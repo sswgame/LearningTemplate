@@ -1329,9 +1329,14 @@ namespace sw
 					return VK_FORMAT_R16G16B16A16_SFLOAT;
 				case RHIFormat::D24_UNORM_S8_UINT:
 					return VK_FORMAT_D24_UNORM_S8_UINT;
-				default:
-					return VK_FORMAT_R8G8B8A8_UNORM;
+				case RHIFormat::R32G32B32_FLOAT:
+					return VK_FORMAT_R32G32B32_SFLOAT;
+				case RHIFormat::R32G32_FLOAT:
+					return VK_FORMAT_R32G32_SFLOAT;
+				case RHIFormat::R32_FLOAT:
+					return VK_FORMAT_R32_SFLOAT;
 			}
+			return VK_FORMAT_R8G8B8A8_UNORM;
 		}
 	} // namespace
 

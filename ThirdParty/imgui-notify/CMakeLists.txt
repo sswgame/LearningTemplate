@@ -4,7 +4,8 @@
 # ==============================================================================
 
 add_library(imgui_notify INTERFACE)
-target_include_directories(imgui_notify INTERFACE
+# SYSTEM: Editor TU 에서 ImGuiNotify.hpp / FontAwesome 경고 억제
+sw_third_party_system_includes(imgui_notify INTERFACE
     "${CMAKE_CURRENT_SOURCE_DIR}/include"
 )
 # Prefer notifications relative to the main ImGui viewport (works without multi-viewport hooks).

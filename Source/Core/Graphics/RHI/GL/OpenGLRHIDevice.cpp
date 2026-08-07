@@ -366,33 +366,53 @@ namespace sw
 					return GL_RGBA16F;
 				case RHIFormat::D24_UNORM_S8_UINT:
 					return GL_DEPTH24_STENCIL8;
-				default:
-					return GL_RGBA8;
+				case RHIFormat::R32G32B32_FLOAT:
+					return GL_RGB32F;
+				case RHIFormat::R32G32_FLOAT:
+					return GL_RG32F;
+				case RHIFormat::R32_FLOAT:
+					return GL_R32F;
 			}
+			return GL_RGBA8;
 		}
 
 		GLenum toGlFormat( RHIFormat format )
 		{
 			switch ( format )
 			{
+				case RHIFormat::R8G8B8A8_UNORM:
+				case RHIFormat::B8G8R8A8_UNORM:
+				case RHIFormat::R16G16B16A16_FLOAT:
+					return GL_RGBA;
 				case RHIFormat::D24_UNORM_S8_UINT:
 					return GL_DEPTH_STENCIL;
-				default:
-					return GL_RGBA;
+				case RHIFormat::R32G32B32_FLOAT:
+					return GL_RGB;
+				case RHIFormat::R32G32_FLOAT:
+					return GL_RG;
+				case RHIFormat::R32_FLOAT:
+					return GL_RED;
 			}
+			return GL_RGBA;
 		}
 
 		GLenum toGlType( RHIFormat format )
 		{
 			switch ( format )
 			{
+				case RHIFormat::R8G8B8A8_UNORM:
+				case RHIFormat::B8G8R8A8_UNORM:
+					return GL_UNSIGNED_BYTE;
 				case RHIFormat::R16G16B16A16_FLOAT:
 					return GL_HALF_FLOAT;
 				case RHIFormat::D24_UNORM_S8_UINT:
 					return GL_UNSIGNED_INT_24_8;
-				default:
-					return GL_UNSIGNED_BYTE;
+				case RHIFormat::R32G32B32_FLOAT:
+				case RHIFormat::R32G32_FLOAT:
+				case RHIFormat::R32_FLOAT:
+					return GL_FLOAT;
 			}
+			return GL_UNSIGNED_BYTE;
 		}
 	} // namespace
 

@@ -155,30 +155,22 @@ namespace sw::tool
 			t.pop_back();
 
 		// Types.h aliases live in the global namespace (not sw::).
-		if ( t == "int" || t == "signed int" )
-			return "int32";
-		if ( t == "unsigned int" || t == "unsigned" )
-			return "uint32";
-		if ( t == "long long" || t == "signed long long" )
-			return "int64";
-		if ( t == "unsigned long long" )
-			return "uint64";
-		if ( t == "float" )
-			return "float32";
-		if ( t == "double" )
-			return "float64";
-		if ( t == "int32_t" )
-			return "int32";
-		if ( t == "uint32_t" )
-			return "uint32";
-		if ( t == "int64_t" )
-			return "int64";
-		if ( t == "uint64_t" )
-			return "uint64";
-		if ( t == "std::basic_string<char>" || t == "basic_string<char>" )
-			return "std::string";
-		if ( t == "string" )
-			return "std::string";
+		// Single return path so NRVO can apply (-Wnrvo).
+		if ( t == "int" || t == "signed int" || t == "int32_t" )
+			t = "int32";
+		else if ( t == "unsigned int" || t == "unsigned" || t == "uint32_t" )
+			t = "uint32";
+		else if ( t == "long long" || t == "signed long long" || t == "int64_t" )
+			t = "int64";
+		else if ( t == "unsigned long long" || t == "uint64_t" )
+			t = "uint64";
+		else if ( t == "float" )
+			t = "float32";
+		else if ( t == "double" )
+			t = "float64";
+		else if ( t == "std::basic_string<char>" || t == "basic_string<char>" || t == "string" )
+			t = "std::string";
+
 		return t;
 	}
 

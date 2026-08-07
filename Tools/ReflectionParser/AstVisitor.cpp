@@ -245,7 +245,7 @@ namespace sw::tool
 			const int32 numArgs = clang_Cursor_getNumArguments( cursor );
 			for ( int32 i = 0; i < numArgs; ++i )
 			{
-				const CXCursor argCursor = clang_Cursor_getArgument( cursor, i );
+				const CXCursor argCursor = clang_Cursor_getArgument( cursor, static_cast<unsigned>( i ) );
 				method.paramTypeNames.push_back(
 					cxStringToStd( clang_getTypeSpelling( clang_getCursorType( argCursor ) ) ) );
 			}

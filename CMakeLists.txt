@@ -35,6 +35,7 @@ include(cmake/internal/Install.cmake)
 include(cmake/internal/Targets.cmake)
 include(cmake/internal/Output.cmake)
 include(cmake/internal/Reflection.cmake)
+include(cmake/internal/ThirdParty.cmake)
 include(cmake/Dependencies.cmake)
 include(cmake/internal/Scripts.cmake)
 

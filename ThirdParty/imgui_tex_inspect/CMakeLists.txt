@@ -22,11 +22,12 @@ endif()
 add_library(imgui_tex_inspect STATIC ${_tex_inspect_sources})
 add_library(imgui_tex_inspect::imgui_tex_inspect ALIAS imgui_tex_inspect)
 
-target_include_directories(imgui_tex_inspect
-    PUBLIC
-        "${CMAKE_CURRENT_SOURCE_DIR}"
-        "${CMAKE_CURRENT_SOURCE_DIR}/backends"
+# SYSTEM: 소비자(Editor) 쪽 헤더 경고 억제 + 자체 TU 경고 끄기
+sw_third_party_system_includes(imgui_tex_inspect PUBLIC
+    "${CMAKE_CURRENT_SOURCE_DIR}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/backends"
 )
+sw_silence_third_party_warnings(imgui_tex_inspect)
 
 if(TARGET imgui)
     target_link_libraries(imgui_tex_inspect PUBLIC imgui)
