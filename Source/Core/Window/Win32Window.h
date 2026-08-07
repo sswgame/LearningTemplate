@@ -28,7 +28,7 @@ namespace sw
 		Win32Window();
 		~Win32Window() override;
 
-		bool create( const utf16* title, uint32 width, uint32 height ) override;
+		bool create( const utf8* title, uint32 width, uint32 height ) override;
 		void destroy() override;
 		bool recreate() override;
 		bool processMessages() override;

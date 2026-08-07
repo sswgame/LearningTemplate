@@ -37,7 +37,7 @@ SW_TEST_CASE( CoreSmoke, ObjectBasics )
 
 SW_TEST_CASE( CoreSmoke, ReflectionBasics )
 {
-	SW_EXPECT_NOT_NULL( &sw::getTypeRegistry() );
+	SW_EXPECT_NOT_NULL( &sw::core::getTypeRegistry() );
 }
 
 SW_TEST_CASE( CoreSmoke, GameStateBasics )

@@ -30,7 +30,7 @@ namespace sw
 	{
 		void destroyModuleSampleActors()
 		{
-			Scene* scene = getSceneManager().getActiveScene();
+			Scene* scene = core::getSceneManager().getActiveScene();
 			if ( scene == nullptr )
 				return;
 
@@ -38,7 +38,7 @@ namespace sw
 			if ( objects == nullptr )
 				return;
 
-			const hashed_string sampleName( "SampleActor" );
+			const hashed_string		 sampleName( "SampleActor" );
 			std::vector<GameObject*> toDestroy;
 			for ( GameObject* obj : objects->getAllGameObjects() )
 			{
@@ -52,7 +52,7 @@ namespace sw
 
 		void spawnSampleActorIfMissing()
 		{
-			Scene* scene = getSceneManager().getActiveScene();
+			Scene* scene = core::getSceneManager().getActiveScene();
 			if ( scene == nullptr )
 				return;
 
@@ -95,10 +95,10 @@ namespace sw
 	{
 		SW_LOG_INFO( "[SWGame] Initializing Game Module..." );
 
-		getGlobalVariableManager().registerPendingVariables( "SWGame", swGameGvmHead() );
-		getTypeRegistry().registerPendingTypes( "SWGame", swGameTypeHead(), swGameEnumHead() );
-		getComponentManager().registerPendingFactories( "SWGame", swGameComponentFactoryHead() );
-		getComponentManager().rebindAllCachedTypeInfo();
+		core::getGlobalVariableManager().registerPendingVariables( "SWGame", swGameGvmHead() );
+		core::getTypeRegistry().registerPendingTypes( "SWGame", swGameTypeHead(), swGameEnumHead() );
+		core::getComponentManager().registerPendingFactories( "SWGame", swGameComponentFactoryHead() );
+		core::getComponentManager().rebindAllCachedTypeInfo();
 
 		spawnSampleActorIfMissing();
 		return true;
@@ -110,15 +110,15 @@ namespace sw
 
 		destroyModuleSampleActors();
 
-		getComponentManager().clearAllCachedTypeInfo();
-		getComponentManager().unregisterFactoriesByModule( "SWGame" );
-		getTypeRegistry().unregisterTypesByModule( "SWGame" );
-		getGlobalVariableManager().unregisterVariablesByModule( "SWGame" );
+		core::getComponentManager().clearAllCachedTypeInfo();
+		core::getComponentManager().unregisterFactoriesByModule( "SWGame" );
+		core::getTypeRegistry().unregisterTypesByModule( "SWGame" );
+		core::getGlobalVariableManager().unregisterVariablesByModule( "SWGame" );
 	}
 
 	void SWGame::update( float32 deltaTime )
 	{
-		if ( auto* scene = getSceneManager().getActiveScene() )
+		if ( auto* scene = core::getSceneManager().getActiveScene() )
 			scene->update( deltaTime );
 	}
 } // namespace sw

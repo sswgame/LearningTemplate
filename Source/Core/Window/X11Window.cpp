@@ -13,7 +13,7 @@ namespace sw
 	}
 
 #if defined( SW_PLATFORM_LINUX )
-	bool X11Window::create( const utf16* title, uint32 width, uint32 height )
+	bool X11Window::create( const utf8* title, uint32 width, uint32 height )
 	{
 		_width	= width;
 		_height = height;
@@ -35,10 +35,7 @@ namespace sw
 			100, 100, width, height,
 			1, black, white );
 
-		std::wstring wTitle( title );
-		std::string	 utf8Title( wTitle.begin(), wTitle.end() );
-
-		XStoreName( display, win, utf8Title.c_str() );
+		XStoreName( display, win, title.c_str() );
 
 		Atom wmDeleteMessage = XInternAtom( display, "WM_DELETE_WINDOW", False );
 		XSetWMProtocols( display, win, &wmDeleteMessage, 1 );
@@ -117,7 +114,7 @@ namespace sw
 		return !_bShouldClose;
 	}
 #else
-	bool X11Window::create( const utf16*, uint32 width, uint32 height )
+	bool X11Window::create( const utf8*, uint32 width, uint32 height )
 	{
 		_width	= width;
 		_height = height;

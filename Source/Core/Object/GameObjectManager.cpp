@@ -173,11 +173,11 @@ namespace sw
 				{
 					obj->tick( deltaTime );
 				} );
-				sw::getTaskManager().emplaceTask( del );
+				core::getTaskManager().emplaceTask( del );
 			}
 		}
-		sw::getTaskManager().dispatch();
-		sw::getTaskManager().waitAll();
+		core::getTaskManager().dispatch();
+		core::getTaskManager().waitAll();
 		SceneComponent::endParallelTransformReadOnly();
 
 		// Pass 3: fold any local pose changes from ticks into world caches (for render / next frame).
@@ -309,7 +309,7 @@ namespace sw
 			objects = _gameObjects;
 		}
 
-		TypeRegistry& registry = getTypeRegistry();
+		TypeRegistry& registry = core::getTypeRegistry();
 		for ( GameObject* obj : objects )
 		{
 			if ( obj == nullptr )

@@ -59,35 +59,12 @@ namespace sw
 		/**
 		 * @brief App이 소유한 Logger 인스턴스를 기동합니다.
 		 */
-		bool startup()
-		{
-			if ( _bInitialized )
-				return true;
-
-			initializeInternal();
-			return true;
-		}
+		void initialize();
 
 		/**
 		 * @brief 종료 함수. 사용 중인 로그 파일 스트림을 닫고 리소스를 해제합니다.
 		 */
-		void shutdown()
-		{
-			std::lock_guard<std::mutex> lock{ _mutex };
-			if ( _pFile != nullptr )
-			{
-				std::fflush( _pFile );
-				std::fclose( _pFile );
-				_pFile = nullptr;
-			}
-			_onLogWritten.removeAll();
-			_bInitialized = false;
-		}
-
-		/**
-		 * @brief 테스트/툴 등에서 Logger 인스턴스가 이미 생성된 뒤 경로만 준비할 때 사용합니다.
-		 */
-		static void initialize();
+		void shutdown();
 
 		/**
 		 * @brief 로그 파일들이 저장되는 루트 폴더의 절대 경로를 반환합니다.

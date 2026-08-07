@@ -134,7 +134,7 @@ namespace sw
 
 			hashed_string typeKey = getComponentTypeKey<T>();
 			rawPtr->setComponentName( typeKey );
-			rawPtr->setCachedTypeInfo( getTypeRegistry().findType( typeKey ) );
+			rawPtr->setCachedTypeInfo( core::getTypeRegistry().findType( typeKey ) );
 
 			_components[typeKey].push_back( std::move( newComp ) );
 			_flatComponents.push_back( rawPtr );

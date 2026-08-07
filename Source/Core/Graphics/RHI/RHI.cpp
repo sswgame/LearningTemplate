@@ -91,7 +91,7 @@ namespace sw
 			RHIBackend initialBackend = gv_RHIBackend;
 			bool	   bCliOverride	  = false;
 
-			CommandLineManager& commandLineManager = getCommandLineManager();
+			CommandLineManager& commandLineManager = core::getCommandLineManager();
 			bool				bFlag			   = false;
 			if ( commandLineManager.getArgument( CommandLineArgument::DIRECTX_11, bFlag ) && bFlag )
 			{
@@ -229,7 +229,7 @@ namespace sw
 
 	const utf8* RHI::getBackendTypeName( RHIBackend backend )
 	{
-		const EnumInfo* info = getTypeRegistry().findEnum( hashed_string( "RHIBackend" ) );
+		const EnumInfo* info = core::getTypeRegistry().findEnum( hashed_string( "RHIBackend" ) );
 
 		if ( info != nullptr )
 		{

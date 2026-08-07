@@ -16,7 +16,7 @@ namespace sw
 		~CocoaWindow() override;
 
 		/** @brief Cocoa 윈도우를 생성합니다. */
-		bool create( const utf16* title, uint32 width, uint32 height ) override;
+		bool create( const utf8* title, uint32 width, uint32 height ) override;
 		/** @brief Cocoa 윈도우를 파괴합니다. */
 		void destroy() override;
 		/** @brief Cocoa 이벤트를 처리합니다. 종료 요청 시 false. */

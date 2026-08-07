@@ -260,7 +260,7 @@ namespace sw
 	TaskHandle Material::loadFromFileAsync( const std::string& assetRelativePath )
 	{
 		std::shared_ptr<AsyncLoadState> state = _asyncLoadState;
-		return sw::getTaskManager().emplaceTask( "LoadMaterialAsync", SW_DELEGATE_LAMBDA( TaskDelegate, [state, assetRelativePath]()
+		return sw::core::getTaskManager().emplaceTask( "LoadMaterialAsync", SW_DELEGATE_LAMBDA( TaskDelegate, [state, assetRelativePath]()
 		{
 			std::lock_guard<std::mutex> lock{ state->mutex };
 			if ( state->material == nullptr )

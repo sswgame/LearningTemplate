@@ -57,7 +57,7 @@ namespace sw
 			if ( ImGui::BeginMenu( "Add Component" ) == false )
 				return;
 
-			const std::vector<hashed_string>& types = getComponentManager().getRegisteredComponentTypes();
+			const std::vector<hashed_string>& types = core::getComponentManager().getRegisteredComponentTypes();
 			if ( types.empty() )
 			{
 				ImGui::TextDisabled( "No registered component types." );
@@ -289,7 +289,7 @@ namespace sw
 			return;
 		}
 
-		Scene* scene = getSceneManager().getActiveScene();
+		Scene* scene = core::getSceneManager().getActiveScene();
 		if ( scene == nullptr || scene->getObjectManager() == nullptr )
 		{
 			ImGui::TextDisabled( "No active scene." );

@@ -231,7 +231,7 @@ namespace sw
 			return;
 		}
 
-		if ( const EnumInfo* enumInfo = sw::getTypeRegistry().findEnum( typeName ) )
+		if ( const EnumInfo* enumInfo = sw::core::getTypeRegistry().findEnum( typeName ) )
 		{
 			(void)enumInfo;
 			int64		 val = *static_cast<const int64*>( valuePtr );
@@ -240,7 +240,7 @@ namespace sw
 			return;
 		}
 
-		if ( const TypeInfo* structInfo = sw::getTypeRegistry().findType( typeName ) )
+		if ( const TypeInfo* structInfo = sw::core::getTypeRegistry().findType( typeName ) )
 		{
 			BinarySerializer::serialize( valuePtr, *structInfo, buffer, ctx );
 			return;
@@ -256,7 +256,7 @@ namespace sw
 			return ( *reader )( valuePtr, data, dataSize, offset );
 		}
 
-		if ( const EnumInfo* enumInfo = sw::getTypeRegistry().findEnum( typeName ) )
+		if ( const EnumInfo* enumInfo = sw::core::getTypeRegistry().findEnum( typeName ) )
 		{
 			(void)enumInfo;
 			if ( offset + sizeof( int64 ) > dataSize )
@@ -266,7 +266,7 @@ namespace sw
 			return true;
 		}
 
-		if ( const TypeInfo* structInfo = sw::getTypeRegistry().findType( typeName ) )
+		if ( const TypeInfo* structInfo = sw::core::getTypeRegistry().findType( typeName ) )
 		{
 			return BinarySerializer::deserialize( valuePtr, *structInfo, data + offset, dataSize - offset, ctx );
 		}
@@ -502,7 +502,7 @@ namespace sw
 			return;
 		}
 
-		if ( const EnumInfo* enumInfo = sw::getTypeRegistry().findEnum( typeName ) )
+		if ( const EnumInfo* enumInfo = sw::core::getTypeRegistry().findEnum( typeName ) )
 		{
 			int64 val = *static_cast<const int64*>( valPtr );
 			ss.append( "\"" );
@@ -514,7 +514,7 @@ namespace sw
 			return;
 		}
 
-		if ( const TypeInfo* structInfo = sw::getTypeRegistry().findType( typeName ) )
+		if ( const TypeInfo* structInfo = sw::core::getTypeRegistry().findType( typeName ) )
 		{
 			ss.append( JsonSerializer::serialize( valPtr, *structInfo, ctx ) );
 			return;
@@ -661,7 +661,7 @@ namespace sw
 			return ( *textReader )( valPtr, valStr );
 		}
 
-		if ( const EnumInfo* enumInfo = sw::getTypeRegistry().findEnum( typeName ) )
+		if ( const EnumInfo* enumInfo = sw::core::getTypeRegistry().findEnum( typeName ) )
 		{
 			std::string s( valStr );
 			if ( s.empty() == false && s.front() == '"' )

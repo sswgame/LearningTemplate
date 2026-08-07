@@ -22,7 +22,7 @@ SW_TEST_CASE( WindowTest, PlatformFactoryAndLifecycle )
 	// Assert create + usable non-zero size + clean destroy instead of pixel-perfect match.
 	constexpr uint32 kReqW = 640;
 	constexpr uint32 kReqH = 480;
-	SW_EXPECT_TRUE( window->create( L"LifecycleTestWindow", kReqW, kReqH ) );
+	SW_EXPECT_TRUE( window->create( "LifecycleTestWindow", kReqW, kReqH ) );
 	SW_EXPECT_TRUE( window->getWidth() > 0 );
 	SW_EXPECT_TRUE( window->getHeight() > 0 );
 	window->destroy();
@@ -55,7 +55,7 @@ SW_TEST_CASE( WindowTest, ResizeCallbackAndCustomMessageHandler )
 		};
 		window->setCustomMessageHandler( SW_DELEGATE_LAMBDA( sw::WindowMessageHandlerDelegate, msgCb ) );
 
-		bool bCreated = window->create( L"CallbackTestWindow", 800, 600 );
+		bool bCreated = window->create( "CallbackTestWindow", 800, 600 );
 		SW_EXPECT_TRUE( bCreated );
 
 		window->destroy();

@@ -29,41 +29,24 @@ namespace sw
 
 	void Logger::initialize()
 	{
-		if ( s_loggerInstance )
-			s_loggerInstance->initializeInternal();
-	}
-
-	const std::string& Logger::getLogFolderPath()
-	{
-		if ( s_loggerInstance )
-			return s_loggerInstance->_logFolderPath;
-
-		static std::string emptyPath;
-		return emptyPath;
-	}
-
-	void Logger::writeLog( LogLevel level, const utf8* tag, const utf8* pMessage, const utf8* file, int32 line )
-	{
-		if ( s_loggerInstance )
-			s_loggerInstance->writeLogInternal( level, tag, pMessage, file, line );
-	}
-
-	DelegateHandle Logger::addLogWrittenListener( const LogWrittenDelegate& listener )
-	{
-		if ( s_loggerInstance == nullptr )
-			return {};
-
-		std::lock_guard<std::mutex> lock{ s_loggerInstance->_mutex };
-		return s_loggerInstance->_onLogWritten.add( listener );
-	}
-
-	void Logger::removeLogWrittenListener( const DelegateHandle& handle )
-	{
-		if ( s_loggerInstance == nullptr )
+		if ( _bInitialized )
 			return;
 
-		std::lock_guard<std::mutex> lock{ s_loggerInstance->_mutex };
-		s_loggerInstance->_onLogWritten.remove( handle );
+		SW_ASSERT( s_loggerInstance != nullptr );
+		s_loggerInstance->initializeInternal();
+	}
+
+	void Logger::shutdown()
+	{
+		std::lock_guard<std::mutex> lock{ _mutex };
+		if ( _pFile != nullptr )
+		{
+			std::fflush( _pFile );
+			std::fclose( _pFile );
+			_pFile = nullptr;
+		}
+		_onLogWritten.removeAll();
+		_bInitialized = false;
 	}
 
 	void Logger::initializeInternal()
@@ -71,22 +54,27 @@ namespace sw
 		if ( _bInitialized )
 			return;
 
-		std::filesystem::path baseDir = std::filesystem::current_path();
+		std::filesystem::path baseDir = FileUtil::getCurrentPath();
 #if defined( SW_PLATFORM_WINDOWS )
-		wchar_t path[MAX_PATH];
-		if ( GetModuleFileNameW( nullptr, path, MAX_PATH ) > 0 )
-			baseDir = std::filesystem::path( path ).parent_path();
+		baseDir = std::filesystem::path( FileUtil::getExecutablePath() ).parent_path();
 #endif
 
 		_logFolderPath = ( baseDir / kDefaultLogFolder ).string();
-		if ( std::filesystem::exists( _logFolderPath ) == false )
-			std::filesystem::create_directory( _logFolderPath );
+
+		if ( FileUtil::isFileExist( _logFolderPath ) == false )
+			FileUtil::createDirectory( _logFolderPath );
 		_bInitialized = true;
 
 #if defined( SW_PLATFORM_WINDOWS )
 		SetConsoleOutputCP( CP_UTF8 );
 		SetConsoleCP( CP_UTF8 );
 #endif
+	}
+
+	void Logger::writeLog( LogLevel level, const utf8* tag, const utf8* pMessage, const utf8* file, int32 line )
+	{
+		SW_ASSERT( s_loggerInstance );
+		s_loggerInstance->writeLogInternal( level, tag, pMessage, file, line );
 	}
 
 	void Logger::writeLogInternal( LogLevel level, const utf8* tag, const utf8* pMessage, const utf8* file, int32 line )
@@ -121,8 +109,8 @@ namespace sw
 		if ( levelIndex >= static_cast<uint8>( LogLevel::Count ) )
 			return;
 
-		const utf8* effectiveTag  = ( tag != nullptr && tag[0] != '\0' ) ? tag : "Engine";
-		const utf8* effectiveFile = ( file != nullptr && file[0] != '\0' ) ? file : "unknown";
+		const utf8* effectiveTag  = ( StringUtil::isNullOrEmpty( tag ) ) ? "Engine" : tag;
+		const utf8* effectiveFile = ( StringUtil::isNullOrEmpty( file ) ) ? "unknown" : file;
 		const utf8* effectiveMsg  = ( pMessage != nullptr ) ? pMessage : "";
 
 		LogEntry entry;
@@ -167,7 +155,8 @@ namespace sw
 					FOREGROUND_RED | FOREGROUND_INTENSITY,
 					FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY,
 					FOREGROUND_GREEN | FOREGROUND_INTENSITY,
-					FOREGROUND_INTENSITY };
+					FOREGROUND_INTENSITY,
+				};
 
 			SetConsoleTextAttribute( consoleHandle, arrLevelColor[static_cast<int32>( level )] );
 			std::fputs( pMessage, stdout );
@@ -189,10 +178,10 @@ namespace sw
 
 	void Logger::writeLogFile( LogLevel level, const int32 year, const int32 month, const int32 day, const int32 hour, const utf8* formattedBuffer )
 	{
-		fixed_string<64> expectedFileNameBuf{};
-		formatstring( expectedFileNameBuf.data(), expectedFileNameBuf.capacity(), "LOG_%#-%#-%#-%#.txt", year, month, day, hour );
+		fixed_string<constant::kMaxBuffer128> expectedFileName{};
+		formatstring( expectedFileName.data(), expectedFileName.capacity(), "LOG_%#-%#-%#-%#.txt", year, month, day, hour );
 
-		if ( _currentLogFileName != expectedFileNameBuf.data() )
+		if ( _currentLogFileName != expectedFileName.data() )
 		{
 			if ( _pFile != nullptr )
 			{
@@ -200,8 +189,8 @@ namespace sw
 				_pFile = nullptr;
 			}
 
-			_currentLogFileName = expectedFileNameBuf.data();
-			std::filesystem::path logPath( _logFolderPath );
+			_currentLogFileName = expectedFileName.data();
+			std::filesystem::path logPath{ _logFolderPath };
 			logPath /= _currentLogFileName;
 
 #if defined( SW_PLATFORM_WINDOWS )
@@ -218,4 +207,32 @@ namespace sw
 		if ( level == LogLevel::Error )
 			std::fflush( _pFile );
 	}
+
+	const std::string& Logger::getLogFolderPath()
+	{
+		if ( s_loggerInstance )
+			return s_loggerInstance->_logFolderPath;
+
+		static std::string emptyPath;
+		return emptyPath;
+	}
+
+	DelegateHandle Logger::addLogWrittenListener( const LogWrittenDelegate& listener )
+	{
+		if ( s_loggerInstance == nullptr )
+			return {};
+
+		std::lock_guard<std::mutex> lock{ s_loggerInstance->_mutex };
+		return s_loggerInstance->_onLogWritten.add( listener );
+	}
+
+	void Logger::removeLogWrittenListener( const DelegateHandle& handle )
+	{
+		if ( s_loggerInstance == nullptr )
+			return;
+
+		std::lock_guard<std::mutex> lock{ s_loggerInstance->_mutex };
+		s_loggerInstance->_onLogWritten.remove( handle );
+	}
+
 } // namespace sw

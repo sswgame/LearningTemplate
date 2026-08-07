@@ -63,8 +63,8 @@ SW_TEST_CASE( MaterialTest, AsyncMaterialLoadTest )
 	sw::TaskHandle handle = mat.loadFromFileAsync( "Material/DefaultMaterial.material" );
 	SW_EXPECT_TRUE( handle.isValid() );
 
-	sw::getTaskManager().waitAll();
-	sw::getTaskManager().clear();
+	sw::core::getTaskManager().waitAll();
+	sw::core::getTaskManager().clear();
 }
 
 // Soft-SKIP quarantine: instance override + shader reflection can block on compiler/DXC.

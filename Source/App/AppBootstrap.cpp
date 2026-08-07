@@ -36,14 +36,13 @@ namespace sw
 		BLOCK( "Logger / CommandLine / GVM 초기화" )
 		{
 			_logger = std::make_unique<Logger>();
-			_logger->startup();
+			_logger->initialize();
 
 			_commandLineManager = std::make_unique<CommandLineManager>();
 			_commandLineManager->initialize();
 
-			_globalVariableManager = std::make_unique<GlobalVariableManager>();
-			_globalVariableManager->initialize();
 			// Core.dll list first (correct moduleName), then App-only list.
+			_globalVariableManager = std::make_unique<GlobalVariableManager>();
 			_globalVariableManager->registerPendingVariables( "Core", GlobalVariableRegistrar::getHead() );
 			_globalVariableManager->registerPendingVariables( "App", swAppGvmHead() );
 			_globalVariableManager->registerToCommandLine( _commandLineManager.get() );
@@ -67,27 +66,26 @@ namespace sw
 			services.typeRegistry		   = _typeRegistry.get();
 			services.componentManager	   = _componentManager.get();
 			services.sceneManager		   = _sceneManager.get();
-			bindCoreServices( services );
+			core::bindCoreServices( services );
 
 			registerCoreReflectionTypes();
-			getComponentManager().registerPendingFactories( "App", swAppComponentFactoryHead() );
+			core::getComponentManager().registerPendingFactories( "App", swAppComponentFactoryHead() );
 		}
 
-		BLOCK( "Task / LiveReload / Resource / Scene 초기화" )
+		BLOCK( "Task / Resource / Scene 초기화" )
 		{
-			if ( _taskManager->initialize() == false )
-				return false;
-			if ( _liveReloadManager->initialize() == false )
-				return false;
-
 			if ( ResourceUtil::initialize() == false )
 			{
 				SW_LOG_ERROR( "Failed to initialize ResourceUtil!" );
 				return false;
 			}
 
+			if ( _taskManager->initialize() == false )
+				return false;
+
 			if ( _reloadFileManager->initialize() == false )
 				return false;
+
 			if ( _sceneManager->initialize() == false )
 				return false;
 		}
@@ -95,7 +93,7 @@ namespace sw
 		BLOCK( "플랫폼 윈도우 생성" )
 		{
 			_window = IWindow::createPlatformWindow();
-			if ( _window == nullptr || _window->create( L"Toy Engine Editor (Live Coding + Hot Reloading + Multi-Backend RHI)", 1280, 720 ) == false )
+			if ( _window == nullptr || _window->create( "SWEngine", 1280, 720 ) == false )
 			{
 				SW_LOG_ERROR( "Failed to create platform window!" );
 				return false;

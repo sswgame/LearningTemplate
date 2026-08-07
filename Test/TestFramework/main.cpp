@@ -21,7 +21,7 @@ int main( int argc, char* argv[] )
 	printf( "STARTING MAIN\n" );
 	fflush( stdout );
 
-	std::unique_ptr<sw::Logger>				   logger			  = std::make_unique<sw::Logger>();
+	std::unique_ptr<sw::Logger> logger = std::make_unique<sw::Logger>();
 	std::unique_ptr<sw::CommandLineManager>	   commandLineManager = std::make_unique<sw::CommandLineManager>();
 	std::unique_ptr<sw::TaskManager>		   taskManager		  = std::make_unique<sw::TaskManager>();
 	std::unique_ptr<sw::GlobalVariableManager> globalVarManager	  = std::make_unique<sw::GlobalVariableManager>();
@@ -31,9 +31,8 @@ int main( int argc, char* argv[] )
 	std::unique_ptr<sw::ReloadFileManager>	   reloadFileManager  = std::make_unique<sw::ReloadFileManager>();
 	std::unique_ptr<sw::SceneManager>		   sceneManager		  = std::make_unique<sw::SceneManager>();
 
-	sw::Logger::initialize();
+	logger->initialize();
 	commandLineManager->initialize();
-	globalVarManager->initialize();
 	globalVarManager->registerPendingVariables( "Core", sw::GlobalVariableRegistrar::getHead() );
 	globalVarManager->registerPendingVariables( "TestFramework", swTestGvmHead() );
 	globalVarManager->registerToCommandLine( commandLineManager.get() );
@@ -69,11 +68,9 @@ int main( int argc, char* argv[] )
 	services.typeRegistry		   = typeRegistry.get();
 	services.componentManager	   = componentManager.get();
 	services.sceneManager		   = sceneManager.get();
-	sw::bindCoreServices( services );
+	sw::core::bindCoreServices( services );
 
 	if ( taskManager->initialize() == false )
-		return -1;
-	if ( liveReloadManager->initialize() == false )
 		return -1;
 	if ( reloadFileManager->initialize() == false )
 		return -1;
@@ -95,7 +92,7 @@ int main( int argc, char* argv[] )
 	componentManager->shutdown();
 	taskManager->shutdown();
 	globalVarManager->shutdown();
-	sw::unbindCoreServices();
+	sw::core::unbindCoreServices();
 
 	printf( "ENDING MAIN\n" );
 	return result;

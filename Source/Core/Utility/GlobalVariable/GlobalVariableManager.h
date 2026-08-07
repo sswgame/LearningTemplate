@@ -10,6 +10,8 @@
 
 namespace sw
 {
+	class CommandLineManager;
+
 	struct GlobalVariableInfo;
 	SW_DECLARE_DELEGATE( void, GlobalVariableChangedDelegate, GlobalVariableInfo* );
 
@@ -46,9 +48,8 @@ namespace sw
 	class SW_API GlobalVariableManager
 	{
 	public:
-		bool initialize();
 		void registerToCommandLine( class CommandLineManager* pCmdLineManager );
-		void updateFromCommandLine( class CommandLineManager* pCmdLineManager );
+		void updateFromCommandLine( const CommandLineManager* pCmdLineManager );
 		void shutdown() { resetAllToDefault(); }
 
 		bool registerVariable( const std::string_view name, GlobalVariableType type, void* pData, const std::variant<bool, int32, float32, std::string>& defaultValue, const std::string_view description, const std::string_view enumType = "", const std::string_view moduleName = "" );
@@ -71,7 +72,7 @@ namespace sw
 		GlobalVariableManager& operator=( const GlobalVariableManager& ) = delete;
 
 	private:
-		std::unordered_map<std::string, GlobalVariableInfo> _variables;
+		std::unordered_map<std::string, GlobalVariableInfo> _mapVariable;
 	};
 
 	struct SW_API GlobalVariableRegistrar
@@ -108,40 +109,40 @@ namespace sw
 
 /** Override in App/Editor/Game/Test heads headers before SW_GLOBAL_VARIABLE_*. */
 #ifndef SW_GVM_MODULE_HEAD
-	#define SW_GVM_MODULE_HEAD() (::sw::GlobalVariableRegistrar::getHead())
+	#define SW_GVM_MODULE_HEAD() ( ::sw::GlobalVariableRegistrar::getHead() )
 #endif
 
 /** @brief SW_GLOBAL_VARIABLE_BOOL 매크로 정의입니다. */
-#define SW_GLOBAL_VARIABLE_BOOL( name, defaultVal, desc )                                                                                                    \
-	extern bool							 name;                                                                                                               \
-	bool								 name = defaultVal;                                                                                                  \
+#define SW_GLOBAL_VARIABLE_BOOL( name, defaultVal, desc )   \
+	extern bool							 name;              \
+	bool								 name = defaultVal; \
 	static ::sw::GlobalVariableRegistrar sw_reg_##name( SW_GVM_MODULE_HEAD(), #name, ::sw::GlobalVariableType::Bool, &name, bool( defaultVal ), desc )
 
 /** @brief SW_GLOBAL_VARIABLE_INT 매크로 정의입니다. */
-#define SW_GLOBAL_VARIABLE_INT( name, defaultVal, desc )                                                                                                     \
-	extern int32						 name;                                                                                                               \
-	int32								 name = defaultVal;                                                                                                  \
+#define SW_GLOBAL_VARIABLE_INT( name, defaultVal, desc )    \
+	extern int32						 name;              \
+	int32								 name = defaultVal; \
 	static ::sw::GlobalVariableRegistrar sw_reg_##name( SW_GVM_MODULE_HEAD(), #name, ::sw::GlobalVariableType::Int32, &name, int32( defaultVal ), desc )
 
 /** @brief SW_GLOBAL_VARIABLE_INT32 매크로 정의입니다. */
 #define SW_GLOBAL_VARIABLE_INT32( name, defaultVal, desc ) SW_GLOBAL_VARIABLE_INT( name, defaultVal, desc )
 
 /** @brief SW_GLOBAL_VARIABLE_FLOAT 매크로 정의입니다. */
-#define SW_GLOBAL_VARIABLE_FLOAT( name, defaultVal, desc )                                                                                                   \
-	extern float32						 name;                                                                                                               \
-	float32								 name = defaultVal;                                                                                                  \
+#define SW_GLOBAL_VARIABLE_FLOAT( name, defaultVal, desc )  \
+	extern float32						 name;              \
+	float32								 name = defaultVal; \
 	static ::sw::GlobalVariableRegistrar sw_reg_##name( SW_GVM_MODULE_HEAD(), #name, ::sw::GlobalVariableType::Float, &name, float32( defaultVal ), desc )
 
 /** @brief SW_GLOBAL_VARIABLE_STRING 매크로 정의입니다. */
-#define SW_GLOBAL_VARIABLE_STRING( name, defaultVal, desc )                                                                                                  \
-	extern std::string					 name;                                                                                                               \
-	std::string							 name = defaultVal;                                                                                                  \
+#define SW_GLOBAL_VARIABLE_STRING( name, defaultVal, desc ) \
+	extern std::string					 name;              \
+	std::string							 name = defaultVal; \
 	static ::sw::GlobalVariableRegistrar sw_reg_##name( SW_GVM_MODULE_HEAD(), #name, ::sw::GlobalVariableType::String, &name, std::string( defaultVal ), desc )
 
 /** @brief SW_GLOBAL_VARIABLE_ENUM 매크로 정의입니다. */
-#define SW_GLOBAL_VARIABLE_ENUM( name, enumType, defaultVal, desc )                                                                                          \
-	extern enumType						 name;                                                                                                               \
-	enumType							 name = defaultVal;                                                                                                  \
+#define SW_GLOBAL_VARIABLE_ENUM( name, enumType, defaultVal, desc ) \
+	extern enumType						 name;                      \
+	enumType							 name = defaultVal;         \
 	static ::sw::GlobalVariableRegistrar sw_reg_##name( SW_GVM_MODULE_HEAD(), #name, ::sw::GlobalVariableType::Enum, &name, int32( defaultVal ), desc, #enumType )
 
 /** @brief SW_EXTERN_GLOBAL_VARIABLE_BOOL 매크로 정의입니다. */

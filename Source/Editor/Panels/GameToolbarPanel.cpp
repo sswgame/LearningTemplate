@@ -40,7 +40,7 @@ namespace sw
 		{
 			setGameState( GameState::Stopped );
 
-			Scene* scene = getSceneManager().getActiveScene();
+			Scene* scene = core::getSceneManager().getActiveScene();
 			if ( scene != nullptr )
 				editor::remapSelectionByObjectName( scene->getObjectManager() );
 		}

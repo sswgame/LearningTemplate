@@ -75,7 +75,7 @@ namespace sw
 
 	TaskHandle TaskHandle::then( TaskDelegate nextTaskDelegate )
 	{
-		TaskHandle nextTask = sw::getTaskManager().emplaceTask( nextTaskDelegate );
+		TaskHandle nextTask = core::getTaskManager().emplaceTask( nextTaskDelegate );
 		precede( nextTask );
 		return nextTask;
 	}
@@ -98,11 +98,12 @@ namespace sw
 		if ( _bInitialized == true )
 			return false;
 
+		constexpr uint32 kDefaultThreadCount = 4;
 		if ( threadCount == 0 )
 		{
 			threadCount = std::thread::hardware_concurrency();
 			if ( threadCount == 0 )
-				threadCount = 4;
+				threadCount = kDefaultThreadCount;
 		}
 
 		_bStop = false;

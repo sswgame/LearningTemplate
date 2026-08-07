@@ -20,11 +20,11 @@ namespace sw
 		ImGui::InputText( "Filter", _filterBuffer, sizeof( _filterBuffer ) );
 		ImGui::SameLine();
 		if ( ImGui::Button( "Reset All Defaults" ) )
-			sw::getGlobalVariableManager().resetAllToDefault();
+			sw::core::getGlobalVariableManager().resetAllToDefault();
 
 		ImGui::Separator();
 
-		const auto& vars	  = sw::getGlobalVariableManager().getAllVariables();
+		const auto& vars	  = sw::core::getGlobalVariableManager().getAllVariables();
 		std::string filterStr = _filterBuffer;
 		std::transform( filterStr.begin(), filterStr.end(), filterStr.begin(), []( unsigned char c )
 		{ return static_cast<char>( std::tolower( c ) ); } );
@@ -143,7 +143,7 @@ namespace sw
 							case GlobalVariableType::Enum:
 							{
 								int32*				pVal	  = static_cast<int32*>( info._pData );
-								const sw::EnumInfo* pEnumInfo = sw::getTypeRegistry().findEnum( sw::hashed_string( info._enumType.c_str() ) );
+								const sw::EnumInfo* pEnumInfo = sw::core::getTypeRegistry().findEnum( sw::hashed_string( info._enumType.c_str() ) );
 								if ( pEnumInfo )
 								{
 									const hashed_string currentName = pEnumInfo->toString( *pVal );
@@ -185,7 +185,7 @@ namespace sw
 
 					ImGui::TableSetColumnIndex( 4 );
 					if ( ImGui::Button( "Reset" ) )
-						sw::getGlobalVariableManager().resetToDefault( name );
+						sw::core::getGlobalVariableManager().resetToDefault( name );
 
 					ImGui::PopID();
 				}

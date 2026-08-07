@@ -150,21 +150,19 @@ int32 main( int32 argc, utf8* argv[] )
 	services.taskManager		   = taskManager.get();
 	services.typeRegistry		   = typeRegistry.get();
 	services.componentManager	   = compManager.get();
-	sw::bindCoreServices( services );
+	sw::core::bindCoreServices( services );
 
-	sw::Logger::initialize();
-
+	logger->initialize();
 	CommandLineArgs args;
 	if ( parseCommandLine( argc, argv, args ) == false )
 	{
 		SW_LOG_ERROR( "Usage: ReflectionParser --input <header.h> [--input ...] --output <dir> [--include <dir> ...]" );
-		sw::unbindCoreServices();
+		sw::core::unbindCoreServices();
 		return 1;
 	}
 
 	commandLineManager->initialize();
 	taskManager->initialize();
-	globalVarManager->initialize();
 	globalVarManager->registerPendingVariables( "Core", sw::GlobalVariableRegistrar::getHead() );
 	globalVarManager->registerToCommandLine( commandLineManager.get() );
 
@@ -192,7 +190,7 @@ int32 main( int32 argc, utf8* argv[] )
 	if ( sw::tool::ParserContext::ensureSharedConfig() == false )
 	{
 		taskManager->shutdown();
-		sw::unbindCoreServices();
+		sw::core::unbindCoreServices();
 		return 1;
 	}
 
@@ -217,6 +215,6 @@ int32 main( int32 argc, utf8* argv[] )
 
 	sw::tool::ParserContext::shutdownShared();
 	taskManager->shutdown();
-	sw::unbindCoreServices();
+	sw::core::unbindCoreServices();
 	return totalErrors == 0 ? 0 : 1;
 }

@@ -79,7 +79,7 @@ namespace sw
 		if ( StringUtil::isNullOrEmpty( _parentFQN.c_str() ) )
 			return false;
 
-		const TypeInfo* parent = getTypeRegistry().findType( _parentFQN );
+		const TypeInfo* parent = core::getTypeRegistry().findType( _parentFQN );
 		return parent ? parent->isA( targetFqn ) : false;
 	}
 

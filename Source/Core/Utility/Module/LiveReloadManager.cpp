@@ -51,11 +51,6 @@ namespace sw
 		shutdown();
 	}
 
-	bool LiveReloadManager::initialize()
-	{
-		return true;
-	}
-
 	bool LiveReloadManager::registerModule( const std::string& moduleName )
 	{
 		ModuleContext& ctx = _modules[moduleName];

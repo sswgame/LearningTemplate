@@ -9,12 +9,12 @@
 
 namespace sw
 {
-	bool										 ResourceUtil::_s_bInitialize = false;
-	std::string									 ResourceUtil::_s_engineFolderPath;
-	std::string									 ResourceUtil::_s_commonFolderPath;
-	std::string									 ResourceUtil::_s_gameFolderPath;
-	std::vector<std::filesystem::path>			 ResourceUtil::_s_resourceFolderList;
-	std::vector<std::string>					 ResourceUtil::_s_resourceFolderStrList;
+	bool							   ResourceUtil::_s_bInitialize = false;
+	std::string						   ResourceUtil::_s_engineFolderPath;
+	std::string						   ResourceUtil::_s_commonFolderPath;
+	std::string						   ResourceUtil::_s_gameFolderPath;
+	std::vector<std::filesystem::path> ResourceUtil::_s_resourceFolderList;
+	std::vector<std::string>		   ResourceUtil::_s_resourceFolderStrList;
 
 	namespace
 	{
@@ -62,13 +62,13 @@ namespace sw
 			return true;
 		_s_bInitialize = true;
 
-		std::filesystem::path currentPath = std::filesystem::current_path();
+		std::filesystem::path currentPath = FileUtil::getCurrentPath();
 
 		std::filesystem::path rootPath{};
 		while ( currentPath.has_parent_path() )
 		{
 			const std::filesystem::path folderPath = currentPath / kResourceFolder;
-			if ( exists( folderPath ) && is_directory( folderPath ) )
+			if ( FileUtil::isDirectoryExist( folderPath.string() ) )
 			{
 				rootPath = currentPath;
 				break;
@@ -87,34 +87,32 @@ namespace sw
 		const std::filesystem::path resourceCommon = rootPath / kResourceFolder / "Common" / "";
 		const std::filesystem::path resourceGame   = rootPath / kResourceFolder / "Game" / "";
 
-		_s_engineFolderPath = exists( resourceEngine ) ? resourceEngine.string() : "";
-		_s_commonFolderPath = exists( resourceCommon ) ? resourceCommon.string() : "";
-		_s_gameFolderPath	= exists( resourceGame ) ? resourceGame.string() : "";
+		_s_engineFolderPath = FileUtil::isDirectoryExist( resourceEngine.string() ) ? resourceEngine.string() : "";
+		_s_commonFolderPath = FileUtil::isDirectoryExist( resourceCommon.string() ) ? resourceCommon.string() : "";
+		_s_gameFolderPath	= FileUtil::isDirectoryExist( resourceGame.string() ) ? resourceGame.string() : "";
 
 		_s_resourceFolderList.reserve( 10 );
 
 		// 1. Game sub-packages (Base, DLC1, etc.) - Highest priority
-		if ( exists( resourceGame ) && is_directory( resourceGame ) )
+		if ( FileUtil::isDirectoryExist( resourceGame.string() ) )
 		{
 			for ( const auto& entry : std::filesystem::directory_iterator( resourceGame ) )
 			{
 				if ( entry.is_directory() )
-				{
 					_s_resourceFolderList.push_back( entry.path() / "" );
-				}
 			}
 		}
 
 		// 2. Game root
-		if ( exists( resourceGame ) )
+		if ( FileUtil::isDirectoryExist( resourceGame.string() ) )
 			_s_resourceFolderList.push_back( resourceGame );
 
 		// 3. Common
-		if ( exists( resourceCommon ) )
+		if ( FileUtil::isDirectoryExist( resourceCommon.string() ) )
 			_s_resourceFolderList.push_back( resourceCommon );
 
 		// 4. Engine
-		if ( exists( resourceEngine ) )
+		if ( FileUtil::isDirectoryExist( resourceEngine.string() ) )
 			_s_resourceFolderList.push_back( resourceEngine );
 
 		// 5. Root - Lowest priority
@@ -135,16 +133,10 @@ namespace sw
 		{
 			const std::filesystem::path absolutePath = ( folderName.empty() ) ? resourceFolder / filePath : resourceFolder / folderName / filePath;
 			if ( exists( absolutePath ) )
-			{
 				return FileUtil::normalizePath( absolutePath.generic_string() );
-			}
 		}
 
 		return std::string{};
 	}
 
-	void ResourceUtil::clearCache()
-	{
-		// Path cache removed — resolve fresh every call.
-	}
 } // namespace sw

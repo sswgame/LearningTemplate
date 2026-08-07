@@ -230,7 +230,7 @@ namespace sw
 	{
 		if ( _cachedTypeInfo != nullptr )
 			return _cachedTypeInfo;
-		return sw::getTypeRegistry().findType( hashed_string( "sw::Component" ) );
+		return sw::core::getTypeRegistry().findType( hashed_string( "sw::Component" ) );
 	}
 
 	void Component::onBeginPlay()

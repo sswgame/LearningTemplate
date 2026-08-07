@@ -79,11 +79,11 @@ namespace sw
 	// @function create
 	// @brief Windows API(CreateWindowEx)를 사용해 실제 데스크톱 윈도우 창을 만듭니다.
 	// ============================================================================
-	bool Win32Window::create( const utf16* title, uint32 width, uint32 height )
+	bool Win32Window::create( const utf8* title, uint32 width, uint32 height )
 	{
 		_width	= width;
 		_height = height;
-		_title	= title != nullptr ? title : L"";
+		_title	= StringUtil::isNullOrEmpty( title ) ? L"" : StringUtil::utf8ToUtf16( title );
 
 		HINSTANCE hInstance = GetModuleHandle( nullptr );
 
@@ -154,9 +154,11 @@ namespace sw
 		const uint32 height = _height;
 		_bRecreating		= true;
 		destroy();
-		_bRecreating  = false;
-		_bShouldClose = false;
-		const bool ok = create( _title.c_str(), width, height );
+		_bRecreating			 = false;
+		_bShouldClose			 = false;
+		const std::string& title = StringUtil::utf16ToUtf8( _title.c_str() );
+
+		const bool ok = create( title.c_str(), width, height );
 		_restoreX	  = CW_USEDEFAULT;
 		_restoreY	  = CW_USEDEFAULT;
 		return ok;

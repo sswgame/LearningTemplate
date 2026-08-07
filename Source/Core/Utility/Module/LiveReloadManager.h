@@ -4,8 +4,6 @@
  * @brief 모듈 DLL 섀도 복사 기반 핫 리로드
  */
 #include "Core/Common/Common.h"
-#include "Core/Utility/File/FileUtil.h"
-
 
 namespace sw
 {
@@ -19,8 +17,6 @@ namespace sw
 		LiveReloadManager();
 		~LiveReloadManager();
 
-		/** @brief 매니저를 초기화합니다. */
-		bool initialize();
 		/** @brief 로드된 모듈을 언로드하고 종료합니다. */
 		void shutdown();
 

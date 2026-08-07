@@ -197,7 +197,7 @@ namespace sw
 
 		GameObjectManager* findActiveObjectManager()
 		{
-			Scene* scene = getSceneManager().getActiveScene();
+			Scene* scene = core::getSceneManager().getActiveScene();
 			return scene != nullptr ? scene->getObjectManager() : nullptr;
 		}
 

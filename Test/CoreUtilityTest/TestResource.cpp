@@ -41,7 +41,6 @@ SW_TEST_CASE( Utility_Resource, FolderRootsAndKnownShaderPath )
 	const std::string lowerPath = sw::StringUtil::toLower( shaderPath );
 	SW_EXPECT_TRUE_MSG( lowerPath.find( "samplecompute.hlsl" ) != std::string::npos, shaderPath.c_str() );
 
-	sw::ResourceUtil::clearCache();
 	const std::string shaderPathAgain = sw::ResourceUtil::getResourcePath( "Shaders/SampleCompute.hlsl" );
 	SW_EXPECT_STREQ( shaderPath.c_str(), shaderPathAgain.c_str() );
 }

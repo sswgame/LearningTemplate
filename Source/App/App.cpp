@@ -49,7 +49,7 @@ namespace sw
 		if ( initializeSubsystems( argc, argv ) == false )
 			return false;
 
-		GlobalVariableInfo* pRHIBackendVar = getGlobalVariableManager().findVariable( "gv_RHIBackend" );
+		GlobalVariableInfo* pRHIBackendVar = core::getGlobalVariableManager().findVariable( "gv_RHIBackend" );
 
 		if ( _bEnableEditor )
 		{
@@ -178,15 +178,15 @@ namespace sw
 	{
 		SW_LOG_INFO( "Entering App Main Loop..." );
 
-		_editorCtx.playerSpeed				   = &gv_EditorPlayerSpeed;
-		_editorCtx.clearColor				   = _clearColor;
-		_editorCtx.reflectionData			   = &_reflectionData;
-		_editorCtx.rhiDevice				   = &_rhi->getDevice();
-		_editorCtx.gameTextureID			   = _gameTextureID;
-		_editorCtx.gameViewportWidth		   = _gameViewportWidth;
-		_editorCtx.gameViewportHeight		   = _gameViewportHeight;
-		_editorCtx.requestGameViewportWidth	   = &_requestedGameViewportWidth;
-		_editorCtx.requestGameViewportHeight   = &_requestedGameViewportHeight;
+		_editorCtx.playerSpeed				 = &gv_EditorPlayerSpeed;
+		_editorCtx.clearColor				 = _clearColor;
+		_editorCtx.reflectionData			 = &_reflectionData;
+		_editorCtx.rhiDevice				 = &_rhi->getDevice();
+		_editorCtx.gameTextureID			 = _gameTextureID;
+		_editorCtx.gameViewportWidth		 = _gameViewportWidth;
+		_editorCtx.gameViewportHeight		 = _gameViewportHeight;
+		_editorCtx.requestGameViewportWidth	 = &_requestedGameViewportWidth;
+		_editorCtx.requestGameViewportHeight = &_requestedGameViewportHeight;
 
 		CpuTimer frameTimer;
 		frameTimer.resetTimer();
@@ -217,9 +217,9 @@ namespace sw
 			{
 				if ( _editor && _editorApi.preRender )
 				{
-					_editorCtx.gameTextureID		 = _gameTextureID;
-					_editorCtx.gameViewportWidth	 = _gameViewportWidth;
-					_editorCtx.gameViewportHeight	 = _gameViewportHeight;
+					_editorCtx.gameTextureID	  = _gameTextureID;
+					_editorCtx.gameViewportWidth  = _gameViewportWidth;
+					_editorCtx.gameViewportHeight = _gameViewportHeight;
 					_editorApi.preRender( _editor, &_rhi->getDevice() );
 				}
 
@@ -254,10 +254,10 @@ namespace sw
 			{
 				if ( _editor && _editorApi.render )
 				{
-					_editorCtx.material				 = activeScene ? activeScene->getMaterial() : nullptr;
-					_editorCtx.gameTextureID		 = _gameTextureID;
-					_editorCtx.gameViewportWidth	 = _gameViewportWidth;
-					_editorCtx.gameViewportHeight	 = _gameViewportHeight;
+					_editorCtx.material			  = activeScene ? activeScene->getMaterial() : nullptr;
+					_editorCtx.gameTextureID	  = _gameTextureID;
+					_editorCtx.gameViewportWidth  = _gameViewportWidth;
+					_editorCtx.gameViewportHeight = _gameViewportHeight;
 					_editorApi.render( _editor, &_editorCtx );
 				}
 
@@ -332,7 +332,7 @@ namespace sw
 				_globalVariableManager->shutdown();
 
 			IWindow::setActiveWindow( nullptr );
-			unbindCoreServices();
+			core::unbindCoreServices();
 
 			_sceneManager.reset();
 			_reloadFileManager.reset();

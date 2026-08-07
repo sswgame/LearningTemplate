@@ -161,7 +161,7 @@ static RegistrarInit s_RegistrarInit;
 SW_TEST_CASE( Reflection_TypeRegistry, FindRegisteredClass )
 {
 	const sw::TypeInfo* info =
-		sw::getTypeRegistry().findType( sw::hashed_string( "sw::DummyActor" ) );
+		sw::core::getTypeRegistry().findType( sw::hashed_string( "sw::DummyActor" ) );
 
 	SW_EXPECT_TRUE( info != nullptr );
 	if ( info == nullptr )
@@ -174,7 +174,7 @@ SW_TEST_CASE( Reflection_TypeRegistry, FindRegisteredClass )
 SW_TEST_CASE( Reflection_TypeRegistry, FindNonExistentClass )
 {
 	const sw::TypeInfo* info =
-		sw::getTypeRegistry().findType( sw::hashed_string( "sw::NotExist" ) );
+		sw::core::getTypeRegistry().findType( sw::hashed_string( "sw::NotExist" ) );
 
 	SW_EXPECT_TRUE( info == nullptr );
 }
@@ -182,7 +182,7 @@ SW_TEST_CASE( Reflection_TypeRegistry, FindNonExistentClass )
 SW_TEST_CASE( Reflection_TypeInfo, PropertyCount )
 {
 	const sw::TypeInfo* info =
-		sw::getTypeRegistry().findType( sw::hashed_string( "sw::DummyActor" ) );
+		sw::core::getTypeRegistry().findType( sw::hashed_string( "sw::DummyActor" ) );
 	SW_EXPECT_TRUE( info != nullptr );
 	if ( info == nullptr )
 		return;
@@ -193,7 +193,7 @@ SW_TEST_CASE( Reflection_TypeInfo, PropertyCount )
 SW_TEST_CASE( Reflection_TypeInfo, FindExistingProperty )
 {
 	const sw::TypeInfo* info =
-		sw::getTypeRegistry().findType( sw::hashed_string( "sw::DummyActor" ) );
+		sw::core::getTypeRegistry().findType( sw::hashed_string( "sw::DummyActor" ) );
 	SW_EXPECT_TRUE( info != nullptr );
 	if ( info == nullptr )
 		return;
@@ -226,7 +226,7 @@ SW_TEST_CASE( Reflection_TypeInfo, PropertyMetadataSupport )
 
 SW_TEST_CASE( Reflection_Serialization, ObjectDiffSerializationDelta )
 {
-	const sw::TypeInfo* info = sw::getTypeRegistry().findType( sw::hashed_string( "sw::DummyActor" ) );
+	const sw::TypeInfo* info = sw::core::getTypeRegistry().findType( sw::hashed_string( "sw::DummyActor" ) );
 	SW_EXPECT_TRUE( info != nullptr );
 	if ( info != nullptr )
 	{
@@ -244,7 +244,7 @@ SW_TEST_CASE( Reflection_Serialization, ObjectDiffSerializationDelta )
 SW_TEST_CASE( Reflection_TypeInfo, FindNonExistentProperty )
 {
 	const sw::TypeInfo* info =
-		sw::getTypeRegistry().findType( sw::hashed_string( "sw::DummyActor" ) );
+		sw::core::getTypeRegistry().findType( sw::hashed_string( "sw::DummyActor" ) );
 	SW_EXPECT_TRUE( info != nullptr );
 	if ( info == nullptr )
 		return;
@@ -256,7 +256,7 @@ SW_TEST_CASE( Reflection_TypeInfo, FindNonExistentProperty )
 SW_TEST_CASE( Reflection_TypeInfo, IsA_SameType )
 {
 	const sw::TypeInfo* info =
-		sw::getTypeRegistry().findType( sw::hashed_string( "sw::DummyActor" ) );
+		sw::core::getTypeRegistry().findType( sw::hashed_string( "sw::DummyActor" ) );
 	SW_EXPECT_TRUE( info != nullptr );
 	if ( info == nullptr )
 		return;
@@ -267,7 +267,7 @@ SW_TEST_CASE( Reflection_TypeInfo, IsA_SameType )
 SW_TEST_CASE( Reflection_TypeInfo, IsA_ParentType )
 {
 	const sw::TypeInfo* info =
-		sw::getTypeRegistry().findType( sw::hashed_string( "sw::DummyActor" ) );
+		sw::core::getTypeRegistry().findType( sw::hashed_string( "sw::DummyActor" ) );
 	SW_EXPECT_TRUE( info != nullptr );
 	if ( info == nullptr )
 		return;
@@ -278,7 +278,7 @@ SW_TEST_CASE( Reflection_TypeInfo, IsA_ParentType )
 SW_TEST_CASE( Reflection_TypeInfo, IsA_UnrelatedType )
 {
 	const sw::TypeInfo* info =
-		sw::getTypeRegistry().findType( sw::hashed_string( "sw::DummyActor" ) );
+		sw::core::getTypeRegistry().findType( sw::hashed_string( "sw::DummyActor" ) );
 	SW_EXPECT_TRUE( info != nullptr );
 	if ( info == nullptr )
 		return;
@@ -289,7 +289,7 @@ SW_TEST_CASE( Reflection_TypeInfo, IsA_UnrelatedType )
 SW_TEST_CASE( Reflection_PropertyInfo, OffsetCorrectness )
 {
 	const sw::TypeInfo* info =
-		sw::getTypeRegistry().findType( sw::hashed_string( "sw::DummyActor" ) );
+		sw::core::getTypeRegistry().findType( sw::hashed_string( "sw::DummyActor" ) );
 	SW_EXPECT_TRUE( info != nullptr );
 	if ( info == nullptr )
 		return;
@@ -315,7 +315,7 @@ SW_TEST_CASE( Reflection_PropertyInfo, OffsetCorrectness )
 SW_TEST_CASE( Reflection_PropertyInfo, GetValuePtr )
 {
 	const sw::TypeInfo* info =
-		sw::getTypeRegistry().findType( sw::hashed_string( "sw::DummyActor" ) );
+		sw::core::getTypeRegistry().findType( sw::hashed_string( "sw::DummyActor" ) );
 	SW_EXPECT_TRUE( info != nullptr );
 	if ( info == nullptr )
 		return;
@@ -336,7 +336,7 @@ SW_TEST_CASE( Reflection_PropertyInfo, GetValuePtr )
 SW_TEST_CASE( Reflection_PropertyInfo, SetValue )
 {
 	const sw::TypeInfo* info =
-		sw::getTypeRegistry().findType( sw::hashed_string( "sw::DummyActor" ) );
+		sw::core::getTypeRegistry().findType( sw::hashed_string( "sw::DummyActor" ) );
 	SW_EXPECT_TRUE( info != nullptr );
 	if ( info == nullptr )
 		return;
@@ -356,7 +356,7 @@ SW_TEST_CASE( Reflection_PropertyInfo, SetValue )
 SW_TEST_CASE( Reflection_PropertyInfo, SetValue_NoDuplicateWrite )
 {
 	const sw::TypeInfo* info =
-		sw::getTypeRegistry().findType( sw::hashed_string( "sw::DummyActor" ) );
+		sw::core::getTypeRegistry().findType( sw::hashed_string( "sw::DummyActor" ) );
 	SW_EXPECT_TRUE( info != nullptr );
 	if ( info == nullptr )
 		return;
@@ -479,7 +479,7 @@ SW_TEST_CASE( Reflection_Containers, AdditionalContainerWrappers )
 SW_TEST_CASE( Reflection_EnumBitFlag, BitFlagDetectionAndToString )
 {
 	const sw::EnumInfo* info =
-		sw::getTypeRegistry().findEnum( sw::hashed_string( "sw::DummyBitFlag" ) );
+		sw::core::getTypeRegistry().findEnum( sw::hashed_string( "sw::DummyBitFlag" ) );
 
 	SW_EXPECT_TRUE( info != nullptr );
 	if ( info == nullptr )
@@ -496,7 +496,7 @@ SW_TEST_CASE( Reflection_EnumBitFlag, BitFlagDetectionAndToString )
 SW_TEST_CASE( Reflection_EnumBitFlag, StringFlagsToValue )
 {
 	const sw::EnumInfo* info =
-		sw::getTypeRegistry().findEnum( sw::hashed_string( "sw::DummyBitFlag" ) );
+		sw::core::getTypeRegistry().findEnum( sw::hashed_string( "sw::DummyBitFlag" ) );
 
 	SW_EXPECT_TRUE( info != nullptr );
 	if ( info == nullptr )
@@ -511,7 +511,7 @@ SW_TEST_CASE( Reflection_EnumBitFlag, StringFlagsToValue )
 SW_TEST_CASE( Reflection_Serialization, BinaryRoundtrip )
 {
 	const sw::TypeInfo* typeInfo =
-		sw::getTypeRegistry().findType( sw::hashed_string( "sw::ComplexData" ) );
+		sw::core::getTypeRegistry().findType( sw::hashed_string( "sw::ComplexData" ) );
 	SW_EXPECT_TRUE( typeInfo != nullptr );
 	if ( typeInfo == nullptr )
 		return;
@@ -544,7 +544,7 @@ SW_TEST_CASE( Reflection_Serialization, BinaryRoundtrip )
 SW_TEST_CASE( Reflection_Serialization, JsonRoundtrip )
 {
 	const sw::TypeInfo* typeInfo =
-		sw::getTypeRegistry().findType( sw::hashed_string( "sw::ComplexData" ) );
+		sw::core::getTypeRegistry().findType( sw::hashed_string( "sw::ComplexData" ) );
 	SW_EXPECT_TRUE( typeInfo != nullptr );
 	if ( typeInfo == nullptr )
 		return;
@@ -569,7 +569,7 @@ SW_TEST_CASE( Reflection_Serialization, JsonRoundtrip )
 SW_TEST_CASE( Reflection_Serialization, XmlRapidXmlRoundtrip )
 {
 	const sw::TypeInfo* typeInfo =
-		sw::getTypeRegistry().findType( sw::hashed_string( "sw::ComplexData" ) );
+		sw::core::getTypeRegistry().findType( sw::hashed_string( "sw::ComplexData" ) );
 	SW_EXPECT_TRUE( typeInfo != nullptr );
 	if ( !typeInfo )
 		return;
@@ -653,7 +653,7 @@ struct SimpleXmlBackend : public sw::IXmlBackend
 SW_TEST_CASE( Reflection_Serialization, CustomXmlBackend )
 {
 	const sw::TypeInfo* typeInfo =
-		sw::getTypeRegistry().findType( sw::hashed_string( "sw::ComplexData" ) );
+		sw::core::getTypeRegistry().findType( sw::hashed_string( "sw::ComplexData" ) );
 	SW_EXPECT_TRUE( typeInfo != nullptr );
 	if ( typeInfo == nullptr )
 		return;
@@ -686,7 +686,7 @@ SW_TEST_CASE( Reflection_Serialization, CustomSerializeContext )
 	{ *static_cast<int32*>( ptr ) = std::stoi( std::string( s ) ) / 10; return true; } );
 
 	const sw::TypeInfo* typeInfo =
-		sw::getTypeRegistry().findType( sw::hashed_string( "sw::ComplexData" ) );
+		sw::core::getTypeRegistry().findType( sw::hashed_string( "sw::ComplexData" ) );
 	SW_EXPECT_TRUE( typeInfo != nullptr );
 	if ( typeInfo == nullptr )
 		return;
@@ -706,7 +706,7 @@ SW_TEST_CASE( Reflection_Serialization, CustomSerializeContext )
 SW_TEST_CASE( Reflection_EnumInfo, FindRegisteredEnum )
 {
 	const sw::EnumInfo* info =
-		sw::getTypeRegistry().findEnum( sw::hashed_string( "sw::DummyType" ) );
+		sw::core::getTypeRegistry().findEnum( sw::hashed_string( "sw::DummyType" ) );
 
 	SW_EXPECT_TRUE( info != nullptr );
 	if ( info == nullptr )
@@ -718,7 +718,7 @@ SW_TEST_CASE( Reflection_EnumInfo, FindRegisteredEnum )
 SW_TEST_CASE( Reflection_EnumInfo, ValueToString )
 {
 	const sw::EnumInfo* info =
-		sw::getTypeRegistry().findEnum( sw::hashed_string( "sw::DummyType" ) );
+		sw::core::getTypeRegistry().findEnum( sw::hashed_string( "sw::DummyType" ) );
 	SW_EXPECT_TRUE( info != nullptr );
 	if ( info == nullptr )
 	{
@@ -733,7 +733,7 @@ SW_TEST_CASE( Reflection_EnumInfo, ValueToString )
 SW_TEST_CASE( Reflection_EnumInfo, InvalidValueReturnsDefault )
 {
 	const sw::EnumInfo* info =
-		sw::getTypeRegistry().findEnum( sw::hashed_string( "sw::DummyType" ) );
+		sw::core::getTypeRegistry().findEnum( sw::hashed_string( "sw::DummyType" ) );
 	SW_EXPECT_TRUE( info != nullptr );
 	if ( info == nullptr )
 	{
@@ -747,11 +747,11 @@ SW_TEST_CASE( Reflection_EnumInfo, InvalidValueReturnsDefault )
 SW_TEST_CASE( Reflection_InnerTypes, FindOuterStruct )
 {
 	const sw::TypeInfo* typeInfoFqn =
-		sw::getTypeRegistry().findType( sw::hashed_string( "sw::InnerNamespaceForTest::OuterStruct" ) );
+		sw::core::getTypeRegistry().findType( sw::hashed_string( "sw::InnerNamespaceForTest::OuterStruct" ) );
 	SW_EXPECT_TRUE( typeInfoFqn != nullptr );
 
 	const sw::TypeInfo* typeInfoShort =
-		sw::getTypeRegistry().findType( sw::hashed_string( "OuterStruct" ) );
+		sw::core::getTypeRegistry().findType( sw::hashed_string( "OuterStruct" ) );
 	SW_EXPECT_TRUE( typeInfoShort != nullptr );
 
 	if ( typeInfoFqn == nullptr )
@@ -773,11 +773,11 @@ SW_TEST_CASE( Reflection_InnerTypes, FindOuterStruct )
 SW_TEST_CASE( Reflection_InnerTypes, FindInnerStruct )
 {
 	const sw::TypeInfo* typeInfoFqn =
-		sw::getTypeRegistry().findType( sw::hashed_string( "sw::InnerNamespaceForTest::OuterStruct::InnerStruct" ) );
+		sw::core::getTypeRegistry().findType( sw::hashed_string( "sw::InnerNamespaceForTest::OuterStruct::InnerStruct" ) );
 	SW_EXPECT_TRUE( typeInfoFqn != nullptr );
 
 	const sw::TypeInfo* typeInfoShort =
-		sw::getTypeRegistry().findType( sw::hashed_string( "InnerStruct" ) );
+		sw::core::getTypeRegistry().findType( sw::hashed_string( "InnerStruct" ) );
 	SW_EXPECT_TRUE( typeInfoShort != nullptr );
 
 	if ( typeInfoFqn == nullptr )
@@ -804,11 +804,11 @@ SW_TEST_CASE( Reflection_InnerTypes, FindInnerStruct )
 SW_TEST_CASE( Reflection_InnerTypes, FindInnerClass )
 {
 	const sw::TypeInfo* typeInfoFqn =
-		sw::getTypeRegistry().findType( sw::hashed_string( "sw::InnerNamespaceForTest::OuterStruct::InnerClass" ) );
+		sw::core::getTypeRegistry().findType( sw::hashed_string( "sw::InnerNamespaceForTest::OuterStruct::InnerClass" ) );
 	SW_EXPECT_TRUE( typeInfoFqn != nullptr );
 
 	const sw::TypeInfo* typeInfoShort =
-		sw::getTypeRegistry().findType( sw::hashed_string( "InnerClass" ) );
+		sw::core::getTypeRegistry().findType( sw::hashed_string( "InnerClass" ) );
 	SW_EXPECT_TRUE( typeInfoShort != nullptr );
 
 	if ( !typeInfoFqn )
@@ -828,11 +828,11 @@ SW_TEST_CASE( Reflection_InnerTypes, FindInnerClass )
 SW_TEST_CASE( Reflection_InnerTypes, FindInnerEnum )
 {
 	const sw::EnumInfo* enumInfoFqn =
-		sw::getTypeRegistry().findEnum( sw::hashed_string( "sw::InnerNamespaceForTest::OuterStruct::InnerEnum" ) );
+		sw::core::getTypeRegistry().findEnum( sw::hashed_string( "sw::InnerNamespaceForTest::OuterStruct::InnerEnum" ) );
 	SW_EXPECT_TRUE( enumInfoFqn != nullptr );
 
 	const sw::EnumInfo* enumInfoShort =
-		sw::getTypeRegistry().findEnum( sw::hashed_string( "InnerEnum" ) );
+		sw::core::getTypeRegistry().findEnum( sw::hashed_string( "InnerEnum" ) );
 	SW_EXPECT_TRUE( enumInfoShort != nullptr );
 
 	if ( !enumInfoFqn )
@@ -848,7 +848,7 @@ SW_TEST_CASE( Reflection_InnerTypes, FindInnerEnum )
 SW_TEST_CASE( Reflection_InnerTypes, InnerStructSerializationRoundtrip )
 {
 	const sw::TypeInfo* typeInfo =
-		sw::getTypeRegistry().findType( sw::hashed_string( "sw::InnerNamespaceForTest::OuterStruct::InnerStruct" ) );
+		sw::core::getTypeRegistry().findType( sw::hashed_string( "sw::InnerNamespaceForTest::OuterStruct::InnerStruct" ) );
 	SW_EXPECT_TRUE( typeInfo != nullptr );
 	if ( !typeInfo )
 		return;
@@ -1073,11 +1073,11 @@ SW_TEST_CASE( Reflection_TypeInfo, DynamicMethodInvoke )
 	info._size				 = sizeof( InvokableTestActor );
 	info._methods.push_back( funcInfo );
 
-	sw::getTypeRegistry().registerClass( info );
+	sw::core::getTypeRegistry().registerClass( info );
 
 	sw::TaskArgs args;
 	args.add( int32{ 50 } );
-	sw::getTypeRegistry().invokeMethod( &actor, sw::hashed_string( "sw::InvokableTestActor" ), sw::hashed_string( "addScore" ), args );
+	sw::core::getTypeRegistry().invokeMethod( &actor, sw::hashed_string( "sw::InvokableTestActor" ), sw::hashed_string( "addScore" ), args );
 
 	SW_EXPECT_EQUAL( 50, actor._score );
 }
@@ -1165,11 +1165,11 @@ SW_TEST_CASE( Reflection_FunctionMacro, AnnotatedMethodInvoke )
 	info._size				 = sizeof( FunctionAnnotatedActor );
 	info._methods.push_back( funcInfo );
 
-	sw::getTypeRegistry().registerClass( info );
+	sw::core::getTypeRegistry().registerClass( info );
 
 	sw::TaskArgs args;
 	args.add( int32{ 35 } );
-	sw::getTypeRegistry().invokeMethod( &actor, sw::hashed_string( "sw::FunctionAnnotatedActor" ), sw::hashed_string( "takeDamage" ), args );
+	sw::core::getTypeRegistry().invokeMethod( &actor, sw::hashed_string( "sw::FunctionAnnotatedActor" ), sw::hashed_string( "takeDamage" ), args );
 
 	SW_EXPECT_EQUAL( 65, actor._health );
 }
@@ -1178,20 +1178,20 @@ SW_TEST_CASE( Reflection_FunctionMacro, CodegenMethodInvoke )
 {
 	// SampleTestActor::takeDamage / getHp are emitted by ReflectionParser codegen.
 	sw::SampleTestActor actor;
-	SW_ASSERT_NOT_NULL( sw::getTypeRegistry().findType( sw::hashed_string( "sw::SampleTestActor" ) ) );
+	SW_ASSERT_NOT_NULL( sw::core::getTypeRegistry().findType( sw::hashed_string( "sw::SampleTestActor" ) ) );
 
-	const sw::TypeInfo* typeInfo = sw::getTypeRegistry().findType( sw::hashed_string( "sw::SampleTestActor" ) );
+	const sw::TypeInfo* typeInfo = sw::core::getTypeRegistry().findType( sw::hashed_string( "sw::SampleTestActor" ) );
 	SW_ASSERT_NOT_NULL( typeInfo );
 	SW_ASSERT_NOT_NULL( typeInfo->findMethod( sw::hashed_string( "takeDamage" ) ) );
 	SW_ASSERT_NOT_NULL( typeInfo->findMethod( sw::hashed_string( "getHp" ) ) );
 
 	sw::TaskArgs damageArgs;
 	damageArgs.add( int32{ 40 } );
-	sw::getTypeRegistry().invokeMethod( &actor, sw::hashed_string( "sw::SampleTestActor" ),
+	sw::core::getTypeRegistry().invokeMethod( &actor, sw::hashed_string( "sw::SampleTestActor" ),
 										sw::hashed_string( "takeDamage" ), damageArgs );
 	SW_EXPECT_EQUAL( 60, actor._hp );
 
-	sw::TaskValue hp = sw::getTypeRegistry().invokeMethod( &actor, sw::hashed_string( "sw::SampleTestActor" ),
+	sw::TaskValue hp = sw::core::getTypeRegistry().invokeMethod( &actor, sw::hashed_string( "sw::SampleTestActor" ),
 														   sw::hashed_string( "getHp" ) );
 	SW_EXPECT_TRUE( hp.hasValue() );
 	SW_EXPECT_EQUAL( 60, hp.getValue<int32>() );

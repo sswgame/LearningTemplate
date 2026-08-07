@@ -150,7 +150,7 @@ namespace sw
 
 	TaskHandle RenderPassResource::loadFromXmlFileAsync( const std::string& assetRelativePath )
 	{
-		return sw::getTaskManager().emplaceTask( "LoadRenderPassAsync", SW_DELEGATE_LAMBDA( TaskDelegate, [this, assetRelativePath]()
+		return sw::core::getTaskManager().emplaceTask( "LoadRenderPassAsync", SW_DELEGATE_LAMBDA( TaskDelegate, [this, assetRelativePath]()
 		{
 			this->loadFromXmlFile( assetRelativePath );
 		} ) );

@@ -45,7 +45,7 @@ namespace sw
 		{
 			if ( argv[index] != nullptr )
 			{
-				builder.append( reinterpret_cast<const char*>( argv[index] ) );
+				builder.append( reinterpret_cast<const utf8*>( argv[index] ) );
 				builder.append( kLineDelim );
 			}
 		}
@@ -70,7 +70,7 @@ namespace sw
 		{
 			if ( argv[index] != nullptr )
 			{
-				rawStr.append( reinterpret_cast<const wchar_t*>( argv[index] ) );
+				rawStr.append( reinterpret_cast<const utf16*>( argv[index] ) );
 				rawStr.append( L"\n" );
 			}
 		}
@@ -114,9 +114,8 @@ namespace sw
 
 			auto iter = _mapArgument.find( cleanKey );
 			if ( iter == _mapArgument.end() )
-			{
 				iter = _mapArgument.find( key );
-			}
+
 			if ( iter == _mapArgument.end() )
 			{
 				SW_LOG_WARNING( "%#에 해당하는 Argument는 없습니다. 무시됩니다", key.c_str() );

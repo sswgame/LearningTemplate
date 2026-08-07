@@ -31,7 +31,7 @@ namespace sw
 		 * @param height 클라이언트 영역 세로 크기
 		 * @return 생성 성공 여부
 		 */
-		virtual bool create( const utf16* title, uint32 width, uint32 height ) = 0;
+		virtual bool create( const utf8* title, uint32 width, uint32 height ) = 0;
 
 		/** @brief 윈도우 리소스를 반환하고 화면에서 제거합니다. */
 		virtual void destroy() = 0;

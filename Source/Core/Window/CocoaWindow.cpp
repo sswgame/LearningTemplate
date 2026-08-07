@@ -139,7 +139,7 @@ namespace sw
 		return !_bShouldClose;
 	}
 #else
-	bool CocoaWindow::create( const utf16*, uint32 width, uint32 height )
+	bool CocoaWindow::create( const utf8*, uint32 width, uint32 height )
 	{
 		_width	= width;
 		_height = height;

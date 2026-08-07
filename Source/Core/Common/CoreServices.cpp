@@ -19,49 +19,52 @@ namespace sw
 		CoreServices s_services{};
 	} // namespace
 
-	void bindCoreServices( const CoreServices& services )
+	namespace core
 	{
-		s_services = services;
-	}
+		void bindCoreServices( const CoreServices& services )
+		{
+			s_services = services;
+		}
 
-	void unbindCoreServices()
-	{
-		s_services = {};
-	}
+		void unbindCoreServices()
+		{
+			s_services = {};
+		}
 
-	CommandLineManager& getCommandLineManager()
-	{
-		SW_LOG_ASSERT( s_services.commandLineManager != nullptr, "CommandLineManager is not bound" );
-		return *s_services.commandLineManager;
-	}
+		CommandLineManager& getCommandLineManager()
+		{
+			SW_LOG_ASSERT( s_services.commandLineManager != nullptr, "CommandLineManager is not bound" );
+			return *s_services.commandLineManager;
+		}
 
-	GlobalVariableManager& getGlobalVariableManager()
-	{
-		SW_LOG_ASSERT( s_services.globalVariableManager != nullptr, "GlobalVariableManager is not bound" );
-		return *s_services.globalVariableManager;
-	}
+		GlobalVariableManager& getGlobalVariableManager()
+		{
+			SW_LOG_ASSERT( s_services.globalVariableManager != nullptr, "GlobalVariableManager is not bound" );
+			return *s_services.globalVariableManager;
+		}
 
-	TaskManager& getTaskManager()
-	{
-		SW_LOG_ASSERT( s_services.taskManager != nullptr, "TaskManager is not bound" );
-		return *s_services.taskManager;
-	}
+		TaskManager& getTaskManager()
+		{
+			SW_LOG_ASSERT( s_services.taskManager != nullptr, "TaskManager is not bound" );
+			return *s_services.taskManager;
+		}
 
-	TypeRegistry& getTypeRegistry()
-	{
-		SW_LOG_ASSERT( s_services.typeRegistry != nullptr, "TypeRegistry is not bound" );
-		return *s_services.typeRegistry;
-	}
+		TypeRegistry& getTypeRegistry()
+		{
+			SW_LOG_ASSERT( s_services.typeRegistry != nullptr, "TypeRegistry is not bound" );
+			return *s_services.typeRegistry;
+		}
 
-	ComponentManager& getComponentManager()
-	{
-		SW_LOG_ASSERT( s_services.componentManager != nullptr, "ComponentManager is not bound" );
-		return *s_services.componentManager;
-	}
+		ComponentManager& getComponentManager()
+		{
+			SW_LOG_ASSERT( s_services.componentManager != nullptr, "ComponentManager is not bound" );
+			return *s_services.componentManager;
+		}
 
-	SceneManager& getSceneManager()
-	{
-		SW_LOG_ASSERT( s_services.sceneManager != nullptr, "SceneManager is not bound" );
-		return *s_services.sceneManager;
-	}
+		SceneManager& getSceneManager()
+		{
+			SW_LOG_ASSERT( s_services.sceneManager != nullptr, "SceneManager is not bound" );
+			return *s_services.sceneManager;
+		}
+	} // namespace Core
 } // namespace sw

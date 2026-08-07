@@ -25,10 +25,10 @@ namespace
 {
 	sw::EditorHandle EditorAPI_Create()
 	{
-		sw::getGlobalVariableManager().registerPendingVariables( "EditorModule", swEditorGvmHead() );
-		sw::getTypeRegistry().registerPendingTypes( "EditorModule", swEditorTypeHead(), swEditorEnumHead() );
-		sw::getComponentManager().registerPendingFactories( "EditorModule", swEditorComponentFactoryHead() );
-		sw::getComponentManager().rebindAllCachedTypeInfo();
+		sw::core::getGlobalVariableManager().registerPendingVariables( "EditorModule", swEditorGvmHead() );
+		sw::core::getTypeRegistry().registerPendingTypes( "EditorModule", swEditorTypeHead(), swEditorEnumHead() );
+		sw::core::getComponentManager().registerPendingFactories( "EditorModule", swEditorComponentFactoryHead() );
+		sw::core::getComponentManager().rebindAllCachedTypeInfo();
 		return static_cast<sw::EditorHandle>( new sw::ImGuiEditor() );
 	}
 
@@ -38,10 +38,10 @@ namespace
 		if ( pEditor != nullptr )
 			delete pEditor;
 
-		sw::getComponentManager().clearAllCachedTypeInfo();
-		sw::getComponentManager().unregisterFactoriesByModule( "EditorModule" );
-		sw::getGlobalVariableManager().unregisterVariablesByModule( "EditorModule" );
-		sw::getTypeRegistry().unregisterTypesByModule( "EditorModule" );
+		sw::core::getComponentManager().clearAllCachedTypeInfo();
+		sw::core::getComponentManager().unregisterFactoriesByModule( "EditorModule" );
+		sw::core::getGlobalVariableManager().unregisterVariablesByModule( "EditorModule" );
+		sw::core::getTypeRegistry().unregisterTypesByModule( "EditorModule" );
 	}
 
 	bool EditorAPI_Initialize( sw::EditorHandle editor, sw::WindowHandle window, sw::RHIDeviceHandle rhiDevice )

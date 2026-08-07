@@ -28,7 +28,7 @@ namespace sw
 
 		void beginPlayActiveScene()
 		{
-			Scene* scene = getSceneManager().getActiveScene();
+			Scene* scene = core::getSceneManager().getActiveScene();
 			if ( scene == nullptr )
 				return;
 
@@ -45,7 +45,7 @@ namespace sw
 
 		void endPlayActiveScene()
 		{
-			Scene* scene = getSceneManager().getActiveScene();
+			Scene* scene = core::getSceneManager().getActiveScene();
 			if ( scene == nullptr )
 				return;
 
@@ -65,7 +65,7 @@ namespace sw
 			s_playSnapshots.clear();
 			s_bHasPlaySnapshot = false;
 
-			Scene* scene = getSceneManager().getActiveScene();
+			Scene* scene = core::getSceneManager().getActiveScene();
 			if ( scene == nullptr || scene->getObjectManager() == nullptr )
 				return;
 
@@ -95,7 +95,7 @@ namespace sw
 			if ( s_bHasPlaySnapshot == false )
 				return;
 
-			Scene* scene = getSceneManager().getActiveScene();
+			Scene* scene = core::getSceneManager().getActiveScene();
 			if ( scene == nullptr || scene->getObjectManager() == nullptr )
 			{
 				s_playSnapshots.clear();

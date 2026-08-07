@@ -22,7 +22,7 @@ namespace sw
 			Component* created = iter->second();
 			if ( created != nullptr )
 			{
-				const TypeInfo* typeInfo = getTypeRegistry().findType( typeName );
+				const TypeInfo* typeInfo = core::getTypeRegistry().findType( typeName );
 				created->setCachedTypeInfo( typeInfo );
 			}
 			return created;
@@ -64,8 +64,8 @@ namespace sw
 				}
 			} );
 
-			sw::getTaskManager().emplaceParallel( totalCount, delegate );
-			sw::getTaskManager().waitAll();
+			core::getTaskManager().emplaceParallel( totalCount, delegate );
+			core::getTaskManager().waitAll();
 		}
 	}
 
@@ -121,7 +121,7 @@ namespace sw
 
 	void ComponentManager::clearAllCachedTypeInfo()
 	{
-		for ( const std::unique_ptr<Scene>& scene : getSceneManager().getLoadedScenes() )
+		for ( const std::unique_ptr<Scene>& scene : core::getSceneManager().getLoadedScenes() )
 		{
 			if ( scene == nullptr )
 				continue;
@@ -133,7 +133,7 @@ namespace sw
 
 	void ComponentManager::rebindAllCachedTypeInfo()
 	{
-		for ( const std::unique_ptr<Scene>& scene : getSceneManager().getLoadedScenes() )
+		for ( const std::unique_ptr<Scene>& scene : core::getSceneManager().getLoadedScenes() )
 		{
 			if ( scene == nullptr )
 				continue;

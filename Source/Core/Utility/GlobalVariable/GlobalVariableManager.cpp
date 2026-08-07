@@ -198,12 +198,7 @@ namespace sw
 
 	void registerCoreGlobalVariables()
 	{
-		getGlobalVariableManager().registerPendingVariables( "Core", GlobalVariableRegistrar::getHead() );
-	}
-
-	bool GlobalVariableManager::initialize()
-	{
-		return true;
+		core::getGlobalVariableManager().registerPendingVariables( "Core", GlobalVariableRegistrar::getHead() );
 	}
 
 	void GlobalVariableManager::registerPendingVariables( const std::string_view moduleName, GlobalVariableRegistrar* pHead )
@@ -213,9 +208,13 @@ namespace sw
 		while ( current != nullptr )
 		{
 			if ( findVariable( current->_name ) == nullptr )
-			{
-				registerVariable( current->_name, current->_type, current->_pData, current->_defaultValue, current->_description, current->_enumType, moduleName );
-			}
+				registerVariable( current->_name,
+								  current->_type,
+								  current->_pData,
+								  current->_defaultValue,
+								  current->_description,
+								  current->_enumType,
+								  moduleName );
 			current = current->_next;
 		}
 	}
@@ -223,16 +222,12 @@ namespace sw
 	void GlobalVariableManager::unregisterVariablesByModule( const std::string_view moduleName )
 	{
 		std::string strModule{ moduleName };
-		for ( auto it = _variables.begin(); it != _variables.end(); )
+		for ( auto it = _mapVariable.begin(); it != _mapVariable.end(); )
 		{
 			if ( it->second._moduleName == strModule )
-			{
-				it = _variables.erase( it );
-			}
+				it = _mapVariable.erase( it );
 			else
-			{
 				++it;
-			}
 		}
 	}
 
@@ -241,7 +236,7 @@ namespace sw
 		if ( pCmdLineManager == nullptr )
 			return;
 
-		for ( const auto& pair : _variables )
+		for ( const auto& pair : _mapVariable )
 		{
 			const GlobalVariableInfo& info = pair.second;
 			if ( std::holds_alternative<int32>( info._defaultValue ) )
@@ -255,12 +250,12 @@ namespace sw
 		}
 	}
 
-	void GlobalVariableManager::updateFromCommandLine( CommandLineManager* pCmdLineManager )
+	void GlobalVariableManager::updateFromCommandLine( const CommandLineManager* pCmdLineManager )
 	{
 		if ( pCmdLineManager == nullptr )
 			return;
 
-		for ( const auto& pair : _variables )
+		for ( const auto& pair : _mapVariable )
 		{
 			const std::string&		  name = pair.first;
 			const GlobalVariableInfo& info = pair.second;
@@ -295,14 +290,11 @@ namespace sw
 	bool GlobalVariableManager::registerVariable( const std::string_view name, GlobalVariableType type, void* pData, const std::variant<bool, int32, float32, std::string>& defaultValue, const std::string_view description, const std::string_view enumType, const std::string_view moduleName )
 	{
 		if ( name.empty() == true || pData == nullptr )
-		{
 			return false;
-		}
 
 		std::string strName{ name };
-		if ( _variables.find( strName ) != _variables.end() )
+		if ( _mapVariable.find( strName ) != _mapVariable.end() )
 		{
-
 			SW_LOG_WARNING( "[GlobalVariableManager] Variable %# is already registered.", strName.c_str() );
 			return false;
 		}
@@ -316,32 +308,28 @@ namespace sw
 		info._enumType	   = std::string{ enumType };
 		info._moduleName   = std::string{ moduleName };
 
-		_variables.emplace( strName, std::move( info ) );
+		_mapVariable.emplace( strName, std::move( info ) );
 		return true;
 	}
 
 	GlobalVariableInfo* GlobalVariableManager::findVariable( const std::string& name )
 	{
-		auto iter = _variables.find( name );
-		if ( iter != _variables.end() )
-		{
+		auto iter = _mapVariable.find( name );
+		if ( iter != _mapVariable.end() )
 			return &iter->second;
-		}
 		return nullptr;
 	}
 
 	const std::unordered_map<std::string, GlobalVariableInfo>& GlobalVariableManager::getAllVariables() const
 	{
-		return _variables;
+		return _mapVariable;
 	}
 
 	bool GlobalVariableManager::setValueFromString( const std::string& name, const std::string& strValue )
 	{
 		GlobalVariableInfo* pInfo = findVariable( name );
 		if ( pInfo != nullptr )
-		{
 			return pInfo->setValueFromString( strValue );
-		}
 		return false;
 	}
 
@@ -358,7 +346,7 @@ namespace sw
 
 	void GlobalVariableManager::resetAllToDefault()
 	{
-		for ( auto& [name, info] : _variables )
+		for ( auto& [name, info] : _mapVariable )
 		{
 			info.resetToDefault();
 		}

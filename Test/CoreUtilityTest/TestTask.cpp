@@ -63,7 +63,7 @@ namespace
 
 SW_TEST_CASE( Utility_Task, GeneralTaskDAG )
 {
-	sw::TaskManager& taskMgr = sw::getTaskManager();
+	sw::TaskManager& taskMgr = sw::core::getTaskManager();
 	taskMgr.initialize();
 
 	s_taskExecOrder = 0;
@@ -93,7 +93,7 @@ SW_TEST_CASE( Utility_Task, GeneralTaskDAG )
 
 SW_TEST_CASE( Utility_Task, ArbitraryArgsTask )
 {
-	sw::TaskManager& taskMgr = sw::getTaskManager();
+	sw::TaskManager& taskMgr = sw::core::getTaskManager();
 	taskMgr.initialize();
 
 	int					 dummyVar = 42;
@@ -134,7 +134,7 @@ SW_TEST_CASE( Utility_Task, ArbitraryArgsTask )
 
 SW_TEST_CASE( Utility_Task, ParallelTask )
 {
-	sw::TaskManager& taskMgr = sw::getTaskManager();
+	sw::TaskManager& taskMgr = sw::core::getTaskManager();
 	taskMgr.initialize();
 
 	constexpr uint32						kElementCount = 100;
@@ -167,7 +167,7 @@ SW_TEST_CASE( Utility_Task, ParallelTask )
 
 SW_TEST_CASE( Utility_Task, StagedTask )
 {
-	sw::TaskManager& taskMgr = sw::getTaskManager();
+	sw::TaskManager& taskMgr = sw::core::getTaskManager();
 	taskMgr.initialize();
 
 	static std::atomic<uint32> s_stageProgress{ 0 };
@@ -204,7 +204,7 @@ SW_TEST_CASE( Utility_Task, StagedTask )
 
 SW_TEST_CASE( Utility_Task, TaskChainingThen )
 {
-	sw::TaskManager& taskMgr = sw::getTaskManager();
+	sw::TaskManager& taskMgr = sw::core::getTaskManager();
 	taskMgr.initialize();
 
 	static std::vector<int32> s_executionOrder;
@@ -237,7 +237,7 @@ SW_TEST_CASE( Utility_Task, TaskChainingThen )
 
 SW_TEST_CASE( Utility_Task, WorkStealingParallelTask )
 {
-	sw::TaskManager& taskMgr = sw::getTaskManager();
+	sw::TaskManager& taskMgr = sw::core::getTaskManager();
 	taskMgr.initialize();
 
 	constexpr uint32	count = 50;
@@ -262,7 +262,7 @@ SW_TEST_CASE( Utility_Task, WorkStealingParallelTask )
 
 SW_TEST_CASE( Utility_Task, TaskCombinatorWhenAll )
 {
-	sw::TaskManager& taskMgr = sw::getTaskManager();
+	sw::TaskManager& taskMgr = sw::core::getTaskManager();
 	taskMgr.initialize();
 
 	std::atomic<int32> completedCount{ 0 };
@@ -298,7 +298,7 @@ SW_TEST_CASE( Utility_Task, TaskCombinatorWhenAll )
 
 SW_TEST_CASE( Utility_Task, TaskCombinatorWhenAny )
 {
-	sw::TaskManager& taskMgr = sw::getTaskManager();
+	sw::TaskManager& taskMgr = sw::core::getTaskManager();
 	taskMgr.initialize();
 
 	bool whenAnyExecuted = false;

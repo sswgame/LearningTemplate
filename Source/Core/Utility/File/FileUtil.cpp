@@ -172,7 +172,7 @@ namespace sw
 
 	bool FileUtil::isDirectoryExist( const std::string_view fileName )
 	{
-		return std::filesystem::exists( fileName );
+		return std::filesystem::exists( fileName ) && std::filesystem::is_directory( fileName );
 	}
 
 	std::string FileUtil::getCurrentPath()

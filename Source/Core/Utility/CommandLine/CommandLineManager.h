@@ -96,10 +96,11 @@ namespace sw
 		 * @param outValue 조회된 값이 저장될 출력 변수
 		 * @return 해당 키가 존재하고 타입 캐스팅이 성공하면 true 반환
 		 */
-		template <typename T>
+
 		/**
 		 * @brief Argument을(를) 반환합니다
 		 */
+		template <typename T>
 		bool getArgument( const std::string_view& key, T& outValue ) const;
 
 		/**
@@ -109,16 +110,17 @@ namespace sw
 		 * @param outValue 조회된 값이 저장될 출력 변수
 		 * @return 해당 키가 존재하고 타입 캐스팅이 성공하면 true 반환
 		 */
-		template <typename T>
-		/**
+		
+		 /**
 		 * @brief Argument을(를) 반환합니다
 		 */
+		 template <typename T>
 		bool getArgument( const CommandLineArgument argument, T& outValue ) const;
 
-		template <typename T>
 		/**
 		 * @brief 인자를 추가합니다
 		 */
+		template <typename T>
 		void addArgument( const std::initializer_list<std::string_view>& synonymList, bool bMustHaveValue, T&& defaultValue, const bool bUseDefaultValue );
 
 	private:
@@ -126,6 +128,7 @@ namespace sw
 		void parseInternal( const std::string& cmdLine );
 
 		void setValue( ArgumentInfo& argument, const std::string& newValue ) const;
+		
 		/**
 		 * @brief 인자 enum을 문자열로 변환합니다
 		 */
@@ -148,6 +151,7 @@ namespace sw
 			SW_LOG_ASSERT( false, "%#가 존재하지 않습니다.", key );
 			return false;
 		}
+		
 		const uint32		argumentIndex = iter->second;
 		const ArgumentInfo& argument	  = _argumentList[argumentIndex];
 

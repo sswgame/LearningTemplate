@@ -5,12 +5,10 @@
  */
 
 #include "Core/Common/Types.h"
-#include "Core/Common/CommonMacros.h"
 #include "Core/Common/CommonHeaders.h"
 
 namespace sw
 {
-
 	class SW_API ResourceUtil
 	{
 	public:
@@ -22,9 +20,6 @@ namespace sw
 		 * @param folderName 검색을 한정할 하위 폴더(비우면 전체 리소스 루트)
 		 */
 		static std::string getResourcePath( const std::string_view filePath, const std::string_view folderName = "" );
-		/** @brief 레거시 no-op (경로 캐시 제거됨). */
-		static void clearCache();
-
 		/** @brief Engine 리소스 폴더 절대 경로 */
 		static const std::string& getEngineFolderPath();
 		/** @brief Common 리소스 폴더 절대 경로 */
@@ -33,10 +28,7 @@ namespace sw
 		static const std::string& getGameFolderPath();
 		/** @brief 리소스 루트(상위) 절대 경로 */
 		static const std::string& getRootFolderPath();
-
-		/**
-		 * @brief 주어진 폴더 이름이 존재하는 모든 리소스 경로들의 절대 경로 목록을 반환합니다.
-		 */
+		/** @brief 주어진 폴더 이름이 존재하는 모든 리소스 경로들의 절대 경로 목록을 반환합니다.*/
 		static std::vector<std::string> getResourceFolders( const std::string_view folderName );
 
 	private:

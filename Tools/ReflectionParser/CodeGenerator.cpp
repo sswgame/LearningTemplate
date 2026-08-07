@@ -246,7 +246,7 @@ namespace sw::tool
 		out.append( "namespace sw\n{\n" );
 		out.appendFormat( "\ttemplate <>\n\tstruct ReflectTypeTraits<%#>\n\t{\n", typeInfo.fullyQualifiedName );
 		out.append( "\t\tstatic const TypeInfo* StaticType()\n\t\t{\n" );
-		out.appendFormat( "\t\t\treturn getTypeRegistry().findType( hashed_string( \"%#\" ) );\n",
+		out.appendFormat( "\t\t\treturn core::getTypeRegistry().findType( hashed_string( \"%#\" ) );\n",
 						  typeInfo.fullyQualifiedName );
 		out.append( "\t\t}\n\t};\n" );
 		out.append( "} // namespace sw\n\n" );
@@ -262,11 +262,11 @@ namespace sw::tool
 			out.append( "\tif ( _cachedTypeInfo != nullptr )\n" );
 			out.append( "\t\treturn _cachedTypeInfo;\n" );
 		}
-		out.appendFormat( "\treturn sw::getTypeRegistry().findType( sw::hashed_string( \"%#\" ) );\n",
+		out.appendFormat( "\treturn sw::core::getTypeRegistry().findType( sw::hashed_string( \"%#\" ) );\n",
 						  typeInfo.fullyQualifiedName );
 		out.append( "}\n\n" );
 		out.appendFormat( "const sw::TypeInfo* %#::StaticType()\n{\n", typeInfo.fullyQualifiedName );
-		out.appendFormat( "\treturn sw::getTypeRegistry().findType( sw::hashed_string( \"%#\" ) );\n",
+		out.appendFormat( "\treturn sw::core::getTypeRegistry().findType( sw::hashed_string( \"%#\" ) );\n",
 						  typeInfo.fullyQualifiedName );
 		out.append( "}\n\n" );
 	}

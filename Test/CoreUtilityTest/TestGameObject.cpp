@@ -75,10 +75,10 @@ SW_TEST_CASE( GameObjectTest, MultiSameComponentAttachment )
 
 SW_TEST_CASE( GameObjectTest, EditorDynamicComponentAttachment )
 {
-	sw::getComponentManager().registerComponentType<sw::MockMeshComponent>( sw::hashed_string( "MockMeshComponent" ) );
-	sw::getComponentManager().registerComponentType<sw::MockAudioComponent>( sw::hashed_string( "MockAudioComponent" ) );
+	sw::core::getComponentManager().registerComponentType<sw::MockMeshComponent>( sw::hashed_string( "MockMeshComponent" ) );
+	sw::core::getComponentManager().registerComponentType<sw::MockAudioComponent>( sw::hashed_string( "MockAudioComponent" ) );
 
-	const std::vector<sw::hashed_string>& types = sw::getComponentManager().getRegisteredComponentTypes();
+	const std::vector<sw::hashed_string>& types = sw::core::getComponentManager().getRegisteredComponentTypes();
 	SW_EXPECT_EQUAL( 2u, static_cast<uint32>( types.size() ) );
 
 	sw::GameObject			actor( sw::hashed_string( "EditorActor" ) );
@@ -92,12 +92,12 @@ SW_TEST_CASE( GameObjectTest, EditorDynamicComponentAttachment )
 	SW_EXPECT_EQUAL( &actor, comp1->getOwner() );
 	SW_EXPECT_EQUAL( &actor, comp2->getOwner() );
 
-	sw::getComponentManager().shutdown();
+	sw::core::getComponentManager().shutdown();
 }
 
 SW_TEST_CASE( GameObjectTest, ParallelComponentTicking )
 {
-	sw::getComponentManager().registerComponentType<sw::MockMeshComponent>( sw::hashed_string( "MockMeshComponent" ) );
+	sw::core::getComponentManager().registerComponentType<sw::MockMeshComponent>( sw::hashed_string( "MockMeshComponent" ) );
 
 	sw::GameObject				actor;
 	std::vector<sw::Component*> activeComps;
@@ -110,7 +110,7 @@ SW_TEST_CASE( GameObjectTest, ParallelComponentTicking )
 
 	SW_EXPECT_EQUAL( 100u, actor.getComponentCount() );
 
-	sw::getComponentManager().tickAllComponentsParallel( activeComps, 0.016f );
+	sw::core::getComponentManager().tickAllComponentsParallel( activeComps, 0.016f );
 
 	for ( sw::Component* comp : activeComps )
 	{
@@ -118,7 +118,7 @@ SW_TEST_CASE( GameObjectTest, ParallelComponentTicking )
 		SW_EXPECT_EQUAL( 1, meshComp->_tickCount );
 	}
 
-	sw::getComponentManager().shutdown();
+	sw::core::getComponentManager().shutdown();
 }
 
 SW_TEST_CASE( GameObjectTest, ReflectionSupport )
@@ -406,9 +406,9 @@ SW_TEST_CASE( ObjectStateXmlSerializerTest, SaveAndLoadXmlString )
 
 SW_TEST_CASE( ObjectStateXmlSerializerTest, ParentChildHierarchyRoundtrip )
 {
-	Scene* scene = getSceneManager().getActiveScene();
+	Scene* scene = core::getSceneManager().getActiveScene();
 	if ( scene == nullptr )
-		scene = getSceneManager().createScene( "GOHierarchySerializer" );
+		scene = core::getSceneManager().createScene( "GOHierarchySerializer" );
 	SW_ASSERT_NOT_NULL( scene );
 	SW_ASSERT_NOT_NULL( scene->getObjectManager() );
 

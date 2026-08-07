@@ -20,7 +20,7 @@ SW_EXTERN_GLOBAL_VARIABLE_STRING( gv_TestString );
 
 SW_TEST_CASE( Utility_GlobalVariable, Registration )
 {
-	sw::GlobalVariableInfo* pBoolInfo = sw::getGlobalVariableManager().findVariable( "gv_TestBool" );
+	sw::GlobalVariableInfo* pBoolInfo = sw::core::getGlobalVariableManager().findVariable( "gv_TestBool" );
 	SW_EXPECT_TRUE( pBoolInfo != nullptr );
 	if ( pBoolInfo != nullptr )
 	{
@@ -29,7 +29,7 @@ SW_TEST_CASE( Utility_GlobalVariable, Registration )
 		SW_EXPECT_EQUAL( std::string( "Unit Test Bool Global Variable" ), pBoolInfo->_description );
 	}
 
-	sw::GlobalVariableInfo* pIntInfo = sw::getGlobalVariableManager().findVariable( "gv_TestInt" );
+	sw::GlobalVariableInfo* pIntInfo = sw::core::getGlobalVariableManager().findVariable( "gv_TestInt" );
 	SW_EXPECT_TRUE( pIntInfo != nullptr );
 	if ( pIntInfo != nullptr )
 	{
@@ -37,37 +37,37 @@ SW_TEST_CASE( Utility_GlobalVariable, Registration )
 		SW_EXPECT_EQUAL( 60, pIntInfo->getValueAsInt() );
 	}
 
-	sw::GlobalVariableInfo* pFloatInfo = sw::getGlobalVariableManager().findVariable( "gv_TestFloat" );
+	sw::GlobalVariableInfo* pFloatInfo = sw::core::getGlobalVariableManager().findVariable( "gv_TestFloat" );
 	SW_EXPECT_TRUE( pFloatInfo != nullptr );
 	if ( pFloatInfo != nullptr )
 	{
 		SW_EXPECT_NEAR_EQUAL( 45.0f, pFloatInfo->getValueAsFloat(), 1e-4f );
 	}
 
-	sw::GlobalVariableInfo* pStrInfo = sw::getGlobalVariableManager().findVariable( "gv_TestString" );
+	sw::GlobalVariableInfo* pStrInfo = sw::core::getGlobalVariableManager().findVariable( "gv_TestString" );
 	SW_EXPECT_TRUE( pStrInfo != nullptr );
 	if ( pStrInfo != nullptr )
 	{
 		SW_EXPECT_EQUAL( std::string( "InitialValue" ), pStrInfo->getValueAsString() );
 	}
 
-	const auto& allVars = sw::getGlobalVariableManager().getAllVariables();
+	const auto& allVars = sw::core::getGlobalVariableManager().getAllVariables();
 	SW_EXPECT_TRUE( allVars.size() >= 4u );
 }
 
 SW_TEST_CASE( Utility_GlobalVariable, ModificationAndReset )
 {
 
-	SW_EXPECT_TRUE( sw::getGlobalVariableManager().setValueFromString( "gv_TestInt", "144" ) );
+	SW_EXPECT_TRUE( sw::core::getGlobalVariableManager().setValueFromString( "gv_TestInt", "144" ) );
 	SW_EXPECT_EQUAL( 144, gv_TestInt );
 
-	SW_EXPECT_TRUE( sw::getGlobalVariableManager().setValueFromString( "gv_TestBool", "false" ) );
+	SW_EXPECT_TRUE( sw::core::getGlobalVariableManager().setValueFromString( "gv_TestBool", "false" ) );
 	SW_EXPECT_FALSE( gv_TestBool );
 
-	SW_EXPECT_TRUE( sw::getGlobalVariableManager().resetToDefault( "gv_TestInt" ) );
+	SW_EXPECT_TRUE( sw::core::getGlobalVariableManager().resetToDefault( "gv_TestInt" ) );
 	SW_EXPECT_EQUAL( 60, gv_TestInt );
 
-	SW_EXPECT_TRUE( sw::getGlobalVariableManager().resetToDefault( "gv_TestBool" ) );
+	SW_EXPECT_TRUE( sw::core::getGlobalVariableManager().resetToDefault( "gv_TestBool" ) );
 	SW_EXPECT_TRUE( gv_TestBool );
 }
 
@@ -76,8 +76,8 @@ SW_TEST_CASE( Utility_GlobalVariable, CommandLineIntegration )
 	// Avoid GlobalVariableManager::updateFromCommandLine on a partial CommandLineManager:
 	// getArgument asserts when a GV name is missing from the CLI map (historical flake/abort).
 	// Parse only the vars under test, then apply via setValueFromString.
-	sw::getGlobalVariableManager().resetToDefault( "gv_TestInt" );
-	sw::getGlobalVariableManager().resetToDefault( "gv_TestString" );
+	sw::core::getGlobalVariableManager().resetToDefault( "gv_TestInt" );
+	sw::core::getGlobalVariableManager().resetToDefault( "gv_TestString" );
 
 	sw::CommandLineManager cmd;
 	cmd.initialize();
@@ -98,11 +98,11 @@ SW_TEST_CASE( Utility_GlobalVariable, CommandLineIntegration )
 	SW_EXPECT_TRUE( cmd.getArgument( "gv_TestString", parsedStr ) );
 	SW_EXPECT_EQUAL( std::string( "FromCLI" ), parsedStr );
 
-	SW_EXPECT_TRUE( sw::getGlobalVariableManager().setValueFromString( "gv_TestInt", std::to_string( parsedInt ) ) );
-	SW_EXPECT_TRUE( sw::getGlobalVariableManager().setValueFromString( "gv_TestString", parsedStr ) );
+	SW_EXPECT_TRUE( sw::core::getGlobalVariableManager().setValueFromString( "gv_TestInt", std::to_string( parsedInt ) ) );
+	SW_EXPECT_TRUE( sw::core::getGlobalVariableManager().setValueFromString( "gv_TestString", parsedStr ) );
 	SW_EXPECT_EQUAL( 777, gv_TestInt );
 	SW_EXPECT_EQUAL( std::string( "FromCLI" ), gv_TestString );
 
-	sw::getGlobalVariableManager().resetToDefault( "gv_TestInt" );
-	sw::getGlobalVariableManager().resetToDefault( "gv_TestString" );
+	sw::core::getGlobalVariableManager().resetToDefault( "gv_TestInt" );
+	sw::core::getGlobalVariableManager().resetToDefault( "gv_TestString" );
 }

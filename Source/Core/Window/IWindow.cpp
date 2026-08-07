@@ -46,6 +46,8 @@ namespace sw
 		const uint32 height = _height;
 		destroy();
 		_bShouldClose = false;
-		return create( _title.c_str(), width, height );
+
+		const std::string& title = StringUtil::utf16ToUtf8( _title.c_str() );
+		return create( title.c_str(), width, height );
 	}
 } // namespace sw

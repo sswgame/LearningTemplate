@@ -86,7 +86,7 @@ namespace sw
 
 	const TypeInfo* GameObject::getTypeInfo() const
 	{
-		return sw::getTypeRegistry().findType( hashed_string( "sw::GameObject" ) );
+		return sw::core::getTypeRegistry().findType( hashed_string( "sw::GameObject" ) );
 	}
 
 	void GameObject::beginPlay()
@@ -134,7 +134,7 @@ namespace sw
 
 	void GameObject::destroyDeferred()
 	{
-		if ( auto scene = sw::getSceneManager().getActiveScene() )
+		if ( auto scene = sw::core::getSceneManager().getActiveScene() )
 		{
 			if ( auto objManager = scene->getObjectManager() )
 			{
@@ -243,7 +243,7 @@ namespace sw
 
 	Component* GameObject::addComponentByName( hashed_string componentTypeName )
 	{
-		Component* newComp = sw::getComponentManager().createComponentByName( componentTypeName );
+		Component* newComp = sw::core::getComponentManager().createComponentByName( componentTypeName );
 		if ( newComp != nullptr )
 		{
 			newComp->setOwner( this );

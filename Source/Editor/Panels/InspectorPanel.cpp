@@ -93,7 +93,7 @@ namespace sw
 			return;
 		}
 
-		Scene* scene = getSceneManager().getActiveScene();
+		Scene* scene = core::getSceneManager().getActiveScene();
 		if ( scene == nullptr || scene->getObjectManager() == nullptr )
 		{
 			ImGui::TextDisabled( "No active scene." );
@@ -496,7 +496,7 @@ namespace sw
 						args.add( std::string( _argString[i] ) );
 				}
 
-				const TaskValue result = getTypeRegistry().invokeMethod(
+				const TaskValue result = core::getTypeRegistry().invokeMethod(
 					instance, typeInfo->_fullyQualifiedName, method._hashName, args );
 				formatTaskValue( result, _lastInvokeResult, sizeof( _lastInvokeResult ) );
 			}
