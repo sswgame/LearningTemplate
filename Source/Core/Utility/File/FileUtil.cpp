@@ -282,123 +282,211 @@ namespace sw
 	void FileUtil::openFileDialog( const FileDialogParams& params, FileDialogDelegate onSuccess )
 	{
 #if defined( SW_PLATFORM_WINDOWS )
-		std::thread( [delegateCallback = std::move( onSuccess ), params]
-		{
-			fixed_wstring<constant::kMaxBuffer8192> szFile;
-
-			OPENFILENAMEW ofn{};
-			ofn.lStructSize		= sizeof( ofn );
-			ofn.hwndOwner		= nullptr;
-			ofn.lpstrFile		= szFile.data();
-			ofn.nMaxFile		= szFile.capacity();
-			ofn.lpstrFileTitle	= nullptr;
-			ofn.nMaxFileTitle	= 0;
-			ofn.lpstrInitialDir = nullptr;
-			ofn.nFilterIndex	= 1;
-
-			fixed_string<constant::kMaxBuffer4096> filter;
-			filter.append( params._description.c_str() );
-			filter.push_back( 0 );
-
-			for ( const std::string& filterExtension : params._filterExtensionList )
+		std::thread(
+			[delegateCallback = std::move( onSuccess ), params]
 			{
-				filter.push_back( '*' );
-				if ( filterExtension[0] != '.' )
-					filter.push_back( '.' );
-				filter.append( filterExtension.c_str() );
-				filter.push_back( ';' );
-			}
-			filter.push_back( 0 );
-			filter.push_back( 0 );
+				fixed_wstring<constant::kMaxBuffer8192> szFile;
 
-			const std::wstring filterW = StringUtil::utf8ToUtf16( filter.c_str() );
-			ofn.lpstrFilter			   = filterW.data();
+				OPENFILENAMEW ofn{};
+				ofn.lStructSize = sizeof( ofn );
+				ofn.hwndOwner	= nullptr;
+				ofn.lpstrFile	= szFile.data();
+				ofn.nMaxFile	= static_cast<DWORD>( szFile.capacity() );
+				ofn.nFilterIndex = 1;
 
-			BOOL result = FALSE;
-			switch ( params._type )
-			{
-				case FileDialogParams::Type::Open:
-					ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_EXPLORER | OFN_NOCHANGEDIR;
-					if ( params._bEnableMultiselect )
-						ofn.Flags |= OFN_ALLOWMULTISELECT;
-					result = GetOpenFileNameW( &ofn );
-					break;
-				case FileDialogParams::Type::Save:
-					ofn.Flags = OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT | OFN_EXPLORER | OFN_NOCHANGEDIR;
-					result	  = GetSaveFileNameW( &ofn );
-					break;
-			}
-
-			if ( result )
-			{
-				if ( params._bEnableMultiselect )
+				std::wstring titleW;
+				if ( params._title.empty() == false )
 				{
-					const uint32	  directoryEndPos = szFile.find( L'\0' );
-					const std::string directoryPath	  = StringUtil::utf16ToUtf8( szFile.substr( 0, directoryEndPos ).c_str() );
-					szFile							  = szFile.substr( directoryEndPos + 1 ).c_str();
+					titleW		   = StringUtil::utf8ToUtf16( params._title );
+					ofn.lpstrTitle = titleW.c_str();
+				}
 
-					std::vector<std::string> filePathList{};
-					while ( StringUtil::isNullOrEmpty( szFile.c_str() ) == false )
-					{
-						std::string fileName = StringUtil::utf16ToUtf8( szFile.c_str() );
-						std::string filePath = directoryPath + "/" + fileName;
-						filePath			 = normalizePath( filePath );
-						filePathList.push_back( filePath );
-						const uint32 pos = szFile.find( L'\0' );
-						szFile			 = szFile.substr( pos );
-					}
-					delegateCallback( filePathList );
+				std::wstring initialDirW;
+				if ( params._initialDirectory.empty() == false )
+				{
+					initialDirW			= StringUtil::utf8ToUtf16( normalizePath( params._initialDirectory ) );
+					ofn.lpstrInitialDir = initialDirW.c_str();
+				}
+
+				fixed_string<constant::kMaxBuffer4096> filter;
+				const char*							   desc = params._description.empty() ? "All Files" : params._description.c_str();
+				filter.append( desc );
+				filter.push_back( 0 );
+
+				if ( params._filterExtensionList.empty() )
+				{
+					filter.append( "*.*" );
+					filter.push_back( 0 );
 				}
 				else
 				{
-					std::string filePath = StringUtil::utf16ToUtf8( szFile.c_str() );
-					filePath			 = normalizePath( filePath );
-					delegateCallback( std::vector{ filePath } );
+					for ( size_t i = 0; i < params._filterExtensionList.size(); ++i )
+					{
+						const std::string& filterExtension = params._filterExtensionList[i];
+						if ( i > 0 )
+							filter.push_back( ';' );
+						filter.push_back( '*' );
+						if ( filterExtension.empty() == false && filterExtension[0] != '.' )
+							filter.push_back( '.' );
+						filter.append( filterExtension.c_str() );
+					}
+					filter.push_back( 0 );
 				}
-			}
-		} ).detach();
-#elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
-		std::thread( [delegateCallback = std::move( onSuccess ), params]
-		{
-			std::vector<std::string> results;
-	#if defined( SW_PLATFORM_MACOS )
-			std::string cmd = "osascript -e 'choose file ";
-			if ( params._type == FileDialogParams::Type::Save )
+				filter.push_back( 0 );
+
+				const std::wstring filterW = StringUtil::utf8ToUtf16( filter.c_str() );
+				ofn.lpstrFilter			   = filterW.c_str();
+
+				BOOL result = FALSE;
+				switch ( params._type )
+				{
+					case FileDialogParams::Type::Open:
+						ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_EXPLORER | OFN_NOCHANGEDIR;
+						if ( params._bEnableMultiselect )
+							ofn.Flags |= OFN_ALLOWMULTISELECT;
+						result = GetOpenFileNameW( &ofn );
+						break;
+					case FileDialogParams::Type::Save:
+						ofn.Flags = OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT | OFN_EXPLORER | OFN_NOCHANGEDIR;
+						result	  = GetSaveFileNameW( &ofn );
+						break;
+				}
+
+				if ( result == FALSE || delegateCallback.isBound() == false )
+					return;
+
+				std::vector<std::string> filePathList;
+				const wchar_t*			 p = szFile.data();
+				if ( p == nullptr || *p == L'\0' )
+					return;
+
+				// Multi-select: "dir\0file1\0file2\0\0" / Single: "full\path\file\0"
+				const std::wstring first( p );
+				p += first.size() + 1;
+				if ( *p == L'\0' )
+				{
+					filePathList.push_back( normalizePath( StringUtil::utf16ToUtf8( first ) ) );
+				}
+				else
+				{
+					const std::string directoryPath = normalizePath( StringUtil::utf16ToUtf8( first ) );
+					while ( *p != L'\0' )
+					{
+						const std::wstring fileNameW( p );
+						filePathList.push_back( normalizePath( directoryPath + "/" + StringUtil::utf16ToUtf8( fileNameW ) ) );
+						p += fileNameW.size() + 1;
+					}
+				}
+
+				if ( filePathList.empty() == false )
+					delegateCallback( filePathList );
+			} )
+			.detach();
+#elif defined( SW_PLATFORM_LINUX )
+		std::thread(
+			[delegateCallback = std::move( onSuccess ), params]
 			{
-				cmd = "osascript -e 'choose file name ";
-			}
-			if ( !params._description.empty() )
+				if ( delegateCallback.isBound() == false )
+					return;
+
+				std::string cmd = "zenity --file-selection";
+				if ( params._type == FileDialogParams::Type::Save )
+					cmd += " --save --confirm-overwrite";
+				if ( params._title.empty() == false )
+					cmd += " --title=\"" + params._title + "\"";
+				else if ( params._description.empty() == false )
+					cmd += " --title=\"" + params._description + "\"";
+				if ( params._bEnableMultiselect && params._type == FileDialogParams::Type::Open )
+					cmd += " --multiple --separator='|'";
+				if ( params._initialDirectory.empty() == false )
+					cmd += " --filename=\"" + normalizePath( params._initialDirectory ) + "/\"";
+				for ( const std::string& ext : params._filterExtensionList )
+				{
+					std::string pattern = "*";
+					if ( ext.empty() == false && ext[0] != '.' )
+						pattern += ".";
+					pattern += ext;
+					cmd += " --file-filter=\"";
+					cmd += params._description.empty() ? pattern : ( params._description + " | " + pattern );
+					cmd += "\"";
+				}
+
+				FILE* pipe = popen( cmd.c_str(), "r" );
+				if ( pipe == nullptr )
+					return;
+
+				char		buf[4096];
+				std::string output;
+				while ( fgets( buf, sizeof( buf ), pipe ) != nullptr )
+					output += buf;
+				pclose( pipe );
+
+				while ( output.empty() == false && ( output.back() == '\n' || output.back() == '\r' ) )
+					output.pop_back();
+				if ( output.empty() )
+					return;
+
+				std::vector<std::string> results;
+				if ( params._bEnableMultiselect )
+				{
+					size_t start = 0;
+					while ( start < output.size() )
+					{
+						const size_t sep = output.find( '|', start );
+						const size_t end = ( sep == std::string::npos ) ? output.size() : sep;
+						results.push_back( normalizePath( output.substr( start, end - start ) ) );
+						if ( sep == std::string::npos )
+							break;
+						start = sep + 1;
+					}
+				}
+				else
+				{
+					results.push_back( normalizePath( output ) );
+				}
+
+				if ( results.empty() == false )
+					delegateCallback( results );
+			} )
+			.detach();
+#elif defined( SW_PLATFORM_MACOS )
+		std::thread(
+			[delegateCallback = std::move( onSuccess ), params]
 			{
-				cmd += "with prompt \"" + params._description + "\" ";
-			}
-			if ( params._bEnableMultiselect && params._type == FileDialogParams::Type::Open )
-			{
-				cmd += "with multiple selections allowed ";
-			}
-			cmd += "'";
-			FILE* pipe = popen( cmd.c_str(), "r" );
-			if ( pipe != nullptr )
-			{
+				if ( delegateCallback.isBound() == false )
+					return;
+
+				std::string cmd = "osascript -e 'choose file ";
+				if ( params._type == FileDialogParams::Type::Save )
+					cmd = "osascript -e 'choose file name ";
+				if ( params._description.empty() == false )
+					cmd += "with prompt \"" + params._description + "\" ";
+				if ( params._bEnableMultiselect && params._type == FileDialogParams::Type::Open )
+					cmd += "with multiple selections allowed ";
+				cmd += "'";
+
+				FILE* pipe = popen( cmd.c_str(), "r" );
+				if ( pipe == nullptr )
+					return;
+
 				char		buf[1024];
 				std::string output;
 				while ( fgets( buf, sizeof( buf ), pipe ) != nullptr )
-				{
 					output += buf;
-				}
 				pclose( pipe );
-				if ( !output.empty() )
-				{
-					if ( output.back() == '\n' || output.back() == '\r' )
-						output.pop_back();
-					results.push_back( normalizePath( output ) );
-				}
-			}
-	#endif
-			if ( delegateCallback.isBound() && !results.empty() )
-			{
-				delegateCallback( results );
-			}
-		} ).detach();
+
+				while ( output.empty() == false && ( output.back() == '\n' || output.back() == '\r' ) )
+					output.pop_back();
+				if ( output.empty() )
+					return;
+
+				delegateCallback( std::vector<std::string>{ normalizePath( output ) } );
+			} )
+			.detach();
+#else
+		(void)params;
+		(void)onSuccess;
+		SW_LOG_WARNING( "[FileUtil] openFileDialog is not supported on this platform." );
 #endif
 	}
 

@@ -7,6 +7,7 @@
 #include "Core/Utility/Log/Logger.h"
 #include "Core/Utility/Resource/ResourceUtil.h"
 #include <imgui.h>
+#include <mutex>
 
 namespace sw
 {
@@ -208,6 +209,89 @@ namespace sw
 		SW_LOG_INFO( "[Content Browser] Open: %#", entry.relativePath.c_str() );
 	}
 
+	void ResourceBrowserPanel::importFilesFromDialog()
+	{
+		if ( _selectedFolderAbs.empty() )
+		{
+			SW_LOG_WARNING( "[Content Browser] Select a destination folder before importing." );
+			return;
+		}
+
+		FileDialogParams params{};
+		params._type				 = FileDialogParams::Type::Open;
+		params._title				 = "Import to Content Browser";
+		params._description			 = "Assets";
+		params._bEnableMultiselect	 = true;
+		params._initialDirectory	 = _selectedFolderAbs;
+		params._filterExtensionList	 = {
+			 ".material",
+			 ".hlsl",
+			 ".glsl",
+			 ".png",
+			 ".jpg",
+			 ".jpeg",
+			 ".tga",
+			 ".dds",
+			 ".json",
+			 ".txt",
+		 };
+
+		FileUtil::openFileDialog( params, SW_DELEGATE_LAMBDA( FileDialogDelegate, [this]( const std::vector<std::string>& paths )
+		{
+			std::scoped_lock<std::mutex> lock( _pendingImportMutex );
+			_pendingImportPaths.insert( _pendingImportPaths.end(), paths.begin(), paths.end() );
+		} ) );
+	}
+
+	void ResourceBrowserPanel::processPendingImports()
+	{
+		std::vector<std::string> paths;
+		{
+			std::scoped_lock<std::mutex> lock( _pendingImportMutex );
+			if ( _pendingImportPaths.empty() )
+				return;
+			paths.swap( _pendingImportPaths );
+		}
+
+		if ( _selectedFolderAbs.empty() )
+		{
+			SW_LOG_WARNING( "[Content Browser] Import cancelled — no destination folder." );
+			return;
+		}
+
+		uint32 copied = 0;
+		for ( const std::string& sourcePath : paths )
+		{
+			if ( FileUtil::isFileExist( sourcePath ) == false )
+			{
+				SW_LOG_WARNING( "[Content Browser] Import skipped (missing): %#", sourcePath.c_str() );
+				continue;
+			}
+
+			const std::string fileName = FileUtil::getFileNamePart( sourcePath );
+			const std::string destPath = FileUtil::normalizePath( ( std::filesystem::path( _selectedFolderAbs ) / fileName ).generic_string() );
+
+			if ( FileUtil::normalizePath( sourcePath ) == destPath )
+			{
+				SW_LOG_INFO( "[Content Browser] Already in folder: %#", fileName.c_str() );
+				continue;
+			}
+
+			if ( FileUtil::copyFile( sourcePath, destPath ) )
+			{
+				++copied;
+				SW_LOG_INFO( "[Content Browser] Imported: %# -> %#", sourcePath.c_str(), destPath.c_str() );
+			}
+			else
+			{
+				SW_LOG_ERROR( "[Content Browser] Failed to import: %#", sourcePath.c_str() );
+			}
+		}
+
+		if ( copied > 0 )
+			_bFolderDirty = true;
+	}
+
 	void ResourceBrowserPanel::drawToolbar()
 	{
 		ImGui::SetNextItemWidth( 220.0f );
@@ -236,6 +320,19 @@ namespace sw
 			ImGui::SetNextItemWidth( 120.0f );
 			ImGui::SliderFloat( "##cb_tile", &_tileSize, 64.0f, 160.0f, "%.0f" );
 		}
+
+		ImGui::SameLine();
+		const bool canImport = _selectedFolderAbs.empty() == false;
+		if ( canImport == false )
+			ImGui::BeginDisabled();
+		const bool importClicked = ImGui::Button( "Import..." );
+		const bool importHovered = ImGui::IsItemHovered( ImGuiHoveredFlags_AllowWhenDisabled );
+		if ( canImport == false )
+			ImGui::EndDisabled();
+		if ( importClicked )
+			importFilesFromDialog();
+		if ( importHovered && canImport == false )
+			ImGui::SetTooltip( "Select a destination folder first." );
 
 		ImGui::SameLine();
 		if ( ImGui::Button( "Refresh" ) )
@@ -424,62 +521,79 @@ namespace sw
 	void ResourceBrowserPanel::drawTilesView( const std::vector<AssetEntry>& visible )
 	{
 		const float cell	   = _tileSize;
-		const float padding	   = ImGui::GetStyle().ItemSpacing.x;
+		const float paddingX   = ImGui::GetStyle().ItemSpacing.x;
+		const float paddingY   = ImGui::GetStyle().ItemSpacing.y;
 		const float panelWidth = ImGui::GetContentRegionAvail().x;
-		int			columns	   = static_cast<int>( ( panelWidth + padding ) / ( cell + padding ) );
+		int			columns	   = static_cast<int>( ( panelWidth + paddingX ) / ( cell + paddingX ) );
 		if ( columns < 1 )
 			columns = 1;
 
-		int index = 0;
-		for ( const AssetEntry& entry : visible )
+		const int itemCount = static_cast<int>( visible.size() );
+		const int rowCount	= ( itemCount + columns - 1 ) / columns;
+		// Button + wrapped name line ≈ cell + text line
+		const float rowHeight = cell + ImGui::GetTextLineHeightWithSpacing() + paddingY;
+
+		ImGuiListClipper clipper;
+		clipper.Begin( rowCount, rowHeight );
+		while ( clipper.Step() )
 		{
-			ImGui::PushID( entry.absolutePath.c_str() );
+			for ( int row = clipper.DisplayStart; row < clipper.DisplayEnd; ++row )
+			{
+				for ( int col = 0; col < columns; ++col )
+				{
+					const int index = row * columns + col;
+					if ( index >= itemCount )
+						break;
 
-			if ( index > 0 && ( index % columns ) != 0 )
-				ImGui::SameLine();
+					const AssetEntry& entry = visible[static_cast<size_t>( index )];
+					ImGui::PushID( entry.absolutePath.c_str() );
 
-			const bool selected = ( entry.absolutePath == _selectedAssetAbs ) || ( entry.bIsDirectory && entry.absolutePath == _selectedFolderAbs );
-			ImGui::PushStyleColor( ImGuiCol_Button, selected ? ImVec4( 0.25f, 0.40f, 0.65f, 1.0f ) : ImVec4( 0.14f, 0.14f, 0.16f, 1.0f ) );
-			ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImVec4( 0.22f, 0.28f, 0.38f, 1.0f ) );
+					if ( col > 0 )
+						ImGui::SameLine();
 
-			ImGui::BeginGroup();
-			const ImVec2 cursor = ImGui::GetCursorScreenPos();
-			if ( ImGui::Button( "##tile", ImVec2( cell, cell ) ) )
-				selectAsset( entry );
-			if ( ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked( ImGuiMouseButton_Left ) )
-				openAsset( entry );
+					const bool selected = ( entry.absolutePath == _selectedAssetAbs ) || ( entry.bIsDirectory && entry.absolutePath == _selectedFolderAbs );
+					ImGui::PushStyleColor( ImGuiCol_Button, selected ? ImVec4( 0.25f, 0.40f, 0.65f, 1.0f ) : ImVec4( 0.14f, 0.14f, 0.16f, 1.0f ) );
+					ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImVec4( 0.22f, 0.28f, 0.38f, 1.0f ) );
 
-			ImDrawList*	 drawList = ImGui::GetWindowDrawList();
-			const ImVec4 tint	  = colorForExtension( entry.bIsDirectory ? std::string{} : entry.extension );
-			const float	 inset	  = 8.0f;
-			drawList->AddRectFilled(
-				ImVec2( cursor.x + inset, cursor.y + inset ),
-				ImVec2( cursor.x + cell - inset, cursor.y + cell * 0.62f ),
-				ImGui::ColorConvertFloat4ToU32( tint ),
-				4.0f );
+					ImGui::BeginGroup();
+					const ImVec2 cursor = ImGui::GetCursorScreenPos();
+					if ( ImGui::Button( "##tile", ImVec2( cell, cell ) ) )
+						selectAsset( entry );
+					if ( ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked( ImGuiMouseButton_Left ) )
+						openAsset( entry );
 
-			const char*	 label	  = typeLabel( entry.extension, entry.bIsDirectory );
-			const ImVec2 textSize = ImGui::CalcTextSize( label );
-			drawList->AddText(
-				ImVec2( cursor.x + ( cell - textSize.x ) * 0.5f, cursor.y + cell * 0.30f ),
-				IM_COL32( 255, 255, 255, 230 ),
-				label );
+					ImDrawList*	 drawList = ImGui::GetWindowDrawList();
+					const ImVec4 tint	  = colorForExtension( entry.bIsDirectory ? std::string{} : entry.extension );
+					const float	 inset	  = 8.0f;
+					drawList->AddRectFilled(
+						ImVec2( cursor.x + inset, cursor.y + inset ),
+						ImVec2( cursor.x + cell - inset, cursor.y + cell * 0.62f ),
+						ImGui::ColorConvertFloat4ToU32( tint ),
+						4.0f );
 
-			ImGui::PushTextWrapPos( ImGui::GetCursorPos().x + cell );
-			ImGui::TextUnformatted( entry.name.c_str() );
-			ImGui::PopTextWrapPos();
-			ImGui::EndGroup();
+					const char*	 label	  = typeLabel( entry.extension, entry.bIsDirectory );
+					const ImVec2 textSize = ImGui::CalcTextSize( label );
+					drawList->AddText(
+						ImVec2( cursor.x + ( cell - textSize.x ) * 0.5f, cursor.y + cell * 0.30f ),
+						IM_COL32( 255, 255, 255, 230 ),
+						label );
 
-			ImGui::PopStyleColor( 2 );
-			ImGui::PopID();
-			++index;
+					ImGui::PushTextWrapPos( ImGui::GetCursorPos().x + cell );
+					ImGui::TextUnformatted( entry.name.c_str() );
+					ImGui::PopTextWrapPos();
+					ImGui::EndGroup();
+
+					ImGui::PopStyleColor( 2 );
+					ImGui::PopID();
+				}
+			}
 		}
 	}
 
 	void ResourceBrowserPanel::drawListView( const std::vector<AssetEntry>& visible )
 	{
 		const ImGuiTableFlags flags =
-			ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollY;
+			ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingStretchProp;
 
 		if ( ImGui::BeginTable( "##cb_list", 3, flags, ImGui::GetContentRegionAvail() ) )
 		{
@@ -488,27 +602,33 @@ namespace sw
 			ImGui::TableSetupColumn( "Path", ImGuiTableColumnFlags_WidthStretch );
 			ImGui::TableHeadersRow();
 
-			for ( const AssetEntry& entry : visible )
+			ImGuiListClipper clipper;
+			clipper.Begin( static_cast<int>( visible.size() ) );
+			while ( clipper.Step() )
 			{
-				ImGui::PushID( entry.absolutePath.c_str() );
-				ImGui::TableNextRow();
-
-				const bool selected = ( entry.absolutePath == _selectedAssetAbs );
-				ImGui::TableSetColumnIndex( 0 );
-				if ( ImGui::Selectable( entry.name.c_str(), selected, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowDoubleClick ) )
+				for ( int i = clipper.DisplayStart; i < clipper.DisplayEnd; ++i )
 				{
-					selectAsset( entry );
-					if ( ImGui::IsMouseDoubleClicked( ImGuiMouseButton_Left ) )
-						openAsset( entry );
+					const AssetEntry& entry = visible[static_cast<size_t>( i )];
+					ImGui::PushID( entry.absolutePath.c_str() );
+					ImGui::TableNextRow();
+
+					const bool selected = ( entry.absolutePath == _selectedAssetAbs );
+					ImGui::TableSetColumnIndex( 0 );
+					if ( ImGui::Selectable( entry.name.c_str(), selected, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowDoubleClick ) )
+					{
+						selectAsset( entry );
+						if ( ImGui::IsMouseDoubleClicked( ImGuiMouseButton_Left ) )
+							openAsset( entry );
+					}
+
+					ImGui::TableSetColumnIndex( 1 );
+					ImGui::TextUnformatted( typeLabel( entry.extension, entry.bIsDirectory ) );
+
+					ImGui::TableSetColumnIndex( 2 );
+					ImGui::TextUnformatted( entry.relativePath.c_str() );
+
+					ImGui::PopID();
 				}
-
-				ImGui::TableSetColumnIndex( 1 );
-				ImGui::TextUnformatted( typeLabel( entry.extension, entry.bIsDirectory ) );
-
-				ImGui::TableSetColumnIndex( 2 );
-				ImGui::TextUnformatted( entry.relativePath.c_str() );
-
-				ImGui::PopID();
 			}
 
 			ImGui::EndTable();
@@ -556,6 +676,7 @@ namespace sw
 
 		if ( _bRootsDirty )
 			refreshRoots();
+		processPendingImports();
 		if ( _bFolderDirty )
 			refreshCurrentFolder();
 

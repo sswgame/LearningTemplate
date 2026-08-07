@@ -10,6 +10,11 @@ if(NOT SW_SHIPPING_BUILD)
             RuntimeAPI
             sw_graphics_libs
             imgui
+            implot
+            imguizmo
+            imgui_node_editor
+            imgui_notify
+            imgui_tex_inspect
     )
 
     sw_configure_module_dll_exports(EditorModule MODULE)

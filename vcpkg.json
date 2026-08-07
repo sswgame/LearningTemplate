@@ -25,6 +25,9 @@
         "vulkan-binding"
       ]
     },
+    "implot",
+    "imguizmo",
+    "imgui-node-editor",
     "mimalloc"
   ]
 }

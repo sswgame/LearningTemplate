@@ -4,6 +4,9 @@
  * @brief Engine/Common/Game 리소스 트리·에셋 브라우저 패널
  */
 #include "Panels/IEditorPanel.h"
+#include <mutex>
+#include <string>
+#include <vector>
 
 namespace sw
 {
@@ -80,6 +83,10 @@ namespace sw
 		void selectAsset( const AssetEntry& entry );
 		/** @brief 에셋을 엽니다(디렉터리면 진입, 파일이면 선택). */
 		void openAsset( const AssetEntry& entry );
+		/** @brief 네이티브 파일 다이얼로그로 현재 폴더에 파일을 가져옵니다. */
+		void importFilesFromDialog();
+		/** @brief 백그라운드 다이얼로그에서 큐잉된 import를 메인 스레드에서 처리합니다. */
+		void processPendingImports();
 
 		std::vector<ContentRoot> _roots;
 		std::vector<AssetEntry>	 _entries;
@@ -90,6 +97,8 @@ namespace sw
 		float					 _tileSize			= 96.0f;
 		AssetTypeFilter			 _typeFilter		= AssetTypeFilter::All;
 		ViewMode				 _viewMode			= ViewMode::Tiles;
+		std::mutex				 _pendingImportMutex;
+		std::vector<std::string> _pendingImportPaths;
 		uint8					 _bRootsDirty	: 1;
 		uint8					 _bFolderDirty	: 1;
 		[[maybe_unused]] uint8	 _reservedFlags : 6;

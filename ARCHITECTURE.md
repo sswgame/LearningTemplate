@@ -106,6 +106,17 @@ App은 Editor/Game 구현 클래스를 직접 링크하지 않고 함수 테이�
 
 `ResourceUtil` 은 루트/폴더 경로만 유지하고 **파일 경로 캐시는 하지 않습니다** (`clearCache()` 는 no-op). 해석은 호출 시마다 루트 목록을 순회합니다.
 
+## Editor ImGui companions
+
+Dev `EditorModule` links vcpkg **implot**, **imguizmo** (includes **ImSequencer**), **imgui-node-editor** (thedmd), plus vendored **imgui-notify** (TyomaVader/ImGuiNotify) and **imgui_tex_inspect** (DX11/OpenGL backends):
+
+- `ImPlot::CreateContext` / `DestroyContext` around the ImGui context in `ImGuiEditor`
+- `ImGuizmo::BeginFrame()` each frame after `ImGui::NewFrame`
+- `ImGui::RenderNotifications()` each frame before `ImGui::Render` (Font Awesome 6 merged for icons)
+- Demo panels: `PlotPanel`, `GizmoPanel`, `NodeEditorPanel`, `SequencerPanel`, `NotifyPanel`, `TexInspectPanel`
+- **imgui_tex_inspect** links a single upstream backend (Windows=`DX11`, else=`OpenGL`) because BackEnd_* symbols conflict if both are linked.
+- **`ImGuiListClipper`** (built into Dear ImGui — not a separate package) virtualizes long lists: Console, Content Browser tiles/list, Global Variables table.
+
 ## Editor Hierarchy / Inspector
 
 - **Hierarchy** (`OutlinerPanel`): root GameObjects (parent==null) with nested child GOs when present; under each GO, components (SceneComponent tree kept separate). Selection in `EditorSelection`.

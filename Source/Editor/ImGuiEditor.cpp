@@ -17,6 +17,12 @@
 #include "Panels/InspectorPanel.h"
 #include "Panels/OutlinerPanel.h"
 #include "Panels/ResourceBrowserPanel.h"
+#include "Panels/PlotPanel.h"
+#include "Panels/GizmoPanel.h"
+#include "Panels/NodeEditorPanel.h"
+#include "Panels/SequencerPanel.h"
+#include "Panels/NotifyPanel.h"
+#include "Panels/TexInspectPanel.h"
 #include "Core/Graphics/RHI/IRHIDevice.h"
 #include "Core/Graphics/RHI/RHICapabilities.h"
 #include "Core/Window/NativeWindowEvent.h"
@@ -25,6 +31,13 @@
 
 #include <imgui.h>
 #include <imgui_internal.h>
+#include <implot.h>
+#include <ImGuizmo.h>
+
+#define NOTIFY_RENDER_OUTSIDE_MAIN_WINDOW false
+#include <ImGuiNotify.hpp>
+#include <fa-solid-900.h>
+#include <IconsFontAwesome6.h>
 
 namespace sw
 {
@@ -52,6 +65,12 @@ namespace sw
 		_panels.push_back( std::make_unique<ComputeTestPanel>() );
 		_panels.push_back( std::make_unique<EngineStatusPanel>() );
 		_panels.push_back( std::make_unique<ResourceBrowserPanel>() );
+		_panels.push_back( std::make_unique<PlotPanel>() );
+		_panels.push_back( std::make_unique<GizmoPanel>() );
+		_panels.push_back( std::make_unique<NodeEditorPanel>() );
+		_panels.push_back( std::make_unique<SequencerPanel>() );
+		_panels.push_back( std::make_unique<NotifyPanel>() );
+		_panels.push_back( std::make_unique<TexInspectPanel>() );
 	}
 
 	void ImGuiEditor::setupFonts()
@@ -102,6 +121,18 @@ namespace sw
 			}
 		}
 
+		BLOCK( "Font Awesome 6 (ImGuiNotify icons)" )
+		{
+			const float			  iconFontSize = editor::constant::kFontSize * 2.0f / 3.0f;
+			static constexpr ImWchar iconsRanges[] = { ICON_MIN_FA, ICON_MAX_16_FA, 0 };
+			ImFontConfig			 iconsConfig{};
+			iconsConfig.MergeMode		 = true;
+			iconsConfig.PixelSnapH		 = true;
+			iconsConfig.GlyphMinAdvanceX = iconFontSize;
+			io.Fonts->AddFontFromMemoryCompressedTTF( fa_solid_900_compressed_data, fa_solid_900_compressed_size, iconFontSize, &iconsConfig,
+													  iconsRanges );
+		}
+
 		io.FontDefault = baseFont;
 	}
 
@@ -116,6 +147,7 @@ namespace sw
 			SW_LOG_INFO( "Checking ImGui version and creating context" );
 			IMGUI_CHECKVERSION();
 			ImGui::CreateContext();
+			ImPlot::CreateContext();
 
 			SW_LOG_INFO( "Configuring ImGui IO" );
 			ImGuiIO& io = ImGui::GetIO();
@@ -212,6 +244,7 @@ namespace sw
 
 		BLOCK( "ImGui Context Destroy" )
 		{
+			ImPlot::DestroyContext();
 			ImGui::DestroyContext();
 		}
 
@@ -231,12 +264,20 @@ namespace sw
 			_platformBackend->newFrame();
 
 		ImGui::NewFrame();
+		ImGuizmo::BeginFrame();
 	}
 
 	void ImGuiEditor::endFrame()
 	{
 		if ( _bInitialized == false )
 			return;
+
+		ImGui::PushStyleVar( ImGuiStyleVar_WindowRounding, 0.0f );
+		ImGui::PushStyleVar( ImGuiStyleVar_WindowBorderSize, 0.0f );
+		ImGui::PushStyleColor( ImGuiCol_WindowBg, ImVec4( 0.10f, 0.10f, 0.10f, 1.00f ) );
+		ImGui::RenderNotifications();
+		ImGui::PopStyleColor( 1 );
+		ImGui::PopStyleVar( 2 );
 
 		ImGui::Render();
 	}

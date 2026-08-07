@@ -21,9 +21,11 @@ namespace sw
 		};
 
 		Type					 _type = Type::Open;		 ///< Open 또는 Save
+		std::string				 _title;					 ///< 다이얼로그 창 제목 (비어 있으면 OS 기본)
 		std::string				 _description;				 ///< 필터 설명 문자열
-		std::vector<std::string> _filterExtensionList;		 ///< 허용 확장자 목록
-		bool					 _bEnableMultiselect = true; ///< 다중 선택 허용
+		std::vector<std::string> _filterExtensionList;		 ///< 허용 확장자 목록 (예: ".png", "hlsl")
+		std::string				 _initialDirectory;			 ///< 시작 폴더 (비어 있으면 OS 기본)
+		bool					 _bEnableMultiselect = true; ///< 다중 선택 허용 (Open만)
 	};
 
 	SW_DECLARE_DELEGATE( void, FileDialogDelegate, const std::vector<std::string>& fileName );
