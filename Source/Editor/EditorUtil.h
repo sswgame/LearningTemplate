@@ -19,5 +19,23 @@ namespace sw
 		 * @return 존재하면 절대 경로, 없으면 빈 path
 		 */
 		static std::filesystem::path resolveFontFile( const utf8* fileName );
+
+		/**
+		 * @brief 프로젝트 루트 (<Project>, Resource의 부모).
+		 * @return 해석 실패 시 빈 path
+		 */
+		static std::filesystem::path getProjectRootPath();
+
+		/**
+		 * @brief <Project>/Config/Editor 디렉터리 (없으면 생성).
+		 * @return 해석 실패 시 빈 path
+		 */
+		static std::filesystem::path getEditorConfigDirectory();
+
+		/**
+		 * @brief Config/Editor 아래 유저 설정 파일 절대 경로.
+		 * @return 해석 실패 시 빈 path
+		 */
+		static std::filesystem::path resolveEditorConfigFile( const utf8* fileName );
 	};
 } // namespace sw

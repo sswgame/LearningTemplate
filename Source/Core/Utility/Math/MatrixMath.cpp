@@ -6,7 +6,6 @@
 #include "Core/Utility/Math/MatrixMath.h"
 #include "Core/Utility/Math/MathUtil.h"
 #include "Core/Utility/Log/Logger.h"
-#include <cmath>
 
 namespace sw
 {

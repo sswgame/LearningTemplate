@@ -8,7 +8,6 @@
 #include "Core/Reflection/ReflectionCore.h"
 #include "Core/Reflection/Serializer.h"
 #include "TestSampleActor.h"
-#include <deque>
 
 namespace sw
 {

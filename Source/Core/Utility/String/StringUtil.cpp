@@ -8,9 +8,6 @@
 #include "Core/Common/CommonMacros.h"
 #include "Core/Utility/Log/Logger.h"
 
-#include <cctype>
-#include <cwctype>
-#include <cstdlib>
 #include "StringUtil.h"
 
 namespace

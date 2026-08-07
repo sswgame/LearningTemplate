@@ -13,9 +13,6 @@ namespace sw
 	}
 
 #if defined( SW_PLATFORM_LINUX )
-	#include <X11/Xlib.h>
-	#include <X11/Xutil.h>
-
 	bool X11Window::create( const utf16* title, uint32 width, uint32 height )
 	{
 		_width	= width;

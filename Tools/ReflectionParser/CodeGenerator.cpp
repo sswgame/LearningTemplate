@@ -7,7 +7,6 @@
 #include "Core/Common/Common.h"
 #include "Core/Utility/File/FileUtil.h"
 #include "Core/Utility/String/formatString.h"
-#include <cstring>
 
 namespace sw::tool
 {

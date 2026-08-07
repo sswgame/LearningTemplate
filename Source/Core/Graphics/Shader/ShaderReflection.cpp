@@ -5,12 +5,6 @@
 #include "ShaderReflection.h"
 #include "Core/Utility/Log/Logger.h"
 
-#if defined( SW_PLATFORM_WINDOWS )
-	#include <d3dcompiler.h>
-	#include <d3d11shader.h>
-	#include <wrl/client.h>
-#endif
-
 namespace sw
 {
 

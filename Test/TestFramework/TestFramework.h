@@ -7,8 +7,6 @@
 #include "Core/CoreMinimal.h"
 #include "Core/Common/CommonMacros.h"
 #include "Core/Utility/Delegate/Delegate.h"
-#include <cmath>
-#include <exception>
 
 namespace test
 {

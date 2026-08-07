@@ -13,9 +13,6 @@ namespace sw
 	}
 
 #if defined( SW_PLATFORM_MACOS )
-	#include <objc/message.h>
-	#include <objc/runtime.h>
-
 	struct SW_CGPoint
 	{
 		double x;

@@ -3,7 +3,8 @@
 /**
  * @file CommonHeaders.h
  * @brief 엔진 전체에서 널리 사용되는 C/C++ 표준 라이브러리 헤더들을 모아둔 파일입니다.
- * @details 이 헤더는 Precompiled Header(PCH)에 주로 포함되어 빌드 타임을 줄이는 용도로 사용됩니다.
+ * @details Precompiled Header(PCH)에 포함되어 빌드 타임을 줄입니다.
+ *          Third Party 헤더(imgui, vulkan, glad 등)는 여기 넣지 말고 사용처에서 include 합니다.
  */
 
 // ============================================================================
@@ -20,6 +21,7 @@
 #include <climits>
 #include <cmath>
 #include <limits>
+#include <exception>
 
 // ============================================================================
 // [C++ STL 컨테이너 및 문자열]

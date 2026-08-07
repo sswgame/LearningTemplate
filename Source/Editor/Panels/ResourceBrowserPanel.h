@@ -4,9 +4,7 @@
  * @brief Engine/Common/Game 리소스 트리·에셋 브라우저 패널
  */
 #include "Panels/IEditorPanel.h"
-#include <mutex>
-#include <string>
-#include <vector>
+#include "Core/Common/CommonHeaders.h"
 
 namespace sw
 {

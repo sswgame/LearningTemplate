@@ -4,7 +4,6 @@
  */
 #include "TestFramework.h"
 #include "Core/Utility/Time/EngineTimer.h"
-#include <thread>
 
 SW_TEST_CASE( Utility_Time, CPUTimerBasic )
 {

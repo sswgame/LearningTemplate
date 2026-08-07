@@ -109,7 +109,6 @@ SW_TEST_CASE( Utility_DataStructure, DynamicBitsetFullCoverage )
 }
 
 #include "Core/Utility/DataStructure/LockFreeQueue.h"
-#include <thread>
 
 SW_TEST_CASE( Utility_DataStructure, LockFreeQueueBasicAndConcurrent )
 {

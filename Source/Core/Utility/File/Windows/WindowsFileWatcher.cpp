@@ -5,7 +5,6 @@
 	#include "Core/Utility/Log/Logger.h"
 	#include "Core/Utility/String/StringUtil.h"
 	#include "Core/Utility/File/FileUtil.h"
-	#include <Windows.h>
 
 namespace sw
 {

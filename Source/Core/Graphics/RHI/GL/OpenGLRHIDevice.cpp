@@ -10,6 +10,7 @@
 #include <glad/glad.h>
 
 #if defined( SW_PLATFORM_WINDOWS )
+	// WGL system header — kept local (not in PlatformHeaders) to avoid clashing with glad.
 	#include <gl/GL.h>
 	#define WGL_CONTEXT_MAJOR_VERSION_ARB	 0x2091
 	#define WGL_CONTEXT_MINOR_VERSION_ARB	 0x2092
@@ -17,16 +18,11 @@
 	#define WGL_CONTEXT_CORE_PROFILE_BIT_ARB 0x00000001
 typedef HGLRC( WINAPI* PFNWGLCREATECONTEXTATTRIBSARBPROC )( HDC hDC, HGLRC hShareContext, const int* attribList );
 #elif defined( SW_PLATFORM_LINUX )
-	#include <X11/Xlib.h>
-	#include <GL/glx.h>
 	#define GLX_CONTEXT_MAJOR_VERSION_ARB	 0x2091
 	#define GLX_CONTEXT_MINOR_VERSION_ARB	 0x2092
 	#define GLX_CONTEXT_PROFILE_MASK_ARB	 0x9126
 	#define GLX_CONTEXT_CORE_PROFILE_BIT_ARB 0x00000001
 typedef GLXContext ( *PFNGLXCREATECONTEXTATTRIBSARBPROC )( Display*, GLXFBConfig, GLXContext, Bool, const int* );
-#elif defined( SW_PLATFORM_MACOS )
-	#include <objc/message.h>
-	#include <objc/runtime.h>
 #endif
 namespace sw
 {

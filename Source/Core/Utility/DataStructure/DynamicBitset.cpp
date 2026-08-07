@@ -6,10 +6,6 @@
 #include "DynamicBitset.h"
 #include "Core/Utility/Log/Logger.h"
 
-#if defined( _MSC_VER )
-	#include <intrin.h>
-#endif
-
 namespace sw
 {
 

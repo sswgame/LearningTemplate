@@ -7,7 +7,6 @@
 #include "Core/Utility/Log/Logger.h"
 #include "Core/Utility/Resource/ResourceUtil.h"
 #include <imgui.h>
-#include <mutex>
 
 namespace sw
 {

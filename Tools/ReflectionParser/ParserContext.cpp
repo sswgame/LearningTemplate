@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file ParserContext.cpp
  * @brief libclang 파싱 컨텍스트 및 설정 캐시 구현
  */
@@ -7,7 +7,6 @@
 #include "Core/Common/Common.h"
 #include "Core/Utility/File/FileUtil.h"
 
-#include <mutex>
 
 namespace sw::tool
 {

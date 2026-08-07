@@ -7,7 +7,6 @@
 #include <imgui.h>
 #include <ImGuizmo.h>
 
-#include <cmath>
 
 namespace sw
 {

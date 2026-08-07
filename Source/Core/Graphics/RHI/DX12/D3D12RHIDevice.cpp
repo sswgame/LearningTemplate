@@ -5,7 +5,6 @@
 #include "D3D12RHIDevice.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
-	#include <d3dcompiler.h>
 	#if defined( SW_DEBUG )
 		#include <d3d12sdklayers.h>
 	#endif

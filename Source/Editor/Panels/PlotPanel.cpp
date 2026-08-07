@@ -7,7 +7,6 @@
 #include <imgui.h>
 #include <implot.h>
 
-#include <cmath>
 
 namespace sw
 {

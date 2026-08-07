@@ -6,7 +6,6 @@
 #include "Core/Common/Common.h"
 #include "Core/Utility/File/FileUtil.h"
 
-#include <chrono>
 
 namespace sw
 {

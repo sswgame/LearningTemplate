@@ -55,10 +55,20 @@ namespace sw
 		void beginDockspace();
 		/** @brief 최초 1회 기본 도킹 레이아웃을 적용합니다. */
 		void applyDefaultDockLayout( uint32 dockspaceId );
+		/** @brief Config/Editor 경로를 준비하고 imgui.ini / panels.ini 경로를 설정합니다. */
+		void setupLayoutPersistencePaths();
+		/** @brief 패널 열림/닫힘 상태를 디스크에서 복원합니다. */
+		void loadPanelVisibility();
+		/** @brief 패널 열림/닫힘 상태와 ImGui 레이아웃을 디스크에 저장합니다. */
+		void saveEditorLayout();
 
 		std::unique_ptr<IImGuiPlatformBackend>	   _platformBackend;
 		std::unique_ptr<IImGuiRendererBackend>	   _rendererBackend;
 		std::vector<std::unique_ptr<IEditorPanel>> _panels;
+
+		/** @brief ImGui IO.IniFilename 이 가리키는 안정적인 스토리지 (수명은 컨텍스트보다 길어야 함) */
+		std::string _imguiIniPath;
+		std::string _panelsIniPath;
 
 		uint8				   _bInitialized	   : 1;
 		uint8				   _bDockLayoutApplied : 1;

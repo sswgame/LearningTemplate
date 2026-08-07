@@ -17,8 +17,6 @@
 #include "Core/Utility/Math/VectorMath.h"
 #include "Core/Utility/Task/TaskTypes.h"
 #include <imgui.h>
-#include <cstring>
-#include <cstdio>
 
 namespace sw
 {

@@ -9,10 +9,8 @@
 #include "Core/Utility/Log/Logger.h"
 #include "Core/Graphics/Shader/ShaderCache.h"
 
-#include <cstring>
 #include <vulkan/vulkan.h>
 #if defined( SW_PLATFORM_WINDOWS )
-	#include <Windows.h>
 	#include <vulkan/vulkan_win32.h>
 #elif defined( SW_PLATFORM_LINUX )
 	#include <vulkan/vulkan_xlib.h>

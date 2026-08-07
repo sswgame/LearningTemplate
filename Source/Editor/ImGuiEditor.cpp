@@ -28,6 +28,7 @@
 #include "Core/Window/NativeWindowEvent.h"
 #include "Runtime/EditorUIContext.h"
 #include "Core/Utility/Log/Logger.h"
+#include "Core/Utility/File/FileUtil.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -136,6 +137,101 @@ namespace sw
 		io.FontDefault = baseFont;
 	}
 
+	void ImGuiEditor::setupLayoutPersistencePaths()
+	{
+		_imguiIniPath.clear();
+		_panelsIniPath.clear();
+
+		const std::filesystem::path imguiPath  = EditorUtil::resolveEditorConfigFile( editor::path::kImGuiIniFile );
+		const std::filesystem::path panelsPath = EditorUtil::resolveEditorConfigFile( editor::path::kPanelsIniFile );
+		if ( imguiPath.empty() || panelsPath.empty() )
+		{
+			SW_LOG_WARNING( "[ImGuiEditor] Failed to resolve Config/Editor — layout will not persist." );
+			return;
+		}
+
+		_imguiIniPath  = imguiPath.string();
+		_panelsIniPath = panelsPath.string();
+		SW_LOG_INFO( "[ImGuiEditor] Layout persistence dir: %#", imguiPath.parent_path().string().c_str() );
+	}
+
+	void ImGuiEditor::loadPanelVisibility()
+	{
+		if ( _panelsIniPath.empty() || FileUtil::isFileExist( _panelsIniPath ) == false )
+			return;
+
+		std::ifstream in( _panelsIniPath );
+		if ( in.is_open() == false )
+		{
+			SW_LOG_WARNING( "[ImGuiEditor] Failed to open panels.ini: %#", _panelsIniPath.c_str() );
+			return;
+		}
+
+		std::unordered_map<std::string, bool> visibility;
+		std::string							  line;
+		while ( std::getline( in, line ) )
+		{
+			if ( line.empty() || line[0] == '#' || line[0] == ';' )
+				continue;
+			if ( line.front() == '[' )
+				continue;
+
+			const size_t eq = line.find( '=' );
+			if ( eq == std::string::npos || eq == 0 )
+				continue;
+
+			std::string title = line.substr( 0, eq );
+			std::string value = line.substr( eq + 1 );
+			while ( title.empty() == false && ( title.back() == ' ' || title.back() == '\t' || title.back() == '\r' ) )
+				title.pop_back();
+			while ( value.empty() == false && ( value.front() == ' ' || value.front() == '\t' ) )
+				value.erase( value.begin() );
+			while ( value.empty() == false && ( value.back() == ' ' || value.back() == '\t' || value.back() == '\r' ) )
+				value.pop_back();
+
+			visibility[title] = ( value == "1" || value == "true" || value == "True" );
+		}
+
+		for ( auto& panel : _panels )
+		{
+			if ( panel == nullptr )
+				continue;
+			const auto it = visibility.find( panel->getWindowTitle() );
+			if ( it != visibility.end() )
+				panel->setOpen( it->second );
+		}
+
+		SW_LOG_INFO( "[ImGuiEditor] Restored panel visibility from %#", _panelsIniPath.c_str() );
+	}
+
+	void ImGuiEditor::saveEditorLayout()
+	{
+		if ( _panelsIniPath.empty() == false )
+		{
+			std::ostringstream out;
+			out << "# Editor panel visibility (1=open, 0=closed)\n";
+			out << "[PanelVisibility]\n";
+			for ( const auto& panel : _panels )
+			{
+				if ( panel == nullptr )
+					continue;
+				out << panel->getWindowTitle() << '=' << ( panel->isOpen() ? '1' : '0' ) << '\n';
+			}
+
+			const std::string text = out.str();
+			if ( FileUtil::writeFile( _panelsIniPath, reinterpret_cast<const uint8*>( text.data() ), text.size() ) )
+				SW_LOG_INFO( "[ImGuiEditor] Saved panel visibility to %#", _panelsIniPath.c_str() );
+			else
+				SW_LOG_WARNING( "[ImGuiEditor] Failed to write panels.ini: %#", _panelsIniPath.c_str() );
+		}
+
+		if ( _imguiIniPath.empty() == false && ImGui::GetCurrentContext() != nullptr )
+		{
+			ImGui::SaveIniSettingsToDisk( _imguiIniPath.c_str() );
+			SW_LOG_INFO( "[ImGuiEditor] Saved ImGui layout to %#", _imguiIniPath.c_str() );
+		}
+	}
+
 	bool ImGuiEditor::initialize( IWindow* window, IRHIDevice* rhiDevice )
 	{
 		SW_LOG_INFO( "ImGuiEditor::initialize Start" );
@@ -158,6 +254,12 @@ namespace sw
 			const RHICapabilities caps = RHIAvailability::query( rhiDevice->getBackendType() );
 			if ( caps._bImGuiHooks )
 				io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+
+			setupLayoutPersistencePaths();
+			if ( _imguiIniPath.empty() == false )
+				io.IniFilename = _imguiIniPath.c_str();
+			else
+				io.IniFilename = nullptr;
 
 			ImGui::StyleColorsDark();
 			ImGuiStyle& style				  = ImGui::GetStyle();
@@ -202,9 +304,10 @@ namespace sw
 			}
 		}
 
-		BLOCK( "Default Panels 등록" )
+		BLOCK( "Default Panels 등록 / 표시 상태 복원" )
 		{
 			registerDefaultPanels();
+			loadPanelVisibility();
 		}
 
 		_bInitialized		= true;
@@ -216,6 +319,11 @@ namespace sw
 	{
 		if ( _bInitialized == false )
 			return;
+
+		BLOCK( "Save Editor Layout" )
+		{
+			saveEditorLayout();
+		}
 
 		BLOCK( "Panels Shutdown" )
 		{

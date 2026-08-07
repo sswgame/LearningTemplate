@@ -6,9 +6,6 @@
 #include "Core/Utility/File/FileUtil.h"
 #include "Core/Utility/Log/Logger.h"
 
-#include <chrono>
-#include <filesystem>
-#include <thread>
 
 namespace sw
 {

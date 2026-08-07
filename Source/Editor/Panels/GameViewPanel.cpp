@@ -4,7 +4,6 @@
 #include "Panels/GameViewPanel.h"
 #include "Runtime/EditorUIContext.h"
 #include <imgui.h>
-#include <cmath>
 
 namespace sw
 {

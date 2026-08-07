@@ -5,7 +5,6 @@
 #include "D3D11RHIDevice.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
-	#include <d3dcompiler.h>
 
 	#include "Core/Graphics/Shader/ShaderCache.h"
 	#include "Core/Utility/Log/Logger.h"

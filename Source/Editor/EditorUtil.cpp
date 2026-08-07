@@ -7,6 +7,7 @@
 #include "Core/Common/CommonDefines.h"
 #include "Core/Common/PlatformHeaders.h"
 #include "Core/Utility/Resource/ResourceUtil.h"
+#include "Core/Utility/File/FileUtil.h"
 
 namespace sw
 {
@@ -79,5 +80,41 @@ namespace sw
 		}
 
 		return {};
+	}
+
+	std::filesystem::path EditorUtil::getProjectRootPath()
+	{
+		// getRootFolderPath() == <Project>/Resource
+		const std::string& resourceRoot = ResourceUtil::getRootFolderPath();
+		if ( resourceRoot.empty() )
+			return {};
+
+		return std::filesystem::path( resourceRoot ).lexically_normal().parent_path();
+	}
+
+	std::filesystem::path EditorUtil::getEditorConfigDirectory()
+	{
+		const std::filesystem::path projectRoot = getProjectRootPath();
+		if ( projectRoot.empty() )
+			return {};
+
+		const std::filesystem::path configDir =
+			projectRoot / editor::path::kConfigFolder / editor::path::kEditorConfigFolder;
+		const std::filesystem::path markerFile = configDir / editor::path::kImGuiIniFile;
+		// createDirectory treats the argument as a file path and creates its parent dirs.
+		FileUtil::createDirectory( markerFile.string() );
+		return configDir;
+	}
+
+	std::filesystem::path EditorUtil::resolveEditorConfigFile( const utf8* fileName )
+	{
+		if ( fileName == nullptr || fileName[0] == '\0' )
+			return {};
+
+		const std::filesystem::path configDir = getEditorConfigDirectory();
+		if ( configDir.empty() )
+			return {};
+
+		return configDir / fileName;
 	}
 } // namespace sw

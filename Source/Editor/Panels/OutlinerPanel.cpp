@@ -14,7 +14,6 @@
 #include "Core/Object/ComponentManager.h"
 #include "Core/Object/SceneComponent.h"
 #include <imgui.h>
-#include <cstdio>
 
 namespace sw
 {

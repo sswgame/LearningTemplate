@@ -10,7 +10,6 @@
 #include <imgui_tex_inspect.h>
 
 #if defined( SW_PLATFORM_WINDOWS )
-	#include <d3d11.h>
 	#include <tex_inspect_directx11.h>
 #else
 	#include <tex_inspect_opengl.h>

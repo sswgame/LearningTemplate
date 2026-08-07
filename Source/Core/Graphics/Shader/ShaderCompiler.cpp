@@ -6,14 +6,6 @@
 
 #include "ShaderCompiler.h"
 
-#if defined( SW_PLATFORM_WINDOWS )
-	#include <Windows.h>
-	#include <Unknwn.h>
-	#include <d3dcompiler.h>
-	#include <dxcapi.h>
-	#include <wrl/client.h>
-#endif
-
 #include "Core/Utility/File/FileUtil.h"
 #include "Core/Utility/Log/Logger.h"
 #include "Core/Utility/Resource/ResourceUtil.h"

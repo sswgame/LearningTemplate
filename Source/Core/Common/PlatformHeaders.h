@@ -3,6 +3,7 @@
 /**
  * @file PlatformHeaders.h
  * @brief 플랫폼(Windows, Linux, macOS) 및 주요 3D API에 의존적인 시스템 헤더들을 추상화하여 포함합니다.
+ * @note Third Party(vulkan, glad, imgui 등)는 여기 넣지 않습니다. 사용처에서 직접 include 합니다.
  */
 
 #if defined( SW_PLATFORM_WINDOWS )
@@ -21,6 +22,7 @@
 	#include <Windows.h>
 	#include <Unknwn.h>
 	#include <commdlg.h>
+	#include <intrin.h>
 	#include <wrl/client.h>
 
 	// DirectX 및 셰이더 컴파일러 관련 헤더
@@ -40,13 +42,17 @@
 	#include <dlfcn.h>
 	#include <dirent.h>
 
-	// 플랫폼별 파일 시스템 이벤트 감지 헤더
 	#if defined( SW_PLATFORM_LINUX )
 		#include <sys/inotify.h>
 		#include <sys/eventfd.h>
+		#include <X11/Xlib.h>
+		#include <X11/Xutil.h>
+		#include <GL/glx.h>
 	#elif defined( SW_PLATFORM_MACOS )
 		#include <mach-o/dyld.h>
 		#include <pwd.h>
+		#include <objc/message.h>
+		#include <objc/runtime.h>
 	#endif
 #else
 	#error "NOT SUPPORTED PLATFORM"

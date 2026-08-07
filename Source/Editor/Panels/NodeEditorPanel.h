@@ -4,6 +4,7 @@
  * @brief imgui-node-editor (thedmd) smoke panel
  */
 #include "IEditorPanel.h"
+#include "Core/Common/CommonHeaders.h"
 
 namespace ax
 {
@@ -30,5 +31,7 @@ namespace sw
 		void destroyEditor();
 
 		ax::NodeEditor::EditorContext* _editor = nullptr;
+		/** @brief ed::Config::SettingsFile 이 가리키는 경로 (수명 유지) */
+		std::string					   _settingsPath;
 	};
 } // namespace sw

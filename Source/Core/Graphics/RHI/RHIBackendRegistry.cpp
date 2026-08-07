@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file RHIBackendRegistry.cpp
  */
 #include "pch.h"
@@ -14,7 +14,6 @@
 #include "Core/Utility/File/FileUtil.h"
 #include "Core/Utility/Log/Logger.h"
 
-#include <mutex>
 
 namespace sw
 {

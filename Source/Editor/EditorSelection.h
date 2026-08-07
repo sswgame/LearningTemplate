@@ -5,7 +5,7 @@
  */
 
 #include "Core/Common/Types.h"
-#include <string>
+#include "Core/Common/CommonHeaders.h"
 
 namespace sw
 {

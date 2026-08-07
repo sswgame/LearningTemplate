@@ -21,5 +21,12 @@ namespace sw::editor
 		inline static constexpr const utf8* kFontsFolder	  = "Fonts";
 		inline static constexpr const utf8* kConsolasFontFile = "consola.ttf";
 		inline static constexpr const utf8* kKoreanUiFontFile = "malgun.ttf";
+
+		/** @brief <Project>/Config/Editor — 레이아웃·패널 표시 상태 (유저 로컬, Resource 아님) */
+		inline static constexpr const utf8* kConfigFolder		 = "Config";
+		inline static constexpr const utf8* kEditorConfigFolder = "Editor";
+		inline static constexpr const utf8* kImGuiIniFile			 = "imgui.ini";
+		inline static constexpr const utf8* kPanelsIniFile		 = "panels.ini";
+		inline static constexpr const utf8* kNodeEditorSettingsFile = "NodeEditor.json";
 	} // namespace path
 } // namespace sw::editor

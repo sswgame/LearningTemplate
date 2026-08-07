@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file Material.cpp
  * @brief Material / MaterialInstance 구현
  */
@@ -14,7 +14,6 @@
 #include "Core/Utility/Resource/ResourceUtil.h"
 #include "Core/Utility/String/StringUtil.h"
 #include "Core/Utility/Task/TaskManager.h"
-#include <sstream>
 
 namespace sw
 {

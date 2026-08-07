@@ -4,9 +4,8 @@
  * @brief ImSequencer demo (from ImGuizmo package)
  */
 #include "IEditorPanel.h"
+#include "Core/Common/CommonHeaders.h"
 #include <ImSequencer.h>
-#include <string>
-#include <vector>
 
 namespace sw
 {

@@ -2,6 +2,8 @@
  * @file NodeEditorPanel.cpp
  */
 #include "Panels/NodeEditorPanel.h"
+#include "EditorDefines.h"
+#include "EditorUtil.h"
 #include "Runtime/EditorUIContext.h"
 
 #include <imgui.h>
@@ -22,9 +24,22 @@ namespace sw
 	{
 		if ( _editor != nullptr )
 			return;
+
 		ed::Config config{};
-		config.SettingsFile = "NodeEditor.json";
-		_editor				= ed::CreateEditor( &config );
+		const std::filesystem::path settingsPath =
+			EditorUtil::resolveEditorConfigFile( editor::path::kNodeEditorSettingsFile );
+		if ( settingsPath.empty() == false )
+		{
+			_settingsPath		  = settingsPath.string();
+			config.SettingsFile = _settingsPath.c_str();
+		}
+		else
+		{
+			_settingsPath.clear();
+			config.SettingsFile = nullptr;
+		}
+
+		_editor = ed::CreateEditor( &config );
 	}
 
 	void NodeEditorPanel::destroyEditor()

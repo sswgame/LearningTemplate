@@ -6,7 +6,6 @@
 #include "Core/Object/GameObject.h"
 #include "Core/Object/Component.h"
 #include "Core/Reflection/ReflectionCore.h"
-#include <unordered_map>
 
 namespace sw::editor
 {
