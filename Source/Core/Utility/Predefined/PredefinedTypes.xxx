@@ -1,0 +1,38 @@
+
+
+
+
+
+
+REGISTER_TYPE( "int8",     int8,     std::stoi )
+REGISTER_TYPE( "int16",    int16,    std::stoi )
+REGISTER_TYPE( "int32",    int32,    std::stoi )
+REGISTER_TYPE( "int64",    int64,    std::stoll )
+REGISTER_TYPE( "uint8",    uint8,    std::stoul )
+REGISTER_TYPE( "uint16",   uint16,   std::stoul )
+REGISTER_TYPE( "uint32",   uint32,   std::stoul )
+REGISTER_TYPE( "uint64",   uint64,   std::stoull )
+REGISTER_TYPE( "float",    float32,  std::stof )
+REGISTER_TYPE( "float32",  float32,  std::stof )
+REGISTER_TYPE( "double",   float64,  std::stod )
+REGISTER_TYPE( "float64",  float64,  std::stod )
+
+
+#if defined( REGISTER_MATH_TYPE )
+REGISTER_MATH_TYPE( "float2",         sw::float2 )
+REGISTER_MATH_TYPE( "sw::float2",     sw::float2 )
+REGISTER_MATH_TYPE( "float3",         sw::float3 )
+REGISTER_MATH_TYPE( "sw::float3",     sw::float3 )
+REGISTER_MATH_TYPE( "float4",         sw::float4 )
+REGISTER_MATH_TYPE( "sw::float4",     sw::float4 )
+REGISTER_MATH_TYPE( "float4x4",       sw::float4x4 )
+REGISTER_MATH_TYPE( "sw::float4x4",   sw::float4x4 )
+REGISTER_MATH_TYPE( "quaternion",     sw::quaternion )
+REGISTER_MATH_TYPE( "sw::quaternion", sw::quaternion )
+#endif
+
+
+
+#if defined( REGISTER_CUSTOM_TYPE )
+
+#endif

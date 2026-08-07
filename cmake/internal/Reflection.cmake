@@ -1,0 +1,59 @@
+# ==============================================================================
+# @file cmake/internal/Reflection.cmake
+# @brief ReflectionParser로 .gen.cpp를 생성하는 CMake 헬퍼
+# ==============================================================================
+
+# sw_add_reflection_step(<target>
+#   HEADERS <header...>
+#   [INCLUDES <dir...>]
+#   [OUTPUT_DIR <dir>]
+# )
+function(sw_add_reflection_step TARGET_NAME)
+    cmake_parse_arguments(ARG "" "OUTPUT_DIR" "HEADERS;INCLUDES" ${ARGN})
+
+    if(NOT TARGET ReflectionParser)
+        message(WARNING "[Reflection] ReflectionParser target not found. Skipping step for: ${TARGET_NAME}")
+        return()
+    endif()
+
+    if(NOT ARG_OUTPUT_DIR)
+        set(ARG_OUTPUT_DIR "${CMAKE_BINARY_DIR}/generated/${TARGET_NAME}")
+    endif()
+
+    if(NOT ARG_HEADERS)
+        message(WARNING "[Reflection] No HEADERS specified for target: ${TARGET_NAME}")
+        return()
+    endif()
+
+    set(_parser_args "")
+    foreach(_header IN LISTS ARG_HEADERS)
+        list(APPEND _parser_args "--input" "${_header}")
+    endforeach()
+    list(APPEND _parser_args "--output" "${ARG_OUTPUT_DIR}")
+    foreach(_inc IN LISTS ARG_INCLUDES)
+        list(APPEND _parser_args "--include" "${_inc}")
+    endforeach()
+
+    file(MAKE_DIRECTORY "${ARG_OUTPUT_DIR}")
+    set(_generated_files "")
+    foreach(_header IN LISTS ARG_HEADERS)
+        get_filename_component(_stem "${_header}" NAME_WE)
+        list(APPEND _generated_files "${ARG_OUTPUT_DIR}/${_stem}.gen.cpp")
+    endforeach()
+
+    # OUTPUT 커스텀 커멘드는 타겟과 같은 CMakeLists 디렉터리에서 등록해야 함
+    add_custom_command(
+        OUTPUT ${_generated_files}
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${ARG_OUTPUT_DIR}"
+        COMMAND $<TARGET_FILE:ReflectionParser> ${_parser_args}
+        DEPENDS ${ARG_HEADERS} ReflectionParser
+        COMMENT "[Reflection] Running ReflectionParser for target: ${TARGET_NAME}"
+        VERBATIM
+    )
+
+    target_sources(${TARGET_NAME} PRIVATE ${_generated_files})
+    target_include_directories(${TARGET_NAME} PRIVATE "${ARG_OUTPUT_DIR}")
+
+    message(STATUS "[Reflection] Parser step registered for target: ${TARGET_NAME}")
+    message(STATUS "[Reflection] Output directory: ${ARG_OUTPUT_DIR}")
+endfunction()

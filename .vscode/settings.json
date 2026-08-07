@@ -1,0 +1,32 @@
+{
+    "cmake.useCMakePresets": "always",
+    "cmake.options.advanced": {
+        "ctest": {
+            "statusBarVisibility": "hidden"
+        },
+        "cpack": {
+            "statusBarVisibility": "hidden",
+            "projectStatusVisibility": "hidden"
+        },
+        "workflow": {
+            "statusBarVisibility": "hidden"
+        },
+        "packagePreset": {
+            "statusBarVisibility": "hidden"
+        },
+        "workflowPreset": {
+            "statusBarVisibility": "hidden"
+        },
+        "testPreset": {
+            "statusBarVisibility": "hidden"
+        }
+    },
+    "clangd.arguments": [
+        "--compile-commands-dir=${workspaceFolder}/build/Ninja-Debug"
+    ],
+    "lldb.launch.expressions": "native",
+    "lldb.launch.terminal": "integrated",
+    "[hlsl]": {
+        "editor.defaultFormatter": "xaver.clang-format"
+    }
+}

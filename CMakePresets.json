@@ -1,0 +1,70 @@
+{
+    "version": 8,
+    "configurePresets": [
+        {
+            "name": "Ninja-Debug",
+            "displayName": "Ninja Debug Build (Clang-cl)",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "environment": {
+                "VCPKG_BINARY_SOURCES": "clear;files,${sourceDir}/build/vcpkg_cache,readwrite"
+            },
+            "cacheVariables": {
+                "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/${presetName}",
+                "CMAKE_C_COMPILER": "clang-cl",
+                "CMAKE_CXX_COMPILER": "clang-cl",
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_BUILD_PARALLEL_LEVEL": "0",
+                "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/cmake/Modules/Toolchain/Vcpkg",
+                "VCPKG_INSTALLED_DIR": "${sourceDir}/build/vcpkg_installed",
+                "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/Tools/vcpkg/scripts/buildsystems/vcpkg.cmake"
+            }
+        },
+        {
+            "name": "Debug",
+            "displayName": "Clang-cl x86_64 Debug Build",
+            "description": "Debug build using LLVM Clang-cl + Ninja (same toolchain as Ninja-Debug)",
+            "inherits": "Ninja-Debug",
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "cacheVariables": {
+                "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/${presetName}"
+            }
+        },
+        {
+            "name": "Ninja-Release",
+            "displayName": "Ninja Release Build (Clang-cl)",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "environment": {
+                "VCPKG_BINARY_SOURCES": "clear;files,${sourceDir}/build/vcpkg_cache,readwrite"
+            },
+            "cacheVariables": {
+                "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/${presetName}",
+                "CMAKE_C_COMPILER": "clang-cl",
+                "CMAKE_CXX_COMPILER": "clang-cl",
+                "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_BUILD_PARALLEL_LEVEL": "0",
+                "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/cmake/Modules/Toolchain/Vcpkg",
+                "VCPKG_INSTALLED_DIR": "${sourceDir}/build/vcpkg_installed",
+                "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/Tools/vcpkg/scripts/buildsystems/vcpkg.cmake"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "Debug",
+            "configurePreset": "Debug",
+            "configuration": "Debug"
+        },
+        {
+            "name": "Ninja-Debug",
+            "configurePreset": "Ninja-Debug",
+            "configuration": "Debug"
+        },
+        {
+            "name": "Ninja-Release",
+            "configurePreset": "Ninja-Release",
+            "configuration": "Release"
+        }
+    ]
+}

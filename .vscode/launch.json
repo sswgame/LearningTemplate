@@ -1,0 +1,52 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "App (CodeLLDB)",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/Bin/App.exe",
+            "args": [
+                "-dx12"
+            ],
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PATH": "${workspaceFolder}/build/Bin;${workspaceFolder}/build/vcpkg_installed/x64-windows/debug/bin;${workspaceFolder}/build/vcpkg_installed/x64-windows/bin;${env:PATH}"
+            },
+            "terminal": "integrated",
+            "sourceLanguages": [
+                "cpp"
+            ],
+            "preLaunchTask": "CMake: Build App (Ninja-Debug)"
+        },
+        {
+            "name": "App + Editor (CodeLLDB)",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/Bin/App.exe",
+            "args": [
+                "-dx12",
+                "-EnableEditor"
+            ],
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PATH": "${workspaceFolder}/build/Bin;${workspaceFolder}/build/vcpkg_installed/x64-windows/debug/bin;${workspaceFolder}/build/vcpkg_installed/x64-windows/bin;${env:PATH}"
+            },
+            "terminal": "integrated",
+            "sourceLanguages": [
+                "cpp"
+            ],
+            "preLaunchTask": "CMake: Build App (Ninja-Debug)"
+        },
+        {
+            "name": "Attach App (CodeLLDB)",
+            "type": "lldb",
+            "request": "attach",
+            "program": "${workspaceFolder}/build/Bin/App.exe",
+            "pid": "${command:pickProcess}",
+            "sourceLanguages": [
+                "cpp"
+            ]
+        }
+    ]
+}

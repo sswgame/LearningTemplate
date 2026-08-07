@@ -1,0 +1,7 @@
+{
+    "ninja_download_urls": {
+        "windows": "https://github.com/ninja-build/ninja/releases/download/v1.12.1/ninja-win.zip",
+        "linux": "https://github.com/ninja-build/ninja/releases/download/v1.12.1/ninja-linux.zip",
+        "darwin": "https://github.com/ninja-build/ninja/releases/download/v1.12.1/ninja-mac.zip"
+    }
+}

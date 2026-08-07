@@ -1,0 +1,43 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "CMake: Configure Ninja-Debug",
+            "type": "shell",
+            "command": "cmake --preset Ninja-Debug",
+            "options": {
+                "cwd": "${workspaceFolder}",
+                "env": {
+                    "PATH": "C:/Program Files/LLVM/bin;${env:PATH}"
+                }
+            },
+            "problemMatcher": [],
+            "group": "build"
+        },
+        {
+            "label": "CMake: Build App (Ninja-Debug)",
+            "type": "shell",
+            "command": "cmake --build --preset Ninja-Debug --target App EditorModule SWGame -j",
+            "options": {
+                "cwd": "${workspaceFolder}",
+                "env": {
+                    "PATH": "C:/Program Files/LLVM/bin;${env:PATH}"
+                }
+            },
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "dependsOn": [],
+            "presentation": {
+                "reveal": "silent",
+                "panel": "shared",
+                "showReuseMessage": false,
+                "clear": false
+            }
+        }
+    ]
+}

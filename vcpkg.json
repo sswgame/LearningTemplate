@@ -1,0 +1,30 @@
+{
+  "name": "sw-engine",
+  "version-string": "1.0.0",
+  "dependencies": [
+    "rapidxml",
+    "directx-dxc",
+    {
+      "name": "glad",
+      "features": [
+        "gl-api-46",
+        "extensions"
+      ]
+    },
+    "vulkan-headers",
+    "vulkan-loader",
+    "vulkan-validationlayers",
+    {
+      "name": "imgui",
+      "features": [
+        "docking-experimental",
+        "win32-binding",
+        "dx11-binding",
+        "dx12-binding",
+        "opengl3-binding",
+        "vulkan-binding"
+      ]
+    },
+    "mimalloc"
+  ]
+}
