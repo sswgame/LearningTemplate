@@ -195,14 +195,22 @@ namespace sw
 					if ( desc._targetFormat == ShaderTargetFormat::DXIL_D3D12 )
 					{
 						arguments.push_back( L"DX12=1" );
-						arguments.push_back( L"-D" );
-						arguments.push_back( L"BINDLESS_UAV=1" );
+						// Graphics uses bindless UAV heap; compute RS (SampleIndirect) uses explicit u0/u1 tables.
+						// Defining BINDLESS_UAV on CS forces cbuffer b1 which is not in the compute root signature.
+						if ( desc._stage != ShaderStage::Compute )
+						{
+							arguments.push_back( L"-D" );
+							arguments.push_back( L"BINDLESS_UAV=1" );
+						}
 					}
 					else if ( desc._targetFormat == ShaderTargetFormat::SPIRV_Vulkan )
 					{
 						arguments.push_back( L"VULKAN=1" );
-						arguments.push_back( L"-D" );
-						arguments.push_back( L"BINDLESS_UAV=1" );
+						if ( desc._stage != ShaderStage::Compute )
+						{
+							arguments.push_back( L"-D" );
+							arguments.push_back( L"BINDLESS_UAV=1" );
+						}
 					}
 					else if ( desc._targetFormat == ShaderTargetFormat::SPIRV_OpenGL )
 						arguments.push_back( L"OPENGL=1" );

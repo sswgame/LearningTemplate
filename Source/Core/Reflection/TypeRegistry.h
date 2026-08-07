@@ -57,6 +57,9 @@ namespace sw
 		EnumRegistrar( void (*registerFunc)(TypeRegistry&) );
 	};
 
+	/** @brief Registers enums/types linked into Core.dll (must be called from Core, after TypeRegistry is bound). */
+	SW_API void registerCoreReflectionTypes();
+
 	inline bool TypeInfo::isA( const hashed_string& targetFqn ) const
 	{
 		if ( _fullyQualifiedName == targetFqn )

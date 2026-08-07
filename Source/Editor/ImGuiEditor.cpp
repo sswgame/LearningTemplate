@@ -14,6 +14,8 @@
 #include "Backend/IImGuiRendererBackend.h"
 
 #include <imgui.h>
+#include <imgui_internal.h>
+#include <unordered_set>
 
 #include "Core/Common/CommonMacros.h"
 #include "Core/Utility/Log/Logger.h"
@@ -45,11 +47,12 @@ namespace sw
 		ImGuiIO& io = ImGui::GetIO();
 		io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-		// ViewportsEnableë DX12 ë©í° ìëì° ì¤ìì²´ì¸/íì¤ì² ìë¡ë ê²½ë¡ì ë§ì¶°ì¼ í¨.
-		// íì¬ ë°±ìë ì°ëì´ ë¶ìì í´ í°í¸ ìë¡ë CreateCommittedResource assertë¥¼ ì ë°íë¯ë¡ ë¹íì±.
-		// io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+		io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 
 		ImGui::StyleColorsDark();
+		ImGuiStyle& style = ImGui::GetStyle();
+		style.WindowRounding			   = 0.0f;
+		style.Colors[ImGuiCol_WindowBg].w = 1.0f;
 
 		SW_LOG_INFO( "Creating Platform Backend" );
 		_platformBackend = IImGuiPlatformBackend::createPlatformBackend();
@@ -71,14 +74,16 @@ namespace sw
 		_rendererBackend = IImGuiRendererBackend::createRendererBackend( rhiDevice->getBackendType() );
 		if ( !_rendererBackend || !_rendererBackend->initialize( rhiDevice ) )
 		{
-
-			unsigned char* pixels;
-			int			   width, height;
-			io.Fonts->GetTexDataAsRGBA32( &pixels, &width, &height );
+			SW_LOG_ERROR( "Renderer backend initialization failed" );
+			_platformBackend->shutdown();
+			_platformBackend.reset();
+			ImGui::DestroyContext();
+			return false;
 		}
 
-		_rhiBackendName = rhiDevice->getBackendName();
-		_bInitialized	= true;
+		_rhiBackendName		= rhiDevice->getBackendName();
+		_bInitialized		= true;
+		_bDockLayoutApplied = false;
 		return true;
 	}
 
@@ -87,17 +92,22 @@ namespace sw
 		if ( _bInitialized == false )
 			return;
 
-		getTypeRegistry().unregisterTypesByModule( "EditorModule" );
-
 		if ( _rendererBackend )
+		{
 			_rendererBackend->shutdown();
+			_rendererBackend.reset();
+		}
 
 		if ( _platformBackend )
+		{
 			_platformBackend->shutdown();
+			_platformBackend.reset();
+		}
 
 		ImGui::DestroyContext();
 
-		_bInitialized = false;
+		_bInitialized		= false;
+		_bDockLayoutApplied = false;
 	}
 
 	void ImGuiEditor::beginFrame()
@@ -161,47 +171,62 @@ namespace sw
 		return false;
 	}
 
-	void ImGuiEditor::beginDockspace( const utf8* dockspaceName )
+	void ImGuiEditor::applyDefaultDockLayout( uint32 dockspaceId )
 	{
-		if ( _bInitialized == false )
-			return;
+		const ImGuiID			 id		  = static_cast<ImGuiID>( dockspaceId );
+		const ImGuiViewport* viewport = ImGui::GetMainViewport();
 
-		static bool				  p_open		  = true;
-		static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_PassthruCentralNode;
+		ImGui::DockBuilderRemoveNode( id );
+		ImGui::DockBuilderAddNode( id, ImGuiDockNodeFlags_DockSpace );
+		ImGui::DockBuilderSetNodeSize( id, viewport->WorkSize );
 
-		ImGuiWindowFlags	 window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking;
-		const ImGuiViewport* viewport	  = ImGui::GetMainViewport();
+		ImGuiID dockMain	 = id;
+		ImGuiID dockLeft	 = 0;
+		ImGuiID dockRight	 = 0;
+		ImGuiID dockBottom	 = 0;
+		ImGuiID dockTop		 = 0;
+		ImGuiID dockRightBot = 0;
 
-		ImGui::SetNextWindowPos( viewport->WorkPos );
-		ImGui::SetNextWindowSize( viewport->WorkSize );
-		ImGui::SetNextWindowViewport( viewport->ID );
-		ImGui::PushStyleVar( ImGuiStyleVar_WindowRounding, 0.0f );
-		ImGui::PushStyleVar( ImGuiStyleVar_WindowBorderSize, 0.0f );
-		window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
-		window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
+		ImGui::DockBuilderSplitNode( dockMain, ImGuiDir_Left, 0.22f, &dockLeft, &dockMain );
+		ImGui::DockBuilderSplitNode( dockMain, ImGuiDir_Right, 0.28f, &dockRight, &dockMain );
+		ImGui::DockBuilderSplitNode( dockMain, ImGuiDir_Down, 0.28f, &dockBottom, &dockMain );
+		ImGui::DockBuilderSplitNode( dockMain, ImGuiDir_Up, 0.06f, &dockTop, &dockMain );
+		ImGui::DockBuilderSplitNode( dockRight, ImGuiDir_Down, 0.45f, &dockRightBot, &dockRight );
 
-		if ( ( dockspace_flags & ImGuiDockNodeFlags_PassthruCentralNode ) != 0 )
-			window_flags |= ImGuiWindowFlags_NoBackground;
+		ImGui::DockBuilderDockWindow( "RHI & Engine Inspector", dockLeft );
+		ImGui::DockBuilderDockWindow( "Global Variables Control", dockLeft );
+		ImGui::DockBuilderDockWindow( "Game Toolbar", dockTop );
+		ImGui::DockBuilderDockWindow( "Game View", dockMain );
+		ImGui::DockBuilderDockWindow( "Live Coding & Console Log", dockRight );
+		ImGui::DockBuilderDockWindow( "Compute Test", dockRight );
+		ImGui::DockBuilderDockWindow( "Engine RHI Status & Command Line", dockRightBot );
+		ImGui::DockBuilderDockWindow( "Dear ImGui Demo", dockBottom );
 
-		ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( 0.0f, 0.0f ) );
-		ImGui::Begin( "DockSpace Demo", &p_open, window_flags );
-		ImGui::PopStyleVar();
-		ImGui::PopStyleVar( 2 );
-
-		ImGuiIO& io = ImGui::GetIO();
-		if ( ( io.ConfigFlags & ImGuiConfigFlags_DockingEnable ) != 0 )
-		{
-			ImGuiID dockspace_id = ImGui::GetID( dockspaceName != nullptr ? dockspaceName : "MainDockSpace" );
-			ImGui::DockSpace( dockspace_id, ImVec2( 0.0f, 0.0f ), dockspace_flags );
-		}
+		ImGui::DockBuilderFinish( id );
 	}
 
-	void ImGuiEditor::endDockspace()
+	void ImGuiEditor::beginDockspace()
 	{
 		if ( _bInitialized == false )
 			return;
 
-		ImGui::End();
+		ImGuiIO& io = ImGui::GetIO();
+		if ( ( io.ConfigFlags & ImGuiConfigFlags_DockingEnable ) == 0 )
+			return;
+
+		const ImGuiViewport* viewport	 = ImGui::GetMainViewport();
+		const ImGuiID		 dockspaceId = ImGui::DockSpaceOverViewport(
+			ImGui::GetID( "EditorMainDockSpace" ), viewport, ImGuiDockNodeFlags_PassthruCentralNode );
+
+		if ( _bDockLayoutApplied == false )
+		{
+			ImGuiDockNode* node = ImGui::DockBuilderGetNode( dockspaceId );
+			const bool	   empty =
+				( node == nullptr ) || ( node->IsSplitNode() == false && node->Windows.Size == 0 );
+			if ( empty )
+				applyDefaultDockLayout( static_cast<uint32>( dockspaceId ) );
+			_bDockLayoutApplied = true;
+		}
 	}
 
 	void ImGuiEditor::showDemoWindow( bool* pOpen )
@@ -347,12 +372,18 @@ namespace sw
 							const sw::EnumInfo* pEnumInfo = sw::getTypeRegistry().findEnum( sw::hashed_string( info._enumType.c_str() ) );
 							if ( pEnumInfo )
 							{
-								std::string currentEnumStr = pEnumInfo->toString( *pVal ).c_str();
-								if ( ImGui::BeginCombo( "##enum_val", currentEnumStr.c_str() ) )
+								const hashed_string currentName = pEnumInfo->toString( *pVal );
+								const utf8*			preview		= currentName.empty() == false ? currentName.c_str() : "(invalid)";
+								if ( ImGui::BeginCombo( "##enum_val", preview ) )
 								{
+									// Deduplicate aliases that share the same underlying value.
+									std::unordered_set<int64> seenValues;
 									for ( const auto& [enumName, enumValue] : pEnumInfo->_mapNameToValue )
 									{
-										bool isSelected = ( *pVal == enumValue );
+										if ( seenValues.insert( enumValue ).second == false )
+											continue;
+
+										const bool isSelected = ( *pVal == static_cast<int32>( enumValue ) );
 										if ( ImGui::Selectable( enumName.c_str(), isSelected ) )
 										{
 											*pVal = static_cast<int32>( enumValue );
@@ -360,21 +391,16 @@ namespace sw
 												info._onValueChanged( const_cast<sw::GlobalVariableInfo*>( &info ) );
 										}
 										if ( isSelected )
-										{
 											ImGui::SetItemDefaultFocus();
-										}
 									}
 									ImGui::EndCombo();
 								}
 							}
 							else
 							{
-
-								if ( ImGui::InputInt( "##int_val", pVal ) )
-								{
-									if ( info._onValueChanged.isBound() )
-										info._onValueChanged( const_cast<sw::GlobalVariableInfo*>( &info ) );
-								}
+								ImGui::TextUnformatted( "(enum metadata missing)" );
+								ImGui::SameLine();
+								ImGui::Text( "%d", *pVal );
 							}
 							break;
 						}
@@ -565,7 +591,7 @@ namespace sw
 		executeComputeDraw( ctx.rhiDevice );
 
 		beginFrame();
-		beginDockspace( "MainDockSpace" );
+		beginDockspace();
 
 		if ( ctx.bShowDemoWindow && *ctx.bShowDemoWindow )
 			showDemoWindow( ctx.bShowDemoWindow );
@@ -665,7 +691,6 @@ namespace sw
 		}
 		ImGui::End();
 
-		endDockspace();
 		endFrame();
 		renderBackend( ctx.rhiDevice );
 	}

@@ -797,20 +797,86 @@ namespace sw
 
 	void D3D12RHIDevice::waitForPreviousFrame()
 	{
-		if ( _commandQueue == nullptr || _fence == nullptr || _swapChain == nullptr )
+		if ( _commandQueue == nullptr || _fence == nullptr )
 			return;
 
-		const UINT64 fence = _fenceValue;
-		_commandQueue->Signal( _fence.Get(), fence );
+		const UINT64 fenceToWait = _fenceValue;
+		const HRESULT signalHr	 = _commandQueue->Signal( _fence.Get(), fenceToWait );
 		_fenceValue++;
 
-		if ( _fence->GetCompletedValue() < fence )
+		if ( FAILED( signalHr ) )
 		{
-			_fence->SetEventOnCompletion( fence, _fenceEvent );
-			WaitForSingleObject( _fenceEvent, INFINITE );
+			SW_LOG_ERROR( "[D3D12] Fence Signal failed hr=0x%X (DeviceRemoved=0x%X)",
+						  static_cast<uint32>( signalHr ),
+						  static_cast<uint32>( _device ? _device->GetDeviceRemovedReason() : S_OK ) );
+			return;
 		}
 
-		_frameIndex = _swapChain->GetCurrentBackBufferIndex();
+		if ( _fence->GetCompletedValue() < fenceToWait )
+		{
+			if ( _fenceEvent == nullptr )
+				return;
+
+			_fence->SetEventOnCompletion( fenceToWait, _fenceEvent );
+			const DWORD waitResult = WaitForSingleObject( _fenceEvent, 2000 );
+			if ( waitResult != WAIT_OBJECT_0 )
+			{
+				SW_LOG_ERROR( "[D3D12] Fence wait timed out (result=%#, fence=%#)", static_cast<uint32>( waitResult ), static_cast<uint32>( fenceToWait ) );
+			}
+		}
+
+		if ( _swapChain != nullptr )
+			_frameIndex = _swapChain->GetCurrentBackBufferIndex();
+	}
+
+	void D3D12RHIDevice::waitIdle()
+	{
+		waitForPreviousFrame();
+	}
+
+	void D3D12RHIDevice::shutdownInternal()
+	{
+		waitForPreviousFrame();
+
+		_offscreenTextures.clear();
+		_textures.clear();
+		_pipelineStates.clear();
+		_renderPasses.clear();
+		_registeredBindlessVector.clear();
+		_bindlessFreeList.clear();
+		_registeredUAVs.clear();
+		_uavFreeList.clear();
+		_constantBuffers.clear();
+		_nextOffscreenRtvIndex = 0;
+		_allocatedDescriptorsCount = 0;
+
+		cleanupRenderTargets();
+		_vertexBuffer.Reset();
+		_vertexBufferView = {};
+		_pipelineState.Reset();
+		_rootSignature.Reset();
+		_computeRootSignature.Reset();
+		_drawCommandSignature.Reset();
+		_dispatchCommandSignature.Reset();
+		_cbvHeap.Reset();
+		_rtvHeap.Reset();
+		_commandList.Reset();
+		_commandAllocator.Reset();
+		_fence.Reset();
+		_swapChain.Reset();
+		_commandQueue.Reset();
+		_device.Reset();
+
+		if ( _fenceEvent )
+		{
+			CloseHandle( _fenceEvent );
+			_fenceEvent = nullptr;
+		}
+
+		_fenceValue = 0;
+		_frameIndex = 0;
+		_rtvDescriptorSize = 0;
+		_cbvDescriptorSize = 0;
 	}
 
 	void D3D12RHIDevice::resize( uint32 width, uint32 height )
@@ -887,35 +953,6 @@ namespace sw
 			flushDebugMessages( "after Present" );
 		}
 		waitForPreviousFrame();
-	}
-
-	void D3D12RHIDevice::waitIdle()
-	{
-		waitForPreviousFrame();
-	}
-
-	void D3D12RHIDevice::shutdownInternal()
-	{
-		waitForPreviousFrame();
-		if ( _fenceEvent )
-		{
-			CloseHandle( _fenceEvent );
-			_fenceEvent = nullptr;
-		}
-		cleanupRenderTargets();
-		_vertexBuffer.Reset();
-		_pipelineState.Reset();
-		_rootSignature.Reset();
-		_computeRootSignature.Reset();
-		_cbvHeap.Reset();
-		_constantBuffers.clear();
-		_fence.Reset();
-		_commandList.Reset();
-		_commandAllocator.Reset();
-		_rtvHeap.Reset();
-		_swapChain.Reset();
-		_commandQueue.Reset();
-		_device.Reset();
 	}
 
 	class D3D12CommandList final : public IRHICommandList
@@ -1131,7 +1168,12 @@ namespace sw
 				{
 					SW_LOG_ERROR( "[D3D12] CreateComputePipelineState failed hr=0x%X", static_cast<uint32>( hr ) );
 					flushDebugMessages( "CreateComputePipelineState" );
+					return 0;
 				}
+			}
+			else
+			{
+				return 0;
 			}
 		}
 		_pipelineStates.push_back( { pso } );

@@ -39,8 +39,8 @@ namespace sw
 		void run();
 		void shutdown();
 
-		/** @brief RHI 백엔드 변경으로 run()이 종료된 경우 true (main에서 App 재생성) */
-		bool shouldRestartForBackendChange() const { return _bBackendChanged; }
+		/** @brief 레거시: soft recreate로 대체되어 항상 false */
+		bool shouldRestartForBackendChange() const { return false; }
 
 	private:
 		bool initializeSubsystems( int argc, char* argv[] );
@@ -57,6 +57,7 @@ namespace sw
 		bool bindEditorAPI( void* hLibraryModule );
 		bool bindGameAPI( void* hLibraryModule );
 		bool createGameViewportTexture();
+		bool applyPendingBackendChange();
 
 		std::unique_ptr<Logger>				   _logger;
 		std::unique_ptr<CommandLineManager>	   _commandLineManager;
@@ -70,9 +71,11 @@ namespace sw
 		std::unique_ptr<ReloadFileManager>	   _reloadFileManager;
 		std::unique_ptr<SceneManager>		   _sceneManager;
 
-		bool _bEnableEditor	  = false;
-		bool _bAppRunning	  = false;
-		bool _bBackendChanged = false;
+		bool	   _bEnableEditor			= false;
+		bool	   _bAppRunning				= false;
+		bool	   _bPendingBackendChange	= false;
+		RHIBackend _pendingRHIBackend		= RHIBackend::DirectX12;
+		RHIBackend _committedRHIBackend		= RHIBackend::DirectX12;
 
 		RHITextureHandle _gameRenderTarget = 0;
 		void*			 _gameTextureID	   = nullptr;

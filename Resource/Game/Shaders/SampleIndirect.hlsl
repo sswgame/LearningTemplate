@@ -31,15 +31,22 @@ cbuffer ComputeConstants : register( b1, space0 )
 };
 RWByteAddressBuffer g_UAVs[] : register( u0, space1 );
 
-	#define GET_DRAW_BUFFER()	  g_UAVs[g_DrawBufferIndex]
-	#define GET_DISPATCH_BUFFER() g_UAVs[g_DispatchBufferIndex]
+	#define GET_DRAW_BUFFER g_UAVs[g_DrawBufferIndex]
+	#define GET_DISPATCH_BUFFER g_UAVs[g_DispatchBufferIndex]
 #else
-// Explicit Binding 모드: 레지스터 슬롯 u0, u1 직접 바인딩
+// Explicit Binding 모드
+// DX12: spaces match compute root signature UAV tables (u0 space1, u1 space2)
+// DX11: CSSetUnorderedAccessViews uses flat u0/u1; SM5.0 rejects `space` (needs 5.1+)
+#if defined( DX11 )
+RWByteAddressBuffer g_IndirectDrawBuffer : register( u0 );
+RWByteAddressBuffer g_IndirectDispatchBuffer : register( u1 );
+#else
 RWByteAddressBuffer g_IndirectDrawBuffer : register( u0, space1 );
 RWByteAddressBuffer g_IndirectDispatchBuffer : register( u1, space2 );
+#endif
 
-	#define GET_DRAW_BUFFER()	  g_IndirectDrawBuffer
-	#define GET_DISPATCH_BUFFER() g_IndirectDispatchBuffer
+	#define GET_DRAW_BUFFER g_IndirectDrawBuffer
+	#define GET_DISPATCH_BUFFER g_IndirectDispatchBuffer
 #endif
 
 /**
@@ -49,13 +56,13 @@ RWByteAddressBuffer g_IndirectDispatchBuffer : register( u1, space2 );
 [numthreads( 1, 1, 1 )] void CSMain( uint3 dispatchThreadID : SV_DispatchThreadID )
 {
 	// 1. DrawIndirect 커맨드 바이트 버퍼 기록 (vertexCount: 6, instanceCount: 1)
-	GET_DRAW_BUFFER().Store( 0, 6 );  
-	GET_DRAW_BUFFER().Store( 4, 1 );  
-	GET_DRAW_BUFFER().Store( 8, 0 );  
-	GET_DRAW_BUFFER().Store( 12, 0 ); 
+	GET_DRAW_BUFFER.Store( 0, 6 );
+	GET_DRAW_BUFFER.Store( 4, 1 );
+	GET_DRAW_BUFFER.Store( 8, 0 );
+	GET_DRAW_BUFFER.Store( 12, 0 );
 
 	// 2. DispatchIndirect 커맨드 바이트 버퍼 기록 (threadGroupCountX: 4, Y: 1, Z: 1)
-	GET_DISPATCH_BUFFER().Store( 0, 4 );
-	GET_DISPATCH_BUFFER().Store( 4, 1 );
-	GET_DISPATCH_BUFFER().Store( 8, 1 );
+	GET_DISPATCH_BUFFER.Store( 0, 4 );
+	GET_DISPATCH_BUFFER.Store( 4, 1 );
+	GET_DISPATCH_BUFFER.Store( 8, 1 );
 }

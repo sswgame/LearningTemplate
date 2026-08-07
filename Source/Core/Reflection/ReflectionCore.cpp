@@ -134,6 +134,11 @@ namespace sw
 		}
 	}
 
+	void registerCoreReflectionTypes()
+	{
+		getTypeRegistry().registerPendingTypes( "Core", TypeRegistrar::getHead(), EnumRegistrar::getHead() );
+	}
+
 	void TypeRegistry::unregisterTypesByModule( const std::string_view moduleName )
 	{
 		hashed_string hashModule( moduleName.data(), static_cast<uint32>( moduleName.size() ) );

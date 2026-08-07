@@ -31,8 +31,8 @@ namespace sw
 		void endFrame();
 		void renderBackend( IRHIDevice* rhiDevice );
 
-		void beginDockspace( const utf8* dockspaceName = "MainDockSpace" );
-		void endDockspace();
+		void beginDockspace();
+		void applyDefaultDockLayout( uint32 dockspaceId );
 
 		void showDemoWindow( bool* pOpen = nullptr );
 		void showGlobalVariablesWindow( bool* pOpen = nullptr );
@@ -49,8 +49,9 @@ namespace sw
 		std::unique_ptr<IImGuiPlatformBackend> _platformBackend;
 		std::unique_ptr<IImGuiRendererBackend> _rendererBackend;
 
-		bool		_bInitialized	= false;
-		std::string _rhiBackendName = "Unknown";
+		bool		_bInitialized			 = false;
+		bool		_bDockLayoutApplied		 = false;
+		std::string _rhiBackendName			 = "Unknown";
 
 		bool				   _bRequestComputeDispatch = false;
 		bool				   _bComputeTestInitialized = false;

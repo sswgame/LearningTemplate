@@ -51,8 +51,11 @@ namespace sw
 		_width	= desc._width;
 		_height = desc._height;
 
+		// Use FLIP_DISCARD to match DX12 (and DXGI HWND rules): after a flip-model
+		// swapchain has been created for an HWND, subsequent DISCARD/blt chains on the
+		// same window can Present without updating what the user sees (frozen frame).
 		DXGI_SWAP_CHAIN_DESC sd{};
-		sd.BufferCount						  = desc._bufferCount;
+		sd.BufferCount						  = ( desc._bufferCount < 2 ) ? 2 : desc._bufferCount;
 		sd.BufferDesc.Width					  = _width;
 		sd.BufferDesc.Height				  = _height;
 		sd.BufferDesc.Format				  = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -63,7 +66,7 @@ namespace sw
 		sd.SampleDesc.Count					  = 1;
 		sd.SampleDesc.Quality				  = 0;
 		sd.Windowed							  = TRUE;
-		sd.SwapEffect						  = DXGI_SWAP_EFFECT_DISCARD;
+		sd.SwapEffect						  = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 
 		UINT createDeviceFlags = 0;
 	#if defined( SW_DEBUG )
@@ -101,7 +104,7 @@ namespace sw
 		if ( createTriangleResources() == false )
 			return false;
 
-		SW_LOG_INFO( "Direct3D 11 RHI Backend Device Initialized Successfully." );
+		SW_LOG_INFO( "Direct3D 11 RHI Backend Device Initialized Successfully (FLIP_DISCARD)." );
 		return true;
 	}
 
@@ -346,6 +349,10 @@ namespace sw
 
 		ID3D11RenderTargetView* nullRtv = nullptr;
 		_deviceContext->OMSetRenderTargets( 1, &nullRtv, nullptr );
+
+		// Unbind possible SRV uses of the offscreen color target before ImGui samples it.
+		ID3D11ShaderResourceView* nullSrvs[D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT] = {};
+		_deviceContext->PSSetShaderResources( 0, D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT, nullSrvs );
 	}
 
 	RHIDescriptorIndex D3D11RHIDevice::registerBindlessResource( RHIBufferHandle buffer )
@@ -503,7 +510,13 @@ namespace sw
 
 	void D3D11RHIDevice::beginFrame( float32 clearColor[4] )
 	{
-		if ( _deviceContext == nullptr || _renderTargetView == nullptr )
+		if ( _deviceContext == nullptr || _swapChain == nullptr )
+			return;
+
+		// FLIP_DISCARD rotates the back buffer; reacquire RTV each frame so we clear/draw the one Present will show.
+		cleanupRenderTargetView();
+		createRenderTargetView();
+		if ( _renderTargetView == nullptr )
 			return;
 
 		_deviceContext->ClearRenderTargetView( _renderTargetView.Get(), clearColor );
@@ -529,7 +542,12 @@ namespace sw
 		if ( _swapChain == nullptr )
 			return;
 
-		_swapChain->Present( vsync ? 1 : 0, 0 );
+		// Release RTV before Present so DXGI can flip the buffer freely.
+		cleanupRenderTargetView();
+
+		const HRESULT hr = _swapChain->Present( vsync ? 1 : 0, 0 );
+		if ( FAILED( hr ) )
+			SW_LOG_ERROR( "[D3D11] Present failed hr=0x%X", static_cast<uint32>( hr ) );
 	}
 
 	class D3D11CommandList final : public IRHICommandList
@@ -759,9 +777,9 @@ namespace sw
 			csDesc._stage			= ShaderStage::Compute;
 			csDesc._targetFormat	= ShaderTargetFormat::DXBC_D3D11;
 			ShaderCompileResult res = ShaderCache::getOrCompile( csDesc );
-			if ( res._bSuccess )
+			if ( res._bSuccess == false || FAILED( _device->CreateComputeShader( res._bytecode.data(), res._bytecode.size(), nullptr, pso.cs.GetAddressOf() ) ) )
 			{
-				_device->CreateComputeShader( res._bytecode.data(), res._bytecode.size(), nullptr, pso.cs.GetAddressOf() );
+				return 0;
 			}
 		}
 		_pipelineStates.push_back( pso );

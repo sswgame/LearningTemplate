@@ -16,6 +16,36 @@
 
 namespace sw
 {
+	namespace
+	{
+		void registerRHIBackendEnum( TypeRegistry& registry )
+		{
+			EnumInfo info{};
+			info._name				 = hashed_string( "RHIBackend" );
+			info._fullyQualifiedName = hashed_string( "sw::RHIBackend" );
+			info._moduleName		 = hashed_string( "Core" );
+			info._bIsBitFlag		 = 0;
+
+			const auto add = [&]( const utf8* name, RHIBackend value )
+			{
+				const int64		  v	   = static_cast<int64>( value );
+				const hashed_string key( name );
+				info._mapNameToValue[key] = v;
+				// Prefer primary names for value→name (skip aliases).
+				if ( info._mapValueToName.find( v ) == info._mapValueToName.end() )
+					info._mapValueToName[v] = key;
+			};
+
+			add( "DirectX11", RHIBackend::DirectX11 );
+			add( "DirectX12", RHIBackend::DirectX12 );
+			add( "Vulkan", RHIBackend::Vulkan );
+			add( "OpenGL", RHIBackend::OpenGL );
+			registry.registerEnum( info );
+		}
+
+		EnumRegistrar g_rhiBackendEnumRegistrar{ &registerRHIBackendEnum };
+	}
+
 	SW_GLOBAL_VARIABLE_ENUM( g_RHIBackend, RHIBackend, RHIBackend::DirectX12, "Current RHI Backend" );
 
 	bool RHI::initialize()

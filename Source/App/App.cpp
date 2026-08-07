@@ -16,10 +16,12 @@
 #include "Core/Reflection/ReflectionCore.h"
 #include "Core/Object/ComponentManager.h"
 #include "Core/Graphics/RHI/RHI.h"
+#include "Core/Graphics/RHI/RHICapabilities.h"
 #include "Core/Graphics/Shader/ShaderCache.h"
 #include "Core/Window/IWindow.h"
 #include "Core/Game/Scene/SceneManager.h"
 #include "Core/Game/Scene/Scene.h"
+#include "Core/Graphics/Material/Material.h"
 #include "Core/Game/GameState.h"
 #include "Core/Utility/Time/EngineTimer.h"
 #include "Core/Common/PlatformHeaders.h"
@@ -83,6 +85,8 @@ namespace sw
 		services.sceneManager		   = _sceneManager.get();
 		bindCoreServices( services );
 
+		registerCoreReflectionTypes();
+
 		if ( _taskManager->initialize() == false )
 			return false;
 		if ( _liveReloadManager->initialize() == false )
@@ -130,6 +134,91 @@ namespace sw
 
 		_gameRenderTarget = _rhi->getDevice().createTexture2D( rtDesc );
 		return _gameRenderTarget != 0;
+	}
+
+	bool App::applyPendingBackendChange()
+	{
+		const RHIBackend requested = _pendingRHIBackend;
+		const RHIBackend previous  = _committedRHIBackend;
+		if ( requested == previous )
+			return true;
+
+		if ( _rhi == nullptr )
+			return false;
+
+		void* editorModule = nullptr;
+		void* gameModule   = nullptr;
+#if !defined( SW_SHIPPING )
+		if ( _liveReloadManager )
+		{
+			editorModule = _liveReloadManager->getModuleHandle( kEditorModuleName );
+			gameModule	 = _liveReloadManager->getModuleHandle( kGameModuleName );
+		}
+#endif
+
+		SW_LOG_INFO( "[Hot-Swap] Soft-recreating RHI: %# → %#",
+					 RHI::getBackendTypeName( previous ),
+					 RHI::getBackendTypeName( requested ) );
+
+		_rhi->getDevice().waitIdle();
+
+		onBeforeEditorReload();
+		onBeforeGameReload();
+
+		if ( _gameRenderTarget != 0 )
+		{
+			_rhi->getDevice().destroyTexture( _gameRenderTarget );
+			_gameRenderTarget = 0;
+			_gameTextureID	  = nullptr;
+		}
+
+		if ( Scene* scene = _sceneManager ? _sceneManager->getActiveScene() : nullptr )
+		{
+			if ( Material* material = scene->getMaterial() )
+				material->shutdown( &_rhi->getDevice() );
+		}
+
+		_rhi->getDevice().waitIdle();
+
+		g_RHIBackend = requested;
+		if ( _rhi->recreateDevice( requested ) == false )
+		{
+			SW_LOG_ERROR( "[Hot-Swap] recreateDevice(%#) failed — restoring %#",
+						  RHI::getBackendTypeName( requested ),
+						  RHI::getBackendTypeName( previous ) );
+			g_RHIBackend = previous;
+			if ( _rhi->recreateDevice( previous ) == false )
+				return false;
+		}
+		else
+		{
+			_committedRHIBackend = requested;
+		}
+
+		if ( Scene* scene = _sceneManager ? _sceneManager->getActiveScene() : nullptr )
+		{
+			if ( scene->initialize( &_rhi->getDevice() ) == false )
+				SW_LOG_ERROR( "[Hot-Swap] Scene re-initialize failed after backend change." );
+		}
+
+		if ( _bEnableEditor )
+		{
+			if ( createGameViewportTexture() == false )
+				SW_LOG_WARNING( "[Hot-Swap] Game viewport texture recreate failed." );
+			onAfterEditorReload( editorModule );
+		}
+
+#if defined( SW_SHIPPING )
+		onAfterGameReload( nullptr );
+#else
+		onAfterGameReload( gameModule );
+#endif
+
+		_editorCtx.rhiDevice	 = &_rhi->getDevice();
+		_editorCtx.gameTextureID = _gameTextureID;
+
+		SW_LOG_INFO( "[Hot-Swap] Active backend is now %#", RHI::getBackendTypeName( _committedRHIBackend ) );
+		return true;
 	}
 
 	bool App::bindEditorAPI( void* hLibraryModule )
@@ -249,16 +338,39 @@ namespace sw
 		_window->setResizeCallback( SW_DELEGATE_METHOD( WindowResizeDelegate, &App::onResize, this ) );
 		_window->setCustomMessageHandler( SW_DELEGATE_METHOD( WindowMessageHandlerDelegate, &App::onWindowMessage, this ) );
 
-		_bAppRunning	 = true;
-		_bBackendChanged = false;
+		_bAppRunning			 = true;
+		_bPendingBackendChange	 = false;
+		_committedRHIBackend	 = g_RHIBackend;
+		_pendingRHIBackend		 = g_RHIBackend;
 
 		if ( pRHIBackendVar )
 		{
 			pRHIBackendVar->_onValueChanged = SW_DELEGATE_LAMBDA( GlobalVariableChangedDelegate, [this]( GlobalVariableInfo* info )
 			{
-				SW_LOG_INFO( "[Hot-Swap] RHI Backend change detected (to %#). Restarting graphics pipeline...", info->getValueAsInt() );
-				_bBackendChanged = true;
-				_bAppRunning	 = false;
+				const RHIBackend requested = static_cast<RHIBackend>( info->getValueAsInt() );
+				if ( RHIAvailability::isAvailable( requested ) == false )
+				{
+					SW_LOG_WARNING( "[Hot-Swap] Backend %# unavailable — reverting.", static_cast<int32>( requested ) );
+					g_RHIBackend = _committedRHIBackend;
+					return;
+				}
+
+				if ( _bEnableEditor && RHIAvailability::query( requested )._bEditorSupported == false )
+				{
+					SW_LOG_WARNING( "[Hot-Swap] Backend %# is not editor-supported — reverting.", RHI::getBackendTypeName( requested ) );
+					g_RHIBackend = _committedRHIBackend;
+					return;
+				}
+
+				if ( requested == _committedRHIBackend )
+					return;
+
+				// Defer until after endFrame so we never tear down mid-ImGui/DX submit.
+				SW_LOG_INFO( "[Hot-Swap] RHI Backend change queued: %# → %#",
+							 RHI::getBackendTypeName( _committedRHIBackend ),
+							 RHI::getBackendTypeName( requested ) );
+				_pendingRHIBackend	   = requested;
+				_bPendingBackendChange = true;
 			} );
 		}
 
@@ -282,9 +394,6 @@ namespace sw
 
 		while ( _bAppRunning && _window->processMessages() )
 		{
-			if ( _bBackendChanged )
-				break;
-
 			frameTimer.updateTimer();
 			const float32 deltaTime = frameTimer.getDeltaTime();
 
@@ -333,6 +442,16 @@ namespace sw
 			}
 
 			device.endFrame( true );
+
+			if ( _bPendingBackendChange )
+			{
+				_bPendingBackendChange = false;
+				if ( applyPendingBackendChange() == false )
+				{
+					SW_LOG_ERROR( "[Hot-Swap] Backend soft-recreate failed." );
+					g_RHIBackend = _committedRHIBackend;
+				}
+			}
 		}
 
 		if ( _window && _window->shouldClose() )

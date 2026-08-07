@@ -37,7 +37,7 @@ namespace sw
 #if defined( SW_PLATFORM_WINDOWS )
 		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> _d3d12SrvHeap;
 		UINT										 _descriptorSize   = 0;
-		uint32										 _maxDescriptors   = 64;
+		uint32										 _maxDescriptors   = 128;
 		uint32										 _nextDescriptor   = 0;
 		std::vector<uint32>							 _freeDescriptors;
 #endif
