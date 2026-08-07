@@ -1,7 +1,7 @@
 #pragma once
 /**
  * @file EventType.h
- * @brief Auto-generated documentation header
+ * @brief 엔진 이벤트 타입 정의
  */
 
 #include "Core/Common/Types.h"
@@ -36,7 +36,7 @@ private:                                                      \
 		IEvent& operator=( IEvent&& )		   = default;
 		virtual ~IEvent()					   = default;
 		/**
-		 * @brief getEventType 처리를 수행합니다.
+		 * @brief EventType을(를) 반환합니다
 		 */
 		virtual EventType getEventType() const = 0;
 	};

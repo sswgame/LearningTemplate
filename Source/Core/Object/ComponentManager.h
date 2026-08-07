@@ -1,7 +1,7 @@
 #pragma once
 /**
  * @file ComponentManager.h
- * @brief Auto-generated documentation header
+ * @brief 컴포넌트 등록·tick 그룹 정렬·일괄 업데이트
  */
 
 #include "Core/Common/CommonHeaders.h"
@@ -20,8 +20,13 @@ namespace sw
 	class SW_API ComponentManager
 	{
 	public:
+		/** @brief 등록된 팩토리를 비웁니다. */
 		void shutdown() { clear(); }
 
+		/**
+		 * @brief 컴포넌트 타입 T를 이름과 함께 팩토리에 등록합니다.
+		 * @tparam T Component 파생 타입
+		 */
 		template <typename T>
 		void registerComponentType( hashed_string typeName )
 		{
@@ -39,21 +44,16 @@ namespace sw
 			}
 		}
 
-		/**
-		 * @brief createComponentByName 처리를 수행합니다.
-		 */
+		/** @brief 등록된 타입 이름으로 Component를 생성합니다. */
 		Component* createComponentByName( hashed_string typeName ) const;
 
+		/** @brief 등록된 컴포넌트 타입 이름 목록을 반환합니다. */
 		const std::vector<hashed_string>& getRegisteredComponentTypes() const { return _registeredTypes; }
 
-		/**
-		 * @brief tickAllComponentsParallel 처리를 수행합니다.
-		 */
+		/** @brief 활성 컴포넌트를 TickGroup·순서에 맞춰 병렬 tick합니다. */
 		void tickAllComponentsParallel( const std::vector<Component*>& activeComponents, float32 deltaTime );
 
-		/**
-		 * @brief clear 처리를 수행합니다.
-		 */
+		/** @brief 팩토리·등록 타입 목록을 비웁니다. */
 		void clear();
 
 	public:

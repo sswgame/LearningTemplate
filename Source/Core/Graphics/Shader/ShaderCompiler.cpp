@@ -1,6 +1,6 @@
 /**
  * @file ShaderCompiler.cpp
- * @brief Auto-generated documentation header
+ * @brief HLSL→DXIL/SPIR-V 등 셰이더 컴파일
  */
 #include "Core/CoreMinimal.h"
 

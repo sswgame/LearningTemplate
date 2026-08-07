@@ -1,7 +1,7 @@
 #pragma once
 /**
  * @file GameObjectManager.h
- * @brief Auto-generated documentation header
+ * @brief 씬 내 GameObject 생성·조회·지연 삭제 관리
  */
 
 #include "Core/Common/CommonHeaders.h"
@@ -18,53 +18,37 @@ namespace sw
 		GameObjectManager();
 		~GameObjectManager();
 
+		/** @brief 새 GameObject를 생성하고 등록합니다. */
 		GameObject* createGameObject( hashed_string name = hashed_string( "GameObject" ) );
 
-		/**
-		 * @brief registerGameObject 처리를 수행합니다.
-		 */
+		/** @brief 이미 생성된 GameObject를 매니저에 등록합니다. */
 		void registerGameObject( GameObject* obj );
 
-		/**
-		 * @brief findGameObjectByName 처리를 수행합니다.
-		 */
+		/** @brief 이름으로 GameObject를 찾습니다. */
 		GameObject* findGameObjectByName( hashed_string name ) const;
 
-		/**
-		 * @brief findGameObjectById 처리를 수행합니다.
-		 */
+		/** @brief 오브젝트 ID로 GameObject를 찾습니다. */
 		GameObject* findGameObjectById( uint64 objectId ) const;
 
+		/** @brief 등록된 모든 GameObject 목록을 반환합니다. */
 		const std::vector<GameObject*>& getAllGameObjects() const { return _gameObjects; }
 
-		/**
-		 * @brief tick 처리를 수행합니다.
-		 */
+		/** @brief 등록된 GameObject에 순차 tick을 호출합니다. */
 		void tick( float32 deltaTime );
 
-		/**
-		 * @brief tickParallel 처리를 수행합니다.
-		 */
+		/** @brief 활성 컴포넌트 기준 병렬 tick을 수행합니다. */
 		void tickParallel( float32 deltaTime );
 
-		/**
-		 * @brief destroyObjectDeferred 처리를 수행합니다.
-		 */
+		/** @brief GameObject를 지연 삭제 큐에 넣습니다. */
 		void destroyObjectDeferred( GameObject* obj );
 
-		/**
-		 * @brief destroyComponentDeferred 처리를 수행합니다.
-		 */
+		/** @brief Component를 지연 삭제 큐에 넣습니다. */
 		void destroyComponentDeferred( Component* comp );
 
-		/**
-		 * @brief processDeferredDestruction 처리를 수행합니다.
-		 */
+		/** @brief 지연 삭제 큐의 오브젝트·컴포넌트를 실제로 해제합니다. */
 		void processDeferredDestruction();
 
-		/**
-		 * @brief clear 처리를 수행합니다.
-		 */
+		/** @brief 등록·대기 목록을 모두 비웁니다. */
 		void clear();
 
 	private:

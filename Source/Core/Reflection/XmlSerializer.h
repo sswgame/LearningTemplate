@@ -24,68 +24,68 @@ namespace sw
 		virtual ~IXmlBackend() = default;
 
 		/**
-		 * @brief initXmlSerialization 처리를 수행합니다.
+		 * @brief XML 직렬화를 시작합니다
 		 */
 		virtual void		initXmlSerialization( const utf8* rootTagName )			   = 0;
 		/**
-		 * @brief writeValue 처리를 수행합니다.
+		 * @brief 값을 XML로 씁니다
 		 */
 		virtual void		writeValue( const utf8* tagName, const utf8* valueString ) = 0;
 		/**
-		 * @brief beginArray 처리를 수행합니다.
+		 * @brief 배열 구간을 시작합니다
 		 */
 		virtual void		beginArray( const utf8* tagName )						   = 0;
 		/**
-		 * @brief writeArrayItem 처리를 수행합니다.
+		 * @brief 배열 항목을 씁니다
 		 */
 		virtual void		writeArrayItem( const utf8* valueString )				   = 0;
 		/**
-		 * @brief endArray 처리를 수행합니다.
+		 * @brief 배열 구간을 끝냅니다
 		 */
 		virtual void		endArray()												   = 0;
 		/**
-		 * @brief beginMap 처리를 수행합니다.
+		 * @brief 맵 구간을 시작합니다
 		 */
 		virtual void		beginMap( const utf8* tagName )							   = 0;
 		/**
-		 * @brief beginMapEntry 처리를 수행합니다.
+		 * @brief 맵 항목을 시작합니다
 		 */
 		virtual void		beginMapEntry()											   = 0;
 		/**
-		 * @brief writeMapKey 처리를 수행합니다.
+		 * @brief 맵 키를 씁니다
 		 */
 		virtual void		writeMapKey( const utf8* keyString )					   = 0;
 		/**
-		 * @brief writeMapValue 처리를 수행합니다.
+		 * @brief 맵 값을 씁니다
 		 */
 		virtual void		writeMapValue( const utf8* valueString )				   = 0;
 		/**
-		 * @brief endMapEntry 처리를 수행합니다.
+		 * @brief 맵 항목을 끝냅니다
 		 */
 		virtual void		endMapEntry()											   = 0;
 		/**
-		 * @brief endMap 처리를 수행합니다.
+		 * @brief 맵 구간을 끝냅니다
 		 */
 		virtual void		endMap()												   = 0;
 		/**
-		 * @brief endSerialize 처리를 수행합니다.
+		 * @brief 직렬화를 마무리합니다
 		 */
 		virtual std::string endSerialize()											   = 0;
 
 		/**
-		 * @brief initXmlDeserialization 처리를 수행합니다.
+		 * @brief XML 역직렬화를 시작합니다
 		 */
 		virtual bool initXmlDeserialization( const utf8* xmlStr, const utf8* rootTagName )	   = 0;
 		/**
-		 * @brief readValue 처리를 수행합니다.
+		 * @brief XML에서 값을 읽습니다
 		 */
 		virtual bool readValue( const utf8* tagName, std::string& outValue )				   = 0;
 		/**
-		 * @brief iterateArray 처리를 수행합니다.
+		 * @brief 배열 요소를 순회합니다
 		 */
 		virtual bool iterateArray( const utf8* tagName, const XmlArrayItemDelegate& callback ) = 0;
 		/**
-		 * @brief iterateMap 처리를 수행합니다.
+		 * @brief 맵 항목을 순회합니다
 		 */
 		virtual bool iterateMap( const utf8* tagName, const XmlMapItemDelegate& callback )	   = 0;
 	};
@@ -101,68 +101,68 @@ namespace sw
 		~RapidXmlBackend() override;
 
 		/**
-		 * @brief initXmlSerialization 처리를 수행합니다.
+		 * @brief XML 직렬화를 시작합니다
 		 */
 		void		initXmlSerialization( const utf8* rootTagName ) override;
 		/**
-		 * @brief writeValue 처리를 수행합니다.
+		 * @brief 값을 XML로 씁니다
 		 */
 		void		writeValue( const utf8* tagName, const utf8* valueString ) override;
 		/**
-		 * @brief beginArray 처리를 수행합니다.
+		 * @brief 배열 구간을 시작합니다
 		 */
 		void		beginArray( const utf8* tagName ) override;
 		/**
-		 * @brief writeArrayItem 처리를 수행합니다.
+		 * @brief 배열 항목을 씁니다
 		 */
 		void		writeArrayItem( const utf8* valueString ) override;
 		/**
-		 * @brief endArray 처리를 수행합니다.
+		 * @brief 배열 구간을 끝냅니다
 		 */
 		void		endArray() override;
 		/**
-		 * @brief beginMap 처리를 수행합니다.
+		 * @brief 맵 구간을 시작합니다
 		 */
 		void		beginMap( const utf8* tagName ) override;
 		/**
-		 * @brief beginMapEntry 처리를 수행합니다.
+		 * @brief 맵 항목을 시작합니다
 		 */
 		void		beginMapEntry() override;
 		/**
-		 * @brief writeMapKey 처리를 수행합니다.
+		 * @brief 맵 키를 씁니다
 		 */
 		void		writeMapKey( const utf8* keyString ) override;
 		/**
-		 * @brief writeMapValue 처리를 수행합니다.
+		 * @brief 맵 값을 씁니다
 		 */
 		void		writeMapValue( const utf8* valueString ) override;
 		/**
-		 * @brief endMapEntry 처리를 수행합니다.
+		 * @brief 맵 항목을 끝냅니다
 		 */
 		void		endMapEntry() override;
 		/**
-		 * @brief endMap 처리를 수행합니다.
+		 * @brief 맵 구간을 끝냅니다
 		 */
 		void		endMap() override;
 		/**
-		 * @brief endSerialize 처리를 수행합니다.
+		 * @brief 직렬화를 마무리합니다
 		 */
 		std::string endSerialize() override;
 
 		/**
-		 * @brief initXmlDeserialization 처리를 수행합니다.
+		 * @brief XML 역직렬화를 시작합니다
 		 */
 		bool initXmlDeserialization( const utf8* xmlStr, const utf8* rootTagName ) override;
 		/**
-		 * @brief readValue 처리를 수행합니다.
+		 * @brief XML에서 값을 읽습니다
 		 */
 		bool readValue( const utf8* tagName, std::string& outValue ) override;
 		/**
-		 * @brief iterateArray 처리를 수행합니다.
+		 * @brief 배열 요소를 순회합니다
 		 */
 		bool iterateArray( const utf8* tagName, const XmlArrayItemDelegate& callback ) override;
 		/**
-		 * @brief iterateMap 처리를 수행합니다.
+		 * @brief 맵 항목을 순회합니다
 		 */
 		bool iterateMap( const utf8* tagName, const XmlMapItemDelegate& callback ) override;
 

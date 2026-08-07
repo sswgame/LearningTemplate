@@ -1,6 +1,6 @@
 /**
  * @file D3D12RHIDevice.cpp
- * @brief Auto-generated documentation header
+ * @brief D3D12RHIDevice 구현
  */
 #include "D3D12RHIDevice.h"
 

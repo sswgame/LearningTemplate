@@ -1,6 +1,6 @@
 /**
  * @file Serializer.cpp
- * @brief Auto-generated documentation header
+ * @brief Binary/JSON/XML 직렬화 구현
  */
 #include "pch.h"
 

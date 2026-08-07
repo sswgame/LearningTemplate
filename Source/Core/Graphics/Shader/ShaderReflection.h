@@ -1,7 +1,7 @@
 #pragma once
 /**
  * @file ShaderReflection.h
- * @brief Auto-generated documentation header
+ * @brief 셰이더 바이트코드 리플렉션 데이터
  */
 
 #include "Core/CoreMinimal.h"
@@ -42,7 +42,7 @@ namespace sw
 	{
 	public:
 		/**
-		 * @brief reflect 처리를 수행합니다.
+		 * @brief 바이트코드에서 리플렉션 데이터를 추출합니다
 		 */
 		static ShaderReflectionData reflect( const std::vector<uint8>& bytecode, ShaderTargetFormat targetFormat );
 	};

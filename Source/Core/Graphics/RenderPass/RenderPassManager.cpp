@@ -1,6 +1,6 @@
 /**
  * @file RenderPassManager.cpp
- * @brief Auto-generated documentation header
+ * @brief 렌더 패스 매니저 구현
  */
 #include "RenderPassManager.h"
 #include "Core/Utility/Log/Logger.h"

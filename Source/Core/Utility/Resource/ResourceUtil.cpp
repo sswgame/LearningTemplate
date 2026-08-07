@@ -1,6 +1,6 @@
 /**
  * @file ResourceUtil.cpp
- * @brief Auto-generated documentation header
+ * @brief ResourceUtil 경로 해석 구현
  */
 #include "pch.h"
 #include "ResourceUtil.h"

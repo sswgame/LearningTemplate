@@ -1,6 +1,6 @@
 /**
  * @file FrameArenaAllocator.cpp
- * @brief Auto-generated documentation header
+ * @brief 프레임 아레나 할당자 구현
  */
 #include "Core/CoreMinimal.h"
 

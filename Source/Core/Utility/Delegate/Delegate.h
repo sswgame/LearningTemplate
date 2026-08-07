@@ -1,7 +1,7 @@
 #pragma once
 /**
  * @file Delegate.h
- * @brief Auto-generated documentation header
+ * @brief 타입 안전 델리게이트·멀티캐스트·핸들
  */
 
 #include "Core/Common/CommonHeaders.h"

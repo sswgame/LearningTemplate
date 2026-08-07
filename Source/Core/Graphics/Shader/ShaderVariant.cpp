@@ -1,6 +1,6 @@
 /**
  * @file ShaderVariant.cpp
- * @brief Auto-generated documentation header
+ * @brief 셰이더 변형 구현
  */
 #include "pch.h"
 #include "ShaderVariant.h"

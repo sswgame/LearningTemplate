@@ -23,7 +23,7 @@ namespace sw
 		~TaskManager() = default;
 
 		/**
-		 * @brief initialize 처리를 수행합니다.
+		 * @brief 초기화합니다
 		 */
 		bool initialize( uint32 threadCount = 0 );
 
@@ -37,7 +37,7 @@ namespace sw
 	public:
 
 		/**
-		 * @brief emplaceTask 처리를 수행합니다.
+		 * @brief 작업을 등록합니다
 		 */
 		TaskHandle emplaceTask( const TaskDelegate& delegate );
 
@@ -58,7 +58,7 @@ namespace sw
 		TaskHandle emplaceTask( const TaskArgsDelegate& delegate, const TaskArgs& args );
 
 		/**
-		 * @brief emplaceTask 처리를 수행합니다.
+		 * @brief 작업을 등록합니다
 		 */
 		TaskHandle emplaceTask( const std::string_view name, const TaskArgsDelegate& delegate, const TaskArgs& args );
 
@@ -75,70 +75,70 @@ namespace sw
 		TaskHandle emplaceParallel( uint32 count, const ParallelTaskDelegate& delegate );
 
 		/**
-		 * @brief emplaceParallel 처리를 수행합니다.
+		 * @brief 병렬 작업을 등록합니다
 		 */
 		TaskHandle emplaceParallel( const std::string_view name, uint32 count, const ParallelTaskDelegate& delegate );
 
 		/**
-		 * @brief emplaceParallelBlock 처리를 수행합니다.
+		 * @brief emplaceParallelB내부 뮤텍스를 잠급니다
 		 */
 		TaskHandle emplaceParallelBlock( uint32 start, uint32 end, const ParallelBlockDelegate& delegate );
 
 		/**
-		 * @brief createStage 처리를 수행합니다.
+		 * @brief 작업 스테이지를 생성합니다
 		 */
 		TaskStageHandle createStage( const std::string_view stageName );
 
 		/**
-		 * @brief waitStage 처리를 수행합니다.
+		 * @brief 스테이지 완료를 기다립니다
 		 */
 		void waitStage( TaskStageHandle stage );
 
 		/**
-		 * @brief isStageComplete 처리를 수행합니다.
+		 * @brief 스테이지 완료 여부를 반환합니다
 		 */
 		bool isStageComplete( TaskStageHandle stage );
 
 		/**
-		 * @brief dispatch 처리를 수행합니다.
+		 * @brief 대기 중인 작업을 디스패치합니다
 		 */
 		void dispatch();
 
 		/**
-		 * @brief waitAll 처리를 수행합니다.
+		 * @brief 모든 작업 완료를 기다립니다
 		 */
 		void waitAll();
 
 		/**
-		 * @brief clear 처리를 수행합니다.
+		 * @brief 내부 상태를 비웁니다
 		 */
 		void clear();
 
 		/**
-		 * @brief whenAll 처리를 수행합니다.
+		 * @brief 모두 완료 시 연결합니다
 		 */
 		TaskHandle whenAll( const std::vector<TaskHandle>& tasks, const TaskDelegate& continuation );
 
 		/**
-		 * @brief whenAny 처리를 수행합니다.
+		 * @brief 하나라도 완료 시 연결합니다
 		 */
 		TaskHandle whenAny( const std::vector<TaskHandle>& tasks, const TaskDelegate& continuation );
 
 	private:
 		/**
-		 * @brief workerLoop 처리를 수행합니다.
+		 * @brief 워커 루프를 실행합니다
 		 */
 		void					  workerLoop( uint32 workerId );
 		/**
-		 * @brief scheduleReadyTask 처리를 수행합니다.
+		 * @brief 준비된 작업을 스케줄합니다
 		 */
 		void					  scheduleReadyTask( const std::shared_ptr<TaskNode>& node );
 		/**
-		 * @brief onTaskFinished 처리를 수행합니다.
+		 * @brief 작업 완료 콜백을 호출합니다
 		 */
 		void					  onTaskFinished( const std::shared_ptr<TaskNode>& node );
 		/**
-		 * @brief tryStealWorkNode 처리를 수행합니다.
+		 * @brief 작업 훔치기를 시도합니다
 		 */
 		std::shared_ptr<TaskNode> tryStealWorkNode();
 

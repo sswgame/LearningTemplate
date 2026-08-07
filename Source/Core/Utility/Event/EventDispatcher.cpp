@@ -1,6 +1,6 @@
 /**
  * @file EventDispatcher.cpp
- * @brief Auto-generated documentation header
+ * @brief 타입 안전 이벤트 디스패처 구현
  */
 #include "pch.h"
 

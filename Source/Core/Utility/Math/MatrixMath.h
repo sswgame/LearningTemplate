@@ -1,7 +1,7 @@
 #pragma once
 /**
  * @file MatrixMath.h
- * @brief 3D 그래픽스 회전과 변환에 필수적인 쿼터니언(Quaternion) 구조체 및 관련 연산을 정의합니다.
+ * @brief 쿼터니언(quaternion)과 4x4 행렬(float4x4) 및 관련 변환 연산.
  */
 #include "Core/Common/Types.h"
 #include "Core/Utility/Math/VectorMath.h"
@@ -49,102 +49,102 @@ namespace sw
 
 	public:
 		/**
-		 * @brief createFromAxisAngle 처리를 수행합니다.
+		 * @brief 축-각에서 쿼터니언을 생성합니다
 		 */
 		static quaternion createFromAxisAngle( const float3& axis, float32 angle ) noexcept;
 		/**
-		 * @brief createFromYawPitchRoll 처리를 수행합니다.
+		 * @brief 요/피치/롤에서 행렬을 생성합니다
 		 */
 		static quaternion createFromYawPitchRoll( float32 yaw, float32 pitch, float32 roll ) noexcept;
 		/**
-		 * @brief createFromYawPitchRoll 처리를 수행합니다.
+		 * @brief 요/피치/롤에서 행렬을 생성합니다
 		 */
 		static quaternion createFromYawPitchRoll( const float3& angles ) noexcept;
 		/**
-		 * @brief createFromRotationMatrix 처리를 수행합니다.
+		 * @brief 회전 행렬에서 쿼터니언을 생성합니다
 		 */
 		static quaternion createFromRotationMatrix( const float4x4& matrix ) noexcept;
 
 		/**
-		 * @brief rotateTowards 처리를 수행합니다.
+		 * @brief 목표 방향으로 회전합니다
 		 */
 		static quaternion rotateTowards( const quaternion& from, const quaternion& to, float32 maxAngle ) noexcept;
 
 		/**
-		 * @brief lerp 처리를 수행합니다.
+		 * @brief 선형 보간합니다
 		 */
 		static quaternion lerp( const quaternion& from, const quaternion& to, float32 t ) noexcept;
 		/**
-		 * @brief slerp 처리를 수행합니다.
+		 * @brief 구면 선형 보간합니다
 		 */
 		static quaternion slerp( const quaternion& from, const quaternion& to, float32 t ) noexcept;
 
 		/**
-		 * @brief concatenate 처리를 수행합니다.
+		 * @brief 변환을 이어 붙입니다
 		 */
 		static quaternion concatenate( const quaternion& q1, const quaternion& q2 ) noexcept;
 		/**
-		 * @brief fromToRotation 처리를 수행합니다.
+		 * @brief 방향 전환 회전을 생성합니다
 		 */
 		static quaternion fromToRotation( const float3& from, const float3& to ) noexcept;
 		/**
-		 * @brief lookRotation 처리를 수행합니다.
+		 * @brief 바라보는 회전을 생성합니다
 		 */
 		static quaternion lookRotation( const float3& direction, const float3& up ) noexcept;
 		/**
-		 * @brief getAngleBetween 처리를 수행합니다.
+		 * @brief AngleBetween을(를) 반환합니다
 		 */
 		static float32	  getAngleBetween( const quaternion& lhs, const quaternion& rhs ) noexcept;
 
 	public:
 		/**
-		 * @brief norm 처리를 수행합니다.
+		 * @brief 노름을 반환합니다
 		 */
 		float32 norm() const noexcept;
 		/**
-		 * @brief normSquared 처리를 수행합니다.
+		 * @brief 노름 제곱을 반환합니다
 		 */
 		float32 normSquared() const noexcept;
 
 		/**
-		 * @brief normalize 처리를 수행합니다.
+		 * @brief 정규화합니다
 		 */
 		quaternion& normalize() noexcept;
 		/**
-		 * @brief normalize 처리를 수행합니다.
+		 * @brief 정규화합니다
 		 */
 		quaternion	normalize() const noexcept;
 
 		/**
-		 * @brief conjugate 처리를 수행합니다.
+		 * @brief 켤레를 반환합니다
 		 */
 		void	   conjugate() noexcept;
 		/**
-		 * @brief conjugate 처리를 수행합니다.
+		 * @brief 켤레를 반환합니다
 		 */
 		quaternion conjugate() const noexcept;
 
 		/**
-		 * @brief inverse 처리를 수행합니다.
+		 * @brief 역을 구합니다
 		 */
 		void	   inverse() noexcept;
 		/**
-		 * @brief inverse 처리를 수행합니다.
+		 * @brief 역을 구합니다
 		 */
 		quaternion inverse() const noexcept;
 
 		/**
-		 * @brief dot 처리를 수행합니다.
+		 * @brief 내적을 계산합니다
 		 */
 		float32 dot( const quaternion& other ) const noexcept;
 
 		/**
-		 * @brief getEulerAngles 처리를 수행합니다.
+		 * @brief EulerAngles을(를) 반환합니다
 		 */
 		float3	 getEulerAngles() const noexcept;
 		float3	 toEuler() const noexcept { return getEulerAngles(); }
 		/**
-		 * @brief toMatrix 처리를 수행합니다.
+		 * @brief 행렬로 변환합니다
 		 */
 		float4x4 toMatrix() const noexcept;
 
@@ -202,146 +202,146 @@ namespace sw
 		}
 
 		/**
-		 * @brief float4x4 처리를 수행합니다.
+		 * @brief 4x4 행렬을 생성합니다
 		 */
 		explicit float4x4( const float32* pArray ) noexcept;
 
 	public:
 		/**
-		 * @brief createTranslation 처리를 수행합니다.
+		 * @brief 이동 행렬을 생성합니다
 		 */
 		static float4x4 createTranslation( const float3& position ) noexcept;
 		/**
-		 * @brief createTranslation 처리를 수행합니다.
+		 * @brief 이동 행렬을 생성합니다
 		 */
 		static float4x4 createTranslation( float32 x, float32 y, float32 z ) noexcept;
 
 		/**
-		 * @brief createScale 처리를 수행합니다.
+		 * @brief 스케일 행렬을 생성합니다
 		 */
 		static float4x4 createScale( const float3& scales ) noexcept;
 		/**
-		 * @brief createScale 처리를 수행합니다.
+		 * @brief 스케일 행렬을 생성합니다
 		 */
 		static float4x4 createScale( float32 x, float32 y, float32 z ) noexcept;
 		/**
-		 * @brief createScale 처리를 수행합니다.
+		 * @brief 스케일 행렬을 생성합니다
 		 */
 		static float4x4 createScale( float32 scale ) noexcept;
 
 		/**
-		 * @brief createRotationX 처리를 수행합니다.
+		 * @brief X축 회전 행렬을 생성합니다
 		 */
 		static float4x4 createRotationX( float32 radians ) noexcept;
 		/**
-		 * @brief createRotationY 처리를 수행합니다.
+		 * @brief Y축 회전 행렬을 생성합니다
 		 */
 		static float4x4 createRotationY( float32 radians ) noexcept;
 		/**
-		 * @brief createRotationZ 처리를 수행합니다.
+		 * @brief Z축 회전 행렬을 생성합니다
 		 */
 		static float4x4 createRotationZ( float32 radians ) noexcept;
 
 		/**
-		 * @brief createFromAxisAngle 처리를 수행합니다.
+		 * @brief 축-각에서 쿼터니언을 생성합니다
 		 */
 		static float4x4 createFromAxisAngle( const float3& axis, float32 angle ) noexcept;
 
 		/**
-		 * @brief createPerspectiveFieldOfView 처리를 수행합니다.
+		 * @brief PerspectiveFieldOfView을(를) 생성합니다
 		 */
 		static float4x4 createPerspectiveFieldOfView( float32 fov, float32 aspectRatio, float32 nearPlane, float32 farPlane ) noexcept;
 		/**
-		 * @brief createPerspective 처리를 수행합니다.
+		 * @brief 원근 투영 행렬을 생성합니다
 		 */
 		static float4x4 createPerspective( float32 width, float32 height, float32 nearPlane, float32 farPlane ) noexcept;
 		/**
-		 * @brief createPerspectiveOffCenter 처리를 수행합니다.
+		 * @brief PerspectiveOffCenter을(를) 생성합니다
 		 */
 		static float4x4 createPerspectiveOffCenter( float32 left, float32 right, float32 bottom, float32 top, float32 nearPlane, float32 farPlane ) noexcept;
 
 		/**
-		 * @brief createOrthographic 처리를 수행합니다.
+		 * @brief 직교 투영 행렬을 생성합니다
 		 */
 		static float4x4 createOrthographic( float32 width, float32 height, float32 nearPlane, float32 farPlane ) noexcept;
 		/**
-		 * @brief createOrthographicOffCenter 처리를 수행합니다.
+		 * @brief 오프센터 직교 투영 행렬을 생성합니다
 		 */
 		static float4x4 createOrthographicOffCenter( float32 left, float32 right, float32 bottom, float32 top, float32 nearPlane, float32 farPlane ) noexcept;
 
 		/**
-		 * @brief createLookAt 처리를 수행합니다.
+		 * @brief LookAt 뷰 행렬을 생성합니다
 		 */
 		static float4x4 createLookAt( const float3& position, const float3& target, const float3& up ) noexcept;
 		/**
-		 * @brief createWorld 처리를 수행합니다.
+		 * @brief World을(를) 생성합니다
 		 */
 		static float4x4 createWorld( const float3& position, const float3& forward, const float3& up ) noexcept;
 
 		/**
-		 * @brief createFromQuaternion 처리를 수행합니다.
+		 * @brief FromQuaternion을(를) 생성합니다
 		 */
 		static float4x4 createFromQuaternion( const quaternion& quaternion ) noexcept;
 		/**
-		 * @brief createFromYawPitchRoll 처리를 수행합니다.
+		 * @brief 요/피치/롤에서 행렬을 생성합니다
 		 */
 		static float4x4 createFromYawPitchRoll( float32 yaw, float32 pitch, float32 roll ) noexcept;
 		/**
-		 * @brief createFromYawPitchRoll 처리를 수행합니다.
+		 * @brief 요/피치/롤에서 행렬을 생성합니다
 		 */
 		static float4x4 createFromYawPitchRoll( const float3& angles ) noexcept;
 
 		/**
-		 * @brief lerp 처리를 수행합니다.
+		 * @brief 선형 보간합니다
 		 */
 		static float4x4 lerp( const float4x4& from, const float4x4& to, float32 t ) noexcept;
 		/**
-		 * @brief transform 처리를 수행합니다.
+		 * @brief 변환을 적용합니다
 		 */
 		static float4x4 transform( const float4x4& matrix, const quaternion& rotation ) noexcept;
 
 	public:
 		/**
-		 * @brief decompose 처리를 수행합니다.
+		 * @brief TRS로 분해합니다
 		 */
 		bool decompose( float3& outScale, quaternion& outRotation, float3& outTranslation ) const noexcept;
 
 		/**
-		 * @brief getScale 처리를 수행합니다.
+		 * @brief Scale을(를) 반환합니다
 		 */
 		float3	   getScale() const noexcept;
 		/**
-		 * @brief getRotation 처리를 수행합니다.
+		 * @brief Rotation을(를) 반환합니다
 		 */
 		quaternion getRotation() const noexcept;
 		/**
-		 * @brief getTranslation 처리를 수행합니다.
+		 * @brief Translation을(를) 반환합니다
 		 */
 		float3	   getTranslation() const noexcept;
 
 		/**
-		 * @brief setScale 처리를 수행합니다.
+		 * @brief Scale을(를) 설정합니다
 		 */
 		void setScale( const float3& scale ) noexcept;
 		/**
-		 * @brief setRotation 처리를 수행합니다.
+		 * @brief Rotation을(를) 설정합니다
 		 */
 		void setRotation( const quaternion& rotation ) noexcept;
 		/**
-		 * @brief setTranslation 처리를 수행합니다.
+		 * @brief Translation을(를) 설정합니다
 		 */
 		void setTranslation( const float3& translation ) noexcept;
 
 		/**
-		 * @brief determinant 처리를 수행합니다.
+		 * @brief 행렬식을 계산합니다
 		 */
 		float32	 determinant() const noexcept;
 		/**
-		 * @brief transpose 처리를 수행합니다.
+		 * @brief 전치합니다
 		 */
 		float4x4 transpose() const noexcept;
 		/**
-		 * @brief invert 처리를 수행합니다.
+		 * @brief 역행렬을 구합니다
 		 */
 		float4x4 invert() const noexcept;
 

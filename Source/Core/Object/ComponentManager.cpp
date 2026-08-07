@@ -1,6 +1,6 @@
 /**
  * @file ComponentManager.cpp
- * @brief Auto-generated documentation header
+ * @brief ComponentManager 구현
  */
 #include "pch.h"
 #include "ComponentManager.h"

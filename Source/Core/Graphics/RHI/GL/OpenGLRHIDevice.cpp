@@ -1,6 +1,6 @@
 /**
  * @file OpenGLRHIDevice.cpp
- * @brief Auto-generated documentation header
+ * @brief OpenGL RHI 디바이스 구현
  */
 #include "OpenGLRHIDevice.h"
 #include "Core/Graphics/Shader/ShaderCache.h"

@@ -1,6 +1,6 @@
 /**
  * @file DynamicBitset.cpp
- * @brief Auto-generated documentation header
+ * @brief DynamicBitset 구현
  */
 #include "pch.h"
 #include "DynamicBitset.h"

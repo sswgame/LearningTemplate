@@ -22,9 +22,7 @@ namespace sw
 	{
 	public:
 		GameObject();
-		/**
-		 * @brief GameObject 처리를 수행합니다.
-		 */
+		/** @brief 이름을 지정하는 생성자 */
 		explicit GameObject( hashed_string name );
 		virtual ~GameObject();
 
@@ -52,16 +50,23 @@ namespace sw
 		/** @brief 게임 오브젝트 이름 반환 */
 		hashed_string getName() const { return _name; }
 
-		/** @brief 고유 고유 오브젝트 ID (UID) 반환 */
+		/** @brief 고유 오브젝트 ID (UID) 반환 */
 		uint64 getObjectId() const { return _objectId; }
 
-		/** @brief 활성화/비활성화 상태 설정 */
+		/**
+		 * @brief 활성화/비활성화 설정
+		 * @details 자체 활성 플래그와 함께 소유 컴포넌트에도 동일 값을 전파합니다.
+		 *          GameObject 간 부모 계층은 아직 없으므로 계층 활성은 자체 활성과 동일하게 유지됩니다.
+		 */
 		void setActive( bool bActive );
 
 		/** @brief 자체 활성화 여부 반환 */
 		bool isActive() const { return _bActive; }
 
-		/** @brief 계층 구조 상 최종 활성화 상태 반환 */
+		/**
+		 * @brief 최종 활성화 여부 반환
+		 * @details `_bActive && _bIsActiveInHierarchy`. 현재는 setActive가 두 비트를 함께 갱신합니다.
+		 */
 		bool isActiveInHierarchy() const { return _bActive && _bIsActiveInHierarchy; }
 
 		/** @brief 태그 추가 */
@@ -173,8 +178,8 @@ namespace sw
 		hashed_string _name; ///< 오브젝트 식별 명칭
 
 		PROPERTY()
-		uint8 _bActive				: 1; ///< 개별 활성화 비트
-		uint8 _bIsActiveInHierarchy : 1; ///< 계층적 최종 활성화 비트
+		uint8 _bActive				: 1; ///< 자체 활성화 비트
+		uint8 _bIsActiveInHierarchy : 1; ///< 최종 활성 비트(현재 setActive와 동기화; 향후 부모 계층용)
 		uint8 _bIsTickOrderDirty	: 1; ///< Tick 우선순위 변경 마크
 
 		std::unordered_map<hashed_string, std::vector<std::unique_ptr<Component>>> _components; ///< 타입별 컴포넌트 맵

@@ -1,7 +1,7 @@
 #pragma once
 /**
  * @file DynamicBitset.h
- * @brief Auto-generated documentation header
+ * @brief 동적 크기 비트셋
  */
 
 #include "Core/CoreMinimal.h"
@@ -18,15 +18,15 @@ namespace sw
 
 	public:
 		/**
-		 * @brief DynamicBitset 처리를 수행합니다.
+		 * @brief 비트셋을 생성합니다
 		 */
 		explicit DynamicBitset( uint32 size = 0 );
 		/**
-		 * @brief DynamicBitset 처리를 수행합니다.
+		 * @brief 비트셋을 생성합니다
 		 */
 		explicit DynamicBitset( const std::string& str );
 		/**
-		 * @brief DynamicBitset 처리를 수행합니다.
+		 * @brief 비트셋을 생성합니다
 		 */
 		explicit DynamicBitset( uint32 size, uint64 value );
 		~DynamicBitset()										   = default;
@@ -47,7 +47,7 @@ namespace sw
 
 		void reserve( const uint32 newCapacity ) { _blockList.reserve( calculateBlockCount( newCapacity ) ); }
 		/**
-		 * @brief resize 처리를 수행합니다.
+		 * @brief 크기를 변경합니다
 		 */
 		void resize( uint32 newSize, bool value = false );
 
@@ -56,59 +56,59 @@ namespace sw
 		bool test( const uint32 pos ) const { return ( *this )[pos]; }
 
 		/**
-		 * @brief set 처리를 수행합니다.
+		 * @brief 값을 설정합니다
 		 */
 		DynamicBitset& set();
 		/**
-		 * @brief set 처리를 수행합니다.
+		 * @brief 값을 설정합니다
 		 */
 		DynamicBitset& set( uint32 pos, bool value = true );
 
 		/**
-		 * @brief reset 처리를 수행합니다.
+		 * @brief 초기 상태로 되돌립니다
 		 */
 		DynamicBitset& reset();
 
 		DynamicBitset& reset( const uint32 pos ) { return set( pos, false ); }
 
 		/**
-		 * @brief flip 처리를 수행합니다.
+		 * @brief 비트를 반전합니다
 		 */
 		DynamicBitset& flip();
 		/**
-		 * @brief flip 처리를 수행합니다.
+		 * @brief 비트를 반전합니다
 		 */
 		DynamicBitset& flip( uint32 pos );
 
 		/**
-		 * @brief all 처리를 수행합니다.
+		 * @brief 모두 켜져 있는지 반환합니다
 		 */
 		bool all() const;
 		/**
-		 * @brief any 처리를 수행합니다.
+		 * @brief 켜진 비트가 있는지 반환합니다
 		 */
 		bool any() const;
 
 		bool   none() const { return any() == false; }
 		/**
-		 * @brief count 처리를 수행합니다.
+		 * @brief 설정된 비트 수를 반환합니다
 		 */
 		uint32 count() const;
 
 		/**
-		 * @brief to_string 처리를 수행합니다.
+		 * @brief 문자열로 변환합니다
 		 */
 		std::string to_string() const;
 		/**
-		 * @brief to_ullong 처리를 수행합니다.
+		 * @brief unsigned long long으로 변환합니다
 		 */
 		uint64		to_ullong() const;
 		/**
-		 * @brief to_ulong 처리를 수행합니다.
+		 * @brief unsigned long으로 변환합니다
 		 */
 		uint32		to_ulong() const;
 		/**
-		 * @brief memory_usage 처리를 수행합니다.
+		 * @brief 메모리 사용량을 반환합니다
 		 */
 		uint32		memory_usage() const;
 
@@ -137,7 +137,7 @@ namespace sw
 		static BlockType bitMask( const uint32 pos ) { return static_cast<BlockType>( 1 ) << getBitIndexInBlock( pos ); }
 
 		/**
-		 * @brief sanitize 처리를 수행합니다.
+		 * @brief 값을 정제합니다
 		 */
 		void sanitize();
 

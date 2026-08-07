@@ -1,6 +1,6 @@
 /**
  * @file ShaderReflection.cpp
- * @brief Auto-generated documentation header
+ * @brief 셰이더 리플렉션 파싱
  */
 #include "ShaderReflection.h"
 #include "Core/Utility/Log/Logger.h"

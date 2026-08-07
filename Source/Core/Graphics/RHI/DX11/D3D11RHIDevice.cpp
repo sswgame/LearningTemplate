@@ -1,6 +1,6 @@
 /**
  * @file D3D11RHIDevice.cpp
- * @brief Auto-generated documentation header
+ * @brief Direct3D 11 RHI 디바이스 구현
  */
 #include "D3D11RHIDevice.h"
 

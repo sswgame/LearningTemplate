@@ -1,7 +1,7 @@
 #pragma once
 /**
  * @file ImGuiOpenGLRendererBackend.h
- * @brief Auto-generated documentation header
+ * @brief ImGui OpenGL 렌더러 백엔드
  */
 
 #include "Editor/Backend/IImGuiRendererBackend.h"
@@ -16,21 +16,13 @@ namespace sw
 		ImGuiOpenGLRendererBackend()		   = default;
 		~ImGuiOpenGLRendererBackend() override = default;
 
-		/**
-		 * @brief initialize 처리를 수행합니다.
-		 */
+		/** @brief OpenGL ImGui 렌더러를 초기화합니다. */
 		bool initialize( IRHIDevice* rhiDevice ) override;
-		/**
-		 * @brief shutdown 처리를 수행합니다.
-		 */
+		/** @brief OpenGL ImGui 렌더러를 종료합니다. */
 		void shutdown() override;
-		/**
-		 * @brief newFrame 처리를 수행합니다.
-		 */
+		/** @brief ImGui OpenGL 프레임을 시작합니다. */
 		void newFrame() override;
-		/**
-		 * @brief render 처리를 수행합니다.
-		 */
+		/** @brief ImGui draw data를 OpenGL로 그립니다. */
 		void render( IRHIDevice* rhiDevice ) override;
 
 		void* registerTexture( RHITextureHandle /*texture*/ ) override { return nullptr; }

@@ -1,7 +1,7 @@
 #pragma once
 /**
  * @file ShaderCache.h
- * @brief Auto-generated documentation header
+ * @brief 컴파일 결과 캐시
  */
 
 #include "Core/CoreMinimal.h"
@@ -18,13 +18,9 @@ namespace sw
 	class SW_API ShaderCache
 	{
 	public:
-		/**
-		 * @brief getOrCompile 처리를 수행합니다.
-		 */
+		/** @brief 캐시에 있으면 반환하고, 없거나 파일이 바뀌었으면 컴파일 후 캐시합니다. */
 		static ShaderCompileResult getOrCompile( const ShaderCompileDesc& desc );
-		/**
-		 * @brief clearCache 처리를 수행합니다.
-		 */
+		/** @brief 컴파일 캐시를 비웁니다. */
 		static void				   clearCache();
 
 	private:

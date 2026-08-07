@@ -32,7 +32,7 @@ namespace sw
 		/** @brief 스왑체인 뷰포트 크기 변경 */
 		void resize( uint32 width, uint32 height ) override;
 
-		/** @brief 프레임 시작 (백버퍼 랜더 타깃 클리어) */
+		/** @brief 프레임 시작 (백버퍼 렌더 타깃 클리어) */
 		void beginFrame( float32 clearColor[4] ) override;
 
 		/** @brief Offscreen color target에 렌더 시작 (Game View 등). colorTarget==0 이면 beginFrame과 동일. */
@@ -159,15 +159,15 @@ namespace sw
 
 	private:
 		/**
-		 * @brief createRenderTargetView 처리를 수행합니다.
+		 * @brief RenderTargetView을(를) 생성합니다
 		 */
 		void createRenderTargetView();
 		/**
-		 * @brief cleanupRenderTargetView 처리를 수행합니다.
+		 * @brief 렌더 타깃 뷰를 정리합니다
 		 */
 		void cleanupRenderTargetView();
 		/**
-		 * @brief createTriangleResources 처리를 수행합니다.
+		 * @brief TriangleResources을(를) 생성합니다
 		 */
 		bool createTriangleResources();
 

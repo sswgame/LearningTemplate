@@ -1,7 +1,7 @@
 #pragma once
 /**
  * @file formatString.h
- * @brief Auto-generated documentation header
+ * @brief printf 스타일 포맷 헬퍼
  */
 
 #include "Core/Common/Types.h"

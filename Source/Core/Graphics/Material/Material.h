@@ -83,7 +83,7 @@ namespace sw
 		/** @brief 머티리얼 파라미터 프로퍼티 목록 반환 */
 		const std::vector<MaterialProperty>& getProperties() const { return _data.properties; }
 
-		/** @brief Constant Buffer 데이터 수신 */
+		/** @brief CPU 측 Constant Buffer 데이터 사본 반환 */
 		const std::vector<uint8>& getBuffer() const { return _data.buffer; }
 
 		/** @brief 특정 이름의 프로퍼티 포인터 반환 */
@@ -124,52 +124,32 @@ namespace sw
 	{
 	public:
 		MaterialInstance() = default;
-		/**
-		 * @brief MaterialInstance 처리를 수행합니다.
-		 */
+		/** @brief 부모 Material을 지정하는 생성자 */
 		explicit MaterialInstance( Material* parentMaterial );
 
-		/**
-		 * @brief setParent 처리를 수행합니다.
-		 */
+		/** @brief 부모 Master Material을 설정합니다. */
 		void	  setParent( Material* parentMaterial );
 		Material* getParent() const { return _parentMaterial; }
 
-		/**
-		 * @brief setScalarParameter 처리를 수행합니다.
-		 */
+		/** @brief 스칼라 파라미터 오버라이드를 설정합니다. */
 		void	setScalarParameter( hashed_string name, float32 value );
-		/**
-		 * @brief getScalarParameter 처리를 수행합니다.
-		 */
+		/** @brief 스칼라 파라미터 값(오버라이드 또는 부모)을 반환합니다. */
 		float32 getScalarParameter( hashed_string name, float32 defaultValue = 0.0f ) const;
 
-		/**
-		 * @brief setVectorParameter 처리를 수행합니다.
-		 */
+		/** @brief float4 벡터 파라미터 오버라이드를 설정합니다. */
 		void		   setVectorParameter( hashed_string name, const float32 color[4] );
 		const float32* getVectorParameter( hashed_string name ) const;
 
-		/**
-		 * @brief setTextureParameter 처리를 수행합니다.
-		 */
+		/** @brief 텍스처 디스크립터 파라미터 오버라이드를 설정합니다. */
 		void			   setTextureParameter( hashed_string name, RHIDescriptorIndex descIdx );
-		/**
-		 * @brief getTextureParameter 처리를 수행합니다.
-		 */
+		/** @brief 텍스처 파라미터 디스크립터 인덱스를 반환합니다. */
 		RHIDescriptorIndex getTextureParameter( hashed_string name ) const;
 
-		/**
-		 * @brief isParameterOverridden 처리를 수행합니다.
-		 */
+		/** @brief 해당 파라미터가 인스턴스에서 오버라이드됐는지 반환합니다. */
 		bool isParameterOverridden( hashed_string name ) const;
-		/**
-		 * @brief validateParametersWithReflection 처리를 수행합니다.
-		 */
+		/** @brief 셰이더 리플렉션과 파라미터 이름·타입 정합성을 검사합니다. */
 		bool validateParametersWithReflection( const struct ShaderReflectionData& reflectionData ) const;
-		/**
-		 * @brief clearOverrides 처리를 수행합니다.
-		 */
+		/** @brief 모든 파라미터 오버라이드를 제거합니다. */
 		void clearOverrides();
 
 	private:

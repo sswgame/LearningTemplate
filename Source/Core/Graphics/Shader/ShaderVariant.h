@@ -1,7 +1,7 @@
 #pragma once
 /**
  * @file ShaderVariant.h
- * @brief Auto-generated documentation header
+ * @brief 셰이더 변형(키워드) 정의
  */
 
 #include "Core/Common/Types.h"
@@ -23,7 +23,7 @@ namespace sw
 		std::vector<ShaderMacroDefine> _defines;
 
 		/**
-		 * @brief getVariantHashKey 처리를 수행합니다.
+		 * @brief VariantHashKey을(를) 반환합니다
 		 */
 		hashed_string getVariantHashKey() const;
 	};
@@ -43,7 +43,7 @@ namespace sw
 		uint32 getCompiledVariantCount() const { return static_cast<uint32>( _variantCache.size() ); }
 
 		/**
-		 * @brief clear 처리를 수행합니다.
+		 * @brief 내부 상태를 비웁니다
 		 */
 		void clear();
 

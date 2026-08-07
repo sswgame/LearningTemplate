@@ -1,6 +1,6 @@
 ﻿/**
  * @file IWindow.cpp
- * @brief Auto-generated documentation header
+ * @brief IWindow 팩토리·활성 윈도우 구현
  */
 #include "IWindow.h"
 #include "Win32Window.h"

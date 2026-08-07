@@ -1,6 +1,6 @@
 /**
  * @file GlobalVariableManager.cpp
- * @brief Auto-generated documentation header
+ * @brief 전역 변수 매니저 구현
  */
 #include "pch.h"
 #include "GlobalVariableManager.h"

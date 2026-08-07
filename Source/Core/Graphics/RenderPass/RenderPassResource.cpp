@@ -1,6 +1,6 @@
 /**
  * @file RenderPassResource.cpp
- * @brief Auto-generated documentation header
+ * @brief RenderPassResource 구현
  */
 #include "Core/CoreMinimal.h"
 

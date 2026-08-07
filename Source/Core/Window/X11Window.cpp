@@ -1,6 +1,6 @@
 /**
  * @file X11Window.cpp
- * @brief Auto-generated documentation header
+ * @brief X11 윈도우 구현
  */
 #include "X11Window.h"
 

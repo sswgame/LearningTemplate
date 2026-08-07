@@ -1,6 +1,6 @@
 /**
  * @file GameObjectManager.cpp
- * @brief Auto-generated documentation header
+ * @brief GameObjectManager 구현
  */
 #include "pch.h"
 #include "GameObjectManager.h"

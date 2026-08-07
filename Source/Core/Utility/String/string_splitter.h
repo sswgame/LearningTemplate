@@ -1,7 +1,7 @@
 #pragma once
 /**
  * @file string_splitter.h
- * @brief Auto-generated documentation header
+ * @brief 구분자 기반 문자열 분할기
  */
 
 #include "Core/Common/Types.h"
@@ -18,7 +18,7 @@ namespace sw
 	public:
 
 		/**
-		 * @brief basic_string_splitter 처리를 수행합니다.
+		 * @brief 구분자 기반 분할기를 생성합니다
 		 */
 		explicit basic_string_splitter( std::basic_string_view<value_type> str, std::initializer_list<std::basic_string_view<value_type>> delimList );
 
@@ -31,7 +31,7 @@ namespace sw
 	private:
 
 		/**
-		 * @brief split 처리를 수행합니다.
+		 * @brief 구분자로 분할합니다
 		 */
 		void split( std::initializer_list<std::basic_string_view<value_type>> delimList );
 

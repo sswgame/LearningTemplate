@@ -1,6 +1,6 @@
 /**
  * @file LiveShaderManager.cpp
- * @brief Auto-generated documentation header
+ * @brief LiveShaderManager 구현
  */
 #include "pch.h"
 #include "LiveShaderManager.h"

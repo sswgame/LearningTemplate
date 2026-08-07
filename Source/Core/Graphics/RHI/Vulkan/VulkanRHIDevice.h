@@ -182,73 +182,73 @@ namespace sw
 
 	private:
 		/**
-		 * @brief checkValidationLayerSupport 처리를 수행합니다.
+		 * @brief Vulkan validation layer 지원을 확인합니다
 		 */
 		bool checkValidationLayerSupport();
 		/**
-		 * @brief createInstance 처리를 수행합니다.
+		 * @brief Instance을(를) 생성합니다
 		 */
 		bool createInstance();
 		/**
-		 * @brief setupDebugMessenger 처리를 수행합니다.
+		 * @brief 디버그 메신저를 설정합니다
 		 */
 		void setupDebugMessenger();
 		/**
-		 * @brief createSurface 처리를 수행합니다.
+		 * @brief Surface을(를) 생성합니다
 		 */
 		bool createSurface();
 		/**
-		 * @brief pickPhysicalDevice 처리를 수행합니다.
+		 * @brief 물리 디바이스를 선택합니다
 		 */
 		bool pickPhysicalDevice();
 		/**
-		 * @brief createLogicalDevice 처리를 수행합니다.
+		 * @brief LogicalDevice을(를) 생성합니다
 		 */
 		bool createLogicalDevice();
 		/**
-		 * @brief createSwapChain 처리를 수행합니다.
+		 * @brief 스왑체인을 생성합니다
 		 */
 		bool createSwapChain();
 		/**
-		 * @brief createImageViews 처리를 수행합니다.
+		 * @brief ImageViews을(를) 생성합니다
 		 */
 		bool createImageViews();
 		/**
-		 * @brief createRenderPass 처리를 수행합니다.
+		 * @brief RenderPass을(를) 생성합니다
 		 */
 		bool createRenderPass();
 		/**
-		 * @brief createFramebuffers 처리를 수행합니다.
+		 * @brief Framebuffers을(를) 생성합니다
 		 */
 		bool createFramebuffers();
 		/**
-		 * @brief createCommandPool 처리를 수행합니다.
+		 * @brief CommandPool을(를) 생성합니다
 		 */
 		bool createCommandPool();
 		/**
-		 * @brief createCommandBuffers 처리를 수행합니다.
+		 * @brief CommandBuffers을(를) 생성합니다
 		 */
 		bool createCommandBuffers();
 		/**
-		 * @brief createSyncObjects 처리를 수행합니다.
+		 * @brief SyncObjects을(를) 생성합니다
 		 */
 		bool createSyncObjects();
 		/**
-		 * @brief createTriangleResources 처리를 수행합니다.
+		 * @brief TriangleResources을(를) 생성합니다
 		 */
 		bool createTriangleResources();
 
 		/**
-		 * @brief recreateSwapChain 처리를 수행합니다.
+		 * @brief 스왑체인을 재생성합니다
 		 */
 		void recreateSwapChain();
 		/**
-		 * @brief cleanupSwapChain 처리를 수행합니다.
+		 * @brief 스왑체인을 정리합니다
 		 */
 		void cleanupSwapChain();
 
 		/**
-		 * @brief findMemoryType 처리를 수행합니다.
+		 * @brief 메모리 타입을 찾습니다
 		 */
 		uint32 findMemoryType( uint32 typeFilter, uint32 properties );
 

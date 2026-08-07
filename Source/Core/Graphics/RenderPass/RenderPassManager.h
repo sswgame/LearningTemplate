@@ -1,7 +1,7 @@
 #pragma once
 /**
  * @file RenderPassManager.h
- * @brief Auto-generated documentation header
+ * @brief 렌더 패스 등록·실행 관리
  */
 
 #include "Core/CoreMinimal.h"
@@ -15,28 +15,18 @@ namespace sw
 
 	public:
 
-		/**
-		 * @brief initialize 처리를 수행합니다.
-		 */
+		/** @brief 매니저를 초기화합니다. */
 		bool		initialize();
-		/**
-		 * @brief shutdown 처리를 수행합니다.
-		 */
+		/** @brief 캐시를 비우고 종료합니다. */
 		void		shutdown();
 
-		/**
-		 * @brief loadRenderPass 처리를 수행합니다.
-		 */
+		/** @brief XML 에셋 경로에서 렌더 패스를 로드(또는 캐시 반환)합니다. */
 		RenderPassResource* loadRenderPass( const std::string_view assetRelativePath );
 
-		/**
-		 * @brief findRenderPass 처리를 수행합니다.
-		 */
+		/** @brief 이름으로 이미 로드된 렌더 패스를 찾습니다. */
 		RenderPassResource* findRenderPass( hashed_string name );
 
-		/**
-		 * @brief clearCache 처리를 수행합니다.
-		 */
+		/** @brief 로드된 렌더 패스 캐시를 비웁니다. */
 		void clearCache();
 
 	public:

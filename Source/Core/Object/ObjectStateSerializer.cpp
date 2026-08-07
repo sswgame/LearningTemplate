@@ -1,6 +1,6 @@
 /**
  * @file ObjectStateSerializer.cpp
- * @brief Auto-generated documentation header
+ * @brief ObjectStateSerializer 구현
  */
 #include "pch.h"
 #include "ObjectStateSerializer.h"

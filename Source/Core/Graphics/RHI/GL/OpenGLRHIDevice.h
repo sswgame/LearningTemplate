@@ -144,7 +144,7 @@ namespace sw
 
 	private:
 		/**
-		 * @brief createTriangleResources 처리를 수행합니다.
+		 * @brief TriangleResources을(를) 생성합니다
 		 */
 		bool createTriangleResources();
 

@@ -51,7 +51,7 @@ namespace sw
 		 */
 		static std::unique_ptr<IRHIDevice> createDevice( RHIBackend backend );
 
-		/** @brief 백엔드 열거형의 이쁜 이름(Pretty Name) 문자열 반환 */
+		/** @brief 백엔드 열거형의 표시용(Pretty Name) 문자열 반환 */
 		static const utf8* getBackendTypeName( RHIBackend backend );
 
 		/** @brief 현재 OS 플랫폼에서 최적인 기본 RHI 백엔드(Windows: DX12, Linux: Vulkan 등) 반환 */

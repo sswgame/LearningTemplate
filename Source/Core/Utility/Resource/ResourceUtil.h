@@ -1,7 +1,7 @@
 #pragma once
 /**
  * @file ResourceUtil.h
- * @brief Auto-generated documentation header
+ * @brief 엔진/공통/게임 리소스 루트 경로 해석 및 캐시
  */
 
 #include "Core/Common/Types.h"
@@ -14,25 +14,24 @@ namespace sw
 	class SW_API ResourceUtil
 	{
 	public:
-		/**
-		 * @brief initialize 처리를 수행합니다.
-		 */
+		/** @brief 실행 파일 기준 리소스 루트·하위 폴더 경로를 초기화합니다. */
 		static bool		   initialize();
 		/**
-		 * @brief getResourcePath 처리를 수행합니다.
+		 * @brief 상대 리소스 경로를 절대 경로로 해석합니다.
+		 * @param filePath 파일 상대 경로
+		 * @param folderName 검색을 한정할 하위 폴더(비우면 전체 리소스 루트)
 		 */
 		static std::string getResourcePath( const std::string_view filePath, const std::string_view folderName = "" );
-		/**
-		 * @brief clearCache 처리를 수행합니다.
-		 */
+		/** @brief 경로 해석 캐시를 비웁니다. */
 		static void		   clearCache();
 
+		/** @brief Engine 리소스 폴더 절대 경로 */
 		static const std::string& getEngineFolderPath();
-
+		/** @brief Common 리소스 폴더 절대 경로 */
 		static const std::string& getCommonFolderPath();
-
+		/** @brief Game 리소스 폴더 절대 경로 */
 		static const std::string& getGameFolderPath();
-
+		/** @brief 리소스 루트(상위) 절대 경로 */
 		static const std::string& getRootFolderPath();
 
 		/**

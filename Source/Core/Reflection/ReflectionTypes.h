@@ -180,7 +180,7 @@ namespace sw
 
 			int64			intResult = 0;
 			/**
-			 * @brief splitter 처리를 수행합니다.
+			 * @brief 분할기를 반환합니다
 			 */
 			string_splitter splitter( flagsStr, { "|" } );
 			for ( const auto& tokenView : splitter.getSplitList() )
@@ -224,11 +224,11 @@ namespace sw
 		mutable bool												   _bIsPODCalculated = false;
 
 		/**
-		 * @brief isPODFastPath 처리를 수행합니다.
+		 * @brief PODFastPath 여부를 반환합니다
 		 */
 		bool isPODFastPath() const;
 		/**
-		 * @brief isA 처리를 수행합니다.
+		 * @brief A 여부를 반환합니다
 		 */
 		bool isA( const hashed_string& targetFqn ) const;
 

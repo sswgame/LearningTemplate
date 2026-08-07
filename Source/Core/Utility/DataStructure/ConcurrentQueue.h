@@ -1,7 +1,7 @@
 #pragma once
 /**
  * @file ConcurrentQueue.h
- * @brief Auto-generated documentation header
+ * @brief 뮤텍스 기반 스레드 안전 큐
  */
 
 #include "Core/Common/CommonHeaders.h"
@@ -11,6 +11,11 @@
 namespace sw
 {
 
+	/**
+	 * @brief 고정 용량 다중 생산자/다중 소비자 큐 (시퀀스 넘버 기반)
+	 * @tparam T 요소 타입
+	 * @tparam Capacity 용량 (2의 거듭제곱)
+	 */
 	template <typename T, uint32 Capacity = 1024>
 	class ConcurrentQueue
 	{
@@ -36,6 +41,7 @@ namespace sw
 
 		~ConcurrentQueue() = default;
 
+		/** @brief 복사로 요소를 넣습니다. 가득 차면 false. */
 		SW_INLINE bool enqueue( const T& item )
 		{
 			Cell*  cell;
@@ -69,6 +75,7 @@ namespace sw
 			return true;
 		}
 
+		/** @brief 이동으로 요소를 넣습니다. 가득 차면 false. */
 		SW_INLINE bool enqueue( T&& item )
 		{
 			Cell*  cell;
@@ -102,6 +109,7 @@ namespace sw
 			return true;
 		}
 
+		/** @brief 앞에서 요소를 꺼냅니다. 비어 있으면 false. */
 		SW_INLINE bool dequeue( T& outItem )
 		{
 			Cell*  cell;
@@ -135,6 +143,7 @@ namespace sw
 			return true;
 		}
 
+		/** @brief 대략적인 현재 요소 수를 반환합니다. */
 		SW_INLINE uint32 size() const
 		{
 			uint32 head = _dequeuePos.load( std::memory_order_relaxed );

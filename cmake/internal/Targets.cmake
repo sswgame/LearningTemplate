@@ -3,6 +3,7 @@
 # @brief 엔진 내부: 소스 수집 + sw_add_library / sw_add_executable
 # ==============================================================================
 
+# 디렉터리 하위의 .c/.cpp/.h/.hpp/.inl 을 CONFIGURE_DEPENDS 로 수집합니다.
 function(sw_collect_sources DIR_PATH OUT_SOURCES)
     file(
         GLOB_RECURSE sources_list
@@ -21,6 +22,7 @@ function(sw_collect_sources DIR_PATH OUT_SOURCES)
     set(${OUT_SOURCES} ${sources_list} PARENT_SCOPE)
 endfunction()
 
+# 현재 소스 디렉터리 소스를 모으고, ARG_SOURCES 추가 / ARG_EXCLUDE 정규식 제외를 적용합니다.
 macro(sw_prepare_target_sources OUT_SOURCES ARG_SOURCES ARG_EXCLUDE)
     sw_collect_sources("${CMAKE_CURRENT_SOURCE_DIR}" ${OUT_SOURCES})
     if(${ARG_SOURCES})
@@ -33,6 +35,7 @@ macro(sw_prepare_target_sources OUT_SOURCES ARG_SOURCES ARG_EXCLUDE)
     endif()
 endmacro()
 
+# include/link/컴파일 옵션 등 공통 타겟 프로퍼티를 설정합니다.
 macro(sw_setup_target_properties TARGET_NAME ARG_INCLUDE_DIRECTORIES ARG_LINK_LIBRARIES)
     target_include_directories(${TARGET_NAME}
         PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}"
@@ -65,6 +68,7 @@ macro(sw_setup_target_properties TARGET_NAME ARG_INCLUDE_DIRECTORIES ARG_LINK_LI
     sw_install_target(${TARGET_NAME})
 endmacro()
 
+# 라이브러리 타겟을 추가합니다. TYPE/LINK_LIBRARIES/EXCLUDE/SOURCES/INCLUDE_DIRECTORIES 지원.
 function(sw_add_library TARGET_NAME)
     cmake_parse_arguments(ARG "" "TYPE" "LINK_LIBRARIES;EXCLUDE;SOURCES;INCLUDE_DIRECTORIES" ${ARGN})
 
@@ -80,6 +84,7 @@ function(sw_add_library TARGET_NAME)
     sw_setup_target_properties(${TARGET_NAME} ARG_INCLUDE_DIRECTORIES ARG_LINK_LIBRARIES)
 endfunction()
 
+# 실행 파일 타겟을 추가합니다. LINK_LIBRARIES/EXCLUDE/SOURCES/INCLUDE_DIRECTORIES 지원.
 function(sw_add_executable TARGET_NAME)
     cmake_parse_arguments(ARG "" "" "LINK_LIBRARIES;EXCLUDE;SOURCES;INCLUDE_DIRECTORIES" ${ARGN})
 
@@ -115,6 +120,7 @@ endfunction()
 # ---------------------------------------------------------------------------
 # 런타임 파일 복사: POST_BUILD COMMENT가 ; 로 이어지지 않도록 한 번에 emit
 # ---------------------------------------------------------------------------
+# SRC_FILE을 TARGET의 SW_RUNTIME_COPY_FILES 프로퍼티에 큐잉합니다 (아직 POST_BUILD 미생성).
 function(sw_queue_runtime_copy TARGET_NAME SRC_FILE)
     if(NOT TARGET ${TARGET_NAME})
         message(FATAL_ERROR "sw_queue_runtime_copy: target '${TARGET_NAME}' does not exist")
@@ -125,6 +131,7 @@ function(sw_queue_runtime_copy TARGET_NAME SRC_FILE)
     set_property(TARGET ${TARGET_NAME} APPEND PROPERTY SW_RUNTIME_COPY_FILES "${SRC_FILE}")
 endfunction()
 
+# 큐잉된 런타임 복사를 하나의 POST_BUILD로 emit하고 요약 COMMENT를 붙입니다.
 function(sw_emit_runtime_copies TARGET_NAME)
     if(NOT TARGET ${TARGET_NAME})
         message(FATAL_ERROR "sw_emit_runtime_copies: target '${TARGET_NAME}' does not exist")

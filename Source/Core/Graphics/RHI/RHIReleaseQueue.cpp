@@ -1,6 +1,6 @@
 /**
  * @file RHIReleaseQueue.cpp
- * @brief Auto-generated documentation header
+ * @brief RHI 지연 해제 큐 구현
  */
 #include "pch.h"
 #include "RHIReleaseQueue.h"

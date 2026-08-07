@@ -1,7 +1,7 @@
 #pragma once
 /**
  * @file TagSystem.h
- * @brief Auto-generated documentation header
+ * @brief 태그 ID·계층·컨테이너 API
  */
 
 #include "Core/Common/CommonHeaders.h"
@@ -14,6 +14,7 @@
 namespace sw
 {
 
+	/** @brief 해시 기반 태그 ID (점 구분 계층은 parentHash에 반영) */
 	struct SW_API TagID
 	{
 		uint64 _id		   = 0;
@@ -57,6 +58,7 @@ namespace sw
 		return TagID( hash, parentHash );
 	}
 
+	/** @brief GameObject 등에 붙는 태그 집합 */
 	class SW_API TagContainer
 	{
 	public:
@@ -65,34 +67,22 @@ namespace sw
 
 		void reserve( uint32 capacity ) { _tags.reserve( capacity ); }
 
-		/**
-		 * @brief addTag 처리를 수행합니다.
-		 */
+		/** @brief 태그를 추가합니다. */
 		void addTag( TagID tag );
 
-		/**
-		 * @brief removeTag 처리를 수행합니다.
-		 */
+		/** @brief 태그를 제거합니다. */
 		void removeTag( TagID tag );
 
-		/**
-		 * @brief hasTag 처리를 수행합니다.
-		 */
+		/** @brief 태그 포함 여부를 반환합니다. bExactMatch면 동일 ID만, 아니면 서브태그 허용. */
 		bool hasTag( TagID tag, bool bExactMatch = false ) const;
 
-		/**
-		 * @brief hasAllTags 처리를 수행합니다.
-		 */
+		/** @brief required의 모든 태그를 포함하는지 검사합니다. */
 		bool hasAllTags( const TagContainer& required ) const;
 
-		/**
-		 * @brief hasAnyTag 처리를 수행합니다.
-		 */
+		/** @brief other의 태그 중 하나라도 포함하는지 검사합니다. */
 		bool hasAnyTag( const TagContainer& other ) const;
 
-		/**
-		 * @brief matchTags 처리를 수행합니다.
-		 */
+		/** @brief required는 모두 포함하고 forbidden은 하나도 없는지 검사합니다. */
 		bool matchTags( const TagContainer& required, const TagContainer& forbidden ) const;
 
 		uint32 getTagCount() const { return static_cast<uint32>( _tags.size() ); }

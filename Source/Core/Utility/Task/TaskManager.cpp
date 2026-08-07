@@ -1,6 +1,6 @@
 /**
  * @file TaskManager.cpp
- * @brief Auto-generated documentation header
+ * @brief TaskManager 구현
  */
 #include "pch.h"
 

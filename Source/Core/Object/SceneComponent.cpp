@@ -1,6 +1,6 @@
 /**
  * @file SceneComponent.cpp
- * @brief Auto-generated documentation header
+ * @brief SceneComponent 트랜스폼·계층 구현
  */
 #include "pch.h"
 #include "SceneComponent.h"

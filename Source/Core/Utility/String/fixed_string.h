@@ -1,7 +1,7 @@
 #pragma once
 /**
  * @file fixed_string.h
- * @brief Auto-generated documentation header
+ * @brief 스택 고정 용량 문자열 타입
  */
 
 #include "Core/Common/Types.h"
@@ -47,28 +47,28 @@ namespace sw
 		reference		operator[]( uint32 pos );
 		const_reference operator[]( uint32 pos ) const;
 		/**
-		 * @brief at 처리를 수행합니다.
+		 * @brief 인덱스의 문자를 반환합니다
 		 */
 		reference		at( uint32 pos );
 		/**
-		 * @brief at 처리를 수행합니다.
+		 * @brief 인덱스의 문자를 반환합니다
 		 */
 		const_reference at( uint32 pos ) const;
 
 		/**
-		 * @brief front 처리를 수행합니다.
+		 * @brief 첫 문자를 반환합니다
 		 */
 		reference		front();
 		/**
-		 * @brief front 처리를 수행합니다.
+		 * @brief 첫 문자를 반환합니다
 		 */
 		const_reference front() const;
 		/**
-		 * @brief back 처리를 수행합니다.
+		 * @brief 마지막 문자를 반환합니다
 		 */
 		reference		back();
 		/**
-		 * @brief back 처리를 수행합니다.
+		 * @brief 마지막 문자를 반환합니다
 		 */
 		const_reference back() const;
 
@@ -86,7 +86,7 @@ namespace sw
 		uint32 size() const { return _size; }
 		uint32 length() const { return _size; }
 		/**
-		 * @brief clear 처리를 수행합니다.
+		 * @brief 내부 상태를 비웁니다
 		 */
 		void   clear();
 
@@ -94,50 +94,50 @@ namespace sw
 		static constexpr uint32 capacity() { return N; }
 
 		/**
-		 * @brief insert 처리를 수행합니다.
+		 * @brief 삽입합니다
 		 */
 		basic_fixed_string& insert( uint32 pos, const T* str );
 		basic_fixed_string& insert( const uint32 pos, const basic_fixed_string& str ) { return insert( pos, str.c_str() ); }
 		/**
-		 * @brief erase 처리를 수행합니다.
+		 * @brief 삭제합니다
 		 */
 		basic_fixed_string& erase( uint32 pos = 0, uint32 length = npos );
 
 		/**
-		 * @brief push_back 처리를 수행합니다.
+		 * @brief push_마지막 문자를 반환합니다
 		 */
 		void push_back( T ch );
 		/**
-		 * @brief pop_back 처리를 수행합니다.
+		 * @brief pop_마지막 문자를 반환합니다
 		 */
 		void pop_back();
 
 		/**
-		 * @brief append 처리를 수행합니다.
+		 * @brief 뒤에 추가합니다
 		 */
 		basic_fixed_string& append( const T* str );
 		basic_fixed_string& append( const basic_fixed_string& str ) { return append( str.c_str() ); }
 		/**
-		 * @brief append 처리를 수행합니다.
+		 * @brief 뒤에 추가합니다
 		 */
 		basic_fixed_string& append( uint32 count, T c );
 		/**
-		 * @brief append 처리를 수행합니다.
+		 * @brief 뒤에 추가합니다
 		 */
 		basic_fixed_string& append( const std::basic_string_view<T>& str );
 
 		/**
-		 * @brief find 처리를 수행합니다.
+		 * @brief 항목을 찾습니다
 		 */
 		uint32 find( const T* str, uint32 pos = 0 ) const;
 		/**
-		 * @brief find 처리를 수행합니다.
+		 * @brief 항목을 찾습니다
 		 */
 		uint32 find( T c, uint32 pos = 0 ) const;
 		uint32 find( const basic_fixed_string& str, uint32 pos = 0 ) const { return find( str.c_str(), pos ); }
 
 		/**
-		 * @brief substr 처리를 수행합니다.
+		 * @brief 부분 문자열을 반환합니다
 		 */
 		basic_fixed_string substr( uint32 pos = 0, uint32 length = npos ) const;
 

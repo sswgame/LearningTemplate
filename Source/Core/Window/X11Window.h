@@ -1,7 +1,7 @@
 #pragma once
 /**
  * @file X11Window.h
- * @brief Auto-generated documentation header
+ * @brief Linux X11 네이티브 윈도우
  */
 
 #include "IWindow.h"
@@ -15,17 +15,11 @@ namespace sw
 		X11Window();
 		~X11Window() override;
 
-		/**
-		 * @brief create 처리를 수행합니다.
-		 */
+		/** @brief X11 윈도우를 생성합니다. */
 		bool create( const utf16* title, uint32 width, uint32 height ) override;
-		/**
-		 * @brief destroy 처리를 수행합니다.
-		 */
+		/** @brief X11 윈도우를 파괴합니다. */
 		void destroy() override;
-		/**
-		 * @brief processMessages 처리를 수행합니다.
-		 */
+		/** @brief X11 이벤트를 처리합니다. 종료 요청 시 false. */
 		bool processMessages() override;
 
 #if defined( SW_PLATFORM_LINUX )

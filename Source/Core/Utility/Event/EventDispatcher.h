@@ -86,7 +86,7 @@ namespace sw
 		void enqueueEvent( hashed_string channel, const T& event )
 		{
 			/**
-			 * @brief lock 처리를 수행합니다.
+			 * @brief 내부 뮤텍스를 잠급니다
 			 */
 			std::lock_guard<std::mutex> lock( _queueMutex );
 			auto [iter, inserted] = _channelQueue.try_emplace( channel );
@@ -99,14 +99,14 @@ namespace sw
 		}
 
 		/**
-		 * @brief processEvents 처리를 수행합니다.
+		 * @brief 이벤트를 처리합니다
 		 */
 		void processEvents();
 
 		SW_INLINE uint32 getPendingEventCount( hashed_string channel = getDefaultChannel() ) const
 		{
 			/**
-			 * @brief lock 처리를 수행합니다.
+			 * @brief 내부 뮤텍스를 잠급니다
 			 */
 			std::lock_guard<std::mutex>																lock( _queueMutex );
 			std::unordered_map<hashed_string, std::vector<std::unique_ptr<IEvent>>>::const_iterator iter = _channelQueue.find( channel );
@@ -118,7 +118,7 @@ namespace sw
 		}
 
 		/**
-		 * @brief clear 처리를 수행합니다.
+		 * @brief 내부 상태를 비웁니다
 		 */
 		void clear();
 
@@ -129,7 +129,7 @@ namespace sw
 			std::pair<hashed_string, EventType> key( channel, T::kType );
 
 			/**
-			 * @brief lock 처리를 수행합니다.
+			 * @brief 내부 뮤텍스를 잠급니다
 			 */
 			std::lock_guard<std::mutex>																				 lock( _busMutex );
 			std::unordered_map<std::pair<hashed_string, EventType>, std::shared_ptr<void>, HashPair>::const_iterator iter = _channelDelegates.find( key );

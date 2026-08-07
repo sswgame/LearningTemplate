@@ -35,28 +35,28 @@ namespace sw
 		GlobalVariableChangedDelegate _onValueChanged;
 
 		/**
-		 * @brief getValueAsBool 처리를 수행합니다.
+		 * @brief ValueAsBool을(를) 반환합니다
 		 */
 		bool getValueAsBool() const;
 		/**
-		 * @brief getValueAsInt 처리를 수행합니다.
+		 * @brief ValueAsInt을(를) 반환합니다
 		 */
 		int32 getValueAsInt() const;
 		/**
-		 * @brief getValueAsFloat 처리를 수행합니다.
+		 * @brief ValueAsFloat을(를) 반환합니다
 		 */
 		float32 getValueAsFloat() const;
 		/**
-		 * @brief getValueAsString 처리를 수행합니다.
+		 * @brief 값을 문자열로 반환합니다
 		 */
 		std::string getValueAsString() const;
 
 		/**
-		 * @brief setValueFromString 처리를 수행합니다.
+		 * @brief 문자열로 전역 변수 값을 설정합니다
 		 */
 		bool setValueFromString( const std::string_view strValue );
 		/**
-		 * @brief resetToDefault 처리를 수행합니다.
+		 * @brief 기본값으로 되돌립니다
 		 */
 		void resetToDefault();
 	};
@@ -70,7 +70,7 @@ namespace sw
 		void shutdown() { resetAllToDefault(); }
 
 		/**
-		 * @brief registerVariable 처리를 수행합니다.
+		 * @brief Variable을(를) 등록합니다
 		 */
 		bool registerVariable( const std::string_view name, GlobalVariableType type, void* pData, const std::variant<bool, int32, float32, std::string>& defaultValue, const std::string_view description, const std::string_view enumType = "", const std::string_view moduleName = "" );
 
@@ -78,21 +78,21 @@ namespace sw
 		void unregisterVariablesByModule( const std::string_view moduleName );
 
 		/**
-		 * @brief findVariable 처리를 수행합니다.
+		 * @brief 전역 변수를 이름으로 찾습니다
 		 */
 		GlobalVariableInfo*										   findVariable( const std::string& name );
 		const std::unordered_map<std::string, GlobalVariableInfo>& getAllVariables() const;
 
 		/**
-		 * @brief setValueFromString 처리를 수행합니다.
+		 * @brief 문자열로 전역 변수 값을 설정합니다
 		 */
 		bool setValueFromString( const std::string& name, const std::string& strValue );
 		/**
-		 * @brief resetToDefault 처리를 수행합니다.
+		 * @brief 기본값으로 되돌립니다
 		 */
 		bool resetToDefault( const std::string& name );
 		/**
-		 * @brief resetAllToDefault 처리를 수행합니다.
+		 * @brief 모든 값을 기본값으로 되돌립니다
 		 */
 		void resetAllToDefault();
 

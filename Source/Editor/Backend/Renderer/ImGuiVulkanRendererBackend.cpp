@@ -1,6 +1,6 @@
 /**
  * @file ImGuiVulkanRendererBackend.cpp
- * @brief Auto-generated documentation header
+ * @brief ImGui Vulkan 렌더러 구현
  */
 #include "ImGuiVulkanRendererBackend.h"
 #include <imgui.h>

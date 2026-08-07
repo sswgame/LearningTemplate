@@ -1,6 +1,6 @@
 /**
  * @file Win32Window.cpp
- * @brief Auto-generated documentation header
+ * @brief Win32 윈도우 구현
  */
 #include "Win32Window.h"
 

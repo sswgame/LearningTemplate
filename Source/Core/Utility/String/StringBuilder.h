@@ -1,7 +1,7 @@
 #pragma once
 /**
  * @file StringBuilder.h
- * @brief Auto-generated documentation header
+ * @brief 고정 용량 문자열 빌더
  */
 
 #include "Core/Common/Types.h"

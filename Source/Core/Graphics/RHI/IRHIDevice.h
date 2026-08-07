@@ -15,7 +15,7 @@ namespace sw
 {
 	/**
 	 * @class IRHICommandList
-	 * @brief GPU 랜더링 및 컴퓨트 명령을 기록(Record)하는 커맨드 리스트 추상 인터페이스
+	 * @brief GPU 렌더링 및 컴퓨트 명령을 기록(Record)하는 커맨드 리스트 추상 인터페이스
 	 */
 	class SW_API IRHICommandList
 	{

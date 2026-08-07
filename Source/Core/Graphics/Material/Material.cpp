@@ -1,6 +1,6 @@
 ﻿/**
  * @file Material.cpp
- * @brief Auto-generated documentation header
+ * @brief Material / MaterialInstance 구현
  */
 #include "Core/CoreMinimal.h"
 

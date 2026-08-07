@@ -1,6 +1,6 @@
 ﻿/**
  * @file ImGuiPlatformBackend.cpp
- * @brief Auto-generated documentation header
+ * @brief ImGui 플랫폼 백엔드 구현
  */
 #include "IImGuiPlatformBackend.h"
 #include "Core/Window/IWindow.h"

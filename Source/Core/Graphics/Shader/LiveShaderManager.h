@@ -1,7 +1,7 @@
 #pragma once
 /**
  * @file LiveShaderManager.h
- * @brief Auto-generated documentation header
+ * @brief 파일 감시 기반 라이브 셰이더 리로드
  */
 
 #include "Core/CoreMinimal.h"
@@ -17,9 +17,7 @@ namespace sw
 	{
 	public:
 
-		/**
-		 * @brief parseIncludes 처리를 수행합니다.
-		 */
+		/** @brief 셰이더 소스에서 #include 경로 목록을 파싱합니다. */
 		static std::vector<std::string> parseIncludes( const std::string& shaderSource );
 	};
 
@@ -37,19 +35,13 @@ namespace sw
 		/** @brief 셰이더 감시 디렉터리로 매니저를 초기화합니다. */
 		bool initialize( const std::string& watchDirectory = "Shaders" );
 
-		/**
-		 * @brief watchShader 처리를 수행합니다.
-		 */
+		/** @brief 셰이더를 감시 목록에 추가하고, 리컴파일 시 콜백을 등록합니다. */
 		void watchShader( const ShaderCompileDesc& desc, const ShaderRecompiledDelegate& onRecompiled = {} );
 
-		/**
-		 * @brief update 처리를 수행합니다.
-		 */
+		/** @brief 변경 대기열을 처리하고 필요 시 리컴파일합니다. */
 		void update();
 
-		/**
-		 * @brief shutdown 처리를 수행합니다.
-		 */
+		/** @brief 감시·콜백·대기열을 정리하고 종료합니다. */
 		void shutdown();
 
 		/**

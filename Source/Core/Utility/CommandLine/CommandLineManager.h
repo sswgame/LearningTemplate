@@ -104,7 +104,7 @@ namespace sw
 		 */
 		template <typename T>
 		/**
-		 * @brief getArgument 처리를 수행합니다.
+		 * @brief Argument을(를) 반환합니다
 		 */
 		bool getArgument( const std::string_view& key, T& outValue ) const;
 
@@ -117,13 +117,13 @@ namespace sw
 		 */
 		template <typename T>
 		/**
-		 * @brief getArgument 처리를 수행합니다.
+		 * @brief Argument을(를) 반환합니다
 		 */
 		bool getArgument( const CommandLineArgument argument, T& outValue ) const;
 
 		template <typename T>
 		/**
-		 * @brief addArgument 처리를 수행합니다.
+		 * @brief 인자를 추가합니다
 		 */
 		void addArgument( const std::initializer_list<std::string_view>& synonymList, bool bMustHaveValue, T&& defaultValue, const bool bUseDefaultValue );
 
@@ -133,7 +133,7 @@ namespace sw
 
 		void setValue( ArgumentInfo& argument, const std::string& newValue ) const;
 		/**
-		 * @brief argumentEnumToString 처리를 수행합니다.
+		 * @brief 인자 enum을 문자열로 변환합니다
 		 */
 		static std::string_view argumentEnumToString( const CommandLineArgument argument );
 

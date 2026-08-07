@@ -1,6 +1,6 @@
 ﻿/**
  * @file ImGuiOpenGLRendererBackend.cpp
- * @brief Auto-generated documentation header
+ * @brief ImGui OpenGL 렌더러 구현
  */
 #include "ImGuiOpenGLRendererBackend.h"
 #include <imgui.h>

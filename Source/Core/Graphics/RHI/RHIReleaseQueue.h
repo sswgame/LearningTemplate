@@ -1,7 +1,7 @@
 #pragma once
 /**
  * @file RHIReleaseQueue.h
- * @brief Auto-generated documentation header
+ * @brief GPU 지연 해제 큐
  */
 
 #include "Core/Common/Types.h"
@@ -18,30 +18,20 @@ namespace sw
 	{
 	public:
 
-		/**
-		 * @brief RHIReleaseQueue 처리를 수행합니다.
-		 */
+		/** @brief frameLatency 프레임 뒤 해제를 수행하는 큐를 만듭니다. */
 		explicit RHIReleaseQueue( uint32 frameLatency = 3 );
 		~RHIReleaseQueue() = default;
 
-		/**
-		 * @brief enqueueRelease 처리를 수행합니다.
-		 */
+		/** @brief GPU 리소스 해제 콜백을 지연 큐에 넣습니다. */
 		void enqueueRelease( const RHIResourceReleaseDelegate& releaseDelegate );
 
-		/**
-		 * @brief tickFrame 처리를 수행합니다.
-		 */
+		/** @brief 프레임을 진행하고 만기된 해제 콜백을 실행합니다. */
 		void tickFrame();
 
-		/**
-		 * @brief flushAll 처리를 수행합니다.
-		 */
+		/** @brief 대기 중인 해제를 모두 즉시 실행합니다. */
 		void flushAll();
 
-		/**
-		 * @brief getPendingReleaseCount 처리를 수행합니다.
-		 */
+		/** @brief 아직 실행되지 않은 해제 항목 수를 반환합니다. */
 		uint32 getPendingReleaseCount() const;
 
 	private:

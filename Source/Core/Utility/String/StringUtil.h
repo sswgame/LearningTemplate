@@ -1,7 +1,7 @@
 #pragma once
 /**
  * @file StringUtil.h
- * @brief Auto-generated documentation header
+ * @brief UTF 변환·해시·분할·트림 등 문자열 유틸
  */
 
 #include "Core/Common/Types.h"
@@ -15,38 +15,38 @@ namespace sw
 		static constexpr const utf8* kWhiteSpace = " \n\r\t\f\v";
 
 		/**
-		 * @brief isNullOrEmpty 처리를 수행합니다.
+		 * @brief null 또는 빈 문자열인지 반환합니다
 		 */
 		static bool isNullOrEmpty( const utf8* str );
 		/**
-		 * @brief isNullOrEmpty 처리를 수행합니다.
+		 * @brief null 또는 빈 문자열인지 반환합니다
 		 */
 		static bool isNullOrEmpty( const utf16* str );
 
 		/**
-		 * @brief utf8ToUtf16 처리를 수행합니다.
+		 * @brief UTF-8을 UTF-16으로 변환합니다
 		 */
 		static std::wstring utf8ToUtf16( const std::string_view& input );
 		/**
-		 * @brief utf16ToUtf8 처리를 수행합니다.
+		 * @brief UTF-16을 UTF-8으로 변환합니다
 		 */
 		static std::string	utf16ToUtf8( const std::wstring_view& input );
 
 		/**
-		 * @brief utf16ToLocale 처리를 수행합니다.
+		 * @brief UTF-16을 로케일 문자열로 변환합니다
 		 */
 		static std::string	utf16ToLocale( const std::wstring_view& input );
 		/**
-		 * @brief localeToUtf16 처리를 수행합니다.
+		 * @brief 로케일 문자열을 UTF-16으로 변환합니다
 		 */
 		static std::wstring localeToUtf16( const std::string_view& input );
 
 		/**
-		 * @brief localeToUtf8 처리를 수행합니다.
+		 * @brief 로케일 문자열을 UTF-8으로 변환합니다
 		 */
 		static std::string localeToUtf8( const std::string_view& input );
 		/**
-		 * @brief utf8ToLocale 처리를 수행합니다.
+		 * @brief UTF-8을 로케일 문자열로 변환합니다
 		 */
 		static std::string utf8ToLocale( const std::string_view& input );
 
@@ -61,55 +61,55 @@ namespace sw
 		}
 
 		/**
-		 * @brief split 처리를 수행합니다.
+		 * @brief 구분자로 분할합니다
 		 */
 		static std::vector<std::string> split( const std::string_view& input, const std::string_view& delimiterList );
 		/**
-		 * @brief toUpper 처리를 수행합니다.
+		 * @brief 대문자로 변환합니다
 		 */
 		static std::string				toUpper( const std::string_view& input );
 		/**
-		 * @brief toLower 처리를 수행합니다.
+		 * @brief 소문자로 변환합니다
 		 */
 		static std::string				toLower( const std::string_view& input );
 
 		/**
-		 * @brief trimStart 처리를 수행합니다.
+		 * @brief 앞 공백을 제거합니다
 		 */
 		static std::string trimStart( const std::string_view& input );
 		/**
-		 * @brief trimEnd 처리를 수행합니다.
+		 * @brief 뒤 공백을 제거합니다
 		 */
 		static std::string trimEnd( const std::string_view& input );
 		/**
-		 * @brief trim 처리를 수행합니다.
+		 * @brief 양끝 공백을 제거합니다
 		 */
 		static std::string trim( const std::string_view& input );
 
 		/**
-		 * @brief strlen 처리를 수행합니다.
+		 * @brief 문자열 길이를 반환합니다
 		 */
 		static uint32 strlen( const utf8* str );
 		/**
-		 * @brief strlen 처리를 수행합니다.
+		 * @brief 문자열 길이를 반환합니다
 		 */
 		static uint32 strlen( const utf16* str );
 
 		/**
-		 * @brief strnicmp 처리를 수행합니다.
+		 * @brief 대소문자 무시 비교를 수행합니다
 		 */
 		static int32 strnicmp( const utf8* lhs, const utf8* rhs, const uint32 stringLength );
 		/**
-		 * @brief strnicmp 처리를 수행합니다.
+		 * @brief 대소문자 무시 비교를 수행합니다
 		 */
 		static int32 strnicmp( const utf16* lhs, const utf16* rhs, const uint32 stringLength );
 
 		/**
-		 * @brief strcmp 처리를 수행합니다.
+		 * @brief 문자열을 비교합니다
 		 */
 		static int32 strcmp( const utf8* lhs, const utf8* rhs );
 		/**
-		 * @brief strcmp 처리를 수행합니다.
+		 * @brief 문자열을 비교합니다
 		 */
 		static int32 strcmp( const utf16* lhs, const utf16* rhs );
 
@@ -153,15 +153,15 @@ namespace sw
 
 	private:
 		/**
-		 * @brief toString 처리를 수행합니다.
+		 * @brief 문자열로 변환합니다
 		 */
 		static std::string	toString( const std::wstring_view& input );
 		/**
-		 * @brief toWString 처리를 수행합니다.
+		 * @brief 와이드 문자열로 변환합니다
 		 */
 		static std::wstring toWString( const std::string_view& input );
 		/**
-		 * @brief isValidUTF8 처리를 수행합니다.
+		 * @brief 유효한 UTF-8인지 검사합니다
 		 */
 		static bool			isValidUTF8( const std::string_view input );
 	};

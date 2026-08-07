@@ -1,6 +1,6 @@
 ﻿/**
  * @file GameObject.cpp
- * @brief Auto-generated documentation header
+ * @brief GameObject 구현
  */
 #include "pch.h"
 #include "GameObject.h"

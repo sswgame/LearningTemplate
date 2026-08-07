@@ -1,5 +1,5 @@
 /**
  * @file pch.cpp
- * @brief Auto-generated documentation header
+ * @brief Core 모듈 사전 컴파일 헤더 강제 포함 단위
  */
 #include "pch.h"

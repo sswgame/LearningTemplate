@@ -148,17 +148,17 @@ namespace sw
 		std::shared_ptr<TaskNode> getNode() const { return _node; }
 
 		/**
-		 * @brief precede 처리를 수행합니다.
+		 * @brief 선행 의존성을 추가합니다
 		 */
 		TaskHandle& precede( TaskHandle targetTask );
 
 		/**
-		 * @brief succeed 처리를 수행합니다.
+		 * @brief 후행 의존성을 추가합니다
 		 */
 		TaskHandle& succeed( TaskHandle dependencyTask );
 
 		/**
-		 * @brief then 처리를 수행합니다.
+		 * @brief 완료 후 연결 작업을 추가합니다
 		 */
 		TaskHandle then( TaskDelegate nextTaskDelegate );
 
@@ -182,7 +182,7 @@ namespace sw
 		std::shared_ptr<StageNode> getStageNode() const { return _node; }
 
 		/**
-		 * @brief addTask 처리를 수행합니다.
+		 * @brief 스테이지에 작업을 추가합니다
 		 */
 		TaskStageHandle& addTask( TaskHandle task );
 

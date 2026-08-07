@@ -1,6 +1,6 @@
 /**
  * @file EngineTimer.cpp
- * @brief Auto-generated documentation header
+ * @brief 엔진 타이머 구현
  */
 #include "pch.h"
 #include "Core/Utility/Time/EngineTimer.h"

@@ -24,15 +24,15 @@ namespace sw
 	{
 		virtual ~IContainerWrapper()									= default;
 		/**
-		 * @brief getKind 처리를 수행합니다.
+		 * @brief Kind을(를) 반환합니다
 		 */
 		virtual ContainerKind getKind() const							= 0;
 		/**
-		 * @brief getSize 처리를 수행합니다.
+		 * @brief 컨테이너 크기를 반환합니다
 		 */
 		virtual size_t		  getSize( const void* containerPtr ) const = 0;
 		/**
-		 * @brief clear 처리를 수행합니다.
+		 * @brief 내부 상태를 비웁니다
 		 */
 		virtual void		  clear( void* containerPtr ) const			= 0;
 
@@ -45,12 +45,12 @@ namespace sw
 		ContainerKind			   getKind() const override { return ContainerKind::Sequence; }
 		ISequenceContainerWrapper* asSequence() override { return this; }
 		/**
-		 * @brief getElement 처리를 수행합니다.
+		 * @brief 요소를 반환합니다
 		 */
 		virtual void*			   getElement( void* containerPtr, size_t index ) const			   = 0;
 		virtual const void*		   getElementConst( const void* containerPtr, size_t index ) const = 0;
 		/**
-		 * @brief addElementDefault 처리를 수행합니다.
+		 * @brief 기본값 요소를 추가합니다
 		 */
 		virtual void			   addElementDefault( void* containerPtr ) const				   = 0;
 		virtual void			   reserve( void* , size_t  ) const {}
@@ -64,36 +64,36 @@ namespace sw
 		IMapContainerWrapper* asMap() override { return this; }
 
 		/**
-		 * @brief forEach 처리를 수행합니다.
+		 * @brief 각 항목에 대해 실행합니다
 		 */
 		virtual void forEach( const void* containerPtr, const MapForEachDelegate& callback ) const		= 0;
 		/**
-		 * @brief insertKeyValue 처리를 수행합니다.
+		 * @brief 키-값을 삽입합니다
 		 */
 		virtual void insertKeyValue( void* containerPtr, const void* keyPtr, const void* valPtr ) const = 0;
 
 		/**
-		 * @brief getKeySize 처리를 수행합니다.
+		 * @brief KeySize을(를) 반환합니다
 		 */
 		virtual size_t getKeySize() const						= 0;
 		/**
-		 * @brief getValueSize 처리를 수행합니다.
+		 * @brief ValueSize을(를) 반환합니다
 		 */
 		virtual size_t getValueSize() const						= 0;
 		/**
-		 * @brief defaultConstructKey 처리를 수행합니다.
+		 * @brief 키를 기본 생성합니다
 		 */
 		virtual void   defaultConstructKey( void* ptr ) const	= 0;
 		/**
-		 * @brief defaultConstructValue 처리를 수행합니다.
+		 * @brief 값을 기본 생성합니다
 		 */
 		virtual void   defaultConstructValue( void* ptr ) const = 0;
 		/**
-		 * @brief destroyKey 처리를 수행합니다.
+		 * @brief Key을(를) 파괴합니다
 		 */
 		virtual void   destroyKey( void* ptr ) const			= 0;
 		/**
-		 * @brief destroyValue 처리를 수행합니다.
+		 * @brief Value을(를) 파괴합니다
 		 */
 		virtual void   destroyValue( void* ptr ) const			= 0;
 	};

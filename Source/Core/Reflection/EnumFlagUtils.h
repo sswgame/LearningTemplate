@@ -1,7 +1,7 @@
 #pragma once
 /**
  * @file EnumFlagUtils.h
- * @brief Auto-generated documentation header
+ * @brief enum 플래그 연산 정의
  */
 
 #include "Core/Common/CommonHeaders.h"

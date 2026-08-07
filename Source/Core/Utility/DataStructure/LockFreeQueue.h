@@ -1,7 +1,7 @@
 #pragma once
 /**
  * @file LockFreeQueue.h
- * @brief Auto-generated documentation header
+ * @brief 고정 용량 lock-free 링 버퍼 큐
  */
 
 #include "Core/Common/Types.h"
@@ -10,6 +10,11 @@
 namespace sw
 {
 
+	/**
+	 * @brief 단일 생산자/단일 소비자에 적합한 고정 용량 lock-free 링 버퍼
+	 * @tparam T 요소 타입
+	 * @tparam Capacity 용량 (2의 거듭제곱)
+	 */
 	template <typename T, uint32 Capacity = 1024>
 	class LockFreeQueue
 	{
@@ -24,6 +29,7 @@ namespace sw
 
 		~LockFreeQueue() = default;
 
+		/** @brief 복사로 요소를 넣습니다. 가득 차면 false. */
 		bool push( const T& item )
 		{
 			const uint32 currentTail = _tail.load( std::memory_order_relaxed );
@@ -39,6 +45,7 @@ namespace sw
 			return true;
 		}
 
+		/** @brief 이동으로 요소를 넣습니다. 가득 차면 false. */
 		bool push( T&& item )
 		{
 			const uint32 currentTail = _tail.load( std::memory_order_relaxed );
@@ -54,6 +61,7 @@ namespace sw
 			return true;
 		}
 
+		/** @brief 앞에서 요소를 꺼냅니다. 비어 있으면 false. */
 		bool pop( T& outItem )
 		{
 			const uint32 currentHead = _head.load( std::memory_order_relaxed );
@@ -69,11 +77,13 @@ namespace sw
 			return true;
 		}
 
+		/** @brief 비어 있는지 반환합니다. */
 		bool empty() const
 		{
 			return _head.load( std::memory_order_relaxed ) == _tail.load( std::memory_order_relaxed );
 		}
 
+		/** @brief 현재 요소 수를 반환합니다. */
 		uint32 size() const
 		{
 			const uint32 head = _head.load( std::memory_order_relaxed );
@@ -81,6 +91,7 @@ namespace sw
 			return tail >= head ? ( tail - head ) : 0;
 		}
 
+		/** @brief 고정 용량을 반환합니다. */
 		constexpr uint32 capacity() const { return Capacity; }
 
 	private:

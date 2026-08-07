@@ -2,7 +2,7 @@
 
 /**
  * @file VectorMath.h
- * @brief 그래픽스 및 게임 로직에서 널리 사용되는 2D/3D/4D 벡터 및 4x4 행렬 수학 연산을 제공하는 헤더입니다.
+ * @brief 2D/3D/4D 벡터 타입과 관련 연산 (HLSL 레이아웃 정렬 유지). 행렬·쿼터니언은 MatrixMath.h.
  * @details Direct3D 12의 HLSL 구조 메모리 레이아웃과 일치하도록 정렬(Alignment)을 유지합니다.
  */
 
@@ -329,98 +329,98 @@ namespace sw
 
 	public:
 		/**
-		 * @brief getDistance 처리를 수행합니다.
+		 * @brief 거리를 계산합니다
 		 */
 		static float32 getDistance( const float4& from, const float4& to ) noexcept;
 		/**
-		 * @brief getDistanceSquared 처리를 수행합니다.
+		 * @brief 거리 제곱을 계산합니다
 		 */
 		static float32 getDistanceSquared( const float4& from, const float4& to ) noexcept;
 
 		/**
-		 * @brief min 처리를 수행합니다.
+		 * @brief 성분별 최솟값을 반환합니다
 		 */
 		static float4 min( const float4& lhs, const float4& rhs ) noexcept;
 		/**
-		 * @brief max 처리를 수행합니다.
+		 * @brief 성분별 최댓값을 반환합니다
 		 */
 		static float4 max( const float4& lhs, const float4& rhs ) noexcept;
 
 		/**
-		 * @brief lerp 처리를 수행합니다.
+		 * @brief 선형 보간합니다
 		 */
 		static float4 lerp( const float4& from, const float4& to, float32 ratio ) noexcept;
 		/**
-		 * @brief smoothStep 처리를 수행합니다.
+		 * @brief SmoothStep 보간합니다
 		 */
 		static float4 smoothStep( const float4& from, const float4& to, float32 ratio ) noexcept;
 
 		/**
-		 * @brief barycentric 처리를 수행합니다.
+		 * @brief 무게중심 좌표로 보간합니다
 		 */
 		static float4 barycentric( const float4& v1, const float4& v2, const float4& v3, float32 f, float32 g ) noexcept;
 		/**
-		 * @brief catmullRom 처리를 수행합니다.
+		 * @brief Catmull-Rom 스플라인 보간합니다
 		 */
 		static float4 catmullRom( const float4& v1, const float4& v2, const float4& v3, const float4& v4, float32 t ) noexcept;
 		/**
-		 * @brief hermite 처리를 수행합니다.
+		 * @brief Hermite 스플라인 보간합니다
 		 */
 		static float4 hermite( const float4& p1, const float4& slope1, const float4& p2, const float4& slope2, float32 t ) noexcept;
 
 		/**
-		 * @brief reflect 처리를 수행합니다.
+		 * @brief 바이트코드에서 리플렉션 데이터를 추출합니다
 		 */
 		static float4 reflect( const float4& source, const float4& normal ) noexcept;
 
 		/**
-		 * @brief transform 처리를 수행합니다.
+		 * @brief 변환을 적용합니다
 		 */
 		static float4 transform( const float4& v, const quaternion& rotation ) noexcept;
 		/**
-		 * @brief transform 처리를 수행합니다.
+		 * @brief 변환을 적용합니다
 		 */
 		static float4 transform( const float4& v, const float4x4& matrix ) noexcept;
 		/**
-		 * @brief transformNormal 처리를 수행합니다.
+		 * @brief 법선을 변환합니다
 		 */
 		static float4 transformNormal( const float4& v, const float4x4& matrix ) noexcept;
 
 	public:
 		/**
-		 * @brief dot 처리를 수행합니다.
+		 * @brief 내적을 계산합니다
 		 */
 		float32 dot( const float4& other ) const noexcept;
 		/**
-		 * @brief normalize 처리를 수행합니다.
+		 * @brief 정규화합니다
 		 */
 		float4& normalize() noexcept;
 		/**
-		 * @brief normalize 처리를 수행합니다.
+		 * @brief 정규화합니다
 		 */
 		float4	normalize() const noexcept;
 
 		/**
-		 * @brief inBounds 처리를 수행합니다.
+		 * @brief 범위 안에 있는지 반환합니다
 		 */
 		bool inBounds( const float4& bound ) const noexcept;
 
 		/**
-		 * @brief clamp 처리를 수행합니다.
+		 * @brief 범위를 제한합니다
 		 */
 		void   clamp( const float4& minValue, const float4& maxValue ) noexcept;
 		/**
-		 * @brief clamp 처리를 수행합니다.
+		 * @brief 범위를 제한합니다
 		 */
 		float4 clamp( const float4& minValue, const float4& maxValue ) const noexcept;
 		float4 clamped( const float4& minValue, const float4& maxValue ) const noexcept { return clamp( minValue, maxValue ); }
 
 		/**
-		 * @brief getLength 처리를 수행합니다.
+		 * @brief 길이를 반환합니다
 		 */
 		float32 getLength() const noexcept;
 		/**
-		 * @brief getLengthSquared 처리를 수행합니다.
+		 * @brief 길이 제곱을 반환합니다
 		 */
 		float32 getLengthSquared() const noexcept;
 
@@ -482,61 +482,61 @@ namespace sw
 
 	public:
 		/**
-		 * @brief getDistance 처리를 수행합니다.
+		 * @brief 거리를 계산합니다
 		 */
 		static float64 getDistance( const double3& from, const double3& to ) noexcept;
 		/**
-		 * @brief getDistanceSquared 처리를 수행합니다.
+		 * @brief 거리 제곱을 계산합니다
 		 */
 		static float64 getDistanceSquared( const double3& from, const double3& to ) noexcept;
 
 		/**
-		 * @brief min 처리를 수행합니다.
+		 * @brief 성분별 최솟값을 반환합니다
 		 */
 		static double3 min( const double3& lhs, const double3& rhs ) noexcept;
 		/**
-		 * @brief max 처리를 수행합니다.
+		 * @brief 성분별 최댓값을 반환합니다
 		 */
 		static double3 max( const double3& lhs, const double3& rhs ) noexcept;
 
 		/**
-		 * @brief lerp 처리를 수행합니다.
+		 * @brief 선형 보간합니다
 		 */
 		static double3 lerp( const double3& from, const double3& to, float64 t ) noexcept;
 
 	public:
 		/**
-		 * @brief inBounds 처리를 수행합니다.
+		 * @brief 범위 안에 있는지 반환합니다
 		 */
 		bool inBounds( const double3& bound ) const noexcept;
 		/**
-		 * @brief isInfinite 처리를 수행합니다.
+		 * @brief Infinite 여부를 반환합니다
 		 */
 		bool isInfinite() const noexcept;
 
 		/**
-		 * @brief dot 처리를 수행합니다.
+		 * @brief 내적을 계산합니다
 		 */
 		float64	 dot( const double3& other ) const noexcept;
 		/**
-		 * @brief cross 처리를 수행합니다.
+		 * @brief 외적을 계산합니다
 		 */
 		double3	 cross( const double3& other ) const noexcept;
 		/**
-		 * @brief normalize 처리를 수행합니다.
+		 * @brief 정규화합니다
 		 */
 		double3& normalize() noexcept;
 		/**
-		 * @brief normalize 처리를 수행합니다.
+		 * @brief 정규화합니다
 		 */
 		double3	 normalize() const noexcept;
 
 		/**
-		 * @brief clamp 처리를 수행합니다.
+		 * @brief 범위를 제한합니다
 		 */
 		void	clamp( const double3& minValue, const double3& maxValue ) noexcept;
 		/**
-		 * @brief clamp 처리를 수행합니다.
+		 * @brief 범위를 제한합니다
 		 */
 		double3 clamp( const double3& minValue, const double3& maxValue ) const noexcept;
 		double3 clamped( const double3& minValue, const double3& maxValue ) const noexcept { return clamp( minValue, maxValue ); }
@@ -544,11 +544,11 @@ namespace sw
 		float3 toFloat3() const noexcept { return float3{ static_cast<float32>( _x ), static_cast<float32>( _y ), static_cast<float32>( _z ) }; }
 
 		/**
-		 * @brief getLength 처리를 수행합니다.
+		 * @brief 길이를 반환합니다
 		 */
 		float64 getLength() const noexcept;
 		/**
-		 * @brief getLengthSquared 처리를 수행합니다.
+		 * @brief 길이 제곱을 반환합니다
 		 */
 		float64 getLengthSquared() const noexcept;
 

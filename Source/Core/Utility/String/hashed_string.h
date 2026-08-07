@@ -1,7 +1,7 @@
 #pragma once
 /**
  * @file hashed_string.h
- * @brief Auto-generated documentation header
+ * @brief 해시 기반 문자열(basic_hashed_string)과 사전 정의 이름 열거형
  */
 
 #include "Core/Common/Types.h"
@@ -11,9 +11,12 @@
 namespace sw
 {
 
+	/**
+	 * @enum PredefinedNameType
+	 * @brief PredefinedNameType.xxx 의 REGISTER_NAME으로 생성되는 사전 정의 이름 열거
+	 */
 	enum class PredefinedNameType : uint8
 	{
-/** @brief REGISTER_NAME 매크로 정의입니다. */
 #define REGISTER_NAME( index, name ) NameType_##name = index,
 #include "Core/Utility/Predefined/PredefinedNameType.xxx"
 #undef REGISTER_NAME
@@ -73,14 +76,14 @@ namespace sw
 	public:
 
 		/**
-		 * @brief size 처리를 수행합니다.
+		 * @brief 크기를 반환합니다
 		 */
 		size_type size() const noexcept;
 
 		const value_type* c_str() const noexcept;
 
 		/**
-		 * @brief getHash 처리를 수행합니다.
+		 * @brief 해시 값을 반환합니다
 		 */
 		hash_type getHash() const noexcept;
 
@@ -98,7 +101,7 @@ namespace sw
 		}
 
 		/**
-		 * @brief helper 처리를 수행합니다.
+		 * @brief 헬퍼를 반환합니다
 		 */
 		static uint32 helper( const T* str, size_type length ) noexcept;
 
@@ -113,12 +116,12 @@ namespace sw
 		}
 
 		/**
-		 * @brief helper_internal 처리를 수행합니다.
+		 * @brief 내부 헬퍼를 반환합니다
 		 */
 		static uint32 helper_internal( AllocationInfo& info, const T* str, size_type length ) noexcept;
 
 		/**
-		 * @brief getAllocationInfo 처리를 수행합니다.
+		 * @brief AllocationInfo을(를) 반환합니다
 		 */
 		static AllocationInfo& getAllocationInfo() noexcept;
 
@@ -294,7 +297,7 @@ namespace sw
 
 		{
 			/**
-			 * @brief readLock 처리를 수행합니다.
+			 * @brief 읽기 잠금을 획득합니다
 			 */
 			std::shared_lock<std::shared_mutex> readLock( info._mutex );
 			const auto							iter = info._mapKeyToIndex.find( findStringKey );
@@ -303,7 +306,7 @@ namespace sw
 		}
 
 		/**
-		 * @brief writeLock 처리를 수행합니다.
+		 * @brief 쓰기 잠금을 획득합니다
 		 */
 		std::unique_lock<std::shared_mutex> writeLock( info._mutex );
 
@@ -343,7 +346,7 @@ namespace sw
 	{
 		auto&								info = getAllocationInfo();
 		/**
-		 * @brief lock 처리를 수행합니다.
+		 * @brief 내부 뮤텍스를 잠급니다
 		 */
 		std::shared_lock<std::shared_mutex> lock( info._mutex );
 		return info._keyList[_stringKeyIndex]._stringLength;
@@ -354,7 +357,7 @@ namespace sw
 	{
 		auto&								info = getAllocationInfo();
 		/**
-		 * @brief lock 처리를 수행합니다.
+		 * @brief 내부 뮤텍스를 잠급니다
 		 */
 		std::shared_lock<std::shared_mutex> lock( info._mutex );
 		return info._keyList[_stringKeyIndex]._str;
@@ -365,7 +368,7 @@ namespace sw
 	{
 		auto&								info = getAllocationInfo();
 		/**
-		 * @brief lock 처리를 수행합니다.
+		 * @brief 내부 뮤텍스를 잠급니다
 		 */
 		std::shared_lock<std::shared_mutex> lock( info._mutex );
 		return info._keyList[_stringKeyIndex]._hash;

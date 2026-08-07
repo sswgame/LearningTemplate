@@ -1,7 +1,7 @@
 #pragma once
 /**
  * @file RenderPassResource.h
- * @brief Auto-generated documentation header
+ * @brief 렌더 패스용 리소스 핸들/디스크립터
  */
 
 #include "Core/Common/Common.h"
@@ -45,19 +45,13 @@ namespace sw
 		RenderPassResource( const RenderPassResource& )			   = delete;
 		RenderPassResource& operator=( const RenderPassResource& ) = delete;
 
-		/**
-		 * @brief loadFromXmlFile 처리를 수행합니다.
-		 */
+		/** @brief XML 파일에서 렌더 패스 디스크립터를 로드합니다. */
 		bool loadFromXmlFile( const std::string& assetRelativePath );
 
-		/**
-		 * @brief saveToXmlFile 처리를 수행합니다.
-		 */
+		/** @brief 렌더 패스 디스크립터를 XML 파일로 저장합니다. */
 		bool saveToXmlFile( const std::string& assetRelativePath ) const;
 
-		/**
-		 * @brief loadFromXmlFileAsync 처리를 수행합니다.
-		 */
+		/** @brief XML 로드를 비동기 작업으로 예약합니다. */
 		TaskHandle loadFromXmlFileAsync( const std::string& assetRelativePath );
 
 		const RenderPassDesc& getDesc() const { return _desc; }

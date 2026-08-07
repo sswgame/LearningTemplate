@@ -1,6 +1,6 @@
 /**
  * @file CommandLineManager.cpp
- * @brief Auto-generated documentation header
+ * @brief 커맨드라인 인자 파싱 구현
  */
 #include "pch.h"
 #include "CommandLineManager.h"

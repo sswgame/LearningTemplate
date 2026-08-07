@@ -1,6 +1,6 @@
 /**
  * @file ImGuiDX11RendererBackend.cpp
- * @brief Auto-generated documentation header
+ * @brief ImGui Direct3D 11 렌더러 구현
  */
 #include "ImGuiDX11RendererBackend.h"
 #include <imgui.h>

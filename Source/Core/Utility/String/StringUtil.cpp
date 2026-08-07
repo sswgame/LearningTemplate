@@ -1,6 +1,6 @@
 /**
  * @file StringUtil.cpp
- * @brief Auto-generated documentation header
+ * @brief 문자열 유틸리티 구현
  */
 #include "pch.h"
 #include "Core/Utility/String/StringUtil.h"

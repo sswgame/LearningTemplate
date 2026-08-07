@@ -15,14 +15,15 @@ namespace sw
 {
 	/**
 	 * @enum TickGroup
-	 * @brief 프레임 업데이트 내에서 컴포넌트 실행 단계(Tick Group) 구분
+	 * @brief 프레임 내 컴포넌트 tick 실행 순서 슬롯
+	 * @details 이름은 물리 파이프라인 단계를 따르지만, 현재 엔진에 물리 시스템이 없어도 정렬용으로 사용합니다.
 	 */
 	enum class TickGroup : uint8
 	{
-		PrePhysics,    ///< 물리 연산 수행 전
-		DuringPhysics, ///< 물리 연산 진행 중 (기본값)
-		PostPhysics,   ///< 물리 연산 완료 후
-		PostUpdate,    ///< 최종 렌더링 준비 및 갱신 후
+		PrePhysics,    ///< 이른 업데이트 단계
+		DuringPhysics, ///< 기본 tick 단계
+		PostPhysics,   ///< 늦은 업데이트 단계
+		PostUpdate,    ///< 렌더 직전 등 최종 단계
 	};
 
 	/**

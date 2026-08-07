@@ -158,19 +158,19 @@ namespace sw
 
 	private:
 		/**
-		 * @brief createRenderTargets 처리를 수행합니다.
+		 * @brief RenderTargets을(를) 생성합니다
 		 */
 		void createRenderTargets();
 		/**
-		 * @brief cleanupRenderTargets 처리를 수행합니다.
+		 * @brief 렌더 타깃을 정리합니다
 		 */
 		void cleanupRenderTargets();
 		/**
-		 * @brief waitForPreviousFrame 처리를 수행합니다.
+		 * @brief 이전 프레임 완료를 기다립니다
 		 */
 		void waitForPreviousFrame();
 		/**
-		 * @brief createTriangleResources 처리를 수행합니다.
+		 * @brief TriangleResources을(를) 생성합니다
 		 */
 		bool createTriangleResources();
 		/**

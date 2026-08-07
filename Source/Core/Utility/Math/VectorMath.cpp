@@ -1,6 +1,6 @@
 /**
  * @file VectorMath.cpp
- * @brief Auto-generated documentation header
+ * @brief 벡터 수학 구현
  */
 #include "pch.h"
 #include "Core/Utility/Math/VectorMath.h"

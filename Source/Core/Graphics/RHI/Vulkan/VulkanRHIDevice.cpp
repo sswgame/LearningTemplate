@@ -1,6 +1,6 @@
 ﻿/**
  * @file VulkanRHIDevice.cpp
- * @brief Auto-generated documentation header
+ * @brief Vulkan RHI 디바이스 구현
  */
 #include "Core/CoreMinimal.h"
 

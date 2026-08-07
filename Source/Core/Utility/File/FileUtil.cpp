@@ -1,6 +1,6 @@
 /**
  * @file FileUtil.cpp
- * @brief Auto-generated documentation header
+ * @brief FileUtil 구현
  */
 #include "pch.h"
 #include "FileUtil.h"

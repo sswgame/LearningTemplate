@@ -1,6 +1,6 @@
 /**
  * @file MatrixMath.cpp
- * @brief Auto-generated documentation header
+ * @brief 행렬·쿼터니언 수학 구현
  */
 #include "pch.h"
 #include "Core/Utility/Math/MatrixMath.h"

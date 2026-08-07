@@ -88,7 +88,7 @@ namespace sw
 		};
 
 		/**
-		 * @brief allocateNewChunk 처리를 수행합니다.
+		 * @brief 새 메모리 청크를 할당합니다
 		 */
 		void allocateNewChunk( size_t minSize );
 

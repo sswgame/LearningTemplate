@@ -1,6 +1,6 @@
 /**
  * @file ShaderCache.cpp
- * @brief Auto-generated documentation header
+ * @brief ShaderCache 구현
  */
 #include "ShaderCache.h"
 #include "Core/Utility/Resource/ResourceUtil.h"

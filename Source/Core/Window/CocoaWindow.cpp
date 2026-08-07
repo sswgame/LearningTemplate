@@ -1,6 +1,6 @@
 /**
  * @file CocoaWindow.cpp
- * @brief Auto-generated documentation header
+ * @brief Cocoa 윈도우 구현
  */
 #include "CocoaWindow.h"
 

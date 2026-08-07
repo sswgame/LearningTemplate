@@ -1,6 +1,6 @@
 ﻿/**
  * @file Component.cpp
- * @brief Auto-generated documentation header
+ * @brief Component 기반 클래스 구현
  */
 #include "pch.h"
 #include "Component.h"

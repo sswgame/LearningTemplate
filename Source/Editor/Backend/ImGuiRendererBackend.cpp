@@ -1,6 +1,6 @@
 /**
  * @file ImGuiRendererBackend.cpp
- * @brief Auto-generated documentation header
+ * @brief ImGuiRendererBackend 구현
  */
 #include "IImGuiRendererBackend.h"
 #include "Renderer/ImGuiDX11RendererBackend.h"

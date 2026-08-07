@@ -15,28 +15,28 @@ namespace sw
 		CpuTimer() noexcept;
 
 		/**
-		 * @brief getTotalTime 처리를 수행합니다.
+		 * @brief 누적 시간을 반환합니다
 		 */
 		float32 getTotalTime() const noexcept;
 		/**
-		 * @brief getDeltaTime 처리를 수행합니다.
+		 * @brief 델타 타임을 반환합니다
 		 */
 		float32 getDeltaTime() const noexcept;
 
 		/**
-		 * @brief resetTimer 처리를 수행합니다.
+		 * @brief 타이머를 리셋합니다
 		 */
 		void resetTimer() noexcept;
 		/**
-		 * @brief startTimer 처리를 수행합니다.
+		 * @brief 타이머를 시작합니다
 		 */
 		void startTimer() noexcept;
 		/**
-		 * @brief stopTimer 처리를 수행합니다.
+		 * @brief 타이머를 중지합니다
 		 */
 		void stopTimer() noexcept;
 		/**
-		 * @brief updateTimer 처리를 수행합니다.
+		 * @brief 타이머를 갱신합니다
 		 */
 		void updateTimer() noexcept;
 

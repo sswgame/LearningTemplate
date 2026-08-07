@@ -23,6 +23,7 @@ else()
     message(STATUS "[BuildConfig] Development build: Core SHARED, Editor/SWGame MODULE DLLs")
 endif()
 
+# Core SHARED DLL: SW_EXPORTS(빌드)/SW_IMPORTS(소비) 및 Windows export-all 설정.
 function(sw_configure_core_dll_exports TARGET_NAME LIB_TYPE)
     if(LIB_TYPE STREQUAL "SHARED")
         target_compile_definitions(${TARGET_NAME} PRIVATE SW_EXPORTS)
@@ -33,6 +34,7 @@ function(sw_configure_core_dll_exports TARGET_NAME LIB_TYPE)
     endif()
 endfunction()
 
+# Editor/Game MODULE DLL: SW_MODULE_EXPORTS 컴파일 정의를 붙입니다.
 function(sw_configure_module_dll_exports TARGET_NAME LIB_TYPE)
     if(LIB_TYPE STREQUAL "MODULE")
         target_compile_definitions(${TARGET_NAME} PRIVATE SW_MODULE_EXPORTS)
