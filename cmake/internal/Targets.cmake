@@ -111,3 +111,55 @@ function(sw_set_module_bin_output TARGET_NAME)
         LIBRARY_OUTPUT_DIRECTORY_RELEASE "${sw_output_directory}/Bin"
     )
 endfunction()
+
+# ---------------------------------------------------------------------------
+# 런타임 파일 복사: POST_BUILD COMMENT가 ; 로 이어지지 않도록 한 번에 emit
+# ---------------------------------------------------------------------------
+function(sw_queue_runtime_copy TARGET_NAME SRC_FILE)
+    if(NOT TARGET ${TARGET_NAME})
+        message(FATAL_ERROR "sw_queue_runtime_copy: target '${TARGET_NAME}' does not exist")
+    endif()
+    if(NOT SRC_FILE OR NOT EXISTS "${SRC_FILE}")
+        return()
+    endif()
+    set_property(TARGET ${TARGET_NAME} APPEND PROPERTY SW_RUNTIME_COPY_FILES "${SRC_FILE}")
+endfunction()
+
+function(sw_emit_runtime_copies TARGET_NAME)
+    if(NOT TARGET ${TARGET_NAME})
+        message(FATAL_ERROR "sw_emit_runtime_copies: target '${TARGET_NAME}' does not exist")
+    endif()
+
+    get_property(_already TARGET ${TARGET_NAME} PROPERTY SW_RUNTIME_COPIES_EMITTED)
+    if(_already)
+        return()
+    endif()
+
+    get_property(_files TARGET ${TARGET_NAME} PROPERTY SW_RUNTIME_COPY_FILES)
+    if(NOT _files)
+        return()
+    endif()
+
+    # 중복 제거 (같은 DLL을 여러 헬퍼가 큐잉할 수 있음)
+    list(REMOVE_DUPLICATES _files)
+
+    set(_names "")
+    set(_commands "")
+    foreach(_src IN LISTS _files)
+        get_filename_component(_name "${_src}" NAME)
+        list(APPEND _names "${_name}")
+        list(APPEND _commands
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${_src}"
+                "$<TARGET_FILE_DIR:${TARGET_NAME}>/${_name}"
+        )
+    endforeach()
+
+    list(JOIN _names ", " _summary)
+    add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
+        ${_commands}
+        COMMENT "[${TARGET_NAME}] Runtime deps: ${_summary}"
+        VERBATIM
+    )
+    set_property(TARGET ${TARGET_NAME} PROPERTY SW_RUNTIME_COPIES_EMITTED TRUE)
+endfunction()

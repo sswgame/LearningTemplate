@@ -28,3 +28,6 @@ sw_copy_vcpkg_shared_lib(App "VkLayer_khronos_validation")
 sw_copy_vcpkg_shared_lib(App "mimalloc")
 sw_copy_vcpkg_shared_lib(App "mimalloc-redirect")
 sw_copy_vcpkg_file(App "VkLayer_khronos_validation.json")
+
+# POST_BUILD COMMENT를 한 줄로 묶음
+sw_emit_runtime_copies(App)

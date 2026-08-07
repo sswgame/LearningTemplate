@@ -1,5 +1,6 @@
 {
     "cmake.useCMakePresets": "always",
+    "cmake.parallelJobs": 0,
     "cmake.options.advanced": {
         "ctest": {
             "statusBarVisibility": "hidden"

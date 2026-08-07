@@ -14,7 +14,6 @@
                 "CMAKE_C_COMPILER": "clang-cl",
                 "CMAKE_CXX_COMPILER": "clang-cl",
                 "CMAKE_BUILD_TYPE": "Debug",
-                "CMAKE_BUILD_PARALLEL_LEVEL": "0",
                 "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/cmake/Modules/Toolchain/Vcpkg",
                 "VCPKG_INSTALLED_DIR": "${sourceDir}/build/vcpkg_installed",
                 "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/Tools/vcpkg/scripts/buildsystems/vcpkg.cmake"
@@ -43,7 +42,6 @@
                 "CMAKE_C_COMPILER": "clang-cl",
                 "CMAKE_CXX_COMPILER": "clang-cl",
                 "CMAKE_BUILD_TYPE": "Release",
-                "CMAKE_BUILD_PARALLEL_LEVEL": "0",
                 "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/cmake/Modules/Toolchain/Vcpkg",
                 "VCPKG_INSTALLED_DIR": "${sourceDir}/build/vcpkg_installed",
                 "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/Tools/vcpkg/scripts/buildsystems/vcpkg.cmake"
@@ -54,17 +52,20 @@
         {
             "name": "Debug",
             "configurePreset": "Debug",
-            "configuration": "Debug"
+            "configuration": "Debug",
+            "jobs": 0
         },
         {
             "name": "Ninja-Debug",
             "configurePreset": "Ninja-Debug",
-            "configuration": "Debug"
+            "configuration": "Debug",
+            "jobs": 0
         },
         {
             "name": "Ninja-Release",
             "configurePreset": "Ninja-Release",
-            "configuration": "Release"
+            "configuration": "Release",
+            "jobs": 0
         }
     ]
 }

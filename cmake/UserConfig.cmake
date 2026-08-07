@@ -22,6 +22,10 @@ option(SW_RHI_AS_MODULES "Build DX11/DX12 RHI backends as MODULE DLLs (Core load
 set(CMAKE_COMPILE_PDB_NAME "compile")
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# CMAKE_BUILD_PARALLEL_LEVEL 은 환경변수/빌드 옵션이지 캐시 변수가 아님.
+# 예전 preset이 -D 로 넣었을 수 있어 경고가 남지 않도록 정리한다.
+unset(CMAKE_BUILD_PARALLEL_LEVEL CACHE)
+
 # Compiler / platform / architecture INTERFACE libs accumulate here.
 # Must be initialized BEFORE Toolchain so vcpkg can append without being wiped later.
 set(sw_flag_libraries "")

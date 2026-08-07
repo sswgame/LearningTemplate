@@ -283,8 +283,16 @@ def SetupEnvironment() -> Dict[str, Any]:
 
     dxc_dll_path_val = existing_config.get("dxc_dll_path", "")
     dxil_dll_path_val = existing_config.get("dxil_dll_path", "")
-    if not dxc_dll_path_val or not os.path.exists(dxc_dll_path_val):
-        dxc_dll_path_val, dxil_dll_path_val = FindDxcDlls(sdk_dir_val, sdk_ver_val, project_root)
+    # vcpkg/Vulkan/Windows Kit 우선순위를 항상 재적용 (캐시된 Windows Kit 경로가 vcpkg DXC를 가리지 않게)
+    found_dxc, found_dxil = FindDxcDlls(sdk_dir_val, sdk_ver_val, project_root)
+    if found_dxc:
+        dxc_dll_path_val = found_dxc
+    elif not dxc_dll_path_val or not os.path.exists(dxc_dll_path_val):
+        dxc_dll_path_val = ""
+    if found_dxil:
+        dxil_dll_path_val = found_dxil
+    elif not dxil_dll_path_val or not os.path.exists(dxil_dll_path_val):
+        dxil_dll_path_val = ""
 
     msvc_path = get_or_find("msvc_tools_dir", FindMsvcPath)
 
@@ -347,16 +355,23 @@ def SetupEnvironment() -> Dict[str, Any]:
 
     UpdateParserConfig(target_os, parser_config_file)
 
-    print(f"[SetupEnvironment] Dynamic query initialized for OS '{platform.system()}':")
-    print(f"  - LLVM Path          : {engine_config_data['llvm_path']}")
-    if libclang_dll_path:
-        print(f"  - libclang DLL Path  : {libclang_dll_path}")
-    if dxc_dll_path_val:
-        print(f"  - DXC DLL Path       : {dxc_dll_path_val}")
-    if vcpkg_path:
-        print(f"  - vcpkg Root         : {engine_config_data['vcpkg_root']}")
-    if ninja_path:
-        print(f"  - Ninja Path         : {engine_config_data['ninja_path']}")
+    # CMake STATUS와 engine_config.json이 같은 내용을 보이게 전체 키를 출력한다.
+    # (기존에는 LLVM/DXC/vcpkg/Ninja만 찍어 SDK/MSVC/dxil 등이 빠진 것처럼 보였음)
+    print(f"[SetupEnvironment] Resolved Config/engine_config.json for OS '{platform.system()}':")
+    print(f"  - target_platform      : {engine_config_data['target_platform']}")
+    print(f"  - target_arch          : {engine_config_data['target_arch']}")
+    print(f"  - llvm_path            : {engine_config_data['llvm_path']}")
+    print(f"  - libclang_dll_path    : {engine_config_data['libclang_dll_path']}")
+    print(f"  - windows_sdk_dir      : {engine_config_data['windows_sdk_dir']}")
+    print(f"  - windows_sdk_version  : {engine_config_data['windows_sdk_version']}")
+    print(f"  - dxc_dll_path         : {engine_config_data['dxc_dll_path']}")
+    print(f"  - dxil_dll_path        : {engine_config_data['dxil_dll_path']}")
+    print(f"  - msvc_tools_dir       : {engine_config_data['msvc_tools_dir']}")
+    print(f"  - vcpkg_root           : {engine_config_data['vcpkg_root']}")
+    print(f"  - ninja_path           : {engine_config_data['ninja_path']}")
+    print(f"  - system_include_dirs  : {engine_config_data['system_include_dirs']}")
+    print(f"  - config_file          : {NormalizePath(str(engine_config_file))}"
+          f" ({'updated' if should_write else 'unchanged'})")
 
     return engine_config_data
 

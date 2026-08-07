@@ -154,7 +154,8 @@ function(sw_link_vcpkg_header_only_target TARGET_NAME)
     target_include_directories(${TARGET_NAME} SYSTEM INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}")
 endfunction()
 
-# Vcpkg에서 설치된 파일(DLL, SO, JSON 등)을 타겟의 출력 디렉터리로 복사하는 헬퍼 함수
+# Vcpkg에서 설치된 파일(DLL, SO, JSON 등)을 타겟 출력 디렉터리로 복사 (큐잉)
+# 실제 POST_BUILD는 sw_emit_runtime_copies() 한 번으로 묶여 출력됩니다.
 function(sw_copy_vcpkg_file TARGET_NAME FILE_NAME)
     sw_get_vcpkg_paths(_inc_dirs _bin_dirs)
     set(_found_file "")
@@ -167,13 +168,7 @@ function(sw_copy_vcpkg_file TARGET_NAME FILE_NAME)
     endforeach()
 
     if(_found_file)
-        add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                "${_found_file}"
-                "$<TARGET_FILE_DIR:${TARGET_NAME}>/${FILE_NAME}"
-            COMMENT "[${TARGET_NAME}] Copying Vcpkg File: ${FILE_NAME}..."
-            VERBATIM
-        )
+        sw_queue_runtime_copy(${TARGET_NAME} "${_found_file}")
     endif()
 endfunction()
 
