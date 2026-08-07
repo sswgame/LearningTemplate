@@ -6,6 +6,10 @@
 #include "Core/Utility/File/FileUtil.h"
 #include "Core/Utility/Log/Logger.h"
 
+#include <chrono>
+#include <filesystem>
+#include <thread>
+
 namespace sw
 {
 	namespace
@@ -17,6 +21,22 @@ namespace sw
 			if ( dir.empty() )
 				return FileUtil::normalizePath( file );
 			return FileUtil::normalizePath( dir + "/" + file );
+		}
+
+		void tryDeleteFile( const std::string& path )
+		{
+			if ( path.empty() )
+				return;
+			std::error_code ec;
+			std::filesystem::remove( path, ec );
+		}
+
+		void tryDeleteShadowArtifacts( const std::string& dllPath )
+		{
+			if ( dllPath.empty() )
+				return;
+			tryDeleteFile( dllPath );
+			tryDeleteFile( FileUtil::getDebugSymbolPath( dllPath ) );
 		}
 	} // namespace
 
@@ -66,17 +86,23 @@ namespace sw
 			return false;
 		}
 
+		const uint64 sourceMtime = FileUtil::getFileTimestamp( ctx._originalDllPath );
+
+		std::string newTempDllPath;
+		std::string newTempPdbPath;
+		void*		newHandle = nullptr;
+
 		BLOCK( "DLL 섀도 카피" )
 		{
 			++s_reloadCount;
 			const std::string tempName = ctx._moduleName + "_temp_" + std::to_string( s_reloadCount );
 			const std::string execDir  = FileUtil::getDirectoryPart( ctx._originalDllPath );
-			ctx._tempDllPath		   = joinDirFile( execDir, FileUtil::formatSharedLibraryName( tempName ) );
+			newTempDllPath			   = joinDirFile( execDir, FileUtil::formatSharedLibraryName( tempName ) );
 
 			bool bCopySuccess = false;
 			for ( int i = 0; i < 10; ++i )
 			{
-				if ( FileUtil::copyFile( ctx._originalDllPath, ctx._tempDllPath ) )
+				if ( FileUtil::copyFile( ctx._originalDllPath, newTempDllPath ) )
 				{
 					bCopySuccess = true;
 					break;
@@ -86,7 +112,7 @@ namespace sw
 
 			if ( bCopySuccess == false )
 			{
-				SW_LOG_ERROR( "[LiveReloadManager] Failed to create shadow copy (locked): %#", ctx._tempDllPath.c_str() );
+				SW_LOG_ERROR( "[LiveReloadManager] Failed to create shadow copy (locked): %#", newTempDllPath.c_str() );
 				return false;
 			}
 		}
@@ -94,28 +120,56 @@ namespace sw
 		BLOCK( "디버그 심볼 복사" )
 		{
 			const std::string originalDebugPath = FileUtil::getDebugSymbolPath( ctx._originalDllPath );
-			const std::string tempDebugPath		= FileUtil::getDebugSymbolPath( ctx._tempDllPath );
+			newTempPdbPath						= FileUtil::getDebugSymbolPath( newTempDllPath );
 			if ( std::filesystem::exists( originalDebugPath ) )
 			{
 				std::error_code ec;
-				std::filesystem::copy( originalDebugPath, tempDebugPath,
+				std::filesystem::copy( originalDebugPath, newTempPdbPath,
 									   std::filesystem::copy_options::overwrite_existing, ec );
 				if ( ec )
 				{
-					SW_LOG_ASSERT( false, "[LiveReloadManager] Failed to copy debug symbols: %#", ec.message().c_str() );
-					return false;
+					SW_LOG_WARNING( "[LiveReloadManager] Failed to copy debug symbols: %#", ec.message().c_str() );
+					// PDB failure is non-fatal for loading the DLL.
+					newTempPdbPath.clear();
 				}
+			}
+			else
+			{
+				newTempPdbPath.clear();
 			}
 		}
 
-		BLOCK( "동적 라이브러리 로드 / AfterReload 콜백" )
+		BLOCK( "동적 라이브러리 로드" )
 		{
-			ctx._hLibraryModule = FileUtil::loadDynamicLibrary( ctx._tempDllPath );
-			if ( ctx._hLibraryModule == nullptr )
+			newHandle = FileUtil::loadDynamicLibrary( newTempDllPath );
+			if ( newHandle == nullptr )
 			{
-				SW_LOG_ERROR( "[LiveReloadManager] Failed to load dynamic library: %#", ctx._tempDllPath.c_str() );
+				SW_LOG_ERROR( "[LiveReloadManager] Failed to load dynamic library: %#", newTempDllPath.c_str() );
+				tryDeleteShadowArtifacts( newTempDllPath );
 				return false;
 			}
+		}
+
+		// Two-handle swap: only free the old module after the new one is loaded successfully.
+		BLOCK( "Swap handles / cleanup previous shadow" )
+		{
+			const std::string previousTempDll = ctx._tempDllPath;
+			void*			  previousHandle  = ctx._hLibraryModule;
+
+			if ( ctx._onBeforeReload.isBound() && previousHandle != nullptr )
+				ctx._onBeforeReload();
+
+			if ( previousHandle != nullptr )
+			{
+				FileUtil::freeDynamicLibrary( previousHandle );
+				previousHandle = nullptr;
+			}
+
+			ctx._hLibraryModule		= newHandle;
+			ctx._tempDllPath		= newTempDllPath;
+			ctx._loadedSourceMtime	= sourceMtime;
+
+			tryDeleteShadowArtifacts( previousTempDll );
 
 			if ( ctx._onAfterReload.isBound() )
 				ctx._onAfterReload( ctx._hLibraryModule );
@@ -130,33 +184,41 @@ namespace sw
 		for ( auto& pair : _modules )
 		{
 			ModuleContext& ctx = pair.second;
+
+			// Auto-reload when the source DLL is newer than the shadow we loaded.
+			if ( ctx._originalDllPath.empty() == false && FileUtil::isFileExist( ctx._originalDllPath ) )
+			{
+				const uint64 sourceMtime = FileUtil::getFileTimestamp( ctx._originalDllPath );
+				if ( sourceMtime != 0 && sourceMtime > ctx._loadedSourceMtime )
+				{
+					SW_LOG_INFO( "[LiveReloadManager] Source DLL newer — queuing reload for %#", ctx._moduleName.c_str() );
+					ctx._bPendingReload = true;
+				}
+			}
+
 			if ( ctx._bPendingReload == false )
 				continue;
 
 			ctx._bPendingReload = false;
 
-			BLOCK( "BeforeReload / DLL Unload" )
-			{
-				if ( ctx._onBeforeReload.isBound() )
-					ctx._onBeforeReload();
-
-				if ( ctx._hLibraryModule != nullptr )
-				{
-					FileUtil::freeDynamicLibrary( ctx._hLibraryModule );
-					ctx._hLibraryModule = nullptr;
-				}
-			}
-
 			BLOCK( "Shadow Copy Reload" )
 			{
-				loadShadowCopyModule( ctx );
+				const uint64 attemptedMtime = FileUtil::getFileTimestamp( ctx._originalDllPath );
+				if ( loadShadowCopyModule( ctx ) == false )
+				{
+					SW_LOG_ERROR( "[LiveReloadManager] Reload failed for %# — keeping previous module handle if any.",
+								  ctx._moduleName.c_str() );
+					// Prevent per-frame retry spam for the same source timestamp; manual trigger still works.
+					if ( attemptedMtime != 0 )
+						ctx._loadedSourceMtime = attemptedMtime;
+				}
 			}
 		}
 	}
 
 	void LiveReloadManager::shutdown()
 	{
-		// App이 이미 onBefore*Reload로 인스턴스를 정리한다. 여기서는 DLL unload만 수행.
+		// App이 이미 onBefore*Reload로 인스턴스를 정리한다. 여기서는 DLL unload + temp cleanup.
 		for ( auto& pair : _modules )
 		{
 			ModuleContext& ctx = pair.second;
@@ -165,6 +227,8 @@ namespace sw
 				FileUtil::freeDynamicLibrary( ctx._hLibraryModule );
 				ctx._hLibraryModule = nullptr;
 			}
+			tryDeleteShadowArtifacts( ctx._tempDllPath );
+			ctx._tempDllPath.clear();
 		}
 		_modules.clear();
 	}

@@ -1,7 +1,14 @@
 # Naming Conventions
 
 이 문서는 프로젝트의 **CMake / Code(C++) / Scripts(Python)** 네이밍 규칙을 정리합니다.
-타겟 그래프·Dev/Shipping·Runtime ABI 는 [ARCHITECTURE.md](ARCHITECTURE.md) 를 참고하세요.
+타겟 그래프·Dev/Shipping·Runtime ABI·RHI/리플렉션 파이프라인은 [ARCHITECTURE.md](ARCHITECTURE.md) 를 참고하세요.
+
+**Quick notes (also in ARCHITECTURE.md):**
+
+- Shipping (`SW_SHIPPING_BUILD=ON`) forces `SW_RHI_AS_MODULES=OFF` (DX linked into Core).
+- clangd compile DB: `build/Ninja-Debug`.
+- Core runs `sw_add_reflection_step` for Object headers; VK/GL stay Core-linked.
+- LiveReload loads the new shadow DLL before freeing the old handle.
 
 ---
 

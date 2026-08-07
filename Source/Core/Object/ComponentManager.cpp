@@ -48,4 +48,34 @@ namespace sw
 		_factories.clear();
 		_registeredTypes.clear();
 	}
+
+	void ComponentManager::registerPendingFactories( ComponentFactoryRegistrar* head )
+	{
+		ComponentFactoryRegistrar* curr = head;
+		while ( curr != nullptr )
+		{
+			if ( curr->_registerFunc != nullptr )
+				curr->_registerFunc( *this );
+			curr = curr->_next;
+		}
+	}
+
+	ComponentFactoryRegistrar*& ComponentFactoryRegistrar::getHead()
+	{
+		static ComponentFactoryRegistrar* s_head = nullptr;
+		return s_head;
+	}
+
+	ComponentFactoryRegistrar::ComponentFactoryRegistrar( void ( *registerFunc )( ComponentManager& ) )
+		: ComponentFactoryRegistrar( registerFunc, getHead() )
+	{
+	}
+
+	ComponentFactoryRegistrar::ComponentFactoryRegistrar( void ( *registerFunc )( ComponentManager& ), ComponentFactoryRegistrar*& moduleHead )
+		: _registerFunc{ registerFunc }
+		, _next{ nullptr }
+	{
+		_next	   = moduleHead;
+		moduleHead = this;
+	}
 } // namespace sw

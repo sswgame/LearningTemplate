@@ -299,6 +299,41 @@ SW_TEST_CASE( GameObjectManagerTest, SequentialAndParallelTick )
 	manager.clear();
 }
 
+SW_TEST_CASE( GameObjectManagerTest, ParallelTickReadsStableHierarchyTransforms )
+{
+	GameObjectManager manager;
+
+	GameObject* parentObj = manager.createGameObject( hashed_string( "Parent" ) );
+	GameObject* childObj  = manager.createGameObject( hashed_string( "Child" ) );
+
+	SceneComponent* parentComp = parentObj->addComponent<SceneComponent>();
+	SceneComponent* childComp  = childObj->addComponent<SceneComponent>();
+	parentComp->setLocalPosition( float3( 10.0f, 0.0f, 0.0f ) );
+	childComp->setLocalPosition( float3( 5.0f, 0.0f, 0.0f ) );
+	SW_ASSERT_TRUE( childComp->attachToComponent( parentComp ) );
+
+	float3 observedDuringTick{ 0.0f, 0.0f, 0.0f };
+	childComp->_onTickDelegate = SW_DELEGATE_LAMBDA( Component::ComponentTickDelegate,
+													 [&observedDuringTick, childComp]( float32 )
+	{
+		observedDuringTick = childComp->getWorldPosition();
+	} );
+
+	manager.tickParallel( 0.016f );
+	SW_EXPECT_NEAR_EQUAL( 15.0f, observedDuringTick._x, 1e-4f );
+
+	// Local write during tick is visible after post-flush, not necessarily mid-tick snapshot.
+	parentComp->_onTickDelegate = SW_DELEGATE_LAMBDA( Component::ComponentTickDelegate,
+													  [parentComp]( float32 )
+	{
+		parentComp->setLocalPosition( float3( 20.0f, 0.0f, 0.0f ) );
+	} );
+	manager.tickParallel( 0.016f );
+	SW_EXPECT_NEAR_EQUAL( 25.0f, childComp->getWorldPosition()._x, 1e-4f );
+
+	manager.clear();
+}
+
 SW_TEST_CASE( ObjectStateXmlSerializerTest, SaveAndLoadXmlString )
 {
 	GameObject source( hashed_string( "SerializedHero" ) );

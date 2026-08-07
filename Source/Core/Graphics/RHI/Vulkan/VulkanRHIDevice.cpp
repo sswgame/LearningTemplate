@@ -987,6 +987,18 @@ namespace sw
 			_allocatedBuffers.clear();
 			_registeredDescriptorSets.clear();
 
+			for ( auto& pair : _textures )
+			{
+				VulkanTextureRecord& record = pair.second;
+				if ( record.imageView != VK_NULL_HANDLE )
+					vkDestroyImageView( _device, record.imageView, nullptr );
+				if ( record.image != VK_NULL_HANDLE )
+					vkDestroyImage( _device, record.image, nullptr );
+				if ( record.memory != VK_NULL_HANDLE )
+					vkFreeMemory( _device, record.memory, nullptr );
+			}
+			_textures.clear();
+
 			if ( _vertexBuffer )
 				vkDestroyBuffer( _device, _vertexBuffer, nullptr );
 			if ( _vertexBufferMemory )
@@ -1301,6 +1313,130 @@ namespace sw
 			vkFreeMemory( _device, record.memory, nullptr );
 			record.memory = VK_NULL_HANDLE;
 		}
+	}
+
+	namespace
+	{
+		VkFormat toVulkanTextureFormat( RHIFormat format )
+		{
+			switch ( format )
+			{
+				case RHIFormat::R8G8B8A8_UNORM:
+					return VK_FORMAT_R8G8B8A8_UNORM;
+				case RHIFormat::B8G8R8A8_UNORM:
+					return VK_FORMAT_B8G8R8A8_UNORM;
+				case RHIFormat::R16G16B16A16_FLOAT:
+					return VK_FORMAT_R16G16B16A16_SFLOAT;
+				case RHIFormat::D24_UNORM_S8_UINT:
+					return VK_FORMAT_D24_UNORM_S8_UINT;
+				default:
+					return VK_FORMAT_R8G8B8A8_UNORM;
+			}
+		}
+	} // namespace
+
+	RHITextureHandle VulkanRHIDevice::createTexture2D( const RHITextureDesc& desc )
+	{
+		if ( _device == nullptr || desc._width == 0 || desc._height == 0 )
+			return 0;
+
+		static bool s_bLoggedLimits = false;
+		if ( s_bLoggedLimits == false )
+		{
+			SW_LOG_INFO( "[Vulkan] createTexture2D: basic 2D color allocation (mipmaps/UAV limited)." );
+			s_bLoggedLimits = true;
+		}
+
+		VkImageUsageFlags usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+		if ( desc._bIsRenderTarget )
+			usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+		if ( desc._bIsDepthStencil )
+			usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+
+		VkImageCreateInfo imageInfo{};
+		imageInfo.sType			= VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+		imageInfo.imageType		= VK_IMAGE_TYPE_2D;
+		imageInfo.extent.width	= desc._width;
+		imageInfo.extent.height = desc._height;
+		imageInfo.extent.depth	= 1;
+		imageInfo.mipLevels		= desc._mipLevels > 0 ? desc._mipLevels : 1;
+		imageInfo.arrayLayers	= 1;
+		imageInfo.format		= toVulkanTextureFormat( desc._format );
+		imageInfo.tiling		= VK_IMAGE_TILING_OPTIMAL;
+		imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		imageInfo.usage			= usage;
+		imageInfo.samples		= VK_SAMPLE_COUNT_1_BIT;
+		imageInfo.sharingMode	= VK_SHARING_MODE_EXCLUSIVE;
+
+		VulkanTextureRecord record{};
+		record.width  = desc._width;
+		record.height = desc._height;
+
+		if ( vkCreateImage( _device, &imageInfo, nullptr, &record.image ) != VK_SUCCESS )
+		{
+			SW_LOG_ERROR( "[Vulkan] Failed to create VkImage for Texture2D." );
+			return 0;
+		}
+
+		VkMemoryRequirements memRequirements;
+		vkGetImageMemoryRequirements( _device, record.image, &memRequirements );
+
+		VkMemoryAllocateInfo allocInfo{};
+		allocInfo.sType			  = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+		allocInfo.allocationSize  = memRequirements.size;
+		allocInfo.memoryTypeIndex = findMemoryType( memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT );
+
+		if ( vkAllocateMemory( _device, &allocInfo, nullptr, &record.memory ) != VK_SUCCESS )
+		{
+			vkDestroyImage( _device, record.image, nullptr );
+			SW_LOG_ERROR( "[Vulkan] Failed to allocate memory for Texture2D." );
+			return 0;
+		}
+
+		vkBindImageMemory( _device, record.image, record.memory, 0 );
+
+		VkImageAspectFlags aspect = desc._bIsDepthStencil ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+		VkImageViewCreateInfo viewInfo{};
+		viewInfo.sType							 = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+		viewInfo.image							 = record.image;
+		viewInfo.viewType						 = VK_IMAGE_VIEW_TYPE_2D;
+		viewInfo.format							 = imageInfo.format;
+		viewInfo.subresourceRange.aspectMask	 = aspect;
+		viewInfo.subresourceRange.baseMipLevel	 = 0;
+		viewInfo.subresourceRange.levelCount	 = imageInfo.mipLevels;
+		viewInfo.subresourceRange.baseArrayLayer = 0;
+		viewInfo.subresourceRange.layerCount	 = 1;
+
+		if ( vkCreateImageView( _device, &viewInfo, nullptr, &record.imageView ) != VK_SUCCESS )
+		{
+			vkDestroyImage( _device, record.image, nullptr );
+			vkFreeMemory( _device, record.memory, nullptr );
+			SW_LOG_ERROR( "[Vulkan] Failed to create VkImageView for Texture2D." );
+			return 0;
+		}
+
+		const RHITextureHandle handle = static_cast<RHITextureHandle>( _nextTextureId++ );
+		_textures.emplace( handle, record );
+		return handle;
+	}
+
+	void VulkanRHIDevice::destroyTexture( RHITextureHandle texture )
+	{
+		if ( texture == 0 )
+			return;
+
+		auto it = _textures.find( texture );
+		if ( it == _textures.end() )
+			return;
+
+		VulkanTextureRecord& record = it->second;
+		if ( record.imageView != VK_NULL_HANDLE )
+			vkDestroyImageView( _device, record.imageView, nullptr );
+		if ( record.image != VK_NULL_HANDLE )
+			vkDestroyImage( _device, record.image, nullptr );
+		if ( record.memory != VK_NULL_HANDLE )
+			vkFreeMemory( _device, record.memory, nullptr );
+		_textures.erase( it );
 	}
 
 	RHIDescriptorIndex VulkanRHIDevice::registerBindlessResource( RHIBufferHandle buffer )

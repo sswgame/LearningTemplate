@@ -128,8 +128,8 @@ namespace sw
 		/** @brief Vulkan VkBuffer 및 메모리 해제 */
 		void destroyBuffer( RHIBufferHandle buffer ) override;
 
-		RHITextureHandle   createTexture2D( const RHITextureDesc& /*desc*/ ) override { return 0; }
-		void			   destroyTexture( RHITextureHandle /*texture*/ ) override {}
+		RHITextureHandle   createTexture2D( const RHITextureDesc& desc ) override;
+		void			   destroyTexture( RHITextureHandle texture ) override;
 		RHIDescriptorIndex registerBindlessTexture( RHITextureHandle /*texture*/ ) override { return kInvalidDescriptorIndex; }
 
 		/** @brief Descriptor Set 내 Bindless UBO/SSBO 바인딩 등록 */
@@ -311,6 +311,17 @@ namespace sw
 		std::vector<VkDescriptorSet>	_registeredDescriptorSets;
 		std::vector<VkDescriptorSet>	_registeredUAVs;
 		std::vector<uint32>				_uavFreeList;
+
+		struct VulkanTextureRecord
+		{
+			VkImage		   image	 = nullptr;
+			VkImageView	   imageView = nullptr;
+			VkDeviceMemory memory	 = nullptr;
+			uint32		   width	 = 0;
+			uint32		   height	 = 0;
+		};
+		std::unordered_map<RHITextureHandle, VulkanTextureRecord> _textures;
+		uint64													  _nextTextureId = 1;
 
 		struct VulkanPipelineStateRecord
 		{

@@ -49,7 +49,11 @@ SW_TEST_CASE( MaterialTest, MaterialLoadAndSave )
 	std::filesystem::remove( tempPath );
 }
 
-// SW_TEST_CASE( MaterialTest, MaterialColorModification )\n// Temporarily disabled due to timeout issue
+// QUARANTINE: timeout — keep discoverable via --test_list
+SW_TEST_CASE( MaterialTest, MaterialColorModification )
+{
+	SW_TEST_SKIP( "Temporarily disabled due to timeout issue" );
+}
 
 SW_TEST_CASE( MaterialTest, AsyncMaterialLoadTest )
 {
@@ -61,8 +65,16 @@ SW_TEST_CASE( MaterialTest, AsyncMaterialLoadTest )
 	sw::getTaskManager().clear();
 }
 
-// SW_TEST_CASE( MaterialTest, MaterialInstanceOverride )\n// Temporarily disabled due to timeout issue
+// QUARANTINE: timeout — keep discoverable via --test_list
+SW_TEST_CASE( MaterialTest, MaterialInstanceOverride )
+{
+	SW_TEST_SKIP( "Temporarily disabled due to timeout issue" );
+}
 
 #include "Core/Graphics/Shader/ShaderReflection.h"
 
-// SW_TEST_CASE( MaterialTest, MaterialShaderReflectionValidation )\n// Temporarily disabled due to timeout issue
+// QUARANTINE: timeout — keep discoverable via --test_list
+SW_TEST_CASE( MaterialTest, MaterialShaderReflectionValidation )
+{
+	SW_TEST_SKIP( "Temporarily disabled due to timeout issue" );
+}

@@ -38,8 +38,16 @@ namespace sw
 		/** @brief 등록된 GameObject에 순차 tick을 호출합니다. */
 		void tick( float32 deltaTime );
 
-		/** @brief 활성 컴포넌트 기준 병렬 tick을 수행합니다. */
+		/**
+		 * @brief 계층-안전 병렬 tick
+		 * @details 1) SceneComponent 월드 캐시 flush (루트→자식)
+		 *          2) 병렬 GameObject::tick (트랜스폼 캐시 읽기 전용)
+		 *          3) tick 중 변경된 로컬 포즈를 반영하기 위해 다시 flush
+		 */
 		void tickParallel( float32 deltaTime );
+
+		/** @brief 모든 SceneComponent 월드 캐시를 계층 순으로 갱신합니다. */
+		void flushSceneTransforms();
 
 		/** @brief GameObject를 지연 삭제 큐에 넣습니다. */
 		void destroyObjectDeferred( GameObject* obj );

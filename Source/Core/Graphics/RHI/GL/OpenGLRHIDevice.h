@@ -99,8 +99,8 @@ namespace sw
 		/** @brief GL 버퍼 객체 삭제 (glDeleteBuffers) */
 		void destroyBuffer( RHIBufferHandle buffer ) override;
 
-		RHITextureHandle   createTexture2D( const RHITextureDesc& /*desc*/ ) override { return 0; }
-		void			   destroyTexture( RHITextureHandle /*texture*/ ) override {}
+		RHITextureHandle   createTexture2D( const RHITextureDesc& desc ) override;
+		void			   destroyTexture( RHITextureHandle texture ) override;
 		RHIDescriptorIndex registerBindlessTexture( RHITextureHandle /*texture*/ ) override { return kInvalidDescriptorIndex; }
 
 		/** @brief UBO/SSBO 바인딩 인덱스 발급 (glBindBufferBase) */
@@ -169,6 +169,16 @@ namespace sw
 		std::vector<BindlessResourceRecord> _registeredUAVs;
 		std::vector<uint32>					_uavFreeList;
 		std::vector<uint32>					_structuredBuffers;
+
+		struct OpenGLTextureRecord
+		{
+			uint32 texture = 0;
+			uint32 fbo	   = 0;
+			uint32 width   = 0;
+			uint32 height  = 0;
+		};
+		std::unordered_map<RHITextureHandle, OpenGLTextureRecord> _textures;
+		uint64													  _nextTextureId = 1;
 
 		struct OpenGLPipelineStateRecord
 		{

@@ -13,7 +13,11 @@
 	#include "Core/Window/X11Window.h"
 #endif
 
-// SW_TEST_CASE( WindowTest, PlatformFactoryAndLifecycle )\n// Temporarily disabled due to window sizing issue
+// QUARANTINE: window sizing — keep discoverable via --test_list
+SW_TEST_CASE( WindowTest, PlatformFactoryAndLifecycle )
+{
+	SW_TEST_SKIP( "Temporarily disabled due to window sizing issue" );
+}
 
 SW_TEST_CASE( WindowTest, ResizeCallbackAndCustomMessageHandler )
 {

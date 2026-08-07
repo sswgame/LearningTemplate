@@ -17,7 +17,6 @@ namespace sw
 	 * @class GameObject
 	 * @brief 라이프사이클(beginPlay, tick), 리플렉션, 태그 시스템, 컴포넌트 컨테이너 기능을 제공하는 엔티티 클래스
 	 */
-	REFLECT()
 	class SW_API GameObject
 	{
 	public:
@@ -164,6 +163,9 @@ namespace sw
 		/** @brief 부착된 전체 컴포넌트 개수 반환 */
 		uint32 getComponentCount() const;
 
+		/** @brief 플랫 컴포넌트 목록(틱·트랜스폼 flush용) */
+		const std::vector<Component*>& getAllComponents() const { return _flatComponents; }
+
 		/** @brief 소유한 모든 컴포넌트 일괄 제거 */
 		void clearComponents();
 
@@ -175,13 +177,10 @@ namespace sw
 		std::vector<Component*>													   _flatComponents; ///< 플랫 접근용 컴포넌트 벡터
 		TagContainer															   _tags;			///< 태그 정보
 
-		PROPERTY()
 		uint64 _objectId = 0; ///< 오브젝트 고유 시리얼 번호
 
-		PROPERTY()
 		hashed_string _name; ///< 오브젝트 식별 명칭
 
-		PROPERTY()
 		uint8				   _bActive				 : 1; ///< 자체 활성화 비트
 		uint8				   _bIsActiveInHierarchy : 1; ///< 최종 활성 비트(현재 setActive와 동기화; 향후 부모 계층용)
 		uint8				   _bIsTickOrderDirty	 : 1; ///< Tick 우선순위 변경 마크

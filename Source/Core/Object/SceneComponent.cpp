@@ -4,9 +4,30 @@
  */
 #include "pch.h"
 #include "SceneComponent.h"
+#include "Core/Reflection/ReflectionCore.h"
 
 namespace sw
 {
+	namespace
+	{
+		// Mutated only on the main thread around parallel tick barriers.
+		bool s_bParallelTransformReadOnly = false;
+	} // namespace
+
+	void SceneComponent::beginParallelTransformReadOnly()
+	{
+		s_bParallelTransformReadOnly = true;
+	}
+
+	void SceneComponent::endParallelTransformReadOnly()
+	{
+		s_bParallelTransformReadOnly = false;
+	}
+
+	bool SceneComponent::isParallelTransformReadOnly()
+	{
+		return s_bParallelTransformReadOnly;
+	}
 
 	SceneComponent::SceneComponent()
 		: _bIsTransformDirty{ 1 }
@@ -27,6 +48,11 @@ namespace sw
 			}
 		}
 		_children.clear();
+	}
+
+	const TypeInfo* SceneComponent::getTypeInfo() const
+	{
+		return sw::getTypeRegistry().findType( hashed_string( "sw::SceneComponent" ) );
 	}
 
 	void SceneComponent::setLocalPosition( const float3& pos )
@@ -50,6 +76,11 @@ namespace sw
 	void SceneComponent::markTransformDirty()
 	{
 		_bIsTransformDirty = 1;
+		// During parallel tick, skip child walks (shared hierarchy mutation / races).
+		// Next flushSceneTransforms recomputes the whole tree from roots.
+		if ( s_bParallelTransformReadOnly )
+			return;
+
 		for ( SceneComponent* child : _children )
 		{
 			if ( child != nullptr && child->_bIsTransformDirty == 0 )
@@ -59,9 +90,33 @@ namespace sw
 		}
 	}
 
+	void SceneComponent::updateWorldTransformFromParent()
+	{
+		const float4x4 localTrans = float4x4::createTranslation( _localPosition );
+		const double3  localPos64( static_cast<float64>( _localPosition._x ),
+								   static_cast<float64>( _localPosition._y ),
+								   static_cast<float64>( _localPosition._z ) );
+
+		if ( _parent != nullptr )
+		{
+			_cachedWorldMatrix		= localTrans * _parent->_cachedWorldMatrix;
+			_cachedWorldPositionLWC = _parent->_cachedWorldPositionLWC + localPos64;
+			_cachedWorldPosition	= float3( static_cast<float32>( _cachedWorldPositionLWC._x ),
+											  static_cast<float32>( _cachedWorldPositionLWC._y ),
+											  static_cast<float32>( _cachedWorldPositionLWC._z ) );
+		}
+		else
+		{
+			_cachedWorldMatrix		= localTrans;
+			_cachedWorldPositionLWC = localPos64;
+			_cachedWorldPosition	= _localPosition;
+		}
+		_bIsTransformDirty = 0;
+	}
+
 	float3 SceneComponent::getWorldPosition() const
 	{
-		if ( _bIsTransformDirty != 0 )
+		if ( s_bParallelTransformReadOnly == false && _bIsTransformDirty != 0 )
 		{
 			getWorldMatrix();
 		}
@@ -70,7 +125,7 @@ namespace sw
 
 	double3 SceneComponent::getWorldPositionLWC() const
 	{
-		if ( _bIsTransformDirty != 0 )
+		if ( s_bParallelTransformReadOnly == false && _bIsTransformDirty != 0 )
 		{
 			getWorldMatrix();
 		}
@@ -79,6 +134,9 @@ namespace sw
 
 	float4x4 SceneComponent::getWorldMatrix() const
 	{
+		if ( s_bParallelTransformReadOnly )
+			return _cachedWorldMatrix;
+
 		if ( _bIsTransformDirty != 0 )
 		{
 			float4x4 localTrans = float4x4::createTranslation( _localPosition );

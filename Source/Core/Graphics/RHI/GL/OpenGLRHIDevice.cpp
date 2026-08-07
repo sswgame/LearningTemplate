@@ -340,6 +340,118 @@ namespace sw
 		}
 	}
 
+	namespace
+	{
+		GLenum toGlInternalFormat( RHIFormat format )
+		{
+			switch ( format )
+			{
+				case RHIFormat::R8G8B8A8_UNORM:
+					return GL_RGBA8;
+				case RHIFormat::B8G8R8A8_UNORM:
+					return GL_RGBA8;
+				case RHIFormat::R16G16B16A16_FLOAT:
+					return GL_RGBA16F;
+				case RHIFormat::D24_UNORM_S8_UINT:
+					return GL_DEPTH24_STENCIL8;
+				default:
+					return GL_RGBA8;
+			}
+		}
+
+		GLenum toGlFormat( RHIFormat format )
+		{
+			switch ( format )
+			{
+				case RHIFormat::D24_UNORM_S8_UINT:
+					return GL_DEPTH_STENCIL;
+				default:
+					return GL_RGBA;
+			}
+		}
+
+		GLenum toGlType( RHIFormat format )
+		{
+			switch ( format )
+			{
+				case RHIFormat::R16G16B16A16_FLOAT:
+					return GL_HALF_FLOAT;
+				case RHIFormat::D24_UNORM_S8_UINT:
+					return GL_UNSIGNED_INT_24_8;
+				default:
+					return GL_UNSIGNED_BYTE;
+			}
+		}
+	} // namespace
+
+	RHITextureHandle OpenGLRHIDevice::createTexture2D( const RHITextureDesc& desc )
+	{
+		if ( _bInitialized == false || desc._width == 0 || desc._height == 0 )
+			return 0;
+
+		static bool s_bLoggedLimits = false;
+		if ( s_bLoggedLimits == false )
+		{
+			SW_LOG_INFO( "[OpenGL] createTexture2D: basic 2D color allocation (mipmaps/UAV limited)." );
+			s_bLoggedLimits = true;
+		}
+
+		GLuint tex = 0;
+		glGenTextures( 1, &tex );
+		glBindTexture( GL_TEXTURE_2D, tex );
+		glTexImage2D( GL_TEXTURE_2D, 0, static_cast<GLint>( toGlInternalFormat( desc._format ) ),
+					  static_cast<GLsizei>( desc._width ), static_cast<GLsizei>( desc._height ),
+					  0, toGlFormat( desc._format ), toGlType( desc._format ), nullptr );
+		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
+		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+		glBindTexture( GL_TEXTURE_2D, 0 );
+
+		OpenGLTextureRecord record{};
+		record.texture = tex;
+		record.width   = desc._width;
+		record.height  = desc._height;
+
+		if ( desc._bIsRenderTarget )
+		{
+			GLuint fbo = 0;
+			glGenFramebuffers( 1, &fbo );
+			glBindFramebuffer( GL_FRAMEBUFFER, fbo );
+			glFramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 0 );
+			const GLenum status = glCheckFramebufferStatus( GL_FRAMEBUFFER );
+			glBindFramebuffer( GL_FRAMEBUFFER, 0 );
+			if ( status != GL_FRAMEBUFFER_COMPLETE )
+			{
+				SW_LOG_WARNING( "[OpenGL] createTexture2D FBO incomplete (status=%#) — texture kept without FBO.", static_cast<uint32>( status ) );
+				glDeleteFramebuffers( 1, &fbo );
+			}
+			else
+			{
+				record.fbo = fbo;
+			}
+		}
+
+		const RHITextureHandle handle = static_cast<RHITextureHandle>( _nextTextureId++ );
+		_textures.emplace( handle, record );
+		return handle;
+	}
+
+	void OpenGLRHIDevice::destroyTexture( RHITextureHandle texture )
+	{
+		if ( texture == 0 )
+			return;
+
+		auto it = _textures.find( texture );
+		if ( it == _textures.end() )
+			return;
+
+		OpenGLTextureRecord& record = it->second;
+		if ( record.fbo != 0 )
+			glDeleteFramebuffers( 1, &record.fbo );
+		if ( record.texture != 0 )
+			glDeleteTextures( 1, &record.texture );
+		_textures.erase( it );
+	}
+
 	RHIDescriptorIndex OpenGLRHIDevice::registerBindlessResource( RHIBufferHandle buffer )
 	{
 		if ( buffer == 0 )
@@ -471,6 +583,15 @@ namespace sw
 		_structuredBuffers.clear();
 		_registeredBindlessVector.clear();
 		_registeredUAVs.clear();
+
+		for ( auto& pair : _textures )
+		{
+			if ( pair.second.fbo != 0 )
+				glDeleteFramebuffers( 1, &pair.second.fbo );
+			if ( pair.second.texture != 0 )
+				glDeleteTextures( 1, &pair.second.texture );
+		}
+		_textures.clear();
 
 		_hDC = nullptr;
 

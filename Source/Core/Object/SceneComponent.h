@@ -18,12 +18,13 @@ namespace sw
 	 * @class SceneComponent
 	 * @brief 로컬 트랜스폼·부모-자식 계층, float→double 누적 월드 위치(LWC), 카메라 상대 행렬을 제공하는 씬 컴포넌트
 	 */
-	REFLECT()
 	class SW_API SceneComponent : public Component
 	{
 	public:
 		SceneComponent();
 		virtual ~SceneComponent() override;
+
+		const TypeInfo* getTypeInfo() const override;
 
 		/** @brief 로컬 위치 설정 */
 		void setLocalPosition( const float3& pos );
@@ -52,6 +53,7 @@ namespace sw
 		/**
 		 * @brief 계층 번역만 합성한 4x4 월드 행렬(캐시)
 		 * @details 현재 구현은 translation만 포함합니다. 회전·스케일은 getCameraRelativeWorldMatrix를 사용하세요.
+		 *          병렬 tick 구간(beginParallelTransformReadOnly)에서는 캐시만 반환합니다.
 		 */
 		float4x4 getWorldMatrix() const;
 
@@ -60,6 +62,12 @@ namespace sw
 		 * @param cameraWorldPos 카메라 월드 위치(LWC)
 		 */
 		float4x4 getCameraRelativeWorldMatrix( const double3& cameraWorldPos ) const;
+
+		/**
+		 * @brief 부모 캐시가 이미 유효하다고 가정하고 이 노드의 월드 캐시를 갱신합니다.
+		 * @details GameObjectManager::flushSceneTransforms 가 루트→자식 순으로 호출합니다.
+		 */
+		void updateWorldTransformFromParent();
 
 		/** @brief 부모 SceneComponent에 계층적으로 부착 */
 		bool attachToComponent( SceneComponent* parent );
@@ -76,17 +84,22 @@ namespace sw
 		/** @brief 트랜스폼 변경 시 행렬 캐시 재계산 더티 마킹 */
 		void markTransformDirty();
 
+		/**
+		 * @brief 병렬 tick 구간: getWorld* 는 캐시만 읽고, markTransformDirty 는 자식 전파를 생략합니다.
+		 * @details 메인 스레드에서 parallel region 진입 전/대기 후 에만 호출하세요.
+		 */
+		static void beginParallelTransformReadOnly();
+		static void endParallelTransformReadOnly();
+		static bool isParallelTransformReadOnly();
+
 	protected:
 		mutable float4x4 _cachedWorldMatrix{ float4x4::Identity }; ///< 캐시된 번역-only 월드 행렬
 		mutable double3	 _cachedWorldPositionLWC{ 0.0, 0.0, 0.0 }; ///< 캐시된 double 누적 월드 위치
 
-		PROPERTY()
 		float3 _localPosition{ 0.0f, 0.0f, 0.0f }; ///< 로컬 X, Y, Z 오프셋
 
-		PROPERTY()
 		float3 _localRotation{ 0.0f, 0.0f, 0.0f }; ///< 로컬 롤/피치/요 오일러 각도
 
-		PROPERTY()
 		float3 _localScale{ 1.0f, 1.0f, 1.0f }; ///< 로컬 스케일 배율
 
 		mutable float3 _cachedWorldPosition{ 0.0f, 0.0f, 0.0f }; ///< 캐시된 float 월드 위치

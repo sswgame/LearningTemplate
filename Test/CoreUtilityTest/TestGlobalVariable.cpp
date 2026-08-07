@@ -71,4 +71,8 @@ SW_TEST_CASE( Utility_GlobalVariable, ModificationAndReset )
 	SW_EXPECT_TRUE( gv_TestBool );
 }
 
-// SW_TEST_CASE( Utility_GlobalVariable, CommandLineIntegration )\n// Temporarily disabled due to command line parsing issue
+// QUARANTINE: command line parsing — keep discoverable via --test_list
+SW_TEST_CASE( Utility_GlobalVariable, CommandLineIntegration )
+{
+	SW_TEST_SKIP( "Temporarily disabled due to command line parsing issue" );
+}

@@ -11,7 +11,10 @@ option(SW_SHIPPING_BUILD "Static Core/SWGame shipping layout (no Editor MODULE /
 if(SW_SHIPPING_BUILD)
 	# CMake: SW_SHIPPING_BUILD / C++: SW_SHIPPING
 	add_compile_definitions(SW_SHIPPING)
+	# Shipping links DX into Core — no RHI_*.dll load path.
+	set(SW_RHI_AS_MODULES OFF CACHE BOOL "Build DX11/DX12 RHI backends as MODULE DLLs (forced OFF for shipping)" FORCE)
 	message(STATUS "[BuildConfig] Shipping build: Core/SWGame STATIC, Editor DLL disabled (SW_SHIPPING_BUILD=ON)")
+	message(STATUS "[BuildConfig] SW_RHI_AS_MODULES forced OFF for shipping")
 else()
 	message(STATUS "[BuildConfig] Development build: Core SHARED, Editor/SWGame MODULE DLLs (SW_SHIPPING_BUILD=OFF, type=${CMAKE_BUILD_TYPE})")
 endif()

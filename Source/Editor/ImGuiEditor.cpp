@@ -17,6 +17,7 @@
 #include "Panels/InspectorPanel.h"
 #include "Panels/ResourceBrowserPanel.h"
 #include "Core/Graphics/RHI/IRHIDevice.h"
+#include "Core/Graphics/RHI/RHICapabilities.h"
 #include "Core/Window/NativeWindowEvent.h"
 #include "Runtime/EditorUIContext.h"
 #include "Core/Utility/Log/Logger.h"
@@ -118,8 +119,10 @@ namespace sw
 			ImGuiIO& io = ImGui::GetIO();
 			io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 			io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-			// Vulkan 멀티 뷰포트 백엔드는 아직 미연동. DX12는 Present 이후 postPresent + 0-size 가드로 지원.
-			if ( rhiDevice->getBackendType() != RHIBackend::Vulkan )
+			// Multi-viewport requires full ImGui hooks. VK/GL report _bImGuiHooks=false;
+			// skip ViewportsEnable so docking stays on the main viewport only.
+			const RHICapabilities caps = RHIAvailability::query( rhiDevice->getBackendType() );
+			if ( caps._bImGuiHooks )
 				io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 
 			ImGui::StyleColorsDark();

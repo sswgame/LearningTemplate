@@ -55,6 +55,9 @@ namespace sw
 		/** @brief 팩토리·등록 타입 목록을 비웁니다. */
 		void clear();
 
+		/** @brief 정적 ComponentFactoryRegistrar 링크드 리스트를 드레인합니다. */
+		void registerPendingFactories( struct ComponentFactoryRegistrar* head );
+
 	public:
 		ComponentManager()	= default;
 		~ComponentManager() = default;
@@ -68,4 +71,23 @@ namespace sw
 		std::unordered_map<hashed_string, ComponentFactoryDelegate> _factories;
 		std::vector<hashed_string>									_registeredTypes;
 	};
+
+	/**
+	 * @brief 정적 초기 시 ComponentManager가 아직 없을 수 있으므로,
+	 *        TypeRegistrar와 같이 링크만 하고 registerCoreReflectionTypes에서 드레인합니다.
+	 */
+	struct SW_API ComponentFactoryRegistrar
+	{
+		void ( *_registerFunc )( ComponentManager& );
+		ComponentFactoryRegistrar* _next;
+
+		static ComponentFactoryRegistrar*& getHead();
+
+		ComponentFactoryRegistrar( void ( *registerFunc )( ComponentManager& ) );
+		ComponentFactoryRegistrar( void ( *registerFunc )( ComponentManager& ), ComponentFactoryRegistrar*& moduleHead );
+	};
+
+#ifndef SW_COMPONENT_FACTORY_MODULE_HEAD
+	#define SW_COMPONENT_FACTORY_MODULE_HEAD() (::sw::ComponentFactoryRegistrar::getHead())
+#endif
 } // namespace sw

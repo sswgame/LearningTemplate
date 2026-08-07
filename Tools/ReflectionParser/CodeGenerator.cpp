@@ -22,6 +22,20 @@ namespace sw::tool
 	{
 	}
 
+	bool CodeGenerator::isComponentDerived( const ParsedTypeInfo& typeInfo )
+	{
+		if ( typeInfo.name == "Component" || typeInfo.name == "SceneComponent" )
+			return true;
+		if ( typeInfo.fullyQualifiedName == "sw::Component" || typeInfo.fullyQualifiedName == "sw::SceneComponent" )
+			return true;
+		if ( typeInfo.parentFQN == "sw::Component" || typeInfo.parentFQN == "sw::SceneComponent" )
+			return true;
+		// Heuristic for deeper Component derivatives when only immediate parent is recorded.
+		if ( typeInfo.parentFQN.find( "Component" ) != std::string::npos )
+			return true;
+		return false;
+	}
+
 	bool CodeGenerator::generate()
 	{
 		FileUtil::createDirectory( _outputDir );
@@ -35,11 +49,25 @@ namespace sw::tool
 		}
 		else
 		{
-			emitFileHeader( buffer );
+			bool bNeedsComponentFactory = false;
+			for ( const ParsedTypeInfo& typeInfo : _types )
+			{
+				if ( isComponentDerived( typeInfo ) )
+				{
+					bNeedsComponentFactory = true;
+					break;
+				}
+			}
+
+			emitFileHeader( buffer, bNeedsComponentFactory );
 			buffer.append( "namespace sw::generated\n{\n" );
 
 			for ( const ParsedTypeInfo& typeInfo : _types )
+			{
 				emitTypeRegistrar( buffer, typeInfo );
+				if ( isComponentDerived( typeInfo ) )
+					emitComponentFactoryRegistrar( buffer, typeInfo );
+			}
 
 			for ( const ParsedEnumInfo& enumInfo : _enums )
 				emitEnumRegistrar( buffer, enumInfo );
@@ -69,13 +97,34 @@ namespace sw::tool
 		return true;
 	}
 
-	void CodeGenerator::emitFileHeader( CodeEmitBuffer& out ) const
+	void CodeGenerator::emitFileHeader( CodeEmitBuffer& out, bool bNeedsComponentFactory ) const
 	{
 		out.append( "// AUTO-GENERATED -- DO NOT EDIT\n" );
 		out.appendFormat( "// Source: %#\n\n", _sourceFilePath );
 		out.append( "#include \"Core/Common/Common.h\"\n" );
 		out.append( "#include \"Core/Reflection/ReflectionCore.h\"\n" );
+		if ( bNeedsComponentFactory )
+		{
+			out.append( "#include \"Core/Object/ComponentManager.h\"\n" );
+			out.append( "#include \"Core/Common/CoreServices.h\"\n" );
+		}
 		out.appendFormat( "#include \"%#\"\n\n", _sourceFilePath );
+	}
+
+	void CodeGenerator::emitComponentFactoryRegistrar( CodeEmitBuffer& out, const ParsedTypeInfo& typeInfo ) const
+	{
+		const std::string id = sanitizeIdentifier( typeInfo.fullyQualifiedName );
+
+		out.appendFormat( "\t// ── %# factory ──────────────────────\n", typeInfo.fullyQualifiedName );
+		out.appendFormat( "\tstruct %#_FactoryRegistrar\n\t{\n", id );
+		out.append( "\t\tstatic void RegisterFactory(sw::ComponentManager& manager)\n\t\t{\n" );
+		out.appendFormat( "\t\t\tmanager.registerComponentType<%#>( sw::hashed_string( \"%#\" ) );\n",
+						  typeInfo.fullyQualifiedName, typeInfo.name );
+		out.append( "\t\t}\n\n" );
+		out.appendFormat( "\t\t%#_FactoryRegistrar()\n\t\t{\n", id );
+		out.append( "\t\t\tstatic sw::ComponentFactoryRegistrar reg( &RegisterFactory, SW_COMPONENT_FACTORY_MODULE_HEAD() );\n" );
+		out.append( "\t\t}\n\t};\n" );
+		out.appendFormat( "\tstatic %#_FactoryRegistrar g_%#_factory_registrar;\n\n", id, id );
 	}
 
 	void CodeGenerator::emitTypeRegistrar( CodeEmitBuffer& out, const ParsedTypeInfo& typeInfo ) const

@@ -31,7 +31,7 @@ namespace sw
 	{
 		if ( _objectManager )
 		{
-			// Scene 소유의 GameObjectManager를 이용한 Object 병렬 틱
+			// flush transforms → parallel object ticks → re-flush (see GameObjectManager::tickParallel)
 			_objectManager->tickParallel( deltaTime );
 		}
 	}

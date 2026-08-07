@@ -27,11 +27,13 @@ namespace sw::tool
 		const std::string& getOutputFilePath() const { return _outputFilePath; }
 
 	private:
-		void emitFileHeader( CodeEmitBuffer& out ) const;
+		void emitFileHeader( CodeEmitBuffer& out, bool bNeedsComponentFactory ) const;
 		void emitTypeRegistrar( CodeEmitBuffer& out, const ParsedTypeInfo& typeInfo ) const;
+		void emitComponentFactoryRegistrar( CodeEmitBuffer& out, const ParsedTypeInfo& typeInfo ) const;
 		void emitEnumRegistrar( CodeEmitBuffer& out, const ParsedEnumInfo& enumInfo ) const;
 
 		static std::string sanitizeIdentifier( const std::string& fqn );
+		static bool		   isComponentDerived( const ParsedTypeInfo& typeInfo );
 
 	private:
 		const std::vector<ParsedTypeInfo>& _types;

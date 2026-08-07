@@ -58,9 +58,32 @@ jobs:
       run: |
         cmake --build --preset CI-Debug
 
-    - name: Test
+    - name: Test (NoGPU)
       run: |
-        ctest --test-dir build/CI-Debug --output-on-failure
+        ctest --test-dir build/CI-Debug -L nogpu --output-on-failure
+
+  build-windows-shipping:
+    runs-on: windows-2022
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup vcpkg
+      uses: lukka/run-vcpkg@v11
+      with:
+        vcpkgGitCommitId: '2024.01.12'
+        vcpkgJsonGlob: 'vcpkg.json'
+
+    - name: Configure (Ninja-Shipping)
+      run: |
+        cmake --preset Ninja-Shipping -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake
+
+    - name: Build App
+      run: |
+        cmake --build --preset Ninja-Shipping --target App
+
+    # ModuleSmokeTest is skipped when SW_SHIPPING_BUILD=ON (no MODULE DLLs).
 
   lint-format:
     runs-on: ubuntu-22.04

@@ -6,9 +6,25 @@
 #include "GameObjectManager.h"
 #include "Core/Object/GameObject.h"
 #include "Core/Object/Component.h"
+#include "Core/Object/SceneComponent.h"
 #include "Core/Utility/Task/TaskManager.h"
+
 namespace sw
 {
+	namespace
+	{
+		void flushSceneComponentSubtree( SceneComponent* root )
+		{
+			if ( root == nullptr )
+				return;
+
+			root->updateWorldTransformFromParent();
+			for ( SceneComponent* child : root->getChildren() )
+			{
+				flushSceneComponentSubtree( child );
+			}
+		}
+	} // namespace
 
 	GameObjectManager::GameObjectManager()
 	{
@@ -78,6 +94,34 @@ namespace sw
 		processDeferredDestruction();
 	}
 
+	void GameObjectManager::flushSceneTransforms()
+	{
+		std::vector<GameObject*> objects;
+		{
+			std::lock_guard<std::mutex> lock{ _mutex };
+			objects = _gameObjects;
+		}
+
+		std::vector<SceneComponent*> roots;
+		roots.reserve( objects.size() );
+
+		for ( GameObject* obj : objects )
+		{
+			if ( obj == nullptr )
+				continue;
+
+			for ( Component* comp : obj->getAllComponents() )
+			{
+				SceneComponent* sceneComp = dynamic_cast<SceneComponent*>( comp );
+				if ( sceneComp != nullptr && sceneComp->getParent() == nullptr )
+					roots.push_back( sceneComp );
+			}
+		}
+
+		for ( SceneComponent* root : roots )
+			flushSceneComponentSubtree( root );
+	}
+
 	void GameObjectManager::tickParallel( float32 deltaTime )
 	{
 		std::vector<GameObject*> activeObjs;
@@ -89,6 +133,12 @@ namespace sw
 		if ( activeObjs.empty() )
 			return;
 
+		// Pass 1: publish a stable world-transform snapshot for this frame.
+		flushSceneTransforms();
+
+		// Pass 2: parallel logic ticks. World getters return the flushed cache only;
+		// local writes mark dirty but do not mutate child hierarchy until the post-flush.
+		SceneComponent::beginParallelTransformReadOnly();
 		for ( GameObject* obj : activeObjs )
 		{
 			if ( obj != nullptr && obj->isActiveInHierarchy() )
@@ -100,9 +150,12 @@ namespace sw
 				sw::getTaskManager().emplaceTask( del );
 			}
 		}
-
 		sw::getTaskManager().dispatch();
 		sw::getTaskManager().waitAll();
+		SceneComponent::endParallelTransformReadOnly();
+
+		// Pass 3: fold any local pose changes from ticks into world caches (for render / next frame).
+		flushSceneTransforms();
 
 		processDeferredDestruction();
 	}

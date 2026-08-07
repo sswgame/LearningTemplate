@@ -14,9 +14,9 @@ namespace sw
 
 		uint8				   _bBindless		 : 1;
 		uint8				   _bCompute		 : 1;
-		uint8				   _bOffscreenRT	 : 1;
-		uint8				   _bImGuiHooks		 : 1;
-		uint8				   _bEditorSupported : 1;
+		uint8				   _bOffscreenRT	 : 1; ///< Basic createTexture2D + offscreen path available
+		uint8				   _bImGuiHooks		 : 1; ///< Full ImGui renderer hooks (multi-viewport etc.)
+		uint8				   _bEditorSupported : 1; ///< Safe to run EditorModule on this backend
 		[[maybe_unused]] uint8 _reserved		 : 3;
 	};
 
@@ -36,7 +36,6 @@ namespace sw
 #endif
 				case RHIBackend::Vulkan:
 				case RHIBackend::OpenGL:
-					// Stub backends remain creatable for experimentation; editor unsupported.
 					return true;
 			}
 			return false;
@@ -63,9 +62,12 @@ namespace sw
 					break;
 				case RHIBackend::Vulkan:
 				case RHIBackend::OpenGL:
+					// Texture2D allocation works for basic color targets (_bOffscreenRT).
+					// Editor / ImGui multi-viewport remain incomplete — keep editor flags false
+					// so App rejects editor hot-swap onto these backends.
 					caps._bBindless		   = false;
 					caps._bCompute		   = true;
-					caps._bOffscreenRT	   = false;
+					caps._bOffscreenRT	   = true;
 					caps._bImGuiHooks	   = false;
 					caps._bEditorSupported = false;
 					break;

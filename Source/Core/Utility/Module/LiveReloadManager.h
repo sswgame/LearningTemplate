@@ -47,9 +47,10 @@ namespace sw
 			std::string			   _moduleName;
 			std::string			   _originalDllPath;
 			std::string			   _tempDllPath;
-			void*				   _hLibraryModule = nullptr;
-			uint8				   _bPendingReload : 1;
-			[[maybe_unused]] uint8 _reserved	   : 7;
+			void*				   _hLibraryModule	  = nullptr;
+			uint64				   _loadedSourceMtime = 0; ///< Timestamp of original DLL when current shadow was loaded
+			uint8				   _bPendingReload	  : 1;
+			[[maybe_unused]] uint8 _reserved		  : 7;
 		};
 
 		/** @brief 원본 DLL을 임시 경로에 복사한 뒤 로드합니다. */

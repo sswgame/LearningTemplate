@@ -43,7 +43,11 @@ SW_TEST_CASE( RHITest, DeviceCreationAllBackends )
 	}
 }
 
-// SW_TEST_CASE( RHITest, UnifiedPipelineStateAndRenderPassAllBackends )\n// Temporarily disabled due to RHI environment issues
+// QUARANTINE: RHI environment issues — keep discoverable via --test_list
+SW_TEST_CASE( RHITest, UnifiedPipelineStateAndRenderPassAllBackends )
+{
+	SW_TEST_SKIP( "Temporarily disabled due to RHI environment issues" );
+}
 
 SW_TEST_CASE( RHITest, BindlessResourceLifecycle )
 {

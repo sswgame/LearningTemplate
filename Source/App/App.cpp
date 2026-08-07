@@ -1,14 +1,9 @@
 ﻿/**
  * @file App.cpp
- * @brief 런타임 클라이언트 앱 구현
+ * @brief App orchestrator — initialize / run / shutdown
  */
 #include "App.h"
-
-#include "AppModuleHeads.h"
-
-SW_DEFINE_MODULE_REGISTRAR_HEAD( swAppGvmHead, ::sw::GlobalVariableRegistrar );
-SW_DEFINE_MODULE_REGISTRAR_HEAD( swAppTypeHead, ::sw::TypeRegistrar );
-SW_DEFINE_MODULE_REGISTRAR_HEAD( swAppEnumHead, ::sw::EnumRegistrar );
+#include "AppInternal.h"
 
 #include "Core/Common/CoreServices.h"
 #include "Core/Utility/Log/Logger.h"
@@ -19,35 +14,26 @@ SW_DEFINE_MODULE_REGISTRAR_HEAD( swAppEnumHead, ::sw::EnumRegistrar );
 #include "Core/Utility/File/ReloadFileManager.h"
 #include "Core/Utility/File/FileUtil.h"
 #include "Core/Utility/Resource/ResourceUtil.h"
-#include "Core/Reflection/ReflectionCore.h"
-#include "Core/Object/ComponentManager.h"
 #include "Core/Graphics/RHI/RHI.h"
 #include "Core/Graphics/RHI/RHICapabilities.h"
 #include "Core/Graphics/Shader/ShaderCache.h"
 #include "Core/Window/IWindow.h"
 #include "Core/Game/Scene/SceneManager.h"
 #include "Core/Game/Scene/Scene.h"
-#include "Core/Graphics/Material/Material.h"
 #include "Core/Game/GameState.h"
 #include "Core/Utility/Time/EngineTimer.h"
-#include "Core/Window/NativeWindowEvent.h"
+#include "Core/Object/ComponentManager.h"
 
 #if defined( SW_SHIPPING )
 	#include "Runtime/GameAPI.h"
 #endif
 
-// EditorUIContext에 넘기는 에디터 상태 (App 멤버 대신 GVM으로 등록 → Global Variables 패널/CLI에서 편집)
-SW_GLOBAL_VARIABLE_FLOAT( gv_EditorPlayerSpeed, 5.0f, "Editor inspector player speed slider" );
+// Defined in AppBootstrap.cpp via SW_GLOBAL_VARIABLE_FLOAT
+extern float32 gv_EditorPlayerSpeed;
 
 namespace sw
 {
-	namespace
-	{
-		constexpr const utf8* kEditorModuleName = "EditorModule";
-#if !defined( SW_SHIPPING )
-		constexpr const utf8* kGameModuleName = "SWGame";
-#endif
-	} // namespace
+	using namespace app_internal;
 
 	App::App()
 		: _bEnableEditor{ 0 }
@@ -57,240 +43,6 @@ namespace sw
 	{
 	}
 	App::~App() = default;
-
-	bool App::initializeSubsystems( int argc, char* argv[] )
-	{
-		BLOCK( "Logger / CommandLine / GVM 초기화" )
-		{
-			_logger = std::make_unique<Logger>();
-			_logger->startup();
-
-			_commandLineManager = std::make_unique<CommandLineManager>();
-			_commandLineManager->initialize();
-
-			_globalVariableManager = std::make_unique<GlobalVariableManager>();
-			_globalVariableManager->initialize();
-			// Core.dll list first (correct moduleName), then App-only list.
-			_globalVariableManager->registerPendingVariables( "Core", GlobalVariableRegistrar::getHead() );
-			_globalVariableManager->registerPendingVariables( "App", swAppGvmHead() );
-			_globalVariableManager->registerToCommandLine( _commandLineManager.get() );
-			_commandLineManager->parse( argc, argv );
-			_globalVariableManager->updateFromCommandLine( _commandLineManager.get() );
-		}
-
-		BLOCK( "Core Services 생성 및 바인딩" )
-		{
-			_taskManager	   = std::make_unique<TaskManager>();
-			_typeRegistry	   = std::make_unique<TypeRegistry>();
-			_componentManager  = std::make_unique<ComponentManager>();
-			_liveReloadManager = std::make_unique<LiveReloadManager>();
-			_reloadFileManager = std::make_unique<ReloadFileManager>();
-			_sceneManager	   = std::make_unique<SceneManager>();
-
-			CoreServices services{};
-			services.commandLineManager	   = _commandLineManager.get();
-			services.globalVariableManager = _globalVariableManager.get();
-			services.taskManager		   = _taskManager.get();
-			services.typeRegistry		   = _typeRegistry.get();
-			services.componentManager	   = _componentManager.get();
-			services.sceneManager		   = _sceneManager.get();
-			bindCoreServices( services );
-
-			registerCoreReflectionTypes();
-		}
-
-		BLOCK( "Task / LiveReload / Resource / Scene 초기화" )
-		{
-			if ( _taskManager->initialize() == false )
-				return false;
-			if ( _liveReloadManager->initialize() == false )
-				return false;
-
-			if ( ResourceUtil::initialize() == false )
-			{
-				SW_LOG_ERROR( "Failed to initialize ResourceUtil!" );
-				return false;
-			}
-
-			if ( _reloadFileManager->initialize() == false )
-				return false;
-			if ( _sceneManager->initialize() == false )
-				return false;
-		}
-
-		BLOCK( "플랫폼 윈도우 생성" )
-		{
-			_window = IWindow::createPlatformWindow();
-			if ( _window == nullptr || _window->create( L"Toy Engine Editor (Live Coding + Hot Reloading + Multi-Backend RHI)", 1280, 720 ) == false )
-			{
-				SW_LOG_ERROR( "Failed to create platform window!" );
-				return false;
-			}
-			IWindow::setActiveWindow( _window.get() );
-		}
-
-		BLOCK( "RHI 초기화" )
-		{
-			_rhi = std::make_unique<RHI>();
-			if ( _rhi->initialize() == false )
-				return false;
-
-			bool bEnableEditor = false;
-			_commandLineManager->getArgument( CommandLineArgument::ENABLE_EDITOR, bEnableEditor );
-			_bEnableEditor = bEnableEditor ? 1 : 0;
-		}
-		return true;
-	}
-
-	bool App::createGameViewportTexture()
-	{
-		RHITextureDesc rtDesc{};
-		rtDesc._width			  = 1280;
-		rtDesc._height			  = 720;
-		rtDesc._format			  = RHIFormat::R8G8B8A8_UNORM;
-		rtDesc._bIsRenderTarget	  = true;
-		rtDesc._bIsShaderResource = true;
-		rtDesc._mipLevels		  = 1;
-		rtDesc._clearColor[0]	  = 0.1f;
-		rtDesc._clearColor[1]	  = 0.1f;
-		rtDesc._clearColor[2]	  = 0.1f;
-		rtDesc._clearColor[3]	  = 1.0f;
-
-		_gameRenderTarget = _rhi->getDevice().createTexture2D( rtDesc );
-		return _gameRenderTarget != 0;
-	}
-
-	bool App::applyPendingBackendChange()
-	{
-		const RHIBackend requested = _pendingRHIBackend;
-		const RHIBackend previous  = _committedRHIBackend;
-		if ( requested == previous )
-			return true;
-
-		if ( _rhi == nullptr )
-			return false;
-
-		void* editorModule = nullptr;
-		void* gameModule   = nullptr;
-#if !defined( SW_SHIPPING )
-		if ( _liveReloadManager )
-		{
-			editorModule = _liveReloadManager->getModuleHandle( kEditorModuleName );
-			gameModule	 = _liveReloadManager->getModuleHandle( kGameModuleName );
-		}
-#endif
-
-		SW_LOG_INFO( "[Hot-Swap] Soft-recreating RHI: %# → %#",
-					 RHI::getBackendTypeName( previous ),
-					 RHI::getBackendTypeName( requested ) );
-
-		BLOCK( "기존 RHI / Scene / Editor 리소스 정리" )
-		{
-			_rhi->getDevice().waitIdle();
-
-			onBeforeEditorReload();
-			onBeforeGameReload();
-
-			if ( _gameRenderTarget != 0 )
-			{
-				_rhi->getDevice().destroyTexture( _gameRenderTarget );
-				_gameRenderTarget = 0;
-				_gameTextureID	  = nullptr;
-			}
-
-			if ( Scene* scene = _sceneManager ? _sceneManager->getActiveScene() : nullptr )
-			{
-				if ( Material* material = scene->getMaterial() )
-					material->shutdown( &_rhi->getDevice() );
-			}
-
-			_rhi->getDevice().waitIdle();
-		}
-
-		BLOCK( "RHI Device 재생성" )
-		{
-			gv_RHIBackend = requested;
-			if ( _rhi->recreateDevice( requested ) == false )
-			{
-				SW_LOG_ERROR( "[Hot-Swap] recreateDevice(%#) failed — restoring %#",
-							  RHI::getBackendTypeName( requested ),
-							  RHI::getBackendTypeName( previous ) );
-				gv_RHIBackend = previous;
-				if ( _rhi->recreateDevice( previous ) == false )
-					return false;
-			}
-			else
-			{
-				_committedRHIBackend = requested;
-			}
-		}
-
-		BLOCK( "Scene / Editor / Game 재초기화" )
-		{
-			if ( Scene* scene = _sceneManager ? _sceneManager->getActiveScene() : nullptr )
-			{
-				if ( scene->initialize( &_rhi->getDevice() ) == false )
-					SW_LOG_ERROR( "[Hot-Swap] Scene re-initialize failed after backend change." );
-			}
-
-			if ( _bEnableEditor )
-			{
-				if ( createGameViewportTexture() == false )
-					SW_LOG_WARNING( "[Hot-Swap] Game viewport texture recreate failed." );
-				onAfterEditorReload( editorModule );
-			}
-
-#if defined( SW_SHIPPING )
-			onAfterGameReload( nullptr );
-#else
-			onAfterGameReload( gameModule );
-#endif
-
-			_editorCtx.rhiDevice	 = &_rhi->getDevice();
-			_editorCtx.gameTextureID = _gameTextureID;
-		}
-
-		SW_LOG_INFO( "[Hot-Swap] Active backend is now %#", RHI::getBackendTypeName( _committedRHIBackend ) );
-		return true;
-	}
-
-	bool App::bindEditorAPI( void* hLibraryModule )
-	{
-		_editorApi = {};
-		if ( hLibraryModule == nullptr )
-			return false;
-
-		auto pfnFill = reinterpret_cast<PFN_FillEditorAPI>( FileUtil::getDynamicSymbol( hLibraryModule, "fillEditorAPI" ) );
-		if ( pfnFill == nullptr || pfnFill( &_editorApi ) == false )
-		{
-			SW_LOG_ERROR( "[App] Failed to bind EditorAPI from module" );
-			return false;
-		}
-		return _editorApi.create != nullptr && _editorApi.destroy != nullptr;
-	}
-
-	bool App::bindGameAPI( void* hLibraryModule )
-	{
-		_gameApi = {};
-#if defined( SW_SHIPPING )
-		(void)hLibraryModule;
-		if ( fillGameAPI( &_gameApi ) == false )
-		{
-			SW_LOG_ERROR( "[App] Failed to bind GameAPI (shipping)" );
-			return false;
-		}
-#else
-		if ( hLibraryModule == nullptr )
-			return false;
-		auto pfnFill = reinterpret_cast<PFN_FillGameAPI>( FileUtil::getDynamicSymbol( hLibraryModule, "fillGameAPI" ) );
-		if ( pfnFill == nullptr || pfnFill( &_gameApi ) == false )
-		{
-			SW_LOG_ERROR( "[App] Failed to bind GameAPI from module" );
-			return false;
-		}
-#endif
-		return _gameApi.create != nullptr && _gameApi.destroy != nullptr;
-	}
 
 	bool App::initialize( int argc, char* argv[] )
 	{
@@ -581,125 +333,5 @@ namespace sw
 			_commandLineManager.reset();
 			_logger.reset();
 		}
-	}
-
-	void App::onResize( uint32 w, uint32 h )
-	{
-		if ( _rhi )
-			_rhi->getDevice().resize( w, h );
-	}
-
-	bool App::onWindowMessage( const NativeWindowEvent& event )
-	{
-#if defined( SW_PLATFORM_WINDOWS ) && !defined( SW_SHIPPING )
-		if ( event.message == WM_KEYDOWN && _rhi )
-		{
-			switch ( event.wParam )
-			{
-				case VK_F5:
-					_rhi->getLiveShaderManager().triggerReloadAll();
-					SW_LOG_INFO( "[App] F5: force shader reload" );
-					break;
-				case VK_F6:
-					if ( _liveReloadManager && _bEnableEditor )
-					{
-						_liveReloadManager->triggerReload( kEditorModuleName );
-						SW_LOG_INFO( "[App] F6: force EditorModule reload" );
-					}
-					break;
-				case VK_F7:
-					if ( _liveReloadManager )
-					{
-						_liveReloadManager->triggerReload( kGameModuleName );
-						SW_LOG_INFO( "[App] F7: force SWGame reload" );
-					}
-					break;
-				default:
-					break;
-			}
-		}
-#endif
-
-		if ( _editor && _editorApi.processEvent )
-			return _editorApi.processEvent( _editor, &event );
-		return false;
-	}
-
-	void App::onBeforeEditorReload()
-	{
-		if ( _editor && _editorApi.shutdown )
-			_editorApi.shutdown( _editor );
-		if ( _editor && _editorApi.destroy )
-			_editorApi.destroy( _editor );
-		_editor	   = nullptr;
-		_editorApi = {};
-	}
-
-	void App::onAfterEditorReload( void* hLibraryModule )
-	{
-		if ( bindEditorAPI( hLibraryModule ) == false )
-			return;
-
-		_editor = _editorApi.create();
-		if ( _editor == nullptr )
-		{
-			SW_LOG_ERROR( "[App] Failed to create Editor instance" );
-			return;
-		}
-
-		if ( _editorApi.initialize( _editor, _window.get(), &_rhi->getDevice() ) == false )
-		{
-			SW_LOG_ERROR( "[App] Failed to initialize Editor instance" );
-			return;
-		}
-
-		if ( _gameRenderTarget && _editorApi.registerTexture )
-			_gameTextureID = _editorApi.registerTexture( _editor, static_cast<TextureHandle>( _gameRenderTarget ) );
-
-		SW_LOG_INFO( "[App] Editor initialized successfully via EditorAPI." );
-	}
-
-	void App::onBeforeGameReload()
-	{
-		if ( _game == nullptr )
-			return;
-
-		if ( _gameApi.shutdown )
-			_gameApi.shutdown( _game );
-		if ( _gameApi.destroy )
-			_gameApi.destroy( _game );
-		_game	 = nullptr;
-		_gameApi = {};
-	}
-
-	void App::onAfterGameReload( void* hLibraryModule )
-	{
-#if defined( SW_SHIPPING )
-		(void)hLibraryModule;
-		if ( _gameApi.create == nullptr && bindGameAPI( nullptr ) == false )
-			return;
-#else
-		void* moduleHandle = hLibraryModule;
-		if ( moduleHandle == nullptr && _liveReloadManager )
-			moduleHandle = _liveReloadManager->getModuleHandle( kGameModuleName );
-
-		if ( bindGameAPI( moduleHandle ) == false )
-			return;
-#endif
-
-		_game = _gameApi.create();
-		if ( _game == nullptr )
-		{
-			SW_LOG_ERROR( "[App] Failed to create Game instance" );
-			return;
-		}
-
-		if ( _gameApi.initialize( _game, _window.get(), &_rhi->getDevice() ) == false )
-		{
-			SW_LOG_ERROR( "[App] Failed to initialize Game instance" );
-			return;
-		}
-
-		SW_LOG_INFO( "[App] SWGame initialized successfully via GameAPI." );
 	}
 } // namespace sw

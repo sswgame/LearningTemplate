@@ -30,7 +30,6 @@ namespace sw
 	 * @class Component
 	 * @brief GameObject의 기능 및 데이터를 분리 확장하기 위한 컴포넌트 기반 클래스
 	 */
-	REFLECT()
 	class SW_API Component
 	{
 		friend class GameObject;
@@ -95,15 +94,12 @@ namespace sw
 	protected:
 		GameObject* _owner = nullptr; ///< 소유자 GameObject 포인터 참조
 
-		PROPERTY()
 		uint64 _componentId = 0; ///< 컴포넌트 고유 시리얼 ID
 
-		PROPERTY()
 		hashed_string _componentName; ///< 컴포넌트 식별 이름
 
 		std::vector<Component*> _tickDependencies; ///< 틱 선행 순서 종속성 목록
 
-		PROPERTY()
 		uint8				   _tickGroup : 3; ///< TickGroup 슬롯
 		uint8				   _bActive	  : 1; ///< 컴포넌트 개별 활성화
 		[[maybe_unused]] uint8 _reserved  : 4;

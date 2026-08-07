@@ -1,6 +1,7 @@
 # Project clangd config — suppress IncludeCleaner false positives (PCH / transitive headers).
+# Match CMakePresets.json binaryDir for the default local preset (Ninja-Debug).
 CompileFlags:
-  CompilationDatabase: build
+  CompilationDatabase: build/Ninja-Debug
 
 Diagnostics:
   UnusedIncludes: None

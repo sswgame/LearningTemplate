@@ -4,6 +4,8 @@
  */
 #include "pch.h"
 #include "Core/Reflection/ReflectionCore.h"
+#include "Core/Object/ComponentManager.h"
+#include "Core/Common/CoreServices.h"
 
 namespace sw
 {
@@ -193,6 +195,8 @@ namespace sw
 	void registerCoreReflectionTypes()
 	{
 		getTypeRegistry().registerPendingTypes( "Core", TypeRegistrar::getHead(), EnumRegistrar::getHead() );
+		// ComponentManager is bound before this call (App::initializeSubsystems).
+		getComponentManager().registerPendingFactories( ComponentFactoryRegistrar::getHead() );
 	}
 
 	void TypeRegistry::unregisterTypesByModule( const std::string_view moduleName )

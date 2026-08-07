@@ -6,6 +6,7 @@
 #include "ObjectStateSerializer.h"
 #include "Core/Object/GameObject.h"
 #include "Core/Reflection/Serializer.h"
+#include "Core/Reflection/ReflectionCore.h"
 
 namespace sw
 {
@@ -19,6 +20,15 @@ namespace sw
 		xmlBackend.writeValue( "Name", gameObject->getName().c_str() );
 		xmlBackend.writeValue( "ObjectId", std::to_string( gameObject->getObjectId() ).c_str() );
 		xmlBackend.writeValue( "IsActive", gameObject->isActive() ? "true" : "false" );
+
+		// When TypeInfo is registered, also emit reflected PROPERTY fields via XmlSerializer
+		// into a nested document stored as ReflectedXml (keeps GameObjectState root/aliases).
+		if ( const TypeInfo* typeInfo = gameObject->getTypeInfo() )
+		{
+			const std::string reflected = XmlSerializer::serialize( gameObject, *typeInfo );
+			if ( reflected.empty() == false )
+				xmlBackend.writeValue( "ReflectedXml", reflected.c_str() );
+		}
 
 		return xmlBackend.endSerialize();
 	}
@@ -43,6 +53,16 @@ namespace sw
 		if ( xmlBackend.readValue( "IsActive", activeStr ) && activeStr.empty() == false )
 		{
 			gameObject->setActive( activeStr == "true" );
+		}
+
+		std::string reflectedXml;
+		if ( xmlBackend.readValue( "ReflectedXml", reflectedXml ) && reflectedXml.empty() == false )
+		{
+			if ( const TypeInfo* typeInfo = gameObject->getTypeInfo() )
+			{
+				if ( XmlSerializer::deserialize( gameObject, *typeInfo, reflectedXml ) == false )
+					SW_LOG_WARNING( "[ObjectStateSerializer] ReflectedXml deserialize failed for %#", typeInfo->_fullyQualifiedName.c_str() );
+			}
 		}
 
 		return true;

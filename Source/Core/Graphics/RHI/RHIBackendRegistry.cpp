@@ -99,6 +99,21 @@ namespace sw
 		return s_instance;
 	}
 
+	RHIBackendRegistry::~RHIBackendRegistry()
+	{
+		unloadModules();
+	}
+
+	void RHIBackendRegistry::unloadModules()
+	{
+		for ( void* handle : _loadedModuleHandles )
+		{
+			if ( handle != nullptr )
+				FileUtil::freeDynamicLibrary( handle );
+		}
+		_loadedModuleHandles.clear();
+	}
+
 	void RHIBackendRegistry::registerBackend( RHIBackend backend, const RHIDeviceFactoryDelegate& factory, const RHICapabilities& caps )
 	{
 		for ( RHIBackendEntry& entry : _entries )
@@ -163,6 +178,7 @@ namespace sw
 		} );
 
 		registerBackend( backend, factory, RHIAvailability::query( backend ) );
+		_loadedModuleHandles.push_back( handle );
 
 		SW_LOG_INFO( "[RHIBackendRegistry] Loaded module %# for backend %#", modulePath, static_cast<int32>( backend ) );
 		return true;
