@@ -30,6 +30,11 @@
 #include "Core/Utility/Log/Logger.h"
 #include "Core/Utility/File/FileUtil.h"
 
+#include <chrono>
+#include <cstdio>
+#include <cstring>
+#include <fstream>
+
 #include <imgui.h>
 #include <imgui_internal.h>
 #include <implot.h>

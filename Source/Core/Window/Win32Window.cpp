@@ -57,12 +57,14 @@ namespace sw
 					return 0;
 
 				case WM_CLOSE:
-					pThis->_bShouldClose = true;
+					if ( pThis->_bRecreating == false )
+						pThis->_bShouldClose = true;
 					DestroyWindow( hWnd );
 					return 0;
 
 				case WM_DESTROY:
-					pThis->_bShouldClose = true;
+					if ( pThis->_bRecreating == false )
+						pThis->_bShouldClose = true;
 					return 0;
 
 				default:
@@ -81,16 +83,18 @@ namespace sw
 	{
 		_width	= width;
 		_height = height;
+		_title	= title != nullptr ? title : L"";
 
 		HINSTANCE hInstance = GetModuleHandle( nullptr );
 
+		// CS_OWNDC: required for stable WGL (GetDC/SwapBuffers) especially after DXGI↔OpenGL hot-swap.
 		WNDCLASSEXW wc{};
 		wc.cbSize		 = sizeof( WNDCLASSEXW );
-		wc.style		 = CS_HREDRAW | CS_VREDRAW;
+		wc.style		 = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
 		wc.lpfnWndProc	 = wndProc;
 		wc.hInstance	 = hInstance;
 		wc.hCursor		 = LoadCursor( nullptr, IDC_ARROW );
-		wc.lpszClassName = L"ToyEngineWindowClass";
+		wc.lpszClassName = L"ToyEngineWindowClass_OWNDC";
 
 		RegisterClassExW( &wc );
 
@@ -99,11 +103,11 @@ namespace sw
 
 		_hWnd = CreateWindowExW(
 			0,
-			L"ToyEngineWindowClass",
-			title,
+			L"ToyEngineWindowClass_OWNDC",
+			_title.c_str(),
 			WS_OVERLAPPEDWINDOW,
-			CW_USEDEFAULT,
-			CW_USEDEFAULT,
+			_restoreX,
+			_restoreY,
 			rc.right - rc.left,
 			rc.bottom - rc.top,
 			nullptr,
@@ -128,6 +132,34 @@ namespace sw
 			DestroyWindow( _hWnd );
 			_hWnd = nullptr;
 		}
+	}
+
+	bool Win32Window::recreate()
+	{
+		if ( _title.empty() )
+			return false;
+
+		// Preserve screen position so DXGI↔OpenGL HWND rebuild feels like the same window.
+		if ( _hWnd != nullptr )
+		{
+			RECT windowRect{};
+			if ( GetWindowRect( _hWnd, &windowRect ) )
+			{
+				_restoreX = windowRect.left;
+				_restoreY = windowRect.top;
+			}
+		}
+
+		const uint32 width	= _width;
+		const uint32 height = _height;
+		_bRecreating		= true;
+		destroy();
+		_bRecreating  = false;
+		_bShouldClose = false;
+		const bool ok = create( _title.c_str(), width, height );
+		_restoreX	  = CW_USEDEFAULT;
+		_restoreY	  = CW_USEDEFAULT;
+		return ok;
 	}
 
 	bool Win32Window::processMessages()

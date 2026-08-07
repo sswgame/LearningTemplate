@@ -36,4 +36,16 @@ namespace sw
 	{
 		return s_activeWindow;
 	}
+
+	bool IWindow::recreate()
+	{
+		if ( _title.empty() )
+			return false;
+
+		const uint32 width	= _width;
+		const uint32 height = _height;
+		destroy();
+		_bShouldClose = false;
+		return create( _title.c_str(), width, height );
+	}
 } // namespace sw

@@ -13,6 +13,7 @@
 #include "Core/Graphics/Material/Material.h"
 #include "Core/Game/Scene/SceneManager.h"
 #include "Core/Game/Scene/Scene.h"
+#include "Core/Window/IWindow.h"
 
 namespace sw
 {
@@ -69,6 +70,21 @@ namespace sw
 		bool bHaveDevice = false;
 		BLOCK( "RHI Device 재생성" )
 		{
+			// Windows: a HWND that has hosted a DXGI swapchain cannot reliably present
+			// via WGL afterward (and vice versa). Rebuild the native window when OpenGL
+			// is involved, preserving screen position/size so it feels continuous.
+			const bool bTouchesOpenGL = ( requested == RHIBackend::OpenGL || previous == RHIBackend::OpenGL );
+			if ( bTouchesOpenGL && _window != nullptr )
+			{
+				if ( _window->recreate() == false )
+				{
+					SW_LOG_ERROR( "[Hot-Swap] Window recreate failed (required for OpenGL↔DXGI)." );
+					gv_RHIBackend = previous;
+					return false;
+				}
+				IWindow::setActiveWindow( _window.get() );
+			}
+
 			gv_RHIBackend = requested;
 			if ( _rhi->recreateDevice( requested ) )
 			{

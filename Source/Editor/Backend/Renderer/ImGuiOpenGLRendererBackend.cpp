@@ -7,7 +7,6 @@
 #include <imgui_impl_opengl3.h>
 
 #include "Core/Graphics/RHI/IRHIDevice.h"
-#include "Core/Graphics/RHI/IRHIDevice.h"
 #include "Core/Utility/Log/Logger.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
@@ -68,9 +67,7 @@ static void Hook_Renderer_DestroyWindow( ImGuiViewport* viewport )
 static void Hook_Platform_RenderWindow( ImGuiViewport* viewport, void* )
 {
 	if ( WGL_WindowData* data = static_cast<WGL_WindowData*>( viewport->RendererUserData ) )
-	{
 		wglMakeCurrent( data->hDC, s_MainWindowRC );
-	}
 }
 
 static void Hook_Renderer_SwapBuffers( ImGuiViewport* viewport, void* )

@@ -60,11 +60,38 @@ namespace sw
 		pfd.cDepthBits			  = 24;
 		pfd.cStencilBits		  = 8;
 
-		int pixelFormat = ChoosePixelFormat( hDC, &pfd );
-		SetPixelFormat( hDC, pixelFormat, &pfd );
+		// SetPixelFormat is once-per-HWND. Reuse after GL↔DXGI hot-swap on the same window.
+		int		   pixelFormat = GetPixelFormat( hDC );
+		if ( pixelFormat != 0 )
+		{
+			DescribePixelFormat( hDC, pixelFormat, sizeof( pfd ), &pfd );
+		}
+		else
+		{
+			pixelFormat = ChoosePixelFormat( hDC, &pfd );
+			if ( pixelFormat == 0 )
+			{
+				SW_LOG_ERROR( "[OpenGL] ChoosePixelFormat failed (err=%#)", static_cast<uint32>( GetLastError() ) );
+				ReleaseDC( hWnd, hDC );
+				return false;
+			}
+			if ( SetPixelFormat( hDC, pixelFormat, &pfd ) == FALSE )
+			{
+				SW_LOG_ERROR( "[OpenGL] SetPixelFormat failed (err=%#)", static_cast<uint32>( GetLastError() ) );
+				ReleaseDC( hWnd, hDC );
+				return false;
+			}
+		}
 
 		HGLRC dummyContext = wglCreateContext( hDC );
-		wglMakeCurrent( hDC, dummyContext );
+		if ( dummyContext == nullptr || wglMakeCurrent( hDC, dummyContext ) == FALSE )
+		{
+			SW_LOG_ERROR( "[OpenGL] wglCreateContext/MakeCurrent failed (err=%#)", static_cast<uint32>( GetLastError() ) );
+			if ( dummyContext )
+				wglDeleteContext( dummyContext );
+			ReleaseDC( hWnd, hDC );
+			return false;
+		}
 
 		PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribsARB = reinterpret_cast<PFNWGLCREATECONTEXTATTRIBSARBPROC>( wglGetProcAddress( "wglCreateContextAttribsARB" ) );
 		if ( wglCreateContextAttribsARB )
@@ -428,6 +455,7 @@ namespace sw
 
 		void applyVsyncInterval( void* hDC, void* hRC, bool vsync )
 		{
+			(void)hDC;
 #if defined( SW_PLATFORM_WINDOWS )
 			(void)hRC;
 			using PFNWGLSWAPINTERVALEXTPROC = BOOL( WINAPI* )( int );
@@ -884,6 +912,9 @@ namespace sw
 		}
 
 #if defined( SW_PLATFORM_WINDOWS )
+		// Ensure the RHI context is current after ImGui multi-viewport may have switched DCs.
+		if ( _hDC && _hRC )
+			wglMakeCurrent( static_cast<HDC>( _hDC ), static_cast<HGLRC>( _hRC ) );
 		SwapBuffers( static_cast<HDC>( _hDC ) );
 #elif defined( SW_PLATFORM_LINUX )
 		glXSwapBuffers( (Display*)_hDC, (Window)(uintptr_t)_hWnd );

@@ -30,6 +30,7 @@ namespace sw
 
 		bool create( const utf16* title, uint32 width, uint32 height ) override;
 		void destroy() override;
+		bool recreate() override;
 		bool processMessages() override;
 
 		void* getNativeHandle() const override { return _hWnd; }
@@ -38,6 +39,11 @@ namespace sw
 	private:
 		static LRESULT CALLBACK wndProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam );
 
-		HWND _hWnd = nullptr;
+		HWND _hWnd		  = nullptr;
+		bool _bRecreating = false;
+#if defined( SW_PLATFORM_WINDOWS )
+		int _restoreX = CW_USEDEFAULT;
+		int _restoreY = CW_USEDEFAULT;
+#endif
 	};
 } // namespace sw

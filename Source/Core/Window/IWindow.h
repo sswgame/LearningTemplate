@@ -37,6 +37,12 @@ namespace sw
 		virtual void destroy() = 0;
 
 		/**
+		 * @brief 동일 크기/제목으로 네이티브 창을 다시 만듭니다 (OpenGL↔DXGI 핫스왑용).
+		 * @details WM_DESTROY로 앱 종료가 걸리지 않도록 구현해야 합니다.
+		 */
+		virtual bool recreate();
+
+		/**
 		 * @brief 플랫폼 종속적인 메시지 루프를 1회 순회합니다. 매 프레임 호출되어야 합니다.
 		 * @return 계속 실행되어야 하면 true, 종료 요청(WM_CLOSE 등)이 있으면 false
 		 */
@@ -62,9 +68,10 @@ namespace sw
 		static IWindow* getActiveWindow();
 
 	protected:
-		uint32 _width		 = 1280;
-		uint32 _height		 = 720;
-		bool   _bShouldClose = false;
+		uint32		 _width		   = 1280;
+		uint32		 _height	   = 720;
+		bool		 _bShouldClose = false;
+		std::wstring _title;
 
 		WindowMessageHandlerDelegate _customHandler;
 		WindowResizeDelegate		 _onResize;
