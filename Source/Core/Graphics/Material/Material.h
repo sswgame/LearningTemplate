@@ -63,7 +63,13 @@ namespace sw
 	class SW_API Material
 	{
 	public:
-		Material() = default;
+		Material();
+		~Material();
+
+		Material( const Material& )			   = delete;
+		Material& operator=( const Material& ) = delete;
+		Material( Material&& )				   = delete;
+		Material& operator=( Material&& )	   = delete;
 
 		/**
 		 * @brief .material 파일로부터 머티리얼 정보를 읽어 GPU 자원 생성 및 Bindless 등록
@@ -75,7 +81,7 @@ namespace sw
 		/** @brief .material 텍스트 로드 */
 		bool loadFromFile( const std::string& assetRelativePath );
 
-		/** @brief TaskManager 비동기 로드 */
+		/** @brief TaskManager 비동기 로드 (파괴 시 대기 태스크는 no-op) */
 		TaskHandle loadFromFileAsync( const std::string& assetRelativePath );
 
 		/** @brief .material 텍스트 저장 */
@@ -109,12 +115,20 @@ namespace sw
 		void shutdown( IRHIDevice* rhi );
 
 	private:
+		/** @brief Async load control block — outlives Material so tasks never UAF on this */
+		struct AsyncLoadState
+		{
+			std::mutex mutex;
+			Material*  material = nullptr;
+		};
+
 		std::string		   _name	   = "DefaultMaterial";
 		std::string		   _shaderPath = "Shaders/BindlessTriangle.hlsl";
 		MaterialData	   _data{};
 		RHIBufferHandle	   _constantBuffer	= 0;
 		RHIDescriptorIndex _descriptorIndex = kInvalidDescriptorIndex;
 		IRHIDevice*		   _rhiDevice		= nullptr;
+		std::shared_ptr<AsyncLoadState> _asyncLoadState;
 	};
 
 	/**

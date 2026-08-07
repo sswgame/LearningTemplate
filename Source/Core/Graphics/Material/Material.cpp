@@ -18,6 +18,21 @@
 
 namespace sw
 {
+	Material::Material()
+		: _asyncLoadState{ std::make_shared<AsyncLoadState>() }
+	{
+		_asyncLoadState->material = this;
+	}
+
+	Material::~Material()
+	{
+		if ( _asyncLoadState )
+		{
+			std::lock_guard<std::mutex> lock{ _asyncLoadState->mutex };
+			_asyncLoadState->material = nullptr;
+		}
+	}
+
 	static struct PropertyTypeDesc
 	{
 		const utf8*			 name;
@@ -245,9 +260,13 @@ namespace sw
 
 	TaskHandle Material::loadFromFileAsync( const std::string& assetRelativePath )
 	{
-		return sw::getTaskManager().emplaceTask( "LoadMaterialAsync", SW_DELEGATE_LAMBDA( TaskDelegate, [this, assetRelativePath]()
+		std::shared_ptr<AsyncLoadState> state = _asyncLoadState;
+		return sw::getTaskManager().emplaceTask( "LoadMaterialAsync", SW_DELEGATE_LAMBDA( TaskDelegate, [state, assetRelativePath]()
 		{
-			this->loadFromFile( assetRelativePath );
+			std::lock_guard<std::mutex> lock{ state->mutex };
+			if ( state->material == nullptr )
+				return;
+			state->material->loadFromFile( assetRelativePath );
 		} ) );
 	}
 

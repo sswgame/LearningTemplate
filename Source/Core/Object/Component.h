@@ -87,6 +87,10 @@ namespace sw
 		/** @brief 컴포넌트 해시 명칭 설정 */
 		void setComponentName( hashed_string name ) { _componentName = name; }
 
+		/** @brief SceneComponent면 this, 아니면 nullptr (dynamic_cast 회피용) */
+		virtual class SceneComponent* asSceneComponent() { return nullptr; }
+		virtual const class SceneComponent* asSceneComponent() const { return nullptr; }
+
 	public:
 		using ComponentTickDelegate = Delegate<void( float32 )>;
 		ComponentTickDelegate _onTickDelegate; ///< 델리게이트 기반 틱 연동 핸들러
@@ -107,4 +111,17 @@ namespace sw
 	private:
 		static uint64 _s_nextComponentId; ///< ID 생성 카운터
 	};
+
+	/**
+	 * @brief TickGroup 순으로 묶고, 그룹 내에서 addTickDependency 기준 위상 정렬합니다.
+	 * @details 사이클이 있으면 해당 그룹은 안정 순서를 유지하고 한 번만 경고를 남깁니다.
+	 */
+	SW_API void sortComponentsByTickOrder( std::vector<Component*>& components );
+
+	/**
+	 * @brief TickGroup별로 의존성 없는 웨이브를 만들어 병렬 tick에 사용합니다.
+	 * @param components 입력 컴포넌트(정렬되지 않아도 됨)
+	 * @param outWaves   그룹·위상 순 웨이브 목록
+	 */
+	SW_API void buildComponentTickWaves( const std::vector<Component*>& components, std::vector<std::vector<Component*>>& outWaves );
 } // namespace sw

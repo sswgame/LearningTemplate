@@ -25,22 +25,37 @@ namespace sw
 		if ( activeComponents.empty() )
 			return;
 
-		uint32 totalCount = static_cast<uint32>( activeComponents.size() );
+		// TickGroup order, then dependency waves within each group; parallel only inside a wave.
+		std::vector<std::vector<Component*>> waves;
+		buildComponentTickWaves( activeComponents, waves );
 
-		ParallelTaskDelegate delegate = SW_DELEGATE_LAMBDA( ParallelTaskDelegate, [&activeComponents, deltaTime]( uint32 index )
+		for ( const std::vector<Component*>& wave : waves )
 		{
-			if ( index < activeComponents.size() )
-			{
-				Component* comp = activeComponents[index];
-				if ( comp != nullptr && comp->isActive() )
-				{
-					comp->onTick( deltaTime );
-				}
-			}
-		} );
+			if ( wave.empty() )
+				continue;
 
-		sw::getTaskManager().emplaceParallel( totalCount, delegate );
-		sw::getTaskManager().waitAll();
+			if ( wave.size() == 1 )
+			{
+				Component* comp = wave.front();
+				if ( comp != nullptr && comp->isActive() )
+					comp->onTick( deltaTime );
+				continue;
+			}
+
+			const uint32 totalCount = static_cast<uint32>( wave.size() );
+			ParallelTaskDelegate delegate = SW_DELEGATE_LAMBDA( ParallelTaskDelegate, [&wave, deltaTime]( uint32 index )
+			{
+				if ( index < wave.size() )
+				{
+					Component* comp = wave[index];
+					if ( comp != nullptr && comp->isActive() )
+						comp->onTick( deltaTime );
+				}
+			} );
+
+			sw::getTaskManager().emplaceParallel( totalCount, delegate );
+			sw::getTaskManager().waitAll();
+		}
 	}
 
 	void ComponentManager::clear()

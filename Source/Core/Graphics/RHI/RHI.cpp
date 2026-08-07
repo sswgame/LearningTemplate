@@ -182,6 +182,9 @@ namespace sw
 			_device->shutdown();
 			_device.reset();
 		}
+
+		// After devices are gone, drop MODULE DLLs (DX11/DX12) so FreeLibrary is safe.
+		RHIBackendRegistry::get().unloadModules();
 	}
 
 	bool RHI::recreateDevice( RHIBackend backend )

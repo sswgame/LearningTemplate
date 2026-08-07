@@ -17,6 +17,18 @@ namespace sw
 
 		PROPERTY()
 		std::string _name = "Hero";
+
+		FUNCTION()
+		void takeDamage( int32 damage )
+		{
+			_hp -= damage;
+		}
+
+		FUNCTION()
+		int32 getHp() const
+		{
+			return _hp;
+		}
 	};
 
 	REFLECT()

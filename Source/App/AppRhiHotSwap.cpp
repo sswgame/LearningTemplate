@@ -42,6 +42,7 @@ namespace sw
 					 RHI::getBackendTypeName( previous ),
 					 RHI::getBackendTypeName( requested ) );
 
+		// Must release editor/game and GPU dependents before recreateDevice tears down the device.
 		BLOCK( "기존 RHI / Scene / Editor 리소스 정리" )
 		{
 			_rhi->getDevice().waitIdle();
@@ -65,26 +66,46 @@ namespace sw
 			_rhi->getDevice().waitIdle();
 		}
 
+		bool bHaveDevice = false;
 		BLOCK( "RHI Device 재생성" )
 		{
 			gv_RHIBackend = requested;
-			if ( _rhi->recreateDevice( requested ) == false )
+			if ( _rhi->recreateDevice( requested ) )
+			{
+				_committedRHIBackend = requested;
+				bHaveDevice			 = true;
+			}
+			else
 			{
 				SW_LOG_ERROR( "[Hot-Swap] recreateDevice(%#) failed — restoring %#",
 							  RHI::getBackendTypeName( requested ),
 							  RHI::getBackendTypeName( previous ) );
 				gv_RHIBackend = previous;
-				if ( _rhi->recreateDevice( previous ) == false )
+				if ( _rhi->recreateDevice( previous ) )
+				{
+					bHaveDevice = true;
+				}
+				else
+				{
+					SW_LOG_ERROR( "[Hot-Swap] FATAL: restore of previous backend %# also failed. Nulling editor/game cleanly.",
+								  RHI::getBackendTypeName( previous ) );
+					_gameRenderTarget = 0;
+					_gameTextureID	  = nullptr;
+					_editor			  = nullptr;
+					_editorApi		  = {};
+					_game			  = nullptr;
+					_gameApi		  = {};
+					_editorCtx.rhiDevice	 = nullptr;
+					_editorCtx.gameTextureID = nullptr;
 					return false;
-			}
-			else
-			{
-				_committedRHIBackend = requested;
+				}
 			}
 		}
 
+		// Device is available (new or restored) — re-bind scene / editor / game.
 		BLOCK( "Scene / Editor / Game 재초기화" )
 		{
+			(void)bHaveDevice;
 			if ( Scene* scene = _sceneManager ? _sceneManager->getActiveScene() : nullptr )
 			{
 				if ( scene->initialize( &_rhi->getDevice() ) == false )

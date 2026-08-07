@@ -69,7 +69,7 @@ namespace sw
 		RHIBackend getBackendType() const override { return RHIBackend::Vulkan; }
 
 		/** @brief Vulkan 백엔드는 Descriptor Indexing 기반 Bindless 지원 (true 반환) */
-		bool supportsBindless() const override { return true; }
+		bool supportsBindless() const override { return false; }
 
 		/** @brief 백엔드 버전 문자열 반환 */
 		const utf8* getBackendName() const override { return "Vulkan 1.3"; }

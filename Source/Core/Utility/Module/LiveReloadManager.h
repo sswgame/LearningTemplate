@@ -6,6 +6,8 @@
 #include "Core/Common/Common.h"
 #include "Core/Utility/File/FileUtil.h"
 
+#include <chrono>
+
 namespace sw
 {
 	/** @brief DLL을 임시 경로에 복사해 로드하는 핫 리로드 매니저 */
@@ -27,7 +29,7 @@ namespace sw
 		bool registerModule( const std::string& moduleName );
 		/** @brief 다음 update에서 해당 모듈 리로드를 예약합니다. */
 		void triggerReload( const std::string& moduleName );
-		/** @brief 예약된 리로드를 수행합니다. */
+		/** @brief 예약된 리로드를 수행합니다 (mtime 자동 리로드는 debounce). */
 		void update();
 		/** @brief 현재 로드된 모듈 핸들을 반환합니다. */
 		void* getModuleHandle( const std::string& moduleName ) const;
@@ -38,6 +40,8 @@ namespace sw
 		void setOnAfterReload( const std::string& moduleName, OnAfterReloadDelegate delegate );
 
 	private:
+		static constexpr int32 kMtimeDebounceMs = 300;
+
 		struct ModuleContext
 		{
 			ModuleContext() noexcept;
@@ -49,8 +53,11 @@ namespace sw
 			std::string			   _tempDllPath;
 			void*				   _hLibraryModule	  = nullptr;
 			uint64				   _loadedSourceMtime = 0; ///< Timestamp of original DLL when current shadow was loaded
-			uint8				   _bPendingReload	  : 1;
-			[[maybe_unused]] uint8 _reserved		  : 7;
+			uint64				   _debounceMtime	  = 0; ///< Last observed newer source mtime while debouncing
+			std::chrono::steady_clock::time_point _debounceSince{};
+			uint8				   _bPendingReload	 : 1;
+			uint8				   _bMtimeDebouncing : 1;
+			[[maybe_unused]] uint8 _reserved		 : 6;
 		};
 
 		/** @brief 원본 DLL을 임시 경로에 복사한 뒤 로드합니다. */

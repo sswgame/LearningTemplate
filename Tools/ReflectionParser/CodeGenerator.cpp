@@ -7,6 +7,7 @@
 #include "Core/Common/Common.h"
 #include "Core/Utility/File/FileUtil.h"
 #include "Core/Utility/String/formatString.h"
+#include <cstring>
 
 namespace sw::tool
 {
@@ -103,12 +104,113 @@ namespace sw::tool
 		out.appendFormat( "// Source: %#\n\n", _sourceFilePath );
 		out.append( "#include \"Core/Common/Common.h\"\n" );
 		out.append( "#include \"Core/Reflection/ReflectionCore.h\"\n" );
+		out.append( "#include \"Core/Utility/Task/TaskTypes.h\"\n" );
 		if ( bNeedsComponentFactory )
 		{
 			out.append( "#include \"Core/Object/ComponentManager.h\"\n" );
 			out.append( "#include \"Core/Common/CoreServices.h\"\n" );
 		}
 		out.appendFormat( "#include \"%#\"\n\n", _sourceFilePath );
+	}
+
+	std::string CodeGenerator::normalizeTypeName( const std::string& clangSpelling )
+	{
+		std::string t = clangSpelling;
+		// Strip common qualifiers / references for TaskArgs get<T>
+		auto stripPrefix = [&]( const char* prefix )
+		{
+			const size_t n = std::strlen( prefix );
+			while ( t.rfind( prefix, 0 ) == 0 )
+				t.erase( 0, n );
+		};
+		stripPrefix( "const " );
+		stripPrefix( "volatile " );
+		while ( t.empty() == false && ( t.back() == '&' || t.back() == ' ' || t.back() == '*' ) )
+		{
+			if ( t.back() == '*' )
+				break; // keep pointers as-is (unsupported for get by value)
+			t.pop_back();
+		}
+		while ( t.empty() == false && t.back() == ' ' )
+			t.pop_back();
+
+		// Types.h aliases live in the global namespace (not sw::).
+		if ( t == "int" || t == "signed int" )
+			return "int32";
+		if ( t == "unsigned int" || t == "unsigned" )
+			return "uint32";
+		if ( t == "long long" || t == "signed long long" )
+			return "int64";
+		if ( t == "unsigned long long" )
+			return "uint64";
+		if ( t == "float" )
+			return "float32";
+		if ( t == "double" )
+			return "float64";
+		if ( t == "int32_t" )
+			return "int32";
+		if ( t == "uint32_t" )
+			return "uint32";
+		if ( t == "int64_t" )
+			return "int64";
+		if ( t == "uint64_t" )
+			return "uint64";
+		if ( t == "std::basic_string<char>" || t == "basic_string<char>" )
+			return "std::string";
+		if ( t == "string" )
+			return "std::string";
+		return t;
+	}
+
+	void CodeGenerator::emitMethodList( CodeEmitBuffer& out, const ParsedTypeInfo& typeInfo ) const
+	{
+		for ( const ParsedFunctionInfo& method : typeInfo.methods )
+		{
+			const std::string retType = normalizeTypeName( method.returnTypeName );
+
+			out.append( "\t\t\t{\n" );
+			out.append( "\t\t\t\tsw::FunctionInfo funcInfo;\n" );
+			out.appendFormat( "\t\t\t\tfuncInfo._name           = \"%#\";\n", method.name );
+			out.appendFormat( "\t\t\t\tfuncInfo._hashName       = sw::hashed_string( \"%#\" );\n", method.name );
+			out.appendFormat( "\t\t\t\tfuncInfo._returnTypeName = \"%#\";\n", retType );
+			out.append( "\t\t\t\tfuncInfo._paramTypeNames = { " );
+			for ( size_t i = 0; i < method.paramTypeNames.size(); ++i )
+			{
+				const std::string p = normalizeTypeName( method.paramTypeNames[i] );
+				out.appendFormat( "\"%#\"", p );
+				if ( i + 1 < method.paramTypeNames.size() )
+					out.append( ", " );
+			}
+			out.append( " };\n" );
+
+			std::string callArgs;
+			for ( size_t i = 0; i < method.paramTypeNames.size(); ++i )
+			{
+				const std::string p = normalizeTypeName( method.paramTypeNames[i] );
+				if ( i > 0 )
+					callArgs += ", ";
+				callArgs += "args.get<" + p + ">( " + std::to_string( i ) + " )";
+			}
+
+			out.append( "\t\t\t\tauto invokerCb = []( void* objPtr, const sw::TaskArgs& args ) -> sw::TaskValue\n" );
+			out.append( "\t\t\t\t{\n" );
+			if ( method.paramTypeNames.empty() )
+				out.append( "\t\t\t\t\t(void)args;\n" );
+			out.appendFormat( "\t\t\t\t\tauto* self = static_cast<%#*>( objPtr );\n", typeInfo.fullyQualifiedName );
+			if ( retType == "void" )
+			{
+				out.appendFormat( "\t\t\t\t\tself->%#(%#);\n", method.name, callArgs.c_str() );
+				out.append( "\t\t\t\t\treturn sw::TaskValue{};\n" );
+			}
+			else
+			{
+				out.appendFormat( "\t\t\t\t\treturn sw::TaskValue{ self->%#(%#) };\n", method.name, callArgs.c_str() );
+			}
+			out.append( "\t\t\t\t};\n" );
+			out.append( "\t\t\t\tfuncInfo._invoker = SW_DELEGATE_LAMBDA( sw::Delegate<sw::TaskValue( void*, const sw::TaskArgs& )>, invokerCb );\n" );
+			out.append( "\t\t\t\tinfo._methods.push_back( funcInfo );\n" );
+			out.append( "\t\t\t}\n" );
+		}
 	}
 
 	void CodeGenerator::emitComponentFactoryRegistrar( CodeEmitBuffer& out, const ParsedTypeInfo& typeInfo ) const
@@ -145,6 +247,10 @@ namespace sw::tool
 			out.append( "\t\t\tinfo._propertyList =\n\t\t\t{\n" );
 			for ( const ParsedPropertyInfo& prop : typeInfo.properties )
 			{
+				const std::string aliasExpr = prop.alias.empty()
+												  ? "sw::hashed_string()"
+												  : ( "sw::hashed_string( \"" + prop.alias + "\" )" );
+
 				if ( prop.isContainer )
 				{
 					const utf8* kindStr = ( prop.containerKind == "Map" ) ? "sw::ContainerKind::Map" : "sw::ContainerKind::Sequence";
@@ -164,7 +270,8 @@ namespace sw::tool
 						"\t\t\t\t  %#,\n"
 						"\t\t\t\t  sw::hashed_string( \"%#\" ),\n"
 						"\t\t\t\t  sw::hashed_string( \"%#\" ),\n"
-						"\t\t\t\t  std::make_shared<%#>() },\n",
+						"\t\t\t\t  std::make_shared<%#>(),\n"
+						"\t\t\t\t  %# },\n",
 						prop.name,
 						prop.typeName,
 						typeInfo.fullyQualifiedName,
@@ -172,7 +279,8 @@ namespace sw::tool
 						kindStr,
 						prop.elementTypeName,
 						prop.keyTypeName,
-						wrapperType );
+						wrapperType,
+						aliasExpr );
 				}
 				else
 				{
@@ -181,15 +289,20 @@ namespace sw::tool
 						"\t\t\t\t  sw::hashed_string( \"%#\" ),\n"
 						"\t\t\t\t  offsetof( %#, %# ),\n"
 						"\t\t\t\t  false, sw::ContainerKind::None,\n"
-						"\t\t\t\t  sw::hashed_string(), sw::hashed_string(), nullptr },\n",
+						"\t\t\t\t  sw::hashed_string(), sw::hashed_string(), nullptr,\n"
+						"\t\t\t\t  %# },\n",
 						prop.name,
 						prop.typeName,
 						typeInfo.fullyQualifiedName,
-						prop.name );
+						prop.name,
+						aliasExpr );
 				}
 			}
 			out.append( "\t\t\t};\n" );
 		}
+
+		if ( typeInfo.methods.empty() == false )
+			emitMethodList( out, typeInfo );
 
 		out.append( "\t\t\tregistry.registerClass( info );\n" );
 		out.append( "\t\t}\n\n" );

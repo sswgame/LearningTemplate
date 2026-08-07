@@ -13,12 +13,16 @@
 
 namespace sw
 {
+	class GameObjectManager;
+
 	/**
 	 * @class GameObject
 	 * @brief 라이프사이클(beginPlay, tick), 리플렉션, 태그 시스템, 컴포넌트 컨테이너 기능을 제공하는 엔티티 클래스
 	 */
 	class SW_API GameObject
 	{
+		friend class GameObjectManager;
+
 	public:
 		GameObject();
 		/** @brief 이름을 지정하는 생성자 */
@@ -43,8 +47,8 @@ namespace sw
 		/** @brief 지연 삭제 (프레임 종료 시 안전 해제) */
 		void destroyDeferred();
 
-		/** @brief 게임 오브젝트 이름 설정 */
-		void setName( hashed_string name ) { _name = name; }
+		/** @brief 게임 오브젝트 이름 설정 (등록된 매니저 이름 맵도 갱신) */
+		void setName( hashed_string name );
 
 		/** @brief 게임 오브젝트 이름 반환 */
 		hashed_string getName() const { return _name; }
@@ -79,11 +83,17 @@ namespace sw
 		/** @brief 소유한 태그 컨테이너 참조 반환 */
 		const TagContainer& getTags() const { return _tags; }
 
+		/**
+		 * @brief typeid(T).name()에서 MSVC `class `/`struct ` 접두사와 네임스페이스를 제거한 짧은 타입명 키
+		 * @details CodeGenerator factory 등록키(typeInfo.name)와 템플릿 addComponent 경로를 일치시킵니다.
+		 */
+		static hashed_string makeComponentTypeKeyFromTypeidName( const char* typeIdName );
+
 		/** @brief 템플릿 컴포넌트 타입의 해시 키 생성 헬퍼 */
 		template <typename T>
 		SW_INLINE static hashed_string getComponentTypeKey()
 		{
-			static const hashed_string s_typeKey( typeid( T ).name() );
+			static const hashed_string s_typeKey = makeComponentTypeKeyFromTypeidName( typeid( T ).name() );
 			return s_typeKey;
 		}
 
@@ -180,6 +190,8 @@ namespace sw
 		uint64 _objectId = 0; ///< 오브젝트 고유 시리얼 번호
 
 		hashed_string _name; ///< 오브젝트 식별 명칭
+
+		GameObjectManager* _ownerManager = nullptr; ///< registerGameObject 시 설정되는 소유 매니저
 
 		uint8				   _bActive				 : 1; ///< 자체 활성화 비트
 		uint8				   _bIsActiveInHierarchy : 1; ///< 최종 활성 비트(현재 setActive와 동기화; 향후 부모 계층용)

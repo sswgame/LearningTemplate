@@ -452,6 +452,14 @@ namespace sw
 		_textures.erase( it );
 	}
 
+	uint32 OpenGLRHIDevice::getGLTextureName( RHITextureHandle texture ) const
+	{
+		if ( texture == 0 )
+			return 0;
+		auto it = _textures.find( texture );
+		return it != _textures.end() ? it->second.texture : 0;
+	}
+
 	RHIDescriptorIndex OpenGLRHIDevice::registerBindlessResource( RHIBufferHandle buffer )
 	{
 		if ( buffer == 0 )

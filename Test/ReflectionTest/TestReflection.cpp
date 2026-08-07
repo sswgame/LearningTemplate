@@ -1076,7 +1076,8 @@ SW_TEST_CASE( Reflection_TypeInfo, DynamicMethodInvoke )
 
 	sw::getTypeRegistry().registerClass( info );
 
-	sw::TaskArgs args{ 50 };
+	sw::TaskArgs args;
+	args.add( int32{ 50 } );
 	sw::getTypeRegistry().invokeMethod( &actor, sw::hashed_string( "sw::InvokableTestActor" ), sw::hashed_string( "addScore" ), args );
 
 	SW_EXPECT_EQUAL( 50, actor._score );
@@ -1133,6 +1134,7 @@ SW_TEST_CASE( Reflection_Cloning, ObjectDeepCopyClone )
 
 SW_TEST_CASE( Reflection_FunctionMacro, AnnotatedMethodInvoke )
 {
+	// Hand-wired invoker (legacy path still supported).
 	REFLECT()
 	struct FunctionAnnotatedActor
 	{
@@ -1147,9 +1149,11 @@ SW_TEST_CASE( Reflection_FunctionMacro, AnnotatedMethodInvoke )
 	} actor;
 
 	sw::FunctionInfo funcInfo;
-	funcInfo._name	   = "takeDamage";
-	funcInfo._hashName = sw::hashed_string( "takeDamage" );
-	auto takeDamageCb  = []( void* objPtr, const sw::TaskArgs& args ) -> sw::TaskValue
+	funcInfo._name			 = "takeDamage";
+	funcInfo._hashName		 = sw::hashed_string( "takeDamage" );
+	funcInfo._returnTypeName = "void";
+	funcInfo._paramTypeNames = { "sw::int32" };
+	auto takeDamageCb		 = []( void* objPtr, const sw::TaskArgs& args ) -> sw::TaskValue
 	{
 		static_cast<FunctionAnnotatedActor*>( objPtr )->takeDamage( args.get<int32>( 0 ) );
 		return sw::TaskValue{};
@@ -1164,8 +1168,32 @@ SW_TEST_CASE( Reflection_FunctionMacro, AnnotatedMethodInvoke )
 
 	sw::getTypeRegistry().registerClass( info );
 
-	sw::TaskArgs  args{ 35 };
-	sw::TaskValue invokeResult = sw::getTypeRegistry().invokeMethod( &actor, sw::hashed_string( "sw::FunctionAnnotatedActor" ), sw::hashed_string( "takeDamage" ), args );
+	sw::TaskArgs args;
+	args.add( int32{ 35 } );
+	sw::getTypeRegistry().invokeMethod( &actor, sw::hashed_string( "sw::FunctionAnnotatedActor" ), sw::hashed_string( "takeDamage" ), args );
 
 	SW_EXPECT_EQUAL( 65, actor._health );
+}
+
+SW_TEST_CASE( Reflection_FunctionMacro, CodegenMethodInvoke )
+{
+	// SampleTestActor::takeDamage / getHp are emitted by ReflectionParser codegen.
+	sw::SampleTestActor actor;
+	SW_ASSERT_NOT_NULL( sw::getTypeRegistry().findType( sw::hashed_string( "sw::SampleTestActor" ) ) );
+
+	const sw::TypeInfo* typeInfo = sw::getTypeRegistry().findType( sw::hashed_string( "sw::SampleTestActor" ) );
+	SW_ASSERT_NOT_NULL( typeInfo );
+	SW_ASSERT_NOT_NULL( typeInfo->findMethod( sw::hashed_string( "takeDamage" ) ) );
+	SW_ASSERT_NOT_NULL( typeInfo->findMethod( sw::hashed_string( "getHp" ) ) );
+
+	sw::TaskArgs damageArgs;
+	damageArgs.add( int32{ 40 } );
+	sw::getTypeRegistry().invokeMethod( &actor, sw::hashed_string( "sw::SampleTestActor" ),
+										sw::hashed_string( "takeDamage" ), damageArgs );
+	SW_EXPECT_EQUAL( 60, actor._hp );
+
+	sw::TaskValue hp = sw::getTypeRegistry().invokeMethod( &actor, sw::hashed_string( "sw::SampleTestActor" ),
+														   sw::hashed_string( "getHp" ) );
+	SW_EXPECT_TRUE( hp.hasValue() );
+	SW_EXPECT_EQUAL( 60, hp.getValue<int32>() );
 }

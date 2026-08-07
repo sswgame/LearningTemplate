@@ -3,6 +3,7 @@
  * @brief libclang AST 순회 및 REFLECT/ENUM 메타데이터 수집
  */
 #include "AstVisitor.h"
+#include "ParserUtil.h"
 #include "Core/Common/Common.h"
 #include "Core/Utility/String/StringBuilder.h"
 #include "Core/Utility/String/StringUtil.h"
@@ -23,27 +24,109 @@ namespace sw::tool
 		struct AnnotationSearch
 		{
 			std::string prefix;
+			std::string spelling;
 			bool		found = false;
 		};
 
 		CXChildVisitResult annotationSearchVisitor( CXCursor cursor, CXCursor, CXClientData data )
 		{
-			auto* search = static_cast<AnnotationSearch*>( data );
-			if ( clang_getCursorKind( cursor ) == CXCursor_AnnotateAttr )
+			auto*			   search = static_cast<AnnotationSearch*>( data );
+			const CXCursorKind kind	  = clang_getCursorKind( cursor );
+			if ( kind == CXCursor_AnnotateAttr || kind == CXCursor_UnexposedAttr )
 			{
 				const std::string spelling = cxStringToStd( clang_getCursorSpelling( cursor ) );
 				if ( spelling.find( search->prefix ) != std::string::npos )
 				{
-					search->found = true;
+					search->found	 = true;
+					search->spelling = spelling;
 					return CXChildVisit_Break;
 				}
 			}
 			return CXChildVisit_Continue;
 		}
 
+		/** @brief AnnotateAttr가 AST 자식으로 안 붙는 경우(매크로 위치) 소스 텍스트로 보정 */
+		bool sourceHasPrimaryAnnotation( CXCursor cursor, const std::string& prefix )
+		{
+			const char* macroName = nullptr;
+			if ( prefix == "REFLECT;" )
+				macroName = "REFLECT(";
+			else if ( prefix == "ENUM;" )
+				macroName = "ENUM(";
+			else if ( prefix == "PROPERTY;" )
+				macroName = "PROPERTY(";
+			else if ( prefix == "FUNCTION;" )
+				macroName = "FUNCTION(";
+			else
+				return false;
+
+			CXFile	 file	= nullptr;
+			unsigned line	= 0;
+			unsigned column = 0;
+			unsigned offset = 0;
+			clang_getFileLocation( clang_getCursorLocation( cursor ), &file, &line, &column, &offset );
+			if ( file == nullptr )
+				return false;
+
+			const std::string path	  = cxStringToStd( clang_getFileName( file ) );
+			const std::string content = readTextFile( path );
+			if ( content.empty() || offset > content.size() )
+				return false;
+
+			const size_t windowStart = ( offset > 512 ) ? ( offset - 512 ) : 0;
+			const std::string_view window( content.data() + windowStart, offset - windowStart );
+			if ( window.find( macroName ) != std::string_view::npos )
+				return true;
+
+			const std::string annotateNeedle = std::string( "annotate(\"" ) + prefix;
+			return window.find( annotateNeedle ) != std::string_view::npos;
+		}
+
+		std::string parseAnnotationAlias( const std::string& annotationSpelling )
+		{
+			const size_t aliasPos = annotationSpelling.find( "Alias" );
+			if ( aliasPos == std::string::npos )
+				return {};
+
+			const size_t eqPos = annotationSpelling.find( '=', aliasPos );
+			if ( eqPos == std::string::npos )
+				return {};
+
+			size_t valueStart = eqPos + 1;
+			while ( valueStart < annotationSpelling.size() &&
+					( annotationSpelling[valueStart] == ' ' || annotationSpelling[valueStart] == '\t' ) )
+				++valueStart;
+
+			if ( valueStart >= annotationSpelling.size() )
+				return {};
+
+			if ( annotationSpelling[valueStart] == '"' )
+			{
+				const size_t endQuote = annotationSpelling.find( '"', valueStart + 1 );
+				if ( endQuote == std::string::npos )
+					return {};
+				return annotationSpelling.substr( valueStart + 1, endQuote - valueStart - 1 );
+			}
+
+			size_t valueEnd = valueStart;
+			while ( valueEnd < annotationSpelling.size() )
+			{
+				const char c = annotationSpelling[valueEnd];
+				if ( c == ',' || c == ';' || c == ' ' || c == '\t' || c == ')' )
+					break;
+				++valueEnd;
+			}
+			return annotationSpelling.substr( valueStart, valueEnd - valueStart );
+		}
+
 		struct FieldCollector
 		{
 			std::vector<ParsedPropertyInfo>* properties = nullptr;
+		};
+
+		struct MethodCollector
+		{
+			std::vector<ParsedFunctionInfo>* methods = nullptr;
 		};
 
 		std::vector<std::string> extractTemplateArgs( const std::string& typeStr )
@@ -124,7 +207,7 @@ namespace sw::tool
 			if ( clang_getCursorKind( cursor ) != CXCursor_FieldDecl )
 				return CXChildVisit_Continue;
 
-			AnnotationSearch search{ "PROPERTY;", false };
+			AnnotationSearch search{ "PROPERTY;", {}, false };
 			clang_visitChildren( cursor, annotationSearchVisitor, &search );
 			if ( search.found == false )
 				return CXChildVisit_Continue;
@@ -133,8 +216,41 @@ namespace sw::tool
 			ParsedPropertyInfo prop;
 			prop.name	  = cxStringToStd( clang_getCursorSpelling( cursor ) );
 			prop.typeName = cxStringToStd( clang_getTypeSpelling( clang_getCursorType( cursor ) ) );
+			prop.alias	  = parseAnnotationAlias( search.spelling );
 			parseContainerDetails( prop );
 			collector->properties->push_back( std::move( prop ) );
+			return CXChildVisit_Continue;
+		}
+
+		CXChildVisitResult methodCollectorVisitor( CXCursor cursor, CXCursor, CXClientData data )
+		{
+			const CXCursorKind kind = clang_getCursorKind( cursor );
+			if ( kind != CXCursor_CXXMethod && kind != CXCursor_FunctionDecl )
+				return CXChildVisit_Continue;
+
+			if ( clang_CXXMethod_isStatic( cursor ) || kind == CXCursor_Constructor || kind == CXCursor_Destructor ||
+				 clang_CXXConstructor_isCopyConstructor( cursor ) || clang_CXXConstructor_isMoveConstructor( cursor ) )
+				return CXChildVisit_Continue;
+
+			AnnotationSearch search{ "FUNCTION;", {}, false };
+			clang_visitChildren( cursor, annotationSearchVisitor, &search );
+			if ( search.found == false )
+				return CXChildVisit_Continue;
+
+			auto*			   collector = static_cast<MethodCollector*>( data );
+			ParsedFunctionInfo method;
+			method.name			  = cxStringToStd( clang_getCursorSpelling( cursor ) );
+			method.returnTypeName = cxStringToStd( clang_getTypeSpelling( clang_getCursorResultType( cursor ) ) );
+
+			const int32 numArgs = clang_Cursor_getNumArguments( cursor );
+			for ( int32 i = 0; i < numArgs; ++i )
+			{
+				const CXCursor argCursor = clang_Cursor_getArgument( cursor, i );
+				method.paramTypeNames.push_back(
+					cxStringToStd( clang_getTypeSpelling( clang_getCursorType( argCursor ) ) ) );
+			}
+
+			collector->methods->push_back( std::move( method ) );
 			return CXChildVisit_Continue;
 		}
 
@@ -223,13 +339,13 @@ namespace sw::tool
 		if ( clang_Location_isFromMainFile( loc ) == false )
 			return false;
 
-		AnnotationSearch search{ prefix, false };
+		AnnotationSearch search{ prefix, {}, false };
 		clang_visitChildren( cursor, annotationSearchVisitor, &search );
 		if ( search.found )
 			return true;
 
-		// AnnotateAttr가 자식에 없더라도 메인 파일 선언은 통과 (매크로 확장 위치 차이 보정)
-		return true;
+		// Primary macros only — never fallback for refined tags like "ENUM;BitFlag".
+		return sourceHasPrimaryAnnotation( cursor, prefix );
 	}
 
 	void AstVisitor::onStructDecl( CXCursor cursor )
@@ -245,8 +361,11 @@ namespace sw::tool
 		FieldCollector fieldCollector{ &typeInfo.properties };
 		clang_visitChildren( cursor, fieldCollectorVisitor, &fieldCollector );
 
-		SW_LOG_INFO( "[AstVisitor] REFLECT class : %#  (%# properties)",
-					 typeInfo.fullyQualifiedName, typeInfo.properties.size() );
+		MethodCollector methodCollector{ &typeInfo.methods };
+		clang_visitChildren( cursor, methodCollectorVisitor, &methodCollector );
+
+		SW_LOG_INFO( "[AstVisitor] REFLECT class : %#  (%# properties, %# methods)",
+					 typeInfo.fullyQualifiedName, typeInfo.properties.size(), typeInfo.methods.size() );
 		_types.push_back( std::move( typeInfo ) );
 	}
 

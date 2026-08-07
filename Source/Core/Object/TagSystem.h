@@ -13,12 +13,16 @@
 
 namespace sw
 {
-
-	/** @brief 해시 기반 태그 ID (점 구분 계층은 parentHash에 반영) */
+	/** @brief 해시 기반 태그 ID (점 구분 계층의 모든 조상 해시를 보관) */
 	struct SW_API TagID
 	{
+		static constexpr uint8 kMaxAncestors = 8;
+
 		uint64 _id		   = 0;
-		uint64 _parentHash = 0;
+		uint64 _parentHash = 0; ///< 직계 부모 경로 해시
+
+		uint64 _ancestorHashes[kMaxAncestors]{}; ///< 루트→직계 부모 순 prefix 해시
+		uint8  _ancestorCount = 0;
 
 		constexpr TagID() = default;
 		constexpr TagID( uint64 id, uint64 parentHash = 0 )
@@ -33,29 +37,49 @@ namespace sw
 
 		constexpr bool isValid() const { return _id != 0; }
 
+		/** @brief parentTag가 자신과 같거나 조상 체인에 있으면 true */
 		constexpr bool isSubtagOf( const TagID& parentTag ) const
 		{
-			if ( _id == parentTag._id || ( _parentHash != 0 && _parentHash == parentTag._id ) )
+			if ( _id == parentTag._id )
 				return true;
+
+			for ( uint8 i = 0; i < _ancestorCount; ++i )
+			{
+				if ( _ancestorHashes[i] == parentTag._id )
+					return true;
+			}
+
+			// Legacy / manually constructed TagID: at least honor immediate parent.
+			if ( _parentHash != 0 && _parentHash == parentTag._id )
+				return true;
+
 			return false;
 		}
 	};
 
 	constexpr TagID operator""_tag( const utf8* str, size_t len )
 	{
-		uint64 hash		  = StringUtil::kOffset64;
-		uint64 parentHash = 0;
+		uint64 hash							= StringUtil::kOffset64;
+		uint64 parentHash					= 0;
+		uint64 prefixes[TagID::kMaxAncestors]{};
+		uint8  prefixCount = 0;
 
 		for ( size_t i = 0; i < len; ++i )
 		{
 			if ( str[i] == '.' )
 			{
+				if ( prefixCount < TagID::kMaxAncestors )
+					prefixes[prefixCount++] = hash;
 				parentHash = hash;
 			}
 			hash = ( hash ^ static_cast<uint64>( str[i] ) ) * StringUtil::kPrime64;
 		}
 
-		return TagID( hash, parentHash );
+		TagID tag( hash, parentHash );
+		tag._ancestorCount = prefixCount;
+		for ( uint8 i = 0; i < prefixCount; ++i )
+			tag._ancestorHashes[i] = prefixes[i];
+		return tag;
 	}
 
 	/** @brief GameObject 등에 붙는 태그 집합 */

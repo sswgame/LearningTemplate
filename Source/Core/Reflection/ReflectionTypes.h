@@ -192,6 +192,8 @@ namespace sw
 	{
 		std::string									  _name;
 		hashed_string								  _hashName;
+		std::string									  _returnTypeName; ///< clang spelling (e.g. void, int32)
+		std::vector<std::string>					  _paramTypeNames; ///< clang spellings in declaration order
 		Delegate<TaskValue( void*, const TaskArgs& )> _invoker;
 	};
 

@@ -8,10 +8,12 @@
 SW_DEFINE_MODULE_REGISTRAR_HEAD( swGameGvmHead, ::sw::GlobalVariableRegistrar );
 SW_DEFINE_MODULE_REGISTRAR_HEAD( swGameTypeHead, ::sw::TypeRegistrar );
 SW_DEFINE_MODULE_REGISTRAR_HEAD( swGameEnumHead, ::sw::EnumRegistrar );
+SW_DEFINE_MODULE_REGISTRAR_HEAD( swGameComponentFactoryHead, ::sw::ComponentFactoryRegistrar );
 
 #include "Runtime/GameAPI.h"
 #include "Core/Common/CoreServices.h"
 #include "Core/Reflection/ReflectionCore.h"
+#include "Core/Object/ComponentManager.h"
 #include "Core/Utility/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Game/Scene/SceneManager.h"
 #include "Core/Game/Scene/Scene.h"
@@ -37,6 +39,7 @@ namespace sw
 
 		getGlobalVariableManager().registerPendingVariables( "SWGame", swGameGvmHead() );
 		getTypeRegistry().registerPendingTypes( "SWGame", swGameTypeHead(), swGameEnumHead() );
+		getComponentManager().registerPendingFactories( swGameComponentFactoryHead() );
 
 		return true;
 	}

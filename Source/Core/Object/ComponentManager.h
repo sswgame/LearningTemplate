@@ -49,7 +49,10 @@ namespace sw
 		/** @brief 등록된 컴포넌트 타입 이름 목록을 반환합니다. */
 		const std::vector<hashed_string>& getRegisteredComponentTypes() const { return _registeredTypes; }
 
-		/** @brief 활성 컴포넌트를 TickGroup·순서에 맞춰 병렬 tick합니다. */
+		/**
+		 * @brief 활성 컴포넌트를 TickGroup→의존성 웨이브 순으로 tick합니다.
+		 * @details 그룹 내 위상 웨이브를 만든 뒤, 웨이브 안에서만 병렬 실행합니다.
+		 */
 		void tickAllComponentsParallel( const std::vector<Component*>& activeComponents, float32 deltaTime );
 
 		/** @brief 팩토리·등록 타입 목록을 비웁니다. */

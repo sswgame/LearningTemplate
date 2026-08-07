@@ -76,12 +76,17 @@ namespace sw
 		if ( _editor == nullptr )
 		{
 			SW_LOG_ERROR( "[App] Failed to create Editor instance" );
+			_editorApi = {};
 			return;
 		}
 
 		if ( _editorApi.initialize( _editor, _window.get(), &_rhi->getDevice() ) == false )
 		{
 			SW_LOG_ERROR( "[App] Failed to initialize Editor instance" );
+			if ( _editorApi.destroy )
+				_editorApi.destroy( _editor );
+			_editor	   = nullptr;
+			_editorApi = {};
 			return;
 		}
 
@@ -123,12 +128,17 @@ namespace sw
 		if ( _game == nullptr )
 		{
 			SW_LOG_ERROR( "[App] Failed to create Game instance" );
+			_gameApi = {};
 			return;
 		}
 
 		if ( _gameApi.initialize( _game, _window.get(), &_rhi->getDevice() ) == false )
 		{
 			SW_LOG_ERROR( "[App] Failed to initialize Game instance" );
+			if ( _gameApi.destroy )
+				_gameApi.destroy( _game );
+			_game	 = nullptr;
+			_gameApi = {};
 			return;
 		}
 

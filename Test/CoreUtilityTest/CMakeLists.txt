@@ -11,10 +11,11 @@ if(BUILD_TESTING)
     add_test(NAME CoreUtilityTest COMMAND CoreUtilityTest)
     set_tests_properties(CoreUtilityTest PROPERTIES LABELS "unit;core")
 
-    # Headless-friendly subset (skips GPU/window suites via framework filter)
+    # Headless-friendly subset (skips GPU/window suites via framework filter).
+    # Keep MaterialTest.MaterialLoadAndSave / AsyncMaterialLoadTest (file I/O only).
     add_test(
         NAME CoreUtilityTest_NoGPU
-        COMMAND CoreUtilityTest --test_filter=-RHITest.*,-WindowTest.*,-MaterialTest.*,-ShaderCompilerTest.*,-LiveShaderTest.*
+        COMMAND CoreUtilityTest --test_filter=-RHITest.*,-WindowTest.*,-ShaderCompilerTest.*,-LiveShaderTest.*,-MaterialTest.MaterialColorModification,-MaterialTest.MaterialInstanceOverride,-MaterialTest.MaterialShaderReflectionValidation
     )
     set_tests_properties(CoreUtilityTest_NoGPU PROPERTIES LABELS "unit;core;nogpu")
 endif()

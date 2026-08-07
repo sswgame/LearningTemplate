@@ -9,6 +9,7 @@
 SW_DEFINE_MODULE_REGISTRAR_HEAD( swAppGvmHead, ::sw::GlobalVariableRegistrar );
 SW_DEFINE_MODULE_REGISTRAR_HEAD( swAppTypeHead, ::sw::TypeRegistrar );
 SW_DEFINE_MODULE_REGISTRAR_HEAD( swAppEnumHead, ::sw::EnumRegistrar );
+SW_DEFINE_MODULE_REGISTRAR_HEAD( swAppComponentFactoryHead, ::sw::ComponentFactoryRegistrar );
 
 #include "Core/Common/CoreServices.h"
 #include "Core/Utility/Log/Logger.h"
@@ -68,6 +69,7 @@ namespace sw
 			bindCoreServices( services );
 
 			registerCoreReflectionTypes();
+			getComponentManager().registerPendingFactories( swAppComponentFactoryHead() );
 		}
 
 		BLOCK( "Task / LiveReload / Resource / Scene 초기화" )
@@ -121,11 +123,14 @@ namespace sw
 		return true;
 	}
 
-	bool App::createGameViewportTexture()
+	bool App::createGameViewportTexture( uint32 width, uint32 height )
 	{
+		if ( _rhi == nullptr || width == 0 || height == 0 )
+			return false;
+
 		RHITextureDesc rtDesc{};
-		rtDesc._width			  = 1280;
-		rtDesc._height			  = 720;
+		rtDesc._width			  = width;
+		rtDesc._height			  = height;
 		rtDesc._format			  = RHIFormat::R8G8B8A8_UNORM;
 		rtDesc._bIsRenderTarget	  = true;
 		rtDesc._bIsShaderResource = true;

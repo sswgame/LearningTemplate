@@ -8,6 +8,7 @@
 SW_DECLARE_MODULE_REGISTRAR_HEAD( swTestGvmHead, ::sw::GlobalVariableRegistrar );
 SW_DECLARE_MODULE_REGISTRAR_HEAD( swTestTypeHead, ::sw::TypeRegistrar );
 SW_DECLARE_MODULE_REGISTRAR_HEAD( swTestEnumHead, ::sw::EnumRegistrar );
+SW_DECLARE_MODULE_REGISTRAR_HEAD( swTestComponentFactoryHead, ::sw::ComponentFactoryRegistrar );
 
 #undef SW_GVM_MODULE_HEAD
 #define SW_GVM_MODULE_HEAD() (::swTestGvmHead())
@@ -15,3 +16,5 @@ SW_DECLARE_MODULE_REGISTRAR_HEAD( swTestEnumHead, ::sw::EnumRegistrar );
 #define SW_TYPE_MODULE_HEAD() (::swTestTypeHead())
 #undef SW_ENUM_MODULE_HEAD
 #define SW_ENUM_MODULE_HEAD() (::swTestEnumHead())
+#undef SW_COMPONENT_FACTORY_MODULE_HEAD
+#define SW_COMPONENT_FACTORY_MODULE_HEAD() (::swTestComponentFactoryHead())

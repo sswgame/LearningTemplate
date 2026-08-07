@@ -18,6 +18,28 @@ namespace sw
 	{
 		if ( _rhi )
 			_rhi->getDevice().resize( w, h );
+
+		if ( _bEnableEditor == 0 || _rhi == nullptr || w == 0 || h == 0 )
+			return;
+
+		if ( _gameRenderTarget != 0 )
+		{
+			_rhi->getDevice().destroyTexture( _gameRenderTarget );
+			_gameRenderTarget = 0;
+			_gameTextureID	  = nullptr;
+		}
+
+		if ( createGameViewportTexture( w, h ) == false )
+		{
+			SW_LOG_WARNING( "[App] Game View RT recreate on resize failed (%# x %#)", w, h );
+			_editorCtx.gameTextureID = nullptr;
+			return;
+		}
+
+		if ( _editor && _editorApi.registerTexture )
+			_gameTextureID = _editorApi.registerTexture( _editor, static_cast<TextureHandle>( _gameRenderTarget ) );
+
+		_editorCtx.gameTextureID = _gameTextureID;
 	}
 
 	bool App::onWindowMessage( const NativeWindowEvent& event )

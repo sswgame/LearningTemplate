@@ -13,6 +13,11 @@ namespace sw
 	{
 	}
 
+	RHIReleaseQueue::~RHIReleaseQueue()
+	{
+		flushAll();
+	}
+
 	void RHIReleaseQueue::enqueueRelease( const RHIResourceReleaseDelegate& releaseDelegate )
 	{
 		if ( releaseDelegate.isBound() == false )

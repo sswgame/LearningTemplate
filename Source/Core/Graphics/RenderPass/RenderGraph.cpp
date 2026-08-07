@@ -1,5 +1,10 @@
 #include "pch.h"
 #include "RenderGraph.h"
+#include "Core/Utility/Log/Logger.h"
+
+#include <queue>
+#include <unordered_map>
+#include <unordered_set>
 
 /**
  * @file RenderGraph.cpp
@@ -22,21 +27,105 @@ namespace sw
 	}
 
 	/**
-	 * @brief 그래프 컴파일: 활성화된 패스 순서대로 실행 시퀀스 구축
+	 * @brief 그래프 컴파일: 리소스 의존성 기준 Kahn 위상 정렬로 실행 시퀀스 구축
 	 */
 	bool RenderGraph::compile()
 	{
 		_compiledExecutionOrder.clear();
 
-		for ( const RenderGraphNode& node : _nodes )
+		if ( _nodes.empty() )
+			return false;
+
+		const size_t nodeCount = _nodes.size();
+
+		// Active (non-culled) node indices
+		std::vector<size_t> activeIndices;
+		activeIndices.reserve( nodeCount );
+		for ( size_t i = 0; i < nodeCount; ++i )
 		{
-			if ( node._bCulled == false )
+			if ( _nodes[i]._bCulled == false )
+				activeIndices.push_back( i );
+		}
+
+		if ( activeIndices.empty() )
+			return true;
+
+		// resource → producer pass index (last writer wins for multi-write)
+		std::unordered_map<hashed_string, size_t> resourceProducer;
+		resourceProducer.reserve( activeIndices.size() * 2 );
+		for ( size_t nodeIndex : activeIndices )
+		{
+			for ( const hashed_string& output : _nodes[nodeIndex]._outputs )
+				resourceProducer[output] = nodeIndex;
+		}
+
+		// Adjacency: producer → consumers; in-degree over active nodes
+		std::unordered_map<size_t, std::vector<size_t>> adjacency;
+		std::unordered_map<size_t, uint32>				inDegree;
+		adjacency.reserve( activeIndices.size() );
+		inDegree.reserve( activeIndices.size() );
+
+		for ( size_t nodeIndex : activeIndices )
+			inDegree[nodeIndex] = 0;
+
+		for ( size_t consumerIndex : activeIndices )
+		{
+			std::unordered_set<size_t> seenProducers;
+			for ( const hashed_string& input : _nodes[consumerIndex]._inputs )
 			{
-				_compiledExecutionOrder.push_back( node._name );
+				auto producerIt = resourceProducer.find( input );
+				if ( producerIt == resourceProducer.end() )
+					continue;
+
+				const size_t producerIndex = producerIt->second;
+				if ( producerIndex == consumerIndex )
+					continue;
+				if ( seenProducers.insert( producerIndex ).second == false )
+					continue;
+
+				adjacency[producerIndex].push_back( consumerIndex );
+				++inDegree[consumerIndex];
 			}
 		}
 
-		return _nodes.empty() == false;
+		std::queue<size_t> ready;
+		for ( size_t nodeIndex : activeIndices )
+		{
+			if ( inDegree[nodeIndex] == 0 )
+				ready.push( nodeIndex );
+		}
+
+		_compiledExecutionOrder.reserve( activeIndices.size() );
+		while ( ready.empty() == false )
+		{
+			const size_t nodeIndex = ready.front();
+			ready.pop();
+			_compiledExecutionOrder.push_back( _nodes[nodeIndex]._name );
+
+			auto adjIt = adjacency.find( nodeIndex );
+			if ( adjIt == adjacency.end() )
+				continue;
+
+			for ( size_t consumerIndex : adjIt->second )
+			{
+				uint32& degree = inDegree[consumerIndex];
+				if ( degree > 0 )
+					--degree;
+				if ( degree == 0 )
+					ready.push( consumerIndex );
+			}
+		}
+
+		if ( _compiledExecutionOrder.size() != activeIndices.size() )
+		{
+			SW_LOG_ERROR( "[RenderGraph] Cycle detected during compile — %u/%u active passes scheduled.",
+						  static_cast<uint32>( _compiledExecutionOrder.size() ),
+						  static_cast<uint32>( activeIndices.size() ) );
+			_compiledExecutionOrder.clear();
+			return false;
+		}
+
+		return true;
 	}
 
 	/**

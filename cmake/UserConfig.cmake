@@ -16,7 +16,9 @@ set(sw_project_version "1.0.0")
 if(NOT DEFINED sw_cpp_standard)
 	set(sw_cpp_standard 17)
 endif()
-set(sw_output_directory "${CMAKE_CURRENT_SOURCE_DIR}/build")
+# Per-preset runtime/lib root: follow the CMake binary dir so Debug/Release/Shipping
+# presets do not overwrite each other under a shared sourceDir/build/Bin.
+set(sw_output_directory "${CMAKE_BINARY_DIR}")
 
 # --- Feature options (모두 SW_* / option) ---
 option(SW_USE_VCPKG "Use vcpkg package integration" ON)

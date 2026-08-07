@@ -66,6 +66,7 @@
                 "CMAKE_BUILD_TYPE": "Release",
                 "SW_SHIPPING_BUILD": "ON",
                 "SW_RHI_AS_MODULES": "OFF",
+                "SW_ENABLE_TESTING": "ON",
                 "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/cmake/Modules/Toolchain/Vcpkg",
                 "VCPKG_INSTALLED_DIR": "${sourceDir}/build/vcpkg_installed",
                 "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/Tools/vcpkg/scripts/buildsystems/vcpkg.cmake"

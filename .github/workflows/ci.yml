@@ -28,6 +28,7 @@ jobs:
       run: |
         cmake --build --preset CI-Debug
 
+    # Full ctest: GPU suites may SKIP (not fake-pass) when initialize fails — see TestRHI.
     - name: Test
       run: |
         ctest --test-dir build/CI-Debug --output-on-failure
@@ -79,11 +80,13 @@ jobs:
       run: |
         cmake --preset Ninja-Shipping -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake
 
-    - name: Build App
+    - name: Build App + CoreUtilityTest
       run: |
-        cmake --build --preset Ninja-Shipping --target App
+        cmake --build --preset Ninja-Shipping --target App CoreUtilityTest
 
-    # ModuleSmokeTest is skipped when SW_SHIPPING_BUILD=ON (no MODULE DLLs).
+    - name: Test (NoGPU under Shipping)
+      run: |
+        ctest --test-dir build/Ninja-Shipping -L nogpu --output-on-failure
 
   lint-format:
     runs-on: ubuntu-22.04
@@ -92,10 +95,13 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
+    # Pin clang-format via apt package version when available (Ubuntu 22.04 ships 14.x).
     - name: Install clang-format
       run: |
         sudo apt-get update
-        sudo apt-get install -y clang-format
+        sudo apt-get install -y clang-format-14 || sudo apt-get install -y clang-format
+        (command -v clang-format-14 >/dev/null && sudo ln -sf "$(command -v clang-format-14)" /usr/local/bin/clang-format) || true
+        clang-format --version
 
     - name: Check formatting
       run: |

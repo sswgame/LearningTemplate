@@ -4,6 +4,7 @@
  */
 #include "pch.h"
 #include "ShaderVariant.h"
+#include "Core/Graphics/RHI/RHI.h"
 
 namespace sw
 {
@@ -45,7 +46,7 @@ namespace sw
 		compileDesc._filePath	  = variantKey._shaderPath;
 		compileDesc._entryPoint	  = "VSMain";
 		compileDesc._stage		  = ShaderStage::Vertex;
-		compileDesc._targetFormat = ShaderTargetFormat::DXBC_D3D11;
+		compileDesc._targetFormat = RHI::getShaderTargetFormat( gv_RHIBackend );
 
 		ShaderCompileResult compileResult = ShaderCompiler::compileHLSL( compileDesc );
 		auto [insertedIter, success]	  = _variantCache.try_emplace( key, std::move( compileResult ) );

@@ -58,6 +58,31 @@ namespace sw
 		}
 		_gameObjects.push_back( obj );
 		_mapNameToObject.insert_or_assign( obj->getName(), obj );
+		obj->_ownerManager = this;
+	}
+
+	void GameObjectManager::notifyNameChanged( GameObject* obj, hashed_string oldName, hashed_string newName )
+	{
+		if ( obj == nullptr )
+			return;
+
+		std::lock_guard<std::mutex> lock{ _mutex };
+		if ( _mapIdToObject.find( obj->getObjectId() ) == _mapIdToObject.end() )
+			return;
+
+		auto oldIt = _mapNameToObject.find( oldName );
+		if ( oldIt != _mapNameToObject.end() && oldIt->second == obj )
+			_mapNameToObject.erase( oldIt );
+
+		_mapNameToObject.insert_or_assign( newName, obj );
+	}
+
+	bool GameObjectManager::renameGameObject( GameObject* obj, hashed_string newName )
+	{
+		if ( obj == nullptr )
+			return false;
+		obj->setName( newName );
+		return true;
 	}
 
 	GameObject* GameObjectManager::findGameObjectByName( hashed_string name ) const
@@ -112,7 +137,7 @@ namespace sw
 
 			for ( Component* comp : obj->getAllComponents() )
 			{
-				SceneComponent* sceneComp = dynamic_cast<SceneComponent*>( comp );
+				SceneComponent* sceneComp = comp != nullptr ? comp->asSceneComponent() : nullptr;
 				if ( sceneComp != nullptr && sceneComp->getParent() == nullptr )
 					roots.push_back( sceneComp );
 			}
@@ -228,6 +253,7 @@ namespace sw
 					}
 					_mapNameToObject.erase( obj->getName() );
 					_mapIdToObject.erase( obj->getObjectId() );
+					obj->_ownerManager = nullptr;
 				}
 				delete obj;
 			}
@@ -245,6 +271,7 @@ namespace sw
 		{
 			if ( obj != nullptr )
 			{
+				obj->_ownerManager = nullptr;
 				delete obj;
 			}
 		}

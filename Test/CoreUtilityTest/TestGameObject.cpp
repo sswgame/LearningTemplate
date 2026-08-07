@@ -132,6 +132,7 @@ SW_TEST_CASE( GameObjectTest, ReflectionSupport )
 
 #include "Core/Object/SceneComponent.h"
 #include "Core/Object/TagSystem.h"
+#include "Core/Utility/Math/MathUtil.h"
 
 using namespace sw;
 
@@ -139,14 +140,19 @@ SW_TEST_CASE( TagSystemTest, IntegerLiteralAndHierarchicalSubsumption )
 {
 	constexpr TagID tagAttacking = "State.Combat.Attacking"_tag;
 	constexpr TagID tagCombat	 = "State.Combat"_tag;
+	constexpr TagID tagState	 = "State"_tag;
 
 	SW_EXPECT_TRUE( tagAttacking.isValid() );
 	SW_EXPECT_TRUE( tagCombat.isValid() );
 
 	SW_EXPECT_TRUE( tagAttacking.isSubtagOf( tagCombat ) );
+	SW_EXPECT_TRUE( tagAttacking.isSubtagOf( tagState ) ); // full parent chain
+	SW_EXPECT_TRUE( tagCombat.isSubtagOf( tagState ) );
+	SW_EXPECT_FALSE( tagState.isSubtagOf( tagAttacking ) );
 
 	TagContainer container{ tagAttacking };
 	SW_EXPECT_TRUE( container.hasTag( tagAttacking, true ) );
+	SW_EXPECT_TRUE( container.hasTag( tagState, false ) );
 
 	TagContainer required{ tagAttacking };
 	TagContainer forbidden{ "State.Dead"_tag };
@@ -198,6 +204,41 @@ SW_TEST_CASE( SceneComponentTest, ParentChildHierarchyAndDirtyPropagation )
 
 	childWorldMat = childComp->getWorldMatrix();
 	SW_EXPECT_NEAR_EQUAL( 25.0f, childWorldMat._41, 1e-4f );
+}
+
+SW_TEST_CASE( SceneComponentTest, ParentRotationScalePropagatesToChild )
+{
+	GameObject actor( hashed_string( "RotatedScaledHierarchy" ) );
+
+	SceneComponent* parentComp = actor.addComponent<SceneComponent>();
+	SceneComponent* childComp  = actor.addComponent<SceneComponent>();
+
+	// 90 deg yaw: local +X becomes world -Z (right-handed Y-up).
+	parentComp->setLocalPosition( float3( 10.0f, 0.0f, 0.0f ) );
+	parentComp->setLocalRotation( float3( 0.0f, MathUtil::HalfPi, 0.0f ) );
+	parentComp->setLocalScale( float3( 2.0f, 2.0f, 2.0f ) );
+
+	childComp->setLocalPosition( float3( 1.0f, 0.0f, 0.0f ) );
+	SW_ASSERT_TRUE( childComp->attachToComponent( parentComp ) );
+
+	const float3 childWorldPos = childComp->getWorldPosition();
+	SW_EXPECT_NEAR_EQUAL( 10.0f, childWorldPos._x, 1e-3f );
+	SW_EXPECT_NEAR_EQUAL( 0.0f, childWorldPos._y, 1e-3f );
+	SW_EXPECT_NEAR_EQUAL( -2.0f, childWorldPos._z, 1e-3f ); // scaled 1 * 2, then yaw 90
+
+	const float4x4 childWorldMat = childComp->getWorldMatrix();
+	SW_EXPECT_NEAR_EQUAL( childWorldPos._x, childWorldMat._41, 1e-3f );
+	SW_EXPECT_NEAR_EQUAL( childWorldPos._y, childWorldMat._42, 1e-3f );
+	SW_EXPECT_NEAR_EQUAL( childWorldPos._z, childWorldMat._43, 1e-3f );
+
+	const double3 cameraPos( 10.0, 0.0, 0.0 );
+	const float4x4 cameraRel = childComp->getCameraRelativeWorldMatrix( cameraPos );
+	SW_EXPECT_NEAR_EQUAL( 0.0f, cameraRel._41, 1e-3f );
+	SW_EXPECT_NEAR_EQUAL( 0.0f, cameraRel._42, 1e-3f );
+	SW_EXPECT_NEAR_EQUAL( -2.0f, cameraRel._43, 1e-3f );
+	// Hierarchy scale should remain in the camera-relative matrix (not identity upper 3x3).
+	const float3 camScale = cameraRel.getScale();
+	SW_EXPECT_NEAR_EQUAL( 2.0f, camScale._x, 1e-3f );
 }
 
 SW_TEST_CASE( SceneComponentTest, LargeWorldCoordinatesAndCameraRelativeRendering )
@@ -267,13 +308,17 @@ SW_TEST_CASE( GameObjectManagerTest, CreationSearchAndDeferredDestruction )
 	SW_EXPECT_EQUAL( enemy, manager.findGameObjectById( enemy->getObjectId() ) );
 	SW_EXPECT_NULL( manager.findGameObjectByName( hashed_string( "Missing" ) ) );
 
+	hero->setName( hashed_string( "HeroRenamed" ) );
+	SW_EXPECT_NULL( manager.findGameObjectByName( hashed_string( "Hero" ) ) );
+	SW_EXPECT_EQUAL( hero, manager.findGameObjectByName( hashed_string( "HeroRenamed" ) ) );
+
 	manager.destroyObjectDeferred( enemy );
 	SW_EXPECT_EQUAL( size_t( 2 ), manager.getAllGameObjects().size() );
 	manager.processDeferredDestruction();
 
 	SW_EXPECT_EQUAL( size_t( 1 ), manager.getAllGameObjects().size() );
 	SW_EXPECT_NULL( manager.findGameObjectByName( hashed_string( "Enemy" ) ) );
-	SW_EXPECT_NOT_NULL( manager.findGameObjectByName( hashed_string( "Hero" ) ) );
+	SW_EXPECT_NOT_NULL( manager.findGameObjectByName( hashed_string( "HeroRenamed" ) ) );
 
 	manager.clear();
 	SW_EXPECT_EQUAL( size_t( 0 ), manager.getAllGameObjects().size() );

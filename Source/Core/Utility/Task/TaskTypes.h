@@ -44,6 +44,28 @@ namespace sw
 		{
 			if ( auto* p = std::any_cast<T>( &_value ) )
 				return *p;
+
+			// Integer literals often land as `int` in std::any; coerce common widths.
+			if constexpr ( std::is_integral_v<T> && !std::is_same_v<T, bool> )
+			{
+				if ( auto* p = std::any_cast<int>( &_value ) )
+					return static_cast<T>( *p );
+				if ( auto* p = std::any_cast<long>( &_value ) )
+					return static_cast<T>( *p );
+				if ( auto* p = std::any_cast<long long>( &_value ) )
+					return static_cast<T>( *p );
+				if ( auto* p = std::any_cast<unsigned>( &_value ) )
+					return static_cast<T>( *p );
+				if ( auto* p = std::any_cast<unsigned long long>( &_value ) )
+					return static_cast<T>( *p );
+			}
+			if constexpr ( std::is_floating_point_v<T> )
+			{
+				if ( auto* p = std::any_cast<float>( &_value ) )
+					return static_cast<T>( *p );
+				if ( auto* p = std::any_cast<double>( &_value ) )
+					return static_cast<T>( *p );
+			}
 			return defaultValue;
 		}
 
@@ -59,15 +81,21 @@ namespace sw
 	{
 	public:
 		TaskArgs() = default;
-		TaskArgs( std::initializer_list<TaskValue> values )
-			: _values{ values.begin(), values.end() }
-		{
-		}
 
+		/**
+		 * @brief Pack one or more typed arguments.
+		 * @note Prefer `args.add( int32{ n } )` or `TaskArgs( int32{ n } )` over `TaskArgs{ n }`:
+		 *       braced-init can bind to initializer_list and surprise integer typing.
+		 */
 		template <typename... Args, typename = std::enable_if_t<( sizeof...( Args ) > 0 )>>
 		explicit TaskArgs( Args&&... args )
 		{
 			( _values.emplace_back( std::forward<Args>( args ) ), ... );
+		}
+
+		TaskArgs( std::initializer_list<TaskValue> values )
+			: _values{ values.begin(), values.end() }
+		{
 		}
 
 		/**

@@ -19,7 +19,7 @@ namespace sw
 	public:
 		/** @brief frameLatency 프레임 뒤 해제를 수행하는 큐를 만듭니다. */
 		explicit RHIReleaseQueue( uint32 frameLatency = 3 );
-		~RHIReleaseQueue() = default;
+		~RHIReleaseQueue();
 
 		/** @brief GPU 리소스 해제 콜백을 지연 큐에 넣습니다. */
 		void enqueueRelease( const RHIResourceReleaseDelegate& releaseDelegate );

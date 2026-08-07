@@ -14,11 +14,19 @@ namespace sw::tool
 	{
 		std::string name;
 		std::string typeName;
+		std::string alias;
 		bool		isContainer	  = false;
 		std::string containerKind = "None";
 		std::string containerType;
 		std::string elementTypeName;
 		std::string keyTypeName;
+	};
+
+	struct ParsedFunctionInfo
+	{
+		std::string				 name;
+		std::string				 returnTypeName;
+		std::vector<std::string> paramTypeNames;
 	};
 
 	struct ParsedTypeInfo
@@ -27,6 +35,7 @@ namespace sw::tool
 		std::string						fullyQualifiedName;
 		std::string						parentFQN;
 		std::vector<ParsedPropertyInfo> properties;
+		std::vector<ParsedFunctionInfo> methods;
 	};
 
 	struct ParsedEnumeratorInfo

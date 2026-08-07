@@ -41,9 +41,6 @@ namespace sw
 		/** @brief 모듈·RHI·매니저를 종료합니다. */
 		void shutdown();
 
-		/** @brief 레거시: soft recreate로 대체되어 항상 false */
-		bool shouldRestartForBackendChange() const { return false; }
-
 	private:
 		/** @brief 로거·커맨드라인·태스크 등 코어 매니저를 생성·바인딩합니다. */
 		bool initializeSubsystems( int argc, char* argv[] );
@@ -68,7 +65,7 @@ namespace sw
 		/** @brief fillGameAPI로 함수 테이블을 채우고 게임을 생성합니다. */
 		bool bindGameAPI( void* hLibraryModule );
 		/** @brief Game View용 오프스크린 렌더 타깃을 생성합니다. */
-		bool createGameViewportTexture();
+		bool createGameViewportTexture( uint32 width = 1280, uint32 height = 720 );
 		/** @brief 대기 중인 RHI 백엔드 변경을 soft recreate로 적용합니다. */
 		bool applyPendingBackendChange();
 

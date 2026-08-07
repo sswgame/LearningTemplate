@@ -19,6 +19,10 @@ SW_TEST_CASE( TagSystemTest, ParentHashOnHierarchicalLiteral )
 	SW_EXPECT_FALSE( root.isSubtagOf( child ) );
 	SW_EXPECT_FALSE( child.isSubtagOf( sibling ) );
 	SW_EXPECT_TRUE( child != sibling );
+
+	constexpr TagID deep = "Faction.Player.Scout"_tag;
+	SW_EXPECT_TRUE( deep.isSubtagOf( child ) );
+	SW_EXPECT_TRUE( deep.isSubtagOf( root ) );
 }
 
 SW_TEST_CASE( TagSystemTest, ExactVsSubsumptionMatch )

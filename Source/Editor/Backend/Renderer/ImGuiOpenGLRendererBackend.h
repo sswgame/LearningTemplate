@@ -9,6 +9,7 @@
 namespace sw
 {
 	class IRHIDevice;
+	class OpenGLRHIDevice;
 
 	class ImGuiOpenGLRendererBackend : public IImGuiRendererBackend
 	{
@@ -25,6 +26,10 @@ namespace sw
 		/** @brief ImGui draw data를 OpenGL로 그립니다. */
 		void render( IRHIDevice* rhiDevice ) override;
 
-		void* registerTexture( RHITextureHandle /*texture*/ ) override { return nullptr; }
+		/** @brief RHI 텍스처 핸들을 ImGui ImTextureID(GLuint)로 등록합니다. */
+		void* registerTexture( RHITextureHandle texture ) override;
+
+	private:
+		OpenGLRHIDevice* _glDevice = nullptr;
 	};
 } // namespace sw

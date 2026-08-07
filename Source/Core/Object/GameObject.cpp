@@ -10,6 +10,40 @@
 #include "Core/Game/Scene/SceneManager.h"
 namespace sw
 {
+	namespace
+	{
+		std::string stripTypeidNameToShortClassName( const char* typeIdName )
+		{
+			if ( typeIdName == nullptr || typeIdName[0] == '\0' )
+				return {};
+
+			std::string_view name( typeIdName );
+
+			auto stripPrefix = [&]( std::string_view prefix )
+			{
+				if ( name.size() >= prefix.size() && name.substr( 0, prefix.size() ) == prefix )
+					name.remove_prefix( prefix.size() );
+			};
+
+			// Longer prefixes first (MSVC unmangled names).
+			stripPrefix( "enum class " );
+			stripPrefix( "class " );
+			stripPrefix( "struct " );
+			stripPrefix( "enum " );
+
+			const size_t lastColon = name.rfind( ':' );
+			if ( lastColon != std::string_view::npos )
+				name.remove_prefix( lastColon + 1 );
+
+			return std::string( name );
+		}
+	} // namespace
+
+	hashed_string GameObject::makeComponentTypeKeyFromTypeidName( const char* typeIdName )
+	{
+		return hashed_string( stripTypeidNameToShortClassName( typeIdName ).c_str() );
+	}
+
 	uint64 GameObject::_s_nextObjectId = 1;
 
 	GameObject::GameObject()
@@ -61,12 +95,7 @@ namespace sw
 
 		if ( _bIsTickOrderDirty != 0 )
 		{
-			std::sort( _flatComponents.begin(), _flatComponents.end(), []( const Component* a, const Component* b )
-			{
-				if ( a == nullptr || b == nullptr )
-					return false;
-				return static_cast<uint8>( a->getTickGroup() ) < static_cast<uint8>( b->getTickGroup() );
-			} );
+			sortComponentsByTickOrder( _flatComponents );
 			_bIsTickOrderDirty = 0;
 		}
 
@@ -93,6 +122,17 @@ namespace sw
 	void GameObject::onPropertyChanged( hashed_string propertyName )
 	{
 		(void)propertyName;
+	}
+
+	void GameObject::setName( hashed_string name )
+	{
+		if ( name == _name )
+			return;
+
+		const hashed_string oldName = _name;
+		_name						= name;
+		if ( _ownerManager != nullptr )
+			_ownerManager->notifyNameChanged( this, oldName, name );
 	}
 
 	void GameObject::setActive( bool bActive )

@@ -7,8 +7,9 @@
 
 - Shipping (`SW_SHIPPING_BUILD=ON`) forces `SW_RHI_AS_MODULES=OFF` (DX linked into Core).
 - clangd compile DB: `build/Ninja-Debug`.
+- Runtime binaries: `build/<preset>/Bin` (not a shared `build/Bin`).
 - Core runs `sw_add_reflection_step` for Object headers; VK/GL stay Core-linked.
-- LiveReload loads the new shadow DLL before freeing the old handle.
+- LiveReload loads the new shadow DLL before freeing the old handle (mtime auto-reload debounced).
 
 ---
 

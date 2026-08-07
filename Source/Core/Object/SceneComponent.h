@@ -26,6 +26,9 @@ namespace sw
 
 		const TypeInfo* getTypeInfo() const override;
 
+		SceneComponent*		  asSceneComponent() override { return this; }
+		const SceneComponent* asSceneComponent() const override { return this; }
+
 		/** @brief 로컬 위치 설정 */
 		void setLocalPosition( const float3& pos );
 		/** @brief 로컬 위치 반환 */
@@ -51,15 +54,15 @@ namespace sw
 		double3 getWorldPositionLWC() const;
 
 		/**
-		 * @brief 계층 번역만 합성한 4x4 월드 행렬(캐시)
-		 * @details 현재 구현은 translation만 포함합니다. 회전·스케일은 getCameraRelativeWorldMatrix를 사용하세요.
-		 *          병렬 tick 구간(beginParallelTransformReadOnly)에서는 캐시만 반환합니다.
+		 * @brief 계층 TRS를 합성한 4x4 월드 행렬(캐시)
+		 * @details localTRS * parentWorld (row-vector). 병렬 tick 구간에서는 캐시만 반환합니다.
 		 */
 		float4x4 getWorldMatrix() const;
 
 		/**
-		 * @brief 카메라 기준 상대 위치 + 로컬 회전·스케일 행렬
+		 * @brief 카메라 기준 상대 위치 + 계층 월드 회전·스케일 행렬
 		 * @param cameraWorldPos 카메라 월드 위치(LWC)
+		 * @details 위치는 (worldLWC - camera)를 float로 내린 값, 회전/스케일은 계층 월드 포즈를 사용합니다.
 		 */
 		float4x4 getCameraRelativeWorldMatrix( const double3& cameraWorldPos ) const;
 
@@ -93,7 +96,7 @@ namespace sw
 		static bool isParallelTransformReadOnly();
 
 	protected:
-		mutable float4x4 _cachedWorldMatrix{ float4x4::Identity }; ///< 캐시된 번역-only 월드 행렬
+		mutable float4x4 _cachedWorldMatrix{ float4x4::Identity }; ///< 캐시된 계층 TRS 월드 행렬
 		mutable double3	 _cachedWorldPositionLWC{ 0.0, 0.0, 0.0 }; ///< 캐시된 double 누적 월드 위치
 
 		float3 _localPosition{ 0.0f, 0.0f, 0.0f }; ///< 로컬 X, Y, Z 오프셋

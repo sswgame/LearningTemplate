@@ -8,6 +8,7 @@
 SW_DEFINE_MODULE_REGISTRAR_HEAD( swEditorGvmHead, ::sw::GlobalVariableRegistrar );
 SW_DEFINE_MODULE_REGISTRAR_HEAD( swEditorTypeHead, ::sw::TypeRegistrar );
 SW_DEFINE_MODULE_REGISTRAR_HEAD( swEditorEnumHead, ::sw::EnumRegistrar );
+SW_DEFINE_MODULE_REGISTRAR_HEAD( swEditorComponentFactoryHead, ::sw::ComponentFactoryRegistrar );
 
 #include "Runtime/EditorAPI.h"
 #include "Runtime/EditorUIContext.h"
@@ -15,6 +16,7 @@ SW_DEFINE_MODULE_REGISTRAR_HEAD( swEditorEnumHead, ::sw::EnumRegistrar );
 #include "Core/Common/CoreServices.h"
 #include "Core/Utility/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Reflection/ReflectionCore.h"
+#include "Core/Object/ComponentManager.h"
 #include "Core/Window/IWindow.h"
 #include "Core/Window/NativeWindowEvent.h"
 #include "Core/Graphics/RHI/IRHIDevice.h"
@@ -25,6 +27,7 @@ namespace
 	{
 		sw::getGlobalVariableManager().registerPendingVariables( "EditorModule", swEditorGvmHead() );
 		sw::getTypeRegistry().registerPendingTypes( "EditorModule", swEditorTypeHead(), swEditorEnumHead() );
+		sw::getComponentManager().registerPendingFactories( swEditorComponentFactoryHead() );
 		return static_cast<sw::EditorHandle>( new sw::ImGuiEditor() );
 	}
 

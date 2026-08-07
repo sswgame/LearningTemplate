@@ -5,13 +5,13 @@
             "name": "App (CodeLLDB)",
             "type": "lldb",
             "request": "launch",
-            "program": "${workspaceFolder}/build/Bin/App.exe",
+            "program": "${workspaceFolder}/build/Ninja-Debug/Bin/App.exe",
             "args": [
                 "-dx12"
             ],
             "cwd": "${workspaceFolder}",
             "env": {
-                "PATH": "${workspaceFolder}/build/Bin;${workspaceFolder}/build/vcpkg_installed/x64-windows/debug/bin;${workspaceFolder}/build/vcpkg_installed/x64-windows/bin;${env:PATH}"
+                "PATH": "${workspaceFolder}/build/Ninja-Debug/Bin;${workspaceFolder}/build/vcpkg_installed/x64-windows/debug/bin;${workspaceFolder}/build/vcpkg_installed/x64-windows/bin;${env:PATH}"
             },
             "terminal": "integrated",
             "sourceLanguages": [
@@ -23,14 +23,14 @@
             "name": "App + Editor (CodeLLDB)",
             "type": "lldb",
             "request": "launch",
-            "program": "${workspaceFolder}/build/Bin/App.exe",
+            "program": "${workspaceFolder}/build/Ninja-Debug/Bin/App.exe",
             "args": [
                 "-dx12",
                 "-EnableEditor"
             ],
             "cwd": "${workspaceFolder}",
             "env": {
-                "PATH": "${workspaceFolder}/build/Bin;${workspaceFolder}/build/vcpkg_installed/x64-windows/debug/bin;${workspaceFolder}/build/vcpkg_installed/x64-windows/bin;${env:PATH}"
+                "PATH": "${workspaceFolder}/build/Ninja-Debug/Bin;${workspaceFolder}/build/vcpkg_installed/x64-windows/debug/bin;${workspaceFolder}/build/vcpkg_installed/x64-windows/bin;${env:PATH}"
             },
             "terminal": "integrated",
             "sourceLanguages": [
@@ -42,7 +42,7 @@
             "name": "Attach App (CodeLLDB)",
             "type": "lldb",
             "request": "attach",
-            "program": "${workspaceFolder}/build/Bin/App.exe",
+            "program": "${workspaceFolder}/build/Ninja-Debug/Bin/App.exe",
             "pid": "${command:pickProcess}",
             "sourceLanguages": [
                 "cpp"

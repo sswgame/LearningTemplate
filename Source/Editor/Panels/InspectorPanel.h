@@ -1,25 +1,42 @@
 #pragma once
 /**
  * @file InspectorPanel.h
- * @brief RHI·엔진·머티리얼 속성 검사기 패널
+ * @brief 선택 GameObject/Component 리플렉션 인스펙터 + 엔진/머티리얼 섹션
  */
 #include "Panels/IEditorPanel.h"
+#include "Core/Common/Types.h"
 
 namespace sw
 {
 	class Material;
 	class IRHIDevice;
+	class GameObject;
+	class Component;
+	struct TypeInfo;
+	struct PropertyInfo;
+	struct FunctionInfo;
 
-	/** @brief 선택 리소스/머티리얼 속성을 검사·편집하는 패널 */
+	/** @brief Outliner 선택 대상의 속성·메서드를 검사·편집하는 패널 */
 	class InspectorPanel : public IEditorPanel
 	{
 	public:
-		const char* getWindowTitle() const override { return "RHI & Engine Inspector"; }
-		/** @brief 인스펙터 UI를 그립니다. */
-		void draw( const EditorUIContext& ctx ) override;
+		const char* getWindowTitle() const override { return "Inspector"; }
+		void		draw( const EditorUIContext& ctx ) override;
 
 	private:
-		/** @brief Material 파라미터 UI를 그립니다. */
+		void drawEngineSection( const EditorUIContext& ctx );
+		void drawSelectionSection();
+		void drawGameObjectHeader( GameObject* obj );
+		void drawComponentSection( Component* comp );
+		void drawTypeProperties( void* instance, const TypeInfo* typeInfo );
+		void drawPropertyWidget( void* instance, const PropertyInfo& prop );
+		void drawTypeMethods( void* instance, const TypeInfo* typeInfo );
+		void drawSceneComponentExtras( class SceneComponent* sceneComp );
 		void renderMaterialUI( Material* material, IRHIDevice* rhiDevice );
+
+		// Scratch buffers for FUNCTION() arg editing (panel-local).
+		int32	_argInt[8]{};
+		float32 _argFloat[8]{};
+		bool	_argBool[8]{};
 	};
 } // namespace sw

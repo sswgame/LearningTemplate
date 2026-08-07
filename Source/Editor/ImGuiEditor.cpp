@@ -15,6 +15,7 @@
 #include "Panels/GameViewPanel.h"
 #include "Panels/GlobalVariablesPanel.h"
 #include "Panels/InspectorPanel.h"
+#include "Panels/OutlinerPanel.h"
 #include "Panels/ResourceBrowserPanel.h"
 #include "Core/Graphics/RHI/IRHIDevice.h"
 #include "Core/Graphics/RHI/RHICapabilities.h"
@@ -42,6 +43,7 @@ namespace sw
 	void ImGuiEditor::registerDefaultPanels()
 	{
 		_panels.clear();
+		_panels.push_back( std::make_unique<OutlinerPanel>() );
 		_panels.push_back( std::make_unique<InspectorPanel>() );
 		_panels.push_back( std::make_unique<GlobalVariablesPanel>() );
 		_panels.push_back( std::make_unique<GameToolbarPanel>() );
@@ -312,7 +314,8 @@ namespace sw
 		ImGui::DockBuilderSplitNode( dockMain, ImGuiDir_Up, 0.06f, &dockTop, &dockMain );
 		ImGui::DockBuilderSplitNode( dockRight, ImGuiDir_Down, 0.45f, &dockRightBot, &dockRight );
 
-		ImGui::DockBuilderDockWindow( "RHI & Engine Inspector", dockLeft );
+		ImGui::DockBuilderDockWindow( "Hierarchy", dockLeft );
+		ImGui::DockBuilderDockWindow( "Inspector", dockLeft );
 		ImGui::DockBuilderDockWindow( "Global Variables Control", dockLeft );
 		ImGui::DockBuilderDockWindow( "Game Toolbar", dockTop );
 		ImGui::DockBuilderDockWindow( "Game View", dockMain );
@@ -335,7 +338,7 @@ namespace sw
 
 		const ImGuiViewport* viewport	 = ImGui::GetMainViewport();
 		const ImGuiID		 dockspaceId = ImGui::DockSpaceOverViewport(
-			   ImGui::GetID( "EditorMainDockSpace_v4" ), viewport, ImGuiDockNodeFlags_PassthruCentralNode );
+			   ImGui::GetID( "EditorMainDockSpace_v5" ), viewport, ImGuiDockNodeFlags_PassthruCentralNode );
 
 		if ( _bDockLayoutApplied == false )
 		{

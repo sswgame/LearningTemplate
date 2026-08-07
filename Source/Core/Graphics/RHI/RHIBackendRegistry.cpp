@@ -106,12 +106,29 @@ namespace sw
 
 	void RHIBackendRegistry::unloadModules()
 	{
-		for ( void* handle : _loadedModuleHandles )
+		if ( _loadedModules.empty() )
+			return;
+
+		// Clear factories before FreeLibrary so create() cannot dispatch into unloaded code.
+		// Devices from these factories must already be destroyed (see RHI::shutdown).
+		for ( const LoadedModule& module : _loadedModules )
 		{
-			if ( handle != nullptr )
-				FileUtil::freeDynamicLibrary( handle );
+			for ( RHIBackendEntry& entry : _entries )
+			{
+				if ( entry._backend == module._backend )
+				{
+					entry._factory = {};
+					break;
+				}
+			}
 		}
-		_loadedModuleHandles.clear();
+
+		for ( const LoadedModule& module : _loadedModules )
+		{
+			if ( module._handle != nullptr )
+				FileUtil::freeDynamicLibrary( module._handle );
+		}
+		_loadedModules.clear();
 	}
 
 	void RHIBackendRegistry::registerBackend( RHIBackend backend, const RHIDeviceFactoryDelegate& factory, const RHICapabilities& caps )
@@ -178,7 +195,7 @@ namespace sw
 		} );
 
 		registerBackend( backend, factory, RHIAvailability::query( backend ) );
-		_loadedModuleHandles.push_back( handle );
+		_loadedModules.push_back( LoadedModule{ backend, handle } );
 
 		SW_LOG_INFO( "[RHIBackendRegistry] Loaded module %# for backend %#", modulePath, static_cast<int32>( backend ) );
 		return true;

@@ -12,6 +12,48 @@ namespace sw
 	{
 		// Mutated only on the main thread around parallel tick barriers.
 		bool s_bParallelTransformReadOnly = false;
+
+		float4x4 makeLocalTRS( const float3& position, const float3& rotation, const float3& scale )
+		{
+			// Row-vector DX style: Scale * Rotation * Translation
+			return float4x4::createScale( scale ) *
+				   float4x4::createFromYawPitchRoll( rotation._y, rotation._x, rotation._z ) *
+				   float4x4::createTranslation( position );
+		}
+
+		void composeWorldFromParent( const float3& localPosition,
+									 const float3& localRotation,
+									 const float3& localScale,
+									 const SceneComponent* parent,
+									 const float4x4&	   parentWorldMatrix,
+									 const double3&		   parentWorldLWC,
+									 float4x4&			   outWorldMatrix,
+									 double3&			   outWorldLWC,
+									 float3&			   outWorldPos )
+		{
+			const float4x4 localTRS = makeLocalTRS( localPosition, localRotation, localScale );
+
+			if ( parent != nullptr )
+			{
+				outWorldMatrix = localTRS * parentWorldMatrix;
+				// LWC: parent double position + local offset transformed by parent rot/scale (no parent translation).
+				const float3 offset = float3::transformNormal( localPosition, parentWorldMatrix );
+				outWorldLWC			= parentWorldLWC + double3( static_cast<float64>( offset._x ),
+																static_cast<float64>( offset._y ),
+																static_cast<float64>( offset._z ) );
+			}
+			else
+			{
+				outWorldMatrix = localTRS;
+				outWorldLWC	   = double3( static_cast<float64>( localPosition._x ),
+										  static_cast<float64>( localPosition._y ),
+										  static_cast<float64>( localPosition._z ) );
+			}
+
+			outWorldPos = float3( static_cast<float32>( outWorldLWC._x ),
+								  static_cast<float32>( outWorldLWC._y ),
+								  static_cast<float32>( outWorldLWC._z ) );
+		}
 	} // namespace
 
 	void SceneComponent::beginParallelTransformReadOnly()
@@ -92,24 +134,17 @@ namespace sw
 
 	void SceneComponent::updateWorldTransformFromParent()
 	{
-		const float4x4 localTrans = float4x4::createTranslation( _localPosition );
-		const double3  localPos64( static_cast<float64>( _localPosition._x ),
-								   static_cast<float64>( _localPosition._y ),
-								   static_cast<float64>( _localPosition._z ) );
-
 		if ( _parent != nullptr )
 		{
-			_cachedWorldMatrix		= localTrans * _parent->_cachedWorldMatrix;
-			_cachedWorldPositionLWC = _parent->_cachedWorldPositionLWC + localPos64;
-			_cachedWorldPosition	= float3( static_cast<float32>( _cachedWorldPositionLWC._x ),
-											  static_cast<float32>( _cachedWorldPositionLWC._y ),
-											  static_cast<float32>( _cachedWorldPositionLWC._z ) );
+			composeWorldFromParent( _localPosition, _localRotation, _localScale, _parent,
+									_parent->_cachedWorldMatrix, _parent->_cachedWorldPositionLWC,
+									_cachedWorldMatrix, _cachedWorldPositionLWC, _cachedWorldPosition );
 		}
 		else
 		{
-			_cachedWorldMatrix		= localTrans;
-			_cachedWorldPositionLWC = localPos64;
-			_cachedWorldPosition	= _localPosition;
+			composeWorldFromParent( _localPosition, _localRotation, _localScale, nullptr,
+									float4x4::Identity, double3( 0.0, 0.0, 0.0 ),
+									_cachedWorldMatrix, _cachedWorldPositionLWC, _cachedWorldPosition );
 		}
 		_bIsTransformDirty = 0;
 	}
@@ -139,24 +174,19 @@ namespace sw
 
 		if ( _bIsTransformDirty != 0 )
 		{
-			float4x4 localTrans = float4x4::createTranslation( _localPosition );
-			double3	 localPos64( static_cast<float64>( _localPosition._x ),
-								 static_cast<float64>( _localPosition._y ),
-								 static_cast<float64>( _localPosition._z ) );
-
 			if ( _parent != nullptr )
 			{
-				_cachedWorldMatrix		= localTrans * _parent->getWorldMatrix();
-				_cachedWorldPositionLWC = _parent->getWorldPositionLWC() + localPos64;
-				_cachedWorldPosition	= float3( static_cast<float32>( _cachedWorldPositionLWC._x ),
-												  static_cast<float32>( _cachedWorldPositionLWC._y ),
-												  static_cast<float32>( _cachedWorldPositionLWC._z ) );
+				const float4x4 parentWorld = _parent->getWorldMatrix();
+				const double3  parentLWC   = _parent->getWorldPositionLWC();
+				composeWorldFromParent( _localPosition, _localRotation, _localScale, _parent,
+										parentWorld, parentLWC,
+										_cachedWorldMatrix, _cachedWorldPositionLWC, _cachedWorldPosition );
 			}
 			else
 			{
-				_cachedWorldMatrix		= localTrans;
-				_cachedWorldPositionLWC = localPos64;
-				_cachedWorldPosition	= _localPosition;
+				composeWorldFromParent( _localPosition, _localRotation, _localScale, nullptr,
+										float4x4::Identity, double3( 0.0, 0.0, 0.0 ),
+										_cachedWorldMatrix, _cachedWorldPositionLWC, _cachedWorldPosition );
 			}
 			_bIsTransformDirty = 0;
 		}
@@ -165,15 +195,15 @@ namespace sw
 
 	float4x4 SceneComponent::getCameraRelativeWorldMatrix( const double3& cameraWorldPos ) const
 	{
-		double3 relativePos64 = getWorldPositionLWC() - cameraWorldPos;
-		float3	relativePos32( static_cast<float32>( relativePos64._x ),
-							   static_cast<float32>( relativePos64._y ),
-							   static_cast<float32>( relativePos64._z ) );
+		const float4x4 worldMat		  = getWorldMatrix();
+		const double3  relativePos64  = getWorldPositionLWC() - cameraWorldPos;
+		const float3   relativePos32( static_cast<float32>( relativePos64._x ),
+									  static_cast<float32>( relativePos64._y ),
+									  static_cast<float32>( relativePos64._z ) );
 
-		float4x4 rotScaleMat = float4x4::createScale( _localScale ) *
-							   float4x4::createFromYawPitchRoll( _localRotation._y, _localRotation._x, _localRotation._z );
-
-		return rotScaleMat * float4x4::createTranslation( relativePos32 );
+		float4x4 cameraRel = worldMat;
+		cameraRel.setTranslation( relativePos32 );
+		return cameraRel;
 	}
 
 	bool SceneComponent::attachToComponent( SceneComponent* parent )

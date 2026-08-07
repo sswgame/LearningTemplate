@@ -39,8 +39,11 @@ namespace sw
 		/** @brief 백엔드 타입 반환 (OpenGL) */
 		RHIBackend getBackendType() const override { return RHIBackend::OpenGL; }
 
-		/** @brief OpenGL은 SSBO/UBO 인덱스 바인딩을 지원함 (true 반환) */
-		bool supportsBindless() const override { return true; }
+		/** @brief Bindless stub — not implemented for OpenGL */
+		bool supportsBindless() const override { return false; }
+
+		/** @brief RHI 텍스처 핸들에 대응하는 GL texture name (없으면 0) */
+		uint32 getGLTextureName( RHITextureHandle texture ) const;
 
 		/** @brief 백엔드 이름 문자열 반환 */
 		virtual const utf8* getBackendName() const override { return "OpenGL (glad 4.6 Core)"; }

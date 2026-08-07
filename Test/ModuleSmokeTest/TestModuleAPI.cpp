@@ -1,14 +1,33 @@
 /**
  * @file TestModuleAPI.cpp
- * @brief Dev MODULE DLL 의 fillGameAPI / fillEditorAPI 로드 스모크
+ * @brief Dev MODULE DLL / Shipping STATIC fillGameAPI (및 Dev Editor) 스모크
  */
 #include "TestFramework.h"
 
-#include "Core/Utility/File/FileUtil.h"
 #include "Runtime/EditorAPI.h"
 #include "Runtime/GameAPI.h"
 
-#if !defined( SW_SHIPPING )
+#if defined( SW_SHIPPING )
+
+SW_TEST_CASE( ModuleAPI, FillGameAPI_ShippingStatic )
+{
+	sw::GameAPI api{};
+	SW_EXPECT_TRUE( fillGameAPI( &api ) );
+	SW_EXPECT_TRUE( api.create != nullptr );
+	SW_EXPECT_TRUE( api.destroy != nullptr );
+	SW_EXPECT_TRUE( api.initialize != nullptr );
+	SW_EXPECT_TRUE( api.shutdown != nullptr );
+	SW_EXPECT_TRUE( api.update != nullptr );
+
+	sw::GameHandle game = api.create();
+	SW_EXPECT_TRUE( game != nullptr );
+	if ( game != nullptr )
+		api.destroy( game );
+}
+
+#else
+
+#include "Core/Utility/File/FileUtil.h"
 
 namespace
 {
@@ -92,4 +111,4 @@ SW_TEST_CASE( ModuleAPI, FillEditorAPI )
 	sw::FileUtil::freeDynamicLibrary( handle );
 }
 
-#endif // !SW_SHIPPING
+#endif // SW_SHIPPING

@@ -42,6 +42,7 @@ namespace sw
 
 	LiveReloadManager::ModuleContext::ModuleContext() noexcept
 		: _bPendingReload{ 0 }
+		, _bMtimeDebouncing{ 0 }
 		, _reserved{ 0 }
 	{
 	}
@@ -181,25 +182,43 @@ namespace sw
 
 	void LiveReloadManager::update()
 	{
+		const auto now = std::chrono::steady_clock::now();
+
 		for ( auto& pair : _modules )
 		{
 			ModuleContext& ctx = pair.second;
 
-			// Auto-reload when the source DLL is newer than the shadow we loaded.
+			// Auto-reload when the source DLL is newer — debounce to avoid copy storms.
 			if ( ctx._originalDllPath.empty() == false && FileUtil::isFileExist( ctx._originalDllPath ) )
 			{
 				const uint64 sourceMtime = FileUtil::getFileTimestamp( ctx._originalDllPath );
 				if ( sourceMtime != 0 && sourceMtime > ctx._loadedSourceMtime )
 				{
-					SW_LOG_INFO( "[LiveReloadManager] Source DLL newer — queuing reload for %#", ctx._moduleName.c_str() );
-					ctx._bPendingReload = true;
+					if ( ctx._bMtimeDebouncing == false || sourceMtime != ctx._debounceMtime )
+					{
+						ctx._bMtimeDebouncing = true;
+						ctx._debounceMtime	  = sourceMtime;
+						ctx._debounceSince	  = now;
+					}
+					else if ( std::chrono::duration_cast<std::chrono::milliseconds>( now - ctx._debounceSince ).count() >= kMtimeDebounceMs )
+					{
+						SW_LOG_INFO( "[LiveReloadManager] Source DLL newer (debounced) — queuing reload for %#",
+									 ctx._moduleName.c_str() );
+						ctx._bPendingReload	  = true;
+						ctx._bMtimeDebouncing = false;
+					}
+				}
+				else
+				{
+					ctx._bMtimeDebouncing = false;
 				}
 			}
 
 			if ( ctx._bPendingReload == false )
 				continue;
 
-			ctx._bPendingReload = false;
+			ctx._bPendingReload	  = false;
+			ctx._bMtimeDebouncing = false;
 
 			BLOCK( "Shadow Copy Reload" )
 			{

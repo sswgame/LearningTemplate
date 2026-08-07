@@ -9,6 +9,7 @@
 SW_DEFINE_MODULE_REGISTRAR_HEAD( swTestGvmHead, ::sw::GlobalVariableRegistrar );
 SW_DEFINE_MODULE_REGISTRAR_HEAD( swTestTypeHead, ::sw::TypeRegistrar );
 SW_DEFINE_MODULE_REGISTRAR_HEAD( swTestEnumHead, ::sw::EnumRegistrar );
+SW_DEFINE_MODULE_REGISTRAR_HEAD( swTestComponentFactoryHead, ::sw::ComponentFactoryRegistrar );
 
 namespace test
 {

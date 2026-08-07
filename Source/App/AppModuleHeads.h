@@ -8,6 +8,7 @@
 SW_DECLARE_MODULE_REGISTRAR_HEAD( swAppGvmHead, ::sw::GlobalVariableRegistrar );
 SW_DECLARE_MODULE_REGISTRAR_HEAD( swAppTypeHead, ::sw::TypeRegistrar );
 SW_DECLARE_MODULE_REGISTRAR_HEAD( swAppEnumHead, ::sw::EnumRegistrar );
+SW_DECLARE_MODULE_REGISTRAR_HEAD( swAppComponentFactoryHead, ::sw::ComponentFactoryRegistrar );
 
 #undef SW_GVM_MODULE_HEAD
 #define SW_GVM_MODULE_HEAD() (::swAppGvmHead())
@@ -15,3 +16,5 @@ SW_DECLARE_MODULE_REGISTRAR_HEAD( swAppEnumHead, ::sw::EnumRegistrar );
 #define SW_TYPE_MODULE_HEAD() (::swAppTypeHead())
 #undef SW_ENUM_MODULE_HEAD
 #define SW_ENUM_MODULE_HEAD() (::swAppEnumHead())
+#undef SW_COMPONENT_FACTORY_MODULE_HEAD
+#define SW_COMPONENT_FACTORY_MODULE_HEAD() (::swAppComponentFactoryHead())

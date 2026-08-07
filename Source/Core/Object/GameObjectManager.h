@@ -26,6 +26,15 @@ namespace sw
 		/** @brief 이미 생성된 GameObject를 매니저에 등록합니다. */
 		void registerGameObject( GameObject* obj );
 
+		/**
+		 * @brief 등록된 GameObject의 이름을 바꾸고 이름 맵을 갱신합니다.
+		 * @details GameObject::setName이 내부적으로 호출합니다.
+		 */
+		void notifyNameChanged( GameObject* obj, hashed_string oldName, hashed_string newName );
+
+		/** @brief rename API — setName과 동일하게 이름 맵을 유지합니다. */
+		bool renameGameObject( GameObject* obj, hashed_string newName );
+
 		/** @brief 이름으로 GameObject를 찾습니다. */
 		GameObject* findGameObjectByName( hashed_string name ) const;
 

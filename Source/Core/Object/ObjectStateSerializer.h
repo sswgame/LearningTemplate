@@ -18,10 +18,14 @@ namespace sw
 	class SW_API ObjectStateSerializer
 	{
 	public:
-		/** @brief GameObject 상태를 XML 문자열로 직렬화합니다. */
+		/**
+		 * @brief GameObject 상태를 XML 문자열로 직렬화합니다.
+		 * @details Name / IsActive / Tags / Components(+ReflectedXml). ObjectId는 디버그용으로만 기록하며
+		 *          런타임 발급 ID이므로 로드 시 복원하지 않습니다.
+		 */
 		static std::string saveToXmlString( const GameObject* gameObject );
 
-		/** @brief XML 문자열에서 GameObject 상태를 복원합니다. */
+		/** @brief XML 문자열에서 GameObject 상태를 복원합니다 (ObjectId 제외). */
 		static bool loadFromXmlString( GameObject* gameObject, std::string_view xmlString );
 
 		/** @brief GameObject 상태를 XML 파일로 저장합니다. */

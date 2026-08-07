@@ -82,6 +82,8 @@ int main( int argc, char* argv[] )
 
 	typeRegistry->registerPendingTypes( "Core", sw::TypeRegistrar::getHead(), sw::EnumRegistrar::getHead() );
 	typeRegistry->registerPendingTypes( "TestFramework", swTestTypeHead(), swTestEnumHead() );
+	componentManager->registerPendingFactories( sw::ComponentFactoryRegistrar::getHead() );
+	componentManager->registerPendingFactories( swTestComponentFactoryHead() );
 
 	SW_LOG_INFO( "Core services initialized. Running tests..." );
 	SW_LOG_INFO( " Tip: --test_filter=Suite.*  --test_filter=-RHITest.*  --test_list" );

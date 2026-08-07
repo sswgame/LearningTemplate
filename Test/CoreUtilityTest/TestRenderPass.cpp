@@ -44,14 +44,25 @@ SW_TEST_CASE( RenderPassTest, RenderGraphCompileOrder )
 	sw::RenderGraph graph;
 	SW_EXPECT_FALSE( graph.compile() );
 
-	graph.addPass( sw::hashed_string( "Depth" ), {}, { sw::hashed_string( "DepthBuffer" ) } );
+	// Insert consumer before producer — topo-sort must still schedule Depth first.
 	graph.addPass( sw::hashed_string( "Shading" ), { sw::hashed_string( "DepthBuffer" ) }, { sw::hashed_string( "Color" ) } );
+	graph.addPass( sw::hashed_string( "Depth" ), {}, { sw::hashed_string( "DepthBuffer" ) } );
 
 	SW_ASSERT_TRUE( graph.compile() );
 	SW_EXPECT_EQUAL( 2u, graph.getNodeCount() );
 	SW_ASSERT_EQUAL( size_t( 2 ), graph.getExecutionOrder().size() );
 	SW_EXPECT_TRUE( graph.getExecutionOrder()[0] == sw::hashed_string( "Depth" ) );
 	SW_EXPECT_TRUE( graph.getExecutionOrder()[1] == sw::hashed_string( "Shading" ) );
+}
+
+SW_TEST_CASE( RenderPassTest, RenderGraphCycleDetect )
+{
+	sw::RenderGraph graph;
+	graph.addPass( sw::hashed_string( "A" ), { sw::hashed_string( "BOut" ) }, { sw::hashed_string( "AOut" ) } );
+	graph.addPass( sw::hashed_string( "B" ), { sw::hashed_string( "AOut" ) }, { sw::hashed_string( "BOut" ) } );
+
+	SW_EXPECT_FALSE( graph.compile() );
+	SW_EXPECT_EQUAL( size_t( 0 ), graph.getExecutionOrder().size() );
 }
 
 SW_TEST_CASE( RenderPassTest, RenderGraphCullUnusedPasses )

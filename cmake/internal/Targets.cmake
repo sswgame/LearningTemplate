@@ -111,7 +111,8 @@ function(sw_configure_pch TARGET_NAME)
     endif()
 endfunction()
 
-# LiveReload: MODULE DLL을 App.exe와 같은 Bin에 배치 (멀티컨픽 하위폴더 무시)
+# LiveReload: MODULE DLL을 App.exe와 같은 preset Bin에 배치 (멀티컨픽 하위폴더 무시)
+# sw_output_directory == CMAKE_BINARY_DIR 이므로 Dev MODULE은 해당 프리셋 트리 안에서만 공존
 function(sw_set_module_bin_output TARGET_NAME)
     set_target_properties(${TARGET_NAME} PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY "${sw_output_directory}/Bin"
