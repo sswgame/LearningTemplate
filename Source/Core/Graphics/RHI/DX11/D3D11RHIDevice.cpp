@@ -12,6 +12,32 @@
 
 namespace sw
 {
+	namespace
+	{
+		DXGI_FORMAT toDxgiFormat( RHIFormat format )
+		{
+			switch ( format )
+			{
+				case RHIFormat::R8G8B8A8_UNORM:
+					return DXGI_FORMAT_R8G8B8A8_UNORM;
+				case RHIFormat::B8G8R8A8_UNORM:
+					return DXGI_FORMAT_B8G8R8A8_UNORM;
+				case RHIFormat::R16G16B16A16_FLOAT:
+					return DXGI_FORMAT_R16G16B16A16_FLOAT;
+				case RHIFormat::D24_UNORM_S8_UINT:
+					return DXGI_FORMAT_D24_UNORM_S8_UINT;
+				case RHIFormat::R32G32B32_FLOAT:
+					return DXGI_FORMAT_R32G32B32_FLOAT;
+				case RHIFormat::R32G32_FLOAT:
+					return DXGI_FORMAT_R32G32_FLOAT;
+				case RHIFormat::R32_FLOAT:
+					return DXGI_FORMAT_R32_FLOAT;
+			}
+			SW_LOG_ASSERT( false, "Unsupported RHIFormat: %#", static_cast<uint32>( format ) );
+			return DXGI_FORMAT_UNKNOWN;
+		}
+	}
+
 	D3D11RHIDevice::D3D11RHIDevice() = default;
 
 	D3D11RHIDevice::~D3D11RHIDevice()
@@ -214,6 +240,114 @@ namespace sw
 		}
 	}
 
+	RHITextureHandle D3D11RHIDevice::createTexture2D( const RHITextureDesc& desc )
+	{
+		if ( _device == nullptr || desc._width == 0 || desc._height == 0 )
+			return 0;
+
+		D3D11_TEXTURE2D_DESC texDesc{};
+		texDesc.Width			 = desc._width;
+		texDesc.Height			 = desc._height;
+		texDesc.MipLevels		 = desc._mipLevels;
+		texDesc.ArraySize		 = 1;
+		texDesc.Format			 = toDxgiFormat( desc._format );
+		texDesc.SampleDesc.Count = 1;
+		texDesc.SampleDesc.Quality = 0;
+		texDesc.Usage			 = D3D11_USAGE_DEFAULT;
+		texDesc.BindFlags		 = 0;
+		texDesc.CPUAccessFlags	 = 0;
+		texDesc.MiscFlags		 = 0;
+
+		if ( desc._bIsRenderTarget )
+			texDesc.BindFlags |= D3D11_BIND_RENDER_TARGET;
+		if ( desc._bIsShaderResource )
+			texDesc.BindFlags |= D3D11_BIND_SHADER_RESOURCE;
+		if ( desc._bIsDepthStencil )
+			texDesc.BindFlags |= D3D11_BIND_DEPTH_STENCIL;
+		if ( desc._bIsUnorderedAccess )
+			texDesc.BindFlags |= D3D11_BIND_UNORDERED_ACCESS;
+
+		if ( texDesc.BindFlags == 0 )
+			texDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+
+		TextureRecord record{};
+		record._width  = desc._width;
+		record._height = desc._height;
+
+		if ( FAILED( _device->CreateTexture2D( &texDesc, nullptr, record._texture.GetAddressOf() ) ) )
+		{
+			SW_LOG_ERROR( "[D3D11] Failed to create Texture2D (%ux%u).", desc._width, desc._height );
+			return 0;
+		}
+
+		if ( desc._bIsRenderTarget )
+		{
+			if ( FAILED( _device->CreateRenderTargetView( record._texture.Get(), nullptr, record._rtv.GetAddressOf() ) ) )
+			{
+				SW_LOG_ERROR( "[D3D11] Failed to create RTV for Texture2D." );
+				return 0;
+			}
+		}
+
+		if ( desc._bIsShaderResource )
+		{
+			if ( FAILED( _device->CreateShaderResourceView( record._texture.Get(), nullptr, record._srv.GetAddressOf() ) ) )
+			{
+				SW_LOG_ERROR( "[D3D11] Failed to create SRV for Texture2D." );
+				return 0;
+			}
+		}
+
+		const RHITextureHandle handle = reinterpret_cast<RHITextureHandle>( record._texture.Get() );
+		_textures.emplace( handle, std::move( record ) );
+		return handle;
+	}
+
+	void D3D11RHIDevice::destroyTexture( RHITextureHandle texture )
+	{
+		if ( texture == 0 )
+			return;
+		_textures.erase( texture );
+	}
+
+	void D3D11RHIDevice::beginOffscreenPass( RHITextureHandle colorTarget, float32 clearColor[4] )
+	{
+		if ( colorTarget == 0 )
+		{
+			beginFrame( clearColor );
+			return;
+		}
+
+		if ( _deviceContext == nullptr )
+			return;
+
+		auto it = _textures.find( colorTarget );
+		if ( it == _textures.end() || it->second._rtv == nullptr )
+			return;
+
+		TextureRecord& record = it->second;
+		_deviceContext->ClearRenderTargetView( record._rtv.Get(), clearColor );
+		_deviceContext->OMSetRenderTargets( 1, record._rtv.GetAddressOf(), nullptr );
+
+		D3D11_VIEWPORT vp{};
+		vp.Width	= static_cast<float32>( record._width );
+		vp.Height	= static_cast<float32>( record._height );
+		vp.MinDepth = 0.0f;
+		vp.MaxDepth = 1.0f;
+		vp.TopLeftX = 0.0f;
+		vp.TopLeftY = 0.0f;
+		_deviceContext->RSSetViewports( 1, &vp );
+	}
+
+	void D3D11RHIDevice::endOffscreenPass( RHITextureHandle colorTarget )
+	{
+		if ( colorTarget == 0 || _deviceContext == nullptr )
+			return;
+
+		ID3D11RenderTargetView* nullRtv = nullptr;
+		_deviceContext->OMSetRenderTargets( 1, &nullRtv, nullptr );
+	}
+
 	RHIDescriptorIndex D3D11RHIDevice::registerBindlessResource( RHIBufferHandle buffer )
 	{
 		if ( buffer == 0 )
@@ -326,6 +460,7 @@ namespace sw
 	void D3D11RHIDevice::shutdownInternal()
 	{
 		cleanupRenderTargetView();
+		_textures.clear();
 		_vertexBuffer.Reset();
 		_inputLayout.Reset();
 		_vertexShader.Reset();

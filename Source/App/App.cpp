@@ -22,6 +22,8 @@
 #include "Core/Game/Scene/Scene.h"
 #include "Core/Game/GameState.h"
 #include "Core/Utility/Time/EngineTimer.h"
+#include "Core/Common/PlatformHeaders.h"
+#include "Core/Window/NativeWindowEvent.h"
 
 #if defined( SW_SHIPPING )
 	#include "Runtime/GameAPI.h"
@@ -194,6 +196,20 @@ namespace sw
 							 path.c_str(), static_cast<uint32>( result._bytecode.size() ) );
 			} );
 			_rhi->getLiveShaderManager().watchShader( vsDesc, shaderReloadDelegate );
+
+			const std::string shaderWatchRoot = FileUtil::normalizePath( ResourceUtil::getRootFolderPath() );
+			if ( shaderWatchRoot.empty() == false && _reloadFileManager )
+			{
+				_shaderWatchHandle = _reloadFileManager->registerWatch(
+					shaderWatchRoot,
+					{ ".hlsl", ".hlsli" },
+					SW_DELEGATE_LAMBDA( FileWatchMatchDelegate,
+										[this]( const FileChangeEvent& ev )
+					{
+						const std::string fullPath = FileUtil::normalizePath( ev._directory + "/" + ev._filename );
+						_rhi->getLiveShaderManager().notifyFileChanged( fullPath );
+					} ) );
+			}
 #endif
 
 			createGameViewportTexture();
@@ -289,19 +305,34 @@ namespace sw
 			if ( _game && _gameApi.update && getGameState() == GameState::Playing )
 				_gameApi.update( _game, deltaTime );
 
-			_rhi->getDevice().beginFrame( _clearColor );
+			IRHIDevice& device		= _rhi->getDevice();
+			Scene*		activeScene = _sceneManager->getActiveScene();
 
-			Scene* activeScene = _sceneManager->getActiveScene();
-			if ( activeScene )
-				activeScene->render( &_rhi->getDevice() );
+			const bool bRenderToGameView = _bEnableEditor && _editor && _gameRenderTarget != 0;
+			if ( bRenderToGameView )
+			{
+				device.beginOffscreenPass( _gameRenderTarget, _clearColor );
+				if ( activeScene )
+					activeScene->render( &device );
+				device.endOffscreenPass( _gameRenderTarget );
+
+				device.beginFrame( _clearColor );
+			}
+			else
+			{
+				device.beginFrame( _clearColor );
+				if ( activeScene )
+					activeScene->render( &device );
+			}
 
 			if ( _editor && _editorApi.render )
 			{
-				_editorCtx.material = activeScene ? activeScene->getMaterial() : nullptr;
+				_editorCtx.material		 = activeScene ? activeScene->getMaterial() : nullptr;
+				_editorCtx.gameTextureID = _gameTextureID;
 				_editorApi.render( _editor, &_editorCtx );
 			}
 
-			_rhi->getDevice().endFrame( true );
+			device.endFrame( true );
 		}
 
 		if ( _window && _window->shouldClose() )
@@ -330,7 +361,12 @@ namespace sw
 		if ( _sceneManager )
 			_sceneManager->shutdown();
 		if ( _reloadFileManager )
+		{
+			if ( _shaderWatchHandle.isValid() )
+				_reloadFileManager->unregisterWatch( _shaderWatchHandle );
+			_shaderWatchHandle = {};
 			_reloadFileManager->shutdown();
+		}
 		if ( _liveReloadManager )
 			_liveReloadManager->shutdown();
 		if ( _componentManager )
@@ -364,6 +400,35 @@ namespace sw
 
 	bool App::onWindowMessage( const NativeWindowEvent& event )
 	{
+#if defined( SW_PLATFORM_WINDOWS ) && !defined( SW_SHIPPING )
+		if ( event.message == WM_KEYDOWN && _rhi )
+		{
+			switch ( event.wParam )
+			{
+				case VK_F5:
+					_rhi->getLiveShaderManager().triggerReloadAll();
+					SW_LOG_INFO( "[App] F5: force shader reload" );
+					break;
+				case VK_F6:
+					if ( _liveReloadManager && _bEnableEditor )
+					{
+						_liveReloadManager->triggerReload( kEditorModuleName );
+						SW_LOG_INFO( "[App] F6: force EditorModule reload" );
+					}
+					break;
+				case VK_F7:
+					if ( _liveReloadManager )
+					{
+						_liveReloadManager->triggerReload( kGameModuleName );
+						SW_LOG_INFO( "[App] F7: force SWGame reload" );
+					}
+					break;
+				default:
+					break;
+			}
+		}
+#endif
+
 		if ( _editor && _editorApi.processEvent )
 			return _editorApi.processEvent( _editor, &event );
 		return false;

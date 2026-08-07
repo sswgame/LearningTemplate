@@ -146,22 +146,39 @@ int32 main( int32 argc, utf8* argv[] )
 	sw::bindCoreServices( services );
 
 	sw::Logger::initialize();
-	commandLineManager->initialize();
-	taskManager->initialize();
-	globalVarManager->initialize();
-	globalVarManager->registerPendingVariables( "ReflectionParser", sw::GlobalVariableRegistrar::getHead() );
-	globalVarManager->registerToCommandLine( commandLineManager.get() );
-	commandLineManager->parse( argc, argv );
-	globalVarManager->updateFromCommandLine( commandLineManager.get() );
 
 	CommandLineArgs args;
 	if ( parseCommandLine( argc, argv, args ) == false )
 	{
 		SW_LOG_ERROR( "Usage: ReflectionParser --input <header.h> [--input ...] --output <dir> [--include <dir> ...]" );
-		taskManager->shutdown();
 		sw::unbindCoreServices();
 		return 1;
 	}
+
+	commandLineManager->initialize();
+	taskManager->initialize();
+	globalVarManager->initialize();
+	globalVarManager->registerPendingVariables( "ReflectionParser", sw::GlobalVariableRegistrar::getHead() );
+	globalVarManager->registerToCommandLine( commandLineManager.get() );
+
+	// Tool flags (--input/--output/--include) are space-separated pairs; CommandLineManager expects
+	// registered key[=value] tokens only — strip parser args before GVM/CLI apply.
+	std::vector<utf8*> passthroughArgv;
+	passthroughArgv.reserve( static_cast<size_t>( argc ) );
+	passthroughArgv.push_back( argv[0] );
+	for ( int32 i = 1; i < argc; ++i )
+	{
+		const std::string_view arg = argv[i] != nullptr ? argv[i] : "";
+		if ( arg == "--input" || arg == "--output" || arg == "--include" )
+		{
+			if ( i + 1 < argc )
+				++i;
+			continue;
+		}
+		passthroughArgv.push_back( argv[i] );
+	}
+	commandLineManager->parse( static_cast<int32>( passthroughArgv.size() ), passthroughArgv.data() );
+	globalVarManager->updateFromCommandLine( commandLineManager.get() );
 
 	typeRegistry->registerPendingTypes( "ReflectionParser", sw::TypeRegistrar::getHead(), sw::EnumRegistrar::getHead() );
 

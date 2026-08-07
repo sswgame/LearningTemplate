@@ -35,6 +35,12 @@ namespace sw
 		/** @brief 프레임 시작 (백버퍼 랜더 타깃 클리어) */
 		void beginFrame( float32 clearColor[4] ) override;
 
+		/** @brief Offscreen color target에 렌더 시작 (Game View 등). colorTarget==0 이면 beginFrame과 동일. */
+		void beginOffscreenPass( RHITextureHandle colorTarget, float32 clearColor[4] ) override;
+
+		/** @brief Offscreen 패스 종료 */
+		void endOffscreenPass( RHITextureHandle colorTarget ) override;
+
 		/** @brief 스왑체인 Present 실행 */
 		void endFrame( bool vsync = true ) override;
 
@@ -101,8 +107,12 @@ namespace sw
 		/** @brief D3D11 버퍼 해제 */
 		void			   destroyBuffer( RHIBufferHandle buffer ) override;
 
-		RHITextureHandle   createTexture2D( const RHITextureDesc& /*desc*/ ) override { return 0; }
-		void			   destroyTexture( RHITextureHandle /*texture*/ ) override {}
+		/** @brief D3D11 2D 텍스처 (RenderTarget / ShaderResource) 생성 */
+		RHITextureHandle   createTexture2D( const RHITextureDesc& desc ) override;
+
+		/** @brief D3D11 텍스처 해제 */
+		void			   destroyTexture( RHITextureHandle texture ) override;
+
 		RHIDescriptorIndex registerBindlessTexture( RHITextureHandle /*texture*/ ) override { return kInvalidDescriptorIndex; }
 
 		/** @brief 에뮬레이션용 Bindless 버퍼 등록 */
@@ -197,6 +207,16 @@ namespace sw
 
 		std::vector<D3D11PipelineStateRecord> _pipelineStates;
 		std::vector<D3D11RenderPassRecord>	  _renderPasses;
+
+		struct TextureRecord
+		{
+			Microsoft::WRL::ComPtr<ID3D11Texture2D>			_texture;
+			Microsoft::WRL::ComPtr<ID3D11RenderTargetView>	_rtv;
+			Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> _srv;
+			uint32											_width	= 0;
+			uint32											_height = 0;
+		};
+		std::unordered_map<RHITextureHandle, TextureRecord> _textures;
 
 		HWND   _hWnd   = nullptr;
 		uint32 _width  = 0;

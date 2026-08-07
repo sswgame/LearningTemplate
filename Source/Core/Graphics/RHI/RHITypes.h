@@ -301,12 +301,13 @@ namespace sw
 	 * @struct RHIRenderPassBeginInfo
 	 * @brief 렌더 패스 바인딩 및 수행 시작 인자
 	 */
-	struct RHIRenderPassBeginInfo
+		struct RHIRenderPassBeginInfo
 	{
-		RHIRenderPassHandle _renderPass	   = 0;                       ///< 사용할 렌더 패스 핸들
-		uint32				_width		   = 0;                       ///< 렌더 영역 너비
-		uint32				_height		   = 0;                       ///< 렌더 영역 높이
-		float32				_clearColor[4] = { 0.1f, 0.1f, 0.1f, 1.0f };    ///< 패스 시작 색상
+		RHIRenderPassHandle _renderPass		= 0;
+		RHITextureHandle	_colorTarget	= 0; ///< 0 = swapchain backbuffer
+		uint32				_width			= 0;
+		uint32				_height			= 0;
+		float32				_clearColor[4]	= { 0.1f, 0.1f, 0.1f, 1.0f };
 	};
 
 	class VertexLayoutBuilder

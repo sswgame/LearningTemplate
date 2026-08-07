@@ -100,6 +100,23 @@ namespace sw
 		}
 	}
 
+	void LiveShaderManager::notifyFileChanged( const std::string& path )
+	{
+		if ( _bInitialized == false )
+			return;
+
+		const std::string normalized = FileUtil::normalizePath( path );
+		if ( _watchedShaders.find( normalized ) != _watchedShaders.end() )
+			_pendingReloadPaths.push_back( normalized );
+
+		const auto includeIt = _includeDependencies.find( normalized );
+		if ( includeIt != _includeDependencies.end() )
+		{
+			for ( const std::string& shaderPath : includeIt->second )
+				_pendingReloadPaths.push_back( shaderPath );
+		}
+	}
+
 	void LiveShaderManager::update()
 	{
 		if ( _bInitialized == false )

@@ -33,6 +33,9 @@ namespace sw
 		bool initialize();
 		void shutdown();
 
+		/** @brief Soft recreate: destroy current device and create backend without full App restart. */
+		bool recreateDevice( RHIBackend backend );
+
 		IRHIDevice&		   getDevice() const { return *_device; }
 		LiveShaderManager& getLiveShaderManager() const { return *_liveShaderManager; }
 

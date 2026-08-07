@@ -37,9 +37,10 @@ namespace sw
 
 		/** @brief 프레임 시작 (백버퍼 Resource Barrier 전환 & Clear) */
 		void beginFrame( float32 clearColor[4] ) override;
-
-		/** @brief 프레임 종료 (커맨드 리스트 제출 & Present 실행) */
 		void endFrame( bool vsync = true ) override;
+
+		void beginOffscreenPass( RHITextureHandle colorTarget, float32 clearColor[4] ) override;
+		void endOffscreenPass( RHITextureHandle colorTarget ) override;
 
 		/** @brief 백엔드 타입 반환 (DirectX12) */
 		RHIBackend getBackendType() const override { return RHIBackend::D3D12; }
@@ -196,6 +197,19 @@ namespace sw
 		std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> _renderTargets;
 		std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> _constantBuffers;
 		std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> _textures;
+
+		struct OffscreenTextureRecord
+		{
+			ID3D12Resource*				_resource = nullptr;
+			D3D12_CPU_DESCRIPTOR_HANDLE _rtvHandle{};
+			uint32						_rtvIndex = 0;
+			D3D12_RESOURCE_STATES		_state	  = D3D12_RESOURCE_STATE_COMMON;
+			uint32						_width	  = 0;
+			uint32						_height	  = 0;
+		};
+		std::unordered_map<RHITextureHandle, OffscreenTextureRecord> _offscreenTextures;
+		uint32														 _nextOffscreenRtvIndex = 0;
+		static constexpr uint32										 kMaxOffscreenRtvs		= 16;
 
 		struct D3D12PipelineStateRecord
 		{

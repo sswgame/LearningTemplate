@@ -6,6 +6,12 @@
 
 #include "Editor/Backend/IImGuiRendererBackend.h"
 
+#if defined( SW_PLATFORM_WINDOWS )
+	#include <wrl/client.h>
+	#include <d3d11.h>
+	#include <vector>
+#endif
+
 namespace sw
 {
 	class IRHIDevice;
@@ -33,6 +39,11 @@ namespace sw
 		 */
 		void render( IRHIDevice* rhiDevice ) override;
 
-		void* registerTexture( RHITextureHandle /*texture*/ ) override { return nullptr; }
+		void* registerTexture( RHITextureHandle texture ) override;
+
+	private:
+#if defined( SW_PLATFORM_WINDOWS )
+		std::vector<Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>> _registeredSrvs;
+#endif
 	};
 }

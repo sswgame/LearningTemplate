@@ -8,6 +8,7 @@
 
 #include "Core/Graphics/RHI/RHITypes.h"
 #include "Core/Graphics/Shader/ShaderReflection.h"
+#include "Core/Utility/File/ReloadFileManager.h"
 #include "Runtime/EditorAPI.h"
 #include "Runtime/EditorUIContext.h"
 #include "Runtime/GameAPI.h"
@@ -25,7 +26,6 @@ namespace sw
 	class ComponentManager;
 	class RHI;
 	class LiveReloadManager;
-	class ReloadFileManager;
 	class SceneManager;
 	struct NativeWindowEvent;
 
@@ -76,6 +76,7 @@ namespace sw
 
 		RHITextureHandle _gameRenderTarget = 0;
 		void*			 _gameTextureID	   = nullptr;
+		FileWatchHandle	 _shaderWatchHandle{};
 
 		EditorAPI	 _editorApi{};
 		EditorHandle _editor = nullptr;

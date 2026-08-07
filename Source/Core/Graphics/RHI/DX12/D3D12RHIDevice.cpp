@@ -107,7 +107,7 @@ namespace sw
 		_frameIndex = _swapChain->GetCurrentBackBufferIndex();
 
 		D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc{};
-		rtvHeapDesc.NumDescriptors = _bufferCount;
+		rtvHeapDesc.NumDescriptors = _bufferCount + kMaxOffscreenRtvs;
 		rtvHeapDesc.Type		   = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
 		rtvHeapDesc.Flags		   = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 		if ( FAILED( _device->CreateDescriptorHeap( &rtvHeapDesc, IID_PPV_ARGS( _rtvHeap.GetAddressOf() ) ) ) )
@@ -494,12 +494,30 @@ namespace sw
 		}
 
 		_textures.push_back( texture );
-		return reinterpret_cast<RHITextureHandle>( texture.Get() );
+
+		const RHITextureHandle handle = reinterpret_cast<RHITextureHandle>( texture.Get() );
+		if ( desc._bIsRenderTarget && _rtvHeap != nullptr && _nextOffscreenRtvIndex < kMaxOffscreenRtvs )
+		{
+			OffscreenTextureRecord record{};
+			record._resource = texture.Get();
+			record._rtvIndex = _bufferCount + _nextOffscreenRtvIndex++;
+			record._rtvHandle = _rtvHeap->GetCPUDescriptorHandleForHeapStart();
+			record._rtvHandle.ptr += static_cast<SIZE_T>( record._rtvIndex ) * _rtvDescriptorSize;
+			record._state  = D3D12_RESOURCE_STATE_COMMON;
+			record._width  = desc._width;
+			record._height = desc._height;
+			_device->CreateRenderTargetView( texture.Get(), nullptr, record._rtvHandle );
+			_offscreenTextures[handle] = record;
+		}
+
+		return handle;
 	}
 
 	void D3D12RHIDevice::destroyTexture( RHITextureHandle texture )
 	{
-		if ( texture == 0 ) return;
+		if ( texture == 0 )
+			return;
+		_offscreenTextures.erase( texture );
 		auto* res = reinterpret_cast<ID3D12Resource*>( texture );
 		for ( auto it = _textures.begin(); it != _textures.end(); ++it )
 		{
@@ -509,6 +527,76 @@ namespace sw
 				break;
 			}
 		}
+	}
+
+	void D3D12RHIDevice::beginOffscreenPass( RHITextureHandle colorTarget, float32 clearColor[4] )
+	{
+		if ( colorTarget == 0 )
+		{
+			beginFrame( clearColor );
+			return;
+		}
+
+		auto it = _offscreenTextures.find( colorTarget );
+		if ( it == _offscreenTextures.end() || _commandList == nullptr )
+			return;
+
+		OffscreenTextureRecord& record = it->second;
+		_commandAllocator->Reset();
+		_commandList->Reset( _commandAllocator.Get(), nullptr );
+
+		if ( record._state != D3D12_RESOURCE_STATE_RENDER_TARGET )
+		{
+			D3D12_RESOURCE_BARRIER barrier{};
+			barrier.Type				   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+			barrier.Transition.pResource   = record._resource;
+			barrier.Transition.StateBefore = record._state;
+			barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_RENDER_TARGET;
+			barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+			_commandList->ResourceBarrier( 1, &barrier );
+			record._state = D3D12_RESOURCE_STATE_RENDER_TARGET;
+		}
+
+		_commandList->OMSetRenderTargets( 1, &record._rtvHandle, FALSE, nullptr );
+		_commandList->ClearRenderTargetView( record._rtvHandle, clearColor, 0, nullptr );
+
+		D3D12_VIEWPORT vp{};
+		vp.Width	= static_cast<float32>( record._width );
+		vp.Height	= static_cast<float32>( record._height );
+		vp.MinDepth = 0.0f;
+		vp.MaxDepth = 1.0f;
+		_commandList->RSSetViewports( 1, &vp );
+
+		D3D12_RECT scissorRect{ 0, 0, static_cast<LONG>( record._width ), static_cast<LONG>( record._height ) };
+		_commandList->RSSetScissorRects( 1, &scissorRect );
+	}
+
+	void D3D12RHIDevice::endOffscreenPass( RHITextureHandle colorTarget )
+	{
+		if ( colorTarget == 0 || _commandList == nullptr )
+			return;
+
+		auto it = _offscreenTextures.find( colorTarget );
+		if ( it == _offscreenTextures.end() )
+			return;
+
+		OffscreenTextureRecord& record = it->second;
+		if ( record._state != D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE )
+		{
+			D3D12_RESOURCE_BARRIER barrier{};
+			barrier.Type				   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+			barrier.Transition.pResource   = record._resource;
+			barrier.Transition.StateBefore = record._state;
+			barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+			barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+			_commandList->ResourceBarrier( 1, &barrier );
+			record._state = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+		}
+
+		_commandList->Close();
+		ID3D12CommandList* lists[] = { _commandList.Get() };
+		_commandQueue->ExecuteCommandLists( 1, lists );
+		waitForPreviousFrame();
 	}
 
 	RHIDescriptorIndex D3D12RHIDevice::registerBindlessTexture( RHITextureHandle texture )

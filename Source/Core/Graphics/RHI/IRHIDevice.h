@@ -2,6 +2,7 @@
 
 #include "Core/CoreMinimal.h"
 #include "RHITypes.h"
+#include "RHICapabilities.h"
 #include "Core/Window/IWindow.h"
 #include "Core/Graphics/RenderPass/RenderPassManager.h"
 
@@ -136,6 +137,22 @@ namespace sw
 
 		/** @brief 프레임 렌더링 종료 (스왑체인 Present 실행) */
 		virtual void endFrame( bool vsync = true )		   = 0;
+
+		/** @brief Offscreen color target에 렌더 시작 (Game View 등). colorTarget==0 이면 beginFrame과 동일. */
+		virtual void beginOffscreenPass( RHITextureHandle colorTarget, float32 clearColor[4] )
+		{
+			(void)colorTarget;
+			beginFrame( clearColor );
+		}
+
+		/** @brief Offscreen 패스 종료 후 셰이더 샘플링 가능 상태로 전환 */
+		virtual void endOffscreenPass( RHITextureHandle colorTarget ) { (void)colorTarget; }
+
+		/** @brief 백엔드 capability 조회 */
+		virtual RHICapabilities getCapabilities() const
+		{
+			return RHIAvailability::query( getBackendType() );
+		}
 
 		/** @brief 현재 RHI 백엔드 종류 반환 */
 		virtual RHIBackend	getBackendType() const = 0;

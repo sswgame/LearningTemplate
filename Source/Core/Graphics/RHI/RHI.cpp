@@ -1,14 +1,13 @@
 #include "RHI.h"
+#include "RHIBackendRegistry.h"
+#include "RHICapabilities.h"
 #include "Core/Graphics/Shader/LiveShaderManager.h"
-#include "DX11/D3D11RHIDevice.h"
-#include "DX12/D3D12RHIDevice.h"
-#include "Vulkan/VulkanRHIDevice.h"
-#include "GL/OpenGLRHIDevice.h"
 #include "Core/Reflection/ReflectionCore.h"
 #include "Core/Graphics/Shader/ShaderCompiler.h"
 #include "Core/Utility/CommandLine/CommandLineManager.h"
 #include "Core/Utility/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Window/IWindow.h"
+#include "Core/Utility/Log/Logger.h"
 
 /**
  * @file RHI.cpp
@@ -25,24 +24,49 @@ namespace sw
 
 		try
 		{
-			RHIBackend initialBackend = RHIBackend::DirectX12;
+			// Priority: explicit CLI > current GVM value > OS default > first available
+			RHIBackend initialBackend = g_RHIBackend;
+			bool	   bCliOverride	  = false;
 
 			CommandLineManager& commandLineManager = getCommandLineManager();
 			bool				bFlag			   = false;
 			if ( commandLineManager.getArgument( CommandLineArgument::DIRECTX_11, bFlag ) && bFlag )
+			{
 				initialBackend = RHIBackend::DirectX11;
+				bCliOverride   = true;
+			}
 			else if ( commandLineManager.getArgument( CommandLineArgument::DIRECTX_12, bFlag ) && bFlag )
+			{
 				initialBackend = RHIBackend::DirectX12;
+				bCliOverride   = true;
+			}
 			else if ( commandLineManager.getArgument( CommandLineArgument::VULKAN, bFlag ) && bFlag )
+			{
 				initialBackend = RHIBackend::Vulkan;
+				bCliOverride   = true;
+			}
 			else if ( commandLineManager.getArgument( CommandLineArgument::OPENGL, bFlag ) && bFlag )
+			{
 				initialBackend = RHIBackend::OpenGL;
+				bCliOverride   = true;
+			}
+
+			if ( bCliOverride == false )
+			{
+				if ( RHIAvailability::isAvailable( initialBackend ) == false )
+					initialBackend = getDefaultPlatformBackend();
+			}
+
+			if ( RHIAvailability::isAvailable( initialBackend ) == false )
+			{
+				SW_LOG_ERROR( "Requested RHI backend is unavailable on this platform." );
+				return false;
+			}
 
 			g_RHIBackend = initialBackend;
 
 			SW_LOG_INFO( "Initializing RHI with backend: %s", getBackendTypeName( initialBackend ) );
 
-			SW_LOG_INFO( "Creating RHI device..." );
 			_device = createDevice( initialBackend );
 			if ( _device == nullptr )
 			{
@@ -50,22 +74,14 @@ namespace sw
 				return false;
 			}
 
-			SW_LOG_INFO( "RHI Device created successfully." );
-
 			if ( IWindow* window = IWindow::getActiveWindow() )
-			{
-				SW_LOG_INFO( "Setting init window..." );
 				_device->setInitWindow( window );
-			}
 
-			SW_LOG_INFO( "Initializing RHI device..." );
 			if ( _device->initialize() == false )
 			{
 				SW_LOG_ERROR( "Failed to initialize RHI Device!" );
 				return false;
 			}
-
-			SW_LOG_INFO( "RHI Device initialized successfully." );
 		}
 		catch ( const std::exception& e )
 		{
@@ -106,46 +122,45 @@ namespace sw
 		}
 	}
 
-	/**
-	 * @brief 요청된 백엔드 타입에 맞는 RHI 디바이스 객체 동적 생성
-	 */
-	std::unique_ptr<IRHIDevice> RHI::createDevice( RHIBackend backend )
+	bool RHI::recreateDevice( RHIBackend backend )
 	{
-		switch ( backend )
+		if ( RHIAvailability::isAvailable( backend ) == false )
 		{
-			case RHIBackend::DirectX11:
-#if defined( SW_PLATFORM_WINDOWS )
-				SW_LOG_INFO( "Creating Direct3D 11 RHI Backend..." );
-				return std::make_unique<D3D11RHIDevice>();
-#else
-				SW_LOG_ERROR( "Direct3D 11 RHI Backend is not supported on non-Windows platforms!" );
-				return nullptr;
-#endif
-
-			case RHIBackend::DirectX12:
-#if defined( SW_PLATFORM_WINDOWS )
-				SW_LOG_INFO( "Creating Direct3D 12 RHI Backend..." );
-				return std::make_unique<D3D12RHIDevice>();
-#else
-				SW_LOG_ERROR( "Direct3D 12 RHI Backend is not supported on non-Windows platforms!" );
-				return nullptr;
-#endif
-
-			case RHIBackend::Vulkan:
-				SW_LOG_INFO( "Creating Vulkan RHI Backend..." );
-				return std::make_unique<VulkanRHIDevice>();
-
-			case RHIBackend::OpenGL:
-				SW_LOG_INFO( "Creating OpenGL RHI Backend..." );
-				return std::make_unique<OpenGLRHIDevice>();
+			SW_LOG_ERROR( "[RHI] recreateDevice: backend unavailable" );
+			return false;
 		}
-		SW_LOG_ERROR( "Unknown RHI Backend Type requested!" );
-		return nullptr;
+
+		IWindow* window = IWindow::getActiveWindow();
+		if ( _device )
+		{
+			_device->waitIdle();
+			_device->shutdown();
+			_device.reset();
+		}
+
+		g_RHIBackend = backend;
+		_device		 = createDevice( backend );
+		if ( _device == nullptr )
+			return false;
+
+		if ( window )
+			_device->setInitWindow( window );
+
+		if ( _device->initialize() == false )
+		{
+			_device.reset();
+			return false;
+		}
+
+		SW_LOG_INFO( "[RHI] Soft-recreated device: %s", getBackendTypeName( backend ) );
+		return true;
 	}
 
-	/**
-	 * @brief 백엔드 열거형의 이쁜 이름 반환 (Reflection 활용)
-	 */
+	std::unique_ptr<IRHIDevice> RHI::createDevice( RHIBackend backend )
+	{
+		return RHIBackendRegistry::get().create( backend );
+	}
+
 	const utf8* RHI::getBackendTypeName( RHIBackend backend )
 	{
 		const EnumInfo* info = getTypeRegistry().findEnum( hashed_string( "RHIBackend" ) );
@@ -171,23 +186,17 @@ namespace sw
 		return "Unknown";
 	}
 
-	/**
-	 * @brief OS 플랫폼별 기본 최적 백엔드 선택
-	 */
 	RHIBackend RHI::getDefaultPlatformBackend()
 	{
 #if defined( SW_PLATFORM_WINDOWS )
 		return RHIBackend::DirectX12;
-#elif defined( SW_PLATFORM_MACOS )
-		return RHIBackend::Metal;
+#elif defined( SW_PLATFORM_LINUX )
+		return RHIBackend::Vulkan;
 #else
 		return RHIBackend::OpenGL;
 #endif
 	}
 
-	/**
-	 * @brief 각 RHI 백엔드 전용 셰이더 컴파일 목적 타깃 포맷 반환
-	 */
 	ShaderTargetFormat RHI::getShaderTargetFormat( RHIBackend backend )
 	{
 		switch ( backend )
@@ -200,8 +209,7 @@ namespace sw
 				return ShaderTargetFormat::SPIRV_Vulkan;
 			case RHIBackend::OpenGL:
 				return ShaderTargetFormat::SPIRV_OpenGL;
-			default:
-				return ShaderTargetFormat::DXBC_D3D11;
 		}
+		return ShaderTargetFormat::DXIL_D3D12;
 	}
 }

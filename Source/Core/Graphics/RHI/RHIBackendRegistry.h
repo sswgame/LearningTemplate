@@ -1,0 +1,45 @@
+#pragma once
+/**
+ * @file RHIBackendRegistry.h
+ * @brief Pluggable RHI backend factory registry (static link or MODULE DLL via SW_RHI_AS_MODULES)
+ */
+
+#include "Core/Graphics/RHI/IRHIDevice.h"
+#include "Core/Graphics/RHI/RHICapabilities.h"
+#include "Core/Utility/Delegate/Delegate.h"
+#include <memory>
+#include <string>
+#include <vector>
+
+namespace sw
+{
+	using RHIDeviceFactoryDelegate = Delegate<std::unique_ptr<IRHIDevice>()>;
+
+	struct RHIBackendEntry
+	{
+		RHIBackend				 _backend{};
+		RHIDeviceFactoryDelegate _factory;
+		RHICapabilities			 _caps{};
+	};
+
+	class SW_API RHIBackendRegistry
+	{
+	public:
+		static RHIBackendRegistry& get();
+
+		void				   registerBackend( RHIBackend backend, const RHIDeviceFactoryDelegate& factory, const RHICapabilities& caps );
+		const RHIBackendEntry* find( RHIBackend backend ) const;
+
+		std::unique_ptr<IRHIDevice> create( RHIBackend backend ) const;
+
+		/** @brief Optional MODULE load: looks for DLL exporting createRHIDevice. */
+		bool tryLoadModule( RHIBackend backend, const std::string& modulePath );
+
+	private:
+		RHIBackendRegistry() = default;
+		std::vector<RHIBackendEntry> _entries;
+	};
+
+	/** @brief C ABI for RHI MODULE DLLs — export as: extern "C" SW_MODULE_API IRHIDevice* createRHIDevice(); */
+	using PFN_CreateRHIDevice = IRHIDevice* ( * )();
+}

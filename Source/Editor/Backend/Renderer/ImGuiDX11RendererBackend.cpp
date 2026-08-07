@@ -11,6 +11,7 @@
 #endif
 
 #include "Core/Graphics/RHI/IRHIDevice.h"
+#include "Core/Utility/Log/Logger.h"
 
 namespace sw
 {
@@ -32,6 +33,7 @@ namespace sw
 #if defined( SW_PLATFORM_WINDOWS )
 		if ( ImGui::GetIO().BackendRendererUserData != nullptr )
 			ImGui_ImplDX11_Shutdown();
+		_registeredSrvs.clear();
 #endif
 	}
 
@@ -49,6 +51,46 @@ namespace sw
 #if defined( SW_PLATFORM_WINDOWS )
 		if ( ImGui::GetIO().BackendRendererUserData != nullptr )
 			ImGui_ImplDX11_RenderDrawData( ImGui::GetDrawData() );
+#endif
+	}
+
+	void* ImGuiDX11RendererBackend::registerTexture( RHITextureHandle texture )
+	{
+#if defined( SW_PLATFORM_WINDOWS )
+		if ( texture == 0 )
+			return nullptr;
+
+		auto* tex = reinterpret_cast<ID3D11Texture2D*>( texture );
+		ID3D11Device* device = nullptr;
+		tex->GetDevice( &device );
+		if ( device == nullptr )
+			return nullptr;
+
+		D3D11_TEXTURE2D_DESC texDesc{};
+		tex->GetDesc( &texDesc );
+
+		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc{};
+		srvDesc.Format					  = texDesc.Format;
+		srvDesc.ViewDimension			  = D3D11_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Texture2D.MostDetailedMip = 0;
+		srvDesc.Texture2D.MipLevels		  = texDesc.MipLevels;
+
+		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> srv;
+		const HRESULT hr = device->CreateShaderResourceView( tex, &srvDesc, srv.GetAddressOf() );
+		device->Release();
+
+		if ( FAILED( hr ) || srv == nullptr )
+		{
+			SW_LOG_ERROR( "[ImGuiDX11] Failed to create SRV for registered texture. HRESULT: %#", hr );
+			return nullptr;
+		}
+
+		ID3D11ShaderResourceView* srvPtr = srv.Get();
+		_registeredSrvs.push_back( std::move( srv ) );
+		return static_cast<void*>( srvPtr );
+#else
+		(void)texture;
+		return nullptr;
 #endif
 	}
 }

@@ -57,6 +57,9 @@ namespace sw
 		 */
 		void triggerReloadAll();
 
+		/** @brief 파일 감시 매칭 경로를 대기열에 넣습니다 (본 셰이더 또는 include 의존). */
+		void notifyFileChanged( const std::string& path );
+
 	private:
 		struct WatchedShaderInfo
 		{

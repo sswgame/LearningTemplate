@@ -17,6 +17,7 @@ set(sw_enable_pch ON CACHE BOOL "Enable Core precompiled header")
 set(sw_enable_unity_build OFF CACHE BOOL "Enable unity build flag module")
 option(SW_BUILD_DOCS "Generate Doxygen docs target when available" OFF)
 option(SW_AUTO_CHANGELOG "Add AutoChangelog target (manual build; not part of default ALL)" OFF)
+option(SW_RHI_AS_MODULES "Build DX11/DX12 RHI backends as MODULE DLLs (Core loads via createRHIDevice)" ON)
 
 set(CMAKE_COMPILE_PDB_NAME "compile")
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
