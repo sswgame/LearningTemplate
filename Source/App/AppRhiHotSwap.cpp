@@ -3,7 +3,6 @@
  * @brief Soft RHI backend recreate / hot-swap
  */
 #include "App.h"
-#include "AppInternal.h"
 
 #include "Core/Utility/Log/Logger.h"
 #include "Core/Utility/Module/LiveReloadManager.h"
@@ -17,7 +16,10 @@
 
 namespace sw
 {
-	using namespace app_internal;
+	SW_EXTERN_GLOBAL_VARIABLE_STRING( kEditorModuleName );
+#if !defined( SW_SHIPPING )
+	SW_EXTERN_GLOBAL_VARIABLE_STRING( kGameModuleName );
+#endif
 
 	bool App::applyPendingBackendChange()
 	{

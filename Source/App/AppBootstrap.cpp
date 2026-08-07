@@ -3,7 +3,6 @@
  * @brief App subsystem / window / RHI bootstrap
  */
 #include "App.h"
-#include "AppInternal.h"
 #include "AppModuleHeads.h"
 
 SW_DEFINE_MODULE_REGISTRAR_HEAD( swAppGvmHead, ::sw::GlobalVariableRegistrar );
@@ -27,10 +26,14 @@ SW_DEFINE_MODULE_REGISTRAR_HEAD( swAppComponentFactoryHead, ::sw::ComponentFacto
 #include "Core/Game/Scene/SceneManager.h"
 #include "Runtime/RuntimeHandles.h"
 
-SW_GLOBAL_VARIABLE_FLOAT( gv_EditorPlayerSpeed, 5.0f, "Editor inspector player speed slider" );
-
 namespace sw
 {
+	SW_GLOBAL_VARIABLE_FLOAT( gv_EditorPlayerSpeed, 5.0f, "Editor inspector player speed slider" );
+	SW_EXTERN_GLOBAL_VARIABLE_STRING( kEditorModuleName );
+#if !defined( SW_SHIPPING )
+	SW_EXTERN_GLOBAL_VARIABLE_STRING( kGameModuleName );
+#endif
+
 	bool App::initializeSubsystems( int argc, char* argv[] )
 	{
 		BLOCK( "Logger / CommandLine / GVM 초기화" )

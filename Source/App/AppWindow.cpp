@@ -3,16 +3,19 @@
  * @brief Window resize / native message handlers
  */
 #include "App.h"
-#include "AppInternal.h"
 
 #include "Core/Utility/Log/Logger.h"
 #include "Core/Utility/Module/LiveReloadManager.h"
+#include "Core/Utility/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Graphics/RHI/RHI.h"
 #include "Core/Window/NativeWindowEvent.h"
 
 namespace sw
 {
-	using namespace app_internal;
+	SW_EXTERN_GLOBAL_VARIABLE_STRING( kEditorModuleName );
+#if !defined( SW_SHIPPING )
+	SW_EXTERN_GLOBAL_VARIABLE_STRING( kGameModuleName );
+#endif
 
 	void App::onResize( uint32 w, uint32 h )
 	{

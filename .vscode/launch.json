@@ -2,12 +2,13 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "App (CodeLLDB)",
+            "name": "App + Editor (CodeLLDB)",
             "type": "lldb",
             "request": "launch",
             "program": "${workspaceFolder}/build/Ninja-Debug/Bin/App.exe",
             "args": [
-                "-dx12"
+                "-dx12",
+                "-EnableEditor"
             ],
             "cwd": "${workspaceFolder}",
             "env": {
@@ -20,13 +21,12 @@
             "preLaunchTask": "CMake: Build App (Ninja-Debug)"
         },
         {
-            "name": "App + Editor (CodeLLDB)",
+            "name": "App (CodeLLDB)",
             "type": "lldb",
             "request": "launch",
             "program": "${workspaceFolder}/build/Ninja-Debug/Bin/App.exe",
             "args": [
-                "-dx12",
-                "-EnableEditor"
+                "-dx12"
             ],
             "cwd": "${workspaceFolder}",
             "env": {

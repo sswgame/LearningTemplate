@@ -3,7 +3,6 @@
  * @brief Editor/Game MODULE API bind and hot-reload callbacks
  */
 #include "App.h"
-#include "AppInternal.h"
 
 #include "Core/Utility/Log/Logger.h"
 #include "Core/Utility/File/FileUtil.h"
@@ -11,6 +10,7 @@
 #include "Core/Window/IWindow.h"
 #include "Core/Graphics/RHI/RHI.h"
 #include "Core/Game/GameState.h"
+#include "Core/Utility/GlobalVariable/GlobalVariableManager.h"
 
 #if defined( SW_SHIPPING )
 	#include "Runtime/GameAPI.h"
@@ -18,7 +18,9 @@
 
 namespace sw
 {
-	using namespace app_internal;
+#if !defined( SW_SHIPPING )
+	SW_EXTERN_GLOBAL_VARIABLE_STRING( kGameModuleName );
+#endif
 
 	bool App::bindEditorAPI( void* hLibraryModule )
 	{

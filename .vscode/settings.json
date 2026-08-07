@@ -1,6 +1,12 @@
 {
     "cmake.useCMakePresets": "always",
     "cmake.parallelJobs": 0,
+    "cmake.debugConfig": {
+        "args": [
+            "-dx12",
+            "EnableEditor",
+        ]
+    },
     "cmake.options.advanced": {
         "ctest": {
             "statusBarVisibility": "hidden"

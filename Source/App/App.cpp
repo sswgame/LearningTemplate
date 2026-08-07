@@ -3,7 +3,6 @@
  * @brief App orchestrator — initialize / run / shutdown
  */
 #include "App.h"
-#include "AppInternal.h"
 
 #include "Core/Common/CoreServices.h"
 #include "Core/Utility/Log/Logger.h"
@@ -28,12 +27,13 @@
 	#include "Runtime/GameAPI.h"
 #endif
 
-// Defined in AppBootstrap.cpp via SW_GLOBAL_VARIABLE_FLOAT
-extern float32 gv_EditorPlayerSpeed;
-
 namespace sw
 {
-	using namespace app_internal;
+	SW_EXTERN_GLOBAL_VARIABLE_FLOAT( gv_EditorPlayerSpeed );
+	SW_GLOBAL_VARIABLE_STRING( kEditorModuleName, "EditorModule", "에디터 모듈 네임" );
+#if !defined( SW_SHIPPING )
+	SW_GLOBAL_VARIABLE_STRING( kGameModuleName, "SWGame", "게임 모듈 네임" );
+#endif
 
 	App::App()
 		: _bEnableEditor{ 0 }
@@ -48,8 +48,6 @@ namespace sw
 	{
 		if ( initializeSubsystems( argc, argv ) == false )
 			return false;
-
-		GlobalVariableInfo* pRHIBackendVar = core::getGlobalVariableManager().findVariable( "gv_RHIBackend" );
 
 		if ( _bEnableEditor )
 		{
@@ -139,7 +137,8 @@ namespace sw
 			_committedRHIBackend   = gv_RHIBackend;
 			_pendingRHIBackend	   = gv_RHIBackend;
 
-			if ( pRHIBackendVar )
+			GlobalVariableInfo* pRHIBackendVar = core::getGlobalVariableManager().findVariable( "gv_RHIBackend" );
+			if ( pRHIBackendVar != nullptr )
 			{
 				pRHIBackendVar->_onValueChanged = SW_DELEGATE_LAMBDA( GlobalVariableChangedDelegate, [this]( GlobalVariableInfo* info )
 				{
