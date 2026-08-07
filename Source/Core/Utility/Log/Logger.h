@@ -82,12 +82,14 @@ namespace sw
 		/**
 		 * @brief 지정된 레벨·태그로 로그 메시지를 기록합니다.
 		 * @param tag 호출 모듈 태그 (보통 SW_LOG_TAG)
+		 * @param file 호출 위치 파일 (__FILE__)
+		 * @param line 호출 위치 줄 (__LINE__)
 		 */
-		static void writeLog( LogLevel level, const utf8* tag, const utf8* pMessage );
+		static void writeLog( LogLevel level, const utf8* tag, const utf8* pMessage, const utf8* file, int32 line );
 
 	public:
 		void initializeInternal();
-		void writeLogInternal( LogLevel level, const utf8* tag, const utf8* pMessage );
+		void writeLogInternal( LogLevel level, const utf8* tag, const utf8* pMessage, const utf8* file, int32 line );
 		void writeLogConsole( LogLevel level, const utf8* pMessage );
 		void writeLogFile( LogLevel level, int32 year, int32 month, int32 day, int32 hour, const utf8* formattedBuffer );
 
@@ -113,7 +115,7 @@ namespace sw
 		{                                                                                                   \
 			utf8 _buffer[sw::constant::kMaxBuffer8192];                                                     \
 			sw::formatstring( _buffer, sw::constant::kMaxBuffer8192, message __VA_OPT__(, ) __VA_ARGS__ ); \
-			sw::Logger::writeLog( level, SW_LOG_TAG, _buffer );                                             \
+			sw::Logger::writeLog( level, SW_LOG_TAG, _buffer, __FILE__, __LINE__ );                         \
 		} while ( false )
 
 	/** @brief SW_LOG_ERROR 매크로 정의입니다. */

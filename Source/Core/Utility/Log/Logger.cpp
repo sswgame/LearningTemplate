@@ -42,10 +42,10 @@ namespace sw
 		return emptyPath;
 	}
 
-	void Logger::writeLog( LogLevel level, const utf8* tag, const utf8* pMessage )
+	void Logger::writeLog( LogLevel level, const utf8* tag, const utf8* pMessage, const utf8* file, int32 line )
 	{
 		if ( s_loggerInstance )
-			s_loggerInstance->writeLogInternal( level, tag, pMessage );
+			s_loggerInstance->writeLogInternal( level, tag, pMessage, file, line );
 	}
 
 	void Logger::initializeInternal()
@@ -71,7 +71,7 @@ namespace sw
 #endif
 	}
 
-	void Logger::writeLogInternal( LogLevel level, const utf8* tag, const utf8* pMessage )
+	void Logger::writeLogInternal( LogLevel level, const utf8* tag, const utf8* pMessage, const utf8* file, int32 line )
 	{
 		SW_ASSERT( _bInitialized );
 		std::lock_guard<std::mutex> lock{ _mutex };
@@ -104,9 +104,13 @@ namespace sw
 			return;
 
 		const utf8* effectiveTag = ( tag != nullptr && tag[0] != '\0' ) ? tag : "Engine";
+		const utf8* effectiveFile = ( file != nullptr && file[0] != '\0' ) ? file : "unknown";
 
+		// VS Code / Cursor 터미널 링크: path(line): 형식 (MSVC 스타일)
 		fixed_string<constant::kMaxBuffer8192> formattedBuffer{};
-		formatstring( formattedBuffer.data(), formattedBuffer.capacity(), "[%#] [%#] [%#] - %#\n", date.data(), effectiveTag, kArrHeader[levelIndex], pMessage );
+		formatstring( formattedBuffer.data(), formattedBuffer.capacity(),
+					  "%#(%#): [%#] [%#] [%#] - %#\n",
+					  effectiveFile, line, date.data(), effectiveTag, kArrHeader[levelIndex], pMessage );
 
 		writeLogConsole( level, formattedBuffer.c_str() );
 		writeLogFile( level, year, month, day, hour, formattedBuffer.c_str() );
