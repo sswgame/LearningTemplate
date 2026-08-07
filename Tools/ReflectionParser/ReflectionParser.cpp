@@ -158,7 +158,7 @@ int32 main( int32 argc, utf8* argv[] )
 	commandLineManager->initialize();
 	taskManager->initialize();
 	globalVarManager->initialize();
-	globalVarManager->registerPendingVariables( "ReflectionParser", sw::GlobalVariableRegistrar::getHead() );
+	globalVarManager->registerPendingVariables( "Core", sw::GlobalVariableRegistrar::getHead() );
 	globalVarManager->registerToCommandLine( commandLineManager.get() );
 
 	// Tool flags (--input/--output/--include) are space-separated pairs; CommandLineManager expects
@@ -180,7 +180,7 @@ int32 main( int32 argc, utf8* argv[] )
 	commandLineManager->parse( static_cast<int32>( passthroughArgv.size() ), passthroughArgv.data() );
 	globalVarManager->updateFromCommandLine( commandLineManager.get() );
 
-	typeRegistry->registerPendingTypes( "ReflectionParser", sw::TypeRegistrar::getHead(), sw::EnumRegistrar::getHead() );
+	typeRegistry->registerPendingTypes( "Core", sw::TypeRegistrar::getHead(), sw::EnumRegistrar::getHead() );
 
 	if ( sw::tool::ParserContext::ensureSharedConfig() == false )
 	{

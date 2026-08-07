@@ -3,6 +3,12 @@
  * @brief SWGame 모듈 구현 및 GameAPI 브릿지
  */
 #include "IGame.h"
+#include "SWGameModuleHeads.h"
+
+SW_DEFINE_MODULE_REGISTRAR_HEAD( swGameGvmHead, ::sw::GlobalVariableRegistrar );
+SW_DEFINE_MODULE_REGISTRAR_HEAD( swGameTypeHead, ::sw::TypeRegistrar );
+SW_DEFINE_MODULE_REGISTRAR_HEAD( swGameEnumHead, ::sw::EnumRegistrar );
+
 #include "Runtime/GameAPI.h"
 #include "Core/Common/CoreServices.h"
 #include "Core/Reflection/ReflectionCore.h"
@@ -29,10 +35,8 @@ namespace sw
 	{
 		SW_LOG_INFO( "[SWGame] Initializing Game Module..." );
 
-		getGlobalVariableManager().registerPendingVariables(
-			"SWGame", GlobalVariableRegistrar::getHead() );
-		getTypeRegistry().registerPendingTypes(
-			"SWGame", TypeRegistrar::getHead(), EnumRegistrar::getHead() );
+		getGlobalVariableManager().registerPendingVariables( "SWGame", swGameGvmHead() );
+		getTypeRegistry().registerPendingTypes( "SWGame", swGameTypeHead(), swGameEnumHead() );
 
 		return true;
 	}

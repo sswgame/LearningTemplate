@@ -3,6 +3,7 @@
  * @brief Auto-generated documentation header
  */
 #include "TestFramework.h"
+#include "TestFramework/TestModuleHeads.h"
 #include "Core/Common/Common.h"
 #include "Core/Reflection/ReflectionCore.h"
 #include "Core/Reflection/Serializer.h"
@@ -151,8 +152,8 @@ struct RegistrarInit
 {
 	RegistrarInit()
 	{
-		static sw::TypeRegistrar s_regType( &RegisterTypes );
-		static sw::EnumRegistrar s_regEnum( &RegisterEnums );
+		static sw::TypeRegistrar s_regType( &RegisterTypes, swTestTypeHead() );
+		static sw::EnumRegistrar s_regEnum( &RegisterEnums, swTestEnumHead() );
 	}
 };
 

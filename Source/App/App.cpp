@@ -4,6 +4,12 @@
  */
 #include "App.h"
 
+#include "AppModuleHeads.h"
+
+SW_DEFINE_MODULE_REGISTRAR_HEAD( swAppGvmHead, ::sw::GlobalVariableRegistrar );
+SW_DEFINE_MODULE_REGISTRAR_HEAD( swAppTypeHead, ::sw::TypeRegistrar );
+SW_DEFINE_MODULE_REGISTRAR_HEAD( swAppEnumHead, ::sw::EnumRegistrar );
+
 #include "Core/Common/CoreServices.h"
 #include "Core/Utility/Log/Logger.h"
 #include "Core/Utility/CommandLine/CommandLineManager.h"
@@ -64,7 +70,9 @@ namespace sw
 
 			_globalVariableManager = std::make_unique<GlobalVariableManager>();
 			_globalVariableManager->initialize();
-			_globalVariableManager->registerPendingVariables( "App", GlobalVariableRegistrar::getHead() );
+			// Core.dll list first (correct moduleName), then App-only list.
+			_globalVariableManager->registerPendingVariables( "Core", GlobalVariableRegistrar::getHead() );
+			_globalVariableManager->registerPendingVariables( "App", swAppGvmHead() );
 			_globalVariableManager->registerToCommandLine( _commandLineManager.get() );
 			_commandLineManager->parse( argc, argv );
 			_globalVariableManager->updateFromCommandLine( _commandLineManager.get() );

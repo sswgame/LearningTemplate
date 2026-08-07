@@ -3,7 +3,12 @@
  * @brief Test registry, filter matching, and runner
  */
 #include "TestFramework.h"
+#include "TestFramework/TestModuleHeads.h"
 #include "Core/Utility/Log/Logger.h"
+
+SW_DEFINE_MODULE_REGISTRAR_HEAD( swTestGvmHead, ::sw::GlobalVariableRegistrar );
+SW_DEFINE_MODULE_REGISTRAR_HEAD( swTestTypeHead, ::sw::TypeRegistrar );
+SW_DEFINE_MODULE_REGISTRAR_HEAD( swTestEnumHead, ::sw::EnumRegistrar );
 
 namespace test
 {

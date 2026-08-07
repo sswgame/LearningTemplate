@@ -3,6 +3,12 @@
  * @brief EditorModule DLL 엔트리포인트 및 Runtime EditorAPI 브릿지
  */
 #include "pch.h"
+#include "EditorModuleHeads.h"
+
+SW_DEFINE_MODULE_REGISTRAR_HEAD( swEditorGvmHead, ::sw::GlobalVariableRegistrar );
+SW_DEFINE_MODULE_REGISTRAR_HEAD( swEditorTypeHead, ::sw::TypeRegistrar );
+SW_DEFINE_MODULE_REGISTRAR_HEAD( swEditorEnumHead, ::sw::EnumRegistrar );
+
 #include "Runtime/EditorAPI.h"
 #include "Runtime/EditorUIContext.h"
 #include "ImGuiEditor.h"
@@ -17,10 +23,8 @@ namespace
 {
 	sw::EditorHandle EditorAPI_Create()
 	{
-		sw::getGlobalVariableManager().registerPendingVariables(
-			"EditorModule", sw::GlobalVariableRegistrar::getHead() );
-		sw::getTypeRegistry().registerPendingTypes(
-			"EditorModule", sw::TypeRegistrar::getHead(), sw::EnumRegistrar::getHead() );
+		sw::getGlobalVariableManager().registerPendingVariables( "EditorModule", swEditorGvmHead() );
+		sw::getTypeRegistry().registerPendingTypes( "EditorModule", swEditorTypeHead(), swEditorEnumHead() );
 		return static_cast<sw::EditorHandle>( new sw::ImGuiEditor() );
 	}
 

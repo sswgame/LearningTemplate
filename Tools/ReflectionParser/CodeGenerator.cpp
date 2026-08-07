@@ -145,7 +145,7 @@ namespace sw::tool
 		out.append( "\t\t\tregistry.registerClass( info );\n" );
 		out.append( "\t\t}\n\n" );
 		out.appendFormat( "\t\t%#_Registrar()\n\t\t{\n", id );
-		out.append( "\t\t\tstatic sw::TypeRegistrar reg( &RegisterType );\n" );
+		out.append( "\t\t\tstatic sw::TypeRegistrar reg( &RegisterType, SW_TYPE_MODULE_HEAD() );\n" );
 		out.append( "\t\t}\n\t};\n" );
 		out.appendFormat( "\tstatic %#_Registrar g_%#_registrar;\n\n", id, id );
 	}
@@ -184,7 +184,7 @@ namespace sw::tool
 		out.append( "\t\t\tregistry.registerEnum( info );\n" );
 		out.append( "\t\t}\n\n" );
 		out.appendFormat( "\t\t%#_Registrar()\n\t\t{\n", id );
-		out.append( "\t\t\tstatic sw::EnumRegistrar reg( &RegisterEnum );\n" );
+		out.append( "\t\t\tstatic sw::EnumRegistrar reg( &RegisterEnum, SW_ENUM_MODULE_HEAD() );\n" );
 		out.append( "\t\t}\n\t};\n" );
 		out.appendFormat( "\tstatic %#_Registrar g_%#_registrar;\n\n", id, id );
 	}

@@ -165,6 +165,12 @@ namespace sw
 		return s_head;
 	}
 
+	void GlobalVariableRegistrar::linkTo( GlobalVariableRegistrar*& moduleHead )
+	{
+		_next	   = moduleHead;
+		moduleHead = this;
+	}
+
 	GlobalVariableRegistrar::GlobalVariableRegistrar( const utf8* name, GlobalVariableType type, void* pData, const std::variant<bool, int32, float32, std::string>& defaultValue, const utf8* description, const utf8* enumType, const utf8* moduleName )
 		: _name{ name }
 		, _type{ type }
@@ -175,8 +181,25 @@ namespace sw
 		, _moduleName{ moduleName }
 		, _next{ nullptr }
 	{
-		_next	  = getHead();
-		getHead() = this;
+		linkTo( getHead() );
+	}
+
+	GlobalVariableRegistrar::GlobalVariableRegistrar( GlobalVariableRegistrar*& moduleHead, const utf8* name, GlobalVariableType type, void* pData, const std::variant<bool, int32, float32, std::string>& defaultValue, const utf8* description, const utf8* enumType, const utf8* moduleName )
+		: _name{ name }
+		, _type{ type }
+		, _pData{ pData }
+		, _defaultValue{ defaultValue }
+		, _description{ description }
+		, _enumType{ enumType }
+		, _moduleName{ moduleName }
+		, _next{ nullptr }
+	{
+		linkTo( moduleHead );
+	}
+
+	void registerCoreGlobalVariables()
+	{
+		getGlobalVariableManager().registerPendingVariables( "Core", GlobalVariableRegistrar::getHead() );
 	}
 
 	bool GlobalVariableManager::initialize()
@@ -186,8 +209,7 @@ namespace sw
 
 	void GlobalVariableManager::registerPendingVariables( const std::string_view moduleName, GlobalVariableRegistrar* pHead )
 	{
-		// getHead()는 Core 공유 리스트라 App/모듈 등록자가 섞여 있다.
-		// 이미 등록된 이름은 건너뛰어 모듈 로드 시 중복 경고를 막는다.
+		// pHead must be one module's list — never the mixed cross-DLL chain.
 		GlobalVariableRegistrar* current = pHead;
 		while ( current != nullptr )
 		{

@@ -3,6 +3,7 @@
  * @brief 단위 테스트 공통 진입점
  */
 #include "pch.h"
+#include "TestFramework/TestModuleHeads.h"
 #include "TestFramework.h"
 #include "Core/Common/CoreServices.h"
 #include "Core/Utility/Log/Logger.h"
@@ -33,7 +34,8 @@ int main( int argc, char* argv[] )
 	sw::Logger::initialize();
 	commandLineManager->initialize();
 	globalVarManager->initialize();
-	globalVarManager->registerPendingVariables( "TestFramework", sw::GlobalVariableRegistrar::getHead() );
+	globalVarManager->registerPendingVariables( "Core", sw::GlobalVariableRegistrar::getHead() );
+	globalVarManager->registerPendingVariables( "TestFramework", swTestGvmHead() );
 	globalVarManager->registerToCommandLine( commandLineManager.get() );
 
 	// Consume framework-only flags first so CommandLineManager does not warn on unknowns.
@@ -78,7 +80,8 @@ int main( int argc, char* argv[] )
 	if ( sceneManager->initialize() == false )
 		return -1;
 
-	typeRegistry->registerPendingTypes( "TestFramework", sw::TypeRegistrar::getHead(), sw::EnumRegistrar::getHead() );
+	typeRegistry->registerPendingTypes( "Core", sw::TypeRegistrar::getHead(), sw::EnumRegistrar::getHead() );
+	typeRegistry->registerPendingTypes( "TestFramework", swTestTypeHead(), swTestEnumHead() );
 
 	SW_LOG_INFO( "Core services initialized. Running tests..." );
 	SW_LOG_INFO( " Tip: --test_filter=Suite.*  --test_filter=-RHITest.*  --test_list" );

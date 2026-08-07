@@ -15,6 +15,7 @@ sw_add_reflection_step(ReflectionTest
         "${CMAKE_CURRENT_SOURCE_DIR}/TestSampleActor.h"
     INCLUDES
         "${CMAKE_SOURCE_DIR}/Source"
+        "${CMAKE_SOURCE_DIR}/Test"
 )
 
 # BUILD_TESTING 옵션 켜짐 시 CTest에 단위 테스트 타겟으로 추가

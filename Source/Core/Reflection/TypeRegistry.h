@@ -34,6 +34,7 @@ namespace sw
 	private:
 		std::unordered_map<hashed_string, TypeInfo> _mapNameToClassType;
 		std::unordered_map<hashed_string, EnumInfo> _mapNameToEnum;
+		hashed_string								_activeModuleName;
 	};
 
 	struct SW_API TypeRegistrar
@@ -41,10 +42,13 @@ namespace sw
 		void ( *_registerFunc )( TypeRegistry& );
 		TypeRegistrar* _next;
 
-		// DLL 경계를 넘는 단일 head (헤더 inline static 금지)
+		/** @brief Core.dll-only type registrar list head. */
 		static TypeRegistrar*& getHead();
 
+		/** @brief Links into Core::getHead() (Core TUs only). */
 		TypeRegistrar( void ( *registerFunc )( TypeRegistry& ) );
+		/** @brief Links into a module-local head (hot-reload safe). */
+		TypeRegistrar( void ( *registerFunc )( TypeRegistry& ), TypeRegistrar*& moduleHead );
 	};
 
 	struct SW_API EnumRegistrar
@@ -55,10 +59,18 @@ namespace sw
 		static EnumRegistrar*& getHead();
 
 		EnumRegistrar( void ( *registerFunc )( TypeRegistry& ) );
+		EnumRegistrar( void ( *registerFunc )( TypeRegistry& ), EnumRegistrar*& moduleHead );
 	};
 
 	/** @brief Registers enums/types linked into Core.dll (must be called from Core, after TypeRegistry is bound). */
 	SW_API void registerCoreReflectionTypes();
+
+#ifndef SW_TYPE_MODULE_HEAD
+	#define SW_TYPE_MODULE_HEAD() (::sw::TypeRegistrar::getHead())
+#endif
+#ifndef SW_ENUM_MODULE_HEAD
+	#define SW_ENUM_MODULE_HEAD() (::sw::EnumRegistrar::getHead())
+#endif
 
 	inline bool TypeInfo::isA( const hashed_string& targetFqn ) const
 	{

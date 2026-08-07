@@ -75,19 +75,27 @@ namespace sw
 
 	void TypeRegistry::registerClass( const TypeInfo& info )
 	{
-		_mapNameToClassType.insert_or_assign( info._fullyQualifiedName, info );
-		if ( info._name.empty() == false )
+		TypeInfo stored = info;
+		if ( stored._moduleName.empty() && _activeModuleName.empty() == false )
+			stored._moduleName = _activeModuleName;
+
+		_mapNameToClassType.insert_or_assign( stored._fullyQualifiedName, stored );
+		if ( stored._name.empty() == false )
 		{
-			_mapNameToClassType.try_emplace( info._name, info );
+			_mapNameToClassType.try_emplace( stored._name, stored );
 		}
 	}
 
 	void TypeRegistry::registerEnum( const EnumInfo& info )
 	{
-		_mapNameToEnum.insert_or_assign( info._fullyQualifiedName, info );
-		if ( info._name.empty() == false )
+		EnumInfo stored = info;
+		if ( stored._moduleName.empty() && _activeModuleName.empty() == false )
+			stored._moduleName = _activeModuleName;
+
+		_mapNameToEnum.insert_or_assign( stored._fullyQualifiedName, stored );
+		if ( stored._name.empty() == false )
 		{
-			_mapNameToEnum.try_emplace( info._name, info );
+			_mapNameToEnum.try_emplace( stored._name, stored );
 		}
 	}
 
@@ -124,11 +132,16 @@ namespace sw
 	}
 
 	TypeRegistrar::TypeRegistrar( void ( *registerFunc )( TypeRegistry& ) )
+		: TypeRegistrar( registerFunc, getHead() )
+	{
+	}
+
+	TypeRegistrar::TypeRegistrar( void ( *registerFunc )( TypeRegistry& ), TypeRegistrar*& moduleHead )
 		: _registerFunc{ registerFunc }
 		, _next{ nullptr }
 	{
-		_next	  = getHead();
-		getHead() = this;
+		_next	   = moduleHead;
+		moduleHead = this;
 	}
 
 	EnumRegistrar*& EnumRegistrar::getHead()
@@ -138,16 +151,21 @@ namespace sw
 	}
 
 	EnumRegistrar::EnumRegistrar( void ( *registerFunc )( TypeRegistry& ) )
+		: EnumRegistrar( registerFunc, getHead() )
+	{
+	}
+
+	EnumRegistrar::EnumRegistrar( void ( *registerFunc )( TypeRegistry& ), EnumRegistrar*& moduleHead )
 		: _registerFunc{ registerFunc }
 		, _next{ nullptr }
 	{
-		_next	  = getHead();
-		getHead() = this;
+		_next	   = moduleHead;
+		moduleHead = this;
 	}
 
 	void TypeRegistry::registerPendingTypes( const std::string_view moduleName, TypeRegistrar* classHead, EnumRegistrar* enumHead )
 	{
-		(void)moduleName;
+		_activeModuleName = hashed_string( moduleName.data(), static_cast<uint32>( moduleName.size() ) );
 
 		TypeRegistrar* currClass = classHead;
 		while ( currClass != nullptr )
@@ -168,6 +186,8 @@ namespace sw
 			}
 			currEnum = currEnum->_next;
 		}
+
+		_activeModuleName = hashed_string();
 	}
 
 	void registerCoreReflectionTypes()

@@ -5,6 +5,7 @@
  */
 
 #include "Core/Reflection/ReflectionCore.h"
+#include "Game/SWGameModuleHeads.h"
 
 namespace sw
 {

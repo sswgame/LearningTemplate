@@ -3,6 +3,7 @@
  * @brief Auto-generated documentation header
  */
 #include "pch.h"
+#include "TestFramework/TestModuleHeads.h"
 #include "TestFramework.h"
 #include "Core/Utility/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Utility/CommandLine/CommandLineManager.h"

@@ -5,6 +5,7 @@
  */
 
 #include "Core/Reflection/ReflectionCore.h"
+#include "TestFramework/TestModuleHeads.h"
 
 namespace sw
 {
