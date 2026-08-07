@@ -1,6 +1,6 @@
 # Unity build flags (optional).
 
-if(NOT sw_enable_unity_build)
+if(NOT SW_ENABLE_UNITY_BUILD)
     return()
 endif()
 

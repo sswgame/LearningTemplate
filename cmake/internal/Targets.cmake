@@ -91,7 +91,7 @@ endfunction()
 # 타겟별 compile definition(SW_EXPORTS/SW_IMPORTS 등)이 다르므로 REUSE_FROM 대신
 # 동일 pch.h를 타겟마다 따로 컴파일한다.
 function(sw_configure_pch TARGET_NAME)
-    if(NOT sw_enable_pch)
+    if(NOT SW_ENABLE_PCH)
         return()
     endif()
     set(_sw_pch "${CMAKE_SOURCE_DIR}/Source/Core/pch.h")

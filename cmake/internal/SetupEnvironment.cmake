@@ -1,6 +1,6 @@
 # ==============================================================================
 # @file cmake/internal/SetupEnvironment.cmake
-# @brief 엔진 내부: Scripts/SetupEnvironment.py 실행 (IDE/LLVM 경로 등)
+# @brief 엔진 내부: Scripts/SetupEnvironment.py 실행 (IDE/LLVM 경로 → engine_config.json)
 # ==============================================================================
 
 find_package(Python3 QUIET COMPONENTS Interpreter)

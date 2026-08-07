@@ -1,6 +1,6 @@
 # Address/UB sanitizer flags (optional).
 
-if(NOT sw_enable_sanitizer)
+if(NOT SW_ENABLE_SANITIZER)
     return()
 endif()
 

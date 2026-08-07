@@ -1,12 +1,10 @@
 r"""
 Scripts/ConfigHelper.py
 
-[초심자를 위한 역할 및 기능 설명]
-이 모듈은 엔진 프리빌드 파이프라인(SetupEnvironment, FindVcpkg, SetupNinja)에서 공통으로 사용되는
-경로 정규화(NormalizePath) 및 JSON 파일 읽기/쓰기 유틸리티를 제공하는 공통 도우미 스크립트입니다.
+엔진 프리빌드 파이프라인(SetupEnvironment, FindVcpkg, SetupNinja) 공통 유틸리티.
 
-윈도우의 `C:\Path\To` 구문을 Linux/macOS 및 CMake 규격인 `C:/Path/To` (POSIX 슬래시)로
-통일해 주는 역할을 담당하여 크로스 플랫폼 경로 이스케이프 문제를 예방합니다.
+네이밍: 공개 함수 PascalCase (GetProjectRoot, NormalizePath, LoadEngineConfig, ...).
+경로 문자열은 POSIX 슬래시(C:/...) 로 정규화한다.
 """
 
 import json

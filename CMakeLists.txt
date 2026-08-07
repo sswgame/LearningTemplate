@@ -44,8 +44,7 @@ add_subdirectory(Source)
 
 add_subdirectory(Tools)
 
-option(sw_build_Game "Build project Game" ON)
-if(sw_build_Game)
+if(SW_BUILD_GAME)
     add_subdirectory(Source/Game)
 endif()
 
@@ -57,7 +56,7 @@ if(TARGET App AND TARGET SWGame)
     endif()
 endif()
 
-if(sw_enable_testing AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Test")
+if(SW_ENABLE_TESTING AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Test")
     include(CTest)
     enable_testing()
     add_subdirectory(Test)

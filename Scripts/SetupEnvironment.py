@@ -1,13 +1,14 @@
 """
 Scripts/SetupEnvironment.py
 
-[초심자를 위한 스크립트 역할 설명]
-이 스크립트는 프로젝트 빌드 전, 개발자의 컴퓨터 환경(Windows / Linux / macOS)을 분석하여
-빌드에 필요한 핵심 도구들(Clang/LLVM, Windows SDK, DXC Shader Compiler, MSVC, vcpkg, Ninja 등)의
-위치를 자동으로 탐색하고 `Config/engine_config.json`과 `Config/parser_config.json`에 저장해주는 자동 환경 감지기입니다.
+프로젝트 빌드 전 개발 PC 환경(Windows / Linux / macOS)을 분석하여
+빌드 도구(Clang/LLVM, Windows SDK, DXC, MSVC, vcpkg, Ninja 등) 경로를
+`Config/engine_config.json` / `Config/parser_config.json` 에 기록합니다.
 
-개발자가 일일이 환경 변수나 헤더 경로를 고정 경로로 적지 않아도,
-이 스크립트 덕분에 어떤 컴퓨터에서든 `cmake --preset` 한 줄로 빌드 준비가 완료됩니다.
+네이밍:
+  - 공개 함수: PascalCase (FindLlvmPath, SetupEnvironment, ...)
+  - 비공개 헬퍼: _snake_case (_find_first_existing_file, _get_or_find, ...)
+  - engine_config 키: snake_case (llvm_path, dxc_dll_path, ...)
 """
 
 import json
@@ -264,17 +265,15 @@ def SetupEnvironment() -> Dict[str, Any]:
         except Exception:
             pass
 
-    def get_or_find(key: str, find_func, *args) -> Any:
-        """
-        @brief get_or_find 처리를 수행합니다.
-        """
+    def _get_or_find(key: str, find_func, *args) -> Any:
+        """engine_config 캐시가 유효하면 재사용, 아니면 find_func로 탐색."""
         val = existing_config.get(key)
         if val and (not isinstance(val, str) or os.path.exists(val)):
             return val
         return find_func(*args)
 
-    llvm_path = get_or_find("llvm_path", FindLlvmPath)
-    libclang_dll_path = get_or_find("libclang_dll_path", FindLibClangDllPath, llvm_path)
+    llvm_path = _get_or_find("llvm_path", FindLlvmPath)
+    libclang_dll_path = _get_or_find("libclang_dll_path", FindLibClangDllPath, llvm_path)
 
     sdk_dir_val = existing_config.get("windows_sdk_dir", "")
     sdk_ver_val = existing_config.get("windows_sdk_version", "")
@@ -294,12 +293,9 @@ def SetupEnvironment() -> Dict[str, Any]:
     elif not dxil_dll_path_val or not os.path.exists(dxil_dll_path_val):
         dxil_dll_path_val = ""
 
-    msvc_path = get_or_find("msvc_tools_dir", FindMsvcPath)
+    msvc_path = _get_or_find("msvc_tools_dir", FindMsvcPath)
 
-    def find_vcpkg_safe():
-        """
-        @brief find_vcpkg_safe 처리를 수행합니다.
-        """
+    def _find_vcpkg_root() -> str:
         try:
             from FindVcpkg import FindOrInstallVcpkg
             vcpkg_path_obj = FindOrInstallVcpkg()
@@ -307,20 +303,17 @@ def SetupEnvironment() -> Dict[str, Any]:
         except ImportError:
             return ""
 
-    vcpkg_path = get_or_find("vcpkg_root", find_vcpkg_safe)
+    vcpkg_path = _get_or_find("vcpkg_root", _find_vcpkg_root)
 
-    def find_ninja_safe():
-        """
-        @brief find_ninja_safe 처리를 수행합니다.
-        """
+    def _find_ninja_path() -> str:
         try:
             from SetupNinja import SetupNinja
             return NormalizePath(SetupNinja())
         except ImportError:
             return ""
 
-    ninja_path = get_or_find("ninja_path", find_ninja_safe)
-    sys_includes = get_or_find("system_include_dirs", FindSystemIncludeDirs)
+    ninja_path = _get_or_find("ninja_path", _find_ninja_path)
+    sys_includes = _get_or_find("system_include_dirs", FindSystemIncludeDirs)
 
     target_os = platform.system().lower()
 
