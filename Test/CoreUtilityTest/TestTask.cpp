@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file TestTask.cpp
  * @brief Auto-generated documentation header
  */
@@ -12,30 +12,30 @@
 
 namespace
 {
-	static std::atomic<int32> g_taskExecOrder{ 0 };
-	static int32			  g_orderA = 0;
-	static int32			  g_orderB = 0;
-	static int32			  g_orderC = 0;
+	static std::atomic<int32> s_taskExecOrder{ 0 };
+	static int32			  s_orderA = 0;
+	static int32			  s_orderB = 0;
+	static int32			  s_orderC = 0;
 
 	void taskFuncA()
 	{
-		g_orderA = ++g_taskExecOrder;
+		s_orderA = ++s_taskExecOrder;
 	}
 
 	void taskFuncB()
 	{
-		g_orderB = ++g_taskExecOrder;
+		s_orderB = ++s_taskExecOrder;
 	}
 
 	void taskFuncC()
 	{
-		g_orderC = ++g_taskExecOrder;
+		s_orderC = ++s_taskExecOrder;
 	}
 
-	static int32	   g_recInt	   = 0;
-	static double	   g_recDouble = 0.0;
-	static std::string g_recStr	   = "";
-	static void*	   g_recPtr	   = nullptr;
+	static int32	   s_recInt	   = 0;
+	static double	   s_recDouble = 0.0;
+	static std::string s_recStr	   = "";
+	static void*	   s_recPtr	   = nullptr;
 
 	struct CustomPlayerData
 	{
@@ -43,21 +43,21 @@ namespace
 		int32		level = 0;
 	};
 
-	static CustomPlayerData	  g_recPlayer;
-	static std::vector<int32> g_recItems;
+	static CustomPlayerData	  s_recPlayer;
+	static std::vector<int32> s_recItems;
 
 	void taskWithArbitraryArgs( const sw::TaskArgs& args )
 	{
-		g_recInt	= args.get<int32>( 0 );
-		g_recDouble = args.get<double>( 1 );
-		g_recStr	= args.get<std::string>( 2 );
-		g_recPtr	= args.get<void*>( 3 );
+		s_recInt	= args.get<int32>( 0 );
+		s_recDouble = args.get<double>( 1 );
+		s_recStr	= args.get<std::string>( 2 );
+		s_recPtr	= args.get<void*>( 3 );
 	}
 
 	void taskWithCustomStructAndContainer( const sw::TaskArgs& args )
 	{
-		g_recPlayer = args.get<CustomPlayerData>( 0 );
-		g_recItems	= args.get<std::vector<int32>>( 1 );
+		s_recPlayer = args.get<CustomPlayerData>( 0 );
+		s_recItems	= args.get<std::vector<int32>>( 1 );
 	}
 }
 
@@ -66,10 +66,10 @@ SW_TEST_CASE( Utility_Task, GeneralTaskDAG )
 	sw::TaskManager& taskMgr = sw::getTaskManager();
 	taskMgr.initialize();
 
-	g_taskExecOrder = 0;
-	g_orderA		= 0;
-	g_orderB		= 0;
-	g_orderC		= 0;
+	s_taskExecOrder = 0;
+	s_orderA		= 0;
+	s_orderB		= 0;
+	s_orderC		= 0;
 
 	sw::TaskDelegate delA = SW_DELEGATE_FUNCTION( sw::TaskDelegate, taskFuncA );
 	sw::TaskDelegate delB = SW_DELEGATE_FUNCTION( sw::TaskDelegate, taskFuncB );
@@ -84,9 +84,9 @@ SW_TEST_CASE( Utility_Task, GeneralTaskDAG )
 
 	taskMgr.waitAll();
 
-	SW_EXPECT_TRUE( g_orderA > 0 );
-	SW_EXPECT_TRUE( g_orderB > g_orderA );
-	SW_EXPECT_TRUE( g_orderC > g_orderB );
+	SW_EXPECT_TRUE( s_orderA > 0 );
+	SW_EXPECT_TRUE( s_orderB > s_orderA );
+	SW_EXPECT_TRUE( s_orderC > s_orderB );
 
 	taskMgr.clear();
 }
@@ -103,10 +103,10 @@ SW_TEST_CASE( Utility_Task, ArbitraryArgsTask )
 	taskMgr.emplaceTask( "ArgsTask", argsDel, args );
 	taskMgr.waitAll();
 
-	SW_EXPECT_EQUAL( 100, g_recInt );
-	SW_EXPECT_TRUE( std::abs( g_recDouble - 3.14159 ) < 0.0001 );
-	SW_EXPECT_EQUAL( std::string( "HelloTask" ), g_recStr );
-	SW_EXPECT_EQUAL( static_cast<void*>( &dummyVar ), g_recPtr );
+	SW_EXPECT_EQUAL( 100, s_recInt );
+	SW_EXPECT_TRUE( std::abs( s_recDouble - 3.14159 ) < 0.0001 );
+	SW_EXPECT_EQUAL( std::string( "HelloTask" ), s_recStr );
+	SW_EXPECT_EQUAL( static_cast<void*>( &dummyVar ), s_recPtr );
 
 	taskMgr.clear();
 
@@ -119,14 +119,14 @@ SW_TEST_CASE( Utility_Task, ArbitraryArgsTask )
 	taskMgr.emplaceTask( "CustomArgsTask", customDel, customArgs );
 	taskMgr.waitAll();
 
-	SW_EXPECT_EQUAL( std::string( "Antigravity" ), g_recPlayer.name );
-	SW_EXPECT_EQUAL( 99, g_recPlayer.level );
-	SW_EXPECT_EQUAL( 3u, static_cast<uint32>( g_recItems.size() ) );
-	if ( g_recItems.size() == 3 )
+	SW_EXPECT_EQUAL( std::string( "Antigravity" ), s_recPlayer.name );
+	SW_EXPECT_EQUAL( 99, s_recPlayer.level );
+	SW_EXPECT_EQUAL( 3u, static_cast<uint32>( s_recItems.size() ) );
+	if ( s_recItems.size() == 3 )
 	{
-		SW_EXPECT_EQUAL( 10, g_recItems[0] );
-		SW_EXPECT_EQUAL( 20, g_recItems[1] );
-		SW_EXPECT_EQUAL( 30, g_recItems[2] );
+		SW_EXPECT_EQUAL( 10, s_recItems[0] );
+		SW_EXPECT_EQUAL( 20, s_recItems[1] );
+		SW_EXPECT_EQUAL( 30, s_recItems[2] );
 	}
 
 	taskMgr.clear();
@@ -138,17 +138,17 @@ SW_TEST_CASE( Utility_Task, ParallelTask )
 	taskMgr.initialize();
 
 	constexpr uint32						kElementCount = 100;
-	static std::vector<std::atomic<uint32>> results( kElementCount );
+	static std::vector<std::atomic<uint32>> s_results( kElementCount );
 	for ( uint32 i = 0; i < kElementCount; ++i )
 	{
-		results[i] = 0;
+		s_results[i] = 0;
 	}
 
 	struct ParallelContext
 	{
 		static void processIndex( uint32 index )
 		{
-			results[index].fetch_add( 1, std::memory_order_relaxed );
+			s_results[index].fetch_add( 1, std::memory_order_relaxed );
 		}
 	};
 
@@ -159,7 +159,7 @@ SW_TEST_CASE( Utility_Task, ParallelTask )
 
 	for ( uint32 i = 0; i < kElementCount; ++i )
 	{
-		SW_EXPECT_EQUAL( 1u, results[i].load() );
+		SW_EXPECT_EQUAL( 1u, s_results[i].load() );
 	}
 
 	taskMgr.clear();
@@ -170,19 +170,19 @@ SW_TEST_CASE( Utility_Task, StagedTask )
 	sw::TaskManager& taskMgr = sw::getTaskManager();
 	taskMgr.initialize();
 
-	static std::atomic<uint32> stageProgress{ 0 };
-	stageProgress = 0;
+	static std::atomic<uint32> s_stageProgress{ 0 };
+	s_stageProgress = 0;
 
 	struct StageContext
 	{
 		static void runStageTask1()
 		{
-			stageProgress.fetch_add( 10, std::memory_order_relaxed );
+			s_stageProgress.fetch_add( 10, std::memory_order_relaxed );
 		}
 
 		static void runStageTask2()
 		{
-			stageProgress.fetch_add( 20, std::memory_order_relaxed );
+			s_stageProgress.fetch_add( 20, std::memory_order_relaxed );
 		}
 	};
 
@@ -197,7 +197,7 @@ SW_TEST_CASE( Utility_Task, StagedTask )
 	taskMgr.waitStage( stage );
 
 	SW_EXPECT_TRUE( taskMgr.isStageComplete( stage ) );
-	SW_EXPECT_EQUAL( 30u, stageProgress.load() );
+	SW_EXPECT_EQUAL( 30u, s_stageProgress.load() );
 
 	taskMgr.clear();
 }
@@ -207,14 +207,14 @@ SW_TEST_CASE( Utility_Task, TaskChainingThen )
 	sw::TaskManager& taskMgr = sw::getTaskManager();
 	taskMgr.initialize();
 
-	static std::vector<int32> executionOrder;
-	executionOrder.clear();
+	static std::vector<int32> s_executionOrder;
+	s_executionOrder.clear();
 
 	struct ChainContext
 	{
-		static void step1() { executionOrder.push_back( 1 ); }
-		static void step2() { executionOrder.push_back( 2 ); }
-		static void step3() { executionOrder.push_back( 3 ); }
+		static void step1() { s_executionOrder.push_back( 1 ); }
+		static void step2() { s_executionOrder.push_back( 2 ); }
+		static void step3() { s_executionOrder.push_back( 3 ); }
 	};
 
 	sw::TaskHandle t1 = taskMgr.emplaceTask( SW_DELEGATE_FUNCTION( sw::TaskDelegate, ChainContext::step1 ) );
@@ -224,12 +224,12 @@ SW_TEST_CASE( Utility_Task, TaskChainingThen )
 	taskMgr.dispatch();
 	taskMgr.waitAll();
 
-	SW_EXPECT_EQUAL( 3, static_cast<int32>( executionOrder.size() ) );
-	if ( executionOrder.size() == 3 )
+	SW_EXPECT_EQUAL( 3, static_cast<int32>( s_executionOrder.size() ) );
+	if ( s_executionOrder.size() == 3 )
 	{
-		SW_EXPECT_EQUAL( 1, executionOrder[0] );
-		SW_EXPECT_EQUAL( 2, executionOrder[1] );
-		SW_EXPECT_EQUAL( 3, executionOrder[2] );
+		SW_EXPECT_EQUAL( 1, s_executionOrder[0] );
+		SW_EXPECT_EQUAL( 2, s_executionOrder[1] );
+		SW_EXPECT_EQUAL( 3, s_executionOrder[2] );
 	}
 
 	taskMgr.clear();

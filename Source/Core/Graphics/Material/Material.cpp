@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file Material.cpp
  * @brief Auto-generated documentation header
  */
@@ -20,7 +20,7 @@ namespace sw
 		const utf8* name;
 		MaterialPropertyType type;
 		uint32 size;
-	} g_PropertyTypes[] = {
+	} s_PropertyTypes[] = {
 		{ "Float", MaterialPropertyType::Float, 4 },
 		{ "Float2", MaterialPropertyType::Float2, 8 },
 		{ "Float3", MaterialPropertyType::Float3, 12 },
@@ -37,7 +37,7 @@ namespace sw
 	};
 
 	static MaterialPropertyType stringToType(const std::string& str, uint32& outSize) {
-		for (const auto& desc : g_PropertyTypes) {
+		for (const auto& desc : s_PropertyTypes) {
 			if (str == desc.name) {
 				outSize = desc.size;
 				return desc.type;
@@ -48,7 +48,7 @@ namespace sw
 	}
 
 	static const utf8* typeToString( MaterialPropertyType type ) {
-		for (const auto& desc : g_PropertyTypes) {
+		for (const auto& desc : s_PropertyTypes) {
 			if (desc.type == type) {
 				return desc.name;
 			}

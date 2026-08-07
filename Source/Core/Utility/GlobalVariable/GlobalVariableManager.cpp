@@ -161,8 +161,8 @@ namespace sw
 
 	GlobalVariableRegistrar*& GlobalVariableRegistrar::getHead()
 	{
-		static GlobalVariableRegistrar* head = nullptr;
-		return head;
+		static GlobalVariableRegistrar* s_head = nullptr;
+		return s_head;
 	}
 
 	bool GlobalVariableManager::initialize()

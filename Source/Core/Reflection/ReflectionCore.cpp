@@ -83,8 +83,8 @@ namespace sw
 
 	TypeRegistrar*& TypeRegistrar::getHead()
 	{
-		static TypeRegistrar* head = nullptr;
-		return head;
+		static TypeRegistrar* s_head = nullptr;
+		return s_head;
 	}
 
 	TypeRegistrar::TypeRegistrar( void (*registerFunc)(TypeRegistry&) )
@@ -97,8 +97,8 @@ namespace sw
 
 	EnumRegistrar*& EnumRegistrar::getHead()
 	{
-		static EnumRegistrar* head = nullptr;
-		return head;
+		static EnumRegistrar* s_head = nullptr;
+		return s_head;
 	}
 
 	EnumRegistrar::EnumRegistrar( void (*registerFunc)(TypeRegistry&) )

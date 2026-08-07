@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file TestDelegate.cpp
  * @brief Auto-generated documentation header
  */
@@ -9,10 +9,10 @@
 
 #include "Core/Utility/Delegate/Delegate.h"
 
-static int	g_TestValue = 0;
+static int	s_TestValue = 0;
 static void freeFunctionTest( int val )
 {
-	g_TestValue += val;
+	s_TestValue += val;
 }
 
 struct DummyListener
@@ -26,12 +26,12 @@ struct DummyListener
 
 SW_TEST_CASE( Utility_Delegate, SingleDelegateFreeFunction )
 {
-	g_TestValue					  = 0;
+	s_TestValue					  = 0;
 	sw::Delegate<void( int )> del = SW_DELEGATE_FUNCTION( sw::Delegate<void( int )>, freeFunctionTest );
 	SW_EXPECT_TRUE( del.isBound() );
 
 	del( 10 );
-	SW_EXPECT_EQUAL( 10, g_TestValue );
+	SW_EXPECT_EQUAL( 10, s_TestValue );
 }
 
 SW_TEST_CASE( Utility_Delegate, SingleDelegateMemberFunction )
@@ -46,7 +46,7 @@ SW_TEST_CASE( Utility_Delegate, SingleDelegateMemberFunction )
 
 SW_TEST_CASE( Utility_Delegate, MulticastDelegateBroadcast )
 {
-	g_TestValue = 0;
+	s_TestValue = 0;
 	DummyListener listener;
 
 	sw::MulticastDelegate<void( int )> multiDel;
@@ -57,13 +57,13 @@ SW_TEST_CASE( Utility_Delegate, MulticastDelegateBroadcast )
 	SW_EXPECT_TRUE( multiDel.isBound() );
 
 	multiDel.broadcast( 5 );
-	SW_EXPECT_EQUAL( 5, g_TestValue );
+	SW_EXPECT_EQUAL( 5, s_TestValue );
 	SW_EXPECT_EQUAL( 5, listener.value );
 }
 
 SW_TEST_CASE( Utility_Delegate, MulticastDelegateRemoveSingle )
 {
-	g_TestValue = 0;
+	s_TestValue = 0;
 
 	sw::MulticastDelegate<void( int )> multiDel;
 	sw::Delegate<void( int )>		   delFree = SW_DELEGATE_FUNCTION( sw::Delegate<void( int )>, freeFunctionTest );
@@ -75,12 +75,12 @@ SW_TEST_CASE( Utility_Delegate, MulticastDelegateRemoveSingle )
 	SW_EXPECT_FALSE( multiDel.isBound() );
 
 	multiDel.broadcast( 99 );
-	SW_EXPECT_EQUAL( 0, g_TestValue );
+	SW_EXPECT_EQUAL( 0, s_TestValue );
 }
 
 SW_TEST_CASE( Utility_Delegate, MulticastDelegateRemoveAll )
 {
-	g_TestValue = 0;
+	s_TestValue = 0;
 	DummyListener listener;
 
 	sw::MulticastDelegate<void( int )> multiDel;
@@ -92,7 +92,7 @@ SW_TEST_CASE( Utility_Delegate, MulticastDelegateRemoveAll )
 	SW_EXPECT_FALSE( multiDel.isBound() );
 
 	multiDel.broadcast( 10 );
-	SW_EXPECT_EQUAL( 0, g_TestValue );
+	SW_EXPECT_EQUAL( 0, s_TestValue );
 	SW_EXPECT_EQUAL( 0, listener.value );
 }
 
@@ -118,7 +118,7 @@ SW_TEST_CASE( Utility_Delegate, MulticastDelegateLambda )
 
 SW_TEST_CASE( Utility_Delegate, MulticastDelegateMultipleBroadcasts )
 {
-	g_TestValue = 0;
+	s_TestValue = 0;
 
 	sw::MulticastDelegate<void( int )> multiDel;
 	multiDel.add( SW_DELEGATE_FUNCTION( sw::Delegate<void( int )>, freeFunctionTest ) );
@@ -127,7 +127,7 @@ SW_TEST_CASE( Utility_Delegate, MulticastDelegateMultipleBroadcasts )
 	multiDel.broadcast( 20 );
 	multiDel.broadcast( 30 );
 
-	SW_EXPECT_EQUAL( 60, g_TestValue );
+	SW_EXPECT_EQUAL( 60, s_TestValue );
 }
 
 SW_TEST_CASE( Utility_Delegate, MulticastDelegateHandle )

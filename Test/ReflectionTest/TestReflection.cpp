@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file TestReflection.cpp
  * @brief Auto-generated documentation header
  */
@@ -151,12 +151,12 @@ namespace sw
 	{
 		RegistrarInit()
 		{
-			static sw::TypeRegistrar regType(&RegisterTypes);
-			static sw::EnumRegistrar regEnum(&RegisterEnums);
+			static sw::TypeRegistrar s_regType(&RegisterTypes);
+			static sw::EnumRegistrar s_regEnum(&RegisterEnums);
 		}
 	};
 
-	static RegistrarInit g_RegistrarInit;
+	static RegistrarInit s_RegistrarInit;
 
 SW_TEST_CASE( Reflection_TypeRegistry, FindRegisteredClass )
 {

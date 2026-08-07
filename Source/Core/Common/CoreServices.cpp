@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file CoreServices.cpp
  * @brief Core.dll 전역 서비스 포인터 테이블 (헤더 inline static 금지 — DLL 경계 공유)
  */
@@ -16,52 +16,52 @@ namespace sw
 {
 	namespace
 	{
-		CoreServices g_services{};
+		CoreServices s_services{};
 	}
 
 	void bindCoreServices( const CoreServices& services )
 	{
-		g_services = services;
+		s_services = services;
 	}
 
 	void unbindCoreServices()
 	{
-		g_services = {};
+		s_services = {};
 	}
 
 	CommandLineManager& getCommandLineManager()
 	{
-		SW_LOG_ASSERT( g_services.commandLineManager != nullptr, "CommandLineManager is not bound" );
-		return *g_services.commandLineManager;
+		SW_LOG_ASSERT( s_services.commandLineManager != nullptr, "CommandLineManager is not bound" );
+		return *s_services.commandLineManager;
 	}
 
 	GlobalVariableManager& getGlobalVariableManager()
 	{
-		SW_LOG_ASSERT( g_services.globalVariableManager != nullptr, "GlobalVariableManager is not bound" );
-		return *g_services.globalVariableManager;
+		SW_LOG_ASSERT( s_services.globalVariableManager != nullptr, "GlobalVariableManager is not bound" );
+		return *s_services.globalVariableManager;
 	}
 
 	TaskManager& getTaskManager()
 	{
-		SW_LOG_ASSERT( g_services.taskManager != nullptr, "TaskManager is not bound" );
-		return *g_services.taskManager;
+		SW_LOG_ASSERT( s_services.taskManager != nullptr, "TaskManager is not bound" );
+		return *s_services.taskManager;
 	}
 
 	TypeRegistry& getTypeRegistry()
 	{
-		SW_LOG_ASSERT( g_services.typeRegistry != nullptr, "TypeRegistry is not bound" );
-		return *g_services.typeRegistry;
+		SW_LOG_ASSERT( s_services.typeRegistry != nullptr, "TypeRegistry is not bound" );
+		return *s_services.typeRegistry;
 	}
 
 	ComponentManager& getComponentManager()
 	{
-		SW_LOG_ASSERT( g_services.componentManager != nullptr, "ComponentManager is not bound" );
-		return *g_services.componentManager;
+		SW_LOG_ASSERT( s_services.componentManager != nullptr, "ComponentManager is not bound" );
+		return *s_services.componentManager;
 	}
 
 	SceneManager& getSceneManager()
 	{
-		SW_LOG_ASSERT( g_services.sceneManager != nullptr, "SceneManager is not bound" );
-		return *g_services.sceneManager;
+		SW_LOG_ASSERT( s_services.sceneManager != nullptr, "SceneManager is not bound" );
+		return *s_services.sceneManager;
 	}
 }

@@ -9,13 +9,13 @@ namespace sw
 {
 	SW_API hashed_string::AllocationInfo* getCoreHashedStringAllocationInfo() noexcept
 	{
-		static hashed_string::AllocationInfo instance;
-		return &instance;
+		static hashed_string::AllocationInfo s_instance;
+		return &s_instance;
 	}
 
 	SW_API hashed_wstring::AllocationInfo* getCoreHashedWStringAllocationInfo() noexcept
 	{
-		static hashed_wstring::AllocationInfo instance;
-		return &instance;
+		static hashed_wstring::AllocationInfo s_instance;
+		return &s_instance;
 	}
 }

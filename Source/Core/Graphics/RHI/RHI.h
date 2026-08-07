@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Core/CoreMinimal.h"
 #include "IRHIDevice.h"
@@ -18,7 +18,7 @@ namespace sw
 {
 	enum class ShaderTargetFormat : uint8;
 
-	extern SW_API RHIBackend g_RHIBackend;
+	extern SW_API RHIBackend gv_RHIBackend;
 
 	/**
 	 * @class RHI

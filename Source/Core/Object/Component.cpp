@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file Component.cpp
  * @brief Auto-generated documentation header
  */
@@ -9,10 +9,10 @@
 
 namespace sw
 {
-	uint64 Component::s_nextComponentId = 1;
+	uint64 Component::_s_nextComponentId = 1;
 
 	Component::Component()
-		: _componentId( s_nextComponentId++ )
+		: _componentId( _s_nextComponentId++ )
 		, _bActive( 1 )
 	{
 	}

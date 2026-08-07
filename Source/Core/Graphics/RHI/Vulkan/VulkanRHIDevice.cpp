@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file VulkanRHIDevice.cpp
  * @brief Auto-generated documentation header
  */
@@ -21,10 +21,10 @@
 #endif
 namespace sw
 {
-	static const std::vector<const utf8*> g_validationLayers = {
+	static const std::vector<const utf8*> s_validationLayers = {
 		"VK_LAYER_KHRONOS_validation" };
 
-	static const std::vector<const char*> deviceExtensions = {
+	static const std::vector<const char*> s_deviceExtensions = {
 		VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 
 	[[maybe_unused]] static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
@@ -88,7 +88,7 @@ namespace sw
 		std::vector<VkLayerProperties> availableLayers( layerCount );
 		vkEnumerateInstanceLayerProperties( &layerCount, availableLayers.data() );
 
-		for ( const utf8* layerName : g_validationLayers )
+		for ( const utf8* layerName : s_validationLayers )
 		{
 			bool layerFound = false;
 			for ( const auto& layerProperties : availableLayers )
@@ -208,8 +208,8 @@ namespace sw
 
 		if ( _bEnableValidationLayers )
 		{
-			createInfo.enabledLayerCount   = static_cast<uint32>( g_validationLayers.size() );
-			createInfo.ppEnabledLayerNames = g_validationLayers.data();
+			createInfo.enabledLayerCount   = static_cast<uint32>( s_validationLayers.size() );
+			createInfo.ppEnabledLayerNames = s_validationLayers.data();
 		}
 		else
 		{
@@ -344,8 +344,8 @@ namespace sw
 		createInfo.pQueueCreateInfos	   = &queueCreateInfo;
 		createInfo.queueCreateInfoCount	   = 1;
 		createInfo.pEnabledFeatures		   = &deviceFeatures;
-		createInfo.enabledExtensionCount   = static_cast<uint32>( deviceExtensions.size() );
-		createInfo.ppEnabledExtensionNames = deviceExtensions.data();
+		createInfo.enabledExtensionCount   = static_cast<uint32>( s_deviceExtensions.size() );
+		createInfo.ppEnabledExtensionNames = s_deviceExtensions.data();
 
 		createInfo.enabledLayerCount = 0;
 

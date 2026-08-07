@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file ImGuiPlatformBackend.cpp
  * @brief Auto-generated documentation header
  */
@@ -22,16 +22,16 @@ bool ImGui_ImplOSX_HandleEvent( void* event, void* view );
 	#include <X11/keysym.h>
 	#include "Core/Utility/Time/EngineTimer.h"
 
-static Display*		g_X11Display = nullptr;
-static Window		g_X11Window	 = 0;
-static sw::CpuTimer g_X11Timer;
+static Display*		s_X11Display = nullptr;
+static Window		s_X11Window	 = 0;
+static sw::CpuTimer s_X11Timer;
 
 static bool ImGui_ImplX11_Init( Display* display, Window window )
 {
-	g_X11Display = display;
-	g_X11Window	 = window;
-	g_X11Timer.resetTimer();
-	g_X11Timer.startTimer();
+	s_X11Display = display;
+	s_X11Window	 = window;
+	s_X11Timer.resetTimer();
+	s_X11Timer.startTimer();
 	ImGuiIO& io			   = ImGui::GetIO();
 	io.BackendPlatformName = "imgui_impl_x11";
 	return true;
@@ -39,29 +39,29 @@ static bool ImGui_ImplX11_Init( Display* display, Window window )
 
 static void ImGui_ImplX11_Shutdown()
 {
-	g_X11Display = nullptr;
-	g_X11Window	 = 0;
+	s_X11Display = nullptr;
+	s_X11Window	 = 0;
 }
 
 static void ImGui_ImplX11_NewFrame()
 {
 	ImGuiIO& io = ImGui::GetIO();
-	if ( !g_X11Display || !g_X11Window )
+	if ( !s_X11Display || !s_X11Window )
 		return;
 
 	XWindowAttributes attrs;
-	XGetWindowAttributes( g_X11Display, g_X11Window, &attrs );
+	XGetWindowAttributes( s_X11Display, s_X11Window, &attrs );
 	io.DisplaySize = ImVec2( (float)attrs.width, (float)attrs.height );
 
-	g_X11Timer.updateTimer();
-	io.DeltaTime = g_X11Timer.getDeltaTime();
+	s_X11Timer.updateTimer();
+	io.DeltaTime = s_X11Timer.getDeltaTime();
 	if ( io.DeltaTime <= 0.0f )
 		io.DeltaTime = 0.00001f;
 
 	Window		 root_return, child_return;
 	int			 root_x, root_y, win_x, win_y;
 	unsigned int mask_return;
-	if ( XQueryPointer( g_X11Display, g_X11Window, &root_return, &child_return, &root_x, &root_y, &win_x, &win_y, &mask_return ) )
+	if ( XQueryPointer( s_X11Display, s_X11Window, &root_return, &child_return, &root_x, &root_y, &win_x, &win_y, &mask_return ) )
 	{
 		io.AddMousePosEvent( (float)win_x, (float)win_y );
 		io.AddMouseButtonEvent( 0, ( mask_return & Button1Mask ) != 0 );

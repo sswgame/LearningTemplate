@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Core/Common/CommonHeaders.h"
 #include "Core/Common/CommonMacros.h"
@@ -181,6 +181,6 @@ namespace sw
 		std::vector<Component*>													   _flatComponents; ///< 플랫 접근용 컴포넌트 벡터
 		TagContainer															   _tags;           ///< 태그 정보
 
-		static uint64 s_nextObjectId; ///< 다음 발급할 고유 ID 카운터
+		static uint64 _s_nextObjectId; ///< 다음 발급할 고유 ID 카운터
 	};
 }

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file RHIBackendRegistry.cpp
  */
 #include "pch.h"
@@ -64,8 +64,8 @@ namespace sw
 		/** @brief Load DX MODULE DLLs after Core is fully initialized (not during CRT static init / loader lock). */
 		void ensureDxModulesLoaded()
 		{
-			static std::once_flag once;
-			std::call_once( once,
+			static std::once_flag s_once;
+			std::call_once( s_once,
 				[]()
 				{
 					if ( tryLoadBackendModule( RHIBackend::DirectX11, "RHI_DX11" ) == false )
@@ -90,13 +90,13 @@ namespace sw
 			}
 		};
 
-		StaticBackendRegistration g_staticBackends{};
+		StaticBackendRegistration s_staticBackends{};
 	}
 
 	RHIBackendRegistry& RHIBackendRegistry::get()
 	{
-		static RHIBackendRegistry instance;
-		return instance;
+		static RHIBackendRegistry s_instance;
+		return s_instance;
 	}
 
 	void RHIBackendRegistry::registerBackend( RHIBackend backend, const RHIDeviceFactoryDelegate& factory, const RHICapabilities& caps )

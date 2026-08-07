@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file main.cpp
  * @brief Toy Engine 런타임 클라이언트 진입점
  */
@@ -6,7 +6,7 @@
 
 int main( int argc, char* argv[] )
 {
-	// g_RHIBackend 변경 시 App을 새로 만들어 파이프라인을 다시 올린다.
+	// gv_RHIBackend 변경 시 App을 새로 만들어 파이프라인을 다시 올린다.
 	for ( ;; )
 	{
 		sw::App app;

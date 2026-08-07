@@ -126,7 +126,7 @@ namespace sw
 		BLOCK( "DXC Compiler (DXIL / SPIR-V) Path" );
 		{
 			typedef HRESULT( WINAPI * PFN_DxcCreateInstance )( REFCLSID rclsid, REFIID riid, LPVOID * ppv );
-			static auto getDxCompilerHandle = []() -> void*
+			static auto s_getDxCompilerHandle = []() -> void*
 			{
 				std::string				 libName	= FileUtil::formatSharedLibraryName( "dxcompiler" );
 				std::vector<std::string> candidates = {
@@ -143,7 +143,7 @@ namespace sw
 				}
 				return FileUtil::loadDynamicLibrary( libName );
 			};
-			static void*				 s_hDxCompiler		   = getDxCompilerHandle();
+			static void*				 s_hDxCompiler		   = s_getDxCompilerHandle();
 			static PFN_DxcCreateInstance s_fnDxcCreateInstance = ( s_hDxCompiler != nullptr )
 																   ? reinterpret_cast<PFN_DxcCreateInstance>( FileUtil::getDynamicSymbol( s_hDxCompiler, "DxcCreateInstance" ) )
 																   : nullptr;

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file IWindow.cpp
  * @brief Auto-generated documentation header
  */
@@ -11,7 +11,7 @@ namespace sw
 {
 	namespace
 	{
-		IWindow* g_activeWindow = nullptr;
+		IWindow* s_activeWindow = nullptr;
 	}
 
 	std::unique_ptr<IWindow> IWindow::createPlatformWindow()
@@ -29,11 +29,11 @@ namespace sw
 
 	void IWindow::setActiveWindow( IWindow* window )
 	{
-		g_activeWindow = window;
+		s_activeWindow = window;
 	}
 
 	IWindow* IWindow::getActiveWindow()
 	{
-		return g_activeWindow;
+		return s_activeWindow;
 	}
 }

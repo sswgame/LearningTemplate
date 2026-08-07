@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file ImGuiDX12RendererBackend.cpp
  * @brief ImGui DirectX12 렌더러 백엔드 구현
  */
@@ -17,8 +17,8 @@ namespace sw
 #if defined( SW_PLATFORM_WINDOWS )
 	namespace
 	{
-		void ( *g_OrigCreateWindow )( ImGuiViewport* )			= nullptr;
-		void ( *g_OrigSetWindowSize )( ImGuiViewport*, ImVec2 ) = nullptr;
+		void ( *s_OrigCreateWindow )( ImGuiViewport* )			= nullptr;
+		void ( *s_OrigSetWindowSize )( ImGuiViewport*, ImVec2 ) = nullptr;
 
 		void ImGuiAllocSrv( ImGui_ImplDX12_InitInfo* info, D3D12_CPU_DESCRIPTOR_HANDLE* outCpu, D3D12_GPU_DESCRIPTOR_HANDLE* outGpu )
 		{
@@ -62,7 +62,7 @@ namespace sw
 
 		void GuardedCreateWindow( ImGuiViewport* viewport )
 		{
-			if ( viewport == nullptr || g_OrigCreateWindow == nullptr )
+			if ( viewport == nullptr || s_OrigCreateWindow == nullptr )
 				return;
 
 			syncViewportSizeFromHwnd( viewport );
@@ -71,19 +71,19 @@ namespace sw
 			if ( viewport->Size.y < 1.0f )
 				viewport->Size.y = 1.0f;
 
-			g_OrigCreateWindow( viewport );
+			s_OrigCreateWindow( viewport );
 		}
 
 		void GuardedSetWindowSize( ImGuiViewport* viewport, ImVec2 size )
 		{
-			if ( viewport == nullptr || g_OrigSetWindowSize == nullptr )
+			if ( viewport == nullptr || s_OrigSetWindowSize == nullptr )
 				return;
 
 			// imgui_impl_dx12의 ResizeBuffers(0,w,h)는 w/h==0 이면 DXGI_ERROR_INVALID_CALL → device removed.
 			if ( size.x < 1.0f || size.y < 1.0f )
 				return;
 
-			g_OrigSetWindowSize( viewport, size );
+			s_OrigSetWindowSize( viewport, size );
 		}
 
 		void installViewportGuards()
@@ -91,20 +91,20 @@ namespace sw
 			ImGuiPlatformIO& platformIO = ImGui::GetPlatformIO();
 			if ( platformIO.Renderer_CreateWindow != nullptr && platformIO.Renderer_CreateWindow != &GuardedCreateWindow )
 			{
-				g_OrigCreateWindow				 = platformIO.Renderer_CreateWindow;
+				s_OrigCreateWindow				 = platformIO.Renderer_CreateWindow;
 				platformIO.Renderer_CreateWindow = &GuardedCreateWindow;
 			}
 			if ( platformIO.Renderer_SetWindowSize != nullptr && platformIO.Renderer_SetWindowSize != &GuardedSetWindowSize )
 			{
-				g_OrigSetWindowSize				  = platformIO.Renderer_SetWindowSize;
+				s_OrigSetWindowSize				  = platformIO.Renderer_SetWindowSize;
 				platformIO.Renderer_SetWindowSize = &GuardedSetWindowSize;
 			}
 		}
 
 		void clearViewportGuards()
 		{
-			g_OrigCreateWindow	= nullptr;
-			g_OrigSetWindowSize = nullptr;
+			s_OrigCreateWindow	= nullptr;
+			s_OrigSetWindowSize = nullptr;
 		}
 	}
 #endif

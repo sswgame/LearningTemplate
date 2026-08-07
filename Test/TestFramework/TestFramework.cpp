@@ -9,8 +9,8 @@ namespace test
 {
 	TestRegistry& TestRegistry::getInstance()
 	{
-		static TestRegistry instance;
-		return instance;
+		static TestRegistry s_instance;
+		return s_instance;
 	}
 
 	void TestRegistry::registerTest( const std::string& suiteName, const std::string& testName, sw::Delegate<void()> func )

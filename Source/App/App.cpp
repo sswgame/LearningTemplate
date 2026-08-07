@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file App.cpp
  * @brief 런타임 클라이언트 앱 구현
  */
@@ -31,13 +31,13 @@
 #endif
 
 // GVM / 커맨드라인 샘플 (엔진 코어가 직접 소비하지 않음 — GlobalVariables 윈도우용)
-SW_GLOBAL_VARIABLE_BOOL( g_EnableVSync, true, "Enable Vertical Synchronization (VSync)" );
-SW_GLOBAL_VARIABLE_INT( g_MaxFPS, 60, "Maximum Framerate Limit" );
-SW_GLOBAL_VARIABLE_FLOAT( g_CameraFOV, 90.0f, "Main Camera Field of View in Degrees" );
-SW_GLOBAL_VARIABLE_STRING( g_PlayerName, "Player1", "Active Player Name" );
+SW_GLOBAL_VARIABLE_BOOL( gv_EnableVSync, true, "Enable Vertical Synchronization (VSync)" );
+SW_GLOBAL_VARIABLE_INT( gv_MaxFPS, 60, "Maximum Framerate Limit" );
+SW_GLOBAL_VARIABLE_FLOAT( gv_CameraFOV, 90.0f, "Main Camera Field of View in Degrees" );
+SW_GLOBAL_VARIABLE_STRING( gv_PlayerName, "Player1", "Active Player Name" );
 
 // EditorUIContext에 넘기는 에디터 상태 (App 멤버 대신 GVM)
-SW_GLOBAL_VARIABLE_FLOAT( g_EditorPlayerSpeed, 5.0f, "Editor inspector player speed slider" );
+SW_GLOBAL_VARIABLE_FLOAT( gv_EditorPlayerSpeed, 5.0f, "Editor inspector player speed slider" );
 
 namespace sw
 {
@@ -179,13 +179,13 @@ namespace sw
 
 		_rhi->getDevice().waitIdle();
 
-		g_RHIBackend = requested;
+		gv_RHIBackend = requested;
 		if ( _rhi->recreateDevice( requested ) == false )
 		{
 			SW_LOG_ERROR( "[Hot-Swap] recreateDevice(%#) failed — restoring %#",
 						  RHI::getBackendTypeName( requested ),
 						  RHI::getBackendTypeName( previous ) );
-			g_RHIBackend = previous;
+			gv_RHIBackend = previous;
 			if ( _rhi->recreateDevice( previous ) == false )
 				return false;
 		}
@@ -263,7 +263,7 @@ namespace sw
 		if ( initializeSubsystems( argc, argv ) == false )
 			return false;
 
-		GlobalVariableInfo* pRHIBackendVar = getGlobalVariableManager().findVariable( "g_RHIBackend" );
+		GlobalVariableInfo* pRHIBackendVar = getGlobalVariableManager().findVariable( "gv_RHIBackend" );
 
 		if ( _bEnableEditor )
 		{
@@ -271,7 +271,7 @@ namespace sw
 			vsDesc._filePath	 = "Shaders/BindlessTriangle.hlsl";
 			vsDesc._entryPoint	 = "VSMain";
 			vsDesc._stage		 = ShaderStage::Vertex;
-			vsDesc._targetFormat = RHI::getShaderTargetFormat( g_RHIBackend );
+			vsDesc._targetFormat = RHI::getShaderTargetFormat( gv_RHIBackend );
 
 			const ShaderCompileResult vsCompileResult = ShaderCache::getOrCompile( vsDesc );
 			_reflectionData							  = ShaderReflection::reflect( vsCompileResult._bytecode, vsDesc._targetFormat );
@@ -339,8 +339,8 @@ namespace sw
 
 		_bAppRunning			 = true;
 		_bPendingBackendChange	 = false;
-		_committedRHIBackend	 = g_RHIBackend;
-		_pendingRHIBackend		 = g_RHIBackend;
+		_committedRHIBackend	 = gv_RHIBackend;
+		_pendingRHIBackend		 = gv_RHIBackend;
 
 		if ( pRHIBackendVar )
 		{
@@ -350,14 +350,14 @@ namespace sw
 				if ( RHIAvailability::isAvailable( requested ) == false )
 				{
 					SW_LOG_WARNING( "[Hot-Swap] Backend %# unavailable — reverting.", static_cast<int32>( requested ) );
-					g_RHIBackend = _committedRHIBackend;
+					gv_RHIBackend = _committedRHIBackend;
 					return;
 				}
 
 				if ( _bEnableEditor && RHIAvailability::query( requested )._bEditorSupported == false )
 				{
 					SW_LOG_WARNING( "[Hot-Swap] Backend %# is not editor-supported — reverting.", RHI::getBackendTypeName( requested ) );
-					g_RHIBackend = _committedRHIBackend;
+					gv_RHIBackend = _committedRHIBackend;
 					return;
 				}
 
@@ -380,7 +380,7 @@ namespace sw
 	{
 		SW_LOG_INFO( "Entering App Main Loop..." );
 
-		_editorCtx.playerSpeed	  = &g_EditorPlayerSpeed;
+		_editorCtx.playerSpeed	  = &gv_EditorPlayerSpeed;
 		_editorCtx.clearColor	  = _clearColor;
 		_editorCtx.reflectionData = &_reflectionData;
 		_editorCtx.rhiDevice	  = &_rhi->getDevice();
@@ -450,7 +450,7 @@ namespace sw
 				if ( applyPendingBackendChange() == false )
 				{
 					SW_LOG_ERROR( "[Hot-Swap] Backend soft-recreate failed." );
-					g_RHIBackend = _committedRHIBackend;
+					gv_RHIBackend = _committedRHIBackend;
 				}
 			}
 		}

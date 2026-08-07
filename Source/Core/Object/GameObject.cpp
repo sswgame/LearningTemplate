@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file GameObject.cpp
  * @brief Auto-generated documentation header
  */
@@ -10,10 +10,10 @@
 #include "Core/Game/Scene/SceneManager.h"
 namespace sw
 {
-	uint64 GameObject::s_nextObjectId = 1;
+	uint64 GameObject::_s_nextObjectId = 1;
 
 	GameObject::GameObject()
-		: _objectId( s_nextObjectId++ )
+		: _objectId( _s_nextObjectId++ )
 		, _name( "GameObject" )
 		, _bActive( 1 )
 		, _bIsActiveInHierarchy( 1 )
@@ -22,7 +22,7 @@ namespace sw
 	}
 
 	GameObject::GameObject( hashed_string name )
-		: _objectId( s_nextObjectId++ )
+		: _objectId( _s_nextObjectId++ )
 		, _name( name )
 		, _bActive( 1 )
 		, _bIsActiveInHierarchy( 1 )

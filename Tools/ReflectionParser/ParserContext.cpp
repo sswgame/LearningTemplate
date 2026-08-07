@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file ParserContext.cpp
  * @brief libclang 파싱 컨텍스트 및 설정 캐시 구현
  */
@@ -13,11 +13,11 @@ namespace sw::tool
 {
 	namespace
 	{
-		ParserClangConfig g_sharedConfig;
-		CXIndex			  g_sharedIndex = nullptr;
-		std::once_flag	  g_configOnce;
-		std::once_flag	  g_indexOnce;
-		bool			  g_configOk = false;
+		ParserClangConfig s_sharedConfig;
+		CXIndex			  s_sharedIndex = nullptr;
+		std::once_flag	  s_configOnce;
+		std::once_flag	  s_indexOnce;
+		bool			  s_configOk = false;
 
 		std::string findConfigFile( const std::string& relPath )
 		{
@@ -186,34 +186,34 @@ namespace sw::tool
 
 	bool ParserContext::ensureSharedConfig()
 	{
-		std::call_once( g_configOnce, []()
+		std::call_once( s_configOnce, []()
 		{
-			g_configOk = g_sharedConfig.load();
+			s_configOk = s_sharedConfig.load();
 		} );
-		return g_configOk;
+		return s_configOk;
 	}
 
 	CXIndex ParserContext::getSharedIndex()
 	{
-		std::call_once( g_indexOnce, []()
+		std::call_once( s_indexOnce, []()
 		{
-			g_sharedIndex = clang_createIndex( 0, 0 );
+			s_sharedIndex = clang_createIndex( 0, 0 );
 		} );
-		return g_sharedIndex;
+		return s_sharedIndex;
 	}
 
 	const ParserClangConfig& ParserContext::getSharedConfig()
 	{
 		ensureSharedConfig();
-		return g_sharedConfig;
+		return s_sharedConfig;
 	}
 
 	void ParserContext::shutdownShared()
 	{
-		if ( g_sharedIndex )
+		if ( s_sharedIndex )
 		{
-			clang_disposeIndex( g_sharedIndex );
-			g_sharedIndex = nullptr;
+			clang_disposeIndex( s_sharedIndex );
+			s_sharedIndex = nullptr;
 		}
 	}
 

@@ -57,7 +57,7 @@ namespace sw
 
 	const SerializeContext& SerializeContext::getDefault()
 	{
-		static SerializeContext defaultCtx = []()
+		static SerializeContext s_defaultCtx = []()
 		{
 			SerializeContext ctx;
 
@@ -219,7 +219,7 @@ namespace sw
 			return ctx;
 		}();
 
-		return defaultCtx;
+		return s_defaultCtx;
 	}
 
 	static void serializeValueBinary( const void* valuePtr, const hashed_string& typeName,

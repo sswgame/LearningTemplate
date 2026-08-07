@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file ImGuiOpenGLRendererBackend.cpp
  * @brief Auto-generated documentation header
  */
@@ -14,7 +14,7 @@ struct WGL_WindowData
 {
 	HDC hDC;
 };
-static HGLRC g_MainWindowRC = nullptr;
+static HGLRC s_MainWindowRC = nullptr;
 
 static bool CreateDeviceWGL( HWND hWnd, WGL_WindowData* data )
 {
@@ -67,7 +67,7 @@ static void Hook_Platform_RenderWindow( ImGuiViewport* viewport, void* )
 {
 	if ( WGL_WindowData* data = static_cast<WGL_WindowData*>( viewport->RendererUserData ) )
 	{
-		wglMakeCurrent( data->hDC, g_MainWindowRC );
+		wglMakeCurrent( data->hDC, s_MainWindowRC );
 	}
 }
 
@@ -88,7 +88,7 @@ namespace sw
 		ImGuiIO& io = ImGui::GetIO();
 		if ( io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable )
 		{
-			g_MainWindowRC					   = static_cast<HGLRC>( rhiDevice->getNativeContext() );
+			s_MainWindowRC					   = static_cast<HGLRC>( rhiDevice->getNativeContext() );
 			ImGuiPlatformIO& platform_io	   = ImGui::GetPlatformIO();
 			platform_io.Renderer_CreateWindow  = Hook_Renderer_CreateWindow;
 			platform_io.Renderer_DestroyWindow = Hook_Renderer_DestroyWindow;

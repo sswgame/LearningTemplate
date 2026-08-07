@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Core/Common/Types.h"
 #include "Core/Common/CommonHeaders.h"
@@ -107,6 +107,6 @@ namespace sw
 		bool _bActive = true; ///< 컴포넌트 개별 활성화 여부
 
 	private:
-		static uint64 s_nextComponentId; ///< ID 생성 카운터
+		static uint64 _s_nextComponentId; ///< ID 생성 카운터
 	};
 }

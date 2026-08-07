@@ -1,4 +1,4 @@
-#include "RHI.h"
+﻿#include "RHI.h"
 #include "RHIBackendRegistry.h"
 #include "RHICapabilities.h"
 #include "Core/Graphics/Shader/LiveShaderManager.h"
@@ -43,10 +43,10 @@ namespace sw
 			registry.registerEnum( info );
 		}
 
-		EnumRegistrar g_rhiBackendEnumRegistrar{ &registerRHIBackendEnum };
+		EnumRegistrar s_rhiBackendEnumRegistrar{ &registerRHIBackendEnum };
 	}
 
-	SW_GLOBAL_VARIABLE_ENUM( g_RHIBackend, RHIBackend, RHIBackend::DirectX12, "Current RHI Backend" );
+	SW_GLOBAL_VARIABLE_ENUM( gv_RHIBackend, RHIBackend, RHIBackend::DirectX12, "Current RHI Backend" );
 
 	bool RHI::initialize()
 	{
@@ -55,7 +55,7 @@ namespace sw
 		try
 		{
 			// Priority: explicit CLI > current GVM value > OS default > first available
-			RHIBackend initialBackend = g_RHIBackend;
+			RHIBackend initialBackend = gv_RHIBackend;
 			bool	   bCliOverride	  = false;
 
 			CommandLineManager& commandLineManager = getCommandLineManager();
@@ -93,7 +93,7 @@ namespace sw
 				return false;
 			}
 
-			g_RHIBackend = initialBackend;
+			gv_RHIBackend = initialBackend;
 
 			SW_LOG_INFO( "Initializing RHI with backend: %s", getBackendTypeName( initialBackend ) );
 
@@ -168,7 +168,7 @@ namespace sw
 			_device.reset();
 		}
 
-		g_RHIBackend = backend;
+		gv_RHIBackend = backend;
 		_device		 = createDevice( backend );
 		if ( _device == nullptr )
 			return false;
