@@ -9,71 +9,71 @@ on:
 jobs:
   build-windows:
     runs-on: windows-2022
-    
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-    
+
     - name: Setup vcpkg
       uses: lukka/run-vcpkg@v11
       with:
         vcpkgGitCommitId: '2024.01.12'
         vcpkgJsonGlob: 'vcpkg.json'
-    
-    - name: Configure CMake
+
+    - name: Configure (CI-Debug preset)
       run: |
-        cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake -DSW_ENABLE_TESTING=ON
-    
+        cmake --preset CI-Debug -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake
+
     - name: Build
       run: |
-        cmake --build build --config Debug
-    
+        cmake --build --preset CI-Debug
+
     - name: Test
       run: |
-        ctest --test-dir build --config Debug --output-on-failure
+        ctest --test-dir build/CI-Debug --output-on-failure
 
   build-linux:
     runs-on: ubuntu-22.04
-    
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-    
+
     - name: Install dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y ninja-build cmake xorg-dev libgl1-mesa-dev libglu1-mesa-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev
-    
+
     - name: Setup vcpkg
       uses: lukka/run-vcpkg@v11
       with:
         vcpkgGitCommitId: '2024.01.12'
         vcpkgJsonGlob: 'vcpkg.json'
-    
-    - name: Configure CMake
+
+    - name: Configure (CI-Debug preset)
       run: |
-        cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake -DSW_ENABLE_TESTING=ON
-    
+        cmake --preset CI-Debug -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake
+
     - name: Build
       run: |
-        cmake --build build --config Debug
-    
+        cmake --build --preset CI-Debug
+
     - name: Test
       run: |
-        ctest --test-dir build --config Debug --output-on-failure
+        ctest --test-dir build/CI-Debug --output-on-failure
 
   lint-format:
     runs-on: ubuntu-22.04
-    
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-    
+
     - name: Install clang-format
       run: |
         sudo apt-get update
         sudo apt-get install -y clang-format
-    
+
     - name: Check formatting
       run: |
-        find Source Test -name "*.cpp" -o -name "*.h" | xargs clang-format --dry-run --Werror
+        find Source Test Tools/ReflectionParser -name "*.cpp" -o -name "*.h" -o -name "*.hpp" | xargs clang-format --dry-run --Werror

@@ -1,6 +1,7 @@
 # Naming Conventions
 
 이 문서는 프로젝트의 **CMake / Code(C++) / Scripts(Python)** 네이밍 규칙을 정리합니다.
+타겟 그래프·Dev/Shipping·Runtime ABI 는 [ARCHITECTURE.md](ARCHITECTURE.md) 를 참고하세요.
 
 ---
 

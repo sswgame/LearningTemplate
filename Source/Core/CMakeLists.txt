@@ -29,6 +29,13 @@ sw_add_library(Core ${_core_lib_type}
     EXCLUDE ${_core_exclude}
 )
 
+# "Core/..." · Resource 경로는 Core를 링크하는 모든 타겟에 PUBLIC 전파
+target_include_directories(Core
+	PUBLIC
+		"${CMAKE_SOURCE_DIR}/Source"
+		"${CMAKE_SOURCE_DIR}/Resource"
+)
+
 # ThirdParty include/link는 PUBLIC: Core 헤더(glad 등)와 Editor의 imgui가 종속 타겟에 전파되어야 함
 if(sw_libraries)
     target_link_libraries(Core PUBLIC ${sw_libraries})

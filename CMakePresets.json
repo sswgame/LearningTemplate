@@ -14,6 +14,7 @@
                 "CMAKE_C_COMPILER": "clang-cl",
                 "CMAKE_CXX_COMPILER": "clang-cl",
                 "CMAKE_BUILD_TYPE": "Debug",
+                "SW_SHIPPING_BUILD": "OFF",
                 "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/cmake/Modules/Toolchain/Vcpkg",
                 "VCPKG_INSTALLED_DIR": "${sourceDir}/build/vcpkg_installed",
                 "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/Tools/vcpkg/scripts/buildsystems/vcpkg.cmake"
@@ -31,7 +32,8 @@
         },
         {
             "name": "Ninja-Release",
-            "displayName": "Ninja Release Build (Clang-cl)",
+            "displayName": "Ninja Release (Dev layout, Clang-cl)",
+            "description": "Optimized Development build (MODULE/hot-reload). Not Shipping.",
             "generator": "Ninja",
             "binaryDir": "${sourceDir}/build/${presetName}",
             "environment": {
@@ -42,9 +44,44 @@
                 "CMAKE_C_COMPILER": "clang-cl",
                 "CMAKE_CXX_COMPILER": "clang-cl",
                 "CMAKE_BUILD_TYPE": "Release",
+                "SW_SHIPPING_BUILD": "OFF",
                 "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/cmake/Modules/Toolchain/Vcpkg",
                 "VCPKG_INSTALLED_DIR": "${sourceDir}/build/vcpkg_installed",
                 "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/Tools/vcpkg/scripts/buildsystems/vcpkg.cmake"
+            }
+        },
+        {
+            "name": "Ninja-Shipping",
+            "displayName": "Ninja Shipping (STATIC, Clang-cl)",
+            "description": "Shipping layout: Core/SWGame STATIC, no Editor MODULE.",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "environment": {
+                "VCPKG_BINARY_SOURCES": "clear;files,${sourceDir}/build/vcpkg_cache,readwrite"
+            },
+            "cacheVariables": {
+                "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/${presetName}",
+                "CMAKE_C_COMPILER": "clang-cl",
+                "CMAKE_CXX_COMPILER": "clang-cl",
+                "CMAKE_BUILD_TYPE": "Release",
+                "SW_SHIPPING_BUILD": "ON",
+                "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/cmake/Modules/Toolchain/Vcpkg",
+                "VCPKG_INSTALLED_DIR": "${sourceDir}/build/vcpkg_installed",
+                "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/Tools/vcpkg/scripts/buildsystems/vcpkg.cmake"
+            }
+        },
+        {
+            "name": "CI-Debug",
+            "displayName": "CI Debug (Ninja, system compilers)",
+            "description": "CI-oriented Debug configure; set CMAKE_TOOLCHAIN_FILE via -D or env from vcpkg action.",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "SW_SHIPPING_BUILD": "OFF",
+                "SW_ENABLE_TESTING": "ON",
+                "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/cmake/Modules/Toolchain/Vcpkg",
+                "VCPKG_INSTALLED_DIR": "${sourceDir}/build/vcpkg_installed"
             }
         }
     ],
@@ -65,6 +102,18 @@
             "name": "Ninja-Release",
             "configurePreset": "Ninja-Release",
             "configuration": "Release",
+            "jobs": 0
+        },
+        {
+            "name": "Ninja-Shipping",
+            "configurePreset": "Ninja-Shipping",
+            "configuration": "Release",
+            "jobs": 0
+        },
+        {
+            "name": "CI-Debug",
+            "configurePreset": "CI-Debug",
+            "configuration": "Debug",
             "jobs": 0
         }
     ]

@@ -36,36 +36,42 @@ macro(sw_prepare_target_sources OUT_SOURCES ARG_SOURCES ARG_EXCLUDE)
 endmacro()
 
 # include/link/컴파일 옵션 등 공통 타겟 프로퍼티를 설정합니다.
+#
+# Include 정책:
+# - PUBLIC:  타겟 자신의 소스 디렉터리 (로컬 헤더)
+# - PRIVATE: ${CMAKE_SOURCE_DIR}/Source , Resource (이 타겟 컴파일용)
+# - Source/ 를 PUBLIC 으로 재export 하지 않음 → Core / RuntimeAPI 가 제공
+#   (Core 헤더의 "Core/..." 경로는 Core의 PUBLIC include 로 전파)
 macro(sw_setup_target_properties TARGET_NAME ARG_INCLUDE_DIRECTORIES ARG_LINK_LIBRARIES)
-    target_include_directories(${TARGET_NAME}
-        PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}"
-        PUBLIC "${CMAKE_SOURCE_DIR}/Source"
-        PUBLIC "${CMAKE_SOURCE_DIR}/Resource"
-    )
+	target_include_directories(${TARGET_NAME}
+		PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}"
+		PRIVATE "${CMAKE_SOURCE_DIR}/Source"
+		PRIVATE "${CMAKE_SOURCE_DIR}/Resource"
+	)
 
-    if(${ARG_INCLUDE_DIRECTORIES})
-        target_include_directories(${TARGET_NAME} PUBLIC ${${ARG_INCLUDE_DIRECTORIES}})
-    endif()
+	if(${ARG_INCLUDE_DIRECTORIES})
+		target_include_directories(${TARGET_NAME} PUBLIC ${${ARG_INCLUDE_DIRECTORIES}})
+	endif()
 
-    set(link_libs "")
-    if(${ARG_LINK_LIBRARIES})
-        list(APPEND link_libs ${${ARG_LINK_LIBRARIES}})
-    endif()
-    if(sw_flag_libraries)
-        list(APPEND link_libs ${sw_flag_libraries})
-    endif()
+	set(link_libs "")
+	if(${ARG_LINK_LIBRARIES})
+		list(APPEND link_libs ${${ARG_LINK_LIBRARIES}})
+	endif()
+	if(sw_flag_libraries)
+		list(APPEND link_libs ${sw_flag_libraries})
+	endif()
 
-    if(link_libs)
-        target_link_libraries(${TARGET_NAME} PRIVATE ${link_libs})
-    endif()
+	if(link_libs)
+		target_link_libraries(${TARGET_NAME} PRIVATE ${link_libs})
+	endif()
 
-    file(RELATIVE_PATH rel_path "${CMAKE_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}")
-    get_filename_component(folder_path "${rel_path}" DIRECTORY)
-    if(folder_path)
-        set_target_properties(${TARGET_NAME} PROPERTIES FOLDER "${folder_path}")
-    endif()
+	file(RELATIVE_PATH rel_path "${CMAKE_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}")
+	get_filename_component(folder_path "${rel_path}" DIRECTORY)
+	if(folder_path)
+		set_target_properties(${TARGET_NAME} PROPERTIES FOLDER "${folder_path}")
+	endif()
 
-    sw_install_target(${TARGET_NAME})
+	sw_install_target(${TARGET_NAME})
 endmacro()
 
 # 라이브러리 타겟을 추가합니다. TYPE/LINK_LIBRARIES/EXCLUDE/SOURCES/INCLUDE_DIRECTORIES 지원.
