@@ -245,11 +245,12 @@ namespace sw
 		std::string _computeShaderPath;                 ///< 컴퓨트 셰이더 소스 경로
 		std::string _computeEntryPoint = "CSMain";       ///< 컴퓨트 셰이더 진입점
 
-		RHIPrimitiveTopology _topology		   = RHIPrimitiveTopology::TriangleList; ///< 프리미티브 위상
-		RHIFillMode			 _fillMode		   = RHIFillMode::Solid;                 ///< 채우기 모드
-		RHICullMode			 _cullMode		   = RHICullMode::None;                  ///< 컬링 모드
-		bool				 _bEnableDepthTest = false;                              ///< 깊이 테스트 활성화 여부
-		bool				 _bEnableBlend	   = false;                              ///< 알파 블렌딩 활성화 여부
+		RHIPrimitiveTopology _topology = RHIPrimitiveTopology::TriangleList; ///< 프리미티브 위상
+		RHIFillMode			 _fillMode = RHIFillMode::Solid;				 ///< 채우기 모드
+		RHICullMode			 _cullMode = RHICullMode::None;					 ///< 컬링 모드
+		uint8				 _bEnableDepthTest : 1 = 0;						 ///< 깊이 테스트 활성화 여부
+		uint8				 _bEnableBlend	   : 1 = 0;						 ///< 알파 블렌딩 활성화 여부
+		uint8				 _reservedFlags	   : 6 = 0;
 	};
 
 	/**
@@ -270,10 +271,11 @@ namespace sw
 	 */
 	struct RHIRenderPassDesc
 	{
-		std::vector<RHIRenderPassAttachment> _colorAttachments;  ///< 색상 어태치먼트 목록
-		bool								 _bHasDepthStencil = false;  ///< 깊이/스텐실 어태치먼트 포함 여부
-		float32								 _clearDepth	   = 1.0f;   ///< 깊이 초기화 값
-		uint8								 _clearStencil	   = 0;      ///< 스텐실 초기화 값
+		std::vector<RHIRenderPassAttachment> _colorAttachments; ///< 색상 어태치먼트 목록
+		float32								 _clearDepth   = 1.0f; ///< 깊이 초기화 값
+		uint8								 _clearStencil = 0;	   ///< 스텐실 초기화 값
+		uint8								 _bHasDepthStencil : 1 = 0; ///< 깊이/스텐실 어태치먼트 포함 여부
+		uint8								 _reservedFlags	   : 7 = 0;
 	};
 
 	/**
@@ -282,19 +284,21 @@ namespace sw
 	 */
 	struct RHITextureDesc
 	{
-		uint32		_width			  = 1;
-		uint32		_height			  = 1;
-		uint32		_depth			  = 1;
-		uint32		_mipLevels		  = 1;
-		RHIFormat	_format			  = RHIFormat::R8G8B8A8_UNORM;
-		bool		_bIsRenderTarget  = false;
-		bool		_bIsDepthStencil  = false;
-		bool		_bIsShaderResource = true;
-		bool		_bIsUnorderedAccess = false;
+		uint32	  _width	 = 1;
+		uint32	  _height	 = 1;
+		uint32	  _depth	 = 1;
+		uint32	  _mipLevels = 1;
+		RHIFormat _format	 = RHIFormat::R8G8B8A8_UNORM;
 
-		float32		_clearColor[4]	  = { 0.0f, 0.0f, 0.0f, 0.0f };
-		float32		_clearDepth		  = 1.0f;
-		uint8		_clearStencil	  = 0;
+		float32 _clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+		float32 _clearDepth	   = 1.0f;
+		uint8	_clearStencil  = 0;
+
+		uint8 _bIsRenderTarget	  : 1 = 0;
+		uint8 _bIsDepthStencil	  : 1 = 0;
+		uint8 _bIsShaderResource  : 1 = 1;
+		uint8 _bIsUnorderedAccess : 1 = 0;
+		uint8 _reservedFlags	  : 4 = 0;
 	};
 
 	/**

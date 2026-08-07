@@ -40,13 +40,14 @@ namespace sw
 	private:
 		struct ModuleContext
 		{
+			OnBeforeReloadDelegate _onBeforeReload;
+			OnAfterReloadDelegate  _onAfterReload;
 			std::string			   _moduleName;
 			std::string			   _originalDllPath;
 			std::string			   _tempDllPath;
 			void*				   _hLibraryModule = nullptr;
-			bool				   _bPendingReload = false;
-			OnBeforeReloadDelegate _onBeforeReload;
-			OnAfterReloadDelegate  _onAfterReload;
+			uint8				   _bPendingReload : 1 = 0;
+			uint8				   _reserved	   : 7 = 0;
 		};
 
 		/** @brief 원본 DLL을 임시 경로에 복사한 뒤 로드합니다. */

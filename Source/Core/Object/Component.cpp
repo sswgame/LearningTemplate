@@ -52,7 +52,7 @@ namespace sw
 
 	void Component::setTickGroup( TickGroup group )
 	{
-		_tickGroup = group;
+		_tickGroup = static_cast<uint8>( group );
 		if ( _owner != nullptr )
 		{
 			_owner->markTickOrderDirty();

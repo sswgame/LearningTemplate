@@ -26,15 +26,17 @@ namespace sw
 		/** @brief 간접 드로우 경로를 실행합니다. */
 		void executeComputeDraw( IRHIDevice* rhiDevice );
 
-		bool				   _bOpen					= true;
-		bool				   _bRequestComputeDispatch = false;
-		bool				   _bComputeTestInitialized = false;
-		bool				   _bComputeTestDispatched	= false;
-		RHIPipelineStateHandle _csPso					= 0;
-		RHIPipelineStateHandle _indirectPso				= 0;
-		RHIBufferHandle		   _uavBuffer				= 0;
-		RHIDescriptorIndex	   _uavIndex				= kInvalidDescriptorIndex;
-		RHIBufferHandle		   _dispatchUavBuffer		= 0;
-		RHIDescriptorIndex	   _dispatchUavIndex		= kInvalidDescriptorIndex;
+		RHIPipelineStateHandle _csPso			 = 0;
+		RHIPipelineStateHandle _indirectPso		 = 0;
+		RHIBufferHandle		   _uavBuffer		 = 0;
+		RHIBufferHandle		   _dispatchUavBuffer = 0;
+		RHIDescriptorIndex	   _uavIndex		 = kInvalidDescriptorIndex;
+		RHIDescriptorIndex	   _dispatchUavIndex = kInvalidDescriptorIndex;
+
+		bool  _bOpen = true; ///< ImGui::Begin에 주소 전달용 (비트필드 불가)
+		uint8 _bRequestComputeDispatch : 1 = 0;
+		uint8 _bComputeTestInitialized : 1 = 0;
+		uint8 _bComputeTestDispatched  : 1 = 0;
+		uint8 _reservedFlags		   : 5 = 0;
 	};
 }

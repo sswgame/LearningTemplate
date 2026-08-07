@@ -15,17 +15,20 @@ namespace sw
 
 	struct PropertyMetadata
 	{
-		std::string _category  = "General";
-		std::string _tooltip   = "";
-		float32		_minRange  = 0.0f;
-		float32		_maxRange  = 1.0f;
-		bool		_bHasRange = false;
+		std::string _category = "General";
+		std::string _tooltip  = "";
+		float32		_minRange = 0.0f;
+		float32		_maxRange = 1.0f;
+		uint8		_bHasRange	   : 1 = 0;
+		uint8		_reservedFlags : 7 = 0;
 	};
 
 	struct PropertyInfo
 	{
+		using PropertyBindingDelegate = Delegate<void( const PropertyInfo& prop, const void* instance )>;
 
 		std::shared_ptr<IContainerWrapper> _containerWrapper;
+		mutable PropertyBindingDelegate	   _onPropertyBoundChanged;
 
 		size_t _offset = 0;
 
@@ -39,13 +42,11 @@ namespace sw
 		mutable uint32 _cachedNameHash	= 0;
 		mutable uint32 _cachedAliasHash = 0;
 
-		ContainerKind _containerKind = ContainerKind::None;
-		uint8		  _bIsContainer : 1;
+		ContainerKind _containerKind   = ContainerKind::None;
+		uint8		  _bIsContainer	   : 1 = 0;
+		uint8		  _reservedFlags   : 7 = 0;
 
-		PropertyInfo()
-			: _bIsContainer( 0 )
-		{
-		}
+		PropertyInfo() = default;
 
 		PropertyInfo( hashed_string name, hashed_string typeName, size_t offset,
 					  bool bIsContainer = false, ContainerKind containerKind = ContainerKind::None,
@@ -82,9 +83,6 @@ namespace sw
 		{
 			return _name == nameOrAlias || ( _alias.empty() == false && _alias == nameOrAlias );
 		}
-
-		using PropertyBindingDelegate = Delegate<void( const PropertyInfo& prop, const void* instance )>;
-		mutable PropertyBindingDelegate _onPropertyBoundChanged;
 
 		void bindOnChanged( PropertyBindingDelegate delegate ) const
 		{
@@ -131,12 +129,10 @@ namespace sw
 		hashed_string							 _name;
 		hashed_string							 _fullyQualifiedName;
 		hashed_string							 _moduleName;
-		uint8									 _bIsBitFlag : 1;
+		uint8									 _bIsBitFlag	 : 1 = 0;
+		uint8									 _reservedFlags : 7 = 0;
 
-		EnumInfo()
-			: _bIsBitFlag( 0 )
-		{
-		}
+		EnumInfo() = default;
 
 		hashed_string toString( int64 val ) const
 		{

@@ -84,24 +84,24 @@ namespace sw
 		std::unique_ptr<ReloadFileManager>	   _reloadFileManager;
 		std::unique_ptr<SceneManager>		   _sceneManager;
 
-		bool	   _bEnableEditor			= false;
-		bool	   _bAppRunning				= false;
-		bool	   _bPendingBackendChange	= false;
-		RHIBackend _pendingRHIBackend		= RHIBackend::DirectX12;
-		RHIBackend _committedRHIBackend		= RHIBackend::DirectX12;
-
-		RHITextureHandle _gameRenderTarget = 0;
-		void*			 _gameTextureID	   = nullptr;
-		FileWatchHandle	 _shaderWatchHandle{};
-
-		EditorAPI	 _editorApi{};
-		EditorHandle _editor = nullptr;
-
-		GameAPI		_gameApi{};
-		GameHandle	_game = nullptr;
-
 		ShaderReflectionData _reflectionData;
 		EditorUIContext		 _editorCtx;
+		EditorAPI			 _editorApi{};
+		GameAPI				 _gameApi{};
 		float32				 _clearColor[4] = { 0.12f, 0.15f, 0.18f, 1.0f };
+
+		FileWatchHandle	 _shaderWatchHandle{};
+		RHITextureHandle _gameRenderTarget = 0;
+		void*			 _gameTextureID	   = nullptr;
+		EditorHandle	 _editor		   = nullptr;
+		GameHandle		 _game			   = nullptr;
+
+		RHIBackend _pendingRHIBackend	= RHIBackend::DirectX12;
+		RHIBackend _committedRHIBackend = RHIBackend::DirectX12;
+
+		uint8 _bEnableEditor		 : 1 = 0;
+		uint8 _bAppRunning			 : 1 = 0;
+		uint8 _bPendingBackendChange : 1 = 0;
+		uint8 _reservedFlags		 : 5 = 0;
 	};
 }

@@ -113,7 +113,9 @@ namespace sw
 		if ( _rhi->initialize() == false )
 			return false;
 
-		_commandLineManager->getArgument( CommandLineArgument::ENABLE_EDITOR, _bEnableEditor );
+		bool bEnableEditor = false;
+		_commandLineManager->getArgument( CommandLineArgument::ENABLE_EDITOR, bEnableEditor );
+		_bEnableEditor = bEnableEditor ? 1 : 0;
 		return true;
 	}
 

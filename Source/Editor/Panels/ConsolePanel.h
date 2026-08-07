@@ -28,13 +28,16 @@ namespace sw
 		/** @brief Logger 구독을 해제합니다. */
 		void unsubscribe();
 
-		char						  _filterBuffer[constant::kMaxBuffer128] = {};
-		bool						  _bAutoScroll							 = true;
-		bool						  _levelEnabled[4]						 = { true, true, true, true };
-		bool						  _bHasNewLogs							 = false;
-		DelegateHandle				  _logListenerHandle;
-		std::mutex					  _entriesMutex;
 		std::deque<Logger::LogEntry>  _entries;
 		std::vector<Logger::LogEntry> _drawSnapshot;
+		std::mutex					  _entriesMutex;
+		DelegateHandle				  _logListenerHandle;
+		char						  _filterBuffer[constant::kMaxBuffer128] = {};
+
+		// ImGui::Checkbox에 주소 전달 — bool 유지
+		bool _bAutoScroll		= true;
+		bool _levelEnabled[4]	= { true, true, true, true };
+		uint8 _bHasNewLogs	  : 1 = 0;
+		uint8 _reservedFlags  : 7 = 0;
 	};
 }

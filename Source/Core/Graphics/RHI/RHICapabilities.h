@@ -10,11 +10,12 @@ namespace sw
 {
 	struct RHICapabilities
 	{
-		bool _bBindless		   = false;
-		bool _bCompute		   = true;
-		bool _bOffscreenRT	   = false;
-		bool _bImGuiHooks	   = false;
-		bool _bEditorSupported = false;
+		uint8 _bBindless		: 1 = 0;
+		uint8 _bCompute			: 1 = 1;
+		uint8 _bOffscreenRT		: 1 = 0;
+		uint8 _bImGuiHooks		: 1 = 0;
+		uint8 _bEditorSupported : 1 = 0;
+		uint8 _reserved			: 3 = 0;
 	};
 
 	struct RHIAvailability

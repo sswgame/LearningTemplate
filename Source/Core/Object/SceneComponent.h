@@ -77,6 +77,9 @@ namespace sw
 		void markTransformDirty();
 
 	protected:
+		mutable float4x4 _cachedWorldMatrix{ float4x4::Identity };  ///< 캐시된 번역-only 월드 행렬
+		mutable double3	 _cachedWorldPositionLWC{ 0.0, 0.0, 0.0 }; ///< 캐시된 double 누적 월드 위치
+
 		PROPERTY()
 		float3 _localPosition{ 0.0f, 0.0f, 0.0f }; ///< 로컬 X, Y, Z 오프셋
 
@@ -84,14 +87,14 @@ namespace sw
 		float3 _localRotation{ 0.0f, 0.0f, 0.0f }; ///< 로컬 롤/피치/요 오일러 각도
 
 		PROPERTY()
-		float3 _localScale{ 1.0f, 1.0f, 1.0f };    ///< 로컬 스케일 배율
+		float3 _localScale{ 1.0f, 1.0f, 1.0f }; ///< 로컬 스케일 배율
 
-		mutable float3	 _cachedWorldPosition{ 0.0f, 0.0f, 0.0f };       ///< 캐시된 float 월드 위치
-		mutable double3	 _cachedWorldPositionLWC{ 0.0, 0.0, 0.0 };      ///< 캐시된 double 누적 월드 위치
-		mutable float4x4 _cachedWorldMatrix{ float4x4::Identity };       ///< 캐시된 번역-only 월드 행렬
+		mutable float3 _cachedWorldPosition{ 0.0f, 0.0f, 0.0f }; ///< 캐시된 float 월드 위치
 
-		SceneComponent*				 _parent = nullptr;                 ///< 부모 컴포넌트 참조
-		std::vector<SceneComponent*> _children;                        ///< 자식 컴포넌트 리스트
-		mutable uint8				 _bIsTransformDirty : 1 = 1;        ///< 트랜스폼 캐시 재계산 더티 비트
+		SceneComponent*				 _parent = nullptr; ///< 부모 컴포넌트 참조
+		std::vector<SceneComponent*> _children;		///< 자식 컴포넌트 리스트
+
+		mutable uint8 _bIsTransformDirty : 1 = 1; ///< 트랜스폼 캐시 재계산 더티 비트
+		mutable uint8 _reservedFlags	 : 7 = 0;
 	};
 }

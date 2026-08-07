@@ -85,10 +85,11 @@ namespace sw
 		std::string				 _breadcrumb; ///< 예: "Game / Shaders"
 		std::string				 _selectedAssetAbs;
 		char					 _searchBuffer[128] = {};
+		float					 _tileSize			= 96.0f;
 		AssetTypeFilter			 _typeFilter		= AssetTypeFilter::All;
 		ViewMode				 _viewMode			= ViewMode::Tiles;
-		float					 _tileSize			= 96.0f;
-		bool					 _bRootsDirty		= true;
-		bool					 _bFolderDirty		= true;
+		uint8					 _bRootsDirty	  : 1 = 1;
+		uint8					 _bFolderDirty	  : 1 = 1;
+		uint8					 _reservedFlags	  : 6 = 0;
 	};
 }

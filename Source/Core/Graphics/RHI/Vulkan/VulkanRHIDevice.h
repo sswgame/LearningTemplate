@@ -278,15 +278,15 @@ namespace sw
 		std::vector<VkFence>		 _inFlightFences;
 		std::vector<VkFence>		 _imagesInFlight;
 
+		void*  _hWnd		  = nullptr;
+		void*  _displayHandle = nullptr;
 		uint32 _currentFrame  = 0;
 		uint32 _imageIndex	  = 0;
-		bool   _bFrameStarted = false;
-
-		void*  _hWnd					= nullptr;
-		void*  _displayHandle			= nullptr;
-		uint32 _width					= 0;
-		uint32 _height					= 0;
-		bool   _bEnableValidationLayers = false;
+		uint32 _width		  = 0;
+		uint32 _height		  = 0;
+		uint8  _bFrameStarted			: 1 = 0;
+		uint8  _bEnableValidationLayers : 1 = 0;
+		uint8  _reservedFlags			: 6 = 0;
 
 		VkPipelineLayout	  _pipelineLayout	   = nullptr;
 		VkDescriptorSetLayout _descriptorSetLayout = nullptr;

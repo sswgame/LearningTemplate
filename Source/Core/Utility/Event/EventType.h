@@ -45,16 +45,10 @@ private:                                                      \
 	{
 		int32 _width  = 0;
 		int32 _height = 0;
-		uint8 _bIsResizing	: 1;
-		uint8 _bIsMaximized : 1;
-		uint8 _bIsMinimized : 1;
-
-		WindowResizeEvent()
-			: _bIsResizing{ 0 }
-			, _bIsMaximized{ 0 }
-			, _bIsMinimized{ 0 }
-		{
-		}
+		uint8 _bIsResizing	 : 1 = 0;
+		uint8 _bIsMaximized	 : 1 = 0;
+		uint8 _bIsMinimized	 : 1 = 0;
+		uint8 _reservedFlags : 5 = 0;
 
 		SW_REGISTER_EVENT( WindowResize );
 	};
@@ -66,7 +60,8 @@ private:                                                      \
 
 	struct WindowActivateEvent final : IEvent
 	{
-		bool _bIsActivate = true;
+		uint8 _bIsActivate	 : 1 = 1;
+		uint8 _reservedFlags : 7 = 0;
 		SW_REGISTER_EVENT( WindowActivate );
 	};
 }

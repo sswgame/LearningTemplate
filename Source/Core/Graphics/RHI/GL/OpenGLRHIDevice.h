@@ -149,13 +149,11 @@ namespace sw
 		bool createTriangleResources();
 
 	private:
-		void*  _hDC			 = nullptr;
-		void*  _hRC			 = nullptr;
-		void*  _hWnd		 = nullptr;
-		uint32 _width		 = 1280;
-		uint32 _height		 = 720;
-		bool   _bInitialized = false;
-
+		void*  _hDC			  = nullptr;
+		void*  _hRC			  = nullptr;
+		void*  _hWnd		  = nullptr;
+		uint32 _width		  = 1280;
+		uint32 _height		  = 720;
 		uint32 _shaderProgram = 0;
 		uint32 _vao			  = 0;
 		uint32 _vbo			  = 0;
@@ -185,5 +183,8 @@ namespace sw
 
 		std::vector<OpenGLPipelineStateRecord> _pipelineStates;
 		std::vector<OpenGLRenderPassRecord>	   _renderPasses;
+
+		uint8 _bInitialized	  : 1 = 0;
+		uint8 _reservedFlags  : 7 = 0;
 	};
 }

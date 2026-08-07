@@ -171,6 +171,10 @@ namespace sw
 		void markTickOrderDirty() { _bIsTickOrderDirty = true; }
 
 	private:
+		std::unordered_map<hashed_string, std::vector<std::unique_ptr<Component>>> _components; ///< 타입별 컴포넌트 맵
+		std::vector<Component*>													   _flatComponents; ///< 플랫 접근용 컴포넌트 벡터
+		TagContainer															   _tags;           ///< 태그 정보
+
 		PROPERTY()
 		uint64 _objectId = 0; ///< 오브젝트 고유 시리얼 번호
 
@@ -178,13 +182,10 @@ namespace sw
 		hashed_string _name; ///< 오브젝트 식별 명칭
 
 		PROPERTY()
-		uint8 _bActive				: 1; ///< 자체 활성화 비트
-		uint8 _bIsActiveInHierarchy : 1; ///< 최종 활성 비트(현재 setActive와 동기화; 향후 부모 계층용)
-		uint8 _bIsTickOrderDirty	: 1; ///< Tick 우선순위 변경 마크
-
-		std::unordered_map<hashed_string, std::vector<std::unique_ptr<Component>>> _components; ///< 타입별 컴포넌트 맵
-		std::vector<Component*>													   _flatComponents; ///< 플랫 접근용 컴포넌트 벡터
-		TagContainer															   _tags;           ///< 태그 정보
+		uint8 _bActive				: 1 = 0; ///< 자체 활성화 비트
+		uint8 _bIsActiveInHierarchy : 1 = 0; ///< 최종 활성 비트(현재 setActive와 동기화; 향후 부모 계층용)
+		uint8 _bIsTickOrderDirty	: 1 = 0; ///< Tick 우선순위 변경 마크
+		uint8 _reservedFlags		: 5 = 0;
 
 		static uint64 _s_nextObjectId; ///< 다음 발급할 고유 ID 카운터
 	};

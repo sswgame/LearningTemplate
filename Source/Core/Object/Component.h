@@ -72,7 +72,7 @@ namespace sw
 		/** @brief Tick 그룹 변경 */
 		void	  setTickGroup( TickGroup group );
 		/** @brief 현재 Tick 그룹 반환 */
-		TickGroup getTickGroup() const { return _tickGroup; }
+		TickGroup getTickGroup() const { return static_cast<TickGroup>( _tickGroup ); }
 
 		/** @brief 다른 컴포넌트가 먼저 Tick 실행되도록 선행 의존성 추가 */
 		void						   addTickDependency( Component* targetComp );
@@ -101,11 +101,12 @@ namespace sw
 		PROPERTY()
 		hashed_string _componentName; ///< 컴포넌트 식별 이름
 
-		std::vector<Component*> _tickDependencies;              ///< 틱 선행 순서 종속성 목록
-		TickGroup				_tickGroup = TickGroup::DuringPhysics; ///< 속한 틱 그룹
+		std::vector<Component*> _tickDependencies; ///< 틱 선행 순서 종속성 목록
 
 		PROPERTY()
-		bool _bActive = true; ///< 컴포넌트 개별 활성화 여부
+		uint8 _tickGroup : 3 = static_cast<uint8>( TickGroup::DuringPhysics ); ///< TickGroup 슬롯
+		uint8 _bActive	 : 1 = 1;											   ///< 컴포넌트 개별 활성화
+		uint8 _reserved	 : 4 = 0;
 
 	private:
 		static uint64 _s_nextComponentId; ///< ID 생성 카운터
