@@ -95,8 +95,12 @@ namespace sw
 
 		BLOCK( "플랫폼 윈도우 생성" )
 		{
+			uint32 width{};
+			uint32 height{};
+			_commandLineManager->getArgument( CommandLineArgument::WIDTH, width );
+			_commandLineManager->getArgument( CommandLineArgument::HEIGHT, height );
 			_window = IWindow::createPlatformWindow();
-			if ( _window == nullptr || _window->create( "SWEngine", 1280, 720 ) == false )
+			if ( _window == nullptr || _window->create( "SWEngine", width, height ) == false )
 			{
 				SW_LOG_ERROR( "Failed to create platform window!" );
 				return false;
@@ -142,9 +146,9 @@ namespace sw
 		rtDesc._clearColor[2]	  = 0.1f;
 		rtDesc._clearColor[3]	  = 1.0f;
 
-		_gameRenderTarget	 = _rhi->getDevice().createTexture2D( rtDesc );
-		_gameViewportWidth	 = width;
-		_gameViewportHeight	 = height;
+		_gameRenderTarget	= _rhi->getDevice().createTexture2D( rtDesc );
+		_gameViewportWidth	= width;
+		_gameViewportHeight = height;
 		return _gameRenderTarget != 0;
 	}
 

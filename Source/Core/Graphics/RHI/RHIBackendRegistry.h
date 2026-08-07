@@ -29,9 +29,9 @@ namespace sw
 		static RHIBackendRegistry& get();
 
 		void				   registerBackend( RHIBackend backend, const RHIDeviceFactoryDelegate& factory, const RHICapabilities& caps );
-		const RHIBackendEntry* find( RHIBackend backend ) const;
+		const RHIBackendEntry* findBackend( RHIBackend backend ) const;
 
-		std::unique_ptr<IRHIDevice> create( RHIBackend backend ) const;
+		std::unique_ptr<IRHIDevice> createDevice( RHIBackend backend ) const;
 
 		/** @brief Optional MODULE load: looks for DLL exporting createRHIDevice. */
 		bool tryLoadModule( RHIBackend backend, const std::string& modulePath );

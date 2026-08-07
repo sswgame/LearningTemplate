@@ -19,7 +19,7 @@ namespace sw
 
 	bool Scene::initialize( IRHIDevice* rhiDevice )
 	{
-		if ( _material && _material->initialize( rhiDevice ) == false )
+		if ( _material != nullptr && _material->initialize( rhiDevice ) == false )
 		{
 			SW_LOG_ERROR( "[Scene] Failed to initialize Material" );
 			return false;

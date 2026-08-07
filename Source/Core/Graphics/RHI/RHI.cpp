@@ -85,75 +85,61 @@ namespace sw
 	{
 		SW_LOG_INFO( "RHI::initialize called" );
 
-		try
+		// Priority: explicit CLI > current GVM value > OS default > first available
+		RHIBackend currentBackend = gv_RHIBackend;
+		bool	   bCliOverride	  = false;
+
+		CommandLineManager& commandLineManager = core::getCommandLineManager();
+		bool				bFlag			   = false;
+		if ( commandLineManager.getArgument( CommandLineArgument::DIRECTX_11, bFlag ) && bFlag )
 		{
-			// Priority: explicit CLI > current GVM value > OS default > first available
-			RHIBackend initialBackend = gv_RHIBackend;
-			bool	   bCliOverride	  = false;
-
-			CommandLineManager& commandLineManager = core::getCommandLineManager();
-			bool				bFlag			   = false;
-			if ( commandLineManager.getArgument( CommandLineArgument::DIRECTX_11, bFlag ) && bFlag )
-			{
-				initialBackend = RHIBackend::DirectX11;
-				bCliOverride   = true;
-			}
-			else if ( commandLineManager.getArgument( CommandLineArgument::DIRECTX_12, bFlag ) && bFlag )
-			{
-				initialBackend = RHIBackend::DirectX12;
-				bCliOverride   = true;
-			}
-			else if ( commandLineManager.getArgument( CommandLineArgument::VULKAN, bFlag ) && bFlag )
-			{
-				initialBackend = RHIBackend::Vulkan;
-				bCliOverride   = true;
-			}
-			else if ( commandLineManager.getArgument( CommandLineArgument::OPENGL, bFlag ) && bFlag )
-			{
-				initialBackend = RHIBackend::OpenGL;
-				bCliOverride   = true;
-			}
-
-			if ( bCliOverride == false )
-			{
-				if ( RHIAvailability::isAvailable( initialBackend ) == false )
-					initialBackend = getDefaultPlatformBackend();
-			}
-
-			if ( RHIAvailability::isAvailable( initialBackend ) == false )
-			{
-				SW_LOG_ERROR( "Requested RHI backend is unavailable on this platform." );
-				return false;
-			}
-
-			gv_RHIBackend = initialBackend;
-
-			SW_LOG_INFO( "Initializing RHI with backend: %s", getBackendTypeName( initialBackend ) );
-
-			_device = createDevice( initialBackend );
-			if ( _device == nullptr )
-			{
-				SW_LOG_ERROR( "Failed to create RHI Device!" );
-				return false;
-			}
-
-			if ( IWindow* window = IWindow::getActiveWindow() )
-				_device->setInitWindow( window );
-
-			if ( _device->initialize() == false )
-			{
-				SW_LOG_ERROR( "Failed to initialize RHI Device!" );
-				return false;
-			}
+			currentBackend = RHIBackend::DirectX11;
+			bCliOverride   = true;
 		}
-		catch ( const std::exception& e )
+		else if ( commandLineManager.getArgument( CommandLineArgument::DIRECTX_12, bFlag ) && bFlag )
 		{
-			SW_LOG_ERROR( "Exception during RHI initialization: %s", e.what() );
+			currentBackend = RHIBackend::DirectX12;
+			bCliOverride   = true;
+		}
+		else if ( commandLineManager.getArgument( CommandLineArgument::VULKAN, bFlag ) && bFlag )
+		{
+			currentBackend = RHIBackend::Vulkan;
+			bCliOverride   = true;
+		}
+		else if ( commandLineManager.getArgument( CommandLineArgument::OPENGL, bFlag ) && bFlag )
+		{
+			currentBackend = RHIBackend::OpenGL;
+			bCliOverride   = true;
+		}
+
+		if ( bCliOverride == false )
+		{
+			if ( RHIAvailability::isAvailable( currentBackend ) == false )
+				currentBackend = getDefaultPlatformBackend();
+		}
+
+		if ( RHIAvailability::isAvailable( currentBackend ) == false )
+		{
+			SW_LOG_ERROR( "Requested RHI backend is unavailable on this platform." );
 			return false;
 		}
-		catch ( ... )
+
+		gv_RHIBackend = currentBackend;
+		SW_LOG_INFO( "Initializing RHI with backend: %#", getBackendTypeName( currentBackend ) );
+
+		_device = createDevice( currentBackend );
+		if ( _device == nullptr )
 		{
-			SW_LOG_ERROR( "Unknown exception during RHI initialization" );
+			SW_LOG_ERROR( "Failed to create RHI Device!" );
+			return false;
+		}
+
+		if ( IWindow* window = IWindow::getActiveWindow() )
+			_device->setInitWindow( window );
+
+		if ( _device->initialize() == false )
+		{
+			SW_LOG_ERROR( "Failed to initialize RHI Device!" );
 			return false;
 		}
 
@@ -224,7 +210,7 @@ namespace sw
 
 	std::unique_ptr<IRHIDevice> RHI::createDevice( RHIBackend backend )
 	{
-		return RHIBackendRegistry::get().create( backend );
+		return RHIBackendRegistry::get().createDevice( backend );
 	}
 
 	const utf8* RHI::getBackendTypeName( RHIBackend backend )

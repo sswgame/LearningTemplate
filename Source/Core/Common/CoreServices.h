@@ -5,7 +5,9 @@
  * @brief App이 소유한 코어 매니저 포인터를 Core.dll에 바인딩하는 서비스 테이블
  */
 
+#include "Core/Common/CommonHeaders.h"
 #include "Core/Common/CommonDefines.h"
+#include "Core/Common/CommonMacros.h"
 
 namespace sw
 {
@@ -28,7 +30,8 @@ namespace sw
 	};
 
 	namespace core
-	{ /** @brief Core.dll 전역 조회가 사용할 매니저 포인터를 바인딩합니다. */
+	{
+		/** @brief Core.dll 전역 조회가 사용할 매니저 포인터를 바인딩합니다. */
 		SW_API void bindCoreServices( const CoreServices& services );
 		/** @brief 바인딩을 해제합니다(앱 종료 시). */
 		SW_API void unbindCoreServices();
@@ -45,5 +48,5 @@ namespace sw
 		SW_API ComponentManager& getComponentManager();
 		/** @brief 바인딩된 SceneManager를 반환합니다. */
 		SW_API SceneManager& getSceneManager();
-	} // namespace Core
+	} // namespace core
 } // namespace sw

@@ -42,9 +42,10 @@ namespace sw
 		, _reservedFlags{ 0 }
 	{
 	}
+
 	App::~App() = default;
 
-	bool App::initialize( int argc, char* argv[] )
+	bool App::initialize( int32 argc, utf8* argv[] )
 	{
 		if ( initializeSubsystems( argc, argv ) == false )
 			return false;
@@ -63,8 +64,7 @@ namespace sw
 				_reflectionData							  = ShaderReflection::reflect( vsCompileResult._bytecode, vsDesc._targetFormat );
 
 #if defined( SW_DEBUG )
-				auto shaderReloadDelegate = SW_DELEGATE_LAMBDA( ShaderRecompiledDelegate,
-																[]( const std::string& path, const ShaderCompileResult& result )
+				ShaderRecompiledDelegate shaderReloadDelegate = SW_DELEGATE_LAMBDA( ShaderRecompiledDelegate, []( const std::string& path, const ShaderCompileResult& result )
 				{
 					SW_LOG_INFO( "[LiveShaderNotify] Shader recompiled successfully live! Path: %# (Bytecode size: %# bytes)",
 								 path.c_str(), static_cast<uint32>( result._bytecode.size() ) );
@@ -72,30 +72,26 @@ namespace sw
 				_rhi->getLiveShaderManager().watchShader( vsDesc, shaderReloadDelegate );
 
 				const std::string shaderWatchRoot = FileUtil::normalizePath( ResourceUtil::getRootFolderPath() );
-				if ( shaderWatchRoot.empty() == false && _reloadFileManager )
+				if ( shaderWatchRoot.empty() == false && _reloadFileManager != nullptr )
 				{
-					_shaderWatchHandle = _reloadFileManager->registerWatch(
-						shaderWatchRoot,
-						{ ".hlsl", ".hlsli" },
-						SW_DELEGATE_LAMBDA( FileWatchMatchDelegate,
-											[this]( const FileChangeEvent& ev )
+					FileWatchMatchDelegate fileWatchDelegate = SW_DELEGATE_LAMBDA( FileWatchMatchDelegate, [this]( const FileChangeEvent& ev )
 					{
 						const std::string fullPath = FileUtil::normalizePath( ev._directory + "/" + ev._filename );
 						_rhi->getLiveShaderManager().notifyFileChanged( fullPath );
-					} ) );
+					} );
+					_shaderWatchHandle						 = _reloadFileManager->registerWatch( shaderWatchRoot, { ".hlsl", ".hlsli" }, fileWatchDelegate );
 				}
 #endif
 
-				createGameViewportTexture();
-
 				_liveReloadManager->setOnBeforeReload( kEditorModuleName, SW_DELEGATE_METHOD( LiveReloadManager::OnBeforeReloadDelegate, &App::onBeforeEditorReload, this ) );
 				_liveReloadManager->setOnAfterReload( kEditorModuleName, SW_DELEGATE_METHOD( LiveReloadManager::OnAfterReloadDelegate, &App::onAfterEditorReload, this ) );
-
 				if ( _liveReloadManager->registerModule( kEditorModuleName ) == false )
 				{
 					SW_LOG_ERROR( "Editor Module 로드에 실패했습니다." );
 					return false;
 				}
+
+				createGameViewportTexture();
 			}
 		}
 
@@ -161,9 +157,7 @@ namespace sw
 						return;
 
 					// Defer until after endFrame so we never tear down mid-ImGui/DX submit.
-					SW_LOG_INFO( "[Hot-Swap] RHI Backend change queued: %# → %#",
-								 RHI::getBackendTypeName( _committedRHIBackend ),
-								 RHI::getBackendTypeName( requested ) );
+					SW_LOG_INFO( "[Hot-Swap] RHI Backend change queued: %# → %#", RHI::getBackendTypeName( _committedRHIBackend ), RHI::getBackendTypeName( requested ) );
 					_pendingRHIBackend	   = requested;
 					_bPendingBackendChange = true;
 				} );

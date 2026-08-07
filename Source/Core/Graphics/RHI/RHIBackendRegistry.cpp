@@ -148,7 +148,7 @@ namespace sw
 		_entries.push_back( RHIBackendEntry{ backend, factory, caps } );
 	}
 
-	const RHIBackendEntry* RHIBackendRegistry::find( RHIBackend backend ) const
+	const RHIBackendEntry* RHIBackendRegistry::findBackend( RHIBackend backend ) const
 	{
 		for ( const RHIBackendEntry& entry : _entries )
 		{
@@ -158,13 +158,13 @@ namespace sw
 		return nullptr;
 	}
 
-	std::unique_ptr<IRHIDevice> RHIBackendRegistry::create( RHIBackend backend ) const
+	std::unique_ptr<IRHIDevice> RHIBackendRegistry::createDevice( RHIBackend backend ) const
 	{
 #if defined( SW_RHI_AS_MODULES )
 		ensureRhiModulesLoaded();
 #endif
 
-		const RHIBackendEntry* entry = find( backend );
+		const RHIBackendEntry* entry = findBackend( backend );
 		if ( entry == nullptr || entry->_factory.isBound() == false )
 		{
 			SW_LOG_ERROR( "[RHIBackendRegistry] No factory registered for backend %#", static_cast<int32>( backend ) );

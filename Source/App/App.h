@@ -35,7 +35,7 @@ namespace sw
 		~App();
 
 		/** @brief 서브시스템·윈도우·RHI·모듈을 초기화합니다. */
-		bool initialize( int argc, char* argv[] );
+		bool initialize( int32 argc, utf8* argv[] );
 		/** @brief 메인 루프를 실행합니다. */
 		void run();
 		/** @brief 모듈·RHI·매니저를 종료합니다. */
@@ -43,7 +43,7 @@ namespace sw
 
 	private:
 		/** @brief 로거·커맨드라인·태스크 등 코어 매니저를 생성·바인딩합니다. */
-		bool initializeSubsystems( int argc, char* argv[] );
+		bool initializeSubsystems( int32 argc, utf8* argv[] );
 
 		/** @brief 윈도우 리사이즈 시 스왑체인/뷰포트를 갱신합니다. */
 		void onResize( uint32 w, uint32 h );

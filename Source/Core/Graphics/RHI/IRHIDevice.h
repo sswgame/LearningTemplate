@@ -1,10 +1,12 @@
 #pragma once
 
+#include "Common/CoreServices.h"
 #include "Core/CoreMinimal.h"
 #include "RHITypes.h"
 #include "RHICapabilities.h"
 #include "Core/Window/IWindow.h"
 #include "Core/Graphics/RenderPass/RenderPassManager.h"
+#include "Core/Utility/CommandLine/CommandLineManager.h"
 
 /**
  * @file IRHIDevice.h
@@ -85,18 +87,21 @@ namespace sw
 				return false;
 
 			_renderPassManager = std::make_unique<RenderPassManager>();
-			if ( !_renderPassManager->initialize() )
+			if ( _renderPassManager->initialize() == false )
 				return false;
 
-			RHISwapChainDesc scDesc{};
-			scDesc._windowHandle  = _initWindow->getNativeHandle();
-			scDesc._windowDisplay = _initWindow->getNativeDisplay();
-			scDesc._width		  = _initWindow->getWidth();
-			scDesc._height		  = _initWindow->getHeight();
-			scDesc._bufferCount	  = 3;
-			scDesc._vsync		  = true;
+			constexpr uint32 kBackBufferCount = 3;
 
-			return initializeInternal( scDesc );
+			RHISwapChainDesc swapChainDesc{};
+			swapChainDesc._windowHandle	 = _initWindow->getNativeHandle();
+			swapChainDesc._windowDisplay = _initWindow->getNativeDisplay();
+			swapChainDesc._width		 = _initWindow->getWidth();
+			swapChainDesc._height		 = _initWindow->getHeight();
+			swapChainDesc._bufferCount	 = kBackBufferCount;
+			swapChainDesc._vsync		 = false;
+			core::getCommandLineManager().getArgument( CommandLineArgument::VSYNC, swapChainDesc._vsync );
+
+			return initializeInternal( swapChainDesc );
 		}
 
 		virtual void shutdown()
@@ -122,9 +127,7 @@ namespace sw
 		/** @brief RHI 디바이스 및 스왑체인 초기화 */
 		virtual bool initializeInternal( const RHISwapChainDesc& desc ) = 0;
 
-		/**
-		 * @brief 디바이스 종료 및 관련 리소스 정리
-		 */
+		/** @brief 디바이스 종료 및 관련 리소스 정리 */
 		virtual void shutdownInternal() = 0;
 
 		/** @brief GPU의 모든 대기 작업 완료 대기 */

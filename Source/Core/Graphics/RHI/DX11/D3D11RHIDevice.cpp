@@ -15,6 +15,11 @@ namespace sw
 {
 	namespace
 	{
+		constexpr uint32 kDefaultNumerator	= 60;
+		constexpr uint32 kDefaultDenomiator = 1;
+	} // namespace
+	namespace
+	{
 		DXGI_FORMAT toDxgiFormat( RHIFormat format )
 		{
 			switch ( format )
@@ -55,19 +60,19 @@ namespace sw
 		// Use FLIP_DISCARD to match DX12 (and DXGI HWND rules): after a flip-model
 		// swapchain has been created for an HWND, subsequent DISCARD/blt chains on the
 		// same window can Present without updating what the user sees (frozen frame).
-		DXGI_SWAP_CHAIN_DESC sd{};
-		sd.BufferCount						  = ( desc._bufferCount < 2 ) ? 2 : desc._bufferCount;
-		sd.BufferDesc.Width					  = _width;
-		sd.BufferDesc.Height				  = _height;
-		sd.BufferDesc.Format				  = DXGI_FORMAT_R8G8B8A8_UNORM;
-		sd.BufferDesc.RefreshRate.Numerator	  = 60;
-		sd.BufferDesc.RefreshRate.Denominator = 1;
-		sd.BufferUsage						  = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-		sd.OutputWindow						  = _hWnd;
-		sd.SampleDesc.Count					  = 1;
-		sd.SampleDesc.Quality				  = 0;
-		sd.Windowed							  = TRUE;
-		sd.SwapEffect						  = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+		DXGI_SWAP_CHAIN_DESC swapChainDesc{};
+		swapChainDesc.BufferCount						 = ( desc._bufferCount < 2 ) ? 2 : desc._bufferCount;
+		swapChainDesc.BufferDesc.Width					 = _width;
+		swapChainDesc.BufferDesc.Height					 = _height;
+		swapChainDesc.BufferDesc.Format					 = DXGI_FORMAT_R8G8B8A8_UNORM;
+		swapChainDesc.BufferDesc.RefreshRate.Numerator	 = kDefaultNumerator;
+		swapChainDesc.BufferDesc.RefreshRate.Denominator = kDefaultDenomiator;
+		swapChainDesc.BufferUsage						 = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+		swapChainDesc.OutputWindow						 = _hWnd;
+		swapChainDesc.SampleDesc.Count					 = 1;
+		swapChainDesc.SampleDesc.Quality				 = 0;
+		swapChainDesc.Windowed							 = TRUE;
+		swapChainDesc.SwapEffect						 = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 
 		UINT createDeviceFlags = 0;
 	#if defined( SW_DEBUG )
@@ -80,19 +85,18 @@ namespace sw
 			D3D_FEATURE_LEVEL_10_0,
 		};
 
-		HRESULT hr = D3D11CreateDeviceAndSwapChain(
-			nullptr,
-			D3D_DRIVER_TYPE_HARDWARE,
-			nullptr,
-			createDeviceFlags,
-			featureLevelArray,
-			2,
-			D3D11_SDK_VERSION,
-			&sd,
-			_swapChain.GetAddressOf(),
-			_device.GetAddressOf(),
-			&featureLevel,
-			_deviceContext.GetAddressOf() );
+		HRESULT hr = D3D11CreateDeviceAndSwapChain( nullptr,
+													D3D_DRIVER_TYPE_HARDWARE,
+													nullptr,
+													createDeviceFlags,
+													featureLevelArray,
+													SW_COUNT_OF( featureLevelArray ),
+													D3D11_SDK_VERSION,
+													&swapChainDesc,
+													_swapChain.GetAddressOf(),
+													_device.GetAddressOf(),
+													&featureLevel,
+													_deviceContext.GetAddressOf() );
 
 		if ( FAILED( hr ) )
 		{
@@ -101,7 +105,6 @@ namespace sw
 		}
 
 		createRenderTargetView();
-
 		if ( createTriangleResources() == false )
 			return false;
 
@@ -225,7 +228,7 @@ namespace sw
 	{
 		if ( buffer == 0 )
 			return;
-		auto*								   res = reinterpret_cast<ID3D11Buffer*>( buffer );
+		auto*								 res = reinterpret_cast<ID3D11Buffer*>( buffer );
 		Microsoft::WRL::ComPtr<ID3D11Buffer> owned;
 		for ( auto it = _constantBuffers.begin(); it != _constantBuffers.end(); ++it )
 		{
