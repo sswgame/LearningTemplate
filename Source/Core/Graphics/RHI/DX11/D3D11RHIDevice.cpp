@@ -6,6 +6,7 @@
 
 #if defined( SW_PLATFORM_WINDOWS )
 
+	#include "Core/Graphics/RHI/RHIDeferredCommandList.h"
 	#include "Core/Graphics/Shader/ShaderCache.h"
 	#include "Core/Utility/Log/Logger.h"
 	#include "Core/Utility/Delegate/Delegate.h"
@@ -328,6 +329,16 @@ namespace sw
 		if ( it == _textures.end() )
 			return;
 
+		ID3D11ShaderResourceView* srv = it->second._srv.Get();
+		for ( size_t i = 0; i < _registeredTextures.size(); ++i )
+		{
+			if ( _registeredTextures[i].Get() == srv )
+			{
+				_registeredTextures[i].Reset();
+				_textureFreeList.push_back( static_cast<uint32>( i ) );
+			}
+		}
+
 		TextureRecord owned = std::move( it->second );
 		_textures.erase( it );
 
@@ -336,6 +347,30 @@ namespace sw
 			(void)owned._texture.Get();
 		};
 		_releaseQueue.enqueueRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, releaseCb ) );
+	}
+
+	RHIDescriptorIndex D3D11RHIDevice::registerBindlessTexture( RHITextureHandle texture )
+	{
+		if ( texture == 0 )
+			return kInvalidDescriptorIndex;
+
+		auto it = _textures.find( texture );
+		if ( it == _textures.end() || it->second._srv == nullptr )
+			return kInvalidDescriptorIndex;
+
+		RHIDescriptorIndex index;
+		if ( _textureFreeList.empty() == false )
+		{
+			index = _textureFreeList.back();
+			_textureFreeList.pop_back();
+			_registeredTextures[index] = it->second._srv;
+		}
+		else
+		{
+			index = static_cast<RHIDescriptorIndex>( _registeredTextures.size() );
+			_registeredTextures.push_back( it->second._srv );
+		}
+		return index;
 	}
 
 	void D3D11RHIDevice::beginOffscreenPass( RHITextureHandle colorTarget, float32 clearColor[4] )
@@ -500,6 +535,13 @@ namespace sw
 		_vertexShader.Reset();
 		_pixelShader.Reset();
 		_registeredBindlessVector.clear();
+		_bindlessFreeList.clear();
+		_registeredTextures.clear();
+		_textureFreeList.clear();
+		_registeredUAVs.clear();
+		_uavFreeList.clear();
+		_computeRootConstantCB.Reset();
+		std::memset( _computeRootConstantShadow, 0, sizeof( _computeRootConstantShadow ) );
 		_constantBuffers.clear();
 		_structuredBuffers.clear();
 		_swapChain.Reset();
@@ -580,109 +622,6 @@ namespace sw
 		_releaseQueue.tickFrame();
 	}
 
-	class D3D11CommandList final : public IRHICommandList
-	{
-	public:
-		D3D11CommandList( D3D11RHIDevice* device )
-			: _device{ device }
-		{
-		}
-
-		void beginCommandList() override {}
-		void endCommandList() override {}
-
-		void setViewport( const RHIViewport& vp ) override
-		{
-			if ( _device != nullptr && _device->getNativeContext() != nullptr )
-			{
-				ID3D11DeviceContext* ctx = static_cast<ID3D11DeviceContext*>( _device->getNativeContext() );
-				D3D11_VIEWPORT		 d3dvp{};
-				d3dvp.TopLeftX = vp._x;
-				d3dvp.TopLeftY = vp._y;
-				d3dvp.Width	   = vp._width;
-				d3dvp.Height   = vp._height;
-				d3dvp.MinDepth = vp._minDepth;
-				d3dvp.MaxDepth = vp._maxDepth;
-				ctx->RSSetViewports( 1, &d3dvp );
-			}
-		}
-
-		void setPipelineState( RHIPipelineStateHandle pso ) override
-		{
-			if ( _device != nullptr )
-				_device->setPipelineState( pso );
-		}
-		void beginRenderPass( const RHIRenderPassBeginInfo& beginInfo ) override
-		{
-			if ( _device != nullptr )
-				_device->beginRenderPass( beginInfo );
-		}
-		void endRenderPass() override
-		{
-			if ( _device != nullptr )
-				_device->endRenderPass();
-		}
-
-		void drawTriangle( RHIDescriptorIndex materialDescriptorIndex ) override
-		{
-			if ( _device != nullptr )
-			{
-				_device->drawTriangle( materialDescriptorIndex );
-			}
-		}
-
-		void dispatchCompute( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ ) override
-		{
-			if ( _device != nullptr )
-			{
-				_device->dispatchCompute( threadGroupCountX, threadGroupCountY, threadGroupCountZ );
-			}
-		}
-
-		void setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* data, uint32 destOffsetIn32BitValues = 0 ) override
-		{
-			if ( _device != nullptr )
-			{
-				_device->setComputeRootConstants( rootParameterIndex, num32BitValues, data, destOffsetIn32BitValues );
-			}
-		}
-
-		void drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) override
-		{
-			if ( _device != nullptr )
-			{
-				_device->drawIndirect( argumentBuffer, argumentBufferOffset );
-			}
-		}
-
-		void dispatchIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) override
-		{
-			if ( _device != nullptr )
-			{
-				_device->dispatchIndirect( argumentBuffer, argumentBufferOffset );
-			}
-		}
-
-		void beginEventMarker( const utf8* name ) override
-		{
-			if ( _device != nullptr )
-			{
-				_device->beginEventMarker( name );
-			}
-		}
-
-		void endEventMarker() override
-		{
-			if ( _device != nullptr )
-			{
-				_device->endEventMarker();
-			}
-		}
-
-	private:
-		D3D11RHIDevice* _device;
-	};
-
 	void D3D11RHIDevice::dispatchCompute( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ )
 	{
 		if ( _deviceContext != nullptr )
@@ -691,19 +630,63 @@ namespace sw
 		}
 	}
 
+	void D3D11RHIDevice::setViewport( const RHIViewport& viewport )
+	{
+		if ( _deviceContext == nullptr )
+			return;
+
+		D3D11_VIEWPORT d3dvp{};
+		d3dvp.TopLeftX = viewport._x;
+		d3dvp.TopLeftY = viewport._y;
+		d3dvp.Width	   = viewport._width;
+		d3dvp.Height   = viewport._height;
+		d3dvp.MinDepth = viewport._minDepth;
+		d3dvp.MaxDepth = viewport._maxDepth;
+		_deviceContext->RSSetViewports( 1, &d3dvp );
+	}
+
+	bool D3D11RHIDevice::ensureComputeRootConstantCB()
+	{
+		if ( _computeRootConstantCB != nullptr )
+			return true;
+		if ( _device == nullptr )
+			return false;
+
+		D3D11_BUFFER_DESC desc{};
+		desc.ByteWidth		= kMaxComputeRootConstantDwords * sizeof( uint32 );
+		desc.Usage			= D3D11_USAGE_DYNAMIC;
+		desc.BindFlags		= D3D11_BIND_CONSTANT_BUFFER;
+		desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+		if ( FAILED( _device->CreateBuffer( &desc, nullptr, _computeRootConstantCB.GetAddressOf() ) ) )
+		{
+			SW_LOG_ERROR( "[D3D11] Failed to create compute root-constant cbuffer." );
+			return false;
+		}
+		return true;
+	}
+
 	void D3D11RHIDevice::setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* data, uint32 destOffsetIn32BitValues )
 	{
-		(void)rootParameterIndex;
-		(void)num32BitValues;
-		(void)data;
-		(void)destOffsetIn32BitValues;
+		if ( _deviceContext == nullptr || num32BitValues == 0 || data == nullptr )
+			return;
+		if ( destOffsetIn32BitValues >= kMaxComputeRootConstantDwords )
+			return;
 
-		static bool s_bLoggedUnsupported = false;
-		if ( s_bLoggedUnsupported == false )
-		{
-			SW_LOG_WARNING( "[D3D11] setComputeRootConstants is unsupported (no native compute root constants). Check supportsComputeRootConstants()." );
-			s_bLoggedUnsupported = true;
-		}
+		const uint32 maxCount = kMaxComputeRootConstantDwords - destOffsetIn32BitValues;
+		const uint32 count	  = num32BitValues < maxCount ? num32BitValues : maxCount;
+		if ( ensureComputeRootConstantCB() == false )
+			return;
+
+		std::memcpy( _computeRootConstantShadow + destOffsetIn32BitValues, data, static_cast<size_t>( count ) * sizeof( uint32 ) );
+
+		D3D11_MAPPED_SUBRESOURCE mapped{};
+		if ( FAILED( _deviceContext->Map( _computeRootConstantCB.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped ) ) )
+			return;
+		std::memcpy( mapped.pData, _computeRootConstantShadow, sizeof( _computeRootConstantShadow ) );
+		_deviceContext->Unmap( _computeRootConstantCB.Get(), 0 );
+
+		ID3D11Buffer* cb = _computeRootConstantCB.Get();
+		_deviceContext->CSSetConstantBuffers( rootParameterIndex, 1, &cb );
 	}
 
 	void D3D11RHIDevice::drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset )
@@ -735,19 +718,12 @@ namespace sw
 
 	std::unique_ptr<IRHICommandList> D3D11RHIDevice::createCommandList()
 	{
-		return std::make_unique<D3D11CommandList>( this );
+		return std::make_unique<RHIDeferredCommandList>();
 	}
 
 	void D3D11RHIDevice::executeCommandList( IRHICommandList* cmdList )
 	{
-		(void)cmdList;
-
-		static bool s_bLoggedImmediate = false;
-		if ( s_bLoggedImmediate == false )
-		{
-			SW_LOG_WARNING( "[D3D11] executeCommandList is a no-op — immediate-mode context is used; deferred command lists are not submitted." );
-			s_bLoggedImmediate = true;
-		}
+		executeDeferredCommandList( this, cmdList );
 	}
 
 	RHIPipelineStateHandle D3D11RHIDevice::createPipelineState( const RHIPipelineStateDesc& desc )

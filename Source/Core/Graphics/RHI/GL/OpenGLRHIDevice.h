@@ -49,8 +49,8 @@ namespace sw
 		/** @brief 백엔드 타입 반환 (OpenGL) */
 		RHIBackend getBackendType() const override { return RHIBackend::OpenGL; }
 
-		/** @brief Bindless stub — not implemented for OpenGL */
-		bool supportsBindless() const override { return false; }
+		/** @brief Descriptor-index tables for UBO/SSBO/texture (bind-at-draw / image units). */
+		bool supportsBindless() const override { return true; }
 
 		/** @brief RHI 텍스처 핸들에 대응하는 GL texture name (없으면 0) */
 		uint32 getGLTextureName( RHITextureHandle texture ) const;
@@ -119,7 +119,8 @@ namespace sw
 
 		RHITextureHandle   createTexture2D( const RHITextureDesc& desc ) override;
 		void			   destroyTexture( RHITextureHandle texture ) override;
-		RHIDescriptorIndex registerBindlessTexture( RHITextureHandle /*texture*/ ) override { return kInvalidDescriptorIndex; }
+		/** @brief 텍스처 유닛 슬롯 인덱스 발급 (샘플러 바인딩용 테이블) */
+		RHIDescriptorIndex registerBindlessTexture( RHITextureHandle texture ) override;
 
 		/** @brief UBO/SSBO 바인딩 인덱스 발급 (glBindBufferBase) */
 		RHIDescriptorIndex registerBindlessResource( RHIBufferHandle buffer ) override;
@@ -141,6 +142,12 @@ namespace sw
 
 		/** @brief glDispatchCompute 컴퓨트 실행 */
 		void dispatchCompute( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ ) override;
+
+		/** @brief glViewport */
+		void setViewport( const RHIViewport& viewport ) override;
+
+		/** @brief 컴퓨트 루트 상수 (UBO shim, ≤64 DWORD) */
+		void setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* data, uint32 destOffsetIn32BitValues = 0 ) override;
 
 		/** @brief glDrawArraysIndirect 실행 */
 		void drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) override;
@@ -166,6 +173,10 @@ namespace sw
 		 */
 		bool createTriangleResources();
 
+		bool ensureComputeRootConstantUbo();
+
+		static constexpr uint32 kMaxComputeRootConstantDwords = 64;
+
 	private:
 		void*  _hDC			  = nullptr;
 		void*  _hRC			  = nullptr;
@@ -190,23 +201,46 @@ namespace sw
 
 		struct OpenGLTextureRecord
 		{
-			uint32 texture = 0;
-			uint32 fbo	   = 0;
-			uint32 width   = 0;
-			uint32 height  = 0;
+			uint32	  texture	= 0;
+			uint32	  fbo		= 0;
+			uint32	  width		= 0;
+			uint32	  height	= 0;
+			uint32	  mipLevels = 1;
+			RHIFormat format	= RHIFormat::R8G8B8A8_UNORM;
+			uint8	  bDepthStencil : 1;
+			uint8	  bUAV			: 1;
+			uint8	  reserved		: 6;
 		};
 		std::unordered_map<RHITextureHandle, OpenGLTextureRecord> _textures;
 		uint64													  _nextTextureId = 1;
 
+		struct BindlessTextureRecord
+		{
+			uint32 texture = 0;
+		};
+		std::vector<BindlessTextureRecord> _registeredTextures;
+		std::vector<uint32>				   _textureFreeList;
+
+		uint32 _computeRootConstantUbo = 0;
+		uint32 _computeRootConstantShadow[kMaxComputeRootConstantDwords]{};
+
 		struct OpenGLPipelineStateRecord
 		{
-			uint32 program = 0;
-			uint32 vao	   = 0;
+			uint32				 program   = 0;
+			uint32				 vao	   = 0;
+			RHIPrimitiveTopology topology  = RHIPrimitiveTopology::TriangleList;
+			RHIFillMode			 fillMode  = RHIFillMode::Solid;
+			RHICullMode			 cullMode  = RHICullMode::None;
+			uint8				 bEnableDepthTest : 1;
+			uint8				 bEnableBlend	  : 1;
+			uint8				 reserved		  : 6;
 		};
 
 		struct OpenGLRenderPassRecord
 		{
-			RHIRenderPassDesc desc;
+			RHIRenderPassDesc desc{};
+			uint8			  bAlive   : 1;
+			uint8			  reserved : 7;
 		};
 
 		std::vector<OpenGLPipelineStateRecord> _pipelineStates;
@@ -214,7 +248,9 @@ namespace sw
 
 		RHIReleaseQueue _releaseQueue{ 3 };
 
-		uint8				   _bInitialized  : 1;
-		[[maybe_unused]] uint8 _reservedFlags : 7;
+		RHIPipelineStateHandle _boundGraphicsPso = 0;
+		int8				   _lastVsync		 = -1; ///< -1 unset, 0/1 last applied
+		uint8				   _bInitialized	 : 1;
+		[[maybe_unused]] uint8 _reservedFlags	 : 7;
 	};
 } // namespace sw

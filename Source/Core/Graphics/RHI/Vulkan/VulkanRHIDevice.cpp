@@ -5,6 +5,7 @@
 #include "Core/CoreMinimal.h"
 
 #include "VulkanRHIDevice.h"
+#include "Core/Graphics/RHI/RHIDeferredCommandList.h"
 #include "Core/Utility/File/FileUtil.h"
 #include "Core/Utility/Log/Logger.h"
 #include "Core/Graphics/Shader/ShaderCache.h"
@@ -1636,10 +1637,25 @@ namespace sw
 		vkCmdDispatch( _commandBuffers[_currentFrame], threadGroupCountX, threadGroupCountY, threadGroupCountZ );
 	}
 
+	void VulkanRHIDevice::setViewport( const RHIViewport& viewport )
+	{
+		if ( _commandBuffers.empty() || _commandBuffers[_currentFrame] == VK_NULL_HANDLE )
+			return;
+
+		VkViewport vkViewport{};
+		vkViewport.x		= viewport._x;
+		vkViewport.y		= viewport._y;
+		vkViewport.width	= viewport._width;
+		vkViewport.height	= viewport._height;
+		vkViewport.minDepth = viewport._minDepth;
+		vkViewport.maxDepth = viewport._maxDepth;
+		vkCmdSetViewport( _commandBuffers[_currentFrame], 0, 1, &vkViewport );
+	}
+
 	void VulkanRHIDevice::setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* data, uint32 destOffsetIn32BitValues )
 	{
 		(void)rootParameterIndex;
-		if ( _commandBuffers.empty() || _commandBuffers[_currentFrame] == VK_NULL_HANDLE || _pipelineLayout == VK_NULL_HANDLE )
+		if ( _commandBuffers.empty() || _commandBuffers[_currentFrame] == VK_NULL_HANDLE || _pipelineLayout == VK_NULL_HANDLE || data == nullptr || num32BitValues == 0 )
 			return;
 
 		vkCmdPushConstants( _commandBuffers[_currentFrame], _pipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, destOffsetIn32BitValues * 4, num32BitValues * 4, data );
@@ -1677,73 +1693,15 @@ namespace sw
 	void VulkanRHIDevice::beginEventMarker( const utf8* ) {}
 	void VulkanRHIDevice::endEventMarker() {}
 
-	class VulkanCommandList final : public IRHICommandList
-	{
-	public:
-		VulkanCommandList( VulkanRHIDevice* device ) : _device{ device } {}
-		void beginCommandList() override {}
-		void endCommandList() override {}
-		void setViewport( const RHIViewport& vp ) override { (void)vp; }
-		void setPipelineState( RHIPipelineStateHandle pso ) override
-		{
-			if ( _device )
-				_device->setPipelineState( pso );
-		}
-		void beginRenderPass( const RHIRenderPassBeginInfo& beginInfo ) override
-		{
-			if ( _device )
-				_device->beginRenderPass( beginInfo );
-		}
-		void endRenderPass() override
-		{
-			if ( _device )
-				_device->endRenderPass();
-		}
-		void drawTriangle( RHIDescriptorIndex materialDescriptorIndex ) override
-		{
-			if ( _device )
-				_device->drawTriangle( materialDescriptorIndex );
-		}
-		void dispatchCompute( uint32 x, uint32 y, uint32 z ) override
-		{
-			if ( _device )
-				_device->dispatchCompute( x, y, z );
-		}
-		void setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* data, uint32 destOffsetIn32BitValues = 0 ) override
-		{
-			if ( _device )
-				_device->setComputeRootConstants( rootParameterIndex, num32BitValues, data, destOffsetIn32BitValues );
-		}
-		void drawIndirect( RHIBufferHandle argBuf, uint32 offset ) override
-		{
-			if ( _device )
-				_device->drawIndirect( argBuf, offset );
-		}
-		void dispatchIndirect( RHIBufferHandle argBuf, uint32 offset ) override
-		{
-			if ( _device )
-				_device->dispatchIndirect( argBuf, offset );
-		}
-		void beginEventMarker( const utf8* name ) override
-		{
-			if ( _device )
-				_device->beginEventMarker( name );
-		}
-		void endEventMarker() override
-		{
-			if ( _device )
-				_device->endEventMarker();
-		}
-
-	private:
-		VulkanRHIDevice* _device;
-	};
-
 	std::unique_ptr<IRHICommandList> VulkanRHIDevice::createCommandList()
 	{
-		return std::make_unique<VulkanCommandList>( this );
+		return std::make_unique<RHIDeferredCommandList>();
 	}
-	void VulkanRHIDevice::executeCommandList( IRHICommandList* cmdList ) { (void)cmdList; }
+
+	void VulkanRHIDevice::executeCommandList( IRHICommandList* cmdList )
+	{
+		executeDeferredCommandList( this, cmdList );
+	}
 
 	RHIPipelineStateHandle VulkanRHIDevice::createPipelineState( const RHIPipelineStateDesc& desc )
 	{

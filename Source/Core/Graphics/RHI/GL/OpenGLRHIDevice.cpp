@@ -3,6 +3,7 @@
  * @brief OpenGL RHI 디바이스 구현
  */
 #include "OpenGLRHIDevice.h"
+#include "Core/Graphics/RHI/RHIDeferredCommandList.h"
 #include "Core/Graphics/Shader/ShaderCache.h"
 #include "Core/Common/PlatformHeaders.h"
 #include "Core/Common/CommonHeaders.h"
@@ -355,7 +356,6 @@ namespace sw
 			switch ( format )
 			{
 				case RHIFormat::R8G8B8A8_UNORM:
-					return GL_RGBA8;
 				case RHIFormat::B8G8R8A8_UNORM:
 					return GL_RGBA8;
 				case RHIFormat::R16G16B16A16_FLOAT:
@@ -377,9 +377,10 @@ namespace sw
 			switch ( format )
 			{
 				case RHIFormat::R8G8B8A8_UNORM:
-				case RHIFormat::B8G8R8A8_UNORM:
 				case RHIFormat::R16G16B16A16_FLOAT:
 					return GL_RGBA;
+				case RHIFormat::B8G8R8A8_UNORM:
+					return GL_BGRA;
 				case RHIFormat::D24_UNORM_S8_UINT:
 					return GL_DEPTH_STENCIL;
 				case RHIFormat::R32G32B32_FLOAT:
@@ -410,6 +411,51 @@ namespace sw
 			}
 			return GL_UNSIGNED_BYTE;
 		}
+
+		GLenum toGlPrimitive( RHIPrimitiveTopology topology )
+		{
+			switch ( topology )
+			{
+				case RHIPrimitiveTopology::LineList:
+					return GL_LINES;
+				case RHIPrimitiveTopology::PointList:
+					return GL_POINTS;
+				case RHIPrimitiveTopology::TriangleList:
+				default:
+					return GL_TRIANGLES;
+			}
+		}
+
+		void applyVsyncInterval( void* hDC, void* hRC, bool vsync )
+		{
+#if defined( SW_PLATFORM_WINDOWS )
+			(void)hRC;
+			using PFNWGLSWAPINTERVALEXTPROC = BOOL( WINAPI* )( int );
+			static PFNWGLSWAPINTERVALEXTPROC s_wglSwapIntervalEXT =
+				reinterpret_cast<PFNWGLSWAPINTERVALEXTPROC>( wglGetProcAddress( "wglSwapIntervalEXT" ) );
+			if ( s_wglSwapIntervalEXT )
+				s_wglSwapIntervalEXT( vsync ? 1 : 0 );
+#elif defined( SW_PLATFORM_LINUX )
+			(void)hRC;
+			using PFNGLXSWAPINTERVALEXTPROC = void ( * )( Display*, GLXDrawable, int );
+			static PFNGLXSWAPINTERVALEXTPROC s_glXSwapIntervalEXT =
+				reinterpret_cast<PFNGLXSWAPINTERVALEXTPROC>( glXGetProcAddressARB( (const GLubyte*)"glXSwapIntervalEXT" ) );
+			if ( s_glXSwapIntervalEXT && hDC )
+			{
+				Display* dpy = static_cast<Display*>( hDC );
+				s_glXSwapIntervalEXT( dpy, glXGetCurrentDrawable(), vsync ? 1 : 0 );
+			}
+#elif defined( SW_PLATFORM_MACOS )
+			(void)hDC;
+			if ( hRC )
+			{
+				id		 context = static_cast<id>( hRC );
+				GLint	 interval = vsync ? 1 : 0;
+				( (void ( * )( id, SEL, GLint*, GLint ))objc_msgSend )(
+					context, sel_registerName( "setValues:forParameter:" ), &interval, 222 /* NSOpenGLCPSwapInterval */ );
+			}
+#endif
+		}
 	} // namespace
 
 	RHITextureHandle OpenGLRHIDevice::createTexture2D( const RHITextureDesc& desc )
@@ -417,39 +463,67 @@ namespace sw
 		if ( _bInitialized == false || desc._width == 0 || desc._height == 0 )
 			return 0;
 
-		static bool s_bLoggedLimits = false;
-		if ( s_bLoggedLimits == false )
-		{
-			SW_LOG_INFO( "[OpenGL] createTexture2D: basic 2D color allocation (mipmaps/UAV limited)." );
-			s_bLoggedLimits = true;
-		}
+		const uint32 mipLevels = desc._mipLevels > 0 ? desc._mipLevels : 1;
+		const GLenum internalFmt = toGlInternalFormat( desc._format );
+		const bool	 bDepth		 = desc._bIsDepthStencil || desc._format == RHIFormat::D24_UNORM_S8_UINT;
 
 		GLuint tex = 0;
 		glGenTextures( 1, &tex );
 		glBindTexture( GL_TEXTURE_2D, tex );
-		glTexImage2D( GL_TEXTURE_2D, 0, static_cast<GLint>( toGlInternalFormat( desc._format ) ),
-					  static_cast<GLsizei>( desc._width ), static_cast<GLsizei>( desc._height ),
-					  0, toGlFormat( desc._format ), toGlType( desc._format ), nullptr );
-		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
+
+		// Immutable storage when mips/UAV requested (required for image load/store).
+		if ( mipLevels > 1 || desc._bIsUnorderedAccess )
+		{
+			glTexStorage2D( GL_TEXTURE_2D, static_cast<GLsizei>( mipLevels ), internalFmt,
+							static_cast<GLsizei>( desc._width ), static_cast<GLsizei>( desc._height ) );
+		}
+		else
+		{
+			glTexImage2D( GL_TEXTURE_2D, 0, static_cast<GLint>( internalFmt ),
+						  static_cast<GLsizei>( desc._width ), static_cast<GLsizei>( desc._height ),
+						  0, toGlFormat( desc._format ), toGlType( desc._format ), nullptr );
+		}
+
+		const GLint minFilter = ( mipLevels > 1 ) ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR;
+		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, minFilter );
 		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
+		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
+		if ( mipLevels > 1 && desc._bIsShaderResource )
+			glGenerateMipmap( GL_TEXTURE_2D );
 		glBindTexture( GL_TEXTURE_2D, 0 );
 
 		OpenGLTextureRecord record{};
-		record.texture = tex;
-		record.width   = desc._width;
-		record.height  = desc._height;
+		record.texture		 = tex;
+		record.width		 = desc._width;
+		record.height		 = desc._height;
+		record.mipLevels	 = mipLevels;
+		record.format		 = desc._format;
+		record.bDepthStencil = bDepth ? 1 : 0;
+		record.bUAV			 = desc._bIsUnorderedAccess ? 1 : 0;
+		record.reserved		 = 0;
 
-		if ( desc._bIsRenderTarget )
+		if ( desc._bIsRenderTarget || bDepth )
 		{
 			GLuint fbo = 0;
 			glGenFramebuffers( 1, &fbo );
 			glBindFramebuffer( GL_FRAMEBUFFER, fbo );
-			glFramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 0 );
+			if ( bDepth )
+			{
+				glFramebufferTexture2D( GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, tex, 0 );
+				glDrawBuffer( GL_NONE );
+				glReadBuffer( GL_NONE );
+			}
+			else
+			{
+				glFramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 0 );
+			}
 			const GLenum status = glCheckFramebufferStatus( GL_FRAMEBUFFER );
 			glBindFramebuffer( GL_FRAMEBUFFER, 0 );
 			if ( status != GL_FRAMEBUFFER_COMPLETE )
 			{
-				SW_LOG_WARNING( "[OpenGL] createTexture2D FBO incomplete (status=%#) — texture kept without FBO.", static_cast<uint32>( status ) );
+				SW_LOG_WARNING( "[OpenGL] createTexture2D FBO incomplete (status=%#) — texture kept without FBO.",
+								static_cast<uint32>( status ) );
 				glDeleteFramebuffers( 1, &fbo );
 			}
 			else
@@ -476,6 +550,15 @@ namespace sw
 		const GLuint texName = it->second.texture;
 		_textures.erase( it );
 
+		for ( size_t i = 0; i < _registeredTextures.size(); ++i )
+		{
+			if ( _registeredTextures[i].texture == texName )
+			{
+				_registeredTextures[i].texture = 0;
+				_textureFreeList.push_back( static_cast<uint32>( i ) );
+			}
+		}
+
 		auto releaseCb = [fboName, texName]()
 		{
 			if ( fboName != 0 )
@@ -498,6 +581,33 @@ namespace sw
 			return 0;
 		auto it = _textures.find( texture );
 		return it != _textures.end() ? it->second.texture : 0;
+	}
+
+	RHIDescriptorIndex OpenGLRHIDevice::registerBindlessTexture( RHITextureHandle texture )
+	{
+		if ( texture == 0 )
+			return kInvalidDescriptorIndex;
+
+		const uint32 glName = getGLTextureName( texture );
+		if ( glName == 0 )
+			return kInvalidDescriptorIndex;
+
+		RHIDescriptorIndex index;
+		if ( _textureFreeList.empty() == false )
+		{
+			index = _textureFreeList.back();
+			_textureFreeList.pop_back();
+		}
+		else
+		{
+			index = static_cast<RHIDescriptorIndex>( _registeredTextures.size() );
+		}
+
+		if ( index >= _registeredTextures.size() )
+			_registeredTextures.resize( index + 1 );
+
+		_registeredTextures[index].texture = glName;
+		return index;
 	}
 
 	RHIDescriptorIndex OpenGLRHIDevice::registerBindlessResource( RHIBufferHandle buffer )
@@ -582,20 +692,38 @@ namespace sw
 
 	void OpenGLRHIDevice::drawTriangle( RHIDescriptorIndex materialDescriptorIndex )
 	{
-		if ( _bInitialized == false || _shaderProgram == 0 || _vao == 0 )
+		if ( _bInitialized == false )
 			return;
 
-		glUseProgram( _shaderProgram );
+		GLuint program = _shaderProgram;
+		GLuint vao	   = _vao;
+		GLenum mode	   = GL_TRIANGLES;
+
+		if ( _boundGraphicsPso != 0 && _boundGraphicsPso <= _pipelineStates.size() )
+		{
+			const OpenGLPipelineStateRecord& pso = _pipelineStates[_boundGraphicsPso - 1];
+			if ( pso.program != 0 )
+			{
+				program = pso.program;
+				mode	= toGlPrimitive( pso.topology );
+				if ( pso.vao != 0 )
+					vao = pso.vao;
+			}
+		}
+
+		if ( program == 0 || vao == 0 )
+			return;
+
+		glUseProgram( program );
 
 		if ( materialDescriptorIndex < static_cast<RHIDescriptorIndex>( _registeredBindlessVector.size() ) )
 		{
 			GLuint ubo = _registeredBindlessVector[materialDescriptorIndex].buffer;
-
 			glBindBufferBase( GL_UNIFORM_BUFFER, 0, ubo );
 		}
 
-		glBindVertexArray( _vao );
-		glDrawArrays( GL_TRIANGLES, 0, 3 );
+		glBindVertexArray( vao );
+		glDrawArrays( mode, 0, 3 );
 		glBindVertexArray( 0 );
 	}
 
@@ -633,6 +761,27 @@ namespace sw
 		_structuredBuffers.clear();
 		_registeredBindlessVector.clear();
 		_registeredUAVs.clear();
+		_registeredTextures.clear();
+		_textureFreeList.clear();
+		_bindlessFreeList.clear();
+		_uavFreeList.clear();
+		if ( _computeRootConstantUbo != 0 )
+		{
+			GLuint ubo = _computeRootConstantUbo;
+			glDeleteBuffers( 1, &ubo );
+			_computeRootConstantUbo = 0;
+		}
+		std::memset( _computeRootConstantShadow, 0, sizeof( _computeRootConstantShadow ) );
+
+		for ( auto& pso : _pipelineStates )
+		{
+			if ( pso.program != 0 )
+				glDeleteProgram( pso.program );
+			pso = OpenGLPipelineStateRecord{};
+		}
+		_pipelineStates.clear();
+		_renderPasses.clear();
+		_boundGraphicsPso = 0;
 
 		for ( auto& pair : _textures )
 		{
@@ -726,7 +875,13 @@ namespace sw
 	{
 		if ( _bInitialized == false )
 			return;
-		(void)vsync;
+
+		const int8 desired = vsync ? 1 : 0;
+		if ( _lastVsync != desired )
+		{
+			applyVsyncInterval( _hDC, _hRC, vsync );
+			_lastVsync = desired;
+		}
 
 #if defined( SW_PLATFORM_WINDOWS )
 		SwapBuffers( static_cast<HDC>( _hDC ) );
@@ -748,105 +903,6 @@ namespace sw
 		SW_LOG_INFO( "OpenGL RHI Resized to %# x %#", width, height );
 	}
 
-	class OpenGLCommandList final : public IRHICommandList
-	{
-	public:
-		OpenGLCommandList( OpenGLRHIDevice* device )
-			: _device{ device }
-		{
-		}
-
-		void beginCommandList() override {}
-		void endCommandList() override {}
-
-		void setViewport( const RHIViewport& vp ) override
-		{
-			glViewport( static_cast<GLint>( vp._x ), static_cast<GLint>( vp._y ), static_cast<GLsizei>( vp._width ), static_cast<GLsizei>( vp._height ) );
-		}
-
-		void setPipelineState( RHIPipelineStateHandle pso ) override
-		{
-			if ( _device != nullptr )
-				_device->setPipelineState( pso );
-		}
-		void beginRenderPass( const RHIRenderPassBeginInfo& beginInfo ) override
-		{
-			if ( _device != nullptr )
-				_device->beginRenderPass( beginInfo );
-		}
-		void endRenderPass() override
-		{
-			if ( _device != nullptr )
-				_device->endRenderPass();
-		}
-
-		void drawTriangle( RHIDescriptorIndex materialDescriptorIndex ) override
-		{
-			if ( _device != nullptr )
-			{
-				_device->drawTriangle( materialDescriptorIndex );
-			}
-		}
-
-		void dispatchCompute( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ ) override
-		{
-			if ( _device != nullptr )
-			{
-				_device->dispatchCompute( threadGroupCountX, threadGroupCountY, threadGroupCountZ );
-			}
-		}
-
-		void setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* data, uint32 destOffsetIn32BitValues = 0 ) override
-		{
-			(void)rootParameterIndex;
-			(void)num32BitValues;
-			(void)data;
-			(void)destOffsetIn32BitValues;
-
-			static bool s_bLoggedUnsupported = false;
-			if ( s_bLoggedUnsupported == false )
-			{
-				SW_LOG_WARNING( "[OpenGL] setComputeRootConstants is unsupported (no native compute root constants). Check supportsComputeRootConstants()." );
-				s_bLoggedUnsupported = true;
-			}
-		}
-
-		void drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) override
-		{
-			if ( _device != nullptr )
-			{
-				_device->drawIndirect( argumentBuffer, argumentBufferOffset );
-			}
-		}
-
-		void dispatchIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) override
-		{
-			if ( _device != nullptr )
-			{
-				_device->dispatchIndirect( argumentBuffer, argumentBufferOffset );
-			}
-		}
-
-		void beginEventMarker( const utf8* name ) override
-		{
-			if ( _device != nullptr )
-			{
-				_device->beginEventMarker( name );
-			}
-		}
-
-		void endEventMarker() override
-		{
-			if ( _device != nullptr )
-			{
-				_device->endEventMarker();
-			}
-		}
-
-	private:
-		OpenGLRHIDevice* _device;
-	};
-
 	void OpenGLRHIDevice::dispatchCompute( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ )
 	{
 		if ( _bInitialized == false )
@@ -857,6 +913,67 @@ namespace sw
 			glDispatchCompute( threadGroupCountX, threadGroupCountY, threadGroupCountZ );
 			glMemoryBarrier( GL_ALL_BARRIER_BITS );
 		}
+	}
+
+	void OpenGLRHIDevice::setViewport( const RHIViewport& viewport )
+	{
+		if ( _bInitialized == false )
+			return;
+		glViewport( static_cast<GLint>( viewport._x ),
+					static_cast<GLint>( viewport._y ),
+					static_cast<GLsizei>( viewport._width ),
+					static_cast<GLsizei>( viewport._height ) );
+	}
+
+	bool OpenGLRHIDevice::ensureComputeRootConstantUbo()
+	{
+		if ( _computeRootConstantUbo != 0 )
+			return true;
+		if ( _bInitialized == false )
+			return false;
+
+		GLuint ubo = 0;
+		if ( glad_glCreateBuffers != nullptr )
+		{
+			glCreateBuffers( 1, &ubo );
+			glNamedBufferStorage( ubo, static_cast<GLsizeiptr>( sizeof( _computeRootConstantShadow ) ), nullptr, GL_DYNAMIC_STORAGE_BIT );
+		}
+		else
+		{
+			glGenBuffers( 1, &ubo );
+			glBindBuffer( GL_UNIFORM_BUFFER, ubo );
+			glBufferData( GL_UNIFORM_BUFFER, static_cast<GLsizeiptr>( sizeof( _computeRootConstantShadow ) ), nullptr, GL_DYNAMIC_DRAW );
+			glBindBuffer( GL_UNIFORM_BUFFER, 0 );
+		}
+		_computeRootConstantUbo = ubo;
+		return _computeRootConstantUbo != 0;
+	}
+
+	void OpenGLRHIDevice::setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* data, uint32 destOffsetIn32BitValues )
+	{
+		if ( _bInitialized == false || num32BitValues == 0 || data == nullptr )
+			return;
+		if ( destOffsetIn32BitValues >= kMaxComputeRootConstantDwords )
+			return;
+
+		const uint32 maxCount = kMaxComputeRootConstantDwords - destOffsetIn32BitValues;
+		const uint32 count	  = num32BitValues < maxCount ? num32BitValues : maxCount;
+		if ( ensureComputeRootConstantUbo() == false )
+			return;
+
+		std::memcpy( _computeRootConstantShadow + destOffsetIn32BitValues, data, static_cast<size_t>( count ) * sizeof( uint32 ) );
+
+		if ( glad_glNamedBufferSubData != nullptr )
+		{
+			glNamedBufferSubData( _computeRootConstantUbo, 0, static_cast<GLsizeiptr>( sizeof( _computeRootConstantShadow ) ), _computeRootConstantShadow );
+		}
+		else
+		{
+			glBindBuffer( GL_UNIFORM_BUFFER, _computeRootConstantUbo );
+			glBufferSubData( GL_UNIFORM_BUFFER, 0, static_cast<GLsizeiptr>( sizeof( _computeRootConstantShadow ) ), _computeRootConstantShadow );
+			glBindBuffer( GL_UNIFORM_BUFFER, 0 );
+		}
+		glBindBufferBase( GL_UNIFORM_BUFFER, rootParameterIndex, _computeRootConstantUbo );
 	}
 
 	void OpenGLRHIDevice::drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset )
@@ -906,19 +1023,12 @@ namespace sw
 
 	std::unique_ptr<IRHICommandList> OpenGLRHIDevice::createCommandList()
 	{
-		return std::make_unique<OpenGLCommandList>( this );
+		return std::make_unique<RHIDeferredCommandList>();
 	}
 
 	void OpenGLRHIDevice::executeCommandList( IRHICommandList* cmdList )
 	{
-		(void)cmdList;
-
-		static bool s_bLoggedImmediate = false;
-		if ( s_bLoggedImmediate == false )
-		{
-			SW_LOG_WARNING( "[OpenGL] executeCommandList is a no-op — immediate-mode GL is used; deferred command lists are not submitted." );
-			s_bLoggedImmediate = true;
-		}
+		executeDeferredCommandList( this, cmdList );
 	}
 
 	RHIPipelineStateHandle OpenGLRHIDevice::createPipelineState( const RHIPipelineStateDesc& desc )
@@ -978,10 +1088,14 @@ namespace sw
 		}
 
 		if ( record.program == 0 )
-		{
-
 			return 0;
-		}
+
+		record.topology		   = desc._topology;
+		record.fillMode		   = desc._fillMode;
+		record.cullMode		   = desc._cullMode;
+		record.bEnableDepthTest = desc._bEnableDepthTest ? 1 : 0;
+		record.bEnableBlend	   = desc._bEnableBlend ? 1 : 0;
+		record.reserved		   = 0;
 
 		_pipelineStates.push_back( record );
 		return static_cast<RHIPipelineStateHandle>( _pipelineStates.size() );
@@ -1050,7 +1164,32 @@ namespace sw
 	{
 		if ( pso == 0 || pso > _pipelineStates.size() )
 			return;
-		_pipelineStates[pso - 1] = OpenGLPipelineStateRecord{};
+
+		OpenGLPipelineStateRecord& record = _pipelineStates[pso - 1];
+		const GLuint			   program = record.program;
+		const GLuint			   vao	   = record.vao;
+		record							  = OpenGLPipelineStateRecord{};
+
+		if ( _boundGraphicsPso == pso )
+			_boundGraphicsPso = 0;
+
+		if ( program == 0 && vao == 0 )
+			return;
+
+		auto releaseCb = [program, vao]()
+		{
+			if ( program != 0 )
+			{
+				GLuint name = program;
+				glDeleteProgram( name );
+			}
+			if ( vao != 0 )
+			{
+				GLuint name = vao;
+				glDeleteVertexArrays( 1, &name );
+			}
+		};
+		_releaseQueue.enqueueRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, releaseCb ) );
 	}
 
 	void OpenGLRHIDevice::setPipelineState( RHIPipelineStateHandle pso )
@@ -1059,13 +1198,51 @@ namespace sw
 			return;
 
 		const auto& record = _pipelineStates[pso - 1];
-		if ( record.program != 0 )
-			glUseProgram( record.program );
+		if ( record.program == 0 )
+			return;
+
+		_boundGraphicsPso = pso;
+		glUseProgram( record.program );
 
 		if ( record.vao != 0 )
 			glBindVertexArray( record.vao );
 		else if ( _vao != 0 )
 			glBindVertexArray( _vao );
+
+		glPolygonMode( GL_FRONT_AND_BACK, record.fillMode == RHIFillMode::Wireframe ? GL_LINE : GL_FILL );
+
+		if ( record.cullMode == RHICullMode::None )
+		{
+			glDisable( GL_CULL_FACE );
+		}
+		else
+		{
+			glEnable( GL_CULL_FACE );
+			glCullFace( record.cullMode == RHICullMode::Front ? GL_FRONT : GL_BACK );
+			glFrontFace( GL_CW ); // match DirectX / clip-control path
+		}
+
+		if ( record.bEnableDepthTest )
+		{
+			glEnable( GL_DEPTH_TEST );
+			glDepthFunc( GL_LESS );
+			glDepthMask( GL_TRUE );
+		}
+		else
+		{
+			glDisable( GL_DEPTH_TEST );
+			glDepthMask( GL_FALSE );
+		}
+
+		if ( record.bEnableBlend )
+		{
+			glEnable( GL_BLEND );
+			glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+		}
+		else
+		{
+			glDisable( GL_BLEND );
+		}
 	}
 
 	void OpenGLRHIDevice::setComputePipelineState( RHIPipelineStateHandle pso )
@@ -1080,14 +1257,20 @@ namespace sw
 
 	RHIRenderPassHandle OpenGLRHIDevice::createRenderPass( const RHIRenderPassDesc& desc )
 	{
-		OpenGLRenderPassRecord record{ desc };
+		OpenGLRenderPassRecord record{};
+		record.desc		= desc;
+		record.bAlive	= 1;
+		record.reserved = 0;
 		_renderPasses.push_back( record );
 		return static_cast<RHIRenderPassHandle>( _renderPasses.size() );
 	}
 
 	void OpenGLRHIDevice::destroyRenderPass( RHIRenderPassHandle pass )
 	{
-		(void)pass;
+		if ( pass == 0 || pass > _renderPasses.size() )
+			return;
+		_renderPasses[pass - 1].bAlive = 0;
+		_renderPasses[pass - 1].desc   = RHIRenderPassDesc{};
 	}
 
 	void OpenGLRHIDevice::beginRenderPass( const RHIRenderPassBeginInfo& beginInfo )
@@ -1098,6 +1281,7 @@ namespace sw
 		uint32 w = beginInfo._width > 0 ? beginInfo._width : _width;
 		uint32 h = beginInfo._height > 0 ? beginInfo._height : _height;
 
+		bool bDepthTarget = false;
 		if ( beginInfo._colorTarget != 0 )
 		{
 			auto it = _textures.find( beginInfo._colorTarget );
@@ -1105,6 +1289,7 @@ namespace sw
 			{
 				const OpenGLTextureRecord& record = it->second;
 				glBindFramebuffer( GL_FRAMEBUFFER, record.fbo );
+				bDepthTarget = record.bDepthStencil != 0;
 				if ( beginInfo._width == 0 )
 					w = record.width;
 				if ( beginInfo._height == 0 )
@@ -1121,8 +1306,35 @@ namespace sw
 		}
 
 		glViewport( 0, 0, static_cast<GLsizei>( w ), static_cast<GLsizei>( h ) );
-		glClearColor( beginInfo._clearColor[0], beginInfo._clearColor[1], beginInfo._clearColor[2], beginInfo._clearColor[3] );
-		glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+
+		RHIRenderPassLoadOp colorLoad  = RHIRenderPassLoadOp::Clear;
+		bool				bClearDepth = true;
+		float32				clearDepth  = 1.0f;
+		if ( beginInfo._renderPass != 0 && beginInfo._renderPass <= _renderPasses.size() )
+		{
+			const OpenGLRenderPassRecord& rp = _renderPasses[beginInfo._renderPass - 1];
+			if ( rp.bAlive )
+			{
+				if ( rp.desc._colorAttachments.empty() == false )
+					colorLoad = rp.desc._colorAttachments[0]._loadOp;
+				bClearDepth = rp.desc._bHasDepthStencil != 0 || bDepthTarget;
+				clearDepth	= rp.desc._clearDepth;
+			}
+		}
+
+		GLbitfield clearMask = 0;
+		if ( bDepthTarget == false && colorLoad == RHIRenderPassLoadOp::Clear )
+		{
+			glClearColor( beginInfo._clearColor[0], beginInfo._clearColor[1], beginInfo._clearColor[2], beginInfo._clearColor[3] );
+			clearMask |= GL_COLOR_BUFFER_BIT;
+		}
+		if ( bClearDepth || bDepthTarget )
+		{
+			glClearDepth( static_cast<GLclampd>( clearDepth ) );
+			clearMask |= GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT;
+		}
+		if ( clearMask != 0 )
+			glClear( clearMask );
 	}
 
 	void OpenGLRHIDevice::endRenderPass()

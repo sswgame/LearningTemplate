@@ -66,7 +66,7 @@ App은 Editor/Game 구현 클래스를 직접 링크하지 않고 함수 테이�
   - `unloadModules` 는 factory를 먼저 비운 뒤 `FreeLibrary`/`dlclose`. **MODULE 백엔드 device는 먼저 destroy** (`RHI::shutdown` 경로).
 - Shipping: `SW_RHI_AS_MODULES` FORCE OFF → 모든 백엔드 device가 Core에 정적 링크.
 - Editor는 concrete device 타입에 링크하지 않음 — `getNativeTextureName` / `queryVulkanImGuiNative` 가상 API 사용.
-- Caps: OpenGL/Vulkan `_bBindless = false` (`supportsBindless()` false). `_bOffscreenRT=true`. `_bEditorSupported` / `_bImGuiHooks` false.
+- Caps: DX11/OpenGL `_bBindless=true` (descriptor-index tables, bind-at-draw — not DX12 heaps). Vulkan `_bBindless=false`, editor hooks deferred. DX11/GL/VK `_bComputeRootConstants=true` (DX12 native; DX11/GL CB/UBO shim ≤64 DWORD; VK push constants). `_bOffscreenRT=true` where listed.
 - **RHIReleaseQueue** (`frameLatency` deferred destroy): wired on **DX12 / OpenGL / DX11** — `destroyBuffer`/`destroyTexture` enqueue; `endFrame` → `tickFrame()`; `waitIdle`/`shutdown` → `flushAll()`. **Vulkan not wired** (deferred).
 
 ### Vulkan — deferred / future
@@ -74,8 +74,21 @@ App은 Editor/Game 구현 클래스를 직접 링크하지 않고 함수 테이�
 명시적으로 **아직 하지 않은** 항목 (추후 후보):
 
 - 에디터 핫스왑 / ImGui multi-viewport hooks (`_bEditorSupported` / `_bImGuiHooks`)
-- 본격 bindless descriptor 경로
+- 본격 bindless descriptor indexing
 - RHIReleaseQueue 연동한 deferred destroy
+
+### OpenGL — current
+
+- Bindless: descriptor-index tables (CB/SSBO/texture), `supportsBindless()==true`
+- Editor: `_bEditorSupported` / `_bImGuiHooks` (Win32 multi-viewport hooks in `ImGuiOpenGLRendererBackend`)
+- Texture2D: mips / depth-stencil FBO / BGRA / UAV storage
+- PSO: program + fill/cull/depth/blend applied in `setPipelineState`; destroy via release queue
+- Compute root constants: UBO shim (`setComputeRootConstants`, ≤64 DWORD)
+
+### DX11 — current
+
+- Bindless: descriptor-index tables (CB / UAV / texture SRV), `supportsBindless()==true` (emulation, not unbounded heaps)
+- Compute root constants: dynamic CS cbuffer shim (`setComputeRootConstants`, ≤64 DWORD)
 
 ### RenderGraph
 
@@ -84,8 +97,8 @@ App은 Editor/Game 구현 클래스를 직접 링크하지 않고 함수 테이�
 
 ### Command lists / compute root constants
 
-- **Immediate-mode backends** (DX11 / OpenGL, and current DX12 device path): draw/dispatch run on the live context; `executeCommandList` is effectively a no-op (recorded `IRHICommandList` is not a deferred submission queue yet).
-- **Compute root constants**: D3D12 maps to `SetComputeRoot32BitConstants` (API capped by D3D12 root signature limits, typically ≤64 DWORDs per root parameter). DX11/GL/VK stubs may ignore or partially implement — do not assume cross-backend parity.
+- All backends use `RHIDeferredCommandList`: record during `begin`/`end`, submit via `executeCommandList` → `replay` onto the live device context (DX12/VK still append to the frame command list; not a separate GPU queue submit).
+- **Compute root constants**: D3D12 `SetComputeRoot32BitConstants`; DX11/GL CB/UBO shim; Vulkan `vkCmdPushConstants`. Shader binding layouts still differ per backend.
 
 ## Reflection
 

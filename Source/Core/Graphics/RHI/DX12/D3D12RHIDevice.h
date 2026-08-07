@@ -136,8 +136,11 @@ namespace sw
 		/** @brief D3D12 Dispatch 컴퓨트 디스패치 실행 */
 		void dispatchCompute( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ ) override;
 
+		/** @brief D3D12 RSSetViewports */
+		void setViewport( const RHIViewport& viewport ) override;
+
 		/** @brief D3D12 SetComputeRoot32BitConstants 32비트 루트 상수 푸시 */
-		void setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* data, uint32 destOffsetIn32BitValues = 0 );
+		void setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* data, uint32 destOffsetIn32BitValues = 0 ) override;
 
 		/** @brief D3D12 ExecuteIndirect 그래픽스 드로우 실행 */
 		void drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) override;

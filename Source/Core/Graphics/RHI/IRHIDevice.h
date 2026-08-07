@@ -273,6 +273,15 @@ namespace sw
 		/** @brief 컴퓨트 셰이더 디스패치 실행 */
 		virtual void dispatchCompute( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ ) = 0;
 
+		/** @brief 뷰포트 영역 설정 (deferred command list replay용) */
+		virtual void setViewport( const RHIViewport& viewport ) = 0;
+
+		/**
+		 * @brief 컴퓨트 루트/푸시 상수 설정
+		 * @details DX12: SetComputeRoot32BitConstants. DX11/GL: CB/UBO shim (최대 64 DWORD).
+		 */
+		virtual void setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* data, uint32 destOffsetIn32BitValues = 0 ) = 0;
+
 		/** @brief GPU 인디렉트 버퍼에 기반한 그래픽스 드로우 실행 */
 		virtual void drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) = 0;
 

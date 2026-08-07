@@ -48,8 +48,8 @@ namespace sw
 		/** @brief 백엔드 타입 반환 (DirectX11) */
 		RHIBackend getBackendType() const override { return RHIBackend::D3D11; }
 
-		/** @brief Direct3D 11 백엔드는 네이티브 Bindless(Unbounded Array)를 지원하지 않음 (false 반환) */
-		bool supportsBindless() const override { return false; }
+		/** @brief Descriptor-index tables (CB/UAV/texture) — bind-at-draw emulation */
+		bool supportsBindless() const override { return true; }
 
 		/** @brief 백엔드 문자열 반환 */
 		const utf8* getBackendName() const override { return "Direct3D 11"; }
@@ -114,7 +114,8 @@ namespace sw
 		/** @brief D3D11 텍스처 해제 */
 		void destroyTexture( RHITextureHandle texture ) override;
 
-		RHIDescriptorIndex registerBindlessTexture( RHITextureHandle /*texture*/ ) override { return kInvalidDescriptorIndex; }
+		/** @brief 텍스처 SRV 테이블 인덱스 발급 */
+		RHIDescriptorIndex registerBindlessTexture( RHITextureHandle texture ) override;
 
 		/** @brief 에뮬레이션용 Bindless 버퍼 등록 */
 		RHIDescriptorIndex registerBindlessResource( RHIBufferHandle buffer ) override;
@@ -137,8 +138,11 @@ namespace sw
 		/** @brief 컴퓨트 셰이더 Dispatch 호출 */
 		void dispatchCompute( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ ) override;
 
-		/** @brief 컴퓨트 셰이더 루트 상수 설정 */
-		void setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* data, uint32 destOffsetIn32BitValues = 0 );
+		/** @brief 뷰포트 설정 */
+		void setViewport( const RHIViewport& viewport ) override;
+
+		/** @brief 컴퓨트 루트 상수 (CS cbuffer shim, ≤64 DWORD) */
+		void setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* data, uint32 destOffsetIn32BitValues = 0 ) override;
 
 		/** @brief D3D11 DrawInstancedIndirect 호출 */
 		void drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) override;
@@ -172,6 +176,10 @@ namespace sw
 		 */
 		bool createTriangleResources();
 
+		bool ensureComputeRootConstantCB();
+
+		static constexpr uint32 kMaxComputeRootConstantDwords = 64;
+
 	private:
 		Microsoft::WRL::ComPtr<ID3D11Device>		   _device;
 		Microsoft::WRL::ComPtr<ID3D11DeviceContext>	   _deviceContext;
@@ -189,8 +197,14 @@ namespace sw
 		std::vector<ID3D11Buffer*> _registeredBindlessVector;
 		std::vector<uint32>		   _bindlessFreeList;
 
+		std::vector<Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>> _registeredTextures;
+		std::vector<uint32>											  _textureFreeList;
+
 		std::vector<Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView>> _registeredUAVs;
 		std::vector<uint32>											   _uavFreeList;
+
+		Microsoft::WRL::ComPtr<ID3D11Buffer> _computeRootConstantCB;
+		uint32								 _computeRootConstantShadow[kMaxComputeRootConstantDwords]{};
 
 		struct D3D11PipelineStateRecord
 		{
@@ -243,7 +257,7 @@ namespace sw
 		void endFrame( bool ) override {}
 
 		RHIBackend	getBackendType() const override { return RHIBackend::D3D11; }
-		bool		supportsBindless() const override { return false; }
+		bool		supportsBindless() const override { return true; }
 		const utf8* getBackendName() const override { return "Direct3D 11 (Not Supported on non-Windows)"; }
 
 		void* getNativeDevice() const override { return nullptr; }

@@ -249,8 +249,7 @@ namespace sw
 			ImGuiIO& io = ImGui::GetIO();
 			io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 			io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-			// Multi-viewport requires full ImGui hooks. VK/GL report _bImGuiHooks=false;
-			// skip ViewportsEnable so docking stays on the main viewport only.
+			// Multi-viewport requires full ImGui hooks (DX11/12/GL). Vulkan keeps hooks off.
 			const RHICapabilities caps = RHIAvailability::query( rhiDevice->getBackendType() );
 			if ( caps._bImGuiHooks )
 				io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;

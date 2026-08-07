@@ -9,6 +9,7 @@
 		#include <d3d12sdklayers.h>
 	#endif
 
+	#include "Core/Graphics/RHI/RHIDeferredCommandList.h"
 	#include "Core/Graphics/Shader/ShaderCache.h"
 	#include "Core/Utility/Log/Logger.h"
 	#include "Core/Utility/Delegate/Delegate.h"
@@ -1055,104 +1056,27 @@ namespace sw
 		_releaseQueue.tickFrame();
 	}
 
-	class D3D12CommandList final : public IRHICommandList
-	{
-	public:
-		D3D12CommandList( D3D12RHIDevice* device )
-			: _device{ device }
-		{
-		}
-
-		void beginCommandList() override {}
-		void endCommandList() override {}
-
-		void setViewport( const RHIViewport& vp ) override
-		{
-			(void)vp;
-		}
-
-		void setPipelineState( RHIPipelineStateHandle pso ) override
-		{
-			if ( _device != nullptr )
-				_device->setPipelineState( pso );
-		}
-		void beginRenderPass( const RHIRenderPassBeginInfo& beginInfo ) override
-		{
-			if ( _device != nullptr )
-				_device->beginRenderPass( beginInfo );
-		}
-		void endRenderPass() override
-		{
-			if ( _device != nullptr )
-				_device->endRenderPass();
-		}
-
-		void drawTriangle( RHIDescriptorIndex materialDescriptorIndex ) override
-		{
-			if ( _device != nullptr )
-			{
-				_device->drawTriangle( materialDescriptorIndex );
-			}
-		}
-
-		void dispatchCompute( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ ) override
-		{
-			if ( _device != nullptr )
-			{
-				_device->dispatchCompute( threadGroupCountX, threadGroupCountY, threadGroupCountZ );
-			}
-		}
-
-		void setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* data, uint32 destOffsetIn32BitValues = 0 ) override
-		{
-			if ( _device != nullptr )
-			{
-				_device->setComputeRootConstants( rootParameterIndex, num32BitValues, data, destOffsetIn32BitValues );
-			}
-		}
-
-		void drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) override
-		{
-			if ( _device != nullptr )
-			{
-				_device->drawIndirect( argumentBuffer, argumentBufferOffset );
-			}
-		}
-
-		void dispatchIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) override
-		{
-			if ( _device != nullptr )
-			{
-				_device->dispatchIndirect( argumentBuffer, argumentBufferOffset );
-			}
-		}
-
-		void beginEventMarker( const utf8* name ) override
-		{
-			if ( _device != nullptr )
-			{
-				_device->beginEventMarker( name );
-			}
-		}
-
-		void endEventMarker() override
-		{
-			if ( _device != nullptr )
-			{
-				_device->endEventMarker();
-			}
-		}
-
-	private:
-		D3D12RHIDevice* _device;
-	};
-
 	void D3D12RHIDevice::dispatchCompute( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ )
 	{
 		if ( _commandList != nullptr )
 		{
 			_commandList->Dispatch( threadGroupCountX, threadGroupCountY, threadGroupCountZ );
 		}
+	}
+
+	void D3D12RHIDevice::setViewport( const RHIViewport& viewport )
+	{
+		if ( _commandList == nullptr )
+			return;
+
+		D3D12_VIEWPORT vp{};
+		vp.TopLeftX = viewport._x;
+		vp.TopLeftY = viewport._y;
+		vp.Width	= viewport._width;
+		vp.Height	= viewport._height;
+		vp.MinDepth = viewport._minDepth;
+		vp.MaxDepth = viewport._maxDepth;
+		_commandList->RSSetViewports( 1, &vp );
 	}
 
 	void D3D12RHIDevice::setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* data, uint32 destOffsetIn32BitValues )
@@ -1192,19 +1116,12 @@ namespace sw
 
 	std::unique_ptr<IRHICommandList> D3D12RHIDevice::createCommandList()
 	{
-		return std::make_unique<D3D12CommandList>( this );
+		return std::make_unique<RHIDeferredCommandList>();
 	}
 
 	void D3D12RHIDevice::executeCommandList( IRHICommandList* cmdList )
 	{
-		(void)cmdList;
-
-		static bool s_bLoggedImmediate = false;
-		if ( s_bLoggedImmediate == false )
-		{
-			SW_LOG_WARNING( "[D3D12] executeCommandList is a no-op — immediate-mode command list is used; deferred lists are not submitted." );
-			s_bLoggedImmediate = true;
-		}
+		executeDeferredCommandList( this, cmdList );
 	}
 
 	RHIPipelineStateHandle D3D12RHIDevice::createPipelineState( const RHIPipelineStateDesc& desc )

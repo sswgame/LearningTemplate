@@ -153,8 +153,11 @@ namespace sw
 		/** @brief vkCmdDispatch 컴퓨트 디스패치 실행 */
 		void dispatchCompute( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ ) override;
 
+		/** @brief vkCmdSetViewport */
+		void setViewport( const RHIViewport& viewport ) override;
+
 		/** @brief vkCmdPushConstants 푸시 상수 설정 */
-		void setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* data, uint32 destOffsetIn32BitValues = 0 );
+		void setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* data, uint32 destOffsetIn32BitValues = 0 ) override;
 
 		/** @brief vkCmdDrawIndirect 실행 */
 		void drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) override;
