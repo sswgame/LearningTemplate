@@ -1,0 +1,7 @@
+# Project clangd config — suppress IncludeCleaner false positives (PCH / transitive headers).
+CompileFlags:
+  CompilationDatabase: build
+
+Diagnostics:
+  UnusedIncludes: None
+  MissingIncludes: None
