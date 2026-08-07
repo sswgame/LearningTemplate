@@ -88,7 +88,7 @@ namespace sw
 			/**
 			 * @brief 내부 뮤텍스를 잠급니다
 			 */
-			std::lock_guard<std::mutex> lock( _queueMutex );
+			std::lock_guard<std::mutex> lock{  _queueMutex  };
 			auto [iter, inserted] = _channelQueue.try_emplace( channel );
 			iter->second.push_back( std::make_unique<T>( event ) );
 		}
@@ -108,7 +108,7 @@ namespace sw
 			/**
 			 * @brief 내부 뮤텍스를 잠급니다
 			 */
-			std::lock_guard<std::mutex>																lock( _queueMutex );
+			std::lock_guard<std::mutex>																lock{  _queueMutex  };
 			std::unordered_map<hashed_string, std::vector<std::unique_ptr<IEvent>>>::const_iterator iter = _channelQueue.find( channel );
 			if ( iter != _channelQueue.end() )
 			{
@@ -131,7 +131,7 @@ namespace sw
 			/**
 			 * @brief 내부 뮤텍스를 잠급니다
 			 */
-			std::lock_guard<std::mutex>																				 lock( _busMutex );
+			std::lock_guard<std::mutex>																				 lock{  _busMutex  };
 			std::unordered_map<std::pair<hashed_string, EventType>, std::shared_ptr<void>, HashPair>::const_iterator iter = _channelDelegates.find( key );
 			if ( iter != _channelDelegates.end() )
 			{

@@ -7,6 +7,42 @@
 
 namespace sw
 {
+	PropertyMetadata::PropertyMetadata() noexcept
+		: _bHasRange{ 0 }
+		, _reservedFlags{ 0 }
+	{
+	}
+
+	PropertyInfo::PropertyInfo() noexcept
+		: _bIsContainer{ 0 }
+		, _reservedFlags{ 0 }
+	{
+	}
+
+	PropertyInfo::PropertyInfo( hashed_string name, hashed_string typeName, size_t offset,
+								bool bIsContainer, ContainerKind containerKind,
+								hashed_string elementTypeName, hashed_string keyTypeName,
+								std::shared_ptr<IContainerWrapper> containerWrapper,
+								hashed_string					   alias )
+		: _containerWrapper{ std::move( containerWrapper ) }
+		, _offset{ offset }
+		, _name{ name }
+		, _typeName{ typeName }
+		, _elementTypeName{ elementTypeName }
+		, _keyTypeName{ keyTypeName }
+		, _alias{ alias }
+		, _containerKind{ containerKind }
+		, _bIsContainer{ static_cast<uint8>( bIsContainer ? 1 : 0 ) }
+		, _reservedFlags{ 0 }
+	{
+	}
+
+	EnumInfo::EnumInfo() noexcept
+		: _bIsBitFlag{ 0 }
+		, _reservedFlags{ 0 }
+	{
+	}
+
 	bool TypeInfo::isPODFastPath() const
 	{
 		if ( _bIsPODCalculated )
@@ -88,8 +124,8 @@ namespace sw
 	}
 
 	TypeRegistrar::TypeRegistrar( void (*registerFunc)(TypeRegistry&) )
-		: _registerFunc( registerFunc )
-		, _next( nullptr )
+		: _registerFunc{ registerFunc }
+		, _next{ nullptr }
 	{
 		_next	  = getHead();
 		getHead() = this;
@@ -102,8 +138,8 @@ namespace sw
 	}
 
 	EnumRegistrar::EnumRegistrar( void (*registerFunc)(TypeRegistry&) )
-		: _registerFunc( registerFunc )
-		, _next( nullptr )
+		: _registerFunc{ registerFunc }
+		, _next{ nullptr }
 	{
 		_next	  = getHead();
 		getHead() = this;

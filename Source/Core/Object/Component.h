@@ -104,9 +104,9 @@ namespace sw
 		std::vector<Component*> _tickDependencies; ///< 틱 선행 순서 종속성 목록
 
 		PROPERTY()
-		uint8 _tickGroup : 3 = static_cast<uint8>( TickGroup::DuringPhysics ); ///< TickGroup 슬롯
-		uint8 _bActive	 : 1 = 1;											   ///< 컴포넌트 개별 활성화
-		uint8 _reserved	 : 4 = 0;
+		uint8 _tickGroup : 3; ///< TickGroup 슬롯
+		uint8 _bActive	 : 1;											   ///< 컴포넌트 개별 활성화
+		[[maybe_unused]] uint8 _reserved	 : 4;
 
 	private:
 		static uint64 _s_nextComponentId; ///< ID 생성 카운터

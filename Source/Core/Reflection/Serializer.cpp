@@ -806,7 +806,7 @@ namespace sw
 		}
 	};
 
-	RapidXmlBackend::RapidXmlBackend() : _impl( std::make_unique<Impl>() ) {}
+	RapidXmlBackend::RapidXmlBackend() : _impl{ std::make_unique<Impl>() } {}
 	RapidXmlBackend::~RapidXmlBackend() = default;
 
 	void RapidXmlBackend::initXmlSerialization( const utf8* rootTagName )

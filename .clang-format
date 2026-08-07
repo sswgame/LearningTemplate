@@ -16,7 +16,7 @@ ColumnLimit: 0
 Cpp11BracedListStyle: true
 ShortNamespaceLines : 0
 FixNamespaceComments: true
-# PreprocessorConditionalComment: true
+PreprocessorConditionalComment: true
 IndentCaseLabels: true
 IndentWidth: 4
 MaxEmptyLinesToKeep: 10

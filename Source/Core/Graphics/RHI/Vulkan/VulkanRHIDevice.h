@@ -284,9 +284,9 @@ namespace sw
 		uint32 _imageIndex	  = 0;
 		uint32 _width		  = 0;
 		uint32 _height		  = 0;
-		uint8  _bFrameStarted			: 1 = 0;
-		uint8  _bEnableValidationLayers : 1 = 0;
-		uint8  _reservedFlags			: 6 = 0;
+		uint8				   _bFrameStarted			: 1;
+		uint8				   _bEnableValidationLayers : 1;
+		[[maybe_unused]] uint8 _reservedFlags			: 6;
 
 		VkPipelineLayout	  _pipelineLayout	   = nullptr;
 		VkDescriptorSetLayout _descriptorSetLayout = nullptr;

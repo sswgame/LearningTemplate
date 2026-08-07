@@ -322,7 +322,7 @@ namespace sw
 	}
 
 	MaterialInstance::MaterialInstance( Material* parentMaterial )
-		: _parentMaterial( parentMaterial )
+		: _parentMaterial{ parentMaterial }
 	{
 	}
 

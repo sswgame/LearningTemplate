@@ -26,7 +26,12 @@
 
 namespace sw
 {
-	ImGuiEditor::ImGuiEditor() = default;
+	ImGuiEditor::ImGuiEditor()
+		: _bInitialized{ 0 }
+		, _bDockLayoutApplied{ 0 }
+		, _reservedFlags{ 0 }
+	{
+	}
 
 	ImGuiEditor::~ImGuiEditor()
 	{
@@ -54,38 +59,44 @@ namespace sw
 		const std::filesystem::path consolasPath = EditorUtil::resolveFontFile( editor::path::kConsolasFontFile );
 		const std::filesystem::path koreanPath	 = EditorUtil::resolveFontFile( editor::path::kKoreanUiFontFile );
 
-		ImFontConfig baseConfig{};
-		baseConfig.OversampleH = 2;
-		baseConfig.OversampleV = 1;
-
 		ImFont* baseFont = nullptr;
-		if ( consolasPath.empty() == false )
+		BLOCK( "Base Font (Consolas)" )
 		{
-			baseFont = io.Fonts->AddFontFromFileTTF( consolasPath.string().c_str(), editor::constant::kFontSize, &baseConfig,
-													 io.Fonts->GetGlyphRangesDefault() );
-			SW_LOG_INFO( "[ImGuiEditor] Loaded Consolas: %#", consolasPath.string().c_str() );
+			ImFontConfig baseConfig{};
+			baseConfig.OversampleH = 2;
+			baseConfig.OversampleV = 1;
+
+			if ( consolasPath.empty() == false )
+			{
+				baseFont = io.Fonts->AddFontFromFileTTF( consolasPath.string().c_str(), editor::constant::kFontSize, &baseConfig,
+														 io.Fonts->GetGlyphRangesDefault() );
+				SW_LOG_INFO( "[ImGuiEditor] Loaded Consolas: %#", consolasPath.string().c_str() );
+			}
+
+			if ( baseFont == nullptr )
+			{
+				baseFont = io.Fonts->AddFontDefault( &baseConfig );
+				SW_LOG_WARNING( "[ImGuiEditor] Consolas not found — using ImGui default font." );
+			}
 		}
 
-		if ( baseFont == nullptr )
+		BLOCK( "Korean Glyph Merge" )
 		{
-			baseFont = io.Fonts->AddFontDefault( &baseConfig );
-			SW_LOG_WARNING( "[ImGuiEditor] Consolas not found — using ImGui default font." );
-		}
-
-		if ( koreanPath.empty() == false )
-		{
-			ImFontConfig mergeConfig{};
-			mergeConfig.MergeMode	= true;
-			mergeConfig.OversampleH = 2;
-			mergeConfig.OversampleV = 1;
-			mergeConfig.PixelSnapH	= true;
-			io.Fonts->AddFontFromFileTTF( koreanPath.string().c_str(), editor::constant::kFontSize, &mergeConfig,
-										  io.Fonts->GetGlyphRangesKorean() );
-			SW_LOG_INFO( "[ImGuiEditor] Merged Korean glyphs from: %#", koreanPath.string().c_str() );
-		}
-		else
-		{
-			SW_LOG_WARNING( "[ImGuiEditor] Korean font (%#) not found — Hangul may not render.", editor::path::kKoreanUiFontFile );
+			if ( koreanPath.empty() == false )
+			{
+				ImFontConfig mergeConfig{};
+				mergeConfig.MergeMode	= true;
+				mergeConfig.OversampleH = 2;
+				mergeConfig.OversampleV = 1;
+				mergeConfig.PixelSnapH	= true;
+				io.Fonts->AddFontFromFileTTF( koreanPath.string().c_str(), editor::constant::kFontSize, &mergeConfig,
+											  io.Fonts->GetGlyphRangesKorean() );
+				SW_LOG_INFO( "[ImGuiEditor] Merged Korean glyphs from: %#", koreanPath.string().c_str() );
+			}
+			else
+			{
+				SW_LOG_WARNING( "[ImGuiEditor] Korean font (%#) not found — Hangul may not render.", editor::path::kKoreanUiFontFile );
+			}
 		}
 
 		io.FontDefault = baseFont;
@@ -97,52 +108,67 @@ namespace sw
 		if ( _bInitialized == true )
 			return true;
 
-		SW_LOG_INFO( "Checking ImGui version and creating context" );
-		IMGUI_CHECKVERSION();
-		ImGui::CreateContext();
-
-		SW_LOG_INFO( "Configuring ImGui IO" );
-		ImGuiIO& io = ImGui::GetIO();
-		io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-		// Vulkan 멀티 뷰포트 백엔드는 아직 미연동. DX12는 Present 이후 postPresent + 0-size 가드로 지원.
-		if ( rhiDevice->getBackendType() != RHIBackend::Vulkan )
-			io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
-
-		ImGui::StyleColorsDark();
-		ImGuiStyle& style = ImGui::GetStyle();
-		style.WindowRounding			   = 0.0f;
-		style.Colors[ImGuiCol_WindowBg].w = 1.0f;
-
-		setupFonts();
-
-		SW_LOG_INFO( "Creating Platform Backend" );
-		_platformBackend = IImGuiPlatformBackend::createPlatformBackend();
-		if ( !_platformBackend )
+		BLOCK( "ImGui Context / IO / Style" )
 		{
-			SW_LOG_ERROR( "Failed to create platform backend" );
-			return false;
+			SW_LOG_INFO( "Checking ImGui version and creating context" );
+			IMGUI_CHECKVERSION();
+			ImGui::CreateContext();
+
+			SW_LOG_INFO( "Configuring ImGui IO" );
+			ImGuiIO& io = ImGui::GetIO();
+			io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+			io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+			// Vulkan 멀티 뷰포트 백엔드는 아직 미연동. DX12는 Present 이후 postPresent + 0-size 가드로 지원.
+			if ( rhiDevice->getBackendType() != RHIBackend::Vulkan )
+				io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+
+			ImGui::StyleColorsDark();
+			ImGuiStyle& style = ImGui::GetStyle();
+			style.WindowRounding			   = 0.0f;
+			style.Colors[ImGuiCol_WindowBg].w = 1.0f;
 		}
 
-		SW_LOG_INFO( "Initializing Platform Backend" );
-		if ( !_platformBackend->initialize( window, rhiDevice->getBackendType() ) )
+		BLOCK( "Fonts Setup" )
 		{
-			SW_LOG_ERROR( "Platform backend initialization failed" );
-			return false;
+			setupFonts();
 		}
 
-		SW_LOG_INFO( "Creating Renderer Backend" );
-		_rendererBackend = IImGuiRendererBackend::createRendererBackend( rhiDevice->getBackendType() );
-		if ( !_rendererBackend || !_rendererBackend->initialize( rhiDevice ) )
+		BLOCK( "Platform Backend 생성 / 초기화" )
 		{
-			SW_LOG_ERROR( "Renderer backend initialization failed" );
-			_platformBackend->shutdown();
-			_platformBackend.reset();
-			ImGui::DestroyContext();
-			return false;
+			SW_LOG_INFO( "Creating Platform Backend" );
+			_platformBackend = IImGuiPlatformBackend::createPlatformBackend();
+			if ( !_platformBackend )
+			{
+				SW_LOG_ERROR( "Failed to create platform backend" );
+				return false;
+			}
+
+			SW_LOG_INFO( "Initializing Platform Backend" );
+			if ( !_platformBackend->initialize( window, rhiDevice->getBackendType() ) )
+			{
+				SW_LOG_ERROR( "Platform backend initialization failed" );
+				return false;
+			}
 		}
 
-		registerDefaultPanels();
+		BLOCK( "Renderer Backend 생성 / 초기화" )
+		{
+			SW_LOG_INFO( "Creating Renderer Backend" );
+			_rendererBackend = IImGuiRendererBackend::createRendererBackend( rhiDevice->getBackendType() );
+			if ( !_rendererBackend || !_rendererBackend->initialize( rhiDevice ) )
+			{
+				SW_LOG_ERROR( "Renderer backend initialization failed" );
+				_platformBackend->shutdown();
+				_platformBackend.reset();
+				ImGui::DestroyContext();
+				return false;
+			}
+		}
+
+		BLOCK( "Default Panels 등록" )
+		{
+			registerDefaultPanels();
+		}
 
 		_bInitialized		= true;
 		_bDockLayoutApplied = false;
@@ -154,26 +180,35 @@ namespace sw
 		if ( _bInitialized == false )
 			return;
 
-		for ( auto& panel : _panels )
+		BLOCK( "Panels Shutdown" )
 		{
-			if ( panel )
-				panel->shutdown( nullptr );
-		}
-		_panels.clear();
-
-		if ( _rendererBackend )
-		{
-			_rendererBackend->shutdown();
-			_rendererBackend.reset();
+			for ( auto& panel : _panels )
+			{
+				if ( panel )
+					panel->shutdown( nullptr );
+			}
+			_panels.clear();
 		}
 
-		if ( _platformBackend )
+		BLOCK( "Renderer / Platform Backend Shutdown" )
 		{
-			_platformBackend->shutdown();
-			_platformBackend.reset();
+			if ( _rendererBackend )
+			{
+				_rendererBackend->shutdown();
+				_rendererBackend.reset();
+			}
+
+			if ( _platformBackend )
+			{
+				_platformBackend->shutdown();
+				_platformBackend.reset();
+			}
 		}
 
-		ImGui::DestroyContext();
+		BLOCK( "ImGui Context Destroy" )
+		{
+			ImGui::DestroyContext();
+		}
 
 		_bInitialized		= false;
 		_bDockLayoutApplied = false;
@@ -327,17 +362,26 @@ namespace sw
 		if ( _bInitialized == false )
 			return;
 
-		beginFrame();
-		beginDockspace();
-
-		for ( auto& panel : _panels )
+		BLOCK( "ImGui NewFrame / Dockspace" )
 		{
-			if ( panel )
-				panel->draw( ctx );
+			beginFrame();
+			beginDockspace();
 		}
 
-		endFrame();
-		renderBackend( ctx.rhiDevice );
+		BLOCK( "Editor Panels Draw" )
+		{
+			for ( auto& panel : _panels )
+			{
+				if ( panel )
+					panel->draw( ctx );
+			}
+		}
+
+		BLOCK( "ImGui Render / Backend Submit" )
+		{
+			endFrame();
+			renderBackend( ctx.rhiDevice );
+		}
 	}
 
 	void* ImGuiEditor::registerTexture( RHITextureHandle texture )

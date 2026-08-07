@@ -9,6 +9,8 @@ namespace sw
 {
 
 	SceneComponent::SceneComponent()
+		: _bIsTransformDirty{ 1 }
+		, _reservedFlags{ 0 }
 	{
 	}
 

@@ -9,6 +9,14 @@
 
 namespace sw
 {
+	ComputeTestPanel::ComputeTestPanel() noexcept
+		: _bRequestComputeDispatch{ 0 }
+		, _bComputeTestInitialized{ 0 }
+		, _bComputeTestDispatched{ 0 }
+		, _reservedFlags{ 0 }
+	{
+	}
+
 	void ComputeTestPanel::draw( const EditorUIContext& ctx )
 	{
 		executeComputeDraw( ctx.rhiDevice );

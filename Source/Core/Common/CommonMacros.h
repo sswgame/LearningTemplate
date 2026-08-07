@@ -108,7 +108,7 @@
 	#define SW_MODULE_API __attribute__( ( visibility( "default" ) ) )
 #endif
 
-/** @brief 사용되지 않는 코드 블록을 명시적으로 구분할 때 사용하는 매크로 */
+/** @brief 코드 블록을 명시적으로 구분할 때 사용하는 매크로 (세미콜론 없이 사용: BLOCK( "..." )) */
 #define BLOCK( message )
 
 /** @brief 비트마스크 생성을 위한 헬퍼 매크로 */

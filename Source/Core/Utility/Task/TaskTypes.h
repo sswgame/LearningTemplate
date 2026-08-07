@@ -19,7 +19,7 @@ namespace sw
 
 		template <typename T, typename = std::enable_if_t<std::is_same_v<std::decay_t<T>, TaskValue> == false>>
 		TaskValue( T&& value )
-			: _value( std::forward<T>( value ) )
+			: _value{ std::forward<T>( value ) }
 		{
 		}
 
@@ -58,7 +58,7 @@ namespace sw
 	public:
 		TaskArgs() = default;
 		TaskArgs( std::initializer_list<TaskValue> values )
-			: _values( values.begin(), values.end() )
+			: _values{ values.begin(), values.end() }
 		{
 		}
 

@@ -15,12 +15,14 @@ namespace sw
 
 	struct PropertyMetadata
 	{
+		PropertyMetadata() noexcept;
+
 		std::string _category = "General";
 		std::string _tooltip  = "";
 		float32		_minRange = 0.0f;
 		float32		_maxRange = 1.0f;
-		uint8		_bHasRange	   : 1 = 0;
-		uint8		_reservedFlags : 7 = 0;
+		uint8		_bHasRange	   : 1;
+		[[maybe_unused]] uint8		_reservedFlags : 7;
 	};
 
 	struct PropertyInfo
@@ -43,27 +45,16 @@ namespace sw
 		mutable uint32 _cachedAliasHash = 0;
 
 		ContainerKind _containerKind   = ContainerKind::None;
-		uint8		  _bIsContainer	   : 1 = 0;
-		uint8		  _reservedFlags   : 7 = 0;
+		uint8		  _bIsContainer	   : 1;
+		[[maybe_unused]] uint8		  _reservedFlags   : 7;
 
-		PropertyInfo() = default;
+		PropertyInfo() noexcept;
 
 		PropertyInfo( hashed_string name, hashed_string typeName, size_t offset,
 					  bool bIsContainer = false, ContainerKind containerKind = ContainerKind::None,
 					  hashed_string elementTypeName = {}, hashed_string keyTypeName = {},
 					  std::shared_ptr<IContainerWrapper> containerWrapper = nullptr,
-					  hashed_string						 alias			  = {} )
-			: _containerWrapper( std::move( containerWrapper ) )
-			, _offset( offset )
-			, _name( name )
-			, _typeName( typeName )
-			, _elementTypeName( elementTypeName )
-			, _keyTypeName( keyTypeName )
-			, _alias( alias )
-			, _containerKind( containerKind )
-			, _bIsContainer( bIsContainer ? 1 : 0 )
-		{
-		}
+					  hashed_string						 alias			  = {} );
 
 		uint32 getNameHash() const noexcept
 		{
@@ -129,10 +120,10 @@ namespace sw
 		hashed_string							 _name;
 		hashed_string							 _fullyQualifiedName;
 		hashed_string							 _moduleName;
-		uint8									 _bIsBitFlag	 : 1 = 0;
-		uint8									 _reservedFlags : 7 = 0;
+		uint8									 _bIsBitFlag	 : 1;
+		[[maybe_unused]] uint8									 _reservedFlags : 7;
 
-		EnumInfo() = default;
+		EnumInfo() noexcept;
 
 		hashed_string toString( int64 val ) const
 		{

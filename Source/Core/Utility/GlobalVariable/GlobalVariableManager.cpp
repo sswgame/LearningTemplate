@@ -165,6 +165,20 @@ namespace sw
 		return s_head;
 	}
 
+	GlobalVariableRegistrar::GlobalVariableRegistrar( const utf8* name, GlobalVariableType type, void* pData, const std::variant<bool, int32, float32, std::string>& defaultValue, const utf8* description, const utf8* enumType, const utf8* moduleName )
+		: _name{ name }
+		, _type{ type }
+		, _pData{ pData }
+		, _defaultValue{ defaultValue }
+		, _description{ description }
+		, _enumType{ enumType }
+		, _moduleName{ moduleName }
+		, _next{ nullptr }
+	{
+		_next	  = getHead();
+		getHead() = this;
+	}
+
 	bool GlobalVariableManager::initialize()
 	{
 		return true;

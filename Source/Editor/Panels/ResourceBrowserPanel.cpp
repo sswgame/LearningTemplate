@@ -10,6 +10,13 @@
 
 namespace sw
 {
+	ResourceBrowserPanel::ResourceBrowserPanel() noexcept
+		: _bRootsDirty{ 1 }
+		, _bFolderDirty{ 1 }
+		, _reservedFlags{ 0 }
+	{
+	}
+
 	namespace
 	{
 		ImVec4 colorForExtension( const std::string& ext )

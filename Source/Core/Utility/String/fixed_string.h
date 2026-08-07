@@ -179,7 +179,7 @@ namespace sw
 
 	template <typename T, uint32 N>
 	basic_fixed_string<T, N>::basic_fixed_string( const T* str )
-		: _size( 0 )
+		: _size{ 0 }
 	{
 		if ( str != nullptr )
 		{
@@ -193,7 +193,7 @@ namespace sw
 
 	template <typename T, uint32 N>
 	basic_fixed_string<T, N>::basic_fixed_string( const std::basic_string<T>& str )
-		: _size( 0 )
+		: _size{ 0 }
 	{
 		SW_LOG_ASSERT( str.length() <= N, "String too long for basic_fixed_string capacity" );
 		std::memcpy( _data, str.data(), sizeof( T ) * str.length() );
@@ -203,7 +203,7 @@ namespace sw
 
 	template <typename T, uint32 N>
 	basic_fixed_string<T, N>::basic_fixed_string( const uint32 count, T ch )
-		: _size( count )
+		: _size{ count }
 	{
 		SW_LOG_ASSERT( count <= N, "String too long for basic_fixed_string capacity" );
 		std::fill_n( _data, count, ch );
@@ -212,7 +212,7 @@ namespace sw
 
 	template <typename T, uint32 N>
 	basic_fixed_string<T, N>::basic_fixed_string( const basic_fixed_string& rhs )
-		: _size( rhs._size )
+		: _size{ rhs._size }
 	{
 
 		std::memcpy( _data, rhs._data, sizeof( T ) * ( _size + 1 ) );

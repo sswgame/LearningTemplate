@@ -99,9 +99,9 @@ namespace sw
 		RHIBackend _pendingRHIBackend	= RHIBackend::DirectX12;
 		RHIBackend _committedRHIBackend = RHIBackend::DirectX12;
 
-		uint8 _bEnableEditor		 : 1 = 0;
-		uint8 _bAppRunning			 : 1 = 0;
-		uint8 _bPendingBackendChange : 1 = 0;
-		uint8 _reservedFlags		 : 5 = 0;
+		uint8 _bEnableEditor		 : 1;
+		uint8 _bAppRunning			 : 1;
+		uint8 _bPendingBackendChange : 1;
+		[[maybe_unused]] uint8 _reservedFlags		 : 5;
 	};
 }

@@ -22,8 +22,8 @@ namespace sw
 
 		constexpr TagID() = default;
 		constexpr TagID( uint64 id, uint64 parentHash = 0 )
-			: _id( id )
-			, _parentHash( parentHash )
+			: _id{ id }
+			, _parentHash{ parentHash }
 		{
 		}
 

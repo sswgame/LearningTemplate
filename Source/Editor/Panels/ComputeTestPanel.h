@@ -12,6 +12,8 @@ namespace sw
 	class ComputeTestPanel : public IEditorPanel
 	{
 	public:
+		ComputeTestPanel() noexcept;
+
 		const char* getWindowTitle() const override { return "Compute Test"; }
 		/** @brief 테스트 컨트롤 UI를 그립니다. */
 		void		draw( const EditorUIContext& ctx ) override;
@@ -34,9 +36,9 @@ namespace sw
 		RHIDescriptorIndex	   _dispatchUavIndex = kInvalidDescriptorIndex;
 
 		bool  _bOpen = true; ///< ImGui::Begin에 주소 전달용 (비트필드 불가)
-		uint8 _bRequestComputeDispatch : 1 = 0;
-		uint8 _bComputeTestInitialized : 1 = 0;
-		uint8 _bComputeTestDispatched  : 1 = 0;
-		uint8 _reservedFlags		   : 5 = 0;
+		uint8 _bRequestComputeDispatch : 1;
+		uint8 _bComputeTestInitialized : 1;
+		uint8 _bComputeTestDispatched  : 1;
+		[[maybe_unused]] uint8 _reservedFlags		   : 5;
 	};
 }

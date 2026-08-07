@@ -959,7 +959,7 @@ namespace sw
 	{
 	public:
 		D3D12CommandList( D3D12RHIDevice* device )
-			: _device( device )
+			: _device{ device }
 		{
 		}
 

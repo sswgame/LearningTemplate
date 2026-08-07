@@ -554,7 +554,7 @@ namespace sw
 	{
 	public:
 		D3D11CommandList( D3D11RHIDevice* device )
-			: _device( device )
+			: _device{ device }
 		{
 		}
 

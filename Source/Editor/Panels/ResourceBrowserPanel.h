@@ -11,6 +11,8 @@ namespace sw
 	class ResourceBrowserPanel : public IEditorPanel
 	{
 	public:
+		ResourceBrowserPanel() noexcept;
+
 		const char* getWindowTitle() const override { return "Content Browser"; }
 		/** @brief 소스 트리·툴바·에셋 타일/리스트 뷰를 그립니다. */
 		void		draw( const EditorUIContext& ctx ) override;
@@ -88,8 +90,8 @@ namespace sw
 		float					 _tileSize			= 96.0f;
 		AssetTypeFilter			 _typeFilter		= AssetTypeFilter::All;
 		ViewMode				 _viewMode			= ViewMode::Tiles;
-		uint8					 _bRootsDirty	  : 1 = 1;
-		uint8					 _bFolderDirty	  : 1 = 1;
-		uint8					 _reservedFlags	  : 6 = 0;
+		uint8					 _bRootsDirty	  : 1;
+		uint8					 _bFolderDirty	  : 1;
+		[[maybe_unused]] uint8					 _reservedFlags	  : 6;
 	};
 }

@@ -10,12 +10,14 @@ namespace sw
 {
 	struct RHICapabilities
 	{
-		uint8 _bBindless		: 1 = 0;
-		uint8 _bCompute			: 1 = 1;
-		uint8 _bOffscreenRT		: 1 = 0;
-		uint8 _bImGuiHooks		: 1 = 0;
-		uint8 _bEditorSupported : 1 = 0;
-		uint8 _reserved			: 3 = 0;
+		RHICapabilities() noexcept;
+
+		uint8 _bBindless		: 1;
+		uint8 _bCompute			: 1;
+		uint8 _bOffscreenRT		: 1;
+		uint8 _bImGuiHooks		: 1;
+		uint8 _bEditorSupported : 1;
+		[[maybe_unused]] uint8 _reserved			: 3;
 	};
 
 	struct RHIAvailability

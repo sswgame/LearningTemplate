@@ -10,7 +10,7 @@
 namespace sw
 {
 	FrameArenaAllocator::FrameArenaAllocator( size_t defaultCapacity )
-		: _defaultCapacity( defaultCapacity )
+		: _defaultCapacity{ defaultCapacity }
 	{
 		_chunks.reserve( 8 );
 		allocateNewChunk( _defaultCapacity );

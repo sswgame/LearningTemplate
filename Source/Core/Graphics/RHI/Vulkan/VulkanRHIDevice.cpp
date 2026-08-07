@@ -71,6 +71,8 @@ namespace sw
 	}
 
 	VulkanRHIDevice::VulkanRHIDevice()
+		: _bFrameStarted{ 0 }
+		, _reservedFlags{ 0 }
 	{
 #if defined( SW_DEBUG )
 		_bEnableValidationLayers = true;
@@ -112,70 +114,85 @@ namespace sw
 		_width		   = desc._width;
 		_height		   = desc._height;
 
-#if defined( SW_PLATFORM_WINDOWS )
-		if ( _bEnableValidationLayers )
+		BLOCK( "Validation Layer Setup" )
 		{
-			std::string execDir = FileUtil::getDirectoryPart( FileUtil::getExecutablePath() );
-			if ( FileUtil::isFileExist( execDir + "/VkLayer_khronos_validation.json" ) )
+#if defined( SW_PLATFORM_WINDOWS )
+			if ( _bEnableValidationLayers )
 			{
-				SetEnvironmentVariableA( "VK_ADD_LAYER_PATH", execDir.c_str() );
-				SetEnvironmentVariableA( "VK_LAYER_PATH", execDir.c_str() );
-			}
-			else
-			{
-				const char* vulkanSdkEnv = std::getenv( "VULKAN_SDK" );
-				if ( vulkanSdkEnv != nullptr && std::strlen( vulkanSdkEnv ) > 0 )
+				std::string execDir = FileUtil::getDirectoryPart( FileUtil::getExecutablePath() );
+				if ( FileUtil::isFileExist( execDir + "/VkLayer_khronos_validation.json" ) )
 				{
-					std::string sdkBinPath = std::string( vulkanSdkEnv ) + "/Bin";
-					SetEnvironmentVariableA( "VK_ADD_LAYER_PATH", sdkBinPath.c_str() );
+					SetEnvironmentVariableA( "VK_ADD_LAYER_PATH", execDir.c_str() );
+					SetEnvironmentVariableA( "VK_LAYER_PATH", execDir.c_str() );
+				}
+				else
+				{
+					const char* vulkanSdkEnv = std::getenv( "VULKAN_SDK" );
+					if ( vulkanSdkEnv != nullptr && std::strlen( vulkanSdkEnv ) > 0 )
+					{
+						std::string sdkBinPath = std::string( vulkanSdkEnv ) + "/Bin";
+						SetEnvironmentVariableA( "VK_ADD_LAYER_PATH", sdkBinPath.c_str() );
+					}
 				}
 			}
-		}
 #endif
 
-		if ( _bEnableValidationLayers && checkValidationLayerSupport() == false )
-		{
-			SW_LOG_INFO( "Vulkan Validation Layers requested, but VK_LAYER_KHRONOS_validation was not found (Validation Layers: DISABLED)" );
-			_bEnableValidationLayers = false;
+			if ( _bEnableValidationLayers && checkValidationLayerSupport() == false )
+			{
+				SW_LOG_INFO( "Vulkan Validation Layers requested, but VK_LAYER_KHRONOS_validation was not found (Validation Layers: DISABLED)" );
+				_bEnableValidationLayers = false;
+			}
 		}
 
-		if ( createInstance() == false )
-			return false;
+		BLOCK( "Instance / Surface / Logical Device" )
+		{
+			if ( createInstance() == false )
+				return false;
 
-		setupDebugMessenger();
+			setupDebugMessenger();
 
-		if ( createSurface() == false )
-			return false;
+			if ( createSurface() == false )
+				return false;
 
-		if ( pickPhysicalDevice() == false )
-			return false;
+			if ( pickPhysicalDevice() == false )
+				return false;
 
-		if ( createLogicalDevice() == false )
-			return false;
+			if ( createLogicalDevice() == false )
+				return false;
+		}
 
-		if ( createSwapChain() == false )
-			return false;
+		BLOCK( "Swapchain / RenderPass / Framebuffers" )
+		{
+			if ( createSwapChain() == false )
+				return false;
 
-		if ( createImageViews() == false )
-			return false;
+			if ( createImageViews() == false )
+				return false;
 
-		if ( createRenderPass() == false )
-			return false;
+			if ( createRenderPass() == false )
+				return false;
 
-		if ( createFramebuffers() == false )
-			return false;
+			if ( createFramebuffers() == false )
+				return false;
+		}
 
-		if ( createCommandPool() == false )
-			return false;
+		BLOCK( "Command Pool / Sync Objects" )
+		{
+			if ( createCommandPool() == false )
+				return false;
 
-		if ( createCommandBuffers() == false )
-			return false;
+			if ( createCommandBuffers() == false )
+				return false;
 
-		if ( createSyncObjects() == false )
-			return false;
+			if ( createSyncObjects() == false )
+				return false;
+		}
 
-		if ( createTriangleResources() == false )
-			return false;
+		BLOCK( "Triangle Resources" )
+		{
+			if ( createTriangleResources() == false )
+				return false;
+		}
 
 		SW_LOG_INFO( "Vulkan RHI Backend Device Initialized Successfully (Validation Layers: %#)", _bEnableValidationLayers ? "ENABLED" : "DISABLED" );
 		return true;
@@ -584,42 +601,50 @@ namespace sw
 
 	bool VulkanRHIDevice::createTriangleResources()
 	{
-		ShaderCompileDesc vsDesc{};
-		vsDesc._filePath			 = "Shaders/BindlessTriangle.hlsl";
-		vsDesc._entryPoint			 = "VSMain";
-		vsDesc._stage				 = ShaderStage::Vertex;
-		vsDesc._targetFormat		 = ShaderTargetFormat::SPIRV_Vulkan;
-		ShaderCompileResult vsResult = ShaderCache::getOrCompile( vsDesc );
+		ShaderCompileResult vsResult{};
+		ShaderCompileResult psResult{};
+		VkShaderModule		vertShaderModule = VK_NULL_HANDLE;
+		VkShaderModule		fragShaderModule = VK_NULL_HANDLE;
 
-		ShaderCompileDesc psDesc{};
-		psDesc._filePath			 = "Shaders/BindlessTriangle.hlsl";
-		psDesc._entryPoint			 = "PSMain";
-		psDesc._stage				 = ShaderStage::Pixel;
-		psDesc._targetFormat		 = ShaderTargetFormat::SPIRV_Vulkan;
-		ShaderCompileResult psResult = ShaderCache::getOrCompile( psDesc );
-
-		if ( vsResult._bSuccess == false || psResult._bSuccess == false )
+		BLOCK( "Compile HLSL → SPIR-V / Create Shader Modules" )
 		{
-			SW_LOG_ERROR( "[Vulkan] Failed to compile BindlessTriangle.hlsl for SPIR-V!" );
-			return false;
+			ShaderCompileDesc vsDesc{};
+			vsDesc._filePath			 = "Shaders/BindlessTriangle.hlsl";
+			vsDesc._entryPoint			 = "VSMain";
+			vsDesc._stage				 = ShaderStage::Vertex;
+			vsDesc._targetFormat		 = ShaderTargetFormat::SPIRV_Vulkan;
+			vsResult					 = ShaderCache::getOrCompile( vsDesc );
+
+			ShaderCompileDesc psDesc{};
+			psDesc._filePath			 = "Shaders/BindlessTriangle.hlsl";
+			psDesc._entryPoint			 = "PSMain";
+			psDesc._stage				 = ShaderStage::Pixel;
+			psDesc._targetFormat		 = ShaderTargetFormat::SPIRV_Vulkan;
+			psResult					 = ShaderCache::getOrCompile( psDesc );
+
+			if ( vsResult._bSuccess == false || psResult._bSuccess == false )
+			{
+				SW_LOG_ERROR( "[Vulkan] Failed to compile BindlessTriangle.hlsl for SPIR-V!" );
+				return false;
+			}
+
+			VkShaderModuleCreateInfo vsInfo{};
+			vsInfo.sType	= VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+			vsInfo.codeSize = vsResult._bytecode.size();
+			vsInfo.pCode	= reinterpret_cast<const uint32*>( vsResult._bytecode.data() );
+			if ( vkCreateShaderModule( _device, &vsInfo, nullptr, &vertShaderModule ) != VK_SUCCESS )
+				return false;
+
+			VkShaderModuleCreateInfo psInfo{};
+			psInfo.sType	= VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+			psInfo.codeSize = psResult._bytecode.size();
+			psInfo.pCode	= reinterpret_cast<const uint32*>( psResult._bytecode.data() );
+			if ( vkCreateShaderModule( _device, &psInfo, nullptr, &fragShaderModule ) != VK_SUCCESS )
+				return false;
 		}
 
-		VkShaderModuleCreateInfo vsInfo{};
-		vsInfo.sType	= VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-		vsInfo.codeSize = vsResult._bytecode.size();
-		vsInfo.pCode	= reinterpret_cast<const uint32*>( vsResult._bytecode.data() );
-		VkShaderModule vertShaderModule;
-		if ( vkCreateShaderModule( _device, &vsInfo, nullptr, &vertShaderModule ) != VK_SUCCESS )
-			return false;
-
-		VkShaderModuleCreateInfo psInfo{};
-		psInfo.sType	= VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-		psInfo.codeSize = psResult._bytecode.size();
-		psInfo.pCode	= reinterpret_cast<const uint32*>( psResult._bytecode.data() );
-		VkShaderModule fragShaderModule;
-		if ( vkCreateShaderModule( _device, &psInfo, nullptr, &fragShaderModule ) != VK_SUCCESS )
-			return false;
-
+		BLOCK( "Graphics Pipeline / Descriptor Sets" )
+		{
 		VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
 		vertShaderStageInfo.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 		vertShaderStageInfo.stage  = VK_SHADER_STAGE_VERTEX_BIT;
@@ -905,6 +930,7 @@ namespace sw
 		}
 
 		return true;
+		}
 	}
 
 	uint32 VulkanRHIDevice::findMemoryType( uint32 typeFilter, uint32 properties )
@@ -1518,7 +1544,7 @@ namespace sw
 	class VulkanCommandList final : public IRHICommandList
 	{
 	public:
-		VulkanCommandList( VulkanRHIDevice* device ) : _device( device ) {}
+		VulkanCommandList( VulkanRHIDevice* device ) : _device{ device } {}
 		void beginCommandList() override {}
 		void endCommandList() override {}
 		void setViewport( const RHIViewport& vp ) override { (void)vp; }

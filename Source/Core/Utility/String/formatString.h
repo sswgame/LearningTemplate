@@ -194,7 +194,7 @@ namespace sw
 
 	public:
 		constexpr FormattedValue( T&& value, const Format& format ) noexcept
-			: _value( std::forward<T>( value ) )
+			: _value{ std::forward<T>( value ) }
 			, _format{ format }
 		{
 		}

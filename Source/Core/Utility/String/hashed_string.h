@@ -299,7 +299,7 @@ namespace sw
 			/**
 			 * @brief 읽기 잠금을 획득합니다
 			 */
-			std::shared_lock<std::shared_mutex> readLock( info._mutex );
+			std::shared_lock<std::shared_mutex> readLock{  info._mutex  };
 			const auto							iter = info._mapKeyToIndex.find( findStringKey );
 			if ( iter != info._mapKeyToIndex.end() )
 				return iter->second;
@@ -308,7 +308,7 @@ namespace sw
 		/**
 		 * @brief 쓰기 잠금을 획득합니다
 		 */
-		std::unique_lock<std::shared_mutex> writeLock( info._mutex );
+		std::unique_lock<std::shared_mutex> writeLock{  info._mutex  };
 
 		const auto iter = info._mapKeyToIndex.find( findStringKey );
 		if ( iter != info._mapKeyToIndex.end() )
@@ -348,7 +348,7 @@ namespace sw
 		/**
 		 * @brief 내부 뮤텍스를 잠급니다
 		 */
-		std::shared_lock<std::shared_mutex> lock( info._mutex );
+		std::shared_lock<std::shared_mutex> lock{  info._mutex  };
 		return info._keyList[_stringKeyIndex]._stringLength;
 	}
 
@@ -359,7 +359,7 @@ namespace sw
 		/**
 		 * @brief 내부 뮤텍스를 잠급니다
 		 */
-		std::shared_lock<std::shared_mutex> lock( info._mutex );
+		std::shared_lock<std::shared_mutex> lock{  info._mutex  };
 		return info._keyList[_stringKeyIndex]._str;
 	}
 
@@ -370,7 +370,7 @@ namespace sw
 		/**
 		 * @brief 내부 뮤텍스를 잠급니다
 		 */
-		std::shared_lock<std::shared_mutex> lock( info._mutex );
+		std::shared_lock<std::shared_mutex> lock{  info._mutex  };
 		return info._keyList[_stringKeyIndex]._hash;
 	}
 

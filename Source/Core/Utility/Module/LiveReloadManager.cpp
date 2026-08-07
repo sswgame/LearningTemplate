@@ -20,6 +20,12 @@ namespace sw
 		}
 	}
 
+	LiveReloadManager::ModuleContext::ModuleContext() noexcept
+		: _bPendingReload{ 0 }
+		, _reserved{ 0 }
+	{
+	}
+
 	LiveReloadManager::LiveReloadManager() = default;
 
 	LiveReloadManager::~LiveReloadManager()
@@ -60,51 +66,60 @@ namespace sw
 			return false;
 		}
 
-		++s_reloadCount;
-		const std::string tempName = ctx._moduleName + "_temp_" + std::to_string( s_reloadCount );
-		const std::string execDir  = FileUtil::getDirectoryPart( ctx._originalDllPath );
-		ctx._tempDllPath		   = joinDirFile( execDir, FileUtil::formatSharedLibraryName( tempName ) );
-
-		bool bCopySuccess = false;
-		for ( int i = 0; i < 10; ++i )
+		BLOCK( "DLL 섀도 카피" )
 		{
-			if ( FileUtil::copyFile( ctx._originalDllPath, ctx._tempDllPath ) )
+			++s_reloadCount;
+			const std::string tempName = ctx._moduleName + "_temp_" + std::to_string( s_reloadCount );
+			const std::string execDir  = FileUtil::getDirectoryPart( ctx._originalDllPath );
+			ctx._tempDllPath		   = joinDirFile( execDir, FileUtil::formatSharedLibraryName( tempName ) );
+
+			bool bCopySuccess = false;
+			for ( int i = 0; i < 10; ++i )
 			{
-				bCopySuccess = true;
-				break;
+				if ( FileUtil::copyFile( ctx._originalDllPath, ctx._tempDllPath ) )
+				{
+					bCopySuccess = true;
+					break;
+				}
+				std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
 			}
-			std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
-		}
 
-		if ( bCopySuccess == false )
-		{
-			SW_LOG_ERROR( "[LiveReloadManager] Failed to create shadow copy (locked): %#", ctx._tempDllPath.c_str() );
-			return false;
-		}
-
-		const std::string originalDebugPath = FileUtil::getDebugSymbolPath( ctx._originalDllPath );
-		const std::string tempDebugPath		= FileUtil::getDebugSymbolPath( ctx._tempDllPath );
-		if ( std::filesystem::exists( originalDebugPath ) )
-		{
-			std::error_code ec;
-			std::filesystem::copy( originalDebugPath, tempDebugPath,
-								   std::filesystem::copy_options::overwrite_existing, ec );
-			if ( ec )
+			if ( bCopySuccess == false )
 			{
-				SW_LOG_ASSERT( false, "[LiveReloadManager] Failed to copy debug symbols: %#", ec.message().c_str() );
+				SW_LOG_ERROR( "[LiveReloadManager] Failed to create shadow copy (locked): %#", ctx._tempDllPath.c_str() );
 				return false;
 			}
 		}
 
-		ctx._hLibraryModule = FileUtil::loadDynamicLibrary( ctx._tempDllPath );
-		if ( ctx._hLibraryModule == nullptr )
+		BLOCK( "디버그 심볼 복사" )
 		{
-			SW_LOG_ERROR( "[LiveReloadManager] Failed to load dynamic library: %#", ctx._tempDllPath.c_str() );
-			return false;
+			const std::string originalDebugPath = FileUtil::getDebugSymbolPath( ctx._originalDllPath );
+			const std::string tempDebugPath		= FileUtil::getDebugSymbolPath( ctx._tempDllPath );
+			if ( std::filesystem::exists( originalDebugPath ) )
+			{
+				std::error_code ec;
+				std::filesystem::copy( originalDebugPath, tempDebugPath,
+									   std::filesystem::copy_options::overwrite_existing, ec );
+				if ( ec )
+				{
+					SW_LOG_ASSERT( false, "[LiveReloadManager] Failed to copy debug symbols: %#", ec.message().c_str() );
+					return false;
+				}
+			}
 		}
 
-		if ( ctx._onAfterReload.isBound() )
-			ctx._onAfterReload( ctx._hLibraryModule );
+		BLOCK( "동적 라이브러리 로드 / AfterReload 콜백" )
+		{
+			ctx._hLibraryModule = FileUtil::loadDynamicLibrary( ctx._tempDllPath );
+			if ( ctx._hLibraryModule == nullptr )
+			{
+				SW_LOG_ERROR( "[LiveReloadManager] Failed to load dynamic library: %#", ctx._tempDllPath.c_str() );
+				return false;
+			}
+
+			if ( ctx._onAfterReload.isBound() )
+				ctx._onAfterReload( ctx._hLibraryModule );
+		}
 
 		SW_LOG_INFO( "[LiveReloadManager] Module loaded (shadow: %#)", ctx._tempDllPath.c_str() );
 		return true;
@@ -120,16 +135,22 @@ namespace sw
 
 			ctx._bPendingReload = false;
 
-			if ( ctx._onBeforeReload.isBound() )
-				ctx._onBeforeReload();
-
-			if ( ctx._hLibraryModule != nullptr )
+			BLOCK( "BeforeReload / DLL Unload" )
 			{
-				FileUtil::freeDynamicLibrary( ctx._hLibraryModule );
-				ctx._hLibraryModule = nullptr;
+				if ( ctx._onBeforeReload.isBound() )
+					ctx._onBeforeReload();
+
+				if ( ctx._hLibraryModule != nullptr )
+				{
+					FileUtil::freeDynamicLibrary( ctx._hLibraryModule );
+					ctx._hLibraryModule = nullptr;
+				}
 			}
 
-			loadShadowCopyModule( ctx );
+			BLOCK( "Shadow Copy Reload" )
+			{
+				loadShadowCopyModule( ctx );
+			}
 		}
 	}
 

@@ -39,6 +39,8 @@ namespace sw
 	}
 
 	ConsolePanel::ConsolePanel()
+		: _bHasNewLogs{ 0 }
+		, _reservedFlags{ 0 }
 	{
 		_logListenerHandle = Logger::addLogWrittenListener(
 			SW_DELEGATE_METHOD( Logger::LogWrittenDelegate, &ConsolePanel::onLogWritten, this ) );
@@ -65,7 +67,7 @@ namespace sw
 
 	void ConsolePanel::onLogWritten( const Logger::LogEntry& entry )
 	{
-		std::lock_guard<std::mutex> lock( _entriesMutex );
+		std::lock_guard<std::mutex> lock{  _entriesMutex  };
 		_entries.push_back( entry );
 		while ( _entries.size() > constant::kMaxBuffer2048 )
 			_entries.pop_front();
@@ -82,7 +84,7 @@ namespace sw
 
 		bool bNewLogs = false;
 		{
-			std::lock_guard<std::mutex> lock( _entriesMutex );
+			std::lock_guard<std::mutex> lock{  _entriesMutex  };
 			_drawSnapshot.assign( _entries.begin(), _entries.end() );
 			bNewLogs	 = _bHasNewLogs;
 			_bHasNewLogs = false;
@@ -90,7 +92,7 @@ namespace sw
 
 		if ( ImGui::Button( "Clear" ) )
 		{
-			std::lock_guard<std::mutex> lock( _entriesMutex );
+			std::lock_guard<std::mutex> lock{  _entriesMutex  };
 			_entries.clear();
 			_drawSnapshot.clear();
 			_bHasNewLogs = false;

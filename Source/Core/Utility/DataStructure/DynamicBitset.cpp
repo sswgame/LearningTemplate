@@ -167,8 +167,6 @@ namespace sw
 		{
 #if defined( _MSC_VER ) && ( defined( _M_X64 ) || defined( _M_AMD64 ) )
 			result += static_cast<uint32>( __popcnt64( block ) );
-#elif defined( __cpp_lib_bitops )
-			result += static_cast<uint32>( std::popcount( block ) );
 #elif defined( __GNUC__ ) || defined( __clang__ )
 			result += static_cast<uint32>( __builtin_popcountll( block ) );
 #else

@@ -26,7 +26,7 @@ namespace sw
 		 */
 		explicit FrameDoubleBuffer( uint64 arenaCapacity = 1024 * 1024 )
 			: _arenas{ FrameArenaAllocator( arenaCapacity ), FrameArenaAllocator( arenaCapacity ) }
-			, _activeIdx( 0 )
+			, _activeIdx{ 0 }
 		{
 		}
 		~FrameDoubleBuffer() = default;

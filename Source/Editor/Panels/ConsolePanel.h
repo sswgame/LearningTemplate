@@ -37,7 +37,7 @@ namespace sw
 		// ImGui::Checkbox에 주소 전달 — bool 유지
 		bool _bAutoScroll		= true;
 		bool _levelEnabled[4]	= { true, true, true, true };
-		uint8 _bHasNewLogs	  : 1 = 0;
-		uint8 _reservedFlags  : 7 = 0;
+		uint8 _bHasNewLogs	  : 1;
+		[[maybe_unused]] uint8 _reservedFlags  : 7;
 	};
 }

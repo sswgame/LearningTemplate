@@ -29,7 +29,11 @@ typedef GLXContext ( *PFNGLXCREATECONTEXTATTRIBSARBPROC )( Display*, GLXFBConfig
 #endif
 namespace sw
 {
-	OpenGLRHIDevice::OpenGLRHIDevice() = default;
+	OpenGLRHIDevice::OpenGLRHIDevice()
+		: _bInitialized{ 0 }
+		, _reservedFlags{ 0 }
+	{
+	}
 
 	OpenGLRHIDevice::~OpenGLRHIDevice()
 	{
@@ -535,7 +539,7 @@ namespace sw
 	{
 	public:
 		OpenGLCommandList( OpenGLRHIDevice* device )
-			: _device( device )
+			: _device{ device }
 		{
 		}
 

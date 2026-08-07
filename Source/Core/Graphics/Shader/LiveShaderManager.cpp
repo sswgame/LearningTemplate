@@ -53,7 +53,7 @@ namespace sw
 
 	void LiveShaderManager::watchShader( const ShaderCompileDesc& desc, const ShaderRecompiledDelegate& onRecompiled )
 	{
-		BLOCK( "LiveShaderManager 셰이더 등록" );
+		BLOCK( "LiveShaderManager 셰이더 등록" )
 		{
 			std::string resolvedPath = ResourceUtil::getResourcePath( desc._filePath );
 			if ( resolvedPath.empty() )

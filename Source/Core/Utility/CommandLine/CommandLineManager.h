@@ -30,14 +30,13 @@ namespace sw
 
 	/**
 	 * @struct StringHash
-	 * @brief std::unordered_map 등에서 std::string_view를 키로 사용하여 검색할 수 있도록 지원하는 커스텀 해시 함수 객체 (C++14 이종 조회 지원)
+	 * @brief std::string / std::string_view 해시 (키 타입은 std::string; 조회 시 string 변환)
 	 */
 	struct StringHash
 	{
-		using is_transparent = void;
-		size_t operator()( std::string_view txt ) const
+		size_t operator()( const std::string& txt ) const
 		{
-			return std::hash<std::string_view>{}( txt );
+			return std::hash<std::string>{}( txt );
 		}
 	};
 
@@ -55,14 +54,9 @@ namespace sw
 			Value _defaultValue = {};
 			uint8 _bMustHaveValue	: 1;
 			uint8 _bUseDefaultValue : 1;
-			uint8 _reserved			: 6;
+			[[maybe_unused]] uint8 _reserved			: 6;
 
-			ArgumentInfo()
-				: _bMustHaveValue( 0 )
-				, _bUseDefaultValue( 0 )
-				, _reserved( 0 )
-			{
-			}
+			ArgumentInfo();
 		};
 
 	public:
@@ -140,7 +134,7 @@ namespace sw
 	private:
 		static constexpr const utf8*										 kLineDelim = ";";
 		std::vector<ArgumentInfo>											 _argumentList;
-		std::unordered_map<std::string, uint32, StringHash, std::equal_to<>> _mapArgument;
+		std::unordered_map<std::string, uint32, StringHash> _mapArgument;
 	};
 
 	template <typename T>
@@ -148,7 +142,7 @@ namespace sw
 	{
 		SW_LOG_ASSERT( key.empty() == false, "들어온 값이 비어있으면 안됩니다" );
 
-		const auto iter = _mapArgument.find( key );
+		const auto iter = _mapArgument.find( std::string( key ) );
 		if ( iter == _mapArgument.end() )
 		{
 			SW_LOG_ASSERT( false, "%#가 존재하지 않습니다.", key );
@@ -225,7 +219,7 @@ namespace sw
 		const uint32 newArgumentIndex = static_cast<uint32>( _argumentList.size() );
 		for ( const std::string_view& synonym : synonymList )
 		{
-			const auto iter = _mapArgument.find( synonym );
+			const auto iter = _mapArgument.find( std::string( synonym ) );
 			if ( iter != _mapArgument.end() )
 			{
 				SW_LOG_ASSERT( false, "%#은 이미 사용 중입니다", synonym );

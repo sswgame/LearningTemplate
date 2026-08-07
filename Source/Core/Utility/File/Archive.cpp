@@ -17,7 +17,7 @@ namespace sw
 	}
 
 	Archive::Archive( const std::string_view fileName, bool bReadMode )
-		: _bReadMode( bReadMode )
+		: _bReadMode{ bReadMode }
 	{
 		if ( bReadMode )
 		{
@@ -28,7 +28,7 @@ namespace sw
 	}
 
 	Archive::Archive( const uint8* data, uint64 size )
-		: _pData( data ), _dataSize( size ), _bReadMode( true )
+		: _pData{ data }, _dataSize( size ), _bReadMode( true )
 	{
 	}
 

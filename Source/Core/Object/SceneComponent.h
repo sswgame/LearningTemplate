@@ -94,7 +94,7 @@ namespace sw
 		SceneComponent*				 _parent = nullptr; ///< 부모 컴포넌트 참조
 		std::vector<SceneComponent*> _children;		///< 자식 컴포넌트 리스트
 
-		mutable uint8 _bIsTransformDirty : 1 = 1; ///< 트랜스폼 캐시 재계산 더티 비트
-		mutable uint8 _reservedFlags	 : 7 = 0;
+		mutable uint8 _bIsTransformDirty : 1; ///< 트랜스폼 캐시 재계산 더티 비트
+		[[maybe_unused]] mutable uint8 _reservedFlags : 7;
 	};
 }

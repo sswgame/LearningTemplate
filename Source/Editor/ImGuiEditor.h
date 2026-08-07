@@ -56,8 +56,8 @@ namespace sw
 		std::unique_ptr<IImGuiRendererBackend>	   _rendererBackend;
 		std::vector<std::unique_ptr<IEditorPanel>> _panels;
 
-		uint8 _bInitialized		  : 1 = 0;
-		uint8 _bDockLayoutApplied : 1 = 0;
-		uint8 _reservedFlags	  : 6 = 0;
+		uint8 _bInitialized		  : 1;
+		uint8 _bDockLayoutApplied : 1;
+		[[maybe_unused]] uint8 _reservedFlags	  : 6;
 	};
 }

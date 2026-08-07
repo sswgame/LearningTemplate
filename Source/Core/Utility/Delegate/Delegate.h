@@ -19,13 +19,13 @@ namespace sw
 	{
 	public:
 		Delegate()
-			: _pInstance( nullptr )
-			, _stubFunc( nullptr )
+			: _pInstance{ nullptr }
+			, _stubFunc{ nullptr }
 		{
 		}
 		Delegate( std::nullptr_t )
-			: _pInstance( nullptr )
-			, _stubFunc( nullptr )
+			: _pInstance{ nullptr }
+			, _stubFunc{ nullptr }
 		{
 		}
 		Delegate( const Delegate& other )			 = default;

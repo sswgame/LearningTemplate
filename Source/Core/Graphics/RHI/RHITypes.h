@@ -238,6 +238,8 @@ namespace sw
 	 */
 	struct RHIPipelineStateDesc
 	{
+		RHIPipelineStateDesc() noexcept;
+
 		std::string _vertexShaderPath;                  ///< 버텍스 셰이더 소스 경로
 		std::string _vertexEntryPoint = "VSMain";        ///< 버텍스 셰이더 진입점
 		std::string _pixelShaderPath;                   ///< 픽셀 셰이더 소스 경로
@@ -248,9 +250,9 @@ namespace sw
 		RHIPrimitiveTopology _topology = RHIPrimitiveTopology::TriangleList; ///< 프리미티브 위상
 		RHIFillMode			 _fillMode = RHIFillMode::Solid;				 ///< 채우기 모드
 		RHICullMode			 _cullMode = RHICullMode::None;					 ///< 컬링 모드
-		uint8				 _bEnableDepthTest : 1 = 0;						 ///< 깊이 테스트 활성화 여부
-		uint8				 _bEnableBlend	   : 1 = 0;						 ///< 알파 블렌딩 활성화 여부
-		uint8				 _reservedFlags	   : 6 = 0;
+		uint8				 _bEnableDepthTest : 1;						 ///< 깊이 테스트 활성화 여부
+		uint8				 _bEnableBlend	   : 1;						 ///< 알파 블렌딩 활성화 여부
+		[[maybe_unused]] uint8				 _reservedFlags	   : 6;
 	};
 
 	/**
@@ -271,11 +273,13 @@ namespace sw
 	 */
 	struct RHIRenderPassDesc
 	{
+		RHIRenderPassDesc() noexcept;
+
 		std::vector<RHIRenderPassAttachment> _colorAttachments; ///< 색상 어태치먼트 목록
 		float32								 _clearDepth   = 1.0f; ///< 깊이 초기화 값
 		uint8								 _clearStencil = 0;	   ///< 스텐실 초기화 값
-		uint8								 _bHasDepthStencil : 1 = 0; ///< 깊이/스텐실 어태치먼트 포함 여부
-		uint8								 _reservedFlags	   : 7 = 0;
+		uint8								 _bHasDepthStencil : 1; ///< 깊이/스텐실 어태치먼트 포함 여부
+		[[maybe_unused]] uint8								 _reservedFlags	   : 7;
 	};
 
 	/**
@@ -284,6 +288,8 @@ namespace sw
 	 */
 	struct RHITextureDesc
 	{
+		RHITextureDesc() noexcept;
+
 		uint32	  _width	 = 1;
 		uint32	  _height	 = 1;
 		uint32	  _depth	 = 1;
@@ -294,11 +300,11 @@ namespace sw
 		float32 _clearDepth	   = 1.0f;
 		uint8	_clearStencil  = 0;
 
-		uint8 _bIsRenderTarget	  : 1 = 0;
-		uint8 _bIsDepthStencil	  : 1 = 0;
-		uint8 _bIsShaderResource  : 1 = 1;
-		uint8 _bIsUnorderedAccess : 1 = 0;
-		uint8 _reservedFlags	  : 4 = 0;
+		uint8 _bIsRenderTarget	  : 1;
+		uint8 _bIsDepthStencil	  : 1;
+		uint8 _bIsShaderResource  : 1;
+		uint8 _bIsUnorderedAccess : 1;
+		[[maybe_unused]] uint8 _reservedFlags	  : 4;
 	};
 
 	/**

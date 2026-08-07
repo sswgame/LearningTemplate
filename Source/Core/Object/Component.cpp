@@ -12,8 +12,10 @@ namespace sw
 	uint64 Component::_s_nextComponentId = 1;
 
 	Component::Component()
-		: _componentId( _s_nextComponentId++ )
-		, _bActive( 1 )
+		: _componentId{ _s_nextComponentId++ }
+		, _tickGroup{ static_cast<uint8>( TickGroup::DuringPhysics ) }
+		, _bActive{ 1 }
+		, _reserved{ 0 }
 	{
 	}
 

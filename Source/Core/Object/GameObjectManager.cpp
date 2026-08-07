@@ -31,7 +31,7 @@ namespace sw
 		if ( obj == nullptr )
 			return;
 
-		std::lock_guard<std::mutex> lock( _mutex );
+		std::lock_guard<std::mutex> lock{  _mutex  };
 		auto [iter, inserted] = _mapIdToObject.try_emplace( obj->getObjectId(), obj );
 		if ( inserted == false )
 			return;
@@ -46,14 +46,14 @@ namespace sw
 
 	GameObject* GameObjectManager::findGameObjectByName( hashed_string name ) const
 	{
-		std::lock_guard<std::mutex> lock( _mutex );
+		std::lock_guard<std::mutex> lock{  _mutex  };
 		auto						it = _mapNameToObject.find( name );
 		return it != _mapNameToObject.end() ? it->second : nullptr;
 	}
 
 	GameObject* GameObjectManager::findGameObjectById( uint64 objectId ) const
 	{
-		std::lock_guard<std::mutex> lock( _mutex );
+		std::lock_guard<std::mutex> lock{  _mutex  };
 		auto						it = _mapIdToObject.find( objectId );
 		return it != _mapIdToObject.end() ? it->second : nullptr;
 	}
@@ -62,7 +62,7 @@ namespace sw
 	{
 		std::vector<GameObject*> activeObjs;
 		{
-			std::lock_guard<std::mutex> lock( _mutex );
+			std::lock_guard<std::mutex> lock{  _mutex  };
 			activeObjs.reserve( _gameObjects.size() );
 			activeObjs = _gameObjects;
 		}
@@ -82,7 +82,7 @@ namespace sw
 	{
 		std::vector<GameObject*> activeObjs;
 		{
-			std::lock_guard<std::mutex> lock( _mutex );
+			std::lock_guard<std::mutex> lock{  _mutex  };
 			activeObjs = _gameObjects;
 		}
 
@@ -112,7 +112,7 @@ namespace sw
 		if ( obj == nullptr )
 			return;
 
-		std::lock_guard<std::mutex> lock( _mutex );
+		std::lock_guard<std::mutex> lock{  _mutex  };
 		for ( GameObject* existing : _pendingObjects )
 		{
 			if ( existing == obj )
@@ -126,7 +126,7 @@ namespace sw
 		if ( comp == nullptr )
 			return;
 
-		std::lock_guard<std::mutex> lock( _mutex );
+		std::lock_guard<std::mutex> lock{  _mutex  };
 		for ( Component* existing : _pendingComponents )
 		{
 			if ( existing == comp )
@@ -141,7 +141,7 @@ namespace sw
 		std::vector<Component*>	 compsToDestroy;
 
 		{
-			std::lock_guard<std::mutex> lock( _mutex );
+			std::lock_guard<std::mutex> lock{  _mutex  };
 			objsToDestroy.swap( _pendingObjects );
 			compsToDestroy.swap( _pendingComponents );
 		}
@@ -167,7 +167,7 @@ namespace sw
 			if ( obj != nullptr )
 			{
 				{
-					std::lock_guard<std::mutex> lock( _mutex );
+					std::lock_guard<std::mutex> lock{  _mutex  };
 					auto						it = std::find( _gameObjects.begin(), _gameObjects.end(), obj );
 					if ( it != _gameObjects.end() )
 					{
@@ -183,7 +183,7 @@ namespace sw
 
 	void GameObjectManager::clear()
 	{
-		std::lock_guard<std::mutex> lock( _mutex );
+		std::lock_guard<std::mutex> lock{  _mutex  };
 
 		_pendingObjects.clear();
 		_pendingComponents.clear();

@@ -12,7 +12,10 @@
 
 set(sw_workspace_name "Workspace")
 set(sw_project_version "1.0.0")
-set(sw_cpp_standard 20)
+# Minimum C++17; override with -Dsw_cpp_standard=20 (or 23) if desired.
+if(NOT DEFINED sw_cpp_standard)
+	set(sw_cpp_standard 17)
+endif()
 set(sw_output_directory "${CMAKE_CURRENT_SOURCE_DIR}/build")
 
 # --- Feature options (모두 SW_* / option) ---

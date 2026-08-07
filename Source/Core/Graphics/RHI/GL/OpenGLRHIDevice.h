@@ -184,7 +184,7 @@ namespace sw
 		std::vector<OpenGLPipelineStateRecord> _pipelineStates;
 		std::vector<OpenGLRenderPassRecord>	   _renderPasses;
 
-		uint8				   _bInitialized  : 1 = 0;
-		[[maybe_unused]] uint8 _reservedFlags : 7 = 0;
+		uint8				   _bInitialized  : 1;
+		[[maybe_unused]] uint8 _reservedFlags : 7;
 	};
 }

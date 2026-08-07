@@ -13,20 +13,22 @@ namespace sw
 	uint64 GameObject::_s_nextObjectId = 1;
 
 	GameObject::GameObject()
-		: _objectId( _s_nextObjectId++ )
-		, _name( "GameObject" )
-		, _bActive( 1 )
-		, _bIsActiveInHierarchy( 1 )
-		, _bIsTickOrderDirty( 1 )
+		: _objectId{ _s_nextObjectId++ }
+		, _name{ "GameObject" }
+		, _bActive{ 1 }
+		, _bIsActiveInHierarchy{ 1 }
+		, _bIsTickOrderDirty{ 1 }
+		, _reservedFlags{ 0 }
 	{
 	}
 
 	GameObject::GameObject( hashed_string name )
-		: _objectId( _s_nextObjectId++ )
-		, _name( name )
-		, _bActive( 1 )
-		, _bIsActiveInHierarchy( 1 )
-		, _bIsTickOrderDirty( 1 )
+		: _objectId{ _s_nextObjectId++ }
+		, _name{ name }
+		, _bActive{ 1 }
+		, _bIsActiveInHierarchy{ 1 }
+		, _bIsTickOrderDirty{ 1 }
+		, _reservedFlags{ 0 }
 	{
 	}
 

@@ -25,7 +25,6 @@
 // [C++ STL 컨테이너 및 문자열]
 // ============================================================================
 #include <array>
-#include <bit>
 #include <bitset>
 #include <deque>
 #include <list>

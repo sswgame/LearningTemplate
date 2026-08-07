@@ -71,7 +71,7 @@ namespace sw
 		std::string profile = getTargetProfile( desc._stage, desc._targetFormat );
 
 #if defined( SW_PLATFORM_WINDOWS )
-		BLOCK( "DXBC (D3D11) Compilation Path" );
+		BLOCK( "DXBC (D3D11) Compilation Path" )
 		{
 			if ( desc._targetFormat == ShaderTargetFormat::DXBC_D3D11 )
 			{
@@ -123,7 +123,7 @@ namespace sw
 			}
 		}
 
-		BLOCK( "DXC Compiler (DXIL / SPIR-V) Path" );
+		BLOCK( "DXC Compiler (DXIL / SPIR-V) Path" )
 		{
 			typedef HRESULT( WINAPI * PFN_DxcCreateInstance )( REFCLSID rclsid, REFIID riid, LPVOID * ppv );
 			static auto s_getDxCompilerHandle = []() -> void*

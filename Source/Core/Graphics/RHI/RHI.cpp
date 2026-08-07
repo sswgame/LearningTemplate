@@ -16,6 +16,38 @@
 
 namespace sw
 {
+	RHICapabilities::RHICapabilities() noexcept
+		: _bBindless{ 0 }
+		, _bCompute{ 1 }
+		, _bOffscreenRT{ 0 }
+		, _bImGuiHooks{ 0 }
+		, _bEditorSupported{ 0 }
+		, _reserved{ 0 }
+	{
+	}
+
+	RHIPipelineStateDesc::RHIPipelineStateDesc() noexcept
+		: _bEnableDepthTest{ 0 }
+		, _bEnableBlend{ 0 }
+		, _reservedFlags{ 0 }
+	{
+	}
+
+	RHIRenderPassDesc::RHIRenderPassDesc() noexcept
+		: _bHasDepthStencil{ 0 }
+		, _reservedFlags{ 0 }
+	{
+	}
+
+	RHITextureDesc::RHITextureDesc() noexcept
+		: _bIsRenderTarget{ 0 }
+		, _bIsDepthStencil{ 0 }
+		, _bIsShaderResource{ 1 }
+		, _bIsUnorderedAccess{ 0 }
+		, _reservedFlags{ 0 }
+	{
+	}
+
 	namespace
 	{
 		void registerRHIBackendEnum( TypeRegistry& registry )

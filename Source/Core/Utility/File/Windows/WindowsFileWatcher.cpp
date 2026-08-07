@@ -61,7 +61,7 @@ namespace sw
 
 	uint32 WindowsFileWatcher::pollEvents( std::vector<FileChangeEvent>& outEvents )
 	{
-		std::lock_guard<std::mutex> lock( _eventMutex );
+		std::lock_guard<std::mutex> lock{  _eventMutex  };
 		uint32 count = static_cast<uint32>( _eventQueue.size() );
 		if ( count > 0 )
 		{
@@ -163,7 +163,7 @@ namespace sw
 
 				FILE_NOTIFY_INFORMATION* pNotify = reinterpret_cast<FILE_NOTIFY_INFORMATION*>( buffer.data() );
 
-				std::lock_guard<std::mutex> lock( _eventMutex );
+				std::lock_guard<std::mutex> lock{  _eventMutex  };
 
 				while ( pNotify )
 				{

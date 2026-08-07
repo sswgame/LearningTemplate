@@ -12,6 +12,13 @@
 
 namespace sw
 {
+	CommandLineManager::ArgumentInfo::ArgumentInfo()
+		: _bMustHaveValue{ 0 }
+		, _bUseDefaultValue{ 0 }
+		, _reserved{ 0 }
+	{
+	}
+
 	// ============================================================================
 	// @function initialize
 	// @brief 미리 정의된 커맨드라인 식별자 매크로 테이블(ArgumentList.xxx)을 읽어들여

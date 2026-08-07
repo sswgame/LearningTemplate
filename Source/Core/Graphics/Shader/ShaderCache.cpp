@@ -14,7 +14,7 @@ namespace sw
 
 	ShaderCompileResult ShaderCache::getOrCompile( const ShaderCompileDesc& desc )
 	{
-		std::lock_guard<std::mutex> lock( _s_cacheMutex );
+		std::lock_guard<std::mutex> lock{  _s_cacheMutex  };
 
 		std::string absPath;
 		std::string cacheKey;
@@ -41,7 +41,7 @@ namespace sw
 			}
 		}
 
-		BLOCK( "캐시 미스: HLSL 컴파일 및 캐시 항목 업데이트" );
+		BLOCK( "캐시 미스: HLSL 컴파일 및 캐시 항목 업데이트" )
 		ShaderCompileResult compiledResult = ShaderCompiler::compileHLSL( desc );
 		if ( compiledResult._bSuccess == true )
 		{
@@ -56,7 +56,7 @@ namespace sw
 
 	void ShaderCache::clearCache()
 	{
-		std::lock_guard<std::mutex> lock( _s_cacheMutex );
+		std::lock_guard<std::mutex> lock{  _s_cacheMutex  };
 		_s_cacheMap.clear();
 	}
 }
