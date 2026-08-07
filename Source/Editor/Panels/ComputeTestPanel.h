@@ -35,7 +35,6 @@ namespace sw
 		RHIDescriptorIndex	   _uavIndex		  = kInvalidDescriptorIndex;
 		RHIDescriptorIndex	   _dispatchUavIndex  = kInvalidDescriptorIndex;
 
-		bool				   _bOpen = true; ///< ImGui::Begin에 주소 전달용 (비트필드 불가)
 		uint8				   _bRequestComputeDispatch : 1;
 		uint8				   _bComputeTestInitialized : 1;
 		uint8				   _bComputeTestDispatched	: 1;

@@ -49,6 +49,8 @@ namespace sw
 		void renderBackend( IRHIDevice* rhiDevice );
 		/** @brief 플랫폼 보조 윈도우(멀티 뷰포트)를 렌더합니다. */
 		void renderPlatformWindows( IRHIDevice* rhiDevice );
+		/** @brief View 메뉴로 패널 표시/숨김을 토글합니다. */
+		void drawMainMenuBar();
 		/** @brief 전체 화면 도킹 스페이스를 시작합니다. */
 		void beginDockspace();
 		/** @brief 최초 1회 기본 도킹 레이아웃을 적용합니다. */

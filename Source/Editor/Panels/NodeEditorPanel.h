@@ -29,7 +29,6 @@ namespace sw
 		void ensureEditor();
 		void destroyEditor();
 
-		bool						_bOpen	 = true;
 		ax::NodeEditor::EditorContext* _editor = nullptr;
 	};
 } // namespace sw

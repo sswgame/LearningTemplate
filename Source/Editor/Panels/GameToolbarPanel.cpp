@@ -14,7 +14,7 @@ namespace sw
 {
 	void GameToolbarPanel::draw( const EditorUIContext& /*ctx*/ )
 	{
-		if ( ImGui::Begin( getWindowTitle() ) == false )
+		if ( ImGui::Begin( getWindowTitle(), getOpenPtr() ) == false )
 		{
 			ImGui::End();
 			return;

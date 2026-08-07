@@ -23,5 +23,13 @@ namespace sw
 		virtual void preRender( IRHIDevice* /*rhiDevice*/ ) {}
 		/** @brief 패널 전용 GPU/구독 리소스를 해제합니다. */
 		virtual void shutdown( IRHIDevice* /*rhiDevice*/ ) {}
+
+		bool  isOpen() const { return _bOpen; }
+		void  setOpen( bool open ) { _bOpen = open; }
+		/** @brief ImGui::Begin(title, p_open) 용 (비트필드 불가 → 별도 bool) */
+		bool* getOpenPtr() { return &_bOpen; }
+
+	private:
+		bool _bOpen = true;
 	};
 } // namespace sw

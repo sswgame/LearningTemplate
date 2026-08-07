@@ -81,7 +81,6 @@ namespace sw
 			}
 		};
 
-		bool		 _bOpen		   = true;
 		bool		 _bExpanded	   = true;
 		int			 _currentFrame = 0;
 		int			 _selected	   = -1;

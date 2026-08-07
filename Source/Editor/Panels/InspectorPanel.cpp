@@ -37,7 +37,7 @@ namespace sw
 
 	void InspectorPanel::draw( const EditorUIContext& ctx )
 	{
-		if ( ImGui::Begin( getWindowTitle() ) == false )
+		if ( ImGui::Begin( getWindowTitle(), getOpenPtr() ) == false )
 		{
 			ImGui::End();
 			return;
@@ -256,7 +256,7 @@ namespace sw
 			size_t size = 0;
 			if ( prop._containerWrapper != nullptr )
 				size = prop._containerWrapper->getSize( prop.getValuePtr<void>( instance ) );
-			ImGui::TextDisabled( "%s (container, size=%zu) — edit skipped", label, size );
+			ImGui::TextDisabled( "%s (container, size=%zu) ??edit skipped", label, size );
 			return;
 		}
 
@@ -478,7 +478,7 @@ namespace sw
 				ImGui::BeginDisabled();
 				ImGui::Button( "Invoke" );
 				ImGui::EndDisabled();
-				ImGui::TextDisabled( "Unsupported FUNCTION args — invoke skipped." );
+				ImGui::TextDisabled( "Unsupported FUNCTION args ??invoke skipped." );
 			}
 			else if ( ImGui::Button( "Invoke" ) )
 			{

@@ -12,8 +12,5 @@ namespace sw
 	public:
 		const char* getWindowTitle() const override { return "Notify"; }
 		void		draw( const EditorUIContext& ctx ) override;
-
-	private:
-		bool _bOpen = true;
 	};
 } // namespace sw

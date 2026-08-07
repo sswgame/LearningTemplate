@@ -1,6 +1,6 @@
 /**
  * @file ResourceBrowserPanel.cpp
- * @brief Unreal Content Browser 스타일 리소스 브라우저
+ * @brief Unreal Content Browser
  */
 #include "Panels/ResourceBrowserPanel.h"
 #include "Core/Utility/File/FileUtil.h"
@@ -255,7 +255,7 @@ namespace sw
 
 		if ( _selectedFolderAbs.empty() )
 		{
-			SW_LOG_WARNING( "[Content Browser] Import cancelled — no destination folder." );
+			SW_LOG_WARNING( "[Content Browser] Import cancelled ??no destination folder." );
 			return;
 		}
 
@@ -530,7 +530,7 @@ namespace sw
 
 		const int itemCount = static_cast<int>( visible.size() );
 		const int rowCount	= ( itemCount + columns - 1 ) / columns;
-		// Button + wrapped name line ≈ cell + text line
+		// Button + wrapped name line ??cell + text line
 		const float rowHeight = cell + ImGui::GetTextLineHeightWithSpacing() + paddingY;
 
 		ImGuiListClipper clipper;
@@ -668,7 +668,7 @@ namespace sw
 
 	void ResourceBrowserPanel::draw( const EditorUIContext& /*ctx*/ )
 	{
-		if ( ImGui::Begin( getWindowTitle() ) == false )
+		if ( ImGui::Begin( getWindowTitle(), getOpenPtr() ) == false )
 		{
 			ImGui::End();
 			return;

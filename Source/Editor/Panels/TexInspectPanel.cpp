@@ -107,7 +107,7 @@ namespace sw
 
 	void TexInspectPanel::draw( const EditorUIContext& ctx )
 	{
-		if ( ImGui::Begin( getWindowTitle(), &_bOpen ) == false )
+		if ( ImGui::Begin( getWindowTitle(), getOpenPtr() ) == false )
 		{
 			ImGui::End();
 			return;
@@ -126,7 +126,7 @@ namespace sw
 		}
 		if ( _bInited == false )
 		{
-			ImGui::TextUnformatted( "Waiting for RHI device…" );
+			ImGui::TextUnformatted( "Waiting for RHI device" );
 			ImGui::End();
 			return;
 		}

@@ -26,7 +26,6 @@ namespace sw
 		void ensureInit( IRHIDevice* rhiDevice );
 		void destroyBackend();
 
-		bool					   _bOpen		  = true;
 		bool					   _bInited		  = false;
 		bool					   _bUnsupported  = false;
 		int						   _backendKind	  = 0; ///< 0 none, 1 dx11, 2 gl

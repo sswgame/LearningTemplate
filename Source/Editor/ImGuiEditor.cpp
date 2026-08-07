@@ -265,6 +265,8 @@ namespace sw
 
 		ImGui::NewFrame();
 		ImGuizmo::BeginFrame();
+		// Panels that host a gizmo re-enable when their canvas may accept input.
+		ImGuizmo::Enable( false );
 	}
 
 	void ImGuiEditor::endFrame()
@@ -368,6 +370,28 @@ namespace sw
 		ImGui::DockBuilderFinish( id );
 	}
 
+	void ImGuiEditor::drawMainMenuBar()
+	{
+		if ( ImGui::BeginMainMenuBar() == false )
+			return;
+
+		if ( ImGui::BeginMenu( "View" ) )
+		{
+			for ( auto& panel : _panels )
+			{
+				if ( panel == nullptr )
+					continue;
+
+				bool open = panel->isOpen();
+				if ( ImGui::MenuItem( panel->getWindowTitle(), nullptr, open ) )
+					panel->setOpen( !open );
+			}
+			ImGui::EndMenu();
+		}
+
+		ImGui::EndMainMenuBar();
+	}
+
 	void ImGuiEditor::beginDockspace()
 	{
 		if ( _bInitialized == false )
@@ -399,7 +423,7 @@ namespace sw
 
 		for ( auto& panel : _panels )
 		{
-			if ( panel )
+			if ( panel && panel->isOpen() )
 				panel->preRender( rhiDevice );
 		}
 	}
@@ -412,6 +436,7 @@ namespace sw
 		BLOCK( "ImGui NewFrame / Dockspace" )
 		{
 			beginFrame();
+			drawMainMenuBar();
 			beginDockspace();
 		}
 
@@ -419,7 +444,7 @@ namespace sw
 		{
 			for ( auto& panel : _panels )
 			{
-				if ( panel )
+				if ( panel && panel->isOpen() )
 					panel->draw( ctx );
 			}
 		}

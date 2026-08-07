@@ -16,7 +16,6 @@ namespace sw
 		void		draw( const EditorUIContext& ctx ) override;
 
 	private:
-		bool  _bOpen	   = true;
 		int	  _operation = 0; ///< 0 translate / 1 rotate / 2 scale
 		float _matrix[16]{};
 		float _view[16]{};

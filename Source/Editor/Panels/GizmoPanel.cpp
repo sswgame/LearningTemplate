@@ -87,7 +87,7 @@ namespace sw
 
 	void GizmoPanel::draw( const EditorUIContext& /*ctx*/ )
 	{
-		if ( ImGui::Begin( getWindowTitle(), &_bOpen ) == false )
+		if ( ImGui::Begin( getWindowTitle(), getOpenPtr() ) == false )
 		{
 			ImGui::End();
 			return;
@@ -109,6 +109,7 @@ namespace sw
 		}
 
 		ImGui::InvisibleButton( "gizmo_canvas", canvasSize );
+		const bool canvasHot = ImGui::IsItemHovered() || ImGui::IsItemActive();
 		const ImVec2 canvasEnd( canvasPos.x + canvasSize.x, canvasPos.y + canvasSize.y );
 		ImGui::GetWindowDrawList()->AddRectFilled( canvasPos, canvasEnd, IM_COL32( 28, 28, 32, 255 ) );
 
@@ -118,6 +119,8 @@ namespace sw
 		ImGuizmo::SetDrawlist( ImGui::GetWindowDrawList() );
 		ImGuizmo::SetRect( canvasPos.x, canvasPos.y, canvasSize.x, canvasSize.y );
 		ImGuizmo::SetOrthographic( false );
+		// Do not steal drags from other panels (ImGuizmo reads global mouse by default).
+		ImGuizmo::Enable( canvasHot || ImGuizmo::IsUsing() );
 
 		ImGuizmo::OPERATION op = ImGuizmo::TRANSLATE;
 		if ( _operation == 1 )

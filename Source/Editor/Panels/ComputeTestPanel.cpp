@@ -21,7 +21,7 @@ namespace sw
 	{
 		executeComputeDraw( ctx.rhiDevice );
 
-		if ( ImGui::Begin( getWindowTitle(), &_bOpen ) == false )
+		if ( ImGui::Begin( getWindowTitle(), getOpenPtr() ) == false )
 		{
 			ImGui::End();
 			return;

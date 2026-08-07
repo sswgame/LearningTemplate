@@ -42,7 +42,7 @@ namespace sw
 
 	void NodeEditorPanel::draw( const EditorUIContext& /*ctx*/ )
 	{
-		if ( ImGui::Begin( getWindowTitle(), &_bOpen ) == false )
+		if ( ImGui::Begin( getWindowTitle(), getOpenPtr() ) == false )
 		{
 			ImGui::End();
 			return;
