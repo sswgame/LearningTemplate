@@ -4,6 +4,7 @@
  */
 #include "pch.h"
 #include "GameObjectManager.h"
+#include "Core/Object/GameObject.h"
 #include "Core/Object/Component.h"
 #include "Core/Utility/Task/TaskManager.h"
 namespace sw

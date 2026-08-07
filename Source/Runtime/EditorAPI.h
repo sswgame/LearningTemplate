@@ -7,14 +7,15 @@
 
 #include "Core/Common/CommonMacros.h"
 #include "Core/Common/Types.h"
-#include "Core/Window/NativeWindowEvent.h"
-#include "Runtime/EditorUIContext.h"
 #include "Runtime/RuntimeHandles.h"
 
 namespace sw
 {
 	using EditorHandle	= void*;
 	using TextureHandle = uint64;
+
+	struct EditorUIContext;
+	struct NativeWindowEvent;
 
 	/** @brief EditorModule C ABI 함수 테이블 */
 	struct EditorAPI

@@ -7,10 +7,12 @@
 #include "Core/Common/CommonHeaders.h"
 #include "Core/Common/CommonMacros.h"
 #include "Core/Common/Types.h"
-#include "Core/Object/GameObject.h"
+#include "Core/Utility/String/hashed_string.h"
 
 namespace sw
 {
+	class GameObject;
+	class Component;
 
 	class SW_API GameObjectManager
 	{

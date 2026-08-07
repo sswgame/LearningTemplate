@@ -2,6 +2,7 @@
  * @file InspectorPanel.cpp
  */
 #include "Panels/InspectorPanel.h"
+#include "Runtime/EditorUIContext.h"
 #include "Core/Graphics/Material/Material.h"
 #include "Core/Graphics/RHI/IRHIDevice.h"
 #include <imgui.h>

@@ -3,11 +3,11 @@
  * @file IEditorPanel.h
  * @brief Editor ImGui 패널 공통 인터페이스
  */
-#include "Runtime/EditorUIContext.h"
 
 namespace sw
 {
 	class IRHIDevice;
+	struct EditorUIContext;
 
 	/** @brief 에디터 도킹 윈도우 한 칸을 그리는 패널 인터페이스 */
 	class IEditorPanel

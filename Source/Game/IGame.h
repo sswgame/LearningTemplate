@@ -5,7 +5,7 @@
  * @brief 게임 로직 모듈의 런타임 추상 인터페이스
  */
 
-#include "Core/Common/Common.h"
+#include "Core/Common/Types.h"
 
 namespace sw
 {

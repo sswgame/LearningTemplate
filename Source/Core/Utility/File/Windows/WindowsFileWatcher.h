@@ -1,13 +1,9 @@
 #pragma once
 
 #include "Core/Utility/File/IFileWatcher.h"
+#include "Core/Common/CommonHeaders.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
-
-#include <thread>
-#include <atomic>
-#include <mutex>
-#include <vector>
 
 // Forward declare HANDLE to avoid full Windows.h inclusion in header
 using HANDLE = void*;

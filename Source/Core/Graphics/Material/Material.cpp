@@ -5,6 +5,8 @@
 #include "Core/CoreMinimal.h"
 
 #include "Material.h"
+#include "Core/Graphics/RHI/IRHIDevice.h"
+#include "Core/Graphics/Shader/ShaderCompiler.h"
 #include "Core/Graphics/Shader/ShaderReflection.h"
 
 #include "Core/Utility/File/FileUtil.h"

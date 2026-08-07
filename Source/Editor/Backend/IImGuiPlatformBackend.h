@@ -4,13 +4,14 @@
  * @brief ImGui 플랫폼(윈도우/입력) 백엔드 추상 인터페이스
  */
 
-#include "Core/Common/Common.h"
-#include "Core/Graphics/RHI/RHITypes.h"
-#include "Core/Window/NativeWindowEvent.h"
+#include "Core/Common/Types.h"
+#include "Core/Common/CommonHeaders.h"
 
 namespace sw
 {
 	class IWindow;
+	struct NativeWindowEvent;
+	enum class RHIBackend : uint32;
 
 	class IImGuiPlatformBackend
 	{

@@ -10,7 +10,6 @@
 
 #include "Core/Utility/Delegate/Delegate.h"
 #include "Core/Utility/String/hashed_string.h"
-#include "Core/Utility/Task/TaskManager.h"
 #include "Core/Object/Component.h"
 
 namespace sw

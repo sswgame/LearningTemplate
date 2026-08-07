@@ -4,13 +4,13 @@
  * @brief ImGui 에디터 셸 (백엔드 / 도킹 / 패널 오케스트레이션)
  */
 #include "IEditor.h"
-#include "Panels/IEditorPanel.h"
 #include "Core/Common/CommonHeaders.h"
 
 namespace sw
 {
 	class IImGuiPlatformBackend;
 	class IImGuiRendererBackend;
+	class IEditorPanel;
 
 	/** @brief ImGui 도킹 셸: 플랫폼/렌더러 백엔드와 기본 패널을 오케스트레이션 */
 	class ImGuiEditor : public IEditor

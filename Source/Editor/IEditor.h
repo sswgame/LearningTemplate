@@ -3,14 +3,16 @@
  * @file IEditor.h
  * @brief App↔Editor Runtime API에 대응하는 에디터 코어 인터페이스
  */
-#include "Core/Graphics/RHI/RHITypes.h"
-#include "Runtime/EditorUIContext.h"
-#include "Core/Window/NativeWindowEvent.h"
+#include "Core/Common/Types.h"
 
 namespace sw
 {
 	class IRHIDevice;
 	class IWindow;
+	struct EditorUIContext;
+	struct NativeWindowEvent;
+
+	using RHITextureHandle = uint64;
 
 	/**
 	 * @class IEditor

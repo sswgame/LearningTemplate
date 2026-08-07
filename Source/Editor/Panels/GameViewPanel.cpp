@@ -2,6 +2,7 @@
  * @file GameViewPanel.cpp
  */
 #include "Panels/GameViewPanel.h"
+#include "Runtime/EditorUIContext.h"
 #include <imgui.h>
 
 namespace sw

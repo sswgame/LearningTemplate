@@ -2,8 +2,6 @@
 
 #include "Core/Common/CommonHeaders.h"
 #include "Core/Game/Scene/Scene.h"
-#include <vector>
-#include <memory>
 
 namespace sw
 {

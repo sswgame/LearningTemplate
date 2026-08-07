@@ -4,7 +4,6 @@
 #include "Core/Common/CommonMacros.h"
 #include "Core/Common/Types.h"
 #include "Core/Utility/String/hashed_string.h"
-#include <memory>
 
 namespace sw
 {

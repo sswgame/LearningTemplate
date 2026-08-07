@@ -7,9 +7,7 @@
 #include "Core/Common/CommonDefines.h"
 #include "Core/Utility/Delegate/Delegate.h"
 #include "Core/Utility/File/IFileWatcher.h"
-#include <memory>
-#include <string>
-#include <vector>
+#include "Core/Common/CommonHeaders.h"
 
 namespace sw
 {

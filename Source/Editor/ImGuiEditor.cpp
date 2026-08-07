@@ -7,6 +7,7 @@
 #include "EditorUtil.h"
 #include "Backend/IImGuiPlatformBackend.h"
 #include "Backend/IImGuiRendererBackend.h"
+#include "Panels/IEditorPanel.h"
 #include "Panels/ComputeTestPanel.h"
 #include "Panels/ConsolePanel.h"
 #include "Panels/EngineStatusPanel.h"
@@ -16,6 +17,8 @@
 #include "Panels/InspectorPanel.h"
 #include "Panels/ResourceBrowserPanel.h"
 #include "Core/Graphics/RHI/IRHIDevice.h"
+#include "Core/Window/NativeWindowEvent.h"
+#include "Runtime/EditorUIContext.h"
 #include "Core/Utility/Log/Logger.h"
 
 #include <imgui.h>

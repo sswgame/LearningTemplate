@@ -2,6 +2,7 @@
  * @file EngineStatusPanel.cpp
  */
 #include "Panels/EngineStatusPanel.h"
+#include "Runtime/EditorUIContext.h"
 #include "Core/Graphics/RHI/IRHIDevice.h"
 #include <imgui.h>
 

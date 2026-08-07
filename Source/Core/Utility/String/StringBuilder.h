@@ -9,7 +9,6 @@
 #include "Core/Common/CommonMacros.h"
 #include "Core/Utility/String/formatString.h"
 #include "Core/Utility/String/StringUtil.h"
-#include <cstring>
 
 namespace sw
 {

@@ -7,9 +7,7 @@
 #include "Core/Graphics/RHI/IRHIDevice.h"
 #include "Core/Graphics/RHI/RHICapabilities.h"
 #include "Core/Utility/Delegate/Delegate.h"
-#include <memory>
-#include <string>
-#include <vector>
+#include "Core/Common/CommonHeaders.h"
 
 namespace sw
 {

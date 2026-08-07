@@ -5,6 +5,7 @@
 #include "pch.h"
 #include "ComponentManager.h"
 #include "Core/Utility/Log/Logger.h"
+#include "Core/Utility/Task/TaskManager.h"
 
 namespace sw
 {

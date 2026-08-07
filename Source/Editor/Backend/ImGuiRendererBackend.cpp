@@ -7,6 +7,7 @@
 #include "Renderer/ImGuiDX12RendererBackend.h"
 #include "Renderer/ImGuiOpenGLRendererBackend.h"
 #include "Renderer/ImGuiVulkanRendererBackend.h"
+#include "Core/Graphics/RHI/RHITypes.h"
 
 namespace sw
 {

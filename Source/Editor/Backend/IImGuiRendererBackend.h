@@ -4,11 +4,14 @@
  * @brief ImGui GPU 렌더러 백엔드 추상 인터페이스 (RHI별 구현)
  */
 
-#include "Core/Common/Common.h"
-#include "Core/Graphics/RHI/RHITypes.h"
+#include "Core/Common/Types.h"
+#include "Core/Common/CommonHeaders.h"
+
 namespace sw
 {
 	class IRHIDevice;
+	enum class RHIBackend : uint32;
+	using RHITextureHandle = uint64;
 
 	class IImGuiRendererBackend
 	{

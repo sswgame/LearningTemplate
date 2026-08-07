@@ -4,11 +4,13 @@
  */
 #include "pch.h"
 #include "Runtime/EditorAPI.h"
+#include "Runtime/EditorUIContext.h"
 #include "ImGuiEditor.h"
 #include "Core/Common/CoreServices.h"
 #include "Core/Utility/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Reflection/ReflectionCore.h"
 #include "Core/Window/IWindow.h"
+#include "Core/Window/NativeWindowEvent.h"
 #include "Core/Graphics/RHI/IRHIDevice.h"
 
 namespace

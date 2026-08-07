@@ -2,6 +2,7 @@
  * @file ComputeTestPanel.cpp
  */
 #include "Panels/ComputeTestPanel.h"
+#include "Runtime/EditorUIContext.h"
 #include "Core/Graphics/RHI/IRHIDevice.h"
 #include "Core/Utility/Log/Logger.h"
 #include <imgui.h>

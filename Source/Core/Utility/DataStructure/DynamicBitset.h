@@ -7,7 +7,6 @@
 #include "Core/CoreMinimal.h"
 
 #include "Core/Common/Types.h"
-#include <bit>
 
 namespace sw
 {

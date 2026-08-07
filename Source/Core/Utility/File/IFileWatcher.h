@@ -2,10 +2,8 @@
 
 #include "Core/Common/Types.h"
 #include "Core/Common/CommonMacros.h"
+#include "Core/Common/CommonHeaders.h"
 #include "Core/Utility/Delegate/Delegate.h"
-#include <string>
-#include <vector>
-#include <string_view>
 
 namespace sw
 {

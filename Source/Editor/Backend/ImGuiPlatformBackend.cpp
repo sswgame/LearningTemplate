@@ -4,6 +4,8 @@
  */
 #include "IImGuiPlatformBackend.h"
 #include "Core/Window/IWindow.h"
+#include "Core/Window/NativeWindowEvent.h"
+#include "Core/Graphics/RHI/RHITypes.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
 	#include <imgui.h>

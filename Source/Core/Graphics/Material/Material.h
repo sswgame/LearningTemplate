@@ -1,7 +1,6 @@
 #pragma once
 #include "Core/Common/Common.h"
-#include "Core/Graphics/RHI/IRHIDevice.h"
-#include "Core/Graphics/Shader/ShaderCompiler.h"
+#include "Core/Graphics/RHI/RHITypes.h"
 #include "Core/Utility/Task/TaskTypes.h"
 
 /**
@@ -11,6 +10,8 @@
 
 namespace sw
 {
+	class IRHIDevice;
+	struct ShaderCompileResult;
 	/**
 	 * @enum MaterialPropertyType
 	 * @brief 머티리얼 Constant Buffer 내 프로퍼티 변수 데이터 타입

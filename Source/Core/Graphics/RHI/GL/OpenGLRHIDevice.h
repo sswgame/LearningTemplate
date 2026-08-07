@@ -2,11 +2,11 @@
 #include "Core/Graphics/RHI/IRHIDevice.h"
 #include "Core/Common/PlatformHeaders.h"
 #include "Core/Common/CommonHeaders.h"
-#include <glad/glad.h>
 
 /**
  * @file OpenGLRHIDevice.h
  * @brief OpenGL 4.6 Core Profile 기반 RHI 백엔드 클래스 정의
+ * @note GLAD/OpenGL 심볼은 OpenGLRHIDevice.cpp 에서만 include합니다.
  */
 
 namespace sw
@@ -184,7 +184,7 @@ namespace sw
 		std::vector<OpenGLPipelineStateRecord> _pipelineStates;
 		std::vector<OpenGLRenderPassRecord>	   _renderPasses;
 
-		uint8 _bInitialized	  : 1 = 0;
-		uint8 _reservedFlags  : 7 = 0;
+		uint8				   _bInitialized  : 1 = 0;
+		[[maybe_unused]] uint8 _reservedFlags : 7 = 0;
 	};
 }
