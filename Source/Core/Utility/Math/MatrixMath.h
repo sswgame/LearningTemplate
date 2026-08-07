@@ -94,7 +94,7 @@ namespace sw
 		/**
 		 * @brief AngleBetween을(를) 반환합니다
 		 */
-		static float32	  getAngleBetween( const quaternion& lhs, const quaternion& rhs ) noexcept;
+		static float32 getAngleBetween( const quaternion& lhs, const quaternion& rhs ) noexcept;
 
 	public:
 		/**
@@ -113,12 +113,12 @@ namespace sw
 		/**
 		 * @brief 정규화합니다
 		 */
-		quaternion	normalize() const noexcept;
+		quaternion normalize() const noexcept;
 
 		/**
 		 * @brief 켤레를 반환합니다
 		 */
-		void	   conjugate() noexcept;
+		void conjugate() noexcept;
 		/**
 		 * @brief 켤레를 반환합니다
 		 */
@@ -127,7 +127,7 @@ namespace sw
 		/**
 		 * @brief 역을 구합니다
 		 */
-		void	   inverse() noexcept;
+		void inverse() noexcept;
 		/**
 		 * @brief 역을 구합니다
 		 */
@@ -141,8 +141,8 @@ namespace sw
 		/**
 		 * @brief EulerAngles을(를) 반환합니다
 		 */
-		float3	 getEulerAngles() const noexcept;
-		float3	 toEuler() const noexcept { return getEulerAngles(); }
+		float3 getEulerAngles() const noexcept;
+		float3 toEuler() const noexcept { return getEulerAngles(); }
 		/**
 		 * @brief 행렬로 변환합니다
 		 */
@@ -309,7 +309,7 @@ namespace sw
 		/**
 		 * @brief Scale을(를) 반환합니다
 		 */
-		float3	   getScale() const noexcept;
+		float3 getScale() const noexcept;
 		/**
 		 * @brief Rotation을(를) 반환합니다
 		 */
@@ -317,7 +317,7 @@ namespace sw
 		/**
 		 * @brief Translation을(를) 반환합니다
 		 */
-		float3	   getTranslation() const noexcept;
+		float3 getTranslation() const noexcept;
 
 		/**
 		 * @brief Scale을(를) 설정합니다
@@ -335,7 +335,7 @@ namespace sw
 		/**
 		 * @brief 행렬식을 계산합니다
 		 */
-		float32	 determinant() const noexcept;
+		float32 determinant() const noexcept;
 		/**
 		 * @brief 전치합니다
 		 */
@@ -365,4 +365,4 @@ namespace sw
 	float4x4 operator*( const float4x4& matrix, float32 scale ) noexcept;
 	float4x4 operator/( const float4x4& matrix, float32 scale ) noexcept;
 	float4x4 operator*( float32 scale, const float4x4& matrix ) noexcept;
-}
+} // namespace sw

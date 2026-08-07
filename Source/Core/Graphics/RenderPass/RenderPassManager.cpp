@@ -47,4 +47,4 @@ namespace sw
 	{
 		_renderPassMap.clear();
 	}
-}
+} // namespace sw

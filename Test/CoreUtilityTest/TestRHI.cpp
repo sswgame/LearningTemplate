@@ -226,4 +226,3 @@ SW_TEST_CASE( RHITest, VertexLayoutBuilderAutoOffset )
 		SW_EXPECT_EQUAL( static_cast<uint32>( offsetof( CustomVertex, color ) ), layout[2]._alignedByteOffset );
 	}
 }
-

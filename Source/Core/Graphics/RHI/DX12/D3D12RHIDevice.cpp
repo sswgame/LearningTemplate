@@ -39,7 +39,7 @@ namespace sw
 			SW_LOG_ASSERT( false, "Unsupported RHIFormat: %#", static_cast<uint32>( format ) );
 			return DXGI_FORMAT_UNKNOWN;
 		}
-	}
+	} // namespace
 
 	D3D12RHIDevice::D3D12RHIDevice() = default;
 
@@ -55,7 +55,7 @@ namespace sw
 		_height		 = desc._height;
 		_bufferCount = desc._bufferCount;
 
-#if defined( SW_DEBUG )
+	#if defined( SW_DEBUG )
 		{
 			Microsoft::WRL::ComPtr<ID3D12Debug> debugController;
 			if ( SUCCEEDED( D3D12GetDebugInterface( IID_PPV_ARGS( debugController.GetAddressOf() ) ) ) )
@@ -64,7 +64,7 @@ namespace sw
 				SW_LOG_INFO( "[D3D12] Debug layer enabled." );
 			}
 		}
-#endif
+	#endif
 
 		Microsoft::WRL::ComPtr<IDXGIFactory4> factory;
 		if ( FAILED( CreateDXGIFactory1( IID_PPV_ARGS( factory.GetAddressOf() ) ) ) )
@@ -73,7 +73,7 @@ namespace sw
 		if ( FAILED( D3D12CreateDevice( nullptr, D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS( _device.GetAddressOf() ) ) ) )
 			return false;
 
-#if defined( SW_DEBUG )
+	#if defined( SW_DEBUG )
 		{
 			Microsoft::WRL::ComPtr<ID3D12InfoQueue> infoQueue;
 			if ( SUCCEEDED( _device.As( &infoQueue ) ) )
@@ -82,7 +82,7 @@ namespace sw
 				infoQueue->SetBreakOnSeverity( D3D12_MESSAGE_SEVERITY_ERROR, FALSE );
 			}
 		}
-#endif
+	#endif
 
 		D3D12_COMMAND_QUEUE_DESC queueDesc{};
 		queueDesc.Type	= D3D12_COMMAND_LIST_TYPE_DIRECT;
@@ -147,7 +147,7 @@ namespace sw
 
 	void D3D12RHIDevice::flushDebugMessages( const utf8* stage )
 	{
-#if defined( SW_DEBUG )
+	#if defined( SW_DEBUG )
 		Microsoft::WRL::ComPtr<ID3D12InfoQueue> infoQueue;
 		if ( FAILED( _device.As( &infoQueue ) ) || infoQueue == nullptr )
 			return;
@@ -158,16 +158,16 @@ namespace sw
 			SIZE_T messageLength = 0;
 			infoQueue->GetMessage( static_cast<UINT64>( i ), nullptr, &messageLength );
 			std::vector<uint8> bytes( messageLength );
-			auto* message = reinterpret_cast<D3D12_MESSAGE*>( bytes.data() );
+			auto*			   message = reinterpret_cast<D3D12_MESSAGE*>( bytes.data() );
 			if ( SUCCEEDED( infoQueue->GetMessage( static_cast<UINT64>( i ), message, &messageLength ) ) )
 			{
 				SW_LOG_ERROR( "[D3D12 InfoQueue:%#] %#", stage, message->pDescription );
 			}
 		}
 		infoQueue->ClearStoredMessages();
-#else
+	#else
 		(void)stage;
-#endif
+	#endif
 	}
 
 	bool D3D12RHIDevice::createTriangleResources()
@@ -408,7 +408,7 @@ namespace sw
 		resDesc.Format			 = DXGI_FORMAT_UNKNOWN;
 		resDesc.SampleDesc.Count = 1;
 		resDesc.Layout			 = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-		resDesc.Flags            = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+		resDesc.Flags			 = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
 		Microsoft::WRL::ComPtr<ID3D12Resource> buffer;
 		if ( FAILED( _device->CreateCommittedResource( &heapProps, D3D12_HEAP_FLAG_NONE, &resDesc, D3D12_RESOURCE_STATE_COMMON, nullptr, IID_PPV_ARGS( buffer.GetAddressOf() ) ) ) )
@@ -446,16 +446,16 @@ namespace sw
 		heapProps.Type = D3D12_HEAP_TYPE_DEFAULT;
 
 		D3D12_RESOURCE_DESC resDesc{};
-		resDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-		resDesc.Alignment = 0;
-		resDesc.Width = desc._width;
-		resDesc.Height = desc._height;
-		resDesc.DepthOrArraySize = 1;
-		resDesc.MipLevels = static_cast<UINT16>( desc._mipLevels );
-		resDesc.Format = toDxgiFormat( desc._format );
-		resDesc.SampleDesc.Count = 1;
+		resDesc.Dimension		   = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+		resDesc.Alignment		   = 0;
+		resDesc.Width			   = desc._width;
+		resDesc.Height			   = desc._height;
+		resDesc.DepthOrArraySize   = 1;
+		resDesc.MipLevels		   = static_cast<UINT16>( desc._mipLevels );
+		resDesc.Format			   = toDxgiFormat( desc._format );
+		resDesc.SampleDesc.Count   = 1;
 		resDesc.SampleDesc.Quality = 0;
-		resDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+		resDesc.Layout			   = D3D12_TEXTURE_LAYOUT_UNKNOWN;
 
 		D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAG_NONE;
 		if ( desc._bIsRenderTarget )
@@ -467,28 +467,28 @@ namespace sw
 
 		resDesc.Flags = flags;
 
-		D3D12_CLEAR_VALUE clearValue{};
+		D3D12_CLEAR_VALUE  clearValue{};
 		D3D12_CLEAR_VALUE* pClearValue = nullptr;
 		if ( desc._bIsRenderTarget )
 		{
-			clearValue.Format = resDesc.Format;
+			clearValue.Format	= resDesc.Format;
 			clearValue.Color[0] = desc._clearColor[0];
 			clearValue.Color[1] = desc._clearColor[1];
 			clearValue.Color[2] = desc._clearColor[2];
 			clearValue.Color[3] = desc._clearColor[3];
-			pClearValue = &clearValue;
+			pClearValue			= &clearValue;
 		}
 		else if ( desc._bIsDepthStencil )
 		{
-			clearValue.Format = resDesc.Format;
-			clearValue.DepthStencil.Depth = desc._clearDepth;
+			clearValue.Format				= resDesc.Format;
+			clearValue.DepthStencil.Depth	= desc._clearDepth;
 			clearValue.DepthStencil.Stencil = desc._clearStencil;
-			pClearValue = &clearValue;
+			pClearValue						= &clearValue;
 		}
 
 		Microsoft::WRL::ComPtr<ID3D12Resource> texture;
 		if ( FAILED( _device->CreateCommittedResource( &heapProps, D3D12_HEAP_FLAG_NONE, &resDesc,
-			D3D12_RESOURCE_STATE_COMMON, pClearValue, IID_PPV_ARGS( texture.GetAddressOf() ) ) ) )
+													   D3D12_RESOURCE_STATE_COMMON, pClearValue, IID_PPV_ARGS( texture.GetAddressOf() ) ) ) )
 		{
 			return 0;
 		}
@@ -499,8 +499,8 @@ namespace sw
 		if ( desc._bIsRenderTarget && _rtvHeap != nullptr && _nextOffscreenRtvIndex < kMaxOffscreenRtvs )
 		{
 			OffscreenTextureRecord record{};
-			record._resource = texture.Get();
-			record._rtvIndex = _bufferCount + _nextOffscreenRtvIndex++;
+			record._resource  = texture.Get();
+			record._rtvIndex  = _bufferCount + _nextOffscreenRtvIndex++;
 			record._rtvHandle = _rtvHeap->GetCPUDescriptorHandleForHeapStart();
 			record._rtvHandle.ptr += static_cast<SIZE_T>( record._rtvIndex ) * _rtvDescriptorSize;
 			record._state  = D3D12_RESOURCE_STATE_COMMON;
@@ -604,7 +604,7 @@ namespace sw
 		if ( texture == 0 || _cbvHeap == nullptr )
 			return kInvalidDescriptorIndex;
 
-		auto* res = reinterpret_cast<ID3D12Resource*>( texture );
+		auto*			   res = reinterpret_cast<ID3D12Resource*>( texture );
 		RHIDescriptorIndex index;
 		if ( _bindlessFreeList.empty() == false )
 		{
@@ -617,12 +617,12 @@ namespace sw
 		}
 
 		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc{};
-		srvDesc.Format = res->GetDesc().Format;
-		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-		srvDesc.Texture2D.MostDetailedMip = 0;
-		srvDesc.Texture2D.MipLevels = res->GetDesc().MipLevels;
-		srvDesc.Texture2D.PlaneSlice = 0;
+		srvDesc.Format						  = res->GetDesc().Format;
+		srvDesc.ViewDimension				  = D3D12_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Shader4ComponentMapping		  = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		srvDesc.Texture2D.MostDetailedMip	  = 0;
+		srvDesc.Texture2D.MipLevels			  = res->GetDesc().MipLevels;
+		srvDesc.Texture2D.PlaneSlice		  = 0;
 		srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
 
 		D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle( _cbvHeap->GetCPUDescriptorHandleForHeapStart() );
@@ -647,7 +647,7 @@ namespace sw
 		if ( buffer == 0 || _cbvHeap == nullptr )
 			return kInvalidDescriptorIndex;
 
-		auto* res	= reinterpret_cast<ID3D12Resource*>( buffer );
+		auto*			   res = reinterpret_cast<ID3D12Resource*>( buffer );
 		RHIDescriptorIndex index;
 		if ( _bindlessFreeList.empty() == false )
 		{
@@ -694,7 +694,7 @@ namespace sw
 		if ( buffer == 0 || _cbvHeap == nullptr )
 			return kInvalidDescriptorIndex;
 
-		ID3D12Resource* res = reinterpret_cast<ID3D12Resource*>( buffer );
+		ID3D12Resource*	   res			   = reinterpret_cast<ID3D12Resource*>( buffer );
 		RHIDescriptorIndex descriptorIndex = 0;
 		if ( _uavFreeList.empty() == false )
 		{
@@ -708,7 +708,7 @@ namespace sw
 		}
 
 		// RWByteAddressBuffer / RAW UAV: R32_TYPELESS + RAW, StructureByteStride must be 0.
-		const RHIDescriptorIndex heapSlot = _allocatedDescriptorsCount++;
+		const RHIDescriptorIndex	heapSlot  = _allocatedDescriptorsCount++;
 		D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle = _cbvHeap->GetCPUDescriptorHandleForHeapStart();
 		cpuHandle.ptr += heapSlot * _cbvDescriptorSize;
 
@@ -716,12 +716,12 @@ namespace sw
 		gpuHandle.ptr += heapSlot * _cbvDescriptorSize;
 
 		D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc{};
-		uavDesc.ViewDimension				  = D3D12_UAV_DIMENSION_BUFFER;
-		uavDesc.Format						  = DXGI_FORMAT_R32_TYPELESS;
-		uavDesc.Buffer.FirstElement			  = 0;
-		uavDesc.Buffer.NumElements			  = static_cast<UINT>( res->GetDesc().Width / 4 );
-		uavDesc.Buffer.StructureByteStride	  = 0;
-		uavDesc.Buffer.Flags				  = D3D12_BUFFER_UAV_FLAG_RAW;
+		uavDesc.ViewDimension			   = D3D12_UAV_DIMENSION_BUFFER;
+		uavDesc.Format					   = DXGI_FORMAT_R32_TYPELESS;
+		uavDesc.Buffer.FirstElement		   = 0;
+		uavDesc.Buffer.NumElements		   = static_cast<UINT>( res->GetDesc().Width / 4 );
+		uavDesc.Buffer.StructureByteStride = 0;
+		uavDesc.Buffer.Flags			   = D3D12_BUFFER_UAV_FLAG_RAW;
 
 		_device->CreateUnorderedAccessView( res, nullptr, &uavDesc, cpuHandle );
 
@@ -800,8 +800,8 @@ namespace sw
 		if ( _commandQueue == nullptr || _fence == nullptr )
 			return;
 
-		const UINT64 fenceToWait = _fenceValue;
-		const HRESULT signalHr	 = _commandQueue->Signal( _fence.Get(), fenceToWait );
+		const UINT64  fenceToWait = _fenceValue;
+		const HRESULT signalHr	  = _commandQueue->Signal( _fence.Get(), fenceToWait );
 		_fenceValue++;
 
 		if ( FAILED( signalHr ) )
@@ -847,7 +847,7 @@ namespace sw
 		_registeredUAVs.clear();
 		_uavFreeList.clear();
 		_constantBuffers.clear();
-		_nextOffscreenRtvIndex = 0;
+		_nextOffscreenRtvIndex	   = 0;
 		_allocatedDescriptorsCount = 0;
 
 		cleanupRenderTargets();
@@ -873,8 +873,8 @@ namespace sw
 			_fenceEvent = nullptr;
 		}
 
-		_fenceValue = 0;
-		_frameIndex = 0;
+		_fenceValue		   = 0;
+		_frameIndex		   = 0;
 		_rtvDescriptorSize = 0;
 		_cbvDescriptorSize = 0;
 	}
@@ -1103,26 +1103,26 @@ namespace sw
 	RHIPipelineStateHandle D3D12RHIDevice::createPipelineState( const RHIPipelineStateDesc& desc )
 	{
 		Microsoft::WRL::ComPtr<ID3D12PipelineState> pso;
-		ShaderCompileDesc vsDesc{};
-		vsDesc._filePath		= desc._vertexShaderPath;
-		vsDesc._entryPoint		= "VSMain";
-		vsDesc._stage			= ShaderStage::Vertex;
-		vsDesc._targetFormat	= ShaderTargetFormat::DXIL_D3D12;
+		ShaderCompileDesc							vsDesc{};
+		vsDesc._filePath			 = desc._vertexShaderPath;
+		vsDesc._entryPoint			 = "VSMain";
+		vsDesc._stage				 = ShaderStage::Vertex;
+		vsDesc._targetFormat		 = ShaderTargetFormat::DXIL_D3D12;
 		ShaderCompileResult vsResult = ShaderCache::getOrCompile( vsDesc );
 
 		ShaderCompileDesc psDesc{};
-		psDesc._filePath		= desc._pixelShaderPath;
-		psDesc._entryPoint		= "PSMain";
-		psDesc._stage			= ShaderStage::Pixel;
-		psDesc._targetFormat	= ShaderTargetFormat::DXIL_D3D12;
+		psDesc._filePath			 = desc._pixelShaderPath;
+		psDesc._entryPoint			 = "PSMain";
+		psDesc._stage				 = ShaderStage::Pixel;
+		psDesc._targetFormat		 = ShaderTargetFormat::DXIL_D3D12;
 		ShaderCompileResult psResult = ShaderCache::getOrCompile( psDesc );
 
 		if ( vsResult._bSuccess && psResult._bSuccess )
 		{
 			D3D12_INPUT_ELEMENT_DESC inputElementDescs[] = {
-				{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-				{"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}
-			};
+				{"POSITION", 0,	 DXGI_FORMAT_R32G32B32_FLOAT, 0,	 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+				{	  "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}
+			 };
 
 			D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc{};
 			psoDesc.InputLayout										 = { inputElementDescs, _countof( inputElementDescs ) };
@@ -1161,7 +1161,7 @@ namespace sw
 			{
 				D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc{};
 				psoDesc.pRootSignature = _computeRootSignature ? _computeRootSignature.Get() : _rootSignature.Get();
-				psoDesc.CS = { res._bytecode.data(), res._bytecode.size() };
+				psoDesc.CS			   = { res._bytecode.data(), res._bytecode.size() };
 
 				const HRESULT hr = _device->CreateComputePipelineState( &psoDesc, IID_PPV_ARGS( pso.GetAddressOf() ) );
 				if ( FAILED( hr ) )
@@ -1266,5 +1266,5 @@ namespace sw
 		barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 		_commandList->ResourceBarrier( 1, &barrier );
 	}
-}
+} // namespace sw
 #endif

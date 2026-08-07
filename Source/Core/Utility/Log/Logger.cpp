@@ -13,7 +13,7 @@ namespace sw
 	{
 		constexpr const utf8* kDefaultLogFolder = "Log";
 		Logger*				  s_loggerInstance	= nullptr;
-	}
+	} // namespace
 
 	Logger::Logger()
 	{
@@ -53,7 +53,7 @@ namespace sw
 		if ( s_loggerInstance == nullptr )
 			return {};
 
-		std::lock_guard<std::mutex> lock{  s_loggerInstance->_mutex  };
+		std::lock_guard<std::mutex> lock{ s_loggerInstance->_mutex };
 		return s_loggerInstance->_onLogWritten.add( listener );
 	}
 
@@ -62,7 +62,7 @@ namespace sw
 		if ( s_loggerInstance == nullptr )
 			return;
 
-		std::lock_guard<std::mutex> lock{  s_loggerInstance->_mutex  };
+		std::lock_guard<std::mutex> lock{ s_loggerInstance->_mutex };
 		s_loggerInstance->_onLogWritten.remove( handle );
 	}
 
@@ -218,4 +218,4 @@ namespace sw
 		if ( level == LogLevel::Error )
 			std::fflush( _pFile );
 	}
-}
+} // namespace sw

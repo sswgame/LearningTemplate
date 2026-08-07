@@ -18,13 +18,13 @@ namespace sw
 		~ImGuiDX12RendererBackend() override = default;
 
 		/** @brief D3D12 ImGui 렌더러와 SRV 힙을 초기화합니다. */
-		bool  initialize( IRHIDevice* rhiDevice ) override;
+		bool initialize( IRHIDevice* rhiDevice ) override;
 		/** @brief D3D12 ImGui 렌더러를 종료합니다. */
-		void  shutdown() override;
+		void shutdown() override;
 		/** @brief ImGui D3D12 프레임을 시작합니다. */
-		void  newFrame() override;
+		void newFrame() override;
 		/** @brief ImGui draw data를 D3D12로 그립니다. */
-		void  render( IRHIDevice* rhiDevice ) override;
+		void render( IRHIDevice* rhiDevice ) override;
 		/** @brief RHI 텍스처를 ImGui용 SRV로 등록합니다. */
 		void* registerTexture( RHITextureHandle texture ) override;
 
@@ -38,10 +38,10 @@ namespace sw
 	private:
 #if defined( SW_PLATFORM_WINDOWS )
 		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> _d3d12SrvHeap;
-		UINT										 _descriptorSize   = 0;
-		uint32										 _maxDescriptors   = 128;
-		uint32										 _nextDescriptor   = 0;
+		UINT										 _descriptorSize = 0;
+		uint32										 _maxDescriptors = 128;
+		uint32										 _nextDescriptor = 0;
 		std::vector<uint32>							 _freeDescriptors;
 #endif
 	};
-}
+} // namespace sw

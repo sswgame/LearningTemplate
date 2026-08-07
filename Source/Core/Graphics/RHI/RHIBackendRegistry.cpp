@@ -21,20 +21,20 @@ namespace sw
 #if !defined( SW_RHI_AS_MODULES )
 		std::unique_ptr<IRHIDevice> createD3D11Device()
 		{
-#if defined( SW_PLATFORM_WINDOWS )
+	#if defined( SW_PLATFORM_WINDOWS )
 			return std::make_unique<D3D11RHIDevice>();
-#else
+	#else
 			return nullptr;
-#endif
+	#endif
 		}
 
 		std::unique_ptr<IRHIDevice> createD3D12Device()
 		{
-#if defined( SW_PLATFORM_WINDOWS )
+	#if defined( SW_PLATFORM_WINDOWS )
 			return std::make_unique<D3D12RHIDevice>();
-#else
+	#else
 			return nullptr;
-#endif
+	#endif
 		}
 #endif
 
@@ -66,13 +66,13 @@ namespace sw
 		{
 			static std::once_flag s_once;
 			std::call_once( s_once,
-				[]()
-				{
-					if ( tryLoadBackendModule( RHIBackend::DirectX11, "RHI_DX11" ) == false )
-						SW_LOG_WARNING( "[RHIBackendRegistry] Failed to load RHI_DX11 module" );
-					if ( tryLoadBackendModule( RHIBackend::DirectX12, "RHI_DX12" ) == false )
-						SW_LOG_WARNING( "[RHIBackendRegistry] Failed to load RHI_DX12 module" );
-				} );
+							[]()
+			{
+				if ( tryLoadBackendModule( RHIBackend::DirectX11, "RHI_DX11" ) == false )
+					SW_LOG_WARNING( "[RHIBackendRegistry] Failed to load RHI_DX11 module" );
+				if ( tryLoadBackendModule( RHIBackend::DirectX12, "RHI_DX12" ) == false )
+					SW_LOG_WARNING( "[RHIBackendRegistry] Failed to load RHI_DX12 module" );
+			} );
 		}
 #endif
 
@@ -91,7 +91,7 @@ namespace sw
 		};
 
 		StaticBackendRegistration s_staticBackends{};
-	}
+	} // namespace
 
 	RHIBackendRegistry& RHIBackendRegistry::get()
 	{
@@ -157,14 +157,14 @@ namespace sw
 		}
 
 		RHIDeviceFactoryDelegate factory = SW_DELEGATE_LAMBDA( RHIDeviceFactoryDelegate,
-			[pfn]() -> std::unique_ptr<IRHIDevice>
-			{
-				return std::unique_ptr<IRHIDevice>( pfn() );
-			} );
+															   [pfn]() -> std::unique_ptr<IRHIDevice>
+		{
+			return std::unique_ptr<IRHIDevice>( pfn() );
+		} );
 
 		registerBackend( backend, factory, RHIAvailability::query( backend ) );
 
 		SW_LOG_INFO( "[RHIBackendRegistry] Loaded module %# for backend %#", modulePath, static_cast<int32>( backend ) );
 		return true;
 	}
-}
+} // namespace sw

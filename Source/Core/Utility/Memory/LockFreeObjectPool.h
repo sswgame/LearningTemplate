@@ -1,9 +1,10 @@
 #pragma once
-/**
- * @file LockFreeObjectPool.h
- * @brief 뮤텍스를 사용하지 않고 원자적 락-프리 큐를 기반으로 동작하는 객체 풀(Object Pool) 선언입니다.
- * @details 렌더링 스레드와 워커 스레드 간의 빈번한 객체 생성/해제 시 병목을 줄이기 위해 설계되었습니다.
- */#include "Core/Common/CommonHeaders.h"
+/**                                                                                                                                             \
+ * @file LockFreeObjectPool.h                                                                                                                   \
+ * @brief 뮤텍스를 사용하지 않고 원자적 락-프리 큐를 기반으로 동작하는 객체 풀(Object Pool) 선언입니다.       \
+ * @details 렌더링 스레드와 워커 스레드 간의 빈번한 객체 생성/해제 시 병목을 줄이기 위해 설계되었습니다. \
+ */                                                                                                                                             \
+#include "Core/Common/CommonHeaders.h"
 #include "Core/Common/CommonMacros.h"
 #include "Core/Common/Types.h"
 
@@ -16,7 +17,8 @@ namespace sw
 	 * @brief 템플릿 기반 락-프리 오브젝트 풀입니다. 최대 Capacity개까지의 객체를 스레드 안전하게 재사용합니다.
 	 * @tparam T 풀링할 객체 타입
 	 * @tparam Capacity 풀에 사전 할당할 최대 객체 수
-	 */	template <typename T, uint32 Capacity = 512>
+	 */
+	template <typename T, uint32 Capacity = 512>
 	class LockFreeObjectPool
 	{
 	public:
@@ -36,7 +38,8 @@ namespace sw
 		 * @tparam Args 생성자에 전달할 가변 인자 타입들
 		 * @param args 생성자에 전달할 가변 인자 리스트
 		 * @return 사용 가능한 객체 포인터 (풀이 가득 찼다면 nullptr 반환)
-		 */		template <typename... Args>
+		 */
+		template <typename... Args>
 		SW_INLINE T* acquire( Args&&... args )
 		{
 			T* ptr = nullptr;
@@ -77,4 +80,4 @@ namespace sw
 		LockFreeQueue<T*, Capacity> _freeQueue;
 		std::atomic<uint32>			_activeCount{ 0 };
 	};
-}
+} // namespace sw

@@ -119,4 +119,4 @@ namespace sw
 		std::string _sourceDirectory;
 		std::string _sourceFileName;
 	};
-}
+} // namespace sw

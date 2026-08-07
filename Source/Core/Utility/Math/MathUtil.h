@@ -17,11 +17,11 @@ namespace sw
 	class MathUtil
 	{
 	public:
-		static constexpr float32 kPI			 = 3.1415926535f;                /**< 원주율 PI */
-		static constexpr float32 kDegreeToRadian = kPI / 180.f;                  /**< 각도(Degree)를 호도(Radian)로 변환하는 상수 */
-		static constexpr float32 kRadianToDegree = 180.f / kPI;                  /**< 호도(Radian)를 각도(Degree)로 변환하는 상수 */
-		static constexpr float32 kEpsilon		 = std::numeric_limits<float32>::epsilon();  /**< 32비트 부동소수점 오차 허용치 */
-		static constexpr float64 kEpsilon64		 = std::numeric_limits<float64>::epsilon();  /**< 64비트 부동소수점 오차 허용치 */
+		static constexpr float32 kPI			 = 3.1415926535f;							/**< 원주율 PI */
+		static constexpr float32 kDegreeToRadian = kPI / 180.f;								/**< 각도(Degree)를 호도(Radian)로 변환하는 상수 */
+		static constexpr float32 kRadianToDegree = 180.f / kPI;								/**< 호도(Radian)를 각도(Degree)로 변환하는 상수 */
+		static constexpr float32 kEpsilon		 = std::numeric_limits<float32>::epsilon(); /**< 32비트 부동소수점 오차 허용치 */
+		static constexpr float64 kEpsilon64		 = std::numeric_limits<float64>::epsilon(); /**< 64비트 부동소수점 오차 허용치 */
 
 		static constexpr float32 Pi		 = kPI;
 		static constexpr float32 HalfPi	 = kPI * 0.5f;
@@ -173,4 +173,4 @@ namespace sw
 			return f;
 		}
 	};
-}
+} // namespace sw

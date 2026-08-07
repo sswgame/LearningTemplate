@@ -15,9 +15,9 @@ namespace sw
 	 */
 	enum class ShaderStage : uint8
 	{
-		Vertex,  ///< 버텍스 셰이더 (VS)
-		Pixel,   ///< 픽셀/프래그먼트 셰이더 (PS/FS)
-		Compute  ///< 컴퓨트 셰이더 (CS)
+		Vertex, ///< 버텍스 셰이더 (VS)
+		Pixel,	///< 픽셀/프래그먼트 셰이더 (PS/FS)
+		Compute ///< 컴퓨트 셰이더 (CS)
 	};
 
 	/**
@@ -26,8 +26,8 @@ namespace sw
 	 */
 	enum class ShaderTargetFormat : uint8
 	{
-		DXBC_D3D11,   ///< Direct3D 11용 DXBC 바이트코드 (d3dcompiler 사용)
-		DXIL_D3D12,   ///< Direct3D 12용 DXIL 바이트코드 (dxc 사용)
+		DXBC_D3D11,	  ///< Direct3D 11용 DXBC 바이트코드 (d3dcompiler 사용)
+		DXIL_D3D12,	  ///< Direct3D 12용 DXIL 바이트코드 (dxc 사용)
 		SPIRV_Vulkan, ///< Vulkan 1.3용 SPIR-V 바이트코드 (dxc -spirv 사용)
 		SPIRV_OpenGL, ///< OpenGL용 SPIR-V 바이트코드 (dxc -spirv 사용)
 		Count
@@ -39,9 +39,9 @@ namespace sw
 	 */
 	struct ShaderCompileDesc
 	{
-		std::string		   _filePath;	                       ///< HLSL 소스 파일 경로 (상대/절대 경로)
-		std::string		   _entryPoint;                        ///< 진입점 함수 이름 (예: "VSMain", "CSMain")
-		ShaderStage		   _stage		 = ShaderStage::Vertex; ///< 컴파일 대상 셰이더 스테이지
+		std::string		   _filePath;										 ///< HLSL 소스 파일 경로 (상대/절대 경로)
+		std::string		   _entryPoint;										 ///< 진입점 함수 이름 (예: "VSMain", "CSMain")
+		ShaderStage		   _stage		 = ShaderStage::Vertex;				 ///< 컴파일 대상 셰이더 스테이지
 		ShaderTargetFormat _targetFormat = ShaderTargetFormat::SPIRV_Vulkan; ///< 출력 포맷
 	};
 
@@ -51,10 +51,10 @@ namespace sw
 	 */
 	struct ShaderCompileResult
 	{
-		bool			   _bSuccess = false;         ///< 컴파일 성공 여부
-		std::vector<uint8> _bytecode;                 ///< 컴파일된 이진 바이트코드 데이터
-		std::string		   _errorMessage;             ///< 실패 시 오류 컴파일러 메세지
-		std::string		   _normalizedRelativePath;   ///< 정규화된 자원 상대 경로
+		bool			   _bSuccess = false;		///< 컴파일 성공 여부
+		std::vector<uint8> _bytecode;				///< 컴파일된 이진 바이트코드 데이터
+		std::string		   _errorMessage;			///< 실패 시 오류 컴파일러 메세지
+		std::string		   _normalizedRelativePath; ///< 정규화된 자원 상대 경로
 	};
 
 	/**
@@ -71,4 +71,4 @@ namespace sw
 		 */
 		static ShaderCompileResult compileHLSL( const ShaderCompileDesc& desc );
 	};
-}
+} // namespace sw

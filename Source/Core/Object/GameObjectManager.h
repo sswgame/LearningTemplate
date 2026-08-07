@@ -54,7 +54,6 @@ namespace sw
 		void clear();
 
 	private:
-
 		std::vector<GameObject*>					   _gameObjects;
 		std::unordered_map<hashed_string, GameObject*> _mapNameToObject;
 		std::unordered_map<uint64, GameObject*>		   _mapIdToObject;
@@ -62,4 +61,4 @@ namespace sw
 		std::vector<Component*>						   _pendingComponents;
 		mutable std::mutex							   _mutex;
 	};
-}
+} // namespace sw

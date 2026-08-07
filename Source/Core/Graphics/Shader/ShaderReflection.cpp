@@ -130,4 +130,4 @@ namespace sw
 
 		return data;
 	}
-}
+} // namespace sw

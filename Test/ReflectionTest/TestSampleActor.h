@@ -70,5 +70,5 @@ namespace sw
 				OptionC = 4,
 			};
 		};
-	}
-}
+	} // namespace InnerNamespaceForTest
+} // namespace sw

@@ -94,4 +94,4 @@ namespace sw
 	private:
 		std::vector<TagID> _tags;
 	};
-}
+} // namespace sw

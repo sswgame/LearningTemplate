@@ -37,4 +37,4 @@ namespace sw
 		std::vector<std::unique_ptr<Scene>> _loadedScenes;
 		Scene*								_activeScene = nullptr;
 	};
-}
+} // namespace sw

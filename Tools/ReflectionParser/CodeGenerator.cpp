@@ -205,4 +205,4 @@ namespace sw::tool
 		}
 		return result;
 	}
-}
+} // namespace sw::tool

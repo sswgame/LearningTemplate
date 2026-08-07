@@ -156,4 +156,4 @@ namespace sw
 		_nodes.clear();
 		_compiledExecutionOrder.clear();
 	}
-}
+} // namespace sw

@@ -111,4 +111,4 @@ namespace sw
 		thread_local FrameArenaAllocator threadLocalArena( 64 * 1024 );
 		return threadLocalArena;
 	}
-}
+} // namespace sw

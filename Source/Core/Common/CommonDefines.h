@@ -17,15 +17,15 @@ namespace sw
 		inline static constexpr uint32 kMaxFrameCountInFlight = 2;
 
 		/** @brief 파일 시스템 최대 경로 길이 (Windows MAX_PATH 호환) */
-		inline static constexpr uint32 kMaxPathSize			  = 260;
+		inline static constexpr uint32 kMaxPathSize = 260;
 
 		/** @brief 문자열 포맷팅 등에 사용되는 고정 크기 스택 버퍼들 */
-		inline static constexpr uint32 kMaxBuffer128		  = 128;
-		inline static constexpr uint32 kMaxBuffer1024		  = 1024;
-		inline static constexpr uint32 kMaxBuffer2048		  = 2048;
-		inline static constexpr uint32 kMaxBuffer4096		  = 4096;
-		inline static constexpr uint32 kMaxBuffer8192		  = 8192;
-	}
+		inline static constexpr uint32 kMaxBuffer128  = 128;
+		inline static constexpr uint32 kMaxBuffer1024 = 1024;
+		inline static constexpr uint32 kMaxBuffer2048 = 2048;
+		inline static constexpr uint32 kMaxBuffer4096 = 4096;
+		inline static constexpr uint32 kMaxBuffer8192 = 8192;
+	} // namespace constant
 
 	/**
 	 * @brief 파일 시스템 내 리소스 폴더 기본 상대 경로 정의 네임스페이스
@@ -35,7 +35,7 @@ namespace sw
 		inline static constexpr const utf8* kShaderFolder  = "Shader";	/**< 셰이더 소스 폴더명 */
 		inline static constexpr const utf8* kTextureFolder = "Texture"; /**< 텍스처 폴더명 */
 		inline static constexpr const utf8* kEditorFolder  = "Editor";	/**< 에디터 전용 리소스 폴더명 */
-	}
+	} // namespace path
 
 	/**
 	 * @brief 배열 순회 및 인덱스 실패 시 반환되는 무효 인덱스(-1) 정의 모음
@@ -51,6 +51,6 @@ namespace sw
 		inline static constexpr int16 kInt16 = -1;
 		inline static constexpr int32 kInt32 = -1;
 		inline static constexpr int64 kInt64 = -1;
-	}
+	} // namespace invalid_index
 
-}
+} // namespace sw

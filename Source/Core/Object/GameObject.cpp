@@ -198,4 +198,4 @@ namespace sw
 		_flatComponents.clear();
 		_components.clear();
 	}
-}
+} // namespace sw

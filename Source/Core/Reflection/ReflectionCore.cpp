@@ -123,7 +123,7 @@ namespace sw
 		return s_head;
 	}
 
-	TypeRegistrar::TypeRegistrar( void (*registerFunc)(TypeRegistry&) )
+	TypeRegistrar::TypeRegistrar( void ( *registerFunc )( TypeRegistry& ) )
 		: _registerFunc{ registerFunc }
 		, _next{ nullptr }
 	{
@@ -137,7 +137,7 @@ namespace sw
 		return s_head;
 	}
 
-	EnumRegistrar::EnumRegistrar( void (*registerFunc)(TypeRegistry&) )
+	EnumRegistrar::EnumRegistrar( void ( *registerFunc )( TypeRegistry& ) )
 		: _registerFunc{ registerFunc }
 		, _next{ nullptr }
 	{
@@ -195,4 +195,4 @@ namespace sw
 				++it;
 		}
 	}
-}
+} // namespace sw

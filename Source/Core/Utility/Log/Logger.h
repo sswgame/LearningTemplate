@@ -49,7 +49,7 @@ namespace sw
 			std::string tag;
 			std::string message;
 			std::string file;
-			int32		line	  = 0;
+			int32		line = 0;
 			std::string timeStamp;
 		};
 
@@ -73,7 +73,7 @@ namespace sw
 		 */
 		void shutdown()
 		{
-			std::lock_guard<std::mutex> lock{  _mutex  };
+			std::lock_guard<std::mutex> lock{ _mutex };
 			if ( _pFile != nullptr )
 			{
 				std::fflush( _pFile );
@@ -123,7 +123,7 @@ namespace sw
 
 		LogWrittenMulticast _onLogWritten;
 	};
-}
+} // namespace sw
 
 // ============================================================================
 // [매크로 인터페이스 정의 영역]
@@ -134,43 +134,43 @@ namespace sw
 	 * @brief 포맷 문자열(+인자)을 파싱한 뒤 Logger::writeLog 로 전달하는 코어 매크로
 	 * @note 메시지 문자열을 __VA_ARGS__ 첫 인자로 받아, 가변 인자 생략(C++20) 확장을 쓰지 않습니다.
 	 */
-	#define SW_LOG_INTERNAL( level, ... )                                                   \
-		do                                                                                  \
-		{                                                                                   \
-			utf8 _buffer[sw::constant::kMaxBuffer8192];                                     \
-			sw::formatstring( _buffer, sw::constant::kMaxBuffer8192, __VA_ARGS__ );         \
-			sw::Logger::writeLog( level, SW_LOG_TAG, _buffer, __FILE__, __LINE__ );         \
+	#define SW_LOG_INTERNAL( level, ... )                                           \
+		do                                                                          \
+		{                                                                           \
+			utf8 _buffer[sw::constant::kMaxBuffer8192];                             \
+			sw::formatstring( _buffer, sw::constant::kMaxBuffer8192, __VA_ARGS__ ); \
+			sw::Logger::writeLog( level, SW_LOG_TAG, _buffer, __FILE__, __LINE__ ); \
 		} while ( false )
 
 	/** @brief SW_LOG_ERROR 매크로 정의입니다. */
-	#define SW_LOG_ERROR( ... )	  SW_LOG_INTERNAL( sw::Logger::LogLevel::Error, __VA_ARGS__ )
+	#define SW_LOG_ERROR( ... ) SW_LOG_INTERNAL( sw::Logger::LogLevel::Error, __VA_ARGS__ )
 	/** @brief SW_LOG_WARNING 매크로 정의입니다. */
 	#define SW_LOG_WARNING( ... ) SW_LOG_INTERNAL( sw::Logger::LogLevel::Warning, __VA_ARGS__ )
 	/** @brief SW_LOG_INFO 매크로 정의입니다. */
-	#define SW_LOG_INFO( ... )	  SW_LOG_INTERNAL( sw::Logger::LogLevel::Info, __VA_ARGS__ )
+	#define SW_LOG_INFO( ... ) SW_LOG_INTERNAL( sw::Logger::LogLevel::Info, __VA_ARGS__ )
 	/** @brief SW_LOG_TRACE 매크로 정의입니다. */
-	#define SW_LOG_TRACE( ... )	  SW_LOG_INTERNAL( sw::Logger::LogLevel::Trace, __VA_ARGS__ )
+	#define SW_LOG_TRACE( ... ) SW_LOG_INTERNAL( sw::Logger::LogLevel::Trace, __VA_ARGS__ )
 	/**
 	 * @brief 조건 실패 시 메시지·식·파일·함수·라인을 Error로 남기고 디버그 브레이크
 	 * @note Release에서는 no-op. 무조건 실패는 SW_LOG_ASSERT( false, ... )로 호출.
 	 */
-	#define SW_LOG_ASSERT( expr, ... )                                                                       \
-		do                                                                                                   \
-		{                                                                                                    \
-			if ( !( expr ) )                                                                                 \
-			{                                                                                                \
-				utf8 _assertMsg[sw::constant::kMaxBuffer8192];                                               \
-				sw::formatstring( _assertMsg, sw::constant::kMaxBuffer8192, __VA_ARGS__ );                  \
-				SW_LOG_INTERNAL( sw::Logger::LogLevel::Error,                                                \
-								 "ASSERT failed\n"                                                           \
-								 "Expression : %#\n"                                                         \
-								 "Message    : %#\n"                                                         \
-								 "FileName   : %#\n"                                                         \
-								 "Function   : %#\n"                                                         \
-								 "Line       : %#",                                                          \
-								 #expr, _assertMsg, __FILE__, SW_FUNCTION_SIGNATURE, __LINE__ );             \
-				SW_DEBUG_BREAK();                                                                            \
-			}                                                                                                \
+	#define SW_LOG_ASSERT( expr, ... )                                                           \
+		do                                                                                       \
+		{                                                                                        \
+			if ( !( expr ) )                                                                     \
+			{                                                                                    \
+				utf8 _assertMsg[sw::constant::kMaxBuffer8192];                                   \
+				sw::formatstring( _assertMsg, sw::constant::kMaxBuffer8192, __VA_ARGS__ );       \
+				SW_LOG_INTERNAL( sw::Logger::LogLevel::Error,                                    \
+								 "ASSERT failed\n"                                               \
+								 "Expression : %#\n"                                             \
+								 "Message    : %#\n"                                             \
+								 "FileName   : %#\n"                                             \
+								 "Function   : %#\n"                                             \
+								 "Line       : %#",                                              \
+								 #expr, _assertMsg, __FILE__, SW_FUNCTION_SIGNATURE, __LINE__ ); \
+				SW_DEBUG_BREAK();                                                                \
+			}                                                                                    \
 		} while ( false )
 #else
 	/** @brief SW_LOG_ERROR 매크로 정의입니다. */

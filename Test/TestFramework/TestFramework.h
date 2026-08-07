@@ -38,7 +38,7 @@ namespace test
 		/**
 		 * @brief runAllTests 처리를 수행합니다.
 		 */
-		int	 runAllTests();
+		int runAllTests();
 
 		/**
 		 * @brief addFailure 처리를 수행합니다.
@@ -59,7 +59,7 @@ namespace test
 			TestRegistry::getInstance().registerTest( suiteName, testName, func );
 		}
 	};
-}
+} // namespace test
 
 /** @brief SW_TEST_CASE 매크로 정의입니다. */
 #define SW_TEST_CASE( SuiteName, TestName )                                                                                                                              \
@@ -127,21 +127,21 @@ namespace test
 #define SW_EXPECT_NEAR_EQUAL( expected, actual, tolerance ) SW_EXPECT_NEAR( expected, actual, tolerance )
 
 /** @brief SW_EXPECT_NOT_NULL 매크로 정의입니다. */
-#define SW_EXPECT_NOT_NULL( ptr )                                                                \
-	do                                                                                          \
-	{                                                                                           \
-		if ( ( ptr ) == nullptr )                                                                \
-		{                                                                                       \
+#define SW_EXPECT_NOT_NULL( ptr )                                                                   \
+	do                                                                                              \
+	{                                                                                               \
+		if ( ( ptr ) == nullptr )                                                                   \
+		{                                                                                           \
 			test::TestRegistry::getInstance().addFailure( #ptr " != nullptr", __FILE__, __LINE__ ); \
-		}                                                                                       \
+		}                                                                                           \
 	} while ( 0 )
 
 /** @brief SW_EXPECT_NULL 매크로 정의입니다. */
-#define SW_EXPECT_NULL( ptr )                                                                    \
-	do                                                                                      \
-	{                                                                                       \
-		if ( ( ptr ) != nullptr )                                                                \
-		{                                                                                      \
+#define SW_EXPECT_NULL( ptr )                                                                       \
+	do                                                                                              \
+	{                                                                                               \
+		if ( ( ptr ) != nullptr )                                                                   \
+		{                                                                                           \
 			test::TestRegistry::getInstance().addFailure( #ptr " == nullptr", __FILE__, __LINE__ ); \
-		}                                                                                      \
+		}                                                                                           \
 	} while ( 0 )

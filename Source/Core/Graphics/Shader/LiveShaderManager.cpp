@@ -166,4 +166,4 @@ namespace sw
 		_pendingReloadPaths.clear();
 		_bInitialized = false;
 	}
-}
+} // namespace sw

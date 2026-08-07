@@ -20,10 +20,10 @@ namespace sw
 	 */
 	enum class TickGroup : uint8
 	{
-		PrePhysics,    ///< 이른 업데이트 단계
+		PrePhysics,	   ///< 이른 업데이트 단계
 		DuringPhysics, ///< 기본 tick 단계
 		PostPhysics,   ///< 늦은 업데이트 단계
-		PostUpdate,    ///< 렌더 직전 등 최종 단계
+		PostUpdate,	   ///< 렌더 직전 등 최종 단계
 	};
 
 	/**
@@ -70,12 +70,12 @@ namespace sw
 		bool isActive() const { return _bActive; }
 
 		/** @brief Tick 그룹 변경 */
-		void	  setTickGroup( TickGroup group );
+		void setTickGroup( TickGroup group );
 		/** @brief 현재 Tick 그룹 반환 */
 		TickGroup getTickGroup() const { return static_cast<TickGroup>( _tickGroup ); }
 
 		/** @brief 다른 컴포넌트가 먼저 Tick 실행되도록 선행 의존성 추가 */
-		void						   addTickDependency( Component* targetComp );
+		void addTickDependency( Component* targetComp );
 		/** @brief 선행 의존 컴포넌트 목록 반환 */
 		const std::vector<Component*>& getTickDependencies() const { return _tickDependencies; }
 
@@ -104,11 +104,11 @@ namespace sw
 		std::vector<Component*> _tickDependencies; ///< 틱 선행 순서 종속성 목록
 
 		PROPERTY()
-		uint8 _tickGroup : 3; ///< TickGroup 슬롯
-		uint8 _bActive	 : 1;											   ///< 컴포넌트 개별 활성화
-		[[maybe_unused]] uint8 _reserved	 : 4;
+		uint8				   _tickGroup : 3; ///< TickGroup 슬롯
+		uint8				   _bActive	  : 1; ///< 컴포넌트 개별 활성화
+		[[maybe_unused]] uint8 _reserved  : 4;
 
 	private:
 		static uint64 _s_nextComponentId; ///< ID 생성 카운터
 	};
-}
+} // namespace sw

@@ -13,7 +13,7 @@ namespace sw
 {
 	struct quaternion;
 	struct float4x4;
-}
+} // namespace sw
 
 namespace sw
 {
@@ -106,10 +106,10 @@ namespace sw
 		float2& normalize() noexcept;
 
 		/** @brief 이 벡터가 정규화된 새로운 벡터 사본을 반환합니다. */
-		float2	normalize() const noexcept;
+		float2 normalize() const noexcept;
 
 		/** @brief 이 벡터의 각 성분을 minValue와 maxValue 사이로 강제 고정(Clamp)합니다. */
-		void   clamp( const float2& minValue, const float2& maxValue ) noexcept;
+		void clamp( const float2& minValue, const float2& maxValue ) noexcept;
 
 		/** @brief 성분들이 고정(Clamp)된 새로운 벡터 사본을 반환합니다. */
 		float2 clamp( const float2& minValue, const float2& maxValue ) const noexcept;
@@ -238,13 +238,13 @@ namespace sw
 		float32 dot( const float3& other ) const noexcept;
 
 		/** @brief 다른 3D 벡터와의 외적(Cross Product)된 벡터를 반환합니다. (오른손 좌표계 기준) */
-		float3	cross( const float3& other ) const noexcept;
+		float3 cross( const float3& other ) const noexcept;
 
 		/** @brief 현재 벡터를 정규화하여 길이 1로 만들고 자신을 반환합니다. */
 		float3& normalize() noexcept;
 
 		/** @brief 정규화된 새로운 벡터 사본을 반환합니다. */
-		float3	normalize() const noexcept;
+		float3 normalize() const noexcept;
 
 		/** @brief 주어진 AABB 바운딩 영역 내에 포함되는지 검사합니다. */
 		bool inBounds( const float3& bound ) const noexcept;
@@ -253,7 +253,7 @@ namespace sw
 		bool isInfinite() const noexcept;
 
 		/** @brief 3D 벡터 성분을 minValue와 maxValue 사이로 강제 제한(Clamp)합니다. */
-		void   clamp( const float3& minValue, const float3& maxValue ) noexcept;
+		void clamp( const float3& minValue, const float3& maxValue ) noexcept;
 
 		/** @brief 성분들이 제한된(Clamp) 새로운 3D 벡터를 반환합니다. */
 		float3 clamp( const float3& minValue, const float3& maxValue ) const noexcept;
@@ -398,7 +398,7 @@ namespace sw
 		/**
 		 * @brief 정규화합니다
 		 */
-		float4	normalize() const noexcept;
+		float4 normalize() const noexcept;
 
 		/**
 		 * @brief 범위 안에 있는지 반환합니다
@@ -408,7 +408,7 @@ namespace sw
 		/**
 		 * @brief 범위를 제한합니다
 		 */
-		void   clamp( const float4& minValue, const float4& maxValue ) noexcept;
+		void clamp( const float4& minValue, const float4& maxValue ) noexcept;
 		/**
 		 * @brief 범위를 제한합니다
 		 */
@@ -517,11 +517,11 @@ namespace sw
 		/**
 		 * @brief 내적을 계산합니다
 		 */
-		float64	 dot( const double3& other ) const noexcept;
+		float64 dot( const double3& other ) const noexcept;
 		/**
 		 * @brief 외적을 계산합니다
 		 */
-		double3	 cross( const double3& other ) const noexcept;
+		double3 cross( const double3& other ) const noexcept;
 		/**
 		 * @brief 정규화합니다
 		 */
@@ -529,12 +529,12 @@ namespace sw
 		/**
 		 * @brief 정규화합니다
 		 */
-		double3	 normalize() const noexcept;
+		double3 normalize() const noexcept;
 
 		/**
 		 * @brief 범위를 제한합니다
 		 */
-		void	clamp( const double3& minValue, const double3& maxValue ) noexcept;
+		void clamp( const double3& minValue, const double3& maxValue ) noexcept;
 		/**
 		 * @brief 범위를 제한합니다
 		 */
@@ -570,4 +570,4 @@ namespace sw
 	double3 operator*( const double3& v, float64 scale ) noexcept;
 	double3 operator/( const double3& v, float64 scale ) noexcept;
 	double3 operator*( float64 scale, const double3& v ) noexcept;
-}
+} // namespace sw

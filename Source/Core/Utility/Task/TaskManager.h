@@ -35,7 +35,6 @@ namespace sw
 		uint32 getWorkerCount() const { return static_cast<uint32>( _workers.size() ); }
 
 	public:
-
 		/**
 		 * @brief 작업을 등록합니다
 		 */
@@ -128,15 +127,15 @@ namespace sw
 		/**
 		 * @brief 워커 루프를 실행합니다
 		 */
-		void					  workerLoop( uint32 workerId );
+		void workerLoop( uint32 workerId );
 		/**
 		 * @brief 준비된 작업을 스케줄합니다
 		 */
-		void					  scheduleReadyTask( const std::shared_ptr<TaskNode>& node );
+		void scheduleReadyTask( const std::shared_ptr<TaskNode>& node );
 		/**
 		 * @brief 작업 완료 콜백을 호출합니다
 		 */
-		void					  onTaskFinished( const std::shared_ptr<TaskNode>& node );
+		void onTaskFinished( const std::shared_ptr<TaskNode>& node );
 		/**
 		 * @brief 작업 훔치기를 시도합니다
 		 */
@@ -155,4 +154,4 @@ namespace sw
 		std::vector<std::shared_ptr<StageNode>> _allStages;
 		std::atomic<uint32>						_activeTaskCount{ 0 };
 	};
-}
+} // namespace sw

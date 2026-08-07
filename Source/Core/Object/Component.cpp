@@ -73,4 +73,4 @@ namespace sw
 		}
 		_tickDependencies.push_back( targetComp );
 	}
-}
+} // namespace sw

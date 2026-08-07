@@ -68,4 +68,4 @@ namespace sw
 		std::unordered_map<hashed_string, ComponentFactoryDelegate> _factories;
 		std::vector<hashed_string>									_registeredTypes;
 	};
-}
+} // namespace sw

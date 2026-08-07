@@ -27,8 +27,8 @@ namespace sw
 											const SerializeContext& ctx = SerializeContext::getDefault() );
 
 		/** @brief JSON 문자열 역직렬화 */
-		static bool		   deserialize( void* instance, const TypeInfo& typeInfo, std::string_view jsonStr,
-										const SerializeContext& ctx = SerializeContext::getDefault() );
+		static bool deserialize( void* instance, const TypeInfo& typeInfo, std::string_view jsonStr,
+								 const SerializeContext& ctx = SerializeContext::getDefault() );
 	};
 
-}
+} // namespace sw

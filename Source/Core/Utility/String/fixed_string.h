@@ -49,7 +49,7 @@ namespace sw
 		/**
 		 * @brief 인덱스의 문자를 반환합니다
 		 */
-		reference		at( uint32 pos );
+		reference at( uint32 pos );
 		/**
 		 * @brief 인덱스의 문자를 반환합니다
 		 */
@@ -58,7 +58,7 @@ namespace sw
 		/**
 		 * @brief 첫 문자를 반환합니다
 		 */
-		reference		front();
+		reference front();
 		/**
 		 * @brief 첫 문자를 반환합니다
 		 */
@@ -66,7 +66,7 @@ namespace sw
 		/**
 		 * @brief 마지막 문자를 반환합니다
 		 */
-		reference		back();
+		reference back();
 		/**
 		 * @brief 마지막 문자를 반환합니다
 		 */
@@ -88,7 +88,7 @@ namespace sw
 		/**
 		 * @brief 내부 상태를 비웁니다
 		 */
-		void   clear();
+		void clear();
 
 		static constexpr uint32 max_size() { return N; }
 		static constexpr uint32 capacity() { return N; }
@@ -164,7 +164,6 @@ namespace sw
 		operator std::basic_string<T>() const { return std::basic_string<T>{ _data, _size }; }
 
 	private:
-
 		T	   _data[N + 1];
 		uint32 _size = 0;
 	};
@@ -491,4 +490,4 @@ namespace sw
 	}
 
 #pragma endregion
-}
+} // namespace sw

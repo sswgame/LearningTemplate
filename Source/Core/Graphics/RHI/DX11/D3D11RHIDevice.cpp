@@ -36,7 +36,7 @@ namespace sw
 			SW_LOG_ASSERT( false, "Unsupported RHIFormat: %#", static_cast<uint32>( format ) );
 			return DXGI_FORMAT_UNKNOWN;
 		}
-	}
+	} // namespace
 
 	D3D11RHIDevice::D3D11RHIDevice() = default;
 
@@ -198,10 +198,10 @@ namespace sw
 	RHIBufferHandle D3D11RHIDevice::createStructuredBuffer( uint32 elementSize, uint32 elementCount )
 	{
 		D3D11_BUFFER_DESC bd{};
-		bd.Usage		  = D3D11_USAGE_DEFAULT;
-		bd.ByteWidth	  = elementSize * elementCount;
-		bd.BindFlags	  = D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE;
-		bd.MiscFlags	  = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
+		bd.Usage			   = D3D11_USAGE_DEFAULT;
+		bd.ByteWidth		   = elementSize * elementCount;
+		bd.BindFlags		   = D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE;
+		bd.MiscFlags		   = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
 		bd.StructureByteStride = elementSize;
 
 		Microsoft::WRL::ComPtr<ID3D11Buffer> buffer;
@@ -249,17 +249,17 @@ namespace sw
 			return 0;
 
 		D3D11_TEXTURE2D_DESC texDesc{};
-		texDesc.Width			 = desc._width;
-		texDesc.Height			 = desc._height;
-		texDesc.MipLevels		 = desc._mipLevels;
-		texDesc.ArraySize		 = 1;
-		texDesc.Format			 = toDxgiFormat( desc._format );
-		texDesc.SampleDesc.Count = 1;
+		texDesc.Width			   = desc._width;
+		texDesc.Height			   = desc._height;
+		texDesc.MipLevels		   = desc._mipLevels;
+		texDesc.ArraySize		   = 1;
+		texDesc.Format			   = toDxgiFormat( desc._format );
+		texDesc.SampleDesc.Count   = 1;
 		texDesc.SampleDesc.Quality = 0;
-		texDesc.Usage			 = D3D11_USAGE_DEFAULT;
-		texDesc.BindFlags		 = 0;
-		texDesc.CPUAccessFlags	 = 0;
-		texDesc.MiscFlags		 = 0;
+		texDesc.Usage			   = D3D11_USAGE_DEFAULT;
+		texDesc.BindFlags		   = 0;
+		texDesc.CPUAccessFlags	   = 0;
+		texDesc.MiscFlags		   = 0;
 
 		if ( desc._bIsRenderTarget )
 			texDesc.BindFlags |= D3D11_BIND_RENDER_TARGET;
@@ -360,7 +360,7 @@ namespace sw
 		if ( buffer == 0 )
 			return kInvalidDescriptorIndex;
 
-		auto*			   res	 = reinterpret_cast<ID3D11Buffer*>( buffer );
+		auto*			   res = reinterpret_cast<ID3D11Buffer*>( buffer );
 		RHIDescriptorIndex index;
 		if ( _bindlessFreeList.empty() == false )
 		{
@@ -387,17 +387,18 @@ namespace sw
 
 	RHIDescriptorIndex D3D11RHIDevice::registerBindlessUAV( RHIBufferHandle buffer )
 	{
-		if ( buffer == 0 ) return kInvalidDescriptorIndex;
+		if ( buffer == 0 )
+			return kInvalidDescriptorIndex;
 		auto* res = reinterpret_cast<ID3D11Buffer*>( buffer );
 
 		D3D11_BUFFER_DESC desc;
 		res->GetDesc( &desc );
 
 		D3D11_UNORDERED_ACCESS_VIEW_DESC uavDesc{};
-		uavDesc.ViewDimension = D3D11_UAV_DIMENSION_BUFFER;
-		uavDesc.Format = DXGI_FORMAT_UNKNOWN;
+		uavDesc.ViewDimension		= D3D11_UAV_DIMENSION_BUFFER;
+		uavDesc.Format				= DXGI_FORMAT_UNKNOWN;
 		uavDesc.Buffer.FirstElement = 0;
-		uavDesc.Buffer.NumElements = desc.ByteWidth / desc.StructureByteStride;
+		uavDesc.Buffer.NumElements	= desc.ByteWidth / desc.StructureByteStride;
 
 		Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> uav;
 		if ( FAILED( _device->CreateUnorderedAccessView( res, &uavDesc, uav.GetAddressOf() ) ) )
@@ -847,5 +848,5 @@ namespace sw
 	void D3D11RHIDevice::endRenderPass()
 	{
 	}
-}
+} // namespace sw
 #endif

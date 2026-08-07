@@ -64,4 +64,4 @@ namespace sw::tool
 			return false;
 		return text.find( keyword ) != std::string_view::npos;
 	}
-}
+} // namespace sw::tool

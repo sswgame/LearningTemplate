@@ -156,4 +156,4 @@ namespace sw
 		return !_bShouldClose;
 	}
 #endif
-}
+} // namespace sw

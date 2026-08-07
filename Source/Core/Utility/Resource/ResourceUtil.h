@@ -15,7 +15,7 @@ namespace sw
 	{
 	public:
 		/** @brief 실행 파일 기준 리소스 루트·하위 폴더 경로를 초기화합니다. */
-		static bool		   initialize();
+		static bool initialize();
 		/**
 		 * @brief 상대 리소스 경로를 절대 경로로 해석합니다.
 		 * @param filePath 파일 상대 경로
@@ -23,7 +23,7 @@ namespace sw
 		 */
 		static std::string getResourcePath( const std::string_view filePath, const std::string_view folderName = "" );
 		/** @brief 경로 해석 캐시를 비웁니다. */
-		static void		   clearCache();
+		static void clearCache();
 
 		/** @brief Engine 리소스 폴더 절대 경로 */
 		static const std::string& getEngineFolderPath();
@@ -48,4 +48,4 @@ namespace sw
 		static std::vector<std::string>						_s_resourceFolderStrList;
 		static std::unordered_map<std::string, std::string> _s_resourcePathCache;
 	};
-}
+} // namespace sw

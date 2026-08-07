@@ -110,4 +110,4 @@ namespace sw
 		} );
 		FileUtil::openFileDialog( params, del );
 	}
-}
+} // namespace sw

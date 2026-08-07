@@ -137,4 +137,4 @@ namespace sw
 
 		ImGui::PopID();
 	}
-}
+} // namespace sw

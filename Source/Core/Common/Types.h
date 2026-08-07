@@ -32,5 +32,5 @@ using float64 = double;
 // ============================================================================
 // [문자형 (Characters)]
 // ============================================================================
-using utf8	= char;     // ASCII 및 UTF-8 호환 문자형
-using utf16 = wchar_t;  // Windows API 호환 와이드 문자형
+using utf8	= char;	   // ASCII 및 UTF-8 호환 문자형
+using utf16 = wchar_t; // Windows API 호환 와이드 문자형

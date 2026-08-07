@@ -42,4 +42,4 @@ namespace sw
 		}
 	}
 
-}
+} // namespace sw

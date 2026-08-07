@@ -71,4 +71,3 @@ SW_TEST_CASE( Utility_GlobalVariable, ModificationAndReset )
 }
 
 // SW_TEST_CASE( Utility_GlobalVariable, CommandLineIntegration )\n// Temporarily disabled due to command line parsing issue
-

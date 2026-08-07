@@ -13,9 +13,9 @@ namespace sw
 	public:
 		const char* getWindowTitle() const override { return "Global Variables Control"; }
 		/** @brief 전역 변수 목록과 편집 UI를 그립니다. */
-		void		draw( const EditorUIContext& ctx ) override;
+		void draw( const EditorUIContext& ctx ) override;
 
 	private:
 		char _filterBuffer[128] = {}; ///< 이름 필터 입력 버퍼
 	};
-}
+} // namespace sw

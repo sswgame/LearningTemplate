@@ -7,7 +7,7 @@
 namespace sw
 {
 	class LiveShaderManager;
-}
+} // namespace sw
 
 /**
  * @file RHI.h
@@ -60,4 +60,4 @@ namespace sw
 		/** @brief 해당 RHI 백엔드에 대응하는 셰이더 타깃 포맷(DXIL, SPIR-V, DXBC 등) 반환 */
 		static ShaderTargetFormat getShaderTargetFormat( RHIBackend backend );
 	};
-}
+} // namespace sw

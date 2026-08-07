@@ -138,8 +138,7 @@ namespace sw
 			0x4100,
 			8, 24,
 			5,
-			0
-		};
+			0 };
 		id pixelFormatClass = (id)objc_getClass( "NSOpenGLPixelFormat" );
 		id pixelFormat		= ( (id ( * )( id, SEL, const uint32_t* ))objc_msgSend )( ( (id ( * )( id, SEL ))objc_msgSend )( pixelFormatClass, sel_registerName( "alloc" ) ), sel_registerName( "initWithAttributes:" ), attrs );
 
@@ -283,7 +282,7 @@ namespace sw
 		if ( _bInitialized == false || elementSize == 0 || elementCount == 0 )
 			return 0;
 
-		uint32 size = elementSize * elementCount;
+		uint32 size		   = elementSize * elementCount;
 		uint32 alignedSize = ( size + 255u ) & ~255u;
 
 		GLuint ssbo;
@@ -346,7 +345,7 @@ namespace sw
 		if ( buffer == 0 )
 			return kInvalidDescriptorIndex;
 
-		GLuint			   ubo	 = static_cast<GLuint>( buffer );
+		GLuint			   ubo = static_cast<GLuint>( buffer );
 		RHIDescriptorIndex index;
 		if ( _bindlessFreeList.empty() == false )
 		{
@@ -380,7 +379,7 @@ namespace sw
 		if ( buffer == 0 )
 			return kInvalidDescriptorIndex;
 
-		GLuint			   ssbo	 = static_cast<GLuint>( buffer );
+		GLuint			   ssbo = static_cast<GLuint>( buffer );
 		RHIDescriptorIndex index;
 		if ( _uavFreeList.empty() == false )
 		{
@@ -791,7 +790,7 @@ namespace sw
 				else
 				{
 					GLchar infoLog[1024];
-					glGetProgramInfoLog( program, sizeof(infoLog), nullptr, infoLog );
+					glGetProgramInfoLog( program, sizeof( infoLog ), nullptr, infoLog );
 					SW_LOG_ERROR( "[OpenGLRHIDevice] Compute shader program link failed: %s", infoLog );
 					glDeleteProgram( program );
 				}
@@ -799,7 +798,7 @@ namespace sw
 			else
 			{
 				GLchar infoLog[1024];
-				glGetShaderInfoLog( cs, sizeof(infoLog), nullptr, infoLog );
+				glGetShaderInfoLog( cs, sizeof( infoLog ), nullptr, infoLog );
 				SW_LOG_ERROR( "[OpenGLRHIDevice] Compute shader specialize/compile failed: %s", infoLog );
 			}
 			glDeleteShader( cs );
@@ -874,4 +873,4 @@ namespace sw
 	void OpenGLRHIDevice::endRenderPass()
 	{
 	}
-}
+} // namespace sw

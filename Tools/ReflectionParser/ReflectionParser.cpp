@@ -126,7 +126,7 @@ namespace
 		if ( generator.getOutputFilePath().empty() == false )
 			SW_LOG_INFO( "[ReflectionParser] Generated  : %#", generator.getOutputFilePath() );
 	}
-}
+} // namespace
 
 int32 main( int32 argc, utf8* argv[] )
 {

@@ -34,4 +34,4 @@ namespace sw
 		void* getNativeHandle() const override { return nullptr; }
 #endif
 	};
-}
+} // namespace sw

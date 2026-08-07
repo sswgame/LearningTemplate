@@ -31,12 +31,12 @@ namespace sw
 		const char* levelName( Logger::LogLevel level )
 		{
 			static constexpr const char* kNames[] = { "Error", "Warning", "Info", "Trace" };
-			const uint8 idx = static_cast<uint8>( level );
+			const uint8					 idx	  = static_cast<uint8>( level );
 			if ( idx >= 4 )
 				return "Info";
 			return kNames[idx];
 		}
-	}
+	} // namespace
 
 	ConsolePanel::ConsolePanel()
 		: _bHasNewLogs{ 0 }
@@ -67,7 +67,7 @@ namespace sw
 
 	void ConsolePanel::onLogWritten( const Logger::LogEntry& entry )
 	{
-		std::lock_guard<std::mutex> lock{  _entriesMutex  };
+		std::lock_guard<std::mutex> lock{ _entriesMutex };
 		_entries.push_back( entry );
 		while ( _entries.size() > constant::kMaxBuffer2048 )
 			_entries.pop_front();
@@ -84,7 +84,7 @@ namespace sw
 
 		bool bNewLogs = false;
 		{
-			std::lock_guard<std::mutex> lock{  _entriesMutex  };
+			std::lock_guard<std::mutex> lock{ _entriesMutex };
 			_drawSnapshot.assign( _entries.begin(), _entries.end() );
 			bNewLogs	 = _bHasNewLogs;
 			_bHasNewLogs = false;
@@ -92,7 +92,7 @@ namespace sw
 
 		if ( ImGui::Button( "Clear" ) )
 		{
-			std::lock_guard<std::mutex> lock{  _entriesMutex  };
+			std::lock_guard<std::mutex> lock{ _entriesMutex };
 			_entries.clear();
 			_drawSnapshot.clear();
 			_bHasNewLogs = false;
@@ -182,4 +182,4 @@ namespace sw
 
 		ImGui::End();
 	}
-}
+} // namespace sw

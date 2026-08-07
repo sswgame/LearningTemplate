@@ -100,10 +100,10 @@ namespace sw
 	FileWatchHandle ReloadFileManager::registerWatch( const std::string& pathPrefix, const std::vector<std::string>& extensions, const FileWatchMatchDelegate& onMatch )
 	{
 		WatchEntry entry{};
-		entry._handle	   = FileWatchHandle{ _nextWatchId++ };
-		entry._pathPrefix  = FileUtil::normalizePath( pathPrefix );
-		entry._extensions  = extensions;
-		entry._onMatch	   = onMatch;
+		entry._handle	  = FileWatchHandle{ _nextWatchId++ };
+		entry._pathPrefix = FileUtil::normalizePath( pathPrefix );
+		entry._extensions = extensions;
+		entry._onMatch	  = onMatch;
 		_watches.push_back( entry );
 
 		SW_LOG_INFO( "[ReloadFileManager] Registered watch %# (ext count %#)", entry._pathPrefix, static_cast<uint32>( extensions.size() ) );
@@ -116,7 +116,7 @@ namespace sw
 			return;
 
 		_watches.erase( std::remove_if( _watches.begin(), _watches.end(),
-							 [&]( const WatchEntry& e )
+										[&]( const WatchEntry& e )
 		{
 			return e._handle == handle;
 		} ),
@@ -150,15 +150,25 @@ namespace sw
 				const utf8* actionStr = "Unknown";
 				switch ( ev._action )
 				{
-					case FileWatcherAction::Added: actionStr = "Added"; break;
-					case FileWatcherAction::Removed: actionStr = "Removed"; break;
-					case FileWatcherAction::Modified: actionStr = "Modified"; break;
-					case FileWatcherAction::RenamedOldName: actionStr = "RenamedOld"; break;
-					case FileWatcherAction::RenamedNewName: actionStr = "RenamedNew"; break;
+					case FileWatcherAction::Added:
+						actionStr = "Added";
+						break;
+					case FileWatcherAction::Removed:
+						actionStr = "Removed";
+						break;
+					case FileWatcherAction::Modified:
+						actionStr = "Modified";
+						break;
+					case FileWatcherAction::RenamedOldName:
+						actionStr = "RenamedOld";
+						break;
+					case FileWatcherAction::RenamedNewName:
+						actionStr = "RenamedNew";
+						break;
 				}
 				SW_LOG_INFO( "[ReloadFileManager] %s : %s/%s", actionStr, ev._directory.c_str(), ev._filename.c_str() );
 				_onFileChanged.broadcast( ev );
 			}
 		}
 	}
-}
+} // namespace sw

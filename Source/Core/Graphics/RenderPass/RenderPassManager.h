@@ -14,11 +14,10 @@ namespace sw
 	{
 
 	public:
-
 		/** @brief 매니저를 초기화합니다. */
-		bool		initialize();
+		bool initialize();
 		/** @brief 캐시를 비우고 종료합니다. */
-		void		shutdown();
+		void shutdown();
 
 		/** @brief XML 에셋 경로에서 렌더 패스를 로드(또는 캐시 반환)합니다. */
 		RenderPassResource* loadRenderPass( const std::string_view assetRelativePath );
@@ -30,11 +29,11 @@ namespace sw
 		void clearCache();
 
 	public:
-		RenderPassManager()					  = default;
-		~RenderPassManager() 				  = default;
-		RenderPassManager( const RenderPassManager& ) = delete;
+		RenderPassManager()										 = default;
+		~RenderPassManager()									 = default;
+		RenderPassManager( const RenderPassManager& )			 = delete;
 		RenderPassManager& operator=( const RenderPassManager& ) = delete;
 
 		std::unordered_map<hashed_string, std::unique_ptr<RenderPassResource>> _renderPassMap;
 	};
-}
+} // namespace sw

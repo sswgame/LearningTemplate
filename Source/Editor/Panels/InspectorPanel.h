@@ -16,10 +16,10 @@ namespace sw
 	public:
 		const char* getWindowTitle() const override { return "RHI & Engine Inspector"; }
 		/** @brief 인스펙터 UI를 그립니다. */
-		void		draw( const EditorUIContext& ctx ) override;
+		void draw( const EditorUIContext& ctx ) override;
 
 	private:
 		/** @brief Material 파라미터 UI를 그립니다. */
 		void renderMaterialUI( Material* material, IRHIDevice* rhiDevice );
 	};
-}
+} // namespace sw

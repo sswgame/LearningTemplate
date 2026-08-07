@@ -40,8 +40,8 @@ namespace sw
 		Material* getMaterial() const;
 
 	private:
-		std::string _name;
+		std::string						   _name;
 		std::unique_ptr<GameObjectManager> _objectManager;
-		std::unique_ptr<Material> _material;
+		std::unique_ptr<Material>		   _material;
 	};
-}
+} // namespace sw

@@ -161,4 +161,4 @@ namespace sw
 		uint32 _capacity	  = Capacity;
 		uint32 _length		  = 0;
 	};
-}
+} // namespace sw

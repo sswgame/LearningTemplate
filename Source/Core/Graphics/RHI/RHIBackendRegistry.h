@@ -39,5 +39,5 @@ namespace sw
 	};
 
 	/** @brief C ABI for RHI MODULE DLLs — export as: extern "C" SW_MODULE_API IRHIDevice* createRHIDevice(); */
-	using PFN_CreateRHIDevice = IRHIDevice* ( * )();
-}
+	using PFN_CreateRHIDevice = IRHIDevice* (*)();
+} // namespace sw

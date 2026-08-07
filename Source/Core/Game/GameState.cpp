@@ -8,7 +8,7 @@ namespace sw
 	namespace
 	{
 		GameState s_gameState = GameState::Stopped;
-	}
+	} // namespace
 
 	GameState getGameState()
 	{
@@ -19,4 +19,4 @@ namespace sw
 	{
 		s_gameState = state;
 	}
-}
+} // namespace sw

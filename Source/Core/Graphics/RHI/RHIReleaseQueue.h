@@ -17,7 +17,6 @@ namespace sw
 	class SW_API RHIReleaseQueue
 	{
 	public:
-
 		/** @brief frameLatency 프레임 뒤 해제를 수행하는 큐를 만듭니다. */
 		explicit RHIReleaseQueue( uint32 frameLatency = 3 );
 		~RHIReleaseQueue() = default;
@@ -46,4 +45,4 @@ namespace sw
 		std::vector<DeferredEntry> _entries;
 		mutable std::mutex		   _mutex;
 	};
-}
+} // namespace sw

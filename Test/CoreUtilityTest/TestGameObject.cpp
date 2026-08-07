@@ -35,7 +35,7 @@ namespace sw
 			_playCount++;
 		}
 	};
-}
+} // namespace sw
 
 SW_TEST_CASE( GameObjectTest, MultiSameComponentAttachment )
 {
@@ -81,8 +81,8 @@ SW_TEST_CASE( GameObjectTest, EditorDynamicComponentAttachment )
 	const std::vector<sw::hashed_string>& types = sw::getComponentManager().getRegisteredComponentTypes();
 	SW_EXPECT_EQUAL( 2u, static_cast<uint32>( types.size() ) );
 
-	sw::GameObject actor( sw::hashed_string( "EditorActor" ) );
-	sw::MockMeshComponent* comp1 = actor.addComponent<sw::MockMeshComponent>();
+	sw::GameObject			actor( sw::hashed_string( "EditorActor" ) );
+	sw::MockMeshComponent*	comp1 = actor.addComponent<sw::MockMeshComponent>();
 	sw::MockAudioComponent* comp2 = actor.addComponent<sw::MockAudioComponent>();
 
 	SW_EXPECT_TRUE( comp1 != nullptr );
@@ -296,4 +296,3 @@ SW_TEST_CASE( PostEditChangePropertyTest, CallbackOnPropertyChanged )
 // SW_TEST_CASE( ObjectStateXmlSerializerTest, SaveAndLoadXml )\n// Temporarily disabled due to timeout issue
 
 // SW_TEST_CASE( GameObjectManagerTest, ParallelObjectTicking )\n// Temporarily disabled due to timeout issue
-

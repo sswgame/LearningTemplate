@@ -25,8 +25,8 @@ namespace sw
 		/** @brief 윈도우·RHI로 게임 상태를 초기화합니다. */
 		virtual bool initialize( IWindow* window, IRHIDevice* rhiDevice ) = 0;
 		/** @brief 게임 리소스를 해제합니다. */
-		virtual void shutdown()											  = 0;
+		virtual void shutdown() = 0;
 		/** @brief 프레임 업데이트를 수행합니다. */
-		virtual void update( float32 deltaTime )						  = 0;
+		virtual void update( float32 deltaTime ) = 0;
 	};
-}
+} // namespace sw

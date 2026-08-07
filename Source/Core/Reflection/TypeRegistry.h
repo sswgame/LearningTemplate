@@ -38,23 +38,23 @@ namespace sw
 
 	struct SW_API TypeRegistrar
 	{
-		void			(*_registerFunc)(TypeRegistry&);
-		TypeRegistrar*	_next;
+		void ( *_registerFunc )( TypeRegistry& );
+		TypeRegistrar* _next;
 
 		// DLL 경계를 넘는 단일 head (헤더 inline static 금지)
 		static TypeRegistrar*& getHead();
 
-		TypeRegistrar( void (*registerFunc)(TypeRegistry&) );
+		TypeRegistrar( void ( *registerFunc )( TypeRegistry& ) );
 	};
 
 	struct SW_API EnumRegistrar
 	{
-		void			(*_registerFunc)(TypeRegistry&);
-		EnumRegistrar*	_next;
+		void ( *_registerFunc )( TypeRegistry& );
+		EnumRegistrar* _next;
 
 		static EnumRegistrar*& getHead();
 
-		EnumRegistrar( void (*registerFunc)(TypeRegistry&) );
+		EnumRegistrar( void ( *registerFunc )( TypeRegistry& ) );
 	};
 
 	/** @brief Registers enums/types linked into Core.dll (must be called from Core, after TypeRegistry is bound). */
@@ -71,4 +71,4 @@ namespace sw
 		return parent ? parent->isA( targetFqn ) : false;
 	}
 
-}
+} // namespace sw

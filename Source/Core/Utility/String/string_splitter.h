@@ -16,20 +16,17 @@ namespace sw
 		using value_type = T;
 
 	public:
-
 		/**
 		 * @brief 구분자 기반 분할기를 생성합니다
 		 */
 		explicit basic_string_splitter( std::basic_string_view<value_type> str, std::initializer_list<std::basic_string_view<value_type>> delimList );
 
 	public:
-
 		uint32 getCount() const { return static_cast<uint32>( _splitList.size() ); }
 
 		const std::vector<std::basic_string_view<value_type>>& getSplitList() const { return _splitList; }
 
 	private:
-
 		/**
 		 * @brief 구분자로 분할합니다
 		 */
@@ -103,4 +100,4 @@ namespace sw
 	}
 #pragma endregion
 
-}
+} // namespace sw

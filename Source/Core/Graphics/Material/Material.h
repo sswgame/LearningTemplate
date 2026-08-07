@@ -40,8 +40,8 @@ namespace sw
 	 */
 	struct MaterialProperty
 	{
-		std::string			 name;   ///< 파라미터 변수 이름
-		MaterialPropertyType type;   ///< 데이터 타입
+		std::string			 name;	 ///< 파라미터 변수 이름
+		MaterialPropertyType type;	 ///< 데이터 타입
 		uint32				 offset; ///< CBuffer 내 바이트 오프셋
 		uint32				 size;	 ///< 바이트 크기
 	};
@@ -53,7 +53,7 @@ namespace sw
 	struct MaterialData
 	{
 		std::vector<MaterialProperty> properties; ///< 파라미터 메타데이터 리스트
-		std::vector<uint8>			  buffer;     ///< Constant Buffer 사본 바이트 배열
+		std::vector<uint8>			  buffer;	  ///< Constant Buffer 사본 바이트 배열
 	};
 
 	/**
@@ -63,7 +63,7 @@ namespace sw
 	class SW_API Material
 	{
 	public:
-		Material()	= default;
+		Material() = default;
 
 		/**
 		 * @brief .material 파일로부터 머티리얼 정보를 읽어 GPU 자원 생성 및 Bindless 등록
@@ -133,7 +133,7 @@ namespace sw
 		Material* getParent() const { return _parentMaterial; }
 
 		/** @brief 스칼라 파라미터 오버라이드를 설정합니다. */
-		void	setScalarParameter( hashed_string name, float32 value );
+		void setScalarParameter( hashed_string name, float32 value );
 		/** @brief 스칼라 파라미터 값(오버라이드 또는 부모)을 반환합니다. */
 		float32 getScalarParameter( hashed_string name, float32 defaultValue = 0.0f ) const;
 
@@ -142,7 +142,7 @@ namespace sw
 		const float32* getVectorParameter( hashed_string name ) const;
 
 		/** @brief 텍스처 디스크립터 파라미터 오버라이드를 설정합니다. */
-		void			   setTextureParameter( hashed_string name, RHIDescriptorIndex descIdx );
+		void setTextureParameter( hashed_string name, RHIDescriptorIndex descIdx );
 		/** @brief 텍스처 파라미터 디스크립터 인덱스를 반환합니다. */
 		RHIDescriptorIndex getTextureParameter( hashed_string name ) const;
 
@@ -159,4 +159,4 @@ namespace sw
 		std::unordered_map<hashed_string, std::array<float32, 4>> _vectorOverrides;
 		std::unordered_map<hashed_string, RHIDescriptorIndex>	  _textureOverrides;
 	};
-}
+} // namespace sw

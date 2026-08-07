@@ -45,118 +45,118 @@ namespace sw
 		std::vector<int32>			 _scores;
 		std::map<std::string, int32> _stats;
 	};
+} // namespace sw
+
+static void RegisterTypes( sw::TypeRegistry& registry )
+{
+	{
+		sw::TypeInfo info;
+		info._name				 = sw::hashed_string( "DummyBase" );
+		info._fullyQualifiedName = sw::hashed_string( "sw::DummyBase" );
+		info._parentFQN			 = sw::hashed_string( "" );
+		info._size				 = sizeof( sw::DummyBase );
+		registry.registerClass( info );
+	}
+
+	{
+		sw::TypeInfo info;
+		info._name				 = sw::hashed_string( "DummyActor" );
+		info._fullyQualifiedName = sw::hashed_string( "sw::DummyActor" );
+		info._parentFQN			 = sw::hashed_string( "sw::DummyBase" );
+		info._size				 = sizeof( sw::DummyActor );
+		info._propertyList =
+			{
+				{	  sw::hashed_string( "_hp" ),		  sw::hashed_string( "int32" ),
+				  offsetof( sw::DummyActor,	_hp ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr},
+				{ sw::hashed_string( "_name" ), sw::hashed_string( "std::string" ),
+				  offsetof( sw::DummyActor,	_name ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr},
+				{sw::hashed_string( "_speed" ),	 sw::hashed_string( "float32" ),
+				  offsetof( sw::DummyActor, _speed ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr},
+		};
+		registry.registerClass( info );
+	}
+
+	{
+		sw::TypeInfo info;
+		info._name				 = sw::hashed_string( "ComplexData" );
+		info._fullyQualifiedName = sw::hashed_string( "sw::ComplexData" );
+		info._parentFQN			 = sw::hashed_string( "" );
+		info._size				 = sizeof( sw::ComplexData );
+		info._propertyList =
+			{
+				{ sw::hashed_string( "_id" ), sw::hashed_string( "int32" ),
+				  offsetof( sw::ComplexData, _id ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr },
+				{ sw::hashed_string( "_title" ), sw::hashed_string( "std::string" ),
+				  offsetof( sw::ComplexData, _title ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr },
+				{ sw::hashed_string( "_flags" ), sw::hashed_string( "sw::DummyBitFlag" ),
+				  offsetof( sw::ComplexData, _flags ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr },
+				{ sw::hashed_string( "_scores" ), sw::hashed_string( "std::vector<int32>" ),
+				  offsetof( sw::ComplexData, _scores ), true, sw::ContainerKind::Sequence, sw::hashed_string( "int32" ), sw::hashed_string(),
+				  std::make_shared<sw::VectorWrapper<std::vector<int32>>>() },
+				{ sw::hashed_string( "_stats" ), sw::hashed_string( "std::map<std::string, int32>" ),
+				  offsetof( sw::ComplexData, _stats ), true, sw::ContainerKind::Map, sw::hashed_string( "int32" ), sw::hashed_string( "std::string" ),
+				  std::make_shared<sw::MapWrapper<std::map<std::string, int32>>>() },
+		};
+		registry.registerClass( info );
+	}
 }
 
-	static void RegisterTypes(sw::TypeRegistry& registry)
+static void RegisterEnums( sw::TypeRegistry& registry )
+{
+
 	{
-		{
-			sw::TypeInfo info;
-			info._name				 = sw::hashed_string( "DummyBase" );
-			info._fullyQualifiedName = sw::hashed_string( "sw::DummyBase" );
-			info._parentFQN			 = sw::hashed_string( "" );
-			info._size				 = sizeof( sw::DummyBase );
-			registry.registerClass( info );
-		}
-
-		{
-			sw::TypeInfo info;
-			info._name				 = sw::hashed_string( "DummyActor" );
-			info._fullyQualifiedName = sw::hashed_string( "sw::DummyActor" );
-			info._parentFQN			 = sw::hashed_string( "sw::DummyBase" );
-			info._size				 = sizeof( sw::DummyActor );
-			info._propertyList =
-				{
-					{	  sw::hashed_string( "_hp" ),		  sw::hashed_string( "int32" ),
-					  offsetof( sw::DummyActor,	_hp ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr},
-					{ sw::hashed_string( "_name" ), sw::hashed_string( "std::string" ),
-					  offsetof( sw::DummyActor,	_name ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr},
-					{sw::hashed_string( "_speed" ),	 sw::hashed_string( "float32" ),
-					  offsetof( sw::DummyActor, _speed ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr},
-			};
-			registry.registerClass( info );
-		}
-
-		{
-			sw::TypeInfo info;
-			info._name				 = sw::hashed_string( "ComplexData" );
-			info._fullyQualifiedName = sw::hashed_string( "sw::ComplexData" );
-			info._parentFQN			 = sw::hashed_string( "" );
-			info._size				 = sizeof( sw::ComplexData );
-			info._propertyList =
-				{
-					{ sw::hashed_string( "_id" ), sw::hashed_string( "int32" ),
-					  offsetof( sw::ComplexData, _id ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr },
-					{ sw::hashed_string( "_title" ), sw::hashed_string( "std::string" ),
-					  offsetof( sw::ComplexData, _title ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr },
-					{ sw::hashed_string( "_flags" ), sw::hashed_string( "sw::DummyBitFlag" ),
-					  offsetof( sw::ComplexData, _flags ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr },
-					{ sw::hashed_string( "_scores" ), sw::hashed_string( "std::vector<int32>" ),
-					  offsetof( sw::ComplexData, _scores ), true, sw::ContainerKind::Sequence, sw::hashed_string( "int32" ), sw::hashed_string(),
-					  std::make_shared<sw::VectorWrapper<std::vector<int32>>>() },
-					{ sw::hashed_string( "_stats" ), sw::hashed_string( "std::map<std::string, int32>" ),
-					  offsetof( sw::ComplexData, _stats ), true, sw::ContainerKind::Map, sw::hashed_string( "int32" ), sw::hashed_string( "std::string" ),
-					  std::make_shared<sw::MapWrapper<std::map<std::string, int32>>>() },
-			};
-			registry.registerClass( info );
-		}
+		sw::EnumInfo info;
+		info._name				 = sw::hashed_string( "DummyType" );
+		info._fullyQualifiedName = sw::hashed_string( "sw::DummyType" );
+		info._bIsBitFlag		 = false;
+		info._mapNameToValue =
+			{
+				{ sw::hashed_string( "None" ), 0},
+				{sw::hashed_string( "TypeA" ), 1},
+				{sw::hashed_string( "TypeB" ), 2},
+		};
+		info._mapValueToName =
+			{
+				{0,	 sw::hashed_string( "None" )},
+				{1, sw::hashed_string( "TypeA" )},
+				{2, sw::hashed_string( "TypeB" )},
+		};
+		registry.registerEnum( info );
 	}
 
-	static void RegisterEnums(sw::TypeRegistry& registry)
 	{
-
-		{
-			sw::EnumInfo info;
-			info._name				 = sw::hashed_string( "DummyType" );
-			info._fullyQualifiedName = sw::hashed_string( "sw::DummyType" );
-			info._bIsBitFlag		 = false;
-			info._mapNameToValue =
-				{
-					{ sw::hashed_string( "None" ), 0},
-					{sw::hashed_string( "TypeA" ), 1},
-					{sw::hashed_string( "TypeB" ), 2},
-			};
-			info._mapValueToName =
-				{
-					{0,	 sw::hashed_string( "None" )},
-					{1, sw::hashed_string( "TypeA" )},
-					{2, sw::hashed_string( "TypeB" )},
-			};
-			registry.registerEnum( info );
-		}
-
-		{
-			sw::EnumInfo info;
-			info._name				 = sw::hashed_string( "DummyBitFlag" );
-			info._fullyQualifiedName = sw::hashed_string( "sw::DummyBitFlag" );
-			info._bIsBitFlag		 = true;
-			info._mapNameToValue =
-				{
-					{	  sw::hashed_string( "None" ), 0},
-					{sw::hashed_string( "OptionA" ), 1},
-					{sw::hashed_string( "OptionB" ), 2},
-					{sw::hashed_string( "OptionC" ), 4},
-			};
-			info._mapValueToName =
-				{
-					{0,	 sw::hashed_string( "None" )},
-					{1, sw::hashed_string( "OptionA" )},
-					{2, sw::hashed_string( "OptionB" )},
-					{4, sw::hashed_string( "OptionC" )},
-			};
-			registry.registerEnum( info );
-		}
+		sw::EnumInfo info;
+		info._name				 = sw::hashed_string( "DummyBitFlag" );
+		info._fullyQualifiedName = sw::hashed_string( "sw::DummyBitFlag" );
+		info._bIsBitFlag		 = true;
+		info._mapNameToValue =
+			{
+				{	  sw::hashed_string( "None" ), 0},
+				{sw::hashed_string( "OptionA" ), 1},
+				{sw::hashed_string( "OptionB" ), 2},
+				{sw::hashed_string( "OptionC" ), 4},
+		};
+		info._mapValueToName =
+			{
+				{0,	 sw::hashed_string( "None" )},
+				{1, sw::hashed_string( "OptionA" )},
+				{2, sw::hashed_string( "OptionB" )},
+				{4, sw::hashed_string( "OptionC" )},
+		};
+		registry.registerEnum( info );
 	}
+}
 
-	struct RegistrarInit
+struct RegistrarInit
+{
+	RegistrarInit()
 	{
-		RegistrarInit()
-		{
-			static sw::TypeRegistrar s_regType(&RegisterTypes);
-			static sw::EnumRegistrar s_regEnum(&RegisterEnums);
-		}
-	};
+		static sw::TypeRegistrar s_regType( &RegisterTypes );
+		static sw::EnumRegistrar s_regEnum( &RegisterEnums );
+	}
+};
 
-	static RegistrarInit s_RegistrarInit;
+static RegistrarInit s_RegistrarInit;
 
 SW_TEST_CASE( Reflection_TypeRegistry, FindRegisteredClass )
 {
@@ -815,7 +815,7 @@ SW_TEST_CASE( Reflection_InnerTypes, FindInnerClass )
 		return;
 
 	sw::InnerNamespaceForTest::OuterStruct::InnerClass instance;
-	const sw::PropertyInfo*						propId = typeInfoFqn->findProperty( sw::hashed_string( "_id" ) );
+	const sw::PropertyInfo*							   propId = typeInfoFqn->findProperty( sw::hashed_string( "_id" ) );
 	SW_EXPECT_TRUE( propId != nullptr );
 	if ( propId )
 	{
@@ -861,7 +861,7 @@ SW_TEST_CASE( Reflection_InnerTypes, InnerStructSerializationRoundtrip )
 	SW_EXPECT_TRUE( !json.empty() );
 
 	sw::InnerNamespaceForTest::OuterStruct::InnerStruct dstJson;
-	bool										 jsonOk = sw::JsonSerializer::deserialize( &dstJson, *typeInfo, json );
+	bool												jsonOk = sw::JsonSerializer::deserialize( &dstJson, *typeInfo, json );
 	SW_EXPECT_TRUE( jsonOk );
 	SW_EXPECT_EQUAL( std::string( "SerializationTest" ), dstJson._innerData );
 	SW_EXPECT_NEAR_EQUAL( 12.34f, dstJson._score, 0.01f );
@@ -870,7 +870,7 @@ SW_TEST_CASE( Reflection_InnerTypes, InnerStructSerializationRoundtrip )
 	SW_EXPECT_TRUE( !xml.empty() );
 
 	sw::InnerNamespaceForTest::OuterStruct::InnerStruct dstXml;
-	bool										 xmlOk = sw::XmlSerializer::deserialize( &dstXml, *typeInfo, xml );
+	bool												xmlOk = sw::XmlSerializer::deserialize( &dstXml, *typeInfo, xml );
 	SW_EXPECT_TRUE( xmlOk );
 	SW_EXPECT_EQUAL( std::string( "SerializationTest" ), dstXml._innerData );
 	SW_EXPECT_NEAR_EQUAL( 12.34f, dstXml._score, 0.01f );

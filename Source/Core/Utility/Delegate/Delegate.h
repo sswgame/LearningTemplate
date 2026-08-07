@@ -133,7 +133,7 @@ namespace sw
 		stub_function		  _stubFunc	 = nullptr;
 		std::shared_ptr<void> _lifeKeeper;
 	};
-}
+} // namespace sw
 
 namespace sw
 {
@@ -232,15 +232,15 @@ namespace sw
 	private:
 		std::vector<DelegateEntry> _delegateList;
 	};
-}
+} // namespace sw
 
 /** @brief SW_DECLARE_DELEGATE 매크로 정의입니다. */
-#define SW_DECLARE_DELEGATE( ReturnType, DelegateName, ... )			using DelegateName = sw::Delegate<ReturnType( __VA_ARGS__ )>
+#define SW_DECLARE_DELEGATE( ReturnType, DelegateName, ... ) using DelegateName = sw::Delegate<ReturnType( __VA_ARGS__ )>
 /** @brief SW_DECLARE_MULTI_CAST_DELEGATE 매크로 정의입니다. */
 #define SW_DECLARE_MULTI_CAST_DELEGATE( ReturnType, DelegateName, ... ) using DelegateName = sw::MulticastDelegate<ReturnType( __VA_ARGS__ )>
 /** @brief SW_DELEGATE_FUNCTION 매크로 정의입니다. */
-#define SW_DELEGATE_FUNCTION( DelegateName, Func )						DelegateName::create<Func>()
+#define SW_DELEGATE_FUNCTION( DelegateName, Func ) DelegateName::create<Func>()
 /** @brief SW_DELEGATE_METHOD 매크로 정의입니다. */
-#define SW_DELEGATE_METHOD( DelegateName, Method, Instance )			DelegateName::create<Method>( Instance )
+#define SW_DELEGATE_METHOD( DelegateName, Method, Instance ) DelegateName::create<Method>( Instance )
 /** @brief SW_DELEGATE_LAMBDA 매크로 정의입니다. */
-#define SW_DELEGATE_LAMBDA( DelegateName, ... )							DelegateName::create( __VA_ARGS__ )
+#define SW_DELEGATE_LAMBDA( DelegateName, ... ) DelegateName::create( __VA_ARGS__ )

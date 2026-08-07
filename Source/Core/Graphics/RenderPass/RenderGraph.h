@@ -17,10 +17,10 @@ namespace sw
 	 */
 	struct RenderGraphNode
 	{
-		hashed_string			   _name;             ///< 렌더 패스 고유 이름 (해시)
-		std::vector<hashed_string> _inputs;	          ///< 입력 종속 자원 해시 리스트
-		std::vector<hashed_string> _outputs;          ///< 출력 생산 자원 해시 리스트
-		bool					   _bCulled = false;  ///< 미사용 패스 컬링 여부
+		hashed_string			   _name;			 ///< 렌더 패스 고유 이름 (해시)
+		std::vector<hashed_string> _inputs;			 ///< 입력 종속 자원 해시 리스트
+		std::vector<hashed_string> _outputs;		 ///< 출력 생산 자원 해시 리스트
+		bool					   _bCulled = false; ///< 미사용 패스 컬링 여부
 	};
 
 	/**
@@ -77,6 +77,6 @@ namespace sw
 
 	private:
 		std::vector<RenderGraphNode> _nodes;
-		std::vector<hashed_string>  _compiledExecutionOrder;
+		std::vector<hashed_string>	 _compiledExecutionOrder;
 	};
-}
+} // namespace sw

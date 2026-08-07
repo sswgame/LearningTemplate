@@ -104,7 +104,7 @@
 	#endif
 #else
 	/** @brief SW_API 매크로 정의입니다. */
-	#define SW_API __attribute__( ( visibility( "default" ) ) )
+	#define SW_API		  __attribute__( ( visibility( "default" ) ) )
 	#define SW_MODULE_API __attribute__( ( visibility( "default" ) ) )
 #endif
 
@@ -147,11 +147,11 @@ char ( &arrayCountHelper( const T ( & )[N] ) )[N + 1];
 // ============================================================================
 #if defined( _MSC_VER )
 	/** @brief SW_INLINE 매크로 정의입니다. */
-	#define SW_INLINE		 __forceinline
+	#define SW_INLINE __forceinline
 	/** @brief SW_RESTRICT 매크로 정의입니다. */
-	#define SW_RESTRICT		 __restrict
+	#define SW_RESTRICT __restrict
 	/** @brief SW_LIKELY 매크로 정의입니다. */
-	#define SW_LIKELY( x )	 ( x )
+	#define SW_LIKELY( x ) ( x )
 	/** @brief SW_UNLIKELY 매크로 정의입니다. */
 	#define SW_UNLIKELY( x ) ( x )
 #elif defined( __GNUC__ ) || defined( __clang__ )
@@ -186,11 +186,10 @@ char ( &arrayCountHelper( const T ( & )[N] ) )[N + 1];
 		__pragma( warning( pop ) )
 	/** @brief SW_DISABLE_WARNING 매크로 정의입니다. */
 	#define SW_DISABLE_WARNING( warningNumber ) \
-		__pragma( warning( disable \
-						   : warningNumber ) )
+		__pragma( warning( disable : warningNumber ) )
 #elif defined( __GNUC__ ) || defined( __clang__ )
 	/** @brief SW_PRAGMA 매크로 정의입니다. */
-	#define SW_PRAGMA( X ) _Pragma( #X )
+	#define SW_PRAGMA( X )			_Pragma( #X )
 	/** @brief SW_DISABLE_WARNING_PUSH 매크로 정의입니다. */
 	#define SW_DISABLE_WARNING_PUSH SW_PRAGMA( GCC diagnostic push )
 	/** @brief SW_DISABLE_WARNING_POP 매크로 정의입니다. */

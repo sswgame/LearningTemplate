@@ -20,4 +20,3 @@ SW_TEST_CASE( Utility_Resource, GetResourcePathWithFolderNameEmptyForNonexistent
 }
 
 // SW_TEST_CASE( Utility_Resource, ResourceFolderPathsAndCacheClear )\n// Temporarily disabled due to resource path issue
-

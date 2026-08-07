@@ -17,7 +17,6 @@ namespace sw
 		friend class FormatString;
 
 	public:
-
 		enum class Alignment : uint8
 		{
 			Right,
@@ -221,7 +220,6 @@ namespace sw
 	class FormatString
 	{
 	public:
-
 		template <typename... Args>
 		static void formatstring( utf8* SW_RESTRICT buffer, uint32 capacity, std::string_view format, Args&&... args ) noexcept
 		{
@@ -712,7 +710,7 @@ namespace sw
 	{
 		FormatString::formatstring( buffer, capacity, format, std::forward<Args>( args )... );
 	}
-}
+} // namespace sw
 
 namespace std
 {
@@ -727,4 +725,4 @@ namespace std
 
 		using type = std::conditional_t<TIndex == 0, TType, sw::Format>;
 	};
-}
+} // namespace std

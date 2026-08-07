@@ -70,13 +70,13 @@ namespace sw
 		bool isActiveInHierarchy() const { return _bActive && _bIsActiveInHierarchy; }
 
 		/** @brief 태그 추가 */
-		void				addTag( TagID tag ) { _tags.addTag( tag ); }
+		void addTag( TagID tag ) { _tags.addTag( tag ); }
 		/** @brief 태그 제거 */
-		void				removeTag( TagID tag ) { _tags.removeTag( tag ); }
+		void removeTag( TagID tag ) { _tags.removeTag( tag ); }
 		/** @brief 태그 소유 검사 */
-		bool				hasTag( TagID tag, bool bExactMatch = false ) const { return _tags.hasTag( tag, bExactMatch ); }
+		bool hasTag( TagID tag, bool bExactMatch = false ) const { return _tags.hasTag( tag, bExactMatch ); }
 		/** @brief 태그 매칭 조건 검사 */
-		bool				matchTags( const TagContainer& required, const TagContainer& forbidden ) const { return _tags.matchTags( required, forbidden ); }
+		bool matchTags( const TagContainer& required, const TagContainer& forbidden ) const { return _tags.matchTags( required, forbidden ); }
 		/** @brief 소유한 태그 컨테이너 참조 반환 */
 		const TagContainer& getTags() const { return _tags; }
 
@@ -171,9 +171,9 @@ namespace sw
 		void markTickOrderDirty() { _bIsTickOrderDirty = true; }
 
 	private:
-		std::unordered_map<hashed_string, std::vector<std::unique_ptr<Component>>> _components; ///< 타입별 컴포넌트 맵
+		std::unordered_map<hashed_string, std::vector<std::unique_ptr<Component>>> _components;		///< 타입별 컴포넌트 맵
 		std::vector<Component*>													   _flatComponents; ///< 플랫 접근용 컴포넌트 벡터
-		TagContainer															   _tags;           ///< 태그 정보
+		TagContainer															   _tags;			///< 태그 정보
 
 		PROPERTY()
 		uint64 _objectId = 0; ///< 오브젝트 고유 시리얼 번호
@@ -182,11 +182,11 @@ namespace sw
 		hashed_string _name; ///< 오브젝트 식별 명칭
 
 		PROPERTY()
-		uint8 _bActive				: 1; ///< 자체 활성화 비트
-		uint8 _bIsActiveInHierarchy : 1; ///< 최종 활성 비트(현재 setActive와 동기화; 향후 부모 계층용)
-		uint8 _bIsTickOrderDirty	: 1; ///< Tick 우선순위 변경 마크
-		[[maybe_unused]] uint8 _reservedFlags		: 5;
+		uint8				   _bActive				 : 1; ///< 자체 활성화 비트
+		uint8				   _bIsActiveInHierarchy : 1; ///< 최종 활성 비트(현재 setActive와 동기화; 향후 부모 계층용)
+		uint8				   _bIsTickOrderDirty	 : 1; ///< Tick 우선순위 변경 마크
+		[[maybe_unused]] uint8 _reservedFlags		 : 5;
 
 		static uint64 _s_nextObjectId; ///< 다음 발급할 고유 ID 카운터
 	};
-}
+} // namespace sw

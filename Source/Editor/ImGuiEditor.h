@@ -20,17 +20,17 @@ namespace sw
 		~ImGuiEditor() override;
 
 		/** @brief ImGui 컨텍스트·백엔드·폰트·기본 패널을 초기화합니다. */
-		bool  initialize( IWindow* window, IRHIDevice* rhiDevice ) override;
+		bool initialize( IWindow* window, IRHIDevice* rhiDevice ) override;
 		/** @brief 패널·백엔드·ImGui 컨텍스트를 종료합니다. */
-		void  shutdown() override;
+		void shutdown() override;
 		/** @brief 각 패널의 preRender를 호출합니다. */
-		void  preRender( IRHIDevice* rhiDevice ) override;
+		void preRender( IRHIDevice* rhiDevice ) override;
 		/** @brief 도킹 스페이스와 패널을 그립니다. */
-		void  render( const EditorUIContext& context ) override;
+		void render( const EditorUIContext& context ) override;
 		/** @brief Present 이후 멀티 뷰포트 보조 윈도우를 렌더합니다. */
-		void  postPresent( IRHIDevice* rhiDevice ) override;
+		void postPresent( IRHIDevice* rhiDevice ) override;
 		/** @brief 네이티브 이벤트를 플랫폼 백엔드로 전달합니다. */
-		bool  processEvent( const NativeWindowEvent& event ) override;
+		bool processEvent( const NativeWindowEvent& event ) override;
 		/** @brief 렌더러 백엔드에 텍스처를 등록합니다. */
 		void* registerTexture( RHITextureHandle texture ) override;
 
@@ -56,8 +56,8 @@ namespace sw
 		std::unique_ptr<IImGuiRendererBackend>	   _rendererBackend;
 		std::vector<std::unique_ptr<IEditorPanel>> _panels;
 
-		uint8 _bInitialized		  : 1;
-		uint8 _bDockLayoutApplied : 1;
-		[[maybe_unused]] uint8 _reservedFlags	  : 6;
+		uint8				   _bInitialized	   : 1;
+		uint8				   _bDockLayoutApplied : 1;
+		[[maybe_unused]] uint8 _reservedFlags	   : 6;
 	};
-}
+} // namespace sw

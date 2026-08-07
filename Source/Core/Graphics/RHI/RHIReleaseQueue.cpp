@@ -18,7 +18,7 @@ namespace sw
 		if ( releaseDelegate.isBound() == false )
 			return;
 
-		std::lock_guard<std::mutex> lock{  _mutex  };
+		std::lock_guard<std::mutex> lock{ _mutex };
 		DeferredEntry				entry;
 		entry._releaseDelegate = releaseDelegate;
 		entry._targetFrame	   = _currentFrame + static_cast<uint64>( _frameLatency );
@@ -29,7 +29,7 @@ namespace sw
 	{
 		std::vector<RHIResourceReleaseDelegate> readyToDestroy;
 		{
-			std::lock_guard<std::mutex> lock{  _mutex  };
+			std::lock_guard<std::mutex> lock{ _mutex };
 			_currentFrame++;
 
 			std::vector<DeferredEntry>::iterator iter = _entries.begin();
@@ -60,7 +60,7 @@ namespace sw
 	{
 		std::vector<DeferredEntry> entriesToFlush;
 		{
-			std::lock_guard<std::mutex> lock{  _mutex  };
+			std::lock_guard<std::mutex> lock{ _mutex };
 			entriesToFlush.swap( _entries );
 		}
 
@@ -75,7 +75,7 @@ namespace sw
 
 	uint32 RHIReleaseQueue::getPendingReleaseCount() const
 	{
-		std::lock_guard<std::mutex> lock{  _mutex  };
+		std::lock_guard<std::mutex> lock{ _mutex };
 		return static_cast<uint32>( _entries.size() );
 	}
-}
+} // namespace sw

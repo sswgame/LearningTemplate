@@ -38,4 +38,4 @@ namespace sw
 		static bool cloneObject( void* dstData, const void* srcData, const TypeInfo& typeInfo );
 	};
 
-}
+} // namespace sw

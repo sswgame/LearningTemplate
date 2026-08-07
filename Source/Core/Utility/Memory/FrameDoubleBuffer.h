@@ -57,4 +57,4 @@ namespace sw
 		FrameArenaAllocator _arenas[2];
 		uint32				_activeIdx = 0;
 	};
-}
+} // namespace sw

@@ -155,4 +155,4 @@ namespace sw
 			this->loadFromXmlFile( assetRelativePath );
 		} ) );
 	}
-}
+} // namespace sw

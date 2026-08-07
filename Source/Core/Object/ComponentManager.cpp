@@ -48,4 +48,4 @@ namespace sw
 		_factories.clear();
 		_registeredTypes.clear();
 	}
-}
+} // namespace sw

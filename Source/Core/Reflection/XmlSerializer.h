@@ -26,60 +26,60 @@ namespace sw
 		/**
 		 * @brief XML 직렬화를 시작합니다
 		 */
-		virtual void		initXmlSerialization( const utf8* rootTagName )			   = 0;
+		virtual void initXmlSerialization( const utf8* rootTagName ) = 0;
 		/**
 		 * @brief 값을 XML로 씁니다
 		 */
-		virtual void		writeValue( const utf8* tagName, const utf8* valueString ) = 0;
+		virtual void writeValue( const utf8* tagName, const utf8* valueString ) = 0;
 		/**
 		 * @brief 배열 구간을 시작합니다
 		 */
-		virtual void		beginArray( const utf8* tagName )						   = 0;
+		virtual void beginArray( const utf8* tagName ) = 0;
 		/**
 		 * @brief 배열 항목을 씁니다
 		 */
-		virtual void		writeArrayItem( const utf8* valueString )				   = 0;
+		virtual void writeArrayItem( const utf8* valueString ) = 0;
 		/**
 		 * @brief 배열 구간을 끝냅니다
 		 */
-		virtual void		endArray()												   = 0;
+		virtual void endArray() = 0;
 		/**
 		 * @brief 맵 구간을 시작합니다
 		 */
-		virtual void		beginMap( const utf8* tagName )							   = 0;
+		virtual void beginMap( const utf8* tagName ) = 0;
 		/**
 		 * @brief 맵 항목을 시작합니다
 		 */
-		virtual void		beginMapEntry()											   = 0;
+		virtual void beginMapEntry() = 0;
 		/**
 		 * @brief 맵 키를 씁니다
 		 */
-		virtual void		writeMapKey( const utf8* keyString )					   = 0;
+		virtual void writeMapKey( const utf8* keyString ) = 0;
 		/**
 		 * @brief 맵 값을 씁니다
 		 */
-		virtual void		writeMapValue( const utf8* valueString )				   = 0;
+		virtual void writeMapValue( const utf8* valueString ) = 0;
 		/**
 		 * @brief 맵 항목을 끝냅니다
 		 */
-		virtual void		endMapEntry()											   = 0;
+		virtual void endMapEntry() = 0;
 		/**
 		 * @brief 맵 구간을 끝냅니다
 		 */
-		virtual void		endMap()												   = 0;
+		virtual void endMap() = 0;
 		/**
 		 * @brief 직렬화를 마무리합니다
 		 */
-		virtual std::string endSerialize()											   = 0;
+		virtual std::string endSerialize() = 0;
 
 		/**
 		 * @brief XML 역직렬화를 시작합니다
 		 */
-		virtual bool initXmlDeserialization( const utf8* xmlStr, const utf8* rootTagName )	   = 0;
+		virtual bool initXmlDeserialization( const utf8* xmlStr, const utf8* rootTagName ) = 0;
 		/**
 		 * @brief XML에서 값을 읽습니다
 		 */
-		virtual bool readValue( const utf8* tagName, std::string& outValue )				   = 0;
+		virtual bool readValue( const utf8* tagName, std::string& outValue ) = 0;
 		/**
 		 * @brief 배열 요소를 순회합니다
 		 */
@@ -87,7 +87,7 @@ namespace sw
 		/**
 		 * @brief 맵 항목을 순회합니다
 		 */
-		virtual bool iterateMap( const utf8* tagName, const XmlMapItemDelegate& callback )	   = 0;
+		virtual bool iterateMap( const utf8* tagName, const XmlMapItemDelegate& callback ) = 0;
 	};
 
 	/**
@@ -103,47 +103,47 @@ namespace sw
 		/**
 		 * @brief XML 직렬화를 시작합니다
 		 */
-		void		initXmlSerialization( const utf8* rootTagName ) override;
+		void initXmlSerialization( const utf8* rootTagName ) override;
 		/**
 		 * @brief 값을 XML로 씁니다
 		 */
-		void		writeValue( const utf8* tagName, const utf8* valueString ) override;
+		void writeValue( const utf8* tagName, const utf8* valueString ) override;
 		/**
 		 * @brief 배열 구간을 시작합니다
 		 */
-		void		beginArray( const utf8* tagName ) override;
+		void beginArray( const utf8* tagName ) override;
 		/**
 		 * @brief 배열 항목을 씁니다
 		 */
-		void		writeArrayItem( const utf8* valueString ) override;
+		void writeArrayItem( const utf8* valueString ) override;
 		/**
 		 * @brief 배열 구간을 끝냅니다
 		 */
-		void		endArray() override;
+		void endArray() override;
 		/**
 		 * @brief 맵 구간을 시작합니다
 		 */
-		void		beginMap( const utf8* tagName ) override;
+		void beginMap( const utf8* tagName ) override;
 		/**
 		 * @brief 맵 항목을 시작합니다
 		 */
-		void		beginMapEntry() override;
+		void beginMapEntry() override;
 		/**
 		 * @brief 맵 키를 씁니다
 		 */
-		void		writeMapKey( const utf8* keyString ) override;
+		void writeMapKey( const utf8* keyString ) override;
 		/**
 		 * @brief 맵 값을 씁니다
 		 */
-		void		writeMapValue( const utf8* valueString ) override;
+		void writeMapValue( const utf8* valueString ) override;
 		/**
 		 * @brief 맵 항목을 끝냅니다
 		 */
-		void		endMapEntry() override;
+		void endMapEntry() override;
 		/**
 		 * @brief 맵 구간을 끝냅니다
 		 */
-		void		endMap() override;
+		void endMap() override;
 		/**
 		 * @brief 직렬화를 마무리합니다
 		 */
@@ -191,4 +191,4 @@ namespace sw
 										const SerializeContext& ctx = SerializeContext::getDefault() );
 	};
 
-}
+} // namespace sw

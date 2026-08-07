@@ -13,6 +13,6 @@ namespace sw
 	public:
 		const char* getWindowTitle() const override { return "Engine RHI Status & Command Line"; }
 		/** @brief 엔진/RHI 상태와 커맨드라인 정보를 그립니다. */
-		void		draw( const EditorUIContext& ctx ) override;
+		void draw( const EditorUIContext& ctx ) override;
 	};
-}
+} // namespace sw

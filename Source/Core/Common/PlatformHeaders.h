@@ -62,7 +62,7 @@
 	/** @brief 무효 소켓 및 에러 코드 추상화 매크로 (Windows) */
 	#define SW_INVALID_SOCKET INVALID_SOCKET
 	/** @brief SW_SOCKET_ERROR 매크로 정의입니다. */
-	#define SW_SOCKET_ERROR	  SOCKET_ERROR
+	#define SW_SOCKET_ERROR SOCKET_ERROR
 #elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
 	#include <sys/types.h>
 	#include <arpa/inet.h>

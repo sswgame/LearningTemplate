@@ -84,7 +84,7 @@ namespace sw
 		const utf8* _tag;
 		CpuTimer	_timer;
 	};
-}
+} // namespace sw
 
 using CpuTimer	 = sw::CpuTimer;
 using ScopeTimer = sw::ScopeTimer;

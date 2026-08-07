@@ -59,7 +59,7 @@ namespace
 		s_recPlayer = args.get<CustomPlayerData>( 0 );
 		s_recItems	= args.get<std::vector<int32>>( 1 );
 	}
-}
+} // namespace
 
 SW_TEST_CASE( Utility_Task, GeneralTaskDAG )
 {

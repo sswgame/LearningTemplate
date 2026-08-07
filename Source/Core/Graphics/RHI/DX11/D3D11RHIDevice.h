@@ -72,46 +72,46 @@ namespace sw
 		RHIPipelineStateHandle createComputePipelineState( const std::string& shaderPath, const std::string& entryPoint = "CSMain" ) override;
 
 		/** @brief 파이프라인 상태 자원 해제 */
-		void				   destroyPipelineState( RHIPipelineStateHandle pso ) override;
+		void destroyPipelineState( RHIPipelineStateHandle pso ) override;
 
 		/** @brief D3D11 그래픽스 셰이더 및 라스터라이저 바인딩 */
-		void				   setPipelineState( RHIPipelineStateHandle pso ) override;
+		void setPipelineState( RHIPipelineStateHandle pso ) override;
 
 		/** @brief D3D11 컴퓨트 셰이더 바인딩 */
-		void				   setComputePipelineState( RHIPipelineStateHandle pso ) override;
+		void setComputePipelineState( RHIPipelineStateHandle pso ) override;
 
 		/** @brief D3D11 렌더 패스 정보 등록 */
-		RHIRenderPassHandle	   createRenderPass( const RHIRenderPassDesc& desc ) override;
+		RHIRenderPassHandle createRenderPass( const RHIRenderPassDesc& desc ) override;
 
 		/** @brief 렌더 패스 정보 제거 */
-		void				   destroyRenderPass( RHIRenderPassHandle pass ) override;
+		void destroyRenderPass( RHIRenderPassHandle pass ) override;
 
 		/** @brief 렌더 패스 바인딩 및 렌더 타깃 설정 */
-		void				   beginRenderPass( const RHIRenderPassBeginInfo& beginInfo ) override;
+		void beginRenderPass( const RHIRenderPassBeginInfo& beginInfo ) override;
 
 		/** @brief 렌더 패스 바인딩 해제 */
-		void				   endRenderPass() override;
+		void endRenderPass() override;
 
 		/** @brief D3D11 Constant Buffer 생성 */
-		RHIBufferHandle	   createConstantBuffer( uint32 size ) override;
+		RHIBufferHandle createConstantBuffer( uint32 size ) override;
 
 		/** @brief D3D11 Constant Buffer 데이터 Map/Unmap 갱신 */
-		void			   updateConstantBuffer( RHIBufferHandle buffer, const void* data, uint32 size ) override;
+		void updateConstantBuffer( RHIBufferHandle buffer, const void* data, uint32 size ) override;
 
 		/** @brief D3D11 Structured Buffer 생성 */
-		RHIBufferHandle	   createStructuredBuffer( uint32 elementSize, uint32 elementCount ) override;
+		RHIBufferHandle createStructuredBuffer( uint32 elementSize, uint32 elementCount ) override;
 
 		/** @brief D3D11 Structured Buffer 데이터 갱신 */
-		void			   updateStructuredBuffer( RHIBufferHandle buffer, const void* data, uint32 size ) override;
+		void updateStructuredBuffer( RHIBufferHandle buffer, const void* data, uint32 size ) override;
 
 		/** @brief D3D11 버퍼 해제 */
-		void			   destroyBuffer( RHIBufferHandle buffer ) override;
+		void destroyBuffer( RHIBufferHandle buffer ) override;
 
 		/** @brief D3D11 2D 텍스처 (RenderTarget / ShaderResource) 생성 */
-		RHITextureHandle   createTexture2D( const RHITextureDesc& desc ) override;
+		RHITextureHandle createTexture2D( const RHITextureDesc& desc ) override;
 
 		/** @brief D3D11 텍스처 해제 */
-		void			   destroyTexture( RHITextureHandle texture ) override;
+		void destroyTexture( RHITextureHandle texture ) override;
 
 		RHIDescriptorIndex registerBindlessTexture( RHITextureHandle /*texture*/ ) override { return kInvalidDescriptorIndex; }
 
@@ -119,19 +119,19 @@ namespace sw
 		RHIDescriptorIndex registerBindlessResource( RHIBufferHandle buffer ) override;
 
 		/** @brief 에뮬레이션용 Bindless 버퍼 해제 */
-		void			   unregisterBindlessResource( RHIDescriptorIndex index ) override;
+		void unregisterBindlessResource( RHIDescriptorIndex index ) override;
 
 		/** @brief 에뮬레이션용 Bindless UAV 등록 */
 		RHIDescriptorIndex registerBindlessUAV( RHIBufferHandle buffer ) override;
 
 		/** @brief 에뮬레이션용 Bindless UAV 해제 */
-		void			   unregisterBindlessUAV( RHIDescriptorIndex index ) override;
+		void unregisterBindlessUAV( RHIDescriptorIndex index ) override;
 
 		/** @brief 컴퓨트 셰이더용 UAV 명시적 슬롯 바인딩 */
-		void			   bindComputeUAV( RHIDescriptorIndex index, uint32 slot ) override;
+		void bindComputeUAV( RHIDescriptorIndex index, uint32 slot ) override;
 
 		/** @brief 기본 삼각형 인덱싱 드로우 호출 */
-		void			   drawTriangle( RHIDescriptorIndex materialDescriptorIndex ) override;
+		void drawTriangle( RHIDescriptorIndex materialDescriptorIndex ) override;
 
 		/** @brief 컴퓨트 셰이더 Dispatch 호출 */
 		void dispatchCompute( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ ) override;
@@ -155,7 +155,7 @@ namespace sw
 		std::unique_ptr<IRHICommandList> createCommandList() override;
 
 		/** @brief 커맨드 리스트 제출 */
-		void							 executeCommandList( IRHICommandList* cmdList ) override;
+		void executeCommandList( IRHICommandList* cmdList ) override;
 
 	private:
 		/**
@@ -185,8 +185,8 @@ namespace sw
 		std::vector<Microsoft::WRL::ComPtr<ID3D11Buffer>> _constantBuffers;
 		std::vector<Microsoft::WRL::ComPtr<ID3D11Buffer>> _structuredBuffers;
 
-		std::vector<ID3D11Buffer*>						  _registeredBindlessVector;
-		std::vector<uint32>								  _bindlessFreeList;
+		std::vector<ID3D11Buffer*> _registeredBindlessVector;
+		std::vector<uint32>		   _bindlessFreeList;
 
 		std::vector<Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView>> _registeredUAVs;
 		std::vector<uint32>											   _uavFreeList;
@@ -210,11 +210,11 @@ namespace sw
 
 		struct TextureRecord
 		{
-			Microsoft::WRL::ComPtr<ID3D11Texture2D>			_texture;
-			Microsoft::WRL::ComPtr<ID3D11RenderTargetView>	_rtv;
+			Microsoft::WRL::ComPtr<ID3D11Texture2D>			 _texture;
+			Microsoft::WRL::ComPtr<ID3D11RenderTargetView>	 _rtv;
 			Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> _srv;
-			uint32											_width	= 0;
-			uint32											_height = 0;
+			uint32											 _width	 = 0;
+			uint32											 _height = 0;
 		};
 		std::unordered_map<RHITextureHandle, TextureRecord> _textures;
 
@@ -222,7 +222,7 @@ namespace sw
 		uint32 _width  = 0;
 		uint32 _height = 0;
 	};
-}
+} // namespace sw
 #else
 namespace sw
 {
@@ -248,11 +248,11 @@ namespace sw
 		void* getNativeSwapChain() const override { return nullptr; }
 		void* getNativeCommandQueue() const override { return nullptr; }
 
-		RHIBufferHandle	   createConstantBuffer( uint32 ) override { return 0; }
-		void			   updateConstantBuffer( RHIBufferHandle, const void*, uint32 ) override {}
-		RHIBufferHandle	   createStructuredBuffer( uint32, uint32 ) override { return 0; }
-		void			   updateStructuredBuffer( RHIBufferHandle, const void*, uint32 ) override {}
-		void			   destroyBuffer( RHIBufferHandle ) override {}
+		RHIBufferHandle createConstantBuffer( uint32 ) override { return 0; }
+		void			updateConstantBuffer( RHIBufferHandle, const void*, uint32 ) override {}
+		RHIBufferHandle createStructuredBuffer( uint32, uint32 ) override { return 0; }
+		void			updateStructuredBuffer( RHIBufferHandle, const void*, uint32 ) override {}
+		void			destroyBuffer( RHIBufferHandle ) override {}
 
 		RHITextureHandle   createTexture2D( const RHITextureDesc& ) override { return 0; }
 		void			   destroyTexture( RHITextureHandle ) override {}
@@ -265,5 +265,5 @@ namespace sw
 		void			   bindComputeUAV( RHIDescriptorIndex, uint32 ) override {}
 		void			   drawTriangle( RHIDescriptorIndex ) override {}
 	};
-}
+} // namespace sw
 #endif

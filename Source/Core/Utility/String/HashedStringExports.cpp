@@ -18,4 +18,4 @@ namespace sw
 		static hashed_wstring::AllocationInfo s_instance;
 		return &s_instance;
 	}
-}
+} // namespace sw

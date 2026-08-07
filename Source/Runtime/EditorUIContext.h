@@ -15,11 +15,11 @@ namespace sw
 	/** @brief App ↔ EditorModule 간 UI 렌더링에 필요한 런타임 컨텍스트 (헤더 결합 최소화) */
 	struct EditorUIContext
 	{
-		float32*			  playerSpeed	  = nullptr;
-		float32*			  clearColor	  = nullptr;
-		Material*			  material		  = nullptr;
-		ShaderReflectionData* reflectionData  = nullptr;
-		IRHIDevice*			  rhiDevice		  = nullptr;
-		void*				  gameTextureID	  = nullptr;
+		float32*			  playerSpeed	 = nullptr;
+		float32*			  clearColor	 = nullptr;
+		Material*			  material		 = nullptr;
+		ShaderReflectionData* reflectionData = nullptr;
+		IRHIDevice*			  rhiDevice		 = nullptr;
+		void*				  gameTextureID	 = nullptr;
 	};
-}
+} // namespace sw

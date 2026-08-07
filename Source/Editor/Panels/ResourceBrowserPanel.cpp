@@ -51,7 +51,7 @@ namespace sw
 				return "File";
 			return ext.c_str();
 		}
-	}
+	} // namespace
 
 	void ResourceBrowserPanel::refreshRoots()
 	{
@@ -120,8 +120,8 @@ namespace sw
 			const std::string& resourceRoot = ResourceUtil::getRootFolderPath();
 			if ( resourceRoot.empty() == false && item.absolutePath.size() > resourceRoot.size() )
 			{
-				std::string rootNorm = FileUtil::normalizePath( resourceRoot );
-				std::string absLower = item.absolutePath;
+				std::string rootNorm  = FileUtil::normalizePath( resourceRoot );
+				std::string absLower  = item.absolutePath;
 				std::string rootLower = rootNorm;
 				std::transform( absLower.begin(), absLower.end(), absLower.begin(), []( unsigned char c )
 				{ return static_cast<char>( std::tolower( c ) ); } );
@@ -247,7 +247,7 @@ namespace sw
 
 	void ResourceBrowserPanel::drawFolderTreeNode( const std::filesystem::path& folderPath, const std::string& label, int depth )
 	{
-		const std::string absPath = FileUtil::normalizePath( folderPath.generic_string() );
+		const std::string absPath  = FileUtil::normalizePath( folderPath.generic_string() );
 		const bool		  selected = ( absPath == _selectedFolderAbs );
 
 		ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth;
@@ -423,10 +423,10 @@ namespace sw
 
 	void ResourceBrowserPanel::drawTilesView( const std::vector<AssetEntry>& visible )
 	{
-		const float cell		= _tileSize;
-		const float padding		= ImGui::GetStyle().ItemSpacing.x;
-		const float panelWidth	= ImGui::GetContentRegionAvail().x;
-		int			columns		= static_cast<int>( ( panelWidth + padding ) / ( cell + padding ) );
+		const float cell	   = _tileSize;
+		const float padding	   = ImGui::GetStyle().ItemSpacing.x;
+		const float panelWidth = ImGui::GetContentRegionAvail().x;
+		int			columns	   = static_cast<int>( ( panelWidth + padding ) / ( cell + padding ) );
 		if ( columns < 1 )
 			columns = 1;
 
@@ -438,8 +438,7 @@ namespace sw
 			if ( index > 0 && ( index % columns ) != 0 )
 				ImGui::SameLine();
 
-			const bool selected = ( entry.absolutePath == _selectedAssetAbs )
-								  || ( entry.bIsDirectory && entry.absolutePath == _selectedFolderAbs );
+			const bool selected = ( entry.absolutePath == _selectedAssetAbs ) || ( entry.bIsDirectory && entry.absolutePath == _selectedFolderAbs );
 			ImGui::PushStyleColor( ImGuiCol_Button, selected ? ImVec4( 0.25f, 0.40f, 0.65f, 1.0f ) : ImVec4( 0.14f, 0.14f, 0.16f, 1.0f ) );
 			ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImVec4( 0.22f, 0.28f, 0.38f, 1.0f ) );
 
@@ -450,16 +449,16 @@ namespace sw
 			if ( ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked( ImGuiMouseButton_Left ) )
 				openAsset( entry );
 
-			ImDrawList* drawList = ImGui::GetWindowDrawList();
-			const ImVec4 tint	 = colorForExtension( entry.bIsDirectory ? std::string{} : entry.extension );
-			const float	 inset	 = 8.0f;
+			ImDrawList*	 drawList = ImGui::GetWindowDrawList();
+			const ImVec4 tint	  = colorForExtension( entry.bIsDirectory ? std::string{} : entry.extension );
+			const float	 inset	  = 8.0f;
 			drawList->AddRectFilled(
 				ImVec2( cursor.x + inset, cursor.y + inset ),
 				ImVec2( cursor.x + cell - inset, cursor.y + cell * 0.62f ),
 				ImGui::ColorConvertFloat4ToU32( tint ),
 				4.0f );
 
-			const char* label = typeLabel( entry.extension, entry.bIsDirectory );
+			const char*	 label	  = typeLabel( entry.extension, entry.bIsDirectory );
 			const ImVec2 textSize = ImGui::CalcTextSize( label );
 			drawList->AddText(
 				ImVec2( cursor.x + ( cell - textSize.x ) * 0.5f, cursor.y + cell * 0.30f ),
@@ -569,4 +568,4 @@ namespace sw
 
 		ImGui::End();
 	}
-}
+} // namespace sw

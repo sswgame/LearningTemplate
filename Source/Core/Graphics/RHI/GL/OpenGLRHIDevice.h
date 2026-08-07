@@ -37,10 +37,10 @@ namespace sw
 		virtual void endFrame( bool vsync ) override;
 
 		/** @brief 백엔드 타입 반환 (OpenGL) */
-		RHIBackend	getBackendType() const override { return RHIBackend::OpenGL; }
+		RHIBackend getBackendType() const override { return RHIBackend::OpenGL; }
 
 		/** @brief OpenGL은 SSBO/UBO 인덱스 바인딩을 지원함 (true 반환) */
-		bool				supportsBindless() const override { return true; }
+		bool supportsBindless() const override { return true; }
 
 		/** @brief 백엔드 이름 문자열 반환 */
 		virtual const utf8* getBackendName() const override { return "OpenGL (glad 4.6 Core)"; }
@@ -64,40 +64,40 @@ namespace sw
 		RHIPipelineStateHandle createComputePipelineState( const std::string& shaderPath, const std::string& entryPoint = "CSMain" ) override;
 
 		/** @brief GLSL 프로그램 객체 삭제 (glDeleteProgram) */
-		void				   destroyPipelineState( RHIPipelineStateHandle pso ) override;
+		void destroyPipelineState( RHIPipelineStateHandle pso ) override;
 
 		/** @brief GLSL 프로그램 바인딩 (glUseProgram) 및 VAO 바인딩 */
-		void				   setPipelineState( RHIPipelineStateHandle pso ) override;
+		void setPipelineState( RHIPipelineStateHandle pso ) override;
 
 		/** @brief GLSL 컴퓨트 프로그램 바인딩 */
-		void				   setComputePipelineState( RHIPipelineStateHandle pso ) override;
+		void setComputePipelineState( RHIPipelineStateHandle pso ) override;
 
 		/** @brief OpenGL 렌더 패스 서술체 생성 */
-		RHIRenderPassHandle	   createRenderPass( const RHIRenderPassDesc& desc ) override;
+		RHIRenderPassHandle createRenderPass( const RHIRenderPassDesc& desc ) override;
 
 		/** @brief 렌더 패스 구조체 해제 */
-		void				   destroyRenderPass( RHIRenderPassHandle pass ) override;
+		void destroyRenderPass( RHIRenderPassHandle pass ) override;
 
 		/** @brief 프레임버퍼 어태치먼트 설정 */
-		void				   beginRenderPass( const RHIRenderPassBeginInfo& beginInfo ) override;
+		void beginRenderPass( const RHIRenderPassBeginInfo& beginInfo ) override;
 
 		/** @brief 렌더 패스 종료 */
-		void				   endRenderPass() override;
+		void endRenderPass() override;
 
 		/** @brief OpenGL UBO (Uniform Buffer Object) 생성 (glGenBuffers) */
-		RHIBufferHandle	   createConstantBuffer( uint32 size ) override;
+		RHIBufferHandle createConstantBuffer( uint32 size ) override;
 
 		/** @brief UBO 데이터 갱신 (glNamedBufferSubData / glBufferSubData) */
-		void			   updateConstantBuffer( RHIBufferHandle buffer, const void* data, uint32 size ) override;
+		void updateConstantBuffer( RHIBufferHandle buffer, const void* data, uint32 size ) override;
 
 		/** @brief OpenGL SSBO (Shader Storage Buffer Object) 생성 */
-		RHIBufferHandle	   createStructuredBuffer( uint32 elementSize, uint32 elementCount ) override;
+		RHIBufferHandle createStructuredBuffer( uint32 elementSize, uint32 elementCount ) override;
 
 		/** @brief SSBO 데이터 갱신 */
-		void			   updateStructuredBuffer( RHIBufferHandle buffer, const void* data, uint32 size ) override;
+		void updateStructuredBuffer( RHIBufferHandle buffer, const void* data, uint32 size ) override;
 
 		/** @brief GL 버퍼 객체 삭제 (glDeleteBuffers) */
-		void			   destroyBuffer( RHIBufferHandle buffer ) override;
+		void destroyBuffer( RHIBufferHandle buffer ) override;
 
 		RHITextureHandle   createTexture2D( const RHITextureDesc& /*desc*/ ) override { return 0; }
 		void			   destroyTexture( RHITextureHandle /*texture*/ ) override {}
@@ -107,19 +107,19 @@ namespace sw
 		RHIDescriptorIndex registerBindlessResource( RHIBufferHandle buffer ) override;
 
 		/** @brief 바인딩 리소스 제거 */
-		void			   unregisterBindlessResource( RHIDescriptorIndex index ) override;
+		void unregisterBindlessResource( RHIDescriptorIndex index ) override;
 
 		/** @brief SSBO (UAV) 바인딩 인덱스 발급 */
 		RHIDescriptorIndex registerBindlessUAV( RHIBufferHandle buffer ) override;
 
 		/** @brief SSBO 바인딩 제거 */
-		void			   unregisterBindlessUAV( RHIDescriptorIndex index ) override;
+		void unregisterBindlessUAV( RHIDescriptorIndex index ) override;
 
 		/** @brief 명시적 바인딩 슬롯에 SSBO 연결 (glBindBufferBase) */
-		void			   bindComputeUAV( RHIDescriptorIndex index, uint32 slot ) override;
+		void bindComputeUAV( RHIDescriptorIndex index, uint32 slot ) override;
 
 		/** @brief 기본 삼각형 그리기 (glDrawArrays) */
-		void			   drawTriangle( RHIDescriptorIndex materialDescriptorIndex ) override;
+		void drawTriangle( RHIDescriptorIndex materialDescriptorIndex ) override;
 
 		/** @brief glDispatchCompute 컴퓨트 실행 */
 		void dispatchCompute( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ ) override;
@@ -140,7 +140,7 @@ namespace sw
 		std::unique_ptr<IRHICommandList> createCommandList() override;
 
 		/** @brief 커맨드 리스트 실행 */
-		void							 executeCommandList( IRHICommandList* cmdList ) override;
+		void executeCommandList( IRHICommandList* cmdList ) override;
 
 	private:
 		/**
@@ -168,7 +168,7 @@ namespace sw
 		std::vector<uint32>					_bindlessFreeList;
 		std::vector<BindlessResourceRecord> _registeredUAVs;
 		std::vector<uint32>					_uavFreeList;
-		std::vector<uint32> _structuredBuffers;
+		std::vector<uint32>					_structuredBuffers;
 
 		struct OpenGLPipelineStateRecord
 		{
@@ -187,4 +187,4 @@ namespace sw
 		uint8				   _bInitialized  : 1;
 		[[maybe_unused]] uint8 _reservedFlags : 7;
 	};
-}
+} // namespace sw

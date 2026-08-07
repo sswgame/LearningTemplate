@@ -123,8 +123,8 @@ namespace sw
 				io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 
 			ImGui::StyleColorsDark();
-			ImGuiStyle& style = ImGui::GetStyle();
-			style.WindowRounding			   = 0.0f;
+			ImGuiStyle& style				  = ImGui::GetStyle();
+			style.WindowRounding			  = 0.0f;
 			style.Colors[ImGuiCol_WindowBg].w = 1.0f;
 		}
 
@@ -332,7 +332,7 @@ namespace sw
 
 		const ImGuiViewport* viewport	 = ImGui::GetMainViewport();
 		const ImGuiID		 dockspaceId = ImGui::DockSpaceOverViewport(
-			ImGui::GetID( "EditorMainDockSpace_v4" ), viewport, ImGuiDockNodeFlags_PassthruCentralNode );
+			   ImGui::GetID( "EditorMainDockSpace_v4" ), viewport, ImGuiDockNodeFlags_PassthruCentralNode );
 
 		if ( _bDockLayoutApplied == false )
 		{
@@ -390,4 +390,4 @@ namespace sw
 			return _rendererBackend->registerTexture( texture );
 		return nullptr;
 	}
-}
+} // namespace sw

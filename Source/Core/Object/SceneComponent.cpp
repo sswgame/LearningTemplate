@@ -162,4 +162,4 @@ namespace sw
 			markTransformDirty();
 		}
 	}
-}
+} // namespace sw

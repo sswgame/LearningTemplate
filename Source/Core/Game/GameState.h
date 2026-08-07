@@ -18,4 +18,4 @@ namespace sw
 
 	SW_API GameState getGameState();
 	SW_API void		 setGameState( GameState state );
-}
+} // namespace sw

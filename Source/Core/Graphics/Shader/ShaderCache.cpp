@@ -14,7 +14,7 @@ namespace sw
 
 	ShaderCompileResult ShaderCache::getOrCompile( const ShaderCompileDesc& desc )
 	{
-		std::lock_guard<std::mutex> lock{  _s_cacheMutex  };
+		std::lock_guard<std::mutex> lock{ _s_cacheMutex };
 
 		std::string absPath;
 		std::string cacheKey;
@@ -56,7 +56,7 @@ namespace sw
 
 	void ShaderCache::clearCache()
 	{
-		std::lock_guard<std::mutex> lock{  _s_cacheMutex  };
+		std::lock_guard<std::mutex> lock{ _s_cacheMutex };
 		_s_cacheMap.clear();
 	}
-}
+} // namespace sw

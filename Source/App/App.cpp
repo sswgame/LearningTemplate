@@ -47,7 +47,7 @@ namespace sw
 #if !defined( SW_SHIPPING )
 		constexpr const utf8* kGameModuleName = "SWGame";
 #endif
-	}
+	} // namespace
 
 	App::App()
 		: _bEnableEditor{ 0 }
@@ -327,10 +327,10 @@ namespace sw
 						{ ".hlsl", ".hlsli" },
 						SW_DELEGATE_LAMBDA( FileWatchMatchDelegate,
 											[this]( const FileChangeEvent& ev )
-						{
-							const std::string fullPath = FileUtil::normalizePath( ev._directory + "/" + ev._filename );
-							_rhi->getLiveShaderManager().notifyFileChanged( fullPath );
-						} ) );
+					{
+						const std::string fullPath = FileUtil::normalizePath( ev._directory + "/" + ev._filename );
+						_rhi->getLiveShaderManager().notifyFileChanged( fullPath );
+					} ) );
 				}
 #endif
 
@@ -380,10 +380,10 @@ namespace sw
 			_window->setResizeCallback( SW_DELEGATE_METHOD( WindowResizeDelegate, &App::onResize, this ) );
 			_window->setCustomMessageHandler( SW_DELEGATE_METHOD( WindowMessageHandlerDelegate, &App::onWindowMessage, this ) );
 
-			_bAppRunning			 = true;
-			_bPendingBackendChange	 = false;
-			_committedRHIBackend	 = gv_RHIBackend;
-			_pendingRHIBackend		 = gv_RHIBackend;
+			_bAppRunning		   = true;
+			_bPendingBackendChange = false;
+			_committedRHIBackend   = gv_RHIBackend;
+			_pendingRHIBackend	   = gv_RHIBackend;
 
 			if ( pRHIBackendVar )
 			{
@@ -443,9 +443,9 @@ namespace sw
 			{
 #if !defined( SW_SHIPPING )
 				_liveReloadManager->update();
-#if defined( SW_DEBUG )
+	#if defined( SW_DEBUG )
 				_rhi->getLiveShaderManager().update();
-#endif
+	#endif
 #endif
 				_reloadFileManager->update();
 			}

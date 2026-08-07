@@ -19,7 +19,7 @@ namespace sw
 			}();
 			return s_secondsPerCount;
 		}
-	}
+	} // namespace
 
 	CpuTimer::CpuTimer() noexcept
 	{
@@ -95,4 +95,4 @@ namespace sw
 		if ( _deltaTime < 0.0 )
 			_deltaTime = 0.0;
 	}
-}
+} // namespace sw

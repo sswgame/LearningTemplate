@@ -59,7 +59,7 @@ namespace sw
 		if ( texture == 0 )
 			return nullptr;
 
-		auto* tex = reinterpret_cast<ID3D11Texture2D*>( texture );
+		auto*		  tex	 = reinterpret_cast<ID3D11Texture2D*>( texture );
 		ID3D11Device* device = nullptr;
 		tex->GetDevice( &device );
 		if ( device == nullptr )
@@ -75,7 +75,7 @@ namespace sw
 		srvDesc.Texture2D.MipLevels		  = texDesc.MipLevels;
 
 		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> srv;
-		const HRESULT hr = device->CreateShaderResourceView( tex, &srvDesc, srv.GetAddressOf() );
+		const HRESULT									 hr = device->CreateShaderResourceView( tex, &srvDesc, srv.GetAddressOf() );
 		device->Release();
 
 		if ( FAILED( hr ) || srv == nullptr )
@@ -92,4 +92,4 @@ namespace sw
 		return nullptr;
 #endif
 	}
-}
+} // namespace sw

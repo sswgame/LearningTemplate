@@ -17,12 +17,12 @@ namespace sw
 	{
 		PropertyMetadata() noexcept;
 
-		std::string _category = "General";
-		std::string _tooltip  = "";
-		float32		_minRange = 0.0f;
-		float32		_maxRange = 1.0f;
-		uint8		_bHasRange	   : 1;
-		[[maybe_unused]] uint8		_reservedFlags : 7;
+		std::string			   _category = "General";
+		std::string			   _tooltip	 = "";
+		float32				   _minRange = 0.0f;
+		float32				   _maxRange = 1.0f;
+		uint8				   _bHasRange	  : 1;
+		[[maybe_unused]] uint8 _reservedFlags : 7;
 	};
 
 	struct PropertyInfo
@@ -44,9 +44,9 @@ namespace sw
 		mutable uint32 _cachedNameHash	= 0;
 		mutable uint32 _cachedAliasHash = 0;
 
-		ContainerKind _containerKind   = ContainerKind::None;
-		uint8		  _bIsContainer	   : 1;
-		[[maybe_unused]] uint8		  _reservedFlags   : 7;
+		ContainerKind		   _containerKind = ContainerKind::None;
+		uint8				   _bIsContainer  : 1;
+		[[maybe_unused]] uint8 _reservedFlags : 7;
 
 		PropertyInfo() noexcept;
 
@@ -120,8 +120,8 @@ namespace sw
 		hashed_string							 _name;
 		hashed_string							 _fullyQualifiedName;
 		hashed_string							 _moduleName;
-		uint8									 _bIsBitFlag	 : 1;
-		[[maybe_unused]] uint8									 _reservedFlags : 7;
+		uint8									 _bIsBitFlag	: 1;
+		[[maybe_unused]] uint8					 _reservedFlags : 7;
 
 		EnumInfo() noexcept;
 
@@ -165,7 +165,7 @@ namespace sw
 				return iter != _mapNameToValue.end() ? iter->second : 0;
 			}
 
-			int64			intResult = 0;
+			int64 intResult = 0;
 			/**
 			 * @brief 분할기를 반환합니다
 			 */
@@ -276,4 +276,4 @@ namespace sw
 		}
 	};
 
-}
+} // namespace sw

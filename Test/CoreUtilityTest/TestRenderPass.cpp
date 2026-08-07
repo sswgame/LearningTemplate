@@ -44,4 +44,3 @@ SW_TEST_CASE( RenderPassTest, XmlSerializationRoundtrip )
 // SW_TEST_CASE( RenderPassTest, RenderGraphDAGExecution )\n// Temporarily disabled due to timeout issue
 
 // SW_TEST_CASE( RenderPassTest, RenderGraphMermaidExport )\n// Temporarily disabled due to timeout issue
-

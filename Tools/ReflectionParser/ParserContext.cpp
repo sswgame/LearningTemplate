@@ -84,7 +84,7 @@ namespace sw::tool
 				return {};
 			return json.substr( q1 + 1, q2 - q1 - 1 );
 		}
-	}
+	} // namespace
 
 	bool ParserClangConfig::load()
 	{
@@ -297,4 +297,4 @@ namespace sw::tool
 
 		return true;
 	}
-}
+} // namespace sw::tool

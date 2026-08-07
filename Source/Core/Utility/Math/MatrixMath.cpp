@@ -770,4 +770,4 @@ namespace sw
 	{
 		return matrix * scale;
 	}
-}
+} // namespace sw

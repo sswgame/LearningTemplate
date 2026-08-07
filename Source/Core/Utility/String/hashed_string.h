@@ -22,7 +22,7 @@ namespace sw
 #undef REGISTER_NAME
 		Count
 	};
-}
+} // namespace sw
 
 namespace sw
 {
@@ -35,7 +35,6 @@ namespace sw
 		using hash_type	 = N;
 
 	public:
-
 		struct HashFunc
 		{
 			std::size_t operator()( const basic_hashed_string& key ) const
@@ -45,7 +44,6 @@ namespace sw
 		};
 
 	public:
-
 		basic_hashed_string() noexcept
 			: _stringKeyIndex{ static_cast<uint32>( PredefinedNameType::NameType_None ) }
 		{
@@ -74,7 +72,6 @@ namespace sw
 		}
 
 	public:
-
 		/**
 		 * @brief 크기를 반환합니다
 		 */
@@ -107,6 +104,7 @@ namespace sw
 
 	public:
 		struct AllocationInfo;
+
 	private:
 		struct StringKey;
 
@@ -146,14 +144,14 @@ namespace sw
 	template <typename T>
 	bool operator>=( const basic_hashed_string<T>& lhs, const basic_hashed_string<T>& rhs ) noexcept { return lhs.getIndex() >= rhs.getIndex(); }
 
-	using hashed_string = basic_hashed_string<char>;
+	using hashed_string	 = basic_hashed_string<char>;
 	using hashed_wstring = basic_hashed_string<wchar_t>;
 
 	/** @brief Core.dll 단독 소유 인턴 테이블 (모든 모듈이 이 export만 사용) */
-	SW_API hashed_string::AllocationInfo*  getCoreHashedStringAllocationInfo() noexcept;
+	SW_API hashed_string::AllocationInfo* getCoreHashedStringAllocationInfo() noexcept;
 	SW_API hashed_wstring::AllocationInfo* getCoreHashedWStringAllocationInfo() noexcept;
 
-}
+} // namespace sw
 
 namespace sw
 {
@@ -299,7 +297,7 @@ namespace sw
 			/**
 			 * @brief 읽기 잠금을 획득합니다
 			 */
-			std::shared_lock<std::shared_mutex> readLock{  info._mutex  };
+			std::shared_lock<std::shared_mutex> readLock{ info._mutex };
 			const auto							iter = info._mapKeyToIndex.find( findStringKey );
 			if ( iter != info._mapKeyToIndex.end() )
 				return iter->second;
@@ -308,7 +306,7 @@ namespace sw
 		/**
 		 * @brief 쓰기 잠금을 획득합니다
 		 */
-		std::unique_lock<std::shared_mutex> writeLock{  info._mutex  };
+		std::unique_lock<std::shared_mutex> writeLock{ info._mutex };
 
 		const auto iter = info._mapKeyToIndex.find( findStringKey );
 		if ( iter != info._mapKeyToIndex.end() )
@@ -344,33 +342,33 @@ namespace sw
 	template <typename T, typename N>
 	typename basic_hashed_string<T, N>::size_type basic_hashed_string<T, N>::size() const noexcept
 	{
-		auto&								info = getAllocationInfo();
+		auto& info = getAllocationInfo();
 		/**
 		 * @brief 내부 뮤텍스를 잠급니다
 		 */
-		std::shared_lock<std::shared_mutex> lock{  info._mutex  };
+		std::shared_lock<std::shared_mutex> lock{ info._mutex };
 		return info._keyList[_stringKeyIndex]._stringLength;
 	}
 
 	template <typename T, typename N>
 	const typename basic_hashed_string<T, N>::value_type* basic_hashed_string<T, N>::c_str() const noexcept
 	{
-		auto&								info = getAllocationInfo();
+		auto& info = getAllocationInfo();
 		/**
 		 * @brief 내부 뮤텍스를 잠급니다
 		 */
-		std::shared_lock<std::shared_mutex> lock{  info._mutex  };
+		std::shared_lock<std::shared_mutex> lock{ info._mutex };
 		return info._keyList[_stringKeyIndex]._str;
 	}
 
 	template <typename T, typename N>
 	typename basic_hashed_string<T, N>::hash_type basic_hashed_string<T, N>::getHash() const noexcept
 	{
-		auto&								info = getAllocationInfo();
+		auto& info = getAllocationInfo();
 		/**
 		 * @brief 내부 뮤텍스를 잠급니다
 		 */
-		std::shared_lock<std::shared_mutex> lock{  info._mutex  };
+		std::shared_lock<std::shared_mutex> lock{ info._mutex };
 		return info._keyList[_stringKeyIndex]._hash;
 	}
 
@@ -380,7 +378,7 @@ namespace sw
 		auto& info = getAllocationInfo();
 		return helper_internal( info, str, length );
 	}
-}
+} // namespace sw
 
 namespace std
 {
@@ -402,4 +400,4 @@ namespace std
 			return lhs.getIndex() == rhs.getIndex();
 		}
 	};
-}
+} // namespace std

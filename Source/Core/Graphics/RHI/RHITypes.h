@@ -12,13 +12,13 @@
 namespace sw
 {
 	/** @brief GPU 버퍼 리소스에 대한 64비트 정수 핸들 */
-	using RHIBufferHandle								 = uint64;
+	using RHIBufferHandle = uint64;
 
 	/** @brief GPU 텍스처 리소스에 대한 64비트 정수 핸들 */
-	using RHITextureHandle								 = uint64;
+	using RHITextureHandle = uint64;
 
 	/** @brief Bindless 리소스 인덱스 타입 (Descriptor Heap / Set 내 바인딩 인덱스) */
-	using RHIDescriptorIndex							 = uint32;
+	using RHIDescriptorIndex = uint32;
 
 	/** @brief 유효하지 않은 Descriptor 인덱스 상수 */
 	constexpr RHIDescriptorIndex kInvalidDescriptorIndex = invalid_index::kUint32;
@@ -71,11 +71,11 @@ namespace sw
 	 */
 	struct RHIInputElement
 	{
-		std::string _semanticName;                             ///< 시맨틱 이름 (POSITION, COLOR 등)
-		uint32		_semanticIndex	   = 0;                     ///< 시맨틱 인덱스
+		std::string _semanticName;									 ///< 시맨틱 이름 (POSITION, COLOR 등)
+		uint32		_semanticIndex	   = 0;							 ///< 시맨틱 인덱스
 		RHIFormat	_format			   = RHIFormat::R32G32B32_FLOAT; ///< 엘리먼트 데이터 포맷
-		uint32		_alignedByteOffset = 0;                     ///< 버텍스 구조체 내 바이트 오프셋
-		uint32		_inputSlot		   = 0;                     ///< 버텍스 버퍼 입력 슬롯
+		uint32		_alignedByteOffset = 0;							 ///< 버텍스 구조체 내 바이트 오프셋
+		uint32		_inputSlot		   = 0;							 ///< 버텍스 버퍼 입력 슬롯
 	};
 
 	/**
@@ -174,10 +174,10 @@ namespace sw
 	using RHIPipelineStateHandle = uint64;
 
 	/** @brief 렌더 패스 객체 64비트 핸들 */
-	using RHIRenderPassHandle	 = uint64;
+	using RHIRenderPassHandle = uint64;
 
 	/** @brief 텍스처 객체 64비트 핸들 */
-	using RHITextureHandle		 = uint64;
+	using RHITextureHandle = uint64;
 
 	/**
 	 * @enum RHIPrimitiveTopology
@@ -186,8 +186,8 @@ namespace sw
 	enum class RHIPrimitiveTopology
 	{
 		TriangleList, ///< 삼각형 리스트
-		LineList,     ///< 선 리스트
-		PointList     ///< 점 리스트
+		LineList,	  ///< 선 리스트
+		PointList	  ///< 점 리스트
 	};
 
 	/**
@@ -196,8 +196,8 @@ namespace sw
 	 */
 	enum class RHIFillMode
 	{
-		Solid,     ///< 일반 채우기
-		Wireframe  ///< 와이어프레임 표시
+		Solid,	  ///< 일반 채우기
+		Wireframe ///< 와이어프레임 표시
 	};
 
 	/**
@@ -217,8 +217,8 @@ namespace sw
 	 */
 	enum class RHIRenderPassLoadOp
 	{
-		Clear,   ///< 기존 데이터 지우기 (Clear Color)
-		Load,    ///< 기존 데이터 유지하기
+		Clear,	 ///< 기존 데이터 지우기 (Clear Color)
+		Load,	 ///< 기존 데이터 유지하기
 		DontCare ///< 이전 내용 무시 (최적화)
 	};
 
@@ -228,7 +228,7 @@ namespace sw
 	 */
 	enum class RHIRenderPassStoreOp
 	{
-		Store,   ///< 메모리에 최종 결과 저장
+		Store,	 ///< 메모리에 최종 결과 저장
 		DontCare ///< 결과 보존 안 함
 	};
 
@@ -240,19 +240,19 @@ namespace sw
 	{
 		RHIPipelineStateDesc() noexcept;
 
-		std::string _vertexShaderPath;                  ///< 버텍스 셰이더 소스 경로
-		std::string _vertexEntryPoint = "VSMain";        ///< 버텍스 셰이더 진입점
-		std::string _pixelShaderPath;                   ///< 픽셀 셰이더 소스 경로
-		std::string _pixelEntryPoint = "PSMain";         ///< 픽셀 셰이더 진입점
-		std::string _computeShaderPath;                 ///< 컴퓨트 셰이더 소스 경로
-		std::string _computeEntryPoint = "CSMain";       ///< 컴퓨트 셰이더 진입점
+		std::string _vertexShaderPath;			   ///< 버텍스 셰이더 소스 경로
+		std::string _vertexEntryPoint = "VSMain";  ///< 버텍스 셰이더 진입점
+		std::string _pixelShaderPath;			   ///< 픽셀 셰이더 소스 경로
+		std::string _pixelEntryPoint = "PSMain";   ///< 픽셀 셰이더 진입점
+		std::string _computeShaderPath;			   ///< 컴퓨트 셰이더 소스 경로
+		std::string _computeEntryPoint = "CSMain"; ///< 컴퓨트 셰이더 진입점
 
-		RHIPrimitiveTopology _topology = RHIPrimitiveTopology::TriangleList; ///< 프리미티브 위상
-		RHIFillMode			 _fillMode = RHIFillMode::Solid;				 ///< 채우기 모드
-		RHICullMode			 _cullMode = RHICullMode::None;					 ///< 컬링 모드
-		uint8				 _bEnableDepthTest : 1;						 ///< 깊이 테스트 활성화 여부
-		uint8				 _bEnableBlend	   : 1;						 ///< 알파 블렌딩 활성화 여부
-		[[maybe_unused]] uint8				 _reservedFlags	   : 6;
+		RHIPrimitiveTopology   _topology = RHIPrimitiveTopology::TriangleList; ///< 프리미티브 위상
+		RHIFillMode			   _fillMode = RHIFillMode::Solid;				   ///< 채우기 모드
+		RHICullMode			   _cullMode = RHICullMode::None;				   ///< 컬링 모드
+		uint8				   _bEnableDepthTest : 1;						   ///< 깊이 테스트 활성화 여부
+		uint8				   _bEnableBlend	 : 1;						   ///< 알파 블렌딩 활성화 여부
+		[[maybe_unused]] uint8 _reservedFlags	 : 6;
 	};
 
 	/**
@@ -261,10 +261,10 @@ namespace sw
 	 */
 	struct RHIRenderPassAttachment
 	{
-		RHIFormat			 _format		= RHIFormat::R8G8B8A8_UNORM;       ///< 어태치먼트 포맷
-		RHIRenderPassLoadOp	 _loadOp		= RHIRenderPassLoadOp::Clear;      ///< 로드 동작
-		RHIRenderPassStoreOp _storeOp		= RHIRenderPassStoreOp::Store;     ///< 저장 동작
-		float32				 _clearColor[4] = { 0.1f, 0.1f, 0.1f, 1.0f };    ///< 초기화 색상 (RGBA)
+		RHIFormat			 _format		= RHIFormat::R8G8B8A8_UNORM;   ///< 어태치먼트 포맷
+		RHIRenderPassLoadOp	 _loadOp		= RHIRenderPassLoadOp::Clear;  ///< 로드 동작
+		RHIRenderPassStoreOp _storeOp		= RHIRenderPassStoreOp::Store; ///< 저장 동작
+		float32				 _clearColor[4] = { 0.1f, 0.1f, 0.1f, 1.0f };  ///< 초기화 색상 (RGBA)
 	};
 
 	/**
@@ -275,11 +275,11 @@ namespace sw
 	{
 		RHIRenderPassDesc() noexcept;
 
-		std::vector<RHIRenderPassAttachment> _colorAttachments; ///< 색상 어태치먼트 목록
-		float32								 _clearDepth   = 1.0f; ///< 깊이 초기화 값
-		uint8								 _clearStencil = 0;	   ///< 스텐실 초기화 값
+		std::vector<RHIRenderPassAttachment> _colorAttachments;		///< 색상 어태치먼트 목록
+		float32								 _clearDepth   = 1.0f;	///< 깊이 초기화 값
+		uint8								 _clearStencil = 0;		///< 스텐실 초기화 값
 		uint8								 _bHasDepthStencil : 1; ///< 깊이/스텐실 어태치먼트 포함 여부
-		[[maybe_unused]] uint8								 _reservedFlags	   : 7;
+		[[maybe_unused]] uint8				 _reservedFlags	   : 7;
 	};
 
 	/**
@@ -300,24 +300,24 @@ namespace sw
 		float32 _clearDepth	   = 1.0f;
 		uint8	_clearStencil  = 0;
 
-		uint8 _bIsRenderTarget	  : 1;
-		uint8 _bIsDepthStencil	  : 1;
-		uint8 _bIsShaderResource  : 1;
-		uint8 _bIsUnorderedAccess : 1;
-		[[maybe_unused]] uint8 _reservedFlags	  : 4;
+		uint8				   _bIsRenderTarget	   : 1;
+		uint8				   _bIsDepthStencil	   : 1;
+		uint8				   _bIsShaderResource  : 1;
+		uint8				   _bIsUnorderedAccess : 1;
+		[[maybe_unused]] uint8 _reservedFlags	   : 4;
 	};
 
 	/**
 	 * @struct RHIRenderPassBeginInfo
 	 * @brief 렌더 패스 바인딩 및 수행 시작 인자
 	 */
-		struct RHIRenderPassBeginInfo
+	struct RHIRenderPassBeginInfo
 	{
-		RHIRenderPassHandle _renderPass		= 0;
-		RHITextureHandle	_colorTarget	= 0; ///< 0 = swapchain backbuffer
-		uint32				_width			= 0;
-		uint32				_height			= 0;
-		float32				_clearColor[4]	= { 0.1f, 0.1f, 0.1f, 1.0f };
+		RHIRenderPassHandle _renderPass	   = 0;
+		RHITextureHandle	_colorTarget   = 0; ///< 0 = swapchain backbuffer
+		uint32				_width		   = 0;
+		uint32				_height		   = 0;
+		float32				_clearColor[4] = { 0.1f, 0.1f, 0.1f, 1.0f };
 	};
 
 	class VertexLayoutBuilder
@@ -346,4 +346,4 @@ namespace sw
 	private:
 		std::vector<RHIInputElement> _elements;
 	};
-}
+} // namespace sw

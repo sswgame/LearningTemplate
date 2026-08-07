@@ -16,4 +16,4 @@ namespace sw
 		uintptr_t wParam	   = 0;
 		intptr_t  lParam	   = 0;
 	};
-}
+} // namespace sw

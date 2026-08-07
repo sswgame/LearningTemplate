@@ -402,7 +402,7 @@ namespace sw
 #endif
 	}
 
-	bool FileUtil::collectFiles( const std::string_view directory, const std::string_view filterExtension, std::vector<std::string>& outFilePathList, const bool bRecursive, const bool bNormalizePath  )
+	bool FileUtil::collectFiles( const std::string_view directory, const std::string_view filterExtension, std::vector<std::string>& outFilePathList, const bool bRecursive, const bool bNormalizePath )
 	{
 		if ( isDirectoryExist( directory ) == false )
 			return false;
@@ -655,4 +655,4 @@ namespace sw
 		dlclose( handle );
 #endif
 	}
-}
+} // namespace sw

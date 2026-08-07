@@ -60,7 +60,7 @@ namespace sw
 
 			const auto add = [&]( const utf8* name, RHIBackend value )
 			{
-				const int64		  v	   = static_cast<int64>( value );
+				const int64			v = static_cast<int64>( value );
 				const hashed_string key( name );
 				info._mapNameToValue[key] = v;
 				// Prefer primary names for value→name (skip aliases).
@@ -76,7 +76,7 @@ namespace sw
 		}
 
 		EnumRegistrar s_rhiBackendEnumRegistrar{ &registerRHIBackendEnum };
-	}
+	} // namespace
 
 	SW_GLOBAL_VARIABLE_ENUM( gv_RHIBackend, RHIBackend, RHIBackend::DirectX12, "Current RHI Backend" );
 
@@ -201,7 +201,7 @@ namespace sw
 		}
 
 		gv_RHIBackend = backend;
-		_device		 = createDevice( backend );
+		_device		  = createDevice( backend );
 		if ( _device == nullptr )
 			return false;
 
@@ -274,4 +274,4 @@ namespace sw
 		}
 		return ShaderTargetFormat::DXIL_D3D12;
 	}
-}
+} // namespace sw

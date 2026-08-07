@@ -27,4 +27,4 @@ namespace sw
 				return std::make_unique<ImGuiDX11RendererBackend>();
 		}
 	}
-}
+} // namespace sw

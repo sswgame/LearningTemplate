@@ -8,4 +8,4 @@ namespace sw
 {
 	using WindowHandle	  = void*;
 	using RHIDeviceHandle = void*;
-}
+} // namespace sw

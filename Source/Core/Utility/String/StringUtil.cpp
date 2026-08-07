@@ -134,7 +134,7 @@ namespace
 			out.push_back( static_cast<utf8>( 0x80 | ( codepoint & 0x3F ) ) );
 		}
 	}
-}
+} // namespace
 
 namespace sw
 {
@@ -480,4 +480,4 @@ namespace sw
 	{
 		return isValidUtf8( reinterpret_cast<const uint8*>( input.data() ), input.size() );
 	}
-}
+} // namespace sw

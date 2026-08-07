@@ -30,12 +30,12 @@ namespace sw
 		/**
 		 * @brief UTF-16을 UTF-8으로 변환합니다
 		 */
-		static std::string	utf16ToUtf8( const std::wstring_view& input );
+		static std::string utf16ToUtf8( const std::wstring_view& input );
 
 		/**
 		 * @brief UTF-16을 로케일 문자열로 변환합니다
 		 */
-		static std::string	utf16ToLocale( const std::wstring_view& input );
+		static std::string utf16ToLocale( const std::wstring_view& input );
 		/**
 		 * @brief 로케일 문자열을 UTF-16으로 변환합니다
 		 */
@@ -67,11 +67,11 @@ namespace sw
 		/**
 		 * @brief 대문자로 변환합니다
 		 */
-		static std::string				toUpper( const std::string_view& input );
+		static std::string toUpper( const std::string_view& input );
 		/**
 		 * @brief 소문자로 변환합니다
 		 */
-		static std::string				toLower( const std::string_view& input );
+		static std::string toLower( const std::string_view& input );
 
 		/**
 		 * @brief 앞 공백을 제거합니다
@@ -155,7 +155,7 @@ namespace sw
 		/**
 		 * @brief 문자열로 변환합니다
 		 */
-		static std::string	toString( const std::wstring_view& input );
+		static std::string toString( const std::wstring_view& input );
 		/**
 		 * @brief 와이드 문자열로 변환합니다
 		 */
@@ -163,6 +163,6 @@ namespace sw
 		/**
 		 * @brief 유효한 UTF-8인지 검사합니다
 		 */
-		static bool			isValidUTF8( const std::string_view input );
+		static bool isValidUTF8( const std::string_view input );
 	};
-}
+} // namespace sw

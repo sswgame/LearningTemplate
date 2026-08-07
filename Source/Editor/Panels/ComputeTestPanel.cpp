@@ -131,4 +131,4 @@ namespace sw
 		cmdList->endCommandList();
 		rhiDevice->executeCommandList( cmdList.get() );
 	}
-}
+} // namespace sw

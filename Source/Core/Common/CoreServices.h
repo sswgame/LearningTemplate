@@ -33,15 +33,15 @@ namespace sw
 	SW_API void unbindCoreServices();
 
 	/** @brief 바인딩된 CommandLineManager를 반환합니다. */
-	SW_API CommandLineManager&	  getCommandLineManager();
+	SW_API CommandLineManager& getCommandLineManager();
 	/** @brief 바인딩된 GlobalVariableManager를 반환합니다. */
 	SW_API GlobalVariableManager& getGlobalVariableManager();
 	/** @brief 바인딩된 TaskManager를 반환합니다. */
-	SW_API TaskManager&			  getTaskManager();
+	SW_API TaskManager& getTaskManager();
 	/** @brief 바인딩된 TypeRegistry를 반환합니다. */
-	SW_API TypeRegistry&		  getTypeRegistry();
+	SW_API TypeRegistry& getTypeRegistry();
 	/** @brief 바인딩된 ComponentManager를 반환합니다. */
-	SW_API ComponentManager&	  getComponentManager();
+	SW_API ComponentManager& getComponentManager();
 	/** @brief 바인딩된 SceneManager를 반환합니다. */
-	SW_API SceneManager&		  getSceneManager();
-}
+	SW_API SceneManager& getSceneManager();
+} // namespace sw

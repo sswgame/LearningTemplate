@@ -26,17 +26,17 @@ namespace sw
 		virtual ~SceneComponent() override;
 
 		/** @brief 로컬 위치 설정 */
-		void   setLocalPosition( const float3& pos );
+		void setLocalPosition( const float3& pos );
 		/** @brief 로컬 위치 반환 */
 		float3 getLocalPosition() const { return _localPosition; }
 
 		/** @brief 로컬 오일러 회전(피치/요/롤) 설정. getCameraRelativeWorldMatrix에 반영 */
-		void   setLocalRotation( const float3& rot );
+		void setLocalRotation( const float3& rot );
 		/** @brief 로컬 회전각 반환 */
 		float3 getLocalRotation() const { return _localRotation; }
 
 		/** @brief 로컬 스케일 설정. getCameraRelativeWorldMatrix에 반영 */
-		void   setLocalScale( const float3& scale );
+		void setLocalScale( const float3& scale );
 		/** @brief 로컬 스케일 반환 */
 		float3 getLocalScale() const { return _localScale; }
 
@@ -77,7 +77,7 @@ namespace sw
 		void markTransformDirty();
 
 	protected:
-		mutable float4x4 _cachedWorldMatrix{ float4x4::Identity };  ///< 캐시된 번역-only 월드 행렬
+		mutable float4x4 _cachedWorldMatrix{ float4x4::Identity }; ///< 캐시된 번역-only 월드 행렬
 		mutable double3	 _cachedWorldPositionLWC{ 0.0, 0.0, 0.0 }; ///< 캐시된 double 누적 월드 위치
 
 		PROPERTY()
@@ -92,9 +92,9 @@ namespace sw
 		mutable float3 _cachedWorldPosition{ 0.0f, 0.0f, 0.0f }; ///< 캐시된 float 월드 위치
 
 		SceneComponent*				 _parent = nullptr; ///< 부모 컴포넌트 참조
-		std::vector<SceneComponent*> _children;		///< 자식 컴포넌트 리스트
+		std::vector<SceneComponent*> _children;			///< 자식 컴포넌트 리스트
 
-		mutable uint8 _bIsTransformDirty : 1; ///< 트랜스폼 캐시 재계산 더티 비트
-		[[maybe_unused]] mutable uint8 _reservedFlags : 7;
+		mutable uint8				   _bIsTransformDirty : 1; ///< 트랜스폼 캐시 재계산 더티 비트
+		[[maybe_unused]] mutable uint8 _reservedFlags	  : 7;
 	};
-}
+} // namespace sw

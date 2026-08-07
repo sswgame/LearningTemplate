@@ -85,7 +85,7 @@ namespace sw
 		auto taskNode = task.getNode();
 		if ( _node != nullptr && taskNode != nullptr )
 		{
-			std::lock_guard<std::mutex> lock{  _node->_mutex  };
+			std::lock_guard<std::mutex> lock{ _node->_mutex };
 			_node->_tasks.push_back( taskNode );
 			taskNode->_parentStage = _node;
 			_node->_remainingTasks.fetch_add( 1, std::memory_order_relaxed );
@@ -93,7 +93,7 @@ namespace sw
 		return *this;
 	}
 
-	bool TaskManager::initialize( uint32 threadCount  )
+	bool TaskManager::initialize( uint32 threadCount )
 	{
 		if ( _bInitialized == true )
 			return false;
@@ -162,10 +162,9 @@ namespace sw
 		node->_unresolvedDependencies  = 0;
 
 		{
-			std::lock_guard<std::mutex> lock{  _queueMutex  };
+			std::lock_guard<std::mutex> lock{ _queueMutex };
 			_allNodes.push_back( node );
 			_activeTaskCount.fetch_add( 1, std::memory_order_relaxed );
-
 		}
 
 		return TaskHandle{ node };
@@ -193,10 +192,9 @@ namespace sw
 		node->_unresolvedDependencies  = 0;
 
 		{
-			std::lock_guard<std::mutex> lock{  _queueMutex  };
+			std::lock_guard<std::mutex> lock{ _queueMutex };
 			_allNodes.push_back( node );
 			_activeTaskCount.fetch_add( 1, std::memory_order_relaxed );
-
 		}
 
 		return TaskHandle{ node };
@@ -240,10 +238,9 @@ namespace sw
 			subTask->_unresolvedDependencies = 0;
 
 			{
-				std::lock_guard<std::mutex> lock{  _queueMutex  };
+				std::lock_guard<std::mutex> lock{ _queueMutex };
 				_allNodes.push_back( subTask );
 				_activeTaskCount.fetch_add( 1, std::memory_order_relaxed );
-
 			}
 
 			TaskHandle subHandle{ subTask };
@@ -265,10 +262,9 @@ namespace sw
 		node->_unresolvedDependencies = 0;
 
 		{
-			std::lock_guard<std::mutex> lock{  _queueMutex  };
+			std::lock_guard<std::mutex> lock{ _queueMutex };
 			_allNodes.push_back( node );
 			_activeTaskCount.fetch_add( 1, std::memory_order_relaxed );
-
 		}
 
 		return TaskHandle{ node };
@@ -279,7 +275,7 @@ namespace sw
 		auto stage	 = std::make_shared<StageNode>();
 		stage->_name = stageName;
 
-		std::lock_guard<std::mutex> lock{  _queueMutex  };
+		std::lock_guard<std::mutex> lock{ _queueMutex };
 		_allStages.push_back( stage );
 
 		return TaskStageHandle{ stage };
@@ -292,7 +288,7 @@ namespace sw
 
 		dispatch();
 
-		std::unique_lock<std::mutex> lock{  stage._node->_mutex  };
+		std::unique_lock<std::mutex> lock{ stage._node->_mutex };
 		stage._node->_cv.wait( lock, [&]()
 		{
 			return stage._node->_remainingTasks.load( std::memory_order_relaxed ) == 0;
@@ -309,7 +305,7 @@ namespace sw
 
 	void TaskManager::dispatch()
 	{
-		std::lock_guard<std::mutex> lock{  _queueMutex  };
+		std::lock_guard<std::mutex> lock{ _queueMutex };
 		for ( const std::shared_ptr<TaskNode>& node : _allNodes )
 		{
 			if ( node->_state == TaskState::Pending && node->_unresolvedDependencies.load( std::memory_order_relaxed ) == 0 )
@@ -323,7 +319,7 @@ namespace sw
 	{
 		dispatch();
 
-		std::unique_lock<std::mutex> lock{  _queueMutex  };
+		std::unique_lock<std::mutex> lock{ _queueMutex };
 		_cvWaitAll.wait( lock, [&]()
 		{
 			return _activeTaskCount.load( std::memory_order_relaxed ) == 0;
@@ -332,7 +328,7 @@ namespace sw
 
 	void TaskManager::clear()
 	{
-		std::lock_guard<std::mutex> lock{  _queueMutex  };
+		std::lock_guard<std::mutex> lock{ _queueMutex };
 		_allNodes.clear();
 		_allStages.clear();
 		std::queue<std::shared_ptr<TaskNode>> emptyQueue;
@@ -373,7 +369,7 @@ namespace sw
 		{
 			std::shared_ptr<TaskNode> node;
 			{
-				std::unique_lock<std::mutex> lock{  _queueMutex  };
+				std::unique_lock<std::mutex> lock{ _queueMutex };
 				_cvWorker.wait( lock, [&]()
 				{
 					return _bStop.load() || _readyQueue.empty() == false;
@@ -437,13 +433,13 @@ namespace sw
 			uint32 prev = stage->_remainingTasks.fetch_sub( 1, std::memory_order_relaxed );
 			if ( prev == 1 )
 			{
-				std::lock_guard<std::mutex> lock{  stage->_mutex  };
+				std::lock_guard<std::mutex> lock{ stage->_mutex };
 				stage->_cv.notify_all();
 			}
 		}
 
 		{
-			std::lock_guard<std::mutex> lock{  _queueMutex  };
+			std::lock_guard<std::mutex> lock{ _queueMutex };
 			for ( const std::shared_ptr<TaskNode>& succ : node->_successors )
 			{
 				int32 remaining = succ->_unresolvedDependencies.fetch_sub( 1, std::memory_order_relaxed );
@@ -503,4 +499,4 @@ namespace sw
 
 		return continuationTask;
 	}
-}
+} // namespace sw

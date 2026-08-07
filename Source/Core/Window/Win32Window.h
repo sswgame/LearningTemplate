@@ -40,4 +40,4 @@ namespace sw
 
 		HWND _hWnd = nullptr;
 	};
-}
+} // namespace sw

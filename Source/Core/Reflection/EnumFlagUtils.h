@@ -22,7 +22,7 @@ namespace sw
 		using Underlying = std::underlying_type_t<T>;
 		return ( static_cast<Underlying>( flags ) & static_cast<Underlying>( contains ) ) == static_cast<Underlying>( contains );
 	}
-}
+} // namespace sw
 
 /** @brief SW_ENUM_FLAGS 매크로 정의입니다. */
 #define SW_ENUM_FLAGS( EnumType )                                                                        \

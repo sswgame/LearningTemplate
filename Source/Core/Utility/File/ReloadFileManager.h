@@ -53,13 +53,13 @@ namespace sw
 	private:
 		struct WatchEntry
 		{
-			FileWatchHandle			_handle;
-			std::string				_pathPrefix;
+			FileWatchHandle			 _handle;
+			std::string				 _pathPrefix;
 			std::vector<std::string> _extensions;
-			FileWatchMatchDelegate	_onMatch;
+			FileWatchMatchDelegate	 _onMatch;
 		};
 
-		bool matchesWatch( const WatchEntry& entry, const FileChangeEvent& ev ) const;
+		bool			   matchesWatch( const WatchEntry& entry, const FileChangeEvent& ev ) const;
 		static std::string extractExtension( const std::string& filename );
 
 		std::unique_ptr<IFileWatcher> _fileWatcher;
@@ -67,4 +67,4 @@ namespace sw
 		std::vector<WatchEntry>		  _watches;
 		uint64						  _nextWatchId = 1;
 	};
-}
+} // namespace sw

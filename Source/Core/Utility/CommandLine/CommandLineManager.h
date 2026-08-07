@@ -50,22 +50,22 @@ namespace sw
 		{
 			using Value = std::variant<int32, bool, float32, std::string>;
 
-			Value _value		= {};
-			Value _defaultValue = {};
-			uint8 _bMustHaveValue	: 1;
-			uint8 _bUseDefaultValue : 1;
-			[[maybe_unused]] uint8 _reserved			: 6;
+			Value				   _value		 = {};
+			Value				   _defaultValue = {};
+			uint8				   _bMustHaveValue	 : 1;
+			uint8				   _bUseDefaultValue : 1;
+			[[maybe_unused]] uint8 _reserved		 : 6;
 
 			ArgumentInfo();
 		};
 
 	public:
-		explicit CommandLineManager()								   = default;
-		~CommandLineManager()										   = default;
-		CommandLineManager( const CommandLineManager& )			 = delete;
+		explicit CommandLineManager()							   = default;
+		~CommandLineManager()									   = default;
+		CommandLineManager( const CommandLineManager& )			   = delete;
 		CommandLineManager& operator=( const CommandLineManager& ) = delete;
-		CommandLineManager( CommandLineManager&& )				 = delete;
-		CommandLineManager& operator=( CommandLineManager&& )	 = delete;
+		CommandLineManager( CommandLineManager&& )				   = delete;
+		CommandLineManager& operator=( CommandLineManager&& )	   = delete;
 
 	public:
 		bool startup();
@@ -132,8 +132,8 @@ namespace sw
 		static std::string_view argumentEnumToString( const CommandLineArgument argument );
 
 	private:
-		static constexpr const utf8*										 kLineDelim = ";";
-		std::vector<ArgumentInfo>											 _argumentList;
+		static constexpr const utf8*						kLineDelim = ";";
+		std::vector<ArgumentInfo>							_argumentList;
 		std::unordered_map<std::string, uint32, StringHash> _mapArgument;
 	};
 

@@ -413,4 +413,4 @@ namespace sw
 		os << bitset.to_string();
 		return os;
 	}
-}
+} // namespace sw

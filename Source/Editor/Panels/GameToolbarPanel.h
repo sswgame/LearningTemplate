@@ -13,6 +13,6 @@ namespace sw
 	public:
 		const char* getWindowTitle() const override { return "Game Toolbar"; }
 		/** @brief 플레이어 속도 등 런타임 슬라이더/버튼을 그립니다. */
-		void		draw( const EditorUIContext& ctx ) override;
+		void draw( const EditorUIContext& ctx ) override;
 	};
-}
+} // namespace sw

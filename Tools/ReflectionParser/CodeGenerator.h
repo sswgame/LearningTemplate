@@ -40,4 +40,4 @@ namespace sw::tool
 		std::string						   _outputDir;
 		std::string						   _outputFilePath;
 	};
-}
+} // namespace sw::tool

@@ -50,4 +50,4 @@ namespace sw
 	private:
 		std::unordered_map<hashed_string, ShaderCompileResult> _variantCache;
 	};
-}
+} // namespace sw

@@ -103,4 +103,4 @@ namespace sw
 	 * @brief 현재 스레드에 바인딩된 프레임 할당자를 반환합니다. (TLS 지원)
 	 */
 	SW_API FrameArenaAllocator& getThreadLocalFrameArena();
-}
+} // namespace sw

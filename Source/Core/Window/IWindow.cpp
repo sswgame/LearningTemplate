@@ -12,7 +12,7 @@ namespace sw
 	namespace
 	{
 		IWindow* s_activeWindow = nullptr;
-	}
+	} // namespace
 
 	std::unique_ptr<IWindow> IWindow::createPlatformWindow()
 	{
@@ -36,4 +36,4 @@ namespace sw
 	{
 		return s_activeWindow;
 	}
-}
+} // namespace sw

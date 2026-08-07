@@ -18,7 +18,6 @@ namespace sw
 	class SW_API ObjectStateSerializer
 	{
 	public:
-
 		/** @brief GameObject 상태를 XML 문자열로 직렬화합니다. */
 		static std::string saveToXmlString( const GameObject* gameObject );
 
@@ -37,4 +36,4 @@ namespace sw
 		/** @brief 로드용 파일 다이얼로그를 엽니다. */
 		static void openLoadFileDialog( GameObject* gameObject, FileDialogDelegate onLoadDone = {} );
 	};
-}
+} // namespace sw

@@ -81,4 +81,4 @@ namespace test
 
 		return ( failedCount == 0 ) ? 0 : 1;
 	}
-}
+} // namespace test

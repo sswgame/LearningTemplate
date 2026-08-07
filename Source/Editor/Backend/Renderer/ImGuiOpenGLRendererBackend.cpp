@@ -117,4 +117,4 @@ namespace sw
 		if ( ImGui::GetIO().BackendRendererUserData != nullptr )
 			ImGui_ImplOpenGL3_RenderDrawData( ImGui::GetDrawData() );
 	}
-}
+} // namespace sw

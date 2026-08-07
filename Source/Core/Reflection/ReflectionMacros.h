@@ -25,11 +25,11 @@ namespace sw
 	class IPropertyObserver
 	{
 	public:
-		virtual ~IPropertyObserver()										= default;
+		virtual ~IPropertyObserver() = default;
 		/**
 		 * @brief 프로퍼티 변경 콜백을 호출합니다
 		 */
 		virtual void onPropertyChanged( const hashed_string& propertyName ) = 0;
 	};
 
-}
+} // namespace sw

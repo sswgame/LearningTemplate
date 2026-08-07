@@ -165,4 +165,4 @@ namespace sw
 		alignas( 64 ) std::atomic<uint32> _enqueuePos{ 0 };
 		alignas( 64 ) std::atomic<uint32> _dequeuePos{ 0 };
 	};
-}
+} // namespace sw

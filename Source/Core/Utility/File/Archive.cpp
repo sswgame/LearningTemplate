@@ -321,4 +321,4 @@ namespace sw
 	{
 		return deserializeObject( pInstance, &typeInfo );
 	}
-}
+} // namespace sw

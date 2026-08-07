@@ -12,12 +12,12 @@ namespace sw
 	{
 		RHICapabilities() noexcept;
 
-		uint8 _bBindless		: 1;
-		uint8 _bCompute			: 1;
-		uint8 _bOffscreenRT		: 1;
-		uint8 _bImGuiHooks		: 1;
-		uint8 _bEditorSupported : 1;
-		[[maybe_unused]] uint8 _reserved			: 3;
+		uint8				   _bBindless		 : 1;
+		uint8				   _bCompute		 : 1;
+		uint8				   _bOffscreenRT	 : 1;
+		uint8				   _bImGuiHooks		 : 1;
+		uint8				   _bEditorSupported : 1;
+		[[maybe_unused]] uint8 _reserved		 : 3;
 	};
 
 	struct RHIAvailability
@@ -73,4 +73,4 @@ namespace sw
 			return caps;
 		}
 	};
-}
+} // namespace sw

@@ -70,46 +70,46 @@ namespace sw
 		RHIPipelineStateHandle createComputePipelineState( const std::string& shaderPath, const std::string& entryPoint = "CSMain" ) override;
 
 		/** @brief 파이프라인 상태 자원 해제 */
-		void				   destroyPipelineState( RHIPipelineStateHandle pso ) override;
+		void destroyPipelineState( RHIPipelineStateHandle pso ) override;
 
 		/** @brief 그래픽스 파이프라인 및 루트 시그니처 바인딩 */
-		void				   setPipelineState( RHIPipelineStateHandle pso ) override;
+		void setPipelineState( RHIPipelineStateHandle pso ) override;
 
 		/** @brief 컴퓨트 파이프라인 및 컴퓨트 루트 시그니처 바인딩 */
-		void				   setComputePipelineState( RHIPipelineStateHandle pso ) override;
+		void setComputePipelineState( RHIPipelineStateHandle pso ) override;
 
 		/** @brief D3D12 렌더 패스 정보 등록 */
-		RHIRenderPassHandle	   createRenderPass( const RHIRenderPassDesc& desc ) override;
+		RHIRenderPassHandle createRenderPass( const RHIRenderPassDesc& desc ) override;
 
 		/** @brief 렌더 패스 제거 */
-		void				   destroyRenderPass( RHIRenderPassHandle pass ) override;
+		void destroyRenderPass( RHIRenderPassHandle pass ) override;
 
 		/** @brief 렌더 타깃 어태치먼트 바인딩 */
-		void				   beginRenderPass( const RHIRenderPassBeginInfo& beginInfo ) override;
+		void beginRenderPass( const RHIRenderPassBeginInfo& beginInfo ) override;
 
 		/** @brief 렌더 패스 종료 */
-		void				   endRenderPass() override;
+		void endRenderPass() override;
 
 		/** @brief D3D12 Constant Buffer 리소스 생성 */
-		RHIBufferHandle	   createConstantBuffer( uint32 size ) override;
+		RHIBufferHandle createConstantBuffer( uint32 size ) override;
 
 		/** @brief Upload 힙을 통한 Constant Buffer 데이터 갱신 */
-		void			   updateConstantBuffer( RHIBufferHandle buffer, const void* data, uint32 size ) override;
+		void updateConstantBuffer( RHIBufferHandle buffer, const void* data, uint32 size ) override;
 
 		/** @brief D3D12 Structured / Storage Buffer 생성 */
-		RHIBufferHandle	   createStructuredBuffer( uint32 elementSize, uint32 elementCount ) override;
+		RHIBufferHandle createStructuredBuffer( uint32 elementSize, uint32 elementCount ) override;
 
 		/** @brief D3D12 Structured Buffer 데이터 갱신 */
-		void			   updateStructuredBuffer( RHIBufferHandle buffer, const void* data, uint32 size ) override;
+		void updateStructuredBuffer( RHIBufferHandle buffer, const void* data, uint32 size ) override;
 
 		/** @brief D3D12 GPU 리소스 삭제 */
-		void			   destroyBuffer( RHIBufferHandle buffer ) override;
+		void destroyBuffer( RHIBufferHandle buffer ) override;
 
 		/** @brief D3D12 2D 텍스처 리소스 생성 */
-		RHITextureHandle   createTexture2D( const RHITextureDesc& desc ) override;
+		RHITextureHandle createTexture2D( const RHITextureDesc& desc ) override;
 
 		/** @brief D3D12 GPU 텍스처 리소스 삭제 */
-		void			   destroyTexture( RHITextureHandle texture ) override;
+		void destroyTexture( RHITextureHandle texture ) override;
 
 		/** @brief D3D12 Bindless 리소스 테이블에 텍스처 등록 후 SRV 인덱스 발급 */
 		RHIDescriptorIndex registerBindlessTexture( RHITextureHandle texture ) override;
@@ -118,19 +118,19 @@ namespace sw
 		RHIDescriptorIndex registerBindlessResource( RHIBufferHandle buffer ) override;
 
 		/** @brief Bindless 리소스 등록 해제 및 Heap 테이블 항목 반환 */
-		void			   unregisterBindlessResource( RHIDescriptorIndex index ) override;
+		void unregisterBindlessResource( RHIDescriptorIndex index ) override;
 
 		/** @brief Bindless Descriptor Heap에 UAV 등록 후 핸들 발급 */
 		RHIDescriptorIndex registerBindlessUAV( RHIBufferHandle buffer ) override;
 
 		/** @brief Bindless UAV 등록 해제 */
-		void			   unregisterBindlessUAV( RHIDescriptorIndex index ) override;
+		void unregisterBindlessUAV( RHIDescriptorIndex index ) override;
 
 		/** @brief 명시적 Root Descriptor Slot에 UAV 테이블 바인딩 */
-		void			   bindComputeUAV( RHIDescriptorIndex index, uint32 slot ) override;
+		void bindComputeUAV( RHIDescriptorIndex index, uint32 slot ) override;
 
 		/** @brief 기본 삼각형 인덱싱 드로우 호출 */
-		void			   drawTriangle( RHIDescriptorIndex materialDescriptorIndex ) override;
+		void drawTriangle( RHIDescriptorIndex materialDescriptorIndex ) override;
 
 		/** @brief D3D12 Dispatch 컴퓨트 디스패치 실행 */
 		void dispatchCompute( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ ) override;
@@ -154,7 +154,7 @@ namespace sw
 		std::unique_ptr<IRHICommandList> createCommandList() override;
 
 		/** @brief 독립 커맨드 리스트 제출 */
-		void							 executeCommandList( IRHICommandList* cmdList ) override;
+		void executeCommandList( IRHICommandList* cmdList ) override;
 
 	private:
 		/**
@@ -226,7 +226,7 @@ namespace sw
 		{
 			Microsoft::WRL::ComPtr<ID3D12Resource> _resource;
 			D3D12_CPU_DESCRIPTOR_HANDLE			   _cpuHandle{};
-			D3D12_GPU_DESCRIPTOR_HANDLE            _gpuHandle{};
+			D3D12_GPU_DESCRIPTOR_HANDLE			   _gpuHandle{};
 		};
 		std::vector<BindlessResourceRecord> _registeredBindlessVector;
 		std::vector<uint32>					_bindlessFreeList;
@@ -248,7 +248,7 @@ namespace sw
 		uint32 _height		= 0;
 		uint32 _bufferCount = 2;
 	};
-}
+} // namespace sw
 #else
 namespace sw
 {
@@ -274,11 +274,11 @@ namespace sw
 		void* getNativeSwapChain() const override { return nullptr; }
 		void* getNativeCommandQueue() const override { return nullptr; }
 
-		RHIBufferHandle	   createConstantBuffer( uint32 ) override { return 0; }
-		void			   updateConstantBuffer( RHIBufferHandle, const void*, uint32 ) override {}
-		RHIBufferHandle	   createStructuredBuffer( uint32, uint32 ) override { return 0; }
-		void			   updateStructuredBuffer( RHIBufferHandle, const void*, uint32 ) override {}
-		void			   destroyBuffer( RHIBufferHandle ) override {}
+		RHIBufferHandle createConstantBuffer( uint32 ) override { return 0; }
+		void			updateConstantBuffer( RHIBufferHandle, const void*, uint32 ) override {}
+		RHIBufferHandle createStructuredBuffer( uint32, uint32 ) override { return 0; }
+		void			updateStructuredBuffer( RHIBufferHandle, const void*, uint32 ) override {}
+		void			destroyBuffer( RHIBufferHandle ) override {}
 
 		RHITextureHandle   createTexture2D( const RHITextureDesc& ) override { return 0; }
 		void			   destroyTexture( RHITextureHandle ) override {}
@@ -291,5 +291,5 @@ namespace sw
 		void			   bindComputeUAV( RHIDescriptorIndex, uint32 ) override {}
 		void			   drawTriangle( RHIDescriptorIndex ) override {}
 	};
-}
+} // namespace sw
 #endif

@@ -11,12 +11,11 @@
 
 namespace sw
 {
-	using ShaderRecompiledDelegate = Delegate<void( const std::string& , const ShaderCompileResult&  )>;
+	using ShaderRecompiledDelegate = Delegate<void( const std::string&, const ShaderCompileResult& )>;
 
 	class SW_API ShaderIncludeResolver
 	{
 	public:
-
 		/** @brief 셰이더 소스에서 #include 경로 목록을 파싱합니다. */
 		static std::vector<std::string> parseIncludes( const std::string& shaderSource );
 	};
@@ -65,4 +64,4 @@ namespace sw
 		std::string														_watchDirectory;
 		bool															_bInitialized = false;
 	};
-}
+} // namespace sw

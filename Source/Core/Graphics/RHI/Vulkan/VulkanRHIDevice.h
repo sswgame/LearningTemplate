@@ -66,10 +66,10 @@ namespace sw
 		void endFrame( bool vsync ) override;
 
 		/** @brief 백엔드 타입 반환 (Vulkan) */
-		RHIBackend	getBackendType() const override { return RHIBackend::Vulkan; }
+		RHIBackend getBackendType() const override { return RHIBackend::Vulkan; }
 
 		/** @brief Vulkan 백엔드는 Descriptor Indexing 기반 Bindless 지원 (true 반환) */
-		bool		supportsBindless() const override { return true; }
+		bool supportsBindless() const override { return true; }
 
 		/** @brief 백엔드 버전 문자열 반환 */
 		const utf8* getBackendName() const override { return "Vulkan 1.3"; }
@@ -93,40 +93,40 @@ namespace sw
 		RHIPipelineStateHandle createComputePipelineState( const std::string& shaderPath, const std::string& entryPoint = "CSMain" ) override;
 
 		/** @brief 파이프라인 상태 해제 */
-		void				   destroyPipelineState( RHIPipelineStateHandle pso ) override;
+		void destroyPipelineState( RHIPipelineStateHandle pso ) override;
 
 		/** @brief 그래픽스 파이프라인 바인딩 */
-		void				   setPipelineState( RHIPipelineStateHandle pso ) override;
+		void setPipelineState( RHIPipelineStateHandle pso ) override;
 
 		/** @brief 컴퓨트 파이프라인 바인딩 */
-		void				   setComputePipelineState( RHIPipelineStateHandle pso ) override;
+		void setComputePipelineState( RHIPipelineStateHandle pso ) override;
 
 		/** @brief Vulkan VkRenderPass 생성 */
-		RHIRenderPassHandle	   createRenderPass( const RHIRenderPassDesc& desc ) override;
+		RHIRenderPassHandle createRenderPass( const RHIRenderPassDesc& desc ) override;
 
 		/** @brief 렌더 패스 해제 */
-		void				   destroyRenderPass( RHIRenderPassHandle pass ) override;
+		void destroyRenderPass( RHIRenderPassHandle pass ) override;
 
 		/** @brief 렌더 패스 커맨드 기록 시작 (vkCmdBeginRenderPass) */
-		void				   beginRenderPass( const RHIRenderPassBeginInfo& beginInfo ) override;
+		void beginRenderPass( const RHIRenderPassBeginInfo& beginInfo ) override;
 
 		/** @brief 렌더 패스 기록 종료 (vkCmdEndRenderPass) */
-		void				   endRenderPass() override;
+		void endRenderPass() override;
 
 		/** @brief Vulkan UBO (Uniform Buffer Object) 생성 */
-		RHIBufferHandle	   createConstantBuffer( uint32 size ) override;
+		RHIBufferHandle createConstantBuffer( uint32 size ) override;
 
 		/** @brief UBO 메모리 Map/Unmap 갱신 */
-		void			   updateConstantBuffer( RHIBufferHandle buffer, const void* data, uint32 size ) override;
+		void updateConstantBuffer( RHIBufferHandle buffer, const void* data, uint32 size ) override;
 
 		/** @brief Vulkan SSBO (Shader Storage Buffer Object) 생성 */
-		RHIBufferHandle	   createStructuredBuffer( uint32 elementSize, uint32 elementCount ) override;
+		RHIBufferHandle createStructuredBuffer( uint32 elementSize, uint32 elementCount ) override;
 
 		/** @brief SSBO 메모리 Map/Unmap 갱신 */
-		void			   updateStructuredBuffer( RHIBufferHandle buffer, const void* data, uint32 size ) override;
+		void updateStructuredBuffer( RHIBufferHandle buffer, const void* data, uint32 size ) override;
 
 		/** @brief Vulkan VkBuffer 및 메모리 해제 */
-		void			   destroyBuffer( RHIBufferHandle buffer ) override;
+		void destroyBuffer( RHIBufferHandle buffer ) override;
 
 		RHITextureHandle   createTexture2D( const RHITextureDesc& /*desc*/ ) override { return 0; }
 		void			   destroyTexture( RHITextureHandle /*texture*/ ) override {}
@@ -136,19 +136,19 @@ namespace sw
 		RHIDescriptorIndex registerBindlessResource( RHIBufferHandle buffer ) override;
 
 		/** @brief Bindless 리소스 등록 해제 */
-		void			   unregisterBindlessResource( RHIDescriptorIndex index ) override;
+		void unregisterBindlessResource( RHIDescriptorIndex index ) override;
 
 		/** @brief Descriptor Set 내 Bindless Storage Buffer (UAV) 등록 */
 		RHIDescriptorIndex registerBindlessUAV( RHIBufferHandle buffer ) override;
 
 		/** @brief Bindless UAV 등록 해제 */
-		void			   unregisterBindlessUAV( RHIDescriptorIndex index ) override;
+		void unregisterBindlessUAV( RHIDescriptorIndex index ) override;
 
 		/** @brief Explicit Set Slot 내 UAV 바인딩 */
-		void			   bindComputeUAV( RHIDescriptorIndex index, uint32 slot ) override;
+		void bindComputeUAV( RHIDescriptorIndex index, uint32 slot ) override;
 
 		/** @brief 삼각형 그리기 (vkCmdDraw) */
-		void			   drawTriangle( RHIDescriptorIndex materialDescriptorIndex ) override;
+		void drawTriangle( RHIDescriptorIndex materialDescriptorIndex ) override;
 
 		/** @brief vkCmdDispatch 컴퓨트 디스패치 실행 */
 		void dispatchCompute( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ ) override;
@@ -172,7 +172,7 @@ namespace sw
 		std::unique_ptr<IRHICommandList> createCommandList() override;
 
 		/** @brief 커맨드 리스트 실행 제출 */
-		void							 executeCommandList( IRHICommandList* cmdList ) override;
+		void executeCommandList( IRHICommandList* cmdList ) override;
 
 		VkInstance		 getInstance() const { return _instance; }
 		VkPhysicalDevice getPhysicalDevice() const { return _physicalDevice; }
@@ -278,28 +278,28 @@ namespace sw
 		std::vector<VkFence>		 _inFlightFences;
 		std::vector<VkFence>		 _imagesInFlight;
 
-		void*  _hWnd		  = nullptr;
-		void*  _displayHandle = nullptr;
-		uint32 _currentFrame  = 0;
-		uint32 _imageIndex	  = 0;
-		uint32 _width		  = 0;
-		uint32 _height		  = 0;
+		void*				   _hWnd		  = nullptr;
+		void*				   _displayHandle = nullptr;
+		uint32				   _currentFrame  = 0;
+		uint32				   _imageIndex	  = 0;
+		uint32				   _width		  = 0;
+		uint32				   _height		  = 0;
 		uint8				   _bFrameStarted			: 1;
 		uint8				   _bEnableValidationLayers : 1;
 		[[maybe_unused]] uint8 _reservedFlags			: 6;
 
-		VkPipelineLayout	  _pipelineLayout	   = nullptr;
-		VkDescriptorSetLayout _descriptorSetLayout = nullptr;
-		VkDescriptorSetLayout _uavDescriptorSetLayout = nullptr;
+		VkPipelineLayout	  _pipelineLayout				  = nullptr;
+		VkDescriptorSetLayout _descriptorSetLayout			  = nullptr;
+		VkDescriptorSetLayout _uavDescriptorSetLayout		  = nullptr;
 		VkDescriptorSetLayout _explicitUavDescriptorSetLayout = nullptr;
-		VkDescriptorPool	  _descriptorPool	   = nullptr;
-		VkDescriptorSet		  _descriptorSet	   = nullptr;
-		VkBuffer			  _dummyUBO			   = nullptr;
-		VkDeviceMemory		  _dummyUBOMemory	   = nullptr;
-		VkPipeline			  _pipeline			   = nullptr;
-		VkBuffer			  _vertexBuffer		   = nullptr;
-		VkDeviceMemory		  _vertexBufferMemory  = nullptr;
-		std::vector<uint32>					_bindlessFreeList;
+		VkDescriptorPool	  _descriptorPool				  = nullptr;
+		VkDescriptorSet		  _descriptorSet				  = nullptr;
+		VkBuffer			  _dummyUBO						  = nullptr;
+		VkDeviceMemory		  _dummyUBOMemory				  = nullptr;
+		VkPipeline			  _pipeline						  = nullptr;
+		VkBuffer			  _vertexBuffer					  = nullptr;
+		VkDeviceMemory		  _vertexBufferMemory			  = nullptr;
+		std::vector<uint32>	  _bindlessFreeList;
 		struct VulkanBufferRecord
 		{
 			VkBuffer	   buffer = nullptr;
@@ -325,4 +325,4 @@ namespace sw
 		std::vector<VulkanPipelineStateRecord> _pipelineStates;
 		std::vector<VulkanRenderPassRecord>	   _renderPasses;
 	};
-}
+} // namespace sw

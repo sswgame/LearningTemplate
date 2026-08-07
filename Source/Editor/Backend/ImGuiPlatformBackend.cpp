@@ -203,4 +203,4 @@ namespace sw
 	{
 		return std::make_unique<ImGuiPlatformBackend>();
 	}
-}
+} // namespace sw

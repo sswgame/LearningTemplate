@@ -82,7 +82,6 @@ namespace sw
 #elif defined( SW_PLATFORM_LINUX )
 		platform_io.Platform_CreateVkSurface = []( ImGuiViewport* vp, ImU64 vk_inst, const void* vk_allocators, ImU64* out_vk_surface ) -> int
 		{
-
 			VkXlibSurfaceCreateInfoKHR create_info = {};
 			create_info.sType					   = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
 			create_info.dpy						   = (Display*)vp->PlatformHandle;
@@ -93,7 +92,6 @@ namespace sw
 #elif defined( SW_PLATFORM_MACOS )
 		platform_io.Platform_CreateVkSurface = []( ImGuiViewport* vp, ImU64 vk_inst, const void* vk_allocators, ImU64* out_vk_surface ) -> int
 		{
-
 			VkMetalSurfaceCreateInfoEXT create_info = {};
 			create_info.sType						= VK_STRUCTURE_TYPE_METAL_SURFACE_CREATE_INFO_EXT;
 			create_info.pLayer						= vp->PlatformHandleRaw;
@@ -136,4 +134,4 @@ namespace sw
 		if ( cmdBuffer != nullptr && ImGui::GetIO().BackendRendererUserData != nullptr )
 			ImGui_ImplVulkan_RenderDrawData( ImGui::GetDrawData(), cmdBuffer );
 	}
-}
+} // namespace sw

@@ -106,7 +106,7 @@ SW_TEST_CASE( Utility_Event, EventDispatcherChannelFiltering )
 {
 	sw::EventDispatcher dispatcher;
 
-	static int32 s_uiChannelReceived	  = 0;
+	static int32 s_uiChannelReceived	= 0;
 	static int32 s_audioChannelReceived = 0;
 
 	sw::hashed_string uiChannel( "UI_Channel" );

@@ -845,4 +845,4 @@ namespace sw
 	{
 		return double3{ v._x * scale, v._y * scale, v._z * scale };
 	}
-}
+} // namespace sw

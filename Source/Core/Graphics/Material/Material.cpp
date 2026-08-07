@@ -18,29 +18,33 @@
 
 namespace sw
 {
-	static struct PropertyTypeDesc {
-		const utf8* name;
+	static struct PropertyTypeDesc
+	{
+		const utf8*			 name;
 		MaterialPropertyType type;
-		uint32 size;
+		uint32				 size;
 	} s_PropertyTypes[] = {
-		{ "Float", MaterialPropertyType::Float, 4 },
-		{ "Float2", MaterialPropertyType::Float2, 8 },
-		{ "Float3", MaterialPropertyType::Float3, 12 },
-		{ "Float4", MaterialPropertyType::Float4, 16 },
-		{ "Float4x4", MaterialPropertyType::Float4x4, 64 },
-		{ "Uint", MaterialPropertyType::Uint, 4 },
-		{ "Uint2", MaterialPropertyType::Uint2, 8 },
-		{ "Uint3", MaterialPropertyType::Uint3, 12 },
-		{ "Uint4", MaterialPropertyType::Uint4, 16 },
-		{ "Int", MaterialPropertyType::Int, 4 },
-		{ "Int2", MaterialPropertyType::Int2, 8 },
-		{ "Int3", MaterialPropertyType::Int3, 12 },
-		{ "Int4", MaterialPropertyType::Int4, 16 },
+		{	  "Float",	   MaterialPropertyType::Float,	4},
+		{  "Float2",	MaterialPropertyType::Float2,  8},
+		{  "Float3",	MaterialPropertyType::Float3, 12},
+		{  "Float4",	MaterialPropertyType::Float4, 16},
+		{"Float4x4", MaterialPropertyType::Float4x4, 64},
+		{	  "Uint",	  MaterialPropertyType::Uint,  4},
+		{	  "Uint2",	   MaterialPropertyType::Uint2,	8},
+		{	  "Uint3",	   MaterialPropertyType::Uint3, 12},
+		{	  "Uint4",	   MaterialPropertyType::Uint4, 16},
+		{	  "Int",		 MaterialPropertyType::Int,	4},
+		{	  "Int2",	  MaterialPropertyType::Int2,  8},
+		{	  "Int3",	  MaterialPropertyType::Int3, 12},
+		{	  "Int4",	  MaterialPropertyType::Int4, 16},
 	};
 
-	static MaterialPropertyType stringToType(const std::string& str, uint32& outSize) {
-		for (const auto& desc : s_PropertyTypes) {
-			if (str == desc.name) {
+	static MaterialPropertyType stringToType( const std::string& str, uint32& outSize )
+	{
+		for ( const auto& desc : s_PropertyTypes )
+		{
+			if ( str == desc.name )
+			{
 				outSize = desc.size;
 				return desc.type;
 			}
@@ -49,9 +53,12 @@ namespace sw
 		return MaterialPropertyType::Unknown;
 	}
 
-	static const utf8* typeToString( MaterialPropertyType type ) {
-		for (const auto& desc : s_PropertyTypes) {
-			if (desc.type == type) {
+	static const utf8* typeToString( MaterialPropertyType type )
+	{
+		for ( const auto& desc : s_PropertyTypes )
+		{
+			if ( desc.type == type )
+			{
 				return desc.name;
 			}
 		}
@@ -79,7 +86,7 @@ namespace sw
 		else
 		{
 
-			uint32 alignedSize = (bufferSize + 255) & ~255u;
+			uint32 alignedSize = ( bufferSize + 255 ) & ~255u;
 			_data.buffer.resize( alignedSize, 0 );
 			bufferSize = alignedSize;
 		}
@@ -107,7 +114,7 @@ namespace sw
 
 		if ( _constantBuffer != 0 )
 		{
-			rhi->updateConstantBuffer( _constantBuffer, _data.buffer.data(), static_cast<uint32>(_data.buffer.size()) );
+			rhi->updateConstantBuffer( _constantBuffer, _data.buffer.data(), static_cast<uint32>( _data.buffer.size() ) );
 			SW_LOG_INFO( "[Material] HotRefresh '%#': Shader recompile detected, Constant Buffer re-uploaded. (Bytecode: %# bytes)", _name.c_str(), result._bytecode.size() );
 		}
 	}
@@ -157,27 +164,28 @@ namespace sw
 			}
 			else
 			{
-				auto spacePos = key.find(' ');
+				auto spacePos = key.find( ' ' );
 				if ( spacePos != std::string::npos )
 				{
-					std::string typeStr = key.substr( 0, spacePos );
+					std::string typeStr	 = key.substr( 0, spacePos );
 					std::string propName = StringUtil::trim( key.substr( spacePos + 1 ) );
 
-					uint32 typeSize = 0;
-					MaterialPropertyType type = stringToType( typeStr, typeSize );
+					uint32				 typeSize = 0;
+					MaterialPropertyType type	  = stringToType( typeStr, typeSize );
 
 					if ( type != MaterialPropertyType::Unknown )
 					{
 
-						uint32 align = (typeSize > 4 && typeSize <= 16) ? 16 : 4;
-						if ( typeSize == 64 ) align = 16;
-						currentOffset = (currentOffset + align - 1) & ~(align - 1);
+						uint32 align = ( typeSize > 4 && typeSize <= 16 ) ? 16 : 4;
+						if ( typeSize == 64 )
+							align = 16;
+						currentOffset = ( currentOffset + align - 1 ) & ~( align - 1 );
 
 						MaterialProperty prop;
-						prop.name = propName;
-						prop.type = type;
+						prop.name	= propName;
+						prop.type	= type;
 						prop.offset = currentOffset;
-						prop.size = typeSize;
+						prop.size	= typeSize;
 						_data.properties.push_back( prop );
 
 						if ( _data.buffer.size() < currentOffset + typeSize )
@@ -188,21 +196,24 @@ namespace sw
 						std::stringstream ss( value );
 						if ( type == MaterialPropertyType::Float || type == MaterialPropertyType::Float2 || type == MaterialPropertyType::Float3 || type == MaterialPropertyType::Float4 || type == MaterialPropertyType::Float4x4 )
 						{
-							float32* ptr = reinterpret_cast<float32*>( _data.buffer.data() + currentOffset );
-							uint32 count = typeSize / 4;
-							for ( uint32 i = 0; i < count; ++i ) ss >> ptr[i];
+							float32* ptr   = reinterpret_cast<float32*>( _data.buffer.data() + currentOffset );
+							uint32	 count = typeSize / 4;
+							for ( uint32 i = 0; i < count; ++i )
+								ss >> ptr[i];
 						}
 						else if ( type == MaterialPropertyType::Uint || type == MaterialPropertyType::Uint2 || type == MaterialPropertyType::Uint3 || type == MaterialPropertyType::Uint4 )
 						{
-							uint32* ptr = reinterpret_cast<uint32*>( _data.buffer.data() + currentOffset );
-							uint32 count = typeSize / 4;
-							for ( uint32 i = 0; i < count; ++i ) ss >> ptr[i];
+							uint32* ptr	  = reinterpret_cast<uint32*>( _data.buffer.data() + currentOffset );
+							uint32	count = typeSize / 4;
+							for ( uint32 i = 0; i < count; ++i )
+								ss >> ptr[i];
 						}
 						else if ( type == MaterialPropertyType::Int || type == MaterialPropertyType::Int2 || type == MaterialPropertyType::Int3 || type == MaterialPropertyType::Int4 )
 						{
-							int32* ptr = reinterpret_cast<int32*>( _data.buffer.data() + currentOffset );
+							int32* ptr	 = reinterpret_cast<int32*>( _data.buffer.data() + currentOffset );
 							uint32 count = typeSize / 4;
-							for ( uint32 i = 0; i < count; ++i ) ss >> ptr[i];
+							for ( uint32 i = 0; i < count; ++i )
+								ss >> ptr[i];
 						}
 						currentOffset += typeSize;
 					}
@@ -210,13 +221,14 @@ namespace sw
 				else if ( key == "color" )
 				{
 					MaterialProperty prop;
-					prop.name = "color";
-					prop.type = MaterialPropertyType::Float4;
-					prop.size = 16;
-					currentOffset = (currentOffset + 15) & ~15u;
-					prop.offset = currentOffset;
-					_data.properties.push_back(prop);
-					if ( _data.buffer.size() < currentOffset + 16 ) _data.buffer.resize( currentOffset + 16, 0 );
+					prop.name	  = "color";
+					prop.type	  = MaterialPropertyType::Float4;
+					prop.size	  = 16;
+					currentOffset = ( currentOffset + 15 ) & ~15u;
+					prop.offset	  = currentOffset;
+					_data.properties.push_back( prop );
+					if ( _data.buffer.size() < currentOffset + 16 )
+						_data.buffer.resize( currentOffset + 16, 0 );
 
 					float32* ptr = reinterpret_cast<float32*>( _data.buffer.data() + currentOffset );
 					sscanf_s( value.c_str(), "%f %f %f %f", &ptr[0], &ptr[1], &ptr[2], &ptr[3] );
@@ -225,7 +237,7 @@ namespace sw
 			}
 		}
 
-		uint32 alignedTotalSize = (currentOffset + 255) & ~255u;
+		uint32 alignedTotalSize = ( currentOffset + 255 ) & ~255u;
 		_data.buffer.resize( alignedTotalSize, 0 );
 
 		return true;
@@ -260,17 +272,20 @@ namespace sw
 			if ( prop.type == MaterialPropertyType::Float || prop.type == MaterialPropertyType::Float2 || prop.type == MaterialPropertyType::Float3 || prop.type == MaterialPropertyType::Float4 || prop.type == MaterialPropertyType::Float4x4 )
 			{
 				const float32* ptr = reinterpret_cast<const float32*>( _data.buffer.data() + prop.offset );
-				for ( uint32 i = 0; i < count; ++i ) file << ptr[i] << ( i == count - 1 ? "" : " " );
+				for ( uint32 i = 0; i < count; ++i )
+					file << ptr[i] << ( i == count - 1 ? "" : " " );
 			}
 			else if ( prop.type == MaterialPropertyType::Uint || prop.type == MaterialPropertyType::Uint2 || prop.type == MaterialPropertyType::Uint3 || prop.type == MaterialPropertyType::Uint4 )
 			{
 				const uint32* ptr = reinterpret_cast<const uint32*>( _data.buffer.data() + prop.offset );
-				for ( uint32 i = 0; i < count; ++i ) file << ptr[i] << ( i == count - 1 ? "" : " " );
+				for ( uint32 i = 0; i < count; ++i )
+					file << ptr[i] << ( i == count - 1 ? "" : " " );
 			}
 			else if ( prop.type == MaterialPropertyType::Int || prop.type == MaterialPropertyType::Int2 || prop.type == MaterialPropertyType::Int3 || prop.type == MaterialPropertyType::Int4 )
 			{
 				const int32* ptr = reinterpret_cast<const int32*>( _data.buffer.data() + prop.offset );
-				for ( uint32 i = 0; i < count; ++i ) file << ptr[i] << ( i == count - 1 ? "" : " " );
+				for ( uint32 i = 0; i < count; ++i )
+					file << ptr[i] << ( i == count - 1 ? "" : " " );
 			}
 			file << "\n";
 		}
@@ -300,7 +315,7 @@ namespace sw
 
 		if ( rhi != nullptr && _constantBuffer != 0 )
 		{
-			rhi->updateConstantBuffer( _constantBuffer, _data.buffer.data(), static_cast<uint32>(_data.buffer.size()) );
+			rhi->updateConstantBuffer( _constantBuffer, _data.buffer.data(), static_cast<uint32>( _data.buffer.size() ) );
 		}
 	}
 
@@ -317,7 +332,7 @@ namespace sw
 				rhi->destroyBuffer( _constantBuffer );
 			}
 		}
-		_constantBuffer = 0;
+		_constantBuffer	 = 0;
 		_descriptorIndex = kInvalidDescriptorIndex;
 	}
 
@@ -364,7 +379,7 @@ namespace sw
 		}
 		if ( _parentMaterial != nullptr )
 		{
-			return _parentMaterial->getPropertyData("color") ? reinterpret_cast<const float32*>(_parentMaterial->getPropertyData("color")) : nullptr;
+			return _parentMaterial->getPropertyData( "color" ) ? reinterpret_cast<const float32*>( _parentMaterial->getPropertyData( "color" ) ) : nullptr;
 		}
 		return nullptr;
 	}
@@ -443,4 +458,4 @@ namespace sw
 		_vectorOverrides.clear();
 		_textureOverrides.clear();
 	}
-}
+} // namespace sw

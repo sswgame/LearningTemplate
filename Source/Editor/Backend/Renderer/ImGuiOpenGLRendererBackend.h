@@ -27,4 +27,4 @@ namespace sw
 
 		void* registerTexture( RHITextureHandle /*texture*/ ) override { return nullptr; }
 	};
-}
+} // namespace sw

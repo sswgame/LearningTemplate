@@ -12,7 +12,8 @@ namespace sw
 	/**
 	 * @class TaskValue
 	 * @brief std::any를 래핑하여 모든 형태의 인자를 런타임에 안전하게 저장하고 타입 캐스팅할 수 있는 클래스
-	 */	class TaskValue
+	 */
+	class TaskValue
 	{
 	public:
 		TaskValue() = default;
@@ -31,7 +32,8 @@ namespace sw
 
 		/**
 		 * @brief 지정된 타입 T에 대한 포인터를 반환합니다. 타입이 불일치하면 nullptr을 반환합니다.
-		 */		template <typename T>
+		 */
+		template <typename T>
 		const T* getPtr() const
 		{
 			return std::any_cast<T>( &_value );
@@ -85,7 +87,8 @@ namespace sw
 
 		/**
 		 * @brief 인덱스에 해당하는 인자를 지정된 타입 포인터로 획득합니다.
-		 */		template <typename T>
+		 */
+		template <typename T>
 		const T* getPtr( uint32 index ) const
 		{
 			if ( index < _values.size() )
@@ -189,4 +192,4 @@ namespace sw
 	private:
 		std::shared_ptr<StageNode> _node;
 	};
-}
+} // namespace sw

@@ -24,4 +24,4 @@ namespace sw
 		static bool deserializeDiff( void* targetInstance, const TypeInfo& typeInfo, const uint8* diffData, size_t diffSize );
 	};
 
-}
+} // namespace sw

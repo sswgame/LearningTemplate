@@ -2,10 +2,10 @@
 #include "WindowsFileWatcher.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
-#include "Core/Utility/Log/Logger.h"
-#include "Core/Utility/String/StringUtil.h"
-#include "Core/Utility/File/FileUtil.h"
-#include <Windows.h>
+	#include "Core/Utility/Log/Logger.h"
+	#include "Core/Utility/String/StringUtil.h"
+	#include "Core/Utility/File/FileUtil.h"
+	#include <Windows.h>
 
 namespace sw
 {
@@ -24,15 +24,14 @@ namespace sw
 			return false;
 
 		std::wstring wDir = StringUtil::utf8ToUtf16( directoryPath );
-		_hDirectory = CreateFileW(
-			wDir.c_str(),
-			FILE_LIST_DIRECTORY,
-			FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-			nullptr,
-			OPEN_EXISTING,
-			FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED,
-			nullptr
-		);
+		_hDirectory		  = CreateFileW(
+			  wDir.c_str(),
+			  FILE_LIST_DIRECTORY,
+			  FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+			  nullptr,
+			  OPEN_EXISTING,
+			  FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED,
+			  nullptr );
 
 		if ( _hDirectory == INVALID_HANDLE_VALUE )
 		{
@@ -50,8 +49,8 @@ namespace sw
 		}
 
 		_directoryPath = directoryPath;
-		_bRecursive = bRecursive;
-		_bIsWatching = true;
+		_bRecursive	   = bRecursive;
+		_bIsWatching   = true;
 
 		_workerThread = std::thread( &WindowsFileWatcher::workerThreadMain, this );
 
@@ -61,8 +60,8 @@ namespace sw
 
 	uint32 WindowsFileWatcher::pollEvents( std::vector<FileChangeEvent>& outEvents )
 	{
-		std::lock_guard<std::mutex> lock{  _eventMutex  };
-		uint32 count = static_cast<uint32>( _eventQueue.size() );
+		std::lock_guard<std::mutex> lock{ _eventMutex };
+		uint32						count = static_cast<uint32>( _eventQueue.size() );
 		if ( count > 0 )
 		{
 			outEvents.insert( outEvents.end(), _eventQueue.begin(), _eventQueue.end() );
@@ -104,9 +103,9 @@ namespace sw
 
 	void WindowsFileWatcher::workerThreadMain()
 	{
-		constexpr DWORD bufferSize = 16 * 1024;
+		constexpr DWORD	   bufferSize = 16 * 1024;
 		std::vector<uint8> buffer( bufferSize );
-		OVERLAPPED overlapped{};
+		OVERLAPPED		   overlapped{};
 
 		DWORD notifyFilter = FILE_NOTIFY_CHANGE_FILE_NAME |
 							 FILE_NOTIFY_CHANGE_DIR_NAME |
@@ -128,25 +127,23 @@ namespace sw
 				notifyFilter,
 				&bytesReturned,
 				&overlapped,
-				nullptr
-			);
+				nullptr );
 
 			if ( !bResult )
 			{
 				break;
 			}
 
-			DWORD bytesTransferred = 0;
-			ULONG_PTR completionKey = 0;
-			LPOVERLAPPED pOverlapped = nullptr;
+			DWORD		 bytesTransferred = 0;
+			ULONG_PTR	 completionKey	  = 0;
+			LPOVERLAPPED pOverlapped	  = nullptr;
 
 			BOOL bWait = GetQueuedCompletionStatus(
 				_hCompletionPort,
 				&bytesTransferred,
 				&completionKey,
 				&pOverlapped,
-				INFINITE
-			);
+				INFINITE );
 
 			if ( !_bIsWatching )
 			{
@@ -163,25 +160,37 @@ namespace sw
 
 				FILE_NOTIFY_INFORMATION* pNotify = reinterpret_cast<FILE_NOTIFY_INFORMATION*>( buffer.data() );
 
-				std::lock_guard<std::mutex> lock{  _eventMutex  };
+				std::lock_guard<std::mutex> lock{ _eventMutex };
 
 				while ( pNotify )
 				{
 					std::wstring wFileName( pNotify->FileName, pNotify->FileNameLength / sizeof( WCHAR ) );
-					std::string fileName = StringUtil::utf16ToUtf8( wFileName );
+					std::string	 fileName = StringUtil::utf16ToUtf8( wFileName );
 
 					FileChangeEvent eventObj;
 					eventObj._directory = _directoryPath;
-					eventObj._filename = fileName;
+					eventObj._filename	= fileName;
 
 					switch ( pNotify->Action )
 					{
-					case FILE_ACTION_ADDED:				eventObj._action = FileWatcherAction::Added; break;
-					case FILE_ACTION_REMOVED:			eventObj._action = FileWatcherAction::Removed; break;
-					case FILE_ACTION_MODIFIED:			eventObj._action = FileWatcherAction::Modified; break;
-					case FILE_ACTION_RENAMED_OLD_NAME:	eventObj._action = FileWatcherAction::RenamedOldName; break;
-					case FILE_ACTION_RENAMED_NEW_NAME:	eventObj._action = FileWatcherAction::RenamedNewName; break;
-					default:							eventObj._action = FileWatcherAction::Modified; break;
+						case FILE_ACTION_ADDED:
+							eventObj._action = FileWatcherAction::Added;
+							break;
+						case FILE_ACTION_REMOVED:
+							eventObj._action = FileWatcherAction::Removed;
+							break;
+						case FILE_ACTION_MODIFIED:
+							eventObj._action = FileWatcherAction::Modified;
+							break;
+						case FILE_ACTION_RENAMED_OLD_NAME:
+							eventObj._action = FileWatcherAction::RenamedOldName;
+							break;
+						case FILE_ACTION_RENAMED_NEW_NAME:
+							eventObj._action = FileWatcherAction::RenamedNewName;
+							break;
+						default:
+							eventObj._action = FileWatcherAction::Modified;
+							break;
 					}
 
 					_eventQueue.push_back( eventObj );
@@ -195,6 +204,6 @@ namespace sw
 			}
 		}
 	}
-}
+} // namespace sw
 
 #endif // SW_PLATFORM_WINDOWS

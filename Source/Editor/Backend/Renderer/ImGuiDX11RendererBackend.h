@@ -33,4 +33,4 @@ namespace sw
 		std::vector<Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>> _registeredSrvs;
 #endif
 	};
-}
+} // namespace sw

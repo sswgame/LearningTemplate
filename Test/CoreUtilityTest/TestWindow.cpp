@@ -48,4 +48,3 @@ SW_TEST_CASE( WindowTest, ResizeCallbackAndCustomMessageHandler )
 		window->destroy();
 	}
 }
-

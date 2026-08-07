@@ -1148,4 +1148,4 @@ namespace sw
 		return true;
 	}
 
-}
+} // namespace sw

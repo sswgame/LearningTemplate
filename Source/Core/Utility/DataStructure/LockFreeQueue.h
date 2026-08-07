@@ -101,4 +101,4 @@ namespace sw
 		alignas( 64 ) std::atomic<uint32> _head{ 0 };
 		alignas( 64 ) std::atomic<uint32> _tail{ 0 };
 	};
-}
+} // namespace sw

@@ -29,7 +29,7 @@ namespace sw
 		virtual void beginCommandList() = 0;
 
 		/** @brief 커맨드 리스트 기록 종료 */
-		virtual void endCommandList()	= 0;
+		virtual void endCommandList() = 0;
 
 		/** @brief 뷰포트 영역 설정 */
 		virtual void setViewport( const RHIViewport& viewport ) = 0;
@@ -81,17 +81,19 @@ namespace sw
 
 		virtual bool initialize()
 		{
-			if ( _initWindow == nullptr ) return false;
+			if ( _initWindow == nullptr )
+				return false;
 
 			_renderPassManager = std::make_unique<RenderPassManager>();
-			if ( !_renderPassManager->initialize() ) return false;
+			if ( !_renderPassManager->initialize() )
+				return false;
 
 			RHISwapChainDesc scDesc{};
 			scDesc._windowHandle  = _initWindow->getNativeHandle();
 			scDesc._windowDisplay = _initWindow->getNativeDisplay();
 			scDesc._width		  = _initWindow->getWidth();
 			scDesc._height		  = _initWindow->getHeight();
-			scDesc._bufferCount   = 3;
+			scDesc._bufferCount	  = 3;
 			scDesc._vsync		  = true;
 
 			return initializeInternal( scDesc );
@@ -113,11 +115,10 @@ namespace sw
 		}
 
 	protected:
-		IWindow* _initWindow = nullptr;
+		IWindow*						   _initWindow = nullptr;
 		std::unique_ptr<RenderPassManager> _renderPassManager;
 
 	public:
-
 		/** @brief RHI 디바이스 및 스왑체인 초기화 */
 		virtual bool initializeInternal( const RHISwapChainDesc& desc ) = 0;
 
@@ -133,10 +134,10 @@ namespace sw
 		virtual void resize( uint32 width, uint32 height ) = 0;
 
 		/** @brief 프레임 렌더링 시작 (백버퍼 지우기) */
-		virtual void beginFrame( float32 clearColor[4] )   = 0;
+		virtual void beginFrame( float32 clearColor[4] ) = 0;
 
 		/** @brief 프레임 렌더링 종료 (스왑체인 Present 실행) */
-		virtual void endFrame( bool vsync = true )		   = 0;
+		virtual void endFrame( bool vsync = true ) = 0;
 
 		/** @brief Offscreen color target에 렌더 시작 (Game View 등). colorTarget==0 이면 beginFrame과 동일. */
 		virtual void beginOffscreenPass( RHITextureHandle colorTarget, float32 clearColor[4] )
@@ -155,7 +156,7 @@ namespace sw
 		}
 
 		/** @brief 현재 RHI 백엔드 종류 반환 */
-		virtual RHIBackend	getBackendType() const = 0;
+		virtual RHIBackend getBackendType() const = 0;
 
 		/** @brief 현재 백엔드가 Bindless(무제한 리소스 배열) 기술을 지원하는지 여부 반환 */
 		virtual bool supportsBindless() const = 0;
@@ -164,85 +165,85 @@ namespace sw
 		virtual const utf8* getBackendName() const = 0;
 
 		/** @brief 기본 Native 디바이스 객체 포인터 반환 (ID3D12Device, VkDevice 등) */
-		virtual void* getNativeDevice() const		= 0;
+		virtual void* getNativeDevice() const = 0;
 
 		/** @brief 기본 Native 컨텍스트 포인터 반환 (ID3D11DeviceContext, EGLContext 등) */
-		virtual void* getNativeContext() const		= 0;
+		virtual void* getNativeContext() const = 0;
 
 		/** @brief 기본 Native 스왑체인 객체 포인터 반환 */
-		virtual void* getNativeSwapChain() const	= 0;
+		virtual void* getNativeSwapChain() const = 0;
 
 		/** @brief 기본 Native 커맨드 큐 객체 포인터 반환 */
 		virtual void* getNativeCommandQueue() const = 0;
 
 		/** @brief 그래픽스 파이프라인 상태 객체(PSO) 생성 */
-		virtual RHIPipelineStateHandle createPipelineState( const RHIPipelineStateDesc& desc )	  = 0;
+		virtual RHIPipelineStateHandle createPipelineState( const RHIPipelineStateDesc& desc ) = 0;
 
 		/** @brief 컴퓨트 파이프라인 상태 객체(PSO) 생성 */
 		virtual RHIPipelineStateHandle createComputePipelineState( const std::string& shaderPath, const std::string& entryPoint = "CSMain" ) = 0;
 
 		/** @brief 파이프라인 상태 객체 해제 */
-		virtual void				   destroyPipelineState( RHIPipelineStateHandle pso )		  = 0;
+		virtual void destroyPipelineState( RHIPipelineStateHandle pso ) = 0;
 
 		/** @brief 그래픽스 파이프라인 바인딩 */
-		virtual void				   setPipelineState( RHIPipelineStateHandle pso )			  = 0;
+		virtual void setPipelineState( RHIPipelineStateHandle pso ) = 0;
 
 		/** @brief 컴퓨트 파이프라인 바인딩 */
-		virtual void				   setComputePipelineState( RHIPipelineStateHandle pso )	  = 0;
+		virtual void setComputePipelineState( RHIPipelineStateHandle pso ) = 0;
 
 		/** @brief 렌더 패스 객체 생성 */
-		virtual RHIRenderPassHandle	   createRenderPass( const RHIRenderPassDesc& desc )		  = 0;
+		virtual RHIRenderPassHandle createRenderPass( const RHIRenderPassDesc& desc ) = 0;
 
 		/** @brief 렌더 패스 객체 해제 */
-		virtual void				   destroyRenderPass( RHIRenderPassHandle pass )			  = 0;
+		virtual void destroyRenderPass( RHIRenderPassHandle pass ) = 0;
 
 		/** @brief 렌더 패스 바인딩 및 수행 시작 */
-		virtual void				   beginRenderPass( const RHIRenderPassBeginInfo& beginInfo ) = 0;
+		virtual void beginRenderPass( const RHIRenderPassBeginInfo& beginInfo ) = 0;
 
 		/** @brief 렌더 패스 수행 종료 */
-		virtual void				   endRenderPass()											  = 0;
+		virtual void endRenderPass() = 0;
 
 		/** @brief Constant Buffer 생성 */
-		virtual RHIBufferHandle	   createConstantBuffer( uint32 size )											 = 0;
+		virtual RHIBufferHandle createConstantBuffer( uint32 size ) = 0;
 
 		/** @brief Constant Buffer 데이터 갱신 */
-		virtual void			   updateConstantBuffer( RHIBufferHandle buffer, const void* data, uint32 size ) = 0;
+		virtual void updateConstantBuffer( RHIBufferHandle buffer, const void* data, uint32 size ) = 0;
 
 		/** @brief Structured / Storage Buffer 생성 */
-		virtual RHIBufferHandle	   createStructuredBuffer( uint32 elementSize, uint32 elementCount )			 = 0;
+		virtual RHIBufferHandle createStructuredBuffer( uint32 elementSize, uint32 elementCount ) = 0;
 
 		/** @brief Structured / Storage Buffer 데이터 갱신 */
-		virtual void			   updateStructuredBuffer( RHIBufferHandle buffer, const void* data, uint32 size ) = 0;
+		virtual void updateStructuredBuffer( RHIBufferHandle buffer, const void* data, uint32 size ) = 0;
 
 		/** @brief GPU 버퍼 리소스 삭제 */
-		virtual void			   destroyBuffer( RHIBufferHandle buffer )										 = 0;
+		virtual void destroyBuffer( RHIBufferHandle buffer ) = 0;
 
 		/** @brief 2D 텍스처 (RenderTarget 포함) 리소스 생성 */
-		virtual RHITextureHandle   createTexture2D( const RHITextureDesc& desc )								 = 0;
+		virtual RHITextureHandle createTexture2D( const RHITextureDesc& desc ) = 0;
 
 		/** @brief GPU 텍스처 리소스 삭제 */
-		virtual void			   destroyTexture( RHITextureHandle texture )									 = 0;
+		virtual void destroyTexture( RHITextureHandle texture ) = 0;
 
 		/** @brief Bindless 리소스 테이블에 텍스처 등록 후 SRV 인덱스 발급 */
-		virtual RHIDescriptorIndex registerBindlessTexture( RHITextureHandle texture )							 = 0;
+		virtual RHIDescriptorIndex registerBindlessTexture( RHITextureHandle texture ) = 0;
 
 		/** @brief Bindless 리소스 테이블에 버퍼 등록 후 Bindless 인덱스 발급 */
-		virtual RHIDescriptorIndex registerBindlessResource( RHIBufferHandle buffer )							 = 0;
+		virtual RHIDescriptorIndex registerBindlessResource( RHIBufferHandle buffer ) = 0;
 
 		/** @brief Bindless 리소스 등록 해제 */
-		virtual void			   unregisterBindlessResource( RHIDescriptorIndex index )						 = 0;
+		virtual void unregisterBindlessResource( RHIDescriptorIndex index ) = 0;
 
 		/** @brief Bindless UAV(Unordered Access View) 등록 후 인덱스 발급 */
-		virtual RHIDescriptorIndex registerBindlessUAV( RHIBufferHandle buffer )								 = 0;
+		virtual RHIDescriptorIndex registerBindlessUAV( RHIBufferHandle buffer ) = 0;
 
 		/** @brief Bindless UAV 등록 해제 */
-		virtual void			   unregisterBindlessUAV( RHIDescriptorIndex index )							 = 0;
+		virtual void unregisterBindlessUAV( RHIDescriptorIndex index ) = 0;
 
 		/** @brief 명시적 슬롯(Explicit Slot)에 UAV 직접 바인딩 */
-		virtual void			   bindComputeUAV( RHIDescriptorIndex index, uint32 slot )						 = 0;
+		virtual void bindComputeUAV( RHIDescriptorIndex index, uint32 slot ) = 0;
 
 		/** @brief 기본 삼각형 인덱싱 드로우 호출 */
-		virtual void			   drawTriangle( RHIDescriptorIndex materialDescriptorIndex )					 = 0;
+		virtual void drawTriangle( RHIDescriptorIndex materialDescriptorIndex ) = 0;
 
 		/** @brief 컴퓨트 셰이더 디스패치 실행 */
 		virtual void dispatchCompute( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ ) = 0;
@@ -260,9 +261,9 @@ namespace sw
 		virtual void endEventMarker() = 0;
 
 		/** @brief 새 독립 커맨드 리스트 생성 */
-		virtual std::unique_ptr<IRHICommandList> createCommandList()							= 0;
+		virtual std::unique_ptr<IRHICommandList> createCommandList() = 0;
 
 		/** @brief 독립 커맨드 리스트 제출 및 커맨드 큐 실행 */
-		virtual void							 executeCommandList( IRHICommandList* cmdList ) = 0;
+		virtual void executeCommandList( IRHICommandList* cmdList ) = 0;
 	};
-}
+} // namespace sw

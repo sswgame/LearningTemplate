@@ -29,12 +29,12 @@ private:                                                      \
 
 	struct IEvent
 	{
-		IEvent()							   = default;
-		IEvent( const IEvent& )				   = default;
-		IEvent& operator=( const IEvent& )	   = default;
-		IEvent( IEvent&& )					   = default;
-		IEvent& operator=( IEvent&& )		   = default;
-		virtual ~IEvent()					   = default;
+		IEvent()						   = default;
+		IEvent( const IEvent& )			   = default;
+		IEvent& operator=( const IEvent& ) = default;
+		IEvent( IEvent&& )				   = default;
+		IEvent& operator=( IEvent&& )	   = default;
+		virtual ~IEvent()				   = default;
 		/**
 		 * @brief EventType을(를) 반환합니다
 		 */
@@ -45,11 +45,11 @@ private:                                                      \
 	{
 		WindowResizeEvent() noexcept;
 
-		int32 _width  = 0;
-		int32 _height = 0;
-		uint8 _bIsResizing	 : 1;
-		uint8 _bIsMaximized	 : 1;
-		uint8 _bIsMinimized	 : 1;
+		int32				   _width  = 0;
+		int32				   _height = 0;
+		uint8				   _bIsResizing	  : 1;
+		uint8				   _bIsMaximized  : 1;
+		uint8				   _bIsMinimized  : 1;
 		[[maybe_unused]] uint8 _reservedFlags : 5;
 
 		SW_REGISTER_EVENT( WindowResize );
@@ -64,8 +64,8 @@ private:                                                      \
 	{
 		WindowActivateEvent() noexcept;
 
-		uint8 _bIsActivate	 : 1;
+		uint8				   _bIsActivate	  : 1;
 		[[maybe_unused]] uint8 _reservedFlags : 7;
 		SW_REGISTER_EVENT( WindowActivate );
 	};
-}
+} // namespace sw

@@ -46,4 +46,4 @@ namespace sw
 		 */
 		static ShaderReflectionData reflect( const std::vector<uint8>& bytecode, ShaderTargetFormat targetFormat );
 	};
-}
+} // namespace sw

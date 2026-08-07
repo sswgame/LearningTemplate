@@ -33,7 +33,7 @@ namespace sw
 
 	/** @brief EditorModule이 export하는 API 테이블 채우기 심볼 이름: fillEditorAPI */
 	using PFN_FillEditorAPI = bool ( * )( EditorAPI* outApi );
-}
+} // namespace sw
 
 extern "C"
 {

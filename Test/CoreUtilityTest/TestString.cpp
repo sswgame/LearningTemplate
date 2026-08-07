@@ -138,4 +138,3 @@ SW_TEST_CASE( Utility_String, FormatStringUtility )
 #include "Core/Utility/String/StringBuilder.h"
 
 // SW_TEST_CASE( Utility_String, StringBuilderZeroAllocation )\n// Temporarily disabled due to format issue
-

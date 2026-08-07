@@ -22,19 +22,19 @@ namespace sw
 
 	struct IContainerWrapper
 	{
-		virtual ~IContainerWrapper()									= default;
+		virtual ~IContainerWrapper() = default;
 		/**
 		 * @brief Kind을(를) 반환합니다
 		 */
-		virtual ContainerKind getKind() const							= 0;
+		virtual ContainerKind getKind() const = 0;
 		/**
 		 * @brief 컨테이너 크기를 반환합니다
 		 */
-		virtual size_t		  getSize( const void* containerPtr ) const = 0;
+		virtual size_t getSize( const void* containerPtr ) const = 0;
 		/**
 		 * @brief 내부 상태를 비웁니다
 		 */
-		virtual void		  clear( void* containerPtr ) const			= 0;
+		virtual void clear( void* containerPtr ) const = 0;
 
 		virtual ISequenceContainerWrapper* asSequence() { return nullptr; }
 		virtual IMapContainerWrapper*	   asMap() { return nullptr; }
@@ -47,13 +47,13 @@ namespace sw
 		/**
 		 * @brief 요소를 반환합니다
 		 */
-		virtual void*			   getElement( void* containerPtr, size_t index ) const			   = 0;
-		virtual const void*		   getElementConst( const void* containerPtr, size_t index ) const = 0;
+		virtual void*		getElement( void* containerPtr, size_t index ) const			= 0;
+		virtual const void* getElementConst( const void* containerPtr, size_t index ) const = 0;
 		/**
 		 * @brief 기본값 요소를 추가합니다
 		 */
-		virtual void			   addElementDefault( void* containerPtr ) const				   = 0;
-		virtual void			   reserve( void* , size_t  ) const {}
+		virtual void addElementDefault( void* containerPtr ) const = 0;
+		virtual void reserve( void*, size_t ) const {}
 	};
 
 	using MapForEachDelegate = Delegate<void( const void* keyPtr, const void* valPtr )>;
@@ -66,7 +66,7 @@ namespace sw
 		/**
 		 * @brief 각 항목에 대해 실행합니다
 		 */
-		virtual void forEach( const void* containerPtr, const MapForEachDelegate& callback ) const		= 0;
+		virtual void forEach( const void* containerPtr, const MapForEachDelegate& callback ) const = 0;
 		/**
 		 * @brief 키-값을 삽입합니다
 		 */
@@ -75,27 +75,27 @@ namespace sw
 		/**
 		 * @brief KeySize을(를) 반환합니다
 		 */
-		virtual size_t getKeySize() const						= 0;
+		virtual size_t getKeySize() const = 0;
 		/**
 		 * @brief ValueSize을(를) 반환합니다
 		 */
-		virtual size_t getValueSize() const						= 0;
+		virtual size_t getValueSize() const = 0;
 		/**
 		 * @brief 키를 기본 생성합니다
 		 */
-		virtual void   defaultConstructKey( void* ptr ) const	= 0;
+		virtual void defaultConstructKey( void* ptr ) const = 0;
 		/**
 		 * @brief 값을 기본 생성합니다
 		 */
-		virtual void   defaultConstructValue( void* ptr ) const = 0;
+		virtual void defaultConstructValue( void* ptr ) const = 0;
 		/**
 		 * @brief Key을(를) 파괴합니다
 		 */
-		virtual void   destroyKey( void* ptr ) const			= 0;
+		virtual void destroyKey( void* ptr ) const = 0;
 		/**
 		 * @brief Value을(를) 파괴합니다
 		 */
-		virtual void   destroyValue( void* ptr ) const			= 0;
+		virtual void destroyValue( void* ptr ) const = 0;
 	};
 
 	template <typename TContainer>
@@ -271,13 +271,11 @@ namespace sw
 			auto* container = static_cast<const TContainer*>( containerPtr );
 			return &( ( *container )[index] );
 		}
-		void clear( void*  ) const override
+		void clear( void* ) const override
 		{
-
 		}
-		void addElementDefault( void*  ) const override
+		void addElementDefault( void* ) const override
 		{
-
 		}
 	};
 
@@ -349,4 +347,4 @@ namespace sw
 		void   destroyValue( void* ptr ) const override { static_cast<ValueType*>( ptr )->~ValueType(); }
 	};
 
-}
+} // namespace sw

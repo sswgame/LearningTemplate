@@ -69,4 +69,4 @@ namespace sw
 		WindowMessageHandlerDelegate _customHandler;
 		WindowResizeDelegate		 _onResize;
 	};
-}
+} // namespace sw

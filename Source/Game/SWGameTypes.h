@@ -18,4 +18,4 @@ namespace sw
 		PROPERTY()
 		float32 _speed = 5.0f; ///< 이동 속도
 	};
-}
+} // namespace sw

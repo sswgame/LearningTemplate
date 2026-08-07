@@ -20,4 +20,4 @@ namespace sw
 		 */
 		static std::filesystem::path resolveFontFile( const utf8* fileName );
 	};
-}
+} // namespace sw

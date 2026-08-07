@@ -39,7 +39,7 @@ namespace sw
 	class SW_API RenderPassResource
 	{
 	public:
-		RenderPassResource()  = default;
+		RenderPassResource()		  = default;
 		virtual ~RenderPassResource() = default;
 
 		RenderPassResource( const RenderPassResource& )			   = delete;
@@ -60,4 +60,4 @@ namespace sw
 	private:
 		RenderPassDesc _desc;
 	};
-}
+} // namespace sw

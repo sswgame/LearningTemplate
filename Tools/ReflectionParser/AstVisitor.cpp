@@ -175,7 +175,7 @@ namespace sw::tool
 			collector->enumerators->push_back( std::move( enumerator ) );
 			return CXChildVisit_Continue;
 		}
-	}
+	} // namespace
 
 	AstVisitor::AstVisitor( CXTranslationUnit tu )
 		: _translationUnit( tu )
@@ -319,4 +319,4 @@ namespace sw::tool
 		}
 		return std::string( fqn.view() );
 	}
-}
+} // namespace sw::tool

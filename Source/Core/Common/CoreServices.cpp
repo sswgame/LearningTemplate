@@ -17,7 +17,7 @@ namespace sw
 	namespace
 	{
 		CoreServices s_services{};
-	}
+	} // namespace
 
 	void bindCoreServices( const CoreServices& services )
 	{
@@ -64,4 +64,4 @@ namespace sw
 		SW_LOG_ASSERT( s_services.sceneManager != nullptr, "SceneManager is not bound" );
 		return *s_services.sceneManager;
 	}
-}
+} // namespace sw

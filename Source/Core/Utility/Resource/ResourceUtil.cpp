@@ -20,7 +20,7 @@ namespace sw
 	namespace
 	{
 		constexpr const utf8* kResourceFolder = "Resource";
-	}
+	} // namespace
 
 	const std::string& ResourceUtil::getEngineFolderPath()
 	{
@@ -90,7 +90,7 @@ namespace sw
 
 		_s_engineFolderPath = exists( resourceEngine ) ? resourceEngine.string() : "";
 		_s_commonFolderPath = exists( resourceCommon ) ? resourceCommon.string() : "";
-		_s_gameFolderPath   = exists( resourceGame ) ? resourceGame.string() : "";
+		_s_gameFolderPath	= exists( resourceGame ) ? resourceGame.string() : "";
 
 		_s_resourceFolderList.reserve( 10 );
 
@@ -107,13 +107,16 @@ namespace sw
 		}
 
 		// 2. Game root
-		if ( exists( resourceGame ) )   _s_resourceFolderList.push_back( resourceGame );
+		if ( exists( resourceGame ) )
+			_s_resourceFolderList.push_back( resourceGame );
 
 		// 3. Common
-		if ( exists( resourceCommon ) ) _s_resourceFolderList.push_back( resourceCommon );
+		if ( exists( resourceCommon ) )
+			_s_resourceFolderList.push_back( resourceCommon );
 
 		// 4. Engine
-		if ( exists( resourceEngine ) ) _s_resourceFolderList.push_back( resourceEngine );
+		if ( exists( resourceEngine ) )
+			_s_resourceFolderList.push_back( resourceEngine );
 
 		// 5. Root - Lowest priority
 		_s_resourceFolderList.push_back( resourceRoot );
@@ -127,7 +130,7 @@ namespace sw
 		return true;
 	}
 
-	std::string ResourceUtil::getResourcePath( const std::string_view filePath, const std::string_view folderName  )
+	std::string ResourceUtil::getResourcePath( const std::string_view filePath, const std::string_view folderName )
 	{
 		std::string cacheKey;
 		if ( folderName.empty() )
@@ -164,4 +167,4 @@ namespace sw
 	{
 		_s_resourcePathCache.clear();
 	}
-}
+} // namespace sw

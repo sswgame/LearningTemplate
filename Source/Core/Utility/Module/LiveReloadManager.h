@@ -24,11 +24,11 @@ namespace sw
 		void shutdown();
 
 		/** @brief 모듈 이름을 등록하고 섀도 복사본을 로드합니다. */
-		bool  registerModule( const std::string& moduleName );
+		bool registerModule( const std::string& moduleName );
 		/** @brief 다음 update에서 해당 모듈 리로드를 예약합니다. */
-		void  triggerReload( const std::string& moduleName );
+		void triggerReload( const std::string& moduleName );
 		/** @brief 예약된 리로드를 수행합니다. */
-		void  update();
+		void update();
 		/** @brief 현재 로드된 모듈 핸들을 반환합니다. */
 		void* getModuleHandle( const std::string& moduleName ) const;
 
@@ -49,7 +49,7 @@ namespace sw
 			std::string			   _tempDllPath;
 			void*				   _hLibraryModule = nullptr;
 			uint8				   _bPendingReload : 1;
-			[[maybe_unused]] uint8				   _reserved	   : 7;
+			[[maybe_unused]] uint8 _reserved	   : 7;
 		};
 
 		/** @brief 원본 DLL을 임시 경로에 복사한 뒤 로드합니다. */
@@ -57,4 +57,4 @@ namespace sw
 
 		std::unordered_map<std::string, ModuleContext> _modules;
 	};
-}
+} // namespace sw

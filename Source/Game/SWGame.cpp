@@ -17,8 +17,8 @@ namespace sw
 	class SWGame : public IGame
 	{
 	public:
-		SWGame()			  = default;
-		~SWGame() override	  = default;
+		SWGame()		   = default;
+		~SWGame() override = default;
 
 		bool initialize( IWindow* window, IRHIDevice* rhiDevice ) override;
 		void shutdown() override;
@@ -49,7 +49,7 @@ namespace sw
 		if ( auto* scene = getSceneManager().getActiveScene() )
 			scene->update( deltaTime );
 	}
-}
+} // namespace sw
 
 namespace
 {
@@ -86,7 +86,7 @@ namespace
 		if ( pGame != nullptr )
 			pGame->update( deltaTime );
 	}
-}
+} // namespace
 
 extern "C"
 {

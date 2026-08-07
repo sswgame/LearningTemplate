@@ -29,10 +29,10 @@ namespace sw::tool
 		ParserContext( const ParserContext& )			 = delete;
 		ParserContext& operator=( const ParserContext& ) = delete;
 
-		static bool					 ensureSharedConfig();
-		static CXIndex				 getSharedIndex();
+		static bool						ensureSharedConfig();
+		static CXIndex					getSharedIndex();
 		static const ParserClangConfig& getSharedConfig();
-		static void					 shutdownShared();
+		static void						shutdownShared();
 
 		bool parse( const std::string& filePath, const std::vector<std::string>& includePaths );
 
@@ -41,4 +41,4 @@ namespace sw::tool
 	private:
 		CXTranslationUnit _translationUnit = nullptr;
 	};
-}
+} // namespace sw::tool

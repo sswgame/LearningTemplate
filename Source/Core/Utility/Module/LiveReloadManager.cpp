@@ -18,7 +18,7 @@ namespace sw
 				return FileUtil::normalizePath( file );
 			return FileUtil::normalizePath( dir + "/" + file );
 		}
-	}
+	} // namespace
 
 	LiveReloadManager::ModuleContext::ModuleContext() noexcept
 		: _bPendingReload{ 0 }
@@ -184,4 +184,4 @@ namespace sw
 	{
 		_modules[moduleName]._onAfterReload = delegate;
 	}
-}
+} // namespace sw

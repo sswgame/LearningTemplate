@@ -20,26 +20,26 @@ namespace sw
 		WindowsFileWatcher();
 		virtual ~WindowsFileWatcher() override;
 
-		virtual bool startWatching( const std::string_view directoryPath, bool bRecursive = true ) override;
+		virtual bool   startWatching( const std::string_view directoryPath, bool bRecursive = true ) override;
 		virtual uint32 pollEvents( std::vector<FileChangeEvent>& outEvents ) override;
-		virtual void stopWatching() override;
-		virtual bool isWatching() const override { return _bIsWatching; }
+		virtual void   stopWatching() override;
+		virtual bool   isWatching() const override { return _bIsWatching; }
 
 	private:
 		void workerThreadMain();
 
 	private:
-		HANDLE					_hDirectory = nullptr;
-		std::atomic<bool>		_bIsWatching = false;
-		bool					_bRecursive = true;
-		std::string				_directoryPath;
+		HANDLE			  _hDirectory  = nullptr;
+		std::atomic<bool> _bIsWatching = false;
+		bool			  _bRecursive  = true;
+		std::string		  _directoryPath;
 
-		std::thread				_workerThread;
-		std::mutex				_eventMutex;
+		std::thread					 _workerThread;
+		std::mutex					 _eventMutex;
 		std::vector<FileChangeEvent> _eventQueue;
 
-		HANDLE					_hCompletionPort = nullptr;
+		HANDLE _hCompletionPort = nullptr;
 	};
-}
+} // namespace sw
 
 #endif // SW_PLATFORM_WINDOWS

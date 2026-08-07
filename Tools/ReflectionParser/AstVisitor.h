@@ -69,4 +69,4 @@ namespace sw::tool
 		std::vector<ParsedTypeInfo> _types;
 		std::vector<ParsedEnumInfo> _enums;
 	};
-}
+} // namespace sw::tool

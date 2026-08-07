@@ -43,4 +43,4 @@ namespace sw
 		std::unordered_map<hashed_string, TextReadFn>	 _textReaders;
 	};
 
-}
+} // namespace sw

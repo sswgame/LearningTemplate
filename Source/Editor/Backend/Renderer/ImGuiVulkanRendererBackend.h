@@ -34,4 +34,4 @@ namespace sw
 		VkDescriptorPool_T* _imguiDescriptorPool = nullptr;
 		VkDevice_T*			_device				 = nullptr;
 	};
-}
+} // namespace sw

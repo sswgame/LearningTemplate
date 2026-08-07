@@ -52,7 +52,7 @@ namespace sw
 				return "vs_6_0";
 			}
 		}
-	}
+	} // namespace
 
 	ShaderCompileResult ShaderCompiler::compileHLSL( const ShaderCompileDesc& desc )
 	{
@@ -85,9 +85,9 @@ namespace sw
 				std::wstring					 wPath = StringUtil::utf8ToUtf16( absPathStr );
 
 				D3D_SHADER_MACRO macros[] = {
-					{ "DX11", "1" },
-					{ nullptr, nullptr }
-				};
+					{ "DX11",	  "1"},
+					{nullptr, nullptr}
+				 };
 
 				HRESULT hr = D3DCompileFromFile(
 					wPath.c_str(),
@@ -269,8 +269,8 @@ namespace sw
 							result._bSuccess = true;
 
 							const utf8* formatName = ( desc._targetFormat == ShaderTargetFormat::SPIRV_Vulkan ) ? "Vulkan (SPIR-V Row-Major Y-Inverted)"
-													 : ( desc._targetFormat == ShaderTargetFormat::SPIRV_OpenGL ) ? "OpenGL (SPIR-V Row-Major Y-Inverted)"
-													 : "D3D12 (DXIL Row-Major)";
+												   : ( desc._targetFormat == ShaderTargetFormat::SPIRV_OpenGL ) ? "OpenGL (SPIR-V Row-Major Y-Inverted)"
+																												: "D3D12 (DXIL Row-Major)";
 							SW_LOG_INFO( "[ShaderCompiler DXC Success] Target: %#", formatName );
 							return result;
 						}
@@ -313,4 +313,4 @@ namespace sw
 		SW_LOG_ERROR( "[ShaderCompiler Error] %# (Path: %#)", result._errorMessage.c_str(), desc._filePath.c_str() );
 		return result;
 	}
-}
+} // namespace sw

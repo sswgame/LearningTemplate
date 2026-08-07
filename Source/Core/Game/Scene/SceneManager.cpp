@@ -18,7 +18,7 @@ namespace sw
 
 	Scene* SceneManager::createScene( const std::string& name )
 	{
-		auto scene = std::make_unique<Scene>( name );
+		auto   scene	= std::make_unique<Scene>( name );
 		Scene* scenePtr = scene.get();
 
 		_loadedScenes.push_back( std::move( scene ) );
@@ -41,4 +41,4 @@ namespace sw
 			}
 		}
 	}
-}
+} // namespace sw

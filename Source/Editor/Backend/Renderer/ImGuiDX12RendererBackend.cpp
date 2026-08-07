@@ -106,7 +106,7 @@ namespace sw
 			s_OrigCreateWindow	= nullptr;
 			s_OrigSetWindowSize = nullptr;
 		}
-	}
+	} // namespace
 #endif
 
 	bool ImGuiDX12RendererBackend::allocSrvDescriptor( D3D12_CPU_DESCRIPTOR_HANDLE* outCpu, D3D12_GPU_DESCRIPTOR_HANDLE* outGpu )
@@ -175,8 +175,8 @@ namespace sw
 		if ( FAILED( device->CreateDescriptorHeap( &desc, IID_PPV_ARGS( &_d3d12SrvHeap ) ) ) )
 			return false;
 
-		_descriptorSize	  = device->GetDescriptorHandleIncrementSize( D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV );
-		_nextDescriptor	  = 0;
+		_descriptorSize = device->GetDescriptorHandleIncrementSize( D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV );
+		_nextDescriptor = 0;
 		_freeDescriptors.clear();
 
 		SW_LOG_INFO( "Populating ImGui_ImplDX12_InitInfo" );
@@ -289,4 +289,4 @@ namespace sw
 		return nullptr;
 #endif
 	}
-}
+} // namespace sw

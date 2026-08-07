@@ -24,10 +24,11 @@ SW_TEST_CASE( MaterialTest, MaterialLoadAndSave )
 	SW_EXPECT_EQUAL( std::string( "DefaultMaterial" ), material.getName() );
 	SW_EXPECT_EQUAL( std::string( "Shaders/BindlessTriangle.hlsl" ), material.getShaderPath() );
 
-	const float* color = reinterpret_cast<const float*>(material.getPropertyData("color"));
+	const float* color = reinterpret_cast<const float*>( material.getPropertyData( "color" ) );
 
-	if (!color) {
-		printf("TEST FAILED: color is NULL! loadOk was %d\n", loadOk);
+	if ( !color )
+	{
+		printf( "TEST FAILED: color is NULL! loadOk was %d\n", loadOk );
 		return;
 	}
 	SW_EXPECT_NEAR_EQUAL( 1.0f, color[0], 1e-4f );
@@ -65,4 +66,3 @@ SW_TEST_CASE( MaterialTest, AsyncMaterialLoadTest )
 #include "Core/Graphics/Shader/ShaderReflection.h"
 
 // SW_TEST_CASE( MaterialTest, MaterialShaderReflectionValidation )\n// Temporarily disabled due to timeout issue
-

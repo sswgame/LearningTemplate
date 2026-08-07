@@ -56,4 +56,4 @@ namespace sw
 	{
 		_variantCache.clear();
 	}
-}
+} // namespace sw

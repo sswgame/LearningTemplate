@@ -28,4 +28,4 @@ namespace sw
 
 		ImGui::End();
 	}
-}
+} // namespace sw

@@ -35,7 +35,6 @@ namespace sw
 		DynamicBitset& operator=( DynamicBitset&& other ) noexcept = default;
 
 	public:
-
 		uint32 size() const { return _bitCount; }
 
 		bool empty() const { return _bitCount == 0; }
@@ -88,7 +87,7 @@ namespace sw
 		 */
 		bool any() const;
 
-		bool   none() const { return any() == false; }
+		bool none() const { return any() == false; }
 		/**
 		 * @brief 설정된 비트 수를 반환합니다
 		 */
@@ -101,15 +100,15 @@ namespace sw
 		/**
 		 * @brief unsigned long long으로 변환합니다
 		 */
-		uint64		to_ullong() const;
+		uint64 to_ullong() const;
 		/**
 		 * @brief unsigned long으로 변환합니다
 		 */
-		uint32		to_ulong() const;
+		uint32 to_ulong() const;
 		/**
 		 * @brief 메모리 사용량을 반환합니다
 		 */
-		uint32		memory_usage() const;
+		uint32 memory_usage() const;
 
 	public:
 		DynamicBitset  operator~() const;
@@ -148,4 +147,4 @@ namespace sw
 		std::vector<BlockType> _blockList;
 		uint32				   _bitCount;
 	};
-}
+} // namespace sw

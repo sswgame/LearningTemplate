@@ -13,6 +13,6 @@ namespace sw
 	public:
 		const char* getWindowTitle() const override { return "Game View"; }
 		/** @brief 게임 렌더 텍스처를 그립니다. */
-		void		draw( const EditorUIContext& ctx ) override;
+		void draw( const EditorUIContext& ctx ) override;
 	};
-}
+} // namespace sw

@@ -25,7 +25,7 @@ namespace sw
 
 	/** @brief SWGame export 심볼: fillGameAPI */
 	using PFN_FillGameAPI = bool ( * )( GameAPI* outApi );
-}
+} // namespace sw
 
 extern "C"
 {

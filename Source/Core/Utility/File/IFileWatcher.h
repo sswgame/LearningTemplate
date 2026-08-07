@@ -35,7 +35,7 @@ namespace sw
 	public:
 		virtual ~IFileWatcher() = default;
 
-		IFileWatcher( const IFileWatcher& ) = delete;
+		IFileWatcher( const IFileWatcher& )			   = delete;
 		IFileWatcher& operator=( const IFileWatcher& ) = delete;
 
 		/**
@@ -64,4 +64,4 @@ namespace sw
 	protected:
 		IFileWatcher() = default;
 	};
-}
+} // namespace sw

@@ -18,7 +18,7 @@ namespace sw
 			if ( candidate.empty() == false && std::filesystem::is_directory( candidate, ec ) )
 				out.push_back( candidate );
 		}
-	}
+	} // namespace
 
 	std::vector<std::filesystem::path> EditorUtil::getSystemFontsDirectories()
 	{
@@ -80,4 +80,4 @@ namespace sw
 
 		return {};
 	}
-}
+} // namespace sw

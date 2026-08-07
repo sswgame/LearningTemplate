@@ -18,9 +18,9 @@ namespace sw
 
 		const char* getWindowTitle() const override { return "Output Log"; }
 		/** @brief 필터·레벨 토글·로그 리스트 UI를 그립니다. */
-		void		draw( const EditorUIContext& ctx ) override;
+		void draw( const EditorUIContext& ctx ) override;
 		/** @brief 로그 구독을 해제합니다. */
-		void		shutdown( IRHIDevice* rhiDevice ) override;
+		void shutdown( IRHIDevice* rhiDevice ) override;
 
 	private:
 		/** @brief Logger 콜백: 엔트리를 스레드 안전하게 큐에 넣습니다. */
@@ -35,9 +35,9 @@ namespace sw
 		char						  _filterBuffer[constant::kMaxBuffer128] = {};
 
 		// ImGui::Checkbox에 주소 전달 — bool 유지
-		bool _bAutoScroll		= true;
-		bool _levelEnabled[4]	= { true, true, true, true };
-		uint8 _bHasNewLogs	  : 1;
-		[[maybe_unused]] uint8 _reservedFlags  : 7;
+		bool				   _bAutoScroll		= true;
+		bool				   _levelEnabled[4] = { true, true, true, true };
+		uint8				   _bHasNewLogs	  : 1;
+		[[maybe_unused]] uint8 _reservedFlags : 7;
 	};
-}
+} // namespace sw
