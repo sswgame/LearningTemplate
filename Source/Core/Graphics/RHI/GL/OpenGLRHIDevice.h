@@ -33,8 +33,17 @@ namespace sw
 		/** @brief 프레임 시작 (glClearColor 및 glClear) */
 		virtual void beginFrame( float32 clearColor[4] ) override;
 
+		/** @brief Offscreen color target에 렌더 시작 (FBO bind). colorTarget==0 이면 beginFrame과 동일. */
+		void beginOffscreenPass( RHITextureHandle colorTarget, float32 clearColor[4] ) override;
+
+		/** @brief Offscreen 패스 종료 (default FBO 복귀, 텍스처 샘플링 가능) */
+		void endOffscreenPass( RHITextureHandle colorTarget ) override;
+
 		/** @brief 프레임 종료 (SwapBuffers / wglSwapBuffers) */
 		virtual void endFrame( bool vsync ) override;
+
+		/** @brief glFinish — GPU 대기 */
+		void waitIdle() override;
 
 		/** @brief 백엔드 타입 반환 (OpenGL) */
 		RHIBackend getBackendType() const override { return RHIBackend::OpenGL; }

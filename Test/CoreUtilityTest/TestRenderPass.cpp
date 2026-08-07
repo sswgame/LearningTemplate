@@ -105,3 +105,29 @@ SW_TEST_CASE( RenderPassTest, RenderGraphMermaidAndDotExport )
 	graph.clear();
 	SW_EXPECT_EQUAL( 0u, graph.getNodeCount() );
 }
+
+SW_TEST_CASE( RenderPassTest, RenderGraphExecuteCallbacks )
+{
+	sw::RenderGraph graph;
+	std::vector<std::string> executed;
+
+	auto makeCb = [&executed]( const char* name ) -> sw::RenderGraphPassExecuteFn
+	{
+		return sw::RenderGraphPassExecuteFn(
+			SW_DELEGATE_LAMBDA( sw::RenderGraphPassExecuteFn, [&executed, name]( const sw::RenderGraphPassContext& ctx )
+			{
+				SW_EXPECT_STREQ( name, ctx._passName.c_str() );
+				executed.push_back( name );
+			} ) );
+	};
+
+	graph.addPass( sw::hashed_string( "Shading" ), { sw::hashed_string( "DepthBuffer" ) }, { sw::hashed_string( "Color" ) },
+				   makeCb( "Shading" ) );
+	graph.addPass( sw::hashed_string( "Depth" ), {}, { sw::hashed_string( "DepthBuffer" ) }, makeCb( "Depth" ) );
+
+	SW_ASSERT_TRUE( graph.execute() );
+	SW_ASSERT_EQUAL( size_t( 2 ), executed.size() );
+	SW_EXPECT_STREQ( "Depth", executed[0].c_str() );
+	SW_EXPECT_STREQ( "Shading", executed[1].c_str() );
+	SW_EXPECT_TRUE( graph.getLastTransitionCount() >= 2u );
+}

@@ -105,4 +105,4 @@ jobs:
 
     - name: Check formatting
       run: |
-        find Source Test Tools/ReflectionParser -name "*.cpp" -o -name "*.h" -o -name "*.hpp" | xargs clang-format --dry-run --Werror
+        find Source Test Tools/ReflectionParser \( -name "*.cpp" -o -name "*.h" -o -name "*.hpp" \) | xargs clang-format --dry-run --Werror

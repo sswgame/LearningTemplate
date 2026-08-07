@@ -14,11 +14,15 @@ SW_DEFINE_MODULE_REGISTRAR_HEAD( swGameComponentFactoryHead, ::sw::ComponentFact
 #include "Core/Common/CoreServices.h"
 #include "Core/Reflection/ReflectionCore.h"
 #include "Core/Object/ComponentManager.h"
+#include "Core/Object/GameObjectManager.h"
+#include "Core/Object/GameObject.h"
+#include "Core/Object/SceneComponent.h"
 #include "Core/Utility/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Game/Scene/SceneManager.h"
 #include "Core/Game/Scene/Scene.h"
 #include "Core/Window/IWindow.h"
 #include "Core/Graphics/RHI/IRHIDevice.h"
+#include "Game/SWGameTypes.h"
 
 namespace sw
 {
@@ -39,7 +43,28 @@ namespace sw
 
 		getGlobalVariableManager().registerPendingVariables( "SWGame", swGameGvmHead() );
 		getTypeRegistry().registerPendingTypes( "SWGame", swGameTypeHead(), swGameEnumHead() );
-		getComponentManager().registerPendingFactories( swGameComponentFactoryHead() );
+		getComponentManager().registerPendingFactories( "SWGame", swGameComponentFactoryHead() );
+
+		// Demo actor for Hierarchy ↔ Inspector ↔ reflection E2E.
+		if ( Scene* scene = getSceneManager().getActiveScene() )
+		{
+			if ( GameObjectManager* objects = scene->getObjectManager() )
+			{
+				GameObject* sample = objects->createGameObject( hashed_string( "SampleActor" ) );
+				if ( sample != nullptr )
+				{
+					SceneComponent* root = sample->addComponent<SceneComponent>();
+					if ( root != nullptr )
+						root->setLocalPosition( float3( 0.0f, 1.0f, 0.0f ) );
+
+					SampleHealthComponent* health = sample->addComponent<SampleHealthComponent>();
+					if ( health != nullptr )
+						health->_health = 100.0f;
+
+					SW_LOG_INFO( "[SWGame] Spawned SampleActor with SceneComponent + SampleHealthComponent." );
+				}
+			}
+		}
 
 		return true;
 	}
@@ -47,6 +72,7 @@ namespace sw
 	void SWGame::shutdown()
 	{
 		SW_LOG_INFO( "[SWGame] Shutting down Game Module..." );
+		getComponentManager().unregisterFactoriesByModule( "SWGame" );
 		getTypeRegistry().unregisterTypesByModule( "SWGame" );
 		getGlobalVariableManager().unregisterVariablesByModule( "SWGame" );
 	}

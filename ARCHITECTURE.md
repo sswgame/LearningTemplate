@@ -76,6 +76,11 @@ App은 Editor/Game 구현 클래스를 직접 링크하지 않고 함수 테이�
 - 본격 bindless descriptor 경로
 - RHIReleaseQueue 연동한 deferred destroy (현재 OpenGL도 미연동)
 
+### RenderGraph
+
+- `compile()`: 리소스 producer→consumer Kahn 위상 정렬 + 사이클 감지.
+- `execute()`: 컴파일된 순서로 패스 콜백 실행. 입력/출력에 대해 **논리** Read/Write 전이를 카운트합니다 (RHI barrier API 없음 — GPU barrier 미연동).
+
 ## Reflection
 
 1. `Tools/ReflectionParser` (libclang) 가 `REFLECT`/`PROPERTY` 헤더를 파싱.
@@ -83,10 +88,16 @@ App은 Editor/Game 구현 클래스를 직접 링크하지 않고 함수 테이�
 3. **Core Object 베이스**(`GameObject` / `Component` / `SceneComponent`)는 `REFLECT` 하지 않음 — 엔진 고정 타입.
    - 이름/활성 등은 `ObjectStateSerializer` 가 직접 처리.
    - `getTypeInfo()` 훅은 파생 타입(게임 모듈)용으로 남겨 둠.
+   - `Component::setCachedTypeInfo` / `_cachedTypeInfo`: 팩토리 생성 시 `TypeRegistry`에서 찾아 캐시.
 4. 게임/테스트 타입만 codegen. Component 파생이면 `ComponentFactoryRegistrar` 도 emit.
 5. **모듈별 factory head:** `SW_DECLARE_MODULE_REGISTRAR_HEAD` / `SW_COMPONENT_FACTORY_MODULE_HEAD()` —
    App / SWGame / Editor / Test 가 각자 head를 두어 MODULE CRT 정적 초기 시 registrar 체인이 섞이지 않음 (`ModuleRegistrarHeads.h`).
-6. 설정은 `Config/parser_config.json` (`-std=c++17` 등).
+6. `ComponentManager::unregisterFactoriesByModule` — 모듈 언로드 시 해당 모듈이 등록한 팩토리만 제거.
+7. 설정은 `Config/parser_config.json` (`-std=c++17` 등).
+
+## Resource paths
+
+`ResourceUtil` 은 루트/폴더 경로만 유지하고 **파일 경로 캐시는 하지 않습니다** (`clearCache()` 는 no-op). 해석은 호출 시마다 루트 목록을 순회합니다.
 
 ## Editor Hierarchy / Inspector
 
@@ -107,15 +118,19 @@ ReflectionParser emits `FunctionInfo` + `TaskArgs` invokers for `FUNCTION()` met
 
 병렬 tick 중 `attach`/`detach` 및 계층 구조 변경은 하지 마세요.
 
+SceneComponent 부모 attach는 있으나 **GameObject 간 parent hierarchy** 는 아직 없음 (`isActiveInHierarchy` 는 자체 활성과 동기). 추후 후보.
+
 ## Tests
 
-| 타겟 | 역할 |
-|--|--|
-| CoreUtilityTest | Utility / Object / 일부 Graphics 단위 테스트 |
-| CoreUtilityTest_NoGPU | GPU/window 스위트 제외 (`LABELS nogpu`; MaterialLoadAndSave 유지) |
-| ReflectionTest | 리플렉션 생성·직렬화 |
-| CoreSmokeTest | Core 링크 스모크 |
-| ModuleSmokeTest | Dev: MODULE `fill*API` 로드 / Shipping: 정적 `fillGameAPI` |
+| 타겟 | 역할 | Labels |
+|--|--|--|
+| CoreUtilityTest | Utility / Object / 일부 Graphics 단위 테스트 | `unit;core` |
+| CoreUtilityTest_NoGPU | GPU/window/shader 스위트 제외 (`--test_filter`); MaterialLoadAndSave 유지 | `unit;core;nogpu` |
+| ReflectionTest | 리플렉션 생성·직렬화 (GPU 불필요) | `unit;reflection;nogpu` |
+| CoreSmokeTest | Core 링크 스모크 (GPU 불필요) | `unit;core;nogpu` |
+| ModuleSmokeTest | Dev: MODULE `fill*API` 로드 / Shipping: 정적 `fillGameAPI` (GPU 불필요) | `unit;module;nogpu` |
+
+`ctest -L nogpu` 는 ReflectionTest / CoreSmokeTest / ModuleSmokeTest / CoreUtilityTest_NoGPU 를 돌립니다.
 
 ## Local & CI
 
@@ -133,6 +148,7 @@ clangd / VS Code compile_commands: `build/Ninja-Debug` (`.clangd`, `.vscode/sett
 CI (`.github/workflows/ci.yml`):
 
 - Windows/Linux Dev: `CI-Debug` preset
-- Linux: `ctest -L nogpu`
+- Linux: `ctest -L nogpu` (ReflectionTest / CoreSmokeTest / ModuleSmokeTest / CoreUtilityTest_NoGPU)
 - Windows Dev: full `ctest` (GPU 실패 시 TestRHI는 SKIP)
 - Windows Shipping: `Ninja-Shipping` → `App` + `CoreUtilityTest`, then `ctest -L nogpu`
+- lint-format: `find … \( -name "*.cpp" -o … \)` 로 확장자 OR 묶음

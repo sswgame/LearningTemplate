@@ -30,10 +30,11 @@ if(NOT SW_SHIPPING_BUILD)
 	endif()
 endif()
 
+# nogpu: fill*API load / static link smoke — no window/RHI
 if(BUILD_TESTING)
 	add_test(NAME ModuleSmokeTest COMMAND ModuleSmokeTest)
 	set_tests_properties(ModuleSmokeTest PROPERTIES
 		WORKING_DIRECTORY "${sw_output_directory}/Bin"
-		LABELS "unit;module"
+		LABELS "unit;module;nogpu"
 	)
 endif()

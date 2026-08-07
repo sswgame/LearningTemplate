@@ -84,14 +84,20 @@ namespace sw
 				Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;
 				std::wstring					 wPath = StringUtil::utf8ToUtf16( absPathStr );
 
-				D3D_SHADER_MACRO macros[] = {
-					{ "DX11",	  "1"},
-					{nullptr, nullptr}
-				 };
+				std::vector<D3D_SHADER_MACRO> macros;
+				macros.reserve( desc._defines.size() + 2 );
+				macros.push_back( { "DX11", "1" } );
+				for ( const ShaderMacroDefine& def : desc._defines )
+				{
+					if ( def._name.empty() )
+						continue;
+					macros.push_back( { def._name.c_str(), def._value.c_str() } );
+				}
+				macros.push_back( { nullptr, nullptr } );
 
 				HRESULT hr = D3DCompileFromFile(
 					wPath.c_str(),
-					macros,
+					macros.data(),
 					D3D_COMPILE_STANDARD_FILE_INCLUDE,
 					desc._entryPoint.c_str(),
 					profile.c_str(),
@@ -176,7 +182,10 @@ namespace sw
 					std::wstring wEntryPoint = StringUtil::utf8ToUtf16( desc._entryPoint );
 					std::wstring wProfile	 = StringUtil::utf8ToUtf16( profile );
 
-					std::vector<LPCWSTR> arguments;
+					std::vector<LPCWSTR>	 arguments;
+					std::vector<std::wstring> defineArgs;
+					defineArgs.reserve( desc._defines.size() );
+
 					arguments.push_back( wPath.c_str() );
 					arguments.push_back( L"-E" );
 					arguments.push_back( wEntryPoint.c_str() );
@@ -216,6 +225,18 @@ namespace sw
 						arguments.push_back( L"OPENGL=1" );
 					else if ( desc._targetFormat == ShaderTargetFormat::DXBC_D3D11 )
 						arguments.push_back( L"DX11=1" );
+
+					for ( const ShaderMacroDefine& def : desc._defines )
+					{
+						if ( def._name.empty() )
+							continue;
+						std::string defineStr = def._name;
+						defineStr += "=";
+						defineStr += def._value;
+						defineArgs.push_back( StringUtil::utf8ToUtf16( defineStr ) );
+						arguments.push_back( L"-D" );
+						arguments.push_back( defineArgs.back().c_str() );
+					}
 
 	#if defined( SW_DEBUG )
 					arguments.push_back( L"-Zi" );
@@ -285,9 +306,19 @@ namespace sw
 				Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;
 				std::wstring					 wPath( absPathStr.begin(), absPathStr.end() );
 
+				std::vector<D3D_SHADER_MACRO> macros;
+				macros.reserve( desc._defines.size() + 1 );
+				for ( const ShaderMacroDefine& def : desc._defines )
+				{
+					if ( def._name.empty() )
+						continue;
+					macros.push_back( { def._name.c_str(), def._value.c_str() } );
+				}
+				macros.push_back( { nullptr, nullptr } );
+
 				HRESULT hrFallback = D3DCompileFromFile(
 					wPath.c_str(),
-					nullptr,
+					macros.data(),
 					D3D_COMPILE_STANDARD_FILE_INCLUDE,
 					desc._entryPoint.c_str(),
 					profile.c_str(),

@@ -11,7 +11,8 @@ if(BUILD_TESTING)
     add_test(NAME CoreUtilityTest COMMAND CoreUtilityTest)
     set_tests_properties(CoreUtilityTest PROPERTIES LABELS "unit;core")
 
-    # Headless-friendly subset (skips GPU/window suites via framework filter).
+    # Headless-friendly subset (skips GPU/window/shader suites via framework filter).
+    # Runs: utility/object/rendergraph/xml material load-save, etc. Excludes RHI/Window/ShaderCompiler/LiveShader + GPU material cases.
     # Keep MaterialTest.MaterialLoadAndSave / AsyncMaterialLoadTest (file I/O only).
     add_test(
         NAME CoreUtilityTest_NoGPU

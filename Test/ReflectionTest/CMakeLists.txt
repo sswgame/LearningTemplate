@@ -19,6 +19,11 @@ sw_add_reflection_step(ReflectionTest
 )
 
 # BUILD_TESTING 옵션 켜짐 시 CTest에 단위 테스트 타겟으로 추가
+# nogpu: reflection codegen/serialize only — no window/RHI
 if(BUILD_TESTING)
     add_test(NAME ReflectionTest COMMAND ReflectionTest)
+    set_tests_properties(ReflectionTest PROPERTIES
+        WORKING_DIRECTORY "${sw_output_directory}/Bin"
+        LABELS "unit;reflection;nogpu"
+    )
 endif()

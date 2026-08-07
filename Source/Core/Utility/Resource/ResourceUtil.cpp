@@ -15,7 +15,6 @@ namespace sw
 	std::string									 ResourceUtil::_s_gameFolderPath;
 	std::vector<std::filesystem::path>			 ResourceUtil::_s_resourceFolderList;
 	std::vector<std::string>					 ResourceUtil::_s_resourceFolderStrList;
-	std::unordered_map<std::string, std::string> ResourceUtil::_s_resourcePathCache;
 
 	namespace
 	{
@@ -132,31 +131,12 @@ namespace sw
 
 	std::string ResourceUtil::getResourcePath( const std::string_view filePath, const std::string_view folderName )
 	{
-		std::string cacheKey;
-		if ( folderName.empty() )
-		{
-			cacheKey = filePath;
-		}
-		else
-		{
-			cacheKey.reserve( folderName.size() + 1 + filePath.size() );
-			cacheKey.append( folderName ).append( "/" ).append( filePath );
-		}
-
-		auto iter = _s_resourcePathCache.find( cacheKey );
-		if ( iter != _s_resourcePathCache.end() )
-		{
-			return iter->second;
-		}
-
 		for ( const std::filesystem::path& resourceFolder : _s_resourceFolderList )
 		{
 			const std::filesystem::path absolutePath = ( folderName.empty() ) ? resourceFolder / filePath : resourceFolder / folderName / filePath;
 			if ( exists( absolutePath ) )
 			{
-				std::string resolved = FileUtil::normalizePath( absolutePath.generic_string() );
-				_s_resourcePathCache.try_emplace( std::move( cacheKey ), resolved );
-				return resolved;
+				return FileUtil::normalizePath( absolutePath.generic_string() );
 			}
 		}
 
@@ -165,6 +145,6 @@ namespace sw
 
 	void ResourceUtil::clearCache()
 	{
-		_s_resourcePathCache.clear();
+		// Path cache removed — resolve fresh every call.
 	}
 } // namespace sw

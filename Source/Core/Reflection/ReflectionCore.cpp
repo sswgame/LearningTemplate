@@ -196,7 +196,7 @@ namespace sw
 	{
 		getTypeRegistry().registerPendingTypes( "Core", TypeRegistrar::getHead(), EnumRegistrar::getHead() );
 		// ComponentManager is bound before this call (App::initializeSubsystems).
-		getComponentManager().registerPendingFactories( ComponentFactoryRegistrar::getHead() );
+		getComponentManager().registerPendingFactories( "Core", ComponentFactoryRegistrar::getHead() );
 	}
 
 	void TypeRegistry::unregisterTypesByModule( const std::string_view moduleName )

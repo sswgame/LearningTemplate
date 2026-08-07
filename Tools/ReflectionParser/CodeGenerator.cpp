@@ -37,6 +37,19 @@ namespace sw::tool
 		return false;
 	}
 
+	bool CodeGenerator::isGameObjectDerived( const ParsedTypeInfo& typeInfo )
+	{
+		if ( typeInfo.name == "GameObject" )
+			return true;
+		if ( typeInfo.fullyQualifiedName == "sw::GameObject" )
+			return true;
+		if ( typeInfo.parentFQN == "sw::GameObject" )
+			return true;
+		if ( typeInfo.parentFQN.find( "GameObject" ) != std::string::npos )
+			return true;
+		return false;
+	}
+
 	bool CodeGenerator::generate()
 	{
 		FileUtil::createDirectory( _outputDir );
@@ -73,7 +86,14 @@ namespace sw::tool
 			for ( const ParsedEnumInfo& enumInfo : _enums )
 				emitEnumRegistrar( buffer, enumInfo );
 
-			buffer.append( "} // namespace sw::generated\n" );
+			buffer.append( "} // namespace sw::generated\n\n" );
+
+			for ( const ParsedTypeInfo& typeInfo : _types )
+			{
+				emitReflectTypeTraits( buffer, typeInfo );
+				if ( isComponentDerived( typeInfo ) || isGameObjectDerived( typeInfo ) )
+					emitTypeInfoAccessors( buffer, typeInfo );
+			}
 		}
 
 		const std::string newContent( buffer.view() );
@@ -227,6 +247,37 @@ namespace sw::tool
 		out.append( "\t\t\tstatic sw::ComponentFactoryRegistrar reg( &RegisterFactory, SW_COMPONENT_FACTORY_MODULE_HEAD() );\n" );
 		out.append( "\t\t}\n\t};\n" );
 		out.appendFormat( "\tstatic %#_FactoryRegistrar g_%#_factory_registrar;\n\n", id, id );
+	}
+
+	void CodeGenerator::emitReflectTypeTraits( CodeEmitBuffer& out, const ParsedTypeInfo& typeInfo ) const
+	{
+		out.appendFormat( "// ReflectTypeTraits — %#\n", typeInfo.fullyQualifiedName );
+		out.append( "namespace sw\n{\n" );
+		out.appendFormat( "\ttemplate <>\n\tstruct ReflectTypeTraits<%#>\n\t{\n", typeInfo.fullyQualifiedName );
+		out.append( "\t\tstatic const TypeInfo* StaticType()\n\t\t{\n" );
+		out.appendFormat( "\t\t\treturn getTypeRegistry().findType( hashed_string( \"%#\" ) );\n",
+						  typeInfo.fullyQualifiedName );
+		out.append( "\t\t}\n\t};\n" );
+		out.append( "} // namespace sw\n\n" );
+	}
+
+	void CodeGenerator::emitTypeInfoAccessors( CodeEmitBuffer& out, const ParsedTypeInfo& typeInfo ) const
+	{
+		// Requires SW_REFLECT_TYPE_API() in the class body (declares StaticType + getTypeInfo).
+		out.appendFormat( "// TypeInfo accessors — %# (needs SW_REFLECT_TYPE_API)\n", typeInfo.fullyQualifiedName );
+		out.appendFormat( "const sw::TypeInfo* %#::getTypeInfo() const\n{\n", typeInfo.fullyQualifiedName );
+		if ( isComponentDerived( typeInfo ) )
+		{
+			out.append( "\tif ( _cachedTypeInfo != nullptr )\n" );
+			out.append( "\t\treturn _cachedTypeInfo;\n" );
+		}
+		out.appendFormat( "\treturn sw::getTypeRegistry().findType( sw::hashed_string( \"%#\" ) );\n",
+						  typeInfo.fullyQualifiedName );
+		out.append( "}\n\n" );
+		out.appendFormat( "const sw::TypeInfo* %#::StaticType()\n{\n", typeInfo.fullyQualifiedName );
+		out.appendFormat( "\treturn sw::getTypeRegistry().findType( sw::hashed_string( \"%#\" ) );\n",
+						  typeInfo.fullyQualifiedName );
+		out.append( "}\n\n" );
 	}
 
 	void CodeGenerator::emitTypeRegistrar( CodeEmitBuffer& out, const ParsedTypeInfo& typeInfo ) const

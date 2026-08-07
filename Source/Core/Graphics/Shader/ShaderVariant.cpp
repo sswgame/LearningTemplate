@@ -47,6 +47,7 @@ namespace sw
 		compileDesc._entryPoint	  = "VSMain";
 		compileDesc._stage		  = ShaderStage::Vertex;
 		compileDesc._targetFormat = RHI::getShaderTargetFormat( gv_RHIBackend );
+		compileDesc._defines	  = variantKey._defines;
 
 		ShaderCompileResult compileResult = ShaderCompiler::compileHLSL( compileDesc );
 		auto [insertedIter, success]	  = _variantCache.try_emplace( key, std::move( compileResult ) );

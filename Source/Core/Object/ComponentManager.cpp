@@ -6,6 +6,7 @@
 #include "ComponentManager.h"
 #include "Core/Utility/Log/Logger.h"
 #include "Core/Utility/Task/TaskManager.h"
+#include "Core/Reflection/ReflectionCore.h"
 
 namespace sw
 {
@@ -14,7 +15,13 @@ namespace sw
 		std::unordered_map<hashed_string, ComponentFactoryDelegate>::const_iterator iter = _factories.find( typeName );
 		if ( iter != _factories.end() && iter->second.isBound() )
 		{
-			return iter->second();
+			Component* created = iter->second();
+			if ( created != nullptr )
+			{
+				const TypeInfo* typeInfo = getTypeRegistry().findType( typeName );
+				created->setCachedTypeInfo( typeInfo );
+			}
+			return created;
 		}
 		SW_LOG_WARNING( "[ComponentManager] Component type not registered in factory: %#", typeName.c_str() );
 		return nullptr;
@@ -61,17 +68,50 @@ namespace sw
 	void ComponentManager::clear()
 	{
 		_factories.clear();
+		_factoryModules.clear();
 		_registeredTypes.clear();
+		_activeModuleName = hashed_string();
 	}
 
-	void ComponentManager::registerPendingFactories( ComponentFactoryRegistrar* head )
+	void ComponentManager::registerPendingFactories( const std::string_view moduleName, ComponentFactoryRegistrar* head )
 	{
+		_activeModuleName = hashed_string( moduleName.data(), static_cast<uint32>( moduleName.size() ) );
+
 		ComponentFactoryRegistrar* curr = head;
 		while ( curr != nullptr )
 		{
 			if ( curr->_registerFunc != nullptr )
 				curr->_registerFunc( *this );
 			curr = curr->_next;
+		}
+
+		_activeModuleName = hashed_string();
+	}
+
+	void ComponentManager::unregisterFactoriesByModule( const std::string_view moduleName )
+	{
+		const hashed_string hashModule( moduleName.data(), static_cast<uint32>( moduleName.size() ) );
+
+		for ( auto it = _factoryModules.begin(); it != _factoryModules.end(); )
+		{
+			if ( it->second != hashModule )
+			{
+				++it;
+				continue;
+			}
+
+			const hashed_string typeName = it->first;
+			_factories.erase( typeName );
+			it = _factoryModules.erase( it );
+
+			for ( auto typeIt = _registeredTypes.begin(); typeIt != _registeredTypes.end(); ++typeIt )
+			{
+				if ( *typeIt == typeName )
+				{
+					_registeredTypes.erase( typeIt );
+					break;
+				}
+			}
 		}
 	}
 

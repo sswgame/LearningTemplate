@@ -209,7 +209,7 @@ namespace sw::tool
 
 			AnnotationSearch search{ "PROPERTY;", {}, false };
 			clang_visitChildren( cursor, annotationSearchVisitor, &search );
-			if ( search.found == false )
+			if ( search.found == false && sourceHasPrimaryAnnotation( cursor, "PROPERTY;" ) == false )
 				return CXChildVisit_Continue;
 
 			auto*			   collector = static_cast<FieldCollector*>( data );
@@ -234,7 +234,7 @@ namespace sw::tool
 
 			AnnotationSearch search{ "FUNCTION;", {}, false };
 			clang_visitChildren( cursor, annotationSearchVisitor, &search );
-			if ( search.found == false )
+			if ( search.found == false && sourceHasPrimaryAnnotation( cursor, "FUNCTION;" ) == false )
 				return CXChildVisit_Continue;
 
 			auto*			   collector = static_cast<MethodCollector*>( data );

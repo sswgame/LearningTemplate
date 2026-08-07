@@ -25,6 +25,7 @@ namespace sw
 		/**
 		 * @brief 컴포넌트 타입 T를 이름과 함께 팩토리에 등록합니다.
 		 * @tparam T Component 파생 타입
+		 * @details 동일 이름이면 교체(insert_or_assign). 모듈 리로드 시 재등록을 허용합니다.
 		 */
 		template <typename T>
 		void registerComponentType( hashed_string typeName )
@@ -36,8 +37,10 @@ namespace sw
 				return new T();
 			} );
 
-			auto [iter, inserted] = _factories.try_emplace( typeName, std::move( creator ) );
-			if ( inserted )
+			const bool bWasNew = ( _factories.find( typeName ) == _factories.end() );
+			_factories.insert_or_assign( typeName, std::move( creator ) );
+			_factoryModules.insert_or_assign( typeName, _activeModuleName );
+			if ( bWasNew )
 			{
 				_registeredTypes.push_back( typeName );
 			}
@@ -58,8 +61,14 @@ namespace sw
 		/** @brief 팩토리·등록 타입 목록을 비웁니다. */
 		void clear();
 
-		/** @brief 정적 ComponentFactoryRegistrar 링크드 리스트를 드레인합니다. */
-		void registerPendingFactories( struct ComponentFactoryRegistrar* head );
+		/**
+		 * @brief 정적 ComponentFactoryRegistrar 링크드 리스트를 드레인합니다.
+		 * @param moduleName 등록 시 팩토리에 붙일 모듈 태그 (unregisterFactoriesByModule용)
+		 */
+		void registerPendingFactories( const std::string_view moduleName, struct ComponentFactoryRegistrar* head );
+
+		/** @brief 해당 모듈이 등록한 컴포넌트 팩토리를 제거합니다. */
+		void unregisterFactoriesByModule( const std::string_view moduleName );
 
 	public:
 		ComponentManager()	= default;
@@ -72,7 +81,9 @@ namespace sw
 
 	private:
 		std::unordered_map<hashed_string, ComponentFactoryDelegate> _factories;
+		std::unordered_map<hashed_string, hashed_string>			_factoryModules;
 		std::vector<hashed_string>									_registeredTypes;
+		hashed_string												_activeModuleName;
 	};
 
 	/**

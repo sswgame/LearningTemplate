@@ -44,6 +44,9 @@ namespace sw
 		/** @brief 런타임 타입 리플렉션 정보(TypeInfo) 반환 */
 		virtual const TypeInfo* getTypeInfo() const;
 
+		/** @brief 팩토리/addComponent가 설정하는 구체 타입 TypeInfo 캐시 */
+		void setCachedTypeInfo( const TypeInfo* typeInfo ) { _cachedTypeInfo = typeInfo; }
+
 		/** @brief 게임플레이 시작 시 초기화 콜백 */
 		virtual void onBeginPlay();
 
@@ -97,6 +100,8 @@ namespace sw
 
 	protected:
 		GameObject* _owner = nullptr; ///< 소유자 GameObject 포인터 참조
+
+		const TypeInfo* _cachedTypeInfo = nullptr; ///< 구체 타입 TypeInfo (팩토리에서 설정)
 
 		uint64 _componentId = 0; ///< 컴포넌트 고유 시리얼 ID
 

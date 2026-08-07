@@ -10,12 +10,214 @@
 #include "Core/Object/GameObjectManager.h"
 #include "Core/Object/GameObject.h"
 #include "Core/Object/Component.h"
+#include "Core/Object/ComponentManager.h"
 #include "Core/Object/SceneComponent.h"
 #include <imgui.h>
 #include <cstdio>
 
 namespace sw
 {
+	namespace
+	{
+		void selectObject( GameObject* obj )
+		{
+			if ( obj == nullptr )
+				return;
+			editor::selectedObjectId()	  = obj->getObjectId();
+			editor::selectedComponentId() = 0;
+		}
+
+		void selectComponent( GameObject* obj, Component* comp )
+		{
+			if ( obj == nullptr || comp == nullptr )
+				return;
+			editor::selectedObjectId()	  = obj->getObjectId();
+			editor::selectedComponentId() = comp->getComponentId();
+		}
+
+		void drawComponentContextMenu( GameObject* obj, Component* /*comp*/ )
+		{
+			if ( ImGui::BeginPopupContextItem( "CompCtx" ) )
+			{
+				if ( ImGui::MenuItem( "Select Owner GameObject" ) )
+					selectObject( obj );
+				ImGui::EndPopup();
+			}
+		}
+
+		void drawAddComponentMenu( GameObject* obj )
+		{
+			if ( ImGui::BeginMenu( "Add Component" ) == false )
+				return;
+
+			const std::vector<hashed_string>& types = getComponentManager().getRegisteredComponentTypes();
+			if ( types.empty() )
+			{
+				ImGui::TextDisabled( "No registered component types." );
+			}
+			else
+			{
+				for ( const hashed_string& typeName : types )
+				{
+					if ( ImGui::MenuItem( typeName.c_str() ) )
+					{
+						if ( obj->addComponentByName( typeName ) == nullptr )
+							ImGui::OpenPopup( "AddCompFailed" );
+					}
+				}
+			}
+			ImGui::EndMenu();
+		}
+
+		void drawGameObjectContextMenu( GameObject* obj, GameObjectManager* manager )
+		{
+			if ( ImGui::BeginPopupContextItem( "GOCtx" ) == false )
+				return;
+
+			if ( ImGui::MenuItem( "Create GameObject" ) )
+			{
+				GameObject* created = manager->createGameObject( hashed_string( "GameObject" ) );
+				selectObject( created );
+			}
+
+			drawAddComponentMenu( obj );
+
+			ImGui::Separator();
+			if ( ImGui::MenuItem( "Destroy GameObject" ) )
+			{
+				if ( editor::selectedObjectId() == obj->getObjectId() )
+					editor::clearSelection();
+				manager->destroyObjectDeferred( obj );
+				manager->processDeferredDestruction();
+			}
+
+			ImGui::EndPopup();
+		}
+
+		void drawSceneComponentNode( GameObject* obj, SceneComponent* sceneComp )
+		{
+			if ( obj == nullptr || sceneComp == nullptr )
+				return;
+
+			ImGui::PushID( static_cast<int>( sceneComp->getComponentId() ) );
+
+			const bool bSelected = ( editor::selectedObjectId() == obj->getObjectId() &&
+									 editor::selectedComponentId() == sceneComp->getComponentId() );
+
+			const char* compName = sceneComp->getComponentName().empty() == false
+									   ? sceneComp->getComponentName().c_str()
+									   : "SceneComponent";
+
+			char label[256];
+			std::snprintf( label, sizeof( label ), "%s##sc%llu",
+						   compName,
+						   static_cast<unsigned long long>( sceneComp->getComponentId() ) );
+
+			bool		 hasChildOnOwner = false;
+			const auto& children		 = sceneComp->getChildren();
+			for ( SceneComponent* child : children )
+			{
+				if ( child != nullptr && child->getOwner() == obj )
+				{
+					hasChildOnOwner = true;
+					break;
+				}
+			}
+
+			const ImGuiTreeNodeFlags flags =
+				ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth |
+				( bSelected ? ImGuiTreeNodeFlags_Selected : 0 ) |
+				( hasChildOnOwner ? 0 : ImGuiTreeNodeFlags_Leaf );
+
+			const bool bOpen = ImGui::TreeNodeEx( label, flags );
+			if ( ImGui::IsItemClicked() )
+				selectComponent( obj, sceneComp );
+			drawComponentContextMenu( obj, sceneComp );
+
+			if ( bOpen )
+			{
+				for ( SceneComponent* child : children )
+				{
+					if ( child != nullptr && child->getOwner() == obj )
+						drawSceneComponentNode( obj, child );
+				}
+				ImGui::TreePop();
+			}
+
+			ImGui::PopID();
+		}
+
+		void drawGameObjectNode( GameObject* obj, GameObjectManager* manager )
+		{
+			if ( obj == nullptr )
+				return;
+
+			ImGui::PushID( static_cast<int>( obj->getObjectId() ) );
+
+			const bool bSelected = ( editor::selectedObjectId() == obj->getObjectId() &&
+									 editor::selectedComponentId() == 0 );
+
+			char label[256];
+			std::snprintf( label, sizeof( label ), "%s##go%llu",
+						   obj->getName().c_str(),
+						   static_cast<unsigned long long>( obj->getObjectId() ) );
+
+			const bool bOpen = ImGui::TreeNodeEx(
+				label,
+				ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth |
+					( bSelected ? ImGuiTreeNodeFlags_Selected : 0 ) |
+					( obj->getComponentCount() == 0 ? ImGuiTreeNodeFlags_Leaf : 0 ) );
+
+			if ( ImGui::IsItemClicked() )
+				selectObject( obj );
+			drawGameObjectContextMenu( obj, manager );
+
+			if ( bOpen )
+			{
+				// Non-SceneComponents as flat selectables; SceneComponents as hierarchy roots.
+				for ( Component* comp : obj->getAllComponents() )
+				{
+					if ( comp == nullptr )
+						continue;
+
+					SceneComponent* sceneComp = comp->asSceneComponent();
+					if ( sceneComp != nullptr )
+					{
+						const SceneComponent* parent = sceneComp->getParent();
+						const bool			  bRootOnThisGo =
+							parent == nullptr || parent->getOwner() != obj;
+						if ( bRootOnThisGo )
+							drawSceneComponentNode( obj, sceneComp );
+						continue;
+					}
+
+					ImGui::PushID( static_cast<int>( comp->getComponentId() ) );
+
+					const bool bCompSelected = ( editor::selectedObjectId() == obj->getObjectId() &&
+												 editor::selectedComponentId() == comp->getComponentId() );
+
+					const char* compName = comp->getComponentName().empty() == false
+											   ? comp->getComponentName().c_str()
+											   : "Component";
+
+					char compLabel[256];
+					std::snprintf( compLabel, sizeof( compLabel ), "%s##c%llu",
+								   compName,
+								   static_cast<unsigned long long>( comp->getComponentId() ) );
+
+					if ( ImGui::Selectable( compLabel, bCompSelected ) )
+						selectComponent( obj, comp );
+					drawComponentContextMenu( obj, comp );
+
+					ImGui::PopID();
+				}
+				ImGui::TreePop();
+			}
+
+			ImGui::PopID();
+		}
+	} // namespace
+
 	void OutlinerPanel::draw( const EditorUIContext& /*ctx*/ )
 	{
 		if ( ImGui::Begin( getWindowTitle() ) == false )
@@ -38,81 +240,29 @@ namespace sw
 		ImGui::Text( "Scene: %s (%u objects)", scene->getName().c_str(), static_cast<uint32>( objects.size() ) );
 		ImGui::Separator();
 
+		if ( ImGui::Button( "Create GameObject" ) )
+		{
+			GameObject* created = manager->createGameObject( hashed_string( "GameObject" ) );
+			selectObject( created );
+		}
+		ImGui::SameLine();
 		if ( ImGui::Button( "Clear Selection" ) )
 			editor::clearSelection();
 
 		ImGui::BeginChild( "##HierarchyTree", ImVec2( 0, 0 ), ImGuiChildFlags_None );
 
-		for ( GameObject* obj : objects )
+		if ( ImGui::BeginPopupContextWindow( "HierarchyBlankCtx", ImGuiPopupFlags_MouseButtonRight | ImGuiPopupFlags_NoOpenOverItems ) )
 		{
-			if ( obj == nullptr )
-				continue;
-
-			ImGui::PushID( static_cast<int>( obj->getObjectId() ) );
-
-			const bool bSelected = ( editor::selectedObjectId() == obj->getObjectId() &&
-									 editor::selectedComponentId() == 0 );
-
-			char label[256];
-			std::snprintf( label, sizeof( label ), "%s##go%llu",
-						   obj->getName().c_str(),
-						   static_cast<unsigned long long>( obj->getObjectId() ) );
-
-			const bool bOpen = ImGui::TreeNodeEx(
-				label,
-				ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth |
-					( bSelected ? ImGuiTreeNodeFlags_Selected : 0 ) |
-					( obj->getComponentCount() == 0 ? ImGuiTreeNodeFlags_Leaf : 0 ) );
-
-			if ( ImGui::IsItemClicked() )
+			if ( ImGui::MenuItem( "Create GameObject" ) )
 			{
-				editor::selectedObjectId()	  = obj->getObjectId();
-				editor::selectedComponentId() = 0;
+				GameObject* created = manager->createGameObject( hashed_string( "GameObject" ) );
+				selectObject( created );
 			}
-
-			if ( bOpen )
-			{
-				for ( Component* comp : obj->getAllComponents() )
-				{
-					if ( comp == nullptr )
-						continue;
-
-					ImGui::PushID( static_cast<int>( comp->getComponentId() ) );
-
-					const bool bCompSelected = ( editor::selectedObjectId() == obj->getObjectId() &&
-												 editor::selectedComponentId() == comp->getComponentId() );
-
-					const char* compName = comp->getComponentName().empty() == false
-											   ? comp->getComponentName().c_str()
-											   : "Component";
-
-					char compLabel[256];
-					std::snprintf( compLabel, sizeof( compLabel ), "%s##c%llu",
-								   compName,
-								   static_cast<unsigned long long>( comp->getComponentId() ) );
-
-					if ( ImGui::Selectable( compLabel, bCompSelected ) )
-					{
-						editor::selectedObjectId()	  = obj->getObjectId();
-						editor::selectedComponentId() = comp->getComponentId();
-					}
-
-					if ( SceneComponent* sceneComp = comp->asSceneComponent() )
-					{
-						if ( sceneComp->getParent() != nullptr )
-						{
-							ImGui::SameLine();
-							ImGui::TextDisabled( "(child)" );
-						}
-					}
-
-					ImGui::PopID();
-				}
-				ImGui::TreePop();
-			}
-
-			ImGui::PopID();
+			ImGui::EndPopup();
 		}
+
+		for ( GameObject* obj : objects )
+			drawGameObjectNode( obj, manager );
 
 		ImGui::EndChild();
 		ImGui::End();

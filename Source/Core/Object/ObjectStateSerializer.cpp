@@ -6,6 +6,7 @@
 #include "ObjectStateSerializer.h"
 #include "Core/Object/GameObject.h"
 #include "Core/Object/Component.h"
+#include "Core/Object/SceneComponent.h"
 #include "Core/Object/TagSystem.h"
 #include "Core/Reflection/Serializer.h"
 #include "Core/Reflection/ReflectionCore.h"
@@ -73,6 +74,114 @@ namespace sw
 			}
 			return outTag.isValid();
 		}
+
+		std::string formatFloat3( const float3& v )
+		{
+			char buf[128];
+			std::snprintf( buf, sizeof( buf ), "%g,%g,%g",
+						   static_cast<double>( v._x ),
+						   static_cast<double>( v._y ),
+						   static_cast<double>( v._z ) );
+			return buf;
+		}
+
+		bool parseFloat3( std::string_view text, float3& out )
+		{
+			out = float3{};
+			float32 vals[3]{};
+			size_t	start = 0;
+			for ( int i = 0; i < 3; ++i )
+			{
+				const size_t sep = text.find( ',', start );
+				const auto	 token = text.substr( start, sep == std::string_view::npos ? std::string_view::npos : sep - start );
+				if ( token.empty() )
+					return false;
+				try
+				{
+					vals[i] = static_cast<float32>( std::stof( std::string( token ) ) );
+				}
+				catch ( ... )
+				{
+					return false;
+				}
+				if ( sep == std::string_view::npos )
+				{
+					if ( i != 2 )
+						return false;
+					break;
+				}
+				start = sep + 1;
+			}
+			out = float3( vals[0], vals[1], vals[2] );
+			return true;
+		}
+
+		/** @brief SceneComponent 로컬 TRS + 동일 GO 내 부모 flat-index. parentIdx=-1 이면 루트. */
+		std::string formatSceneTransform( const SceneComponent* sceneComp, int32 parentFlatIndex )
+		{
+			std::string out = formatFloat3( sceneComp->getLocalPosition() );
+			out += ';';
+			out += formatFloat3( sceneComp->getLocalRotation() );
+			out += ';';
+			out += formatFloat3( sceneComp->getLocalScale() );
+			out += ';';
+			out += std::to_string( parentFlatIndex );
+			return out;
+		}
+
+		bool parseSceneTransform( std::string_view text, float3& outPos, float3& outRot, float3& outScl, int32& outParentIdx )
+		{
+			outPos		 = float3{};
+			outRot		 = float3{};
+			outScl		 = float3( 1.0f, 1.0f, 1.0f );
+			outParentIdx = -1;
+
+			std::string_view parts[4];
+			size_t			 start	  = 0;
+			size_t			 partCount = 0;
+			while ( partCount < 4 && start <= text.size() )
+			{
+				const size_t sep = text.find( ';', start );
+				parts[partCount++] = text.substr( start, sep == std::string_view::npos ? std::string_view::npos : sep - start );
+				if ( sep == std::string_view::npos )
+					break;
+				start = sep + 1;
+			}
+			if ( partCount < 3 )
+				return false;
+
+			if ( parseFloat3( parts[0], outPos ) == false ||
+				 parseFloat3( parts[1], outRot ) == false ||
+				 parseFloat3( parts[2], outScl ) == false )
+				return false;
+
+			if ( partCount >= 4 && parts[3].empty() == false )
+			{
+				try
+				{
+					outParentIdx = static_cast<int32>( std::stoi( std::string( parts[3] ) ) );
+				}
+				catch ( ... )
+				{
+					outParentIdx = -1;
+				}
+			}
+			return true;
+		}
+
+		int32 findFlatComponentIndex( const GameObject* gameObject, const Component* target )
+		{
+			if ( gameObject == nullptr || target == nullptr )
+				return -1;
+
+			const std::vector<Component*>& comps = gameObject->getAllComponents();
+			for ( size_t i = 0; i < comps.size(); ++i )
+			{
+				if ( comps[i] == target )
+					return static_cast<int32>( i );
+			}
+			return -1;
+		}
 	} // namespace
 
 	std::string ObjectStateSerializer::saveToXmlString( const GameObject* gameObject )
@@ -102,8 +211,10 @@ namespace sw
 			xmlBackend.writeArrayItem( formatTagId( tag ).c_str() );
 		xmlBackend.endArray();
 
+		const std::vector<Component*>& comps = gameObject->getAllComponents();
+
 		xmlBackend.beginMap( "Components" );
-		for ( Component* comp : gameObject->getAllComponents() )
+		for ( Component* comp : comps )
 		{
 			if ( comp == nullptr )
 				continue;
@@ -115,6 +226,31 @@ namespace sw
 			if ( const TypeInfo* typeInfo = comp->getTypeInfo() )
 				reflected = XmlSerializer::serialize( comp, *typeInfo );
 			xmlBackend.writeMapValue( reflected.c_str() );
+			xmlBackend.endMapEntry();
+		}
+		xmlBackend.endMap();
+
+		// SceneComponent local TRS (+ same-GO parent flat index). Keyed by flat component index.
+		xmlBackend.beginMap( "SceneTransforms" );
+		for ( size_t i = 0; i < comps.size(); ++i )
+		{
+			Component* comp = comps[i];
+			if ( comp == nullptr )
+				continue;
+			SceneComponent* sceneComp = comp->asSceneComponent();
+			if ( sceneComp == nullptr )
+				continue;
+
+			int32 parentIdx = -1;
+			if ( SceneComponent* parent = sceneComp->getParent() )
+			{
+				if ( parent->getOwner() == gameObject )
+					parentIdx = findFlatComponentIndex( gameObject, parent );
+			}
+
+			xmlBackend.beginMapEntry();
+			xmlBackend.writeMapKey( std::to_string( i ).c_str() );
+			xmlBackend.writeMapValue( formatSceneTransform( sceneComp, parentIdx ).c_str() );
 			xmlBackend.endMapEntry();
 		}
 		xmlBackend.endMap();
@@ -131,6 +267,10 @@ namespace sw
 		RapidXmlBackend xmlBackend;
 		if ( xmlBackend.initXmlDeserialization( xmlCopy.c_str(), "GameObjectState" ) == false )
 			return false;
+
+		// Drop stale components / tags before applying saved state (avoids duplicates).
+		gameObject->clearComponents();
+		gameObject->clearTags();
 
 		std::string nameStr;
 		if ( xmlBackend.readValue( "Name", nameStr ) && nameStr.empty() == false )
@@ -188,6 +328,83 @@ namespace sw
 			}
 		} );
 		xmlBackend.iterateMap( "Components", compCb );
+
+		// Apply SceneComponent transforms after components exist; then re-attach same-GO parents.
+		struct PendingAttach
+		{
+			int32 childIdx  = -1;
+			int32 parentIdx = -1;
+		};
+		std::vector<PendingAttach> pendingAttaches;
+
+		XmlMapItemDelegate xformCb = SW_DELEGATE_LAMBDA( XmlMapItemDelegate,
+														 [gameObject, &pendingAttaches]( std::string_view keyStr, std::string_view valStr )
+		{
+			if ( keyStr.empty() || valStr.empty() )
+				return;
+
+			int32 flatIdx = -1;
+			try
+			{
+				flatIdx = static_cast<int32>( std::stoi( std::string( keyStr ) ) );
+			}
+			catch ( ... )
+			{
+				return;
+			}
+
+			const std::vector<Component*>& comps = gameObject->getAllComponents();
+			if ( flatIdx < 0 || static_cast<size_t>( flatIdx ) >= comps.size() )
+				return;
+
+			Component* comp = comps[static_cast<size_t>( flatIdx )];
+			if ( comp == nullptr )
+				return;
+			SceneComponent* sceneComp = comp->asSceneComponent();
+			if ( sceneComp == nullptr )
+				return;
+
+			float3 pos{};
+			float3 rot{};
+			float3 scl{ 1.0f, 1.0f, 1.0f };
+			int32  parentIdx = -1;
+			if ( parseSceneTransform( valStr, pos, rot, scl, parentIdx ) == false )
+			{
+				SW_LOG_WARNING( "[ObjectStateSerializer] Failed to parse SceneTransform for index %#", flatIdx );
+				return;
+			}
+
+			sceneComp->setLocalPosition( pos );
+			sceneComp->setLocalRotation( rot );
+			sceneComp->setLocalScale( scl );
+
+			if ( parentIdx >= 0 )
+				pendingAttaches.push_back( PendingAttach{ flatIdx, parentIdx } );
+		} );
+		xmlBackend.iterateMap( "SceneTransforms", xformCb );
+
+		{
+			const std::vector<Component*>& comps = gameObject->getAllComponents();
+			for ( const PendingAttach& link : pendingAttaches )
+			{
+				if ( link.childIdx < 0 || link.parentIdx < 0 )
+					continue;
+				if ( static_cast<size_t>( link.childIdx ) >= comps.size() ||
+					 static_cast<size_t>( link.parentIdx ) >= comps.size() )
+					continue;
+
+				SceneComponent* child  = comps[static_cast<size_t>( link.childIdx )] != nullptr
+											 ? comps[static_cast<size_t>( link.childIdx )]->asSceneComponent()
+											 : nullptr;
+				SceneComponent* parent = comps[static_cast<size_t>( link.parentIdx )] != nullptr
+											 ? comps[static_cast<size_t>( link.parentIdx )]->asSceneComponent()
+											 : nullptr;
+				if ( child == nullptr || parent == nullptr )
+					continue;
+
+				child->attachToComponent( parent );
+			}
+		}
 
 		return true;
 	}

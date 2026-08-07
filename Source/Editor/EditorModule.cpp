@@ -27,7 +27,7 @@ namespace
 	{
 		sw::getGlobalVariableManager().registerPendingVariables( "EditorModule", swEditorGvmHead() );
 		sw::getTypeRegistry().registerPendingTypes( "EditorModule", swEditorTypeHead(), swEditorEnumHead() );
-		sw::getComponentManager().registerPendingFactories( swEditorComponentFactoryHead() );
+		sw::getComponentManager().registerPendingFactories( "EditorModule", swEditorComponentFactoryHead() );
 		return static_cast<sw::EditorHandle>( new sw::ImGuiEditor() );
 	}
 
@@ -37,6 +37,7 @@ namespace
 		if ( pEditor != nullptr )
 			delete pEditor;
 
+		sw::getComponentManager().unregisterFactoriesByModule( "EditorModule" );
 		sw::getGlobalVariableManager().unregisterVariablesByModule( "EditorModule" );
 		sw::getTypeRegistry().unregisterTypesByModule( "EditorModule" );
 	}

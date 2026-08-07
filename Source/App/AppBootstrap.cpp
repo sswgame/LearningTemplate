@@ -69,7 +69,7 @@ namespace sw
 			bindCoreServices( services );
 
 			registerCoreReflectionTypes();
-			getComponentManager().registerPendingFactories( swAppComponentFactoryHead() );
+			getComponentManager().registerPendingFactories( "App", swAppComponentFactoryHead() );
 		}
 
 		BLOCK( "Task / LiveReload / Resource / Scene 초기화" )

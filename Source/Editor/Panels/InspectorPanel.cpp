@@ -336,6 +336,63 @@ namespace sw
 		ImGui::TextDisabled( "%s (%s)", label, prop._typeName.c_str() );
 	}
 
+	namespace
+	{
+		bool isSupportedMethodArgType( const std::string& typeName )
+		{
+			return typeName == "int32" || typeName == "int" || typeName == "sw::int32" ||
+				   typeName == "float32" || typeName == "float" || typeName == "sw::float32" ||
+				   typeName == "bool";
+		}
+
+		bool formatTaskValue( const TaskValue& value, char* outBuf, size_t outSize )
+		{
+			if ( outBuf == nullptr || outSize == 0 )
+				return false;
+			outBuf[0] = '\0';
+
+			if ( value.hasValue() == false )
+			{
+				std::snprintf( outBuf, outSize, "(void / empty)" );
+				return true;
+			}
+
+			if ( const int32* p = value.getPtr<int32>() )
+			{
+				std::snprintf( outBuf, outSize, "%d", static_cast<int>( *p ) );
+				return true;
+			}
+			if ( const int* p = value.getPtr<int>() )
+			{
+				std::snprintf( outBuf, outSize, "%d", *p );
+				return true;
+			}
+			if ( const float32* p = value.getPtr<float32>() )
+			{
+				std::snprintf( outBuf, outSize, "%g", static_cast<double>( *p ) );
+				return true;
+			}
+			if ( const float* p = value.getPtr<float>() )
+			{
+				std::snprintf( outBuf, outSize, "%g", static_cast<double>( *p ) );
+				return true;
+			}
+			if ( const bool* p = value.getPtr<bool>() )
+			{
+				std::snprintf( outBuf, outSize, "%s", *p ? "true" : "false" );
+				return true;
+			}
+			if ( const std::string* p = value.getPtr<std::string>() )
+			{
+				std::snprintf( outBuf, outSize, "%s", p->c_str() );
+				return true;
+			}
+
+			std::snprintf( outBuf, outSize, "(unsupported return type: %s)", value.type().name() );
+			return false;
+		}
+	} // namespace
+
 	void InspectorPanel::drawTypeMethods( void* instance, const TypeInfo* typeInfo )
 	{
 		if ( instance == nullptr || typeInfo == nullptr || typeInfo->_methods.empty() )
@@ -344,6 +401,9 @@ namespace sw
 			return;
 		}
 
+		if ( _lastInvokeResult[0] != '\0' )
+			ImGui::TextDisabled( "Last result: %s", _lastInvokeResult );
+
 		for ( const FunctionInfo& method : typeInfo->_methods )
 		{
 			ImGui::PushID( method._name.c_str() );
@@ -351,6 +411,16 @@ namespace sw
 						 method._returnTypeName.empty() ? "?" : method._returnTypeName.c_str() );
 
 			const uint32 paramCount = static_cast<uint32>( method._paramTypeNames.size() );
+			bool		 bArgsOk	= true;
+			for ( uint32 i = 0; i < paramCount; ++i )
+			{
+				if ( i >= 8 || isSupportedMethodArgType( method._paramTypeNames[i] ) == false )
+				{
+					bArgsOk = false;
+					break;
+				}
+			}
+
 			for ( uint32 i = 0; i < paramCount && i < 8; ++i )
 			{
 				ImGui::PushID( static_cast<int>( i ) );
@@ -370,7 +440,17 @@ namespace sw
 				ImGui::PopID();
 			}
 
-			if ( ImGui::Button( "Invoke" ) )
+			if ( paramCount > 8 )
+				ImGui::TextDisabled( "Too many arguments (max 8 in UI)." );
+
+			if ( bArgsOk == false )
+			{
+				ImGui::BeginDisabled();
+				ImGui::Button( "Invoke" );
+				ImGui::EndDisabled();
+				ImGui::TextDisabled( "Unsupported FUNCTION args — invoke skipped." );
+			}
+			else if ( ImGui::Button( "Invoke" ) )
 			{
 				TaskArgs args;
 				for ( uint32 i = 0; i < paramCount && i < 8; ++i )
@@ -382,10 +462,11 @@ namespace sw
 						args.add( _argFloat[i] );
 					else if ( p == "bool" )
 						args.add( _argBool[i] );
-					else
-						args.add( 0 ); // placeholder — invoker may fail for unsupported UI types
 				}
-				getTypeRegistry().invokeMethod( instance, typeInfo->_fullyQualifiedName, method._hashName, args );
+
+				const TaskValue result = getTypeRegistry().invokeMethod(
+					instance, typeInfo->_fullyQualifiedName, method._hashName, args );
+				formatTaskValue( result, _lastInvokeResult, sizeof( _lastInvokeResult ) );
 			}
 
 			ImGui::PopID();

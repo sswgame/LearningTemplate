@@ -38,5 +38,6 @@ namespace sw
 		int32	_argInt[8]{};
 		float32 _argFloat[8]{};
 		bool	_argBool[8]{};
+		char	_lastInvokeResult[256]{};
 	};
 } // namespace sw

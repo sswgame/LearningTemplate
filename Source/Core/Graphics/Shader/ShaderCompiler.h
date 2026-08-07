@@ -34,15 +34,26 @@ namespace sw
 	};
 
 	/**
+	 * @struct ShaderMacroDefine
+	 * @brief 셰이더 전처리 매크로 정의 (NAME=VALUE)
+	 */
+	struct ShaderMacroDefine
+	{
+		std::string _name;
+		std::string _value;
+	};
+
+	/**
 	 * @struct ShaderCompileDesc
 	 * @brief 셰이더 컴파일 요청 서술체
 	 */
 	struct ShaderCompileDesc
 	{
-		std::string		   _filePath;										 ///< HLSL 소스 파일 경로 (상대/절대 경로)
-		std::string		   _entryPoint;										 ///< 진입점 함수 이름 (예: "VSMain", "CSMain")
-		ShaderStage		   _stage		 = ShaderStage::Vertex;				 ///< 컴파일 대상 셰이더 스테이지
-		ShaderTargetFormat _targetFormat = ShaderTargetFormat::SPIRV_Vulkan; ///< 출력 포맷
+		std::string					   _filePath;										 ///< HLSL 소스 파일 경로 (상대/절대 경로)
+		std::string					   _entryPoint;										 ///< 진입점 함수 이름 (예: "VSMain", "CSMain")
+		ShaderStage					   _stage		 = ShaderStage::Vertex;				 ///< 컴파일 대상 셰이더 스테이지
+		ShaderTargetFormat			   _targetFormat = ShaderTargetFormat::SPIRV_Vulkan; ///< 출력 포맷
+		std::vector<ShaderMacroDefine> _defines;										 ///< 추가 전처리 매크로 (-D NAME=VALUE)
 	};
 
 	/**

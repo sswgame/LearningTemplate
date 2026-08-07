@@ -634,8 +634,49 @@ namespace sw
 		if ( _bInitialized == false )
 			return;
 
+		glBindFramebuffer( GL_FRAMEBUFFER, 0 );
+		glViewport( 0, 0, static_cast<GLsizei>( _width ), static_cast<GLsizei>( _height ) );
 		glClearColor( clearColor[0], clearColor[1], clearColor[2], clearColor[3] );
 		glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+	}
+
+	void OpenGLRHIDevice::beginOffscreenPass( RHITextureHandle colorTarget, float32 clearColor[4] )
+	{
+		if ( colorTarget == 0 )
+		{
+			beginFrame( clearColor );
+			return;
+		}
+
+		if ( _bInitialized == false )
+			return;
+
+		auto it = _textures.find( colorTarget );
+		if ( it == _textures.end() || it->second.fbo == 0 )
+			return;
+
+		const OpenGLTextureRecord& record = it->second;
+		glBindFramebuffer( GL_FRAMEBUFFER, record.fbo );
+		glViewport( 0, 0, static_cast<GLsizei>( record.width ), static_cast<GLsizei>( record.height ) );
+		glClearColor( clearColor[0], clearColor[1], clearColor[2], clearColor[3] );
+		glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+	}
+
+	void OpenGLRHIDevice::endOffscreenPass( RHITextureHandle colorTarget )
+	{
+		if ( colorTarget == 0 || _bInitialized == false )
+			return;
+
+		glBindFramebuffer( GL_FRAMEBUFFER, 0 );
+		// Make color attachment readable as a texture for subsequent sampling (ImGui Game View etc.).
+		glMemoryBarrier( GL_FRAMEBUFFER_BARRIER_BIT | GL_TEXTURE_FETCH_BARRIER_BIT );
+	}
+
+	void OpenGLRHIDevice::waitIdle()
+	{
+		if ( _bInitialized == false )
+			return;
+		glFinish();
 	}
 
 	void OpenGLRHIDevice::endFrame( bool vsync )
@@ -800,11 +841,17 @@ namespace sw
 
 	void OpenGLRHIDevice::beginEventMarker( const utf8* name )
 	{
-		(void)name;
+		if ( _bInitialized == false || name == nullptr )
+			return;
+		// OpenGL 4.3+ / 4.6 Core: KHR_debug
+		glPushDebugGroup( GL_DEBUG_SOURCE_APPLICATION, 0, -1, name );
 	}
 
 	void OpenGLRHIDevice::endEventMarker()
 	{
+		if ( _bInitialized == false )
+			return;
+		glPopDebugGroup();
 	}
 
 	std::unique_ptr<IRHICommandList> OpenGLRHIDevice::createCommandList()
@@ -991,15 +1038,40 @@ namespace sw
 		if ( _bInitialized == false )
 			return;
 
-		glClearColor( beginInfo._clearColor[0], beginInfo._clearColor[1], beginInfo._clearColor[2], beginInfo._clearColor[3] );
-		glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-
 		uint32 w = beginInfo._width > 0 ? beginInfo._width : _width;
 		uint32 h = beginInfo._height > 0 ? beginInfo._height : _height;
+
+		if ( beginInfo._colorTarget != 0 )
+		{
+			auto it = _textures.find( beginInfo._colorTarget );
+			if ( it != _textures.end() && it->second.fbo != 0 )
+			{
+				const OpenGLTextureRecord& record = it->second;
+				glBindFramebuffer( GL_FRAMEBUFFER, record.fbo );
+				if ( beginInfo._width == 0 )
+					w = record.width;
+				if ( beginInfo._height == 0 )
+					h = record.height;
+			}
+			else
+			{
+				glBindFramebuffer( GL_FRAMEBUFFER, 0 );
+			}
+		}
+		else
+		{
+			glBindFramebuffer( GL_FRAMEBUFFER, 0 );
+		}
+
 		glViewport( 0, 0, static_cast<GLsizei>( w ), static_cast<GLsizei>( h ) );
+		glClearColor( beginInfo._clearColor[0], beginInfo._clearColor[1], beginInfo._clearColor[2], beginInfo._clearColor[3] );
+		glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 	}
 
 	void OpenGLRHIDevice::endRenderPass()
 	{
+		if ( _bInitialized == false )
+			return;
+		glBindFramebuffer( GL_FRAMEBUFFER, 0 );
 	}
 } // namespace sw

@@ -11,12 +11,6 @@
 
 namespace sw
 {
-	struct ShaderMacroDefine
-	{
-		std::string _name;
-		std::string _value;
-	};
-
 	struct ShaderVariantKey
 	{
 		std::string					   _shaderPath;

@@ -5,6 +5,7 @@
  */
 
 #include "Core/Reflection/ReflectionCore.h"
+#include "Core/Object/Component.h"
 #include "Game/SWGameModuleHeads.h"
 
 namespace sw
@@ -18,5 +19,38 @@ namespace sw
 
 		PROPERTY()
 		float32 _speed = 5.0f; ///< 이동 속도
+	};
+
+	/**
+	 * @brief Hierarchy↔Inspector↔reflection E2E용 샘플 컴포넌트
+	 */
+	REFLECT()
+	class SampleHealthComponent : public Component
+	{
+	public:
+		SW_REFLECT_TYPE_API();
+
+		PROPERTY()
+		float32 _health = 100.0f;
+
+		FUNCTION()
+		void takeDamage( float32 amount )
+		{
+			_health -= amount;
+			if ( _health < 0.0f )
+				_health = 0.0f;
+		}
+
+		FUNCTION()
+		float32 getHealth() const
+		{
+			return _health;
+		}
+
+		FUNCTION()
+		void heal( float32 amount )
+		{
+			_health += amount;
+		}
 	};
 } // namespace sw

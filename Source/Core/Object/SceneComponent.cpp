@@ -4,7 +4,9 @@
  */
 #include "pch.h"
 #include "SceneComponent.h"
+#include "Core/Object/ComponentManager.h"
 #include "Core/Reflection/ReflectionCore.h"
+#include "Core/Utility/Log/Logger.h"
 
 namespace sw
 {
@@ -94,6 +96,8 @@ namespace sw
 
 	const TypeInfo* SceneComponent::getTypeInfo() const
 	{
+		if ( _cachedTypeInfo != nullptr )
+			return _cachedTypeInfo;
 		return sw::getTypeRegistry().findType( hashed_string( "sw::SceneComponent" ) );
 	}
 
@@ -208,6 +212,12 @@ namespace sw
 
 	bool SceneComponent::attachToComponent( SceneComponent* parent )
 	{
+		if ( s_bParallelTransformReadOnly )
+		{
+			SW_LOG_ERROR( "[SceneComponent] attachToComponent is not allowed during parallel transform read-only." );
+			return false;
+		}
+
 		if ( parent == nullptr || parent == this || parent == _parent )
 			return false;
 
@@ -233,6 +243,12 @@ namespace sw
 
 	void SceneComponent::detachFromComponent()
 	{
+		if ( s_bParallelTransformReadOnly )
+		{
+			SW_LOG_ERROR( "[SceneComponent] detachFromComponent is not allowed during parallel transform read-only." );
+			return;
+		}
+
 		if ( _parent != nullptr )
 		{
 			std::vector<SceneComponent*>& children = _parent->_children;
@@ -250,4 +266,15 @@ namespace sw
 			markTransformDirty();
 		}
 	}
+
+	namespace
+	{
+		// Built-in factory so ObjectStateSerializer / Add Component can recreate SceneComponent by name.
+		void registerSceneComponentFactory( ComponentManager& manager )
+		{
+			manager.registerComponentType<SceneComponent>( hashed_string( "SceneComponent" ) );
+		}
+
+		static ComponentFactoryRegistrar s_sceneComponentFactoryRegistrar( &registerSceneComponentFactory );
+	} // namespace
 } // namespace sw

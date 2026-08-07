@@ -228,6 +228,8 @@ namespace sw
 
 	const TypeInfo* Component::getTypeInfo() const
 	{
+		if ( _cachedTypeInfo != nullptr )
+			return _cachedTypeInfo;
 		return sw::getTypeRegistry().findType( hashed_string( "sw::Component" ) );
 	}
 

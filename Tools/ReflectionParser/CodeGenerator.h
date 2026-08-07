@@ -31,10 +31,13 @@ namespace sw::tool
 		void emitTypeRegistrar( CodeEmitBuffer& out, const ParsedTypeInfo& typeInfo ) const;
 		void emitMethodList( CodeEmitBuffer& out, const ParsedTypeInfo& typeInfo ) const;
 		void emitComponentFactoryRegistrar( CodeEmitBuffer& out, const ParsedTypeInfo& typeInfo ) const;
+		void emitReflectTypeTraits( CodeEmitBuffer& out, const ParsedTypeInfo& typeInfo ) const;
+		void emitTypeInfoAccessors( CodeEmitBuffer& out, const ParsedTypeInfo& typeInfo ) const;
 		void emitEnumRegistrar( CodeEmitBuffer& out, const ParsedEnumInfo& enumInfo ) const;
 
 		static std::string sanitizeIdentifier( const std::string& fqn );
 		static bool		   isComponentDerived( const ParsedTypeInfo& typeInfo );
+		static bool		   isGameObjectDerived( const ParsedTypeInfo& typeInfo );
 		/** @brief Map clang type spellings to project typedefs usable in args.get<T>(). */
 		static std::string normalizeTypeName( const std::string& clangSpelling );
 

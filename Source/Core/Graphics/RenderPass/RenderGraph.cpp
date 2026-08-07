@@ -16,12 +16,14 @@ namespace sw
 	/**
 	 * @brief 그래프에 새 패스 노드 등록
 	 */
-	void RenderGraph::addPass( hashed_string passName, std::vector<hashed_string> inputs, std::vector<hashed_string> outputs )
+	void RenderGraph::addPass( hashed_string passName, std::vector<hashed_string> inputs, std::vector<hashed_string> outputs,
+							   RenderGraphPassExecuteFn execute )
 	{
 		RenderGraphNode node;
 		node._name	  = passName;
 		node._inputs  = std::move( inputs );
 		node._outputs = std::move( outputs );
+		node._execute = std::move( execute );
 		node._bCulled = false;
 		_nodes.push_back( std::move( node ) );
 	}
@@ -123,6 +125,74 @@ namespace sw
 						  static_cast<uint32>( activeIndices.size() ) );
 			_compiledExecutionOrder.clear();
 			return false;
+		}
+
+		return true;
+	}
+
+	/**
+	 * @brief 컴파일된 위상 순서로 패스 콜백 실행 + 논리 리소스 전이 추적
+	 */
+	bool RenderGraph::execute()
+	{
+		_lastTransitionCount = 0;
+
+		if ( _compiledExecutionOrder.empty() )
+		{
+			if ( compile() == false )
+				return false;
+		}
+
+		std::unordered_map<hashed_string, size_t> nameToIndex;
+		nameToIndex.reserve( _nodes.size() );
+		for ( size_t i = 0; i < _nodes.size(); ++i )
+			nameToIndex[_nodes[i]._name] = i;
+
+		std::unordered_map<hashed_string, RenderGraphResourceState> resourceStates;
+		resourceStates.reserve( _compiledExecutionOrder.size() * 2 );
+
+		auto transitionTo = [this, &resourceStates]( hashed_string resource, RenderGraphResourceState desired )
+		{
+			auto it = resourceStates.find( resource );
+			const RenderGraphResourceState previous =
+				( it != resourceStates.end() ) ? it->second : RenderGraphResourceState::Undefined;
+			if ( previous != desired )
+			{
+				++_lastTransitionCount;
+				resourceStates[resource] = desired;
+			}
+			else if ( it == resourceStates.end() )
+			{
+				resourceStates[resource] = desired;
+			}
+		};
+
+		for ( const hashed_string& passName : _compiledExecutionOrder )
+		{
+			auto indexIt = nameToIndex.find( passName );
+			if ( indexIt == nameToIndex.end() )
+			{
+				SW_LOG_ERROR( "[RenderGraph] execute: unknown pass in order: %#", passName.c_str() );
+				return false;
+			}
+
+			RenderGraphNode& node = _nodes[indexIt->second];
+			if ( node._bCulled )
+				continue;
+
+			for ( const hashed_string& input : node._inputs )
+				transitionTo( input, RenderGraphResourceState::Read );
+			for ( const hashed_string& output : node._outputs )
+				transitionTo( output, RenderGraphResourceState::Write );
+
+			if ( node._execute.isBound() )
+			{
+				RenderGraphPassContext ctx;
+				ctx._passName = node._name;
+				ctx._inputs	  = &node._inputs;
+				ctx._outputs  = &node._outputs;
+				node._execute( ctx );
+			}
 		}
 
 		return true;
@@ -244,5 +314,6 @@ namespace sw
 	{
 		_nodes.clear();
 		_compiledExecutionOrder.clear();
+		_lastTransitionCount = 0;
 	}
 } // namespace sw

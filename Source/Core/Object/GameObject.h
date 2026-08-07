@@ -76,6 +76,8 @@ namespace sw
 		void addTag( TagID tag ) { _tags.addTag( tag ); }
 		/** @brief 태그 제거 */
 		void removeTag( TagID tag ) { _tags.removeTag( tag ); }
+		/** @brief 모든 태그 제거 (직렬화 로드 전 정리용) */
+		void clearTags() { _tags.clear(); }
 		/** @brief 태그 소유 검사 */
 		bool hasTag( TagID tag, bool bExactMatch = false ) const { return _tags.hasTag( tag, bExactMatch ); }
 		/** @brief 태그 매칭 조건 검사 */
@@ -114,6 +116,7 @@ namespace sw
 
 			hashed_string typeKey = getComponentTypeKey<T>();
 			rawPtr->setComponentName( typeKey );
+			rawPtr->setCachedTypeInfo( getTypeRegistry().findType( typeKey ) );
 
 			_components[typeKey].push_back( std::move( newComp ) );
 			_flatComponents.push_back( rawPtr );

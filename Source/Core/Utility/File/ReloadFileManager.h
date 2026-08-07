@@ -24,6 +24,7 @@ namespace sw
 	/**
 	 * @class ReloadFileManager
 	 * @brief FileWatcher로 리소스 변경을 폴링하고, 등록된 path prefix + 확장자 매칭 시에만 콜백을 호출합니다.
+	 * @note Windows: ReadDirectoryChangesW. Non-Windows: mtime poll fallback when no native watcher.
 	 */
 	class SW_API ReloadFileManager
 	{
@@ -61,10 +62,15 @@ namespace sw
 
 		bool			   matchesWatch( const WatchEntry& entry, const FileChangeEvent& ev ) const;
 		static std::string extractExtension( const std::string& filename );
+		void			   dispatchEvents( const std::vector<FileChangeEvent>& events );
+		void			   pollMtimeFallback( std::vector<FileChangeEvent>& outEvents );
+		bool			   extensionAllowed( const WatchEntry& entry, const std::string& filename ) const;
 
-		std::unique_ptr<IFileWatcher> _fileWatcher;
-		FileChangeMulticastDelegate	  _onFileChanged;
-		std::vector<WatchEntry>		  _watches;
-		uint64						  _nextWatchId = 1;
+		std::unique_ptr<IFileWatcher>					   _fileWatcher;
+		FileChangeMulticastDelegate						   _onFileChanged;
+		std::vector<WatchEntry>							   _watches;
+		uint64											   _nextWatchId = 1;
+		std::unordered_map<std::string, std::filesystem::file_time_type> _pollMtimes;
+		bool											   _bUseMtimePoll = false;
 	};
 } // namespace sw
