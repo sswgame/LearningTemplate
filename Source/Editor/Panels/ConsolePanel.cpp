@@ -1,6 +1,6 @@
 /**
  * @file ConsolePanel.cpp
- * @brief Logger::addLogWrittenListener �?구독???�시?�는 Output Log ?�널
+ * @brief Logger::addLogWrittenListener �?구독???�시?�는 Output Log ?�널
  */
 #include "Panels/ConsolePanel.h"
 #include "Core/Common/CommonDefines.h"
@@ -155,7 +155,6 @@ namespace sw
 				const Logger::LogEntry& entry = *visible[static_cast<size_t>( i )];
 				ImGui::PushID( i );
 
-				// 콘솔 출력�??�일 ?�서: [date] [tag] [level] - message
 				ImGui::TextDisabled( "[%s]", entry.timeStamp.c_str() );
 				ImGui::SameLine( 0.0f, 0.0f );
 				ImGui::TextColored( ImVec4( 0.45f, 0.85f, 0.95f, 1.0f ), " [%s]", entry.tag.c_str() );
