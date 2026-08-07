@@ -27,5 +27,16 @@ namespace sw
 		ShaderReflectionData* reflectionData = nullptr;
 		IRHIDevice*			  rhiDevice		 = nullptr;
 		void*				  gameTextureID	 = nullptr;
+
+		/** @brief Current Game View RT size (App → panel). */
+		uint32 gameViewportWidth  = 0;
+		uint32 gameViewportHeight = 0;
+
+		/**
+		 * @brief Panel writes desired content-region size; App recreates RT (debounced).
+		 * @details Non-null when editor owns a game viewport. Write 0 to clear a pending request.
+		 */
+		uint32* requestGameViewportWidth  = nullptr;
+		uint32* requestGameViewportHeight = nullptr;
 	};
 } // namespace sw

@@ -428,6 +428,44 @@ SW_TEST_CASE( HierarchicalActiveStateTest, SubtreeTickSkip )
 	SW_EXPECT_EQUAL( 0, comp->_tickCount );
 }
 
+SW_TEST_CASE( GameObjectHierarchyTest, ParentChildAttachAndActivePropagation )
+{
+	GameObject parent( hashed_string( "ParentGO" ) );
+	GameObject child( hashed_string( "ChildGO" ) );
+	GameObject grand( hashed_string( "GrandGO" ) );
+
+	SW_EXPECT_TRUE( child.attachToParent( &parent ) );
+	SW_EXPECT_TRUE( grand.attachToParent( &child ) );
+	SW_EXPECT_EQUAL( &parent, child.getParent() );
+	SW_EXPECT_EQUAL( &child, grand.getParent() );
+	SW_EXPECT_EQUAL( size_t( 1 ), parent.getChildren().size() );
+	SW_EXPECT_EQUAL( &child, parent.getChildren()[0] );
+
+	// Cycle attach must fail.
+	SW_EXPECT_FALSE( parent.attachToParent( &grand ) );
+
+	parent.setActive( false );
+	SW_EXPECT_FALSE( parent.isActiveInHierarchy() );
+	SW_EXPECT_FALSE( child.isActiveInHierarchy() );
+	SW_EXPECT_FALSE( grand.isActiveInHierarchy() );
+
+	parent.setActive( true );
+	SW_EXPECT_TRUE( child.isActiveInHierarchy() );
+	SW_EXPECT_TRUE( grand.isActiveInHierarchy() );
+
+	child.setActive( false );
+	SW_EXPECT_TRUE( parent.isActiveInHierarchy() );
+	SW_EXPECT_FALSE( child.isActiveInHierarchy() );
+	SW_EXPECT_FALSE( grand.isActiveInHierarchy() );
+
+	grand.detachFromParent();
+	SW_EXPECT_NULL( grand.getParent() );
+	SW_EXPECT_EQUAL( size_t( 0 ), child.getChildren().size() );
+	// Detached grand is root again; own active still true.
+	SW_EXPECT_TRUE( grand.isActive() );
+	SW_EXPECT_TRUE( grand.isActiveInHierarchy() );
+}
+
 SW_TEST_CASE( PostEditChangePropertyTest, CallbackOnPropertyChanged )
 {
 	GameObject			   actor( hashed_string( "PropertyChangedActor" ) );

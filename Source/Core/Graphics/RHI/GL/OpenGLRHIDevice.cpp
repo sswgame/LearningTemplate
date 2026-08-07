@@ -6,6 +6,7 @@
 #include "Core/Graphics/Shader/ShaderCache.h"
 #include "Core/Common/PlatformHeaders.h"
 #include "Core/Common/CommonHeaders.h"
+#include "Core/Utility/Delegate/Delegate.h"
 #include <glad/glad.h>
 
 #if defined( SW_PLATFORM_WINDOWS )
@@ -320,24 +321,35 @@ namespace sw
 	{
 		if ( buffer == 0 )
 			return;
-		GLuint ubo = static_cast<GLuint>( buffer );
-		glDeleteBuffers( 1, &ubo );
+		GLuint glBuffer = static_cast<GLuint>( buffer );
+		bool   bFound	= false;
 		for ( auto it = _constantBuffers.begin(); it != _constantBuffers.end(); ++it )
 		{
-			if ( *it == ubo )
+			if ( *it == glBuffer )
 			{
 				_constantBuffers.erase( it );
+				bFound = true;
 				break;
 			}
 		}
 		for ( auto it = _structuredBuffers.begin(); it != _structuredBuffers.end(); ++it )
 		{
-			if ( *it == ubo )
+			if ( *it == glBuffer )
 			{
 				_structuredBuffers.erase( it );
+				bFound = true;
 				break;
 			}
 		}
+		if ( bFound == false )
+			return;
+
+		auto releaseCb = [glBuffer]()
+		{
+			GLuint name = glBuffer;
+			glDeleteBuffers( 1, &name );
+		};
+		_releaseQueue.enqueueRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, releaseCb ) );
 	}
 
 	namespace
@@ -444,12 +456,24 @@ namespace sw
 		if ( it == _textures.end() )
 			return;
 
-		OpenGLTextureRecord& record = it->second;
-		if ( record.fbo != 0 )
-			glDeleteFramebuffers( 1, &record.fbo );
-		if ( record.texture != 0 )
-			glDeleteTextures( 1, &record.texture );
+		const GLuint fboName = it->second.fbo;
+		const GLuint texName = it->second.texture;
 		_textures.erase( it );
+
+		auto releaseCb = [fboName, texName]()
+		{
+			if ( fboName != 0 )
+			{
+				GLuint name = fboName;
+				glDeleteFramebuffers( 1, &name );
+			}
+			if ( texName != 0 )
+			{
+				GLuint name = texName;
+				glDeleteTextures( 1, &name );
+			}
+		};
+		_releaseQueue.enqueueRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, releaseCb ) );
 	}
 
 	uint32 OpenGLRHIDevice::getGLTextureName( RHITextureHandle texture ) const
@@ -564,6 +588,8 @@ namespace sw
 		if ( _bInitialized == false )
 			return;
 
+		_releaseQueue.flushAll();
+
 		if ( _shaderProgram )
 		{
 			glDeleteProgram( _shaderProgram );
@@ -677,6 +703,7 @@ namespace sw
 		if ( _bInitialized == false )
 			return;
 		glFinish();
+		_releaseQueue.flushAll();
 	}
 
 	void OpenGLRHIDevice::endFrame( bool vsync )
@@ -693,6 +720,7 @@ namespace sw
 		id context = (id)_hRC;
 		( (void ( * )( id, SEL ))objc_msgSend )( context, sel_registerName( "flushBuffer" ) );
 #endif
+		_releaseQueue.tickFrame();
 	}
 
 	void OpenGLRHIDevice::resize( uint32 width, uint32 height )

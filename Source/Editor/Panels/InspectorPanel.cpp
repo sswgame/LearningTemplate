@@ -342,7 +342,8 @@ namespace sw
 		{
 			return typeName == "int32" || typeName == "int" || typeName == "sw::int32" ||
 				   typeName == "float32" || typeName == "float" || typeName == "sw::float32" ||
-				   typeName == "bool";
+				   typeName == "bool" ||
+				   typeName == "std::string" || typeName == "string";
 		}
 
 		bool formatTaskValue( const TaskValue& value, char* outBuf, size_t outSize )
@@ -434,6 +435,8 @@ namespace sw
 					ImGui::DragFloat( label, &_argFloat[i], 0.1f );
 				else if ( p == "bool" )
 					ImGui::Checkbox( label, &_argBool[i] );
+				else if ( p == "std::string" || p == "string" )
+					ImGui::InputText( label, _argString[i], sizeof( _argString[i] ) );
 				else
 					ImGui::TextDisabled( "%s (unsupported in UI)", label );
 
@@ -462,6 +465,8 @@ namespace sw
 						args.add( _argFloat[i] );
 					else if ( p == "bool" )
 						args.add( _argBool[i] );
+					else if ( p == "std::string" || p == "string" )
+						args.add( std::string( _argString[i] ) );
 				}
 
 				const TaskValue result = getTypeRegistry().invokeMethod(

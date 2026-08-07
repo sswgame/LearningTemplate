@@ -237,6 +237,10 @@ namespace sw
 	{
 	}
 
+	void Component::onEndPlay()
+	{
+	}
+
 	void Component::onTick( float32 deltaTime )
 	{
 		if ( _bActive != 0 && _onTickDelegate.isBound() )

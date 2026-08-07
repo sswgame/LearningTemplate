@@ -66,6 +66,10 @@ namespace sw
 		bool bindGameAPI( void* hLibraryModule );
 		/** @brief Game View용 오프스크린 렌더 타깃을 생성합니다. */
 		bool createGameViewportTexture( uint32 width = 1280, uint32 height = 720 );
+		/** @brief Game View RT를 파괴 후 재생성하고 ImGui 텍스처를 다시 등록합니다. */
+		bool recreateGameViewportTexture( uint32 width, uint32 height );
+		/** @brief GameViewPanel 요청 크기를 debounce 후 적용합니다. */
+		void processGameViewportResizeRequest();
 		/** @brief 대기 중인 RHI 백엔드 변경을 soft recreate로 적용합니다. */
 		bool applyPendingBackendChange();
 
@@ -90,6 +94,13 @@ namespace sw
 		FileWatchHandle	 _shaderWatchHandle{};
 		RHITextureHandle _gameRenderTarget = 0;
 		void*			 _gameTextureID	   = nullptr;
+		uint32			 _gameViewportWidth  = 1280;
+		uint32			 _gameViewportHeight = 720;
+		uint32			 _requestedGameViewportWidth  = 0;
+		uint32			 _requestedGameViewportHeight = 0;
+		uint32			 _gameViewportResizeStableFrames = 0;
+		uint32			 _gameViewportResizeLastW = 0;
+		uint32			 _gameViewportResizeLastH = 0;
 		EditorHandle	 _editor		   = nullptr;
 		GameHandle		 _game			   = nullptr;
 

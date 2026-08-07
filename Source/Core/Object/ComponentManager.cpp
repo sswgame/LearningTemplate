@@ -7,6 +7,10 @@
 #include "Core/Utility/Log/Logger.h"
 #include "Core/Utility/Task/TaskManager.h"
 #include "Core/Reflection/ReflectionCore.h"
+#include "Core/Game/Scene/SceneManager.h"
+#include "Core/Game/Scene/Scene.h"
+#include "Core/Object/GameObjectManager.h"
+#include "Core/Common/CoreServices.h"
 
 namespace sw
 {
@@ -112,6 +116,30 @@ namespace sw
 					break;
 				}
 			}
+		}
+	}
+
+	void ComponentManager::clearAllCachedTypeInfo()
+	{
+		for ( const std::unique_ptr<Scene>& scene : getSceneManager().getLoadedScenes() )
+		{
+			if ( scene == nullptr )
+				continue;
+			GameObjectManager* objects = scene->getObjectManager();
+			if ( objects != nullptr )
+				objects->clearAllCachedTypeInfo();
+		}
+	}
+
+	void ComponentManager::rebindAllCachedTypeInfo()
+	{
+		for ( const std::unique_ptr<Scene>& scene : getSceneManager().getLoadedScenes() )
+		{
+			if ( scene == nullptr )
+				continue;
+			GameObjectManager* objects = scene->getObjectManager();
+			if ( objects != nullptr )
+				objects->rebindAllCachedTypeInfo();
 		}
 	}
 

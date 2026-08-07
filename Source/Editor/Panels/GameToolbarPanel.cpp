@@ -2,7 +2,12 @@
  * @file GameToolbarPanel.cpp
  */
 #include "Panels/GameToolbarPanel.h"
+#include "EditorSelection.h"
 #include "Core/Game/GameState.h"
+#include "Core/Common/CoreServices.h"
+#include "Core/Game/Scene/SceneManager.h"
+#include "Core/Game/Scene/Scene.h"
+#include "Core/Object/GameObjectManager.h"
 #include <imgui.h>
 
 namespace sw
@@ -32,7 +37,13 @@ namespace sw
 		ImGui::SameLine();
 
 		if ( ImGui::Button( "Stop" ) )
+		{
 			setGameState( GameState::Stopped );
+
+			Scene* scene = getSceneManager().getActiveScene();
+			if ( scene != nullptr )
+				editor::remapSelectionByObjectName( scene->getObjectManager() );
+		}
 
 		ImGui::End();
 	}

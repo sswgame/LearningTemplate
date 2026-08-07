@@ -9,6 +9,7 @@
 
 	#include "Core/Graphics/Shader/ShaderCache.h"
 	#include "Core/Utility/Log/Logger.h"
+	#include "Core/Utility/Delegate/Delegate.h"
 
 namespace sw
 {
@@ -224,23 +225,37 @@ namespace sw
 	{
 		if ( buffer == 0 )
 			return;
-		auto* res = reinterpret_cast<ID3D11Buffer*>( buffer );
+		auto*								   res = reinterpret_cast<ID3D11Buffer*>( buffer );
+		Microsoft::WRL::ComPtr<ID3D11Buffer> owned;
 		for ( auto it = _constantBuffers.begin(); it != _constantBuffers.end(); ++it )
 		{
 			if ( it->Get() == res )
 			{
+				owned = std::move( *it );
 				_constantBuffers.erase( it );
-				return;
+				break;
 			}
 		}
-		for ( auto it = _structuredBuffers.begin(); it != _structuredBuffers.end(); ++it )
+		if ( owned == nullptr )
 		{
-			if ( it->Get() == res )
+			for ( auto it = _structuredBuffers.begin(); it != _structuredBuffers.end(); ++it )
 			{
-				_structuredBuffers.erase( it );
-				return;
+				if ( it->Get() == res )
+				{
+					owned = std::move( *it );
+					_structuredBuffers.erase( it );
+					break;
+				}
 			}
 		}
+		if ( owned == nullptr )
+			return;
+
+		auto releaseCb = [owned]()
+		{
+			(void)owned.Get();
+		};
+		_releaseQueue.enqueueRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, releaseCb ) );
 	}
 
 	RHITextureHandle D3D11RHIDevice::createTexture2D( const RHITextureDesc& desc )
@@ -310,7 +325,18 @@ namespace sw
 	{
 		if ( texture == 0 )
 			return;
-		_textures.erase( texture );
+		auto it = _textures.find( texture );
+		if ( it == _textures.end() )
+			return;
+
+		TextureRecord owned = std::move( it->second );
+		_textures.erase( it );
+
+		auto releaseCb = [owned]()
+		{
+			(void)owned._texture.Get();
+		};
+		_releaseQueue.enqueueRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, releaseCb ) );
 	}
 
 	void D3D11RHIDevice::beginOffscreenPass( RHITextureHandle colorTarget, float32 clearColor[4] )
@@ -467,6 +493,7 @@ namespace sw
 
 	void D3D11RHIDevice::shutdownInternal()
 	{
+		_releaseQueue.flushAll();
 		cleanupRenderTargetView();
 		_textures.clear();
 		_vertexBuffer.Reset();
@@ -475,6 +502,7 @@ namespace sw
 		_pixelShader.Reset();
 		_registeredBindlessVector.clear();
 		_constantBuffers.clear();
+		_structuredBuffers.clear();
 		_swapChain.Reset();
 		_deviceContext.Reset();
 		_device.Reset();
@@ -549,6 +577,8 @@ namespace sw
 		const HRESULT hr = _swapChain->Present( vsync ? 1 : 0, 0 );
 		if ( FAILED( hr ) )
 			SW_LOG_ERROR( "[D3D11] Present failed hr=0x%X", static_cast<uint32>( hr ) );
+
+		_releaseQueue.tickFrame();
 	}
 
 	class D3D11CommandList final : public IRHICommandList

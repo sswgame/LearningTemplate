@@ -1,13 +1,17 @@
 /**
  * @file ObjectStateSerializer.cpp
- * @brief ObjectStateSerializer 구현
+ * @brief ObjectStateSerializer 구현 (stable SceneTransforms keys)
  */
 #include "pch.h"
 #include "ObjectStateSerializer.h"
 #include "Core/Object/GameObject.h"
+#include "Core/Object/GameObjectManager.h"
 #include "Core/Object/Component.h"
 #include "Core/Object/SceneComponent.h"
 #include "Core/Object/TagSystem.h"
+#include "Core/Game/Scene/SceneManager.h"
+#include "Core/Game/Scene/Scene.h"
+#include "Core/Common/CoreServices.h"
 #include "Core/Reflection/Serializer.h"
 #include "Core/Reflection/ReflectionCore.h"
 #include "Core/Utility/Log/Logger.h"
@@ -116,8 +120,122 @@ namespace sw
 			return true;
 		}
 
-		/** @brief SceneComponent 로컬 TRS + 동일 GO 내 부모 flat-index. parentIdx=-1 이면 루트. */
-		std::string formatSceneTransform( const SceneComponent* sceneComp, int32 parentFlatIndex )
+		/** @brief Type FQN, else component name, else "Component". */
+		std::string componentTypeBaseName( const Component* comp )
+		{
+			if ( comp == nullptr )
+				return "Component";
+
+			if ( const TypeInfo* typeInfo = comp->getTypeInfo() )
+			{
+				if ( typeInfo->_fullyQualifiedName.empty() == false )
+					return typeInfo->_fullyQualifiedName.c_str();
+			}
+
+			if ( comp->getComponentName().empty() == false )
+				return comp->getComponentName().c_str();
+
+			return "Component";
+		}
+
+		/**
+		 * @brief Stable SceneTransforms map key for a component on its owner GO.
+		 * @details Prefer component name when set; otherwise typeName. Always suffix
+		 *          occurrence index among components sharing that base on the same GO.
+		 */
+		std::string makeStableComponentKey( const Component* comp, int32 occurrenceIndex )
+		{
+			std::string base;
+			if ( comp != nullptr && comp->getComponentName().empty() == false )
+				base = comp->getComponentName().c_str();
+			else
+				base = componentTypeBaseName( comp );
+
+			base += '#';
+			base += std::to_string( occurrenceIndex );
+			return base;
+		}
+
+		/** @brief Build stableKey → Component* for all components on a GO (occurrence by base name). */
+		void buildStableComponentKeyMap( const GameObject* gameObject,
+										 std::unordered_map<std::string, Component*>& outMap )
+		{
+			outMap.clear();
+			if ( gameObject == nullptr )
+				return;
+
+			std::unordered_map<std::string, int32> occurrence;
+			for ( Component* comp : gameObject->getAllComponents() )
+			{
+				if ( comp == nullptr )
+					continue;
+
+				std::string base;
+				if ( comp->getComponentName().empty() == false )
+					base = comp->getComponentName().c_str();
+				else
+					base = componentTypeBaseName( comp );
+
+				const int32 occ = occurrence[base]++;
+				outMap.emplace( makeStableComponentKey( comp, occ ), comp );
+			}
+		}
+
+		uint32 countSceneComponents( const GameObject* gameObject )
+		{
+			if ( gameObject == nullptr )
+				return 0;
+
+			uint32 count = 0;
+			for ( Component* comp : gameObject->getAllComponents() )
+			{
+				if ( comp != nullptr && comp->asSceneComponent() != nullptr )
+					++count;
+			}
+			return count;
+		}
+
+		GameObjectManager* findActiveObjectManager()
+		{
+			Scene* scene = getSceneManager().getActiveScene();
+			return scene != nullptr ? scene->getObjectManager() : nullptr;
+		}
+
+		SceneComponent* resolveParentSceneComponent( GameObject* childOwner,
+													 std::string_view parentOwnerName,
+													 std::string_view parentStableKey )
+		{
+			if ( parentStableKey.empty() )
+				return nullptr;
+
+			GameObject* parentOwner = childOwner;
+			if ( parentOwnerName.empty() == false )
+			{
+				const bool bSameOwner = childOwner != nullptr &&
+										std::string_view( childOwner->getName().c_str() ) == parentOwnerName;
+				if ( bSameOwner == false )
+				{
+					GameObjectManager* manager = findActiveObjectManager();
+					if ( manager == nullptr )
+						return nullptr;
+					parentOwner = manager->findGameObjectByName(
+						hashed_string( std::string( parentOwnerName ).c_str() ) );
+				}
+			}
+
+			if ( parentOwner == nullptr )
+				return nullptr;
+
+			std::unordered_map<std::string, Component*> keyMap;
+			buildStableComponentKeyMap( parentOwner, keyMap );
+			const auto it = keyMap.find( std::string( parentStableKey ) );
+			if ( it == keyMap.end() || it->second == nullptr )
+				return nullptr;
+			return it->second->asSceneComponent();
+		}
+
+		/** @brief local TRS + parent ref: empty = root; "ownerName/stableKey" = parent. */
+		std::string formatSceneTransform( const SceneComponent* sceneComp )
 		{
 			std::string out = formatFloat3( sceneComp->getLocalPosition() );
 			out += ';';
@@ -125,23 +243,57 @@ namespace sw
 			out += ';';
 			out += formatFloat3( sceneComp->getLocalScale() );
 			out += ';';
-			out += std::to_string( parentFlatIndex );
+
+			SceneComponent* parent = sceneComp->getParent();
+			if ( parent == nullptr )
+				return out;
+
+			GameObject* parentOwner = parent->getOwner();
+			if ( parentOwner == nullptr )
+				return out;
+
+			std::unordered_map<std::string, Component*> parentKeyMap;
+			buildStableComponentKeyMap( parentOwner, parentKeyMap );
+
+			std::string parentKey;
+			for ( const auto& entry : parentKeyMap )
+			{
+				if ( entry.second == parent )
+				{
+					parentKey = entry.first;
+					break;
+				}
+			}
+			if ( parentKey.empty() )
+				return out;
+
+			out += parentOwner->getName().c_str();
+			out += '/';
+			out += parentKey;
 			return out;
 		}
 
-		bool parseSceneTransform( std::string_view text, float3& outPos, float3& outRot, float3& outScl, int32& outParentIdx )
+		bool parseSceneTransform( std::string_view text,
+								  float3&		   outPos,
+								  float3&		   outRot,
+								  float3&		   outScl,
+								  std::string&	   outParentOwner,
+								  std::string&	   outParentKey,
+								  int32&		   outLegacyParentIdx )
 		{
-			outPos		 = float3{};
-			outRot		 = float3{};
-			outScl		 = float3( 1.0f, 1.0f, 1.0f );
-			outParentIdx = -1;
+			outPos			   = float3{};
+			outRot			   = float3{};
+			outScl			   = float3( 1.0f, 1.0f, 1.0f );
+			outParentOwner.clear();
+			outParentKey.clear();
+			outLegacyParentIdx = -1;
 
 			std::string_view parts[4];
-			size_t			 start	  = 0;
+			size_t			 start	   = 0;
 			size_t			 partCount = 0;
 			while ( partCount < 4 && start <= text.size() )
 			{
-				const size_t sep = text.find( ';', start );
+				const size_t sep	   = text.find( ';', start );
 				parts[partCount++] = text.substr( start, sep == std::string_view::npos ? std::string_view::npos : sep - start );
 				if ( sep == std::string_view::npos )
 					break;
@@ -155,32 +307,228 @@ namespace sw
 				 parseFloat3( parts[2], outScl ) == false )
 				return false;
 
-			if ( partCount >= 4 && parts[3].empty() == false )
+			if ( partCount < 4 || parts[3].empty() )
+				return true;
+
+			const std::string_view parentRef = parts[3];
+			const size_t		   slash	 = parentRef.find( '/' );
+			if ( slash != std::string_view::npos )
+			{
+				outParentOwner.assign( parentRef.substr( 0, slash ) );
+				outParentKey.assign( parentRef.substr( slash + 1 ) );
+				return true;
+			}
+
+			// Legacy: same-GO flat component index.
+			bool bAllDigits = parentRef.empty() == false;
+			for ( char c : parentRef )
+			{
+				if ( c < '0' || c > '9' )
+				{
+					if ( c != '-' )
+					{
+						bAllDigits = false;
+						break;
+					}
+				}
+			}
+			if ( bAllDigits )
 			{
 				try
 				{
-					outParentIdx = static_cast<int32>( std::stoi( std::string( parts[3] ) ) );
+					outLegacyParentIdx = static_cast<int32>( std::stoi( std::string( parentRef ) ) );
 				}
 				catch ( ... )
 				{
-					outParentIdx = -1;
+					outLegacyParentIdx = -1;
 				}
+				return true;
 			}
+
+			// Same-GO stable key without owner prefix.
+			outParentKey.assign( parentRef );
 			return true;
 		}
 
-		int32 findFlatComponentIndex( const GameObject* gameObject, const Component* target )
+		struct PendingAttach
 		{
-			if ( gameObject == nullptr || target == nullptr )
-				return -1;
+			SceneComponent* child			= nullptr;
+			std::string		parentOwnerName;
+			std::string		parentStableKey;
+			int32			legacyParentIdx = -1;
+		};
+
+		void applyPendingAttaches( GameObject* gameObject, const std::vector<PendingAttach>& pendingAttaches )
+		{
+			if ( gameObject == nullptr || pendingAttaches.empty() )
+				return;
 
 			const std::vector<Component*>& comps = gameObject->getAllComponents();
-			for ( size_t i = 0; i < comps.size(); ++i )
+
+			for ( const PendingAttach& link : pendingAttaches )
 			{
-				if ( comps[i] == target )
-					return static_cast<int32>( i );
+				if ( link.child == nullptr )
+					continue;
+
+				SceneComponent* parent = nullptr;
+				if ( link.legacyParentIdx >= 0 )
+				{
+					if ( static_cast<size_t>( link.legacyParentIdx ) < comps.size() &&
+						 comps[static_cast<size_t>( link.legacyParentIdx )] != nullptr )
+						parent = comps[static_cast<size_t>( link.legacyParentIdx )]->asSceneComponent();
+				}
+				else if ( link.parentStableKey.empty() == false )
+				{
+					parent = resolveParentSceneComponent( gameObject, link.parentOwnerName, link.parentStableKey );
+				}
+
+				if ( parent == nullptr )
+				{
+					SW_LOG_ERROR( "[ObjectStateSerializer] Failed to resolve SceneComponent parent "
+								  "(owner='%#' key='%#' legacyIdx=%#) for child on '%#'.",
+								  link.parentOwnerName.c_str(),
+								  link.parentStableKey.c_str(),
+								  link.legacyParentIdx,
+								  gameObject->getName().c_str() );
+					continue;
+				}
+
+				link.child->attachToComponent( parent );
 			}
-			return -1;
+		}
+
+		bool collectAndApplySceneTransforms( GameObject*										gameObject,
+											 RapidXmlBackend&									xmlBackend,
+											 std::vector<PendingAttach>*						outPendingAttaches,
+											 bool												bApplyTransforms )
+		{
+			if ( gameObject == nullptr )
+				return false;
+
+			std::unordered_map<std::string, Component*> keyMap;
+			buildStableComponentKeyMap( gameObject, keyMap );
+
+			const uint32 sceneCompCount = countSceneComponents( gameObject );
+			uint32		 xformCount		= 0;
+			uint32		 appliedCount	= 0;
+
+			std::vector<PendingAttach> localPending;
+			std::vector<PendingAttach>& pending = outPendingAttaches != nullptr ? *outPendingAttaches : localPending;
+
+			XmlMapItemDelegate xformCb = SW_DELEGATE_LAMBDA(
+				XmlMapItemDelegate,
+				[gameObject, &keyMap, &xformCount, &appliedCount, &pending, bApplyTransforms]( std::string_view keyStr,
+																							   std::string_view valStr )
+			{
+				if ( keyStr.empty() )
+					return;
+
+				++xformCount;
+
+				Component* comp = nullptr;
+				const auto it	= keyMap.find( std::string( keyStr ) );
+				if ( it != keyMap.end() )
+					comp = it->second;
+
+				// Legacy numeric flat-index keys.
+				if ( comp == nullptr )
+				{
+					bool bNumeric = true;
+					for ( char c : keyStr )
+					{
+						if ( c < '0' || c > '9' )
+						{
+							bNumeric = false;
+							break;
+						}
+					}
+					if ( bNumeric )
+					{
+						try
+						{
+							const int32 flatIdx = static_cast<int32>( std::stoi( std::string( keyStr ) ) );
+							const auto& comps	= gameObject->getAllComponents();
+							if ( flatIdx >= 0 && static_cast<size_t>( flatIdx ) < comps.size() )
+								comp = comps[static_cast<size_t>( flatIdx )];
+						}
+						catch ( ... )
+						{
+						}
+					}
+				}
+
+				if ( comp == nullptr )
+				{
+					const std::string key( keyStr );
+					SW_LOG_ERROR( "[ObjectStateSerializer] SceneTransform key '%#' not found on GameObject '%#'.",
+								  key.c_str(),
+								  gameObject->getName().c_str() );
+					return;
+				}
+
+				SceneComponent* sceneComp = comp->asSceneComponent();
+				if ( sceneComp == nullptr )
+				{
+					const std::string key( keyStr );
+					SW_LOG_ERROR( "[ObjectStateSerializer] SceneTransform key '%#' is not a SceneComponent on '%#'.",
+								  key.c_str(),
+								  gameObject->getName().c_str() );
+					return;
+				}
+
+				if ( valStr.empty() )
+					return;
+
+				float3		pos{};
+				float3		rot{};
+				float3		scl{ 1.0f, 1.0f, 1.0f };
+				std::string parentOwner;
+				std::string parentKey;
+				int32		legacyParentIdx = -1;
+				if ( parseSceneTransform( valStr, pos, rot, scl, parentOwner, parentKey, legacyParentIdx ) == false )
+				{
+					const std::string key( keyStr );
+					SW_LOG_ERROR( "[ObjectStateSerializer] Failed to parse SceneTransform for key '%#' on '%#'.",
+								  key.c_str(),
+								  gameObject->getName().c_str() );
+					return;
+				}
+
+				if ( bApplyTransforms )
+				{
+					sceneComp->setLocalPosition( pos );
+					sceneComp->setLocalRotation( rot );
+					sceneComp->setLocalScale( scl );
+				}
+
+				++appliedCount;
+
+				if ( legacyParentIdx >= 0 || parentKey.empty() == false )
+				{
+					PendingAttach link;
+					link.child			  = sceneComp;
+					link.parentOwnerName  = std::move( parentOwner );
+					link.parentStableKey  = std::move( parentKey );
+					link.legacyParentIdx  = legacyParentIdx;
+					pending.push_back( std::move( link ) );
+				}
+			} );
+			xmlBackend.iterateMap( "SceneTransforms", xformCb );
+
+			if ( xformCount != sceneCompCount )
+			{
+				SW_LOG_ERROR( "[ObjectStateSerializer] SceneTransforms count mismatch on '%#': "
+							  "xmlEntries=%# sceneComponents=%# applied=%#.",
+							  gameObject->getName().c_str(),
+							  xformCount,
+							  sceneCompCount,
+							  appliedCount );
+			}
+
+			if ( outPendingAttaches == nullptr )
+				applyPendingAttaches( gameObject, pending );
+
+			return true;
 		}
 	} // namespace
 
@@ -230,28 +578,32 @@ namespace sw
 		}
 		xmlBackend.endMap();
 
-		// SceneComponent local TRS (+ same-GO parent flat index). Keyed by flat component index.
+		// SceneComponent local TRS + parent attach, keyed by stable component id.
 		xmlBackend.beginMap( "SceneTransforms" );
-		for ( size_t i = 0; i < comps.size(); ++i )
 		{
-			Component* comp = comps[i];
-			if ( comp == nullptr )
-				continue;
-			SceneComponent* sceneComp = comp->asSceneComponent();
-			if ( sceneComp == nullptr )
-				continue;
-
-			int32 parentIdx = -1;
-			if ( SceneComponent* parent = sceneComp->getParent() )
+			std::unordered_map<std::string, int32> occurrence;
+			for ( Component* comp : comps )
 			{
-				if ( parent->getOwner() == gameObject )
-					parentIdx = findFlatComponentIndex( gameObject, parent );
-			}
+				if ( comp == nullptr )
+					continue;
+				SceneComponent* sceneComp = comp->asSceneComponent();
+				if ( sceneComp == nullptr )
+					continue;
 
-			xmlBackend.beginMapEntry();
-			xmlBackend.writeMapKey( std::to_string( i ).c_str() );
-			xmlBackend.writeMapValue( formatSceneTransform( sceneComp, parentIdx ).c_str() );
-			xmlBackend.endMapEntry();
+				std::string base;
+				if ( comp->getComponentName().empty() == false )
+					base = comp->getComponentName().c_str();
+				else
+					base = componentTypeBaseName( comp );
+
+				const int32		  occ = occurrence[base]++;
+				const std::string key = makeStableComponentKey( comp, occ );
+
+				xmlBackend.beginMapEntry();
+				xmlBackend.writeMapKey( key.c_str() );
+				xmlBackend.writeMapValue( formatSceneTransform( sceneComp ).c_str() );
+				xmlBackend.endMapEntry();
+			}
 		}
 		xmlBackend.endMap();
 
@@ -329,83 +681,28 @@ namespace sw
 		} );
 		xmlBackend.iterateMap( "Components", compCb );
 
-		// Apply SceneComponent transforms after components exist; then re-attach same-GO parents.
-		struct PendingAttach
-		{
-			int32 childIdx  = -1;
-			int32 parentIdx = -1;
-		};
 		std::vector<PendingAttach> pendingAttaches;
+		collectAndApplySceneTransforms( gameObject, xmlBackend, &pendingAttaches, true );
+		applyPendingAttaches( gameObject, pendingAttaches );
 
-		XmlMapItemDelegate xformCb = SW_DELEGATE_LAMBDA( XmlMapItemDelegate,
-														 [gameObject, &pendingAttaches]( std::string_view keyStr, std::string_view valStr )
-		{
-			if ( keyStr.empty() || valStr.empty() )
-				return;
+		return true;
+	}
 
-			int32 flatIdx = -1;
-			try
-			{
-				flatIdx = static_cast<int32>( std::stoi( std::string( keyStr ) ) );
-			}
-			catch ( ... )
-			{
-				return;
-			}
+	bool ObjectStateSerializer::rebindSceneHierarchy( GameObject* gameObject, std::string_view xmlString )
+	{
+		if ( gameObject == nullptr || xmlString.empty() )
+			return false;
 
-			const std::vector<Component*>& comps = gameObject->getAllComponents();
-			if ( flatIdx < 0 || static_cast<size_t>( flatIdx ) >= comps.size() )
-				return;
+		std::string		xmlCopy( xmlString );
+		RapidXmlBackend xmlBackend;
+		if ( xmlBackend.initXmlDeserialization( xmlCopy.c_str(), "GameObjectState" ) == false )
+			return false;
 
-			Component* comp = comps[static_cast<size_t>( flatIdx )];
-			if ( comp == nullptr )
-				return;
-			SceneComponent* sceneComp = comp->asSceneComponent();
-			if ( sceneComp == nullptr )
-				return;
-
-			float3 pos{};
-			float3 rot{};
-			float3 scl{ 1.0f, 1.0f, 1.0f };
-			int32  parentIdx = -1;
-			if ( parseSceneTransform( valStr, pos, rot, scl, parentIdx ) == false )
-			{
-				SW_LOG_WARNING( "[ObjectStateSerializer] Failed to parse SceneTransform for index %#", flatIdx );
-				return;
-			}
-
-			sceneComp->setLocalPosition( pos );
-			sceneComp->setLocalRotation( rot );
-			sceneComp->setLocalScale( scl );
-
-			if ( parentIdx >= 0 )
-				pendingAttaches.push_back( PendingAttach{ flatIdx, parentIdx } );
-		} );
-		xmlBackend.iterateMap( "SceneTransforms", xformCb );
-
-		{
-			const std::vector<Component*>& comps = gameObject->getAllComponents();
-			for ( const PendingAttach& link : pendingAttaches )
-			{
-				if ( link.childIdx < 0 || link.parentIdx < 0 )
-					continue;
-				if ( static_cast<size_t>( link.childIdx ) >= comps.size() ||
-					 static_cast<size_t>( link.parentIdx ) >= comps.size() )
-					continue;
-
-				SceneComponent* child  = comps[static_cast<size_t>( link.childIdx )] != nullptr
-											 ? comps[static_cast<size_t>( link.childIdx )]->asSceneComponent()
-											 : nullptr;
-				SceneComponent* parent = comps[static_cast<size_t>( link.parentIdx )] != nullptr
-											 ? comps[static_cast<size_t>( link.parentIdx )]->asSceneComponent()
-											 : nullptr;
-				if ( child == nullptr || parent == nullptr )
-					continue;
-
-				child->attachToComponent( parent );
-			}
-		}
-
+		// Re-resolve parents only (transforms already applied during load). Needed after multi-GO restore
+		// so cross-GO attaches see fully rebuilt component lists.
+		std::vector<PendingAttach> pendingAttaches;
+		collectAndApplySceneTransforms( gameObject, xmlBackend, &pendingAttaches, false );
+		applyPendingAttaches( gameObject, pendingAttaches );
 		return true;
 	}
 

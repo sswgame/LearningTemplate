@@ -7,6 +7,7 @@
 #include "Core/Object/GameObject.h"
 #include "Core/Object/Component.h"
 #include "Core/Object/SceneComponent.h"
+#include "Core/Reflection/ReflectionCore.h"
 #include "Core/Utility/Task/TaskManager.h"
 
 namespace sw
@@ -278,5 +279,50 @@ namespace sw
 		_gameObjects.clear();
 		_mapNameToObject.clear();
 		_mapIdToObject.clear();
+	}
+
+	void GameObjectManager::clearAllCachedTypeInfo()
+	{
+		std::vector<GameObject*> objects;
+		{
+			std::lock_guard<std::mutex> lock{ _mutex };
+			objects = _gameObjects;
+		}
+
+		for ( GameObject* obj : objects )
+		{
+			if ( obj == nullptr )
+				continue;
+			for ( Component* comp : obj->getAllComponents() )
+			{
+				if ( comp != nullptr )
+					comp->clearCachedTypeInfo();
+			}
+		}
+	}
+
+	void GameObjectManager::rebindAllCachedTypeInfo()
+	{
+		std::vector<GameObject*> objects;
+		{
+			std::lock_guard<std::mutex> lock{ _mutex };
+			objects = _gameObjects;
+		}
+
+		TypeRegistry& registry = getTypeRegistry();
+		for ( GameObject* obj : objects )
+		{
+			if ( obj == nullptr )
+				continue;
+			for ( Component* comp : obj->getAllComponents() )
+			{
+				if ( comp == nullptr )
+					continue;
+				const hashed_string typeKey = comp->getComponentName();
+				if ( typeKey.empty() )
+					continue;
+				comp->setCachedTypeInfo( registry.findType( typeKey ) );
+			}
+		}
 	}
 } // namespace sw

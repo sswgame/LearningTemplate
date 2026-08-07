@@ -43,10 +43,10 @@ SW_TEST_CASE( RHITest, DeviceCreationAllBackends )
 	}
 }
 
-// QUARANTINE: RHI environment issues — keep discoverable via --test_list
+// Soft-skip: full GPU pipeline path flaky without stable RHI env (discoverable via --test_list)
 SW_TEST_CASE( RHITest, UnifiedPipelineStateAndRenderPassAllBackends )
 {
-	SW_TEST_SKIP( "Temporarily disabled due to RHI environment issues" );
+	SW_TEST_SKIP( "SKIP: unified pipeline/render-pass across backends needs stable RHI environment" );
 }
 
 SW_TEST_CASE( RHITest, BindlessResourceLifecycle )

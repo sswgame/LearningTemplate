@@ -70,6 +70,18 @@ namespace sw
 		/** @brief 등록·대기 목록을 모두 비웁니다. */
 		void clear();
 
+		/**
+		 * @brief 소유 컴포넌트의 TypeInfo 캐시를 모두 null로 만듭니다.
+		 * @details unregisterTypesByModule 직전에 호출해 댕글링 TypeInfo 포인터를 제거합니다.
+		 */
+		void clearAllCachedTypeInfo();
+
+		/**
+		 * @brief 컴포넌트 이름 키로 TypeRegistry에서 TypeInfo를 다시 바인딩합니다.
+		 * @details registerPendingTypes 직후에 호출합니다.
+		 */
+		void rebindAllCachedTypeInfo();
+
 	private:
 		std::vector<GameObject*>					   _gameObjects;
 		std::unordered_map<hashed_string, GameObject*> _mapNameToObject;

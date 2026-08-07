@@ -114,7 +114,7 @@ namespace sw
 
 			if ( _bEnableEditor )
 			{
-				if ( createGameViewportTexture() == false )
+				if ( createGameViewportTexture( _gameViewportWidth, _gameViewportHeight ) == false )
 					SW_LOG_WARNING( "[Hot-Swap] Game viewport texture recreate failed." );
 				onAfterEditorReload( editorModule );
 			}

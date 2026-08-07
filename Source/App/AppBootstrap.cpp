@@ -25,6 +25,7 @@ SW_DEFINE_MODULE_REGISTRAR_HEAD( swAppComponentFactoryHead, ::sw::ComponentFacto
 #include "Core/Graphics/RHI/RHICapabilities.h"
 #include "Core/Window/IWindow.h"
 #include "Core/Game/Scene/SceneManager.h"
+#include "Runtime/RuntimeHandles.h"
 
 SW_GLOBAL_VARIABLE_FLOAT( gv_EditorPlayerSpeed, 5.0f, "Editor inspector player speed slider" );
 
@@ -140,7 +141,80 @@ namespace sw
 		rtDesc._clearColor[2]	  = 0.1f;
 		rtDesc._clearColor[3]	  = 1.0f;
 
-		_gameRenderTarget = _rhi->getDevice().createTexture2D( rtDesc );
+		_gameRenderTarget	 = _rhi->getDevice().createTexture2D( rtDesc );
+		_gameViewportWidth	 = width;
+		_gameViewportHeight	 = height;
 		return _gameRenderTarget != 0;
+	}
+
+	bool App::recreateGameViewportTexture( uint32 width, uint32 height )
+	{
+		if ( _rhi == nullptr || width == 0 || height == 0 )
+			return false;
+
+		if ( _gameRenderTarget != 0 )
+		{
+			_rhi->getDevice().destroyTexture( _gameRenderTarget );
+			_gameRenderTarget = 0;
+			_gameTextureID	  = nullptr;
+		}
+
+		if ( createGameViewportTexture( width, height ) == false )
+		{
+			SW_LOG_WARNING( "[App] Game View RT recreate failed (%# x %#)", width, height );
+			_editorCtx.gameTextureID = nullptr;
+			return false;
+		}
+
+		if ( _editor && _editorApi.registerTexture )
+			_gameTextureID = _editorApi.registerTexture( _editor, static_cast<TextureHandle>( _gameRenderTarget ) );
+
+		_editorCtx.gameTextureID	   = _gameTextureID;
+		_editorCtx.gameViewportWidth   = _gameViewportWidth;
+		_editorCtx.gameViewportHeight  = _gameViewportHeight;
+		return true;
+	}
+
+	void App::processGameViewportResizeRequest()
+	{
+		if ( _bEnableEditor == 0 || _rhi == nullptr )
+			return;
+
+		const uint32 reqW = _requestedGameViewportWidth;
+		const uint32 reqH = _requestedGameViewportHeight;
+		if ( reqW == 0 || reqH == 0 )
+		{
+			_gameViewportResizeStableFrames = 0;
+			return;
+		}
+
+		if ( reqW == _gameViewportWidth && reqH == _gameViewportHeight )
+		{
+			_requestedGameViewportWidth		= 0;
+			_requestedGameViewportHeight	= 0;
+			_gameViewportResizeStableFrames = 0;
+			return;
+		}
+
+		if ( reqW != _gameViewportResizeLastW || reqH != _gameViewportResizeLastH )
+		{
+			_gameViewportResizeLastW		= reqW;
+			_gameViewportResizeLastH		= reqH;
+			_gameViewportResizeStableFrames = 0;
+			return;
+		}
+
+		++_gameViewportResizeStableFrames;
+		// Debounce: require a few stable frames so dock/layout thrash does not spam recreate.
+		constexpr uint32 kStableFramesBeforeRecreate = 4;
+		if ( _gameViewportResizeStableFrames < kStableFramesBeforeRecreate )
+			return;
+
+		if ( recreateGameViewportTexture( reqW, reqH ) )
+		{
+			_requestedGameViewportWidth		= 0;
+			_requestedGameViewportHeight	= 0;
+			_gameViewportResizeStableFrames = 0;
+		}
 	}
 } // namespace sw

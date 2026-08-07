@@ -66,6 +66,7 @@ App은 Editor/Game 구현 클래스를 직접 링크하지 않고 함수 테이�
   - `unloadModules` 는 factory를 먼저 비운 뒤 `FreeLibrary`. **MODULE 백엔드 device는 먼저 destroy** (`RHI::shutdown` 경로).
 - **Vulkan / OpenGL 디바이스는 Core에 정적 링크 (의도적).** DX만 optional MODULE.
 - Caps: OpenGL/Vulkan `_bBindless = false` (`supportsBindless()` false). `_bOffscreenRT=true`. `_bEditorSupported` / `_bImGuiHooks` false.
+- **RHIReleaseQueue** (`frameLatency` deferred destroy): wired on **DX12 / OpenGL / DX11** — `destroyBuffer`/`destroyTexture` enqueue; `endFrame` → `tickFrame()`; `waitIdle`/`shutdown` → `flushAll()`. **Vulkan not wired** (deferred).
 
 ### Vulkan — deferred / future
 
@@ -74,7 +75,7 @@ App은 Editor/Game 구현 클래스를 직접 링크하지 않고 함수 테이�
 - VK를 Core에서 MODULE로 분리
 - 에디터 핫스왑 / ImGui multi-viewport hooks
 - 본격 bindless descriptor 경로
-- RHIReleaseQueue 연동한 deferred destroy (현재 OpenGL도 미연동)
+- RHIReleaseQueue 연동한 deferred destroy
 
 ### RenderGraph
 
@@ -89,6 +90,7 @@ App은 Editor/Game 구현 클래스를 직접 링크하지 않고 함수 테이�
    - 이름/활성 등은 `ObjectStateSerializer` 가 직접 처리.
    - `getTypeInfo()` 훅은 파생 타입(게임 모듈)용으로 남겨 둠.
    - `Component::setCachedTypeInfo` / `_cachedTypeInfo`: 팩토리 생성 시 `TypeRegistry`에서 찾아 캐시.
+   - **TypeInfo rebind on MODULE reload:** `ComponentManager::rebindAllCachedTypeInfo` / `GameObjectManager::rebindAllCachedTypeInfo` refresh `_cachedTypeInfo` from `TypeRegistry` after hot-reload (called from SWGame / EditorModule reload paths). `clearCachedTypeInfo` drops stale pointers first.
 4. 게임/테스트 타입만 codegen. Component 파생이면 `ComponentFactoryRegistrar` 도 emit.
 5. **모듈별 factory head:** `SW_DECLARE_MODULE_REGISTRAR_HEAD` / `SW_COMPONENT_FACTORY_MODULE_HEAD()` —
    App / SWGame / Editor / Test 가 각자 head를 두어 MODULE CRT 정적 초기 시 registrar 체인이 섞이지 않음 (`ModuleRegistrarHeads.h`).
@@ -101,12 +103,12 @@ App은 Editor/Game 구현 클래스를 직접 링크하지 않고 함수 테이�
 
 ## Editor Hierarchy / Inspector
 
-- **Hierarchy** (`OutlinerPanel`): active scene GameObjects + components; selection in `EditorSelection`.
+- **Hierarchy** (`OutlinerPanel`): root GameObjects (parent==null) with nested child GOs when present; under each GO, components (SceneComponent tree kept separate). Selection in `EditorSelection`.
 - **Inspector**: selection Name/Active, SceneComponent transform, reflected `PROPERTY` widgets, `FUNCTION()` Invoke with simple arg editors; Engine/Material section remains collapsible.
 
 ## FUNCTION() codegen
 
-ReflectionParser emits `FunctionInfo` + `TaskArgs` invokers for `FUNCTION()` methods (return value packed in `TaskValue`). Param type spellings are normalized (`int`→`int32`, etc.).
+ReflectionParser emits `FunctionInfo` + `TaskArgs` invokers for `FUNCTION()` methods (return value packed in `TaskValue`). Param type spellings are normalized (`int`→`int32`, etc.). Prefer `TaskArgs( int32{ n }, … )` / `args.add( int32{ n } )` over braced-init `TaskArgs{ n }` (initializer_list typing surprises).
 
 ## Scene tick
 
@@ -118,7 +120,9 @@ ReflectionParser emits `FunctionInfo` + `TaskArgs` invokers for `FUNCTION()` met
 
 병렬 tick 중 `attach`/`detach` 및 계층 구조 변경은 하지 마세요.
 
-SceneComponent 부모 attach는 있으나 **GameObject 간 parent hierarchy** 는 아직 없음 (`isActiveInHierarchy` 는 자체 활성과 동기). 추후 후보.
+**GameObject parent hierarchy (basic):** `attachToParent` / `detachFromParent` / `getParent` / `getChildren`; `isActiveInHierarchy` propagates from parent. Independent of SceneComponent attach.
+
+**ObjectStateSerializer `SceneTransforms`:** keyed by **stable component keys** (component name or typeName + occurrence index on that GO), not flat list index. Parent attach can reference cross-GO parents as `ownerName/stableKey`. Count mismatches log loudly.
 
 ## Tests
 

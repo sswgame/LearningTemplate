@@ -97,7 +97,7 @@ SW_TEST_CASE( Utility_Task, ArbitraryArgsTask )
 	taskMgr.initialize();
 
 	int					 dummyVar = 42;
-	sw::TaskArgs		 args{ 100, 3.14159, std::string( "HelloTask" ), static_cast<void*>( &dummyVar ) };
+	sw::TaskArgs		 args( int32{ 100 }, 3.14159, std::string( "HelloTask" ), static_cast<void*>( &dummyVar ) );
 	sw::TaskArgsDelegate argsDel = SW_DELEGATE_FUNCTION( sw::TaskArgsDelegate, taskWithArbitraryArgs );
 
 	taskMgr.emplaceTask( "ArgsTask", argsDel, args );
@@ -113,7 +113,7 @@ SW_TEST_CASE( Utility_Task, ArbitraryArgsTask )
 	CustomPlayerData   inputPlayer{ "Antigravity", 99 };
 	std::vector<int32> inputItems{ 10, 20, 30 };
 
-	sw::TaskArgs		 customArgs{ inputPlayer, inputItems };
+	sw::TaskArgs		 customArgs( inputPlayer, inputItems );
 	sw::TaskArgsDelegate customDel = SW_DELEGATE_FUNCTION( sw::TaskArgsDelegate, taskWithCustomStructAndContainer );
 
 	taskMgr.emplaceTask( "CustomArgsTask", customDel, customArgs );

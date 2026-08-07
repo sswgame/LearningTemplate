@@ -43,6 +43,23 @@ namespace sw
 			}
 		}
 
+		void endPlayActiveScene()
+		{
+			Scene* scene = getSceneManager().getActiveScene();
+			if ( scene == nullptr )
+				return;
+
+			GameObjectManager* objects = scene->getObjectManager();
+			if ( objects == nullptr )
+				return;
+
+			for ( GameObject* obj : objects->getAllGameObjects() )
+			{
+				if ( obj != nullptr && obj->isActiveInHierarchy() )
+					obj->endPlay();
+			}
+		}
+
 		void capturePlaySnapshot()
 		{
 			s_playSnapshots.clear();
@@ -124,6 +141,19 @@ namespace sw
 					SW_LOG_WARNING( "[GameState] Failed to restore '%#' from play snapshot.", snap.name.c_str() );
 			}
 
+			// Second pass: cross-GO SceneComponent parents need all GOs rebuilt first.
+			for ( const ObjectSnapshot& snap : s_playSnapshots )
+			{
+				GameObject* obj = objects->findGameObjectByName( hashed_string( snap.name.c_str() ) );
+				if ( obj == nullptr )
+					obj = objects->findGameObjectById( snap.objectId );
+				if ( obj == nullptr )
+					continue;
+
+				if ( ObjectStateSerializer::rebindSceneHierarchy( obj, snap.xml ) == false )
+					SW_LOG_WARNING( "[GameState] Failed to rebind scene hierarchy for '%#'.", snap.name.c_str() );
+			}
+
 			SW_LOG_INFO( "[GameState] Play snapshot restored (%# objects).",
 						 static_cast<uint32>( s_playSnapshots.size() ) );
 
@@ -152,8 +182,11 @@ namespace sw
 			beginPlayActiveScene();
 		}
 
-		// Playing/Paused → Stopped: restore editor scene snapshot.
+		// Playing/Paused → Stopped: endPlay first, then restore editor scene snapshot.
 		if ( ( previous == GameState::Playing || previous == GameState::Paused ) && state == GameState::Stopped )
+		{
+			endPlayActiveScene();
 			restorePlaySnapshot();
+		}
 	}
 } // namespace sw

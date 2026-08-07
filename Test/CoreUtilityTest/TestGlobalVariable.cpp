@@ -71,8 +71,8 @@ SW_TEST_CASE( Utility_GlobalVariable, ModificationAndReset )
 	SW_EXPECT_TRUE( gv_TestBool );
 }
 
-// QUARANTINE: command line parsing — keep discoverable via --test_list
+// Soft-skip: command line parsing flake (discoverable via --test_list)
 SW_TEST_CASE( Utility_GlobalVariable, CommandLineIntegration )
 {
-	SW_TEST_SKIP( "Temporarily disabled due to command line parsing issue" );
+	SW_TEST_SKIP( "SKIP: command line GlobalVariable parsing flake in this environment" );
 }

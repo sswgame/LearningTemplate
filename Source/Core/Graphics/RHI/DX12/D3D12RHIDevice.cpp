@@ -12,6 +12,7 @@
 
 	#include "Core/Graphics/Shader/ShaderCache.h"
 	#include "Core/Utility/Log/Logger.h"
+	#include "Core/Utility/Delegate/Delegate.h"
 
 namespace sw
 {
@@ -420,24 +421,98 @@ namespace sw
 
 	void D3D12RHIDevice::updateStructuredBuffer( RHIBufferHandle buffer, const void* data, uint32 size )
 	{
-		(void)buffer;
-		(void)data;
-		(void)size;
+		if ( buffer == 0 || data == nullptr || size == 0 || _device == nullptr || _commandQueue == nullptr )
+			return;
+
+		ID3D12Resource* dest = reinterpret_cast<ID3D12Resource*>( buffer );
+
+		D3D12_HEAP_PROPERTIES uploadHeap{};
+		uploadHeap.Type = D3D12_HEAP_TYPE_UPLOAD;
+
+		D3D12_RESOURCE_DESC uploadDesc{};
+		uploadDesc.Dimension		 = D3D12_RESOURCE_DIMENSION_BUFFER;
+		uploadDesc.Width			 = size;
+		uploadDesc.Height			 = 1;
+		uploadDesc.DepthOrArraySize = 1;
+		uploadDesc.MipLevels		 = 1;
+		uploadDesc.Format			 = DXGI_FORMAT_UNKNOWN;
+		uploadDesc.SampleDesc.Count = 1;
+		uploadDesc.Layout			 = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+
+		Microsoft::WRL::ComPtr<ID3D12Resource> upload;
+		if ( FAILED( _device->CreateCommittedResource( &uploadHeap, D3D12_HEAP_FLAG_NONE, &uploadDesc,
+													   D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS( upload.GetAddressOf() ) ) ) )
+		{
+			SW_LOG_ERROR( "[D3D12] updateStructuredBuffer: failed to create staging upload buffer (%u bytes)", size );
+			return;
+		}
+
+		void* mapped = nullptr;
+		if ( FAILED( upload->Map( 0, nullptr, &mapped ) ) || mapped == nullptr )
+		{
+			SW_LOG_ERROR( "[D3D12] updateStructuredBuffer: Map failed on staging buffer" );
+			return;
+		}
+		memcpy( mapped, data, size );
+		upload->Unmap( 0, nullptr );
+
+		Microsoft::WRL::ComPtr<ID3D12CommandAllocator>	  stagingAllocator;
+		Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> stagingList;
+		if ( FAILED( _device->CreateCommandAllocator( D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS( stagingAllocator.GetAddressOf() ) ) ) ||
+			 FAILED( _device->CreateCommandList( 0, D3D12_COMMAND_LIST_TYPE_DIRECT, stagingAllocator.Get(), nullptr, IID_PPV_ARGS( stagingList.GetAddressOf() ) ) ) )
+		{
+			SW_LOG_ERROR( "[D3D12] updateStructuredBuffer: failed to create staging command list" );
+			return;
+		}
+
+		D3D12_RESOURCE_BARRIER toCopyDest{};
+		toCopyDest.Type						  = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+		toCopyDest.Transition.pResource		  = dest;
+		toCopyDest.Transition.StateBefore	  = D3D12_RESOURCE_STATE_COMMON;
+		toCopyDest.Transition.StateAfter	  = D3D12_RESOURCE_STATE_COPY_DEST;
+		toCopyDest.Transition.Subresource	  = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+		stagingList->ResourceBarrier( 1, &toCopyDest );
+
+		stagingList->CopyBufferRegion( dest, 0, upload.Get(), 0, size );
+
+		D3D12_RESOURCE_BARRIER toUav{};
+		toUav.Type					   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+		toUav.Transition.pResource	   = dest;
+		toUav.Transition.StateBefore   = D3D12_RESOURCE_STATE_COPY_DEST;
+		toUav.Transition.StateAfter	   = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+		toUav.Transition.Subresource   = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+		stagingList->ResourceBarrier( 1, &toUav );
+
+		stagingList->Close();
+		ID3D12CommandList* lists[] = { stagingList.Get() };
+		_commandQueue->ExecuteCommandLists( 1, lists );
+		waitForPreviousFrame();
 	}
 
 	void D3D12RHIDevice::destroyBuffer( RHIBufferHandle buffer )
 	{
 		if ( buffer == 0 )
 			return;
-		auto* res = reinterpret_cast<ID3D12Resource*>( buffer );
+		auto*									  res = reinterpret_cast<ID3D12Resource*>( buffer );
+		Microsoft::WRL::ComPtr<ID3D12Resource> owned;
 		for ( auto it = _constantBuffers.begin(); it != _constantBuffers.end(); ++it )
 		{
 			if ( it->Get() == res )
 			{
+				owned = std::move( *it );
 				_constantBuffers.erase( it );
 				break;
 			}
 		}
+		if ( owned == nullptr )
+			return;
+
+		auto releaseCb = [owned]()
+		{
+			// ComPtr releases when this deferred callback is destroyed after tick/flush.
+			(void)owned.Get();
+		};
+		_releaseQueue.enqueueRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, releaseCb ) );
 	}
 
 	RHITextureHandle D3D12RHIDevice::createTexture2D( const RHITextureDesc& desc )
@@ -518,15 +593,25 @@ namespace sw
 		if ( texture == 0 )
 			return;
 		_offscreenTextures.erase( texture );
-		auto* res = reinterpret_cast<ID3D12Resource*>( texture );
+		auto*									  res = reinterpret_cast<ID3D12Resource*>( texture );
+		Microsoft::WRL::ComPtr<ID3D12Resource> owned;
 		for ( auto it = _textures.begin(); it != _textures.end(); ++it )
 		{
 			if ( it->Get() == res )
 			{
+				owned = std::move( *it );
 				_textures.erase( it );
 				break;
 			}
 		}
+		if ( owned == nullptr )
+			return;
+
+		auto releaseCb = [owned]()
+		{
+			(void)owned.Get();
+		};
+		_releaseQueue.enqueueRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, releaseCb ) );
 	}
 
 	void D3D12RHIDevice::beginOffscreenPass( RHITextureHandle colorTarget, float32 clearColor[4] )
@@ -832,11 +917,13 @@ namespace sw
 	void D3D12RHIDevice::waitIdle()
 	{
 		waitForPreviousFrame();
+		_releaseQueue.flushAll();
 	}
 
 	void D3D12RHIDevice::shutdownInternal()
 	{
 		waitForPreviousFrame();
+		_releaseQueue.flushAll();
 
 		_offscreenTextures.clear();
 		_textures.clear();
@@ -953,6 +1040,7 @@ namespace sw
 			flushDebugMessages( "after Present" );
 		}
 		waitForPreviousFrame();
+		_releaseQueue.tickFrame();
 	}
 
 	class D3D12CommandList final : public IRHICommandList

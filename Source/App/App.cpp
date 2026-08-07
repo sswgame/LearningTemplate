@@ -178,11 +178,15 @@ namespace sw
 	{
 		SW_LOG_INFO( "Entering App Main Loop..." );
 
-		_editorCtx.playerSpeed	  = &gv_EditorPlayerSpeed;
-		_editorCtx.clearColor	  = _clearColor;
-		_editorCtx.reflectionData = &_reflectionData;
-		_editorCtx.rhiDevice	  = &_rhi->getDevice();
-		_editorCtx.gameTextureID  = _gameTextureID;
+		_editorCtx.playerSpeed				   = &gv_EditorPlayerSpeed;
+		_editorCtx.clearColor				   = _clearColor;
+		_editorCtx.reflectionData			   = &_reflectionData;
+		_editorCtx.rhiDevice				   = &_rhi->getDevice();
+		_editorCtx.gameTextureID			   = _gameTextureID;
+		_editorCtx.gameViewportWidth		   = _gameViewportWidth;
+		_editorCtx.gameViewportHeight		   = _gameViewportHeight;
+		_editorCtx.requestGameViewportWidth	   = &_requestedGameViewportWidth;
+		_editorCtx.requestGameViewportHeight   = &_requestedGameViewportHeight;
 
 		CpuTimer frameTimer;
 		frameTimer.resetTimer();
@@ -192,6 +196,11 @@ namespace sw
 		{
 			frameTimer.updateTimer();
 			const float32 deltaTime = frameTimer.getDeltaTime();
+
+			BLOCK( "Game View RT 리사이즈 요청 처리" )
+			{
+				processGameViewportResizeRequest();
+			}
 
 			BLOCK( "핫 리로드 / 파일 워치 업데이트" )
 			{
@@ -208,7 +217,9 @@ namespace sw
 			{
 				if ( _editor && _editorApi.preRender )
 				{
-					_editorCtx.gameTextureID = _gameTextureID;
+					_editorCtx.gameTextureID		 = _gameTextureID;
+					_editorCtx.gameViewportWidth	 = _gameViewportWidth;
+					_editorCtx.gameViewportHeight	 = _gameViewportHeight;
 					_editorApi.preRender( _editor, &_rhi->getDevice() );
 				}
 
@@ -243,8 +254,10 @@ namespace sw
 			{
 				if ( _editor && _editorApi.render )
 				{
-					_editorCtx.material		 = activeScene ? activeScene->getMaterial() : nullptr;
-					_editorCtx.gameTextureID = _gameTextureID;
+					_editorCtx.material				 = activeScene ? activeScene->getMaterial() : nullptr;
+					_editorCtx.gameTextureID		 = _gameTextureID;
+					_editorCtx.gameViewportWidth	 = _gameViewportWidth;
+					_editorCtx.gameViewportHeight	 = _gameViewportHeight;
 					_editorApi.render( _editor, &_editorCtx );
 				}
 

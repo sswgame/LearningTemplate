@@ -13,10 +13,10 @@
 	#include "Core/Window/X11Window.h"
 #endif
 
-// QUARANTINE: window sizing — keep discoverable via --test_list
+// Soft-skip: window sizing flake (discoverable via --test_list)
 SW_TEST_CASE( WindowTest, PlatformFactoryAndLifecycle )
 {
-	SW_TEST_SKIP( "Temporarily disabled due to window sizing issue" );
+	SW_TEST_SKIP( "SKIP: platform window sizing flake in this environment" );
 }
 
 SW_TEST_CASE( WindowTest, ResizeCallbackAndCustomMessageHandler )

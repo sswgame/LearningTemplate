@@ -1,5 +1,6 @@
 /**
  * @file OutlinerPanel.cpp
+ * @brief Hierarchy outliner (GameObject / Component)
  */
 #include "Panels/OutlinerPanel.h"
 #include "EditorSelection.h"
@@ -25,6 +26,7 @@ namespace sw
 				return;
 			editor::selectedObjectId()	  = obj->getObjectId();
 			editor::selectedComponentId() = 0;
+			editor::selectedObjectName()	  = obj->getName().c_str();
 		}
 
 		void selectComponent( GameObject* obj, Component* comp )
@@ -33,16 +35,29 @@ namespace sw
 				return;
 			editor::selectedObjectId()	  = obj->getObjectId();
 			editor::selectedComponentId() = comp->getComponentId();
+			editor::selectedObjectName()	  = obj->getName().c_str();
 		}
 
-		void drawComponentContextMenu( GameObject* obj, Component* /*comp*/ )
+		void drawComponentContextMenu( GameObject* obj, Component* comp, GameObjectManager* manager )
 		{
-			if ( ImGui::BeginPopupContextItem( "CompCtx" ) )
+			if ( ImGui::BeginPopupContextItem( "CompCtx" ) == false )
+				return;
+
+			if ( ImGui::MenuItem( "Select Owner GameObject" ) )
+				selectObject( obj );
+
+			if ( ImGui::MenuItem( "Remove Component" ) && comp != nullptr && manager != nullptr )
 			{
-				if ( ImGui::MenuItem( "Select Owner GameObject" ) )
-					selectObject( obj );
-				ImGui::EndPopup();
+				if ( editor::selectedObjectId() == obj->getObjectId() &&
+					 editor::selectedComponentId() == comp->getComponentId() )
+				{
+					editor::selectedComponentId() = 0;
+				}
+				manager->destroyComponentDeferred( comp );
+				manager->processDeferredDestruction();
 			}
+
+			ImGui::EndPopup();
 		}
 
 		void drawAddComponentMenu( GameObject* obj )
@@ -94,7 +109,7 @@ namespace sw
 			ImGui::EndPopup();
 		}
 
-		void drawSceneComponentNode( GameObject* obj, SceneComponent* sceneComp )
+		void drawSceneComponentNode( GameObject* obj, SceneComponent* sceneComp, GameObjectManager* manager )
 		{
 			if ( obj == nullptr || sceneComp == nullptr )
 				return;
@@ -132,14 +147,14 @@ namespace sw
 			const bool bOpen = ImGui::TreeNodeEx( label, flags );
 			if ( ImGui::IsItemClicked() )
 				selectComponent( obj, sceneComp );
-			drawComponentContextMenu( obj, sceneComp );
+			drawComponentContextMenu( obj, sceneComp, manager );
 
 			if ( bOpen )
 			{
 				for ( SceneComponent* child : children )
 				{
 					if ( child != nullptr && child->getOwner() == obj )
-						drawSceneComponentNode( obj, child );
+						drawSceneComponentNode( obj, child, manager );
 				}
 				ImGui::TreePop();
 			}
@@ -162,11 +177,15 @@ namespace sw
 						   obj->getName().c_str(),
 						   static_cast<unsigned long long>( obj->getObjectId() ) );
 
+			const bool bHasChildGos	  = obj->getChildren().empty() == false;
+			const bool bHasComponents = obj->getComponentCount() > 0;
+			const bool bLeaf		  = ( bHasChildGos == false && bHasComponents == false );
+
 			const bool bOpen = ImGui::TreeNodeEx(
 				label,
 				ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth |
 					( bSelected ? ImGuiTreeNodeFlags_Selected : 0 ) |
-					( obj->getComponentCount() == 0 ? ImGuiTreeNodeFlags_Leaf : 0 ) );
+					( bLeaf ? ImGuiTreeNodeFlags_Leaf : 0 ) );
 
 			if ( ImGui::IsItemClicked() )
 				selectObject( obj );
@@ -174,6 +193,9 @@ namespace sw
 
 			if ( bOpen )
 			{
+				for ( GameObject* child : obj->getChildren() )
+					drawGameObjectNode( child, manager );
+
 				// Non-SceneComponents as flat selectables; SceneComponents as hierarchy roots.
 				for ( Component* comp : obj->getAllComponents() )
 				{
@@ -187,7 +209,7 @@ namespace sw
 						const bool			  bRootOnThisGo =
 							parent == nullptr || parent->getOwner() != obj;
 						if ( bRootOnThisGo )
-							drawSceneComponentNode( obj, sceneComp );
+							drawSceneComponentNode( obj, sceneComp, manager );
 						continue;
 					}
 
@@ -207,7 +229,7 @@ namespace sw
 
 					if ( ImGui::Selectable( compLabel, bCompSelected ) )
 						selectComponent( obj, comp );
-					drawComponentContextMenu( obj, comp );
+					drawComponentContextMenu( obj, comp, manager );
 
 					ImGui::PopID();
 				}
@@ -262,7 +284,10 @@ namespace sw
 		}
 
 		for ( GameObject* obj : objects )
-			drawGameObjectNode( obj, manager );
+		{
+			if ( obj != nullptr && obj->getParent() == nullptr )
+				drawGameObjectNode( obj, manager );
+		}
 
 		ImGui::EndChild();
 		ImGui::End();

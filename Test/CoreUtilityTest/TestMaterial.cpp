@@ -49,10 +49,10 @@ SW_TEST_CASE( MaterialTest, MaterialLoadAndSave )
 	std::filesystem::remove( tempPath );
 }
 
-// QUARANTINE: timeout — keep discoverable via --test_list
+// Soft-skip: hangs/times out in some environments (discoverable via --test_list)
 SW_TEST_CASE( MaterialTest, MaterialColorModification )
 {
-	SW_TEST_SKIP( "Temporarily disabled due to timeout issue" );
+	SW_TEST_SKIP( "SKIP: material color path hangs/times out in this environment" );
 }
 
 SW_TEST_CASE( MaterialTest, AsyncMaterialLoadTest )
@@ -65,16 +65,16 @@ SW_TEST_CASE( MaterialTest, AsyncMaterialLoadTest )
 	sw::getTaskManager().clear();
 }
 
-// QUARANTINE: timeout — keep discoverable via --test_list
+// Soft-skip: hangs/times out in some environments (discoverable via --test_list)
 SW_TEST_CASE( MaterialTest, MaterialInstanceOverride )
 {
-	SW_TEST_SKIP( "Temporarily disabled due to timeout issue" );
+	SW_TEST_SKIP( "SKIP: material instance override hangs/times out in this environment" );
 }
 
 #include "Core/Graphics/Shader/ShaderReflection.h"
 
-// QUARANTINE: timeout — keep discoverable via --test_list
+// Soft-skip: hangs/times out in some environments (discoverable via --test_list)
 SW_TEST_CASE( MaterialTest, MaterialShaderReflectionValidation )
 {
-	SW_TEST_SKIP( "Temporarily disabled due to timeout issue" );
+	SW_TEST_SKIP( "SKIP: shader reflection validation hangs/times out in this environment" );
 }

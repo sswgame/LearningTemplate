@@ -38,6 +38,9 @@ namespace sw
 		/** @brief 게임플레이 시작 시 최초 1회 호출되는 초기화 루틴 */
 		virtual void beginPlay();
 
+		/** @brief 게임플레이 종료 시 호출되는 정리 루틴 (스냅샷 복원 전) */
+		virtual void endPlay();
+
 		/** @brief 매 프레임 업데이트 루틴 */
 		virtual void tick( float32 deltaTime );
 
@@ -58,8 +61,8 @@ namespace sw
 
 		/**
 		 * @brief 활성화/비활성화 설정
-		 * @details 자체 활성 플래그와 함께 소유 컴포넌트에도 동일 값을 전파합니다.
-		 *          GameObject 간 부모 계층은 아직 없으므로 계층 활성은 자체 활성과 동일하게 유지됩니다.
+		 * @details 자체 활성 플래그를 갱신하고 `isActiveInHierarchy`를 부모 계층에 맞게 재계산합니다.
+		 *          소유 컴포넌트에는 자체 활성 값을 전파합니다 (SceneComponent 계층과 별개).
 		 */
 		void setActive( bool bActive );
 
@@ -68,9 +71,24 @@ namespace sw
 
 		/**
 		 * @brief 최종 활성화 여부 반환
-		 * @details `_bActive && _bIsActiveInHierarchy`. 현재는 setActive가 두 비트를 함께 갱신합니다.
+		 * @details `_bActive && _bIsActiveInHierarchy`. 부모 GO가 비활성이면 자식도 false.
 		 */
 		bool isActiveInHierarchy() const { return _bActive && _bIsActiveInHierarchy; }
+
+		/**
+		 * @brief 부모 GameObject에 부착 (사이클 방지). SceneComponent 계층과 독립.
+		 * @return 성공 시 true
+		 */
+		bool attachToParent( GameObject* parent );
+
+		/** @brief 부모에서 분리 (자식 관계는 유지하지 않음 — 이 GO만 detach) */
+		void detachFromParent();
+
+		/** @brief 부모 GameObject (없으면 nullptr) */
+		GameObject* getParent() const { return _parent; }
+
+		/** @brief 직계 자식 GameObject 목록 */
+		const std::vector<GameObject*>& getChildren() const { return _children; }
 
 		/** @brief 태그 추가 */
 		void addTag( TagID tag ) { _tags.addTag( tag ); }
@@ -186,9 +204,15 @@ namespace sw
 		void markTickOrderDirty() { _bIsTickOrderDirty = true; }
 
 	private:
+		/** @brief 부모 활성 상태를 반영해 `_bIsActiveInHierarchy`를 재계산하고 자식에 전파 */
+		void refreshActiveInHierarchy();
+
 		std::unordered_map<hashed_string, std::vector<std::unique_ptr<Component>>> _components;		///< 타입별 컴포넌트 맵
 		std::vector<Component*>													   _flatComponents; ///< 플랫 접근용 컴포넌트 벡터
 		TagContainer															   _tags;			///< 태그 정보
+
+		GameObject*				 _parent = nullptr; ///< 부모 GameObject (SceneComponent 계층과 별개)
+		std::vector<GameObject*> _children;			///< 직계 자식 GameObject
 
 		uint64 _objectId = 0; ///< 오브젝트 고유 시리얼 번호
 
@@ -197,7 +221,7 @@ namespace sw
 		GameObjectManager* _ownerManager = nullptr; ///< registerGameObject 시 설정되는 소유 매니저
 
 		uint8				   _bActive				 : 1; ///< 자체 활성화 비트
-		uint8				   _bIsActiveInHierarchy : 1; ///< 최종 활성 비트(현재 setActive와 동기화; 향후 부모 계층용)
+		uint8				   _bIsActiveInHierarchy : 1; ///< 계층 반영 최종 활성 비트
 		uint8				   _bIsTickOrderDirty	 : 1; ///< Tick 우선순위 변경 마크
 		[[maybe_unused]] uint8 _reservedFlags		 : 5;
 

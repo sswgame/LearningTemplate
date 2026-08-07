@@ -70,6 +70,18 @@ namespace sw
 		/** @brief 해당 모듈이 등록한 컴포넌트 팩토리를 제거합니다. */
 		void unregisterFactoriesByModule( const std::string_view moduleName );
 
+		/**
+		 * @brief 로드된 모든 씬의 라이브 컴포넌트 TypeInfo 캐시를 비웁니다.
+		 * @details unregisterTypesByModule 직전에 호출합니다.
+		 */
+		void clearAllCachedTypeInfo();
+
+		/**
+		 * @brief 로드된 모든 씬의 라이브 컴포넌트 TypeInfo 캐시를 레지스트리에서 재바인딩합니다.
+		 * @details registerPendingTypes 직후에 호출합니다.
+		 */
+		void rebindAllCachedTypeInfo();
+
 	public:
 		ComponentManager()	= default;
 		~ComponentManager() = default;

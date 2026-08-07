@@ -68,6 +68,17 @@ namespace sw
 
 	GameObject::~GameObject()
 	{
+		// Detach hierarchy links before destroying components (children stay alive as roots).
+		detachFromParent();
+		while ( _children.empty() == false )
+		{
+			GameObject* child = _children.back();
+			if ( child != nullptr )
+				child->detachFromParent();
+			else
+				_children.pop_back();
+		}
+
 		clearComponents();
 	}
 
@@ -83,6 +94,17 @@ namespace sw
 			if ( comp != nullptr && comp->isActive() )
 			{
 				comp->onBeginPlay();
+			}
+		}
+	}
+
+	void GameObject::endPlay()
+	{
+		for ( Component* comp : _flatComponents )
+		{
+			if ( comp != nullptr && comp->isActive() )
+			{
+				comp->onEndPlay();
 			}
 		}
 	}
@@ -137,8 +159,8 @@ namespace sw
 
 	void GameObject::setActive( bool bActive )
 	{
-		_bActive			  = bActive ? 1 : 0;
-		_bIsActiveInHierarchy = bActive ? 1 : 0;
+		_bActive = bActive ? 1 : 0;
+		refreshActiveInHierarchy();
 
 		for ( Component* comp : _flatComponents )
 		{
@@ -148,6 +170,61 @@ namespace sw
 			}
 		}
 		onPropertyChanged( hashed_string( "_bActive" ) );
+	}
+
+	void GameObject::refreshActiveInHierarchy()
+	{
+		// Store parent-chain activity only; isActiveInHierarchy() ANDs with _bActive.
+		const bool parentActiveInHierarchy = ( _parent == nullptr ) || _parent->isActiveInHierarchy();
+		_bIsActiveInHierarchy			   = parentActiveInHierarchy ? 1 : 0;
+
+		for ( GameObject* child : _children )
+		{
+			if ( child != nullptr )
+				child->refreshActiveInHierarchy();
+		}
+	}
+
+	bool GameObject::attachToParent( GameObject* parent )
+	{
+		if ( parent == nullptr || parent == this || parent == _parent )
+			return false;
+
+		GameObject* ancestor = parent;
+		while ( ancestor != nullptr )
+		{
+			if ( ancestor == this )
+				return false;
+			ancestor = ancestor->getParent();
+		}
+
+		detachFromParent();
+
+		_parent = parent;
+		if ( _parent->_children.capacity() <= _parent->_children.size() )
+			_parent->_children.reserve( _parent->_children.size() + 4 );
+		_parent->_children.push_back( this );
+		refreshActiveInHierarchy();
+		return true;
+	}
+
+	void GameObject::detachFromParent()
+	{
+		if ( _parent == nullptr )
+			return;
+
+		std::vector<GameObject*>& siblings = _parent->_children;
+		for ( size_t idx = 0; idx < siblings.size(); ++idx )
+		{
+			if ( siblings[idx] == this )
+			{
+				siblings[idx] = siblings.back();
+				siblings.pop_back();
+				break;
+			}
+		}
+		_parent = nullptr;
+		refreshActiveInHierarchy();
 	}
 
 	Component* GameObject::addComponentByName( hashed_string componentTypeName )

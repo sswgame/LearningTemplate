@@ -1,5 +1,6 @@
 #pragma once
 #include "Core/Graphics/RHI/IRHIDevice.h"
+#include "Core/Graphics/RHI/RHIReleaseQueue.h"
 
 #include "Core/Common/PlatformHeaders.h"
 #include "Core/Common/CommonHeaders.h"
@@ -247,6 +248,8 @@ namespace sw
 		uint32 _width		= 0;
 		uint32 _height		= 0;
 		uint32 _bufferCount = 2;
+
+		RHIReleaseQueue _releaseQueue{ 3 };
 	};
 } // namespace sw
 #else

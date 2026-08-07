@@ -1,5 +1,6 @@
 #pragma once
 #include "Core/Graphics/RHI/IRHIDevice.h"
+#include "Core/Graphics/RHI/RHIReleaseQueue.h"
 #include "Core/Common/PlatformHeaders.h"
 #include "Core/Common/CommonHeaders.h"
 
@@ -205,6 +206,8 @@ namespace sw
 
 		std::vector<OpenGLPipelineStateRecord> _pipelineStates;
 		std::vector<OpenGLRenderPassRecord>	   _renderPasses;
+
+		RHIReleaseQueue _releaseQueue{ 3 };
 
 		uint8				   _bInitialized  : 1;
 		[[maybe_unused]] uint8 _reservedFlags : 7;

@@ -47,8 +47,14 @@ namespace sw
 		/** @brief 팩토리/addComponent가 설정하는 구체 타입 TypeInfo 캐시 */
 		void setCachedTypeInfo( const TypeInfo* typeInfo ) { _cachedTypeInfo = typeInfo; }
 
+		/** @brief 핫리로드 unregister 직전 캐시 무효화 (댕글링 TypeInfo 방지) */
+		void clearCachedTypeInfo() { _cachedTypeInfo = nullptr; }
+
 		/** @brief 게임플레이 시작 시 초기화 콜백 */
 		virtual void onBeginPlay();
+
+		/** @brief 게임플레이 종료 시 정리 콜백 (beginPlay 대응) */
+		virtual void onEndPlay();
 
 		/** @brief 프레임 단위 업데이트 콜백 */
 		virtual void onTick( float32 deltaTime );

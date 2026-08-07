@@ -26,6 +26,60 @@ SW_DEFINE_MODULE_REGISTRAR_HEAD( swGameComponentFactoryHead, ::sw::ComponentFact
 
 namespace sw
 {
+	namespace
+	{
+		void destroyModuleSampleActors()
+		{
+			Scene* scene = getSceneManager().getActiveScene();
+			if ( scene == nullptr )
+				return;
+
+			GameObjectManager* objects = scene->getObjectManager();
+			if ( objects == nullptr )
+				return;
+
+			const hashed_string sampleName( "SampleActor" );
+			std::vector<GameObject*> toDestroy;
+			for ( GameObject* obj : objects->getAllGameObjects() )
+			{
+				if ( obj != nullptr && obj->getName() == sampleName )
+					toDestroy.push_back( obj );
+			}
+			for ( GameObject* obj : toDestroy )
+				objects->destroyObjectDeferred( obj );
+			objects->processDeferredDestruction();
+		}
+
+		void spawnSampleActorIfMissing()
+		{
+			Scene* scene = getSceneManager().getActiveScene();
+			if ( scene == nullptr )
+				return;
+
+			GameObjectManager* objects = scene->getObjectManager();
+			if ( objects == nullptr )
+				return;
+
+			const hashed_string sampleName( "SampleActor" );
+			if ( objects->findGameObjectByName( sampleName ) != nullptr )
+				return;
+
+			GameObject* sample = objects->createGameObject( sampleName );
+			if ( sample == nullptr )
+				return;
+
+			SceneComponent* root = sample->addComponent<SceneComponent>();
+			if ( root != nullptr )
+				root->setLocalPosition( float3( 0.0f, 1.0f, 0.0f ) );
+
+			SampleHealthComponent* health = sample->addComponent<SampleHealthComponent>();
+			if ( health != nullptr )
+				health->_health = 100.0f;
+
+			SW_LOG_INFO( "[SWGame] Spawned SampleActor with SceneComponent + SampleHealthComponent." );
+		}
+	} // namespace
+
 	class SWGame : public IGame
 	{
 	public:
@@ -44,34 +98,19 @@ namespace sw
 		getGlobalVariableManager().registerPendingVariables( "SWGame", swGameGvmHead() );
 		getTypeRegistry().registerPendingTypes( "SWGame", swGameTypeHead(), swGameEnumHead() );
 		getComponentManager().registerPendingFactories( "SWGame", swGameComponentFactoryHead() );
+		getComponentManager().rebindAllCachedTypeInfo();
 
-		// Demo actor for Hierarchy ↔ Inspector ↔ reflection E2E.
-		if ( Scene* scene = getSceneManager().getActiveScene() )
-		{
-			if ( GameObjectManager* objects = scene->getObjectManager() )
-			{
-				GameObject* sample = objects->createGameObject( hashed_string( "SampleActor" ) );
-				if ( sample != nullptr )
-				{
-					SceneComponent* root = sample->addComponent<SceneComponent>();
-					if ( root != nullptr )
-						root->setLocalPosition( float3( 0.0f, 1.0f, 0.0f ) );
-
-					SampleHealthComponent* health = sample->addComponent<SampleHealthComponent>();
-					if ( health != nullptr )
-						health->_health = 100.0f;
-
-					SW_LOG_INFO( "[SWGame] Spawned SampleActor with SceneComponent + SampleHealthComponent." );
-				}
-			}
-		}
-
+		spawnSampleActorIfMissing();
 		return true;
 	}
 
 	void SWGame::shutdown()
 	{
 		SW_LOG_INFO( "[SWGame] Shutting down Game Module..." );
+
+		destroyModuleSampleActors();
+
+		getComponentManager().clearAllCachedTypeInfo();
 		getComponentManager().unregisterFactoriesByModule( "SWGame" );
 		getTypeRegistry().unregisterTypesByModule( "SWGame" );
 		getGlobalVariableManager().unregisterVariablesByModule( "SWGame" );
