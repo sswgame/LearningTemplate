@@ -91,6 +91,13 @@ namespace sw
 			return false;
 		if ( _liveReloadManager->initialize() == false )
 			return false;
+
+		if ( ResourceUtil::initialize() == false )
+		{
+			SW_LOG_ERROR( "Failed to initialize ResourceUtil!" );
+			return false;
+		}
+
 		if ( _reloadFileManager->initialize() == false )
 			return false;
 		if ( _sceneManager->initialize() == false )
@@ -103,12 +110,6 @@ namespace sw
 			return false;
 		}
 		IWindow::setActiveWindow( _window.get() );
-
-		if ( ResourceUtil::initialize() == false )
-		{
-			SW_LOG_ERROR( "Failed to initialize ResourceUtil!" );
-			return false;
-		}
 
 		_rhi = std::make_unique<RHI>();
 		if ( _rhi->initialize() == false )
