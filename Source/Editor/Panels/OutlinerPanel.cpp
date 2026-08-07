@@ -22,20 +22,12 @@ namespace sw
 	{
 		void selectObject( GameObject* obj )
 		{
-			if ( obj == nullptr )
-				return;
-			editor::selectedObjectId()	  = obj->getObjectId();
-			editor::selectedComponentId() = 0;
-			editor::selectedObjectName()	  = obj->getName().c_str();
+			editor::selectGameObject( obj );
 		}
 
 		void selectComponent( GameObject* obj, Component* comp )
 		{
-			if ( obj == nullptr || comp == nullptr )
-				return;
-			editor::selectedObjectId()	  = obj->getObjectId();
-			editor::selectedComponentId() = comp->getComponentId();
-			editor::selectedObjectName()	  = obj->getName().c_str();
+			editor::selectComponent( obj, comp );
 		}
 
 		void drawComponentContextMenu( GameObject* obj, Component* comp, GameObjectManager* manager )
@@ -52,6 +44,7 @@ namespace sw
 					 editor::selectedComponentId() == comp->getComponentId() )
 				{
 					editor::selectedComponentId() = 0;
+					editor::selectedComponentKey().clear();
 				}
 				manager->destroyComponentDeferred( comp );
 				manager->processDeferredDestruction();
@@ -95,7 +88,56 @@ namespace sw
 				selectObject( created );
 			}
 
+			if ( ImGui::MenuItem( "Create Child GameObject" ) )
+			{
+				GameObject* created = manager->createGameObject( hashed_string( "GameObject" ) );
+				if ( created != nullptr )
+				{
+					created->attachToParent( obj );
+					selectObject( created );
+				}
+			}
+
 			drawAddComponentMenu( obj );
+
+			ImGui::Separator();
+
+			if ( obj->getParent() != nullptr )
+			{
+				if ( ImGui::MenuItem( "Unparent" ) )
+					obj->detachFromParent();
+			}
+
+			GameObject* selected = manager->findGameObjectById( editor::selectedObjectId() );
+			const bool	bCanParentToSelected =
+				selected != nullptr && selected != obj && editor::selectedComponentId() == 0;
+			if ( bCanParentToSelected )
+			{
+				// Preview cycle the same way attachToParent rejects it.
+				bool		bWouldCycle = false;
+				GameObject* ancestor	= selected;
+				while ( ancestor != nullptr )
+				{
+					if ( ancestor == obj )
+					{
+						bWouldCycle = true;
+						break;
+					}
+					ancestor = ancestor->getParent();
+				}
+
+				if ( bWouldCycle == false )
+				{
+					if ( ImGui::MenuItem( "Parent to Selected" ) )
+						obj->attachToParent( selected );
+				}
+				else
+				{
+					ImGui::BeginDisabled();
+					ImGui::MenuItem( "Parent to Selected" );
+					ImGui::EndDisabled();
+				}
+			}
 
 			ImGui::Separator();
 			if ( ImGui::MenuItem( "Destroy GameObject" ) )
@@ -265,7 +307,14 @@ namespace sw
 		if ( ImGui::Button( "Create GameObject" ) )
 		{
 			GameObject* created = manager->createGameObject( hashed_string( "GameObject" ) );
-			selectObject( created );
+			if ( created != nullptr )
+			{
+				// Nice: parent under currently selected GO when selection is a GameObject.
+				GameObject* selected = manager->findGameObjectById( editor::selectedObjectId() );
+				if ( selected != nullptr && editor::selectedComponentId() == 0 )
+					created->attachToParent( selected );
+				selectObject( created );
+			}
 		}
 		ImGui::SameLine();
 		if ( ImGui::Button( "Clear Selection" ) )

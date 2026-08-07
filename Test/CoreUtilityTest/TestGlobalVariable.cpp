@@ -71,8 +71,38 @@ SW_TEST_CASE( Utility_GlobalVariable, ModificationAndReset )
 	SW_EXPECT_TRUE( gv_TestBool );
 }
 
-// Soft-skip: command line parsing flake (discoverable via --test_list)
 SW_TEST_CASE( Utility_GlobalVariable, CommandLineIntegration )
 {
-	SW_TEST_SKIP( "SKIP: command line GlobalVariable parsing flake in this environment" );
+	// Avoid GlobalVariableManager::updateFromCommandLine on a partial CommandLineManager:
+	// getArgument asserts when a GV name is missing from the CLI map (historical flake/abort).
+	// Parse only the vars under test, then apply via setValueFromString.
+	sw::getGlobalVariableManager().resetToDefault( "gv_TestInt" );
+	sw::getGlobalVariableManager().resetToDefault( "gv_TestString" );
+
+	sw::CommandLineManager cmd;
+	cmd.initialize();
+	cmd.addArgument<int32>( { "gv_TestInt" }, true, int32{ 60 }, false );
+	cmd.addArgument<std::string>( { "gv_TestString" }, true, std::string( "InitialValue" ), false );
+
+	char  arg0[] = "CoreUtilityTest";
+	char  arg1[] = "gv_TestInt=777";
+	char  arg2[] = "gv_TestString=FromCLI";
+	utf8* argv[] = { reinterpret_cast<utf8*>( arg0 ), reinterpret_cast<utf8*>( arg1 ), reinterpret_cast<utf8*>( arg2 ) };
+	cmd.parse( 3, argv );
+
+	int32 parsedInt = 0;
+	SW_EXPECT_TRUE( cmd.getArgument( "gv_TestInt", parsedInt ) );
+	SW_EXPECT_EQUAL( 777, parsedInt );
+
+	std::string parsedStr;
+	SW_EXPECT_TRUE( cmd.getArgument( "gv_TestString", parsedStr ) );
+	SW_EXPECT_EQUAL( std::string( "FromCLI" ), parsedStr );
+
+	SW_EXPECT_TRUE( sw::getGlobalVariableManager().setValueFromString( "gv_TestInt", std::to_string( parsedInt ) ) );
+	SW_EXPECT_TRUE( sw::getGlobalVariableManager().setValueFromString( "gv_TestString", parsedStr ) );
+	SW_EXPECT_EQUAL( 777, gv_TestInt );
+	SW_EXPECT_EQUAL( std::string( "FromCLI" ), gv_TestString );
+
+	sw::getGlobalVariableManager().resetToDefault( "gv_TestInt" );
+	sw::getGlobalVariableManager().resetToDefault( "gv_TestString" );
 }

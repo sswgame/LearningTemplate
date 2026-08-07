@@ -28,7 +28,8 @@ jobs:
       run: |
         cmake --build --preset CI-Debug
 
-    # Full ctest: GPU suites may SKIP (not fake-pass) when initialize fails — see TestRHI.
+    # Full ctest: GPU / soft-SKIP quarantines may SKIP (not fake-pass) — see TestRHI, TestMaterial, ARCHITECTURE.md.
+    # ASAN is not enabled here (Windows MSVC); Linux job stays -L nogpu without sanitizers for speed.
     - name: Test
       run: |
         ctest --test-dir build/CI-Debug --output-on-failure
@@ -59,6 +60,7 @@ jobs:
       run: |
         cmake --build --preset CI-Debug
 
+    # NoGPU label only; soft-SKIP cases still report as skipped. No ASAN job (optional future).
     - name: Test (NoGPU)
       run: |
         ctest --test-dir build/CI-Debug -L nogpu --output-on-failure

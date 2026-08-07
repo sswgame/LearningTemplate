@@ -1145,7 +1145,9 @@ namespace sw
 		(void)typeInfo;
 		(void)diffData;
 		(void)diffSize;
-		return true;
+		// serializeDiff currently records only property name hashes (no payload), so apply is not implemented.
+		SW_LOG_ERROR( "[ObjectDiffSerializer] deserializeDiff is not implemented (diff buffer has no property payloads)." );
+		return false;
 	}
 
 } // namespace sw

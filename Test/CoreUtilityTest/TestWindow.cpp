@@ -13,10 +13,19 @@
 	#include "Core/Window/X11Window.h"
 #endif
 
-// Soft-skip: window sizing flake (discoverable via --test_list)
 SW_TEST_CASE( WindowTest, PlatformFactoryAndLifecycle )
 {
-	SW_TEST_SKIP( "SKIP: platform window sizing flake in this environment" );
+	std::unique_ptr<sw::IWindow> window = sw::IWindow::createPlatformWindow();
+	SW_ASSERT_TRUE( window != nullptr );
+
+	// Exact client size can differ under DPI / display scaling (was the old flake).
+	// Assert create + usable non-zero size + clean destroy instead of pixel-perfect match.
+	constexpr uint32 kReqW = 640;
+	constexpr uint32 kReqH = 480;
+	SW_EXPECT_TRUE( window->create( L"LifecycleTestWindow", kReqW, kReqH ) );
+	SW_EXPECT_TRUE( window->getWidth() > 0 );
+	SW_EXPECT_TRUE( window->getHeight() > 0 );
+	window->destroy();
 }
 
 SW_TEST_CASE( WindowTest, ResizeCallbackAndCustomMessageHandler )

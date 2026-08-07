@@ -27,6 +27,8 @@ namespace sw
 
 		/** @brief RHI 텍스처를 ImGui용 SRV로 등록합니다. */
 		void* registerTexture( RHITextureHandle texture ) override;
+		/** @brief 등록된 ImGui SRV를 해제합니다. */
+		void unregisterTexture( void* textureID ) override;
 
 	private:
 #if defined( SW_PLATFORM_WINDOWS )

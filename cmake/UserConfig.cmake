@@ -28,7 +28,7 @@ option(SW_ENABLE_PCH "Enable precompiled headers (Core pch.h)" ON)
 option(SW_ENABLE_UNITY_BUILD "Enable unity build flag module" OFF)
 option(SW_BUILD_DOCS "Generate Doxygen docs target when available" OFF)
 option(SW_AUTO_CHANGELOG "Add AutoChangelog target (manual build; not part of default ALL)" OFF)
-option(SW_RHI_AS_MODULES "Build DX11/DX12 RHI backends as MODULE DLLs (Core loads via createRHIDevice)" ON)
+option(SW_RHI_AS_MODULES "Build RHI backends (DX11/DX12/GL/Vulkan) as MODULE plugins (Core loads via createRHIDevice)" ON)
 option(SW_BUILD_GAME "Build Source/Game (SWGame module)" ON)
 # SW_SHIPPING_BUILD 는 cmake/internal/BuildConfig.cmake 에서 option() — Release 와 독립.
 

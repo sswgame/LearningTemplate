@@ -55,6 +55,11 @@ namespace sw
 		/** @brief RHI 텍스처 핸들에 대응하는 GL texture name (없으면 0) */
 		uint32 getGLTextureName( RHITextureHandle texture ) const;
 
+		uint32 getNativeTextureName( RHITextureHandle texture ) const override
+		{
+			return getGLTextureName( texture );
+		}
+
 		/** @brief 백엔드 이름 문자열 반환 */
 		virtual const utf8* getBackendName() const override { return "OpenGL (glad 4.6 Core)"; }
 

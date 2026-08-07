@@ -281,6 +281,9 @@ SW_TEST_CASE( MathTest, Double3VectorOperations )
 
 #include "Core/Object/GameObjectManager.h"
 #include "Core/Object/ObjectStateSerializer.h"
+#include "Core/Common/CoreServices.h"
+#include "Core/Game/Scene/SceneManager.h"
+#include "Core/Game/Scene/Scene.h"
 
 class MockCallbackComponent : public Component
 {
@@ -388,6 +391,7 @@ SW_TEST_CASE( ObjectStateXmlSerializerTest, SaveAndLoadXmlString )
 	SW_ASSERT_TRUE( xml.empty() == false );
 	SW_EXPECT_TRUE( xml.find( "GameObjectState" ) != std::string::npos );
 	SW_EXPECT_TRUE( xml.find( "SerializedHero" ) != std::string::npos );
+	SW_EXPECT_TRUE( xml.find( "ParentGO" ) != std::string::npos );
 
 	GameObject target( hashed_string( "Temp" ) );
 	target.setActive( true );
@@ -398,6 +402,73 @@ SW_TEST_CASE( ObjectStateXmlSerializerTest, SaveAndLoadXmlString )
 	SW_EXPECT_FALSE( ObjectStateSerializer::loadFromXmlString( nullptr, xml ) );
 	SW_EXPECT_FALSE( ObjectStateSerializer::loadFromXmlString( &target, "" ) );
 	SW_EXPECT_EMPTY( ObjectStateSerializer::saveToXmlString( nullptr ) );
+}
+
+SW_TEST_CASE( ObjectStateXmlSerializerTest, ParentChildHierarchyRoundtrip )
+{
+	Scene* scene = getSceneManager().getActiveScene();
+	if ( scene == nullptr )
+		scene = getSceneManager().createScene( "GOHierarchySerializer" );
+	SW_ASSERT_NOT_NULL( scene );
+	SW_ASSERT_NOT_NULL( scene->getObjectManager() );
+
+	GameObjectManager* manager = scene->getObjectManager();
+	manager->clear();
+
+	GameObject* parent = manager->createGameObject( hashed_string( "ParentGO" ) );
+	GameObject* child  = manager->createGameObject( hashed_string( "ChildGO" ) );
+	GameObject* grand  = manager->createGameObject( hashed_string( "GrandGO" ) );
+	SW_ASSERT_NOT_NULL( parent );
+	SW_ASSERT_NOT_NULL( child );
+	SW_ASSERT_NOT_NULL( grand );
+
+	SW_ASSERT_TRUE( child->attachToParent( parent ) );
+	SW_ASSERT_TRUE( grand->attachToParent( child ) );
+
+	const std::string parentXml = ObjectStateSerializer::saveToXmlString( parent );
+	const std::string childXml	= ObjectStateSerializer::saveToXmlString( child );
+	const std::string grandXml	= ObjectStateSerializer::saveToXmlString( grand );
+	SW_ASSERT_TRUE( parentXml.empty() == false );
+	SW_ASSERT_TRUE( childXml.empty() == false );
+	SW_ASSERT_TRUE( grandXml.empty() == false );
+
+	SW_EXPECT_TRUE( childXml.find( "ParentGO" ) != std::string::npos );
+	SW_EXPECT_TRUE( grandXml.find( "ChildGO" ) != std::string::npos );
+
+	// Tear down hierarchy, recreate empty GOs, load, then rebind (Play snapshot order).
+	manager->clear();
+	parent = manager->createGameObject( hashed_string( "TempParent" ) );
+	child  = manager->createGameObject( hashed_string( "TempChild" ) );
+	grand  = manager->createGameObject( hashed_string( "TempGrand" ) );
+	SW_ASSERT_NOT_NULL( parent );
+	SW_ASSERT_NOT_NULL( child );
+	SW_ASSERT_NOT_NULL( grand );
+
+	// Load child before parent to force second-pass rebind (like unordered snapshot restore).
+	SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXmlString( child, childXml ) );
+	SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXmlString( grand, grandXml ) );
+	SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXmlString( parent, parentXml ) );
+
+	SW_ASSERT_TRUE( ObjectStateSerializer::rebindSceneHierarchy( parent, parentXml ) );
+	SW_ASSERT_TRUE( ObjectStateSerializer::rebindSceneHierarchy( child, childXml ) );
+	SW_ASSERT_TRUE( ObjectStateSerializer::rebindSceneHierarchy( grand, grandXml ) );
+
+	parent = manager->findGameObjectByName( hashed_string( "ParentGO" ) );
+	child  = manager->findGameObjectByName( hashed_string( "ChildGO" ) );
+	grand  = manager->findGameObjectByName( hashed_string( "GrandGO" ) );
+	SW_ASSERT_NOT_NULL( parent );
+	SW_ASSERT_NOT_NULL( child );
+	SW_ASSERT_NOT_NULL( grand );
+
+	SW_EXPECT_NULL( parent->getParent() );
+	SW_EXPECT_EQUAL( parent, child->getParent() );
+	SW_EXPECT_EQUAL( child, grand->getParent() );
+	SW_EXPECT_EQUAL( size_t( 1 ), parent->getChildren().size() );
+	SW_EXPECT_EQUAL( child, parent->getChildren()[0] );
+	SW_EXPECT_EQUAL( size_t( 1 ), child->getChildren().size() );
+	SW_EXPECT_EQUAL( grand, child->getChildren()[0] );
+
+	manager->clear();
 }
 
 SW_TEST_CASE( ComponentTickGroupTest, TickOrderPrePhysicsToPostUpdate )

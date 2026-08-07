@@ -198,6 +198,7 @@ namespace sw
 		std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> _renderTargets;
 		std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> _constantBuffers;
 		std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> _textures;
+		std::unordered_map<RHIBufferHandle, D3D12_RESOURCE_STATES> _structuredBufferStates;
 
 		struct OffscreenTextureRecord
 		{

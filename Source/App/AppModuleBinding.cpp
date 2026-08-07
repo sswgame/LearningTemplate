@@ -10,6 +10,7 @@
 #include "Core/Utility/Module/LiveReloadManager.h"
 #include "Core/Window/IWindow.h"
 #include "Core/Graphics/RHI/RHI.h"
+#include "Core/Game/GameState.h"
 
 #if defined( SW_SHIPPING )
 	#include "Runtime/GameAPI.h"
@@ -98,6 +99,15 @@ namespace sw
 
 	void App::onBeforeGameReload()
 	{
+		// Force Stop before unloading game MODULE so play-mode components/actors
+		// from the old DLL are torn down and the editor scene snapshot is restored.
+		const GameState state = getGameState();
+		if ( state == GameState::Playing || state == GameState::Paused )
+		{
+			SW_LOG_INFO( "[App] Forcing GameState::Stopped before game module reload." );
+			setGameState( GameState::Stopped );
+		}
+
 		if ( _game == nullptr )
 			return;
 

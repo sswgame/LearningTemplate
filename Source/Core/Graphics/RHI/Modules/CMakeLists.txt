@@ -3,20 +3,20 @@
 # @brief RHI backend MODULE DLL plugins (SW_RHI_AS_MODULES)
 # ==============================================================================
 
-if(NOT WIN32)
-    message(STATUS "[RHI Modules] Non-Windows: DX MODULE backends skipped")
-    return()
+# DX is Windows-only; GL/Vulkan build on all platforms that have Modules enabled.
+if(WIN32)
+    add_subdirectory(DX11)
+    add_subdirectory(DX12)
 endif()
 
-add_subdirectory(DX11)
-add_subdirectory(DX12)
+add_subdirectory(GL)
+add_subdirectory(Vulkan)
 
-# App is discovered before Core; wire runtime DLL build order here.
+# App is discovered before Core; wire runtime DLL/so build order here.
 if(TARGET App)
-    if(TARGET RHI_DX11)
-        add_dependencies(App RHI_DX11)
-    endif()
-    if(TARGET RHI_DX12)
-        add_dependencies(App RHI_DX12)
-    endif()
+    foreach(_rhi_mod IN ITEMS RHI_DX11 RHI_DX12 RHI_GL RHI_Vulkan)
+        if(TARGET ${_rhi_mod})
+            add_dependencies(App ${_rhi_mod})
+        endif()
+    endforeach()
 endif()

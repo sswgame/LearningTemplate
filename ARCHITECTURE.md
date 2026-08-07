@@ -11,8 +11,8 @@ App (exe)
  ├─ EditorModule  (MODULE, Dev only)  ← fillEditorAPI
  └─ SWGame        (MODULE Dev / STATIC Shipping)  ← fillGameAPI
 
-RHI_DX11 / RHI_DX12  (MODULE, optional SW_RHI_AS_MODULES; forced OFF in Shipping)
-  └─ loaded by Core at runtime via createRHIDevice
+RHI_DX11 / RHI_DX12 / RHI_GL / RHI_Vulkan  (MODULE when SW_RHI_AS_MODULES; forced OFF in Shipping)
+  └─ loaded by Core at runtime via createRHIDevice (DX Windows-only; GL/VK all platforms)
 
 Tools/ReflectionParser  → generates *.gen.cpp for SWGame (and tests)
 Test/*                  → links Core (+ RuntimeAPI for module smoke)
@@ -38,7 +38,7 @@ MODULE DLL(`sw_set_module_bin_output`)도 같은 preset `Bin` 에 두어 LiveRel
 | Core | SHARED DLL | STATIC |
 | EditorModule | MODULE DLL + 핫리로드 | 빌드 안 함 |
 | SWGame | MODULE DLL + 핫리로드 | STATIC → App에 링크 |
-| `SW_RHI_AS_MODULES` | ON (기본) — DX MODULE | **FORCE OFF** — DX linked into Core |
+| `SW_RHI_AS_MODULES` | ON (기본) — RHI_* MODULE | **FORCE OFF** — all RHI backends linked into Core |
 | C++ define | (없음) | `SW_SHIPPING` |
 
 빌드 타입(Debug/Release)과 Shipping 여부는 **독립**입니다.
@@ -61,10 +61,11 @@ App은 Editor/Game 구현 클래스를 직접 링크하지 않고 함수 테이�
 
 ## RHI backends
 
-- `IRHIDevice` + `RHIBackendRegistry` 는 Core.
-- `SW_RHI_AS_MODULES=ON`(Dev 기본): DX11/DX12 는 `RHI_DX11` / `RHI_DX12` MODULE, Core가 지연 로드.
-  - `unloadModules` 는 factory를 먼저 비운 뒤 `FreeLibrary`. **MODULE 백엔드 device는 먼저 destroy** (`RHI::shutdown` 경로).
-- **Vulkan / OpenGL 디바이스는 Core에 정적 링크 (의도적).** DX만 optional MODULE.
+- `IRHIDevice` + `RHIBackendRegistry` 는 Core. 헤더는 Core에 두고 device `.cpp` 만 MODULE로 분리.
+- `SW_RHI_AS_MODULES=ON`(Dev 기본): `RHI_DX11` / `RHI_DX12` (Windows) + `RHI_GL` / `RHI_Vulkan` MODULE을 Core가 지연 로드 (`createRHIDevice`).
+  - `unloadModules` 는 factory를 먼저 비운 뒤 `FreeLibrary`/`dlclose`. **MODULE 백엔드 device는 먼저 destroy** (`RHI::shutdown` 경로).
+- Shipping: `SW_RHI_AS_MODULES` FORCE OFF → 모든 백엔드 device가 Core에 정적 링크.
+- Editor는 concrete device 타입에 링크하지 않음 — `getNativeTextureName` / `queryVulkanImGuiNative` 가상 API 사용.
 - Caps: OpenGL/Vulkan `_bBindless = false` (`supportsBindless()` false). `_bOffscreenRT=true`. `_bEditorSupported` / `_bImGuiHooks` false.
 - **RHIReleaseQueue** (`frameLatency` deferred destroy): wired on **DX12 / OpenGL / DX11** — `destroyBuffer`/`destroyTexture` enqueue; `endFrame` → `tickFrame()`; `waitIdle`/`shutdown` → `flushAll()`. **Vulkan not wired** (deferred).
 
@@ -72,8 +73,7 @@ App은 Editor/Game 구현 클래스를 직접 링크하지 않고 함수 테이�
 
 명시적으로 **아직 하지 않은** 항목 (추후 후보):
 
-- VK를 Core에서 MODULE로 분리
-- 에디터 핫스왑 / ImGui multi-viewport hooks
+- 에디터 핫스왑 / ImGui multi-viewport hooks (`_bEditorSupported` / `_bImGuiHooks`)
 - 본격 bindless descriptor 경로
 - RHIReleaseQueue 연동한 deferred destroy
 
@@ -81,6 +81,11 @@ App은 Editor/Game 구현 클래스를 직접 링크하지 않고 함수 테이�
 
 - `compile()`: 리소스 producer→consumer Kahn 위상 정렬 + 사이클 감지.
 - `execute()`: 컴파일된 순서로 패스 콜백 실행. 입력/출력에 대해 **논리** Read/Write 전이를 카운트합니다 (RHI barrier API 없음 — GPU barrier 미연동).
+
+### Command lists / compute root constants
+
+- **Immediate-mode backends** (DX11 / OpenGL, and current DX12 device path): draw/dispatch run on the live context; `executeCommandList` is effectively a no-op (recorded `IRHICommandList` is not a deferred submission queue yet).
+- **Compute root constants**: D3D12 maps to `SetComputeRoot32BitConstants` (API capped by D3D12 root signature limits, typically ≤64 DWORDs per root parameter). DX11/GL/VK stubs may ignore or partially implement — do not assume cross-backend parity.
 
 ## Reflection
 
@@ -104,11 +109,17 @@ App은 Editor/Game 구현 클래스를 직접 링크하지 않고 함수 테이�
 ## Editor Hierarchy / Inspector
 
 - **Hierarchy** (`OutlinerPanel`): root GameObjects (parent==null) with nested child GOs when present; under each GO, components (SceneComponent tree kept separate). Selection in `EditorSelection`.
-- **Inspector**: selection Name/Active, SceneComponent transform, reflected `PROPERTY` widgets, `FUNCTION()` Invoke with simple arg editors; Engine/Material section remains collapsible.
+  - Context menu: Unparent / Parent to Selected (cycle-safe), Create Child, Create under selected from toolbar.
+- **Inspector**: selection Name/Active, read-only Parent name (+ Unparent), SceneComponent transform, reflected `PROPERTY` widgets (containers show size only), `FUNCTION()` Invoke with simple arg editors (`int32`/`int64`/`float`/`bool`/`string`); Engine/Material section remains collapsible.
+- **Play→Stop selection**: `EditorSelection` remaps GO by cached name and component by stable key (`componentName|typeName` + `#` + occurrence), matching `ObjectStateSerializer` SceneTransforms keys.
 
 ## FUNCTION() codegen
 
-ReflectionParser emits `FunctionInfo` + `TaskArgs` invokers for `FUNCTION()` methods (return value packed in `TaskValue`). Param type spellings are normalized (`int`→`int32`, etc.). Prefer `TaskArgs( int32{ n }, … )` / `args.add( int32{ n } )` over braced-init `TaskArgs{ n }` (initializer_list typing surprises).
+ReflectionParser emits `FunctionInfo` + `TaskArgs` invokers for `FUNCTION()` methods (return value packed in `TaskValue`). Param type spellings are normalized (`int`→`int32`, `long long`→`int64`, etc.). Prefer `TaskArgs( int32{ n }, … )` / `args.add( int32{ n } )` over braced-init `TaskArgs{ n }` (initializer_list typing surprises).
+
+## ObjectDiffSerializer
+
+`serializeDiff` currently writes property **name hashes only** (no value payloads). `deserializeDiff` therefore **fails honestly** (`SW_LOG_ERROR` + `false`) until a real delta format exists.
 
 ## Scene tick
 
@@ -120,9 +131,9 @@ ReflectionParser emits `FunctionInfo` + `TaskArgs` invokers for `FUNCTION()` met
 
 병렬 tick 중 `attach`/`detach` 및 계층 구조 변경은 하지 마세요.
 
-**GameObject parent hierarchy (basic):** `attachToParent` / `detachFromParent` / `getParent` / `getChildren`; `isActiveInHierarchy` propagates from parent. Independent of SceneComponent attach.
+**GameObject parent hierarchy (basic):** `attachToParent` / `detachFromParent` / `getParent` / `getChildren`; `isActiveInHierarchy` propagates from parent. Independent of SceneComponent attach. Parallel transform read-only blocks attach/detach (same guard as SceneComponent).
 
-**ObjectStateSerializer `SceneTransforms`:** keyed by **stable component keys** (component name or typeName + occurrence index on that GO), not flat list index. Parent attach can reference cross-GO parents as `ownerName/stableKey`. Count mismatches log loudly.
+**ObjectStateSerializer:** `ParentGO` stores the parent GameObject by **stable name** (empty = root). Load creates/restores GOs first; `rebindSceneHierarchy` second pass re-attaches both SceneComponent parents and GameObject parents (used by Play/Stop snapshot restore). `SceneTransforms` keyed by **stable component keys** (component name or typeName + occurrence index on that GO), not flat list index. Parent attach can reference cross-GO parents as `ownerName/stableKey`. Count mismatches log loudly.
 
 ## Tests
 
@@ -135,6 +146,15 @@ ReflectionParser emits `FunctionInfo` + `TaskArgs` invokers for `FUNCTION()` met
 | ModuleSmokeTest | Dev: MODULE `fill*API` 로드 / Shipping: 정적 `fillGameAPI` (GPU 불필요) | `unit;module;nogpu` |
 
 `ctest -L nogpu` 는 ReflectionTest / CoreSmokeTest / ModuleSmokeTest / CoreUtilityTest_NoGPU 를 돌립니다.
+
+### Soft-SKIP quarantine
+
+Some cases call `SW_TEST_SKIP` so the suite stays green when an environment cannot run them (discoverable via `--test_list` / `[SKIPPED]` summary):
+
+- **TestRHI** full pipeline — needs stable GPU/RHI env
+- **TestMaterial** color/instance/reflection — historically hang on TaskManager / DXC without timeout
+- **TestShader** — compiler DLL unavailable
+- Fixed / un-SKIP'd when flake was assert/size: **WindowTest.PlatformFactoryAndLifecycle** (DPI-tolerant size), **Utility_GlobalVariable.CommandLineIntegration** (partial CLI map + `getArgument` assert)
 
 ## Local & CI
 

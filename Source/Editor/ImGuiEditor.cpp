@@ -396,4 +396,10 @@ namespace sw
 			return _rendererBackend->registerTexture( texture );
 		return nullptr;
 	}
+
+	void ImGuiEditor::unregisterTexture( void* textureID )
+	{
+		if ( _rendererBackend )
+			_rendererBackend->unregisterTexture( textureID );
+	}
 } // namespace sw

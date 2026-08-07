@@ -14,7 +14,7 @@ else()
     set(_core_lib_type SHARED)
 endif()
 
-# RHI MODULE 엔트리는 Core에 넣지 않음. SW_RHI_AS_MODULES=ON 이면 DX 디바이스도 분리.
+# RHI MODULE 엔트리는 Core에 넣지 않음. SW_RHI_AS_MODULES=ON 이면 백엔드 device .cpp 도 분리.
 set(_core_exclude
     "Graphics/RHI/Modules/"
 )
@@ -22,6 +22,8 @@ if(SW_RHI_AS_MODULES)
     list(APPEND _core_exclude
         "Graphics/RHI/DX11/.*\\.cpp"
         "Graphics/RHI/DX12/.*\\.cpp"
+        "Graphics/RHI/GL/.*\\.cpp"
+        "Graphics/RHI/Vulkan/.*\\.cpp"
     )
 endif()
 
@@ -46,12 +48,12 @@ sw_set_log_tag(Core Engine)
 
 if(SW_RHI_AS_MODULES)
     target_compile_definitions(Core PRIVATE SW_RHI_AS_MODULES)
-    message(STATUS "[Core] SW_RHI_AS_MODULES=ON — DX11/DX12 device sources excluded; loading RHI_*.dll")
+    message(STATUS "[Core] SW_RHI_AS_MODULES=ON — RHI device sources excluded; loading RHI_* modules")
 endif()
 
 sw_configure_pch(Core)
 
-# Optional RHI backend MODULE DLLs (Windows DX11/DX12 first)
+# Optional RHI backend MODULE plugins (DX Windows-only; GL/Vulkan all platforms)
 if(SW_RHI_AS_MODULES)
     add_subdirectory(Graphics/RHI/Modules)
 endif()

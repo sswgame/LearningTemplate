@@ -49,10 +49,12 @@ SW_TEST_CASE( MaterialTest, MaterialLoadAndSave )
 	std::filesystem::remove( tempPath );
 }
 
-// Soft-skip: hangs/times out in some environments (discoverable via --test_list)
+// Soft-SKIP quarantine: Material::setProperty / GPU buffer upload path has hung in CI
+// (likely waits on TaskManager / shader compile / RHI device that is unavailable or stalls).
+// Prefer keep SKIP until color mutation can run without a live GPU device.
 SW_TEST_CASE( MaterialTest, MaterialColorModification )
 {
-	SW_TEST_SKIP( "SKIP: material color path hangs/times out in this environment" );
+	SW_TEST_SKIP( "SKIP: material color path hangs — hypothesis: setProperty/upload waits on TaskManager or missing RHI device" );
 }
 
 SW_TEST_CASE( MaterialTest, AsyncMaterialLoadTest )
@@ -65,16 +67,16 @@ SW_TEST_CASE( MaterialTest, AsyncMaterialLoadTest )
 	sw::getTaskManager().clear();
 }
 
-// Soft-skip: hangs/times out in some environments (discoverable via --test_list)
+// Soft-SKIP quarantine: instance override + shader reflection can block on compiler/DXC.
 SW_TEST_CASE( MaterialTest, MaterialInstanceOverride )
 {
-	SW_TEST_SKIP( "SKIP: material instance override hangs/times out in this environment" );
+	SW_TEST_SKIP( "SKIP: material instance override hang — hypothesis: shader compile/reflection wait without timeout" );
 }
 
 #include "Core/Graphics/Shader/ShaderReflection.h"
 
-// Soft-skip: hangs/times out in some environments (discoverable via --test_list)
+// Soft-SKIP quarantine: reflection validation pulls ShaderReflection / DXC and can hang headless.
 SW_TEST_CASE( MaterialTest, MaterialShaderReflectionValidation )
 {
-	SW_TEST_SKIP( "SKIP: shader reflection validation hangs/times out in this environment" );
+	SW_TEST_SKIP( "SKIP: shader reflection validation hang — hypothesis: DXC/compiler unavailable or blocking I/O" );
 }

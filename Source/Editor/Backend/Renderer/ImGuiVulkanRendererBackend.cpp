@@ -14,18 +14,21 @@
 #endif
 #include <imgui_impl_vulkan.h>
 
-#include "Core/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
+#include "Core/Graphics/RHI/IRHIDevice.h"
 #include "Core/Common/Common.h"
 
 namespace sw
 {
 	bool ImGuiVulkanRendererBackend::initialize( class IRHIDevice* rhiDevice )
 	{
-		auto vkDevice = dynamic_cast<VulkanRHIDevice*>( rhiDevice );
-		if ( vkDevice == nullptr )
+		if ( rhiDevice == nullptr )
 			return false;
 
-		_device = vkDevice->getDevice();
+		RHIVulkanImGuiNative vkNative{};
+		if ( rhiDevice->queryVulkanImGuiNative( vkNative ) == false || vkNative._device == nullptr )
+			return false;
+
+		_device = static_cast<VkDevice>( vkNative._device );
 
 		VkDescriptorPoolSize pool_sizes[] = {
 			{			   VK_DESCRIPTOR_TYPE_SAMPLER, 1000},
@@ -53,14 +56,14 @@ namespace sw
 		}
 
 		ImGui_ImplVulkan_InitInfo init_info	   = {};
-		init_info.Instance					   = vkDevice->getInstance();
-		init_info.PhysicalDevice			   = vkDevice->getPhysicalDevice();
-		init_info.Device					   = vkDevice->getDevice();
-		init_info.QueueFamily				   = 0;
-		init_info.Queue						   = vkDevice->getGraphicsQueue();
+		init_info.Instance					   = static_cast<VkInstance>( vkNative._instance );
+		init_info.PhysicalDevice			   = static_cast<VkPhysicalDevice>( vkNative._physicalDevice );
+		init_info.Device					   = _device;
+		init_info.QueueFamily				   = vkNative._queueFamily;
+		init_info.Queue						   = static_cast<VkQueue>( vkNative._graphicsQueue );
 		init_info.PipelineCache				   = VK_NULL_HANDLE;
 		init_info.DescriptorPool			   = _imguiDescriptorPool;
-		init_info.PipelineInfoMain.RenderPass  = vkDevice->getRenderPass();
+		init_info.PipelineInfoMain.RenderPass  = static_cast<VkRenderPass>( vkNative._renderPass );
 		init_info.PipelineInfoMain.Subpass	   = 0;
 		init_info.MinImageCount				   = 2;
 		init_info.ImageCount				   = 2;

@@ -20,7 +20,7 @@ namespace sw
 		/** @brief CDO 객체와 변경된 객체를 비교하여 델타 바이너리 추출 */
 		static bool serializeDiff( std::vector<uint8>& outDiffBuffer, const void* cdoInstance, const void* modifiedInstance, const TypeInfo& typeInfo );
 
-		/** @brief 델타 바이너리를 타깃 인스턴스에 적용 */
+		/** @brief Apply delta binary. Currently unimplemented (serializeDiff has no payloads) — returns false. */
 		static bool deserializeDiff( void* targetInstance, const TypeInfo& typeInfo, const uint8* diffData, size_t diffSize );
 	};
 

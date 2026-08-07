@@ -161,6 +161,12 @@ namespace sw
 		/** @brief 현재 백엔드가 Bindless(무제한 리소스 배열) 기술을 지원하는지 여부 반환 */
 		virtual bool supportsBindless() const = 0;
 
+		/** @brief 컴퓨트 루트/푸시 상수(setComputeRootConstants) 네이티브 지원 여부 */
+		virtual bool supportsComputeRootConstants() const
+		{
+			return getCapabilities()._bComputeRootConstants != 0;
+		}
+
 		/** @brief 백엔드 이름 및 버전 포맷 문자열 반환 */
 		virtual const utf8* getBackendName() const = 0;
 
@@ -175,6 +181,25 @@ namespace sw
 
 		/** @brief 기본 Native 커맨드 큐 객체 포인터 반환 */
 		virtual void* getNativeCommandQueue() const = 0;
+
+		/**
+		 * @brief RHI 텍스처 → 백엔드 native texture name (OpenGL GLuint 등). 미지원 시 0.
+		 * @note Editor MODULE이 RHI_* device MODULE concrete 타입에 링크하지 않도록 가상화.
+		 */
+		virtual uint32 getNativeTextureName( RHITextureHandle texture ) const
+		{
+			(void)texture;
+			return 0;
+		}
+
+		/**
+		 * @brief Vulkan ImGui 초기화용 native 핸들. 비-Vulkan이면 false.
+		 */
+		virtual bool queryVulkanImGuiNative( RHIVulkanImGuiNative& out ) const
+		{
+			(void)out;
+			return false;
+		}
 
 		/** @brief 그래픽스 파이프라인 상태 객체(PSO) 생성 */
 		virtual RHIPipelineStateHandle createPipelineState( const RHIPipelineStateDesc& desc ) = 0;

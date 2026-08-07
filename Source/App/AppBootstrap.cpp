@@ -152,6 +152,13 @@ namespace sw
 		if ( _rhi == nullptr || width == 0 || height == 0 )
 			return false;
 
+		if ( _gameTextureID != nullptr && _editor && _editorApi.unregisterTexture )
+		{
+			_editorApi.unregisterTexture( _editor, _gameTextureID );
+			_gameTextureID			 = nullptr;
+			_editorCtx.gameTextureID = nullptr;
+		}
+
 		if ( _gameRenderTarget != 0 )
 		{
 			_rhi->getDevice().destroyTexture( _gameRenderTarget );
@@ -169,9 +176,9 @@ namespace sw
 		if ( _editor && _editorApi.registerTexture )
 			_gameTextureID = _editorApi.registerTexture( _editor, static_cast<TextureHandle>( _gameRenderTarget ) );
 
-		_editorCtx.gameTextureID	   = _gameTextureID;
-		_editorCtx.gameViewportWidth   = _gameViewportWidth;
-		_editorCtx.gameViewportHeight  = _gameViewportHeight;
+		_editorCtx.gameTextureID	  = _gameTextureID;
+		_editorCtx.gameViewportWidth  = _gameViewportWidth;
+		_editorCtx.gameViewportHeight = _gameViewportHeight;
 		return true;
 	}
 

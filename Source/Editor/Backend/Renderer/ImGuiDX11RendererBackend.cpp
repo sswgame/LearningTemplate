@@ -92,4 +92,24 @@ namespace sw
 		return nullptr;
 #endif
 	}
+
+	void ImGuiDX11RendererBackend::unregisterTexture( void* textureID )
+	{
+#if defined( SW_PLATFORM_WINDOWS )
+		if ( textureID == nullptr )
+			return;
+
+		auto* srv = static_cast<ID3D11ShaderResourceView*>( textureID );
+		for ( auto it = _registeredSrvs.begin(); it != _registeredSrvs.end(); ++it )
+		{
+			if ( it->Get() == srv )
+			{
+				_registeredSrvs.erase( it );
+				return;
+			}
+		}
+#else
+		(void)textureID;
+#endif
+	}
 } // namespace sw

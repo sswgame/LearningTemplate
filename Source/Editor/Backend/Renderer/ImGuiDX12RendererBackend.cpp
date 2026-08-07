@@ -289,4 +289,29 @@ namespace sw
 		return nullptr;
 #endif
 	}
+
+	void ImGuiDX12RendererBackend::unregisterTexture( void* textureID )
+	{
+#if defined( SW_PLATFORM_WINDOWS )
+		if ( textureID == nullptr || _d3d12SrvHeap == nullptr || _descriptorSize == 0 )
+			return;
+
+		const SIZE_T gpuStart = _d3d12SrvHeap->GetGPUDescriptorHandleForHeapStart().ptr;
+		const SIZE_T gpuPtr	  = reinterpret_cast<SIZE_T>( textureID );
+		if ( gpuPtr < gpuStart )
+			return;
+
+		const uint32 index = static_cast<uint32>( ( gpuPtr - gpuStart ) / _descriptorSize );
+		if ( index >= _maxDescriptors )
+			return;
+
+		D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle{};
+		D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle{};
+		cpuHandle.ptr = _d3d12SrvHeap->GetCPUDescriptorHandleForHeapStart().ptr + static_cast<SIZE_T>( index ) * _descriptorSize;
+		gpuHandle.ptr = gpuPtr;
+		freeSrvDescriptor( cpuHandle, gpuHandle );
+#else
+		(void)textureID;
+#endif
+	}
 } // namespace sw

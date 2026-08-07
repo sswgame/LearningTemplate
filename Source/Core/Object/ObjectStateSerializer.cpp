@@ -397,6 +397,63 @@ namespace sw
 			}
 		}
 
+		/**
+		 * @brief Attach GO to ParentGO by stable name (empty = root).
+		 * @details Detaches first so stale play-time parents are cleared before rebind.
+		 *          Missing parent is expected on first pass of multi-GO restore; log only when requested.
+		 */
+		void applyParentGO( GameObject* gameObject, std::string_view parentName, bool bLogMissing )
+		{
+			if ( gameObject == nullptr )
+				return;
+
+			gameObject->detachFromParent();
+			if ( parentName.empty() )
+				return;
+
+			GameObjectManager* manager = findActiveObjectManager();
+			if ( manager == nullptr )
+			{
+				if ( bLogMissing )
+				{
+					SW_LOG_ERROR( "[ObjectStateSerializer] No active GameObjectManager to resolve ParentGO '%#' for '%#'.",
+								  std::string( parentName ).c_str(),
+								  gameObject->getName().c_str() );
+				}
+				return;
+			}
+
+			GameObject* parent = manager->findGameObjectByName(
+				hashed_string( std::string( parentName ).c_str() ) );
+			if ( parent == nullptr )
+			{
+				if ( bLogMissing )
+				{
+					SW_LOG_ERROR( "[ObjectStateSerializer] Failed to resolve ParentGO '%#' for '%#'.",
+								  std::string( parentName ).c_str(),
+								  gameObject->getName().c_str() );
+				}
+				return;
+			}
+
+			if ( gameObject->attachToParent( parent ) == false && bLogMissing )
+			{
+				SW_LOG_ERROR( "[ObjectStateSerializer] attachToParent failed for '%#' -> '%#'.",
+							  gameObject->getName().c_str(),
+							  parent->getName().c_str() );
+			}
+		}
+
+		void readAndApplyParentGO( GameObject* gameObject, RapidXmlBackend& xmlBackend, bool bLogMissing )
+		{
+			if ( gameObject == nullptr )
+				return;
+
+			std::string parentName;
+			xmlBackend.readValue( "ParentGO", parentName ); // missing key → empty → root
+			applyParentGO( gameObject, parentName, bLogMissing );
+		}
+
 		bool collectAndApplySceneTransforms( GameObject*										gameObject,
 											 RapidXmlBackend&									xmlBackend,
 											 std::vector<PendingAttach>*						outPendingAttaches,
@@ -544,6 +601,9 @@ namespace sw
 		// (would collide with GameObject::_s_nextObjectId and break manager id maps).
 		xmlBackend.writeValue( "ObjectId", std::to_string( gameObject->getObjectId() ).c_str() );
 		xmlBackend.writeValue( "IsActive", gameObject->isActive() ? "true" : "false" );
+		// Stable parent name (empty = root). Rebind after multi-GO load via rebindSceneHierarchy.
+		const GameObject* parentGo = gameObject->getParent();
+		xmlBackend.writeValue( "ParentGO", parentGo != nullptr ? parentGo->getName().c_str() : "" );
 
 		// When TypeInfo is registered, also emit reflected PROPERTY fields via XmlSerializer
 		// into a nested document stored as ReflectedXml (keeps GameObjectState root/aliases).
@@ -685,6 +745,9 @@ namespace sw
 		collectAndApplySceneTransforms( gameObject, xmlBackend, &pendingAttaches, true );
 		applyPendingAttaches( gameObject, pendingAttaches );
 
+		// ParentGO may be missing on first pass of multi-GO restore; rebindSceneHierarchy fixes it.
+		readAndApplyParentGO( gameObject, xmlBackend, false );
+
 		return true;
 	}
 
@@ -703,6 +766,9 @@ namespace sw
 		std::vector<PendingAttach> pendingAttaches;
 		collectAndApplySceneTransforms( gameObject, xmlBackend, &pendingAttaches, false );
 		applyPendingAttaches( gameObject, pendingAttaches );
+
+		// Second pass: GameObject parent by stable name (all GOs must exist).
+		readAndApplyParentGO( gameObject, xmlBackend, true );
 		return true;
 	}
 

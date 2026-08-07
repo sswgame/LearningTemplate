@@ -29,6 +29,7 @@ namespace sw
 		void render( IRHIDevice* rhiDevice ) override;
 
 		void* registerTexture( RHITextureHandle /*texture*/ ) override { return nullptr; }
+		void  unregisterTexture( void* /*textureID*/ ) override {}
 
 	private:
 		VkDescriptorPool_T* _imguiDescriptorPool = nullptr;

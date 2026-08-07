@@ -782,11 +782,17 @@ namespace sw
 
 		void setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* data, uint32 destOffsetIn32BitValues = 0 ) override
 		{
-
 			(void)rootParameterIndex;
 			(void)num32BitValues;
 			(void)data;
 			(void)destOffsetIn32BitValues;
+
+			static bool s_bLoggedUnsupported = false;
+			if ( s_bLoggedUnsupported == false )
+			{
+				SW_LOG_WARNING( "[OpenGL] setComputeRootConstants is unsupported (no native compute root constants). Check supportsComputeRootConstants()." );
+				s_bLoggedUnsupported = true;
+			}
 		}
 
 		void drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) override
@@ -890,6 +896,13 @@ namespace sw
 	void OpenGLRHIDevice::executeCommandList( IRHICommandList* cmdList )
 	{
 		(void)cmdList;
+
+		static bool s_bLoggedImmediate = false;
+		if ( s_bLoggedImmediate == false )
+		{
+			SW_LOG_WARNING( "[OpenGL] executeCommandList is a no-op — immediate-mode GL is used; deferred command lists are not submitted." );
+			s_bLoggedImmediate = true;
+		}
 	}
 
 	RHIPipelineStateHandle OpenGLRHIDevice::createPipelineState( const RHIPipelineStateDesc& desc )

@@ -5,7 +5,7 @@
 
 **Quick notes (also in ARCHITECTURE.md):**
 
-- Shipping (`SW_SHIPPING_BUILD=ON`) forces `SW_RHI_AS_MODULES=OFF` (DX linked into Core).
+- Shipping (`SW_SHIPPING_BUILD=ON`) forces `SW_RHI_AS_MODULES=OFF` (all RHI backends linked into Core).
 - clangd compile DB: `build/Ninja-Debug`.
 - Runtime binaries: `build/<preset>/Bin` (not a shared `build/Bin`).
 - Core Object bases (`GameObject` / `Component` / `SceneComponent`) are not `REFLECT`'d; game/test types use registrar + `ComponentFactoryRegistrar`. VK/GL stay Core-linked.

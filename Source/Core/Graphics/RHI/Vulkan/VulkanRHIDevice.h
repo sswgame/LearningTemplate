@@ -180,6 +180,17 @@ namespace sw
 		VkQueue			 getGraphicsQueue() const { return _graphicsQueue; }
 		VkRenderPass	 getRenderPass() const { return _renderPass; }
 
+		bool queryVulkanImGuiNative( RHIVulkanImGuiNative& out ) const override
+		{
+			out._instance		= _instance;
+			out._physicalDevice = _physicalDevice;
+			out._device			= _device;
+			out._graphicsQueue	= _graphicsQueue;
+			out._renderPass		= _renderPass;
+			out._queueFamily	= _graphicsQueueFamilyIndex;
+			return _device != nullptr;
+		}
+
 	private:
 		/**
 		 * @brief Vulkan validation layer 지원을 확인합니다

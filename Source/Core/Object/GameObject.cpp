@@ -6,8 +6,10 @@
 #include "GameObject.h"
 #include "GameObjectManager.h"
 #include "ComponentManager.h"
+#include "SceneComponent.h"
 #include "Core/Reflection/ReflectionCore.h"
 #include "Core/Game/Scene/SceneManager.h"
+#include "Core/Utility/Log/Logger.h"
 namespace sw
 {
 	namespace
@@ -187,6 +189,12 @@ namespace sw
 
 	bool GameObject::attachToParent( GameObject* parent )
 	{
+		if ( SceneComponent::isParallelTransformReadOnly() )
+		{
+			SW_LOG_ERROR( "[GameObject] attachToParent is not allowed during parallel transform read-only." );
+			return false;
+		}
+
 		if ( parent == nullptr || parent == this || parent == _parent )
 			return false;
 
@@ -210,6 +218,12 @@ namespace sw
 
 	void GameObject::detachFromParent()
 	{
+		if ( SceneComponent::isParallelTransformReadOnly() )
+		{
+			SW_LOG_ERROR( "[GameObject] detachFromParent is not allowed during parallel transform read-only." );
+			return;
+		}
+
 		if ( _parent == nullptr )
 			return;
 

@@ -50,6 +50,20 @@ namespace sw
 	};
 
 	/**
+	 * @struct RHIVulkanImGuiNative
+	 * @brief Vulkan ImGui init용 opaque 핸들 묶음 (Editor가 concrete VulkanRHIDevice에 의존하지 않도록)
+	 */
+	struct RHIVulkanImGuiNative
+	{
+		void*  _instance		= nullptr;
+		void*  _physicalDevice	= nullptr;
+		void*  _device			= nullptr;
+		void*  _graphicsQueue	= nullptr;
+		void*  _renderPass		= nullptr;
+		uint32 _queueFamily		= 0;
+	};
+
+	/**
 	 * @enum RHIFormat
 	 * @brief 텍스처 및 렌더 타깃, 픽셀 데이터 포맷
 	 */

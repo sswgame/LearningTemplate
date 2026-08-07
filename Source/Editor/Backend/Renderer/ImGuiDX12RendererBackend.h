@@ -27,6 +27,8 @@ namespace sw
 		void render( IRHIDevice* rhiDevice ) override;
 		/** @brief RHI 텍스처를 ImGui용 SRV로 등록합니다. */
 		void* registerTexture( RHITextureHandle texture ) override;
+		/** @brief 등록된 ImGui SRV 디스크립터를 풀에 반환합니다. */
+		void unregisterTexture( void* textureID ) override;
 
 #if defined( SW_PLATFORM_WINDOWS )
 		/** @brief SRV 힙에서 CPU/GPU 디스크립터를 할당합니다. */

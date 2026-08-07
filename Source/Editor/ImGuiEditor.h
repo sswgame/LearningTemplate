@@ -33,6 +33,8 @@ namespace sw
 		bool processEvent( const NativeWindowEvent& event ) override;
 		/** @brief 렌더러 백엔드에 텍스처를 등록합니다. */
 		void* registerTexture( RHITextureHandle texture ) override;
+		/** @brief 렌더러 백엔드에 등록된 텍스처를 해제합니다. */
+		void unregisterTexture( void* textureID ) override;
 
 	private:
 		/** @brief Console/GameView 등 기본 패널을 등록합니다. */

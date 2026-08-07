@@ -415,8 +415,10 @@ namespace sw
 		if ( FAILED( _device->CreateCommittedResource( &heapProps, D3D12_HEAP_FLAG_NONE, &resDesc, D3D12_RESOURCE_STATE_COMMON, nullptr, IID_PPV_ARGS( buffer.GetAddressOf() ) ) ) )
 			return 0;
 
+		const RHIBufferHandle handle = reinterpret_cast<RHIBufferHandle>( buffer.Get() );
+		_structuredBufferStates[handle] = D3D12_RESOURCE_STATE_COMMON;
 		_constantBuffers.push_back( buffer );
-		return reinterpret_cast<RHIBufferHandle>( buffer.Get() );
+		return handle;
 	}
 
 	void D3D12RHIDevice::updateStructuredBuffer( RHIBufferHandle buffer, const void* data, uint32 size )
@@ -465,34 +467,45 @@ namespace sw
 			return;
 		}
 
-		D3D12_RESOURCE_BARRIER toCopyDest{};
-		toCopyDest.Type						  = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-		toCopyDest.Transition.pResource		  = dest;
-		toCopyDest.Transition.StateBefore	  = D3D12_RESOURCE_STATE_COMMON;
-		toCopyDest.Transition.StateAfter	  = D3D12_RESOURCE_STATE_COPY_DEST;
-		toCopyDest.Transition.Subresource	  = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-		stagingList->ResourceBarrier( 1, &toCopyDest );
+		D3D12_RESOURCE_STATES stateBefore = D3D12_RESOURCE_STATE_COMMON;
+		const auto			  stateIt	  = _structuredBufferStates.find( buffer );
+		if ( stateIt != _structuredBufferStates.end() )
+			stateBefore = stateIt->second;
+
+		if ( stateBefore != D3D12_RESOURCE_STATE_COPY_DEST )
+		{
+			D3D12_RESOURCE_BARRIER toCopyDest{};
+			toCopyDest.Type					   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+			toCopyDest.Transition.pResource	   = dest;
+			toCopyDest.Transition.StateBefore  = stateBefore;
+			toCopyDest.Transition.StateAfter   = D3D12_RESOURCE_STATE_COPY_DEST;
+			toCopyDest.Transition.Subresource  = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+			stagingList->ResourceBarrier( 1, &toCopyDest );
+		}
 
 		stagingList->CopyBufferRegion( dest, 0, upload.Get(), 0, size );
 
 		D3D12_RESOURCE_BARRIER toUav{};
-		toUav.Type					   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-		toUav.Transition.pResource	   = dest;
-		toUav.Transition.StateBefore   = D3D12_RESOURCE_STATE_COPY_DEST;
-		toUav.Transition.StateAfter	   = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
-		toUav.Transition.Subresource   = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+		toUav.Type					 = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+		toUav.Transition.pResource	 = dest;
+		toUav.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
+		toUav.Transition.StateAfter	 = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+		toUav.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 		stagingList->ResourceBarrier( 1, &toUav );
 
 		stagingList->Close();
 		ID3D12CommandList* lists[] = { stagingList.Get() };
 		_commandQueue->ExecuteCommandLists( 1, lists );
 		waitForPreviousFrame();
+
+		_structuredBufferStates[buffer] = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
 	}
 
 	void D3D12RHIDevice::destroyBuffer( RHIBufferHandle buffer )
 	{
 		if ( buffer == 0 )
 			return;
+		_structuredBufferStates.erase( buffer );
 		auto*									  res = reinterpret_cast<ID3D12Resource*>( buffer );
 		Microsoft::WRL::ComPtr<ID3D12Resource> owned;
 		for ( auto it = _constantBuffers.begin(); it != _constantBuffers.end(); ++it )
@@ -1186,6 +1199,13 @@ namespace sw
 	void D3D12RHIDevice::executeCommandList( IRHICommandList* cmdList )
 	{
 		(void)cmdList;
+
+		static bool s_bLoggedImmediate = false;
+		if ( s_bLoggedImmediate == false )
+		{
+			SW_LOG_WARNING( "[D3D12] executeCommandList is a no-op — immediate-mode command list is used; deferred lists are not submitted." );
+			s_bLoggedImmediate = true;
+		}
 	}
 
 	RHIPipelineStateHandle D3D12RHIDevice::createPipelineState( const RHIPipelineStateDesc& desc )

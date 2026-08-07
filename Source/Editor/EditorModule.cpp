@@ -95,6 +95,14 @@ namespace
 			return nullptr;
 		return pEditor->registerTexture( static_cast<sw::RHITextureHandle>( texture ) );
 	}
+
+	void EditorAPI_UnregisterTexture( sw::EditorHandle editor, void* textureID )
+	{
+		auto* pEditor = static_cast<sw::IEditor*>( editor );
+		if ( pEditor == nullptr )
+			return;
+		pEditor->unregisterTexture( textureID );
+	}
 } // namespace
 
 extern "C"
@@ -104,15 +112,16 @@ extern "C"
 		if ( outApi == nullptr )
 			return false;
 
-		outApi->create			= &EditorAPI_Create;
-		outApi->destroy			= &EditorAPI_Destroy;
-		outApi->initialize		= &EditorAPI_Initialize;
-		outApi->shutdown		= &EditorAPI_Shutdown;
-		outApi->preRender		= &EditorAPI_PreRender;
-		outApi->render			= &EditorAPI_Render;
-		outApi->postPresent		= &EditorAPI_PostPresent;
-		outApi->processEvent	= &EditorAPI_ProcessEvent;
-		outApi->registerTexture = &EditorAPI_RegisterTexture;
+		outApi->create			  = &EditorAPI_Create;
+		outApi->destroy			  = &EditorAPI_Destroy;
+		outApi->initialize		  = &EditorAPI_Initialize;
+		outApi->shutdown		  = &EditorAPI_Shutdown;
+		outApi->preRender		  = &EditorAPI_PreRender;
+		outApi->render			  = &EditorAPI_Render;
+		outApi->postPresent		  = &EditorAPI_PostPresent;
+		outApi->processEvent	  = &EditorAPI_ProcessEvent;
+		outApi->registerTexture	  = &EditorAPI_RegisterTexture;
+		outApi->unregisterTexture = &EditorAPI_UnregisterTexture;
 		return true;
 	}
 }

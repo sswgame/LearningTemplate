@@ -37,5 +37,7 @@ namespace sw
 		virtual bool processEvent( const NativeWindowEvent& event ) = 0;
 		/** @brief RHI 텍스처를 ImGui 텍스처 ID로 등록합니다. */
 		virtual void* registerTexture( RHITextureHandle texture ) = 0;
+		/** @brief 등록된 ImGui 텍스처 ID를 해제합니다. */
+		virtual void unregisterTexture( void* textureID ) = 0;
 	};
 } // namespace sw

@@ -29,6 +29,8 @@ namespace sw
 
 		/** @brief RHI 텍스처를 ImGui 텍스처 ID로 등록하고 핸들을 반환합니다. */
 		virtual void* registerTexture( RHITextureHandle texture ) = 0;
+		/** @brief registerTexture로 발급한 ImGui 텍스처 ID를 해제합니다. */
+		virtual void unregisterTexture( void* textureID ) = 0;
 
 		/** @brief 지정 RHI 백엔드에 맞는 렌더러 구현을 생성합니다. */
 		static std::unique_ptr<IImGuiRendererBackend> createRendererBackend( RHIBackend backend );

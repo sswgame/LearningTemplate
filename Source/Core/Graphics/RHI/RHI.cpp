@@ -22,6 +22,7 @@ namespace sw
 		, _bOffscreenRT{ 0 }
 		, _bImGuiHooks{ 0 }
 		, _bEditorSupported{ 0 }
+		, _bComputeRootConstants{ 0 }
 		, _reserved{ 0 }
 	{
 	}

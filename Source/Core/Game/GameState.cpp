@@ -141,7 +141,7 @@ namespace sw
 					SW_LOG_WARNING( "[GameState] Failed to restore '%#' from play snapshot.", snap.name.c_str() );
 			}
 
-			// Second pass: cross-GO SceneComponent parents need all GOs rebuilt first.
+			// Second pass: cross-GO SceneComponent parents + GameObject ParentGO need all GOs rebuilt first.
 			for ( const ObjectSnapshot& snap : s_playSnapshots )
 			{
 				GameObject* obj = objects->findGameObjectByName( hashed_string( snap.name.c_str() ) );

@@ -131,7 +131,7 @@ namespace sw
 				ImGui::PushID( static_cast<int>( comp->getComponentId() ) );
 				const char* name = comp->getComponentName().empty() == false ? comp->getComponentName().c_str() : "Component";
 				if ( ImGui::Selectable( name ) )
-					editor::selectedComponentId() = comp->getComponentId();
+					editor::selectComponent( obj, comp );
 				ImGui::PopID();
 			}
 		}
@@ -151,11 +151,12 @@ namespace sw
 			{
 				ImGui::TextDisabled( "Selected component no longer exists." );
 				editor::selectedComponentId() = 0;
+				editor::selectedComponentKey().clear();
 			}
 			else
 			{
 				if ( ImGui::Button( "Back to GameObject" ) )
-					editor::selectedComponentId() = 0;
+					editor::selectGameObject( obj );
 				drawComponentSection( selected );
 			}
 		}
@@ -173,6 +174,18 @@ namespace sw
 		bool bActive = obj->isActive();
 		if ( ImGui::Checkbox( "Active", &bActive ) )
 			obj->setActive( bActive );
+
+		if ( GameObject* parent = obj->getParent() )
+		{
+			ImGui::Text( "Parent: %s", parent->getName().c_str() );
+			ImGui::SameLine();
+			if ( ImGui::SmallButton( "Unparent" ) )
+				obj->detachFromParent();
+		}
+		else
+		{
+			ImGui::TextDisabled( "Parent: (root)" );
+		}
 	}
 
 	void InspectorPanel::drawComponentSection( Component* comp )
@@ -240,7 +253,10 @@ namespace sw
 
 		if ( prop._bIsContainer )
 		{
-			ImGui::TextDisabled( "%s (container)", label );
+			size_t size = 0;
+			if ( prop._containerWrapper != nullptr )
+				size = prop._containerWrapper->getSize( prop.getValuePtr<void>( instance ) );
+			ImGui::TextDisabled( "%s (container, size=%zu) — edit skipped", label, size );
 			return;
 		}
 
@@ -341,9 +357,15 @@ namespace sw
 		bool isSupportedMethodArgType( const std::string& typeName )
 		{
 			return typeName == "int32" || typeName == "int" || typeName == "sw::int32" ||
+				   typeName == "int64" || typeName == "int64_t" || typeName == "long long" || typeName == "sw::int64" ||
 				   typeName == "float32" || typeName == "float" || typeName == "sw::float32" ||
 				   typeName == "bool" ||
 				   typeName == "std::string" || typeName == "string";
+		}
+
+		bool isInt64MethodArgType( const std::string& typeName )
+		{
+			return typeName == "int64" || typeName == "int64_t" || typeName == "long long" || typeName == "sw::int64";
 		}
 
 		bool formatTaskValue( const TaskValue& value, char* outBuf, size_t outSize )
@@ -366,6 +388,11 @@ namespace sw
 			if ( const int* p = value.getPtr<int>() )
 			{
 				std::snprintf( outBuf, outSize, "%d", *p );
+				return true;
+			}
+			if ( const int64* p = value.getPtr<int64>() )
+			{
+				std::snprintf( outBuf, outSize, "%lld", static_cast<long long>( *p ) );
 				return true;
 			}
 			if ( const float32* p = value.getPtr<float32>() )
@@ -429,7 +456,7 @@ namespace sw
 				char			   label[64];
 				std::snprintf( label, sizeof( label ), "arg%u (%s)", i, p.c_str() );
 
-				if ( p == "int32" || p == "int" || p == "sw::int32" )
+				if ( p == "int32" || p == "int" || p == "sw::int32" || isInt64MethodArgType( p ) )
 					ImGui::InputInt( label, &_argInt[i] );
 				else if ( p == "float32" || p == "float" || p == "sw::float32" )
 					ImGui::DragFloat( label, &_argFloat[i], 0.1f );
@@ -460,7 +487,9 @@ namespace sw
 				{
 					const std::string& p = method._paramTypeNames[i];
 					if ( p == "int32" || p == "int" || p == "sw::int32" )
-						args.add( _argInt[i] );
+						args.add( int32{ _argInt[i] } );
+					else if ( isInt64MethodArgType( p ) )
+						args.add( int64{ _argInt[i] } );
 					else if ( p == "float32" || p == "float" || p == "sw::float32" )
 						args.add( _argFloat[i] );
 					else if ( p == "bool" )

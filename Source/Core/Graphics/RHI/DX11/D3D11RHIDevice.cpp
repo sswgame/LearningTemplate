@@ -694,11 +694,17 @@ namespace sw
 
 	void D3D11RHIDevice::setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* data, uint32 destOffsetIn32BitValues )
 	{
-
 		(void)rootParameterIndex;
 		(void)num32BitValues;
 		(void)data;
 		(void)destOffsetIn32BitValues;
+
+		static bool s_bLoggedUnsupported = false;
+		if ( s_bLoggedUnsupported == false )
+		{
+			SW_LOG_WARNING( "[D3D11] setComputeRootConstants is unsupported (no native compute root constants). Check supportsComputeRootConstants()." );
+			s_bLoggedUnsupported = true;
+		}
 	}
 
 	void D3D11RHIDevice::drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset )
@@ -736,6 +742,13 @@ namespace sw
 	void D3D11RHIDevice::executeCommandList( IRHICommandList* cmdList )
 	{
 		(void)cmdList;
+
+		static bool s_bLoggedImmediate = false;
+		if ( s_bLoggedImmediate == false )
+		{
+			SW_LOG_WARNING( "[D3D11] executeCommandList is a no-op — immediate-mode context is used; deferred command lists are not submitted." );
+			s_bLoggedImmediate = true;
+		}
 	}
 
 	RHIPipelineStateHandle D3D11RHIDevice::createPipelineState( const RHIPipelineStateDesc& desc )

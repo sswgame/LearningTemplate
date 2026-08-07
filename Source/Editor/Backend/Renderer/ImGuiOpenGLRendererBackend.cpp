@@ -7,7 +7,7 @@
 #include <imgui_impl_opengl3.h>
 
 #include "Core/Graphics/RHI/IRHIDevice.h"
-#include "Core/Graphics/RHI/GL/OpenGLRHIDevice.h"
+#include "Core/Graphics/RHI/IRHIDevice.h"
 #include "Core/Utility/Log/Logger.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
@@ -84,9 +84,7 @@ namespace sw
 {
 	bool ImGuiOpenGLRendererBackend::initialize( class IRHIDevice* rhiDevice )
 	{
-		_glDevice = ( rhiDevice != nullptr && rhiDevice->getBackendType() == RHIBackend::OpenGL )
-						? static_cast<OpenGLRHIDevice*>( rhiDevice )
-						: nullptr;
+		_rhiDevice = ( rhiDevice != nullptr && rhiDevice->getBackendType() == RHIBackend::OpenGL ) ? rhiDevice : nullptr;
 
 		bool bResult = ImGui_ImplOpenGL3_Init( "#version 460" );
 
@@ -109,15 +107,15 @@ namespace sw
 	{
 		if ( ImGui::GetIO().BackendRendererUserData != nullptr )
 			ImGui_ImplOpenGL3_Shutdown();
-		_glDevice = nullptr;
+		_rhiDevice = nullptr;
 	}
 
 	void* ImGuiOpenGLRendererBackend::registerTexture( RHITextureHandle texture )
 	{
-		if ( texture == 0 || _glDevice == nullptr )
+		if ( texture == 0 || _rhiDevice == nullptr )
 			return nullptr;
 
-		const uint32 glName = _glDevice->getGLTextureName( texture );
+		const uint32 glName = _rhiDevice->getNativeTextureName( texture );
 		if ( glName == 0 )
 		{
 			SW_LOG_ERROR( "[ImGuiOpenGL] Failed to resolve GL texture for RHI handle %#", texture );
@@ -126,6 +124,12 @@ namespace sw
 
 		// imgui_impl_opengl3 treats ImTextureID as GLuint.
 		return reinterpret_cast<void*>( static_cast<uintptr_t>( glName ) );
+	}
+
+	void ImGuiOpenGLRendererBackend::unregisterTexture( void* textureID )
+	{
+		// GL texture name is owned by RHI; ImGui only stores the id.
+		(void)textureID;
 	}
 
 	void ImGuiOpenGLRendererBackend::newFrame()

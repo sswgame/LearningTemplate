@@ -29,6 +29,7 @@ namespace sw
 		void ( *postPresent )( EditorHandle editor, RHIDeviceHandle rhiDevice )						= nullptr; ///< Present 이후(멀티 뷰포트)
 		bool ( *processEvent )( EditorHandle editor, const NativeWindowEvent* event )				= nullptr; ///< 네이티브 이벤트 전달
 		void* ( *registerTexture )( EditorHandle editor, TextureHandle texture )					= nullptr; ///< ImGui 텍스처 등록
+		void ( *unregisterTexture )( EditorHandle editor, void* textureID )						= nullptr; ///< ImGui 텍스처 해제
 	};
 
 	/** @brief EditorModule이 export하는 API 테이블 채우기 심볼 이름: fillEditorAPI */
