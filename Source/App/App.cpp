@@ -37,8 +37,7 @@ SW_GLOBAL_VARIABLE_INT( g_MaxFPS, 60, "Maximum Framerate Limit" );
 SW_GLOBAL_VARIABLE_FLOAT( g_CameraFOV, 90.0f, "Main Camera Field of View in Degrees" );
 SW_GLOBAL_VARIABLE_STRING( g_PlayerName, "Player1", "Active Player Name" );
 
-// EditorUIContext에 넘기는 에디터 데모 상태 (App 멤버 대신 GVM)
-SW_GLOBAL_VARIABLE_BOOL( g_ShowEditorDemo, true, "Show ImGui Demo Window" );
+// EditorUIContext에 넘기는 에디터 상태 (App 멤버 대신 GVM)
 SW_GLOBAL_VARIABLE_FLOAT( g_EditorPlayerSpeed, 5.0f, "Editor inspector player speed slider" );
 
 namespace sw
@@ -382,12 +381,11 @@ namespace sw
 	{
 		SW_LOG_INFO( "Entering App Main Loop..." );
 
-		_editorCtx.bShowDemoWindow = &g_ShowEditorDemo;
-		_editorCtx.playerSpeed	   = &g_EditorPlayerSpeed;
-		_editorCtx.clearColor	   = _clearColor;
-		_editorCtx.reflectionData  = &_reflectionData;
-		_editorCtx.rhiDevice	   = &_rhi->getDevice();
-		_editorCtx.gameTextureID   = _gameTextureID;
+		_editorCtx.playerSpeed	  = &g_EditorPlayerSpeed;
+		_editorCtx.clearColor	  = _clearColor;
+		_editorCtx.reflectionData = &_reflectionData;
+		_editorCtx.rhiDevice	  = &_rhi->getDevice();
+		_editorCtx.gameTextureID  = _gameTextureID;
 
 		CpuTimer frameTimer;
 		frameTimer.resetTimer();
@@ -443,6 +441,9 @@ namespace sw
 			}
 
 			device.endFrame( true );
+
+			if ( _editor && _editorApi.postPresent )
+				_editorApi.postPresent( _editor, &_rhi->getDevice() );
 
 			if ( _bPendingBackendChange )
 			{

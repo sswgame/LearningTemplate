@@ -32,9 +32,9 @@ namespace sw
 	 */
 	namespace path
 	{
-		inline static constexpr const utf8* kShaderFolder  = "Shader";  /**< 셰이더 소스 폴더명 */
+		inline static constexpr const utf8* kShaderFolder  = "Shader";	/**< 셰이더 소스 폴더명 */
 		inline static constexpr const utf8* kTextureFolder = "Texture"; /**< 텍스처 폴더명 */
-		inline static constexpr const utf8* kEditorFolder  = "Editor";  /**< 에디터 전용 리소스 폴더명 */
+		inline static constexpr const utf8* kEditorFolder  = "Editor";	/**< 에디터 전용 리소스 폴더명 */
 	}
 
 	/**

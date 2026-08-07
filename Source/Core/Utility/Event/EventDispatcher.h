@@ -160,7 +160,7 @@ namespace sw
 			}
 		};
 
-		SW_DECLARE_DELEGATE( void, ChannelEventCallback, const IEvent& )
+		SW_DECLARE_DELEGATE( void, ChannelEventCallback, const IEvent& );
 
 		mutable std::mutex																		 _busMutex;
 		std::unordered_map<std::pair<hashed_string, EventType>, std::shared_ptr<void>, HashPair> _channelDelegates;

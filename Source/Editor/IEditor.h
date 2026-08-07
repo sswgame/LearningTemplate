@@ -25,6 +25,8 @@ namespace sw
 		virtual void  shutdown()										  = 0;
 		virtual void  preRender( IRHIDevice* rhiDevice )				  = 0;
 		virtual void  render( const EditorUIContext& context )			  = 0;
+		/** @brief 메인 스왑체인 Present 이후 호출 (멀티 뷰포트 보조 윈도우 렌더) */
+		virtual void  postPresent( IRHIDevice* rhiDevice )				  = 0;
 		virtual bool  processEvent( const NativeWindowEvent& event )	  = 0;
 		virtual void* registerTexture( RHITextureHandle texture )		  = 0;
 	};

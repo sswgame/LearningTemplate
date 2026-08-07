@@ -24,6 +24,7 @@ namespace sw
 		void ( *shutdown )( EditorHandle editor )													= nullptr;
 		void ( *preRender )( EditorHandle editor, RHIDeviceHandle rhiDevice )						= nullptr;
 		void ( *render )( EditorHandle editor, const EditorUIContext* context )						= nullptr;
+		void ( *postPresent )( EditorHandle editor, RHIDeviceHandle rhiDevice )						= nullptr;
 		bool ( *processEvent )( EditorHandle editor, const NativeWindowEvent* event )				= nullptr;
 		void* ( *registerTexture )( EditorHandle editor, TextureHandle texture )					= nullptr;
 	};

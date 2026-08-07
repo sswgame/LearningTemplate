@@ -61,6 +61,13 @@ namespace
 			pEditor->render( *context );
 	}
 
+	void EditorAPI_PostPresent( sw::EditorHandle editor, sw::RHIDeviceHandle rhiDevice )
+	{
+		auto* pEditor = static_cast<sw::IEditor*>( editor );
+		if ( pEditor != nullptr )
+			pEditor->postPresent( static_cast<sw::IRHIDevice*>( rhiDevice ) );
+	}
+
 	bool EditorAPI_ProcessEvent( sw::EditorHandle editor, const sw::NativeWindowEvent* event )
 	{
 		auto* pEditor = static_cast<sw::IEditor*>( editor );
@@ -91,6 +98,7 @@ extern "C"
 		outApi->shutdown		= &EditorAPI_Shutdown;
 		outApi->preRender		= &EditorAPI_PreRender;
 		outApi->render			= &EditorAPI_Render;
+		outApi->postPresent		= &EditorAPI_PostPresent;
 		outApi->processEvent	= &EditorAPI_ProcessEvent;
 		outApi->registerTexture = &EditorAPI_RegisterTexture;
 		return true;

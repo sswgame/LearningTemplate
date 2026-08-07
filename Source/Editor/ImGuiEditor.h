@@ -22,14 +22,17 @@ namespace sw
 		void  shutdown() override;
 		void  preRender( IRHIDevice* rhiDevice ) override;
 		void  render( const EditorUIContext& context ) override;
+		void  postPresent( IRHIDevice* rhiDevice ) override;
 		bool  processEvent( const NativeWindowEvent& event ) override;
 		void* registerTexture( RHITextureHandle texture ) override;
 
 	private:
 		void registerDefaultPanels();
+		void setupFonts();
 		void beginFrame();
 		void endFrame();
 		void renderBackend( IRHIDevice* rhiDevice );
+		void renderPlatformWindows( IRHIDevice* rhiDevice );
 		void beginDockspace();
 		void applyDefaultDockLayout( uint32 dockspaceId );
 

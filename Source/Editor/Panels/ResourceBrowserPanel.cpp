@@ -164,6 +164,7 @@ namespace sw
 				return lower == ".hlsl" || lower == ".glsl";
 			case AssetTypeFilter::Other:
 				return lower != ".material" && lower != ".hlsl" && lower != ".glsl";
+			case AssetTypeFilter::Count:
 			default:
 				return true;
 		}

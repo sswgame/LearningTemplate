@@ -4,7 +4,8 @@
  * @brief Auto-generated documentation header
  */
 
-#include "Core/Utility/Log/Logger.h"
+#include "Core/Common/CommonHeaders.h"
+#include "Core/Common/CommonMacros.h"
 
 namespace sw
 {
@@ -51,7 +52,7 @@ namespace sw
 		template <typename... UArgs, typename = std::enable_if_t<std::is_invocable_v<R( Args... ), UArgs...>>>
 		R operator()( UArgs&&... args ) const
 		{
-			SW_LOG_ASSERT( isBound(), "FUNCTION NOT BOUND" );
+			SW_ASSERT( isBound() );
 			return std::invoke( _stubFunc, _pInstance, std::forward<UArgs>( args )... );
 		}
 
@@ -234,9 +235,9 @@ namespace sw
 }
 
 /** @brief SW_DECLARE_DELEGATE 매크로 정의입니다. */
-#define SW_DECLARE_DELEGATE( ReturnType, DelegateName, ... )			using DelegateName = sw::Delegate<ReturnType( __VA_ARGS__ )>;
+#define SW_DECLARE_DELEGATE( ReturnType, DelegateName, ... )			using DelegateName = sw::Delegate<ReturnType( __VA_ARGS__ )>
 /** @brief SW_DECLARE_MULTI_CAST_DELEGATE 매크로 정의입니다. */
-#define SW_DECLARE_MULTI_CAST_DELEGATE( ReturnType, DelegateName, ... ) using DelegateName = sw::MulticastDelegate<ReturnType( __VA_ARGS__ )>;
+#define SW_DECLARE_MULTI_CAST_DELEGATE( ReturnType, DelegateName, ... ) using DelegateName = sw::MulticastDelegate<ReturnType( __VA_ARGS__ )>
 /** @brief SW_DELEGATE_FUNCTION 매크로 정의입니다. */
 #define SW_DELEGATE_FUNCTION( DelegateName, Func )						DelegateName::create<Func>()
 /** @brief SW_DELEGATE_METHOD 매크로 정의입니다. */

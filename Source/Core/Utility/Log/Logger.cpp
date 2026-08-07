@@ -48,6 +48,24 @@ namespace sw
 			s_loggerInstance->writeLogInternal( level, tag, pMessage, file, line );
 	}
 
+	DelegateHandle Logger::addLogWrittenListener( const LogWrittenDelegate& listener )
+	{
+		if ( s_loggerInstance == nullptr )
+			return {};
+
+		std::lock_guard<std::mutex> lock( s_loggerInstance->_mutex );
+		return s_loggerInstance->_onLogWritten.add( listener );
+	}
+
+	void Logger::removeLogWrittenListener( const DelegateHandle& handle )
+	{
+		if ( s_loggerInstance == nullptr )
+			return;
+
+		std::lock_guard<std::mutex> lock( s_loggerInstance->_mutex );
+		s_loggerInstance->_onLogWritten.remove( handle );
+	}
+
 	void Logger::initializeInternal()
 	{
 		if ( _bInitialized )
@@ -74,10 +92,10 @@ namespace sw
 	void Logger::writeLogInternal( LogLevel level, const utf8* tag, const utf8* pMessage, const utf8* file, int32 line )
 	{
 		SW_ASSERT( _bInitialized );
-		std::lock_guard<std::mutex> lock{ _mutex };
-		const auto&					now	 = std::chrono::system_clock::now();
-		const std::time_t			time = std::chrono::system_clock::to_time_t( now );
-		std::tm*					pLocalTime{};
+
+		const auto&		  now  = std::chrono::system_clock::now();
+		const std::time_t time = std::chrono::system_clock::to_time_t( now );
+		std::tm*		  pLocalTime{};
 #if defined( SW_PLATFORM_WINDOWS )
 		std::tm localTime{};
 		localtime_s( &localTime, &time );
@@ -103,17 +121,34 @@ namespace sw
 		if ( levelIndex >= static_cast<uint8>( LogLevel::Count ) )
 			return;
 
-		const utf8* effectiveTag = ( tag != nullptr && tag[0] != '\0' ) ? tag : "Engine";
+		const utf8* effectiveTag  = ( tag != nullptr && tag[0] != '\0' ) ? tag : "Engine";
 		const utf8* effectiveFile = ( file != nullptr && file[0] != '\0' ) ? file : "unknown";
+		const utf8* effectiveMsg  = ( pMessage != nullptr ) ? pMessage : "";
 
-		// VS Code / Cursor 터미널 링크: path(line): 형식 (MSVC 스타일)
+		LogEntry entry;
+		entry.level		= level;
+		entry.tag		= effectiveTag;
+		entry.message	= effectiveMsg;
+		entry.file		= effectiveFile;
+		entry.line		= line;
+		entry.timeStamp = date.c_str();
+
 		fixed_string<constant::kMaxBuffer8192> formattedBuffer{};
+		// 경로:줄 은 메시지 뒤에 둔다. 선행 file(line): 은 IDE problem matcher가 빌드 경고로 오인한다.
 		formatstring( formattedBuffer.data(), formattedBuffer.capacity(),
-					  "%#(%#): [%#] [%#] [%#] - %#\n",
-					  effectiveFile, line, date.data(), effectiveTag, kArrHeader[levelIndex], pMessage );
+					  "[%#] [%#] [%#] - %#  %#:%#\n",
+					  date.data(), effectiveTag, kArrHeader[levelIndex], effectiveMsg, effectiveFile, line );
 
-		writeLogConsole( level, formattedBuffer.c_str() );
-		writeLogFile( level, year, month, day, hour, formattedBuffer.c_str() );
+		LogWrittenMulticast listeners;
+		{
+			std::lock_guard<std::mutex> lock{ _mutex };
+			writeLogConsole( level, formattedBuffer.c_str() );
+			writeLogFile( level, year, month, day, hour, formattedBuffer.c_str() );
+			listeners = _onLogWritten;
+		}
+
+		if ( listeners.isBound() )
+			listeners.broadcast( entry );
 	}
 
 	void Logger::writeLogConsole( LogLevel level, const utf8* pMessage )

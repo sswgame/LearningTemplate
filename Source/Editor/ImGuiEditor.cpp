@@ -3,11 +3,12 @@
  * @brief ImGui 에디터 셸 구현
  */
 #include "ImGuiEditor.h"
+#include "EditorDefines.h"
+#include "EditorUtil.h"
 #include "Backend/IImGuiPlatformBackend.h"
 #include "Backend/IImGuiRendererBackend.h"
 #include "Panels/ComputeTestPanel.h"
 #include "Panels/ConsolePanel.h"
-#include "Panels/DemoPanel.h"
 #include "Panels/EngineStatusPanel.h"
 #include "Panels/GameToolbarPanel.h"
 #include "Panels/GameViewPanel.h"
@@ -19,10 +20,7 @@
 
 #include <imgui.h>
 #include <imgui_internal.h>
-
-#if defined( SW_PLATFORM_WINDOWS )
-	#include "Core/Common/PlatformHeaders.h"
-#endif
+#include <filesystem>
 
 namespace sw
 {
@@ -44,7 +42,51 @@ namespace sw
 		_panels.push_back( std::make_unique<ComputeTestPanel>() );
 		_panels.push_back( std::make_unique<EngineStatusPanel>() );
 		_panels.push_back( std::make_unique<ResourceBrowserPanel>() );
-		_panels.push_back( std::make_unique<DemoPanel>() );
+	}
+
+	void ImGuiEditor::setupFonts()
+	{
+		ImGuiIO& io = ImGui::GetIO();
+		io.Fonts->Clear();
+
+		const std::filesystem::path consolasPath = EditorUtil::resolveFontFile( editor::path::kConsolasFontFile );
+		const std::filesystem::path koreanPath	 = EditorUtil::resolveFontFile( editor::path::kKoreanUiFontFile );
+
+		ImFontConfig baseConfig{};
+		baseConfig.OversampleH = 2;
+		baseConfig.OversampleV = 1;
+
+		ImFont* baseFont = nullptr;
+		if ( consolasPath.empty() == false )
+		{
+			baseFont = io.Fonts->AddFontFromFileTTF( consolasPath.string().c_str(), editor::constant::kFontSize, &baseConfig,
+													 io.Fonts->GetGlyphRangesDefault() );
+			SW_LOG_INFO( "[ImGuiEditor] Loaded Consolas: %#", consolasPath.string().c_str() );
+		}
+
+		if ( baseFont == nullptr )
+		{
+			baseFont = io.Fonts->AddFontDefault( &baseConfig );
+			SW_LOG_WARNING( "[ImGuiEditor] Consolas not found — using ImGui default font." );
+		}
+
+		if ( koreanPath.empty() == false )
+		{
+			ImFontConfig mergeConfig{};
+			mergeConfig.MergeMode	= true;
+			mergeConfig.OversampleH = 2;
+			mergeConfig.OversampleV = 1;
+			mergeConfig.PixelSnapH	= true;
+			io.Fonts->AddFontFromFileTTF( koreanPath.string().c_str(), editor::constant::kFontSize, &mergeConfig,
+										  io.Fonts->GetGlyphRangesKorean() );
+			SW_LOG_INFO( "[ImGuiEditor] Merged Korean glyphs from: %#", koreanPath.string().c_str() );
+		}
+		else
+		{
+			SW_LOG_WARNING( "[ImGuiEditor] Korean font (%#) not found — Hangul may not render.", editor::path::kKoreanUiFontFile );
+		}
+
+		io.FontDefault = baseFont;
 	}
 
 	bool ImGuiEditor::initialize( IWindow* window, IRHIDevice* rhiDevice )
@@ -61,12 +103,16 @@ namespace sw
 		ImGuiIO& io = ImGui::GetIO();
 		io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-		io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+		// Vulkan 멀티 뷰포트 백엔드는 아직 미연동. DX12는 Present 이후 postPresent + 0-size 가드로 지원.
+		if ( rhiDevice->getBackendType() != RHIBackend::Vulkan )
+			io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 
 		ImGui::StyleColorsDark();
 		ImGuiStyle& style = ImGui::GetStyle();
 		style.WindowRounding			   = 0.0f;
 		style.Colors[ImGuiCol_WindowBg].w = 1.0f;
+
+		setupFonts();
 
 		SW_LOG_INFO( "Creating Platform Backend" );
 		_platformBackend = IImGuiPlatformBackend::createPlatformBackend();
@@ -160,23 +206,37 @@ namespace sw
 
 		if ( _rendererBackend )
 			_rendererBackend->render( rhiDevice );
+	}
+
+	void ImGuiEditor::renderPlatformWindows( IRHIDevice* rhiDevice )
+	{
+		if ( _bInitialized == false || rhiDevice == nullptr )
+			return;
 
 		ImGuiIO& io = ImGui::GetIO();
-		if ( io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable )
-		{
-			ImGui::UpdatePlatformWindows();
-			ImGui::RenderPlatformWindowsDefault();
+		if ( ( io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable ) == 0 )
+			return;
+
+		// 공식 예제와 같이 메인 Present 이후에 보조 뷰포트를 제출한다.
+		ImGui::UpdatePlatformWindows();
+		ImGui::RenderPlatformWindowsDefault();
 
 #if defined( SW_PLATFORM_WINDOWS )
-			if ( rhiDevice->getBackendType() == sw::RHIBackend::OpenGL )
-			{
-				void* hDC = rhiDevice->getNativeDevice();
-				void* hRC = rhiDevice->getNativeContext();
-				if ( hDC && hRC )
-					wglMakeCurrent( static_cast<HDC>( hDC ), static_cast<HGLRC>( hRC ) );
-			}
-#endif
+		if ( rhiDevice->getBackendType() == RHIBackend::OpenGL )
+		{
+			void* hDC = rhiDevice->getNativeDevice();
+			void* hRC = rhiDevice->getNativeContext();
+			if ( hDC && hRC )
+				wglMakeCurrent( static_cast<HDC>( hDC ), static_cast<HGLRC>( hRC ) );
 		}
+#else
+		(void)rhiDevice;
+#endif
+	}
+
+	void ImGuiEditor::postPresent( IRHIDevice* rhiDevice )
+	{
+		renderPlatformWindows( rhiDevice );
 	}
 
 	bool ImGuiEditor::processEvent( const NativeWindowEvent& event )
@@ -216,11 +276,10 @@ namespace sw
 		ImGui::DockBuilderDockWindow( "Global Variables Control", dockLeft );
 		ImGui::DockBuilderDockWindow( "Game Toolbar", dockTop );
 		ImGui::DockBuilderDockWindow( "Game View", dockMain );
-		ImGui::DockBuilderDockWindow( "Live Coding & Console Log", dockRight );
+		ImGui::DockBuilderDockWindow( "Output Log", dockRight );
 		ImGui::DockBuilderDockWindow( "Compute Test", dockRight );
 		ImGui::DockBuilderDockWindow( "Engine RHI Status & Command Line", dockRightBot );
 		ImGui::DockBuilderDockWindow( "Content Browser", dockBottom );
-		ImGui::DockBuilderDockWindow( "Dear ImGui Demo", dockBottom );
 
 		ImGui::DockBuilderFinish( id );
 	}
@@ -236,7 +295,7 @@ namespace sw
 
 		const ImGuiViewport* viewport	 = ImGui::GetMainViewport();
 		const ImGuiID		 dockspaceId = ImGui::DockSpaceOverViewport(
-			ImGui::GetID( "EditorMainDockSpace_v2" ), viewport, ImGuiDockNodeFlags_PassthruCentralNode );
+			ImGui::GetID( "EditorMainDockSpace_v4" ), viewport, ImGuiDockNodeFlags_PassthruCentralNode );
 
 		if ( _bDockLayoutApplied == false )
 		{
