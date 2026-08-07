@@ -23,7 +23,7 @@
         }
     },
     "clangd.arguments": [
-        "--compile-commands-dir=${workspaceFolder}/build/Ninja-Debug"
+        "--compile-commands-dir=${workspaceFolder}/build"
     ],
     "lldb.launch.expressions": "native",
     "lldb.launch.terminal": "integrated",

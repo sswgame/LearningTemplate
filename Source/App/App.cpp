@@ -30,13 +30,7 @@
 	#include "Runtime/GameAPI.h"
 #endif
 
-// GVM / 커맨드라인 샘플 (엔진 코어가 직접 소비하지 않음 — GlobalVariables 윈도우용)
-SW_GLOBAL_VARIABLE_BOOL( gv_EnableVSync, true, "Enable Vertical Synchronization (VSync)" );
-SW_GLOBAL_VARIABLE_INT( gv_MaxFPS, 60, "Maximum Framerate Limit" );
-SW_GLOBAL_VARIABLE_FLOAT( gv_CameraFOV, 90.0f, "Main Camera Field of View in Degrees" );
-SW_GLOBAL_VARIABLE_STRING( gv_PlayerName, "Player1", "Active Player Name" );
-
-// EditorUIContext에 넘기는 에디터 상태 (App 멤버 대신 GVM)
+// EditorUIContext에 넘기는 에디터 상태 (App 멤버 대신 GVM으로 등록 → Global Variables 패널/CLI에서 편집)
 SW_GLOBAL_VARIABLE_FLOAT( gv_EditorPlayerSpeed, 5.0f, "Editor inspector player speed slider" );
 
 namespace sw
