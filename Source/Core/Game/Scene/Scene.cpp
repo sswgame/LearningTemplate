@@ -8,11 +8,9 @@ namespace sw
 {
 	Scene::Scene( const std::string& name )
 		: _name{ name }
-	// GameObjectManager의 생성자를 public으로 변경해야 합니다.
-	// 임시로 기본 생성자를 호출합니다. (수정 필요)
 	{
-		// TODO: _objectManager = std::make_unique<GameObjectManager>();
-		_material = std::make_unique<Material>();
+		_objectManager = std::make_unique<GameObjectManager>();
+		_material	   = std::make_unique<Material>();
 	}
 
 	Scene::~Scene()

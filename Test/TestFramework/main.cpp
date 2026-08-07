@@ -35,7 +35,29 @@ int main( int argc, char* argv[] )
 	globalVarManager->initialize();
 	globalVarManager->registerPendingVariables( "TestFramework", sw::GlobalVariableRegistrar::getHead() );
 	globalVarManager->registerToCommandLine( commandLineManager.get() );
-	commandLineManager->parse( argc, argv );
+
+	// Consume framework-only flags first so CommandLineManager does not warn on unknowns.
+	test::TestRegistry::getInstance().configureFromArgs( argc, argv );
+
+	std::vector<char*> coreArgs;
+	coreArgs.reserve( static_cast<size_t>( argc ) );
+	coreArgs.push_back( argv[0] );
+	for ( int i = 1; i < argc; ++i )
+	{
+		const std::string_view arg = argv[i] != nullptr ? argv[i] : "";
+		if ( arg == "--test_list" || arg == "--gtest_list_tests" )
+			continue;
+		if ( arg == "--test_filter" || arg == "--gtest_filter" )
+		{
+			if ( i + 1 < argc )
+				++i;
+			continue;
+		}
+		if ( arg.rfind( "--test_filter=", 0 ) == 0 || arg.rfind( "--gtest_filter=", 0 ) == 0 )
+			continue;
+		coreArgs.push_back( argv[i] );
+	}
+	commandLineManager->parse( static_cast<int32>( coreArgs.size() ), coreArgs.data() );
 	globalVarManager->updateFromCommandLine( commandLineManager.get() );
 
 	sw::CoreServices services{};
@@ -59,6 +81,7 @@ int main( int argc, char* argv[] )
 	typeRegistry->registerPendingTypes( "TestFramework", sw::TypeRegistrar::getHead(), sw::EnumRegistrar::getHead() );
 
 	SW_LOG_INFO( "Core services initialized. Running tests..." );
+	SW_LOG_INFO( " Tip: --test_filter=Suite.*  --test_filter=-RHITest.*  --test_list" );
 	int result = test::TestRegistry::getInstance().runAllTests();
 
 	sceneManager->shutdown();

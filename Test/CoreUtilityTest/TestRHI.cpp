@@ -169,7 +169,7 @@ SW_TEST_CASE( RHITest, ComputeShaderDispatchAndIndirectCommands )
 
 #include "Graphics/RHI/RHIReleaseQueue.h"
 
-SW_TEST_CASE( RHITest, DeferredReleaseQueue )
+SW_TEST_CASE( RHIReleaseQueueTest, LatencyRelease )
 {
 	sw::RHIReleaseQueue queue( 3 );
 	SW_EXPECT_EQUAL( 0u, queue.getPendingReleaseCount() );
@@ -196,9 +196,28 @@ SW_TEST_CASE( RHITest, DeferredReleaseQueue )
 	SW_EXPECT_EQUAL( 0u, queue.getPendingReleaseCount() );
 }
 
+SW_TEST_CASE( RHIReleaseQueueTest, FlushAll )
+{
+	sw::RHIReleaseQueue queue( 5 );
+	int32				releaseCount = 0;
+	auto				cb			 = [&releaseCount]()
+	{
+		++releaseCount;
+	};
+	sw::RHIResourceReleaseDelegate releaseDel = SW_DELEGATE_LAMBDA( sw::RHIResourceReleaseDelegate, cb );
+
+	queue.enqueueRelease( releaseDel );
+	queue.enqueueRelease( releaseDel );
+	SW_EXPECT_EQUAL( 2u, queue.getPendingReleaseCount() );
+
+	queue.flushAll();
+	SW_EXPECT_EQUAL( 2, releaseCount );
+	SW_EXPECT_EQUAL( 0u, queue.getPendingReleaseCount() );
+}
+
 #include "Core/Graphics/RHI/RHITypes.h"
 
-SW_TEST_CASE( RHITest, VertexLayoutBuilderAutoOffset )
+SW_TEST_CASE( RHITypesTest, VertexLayoutBuilderAutoOffset )
 {
 	struct CustomVertex
 	{

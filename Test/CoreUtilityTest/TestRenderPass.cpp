@@ -37,10 +37,60 @@ SW_TEST_CASE( RenderPassTest, XmlSerializationRoundtrip )
 	std::filesystem::remove( testPath );
 }
 
-// SW_TEST_CASE( RenderPassTest, RenderPassManagerSubsystem )\n// Temporarily disabled due to timeout issue
-
 #include "Core/Graphics/RenderPass/RenderGraph.h"
 
-// SW_TEST_CASE( RenderPassTest, RenderGraphDAGExecution )\n// Temporarily disabled due to timeout issue
+SW_TEST_CASE( RenderPassTest, RenderGraphCompileOrder )
+{
+	sw::RenderGraph graph;
+	SW_EXPECT_FALSE( graph.compile() );
 
-// SW_TEST_CASE( RenderPassTest, RenderGraphMermaidExport )\n// Temporarily disabled due to timeout issue
+	graph.addPass( sw::hashed_string( "Depth" ), {}, { sw::hashed_string( "DepthBuffer" ) } );
+	graph.addPass( sw::hashed_string( "Shading" ), { sw::hashed_string( "DepthBuffer" ) }, { sw::hashed_string( "Color" ) } );
+
+	SW_ASSERT_TRUE( graph.compile() );
+	SW_EXPECT_EQUAL( 2u, graph.getNodeCount() );
+	SW_ASSERT_EQUAL( size_t( 2 ), graph.getExecutionOrder().size() );
+	SW_EXPECT_TRUE( graph.getExecutionOrder()[0] == sw::hashed_string( "Depth" ) );
+	SW_EXPECT_TRUE( graph.getExecutionOrder()[1] == sw::hashed_string( "Shading" ) );
+}
+
+SW_TEST_CASE( RenderPassTest, RenderGraphCullUnusedPasses )
+{
+	sw::RenderGraph graph;
+	graph.addPass( sw::hashed_string( "Depth" ), {}, { sw::hashed_string( "DepthBuffer" ) } );
+	graph.addPass( sw::hashed_string( "DebugOverlay" ), {}, { sw::hashed_string( "DebugRT" ) } );
+	graph.addPass( sw::hashed_string( "Present" ), { sw::hashed_string( "DepthBuffer" ) }, { sw::hashed_string( "Swapchain" ) } );
+
+	graph.cullUnusedPasses( sw::hashed_string( "Swapchain" ) );
+
+	SW_EXPECT_FALSE( graph.isPassCulled( sw::hashed_string( "Depth" ) ) );
+	SW_EXPECT_TRUE( graph.isPassCulled( sw::hashed_string( "DebugOverlay" ) ) );
+	SW_EXPECT_FALSE( graph.isPassCulled( sw::hashed_string( "Present" ) ) );
+
+	const std::vector<sw::hashed_string>& order = graph.getExecutionOrder();
+	SW_EXPECT_EQUAL( size_t( 2 ), order.size() );
+	for ( const sw::hashed_string& pass : order )
+	{
+		SW_EXPECT_TRUE( pass != sw::hashed_string( "DebugOverlay" ) );
+	}
+}
+
+SW_TEST_CASE( RenderPassTest, RenderGraphMermaidAndDotExport )
+{
+	sw::RenderGraph graph;
+	graph.addPass( sw::hashed_string( "PassA" ), {}, { sw::hashed_string( "RT0" ) } );
+	graph.addPass( sw::hashed_string( "PassB" ), { sw::hashed_string( "RT0" ) }, { sw::hashed_string( "RT1" ) } );
+	SW_ASSERT_TRUE( graph.compile() );
+
+	const std::string mermaid = graph.exportToMermaid();
+	SW_EXPECT_TRUE_MSG( mermaid.find( "graph TD" ) != std::string::npos, "Mermaid export should start with graph TD" );
+	SW_EXPECT_TRUE( mermaid.find( "PassA" ) != std::string::npos );
+	SW_EXPECT_TRUE( mermaid.find( "RT0" ) != std::string::npos );
+
+	const std::string dot = graph.exportToDot();
+	SW_EXPECT_TRUE_MSG( dot.find( "digraph" ) != std::string::npos, "DOT export should declare a digraph" );
+	SW_EXPECT_TRUE( dot.find( "PassB" ) != std::string::npos );
+
+	graph.clear();
+	SW_EXPECT_EQUAL( 0u, graph.getNodeCount() );
+}

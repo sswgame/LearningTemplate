@@ -253,7 +253,72 @@ public:
 	}
 };
 
-// SW_TEST_CASE( GameObjectManagerTest, CreationSearchAndDeferredDestruction )\n// Temporarily disabled due to timeout issue
+SW_TEST_CASE( GameObjectManagerTest, CreationSearchAndDeferredDestruction )
+{
+	GameObjectManager manager;
+
+	GameObject* hero  = manager.createGameObject( hashed_string( "Hero" ) );
+	GameObject* enemy = manager.createGameObject( hashed_string( "Enemy" ) );
+	SW_ASSERT_NOT_NULL( hero );
+	SW_ASSERT_NOT_NULL( enemy );
+
+	SW_EXPECT_EQUAL( size_t( 2 ), manager.getAllGameObjects().size() );
+	SW_EXPECT_EQUAL( hero, manager.findGameObjectByName( hashed_string( "Hero" ) ) );
+	SW_EXPECT_EQUAL( enemy, manager.findGameObjectById( enemy->getObjectId() ) );
+	SW_EXPECT_NULL( manager.findGameObjectByName( hashed_string( "Missing" ) ) );
+
+	manager.destroyObjectDeferred( enemy );
+	SW_EXPECT_EQUAL( size_t( 2 ), manager.getAllGameObjects().size() );
+	manager.processDeferredDestruction();
+
+	SW_EXPECT_EQUAL( size_t( 1 ), manager.getAllGameObjects().size() );
+	SW_EXPECT_NULL( manager.findGameObjectByName( hashed_string( "Enemy" ) ) );
+	SW_EXPECT_NOT_NULL( manager.findGameObjectByName( hashed_string( "Hero" ) ) );
+
+	manager.clear();
+	SW_EXPECT_EQUAL( size_t( 0 ), manager.getAllGameObjects().size() );
+}
+
+SW_TEST_CASE( GameObjectManagerTest, SequentialAndParallelTick )
+{
+	GameObjectManager manager;
+
+	GameObject*		   a	= manager.createGameObject( hashed_string( "A" ) );
+	GameObject*		   b	= manager.createGameObject( hashed_string( "B" ) );
+	MockMeshComponent* aMesh = a->addComponent<MockMeshComponent>();
+	MockMeshComponent* bMesh = b->addComponent<MockMeshComponent>();
+
+	manager.tick( 0.016f );
+	SW_EXPECT_EQUAL( 1, aMesh->_tickCount );
+	SW_EXPECT_EQUAL( 1, bMesh->_tickCount );
+
+	manager.tickParallel( 0.016f );
+	SW_EXPECT_EQUAL( 2, aMesh->_tickCount );
+	SW_EXPECT_EQUAL( 2, bMesh->_tickCount );
+
+	manager.clear();
+}
+
+SW_TEST_CASE( ObjectStateXmlSerializerTest, SaveAndLoadXmlString )
+{
+	GameObject source( hashed_string( "SerializedHero" ) );
+	source.setActive( false );
+
+	const std::string xml = ObjectStateSerializer::saveToXmlString( &source );
+	SW_ASSERT_TRUE( xml.empty() == false );
+	SW_EXPECT_TRUE( xml.find( "GameObjectState" ) != std::string::npos );
+	SW_EXPECT_TRUE( xml.find( "SerializedHero" ) != std::string::npos );
+
+	GameObject target( hashed_string( "Temp" ) );
+	target.setActive( true );
+	SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXmlString( &target, xml ) );
+	SW_EXPECT_STREQ( "SerializedHero", target.getName().c_str() );
+	SW_EXPECT_FALSE( target.isActive() );
+
+	SW_EXPECT_FALSE( ObjectStateSerializer::loadFromXmlString( nullptr, xml ) );
+	SW_EXPECT_FALSE( ObjectStateSerializer::loadFromXmlString( &target, "" ) );
+	SW_EXPECT_EMPTY( ObjectStateSerializer::saveToXmlString( nullptr ) );
+}
 
 SW_TEST_CASE( ComponentTickGroupTest, TickOrderPrePhysicsToPostUpdate )
 {
@@ -292,7 +357,3 @@ SW_TEST_CASE( PostEditChangePropertyTest, CallbackOnPropertyChanged )
 	// The property change notification should work, but the exact property name may vary based on reflection system
 	SW_EXPECT_TRUE( comp->_lastChangedProperty.getHash() != 0 );
 }
-
-// SW_TEST_CASE( ObjectStateXmlSerializerTest, SaveAndLoadXml )\n// Temporarily disabled due to timeout issue
-
-// SW_TEST_CASE( GameObjectManagerTest, ParallelObjectTicking )\n// Temporarily disabled due to timeout issue

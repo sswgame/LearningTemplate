@@ -137,4 +137,32 @@ SW_TEST_CASE( Utility_String, FormatStringUtility )
 
 #include "Core/Utility/String/StringBuilder.h"
 
-// SW_TEST_CASE( Utility_String, StringBuilderZeroAllocation )\n// Temporarily disabled due to format issue
+SW_TEST_CASE( Utility_String, StringBuilderAppendAndFormat )
+{
+	sw::StringBuilder<64> sb;
+	sb.append( "Hello" );
+	sb.append( ' ' );
+	sb.append( 42 );
+	SW_EXPECT_STREQ( "Hello 42", sb.c_str() );
+	SW_EXPECT_EQUAL( 8u, sb.size() );
+
+	sb.appendFormat( " x=%#", 7 );
+	SW_EXPECT_STREQ( "Hello 42 x=7", sb.c_str() );
+
+	sb.clear();
+	SW_EXPECT_EQUAL( 0u, sb.size() );
+	SW_EXPECT_STREQ( "", sb.c_str() );
+	SW_EXPECT_EMPTY( sb.view() );
+}
+
+SW_TEST_CASE( Utility_String, StringBuilderGrowsBeyondStaticCapacity )
+{
+	sw::StringBuilder<8> sb;
+	const uint32		 initialCapacity = sb.capacity();
+	SW_EXPECT_EQUAL( 8u, initialCapacity );
+
+	sb.append( "0123456789ABCDEF" );
+	SW_EXPECT_TRUE_MSG( sb.capacity() > initialCapacity, "StringBuilder should grow when content exceeds static capacity" );
+	SW_EXPECT_STREQ( "0123456789ABCDEF", sb.c_str() );
+	SW_EXPECT_EQUAL( 16u, sb.size() );
+}
