@@ -6,7 +6,6 @@
 #include "Core/Utility/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Utility/String/StringUtil.h"
 #include <imgui.h>
-#include <unordered_set>
 
 namespace sw
 {

@@ -4,7 +4,6 @@
  */
 #include "IImGuiPlatformBackend.h"
 #include "Core/Window/IWindow.h"
-#include "Core/Common/PlatformHeaders.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
 	#include <imgui.h>

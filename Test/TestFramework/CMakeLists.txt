@@ -9,3 +9,4 @@ sw_add_library(TestFramework STATIC)
 # 엔진 메인 모듈인 Core에 대한 퍼블릭 종속성 부여
 target_link_libraries(TestFramework PUBLIC Core)
 sw_set_log_tag(TestFramework Test)
+sw_configure_pch(TestFramework)

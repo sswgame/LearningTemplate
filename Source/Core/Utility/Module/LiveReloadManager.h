@@ -5,9 +5,6 @@
  */
 #include "Core/Common/Common.h"
 #include "Core/Utility/File/FileUtil.h"
-#include <memory>
-#include <string>
-#include <unordered_map>
 
 namespace sw
 {

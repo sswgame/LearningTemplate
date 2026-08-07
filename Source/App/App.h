@@ -13,8 +13,6 @@
 #include "Runtime/EditorUIContext.h"
 #include "Runtime/GameAPI.h"
 
-#include <memory>
-
 namespace sw
 {
 	class IWindow;

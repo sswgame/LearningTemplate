@@ -10,6 +10,8 @@
 // [C 표준 라이브러리]
 // ============================================================================
 #include <cassert>
+#include <cstdint>
+#include <cstdio>
 #include <cstdlib>
 #include <cstdarg>
 #include <cstring>
@@ -17,6 +19,7 @@
 #include <cwctype>
 #include <climits>
 #include <cmath>
+#include <limits>
 
 // ============================================================================
 // [C++ STL 컨테이너 및 문자열]

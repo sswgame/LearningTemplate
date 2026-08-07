@@ -6,12 +6,6 @@
 
 #include "Editor/Backend/IImGuiRendererBackend.h"
 
-#if defined( SW_PLATFORM_WINDOWS )
-	#include <wrl/client.h>
-	#include <d3d11.h>
-	#include <vector>
-#endif
-
 namespace sw
 {
 	class IRHIDevice;

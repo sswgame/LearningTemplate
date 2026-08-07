@@ -6,8 +6,6 @@
 #include <imgui.h>
 
 #if defined( SW_PLATFORM_WINDOWS )
-	#include "Core/Common/PlatformHeaders.h"
-	#include <dxgi1_4.h>
 	#include <imgui_impl_dx12.h>
 #endif
 

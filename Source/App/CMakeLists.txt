@@ -15,6 +15,7 @@ sw_add_executable(App
 )
 
 sw_set_log_tag(App Engine)
+sw_configure_pch(App)
 
 # SWGame 링크/의존은 루트 CMakeLists에서 Tools 이후 연결
 if(NOT SW_SHIPPING_BUILD AND TARGET EditorModule)

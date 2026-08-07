@@ -5,6 +5,7 @@
 
 sw_add_executable(CoreSmokeTest LINK_LIBRARIES Core TestFramework)
 sw_set_log_tag(CoreSmokeTest Test)
+sw_configure_pch(CoreSmokeTest)
 
 if(BUILD_TESTING)
     add_test(NAME CoreSmokeTest COMMAND CoreSmokeTest)

@@ -5,19 +5,8 @@
 #include "EditorUtil.h"
 #include "EditorDefines.h"
 #include "Core/Common/CommonDefines.h"
+#include "Core/Common/PlatformHeaders.h"
 #include "Core/Utility/Resource/ResourceUtil.h"
-
-#include <filesystem>
-
-#if defined( SW_PLATFORM_WINDOWS )
-	#include "Core/Common/PlatformHeaders.h"
-#elif defined( SW_PLATFORM_LINUX )
-	#include <cstdlib>
-#elif defined( SW_PLATFORM_MACOS )
-	#include <cstdlib>
-	#include <pwd.h>
-	#include <unistd.h>
-#endif
 
 namespace sw
 {

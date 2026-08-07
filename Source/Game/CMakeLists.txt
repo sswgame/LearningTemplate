@@ -18,6 +18,7 @@ sw_add_library(SWGame ${SWGAME_LIB_TYPE}
 
 sw_configure_module_dll_exports(SWGame ${SWGAME_LIB_TYPE})
 sw_set_log_tag(SWGame Game)
+sw_configure_pch(SWGame)
 
 if(NOT SW_SHIPPING_BUILD)
     sw_set_module_bin_output(SWGame)

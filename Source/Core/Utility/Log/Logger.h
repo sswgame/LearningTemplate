@@ -13,7 +13,6 @@
 #include "Core/Common/CommonMacros.h"
 #include "Core/Utility/Delegate/Delegate.h"
 #include "Core/Utility/String/formatString.h"
-#include <cstdio>
 
 #if !defined( SW_LOG_TAG )
 	#define SW_LOG_TAG "Engine"

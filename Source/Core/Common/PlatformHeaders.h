@@ -46,6 +46,7 @@
 		#include <sys/eventfd.h>
 	#elif defined( SW_PLATFORM_MACOS )
 		#include <mach-o/dyld.h>
+		#include <pwd.h>
 	#endif
 #else
 	#error "NOT SUPPORTED PLATFORM"

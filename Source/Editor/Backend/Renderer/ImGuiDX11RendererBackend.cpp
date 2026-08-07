@@ -6,7 +6,6 @@
 #include <imgui.h>
 
 #if defined( SW_PLATFORM_WINDOWS )
-	#include <d3d11.h>
 	#include <imgui_impl_dx11.h>
 #endif
 

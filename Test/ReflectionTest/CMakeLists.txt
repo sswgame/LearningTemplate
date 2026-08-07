@@ -6,6 +6,7 @@
 # ReflectionTest 실행 파일 타겟 생성
 sw_add_executable(ReflectionTest LINK_LIBRARIES Core TestFramework)
 sw_set_log_tag(ReflectionTest Test)
+sw_configure_pch(ReflectionTest)
 
 # [Reflection] 타겟을 위해 ReflectionParser 구동 커스텀 스텝 등록
 # 매크로를 통해 `TestSampleActor.h`를 파싱하고 .gen.cpp 코드를 생성하여 타겟에 자동 병합

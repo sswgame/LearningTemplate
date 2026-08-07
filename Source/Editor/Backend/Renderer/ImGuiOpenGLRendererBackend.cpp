@@ -8,10 +8,7 @@
 
 #include "Core/Graphics/RHI/IRHIDevice.h"
 
-#include "Core/Common/CommonMacros.h"
-
 #if defined( SW_PLATFORM_WINDOWS )
-	#include "Core/Common/PlatformHeaders.h"
 
 struct WGL_WindowData
 {

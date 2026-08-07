@@ -4,7 +4,6 @@
  */
 #include "Panels/ConsolePanel.h"
 #include "Core/Common/CommonDefines.h"
-#include <algorithm>
 #include <imgui.h>
 
 namespace sw

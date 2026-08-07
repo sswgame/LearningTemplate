@@ -6,7 +6,6 @@
 #include "Core/Utility/File/FileUtil.h"
 #include "Core/Utility/Log/Logger.h"
 #include "Core/Utility/Resource/ResourceUtil.h"
-#include <algorithm>
 #include <imgui.h>
 
 namespace sw

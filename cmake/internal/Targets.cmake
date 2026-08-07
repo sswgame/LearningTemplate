@@ -88,6 +88,18 @@ function(sw_add_executable TARGET_NAME)
     sw_setup_target_properties(${TARGET_NAME} ARG_INCLUDE_DIRECTORIES ARG_LINK_LIBRARIES)
 endfunction()
 
+# 타겟별 compile definition(SW_EXPORTS/SW_IMPORTS 등)이 다르므로 REUSE_FROM 대신
+# 동일 pch.h를 타겟마다 따로 컴파일한다.
+function(sw_configure_pch TARGET_NAME)
+    if(NOT sw_enable_pch)
+        return()
+    endif()
+    set(_sw_pch "${CMAKE_SOURCE_DIR}/Source/Core/pch.h")
+    if(EXISTS "${_sw_pch}")
+        target_precompile_headers(${TARGET_NAME} PRIVATE "${_sw_pch}")
+    endif()
+endfunction()
+
 # LiveReload: MODULE DLL을 App.exe와 같은 Bin에 배치 (멀티컨픽 하위폴더 무시)
 function(sw_set_module_bin_output TARGET_NAME)
     set_target_properties(${TARGET_NAME} PROPERTIES

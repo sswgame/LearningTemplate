@@ -24,7 +24,6 @@
 #include "Core/Graphics/Material/Material.h"
 #include "Core/Game/GameState.h"
 #include "Core/Utility/Time/EngineTimer.h"
-#include "Core/Common/PlatformHeaders.h"
 #include "Core/Window/NativeWindowEvent.h"
 
 #if defined( SW_SHIPPING )

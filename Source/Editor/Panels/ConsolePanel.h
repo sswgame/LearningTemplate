@@ -2,9 +2,6 @@
 #include "Panels/IEditorPanel.h"
 #include "Core/Utility/Delegate/Delegate.h"
 #include "Core/Utility/Log/Logger.h"
-#include <deque>
-#include <mutex>
-#include <vector>
 
 namespace sw
 {

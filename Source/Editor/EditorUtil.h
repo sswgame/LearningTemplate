@@ -4,8 +4,7 @@
  * @brief EditorModule 유틸 (폰트 경로 등 플랫폼 의존 처리)
  */
 #include "Core/Common/Types.h"
-#include <filesystem>
-#include <vector>
+#include "Core/Common/CommonHeaders.h"
 
 namespace sw
 {

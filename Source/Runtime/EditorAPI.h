@@ -6,15 +6,15 @@
  */
 
 #include "Core/Common/CommonMacros.h"
+#include "Core/Common/Types.h"
 #include "Core/Window/NativeWindowEvent.h"
 #include "Runtime/EditorUIContext.h"
 #include "Runtime/RuntimeHandles.h"
-#include <cstdint>
 
 namespace sw
 {
 	using EditorHandle	= void*;
-	using TextureHandle = uint64_t;
+	using TextureHandle = uint64;
 
 	struct EditorAPI
 	{

@@ -42,9 +42,7 @@ if(SW_RHI_AS_MODULES)
     message(STATUS "[Core] SW_RHI_AS_MODULES=ON — DX11/DX12 device sources excluded; loading RHI_*.dll")
 endif()
 
-if(sw_enable_pch AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/pch.h")
-    target_precompile_headers(Core PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/pch.h")
-endif()
+sw_configure_pch(Core)
 
 # Optional RHI backend MODULE DLLs (Windows DX11/DX12 first)
 if(SW_RHI_AS_MODULES)

@@ -1,8 +1,5 @@
 #pragma once
 #include "Panels/IEditorPanel.h"
-#include <filesystem>
-#include <string>
-#include <vector>
 
 namespace sw
 {
