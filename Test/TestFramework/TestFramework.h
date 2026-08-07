@@ -106,7 +106,7 @@ namespace test
 	do                                                                                       \
 	{                                                                                        \
 		test::TestRegistry::getInstance().skipCurrentTest( ( reason ), __FILE__, __LINE__ ); \
-		throw test::TestSkipException( ( reason ) );                                         \
+		return;                                                                              \
 	} while ( 0 )
 
 /** @brief Soft expectation — records failure and continues. */
