@@ -44,6 +44,40 @@ namespace sw
 				return "vs_6_0";
 			}
 		}
+
+#if defined( SW_HAS_DXC_API )
+	#if defined( SW_PLATFORM_WINDOWS )
+		template <typename T>
+		using DxcComPtr = Microsoft::WRL::ComPtr<T>;
+
+		template <typename T>
+		T** dxcAddressOf( DxcComPtr<T>& ptr )
+		{
+			return ptr.GetAddressOf();
+		}
+
+		template <typename T>
+		T* dxcGet( const DxcComPtr<T>& ptr )
+		{
+			return ptr.Get();
+		}
+	#else
+		template <typename T>
+		using DxcComPtr = CComPtr<T>;
+
+		template <typename T>
+		T** dxcAddressOf( DxcComPtr<T>& ptr )
+		{
+			return &ptr;
+		}
+
+		template <typename T>
+		T* dxcGet( const DxcComPtr<T>& ptr )
+		{
+			return ptr;
+		}
+	#endif
+#endif
 	} // namespace
 
 	ShaderCompileResult ShaderCompiler::compileHLSL( const ShaderCompileDesc& desc )
@@ -120,10 +154,11 @@ namespace sw
 				return result;
 			}
 		}
+#endif // SW_PLATFORM_WINDOWS
 
+#if defined( SW_HAS_DXC_API )
 		BLOCK( "DXC Compiler (DXIL / SPIR-V) Path" )
 		{
-			typedef HRESULT( WINAPI * PFN_DxcCreateInstance )( REFCLSID rclsid, REFIID riid, LPVOID * ppv );
 			static auto s_getDxCompilerHandle = []() -> void*
 			{
 				std::string				 libName	= FileUtil::formatSharedLibraryName( "dxcompiler" );
@@ -137,44 +172,53 @@ namespace sw
 						void* h = FileUtil::loadDynamicLibrary( cand );
 						if ( h != nullptr )
 							return h;
+						SW_LOG_ERROR( "[ShaderCompiler] Failed to load %#", cand.c_str() );
 					}
 				}
 				return FileUtil::loadDynamicLibrary( libName );
 			};
-			static void*				 s_hDxCompiler		   = s_getDxCompilerHandle();
-			static PFN_DxcCreateInstance s_fnDxcCreateInstance = ( s_hDxCompiler != nullptr )
-																   ? reinterpret_cast<PFN_DxcCreateInstance>( FileUtil::getDynamicSymbol( s_hDxCompiler, "DxcCreateInstance" ) )
-																   : nullptr;
+			static void*				  s_hDxCompiler		   = s_getDxCompilerHandle();
+			static DxcCreateInstanceProc s_fnDxcCreateInstance = ( s_hDxCompiler != nullptr )
+																	 ? reinterpret_cast<DxcCreateInstanceProc>( FileUtil::getDynamicSymbol( s_hDxCompiler, "DxcCreateInstance" ) )
+																	 : nullptr;
 
-			PFN_DxcCreateInstance fnDxcCreateInstance = s_fnDxcCreateInstance;
+			DxcCreateInstanceProc fnDxcCreateInstance = s_fnDxcCreateInstance;
+			if ( fnDxcCreateInstance == nullptr )
+			{
+				SW_LOG_ERROR( "[ShaderCompiler] DxcCreateInstance unavailable (libdxcompiler not loaded)" );
+			}
 
-			Microsoft::WRL::ComPtr<IDxcUtils>	  utils;
-			Microsoft::WRL::ComPtr<IDxcCompiler3> compiler;
+			DxcComPtr<IDxcUtils>	 utils;
+			DxcComPtr<IDxcCompiler3> compiler;
 
 			if ( fnDxcCreateInstance != nullptr )
 			{
-				HRESULT hrInit = fnDxcCreateInstance( CLSID_DxcUtils, IID_PPV_ARGS( utils.GetAddressOf() ) );
+				HRESULT hrInit = fnDxcCreateInstance( CLSID_DxcUtils, IID_PPV_ARGS( dxcAddressOf( utils ) ) );
 				if ( SUCCEEDED( hrInit ) )
 				{
-					fnDxcCreateInstance( CLSID_DxcCompiler, IID_PPV_ARGS( compiler.GetAddressOf() ) );
+					fnDxcCreateInstance( CLSID_DxcCompiler, IID_PPV_ARGS( dxcAddressOf( compiler ) ) );
+				}
+				else
+				{
+					SW_LOG_ERROR( "[ShaderCompiler] DxcCreateInstance(CLSID_DxcUtils) failed: 0x%X", hrInit );
 				}
 			}
 
 			if ( utils != nullptr && compiler != nullptr )
 			{
-				Microsoft::WRL::ComPtr<IDxcIncludeHandler> includeHandler;
-				utils->CreateDefaultIncludeHandler( includeHandler.GetAddressOf() );
+				DxcComPtr<IDxcIncludeHandler> includeHandler;
+				utils->CreateDefaultIncludeHandler( dxcAddressOf( includeHandler ) );
 
-				std::wstring							 wPath = StringUtil::utf8ToUtf16( absPathStr );
-				Microsoft::WRL::ComPtr<IDxcBlobEncoding> sourceBlob;
-				HRESULT									 hrLoad = utils->LoadFile( wPath.c_str(), nullptr, sourceBlob.GetAddressOf() );
+				std::wstring			   wPath = StringUtil::utf8ToUtf16( absPathStr );
+				DxcComPtr<IDxcBlobEncoding> sourceBlob;
+				HRESULT					   hrLoad = utils->LoadFile( wPath.c_str(), nullptr, dxcAddressOf( sourceBlob ) );
 
 				if ( SUCCEEDED( hrLoad ) )
 				{
 					std::wstring wEntryPoint = StringUtil::utf8ToUtf16( desc._entryPoint );
 					std::wstring wProfile	 = StringUtil::utf8ToUtf16( profile );
 
-					std::vector<LPCWSTR>	 arguments;
+					std::vector<LPCWSTR>	  arguments;
 					std::vector<std::wstring> defineArgs;
 					defineArgs.reserve( desc._defines.size() );
 
@@ -240,13 +284,13 @@ namespace sw
 					sourceBuffer.Size	  = sourceBlob->GetBufferSize();
 					sourceBuffer.Encoding = DXC_CP_UTF8;
 
-					Microsoft::WRL::ComPtr<IDxcResult> compileResult;
-					HRESULT							   hrCompile = compiler->Compile(
-						   &sourceBuffer,
-						   arguments.data(),
-						   static_cast<uint32>( arguments.size() ),
-						   includeHandler.Get(),
-						   IID_PPV_ARGS( compileResult.GetAddressOf() ) );
+					DxcComPtr<IDxcResult> compileResult;
+					HRESULT				  hrCompile = compiler->Compile(
+						 &sourceBuffer,
+						 arguments.data(),
+						 static_cast<uint32>( arguments.size() ),
+						 dxcGet( includeHandler ),
+						 IID_PPV_ARGS( dxcAddressOf( compileResult ) ) );
 
 					if ( FAILED( hrCompile ) )
 					{
@@ -258,8 +302,8 @@ namespace sw
 						HRESULT status = S_OK;
 						compileResult->GetStatus( &status );
 
-						Microsoft::WRL::ComPtr<IDxcBlobUtf8> errors;
-						compileResult->GetOutput( DXC_OUT_ERRORS, IID_PPV_ARGS( errors.GetAddressOf() ), nullptr );
+						DxcComPtr<IDxcBlobUtf8> errors;
+						compileResult->GetOutput( DXC_OUT_ERRORS, IID_PPV_ARGS( dxcAddressOf( errors ) ), nullptr );
 
 						if ( errors != nullptr && errors->GetStringLength() > 0 )
 						{
@@ -272,8 +316,8 @@ namespace sw
 							return result;
 						}
 
-						Microsoft::WRL::ComPtr<IDxcBlob> shaderBlob;
-						compileResult->GetOutput( DXC_OUT_OBJECT, IID_PPV_ARGS( shaderBlob.GetAddressOf() ), nullptr );
+						DxcComPtr<IDxcBlob> shaderBlob;
+						compileResult->GetOutput( DXC_OUT_OBJECT, IID_PPV_ARGS( dxcAddressOf( shaderBlob ) ), nullptr );
 
 						if ( shaderBlob != nullptr && shaderBlob->GetBufferSize() > 0 )
 						{
@@ -289,8 +333,13 @@ namespace sw
 						}
 					}
 				}
+				else
+				{
+					SW_LOG_ERROR( "[ShaderCompiler] DXC LoadFile failed: 0x%X (%#)", hrLoad, absPathStr.c_str() );
+				}
 			}
 
+	#if defined( SW_PLATFORM_WINDOWS )
 			if ( desc._targetFormat != ShaderTargetFormat::SPIRV_Vulkan )
 			{
 				UINT							 compileFlags = D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_PACK_MATRIX_ROW_MAJOR;
@@ -329,10 +378,12 @@ namespace sw
 					return result;
 				}
 			}
+	#endif // SW_PLATFORM_WINDOWS
 		}
-#endif
+#endif // SW_HAS_DXC_API
 
-		result._errorMessage = "Failed to compile shader with DXC and D3DCompiler (hrCompile/hrLoad failed)";
+		if ( result._errorMessage.empty() )
+			result._errorMessage = "Failed to compile shader with DXC and D3DCompiler (hrCompile/hrLoad failed)";
 		SW_LOG_ERROR( "[ShaderCompiler Error] %# (Path: %#)", result._errorMessage.c_str(), desc._filePath.c_str() );
 		return result;
 	}

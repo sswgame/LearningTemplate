@@ -454,6 +454,16 @@ def SetupEnvironment() -> Dict[str, Any]:
 
     UpdateParserConfig(target_os, parser_config_file)
 
+    # Linux/WSL: apply home-dir developer fixes (debuginfod/GDB) so Remote and
+    # bare-metal Linux both get them on configure without manual shell steps.
+    if platform.system() == "Linux":
+        try:
+            from SetupLinuxDevEnvironment import SetupLinuxDevEnvironment
+
+            SetupLinuxDevEnvironment()
+        except Exception as exc:
+            print(f"[SetupEnvironment] SetupLinuxDevEnvironment skipped: {exc}")
+
     print(f"[SetupEnvironment] Resolved Config/engine_config.json for OS '{platform.system()}':")
     print(f"  - target_platform      : {engine_config_data['target_platform']}")
     print(f"  - target_arch          : {engine_config_data['target_arch']}")

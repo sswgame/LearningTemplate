@@ -32,6 +32,7 @@
 	#include <d3dcompiler.h>
 	#include <dxcapi.h>
 	#include <d3d11shader.h>
+	#define SW_HAS_DXC_API 1
 
 #elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
 	// POSIX 표준 시스템 헤더 모음
@@ -55,6 +56,12 @@
 		#include <pwd.h>
 		#include <objc/message.h>
 		#include <objc/runtime.h>
+	#endif
+
+	// DXC COM API (vcpkg directx-dxc). WinAdapter.h provides CComPtr / HRESULT on Unix.
+	#if __has_include(<dxcapi.h>)
+		#include <dxcapi.h>
+		#define SW_HAS_DXC_API 1
 	#endif
 #else
 	#error "NOT SUPPORTED PLATFORM"
