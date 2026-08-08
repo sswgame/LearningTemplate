@@ -8,7 +8,7 @@
             "-vulkan",
             "EnableEditor"
         ],
-        // debuginfod: system gdb + Scripts/SetupLinuxDevEnvironment.py
+        // debuginfod: system gdb + Scripts/setup/SetupLinuxDevEnvironment.py
         // (writes ~/.gdbinit / clears DEBUGINFOD_URLS on CMake configure).
         // Do not point miDebuggerPath at a project .sh — VS .vs copies often
         // lack +x → GDB exit 126 and no window.

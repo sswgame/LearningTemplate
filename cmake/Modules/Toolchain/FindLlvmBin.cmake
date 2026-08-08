@@ -36,29 +36,12 @@ if(NOT COMMAND sw_find_llvm_bin)
             endforeach()
         endif()
 
-        # 3) PATH 상의 clang-cl
+        # 3) PATH 상의 clang-cl (하드코딩 설치 경로는 Scripts/search_paths 담당)
         if(NOT _llvm_bin)
             find_program(_clang_cl_exe NAMES clang-cl clang-cl.exe)
             if(_clang_cl_exe)
                 get_filename_component(_llvm_bin "${_clang_cl_exe}" DIRECTORY)
             endif()
-        endif()
-
-        # 4) 일반 설치 경로
-        if(NOT _llvm_bin)
-            set(_default_roots
-                "C:/Program Files/LLVM"
-                "C:/Program Files (x86)/LLVM"
-            )
-            if(DEFINED ENV{ProgramFiles})
-                list(APPEND _default_roots "$ENV{ProgramFiles}/LLVM")
-            endif()
-            foreach(_root IN LISTS _default_roots)
-                if(EXISTS "${_root}/bin/clang-cl.exe")
-                    set(_llvm_bin "${_root}/bin")
-                    break()
-                endif()
-            endforeach()
         endif()
 
         set(${OUT_VAR} "${_llvm_bin}" PARENT_SCOPE)

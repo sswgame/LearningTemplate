@@ -4,7 +4,8 @@ if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 	return()
 endif()
 
-set(CMAKE_MSVC_PARALLEL_COMPILE ON PARENT_SCOPE)
+# File-scope include: plain set() (PARENT_SCOPE is a no-op outside a function).
+set(CMAKE_MSVC_PARALLEL_COMPILE ON)
 
 add_library(sw_compiler_msvc INTERFACE)
 

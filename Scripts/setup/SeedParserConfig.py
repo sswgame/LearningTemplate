@@ -1,20 +1,25 @@
 #!/usr/bin/env python3
 r"""
-Scripts/SeedParserConfig.py
+Scripts/setup/SeedParserConfig.py
 
-Config/parser_config.json 을 현재 OS용으로 생성합니다.
-실제 로직은 SetupEnvironment.UpdateParserConfig 에 위임합니다.
-
-  python3 Scripts/SeedParserConfig.py
+  python3 Scripts/setup/SeedParserConfig.py
 """
 
 from __future__ import annotations
 
 import platform
 import sys
+from pathlib import Path
 
-from ConfigHelper import GetProjectRoot
-from SetupEnvironment import UpdateParserConfig
+_SCRIPTS = Path(__file__).resolve().parents[1]
+if str(_SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(_SCRIPTS))
+
+from ConfigHelper import EnsureScriptsOnPath, GetProjectRoot
+
+EnsureScriptsOnPath()
+
+from setup.UpdateParserConfig import UpdateParserConfig
 
 
 def Main() -> int:

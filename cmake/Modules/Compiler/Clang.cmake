@@ -10,8 +10,9 @@ endif()
 find_program(SW_COMPILER_LAUNCHER NAMES sccache ccache HINTS "$ENV{PATH}")
 if(SW_COMPILER_LAUNCHER)
 	message(STATUS "[Clang.cmake] Compiler Cache launcher detected: ${SW_COMPILER_LAUNCHER}")
-	set(CMAKE_C_COMPILER_LAUNCHER "${SW_COMPILER_LAUNCHER}" PARENT_SCOPE)
-	set(CMAKE_CXX_COMPILER_LAUNCHER "${SW_COMPILER_LAUNCHER}" PARENT_SCOPE)
+	# File-scope include: plain set() (PARENT_SCOPE is a no-op outside a function).
+	set(CMAKE_C_COMPILER_LAUNCHER "${SW_COMPILER_LAUNCHER}")
+	set(CMAKE_CXX_COMPILER_LAUNCHER "${SW_COMPILER_LAUNCHER}")
 endif()
 
 add_library(sw_compiler_clang INTERFACE)

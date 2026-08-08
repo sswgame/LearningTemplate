@@ -1,10 +1,11 @@
 # ==============================================================================
 # @file cmake/LoadFlagModules.cmake
 # @brief 엔진 내부: Compiler/Platform/Architecture/BuildType/Options INTERFACE 모듈 로드
-# @note cmake/Modules/Toolchain 은 여기 포함하지 않음 (Toolchain.cmake가 담당)
+# @note cmake/Modules/Toolchain 은 여기 포함하지 않음 (VcpkgGate.cmake가 담당)
+# @note docs/changelog 커스텀 타겟은 internal/AuxTargets.cmake (플래그 GLOB 밖)
 # ==============================================================================
 
-# Do NOT reset sw_flag_libraries — Toolchain(vcpkg) may already have appended entries.
+# Do NOT reset sw_flag_libraries — VcpkgGate may already have appended entries.
 
 file(
     GLOB_RECURSE sw_flag_module_files

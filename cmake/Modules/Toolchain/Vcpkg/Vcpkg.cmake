@@ -1,24 +1,26 @@
-# vcpkg toolchain setup.
+# vcpkg toolchain setup (Scripts/vcpkg/FindVcpkg.py + manifest install gate).
+
+include("${CMAKE_CURRENT_LIST_DIR}/../../../internal/Python.cmake")
 
 # ##############################################################
-#
-# Python 스크립트(Scripts/FindVcpkg.py)를 실행하여 vcpkg 루트 경로를 동적으로 탐색합니다.
-#
+# vcpkg 루트 탐색 (Scripts)
 # ##############################################################
 
 if(NOT DEFINED sw_vcpkg_root OR sw_vcpkg_root STREQUAL "")
-    find_package(Python3 QUIET COMPONENTS Interpreter)
-    if(Python3_Interpreter_FOUND)
-        execute_process(
-            COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/Scripts/FindVcpkg.py"
-            OUTPUT_VARIABLE sw_detected_vcpkg_root
-            OUTPUT_STRIP_TRAILING_WHITESPACE
-            ERROR_QUIET
-            RESULT_VARIABLE sw_find_vcpkg_result
-        )
-        if(sw_find_vcpkg_result EQUAL 0 AND NOT "${sw_detected_vcpkg_root}" STREQUAL "")
-            set(sw_vcpkg_root "${sw_detected_vcpkg_root}" CACHE PATH "vcpkg root directory" FORCE)
-        endif()
+    set(_sw_find_vcpkg_args "")
+    if(SW_VCPKG_AUTO_BOOTSTRAP)
+        list(APPEND _sw_find_vcpkg_args "--install")
+    endif()
+
+    sw_execute_python_script(
+        "Scripts/vcpkg/FindVcpkg.py"
+        ARGS ${_sw_find_vcpkg_args}
+        OUTPUT_VARIABLE sw_detected_vcpkg_root
+        RESULT_VARIABLE sw_find_vcpkg_result
+        QUIET
+    )
+    if(sw_find_vcpkg_result EQUAL 0 AND NOT "${sw_detected_vcpkg_root}" STREQUAL "")
+        set(sw_vcpkg_root "${sw_detected_vcpkg_root}" CACHE PATH "vcpkg root directory" FORCE)
     endif()
 
     if(NOT DEFINED sw_vcpkg_root OR sw_vcpkg_root STREQUAL "")
@@ -63,17 +65,50 @@ if(EXISTS "${VCPKG_INSTALLED_DIR}")
 endif()
 
 # ##############################################################
-# [vcpkg 빌드 속도 최적화]
-# 이미 vcpkg 의존성 바이너리(build/vcpkg_installed/x64-windows)가 생성되어 있는 경우,
-# CMake 설정(Configure) 단계마다 vcpkg install 및 네트워크 도구 다운로드가 재실행되는
-# 빌드 지연 오버헤드를 완전 방지하기 위해 VCPKG_MANIFEST_MODE를 OFF로 조건부 설정합니다.
-# 만약 신규 의존성 패키지를 다시 다운로드/빌드하려면 build/vcpkg_installed 폴더를 삭제하면 됩니다.
+# Manifest install gate (project() 전 CACHE 설정 → toolchain이 존중)
+# installed 트리 + manifest 해시가 같으면 OFF (configure마다 install 방지)
 # ##############################################################
-# Standard vcpkg manifest mode enabled for automatic dependency management
+
+include("${CMAKE_CURRENT_LIST_DIR}/../../../internal/VcpkgManifestHash.cmake")
+sw_vcpkg_compute_manifest_hash(_sw_manifest_hash)
+
+set(_sw_vcpkg_tree "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}")
+set(_sw_stamp "${VCPKG_INSTALLED_DIR}/.sw_vcpkg_manifest_sha")
+set(_sw_tree_ready FALSE)
+if(EXISTS "${_sw_vcpkg_tree}")
+    set(_sw_tree_ready TRUE)
+endif()
+
+set(_sw_stamp_match FALSE)
+if(_sw_tree_ready AND EXISTS "${_sw_stamp}" AND NOT _sw_manifest_hash STREQUAL "")
+    file(READ "${_sw_stamp}" _sw_stamp_content)
+    string(STRIP "${_sw_stamp_content}" _sw_stamp_content)
+    if(_sw_stamp_content STREQUAL _sw_manifest_hash)
+        set(_sw_stamp_match TRUE)
+    endif()
+endif()
+
+if(SW_VCPKG_FORCE_INSTALL)
+    set(VCPKG_MANIFEST_MODE ON CACHE BOOL "vcpkg manifest install" FORCE)
+    message(STATUS "[vcpkg] SW_VCPKG_FORCE_INSTALL=ON — manifest install enabled")
+elseif(_sw_tree_ready AND _sw_stamp_match)
+    set(VCPKG_MANIFEST_MODE OFF CACHE BOOL "vcpkg manifest install" FORCE)
+    message(STATUS "[vcpkg] Installed tree matches manifest stamp — skipping install (VCPKG_MANIFEST_MODE=OFF)")
+elseif(_sw_tree_ready AND _sw_manifest_hash STREQUAL "")
+    # No manifest files — keep using installed tree without install churn
+    set(VCPKG_MANIFEST_MODE OFF CACHE BOOL "vcpkg manifest install" FORCE)
+    message(STATUS "[vcpkg] Installed tree present (no manifest hash) — VCPKG_MANIFEST_MODE=OFF")
+else()
+    set(VCPKG_MANIFEST_MODE ON CACHE BOOL "vcpkg manifest install" FORCE)
+    if(_sw_tree_ready)
+        message(STATUS "[vcpkg] Manifest changed or stamp missing — install enabled")
+    else()
+        message(STATUS "[vcpkg] Installed tree missing — install enabled")
+    endif()
+endif()
 
 if(DEFINED sw_vcpkg_root AND NOT sw_vcpkg_root STREQUAL "")
     set(VCPKG_ROOT "${sw_vcpkg_root}" CACHE PATH "vcpkg root directory" FORCE)
-
 endif()
 
 if(NOT TARGET sw_toolchain_vcpkg)
@@ -98,17 +133,11 @@ target_compile_definitions(
     INTERFACE
     SW_VCPKG
 )
-if(NOT sw_toolchain_vcpkg IN_LIST sw_module_libraries)
-    list(APPEND sw_module_libraries sw_toolchain_vcpkg)
+# Consumed by sw_add_* via sw_flag_libraries (same list as Compiler/Platform modules).
+if(NOT sw_toolchain_vcpkg IN_LIST sw_flag_libraries)
+    list(APPEND sw_flag_libraries sw_toolchain_vcpkg)
 endif()
 
-# ##############################################################
-#
-# Vcpkg 헬퍼 매크로 및 함수
-#
-# ##############################################################
-
-# Vcpkg가 사용하는 타겟 Triplet과 설치 경로를 계산하여 OUT_INC_DIRS와 OUT_BIN_DIRS 리스트에 반환합니다.
 macro(sw_get_vcpkg_paths OUT_INC_DIRS OUT_BIN_DIRS)
     set(_vcpkg_path "${sw_vcpkg_root}")
     if(NOT _vcpkg_path)
@@ -143,7 +172,6 @@ macro(sw_get_vcpkg_paths OUT_INC_DIRS OUT_BIN_DIRS)
     endif()
 endmacro()
 
-# 헤더 전용 라이브러리를 Vcpkg로부터 연결할 때 사용하는 헬퍼 함수
 function(sw_link_vcpkg_header_only_target TARGET_NAME)
     sw_get_vcpkg_paths(_inc_dirs _bin_dirs)
     foreach(_dir IN LISTS _inc_dirs)
@@ -154,8 +182,6 @@ function(sw_link_vcpkg_header_only_target TARGET_NAME)
     target_include_directories(${TARGET_NAME} SYSTEM INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}")
 endfunction()
 
-# Vcpkg에서 설치된 파일(DLL, SO, JSON 등)을 타겟 출력 디렉터리로 복사 (큐잉)
-# 실제 POST_BUILD는 sw_emit_runtime_copies() 한 번으로 묶여 출력됩니다.
 function(sw_copy_vcpkg_file TARGET_NAME FILE_NAME)
     sw_get_vcpkg_paths(_inc_dirs _bin_dirs)
     set(_found_file "")
@@ -172,7 +198,6 @@ function(sw_copy_vcpkg_file TARGET_NAME FILE_NAME)
     endif()
 endfunction()
 
-# 크로스 플랫폼 공유 라이브러리(dll, so, dylib) 복사 헬퍼 함수
 function(sw_copy_vcpkg_shared_lib TARGET_NAME LIB_BASE_NAME)
     if(WIN32)
         set(_lib_name "${LIB_BASE_NAME}.dll")

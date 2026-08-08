@@ -1,36 +1,8 @@
-# Linux platform definitions.
+# Linux platform definitions (CMake-only: find_library, RPATH, INTERFACE libs).
+# Host file fixes (Vulkan loader symlink) live in cmake/internal/VcpkgHostFixes.cmake.
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     return()
-endif()
-
-# imgui[vulkan-binding] still pulls vcpkg vulkan-loader into RUNPATH; replace those
-# .so files with symlinks to the system loader so WSI extensions are available.
-find_package(Python3 QUIET COMPONENTS Interpreter)
-if(Python3_Interpreter_FOUND AND DEFINED VCPKG_INSTALLED_DIR AND DEFINED VCPKG_TARGET_TRIPLET)
-    execute_process(
-        COMMAND "${Python3_EXECUTABLE}"
-                "${CMAKE_SOURCE_DIR}/Scripts/FixVcpkgVulkanLoader.py"
-                "--vcpkg-installed-dir" "${VCPKG_INSTALLED_DIR}"
-                "--triplet" "${VCPKG_TARGET_TRIPLET}"
-        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
-        RESULT_VARIABLE _sw_vk_fix_result
-        OUTPUT_VARIABLE _sw_vk_fix_output
-        ERROR_VARIABLE _sw_vk_fix_error
-        OUTPUT_STRIP_TRAILING_WHITESPACE
-        ERROR_STRIP_TRAILING_WHITESPACE
-    )
-    if(_sw_vk_fix_output)
-        message(STATUS "${_sw_vk_fix_output}")
-    endif()
-    if(NOT _sw_vk_fix_result EQUAL 0)
-        message(WARNING
-            "[Linux] FixVcpkgVulkanLoader.py failed (exit ${_sw_vk_fix_result}).\n"
-            "${_sw_vk_fix_error}"
-        )
-    endif()
-elseif(NOT Python3_Interpreter_FOUND)
-    message(WARNING "[Linux] Python3 not found; skipping FixVcpkgVulkanLoader.py")
 endif()
 
 # Prefer the resolved loader directory in RPATH (no hardcoded sysroot paths).
@@ -83,7 +55,6 @@ if(OpenGL_FOUND)
     if(TARGET OpenGL::GLX)
         target_link_libraries(sw_platform_linux INTERFACE OpenGL::GLX)
     elseif(OPENGL_opengl_LIBRARY AND NOT TARGET OpenGL::GL)
-        # GLVND split: libOpenGL + libGLX
         target_link_libraries(sw_platform_linux INTERFACE ${OPENGL_opengl_LIBRARY})
     else()
         find_library(SW_GLX_LIBRARY NAMES GLX glx)

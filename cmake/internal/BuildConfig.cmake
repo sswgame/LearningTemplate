@@ -3,10 +3,9 @@
 # @brief 엔진 내부: Development(MODULE) vs Shipping(STATIC) + DLL export 헬퍼
 # ==============================================================================
 
-# SW_SHIPPING_BUILD 는 빌드 타입(Debug/Release)과 독립입니다.
+# SW_SHIPPING_BUILD option() 은 UserConfig.cmake.
 # - OFF (기본): Core SHARED + Editor/SWGame MODULE (핫리로드 가능). Release여도 Dev 레이아웃.
 # - ON: Core/SWGame STATIC, Editor MODULE 비활성. 보통 Ninja-Shipping preset과 함께 사용.
-option(SW_SHIPPING_BUILD "Static Core/SWGame shipping layout (no Editor MODULE / no hot-reload)" OFF)
 
 if(SW_SHIPPING_BUILD)
 	# CMake: SW_SHIPPING_BUILD / C++: SW_SHIPPING

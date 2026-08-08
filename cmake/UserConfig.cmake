@@ -22,6 +22,8 @@ set(sw_output_directory "${CMAKE_BINARY_DIR}")
 
 # --- Feature options (모두 SW_* / option) ---
 option(SW_USE_VCPKG "Use vcpkg package integration" ON)
+option(SW_VCPKG_FORCE_INSTALL "Force vcpkg manifest install even if installed tree + stamp match" OFF)
+option(SW_VCPKG_AUTO_BOOTSTRAP "Allow Scripts/vcpkg/FindVcpkg.py to git-clone Tools/vcpkg if missing" OFF)
 option(SW_ENABLE_TESTING "Build and register unit tests" ON)
 option(SW_ENABLE_SANITIZER "Enable sanitizer flag module" OFF)
 option(SW_ENABLE_PCH "Enable precompiled headers (Core pch.h)" ON)
@@ -30,7 +32,8 @@ option(SW_BUILD_DOCS "Generate Doxygen docs target when available" OFF)
 option(SW_AUTO_CHANGELOG "Add AutoChangelog target (manual build; not part of default ALL)" OFF)
 option(SW_RHI_AS_MODULES "Build RHI backends (DX11/DX12/GL/Vulkan) as MODULE plugins (Core loads via createRHIDevice)" ON)
 option(SW_BUILD_GAME "Build Source/Game (SWGame module)" ON)
-# SW_SHIPPING_BUILD 는 cmake/internal/BuildConfig.cmake 에서 option() — Release 와 독립.
+# Release 와 독립 — 레이아웃 정책은 BuildConfig.cmake 가 적용.
+option(SW_SHIPPING_BUILD "Static Core/SWGame shipping layout (no Editor MODULE / no hot-reload)" OFF)
 
 # 예전 소문자 CACHE 토글 → 새 SW_* 로 이관 후 제거
 macro(sw_migrate_legacy_bool_cache LEGACY_NAME NEW_NAME)
@@ -53,5 +56,5 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 unset(CMAKE_BUILD_PARALLEL_LEVEL CACHE)
 
 # Compiler / platform / architecture INTERFACE libs accumulate here.
-# Must be initialized BEFORE Toolchain so vcpkg can append without being wiped later.
+# Must be initialized BEFORE VcpkgGate so vcpkg can append without being wiped later.
 set(sw_flag_libraries "")

@@ -1,18 +1,18 @@
-r"""
-Scripts/SetupLinuxDevEnvironment.py
+﻿r"""
+Scripts/setup/SetupLinuxDevEnvironment.py
 
-Linux / WSL 개발 환경에 필요한 홈 디렉터리 설정을 자동 적용합니다.
+Linux / WSL 媛쒕컻 ?섍꼍???꾩슂?????붾젆?곕━ ?ㅼ젙???먮룞 ?곸슜?⑸땲??
 
-적용 내용 (idempotent):
-1. ~/.gdbinit — Ubuntu debuginfod 비활성화
-   (VS Code/Cursor cppdbg가 "Downloading separate debug info..." 에서 멈추는 문제)
-2. ~/.bashrc, ~/.profile — DEBUGINFOD_URLS 비우기
-   (login/interactive 셸·Remote 서버가 GDB에 URL을 넘기지 않도록)
-3. 파일 다이얼로그 도구(zenity/kdialog/yad) 존재 여부 안내
-   (에디터 Import/Save 다이얼로그 — 없으면 패키지 설치 힌트만 출력)
+?곸슜 ?댁슜 (idempotent):
+1. ~/.gdbinit ??Ubuntu debuginfod 鍮꾪솢?깊솕
+   (VS Code/Cursor cppdbg媛 "Downloading separate debug info..." ?먯꽌 硫덉텛??臾몄젣)
+2. ~/.bashrc, ~/.profile ??DEBUGINFOD_URLS 鍮꾩슦湲?
+   (login/interactive ?맞톀emote ?쒕쾭媛 GDB??URL???섍린吏 ?딅룄濡?
+3. ?뚯씪 ?ㅼ씠?쇰줈洹??꾧뎄(zenity/kdialog/yad) 議댁옱 ?щ? ?덈궡
+   (?먮뵒??Import/Save ?ㅼ씠?쇰줈洹????놁쑝硫??⑦궎吏 ?ㅼ튂 ?뚰듃留?異쒕젰)
 
-CMake configure 시 SetupEnvironment.py 에서 호출되며, 수동 실행도 가능합니다:
-  python3 Scripts/SetupLinuxDevEnvironment.py
+CMake configure ??SetupEnvironment.py ?먯꽌 ?몄텧?섎ŉ, ?섎룞 ?ㅽ뻾??媛?ν빀?덈떎:
+  python3 Scripts/setup/SetupLinuxDevEnvironment.py
 """
 
 from __future__ import annotations
@@ -24,11 +24,16 @@ import sys
 from pathlib import Path
 from typing import Optional, Sequence
 
+# Allow `python3 Scripts/setup/SetupLinuxDevEnvironment.py`
+_SCRIPTS = Path(__file__).resolve().parents[1]
+if str(_SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(_SCRIPTS))
+
 
 _MARKER = "Template engine linux-dev"
 
 _GDBINIT_BLOCK = f"""\
-# >>> {_MARKER} (managed — do not edit by hand)
+# >>> {_MARKER} (managed ??do not edit by hand)
 # Prevent hang when debuginfod.ubuntu.com is slow/unreachable (VS Code/Cursor cppdbg).
 set debuginfod urls
 set debuginfod enabled off
@@ -36,7 +41,7 @@ set debuginfod enabled off
 """
 
 _SHELL_BLOCK = f"""\
-# >>> {_MARKER} (managed — do not edit by hand)
+# >>> {_MARKER} (managed ??do not edit by hand)
 # Disable Ubuntu debuginfod (breaks VS Code/Cursor GDB when the server is down).
 unset DEBUGINFOD_URLS
 export DEBUGINFOD_URLS=
@@ -60,7 +65,7 @@ def _IsWsl() -> bool:
 
 def _UpsertManagedBlock(path: Path, block: str) -> str:
     """
-    path 에 managed 블록을 쓰거나 갱신합니다.
+    path ??managed 釉붾줉???곌굅??媛깆떊?⑸땲??
     Returns: 'created' | 'updated' | 'unchanged'
     """
     begin = f"# >>> {_MARKER}"
@@ -98,7 +103,7 @@ def _UpsertManagedBlock(path: Path, block: str) -> str:
 
 
 def SetupGdbDebuginfod(home: Optional[Path] = None) -> None:
-    """~/.gdbinit 및 셸 rc에 debuginfod 비활성화를 적용합니다."""
+    """~/.gdbinit 諛???rc??debuginfod 鍮꾪솢?깊솕瑜??곸슜?⑸땲??"""
     home_dir = home or Path.home()
     actions = []
 
@@ -119,7 +124,7 @@ def SetupGdbDebuginfod(home: Optional[Path] = None) -> None:
 
 
 def CheckFileDialogTools() -> None:
-    """에디터 파일 다이얼로그에 필요한 외부 도구 존재 여부를 안내합니다."""
+    """?먮뵒???뚯씪 ?ㅼ씠?쇰줈洹몄뿉 ?꾩슂???몃? ?꾧뎄 議댁옱 ?щ?瑜??덈궡?⑸땲??"""
     tools = ("zenity", "qarma", "matedialog", "kdialog", "yad")
     found = [name for name in tools if shutil.which(name)]
     if found:
@@ -129,13 +134,13 @@ def CheckFileDialogTools() -> None:
     host = "WSL" if _IsWsl() else "Linux"
     print(
         f"[SetupLinuxDevEnvironment] {host}: no file dialog tool "
-        f"(zenity/kdialog/yad). Editor Import/Save dialogs need one — "
+        f"(zenity/kdialog/yad). Editor Import/Save dialogs need one ??"
         f"e.g. sudo apt install zenity"
     )
 
 
 def SetupLinuxDevEnvironment(home: Optional[Path] = None) -> int:
-    """Linux 개발 환경 자동 설정을 수행합니다. non-Linux 에서는 no-op."""
+    """Linux 媛쒕컻 ?섍꼍 ?먮룞 ?ㅼ젙???섑뻾?⑸땲?? non-Linux ?먯꽌??no-op."""
     if not _IsLinux():
         print("[SetupLinuxDevEnvironment] skip (not Linux)")
         return 0

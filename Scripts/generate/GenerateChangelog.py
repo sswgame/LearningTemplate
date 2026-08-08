@@ -1,20 +1,22 @@
 """
-Scripts/GenerateChangelog.py
+Scripts/generate/GenerateChangelog.py
 
-Git 커밋 로그를 파싱하여 Documentation/CHANGELOG.md 를 생성합니다.
-
-네이밍: 공개 함수는 PascalCase (Scripts 공통 규칙).
+Git 커밋 로그 → Documentation/CHANGELOG.md
 """
 
+from __future__ import annotations
+
 import subprocess
+import sys
 from pathlib import Path
+
+# Scripts/ on path
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from ConfigHelper import GetProjectRoot
 
 
 def GenerateChangelog() -> None:
-	"""Git 이력을 마크다운 CHANGELOG.md 로 기록합니다."""
-	script_dir = Path(__file__).resolve().parent
-	project_root = script_dir.parent
-
+	project_root = GetProjectRoot()
 	docs_dir = project_root / "Documentation"
 	docs_dir.mkdir(parents=True, exist_ok=True)
 	changelog_path = docs_dir / "CHANGELOG.md"
@@ -40,7 +42,6 @@ def GenerateChangelog() -> None:
 ## Recent Commits
 {git_log}
 """
-
 	with open(changelog_path, "w", encoding="utf-8") as f:
 		f.write(content)
 	print(f"[AutoChangelog] Successfully generated {changelog_path}")

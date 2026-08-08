@@ -8,7 +8,7 @@ if(NOT _llvm_bin)
     message(FATAL_ERROR
         "[VcpkgPortsToolchain] clang-cl.exe를 찾을 수 없습니다.\n"
         "  LLVM을 설치하거나 LLVM_DIR/LLVM_ROOT를 설정한 뒤\n"
-        "  python Scripts/SetupEnvironment.py 를 실행하세요."
+        "  python Scripts/setup/SetupEnvironment.py 를 실행하세요."
     )
 endif()
 

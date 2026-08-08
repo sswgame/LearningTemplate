@@ -1,27 +1,18 @@
 # ==============================================================================
 # @file cmake/internal/SetupEnvironment.cmake
-# @brief 엔진 내부: Scripts/SetupEnvironment.py 실행 (IDE/LLVM 경로 → engine_config.json)
+# @brief Scripts/setup/SetupEnvironment.py 실행 (IDE/LLVM 경로 → engine_config.json)
 # ==============================================================================
 
-find_package(Python3 QUIET COMPONENTS Interpreter)
-if(Python3_Interpreter_FOUND)
-    execute_process(
-        COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/Scripts/SetupEnvironment.py"
-        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-        RESULT_VARIABLE sw_setup_env_result
-        OUTPUT_VARIABLE sw_setup_env_output
-        ERROR_VARIABLE sw_setup_env_error
-        OUTPUT_STRIP_TRAILING_WHITESPACE
-        ERROR_STRIP_TRAILING_WHITESPACE
-    )
-    if(NOT sw_setup_env_result EQUAL 0)
-        message(WARNING
-            "[SetupEnvironment] SetupEnvironment.py failed (exit ${sw_setup_env_result}).\n"
-            "${sw_setup_env_output}\n${sw_setup_env_error}"
-        )
-    elseif(sw_setup_env_output)
-        message(STATUS "${sw_setup_env_output}")
-    endif()
-else()
-    message(WARNING "[SetupEnvironment] Python3 not found; skipping SetupEnvironment.py")
+include("${CMAKE_CURRENT_LIST_DIR}/Python.cmake")
+
+set(_sw_setup_args "")
+if(SW_VCPKG_AUTO_BOOTSTRAP)
+    # FindVcpkg inside SetupEnvironment stays bootstrap-off; env flag for explicit tools.
+    set(ENV{SW_VCPKG_AUTO_BOOTSTRAP} "1")
 endif()
+
+sw_execute_python_script(
+    "Scripts/setup/SetupEnvironment.py"
+    WARN
+    RESULT_VARIABLE sw_setup_env_result
+)

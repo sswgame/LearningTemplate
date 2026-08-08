@@ -1,5 +1,5 @@
 # ==============================================================================
-# @file cmake/internal/ThirdParty.cmake
+# @file cmake/internal/ThirdPartyWarnings.cmake
 # @brief Vendored ThirdParty 경고 억제 헬퍼 (소스 수정 없이 ignore)
 # ==============================================================================
 

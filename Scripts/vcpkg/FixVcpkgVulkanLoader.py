@@ -1,13 +1,10 @@
+#!/usr/bin/env python3
 r"""
-Scripts/FixVcpkgVulkanLoader.py
+Scripts/vcpkg/FixVcpkgVulkanLoader.py
 
-vcpkg가 설치한 libvulkan.so* 를 시스템 Vulkan loader로 바꿔 심볼릭 링크합니다.
-vcpkg vulkan-loader는 X11 WSI(VK_KHR_xlib_surface / VK_KHR_xcb_surface) 없이
-빌드되는 경우가 많아, Linux(WSLg 포함)에서 창 표면 생성이 실패합니다.
+vcpkg libvulkan.so* 를 시스템 Vulkan loader로 심볼릭 링크합니다.
 
-CMake(Linux.cmake) configure 시 자동 호출되며, 수동 실행도 가능합니다:
-  python Scripts/FixVcpkgVulkanLoader.py
-  python Scripts/FixVcpkgVulkanLoader.py --vcpkg-installed-dir <dir> --triplet x64-linux
+  python3 Scripts/vcpkg/FixVcpkgVulkanLoader.py --vcpkg-installed-dir <dir> --triplet x64-linux
 """
 
 from __future__ import annotations
@@ -21,8 +18,13 @@ import sys
 from pathlib import Path
 from typing import Iterable, List, Optional, Sequence
 
-from ConfigHelper import GetProjectRoot
+_SCRIPTS = Path(__file__).resolve().parents[1]
+if str(_SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(_SCRIPTS))
 
+from ConfigHelper import EnsureScriptsOnPath, GetProjectRoot, LoadSearchPaths
+
+EnsureScriptsOnPath()
 
 _WSI_EXTENSIONS = (
     "VK_KHR_xcb_surface",
@@ -35,7 +37,6 @@ def _IsVcpkgPath(path: Path) -> bool:
 
 
 def _MappedLibraryPath(soname_substr: str) -> Optional[Path]:
-    """현재 프로세스에 매핑된 공유 라이브러리 경로를 /proc/self/maps 에서 찾습니다."""
     try:
         with open("/proc/self/maps", "r", encoding="utf-8", errors="replace") as maps:
             for line in maps:
@@ -53,7 +54,6 @@ def _MappedLibraryPath(soname_substr: str) -> Optional[Path]:
 
 
 def FindSystemVulkanLoader() -> Optional[Path]:
-    """시스템 libvulkan 실경로를 동적으로 찾습니다 (하드코딩 경로 없음)."""
     try:
         result = subprocess.run(
             ["ldconfig", "-p"],
@@ -63,7 +63,6 @@ def FindSystemVulkanLoader() -> Optional[Path]:
         )
         if result.returncode == 0:
             for line in result.stdout.splitlines():
-                # e.g. "\tlibvulkan.so.1 (libc6,x86-64) => /lib/.../libvulkan.so.1"
                 if "libvulkan.so" not in line or "=>" not in line:
                     continue
                 path = Path(line.split("=>", 1)[1].strip())
@@ -85,7 +84,6 @@ def FindSystemVulkanLoader() -> Optional[Path]:
             mapped = _MappedLibraryPath("libvulkan.so")
             if mapped is not None:
                 return mapped
-
     return None
 
 
@@ -93,7 +91,6 @@ def CollectVcpkgLibDirs(
     installed_dir: Optional[Path],
     triplet: Optional[str],
 ) -> List[Path]:
-    """심볼릭 링크를 걸 lib 디렉터리 목록을 모읍니다."""
     dirs: List[Path] = []
     seen = set()
 
@@ -117,7 +114,6 @@ def CollectVcpkgLibDirs(
         add_installed_root(Path(installed_dir) / triplet)
     elif installed_dir:
         installed = Path(installed_dir)
-        # Accept either .../vcpkg_installed or .../vcpkg_installed/<triplet>
         if (installed / "lib").is_dir():
             add_installed_root(installed)
         elif triplet:
@@ -127,40 +123,38 @@ def CollectVcpkgLibDirs(
                 if child.is_dir() and (child / "lib").is_dir():
                     add_installed_root(child)
 
-    project_root = GetProjectRoot()
-    base = project_root / "build" / "vcpkg_installed"
-    if base.is_dir():
-        if triplet:
-            add_installed_root(base / triplet)
-        else:
-            for child in sorted(base.iterdir()):
-                if child.is_dir() and (child / "lib").is_dir():
-                    add_installed_root(child)
+    # Optional relative fallback from Config/search_paths.json (not a hardcoded absolute).
+    if not dirs:
+        rel = LoadSearchPaths().get("vcpkg_installed_rel", "")
+        if rel:
+            base = GetProjectRoot() / rel
+            if base.is_dir():
+                if triplet:
+                    add_installed_root(base / triplet)
+                else:
+                    for child in sorted(base.iterdir()):
+                        if child.is_dir() and (child / "lib").is_dir():
+                            add_installed_root(child)
 
     return dirs
 
 
 def ForceSymlink(target: Path, link_path: Path) -> None:
-    """link_path 가 target 을 가리키도록 강제 재생성합니다."""
     if link_path.is_symlink() or link_path.exists():
         link_path.unlink()
     link_path.symlink_to(target)
 
 
 def FixLibDir(lib_dir: Path, system_vulkan: Path) -> bool:
-    """한 vcpkg lib 디렉터리의 libvulkan.so* 를 시스템 loader로 교체합니다."""
     so1 = lib_dir / "libvulkan.so.1"
     so = lib_dir / "libvulkan.so"
-
     ForceSymlink(system_vulkan, so1)
     ForceSymlink(Path("libvulkan.so.1"), so)
-
     print(f"[FixVcpkgVulkanLoader] {lib_dir} -> {system_vulkan}")
     return True
 
 
 def VerifyWsi(loader_path: Path) -> bool:
-    """loader_path 가 X11 WSI 확장을 노출하는지 확인합니다."""
     os.environ.setdefault("DISPLAY", ":0")
 
     class ExtensionProperties(ctypes.Structure):
@@ -194,40 +188,15 @@ def ParseArgs(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Point vcpkg libvulkan.so* at the system Vulkan loader (Linux X11 WSI)."
     )
-    parser.add_argument(
-        "--vcpkg-installed-dir",
-        type=Path,
-        default=None,
-        help="VCPKG_INSTALLED_DIR (contains <triplet>/lib)",
-    )
+    parser.add_argument("--vcpkg-installed-dir", type=Path, default=None)
     parser.add_argument(
         "--triplet",
         default=os.environ.get("VCPKG_TARGET_TRIPLET", "x64-linux"),
-        help="vcpkg triplet (default: x64-linux or $VCPKG_TARGET_TRIPLET)",
     )
-    parser.add_argument(
-        "--system-vulkan",
-        type=Path,
-        default=None,
-        help="Explicit system libvulkan path (default: auto-detect)",
-    )
-    parser.add_argument(
-        "--verify",
-        action="store_true",
-        default=True,
-        help="After fix, enumerate instance extensions (default: on)",
-    )
-    parser.add_argument(
-        "--no-verify",
-        action="store_false",
-        dest="verify",
-        help="Skip WSI verification",
-    )
-    parser.add_argument(
-        "--verify-only",
-        action="store_true",
-        help="Only verify WSI; do not rewrite symlinks",
-    )
+    parser.add_argument("--system-vulkan", type=Path, default=None)
+    parser.add_argument("--verify", action="store_true", default=True)
+    parser.add_argument("--no-verify", action="store_false", dest="verify")
+    parser.add_argument("--verify-only", action="store_true")
     return parser.parse_args(argv)
 
 
@@ -238,9 +207,7 @@ def Main(argv: Optional[Sequence[str]] = None) -> int:
 
     args = ParseArgs(argv)
     system_vulkan = (
-        args.system_vulkan.resolve()
-        if args.system_vulkan
-        else FindSystemVulkanLoader()
+        args.system_vulkan.resolve() if args.system_vulkan else FindSystemVulkanLoader()
     )
     if system_vulkan is None or not system_vulkan.exists():
         print(
@@ -266,10 +233,7 @@ def Main(argv: Optional[Sequence[str]] = None) -> int:
     if not args.verify and not args.verify_only:
         return 0
 
-    # Prefer debug/lib if present (matches typical Debug RUNPATH).
-    verify_candidates: Iterable[Path] = (
-        d / "libvulkan.so.1" for d in reversed(lib_dirs)
-    )
+    verify_candidates: Iterable[Path] = (d / "libvulkan.so.1" for d in reversed(lib_dirs))
     loader: Optional[Path] = None
     for candidate in verify_candidates:
         if candidate.exists():
