@@ -7,6 +7,8 @@
 #include "Core/Common/Common.h"
 #include "Core/Utility/File/FileUtil.h"
 
+#include <algorithm>
+
 
 namespace sw::tool
 {
@@ -95,17 +97,51 @@ namespace sw::tool
 		std::string winSdkDir;
 		std::string winSdkVer;
 
+#if defined( SW_PLATFORM_WINDOWS )
+		constexpr const utf8* kPlatformParserKey = "windows";
+#elif defined( SW_PLATFORM_LINUX )
+		constexpr const utf8* kPlatformParserKey = "linux";
+#elif defined( SW_PLATFORM_MACOS )
+		constexpr const utf8* kPlatformParserKey = "darwin";
+#else
+		constexpr const utf8* kPlatformParserKey = "";
+#endif
+
 		const std::string parserCfgPath = findConfigFile( "Config/parser_config.json" );
 		if ( parserCfgPath.empty() == false )
 		{
 			const std::string fullJson = readTextFile( parserCfgPath );
 			if ( fullJson.empty() == false )
 			{
-				baseArgs = extractJsonArray( fullJson, "parser_args" );
-				if ( baseArgs.empty() )
-					baseArgs = extractJsonArray( fullJson, "default_parser_args" );
+				// Prefer default + current-OS platform args so a Windows-generated
+				// parser_args (with -fms-compatibility) is never reused on Linux/macOS.
+				const std::vector<std::string> defaultArgs	= extractJsonArray( fullJson, "default_parser_args" );
+				const std::vector<std::string> platformArgs = ( kPlatformParserKey[0] != '\0' )
+																  ? extractJsonArray( fullJson, kPlatformParserKey )
+																  : std::vector<std::string>{};
+				if ( defaultArgs.empty() == false )
+				{
+					baseArgs = defaultArgs;
+					baseArgs.insert( baseArgs.end(), platformArgs.begin(), platformArgs.end() );
+				}
+				else
+				{
+					baseArgs = extractJsonArray( fullJson, "parser_args" );
+				}
 			}
 		}
+
+#if !defined( SW_PLATFORM_WINDOWS )
+		// Safety: strip MSVC-compat flags if a stale merged parser_args leaked in.
+		baseArgs.erase(
+			std::remove_if( baseArgs.begin(), baseArgs.end(),
+							[]( const std::string& a )
+		{
+			return a == "-fms-compatibility" || a == "-fms-extensions"
+				   || a.rfind( "-fms-compatibility-version", 0 ) == 0;
+		} ),
+			baseArgs.end() );
+#endif
 
 		const std::string engineCfgPath = findConfigFile( "Config/engine_config.json" );
 		if ( engineCfgPath.empty() == false )
@@ -135,24 +171,29 @@ namespace sw::tool
 				llvmPath = envLlvm;
 		}
 
-		const std::string llvmClangDir = FileUtil::normalizePath( llvmPath + "/lib/clang" );
+		// Builtin headers / __GCC_ATOMIC_* need a correct Clang resource-dir (libclang ≠ gcc).
+		const std::string llvmClangDir = FileUtil::normalizeSeparators( llvmPath + "/lib/clang" );
 		if ( FileUtil::isDirectoryExist( llvmClangDir ) )
 		{
 			std::vector<std::string> clangSubFolders;
-			FileUtil::collectFolders( llvmClangDir, clangSubFolders, false );
+			FileUtil::collectFolders( llvmClangDir, clangSubFolders, false, false );
 			for ( const std::string& folder : clangSubFolders )
 			{
-				const std::string clangInc = FileUtil::normalizePath( folder + "/include" );
-				if ( FileUtil::isDirectoryExist( clangInc ) )
-				{
-					baseArgs.emplace_back( "-isystem" );
-					baseArgs.emplace_back( clangInc );
-					break;
-				}
+				const std::string resourceDir = FileUtil::normalizeSeparators( folder );
+				const std::string clangInc	  = FileUtil::normalizeSeparators( folder + "/include" );
+				if ( FileUtil::isDirectoryExist( clangInc ) == false )
+					continue;
+
+				baseArgs.emplace_back( "-resource-dir" );
+				baseArgs.emplace_back( resourceDir );
+				baseArgs.emplace_back( "-isystem" );
+				baseArgs.emplace_back( clangInc );
+				break;
 			}
 		}
 
-		const std::string msvcInc = FileUtil::normalizePath( msvcToolsDir + "/include" );
+#if defined( SW_PLATFORM_WINDOWS )
+		const std::string msvcInc = FileUtil::normalizeSeparators( msvcToolsDir + "/include" );
 		if ( msvcToolsDir.empty() == false && FileUtil::isDirectoryExist( msvcInc ) )
 		{
 			baseArgs.emplace_back( "-isystem" );
@@ -161,13 +202,14 @@ namespace sw::tool
 
 		if ( winSdkDir.empty() == false && winSdkVer.empty() == false )
 		{
-			const std::string ucrtPath = FileUtil::normalizePath( winSdkDir + "/Include/" + winSdkVer + "/ucrt" );
+			const std::string ucrtPath = FileUtil::normalizeSeparators( winSdkDir + "/Include/" + winSdkVer + "/ucrt" );
 			if ( FileUtil::isDirectoryExist( ucrtPath ) )
 			{
 				baseArgs.emplace_back( "-isystem" );
 				baseArgs.emplace_back( ucrtPath );
 			}
 		}
+#endif
 
 		bLoaded = true;
 		SW_LOG_INFO( "[ParserContext] Cached clang config (%# base args).", static_cast<uint32>( baseArgs.size() ) );
