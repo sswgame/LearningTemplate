@@ -215,6 +215,10 @@ namespace sw
 		extensions.push_back( VK_KHR_SURFACE_EXTENSION_NAME );
 #if defined( SW_PLATFORM_WINDOWS )
 		extensions.push_back( VK_KHR_WIN32_SURFACE_EXTENSION_NAME );
+#elif defined( SW_PLATFORM_LINUX )
+		extensions.push_back( VK_KHR_XLIB_SURFACE_EXTENSION_NAME );
+#elif defined( SW_PLATFORM_MACOS )
+		extensions.push_back( VK_EXT_METAL_SURFACE_EXTENSION_NAME );
 #endif
 		if ( _bEnableValidationLayers )
 			extensions.push_back( VK_EXT_DEBUG_UTILS_EXTENSION_NAME );

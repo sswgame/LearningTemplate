@@ -2,10 +2,17 @@
     "cmake.useCMakePresets": "always",
     "cmake.parallelJobs": 0,
     "cmake.debugConfig": {
+        // Don't force -dx12: WSL/Linux has no DX12. Override per launch with -vulkan/-opengl if needed.
         "args": [
-            "-dx12",
-            "EnableEditor",
-        ]
+            "EnableEditor"
+        ],
+        // debuginfod: use system gdb + ~/.gdbinit / unset DEBUGINFOD_URLS
+        // (see .vscode/disable-debuginfod-wsl.sh). Do not point miDebuggerPath at a
+        // .sh on /home/ssw/.vs — no +x → GDB exit 126 and no window.
+        "miDebuggerPath": "/usr/bin/gdb",
+        "debuginfod": {
+            "enabled": false
+        }
     },
     "cmake.options.advanced": {
         "ctest": {
