@@ -152,6 +152,47 @@ static bool ImGui_ImplX11_GetWindowMinimized( ImGuiViewport* viewport )
 	return false;
 }
 
+static void ImGui_ImplX11_UpdateMonitors()
+{
+	// ImGui docking requires PlatformIO.Monitors.Size > 0 before NewFrame.
+	ImGuiPlatformIO& platformIO = ImGui::GetPlatformIO();
+	platformIO.Monitors.resize( 0 );
+	if ( s_X11Display == nullptr )
+		return;
+
+	const int screenCount = ScreenCount( s_X11Display );
+	for ( int screen = 0; screen < screenCount; ++screen )
+	{
+		ImGuiPlatformMonitor monitor{};
+		monitor.MainPos	 = ImVec2( 0.0f, 0.0f );
+		monitor.MainSize = ImVec2( (float)DisplayWidth( s_X11Display, screen ), (float)DisplayHeight( s_X11Display, screen ) );
+		monitor.WorkPos	 = monitor.MainPos;
+		monitor.WorkSize = monitor.MainSize;
+		monitor.DpiScale = 1.0f;
+
+		const int widthMm = DisplayWidthMM( s_X11Display, screen );
+		if ( widthMm > 0 && monitor.MainSize.x > 0.0f )
+		{
+			const float dpi = ( monitor.MainSize.x * 25.4f ) / (float)widthMm;
+			if ( dpi > 0.0f )
+				monitor.DpiScale = dpi / 96.0f;
+		}
+		if ( monitor.DpiScale <= 0.0f )
+			continue;
+
+		monitor.PlatformHandle = reinterpret_cast<void*>( static_cast<uintptr_t>( screen ) );
+		platformIO.Monitors.push_back( monitor );
+	}
+
+	if ( platformIO.Monitors.empty() )
+	{
+		ImGuiPlatformMonitor fallback{};
+		fallback.MainSize = fallback.WorkSize = ImVec2( 1280.0f, 720.0f );
+		fallback.DpiScale					  = 1.0f;
+		platformIO.Monitors.push_back( fallback );
+	}
+}
+
 static bool ImGui_ImplX11_Init( Display* display, Window window )
 {
 	s_X11Display = display;
@@ -183,6 +224,8 @@ static bool ImGui_ImplX11_Init( Display* display, Window window )
 	platformIO.Platform_GetWindowFocus = ImGui_ImplX11_GetWindowFocus;
 	platformIO.Platform_GetWindowMinimized = ImGui_ImplX11_GetWindowMinimized;
 	platformIO.Platform_SetWindowTitle = ImGui_ImplX11_SetWindowTitle;
+
+	ImGui_ImplX11_UpdateMonitors();
 	return true;
 }
 
@@ -203,6 +246,9 @@ static void ImGui_ImplX11_NewFrame()
 	ImGuiIO& io = ImGui::GetIO();
 	if ( !s_X11Display || !s_X11Window )
 		return;
+
+	if ( ImGui::GetPlatformIO().Monitors.empty() )
+		ImGui_ImplX11_UpdateMonitors();
 
 	XWindowAttributes attrs;
 	XGetWindowAttributes( s_X11Display, s_X11Window, &attrs );
