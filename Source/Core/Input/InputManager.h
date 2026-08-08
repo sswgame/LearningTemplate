@@ -11,6 +11,7 @@
 namespace sw
 {
 	struct NativeWindowEvent;
+	class GamepadXInput;
 
 	/** @brief Minimal key set for gameplay / title flow */
 	enum class Key : uint8
@@ -21,6 +22,10 @@ namespace sw
 		S,
 		D,
 		C,
+		E,
+		Z,
+		Digit1,
+		Digit2,
 		Space,
 		Escape,
 		Enter,
@@ -49,7 +54,7 @@ namespace sw
 	{
 	public:
 		InputManager();
-		~InputManager() = default;
+		~InputManager();
 
 		InputManager( const InputManager& )			   = delete;
 		InputManager& operator=( const InputManager& ) = delete;
@@ -71,6 +76,11 @@ namespace sw
 		void  getMousePosition( int32& outX, int32& outY ) const;
 		bool  isMouseButtonDown( MouseButton button ) const;
 
+		/** @brief When enabled, beginFrame also polls XInput user 0. */
+		void setGamepadPollingEnabled( bool enabled );
+		bool isGamepadPollingEnabled() const { return _bPollGamepad != 0; }
+		GamepadXInput* getGamepad() const { return _gamepad.get(); }
+
 	private:
 		void setKeyDown( Key key, bool bDown );
 		void setMouseButtonDown( MouseButton button, bool bDown );
@@ -84,9 +94,11 @@ namespace sw
 		bool  _prevKeys[static_cast<size_t>( Key::Count )]{};
 		bool  _mouseButtons[static_cast<size_t>( MouseButton::Count )]{};
 		bool  _prevMouseButtons[static_cast<size_t>( MouseButton::Count )]{};
-		int32				   _mouseX		  = 0;
-		int32				   _mouseY		  = 0;
-		uint8				   _bInitialized  : 1;
-		[[maybe_unused]] uint8 _reservedFlags : 7;
+		int32							   _mouseX		 = 0;
+		int32							   _mouseY		 = 0;
+		std::unique_ptr<GamepadXInput>	   _gamepad;
+		uint8							   _bInitialized : 1;
+		uint8							   _bPollGamepad : 1;
+		[[maybe_unused]] uint8			   _reservedFlags : 6;
 	};
 } // namespace sw

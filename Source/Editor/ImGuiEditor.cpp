@@ -1,23 +1,26 @@
 /**
  * @file ImGuiEditor.cpp
- * @brief ImGui 에디터 셸 구현
+ * @brief ImGui ?????????
  */
 #include "ImGuiEditor.h"
 #include "EditorDefines.h"
 #include "EditorUtil.h"
 #include "Backend/IImGuiPlatformBackend.h"
 #include "Backend/IImGuiRendererBackend.h"
-#include "Panels/IEditorPanel.h"
-#include "Panels/ConsolePanel.h"
-#include "Panels/GameToolbarPanel.h"
-#include "Panels/GameViewPanel.h"
-#include "Panels/InspectorPanel.h"
-#include "Panels/OutlinerPanel.h"
-#include "Panels/ResourceBrowserPanel.h"
-#include "Panels/SequencerPanel.h"
-#include "Panels/AnimationGraphPanel.h"
-#include "Panels/AIGraphPanel.h"
-#include "Panels/GlobalVariablesPanel.h"
+#include "Windows/IEditorWindow.h"
+#include "Windows/ConsoleWindow.h"
+#include "Windows/GameViewWindow.h"
+#include "Windows/InspectorWindow.h"
+#include "Windows/HierarchyWindow.h"
+#include "Windows/ContentBrowserWindow.h"
+#include "Tools/SequencerTool.h"
+#include "Tools/AnimationGraphTool.h"
+#include "Tools/TileMapTool.h"
+#include "Tools/SpriteClipTool.h"
+#include "Shell/EditorTransportBar.h"
+#include "Overlay/BoneHierarchyPopup.h"
+#include "Workspace/EditorCommandStack.h"
+#include "Workspace/EditorWorkspace.h"
 #include "Core/Graphics/RHI/IRHIDevice.h"
 #include "Core/Graphics/RHI/RHICapabilities.h"
 #include "Core/Graphics/RenderPass/RenderPassResource.h"
@@ -67,16 +70,17 @@ namespace sw
 	void ImGuiEditor::registerDefaultPanels()
 	{
 		_panels.clear();
-		_panels.push_back( std::make_unique<OutlinerPanel>() );
-		_panels.push_back( std::make_unique<InspectorPanel>() );
-		_panels.push_back( std::make_unique<GameToolbarPanel>() );
-		_panels.push_back( std::make_unique<GameViewPanel>() );
-		_panels.push_back( std::make_unique<ConsolePanel>() );
-		_panels.push_back( std::make_unique<ResourceBrowserPanel>() );
-		_panels.push_back( std::make_unique<SequencerPanel>() );
-		_panels.push_back( std::make_unique<AnimationGraphPanel>() );
-		_panels.push_back( std::make_unique<AIGraphPanel>() );
-		_panels.push_back( std::make_unique<GlobalVariablesPanel>() );
+		// Core Windows (open by default)
+		_panels.push_back( std::make_unique<HierarchyWindow>() );
+		_panels.push_back( std::make_unique<InspectorWindow>() );
+		_panels.push_back( std::make_unique<GameViewWindow>() );
+		_panels.push_back( std::make_unique<ConsoleWindow>() );
+		_panels.push_back( std::make_unique<ContentBrowserWindow>() );
+		// On-demand Tools (start closed)
+		_panels.push_back( std::make_unique<SequencerTool>() );
+		_panels.push_back( std::make_unique<AnimationGraphTool>() );
+		_panels.push_back( std::make_unique<TileMapTool>() );
+		_panels.push_back( std::make_unique<SpriteClipTool>() );
 	}
 
 	void ImGuiEditor::setupFonts()
@@ -111,7 +115,7 @@ namespace sw
 			if ( baseFont == nullptr )
 			{
 				baseFont = io.Fonts->AddFontDefault( &baseConfig );
-				SW_LOG_WARNING( "[ImGuiEditor] No system UI font found — using ImGui default font." );
+				SW_LOG_WARNING( "[ImGuiEditor] No system UI font found ??using ImGui default font." );
 			}
 		}
 
@@ -130,7 +134,7 @@ namespace sw
 			}
 			else
 			{
-				SW_LOG_WARNING( "[ImGuiEditor] Korean font not found — Hangul may not render." );
+				SW_LOG_WARNING( "[ImGuiEditor] Korean font not found ??Hangul may not render." );
 			}
 		}
 
@@ -158,7 +162,7 @@ namespace sw
 		const std::filesystem::path panelsPath = EditorUtil::resolveEditorConfigFile( editor::path::kPanelsIniFile );
 		if ( imguiPath.empty() || panelsPath.empty() )
 		{
-			SW_LOG_WARNING( "[ImGuiEditor] Failed to resolve Config/Editor — layout will not persist." );
+			SW_LOG_WARNING( "[ImGuiEditor] Failed to resolve Config/Editor ??layout will not persist." );
 			return;
 		}
 
@@ -283,7 +287,7 @@ namespace sw
 			setupFonts();
 		}
 
-		BLOCK( "Platform Backend 생성 / 초기화" )
+		BLOCK( "Platform Backend create / init" )
 		{
 			SW_LOG_INFO( "Creating Platform Backend" );
 			_platformBackend = IImGuiPlatformBackend::createPlatformBackend();
@@ -301,7 +305,7 @@ namespace sw
 			}
 		}
 
-		BLOCK( "Renderer Backend 생성 / 초기화" )
+		BLOCK( "Renderer Backend create / init" )
 		{
 			SW_LOG_INFO( "Creating Renderer Backend" );
 			_rendererBackend = IImGuiRendererBackend::createRendererBackend( rhiDevice->getBackendType() );
@@ -349,7 +353,7 @@ namespace sw
 
 			registerDefaultPanels();
 			loadPanelVisibility();
-			SW_LOG_INFO( "[ImGuiEditor] Splash complete — panels registered." );
+			SW_LOG_INFO( "[ImGuiEditor] Splash complete ??panels registered." );
 		}
 
 		_bInitialized		= true;
@@ -452,7 +456,7 @@ namespace sw
 		if ( ( io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable ) == 0 )
 			return;
 
-		// 공식 예제와 같이 메인 Present 이후에 보조 뷰포트를 제출한다.
+		// ?? ????? ?? ?? Present ??????? ?????? ??????.
 		ImGui::UpdatePlatformWindows();
 		ImGui::RenderPlatformWindowsDefault();
 
@@ -502,17 +506,13 @@ namespace sw
 
 		ImGui::DockBuilderSplitNode( dockMain, ImGuiDir_Left, 0.22f, &dockLeft, &dockMain );
 		ImGui::DockBuilderSplitNode( dockMain, ImGuiDir_Right, 0.28f, &dockRight, &dockMain );
-		ImGui::DockBuilderSplitNode( dockMain, ImGuiDir_Down, 0.30f, &dockBottom, &dockMain );
-		ImGui::DockBuilderSplitNode( dockMain, ImGuiDir_Up, 0.06f, &dockTop, &dockMain );
+		ImGui::DockBuilderSplitNode( dockMain, ImGuiDir_Down, 0.28f, &dockBottom, &dockMain );
+		(void)dockTop;
 
 		ImGui::DockBuilderDockWindow( "Hierarchy", dockLeft );
-		ImGui::DockBuilderDockWindow( "Inspector", dockLeft );
-		ImGui::DockBuilderDockWindow( "Game Toolbar", dockTop );
+		ImGui::DockBuilderDockWindow( "Inspector", dockRight );
 		ImGui::DockBuilderDockWindow( "Game View", dockMain );
-		ImGui::DockBuilderDockWindow( "Output Log", dockRight );
-		ImGui::DockBuilderDockWindow( "Global Variables Control", dockRight );
-		ImGui::DockBuilderDockWindow( "Animation Graph", dockRight );
-		ImGui::DockBuilderDockWindow( "AI Graph", dockRight );
+		ImGui::DockBuilderDockWindow( "Output Log", dockBottom );
 		ImGui::DockBuilderDockWindow( "Content Browser", dockBottom );
 
 		ImGui::DockBuilderFinish( id );
@@ -523,13 +523,52 @@ namespace sw
 		if ( ImGui::BeginMainMenuBar() == false )
 			return;
 
-		if ( ImGui::BeginMenu( "View" ) )
+		if ( ImGui::BeginMenu( "File" ) )
 		{
+			ImGui::TextDisabled( "Scene IO ? use Content Browser" );
+			ImGui::EndMenu();
+		}
+
+		if ( ImGui::BeginMenu( "Edit" ) )
+		{
+			const bool canUndo = EditorCommandStack::get().canUndo();
+			const bool canRedo = EditorCommandStack::get().canRedo();
+			if ( ImGui::MenuItem( "Undo", "Ctrl+Z", false, canUndo ) )
+				EditorCommandStack::get().undo();
+			if ( ImGui::MenuItem( "Redo", "Ctrl+Y", false, canRedo ) )
+				EditorCommandStack::get().redo();
+			ImGui::EndMenu();
+		}
+
+		if ( ImGui::BeginMenu( "Assets" ) )
+		{
+			if ( ImGui::MenuItem( "Open Tile Map Tool" ) )
+				editor::requestOpenWindow( "Tile Map Tool" );
+			if ( ImGui::MenuItem( "Open Sprite Clip" ) )
+				editor::requestOpenWindow( "Sprite Clip" );
+			if ( ImGui::MenuItem( "Open Animation Graph" ) )
+				editor::requestOpenWindow( "Animation Graph" );
+			if ( ImGui::MenuItem( "Open Sequencer" ) )
+				editor::requestOpenWindow( "Sequencer" );
+			ImGui::EndMenu();
+		}
+
+		if ( ImGui::BeginMenu( "Window" ) )
+		{
+			ImGui::SeparatorText( "Windows" );
 			for ( auto& panel : _panels )
 			{
-				if ( panel == nullptr )
+				if ( panel == nullptr || panel->isToolWindow() )
 					continue;
-
+				bool open = panel->isOpen();
+				if ( ImGui::MenuItem( panel->getWindowTitle(), nullptr, open ) )
+					panel->setOpen( !open );
+			}
+			ImGui::SeparatorText( "Tools" );
+			for ( auto& panel : _panels )
+			{
+				if ( panel == nullptr || panel->isToolWindow() == false )
+					continue;
 				bool open = panel->isOpen();
 				if ( ImGui::MenuItem( panel->getWindowTitle(), nullptr, open ) )
 					panel->setOpen( !open );
@@ -537,7 +576,6 @@ namespace sw
 			ImGui::EndMenu();
 		}
 
-		// EngineStatus folded into status line (plan P6).
 		const char* backend = ( ctx.rhiDevice != nullptr ) ? ctx.rhiDevice->getBackendName() : "n/a";
 		const float statusW = 280.0f;
 		ImGui::SameLine( ImGui::GetWindowWidth() - statusW );
@@ -567,7 +605,7 @@ namespace sw
 
 		const ImGuiViewport* viewport	 = ImGui::GetMainViewport();
 		const ImGuiID		 dockspaceId = ImGui::DockSpaceOverViewport(
-			ImGui::GetID( "EditorMainDockSpace_v5" ), viewport, ImGuiDockNodeFlags_PassthruCentralNode );
+			ImGui::GetID( "EditorMainDockSpace_v6" ), viewport, ImGuiDockNodeFlags_PassthruCentralNode );
 
 		if ( _bDockLayoutApplied == false )
 		{
@@ -601,16 +639,47 @@ namespace sw
 		{
 			beginFrame();
 			drawMainMenuBar( ctx );
+			drawEditorTransportBar( ctx );
 			beginDockspace();
 		}
 
-		BLOCK( "Editor Panels Draw" )
+		BLOCK( "Editor Hotkeys" )
+		{
+			ImGuiIO& io = ImGui::GetIO();
+			if ( io.WantTextInput == false && ( io.KeyCtrl || io.KeySuper ) )
+			{
+				if ( ImGui::IsKeyPressed( ImGuiKey_Z, false ) )
+					EditorCommandStack::get().undo();
+				if ( ImGui::IsKeyPressed( ImGuiKey_Y, false ) )
+					EditorCommandStack::get().redo();
+			}
+		}
+
+		BLOCK( "Open Window Requests" )
+		{
+			std::string openTitle;
+			if ( editor::consumeOpenWindow( openTitle ) )
+			{
+				for ( auto& panel : _panels )
+				{
+					if ( panel && openTitle == panel->getWindowTitle() )
+					{
+						panel->setOpen( true );
+						ImGui::SetWindowFocus( panel->getWindowTitle() );
+						break;
+					}
+				}
+			}
+		}
+
+		BLOCK( "Editor Windows Draw" )
 		{
 			for ( auto& panel : _panels )
 			{
 				if ( panel && panel->isOpen() )
 					panel->draw( ctx );
 			}
+			drawBoneHierarchyPopup();
 		}
 
 		BLOCK( "ImGui Render / Backend Submit" )

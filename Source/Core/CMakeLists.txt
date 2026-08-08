@@ -54,6 +54,11 @@ endif()
 sw_configure_core_dll_exports(Core ${_core_lib_type})
 sw_set_log_tag(Core Engine)
 
+# Input (XInput) + Audio (XAudio2) on Windows
+if(WIN32)
+    target_link_libraries(Core PRIVATE xinput.lib xaudio2.lib)
+endif()
+
 if(SW_RHI_AS_MODULES)
     target_compile_definitions(Core PRIVATE SW_RHI_AS_MODULES)
     message(STATUS "[Core] SW_RHI_AS_MODULES=ON — RHI device sources excluded; loading RHI_* modules")

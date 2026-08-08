@@ -1,0 +1,125 @@
+<?xml version="1.0"?>
+<car name="Ferrari LaFerrari">
+
+    <body model="project\models\ferrari_laferrari\scene.gltf" scale="2.0" forward_z="-1"
+        hide_parts="tire 1,tire 2,tire 3,tire 4,brakerear" />
+
+    <wheels model="project\models\wheel\model.blend"
+        front_wheel_radius="0.321" rear_wheel_radius="0.358" front_wheel_width="0.265" rear_wheel_width="0.345" wheel_mass="20"
+        albedo="project\models\wheel\albedo.jpeg" metalness="project\models\wheel\metalness.png"
+        normal="project\models\wheel\normal.png" roughness="project\models\wheel\roughness.png" />
+
+    <!-- dimensions in meters, mass in kg -->
+    <chassis
+        mass="1430" length="4.702" width="1.992" height="1.116"
+        wheelbase="2.65" track_front="1.656" track_rear="1.64"
+        center_of_mass_x="0" center_of_mass_y="-0.28" center_of_mass_z="-0.238"
+        inertia_xx="520" inertia_yy="2150" inertia_zz="1720" />
+
+    <!-- v12 hybrid, torque in nm -->
+    <engine
+        engine_idle_rpm="1000" engine_redline_rpm="9250" engine_max_rpm="9500"
+        engine_peak_torque="700" engine_peak_torque_rpm="6750"
+        engine_inertia="0.25" engine_friction="0.02" engine_rpm_smoothing="6" engine_crank_axis_x="0" engine_crank_axis_y="0" engine_crank_axis_z="1"
+        engine_sound_cylinders="12" engine_sound_banks="2"
+        engine_displacement_l="6.262" engine_bore_mm="94" engine_stroke_mm="75.2" engine_compression_ratio="13.5"
+        exhaust_primary_length_m="0.72" exhaust_collector_length_m="2.35"
+        engine_firing_order="0,11,4,7,2,9,5,6,1,10,3,8"
+        engine_cylinder_bank="0,0,0,0,0,0,1,1,1,1,1,1"
+        turbo_enabled="false" boost_max_pressure="0" boost_spool_rate="0" boost_wastegate_rpm="0" boost_torque_mult="0" boost_min_rpm="0"
+        electric_enabled="true" electric_motor_torque="220" electric_motor_power_kw="120" electric_motor_max_rpm="9500" electric_torque_response="60" />
+
+    <!-- 7 speed dct plus reverse, index 0 is reverse, index 1 is neutral -->
+    <transmission
+        gear_ratios="-3.23,0,3.083,2.19,1.633,1.29,1.029,0.846,0.691,0,0" gear_count="9" final_drive="4.443"
+        shift_up_rpm="8800" shift_down_rpm="3500" shift_time="0.08"
+        clutch_engagement_rate="20" clutch_max_torque="1100" driveline_inertia="0.08" drivetrain_efficiency="0.92" manual_transmission="false"
+        downshift_blip_amount="0.35" downshift_blip_duration="0.15"
+        upshift_speed_base="0,0,60,85,115,150,190,230,0,0,0"
+        upshift_speed_sport="0,0,80,115,155,195,245,300,0,0,0"
+        downshift_speeds="0,0,0,30,55,80,110,150,200,0,0" />
+
+    <!-- rwd with limited slip diff -->
+    <drivetrain
+        drivetrain_type="0" torque_split_front="0" diff_type="2"
+        lsd_preload="150" lsd_lock_ratio_accel="0.25" lsd_lock_ratio_decel="0.15" lsd_viscous="40"
+        driveshaft_stiffness="8000" driveshaft_damping="90"
+        halfshaft_mass="3.2" driveshaft_mass="8.5" differential_mass="18" />
+
+    <!-- carbon ceramic discs, temps in celsius -->
+    <brakes
+        brake_force="12000" brake_bias_front="0.62" reverse_power_ratio="0.5"
+        brake_ambient_temp="30" brake_optimal_temp="400" brake_fade_temp="700" brake_max_temp="900"
+        brake_heat_coefficient="0.015" brake_cooling_base="8" brake_cooling_airflow="1.5" brake_thermal_mass="5"
+        handbrake_torque="2500" />
+
+    <!-- angles in radians -->
+    <suspension
+        suspension_height="0.3" suspension_travel="0.12"
+        upright_mass="13" suspension_link_mass="2.2" steering_rack_mass="3.5" arb_mass="7" coilover_mass="3.8"
+        front_spring_freq="2.35" rear_spring_freq="2.25" front_damping_ratio="0.68" rear_damping_ratio="0.72"
+        damping_bump_ratio="0.7" damping_rebound_ratio="1.3" damping_bump_high_speed_ratio="0.32" damping_rebound_high_speed_ratio="0.55" damper_knee_velocity="0.18"
+        front_arb_stiffness="14000" rear_arb_stiffness="11000"
+        max_susp_force="35000" max_damper_velocity="5" bump_stop_stiffness="100000" bump_stop_threshold="0.9" bump_stop_progression="4"
+        packer_threshold="1.05" packer_stiffness="900000"
+        bushing_stiffness_radial="30000000" bushing_stiffness_axial="10000000" bushing_damping="12000" bushing_max_deflection="0.001"
+        front_camber="-0.0261799" rear_camber="-0.0174533" front_toe="0.00174533" rear_toe="0.00349066" />
+
+    <!-- sla, 2.0 m front swing arm for 0.29 deg/cm camber gain, roll centres 55 mm front and 80 mm rear -->
+    <front_suspension mechanism="double_wishbone"
+        chassis_inset="0.306" upper_chassis_inset="0.448" lower_upright_inset="0.055" upper_upright_inset="0.135"
+        upper_inner_y="0.125" lower_inner_y="-0.182" upper_upright_y="0.19" lower_upright_y="-0.18"
+        arm_span="0.24" strut_top_y="0.43" strut_top_inset="0.29" tie_rod_y="0.01" tie_rod_z="-0.15" link_spread_y="0.16" link_spread_z="0.22" />
+
+    <rear_suspension mechanism="multi_link"
+        chassis_inset="0.311" upper_chassis_inset="0.45" lower_upright_inset="0.055" upper_upright_inset="0.135"
+        upper_inner_y="0.126" lower_inner_y="-0.162" upper_upright_y="0.18" lower_upright_y="-0.18"
+        arm_span="0.2" strut_top_y="0.41" strut_top_inset="0.3" tie_rod_y="0" tie_rod_z="0.13" link_spread_y="0.17" link_spread_z="0.24" />
+
+    <steering
+        max_steer_angle="0.52" steering_rate="1.5"
+        self_align_gain="1.0" steering_linearity="1.3" steering_deadzone="0.001" />
+
+    <!-- brush model, cup 2, about 1930 N per degree at the 4 kN reference load -->
+    <tires
+        tire_model_type="1" tread_stiffness_long="33000000" tread_stiffness_lat="24000000" tire_slide_friction_ratio="0.84"
+        tire_probe_rows="5" tire_probe_columns="3" tire_probe_arc="0.32" tire_crown_drop="0.0035" tire_substeps="4"
+        lat_B="12" lat_C="1.55" lat_D="1" lat_E="-0.2" long_B="20" long_C="1.6" long_D="1" long_E="-0.3" combined_long_B="10" combined_long_C="1" combined_long_E="0" combined_lat_B="8" combined_lat_C="1" combined_lat_E="0"
+        load_B_scale_min="0.5" pneumatic_trail_max="0.04" pneumatic_trail_peak="0.14"
+        tire_friction="1.5" min_slip_speed="0.5" load_sensitivity="0.92" load_reference="4000" rear_grip_ratio="1.0"
+        slip_angle_deadband="0.01" camber_thrust_coeff="0.015" max_slip_angle="1.2"
+        tire_pressure="2.2" tire_pressure_optimal="2.2" tire_vertical_stiffness="180000" rolling_resistance="0.011"
+        tire_ambient_temp="50" tire_optimal_temp="90" tire_temp_range="50"
+        tire_heat_from_slip="25" tire_heat_from_rolling="0.15" tire_cooling_rate="2" tire_cooling_airflow="0.05"
+        tire_grip_temp_factor="0.15" tire_min_temp="10" tire_max_temp="350"
+        tire_relaxation_length="0.3" tire_wear_rate="0.00001" tire_wear_heat_mult="2" tire_grip_wear_loss="0.3"
+        tire_core_transfer_rate="0.5" tire_surface_response="3" />
+
+    <aero
+        drag_coeff="0.35" frontal_area="1.98" side_area="4"
+        lift_coeff_front="-0.3" lift_coeff_rear="-0.45" drs_enabled="false" drs_rear_cl_factor="0.3"
+        ground_effect_enabled="true" ground_effect_multiplier="1.5" ground_effect_height_ref="0.15" ground_effect_height_max="0.3"
+        yaw_aero_enabled="true" yaw_drag_multiplier="1.8" yaw_side_force_coeff="0.6"
+        pitch_aero_enabled="true" pitch_sensitivity="0.5"
+        aero_center_height="0.3" aero_center_front_z="0" aero_center_rear_z="0" />
+
+    <assists
+        abs_enabled="true" abs_slip_threshold="0.15" abs_release_rate="0.7" abs_pulse_frequency="15" abs_load_sensitivity="0.15"
+        tc_enabled="true" tc_slip_threshold="0.08" tc_power_reduction="0.8" tc_response_rate="15"
+        steering_speed_reduction="0.55" steering_speed_reference="55" abs_level="1" traction_control_level="1" />
+
+    <input
+        throttle_smoothing="10" brake_smoothing="10" input_deadzone="0.01" />
+
+    <simulation
+        braking_speed_threshold="3" linear_damping="0.001" angular_damping="0.05"
+        airborne_wheel_decay="0.99" bearing_friction="0.2" />
+
+    <validation settle_speed_max="0.04" zero_to_100_min="2.5" zero_to_100_max="4.0"
+        braking_distance_min="28" braking_distance_max="38" skidpad_g_min="1.00" skidpad_g_max="1.35" />
+
+    <upgrades
+        engine_stage_max="1" suspension_stage_max="1" tires_stage_max="1"
+        brakes_stage_max="1" aero_stage_max="0" weight_stage_max="1" />
+
+</car>

@@ -1,7 +1,7 @@
 #pragma once
 /**
  * @file ImGuiEditor.h
- * @brief ImGui 에디터 셸 (백엔드 / 도킹 / 패널 오케스트레이션)
+ * @brief ImGui editor shell (backend / docking / window orchestration)
  */
 #include "IEditor.h"
 #include "Core/Common/CommonHeaders.h"
@@ -10,63 +10,42 @@ namespace sw
 {
 	class IImGuiPlatformBackend;
 	class IImGuiRendererBackend;
-	class IEditorPanel;
+	class IEditorWindow;
 
-	/** @brief ImGui 도킹 셸: 플랫폼/렌더러 백엔드와 기본 패널을 오케스트레이션 */
+	/** @brief ImGui docking shell: backends + Window/Tool orchestration */
 	class ImGuiEditor : public IEditor
 	{
 	public:
 		ImGuiEditor();
 		~ImGuiEditor() override;
 
-		/** @brief ImGui 컨텍스트·백엔드·폰트·기본 패널을 초기화합니다. */
-		bool initialize( IWindow* window, IRHIDevice* rhiDevice ) override;
-		/** @brief 패널·백엔드·ImGui 컨텍스트를 종료합니다. */
-		void shutdown() override;
-		/** @brief 각 패널의 preRender를 호출합니다. */
-		void preRender( IRHIDevice* rhiDevice ) override;
-		/** @brief 도킹 스페이스와 패널을 그립니다. */
-		void render( const EditorUIContext& context ) override;
-		/** @brief Present 이후 멀티 뷰포트 보조 윈도우를 렌더합니다. */
-		void postPresent( IRHIDevice* rhiDevice ) override;
-		/** @brief 네이티브 이벤트를 플랫폼 백엔드로 전달합니다. */
-		bool processEvent( const NativeWindowEvent& event ) override;
-		/** @brief 렌더러 백엔드에 텍스처를 등록합니다. */
+		bool  initialize( IWindow* window, IRHIDevice* rhiDevice ) override;
+		void  shutdown() override;
+		void  preRender( IRHIDevice* rhiDevice ) override;
+		void  render( const EditorUIContext& context ) override;
+		void  postPresent( IRHIDevice* rhiDevice ) override;
+		bool  processEvent( const NativeWindowEvent& event ) override;
 		void* registerTexture( RHITextureHandle texture ) override;
-		/** @brief 렌더러 백엔드에 등록된 텍스처를 해제합니다. */
-		void unregisterTexture( void* textureID ) override;
+		void  unregisterTexture( void* textureID ) override;
 
 	private:
-		/** @brief Console/GameView 등 기본 패널을 등록합니다. */
 		void registerDefaultPanels();
-		/** @brief 에디터/시스템 폰트를 로드합니다. */
 		void setupFonts();
-		/** @brief ImGui NewFrame을 시작합니다. */
 		void beginFrame();
-		/** @brief ImGui 프레임을 끝냅니다. */
 		void endFrame();
-		/** @brief 메인 뷰포트 ImGui draw data를 RHI로 그립니다. */
 		void renderBackend( IRHIDevice* rhiDevice );
-		/** @brief 플랫폼 보조 윈도우(멀티 뷰포트)를 렌더합니다. */
 		void renderPlatformWindows( IRHIDevice* rhiDevice );
-		/** @brief View 메뉴 + 상태줄(RHI/FPS)을 그립니다. */
 		void drawMainMenuBar( const EditorUIContext& ctx );
-		/** @brief 전체 화면 도킹 스페이스를 시작합니다. */
 		void beginDockspace();
-		/** @brief 최초 1회 기본 도킹 레이아웃을 적용합니다. */
 		void applyDefaultDockLayout( uint32 dockspaceId );
-		/** @brief Config/Editor 경로를 준비하고 imgui.ini / panels.ini 경로를 설정합니다. */
 		void setupLayoutPersistencePaths();
-		/** @brief 패널 열림/닫힘 상태를 디스크에서 복원합니다. */
 		void loadPanelVisibility();
-		/** @brief 패널 열림/닫힘 상태와 ImGui 레이아웃을 디스크에 저장합니다. */
 		void saveEditorLayout();
 
 		std::unique_ptr<IImGuiPlatformBackend>	   _platformBackend;
 		std::unique_ptr<IImGuiRendererBackend>	   _rendererBackend;
-		std::vector<std::unique_ptr<IEditorPanel>> _panels;
+		std::vector<std::unique_ptr<IEditorWindow>> _panels;
 
-		/** @brief ImGui IO.IniFilename 이 가리키는 안정적인 스토리지 (수명은 컨텍스트보다 길어야 함) */
 		std::string _imguiIniPath;
 		std::string _panelsIniPath;
 

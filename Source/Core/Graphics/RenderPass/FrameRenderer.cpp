@@ -164,9 +164,21 @@ namespace sw
 			// Continue into the same color target (backend still clears on begin; stub until LoadOp is wired).
 			clearAndDraw( _clearColor, true );
 		}
-		else if ( passType == "PostBloom" || passType == "Post" )
+		else if ( passType == "SSAO" || passType == "HBAO" )
+		{
+			// Ambient occlusion stub — marker until fullscreen AO is wired.
+		}
+		else if ( passType == "PostBloom" || passType == "Bloom" || passType == "Post" )
 		{
 			// Post-process stub — marker only until bloom/composite shaders are wired.
+		}
+		else if ( passType == "TAA" )
+		{
+			// Temporal AA stub — marker until history resolve is wired.
+		}
+		else if ( passType == "Tonemap" || passType == "ToneMap" )
+		{
+			// Tonemap stub — marker until HDR→LDR composite is wired.
 		}
 		else if ( passType == "Present" )
 		{

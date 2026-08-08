@@ -65,20 +65,52 @@
 			</_outputs>
 		</item>
 		<item>
+			<_name>SSAO</_name>
+			<_type>SSAO</_type>
+			<_inputs>
+				<item>GBufferNormal</item>
+				<item>SceneDepth</item>
+			</_inputs>
+			<_outputs>
+				<item>AOColor</item>
+			</_outputs>
+		</item>
+		<item>
 			<_name>PostBloom</_name>
 			<_type>PostBloom</_type>
 			<_inputs>
 				<item>TransparentColor</item>
+				<item>AOColor</item>
 			</_inputs>
 			<_outputs>
 				<item>BloomColor</item>
 			</_outputs>
 		</item>
 		<item>
+			<_name>TAA</_name>
+			<_type>TAA</_type>
+			<_inputs>
+				<item>BloomColor</item>
+			</_inputs>
+			<_outputs>
+				<item>TaaColor</item>
+			</_outputs>
+		</item>
+		<item>
+			<_name>Tonemap</_name>
+			<_type>Tonemap</_type>
+			<_inputs>
+				<item>TaaColor</item>
+			</_inputs>
+			<_outputs>
+				<item>TonemapColor</item>
+			</_outputs>
+		</item>
+		<item>
 			<_name>Present</_name>
 			<_type>Present</_type>
 			<_inputs>
-				<item>BloomColor</item>
+				<item>TonemapColor</item>
 			</_inputs>
 			<_outputs>
 				<item>Swapchain</item>

@@ -3,6 +3,7 @@
  * @brief Cross-platform keyboard / mouse state
  */
 #include "InputManager.h"
+#include "Core/Input/GamepadXInput.h"
 #include "Core/Window/NativeWindowEvent.h"
 #include "Core/Utility/Log/Logger.h"
 #include "Core/Window/IWindow.h"
@@ -18,9 +19,12 @@ namespace sw
 {
 	InputManager::InputManager()
 		: _bInitialized{ 0 }
+		, _bPollGamepad{ 0 }
 		, _reservedFlags{ 0 }
 	{
 	}
+
+	InputManager::~InputManager() = default;
 
 	bool InputManager::initialize()
 	{
@@ -30,6 +34,8 @@ namespace sw
 		std::memset( _prevMouseButtons, 0, sizeof( _prevMouseButtons ) );
 		_mouseX		  = 0;
 		_mouseY		  = 0;
+		_gamepad	  = std::make_unique<GamepadXInput>();
+		_bPollGamepad = 1;
 		_bInitialized = 1;
 		SW_LOG_INFO( "[InputManager] Initialized." );
 		return true;
@@ -37,8 +43,17 @@ namespace sw
 
 	void InputManager::shutdown()
 	{
+		_gamepad.reset();
+		_bPollGamepad = 0;
 		_bInitialized = 0;
 		SW_LOG_INFO( "[InputManager] Shut down." );
+	}
+
+	void InputManager::setGamepadPollingEnabled( bool enabled )
+	{
+		_bPollGamepad = enabled ? 1 : 0;
+		if ( enabled && _gamepad == nullptr )
+			_gamepad = std::make_unique<GamepadXInput>();
 	}
 
 	void InputManager::beginFrame()
@@ -49,6 +64,8 @@ namespace sw
 		std::memcpy( _prevKeys, _keys, sizeof( _keys ) );
 		std::memcpy( _prevMouseButtons, _mouseButtons, sizeof( _mouseButtons ) );
 		pollPlatform();
+		if ( _bPollGamepad != 0 && _gamepad != nullptr )
+			_gamepad->poll( 0 );
 	}
 
 	void InputManager::endFrame()
@@ -118,6 +135,16 @@ namespace sw
 			case 'C':
 			case 'c':
 				return Key::C;
+			case 'E':
+			case 'e':
+				return Key::E;
+			case 'Z':
+			case 'z':
+				return Key::Z;
+			case '1':
+				return Key::Digit1;
+			case '2':
+				return Key::Digit2;
 			case VK_SPACE:
 				return Key::Space;
 			case VK_ESCAPE:
@@ -174,6 +201,10 @@ namespace sw
 			{ 'S', Key::S },
 			{ 'D', Key::D },
 			{ 'C', Key::C },
+			{ 'E', Key::E },
+			{ 'Z', Key::Z },
+			{ '1', Key::Digit1 },
+			{ '2', Key::Digit2 },
 			{ VK_SPACE, Key::Space },
 			{ VK_ESCAPE, Key::Escape },
 			{ VK_RETURN, Key::Enter },
@@ -280,6 +311,18 @@ namespace sw
 			case XK_c:
 			case XK_C:
 				return Key::C;
+			case XK_e:
+			case XK_E:
+				return Key::E;
+			case XK_z:
+			case XK_Z:
+				return Key::Z;
+			case XK_1:
+			case XK_KP_1:
+				return Key::Digit1;
+			case XK_2:
+			case XK_KP_2:
+				return Key::Digit2;
 			case XK_space:
 				return Key::Space;
 			case XK_Escape:

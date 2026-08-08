@@ -1,0 +1,11 @@
+# Species stub table (id name baseHp baseAtk move0 move1)
+# Mirrors SpeciesCatalog::kSpecies — runtime still uses the C++ table.
+critter_a	Wild_Critter	40	10	0	1
+critter_b	Brush_Hopper	35	12	0	3
+starter_a	Leaf_Pup	45	11	3	1
+
+# Moves (index id name power ppMax)
+# 0 tackle Tackle 40 35
+# 1 growl Growl 0 40
+# 2 ember Ember 40 25
+# 3 vine_whip Vine_Whip 45 25
