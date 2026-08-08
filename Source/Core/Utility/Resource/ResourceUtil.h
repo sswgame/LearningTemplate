@@ -31,8 +31,10 @@ namespace sw
 		static const std::string& getCommonFolderPath();
 		/** @brief Game 리소스 폴더 절대 경로 */
 		static const std::string& getGameFolderPath();
-		/** @brief 리소스 루트(상위) 절대 경로 */
+		/** @brief Resource/ 폴더 절대 경로 (에셋 루트) */
 		static const std::string& getRootFolderPath();
+		/** @brief 프로젝트 루트 절대 경로 (Resource/·Config/ 의 부모) */
+		static const std::string& getProjectFolderPath();
 		/** @brief 주어진 폴더 이름이 존재하는 모든 리소스 경로들의 절대 경로 목록을 반환합니다.*/
 		static std::vector<std::string> getResourceFolders( const std::string_view folderName );
 
@@ -49,6 +51,7 @@ namespace sw
 
 	private:
 		static bool								  _s_bInitialize;
+		static std::string						  _s_projectFolderPath;
 		static std::string						  _s_engineFolderPath;
 		static std::string						  _s_commonFolderPath;
 		static std::string						  _s_gameFolderPath;

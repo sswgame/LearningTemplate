@@ -151,6 +151,12 @@ namespace sw
 	SW_API hashed_string::AllocationInfo* getCoreHashedStringAllocationInfo() noexcept;
 	SW_API hashed_wstring::AllocationInfo* getCoreHashedWStringAllocationInfo() noexcept;
 
+	/**
+	 * @brief 인턴 테이블을 비웁니다. 프로세스 종료 직전 / CRT 덤프 직전에만 호출하세요.
+	 * @warning 이후 hashed_string 사용은 정의되지 않은 동작입니다.
+	 */
+	SW_API void shutdownHashedStringPools() noexcept;
+
 } // namespace sw
 
 namespace sw
@@ -269,6 +275,14 @@ namespace sw
 		{
 			_keyList.reserve( std::numeric_limits<uint16>::max() );
 			createPredefinedNameTypes();
+		}
+
+		void clear() noexcept
+		{
+			std::unique_lock<std::shared_mutex> lock{ _mutex };
+			_mapKeyToIndex.clear();
+			// clear() alone keeps reserve(65535) (~1.5MB) capacity; release it for CRT dumps.
+			std::vector<StringKey>{}.swap( _keyList );
 		}
 
 	private:

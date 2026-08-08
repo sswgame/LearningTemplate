@@ -160,7 +160,8 @@ namespace sw
 		}
 		else if ( passType == "Transparent" )
 		{
-			_device->drawTriangle( matIdx );
+			// Continue into the same color target (backend still clears on begin; stub until LoadOp is wired).
+			clearAndDraw( _clearColor, true );
 		}
 		else if ( passType == "PostBloom" || passType == "Post" )
 		{
@@ -168,7 +169,7 @@ namespace sw
 		}
 		else if ( passType == "Present" )
 		{
-			_device->drawTriangle( matIdx );
+			clearAndDraw( _clearColor, true );
 		}
 		else
 		{

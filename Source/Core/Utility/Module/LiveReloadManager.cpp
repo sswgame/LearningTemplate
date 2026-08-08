@@ -6,8 +6,10 @@
  * Windows also copies PDB debug symbols alongside the shadow module.
  */
 #include "LiveReloadManager.h"
+#include "Core/Common/CoreServices.h"
 #include "Core/Utility/File/FileUtil.h"
 #include "Core/Utility/Log/Logger.h"
+#include "Core/Utility/Task/TaskManager.h"
 
 namespace sw
 {
@@ -152,6 +154,10 @@ namespace sw
 
 			if ( previousHandle != nullptr )
 			{
+				// Drop any TaskManager nodes that still capture callables from the old MODULE.
+				core::getTaskManager().waitAll();
+				core::getTaskManager().clear();
+
 				FileUtil::freeDynamicLibrary( previousHandle );
 				previousHandle = nullptr;
 			}

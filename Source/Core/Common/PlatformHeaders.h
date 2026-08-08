@@ -32,6 +32,7 @@
 	#include <d3dcompiler.h>
 	#include <dxcapi.h>
 	#include <d3d11shader.h>
+	#include <d3d12shader.h>
 	#define SW_HAS_DXC_API 1
 
 #elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )

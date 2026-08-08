@@ -40,10 +40,10 @@ namespace sw
 	 */
 	struct MaterialProperty
 	{
-		std::string			 name;	 ///< 파라미터 변수 이름
-		MaterialPropertyType type;	 ///< 데이터 타입
-		uint32				 offset; ///< CBuffer 내 바이트 오프셋
-		uint32				 size;	 ///< 바이트 크기
+		std::string			 _name;	  ///< 파라미터 변수 이름
+		MaterialPropertyType _type;	  ///< 데이터 타입
+		uint32				 _offset; ///< CBuffer 내 바이트 오프셋
+		uint32				 _size;	  ///< 바이트 크기
 	};
 
 	/**
@@ -52,8 +52,8 @@ namespace sw
 	 */
 	struct MaterialData
 	{
-		std::vector<MaterialProperty> properties; ///< 파라미터 메타데이터 리스트
-		std::vector<uint8>			  buffer;	  ///< Constant Buffer 사본 바이트 배열
+		std::vector<MaterialProperty> _properties; ///< 파라미터 메타데이터 리스트
+		std::vector<uint8>			  _buffer;	   ///< Constant Buffer 사본 바이트 배열
 	};
 
 	/**
@@ -88,10 +88,10 @@ namespace sw
 		bool saveToFile( const std::string& assetRelativePath ) const;
 
 		/** @brief 머티리얼 파라미터 프로퍼티 목록 반환 */
-		const std::vector<MaterialProperty>& getProperties() const { return _data.properties; }
+		const std::vector<MaterialProperty>& getProperties() const { return _data._properties; }
 
 		/** @brief CPU 측 Constant Buffer 데이터 사본 반환 */
-		const std::vector<uint8>& getBuffer() const { return _data.buffer; }
+		const std::vector<uint8>& getBuffer() const { return _data._buffer; }
 
 		/** @brief 특정 이름의 프로퍼티 포인터 반환 */
 		const void* getPropertyData( const std::string& name ) const;
@@ -118,8 +118,8 @@ namespace sw
 		/** @brief Async load control block — outlives Material so tasks never UAF on this */
 		struct AsyncLoadState
 		{
-			std::mutex mutex;
-			Material*  material = nullptr;
+			std::mutex _mutex;
+			Material*  _material = nullptr;
 		};
 
 		std::string		   _name	   = "DefaultMaterial";

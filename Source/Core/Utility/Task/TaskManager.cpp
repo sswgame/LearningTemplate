@@ -15,6 +15,20 @@
 
 namespace sw
 {
+	namespace
+	{
+		thread_local bool t_bTaskWorkerThread	= false;
+		thread_local bool t_bInsideParallelTask = false;
+
+		struct ParallelTaskScope
+		{
+			ParallelTaskScope() { t_bInsideParallelTask = true; }
+			~ParallelTaskScope() { t_bInsideParallelTask = false; }
+			ParallelTaskScope( const ParallelTaskScope& )			= delete;
+			ParallelTaskScope& operator=( const ParallelTaskScope& ) = delete;
+		};
+	} // namespace
+
 	struct TaskNode : public std::enable_shared_from_this<TaskNode>
 	{
 		TaskNode()
@@ -106,7 +120,8 @@ namespace sw
 				threadCount = kDefaultThreadCount;
 		}
 
-		_bStop = false;
+		_mainThreadId = std::this_thread::get_id();
+		_bStop		  = false;
 		_workers.reserve( threadCount );
 		for ( uint32 threadIndex = 0; threadIndex < threadCount; ++threadIndex )
 		{
@@ -138,8 +153,39 @@ namespace sw
 		_workers.clear();
 
 		clear();
+		_mainThreadId = {};
 		_bInitialized = false;
 		SW_LOG_INFO( "[TaskManager] Shutdown cleanly." );
+	}
+
+	bool TaskManager::isMainThread() const
+	{
+		return _bInitialized && std::this_thread::get_id() == _mainThreadId;
+	}
+
+	void TaskManager::ensureMainThread() const
+	{
+		SW_ASSERT( isMainThread() );
+	}
+
+	bool TaskManager::isWorkerThread() const
+	{
+		return t_bTaskWorkerThread;
+	}
+
+	void TaskManager::ensureWorkerThread() const
+	{
+		SW_ASSERT( isWorkerThread() );
+	}
+
+	bool TaskManager::isInsideParallelTask() const
+	{
+		return t_bInsideParallelTask;
+	}
+
+	void TaskManager::ensureInsideParallelTask() const
+	{
+		SW_ASSERT( isInsideParallelTask() );
 	}
 
 	TaskHandle TaskManager::emplaceTask( const TaskDelegate& delegate )
@@ -366,6 +412,8 @@ namespace sw
 	void TaskManager::workerLoop( uint32 workerId )
 	{
 		(void)workerId;
+		t_bTaskWorkerThread = true;
+
 		while ( true )
 		{
 			std::shared_ptr<TaskNode> node;
@@ -407,6 +455,7 @@ namespace sw
 				}
 				else if ( node->_type == TaskType::Parallel )
 				{
+					const ParallelTaskScope parallelScope{};
 					if ( node->_parallelDelegate.isBound() == true )
 					{
 						for ( uint32 elementIndex = node->_rangeStart; elementIndex < node->_rangeEnd; ++elementIndex )
@@ -423,6 +472,9 @@ namespace sw
 				onTaskFinished( node );
 			}
 		}
+
+		t_bTaskWorkerThread	  = false;
+		t_bInsideParallelTask = false;
 	}
 
 	void TaskManager::onTaskFinished( const std::shared_ptr<TaskNode>& node )
@@ -449,6 +501,16 @@ namespace sw
 					scheduleReadyTask( succ );
 				}
 			}
+
+			// Drop module-owned delegates immediately so FreeLibrary / hot-reload cannot
+			// leave callables into an unloaded DLL inside _allNodes.
+			node->_delegate		   = {};
+			node->_argsDelegate	   = {};
+			node->_parallelDelegate = {};
+			node->_blockDelegate   = {};
+			node->_successors.clear();
+
+			_allNodes.erase( std::remove( _allNodes.begin(), _allNodes.end(), node ), _allNodes.end() );
 
 			uint32 activeLeft = _activeTaskCount.fetch_sub( 1, std::memory_order_relaxed );
 			if ( activeLeft == 1 )

@@ -815,36 +815,36 @@ namespace sw
 
 		for ( const auto& prop : props )
 		{
-			ImGui::PushID( prop.name.c_str() );
+			ImGui::PushID( prop._name.c_str() );
 
-			if ( prop.type == MaterialPropertyType::Float )
+			if ( prop._type == MaterialPropertyType::Float )
 			{
-				float32* ptr = reinterpret_cast<float32*>( tempBuffer.data() + prop.offset );
-				if ( ImGui::DragFloat( prop.name.c_str(), ptr, 0.01f ) )
+				float32* ptr = reinterpret_cast<float32*>( tempBuffer.data() + prop._offset );
+				if ( ImGui::DragFloat( prop._name.c_str(), ptr, 0.01f ) )
 					bChanged = true;
 			}
-			else if ( prop.type == MaterialPropertyType::Float2 )
+			else if ( prop._type == MaterialPropertyType::Float2 )
 			{
-				float32* ptr = reinterpret_cast<float32*>( tempBuffer.data() + prop.offset );
-				if ( ImGui::DragFloat2( prop.name.c_str(), ptr, 0.01f ) )
+				float32* ptr = reinterpret_cast<float32*>( tempBuffer.data() + prop._offset );
+				if ( ImGui::DragFloat2( prop._name.c_str(), ptr, 0.01f ) )
 					bChanged = true;
 			}
-			else if ( prop.type == MaterialPropertyType::Float3 )
+			else if ( prop._type == MaterialPropertyType::Float3 )
 			{
-				float32* ptr = reinterpret_cast<float32*>( tempBuffer.data() + prop.offset );
-				if ( ImGui::DragFloat3( prop.name.c_str(), ptr, 0.01f ) )
+				float32* ptr = reinterpret_cast<float32*>( tempBuffer.data() + prop._offset );
+				if ( ImGui::DragFloat3( prop._name.c_str(), ptr, 0.01f ) )
 					bChanged = true;
 			}
-			else if ( prop.type == MaterialPropertyType::Float4 )
+			else if ( prop._type == MaterialPropertyType::Float4 )
 			{
-				float32* ptr = reinterpret_cast<float32*>( tempBuffer.data() + prop.offset );
-				if ( ImGui::ColorEdit4( prop.name.c_str(), ptr ) )
+				float32* ptr = reinterpret_cast<float32*>( tempBuffer.data() + prop._offset );
+				if ( ImGui::ColorEdit4( prop._name.c_str(), ptr ) )
 					bChanged = true;
 			}
-			else if ( prop.type == MaterialPropertyType::Float4x4 )
+			else if ( prop._type == MaterialPropertyType::Float4x4 )
 			{
-				float32* ptr = reinterpret_cast<float32*>( tempBuffer.data() + prop.offset );
-				ImGui::Text( "%s", prop.name.c_str() );
+				float32* ptr = reinterpret_cast<float32*>( tempBuffer.data() + prop._offset );
+				ImGui::Text( "%s", prop._name.c_str() );
 				if ( ImGui::DragFloat4( "##r0", ptr, 0.01f ) )
 					bChanged = true;
 				if ( ImGui::DragFloat4( "##r1", ptr + 4, 0.01f ) )
@@ -854,28 +854,28 @@ namespace sw
 				if ( ImGui::DragFloat4( "##r3", ptr + 12, 0.01f ) )
 					bChanged = true;
 			}
-			else if ( prop.type == MaterialPropertyType::Uint || prop.type == MaterialPropertyType::Int )
+			else if ( prop._type == MaterialPropertyType::Uint || prop._type == MaterialPropertyType::Int )
 			{
-				int* ptr = reinterpret_cast<int*>( tempBuffer.data() + prop.offset );
-				if ( ImGui::InputInt( prop.name.c_str(), ptr ) )
+				int32* ptr = reinterpret_cast<int32*>( tempBuffer.data() + prop._offset );
+				if ( ImGui::InputInt( prop._name.c_str(), ptr ) )
 					bChanged = true;
 			}
-			else if ( prop.type == MaterialPropertyType::Uint2 || prop.type == MaterialPropertyType::Int2 )
+			else if ( prop._type == MaterialPropertyType::Uint2 || prop._type == MaterialPropertyType::Int2 )
 			{
-				int* ptr = reinterpret_cast<int*>( tempBuffer.data() + prop.offset );
-				if ( ImGui::InputInt2( prop.name.c_str(), ptr ) )
+				int32* ptr = reinterpret_cast<int32*>( tempBuffer.data() + prop._offset );
+				if ( ImGui::InputInt2( prop._name.c_str(), ptr ) )
 					bChanged = true;
 			}
-			else if ( prop.type == MaterialPropertyType::Uint3 || prop.type == MaterialPropertyType::Int3 )
+			else if ( prop._type == MaterialPropertyType::Uint3 || prop._type == MaterialPropertyType::Int3 )
 			{
-				int* ptr = reinterpret_cast<int*>( tempBuffer.data() + prop.offset );
-				if ( ImGui::InputInt3( prop.name.c_str(), ptr ) )
+				int32* ptr = reinterpret_cast<int32*>( tempBuffer.data() + prop._offset );
+				if ( ImGui::InputInt3( prop._name.c_str(), ptr ) )
 					bChanged = true;
 			}
-			else if ( prop.type == MaterialPropertyType::Uint4 || prop.type == MaterialPropertyType::Int4 )
+			else if ( prop._type == MaterialPropertyType::Uint4 || prop._type == MaterialPropertyType::Int4 )
 			{
-				int* ptr = reinterpret_cast<int*>( tempBuffer.data() + prop.offset );
-				if ( ImGui::InputInt4( prop.name.c_str(), ptr ) )
+				int32* ptr = reinterpret_cast<int32*>( tempBuffer.data() + prop._offset );
+				if ( ImGui::InputInt4( prop._name.c_str(), ptr ) )
 					bChanged = true;
 			}
 

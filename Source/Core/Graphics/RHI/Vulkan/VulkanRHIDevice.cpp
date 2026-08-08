@@ -76,6 +76,7 @@ namespace sw
 	VulkanRHIDevice::VulkanRHIDevice()
 		: _bFrameStarted{ 0 }
 		, _bOffscreenPassActive{ 0 }
+		, _bRenderPassActive{ 0 }
 		, _linuxWsi{ 0 }
 		, _reservedFlags{ 0 }
 	{
@@ -870,6 +871,8 @@ namespace sw
 			dynamicState.dynamicStateCount = static_cast<uint32>( dynamicStates.size() );
 			dynamicState.pDynamicStates	   = dynamicStates.data();
 
+			// Single overlapping range: every vkCmdPushConstants must include ALL of these stages
+			// (VUID: missing stageFlags from the overlapping VkPushConstantRange).
 			VkPushConstantRange pushConstant{};
 			pushConstant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT;
 			pushConstant.offset		= 0;
@@ -1050,6 +1053,14 @@ namespace sw
 			if ( vkCreateGraphicsPipelines( _device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &_pipeline ) != VK_SUCCESS )
 				return false;
 
+			// Offscreen Game View / RT path uses R8G8B8A8_UNORM — not swapchain-compatible.
+			if ( ensureOffscreenRenderPass( static_cast<uint32>( VK_FORMAT_R8G8B8A8_UNORM ) ) == false )
+				return false;
+
+			pipelineInfo.renderPass = _offscreenRenderPass;
+			if ( vkCreateGraphicsPipelines( _device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &_offscreenPipeline ) != VK_SUCCESS )
+				return false;
+
 			vkDestroyShaderModule( _device, fragShaderModule, nullptr );
 			vkDestroyShaderModule( _device, vertShaderModule, nullptr );
 
@@ -1198,6 +1209,11 @@ namespace sw
 				vkFreeMemory( _device, _vertexBufferMemory, nullptr );
 			if ( _pipeline )
 				vkDestroyPipeline( _device, _pipeline, nullptr );
+			if ( _offscreenPipeline )
+			{
+				vkDestroyPipeline( _device, _offscreenPipeline, nullptr );
+				_offscreenPipeline = nullptr;
+			}
 			if ( _pipelineLayout )
 				vkDestroyPipelineLayout( _device, _pipelineLayout, nullptr );
 			if ( _dummyUBO )
@@ -1208,6 +1224,16 @@ namespace sw
 				vkDestroyDescriptorPool( _device, _descriptorPool, nullptr );
 			if ( _descriptorSetLayout )
 				vkDestroyDescriptorSetLayout( _device, _descriptorSetLayout, nullptr );
+			if ( _uavDescriptorSetLayout )
+			{
+				vkDestroyDescriptorSetLayout( _device, _uavDescriptorSetLayout, nullptr );
+				_uavDescriptorSetLayout = nullptr;
+			}
+			if ( _explicitUavDescriptorSetLayout )
+			{
+				vkDestroyDescriptorSetLayout( _device, _explicitUavDescriptorSetLayout, nullptr );
+				_explicitUavDescriptorSetLayout = nullptr;
+			}
 
 			cleanupSwapChain();
 
@@ -1223,6 +1249,11 @@ namespace sw
 
 			if ( _renderPass )
 				vkDestroyRenderPass( _device, _renderPass, nullptr );
+			if ( _offscreenRenderPass )
+			{
+				vkDestroyRenderPass( _device, _offscreenRenderPass, nullptr );
+				_offscreenRenderPass = nullptr;
+			}
 			vkDestroyDevice( _device, nullptr );
 			_device = nullptr;
 		}
@@ -1296,20 +1327,14 @@ namespace sw
 		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 		vkBeginCommandBuffer( _commandBuffers[_currentFrame], &beginInfo );
 
-		_bFrameStarted = true;
+		_bFrameStarted	   = true;
+		_bRenderPassActive = false;
 
-		VkRenderPassBeginInfo renderPassInfo{};
-		renderPassInfo.sType			 = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		renderPassInfo.renderPass		 = _renderPass;
-		renderPassInfo.framebuffer		 = _swapChainFramebuffers[_imageIndex];
-		renderPassInfo.renderArea.offset = { 0, 0 };
-		renderPassInfo.renderArea.extent = { _swapChainExtentWidth, _swapChainExtentHeight };
-
-		VkClearValue clearValue		   = { { { clearColor[0], clearColor[1], clearColor[2], clearColor[3] } } };
-		renderPassInfo.clearValueCount = 1;
-		renderPassInfo.pClearValues	   = &clearValue;
-
-		vkCmdBeginRenderPass( _commandBuffers[_currentFrame], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE );
+		// Open the default swapchain pass so legacy drawTriangle paths work; FrameRenderer
+		// may end/restart passes via beginRenderPass/endRenderPass on the same buffer.
+		RHIRenderPassBeginInfo rpBegin{};
+		std::memcpy( rpBegin._clearColor, clearColor, sizeof( rpBegin._clearColor ) );
+		beginRenderPass( rpBegin );
 
 		constexpr float32 kDefaultViewportX		   = 0.0f;
 		constexpr float32 kDefaultViewportMinDepth = 0.0f;
@@ -1337,7 +1362,11 @@ namespace sw
 		if ( !_bFrameStarted )
 			return;
 
-		vkCmdEndRenderPass( _commandBuffers[_currentFrame] );
+		if ( _bRenderPassActive )
+		{
+			vkCmdEndRenderPass( _commandBuffers[_currentFrame] );
+			_bRenderPassActive = false;
+		}
 		vkEndCommandBuffer( _commandBuffers[_currentFrame] );
 
 		VkSubmitInfo submitInfo{};
@@ -1606,13 +1635,20 @@ namespace sw
 		return true;
 	}
 
-	bool VulkanRHIDevice::createOffscreenFramebuffer( VulkanTextureRecord& record )
+	bool VulkanRHIDevice::ensureOffscreenRenderPass( uint32 vkFormat )
 	{
-		if ( record.imageView == VK_NULL_HANDLE || record._bRenderTarget == 0 )
+		if ( _offscreenRenderPass != VK_NULL_HANDLE )
+			return true;
+		if ( _device == nullptr )
+			return false;
+
+		// Shared pass is always R8G8B8A8_UNORM (Game View). Other RT formats use a private RP.
+		const uint32 sharedFormat = static_cast<uint32>( VK_FORMAT_R8G8B8A8_UNORM );
+		if ( vkFormat != 0 && vkFormat != sharedFormat )
 			return false;
 
 		VkAttachmentDescription colorAttachment{};
-		colorAttachment.format		   = static_cast<VkFormat>( record.format );
+		colorAttachment.format		   = static_cast<VkFormat>( sharedFormat );
 		colorAttachment.samples		   = VK_SAMPLE_COUNT_1_BIT;
 		colorAttachment.loadOp		   = VK_ATTACHMENT_LOAD_OP_CLEAR;
 		colorAttachment.storeOp		   = VK_ATTACHMENT_STORE_OP_STORE;
@@ -1630,12 +1666,13 @@ namespace sw
 		subpass.colorAttachmentCount = 1;
 		subpass.pColorAttachments	 = &colorRef;
 
+		// Match swapchain-compatible dependency style so PSO / active RP stay consistent.
 		VkSubpassDependency dependency{};
 		dependency.srcSubpass	 = VK_SUBPASS_EXTERNAL;
 		dependency.dstSubpass	 = 0;
-		dependency.srcStageMask	 = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+		dependency.srcStageMask	 = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		dependency.srcAccessMask = 0;
 		dependency.dstStageMask	 = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-		dependency.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
 		dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
 		VkRenderPassCreateInfo rpInfo{};
@@ -1647,8 +1684,62 @@ namespace sw
 		rpInfo.dependencyCount = 1;
 		rpInfo.pDependencies   = &dependency;
 
-		if ( vkCreateRenderPass( _device, &rpInfo, nullptr, &record.renderPass ) != VK_SUCCESS )
+		return vkCreateRenderPass( _device, &rpInfo, nullptr, &_offscreenRenderPass ) == VK_SUCCESS;
+	}
+
+	bool VulkanRHIDevice::createOffscreenFramebuffer( VulkanTextureRecord& record )
+	{
+		if ( record.imageView == VK_NULL_HANDLE || record._bRenderTarget == 0 )
 			return false;
+
+		const bool bUseSharedPass = ( record.format == static_cast<uint32>( VK_FORMAT_R8G8B8A8_UNORM ) );
+		if ( bUseSharedPass )
+		{
+			if ( ensureOffscreenRenderPass( record.format ) == false )
+				return false;
+			record.renderPass = _offscreenRenderPass;
+		}
+		else
+		{
+			VkAttachmentDescription colorAttachment{};
+			colorAttachment.format		   = static_cast<VkFormat>( record.format );
+			colorAttachment.samples		   = VK_SAMPLE_COUNT_1_BIT;
+			colorAttachment.loadOp		   = VK_ATTACHMENT_LOAD_OP_CLEAR;
+			colorAttachment.storeOp		   = VK_ATTACHMENT_STORE_OP_STORE;
+			colorAttachment.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+			colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+			colorAttachment.initialLayout  = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+			colorAttachment.finalLayout	   = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+			VkAttachmentReference colorRef{};
+			colorRef.attachment = 0;
+			colorRef.layout		= VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+			VkSubpassDescription subpass{};
+			subpass.pipelineBindPoint	 = VK_PIPELINE_BIND_POINT_GRAPHICS;
+			subpass.colorAttachmentCount = 1;
+			subpass.pColorAttachments	 = &colorRef;
+
+			VkSubpassDependency dependency{};
+			dependency.srcSubpass	 = VK_SUBPASS_EXTERNAL;
+			dependency.dstSubpass	 = 0;
+			dependency.srcStageMask	 = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+			dependency.srcAccessMask = 0;
+			dependency.dstStageMask	 = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+			dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+			VkRenderPassCreateInfo rpInfo{};
+			rpInfo.sType		   = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+			rpInfo.attachmentCount = 1;
+			rpInfo.pAttachments	   = &colorAttachment;
+			rpInfo.subpassCount	   = 1;
+			rpInfo.pSubpasses	   = &subpass;
+			rpInfo.dependencyCount = 1;
+			rpInfo.pDependencies   = &dependency;
+
+			if ( vkCreateRenderPass( _device, &rpInfo, nullptr, &record.renderPass ) != VK_SUCCESS )
+				return false;
+		}
 
 		VkFramebufferCreateInfo fbInfo{};
 		fbInfo.sType		   = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
@@ -1661,7 +1752,8 @@ namespace sw
 
 		if ( vkCreateFramebuffer( _device, &fbInfo, nullptr, &record.framebuffer ) != VK_SUCCESS )
 		{
-			vkDestroyRenderPass( _device, record.renderPass, nullptr );
+			if ( record.renderPass != _offscreenRenderPass )
+				vkDestroyRenderPass( _device, record.renderPass, nullptr );
 			record.renderPass = VK_NULL_HANDLE;
 			return false;
 		}
@@ -1675,11 +1767,10 @@ namespace sw
 			vkDestroyFramebuffer( _device, record.framebuffer, nullptr );
 			record.framebuffer = VK_NULL_HANDLE;
 		}
-		if ( record.renderPass != VK_NULL_HANDLE )
-		{
+		// Shared offscreen RP is owned by the device; only destroy private per-texture passes.
+		if ( record.renderPass != VK_NULL_HANDLE && record.renderPass != _offscreenRenderPass )
 			vkDestroyRenderPass( _device, record.renderPass, nullptr );
-			record.renderPass = VK_NULL_HANDLE;
-		}
+		record.renderPass = VK_NULL_HANDLE;
 	}
 
 	bool VulkanRHIDevice::queryVulkanTextureView( RHITextureHandle texture, void*& outImageView ) const
@@ -1919,17 +2010,17 @@ namespace sw
 							   static_cast<uint32>( VK_IMAGE_ASPECT_COLOR_BIT ) );
 		record.layout = static_cast<uint32>( VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
 
-		VkClearValue clearValue{};
-		clearValue.color = { { clearColor[0], clearColor[1], clearColor[2], clearColor[3] } };
+		_bOffscreenPassActive	= 1;
+		_bFrameStarted			= 1; // allow drawTriangle / setPipelineState during offscreen
+		_bRenderPassActive		= 0;
+		_activeOffscreenTarget	= colorTarget;
 
-		VkRenderPassBeginInfo rpBegin{};
-		rpBegin.sType			  = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		rpBegin.renderPass		  = record.renderPass;
-		rpBegin.framebuffer		  = record.framebuffer;
-		rpBegin.renderArea.extent = { record.width, record.height };
-		rpBegin.clearValueCount	  = 1;
-		rpBegin.pClearValues	  = &clearValue;
-		vkCmdBeginRenderPass( _offscreenCommandBuffer, &rpBegin, VK_SUBPASS_CONTENTS_INLINE );
+		// Default clear pass (FrameRenderer may restart passes on this same buffer).
+		RHIRenderPassBeginInfo rpBegin{};
+		std::memcpy( rpBegin._clearColor, clearColor, sizeof( rpBegin._clearColor ) );
+		rpBegin._width	= record.width;
+		rpBegin._height = record.height;
+		beginRenderPass( rpBegin );
 
 		VkViewport viewport{};
 		viewport.x		  = 0.0f;
@@ -1943,9 +2034,6 @@ namespace sw
 		VkRect2D scissor{};
 		scissor.extent = { record.width, record.height };
 		vkCmdSetScissor( _offscreenCommandBuffer, 0, 1, &scissor );
-
-		_bOffscreenPassActive = 1;
-		_bFrameStarted		  = 1; // allow drawTriangle / setPipelineState during offscreen
 	}
 
 	void VulkanRHIDevice::endOffscreenPass( RHITextureHandle colorTarget )
@@ -1958,7 +2046,11 @@ namespace sw
 			return;
 
 		VulkanTextureRecord& record = it->second;
-		vkCmdEndRenderPass( _offscreenCommandBuffer );
+		if ( _bRenderPassActive )
+		{
+			vkCmdEndRenderPass( _offscreenCommandBuffer );
+			_bRenderPassActive = false;
+		}
 		transitionImageLayout( _offscreenCommandBuffer, record.image,
 							   static_cast<uint32>( VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL ),
 							   static_cast<uint32>( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ),
@@ -1974,8 +2066,9 @@ namespace sw
 		vkQueueSubmit( _graphicsQueue, 1, &submitInfo, _offscreenFence );
 		vkWaitForFences( _device, 1, &_offscreenFence, VK_TRUE, UINT64_MAX );
 
-		_bOffscreenPassActive = 0;
-		_bFrameStarted		  = 0;
+		_bOffscreenPassActive  = 0;
+		_bFrameStarted		   = 0;
+		_activeOffscreenTarget = 0;
 	}
 
 	RHIDescriptorIndex VulkanRHIDevice::registerBindlessResource( RHIBufferHandle buffer )
@@ -2136,10 +2229,16 @@ namespace sw
 	void VulkanRHIDevice::drawTriangle( RHIDescriptorIndex materialDescriptorIndex )
 	{
 		VkCommandBuffer cmd = currentCommandBuffer();
-		if ( cmd == VK_NULL_HANDLE || _pipeline == VK_NULL_HANDLE || _pipelineLayout == VK_NULL_HANDLE )
+		if ( cmd == VK_NULL_HANDLE || _pipelineLayout == VK_NULL_HANDLE )
 			return;
 
-		vkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipeline );
+		const VkPipeline pipeline = ( _bOffscreenPassActive && _offscreenPipeline != VK_NULL_HANDLE )
+										? _offscreenPipeline
+										: _pipeline;
+		if ( pipeline == VK_NULL_HANDLE )
+			return;
+
+		vkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline );
 
 		if ( materialDescriptorIndex < static_cast<RHIDescriptorIndex>( _registeredDescriptorSets.size() ) && _registeredDescriptorSets[materialDescriptorIndex] != VK_NULL_HANDLE )
 		{
@@ -2151,8 +2250,10 @@ namespace sw
 			vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelineLayout, 0, 1, &_descriptorSet, 0, nullptr );
 		}
 
+		constexpr VkShaderStageFlags kPushStages =
+			VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT;
 		uint32 matIndex = static_cast<uint32>( materialDescriptorIndex );
-		vkCmdPushConstants( cmd, _pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( uint32 ), &matIndex );
+		vkCmdPushConstants( cmd, _pipelineLayout, kPushStages, 0, sizeof( uint32 ), &matIndex );
 
 		if ( _vertexBuffer != VK_NULL_HANDLE )
 		{
@@ -2195,7 +2296,9 @@ namespace sw
 		if ( cmd == VK_NULL_HANDLE || _pipelineLayout == VK_NULL_HANDLE || data == nullptr || num32BitValues == 0 )
 			return;
 
-		vkCmdPushConstants( cmd, _pipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, destOffsetIn32BitValues * 4, num32BitValues * 4, data );
+		constexpr VkShaderStageFlags kPushStages =
+			VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT;
+		vkCmdPushConstants( cmd, _pipelineLayout, kPushStages, destOffsetIn32BitValues * 4, num32BitValues * 4, data );
 	}
 
 	void VulkanRHIDevice::drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset )
@@ -2496,27 +2599,61 @@ namespace sw
 
 	void VulkanRHIDevice::beginRenderPass( const RHIRenderPassBeginInfo& beginInfo )
 	{
-		if ( _commandBuffers.empty() || _commandBuffers[_currentFrame] == VK_NULL_HANDLE || _renderPass == VK_NULL_HANDLE || _swapChainFramebuffers.empty() )
+		VkCommandBuffer cmd = currentCommandBuffer();
+		if ( cmd == VK_NULL_HANDLE )
 			return;
+
+		VkRenderPass  renderPass  = _renderPass;
+		VkFramebuffer framebuffer = VK_NULL_HANDLE;
+		VkExtent2D	  extent{ _swapChainExtentWidth, _swapChainExtentHeight };
+
+		if ( _bOffscreenPassActive && _activeOffscreenTarget != 0 )
+		{
+			auto it = _textures.find( _activeOffscreenTarget );
+			if ( it == _textures.end() || it->second.framebuffer == VK_NULL_HANDLE || it->second.renderPass == VK_NULL_HANDLE )
+				return;
+			renderPass	= it->second.renderPass;
+			framebuffer = it->second.framebuffer;
+			extent		= { it->second.width, it->second.height };
+		}
+		else
+		{
+			if ( _renderPass == VK_NULL_HANDLE || _swapChainFramebuffers.empty() || _imageIndex >= _swapChainFramebuffers.size() )
+				return;
+			framebuffer = _swapChainFramebuffers[_imageIndex];
+		}
+
+		if ( beginInfo._width > 0 && beginInfo._height > 0 )
+			extent = { beginInfo._width, beginInfo._height };
+
+		if ( _bRenderPassActive )
+		{
+			vkCmdEndRenderPass( cmd );
+			_bRenderPassActive = false;
+		}
+
+		VkClearValue clearValue{};
+		clearValue.color = { { beginInfo._clearColor[0], beginInfo._clearColor[1], beginInfo._clearColor[2], beginInfo._clearColor[3] } };
 
 		VkRenderPassBeginInfo renderPassInfo{};
 		renderPassInfo.sType			 = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		renderPassInfo.renderPass		 = _renderPass;
-		renderPassInfo.framebuffer		 = _swapChainFramebuffers[_imageIndex];
+		renderPassInfo.renderPass		 = renderPass;
+		renderPassInfo.framebuffer		 = framebuffer;
 		renderPassInfo.renderArea.offset = { 0, 0 };
-		renderPassInfo.renderArea.extent = { _swapChainExtentWidth, _swapChainExtentHeight };
+		renderPassInfo.renderArea.extent = extent;
+		renderPassInfo.clearValueCount	 = 1;
+		renderPassInfo.pClearValues		 = &clearValue;
 
-		VkClearValue clearValue		   = { { { beginInfo._clearColor[0], beginInfo._clearColor[1], beginInfo._clearColor[2], beginInfo._clearColor[3] } } };
-		renderPassInfo.clearValueCount = 1;
-		renderPassInfo.pClearValues	   = &clearValue;
-
-		vkCmdBeginRenderPass( _commandBuffers[_currentFrame], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE );
+		vkCmdBeginRenderPass( cmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE );
+		_bRenderPassActive = true;
 	}
 
 	void VulkanRHIDevice::endRenderPass()
 	{
-		if ( _commandBuffers.empty() || _commandBuffers[_currentFrame] == VK_NULL_HANDLE )
+		VkCommandBuffer cmd = currentCommandBuffer();
+		if ( cmd == VK_NULL_HANDLE || _bRenderPassActive == 0 )
 			return;
-		vkCmdEndRenderPass( _commandBuffers[_currentFrame] );
+		vkCmdEndRenderPass( cmd );
+		_bRenderPassActive = false;
 	}
 } // namespace sw

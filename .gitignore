@@ -59,9 +59,10 @@ __pycache__/
 Config/engine_config.json
 Config/parser_config.json
 # Committed seed for the above: Config/parser_config.defaults.json
-Config/Editor/imgui.ini
-Config/Editor/panels.ini
-Config/Editor/NodeEditor.json
+Config/Editor/
+# Mistaken legacy location (Resource is for assets, not user editor settings)
+Resource/config/editor/
+Resource/Config/Editor/
 # Legacy cwd leftovers (superseded by Config/Editor/)
 /imgui.ini
 /NodeEditor.json

@@ -1,8 +1,9 @@
 /**
  * @file ShaderReflection.cpp
- * @brief 셰이더 리플렉션 파싱 (DX D3DReflect + SPIR-V 최소)
+ * @brief 셰이더 리플렉션 파싱 (DXBC D3DReflect / DXIL DXC CreateReflection / SPIR-V)
  */
 #include "ShaderReflection.h"
+#include "Core/Utility/File/FileUtil.h"
 #include "Core/Utility/Log/Logger.h"
 
 #include <cstring>
@@ -12,15 +13,15 @@ namespace sw
 {
 	namespace
 	{
-		constexpr uint32 kSpirvMagic			   = 0x07230203u;
-		constexpr uint32 kOpName			   = 5u;
-		constexpr uint32 kOpDecorate		   = 71u;
-		constexpr uint32 kOpVariable		   = 59u;
-		constexpr uint32 kDecorationBinding	   = 33u;
+		constexpr uint32 kSpirvMagic				  = 0x07230203u;
+		constexpr uint32 kOpName				  = 5u;
+		constexpr uint32 kOpDecorate			  = 71u;
+		constexpr uint32 kOpVariable			  = 59u;
+		constexpr uint32 kDecorationBinding		  = 33u;
 		constexpr uint32 kDecorationDescriptorSet = 34u;
-		constexpr uint32 kStorageClassUniform  = 2u;
+		constexpr uint32 kStorageClassUniform	  = 2u;
 		constexpr uint32 kStorageClassUniformConstant = 0u;
-		constexpr uint32 kStorageClassStorageBuffer = 12u;
+		constexpr uint32 kStorageClassStorageBuffer	  = 12u;
 
 		ShaderReflectionData reflectSpirv( const std::vector<uint8>& bytecode )
 		{
@@ -52,7 +53,7 @@ namespace sw
 			size_t offset = 5;
 			while ( offset < wordCount )
 			{
-				const uint32 first	   = words[offset];
+				const uint32 first		= words[offset];
 				const uint32 instrWords = first & 0xFFFFu;
 				const uint32 opcode		= first >> 16;
 				if ( instrWords == 0 || offset + instrWords > wordCount )
@@ -124,20 +125,27 @@ namespace sw
 		}
 
 #if defined( SW_PLATFORM_WINDOWS )
-		ShaderReflectionData reflectDx( const std::vector<uint8>& bytecode )
+		const char* resourceTypeName( uint32 sit )
 		{
-			Microsoft::WRL::ComPtr<ID3D11ShaderReflection> reflection;
-			const HRESULT								   hr = D3DReflect(
-				  bytecode.data(),
-				  bytecode.size(),
-				  IID_PPV_ARGS( reflection.GetAddressOf() ) );
-
-			if ( FAILED( hr ) || reflection == nullptr )
+			switch ( sit )
 			{
-				SW_LOG_ERROR( "[ShaderReflection] D3DReflect failed for DX bytecode." );
-				return {};
+				case D3D_SIT_TEXTURE:
+					return "Texture";
+				case D3D_SIT_SAMPLER:
+					return "Sampler";
+				case D3D_SIT_CBUFFER:
+					return "ConstantBuffer";
+				case D3D_SIT_UAV_RWTYPED:
+				case D3D_SIT_UAV_RWSTRUCTURED:
+				case D3D_SIT_UAV_RWBYTEADDRESS:
+					return "UAV";
+				default:
+					return "OtherResource";
 			}
+		}
 
+		ShaderReflectionData fillFromId3d11Reflection( ID3D11ShaderReflection* reflection )
+		{
 			ShaderReflectionData data{};
 			D3D11_SHADER_DESC	 shaderDesc{};
 			reflection->GetDesc( &shaderDesc );
@@ -152,7 +160,7 @@ namespace sw
 				cb->GetDesc( &cbDesc );
 
 				ShaderBufferInfo bufInfo{};
-				bufInfo._name	   = cbDesc.Name;
+				bufInfo._name	   = cbDesc.Name != nullptr ? cbDesc.Name : "";
 				bufInfo._bindPoint = cbIndex;
 				bufInfo._totalSize = cbDesc.Size;
 
@@ -166,14 +174,13 @@ namespace sw
 					var->GetDesc( &varDesc );
 
 					ShaderVariableInfo varInfo{};
-					varInfo._name	= varDesc.Name;
+					varInfo._name	= varDesc.Name != nullptr ? varDesc.Name : "";
 					varInfo._offset = varDesc.StartOffset;
 					varInfo._size	= varDesc.Size;
-
 					bufInfo._variables.push_back( varInfo );
 				}
 
-				data._constantBuffers.push_back( bufInfo );
+				data._constantBuffers.push_back( std::move( bufInfo ) );
 			}
 
 			for ( UINT resourceIndex = 0; resourceIndex < shaderDesc.BoundResources; ++resourceIndex )
@@ -182,32 +189,177 @@ namespace sw
 				reflection->GetResourceBindingDesc( resourceIndex, &bindDesc );
 
 				ShaderResourceBinding resBinding{};
-				resBinding._name	  = bindDesc.Name;
+				resBinding._name	  = bindDesc.Name != nullptr ? bindDesc.Name : "";
 				resBinding._bindPoint = bindDesc.BindPoint;
 				resBinding._bindCount = bindDesc.BindCount;
-
-				switch ( static_cast<uint32>( bindDesc.Type ) )
-				{
-					case D3D_SIT_TEXTURE:
-						resBinding._type = "Texture";
-						break;
-					case D3D_SIT_SAMPLER:
-						resBinding._type = "Sampler";
-						break;
-					case D3D_SIT_CBUFFER:
-						resBinding._type = "ConstantBuffer";
-						break;
-					default:
-						resBinding._type = "OtherResource";
-						break;
-				}
-
-				data._resources.push_back( resBinding );
+				resBinding._type	  = resourceTypeName( static_cast<uint32>( bindDesc.Type ) );
+				data._resources.push_back( std::move( resBinding ) );
 			}
 
-			SW_LOG_INFO( "[ShaderReflection Success] ConstantBuffers: %# BoundResources: %#",
+			return data;
+		}
+
+		ShaderReflectionData fillFromId3d12Reflection( ID3D12ShaderReflection* reflection )
+		{
+			ShaderReflectionData data{};
+			D3D12_SHADER_DESC	 shaderDesc{};
+			reflection->GetDesc( &shaderDesc );
+
+			for ( UINT cbIndex = 0; cbIndex < shaderDesc.ConstantBuffers; ++cbIndex )
+			{
+				ID3D12ShaderReflectionConstantBuffer* cb = reflection->GetConstantBufferByIndex( cbIndex );
+				if ( cb == nullptr )
+					continue;
+
+				D3D12_SHADER_BUFFER_DESC cbDesc{};
+				cb->GetDesc( &cbDesc );
+
+				ShaderBufferInfo bufInfo{};
+				bufInfo._name	   = cbDesc.Name != nullptr ? cbDesc.Name : "";
+				bufInfo._bindPoint = cbIndex;
+				bufInfo._totalSize = cbDesc.Size;
+
+				for ( UINT varIndex = 0; varIndex < cbDesc.Variables; ++varIndex )
+				{
+					ID3D12ShaderReflectionVariable* var = cb->GetVariableByIndex( varIndex );
+					if ( var == nullptr )
+						continue;
+
+					D3D12_SHADER_VARIABLE_DESC varDesc{};
+					var->GetDesc( &varDesc );
+
+					ShaderVariableInfo varInfo{};
+					varInfo._name	= varDesc.Name != nullptr ? varDesc.Name : "";
+					varInfo._offset = varDesc.StartOffset;
+					varInfo._size	= varDesc.Size;
+					bufInfo._variables.push_back( varInfo );
+				}
+
+				data._constantBuffers.push_back( std::move( bufInfo ) );
+			}
+
+			for ( UINT resourceIndex = 0; resourceIndex < shaderDesc.BoundResources; ++resourceIndex )
+			{
+				D3D12_SHADER_INPUT_BIND_DESC bindDesc{};
+				reflection->GetResourceBindingDesc( resourceIndex, &bindDesc );
+
+				ShaderResourceBinding resBinding{};
+				resBinding._name	  = bindDesc.Name != nullptr ? bindDesc.Name : "";
+				resBinding._bindPoint = bindDesc.BindPoint;
+				resBinding._bindCount = bindDesc.BindCount;
+				resBinding._type	  = resourceTypeName( static_cast<uint32>( bindDesc.Type ) );
+				data._resources.push_back( std::move( resBinding ) );
+			}
+
+			return data;
+		}
+
+		ShaderReflectionData reflectDxbc( const std::vector<uint8>& bytecode )
+		{
+			Microsoft::WRL::ComPtr<ID3D11ShaderReflection> reflection;
+			const HRESULT hr = D3DReflect( bytecode.data(), bytecode.size(), IID_PPV_ARGS( reflection.GetAddressOf() ) );
+			if ( FAILED( hr ) || reflection == nullptr )
+			{
+				SW_LOG_ERROR( "[ShaderReflection] D3DReflect failed for DXBC (hr=0x%X).", static_cast<uint32>( hr ) );
+				return {};
+			}
+
+			ShaderReflectionData data = fillFromId3d11Reflection( reflection.Get() );
+			SW_LOG_INFO( "[ShaderReflection DXBC] ConstantBuffers: %# BoundResources: %#",
 						 data._constantBuffers.size(), data._resources.size() );
 			return data;
+		}
+
+#if defined( SW_HAS_DXC_API )
+		DxcCreateInstanceProc loadDxcCreateInstance()
+		{
+			static void*				  s_hDxCompiler		   = nullptr;
+			static DxcCreateInstanceProc s_fnDxcCreateInstance = nullptr;
+			static bool					 s_bTried			   = false;
+			if ( s_bTried == false )
+			{
+				s_bTried									  = true;
+				const std::string				 libName	  = FileUtil::formatSharedLibraryName( "dxcompiler" );
+				const std::vector<std::string> candidates = {
+					FileUtil::getDirectoryPart( FileUtil::getExecutablePath() ) + "/" + libName,
+					libName };
+				for ( const std::string& cand : candidates )
+				{
+					if ( FileUtil::isFileExist( cand ) == false )
+						continue;
+					s_hDxCompiler = FileUtil::loadDynamicLibrary( cand );
+					if ( s_hDxCompiler != nullptr )
+						break;
+				}
+				if ( s_hDxCompiler == nullptr )
+					s_hDxCompiler = FileUtil::loadDynamicLibrary( libName );
+				if ( s_hDxCompiler != nullptr )
+					s_fnDxcCreateInstance = reinterpret_cast<DxcCreateInstanceProc>(
+						FileUtil::getDynamicSymbol( s_hDxCompiler, "DxcCreateInstance" ) );
+			}
+			return s_fnDxcCreateInstance;
+		}
+
+		ShaderReflectionData reflectDxil( const std::vector<uint8>& bytecode )
+		{
+			DxcCreateInstanceProc fnCreate = loadDxcCreateInstance();
+			if ( fnCreate == nullptr )
+			{
+				SW_LOG_ERROR( "[ShaderReflection] DXIL reflection needs dxcompiler (DxcCreateInstance missing)." );
+				return {};
+			}
+
+			Microsoft::WRL::ComPtr<IDxcUtils> utils;
+			const HRESULT					 hrUtils = fnCreate( CLSID_DxcUtils, IID_PPV_ARGS( utils.GetAddressOf() ) );
+			if ( FAILED( hrUtils ) || utils == nullptr )
+			{
+				SW_LOG_ERROR( "[ShaderReflection] DxcCreateInstance(IDxcUtils) failed (hr=0x%X).", static_cast<uint32>( hrUtils ) );
+				return {};
+			}
+
+			DxcBuffer buffer{};
+			buffer.Ptr		= bytecode.data();
+			buffer.Size		= bytecode.size();
+			buffer.Encoding = 0;
+
+			Microsoft::WRL::ComPtr<ID3D12ShaderReflection> reflection12;
+			HRESULT hr = utils->CreateReflection( &buffer, IID_PPV_ARGS( reflection12.GetAddressOf() ) );
+			if ( SUCCEEDED( hr ) && reflection12 != nullptr )
+			{
+				ShaderReflectionData data = fillFromId3d12Reflection( reflection12.Get() );
+				SW_LOG_INFO( "[ShaderReflection DXIL] ConstantBuffers: %# BoundResources: %#",
+							 data._constantBuffers.size(), data._resources.size() );
+				return data;
+			}
+
+			// Some DXC builds expose DXIL reflection as ID3D11ShaderReflection.
+			Microsoft::WRL::ComPtr<ID3D11ShaderReflection> reflection11;
+			hr = utils->CreateReflection( &buffer, IID_PPV_ARGS( reflection11.GetAddressOf() ) );
+			if ( SUCCEEDED( hr ) && reflection11 != nullptr )
+			{
+				ShaderReflectionData data = fillFromId3d11Reflection( reflection11.Get() );
+				SW_LOG_INFO( "[ShaderReflection DXIL/D3D11iface] ConstantBuffers: %# BoundResources: %#",
+							 data._constantBuffers.size(), data._resources.size() );
+				return data;
+			}
+
+			SW_LOG_ERROR( "[ShaderReflection] IDxcUtils::CreateReflection failed for DXIL (hr=0x%X).", static_cast<uint32>( hr ) );
+			return {};
+		}
+#endif
+
+		ShaderReflectionData reflectDx( const std::vector<uint8>& bytecode, ShaderTargetFormat targetFormat )
+		{
+			if ( targetFormat == ShaderTargetFormat::DXBC_D3D11 )
+				return reflectDxbc( bytecode );
+
+#if defined( SW_HAS_DXC_API )
+			if ( targetFormat == ShaderTargetFormat::DXIL_D3D12 )
+				return reflectDxil( bytecode );
+#endif
+
+			SW_LOG_ERROR( "[ShaderReflection] Unsupported DX target format %#.", static_cast<uint32>( targetFormat ) );
+			return {};
 		}
 #endif
 	} // namespace
@@ -227,7 +379,7 @@ namespace sw
 
 #if defined( SW_PLATFORM_WINDOWS )
 		if ( bDxBytecode )
-			return reflectDx( bytecode );
+			return reflectDx( bytecode, targetFormat );
 #else
 		(void)bDxBytecode;
 #endif

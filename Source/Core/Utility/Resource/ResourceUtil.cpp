@@ -10,6 +10,7 @@
 namespace sw
 {
 	bool							   ResourceUtil::_s_bInitialize = false;
+	std::string						   ResourceUtil::_s_projectFolderPath;
 	std::string						   ResourceUtil::_s_engineFolderPath;
 	std::string						   ResourceUtil::_s_commonFolderPath;
 	std::string						   ResourceUtil::_s_gameFolderPath;
@@ -57,6 +58,11 @@ namespace sw
 	{
 		static const std::string s_emptyStr;
 		return _s_resourceFolderStrList.empty() ? s_emptyStr : _s_resourceFolderStrList.back();
+	}
+
+	const std::string& ResourceUtil::getProjectFolderPath()
+	{
+		return _s_projectFolderPath;
 	}
 
 	std::vector<std::string> ResourceUtil::getResourceFolders( const std::string_view folderName )
@@ -109,6 +115,8 @@ namespace sw
 			return false;
 
 		SW_LOG_INFO( "RootFolder : %#", rootPath.string() );
+
+		_s_projectFolderPath = FileUtil::normalizeSeparators( trimTrailingSlashes( rootPath.string() ) );
 
 		const std::filesystem::path resourceRoot   = rootPath / kResourceFolder / "";
 		const std::filesystem::path resourceEngine = rootPath / kResourceFolder / "Engine" / "";

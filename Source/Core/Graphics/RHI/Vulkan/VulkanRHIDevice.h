@@ -295,8 +295,9 @@ namespace sw
 		std::vector<VkImageView>   _swapChainImageViews;
 		std::vector<VkFramebuffer> _swapChainFramebuffers;
 
-		VkRenderPass  _renderPass  = nullptr;
-		VkCommandPool _commandPool = nullptr;
+		VkRenderPass  _renderPass		   = nullptr;
+		VkRenderPass  _offscreenRenderPass = nullptr; ///< R8G8B8A8_UNORM color-only pass for Game View / RT draws
+		VkCommandPool _commandPool		   = nullptr;
 
 		std::vector<VkCommandBuffer> _commandBuffers;
 		std::vector<VkSemaphore>	 _imageAvailableSemaphores;
@@ -312,12 +313,14 @@ namespace sw
 		uint32				   _height		  = 0;
 		uint8				   _bFrameStarted			: 1;
 		uint8				   _bOffscreenPassActive	: 1;
+		uint8				   _bRenderPassActive		: 1;
 		uint8				   _bEnableValidationLayers : 1;
 		[[maybe_unused]] uint8 _linuxWsi	  : 2; ///< 0=none, 1=xlib, 2=xcb (Linux only)
-		[[maybe_unused]] uint8 _reservedFlags : 3;
+		[[maybe_unused]] uint8 _reservedFlags : 2;
 
-		VkCommandBuffer _offscreenCommandBuffer = nullptr;
-		VkFence			_offscreenFence			= nullptr;
+		VkCommandBuffer	   _offscreenCommandBuffer = nullptr;
+		VkFence			   _offscreenFence		   = nullptr;
+		RHITextureHandle   _activeOffscreenTarget  = 0;
 		VkSampler		_defaultSampler			= nullptr;
 
 		VkPipelineLayout	  _pipelineLayout				  = nullptr;
@@ -329,6 +332,7 @@ namespace sw
 		VkBuffer			  _dummyUBO						  = nullptr;
 		VkDeviceMemory		  _dummyUBOMemory				  = nullptr;
 		VkPipeline			  _pipeline						  = nullptr;
+		VkPipeline			  _offscreenPipeline			  = nullptr; ///< Same shaders as `_pipeline`, bound to `_offscreenRenderPass`
 		VkBuffer			  _vertexBuffer					  = nullptr;
 		VkDeviceMemory		  _vertexBufferMemory			  = nullptr;
 		std::vector<uint32>	  _bindlessFreeList;
@@ -383,6 +387,7 @@ namespace sw
 
 		VkCommandBuffer currentCommandBuffer() const;
 		bool			transitionImageLayout( VkCommandBuffer cmd, VkImage image, uint32 oldLayout, uint32 newLayout, uint32 aspect );
+		bool			ensureOffscreenRenderPass( uint32 vkFormat );
 		bool			createOffscreenFramebuffer( VulkanTextureRecord& record );
 		void			destroyOffscreenFramebuffer( VulkanTextureRecord& record );
 	};

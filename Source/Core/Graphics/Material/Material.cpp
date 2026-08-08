@@ -20,23 +20,23 @@ namespace sw
 	Material::Material()
 		: _asyncLoadState{ std::make_shared<AsyncLoadState>() }
 	{
-		_asyncLoadState->material = this;
+		_asyncLoadState->_material = this;
 	}
 
 	Material::~Material()
 	{
 		if ( _asyncLoadState )
 		{
-			std::lock_guard<std::mutex> lock{ _asyncLoadState->mutex };
-			_asyncLoadState->material = nullptr;
+			std::lock_guard<std::mutex> lock{ _asyncLoadState->_mutex };
+			_asyncLoadState->_material = nullptr;
 		}
 	}
 
 	static struct PropertyTypeDesc
 	{
-		const utf8*			 name;
-		MaterialPropertyType type;
-		uint32				 size;
+		const utf8*			 _name;
+		MaterialPropertyType _type;
+		uint32				 _size;
 	} s_PropertyTypes[] = {
 		{	  "Float",	   MaterialPropertyType::Float,	4},
 		{  "Float2",	MaterialPropertyType::Float2,  8},
@@ -57,10 +57,10 @@ namespace sw
 	{
 		for ( const auto& desc : s_PropertyTypes )
 		{
-			if ( str == desc.name )
+			if ( str == desc._name )
 			{
-				outSize = desc.size;
-				return desc.type;
+				outSize = desc._size;
+				return desc._type;
 			}
 		}
 		outSize = 0;
@@ -71,9 +71,9 @@ namespace sw
 	{
 		for ( const auto& desc : s_PropertyTypes )
 		{
-			if ( desc.type == type )
+			if ( desc._type == type )
 			{
-				return desc.name;
+				return desc._name;
 			}
 		}
 		return "Unknown";
@@ -91,17 +91,17 @@ namespace sw
 			SW_LOG_WARNING( "[Material] Failed to load material file '%#'. Using fallback defaults.", assetRelativePath.c_str() );
 		}
 
-		uint32 bufferSize = static_cast<uint32>( _data.buffer.size() );
+		uint32 bufferSize = static_cast<uint32>( _data._buffer.size() );
 		if ( bufferSize == 0 )
 		{
 			bufferSize = 256;
-			_data.buffer.resize( bufferSize, 0 );
+			_data._buffer.resize( bufferSize, 0 );
 		}
 		else
 		{
 
 			uint32 alignedSize = ( bufferSize + 255 ) & ~255u;
-			_data.buffer.resize( alignedSize, 0 );
+			_data._buffer.resize( alignedSize, 0 );
 			bufferSize = alignedSize;
 		}
 
@@ -112,7 +112,7 @@ namespace sw
 			return false;
 		}
 
-		rhi->updateConstantBuffer( _constantBuffer, _data.buffer.data(), bufferSize );
+		rhi->updateConstantBuffer( _constantBuffer, _data._buffer.data(), bufferSize );
 		_descriptorIndex = rhi->registerBindlessResource( _constantBuffer );
 
 		SW_LOG_INFO( "[Material] Initialized '%#' with Bindless Descriptor Index %#", _name.c_str(), _descriptorIndex );
@@ -128,7 +128,7 @@ namespace sw
 
 		if ( _constantBuffer != 0 )
 		{
-			rhi->updateConstantBuffer( _constantBuffer, _data.buffer.data(), static_cast<uint32>( _data.buffer.size() ) );
+			rhi->updateConstantBuffer( _constantBuffer, _data._buffer.data(), static_cast<uint32>( _data._buffer.size() ) );
 			SW_LOG_INFO( "[Material] HotRefresh '%#': Shader recompile detected, Constant Buffer re-uploaded. (Bytecode: %# bytes)", _name.c_str(), result._bytecode.size() );
 		}
 	}
@@ -150,8 +150,8 @@ namespace sw
 
 		std::stringstream file( std::string( reinterpret_cast<const utf8*>( fileData.data() ), fileData.size() ) );
 
-		_data.properties.clear();
-		_data.buffer.clear();
+		_data._properties.clear();
+		_data._buffer.clear();
 		uint32 currentOffset = 0;
 
 		std::string line;
@@ -196,35 +196,35 @@ namespace sw
 						currentOffset = ( currentOffset + align - 1 ) & ~( align - 1 );
 
 						MaterialProperty prop;
-						prop.name	= propName;
-						prop.type	= type;
-						prop.offset = currentOffset;
-						prop.size	= typeSize;
-						_data.properties.push_back( prop );
+						prop._name	= propName;
+						prop._type	= type;
+						prop._offset = currentOffset;
+						prop._size	= typeSize;
+						_data._properties.push_back( prop );
 
-						if ( _data.buffer.size() < currentOffset + typeSize )
+						if ( _data._buffer.size() < currentOffset + typeSize )
 						{
-							_data.buffer.resize( currentOffset + typeSize, 0 );
+							_data._buffer.resize( currentOffset + typeSize, 0 );
 						}
 
 						std::stringstream ss( value );
 						if ( type == MaterialPropertyType::Float || type == MaterialPropertyType::Float2 || type == MaterialPropertyType::Float3 || type == MaterialPropertyType::Float4 || type == MaterialPropertyType::Float4x4 )
 						{
-							float32* ptr   = reinterpret_cast<float32*>( _data.buffer.data() + currentOffset );
+							float32* ptr   = reinterpret_cast<float32*>( _data._buffer.data() + currentOffset );
 							uint32	 count = typeSize / 4;
 							for ( uint32 i = 0; i < count; ++i )
 								ss >> ptr[i];
 						}
 						else if ( type == MaterialPropertyType::Uint || type == MaterialPropertyType::Uint2 || type == MaterialPropertyType::Uint3 || type == MaterialPropertyType::Uint4 )
 						{
-							uint32* ptr	  = reinterpret_cast<uint32*>( _data.buffer.data() + currentOffset );
+							uint32* ptr	  = reinterpret_cast<uint32*>( _data._buffer.data() + currentOffset );
 							uint32	count = typeSize / 4;
 							for ( uint32 i = 0; i < count; ++i )
 								ss >> ptr[i];
 						}
 						else if ( type == MaterialPropertyType::Int || type == MaterialPropertyType::Int2 || type == MaterialPropertyType::Int3 || type == MaterialPropertyType::Int4 )
 						{
-							int32* ptr	 = reinterpret_cast<int32*>( _data.buffer.data() + currentOffset );
+							int32* ptr	 = reinterpret_cast<int32*>( _data._buffer.data() + currentOffset );
 							uint32 count = typeSize / 4;
 							for ( uint32 i = 0; i < count; ++i )
 								ss >> ptr[i];
@@ -235,16 +235,16 @@ namespace sw
 				else if ( key == "color" )
 				{
 					MaterialProperty prop;
-					prop.name	  = "color";
-					prop.type	  = MaterialPropertyType::Float4;
-					prop.size	  = 16;
+					prop._name	  = "color";
+					prop._type	  = MaterialPropertyType::Float4;
+					prop._size	  = 16;
 					currentOffset = ( currentOffset + 15 ) & ~15u;
-					prop.offset	  = currentOffset;
-					_data.properties.push_back( prop );
-					if ( _data.buffer.size() < currentOffset + 16 )
-						_data.buffer.resize( currentOffset + 16, 0 );
+					prop._offset	  = currentOffset;
+					_data._properties.push_back( prop );
+					if ( _data._buffer.size() < currentOffset + 16 )
+						_data._buffer.resize( currentOffset + 16, 0 );
 
-					float32* ptr = reinterpret_cast<float32*>( _data.buffer.data() + currentOffset );
+					float32* ptr = reinterpret_cast<float32*>( _data._buffer.data() + currentOffset );
 #if defined( SW_PLATFORM_WINDOWS )
 					sscanf_s( value.c_str(), "%f %f %f %f", &ptr[0], &ptr[1], &ptr[2], &ptr[3] );
 #else
@@ -256,7 +256,7 @@ namespace sw
 		}
 
 		uint32 alignedTotalSize = ( currentOffset + 255 ) & ~255u;
-		_data.buffer.resize( alignedTotalSize, 0 );
+		_data._buffer.resize( alignedTotalSize, 0 );
 
 		return true;
 	}
@@ -266,10 +266,10 @@ namespace sw
 		std::shared_ptr<AsyncLoadState> state = _asyncLoadState;
 		return sw::core::getTaskManager().emplaceTask( "LoadMaterialAsync", SW_DELEGATE_LAMBDA( TaskDelegate, [state, assetRelativePath]()
 		{
-			std::lock_guard<std::mutex> lock{ state->mutex };
-			if ( state->material == nullptr )
+			std::lock_guard<std::mutex> lock{ state->_mutex };
+			if ( state->_material == nullptr )
 				return;
-			state->material->loadFromFile( assetRelativePath );
+			state->_material->loadFromFile( assetRelativePath );
 		} ) );
 	}
 
@@ -286,26 +286,26 @@ namespace sw
 		file << "name: " << _name << "\n";
 		file << "shader: " << _shaderPath << "\n";
 
-		for ( const auto& prop : _data.properties )
+		for ( const auto& prop : _data._properties )
 		{
-			file << typeToString( prop.type ) << " " << prop.name << ": ";
+			file << typeToString( prop._type ) << " " << prop._name << ": ";
 
-			uint32 count = prop.size / 4;
-			if ( prop.type == MaterialPropertyType::Float || prop.type == MaterialPropertyType::Float2 || prop.type == MaterialPropertyType::Float3 || prop.type == MaterialPropertyType::Float4 || prop.type == MaterialPropertyType::Float4x4 )
+			uint32 count = prop._size / 4;
+			if ( prop._type == MaterialPropertyType::Float || prop._type == MaterialPropertyType::Float2 || prop._type == MaterialPropertyType::Float3 || prop._type == MaterialPropertyType::Float4 || prop._type == MaterialPropertyType::Float4x4 )
 			{
-				const float32* ptr = reinterpret_cast<const float32*>( _data.buffer.data() + prop.offset );
+				const float32* ptr = reinterpret_cast<const float32*>( _data._buffer.data() + prop._offset );
 				for ( uint32 i = 0; i < count; ++i )
 					file << ptr[i] << ( i == count - 1 ? "" : " " );
 			}
-			else if ( prop.type == MaterialPropertyType::Uint || prop.type == MaterialPropertyType::Uint2 || prop.type == MaterialPropertyType::Uint3 || prop.type == MaterialPropertyType::Uint4 )
+			else if ( prop._type == MaterialPropertyType::Uint || prop._type == MaterialPropertyType::Uint2 || prop._type == MaterialPropertyType::Uint3 || prop._type == MaterialPropertyType::Uint4 )
 			{
-				const uint32* ptr = reinterpret_cast<const uint32*>( _data.buffer.data() + prop.offset );
+				const uint32* ptr = reinterpret_cast<const uint32*>( _data._buffer.data() + prop._offset );
 				for ( uint32 i = 0; i < count; ++i )
 					file << ptr[i] << ( i == count - 1 ? "" : " " );
 			}
-			else if ( prop.type == MaterialPropertyType::Int || prop.type == MaterialPropertyType::Int2 || prop.type == MaterialPropertyType::Int3 || prop.type == MaterialPropertyType::Int4 )
+			else if ( prop._type == MaterialPropertyType::Int || prop._type == MaterialPropertyType::Int2 || prop._type == MaterialPropertyType::Int3 || prop._type == MaterialPropertyType::Int4 )
 			{
-				const int32* ptr = reinterpret_cast<const int32*>( _data.buffer.data() + prop.offset );
+				const int32* ptr = reinterpret_cast<const int32*>( _data._buffer.data() + prop._offset );
 				for ( uint32 i = 0; i < count; ++i )
 					file << ptr[i] << ( i == count - 1 ? "" : " " );
 			}
@@ -318,11 +318,11 @@ namespace sw
 
 	const void* Material::getPropertyData( const std::string& name ) const
 	{
-		for ( const auto& prop : _data.properties )
+		for ( const auto& prop : _data._properties )
 		{
-			if ( prop.name == name )
+			if ( prop._name == name )
 			{
-				return _data.buffer.data() + prop.offset;
+				return _data._buffer.data() + prop._offset;
 			}
 		}
 		return nullptr;
@@ -330,14 +330,14 @@ namespace sw
 
 	void Material::setPropertyData( IRHIDevice* rhi, uint32 offset, uint32 size, const void* data )
 	{
-		if ( data == nullptr || offset + size > _data.buffer.size() )
+		if ( data == nullptr || offset + size > _data._buffer.size() )
 			return;
 
-		std::memcpy( _data.buffer.data() + offset, data, size );
+		std::memcpy( _data._buffer.data() + offset, data, size );
 
 		if ( rhi != nullptr && _constantBuffer != 0 )
 		{
-			rhi->updateConstantBuffer( _constantBuffer, _data.buffer.data(), static_cast<uint32>( _data.buffer.size() ) );
+			rhi->updateConstantBuffer( _constantBuffer, _data._buffer.data(), static_cast<uint32>( _data._buffer.size() ) );
 		}
 	}
 

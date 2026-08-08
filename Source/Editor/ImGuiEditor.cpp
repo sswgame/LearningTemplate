@@ -17,6 +17,7 @@
 #include "Panels/SequencerPanel.h"
 #include "Panels/AnimationGraphPanel.h"
 #include "Panels/AIGraphPanel.h"
+#include "Panels/GlobalVariablesPanel.h"
 #include "Core/Graphics/RHI/IRHIDevice.h"
 #include "Core/Graphics/RHI/RHICapabilities.h"
 #include "Core/Graphics/RenderPass/RenderPassResource.h"
@@ -75,6 +76,7 @@ namespace sw
 		_panels.push_back( std::make_unique<SequencerPanel>() );
 		_panels.push_back( std::make_unique<AnimationGraphPanel>() );
 		_panels.push_back( std::make_unique<AIGraphPanel>() );
+		_panels.push_back( std::make_unique<GlobalVariablesPanel>() );
 	}
 
 	void ImGuiEditor::setupFonts()
@@ -508,6 +510,7 @@ namespace sw
 		ImGui::DockBuilderDockWindow( "Game Toolbar", dockTop );
 		ImGui::DockBuilderDockWindow( "Game View", dockMain );
 		ImGui::DockBuilderDockWindow( "Output Log", dockRight );
+		ImGui::DockBuilderDockWindow( "Global Variables Control", dockRight );
 		ImGui::DockBuilderDockWindow( "Animation Graph", dockRight );
 		ImGui::DockBuilderDockWindow( "AI Graph", dockRight );
 		ImGui::DockBuilderDockWindow( "Content Browser", dockBottom );

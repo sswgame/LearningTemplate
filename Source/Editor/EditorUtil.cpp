@@ -109,12 +109,19 @@ namespace sw
 
 	std::filesystem::path EditorUtil::getProjectRootPath()
 	{
-		// getRootFolderPath() == <Project>/Resource
+		const std::string& projectRoot = ResourceUtil::getProjectFolderPath();
+		if ( projectRoot.empty() == false )
+			return std::filesystem::path( projectRoot );
+
+		// Fallback: Resource/ parent (strip trailing separators — path("Resource/").parent_path() == "Resource").
 		const std::string& resourceRoot = ResourceUtil::getRootFolderPath();
 		if ( resourceRoot.empty() )
 			return {};
 
-		return std::filesystem::path( resourceRoot ).lexically_normal().parent_path();
+		std::filesystem::path path = std::filesystem::path( resourceRoot ).lexically_normal();
+		while ( path.has_filename() == false && path.has_parent_path() )
+			path = path.parent_path();
+		return path.parent_path();
 	}
 
 	std::filesystem::path EditorUtil::getEditorConfigDirectory()
@@ -123,6 +130,7 @@ namespace sw
 		if ( projectRoot.empty() )
 			return {};
 
+		// User/editor settings live under <Project>/Config/Editor — never under Resource/.
 		const std::filesystem::path configDir =
 			projectRoot / editor::path::kConfigFolder / editor::path::kEditorConfigFolder;
 		const std::filesystem::path markerFile = configDir / editor::path::kImGuiIniFile;

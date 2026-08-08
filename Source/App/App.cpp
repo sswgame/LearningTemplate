@@ -10,6 +10,7 @@
 #include "Core/Utility/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Utility/Task/TaskManager.h"
 #include "Core/Utility/Memory/MemoryLeakDetector.h"
+#include "Core/Utility/String/hashed_string.h"
 #include "Core/Utility/Module/LiveReloadManager.h"
 #include "Core/Utility/File/ReloadFileManager.h"
 #include "Core/Utility/File/FileUtil.h"
@@ -183,6 +184,12 @@ namespace sw
 			}
 		}
 
+		// Warm both intern tables so their ~1.5MB reserves are inside the baseline.
+		(void)getCoreHashedStringAllocationInfo();
+		(void)getCoreHashedWStringAllocationInfo();
+
+		// Warm registries (hashed_string, GV, paths, etc.) are in the baseline — not reported as leaks.
+		captureMemoryLeakBaseline();
 		return true;
 	}
 
@@ -399,12 +406,13 @@ namespace sw
 				_shaderWatchHandle = {};
 				_reloadFileManager->shutdown();
 			}
+			// Drain tasks (may hold MODULE lambdas) before FreeLibrary in LiveReloadManager.
+			if ( _taskManager )
+				_taskManager->shutdown();
 			if ( _liveReloadManager )
 				_liveReloadManager->shutdown();
 			if ( _componentManager )
 				_componentManager->shutdown();
-			if ( _taskManager )
-				_taskManager->shutdown();
 			if ( _globalVariableManager )
 				_globalVariableManager->shutdown();
 
@@ -425,6 +433,10 @@ namespace sw
 			_commandLineManager.reset();
 			_logger.reset();
 		}
+
+		// Drop process-lifetime caches so CRT baseline compare isn't fighting intentional holdouts.
+		ShaderCache::clearCache();
+		shutdownHashedStringPools();
 
 		reportMemoryLeaks( "App::shutdown" );
 	}

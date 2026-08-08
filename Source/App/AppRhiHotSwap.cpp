@@ -10,6 +10,7 @@
 #include "Core/Graphics/RHI/RHI.h"
 #include "Core/Graphics/RHI/RHICapabilities.h"
 #include "Core/Graphics/Material/Material.h"
+#include "Core/Graphics/Shader/ShaderCache.h"
 #include "Core/Game/Scene/SceneManager.h"
 #include "Core/Game/Scene/Scene.h"
 #include "Core/Window/IWindow.h"
@@ -67,6 +68,9 @@ namespace sw
 			}
 
 			_rhi->getDevice().waitIdle();
+
+			// Drop format-specific bytecode (DXBC / SPIR-V / etc.) before the new backend compiles.
+			ShaderCache::clearCache();
 		}
 
 		bool bHaveDevice = false;

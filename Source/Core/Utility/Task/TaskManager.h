@@ -34,6 +34,21 @@ namespace sw
 
 		uint32 getWorkerCount() const { return static_cast<uint32>( _workers.size() ); }
 
+		/** @brief 호출 스레드가 initialize()를 호출한 메인 스레드인지 여부 */
+		bool isMainThread() const;
+		/** @brief Debug: 메인 스레드가 아니면 assert */
+		void ensureMainThread() const;
+
+		/** @brief 호출 스레드가 TaskManager 워커 풀에 속하는지 여부 */
+		bool isWorkerThread() const;
+		/** @brief Debug: 워커 스레드가 아니면 assert */
+		void ensureWorkerThread() const;
+
+		/** @brief 현재 Parallel 태스크 본문 실행 중인지 여부 (워커 TLS) */
+		bool isInsideParallelTask() const;
+		/** @brief Debug: Parallel 태스크 안이 아니면 assert */
+		void ensureInsideParallelTask() const;
+
 	public:
 		/**
 		 * @brief 작업을 등록합니다
@@ -143,6 +158,7 @@ namespace sw
 
 	private:
 		bool								  _bInitialized = false;
+		std::thread::id						  _mainThreadId{};
 		std::atomic<bool>					  _bStop{ false };
 		std::vector<std::thread>			  _workers;
 		std::queue<std::shared_ptr<TaskNode>> _readyQueue;

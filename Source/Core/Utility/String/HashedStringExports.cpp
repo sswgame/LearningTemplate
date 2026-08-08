@@ -18,4 +18,11 @@ namespace sw
 		static hashed_wstring::AllocationInfo s_instance;
 		return &s_instance;
 	}
+
+	SW_API void shutdownHashedStringPools() noexcept
+	{
+		// Touch both pools first so a late first-use cannot allocate after App teardown.
+		getCoreHashedStringAllocationInfo()->clear();
+		getCoreHashedWStringAllocationInfo()->clear();
+	}
 } // namespace sw
