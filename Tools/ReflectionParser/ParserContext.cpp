@@ -249,7 +249,7 @@ namespace sw::tool
 			if ( loadParserArgsFromFile( findConfigFile( "Config/parser_config.defaults.json" ) ) == false )
 			{
 				baseArgs = defaultParserArgsFallback();
-				SW_LOG_WARN( "[ParserContext] Using built-in parser_args fallback (no Config/parser_config*.json)." );
+				SW_LOG_WARNING( "[ParserContext] Using built-in parser_args fallback (no Config/parser_config*.json)." );
 			}
 		}
 
