@@ -24,11 +24,10 @@ namespace sw
 
 		ShaderReflectionData reflectSpirv( const std::vector<uint8>& bytecode )
 		{
-			ShaderReflectionData data{};
 			if ( bytecode.size() < 20 || ( bytecode.size() % 4 ) != 0 )
 			{
 				SW_LOG_WARNING( "[ShaderReflection] SPIR-V bytecode size invalid." );
-				return data;
+				return {};
 			}
 
 			const uint32* words		= reinterpret_cast<const uint32*>( bytecode.data() );
@@ -36,8 +35,10 @@ namespace sw
 			if ( words[0] != kSpirvMagic )
 			{
 				SW_LOG_WARNING( "[ShaderReflection] Not a SPIR-V module (bad magic)." );
-				return data;
+				return {};
 			}
+
+			ShaderReflectionData data{};
 
 			std::unordered_map<uint32, std::string> names;
 			std::unordered_map<uint32, uint32>		bindings;
@@ -121,108 +122,112 @@ namespace sw
 						 data._constantBuffers.size(), data._resources.size() );
 			return data;
 		}
-	} // namespace
-
-	ShaderReflectionData ShaderReflection::reflect( const std::vector<uint8>& bytecode, ShaderTargetFormat targetFormat )
-	{
-		ShaderReflectionData data{};
-
-		if ( bytecode.empty() == true )
-		{
-			SW_LOG_WARNING( "ShaderReflection::reflect called with empty bytecode" );
-			return data;
-		}
-
-		const bool bDxBytecode = ( targetFormat == ShaderTargetFormat::DXBC_D3D11 ||
-								   targetFormat == ShaderTargetFormat::DXIL_D3D12 );
-		const bool bSpirv = ( targetFormat == ShaderTargetFormat::SPIRV_Vulkan ||
-							  targetFormat == ShaderTargetFormat::SPIRV_OpenGL );
 
 #if defined( SW_PLATFORM_WINDOWS )
-		if ( bDxBytecode )
+		ShaderReflectionData reflectDx( const std::vector<uint8>& bytecode )
 		{
 			Microsoft::WRL::ComPtr<ID3D11ShaderReflection> reflection;
-			HRESULT										   hr = D3DReflect(
+			const HRESULT								   hr = D3DReflect(
 				  bytecode.data(),
 				  bytecode.size(),
 				  IID_PPV_ARGS( reflection.GetAddressOf() ) );
 
-			if ( SUCCEEDED( hr ) && reflection != nullptr )
+			if ( FAILED( hr ) || reflection == nullptr )
 			{
-				D3D11_SHADER_DESC shaderDesc{};
-				reflection->GetDesc( &shaderDesc );
-
-				for ( UINT cbIndex = 0; cbIndex < shaderDesc.ConstantBuffers; ++cbIndex )
-				{
-					ID3D11ShaderReflectionConstantBuffer* cb = reflection->GetConstantBufferByIndex( cbIndex );
-					if ( cb == nullptr )
-						continue;
-
-					D3D11_SHADER_BUFFER_DESC cbDesc{};
-					cb->GetDesc( &cbDesc );
-
-					ShaderBufferInfo bufInfo{};
-					bufInfo._name	   = cbDesc.Name;
-					bufInfo._bindPoint = cbIndex;
-					bufInfo._totalSize = cbDesc.Size;
-
-					for ( UINT varIndex = 0; varIndex < cbDesc.Variables; ++varIndex )
-					{
-						ID3D11ShaderReflectionVariable* var = cb->GetVariableByIndex( varIndex );
-						if ( var == nullptr )
-							continue;
-
-						D3D11_SHADER_VARIABLE_DESC varDesc{};
-						var->GetDesc( &varDesc );
-
-						ShaderVariableInfo varInfo{};
-						varInfo._name	= varDesc.Name;
-						varInfo._offset = varDesc.StartOffset;
-						varInfo._size	= varDesc.Size;
-
-						bufInfo._variables.push_back( varInfo );
-					}
-
-					data._constantBuffers.push_back( bufInfo );
-				}
-
-				for ( UINT resourceIndex = 0; resourceIndex < shaderDesc.BoundResources; ++resourceIndex )
-				{
-					D3D11_SHADER_INPUT_BIND_DESC bindDesc{};
-					reflection->GetResourceBindingDesc( resourceIndex, &bindDesc );
-
-					ShaderResourceBinding resBinding{};
-					resBinding._name	  = bindDesc.Name;
-					resBinding._bindPoint = bindDesc.BindPoint;
-					resBinding._bindCount = bindDesc.BindCount;
-
-					switch ( static_cast<uint32>( bindDesc.Type ) )
-					{
-						case D3D_SIT_TEXTURE:
-							resBinding._type = "Texture";
-							break;
-						case D3D_SIT_SAMPLER:
-							resBinding._type = "Sampler";
-							break;
-						case D3D_SIT_CBUFFER:
-							resBinding._type = "ConstantBuffer";
-							break;
-						default:
-							resBinding._type = "OtherResource";
-							break;
-					}
-
-					data._resources.push_back( resBinding );
-				}
-
-				SW_LOG_INFO( "[ShaderReflection Success] ConstantBuffers: %# BoundResources: %#",
-							 data._constantBuffers.size(), data._resources.size() );
-				return data;
+				SW_LOG_ERROR( "[ShaderReflection] D3DReflect failed for DX bytecode." );
+				return {};
 			}
 
-			SW_LOG_ERROR( "[ShaderReflection] D3DReflect failed for DX bytecode." );
+			ShaderReflectionData data{};
+			D3D11_SHADER_DESC	 shaderDesc{};
+			reflection->GetDesc( &shaderDesc );
+
+			for ( UINT cbIndex = 0; cbIndex < shaderDesc.ConstantBuffers; ++cbIndex )
+			{
+				ID3D11ShaderReflectionConstantBuffer* cb = reflection->GetConstantBufferByIndex( cbIndex );
+				if ( cb == nullptr )
+					continue;
+
+				D3D11_SHADER_BUFFER_DESC cbDesc{};
+				cb->GetDesc( &cbDesc );
+
+				ShaderBufferInfo bufInfo{};
+				bufInfo._name	   = cbDesc.Name;
+				bufInfo._bindPoint = cbIndex;
+				bufInfo._totalSize = cbDesc.Size;
+
+				for ( UINT varIndex = 0; varIndex < cbDesc.Variables; ++varIndex )
+				{
+					ID3D11ShaderReflectionVariable* var = cb->GetVariableByIndex( varIndex );
+					if ( var == nullptr )
+						continue;
+
+					D3D11_SHADER_VARIABLE_DESC varDesc{};
+					var->GetDesc( &varDesc );
+
+					ShaderVariableInfo varInfo{};
+					varInfo._name	= varDesc.Name;
+					varInfo._offset = varDesc.StartOffset;
+					varInfo._size	= varDesc.Size;
+
+					bufInfo._variables.push_back( varInfo );
+				}
+
+				data._constantBuffers.push_back( bufInfo );
+			}
+
+			for ( UINT resourceIndex = 0; resourceIndex < shaderDesc.BoundResources; ++resourceIndex )
+			{
+				D3D11_SHADER_INPUT_BIND_DESC bindDesc{};
+				reflection->GetResourceBindingDesc( resourceIndex, &bindDesc );
+
+				ShaderResourceBinding resBinding{};
+				resBinding._name	  = bindDesc.Name;
+				resBinding._bindPoint = bindDesc.BindPoint;
+				resBinding._bindCount = bindDesc.BindCount;
+
+				switch ( static_cast<uint32>( bindDesc.Type ) )
+				{
+					case D3D_SIT_TEXTURE:
+						resBinding._type = "Texture";
+						break;
+					case D3D_SIT_SAMPLER:
+						resBinding._type = "Sampler";
+						break;
+					case D3D_SIT_CBUFFER:
+						resBinding._type = "ConstantBuffer";
+						break;
+					default:
+						resBinding._type = "OtherResource";
+						break;
+				}
+
+				data._resources.push_back( resBinding );
+			}
+
+			SW_LOG_INFO( "[ShaderReflection Success] ConstantBuffers: %# BoundResources: %#",
+						 data._constantBuffers.size(), data._resources.size() );
 			return data;
 		}
+#endif
+	} // namespace
+
+	ShaderReflectionData ShaderReflection::reflect( const std::vector<uint8>& bytecode, ShaderTargetFormat targetFormat )
+	{
+		if ( bytecode.empty() == true )
+		{
+			SW_LOG_WARNING( "ShaderReflection::reflect called with empty bytecode" );
+			return {};
+		}
+
+		const bool bDxBytecode = ( targetFormat == ShaderTargetFormat::DXBC_D3D11 ||
+								   targetFormat == ShaderTargetFormat::DXIL_D3D12 );
+		const bool bSpirv	   = ( targetFormat == ShaderTargetFormat::SPIRV_Vulkan ||
+							 targetFormat == ShaderTargetFormat::SPIRV_OpenGL );
+
+#if defined( SW_PLATFORM_WINDOWS )
+		if ( bDxBytecode )
+			return reflectDx( bytecode );
 #else
 		(void)bDxBytecode;
 #endif
@@ -232,6 +237,6 @@ namespace sw
 
 		SW_LOG_WARNING( "[ShaderReflection] Reflection unsupported for target format %# — returning empty result.",
 						static_cast<uint32>( targetFormat ) );
-		return data;
+		return {};
 	}
 } // namespace sw

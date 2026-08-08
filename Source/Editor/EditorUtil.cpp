@@ -58,25 +58,23 @@ namespace sw
 		const std::string& resourceRoot = ResourceUtil::getRootFolderPath();
 		if ( resourceRoot.empty() == false )
 		{
-			std::filesystem::path candidate =
-				std::filesystem::path( resourceRoot ) / editor::path::kEditorFolder / editor::path::kFontsFolder / fileName;
-			if ( std::filesystem::is_regular_file( candidate, ec ) )
-				return candidate;
+			if ( std::filesystem::is_regular_file(
+					 std::filesystem::path( resourceRoot ) / editor::path::kEditorFolder / editor::path::kFontsFolder / fileName,
+					 ec ) )
+				return std::filesystem::path( resourceRoot ) / editor::path::kEditorFolder / editor::path::kFontsFolder / fileName;
 		}
 
 		for ( const std::string& editorRoot : ResourceUtil::getResourceFolders( editor::path::kEditorFolder ) )
 		{
-			std::filesystem::path candidate =
-				std::filesystem::path( editorRoot ) / editor::path::kFontsFolder / fileName;
-			if ( std::filesystem::is_regular_file( candidate, ec ) )
-				return candidate;
+			if ( std::filesystem::is_regular_file(
+					 std::filesystem::path( editorRoot ) / editor::path::kFontsFolder / fileName, ec ) )
+				return std::filesystem::path( editorRoot ) / editor::path::kFontsFolder / fileName;
 		}
 
 		for ( const std::filesystem::path& fontsDir : getSystemFontsDirectories() )
 		{
-			std::filesystem::path candidate = fontsDir / fileName;
-			if ( std::filesystem::is_regular_file( candidate, ec ) )
-				return candidate;
+			if ( std::filesystem::is_regular_file( fontsDir / fileName, ec ) )
+				return fontsDir / fileName;
 
 			// Distro fonts live in nested dirs (e.g. /usr/share/fonts/truetype/dejavu/...).
 			if ( std::filesystem::is_directory( fontsDir, ec ) )

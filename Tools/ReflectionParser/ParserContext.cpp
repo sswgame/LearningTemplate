@@ -228,10 +228,13 @@ namespace sw::tool
 
 			// Prefer default + current-OS platform args so a Windows-generated
 			// parser_args (with -fms-compatibility) is never reused on Linux/macOS.
-			const std::vector<std::string> defaultArgs	= extractJsonArray( fullJson, "default_parser_args" );
-			const std::vector<std::string> platformArgs = ( kPlatformParserKey[0] != '\0' )
-															  ? extractJsonArray( fullJson, kPlatformParserKey )
-															  : std::vector<std::string>{};
+			const std::vector<std::string> defaultArgs = extractJsonArray( fullJson, "default_parser_args" );
+#if defined( SW_PLATFORM_WINDOWS ) || defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
+			const std::vector<std::string> platformArgs = extractJsonArray( fullJson, kPlatformParserKey );
+#else
+			(void)kPlatformParserKey;
+			const std::vector<std::string> platformArgs{};
+#endif
 			if ( defaultArgs.empty() == false )
 			{
 				baseArgs = defaultArgs;

@@ -168,17 +168,18 @@ namespace sw
 			}
 		}
 
-		if ( rapidxml::xml_node<>* passesNode = root->first_node( "_passes" ) )
-			parseGraphPasses( passesNode, _desc._passes );
-		else if ( rapidxml::xml_node<>* passesNode = root->first_node( "passes" ) )
+		rapidxml::xml_node<>* passesNode = root->first_node( "_passes" );
+		if ( passesNode == nullptr )
+			passesNode = root->first_node( "passes" );
+		if ( passesNode != nullptr )
 			parseGraphPasses( passesNode, _desc._passes );
 
 		if ( rapidxml::xml_node<>* graphNode = root->first_node( "_graph" ) )
 		{
 			if ( rapidxml::xml_node<>* n = graphNode->first_node( "_name" ) )
 				_desc._graph._name = n->value();
-			if ( rapidxml::xml_node<>* passesNode = graphNode->first_node( "_passes" ) )
-				parseGraphPasses( passesNode, _desc._graph._passes );
+			if ( rapidxml::xml_node<>* graphPassesNode = graphNode->first_node( "_passes" ) )
+				parseGraphPasses( graphPassesNode, _desc._graph._passes );
 		}
 		else if ( std::strcmp( root->name(), "RenderGraphDesc" ) == 0 )
 		{

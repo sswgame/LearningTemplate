@@ -313,8 +313,8 @@ namespace sw
 		uint8				   _bFrameStarted			: 1;
 		uint8				   _bOffscreenPassActive	: 1;
 		uint8				   _bEnableValidationLayers : 1;
-		uint8				   _linuxWsi				: 2; ///< 0=none, 1=xlib, 2=xcb
-		[[maybe_unused]] uint8 _reservedFlags			: 3;
+		[[maybe_unused]] uint8 _linuxWsi	  : 2; ///< 0=none, 1=xlib, 2=xcb (Linux only)
+		[[maybe_unused]] uint8 _reservedFlags : 3;
 
 		VkCommandBuffer _offscreenCommandBuffer = nullptr;
 		VkFence			_offscreenFence			= nullptr;

@@ -47,13 +47,14 @@ namespace sw
 			return false;
 		}
 
-		if ( rapidxml::xml_node<>* nameNode = root->first_node( "name" ) )
-			outDesc._name = nameNode->value();
-		else if ( rapidxml::xml_node<>* nameNode = root->first_node( "_name" ) )
+		rapidxml::xml_node<>* nameNode = root->first_node( "name" );
+		if ( nameNode == nullptr )
+			nameNode = root->first_node( "_name" );
+		if ( nameNode != nullptr )
 			outDesc._name = nameNode->value();
 		else
 		{
-			outDesc._name = FileUtil::getFileNamePart( absPath );
+			outDesc._name	 = FileUtil::getFileNamePart( absPath );
 			const size_t dot = outDesc._name.find_last_of( '.' );
 			if ( dot != std::string::npos )
 				outDesc._name.resize( dot );

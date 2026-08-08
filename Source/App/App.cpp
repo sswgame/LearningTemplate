@@ -9,6 +9,7 @@
 #include "Core/Utility/CommandLine/CommandLineManager.h"
 #include "Core/Utility/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Utility/Task/TaskManager.h"
+#include "Core/Utility/Memory/MemoryLeakDetector.h"
 #include "Core/Utility/Module/LiveReloadManager.h"
 #include "Core/Utility/File/ReloadFileManager.h"
 #include "Core/Utility/File/FileUtil.h"
@@ -51,6 +52,7 @@ namespace sw
 
 	bool App::initialize( int32 argc, utf8* argv[] )
 	{
+		enableMemoryLeakChecks();
 		if ( initializeSubsystems( argc, argv ) == false )
 			return false;
 
@@ -423,5 +425,7 @@ namespace sw
 			_commandLineManager.reset();
 			_logger.reset();
 		}
+
+		reportMemoryLeaks( "App::shutdown" );
 	}
 } // namespace sw

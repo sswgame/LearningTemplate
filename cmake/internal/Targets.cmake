@@ -5,15 +5,16 @@
 
 # 디렉터리 하위의 .c/.cpp/.h/.hpp/.inl 을 CONFIGURE_DEPENDS 로 수집합니다.
 function(sw_collect_sources DIR_PATH OUT_SOURCES)
+    # NOTE: Do not use CONFIGURE_DEPENDS here. On this Windows/Ninja setup it stalls
+    # every build at "[0/2] Re-checking globbed directories..." (VERIFY_GLOBS → nested
+    # cmake/ninja restat). Re-run cmake configure after adding/removing sources.
     file(
         GLOB_RECURSE sources_list
-        CONFIGURE_DEPENDS
         "${DIR_PATH}/*.cpp"
         "${DIR_PATH}/*.c"
     )
     file(
         GLOB_RECURSE headers_list
-        CONFIGURE_DEPENDS
         "${DIR_PATH}/*.h"
         "${DIR_PATH}/*.hpp"
         "${DIR_PATH}/*.inl"
