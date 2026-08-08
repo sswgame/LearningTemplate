@@ -212,16 +212,20 @@ SW_TEST_CASE( Reflection_TypeInfo, PropertyMetadataSupport )
 {
 	sw::PropertyInfo prop;
 	prop._metadata._category  = "Rendering";
+	prop._metadata._displayName = "Light Intensity";
 	prop._metadata._tooltip	  = "Controls light intensity";
 	prop._metadata._minRange  = 0.0f;
 	prop._metadata._maxRange  = 100.0f;
 	prop._metadata._bHasRange = true;
+	prop._metadata._bReadOnly = true;
 
 	SW_EXPECT_EQUAL( std::string( "Rendering" ), prop._metadata._category );
+	SW_EXPECT_EQUAL( std::string( "Light Intensity" ), prop._metadata._displayName );
 	SW_EXPECT_EQUAL( std::string( "Controls light intensity" ), prop._metadata._tooltip );
 	SW_EXPECT_NEAR_EQUAL( 0.0f, prop._metadata._minRange, 1e-4f );
 	SW_EXPECT_NEAR_EQUAL( 100.0f, prop._metadata._maxRange, 1e-4f );
 	SW_EXPECT_TRUE( prop._metadata._bHasRange );
+	SW_EXPECT_TRUE( prop._metadata._bReadOnly );
 }
 
 SW_TEST_CASE( Reflection_Serialization, ObjectDiffSerializationDelta )

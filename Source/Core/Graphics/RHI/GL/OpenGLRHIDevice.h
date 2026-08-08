@@ -207,8 +207,8 @@ namespace sw
 			uint32	  height	= 0;
 			uint32	  mipLevels = 1;
 			RHIFormat format	= RHIFormat::R8G8B8A8_UNORM;
-			uint8	  bDepthStencil : 1;
-			uint8	  bUAV			: 1;
+			uint8	  _bDepthStencil : 1;
+			uint8	  _bUAV			 : 1;
 			uint8	  reserved		: 6;
 		};
 		std::unordered_map<RHITextureHandle, OpenGLTextureRecord> _textures;
@@ -231,15 +231,15 @@ namespace sw
 			RHIPrimitiveTopology topology  = RHIPrimitiveTopology::TriangleList;
 			RHIFillMode			 fillMode  = RHIFillMode::Solid;
 			RHICullMode			 cullMode  = RHICullMode::None;
-			uint8				 bEnableDepthTest : 1;
-			uint8				 bEnableBlend	  : 1;
+			uint8				 _bEnableDepthTest : 1;
+			uint8				 _bEnableBlend	   : 1;
 			uint8				 reserved		  : 6;
 		};
 
 		struct OpenGLRenderPassRecord
 		{
 			RHIRenderPassDesc desc{};
-			uint8			  bAlive   : 1;
+			uint8			  _bAlive  : 1;
 			uint8			  reserved : 7;
 		};
 

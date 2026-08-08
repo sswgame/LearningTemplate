@@ -271,6 +271,97 @@ namespace sw::tool
 		out.append( "}\n\n" );
 	}
 
+	void CodeGenerator::emitPropertyMetadata( CodeEmitBuffer& out, const ParsedPropertyInfo& prop ) const
+	{
+		if ( prop.category.empty() == false )
+			out.appendFormat( "\t\t\t\tp._metadata._category     = \"%#\";\n", escapeCppString( prop.category ) );
+		if ( prop.displayName.empty() == false )
+			out.appendFormat( "\t\t\t\tp._metadata._displayName  = \"%#\";\n", escapeCppString( prop.displayName ) );
+		if ( prop.tooltip.empty() == false )
+			out.appendFormat( "\t\t\t\tp._metadata._tooltip      = \"%#\";\n", escapeCppString( prop.tooltip ) );
+		if ( prop.readOnly )
+			out.append( "\t\t\t\tp._metadata._bReadOnly    = true;\n" );
+		if ( prop.hasRange )
+		{
+			out.appendFormat( "\t\t\t\tp._metadata._minRange     = %#f;\n", prop.minRange );
+			out.appendFormat( "\t\t\t\tp._metadata._maxRange     = %#f;\n", prop.maxRange );
+			out.append( "\t\t\t\tp._metadata._bHasRange    = true;\n" );
+		}
+	}
+
+	void CodeGenerator::emitPropertyInfoEntry( CodeEmitBuffer& out, const ParsedTypeInfo& typeInfo, const ParsedPropertyInfo& prop ) const
+	{
+		const std::string aliasExpr = prop.alias.empty()
+										  ? "sw::hashed_string()"
+										  : ( "sw::hashed_string( \"" + escapeCppString( prop.alias ) + "\" )" );
+
+		out.append( "\t\t\t\t[]() {\n" );
+		out.append( "\t\t\t\t\tsw::PropertyInfo p(\n" );
+		out.appendFormat( "\t\t\t\t\t\tsw::hashed_string( \"%#\" ),\n", prop.name );
+		out.appendFormat( "\t\t\t\t\t\tsw::hashed_string( \"%#\" ),\n", prop.typeName );
+		out.appendFormat( "\t\t\t\t\t\toffsetof( %#, %# ),\n", typeInfo.fullyQualifiedName, prop.name );
+
+		if ( prop.isContainer )
+		{
+			const utf8* kindStr = ( prop.containerKind == "Map" ) ? "sw::ContainerKind::Map" : "sw::ContainerKind::Sequence";
+
+			utf8 wrapperType[constant::kMaxBuffer1024];
+			formatstring( wrapperType, constant::kMaxBuffer1024,
+						  "sw::%#Wrapper<decltype(std::declval<%#>().%#)>",
+						  prop.containerType,
+						  typeInfo.fullyQualifiedName,
+						  prop.name );
+
+			out.appendFormat( "\t\t\t\t\t\ttrue,\n\t\t\t\t\t\t%#,\n", kindStr );
+			out.appendFormat( "\t\t\t\t\t\tsw::hashed_string( \"%#\" ),\n", prop.elementTypeName );
+			out.appendFormat( "\t\t\t\t\t\tsw::hashed_string( \"%#\" ),\n", prop.keyTypeName );
+			out.appendFormat( "\t\t\t\t\t\tstd::make_shared<%#>(),\n", wrapperType );
+			out.appendFormat( "\t\t\t\t\t\t%# );\n", aliasExpr );
+		}
+		else
+		{
+			out.appendFormat( "\t\t\t\t\t\tfalse, sw::ContainerKind::None,\n"
+							  "\t\t\t\t\t\tsw::hashed_string(), sw::hashed_string(), nullptr,\n"
+							  "\t\t\t\t\t\t%# );\n",
+							  aliasExpr );
+		}
+
+		emitPropertyMetadata( out, prop );
+		out.append( "\t\t\t\t\treturn p;\n" );
+		out.append( "\t\t\t\t}(),\n" );
+	}
+
+	std::string CodeGenerator::escapeCppString( const std::string& value )
+	{
+		std::string escaped;
+		escaped.reserve( value.size() + 8 );
+		for ( char c : value )
+		{
+			switch ( c )
+			{
+			case '\\':
+				escaped += "\\\\";
+				break;
+			case '"':
+				escaped += "\\\"";
+				break;
+			case '\n':
+				escaped += "\\n";
+				break;
+			case '\r':
+				escaped += "\\r";
+				break;
+			case '\t':
+				escaped += "\\t";
+				break;
+			default:
+				escaped += c;
+				break;
+			}
+		}
+		return escaped;
+	}
+
 	void CodeGenerator::emitTypeRegistrar( CodeEmitBuffer& out, const ParsedTypeInfo& typeInfo ) const
 	{
 		const std::string id = sanitizeIdentifier( typeInfo.fullyQualifiedName );
@@ -288,58 +379,7 @@ namespace sw::tool
 		{
 			out.append( "\t\t\tinfo._propertyList =\n\t\t\t{\n" );
 			for ( const ParsedPropertyInfo& prop : typeInfo.properties )
-			{
-				const std::string aliasExpr = prop.alias.empty()
-												  ? "sw::hashed_string()"
-												  : ( "sw::hashed_string( \"" + prop.alias + "\" )" );
-
-				if ( prop.isContainer )
-				{
-					const utf8* kindStr = ( prop.containerKind == "Map" ) ? "sw::ContainerKind::Map" : "sw::ContainerKind::Sequence";
-
-					utf8 wrapperType[constant::kMaxBuffer1024];
-					formatstring( wrapperType, constant::kMaxBuffer1024,
-								  "sw::%#Wrapper<decltype(std::declval<%#>().%#)>",
-								  prop.containerType,
-								  typeInfo.fullyQualifiedName,
-								  prop.name );
-
-					out.appendFormat(
-						"\t\t\t\t{ sw::hashed_string( \"%#\" ),\n"
-						"\t\t\t\t  sw::hashed_string( \"%#\" ),\n"
-						"\t\t\t\t  offsetof( %#, %# ),\n"
-						"\t\t\t\t  true,\n"
-						"\t\t\t\t  %#,\n"
-						"\t\t\t\t  sw::hashed_string( \"%#\" ),\n"
-						"\t\t\t\t  sw::hashed_string( \"%#\" ),\n"
-						"\t\t\t\t  std::make_shared<%#>(),\n"
-						"\t\t\t\t  %# },\n",
-						prop.name,
-						prop.typeName,
-						typeInfo.fullyQualifiedName,
-						prop.name,
-						kindStr,
-						prop.elementTypeName,
-						prop.keyTypeName,
-						wrapperType,
-						aliasExpr );
-				}
-				else
-				{
-					out.appendFormat(
-						"\t\t\t\t{ sw::hashed_string( \"%#\" ),\n"
-						"\t\t\t\t  sw::hashed_string( \"%#\" ),\n"
-						"\t\t\t\t  offsetof( %#, %# ),\n"
-						"\t\t\t\t  false, sw::ContainerKind::None,\n"
-						"\t\t\t\t  sw::hashed_string(), sw::hashed_string(), nullptr,\n"
-						"\t\t\t\t  %# },\n",
-						prop.name,
-						prop.typeName,
-						typeInfo.fullyQualifiedName,
-						prop.name,
-						aliasExpr );
-				}
-			}
+				emitPropertyInfoEntry( out, typeInfo, prop );
 			out.append( "\t\t\t};\n" );
 		}
 

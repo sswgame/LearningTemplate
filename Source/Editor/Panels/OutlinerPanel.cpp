@@ -4,6 +4,7 @@
  */
 #include "Panels/OutlinerPanel.h"
 #include "EditorSelection.h"
+#include "EditorAssetDrop.h"
 #include "Runtime/EditorUIContext.h"
 #include "Core/Common/CoreServices.h"
 #include "Core/Game/Scene/SceneManager.h"
@@ -13,15 +14,83 @@
 #include "Core/Object/Component.h"
 #include "Core/Object/ComponentManager.h"
 #include "Core/Object/SceneComponent.h"
+#include "Core/Utility/Log/Logger.h"
 #include <imgui.h>
+#include <cstring>
 
 namespace sw
 {
 	namespace
 	{
+		constexpr const char* kHierarchyGoPayload = "SW_HIERARCHY_GO";
+
 		void selectObject( GameObject* obj )
 		{
 			editor::selectGameObject( obj );
+		}
+
+		bool wouldCreateParentCycle( GameObject* child, GameObject* newParent )
+		{
+			if ( child == nullptr || newParent == nullptr || child == newParent )
+				return true;
+
+			GameObject* ancestor = newParent;
+			while ( ancestor != nullptr )
+			{
+				if ( ancestor == child )
+					return true;
+				ancestor = ancestor->getParent();
+			}
+			return false;
+		}
+
+		void handleHierarchyReparentDrop( GameObject* targetParent, const ImGuiPayload* payload, GameObjectManager* manager )
+		{
+			if ( payload == nullptr || manager == nullptr || targetParent == nullptr )
+				return;
+			if ( payload->DataSize != static_cast<int>( sizeof( uint64 ) ) )
+				return;
+
+			const uint64		  draggedId = *static_cast<const uint64*>( payload->Data );
+			GameObject* const dragged	  = manager->findGameObjectById( draggedId );
+			if ( dragged == nullptr || dragged == targetParent )
+				return;
+			if ( wouldCreateParentCycle( dragged, targetParent ) )
+				return;
+
+			if ( dragged->attachToParent( targetParent ) )
+				selectObject( dragged );
+		}
+
+		void drawGameObjectDragDrop( GameObject* obj, GameObjectManager* manager )
+		{
+			if ( obj == nullptr || manager == nullptr )
+				return;
+
+			if ( ImGui::BeginDragDropSource( ImGuiDragDropFlags_None ) )
+			{
+				const uint64 id = obj->getObjectId();
+				ImGui::SetDragDropPayload( kHierarchyGoPayload, &id, sizeof( id ) );
+				ImGui::TextUnformatted( obj->getName().c_str() );
+				ImGui::EndDragDropSource();
+			}
+
+			if ( ImGui::BeginDragDropTarget() )
+			{
+				if ( const ImGuiPayload* payload = ImGui::AcceptDragDropPayload( kHierarchyGoPayload ) )
+					handleHierarchyReparentDrop( obj, payload, manager );
+
+				if ( const ImGuiPayload* assetPayload = ImGui::AcceptDragDropPayload( "SW_ASSET_PATH" ) )
+				{
+					const char* path = static_cast<const char*>( assetPayload->Data );
+					if ( path != nullptr )
+					{
+						if ( GameObject* spawned = editor::spawnPrefabFromAssetPath( manager, path, obj ) )
+							selectObject( spawned );
+					}
+				}
+				ImGui::EndDragDropTarget();
+			}
 		}
 
 		void selectComponent( GameObject* obj, Component* comp )
@@ -231,6 +300,7 @@ namespace sw
 			if ( ImGui::IsItemClicked() )
 				selectObject( obj );
 			drawGameObjectContextMenu( obj, manager );
+			drawGameObjectDragDrop( obj, manager );
 
 			if ( bOpen )
 			{
@@ -320,6 +390,20 @@ namespace sw
 			editor::clearSelection();
 
 		ImGui::BeginChild( "##HierarchyTree", ImVec2( 0, 0 ), ImGuiChildFlags_None );
+
+		if ( ImGui::BeginDragDropTarget() )
+		{
+			if ( const ImGuiPayload* assetPayload = ImGui::AcceptDragDropPayload( "SW_ASSET_PATH" ) )
+			{
+				const char* path = static_cast<const char*>( assetPayload->Data );
+				if ( path != nullptr )
+				{
+					if ( GameObject* spawned = editor::spawnPrefabFromAssetPath( manager, path, nullptr ) )
+						selectObject( spawned );
+				}
+			}
+			ImGui::EndDragDropTarget();
+		}
 
 		if ( ImGui::BeginPopupContextWindow( "HierarchyBlankCtx", ImGuiPopupFlags_MouseButtonRight | ImGuiPopupFlags_NoOpenOverItems ) )
 		{

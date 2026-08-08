@@ -8,23 +8,20 @@
 #include "Backend/IImGuiPlatformBackend.h"
 #include "Backend/IImGuiRendererBackend.h"
 #include "Panels/IEditorPanel.h"
-#include "Panels/ComputeTestPanel.h"
 #include "Panels/ConsolePanel.h"
-#include "Panels/EngineStatusPanel.h"
 #include "Panels/GameToolbarPanel.h"
 #include "Panels/GameViewPanel.h"
-#include "Panels/GlobalVariablesPanel.h"
 #include "Panels/InspectorPanel.h"
 #include "Panels/OutlinerPanel.h"
 #include "Panels/ResourceBrowserPanel.h"
-#include "Panels/PlotPanel.h"
-#include "Panels/GizmoPanel.h"
-#include "Panels/NodeEditorPanel.h"
 #include "Panels/SequencerPanel.h"
-#include "Panels/NotifyPanel.h"
-#include "Panels/TexInspectPanel.h"
+#include "Panels/AnimationGraphPanel.h"
+#include "Panels/AIGraphPanel.h"
 #include "Core/Graphics/RHI/IRHIDevice.h"
 #include "Core/Graphics/RHI/RHICapabilities.h"
+#include "Core/Graphics/RenderPass/RenderPassResource.h"
+#include "Core/Common/CoreServices.h"
+#include "Core/Utility/Task/TaskManager.h"
 #include "Core/Window/NativeWindowEvent.h"
 #include "Runtime/EditorUIContext.h"
 #include "Core/Utility/Log/Logger.h"
@@ -71,19 +68,13 @@ namespace sw
 		_panels.clear();
 		_panels.push_back( std::make_unique<OutlinerPanel>() );
 		_panels.push_back( std::make_unique<InspectorPanel>() );
-		_panels.push_back( std::make_unique<GlobalVariablesPanel>() );
 		_panels.push_back( std::make_unique<GameToolbarPanel>() );
 		_panels.push_back( std::make_unique<GameViewPanel>() );
 		_panels.push_back( std::make_unique<ConsolePanel>() );
-		_panels.push_back( std::make_unique<ComputeTestPanel>() );
-		_panels.push_back( std::make_unique<EngineStatusPanel>() );
 		_panels.push_back( std::make_unique<ResourceBrowserPanel>() );
-		_panels.push_back( std::make_unique<PlotPanel>() );
-		_panels.push_back( std::make_unique<GizmoPanel>() );
-		_panels.push_back( std::make_unique<NodeEditorPanel>() );
 		_panels.push_back( std::make_unique<SequencerPanel>() );
-		_panels.push_back( std::make_unique<NotifyPanel>() );
-		_panels.push_back( std::make_unique<TexInspectPanel>() );
+		_panels.push_back( std::make_unique<AnimationGraphPanel>() );
+		_panels.push_back( std::make_unique<AIGraphPanel>() );
 	}
 
 	void ImGuiEditor::setupFonts()
@@ -322,10 +313,41 @@ namespace sw
 			}
 		}
 
-		BLOCK( "Default Panels 등록 / 표시 상태 복원" )
+		BLOCK( "Splash / async RenderPass load then panels" )
 		{
+			SW_LOG_INFO( "[ImGuiEditor] Splash: loading DefaultRenderPass / ForwardPipeline..." );
+
+			auto defaultPass = std::make_shared<RenderPassResource>();
+			auto forwardPass = std::make_shared<RenderPassResource>();
+
+			TaskHandle hDefault = core::getTaskManager().emplaceTask(
+				"EditorSplash_DefaultRenderPass",
+				SW_DELEGATE_LAMBDA( TaskDelegate, [defaultPass]()
+				{
+					SW_LOG_INFO( "[ImGuiEditor] Splash: reading DefaultRenderPass.xml" );
+					defaultPass->loadFromXmlFile( "Engine/RenderPass/DefaultRenderPass.xml" );
+				} ) );
+
+			TaskHandle hForward = core::getTaskManager().emplaceTask(
+				"EditorSplash_ForwardPipeline",
+				SW_DELEGATE_LAMBDA( TaskDelegate, [forwardPass]()
+				{
+					SW_LOG_INFO( "[ImGuiEditor] Splash: reading ForwardPipeline.xml" );
+					forwardPass->loadFromXmlFile( "Engine/RenderPass/ForwardPipeline.xml" );
+				} ) );
+
+			(void)hDefault;
+			(void)hForward;
+			core::getTaskManager().dispatch();
+			core::getTaskManager().waitAll();
+
+			SW_LOG_INFO( "[ImGuiEditor] Splash: pipelines ready (Default='%#', Forward='%#').",
+						 defaultPass->getDesc()._name.c_str(),
+						 forwardPass->getDesc()._name.c_str() );
+
 			registerDefaultPanels();
 			loadPanelVisibility();
+			SW_LOG_INFO( "[ImGuiEditor] Splash complete — panels registered." );
 		}
 
 		_bInitialized		= true;
@@ -475,28 +497,25 @@ namespace sw
 		ImGuiID dockRight	 = 0;
 		ImGuiID dockBottom	 = 0;
 		ImGuiID dockTop		 = 0;
-		ImGuiID dockRightBot = 0;
 
 		ImGui::DockBuilderSplitNode( dockMain, ImGuiDir_Left, 0.22f, &dockLeft, &dockMain );
 		ImGui::DockBuilderSplitNode( dockMain, ImGuiDir_Right, 0.28f, &dockRight, &dockMain );
 		ImGui::DockBuilderSplitNode( dockMain, ImGuiDir_Down, 0.30f, &dockBottom, &dockMain );
 		ImGui::DockBuilderSplitNode( dockMain, ImGuiDir_Up, 0.06f, &dockTop, &dockMain );
-		ImGui::DockBuilderSplitNode( dockRight, ImGuiDir_Down, 0.45f, &dockRightBot, &dockRight );
 
 		ImGui::DockBuilderDockWindow( "Hierarchy", dockLeft );
 		ImGui::DockBuilderDockWindow( "Inspector", dockLeft );
-		ImGui::DockBuilderDockWindow( "Global Variables Control", dockLeft );
 		ImGui::DockBuilderDockWindow( "Game Toolbar", dockTop );
 		ImGui::DockBuilderDockWindow( "Game View", dockMain );
 		ImGui::DockBuilderDockWindow( "Output Log", dockRight );
-		ImGui::DockBuilderDockWindow( "Compute Test", dockRight );
-		ImGui::DockBuilderDockWindow( "Engine RHI Status & Command Line", dockRightBot );
+		ImGui::DockBuilderDockWindow( "Animation Graph", dockRight );
+		ImGui::DockBuilderDockWindow( "AI Graph", dockRight );
 		ImGui::DockBuilderDockWindow( "Content Browser", dockBottom );
 
 		ImGui::DockBuilderFinish( id );
 	}
 
-	void ImGuiEditor::drawMainMenuBar()
+	void ImGuiEditor::drawMainMenuBar( const EditorUIContext& ctx )
 	{
 		if ( ImGui::BeginMainMenuBar() == false )
 			return;
@@ -513,6 +532,22 @@ namespace sw
 					panel->setOpen( !open );
 			}
 			ImGui::EndMenu();
+		}
+
+		// EngineStatus folded into status line (plan P6).
+		const char* backend = ( ctx.rhiDevice != nullptr ) ? ctx.rhiDevice->getBackendName() : "n/a";
+		const float statusW = 280.0f;
+		ImGui::SameLine( ImGui::GetWindowWidth() - statusW );
+		ImGui::TextDisabled( "RHI %s | %.0f FPS", backend, static_cast<double>( ImGui::GetIO().Framerate ) );
+		if ( ImGui::IsItemHovered() )
+		{
+			ImGui::BeginTooltip();
+			ImGui::TextUnformatted( "Switch RHI: -dx11 / -dx12 / -vk / -gl" );
+			const bool bVk = RHIAvailability::query( RHIBackend::Vulkan )._bEditorSupported;
+			const bool bGl = RHIAvailability::query( RHIBackend::OpenGL )._bEditorSupported;
+			ImGui::Text( "Vulkan editor: %s", bVk ? "yes" : "no" );
+			ImGui::Text( "OpenGL editor: %s", bGl ? "yes" : "no" );
+			ImGui::EndTooltip();
 		}
 
 		ImGui::EndMainMenuBar();
@@ -562,7 +597,7 @@ namespace sw
 		BLOCK( "ImGui NewFrame / Dockspace" )
 		{
 			beginFrame();
-			drawMainMenuBar();
+			drawMainMenuBar( ctx );
 			beginDockspace();
 		}
 

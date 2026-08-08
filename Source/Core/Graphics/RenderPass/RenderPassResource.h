@@ -26,6 +26,34 @@ namespace sw
 		bool _bClear = true;
 	};
 
+	/** @brief Single pass node inside a pipeline / render-graph descriptor */
+	REFLECT()
+	struct RenderGraphPassDesc
+	{
+		PROPERTY()
+		std::string _name = "Pass";
+
+		PROPERTY()
+		std::string _type = "Opaque";
+
+		PROPERTY()
+		std::vector<std::string> _inputs;
+
+		PROPERTY()
+		std::vector<std::string> _outputs;
+	};
+
+	/** @brief Optional graph-level description (passes + resources) */
+	REFLECT()
+	struct RenderGraphDesc
+	{
+		PROPERTY()
+		std::string _name = "DefaultGraph";
+
+		PROPERTY()
+		std::vector<RenderGraphPassDesc> _passes;
+	};
+
 	REFLECT()
 	struct RenderPassDesc
 	{
@@ -34,6 +62,12 @@ namespace sw
 
 		PROPERTY()
 		std::vector<RenderPassAttachment> _attachments;
+
+		PROPERTY()
+		std::vector<RenderGraphPassDesc> _passes;
+
+		PROPERTY()
+		RenderGraphDesc _graph;
 	};
 
 	class SW_API RenderPassResource
@@ -56,6 +90,9 @@ namespace sw
 
 		const RenderPassDesc& getDesc() const { return _desc; }
 		RenderPassDesc&		  getDesc() { return _desc; }
+
+		/** @brief Effective graph passes (top-level _passes, else _graph._passes). */
+		const std::vector<RenderGraphPassDesc>& getGraphPasses() const;
 
 	private:
 		RenderPassDesc _desc;

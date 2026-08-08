@@ -11,6 +11,7 @@ namespace sw
 {
 	PropertyMetadata::PropertyMetadata() noexcept
 		: _bHasRange{ 0 }
+		, _bReadOnly{ 0 }
 		, _reservedFlags{ 0 }
 	{
 	}

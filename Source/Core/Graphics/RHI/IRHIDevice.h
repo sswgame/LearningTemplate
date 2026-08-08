@@ -98,8 +98,8 @@ namespace sw
 			swapChainDesc._width		 = _initWindow->getWidth();
 			swapChainDesc._height		 = _initWindow->getHeight();
 			swapChainDesc._bufferCount	 = kBackBufferCount;
-			swapChainDesc._vsync		 = false;
-			core::getCommandLineManager().getArgument( CommandLineArgument::VSYNC, swapChainDesc._vsync );
+			swapChainDesc._bVSync		 = false;
+			core::getCommandLineManager().getArgument( CommandLineArgument::VSYNC, swapChainDesc._bVSync );
 
 			return initializeInternal( swapChainDesc );
 		}

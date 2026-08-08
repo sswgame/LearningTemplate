@@ -9,6 +9,8 @@
 #include "Core/Utility/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Graphics/RHI/RHI.h"
 #include "Core/Window/NativeWindowEvent.h"
+#include "Core/Common/CoreServices.h"
+#include "Core/Input/InputManager.h"
 
 namespace sw
 {
@@ -30,6 +32,9 @@ namespace sw
 
 	bool App::onWindowMessage( const NativeWindowEvent& event )
 	{
+		if ( _inputManager )
+			_inputManager->processNativeEvent( event );
+
 #if defined( SW_PLATFORM_WINDOWS ) && !defined( SW_SHIPPING )
 		if ( event.message == WM_KEYDOWN && _rhi )
 		{

@@ -14,6 +14,7 @@
 #include "Core/Reflection/ReflectionCore.h"
 #include "Core/Object/ComponentManager.h"
 #include "Core/Game/Scene/SceneManager.h"
+#include "Core/Input/InputManager.h"
 #include "Core/Utility/CommandLine/CommandLineManager.h"
 
 int main( int argc, char* argv[] )
@@ -30,6 +31,7 @@ int main( int argc, char* argv[] )
 	std::unique_ptr<sw::LiveReloadManager>	   liveReloadManager  = std::make_unique<sw::LiveReloadManager>();
 	std::unique_ptr<sw::ReloadFileManager>	   reloadFileManager  = std::make_unique<sw::ReloadFileManager>();
 	std::unique_ptr<sw::SceneManager>		   sceneManager		  = std::make_unique<sw::SceneManager>();
+	std::unique_ptr<sw::InputManager>		   inputManager		  = std::make_unique<sw::InputManager>();
 
 	logger->initialize();
 	commandLineManager->initialize();
@@ -68,6 +70,7 @@ int main( int argc, char* argv[] )
 	services.typeRegistry		   = typeRegistry.get();
 	services.componentManager	   = componentManager.get();
 	services.sceneManager		   = sceneManager.get();
+	services.inputManager		   = inputManager.get();
 	sw::core::bindCoreServices( services );
 
 	if ( taskManager->initialize() == false )
@@ -75,6 +78,8 @@ int main( int argc, char* argv[] )
 	if ( reloadFileManager->initialize() == false )
 		return -1;
 	if ( sceneManager->initialize() == false )
+		return -1;
+	if ( inputManager->initialize() == false )
 		return -1;
 
 	typeRegistry->registerPendingTypes( "Core", sw::TypeRegistrar::getHead(), sw::EnumRegistrar::getHead() );
@@ -87,6 +92,7 @@ int main( int argc, char* argv[] )
 	int result = test::TestRegistry::getInstance().runAllTests();
 
 	sceneManager->shutdown();
+	inputManager->shutdown();
 	reloadFileManager->shutdown();
 	liveReloadManager->shutdown();
 	componentManager->shutdown();

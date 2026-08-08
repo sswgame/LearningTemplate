@@ -634,8 +634,8 @@ namespace sw
 		record.height		 = desc._height;
 		record.mipLevels	 = mipLevels;
 		record.format		 = desc._format;
-		record.bDepthStencil = bDepth ? 1 : 0;
-		record.bUAV			 = desc._bIsUnorderedAccess ? 1 : 0;
+		record._bDepthStencil = bDepth ? 1 : 0;
+		record._bUAV		  = desc._bIsUnorderedAccess ? 1 : 0;
 		record.reserved		 = 0;
 
 		if ( desc._bIsRenderTarget || bDepth )
@@ -1231,8 +1231,8 @@ namespace sw
 		record.topology		   = desc._topology;
 		record.fillMode		   = desc._fillMode;
 		record.cullMode		   = desc._cullMode;
-		record.bEnableDepthTest = desc._bEnableDepthTest ? 1 : 0;
-		record.bEnableBlend	   = desc._bEnableBlend ? 1 : 0;
+		record._bEnableDepthTest = desc._bEnableDepthTest ? 1 : 0;
+		record._bEnableBlend	 = desc._bEnableBlend ? 1 : 0;
 		record.reserved		   = 0;
 
 		_pipelineStates.push_back( record );
@@ -1360,7 +1360,7 @@ namespace sw
 			glFrontFace( GL_CW ); // match DirectX / clip-control path
 		}
 
-		if ( record.bEnableDepthTest )
+		if ( record._bEnableDepthTest )
 		{
 			glEnable( GL_DEPTH_TEST );
 			glDepthFunc( GL_LESS );
@@ -1372,7 +1372,7 @@ namespace sw
 			glDepthMask( GL_FALSE );
 		}
 
-		if ( record.bEnableBlend )
+		if ( record._bEnableBlend )
 		{
 			glEnable( GL_BLEND );
 			glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
@@ -1397,7 +1397,7 @@ namespace sw
 	{
 		OpenGLRenderPassRecord record{};
 		record.desc		= desc;
-		record.bAlive	= 1;
+		record._bAlive = 1;
 		record.reserved = 0;
 		_renderPasses.push_back( record );
 		return static_cast<RHIRenderPassHandle>( _renderPasses.size() );
@@ -1407,7 +1407,7 @@ namespace sw
 	{
 		if ( pass == 0 || pass > _renderPasses.size() )
 			return;
-		_renderPasses[pass - 1].bAlive = 0;
+		_renderPasses[pass - 1]._bAlive = 0;
 		_renderPasses[pass - 1].desc   = RHIRenderPassDesc{};
 	}
 
@@ -1427,7 +1427,7 @@ namespace sw
 			{
 				const OpenGLTextureRecord& record = it->second;
 				glBindFramebuffer( GL_FRAMEBUFFER, record.fbo );
-				bDepthTarget = record.bDepthStencil != 0;
+				bDepthTarget = record._bDepthStencil != 0;
 				if ( beginInfo._width == 0 )
 					w = record.width;
 				if ( beginInfo._height == 0 )
@@ -1451,7 +1451,7 @@ namespace sw
 		if ( beginInfo._renderPass != 0 && beginInfo._renderPass <= _renderPasses.size() )
 		{
 			const OpenGLRenderPassRecord& rp = _renderPasses[beginInfo._renderPass - 1];
-			if ( rp.bAlive )
+			if ( rp._bAlive )
 			{
 				if ( rp.desc._colorAttachments.empty() == false )
 					colorLoad = rp.desc._colorAttachments[0]._loadOp;

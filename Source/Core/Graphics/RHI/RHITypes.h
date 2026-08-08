@@ -117,10 +117,10 @@ namespace sw
 		uint32 _bufferCount = 2; ///< 프레임버퍼 갯수 (Double/Triple Buffering)
 
 		PROPERTY()
-		bool _vsync = true; ///< 수직 동기화 여부
+		bool _bVSync = true; ///< 수직 동기화 여부
 
 		PROPERTY()
-		bool _fullscreen = false; ///< 전체 화면 여부
+		bool _bFullscreen = false; ///< 전체 화면 여부
 	};
 
 	/**

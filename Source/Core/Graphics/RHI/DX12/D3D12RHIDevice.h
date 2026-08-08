@@ -222,7 +222,9 @@ namespace sw
 		};
 		struct D3D12RenderPassRecord
 		{
-			RHIRenderPassDesc desc;
+			RHIRenderPassDesc desc{};
+			uint8			  _bAlive	: 1;
+			uint8			  _reserved : 7;
 		};
 		std::vector<D3D12PipelineStateRecord> _pipelineStates;
 		std::vector<D3D12RenderPassRecord>	  _renderPasses;
@@ -267,13 +269,13 @@ namespace sw
 		~D3D12RHIDevice() override = default;
 
 		bool initializeInternal( const RHISwapChainDesc& ) override { return false; }
-		void shutdown() override {}
+		void shutdownInternal() override {}
 		void resize( uint32, uint32 ) override {}
 		void beginFrame( float32[4] ) override {}
 		void endFrame( bool ) override {}
 
 		RHIBackend	getBackendType() const override { return RHIBackend::D3D12; }
-		bool		supportsBindless() const override { return false; }
+		bool		supportsBindless() const override { return true; }
 		const utf8* getBackendName() const override { return "Direct3D 12 (Not Supported on non-Windows)"; }
 
 		void* getNativeDevice() const override { return nullptr; }
@@ -297,6 +299,25 @@ namespace sw
 		void			   unregisterBindlessUAV( RHIDescriptorIndex ) override {}
 		void			   bindComputeUAV( RHIDescriptorIndex, uint32 ) override {}
 		void			   drawTriangle( RHIDescriptorIndex ) override {}
+
+		RHIPipelineStateHandle createPipelineState( const RHIPipelineStateDesc& ) override { return 0; }
+		RHIPipelineStateHandle createComputePipelineState( const std::string&, const std::string& ) override { return 0; }
+		void				   destroyPipelineState( RHIPipelineStateHandle ) override {}
+		void				   setPipelineState( RHIPipelineStateHandle ) override {}
+		void				   setComputePipelineState( RHIPipelineStateHandle ) override {}
+		RHIRenderPassHandle	   createRenderPass( const RHIRenderPassDesc& ) override { return 0; }
+		void				   destroyRenderPass( RHIRenderPassHandle ) override {}
+		void				   beginRenderPass( const RHIRenderPassBeginInfo& ) override {}
+		void				   endRenderPass() override {}
+		void				   dispatchCompute( uint32, uint32, uint32 ) override {}
+		void				   setViewport( const RHIViewport& ) override {}
+		void				   setComputeRootConstants( uint32, uint32, const void*, uint32 ) override {}
+		void				   drawIndirect( RHIBufferHandle, uint32 ) override {}
+		void				   dispatchIndirect( RHIBufferHandle, uint32 ) override {}
+		void				   beginEventMarker( const utf8* ) override {}
+		void				   endEventMarker() override {}
+		std::unique_ptr<IRHICommandList> createCommandList() override { return nullptr; }
+		void							 executeCommandList( IRHICommandList* ) override {}
 	};
 } // namespace sw
 #endif

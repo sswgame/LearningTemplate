@@ -174,13 +174,32 @@ namespace sw
 
 	bool FileUtil::pathsEqualNormalized( const std::string_view lhs, const std::string_view rhs )
 	{
-		std::string a = normalizePath( lhs );
-		std::string b = normalizePath( rhs );
-		while ( a.size() > 1 && a.back() == '/' )
-			a.pop_back();
-		while ( b.size() > 1 && b.back() == '/' )
-			b.pop_back();
-		return a == b;
+		auto trimTrailingSlash = []( std::string_view v ) -> std::string_view {
+			while ( v.size() > 1 && ( v.back() == '/' || v.back() == '\\' ) )
+				v.remove_suffix( 1 );
+			return v;
+		};
+		const std::string_view aView = trimTrailingSlash( lhs );
+		const std::string_view bView = trimTrailingSlash( rhs );
+		if ( aView.size() != bView.size() )
+			return false;
+
+		for ( size_t i = 0; i < aView.size(); ++i )
+		{
+			utf8 a = aView[i];
+			utf8 b = bView[i];
+			if ( a == '\\' )
+				a = '/';
+			else
+				a = StringUtil::toLowerChar( a );
+			if ( b == '\\' )
+				b = '/';
+			else
+				b = StringUtil::toLowerChar( b );
+			if ( a != b )
+				return false;
+		}
+		return true;
 	}
 
 	void FileUtil::createDirectory( const std::string_view path )

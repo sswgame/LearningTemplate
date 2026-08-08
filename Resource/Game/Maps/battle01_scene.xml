@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<SceneDescriptor>
+	<name>Battle01Scene</name>
+	<entities>
+		<entity name="BattleArena"/>
+		<entity name="FoePlaceholder"/>
+		<entity name="PlayerBattler"/>
+	</entities>
+</SceneDescriptor>

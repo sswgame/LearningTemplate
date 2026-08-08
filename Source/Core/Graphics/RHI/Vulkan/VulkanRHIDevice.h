@@ -2,6 +2,7 @@
 
 #include "Core/CoreMinimal.h"
 #include "Core/Graphics/RHI/IRHIDevice.h"
+#include "Core/Graphics/RHI/RHIReleaseQueue.h"
 #include "Core/Common/PlatformHeaders.h"
 #include "Core/Common/CommonHeaders.h"
 
@@ -354,13 +355,14 @@ namespace sw
 			uint32			   layout		 = 0; ///< VkImageLayout (UNDEFINED=0)
 			uint32			   width		 = 0;
 			uint32			   height		 = 0;
-			uint8			   bRenderTarget : 1;
-			uint8			   bDepthStencil : 1;
-			uint8			   reserved		 : 6;
+			uint8			   _bRenderTarget : 1;
+			uint8			   _bDepthStencil : 1;
+			uint8			   _reserved	  : 6;
 			RHIDescriptorIndex bindlessIndex = kInvalidDescriptorIndex;
 		};
 		std::unordered_map<RHITextureHandle, VulkanTextureRecord> _textures;
 		uint64													  _nextTextureId = 1;
+		RHIReleaseQueue											  _releaseQueue{ 3 };
 
 		VkDescriptorSetLayout		 _textureDescriptorSetLayout = nullptr;
 		std::vector<VkDescriptorSet> _registeredTextures;

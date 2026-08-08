@@ -10,6 +10,7 @@
 #include "Core/Reflection/ReflectionCore.h"
 #include "Core/Object/ComponentManager.h"
 #include "Core/Game/Scene/SceneManager.h"
+#include "Core/Input/InputManager.h"
 #include "Core/Utility/Log/Logger.h"
 
 namespace sw
@@ -65,6 +66,12 @@ namespace sw
 		{
 			SW_LOG_ASSERT( s_services.sceneManager != nullptr, "SceneManager is not bound" );
 			return *s_services.sceneManager;
+		}
+
+		InputManager& getInputManager()
+		{
+			SW_LOG_ASSERT( s_services.inputManager != nullptr, "InputManager is not bound" );
+			return *s_services.inputManager;
 		}
 	} // namespace Core
 } // namespace sw

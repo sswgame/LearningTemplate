@@ -2,9 +2,8 @@
  * @file LiveReloadManager.cpp
  * @brief 모듈 공유 라이브러리 섀도 복사 로드 및 핫 리로드
  *
- * Windows/macOS: `*_temp_N` 고유 경로 + (Windows) PDB 동반 복사, two-handle swap.
- * Linux: 고정 `*_live` 섀도 — dlopen 경로 캐시를 피하려고 언로드 후 덮어쓰고 다시 로드.
- *         디버거가 같은 .so 경로에 BP를 유지하기 쉬움.
+ * All platforms: `*_temp_N` unique shadow + two-handle swap (load new, then free old).
+ * Windows also copies PDB debug symbols alongside the shadow module.
  */
 #include "LiveReloadManager.h"
 #include "Core/Utility/File/FileUtil.h"
@@ -14,9 +13,7 @@ namespace sw
 {
 	namespace
 	{
-#if !defined( SW_PLATFORM_LINUX )
 		uint32 s_reloadCount = 0;
-#endif
 
 		std::string joinDirFile( const std::string& dir, const std::string& file )
 		{
@@ -101,69 +98,6 @@ namespace sw
 		iter->second._bPendingReload = true;
 	}
 
-#if defined( SW_PLATFORM_LINUX )
-	bool LiveReloadManager::loadShadowCopyModule( ModuleContext& ctx )
-	{
-		if ( FileUtil::isFileExist( ctx._originalModulePath ) == false )
-		{
-			SW_LOG_ERROR( "[LiveReloadManager] Original module not found: %#", ctx._originalModulePath.c_str() );
-			return false;
-		}
-
-		const uint64	  sourceMtime = FileUtil::getFileTimestamp( ctx._originalModulePath );
-		const std::string execDir	  = FileUtil::getDirectoryPart( ctx._originalModulePath );
-		const std::string livePath	  = joinDirFile( execDir, FileUtil::formatSharedLibraryName( ctx._moduleName + "_live" ) );
-
-		// Fixed path: must drop the previous mapping or dlopen may reuse the old image.
-		BLOCK( "Unload previous fixed shadow" )
-		{
-			if ( ctx._hLibraryModule != nullptr )
-			{
-				if ( ctx._onBeforeReload.isBound() )
-					ctx._onBeforeReload();
-
-				FileUtil::freeDynamicLibrary( ctx._hLibraryModule );
-				ctx._hLibraryModule = nullptr;
-			}
-
-			tryDeleteShadowArtifacts( ctx._tempModulePath );
-			if ( ctx._tempModulePath != livePath )
-				tryDeleteShadowArtifacts( livePath );
-			ctx._tempModulePath.clear();
-		}
-
-		BLOCK( "Copy to fixed live shadow" )
-		{
-			if ( copyFileWithRetry( ctx._originalModulePath, livePath ) == false )
-			{
-				SW_LOG_ERROR( "[LiveReloadManager] Failed to create fixed shadow copy: %#", livePath.c_str() );
-				return false;
-			}
-			copyDebugSymbolsIfPresent( ctx._originalModulePath, livePath );
-		}
-
-		BLOCK( "Load fixed live shadow" )
-		{
-			void* newHandle = FileUtil::loadDynamicLibrary( livePath );
-			if ( newHandle == nullptr )
-			{
-				SW_LOG_ERROR( "[LiveReloadManager] Failed to load dynamic library: %#", livePath.c_str() );
-				tryDeleteShadowArtifacts( livePath );
-				return false;
-			}
-
-			ctx._hLibraryModule		= newHandle;
-			ctx._tempModulePath		= livePath;
-			ctx._loadedSourceMtime	= sourceMtime;
-
-			if ( ctx._onAfterReload.isBound() )
-				ctx._onAfterReload( ctx._hLibraryModule );
-		}
-
-		SW_LOG_INFO( "[LiveReloadManager] Module loaded (fixed shadow: %#)", ctx._tempModulePath.c_str() );
-		return true;
-	}
-#else
 	bool LiveReloadManager::loadShadowCopyModule( ModuleContext& ctx )
 	{
 		if ( FileUtil::isFileExist( ctx._originalModulePath ) == false )
@@ -222,9 +156,9 @@ namespace sw
 				previousHandle = nullptr;
 			}
 
-			ctx._hLibraryModule		= newHandle;
-			ctx._tempModulePath		= newTempModulePath;
-			ctx._loadedSourceMtime	= sourceMtime;
+			ctx._hLibraryModule	   = newHandle;
+			ctx._tempModulePath	   = newTempModulePath;
+			ctx._loadedSourceMtime = sourceMtime;
 
 			tryDeleteShadowArtifacts( previousTempModule );
 
@@ -235,7 +169,6 @@ namespace sw
 		SW_LOG_INFO( "[LiveReloadManager] Module loaded (shadow: %#)", ctx._tempModulePath.c_str() );
 		return true;
 	}
-#endif
 
 	void LiveReloadManager::update()
 	{
@@ -245,7 +178,6 @@ namespace sw
 		{
 			ModuleContext& ctx = pair.second;
 
-			// Auto-reload when the source module is newer — debounce to avoid copy storms.
 			if ( ctx._originalModulePath.empty() == false && FileUtil::isFileExist( ctx._originalModulePath ) )
 			{
 				const uint64 sourceMtime = FileUtil::getFileTimestamp( ctx._originalModulePath );
@@ -282,13 +214,8 @@ namespace sw
 				const uint64 attemptedMtime = FileUtil::getFileTimestamp( ctx._originalModulePath );
 				if ( loadShadowCopyModule( ctx ) == false )
 				{
-#if defined( SW_PLATFORM_LINUX )
-					SW_LOG_ERROR( "[LiveReloadManager] Reload failed for %# — previous fixed shadow was unloaded.",
-								  ctx._moduleName.c_str() );
-#else
 					SW_LOG_ERROR( "[LiveReloadManager] Reload failed for %# — keeping previous module handle if any.",
 								  ctx._moduleName.c_str() );
-#endif
 					if ( attemptedMtime != 0 )
 						ctx._loadedSourceMtime = attemptedMtime;
 				}
@@ -298,7 +225,6 @@ namespace sw
 
 	void LiveReloadManager::shutdown()
 	{
-		// App이 이미 onBefore*Reload로 인스턴스를 정리한다. 여기서는 unload + temp cleanup.
 		for ( auto& pair : _modules )
 		{
 			ModuleContext& ctx = pair.second;

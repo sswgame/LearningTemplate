@@ -3,6 +3,7 @@
  */
 #include "Panels/InspectorPanel.h"
 #include "EditorSelection.h"
+#include "EditorAssetDrop.h"
 #include "Runtime/EditorUIContext.h"
 #include "Core/Common/CoreServices.h"
 #include "Core/Game/Scene/SceneManager.h"
@@ -16,7 +17,14 @@
 #include "Core/Graphics/RHI/IRHIDevice.h"
 #include "Core/Utility/Math/VectorMath.h"
 #include "Core/Utility/Task/TaskTypes.h"
+#include "Core/Utility/Log/Logger.h"
+#include "Core/Utility/String/StringUtil.h"
+#include "Core/Utility/GlobalVariable/GlobalVariableManager.h"
 #include <imgui.h>
+#include <algorithm>
+#include <cstring>
+#include <map>
+#include <vector>
 
 namespace sw
 {
@@ -24,7 +32,35 @@ namespace sw
 	{
 		const char* propLabel( const PropertyInfo& prop )
 		{
-			return prop._alias.empty() == false ? prop._alias.c_str() : prop._name.c_str();
+			if ( prop._metadata._displayName.empty() == false )
+				return prop._metadata._displayName.c_str();
+			if ( prop._alias.empty() == false )
+				return prop._alias.c_str();
+			return prop._name.c_str();
+		}
+
+		bool propertyNameHintsAsset( const PropertyInfo& prop, const char* path )
+		{
+			if ( path == nullptr || path[0] == '\0' )
+				return false;
+
+			const std::string nameLower = StringUtil::toLower( std::string( prop._name.c_str() ) );
+			const std::string aliasLower =
+				prop._alias.empty() ? std::string() : StringUtil::toLower( std::string( prop._alias.c_str() ) );
+
+			auto contains = []( const std::string& hay, const char* needle ) {
+				return hay.find( needle ) != std::string::npos;
+			};
+
+			if ( editor::isTextureAssetPath( path ) )
+				return contains( nameLower, "texture" ) || contains( nameLower, "tex" ) ||
+					   contains( aliasLower, "texture" ) || contains( aliasLower, "tex" );
+			if ( editor::isMaterialAssetPath( path ) )
+				return contains( nameLower, "material" ) || contains( aliasLower, "material" );
+			if ( editor::isPrefabAssetPath( path ) )
+				return contains( nameLower, "prefab" ) || contains( nameLower, "asset" ) ||
+					   contains( aliasLower, "prefab" ) || contains( aliasLower, "asset" );
+			return false;
 		}
 
 		bool typeNameIs( const PropertyInfo& prop, const char* name )
@@ -45,6 +81,31 @@ namespace sw
 		ImGui::Separator();
 		if ( ImGui::CollapsingHeader( "Engine / Material", ImGuiTreeNodeFlags_DefaultOpen ) )
 			drawEngineSection( ctx );
+
+		if ( ImGui::CollapsingHeader( "Debug / Global Variables" ) )
+		{
+			GlobalVariableManager& gvm = core::getGlobalVariableManager();
+			ImGui::Text( "%zu variables registered", gvm.getAllVariables().size() );
+			if ( ImGui::Button( "Reset All Defaults" ) )
+				gvm.resetAllToDefault();
+			ImGui::TextDisabled( "Former Global Variables panel — folded into Inspector." );
+		}
+
+		ImGui::Separator();
+		ImGui::TextUnformatted( "Asset Drop Target" );
+		if ( _lastDroppedAsset.empty() == false )
+			ImGui::TextDisabled( "Last dropped: %s", _lastDroppedAsset.c_str() );
+		ImGui::Button( "Drop SW_ASSET_PATH here", ImVec2( -1.0f, 36.0f ) );
+		if ( ImGui::BeginDragDropTarget() )
+		{
+			if ( const ImGuiPayload* payload = ImGui::AcceptDragDropPayload( "SW_ASSET_PATH" ) )
+			{
+				const char* path = static_cast<const char*>( payload->Data );
+				if ( path != nullptr )
+					acceptAssetDrop( path );
+			}
+			ImGui::EndDragDropTarget();
+		}
 
 		ImGui::End();
 	}
@@ -232,36 +293,166 @@ namespace sw
 					 static_cast<double>( world._z ) );
 	}
 
+	void InspectorPanel::setLastDroppedAsset( const char* path )
+	{
+		_lastDroppedAsset = ( path != nullptr ) ? path : "";
+	}
+
+	void InspectorPanel::acceptAssetDrop( const char* path )
+	{
+		if ( path == nullptr || path[0] == '\0' )
+			return;
+
+		setLastDroppedAsset( path );
+
+		Scene* scene = core::getSceneManager().getActiveScene();
+		if ( scene == nullptr || scene->getObjectManager() == nullptr )
+		{
+			SW_LOG_INFO( "[Inspector] Stored dropped asset (no scene): %#", path );
+			return;
+		}
+
+		GameObject* obj	 = scene->getObjectManager()->findGameObjectById( editor::selectedObjectId() );
+		Component*	comp = nullptr;
+		if ( obj != nullptr && editor::selectedComponentId() != 0 )
+		{
+			for ( Component* c : obj->getAllComponents() )
+			{
+				if ( c != nullptr && c->getComponentId() == editor::selectedComponentId() )
+				{
+					comp = c;
+					break;
+				}
+			}
+		}
+
+		auto tryAssign = [&]( void* instance, const TypeInfo* typeInfo ) -> bool {
+			if ( instance == nullptr || typeInfo == nullptr )
+				return false;
+
+			bool bAssigned = false;
+			for ( const PropertyInfo& prop : typeInfo->_propertyList )
+			{
+				if ( prop._metadata._bReadOnly || prop._bIsContainer )
+					continue;
+				if ( typeNameIs( prop, "std::string" ) == false && typeNameIs( prop, "string" ) == false &&
+					 typeNameIs( prop, "sw::hashed_string" ) == false && typeNameIs( prop, "hashed_string" ) == false )
+					continue;
+				if ( propertyNameHintsAsset( prop, path ) == false )
+					continue;
+
+				if ( typeNameIs( prop, "std::string" ) || typeNameIs( prop, "string" ) )
+				{
+					if ( std::string* ptr = prop.getValuePtr<std::string>( instance ) )
+					{
+						*ptr	  = path;
+						bAssigned = true;
+					}
+				}
+				else if ( typeNameIs( prop, "sw::hashed_string" ) || typeNameIs( prop, "hashed_string" ) )
+				{
+					if ( hashed_string* ptr = prop.getValuePtr<hashed_string>( instance ) )
+					{
+						*ptr	  = hashed_string( path );
+						bAssigned = true;
+					}
+				}
+			}
+			return bAssigned;
+		};
+
+		bool bAssigned = false;
+		if ( comp != nullptr )
+		{
+			if ( const TypeInfo* typeInfo = comp->getTypeInfo() )
+				bAssigned = tryAssign( comp, typeInfo );
+		}
+		else if ( obj != nullptr )
+		{
+			if ( const TypeInfo* typeInfo = obj->getTypeInfo() )
+				bAssigned = tryAssign( obj, typeInfo );
+		}
+
+		if ( bAssigned )
+			SW_LOG_INFO( "[Inspector] Assigned asset path to selection: %#", path );
+		else
+			SW_LOG_INFO( "[Inspector] Stored dropped asset (no matching property): %#", path );
+	}
+
 	void InspectorPanel::drawTypeProperties( void* instance, const TypeInfo* typeInfo )
 	{
 		if ( instance == nullptr || typeInfo == nullptr )
 			return;
 
+		std::map<std::string, std::vector<const PropertyInfo*>> grouped;
 		for ( const PropertyInfo& prop : typeInfo->_propertyList )
 		{
-			ImGui::PushID( prop._name.c_str() );
-			drawPropertyWidget( instance, prop );
-			ImGui::PopID();
+			const std::string category =
+				prop._metadata._category.empty() ? "General" : std::string( prop._metadata._category.c_str() );
+			grouped[category].push_back( &prop );
+		}
+
+		for ( const auto& [category, props] : grouped )
+		{
+			if ( ImGui::CollapsingHeader( category.c_str(), ImGuiTreeNodeFlags_DefaultOpen ) == false )
+				continue;
+
+			for ( const PropertyInfo* prop : props )
+			{
+				ImGui::PushID( prop->_name.c_str() );
+				drawPropertyWidget( instance, *prop );
+				ImGui::PopID();
+			}
 		}
 	}
 
 	void InspectorPanel::drawPropertyWidget( void* instance, const PropertyInfo& prop )
 	{
-		const char* label = propLabel( prop );
+		const char* label	  = propLabel( prop );
+		const bool	bReadOnly = prop._metadata._bReadOnly != 0;
+
+		auto showTooltipIfHovered = [&]() {
+			if ( prop._metadata._tooltip.empty() == false && ImGui::IsItemHovered() )
+				ImGui::SetTooltip( "%s", prop._metadata._tooltip.c_str() );
+		};
+
+		auto drawReadOnlyText = [&]( const char* value ) {
+			ImGui::TextDisabled( "%s", label );
+			ImGui::SameLine();
+			ImGui::TextUnformatted( value != nullptr ? value : "" );
+			showTooltipIfHovered();
+		};
+
+		const bool bHasRange = prop._metadata._bHasRange != 0;
+		const float minF	   = prop._metadata._minRange;
+		const float maxF	   = prop._metadata._maxRange;
+		const int	minI	   = static_cast<int>( minF );
+		const int	maxI	   = static_cast<int>( maxF );
 
 		if ( prop._bIsContainer )
 		{
 			size_t size = 0;
 			if ( prop._containerWrapper != nullptr )
 				size = prop._containerWrapper->getSize( prop.getValuePtr<void>( instance ) );
-			ImGui::TextDisabled( "%s (container, size=%zu) ??edit skipped", label, size );
+			ImGui::TextDisabled( "%s (container, size=%zu) — edit skipped", label, size );
 			return;
 		}
 
 		if ( typeNameIs( prop, "int32" ) || typeNameIs( prop, "int" ) || typeNameIs( prop, "int32_t" ) )
 		{
 			int32* ptr = prop.getValuePtr<int32>( instance );
-			if ( ptr )
+			if ( ptr == nullptr )
+				return;
+			if ( bReadOnly )
+			{
+				char buf[64];
+				std::snprintf( buf, sizeof( buf ), "%d", static_cast<int>( *ptr ) );
+				drawReadOnlyText( buf );
+				return;
+			}
+			if ( bHasRange )
+				ImGui::DragInt( label, ptr, 1.0f, minI, maxI );
+			else
 				ImGui::DragInt( label, ptr );
 			return;
 		}
@@ -270,37 +461,102 @@ namespace sw
 			uint32* ptr = prop.getValuePtr<uint32>( instance );
 			if ( ptr == nullptr )
 				return;
+			if ( bReadOnly )
+			{
+				char buf[64];
+				std::snprintf( buf, sizeof( buf ), "%u", static_cast<unsigned>( *ptr ) );
+				drawReadOnlyText( buf );
+				return;
+			}
 			int tmp = static_cast<int>( *ptr );
-			if ( ImGui::DragInt( label, &tmp, 1.0f, 0 ) )
+			if ( bHasRange )
+			{
+				if ( ImGui::DragInt( label, &tmp, 1.0f, minI, maxI ) )
+					*ptr = static_cast<uint32>( tmp );
+			}
+			else if ( ImGui::DragInt( label, &tmp, 1.0f, 0 ) )
+			{
 				*ptr = static_cast<uint32>( tmp );
+			}
 			return;
 		}
 		if ( typeNameIs( prop, "int64" ) || typeNameIs( prop, "int64_t" ) || typeNameIs( prop, "long long" ) )
 		{
-			int tmp = static_cast<int>( *prop.getValuePtr<int64>( instance ) );
-			if ( ImGui::DragInt( label, &tmp ) )
-				*prop.getValuePtr<int64>( instance ) = static_cast<int64>( tmp );
+			int64* ptr = prop.getValuePtr<int64>( instance );
+			if ( ptr == nullptr )
+				return;
+			if ( bReadOnly )
+			{
+				char buf[64];
+				std::snprintf( buf, sizeof( buf ), "%lld", static_cast<long long>( *ptr ) );
+				drawReadOnlyText( buf );
+				return;
+			}
+			int tmp = static_cast<int>( *ptr );
+			if ( bHasRange )
+			{
+				if ( ImGui::DragInt( label, &tmp, 1.0f, minI, maxI ) )
+					*ptr = static_cast<int64>( tmp );
+			}
+			else if ( ImGui::DragInt( label, &tmp ) )
+			{
+				*ptr = static_cast<int64>( tmp );
+			}
 			return;
 		}
 		if ( typeNameIs( prop, "float32" ) || typeNameIs( prop, "float" ) )
 		{
 			float32* ptr = prop.getValuePtr<float32>( instance );
-			if ( ptr )
+			if ( ptr == nullptr )
+				return;
+			if ( bReadOnly )
+			{
+				char buf[64];
+				std::snprintf( buf, sizeof( buf ), "%g", static_cast<double>( *ptr ) );
+				drawReadOnlyText( buf );
+				return;
+			}
+			if ( bHasRange )
+				ImGui::DragFloat( label, ptr, 0.01f, minF, maxF );
+			else
 				ImGui::DragFloat( label, ptr, 0.01f );
 			return;
 		}
 		if ( typeNameIs( prop, "float64" ) || typeNameIs( prop, "double" ) )
 		{
-			float tmp = static_cast<float>( *prop.getValuePtr<float64>( instance ) );
-			if ( ImGui::DragFloat( label, &tmp, 0.01f ) )
-				*prop.getValuePtr<float64>( instance ) = static_cast<float64>( tmp );
+			float64* ptr = prop.getValuePtr<float64>( instance );
+			if ( ptr == nullptr )
+				return;
+			if ( bReadOnly )
+			{
+				char buf[64];
+				std::snprintf( buf, sizeof( buf ), "%g", static_cast<double>( *ptr ) );
+				drawReadOnlyText( buf );
+				return;
+			}
+			float tmp = static_cast<float>( *ptr );
+			if ( bHasRange )
+			{
+				if ( ImGui::DragFloat( label, &tmp, 0.01f, minF, maxF ) )
+					*ptr = static_cast<float64>( tmp );
+			}
+			else if ( ImGui::DragFloat( label, &tmp, 0.01f ) )
+			{
+				*ptr = static_cast<float64>( tmp );
+			}
 			return;
 		}
 		if ( typeNameIs( prop, "bool" ) )
 		{
 			bool* ptr = prop.getValuePtr<bool>( instance );
-			if ( ptr )
-				ImGui::Checkbox( label, ptr );
+			if ( ptr == nullptr )
+				return;
+			if ( bReadOnly )
+			{
+				drawReadOnlyText( *ptr ? "true" : "false" );
+				return;
+			}
+			ImGui::Checkbox( label, ptr );
 			return;
 		}
 		if ( typeNameIs( prop, "std::string" ) || typeNameIs( prop, "string" ) )
@@ -308,6 +564,11 @@ namespace sw
 			std::string* ptr = prop.getValuePtr<std::string>( instance );
 			if ( ptr == nullptr )
 				return;
+			if ( bReadOnly )
+			{
+				drawReadOnlyText( ptr->c_str() );
+				return;
+			}
 			char buf[512];
 			std::snprintf( buf, sizeof( buf ), "%s", ptr->c_str() );
 			if ( ImGui::InputText( label, buf, sizeof( buf ) ) )
@@ -317,22 +578,50 @@ namespace sw
 		if ( typeNameIs( prop, "sw::float3" ) || typeNameIs( prop, "float3" ) )
 		{
 			float3* ptr = prop.getValuePtr<float3>( instance );
-			if ( ptr )
-				ImGui::DragFloat3( label, &ptr->_x, 0.1f );
+			if ( ptr == nullptr )
+				return;
+			if ( bReadOnly )
+			{
+				char buf[128];
+				std::snprintf( buf, sizeof( buf ), "(%.2f, %.2f, %.2f)",
+							   static_cast<double>( ptr->_x ), static_cast<double>( ptr->_y ), static_cast<double>( ptr->_z ) );
+				drawReadOnlyText( buf );
+				return;
+			}
+			ImGui::DragFloat3( label, &ptr->_x, 0.1f );
 			return;
 		}
 		if ( typeNameIs( prop, "sw::float2" ) || typeNameIs( prop, "float2" ) )
 		{
 			float2* ptr = prop.getValuePtr<float2>( instance );
-			if ( ptr )
-				ImGui::DragFloat2( label, &ptr->_x, 0.1f );
+			if ( ptr == nullptr )
+				return;
+			if ( bReadOnly )
+			{
+				char buf[96];
+				std::snprintf( buf, sizeof( buf ), "(%.2f, %.2f)",
+							   static_cast<double>( ptr->_x ), static_cast<double>( ptr->_y ) );
+				drawReadOnlyText( buf );
+				return;
+			}
+			ImGui::DragFloat2( label, &ptr->_x, 0.1f );
 			return;
 		}
 		if ( typeNameIs( prop, "sw::float4" ) || typeNameIs( prop, "float4" ) )
 		{
 			float4* ptr = prop.getValuePtr<float4>( instance );
-			if ( ptr )
-				ImGui::DragFloat4( label, &ptr->_x, 0.01f );
+			if ( ptr == nullptr )
+				return;
+			if ( bReadOnly )
+			{
+				char buf[160];
+				std::snprintf( buf, sizeof( buf ), "(%.2f, %.2f, %.2f, %.2f)",
+							   static_cast<double>( ptr->_x ), static_cast<double>( ptr->_y ),
+							   static_cast<double>( ptr->_z ), static_cast<double>( ptr->_w ) );
+				drawReadOnlyText( buf );
+				return;
+			}
+			ImGui::DragFloat4( label, &ptr->_x, 0.01f );
 			return;
 		}
 		if ( typeNameIs( prop, "sw::hashed_string" ) || typeNameIs( prop, "hashed_string" ) )
@@ -340,6 +629,11 @@ namespace sw
 			hashed_string* ptr = prop.getValuePtr<hashed_string>( instance );
 			if ( ptr == nullptr )
 				return;
+			if ( bReadOnly )
+			{
+				drawReadOnlyText( ptr->c_str() );
+				return;
+			}
 			char buf[256];
 			std::snprintf( buf, sizeof( buf ), "%s", ptr->c_str() );
 			if ( ImGui::InputText( label, buf, sizeof( buf ), ImGuiInputTextFlags_EnterReturnsTrue ) )
@@ -348,6 +642,7 @@ namespace sw
 		}
 
 		ImGui::TextDisabled( "%s (%s)", label, prop._typeName.c_str() );
+		showTooltipIfHovered();
 	}
 
 	namespace

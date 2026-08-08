@@ -2,6 +2,7 @@
 #include "Core/Object/GameObjectManager.h"
 #include "Core/Graphics/Material/Material.h"
 #include "Core/Graphics/RHI/IRHIDevice.h"
+#include "Core/Graphics/RenderPass/FrameRenderer.h"
 #include "Core/Utility/Log/Logger.h"
 
 namespace sw
@@ -38,10 +39,17 @@ namespace sw
 
 	void Scene::render( IRHIDevice* rhiDevice )
 	{
-		if ( rhiDevice && _material )
+		if ( rhiDevice == nullptr )
+			return;
+
+		if ( _frameRenderer != nullptr && _frameRenderer->isReady() )
 		{
-			rhiDevice->drawTriangle( _material->getDescriptorIndex() );
+			if ( _frameRenderer->execute( rhiDevice, _material.get() ) )
+				return;
 		}
+
+		if ( _material )
+			rhiDevice->drawTriangle( _material->getDescriptorIndex() );
 	}
 
 	Material* Scene::getMaterial() const

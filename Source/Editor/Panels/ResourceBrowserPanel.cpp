@@ -560,6 +560,13 @@ namespace sw
 						selectAsset( entry );
 					if ( ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked( ImGuiMouseButton_Left ) )
 						openAsset( entry );
+					if ( entry.bIsDirectory == false && ImGui::BeginDragDropSource( ImGuiDragDropFlags_SourceAllowNullID ) )
+					{
+						ImGui::SetDragDropPayload( "SW_ASSET_PATH", entry.relativePath.c_str(),
+												   entry.relativePath.size() + 1 );
+						ImGui::TextUnformatted( entry.relativePath.c_str() );
+						ImGui::EndDragDropSource();
+					}
 
 					ImDrawList*	 drawList = ImGui::GetWindowDrawList();
 					const ImVec4 tint	  = colorForExtension( entry.bIsDirectory ? std::string{} : entry.extension );
@@ -618,6 +625,13 @@ namespace sw
 						selectAsset( entry );
 						if ( ImGui::IsMouseDoubleClicked( ImGuiMouseButton_Left ) )
 							openAsset( entry );
+					}
+					if ( entry.bIsDirectory == false && ImGui::BeginDragDropSource() )
+					{
+						ImGui::SetDragDropPayload( "SW_ASSET_PATH", entry.relativePath.c_str(),
+												   entry.relativePath.size() + 1 );
+						ImGui::TextUnformatted( entry.relativePath.c_str() );
+						ImGui::EndDragDropSource();
 					}
 
 					ImGui::TableSetColumnIndex( 1 );

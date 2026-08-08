@@ -25,6 +25,8 @@ namespace sw
 	class RHI;
 	class LiveReloadManager;
 	class SceneManager;
+	class InputManager;
+	class FrameRenderer;
 	struct NativeWindowEvent;
 
 	/** @brief 윈도우·RHI·에디터/게임 모듈을 구동하는 메인 애플리케이션 */
@@ -84,7 +86,10 @@ namespace sw
 		std::unique_ptr<LiveReloadManager>	   _liveReloadManager;
 		std::unique_ptr<ReloadFileManager>	   _reloadFileManager;
 		std::unique_ptr<SceneManager>		   _sceneManager;
+		std::unique_ptr<InputManager>		   _inputManager;
+		std::unique_ptr<FrameRenderer>		   _frameRenderer;
 
+		float32				 _splashTimer = 0.0f;
 		ShaderReflectionData _reflectionData;
 		EditorUIContext		 _editorCtx;
 		EditorAPI			 _editorApi{};

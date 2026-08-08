@@ -17,6 +17,7 @@ namespace sw
 	class TypeRegistry;
 	class ComponentManager;
 	class SceneManager;
+	class InputManager;
 
 	/** @brief App 소유 코어 매니저 포인터 묶음 */
 	struct CoreServices
@@ -27,6 +28,7 @@ namespace sw
 		TypeRegistry*		   typeRegistry			 = nullptr;
 		ComponentManager*	   componentManager		 = nullptr;
 		SceneManager*		   sceneManager			 = nullptr;
+		InputManager*		   inputManager			 = nullptr;
 	};
 
 	namespace core
@@ -48,5 +50,7 @@ namespace sw
 		SW_API ComponentManager& getComponentManager();
 		/** @brief 바인딩된 SceneManager를 반환합니다. */
 		SW_API SceneManager& getSceneManager();
+		/** @brief 바인딩된 InputManager를 반환합니다. */
+		SW_API InputManager& getInputManager();
 	} // namespace core
 } // namespace sw

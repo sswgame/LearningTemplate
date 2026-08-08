@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Prefab>
+	<name>SamplePrefab</name>
+	<GameObjectState>
+		<Name>SamplePrefab</Name>
+		<IsActive>1</IsActive>
+		<ParentGO></ParentGO>
+		<Tags/>
+		<Components/>
+		<SceneTransforms/>
+	</GameObjectState>
+</Prefab>

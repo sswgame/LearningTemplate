@@ -33,6 +33,8 @@ namespace sw
 		void drawTypeMethods( void* instance, const TypeInfo* typeInfo );
 		void drawSceneComponentExtras( class SceneComponent* sceneComp );
 		void renderMaterialUI( Material* material, IRHIDevice* rhiDevice );
+		void acceptAssetDrop( const char* path );
+		void setLastDroppedAsset( const char* path );
 
 		// Scratch buffers for FUNCTION() arg editing (panel-local).
 		int32	_argInt[8]{};
@@ -40,5 +42,6 @@ namespace sw
 		bool	_argBool[8]{};
 		char	_argString[8][256]{};
 		char	_lastInvokeResult[256]{};
+		std::string _lastDroppedAsset;
 	};
 } // namespace sw

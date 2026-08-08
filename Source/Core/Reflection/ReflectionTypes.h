@@ -17,12 +17,14 @@ namespace sw
 	{
 		PropertyMetadata() noexcept;
 
-		std::string			   _category = "General";
-		std::string			   _tooltip	 = "";
+		std::string			   _category	= "General";
+		std::string			   _displayName = "";
+		std::string			   _tooltip		= "";
 		float32				   _minRange = 0.0f;
 		float32				   _maxRange = 1.0f;
 		uint8				   _bHasRange	  : 1;
-		[[maybe_unused]] uint8 _reservedFlags : 7;
+		uint8				   _bReadOnly	  : 1;
+		[[maybe_unused]] uint8 _reservedFlags : 6;
 	};
 
 	struct PropertyInfo

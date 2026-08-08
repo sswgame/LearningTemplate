@@ -10,6 +10,7 @@ namespace sw
 	class GameObjectManager;
 	class IRHIDevice;
 	class Material;
+	class FrameRenderer;
 
 	/**
 	 * @class Scene
@@ -27,8 +28,12 @@ namespace sw
 		/** @brief 매 프레임 호출되어 씬 내부의 객체들을 병렬 업데이트합니다. */
 		virtual void update( float32 deltaTime );
 
-		/** @brief 씬을 렌더링합니다. (현재는 Material 기반 렌더링 스텁) */
+		/** @brief 씬을 렌더링합니다. (FrameRenderer 우선, 없으면 drawTriangle) */
 		virtual void render( IRHIDevice* rhiDevice );
+
+		/** @brief Optional FrameRenderer owned by App (non-owning). */
+		void setFrameRenderer( FrameRenderer* frameRenderer ) { _frameRenderer = frameRenderer; }
+		FrameRenderer* getFrameRenderer() const { return _frameRenderer; }
 
 		/** @brief 씬의 이름 반환 */
 		const std::string& getName() const { return _name; }
@@ -43,5 +48,7 @@ namespace sw
 		std::string						   _name;
 		std::unique_ptr<GameObjectManager> _objectManager;
 		std::unique_ptr<Material>		   _material;
+		FrameRenderer*					   _frameRenderer = nullptr;
 	};
 } // namespace sw
+

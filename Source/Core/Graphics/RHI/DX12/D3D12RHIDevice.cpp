@@ -1107,11 +1107,17 @@ namespace sw
 
 	void D3D12RHIDevice::beginEventMarker( const utf8* name )
 	{
-		(void)name;
+		if ( _commandList == nullptr || name == nullptr )
+			return;
+		wchar_t wide[256]{};
+		MultiByteToWideChar( CP_UTF8, 0, name, -1, wide, 256 );
+		_commandList->BeginEvent( 0, wide, static_cast<UINT>( ( wcslen( wide ) + 1 ) * sizeof( wchar_t ) ) );
 	}
 
 	void D3D12RHIDevice::endEventMarker()
 	{
+		if ( _commandList != nullptr )
+			_commandList->EndEvent();
 	}
 
 	std::unique_ptr<IRHICommandList> D3D12RHIDevice::createCommandList()
@@ -1237,14 +1243,18 @@ namespace sw
 
 	RHIRenderPassHandle D3D12RHIDevice::createRenderPass( const RHIRenderPassDesc& desc )
 	{
-		D3D12RenderPassRecord record{ desc };
+		D3D12RenderPassRecord record{};
+		record.desc	   = desc;
+		record._bAlive = 1;
 		_renderPasses.push_back( record );
 		return static_cast<RHIRenderPassHandle>( _renderPasses.size() );
 	}
 
 	void D3D12RHIDevice::destroyRenderPass( RHIRenderPassHandle pass )
 	{
-		(void)pass;
+		if ( pass == 0 || pass > _renderPasses.size() )
+			return;
+		_renderPasses[pass - 1]._bAlive = 0;
 	}
 
 	void D3D12RHIDevice::beginRenderPass( const RHIRenderPassBeginInfo& beginInfo )

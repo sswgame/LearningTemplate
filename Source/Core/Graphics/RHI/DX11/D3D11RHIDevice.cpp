@@ -10,6 +10,7 @@
 	#include "Core/Graphics/Shader/ShaderCache.h"
 	#include "Core/Utility/Log/Logger.h"
 	#include "Core/Utility/Delegate/Delegate.h"
+	#include <d3d11_1.h>
 
 namespace sw
 {
@@ -710,13 +711,33 @@ namespace sw
 		}
 	}
 
+	void D3D11RHIDevice::waitIdle()
+	{
+		if ( _deviceContext != nullptr )
+			_deviceContext->Flush();
+		_releaseQueue.flushAll();
+	}
+
 	void D3D11RHIDevice::beginEventMarker( const utf8* name )
 	{
-		(void)name;
+		if ( _deviceContext == nullptr || name == nullptr )
+			return;
+		Microsoft::WRL::ComPtr<ID3DUserDefinedAnnotation> annotation;
+		if ( SUCCEEDED( _deviceContext.As( &annotation ) ) && annotation != nullptr )
+		{
+			wchar_t wide[256]{};
+			MultiByteToWideChar( CP_UTF8, 0, name, -1, wide, 256 );
+			annotation->BeginEvent( wide );
+		}
 	}
 
 	void D3D11RHIDevice::endEventMarker()
 	{
+		if ( _deviceContext == nullptr )
+			return;
+		Microsoft::WRL::ComPtr<ID3DUserDefinedAnnotation> annotation;
+		if ( SUCCEEDED( _deviceContext.As( &annotation ) ) && annotation != nullptr )
+			annotation->EndEvent();
 	}
 
 	std::unique_ptr<IRHICommandList> D3D11RHIDevice::createCommandList()
@@ -840,14 +861,18 @@ namespace sw
 
 	RHIRenderPassHandle D3D11RHIDevice::createRenderPass( const RHIRenderPassDesc& desc )
 	{
-		D3D11RenderPassRecord record{ desc };
+		D3D11RenderPassRecord record{};
+		record.desc	   = desc;
+		record._bAlive = 1;
 		_renderPasses.push_back( record );
 		return static_cast<RHIRenderPassHandle>( _renderPasses.size() );
 	}
 
 	void D3D11RHIDevice::destroyRenderPass( RHIRenderPassHandle pass )
 	{
-		(void)pass;
+		if ( pass == 0 || pass > _renderPasses.size() )
+			return;
+		_renderPasses[pass - 1]._bAlive = 0;
 	}
 
 	void D3D11RHIDevice::beginRenderPass( const RHIRenderPassBeginInfo& beginInfo )

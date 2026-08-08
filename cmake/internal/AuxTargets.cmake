@@ -38,3 +38,16 @@ if(SW_BUILD_DOCS)
         message(STATUS "[Docs] Skipping docs target (doxygen or Doxyfile missing).")
     endif()
 endif()
+
+if(NOT Python3_Interpreter_FOUND)
+    find_package(Python3 COMPONENTS Interpreter QUIET)
+endif()
+if(Python3_Interpreter_FOUND)
+    add_custom_target(CookPrefabs
+        COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/Scripts/generate/CookPrefabs.py"
+        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+        COMMENT "Cooking prefab XML/JSON to PFB1 binary..."
+        VERBATIM
+    )
+    set_target_properties(CookPrefabs PROPERTIES FOLDER "Engine/Scripts")
+endif()

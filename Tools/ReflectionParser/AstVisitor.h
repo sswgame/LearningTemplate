@@ -15,6 +15,13 @@ namespace sw::tool
 		std::string name;
 		std::string typeName;
 		std::string alias;
+		std::string category;
+		std::string displayName;
+		std::string tooltip;
+		bool		readOnly	= false;
+		bool		hasRange	= false;
+		float		minRange	= 0.0f;
+		float		maxRange	= 1.0f;
 		bool		isContainer	  = false;
 		std::string containerKind = "None";
 		std::string containerType;

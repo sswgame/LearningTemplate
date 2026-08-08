@@ -20,8 +20,12 @@
 #include "Core/Game/Scene/SceneManager.h"
 #include "Core/Game/Scene/Scene.h"
 #include "Core/Game/GameState.h"
+#include "Core/Input/InputManager.h"
+#include "Core/Graphics/RenderPass/FrameRenderer.h"
 #include "Core/Utility/Time/EngineTimer.h"
 #include "Core/Object/ComponentManager.h"
+#include "Core/Game/GameState.h"
+#include "AppState.h"
 
 #if defined( SW_SHIPPING )
 	#include "Runtime/GameAPI.h"
@@ -95,10 +99,21 @@ namespace sw
 			}
 		}
 
-		BLOCK( "메인 씬 생성" )
+		BLOCK( "메인 씬 생성 / FrameRenderer" )
 		{
+			_sceneManager->setRhiDevice( &_rhi->getDevice() );
+			if ( _frameRenderer )
+			{
+				_frameRenderer->initialize( &_rhi->getDevice(), "Engine/RenderPass/ForwardPipeline.xml" );
+				_sceneManager->setFrameRenderer( _frameRenderer.get() );
+			}
+
 			if ( Scene* activeScene = _sceneManager->createScene( "MainScene" ) )
+			{
 				activeScene->initialize( &_rhi->getDevice() );
+				if ( _frameRenderer )
+					activeScene->setFrameRenderer( _frameRenderer.get() );
+			}
 		}
 
 		BLOCK( "Game Module 등록 / 초기화" )
@@ -118,9 +133,11 @@ namespace sw
 			}
 #endif
 
-			// 에디터 OFF/Shipping: Play 토글 없이 바로 실행. 에디터 ON이면 UI Play로 제어.
+			// App flow starts at Splash; GameState Playing is armed after Title.
+			setAppState( AppState::Splash );
+			_splashTimer = 0.0f;
 			if ( _bEnableEditor == false )
-				setGameState( GameState::Playing );
+				setGameState( GameState::Stopped );
 		}
 
 		BLOCK( "윈도우 콜백 / RHI Hot-Swap 훅 설정" )
@@ -190,6 +207,51 @@ namespace sw
 			frameTimer.updateTimer();
 			const float32 deltaTime = frameTimer.getDeltaTime();
 
+			BLOCK( "Input beginFrame" )
+			{
+				if ( _inputManager )
+					_inputManager->beginFrame();
+			}
+
+			BLOCK( "AppState Splash / Title" )
+			{
+				const AppState state = getAppState();
+				if ( state == AppState::Splash )
+				{
+					_splashTimer += deltaTime;
+					constexpr float32 kSplashSeconds = 1.25f;
+					if ( _splashTimer >= kSplashSeconds )
+					{
+						setAppState( AppState::Title );
+						SW_LOG_INFO( "[App] Title — Enter/Space=New Game, C=Continue." );
+					}
+				}
+				else if ( state == AppState::Title )
+				{
+					InputManager& input = core::getInputManager();
+					if ( input.wasKeyPressed( Key::Enter ) || input.wasKeyPressed( Key::Space ) )
+					{
+						setGameStartMode( GameStartMode::NewGame );
+						if ( _bEnableEditor )
+							setAppState( AppState::Editor );
+						else
+							setAppState( AppState::Playing );
+						setGameState( GameState::Playing );
+						SW_LOG_INFO( "[App] New Game — entering Playing / Editor." );
+					}
+					else if ( input.wasKeyPressed( Key::C ) )
+					{
+						setGameStartMode( GameStartMode::Continue );
+						if ( _bEnableEditor )
+							setAppState( AppState::Editor );
+						else
+							setAppState( AppState::Playing );
+						setGameState( GameState::Playing );
+						SW_LOG_INFO( "[App] Continue — entering Playing / Editor." );
+					}
+				}
+			}
+
 			BLOCK( "Game View RT 리사이즈 요청 처리" )
 			{
 				processGameViewportResizeRequest();
@@ -206,6 +268,12 @@ namespace sw
 				_reloadFileManager->update();
 			}
 
+			BLOCK( "Task dispatch / Scene async transitions" )
+			{
+				_taskManager->dispatch();
+				_sceneManager->tickTransitions();
+			}
+
 			BLOCK( "에디터 PreRender / 게임 Update" )
 			{
 				if ( _editor && _editorApi.preRender )
@@ -216,7 +284,11 @@ namespace sw
 					_editorApi.preRender( _editor, &_rhi->getDevice() );
 				}
 
-				if ( _game && _gameApi.update && getGameState() == GameState::Playing )
+				const AppState appState = getAppState();
+				const bool	   bGameplay =
+					( appState == AppState::Playing || appState == AppState::Editor )
+					&& getGameState() == GameState::Playing;
+				if ( _game && _gameApi.update && bGameplay )
 					_gameApi.update( _game, deltaTime );
 			}
 
@@ -272,6 +344,12 @@ namespace sw
 					}
 				}
 			}
+
+			BLOCK( "Input endFrame" )
+			{
+				if ( _inputManager )
+					_inputManager->endFrame();
+			}
 		}
 
 		if ( _window && _window->shouldClose() )
@@ -306,8 +384,12 @@ namespace sw
 
 		BLOCK( "매니저 종료 및 CoreServices 언바인드" )
 		{
+			if ( _frameRenderer )
+				_frameRenderer->shutdown();
 			if ( _sceneManager )
 				_sceneManager->shutdown();
+			if ( _inputManager )
+				_inputManager->shutdown();
 			if ( _reloadFileManager )
 			{
 				if ( _shaderWatchHandle.isValid() )
@@ -327,7 +409,9 @@ namespace sw
 			IWindow::setActiveWindow( nullptr );
 			core::unbindCoreServices();
 
+			_frameRenderer.reset();
 			_sceneManager.reset();
+			_inputManager.reset();
 			_reloadFileManager.reset();
 			_liveReloadManager.reset();
 			_componentManager.reset();

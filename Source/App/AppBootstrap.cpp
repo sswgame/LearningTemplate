@@ -24,6 +24,8 @@ SW_DEFINE_MODULE_REGISTRAR_HEAD( swAppComponentFactoryHead, ::sw::ComponentFacto
 #include "Core/Graphics/RHI/RHICapabilities.h"
 #include "Core/Window/IWindow.h"
 #include "Core/Game/Scene/SceneManager.h"
+#include "Core/Input/InputManager.h"
+#include "Core/Graphics/RenderPass/FrameRenderer.h"
 #include "Runtime/RuntimeHandles.h"
 
 namespace sw
@@ -61,6 +63,8 @@ namespace sw
 			_liveReloadManager = std::make_unique<LiveReloadManager>();
 			_reloadFileManager = std::make_unique<ReloadFileManager>();
 			_sceneManager	   = std::make_unique<SceneManager>();
+			_inputManager	   = std::make_unique<InputManager>();
+			_frameRenderer	   = std::make_unique<FrameRenderer>();
 
 			CoreServices services{};
 			services.commandLineManager	   = _commandLineManager.get();
@@ -69,6 +73,7 @@ namespace sw
 			services.typeRegistry		   = _typeRegistry.get();
 			services.componentManager	   = _componentManager.get();
 			services.sceneManager		   = _sceneManager.get();
+			services.inputManager		   = _inputManager.get();
 			core::bindCoreServices( services );
 
 			registerCoreReflectionTypes();
@@ -90,6 +95,9 @@ namespace sw
 				return false;
 
 			if ( _sceneManager->initialize() == false )
+				return false;
+
+			if ( _inputManager->initialize() == false )
 				return false;
 		}
 

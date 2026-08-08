@@ -119,6 +119,106 @@ namespace sw::tool
 			return annotationSpelling.substr( valueStart, valueEnd - valueStart );
 		}
 
+		std::string parseAnnotationStringValue( const std::string& token, size_t eqPos )
+		{
+			size_t valueStart = eqPos + 1;
+			while ( valueStart < token.size() && ( token[valueStart] == ' ' || token[valueStart] == '\t' ) )
+				++valueStart;
+
+			if ( valueStart >= token.size() )
+				return {};
+
+			if ( token[valueStart] == '"' )
+			{
+				const size_t endQuote = token.find( '"', valueStart + 1 );
+				if ( endQuote == std::string::npos )
+					return {};
+				return token.substr( valueStart + 1, endQuote - valueStart - 1 );
+			}
+
+			size_t valueEnd = valueStart;
+			while ( valueEnd < token.size() )
+			{
+				const char c = token[valueEnd];
+				if ( c == ' ' || c == '\t' )
+					break;
+				++valueEnd;
+			}
+			return token.substr( valueStart, valueEnd - valueStart );
+		}
+
+		void parsePropertyAnnotation( const std::string& annotationSpelling, ParsedPropertyInfo& prop )
+		{
+			const size_t prefixPos = annotationSpelling.find( "PROPERTY;" );
+			if ( prefixPos == std::string::npos )
+				return;
+
+			std::string args = annotationSpelling.substr( prefixPos + 9 );
+			while ( args.empty() == false && ( args.back() == '"' || args.back() == ')' || args.back() == ';' ) )
+				args.pop_back();
+
+			std::vector<std::string> tokens;
+			std::string				 current;
+			bool					 bInQuote = false;
+			for ( char c : args )
+			{
+				if ( c == '"' )
+				{
+					bInQuote = !bInQuote;
+					current.push_back( c );
+					continue;
+				}
+				if ( c == ',' && bInQuote == false )
+				{
+					if ( current.empty() == false )
+						tokens.push_back( StringUtil::trim( current ) );
+					current.clear();
+					continue;
+				}
+				current.push_back( c );
+			}
+			if ( current.empty() == false )
+				tokens.push_back( StringUtil::trim( current ) );
+
+			for ( const std::string& token : tokens )
+			{
+				if ( token.empty() )
+					continue;
+
+				const size_t eqPos = token.find( '=' );
+				if ( eqPos == std::string::npos )
+				{
+					if ( token == "ReadOnly" )
+						prop.readOnly = true;
+					continue;
+				}
+
+				const std::string key = StringUtil::trim( token.substr( 0, eqPos ) );
+				const std::string val = parseAnnotationStringValue( token, eqPos );
+
+				if ( key == "Alias" )
+					prop.alias = val;
+				else if ( key == "Category" )
+					prop.category = val;
+				else if ( key == "DisplayName" )
+					prop.displayName = val;
+				else if ( key == "Tooltip" )
+					prop.tooltip = val;
+				else if ( key == "Min" )
+				{
+					prop.minRange = std::strtof( val.c_str(), nullptr );
+					prop.hasRange = true;
+				}
+				else if ( key == "Max" )
+				{
+					prop.maxRange = std::strtof( val.c_str(), nullptr );
+					prop.hasRange = true;
+				}
+				else if ( key == "ReadOnly" )
+					prop.readOnly = ( val == "true" || val == "1" || val == "True" );
+			}
+		}
+
 		struct FieldCollector
 		{
 			std::vector<ParsedPropertyInfo>* properties = nullptr;
@@ -216,7 +316,9 @@ namespace sw::tool
 			ParsedPropertyInfo prop;
 			prop.name	  = cxStringToStd( clang_getCursorSpelling( cursor ) );
 			prop.typeName = cxStringToStd( clang_getTypeSpelling( clang_getCursorType( cursor ) ) );
-			prop.alias	  = parseAnnotationAlias( search.spelling );
+			parsePropertyAnnotation( search.spelling, prop );
+			if ( prop.alias.empty() )
+				prop.alias = parseAnnotationAlias( search.spelling );
 			parseContainerDetails( prop );
 			collector->properties->push_back( std::move( prop ) );
 			return CXChildVisit_Continue;

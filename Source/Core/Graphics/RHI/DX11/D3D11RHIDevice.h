@@ -45,6 +45,9 @@ namespace sw
 		/** @brief 스왑체인 Present 실행 */
 		void endFrame( bool vsync = true ) override;
 
+		/** @brief GPU idle + release queue flush */
+		void waitIdle() override;
+
 		/** @brief 백엔드 타입 반환 (DirectX11) */
 		RHIBackend getBackendType() const override { return RHIBackend::D3D11; }
 
@@ -217,7 +220,9 @@ namespace sw
 
 		struct D3D11RenderPassRecord
 		{
-			RHIRenderPassDesc desc;
+			RHIRenderPassDesc desc{};
+			uint8			  _bAlive	: 1;
+			uint8			  _reserved : 7;
 		};
 
 		std::vector<D3D11PipelineStateRecord> _pipelineStates;
@@ -281,6 +286,25 @@ namespace sw
 		void			   unregisterBindlessUAV( RHIDescriptorIndex ) override {}
 		void			   bindComputeUAV( RHIDescriptorIndex, uint32 ) override {}
 		void			   drawTriangle( RHIDescriptorIndex ) override {}
+
+		RHIPipelineStateHandle createPipelineState( const RHIPipelineStateDesc& ) override { return 0; }
+		RHIPipelineStateHandle createComputePipelineState( const std::string&, const std::string& ) override { return 0; }
+		void				   destroyPipelineState( RHIPipelineStateHandle ) override {}
+		void				   setPipelineState( RHIPipelineStateHandle ) override {}
+		void				   setComputePipelineState( RHIPipelineStateHandle ) override {}
+		RHIRenderPassHandle	   createRenderPass( const RHIRenderPassDesc& ) override { return 0; }
+		void				   destroyRenderPass( RHIRenderPassHandle ) override {}
+		void				   beginRenderPass( const RHIRenderPassBeginInfo& ) override {}
+		void				   endRenderPass() override {}
+		void				   dispatchCompute( uint32, uint32, uint32 ) override {}
+		void				   setViewport( const RHIViewport& ) override {}
+		void				   setComputeRootConstants( uint32, uint32, const void*, uint32 ) override {}
+		void				   drawIndirect( RHIBufferHandle, uint32 ) override {}
+		void				   dispatchIndirect( RHIBufferHandle, uint32 ) override {}
+		void				   beginEventMarker( const utf8* ) override {}
+		void				   endEventMarker() override {}
+		std::unique_ptr<IRHICommandList> createCommandList() override { return nullptr; }
+		void							 executeCommandList( IRHICommandList* ) override {}
 	};
 } // namespace sw
 #endif

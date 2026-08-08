@@ -25,6 +25,7 @@ namespace sw
 
 		std::vector<ObjectSnapshot> s_playSnapshots;
 		bool						s_bHasPlaySnapshot = false;
+		GameStartMode				s_gameStartMode	= GameStartMode::NewGame;
 
 		void beginPlayActiveScene()
 		{
@@ -188,5 +189,17 @@ namespace sw
 			endPlayActiveScene();
 			restorePlaySnapshot();
 		}
+	}
+
+	void setGameStartMode( GameStartMode mode )
+	{
+		s_gameStartMode = mode;
+	}
+
+	GameStartMode consumeGameStartMode()
+	{
+		const GameStartMode mode = s_gameStartMode;
+		s_gameStartMode			 = GameStartMode::NewGame;
+		return mode;
 	}
 } // namespace sw

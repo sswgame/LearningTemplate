@@ -16,6 +16,16 @@ namespace sw
 		Paused
 	};
 
+	/** @brief Title → Playing handoff (New Game vs Continue). */
+	enum class GameStartMode : uint8
+	{
+		NewGame = 0,
+		Continue
+	};
+
 	SW_API GameState getGameState();
 	SW_API void		 setGameState( GameState state );
+
+	SW_API void		  setGameStartMode( GameStartMode mode );
+	SW_API GameStartMode consumeGameStartMode();
 } // namespace sw

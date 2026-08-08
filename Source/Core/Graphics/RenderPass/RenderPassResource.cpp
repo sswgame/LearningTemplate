@@ -19,6 +19,82 @@
 
 namespace sw
 {
+	namespace
+	{
+		void parseStringList( rapidxml::xml_node<>* parent, const char* listName, std::vector<std::string>& out )
+		{
+			out.clear();
+			if ( parent == nullptr )
+				return;
+			rapidxml::xml_node<>* list = parent->first_node( listName );
+			if ( list == nullptr )
+				return;
+			for ( rapidxml::xml_node<>* item = list->first_node( "item" ); item; item = item->next_sibling( "item" ) )
+			{
+				if ( item->value() != nullptr && item->value()[0] != '\0' )
+					out.emplace_back( item->value() );
+				else if ( rapidxml::xml_attribute<>* attr = item->first_attribute( "name" ) )
+					out.emplace_back( attr->value() );
+			}
+		}
+
+		void parseGraphPasses( rapidxml::xml_node<>* passesNode, std::vector<RenderGraphPassDesc>& out )
+		{
+			out.clear();
+			if ( passesNode == nullptr )
+				return;
+
+			for ( rapidxml::xml_node<>* passNode = passesNode->first_node( "item" ); passNode; passNode = passNode->next_sibling( "item" ) )
+			{
+				RenderGraphPassDesc pass{};
+				if ( rapidxml::xml_node<>* n = passNode->first_node( "_name" ) )
+					pass._name = n->value();
+				else if ( rapidxml::xml_attribute<>* a = passNode->first_attribute( "name" ) )
+					pass._name = a->value();
+
+				if ( rapidxml::xml_node<>* n = passNode->first_node( "_type" ) )
+					pass._type = n->value();
+				else if ( rapidxml::xml_attribute<>* a = passNode->first_attribute( "type" ) )
+					pass._type = a->value();
+
+				parseStringList( passNode, "_inputs", pass._inputs );
+				parseStringList( passNode, "_outputs", pass._outputs );
+				out.push_back( std::move( pass ) );
+			}
+
+			// Also accept <Pass name="..." type="..."> children
+			for ( rapidxml::xml_node<>* passNode = passesNode->first_node( "Pass" ); passNode; passNode = passNode->next_sibling( "Pass" ) )
+			{
+				RenderGraphPassDesc pass{};
+				if ( rapidxml::xml_attribute<>* a = passNode->first_attribute( "name" ) )
+					pass._name = a->value();
+				if ( rapidxml::xml_attribute<>* a = passNode->first_attribute( "type" ) )
+					pass._type = a->value();
+				parseStringList( passNode, "inputs", pass._inputs );
+				parseStringList( passNode, "outputs", pass._outputs );
+				if ( pass._inputs.empty() )
+					parseStringList( passNode, "_inputs", pass._inputs );
+				if ( pass._outputs.empty() )
+					parseStringList( passNode, "_outputs", pass._outputs );
+				out.push_back( std::move( pass ) );
+			}
+		}
+
+		void appendStringList( rapidxml::xml_document<>& doc, rapidxml::xml_node<>* parent, const char* listName, const std::vector<std::string>& values )
+		{
+			rapidxml::xml_node<>* list = doc.allocate_node( rapidxml::node_element, listName );
+			parent->append_node( list );
+			for ( const std::string& v : values )
+				list->append_node( doc.allocate_node( rapidxml::node_element, "item", doc.allocate_string( v.c_str() ) ) );
+		}
+	} // namespace
+
+	const std::vector<RenderGraphPassDesc>& RenderPassResource::getGraphPasses() const
+	{
+		if ( _desc._passes.empty() == false )
+			return _desc._passes;
+		return _desc._graph._passes;
+	}
 
 	bool RenderPassResource::loadFromXmlFile( const std::string& assetRelativePath )
 	{
@@ -55,15 +131,19 @@ namespace sw
 
 		rapidxml::xml_node<>* root = doc.first_node( "RenderPassDesc" );
 		if ( root == nullptr )
+			root = doc.first_node( "RenderGraphDesc" );
+		if ( root == nullptr )
 		{
-			SW_LOG_ERROR( "[RenderPassResource] XML missing root <RenderPassDesc> node: %#", absPath );
+			SW_LOG_ERROR( "[RenderPassResource] XML missing root <RenderPassDesc>: %#", absPath );
 			return false;
 		}
 
+		_desc = {};
+
 		if ( rapidxml::xml_node<>* nameNode = root->first_node( "_name" ) )
-		{
 			_desc._name = nameNode->value();
-		}
+		else if ( rapidxml::xml_attribute<>* attr = root->first_attribute( "name" ) )
+			_desc._name = attr->value();
 
 		_desc._attachments.clear();
 		if ( rapidxml::xml_node<>* attachsNode = root->first_node( "_attachments" ) )
@@ -77,18 +157,41 @@ namespace sw
 				if ( rapidxml::xml_node<>* n = attNode->first_node( "_format" ) )
 					att._format = n->value();
 				if ( rapidxml::xml_node<>* n = attNode->first_node( "_bClear" ) )
-					att._bClear = ( std::string( n->value() ) == "1" );
+					att._bClear = ( std::string( n->value() ) == "1" || std::string( n->value() ) == "true" );
 				if ( rapidxml::xml_node<>* n = attNode->first_node( "_clearColor" ) )
 				{
-
-					std::sscanf( n->value(), "%f,%f,%f,%f", &att._clearColor[0], &att._clearColor[1], &att._clearColor[2], &att._clearColor[3] );
+					if ( std::sscanf( n->value(), "%f,%f,%f,%f", &att._clearColor[0], &att._clearColor[1], &att._clearColor[2], &att._clearColor[3] ) < 4 )
+						std::sscanf( n->value(), "%f %f %f %f", &att._clearColor[0], &att._clearColor[1], &att._clearColor[2], &att._clearColor[3] );
 				}
 
 				_desc._attachments.push_back( std::move( att ) );
 			}
 		}
 
-		SW_LOG_INFO( "[RenderPassResource] Loaded RenderPass '%#' (Attachments: %#)", _desc._name, _desc._attachments.size() );
+		if ( rapidxml::xml_node<>* passesNode = root->first_node( "_passes" ) )
+			parseGraphPasses( passesNode, _desc._passes );
+		else if ( rapidxml::xml_node<>* passesNode = root->first_node( "passes" ) )
+			parseGraphPasses( passesNode, _desc._passes );
+
+		if ( rapidxml::xml_node<>* graphNode = root->first_node( "_graph" ) )
+		{
+			if ( rapidxml::xml_node<>* n = graphNode->first_node( "_name" ) )
+				_desc._graph._name = n->value();
+			if ( rapidxml::xml_node<>* passesNode = graphNode->first_node( "_passes" ) )
+				parseGraphPasses( passesNode, _desc._graph._passes );
+		}
+		else if ( std::strcmp( root->name(), "RenderGraphDesc" ) == 0 )
+		{
+			_desc._graph._name = _desc._name;
+			if ( _desc._passes.empty() == false )
+				_desc._graph._passes = _desc._passes;
+		}
+
+		if ( _desc._graph._name.empty() )
+			_desc._graph._name = _desc._name;
+
+		SW_LOG_INFO( "[RenderPassResource] Loaded '%#' (Attachments: %#, Passes: %#)",
+					 _desc._name, _desc._attachments.size(), getGraphPasses().size() );
 		return true;
 	}
 
@@ -133,6 +236,22 @@ namespace sw
 								  Fmt( att._clearColor[2], colorFmt ),
 								  Fmt( att._clearColor[3], colorFmt ) );
 			attNode->append_node( doc.allocate_node( rapidxml::node_element, "_clearColor", doc.allocate_string( colorSS.c_str() ) ) );
+		}
+
+		const std::vector<RenderGraphPassDesc>& passes = getGraphPasses();
+		if ( passes.empty() == false )
+		{
+			rapidxml::xml_node<>* passesNode = doc.allocate_node( rapidxml::node_element, "_passes" );
+			root->append_node( passesNode );
+			for ( const RenderGraphPassDesc& pass : passes )
+			{
+				rapidxml::xml_node<>* passNode = doc.allocate_node( rapidxml::node_element, "item" );
+				passesNode->append_node( passNode );
+				passNode->append_node( doc.allocate_node( rapidxml::node_element, "_name", doc.allocate_string( pass._name.c_str() ) ) );
+				passNode->append_node( doc.allocate_node( rapidxml::node_element, "_type", doc.allocate_string( pass._type.c_str() ) ) );
+				appendStringList( doc, passNode, "_inputs", pass._inputs );
+				appendStringList( doc, passNode, "_outputs", pass._outputs );
+			}
 		}
 
 		std::string xmlStr;

@@ -29,6 +29,8 @@ namespace sw::tool
 	private:
 		void emitFileHeader( CodeEmitBuffer& out, bool bNeedsComponentFactory ) const;
 		void emitTypeRegistrar( CodeEmitBuffer& out, const ParsedTypeInfo& typeInfo ) const;
+		void emitPropertyInfoEntry( CodeEmitBuffer& out, const ParsedTypeInfo& typeInfo, const ParsedPropertyInfo& prop ) const;
+		void emitPropertyMetadata( CodeEmitBuffer& out, const ParsedPropertyInfo& prop ) const;
 		void emitMethodList( CodeEmitBuffer& out, const ParsedTypeInfo& typeInfo ) const;
 		void emitComponentFactoryRegistrar( CodeEmitBuffer& out, const ParsedTypeInfo& typeInfo ) const;
 		void emitReflectTypeTraits( CodeEmitBuffer& out, const ParsedTypeInfo& typeInfo ) const;
@@ -40,6 +42,7 @@ namespace sw::tool
 		static bool		   isGameObjectDerived( const ParsedTypeInfo& typeInfo );
 		/** @brief Map clang type spellings to project typedefs usable in args.get<T>(). */
 		static std::string normalizeTypeName( const std::string& clangSpelling );
+		static std::string escapeCppString( const std::string& value );
 
 	private:
 		const std::vector<ParsedTypeInfo>& _types;

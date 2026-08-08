@@ -1126,6 +1126,7 @@ namespace sw
 	{
 		if ( _device )
 			vkDeviceWaitIdle( _device );
+		_releaseQueue.flushAll();
 	}
 
 	void VulkanRHIDevice::shutdownInternal()
@@ -1133,6 +1134,7 @@ namespace sw
 		if ( _device )
 		{
 			vkDeviceWaitIdle( _device );
+			_releaseQueue.flushAll();
 
 			if ( _commandPool )
 			{
@@ -1369,6 +1371,7 @@ namespace sw
 		vkQueuePresentKHR( _graphicsQueue, &presentInfo );
 
 		_currentFrame = ( _currentFrame + 1 ) % 2;
+		_releaseQueue.tickFrame();
 	}
 
 	RHIBufferHandle VulkanRHIDevice::createConstantBuffer( uint32 size )
@@ -1494,16 +1497,17 @@ namespace sw
 			return;
 
 		VulkanBufferRecord& record = _allocatedBuffers[buffer - 1];
-		if ( record.buffer != VK_NULL_HANDLE )
-		{
-			vkDestroyBuffer( _device, record.buffer, nullptr );
-			record.buffer = VK_NULL_HANDLE;
-		}
-		if ( record.memory != VK_NULL_HANDLE )
-		{
-			vkFreeMemory( _device, record.memory, nullptr );
-			record.memory = VK_NULL_HANDLE;
-		}
+		VkBuffer			buf	   = record.buffer;
+		VkDeviceMemory		mem	   = record.memory;
+		VkDevice			dev	   = _device;
+		record.buffer			   = VK_NULL_HANDLE;
+		record.memory			   = VK_NULL_HANDLE;
+		_releaseQueue.enqueueRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, buf, mem]() {
+			if ( buf != VK_NULL_HANDLE )
+				vkDestroyBuffer( dev, buf, nullptr );
+			if ( mem != VK_NULL_HANDLE )
+				vkFreeMemory( dev, mem, nullptr );
+		} ) );
 	}
 
 	namespace
@@ -1604,7 +1608,7 @@ namespace sw
 
 	bool VulkanRHIDevice::createOffscreenFramebuffer( VulkanTextureRecord& record )
 	{
-		if ( record.imageView == VK_NULL_HANDLE || record.bRenderTarget == 0 )
+		if ( record.imageView == VK_NULL_HANDLE || record._bRenderTarget == 0 )
 			return false;
 
 		VkAttachmentDescription colorAttachment{};
@@ -1723,8 +1727,8 @@ namespace sw
 		record.height		 = desc._height;
 		record.format		 = static_cast<uint32>( format );
 		record.layout		 = static_cast<uint32>( VK_IMAGE_LAYOUT_UNDEFINED );
-		record.bRenderTarget = desc._bIsRenderTarget ? 1 : 0;
-		record.bDepthStencil = desc._bIsDepthStencil ? 1 : 0;
+		record._bRenderTarget = desc._bIsRenderTarget ? 1 : 0;
+		record._bDepthStencil = desc._bIsDepthStencil ? 1 : 0;
 		record.bindlessIndex = kInvalidDescriptorIndex;
 
 		if ( vkCreateImage( _device, &imageInfo, nullptr, &record.image ) != VK_SUCCESS )
@@ -1773,7 +1777,7 @@ namespace sw
 			return 0;
 		}
 
-		if ( record.bRenderTarget && createOffscreenFramebuffer( record ) == false )
+		if ( record._bRenderTarget && createOffscreenFramebuffer( record ) == false )
 		{
 			SW_LOG_WARNING( "[Vulkan] createTexture2D: framebuffer creation failed — texture kept without offscreen pass." );
 		}
@@ -1806,13 +1810,22 @@ namespace sw
 		}
 
 		destroyOffscreenFramebuffer( record );
-		if ( record.imageView != VK_NULL_HANDLE )
-			vkDestroyImageView( _device, record.imageView, nullptr );
-		if ( record.image != VK_NULL_HANDLE )
-			vkDestroyImage( _device, record.image, nullptr );
-		if ( record.memory != VK_NULL_HANDLE )
-			vkFreeMemory( _device, record.memory, nullptr );
+		VkDevice	   dev	 = _device;
+		VkImageView	   view	 = record.imageView;
+		VkImage		   image = record.image;
+		VkDeviceMemory mem	 = record.memory;
+		record.imageView	 = VK_NULL_HANDLE;
+		record.image		 = VK_NULL_HANDLE;
+		record.memory		 = VK_NULL_HANDLE;
 		_textures.erase( it );
+		_releaseQueue.enqueueRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, view, image, mem]() {
+			if ( view != VK_NULL_HANDLE )
+				vkDestroyImageView( dev, view, nullptr );
+			if ( image != VK_NULL_HANDLE )
+				vkDestroyImage( dev, image, nullptr );
+			if ( mem != VK_NULL_HANDLE )
+				vkFreeMemory( dev, mem, nullptr );
+		} ) );
 	}
 
 	RHIDescriptorIndex VulkanRHIDevice::registerBindlessTexture( RHITextureHandle texture )
