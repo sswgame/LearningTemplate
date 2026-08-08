@@ -14,13 +14,20 @@ if(X11_FOUND)
 endif()
 
 # WSLg Vulkan WSI often needs xcb (VK_KHR_xcb_surface) via XGetXCBConnection.
+find_path(SW_XCB_INCLUDE_DIR NAMES xcb/xcb.h)
 find_library(SW_XCB_LIBRARY NAMES xcb)
 find_library(SW_X11_XCB_LIBRARY NAMES X11-xcb)
+if(SW_XCB_INCLUDE_DIR)
+    target_include_directories(sw_platform_linux INTERFACE ${SW_XCB_INCLUDE_DIR})
+endif()
 if(SW_XCB_LIBRARY)
     target_link_libraries(sw_platform_linux INTERFACE ${SW_XCB_LIBRARY})
 endif()
 if(SW_X11_XCB_LIBRARY)
     target_link_libraries(sw_platform_linux INTERFACE ${SW_X11_XCB_LIBRARY})
+endif()
+if(NOT SW_XCB_INCLUDE_DIR OR NOT SW_XCB_LIBRARY)
+    message(WARNING "[Linux] libxcb headers/libs not found — install libxcb1-dev (Vulkan xcb WSI)")
 endif()
 
 # Mirror Windows sw_platform_windows (opengl32.lib): bake GL/GLX into every target via
