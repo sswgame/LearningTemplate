@@ -18,8 +18,8 @@
  * heap is still larger than the post-init baseline.
  */
 
-#include "Core/Common/CommonMacros.h"
 #include "Core/Common/Types.h"
+#include "Core/Common/CommonMacros.h"
 
 namespace sw
 {

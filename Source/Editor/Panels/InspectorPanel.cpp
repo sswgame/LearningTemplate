@@ -2,29 +2,28 @@
  * @file InspectorPanel.cpp
  */
 #include "Panels/InspectorPanel.h"
-#include "EditorSelection.h"
+
 #include "EditorAssetDrop.h"
+#include "EditorSelection.h"
 #include "Runtime/EditorUIContext.h"
+
 #include "Core/Common/CoreServices.h"
-#include "Core/Game/Scene/SceneManager.h"
 #include "Core/Game/Scene/Scene.h"
-#include "Core/Object/GameObjectManager.h"
-#include "Core/Object/GameObject.h"
-#include "Core/Object/Component.h"
-#include "Core/Object/SceneComponent.h"
-#include "Core/Reflection/ReflectionCore.h"
+#include "Core/Game/Scene/SceneManager.h"
 #include "Core/Graphics/Material/Material.h"
 #include "Core/Graphics/RHI/IRHIDevice.h"
-#include "Core/Utility/Math/VectorMath.h"
-#include "Core/Utility/Task/TaskTypes.h"
-#include "Core/Utility/Log/Logger.h"
-#include "Core/Utility/String/StringUtil.h"
+#include "Core/Object/Component.h"
+#include "Core/Object/GameObject.h"
+#include "Core/Object/GameObjectManager.h"
+#include "Core/Object/SceneComponent.h"
+#include "Core/Reflection/ReflectionCore.h"
 #include "Core/Utility/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Utility/Log/Logger.h"
+#include "Core/Utility/Math/VectorMath.h"
+#include "Core/Utility/String/StringUtil.h"
+#include "Core/Utility/Task/TaskTypes.h"
+
 #include <imgui.h>
-#include <algorithm>
-#include <cstring>
-#include <map>
-#include <vector>
 
 namespace sw
 {

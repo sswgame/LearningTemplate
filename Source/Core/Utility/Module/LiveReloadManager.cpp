@@ -6,6 +6,7 @@
  * Windows also copies PDB debug symbols alongside the shadow module.
  */
 #include "LiveReloadManager.h"
+
 #include "Core/Common/CoreServices.h"
 #include "Core/Utility/File/FileUtil.h"
 #include "Core/Utility/Log/Logger.h"

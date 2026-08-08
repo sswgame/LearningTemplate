@@ -2,9 +2,10 @@
  * @file FrameRenderer.cpp
  */
 #include "FrameRenderer.h"
+
+#include "Core/Graphics/Material/Material.h"
 #include "Core/Graphics/RHI/IRHIDevice.h"
 #include "Core/Graphics/RHI/RHITypes.h"
-#include "Core/Graphics/Material/Material.h"
 #include "Core/Graphics/RenderPass/RenderPassManager.h"
 #include "Core/Utility/Log/Logger.h"
 

@@ -4,14 +4,10 @@
  */
 #include "pch.h"
 
-#include "Core/Common/CommonHeaders.h"
-#include "Core/Common/CommonMacros.h"
+#include "TaskManager.h"
 
-#include "Core/Utility/Task/TaskManager.h"
-#include "Core/Utility/Log/Logger.h"
-#include "Core/Utility/String/StringBuilder.h"
 #include "Core/Common/CommonDefines.h"
-#include "Core/Utility/Time/EngineTimer.h"
+#include "Core/Utility/String/StringBuilder.h"
 
 namespace sw
 {

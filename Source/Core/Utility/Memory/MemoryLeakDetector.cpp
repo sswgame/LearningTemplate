@@ -6,8 +6,6 @@
 
 #include "Core/Utility/String/formatString.h"
 
-#include <cstdio>
-
 #if defined( SW_PLATFORM_WINDOWS ) && defined( SW_DEBUG ) && !defined( SW_SHIPPING )
 	#define SW_HAS_CRT_LEAK_CHECK 1
 	#include <crtdbg.h>

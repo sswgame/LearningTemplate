@@ -5,14 +5,12 @@
 #include "Core/CoreMinimal.h"
 
 #include "Material.h"
+
 #include "Core/Graphics/RHI/IRHIDevice.h"
 #include "Core/Graphics/Shader/ShaderCompiler.h"
 #include "Core/Graphics/Shader/ShaderReflection.h"
-
 #include "Core/Utility/File/FileUtil.h"
-#include "Core/Utility/Log/Logger.h"
 #include "Core/Utility/Resource/ResourceUtil.h"
-#include "Core/Utility/String/StringUtil.h"
 #include "Core/Utility/Task/TaskManager.h"
 
 namespace sw

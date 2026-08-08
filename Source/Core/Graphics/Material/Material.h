@@ -1,12 +1,12 @@
 #pragma once
-#include "Core/Common/Common.h"
-#include "Core/Graphics/RHI/RHITypes.h"
-#include "Core/Utility/Task/TaskTypes.h"
-
 /**
  * @file Material.h
  * @brief RHI Bindless 머티리얼 리소스 및 동적 머티리얼 인스턴스(MaterialInstance) 정의
  */
+
+#include "Core/CoreMinimal.h"
+#include "Core/Graphics/RHI/RHITypes.h"
+#include "Core/Utility/Task/TaskTypes.h"
 
 namespace sw
 {
