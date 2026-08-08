@@ -26,6 +26,29 @@ SW_TEST_CASE( Utility_File, FileUtilPathOperations )
 
 	std::string newExt = sw::FileUtil::replaceExtension( fullPath, "bin" );
 	SW_EXPECT_EQUAL( std::string( "Projects/Sample/TestFile.bin" ), newExt );
+
+	SW_EXPECT_EQUAL( std::string( "Foo/Bar" ), sw::FileUtil::normalizeSeparators( "Foo\\Bar" ) );
+	SW_EXPECT_EQUAL( std::string( "foo/bar" ), sw::FileUtil::normalizePath( "Foo\\Bar" ) );
+	SW_EXPECT_TRUE( sw::FileUtil::pathsEqualNormalized( "Foo/Bar", "foo/bar" ) );
+}
+
+SW_TEST_CASE( Utility_File, ReadWritePreservesPathCase )
+{
+	namespace fs = std::filesystem;
+	const fs::path dir = fs::temp_directory_path() / "SwPathCaseTestDir";
+	fs::create_directories( dir );
+	const fs::path filePath = dir / "MixedCaseFile.bin";
+	const std::string content = "case-sensitive-io";
+	const std::string pathStr = filePath.generic_string();
+
+	SW_EXPECT_TRUE( sw::FileUtil::writeFile( pathStr, reinterpret_cast<const uint8*>( content.data() ), content.size() ) );
+	SW_EXPECT_TRUE( sw::FileUtil::isFileExist( pathStr ) );
+
+	std::vector<uint8> readBuffer;
+	SW_EXPECT_TRUE( sw::FileUtil::readFile( pathStr, readBuffer ) );
+	SW_EXPECT_EQUAL( content, std::string( readBuffer.begin(), readBuffer.end() ) );
+
+	fs::remove_all( dir );
 }
 
 SW_TEST_CASE( Utility_File, WriteAndReadFile )

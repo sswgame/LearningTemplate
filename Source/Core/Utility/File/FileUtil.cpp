@@ -143,6 +143,17 @@ namespace sw
 		return false;
 	}
 
+	std::string FileUtil::normalizeSeparators( const std::string_view path )
+	{
+		std::string outResult{ path };
+		for ( utf8& c : outResult )
+		{
+			if ( c == '\\' )
+				c = '/';
+		}
+		return outResult;
+	}
+
 	std::string FileUtil::normalizePath( const std::string_view path )
 	{
 		std::string outResult{ path };
@@ -154,6 +165,17 @@ namespace sw
 				c = StringUtil::toLowerChar( c );
 		}
 		return outResult;
+	}
+
+	bool FileUtil::pathsEqualNormalized( const std::string_view lhs, const std::string_view rhs )
+	{
+		std::string a = normalizePath( lhs );
+		std::string b = normalizePath( rhs );
+		while ( a.size() > 1 && a.back() == '/' )
+			a.pop_back();
+		while ( b.size() > 1 && b.back() == '/' )
+			b.pop_back();
+		return a == b;
 	}
 
 	void FileUtil::createDirectory( const std::string_view path )
@@ -222,7 +244,7 @@ namespace sw
 
 	uint32 FileUtil::getFileSize( const std::string_view fileName )
 	{
-		const std::string filePath = normalizePath( fileName );
+		const std::string filePath = normalizeSeparators( fileName );
 		std::ifstream	  input{ filePath, std::ios::binary | std::ios::ate };
 		if ( input.is_open() )
 		{
@@ -238,7 +260,7 @@ namespace sw
 		if ( size == 0 )
 			return false;
 
-		const std::string filePath = normalizePath( fileName );
+		const std::string filePath = normalizeSeparators( fileName );
 		std::ofstream	  output{ filePath, std::ios::binary | std::ios::trunc };
 		if ( output.is_open() )
 		{
@@ -252,7 +274,7 @@ namespace sw
 
 	bool FileUtil::readFile( const std::string_view fileName, std::vector<uint8>& outData, const uint32 offset, const uint32 maxReadCount )
 	{
-		const std::string filePath = normalizePath( fileName );
+		const std::string filePath = normalizeSeparators( fileName );
 		std::ifstream	  input{ filePath, std::ios::binary | std::ios::ate };
 		if ( input.is_open() )
 		{
@@ -274,7 +296,7 @@ namespace sw
 		if ( isFileExist( fileName ) == false )
 			return 0;
 
-		const std::string					  filePath = normalizePath( fileName );
+		const std::string					  filePath = normalizeSeparators( fileName );
 		const std::filesystem::file_time_type tim	   = std::filesystem::last_write_time( filePath );
 		return std::chrono::duration_cast<std::chrono::duration<uint64>>( tim.time_since_epoch() ).count();
 	}

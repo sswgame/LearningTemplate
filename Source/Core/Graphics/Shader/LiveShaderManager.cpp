@@ -55,17 +55,16 @@ namespace sw
 	{
 		BLOCK( "LiveShaderManager 셰이더 등록" )
 		{
-			std::string resolvedPath = ResourceUtil::getResourcePath( desc._filePath );
-			if ( resolvedPath.empty() )
-			{
-				resolvedPath = desc._filePath;
-			}
-			resolvedPath = FileUtil::normalizePath( resolvedPath );
+			std::string ioPath = ResourceUtil::getResourcePath( desc._filePath );
+			if ( ioPath.empty() )
+				ioPath = desc._filePath;
 
-			_watchedShaders[resolvedPath].push_back( { desc, onRecompiled } );
+			// Map / notify keys are lowercase; I/O keeps the real FS path.
+			const std::string keyPath = FileUtil::normalizePath( ioPath );
+			_watchedShaders[keyPath].push_back( { desc, onRecompiled } );
 
 			std::vector<uint8> fileBytes;
-			if ( FileUtil::readFile( resolvedPath, fileBytes ) && fileBytes.empty() == false )
+			if ( FileUtil::readFile( ioPath, fileBytes ) && fileBytes.empty() == false )
 			{
 				std::string				 sourceText( reinterpret_cast<const utf8*>( fileBytes.data() ), fileBytes.size() );
 				std::vector<std::string> includeFiles = ShaderIncludeResolver::parseIncludes( sourceText );
@@ -75,7 +74,7 @@ namespace sw
 				{
 					std::string incPath = shaderDir.empty() ? inc : ( shaderDir + "/" + inc );
 					incPath				= FileUtil::normalizePath( incPath );
-					_includeDependencies[incPath].push_back( resolvedPath );
+					_includeDependencies[incPath].push_back( keyPath );
 				}
 			}
 
@@ -88,7 +87,7 @@ namespace sw
 				}
 			}
 
-			SW_LOG_INFO( "[LiveShaderManager] Registered live shader watch target: %#", resolvedPath.c_str() );
+			SW_LOG_INFO( "[LiveShaderManager] Registered live shader watch target: %#", ioPath.c_str() );
 		}
 	}
 

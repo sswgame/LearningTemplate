@@ -71,7 +71,7 @@ namespace sw
 				} );
 				_rhi->getLiveShaderManager().watchShader( vsDesc, shaderReloadDelegate );
 
-				const std::string shaderWatchRoot = FileUtil::normalizePath( ResourceUtil::getRootFolderPath() );
+				const std::string shaderWatchRoot = ResourceUtil::getRootFolderPath();
 				if ( shaderWatchRoot.empty() == false && _reloadFileManager != nullptr )
 				{
 					FileWatchMatchDelegate fileWatchDelegate = SW_DELEGATE_LAMBDA( FileWatchMatchDelegate, [this]( const FileChangeEvent& ev )
@@ -79,7 +79,7 @@ namespace sw
 						const std::string fullPath = FileUtil::normalizePath( ev._directory + "/" + ev._filename );
 						_rhi->getLiveShaderManager().notifyFileChanged( fullPath );
 					} );
-					_shaderWatchHandle						 = _reloadFileManager->registerWatch( shaderWatchRoot, { ".hlsl", ".hlsli" }, fileWatchDelegate );
+					_shaderWatchHandle = _reloadFileManager->registerWatch( shaderWatchRoot, { ".hlsl", ".hlsli" }, fileWatchDelegate );
 				}
 #endif
 

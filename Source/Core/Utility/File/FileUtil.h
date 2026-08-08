@@ -55,8 +55,15 @@ namespace sw
 		static bool makePathRelative( const std::string_view rootDir, const std::string_view path, std::string& outResult );
 		/** @brief 절대 경로로 만듭니다. */
 		static bool makePathAbsolute( const std::string_view path, std::string& outResult );
-		/** @brief 경로 구분자를 정규화합니다. */
+		/**
+		 * @brief 비교/맵 키용 경로 정규화 (`\`→`/` + 소문자).
+		 * @note Linux/macOS I/O에는 사용하지 말 것. open에는 normalizeSeparators 또는 실제 FS 경로를 쓴다.
+		 */
 		static std::string normalizePath( const std::string_view path );
+		/** @brief I/O용 구분자만 정규화 (`\`→`/`). 대소문자는 유지한다. */
+		static std::string normalizeSeparators( const std::string_view path );
+		/** @brief normalizePath 기준 경로 동등 비교 */
+		static bool pathsEqualNormalized( const std::string_view lhs, const std::string_view rhs );
 		/** @brief 디렉터리를 생성합니다(필요 시 상위 포함). */
 		static void createDirectory( const std::string_view path );
 		/** @brief 파일 존재 여부를 반환합니다. */

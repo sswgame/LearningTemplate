@@ -115,7 +115,8 @@ namespace sw
 	{
 		WatchEntry entry{};
 		entry._handle	  = FileWatchHandle{ _nextWatchId++ };
-		entry._pathPrefix = FileUtil::normalizePath( pathPrefix );
+		// Keep real FS path for mtime poll / native watchers; matching uses normalizePath.
+		entry._pathPrefix = FileUtil::normalizeSeparators( pathPrefix );
 		entry._extensions = extensions;
 		entry._onMatch	  = onMatch;
 		_watches.push_back( entry );

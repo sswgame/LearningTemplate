@@ -62,8 +62,8 @@ namespace sw
 
 		if ( _bComputeTestInitialized )
 		{
-			ImGui::Text( "CS PSO Handle: %lu", _csPso );
-			ImGui::Text( "Indirect PSO Handle: %lu", _indirectPso );
+			ImGui::Text( "CS PSO Handle: %d", static_cast<int32>(_csPso) );
+			ImGui::Text( "Indirect PSO Handle: %d", static_cast<int32>(_indirectPso) );
 			ImGui::Text( "UAV Buffer Index: %u", _uavIndex );
 
 			if ( ImGui::Button( "Dispatch Compute & Draw Indirect" ) )

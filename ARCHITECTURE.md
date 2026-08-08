@@ -119,6 +119,31 @@ App은 Editor/Game 구현 클래스를 직접 링크하지 않고 함수 테이�
 
 `ResourceUtil` 은 루트/폴더 경로만 유지하고 **파일 경로 캐시는 하지 않습니다** (`clearCache()` 는 no-op). 해석은 호출 시마다 루트 목록을 순회합니다.
 
+### Case / normalize rules
+
+Linux·macOS는 경로가 대소문자를 구분합니다. 엔진은 아래처럼 **루트(절대)** 와 **상대(리소스 식별자)** 를 나눕니다.
+
+| 용도 | API / 형태 | 규칙 |
+|--|--|--|
+| 비교·맵·watch 키 | `FileUtil::normalizePath` | `\`→`/` + **전체 소문자** |
+| I/O (open/stat) | `FileUtil::normalizeSeparators` 또는 FS 실제 경로 | 구분자만 정규화, **대소문자 유지** |
+| 리소스 루트 절대경로 | `ResourceUtil::get*FolderPath` / 내부 루트 목록 | FS에서 찾은 **실제 대소문자** 유지 (`…/Template/Resource/Game` 등) |
+| 루트 아래 상대경로 | `shaders/foo.hlsl` | **소문자 정규형** (폴더·파일명 모두) |
+| 저장·임포트 dest | `ResourceUtil::makeSavePath` / `makeSaveFolderPath` | `physicalRoot` + 소문자 상대 폴더·파일 |
+| 경로 동등 비교 | `FileUtil::pathsEqualNormalized` | `normalizePath` 후 trailing `/` 무시 |
+
+결합 예:
+
+```text
+ioPath  = physicalRoot + "/" + lowerRelative   // open / write
+keyPath = normalizePath(ioPath)                // map / watch / prefix match
+```
+
+- `getResourcePath`: 소문자 상대경로로 먼저 찾고, 없으면 legacy mixed-case 상대경로 fallback. 반환값은 **I/O용** (루트 case 유지).
+- Content Browser import 등 엔진이 쓰는 저장 경로는 `makeSavePath`로만 만들고, 디스크에도 상대 구간을 소문자로 기록합니다.
+- `LiveShaderManager` / `ReloadFileManager`: 맵·매칭 키는 `normalizePath`, mtime poll·`readFile` 은 실제 FS 경로를 씁니다.
+- 기존 리포의 mixed-case 에셋은 일괄 rename하지 않습니다. 읽기는 real path + fallback으로 처리합니다.
+
 ## Editor ImGui companions
 
 Dev `EditorModule` links vcpkg **implot**, **imguizmo** (includes **ImSequencer**), **imgui-node-editor** (thedmd), plus vendored **imgui-notify** (TyomaVader/ImGuiNotify) and **imgui_tex_inspect** (DX11/OpenGL backends):

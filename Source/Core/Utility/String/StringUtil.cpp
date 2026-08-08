@@ -390,7 +390,7 @@ namespace sw
 	void StringUtil::strncpy( utf8* destination, const utf8* source, const uint32 length )
 	{
 #if defined( SW_PLATFORM_WINDOWS )
-		::strncpy_s( destination, length, source );
+		::strncpy_s( destination, length, source , length );
 #elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
 		::strncpy( destination, source, length );
 #else
@@ -401,7 +401,7 @@ namespace sw
 	void StringUtil::strncpy( utf16* destination, const utf16* source, const uint32 length )
 	{
 #if defined( SW_PLATFORM_WINDOWS )
-		::wcsncpy_s( destination, length, source, _TRUNCATE );
+		::wcsncpy_s( destination, length, source, length );
 #elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
 		::wcsncpy( destination, source, length );
 #else

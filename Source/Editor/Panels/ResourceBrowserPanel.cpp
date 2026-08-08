@@ -66,7 +66,7 @@ namespace sw
 				return;
 			ContentRoot root;
 			root.displayName  = name;
-			root.absolutePath = FileUtil::normalizePath( path );
+			root.absolutePath = FileUtil::normalizeSeparators( path );
 			_roots.push_back( std::move( root ) );
 		};
 
@@ -82,7 +82,8 @@ namespace sw
 
 	void ResourceBrowserPanel::selectFolder( const std::string& absolutePath, const std::string& breadcrumb )
 	{
-		_selectedFolderAbs = FileUtil::normalizePath( absolutePath );
+		// Browse/I/O uses real FS case; save paths lower-case relative segments via ResourceUtil::makeSavePath.
+		_selectedFolderAbs = FileUtil::normalizeSeparators( absolutePath );
 		_breadcrumb		   = breadcrumb;
 		_selectedAssetAbs.clear();
 		_bFolderDirty = true;
@@ -110,33 +111,26 @@ namespace sw
 				break;
 
 			AssetEntry item;
-			item.absolutePath = FileUtil::normalizePath( entry.path().generic_string() );
+			item.absolutePath = FileUtil::normalizeSeparators( entry.path().generic_string() );
 			item.name		  = entry.path().filename().generic_string();
 			item.bIsDirectory = entry.is_directory( ec );
 			if ( item.bIsDirectory == false )
 				item.extension = entry.path().extension().generic_string();
 
-			// Relative path under Resource root if possible
+			// Relative path under Resource root (lowercase logical form)
 			const std::string& resourceRoot = ResourceUtil::getRootFolderPath();
-			if ( resourceRoot.empty() == false && item.absolutePath.size() > resourceRoot.size() )
+			if ( resourceRoot.empty() == false )
 			{
-				std::string rootNorm  = FileUtil::normalizePath( resourceRoot );
-				std::string absLower  = item.absolutePath;
-				std::string rootLower = rootNorm;
-				std::transform( absLower.begin(), absLower.end(), absLower.begin(), []( unsigned char c )
-				{ return static_cast<char>( std::tolower( c ) ); } );
-				std::transform( rootLower.begin(), rootLower.end(), rootLower.begin(), []( unsigned char c )
-				{ return static_cast<char>( std::tolower( c ) ); } );
-				if ( absLower.rfind( rootLower, 0 ) == 0 )
+				const std::string rootNorm = FileUtil::normalizePath( resourceRoot );
+				const std::string absNorm  = FileUtil::normalizePath( item.absolutePath );
+				if ( absNorm.size() > rootNorm.size() && absNorm.compare( 0, rootNorm.size(), rootNorm ) == 0
+					 && absNorm[rootNorm.size()] == '/' )
 				{
-					size_t offset = rootNorm.size();
-					while ( offset < item.absolutePath.size() && ( item.absolutePath[offset] == '/' || item.absolutePath[offset] == '\\' ) )
-						++offset;
-					item.relativePath = item.absolutePath.substr( offset );
+					item.relativePath = absNorm.substr( rootNorm.size() + 1 );
 				}
 			}
 			if ( item.relativePath.empty() )
-				item.relativePath = item.name;
+				item.relativePath = FileUtil::normalizePath( item.name );
 
 			_entries.push_back( std::move( item ) );
 		}
@@ -268,14 +262,16 @@ namespace sw
 			}
 
 			const std::string fileName = FileUtil::getFileNamePart( sourcePath );
-			const std::string destPath = FileUtil::normalizePath( ( std::filesystem::path( _selectedFolderAbs ) / fileName ).generic_string() );
+			// Root keeps FS case; relative folder + file name are forced lowercase for save.
+			const std::string destPath = ResourceUtil::makeSavePath( _selectedFolderAbs, fileName );
 
-			if ( FileUtil::normalizePath( sourcePath ) == destPath )
+			if ( FileUtil::pathsEqualNormalized( sourcePath, destPath ) )
 			{
 				SW_LOG_INFO( "[Content Browser] Already in folder: %#", fileName.c_str() );
 				continue;
 			}
 
+			FileUtil::createDirectory( destPath );
 			if ( FileUtil::copyFile( sourcePath, destPath ) )
 			{
 				++copied;
@@ -343,8 +339,8 @@ namespace sw
 
 	void ResourceBrowserPanel::drawFolderTreeNode( const std::filesystem::path& folderPath, const std::string& label, int depth )
 	{
-		const std::string absPath  = FileUtil::normalizePath( folderPath.generic_string() );
-		const bool		  selected = ( absPath == _selectedFolderAbs );
+		const std::string absPath  = FileUtil::normalizeSeparators( folderPath.generic_string() );
+		const bool		  selected = FileUtil::pathsEqualNormalized( absPath, _selectedFolderAbs );
 
 		ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth;
 		if ( selected )
@@ -375,27 +371,14 @@ namespace sw
 			std::string crumb = label;
 			for ( const ContentRoot& root : _roots )
 			{
-				std::string rootAbs = root.absolutePath;
-				std::string absLow	= absPath;
-				std::string rootLow = rootAbs;
-				std::transform( absLow.begin(), absLow.end(), absLow.begin(), []( unsigned char c )
-				{ return static_cast<char>( std::tolower( c ) ); } );
-				std::transform( rootLow.begin(), rootLow.end(), rootLow.begin(), []( unsigned char c )
-				{ return static_cast<char>( std::tolower( c ) ); } );
-				if ( absLow.rfind( rootLow, 0 ) == 0 )
+				const std::string rootNorm = FileUtil::normalizePath( root.absolutePath );
+				const std::string absNorm  = FileUtil::normalizePath( absPath );
+				if ( absNorm == rootNorm || ( absNorm.size() > rootNorm.size() && absNorm.compare( 0, rootNorm.size(), rootNorm ) == 0 && absNorm[rootNorm.size()] == '/' ) )
 				{
 					crumb = root.displayName;
-					if ( absPath.size() > rootAbs.size() )
+					if ( absNorm.size() > rootNorm.size() )
 					{
-						size_t offset = rootAbs.size();
-						while ( offset < absPath.size() && ( absPath[offset] == '/' || absPath[offset] == '\\' ) )
-							++offset;
-						std::string rel = absPath.substr( offset );
-						for ( char& c : rel )
-						{
-							if ( c == '/' || c == '\\' )
-								c = '/';
-						}
+						std::string rel = absNorm.substr( rootNorm.size() + 1 );
 						std::string pretty;
 						size_t		start = 0;
 						while ( start < rel.size() )
@@ -502,7 +485,23 @@ namespace sw
 			else
 			{
 				builtCrumb += " / " + parts[i];
-				builtPath = FileUtil::normalizePath( ( std::filesystem::path( builtPath ) / parts[i] ).generic_string() );
+				const std::string lowerChild = FileUtil::normalizePath( parts[i] );
+				std::string		  next		 = FileUtil::normalizeSeparators( ( std::filesystem::path( builtPath ) / lowerChild ).generic_string() );
+				std::error_code	  ec;
+				if ( std::filesystem::is_directory( next, ec ) == false && builtPath.empty() == false )
+				{
+					for ( const auto& child : std::filesystem::directory_iterator( builtPath, ec ) )
+					{
+						if ( ec || child.is_directory( ec ) == false )
+							continue;
+						if ( FileUtil::normalizePath( child.path().filename().generic_string() ) == lowerChild )
+						{
+							next = FileUtil::normalizeSeparators( child.path().generic_string() );
+							break;
+						}
+					}
+				}
+				builtPath = std::move( next );
 			}
 
 			const bool isLast = ( i + 1 == parts.size() );
@@ -550,7 +549,8 @@ namespace sw
 					if ( col > 0 )
 						ImGui::SameLine();
 
-					const bool selected = ( entry.absolutePath == _selectedAssetAbs ) || ( entry.bIsDirectory && entry.absolutePath == _selectedFolderAbs );
+					const bool selected = FileUtil::pathsEqualNormalized( entry.absolutePath, _selectedAssetAbs )
+										  || ( entry.bIsDirectory && FileUtil::pathsEqualNormalized( entry.absolutePath, _selectedFolderAbs ) );
 					ImGui::PushStyleColor( ImGuiCol_Button, selected ? ImVec4( 0.25f, 0.40f, 0.65f, 1.0f ) : ImVec4( 0.14f, 0.14f, 0.16f, 1.0f ) );
 					ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImVec4( 0.22f, 0.28f, 0.38f, 1.0f ) );
 
@@ -611,7 +611,7 @@ namespace sw
 					ImGui::PushID( entry.absolutePath.c_str() );
 					ImGui::TableNextRow();
 
-					const bool selected = ( entry.absolutePath == _selectedAssetAbs );
+					const bool selected = FileUtil::pathsEqualNormalized( entry.absolutePath, _selectedAssetAbs );
 					ImGui::TableSetColumnIndex( 0 );
 					if ( ImGui::Selectable( entry.name.c_str(), selected, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowDoubleClick ) )
 					{

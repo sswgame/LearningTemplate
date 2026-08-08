@@ -23,7 +23,7 @@ namespace sw::tool
 			std::string cur = FileUtil::getCurrentPath();
 			while ( true )
 			{
-				std::string candidate = FileUtil::normalizePath( cur + "/" + relPath );
+				std::string candidate = ( cur + "/" + relPath );
 				if ( FileUtil::isFileExist( candidate ) )
 					return candidate;
 

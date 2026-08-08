@@ -124,7 +124,7 @@ namespace sw
 		fixed_string<constant::kMaxBuffer8192> formattedBuffer{};
 		// 경로:줄 은 메시지 뒤에 둔다. 선행 file(line): 은 IDE problem matcher가 빌드 경고로 오인한다.
 		formatstring( formattedBuffer.data(), formattedBuffer.capacity(),
-					  "[%#] [%#] [%#] - %#\n> %#:%#\n",
+					  "[%#] [%#] [%#] - %#\n -> %#:%#\n",
 					  date.data(), effectiveTag, kArrHeader[levelIndex], effectiveMsg, effectiveFile, line );
 
 		LogWrittenMulticast listeners;

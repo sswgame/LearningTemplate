@@ -3,7 +3,10 @@
   "version-string": "1.0.0",
   "dependencies": [
     "rapidxml",
-    "directx-dxc",
+    {
+      "name": "directx-dxc",
+      "platform": "windows | linux"
+    },
     {
       "name": "glad",
       "features": [
