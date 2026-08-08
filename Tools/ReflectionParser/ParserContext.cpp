@@ -37,6 +37,39 @@ namespace sw::tool
 			return {};
 		}
 
+		std::string unescapeJsonString( const std::string& escaped )
+		{
+			std::string out;
+			out.reserve( escaped.size() );
+			for ( size_t i = 0; i < escaped.size(); ++i )
+			{
+				if ( escaped[i] == '\\' && i + 1 < escaped.size() )
+				{
+					const char next = escaped[i + 1];
+					if ( next == '"' || next == '\\' || next == '/' )
+					{
+						out.push_back( next );
+						++i;
+						continue;
+					}
+					if ( next == 'n' )
+					{
+						out.push_back( '\n' );
+						++i;
+						continue;
+					}
+					if ( next == 't' )
+					{
+						out.push_back( '\t' );
+						++i;
+						continue;
+					}
+				}
+				out.push_back( escaped[i] );
+			}
+			return out;
+		}
+
 		std::vector<std::string> extractJsonArray( const std::string& json, const std::string& key )
 		{
 			std::vector<std::string> result;
@@ -46,24 +79,102 @@ namespace sw::tool
 				return result;
 
 			const size_t lbracket = json.find( '[', pos );
-			const size_t rbracket = json.find( ']', lbracket );
-			if ( lbracket == std::string::npos || rbracket == std::string::npos )
+			if ( lbracket == std::string::npos )
+				return result;
+
+			// Walk the array so strings containing ']' / escaped quotes stay intact.
+			size_t	cursor	 = lbracket + 1;
+			bool	inString = false;
+			size_t	depth	 = 1;
+			size_t	rbracket = std::string::npos;
+			while ( cursor < json.size() )
+			{
+				const char c = json[cursor];
+				if ( inString )
+				{
+					if ( c == '\\' && cursor + 1 < json.size() )
+					{
+						cursor += 2;
+						continue;
+					}
+					if ( c == '"' )
+						inString = false;
+					++cursor;
+					continue;
+				}
+				if ( c == '"' )
+				{
+					inString = true;
+					++cursor;
+					continue;
+				}
+				if ( c == '[' )
+				{
+					++depth;
+					++cursor;
+					continue;
+				}
+				if ( c == ']' )
+				{
+					--depth;
+					if ( depth == 0 )
+					{
+						rbracket = cursor;
+						break;
+					}
+					++cursor;
+					continue;
+				}
+				++cursor;
+			}
+			if ( rbracket == std::string::npos )
 				return result;
 
 			const std::string arrayContent = json.substr( lbracket + 1, rbracket - lbracket - 1 );
-			size_t			  cursor	   = 0;
+			cursor						   = 0;
 			while ( cursor < arrayContent.size() )
 			{
 				const size_t q1 = arrayContent.find( '"', cursor );
 				if ( q1 == std::string::npos )
 					break;
-				const size_t q2 = arrayContent.find( '"', q1 + 1 );
-				if ( q2 == std::string::npos )
+
+				size_t q2 = q1 + 1;
+				while ( q2 < arrayContent.size() )
+				{
+					if ( arrayContent[q2] == '\\' )
+					{
+						q2 += ( q2 + 1 < arrayContent.size() ) ? 2 : 1;
+						continue;
+					}
+					if ( arrayContent[q2] == '"' )
+						break;
+					++q2;
+				}
+				if ( q2 >= arrayContent.size() )
 					break;
-				result.push_back( arrayContent.substr( q1 + 1, q2 - q1 - 1 ) );
+
+				result.push_back( unescapeJsonString( arrayContent.substr( q1 + 1, q2 - q1 - 1 ) ) );
 				cursor = q2 + 1;
 			}
 			return result;
+		}
+
+		std::vector<std::string> defaultParserArgsFallback()
+		{
+			// Mirrors Config/parser_config.defaults.json — used when the local
+			// generated Config/parser_config.json is missing (gitignored).
+			return {
+				"-std=c++17",
+				"-D__REFLECT_PARSER__",
+				"-DSW_API=",
+				"-DREFLECT(...)=__attribute__((annotate(\"REFLECT;\" #__VA_ARGS__)))",
+				"-DPROPERTY(...)=__attribute__((annotate(\"PROPERTY;\" #__VA_ARGS__)))",
+				"-DFUNCTION(...)=__attribute__((annotate(\"FUNCTION;\" #__VA_ARGS__)))",
+				"-DENUM(...)=__attribute__((annotate(\"ENUM;\" #__VA_ARGS__)))",
+				"-x",
+				"c++",
+				"-w",
+			};
 		}
 
 		std::string extractJsonValue( const std::string& json, const std::string& key )
@@ -107,27 +218,38 @@ namespace sw::tool
 		constexpr const utf8* kPlatformParserKey = "";
 #endif
 
-		const std::string parserCfgPath = findConfigFile( "Config/parser_config.json" );
-		if ( parserCfgPath.empty() == false )
+		auto loadParserArgsFromFile = [&]( const std::string& cfgPath ) -> bool
 		{
-			const std::string fullJson = readTextFile( parserCfgPath );
-			if ( fullJson.empty() == false )
+			if ( cfgPath.empty() )
+				return false;
+			const std::string fullJson = readTextFile( cfgPath );
+			if ( fullJson.empty() )
+				return false;
+
+			// Prefer default + current-OS platform args so a Windows-generated
+			// parser_args (with -fms-compatibility) is never reused on Linux/macOS.
+			const std::vector<std::string> defaultArgs	= extractJsonArray( fullJson, "default_parser_args" );
+			const std::vector<std::string> platformArgs = ( kPlatformParserKey[0] != '\0' )
+															  ? extractJsonArray( fullJson, kPlatformParserKey )
+															  : std::vector<std::string>{};
+			if ( defaultArgs.empty() == false )
 			{
-				// Prefer default + current-OS platform args so a Windows-generated
-				// parser_args (with -fms-compatibility) is never reused on Linux/macOS.
-				const std::vector<std::string> defaultArgs	= extractJsonArray( fullJson, "default_parser_args" );
-				const std::vector<std::string> platformArgs = ( kPlatformParserKey[0] != '\0' )
-																  ? extractJsonArray( fullJson, kPlatformParserKey )
-																  : std::vector<std::string>{};
-				if ( defaultArgs.empty() == false )
-				{
-					baseArgs = defaultArgs;
-					baseArgs.insert( baseArgs.end(), platformArgs.begin(), platformArgs.end() );
-				}
-				else
-				{
-					baseArgs = extractJsonArray( fullJson, "parser_args" );
-				}
+				baseArgs = defaultArgs;
+				baseArgs.insert( baseArgs.end(), platformArgs.begin(), platformArgs.end() );
+				return true;
+			}
+
+			baseArgs = extractJsonArray( fullJson, "parser_args" );
+			return baseArgs.empty() == false;
+		};
+
+		if ( loadParserArgsFromFile( findConfigFile( "Config/parser_config.json" ) ) == false )
+		{
+			// Generated/local file missing (gitignored) — use committed defaults.
+			if ( loadParserArgsFromFile( findConfigFile( "Config/parser_config.defaults.json" ) ) == false )
+			{
+				baseArgs = defaultParserArgsFallback();
+				SW_LOG_WARN( "[ParserContext] Using built-in parser_args fallback (no Config/parser_config*.json)." );
 			}
 		}
 
@@ -158,7 +280,7 @@ namespace sw::tool
 
 		if ( baseArgs.empty() )
 		{
-			SW_LOG_ERROR( "[ParserContext] Config/parser_config.json could not be loaded or contains no parser_args." );
+			SW_LOG_ERROR( "[ParserContext] No parser_args available (config + fallback empty)." );
 			return false;
 		}
 

@@ -58,6 +58,7 @@ __pycache__/
 # Local user environment config (generated dynamically)
 Config/engine_config.json
 Config/parser_config.json
+# Committed seed for the above: Config/parser_config.defaults.json
 Config/Editor/imgui.ini
 Config/Editor/panels.ini
 Config/Editor/NodeEditor.json

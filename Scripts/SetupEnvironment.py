@@ -324,8 +324,21 @@ def FindSystemIncludeDirs() -> List[str]:
     return include_dirs
 
 
-def _DefaultParserConfig() -> Dict[str, Any]:
-    """parser_config.json 시드 값 (로컬 생성물 — 저장소에는 커밋하지 않음)."""
+def _LoadParserConfigSeed(project_root: Path) -> Dict[str, Any]:
+    """
+    커밋된 Config/parser_config.defaults.json 을 시드로 읽고,
+    없으면 내장 기본값을 사용합니다. (로컬 parser_config.json 은 gitignore)
+    """
+    defaults_file = project_root / "Config" / "parser_config.defaults.json"
+    if defaults_file.exists():
+        try:
+            with open(defaults_file, "r", encoding="utf-8") as f:
+                loaded = json.load(f)
+            if isinstance(loaded, dict) and isinstance(loaded.get("default_parser_args"), list):
+                return loaded
+        except Exception:
+            pass
+
     return {
         "default_parser_args": [
             "-std=c++17",
@@ -353,7 +366,8 @@ def _DefaultParserConfig() -> Dict[str, Any]:
 
 def UpdateParserConfig(target_os: str, parser_config_file: Path) -> None:
     """Config/parser_config.json 파일의 parser 인자를 업데이트합니다."""
-    parser_data: Dict[str, Any] = _DefaultParserConfig()
+    project_root = GetProjectRoot()
+    parser_data: Dict[str, Any] = _LoadParserConfigSeed(project_root)
 
     if parser_config_file.exists():
         try:
