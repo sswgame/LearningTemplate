@@ -85,11 +85,17 @@ namespace sw
 #elif defined( SW_PLATFORM_LINUX )
 		platform_io.Platform_CreateVkSurface = []( ImGuiViewport* vp, ImU64 vk_inst, const void* vk_allocators, ImU64* out_vk_surface ) -> int
 		{
+			const VkInstance instance = reinterpret_cast<VkInstance>( vk_inst );
+			auto*			 createFn = reinterpret_cast<PFN_vkCreateXlibSurfaceKHR>(
+				vkGetInstanceProcAddr( instance, "vkCreateXlibSurfaceKHR" ) );
+			if ( createFn == nullptr )
+				return static_cast<int>( VK_ERROR_EXTENSION_NOT_PRESENT );
+
 			VkXlibSurfaceCreateInfoKHR create_info = {};
 			create_info.sType					   = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
 			create_info.dpy						   = (Display*)vp->PlatformHandle;
 			create_info.window					   = (Window)(uintptr_t)vp->PlatformHandleRaw;
-			VkResult err						   = vkCreateXlibSurfaceKHR( reinterpret_cast<VkInstance>( vk_inst ), &create_info, static_cast<const VkAllocationCallbacks*>( vk_allocators ), reinterpret_cast<VkSurfaceKHR*>( out_vk_surface ) );
+			VkResult err						   = createFn( instance, &create_info, static_cast<const VkAllocationCallbacks*>( vk_allocators ), reinterpret_cast<VkSurfaceKHR*>( out_vk_surface ) );
 			return static_cast<int>( err );
 		};
 #elif defined( SW_PLATFORM_MACOS )

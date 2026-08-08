@@ -269,12 +269,21 @@ namespace sw
 		}
 		return true;
 #elif defined( SW_PLATFORM_LINUX )
+		// vcpkg vulkan-loader may omit Xlib WSI link exports; resolve at runtime.
+		auto* vkCreateXlibSurfaceKHRFn = reinterpret_cast<PFN_vkCreateXlibSurfaceKHR>(
+			vkGetInstanceProcAddr( _instance, "vkCreateXlibSurfaceKHR" ) );
+		if ( vkCreateXlibSurfaceKHRFn == nullptr )
+		{
+			SW_LOG_ERROR( "vkCreateXlibSurfaceKHR not available from Vulkan loader!" );
+			return false;
+		}
+
 		VkXlibSurfaceCreateInfoKHR createInfo{};
 		createInfo.sType  = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
 		createInfo.dpy	  = (Display*)_displayHandle;
 		createInfo.window = (Window)(uintptr_t)_hWnd;
 
-		if ( vkCreateXlibSurfaceKHR( _instance, &createInfo, nullptr, &_surface ) != VK_SUCCESS )
+		if ( vkCreateXlibSurfaceKHRFn( _instance, &createInfo, nullptr, &_surface ) != VK_SUCCESS )
 		{
 			SW_LOG_ERROR( "Failed to create X11 window surface!" );
 			return false;
