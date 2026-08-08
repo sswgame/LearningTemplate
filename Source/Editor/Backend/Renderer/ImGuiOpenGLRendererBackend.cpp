@@ -19,6 +19,8 @@ static HGLRC s_MainWindowRC = nullptr;
 #elif defined( SW_PLATFORM_LINUX )
 	#include <X11/Xlib.h>
 	#include <X11/Xutil.h>
+	// vcpkg Khronos glxext.h references X11 Status and breaks with some include orders.
+	#define GLX_GLXEXT_LEGACY
 	#include <GL/glx.h>
 	#ifdef None
 		#undef None
