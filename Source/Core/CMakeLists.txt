@@ -7,7 +7,7 @@
 # 단일 SHARED 라이브러리로 링크합니다.
 # ==============================================================================
 
-# 개발: SHARED DLL / 배포(Release): STATIC
+# 개발: SHARED DLL / Shipping(SW_SHIPPING_BUILD): STATIC
 if(SW_SHIPPING_BUILD)
     set(_core_lib_type STATIC)
 else()

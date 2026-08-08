@@ -1,22 +1,31 @@
 # ==============================================================================
 # @file cmake/LoadFlagModules.cmake
-# @brief 엔진 내부: Compiler/Platform/Architecture/BuildType/Options INTERFACE 모듈 로드
-# @note cmake/Modules/Toolchain 은 여기 포함하지 않음 (VcpkgGate.cmake가 담당)
-# @note docs/changelog 커스텀 타겟은 internal/AuxTargets.cmake (플래그 GLOB 밖)
+# @brief Compiler/Platform/Architecture/BuildType/Options INTERFACE 모듈 (명시적 순서)
+# @note cmake/Modules/Toolchain 은 VcpkgGate.cmake가 담당
+# @note docs/changelog 커스텀 타겟은 internal/AuxTargets.cmake
 # ==============================================================================
 
 # Do NOT reset sw_flag_libraries — VcpkgGate may already have appended entries.
+set(_sw_modules_root "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules")
 
-file(
-    GLOB_RECURSE sw_flag_module_files
-    CONFIGURE_DEPENDS
-    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/Architecture/*.cmake"
-    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/BuildType/*.cmake"
-    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/Compiler/*.cmake"
-    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/Options/*.cmake"
-    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/Platform/*.cmake"
-)
+# Architecture → Platform → Compiler → BuildType → Options
+# (각 파일은 해당하지 않으면 early return)
+include("${_sw_modules_root}/Architecture/X64.cmake")
+include("${_sw_modules_root}/Architecture/ARM64.cmake")
 
-foreach(sw_flag_module_file IN LISTS sw_flag_module_files)
-    include(${sw_flag_module_file})
-endforeach()
+include("${_sw_modules_root}/Platform/Windows.cmake")
+include("${_sw_modules_root}/Platform/Linux.cmake")
+include("${_sw_modules_root}/Platform/MacOS.cmake")
+
+include("${_sw_modules_root}/Compiler/MSVC.cmake")
+include("${_sw_modules_root}/Compiler/Clang.cmake")
+include("${_sw_modules_root}/Compiler/GCC.cmake")
+
+include("${_sw_modules_root}/BuildType/Debug.cmake")
+include("${_sw_modules_root}/BuildType/Release.cmake")
+
+include("${_sw_modules_root}/Options/CppStandard.cmake")
+include("${_sw_modules_root}/Options/Sanitizer.cmake")
+include("${_sw_modules_root}/Options/UnityBuild.cmake")
+
+unset(_sw_modules_root)

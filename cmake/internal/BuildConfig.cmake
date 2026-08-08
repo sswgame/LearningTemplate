@@ -10,10 +10,10 @@
 if(SW_SHIPPING_BUILD)
 	# CMake: SW_SHIPPING_BUILD / C++: SW_SHIPPING
 	add_compile_definitions(SW_SHIPPING)
-	# Shipping links all RHI backends into Core — no RHI_* module load path.
-	set(SW_RHI_AS_MODULES OFF CACHE BOOL "Build RHI backends as MODULE plugins (forced OFF for shipping)" FORCE)
+	# Directory-scope only — do not CACHE FORCE (sticky across Dev reconfigure in same binaryDir).
+	set(SW_RHI_AS_MODULES OFF)
 	message(STATUS "[BuildConfig] Shipping build: Core/SWGame STATIC, Editor DLL disabled (SW_SHIPPING_BUILD=ON)")
-	message(STATUS "[BuildConfig] SW_RHI_AS_MODULES forced OFF for shipping")
+	message(STATUS "[BuildConfig] SW_RHI_AS_MODULES=OFF for this configure (non-cache)")
 else()
 	message(STATUS "[BuildConfig] Development build: Core SHARED, Editor/SWGame MODULE DLLs (SW_SHIPPING_BUILD=OFF, type=${CMAKE_BUILD_TYPE})")
 endif()

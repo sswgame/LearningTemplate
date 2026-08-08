@@ -8,10 +8,10 @@
 #   VcpkgGate.cmake           — SW_USE_VCPKG 시 Modules/Toolchain/Vcpkg 로드
 #                               (≠ CMAKE_TOOLCHAIN_FILE; preset이 Tools/vcpkg 지정)
 #   ThirdPartyGraph.cmake     — ThirdParty/ 서브트리 등록
-#   LoadFlagModules.cmake     — Compiler/Platform/… INTERFACE 플래그
+#   LoadFlagModules.cmake     — Compiler/Platform/… INTERFACE (명시 include)
 #   Modules/Toolchain/        — vcpkg 게이트 세부·overlay triplet
 #   Modules/{Compiler,…}      — 플래그 INTERFACE (LoadFlagModules)
-#   internal/                 — 타겟/탐색/출력/install/shipping/reflection/Python
+#   internal/                 — 타겟/탐색/출력/VcpkgRuntime/shipping/reflection/Python
 #
 # ==============================================================================
 
@@ -41,6 +41,7 @@ include(cmake/internal/BuildConfig.cmake)
 include(cmake/internal/Discover.cmake)
 include(cmake/internal/Install.cmake)
 include(cmake/internal/Targets.cmake)
+include(cmake/internal/VcpkgRuntime.cmake)
 include(cmake/internal/Output.cmake)
 include(cmake/internal/Reflection.cmake)
 include(cmake/internal/ThirdPartyWarnings.cmake)

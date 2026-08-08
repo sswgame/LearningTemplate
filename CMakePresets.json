@@ -3,35 +3,66 @@
 
   "configurePresets": [
     {
-      "name": "Ninja-Debug",
-      "displayName": "Windows Ninja Debug (Clang-cl)",
-      "description": "Windows Debug build using Ninja + Clang-cl",
-
+      "name": "base-vcpkg",
+      "hidden": true,
       "generator": "Ninja",
-
       "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/${presetName}",
+        "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/cmake/Modules/Toolchain/Vcpkg",
+        "VCPKG_INSTALLED_DIR": "${sourceDir}/build/vcpkg_installed",
+        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/Tools/vcpkg/scripts/buildsystems/vcpkg.cmake"
+      },
+      "environment": {
+        "VCPKG_BINARY_SOURCES": "clear;files,${sourceDir}/build/vcpkg_cache,readwrite"
+      }
+    },
 
+    {
+      "name": "base-windows",
+      "hidden": true,
+      "inherits": "base-vcpkg",
       "architecture": {
         "value": "x64",
         "strategy": "external"
       },
-
       "environment": {
         "CC": "clang-cl",
-        "CXX": "clang-cl",
+        "CXX": "clang-cl"
+      }
+    },
 
-        "VCPKG_BINARY_SOURCES": "clear;files,${sourceDir}/build/vcpkg_cache,readwrite"
+    {
+      "name": "base-wsl",
+      "hidden": true,
+      "inherits": "base-vcpkg",
+      "environment": {
+        "CC": "clang",
+        "CXX": "clang++"
       },
+      "vendor": {
+        "microsoft.com/VisualStudioRemoteSettings/CMake/1.0": {
+          "remoteCopySources": true,
+          "remoteCopySourcesMethod": "rsync",
+          "remoteCopySourcesExclusionList": [
+            ".vs",
+            ".git",
+            "${sourceDir}/Tools/vcpkg/buildtrees",
+            "${sourceDir}/Tools/vcpkg/packages",
+            "${sourceDir}/Tools/vcpkg/downloads"
+          ]
+        }
+      }
+    },
 
+    {
+      "name": "Ninja-Debug",
+      "displayName": "Windows Ninja Debug (Clang-cl)",
+      "description": "Windows Debug build using Ninja + Clang-cl",
+      "inherits": "base-windows",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/${presetName}",
-
-        "SW_SHIPPING_BUILD": "OFF",
-
-        "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/cmake/Modules/Toolchain/Vcpkg",
-        "VCPKG_INSTALLED_DIR": "${sourceDir}/build/vcpkg_installed",
-        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/Tools/vcpkg/scripts/buildsystems/vcpkg.cmake"
+        "SW_SHIPPING_BUILD": "OFF"
       }
     },
 
@@ -39,32 +70,10 @@
       "name": "Ninja-Release",
       "displayName": "Windows Ninja Release (Clang-cl)",
       "description": "Windows Release build using Ninja + Clang-cl",
-
-      "generator": "Ninja",
-
-      "binaryDir": "${sourceDir}/build/${presetName}",
-
-      "architecture": {
-        "value": "x64",
-        "strategy": "external"
-      },
-
-      "environment": {
-        "CC": "clang-cl",
-        "CXX": "clang-cl",
-
-        "VCPKG_BINARY_SOURCES": "clear;files,${sourceDir}/build/vcpkg_cache,readwrite"
-      },
-
+      "inherits": "base-windows",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/${presetName}",
-
-        "SW_SHIPPING_BUILD": "OFF",
-
-        "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/cmake/Modules/Toolchain/Vcpkg",
-        "VCPKG_INSTALLED_DIR": "${sourceDir}/build/vcpkg_installed",
-        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/Tools/vcpkg/scripts/buildsystems/vcpkg.cmake"
+        "SW_SHIPPING_BUILD": "OFF"
       }
     },
 
@@ -72,34 +81,11 @@
       "name": "Ninja-Shipping",
       "displayName": "Windows Ninja Shipping (Clang-cl)",
       "description": "Windows Shipping build using Ninja + Clang-cl",
-
-      "generator": "Ninja",
-
-      "binaryDir": "${sourceDir}/build/${presetName}",
-
-      "architecture": {
-        "value": "x64",
-        "strategy": "external"
-      },
-
-      "environment": {
-        "CC": "clang-cl",
-        "CXX": "clang-cl",
-
-        "VCPKG_BINARY_SOURCES": "clear;files,${sourceDir}/build/vcpkg_cache,readwrite"
-      },
-
+      "inherits": "base-windows",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/${presetName}",
-
         "SW_SHIPPING_BUILD": "ON",
-        "SW_RHI_AS_MODULES": "OFF",
-        "SW_ENABLE_TESTING": "ON",
-
-        "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/cmake/Modules/Toolchain/Vcpkg",
-        "VCPKG_INSTALLED_DIR": "${sourceDir}/build/vcpkg_installed",
-        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/Tools/vcpkg/scripts/buildsystems/vcpkg.cmake"
+        "SW_ENABLE_TESTING": "ON"
       }
     },
 
@@ -107,40 +93,10 @@
       "name": "WSL-Debug",
       "displayName": "WSL Ninja Debug (Clang)",
       "description": "WSL Ubuntu Debug build using Ninja + Clang",
-
-      "generator": "Ninja",
-
-      "binaryDir": "${sourceDir}/build/${presetName}",
-
-      "environment": {
-        "CC": "clang",
-        "CXX": "clang++",
-
-        "VCPKG_BINARY_SOURCES": "clear;files,${sourceDir}/build/vcpkg_cache,readwrite"
-      },
-
+      "inherits": "base-wsl",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/${presetName}",
-        "SW_RHI_AS_MODULES": "OFF",
-        "SW_SHIPPING_BUILD": "OFF",
-
-        "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/cmake/Modules/Toolchain/Vcpkg",
-        "VCPKG_INSTALLED_DIR": "${sourceDir}/build/vcpkg_installed",
-        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/Tools/vcpkg/scripts/buildsystems/vcpkg.cmake"
-      },
-      "vendor": {
-        "microsoft.com/VisualStudioRemoteSettings/CMake/1.0": {
-          "remoteCopySources": true,
-          "remoteCopySourcesMethod": "rsync",
-          "remoteCopySourcesExclusionList": [
-            ".vs",
-            ".git",
-            "${sourceDir}/Tools/vcpkg/buildtrees",
-            "${sourceDir}/Tools/vcpkg/packages",
-            "${sourceDir}/Tools/vcpkg/downloads"
-          ]
-        }
+        "SW_SHIPPING_BUILD": "OFF"
       }
     },
 
@@ -148,40 +104,10 @@
       "name": "WSL-Release",
       "displayName": "WSL Ninja Release (Clang)",
       "description": "WSL Ubuntu Release build using Ninja + Clang",
-
-      "generator": "Ninja",
-
-      "binaryDir": "${sourceDir}/build/${presetName}",
-
-      "environment": {
-        "CC": "clang",
-        "CXX": "clang++",
-
-        "VCPKG_BINARY_SOURCES": "clear;files,${sourceDir}/build/vcpkg_cache,readwrite"
-      },
-
+      "inherits": "base-wsl",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/${presetName}",
-
-        "SW_SHIPPING_BUILD": "OFF",
-
-        "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/cmake/Modules/Toolchain/Vcpkg",
-        "VCPKG_INSTALLED_DIR": "${sourceDir}/build/vcpkg_installed",
-        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/Tools/vcpkg/scripts/buildsystems/vcpkg.cmake"
-      },
-      "vendor": {
-        "microsoft.com/VisualStudioRemoteSettings/CMake/1.0": {
-          "remoteCopySources": true,
-          "remoteCopySourcesMethod": "rsync",
-          "remoteCopySourcesExclusionList": [
-            ".vs",
-            ".git",
-            "${sourceDir}/Tools/vcpkg/buildtrees",
-            "${sourceDir}/Tools/vcpkg/packages",
-            "${sourceDir}/Tools/vcpkg/downloads"
-          ]
-        }
+        "SW_SHIPPING_BUILD": "OFF"
       }
     },
 
@@ -189,62 +115,23 @@
       "name": "WSL-Shipping",
       "displayName": "WSL Ninja Shipping (Clang)",
       "description": "WSL Ubuntu Shipping build using Ninja + Clang",
-
-      "generator": "Ninja",
-
-      "binaryDir": "${sourceDir}/build/${presetName}",
-
-      "environment": {
-        "CC": "clang",
-        "CXX": "clang++",
-
-        "VCPKG_BINARY_SOURCES": "clear;files,${sourceDir}/build/vcpkg_cache,readwrite"
-      },
-
+      "inherits": "base-wsl",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/${presetName}",
-
         "SW_SHIPPING_BUILD": "ON",
-        "SW_RHI_AS_MODULES": "OFF",
-        "SW_ENABLE_TESTING": "ON",
-
-        "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/cmake/Modules/Toolchain/Vcpkg",
-        "VCPKG_INSTALLED_DIR": "${sourceDir}/build/vcpkg_installed",
-        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/Tools/vcpkg/scripts/buildsystems/vcpkg.cmake"
-      },
-      "vendor": {
-        "microsoft.com/VisualStudioRemoteSettings/CMake/1.0": {
-          "remoteCopySources": true,
-          "remoteCopySourcesMethod": "rsync",
-          "remoteCopySourcesExclusionList": [
-            ".vs",
-            ".git",
-            "${sourceDir}/Tools/vcpkg/buildtrees",
-            "${sourceDir}/Tools/vcpkg/packages",
-            "${sourceDir}/Tools/vcpkg/downloads"
-          ]
-        }
+        "SW_ENABLE_TESTING": "ON"
       }
     },
 
     {
       "name": "CI-Debug",
       "displayName": "CI Debug (Ninja)",
-      "description": "CI-oriented Debug build using the system compiler",
-
-      "generator": "Ninja",
-
-      "binaryDir": "${sourceDir}/build/${presetName}",
-
+      "description": "CI-oriented Debug build (system compiler + Tools/vcpkg toolchain)",
+      "inherits": "base-vcpkg",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-
         "SW_SHIPPING_BUILD": "OFF",
-        "SW_ENABLE_TESTING": "ON",
-
-        "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/cmake/Modules/Toolchain/Vcpkg",
-        "VCPKG_INSTALLED_DIR": "${sourceDir}/build/vcpkg_installed"
+        "SW_ENABLE_TESTING": "ON"
       }
     }
   ],
@@ -254,32 +141,26 @@
       "name": "Ninja-Debug",
       "configurePreset": "Ninja-Debug"
     },
-
     {
       "name": "Ninja-Release",
       "configurePreset": "Ninja-Release"
     },
-
     {
       "name": "Ninja-Shipping",
       "configurePreset": "Ninja-Shipping"
     },
-
     {
       "name": "WSL-Debug",
       "configurePreset": "WSL-Debug"
     },
-
     {
       "name": "WSL-Release",
       "configurePreset": "WSL-Release"
     },
-
     {
       "name": "WSL-Shipping",
       "configurePreset": "WSL-Shipping"
     },
-
     {
       "name": "CI-Debug",
       "configurePreset": "CI-Debug"
