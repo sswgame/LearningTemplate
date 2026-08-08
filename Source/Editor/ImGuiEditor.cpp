@@ -91,27 +91,34 @@ namespace sw
 		ImGuiIO& io = ImGui::GetIO();
 		io.Fonts->Clear();
 
-		const std::filesystem::path consolasPath = EditorUtil::resolveFontFile( editor::path::kConsolasFontFile );
-		const std::filesystem::path koreanPath	 = EditorUtil::resolveFontFile( editor::path::kKoreanUiFontFile );
+		const std::filesystem::path basePath = EditorUtil::resolveFontFile(
+			editor::path::kBaseFontCandidates,
+			sizeof( editor::path::kBaseFontCandidates ) / sizeof( editor::path::kBaseFontCandidates[0] ) );
+		const std::filesystem::path koreanPath = EditorUtil::resolveFontFile(
+			editor::path::kKoreanFontCandidates,
+			sizeof( editor::path::kKoreanFontCandidates ) / sizeof( editor::path::kKoreanFontCandidates[0] ) );
 
 		ImFont* baseFont = nullptr;
-		BLOCK( "Base Font (Consolas)" )
+		BLOCK( "Base Font" )
 		{
 			ImFontConfig baseConfig{};
 			baseConfig.OversampleH = 2;
 			baseConfig.OversampleV = 1;
+			// Explicit size required: ImGui asserts if MergeMode uses an explicit size
+			// over a destination font that used an implicit reference size (AddFontDefault).
+			baseConfig.SizePixels = editor::constant::kFontSize;
 
-			if ( consolasPath.empty() == false )
+			if ( basePath.empty() == false )
 			{
-				baseFont = io.Fonts->AddFontFromFileTTF( consolasPath.string().c_str(), editor::constant::kFontSize, &baseConfig,
+				baseFont = io.Fonts->AddFontFromFileTTF( basePath.string().c_str(), editor::constant::kFontSize, &baseConfig,
 														 io.Fonts->GetGlyphRangesDefault() );
-				SW_LOG_INFO( "[ImGuiEditor] Loaded Consolas: %#", consolasPath.string().c_str() );
+				SW_LOG_INFO( "[ImGuiEditor] Loaded base font: %#", basePath.string().c_str() );
 			}
 
 			if ( baseFont == nullptr )
 			{
 				baseFont = io.Fonts->AddFontDefault( &baseConfig );
-				SW_LOG_WARNING( "[ImGuiEditor] Consolas not found — using ImGui default font." );
+				SW_LOG_WARNING( "[ImGuiEditor] No system UI font found — using ImGui default font." );
 			}
 		}
 
@@ -130,7 +137,7 @@ namespace sw
 			}
 			else
 			{
-				SW_LOG_WARNING( "[ImGuiEditor] Korean font (%#) not found — Hangul may not render.", editor::path::kKoreanUiFontFile );
+				SW_LOG_WARNING( "[ImGuiEditor] Korean font not found — Hangul may not render." );
 			}
 		}
 

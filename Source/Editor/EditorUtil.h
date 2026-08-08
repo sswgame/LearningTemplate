@@ -21,6 +21,12 @@ namespace sw
 		static std::filesystem::path resolveFontFile( const utf8* fileName );
 
 		/**
+		 * @brief 여러 파일명 후보를 순서대로 탐색합니다 (시스템 폰트 트리는 재귀 검색).
+		 * @return 첫 번째 존재하는 절대 경로, 없으면 빈 path
+		 */
+		static std::filesystem::path resolveFontFile( const utf8* const* fileNames, size_t count );
+
+		/**
 		 * @brief 프로젝트 루트 (<Project>, Resource의 부모).
 		 * @return 해석 실패 시 빈 path
 		 */

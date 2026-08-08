@@ -77,8 +77,35 @@ namespace sw
 			std::filesystem::path candidate = fontsDir / fileName;
 			if ( std::filesystem::is_regular_file( candidate, ec ) )
 				return candidate;
+
+			// Distro fonts live in nested dirs (e.g. /usr/share/fonts/truetype/dejavu/...).
+			if ( std::filesystem::is_directory( fontsDir, ec ) )
+			{
+				for ( std::filesystem::recursive_directory_iterator it( fontsDir, ec ), end; it != end && !ec; it.increment( ec ) )
+				{
+					if ( it->is_regular_file( ec ) == false )
+						continue;
+					if ( it->path().filename() == fileName )
+						return it->path();
+				}
+				ec.clear();
+			}
 		}
 
+		return {};
+	}
+
+	std::filesystem::path EditorUtil::resolveFontFile( const utf8* const* fileNames, size_t count )
+	{
+		if ( fileNames == nullptr || count == 0 )
+			return {};
+
+		for ( size_t i = 0; i < count; ++i )
+		{
+			std::filesystem::path found = resolveFontFile( fileNames[i] );
+			if ( found.empty() == false )
+				return found;
+		}
 		return {};
 	}
 

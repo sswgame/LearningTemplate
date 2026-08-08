@@ -22,6 +22,29 @@ namespace sw::editor
 		inline static constexpr const utf8* kConsolasFontFile = "consola.ttf";
 		inline static constexpr const utf8* kKoreanUiFontFile = "malgun.ttf";
 
+		/** @brief 기본(라틴) UI 폰트 후보 — 앞쪽이 우선 */
+		inline static constexpr const utf8* kBaseFontCandidates[] = {
+			"consola.ttf",
+			"Consolas.ttf",
+			"DejaVuSansMono.ttf",
+			"DejaVuSansMono-Bold.ttf",
+			"LiberationMono-Regular.ttf",
+			"NotoSansMono-Regular.ttf",
+			"UbuntuMono-R.ttf",
+			"FreeMono.ttf",
+		};
+		/** @brief 한글 글리프 머지용 폰트 후보 */
+		inline static constexpr const utf8* kKoreanFontCandidates[] = {
+			"malgun.ttf",
+			"malgunsl.ttf",
+			"NanumGothic.ttf",
+			"NanumBarunGothic.ttf",
+			"NotoSansCJK-Regular.ttc",
+			"NotoSansCJKkr-Regular.otf",
+			"NotoSansKR-Regular.otf",
+			"DroidSansFallbackFull.ttf",
+		};
+
 		/** @brief <Project>/Config/Editor — 레이아웃·패널 표시 상태 (유저 로컬, Resource 아님) */
 		inline static constexpr const utf8* kConfigFolder		 = "Config";
 		inline static constexpr const utf8* kEditorConfigFolder = "Editor";
