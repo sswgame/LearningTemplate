@@ -27,6 +27,7 @@ bool ImGui_ImplOSX_HandleEvent( void* event, void* view );
 
 static Display*		s_X11Display = nullptr;
 static Window		s_X11Window	 = 0;
+static Atom			s_X11WmDelete = 0;
 static sw::CpuTimer s_X11Timer;
 
 struct ImGui_ImplX11_ViewportData
@@ -34,6 +35,22 @@ struct ImGui_ImplX11_ViewportData
 	Window WindowHandle = 0;
 	bool   Owned		= false;
 };
+
+static ImGuiViewport* ImGui_ImplX11_FindViewportByWindow( Window window )
+{
+	if ( window == 0 )
+		return nullptr;
+
+	ImGuiPlatformIO& platformIO = ImGui::GetPlatformIO();
+	for ( int i = 0; i < platformIO.Viewports.Size; ++i )
+	{
+		ImGuiViewport* viewport = platformIO.Viewports[i];
+		auto*		   vd		= static_cast<ImGui_ImplX11_ViewportData*>( viewport->PlatformUserData );
+		if ( vd && vd->WindowHandle == window )
+			return viewport;
+	}
+	return nullptr;
+}
 
 static void ImGui_ImplX11_CreateWindow( ImGuiViewport* viewport )
 {
@@ -52,8 +69,9 @@ static void ImGui_ImplX11_CreateWindow( ImGuiViewport* viewport )
 											WhitePixel( s_X11Display, DefaultScreen( s_X11Display ) ) );
 	XSelectInput( s_X11Display, vd->WindowHandle,
 				  ExposureMask | StructureNotifyMask | ButtonPressMask | ButtonReleaseMask | PointerMotionMask | FocusChangeMask | KeyPressMask | KeyReleaseMask );
-	Atom wmDelete = XInternAtom( s_X11Display, "WM_DELETE_WINDOW", False );
-	XSetWMProtocols( s_X11Display, vd->WindowHandle, &wmDelete, 1 );
+	if ( s_X11WmDelete == 0 )
+		s_X11WmDelete = XInternAtom( s_X11Display, "WM_DELETE_WINDOW", False );
+	XSetWMProtocols( s_X11Display, vd->WindowHandle, &s_X11WmDelete, 1 );
 	XMapWindow( s_X11Display, vd->WindowHandle );
 	XFlush( s_X11Display );
 
@@ -195,8 +213,9 @@ static void ImGui_ImplX11_UpdateMonitors()
 
 static bool ImGui_ImplX11_Init( Display* display, Window window )
 {
-	s_X11Display = display;
-	s_X11Window	 = window;
+	s_X11Display  = display;
+	s_X11Window	  = window;
+	s_X11WmDelete = XInternAtom( display, "WM_DELETE_WINDOW", False );
 	s_X11Timer.resetTimer();
 	s_X11Timer.startTimer();
 	ImGuiIO& io				= ImGui::GetIO();
@@ -237,8 +256,9 @@ static void ImGui_ImplX11_Shutdown()
 		IM_DELETE( static_cast<ImGui_ImplX11_ViewportData*>( mainViewport->PlatformUserData ) );
 		mainViewport->PlatformUserData = nullptr;
 	}
-	s_X11Display = nullptr;
-	s_X11Window	 = 0;
+	s_X11Display  = nullptr;
+	s_X11Window	  = 0;
+	s_X11WmDelete = 0;
 }
 
 static void ImGui_ImplX11_NewFrame()
@@ -276,6 +296,22 @@ static bool ImGui_ImplX11_ProcessEvent( XEvent* event )
 	ImGuiIO& io = ImGui::GetIO();
 	switch ( event->type )
 	{
+		case ClientMessage:
+		{
+			if ( s_X11WmDelete == 0 || event->xclient.data.l[0] != static_cast<long>( s_X11WmDelete ) )
+				return false;
+
+			// Secondary viewport close: tell ImGui, do not exit the app.
+			if ( event->xclient.window == s_X11Window )
+				return false;
+
+			if ( ImGuiViewport* viewport = ImGui_ImplX11_FindViewportByWindow( event->xclient.window ) )
+			{
+				viewport->PlatformRequestClose = true;
+				return true;
+			}
+			return false;
+		}
 		case KeyPress:
 		case KeyRelease:
 		{

@@ -93,7 +93,10 @@ namespace sw
 
 			if ( event.type == ClientMessage )
 			{
-				if ( static_cast<Atom>( event.xclient.data.l[0] ) == static_cast<Atom>( _x11WmDelete ) )
+				// Only the main window's close request exits the app.
+				// ImGui multi-viewport windows share this Display and also send WM_DELETE_WINDOW.
+				if ( event.xclient.window == static_cast<Window>( _x11Window )
+					 && static_cast<Atom>( event.xclient.data.l[0] ) == static_cast<Atom>( _x11WmDelete ) )
 				{
 					_bShouldClose = true;
 					return false;
@@ -101,6 +104,9 @@ namespace sw
 			}
 			else if ( event.type == ConfigureNotify )
 			{
+				if ( event.xconfigure.window != static_cast<Window>( _x11Window ) )
+					continue;
+
 				uint32 newW = static_cast<uint32>( event.xconfigure.width );
 				uint32 newH = static_cast<uint32>( event.xconfigure.height );
 				if ( newW != _width || newH != _height )
