@@ -4,12 +4,12 @@
 
 include("${CMAKE_CURRENT_SOURCE_DIR}/../../RhiSources.cmake")
 
-sw_add_library(RHI_Vulkan MODULE
+sw_add_library(RHI_Vulkan
+    TYPE MODULE
     SOURCES
         ${SW_RHI_VULKAN_DEVICE_SOURCES}
     LINK_LIBRARIES
         Core
-        sw_graphics_libs
 )
 
 sw_configure_module_dll_exports(RHI_Vulkan MODULE)

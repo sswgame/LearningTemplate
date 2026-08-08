@@ -9,11 +9,11 @@ else()
     set(SWGAME_LIB_TYPE MODULE)
 endif()
 
-sw_add_library(SWGame ${SWGAME_LIB_TYPE}
+sw_add_library(SWGame
+    TYPE ${SWGAME_LIB_TYPE}
     LINK_LIBRARIES
         Core
         RuntimeAPI
-        sw_graphics_libs
 )
 
 sw_configure_module_dll_exports(SWGame ${SWGAME_LIB_TYPE})

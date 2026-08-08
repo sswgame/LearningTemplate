@@ -45,8 +45,7 @@ endif()
 
 # ReflectionParser 실행 파일 타겟 정의 및 Core, libclang 라이브러리 링킹
 sw_add_executable(ReflectionParser
-    INCLUDE_DIRECTORIES
-        "${LIBCLANG_INCLUDE_DIR}"
+    NO_INSTALL
     LINK_LIBRARIES
         Core
         "${LIBCLANG_LIB}"

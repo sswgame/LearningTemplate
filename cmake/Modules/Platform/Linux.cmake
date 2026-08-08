@@ -46,7 +46,7 @@ if(NOT TARGET sw_graphics_libs)
     add_library(sw_graphics_libs INTERFACE)
 endif()
 
-# OpenGL/GLX — linked by Core / RHI / App via sw_graphics_libs (not every sw_add_*).
+# OpenGL/GLX — Core PUBLIC sw_graphics_libs 로만 전파 (tools/tests는 미링크).
 find_package(OpenGL)
 if(OpenGL_FOUND)
     if(TARGET OpenGL::GL)

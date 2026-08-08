@@ -61,8 +61,7 @@
       "description": "Windows Debug build using Ninja + Clang-cl",
       "inherits": "base-windows",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
-        "SW_SHIPPING_BUILD": "OFF"
+        "CMAKE_BUILD_TYPE": "Debug"
       }
     },
 
@@ -72,8 +71,7 @@
       "description": "Windows Release build using Ninja + Clang-cl",
       "inherits": "base-windows",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release",
-        "SW_SHIPPING_BUILD": "OFF"
+        "CMAKE_BUILD_TYPE": "Release"
       }
     },
 
@@ -84,8 +82,7 @@
       "inherits": "base-windows",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "SW_SHIPPING_BUILD": "ON",
-        "SW_ENABLE_TESTING": "ON"
+        "SW_SHIPPING_BUILD": "ON"
       }
     },
 
@@ -95,8 +92,7 @@
       "description": "WSL Ubuntu Debug build using Ninja + Clang",
       "inherits": "base-wsl",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
-        "SW_SHIPPING_BUILD": "OFF"
+        "CMAKE_BUILD_TYPE": "Debug"
       }
     },
 
@@ -106,8 +102,7 @@
       "description": "WSL Ubuntu Release build using Ninja + Clang",
       "inherits": "base-wsl",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release",
-        "SW_SHIPPING_BUILD": "OFF"
+        "CMAKE_BUILD_TYPE": "Release"
       }
     },
 
@@ -118,8 +113,7 @@
       "inherits": "base-wsl",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "SW_SHIPPING_BUILD": "ON",
-        "SW_ENABLE_TESTING": "ON"
+        "SW_SHIPPING_BUILD": "ON"
       }
     },
 
@@ -129,9 +123,7 @@
       "description": "CI-oriented Debug build (system compiler + Tools/vcpkg toolchain)",
       "inherits": "base-vcpkg",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
-        "SW_SHIPPING_BUILD": "OFF",
-        "SW_ENABLE_TESTING": "ON"
+        "CMAKE_BUILD_TYPE": "Debug"
       }
     }
   ],

@@ -3,7 +3,10 @@
 # @brief Core utility unit tests
 # ==============================================================================
 
-sw_add_executable(CoreUtilityTest LINK_LIBRARIES Core TestFramework)
+sw_add_executable(CoreUtilityTest
+    NO_INSTALL
+    LINK_LIBRARIES Core TestFramework
+)
 sw_set_log_tag(CoreUtilityTest Test)
 sw_configure_pch(CoreUtilityTest)
 
@@ -11,9 +14,6 @@ if(BUILD_TESTING)
     add_test(NAME CoreUtilityTest COMMAND CoreUtilityTest)
     set_tests_properties(CoreUtilityTest PROPERTIES LABELS "unit;core")
 
-    # Headless-friendly subset (skips GPU/window/shader suites via framework filter).
-    # Runs: utility/object/rendergraph/xml material load-save, etc. Excludes RHI/Window/ShaderCompiler/LiveShader + GPU material cases.
-    # Keep MaterialTest.MaterialLoadAndSave / AsyncMaterialLoadTest (file I/O only).
     add_test(
         NAME CoreUtilityTest_NoGPU
         COMMAND CoreUtilityTest --test_filter=-RHITest.*,-WindowTest.*,-ShaderCompilerTest.*,-LiveShaderTest.*,-MaterialTest.MaterialColorModification,-MaterialTest.MaterialInstanceOverride,-MaterialTest.MaterialShaderReflectionValidation

@@ -5,11 +5,11 @@
 
 set(_module_smoke_libs Core RuntimeAPI TestFramework)
 if(SW_SHIPPING_BUILD)
-	# STATIC SWGame exports fillGameAPI into the test binary
 	list(APPEND _module_smoke_libs SWGame)
 endif()
 
 sw_add_executable(ModuleSmokeTest
+	NO_INSTALL
 	LINK_LIBRARIES
 		${_module_smoke_libs}
 )
@@ -18,7 +18,6 @@ sw_set_log_tag(ModuleSmokeTest Test)
 sw_configure_pch(ModuleSmokeTest)
 
 if(NOT SW_SHIPPING_BUILD)
-	# LiveReload 모듈 출력 경로와 동일 (cmake/internal/Targets.cmake sw_set_module_bin_output)
 	target_compile_definitions(ModuleSmokeTest PRIVATE
 		"SW_TEST_MODULE_DIR=\"${sw_output_directory}/Bin\""
 	)
@@ -30,7 +29,6 @@ if(NOT SW_SHIPPING_BUILD)
 	endif()
 endif()
 
-# nogpu: fill*API load / static link smoke — no window/RHI
 if(BUILD_TESTING)
 	add_test(NAME ModuleSmokeTest COMMAND ModuleSmokeTest)
 	set_tests_properties(ModuleSmokeTest PROPERTIES

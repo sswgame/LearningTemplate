@@ -4,11 +4,11 @@
 # ==============================================================================
 
 if(NOT SW_SHIPPING_BUILD)
-    sw_add_library(EditorModule MODULE
+    sw_add_library(EditorModule
+        TYPE MODULE
         LINK_LIBRARIES
             Core
             RuntimeAPI
-            sw_graphics_libs
             imgui
             implot
             imguizmo

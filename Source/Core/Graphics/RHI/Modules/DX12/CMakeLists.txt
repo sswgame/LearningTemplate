@@ -4,12 +4,12 @@
 
 include("${CMAKE_CURRENT_SOURCE_DIR}/../../RhiSources.cmake")
 
-sw_add_library(RHI_DX12 MODULE
+sw_add_library(RHI_DX12
+    TYPE MODULE
     SOURCES
         ${SW_RHI_DX12_DEVICE_SOURCES}
     LINK_LIBRARIES
         Core
-        sw_graphics_libs
 )
 
 sw_configure_module_dll_exports(RHI_DX12 MODULE)

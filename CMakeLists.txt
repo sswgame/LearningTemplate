@@ -7,7 +7,6 @@
 #   UserConfig.cmake          — SW_* 사용자 옵션
 #   VcpkgGate.cmake           — SW_USE_VCPKG 시 Modules/Toolchain/Vcpkg 로드
 #                               (≠ CMAKE_TOOLCHAIN_FILE; preset이 Tools/vcpkg 지정)
-#   ThirdPartyGraph.cmake     — ThirdParty/ 서브트리 등록
 #   LoadFlagModules.cmake     — Compiler/Platform/… INTERFACE (명시 include)
 #   Modules/Toolchain/        — vcpkg 게이트 세부·overlay triplet
 #   Modules/{Compiler,…}      — 플래그 INTERFACE (LoadFlagModules)
@@ -45,7 +44,13 @@ include(cmake/internal/VcpkgRuntime.cmake)
 include(cmake/internal/Output.cmake)
 include(cmake/internal/Reflection.cmake)
 include(cmake/internal/ThirdPartyWarnings.cmake)
-include(cmake/ThirdPartyGraph.cmake)
+
+# ThirdParty 서브트리 (경고 헬퍼는 ThirdPartyWarnings.cmake)
+add_library(sw_third_party_includes INTERFACE)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty")
+    add_subdirectory(ThirdParty)
+endif()
+
 include(cmake/internal/AuxTargets.cmake)
 
 # --- 타겟 그래프 ---

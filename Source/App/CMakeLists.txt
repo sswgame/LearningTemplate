@@ -3,15 +3,10 @@
 # @brief 메인 애플리케이션(App) 빌드 및 패키징 스크립트
 # ==============================================================================
 
-set(APP_LINK_LIBS
-    Core
-    RuntimeAPI
-    sw_graphics_libs
-)
-
 sw_add_executable(App
     LINK_LIBRARIES
-        ${APP_LINK_LIBS}
+        Core
+        RuntimeAPI
 )
 
 sw_set_log_tag(App Engine)

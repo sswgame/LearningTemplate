@@ -36,13 +36,13 @@ macro(sw_prepare_target_sources OUT_SOURCES ARG_SOURCES ARG_EXCLUDE)
 endmacro()
 
 # include/link/컴파일 옵션 등 공통 타겟 프로퍼티를 설정합니다.
+# SKIP_INSTALL: TRUE 이면 install() 생략 (Test / ReflectionParser).
 #
 # Include 정책:
 # - PUBLIC:  타겟 자신의 소스 디렉터리 (로컬 헤더)
 # - PRIVATE: ${CMAKE_SOURCE_DIR}/Source , Resource (이 타겟 컴파일용)
 # - Source/ 를 PUBLIC 으로 재export 하지 않음 → Core / RuntimeAPI 가 제공
-#   (Core 헤더의 "Core/..." 경로는 Core의 PUBLIC include 로 전파)
-macro(sw_setup_target_properties TARGET_NAME ARG_INCLUDE_DIRECTORIES ARG_LINK_LIBRARIES)
+macro(sw_setup_target_properties TARGET_NAME ARG_INCLUDE_DIRECTORIES ARG_LINK_LIBRARIES SKIP_INSTALL)
 	target_include_directories(${TARGET_NAME}
 		PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}"
 		PRIVATE "${CMAKE_SOURCE_DIR}/Source"
@@ -71,32 +71,32 @@ macro(sw_setup_target_properties TARGET_NAME ARG_INCLUDE_DIRECTORIES ARG_LINK_LI
 		set_target_properties(${TARGET_NAME} PROPERTIES FOLDER "${folder_path}")
 	endif()
 
-	sw_install_target(${TARGET_NAME})
+	if(NOT SKIP_INSTALL)
+		sw_install_target(${TARGET_NAME})
+	endif()
 endmacro()
 
-# 라이브러리 타겟을 추가합니다. TYPE/LINK_LIBRARIES/EXCLUDE/SOURCES/INCLUDE_DIRECTORIES 지원.
+# 라이브러리 타겟. TYPE / LINK_LIBRARIES / EXCLUDE / SOURCES / INCLUDE_DIRECTORIES / NO_INSTALL
 function(sw_add_library TARGET_NAME)
-    cmake_parse_arguments(ARG "" "TYPE" "LINK_LIBRARIES;EXCLUDE;SOURCES;INCLUDE_DIRECTORIES" ${ARGN})
+    cmake_parse_arguments(ARG "NO_INSTALL" "TYPE" "LINK_LIBRARIES;EXCLUDE;SOURCES;INCLUDE_DIRECTORIES" ${ARGN})
 
     set(LIB_TYPE STATIC)
     if(ARG_TYPE)
         set(LIB_TYPE ${ARG_TYPE})
-    elseif(${ARGC} GREATER 1 AND NOT "${ARGV1}" MATCHES "^(LINK_LIBRARIES|EXCLUDE|SOURCES|TYPE|INCLUDE_DIRECTORIES)$")
-        set(LIB_TYPE ${ARGV1})
     endif()
 
     sw_prepare_target_sources(TARGET_SOURCES ARG_SOURCES ARG_EXCLUDE)
     add_library(${TARGET_NAME} ${LIB_TYPE} ${TARGET_SOURCES})
-    sw_setup_target_properties(${TARGET_NAME} ARG_INCLUDE_DIRECTORIES ARG_LINK_LIBRARIES)
+    sw_setup_target_properties(${TARGET_NAME} ARG_INCLUDE_DIRECTORIES ARG_LINK_LIBRARIES ${ARG_NO_INSTALL})
 endfunction()
 
-# 실행 파일 타겟을 추가합니다. LINK_LIBRARIES/EXCLUDE/SOURCES/INCLUDE_DIRECTORIES 지원.
+# 실행 파일 타겟. LINK_LIBRARIES / EXCLUDE / SOURCES / INCLUDE_DIRECTORIES / NO_INSTALL
 function(sw_add_executable TARGET_NAME)
-    cmake_parse_arguments(ARG "" "" "LINK_LIBRARIES;EXCLUDE;SOURCES;INCLUDE_DIRECTORIES" ${ARGN})
+    cmake_parse_arguments(ARG "NO_INSTALL" "" "LINK_LIBRARIES;EXCLUDE;SOURCES;INCLUDE_DIRECTORIES" ${ARGN})
 
     sw_prepare_target_sources(TARGET_SOURCES ARG_SOURCES ARG_EXCLUDE)
     add_executable(${TARGET_NAME} ${TARGET_SOURCES})
-    sw_setup_target_properties(${TARGET_NAME} ARG_INCLUDE_DIRECTORIES ARG_LINK_LIBRARIES)
+    sw_setup_target_properties(${TARGET_NAME} ARG_INCLUDE_DIRECTORIES ARG_LINK_LIBRARIES ${ARG_NO_INSTALL})
 endfunction()
 
 # 타겟별 compile definition(SW_EXPORTS/SW_IMPORTS 등)이 다르므로 REUSE_FROM 대신
@@ -111,8 +111,7 @@ function(sw_configure_pch TARGET_NAME)
     endif()
 endfunction()
 
-# LiveReload: MODULE DLL을 App.exe와 같은 preset Bin에 배치 (멀티컨픽 하위폴더 무시)
-# sw_output_directory == CMAKE_BINARY_DIR 이므로 Dev MODULE은 해당 프리셋 트리 안에서만 공존
+# LiveReload: MODULE DLL을 App.exe와 같은 preset Bin에 배치
 # MODULE → Bin (not Lib). Output.cmake already flats Bin; this also moves LIBRARY out of Lib/.
 function(sw_set_module_bin_output TARGET_NAME)
     set_target_properties(${TARGET_NAME} PROPERTIES
@@ -128,7 +127,6 @@ endfunction()
 # ---------------------------------------------------------------------------
 # 런타임 파일 복사: POST_BUILD COMMENT가 ; 로 이어지지 않도록 한 번에 emit
 # ---------------------------------------------------------------------------
-# SRC_FILE을 TARGET의 SW_RUNTIME_COPY_FILES 프로퍼티에 큐잉합니다 (아직 POST_BUILD 미생성).
 function(sw_queue_runtime_copy TARGET_NAME SRC_FILE)
     if(NOT TARGET ${TARGET_NAME})
         message(FATAL_ERROR "sw_queue_runtime_copy: target '${TARGET_NAME}' does not exist")
@@ -139,7 +137,6 @@ function(sw_queue_runtime_copy TARGET_NAME SRC_FILE)
     set_property(TARGET ${TARGET_NAME} APPEND PROPERTY SW_RUNTIME_COPY_FILES "${SRC_FILE}")
 endfunction()
 
-# 큐잉된 런타임 복사를 하나의 POST_BUILD로 emit하고 요약 COMMENT를 붙입니다.
 function(sw_emit_runtime_copies TARGET_NAME)
     if(NOT TARGET ${TARGET_NAME})
         message(FATAL_ERROR "sw_emit_runtime_copies: target '${TARGET_NAME}' does not exist")
@@ -155,7 +152,6 @@ function(sw_emit_runtime_copies TARGET_NAME)
         return()
     endif()
 
-    # 중복 제거 (같은 DLL을 여러 헬퍼가 큐잉할 수 있음)
     list(REMOVE_DUPLICATES _files)
 
     set(_names "")

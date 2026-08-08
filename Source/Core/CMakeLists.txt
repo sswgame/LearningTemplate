@@ -29,7 +29,8 @@ if(SW_RHI_AS_MODULES)
     endforeach()
 endif()
 
-sw_add_library(Core ${_core_lib_type}
+sw_add_library(Core
+    TYPE ${_core_lib_type}
     EXCLUDE ${_core_exclude}
 )
 

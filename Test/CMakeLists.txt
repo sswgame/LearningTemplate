@@ -1,6 +1,10 @@
 # ==============================================================================
 # @file Test/CMakeLists.txt
-# @brief Test 직속 하위 단위 테스트 프로젝트를 탐색하여 빌드 트리에 추가
+# @brief 단위 테스트 그래프 (명시 등록)
 # ==============================================================================
 
-sw_discover_projects("${CMAKE_CURRENT_SOURCE_DIR}")
+add_subdirectory(TestFramework)
+add_subdirectory(CoreSmokeTest)
+add_subdirectory(CoreUtilityTest)
+add_subdirectory(ModuleSmokeTest)
+add_subdirectory(ReflectionTest)
