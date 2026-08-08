@@ -16,6 +16,25 @@ struct WGL_WindowData
 	HDC hDC;
 };
 static HGLRC s_MainWindowRC = nullptr;
+#elif defined( SW_PLATFORM_LINUX )
+	#include <X11/Xlib.h>
+	#include <X11/Xutil.h>
+	#include <GL/glx.h>
+	#ifdef None
+		#undef None
+	#endif
+
+struct GLX_WindowData
+{
+	Display*   dpy = nullptr;
+	GLXContext ctx = nullptr;
+	Window	   win = 0;
+};
+static Display*	  s_MainDisplay = nullptr;
+static GLXContext s_MainContext = nullptr;
+#endif
+
+#if defined( SW_PLATFORM_WINDOWS )
 
 static bool CreateDeviceWGL( HWND hWnd, WGL_WindowData* data )
 {
@@ -75,6 +94,54 @@ static void Hook_Renderer_SwapBuffers( ImGuiViewport* viewport, void* )
 	if ( WGL_WindowData* data = static_cast<WGL_WindowData*>( viewport->RendererUserData ) )
 		::SwapBuffers( data->hDC );
 }
+#elif defined( SW_PLATFORM_LINUX )
+static void Hook_Renderer_CreateWindow_GLX( ImGuiViewport* viewport )
+{
+	if ( s_MainDisplay == nullptr || s_MainContext == nullptr || viewport == nullptr )
+		return;
+	auto* data = new GLX_WindowData();
+	data->dpy  = s_MainDisplay;
+	data->win  = static_cast<Window>( reinterpret_cast<uintptr_t>( viewport->PlatformHandleRaw ) );
+
+	XWindowAttributes attrs{};
+	XVisualInfo*	  vi = nullptr;
+	if ( data->win != 0 && XGetWindowAttributes( data->dpy, data->win, &attrs ) != 0 && attrs.visual != nullptr )
+	{
+		XVisualInfo templateInfo{};
+		templateInfo.visualid = XVisualIDFromVisual( attrs.visual );
+		int count			  = 0;
+		vi					  = XGetVisualInfo( data->dpy, VisualIDMask, &templateInfo, &count );
+	}
+	if ( vi != nullptr )
+	{
+		data->ctx = glXCreateContext( data->dpy, vi, s_MainContext, True );
+		XFree( vi );
+	}
+	viewport->RendererUserData = data;
+}
+
+static void Hook_Renderer_DestroyWindow_GLX( ImGuiViewport* viewport )
+{
+	if ( viewport == nullptr || viewport->RendererUserData == nullptr )
+		return;
+	auto* data = static_cast<GLX_WindowData*>( viewport->RendererUserData );
+	if ( data->ctx )
+		glXDestroyContext( data->dpy, data->ctx );
+	delete data;
+	viewport->RendererUserData = nullptr;
+}
+
+static void Hook_Platform_RenderWindow_GLX( ImGuiViewport* viewport, void* )
+{
+	if ( auto* data = static_cast<GLX_WindowData*>( viewport->RendererUserData ) )
+		glXMakeCurrent( data->dpy, data->win, data->ctx ? data->ctx : s_MainContext );
+}
+
+static void Hook_Renderer_SwapBuffers_GLX( ImGuiViewport* viewport, void* )
+{
+	if ( auto* data = static_cast<GLX_WindowData*>( viewport->RendererUserData ) )
+		glXSwapBuffers( data->dpy, data->win );
+}
 #endif
 
 namespace sw
@@ -95,6 +162,20 @@ namespace sw
 			platform_io.Renderer_DestroyWindow = Hook_Renderer_DestroyWindow;
 			platform_io.Renderer_SwapBuffers   = Hook_Renderer_SwapBuffers;
 			platform_io.Platform_RenderWindow  = Hook_Platform_RenderWindow;
+		}
+#elif defined( SW_PLATFORM_LINUX )
+		ImGuiIO& io = ImGui::GetIO();
+		if ( ( io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable ) && rhiDevice != nullptr )
+		{
+			s_MainDisplay					   = static_cast<Display*>( rhiDevice->getNativeDevice() );
+			s_MainContext					   = static_cast<GLXContext>( rhiDevice->getNativeContext() );
+			if ( s_MainDisplay == nullptr )
+				s_MainDisplay = glXGetCurrentDisplay();
+			ImGuiPlatformIO& platform_io	   = ImGui::GetPlatformIO();
+			platform_io.Renderer_CreateWindow  = Hook_Renderer_CreateWindow_GLX;
+			platform_io.Renderer_DestroyWindow = Hook_Renderer_DestroyWindow_GLX;
+			platform_io.Renderer_SwapBuffers   = Hook_Renderer_SwapBuffers_GLX;
+			platform_io.Platform_RenderWindow  = Hook_Platform_RenderWindow_GLX;
 		}
 #endif
 		return bResult;

@@ -34,6 +34,7 @@ SW_VK_DEFINE_HANDLE( VkBuffer )
 SW_VK_DEFINE_HANDLE( VkDeviceMemory )
 SW_VK_DEFINE_HANDLE( VkPipeline )
 SW_VK_DEFINE_HANDLE( VkDebugUtilsMessengerEXT )
+SW_VK_DEFINE_HANDLE( VkSampler )
 
 namespace sw
 {
@@ -65,11 +66,13 @@ namespace sw
 		/** @brief 프레임 종료 (vkQueueSubmit 및 vkQueuePresentKHR 제출) */
 		void endFrame( bool vsync ) override;
 
+		void beginOffscreenPass( RHITextureHandle colorTarget, float32 clearColor[4] ) override;
+		void endOffscreenPass( RHITextureHandle colorTarget ) override;
+
 		/** @brief 백엔드 타입 반환 (Vulkan) */
 		RHIBackend getBackendType() const override { return RHIBackend::Vulkan; }
 
-		/** @brief Vulkan 백엔드는 Descriptor Indexing 기반 Bindless 지원 (true 반환) */
-		bool supportsBindless() const override { return false; }
+		bool supportsBindless() const override { return true; }
 
 		/** @brief 백엔드 버전 문자열 반환 */
 		const utf8* getBackendName() const override { return "Vulkan 1.3"; }
@@ -78,7 +81,11 @@ namespace sw
 		void* getNativeDevice() const override { return reinterpret_cast<void*>( _device ); }
 
 		/** @brief Native VkCommandBuffer 핸들 반환 */
-		void* getNativeContext() const override { return reinterpret_cast<void*>( ( !_bFrameStarted || _commandBuffers.empty() ) ? nullptr : _commandBuffers[_currentFrame] ); }
+		void* getNativeContext() const override
+		{
+			VkCommandBuffer cmd = currentCommandBuffer();
+			return reinterpret_cast<void*>( cmd );
+		}
 
 		/** @brief Native VkSwapchainKHR 핸들 반환 */
 		void* getNativeSwapChain() const override { return reinterpret_cast<void*>( _swapChain ); }
@@ -130,7 +137,7 @@ namespace sw
 
 		RHITextureHandle   createTexture2D( const RHITextureDesc& desc ) override;
 		void			   destroyTexture( RHITextureHandle texture ) override;
-		RHIDescriptorIndex registerBindlessTexture( RHITextureHandle /*texture*/ ) override { return kInvalidDescriptorIndex; }
+		RHIDescriptorIndex registerBindlessTexture( RHITextureHandle texture ) override;
 
 		/** @brief Descriptor Set 내 Bindless UBO/SSBO 바인딩 등록 */
 		RHIDescriptorIndex registerBindlessResource( RHIBufferHandle buffer ) override;
@@ -191,8 +198,12 @@ namespace sw
 			out._graphicsQueue	= _graphicsQueue;
 			out._renderPass		= _renderPass;
 			out._queueFamily	= _graphicsQueueFamilyIndex;
+			out._minImageCount	= 2;
+			out._imageCount		= static_cast<uint32>( _swapChainImages.empty() ? 2 : _swapChainImages.size() );
 			return _device != nullptr;
 		}
+
+		bool queryVulkanTextureView( RHITextureHandle texture, void*& outImageView ) const override;
 
 	private:
 		/**
@@ -299,8 +310,13 @@ namespace sw
 		uint32				   _width		  = 0;
 		uint32				   _height		  = 0;
 		uint8				   _bFrameStarted			: 1;
+		uint8				   _bOffscreenPassActive	: 1;
 		uint8				   _bEnableValidationLayers : 1;
-		[[maybe_unused]] uint8 _reservedFlags			: 6;
+		[[maybe_unused]] uint8 _reservedFlags			: 5;
+
+		VkCommandBuffer _offscreenCommandBuffer = nullptr;
+		VkFence			_offscreenFence			= nullptr;
+		VkSampler		_defaultSampler			= nullptr;
 
 		VkPipelineLayout	  _pipelineLayout				  = nullptr;
 		VkDescriptorSetLayout _descriptorSetLayout			  = nullptr;
@@ -328,14 +344,26 @@ namespace sw
 
 		struct VulkanTextureRecord
 		{
-			VkImage		   image	 = nullptr;
-			VkImageView	   imageView = nullptr;
-			VkDeviceMemory memory	 = nullptr;
-			uint32		   width	 = 0;
-			uint32		   height	 = 0;
+			VkImage			   image		 = nullptr;
+			VkImageView		   imageView	 = nullptr;
+			VkDeviceMemory	   memory		 = nullptr;
+			VkFramebuffer	   framebuffer	 = nullptr;
+			VkRenderPass	   renderPass	 = nullptr;
+			uint32			   format		 = 0; ///< VkFormat
+			uint32			   layout		 = 0; ///< VkImageLayout (UNDEFINED=0)
+			uint32			   width		 = 0;
+			uint32			   height		 = 0;
+			uint8			   bRenderTarget : 1;
+			uint8			   bDepthStencil : 1;
+			uint8			   reserved		 : 6;
+			RHIDescriptorIndex bindlessIndex = kInvalidDescriptorIndex;
 		};
 		std::unordered_map<RHITextureHandle, VulkanTextureRecord> _textures;
 		uint64													  _nextTextureId = 1;
+
+		VkDescriptorSetLayout		 _textureDescriptorSetLayout = nullptr;
+		std::vector<VkDescriptorSet> _registeredTextures;
+		std::vector<uint32>			 _textureFreeList;
 
 		struct VulkanPipelineStateRecord
 		{
@@ -349,5 +377,10 @@ namespace sw
 
 		std::vector<VulkanPipelineStateRecord> _pipelineStates;
 		std::vector<VulkanRenderPassRecord>	   _renderPasses;
+
+		VkCommandBuffer currentCommandBuffer() const;
+		bool			transitionImageLayout( VkCommandBuffer cmd, VkImage image, uint32 oldLayout, uint32 newLayout, uint32 aspect );
+		bool			createOffscreenFramebuffer( VulkanTextureRecord& record );
+		void			destroyOffscreenFramebuffer( VulkanTextureRecord& record );
 	};
 } // namespace sw

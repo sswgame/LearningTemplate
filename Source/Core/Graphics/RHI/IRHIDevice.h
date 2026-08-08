@@ -204,6 +204,16 @@ namespace sw
 			return false;
 		}
 
+		/**
+		 * @brief Vulkan ImGui 텍스처 등록용 VkImageView. 비-Vulkan/미존재면 false.
+		 */
+		virtual bool queryVulkanTextureView( RHITextureHandle texture, void*& outImageView ) const
+		{
+			(void)texture;
+			outImageView = nullptr;
+			return false;
+		}
+
 		/** @brief 그래픽스 파이프라인 상태 객체(PSO) 생성 */
 		virtual RHIPipelineStateHandle createPipelineState( const RHIPipelineStateDesc& desc ) = 0;
 

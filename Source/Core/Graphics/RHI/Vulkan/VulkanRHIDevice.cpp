@@ -71,6 +71,7 @@ namespace sw
 
 	VulkanRHIDevice::VulkanRHIDevice()
 		: _bFrameStarted{ 0 }
+		, _bOffscreenPassActive{ 0 }
 		, _reservedFlags{ 0 }
 	{
 #if defined( SW_DEBUG )
@@ -360,12 +361,21 @@ namespace sw
 
 		VkPhysicalDeviceFeatures deviceFeatures{};
 
+		VkPhysicalDeviceVulkan12Features available12{};
+		available12.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
+		VkPhysicalDeviceFeatures2 features2{};
+		features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+		features2.pNext = &available12;
+		vkGetPhysicalDeviceFeatures2( _physicalDevice, &features2 );
+
 		VkPhysicalDeviceVulkan12Features vulkan12Features{};
-		vulkan12Features.sType										   = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
-		vulkan12Features.descriptorBindingPartiallyBound			   = VK_TRUE;
-		vulkan12Features.descriptorBindingStorageBufferUpdateAfterBind = VK_TRUE;
-		vulkan12Features.shaderStorageBufferArrayNonUniformIndexing	   = VK_TRUE;
-		vulkan12Features.runtimeDescriptorArray						   = VK_TRUE;
+		vulkan12Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
+		vulkan12Features.descriptorBindingPartiallyBound			   = available12.descriptorBindingPartiallyBound;
+		vulkan12Features.descriptorBindingStorageBufferUpdateAfterBind = available12.descriptorBindingStorageBufferUpdateAfterBind;
+		vulkan12Features.descriptorBindingSampledImageUpdateAfterBind  = available12.descriptorBindingSampledImageUpdateAfterBind;
+		vulkan12Features.shaderStorageBufferArrayNonUniformIndexing	   = available12.shaderStorageBufferArrayNonUniformIndexing;
+		vulkan12Features.shaderSampledImageArrayNonUniformIndexing	   = available12.shaderSampledImageArrayNonUniformIndexing;
+		vulkan12Features.runtimeDescriptorArray						   = available12.runtimeDescriptorArray;
 
 		VkDeviceCreateInfo createInfo{};
 		createInfo.sType				   = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -569,6 +579,34 @@ namespace sw
 
 		if ( vkAllocateCommandBuffers( _device, &allocInfo, _commandBuffers.data() ) != VK_SUCCESS )
 			return false;
+
+		VkCommandBufferAllocateInfo offscreenAlloc{};
+		offscreenAlloc.sType			  = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+		offscreenAlloc.commandPool		  = _commandPool;
+		offscreenAlloc.level			  = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+		offscreenAlloc.commandBufferCount = 1;
+		if ( vkAllocateCommandBuffers( _device, &offscreenAlloc, &_offscreenCommandBuffer ) != VK_SUCCESS )
+			return false;
+
+		VkFenceCreateInfo fenceInfo{};
+		fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+		fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+		if ( vkCreateFence( _device, &fenceInfo, nullptr, &_offscreenFence ) != VK_SUCCESS )
+			return false;
+
+		VkSamplerCreateInfo samplerInfo{};
+		samplerInfo.sType		  = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+		samplerInfo.magFilter	  = VK_FILTER_LINEAR;
+		samplerInfo.minFilter	  = VK_FILTER_LINEAR;
+		samplerInfo.addressModeU  = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+		samplerInfo.addressModeV  = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+		samplerInfo.addressModeW  = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+		samplerInfo.maxAnisotropy = 1.0f;
+		samplerInfo.borderColor	  = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+		samplerInfo.maxLod		  = 1000.0f;
+		if ( vkCreateSampler( _device, &samplerInfo, nullptr, &_defaultSampler ) != VK_SUCCESS )
+			return false;
+
 		return true;
 	}
 
@@ -824,18 +862,34 @@ namespace sw
 				return false;
 			vkBindBufferMemory( _device, _dummyUBO, _dummyUBOMemory, 0 );
 
-			VkDescriptorPoolSize poolSizes[2]{};
+			VkDescriptorSetLayoutBinding textureLayoutBinding{};
+			textureLayoutBinding.binding			 = 0;
+			textureLayoutBinding.descriptorType		 = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			textureLayoutBinding.descriptorCount	 = 1;
+			textureLayoutBinding.stageFlags			 = VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT | VK_SHADER_STAGE_VERTEX_BIT;
+			textureLayoutBinding.pImmutableSamplers = nullptr;
+
+			VkDescriptorSetLayoutCreateInfo textureLayoutInfo{};
+			textureLayoutInfo.sType		   = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+			textureLayoutInfo.bindingCount = 1;
+			textureLayoutInfo.pBindings	   = &textureLayoutBinding;
+			if ( vkCreateDescriptorSetLayout( _device, &textureLayoutInfo, nullptr, &_textureDescriptorSetLayout ) != VK_SUCCESS )
+				return false;
+
+			VkDescriptorPoolSize poolSizes[3]{};
 			poolSizes[0].type			 = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-			poolSizes[0].descriptorCount = 128;
+			poolSizes[0].descriptorCount = 256;
 			poolSizes[1].type			 = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-			poolSizes[1].descriptorCount = 128;
+			poolSizes[1].descriptorCount = 256;
+			poolSizes[2].type			 = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			poolSizes[2].descriptorCount = 256;
 
 			VkDescriptorPoolCreateInfo poolInfo{};
 			poolInfo.sType		   = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 			poolInfo.flags		   = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-			poolInfo.poolSizeCount = 2;
+			poolInfo.poolSizeCount = 3;
 			poolInfo.pPoolSizes	   = poolSizes;
-			poolInfo.maxSets	   = 256;
+			poolInfo.maxSets	   = 512;
 			if ( vkCreateDescriptorPool( _device, &poolInfo, nullptr, &_descriptorPool ) != VK_SUCCESS )
 				return false;
 
@@ -1002,6 +1056,7 @@ namespace sw
 			for ( auto& pair : _textures )
 			{
 				VulkanTextureRecord& record = pair.second;
+				destroyOffscreenFramebuffer( record );
 				if ( record.imageView != VK_NULL_HANDLE )
 					vkDestroyImageView( _device, record.imageView, nullptr );
 				if ( record.image != VK_NULL_HANDLE )
@@ -1010,6 +1065,33 @@ namespace sw
 					vkFreeMemory( _device, record.memory, nullptr );
 			}
 			_textures.clear();
+			_registeredTextures.clear();
+			_textureFreeList.clear();
+
+			if ( _defaultSampler )
+			{
+				vkDestroySampler( _device, _defaultSampler, nullptr );
+				_defaultSampler = nullptr;
+			}
+			if ( _offscreenFence )
+			{
+				vkDestroyFence( _device, _offscreenFence, nullptr );
+				_offscreenFence = nullptr;
+			}
+			_offscreenCommandBuffer = nullptr; // freed with command pool
+
+			if ( _textureDescriptorSetLayout )
+			{
+				vkDestroyDescriptorSetLayout( _device, _textureDescriptorSetLayout, nullptr );
+				_textureDescriptorSetLayout = nullptr;
+			}
+
+			for ( auto& pso : _pipelineStates )
+			{
+				if ( pso.pipeline != VK_NULL_HANDLE )
+					vkDestroyPipeline( _device, pso.pipeline, nullptr );
+			}
+			_pipelineStates.clear();
 
 			if ( _vertexBuffer )
 				vkDestroyBuffer( _device, _vertexBuffer, nullptr );
@@ -1352,23 +1434,177 @@ namespace sw
 		}
 	} // namespace
 
+	VkCommandBuffer VulkanRHIDevice::currentCommandBuffer() const
+	{
+		if ( _bOffscreenPassActive && _offscreenCommandBuffer != VK_NULL_HANDLE )
+			return _offscreenCommandBuffer;
+		if ( _bFrameStarted && _commandBuffers.empty() == false )
+			return _commandBuffers[_currentFrame];
+		return VK_NULL_HANDLE;
+	}
+
+	bool VulkanRHIDevice::transitionImageLayout( VkCommandBuffer cmd, VkImage image, uint32 oldLayoutU32, uint32 newLayoutU32, uint32 aspectU32 )
+	{
+		const VkImageLayout		 oldLayout = static_cast<VkImageLayout>( oldLayoutU32 );
+		const VkImageLayout		 newLayout = static_cast<VkImageLayout>( newLayoutU32 );
+		const VkImageAspectFlags aspect	   = static_cast<VkImageAspectFlags>( aspectU32 );
+		if ( cmd == VK_NULL_HANDLE || image == VK_NULL_HANDLE || oldLayout == newLayout )
+			return true;
+
+		VkImageMemoryBarrier barrier{};
+		barrier.sType						 = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		barrier.oldLayout					 = oldLayout;
+		barrier.newLayout					 = newLayout;
+		barrier.srcQueueFamilyIndex			 = VK_QUEUE_FAMILY_IGNORED;
+		barrier.dstQueueFamilyIndex			 = VK_QUEUE_FAMILY_IGNORED;
+		barrier.image						 = image;
+		barrier.subresourceRange.aspectMask	 = aspect;
+		barrier.subresourceRange.levelCount	 = 1;
+		barrier.subresourceRange.layerCount	 = 1;
+
+		VkPipelineStageFlags srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+		VkPipelineStageFlags dstStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+
+		if ( oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL )
+		{
+			barrier.srcAccessMask = 0;
+			barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+			srcStage			  = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+			dstStage			  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		}
+		else if ( oldLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL )
+		{
+			barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+			barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+			srcStage			  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+			dstStage			  = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+		}
+		else if ( oldLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL )
+		{
+			barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+			barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+			srcStage			  = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+			dstStage			  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		}
+		else if ( oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL )
+		{
+			barrier.srcAccessMask = 0;
+			barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+			srcStage			  = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+			dstStage			  = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+		}
+		else
+		{
+			barrier.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT;
+			barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
+			srcStage			  = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+			dstStage			  = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+		}
+
+		vkCmdPipelineBarrier( cmd, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier );
+		return true;
+	}
+
+	bool VulkanRHIDevice::createOffscreenFramebuffer( VulkanTextureRecord& record )
+	{
+		if ( record.imageView == VK_NULL_HANDLE || record.bRenderTarget == 0 )
+			return false;
+
+		VkAttachmentDescription colorAttachment{};
+		colorAttachment.format		   = static_cast<VkFormat>( record.format );
+		colorAttachment.samples		   = VK_SAMPLE_COUNT_1_BIT;
+		colorAttachment.loadOp		   = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		colorAttachment.storeOp		   = VK_ATTACHMENT_STORE_OP_STORE;
+		colorAttachment.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		colorAttachment.initialLayout  = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		colorAttachment.finalLayout	   = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+		VkAttachmentReference colorRef{};
+		colorRef.attachment = 0;
+		colorRef.layout		= VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+		VkSubpassDescription subpass{};
+		subpass.pipelineBindPoint	 = VK_PIPELINE_BIND_POINT_GRAPHICS;
+		subpass.colorAttachmentCount = 1;
+		subpass.pColorAttachments	 = &colorRef;
+
+		VkSubpassDependency dependency{};
+		dependency.srcSubpass	 = VK_SUBPASS_EXTERNAL;
+		dependency.dstSubpass	 = 0;
+		dependency.srcStageMask	 = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+		dependency.dstStageMask	 = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		dependency.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+		dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+		VkRenderPassCreateInfo rpInfo{};
+		rpInfo.sType		   = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+		rpInfo.attachmentCount = 1;
+		rpInfo.pAttachments	   = &colorAttachment;
+		rpInfo.subpassCount	   = 1;
+		rpInfo.pSubpasses	   = &subpass;
+		rpInfo.dependencyCount = 1;
+		rpInfo.pDependencies   = &dependency;
+
+		if ( vkCreateRenderPass( _device, &rpInfo, nullptr, &record.renderPass ) != VK_SUCCESS )
+			return false;
+
+		VkFramebufferCreateInfo fbInfo{};
+		fbInfo.sType		   = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+		fbInfo.renderPass	   = record.renderPass;
+		fbInfo.attachmentCount = 1;
+		fbInfo.pAttachments	   = &record.imageView;
+		fbInfo.width		   = record.width;
+		fbInfo.height		   = record.height;
+		fbInfo.layers		   = 1;
+
+		if ( vkCreateFramebuffer( _device, &fbInfo, nullptr, &record.framebuffer ) != VK_SUCCESS )
+		{
+			vkDestroyRenderPass( _device, record.renderPass, nullptr );
+			record.renderPass = VK_NULL_HANDLE;
+			return false;
+		}
+		return true;
+	}
+
+	void VulkanRHIDevice::destroyOffscreenFramebuffer( VulkanTextureRecord& record )
+	{
+		if ( record.framebuffer != VK_NULL_HANDLE )
+		{
+			vkDestroyFramebuffer( _device, record.framebuffer, nullptr );
+			record.framebuffer = VK_NULL_HANDLE;
+		}
+		if ( record.renderPass != VK_NULL_HANDLE )
+		{
+			vkDestroyRenderPass( _device, record.renderPass, nullptr );
+			record.renderPass = VK_NULL_HANDLE;
+		}
+	}
+
+	bool VulkanRHIDevice::queryVulkanTextureView( RHITextureHandle texture, void*& outImageView ) const
+	{
+		outImageView = nullptr;
+		auto it		 = _textures.find( texture );
+		if ( it == _textures.end() || it->second.imageView == VK_NULL_HANDLE )
+			return false;
+		outImageView = reinterpret_cast<void*>( it->second.imageView );
+		return true;
+	}
+
 	RHITextureHandle VulkanRHIDevice::createTexture2D( const RHITextureDesc& desc )
 	{
 		if ( _device == nullptr || desc._width == 0 || desc._height == 0 )
 			return 0;
 
-		static bool s_bLoggedLimits = false;
-		if ( s_bLoggedLimits == false )
-		{
-			SW_LOG_INFO( "[Vulkan] createTexture2D: basic 2D color allocation (mipmaps/UAV limited)." );
-			s_bLoggedLimits = true;
-		}
-
-		VkImageUsageFlags usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+		VkImageUsageFlags usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 		if ( desc._bIsRenderTarget )
 			usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 		if ( desc._bIsDepthStencil )
 			usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+		if ( desc._bIsUnorderedAccess )
+			usage |= VK_IMAGE_USAGE_STORAGE_BIT;
+
+		const VkFormat format = toVulkanTextureFormat( desc._format );
 
 		VkImageCreateInfo imageInfo{};
 		imageInfo.sType			= VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -1378,7 +1614,7 @@ namespace sw
 		imageInfo.extent.depth	= 1;
 		imageInfo.mipLevels		= desc._mipLevels > 0 ? desc._mipLevels : 1;
 		imageInfo.arrayLayers	= 1;
-		imageInfo.format		= toVulkanTextureFormat( desc._format );
+		imageInfo.format		= format;
 		imageInfo.tiling		= VK_IMAGE_TILING_OPTIMAL;
 		imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 		imageInfo.usage			= usage;
@@ -1386,8 +1622,13 @@ namespace sw
 		imageInfo.sharingMode	= VK_SHARING_MODE_EXCLUSIVE;
 
 		VulkanTextureRecord record{};
-		record.width  = desc._width;
-		record.height = desc._height;
+		record.width		 = desc._width;
+		record.height		 = desc._height;
+		record.format		 = static_cast<uint32>( format );
+		record.layout		 = static_cast<uint32>( VK_IMAGE_LAYOUT_UNDEFINED );
+		record.bRenderTarget = desc._bIsRenderTarget ? 1 : 0;
+		record.bDepthStencil = desc._bIsDepthStencil ? 1 : 0;
+		record.bindlessIndex = kInvalidDescriptorIndex;
 
 		if ( vkCreateImage( _device, &imageInfo, nullptr, &record.image ) != VK_SUCCESS )
 		{
@@ -1412,12 +1653,15 @@ namespace sw
 
 		vkBindImageMemory( _device, record.image, record.memory, 0 );
 
-		VkImageAspectFlags aspect = desc._bIsDepthStencil ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+		VkImageAspectFlags aspect = desc._bIsDepthStencil ? ( VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT ) : VK_IMAGE_ASPECT_COLOR_BIT;
+		if ( desc._bIsDepthStencil && format != VK_FORMAT_D24_UNORM_S8_UINT && format != VK_FORMAT_D32_SFLOAT_S8_UINT )
+			aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
+
 		VkImageViewCreateInfo viewInfo{};
 		viewInfo.sType							 = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 		viewInfo.image							 = record.image;
 		viewInfo.viewType						 = VK_IMAGE_VIEW_TYPE_2D;
-		viewInfo.format							 = imageInfo.format;
+		viewInfo.format							 = format;
 		viewInfo.subresourceRange.aspectMask	 = aspect;
 		viewInfo.subresourceRange.baseMipLevel	 = 0;
 		viewInfo.subresourceRange.levelCount	 = imageInfo.mipLevels;
@@ -1430,6 +1674,11 @@ namespace sw
 			vkFreeMemory( _device, record.memory, nullptr );
 			SW_LOG_ERROR( "[Vulkan] Failed to create VkImageView for Texture2D." );
 			return 0;
+		}
+
+		if ( record.bRenderTarget && createOffscreenFramebuffer( record ) == false )
+		{
+			SW_LOG_WARNING( "[Vulkan] createTexture2D: framebuffer creation failed — texture kept without offscreen pass." );
 		}
 
 		const RHITextureHandle handle = static_cast<RHITextureHandle>( _nextTextureId++ );
@@ -1447,6 +1696,19 @@ namespace sw
 			return;
 
 		VulkanTextureRecord& record = it->second;
+		if ( record.bindlessIndex != kInvalidDescriptorIndex )
+		{
+			const RHIDescriptorIndex index = record.bindlessIndex;
+			if ( index < _registeredTextures.size() && _registeredTextures[index] != VK_NULL_HANDLE )
+			{
+				vkFreeDescriptorSets( _device, _descriptorPool, 1, &_registeredTextures[index] );
+				_registeredTextures[index] = VK_NULL_HANDLE;
+				_textureFreeList.push_back( index );
+			}
+			record.bindlessIndex = kInvalidDescriptorIndex;
+		}
+
+		destroyOffscreenFramebuffer( record );
 		if ( record.imageView != VK_NULL_HANDLE )
 			vkDestroyImageView( _device, record.imageView, nullptr );
 		if ( record.image != VK_NULL_HANDLE )
@@ -1454,6 +1716,156 @@ namespace sw
 		if ( record.memory != VK_NULL_HANDLE )
 			vkFreeMemory( _device, record.memory, nullptr );
 		_textures.erase( it );
+	}
+
+	RHIDescriptorIndex VulkanRHIDevice::registerBindlessTexture( RHITextureHandle texture )
+	{
+		if ( texture == 0 || _descriptorPool == VK_NULL_HANDLE || _textureDescriptorSetLayout == VK_NULL_HANDLE || _defaultSampler == VK_NULL_HANDLE )
+			return kInvalidDescriptorIndex;
+
+		auto it = _textures.find( texture );
+		if ( it == _textures.end() || it->second.imageView == VK_NULL_HANDLE )
+			return kInvalidDescriptorIndex;
+
+		VulkanTextureRecord& record = it->second;
+		if ( record.bindlessIndex != kInvalidDescriptorIndex )
+			return record.bindlessIndex;
+
+		VkDescriptorSetAllocateInfo allocInfo{};
+		allocInfo.sType				 = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+		allocInfo.descriptorPool	 = _descriptorPool;
+		allocInfo.descriptorSetCount = 1;
+		allocInfo.pSetLayouts		 = &_textureDescriptorSetLayout;
+
+		VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
+		if ( vkAllocateDescriptorSets( _device, &allocInfo, &descriptorSet ) != VK_SUCCESS )
+		{
+			SW_LOG_ERROR( "[Vulkan] Failed to allocate VkDescriptorSet for bindless texture!" );
+			return kInvalidDescriptorIndex;
+		}
+
+		VkDescriptorImageInfo imageInfo{};
+		imageInfo.sampler	  = _defaultSampler;
+		imageInfo.imageView	  = record.imageView;
+		imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+		VkWriteDescriptorSet write{};
+		write.sType			  = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		write.dstSet		  = descriptorSet;
+		write.dstBinding	  = 0;
+		write.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		write.descriptorCount = 1;
+		write.pImageInfo	  = &imageInfo;
+		vkUpdateDescriptorSets( _device, 1, &write, 0, nullptr );
+
+		RHIDescriptorIndex descriptorIndex;
+		if ( _textureFreeList.empty() == false )
+		{
+			descriptorIndex = _textureFreeList.back();
+			_textureFreeList.pop_back();
+		}
+		else
+		{
+			descriptorIndex = static_cast<RHIDescriptorIndex>( _registeredTextures.size() );
+		}
+
+		if ( descriptorIndex >= _registeredTextures.size() )
+			_registeredTextures.resize( descriptorIndex + 1 );
+		_registeredTextures[descriptorIndex] = descriptorSet;
+		record.bindlessIndex				 = descriptorIndex;
+		return descriptorIndex;
+	}
+
+	void VulkanRHIDevice::beginOffscreenPass( RHITextureHandle colorTarget, float32 clearColor[4] )
+	{
+		if ( colorTarget == 0 )
+		{
+			beginFrame( clearColor );
+			return;
+		}
+
+		auto it = _textures.find( colorTarget );
+		if ( it == _textures.end() || _offscreenCommandBuffer == VK_NULL_HANDLE )
+			return;
+
+		VulkanTextureRecord& record = it->second;
+		if ( record.framebuffer == VK_NULL_HANDLE || record.renderPass == VK_NULL_HANDLE )
+		{
+			SW_LOG_ERROR( "[Vulkan] beginOffscreenPass: texture has no framebuffer." );
+			return;
+		}
+
+		vkWaitForFences( _device, 1, &_offscreenFence, VK_TRUE, UINT64_MAX );
+		vkResetFences( _device, 1, &_offscreenFence );
+		vkResetCommandBuffer( _offscreenCommandBuffer, 0 );
+
+		VkCommandBufferBeginInfo beginInfo{};
+		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+		vkBeginCommandBuffer( _offscreenCommandBuffer, &beginInfo );
+
+		transitionImageLayout( _offscreenCommandBuffer, record.image, record.layout,
+							   static_cast<uint32>( VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL ),
+							   static_cast<uint32>( VK_IMAGE_ASPECT_COLOR_BIT ) );
+		record.layout = static_cast<uint32>( VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
+
+		VkClearValue clearValue{};
+		clearValue.color = { { clearColor[0], clearColor[1], clearColor[2], clearColor[3] } };
+
+		VkRenderPassBeginInfo rpBegin{};
+		rpBegin.sType			  = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		rpBegin.renderPass		  = record.renderPass;
+		rpBegin.framebuffer		  = record.framebuffer;
+		rpBegin.renderArea.extent = { record.width, record.height };
+		rpBegin.clearValueCount	  = 1;
+		rpBegin.pClearValues	  = &clearValue;
+		vkCmdBeginRenderPass( _offscreenCommandBuffer, &rpBegin, VK_SUBPASS_CONTENTS_INLINE );
+
+		VkViewport viewport{};
+		viewport.x		  = 0.0f;
+		viewport.y		  = static_cast<float32>( record.height );
+		viewport.width	  = static_cast<float32>( record.width );
+		viewport.height	  = -static_cast<float32>( record.height );
+		viewport.minDepth = 0.0f;
+		viewport.maxDepth = 1.0f;
+		vkCmdSetViewport( _offscreenCommandBuffer, 0, 1, &viewport );
+
+		VkRect2D scissor{};
+		scissor.extent = { record.width, record.height };
+		vkCmdSetScissor( _offscreenCommandBuffer, 0, 1, &scissor );
+
+		_bOffscreenPassActive = 1;
+		_bFrameStarted		  = 1; // allow drawTriangle / setPipelineState during offscreen
+	}
+
+	void VulkanRHIDevice::endOffscreenPass( RHITextureHandle colorTarget )
+	{
+		if ( colorTarget == 0 || _bOffscreenPassActive == 0 || _offscreenCommandBuffer == VK_NULL_HANDLE )
+			return;
+
+		auto it = _textures.find( colorTarget );
+		if ( it == _textures.end() )
+			return;
+
+		VulkanTextureRecord& record = it->second;
+		vkCmdEndRenderPass( _offscreenCommandBuffer );
+		transitionImageLayout( _offscreenCommandBuffer, record.image,
+							   static_cast<uint32>( VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL ),
+							   static_cast<uint32>( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ),
+							   static_cast<uint32>( VK_IMAGE_ASPECT_COLOR_BIT ) );
+		record.layout = static_cast<uint32>( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+
+		vkEndCommandBuffer( _offscreenCommandBuffer );
+
+		VkSubmitInfo submitInfo{};
+		submitInfo.sType			  = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		submitInfo.commandBufferCount = 1;
+		submitInfo.pCommandBuffers	  = &_offscreenCommandBuffer;
+		vkQueueSubmit( _graphicsQueue, 1, &submitInfo, _offscreenFence );
+		vkWaitForFences( _device, 1, &_offscreenFence, VK_TRUE, UINT64_MAX );
+
+		_bOffscreenPassActive = 0;
+		_bFrameStarted		  = 0;
 	}
 
 	RHIDescriptorIndex VulkanRHIDevice::registerBindlessResource( RHIBufferHandle buffer )
@@ -1600,59 +2012,60 @@ namespace sw
 
 	void VulkanRHIDevice::bindComputeUAV( RHIDescriptorIndex index, uint32 slot )
 	{
-		if ( _commandBuffers.empty() || _commandBuffers[_currentFrame] == VK_NULL_HANDLE || _pipelineLayout == VK_NULL_HANDLE )
+		VkCommandBuffer cmd = currentCommandBuffer();
+		if ( cmd == VK_NULL_HANDLE || _pipelineLayout == VK_NULL_HANDLE )
 			return;
 
 		if ( index < static_cast<RHIDescriptorIndex>( _registeredUAVs.size() ) && _registeredUAVs[index] != VK_NULL_HANDLE )
 		{
 			VkDescriptorSet descSet = _registeredUAVs[index];
-
-			vkCmdBindDescriptorSets( _commandBuffers[_currentFrame], VK_PIPELINE_BIND_POINT_COMPUTE, _pipelineLayout, 2 + slot, 1, &descSet, 0, nullptr );
+			vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _pipelineLayout, 2 + slot, 1, &descSet, 0, nullptr );
 		}
 	}
 
 	void VulkanRHIDevice::drawTriangle( RHIDescriptorIndex materialDescriptorIndex )
 	{
-		if ( !_bFrameStarted )
-			return;
-		if ( _pipeline == VK_NULL_HANDLE || _pipelineLayout == VK_NULL_HANDLE )
+		VkCommandBuffer cmd = currentCommandBuffer();
+		if ( cmd == VK_NULL_HANDLE || _pipeline == VK_NULL_HANDLE || _pipelineLayout == VK_NULL_HANDLE )
 			return;
 
-		vkCmdBindPipeline( _commandBuffers[_currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, _pipeline );
+		vkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipeline );
 
 		if ( materialDescriptorIndex < static_cast<RHIDescriptorIndex>( _registeredDescriptorSets.size() ) && _registeredDescriptorSets[materialDescriptorIndex] != VK_NULL_HANDLE )
 		{
 			VkDescriptorSet descSet = _registeredDescriptorSets[materialDescriptorIndex];
-			vkCmdBindDescriptorSets( _commandBuffers[_currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelineLayout, 0, 1, &descSet, 0, nullptr );
+			vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelineLayout, 0, 1, &descSet, 0, nullptr );
 		}
 		else if ( _descriptorSet != VK_NULL_HANDLE )
 		{
-			vkCmdBindDescriptorSets( _commandBuffers[_currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelineLayout, 0, 1, &_descriptorSet, 0, nullptr );
+			vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelineLayout, 0, 1, &_descriptorSet, 0, nullptr );
 		}
 
 		uint32 matIndex = static_cast<uint32>( materialDescriptorIndex );
-		vkCmdPushConstants( _commandBuffers[_currentFrame], _pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( uint32 ), &matIndex );
+		vkCmdPushConstants( cmd, _pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( uint32 ), &matIndex );
 
 		if ( _vertexBuffer != VK_NULL_HANDLE )
 		{
 			VkBuffer	 vertexBuffers[] = { _vertexBuffer };
 			VkDeviceSize offsets[]		 = { 0 };
-			vkCmdBindVertexBuffers( _commandBuffers[_currentFrame], 0, 1, vertexBuffers, offsets );
+			vkCmdBindVertexBuffers( cmd, 0, 1, vertexBuffers, offsets );
 		}
 
-		vkCmdDraw( _commandBuffers[_currentFrame], 3, 1, 0, 0 );
+		vkCmdDraw( cmd, 3, 1, 0, 0 );
 	}
 
 	void VulkanRHIDevice::dispatchCompute( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ )
 	{
-		if ( _commandBuffers.empty() || _commandBuffers[_currentFrame] == VK_NULL_HANDLE )
+		VkCommandBuffer cmd = currentCommandBuffer();
+		if ( cmd == VK_NULL_HANDLE )
 			return;
-		vkCmdDispatch( _commandBuffers[_currentFrame], threadGroupCountX, threadGroupCountY, threadGroupCountZ );
+		vkCmdDispatch( cmd, threadGroupCountX, threadGroupCountY, threadGroupCountZ );
 	}
 
 	void VulkanRHIDevice::setViewport( const RHIViewport& viewport )
 	{
-		if ( _commandBuffers.empty() || _commandBuffers[_currentFrame] == VK_NULL_HANDLE )
+		VkCommandBuffer cmd = currentCommandBuffer();
+		if ( cmd == VK_NULL_HANDLE )
 			return;
 
 		VkViewport vkViewport{};
@@ -1662,21 +2075,23 @@ namespace sw
 		vkViewport.height	= viewport._height;
 		vkViewport.minDepth = viewport._minDepth;
 		vkViewport.maxDepth = viewport._maxDepth;
-		vkCmdSetViewport( _commandBuffers[_currentFrame], 0, 1, &vkViewport );
+		vkCmdSetViewport( cmd, 0, 1, &vkViewport );
 	}
 
 	void VulkanRHIDevice::setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* data, uint32 destOffsetIn32BitValues )
 	{
 		(void)rootParameterIndex;
-		if ( _commandBuffers.empty() || _commandBuffers[_currentFrame] == VK_NULL_HANDLE || _pipelineLayout == VK_NULL_HANDLE || data == nullptr || num32BitValues == 0 )
+		VkCommandBuffer cmd = currentCommandBuffer();
+		if ( cmd == VK_NULL_HANDLE || _pipelineLayout == VK_NULL_HANDLE || data == nullptr || num32BitValues == 0 )
 			return;
 
-		vkCmdPushConstants( _commandBuffers[_currentFrame], _pipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, destOffsetIn32BitValues * 4, num32BitValues * 4, data );
+		vkCmdPushConstants( cmd, _pipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, destOffsetIn32BitValues * 4, num32BitValues * 4, data );
 	}
 
 	void VulkanRHIDevice::drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset )
 	{
-		if ( _commandBuffers.empty() || _commandBuffers[_currentFrame] == VK_NULL_HANDLE || argumentBuffer == 0 || argumentBuffer > static_cast<RHIBufferHandle>( _allocatedBuffers.size() ) )
+		VkCommandBuffer cmd = currentCommandBuffer();
+		if ( cmd == VK_NULL_HANDLE || argumentBuffer == 0 || argumentBuffer > static_cast<RHIBufferHandle>( _allocatedBuffers.size() ) )
 			return;
 
 		const VulkanBufferRecord& record = _allocatedBuffers[argumentBuffer - 1];
@@ -1686,25 +2101,49 @@ namespace sw
 			{
 				VkBuffer	 vertexBuffers[] = { _vertexBuffer };
 				VkDeviceSize offsets[]		 = { 0 };
-				vkCmdBindVertexBuffers( _commandBuffers[_currentFrame], 0, 1, vertexBuffers, offsets );
+				vkCmdBindVertexBuffers( cmd, 0, 1, vertexBuffers, offsets );
 			}
-			vkCmdDrawIndirect( _commandBuffers[_currentFrame], record.buffer, argumentBufferOffset, 1, sizeof( VkDrawIndirectCommand ) );
+			vkCmdDrawIndirect( cmd, record.buffer, argumentBufferOffset, 1, sizeof( VkDrawIndirectCommand ) );
 		}
 	}
 
 	void VulkanRHIDevice::dispatchIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset )
 	{
-		if ( _commandBuffers.empty() || _commandBuffers[_currentFrame] == VK_NULL_HANDLE || argumentBuffer == 0 || argumentBuffer > static_cast<RHIBufferHandle>( _allocatedBuffers.size() ) )
+		VkCommandBuffer cmd = currentCommandBuffer();
+		if ( cmd == VK_NULL_HANDLE || argumentBuffer == 0 || argumentBuffer > static_cast<RHIBufferHandle>( _allocatedBuffers.size() ) )
 			return;
 
 		const VulkanBufferRecord& record = _allocatedBuffers[argumentBuffer - 1];
 		if ( record.buffer != VK_NULL_HANDLE )
-		{
-			vkCmdDispatchIndirect( _commandBuffers[_currentFrame], record.buffer, argumentBufferOffset );
-		}
+			vkCmdDispatchIndirect( cmd, record.buffer, argumentBufferOffset );
 	}
-	void VulkanRHIDevice::beginEventMarker( const utf8* ) {}
-	void VulkanRHIDevice::endEventMarker() {}
+	void VulkanRHIDevice::beginEventMarker( const utf8* name )
+	{
+		VkCommandBuffer cmd = currentCommandBuffer();
+		if ( cmd == VK_NULL_HANDLE || name == nullptr || _instance == VK_NULL_HANDLE )
+			return;
+
+		auto fn = reinterpret_cast<PFN_vkCmdBeginDebugUtilsLabelEXT>(
+			vkGetInstanceProcAddr( _instance, "vkCmdBeginDebugUtilsLabelEXT" ) );
+		if ( fn == nullptr )
+			return;
+
+		VkDebugUtilsLabelEXT label{};
+		label.sType		 = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT;
+		label.pLabelName = name;
+		fn( cmd, &label );
+	}
+	void VulkanRHIDevice::endEventMarker()
+	{
+		VkCommandBuffer cmd = currentCommandBuffer();
+		if ( cmd == VK_NULL_HANDLE || _instance == VK_NULL_HANDLE )
+			return;
+
+		auto fn = reinterpret_cast<PFN_vkCmdEndDebugUtilsLabelEXT>(
+			vkGetInstanceProcAddr( _instance, "vkCmdEndDebugUtilsLabelEXT" ) );
+		if ( fn )
+			fn( cmd );
+	}
 
 	std::unique_ptr<IRHICommandList> VulkanRHIDevice::createCommandList()
 	{
@@ -1899,35 +2338,36 @@ namespace sw
 	{
 		if ( pso == 0 || pso > _pipelineStates.size() )
 			return;
-		_pipelineStates[pso - 1].pipeline = VK_NULL_HANDLE;
+		VkPipeline& pipe = _pipelineStates[pso - 1].pipeline;
+		if ( pipe != VK_NULL_HANDLE )
+		{
+			vkDestroyPipeline( _device, pipe, nullptr );
+			pipe = VK_NULL_HANDLE;
+		}
 	}
 
 	void VulkanRHIDevice::setPipelineState( RHIPipelineStateHandle pso )
 	{
-		if ( _commandBuffers.empty() || _commandBuffers[_currentFrame] == VK_NULL_HANDLE )
+		VkCommandBuffer cmd = currentCommandBuffer();
+		if ( cmd == VK_NULL_HANDLE )
 			return;
 
 		VkPipeline pipe = _pipeline;
 		if ( pso > 0 && pso <= _pipelineStates.size() && _pipelineStates[pso - 1].pipeline != VK_NULL_HANDLE )
-		{
 			pipe = _pipelineStates[pso - 1].pipeline;
-		}
 
 		if ( pipe != VK_NULL_HANDLE )
-		{
-			vkCmdBindPipeline( _commandBuffers[_currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, pipe );
-		}
+			vkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipe );
 	}
 
 	void VulkanRHIDevice::setComputePipelineState( RHIPipelineStateHandle pso )
 	{
-		if ( _commandBuffers.empty() || _commandBuffers[_currentFrame] == VK_NULL_HANDLE )
+		VkCommandBuffer cmd = currentCommandBuffer();
+		if ( cmd == VK_NULL_HANDLE )
 			return;
 
 		if ( pso > 0 && pso <= _pipelineStates.size() && _pipelineStates[pso - 1].pipeline != VK_NULL_HANDLE )
-		{
-			vkCmdBindPipeline( _commandBuffers[_currentFrame], VK_PIPELINE_BIND_POINT_COMPUTE, _pipelineStates[pso - 1].pipeline );
-		}
+			vkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _pipelineStates[pso - 1].pipeline );
 	}
 
 	RHIRenderPassHandle VulkanRHIDevice::createRenderPass( const RHIRenderPassDesc& desc )

@@ -75,12 +75,11 @@ namespace sw
 					caps._bComputeRootConstants = true; // UBO shim (≤64 DWORD)
 					break;
 				case RHIBackend::Vulkan:
-					// Texture2D / offscreen work; full descriptor-indexing bindless + editor hooks deferred.
-					caps._bBindless				 = false;
+					caps._bBindless				 = true;
 					caps._bCompute				 = true;
 					caps._bOffscreenRT			 = true;
-					caps._bImGuiHooks			 = false;
-					caps._bEditorSupported		 = false;
+					caps._bImGuiHooks			 = true;
+					caps._bEditorSupported		 = true;
 					caps._bComputeRootConstants = true; // vkCmdPushConstants path
 					break;
 			}

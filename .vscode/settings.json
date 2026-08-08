@@ -3,7 +3,9 @@
     "cmake.parallelJobs": 0,
     "cmake.debugConfig": {
         // Don't force -dx12: WSL/Linux has no DX12. Override per launch with -vulkan/-opengl if needed.
+        // Linux/WSLg: prefer Vulkan. -gl often hits GLXBadFBConfig (WSLg GL << 4.6).
         "args": [
+            "-vulkan",
             "EnableEditor"
         ],
         // debuginfod: use system gdb + ~/.gdbinit / unset DEBUGINFOD_URLS

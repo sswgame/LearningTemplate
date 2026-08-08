@@ -5,9 +5,11 @@
  */
 
 #include "Editor/Backend/IImGuiRendererBackend.h"
+#include <unordered_map>
 
 struct VkDescriptorPool_T;
 struct VkDevice_T;
+struct VkSampler_T;
 
 namespace sw
 {
@@ -28,11 +30,14 @@ namespace sw
 		/** @brief ImGui draw data를 Vulkan으로 그립니다. */
 		void render( IRHIDevice* rhiDevice ) override;
 
-		void* registerTexture( RHITextureHandle /*texture*/ ) override { return nullptr; }
-		void  unregisterTexture( void* /*textureID*/ ) override {}
+		void* registerTexture( RHITextureHandle texture ) override;
+		void  unregisterTexture( void* textureID ) override;
 
 	private:
-		VkDescriptorPool_T* _imguiDescriptorPool = nullptr;
-		VkDevice_T*			_device				 = nullptr;
+		VkDescriptorPool_T*								 _imguiDescriptorPool = nullptr;
+		VkDevice_T*										 _device				 = nullptr;
+		VkSampler_T*									 _sampler			 = nullptr;
+		IRHIDevice*										 _rhiDevice			 = nullptr;
+		std::unordered_map<void*, RHITextureHandle>		 _textureIds;
 	};
 } // namespace sw

@@ -61,6 +61,8 @@ namespace sw
 		void*  _graphicsQueue	= nullptr;
 		void*  _renderPass		= nullptr;
 		uint32 _queueFamily		= 0;
+		uint32 _minImageCount	= 2;
+		uint32 _imageCount		= 2;
 	};
 
 	/**

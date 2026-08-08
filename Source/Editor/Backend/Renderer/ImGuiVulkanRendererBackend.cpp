@@ -16,6 +16,7 @@
 
 #include "Core/Graphics/RHI/IRHIDevice.h"
 #include "Core/Common/Common.h"
+#include "Core/Utility/Log/Logger.h"
 
 namespace sw
 {
@@ -28,7 +29,8 @@ namespace sw
 		if ( rhiDevice->queryVulkanImGuiNative( vkNative ) == false || vkNative._device == nullptr )
 			return false;
 
-		_device = static_cast<VkDevice>( vkNative._device );
+		_rhiDevice = rhiDevice;
+		_device	   = static_cast<VkDevice>( vkNative._device );
 
 		VkDescriptorPoolSize pool_sizes[] = {
 			{			   VK_DESCRIPTOR_TYPE_SAMPLER, 1000},
@@ -55,6 +57,24 @@ namespace sw
 			return false;
 		}
 
+		VkSamplerCreateInfo samplerInfo{};
+		samplerInfo.sType		 = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+		samplerInfo.magFilter	 = VK_FILTER_LINEAR;
+		samplerInfo.minFilter	 = VK_FILTER_LINEAR;
+		samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+		samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+		samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+		samplerInfo.maxAnisotropy = 1.0f;
+		samplerInfo.maxLod		 = 1000.0f;
+		if ( vkCreateSampler( _device, &samplerInfo, nullptr, &_sampler ) != VK_SUCCESS )
+		{
+			SW_LOG_ERROR( "Failed to create Vulkan sampler for ImGui textures" );
+			return false;
+		}
+
+		const uint32_t imageCount = vkNative._imageCount >= 2 ? vkNative._imageCount : 2;
+		const uint32_t minImages  = vkNative._minImageCount >= 2 ? vkNative._minImageCount : 2;
+
 		ImGui_ImplVulkan_InitInfo init_info	   = {};
 		init_info.Instance					   = static_cast<VkInstance>( vkNative._instance );
 		init_info.PhysicalDevice			   = static_cast<VkPhysicalDevice>( vkNative._physicalDevice );
@@ -65,8 +85,8 @@ namespace sw
 		init_info.DescriptorPool			   = _imguiDescriptorPool;
 		init_info.PipelineInfoMain.RenderPass  = static_cast<VkRenderPass>( vkNative._renderPass );
 		init_info.PipelineInfoMain.Subpass	   = 0;
-		init_info.MinImageCount				   = 2;
-		init_info.ImageCount				   = 2;
+		init_info.MinImageCount				   = minImages;
+		init_info.ImageCount				   = imageCount;
 		init_info.PipelineInfoMain.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
 		init_info.Allocator					   = nullptr;
 		init_info.CheckVkResultFn			   = nullptr;
@@ -93,8 +113,8 @@ namespace sw
 
 			VkXlibSurfaceCreateInfoKHR create_info = {};
 			create_info.sType					   = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
-			create_info.dpy						   = (Display*)vp->PlatformHandle;
-			create_info.window					   = (Window)(uintptr_t)vp->PlatformHandleRaw;
+			create_info.dpy						   = static_cast<Display*>( vp->PlatformHandle );
+			create_info.window					   = static_cast<Window>( reinterpret_cast<uintptr_t>( vp->PlatformHandleRaw ) );
 			VkResult err						   = createFn( instance, &create_info, static_cast<const VkAllocationCallbacks*>( vk_allocators ), reinterpret_cast<VkSurfaceKHR*>( out_vk_surface ) );
 			return static_cast<int>( err );
 		};
@@ -110,9 +130,7 @@ namespace sw
 #endif
 
 		if ( !ImGui_ImplVulkan_Init( &init_info ) )
-		{
 			return false;
-		}
 
 		return true;
 	}
@@ -122,13 +140,65 @@ namespace sw
 		if ( _device )
 			vkDeviceWaitIdle( _device );
 
+		for ( auto& pair : _textureIds )
+		{
+			if ( pair.first != nullptr )
+				ImGui_ImplVulkan_RemoveTexture( static_cast<VkDescriptorSet>( pair.first ) );
+		}
+		_textureIds.clear();
+
 		if ( ImGui::GetIO().BackendRendererUserData != nullptr )
 			ImGui_ImplVulkan_Shutdown();
+
+		if ( _sampler && _device )
+		{
+			vkDestroySampler( _device, _sampler, nullptr );
+			_sampler = nullptr;
+		}
 		if ( _imguiDescriptorPool && _device )
 		{
 			vkDestroyDescriptorPool( _device, _imguiDescriptorPool, nullptr );
 			_imguiDescriptorPool = nullptr;
 		}
+		_rhiDevice = nullptr;
+		_device	   = nullptr;
+	}
+
+	void* ImGuiVulkanRendererBackend::registerTexture( RHITextureHandle texture )
+	{
+		if ( texture == 0 || _rhiDevice == nullptr || _sampler == nullptr )
+			return nullptr;
+
+		void* imageViewPtr = nullptr;
+		if ( _rhiDevice->queryVulkanTextureView( texture, imageViewPtr ) == false || imageViewPtr == nullptr )
+		{
+			SW_LOG_ERROR( "[ImGuiVulkan] Failed to resolve VkImageView for RHI handle %#", texture );
+			return nullptr;
+		}
+
+		VkDescriptorSet set = ImGui_ImplVulkan_AddTexture(
+			_sampler,
+			static_cast<VkImageView>( imageViewPtr ),
+			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+		if ( set == VK_NULL_HANDLE )
+			return nullptr;
+
+		void* textureID = reinterpret_cast<void*>( set );
+		_textureIds[textureID] = texture;
+		return textureID;
+	}
+
+	void ImGuiVulkanRendererBackend::unregisterTexture( void* textureID )
+	{
+		if ( textureID == nullptr )
+			return;
+
+		auto it = _textureIds.find( textureID );
+		if ( it == _textureIds.end() )
+			return;
+
+		ImGui_ImplVulkan_RemoveTexture( static_cast<VkDescriptorSet>( textureID ) );
+		_textureIds.erase( it );
 	}
 
 	void ImGuiVulkanRendererBackend::newFrame()

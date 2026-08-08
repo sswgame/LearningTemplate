@@ -21,6 +21,7 @@ bool ImGui_ImplOSX_HandleEvent( void* event, void* view );
 #elif defined( SW_PLATFORM_LINUX )
 	#include <imgui.h>
 	#include <X11/Xlib.h>
+	#include <X11/Xatom.h>
 	#include <X11/keysym.h>
 	#include "Core/Utility/Time/EngineTimer.h"
 
@@ -28,19 +29,171 @@ static Display*		s_X11Display = nullptr;
 static Window		s_X11Window	 = 0;
 static sw::CpuTimer s_X11Timer;
 
+struct ImGui_ImplX11_ViewportData
+{
+	Window WindowHandle = 0;
+	bool   Owned		= false;
+};
+
+static void ImGui_ImplX11_CreateWindow( ImGuiViewport* viewport )
+{
+	if ( s_X11Display == nullptr || viewport == nullptr )
+		return;
+
+	auto* vd	= IM_NEW( ImGui_ImplX11_ViewportData )();
+	vd->Owned	= true;
+	viewport->PlatformUserData = vd;
+
+	const int w = (int)viewport->Size.x > 0 ? (int)viewport->Size.x : 1;
+	const int h = (int)viewport->Size.y > 0 ? (int)viewport->Size.y : 1;
+	Window	  root = DefaultRootWindow( s_X11Display );
+	vd->WindowHandle = XCreateSimpleWindow( s_X11Display, root, (int)viewport->Pos.x, (int)viewport->Pos.y, (unsigned)w, (unsigned)h, 1,
+											BlackPixel( s_X11Display, DefaultScreen( s_X11Display ) ),
+											WhitePixel( s_X11Display, DefaultScreen( s_X11Display ) ) );
+	XSelectInput( s_X11Display, vd->WindowHandle,
+				  ExposureMask | StructureNotifyMask | ButtonPressMask | ButtonReleaseMask | PointerMotionMask | FocusChangeMask | KeyPressMask | KeyReleaseMask );
+	Atom wmDelete = XInternAtom( s_X11Display, "WM_DELETE_WINDOW", False );
+	XSetWMProtocols( s_X11Display, vd->WindowHandle, &wmDelete, 1 );
+	XMapWindow( s_X11Display, vd->WindowHandle );
+	XFlush( s_X11Display );
+
+	viewport->PlatformHandle	= s_X11Display;
+	viewport->PlatformHandleRaw = reinterpret_cast<void*>( static_cast<uintptr_t>( vd->WindowHandle ) );
+}
+
+static void ImGui_ImplX11_DestroyWindow( ImGuiViewport* viewport )
+{
+	if ( viewport == nullptr )
+		return;
+	if ( auto* vd = static_cast<ImGui_ImplX11_ViewportData*>( viewport->PlatformUserData ) )
+	{
+		if ( vd->Owned && vd->WindowHandle != 0 && s_X11Display )
+		{
+			XDestroyWindow( s_X11Display, vd->WindowHandle );
+			XFlush( s_X11Display );
+		}
+		IM_DELETE( vd );
+		viewport->PlatformUserData	= nullptr;
+		viewport->PlatformHandle	= nullptr;
+		viewport->PlatformHandleRaw = nullptr;
+	}
+}
+
+static void ImGui_ImplX11_ShowWindow( ImGuiViewport* viewport )
+{
+	auto* vd = static_cast<ImGui_ImplX11_ViewportData*>( viewport->PlatformUserData );
+	if ( vd && s_X11Display && vd->WindowHandle )
+		XMapRaised( s_X11Display, vd->WindowHandle );
+}
+
+static void ImGui_ImplX11_SetWindowPos( ImGuiViewport* viewport, ImVec2 pos )
+{
+	auto* vd = static_cast<ImGui_ImplX11_ViewportData*>( viewport->PlatformUserData );
+	if ( vd && s_X11Display && vd->WindowHandle )
+		XMoveWindow( s_X11Display, vd->WindowHandle, (int)pos.x, (int)pos.y );
+}
+
+static ImVec2 ImGui_ImplX11_GetWindowPos( ImGuiViewport* viewport )
+{
+	auto* vd = static_cast<ImGui_ImplX11_ViewportData*>( viewport->PlatformUserData );
+	if ( vd == nullptr || s_X11Display == nullptr || vd->WindowHandle == 0 )
+		return ImVec2( 0, 0 );
+	Window		 child;
+	int			 x = 0, y = 0;
+	XTranslateCoordinates( s_X11Display, vd->WindowHandle, DefaultRootWindow( s_X11Display ), 0, 0, &x, &y, &child );
+	return ImVec2( (float)x, (float)y );
+}
+
+static void ImGui_ImplX11_SetWindowSize( ImGuiViewport* viewport, ImVec2 size )
+{
+	auto* vd = static_cast<ImGui_ImplX11_ViewportData*>( viewport->PlatformUserData );
+	if ( vd && s_X11Display && vd->WindowHandle )
+		XResizeWindow( s_X11Display, vd->WindowHandle, (unsigned)( size.x > 1 ? size.x : 1 ), (unsigned)( size.y > 1 ? size.y : 1 ) );
+}
+
+static ImVec2 ImGui_ImplX11_GetWindowSize( ImGuiViewport* viewport )
+{
+	auto* vd = static_cast<ImGui_ImplX11_ViewportData*>( viewport->PlatformUserData );
+	if ( vd == nullptr || s_X11Display == nullptr || vd->WindowHandle == 0 )
+		return ImVec2( 0, 0 );
+	XWindowAttributes attrs{};
+	XGetWindowAttributes( s_X11Display, vd->WindowHandle, &attrs );
+	return ImVec2( (float)attrs.width, (float)attrs.height );
+}
+
+static void ImGui_ImplX11_SetWindowTitle( ImGuiViewport* viewport, const char* title )
+{
+	auto* vd = static_cast<ImGui_ImplX11_ViewportData*>( viewport->PlatformUserData );
+	if ( vd && s_X11Display && vd->WindowHandle && title )
+		XStoreName( s_X11Display, vd->WindowHandle, title );
+}
+
+static void ImGui_ImplX11_SetWindowFocus( ImGuiViewport* viewport )
+{
+	auto* vd = static_cast<ImGui_ImplX11_ViewportData*>( viewport->PlatformUserData );
+	if ( vd && s_X11Display && vd->WindowHandle )
+		XSetInputFocus( s_X11Display, vd->WindowHandle, RevertToParent, CurrentTime );
+}
+
+static bool ImGui_ImplX11_GetWindowFocus( ImGuiViewport* viewport )
+{
+	auto* vd = static_cast<ImGui_ImplX11_ViewportData*>( viewport->PlatformUserData );
+	if ( vd == nullptr || s_X11Display == nullptr || vd->WindowHandle == 0 )
+		return false;
+	Window focused = 0;
+	int	   revert  = 0;
+	XGetInputFocus( s_X11Display, &focused, &revert );
+	return focused == vd->WindowHandle;
+}
+
+static bool ImGui_ImplX11_GetWindowMinimized( ImGuiViewport* viewport )
+{
+	(void)viewport;
+	return false;
+}
+
 static bool ImGui_ImplX11_Init( Display* display, Window window )
 {
 	s_X11Display = display;
 	s_X11Window	 = window;
 	s_X11Timer.resetTimer();
 	s_X11Timer.startTimer();
-	ImGuiIO& io			   = ImGui::GetIO();
-	io.BackendPlatformName = "imgui_impl_x11";
+	ImGuiIO& io				= ImGui::GetIO();
+	io.BackendPlatformName	= "imgui_impl_x11";
+	io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;
+	io.BackendFlags |= ImGuiBackendFlags_PlatformHasViewports;
+
+	ImGuiViewport* mainViewport = ImGui::GetMainViewport();
+	mainViewport->PlatformHandle	= display;
+	mainViewport->PlatformHandleRaw = reinterpret_cast<void*>( static_cast<uintptr_t>( window ) );
+	auto* mainVd					= IM_NEW( ImGui_ImplX11_ViewportData )();
+	mainVd->WindowHandle			= window;
+	mainVd->Owned					= false;
+	mainViewport->PlatformUserData	= mainVd;
+
+	ImGuiPlatformIO& platformIO		 = ImGui::GetPlatformIO();
+	platformIO.Platform_CreateWindow = ImGui_ImplX11_CreateWindow;
+	platformIO.Platform_DestroyWindow = ImGui_ImplX11_DestroyWindow;
+	platformIO.Platform_ShowWindow	 = ImGui_ImplX11_ShowWindow;
+	platformIO.Platform_SetWindowPos = ImGui_ImplX11_SetWindowPos;
+	platformIO.Platform_GetWindowPos = ImGui_ImplX11_GetWindowPos;
+	platformIO.Platform_SetWindowSize = ImGui_ImplX11_SetWindowSize;
+	platformIO.Platform_GetWindowSize = ImGui_ImplX11_GetWindowSize;
+	platformIO.Platform_SetWindowFocus = ImGui_ImplX11_SetWindowFocus;
+	platformIO.Platform_GetWindowFocus = ImGui_ImplX11_GetWindowFocus;
+	platformIO.Platform_GetWindowMinimized = ImGui_ImplX11_GetWindowMinimized;
+	platformIO.Platform_SetWindowTitle = ImGui_ImplX11_SetWindowTitle;
 	return true;
 }
 
 static void ImGui_ImplX11_Shutdown()
 {
+	ImGuiViewport* mainViewport = ImGui::GetMainViewport();
+	if ( mainViewport && mainViewport->PlatformUserData )
+	{
+		IM_DELETE( static_cast<ImGui_ImplX11_ViewportData*>( mainViewport->PlatformUserData ) );
+		mainViewport->PlatformUserData = nullptr;
+	}
 	s_X11Display = nullptr;
 	s_X11Window	 = 0;
 }

@@ -21,8 +21,8 @@ namespace sw
 		Display* display = XOpenDisplay( nullptr );
 		if ( display == nullptr )
 		{
-			SW_LOG_ERROR( "[X11Window Linux] Failed to open X11 Display! Running headless fallback." );
-			return true;
+			SW_LOG_ERROR( "[X11Window Linux] Failed to open X11 Display!" );
+			return false;
 		}
 
 		int			  screen = DefaultScreen( display );
@@ -40,7 +40,9 @@ namespace sw
 		Atom wmDeleteMessage = XInternAtom( display, "WM_DELETE_WINDOW", False );
 		XSetWMProtocols( display, win, &wmDeleteMessage, 1 );
 
-		XSelectInput( display, win, ExposureMask | KeyPressMask | KeyReleaseMask | StructureNotifyMask );
+		XSelectInput( display, win,
+					  ExposureMask | KeyPressMask | KeyReleaseMask | StructureNotifyMask |
+						  ButtonPressMask | ButtonReleaseMask | PointerMotionMask | FocusChangeMask );
 		XMapWindow( display, win );
 		XFlush( display );
 

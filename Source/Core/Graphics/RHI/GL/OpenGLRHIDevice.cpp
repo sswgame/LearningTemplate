@@ -28,6 +28,46 @@ typedef HGLRC( WINAPI* PFNWGLCREATECONTEXTATTRIBSARBPROC )( HDC hDC, HGLRC hShar
 	#define GLX_CONTEXT_PROFILE_MASK_ARB	 0x9126
 	#define GLX_CONTEXT_CORE_PROFILE_BIT_ARB 0x00000001
 typedef GLXContext ( *PFNGLXCREATECONTEXTATTRIBSARBPROC )( Display*, GLXFBConfig, GLXContext, Bool, const int* );
+
+namespace
+{
+	thread_local int g_glxXError = 0;
+
+	int glxXErrorHandler( Display*, XErrorEvent* )
+	{
+		g_glxXError = 1;
+		return 0;
+	}
+
+	struct GlxXErrorScope
+	{
+		Display*	  _dpy	= nullptr;
+		XErrorHandler _prev = nullptr;
+
+		explicit GlxXErrorScope( Display* dpy )
+			: _dpy( dpy )
+			, _prev( XSetErrorHandler( &glxXErrorHandler ) )
+		{
+			g_glxXError = 0;
+		}
+
+		~GlxXErrorScope()
+		{
+			if ( _dpy )
+				XSync( _dpy, False );
+			XSetErrorHandler( _prev );
+		}
+
+		bool failed()
+		{
+			if ( _dpy )
+				XSync( _dpy, False );
+			const bool b = g_glxXError != 0;
+			g_glxXError	 = 0;
+			return b;
+		}
+	};
+} // namespace
 #endif
 namespace sw
 {
@@ -120,41 +160,104 @@ namespace sw
 		Display* dpy = (Display*)desc._windowDisplay;
 		Window	 win = (Window)(uintptr_t)desc._windowHandle;
 
-		int visual_attribs[] = {
-			GLX_RENDER_TYPE, GLX_RGBA_BIT,
-			GLX_DRAWABLE_TYPE, GLX_WINDOW_BIT,
-			GLX_DOUBLEBUFFER, True,
-			GLX_RED_SIZE, 8,
-			GLX_GREEN_SIZE, 8,
-			GLX_BLUE_SIZE, 8,
-			GLX_DEPTH_SIZE, 24,
-			0 };
-		int			 fbcount = 0;
-		GLXFBConfig* fbc	 = glXChooseFBConfig( dpy, DefaultScreen( dpy ), visual_attribs, &fbcount );
-
-		if ( !fbc )
+		XWindowAttributes wa{};
+		if ( XGetWindowAttributes( dpy, win, &wa ) == 0 || wa.visual == nullptr )
 		{
-			SW_LOG_ERROR( "Failed to retrieve a framebuffer config" );
+			SW_LOG_ERROR( "[OpenGL] XGetWindowAttributes failed" );
+			return false;
+		}
+		const VisualID windowVisualId = XVisualIDFromVisual( wa.visual );
+
+		int			 fbcount = 0;
+		GLXFBConfig* fbcAll	 = glXGetFBConfigs( dpy, DefaultScreen( dpy ), &fbcount );
+		if ( fbcAll == nullptr || fbcount <= 0 )
+		{
+			SW_LOG_ERROR( "[OpenGL] glXGetFBConfigs failed" );
 			return false;
 		}
 
-		PFNGLXCREATECONTEXTATTRIBSARBPROC glXCreateContextAttribsARB = (PFNGLXCREATECONTEXTATTRIBSARBPROC)glXGetProcAddressARB( (const GLubyte*)"glXCreateContextAttribsARB" );
-		GLXContext						  ctx						 = 0;
-		if ( glXCreateContextAttribsARB )
+		GLXFBConfig chosen = nullptr;
+		for ( int i = 0; i < fbcount; ++i )
 		{
-			int context_attribs[] = {
-				GLX_CONTEXT_MAJOR_VERSION_ARB, 4,
-				GLX_CONTEXT_MINOR_VERSION_ARB, 6,
-				GLX_CONTEXT_PROFILE_MASK_ARB, GLX_CONTEXT_CORE_PROFILE_BIT_ARB,
-				0 };
-			ctx = glXCreateContextAttribsARB( dpy, fbc[0], NULL, True, context_attribs );
+			int usable = 0;
+			glXGetFBConfigAttrib( dpy, fbcAll[i], GLX_DRAWABLE_TYPE, &usable );
+			if ( ( usable & GLX_WINDOW_BIT ) == 0 )
+				continue;
+			glXGetFBConfigAttrib( dpy, fbcAll[i], GLX_RENDER_TYPE, &usable );
+			if ( ( usable & GLX_RGBA_BIT ) == 0 )
+				continue;
+			XVisualInfo* vi = glXGetVisualFromFBConfig( dpy, fbcAll[i] );
+			if ( vi == nullptr )
+				continue;
+			const bool bMatch = ( vi->visualid == windowVisualId );
+			XFree( vi );
+			if ( bMatch )
+			{
+				chosen = fbcAll[i];
+				break;
+			}
 		}
-		else
+		if ( chosen == nullptr )
+			chosen = fbcAll[0];
+
+		PFNGLXCREATECONTEXTATTRIBSARBPROC glXCreateContextAttribsARB =
+			(PFNGLXCREATECONTEXTATTRIBSARBPROC)glXGetProcAddressARB( (const GLubyte*)"glXCreateContextAttribsARB" );
+
+		GLXContext ctx = nullptr;
 		{
-			ctx = glXCreateNewContext( dpy, fbc[0], GLX_RGBA_TYPE, NULL, True );
+			GlxXErrorScope trap( dpy );
+			if ( glXCreateContextAttribsARB )
+			{
+				// Prefer 4.6, fall back for WSLg/Mesa (often ≤4.1 / 3.3).
+				static const int kVersions[][2] = {
+					{ 4, 6 }, { 4, 5 }, { 4, 3 }, { 4, 2 }, { 4, 1 }, { 4, 0 }, { 3, 3 } };
+				for ( const auto& ver : kVersions )
+				{
+					int context_attribs[] = {
+						GLX_CONTEXT_MAJOR_VERSION_ARB, ver[0],
+						GLX_CONTEXT_MINOR_VERSION_ARB, ver[1],
+						GLX_CONTEXT_PROFILE_MASK_ARB, GLX_CONTEXT_CORE_PROFILE_BIT_ARB,
+						0 };
+					ctx = glXCreateContextAttribsARB( dpy, chosen, nullptr, True, context_attribs );
+					if ( ctx != nullptr && trap.failed() == false )
+					{
+						SW_LOG_INFO( "[OpenGL] GLX core context %#.%#", ver[0], ver[1] );
+						break;
+					}
+					if ( ctx )
+					{
+						glXDestroyContext( dpy, ctx );
+						ctx = nullptr;
+					}
+					trap.failed(); // clear
+				}
+			}
+			if ( ctx == nullptr )
+			{
+				ctx = glXCreateNewContext( dpy, chosen, GLX_RGBA_TYPE, nullptr, True );
+				if ( ctx == nullptr || trap.failed() )
+				{
+					if ( ctx )
+					{
+						glXDestroyContext( dpy, ctx );
+						ctx = nullptr;
+					}
+				}
+			}
 		}
-		XFree( fbc );
-		glXMakeCurrent( dpy, win, ctx );
+		XFree( fbcAll );
+
+		if ( ctx == nullptr )
+		{
+			SW_LOG_ERROR( "[OpenGL] Failed to create GLX context (WSLg often lacks GL 4.x — use -vulkan)" );
+			return false;
+		}
+		if ( glXMakeCurrent( dpy, win, ctx ) == False )
+		{
+			SW_LOG_ERROR( "[OpenGL] glXMakeCurrent failed" );
+			glXDestroyContext( dpy, ctx );
+			return false;
+		}
 		_hDC = dpy;
 		_hRC = ctx;
 #elif defined( SW_PLATFORM_MACOS )
