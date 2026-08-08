@@ -4,6 +4,45 @@ if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     return()
 endif()
 
+# imgui[vulkan-binding] still pulls vcpkg vulkan-loader into RUNPATH; replace those
+# .so files with symlinks to the system loader so WSI extensions are available.
+find_package(Python3 QUIET COMPONENTS Interpreter)
+if(Python3_Interpreter_FOUND AND DEFINED VCPKG_INSTALLED_DIR AND DEFINED VCPKG_TARGET_TRIPLET)
+    execute_process(
+        COMMAND "${Python3_EXECUTABLE}"
+                "${CMAKE_SOURCE_DIR}/Scripts/FixVcpkgVulkanLoader.py"
+                "--vcpkg-installed-dir" "${VCPKG_INSTALLED_DIR}"
+                "--triplet" "${VCPKG_TARGET_TRIPLET}"
+        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+        RESULT_VARIABLE _sw_vk_fix_result
+        OUTPUT_VARIABLE _sw_vk_fix_output
+        ERROR_VARIABLE _sw_vk_fix_error
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_STRIP_TRAILING_WHITESPACE
+    )
+    if(_sw_vk_fix_output)
+        message(STATUS "${_sw_vk_fix_output}")
+    endif()
+    if(NOT _sw_vk_fix_result EQUAL 0)
+        message(WARNING
+            "[Linux] FixVcpkgVulkanLoader.py failed (exit ${_sw_vk_fix_result}).\n"
+            "${_sw_vk_fix_error}"
+        )
+    endif()
+elseif(NOT Python3_Interpreter_FOUND)
+    message(WARNING "[Linux] Python3 not found; skipping FixVcpkgVulkanLoader.py")
+endif()
+
+# Prefer the resolved loader directory in RPATH (no hardcoded sysroot paths).
+find_library(SW_SYSTEM_VULKAN_LIBRARY NAMES vulkan)
+if(SW_SYSTEM_VULKAN_LIBRARY)
+    get_filename_component(_sw_vk_real "${SW_SYSTEM_VULKAN_LIBRARY}" REALPATH)
+    get_filename_component(_sw_vk_libdir "${_sw_vk_real}" DIRECTORY)
+    list(PREPEND CMAKE_BUILD_RPATH "${_sw_vk_libdir}")
+    list(PREPEND CMAKE_INSTALL_RPATH "${_sw_vk_libdir}")
+    message(STATUS "[Linux] Vulkan loader: ${SW_SYSTEM_VULKAN_LIBRARY} → ${_sw_vk_real}")
+endif()
+
 add_library(sw_platform_linux INTERFACE)
 target_compile_definitions(sw_platform_linux INTERFACE SW_PLATFORM_LINUX)
 
@@ -57,7 +96,6 @@ else()
 endif()
 
 # Vulkan loader — prefer system libvulkan (vcpkg loader often lacks X11 WSI).
-find_library(SW_SYSTEM_VULKAN_LIBRARY NAMES vulkan)
 if(SW_SYSTEM_VULKAN_LIBRARY)
     target_link_libraries(sw_platform_linux INTERFACE ${SW_SYSTEM_VULKAN_LIBRARY})
 else()
