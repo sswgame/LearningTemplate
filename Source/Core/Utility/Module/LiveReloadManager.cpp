@@ -15,9 +15,10 @@ namespace sw
 
 		std::string joinDirFile( const std::string& dir, const std::string& file )
 		{
+			// Case-preserving: Linux/macOS paths are case-sensitive (libEditorModule.so).
 			if ( dir.empty() )
-				return FileUtil::normalizePath( file );
-			return FileUtil::normalizePath( dir + "/" + file );
+				return FileUtil::normalizeSeparators( file );
+			return FileUtil::normalizeSeparators( dir + "/" + file );
 		}
 
 		void tryDeleteFile( const std::string& path )

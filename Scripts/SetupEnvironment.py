@@ -324,16 +324,49 @@ def FindSystemIncludeDirs() -> List[str]:
     return include_dirs
 
 
+def _DefaultParserConfig() -> Dict[str, Any]:
+    """parser_config.json 시드 값 (로컬 생성물 — 저장소에는 커밋하지 않음)."""
+    return {
+        "default_parser_args": [
+            "-std=c++17",
+            "-D__REFLECT_PARSER__",
+            "-DSW_API=",
+            '-DREFLECT(...)=__attribute__((annotate("REFLECT;" #__VA_ARGS__)))',
+            '-DPROPERTY(...)=__attribute__((annotate("PROPERTY;" #__VA_ARGS__)))',
+            '-DFUNCTION(...)=__attribute__((annotate("FUNCTION;" #__VA_ARGS__)))',
+            '-DENUM(...)=__attribute__((annotate("ENUM;" #__VA_ARGS__)))',
+            "-x",
+            "c++",
+            "-w",
+        ],
+        "platform_parser_args": {
+            "windows": [
+                "-fms-compatibility",
+                "-fms-compatibility-version=19",
+                "-fms-extensions",
+            ],
+            "linux": [],
+            "darwin": [],
+        },
+    }
+
+
 def UpdateParserConfig(target_os: str, parser_config_file: Path) -> None:
     """Config/parser_config.json 파일의 parser 인자를 업데이트합니다."""
-    parser_data: Dict[str, Any] = {}
+    parser_data: Dict[str, Any] = _DefaultParserConfig()
 
     if parser_config_file.exists():
         try:
             with open(parser_config_file, "r", encoding="utf-8") as f:
-                parser_data = json.load(f)
+                loaded = json.load(f)
+            if isinstance(loaded, dict):
+                # Keep defaults for missing keys so a fresh clone still works.
+                if isinstance(loaded.get("default_parser_args"), list):
+                    parser_data["default_parser_args"] = loaded["default_parser_args"]
+                if isinstance(loaded.get("platform_parser_args"), dict):
+                    parser_data["platform_parser_args"] = loaded["platform_parser_args"]
         except Exception:
-            parser_data = {}
+            pass
 
     default_args = parser_data.get("default_parser_args", [])
     platform_map = parser_data.get("platform_parser_args", {})
@@ -342,6 +375,7 @@ def UpdateParserConfig(target_os: str, parser_config_file: Path) -> None:
     active_args = list(default_args) + list(platform_args)
     parser_data["parser_args"] = active_args
 
+    parser_config_file.parent.mkdir(parents=True, exist_ok=True)
     with open(parser_config_file, "w", encoding="utf-8") as f:
         json.dump(parser_data, f, indent=4)
 

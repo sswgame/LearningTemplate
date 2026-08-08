@@ -112,8 +112,8 @@ namespace sw
 #endif
 
 		// SPIR-V / non-DX: do not fabricate TransformBuffer metadata.
-		SW_LOG_ERROR( "[ShaderReflection] Reflection unsupported for target format %# — returning empty result.",
-					  static_cast<uint32>( targetFormat ) );
+		SW_LOG_WARN( "[ShaderReflection] Reflection unsupported for target format %# — returning empty result.",
+					 static_cast<uint32>( targetFormat ) );
 		return data;
 	}
 } // namespace sw
