@@ -260,7 +260,11 @@ namespace sw
 		}
 		else
 		{
-			SW_LOG_ERROR( "No Vulkan X11 WSI extension (VK_KHR_xlib_surface / VK_KHR_xcb_surface)." );
+			SW_LOG_ERROR( "No Vulkan X11 WSI extension (VK_KHR_xlib_surface / VK_KHR_xcb_surface). Enumerated %# instance extensions.",
+						  availableExtCount );
+			for ( const VkExtensionProperties& ext : availableExts )
+				SW_LOG_INFO( "  instance ext: %#", ext.extensionName );
+			SW_LOG_ERROR( "If libvulkan comes from vcpkg, switch to the system loader (libvulkan1)." );
 			return false;
 		}
 #elif defined( SW_PLATFORM_MACOS )

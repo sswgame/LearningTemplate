@@ -56,12 +56,17 @@ else()
     message(WARNING "[Linux] OpenGL not found — GL/GLX RHI link may fail when SW_RHI_AS_MODULES=OFF")
 endif()
 
-# Vulkan loader (vkCreateXlibSurfaceKHR etc.) — same reason as GLX when RHI is in Core.
-find_package(Vulkan QUIET)
-if(TARGET Vulkan::Vulkan)
-    target_link_libraries(sw_platform_linux INTERFACE Vulkan::Vulkan)
-elseif(Vulkan_LIBRARIES)
-    target_link_libraries(sw_platform_linux INTERFACE ${Vulkan_LIBRARIES})
+# Vulkan loader — prefer system libvulkan (vcpkg loader often lacks X11 WSI).
+find_library(SW_SYSTEM_VULKAN_LIBRARY NAMES vulkan)
+if(SW_SYSTEM_VULKAN_LIBRARY)
+    target_link_libraries(sw_platform_linux INTERFACE ${SW_SYSTEM_VULKAN_LIBRARY})
+else()
+    find_package(Vulkan QUIET)
+    if(TARGET Vulkan::Vulkan)
+        target_link_libraries(sw_platform_linux INTERFACE Vulkan::Vulkan)
+    elseif(Vulkan_LIBRARIES)
+        target_link_libraries(sw_platform_linux INTERFACE ${Vulkan_LIBRARIES})
+    endif()
 endif()
 
 if(NOT TARGET sw_graphics_libs)
