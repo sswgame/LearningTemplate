@@ -6,6 +6,11 @@
 #include "FileUtil.h"
 #include "Core/Common/CommonDefines.h"
 
+#if defined( SW_PLATFORM_LINUX )
+	#include "Core/Utility/File/Linux/LinuxFileDialog.h"
+	#include "Core/Utility/Log/Logger.h"
+#endif
+
 namespace sw
 {
 
@@ -411,64 +416,11 @@ namespace sw
 				if ( delegateCallback.isBound() == false )
 					return;
 
-				std::string cmd = "zenity --file-selection";
-				if ( params._type == FileDialogParams::Type::Save )
-					cmd += " --save --confirm-overwrite";
-				if ( params._title.empty() == false )
-					cmd += " --title=\"" + params._title + "\"";
-				else if ( params._description.empty() == false )
-					cmd += " --title=\"" + params._description + "\"";
-				if ( params._bEnableMultiselect && params._type == FileDialogParams::Type::Open )
-					cmd += " --multiple --separator='|'";
-				if ( params._initialDirectory.empty() == false )
-					cmd += " --filename=\"" + normalizePath( params._initialDirectory ) + "/\"";
-				for ( const std::string& ext : params._filterExtensionList )
-				{
-					std::string pattern = "*";
-					if ( ext.empty() == false && ext[0] != '.' )
-						pattern += ".";
-					pattern += ext;
-					cmd += " --file-filter=\"";
-					cmd += params._description.empty() ? pattern : ( params._description + " | " + pattern );
-					cmd += "\"";
-				}
-
-				FILE* pipe = popen( cmd.c_str(), "r" );
-				if ( pipe == nullptr )
-					return;
-
-				char		buf[4096];
-				std::string output;
-				while ( fgets( buf, sizeof( buf ), pipe ) != nullptr )
-					output += buf;
-				pclose( pipe );
-
-				while ( output.empty() == false && ( output.back() == '\n' || output.back() == '\r' ) )
-					output.pop_back();
-				if ( output.empty() )
-					return;
-
 				std::vector<std::string> results;
-				if ( params._bEnableMultiselect )
-				{
-					size_t start = 0;
-					while ( start < output.size() )
-					{
-						const size_t sep = output.find( '|', start );
-						const size_t end = ( sep == std::string::npos ) ? output.size() : sep;
-						results.push_back( normalizePath( output.substr( start, end - start ) ) );
-						if ( sep == std::string::npos )
-							break;
-						start = sep + 1;
-					}
-				}
-				else
-				{
-					results.push_back( normalizePath( output ) );
-				}
+				if ( LinuxFileDialog::open( params, results ) == false || results.empty() )
+					return;
 
-				if ( results.empty() == false )
-					delegateCallback( results );
+				delegateCallback( results );
 			} )
 			.detach();
 #elif defined( SW_PLATFORM_MACOS )

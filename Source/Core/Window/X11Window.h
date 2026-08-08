@@ -25,7 +25,6 @@ namespace sw
 #if defined( SW_PLATFORM_LINUX )
 		void*  getNativeHandle() const override { return reinterpret_cast<void*>( _x11Window ); }
 		void*  getNativeDisplay() const override { return _x11Display; }
-		void*  getX11Display() const { return _x11Display; }
 		uint64 getX11Window() const { return _x11Window; }
 
 	private:

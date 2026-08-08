@@ -10,6 +10,8 @@
 
 #if defined( SW_PLATFORM_WINDOWS )
 	#include "Core/Utility/File/Windows/WindowsFileWatcher.h"
+#elif defined( SW_PLATFORM_LINUX )
+	#include "Core/Utility/File/Linux/LinuxFileWatcher.h"
 #endif
 
 namespace sw
@@ -25,7 +27,11 @@ namespace sw
 	{
 #if defined( SW_PLATFORM_WINDOWS )
 		_fileWatcher = std::make_unique<WindowsFileWatcher>();
+#elif defined( SW_PLATFORM_LINUX )
+		_fileWatcher = std::make_unique<LinuxFileWatcher>();
+#endif
 
+#if defined( SW_PLATFORM_WINDOWS ) || defined( SW_PLATFORM_LINUX )
 		const std::string& rootPath = ResourceUtil::getRootFolderPath();
 		if ( rootPath.empty() == false )
 		{
@@ -43,7 +49,7 @@ namespace sw
 			_bUseMtimePoll = true;
 		}
 #else
-		// No native watcher yet — live reload via mtime poll on registered watch prefixes.
+		// macOS: FSEvents watcher not implemented yet.
 		_bUseMtimePoll = true;
 		SW_LOG_INFO( "ReloadFileManager: Using mtime poll fallback (no native file watcher)." );
 #endif

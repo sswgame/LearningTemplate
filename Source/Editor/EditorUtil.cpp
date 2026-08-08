@@ -31,10 +31,10 @@ namespace sw
 			appendIfDirectory( dirs, std::filesystem::path( windowsDir ) / editor::path::kFontsFolder );
 
 #elif defined( SW_PLATFORM_LINUX )
-		appendIfDirectory( dirs, "/usr/share/fonts" );
-		appendIfDirectory( dirs, "/usr/local/share/fonts" );
+		appendIfDirectory( dirs, editor::path::kLinuxSystemFontsDir );
+		appendIfDirectory( dirs, editor::path::kLinuxLocalSystemFontsDir );
 		if ( const char* home = std::getenv( "HOME" ) )
-			appendIfDirectory( dirs, std::filesystem::path( home ) / ".local" / "share" / "fonts" );
+			appendIfDirectory( dirs, std::filesystem::path( home ) / editor::path::kLinuxUserFontsRelPath );
 
 #elif defined( SW_PLATFORM_MACOS )
 		appendIfDirectory( dirs, "/System/Library/Fonts" );

@@ -11,6 +11,9 @@ namespace sw
 {
 	struct NativeWindowEvent
 	{
+		/** @brief X11: processMessages가 XEvent* 를 lParam에 실을 때 사용 */
+		static constexpr uint32 kMessageX11 = 0x8001;
+
 		void*	  nativeWindow = nullptr;
 		uint32	  message	   = 0;
 		uintptr_t wParam	   = 0;

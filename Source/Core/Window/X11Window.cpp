@@ -3,6 +3,8 @@
  * @brief X11 윈도우 구현
  */
 #include "X11Window.h"
+#include "NativeWindowEvent.h"
+#include "Core/Utility/String/StringUtil.h"
 
 namespace sw
 {
@@ -17,11 +19,12 @@ namespace sw
 	{
 		_width	= width;
 		_height = height;
+		_title	= StringUtil::isNullOrEmpty( title ) ? L"" : StringUtil::utf8ToUtf16( title );
 
 		Display* display = XOpenDisplay( nullptr );
 		if ( display == nullptr )
 		{
-			SW_LOG_ERROR( "[X11Window Linux] Failed to open X11 Display!" );
+			SW_LOG_ERROR( "[X11Window] Failed to open X11 Display!" );
 			return false;
 		}
 
@@ -35,7 +38,7 @@ namespace sw
 			100, 100, width, height,
 			1, black, white );
 
-		XStoreName( display, win, title );
+		XStoreName( display, win, title != nullptr ? title : "" );
 
 		Atom wmDeleteMessage = XInternAtom( display, "WM_DELETE_WINDOW", False );
 		XSetWMProtocols( display, win, &wmDeleteMessage, 1 );
@@ -51,7 +54,7 @@ namespace sw
 		_x11WmDelete  = static_cast<uint64>( wmDeleteMessage );
 		_bShouldClose = false;
 
-		SW_LOG_INFO( "[X11Window Linux] Native X11 Window created successfully! (%#x%#)", width, height );
+		SW_LOG_INFO( "[X11Window] Native X11 Window created successfully! (%#x%#)", width, height );
 		return true;
 	}
 
@@ -72,7 +75,7 @@ namespace sw
 	bool X11Window::processMessages()
 	{
 		if ( _x11Display == nullptr )
-			return !_bShouldClose;
+			return _bShouldClose == false;
 
 		Display* display = static_cast<Display*>( _x11Display );
 		while ( XPending( display ) > 0 )
@@ -80,14 +83,14 @@ namespace sw
 			XEvent event;
 			XNextEvent( display, &event );
 
-			if ( _customHandler.isBound() )
+			if ( _customHandler.isBound() == true )
 			{
 				NativeWindowEvent ev{};
 				ev.nativeWindow = reinterpret_cast<void*>( static_cast<uintptr_t>( _x11Window ) );
-				ev.message		= 0x8001; // X11 event tag used by ImGui platform backend
+				ev.message		= NativeWindowEvent::kMessageX11;
 				ev.wParam		= 0;
 				ev.lParam		= reinterpret_cast<intptr_t>( &event );
-				if ( _customHandler( ev ) )
+				if ( _customHandler( ev ) == true )
 					continue;
 			}
 
@@ -113,13 +116,13 @@ namespace sw
 				{
 					_width	= newW;
 					_height = newH;
-					if ( _onResize.isBound() )
+					if ( _onResize.isBound() == true )
 						_onResize( _width, _height );
 				}
 			}
 		}
 
-		return !_bShouldClose;
+		return _bShouldClose == false;
 	}
 #else
 	bool X11Window::create( const utf8*, uint32 width, uint32 height )
@@ -133,7 +136,7 @@ namespace sw
 
 	bool X11Window::processMessages()
 	{
-		return !_bShouldClose;
+		return _bShouldClose == false;
 	}
 #endif
 } // namespace sw

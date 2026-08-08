@@ -1,13 +1,17 @@
 #pragma once
 /**
  * @file LiveReloadManager.h
- * @brief 모듈 DLL 섀도 복사 기반 핫 리로드
+ * @brief 모듈 공유 라이브러리 섀도 복사 기반 핫 리로드
  */
 #include "Core/Common/Common.h"
 
 namespace sw
 {
-	/** @brief DLL을 임시 경로에 복사해 로드하는 핫 리로드 매니저 */
+	/**
+	 * @brief 모듈을 섀도 경로에 복사해 로드하는 핫 리로드 매니저
+	 * @note Windows/macOS: `*_temp_N` 고유 섀도 (two-handle swap, Windows는 PDB 동반).
+	 *       Linux: `*_live` 고정 섀도 (언로드 → 덮어쓰기 → 로드, 디버거 모듈 경로 안정화).
+	 */
 	class LiveReloadManager
 	{
 	public:
@@ -44,10 +48,10 @@ namespace sw
 			OnBeforeReloadDelegate _onBeforeReload;
 			OnAfterReloadDelegate  _onAfterReload;
 			std::string			   _moduleName;
-			std::string			   _originalDllPath;
-			std::string			   _tempDllPath;
+			std::string			   _originalModulePath;
+			std::string			   _tempModulePath;
 			void*				   _hLibraryModule	  = nullptr;
-			uint64				   _loadedSourceMtime = 0; ///< Timestamp of original DLL when current shadow was loaded
+			uint64				   _loadedSourceMtime = 0; ///< Timestamp of original module when current shadow was loaded
 			uint64				   _debounceMtime	  = 0; ///< Last observed newer source mtime while debouncing
 			std::chrono::steady_clock::time_point _debounceSince{};
 			uint8				   _bPendingReload	 : 1;
@@ -55,7 +59,7 @@ namespace sw
 			[[maybe_unused]] uint8 _reserved		 : 6;
 		};
 
-		/** @brief 원본 DLL을 임시 경로에 복사한 뒤 로드합니다. */
+		/** @brief 원본 모듈을 플랫폼별 섀도 경로에 복사한 뒤 로드합니다. */
 		bool loadShadowCopyModule( ModuleContext& ctx );
 
 		std::unordered_map<std::string, ModuleContext> _modules;

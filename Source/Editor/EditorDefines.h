@@ -18,11 +18,14 @@ namespace sw::editor
 		/** @brief Resource 하위 에디터 리소스 폴더명 */
 		inline static constexpr const utf8* kEditorFolder = "Editor";
 		/** @brief 에디터 폰트 하위 폴더명 (시스템 Fonts 폴더명과 동일) */
-		inline static constexpr const utf8* kFontsFolder	  = "Fonts";
-		inline static constexpr const utf8* kConsolasFontFile = "consola.ttf";
-		inline static constexpr const utf8* kKoreanUiFontFile = "malgun.ttf";
+		inline static constexpr const utf8* kFontsFolder = "Fonts";
 
-		/** @brief 기본(라틴) UI 폰트 후보 — 앞쪽이 우선 */
+		/** @brief Linux 시스템 폰트 루트 */
+		inline static constexpr const utf8* kLinuxSystemFontsDir		= "/usr/share/fonts";
+		inline static constexpr const utf8* kLinuxLocalSystemFontsDir = "/usr/local/share/fonts";
+		inline static constexpr const utf8* kLinuxUserFontsRelPath	= ".local/share/fonts";
+
+		/** @brief 기본(라틴) UI 폰트 후보 — 앞쪽이 우선 (크로스플랫폼 폴백 순서) */
 		inline static constexpr const utf8* kBaseFontCandidates[] = {
 			"consola.ttf",
 			"Consolas.ttf",
@@ -46,10 +49,10 @@ namespace sw::editor
 		};
 
 		/** @brief <Project>/Config/Editor — 레이아웃·패널 표시 상태 (유저 로컬, Resource 아님) */
-		inline static constexpr const utf8* kConfigFolder		 = "Config";
-		inline static constexpr const utf8* kEditorConfigFolder = "Editor";
-		inline static constexpr const utf8* kImGuiIniFile			 = "imgui.ini";
-		inline static constexpr const utf8* kPanelsIniFile		 = "panels.ini";
+		inline static constexpr const utf8* kConfigFolder			= "Config";
+		inline static constexpr const utf8* kEditorConfigFolder		= "Editor";
+		inline static constexpr const utf8* kImGuiIniFile			= "imgui.ini";
+		inline static constexpr const utf8* kPanelsIniFile			= "panels.ini";
 		inline static constexpr const utf8* kNodeEditorSettingsFile = "NodeEditor.json";
 	} // namespace path
 } // namespace sw::editor

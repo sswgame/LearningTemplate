@@ -104,7 +104,10 @@ namespace sw
 		static std::string_view getSharedLibraryExtension();
 		/** @brief baseName에 접두사·확장자를 붙여 공유 라이브러리 이름을 만듭니다. */
 		static std::string formatSharedLibraryName( const std::string& baseName );
-		/** @brief 라이브러리에 대응하는 디버그 심볼 경로를 반환합니다. */
+		/**
+		 * @brief 라이브러리에 대응하는 사이드카 디버그 심볼 경로를 반환합니다.
+		 * @note Windows: `.pdb` / macOS: `.dSYM` / Linux: `.debug` (없으면 DWARF가 .so에 내장된 경우가 많음)
+		 */
 		static std::string getDebugSymbolPath( const std::string_view libraryPath );
 
 		/** @brief 동적 라이브러리를 로드합니다. */

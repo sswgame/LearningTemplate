@@ -8,6 +8,8 @@ Linux / WSL 개발 환경에 필요한 홈 디렉터리 설정을 자동 적용�
    (VS Code/Cursor cppdbg가 "Downloading separate debug info..." 에서 멈추는 문제)
 2. ~/.bashrc, ~/.profile — DEBUGINFOD_URLS 비우기
    (login/interactive 셸·Remote 서버가 GDB에 URL을 넘기지 않도록)
+3. 파일 다이얼로그 도구(zenity/kdialog/yad) 존재 여부 안내
+   (에디터 Import/Save 다이얼로그 — 없으면 패키지 설치 힌트만 출력)
 
 CMake configure 시 SetupEnvironment.py 에서 호출되며, 수동 실행도 가능합니다:
   python3 Scripts/SetupLinuxDevEnvironment.py
@@ -17,6 +19,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import shutil
 import sys
 from pathlib import Path
 from typing import Optional, Sequence
@@ -115,6 +118,22 @@ def SetupGdbDebuginfod(home: Optional[Path] = None) -> None:
     print(f"[SetupLinuxDevEnvironment] {host} debuginfod fix ({', '.join(actions)})")
 
 
+def CheckFileDialogTools() -> None:
+    """에디터 파일 다이얼로그에 필요한 외부 도구 존재 여부를 안내합니다."""
+    tools = ("zenity", "qarma", "matedialog", "kdialog", "yad")
+    found = [name for name in tools if shutil.which(name)]
+    if found:
+        print(f"[SetupLinuxDevEnvironment] file dialog tool: {found[0]}")
+        return
+
+    host = "WSL" if _IsWsl() else "Linux"
+    print(
+        f"[SetupLinuxDevEnvironment] {host}: no file dialog tool "
+        f"(zenity/kdialog/yad). Editor Import/Save dialogs need one — "
+        f"e.g. sudo apt install zenity"
+    )
+
+
 def SetupLinuxDevEnvironment(home: Optional[Path] = None) -> int:
     """Linux 개발 환경 자동 설정을 수행합니다. non-Linux 에서는 no-op."""
     if not _IsLinux():
@@ -122,6 +141,7 @@ def SetupLinuxDevEnvironment(home: Optional[Path] = None) -> int:
         return 0
 
     SetupGdbDebuginfod(home=home)
+    CheckFileDialogTools()
     return 0
 
 

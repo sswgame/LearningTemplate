@@ -1,17 +1,22 @@
 /**
  * @file LiveReloadManager.cpp
- * @brief 모듈 DLL 섀도 복사 로드 및 핫 리로드
+ * @brief 모듈 공유 라이브러리 섀도 복사 로드 및 핫 리로드
+ *
+ * Windows/macOS: `*_temp_N` 고유 경로 + (Windows) PDB 동반 복사, two-handle swap.
+ * Linux: 고정 `*_live` 섀도 — dlopen 경로 캐시를 피하려고 언로드 후 덮어쓰고 다시 로드.
+ *         디버거가 같은 .so 경로에 BP를 유지하기 쉬움.
  */
 #include "LiveReloadManager.h"
 #include "Core/Utility/File/FileUtil.h"
 #include "Core/Utility/Log/Logger.h"
 
-
 namespace sw
 {
 	namespace
 	{
+#if !defined( SW_PLATFORM_LINUX )
 		uint32 s_reloadCount = 0;
+#endif
 
 		std::string joinDirFile( const std::string& dir, const std::string& file )
 		{
@@ -29,12 +34,36 @@ namespace sw
 			std::filesystem::remove( path, ec );
 		}
 
-		void tryDeleteShadowArtifacts( const std::string& dllPath )
+		void tryDeleteShadowArtifacts( const std::string& modulePath )
 		{
-			if ( dllPath.empty() )
+			if ( modulePath.empty() )
 				return;
-			tryDeleteFile( dllPath );
-			tryDeleteFile( FileUtil::getDebugSymbolPath( dllPath ) );
+			tryDeleteFile( modulePath );
+			tryDeleteFile( FileUtil::getDebugSymbolPath( modulePath ) );
+		}
+
+		bool copyFileWithRetry( const std::string& source, const std::string& destination )
+		{
+			for ( int i = 0; i < 10; ++i )
+			{
+				if ( FileUtil::copyFile( source, destination ) )
+					return true;
+				std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+			}
+			return false;
+		}
+
+		void copyDebugSymbolsIfPresent( const std::string& originalModulePath, const std::string& shadowModulePath )
+		{
+			const std::string originalDebugPath = FileUtil::getDebugSymbolPath( originalModulePath );
+			const std::string shadowDebugPath	= FileUtil::getDebugSymbolPath( shadowModulePath );
+			if ( std::filesystem::exists( originalDebugPath ) == false )
+				return;
+
+			std::error_code ec;
+			std::filesystem::copy( originalDebugPath, shadowDebugPath, std::filesystem::copy_options::overwrite_existing, ec );
+			if ( ec )
+				SW_LOG_WARNING( "[LiveReloadManager] Failed to copy debug symbols: %#", ec.message().c_str() );
 		}
 	} // namespace
 
@@ -58,7 +87,7 @@ namespace sw
 		ctx._moduleName	   = moduleName;
 
 		const std::string execDir = FileUtil::getDirectoryPart( FileUtil::getExecutablePath() );
-		ctx._originalDllPath	  = joinDirFile( execDir, FileUtil::formatSharedLibraryName( moduleName ) );
+		ctx._originalModulePath	  = joinDirFile( execDir, FileUtil::formatSharedLibraryName( moduleName ) );
 		return loadShadowCopyModule( ctx );
 	}
 
@@ -72,74 +101,108 @@ namespace sw
 		iter->second._bPendingReload = true;
 	}
 
+#if defined( SW_PLATFORM_LINUX )
 	bool LiveReloadManager::loadShadowCopyModule( ModuleContext& ctx )
 	{
-		if ( FileUtil::isFileExist( ctx._originalDllPath ) == false )
+		if ( FileUtil::isFileExist( ctx._originalModulePath ) == false )
 		{
-			SW_LOG_ERROR( "[LiveReloadManager] Original module DLL not found: %#", ctx._originalDllPath.c_str() );
+			SW_LOG_ERROR( "[LiveReloadManager] Original module not found: %#", ctx._originalModulePath.c_str() );
 			return false;
 		}
 
-		const uint64 sourceMtime = FileUtil::getFileTimestamp( ctx._originalDllPath );
+		const uint64	  sourceMtime = FileUtil::getFileTimestamp( ctx._originalModulePath );
+		const std::string execDir	  = FileUtil::getDirectoryPart( ctx._originalModulePath );
+		const std::string livePath	  = joinDirFile( execDir, FileUtil::formatSharedLibraryName( ctx._moduleName + "_live" ) );
 
-		std::string newTempDllPath;
-		std::string newTempPdbPath;
+		// Fixed path: must drop the previous mapping or dlopen may reuse the old image.
+		BLOCK( "Unload previous fixed shadow" )
+		{
+			if ( ctx._hLibraryModule != nullptr )
+			{
+				if ( ctx._onBeforeReload.isBound() )
+					ctx._onBeforeReload();
+
+				FileUtil::freeDynamicLibrary( ctx._hLibraryModule );
+				ctx._hLibraryModule = nullptr;
+			}
+
+			tryDeleteShadowArtifacts( ctx._tempModulePath );
+			if ( ctx._tempModulePath != livePath )
+				tryDeleteShadowArtifacts( livePath );
+			ctx._tempModulePath.clear();
+		}
+
+		BLOCK( "Copy to fixed live shadow" )
+		{
+			if ( copyFileWithRetry( ctx._originalModulePath, livePath ) == false )
+			{
+				SW_LOG_ERROR( "[LiveReloadManager] Failed to create fixed shadow copy: %#", livePath.c_str() );
+				return false;
+			}
+			copyDebugSymbolsIfPresent( ctx._originalModulePath, livePath );
+		}
+
+		BLOCK( "Load fixed live shadow" )
+		{
+			void* newHandle = FileUtil::loadDynamicLibrary( livePath );
+			if ( newHandle == nullptr )
+			{
+				SW_LOG_ERROR( "[LiveReloadManager] Failed to load dynamic library: %#", livePath.c_str() );
+				tryDeleteShadowArtifacts( livePath );
+				return false;
+			}
+
+			ctx._hLibraryModule		= newHandle;
+			ctx._tempModulePath		= livePath;
+			ctx._loadedSourceMtime	= sourceMtime;
+
+			if ( ctx._onAfterReload.isBound() )
+				ctx._onAfterReload( ctx._hLibraryModule );
+		}
+
+		SW_LOG_INFO( "[LiveReloadManager] Module loaded (fixed shadow: %#)", ctx._tempModulePath.c_str() );
+		return true;
+	}
+#else
+	bool LiveReloadManager::loadShadowCopyModule( ModuleContext& ctx )
+	{
+		if ( FileUtil::isFileExist( ctx._originalModulePath ) == false )
+		{
+			SW_LOG_ERROR( "[LiveReloadManager] Original module not found: %#", ctx._originalModulePath.c_str() );
+			return false;
+		}
+
+		const uint64 sourceMtime = FileUtil::getFileTimestamp( ctx._originalModulePath );
+
+		std::string newTempModulePath;
 		void*		newHandle = nullptr;
 
-		BLOCK( "DLL 섀도 카피" )
+		BLOCK( "모듈 섀도 카피" )
 		{
 			++s_reloadCount;
 			const std::string tempName = ctx._moduleName + "_temp_" + std::to_string( s_reloadCount );
-			const std::string execDir  = FileUtil::getDirectoryPart( ctx._originalDllPath );
-			newTempDllPath			   = joinDirFile( execDir, FileUtil::formatSharedLibraryName( tempName ) );
+			const std::string execDir  = FileUtil::getDirectoryPart( ctx._originalModulePath );
+			newTempModulePath		   = joinDirFile( execDir, FileUtil::formatSharedLibraryName( tempName ) );
 
-			bool bCopySuccess = false;
-			for ( int i = 0; i < 10; ++i )
+			if ( copyFileWithRetry( ctx._originalModulePath, newTempModulePath ) == false )
 			{
-				if ( FileUtil::copyFile( ctx._originalDllPath, newTempDllPath ) )
-				{
-					bCopySuccess = true;
-					break;
-				}
-				std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
-			}
-
-			if ( bCopySuccess == false )
-			{
-				SW_LOG_ERROR( "[LiveReloadManager] Failed to create shadow copy (locked): %#", newTempDllPath.c_str() );
+				SW_LOG_ERROR( "[LiveReloadManager] Failed to create shadow copy (locked): %#", newTempModulePath.c_str() );
 				return false;
 			}
 		}
 
 		BLOCK( "디버그 심볼 복사" )
 		{
-			const std::string originalDebugPath = FileUtil::getDebugSymbolPath( ctx._originalDllPath );
-			newTempPdbPath						= FileUtil::getDebugSymbolPath( newTempDllPath );
-			if ( std::filesystem::exists( originalDebugPath ) )
-			{
-				std::error_code ec;
-				std::filesystem::copy( originalDebugPath, newTempPdbPath,
-									   std::filesystem::copy_options::overwrite_existing, ec );
-				if ( ec )
-				{
-					SW_LOG_WARNING( "[LiveReloadManager] Failed to copy debug symbols: %#", ec.message().c_str() );
-					// PDB failure is non-fatal for loading the DLL.
-					newTempPdbPath.clear();
-				}
-			}
-			else
-			{
-				newTempPdbPath.clear();
-			}
+			copyDebugSymbolsIfPresent( ctx._originalModulePath, newTempModulePath );
 		}
 
 		BLOCK( "동적 라이브러리 로드" )
 		{
-			newHandle = FileUtil::loadDynamicLibrary( newTempDllPath );
+			newHandle = FileUtil::loadDynamicLibrary( newTempModulePath );
 			if ( newHandle == nullptr )
 			{
-				SW_LOG_ERROR( "[LiveReloadManager] Failed to load dynamic library: %#", newTempDllPath.c_str() );
-				tryDeleteShadowArtifacts( newTempDllPath );
+				SW_LOG_ERROR( "[LiveReloadManager] Failed to load dynamic library: %#", newTempModulePath.c_str() );
+				tryDeleteShadowArtifacts( newTempModulePath );
 				return false;
 			}
 		}
@@ -147,8 +210,8 @@ namespace sw
 		// Two-handle swap: only free the old module after the new one is loaded successfully.
 		BLOCK( "Swap handles / cleanup previous shadow" )
 		{
-			const std::string previousTempDll = ctx._tempDllPath;
-			void*			  previousHandle  = ctx._hLibraryModule;
+			const std::string previousTempModule = ctx._tempModulePath;
+			void*			  previousHandle	 = ctx._hLibraryModule;
 
 			if ( ctx._onBeforeReload.isBound() && previousHandle != nullptr )
 				ctx._onBeforeReload();
@@ -160,18 +223,19 @@ namespace sw
 			}
 
 			ctx._hLibraryModule		= newHandle;
-			ctx._tempDllPath		= newTempDllPath;
+			ctx._tempModulePath		= newTempModulePath;
 			ctx._loadedSourceMtime	= sourceMtime;
 
-			tryDeleteShadowArtifacts( previousTempDll );
+			tryDeleteShadowArtifacts( previousTempModule );
 
 			if ( ctx._onAfterReload.isBound() )
 				ctx._onAfterReload( ctx._hLibraryModule );
 		}
 
-		SW_LOG_INFO( "[LiveReloadManager] Module loaded (shadow: %#)", ctx._tempDllPath.c_str() );
+		SW_LOG_INFO( "[LiveReloadManager] Module loaded (shadow: %#)", ctx._tempModulePath.c_str() );
 		return true;
 	}
+#endif
 
 	void LiveReloadManager::update()
 	{
@@ -181,10 +245,10 @@ namespace sw
 		{
 			ModuleContext& ctx = pair.second;
 
-			// Auto-reload when the source DLL is newer — debounce to avoid copy storms.
-			if ( ctx._originalDllPath.empty() == false && FileUtil::isFileExist( ctx._originalDllPath ) )
+			// Auto-reload when the source module is newer — debounce to avoid copy storms.
+			if ( ctx._originalModulePath.empty() == false && FileUtil::isFileExist( ctx._originalModulePath ) )
 			{
-				const uint64 sourceMtime = FileUtil::getFileTimestamp( ctx._originalDllPath );
+				const uint64 sourceMtime = FileUtil::getFileTimestamp( ctx._originalModulePath );
 				if ( sourceMtime != 0 && sourceMtime > ctx._loadedSourceMtime )
 				{
 					if ( ctx._bMtimeDebouncing == false || sourceMtime != ctx._debounceMtime )
@@ -195,7 +259,7 @@ namespace sw
 					}
 					else if ( std::chrono::duration_cast<std::chrono::milliseconds>( now - ctx._debounceSince ).count() >= kMtimeDebounceMs )
 					{
-						SW_LOG_INFO( "[LiveReloadManager] Source DLL newer (debounced) — queuing reload for %#",
+						SW_LOG_INFO( "[LiveReloadManager] Source module newer (debounced) — queuing reload for %#",
 									 ctx._moduleName.c_str() );
 						ctx._bPendingReload	  = true;
 						ctx._bMtimeDebouncing = false;
@@ -215,12 +279,16 @@ namespace sw
 
 			BLOCK( "Shadow Copy Reload" )
 			{
-				const uint64 attemptedMtime = FileUtil::getFileTimestamp( ctx._originalDllPath );
+				const uint64 attemptedMtime = FileUtil::getFileTimestamp( ctx._originalModulePath );
 				if ( loadShadowCopyModule( ctx ) == false )
 				{
+#if defined( SW_PLATFORM_LINUX )
+					SW_LOG_ERROR( "[LiveReloadManager] Reload failed for %# — previous fixed shadow was unloaded.",
+								  ctx._moduleName.c_str() );
+#else
 					SW_LOG_ERROR( "[LiveReloadManager] Reload failed for %# — keeping previous module handle if any.",
 								  ctx._moduleName.c_str() );
-					// Prevent per-frame retry spam for the same source timestamp; manual trigger still works.
+#endif
 					if ( attemptedMtime != 0 )
 						ctx._loadedSourceMtime = attemptedMtime;
 				}
@@ -230,7 +298,7 @@ namespace sw
 
 	void LiveReloadManager::shutdown()
 	{
-		// App이 이미 onBefore*Reload로 인스턴스를 정리한다. 여기서는 DLL unload + temp cleanup.
+		// App이 이미 onBefore*Reload로 인스턴스를 정리한다. 여기서는 unload + temp cleanup.
 		for ( auto& pair : _modules )
 		{
 			ModuleContext& ctx = pair.second;
@@ -239,8 +307,8 @@ namespace sw
 				FileUtil::freeDynamicLibrary( ctx._hLibraryModule );
 				ctx._hLibraryModule = nullptr;
 			}
-			tryDeleteShadowArtifacts( ctx._tempDllPath );
-			ctx._tempDllPath.clear();
+			tryDeleteShadowArtifacts( ctx._tempModulePath );
+			ctx._tempModulePath.clear();
 		}
 		_modules.clear();
 	}
