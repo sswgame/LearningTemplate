@@ -9,6 +9,8 @@
 	#include <vulkan/vulkan_win32.h>
 #elif defined( SW_PLATFORM_LINUX )
 	#include <vulkan/vulkan_xlib.h>
+	#include <vulkan/vulkan_xcb.h>
+	#include <X11/Xlib-xcb.h>
 #elif defined( SW_PLATFORM_MACOS )
 	#include <vulkan/vulkan_metal.h>
 #endif
@@ -105,18 +107,35 @@ namespace sw
 #elif defined( SW_PLATFORM_LINUX )
 		platform_io.Platform_CreateVkSurface = []( ImGuiViewport* vp, ImU64 vk_inst, const void* vk_allocators, ImU64* out_vk_surface ) -> int
 		{
-			const VkInstance instance = reinterpret_cast<VkInstance>( vk_inst );
-			auto*			 createFn = reinterpret_cast<PFN_vkCreateXlibSurfaceKHR>(
-				vkGetInstanceProcAddr( instance, "vkCreateXlibSurfaceKHR" ) );
-			if ( createFn == nullptr )
+			const VkInstance		  instance	 = reinterpret_cast<VkInstance>( vk_inst );
+			const VkAllocationCallbacks* allocators = static_cast<const VkAllocationCallbacks*>( vk_allocators );
+			Display*				  dpy		 = static_cast<Display*>( vp->PlatformHandle );
+			const xcb_window_t		  window	 = static_cast<xcb_window_t>( reinterpret_cast<uintptr_t>( vp->PlatformHandleRaw ) );
+
+			if ( auto* createXlib = reinterpret_cast<PFN_vkCreateXlibSurfaceKHR>(
+					 vkGetInstanceProcAddr( instance, "vkCreateXlibSurfaceKHR" ) ) )
+			{
+				VkXlibSurfaceCreateInfoKHR create_info = {};
+				create_info.sType					   = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
+				create_info.dpy						   = dpy;
+				create_info.window					   = static_cast<Window>( window );
+				return static_cast<int>( createXlib( instance, &create_info, allocators, reinterpret_cast<VkSurfaceKHR*>( out_vk_surface ) ) );
+			}
+
+			auto* createXcb = reinterpret_cast<PFN_vkCreateXcbSurfaceKHR>(
+				vkGetInstanceProcAddr( instance, "vkCreateXcbSurfaceKHR" ) );
+			if ( createXcb == nullptr || dpy == nullptr )
 				return static_cast<int>( VK_ERROR_EXTENSION_NOT_PRESENT );
 
-			VkXlibSurfaceCreateInfoKHR create_info = {};
-			create_info.sType					   = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
-			create_info.dpy						   = static_cast<Display*>( vp->PlatformHandle );
-			create_info.window					   = static_cast<Window>( reinterpret_cast<uintptr_t>( vp->PlatformHandleRaw ) );
-			VkResult err						   = createFn( instance, &create_info, static_cast<const VkAllocationCallbacks*>( vk_allocators ), reinterpret_cast<VkSurfaceKHR*>( out_vk_surface ) );
-			return static_cast<int>( err );
+			xcb_connection_t* connection = XGetXCBConnection( dpy );
+			if ( connection == nullptr )
+				return static_cast<int>( VK_ERROR_INITIALIZATION_FAILED );
+
+			VkXcbSurfaceCreateInfoKHR create_info = {};
+			create_info.sType					  = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
+			create_info.connection				  = connection;
+			create_info.window					  = window;
+			return static_cast<int>( createXcb( instance, &create_info, allocators, reinterpret_cast<VkSurfaceKHR*>( out_vk_surface ) ) );
 		};
 #elif defined( SW_PLATFORM_MACOS )
 		platform_io.Platform_CreateVkSurface = []( ImGuiViewport* vp, ImU64 vk_inst, const void* vk_allocators, ImU64* out_vk_surface ) -> int

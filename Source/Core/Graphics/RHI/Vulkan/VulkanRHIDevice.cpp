@@ -15,9 +15,12 @@
 	#include <vulkan/vulkan_win32.h>
 #elif defined( SW_PLATFORM_LINUX )
 	#include <vulkan/vulkan_xlib.h>
+	#include <vulkan/vulkan_xcb.h>
+	#include <X11/Xlib-xcb.h>
 #elif defined( SW_PLATFORM_MACOS )
 	#include <vulkan/vulkan_metal.h>
 #endif
+#include <cstring>
 namespace sw
 {
 	static const std::vector<const utf8*> s_validationLayers = {
@@ -72,6 +75,7 @@ namespace sw
 	VulkanRHIDevice::VulkanRHIDevice()
 		: _bFrameStarted{ 0 }
 		, _bOffscreenPassActive{ 0 }
+		, _linuxWsi{ 0 }
 		, _reservedFlags{ 0 }
 	{
 #if defined( SW_DEBUG )
@@ -214,15 +218,62 @@ namespace sw
 
 		std::vector<const char*> extensions;
 		extensions.push_back( VK_KHR_SURFACE_EXTENSION_NAME );
+
+		uint32 availableExtCount = 0;
+		vkEnumerateInstanceExtensionProperties( nullptr, &availableExtCount, nullptr );
+		std::vector<VkExtensionProperties> availableExts( availableExtCount );
+		if ( availableExtCount > 0 )
+			vkEnumerateInstanceExtensionProperties( nullptr, &availableExtCount, availableExts.data() );
+
+		auto hasExtension = [&availableExts]( const char* name ) -> bool
+		{
+			for ( const VkExtensionProperties& ext : availableExts )
+			{
+				if ( std::strcmp( ext.extensionName, name ) == 0 )
+					return true;
+			}
+			return false;
+		};
+
 #if defined( SW_PLATFORM_WINDOWS )
+		if ( hasExtension( VK_KHR_WIN32_SURFACE_EXTENSION_NAME ) == false )
+		{
+			SW_LOG_ERROR( "VK_KHR_win32_surface is not available." );
+			return false;
+		}
 		extensions.push_back( VK_KHR_WIN32_SURFACE_EXTENSION_NAME );
 #elif defined( SW_PLATFORM_LINUX )
-		extensions.push_back( VK_KHR_XLIB_SURFACE_EXTENSION_NAME );
+		// WSLg/gfxstream often exposes xcb but not xlib.
+		_linuxWsi = 0;
+		if ( hasExtension( VK_KHR_XLIB_SURFACE_EXTENSION_NAME ) )
+		{
+			extensions.push_back( VK_KHR_XLIB_SURFACE_EXTENSION_NAME );
+			_linuxWsi = 1;
+			SW_LOG_INFO( "Vulkan WSI: VK_KHR_xlib_surface" );
+		}
+		else if ( hasExtension( VK_KHR_XCB_SURFACE_EXTENSION_NAME ) )
+		{
+			extensions.push_back( VK_KHR_XCB_SURFACE_EXTENSION_NAME );
+			_linuxWsi = 2;
+			SW_LOG_INFO( "Vulkan WSI: VK_KHR_xcb_surface (xlib unavailable)" );
+		}
+		else
+		{
+			SW_LOG_ERROR( "No Vulkan X11 WSI extension (VK_KHR_xlib_surface / VK_KHR_xcb_surface)." );
+			return false;
+		}
 #elif defined( SW_PLATFORM_MACOS )
+		if ( hasExtension( VK_EXT_METAL_SURFACE_EXTENSION_NAME ) == false )
+		{
+			SW_LOG_ERROR( "VK_EXT_metal_surface is not available." );
+			return false;
+		}
 		extensions.push_back( VK_EXT_METAL_SURFACE_EXTENSION_NAME );
 #endif
-		if ( _bEnableValidationLayers )
+		if ( _bEnableValidationLayers && hasExtension( VK_EXT_DEBUG_UTILS_EXTENSION_NAME ) )
 			extensions.push_back( VK_EXT_DEBUG_UTILS_EXTENSION_NAME );
+		else if ( _bEnableValidationLayers )
+			_bEnableValidationLayers = false;
 
 		createInfo.enabledExtensionCount   = static_cast<uint32>( extensions.size() );
 		createInfo.ppEnabledExtensionNames = extensions.data();
@@ -274,26 +325,67 @@ namespace sw
 		}
 		return true;
 #elif defined( SW_PLATFORM_LINUX )
-		// vcpkg vulkan-loader may omit Xlib WSI link exports; resolve at runtime.
-		auto* vkCreateXlibSurfaceKHRFn = reinterpret_cast<PFN_vkCreateXlibSurfaceKHR>(
-			vkGetInstanceProcAddr( _instance, "vkCreateXlibSurfaceKHR" ) );
-		if ( vkCreateXlibSurfaceKHRFn == nullptr )
+		Display* display = static_cast<Display*>( _displayHandle );
+		Window	 window	 = static_cast<Window>( reinterpret_cast<uintptr_t>( _hWnd ) );
+		if ( display == nullptr || window == 0 )
 		{
-			SW_LOG_ERROR( "vkCreateXlibSurfaceKHR not available from Vulkan loader!" );
+			SW_LOG_ERROR( "Invalid X11 display/window for Vulkan surface." );
 			return false;
 		}
 
-		VkXlibSurfaceCreateInfoKHR createInfo{};
-		createInfo.sType  = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
-		createInfo.dpy	  = (Display*)_displayHandle;
-		createInfo.window = (Window)(uintptr_t)_hWnd;
-
-		if ( vkCreateXlibSurfaceKHRFn( _instance, &createInfo, nullptr, &_surface ) != VK_SUCCESS )
+		if ( _linuxWsi == 1 )
 		{
-			SW_LOG_ERROR( "Failed to create X11 window surface!" );
-			return false;
+			auto* createFn = reinterpret_cast<PFN_vkCreateXlibSurfaceKHR>(
+				vkGetInstanceProcAddr( _instance, "vkCreateXlibSurfaceKHR" ) );
+			if ( createFn == nullptr )
+			{
+				SW_LOG_ERROR( "vkCreateXlibSurfaceKHR not available from Vulkan loader!" );
+				return false;
+			}
+
+			VkXlibSurfaceCreateInfoKHR createInfo{};
+			createInfo.sType  = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
+			createInfo.dpy	  = display;
+			createInfo.window = window;
+			if ( createFn( _instance, &createInfo, nullptr, &_surface ) != VK_SUCCESS )
+			{
+				SW_LOG_ERROR( "Failed to create Xlib Vulkan surface!" );
+				return false;
+			}
+			return true;
 		}
-		return true;
+
+		if ( _linuxWsi == 2 )
+		{
+			auto* createFn = reinterpret_cast<PFN_vkCreateXcbSurfaceKHR>(
+				vkGetInstanceProcAddr( _instance, "vkCreateXcbSurfaceKHR" ) );
+			if ( createFn == nullptr )
+			{
+				SW_LOG_ERROR( "vkCreateXcbSurfaceKHR not available from Vulkan loader!" );
+				return false;
+			}
+
+			xcb_connection_t* connection = XGetXCBConnection( display );
+			if ( connection == nullptr )
+			{
+				SW_LOG_ERROR( "XGetXCBConnection failed — cannot create Vulkan xcb surface." );
+				return false;
+			}
+
+			VkXcbSurfaceCreateInfoKHR createInfo{};
+			createInfo.sType	  = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
+			createInfo.connection = connection;
+			createInfo.window	  = static_cast<xcb_window_t>( window );
+			if ( createFn( _instance, &createInfo, nullptr, &_surface ) != VK_SUCCESS )
+			{
+				SW_LOG_ERROR( "Failed to create XCB Vulkan surface!" );
+				return false;
+			}
+			return true;
+		}
+
+		SW_LOG_ERROR( "No Linux Vulkan WSI selected during instance creation." );
+		return false;
 #elif defined( SW_PLATFORM_MACOS )
 		VkMetalSurfaceCreateInfoEXT createInfo{};
 		createInfo.sType  = VK_STRUCTURE_TYPE_METAL_SURFACE_CREATE_INFO_EXT;

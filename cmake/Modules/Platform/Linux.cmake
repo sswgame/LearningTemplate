@@ -13,6 +13,16 @@ if(X11_FOUND)
     target_include_directories(sw_platform_linux INTERFACE ${X11_INCLUDE_DIR})
 endif()
 
+# WSLg Vulkan WSI often needs xcb (VK_KHR_xcb_surface) via XGetXCBConnection.
+find_library(SW_XCB_LIBRARY NAMES xcb)
+find_library(SW_X11_XCB_LIBRARY NAMES X11-xcb)
+if(SW_XCB_LIBRARY)
+    target_link_libraries(sw_platform_linux INTERFACE ${SW_XCB_LIBRARY})
+endif()
+if(SW_X11_XCB_LIBRARY)
+    target_link_libraries(sw_platform_linux INTERFACE ${SW_X11_XCB_LIBRARY})
+endif()
+
 # Mirror Windows sw_platform_windows (opengl32.lib): bake GL/GLX into every target via
 # sw_flag_libraries so SHARED Core can resolve glX* when SW_RHI_AS_MODULES=OFF
 # (lld --no-allow-shlib-undefined on consumers).
