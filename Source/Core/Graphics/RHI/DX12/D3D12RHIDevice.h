@@ -266,7 +266,7 @@ namespace sw
 		D3D12RHIDevice()		   = default;
 		~D3D12RHIDevice() override = default;
 
-		bool initialize( const RHISwapChainDesc& ) override { return false; }
+		bool initializeInternal( const RHISwapChainDesc& ) override { return false; }
 		void shutdown() override {}
 		void resize( uint32, uint32 ) override {}
 		void beginFrame( float32[4] ) override {}

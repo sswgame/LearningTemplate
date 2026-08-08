@@ -122,12 +122,25 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/${presetName}",
-
+        "SW_RHI_AS_MODULES": "OFF",
         "SW_SHIPPING_BUILD": "OFF",
 
         "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/cmake/Modules/Toolchain/Vcpkg",
         "VCPKG_INSTALLED_DIR": "${sourceDir}/build/vcpkg_installed",
         "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/Tools/vcpkg/scripts/buildsystems/vcpkg.cmake"
+      },
+      "vendor": {
+        "microsoft.com/VisualStudioRemoteSettings/CMake/1.0": {
+          "remoteCopySources": true,
+          "remoteCopySourcesMethod": "rsync",
+          "remoteCopySourcesExclusionList": [
+            ".vs",
+            ".git",
+            "${sourceDir}/Tools/vcpkg/buildtrees",
+            "${sourceDir}/Tools/vcpkg/packages",
+            "${sourceDir}/Tools/vcpkg/downloads",
+          ]
+        }
       }
     },
 
@@ -156,6 +169,19 @@
         "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/cmake/Modules/Toolchain/Vcpkg",
         "VCPKG_INSTALLED_DIR": "${sourceDir}/build/vcpkg_installed",
         "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/Tools/vcpkg/scripts/buildsystems/vcpkg.cmake"
+      },
+      "vendor": {
+        "microsoft.com/VisualStudioRemoteSettings/CMake/1.0": {
+          "remoteCopySources": true,
+          "remoteCopySourcesMethod": "rsync",
+          "remoteCopySourcesExclusionList": [
+            ".vs",
+            ".git",
+            "${sourceDir}/Tools/vcpkg/buildtrees",
+            "${sourceDir}/Tools/vcpkg/packages",
+            "${sourceDir}/Tools/vcpkg/downloads"
+          ]
+        }
       }
     },
 
@@ -186,6 +212,19 @@
         "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/cmake/Modules/Toolchain/Vcpkg",
         "VCPKG_INSTALLED_DIR": "${sourceDir}/build/vcpkg_installed",
         "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/Tools/vcpkg/scripts/buildsystems/vcpkg.cmake"
+      },
+      "vendor": {
+        "microsoft.com/VisualStudioRemoteSettings/CMake/1.0": {
+          "remoteCopySources": true,
+          "remoteCopySourcesMethod": "rsync",
+          "remoteCopySourcesExclusionList": [
+            ".vs",
+            ".git",
+            "${sourceDir}/Tools/vcpkg/buildtrees",
+            "${sourceDir}/Tools/vcpkg/packages",
+            "${sourceDir}/Tools/vcpkg/downloads"
+          ]
+        }
       }
     },
 
