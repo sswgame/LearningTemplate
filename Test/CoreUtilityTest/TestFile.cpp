@@ -113,7 +113,7 @@ SW_TEST_CASE( Utility_File, ArchiveChecksumVerification )
 {
 	sw::Archive writeArc;
 	writeArc << std::string( "AntigravityData" );
-	writeArc << 123456789LL;
+	writeArc << 123456789;
 
 	uint32 initialChecksum = writeArc.calculateChecksum();
 	SW_EXPECT_TRUE( initialChecksum != 0 );

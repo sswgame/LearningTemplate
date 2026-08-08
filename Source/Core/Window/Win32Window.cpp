@@ -4,6 +4,7 @@
  */
 #include "Win32Window.h"
 
+#if defined( SW_PLATFORM_WINDOWS )
 namespace sw
 {
 	Win32Window::Win32Window() = default;
@@ -13,7 +14,7 @@ namespace sw
 		destroy();
 	}
 
-#if defined( SW_PLATFORM_WINDOWS )
+	#if defined( SW_PLATFORM_WINDOWS )
 	// ============================================================================
 	// @function wndProc
 	// @brief Windows OS로부터 수신된 네이티브 메시지를 처리하는 정적 콜백 함수
@@ -138,7 +139,7 @@ namespace sw
 	{
 		if ( _title.empty() )
 			return false;
-
+		#if defined( SW_PLATFORM_WINDOWS )
 		// Preserve screen position so DXGI↔OpenGL HWND rebuild feels like the same window.
 		if ( _hWnd != nullptr )
 		{
@@ -161,6 +162,7 @@ namespace sw
 		const bool ok = create( title.c_str(), width, height );
 		_restoreX	  = CW_USEDEFAULT;
 		_restoreY	  = CW_USEDEFAULT;
+		#endif
 		return ok;
 	}
 
@@ -177,13 +179,13 @@ namespace sw
 		}
 		return !_bShouldClose;
 	}
-#else
+	#else
 	LRESULT CALLBACK Win32Window::wndProc( HWND, UINT, WPARAM, LPARAM )
 	{
 		return 0;
 	}
 
-	bool Win32Window::create( const utf16*, uint32 width, uint32 height )
+	bool Win32Window::create( const utf8*, uint32 width, uint32 height )
 	{
 		_width	= width;
 		_height = height;
@@ -200,5 +202,6 @@ namespace sw
 	{
 		return !_bShouldClose;
 	}
-#endif
+	#endif
 } // namespace sw
+#endif

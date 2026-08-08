@@ -35,7 +35,7 @@ namespace sw
 			100, 100, width, height,
 			1, black, white );
 
-		XStoreName( display, win, title.c_str() );
+		XStoreName( display, win, title );
 
 		Atom wmDeleteMessage = XInternAtom( display, "WM_DELETE_WINDOW", False );
 		XSetWMProtocols( display, win, &wmDeleteMessage, 1 );

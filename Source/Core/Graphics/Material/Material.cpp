@@ -245,7 +245,11 @@ namespace sw
 						_data.buffer.resize( currentOffset + 16, 0 );
 
 					float32* ptr = reinterpret_cast<float32*>( _data.buffer.data() + currentOffset );
+#if defined( SW_PLATFORM_WINDOWS )
 					sscanf_s( value.c_str(), "%f %f %f %f", &ptr[0], &ptr[1], &ptr[2], &ptr[3] );
+#else
+					sscanf( value.c_str(), "%f %f %f %f", &ptr[0], &ptr[1], &ptr[2], &ptr[3] );
+#endif
 					currentOffset += 16;
 				}
 			}

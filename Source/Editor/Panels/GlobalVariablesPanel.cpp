@@ -31,7 +31,7 @@ namespace sw
 
 		struct Row
 		{
-			const std::string*		   name = nullptr;
+			const std::string*		  name = nullptr;
 			const GlobalVariableInfo* info = nullptr;
 		};
 		std::vector<Row> rows;
@@ -71,8 +71,8 @@ namespace sw
 			{
 				for ( int i = clipper.DisplayStart; i < clipper.DisplayEnd; ++i )
 				{
-					const Row&				 row  = rows[static_cast<size_t>( i )];
-					const std::string&		 name = *row.name;
+					const Row&				  row  = rows[static_cast<size_t>( i )];
+					const std::string&		  name = *row.name;
 					const GlobalVariableInfo& info = *row.info;
 
 					ImGui::PushID( i );
@@ -84,7 +84,7 @@ namespace sw
 					ImGui::TableSetColumnIndex( 1 );
 					switch ( info._type )
 					{
-						case GlobalVariableType::Bool:
+						case GlobalVariableType::Boolean:
 							ImGui::TextColored( ImVec4( 0.4f, 0.8f, 1.0f, 1.0f ), "Bool" );
 							break;
 						case GlobalVariableType::Int32:
@@ -106,7 +106,7 @@ namespace sw
 					{
 						switch ( info._type )
 						{
-							case GlobalVariableType::Bool:
+							case GlobalVariableType::Boolean:
 							{
 								bool* pVal = static_cast<bool*>( info._pData );
 								if ( ImGui::Checkbox( "##bool_val", pVal ) && info._onValueChanged.isBound() )
@@ -131,7 +131,7 @@ namespace sw
 							{
 								std::string* pVal = static_cast<std::string*>( info._pData );
 								char		 buf[256];
-								strncpy_s( buf, pVal->c_str(), sizeof( buf ) - 1 );
+								StringUtil::strncpy( buf, pVal->c_str(), sizeof( buf ) - 1 );
 								if ( ImGui::InputText( "##string_val", buf, sizeof( buf ) ) )
 								{
 									*pVal = buf;

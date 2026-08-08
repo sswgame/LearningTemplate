@@ -47,7 +47,9 @@
 		#include <sys/eventfd.h>
 		#include <X11/Xlib.h>
 		#include <X11/Xutil.h>
-		#include <GL/glx.h>
+		#ifdef None
+			#undef None
+		#endif
 	#elif defined( SW_PLATFORM_MACOS )
 		#include <mach-o/dyld.h>
 		#include <pwd.h>

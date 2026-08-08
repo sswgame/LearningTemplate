@@ -24,7 +24,7 @@ SW_TEST_CASE( Utility_GlobalVariable, Registration )
 	SW_EXPECT_TRUE( pBoolInfo != nullptr );
 	if ( pBoolInfo != nullptr )
 	{
-		SW_EXPECT_TRUE( pBoolInfo->_type == sw::GlobalVariableType::Bool );
+		SW_EXPECT_TRUE( pBoolInfo->_type == sw::GlobalVariableType::Boolean );
 		SW_EXPECT_TRUE( pBoolInfo->getValueAsBool() == true );
 		SW_EXPECT_EQUAL( std::string( "Unit Test Bool Global Variable" ), pBoolInfo->_description );
 	}

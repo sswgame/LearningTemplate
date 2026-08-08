@@ -7,15 +7,6 @@
 
 #if defined( SW_PLATFORM_WINDOWS )
 	#include "Core/Common/PlatformHeaders.h"
-#else
-using HWND	  = void*;
-using UINT	  = uint32;
-using WPARAM  = uintptr_t;
-using LPARAM  = intptr_t;
-using LRESULT = intptr_t;
-	#define CALLBACK
-#endif
-
 namespace sw
 {
 	/**
@@ -41,9 +32,19 @@ namespace sw
 
 		HWND _hWnd		  = nullptr;
 		bool _bRecreating = false;
-#if defined( SW_PLATFORM_WINDOWS )
+	#if defined( SW_PLATFORM_WINDOWS )
 		int _restoreX = CW_USEDEFAULT;
 		int _restoreY = CW_USEDEFAULT;
-#endif
+	#endif
 	};
 } // namespace sw
+
+#else
+using HWND	  = void*;
+using UINT	  = uint32;
+using WPARAM  = uintptr_t;
+using LPARAM  = intptr_t;
+using LRESULT = intptr_t;
+	#define CALLBACK
+
+#endif

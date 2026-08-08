@@ -7,7 +7,14 @@
 #include <imgui.h>
 
 #define NOTIFY_RENDER_OUTSIDE_MAIN_WINDOW false
-#include <ImGuiNotify.hpp>
+#if defined( SW_PLATFORM_LINUX )
+	#if defined( Success )
+		#undef Success
+		#include <ImGuiNotify.hpp>
+	#endif
+#else
+	#include <ImGuiNotify.hpp>
+#endif
 
 namespace sw
 {

@@ -1,3 +1,5 @@
+#include "StringUtil.h"
+#include "StringUtil.h"
 /**
  * @file StringUtil.cpp
  * @brief 문자열 유틸리티 구현
@@ -385,6 +387,28 @@ namespace sw
 		return std::wcscmp( reinterpret_cast<const utf16*>( lhs ), reinterpret_cast<const utf16*>( rhs ) );
 	}
 
+	void StringUtil::strncpy( utf8* destination, const utf8* source, const uint32 length )
+	{
+#if defined( SW_PLATFORM_WINDOWS )
+		::strncpy_s( destination, length, source );
+#elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
+		::strncpy( destination, source, length );
+#else
+	#error "Unsupported platform"
+#endif
+	}
+
+	void StringUtil::strncpy( utf16* destination, const utf16* source, const uint32 length )
+	{
+#if defined( SW_PLATFORM_WINDOWS )
+		::wcsncpy_s( destination, length, source, _TRUNCATE );
+#elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
+		::wcsncpy( destination, source, length );
+#else
+	#error "Unsupported platform"
+#endif
+	}
+
 	const utf8* StringUtil::strstr( const utf8* str, const utf8* substr )
 	{
 		return ::strstr( str, substr );
@@ -446,12 +470,24 @@ namespace sw
 
 		std::wstring nullTerminated{ input };
 		size_t		 requiredSize = 0;
+#if defined( SW_PLATFORM_WINDOWS )
 		wcstombs_s( &requiredSize, nullptr, 0, nullTerminated.c_str(), 0 );
+#elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
+		wcstombs( nullptr, nullTerminated.c_str(), 0 );
+#else
+	#error "Unsupported platform"
+#endif
 		if ( requiredSize == 0 || requiredSize == static_cast<size_t>( -1 ) )
 			return std::string{};
 
 		std::string buffer( requiredSize - 1, '\0' );
+#if defined( SW_PLATFORM_WINDOWS )
 		wcstombs_s( nullptr, buffer.data(), requiredSize, nullTerminated.c_str(), requiredSize );
+#elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
+		wcstombs( buffer.data(), nullTerminated.c_str(), requiredSize );
+#else
+	#error "Unsupported platform"
+#endif
 
 		return buffer;
 	}
@@ -463,12 +499,25 @@ namespace sw
 
 		std::string nullTerminated{ input };
 		size_t		requiredSize = 0;
+#if defined( SW_PLATFORM_WINDOWS )
 		mbstowcs_s( &requiredSize, nullptr, 0, nullTerminated.c_str(), 0 );
+#elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
+		mbstowcs( nullptr, nullTerminated.c_str(), 0 );
+#else
+	#error "Unsupported platform"
+#endif
 		if ( requiredSize == 0 || requiredSize == static_cast<size_t>( -1 ) )
+
 			return std::wstring{};
 
 		std::wstring buffer( requiredSize - 1, L'\0' );
+#if defined( SW_PLATFORM_WINDOWS )
 		mbstowcs_s( nullptr, buffer.data(), requiredSize, nullTerminated.c_str(), requiredSize );
+#elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
+		mbstowcs( buffer.data(), nullTerminated.c_str(), requiredSize );
+#else
+	#error "Unsupported platform"
+#endif
 
 		return buffer;
 	}

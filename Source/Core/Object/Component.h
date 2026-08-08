@@ -13,6 +13,7 @@
 
 namespace sw
 {
+	class GameObject;
 	/**
 	 * @enum TickGroup
 	 * @brief 프레임 내 컴포넌트 tick 실행 순서 슬롯

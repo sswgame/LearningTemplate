@@ -109,9 +109,9 @@ namespace sw
 	} // namespace
 #endif
 
+#if defined( SW_PLATFORM_WINDOWS )
 	bool ImGuiDX12RendererBackend::allocSrvDescriptor( D3D12_CPU_DESCRIPTOR_HANDLE* outCpu, D3D12_GPU_DESCRIPTOR_HANDLE* outGpu )
 	{
-#if defined( SW_PLATFORM_WINDOWS )
 		if ( _d3d12SrvHeap == nullptr || outCpu == nullptr || outGpu == nullptr )
 			return false;
 
@@ -134,16 +134,10 @@ namespace sw
 		outCpu->ptr = _d3d12SrvHeap->GetCPUDescriptorHandleForHeapStart().ptr + static_cast<SIZE_T>( index ) * _descriptorSize;
 		outGpu->ptr = _d3d12SrvHeap->GetGPUDescriptorHandleForHeapStart().ptr + static_cast<SIZE_T>( index ) * _descriptorSize;
 		return true;
-#else
-		(void)outCpu;
-		(void)outGpu;
-		return false;
-#endif
 	}
 
 	void ImGuiDX12RendererBackend::freeSrvDescriptor( D3D12_CPU_DESCRIPTOR_HANDLE cpu, D3D12_GPU_DESCRIPTOR_HANDLE /*gpu*/ )
 	{
-#if defined( SW_PLATFORM_WINDOWS )
 		if ( _d3d12SrvHeap == nullptr || _descriptorSize == 0 )
 			return;
 
@@ -154,10 +148,8 @@ namespace sw
 		const uint32 index = static_cast<uint32>( ( cpu.ptr - start ) / _descriptorSize );
 		if ( index < _maxDescriptors )
 			_freeDescriptors.push_back( index );
-#else
-		(void)cpu;
-#endif
 	}
+#endif
 
 	bool ImGuiDX12RendererBackend::initialize( class IRHIDevice* rhiDevice )
 	{

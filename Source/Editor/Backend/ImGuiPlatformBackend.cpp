@@ -143,6 +143,7 @@ namespace sw
 				return false;
 			Display* display = static_cast<Display*>( window->getNativeDisplay() );
 			Window	 win	 = static_cast<Window>( reinterpret_cast<uintptr_t>( window->getNativeHandle() ) );
+			(void)backendType;
 			return ImGui_ImplX11_Init( display, win );
 #else
 			(void)window;

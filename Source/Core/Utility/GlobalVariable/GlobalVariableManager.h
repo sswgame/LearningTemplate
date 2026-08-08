@@ -17,7 +17,7 @@ namespace sw
 
 	enum class GlobalVariableType : uint8
 	{
-		Bool,
+		Boolean,
 		Int32,
 		Float,
 		String,
@@ -27,7 +27,7 @@ namespace sw
 	struct SW_API GlobalVariableInfo
 	{
 		std::string										_name;
-		GlobalVariableType								_type  = GlobalVariableType::Bool;
+		GlobalVariableType								_type  = GlobalVariableType::Boolean;
 		void*											_pData = nullptr;
 		std::variant<bool, int32, float32, std::string> _defaultValue;
 		std::string										_description;
@@ -116,7 +116,7 @@ namespace sw
 #define SW_GLOBAL_VARIABLE_BOOL( name, defaultVal, desc )   \
 	extern bool							 name;              \
 	bool								 name = defaultVal; \
-	static ::sw::GlobalVariableRegistrar sw_reg_##name( SW_GVM_MODULE_HEAD(), #name, ::sw::GlobalVariableType::Bool, &name, bool( defaultVal ), desc )
+	static ::sw::GlobalVariableRegistrar sw_reg_##name( SW_GVM_MODULE_HEAD(), #name, ::sw::GlobalVariableType::Boolean, &name, bool( defaultVal ), desc )
 
 /** @brief SW_GLOBAL_VARIABLE_INT 매크로 정의입니다. */
 #define SW_GLOBAL_VARIABLE_INT( name, defaultVal, desc )    \

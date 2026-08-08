@@ -12,7 +12,7 @@ namespace sw
 
 	bool GlobalVariableInfo::getValueAsBool() const
 	{
-		if ( _pData != nullptr && _type == GlobalVariableType::Bool )
+		if ( _pData != nullptr && _type == GlobalVariableType::Boolean )
 		{
 			return *static_cast<bool*>( _pData );
 		}
@@ -46,7 +46,7 @@ namespace sw
 
 		switch ( _type )
 		{
-			case GlobalVariableType::Bool:
+			case GlobalVariableType::Boolean:
 				return *static_cast<bool*>( _pData ) ? "true" : "false";
 			case GlobalVariableType::Int32:
 			case GlobalVariableType::Enum:
@@ -68,7 +68,7 @@ namespace sw
 
 		switch ( _type )
 		{
-			case GlobalVariableType::Bool:
+			case GlobalVariableType::Boolean:
 			{
 				const std::string lowerVal = sw::StringUtil::toLower( std::string( strValue ) );
 
@@ -125,7 +125,7 @@ namespace sw
 
 		switch ( _type )
 		{
-			case GlobalVariableType::Bool:
+			case GlobalVariableType::Boolean:
 				if ( std::holds_alternative<bool>( _defaultValue ) )
 				{
 					*static_cast<bool*>( _pData ) = std::get<bool>( _defaultValue );
@@ -272,7 +272,7 @@ namespace sw
 				if ( pCmdLineManager->getArgument( name, val ) )
 					setValueFromString( name, std::to_string( val ) );
 			}
-			else if ( info._type == GlobalVariableType::Bool )
+			else if ( info._type == GlobalVariableType::Boolean )
 			{
 				bool val = false;
 				if ( pCmdLineManager->getArgument( name, val ) )

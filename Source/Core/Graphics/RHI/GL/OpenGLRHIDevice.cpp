@@ -19,6 +19,10 @@
 	#define WGL_CONTEXT_CORE_PROFILE_BIT_ARB 0x00000001
 typedef HGLRC( WINAPI* PFNWGLCREATECONTEXTATTRIBSARBPROC )( HDC hDC, HGLRC hShareContext, const int* attribList );
 #elif defined( SW_PLATFORM_LINUX )
+	#include <GL/glx.h>
+	#ifdef None
+		#undef None
+	#endif
 	#define GLX_CONTEXT_MAJOR_VERSION_ARB	 0x2091
 	#define GLX_CONTEXT_MINOR_VERSION_ARB	 0x2092
 	#define GLX_CONTEXT_PROFILE_MASK_ARB	 0x9126
@@ -124,7 +128,7 @@ namespace sw
 			GLX_GREEN_SIZE, 8,
 			GLX_BLUE_SIZE, 8,
 			GLX_DEPTH_SIZE, 24,
-			None };
+			0 };
 		int			 fbcount = 0;
 		GLXFBConfig* fbc	 = glXChooseFBConfig( dpy, DefaultScreen( dpy ), visual_attribs, &fbcount );
 
@@ -142,7 +146,7 @@ namespace sw
 				GLX_CONTEXT_MAJOR_VERSION_ARB, 4,
 				GLX_CONTEXT_MINOR_VERSION_ARB, 6,
 				GLX_CONTEXT_PROFILE_MASK_ARB, GLX_CONTEXT_CORE_PROFILE_BIT_ARB,
-				None };
+				0 };
 			ctx = glXCreateContextAttribsARB( dpy, fbc[0], NULL, True, context_attribs );
 		}
 		else
@@ -832,7 +836,7 @@ namespace sw
 #elif defined( SW_PLATFORM_LINUX )
 		if ( _hRC )
 		{
-			glXMakeCurrent( (Display*)_hDC, None, NULL );
+			glXMakeCurrent( (Display*)_hDC, 0, NULL );
 			glXDestroyContext( (Display*)_hDC, (GLXContext)_hRC );
 			_hRC = nullptr;
 		}

@@ -113,6 +113,9 @@ namespace sw
 		 */
 		static int32 strcmp( const utf16* lhs, const utf16* rhs );
 
+		static void strncpy( utf8* destination, const utf8* source, const uint32 length );
+		static void strncpy( utf16* destination, const utf16* source, const uint32 length );
+
 		static const utf8*	strstr( const utf8* str, const utf8* substr );
 		static const utf16* strstr( const utf16* str, const utf16* substr );
 

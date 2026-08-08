@@ -18,12 +18,19 @@
       "name": "imgui",
       "features": [
         "docking-experimental",
-        "win32-binding",
-        "dx11-binding",
-        "dx12-binding",
         "opengl3-binding",
         "vulkan-binding"
       ]
+    },
+
+    {
+      "name": "imgui",
+      "features": [
+        "win32-binding",
+        "dx11-binding",
+        "dx12-binding"
+      ],
+      "platform": "windows & !uwp"
     },
     "implot",
     "imguizmo",

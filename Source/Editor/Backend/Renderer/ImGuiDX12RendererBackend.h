@@ -6,6 +6,9 @@
 
 #include "Editor/Backend/IImGuiRendererBackend.h"
 
+struct D3D12_CPU_DESCRIPTOR_HANDLE;
+struct D3D12_GPU_DESCRIPTOR_HANDLE;
+
 namespace sw
 {
 	class IRHIDevice;

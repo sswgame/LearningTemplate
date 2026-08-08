@@ -41,7 +41,14 @@
 #include <ImGuizmo.h>
 
 #define NOTIFY_RENDER_OUTSIDE_MAIN_WINDOW false
-#include <ImGuiNotify.hpp>
+#if defined( SW_PLATFORM_LINUX )
+	#if defined( Success )
+		#undef Success
+		#include <ImGuiNotify.hpp>
+	#endif
+#else
+	#include <ImGuiNotify.hpp>
+#endif
 #include <fa-solid-900.h>
 #include <IconsFontAwesome6.h>
 
@@ -129,7 +136,7 @@ namespace sw
 
 		BLOCK( "Font Awesome 6 (ImGuiNotify icons)" )
 		{
-			const float			  iconFontSize = editor::constant::kFontSize * 2.0f / 3.0f;
+			const float				 iconFontSize  = editor::constant::kFontSize * 2.0f / 3.0f;
 			static constexpr ImWchar iconsRanges[] = { ICON_MIN_FA, ICON_MAX_16_FA, 0 };
 			ImFontConfig			 iconsConfig{};
 			iconsConfig.MergeMode		 = true;
@@ -515,7 +522,7 @@ namespace sw
 
 		const ImGuiViewport* viewport	 = ImGui::GetMainViewport();
 		const ImGuiID		 dockspaceId = ImGui::DockSpaceOverViewport(
-			   ImGui::GetID( "EditorMainDockSpace_v5" ), viewport, ImGuiDockNodeFlags_PassthruCentralNode );
+			ImGui::GetID( "EditorMainDockSpace_v5" ), viewport, ImGuiDockNodeFlags_PassthruCentralNode );
 
 		if ( _bDockLayoutApplied == false )
 		{
