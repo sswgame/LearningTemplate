@@ -1,5 +1,6 @@
 # Linux platform definitions (CMake-only: find_library, RPATH, INTERFACE libs).
 # Host file fixes (Vulkan loader symlink) live in cmake/internal/VcpkgHostFixes.cmake.
+# GPU (OpenGL/GLX/Vulkan) → sw_graphics_libs; X11/xcb stay on platform (windowing/WSI).
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     return()
@@ -41,46 +42,43 @@ if(NOT SW_XCB_INCLUDE_DIR OR NOT SW_XCB_LIBRARY)
     message(WARNING "[Linux] libxcb headers/libs not found — install libxcb1-dev (Vulkan xcb WSI)")
 endif()
 
-# Mirror Windows sw_platform_windows (opengl32.lib): bake GL/GLX into every target via
-# sw_flag_libraries so SHARED Core can resolve glX* when SW_RHI_AS_MODULES=OFF
-# (lld --no-allow-shlib-undefined on consumers).
+if(NOT TARGET sw_graphics_libs)
+    add_library(sw_graphics_libs INTERFACE)
+endif()
+
+# OpenGL/GLX — linked by Core / RHI / App via sw_graphics_libs (not every sw_add_*).
 find_package(OpenGL)
 if(OpenGL_FOUND)
     if(TARGET OpenGL::GL)
-        target_link_libraries(sw_platform_linux INTERFACE OpenGL::GL)
+        target_link_libraries(sw_graphics_libs INTERFACE OpenGL::GL)
     elseif(OPENGL_gl_LIBRARY)
-        target_link_libraries(sw_platform_linux INTERFACE ${OPENGL_gl_LIBRARY})
+        target_link_libraries(sw_graphics_libs INTERFACE ${OPENGL_gl_LIBRARY})
     endif()
 
     if(TARGET OpenGL::GLX)
-        target_link_libraries(sw_platform_linux INTERFACE OpenGL::GLX)
+        target_link_libraries(sw_graphics_libs INTERFACE OpenGL::GLX)
     elseif(OPENGL_opengl_LIBRARY AND NOT TARGET OpenGL::GL)
-        target_link_libraries(sw_platform_linux INTERFACE ${OPENGL_opengl_LIBRARY})
+        target_link_libraries(sw_graphics_libs INTERFACE ${OPENGL_opengl_LIBRARY})
     else()
         find_library(SW_GLX_LIBRARY NAMES GLX glx)
         if(SW_GLX_LIBRARY)
-            target_link_libraries(sw_platform_linux INTERFACE ${SW_GLX_LIBRARY})
+            target_link_libraries(sw_graphics_libs INTERFACE ${SW_GLX_LIBRARY})
         endif()
     endif()
 else()
-    message(WARNING "[Linux] OpenGL not found — GL/GLX RHI link may fail when SW_RHI_AS_MODULES=OFF")
+    message(WARNING "[Linux] OpenGL not found — GL/GLX RHI link may fail")
 endif()
 
 # Vulkan loader — prefer system libvulkan (vcpkg loader often lacks X11 WSI).
 if(SW_SYSTEM_VULKAN_LIBRARY)
-    target_link_libraries(sw_platform_linux INTERFACE ${SW_SYSTEM_VULKAN_LIBRARY})
+    target_link_libraries(sw_graphics_libs INTERFACE ${SW_SYSTEM_VULKAN_LIBRARY})
 else()
     find_package(Vulkan QUIET)
     if(TARGET Vulkan::Vulkan)
-        target_link_libraries(sw_platform_linux INTERFACE Vulkan::Vulkan)
+        target_link_libraries(sw_graphics_libs INTERFACE Vulkan::Vulkan)
     elseif(Vulkan_LIBRARIES)
-        target_link_libraries(sw_platform_linux INTERFACE ${Vulkan_LIBRARIES})
+        target_link_libraries(sw_graphics_libs INTERFACE ${Vulkan_LIBRARIES})
     endif()
-endif()
-
-if(NOT TARGET sw_graphics_libs)
-    add_library(sw_graphics_libs INTERFACE)
-    target_link_libraries(sw_graphics_libs INTERFACE sw_platform_linux)
 endif()
 
 list(APPEND sw_flag_libraries sw_platform_linux)

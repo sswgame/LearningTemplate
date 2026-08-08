@@ -115,6 +115,21 @@ if(DEFINED sw_vcpkg_root AND NOT sw_vcpkg_root STREQUAL "")
     set(VCPKG_ROOT "${sw_vcpkg_root}" CACHE PATH "vcpkg root directory" FORCE)
 endif()
 
+# Preset contract: CMAKE_TOOLCHAIN_FILE → Tools/vcpkg. Warn if FindVcpkg resolved elsewhere.
+set(_sw_canonical_vcpkg "${CMAKE_SOURCE_DIR}/Tools/vcpkg")
+cmake_path(NORMAL_PATH _sw_canonical_vcpkg)
+if(DEFINED sw_vcpkg_root AND NOT sw_vcpkg_root STREQUAL "")
+    set(_sw_resolved_vcpkg "${sw_vcpkg_root}")
+    cmake_path(NORMAL_PATH _sw_resolved_vcpkg)
+    if(NOT _sw_resolved_vcpkg STREQUAL _sw_canonical_vcpkg)
+        message(WARNING
+            "[vcpkg] Resolved root (${_sw_resolved_vcpkg}) differs from preset contract "
+            "(${_sw_canonical_vcpkg}). Presets use Tools/vcpkg as CMAKE_TOOLCHAIN_FILE; "
+            "bootstrap or clone into Tools/vcpkg to keep includes and toolchain aligned."
+        )
+    endif()
+endif()
+
 if(NOT TARGET sw_toolchain_vcpkg)
     add_library(sw_toolchain_vcpkg INTERFACE)
 endif()

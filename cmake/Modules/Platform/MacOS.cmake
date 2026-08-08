@@ -1,4 +1,4 @@
-# macOS platform definitions.
+# macOS platform definitions. GPU frameworks → sw_graphics_libs when needed.
 
 if(NOT APPLE)
     return()
@@ -14,7 +14,6 @@ endif()
 
 if(NOT TARGET sw_graphics_libs)
     add_library(sw_graphics_libs INTERFACE)
-    target_link_libraries(sw_graphics_libs INTERFACE sw_platform_macos)
 endif()
 
 list(APPEND sw_flag_libraries sw_platform_macos)

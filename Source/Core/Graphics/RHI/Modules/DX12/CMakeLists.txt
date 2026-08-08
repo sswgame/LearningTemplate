@@ -2,9 +2,11 @@
 # @file RHI_DX12 MODULE — Direct3D 12 backend plugin
 # ==============================================================================
 
+include("${CMAKE_CURRENT_SOURCE_DIR}/../../RhiSources.cmake")
+
 sw_add_library(RHI_DX12 MODULE
     SOURCES
-        "${CMAKE_CURRENT_SOURCE_DIR}/../../DX12/D3D12RHIDevice.cpp"
+        ${SW_RHI_DX12_DEVICE_SOURCES}
     LINK_LIBRARIES
         Core
         sw_graphics_libs

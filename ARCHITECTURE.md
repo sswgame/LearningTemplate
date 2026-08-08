@@ -38,7 +38,7 @@ MODULE DLL(`sw_set_module_bin_output`)도 같은 preset `Bin` 에 두어 LiveRel
 | Core | SHARED DLL | STATIC |
 | EditorModule | MODULE DLL + 핫리로드 | 빌드 안 함 |
 | SWGame | MODULE DLL + 핫리로드 | STATIC → App에 링크 |
-| `SW_RHI_AS_MODULES` | ON (기본) — RHI_* MODULE | **FORCE OFF** — all RHI backends linked into Core |
+| `SW_RHI_AS_MODULES` | ON (기본) — RHI_* MODULE | directory-scope OFF — all RHI backends linked into Core |
 | C++ define | (없음) | `SW_SHIPPING` |
 
 빌드 타입(Debug/Release)과 Shipping 여부는 **독립**입니다.
@@ -64,7 +64,7 @@ App은 Editor/Game 구현 클래스를 직접 링크하지 않고 함수 테이�
 - `IRHIDevice` + `RHIBackendRegistry` 는 Core. 헤더는 Core에 두고 device `.cpp` 만 MODULE로 분리.
 - `SW_RHI_AS_MODULES=ON`(Dev 기본): `RHI_DX11` / `RHI_DX12` (Windows) + `RHI_GL` / `RHI_Vulkan` MODULE을 Core가 지연 로드 (`createRHIDevice`).
   - `unloadModules` 는 factory를 먼저 비운 뒤 `FreeLibrary`/`dlclose`. **MODULE 백엔드 device는 먼저 destroy** (`RHI::shutdown` 경로).
-- Shipping: `SW_RHI_AS_MODULES` FORCE OFF → 모든 백엔드 device가 Core에 정적 링크.
+- Shipping: `BuildConfig.cmake`가 `SW_RHI_AS_MODULES`를 non-cache로 OFF → 모든 백엔드 device가 Core에 정적 링크.
 - Editor는 concrete device 타입에 링크하지 않음 — `getNativeTextureName` / `queryVulkanImGuiNative` 가상 API 사용.
 - Caps: DX11/OpenGL `_bBindless=true` (descriptor-index tables, bind-at-draw — not DX12 heaps). Vulkan `_bBindless=false`, editor hooks deferred. DX11/GL/VK `_bComputeRootConstants=true` (DX12 native; DX11/GL CB/UBO shim ≤64 DWORD; VK push constants). `_bOffscreenRT=true` where listed.
 - **RHIReleaseQueue** (`frameLatency` deferred destroy): wired on **DX12 / OpenGL / DX11** — `destroyBuffer`/`destroyTexture` enqueue; `endFrame` → `tickFrame()`; `waitIdle`/`shutdown` → `flushAll()`. **Vulkan not wired** (deferred).

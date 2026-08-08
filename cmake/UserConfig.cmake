@@ -35,20 +35,6 @@ option(SW_BUILD_GAME "Build Source/Game (SWGame module)" ON)
 # Release 와 독립 — 레이아웃 정책은 BuildConfig.cmake 가 적용.
 option(SW_SHIPPING_BUILD "Static Core/SWGame shipping layout (no Editor MODULE / no hot-reload)" OFF)
 
-# 예전 소문자 CACHE 토글 → 새 SW_* 로 이관 후 제거
-macro(sw_migrate_legacy_bool_cache LEGACY_NAME NEW_NAME)
-	if(DEFINED ${LEGACY_NAME})
-		set(${NEW_NAME} "${${LEGACY_NAME}}" CACHE BOOL "" FORCE)
-		unset(${LEGACY_NAME} CACHE)
-	endif()
-endmacro()
-sw_migrate_legacy_bool_cache(sw_use_vcpkg SW_USE_VCPKG)
-sw_migrate_legacy_bool_cache(sw_enable_testing SW_ENABLE_TESTING)
-sw_migrate_legacy_bool_cache(sw_enable_sanitizer SW_ENABLE_SANITIZER)
-sw_migrate_legacy_bool_cache(sw_enable_pch SW_ENABLE_PCH)
-sw_migrate_legacy_bool_cache(sw_enable_unity_build SW_ENABLE_UNITY_BUILD)
-sw_migrate_legacy_bool_cache(sw_build_Game SW_BUILD_GAME)
-
 set(CMAKE_COMPILE_PDB_NAME "compile")
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 

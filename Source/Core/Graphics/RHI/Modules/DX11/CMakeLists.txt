@@ -2,9 +2,11 @@
 # @file RHI_DX11 MODULE — Direct3D 11 backend plugin
 # ==============================================================================
 
+include("${CMAKE_CURRENT_SOURCE_DIR}/../../RhiSources.cmake")
+
 sw_add_library(RHI_DX11 MODULE
     SOURCES
-        "${CMAKE_CURRENT_SOURCE_DIR}/../../DX11/D3D11RHIDevice.cpp"
+        ${SW_RHI_DX11_DEVICE_SOURCES}
     LINK_LIBRARIES
         Core
         sw_graphics_libs

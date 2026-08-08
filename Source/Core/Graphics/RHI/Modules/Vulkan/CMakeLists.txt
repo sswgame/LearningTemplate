@@ -2,9 +2,11 @@
 # @file RHI_Vulkan MODULE — Vulkan backend plugin
 # ==============================================================================
 
+include("${CMAKE_CURRENT_SOURCE_DIR}/../../RhiSources.cmake")
+
 sw_add_library(RHI_Vulkan MODULE
     SOURCES
-        "${CMAKE_CURRENT_SOURCE_DIR}/../../Vulkan/VulkanRHIDevice.cpp"
+        ${SW_RHI_VULKAN_DEVICE_SOURCES}
     LINK_LIBRARIES
         Core
         sw_graphics_libs

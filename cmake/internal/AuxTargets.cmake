@@ -1,7 +1,7 @@
 # ==============================================================================
 # @file cmake/internal/AuxTargets.cmake
 # @brief 보조 커스텀 타겟 (changelog / docs) — Scripts/generate 위임
-# @note flag-module GLOB(Options/)에 넣지 않음 — 컴파일 플래그와 분리
+# @note LoadFlagModules 명시 include 목록에 넣지 않음 — 컴파일 플래그와 분리
 # ==============================================================================
 
 include("${CMAKE_CURRENT_LIST_DIR}/Python.cmake")

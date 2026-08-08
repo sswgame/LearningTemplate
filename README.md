@@ -8,7 +8,7 @@
 - Shipping (`SW_SHIPPING_BUILD=ON`) forces `SW_RHI_AS_MODULES=OFF` (all RHI backends linked into Core).
 - clangd compile DB: `build/Ninja-Debug`.
 - Runtime binaries: `build/<preset>/Bin` (not a shared `build/Bin`).
-- Core Object bases (`GameObject` / `Component` / `SceneComponent`) are not `REFLECT`'d; game/test types use registrar + `ComponentFactoryRegistrar`. VK/GL stay Core-linked.
+- Core Object bases (`GameObject` / `Component` / `SceneComponent`) are not `REFLECT`'d; game/test types use registrar + `ComponentFactoryRegistrar`. Dev default (`SW_RHI_AS_MODULES=ON`): VK/GL/DX device `.cpp` live in `RHI_*` MODULEs; Shipping / modules OFF links them into Core.
 - LiveReload loads the new shadow DLL before freeing the old handle (mtime auto-reload debounced).
 
 ---

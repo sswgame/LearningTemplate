@@ -2,9 +2,11 @@
 # @file RHI_GL MODULE — OpenGL backend plugin
 # ==============================================================================
 
+include("${CMAKE_CURRENT_SOURCE_DIR}/../../RhiSources.cmake")
+
 sw_add_library(RHI_GL MODULE
     SOURCES
-        "${CMAKE_CURRENT_SOURCE_DIR}/../../GL/OpenGLRHIDevice.cpp"
+        ${SW_RHI_GL_DEVICE_SOURCES}
     LINK_LIBRARIES
         Core
         sw_graphics_libs
