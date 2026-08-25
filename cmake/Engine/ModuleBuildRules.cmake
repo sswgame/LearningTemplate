@@ -62,26 +62,19 @@ endif()
 # ------------------------------------------------------------------------------
 # 4) DLL export 매크로 — Engine / GameFramework가 공유
 # ------------------------------------------------------------------------------
-# SHARED Engine: SW_EXPORTS / SW_IMPORTS, 옵션으로 WINDOWS_EXPORT_ALL_SYMBOLS
+# SHARED Engine: SW_EXPORTS / SW_IMPORTS
 function(sw_configureEngineDllExports TARGET_NAME LIB_TYPE)
 	if(LIB_TYPE STREQUAL "SHARED")
 		target_compile_definitions(${TARGET_NAME} PRIVATE SW_EXPORTS)
 		target_compile_definitions(${TARGET_NAME} INTERFACE SW_IMPORTS)
-		if(WIN32 AND SW_WINDOWS_EXPORT_ALL_SYMBOLS)
-			set_target_properties(${TARGET_NAME} PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
-			message(STATUS "[Exports] ${TARGET_NAME}: WINDOWS_EXPORT_ALL_SYMBOLS=ON")
-		endif()
 	endif()
 endfunction()
 
-# GameFramework·Kit SHARED export.
+# GameFramework·Kit SHARED: SW_GF_EXPORTS / SW_GF_IMPORTS
 function(sw_configureGfExports TARGET_NAME LIB_TYPE)
 	if(LIB_TYPE STREQUAL "SHARED")
 		target_compile_definitions(${TARGET_NAME} PRIVATE SW_GF_EXPORTS)
 		target_compile_definitions(${TARGET_NAME} INTERFACE SW_GF_IMPORTS)
-		if(WIN32 AND SW_WINDOWS_EXPORT_ALL_SYMBOLS)
-			set_target_properties(${TARGET_NAME} PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
-		endif()
 	endif()
 endfunction()
 

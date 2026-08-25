@@ -78,11 +78,19 @@ target_compile_options(sw_compiler_clang INTERFACE
 	$<$<AND:$<BOOL:${MSVC}>,$<CONFIG:Debug>>:/Od>
 	$<$<AND:$<BOOL:${MSVC}>,$<CONFIG:Debug>>:/Z7>
 
-	# Release: 최고 최적화 & AVX2 활성화
+	# Release: 최고 최적화 & AVX2 & 부동소수점 벡터화 가속
 	$<$<AND:$<NOT:$<BOOL:${MSVC}>>,$<CONFIG:Release>>:-O3>
 	$<$<AND:$<NOT:$<BOOL:${MSVC}>>,$<CONFIG:Release>>:-mavx2>
+	$<$<AND:$<NOT:$<BOOL:${MSVC}>>,$<CONFIG:Release>>:-fno-math-errno>
+	$<$<AND:$<NOT:$<BOOL:${MSVC}>>,$<CONFIG:Release>>:-fno-trapping-math>
 	$<$<AND:$<BOOL:${MSVC}>,$<CONFIG:Release>>:/O2>
 	$<$<AND:$<BOOL:${MSVC}>,$<CONFIG:Release>>:/arch:AVX2>
+	$<$<AND:$<BOOL:${MSVC}>,$<CONFIG:Release>>:-clang:-fno-math-errno>
+	$<$<AND:$<BOOL:${MSVC}>,$<CONFIG:Release>>:-clang:-fno-trapping-math>
+
+	# Clang -ftime-trace 컴파일 타임 프로파일러 (SW_ENABLE_TIME_TRACE=ON)
+	$<$<AND:$<BOOL:${SW_ENABLE_TIME_TRACE}>,$<NOT:$<BOOL:${MSVC}>>>:-ftime-trace>
+	$<$<AND:$<BOOL:${SW_ENABLE_TIME_TRACE}>,$<BOOL:${MSVC}>>:-clang:-ftime-trace>
 )
 
 # ------------------------------------------------------------------------------

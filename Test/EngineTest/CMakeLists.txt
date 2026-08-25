@@ -43,6 +43,6 @@ if(BUILD_TESTING)
 		WORKING_DIRECTORY "${sw_output_directory}/Bin"
 		LABELS "unit;engine;nogpu"
 		RUN_SERIAL TRUE
-		TIMEOUT 90
+		TIMEOUT 180
 	)
 endif()

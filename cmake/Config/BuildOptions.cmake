@@ -37,7 +37,6 @@ option(SW_REQUIRE_REFLECTION "Engine/SWGame 등 리플렉션 타겟에 Reflectio
 option(SW_RHI_AS_MODULES "RHI 그래픽스 백엔드(DX11/DX12/GL/Vulkan)를 MODULE DLL 플러그인으로 분리 빌드" ON)
 option(SW_SHIPPING_BUILD "배포용 단일 실행 파일 정적 링크 빌드 (Editor 모듈 제외 및 최고 성능 최적화)" OFF)
 option(SW_USE_SCCACHE "사용 가능 시 sccache 컴파일러 캐시를 활성화하여 빌드 가속" ON)
-option(SW_WINDOWS_EXPORT_ALL_SYMBOLS "Windows에서 Engine/GF에 WINDOWS_EXPORT_ALL_SYMBOLS 사용 (OFF 시 명시적 SW_API만 export)" OFF)
 
 # 2-2) 도구 및 vcpkg 부트스트랩 옵션
 option(SW_LLVM_AUTO_BOOTSTRAP "LLVM이 없을 때 SetupLlvm.py를 통해 Tools/LLVM에 최소 clang-cl+libclang 키트 자동 다운로드 허용" ON)
@@ -49,7 +48,9 @@ option(SW_VCPKG_FORCE_INSTALL "설치 트리 및 스탬프가 일치해도 vcpkg
 # 3) 디버깅 및 진단 도구 옵션
 # ------------------------------------------------------------------------------
 option(SW_ENABLE_DEADLOCK_DETECTION "sw::Mutex 잠금 순서를 실시간 추적하여 데드락 사이클 탐지 (성능 저하 주의)" OFF)
+option(SW_ENABLE_LTO "Shipping 배포 빌드 시 ThinLTO(링크 타임 최적화) 활성화" ON)
 option(SW_ENABLE_STL_CONTAINER "엔진 커스텀 할당자 대신 std::allocator를 사용하도록 설정" OFF)
+option(SW_ENABLE_TIME_TRACE "Clang 컴파일 시간 프로파일링(-ftime-trace JSON 출력)" OFF)
 
 # 활성화할 대상 게임 팩 선택 (Source/Games/ 하위 디렉터리 이름)
 set(SW_ACTIVE_GAME "Demo" CACHE STRING "활성화할 Source/Games 게임 팩 (Demo | Empty)")
@@ -63,3 +64,25 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 unset(CMAKE_BUILD_PARALLEL_LEVEL CACHE)
 set(sw_flag_libraries "")
+
+# ------------------------------------------------------------------------------
+# 5) Ninja 빌드 작업 풀(Job Pools) — 컴파일(CPU 풀가동) vs 링크(메모리/디스크 제한) 분리
+# ------------------------------------------------------------------------------
+if(CMAKE_GENERATOR MATCHES "Ninja")
+	cmake_host_system_information(RESULT cpuCount QUERY NUMBER_OF_LOGICAL_CORES)
+	if(NOT cpuCount OR cpuCount LESS 2)
+		set(cpuCount 4)
+	endif()
+
+	# 링크 동시 실행 개수는 코어 수의 1/4 (최소 2, 최대 4)로 제한하여 RAM 부족/페이징 스래싱 방지
+	math(EXPR linkJobs "${cpuCount} / 4")
+	if(linkJobs LESS 2)
+		set(linkJobs 2)
+	elseif(linkJobs GREATER 4)
+		set(linkJobs 4)
+	endif()
+
+	set_property(GLOBAL PROPERTY JOB_POOLS compile_job_pool=${cpuCount} link_job_pool=${linkJobs})
+	set(CMAKE_JOB_POOL_COMPILE compile_job_pool)
+	set(CMAKE_JOB_POOL_LINK link_job_pool)
+endif()

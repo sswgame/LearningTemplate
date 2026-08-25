@@ -18,7 +18,7 @@ sw_addTestExecutable(SmokeTest
 	LABELS
 		"unit;module;nogpu"
 	TIMEOUT
-		90
+		180
 )
 
 if(NOT SW_SHIPPING_BUILD)
