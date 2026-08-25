@@ -68,8 +68,6 @@
 	#endif
 #endif
 
-#define NOTIFY_RENDER_OUTSIDE_MAIN_WINDOW false
-
 namespace sw
 {
 	ImGuiEditor::ImGuiEditor()
