@@ -735,7 +735,7 @@ SW_TEST_CASE( ModuleAPI, FullGameSceneAndComponentLifecycle )
 		};
 
 		if ( sw::engine::areEngineServicesBound() )
-			sw::engine::getTaskManager().waitAll( 2000 );
+			sw::engine::getTaskManager().waitAll();
 		sw::engine::getSceneManager().tickTransitions();
 
 		sw::Scene* current = sw::engine::getSceneManager().getActiveScene();
@@ -747,7 +747,7 @@ SW_TEST_CASE( ModuleAPI, FullGameSceneAndComponentLifecycle )
 		for ( int32 iter = 0; iter < 100; ++iter )
 		{
 			if ( sw::engine::areEngineServicesBound() )
-				sw::engine::getTaskManager().waitAll( 500 );
+				sw::engine::getTaskManager().waitAll();
 			sw::engine::getSceneManager().tickTransitions();
 
 			sw::Scene* sc = sw::engine::getSceneManager().getActiveScene();
@@ -791,7 +791,7 @@ SW_TEST_CASE( ModuleAPI, FullGameSceneAndComponentLifecycle )
 			pActive->tick( 0.016f );
 	}
 
-	sw::engine::getTaskManager().waitAll( 2000 );
+	sw::engine::getTaskManager().waitAll();
 	sw::engine::getSceneManager().tickTransitions();
 
 	api.shutdown( game );
@@ -897,7 +897,7 @@ SW_TEST_CASE( ModuleAPI, GameModuleRepeatedReloadCycle )
 			sw::engine::getSceneManager().tickTransitions();
 			api.update( game, 0.016f );
 		}
-		sw::engine::getTaskManager().waitAll( 2000 );
+		sw::engine::getTaskManager().waitAll();
 		sw::engine::getSceneManager().tickTransitions();
 
 		api.shutdown( game );
