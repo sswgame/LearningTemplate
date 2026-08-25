@@ -13,6 +13,13 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 # 부모 경로들을 sys.path에 추가하여 공통 스크립트 모듈 로드
 scriptDir = Path(__file__).resolve().parent
 sys.path.insert(0, str(scriptDir))
@@ -35,10 +42,11 @@ def main() -> int:
 
     # 1. Include 순서 및 중복 검사
     print("\n[1/3] Include 순서 및 중복 검사...")
+    sourceHeaderMap, testHeaderMap, toolsHeaderMap = CheckIncludeOrder.buildHeaderLookupMap(projectRoot)
     for filePath in stagedFiles:
         try:
             oldContent = filePath.read_text(encoding="utf-8-sig")
-            violations = CheckIncludeOrder.processFile(filePath, projectRoot)
+            violations = CheckIncludeOrder.processFile(filePath, projectRoot, sourceHeaderMap, testHeaderMap, toolsHeaderMap)
             if violations:
                 newContent = filePath.read_text(encoding="utf-8-sig")
                 if oldContent != newContent:
@@ -82,10 +90,10 @@ def main() -> int:
         print("  - 포맷팅 OK")
 
     if hasErrors:
-        print("\n[PreCommitLint] ❌ 검사에 실패했습니다. 오류를 수정한 후 다시 git add 하고 커밋해주세요.")
+        print("\n[PreCommitLint] [FAIL] 검사에 실패했습니다. 오류를 수정한 후 다시 git add 하고 커밋해주세요.")
         return 1
 
-    print("\n[PreCommitLint] ✅ 모든 검사를 통과했습니다.")
+    print("\n[PreCommitLint] [OK] 모든 검사를 통과했습니다.")
     return 0
 
 

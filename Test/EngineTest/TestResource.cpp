@@ -14,6 +14,7 @@
 /**
  * @brief [Engine_Resource] 없는 리소스 경로는 빈 문자열
  */
+
 SW_TEST_CASE( Engine_Resource, GetResourcePathEmptyForNonexistent )
 {
 	sw::ResourceUtil::initialize();
@@ -177,8 +178,8 @@ SW_TEST_CASE( Engine_Resource, AssetStreamingQueueLifecycleAndThrottling )
 	SW_EXPECT_EQUAL( size_t( 0 ), queue.getPendingCount() );
 	SW_EXPECT_EQUAL( size_t( 0 ), queue.getCompletedCount() );
 
-	bool bCompleted1{ false };
-	bool bSuccess1{ false };
+	bool	   bCompleted1{ false };
+	bool	   bSuccess1{ false };
 	sw::string path1{};
 
 	queue.requestAsset(
@@ -187,8 +188,8 @@ SW_TEST_CASE( Engine_Resource, AssetStreamingQueueLifecycleAndThrottling )
 		SW_DELEGATE_LAMBDA( sw::OnStreamingCompleteDelegate, [&]( std::string_view p, bool ok )
 	{
 		bCompleted1 = true;
-		bSuccess1 = ok;
-		path1 = sw::string( p );
+		bSuccess1	= ok;
+		path1		= sw::string( p );
 	} ) );
 
 	SW_EXPECT_TRUE( queue.isStreaming( "Textures/Character.png" ) );
@@ -205,8 +206,8 @@ SW_TEST_CASE( Engine_Resource, AssetStreamingQueueLifecycleAndThrottling )
 		SW_DELEGATE_LAMBDA( sw::OnStreamingCompleteDelegate, [&]( std::string_view p, bool ok )
 	{
 		bCompleted1 = true;
-		bSuccess1 = ok;
-		path1 = sw::string( p );
+		bSuccess1	= ok;
+		path1		= sw::string( p );
 	} ) );
 
 	// 워커 스레드 작업 완료 대기

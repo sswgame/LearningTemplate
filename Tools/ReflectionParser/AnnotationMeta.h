@@ -3,10 +3,8 @@
  * @brief AnnotationMeta.txt — REFLECT/PROPERTY/FUNCTION 토큰 → 필드 바인딩.
  */
 #pragma once
-
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
-
 #include "Core/Container/unordered_map.h"
 
 namespace sw
@@ -69,8 +67,8 @@ namespace sw
 		void addAlias( const string& scope, const string& alias, AnnotationBinding binding );
 
 		using ScopeMap = unordered_map<string, AnnotationBinding>;
-		unordered_map<string, ScopeMap> _bare; ///< scope → alias → 바인딩
-		unordered_map<string, ScopeMap> _keys;
+		unordered_map<string, ScopeMap> _mapBare; ///< scope → alias → 바인딩
+		unordered_map<string, ScopeMap> _mapKeys;
 		bool							_bLoaded = false;
 	};
 } // namespace sw

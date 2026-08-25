@@ -1,9 +1,9 @@
 #pragma once
-#include "Engine/ECS/ComponentHandle.h"
-
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+
+#include "Engine/ECS/ComponentHandle.h"
 
 namespace sw
 {

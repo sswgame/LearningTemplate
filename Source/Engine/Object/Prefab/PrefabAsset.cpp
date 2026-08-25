@@ -10,6 +10,7 @@
 #include "Engine/Utility/Resource/AssetFormat.h"
 #include "Engine/Utility/Resource/ResourceManager.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
+
 namespace sw
 {
 

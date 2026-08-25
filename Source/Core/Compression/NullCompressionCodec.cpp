@@ -3,6 +3,7 @@
 #include "Core/Compression/NullCompressionCodec.h"
 
 #include "Core/Memory/Memory.h"
+
 namespace sw
 {
 	CompressionCodecType NullCompressionCodec::getCodecType() const

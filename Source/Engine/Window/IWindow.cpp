@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Engine/Window/IWindow.h"
+
 #include "Engine/Window/Linux/X11Window.h"
 #include "Engine/Window/Mac/CocoaWindow.h"
 #include "Engine/Window/Windows/Win32Window.h"
@@ -11,7 +12,6 @@ namespace sw
 	{
 
 		IWindow* s_pActiveWindow{ nullptr };
-
 
 	} // namespace
 

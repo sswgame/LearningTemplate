@@ -70,7 +70,6 @@ namespace sw
 		return _bFinished != 0;
 	}
 
-
 	TransitionOrchestrator::TransitionOrchestrator()
 		: _fade{}
 		, _callbacks{}

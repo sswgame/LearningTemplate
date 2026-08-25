@@ -21,7 +21,6 @@ namespace sw
 
 		shared_ptr<MaterialInstance> s_glassMaterialInstance;
 
-
 	} // namespace
 
 	void destroyModuleSampleActors()

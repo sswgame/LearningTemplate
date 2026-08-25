@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Memory/Memory.h"
+
 #include "Core/Memory/MemoryProfiler.h"
 
 #if defined( SW_PLATFORM_WINDOWS )

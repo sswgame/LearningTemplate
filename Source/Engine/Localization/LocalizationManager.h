@@ -30,7 +30,7 @@ namespace sw
 		LocalizationManager();
 		~LocalizationManager();
 
-		LocalizationManager( const LocalizationManager& ) = delete;
+		LocalizationManager( const LocalizationManager& )			 = delete;
 		LocalizationManager& operator=( const LocalizationManager& ) = delete;
 		LocalizationManager( LocalizationManager&& other ) noexcept;
 		LocalizationManager& operator=( LocalizationManager&& other ) noexcept;

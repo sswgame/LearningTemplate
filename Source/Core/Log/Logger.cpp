@@ -1,9 +1,10 @@
 #include "pch.h"
 
+#include "Core/Log/Logger.h"
+
 #include "Core/Common/PlatformOsHeaders.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/File/FileUtil.h"
-#include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
 
 #include <chrono>

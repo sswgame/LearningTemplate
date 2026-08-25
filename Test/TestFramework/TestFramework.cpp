@@ -256,8 +256,8 @@ namespace test
 
 			if ( sw::engine::areEngineServicesBound() )
 			{
-				sw::engine::getTaskManager().waitAll();
 				sw::engine::getSceneManager().cancelPendingAsyncLoads();
+				sw::engine::getTaskManager().clear();
 			}
 
 			const std::chrono::high_resolution_clock::time_point end	 = std::chrono::high_resolution_clock::now();

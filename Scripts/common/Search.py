@@ -10,10 +10,15 @@ import os
 from pathlib import Path
 from typing import Any, Callable, Iterable, Iterator
 
-from .Constants import kCppAllExtensions
+from .Constants import kCppAllExtensions, kLintTargetRelDirs
 from .Paths import expandPathTemplate, platformKey
 
 _kRglobSkipDirNames = {"buildtrees", "downloads", "packages"}
+
+
+def getLintSearchDirs(repositoryRoot: Path) -> list[Path]:
+    """린트 및 포맷팅 대상 루트 디렉터리 목록을 반환합니다 (Source, Test, Tools/ReflectionParser)."""
+    return [repositoryRoot / rel for rel in kLintTargetRelDirs]
 
 
 def collectSourceFiles(roots: Iterable[Path],

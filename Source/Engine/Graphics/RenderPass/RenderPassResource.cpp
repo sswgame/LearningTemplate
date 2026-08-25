@@ -1,7 +1,8 @@
 #include "pch.h"
 
-#include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RenderPass/RenderPassResource.h"
+
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RenderPass/RenderPassXmlUtil.h"
 #include "Engine/Utility/Resource/AssetFormat.h"
 #include "Engine/Utility/Resource/ResourceManager.h"
@@ -11,11 +12,9 @@
 namespace sw
 {
 
-
 	namespace
 	{
 	} // namespace
-
 
 	bool RenderPassResource::loadFromXmlFile( string_view assetRelativePath )
 	{

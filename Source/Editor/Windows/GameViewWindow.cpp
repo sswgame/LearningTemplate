@@ -18,8 +18,9 @@
 #include "RuntimeAPI/EditorService.h"
 #include "RuntimeAPI/EditorUIContext.h"
 
-#include <ImGuizmo.h>
 #include <imgui.h>
+#include <ImGuizmo.h>
+
 namespace sw
 {
 	GameViewWindow::GameViewWindow()

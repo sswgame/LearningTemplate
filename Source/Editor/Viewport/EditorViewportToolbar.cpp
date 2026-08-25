@@ -3,6 +3,7 @@
 #include "Editor/Viewport/EditorViewportToolbar.h"
 
 #include <imgui.h>
+
 namespace sw
 {
 	void EditorViewportToolbar::draw( ViewportToolbarSettings& settings, float32 viewportWidth )

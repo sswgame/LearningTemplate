@@ -116,12 +116,12 @@ void sw_delete_array_func( T* pPtr )
 	}
 }
 
-#define sw_malloc( size )		sw::Memory::allocMemory( size )
-#define sw_free( pPtr )			sw::Memory::freeMemory( pPtr )
-#define sw_new					new ( sw::MemoryAllocTag{} )
+#define sw_malloc( size )		 sw::Memory::allocMemory( size )
+#define sw_free( pPtr )			 sw::Memory::freeMemory( pPtr )
+#define sw_new					 new ( sw::MemoryAllocTag{} )
 #define sw_placement_new( pPtr ) new ( pPtr )
-#define sw_delete				sw_delete_func
-#define sw_delete_array			sw_delete_array_func
+#define sw_delete				 sw_delete_func
+#define sw_delete_array			 sw_delete_array_func
 
 namespace sw
 {

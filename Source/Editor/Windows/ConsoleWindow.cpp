@@ -55,7 +55,6 @@ namespace sw
 			SW_DELEGATE_METHOD( LogWrittenDelegate, &ConsoleWindow::onLogWritten, this ) );
 	}
 
-
 	ConsoleWindow::~ConsoleWindow()
 	{
 		unsubscribe();

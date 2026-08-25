@@ -1,8 +1,9 @@
 #include "pch.h"
 
+#include "Editor/EditorUtil.h"
+
 #include "Editor/Config/EditorConfig.h"
 #include "Editor/Config/EditorData.h"
-#include "Editor/EditorUtil.h"
 
 #include "RuntimeAPI/EditorService.h"
 

@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Engine/Window/Linux/X11Window.h"
+
 #include "Engine/Window/NativeWindowEvent.h"
 
 namespace sw

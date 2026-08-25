@@ -213,25 +213,25 @@ SW_TEST_CASE( AudioSystemTest, MultithreadedAudioDecodeAndPlayback )
 		bytes.push_back( 0 );
 		bytes.push_back( 0 );
 		bytes.push_back( 0 );
-		for ( uint32 i = 0; i < 32; ++i )
-			bytes.push_back( static_cast<uint8>( i ) );
+		for ( uint32 byteIndex = 0; byteIndex < 32; ++byteIndex )
+			bytes.push_back( static_cast<uint8>( byteIndex ) );
 		sw::FileUtil::writeFile( path, bytes.data(), bytes.size() );
 	};
 
 	generateWav( wavA );
 	generateWav( wavB );
 
-	constexpr int32 threadCount = 4;
+	constexpr int32			 threadCount = 4;
 	std::vector<std::thread> workers;
 	workers.reserve( threadCount );
 
-	for ( int32 i = 0; i < threadCount; ++i )
+	for ( int32 workerIndex = 0; workerIndex < threadCount; ++workerIndex )
 	{
-		workers.emplace_back( [&, i]()
+		workers.emplace_back( [&, workerIndex]()
 		{
 			for ( int32 iter = 0; iter < 10; ++iter )
 			{
-				pAudioSystem->play( ( i % 2 == 0 ) ? wavA : wavB );
+				pAudioSystem->play( ( workerIndex % 2 == 0 ) ? wavA : wavB );
 			}
 		} );
 	}

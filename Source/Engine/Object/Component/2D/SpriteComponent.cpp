@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Engine/Object/Component/2D/SpriteComponent.h"
+
 #include "Engine/Object/Component/EcsDataUtil.h"
 #include "Engine/Object/Component/TagSystem.h"
 

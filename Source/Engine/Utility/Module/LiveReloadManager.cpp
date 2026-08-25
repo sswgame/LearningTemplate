@@ -1,14 +1,15 @@
 #include "pch.h"
 
+#include "Engine/Utility/Module/LiveReloadManager.h"
+
+#include "Core/File/IFileWatcher.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
+
 #include "Engine/Common/EngineServices.h"
 #include "Engine/ECS/Registry.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/TypeRegistry.h"
-#include "Engine/Utility/Module/LiveReloadManager.h"
 #include "Engine/Utility/Task/TaskManager.h"
-
-#include "Core/File/IFileWatcher.h"
-#include "Core/GlobalVariable/GlobalVariableManager.h"
 
 #include "RuntimeAPI/PluginAPI.h"
 
@@ -110,7 +111,6 @@ namespace sw
 		if ( getDelayLoadLiveReloadManager() == nullptr )
 			setDelayLoadLiveReloadManager( this );
 	}
-
 
 	LiveReloadManager::~LiveReloadManager()
 	{

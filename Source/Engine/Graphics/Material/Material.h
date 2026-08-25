@@ -10,6 +10,7 @@
 
 #include "Engine/Graphics/Material/MaterialTypes.h"
 #include "Engine/Utility/Task/TaskTypes.h"
+
 namespace sw
 {
 	class IRHIDevice;

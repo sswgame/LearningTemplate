@@ -247,7 +247,7 @@ SW_TEST_CASE( SceneTest, AsyncSwapUnloadsPreviousActive )
  */
 SW_TEST_CASE( SceneTest, SceneAsyncLoadCancellationAndRecovery )
 {
-	const sw::string tempDir = sw::FileUtil::getTempDirectory();
+	const sw::string tempDir	= sw::FileUtil::getTempDirectory();
 	const sw::string scenePath1 = sw::FileUtil::joinPath( tempDir, "test_rapid_1.scene.xml" );
 	const sw::string scenePath2 = sw::FileUtil::joinPath( tempDir, "test_rapid_2.scene.xml" );
 

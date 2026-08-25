@@ -3,10 +3,10 @@
  * @brief 두 AnimClip 사이 재생 / 크로스페이드.
  */
 #pragma once
-#include "Engine/Animation/AnimClip.h"
-
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+
+#include "Engine/Animation/AnimClip.h"
 
 namespace sw
 {

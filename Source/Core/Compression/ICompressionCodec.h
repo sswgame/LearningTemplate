@@ -1,6 +1,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+
 namespace sw
 {
 	/**

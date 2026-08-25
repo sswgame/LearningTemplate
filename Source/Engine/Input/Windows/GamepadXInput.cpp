@@ -1,7 +1,8 @@
 #include "pch.h"
 
-#include "Engine/Input/GamepadButtons.h"
 #include "Engine/Input/Windows/GamepadXInput.h"
+
+#include "Engine/Input/GamepadButtons.h"
 
 #if defined( _WIN32 )
 
@@ -76,7 +77,6 @@ namespace sw
 			return s_pfn;
 		}
 #endif
-
 
 	} // namespace
 

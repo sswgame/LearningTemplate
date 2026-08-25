@@ -3,11 +3,11 @@
  * @brief 종족 / 기술 테이블 + 파티 멤버 (game/<pack>/data/species.xml에서 로드)
  */
 #pragma once
-#include "GameFramework/GameFrameworkExports.h"
-
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+
+#include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {

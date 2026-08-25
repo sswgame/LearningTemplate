@@ -13,18 +13,18 @@ namespace sw
 	/** @note 비트필드 대신 uint8 — DLL/컴파일러 간 패킹·true 대입 이슈를 피합니다. 0/1만 사용. */
 	struct SW_API RHICapabilities
 	{
-		uint8 _bBindless{ 0 };			   ///< 디스크립터 인덱스 테이블 (드로우 시 바인드로 에뮬 가능)
-		uint8 _bNativeBindless{ 0 };	   ///< 하드웨어 디스크립터 인덱싱 / bindless 샘플링
-		uint8 _bCompute{ 1 };			   ///< 컴퓨트 셰이더
-		uint8 _bOffscreenRT{ 0 };		   ///< createTexture2D + 오프스크린 경로
-		uint8 _bImGuiHooks{ 0 };		   ///< ImGui 렌더러 훅 (멀티 뷰포트 등)
-		uint8 _bEditorSupported{ 0 };	   ///< 이 백엔드에서 EditorModule 실행 가능
-		uint8 _bComputeRootConstants{ 0 }; ///< 컴퓨트 루트/푸시 상수 (DX12 네이티브, DX11/GL CB/UBO 심)
-		uint8 _bIndirectDraw{ 0 };		   ///< drawIndirect / dispatchIndirect
-		uint8 _bIndexedDraw{ 0 };		   ///< setIndexBuffer + drawIndexedIndirect
-		uint8 _bGpuCulling{ 0 };				   ///< 컴퓨트 컬 + 인디렉트 인자 경로
-		uint8 _bMultiDrawIndirect{ 0 };			   ///< 멀티 드로우 / count 버퍼 (DX12/VK/GL; DX11은 루프)
-		uint8 _bParallelCommandRecording{ 0 };	   ///< 멀티스레드 커맨드 리스트 병렬 기록 및 제출 지원 (DX12/VK)
+		uint8 _bBindless{ 0 };				   ///< 디스크립터 인덱스 테이블 (드로우 시 바인드로 에뮬 가능)
+		uint8 _bNativeBindless{ 0 };		   ///< 하드웨어 디스크립터 인덱싱 / bindless 샘플링
+		uint8 _bCompute{ 1 };				   ///< 컴퓨트 셰이더
+		uint8 _bOffscreenRT{ 0 };			   ///< createTexture2D + 오프스크린 경로
+		uint8 _bImGuiHooks{ 0 };			   ///< ImGui 렌더러 훅 (멀티 뷰포트 등)
+		uint8 _bEditorSupported{ 0 };		   ///< 이 백엔드에서 EditorModule 실행 가능
+		uint8 _bComputeRootConstants{ 0 };	   ///< 컴퓨트 루트/푸시 상수 (DX12 네이티브, DX11/GL CB/UBO 심)
+		uint8 _bIndirectDraw{ 0 };			   ///< drawIndirect / dispatchIndirect
+		uint8 _bIndexedDraw{ 0 };			   ///< setIndexBuffer + drawIndexedIndirect
+		uint8 _bGpuCulling{ 0 };			   ///< 컴퓨트 컬 + 인디렉트 인자 경로
+		uint8 _bMultiDrawIndirect{ 0 };		   ///< 멀티 드로우 / count 버퍼 (DX12/VK/GL; DX11은 루프)
+		uint8 _bParallelCommandRecording{ 0 }; ///< 멀티스레드 커맨드 리스트 병렬 기록 및 제출 지원 (DX12/VK)
 
 		/** @brief 기본값 (컴퓨트만 켠 보수적 기본). */
 		RHICapabilities() noexcept = default;

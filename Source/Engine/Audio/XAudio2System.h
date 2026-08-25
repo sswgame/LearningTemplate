@@ -6,6 +6,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Memory/Memory.h"
+
 #include "Engine/Audio/IAudioSystem.h"
 
 namespace sw

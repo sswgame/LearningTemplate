@@ -1,8 +1,9 @@
 #include "pch.h"
 
+#include "Engine/Graphics/RenderPass/RenderPipelineResource.h"
+
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RenderPass/RenderPassXmlUtil.h"
-#include "Engine/Graphics/RenderPass/RenderPipelineResource.h"
 #include "Engine/Utility/Resource/AssetFormat.h"
 #include "Engine/Utility/Resource/ResourceManager.h"
 #include "Engine/Utility/Task/TaskManager.h"
@@ -10,7 +11,6 @@
 
 namespace sw
 {
-
 
 	namespace
 	{
@@ -137,7 +137,6 @@ namespace sw
 		}
 
 	} // namespace
-
 
 	bool RenderPipelineResource::loadFromXmlFile( string_view assetRelativePath )
 	{

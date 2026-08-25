@@ -161,7 +161,6 @@ namespace sw
 			// Numpad Enter shares VK_RETURN; poll cannot distinguish — rely on Key::Enter.
 		};
 
-
 	} // namespace
 
 	Key mapWin32VirtualKey( uintptr_t vk )

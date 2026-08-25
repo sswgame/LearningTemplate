@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Engine/Reflection/PropertyMetaHint.h"
+
 namespace sw
 {
 	PropertyWidgetType PropertyMetaHint::deduceWidgetType( const PropertyMetadata& meta, string_view typeName )

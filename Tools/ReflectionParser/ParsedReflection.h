@@ -5,11 +5,10 @@
  *          AST 순회 로직은 AstVisitor, 코드 출력은 CodeGenerator 쪽입니다.
  */
 #pragma once
-
-#include "ParserDefines.h"
-
 #include "Engine/EngineMinimal.h"
 #include "Engine/Reflection/ReflectionTypes.h"
+
+#include "ReflectionParser/ParserDefines.h"
 
 namespace sw
 {
@@ -77,7 +76,7 @@ namespace sw
 	{
 		string				   _name;
 		string				   _returnTypeName;
-		vector<string>		   _paramTypeNames;
+		vector<string>		   _listParamTypeNames;
 		string				   _category = annotationConstants::kDefaultMethodCategory;
 		string				   _displayName;
 		string				   _tooltip;
@@ -144,8 +143,8 @@ namespace sw
 		string							  _name;
 		string							  _fullyQualifiedName;
 		vector<string>					  _listAliases;
-		vector<std::pair<string, string>> _valueAliases;
-		vector<ParsedEnumeratorInfo>	  _enumerators;
+		vector<std::pair<string, string>> _listValueAliases;
+		vector<ParsedEnumeratorInfo>	  _listEnumerators;
 		string							  _invalidEnumerator;
 		string							  _countEnumerator;
 		uint8							  _bIsBitFlag	: 1;

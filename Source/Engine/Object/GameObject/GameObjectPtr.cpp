@@ -1,11 +1,12 @@
 #include "pch.h"
 
+#include "Engine/Object/GameObject/GameObjectPtr.h"
+
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/GameObjectPtr.h"
-#include "Engine/Scene/SceneManager.h"
 #include "Engine/Scene/Scene.h"
-#include "Engine/Common/EngineServices.h"
+#include "Engine/Scene/SceneManager.h"
 
 namespace sw
 {
@@ -38,20 +39,20 @@ namespace sw
 		, _cachedEntity{ other._cachedEntity }
 		, _pManager{ other._pManager }
 	{
-		other._targetName = hashed_string{};
-		other._pCachedPtr = nullptr;
+		other._targetName	= hashed_string{};
+		other._pCachedPtr	= nullptr;
 		other._cachedEntity = sw::kNullEntity;
-		other._pManager = nullptr;
+		other._pManager		= nullptr;
 	}
 
 	GameObjectPtr::~GameObjectPtr() = default;
 
 	GameObjectPtr& GameObjectPtr::operator=( GameObject* pTarget )
 	{
-		_targetName = pTarget != nullptr ? pTarget->getName() : hashed_string{};
-		_pCachedPtr = pTarget;
+		_targetName	  = pTarget != nullptr ? pTarget->getName() : hashed_string{};
+		_pCachedPtr	  = pTarget;
 		_cachedEntity = pTarget != nullptr ? pTarget->getEntityId() : sw::kNullEntity;
-		_pManager = pTarget != nullptr ? pTarget->getManager() : nullptr;
+		_pManager	  = pTarget != nullptr ? pTarget->getManager() : nullptr;
 		return *this;
 	}
 
@@ -59,10 +60,10 @@ namespace sw
 	{
 		if ( this != &other )
 		{
-			_targetName = other._targetName;
-			_pCachedPtr = other._pCachedPtr;
+			_targetName	  = other._targetName;
+			_pCachedPtr	  = other._pCachedPtr;
 			_cachedEntity = other._cachedEntity;
-			_pManager = other._pManager;
+			_pManager	  = other._pManager;
 		}
 		return *this;
 	}
@@ -71,14 +72,14 @@ namespace sw
 	{
 		if ( this != &other )
 		{
-			_targetName		  = std::move( other._targetName );
-			_pCachedPtr		  = other._pCachedPtr;
-			_cachedEntity	  = other._cachedEntity;
-			_pManager		  = other._pManager;
-			other._targetName = hashed_string{};
-			other._pCachedPtr = nullptr;
+			_targetName			= std::move( other._targetName );
+			_pCachedPtr			= other._pCachedPtr;
+			_cachedEntity		= other._cachedEntity;
+			_pManager			= other._pManager;
+			other._targetName	= hashed_string{};
+			other._pCachedPtr	= nullptr;
 			other._cachedEntity = sw::kNullEntity;
-			other._pManager = nullptr;
+			other._pManager		= nullptr;
 		}
 		return *this;
 	}
@@ -87,7 +88,7 @@ namespace sw
 	{
 		if ( _targetName.getHash() == 0 )
 		{
-			_pCachedPtr = nullptr;
+			_pCachedPtr	  = nullptr;
 			_cachedEntity = sw::kNullEntity;
 			return;
 		}
@@ -99,7 +100,7 @@ namespace sw
 				return;
 
 			SceneManager& sceneMgr = engine::getSceneManager();
-			Scene* pScene = sceneMgr.getActiveScene();
+			Scene*		  pScene   = sceneMgr.getActiveScene();
 			if ( pScene == nullptr )
 				return;
 
@@ -126,7 +127,7 @@ namespace sw
 		}
 		else
 		{
-			_pCachedPtr = nullptr;
+			_pCachedPtr	  = nullptr;
 			_cachedEntity = sw::kNullEntity;
 		}
 	}

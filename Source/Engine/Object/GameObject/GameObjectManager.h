@@ -3,10 +3,6 @@
  * @brief 씬 내 GameObject 생성·조회·지연 삭제 관리
  */
 #pragma once
-#include "Engine/ECS/Registry.h"
-#include "Engine/Object/Component/TagSystem.h"
-#include "Engine/Physics/PhysicsWorld.h"
-
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
@@ -15,6 +11,10 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
+
+#include "Engine/ECS/Registry.h"
+#include "Engine/Object/Component/TagSystem.h"
+#include "Engine/Physics/PhysicsWorld.h"
 
 #include <shared_mutex>
 

@@ -1,10 +1,11 @@
 #include "pch.h"
 
-#include "Games/Demo/Actors/PlayerComponent.h"
 #include "Games/Demo/UI/DashUIComponent.h"
 
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+
+#include "Games/Demo/Actors/PlayerComponent.h"
 
 #include "RuntimeAPI/GameService.h"
 

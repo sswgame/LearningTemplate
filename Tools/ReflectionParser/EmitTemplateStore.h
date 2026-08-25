@@ -3,7 +3,6 @@
  * @brief 이름 붙은 .tpl 골격을 로드하고 $VAR / ${VAR} 자리 표시자를 확장합니다.
  */
 #pragma once
-
 #include "Engine/EngineMinimal.h"
 
 namespace sw
@@ -39,7 +38,7 @@ namespace sw
 							  const unordered_map<string, string>& vars );
 
 	private:
-		unordered_map<string, string> _templates;
+		unordered_map<string, string> _mapTemplates;
 		bool						  _bLoaded = false;
 	};
 } // namespace sw

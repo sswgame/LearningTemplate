@@ -1,7 +1,8 @@
 #include "pch.h"
 
-#include "Engine/Common/EngineDefines.h"
 #include "Engine/Config/EngineData.h"
+
+#include "Engine/Common/EngineDefines.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
 
 namespace sw

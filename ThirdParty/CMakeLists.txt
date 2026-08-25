@@ -3,7 +3,13 @@
 # @brief 서드파티 서브디렉터리 등록
 # ==============================================================================
 
-# ------------------------------------------------------------------------------
-# 1) 하위 CMakeLists가 있는 디렉터리만 등록 (sw_discoverProjects)
-# ------------------------------------------------------------------------------
-sw_discoverProjects("${CMAKE_CURRENT_SOURCE_DIR}")
+add_subdirectory(dxc)
+add_subdirectory(glad)
+add_subdirectory(imgui)
+add_subdirectory(imgui-node-editor)
+add_subdirectory(imgui-notify)
+add_subdirectory(imguizmo)
+add_subdirectory(implot)
+add_subdirectory(nlohmann-json)
+add_subdirectory(rapidxml)
+add_subdirectory(vulkan)

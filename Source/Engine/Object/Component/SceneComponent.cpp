@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Engine/Object/Component/SceneComponent.h"
+
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 namespace sw
@@ -54,7 +55,6 @@ namespace sw
 								  static_cast<float32>( outWorldLWC._y ),
 								  static_cast<float32>( outWorldLWC._z ) );
 		}
-
 
 	} // namespace
 

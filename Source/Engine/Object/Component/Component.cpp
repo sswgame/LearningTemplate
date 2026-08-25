@@ -1,14 +1,14 @@
 #include "pch.h"
 
+#include "Engine/Object/Component/Component.h"
+
 #include "Engine/Common/EngineServices.h"
 #include "Engine/ECS/Registry.h"
-#include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/ComponentDefaults.h"
 #include "Engine/Reflection/ReflectionCore.h"
 
 namespace sw
 {
-
 
 	Component::Component()
 		: Component{ false }
@@ -46,12 +46,12 @@ namespace sw
 	{
 		if ( this != &other )
 		{
-			_pOwner				  = std::exchange( other._pOwner, nullptr );
-			_pCachedTypeInfo	  = other._pCachedTypeInfo;
-			_componentId		  = other._componentId;
-			_componentName		  = std::move( other._componentName );
-			_onTickDelegate		  = std::move( other._onTickDelegate );
-			_tickGroup			  = other._tickGroup;
+			_pOwner			 = std::exchange( other._pOwner, nullptr );
+			_pCachedTypeInfo = other._pCachedTypeInfo;
+			_componentId	 = other._componentId;
+			_componentName	 = std::move( other._componentName );
+			_onTickDelegate	 = std::move( other._onTickDelegate );
+			_tickGroup		 = other._tickGroup;
 			_bActive.store( other._bActive.load( std::memory_order_relaxed ), std::memory_order_relaxed );
 			_bIsSceneComponent = other._bIsSceneComponent;
 			_bIsPendingKill.store( other._bIsPendingKill.load( std::memory_order_relaxed ), std::memory_order_relaxed );
@@ -91,8 +91,6 @@ namespace sw
 	{
 		(void)propertyName;
 	}
-
-
 
 	void Component::setCachedTypeInfo( const TypeInfo* pTypeInfo )
 	{
@@ -159,6 +157,5 @@ namespace sw
 	}
 
 	std::atomic<uint64> Component::_s_nextComponentId = 1;
-
 
 } // namespace sw

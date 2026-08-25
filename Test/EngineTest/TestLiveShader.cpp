@@ -11,6 +11,7 @@
 /**
  * @brief [LiveShaderTest] 초기화와 감시
  */
+
 SW_TEST_CASE( LiveShaderTest, InitializationAndWatch )
 {
 	const sw::string shaderRelPath = "shaders/testlive.hlsl";

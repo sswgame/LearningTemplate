@@ -1,12 +1,13 @@
 #include "pch.h"
 
+#include "Engine/Graphics/RenderPass/GpuScene.h"
+
 #include "Engine/ECS/Registry.h"
 #include "Engine/ECS/View.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResource.h"
-#include "Engine/Graphics/RenderPass/GpuScene.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObjectManagerInternal.h"
 #include "Engine/Utility/Task/TaskManager.h"

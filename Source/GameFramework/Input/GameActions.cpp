@@ -1,10 +1,11 @@
 #include "pch.h"
 
-#include "GameFramework/Data/GameData.h"
 #include "GameFramework/Input/GameActions.h"
 
 #include "Engine/Input/ActionMap.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
+
+#include "GameFramework/Data/GameData.h"
 
 namespace sw
 {

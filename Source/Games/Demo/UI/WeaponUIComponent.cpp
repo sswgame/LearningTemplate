@@ -1,12 +1,13 @@
 #include "pch.h"
 
-#include "Games/Demo/Actors/WeaponComponent.h"
 #include "Games/Demo/UI/WeaponUIComponent.h"
 
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+
+#include "Games/Demo/Actors/WeaponComponent.h"
 
 #include "RuntimeAPI/GameService.h"
 

@@ -1,6 +1,5 @@
 #include "pch.h"
 
-#include "Games/Demo/Actors/MonsterComponent.h"
 #include "Games/Demo/Actors/MonsterSummonComponent.h"
 
 #include "Core/Math/MathUtil.h"
@@ -10,6 +9,8 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Utility/Resource/ResourceManager.h"
+
+#include "Games/Demo/Actors/MonsterComponent.h"
 
 #include "RuntimeAPI/GameService.h"
 

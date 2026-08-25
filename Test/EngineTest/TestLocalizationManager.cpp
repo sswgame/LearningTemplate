@@ -12,12 +12,14 @@
 #include "RuntimeAPI/GameService.h"
 
 #include "TestFramework/TestFramework.h"
+
 // ------------------------------------------------------------------------------
 // LocalizationManagerTest -- 비-싱글톤 다국어 매니저 동작 및 파일 로드 검증
 // ------------------------------------------------------------------------------
 /**
  * @brief [LocalizationManagerTest] 독립적인 복수 인스턴스 생성 및 비-싱글톤 동작 검증
  */
+
 SW_TEST_CASE( LocalizationManagerTest, NonSingletonIndependence )
 {
 	sw::LocalizationManager locManager1;

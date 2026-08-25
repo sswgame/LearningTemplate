@@ -42,7 +42,6 @@ namespace sw
 			return role == ZoneRole::Gym || role == ZoneRole::Dungeon || role == ZoneRole::Boss;
 		}
 
-
 	} // namespace
 
 	ZoneDef::ZoneDef()
@@ -60,7 +59,6 @@ namespace sw
 		, _activeIndex{ -1 }
 	{
 	}
-
 
 	bool ZoneDef::hasTag( string_view tag ) const
 	{

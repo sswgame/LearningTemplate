@@ -1,7 +1,8 @@
 #include "pch.h"
 
-#include "Editor/Config/EditorData.h"
 #include "Editor/Tools/TileMapTool.h"
+
+#include "Editor/Config/EditorData.h"
 #include "Editor/Workspace/EditorWorkspace.h"
 
 #include "Engine/Utility/Xml/XmlDocument.h"
@@ -48,7 +49,6 @@ namespace sw
 			StringUtil::strncpy( _arrWarpTarget, editorData._warpMap.c_str(), sizeof( _arrWarpTarget ) - 1 );
 		resize( 8, 8 );
 	}
-
 
 	void TileMapTool::draw( const EditorUIContext& /*ctx*/ )
 	{

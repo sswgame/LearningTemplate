@@ -1,8 +1,9 @@
 #include "pch.h"
 
+#include "Engine/Graphics/RHI/GL/OpenGLRHIDevice.h"
+
 #include "Engine/Config/EngineData.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHICommandContext.h"
-#include "Engine/Graphics/RHI/GL/OpenGLRHIDevice.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHIResource.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHISwapChain.h"
 #include "Engine/Graphics/RHI/RHIDeferredCommandList.h"
@@ -112,7 +113,6 @@ namespace sw
 #endif
 		}
 
-
 	} // namespace
 
 	OpenGLRHIDevice::OpenGLRHIDevice()
@@ -159,7 +159,6 @@ namespace sw
 		_swapChainImpl = sw::make_unique<OpenGLRHISwapChain>( this );
 		_resourceImpl  = sw::make_unique<OpenGLRHIResource>( this );
 	}
-
 
 	OpenGLRHIDevice::~OpenGLRHIDevice()
 	{
@@ -225,24 +224,23 @@ namespace sw
 		}
 
 		PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribsARB = reinterpret_cast<PFNWGLCREATECONTEXTATTRIBSARBPROC>( wglGetProcAddress( "wglCreateContextAttribsARB" ) );
-		HGLRC hRC{ nullptr };
+		HGLRC							  hRC{ nullptr };
 		if ( wglCreateContextAttribsARB )
 		{
 			static const int32 kArrVersions[][2] = {
-				{ 4, 6 },
-				{ 4, 5 },
-				{ 4, 3 },
-				{ 4, 1 },
-				{ 3, 3 }
-			};
+				{4, 6},
+				{4, 5},
+				{4, 3},
+				{4, 1},
+				{3, 3}
+			 };
 			for ( const int32( &ver )[2] : kArrVersions )
 			{
 				int32 arrAttribs[] = {
 					WGL_CONTEXT_MAJOR_VERSION_ARB, ver[0],
 					WGL_CONTEXT_MINOR_VERSION_ARB, ver[1],
 					WGL_CONTEXT_PROFILE_MASK_ARB, WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
-					0
-				};
+					0 };
 				hRC = wglCreateContextAttribsARB( hDC, nullptr, arrAttribs );
 				if ( hRC != nullptr )
 				{
@@ -720,8 +718,6 @@ namespace sw
 		_releaseQueue.flushAll();
 	}
 
-
-
 	bool OpenGLRHIDevice::bindGraphicsContext()
 	{
 		if ( _bInitialized == false || _pHRC == nullptr )
@@ -768,15 +764,6 @@ namespace sw
 #endif
 	}
 
-
-
-
-
-
-
-
-
-
 	RHIBufferHandle OpenGLRHIDevice::createIndexBuffer( const void* pData, uint32 sizeBytes, uint32 indexStride )
 	{
 		(void)indexStride;
@@ -791,15 +778,6 @@ namespace sw
 
 		return storeGlBuffer( ibo );
 	}
-
-
-
-
-
-
-
-
-
 
 	void OpenGLRHIDevice::drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset,
 										RHIDescriptorIndex materialDescriptorIndex )
@@ -824,10 +802,6 @@ namespace sw
 			glDrawArraysIndirect( GL_TRIANGLES, reinterpret_cast<const void*>( static_cast<uintptr_t>( argumentBufferOffset ) ) );
 		glBindBuffer( GL_DRAW_INDIRECT_BUFFER, 0 );
 	}
-
-
-
-
 
 	void OpenGLRHIDevice::multiDrawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset, uint32 maxCommandCount,
 											 RHIBufferHandle countBuffer, uint32 countBufferOffset )
@@ -866,10 +840,6 @@ namespace sw
 		glBindBuffer( GL_DRAW_INDIRECT_BUFFER, 0 );
 	}
 
-
-
-
-
 	unique_ptr<IRHICommandList> OpenGLRHIDevice::createCommandList( RHICommandListMode mode )
 	{
 		unique_ptr<RHIDeferredCommandList> list = make_unique<RHIDeferredCommandList>( mode, getCommandContextForMode( mode ) );
@@ -884,7 +854,6 @@ namespace sw
 #endif
 		executeDeferredCommandList( this, pCmdList );
 	}
-
 
 	bool OpenGLRHIDevice::ensureComputeRootConstantUbo()
 	{

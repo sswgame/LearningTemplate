@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Engine/Graphics/RHI/GL/OpenGLRHICommandContext.h"
+
 #include "Engine/Graphics/RHI/GL/OpenGLRHIDevice.h"
 
 #include <glad/glad.h>
@@ -21,7 +22,6 @@ namespace sw
 				return GL_TRIANGLES;
 		}
 	}
-
 
 	void OpenGLRHICommandContext::beginOffscreenPass( RHITextureHandle colorTarget, float32 clearColor[4] )
 	{
@@ -428,8 +428,8 @@ namespace sw
 		if ( _pDevice->_bInitialized == false )
 			return;
 
-		GLuint program = _pDevice->_shaderProgram;
-		const OpenGLRHIDevice::OpenGLPipelineStateRecord* pPso = _pDevice->_pipelineStates.get( _pDevice->_boundGraphicsPso );
+		GLuint											  program = _pDevice->_shaderProgram;
+		const OpenGLRHIDevice::OpenGLPipelineStateRecord* pPso	  = _pDevice->_pipelineStates.get( _pDevice->_boundGraphicsPso );
 		if ( pPso != nullptr && pPso->program != 0 )
 			program = pPso->program;
 

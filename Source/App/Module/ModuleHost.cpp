@@ -90,7 +90,6 @@ namespace
 	}
 } // namespace
 
-
 namespace sw
 {
 	ModuleHost::ModuleHost()
@@ -118,7 +117,7 @@ namespace sw
 		if ( _pGameSavedStateBuffer != nullptr )
 		{
 			std::free( _pGameSavedStateBuffer );
-			_pGameSavedStateBuffer  = nullptr;
+			_pGameSavedStateBuffer	= nullptr;
 			_gameSavedStateCapacity = 0;
 			_gameSavedStateSize		= 0;
 		}
@@ -341,7 +340,7 @@ namespace sw
 					if ( _pGameSavedStateBuffer != nullptr )
 						std::free( _pGameSavedStateBuffer );
 					_gameSavedStateCapacity = size;
-					_pGameSavedStateBuffer  = static_cast<uint8*>( std::malloc( size ) );
+					_pGameSavedStateBuffer	= static_cast<uint8*>( std::malloc( size ) );
 				}
 				_gameSavedStateSize = size;
 				if ( _gameApi.serializeState( _game, _pGameSavedStateBuffer, &size ) == false )
@@ -411,8 +410,6 @@ namespace sw
 
 			_gameSavedStateSize = 0;
 		}
-
-
 
 		SW_LOG_INFO( "[ModuleHost] SWGame initialized successfully via GameAPI." );
 	}
@@ -561,17 +558,17 @@ namespace sw
 		if ( _gameApi.bindService != nullptr )
 		{
 			GameService gs{};
-			gs.getService              = getGameService;
+			gs.getService			   = getGameService;
 			gs._pLocalizationManager   = &sw::engine::getLocalizationManager();
-			gs._pEventDispatcher       = &sw::engine::getEventDispatcher();
+			gs._pEventDispatcher	   = &sw::engine::getEventDispatcher();
 			gs._pGlobalVariableManager = &sw::engine::getGlobalVariableManager();
-			gs._pAudioSystem           = &sw::engine::getAudioSystem();
-			gs._pTypeRegistry          = &sw::engine::getTypeRegistry();
-			gs._pInputManager          = &sw::engine::getInputManager();
-			gs._pSceneManager          = &sw::engine::getSceneManager();
-			gs._pResourceManager       = &sw::engine::getResourceManager();
-			gs._pDebugDrawQueue        = &sw::engine::getDebugDrawQueue();
-			gs._pDebugOverlayState     = &sw::engine::getDebugOverlayState();
+			gs._pAudioSystem		   = &sw::engine::getAudioSystem();
+			gs._pTypeRegistry		   = &sw::engine::getTypeRegistry();
+			gs._pInputManager		   = &sw::engine::getInputManager();
+			gs._pSceneManager		   = &sw::engine::getSceneManager();
+			gs._pResourceManager	   = &sw::engine::getResourceManager();
+			gs._pDebugDrawQueue		   = &sw::engine::getDebugDrawQueue();
+			gs._pDebugOverlayState	   = &sw::engine::getDebugOverlayState();
 			_gameApi.bindService( &gs );
 		}
 

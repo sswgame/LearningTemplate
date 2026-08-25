@@ -1,8 +1,9 @@
 #include "pch.h"
 
+#include "Engine/Graphics/RHI/Vulkan/VulkanRHIResource.h"
+
 #include "Engine/Graphics/RHI/FrameResourceRing.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
-#include "Engine/Graphics/RHI/Vulkan/VulkanRHIResource.h"
 #include "Engine/Graphics/Shader/ShaderCache.h"
 
 #include <vulkan/vulkan.h>
@@ -43,8 +44,8 @@ namespace sw
 		vsDesc._targetFormat		 = ShaderTargetFormat::SPIRV_Vulkan;
 		ShaderCompileResult vsResult = ShaderCache::getOrCompile( vsDesc );
 
-		const bool bDepthOnly = ( desc._numRenderTargets == 0 && desc._bEnableDepthTest != 0 );
-		const bool bHasPixelShader = desc._pixelShaderPath.empty() == false && bDepthOnly == false;
+		const bool			bDepthOnly		= ( desc._numRenderTargets == 0 && desc._bEnableDepthTest != 0 );
+		const bool			bHasPixelShader = desc._pixelShaderPath.empty() == false && bDepthOnly == false;
 		ShaderCompileResult psResult{};
 		if ( bHasPixelShader )
 		{
@@ -853,8 +854,8 @@ namespace sw
 		const VulkanRHIDevice::VulkanBufferRecord* pRecord = _pDevice->resolveAllocatedBuffer( buffer );
 		if ( pRecord == nullptr || _pDevice->_descriptorPool == VK_NULL_HANDLE || _pDevice->_descriptorSetLayout == VK_NULL_HANDLE )
 			return kInvalidDescriptorIndex;
-		const bool bIsStorage = ( pRecord->usage & VK_BUFFER_USAGE_STORAGE_BUFFER_BIT ) != 0;
-		VkDescriptorSetLayout setLayout = bIsStorage ? _pDevice->_uavDescriptorSetLayout : _pDevice->_descriptorSetLayout;
+		const bool			  bIsStorage = ( pRecord->usage & VK_BUFFER_USAGE_STORAGE_BUFFER_BIT ) != 0;
+		VkDescriptorSetLayout setLayout	 = bIsStorage ? _pDevice->_uavDescriptorSetLayout : _pDevice->_descriptorSetLayout;
 
 		VkDescriptorSetAllocateInfo allocInfo{};
 		allocInfo.sType				 = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;

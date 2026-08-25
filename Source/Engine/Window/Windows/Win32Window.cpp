@@ -1,7 +1,8 @@
 #include "pch.h"
 
-#include "Engine/Window/NativeWindowEvent.h"
 #include "Engine/Window/Windows/Win32Window.h"
+
+#include "Engine/Window/NativeWindowEvent.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
 namespace sw

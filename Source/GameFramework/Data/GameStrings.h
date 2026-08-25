@@ -3,12 +3,12 @@
  * @brief game/<pack>/data/strings.xml에서 로드하는 키/값 문자열 테이블
  */
 #pragma once
-#include "GameFramework/GameFrameworkExports.h"
-
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+
+#include "GameFramework/GameFrameworkExports.h"
 
 #include <functional>
 

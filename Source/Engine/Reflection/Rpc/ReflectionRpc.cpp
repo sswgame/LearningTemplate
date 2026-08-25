@@ -1,15 +1,16 @@
 #include "pch.h"
 
+#include "Engine/Reflection/Rpc/ReflectionRpc.h"
+
+#include "Core/Container/ObjectHandle.h"
+
 #include "Engine/Common/EngineServices.h"
 #include "Engine/ECS/ComponentHandle.h"
 #include "Engine/ECS/Entity.h"
 #include "Engine/Reflection/ReflectionTypes.h"
-#include "Engine/Reflection/Rpc/ReflectionRpc.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Core/SerializeContext.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
-
-#include "Core/Container/ObjectHandle.h"
 
 namespace sw
 {
@@ -146,7 +147,6 @@ namespace sw
 			offset += size;
 			return true;
 		}
-
 
 	} // namespace
 

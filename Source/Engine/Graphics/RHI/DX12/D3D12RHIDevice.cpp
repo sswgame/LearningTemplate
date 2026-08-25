@@ -5,6 +5,7 @@
 #include "Engine/Graphics/RHI/DX12/D3D12RHICommandContext.h"
 #include "Engine/Graphics/RHI/DX12/D3D12RHIResource.h"
 #include "Engine/Graphics/RHI/DX12/D3D12RHISwapChain.h"
+
 #if defined( SW_PLATFORM_WINDOWS )
 	#if defined( SW_DEBUG )
 		#include <d3d12sdklayers.h>
@@ -555,7 +556,7 @@ namespace sw
 		rootSigDesc.NumStaticSamplers = _countof( staticSamplers );
 		rootSigDesc.pStaticSamplers	  = staticSamplers;
 		rootSigDesc.Flags			  = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
-							D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED;
+										D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED;
 
 		Microsoft::WRL::ComPtr<ID3DBlob> signatureBlob;
 		Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;

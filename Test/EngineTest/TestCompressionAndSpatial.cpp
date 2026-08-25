@@ -15,9 +15,11 @@
 #include "Engine/Utility/Resource/AssetStreamingQueue.h"
 
 #include "TestFramework/TestFramework.h"
+
 // ------------------------------------------------------------------------------
 // 1) SpatialQuadTree 2D 공간 분할 및 범위 쿼리 검증
 // ------------------------------------------------------------------------------
+
 SW_TEST_CASE( Engine_Spatial, SpatialQuadTreeInsertAndRangeQuery )
 {
 	sw::SpatialQuadTree tree( sw::AABB2D{ 0.0f, 0.0f, 1000.0f, 1000.0f } );
@@ -266,9 +268,9 @@ SW_TEST_CASE( Engine_File, ReloadFileManagerLifecycle )
 	bool	   bCallbackCalled = false;
 	const auto handle		   = manager.registerWatch( "Resource/shaders", { ".hlsl" },
 														SW_DELEGATE_LAMBDA( sw::FileWatchMatchDelegate, [&bCallbackCalled]( const sw::FileChangeEvent& )
-			 {
-		 bCallbackCalled = true;
-	 } ) );
+	{
+		bCallbackCalled = true;
+	} ) );
 
 	SW_EXPECT_TRUE( handle.isValid() );
 	manager.unregisterWatch( handle );

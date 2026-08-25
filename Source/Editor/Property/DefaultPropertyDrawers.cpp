@@ -1,16 +1,17 @@
 #include "pch.h"
 
 #include "Editor/Property/DefaultPropertyDrawers.h"
+
 #include "Editor/Property/IPropertyDrawer.h"
 #include "Editor/Property/PropertyDrawerHelper.h"
 #include "Editor/Property/PropertyDrawerRegistry.h"
 #include "Editor/Widgets/EditorWidgets.h"
-#include "Engine/Utility/CommandStack.h"
 #include "Editor/Workspace/EditorWorkspace.h"
 
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/Utility/CommandStack.h"
 
 #include "RuntimeAPI/EditorService.h"
 
@@ -64,7 +65,7 @@ namespace sw
 		const string  lbl		 = string( "Edit " ) + it->second._label;
 		s_mapPending.erase( it );
 
-		uint64						selectedId = EditorWorkspace::selectedObjectId();
+		uint64				  selectedId = EditorWorkspace::selectedObjectId();
 		CommandStack::Command cmd;
 		cmd._label = lbl;
 		cmd._undo  = [pPtr, sz, listBefore, selectedId]()
@@ -116,7 +117,7 @@ namespace sw
 		const string lbl	 = string( "Edit " ) + it->second._label;
 		s_mapPending.erase( it );
 
-		uint64						selectedId = EditorWorkspace::selectedObjectId();
+		uint64				  selectedId = EditorWorkspace::selectedObjectId();
 		CommandStack::Command cmd;
 		cmd._label = lbl;
 		cmd._undo  = [pTarget, before, selectedId]()
@@ -163,7 +164,6 @@ namespace sw
 				[[maybe_unused]] const int32 minI	   = static_cast<int32>( minF );
 				[[maybe_unused]] const int32 maxI	   = static_cast<int32>( maxF );
 
-
 				int32* pPtr = prop.getValuePtr<int32>( pInstance );
 				if ( pPtr == nullptr )
 					return true;
@@ -194,7 +194,6 @@ namespace sw
 				const float32				 maxF	   = prop._metadata._maxRange;
 				[[maybe_unused]] const int32 minI	   = static_cast<int32>( minF );
 				[[maybe_unused]] const int32 maxI	   = static_cast<int32>( maxF );
-
 
 				uint32* pPtr = prop.getValuePtr<uint32>( pInstance );
 				if ( pPtr == nullptr )
@@ -231,7 +230,6 @@ namespace sw
 				[[maybe_unused]] const int32 minI	   = static_cast<int32>( minF );
 				[[maybe_unused]] const int32 maxI	   = static_cast<int32>( maxF );
 
-
 				int64* pPtr = prop.getValuePtr<int64>( pInstance );
 				if ( pPtr == nullptr )
 					return true;
@@ -267,7 +265,6 @@ namespace sw
 				[[maybe_unused]] const int32 minI	   = static_cast<int32>( minF );
 				[[maybe_unused]] const int32 maxI	   = static_cast<int32>( maxF );
 
-
 				float32* pPtr = prop.getValuePtr<float32>( pInstance );
 				if ( pPtr == nullptr )
 					return true;
@@ -298,7 +295,6 @@ namespace sw
 				const float32				 maxF	   = prop._metadata._maxRange;
 				[[maybe_unused]] const int32 minI	   = static_cast<int32>( minF );
 				[[maybe_unused]] const int32 maxI	   = static_cast<int32>( maxF );
-
 
 				float64* pPtr = prop.getValuePtr<float64>( pInstance );
 				if ( pPtr == nullptr )
@@ -335,7 +331,6 @@ namespace sw
 				[[maybe_unused]] const int32 minI	   = static_cast<int32>( minF );
 				[[maybe_unused]] const int32 maxI	   = static_cast<int32>( maxF );
 
-
 				bool* pPtr = prop.getValuePtr<bool>( pInstance );
 				if ( pPtr == nullptr )
 					return true;
@@ -361,7 +356,6 @@ namespace sw
 				const float32				 maxF	   = prop._metadata._maxRange;
 				[[maybe_unused]] const int32 minI	   = static_cast<int32>( minF );
 				[[maybe_unused]] const int32 maxI	   = static_cast<int32>( maxF );
-
 
 				string* pPtr = prop.getValuePtr<string>( pInstance );
 				if ( pPtr == nullptr )
@@ -391,7 +385,6 @@ namespace sw
 				const float32				 maxF	   = prop._metadata._maxRange;
 				[[maybe_unused]] const int32 minI	   = static_cast<int32>( minF );
 				[[maybe_unused]] const int32 maxI	   = static_cast<int32>( maxF );
-
 
 				float3* pPtr = prop.getValuePtr<float3>( pInstance );
 				// 쓰기 가능하면 RGB 축 컨트롤을 우선합니다.
@@ -423,7 +416,6 @@ namespace sw
 				[[maybe_unused]] const int32 minI	   = static_cast<int32>( minF );
 				[[maybe_unused]] const int32 maxI	   = static_cast<int32>( maxF );
 
-
 				float2* pPtr = prop.getValuePtr<float2>( pInstance );
 				if ( pPtr == nullptr )
 					return true;
@@ -452,7 +444,6 @@ namespace sw
 				const float32				 maxF	   = prop._metadata._maxRange;
 				[[maybe_unused]] const int32 minI	   = static_cast<int32>( minF );
 				[[maybe_unused]] const int32 maxI	   = static_cast<int32>( maxF );
-
 
 				float4* pPtr = prop.getValuePtr<float4>( pInstance );
 				if ( pPtr == nullptr )
@@ -483,7 +474,6 @@ namespace sw
 				const float32				 maxF	   = prop._metadata._maxRange;
 				[[maybe_unused]] const int32 minI	   = static_cast<int32>( minF );
 				[[maybe_unused]] const int32 maxI	   = static_cast<int32>( maxF );
-
 
 				hashed_string* pPtr = prop.getValuePtr<hashed_string>( pInstance );
 				if ( pPtr == nullptr )

@@ -39,17 +39,30 @@ endif()
 #    Dev에서 App/Editor가 Engine.dll로부터 FileUtil/Logger를 dllimport
 #    ReflectionParser는 Core STATIC만 링크해 Engine.dll 순환을 피함
 # ------------------------------------------------------------------------------
-sw_addLibrary(Engine
-    TYPE ${coreLibType}
-    EXCLUDE ${coreExclude}
-    PCH
+file(GLOB_RECURSE ENGINE_SOURCES CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp")
+foreach(exPattern IN LISTS coreExclude)
+    list(FILTER ENGINE_SOURCES EXCLUDE REGEX "${exPattern}")
+endforeach()
+
+add_library(Engine ${coreLibType} ${ENGINE_SOURCES})
+
+target_include_directories(Engine PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
+target_link_libraries(Engine
+    PUBLIC
+        sw_public_source_includes
+    PRIVATE
+        sw_global_options
 )
+if(sw_flag_libraries)
+    target_link_libraries(Engine PRIVATE ${sw_flag_libraries})
+endif()
+
+target_compile_definitions(Engine PRIVATE "SW_LOG_TAG=\"Engine\"" SW_ENGINE_INTERNAL)
+target_precompile_headers(Engine PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/pch.h")
 
 target_sources(Engine PRIVATE
 	"${CMAKE_CURRENT_SOURCE_DIR}/../sw.natvis"
 )
-
-target_link_libraries(Engine PUBLIC sw_public_source_includes)
 
 target_sources(Engine PRIVATE $<TARGET_OBJECTS:Core_objects>)
 add_dependencies(Engine Core_objects)
@@ -106,8 +119,6 @@ sw_configureEngineDllExports(Engine ${coreLibType})
 set_property(TARGET Engine PROPERTY SW_DELAYLOAD_HOOK_SOURCE
     "${CMAKE_CURRENT_SOURCE_DIR}/Utility/Module/DelayLoadNotifyHook.cpp")
 
-sw_setLogTag(Engine Engine)
-
 # Windows: Input(XInput) + Audio(XAudio2) + 파일 대화상자 + 셰이더 컴파일러 유틸리티
 if(WIN32)
     target_link_libraries(Engine PRIVATE xaudio2.lib mfplat.lib mfreadwrite.lib mfuuid.lib comdlg32 ole32 shell32 dbghelp d3dcompiler.lib delayimp.lib)
@@ -120,11 +131,9 @@ if(SW_RHI_AS_MODULES)
 else()
     message(STATUS "[Engine] SW_RHI_AS_MODULES=OFF -> RHI device sources linked into Engine")
 endif()
-
 # ------------------------------------------------------------------------------
-# 5) PCH · Unity — FrameRenderer/Material 분할 TU는 공유 내부 헤더 병합을 피함
+# 5) Unity — FrameRenderer/Material 분할 TU는 공유 내부 헤더 병합을 피함
 # ------------------------------------------------------------------------------
-sw_configurePch(Engine)
 if(COMMAND sw_setUnityBuild)
 	sw_setUnityBuild(Engine BATCH_SIZE 12)
 	if(COMMAND sw_skipUnitySources)
@@ -163,5 +172,3 @@ sw_addReflectBuiltinsGen(Engine)
 if(SW_RHI_AS_MODULES)
     add_subdirectory(Graphics/RHI/Modules)
 endif()
-
-target_compile_definitions(Engine PRIVATE SW_ENGINE_INTERNAL)

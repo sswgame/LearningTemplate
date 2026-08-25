@@ -1,15 +1,16 @@
 #include "pch.h"
 
 #include "Editor/Config/EditorData.h"
+
+#include "Core/File/FileUtil.h"
+
 #include "Editor/Config/EditorConfig.h"
 #include "Editor/EditorDefines.h"
 #include "Editor/EditorUtil.h"
 
-#include "Core/File/FileUtil.h"
-
 #include "Engine/Utility/Xml/XmlDocument.h"
 
-#include <sw/config/ConfigConstants.h>
+#include "sw/config/ConfigConstants.h"
 
 namespace sw
 {

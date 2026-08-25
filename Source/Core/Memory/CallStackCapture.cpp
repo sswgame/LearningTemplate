@@ -1,7 +1,8 @@
 #include "pch.h"
 
-#include "Core/Concurrency/mutex.h"
 #include "Core/Memory/CallStackCapture.h"
+
+#include "Core/Concurrency/mutex.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
 	#include "Core/Common/PlatformOsHeaders.h"

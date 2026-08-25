@@ -3,12 +3,12 @@
  * @brief 역할 태그와 카메라 경계로 존을 활성화/일시정지합니다 (룸 개념)
  */
 #pragma once
-#include "GameFramework/GameFrameworkExports.h"
-
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+
+#include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
@@ -38,7 +38,6 @@ namespace sw
 		int32 _maxX{ 0 };
 		int32 _maxY{ 0 };
 	};
-
 
 	/** @brief 한 존의 ID·역할·경계·태그 */
 	struct ZoneDef
@@ -81,7 +80,6 @@ namespace sw
 
 		/** @brief 플레이어 타일 위치에 맞는 첫 번째 존을 활성화합니다. 변경되면 true 를 반환합니다. */
 		bool updateActiveZone( int32 playerX, int32 playerY );
-
 
 		/** @brief 활성 존의 클리어 게이트를 잠그거나 풉니다. */
 		void setClearGateLocked( bool bLocked );

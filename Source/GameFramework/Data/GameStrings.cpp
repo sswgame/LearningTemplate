@@ -13,7 +13,7 @@ namespace sw
 	namespace
 	{
 		static const string s_emptyString{};
-	}
+	} // namespace
 
 	bool GameStrings::loadFromResource( string_view assetRelativePath )
 	{
@@ -183,4 +183,3 @@ namespace sw
 			pLoc->clear();
 	}
 } // namespace sw
-

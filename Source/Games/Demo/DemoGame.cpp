@@ -1,7 +1,6 @@
 #include "pch.h"
 
 #include "Games/Demo/DemoGame.h"
-#include "Games/Demo/DemoGameHelpers.h"
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Memory/Memory.h"
@@ -21,6 +20,8 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Input/GameActions.h"
 #include "GameFramework/Kits/TurnBattle/SpeciesData.h"
+
+#include "Games/Demo/DemoGameHelpers.h"
 
 #include "RuntimeAPI/GameAPI.h"
 #include "RuntimeAPI/GameModuleExports.h"
@@ -131,7 +132,6 @@ namespace sw
 
 		updateHud();
 	}
-
 
 } // namespace sw
 

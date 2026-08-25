@@ -3,15 +3,15 @@
  * @brief 던전 / 보스 룸용 실시간 클리어 게이트 전투 (던그리드 스타일 아이디어).
  */
 #pragma once
-#include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/GameFrameworkMinimal.h"
-
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 
 #include "Engine/Physics/AABB.h"
 #include "Engine/Physics/CollisionLayers.h"
+
+#include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/GameFrameworkMinimal.h"
 
 namespace sw
 {

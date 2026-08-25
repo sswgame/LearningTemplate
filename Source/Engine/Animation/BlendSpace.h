@@ -1,13 +1,13 @@
 #pragma once
-#include "Engine/Animation/DualQuaternion.h"
-#include "Engine/Animation/Skeleton.h"
-
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
+
+#include "Engine/Animation/DualQuaternion.h"
+#include "Engine/Animation/Skeleton.h"
 
 namespace sw
 {

@@ -3,11 +3,11 @@
  * @brief 얇은 AABB와 레이어 인식 겹침 질의.
  */
 #pragma once
-#include "Engine/Physics/CollisionLayers.h"
-
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Math/Math.h"
+
+#include "Engine/Physics/CollisionLayers.h"
 
 namespace sw
 {

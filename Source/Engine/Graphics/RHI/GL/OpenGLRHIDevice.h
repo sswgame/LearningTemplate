@@ -4,17 +4,17 @@
  * @note GLAD/OpenGL 심볼은 OpenGLRHIDevice.cpp 에서만 include합니다.
  */
 #pragma once
-#include "Engine/Common/EnginePlatformHeaders.h"
-#include "Engine/Graphics/RHI/IRHIDevice.h"
-#include <memory>
-
-#include "Engine/Graphics/RHI/RHIHandleTable.h"
-#include "Engine/Graphics/RHI/RHIReleaseQueue.h"
-
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+
+#include "Engine/Common/EnginePlatformHeaders.h"
+#include "Engine/Graphics/RHI/IRHIDevice.h"
+#include "Engine/Graphics/RHI/RHIHandleTable.h"
+#include "Engine/Graphics/RHI/RHIReleaseQueue.h"
+
+#include <memory>
 
 namespace sw
 {
@@ -51,9 +51,6 @@ namespace sw
 
 		/** @brief 프레임 시작 (glClearColor 및 glClear) */
 		void beginFrame( float32 clearColor[4] );
-
-
-
 
 		/** @brief 프레임 종료 (SwapBuffers / wglSwapBuffers) */
 		void endFrame( bool vsync, bool bPresent = true );
@@ -103,26 +100,13 @@ namespace sw
 		/** @brief OpenGL은 커맨드 큐가 없음 (nullptr) */
 		void* getNativeCommandQueue() const override { return nullptr; }
 
-
-
-
-
-
-
-
-
-
 		/** @brief glDrawArraysIndirect 실행 */
 		void drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0,
 						   RHIDescriptorIndex materialDescriptorIndex = kInvalidDescriptorIndex );
 
-
-
 		/** @brief glMultiDrawArraysIndirect when available. */
 		void multiDrawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset, uint32 maxCommandCount,
 								RHIBufferHandle countBuffer = 0, uint32 countBufferOffset = 0 );
-
-
 
 		/** @brief 커맨드 리스트 객체 생성 */
 		unique_ptr<IRHICommandList> createCommandList( RHICommandListMode mode ) override;

@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Editor/Common/EditorContext.h"
+
 #include "Editor/Overlay/CommandPaletteWindow.h"
 #include "Editor/Overlay/EditorNotificationManager.h"
 #include "Editor/Property/ComponentDrawerRegistry.h"

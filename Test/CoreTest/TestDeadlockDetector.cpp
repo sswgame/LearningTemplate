@@ -3,7 +3,7 @@
 #include "Core/Concurrency/DeadlockDetector.h"
 #include "Core/Concurrency/mutex.h"
 
-#include "TestFramework.h"
+#include "TestFramework/TestFramework.h"
 
 #include <chrono>
 #include <thread>
@@ -28,7 +28,6 @@ SW_TEST_CASE( DeadlockDetectorTest, BasicTracking )
 
 	detector.shutdown();
 }
-
 
 /**
  * @brief [DeadlockDetectorTest] 다중 락 계층 획득 및 해제 시퀀스 검증

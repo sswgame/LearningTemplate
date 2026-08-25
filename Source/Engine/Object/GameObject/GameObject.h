@@ -3,14 +3,14 @@
  * @brief 엔진 월드 액터/엔티티의 기반 클래스인 GameObject 클래스 정의
  */
 #pragma once
+#include "Core/Common/Macros.h"
+#include "Core/Common/Types.h"
+#include "Core/Container/vector.h"
+
 #include "Engine/ECS/Entity.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
-#include "Core/Container/vector.h"
 
 #include <atomic>
 #include <tuple>
@@ -207,7 +207,6 @@ namespace sw
 		{
 			static_assert( HasOwnReflectBody_v<T> || HasReflectStaticType_v<T> || sizeof( T ) == sizeof( Component ),
 						   "T must declare its own REFLECT_BODY() or REFLECT_SCRIPT()! Component-derived classes with member variables MUST declare REFLECT_SCRIPT()." );
-
 
 			if ( _pOwnerManager == nullptr )
 			{

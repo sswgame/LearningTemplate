@@ -3,12 +3,12 @@
  * @brief 페이드와 대기 중인 워프/전투/복귀 전환 FSM을 소유합니다
  */
 #pragma once
-#include "GameFramework/GameFrameworkExports.h"
-
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Delegate/Delegate.h"
+
+#include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {

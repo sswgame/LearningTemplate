@@ -1,19 +1,20 @@
 #include "pch.h"
 
-#include "Engine/Audio/IAudioSystem.h"
 #include "Engine/Common/EngineServices.h"
-#include "Engine/ECS/Registry.h"
-#include "Engine/Input/InputManager.h"
-#include "Engine/Object/Component/TagSystem.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Reflection/ReflectionCore.h"
-#include "Engine/Utility/Resource/ResourceManager.h"
-#include "Engine/Localization/LocalizationManager.h"
-#include "Engine/Utility/Task/TaskManager.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Event/EventDispatcher.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+
+#include "Engine/Audio/IAudioSystem.h"
+#include "Engine/ECS/Registry.h"
+#include "Engine/Input/InputManager.h"
+#include "Engine/Localization/LocalizationManager.h"
+#include "Engine/Object/Component/TagSystem.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Utility/Resource/ResourceManager.h"
+#include "Engine/Utility/Task/TaskManager.h"
 
 #include "RuntimeAPI/PluginAPI.h"
 
@@ -23,7 +24,6 @@ namespace sw
 	{
 
 		EngineServices s_services{};
-
 
 	} // namespace
 

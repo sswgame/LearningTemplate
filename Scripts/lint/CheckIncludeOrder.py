@@ -19,12 +19,45 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from common import collectSourceFiles, getProjectRoot, kCppSourceExtensions
+from common import collectSourceFiles, getLintSearchDirs, getProjectRoot, kCppSourceExtensions
 
 _kIncludeRe = re.compile(r'^\s*#\s*include\s+([<"])([^>"]+)[>"]', re.MULTILINE)
 
 
-def processFile(filePath: Path, repositoryRoot: Path) -> list[str]:
+def buildHeaderLookupMap(repositoryRoot: Path) -> tuple[dict[str, str], dict[str, str], dict[str, str]]:
+    sourceMap: dict[str, str] = {}
+    sourceCounts: dict[str, int] = {}
+    for headerPath in (repositoryRoot / "Source").glob("**/*.h"):
+        rel = headerPath.relative_to(repositoryRoot / "Source").as_posix()
+        sourceCounts[headerPath.name] = sourceCounts.get(headerPath.name, 0) + 1
+        sourceMap[headerPath.name] = rel
+
+    # Remove ambiguous duplicates (like pch.h)
+    sourceMap = {k: v for k, v in sourceMap.items() if sourceCounts[k] == 1}
+
+    testMap: dict[str, str] = {}
+    testCounts: dict[str, int] = {}
+    for headerPath in (repositoryRoot / "Test").glob("**/*.h"):
+        rel = headerPath.relative_to(repositoryRoot / "Test").as_posix()
+        testCounts[headerPath.name] = testCounts.get(headerPath.name, 0) + 1
+        testMap[headerPath.name] = rel
+    testMap = {k: v for k, v in testMap.items() if testCounts[k] == 1}
+
+    toolsMap: dict[str, str] = {}
+    toolsCounts: dict[str, int] = {}
+    for headerPath in (repositoryRoot / "Tools").glob("**/*.h"):
+        rel = headerPath.relative_to(repositoryRoot / "Tools").as_posix()
+        toolsCounts[headerPath.name] = toolsCounts.get(headerPath.name, 0) + 1
+        toolsMap[headerPath.name] = rel
+    toolsMap = {k: v for k, v in toolsMap.items() if toolsCounts[k] == 1}
+
+    return sourceMap, testMap, toolsMap
+
+
+def processFile(filePath: Path, repositoryRoot: Path,
+                sourceHeaderMap: dict[str, str] | None = None,
+                testHeaderMap: dict[str, str] | None = None,
+                toolsHeaderMap: dict[str, str] | None = None) -> list[str]:
     relativeFilePath = filePath.relative_to(repositoryRoot).as_posix()
     try:
         text = filePath.read_text(encoding="utf-8", errors="strict")
@@ -56,30 +89,8 @@ def processFile(filePath: Path, repositoryRoot: Path) -> list[str]:
     if boundaryIndex == -1:
         boundaryIndex = len(lines)
 
-    # 2. 경계선 아래에 있는 글로벌 인클루드(#if 블록 바깥)를 찾아내어 위로 올리기
-    inIfDirectiveLevel = 0
-    misplacedIncludesList = []
-    bottomLines = []
-    
-    for lineIndex in range(boundaryIndex, len(lines)):
-        line = lines[lineIndex]
-        stripped = line.strip()
-        if stripped.startswith('#if'):
-            inIfDirectiveLevel += 1
-        elif stripped.startswith('#endif'):
-            inIfDirectiveLevel = max(0, inIfDirectiveLevel - 1)
-            
-        includeMatch = _kIncludeRe.match(line)
-        if includeMatch and inIfDirectiveLevel == 0:
-            misplacedIncludesList.append(line)
-            violationsList.append(f"{relativeFilePath}: 글로벌 인클루드({includeMatch.group(2)})가 #if나 코드 영역 아래에 있어 상단으로 이동되었습니다.")
-        else:
-            bottomLines.append(line)
-
     topLines = lines[:boundaryIndex]
-    if misplacedIncludesList:
-        topLines.extend(misplacedIncludesList)
-        topLines.append("")
+    bottomLines = lines[boundaryIndex:]
 
     # 3. 상단 영역에서 모든 인클루드 추출 및 정렬/그룹핑
     nonIncludeLines = []
@@ -112,6 +123,26 @@ def processFile(filePath: Path, repositoryRoot: Path) -> list[str]:
         includeType = includeMatch.group(1)
         includeName = includeMatch.group(2)
 
+        # <sw/...> 같은 프로젝트 자동 생성 헤더는 System Include가 아니므로 "" 로 변환
+        if includeType == '<' and includeName.startswith("sw/"):
+            includeType = '"'
+            line = f'#include "{includeName}"'
+
+        # 상대 경로 정규화: "/" 가 없고 pch.h / .xxx 가 아닌 경우 Source/, Test/, Tools/ 상대 경로로 복원
+        if includeType == '"' and "/" not in includeName and not includeName.endswith(".xxx") and includeName != "pch.h":
+            if sourceHeaderMap and includeName in sourceHeaderMap:
+                normalizedPath = sourceHeaderMap[includeName]
+                line = f'#include "{normalizedPath}"'
+                includeName = normalizedPath
+            elif testHeaderMap and "Test" in relativeFilePath and includeName in testHeaderMap:
+                normalizedPath = testHeaderMap[includeName]
+                line = f'#include "{normalizedPath}"'
+                includeName = normalizedPath
+            elif toolsHeaderMap and "Tools" in relativeFilePath and includeName in toolsHeaderMap:
+                normalizedPath = toolsHeaderMap[includeName]
+                line = f'#include "{normalizedPath}"'
+                includeName = normalizedPath
+
         # 중복 제거
         includeFull = f"{includeType}{includeName}{'>' if includeType == '<' else '\"'}"
         if not includeName.endswith(".xxx"):
@@ -130,9 +161,8 @@ def processFile(filePath: Path, repositoryRoot: Path) -> list[str]:
             else:
                 localIncludesList.append(line)
 
-    # 사전순 정렬
+    # 로컬 인클루드는 알파벳순 정렬, 시스템/서드파티(<...>) 인클루드는 선언 순서 유지 (헤더 간 순서 의존성 보존)
     localIncludesList.sort()
-    systemIncludesList.sort()
 
     sortedIncludesList = []
     if pchLine:
@@ -167,8 +197,21 @@ def processFile(filePath: Path, repositoryRoot: Path) -> list[str]:
         sortedIncludesList.pop()
 
     # 최종 상단 텍스트 조합
-    finalTopLines = nonIncludeLines[:firstIncludeIndex] + sortedIncludesList + nonIncludeLines[firstIncludeIndex:]
-    
+    if sortedIncludesList and nonIncludeLines[firstIncludeIndex:]:
+        finalTopLines = nonIncludeLines[:firstIncludeIndex] + sortedIncludesList + [""] + nonIncludeLines[firstIncludeIndex:]
+    else:
+        finalTopLines = nonIncludeLines[:firstIncludeIndex] + sortedIncludesList + nonIncludeLines[firstIncludeIndex:]
+
+    while finalTopLines and finalTopLines[-1] == "":
+        finalTopLines.pop()
+
+    while bottomLines and bottomLines[0] == "":
+        bottomLines.pop(0)
+
+    # 마지막 include(또는 상단 헤더 영역)와 하단 본문(namespace 등) 사이에 항상 1줄 띄우기
+    if finalTopLines and bottomLines:
+        finalTopLines.append("")
+
     # 4. .cpp 파일의 경우 첫 번째 인클루드가 "pch.h"인지 검사 (검사 결과만 리포트)
     if isCpp and not pchLine:
         if "ThirdParty" not in relativeFilePath and "Tools/vcpkg" not in relativeFilePath:
@@ -176,6 +219,9 @@ def processFile(filePath: Path, repositoryRoot: Path) -> list[str]:
 
     # 변경사항이 있다면 파일에 쓰기
     newText = "\n".join(finalTopLines + bottomLines)
+    if text.endswith("\n") and not newText.endswith("\n"):
+        newText += "\n"
+
     if newText != text:
         try:
             filePath.write_text(newText, encoding="utf-8")
@@ -191,17 +237,15 @@ def main() -> int:
     args = parser.parse_args()
     repo = (args.root or getProjectRoot()).resolve()
 
-    sourceDirs = [
-        repo / "Source",
-        repo / "Test"
-    ]
+    sourceDirs = getLintSearchDirs(repo)
 
     allFiles = collectSourceFiles(sourceDirs)
+    sourceHeaderMap, testHeaderMap, toolsHeaderMap = buildHeaderLookupMap(repo)
 
     violations: list[str] = []
     maxWorkers = min(32, (os.cpu_count() or 4) * 2)
     with concurrent.futures.ThreadPoolExecutor(max_workers=maxWorkers) as executor:
-        futures = [executor.submit(processFile, path, repo) for path in allFiles]
+        futures = [executor.submit(processFile, path, repo, sourceHeaderMap, testHeaderMap, toolsHeaderMap) for path in allFiles]
         for future in concurrent.futures.as_completed(futures):
             violations.extend(future.result())
 

@@ -1,9 +1,9 @@
 #pragma once
-#include "Editor/Tools/BaseNodeGraphEditor.h"
-
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+
+#include "Editor/Tools/BaseNodeGraphEditor.h"
 
 namespace sw
 {

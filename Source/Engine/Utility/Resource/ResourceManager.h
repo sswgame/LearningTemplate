@@ -11,12 +11,12 @@
  *   - StringTable · ReloadFileManager · SceneManager
  */
 #pragma once
+#include "Core/Common/Macros.h"
+#include "Core/Memory/Memory.h"
+
 #include "Engine/Utility/File/ReloadFileManager.h"
 #include "Engine/Utility/Resource/AssetDatabase.h"
 #include "Engine/Utility/Resource/AssetFormat.h"
-
-#include "Core/Common/Macros.h"
-#include "Core/Memory/Memory.h"
 
 namespace sw
 {

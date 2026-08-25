@@ -1,15 +1,16 @@
 #include "pch.h"
 
+#include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
+
+#include "Core/File/FileUtil.h"
+
 #include "Engine/Config/EngineData.h"
 #include "Engine/Graphics/RHI/FrameResourceRing.h"
 #include "Engine/Graphics/RHI/RHIDeferredCommandList.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHICommandContext.h"
-#include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIResource.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHISwapChain.h"
 #include "Engine/Graphics/Shader/ShaderCache.h"
-
-#include "Core/File/FileUtil.h"
 
 #include <vulkan/vulkan.h>
 
@@ -23,7 +24,6 @@
 #elif defined( SW_PLATFORM_MACOS )
 	#include <vulkan/vulkan_metal.h>
 #endif
-
 
 namespace
 {
@@ -56,8 +56,6 @@ namespace sw
 	namespace
 	{
 
-
-
 		bool hasExtensionVal( const vector<VkExtensionProperties>& availableExts, const utf8* pName )
 		{
 			for ( const VkExtensionProperties& ext : availableExts )
@@ -67,7 +65,6 @@ namespace sw
 			}
 			return false;
 		}
-
 
 	} // namespace
 
@@ -213,7 +210,6 @@ namespace sw
 		_swapChainImpl = sw::make_unique<VulkanRHISwapChain>( this );
 		_resourceImpl  = sw::make_unique<VulkanRHIResource>( this );
 	}
-
 
 	VulkanRHIDevice::~VulkanRHIDevice()
 	{
@@ -718,10 +714,6 @@ namespace sw
 		_bFrameStarted = false;
 		_releaseQueue.tickFrame();
 	}
-
-
-
-
 
 	VkCommandBuffer VulkanRHIDevice::currentCommandBuffer() const
 	{
@@ -1360,7 +1352,6 @@ namespace sw
 		// 스왑체인 이미지가 소유하지 않는 참조 사본이므로 비우기만 합니다.
 		_listImagesInFlight.clear();
 	}
-
 
 	void VulkanRHIDevice::recreateSwapChain()
 	{

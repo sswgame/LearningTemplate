@@ -5,10 +5,9 @@
  *          새 PROPERTY 필드를 추가하면: AnnotationMeta.txt + 이 모듈의 apply 테이블을 함께 수정하세요.
  */
 #pragma once
-
-#include "ParsedReflection.h"
-
 #include "Engine/EngineMinimal.h"
+
+#include "ReflectionParser/ParsedReflection.h"
 
 namespace sw
 {

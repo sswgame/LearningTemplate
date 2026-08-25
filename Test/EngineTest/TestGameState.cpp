@@ -10,6 +10,7 @@
 /**
  * @brief [GameStateTest] 기본 상태는 Stopped
  */
+
 SW_TEST_CASE( GameStateTest, DefaultIsStopped )
 {
 	sw::setGameState( sw::GameState::Stopped );

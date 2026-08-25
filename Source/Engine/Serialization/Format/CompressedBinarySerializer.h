@@ -1,6 +1,6 @@
 #pragma once
-
 #include "Core/Compression/CompressionStream.h"
+
 #include "Engine/EngineMinimal.h"
 #include "Engine/Serialization/Core/SchemaMigrate.h"
 #include "Engine/Serialization/Core/SerializeContext.h"

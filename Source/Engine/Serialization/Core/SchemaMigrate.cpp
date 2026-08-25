@@ -1,8 +1,9 @@
 #include "pch.h"
 
+#include "Engine/Serialization/Core/SchemaMigrate.h"
+
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectionCore.h"
-#include "Engine/Serialization/Core/SchemaMigrate.h"
 #include "Engine/Serialization/Core/SerializerInternal.h"
 
 namespace sw
@@ -29,7 +30,6 @@ namespace sw
 		}
 
 	} // namespace
-
 
 	void* createScratchInstance( const TypeInfo& typeInfo, vector<uint8>& listStorage )
 	{
@@ -97,7 +97,6 @@ namespace sw
 			}
 		}
 	}
-
 
 	namespace
 	{
@@ -188,7 +187,6 @@ namespace sw
 		}
 
 	} // namespace
-
 
 	const SchemaOrphanValue* SchemaMigrateContext::findOrphan( hashed_string name ) const
 	{

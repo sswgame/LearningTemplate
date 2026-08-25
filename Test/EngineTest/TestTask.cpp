@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Utility/Task/TaskFuture.h"
 #include "Engine/Utility/Task/TaskManager.h"
 
 #include "TestFramework/TestFramework.h"
@@ -453,8 +454,6 @@ SW_TEST_CASE( Engine_Task, WaitAllWithTimeout )
 
 	taskMgr.clear();
 }
-
-#include "Engine/Utility/Task/TaskFuture.h"
 
 /**
  * @brief [Engine_Task] C++17 호환 TaskFuture / TaskPromise Fluent 체이닝 및 비동기 파이프라인 검증

@@ -3,13 +3,13 @@
  * @brief ECS 레지스트리 — 엔티티, 컴포넌트 풀, 팩토리, 지연 명령
  */
 #pragma once
+#include "Core/Concurrency/mutex.h"
+#include "Core/Container/vector.h"
+
 #include "Engine/ECS/ComponentHandle.h"
 #include "Engine/ECS/Entity.h"
 #include "Engine/EngineMinimal.h"
 #include "Engine/Object/Component/Component.h"
-
-#include "Core/Concurrency/mutex.h"
-#include "Core/Container/vector.h"
 
 #include <atomic>
 #include <shared_mutex>
@@ -284,7 +284,8 @@ namespace sw
 				std::unique_lock<std::shared_mutex> lock{ _entityLock };
 				auto&								sig = _mapEntitySignatures[entity];
 				auto								it	= std::lower_bound( sig.begin(), sig.end(), typeId,
-					[]( const EntitySignatureEntry& entry, uint32 val ) { return entry._typeId < val; } );
+																			[]( const EntitySignatureEntry& entry, uint32 val )
+				{ return entry._typeId < val; } );
 				if ( it == sig.end() || it->_typeId != typeId )
 					sig.insert( it, EntitySignatureEntry{ typeId, &pool } );
 			}
@@ -321,7 +322,8 @@ namespace sw
 				{
 					auto& sig	= it->second;
 					auto  sigIt = std::lower_bound( sig.begin(), sig.end(), typeId,
-						[]( const EntitySignatureEntry& entry, uint32 val ) { return entry._typeId < val; } );
+													[]( const EntitySignatureEntry& entry, uint32 val )
+					{ return entry._typeId < val; } );
 					if ( sigIt != sig.end() && sigIt->_typeId == typeId )
 						sig.erase( sigIt );
 				}
@@ -710,11 +712,11 @@ namespace sw
 		bool   isValidUnlocked( Entity entity ) const;
 		Entity handleFromIndexUnlocked( uint32 index ) const;
 
-		mutable std::shared_mutex			  _entityLock;
-		vector<uint32>						  _listGenerations;
-		vector<uint8>						  _listOccupied;
-		vector<uint32>						  _listFreeIndices;
-		vector<Entity>								 _listActiveEntities;
+		mutable std::shared_mutex							_entityLock;
+		vector<uint32>										_listGenerations;
+		vector<uint8>										_listOccupied;
+		vector<uint32>										_listFreeIndices;
+		vector<Entity>										_listActiveEntities;
 		unordered_map<Entity, vector<EntitySignatureEntry>> _mapEntitySignatures;
 
 		CommandBuffer _commandBuffer;

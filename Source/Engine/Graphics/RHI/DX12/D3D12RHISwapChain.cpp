@@ -1,7 +1,8 @@
 #include "pch.h"
 
-#include "Engine/Graphics/RHI/DX12/D3D12RHIDevice.h"
 #include "Engine/Graphics/RHI/DX12/D3D12RHISwapChain.h"
+
+#include "Engine/Graphics/RHI/DX12/D3D12RHIDevice.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
 namespace sw
@@ -38,8 +39,6 @@ namespace sw
 		_pDevice->createRenderTargets();
 		_pDevice->_frameIndex = _pDevice->_swapChain->GetCurrentBackBufferIndex();
 	}
-
-
 
 	void D3D12RHISwapChain::beginFrame( float32 clearColor[4] )
 	{
@@ -90,8 +89,6 @@ namespace sw
 		D3D12_RECT scissorRect{ 0, 0, static_cast<LONG>( _pDevice->_width ), static_cast<LONG>( _pDevice->_height ) };
 		_pDevice->_commandList->RSSetScissorRects( 1, &scissorRect );
 	}
-
-
 
 	void D3D12RHISwapChain::endFrame( bool vsync, bool bPresent )
 	{

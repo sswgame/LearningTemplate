@@ -1,9 +1,9 @@
 #pragma once
-#include "GameFramework/GameFrameworkExports.h"
-
 #include "Core/Container/string.h"
 
 #include "Engine/Object/Component/Component.h"
+
+#include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {

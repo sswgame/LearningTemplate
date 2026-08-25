@@ -3,10 +3,10 @@
  * @brief 씬 프레임버퍼 미리보기와 ImGuizmo 조작을 제공하는 Game View 윈도우
  */
 #pragma once
+#include "Core/Common/Types.h"
+
 #include "Editor/Viewport/EditorViewportClient.h"
 #include "Editor/Windows/IEditorWindow.h"
-
-#include "Core/Common/Types.h"
 
 namespace sw
 {

@@ -9,10 +9,14 @@
 #    Vulkan 백엔드 TU: Types.h 별칭이 PCH와 union 멤버 충돌 → 해당 파일만 PCH 제외
 # ------------------------------------------------------------------------------
 if(NOT SW_SHIPPING_BUILD)
-	sw_addLibrary(EditorModule
-		TYPE MODULE
-		LINK_LIBRARIES
-						Engine
+	file(GLOB_RECURSE EDITOR_SOURCES CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp")
+
+	add_library(EditorModule MODULE ${EDITOR_SOURCES})
+
+	target_include_directories(EditorModule PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
+	target_link_libraries(EditorModule
+		PRIVATE
+			Engine
 			RuntimeAPI
 			imgui
 			implot
@@ -20,13 +24,27 @@ if(NOT SW_SHIPPING_BUILD)
 			imgui_nodeeditor
 			imgui_notify
 			sw_graphics_libs
-		LOG_TAG Editor
-		PCH
+			sw_global_options
 	)
-	sw_disableTargetIpo(EditorModule)
+	if(sw_flag_libraries)
+		target_link_libraries(EditorModule PRIVATE ${sw_flag_libraries})
+	endif()
+
+	target_compile_definitions(EditorModule
+		PRIVATE
+			"SW_LOG_TAG=\"Editor\""
+			SW_MODULE_EXPORTS
+			SW_EDITOR_INTERNAL
+	)
+	target_precompile_headers(EditorModule PRIVATE "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
+
+	sw_setModuleBinOutput(EditorModule)
+	set_property(TARGET EditorModule PROPERTY INTERPROCEDURAL_OPTIMIZATION FALSE)
+
 	if(COMMAND sw_setUnityBuild)
 		sw_setUnityBuild(EditorModule OFF)
 	endif()
+
 	set_source_files_properties(
 		"${CMAKE_CURRENT_SOURCE_DIR}/Backend/Renderer/ImGuiVulkanRendererBackend.cpp"
 		PROPERTIES SKIP_PRECOMPILE_HEADERS ON
@@ -37,8 +55,4 @@ if(NOT SW_SHIPPING_BUILD)
 		HEADERS
 			"${CMAKE_CURRENT_SOURCE_DIR}/Config/EditorConfig.h"
 	)
-endif()
-
-if(NOT SW_SHIPPING_BUILD)
-target_compile_definitions(EditorModule PRIVATE SW_EDITOR_INTERNAL)
 endif()

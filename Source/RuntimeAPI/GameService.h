@@ -4,9 +4,8 @@
  * @note GameFramework 헤더를 포함하지 않습니다. 구현은 GameFramework.dll이 export합니다.
  */
 #pragma once
-
-
 #include "Core/Common/Macros.h"
+
 #include <type_traits>
 
 #if defined( SW_PLATFORM_WINDOWS )
@@ -52,15 +51,15 @@ namespace sw
 	{
 		void* ( *getService )(GameServiceId id){ nullptr };
 		LocalizationManager*   _pLocalizationManager{ nullptr };
-		EventDispatcher*       _pEventDispatcher{ nullptr };
+		EventDispatcher*	   _pEventDispatcher{ nullptr };
 		GlobalVariableManager* _pGlobalVariableManager{ nullptr };
-		IAudioSystem*          _pAudioSystem{ nullptr };
-		TypeRegistry*          _pTypeRegistry{ nullptr };
-		InputManager*          _pInputManager{ nullptr };
-		SceneManager*          _pSceneManager{ nullptr };
-		ResourceManager*       _pResourceManager{ nullptr };
-		DebugDrawQueue*        _pDebugDrawQueue{ nullptr };
-		DebugOverlayState*     _pDebugOverlayState{ nullptr };
+		IAudioSystem*		   _pAudioSystem{ nullptr };
+		TypeRegistry*		   _pTypeRegistry{ nullptr };
+		InputManager*		   _pInputManager{ nullptr };
+		SceneManager*		   _pSceneManager{ nullptr };
+		ResourceManager*	   _pResourceManager{ nullptr };
+		DebugDrawQueue*		   _pDebugDrawQueue{ nullptr };
+		DebugOverlayState*	   _pDebugOverlayState{ nullptr };
 	};
 
 	template <typename T>
@@ -83,7 +82,6 @@ namespace sw
 	SW_DECLARE_GAME_SERVICE( ResourceManager, GameServiceId::ResourceManager );
 	SW_DECLARE_GAME_SERVICE( DebugDrawQueue, GameServiceId::DebugDrawQueue );
 	SW_DECLARE_GAME_SERVICE( DebugOverlayState, GameServiceId::DebugOverlayState );
-
 
 	namespace game
 	{

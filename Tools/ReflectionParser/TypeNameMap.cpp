@@ -1,11 +1,12 @@
 #include "pch.h"
 
-#include "TypeNameMap.h"
+#include "ReflectionParser/TypeNameMap.h"
 
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
-#include "ParserDefines.h"
+#include "ReflectionParser/ParserDefines.h"
+
 namespace sw
 {
 	namespace
@@ -85,8 +86,8 @@ namespace sw
 		if ( t.empty() )
 			return t;
 
-		const auto it = _aliasToCanonical.find( t );
-		if ( it != _aliasToCanonical.end() )
+		const auto it = _mapAliasToCanonical.find( t );
+		if ( it != _mapAliasToCanonical.end() )
 			t = it->second;
 		else
 		{
@@ -94,8 +95,8 @@ namespace sw
 			if ( sep != string::npos && sep + 2 < t.size() )
 			{
 				const string bare	= t.substr( sep + 2 );
-				const auto	 itBare = _aliasToCanonical.find( bare );
-				if ( itBare != _aliasToCanonical.end() )
+				const auto	 itBare = _mapAliasToCanonical.find( bare );
+				if ( itBare != _mapAliasToCanonical.end() )
 					t = itBare->second;
 			}
 		}

@@ -1,8 +1,9 @@
 #include "pch.h"
 
+#include "Core/Memory/LinearAllocator.h"
+
 #include "Core/Concurrency/mutex.h"
 #include "Core/CoreMinimal.h"
-#include "Core/Memory/LinearAllocator.h"
 
 namespace sw
 {

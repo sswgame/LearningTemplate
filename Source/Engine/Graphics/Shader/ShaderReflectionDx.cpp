@@ -8,7 +8,6 @@ namespace sw::shader_reflection_detail
 	namespace
 	{
 
-
 		const utf8* resourceTypeName( uint32 sit )
 		{
 			switch ( sit )
@@ -199,8 +198,6 @@ namespace sw::shader_reflection_detail
 
 			return data;
 		}
-
-
 
 		ShaderReflectionData reflectDxbc( const vector<uint8>& bytecode )
 		{

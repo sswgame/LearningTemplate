@@ -4,11 +4,11 @@
  * @note 팩 선택은 Host Config/Game/GameConfig.json (Dev) 또는 Shipping 베이크.
  */
 #pragma once
-#include "GameFramework/GameFrameworkExports.h"
-
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+
+#include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {

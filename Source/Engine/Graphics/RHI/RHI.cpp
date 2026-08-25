@@ -1,17 +1,18 @@
 #include "pch.h"
 
+#include "Engine/Graphics/RHI/RHI.h"
+
+#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
+
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
-#include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHIBackendRegistry.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
 #include "Engine/Graphics/Shader/LiveShaderManager.h"
 #include "Engine/Graphics/Shader/ShaderCompiler.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Window/IWindow.h"
-
-#include "Core/CommandLine/CommandLineManager.h"
-#include "Core/GlobalVariable/GlobalVariableManager.h"
 
 namespace sw
 {

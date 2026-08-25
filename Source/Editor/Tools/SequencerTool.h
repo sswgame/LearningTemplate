@@ -3,11 +3,11 @@
  * @brief 실험적 시퀀서 UI 프로토타입 (저장/엔진 타임라인 바인딩 없음)
  */
 #pragma once
-#include "Editor/Windows/IEditorWindow.h"
-
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
 #include "Core/Memory/Memory.h"
+
+#include "Editor/Windows/IEditorWindow.h"
 
 namespace sw
 {

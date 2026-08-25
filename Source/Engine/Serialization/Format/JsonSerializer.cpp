@@ -1,9 +1,10 @@
 #include "pch.h"
 
+#include "Engine/Serialization/Format/JsonSerializer.h"
+
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Serialization/Core/SchemaMigrate.h"
 #include "Engine/Serialization/Core/SerializerInternal.h"
-#include "Engine/Serialization/Format/JsonSerializer.h"
 #include "Engine/Utility/Json/JsonDocument.h"
 
 namespace sw
@@ -103,7 +104,6 @@ namespace sw
 		}
 
 	} // namespace
-
 
 	string JsonSerializer::escapeString( string_view value )
 	{

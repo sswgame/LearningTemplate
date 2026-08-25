@@ -24,14 +24,14 @@ namespace sw
 
 			struct StaticDomainRoute
 			{
-				string_view   _prefix;
+				string_view _prefix;
 				const string& ( *_pGetFolderFunc )();
 			};
 
 			static constexpr StaticDomainRoute kStaticDomainRoutes[] = {
-				{ path::kEnginePack, &ResourceUtil::getEngineFolderPath },
-				{ path::kCommonPack, &ResourceUtil::getCommonFolderPath },
-				{ path::kEditorPack, &ResourceUtil::getEditorFolderPath },
+				{path::kEnginePack, &ResourceUtil::getEngineFolderPath},
+				{path::kCommonPack, &ResourceUtil::getCommonFolderPath},
+				{path::kEditorPack, &ResourceUtil::getEditorFolderPath},
 			};
 
 			for ( const auto& route : kStaticDomainRoutes )
@@ -125,7 +125,6 @@ namespace sw
 				ioRootNorm	   = std::move( candidateNorm );
 			}
 		}
-
 
 	} // namespace
 

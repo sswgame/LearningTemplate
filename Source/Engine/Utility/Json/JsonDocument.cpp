@@ -74,7 +74,6 @@ namespace sw
 			return fromStdString( value.dump( indent ) );
 		}
 
-
 	} // namespace
 
 	struct JsonDocument::Impl

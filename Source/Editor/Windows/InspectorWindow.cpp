@@ -2,6 +2,9 @@
 
 #include "Editor/Windows/InspectorWindow.h"
 
+#include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Math/VectorMath.h"
+
 #include "Editor/Common/EditorConstants.h"
 #include "Editor/Config/EditorData.h"
 #include "Editor/Property/ComponentDrawerRegistry.h"
@@ -12,16 +15,13 @@
 #include "Editor/Property/PropertyDrawerRegistry.h"
 #include "Editor/Widgets/EditorWidgets.h"
 #include "Editor/Workspace/EditorAssetDrop.h"
-#include "Engine/Utility/CommandStack.h"
 #include "Editor/Workspace/EditorWorkspace.h"
-
-#include "Core/GlobalVariable/GlobalVariableManager.h"
-#include "Core/Math/VectorMath.h"
 
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Utility/CommandStack.h"
 #include "Engine/Utility/Task/TaskTypes.h"
 
 #include "RuntimeAPI/EditorService.h"
@@ -657,8 +657,6 @@ namespace sw
 			ImGui::PopID();
 		}
 	}
-
-
 
 	void InspectorWindow::renderMaterialUI( Material* pMaterial, IRHIDevice* pRHIDevice )
 	{

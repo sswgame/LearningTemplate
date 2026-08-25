@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Editor/Windows/EditorWindowRegistry.h"
+
 #include "Editor/Common/EditorContext.h"
 #include "Editor/Tools/AnimationGraphTool.h"
 #include "Editor/Tools/DialogueGraphTool.h"
@@ -9,7 +11,6 @@
 #include "Editor/Tools/TileMapTool.h"
 #include "Editor/Windows/ConsoleWindow.h"
 #include "Editor/Windows/ContentBrowserWindow.h"
-#include "Editor/Windows/EditorWindowRegistry.h"
 #include "Editor/Windows/GameViewWindow.h"
 #include "Editor/Windows/HierarchyWindow.h"
 #include "Editor/Windows/InspectorWindow.h"

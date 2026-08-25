@@ -1,7 +1,8 @@
 #include "pch.h"
 
-#include "Core/Common/PlatformOsHeaders.h"
 #include "Core/File/FileUtil.h"
+
+#include "Core/Common/PlatformOsHeaders.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"

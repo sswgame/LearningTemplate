@@ -8,6 +8,7 @@
 #include "Core/Concurrency/DataRaceDetector.h"
 #include "Core/Container/InlineAllocator.h"
 #include "Core/Memory/Memory.h"
+
 namespace sw
 {
 #if defined( SW_ENABLE_STL_CONTAINER )

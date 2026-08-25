@@ -1,8 +1,9 @@
 #include "pch.h"
 
+#include "Editor/Tools/AnimationGraphTool.h"
+
 #include "Editor/Config/EditorConfig.h"
 #include "Editor/EditorUtil.h"
-#include "Editor/Tools/AnimationGraphTool.h"
 
 #include "Engine/Serialization/Format/JsonSerializer.h"
 
@@ -208,7 +209,6 @@ namespace sw
 		ed::SetCurrentEditor( nullptr );
 		ImGui::End();
 	}
-
 
 	void AnimationGraphTool::ensureDefaults()
 	{

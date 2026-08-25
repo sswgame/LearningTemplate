@@ -1,7 +1,7 @@
 #include "pch.h"
 
-#include "Engine/Utility/CommandStack.h"
 #include "Editor/Workspace/EditorTransaction.h"
+
 #include "Editor/Workspace/EditorWorkspace.h"
 #include "Editor/Workspace/SelectionManager.h"
 
@@ -10,6 +10,7 @@
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/Utility/CommandStack.h"
 
 #include "RuntimeAPI/EditorService.h"
 

@@ -1,12 +1,14 @@
 #include "pch.h"
 
 #include "TestFramework/TestFramework.h"
+
 // ------------------------------------------------------------------------------
 // 1) Core_String — Util·해시·스플리터·빌더
 // ------------------------------------------------------------------------------
 /**
  * @brief [Core_String] StringUtil 기본
  */
+
 SW_TEST_CASE( Core_String, StringUtilBasic )
 {
 	SW_EXPECT_TRUE( sw::StringUtil::isNullOrEmpty( static_cast<const utf8*>( nullptr ) ) );

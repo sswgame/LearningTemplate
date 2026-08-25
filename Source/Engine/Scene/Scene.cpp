@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Engine/Scene/Scene.h"
+
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineData.h"
 #include "Engine/Graphics/Material/Material.h"
@@ -8,7 +10,6 @@
 #include "Engine/Graphics/RenderPass/FrameRenderer.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Scene/Scene.h"
 #include "Engine/Utility/Resource/ResourceManager.h"
 
 namespace sw
@@ -25,7 +26,6 @@ namespace sw
 			return engine::getEngineData()._defaultMaterial;
 		}
 
-
 	} // namespace
 
 	Scene::Scene( string_view name )
@@ -40,7 +40,6 @@ namespace sw
 		, _bCamerasEnsured{ false }
 	{
 	}
-
 
 	Scene::~Scene()
 	{

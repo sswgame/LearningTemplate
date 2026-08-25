@@ -1,15 +1,16 @@
+#include "pch.h"
 
-#include "AnnotationApply.h"
-#include "AnnotationMeta.h"
-#include "ParserDefines.h"
+#include "ReflectionParser/AnnotationApply.h"
 
 #include "Core/Common/Types.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/string_splitter.h"
 
-#include "Engine/Common/Common.h"
 #include "Engine/Reflection/ReflectionEnumNames.h"
+
+#include "ReflectionParser/AnnotationMeta.h"
+#include "ReflectionParser/ParserDefines.h"
 
 namespace sw
 {
@@ -62,9 +63,9 @@ namespace sw
 		bool		   bInQuote	  = false;
 		size_t		   tokenStart = 0;
 
-		for ( size_t i = 0; i < args.size(); ++i )
+		for ( size_t charIndex = 0; charIndex < args.size(); ++charIndex )
 		{
-			const utf8 c = args[i];
+			const utf8 c = args[charIndex];
 			if ( c == '"' )
 			{
 				bInQuote = ( bInQuote == false );
@@ -72,13 +73,13 @@ namespace sw
 			}
 			if ( c == ',' && bInQuote == false )
 			{
-				if ( i > tokenStart )
+				if ( charIndex > tokenStart )
 				{
-					std::string_view token = StringUtil::trim( args.substr( tokenStart, i - tokenStart ) );
+					std::string_view token = StringUtil::trim( args.substr( tokenStart, charIndex - tokenStart ) );
 					if ( token.empty() == false )
 						tokens.emplace_back( token );
 				}
-				tokenStart = i + 1;
+				tokenStart = charIndex + 1;
 			}
 		}
 		if ( args.size() > tokenStart )
@@ -173,7 +174,7 @@ namespace sw
 			string alias	 = StringUtil::trim( token.substr( 0, colon ).c_str() );
 			string canonical = StringUtil::trim( token.substr( colon + 1 ).c_str() );
 			if ( alias.empty() == false && canonical.empty() == false )
-				enumInfo._valueAliases.emplace_back( std::move( alias ), std::move( canonical ) );
+				enumInfo._listValueAliases.emplace_back( std::move( alias ), std::move( canonical ) );
 		}
 	}
 

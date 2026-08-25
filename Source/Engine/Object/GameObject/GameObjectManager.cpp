@@ -1,10 +1,11 @@
 #include "pch.h"
 
-#include "Engine/Common/EngineServices.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Utility/Task/TaskManager.h"
 
 #include "Core/String/StringBuilder.h"
+
+#include "Engine/Common/EngineServices.h"
+#include "Engine/Utility/Task/TaskManager.h"
 
 namespace sw
 {
@@ -105,7 +106,6 @@ namespace sw
 			}
 		}
 	}
-
 
 	GameObjectManager::~GameObjectManager()
 	{

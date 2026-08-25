@@ -1,10 +1,6 @@
+#include "pch.h"
 
-#include "ReflectBuiltinsLoader.h"
-#include "ContainerTypeMap.h"
-#include "EmitTemplateStore.h"
-#include "ParserDefines.h"
-#include "ParserUtil.h"
-#include "TypeNameMap.h"
+#include "ReflectionParser/ReflectBuiltinsLoader.h"
 
 #include "Core/Common/Types.h"
 #include "Core/File/FileUtil.h"
@@ -12,6 +8,12 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/string_splitter.h"
+
+#include "ReflectionParser/ContainerTypeMap.h"
+#include "ReflectionParser/EmitTemplateStore.h"
+#include "ReflectionParser/ParserDefines.h"
+#include "ReflectionParser/ParserUtil.h"
+#include "ReflectionParser/TypeNameMap.h"
 
 namespace sw
 {

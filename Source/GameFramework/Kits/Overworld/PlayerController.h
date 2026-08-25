@@ -3,12 +3,12 @@
  * @brief 타일 스텝 플레이어 이동 + locomotion FSM (Playing 전용 입력)
  */
 #pragma once
-#include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Overworld/PlayerLocomotion.h"
-
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+
+#include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Kits/Overworld/PlayerLocomotion.h"
 
 namespace sw
 {

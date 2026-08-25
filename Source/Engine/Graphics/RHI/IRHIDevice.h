@@ -3,11 +3,11 @@
  * @brief RHI 커맨드 리스트 기록과 디바이스 추상화
  */
 #pragma once
-#include "Engine/Graphics/RHI/RHICapabilities.h"
-
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Memory/Memory.h"
+
+#include "Engine/Graphics/RHI/RHICapabilities.h"
 
 namespace sw
 {
@@ -18,8 +18,6 @@ namespace sw
 	class IRHISwapChain;
 	class RHIDeferredCommandList;
 	class RenderPassManager;
-
-
 
 	/**
 	 * @class IRHIDevice
@@ -197,8 +195,6 @@ namespace sw
 			outImageView = nullptr;
 			return false;
 		}
-
-
 
 		/** @brief initializeInternal에 넘길 윈도우를 저장합니다. */
 		void setInitWindow( IWindow* pWindow ) { _pInitWindow = pWindow; }

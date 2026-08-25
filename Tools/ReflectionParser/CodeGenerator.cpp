@@ -1,21 +1,21 @@
 #include "pch.h"
 
-#include "CodeGenerator.h"
+#include "ReflectionParser/CodeGenerator.h"
 
 #include "Core/Common/Types.h"
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
-#include "EmitTemplateStore.h"
-
 #include "Engine/Common/Common.h"
 #include "Engine/Reflection/ReflectionEnumNames.h"
 
-#include "ParserContext.h"
-#include "ParserDefines.h"
-#include "ParserUtil.h"
-#include "TypeNameMap.h"
+#include "ReflectionParser/EmitTemplateStore.h"
+#include "ReflectionParser/ParserContext.h"
+#include "ReflectionParser/ParserDefines.h"
+#include "ReflectionParser/ParserUtil.h"
+#include "ReflectionParser/TypeNameMap.h"
+
 namespace sw
 {
 	namespace
@@ -61,14 +61,14 @@ namespace sw
 		{
 			StringBuilder<constant::kMaxBuffer1024> b;
 			b.append( annotationConstants::kCtorLookupName );
-			if ( method._paramTypeNames.empty() == false )
+			if ( method._listParamTypeNames.empty() == false )
 			{
 				b.append( '(' );
-				for ( size_t paramIndex = 0; paramIndex < method._paramTypeNames.size(); ++paramIndex )
+				for ( size_t paramIndex = 0; paramIndex < method._listParamTypeNames.size(); ++paramIndex )
 				{
 					if ( paramIndex > 0 )
 						b.append( ',' );
-					b.append( normalizeTypeName( method._paramTypeNames[paramIndex] ) );
+					b.append( normalizeTypeName( method._listParamTypeNames[paramIndex] ) );
 				}
 				b.append( ')' );
 			}
@@ -114,8 +114,8 @@ namespace sw
 		const vector<ParsedEnumInfo>& enums,
 		const string&				  sourceFilePath,
 		const string&				  outputDir )
-		: _types{ types }
-		, _enums{ enums }
+		: _listTypes{ types }
+		, _listEnums{ enums }
 		, _sourceFilePath{ sourceFilePath }
 		, _outputDir{ outputDir }
 		, _outputFilePath{}
@@ -156,12 +156,12 @@ namespace sw
 
 		CodeEmitBuffer buffer;
 
-		if ( _types.empty() && _enums.empty() )
+		if ( _listTypes.empty() && _listEnums.empty() )
 		{
 			buffer.appendFormat( "// No reflected types found in %#\n", _sourceFilePath );
 		}
 
-		if ( _types.empty() == false || _enums.empty() == false )
+		if ( _listTypes.empty() == false || _listEnums.empty() == false )
 		{
 			BLOCK( "Emit File Header" )
 			{
@@ -171,9 +171,9 @@ namespace sw
 
 			BLOCK( "Emit Registrars" )
 			{
-				for ( const ParsedTypeInfo& typeInfo : _types )
+				for ( const ParsedTypeInfo& typeInfo : _listTypes )
 					emitTypeRegistrar( buffer, typeInfo );
-				for ( const ParsedEnumInfo& enumInfo : _enums )
+				for ( const ParsedEnumInfo& enumInfo : _listEnums )
 					emitEnumRegistrar( buffer, enumInfo );
 			}
 
@@ -181,7 +181,7 @@ namespace sw
 
 			BLOCK( "Emit Component Factory Registrars" )
 			{
-				for ( const ParsedTypeInfo& typeInfo : _types )
+				for ( const ParsedTypeInfo& typeInfo : _listTypes )
 				{
 					if ( typeInfo.wantsComponentFactory() )
 						emitComponentFactoryRegistrar( buffer, typeInfo );
@@ -190,7 +190,7 @@ namespace sw
 
 			BLOCK( "Emit Script System Registrars" )
 			{
-				for ( const ParsedTypeInfo& typeInfo : _types )
+				for ( const ParsedTypeInfo& typeInfo : _listTypes )
 				{
 					if ( typeInfo.wantsScriptSystem() )
 						emitScriptSystemRegistrar( buffer, typeInfo );
@@ -199,7 +199,7 @@ namespace sw
 
 			BLOCK( "Emit Type Traits & Accessors" )
 			{
-				for ( const ParsedTypeInfo& typeInfo : _types )
+				for ( const ParsedTypeInfo& typeInfo : _listTypes )
 				{
 					emitReflectTypeTraits( buffer, typeInfo );
 					if ( typeInfo.wantsTypeApi() )
@@ -406,7 +406,7 @@ namespace sw
 		e.line( "auto invokerCb = []( void* objPtr, const ::sw::TaskArgs& args ) -> ::sw::TaskValue" );
 		e.line( "{" );
 		e.push();
-		if ( method._paramTypeNames.empty() )
+		if ( method._listParamTypeNames.empty() )
 			e.line( "(void)args;" );
 
 		if ( method._bStatic && method._bConstructor == false )
@@ -460,7 +460,7 @@ namespace sw
 			e.assign( "funcInfo._name", CodeEmit::quoted( method._bConstructor ? annotationConstants::kCtorLookupName : method._name ) );
 			e.linef( "funcInfo._hashName       = %#;", CodeEmit::hs( lookupName ) );
 			e.assign( "funcInfo._returnTypeName", CodeEmit::quoted( retType ) );
-			e.assign( "funcInfo._listParamTypeNames", makeQuotedTypeList( method._paramTypeNames ) );
+			e.assign( "funcInfo._listParamTypeNames", makeQuotedTypeList( method._listParamTypeNames ) );
 
 			e.assignQuotedIf( method._category.empty() == false, "funcInfo._metadata._category", method._category );
 			e.assignQuotedIf( method._displayName.empty() == false, "funcInfo._metadata._displayName", method._displayName );
@@ -475,7 +475,7 @@ namespace sw
 			e.flagIf( method._bStatic, "funcInfo._metadata._bStatic" );
 			e.flagIf( method._bConst, "funcInfo._metadata._bConst" );
 
-			const string callArgs = makeInvokerCallArgs( method._paramTypeNames );
+			const string callArgs = makeInvokerCallArgs( method._listParamTypeNames );
 
 			emitMethodInvoker( e, typeInfo, method, retType, callArgs );
 			e.pop();
@@ -601,12 +601,12 @@ namespace sw
 		CodeEmit e( out );
 		e.push( 3 );
 
-		if ( enumInfo._enumerators.empty() == false )
+		if ( enumInfo._listEnumerators.empty() == false )
 		{
 			e.line( "info._mapNameToValue =" );
 			e.line( "{" );
 			e.push();
-			for ( const ParsedEnumeratorInfo& en : enumInfo._enumerators )
+			for ( const ParsedEnumeratorInfo& en : enumInfo._listEnumerators )
 				e.linef( "{ %#, %# },", CodeEmit::hs( en._name ), en._value );
 			e.pop();
 			e.line( "};" );
@@ -614,13 +614,13 @@ namespace sw
 			e.line( "info._mapValueToName =" );
 			e.line( "{" );
 			e.push();
-			for ( const ParsedEnumeratorInfo& en : enumInfo._enumerators )
+			for ( const ParsedEnumeratorInfo& en : enumInfo._listEnumerators )
 				e.linef( "{ %#, %# },", en._value, CodeEmit::hs( en._name ) );
 			e.pop();
 			e.line( "};" );
 		}
 
-		for ( const auto& [alias, canonical] : enumInfo._valueAliases )
+		for ( const auto& [alias, canonical] : enumInfo._listValueAliases )
 		{
 			e.line( "{" );
 			e.push();
@@ -646,7 +646,7 @@ namespace sw
 		if ( spec.empty() )
 			return nullptr;
 		const string leaf = enumeratorLeaf( spec );
-		for ( const ParsedEnumeratorInfo& en : enumInfo._enumerators )
+		for ( const ParsedEnumeratorInfo& en : enumInfo._listEnumerators )
 		{
 			if ( en._name == spec || en._name == leaf )
 				return &en;
@@ -663,7 +663,7 @@ namespace sw
 		e.blank();
 
 		bool bNeedFlags = false;
-		for ( const ParsedEnumInfo& enumInfo : _enums )
+		for ( const ParsedEnumInfo& enumInfo : _listEnums )
 		{
 			if ( enumInfo._bEmitFlagOps )
 				bNeedFlags = true;
@@ -681,7 +681,7 @@ namespace sw
 			e.blank();
 		}
 
-		for ( const ParsedEnumInfo& enumInfo : _enums )
+		for ( const ParsedEnumInfo& enumInfo : _listEnums )
 		{
 			if ( enumInfo._bEmitFlagOps == 0 )
 				continue;

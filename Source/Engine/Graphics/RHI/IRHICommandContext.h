@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+
 #include "Engine/Graphics/RHI/ICommandReplayTarget.h"
 #include "Engine/Graphics/RHI/RHICommandListDefaults.h"
 

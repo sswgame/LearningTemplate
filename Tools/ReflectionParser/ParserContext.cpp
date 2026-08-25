@@ -1,6 +1,6 @@
+#include "pch.h"
 
-#include "ParserContext.h"
-#include "ParserDefines.h"
+#include "ReflectionParser/ParserContext.h"
 
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
@@ -8,6 +8,8 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Common/Common.h"
+
+#include "ReflectionParser/ParserDefines.h"
 
 namespace sw
 {

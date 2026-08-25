@@ -7,8 +7,6 @@ namespace sw::shader_reflection_detail
 	namespace
 	{
 
-
-
 		constexpr uint32 kSpirvMagic		 = 0x07230203u;
 		constexpr uint32 kOpName			 = 5u;
 		constexpr uint32 kOpMemberName		 = 6u;

@@ -237,18 +237,18 @@ namespace sw
 		REFLECT_BODY();
 
 		GameObject* owner{ nullptr };
-		
+
 		PROPERTY()
-		float32 _scriptSpeed{ 0.0f };
+		float32 _scriptSpeed{ 1.5f };
 
 		/**
 		 * 이 변수는 PROPERTY() 가 주석에 있지만, 실제로는 파싱되지 않아야 합니다.
 		 */
 		int32 _shouldNotBeParsed{ 0 };
 
-		uint32		_tickCount{ 0 };
-		bool		_beganPlay{ false };
-		bool		_endedPlay{ false };
+		uint32 _tickCount{ 0 };
+		bool   _beganPlay{ false };
+		bool   _endedPlay{ false };
 
 		/** @brief 플레이 시작 플래그를 켭니다. */
 		void beginPlay()

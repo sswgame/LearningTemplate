@@ -1,10 +1,11 @@
 #include "pch.h"
 
+#include "Core/File/Linux/LinuxFileDialog.h"
+
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
-#include "Core/File/Linux/LinuxFileDialog.h"
 #include "Core/Log/Logger.h"
 
 #if defined( SW_PLATFORM_LINUX )
@@ -332,7 +333,6 @@ namespace sw
 				outPaths.push_back( FileUtil::normalizeSeparators( output ) );
 			return outPaths.empty() == false;
 		}
-
 
 	} // namespace
 

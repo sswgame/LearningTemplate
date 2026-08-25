@@ -75,8 +75,9 @@ elseif(APPLE)
 	target_link_libraries(Core_objects PUBLIC "-framework CoreServices" "-framework CoreFoundation")
 endif()
 
-sw_setLogTag(Core_objects Engine)
-sw_configurePch(Core_objects)
+target_compile_definitions(Core_objects PRIVATE "SW_LOG_TAG=\"Engine\"")
+target_precompile_headers(Core_objects PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/pch.h")
+target_link_libraries(Core_objects PRIVATE sw_global_options)
 
 # ------------------------------------------------------------------------------
 # 3) Core STATIC — 파서가 링크하는 껍데기. Engine은 Core_objects를 직접 가져감

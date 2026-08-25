@@ -2,6 +2,7 @@
 #include "Core/Common/Types.h"
 
 #include <type_traits>
+
 namespace sw
 {
 	// ------------------------------------------------------------------------------

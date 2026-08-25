@@ -1,5 +1,6 @@
 #pragma once
 #include "Core/Common/Types.h"
+
 #include "Engine/Graphics/RHI/IRHIResource.h"
 
 namespace sw

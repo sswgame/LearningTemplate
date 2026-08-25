@@ -1,19 +1,18 @@
+#include "pch.h"
 
 #include "Core/Common/StdHeaders.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
-#include "Engine/Common/Common.h"
-
-#include "AnnotationMeta.h"
-#include "AstVisitor.h"
-#include "CodeGenerator.h"
-#include "EmitTemplateStore.h"
-#include "ParserContext.h"
-#include "ParserDefines.h"
-#include "ParserUtil.h"
-#include "ReflectBuiltinsLoader.h"
+#include "ReflectionParser/AnnotationMeta.h"
+#include "ReflectionParser/AstVisitor.h"
+#include "ReflectionParser/CodeGenerator.h"
+#include "ReflectionParser/EmitTemplateStore.h"
+#include "ReflectionParser/ParserContext.h"
+#include "ReflectionParser/ParserDefines.h"
+#include "ReflectionParser/ParserUtil.h"
+#include "ReflectionParser/ReflectBuiltinsLoader.h"
 
 namespace sw
 {

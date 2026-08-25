@@ -40,6 +40,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from common import (
     collectSourceFiles,
+    getLintSearchDirs,
     getProjectRoot,
     kCppAllExtensions,
     kCppHeaderExtensions,
@@ -581,17 +582,14 @@ def runConventionsCheck(rootDir: Path | None = None,
             relRootDir = projectRoot
             if projectRoot not in filePath.parents:
                 for parent in filePath.parents:
-                    if (parent / "Source").is_dir() or (parent / "Test").is_dir():
+                    if (parent / "Source").is_dir() or (parent / "Test").is_dir() or (parent / "Tools").is_dir():
                         relRootDir = parent
                         break
 
             allViolations.extend(checkFileConventionsInternal(filePath, relRootDir))
         return allViolations
 
-    searchDirs = [
-        projectRoot / "Source",
-        projectRoot / "Test",
-    ]
+    searchDirs = getLintSearchDirs(projectRoot)
     filesToScan = collectSourceFiles(
         searchDirs, excludeSubdirs=["ThirdParty", "build", ".vcpkg"]
     )

@@ -13,6 +13,7 @@
 /**
  * @brief [MaterialTest] 머티리얼 로드 및 저장
  */
+
 SW_TEST_CASE( MaterialTest, MaterialLoadAndSave )
 {
 	sw::ResourceUtil::initialize();

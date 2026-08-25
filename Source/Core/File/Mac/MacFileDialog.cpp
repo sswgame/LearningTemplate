@@ -1,7 +1,8 @@
 #include "pch.h"
 
-#include "Core/CoreMinimal.h"
 #include "Core/File/Mac/MacFileDialog.h"
+
+#include "Core/CoreMinimal.h"
 
 #if defined( SW_PLATFORM_MACOS )
 

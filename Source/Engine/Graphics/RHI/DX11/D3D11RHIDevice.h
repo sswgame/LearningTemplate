@@ -3,16 +3,16 @@
  * @brief Direct3D 11 API 기반 RHI 백엔드 클래스 정의
  */
 #pragma once
-#include "Engine/Common/EnginePlatformHeaders.h"
-#include "Engine/Graphics/RHI/IRHIDevice.h"
-#include <memory>
-
-#include "Engine/Graphics/RHI/RHIHandleTable.h"
-#include "Engine/Graphics/RHI/RHIReleaseQueue.h"
-
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+
+#include "Engine/Common/EnginePlatformHeaders.h"
+#include "Engine/Graphics/RHI/IRHIDevice.h"
+#include "Engine/Graphics/RHI/RHIHandleTable.h"
+#include "Engine/Graphics/RHI/RHIReleaseQueue.h"
+
+#include <memory>
 
 #if defined( SW_PLATFORM_WINDOWS )
 
@@ -52,9 +52,6 @@ namespace sw
 
 		/** @brief 프레임 시작 (백버퍼 렌더 타깃 클리어) */
 		void beginFrame( float32 clearColor[4] );
-
-
-
 
 		/** @brief 스왑체인 Present 실행 */
 		void endFrame( bool vsync = true, bool bPresent = true );
@@ -97,34 +94,12 @@ namespace sw
 		/** @brief D3D11은 단일 큐 모델로 커맨드 큐 포인터가 없음 (nullptr) */
 		void* getNativeCommandQueue() const override { return nullptr; }
 
-
-
-
-
-
-
-
-
-
 		/** @brief 네이티브 텍스처 포인터 반환 (ID3D11Texture2D*) */
 		void* getNativeTexturePointer( RHITextureHandle texture ) const override;
-
-
-
-
-
-
-
-
-
 
 		/** @brief D3D11 DrawInstancedIndirect 호출 */
 		void drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0,
 						   RHIDescriptorIndex materialDescriptorIndex = kInvalidDescriptorIndex );
-
-
-
-
 
 		/** @brief 커맨드 리스트 생성 */
 		unique_ptr<IRHICommandList> createCommandList( RHICommandListMode mode ) override;
@@ -246,7 +221,6 @@ namespace sw
 		sw::unique_ptr<D3D11RHIResource>	   _resourceImpl;
 	};
 } // namespace sw
-
 
 #else
 namespace sw

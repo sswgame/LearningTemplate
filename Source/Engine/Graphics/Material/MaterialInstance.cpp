@@ -41,7 +41,6 @@ namespace sw
 
 	} // namespace
 
-
 	MaterialInstance::MaterialInstance()
 		: _pParentMaterial{ nullptr }
 		, _desc{}

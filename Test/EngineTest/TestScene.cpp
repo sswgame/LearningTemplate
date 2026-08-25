@@ -10,6 +10,7 @@
 /**
  * @brief [SceneTest] 빈 매니저에서 createScene 이 활성 씬을 설정
  */
+
 SW_TEST_CASE( SceneTest, CreateSceneSetsActiveWhenEmpty )
 {
 	sw::SceneManager manager;

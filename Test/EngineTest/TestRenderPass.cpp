@@ -22,12 +22,14 @@
 #include "Engine/Window/IWindow.h"
 
 #include "TestFramework/TestFramework.h"
+
 // ------------------------------------------------------------------------------
 // 1) RenderPassTest — XML·그래프 위상
 // ------------------------------------------------------------------------------
 /**
  * @brief [RenderPassTest] XML 직렬화 라운드트립
  */
+
 SW_TEST_CASE( RenderPassTest, XmlSerializationRoundtrip )
 {
 	sw::RenderPassResource passRes;
@@ -457,7 +459,7 @@ SW_TEST_CASE( RenderPassTest, FrameRendererInitializeAndExecuteSmoke )
 	sw::unique_ptr<sw::IWindow>	   window;
 	sw::shared_ptr<sw::IRHIDevice> device;
 	const sw::RHIBackend		   backends[] = {
-		  sw::RHIBackend::DirectX11, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL, sw::RHIBackend::DirectX12 };
+		sw::RHIBackend::DirectX11, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL, sw::RHIBackend::DirectX12 };
 	bool bOk{ false };
 	for ( sw::RHIBackend backend : backends )
 	{

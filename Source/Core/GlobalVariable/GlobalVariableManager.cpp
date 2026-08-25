@@ -1,8 +1,9 @@
 #include "pch.h"
 
+#include "Core/GlobalVariable/GlobalVariableManager.h"
+
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Common/Defines.h"
-#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 

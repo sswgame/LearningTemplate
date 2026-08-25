@@ -1,10 +1,10 @@
 #include "pch.h"
 
-#include "Engine/Config/GameConfig.h"
-#include "Engine/Utility/File/KeyValueFile.h"
-#include "Engine/Localization/StringTable.h"
-
 #include "Core/File/FileUtil.h"
+
+#include "Engine/Config/GameConfig.h"
+#include "Engine/Localization/StringTable.h"
+#include "Engine/Utility/File/KeyValueFile.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -313,7 +313,7 @@ SW_TEST_CASE( KeyValueFileTest, GameConfigActiveManagement )
 	const sw::GameConfig oldActive = sw::GameConfig::getActive();
 
 	sw::GameConfig customConfig{};
-	customConfig._packRoot = "game/custom_pack";
+	customConfig._packRoot	   = "game/custom_pack";
 	customConfig._gameDataFile = "data/custom_gamedata.xml";
 
 	sw::GameConfig::setActive( customConfig );

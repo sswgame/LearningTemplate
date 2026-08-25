@@ -3,11 +3,11 @@
  * @brief ImGui가 아닌 런타임 HUD 상태 (게이지 채움 + 대사 한 줄 + 화면 사각형 앵커)
  */
 #pragma once
-#include "GameFramework/GameFrameworkExports.h"
-
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+
+#include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {

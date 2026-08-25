@@ -1,7 +1,8 @@
 #include "pch.h"
 
-#include "Engine/Common/EngineServices.h"
 #include "Engine/Game/GameState.h"
+
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Utility/CommandStack.h"
@@ -166,7 +167,6 @@ namespace sw
 			s_listPlaySnapshots.clear();
 			s_bHasPlaySnapshot = false;
 		}
-
 
 	} // namespace
 

@@ -1,7 +1,8 @@
 #include "pch.h"
 
-#include "Engine/Graphics/RHI/DX12/D3D12RHIDevice.h"
 #include "Engine/Graphics/RHI/DX12/D3D12RHIResource.h"
+
+#include "Engine/Graphics/RHI/DX12/D3D12RHIDevice.h"
 #include "Engine/Graphics/Shader/ShaderCache.h"
 
 #include <d3d12.h>
@@ -9,7 +10,6 @@
 #if defined( SW_PLATFORM_WINDOWS )
 namespace sw
 {
-
 
 	RHIPipelineStateHandle D3D12RHIResource::createPipelineState( const RHIPipelineStateDesc& desc )
 	{
@@ -110,8 +110,6 @@ namespace sw
 		return _pDevice->_pipelineStates.insert( { pso } );
 	}
 
-
-
 	RHIPipelineStateHandle D3D12RHIResource::createComputePipelineState( string_view shaderPath, string_view entryPoint )
 	{
 		Microsoft::WRL::ComPtr<ID3D12PipelineState> pso;
@@ -143,8 +141,6 @@ namespace sw
 		return _pDevice->_pipelineStates.insert( { pso } );
 	}
 
-
-
 	void D3D12RHIResource::destroyPipelineState( RHIPipelineStateHandle pso )
 	{
 		if ( pso == 0 )
@@ -160,9 +156,6 @@ namespace sw
 		_pDevice->_releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, releaseCb ), _pDevice->_fenceValue );
 	}
 
-
-
-
 	RHIRenderPassHandle D3D12RHIResource::createRenderPass( const RHIRenderPassDesc& desc )
 	{
 		D3D12RHIDevice::D3D12RenderPassRecord record{};
@@ -172,17 +165,12 @@ namespace sw
 		return _pDevice->_listRenderPasses.size();
 	}
 
-
-
 	void D3D12RHIResource::destroyRenderPass( RHIRenderPassHandle pass )
 	{
 		if ( pass == 0 || pass > _pDevice->_listRenderPasses.size() )
 			return;
 		_pDevice->_listRenderPasses[pass - 1]._bAlive = 0;
 	}
-
-
-
 
 	RHIBufferHandle D3D12RHIResource::createConstantBuffer( uint32 size )
 	{
@@ -214,8 +202,6 @@ namespace sw
 		return handle;
 	}
 
-
-
 	void D3D12RHIResource::updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size )
 	{
 		if ( buffer == 0 || pData == nullptr )
@@ -245,8 +231,6 @@ namespace sw
 		}
 	}
 
-
-
 	RHIBufferHandle D3D12RHIResource::createStructuredBuffer( uint32 elementSize, uint32 elementCount )
 	{
 		UINT				  alignedSize = elementSize * elementCount;
@@ -274,8 +258,6 @@ namespace sw
 		_pDevice->_mapStructuredBufferStates[handle] = D3D12_RESOURCE_STATE_COMMON;
 		return handle;
 	}
-
-
 
 	void D3D12RHIResource::updateStructuredBuffer( RHIBufferHandle buffer, const void* pData, uint32 size )
 	{
@@ -359,8 +341,6 @@ namespace sw
 		_pDevice->_mapStructuredBufferStates[buffer] = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
 	}
 
-
-
 	RHIBufferHandle D3D12RHIResource::createVertexBuffer( const void* pData, uint32 sizeBytes )
 	{
 		if ( _pDevice->_device == nullptr || pData == nullptr || sizeBytes == 0 )
@@ -391,9 +371,6 @@ namespace sw
 
 		return _pDevice->storeBuffer( buffer );
 	}
-
-
-
 
 	void D3D12RHIResource::destroyBuffer( RHIBufferHandle buffer )
 	{
@@ -436,8 +413,6 @@ namespace sw
 		{ (void)owned.Get(); };
 		_pDevice->_releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, releaseCb ), _pDevice->_fenceValue );
 	}
-
-
 
 	RHITextureHandle D3D12RHIResource::createTexture2D( const RHITextureDesc& desc )
 	{
@@ -564,7 +539,6 @@ namespace sw
 		return handle;
 	}
 
-
 	void D3D12RHIResource::destroyTexture( RHITextureHandle texture )
 	{
 		if ( texture == 0 )
@@ -594,8 +568,6 @@ namespace sw
 		{ (void)owned.Get(); };
 		_pDevice->_releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, releaseCb ), _pDevice->_fenceValue );
 	}
-
-
 
 	RHIDescriptorIndex D3D12RHIResource::registerBindlessTexture( RHITextureHandle texture )
 	{
@@ -650,8 +622,6 @@ namespace sw
 
 		return index;
 	}
-
-
 
 	RHIDescriptorIndex D3D12RHIResource::registerBindlessResource( RHIBufferHandle buffer )
 	{
@@ -712,8 +682,6 @@ namespace sw
 		return index;
 	}
 
-
-
 	void D3D12RHIResource::unregisterBindlessResource( RHIDescriptorIndex index )
 	{
 		if ( index < _pDevice->_listRegisteredBindless.size() )
@@ -724,8 +692,6 @@ namespace sw
 			_pDevice->_listFreeBindless.push_back( index );
 		}
 	}
-
-
 
 	RHIDescriptorIndex D3D12RHIResource::registerBindlessUAV( RHIBufferHandle buffer )
 	{
@@ -777,8 +743,6 @@ namespace sw
 
 		return descriptorIndex;
 	}
-
-
 
 	void D3D12RHIResource::unregisterBindlessUAV( RHIDescriptorIndex index )
 	{

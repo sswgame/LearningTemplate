@@ -7,6 +7,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/MatrixMath.h"
+
 namespace sw
 {
 	/**

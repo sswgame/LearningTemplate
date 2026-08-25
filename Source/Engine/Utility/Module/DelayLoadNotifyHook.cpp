@@ -1,6 +1,5 @@
 #include "pch.h"
 
-
 #if defined( SW_PLATFORM_WINDOWS ) && defined( _MSC_VER )
 	#include "Engine/Utility/Module/LiveReloadManager.h"
 

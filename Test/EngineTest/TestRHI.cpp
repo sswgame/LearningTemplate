@@ -8,6 +8,7 @@
 #include "Engine/Graphics/RHI/RHICapabilities.h"
 #include "Engine/Graphics/RHI/RHIDeferredCommandList.h"
 #include "Engine/Graphics/RHI/RHIHandleTable.h"
+#include "Engine/Graphics/RHI/RHIReleaseQueue.h"
 #include "Engine/Window/IWindow.h"
 
 #include "TestFramework/TestFramework.h"
@@ -388,8 +389,6 @@ SW_TEST_CASE( RHITest, ComputeShaderDispatchAndIndirectCommands )
 
 	shutdownDeviceWithWindow( rhiDevice, window );
 }
-
-#include "Engine/Graphics/RHI/RHIReleaseQueue.h"
 
 // ------------------------------------------------------------------------------
 // 2) RHIReleaseQueueTest — 지연 해제·flush

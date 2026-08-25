@@ -1,8 +1,9 @@
 #include "pch.h"
 
+#include "Core/File/Windows/WindowsFileWatcher.h"
+
 #include "Core/Common/PlatformOsHeaders.h"
 #include "Core/Concurrency/mutex.h"
-#include "Core/File/Windows/WindowsFileWatcher.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
 	#include "Core/Container/string.h"
@@ -24,7 +25,6 @@ namespace sw
 		, _hCompletionPort{ nullptr }
 	{
 	}
-
 
 	WindowsFileWatcher::~WindowsFileWatcher()
 	{

@@ -3,10 +3,10 @@
  * @brief GameFramework 소비자를 위한 공통 포함
  */
 #pragma once
+#include "Engine/EngineMinimal.h"
+
 #include "GameFramework/Base/IGame.h"
 #include "GameFramework/GameFrameworkExports.h"
-
-#include "Engine/EngineMinimal.h"
 
 namespace sw
 {

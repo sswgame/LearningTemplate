@@ -1,9 +1,10 @@
 #include "pch.h"
 
+#include "Editor/Property/PropertyDrawerRegistry.h"
+
 #include "Editor/Common/EditorContext.h"
 #include "Editor/Property/DefaultPropertyDrawers.h"
 #include "Editor/Property/IPropertyDrawer.h"
-#include "Editor/Property/PropertyDrawerRegistry.h"
 
 namespace sw
 {

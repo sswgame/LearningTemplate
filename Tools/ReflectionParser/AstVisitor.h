@@ -4,10 +4,9 @@
  * @details 수집 결과 타입은 ParsedReflection.h, 어노테이션 문자열 적용은 AnnotationApply.* 입니다.
  */
 #pragma once
-
-#include "ParsedReflection.h"
-
 #include "Engine/EngineMinimal.h"
+
+#include "ReflectionParser/ParsedReflection.h"
 
 #include <clang-c/Index.h>
 
@@ -27,8 +26,8 @@ namespace sw
 		/** @brief AST 트리를 방문하며 리플렉션 정보를 수집합니다. */
 		void visit();
 
-		const vector<ParsedTypeInfo>& getCollectedTypes() const { return _types; }
-		const vector<ParsedEnumInfo>& getCollectedEnums() const { return _enums; }
+		const vector<ParsedTypeInfo>& getCollectedTypes() const { return _listTypes; }
+		const vector<ParsedEnumInfo>& getCollectedEnums() const { return _listEnums; }
 
 		/** @brief 커서의 네임스페이스 포함 이름(FQN)을 만듭니다. */
 		static string buildFullyQualifiedName( CXCursor cursor );
@@ -42,7 +41,7 @@ namespace sw
 
 	private:
 		CXTranslationUnit	   _translationUnit;
-		vector<ParsedTypeInfo> _types;
-		vector<ParsedEnumInfo> _enums;
+		vector<ParsedTypeInfo> _listTypes;
+		vector<ParsedEnumInfo> _listEnums;
 	};
 } // namespace sw

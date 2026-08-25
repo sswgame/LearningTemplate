@@ -8,10 +8,10 @@
  *   - VK/KeySym 맵: InputKeyMapWin32.cpp / InputKeyMapX11.cpp
  */
 #pragma once
-#include "Engine/Input/KeyCodes.h"
-
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+
+#include "Engine/Input/KeyCodes.h"
 
 namespace sw
 {

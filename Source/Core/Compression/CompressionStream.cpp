@@ -1,7 +1,8 @@
 #include "pch.h"
 
-#include "Core/Compression/CompressionCodecRegistry.h"
 #include "Core/Compression/CompressionStream.h"
+
+#include "Core/Compression/CompressionCodecRegistry.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 

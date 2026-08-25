@@ -1,5 +1,4 @@
 #pragma once
-
 #include "Core/Compression/ICompressionCodec.h"
 
 namespace sw

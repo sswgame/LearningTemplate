@@ -3,12 +3,12 @@
  * @brief 오버월드, 턴배틀, 액션전투, 타이틀 등 게임 모드 상태 전환 및 생명주기 관리 FSM
  */
 #pragma once
-#include "GameFramework/GameFrameworkExports.h"
-
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Delegate/Delegate.h"
+
+#include "GameFramework/GameFrameworkExports.h"
 
 #include <memory>
 
@@ -93,9 +93,9 @@ namespace sw
 		void setOnModeChanged( ModeChangedDelegate delegate ) { _onModeChanged = delegate; }
 
 	private:
-		GamePlayMode													_currentMode;
-		GamePlayMode													_previousMode;
+		GamePlayMode												   _currentMode;
+		GamePlayMode												   _previousMode;
 		unordered_map<GamePlayMode, std::shared_ptr<IGameModeHandler>> _mapHandlers;
-		ModeChangedDelegate												_onModeChanged;
+		ModeChangedDelegate											   _onModeChanged;
 	};
 } // namespace sw

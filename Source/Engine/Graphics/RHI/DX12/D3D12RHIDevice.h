@@ -3,18 +3,18 @@
  * @brief Direct3D 12 API 기반 RHI 백엔드 클래스 정의
  */
 #pragma once
-#include "Engine/Common/EnginePlatformHeaders.h"
-#include "Engine/Graphics/RHI/FrameResourceRing.h"
-#include "Engine/Graphics/RHI/IRHIDevice.h"
-#include <memory>
-
-#include "Engine/Graphics/RHI/RHIHandleTable.h"
-#include "Engine/Graphics/RHI/RHIReleaseQueue.h"
-
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+
+#include "Engine/Common/EnginePlatformHeaders.h"
+#include "Engine/Graphics/RHI/FrameResourceRing.h"
+#include "Engine/Graphics/RHI/IRHIDevice.h"
+#include "Engine/Graphics/RHI/RHIHandleTable.h"
+#include "Engine/Graphics/RHI/RHIReleaseQueue.h"
+
+#include <memory>
 
 #if defined( SW_PLATFORM_WINDOWS )
 
@@ -60,7 +60,6 @@ namespace sw
 		/** @brief Mode=Deferred CL 바인딩용 soft Deferred Context. */
 		IRHICommandContext* getDeferredCommandContext() override;
 
-
 		/** @brief 백엔드 타입 반환 (DirectX12) */
 		RHIBackend getBackendType() const override { return RHIBackend::DirectX12; }
 
@@ -95,8 +94,6 @@ namespace sw
 
 		/** @brief 네이티브 텍스처 포인터 반환 (ID3D12Resource*) */
 		void* getNativeTexturePointer( RHITextureHandle texture ) const override;
-
-
 
 		/** @brief 독립 커맨드 리스트 생성 */
 		unique_ptr<IRHICommandList> createCommandList( RHICommandListMode mode ) override;
@@ -270,7 +267,6 @@ namespace sw
 		sw::unique_ptr<D3D12RHIResource>	   _resourceImpl;
 	};
 } // namespace sw
-
 
 #else
 namespace sw

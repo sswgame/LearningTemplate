@@ -1,16 +1,17 @@
 #include "pch.h"
 
 #include "Engine/Localization/LocalizationManager.h"
-#include "Engine/Localization/StringTable.h"
-#include "Engine/Common/EngineServices.h"
-#include "Engine/Utility/File/KeyValueFile.h"
-#include "Engine/Utility/Json/JsonDocument.h"
-#include "Engine/Utility/Resource/ResourceUtil.h"
-#include "Engine/Utility/Xml/XmlDocument.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+
+#include "Engine/Common/EngineServices.h"
+#include "Engine/Localization/StringTable.h"
+#include "Engine/Utility/File/KeyValueFile.h"
+#include "Engine/Utility/Json/JsonDocument.h"
+#include "Engine/Utility/Resource/ResourceUtil.h"
+#include "Engine/Utility/Xml/XmlDocument.h"
 
 #include <mutex>
 #include <shared_mutex>

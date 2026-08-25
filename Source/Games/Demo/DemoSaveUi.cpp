@@ -2,8 +2,8 @@
 
 #include "Core/Event/EventDispatcher.h"
 
-#include "GameFramework/Data/GameStrings.h"
 #include "GameFramework/Base/GameEvents.h"
+#include "GameFramework/Data/GameStrings.h"
 #include "GameFramework/Kits/Overworld/ZoneRuntime.h"
 #include "GameFramework/Kits/TurnBattle/SpeciesData.h"
 #include "GameFramework/Transition/TransitionOrchestrator.h"

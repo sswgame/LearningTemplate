@@ -14,8 +14,9 @@
 
 #include "RuntimeAPI/EditorService.h"
 
-#include <algorithm>
 #include <imgui.h>
+#include <algorithm>
+
 namespace sw
 {
 	namespace
@@ -193,7 +194,7 @@ namespace sw
 
 		ImGuiViewport* pViewport = ImGui::GetMainViewport();
 		const ImVec2   center	 = pViewport ? ImVec2{ pViewport->Pos.x + pViewport->Size.x * 0.5f,
-												   pViewport->Pos.y + pViewport->Size.y * 0.28f }
+													   pViewport->Pos.y + pViewport->Size.y * 0.28f }
 											 : ImVec2{ 400.0f, 200.0f };
 
 		constexpr float32 paletteWidth	= 580.0f;

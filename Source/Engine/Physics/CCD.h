@@ -1,11 +1,11 @@
 #pragma once
-#include "Engine/ECS/Entity.h"
-#include "Engine/Physics/AABB.h"
-
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/ObjectHandle.h"
 #include "Core/Math/VectorMath.h"
+
+#include "Engine/ECS/Entity.h"
+#include "Engine/Physics/AABB.h"
 
 namespace sw
 {

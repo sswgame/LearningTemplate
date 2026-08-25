@@ -3,11 +3,11 @@
  * @brief SWGame용 공유 ActionMap과 게임플레이→액션 이름 테이블
  */
 #pragma once
-#include "GameFramework/GameFrameworkExports.h"
-
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+
+#include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {

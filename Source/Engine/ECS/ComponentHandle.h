@@ -3,9 +3,9 @@
  * @brief 엔티티+타입 컴포넌트 핸들. 저장은 핸들, T*는 resolve 순간에만 씁니다.
  */
 #pragma once
-#include "Engine/ECS/Entity.h"
-
 #include "Core/Common/Types.h"
+
+#include "Engine/ECS/Entity.h"
 
 #include <cstddef>
 

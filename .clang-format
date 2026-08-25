@@ -23,21 +23,6 @@ MaxEmptyLinesToKeep: 1
 NamespaceIndentation: All
 PointerAlignment: Left
 SortIncludes: Never
-IncludeCategories:
-  - Regex:           '^"pch\.h"'
-    Priority:        -1
-  - Regex:           '^<imgui\.h>'
-    Priority:        1
-  - Regex:           '^<imgui_internal\.h>'
-    Priority:        2
-  - Regex:           '^<Im.*>'
-    Priority:        3
-  - Regex:           '^<implot.*>'
-    Priority:        3
-  - Regex:           '^<imgui-.*>'
-    Priority:        3
-  - Regex:           '.*'
-    Priority:        4
 SortUsingDeclarations: false
 SpaceAfterCStyleCast: false
 SpaceBeforeAssignmentOperators: true

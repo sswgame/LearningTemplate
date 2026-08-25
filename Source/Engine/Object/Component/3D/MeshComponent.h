@@ -3,12 +3,12 @@
  * @brief SceneComponent that references a Mesh for FrameRenderer submission (3D Rendering)
  */
 #pragma once
-#include "Engine/Graphics/RHI/RHITypes.h"
-#include "Engine/Object/Component/SceneComponent.h"
-
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Memory/Memory.h"
+
+#include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Object/Component/SceneComponent.h"
 
 namespace sw
 {

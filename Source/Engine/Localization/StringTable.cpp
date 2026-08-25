@@ -1,13 +1,14 @@
 #include "pch.h"
 
 #include "Engine/Localization/StringTable.h"
+
+#include "Core/File/FileUtil.h"
+#include "Core/Log/Logger.h"
+
 #include "Engine/Utility/File/KeyValueFile.h"
 #include "Engine/Utility/Json/JsonDocument.h"
 #include "Engine/Utility/Resource/ResourceUtil.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
-
-#include "Core/File/FileUtil.h"
-#include "Core/Log/Logger.h"
 
 #include <mutex>
 #include <shared_mutex>
@@ -92,8 +93,8 @@ namespace sw
 			return false;
 		}
 
-		const uint8* pPtr  = buffer.data();
-		const uint8* pEnd  = buffer.data() + buffer.size();
+		const uint8* pPtr = buffer.data();
+		const uint8* pEnd = buffer.data() + buffer.size();
 
 		uint32 magic{ 0 };
 		uint32 version{ 0 };
@@ -301,4 +302,3 @@ namespace sw
 		return _mapTable.empty();
 	}
 } // namespace sw
-

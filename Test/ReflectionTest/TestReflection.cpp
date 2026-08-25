@@ -1,12 +1,14 @@
 #include "pch.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Object/GameObject/GameObjectManagerInternal.h"
 #include "Engine/Reflection/ReflectAny.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/Rpc/ReflectionRpc.h"
 #include "Engine/Serialization/Core/SchemaMigrate.h"
 #include "Engine/Serialization/Core/Serializer.h"
 #include "Engine/Serialization/Format/CompressedBinarySerializer.h"
+#include "Engine/Utility/Task/TaskManager.h"
 
 #include "ReflectionTest/TestSampleActor.h"
 
@@ -267,7 +269,7 @@ SW_TEST_CASE( Reflection_TypeInfo, FindExistingProperty )
  */
 SW_TEST_CASE( ReflectionParser, FallbackCommentTest )
 {
-	const sw::TypeInfo* info = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::TestSampleActor" ) );
+	const sw::TypeInfo* info = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::TestScriptComponent" ) );
 	SW_ASSERT_NOT_NULL( info );
 
 	// _shouldNotBeParsed 프로퍼티는 등록되지 않아야 함 (주석 안에 PROPERTY()가 있으므로 무시되어야 함)
@@ -2312,9 +2314,6 @@ SW_TEST_CASE( Reflection_Serialization, ReflectAnyPolymorphic )
 	SW_EXPECT_EQUAL( 1, static_cast<int32>( albedo->_metadata._bAssetPath ) );
 }
 
-#include "Engine/Object/GameObject/GameObjectManagerInternal.h"
-#include "Engine/Utility/Task/TaskManager.h"
-
 // ------------------------------------------------------------------------------
 // 25) Reflection_ECS — 스크립트 생명주기·상속
 // ------------------------------------------------------------------------------
@@ -2444,13 +2443,13 @@ SW_TEST_CASE( Reflection_ECS, ScriptInheritanceMultiLevel )
  */
 SW_TEST_CASE( Reflection_ECS, ScriptPropertySerialization )
 {
-	const sw::TypeInfo* pType = sw::engine::getTypeRegistry().findType( sw::hashed_string("sw::TestScriptComponent") );
+	const sw::TypeInfo* pType = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::TestScriptComponent" ) );
 	SW_ASSERT_NOT_NULL( pType );
-	
+
 	// PROPERTY() float32 _scriptSpeed 가 등록되어 있어야 함
-	const sw::PropertyInfo* pSpeedProp = pType->findProperty( sw::hashed_string("_scriptSpeed") );
+	const sw::PropertyInfo* pSpeedProp = pType->findProperty( sw::hashed_string( "_scriptSpeed" ) );
 	SW_ASSERT_NOT_NULL( pSpeedProp );
-	SW_EXPECT_TRUE( pSpeedProp->_typeName == sw::hashed_string("float32") );
+	SW_EXPECT_TRUE( pSpeedProp->_typeName == sw::hashed_string( "float32" ) );
 
 	sw::TestScriptComponent comp;
 	SW_EXPECT_TRUE( sw::MathUtil::abs( comp._scriptSpeed - 1.5f ) < 0.0001f );

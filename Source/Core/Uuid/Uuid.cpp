@@ -19,7 +19,6 @@ namespace sw
 			return -1;
 		}
 
-
 	} // namespace
 
 	Uuid Uuid::generate()

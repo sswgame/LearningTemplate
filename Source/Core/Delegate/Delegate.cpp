@@ -1,7 +1,8 @@
 #include "pch.h"
 
-#include "Core/CoreMinimal.h"
 #include "Core/Delegate/Delegate.h"
+
+#include "Core/CoreMinimal.h"
 
 namespace sw
 {

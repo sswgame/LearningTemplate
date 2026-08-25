@@ -6,6 +6,7 @@
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+
 #if defined( SW_PLATFORM_MACOS )
 	#include <CoreServices/CoreServices.h>
 

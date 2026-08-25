@@ -1,9 +1,9 @@
 #pragma once
-#include "Engine/Utility/Task/TaskTypes.h"
-
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+
+#include "Engine/Utility/Task/TaskTypes.h"
 
 #include <atomic>
 #include <memory>

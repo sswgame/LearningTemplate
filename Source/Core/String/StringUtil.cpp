@@ -1,7 +1,8 @@
 #include "pch.h"
 
-#include "Core/CoreMinimal.h"
 #include "Core/String/StringUtil.h"
+
+#include "Core/CoreMinimal.h"
 
 namespace sw
 {
@@ -249,7 +250,6 @@ namespace sw
 				out.push_back( static_cast<utf8>( 0x80 | ( codepoint & 0x3F ) ) );
 			}
 		}
-
 
 	} // namespace
 

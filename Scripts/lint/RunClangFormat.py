@@ -19,13 +19,11 @@ from typing import Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from common import collectSourceFiles, getProjectRoot, runClangFormatBatch
-
-_kFormatRoots = ("Source", "Test", "Tools/ReflectionParser")
+from common import collectSourceFiles, getLintSearchDirs, getProjectRoot, runClangFormatBatch
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Source/Test/ReflectionParser 전체에 clang-format을 적용합니다.")
+    parser = argparse.ArgumentParser(description="프로젝트 전체 소스코드에 clang-format을 적용합니다.")
     parser.add_argument(
         "--check",
         action="store_true",
@@ -34,7 +32,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     root = getProjectRoot()
-    roots = [root / rel for rel in _kFormatRoots]
+    roots = getLintSearchDirs(root)
     fileList = collectSourceFiles(roots)
 
     if not fileList:

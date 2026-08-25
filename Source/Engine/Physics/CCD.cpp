@@ -152,8 +152,7 @@ namespace sw
 		const float3 initialClosest{
 			MathUtil::clamp( startCenter._x, targetBox._min._x, targetBox._max._x ),
 			MathUtil::clamp( startCenter._y, targetBox._min._y, targetBox._max._y ),
-			MathUtil::clamp( startCenter._z, targetBox._min._z, targetBox._max._z )
-		};
+			MathUtil::clamp( startCenter._z, targetBox._min._z, targetBox._max._z ) };
 
 		const float3  toCenterInitial{ startCenter._x - initialClosest._x, startCenter._y - initialClosest._y, startCenter._z - initialClosest._z };
 		const float32 distSqInitial = toCenterInitial._x * toCenterInitial._x + toCenterInitial._y * toCenterInitial._y + toCenterInitial._z * toCenterInitial._z;
@@ -176,7 +175,7 @@ namespace sw
 		const AABB expandedBox{
 			float3{targetBox._min._x - radius, targetBox._min._y - radius, targetBox._min._z - radius},
 			float3{targetBox._max._x + radius, targetBox._max._y + radius, targetBox._max._z + radius}
-		};
+		 };
 
 		float32 tNear = -MathUtil::MaxFloat;
 		float32 tFar  = MathUtil::MaxFloat;
@@ -282,14 +281,12 @@ namespace sw
 		const float3 sphereCenterAtHit{
 			startCenter._x + displacement._x * tNear,
 			startCenter._y + displacement._y * tNear,
-			startCenter._z + displacement._z * tNear
-		};
+			startCenter._z + displacement._z * tNear };
 
 		const float3 closestOnBox{
 			MathUtil::clamp( sphereCenterAtHit._x, targetBox._min._x, targetBox._max._x ),
 			MathUtil::clamp( sphereCenterAtHit._y, targetBox._min._y, targetBox._max._y ),
-			MathUtil::clamp( sphereCenterAtHit._z, targetBox._min._z, targetBox._max._z )
-		};
+			MathUtil::clamp( sphereCenterAtHit._z, targetBox._min._z, targetBox._max._z ) };
 
 		const float3  toCenter{ sphereCenterAtHit._x - closestOnBox._x, sphereCenterAtHit._y - closestOnBox._y, sphereCenterAtHit._z - closestOnBox._z };
 		const float32 distSqHit = toCenter._x * toCenter._x + toCenter._y * toCenter._y + toCenter._z * toCenter._z;
@@ -312,8 +309,7 @@ namespace sw
 		const float3  closestPointOnRay{
 			startCenter._x + displacement._x * clampedProj,
 			startCenter._y + displacement._y * clampedProj,
-			startCenter._z + displacement._z * clampedProj
-		};
+			startCenter._z + displacement._z * clampedProj };
 
 		const float3  diff{ closestPointOnRay._x - closestOnBox._x, closestPointOnRay._y - closestOnBox._y, closestPointOnRay._z - closestOnBox._z };
 		const float32 edgeDistSq = diff._x * diff._x + diff._y * diff._y + diff._z * diff._z;

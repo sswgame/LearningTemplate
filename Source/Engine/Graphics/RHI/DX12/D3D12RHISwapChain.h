@@ -1,5 +1,6 @@
 #pragma once
 #include "Core/Common/Types.h"
+
 #include "Engine/Graphics/RHI/IRHISwapChain.h"
 
 #if defined( SW_PLATFORM_WINDOWS )

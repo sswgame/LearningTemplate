@@ -1,10 +1,11 @@
 #include "pch.h"
 
+#include "Engine/Object/GameObject/GameObject.h"
+
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Object/Component/ComponentPtr.h"
-#include "Engine/Object/Component/TagComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
-#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/Component/TagComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectPtr.h"
 #include "Engine/Reflection/ReflectionCore.h"
@@ -35,13 +36,11 @@ namespace sw
 	{
 	}
 
-
 	/**
 	 * @brief 게임 오브젝트 소멸자: 부모 계층 연결을 해제하고 모든 소유 컴포넌트의 onDestroy 호출 및 ECS 엔티티를 파괴합니다.
 	 */
 	GameObject::~GameObject()
 	{
-
 
 		// 컴포넌트 파괴 전 부모-자식 계층 링크 분리 (자식 오브젝트들은 루트로 승격되어 생존)
 		detachFromParent();
@@ -60,7 +59,6 @@ namespace sw
 		{
 			if ( pComp == nullptr )
 				return;
-
 
 			unregisterComponentIfSceneRoot( pComp );
 			pComp->onDestroy();
@@ -156,15 +154,17 @@ namespace sw
 		}
 
 		SceneComponent* pChildSc = getPrimarySceneComponent();
-		if ( pChildSc == nullptr ) return false;
+		if ( pChildSc == nullptr )
+			return false;
 
 		SceneComponent* pParentSc = pParent != nullptr ? pParent->getPrimarySceneComponent() : nullptr;
-		if ( pParentSc == nullptr ) return false;
+		if ( pParentSc == nullptr )
+			return false;
 
 		bool bAttached = pChildSc->attachToComponent( pParentSc );
 		if ( bAttached )
 			refreshActiveInHierarchy();
-		
+
 		return bAttached;
 	}
 
@@ -199,8 +199,8 @@ namespace sw
 
 	void GameObject::refreshActiveInHierarchy()
 	{
-		bool bParentActive = true;
-		GameObject* pParent = getParent();
+		bool		bParentActive = true;
+		GameObject* pParent		  = getParent();
 		if ( pParent != nullptr )
 			bParentActive = pParent->isActiveInHierarchy();
 
@@ -443,8 +443,6 @@ namespace sw
 		if ( _pOwnerManager != nullptr )
 			_pOwnerManager->getRegistry().markTickWavesDirty();
 	}
-
-
 
 	std::atomic<uint64> GameObject::_s_nextObjectId{ 1 };
 } // namespace sw

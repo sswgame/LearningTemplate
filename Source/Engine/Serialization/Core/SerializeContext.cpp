@@ -1,11 +1,12 @@
 #include "pch.h"
 
-#include "Engine/ECS/ComponentHandle.h"
-#include "Engine/ECS/Entity.h"
-#include "Engine/Reflection/ReflectAny.h"
 #include "Engine/Serialization/Core/SerializeContext.h"
 
 #include "Core/Container/ObjectHandle.h"
+
+#include "Engine/ECS/ComponentHandle.h"
+#include "Engine/ECS/Entity.h"
+#include "Engine/Reflection/ReflectAny.h"
 
 namespace sw
 {
@@ -152,107 +153,107 @@ namespace sw
 			ctx.registerBinaryHandler( hashed_string( "sw::hashed_string" ), hashedStrWriteBin, hashedStrReadBin );
 
 #define SW_BUILTIN_TEXT_none( Canon, CppType )
-#define SW_BUILTIN_TEXT_stoi( Canon, CppType )                                                                 \
-	{                                                                                                          \
+#define SW_BUILTIN_TEXT_stoi( Canon, CppType )                                                                    \
+	{                                                                                                             \
 		auto writeFn = []( const void* pPtr ) { return sw::to_string( *static_cast<const CppType*>( pPtr ) ); };  \
-		auto readFn	 = []( void* pPtr, string_view strView )                                                   \
-		{                                                                                                      \
-			const fixed_string<constant::kMaxBuffer64> strStr{ strView };                                      \
-			utf8*									   pEndPtr{ nullptr };                                     \
+		auto readFn	 = []( void* pPtr, string_view strView )                                                      \
+		{                                                                                                         \
+			const fixed_string<constant::kMaxBuffer64> strStr{ strView };                                         \
+			utf8*									   pEndPtr{ nullptr };                                        \
 			int64									   val = StringUtil::strtoll( strStr.c_str(), &pEndPtr, 10 ); \
-			if ( pEndPtr == strStr.c_str() && strStr.empty() == false )                                        \
-				return false;                                                                                  \
-			*static_cast<CppType*>( pPtr ) = static_cast<CppType>( val );                                      \
-			return true;                                                                                       \
-		};                                                                                                     \
-		ctx.registerTextHandler( hashed_string( #Canon ), writeFn, readFn );                                   \
-		const string qualified = string( "sw::" ) + #Canon;                                                    \
-		ctx.registerTextHandler( hashed_string( qualified.c_str() ), writeFn, readFn );                        \
+			if ( pEndPtr == strStr.c_str() && strStr.empty() == false )                                           \
+				return false;                                                                                     \
+			*static_cast<CppType*>( pPtr ) = static_cast<CppType>( val );                                         \
+			return true;                                                                                          \
+		};                                                                                                        \
+		ctx.registerTextHandler( hashed_string( #Canon ), writeFn, readFn );                                      \
+		const string qualified = string( "sw::" ) + #Canon;                                                       \
+		ctx.registerTextHandler( hashed_string( qualified.c_str() ), writeFn, readFn );                           \
 	}
-#define SW_BUILTIN_TEXT_stoll( Canon, CppType )                                                                \
-	{                                                                                                          \
+#define SW_BUILTIN_TEXT_stoll( Canon, CppType )                                                                   \
+	{                                                                                                             \
 		auto writeFn = []( const void* pPtr ) { return sw::to_string( *static_cast<const CppType*>( pPtr ) ); };  \
-		auto readFn	 = []( void* pPtr, string_view strView )                                                   \
-		{                                                                                                      \
-			const fixed_string<constant::kMaxBuffer64> strStr{ strView };                                      \
-			utf8*									   pEndPtr{ nullptr };                                     \
+		auto readFn	 = []( void* pPtr, string_view strView )                                                      \
+		{                                                                                                         \
+			const fixed_string<constant::kMaxBuffer64> strStr{ strView };                                         \
+			utf8*									   pEndPtr{ nullptr };                                        \
 			int64									   val = StringUtil::strtoll( strStr.c_str(), &pEndPtr, 10 ); \
-			if ( pEndPtr == strStr.c_str() && strStr.empty() == false )                                        \
-				return false;                                                                                  \
-			*static_cast<CppType*>( pPtr ) = static_cast<CppType>( val );                                      \
-			return true;                                                                                       \
-		};                                                                                                     \
-		ctx.registerTextHandler( hashed_string( #Canon ), writeFn, readFn );                                   \
-		const string qualified = string( "sw::" ) + #Canon;                                                    \
-		ctx.registerTextHandler( hashed_string( qualified.c_str() ), writeFn, readFn );                        \
+			if ( pEndPtr == strStr.c_str() && strStr.empty() == false )                                           \
+				return false;                                                                                     \
+			*static_cast<CppType*>( pPtr ) = static_cast<CppType>( val );                                         \
+			return true;                                                                                          \
+		};                                                                                                        \
+		ctx.registerTextHandler( hashed_string( #Canon ), writeFn, readFn );                                      \
+		const string qualified = string( "sw::" ) + #Canon;                                                       \
+		ctx.registerTextHandler( hashed_string( qualified.c_str() ), writeFn, readFn );                           \
 	}
-#define SW_BUILTIN_TEXT_stoul( Canon, CppType )                                                                \
-	{                                                                                                          \
-		auto writeFn = []( const void* pPtr ) { return sw::to_string( *static_cast<const CppType*>( pPtr ) ); };  \
-		auto readFn	 = []( void* pPtr, string_view strView )                                                   \
-		{                                                                                                      \
-			const fixed_string<constant::kMaxBuffer64> strStr{ strView };                                      \
-			utf8*									   pEndPtr{ nullptr };                                     \
-			uint64									   val = StringUtil::strtoull( strStr.c_str(), &pEndPtr, 10 );\
-			if ( pEndPtr == strStr.c_str() && strStr.empty() == false )                                        \
-				return false;                                                                                  \
-			*static_cast<CppType*>( pPtr ) = static_cast<CppType>( val );                                      \
-			return true;                                                                                       \
-		};                                                                                                     \
-		ctx.registerTextHandler( hashed_string( #Canon ), writeFn, readFn );                                   \
-		const string qualified = string( "sw::" ) + #Canon;                                                    \
-		ctx.registerTextHandler( hashed_string( qualified.c_str() ), writeFn, readFn );                        \
+#define SW_BUILTIN_TEXT_stoul( Canon, CppType )                                                                    \
+	{                                                                                                              \
+		auto writeFn = []( const void* pPtr ) { return sw::to_string( *static_cast<const CppType*>( pPtr ) ); };   \
+		auto readFn	 = []( void* pPtr, string_view strView )                                                       \
+		{                                                                                                          \
+			const fixed_string<constant::kMaxBuffer64> strStr{ strView };                                          \
+			utf8*									   pEndPtr{ nullptr };                                         \
+			uint64									   val = StringUtil::strtoull( strStr.c_str(), &pEndPtr, 10 ); \
+			if ( pEndPtr == strStr.c_str() && strStr.empty() == false )                                            \
+				return false;                                                                                      \
+			*static_cast<CppType*>( pPtr ) = static_cast<CppType>( val );                                          \
+			return true;                                                                                           \
+		};                                                                                                         \
+		ctx.registerTextHandler( hashed_string( #Canon ), writeFn, readFn );                                       \
+		const string qualified = string( "sw::" ) + #Canon;                                                        \
+		ctx.registerTextHandler( hashed_string( qualified.c_str() ), writeFn, readFn );                            \
 	}
-#define SW_BUILTIN_TEXT_stoull( Canon, CppType )                                                               \
-	{                                                                                                          \
-		auto writeFn = []( const void* pPtr ) { return sw::to_string( *static_cast<const CppType*>( pPtr ) ); };  \
-		auto readFn	 = []( void* pPtr, string_view strView )                                                   \
-		{                                                                                                      \
-			const fixed_string<constant::kMaxBuffer64> strStr{ strView };                                      \
-			utf8*									   pEndPtr{ nullptr };                                     \
-			uint64									   val = StringUtil::strtoull( strStr.c_str(), &pEndPtr, 10 );\
-			if ( pEndPtr == strStr.c_str() && strStr.empty() == false )                                        \
-				return false;                                                                                  \
-			*static_cast<CppType*>( pPtr ) = static_cast<CppType>( val );                                      \
-			return true;                                                                                       \
-		};                                                                                                     \
-		ctx.registerTextHandler( hashed_string( #Canon ), writeFn, readFn );                                   \
-		const string qualified = string( "sw::" ) + #Canon;                                                    \
-		ctx.registerTextHandler( hashed_string( qualified.c_str() ), writeFn, readFn );                        \
+#define SW_BUILTIN_TEXT_stoull( Canon, CppType )                                                                   \
+	{                                                                                                              \
+		auto writeFn = []( const void* pPtr ) { return sw::to_string( *static_cast<const CppType*>( pPtr ) ); };   \
+		auto readFn	 = []( void* pPtr, string_view strView )                                                       \
+		{                                                                                                          \
+			const fixed_string<constant::kMaxBuffer64> strStr{ strView };                                          \
+			utf8*									   pEndPtr{ nullptr };                                         \
+			uint64									   val = StringUtil::strtoull( strStr.c_str(), &pEndPtr, 10 ); \
+			if ( pEndPtr == strStr.c_str() && strStr.empty() == false )                                            \
+				return false;                                                                                      \
+			*static_cast<CppType*>( pPtr ) = static_cast<CppType>( val );                                          \
+			return true;                                                                                           \
+		};                                                                                                         \
+		ctx.registerTextHandler( hashed_string( #Canon ), writeFn, readFn );                                       \
+		const string qualified = string( "sw::" ) + #Canon;                                                        \
+		ctx.registerTextHandler( hashed_string( qualified.c_str() ), writeFn, readFn );                            \
 	}
-#define SW_BUILTIN_TEXT_stof( Canon, CppType )                                                                 \
-	{                                                                                                          \
-		auto writeFn = []( const void* pPtr ) { return sw::to_string( *static_cast<const CppType*>( pPtr ) ); };  \
-		auto readFn	 = []( void* pPtr, string_view strView )                                                   \
-		{                                                                                                      \
-			const fixed_string<constant::kMaxBuffer64> strStr{ strView };                                      \
-			utf8*									   pEndPtr{ nullptr };                                     \
-			float32									   val = StringUtil::strtof( strStr.c_str(), &pEndPtr );   \
-			if ( pEndPtr == strStr.c_str() && strStr.empty() == false )                                        \
-				return false;                                                                                  \
-			*static_cast<CppType*>( pPtr ) = static_cast<CppType>( val );                                      \
-			return true;                                                                                       \
-		};                                                                                                     \
-		ctx.registerTextHandler( hashed_string( #Canon ), writeFn, readFn );                                   \
-		const string qualified = string( "sw::" ) + #Canon;                                                    \
-		ctx.registerTextHandler( hashed_string( qualified.c_str() ), writeFn, readFn );                        \
+#define SW_BUILTIN_TEXT_stof( Canon, CppType )                                                                   \
+	{                                                                                                            \
+		auto writeFn = []( const void* pPtr ) { return sw::to_string( *static_cast<const CppType*>( pPtr ) ); }; \
+		auto readFn	 = []( void* pPtr, string_view strView )                                                     \
+		{                                                                                                        \
+			const fixed_string<constant::kMaxBuffer64> strStr{ strView };                                        \
+			utf8*									   pEndPtr{ nullptr };                                       \
+			float32									   val = StringUtil::strtof( strStr.c_str(), &pEndPtr );     \
+			if ( pEndPtr == strStr.c_str() && strStr.empty() == false )                                          \
+				return false;                                                                                    \
+			*static_cast<CppType*>( pPtr ) = static_cast<CppType>( val );                                        \
+			return true;                                                                                         \
+		};                                                                                                       \
+		ctx.registerTextHandler( hashed_string( #Canon ), writeFn, readFn );                                     \
+		const string qualified = string( "sw::" ) + #Canon;                                                      \
+		ctx.registerTextHandler( hashed_string( qualified.c_str() ), writeFn, readFn );                          \
 	}
-#define SW_BUILTIN_TEXT_stod( Canon, CppType )                                                                 \
-	{                                                                                                          \
-		auto writeFn = []( const void* pPtr ) { return sw::to_string( *static_cast<const CppType*>( pPtr ) ); };  \
-		auto readFn	 = []( void* pPtr, string_view strView )                                                   \
-		{                                                                                                      \
-			const fixed_string<constant::kMaxBuffer64> strStr{ strView };                                      \
-			utf8*									   pEndPtr{ nullptr };                                     \
-			float64									   val = StringUtil::strtod( strStr.c_str(), &pEndPtr );   \
-			if ( pEndPtr == strStr.c_str() && strStr.empty() == false )                                        \
-				return false;                                                                                  \
-			*static_cast<CppType*>( pPtr ) = static_cast<CppType>( val );                                      \
-			return true;                                                                                       \
-		};                                                                                                     \
-		ctx.registerTextHandler( hashed_string( #Canon ), writeFn, readFn );                                   \
-		const string qualified = string( "sw::" ) + #Canon;                                                    \
-		ctx.registerTextHandler( hashed_string( qualified.c_str() ), writeFn, readFn );                        \
+#define SW_BUILTIN_TEXT_stod( Canon, CppType )                                                                   \
+	{                                                                                                            \
+		auto writeFn = []( const void* pPtr ) { return sw::to_string( *static_cast<const CppType*>( pPtr ) ); }; \
+		auto readFn	 = []( void* pPtr, string_view strView )                                                     \
+		{                                                                                                        \
+			const fixed_string<constant::kMaxBuffer64> strStr{ strView };                                        \
+			utf8*									   pEndPtr{ nullptr };                                       \
+			float64									   val = StringUtil::strtod( strStr.c_str(), &pEndPtr );     \
+			if ( pEndPtr == strStr.c_str() && strStr.empty() == false )                                          \
+				return false;                                                                                    \
+			*static_cast<CppType*>( pPtr ) = static_cast<CppType>( val );                                        \
+			return true;                                                                                         \
+		};                                                                                                       \
+		ctx.registerTextHandler( hashed_string( #Canon ), writeFn, readFn );                                     \
+		const string qualified = string( "sw::" ) + #Canon;                                                      \
+		ctx.registerTextHandler( hashed_string( qualified.c_str() ), writeFn, readFn );                          \
 	}
 
 #define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, TextConv, Ns, ... ) SW_BUILTIN_TEXT_##TextConv( Canon, CppType )

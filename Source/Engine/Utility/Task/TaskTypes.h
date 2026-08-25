@@ -8,6 +8,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/String/StringUtil.h"
+
 namespace sw
 {
 	/**

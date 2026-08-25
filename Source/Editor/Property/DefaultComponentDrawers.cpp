@@ -1,7 +1,8 @@
 #include "pch.h"
 
-#include "Editor/Property/ComponentDrawerRegistry.h"
 #include "Editor/Property/DefaultComponentDrawers.h"
+
+#include "Editor/Property/ComponentDrawerRegistry.h"
 #include "Editor/Property/IComponentDrawer.h"
 #include "Editor/Widgets/EditorWidgets.h"
 #include "Editor/Workspace/EditorWorkspace.h"

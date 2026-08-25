@@ -283,7 +283,7 @@ SW_TEST_CASE( ShaderCompilerTest, MultiBackendVariantKeyIsolation )
 	sw::ShaderVariantKey keyDx11Copy = keyDx11;
 	SW_EXPECT_EQUAL( keyDx11.getVariantHashKey().getHash(), keyDx11Copy.getVariantHashKey().getHash() );
 
-	sw::ShaderVariantManager manager;
+	sw::ShaderVariantManager	   manager;
 	const sw::ShaderCompileResult* pResDx11 = manager.getOrCompileVariant( keyDx11 );
 	if ( pResDx11 != nullptr && pResDx11->_bSuccess )
 	{
@@ -336,4 +336,3 @@ SW_TEST_CASE( ShaderCompilerTest, MultiBackendDiskCacheFileSeparation )
 
 	sw::ShaderCompiler::clearDiskCache();
 }
-

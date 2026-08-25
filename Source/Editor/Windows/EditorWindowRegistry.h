@@ -1,10 +1,10 @@
 #pragma once
-#include "Editor/Windows/IEditorWindow.h"
-
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
+
+#include "Editor/Windows/IEditorWindow.h"
 
 namespace sw
 {

@@ -131,3 +131,14 @@ kKeyVcpkgInstalledRel = "vcpkg_installed_rel"
 # Environment Variables
 kEnvSwLlvmAutoBootstrap = "SW_LLVM_AUTO_BOOTSTRAP"
 kEnvSwVcpkgAutoBootstrap = "SW_VCPKG_AUTO_BOOTSTRAP"
+
+# =============================================================================
+# --- 6. Lint & Formatting Targets (린트 및 포맷팅 대상 디렉터리 SSOT) --------
+# =============================================================================
+
+kLintTargetRelDirs: tuple[str, ...] = (
+    "Source",
+    "Test",
+    "Tools/ReflectionParser",
+)
+

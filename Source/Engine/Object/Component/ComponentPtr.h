@@ -2,9 +2,10 @@
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/SpinLock.h"
 #include "Core/String/hashed_string.h"
+
+#include "Engine/ECS/Entity.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/ECS/Entity.h"
 
 namespace sw
 {
@@ -39,20 +40,30 @@ namespace sw
 		ComponentPtr& operator=( ComponentPtr&& other ) noexcept;
 
 		/** @brief 캐싱된 빠른 메모리 주소를 반환합니다. */
-		Component* get() const { resolveLazy(); return _pCachedPtr; }
+		Component* get() const
+		{
+			resolveLazy();
+			return _pCachedPtr;
+		}
 
-		bool isValid() const { resolveLazy(); return _pCachedPtr != nullptr; }
+		bool isValid() const
+		{
+			resolveLazy();
+			return _pCachedPtr != nullptr;
+		}
 
-		Component* operator->() const { resolveLazy(); return _pCachedPtr; }
-		explicit   operator bool() const { return isValid(); }
+		Component* operator->() const
+		{
+			resolveLazy();
+			return _pCachedPtr;
+		}
+		explicit operator bool() const { return isValid(); }
 
 		bool operator==( const ComponentPtr& other ) const { return _targetObjectName == other._targetObjectName && _targetComponentType == other._targetComponentType; }
 		bool operator!=( const ComponentPtr& other ) const { return ( *this == other ) == false; }
 
 		hashed_string getTargetObjectName() const { return _targetObjectName; }
 		hashed_string getTargetComponentType() const { return _targetComponentType; }
-
-
 
 	private:
 		void resolveLazy() const;
@@ -64,8 +75,8 @@ namespace sw
 		PROPERTY()
 		hashed_string _targetComponentType;
 
-		mutable Component* _pCachedPtr{ nullptr };
-		mutable sw::Entity _cachedEntity{ sw::kNullEntity };
+		mutable Component*			   _pCachedPtr{ nullptr };
+		mutable sw::Entity			   _cachedEntity{ sw::kNullEntity };
 		mutable sw::GameObjectManager* _pManager{ nullptr };
 	};
 

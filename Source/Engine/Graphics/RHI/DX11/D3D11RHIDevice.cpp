@@ -1,7 +1,8 @@
 #include "pch.h"
 
-#include "Engine/Graphics/RHI/DX11/D3D11RHICommandContext.h"
 #include "Engine/Graphics/RHI/DX11/D3D11RHIDevice.h"
+
+#include "Engine/Graphics/RHI/DX11/D3D11RHICommandContext.h"
 #include "Engine/Graphics/RHI/DX11/D3D11RHIResource.h"
 #include "Engine/Graphics/RHI/DX11/D3D11RHISwapChain.h"
 
@@ -21,8 +22,6 @@ namespace sw
 
 		constexpr uint32 kDefaultNumerator	= 60;
 		constexpr uint32 kDefaultDenomiator = 1;
-
-
 
 	} // namespace
 
@@ -65,7 +64,6 @@ namespace sw
 		_swapChainImpl = sw::make_unique<D3D11RHISwapChain>( this );
 		_resourceImpl  = sw::make_unique<D3D11RHIResource>( this );
 	}
-
 
 	D3D11RHIDevice::~D3D11RHIDevice()
 	{
@@ -238,9 +236,6 @@ namespace sw
 		_deviceContext->RSSetViewports( 1, &vp );
 	}
 
-
-
-
 	void D3D11RHIDevice::endFrame( bool vsync, bool bPresent )
 	{
 		if ( _swapChain == nullptr )
@@ -277,29 +272,11 @@ namespace sw
 		_contextOwnerThread = std::thread::id{};
 	}
 
-
-
-
-
-
-
-
-
-
 	void* D3D11RHIDevice::getNativeTexturePointer( RHITextureHandle texture ) const
 	{
 		const TextureRecord* pRec = resolveTexture( texture );
 		return pRec != nullptr ? pRec->_texture.Get() : nullptr;
 	}
-
-
-
-
-
-
-
-
-
 
 	unique_ptr<IRHICommandList> D3D11RHIDevice::createCommandList( RHICommandListMode mode )
 	{
@@ -331,7 +308,6 @@ namespace sw
 	{
 		_renderTargetView.Reset();
 	}
-
 
 	bool D3D11RHIDevice::ensureComputeRootConstantCB()
 	{

@@ -3,9 +3,9 @@
  * @brief 타일 스텝 이동 FSM (Idle / Walk / Interact)
  */
 #pragma once
-#include "GameFramework/GameFrameworkMinimal.h"
-
 #include "Core/Common/Types.h"
+
+#include "GameFramework/GameFrameworkMinimal.h"
 
 namespace sw
 {

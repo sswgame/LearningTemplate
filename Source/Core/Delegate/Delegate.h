@@ -365,7 +365,6 @@ namespace sw
 		/** @brief 복사 대입합니다. */
 		MulticastDelegate& operator=( const MulticastDelegate& other ) = default;
 
-
 		/** @brief 두 멀티캐스트 델리게이트가 동일한 대상 리스트를 가지고 있는지 비교합니다. */
 		bool operator==( const MulticastDelegate& other ) const
 		{
@@ -485,7 +484,6 @@ namespace sw
 		uint32				   _broadcastDepth;		///< 중첩 broadcast 깊이. 0 이 될 때만 지연 제거를 반영
 	};
 } // namespace sw
-
 
 /** @brief Delegate 별칭을 선언합니다. */
 #define SW_DECLARE_DELEGATE( ReturnType, DelegateName, ... ) using DelegateName = sw::Delegate<ReturnType( __VA_ARGS__ )>

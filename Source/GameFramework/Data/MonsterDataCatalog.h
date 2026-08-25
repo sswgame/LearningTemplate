@@ -3,13 +3,13 @@
  * @brief monsters.xml에서 로드하는 몬스터 스탯 및 AI 데이터 카탈로그
  */
 #pragma once
-#include "GameFramework/GameFrameworkExports.h"
-
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/String/hashed_string.h"
+
+#include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {

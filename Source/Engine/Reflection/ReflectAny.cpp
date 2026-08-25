@@ -5,6 +5,7 @@
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Serialization/Core/SerializeContext.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
+
 namespace sw
 {
 

@@ -12,14 +12,23 @@ if(SW_SHIPPING_BUILD)
 	list(APPEND moduleSmokeLibs SWGame)
 endif()
 
-sw_addExecutable(SmokeTest
-	NO_INSTALL
-	LINK_LIBRARIES
-		${moduleSmokeLibs}
-)
+file(GLOB_RECURSE SMOKETEST_SOURCES CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp")
 
-sw_setLogTag(SmokeTest Test)
-sw_configurePch(SmokeTest)
+add_executable(SmokeTest ${SMOKETEST_SOURCES})
+
+target_include_directories(SmokeTest PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
+target_link_libraries(SmokeTest
+	PRIVATE
+		${moduleSmokeLibs}
+		sw_global_options
+)
+if(sw_flag_libraries)
+	target_link_libraries(SmokeTest PRIVATE ${sw_flag_libraries})
+endif()
+
+target_compile_definitions(SmokeTest PRIVATE "SW_LOG_TAG=\"Test\"")
+target_precompile_headers(SmokeTest PRIVATE "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
+set_target_properties(SmokeTest PROPERTIES FOLDER "Test")
 
 if(NOT SW_SHIPPING_BUILD)
 	target_compile_definitions(SmokeTest PRIVATE
@@ -44,5 +53,7 @@ if(BUILD_TESTING)
 	set_tests_properties(SmokeTest PROPERTIES
 		WORKING_DIRECTORY "${sw_output_directory}/Bin"
 		LABELS "unit;module;nogpu"
+		RUN_SERIAL TRUE
+		TIMEOUT 90
 	)
 endif()

@@ -1,9 +1,6 @@
 #include "pch.h"
 
-#include "AstVisitor.h"
-
-#include "AnnotationApply.h"
-#include "ContainerTypeMap.h"
+#include "ReflectionParser/AstVisitor.h"
 
 #include "Core/Common/Types.h"
 #include "Core/File/FileUtil.h"
@@ -15,10 +12,13 @@
 #include "Engine/Common/Common.h"
 #include "Engine/Reflection/ReflectionEnumNames.h"
 
-#include "ParserContext.h"
-#include "ParserDefines.h"
-#include "ParserUtil.h"
-#include "TypeNameMap.h"
+#include "ReflectionParser/AnnotationApply.h"
+#include "ReflectionParser/ContainerTypeMap.h"
+#include "ReflectionParser/ParserContext.h"
+#include "ReflectionParser/ParserDefines.h"
+#include "ReflectionParser/ParserUtil.h"
+#include "ReflectionParser/TypeNameMap.h"
+
 namespace sw
 {
 	namespace
@@ -121,15 +121,15 @@ namespace sw
 					}
 					else if ( bInLineComment )
 					{
-						if ( window[i] == '\n' )
+						if ( window[index] == '\n' )
 							bInLineComment = false;
 					}
 					else if ( bInBlockComment )
 					{
-						if ( window[i] == '*' && i + 1 < pos && window[i + 1] == '/' )
+						if ( window[index] == '*' && index + 1 < pos && window[index + 1] == '/' )
 						{
 							bInBlockComment = false;
-							++i;
+							++index;
 						}
 					}
 				}
@@ -380,7 +380,7 @@ namespace sw
 		{
 			const vector<string> args = extractTemplateArgs( typeSpelling );
 			const int32			 numClangArgs =
-				 ( type.kind == CXType_Invalid ) ? 0 : clang_Type_getNumTemplateArguments( type );
+				( type.kind == CXType_Invalid ) ? 0 : clang_Type_getNumTemplateArguments( type );
 
 			if ( node._containerKind == ContainerKind::Map )
 			{
@@ -529,7 +529,7 @@ namespace sw
 				for ( int32 argIndex = 0; argIndex < numArgs; ++argIndex )
 				{
 					const CXCursor argCursor = clang_Cursor_getArgument( cursor, static_cast<uint32>( argIndex ) );
-					method._paramTypeNames.push_back( normalizeTypeName(
+					method._listParamTypeNames.push_back( normalizeTypeName(
 						cxStringToStd( clang_getTypeSpelling( clang_getCursorType( argCursor ) ) ) ) );
 				}
 
@@ -571,7 +571,7 @@ namespace sw
 			for ( int32 argIndex = 0; argIndex < numArgs; ++argIndex )
 			{
 				const CXCursor argCursor = clang_Cursor_getArgument( cursor, static_cast<uint32>( argIndex ) );
-				method._paramTypeNames.push_back( normalizeTypeName(
+				method._listParamTypeNames.push_back( normalizeTypeName(
 					cxStringToStd( clang_getTypeSpelling( clang_getCursorType( argCursor ) ) ) ) );
 			}
 
@@ -600,7 +600,7 @@ namespace sw
 			const CXType   baseType = clang_getCursorType( cursor );
 			const CXCursor baseDecl = clang_getTypeDeclaration( baseType );
 			const string   baseFQN =
-				  ( clang_Cursor_isNull( baseDecl ) == 0 ) ? AstVisitor::buildFullyQualifiedName( baseDecl ) : string{};
+				( clang_Cursor_isNull( baseDecl ) == 0 ) ? AstVisitor::buildFullyQualifiedName( baseDecl ) : string{};
 
 			++collector->baseCount;
 			if ( collector->baseCount > 1 )
@@ -718,7 +718,7 @@ namespace sw
 
 		struct EnumeratorCollector
 		{
-			vector<ParsedEnumeratorInfo>* _enumerators = nullptr;
+			vector<ParsedEnumeratorInfo>* _listEnumerators = nullptr;
 		};
 
 		/** @brief enumerator 이름·값을 수집합니다. */
@@ -731,7 +731,7 @@ namespace sw
 			ParsedEnumeratorInfo enumerator;
 			enumerator._name  = cxStringToStd( clang_getCursorSpelling( cursor ) );
 			enumerator._value = clang_getEnumConstantDeclValue( cursor );
-			collector->_enumerators->push_back( std::move( enumerator ) );
+			collector->_listEnumerators->push_back( std::move( enumerator ) );
 			return CXChildVisit_Continue;
 		}
 
@@ -739,8 +739,8 @@ namespace sw
 
 	AstVisitor::AstVisitor( CXTranslationUnit translationUnit )
 		: _translationUnit{ translationUnit }
-		, _types{}
-		, _enums{}
+		, _listTypes{}
+		, _listEnums{}
 	{
 	}
 
@@ -788,8 +788,8 @@ namespace sw
 		{
 			const bool bHasFunction = hasAnnotateAttrPrefix( cursor, annotationConstants::kFunctionPrefix ) ||
 									  sourceHasPrimaryAnnotation( cursor, annotationConstants::kFunctionPrefix );
-			const bool bHasBody = hasAnnotateAttrPrefix( cursor, "REFLECT_BODY" ) ||
-								  ( cxStringToStd( clang_getCursorSpelling( cursor ) ) == annotationConstants::kReflectBodyMarkerFn );
+			const bool bHasBody		= hasAnnotateAttrPrefix( cursor, "REFLECT_BODY" ) ||
+									  ( cxStringToStd( clang_getCursorSpelling( cursor ) ) == annotationConstants::kReflectBodyMarkerFn );
 			if ( bHasFunction || bHasBody )
 			{
 				CXCursor   parent		  = clang_getCursorSemanticParent( cursor );
@@ -915,7 +915,7 @@ namespace sw
 					 typeInfo._fullyQualifiedName, typeInfo._listProperties.size(), typeInfo._listMethods.size(),
 					 typeInfo._bAbstract ? 1 : 0, typeInfo._bStatic ? 1 : 0, typeInfo._bReflectBody ? 1 : 0,
 					 typeInfo._bComponentFactory ? 1 : 0, typeInfo._bIsScript ? 1 : 0 );
-		_types.push_back( std::move( typeInfo ) );
+		_listTypes.push_back( std::move( typeInfo ) );
 	}
 
 	/**
@@ -935,7 +935,7 @@ namespace sw
 		BLOCK( "Collect Enumerators" )
 		{
 			// 모든 열거자 항목(이름, 정수값) 수집
-			EnumeratorCollector enumeratorCollector{ &enumInfo._enumerators };
+			EnumeratorCollector enumeratorCollector{ &enumInfo._listEnumerators };
 			clang_visitChildren( cursor, enumeratorCollectorVisitor, &enumeratorCollector );
 		}
 
@@ -960,9 +960,9 @@ namespace sw
 			// 명시적 BitFlag 어노테이션이 없더라도, 값이 모두 1, 2, 4, 8... 비트 패턴이면 BitFlag로 자동 감지
 			if ( enumInfo._bIsBitFlag == 0 )
 			{
-				bool  allPowerOf2  = enumInfo._enumerators.empty() == false;
+				bool  allPowerOf2  = enumInfo._listEnumerators.empty() == false;
 				int32 nonZeroCount = 0;
-				for ( const ParsedEnumeratorInfo& e : enumInfo._enumerators )
+				for ( const ParsedEnumeratorInfo& e : enumInfo._listEnumerators )
 				{
 					if ( e._value != 0 )
 					{
@@ -980,9 +980,9 @@ namespace sw
 		}
 
 		SW_LOG_INFO( "[AstVisitor] ENUM          : %#  (%# values, _bIsBitFlag=%# aliases=%#)",
-					 enumInfo._fullyQualifiedName, enumInfo._enumerators.size(), enumInfo._bIsBitFlag ? "true" : "false",
+					 enumInfo._fullyQualifiedName, enumInfo._listEnumerators.size(), enumInfo._bIsBitFlag ? "true" : "false",
 					 enumInfo._listAliases.size() );
-		_enums.push_back( std::move( enumInfo ) );
+		_listEnums.push_back( std::move( enumInfo ) );
 	}
 
 	/**

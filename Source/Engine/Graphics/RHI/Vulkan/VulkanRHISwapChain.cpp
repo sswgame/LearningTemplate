@@ -1,7 +1,8 @@
 #include "pch.h"
 
-#include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHISwapChain.h"
+
+#include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
 
 namespace sw
 {

@@ -1,7 +1,8 @@
 #include "pch.h"
 
-#include "Engine/Graphics/RHI/DX11/D3D11RHIDevice.h"
 #include "Engine/Graphics/RHI/DX11/D3D11RHISwapChain.h"
+
+#include "Engine/Graphics/RHI/DX11/D3D11RHIDevice.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
 namespace sw

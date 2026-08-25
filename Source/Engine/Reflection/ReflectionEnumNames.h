@@ -3,9 +3,9 @@
  * @brief ContainerKind / FunctionNetRole ↔ 식별자 문자열 (Predefined*.xxx 단일 출처).
  */
 #pragma once
-
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+
 #include "Engine/Reflection/ReflectionContainers.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 

@@ -1,13 +1,14 @@
 #include "pch.h"
 
 #include "Engine/Graphics/Material/Material.h"
+
+#include "Core/Concurrency/mutex.h"
+
 #include "Engine/Graphics/Material/MaterialInternal.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResource.h"
 #include "Engine/Graphics/Shader/ShaderCompiler.h"
 #include "Engine/Graphics/Shader/ShaderReflection.h"
-
-#include "Core/Concurrency/mutex.h"
 
 namespace sw
 {

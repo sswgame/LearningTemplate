@@ -1,12 +1,13 @@
 #include "pch.h"
 
-#include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/ComponentPtr.h"
+
+#include "Engine/Common/EngineServices.h"
+#include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Scene/SceneManager.h"
 #include "Engine/Scene/Scene.h"
-#include "Engine/Common/EngineServices.h"
+#include "Engine/Scene/SceneManager.h"
 
 namespace sw
 {
@@ -114,7 +115,7 @@ namespace sw
 	{
 		if ( _targetObjectName.getHash() == 0 || _targetComponentType.getHash() == 0 )
 		{
-			_pCachedPtr = nullptr;
+			_pCachedPtr	  = nullptr;
 			_cachedEntity = sw::kNullEntity;
 			return;
 		}
@@ -126,7 +127,7 @@ namespace sw
 				return;
 
 			SceneManager& sceneMgr = engine::getSceneManager();
-			Scene* pScene = sceneMgr.getActiveScene();
+			Scene*		  pScene   = sceneMgr.getActiveScene();
 			if ( pScene == nullptr )
 				return;
 
@@ -150,9 +151,9 @@ namespace sw
 		}
 
 		// 2) 느린 경로
-		_pCachedPtr = nullptr;
+		_pCachedPtr	  = nullptr;
 		_cachedEntity = sw::kNullEntity;
-		
+
 		GameObject* pObj = pObjMgr->findGameObjectByName( _targetObjectName );
 		if ( pObj != nullptr && pObj->isPendingKill() == false )
 		{
@@ -160,7 +161,7 @@ namespace sw
 			{
 				if ( pComp->getComponentName() == _targetComponentType )
 				{
-					_pCachedPtr = pComp;
+					_pCachedPtr	  = pComp;
 					_cachedEntity = pObj->getEntityId();
 					break;
 				}

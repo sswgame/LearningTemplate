@@ -3,6 +3,7 @@
 #include "Core/Compression/RleCompressionCodec.h"
 
 #include "Core/Memory/Memory.h"
+
 namespace sw
 {
 	namespace

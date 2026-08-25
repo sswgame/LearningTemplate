@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Memory/Memory.h"
+
 #include <atomic>
 #include <memory>
 

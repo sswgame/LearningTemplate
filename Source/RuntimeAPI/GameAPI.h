@@ -3,10 +3,10 @@
  * @brief App ↔ SWGame 통신용 함수 테이블
  */
 #pragma once
-#include "RuntimeAPI/RuntimeHandles.h"
-
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+
+#include "RuntimeAPI/RuntimeHandles.h"
 
 namespace sw
 {
@@ -50,7 +50,6 @@ namespace sw
 	class IWindow;
 	class IRHIDevice;
 } // namespace sw
-
 
 extern "C"
 {

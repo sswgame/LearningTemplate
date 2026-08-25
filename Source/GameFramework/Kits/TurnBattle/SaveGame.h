@@ -3,15 +3,15 @@
  * @brief 영속 세이브 블롭 (맵 + 파티 + 스토리 플래그). 일시적 전투 상태는 제외합니다.
  */
 #pragma once
-#include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/TurnBattle/SpeciesData.h"
-#include "GameFramework/Save/ISaveGame.h"
-
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/map.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+
+#include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Kits/TurnBattle/SpeciesData.h"
+#include "GameFramework/Save/ISaveGame.h"
 
 namespace sw
 {

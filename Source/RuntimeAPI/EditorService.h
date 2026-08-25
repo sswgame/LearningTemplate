@@ -1,9 +1,9 @@
 #pragma once
+#include "Core/Common/Macros.h"
 
 #if !defined( SW_EDITOR_INTERNAL ) && !defined( SW_APP_INTERNAL ) && !defined( SW_TEST_INTERNAL )
 	#error "EditorService.h can only be included by Editor or App."
 #endif
-#include "Core/Common/Macros.h"
 
 namespace sw
 {
@@ -67,7 +67,6 @@ namespace sw
 	SW_DECLARE_EDITOR_SERVICE( DebugDrawQueue, EditorServiceId::DebugDrawQueue );
 	SW_DECLARE_EDITOR_SERVICE( const EngineData, EditorServiceId::EngineData );
 
-
 	namespace editor
 	{
 		SW_MODULE_API void bindEditorService( const EditorService& service );
@@ -80,7 +79,6 @@ namespace sw
 		{
 			return static_cast<T*>( getRawService( EditorServiceTraits<T>::id ) );
 		}
-
 
 		SW_MODULE_API EditorData& getEditorData();
 		SW_MODULE_API void		  setEditorData( EditorData* pData );

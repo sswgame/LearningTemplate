@@ -66,20 +66,33 @@ if(NOT LIBCLANG_LIB OR NOT LIBCLANG_INCLUDE_DIR)
     return()
 endif()
 
-# ------------------------------------------------------------------------------
-# 2) 타겟 — Core만 링크 (Engine.dll 순환 방지)
-# ------------------------------------------------------------------------------
-sw_addExecutable(ReflectionParser
-    NO_INSTALL
-    LINK_LIBRARIES
-        Core
-        "${LIBCLANG_LIB}"
+file(GLOB_RECURSE PARSER_SOURCES CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp")
+
+add_executable(ReflectionParser ${PARSER_SOURCES})
+
+target_include_directories(ReflectionParser PUBLIC
+    "${CMAKE_CURRENT_SOURCE_DIR}"
+    "${CMAKE_SOURCE_DIR}/Tools"
+    "${CMAKE_SOURCE_DIR}/Source"
+    "${CMAKE_SOURCE_DIR}/Source/Core"
 )
-sw_disableTargetIpo(ReflectionParser)
-sw_setLogTag(ReflectionParser Tool)
-sw_configurePch(ReflectionParser)
 target_include_directories(ReflectionParser SYSTEM PRIVATE "${LIBCLANG_INCLUDE_DIR}")
 target_include_directories(ReflectionParser PRIVATE "${CMAKE_BINARY_DIR}/generated")
+
+target_link_libraries(ReflectionParser
+    PRIVATE
+        Core
+        "${LIBCLANG_LIB}"
+        sw_global_options
+)
+if(sw_flag_libraries)
+    target_link_libraries(ReflectionParser PRIVATE ${sw_flag_libraries})
+endif()
+
+target_compile_definitions(ReflectionParser PRIVATE "SW_LOG_TAG=\"Tool\"")
+target_precompile_headers(ReflectionParser PRIVATE "${CMAKE_SOURCE_DIR}/Source/Core/pch.h")
+
+set_property(TARGET ReflectionParser PROPERTY INTERPROCEDURAL_OPTIMIZATION FALSE)
 if(COMMAND sw_setUnityBuild)
 	sw_setUnityBuild(ReflectionParser OFF)
 endif()

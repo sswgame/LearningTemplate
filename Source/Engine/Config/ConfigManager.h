@@ -3,9 +3,6 @@
  * @brief Config/ 호스트 JSON (EngineConfig 등). Resource/ 팩 에셋이 아니므로 ResourceManager와 분리합니다.
  */
 #pragma once
-#include "Engine/Config/IConfig.h"
-#include "Engine/Serialization/Format/JsonSerializer.h"
-
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
@@ -13,6 +10,9 @@
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
+
+#include "Engine/Config/IConfig.h"
+#include "Engine/Serialization/Format/JsonSerializer.h"
 
 namespace sw
 {

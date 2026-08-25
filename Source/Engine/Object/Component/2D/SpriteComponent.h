@@ -3,12 +3,12 @@
  * @brief Sprite Mesh Rendering Component for 2D objects
  */
 #pragma once
-#include "Engine/Object/Component/3D/MeshComponent.h"
-#include "Engine/Reflection/ReflectionMacros.h"
-
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+
+#include "Engine/Object/Component/3D/MeshComponent.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {

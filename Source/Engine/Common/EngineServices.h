@@ -3,15 +3,12 @@
  * @brief App이 소유한 코어 매니저 포인터를 Engine.dll에 바인딩하는 서비스 테이블
  */
 #pragma once
+#include "Core/Common/Macros.h"
+#include "Core/Common/Types.h"
 
 #if !defined( SW_ENGINE_INTERNAL ) && !defined( SW_APP_INTERNAL ) && !defined( SW_TEST_INTERNAL ) && !defined( SW_TOOL_INTERNAL )
 	#error "EngineServices.h can only be included internally by the Engine, App, or Tests."
 #endif
-
-
-
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 
 namespace sw
 

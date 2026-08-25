@@ -3,13 +3,13 @@
  * @brief 2D Sprite Animator Component
  */
 #pragma once
-#include "Engine/Object/Component/SceneComponent.h"
-#include "Engine/Reflection/ReflectionMacros.h"
-
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+
+#include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {

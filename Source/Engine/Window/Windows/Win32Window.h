@@ -3,8 +3,8 @@
  * @brief Microsoft Windows OS 전용(Win32 API 기반) IWindow 구현체 헤더
  */
 #pragma once
-
 #include "Core/Common/Types.h"
+
 #include "Engine/Window/IWindow.h"
 
 #if defined( SW_PLATFORM_WINDOWS )

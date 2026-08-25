@@ -5,6 +5,7 @@
 #include "TestFramework/TestFramework.h"
 
 #include <tuple>
+
 using namespace sw;
 
 // ------------------------------------------------------------------------------

@@ -5,6 +5,7 @@
 #include "Editor/Common/EditorContext.h"
 
 #include <imgui.h>
+
 namespace sw
 {
 	namespace

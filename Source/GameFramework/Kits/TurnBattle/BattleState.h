@@ -3,10 +3,10 @@
  * @brief 턴제 야생 / 트레이너 전투 (Fight / Run + 얇은 적 정책)
  */
 #pragma once
+#include "Core/Common/Types.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/TurnBattle/SpeciesData.h"
-
-#include "Core/Common/Types.h"
 
 namespace sw
 {

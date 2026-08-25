@@ -1,6 +1,7 @@
 #pragma once
 #include "Engine/EngineMinimal.h"
 #include "Engine/Reflection/ReflectionTypes.h"
+
 namespace sw
 {
 	/**

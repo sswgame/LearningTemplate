@@ -1,12 +1,13 @@
 #include "pch.h"
 
+#include "Core/File/Linux/LinuxFileWatcher.h"
+
 #include "Core/Common/PlatformOsHeaders.h"
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
-#include "Core/File/Linux/LinuxFileWatcher.h"
 #include "Core/Log/Logger.h"
 
 #if defined( SW_PLATFORM_LINUX )
@@ -35,7 +36,6 @@ namespace sw
 				++offset;
 			return absNorm.substr( offset );
 		}
-
 
 	} // namespace
 

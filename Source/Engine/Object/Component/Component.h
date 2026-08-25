@@ -3,13 +3,13 @@
  * @brief GameObject에 부착되는 컴포넌트의 기반 클래스 및 TickGroup 열거형 정의
  */
 #pragma once
-#include "Engine/ECS/ComponentHandle.h"
-#include "Engine/Reflection/ReflectionCore.h"
-
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+
+#include "Engine/ECS/ComponentHandle.h"
+#include "Engine/Reflection/ReflectionCore.h"
 
 #include <atomic>
 
@@ -69,7 +69,6 @@ namespace sw
 		virtual void onDestroy();
 		/** @brief 프로퍼티 변경 시 이벤트 콜백 */
 		virtual void onPropertyChanged( hashed_string propertyName );
-
 
 		/** @brief 팩토리/addComponent가 설정하는 구체 타입 TypeInfo 캐시 */
 		void setCachedTypeInfo( const TypeInfo* pTypeInfo );
@@ -138,10 +137,10 @@ namespace sw
 
 		explicit Component( bool bIsSceneComponent );
 
-		GameObject*			  _pOwner;								  ///< 소유자 GameObject 포인터 참조
-		const TypeInfo*		  _pCachedTypeInfo;						  ///< 구체 타입 TypeInfo (팩토리에서 설정)
-		uint64				  _componentId;							  ///< 컴포넌트 고유 시리얼 ID
-		hashed_string		  _componentName;						  ///< 컴포넌트 식별 이름
+		GameObject*		_pOwner;		  ///< 소유자 GameObject 포인터 참조
+		const TypeInfo* _pCachedTypeInfo; ///< 구체 타입 TypeInfo (팩토리에서 설정)
+		uint64			_componentId;	  ///< 컴포넌트 고유 시리얼 ID
+		hashed_string	_componentName;	  ///< 컴포넌트 식별 이름
 
 		ComponentTickDelegate _onTickDelegate;						  ///< 델리게이트 기반 틱 연동 핸들러
 		TickGroup			  _tickGroup{ TickGroup::DuringPhysics }; ///< TickGroup 슬롯

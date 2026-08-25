@@ -1,11 +1,12 @@
 #include "pch.h"
 
 #include "Engine/Object/Component/ComponentDefaults.h"
+
+#include "Core/Concurrency/mutex.h"
+
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Serialization/Core/SchemaMigrate.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
-
-#include "Core/Concurrency/mutex.h"
 
 namespace sw
 {

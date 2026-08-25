@@ -1,9 +1,10 @@
 #include "pch.h"
 
+#include "Engine/Serialization/Format/BinarySerializer.h"
+
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Serialization/Core/SchemaMigrate.h"
 #include "Engine/Serialization/Core/SerializerInternal.h"
-#include "Engine/Serialization/Format/BinarySerializer.h"
 
 namespace sw
 {

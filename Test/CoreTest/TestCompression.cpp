@@ -6,9 +6,11 @@
 #include "Core/Compression/RleCompressionCodec.h"
 
 #include "TestFramework/TestFramework.h"
+
 // ------------------------------------------------------------------------------
 // 1) Core_Compression — Null 코덱 검증
 // ------------------------------------------------------------------------------
+
 SW_TEST_CASE( Core_Compression, NullCodecPassthrough )
 {
 	sw::NullCompressionCodec codec;

@@ -4,10 +4,10 @@
  * @note 그래픽 API 헤더는 Core/Common/EnginePlatformHeaders.h에 있습니다.
  */
 #pragma once
-
 // ------------------------------------------------------------------------------
 // 1) Windows — NOMINMAX / WIN32_LEAN_AND_MEAN 후 SDK 헤더
 // ------------------------------------------------------------------------------
+
 #if defined( SW_PLATFORM_WINDOWS ) || defined( _WIN32 ) || defined( _WIN64 )
 	#if !defined( NOMINMAX )
 		/** @brief Windows.h 의 min/max 매크로를 막습니다. */

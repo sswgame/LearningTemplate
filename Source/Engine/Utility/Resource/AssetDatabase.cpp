@@ -1,7 +1,8 @@
 #include "pch.h"
 
-#include "Engine/Utility/File/KeyValueFile.h"
 #include "Engine/Utility/Resource/AssetDatabase.h"
+
+#include "Engine/Utility/File/KeyValueFile.h"
 
 namespace sw
 {
@@ -19,7 +20,6 @@ namespace sw
 			}
 			return result;
 		}
-
 
 	} // namespace
 

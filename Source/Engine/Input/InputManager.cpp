@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Engine/Input/InputManager.h"
+
 #include "Engine/Input/Windows/GamepadXInput.h"
 #include "Engine/Window/IWindow.h"
 
@@ -27,7 +28,6 @@ namespace sw
 		, _reservedFlags{ 0 }
 	{
 	}
-
 
 	InputManager::~InputManager() = default;
 

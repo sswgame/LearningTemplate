@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Concurrency/DeadlockDetector.h"
+
 #include "Core/Memory/CallStackCapture.h"
 #include "Core/String/StringBuilder.h"
 
@@ -11,7 +12,6 @@ namespace sw
 
 		/** @brief 프로세스 전역 활성 데드락 감지기 인스턴스 포인터 */
 		std::atomic<DeadlockDetector*> s_activeDetector{ nullptr };
-
 
 	} // namespace
 

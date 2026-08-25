@@ -1,9 +1,10 @@
 #include "pch.h"
 
+#include "Engine/Serialization/Format/XmlSerializer.h"
+
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Serialization/Core/SchemaMigrate.h"
 #include "Engine/Serialization/Core/SerializerInternal.h"
-#include "Engine/Serialization/Format/XmlSerializer.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
 
 namespace sw
@@ -207,7 +208,6 @@ namespace sw
 		}
 		return true;
 	}
-
 
 	namespace
 	{
@@ -488,7 +488,6 @@ namespace sw
 		}
 
 	} // namespace
-
 
 	string XmlSerializer::serialize( const void* pInstance, const TypeInfo& typeInfo,
 									 IXmlBackend& backend, const SerializeContext& ctx )

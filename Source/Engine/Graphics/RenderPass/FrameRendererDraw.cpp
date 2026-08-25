@@ -66,8 +66,8 @@ namespace sw
 				float4x4			   _world;
 			};
 
-			vector<SceneMeshDrawItem> listDrawItems;
-			Registry&				  reg = GameObjectManagerAccess::get( *pObjects );
+			vector<SceneMeshDrawItem>					   listDrawItems;
+			Registry&									   reg = GameObjectManagerAccess::get( *pObjects );
 			View<MeshData, TransformData, EntityStateData> view( reg );
 
 			for ( auto [e, mdata, tdata, state] : view )
@@ -104,16 +104,16 @@ namespace sw
 				else if ( mdata._pMaterial != nullptr )
 					drawCb = mdata._pMaterial->getDescriptorIndex();
 
-				const uint64 vbId	  = static_cast<uint64>( mesh->getVertexBuffer() ) & 0xFFFF;
-				const uint64 sortKey  = ( static_cast<uint64>( drawPso ) << 32 ) | ( static_cast<uint64>( drawCb ) << 16 ) | vbId;
+				const uint64 vbId	 = static_cast<uint64>( mesh->getVertexBuffer() ) & 0xFFFF;
+				const uint64 sortKey = ( static_cast<uint64>( drawPso ) << 32 ) | ( static_cast<uint64>( drawCb ) << 16 ) | vbId;
 
 				SceneMeshDrawItem item{};
-				item._sortKey			 = sortKey;
-				item._mesh				 = mesh;
+				item._sortKey			= sortKey;
+				item._mesh				= mesh;
 				item._pMaterialInstance = mdata._materialInstance.get();
-				item._pso				 = drawPso;
-				item._cbIndex			 = drawCb;
-				item._world				 = tdata.cachedWorldMatrix;
+				item._pso				= drawPso;
+				item._cbIndex			= drawCb;
+				item._world				= tdata.cachedWorldMatrix;
 				listDrawItems.push_back( std::move( item ) );
 			}
 

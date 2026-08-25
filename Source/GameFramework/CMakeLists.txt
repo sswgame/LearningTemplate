@@ -13,19 +13,35 @@ else()
 	set(gfLibType SHARED)
 endif()
 
-sw_addLibrary(GameFramework
-	TYPE ${gfLibType}
-	EXCLUDE "Kits/"
-	LINK_LIBRARIES Engine
-	LOG_TAG GameFramework
-	PCH
-	BIN_OUTPUT
+file(GLOB_RECURSE GF_SOURCES CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp")
+list(FILTER GF_SOURCES EXCLUDE REGEX "Kits/")
+
+add_library(GameFramework ${gfLibType} ${GF_SOURCES})
+
+target_include_directories(GameFramework PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
+target_link_libraries(GameFramework
+	PUBLIC
+		Engine
+		sw_public_source_includes
+	PRIVATE
+		sw_global_options
 )
+if(sw_flag_libraries)
+	target_link_libraries(GameFramework PRIVATE ${sw_flag_libraries})
+endif()
+
+target_compile_definitions(GameFramework
+	PRIVATE
+		"SW_LOG_TAG=\"GameFramework\""
+		SW_GAME_INTERNAL
+)
+target_precompile_headers(GameFramework PRIVATE "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
 
 sw_configureGfExports(GameFramework ${gfLibType})
+if(gfLibType STREQUAL "SHARED")
+	sw_setModuleBinOutput(GameFramework)
+endif()
 set_property(GLOBAL APPEND PROPERTY SW_DYNAMIC_MODULES GameFramework)
-
-target_link_libraries(GameFramework PUBLIC sw_public_source_includes)
 if(COMMAND sw_setUnityBuild)
 	sw_setUnityBuild(GameFramework BATCH_SIZE 8)
 endif()
@@ -42,5 +58,3 @@ sw_addReflectionStep(GameFramework
 )
 
 add_subdirectory(Kits)
-
-target_compile_definitions(GameFramework PRIVATE SW_GAME_INTERNAL)

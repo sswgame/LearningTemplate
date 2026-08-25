@@ -2,6 +2,8 @@
 
 #include "Editor/Backend/ImGuiEditor.h"
 
+#include "Core/File/FileUtil.h"
+
 #include "Editor/Backend/IImGuiPlatformBackend.h"
 #include "Editor/Backend/IImGuiRendererBackend.h"
 #include "Editor/Common/EditorContext.h"
@@ -19,8 +21,6 @@
 #include "Editor/Workspace/AssetEditorRegistry.h"
 #include "Editor/Workspace/EditorWorkspace.h"
 
-#include "Core/File/FileUtil.h"
-
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineData.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -33,12 +33,23 @@
 #include "Engine/Utility/Task/TaskManager.h"
 #include "Engine/Window/NativeWindowEvent.h"
 
+#include "RuntimeAPI/EditorModuleExports.h"
 #include "RuntimeAPI/EditorService.h"
 #include "RuntimeAPI/EditorUIContext.h"
 
-#include <sw/config/ConfigConstants.h>
+#include "sw/config/ConfigConstants.h"
+
+#include <imgui.h>
+#include <imgui_internal.h>
+#include <fa_solid_900.h>
+#include <IconsFontAwesome6.h>
+#include <ImGuiNotify.hpp>
+#include <ImGuizmo.h>
+#include <implot.h>
+#include <ImSequencer.h>
 
 // X11 매크로(None/Success/…)가 ImGui / notify 식별자와 충돌합니다 — 에디터 전용.
+
 #if defined( SW_PLATFORM_LINUX )
 	#ifdef None
 		#undef None
@@ -57,17 +68,7 @@
 	#endif
 #endif
 
-#include <imgui.h>
-
-#include <imgui_internal.h>
-#include <ImGuizmo.h>
-#include <ImSequencer.h>
-#include <implot.h>
-
 #define NOTIFY_RENDER_OUTSIDE_MAIN_WINDOW false
-#include <ImGuiNotify.hpp>
-#include <IconsFontAwesome6.h>
-#include <fa_solid_900.h>
 
 namespace sw
 {
@@ -749,8 +750,6 @@ namespace sw
 		}
 	}
 } // namespace sw
-
-#include "RuntimeAPI/EditorModuleExports.h"
 
 // ==============================================================================
 // EditorModule C-ABI 진입점 매크로 자동 구현

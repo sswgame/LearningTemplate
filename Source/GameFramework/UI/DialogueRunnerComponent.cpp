@@ -7,6 +7,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Utility/Json/JsonDocument.h"
+
 namespace sw
 {
 	DialogueRunnerComponent::DialogueRunnerComponent()

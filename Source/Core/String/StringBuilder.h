@@ -9,7 +9,6 @@
  * 4. Move Semantics: 힙 버퍼 소유 시 0-Copy 포인터 이전 지원.
  */
 #pragma once
-
 #include "Core/Common/Macros.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"

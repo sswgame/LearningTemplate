@@ -1,7 +1,6 @@
 #include "pch.h"
 
 #include "RuntimeAPI/GameService.h"
-#include "RuntimeAPI/PluginAPI.h"
 
 #include "Core/Event/EventDispatcher.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
@@ -9,14 +8,16 @@
 #include "Engine/Audio/IAudioSystem.h"
 #include "Engine/ECS/Registry.h"
 #include "Engine/Input/InputManager.h"
+#include "Engine/Localization/StringTable.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Utility/Resource/ResourceManager.h"
-#include "Engine/Localization/StringTable.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+
+#include "RuntimeAPI/PluginAPI.h"
 
 namespace sw
 {

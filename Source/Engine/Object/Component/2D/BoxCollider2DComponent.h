@@ -3,14 +3,14 @@
  * @brief 2D Box Collider Component
  */
 #pragma once
-#include "Engine/Object/Component/SceneComponent.h"
-#include "Engine/Reflection/ReflectionMacros.h"
-
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
-#include "Core/Container/string.h"
 #include "Core/Container/ObjectHandle.h"
+#include "Core/Container/string.h"
 #include "Core/Math/Math.h"
+
+#include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {

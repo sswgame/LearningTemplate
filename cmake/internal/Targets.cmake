@@ -1,6 +1,6 @@
 # ==============================================================================
 # @file cmake/internal/Targets.cmake
-# @brief 타겟 생성·설치·출력·Dev/Shipping·ThirdParty 래퍼 헬퍼 (단일 진입점)
+# @brief 출력 디렉터리, 글로벌 옵션, DLL 익스포트 및 런타임 유틸리티
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
@@ -8,10 +8,13 @@
 # ------------------------------------------------------------------------------
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${sw_output_directory}/Bin")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${sw_output_directory}/Lib")
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${sw_output_directory}/Lib")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG "${sw_output_directory}/Bin")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE "${sw_output_directory}/Bin")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG "${sw_output_directory}/Lib")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE "${sw_output_directory}/Lib")
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG "${sw_output_directory}/Lib")
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE "${sw_output_directory}/Lib")
 
 if(EXISTS "${CMAKE_SOURCE_DIR}/Resource")
 	install(DIRECTORY "${CMAKE_SOURCE_DIR}/Resource" DESTINATION .)
@@ -56,41 +59,8 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebI
 	endif()
 endif()
 
-# 런타임이 아닌 타겟(도구, 에디터 등)에서 IPO를 끕니다.
-function(sw_disableTargetIpo TARGET_NAME)
-	if(sw_ipo_supported AND TARGET ${TARGET_NAME})
-		set_property(TARGET ${TARGET_NAME} PROPERTY INTERPROCEDURAL_OPTIMIZATION FALSE)
-	endif()
-endfunction()
-
 # ------------------------------------------------------------------------------
-# 4) 설치 · 하위 프로젝트 탐색
-# ------------------------------------------------------------------------------
-# 타겟을 Bin/Lib 레이아웃으로 설치합니다.
-function(sw_installTarget TARGET_NAME)
-	install(TARGETS ${TARGET_NAME}
-		RUNTIME DESTINATION Bin
-		LIBRARY DESTINATION Lib
-		ARCHIVE DESTINATION Lib
-	)
-endfunction()
-
-# BASE_DIR 아래 CMakeLists.txt가 있는 하위 디렉터리를 add_subdirectory 합니다.
-function(sw_discoverProjects BASE_DIR)
-	if(NOT EXISTS "${BASE_DIR}")
-		return()
-	endif()
-	file(GLOB children RELATIVE "${BASE_DIR}" "${BASE_DIR}/*")
-	foreach(child IN LISTS children)
-		set(childPath "${BASE_DIR}/${child}")
-		if(IS_DIRECTORY "${childPath}" AND EXISTS "${childPath}/CMakeLists.txt")
-			add_subdirectory("${childPath}")
-		endif()
-	endforeach()
-endfunction()
-
-# ------------------------------------------------------------------------------
-# 5) DLL export 매크로 — Engine / MODULE / GameFramework가 공유
+# 4) DLL export 매크로 — Engine / GameFramework가 공유
 # ------------------------------------------------------------------------------
 # SHARED Engine: SW_EXPORTS / SW_IMPORTS, 옵션으로 WINDOWS_EXPORT_ALL_SYMBOLS
 function(sw_configureEngineDllExports TARGET_NAME LIB_TYPE)
@@ -99,19 +69,12 @@ function(sw_configureEngineDllExports TARGET_NAME LIB_TYPE)
 		target_compile_definitions(${TARGET_NAME} INTERFACE SW_IMPORTS)
 		if(WIN32 AND SW_WINDOWS_EXPORT_ALL_SYMBOLS)
 			set_target_properties(${TARGET_NAME} PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
-			message(STATUS "[Exports] ${TARGET_NAME}: WINDOWS_EXPORT_ALL_SYMBOLS=ON (set -DSW_WINDOWS_EXPORT_ALL_SYMBOLS=OFF when SW_API surface is complete)")
+			message(STATUS "[Exports] ${TARGET_NAME}: WINDOWS_EXPORT_ALL_SYMBOLS=ON")
 		endif()
 	endif()
 endfunction()
 
-# MODULE 타겟에 SW_MODULE_EXPORTS를 정의합니다.
-function(sw_configureModuleDllExports TARGET_NAME LIB_TYPE)
-	if(LIB_TYPE STREQUAL "MODULE")
-		target_compile_definitions(${TARGET_NAME} PRIVATE SW_MODULE_EXPORTS)
-	endif()
-endfunction()
-
-# GameFramework·Kit SHARED export. sw_addGfKit / GameFramework CMakeLists 양쪽에서 호출.
+# GameFramework·Kit SHARED export.
 function(sw_configureGfExports TARGET_NAME LIB_TYPE)
 	if(LIB_TYPE STREQUAL "SHARED")
 		target_compile_definitions(${TARGET_NAME} PRIVATE SW_GF_EXPORTS)
@@ -122,178 +85,20 @@ function(sw_configureGfExports TARGET_NAME LIB_TYPE)
 	endif()
 endfunction()
 
-# ------------------------------------------------------------------------------
-# 6) 로그 태그 · 소스 GLOB
-#    Ninja는 CONFIGURE_DEPENDS를 지원하므로 기본 ON — 파일 추가/삭제를 자동 감지
-#    재구성 비용이 문제가 되면 -DSW_GLOB_CONFIGURE_DEPENDS=OFF (수동 재구성 필요)
-# ------------------------------------------------------------------------------
-# 타겟에 SW_LOG_TAG 컴파일 정의를 설정합니다.
-function(sw_setLogTag TARGET_NAME TAG)
-	target_compile_definitions(${TARGET_NAME} PRIVATE "SW_LOG_TAG=\"${TAG}\"")
-endfunction()
-
-# 디렉터리에서 소스/헤더를 GLOB하여 출력 변수에 담습니다.
-function(sw_collectSources DIR_PATH OUT_SOURCES)
-	set(globMode "")
-	if(SW_GLOB_CONFIGURE_DEPENDS)
-		set(globMode CONFIGURE_DEPENDS)
-	endif()
-	file(GLOB_RECURSE sourcesList ${globMode} "${DIR_PATH}/*.cpp" "${DIR_PATH}/*.c")
-	file(GLOB_RECURSE headersList ${globMode} "${DIR_PATH}/*.h" "${DIR_PATH}/*.hpp" "${DIR_PATH}/*.inl")
-	list(APPEND sourcesList ${headersList})
-	set(${OUT_SOURCES} ${sourcesList} PARENT_SCOPE)
-endfunction()
-
-# 현재 소스 디렉터리를 수집하고 SOURCES/EXCLUDE 인자를 적용합니다.
-macro(sw_prepareTargetSources OUT_SOURCES ARG_SOURCES ARG_EXCLUDE)
-	sw_collectSources("${CMAKE_CURRENT_SOURCE_DIR}" ${OUT_SOURCES})
-	if(${ARG_SOURCES})
-		list(APPEND ${OUT_SOURCES} ${${ARG_SOURCES}})
-	endif()
-	if(${ARG_EXCLUDE})
-		foreach(exPattern IN LISTS ${ARG_EXCLUDE})
-			list(FILTER ${OUT_SOURCES} EXCLUDE REGEX "${exPattern}")
-		endforeach()
-	endif()
-endmacro()
-
-# ------------------------------------------------------------------------------
-# 7) 공통 타겟 속성 — include / 링크 / IDE 폴더 / 설치
-#    PUBLIC include = 로컬 소스 dir. PRIVATE = sw_public_source_includes (자기 TU만)
-#    소비자 전파는 Engine·Core·Kits가 sw_public_source_includes를 PUBLIC 링크
-# ------------------------------------------------------------------------------
-macro(sw_setupTargetProperties TARGET_NAME ARG_INCLUDE_DIRECTORIES ARG_LINK_LIBRARIES SKIP_INSTALL)
-	get_target_property(_target_type ${TARGET_NAME} TYPE)
-	if(_target_type STREQUAL "INTERFACE_LIBRARY")
-		set(_scope INTERFACE)
-		set(_link_scope INTERFACE)
-	else()
-		set(_scope PUBLIC)
-		set(_link_scope PRIVATE)
-	endif()
-
-	target_include_directories(${TARGET_NAME} ${_scope} "${CMAKE_CURRENT_SOURCE_DIR}")
-	if(TARGET sw_public_source_includes)
-		target_link_libraries(${TARGET_NAME} ${_link_scope} sw_public_source_includes)
-	endif()
-	if(${ARG_INCLUDE_DIRECTORIES})
-		target_include_directories(${TARGET_NAME} ${_scope} ${${ARG_INCLUDE_DIRECTORIES}})
-	endif()
-	set(linkLibs "")
-	if(${ARG_LINK_LIBRARIES})
-		list(APPEND linkLibs ${${ARG_LINK_LIBRARIES}})
-	endif()
-	if(sw_flag_libraries)
-		list(APPEND linkLibs ${sw_flag_libraries})
-	endif()
-	list(APPEND linkLibs sw_global_options)
-	if(linkLibs)
-		target_link_libraries(${TARGET_NAME} ${_link_scope} ${linkLibs})
-	endif()
-	file(RELATIVE_PATH relPath "${CMAKE_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}")
-	get_filename_component(folderPath "${relPath}" DIRECTORY)
-	if(folderPath)
-		set_target_properties(${TARGET_NAME} PROPERTIES FOLDER "${folderPath}")
-	endif()
-	if(NOT SKIP_INSTALL)
-		sw_installTarget(${TARGET_NAME})
-	endif()
-endmacro()
-
-# ------------------------------------------------------------------------------
-# 8) 라이브러리 · 실행 파일 생성 래퍼
-#    - TYPE: STATIC | SHARED | MODULE | INTERFACE
-#    - NO_INSTALL: 설치(Bin/Lib) 대상에서 제외
-#    - LINK_LIBRARIES: 종속 라이브러리 목록
-#    - EXCLUDE: 소스 GLOB 필터링 정규식
-#    - SOURCES: 명시적 추가 소스 파일 목록
-#    - INCLUDE_DIRECTORIES: 추가 헤더 경로
-#    - LOG_TAG: SW_LOG_TAG 매크로 정의 ("Engine", "App", "Core" 등)
-#    - PCH: 프리컴파일 헤더 활성화
-#    - BIN_OUTPUT: LiveReload용 바이너리 출력 디렉터리를 Bin/으로 강제 고정
-# ------------------------------------------------------------------------------
-
-# 라이브러리 타겟을 생성하고 공통 속성(include/링크/PCH/출력/설치)을 설정합니다.
-function(sw_addLibrary TARGET_NAME)
-	cmake_parse_arguments(ARG
-		"NO_INSTALL;PCH;BIN_OUTPUT"
-		"TYPE;LOG_TAG"
-		"LINK_LIBRARIES;EXCLUDE;SOURCES;INCLUDE_DIRECTORIES"
-		${ARGN}
+# MODULE/핫리로드 타겟의 런타임 출력을 Bin/으로 고정합니다.
+function(sw_setModuleBinOutput TARGET_NAME)
+	set_target_properties(${TARGET_NAME} PROPERTIES
+		RUNTIME_OUTPUT_DIRECTORY "${sw_output_directory}/Bin"
+		LIBRARY_OUTPUT_DIRECTORY "${sw_output_directory}/Bin"
+		RUNTIME_OUTPUT_DIRECTORY_DEBUG "${sw_output_directory}/Bin"
+		RUNTIME_OUTPUT_DIRECTORY_RELEASE "${sw_output_directory}/Bin"
+		LIBRARY_OUTPUT_DIRECTORY_DEBUG "${sw_output_directory}/Bin"
+		LIBRARY_OUTPUT_DIRECTORY_RELEASE "${sw_output_directory}/Bin"
 	)
-	set(LIB_TYPE STATIC)
-	if(ARG_TYPE)
-		set(LIB_TYPE ${ARG_TYPE})
-	endif()
-	sw_prepareTargetSources(TARGET_SOURCES ARG_SOURCES ARG_EXCLUDE)
-	add_library(${TARGET_NAME} ${LIB_TYPE} ${TARGET_SOURCES})
-	sw_setupTargetProperties(${TARGET_NAME} ARG_INCLUDE_DIRECTORIES ARG_LINK_LIBRARIES ${ARG_NO_INSTALL})
-
-	if(LIB_TYPE STREQUAL "MODULE")
-		sw_configureModuleDllExports(${TARGET_NAME} MODULE)
-		sw_setModuleBinOutput(${TARGET_NAME})
-	elseif(ARG_BIN_OUTPUT)
-		sw_setModuleBinOutput(${TARGET_NAME})
-	endif()
-	if(ARG_LOG_TAG)
-		sw_setLogTag(${TARGET_NAME} ${ARG_LOG_TAG})
-	endif()
-	if(ARG_PCH)
-		sw_configurePch(${TARGET_NAME})
-	endif()
-endfunction()
-
-# 실행 파일(exe) 타겟을 생성하고 공통 속성을 설정합니다.
-function(sw_addExecutable TARGET_NAME)
-	cmake_parse_arguments(ARG
-		"NO_INSTALL;PCH"
-		"LOG_TAG"
-		"LINK_LIBRARIES;EXCLUDE;SOURCES;INCLUDE_DIRECTORIES"
-		${ARGN}
-	)
-	sw_prepareTargetSources(TARGET_SOURCES ARG_SOURCES ARG_EXCLUDE)
-	add_executable(${TARGET_NAME} ${TARGET_SOURCES})
-	sw_setupTargetProperties(${TARGET_NAME} ARG_INCLUDE_DIRECTORIES ARG_LINK_LIBRARIES ${ARG_NO_INSTALL})
-	if(ARG_LOG_TAG)
-		sw_setLogTag(${TARGET_NAME} ${ARG_LOG_TAG})
-	endif()
-	if(ARG_PCH)
-		sw_configurePch(${TARGET_NAME})
-	endif()
 endfunction()
 
 # ------------------------------------------------------------------------------
-# 9) sw_configurePch — PCH_FILE 명시 또는 타겟명 폴백
-#    Core / Core_objects / ReflectionParser → Core/pch.h, 나머지 → Engine/pch.h
-# ------------------------------------------------------------------------------
-function(sw_configurePch TARGET_NAME)
-	cmake_parse_arguments(ARG "" "PCH_FILE" "" ${ARGN})
-	if(NOT SW_ENABLE_PCH)
-		return()
-	endif()
-	if(ARG_PCH_FILE)
-		if(EXISTS "${ARG_PCH_FILE}")
-			target_precompile_headers(${TARGET_NAME} PRIVATE "${ARG_PCH_FILE}")
-		else()
-			message(WARNING "[sw_configurePch] PCH_FILE not found: ${ARG_PCH_FILE} (target: ${TARGET_NAME})")
-		endif()
-		return()
-	endif()
-	if(TARGET_NAME STREQUAL "Core" OR TARGET_NAME STREQUAL "Core_objects" OR TARGET_NAME STREQUAL "ReflectionParser")
-		set(swPch "${CMAKE_SOURCE_DIR}/Source/Core/pch.h")
-	elseif(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/pch.h")
-		set(swPch "${CMAKE_CURRENT_SOURCE_DIR}/pch.h")
-	else()
-		set(swPch "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
-	endif()
-	if(EXISTS "${swPch}")
-		target_precompile_headers(${TARGET_NAME} PRIVATE "${swPch}")
-	endif()
-endfunction()
-
-# ------------------------------------------------------------------------------
-# 10) sw_addDelayloadHook — Windows delay-load + 훅 소스
-#     훅 경로: Engine 타겟 SW_DELAYLOAD_HOOK_SOURCE, 없으면 기본 경로 폴백
+# 5) Windows delay-load + 훅 소스 바인딩
 # ------------------------------------------------------------------------------
 function(sw_addDelayloadHook TARGET_NAME)
 	cmake_parse_arguments(ARG "" "" "DLLS" ${ARGN})
@@ -320,53 +125,9 @@ function(sw_addDelayloadHook TARGET_NAME)
 	endforeach()
 endfunction()
 
-# MODULE/핫리로드 타겟의 런타임 출력을 Bin/으로 고정합니다.
-function(sw_setModuleBinOutput TARGET_NAME)
-	set_target_properties(${TARGET_NAME} PROPERTIES
-		RUNTIME_OUTPUT_DIRECTORY "${sw_output_directory}/Bin"
-		LIBRARY_OUTPUT_DIRECTORY "${sw_output_directory}/Bin"
-		RUNTIME_OUTPUT_DIRECTORY_DEBUG "${sw_output_directory}/Bin"
-		RUNTIME_OUTPUT_DIRECTORY_RELEASE "${sw_output_directory}/Bin"
-		LIBRARY_OUTPUT_DIRECTORY_DEBUG "${sw_output_directory}/Bin"
-		LIBRARY_OUTPUT_DIRECTORY_RELEASE "${sw_output_directory}/Bin"
-	)
-endfunction()
-
 # ------------------------------------------------------------------------------
-# 11) sw_addGfKit — Dev SHARED / Shipping STATIC + delay-load + PCH
-#     export는 sw_configureGfExports로 중앙화 (GameFramework CMakeLists와 공유)
+# 6) 런타임 파일 복사 큐 — POST_BUILD는 sw_emitRuntimeCopies가 한 번에 방출
 # ------------------------------------------------------------------------------
-function(sw_addGfKit TARGET_NAME)
-	cmake_parse_arguments(ARG "" "LOG_TAG" "LINK_LIBRARIES;DELAYLOAD_DLLS" ${ARGN})
-	if(SW_SHIPPING_BUILD)
-		set(kitType STATIC)
-	else()
-		set(kitType SHARED)
-	endif()
-	if(NOT ARG_LOG_TAG)
-		set(ARG_LOG_TAG ${TARGET_NAME})
-	endif()
-	sw_addLibrary(${TARGET_NAME}
-		TYPE ${kitType}
-		LINK_LIBRARIES ${ARG_LINK_LIBRARIES}
-		LOG_TAG ${ARG_LOG_TAG}
-		PCH
-		BIN_OUTPUT
-	)
-	sw_configureGfExports(${TARGET_NAME} ${kitType})
-	if(kitType STREQUAL "SHARED" AND WIN32 AND ARG_DELAYLOAD_DLLS)
-		sw_addDelayloadHook(${TARGET_NAME} DLLS ${ARG_DELAYLOAD_DLLS})
-	endif()
-	if(TARGET sw_public_source_includes)
-		target_link_libraries(${TARGET_NAME} PUBLIC sw_public_source_includes)
-	endif()
-	set_property(GLOBAL APPEND PROPERTY SW_DYNAMIC_MODULES ${TARGET_NAME})
-endfunction()
-
-# ------------------------------------------------------------------------------
-# 12) 런타임 파일 복사 큐 — POST_BUILD는 sw_emitRuntimeCopies가 한 번에 방출
-# ------------------------------------------------------------------------------
-# POST_BUILD에서 복사할 런타임 파일을 타겟 속성에 큐잉합니다.
 function(sw_queueRuntimeCopy TARGET_NAME SRC_FILE)
 	if(NOT TARGET ${TARGET_NAME})
 		message(FATAL_ERROR "sw_queueRuntimeCopy: target '${TARGET_NAME}' does not exist")
@@ -377,7 +138,6 @@ function(sw_queueRuntimeCopy TARGET_NAME SRC_FILE)
 	set_property(TARGET ${TARGET_NAME} APPEND PROPERTY SW_RUNTIME_COPY_FILES "${SRC_FILE}")
 endfunction()
 
-# 큐잉된 런타임 파일 복사를 POST_BUILD 커스텀 커맨드로 방출합니다.
 function(sw_emitRuntimeCopies TARGET_NAME)
 	if(NOT TARGET ${TARGET_NAME})
 		message(FATAL_ERROR "sw_emitRuntimeCopies: target '${TARGET_NAME}' does not exist")
@@ -412,9 +172,8 @@ function(sw_emitRuntimeCopies TARGET_NAME)
 endfunction()
 
 # ------------------------------------------------------------------------------
-# 13) ThirdParty 래퍼 — SYSTEM include / vcpkg CONFIG / STATIC 폴백
+# 7) ThirdParty 래퍼 — SYSTEM include / vcpkg CONFIG / STATIC 폴백
 # ------------------------------------------------------------------------------
-# ThirdParty include를 SYSTEM으로 타겟에 연결합니다.
 function(sw_thirdPartySystemIncludes TARGET_NAME)
 	cmake_parse_arguments(ARG "" "" "INTERFACE;PUBLIC;PRIVATE" ${ARGN})
 	if(NOT TARGET ${TARGET_NAME})
@@ -431,7 +190,6 @@ function(sw_thirdPartySystemIncludes TARGET_NAME)
 	endif()
 endfunction()
 
-# find_package CONFIG 타겟을 INTERFACE 별칭으로 감쌉니다.
 function(sw_addVcpkgConfigLib)
 	cmake_parse_arguments(ARG "HEADER_ONLY;ATTACH_GLOBAL" "NAME;PACKAGE;CONFIG_TARGET" "" ${ARGN})
 	if(NOT ARG_NAME)
@@ -461,7 +219,6 @@ function(sw_addVcpkgConfigLib)
 	endif()
 endfunction()
 
-# find_package 실패 시 vcpkg installed 트리에서 STATIC IMPORTED를 만듭니다.
 function(sw_addVcpkgStaticLib)
 	cmake_parse_arguments(ARG "" "NAME;PACKAGE;CONFIG_TARGET;HEADER;LIB_BASENAME;WARN" "" ${ARGN})
 	if(NOT ARG_NAME OR NOT ARG_HEADER OR NOT ARG_LIB_BASENAME)
@@ -479,20 +236,16 @@ function(sw_addVcpkgStaticLib)
 		target_link_libraries(${ARG_NAME} INTERFACE ${ARG_CONFIG_TARGET})
 		return()
 	endif()
-	# find_package가 비네임스페이스 타겟만 만든 경우 — 그대로 사용
 	if(TARGET ${ARG_NAME})
 		return()
 	endif()
 
 	set(root "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}")
 	if(NOT EXISTS "${root}/include/${ARG_HEADER}")
-		# 조용히 무시하면 런타임에야 깨지므로 항상 경고
 		if(ARG_WARN)
 			message(WARNING "${ARG_WARN}")
 		else()
-			message(WARNING "[${ARG_NAME}] vcpkg 설치 트리에서 헤더 '${ARG_HEADER}'를 찾을 수 없습니다 "
-				"(${root}/include). 빈 INTERFACE 타겟으로 대체합니다. "
-				"해당 타겟을 링크하는 소비자는 런타임 오류가 발생할 수 있습니다.")
+			message(WARNING "[${ARG_NAME}] vcpkg 설치 트리에서 헤더 '${ARG_HEADER}'를 찾을 수 없습니다 (${root}/include).")
 		endif()
 		add_library(${ARG_NAME} INTERFACE)
 		return()

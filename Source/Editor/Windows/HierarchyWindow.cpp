@@ -15,8 +15,9 @@
 #include "RuntimeAPI/EditorService.h"
 #include "RuntimeAPI/EditorUIContext.h"
 
-#include <algorithm>
 #include <imgui.h>
+#include <algorithm>
+
 namespace sw
 {
 

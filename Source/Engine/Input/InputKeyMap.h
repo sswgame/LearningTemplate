@@ -3,10 +3,10 @@
  * @brief 플랫폼 VK / KeySym → Key, 그리고 Win32 폴 테이블.
  */
 #pragma once
-#include "Engine/Input/KeyCodes.h"
-
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+
+#include "Engine/Input/KeyCodes.h"
 
 namespace sw
 {

@@ -1,6 +1,6 @@
 #pragma once
-
 #include "Core/Memory/Memory.h"
+
 #include "Engine/EngineMinimal.h"
 
 namespace sw

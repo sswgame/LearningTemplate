@@ -3,9 +3,9 @@
  * @brief 키보드/마우스 바인드 ID. ENUM() → KeyCodes.gen.cpp 등록.
  */
 #pragma once
-#include "Engine/Reflection/ReflectionMacros.h"
-
 #include "Core/Common/Types.h"
+
+#include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {

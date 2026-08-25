@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Editor/Backend/Platform/ImGuiX11Platform.h"
+
 #if defined( SW_PLATFORM_LINUX )
 	#include <imgui.h>
 	#include "Core/Time/CpuTimer.h"

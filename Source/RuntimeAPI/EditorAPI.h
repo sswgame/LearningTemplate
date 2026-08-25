@@ -3,10 +3,10 @@
  * @brief App ↔ EditorModule 통신용 함수 테이블 (IEditor 구현 세부사항 은닉)
  */
 #pragma once
-#include "RuntimeAPI/RuntimeHandles.h"
-
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+
+#include "RuntimeAPI/RuntimeHandles.h"
 
 namespace sw
 {
@@ -37,17 +37,17 @@ namespace sw
 		uint32 _abiVersion{ 0 }; /**< @brief 호스트가 API를 채우기 전에 예상하는 버전을 설정합니다. */
 		uint32 _structSize{ 0 }; /**< @brief 호스트가 API를 채우기 전에 EditorAPI 구조체의 크기를 설정합니다. */
 
-		EditorHandle ( *create )(){ nullptr };																					  /**< @brief 에디터 인스턴스를 생성합니다. */
-		void ( *destroy )( EditorHandle editor ){ nullptr };																	  /**< @brief 에디터 인스턴스를 파괴합니다. */
-		bool ( *initialize )( EditorHandle editor, WindowHandle window, RHIDeviceHandle rhiDevice ){ nullptr };					  /**< @brief 윈도우 및 RHI 디바이스로 에디터를 초기화합니다. */
-		void ( *shutdown )( EditorHandle editor ){ nullptr };																	  /**< @brief 에디터를 종료합니다. */
-		void ( *preRender )( EditorHandle editor, RHIDeviceHandle rhiDevice ){ nullptr };										  /**< @brief 렌더링 직전에 호출됩니다. */
-		void ( *render )( EditorHandle editor, const EditorUIContext* pContext ){ nullptr };									  /**< @brief 에디터 UI를 렌더링합니다. */
-		void ( *postPresent )( EditorHandle editor, RHIDeviceHandle rhiDevice ){ nullptr };										  /**< @brief 렌더링 결과가 출력된 후 호출됩니다 (멀티 뷰포트 처리용). */
+		EditorHandle ( *create )(){ nullptr };																						/**< @brief 에디터 인스턴스를 생성합니다. */
+		void ( *destroy )( EditorHandle editor ){ nullptr };																		/**< @brief 에디터 인스턴스를 파괴합니다. */
+		bool ( *initialize )( EditorHandle editor, WindowHandle window, RHIDeviceHandle rhiDevice ){ nullptr };						/**< @brief 윈도우 및 RHI 디바이스로 에디터를 초기화합니다. */
+		void ( *shutdown )( EditorHandle editor ){ nullptr };																		/**< @brief 에디터를 종료합니다. */
+		void ( *preRender )( EditorHandle editor, RHIDeviceHandle rhiDevice ){ nullptr };											/**< @brief 렌더링 직전에 호출됩니다. */
+		void ( *render )( EditorHandle editor, const EditorUIContext* pContext ){ nullptr };										/**< @brief 에디터 UI를 렌더링합니다. */
+		void ( *postPresent )( EditorHandle editor, RHIDeviceHandle rhiDevice ){ nullptr };											/**< @brief 렌더링 결과가 출력된 후 호출됩니다 (멀티 뷰포트 처리용). */
 		bool ( *processEvent )( EditorHandle editor, const NativeWindowEvent* pEvent, const EditorUIContext* pContext ){ nullptr }; /**< @brief 네이티브 이벤트를 에디터로 전달합니다. */
-		void* ( *registerTexture )( EditorHandle editor, TextureHandle texture ){ nullptr };									  /**< @brief 텍스처를 ImGui에 등록합니다. */
-		void ( *unregisterTexture )( EditorHandle editor, void* pTextureId ){ nullptr };										  /**< @brief 텍스처를 ImGui에서 해제합니다. */
-		void ( *bindService )( const EditorService* pService ){ nullptr };														  /**< @brief EditorService를 에디터 모듈에 주입하거나 nullptr로 해제합니다. */
+		void* ( *registerTexture )(EditorHandle editor, TextureHandle texture){ nullptr };											/**< @brief 텍스처를 ImGui에 등록합니다. */
+		void ( *unregisterTexture )( EditorHandle editor, void* pTextureId ){ nullptr };											/**< @brief 텍스처를 ImGui에서 해제합니다. */
+		void ( *bindService )( const EditorService* pService ){ nullptr };															/**< @brief EditorService를 에디터 모듈에 주입하거나 nullptr로 해제합니다. */
 	};
 
 	/** @brief EditorModule이 export하는 API 테이블 채우기 심볼 이름: fillEditorAPI */
@@ -56,7 +56,6 @@ namespace sw
 	class IWindow;
 	class IRHIDevice;
 } // namespace sw
-
 
 extern "C"
 {

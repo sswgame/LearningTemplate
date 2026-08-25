@@ -6,6 +6,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Utility/Resource/ResourceUtil.h"
+
 namespace sw
 {
 
@@ -463,11 +464,11 @@ namespace sw
 
 					DxcComPtr<IDxcResult> compileResult;
 					HRESULT				  hrCompile = compiler->Compile(
-						  &sourceBuffer,
-						  listArguments.data(),
-						  static_cast<uint32>( listArguments.size() ),
-						  dxcGet( includeHandler ),
-						  IID_PPV_ARGS( dxcAddressOf( compileResult ) ) );
+						&sourceBuffer,
+						listArguments.data(),
+						static_cast<uint32>( listArguments.size() ),
+						dxcGet( includeHandler ),
+						IID_PPV_ARGS( dxcAddressOf( compileResult ) ) );
 
 					if ( FAILED( hrCompile ) )
 						SW_LOG_ERROR( "[ShaderCompiler] DXC compiler->Compile failed with HRESULT: 0x%#", hrCompile );

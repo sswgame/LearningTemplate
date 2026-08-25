@@ -1,14 +1,15 @@
 #pragma once
+#include "Core/Common/Macros.h"
+#include "Core/Common/Types.h"
+#include "Core/Container/HandleTable.h"
+#include "Core/Container/unordered_map.h"
+#include "Core/Container/vector.h"
+
 #include "Engine/ECS/Entity.h"
 #include "Engine/Physics/AABB.h"
 #include "Engine/Physics/CCD.h"
 #include "Engine/Physics/CollisionLayers.h"
 
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
-#include "Core/Container/unordered_map.h"
-#include "Core/Container/vector.h"
-#include "Core/Container/HandleTable.h"
 #include <shared_mutex>
 
 namespace sw

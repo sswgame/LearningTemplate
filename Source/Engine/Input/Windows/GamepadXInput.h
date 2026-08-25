@@ -3,10 +3,10 @@
  * @brief Windows XInput 게임패드 얇은 래퍼 (비-Windows에서는 스텁).
  */
 #pragma once
-#include "Engine/Input/GamepadButtons.h"
-
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+
+#include "Engine/Input/GamepadButtons.h"
 
 namespace sw
 {

@@ -1,7 +1,8 @@
 #include "pch.h"
 
-#include "Engine/Graphics/RHI/GL/OpenGLRHIDevice.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHISwapChain.h"
+
+#include "Engine/Graphics/RHI/GL/OpenGLRHIDevice.h"
 
 namespace sw
 {

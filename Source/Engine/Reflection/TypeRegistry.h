@@ -12,7 +12,6 @@
 namespace sw
 {
 
-
 	/**
 	 * @brief 컴파일러 함수 시그니처에서 템플릿 인자 E 의 타입 이름만 뽑아냅니다.
 	 * @details `[E = Foo::Bar]`(clang/gcc)와 `typeFqn<enum Foo::Bar>`(MSVC) 두 형태를 모두 받습니다.
@@ -73,7 +72,6 @@ namespace sw
 		static const hashed_string kFqn = parseTypeFromSignature( sig );
 		return kFqn;
 	}
-
 
 	/**
 	 * @class TypeRegistry
@@ -268,7 +266,6 @@ namespace sw
 		EnumRegistrar( void ( *registerFunc )( TypeRegistry& ), EnumRegistrar*& pModuleHead );
 	};
 
-
 #ifndef SW_TYPE_MODULE_HEAD
 	#define SW_TYPE_MODULE_HEAD() ( ::sw::TypeRegistrar::getHead() )
 #endif
@@ -311,6 +308,5 @@ namespace sw
 	}
 
 	/** @brief 부모 FQN을 따라가며 targetFqn에서 파생됐는지 검사합니다. */
-
 
 } // namespace sw

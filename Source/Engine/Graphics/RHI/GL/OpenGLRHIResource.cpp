@@ -1,7 +1,8 @@
 #include "pch.h"
 
-#include "Engine/Graphics/RHI/GL/OpenGLRHIDevice.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHIResource.h"
+
+#include "Engine/Graphics/RHI/GL/OpenGLRHIDevice.h"
 #include "Engine/Graphics/Shader/ShaderCache.h"
 
 #include <glad/glad.h>
@@ -79,7 +80,6 @@ namespace sw
 		return pRec != nullptr ? pRec->texture : 0;
 	}
 
-
 	RHIPipelineStateHandle OpenGLRHIResource::createPipelineState( const RHIPipelineStateDesc& desc )
 	{
 		OpenGLRHIDevice::OpenGLPipelineStateRecord record{};
@@ -112,8 +112,8 @@ namespace sw
 		fillDefines( vsDesc );
 		ShaderCompileResult vsResult = ShaderCache::getOrCompile( vsDesc );
 
-		const bool bDepthOnly	   = ( desc._numRenderTargets == 0 && desc._bEnableDepthTest != 0 );
-		const bool bHasPixelShader = desc._pixelShaderPath.empty() == false && bDepthOnly == false;
+		const bool			bDepthOnly		= ( desc._numRenderTargets == 0 && desc._bEnableDepthTest != 0 );
+		const bool			bHasPixelShader = desc._pixelShaderPath.empty() == false && bDepthOnly == false;
 		ShaderCompileResult psResult{};
 		ShaderCompileDesc	psDesc{};
 		if ( bHasPixelShader )

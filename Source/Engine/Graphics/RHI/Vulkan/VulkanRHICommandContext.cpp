@@ -1,13 +1,13 @@
 #include "pch.h"
 
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHICommandContext.h"
+
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
 
 #include <vulkan/vulkan.h>
 
 namespace sw
 {
-
 
 	static void setVkClearColor( VkClearValue& dst, const float32* pClear )
 	{
@@ -16,7 +16,6 @@ namespace sw
 		dst.color.float32[2] = pClear[2];
 		dst.color.float32[3] = pClear[3];
 	}
-
 
 	static void mapStateVal( RHIBufferState state, VkAccessFlags& access, VkPipelineStageFlags& stage )
 	{
@@ -681,7 +680,7 @@ namespace sw
 		{
 			const VkDescriptorSet descSet = _pDevice->_listRegisteredDescriptorSets[materialDescriptorIndex];
 			vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pDevice->_pipelineLayout, 0, 1, &descSet, 0, nullptr );
-			uint32						 matIndex	 = materialDescriptorIndex;
+			uint32						 matIndex = materialDescriptorIndex;
 			constexpr VkShaderStageFlags kPushStages =
 				VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT;
 			vkCmdPushConstants( cmd, _pDevice->_pipelineLayout, kPushStages, 0, sizeof( uint32 ), &matIndex );

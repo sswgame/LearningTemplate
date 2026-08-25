@@ -1,10 +1,11 @@
 #include "pch.h"
 
 #include "Engine/Object/Component/2D/SpriteAnimatorComponent.h"
-#include "Engine/Object/Component/2D/SpriteComponent.h"
-#include "Engine/Object/Component/TagSystem.h"
 
 #include "Core/String/StringBuilder.h"
+
+#include "Engine/Object/Component/2D/SpriteComponent.h"
+#include "Engine/Object/Component/TagSystem.h"
 
 namespace sw
 {

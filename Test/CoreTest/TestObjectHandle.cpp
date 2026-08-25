@@ -3,7 +3,7 @@
 #include "Core/Container/HandleTable.h"
 #include "Core/Container/ObjectHandle.h"
 
-#include "TestFramework.h"
+#include "TestFramework/TestFramework.h"
 
 using namespace sw;
 

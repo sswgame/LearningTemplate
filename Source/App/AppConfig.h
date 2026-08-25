@@ -1,8 +1,8 @@
 #pragma once
+#include "Core/Container/string.h"
+
 #include "Engine/Config/IConfig.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-
-#include "Core/Container/string.h"
 
 namespace sw
 {

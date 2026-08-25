@@ -1,7 +1,8 @@
 #include "pch.h"
 
-#include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/Serialization/Format/CompressedBinarySerializer.h"
+
+#include "Engine/Serialization/Format/BinarySerializer.h"
 
 namespace sw
 {

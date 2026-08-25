@@ -53,6 +53,8 @@ add_library(sw_third_party_includes INTERFACE)
 add_library(sw_public_source_includes INTERFACE)
 target_include_directories(sw_public_source_includes INTERFACE
 	"${CMAKE_CURRENT_SOURCE_DIR}/Source"
+	"${CMAKE_CURRENT_SOURCE_DIR}/Source/Engine"
+	"${CMAKE_CURRENT_SOURCE_DIR}/Source/Core"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Resource"
 	"${CMAKE_BINARY_DIR}/generated"
 )
@@ -120,6 +122,7 @@ endif()
 # ------------------------------------------------------------------------------
 if(SW_ENABLE_TESTING AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Test")
 	include(CTest)
+	set(CTEST_TEST_TIMEOUT 60)
 	enable_testing()
 	add_subdirectory(Test)
 	if(TARGET CheckEngineLayers AND Python3_Interpreter_FOUND)
@@ -128,7 +131,7 @@ if(SW_ENABLE_TESTING AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Test")
 			COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/${SW_SCRIPT_LINT_CHECK_ENGINE_LAYERS}"
 				--root "${CMAKE_SOURCE_DIR}"
 		)
-		set_tests_properties(CheckEngineLayers PROPERTIES LABELS "lint")
+		set_tests_properties(CheckEngineLayers PROPERTIES LABELS "lint" TIMEOUT 15)
 	endif()
 
 	if(TARGET CheckIncludeOrder AND Python3_Interpreter_FOUND)
@@ -137,7 +140,7 @@ if(SW_ENABLE_TESTING AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Test")
 			COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/Scripts/lint/CheckIncludeOrder.py"
 				--root "${CMAKE_SOURCE_DIR}"
 		)
-		set_tests_properties(CheckIncludeOrder PROPERTIES LABELS "lint")
+		set_tests_properties(CheckIncludeOrder PROPERTIES LABELS "lint" TIMEOUT 15)
 	endif()
 	if(TARGET CheckSourceGlob AND Python3_Interpreter_FOUND)
 		add_test(
@@ -145,6 +148,6 @@ if(SW_ENABLE_TESTING AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Test")
 			COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/${SW_SCRIPT_LINT_CHECK_SOURCE_GLOB}"
 				--root "${CMAKE_SOURCE_DIR}" --build "${CMAKE_BINARY_DIR}" --active-game "${SW_ACTIVE_GAME}"
 		)
-		set_tests_properties(CheckSourceGlob PROPERTIES LABELS "lint")
+		set_tests_properties(CheckSourceGlob PROPERTIES LABELS "lint" TIMEOUT 15)
 	endif()
 endif()

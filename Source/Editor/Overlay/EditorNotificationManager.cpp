@@ -4,8 +4,9 @@
 
 #include "Editor/Common/EditorContext.h"
 
-#include <algorithm>
 #include <imgui.h>
+#include <algorithm>
+
 namespace sw
 {
 	namespace

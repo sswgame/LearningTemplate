@@ -1,7 +1,8 @@
 #include "pch.h"
 
-#include "Editor/Common/EditorContext.h"
 #include "Editor/Workspace/AssetEditorRegistry.h"
+
+#include "Editor/Common/EditorContext.h"
 #include "Editor/Workspace/EditorWorkspace.h"
 
 namespace sw

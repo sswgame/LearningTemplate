@@ -1,7 +1,8 @@
 #include "pch.h"
 
-#include "Engine/Graphics/RHI/DX11/D3D11RHIDevice.h"
 #include "Engine/Graphics/RHI/DX11/D3D11RHIResource.h"
+
+#include "Engine/Graphics/RHI/DX11/D3D11RHIDevice.h"
 #include "Engine/Graphics/Shader/ShaderCache.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
@@ -32,7 +33,6 @@ namespace sw
 			return DXGI_FORMAT_UNKNOWN;
 		}
 	} // namespace
-
 
 	RHIPipelineStateHandle D3D11RHIResource::createPipelineState( const RHIPipelineStateDesc& desc )
 	{
@@ -520,7 +520,6 @@ namespace sw
 		}
 		return index;
 	}
-
 
 	void D3D11RHIResource::unregisterBindlessUAV( RHIDescriptorIndex index ) { (void)index; }
 } // namespace sw

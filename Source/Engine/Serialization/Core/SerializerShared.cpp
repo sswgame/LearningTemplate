@@ -33,7 +33,6 @@ namespace sw
 
 	} // namespace
 
-
 	void serializeValueBinary( const void* pValuePtr, const hashed_string& typeName,
 							   vector<uint8>& listBuffer, const SerializeContext& ctx )
 	{
@@ -309,15 +308,15 @@ namespace sw
 		if ( dst.isValid() == false )
 			return;
 
-		const hashed_string resolved	= resolveHandlerTypeName( typeName, ctx );
-		const bool			bIsString	= ( resolved == hashed_string( "string" ) ||
-								resolved == hashed_string( "sw::string" ) ||
-								resolved == hashed_string( "hashed_string" ) ||
-								resolved == hashed_string( "sw::hashed_string" ) ||
-								engine::getTypeRegistry().isType( resolved, "string" ) ||
-								engine::getTypeRegistry().isType( resolved, "hashed_string" ) );
-		const bool			bIsBool		= ( resolved == hashed_string( "bool" ) || resolved == hashed_string( "sw::bool" ) );
-		const bool			bIsEnum		= ( engine::getTypeRegistry().findEnum( typeName ) != nullptr );
+		const hashed_string resolved  = resolveHandlerTypeName( typeName, ctx );
+		const bool			bIsString = ( resolved == hashed_string( "string" ) ||
+										  resolved == hashed_string( "sw::string" ) ||
+										  resolved == hashed_string( "hashed_string" ) ||
+										  resolved == hashed_string( "sw::hashed_string" ) ||
+										  engine::getTypeRegistry().isType( resolved, "string" ) ||
+										  engine::getTypeRegistry().isType( resolved, "hashed_string" ) );
+		const bool			bIsBool	  = ( resolved == hashed_string( "bool" ) || resolved == hashed_string( "sw::bool" ) );
+		const bool			bIsEnum	  = ( engine::getTypeRegistry().findEnum( typeName ) != nullptr );
 
 		if ( bIsString || bIsEnum )
 		{

@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Engine/Audio/XAudio2System.h"
+
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Utility/Task/TaskManager.h"
 
@@ -37,8 +38,8 @@ namespace sw
 		 */
 		struct ScopedThreadComAndMf
 		{
-			uint8 _bCoInit : 1;
-			uint8 _bMfInit : 1;
+			uint8 _bCoInit	: 1;
+			uint8 _bMfInit	: 1;
 			uint8 _reserved : 6;
 
 			ScopedThreadComAndMf()

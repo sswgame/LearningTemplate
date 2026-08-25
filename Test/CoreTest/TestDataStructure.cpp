@@ -1,6 +1,10 @@
 #include "pch.h"
 
+#include "Core/Concurrency/ConcurrentQueue.h"
+#include "Core/Concurrency/LockFreeObjectPool.h"
+#include "Core/Concurrency/LockFreeQueue.h"
 #include "Core/Container/DynamicBitset.h"
+#include "Core/Container/string.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -10,6 +14,7 @@
 /**
  * @brief [Core_DataStructure] DynamicBitset 기본
  */
+
 SW_TEST_CASE( Core_DataStructure, DynamicBitsetBasic )
 {
 	sw::DynamicBitset bitset( 100 );
@@ -162,8 +167,6 @@ SW_TEST_CASE( Core_DataStructure, DynamicBitsetFullCoverage )
 	SW_EXPECT_EQUAL( sw::string( "1100" ), bsEqual1.to_string() );
 }
 
-#include "Core/Concurrency/LockFreeQueue.h"
-
 // ------------------------------------------------------------------------------
 // 2) 큐 — LockFreeQueue·ConcurrentQueue
 // ------------------------------------------------------------------------------
@@ -225,8 +228,6 @@ SW_TEST_CASE( Core_DataStructure, LockFreeQueueBasicAndConcurrent )
 
 	SW_EXPECT_TRUE( queue.empty() );
 }
-
-#include "Core/Concurrency/ConcurrentQueue.h"
 
 /**
  * @brief [Core_DataStructure] ConcurrentQueue 멀티스레드
@@ -292,9 +293,6 @@ SW_TEST_CASE( Core_DataStructure, ConcurrentQueueMultiThread )
 	SW_EXPECT_TRUE( queue.empty() );
 	SW_EXPECT_EQUAL( kNumProducers * kItemsPerThread, totalSumReceived.load() );
 }
-
-#include "Core/Concurrency/LockFreeObjectPool.h"
-#include "Core/Container/string.h"
 
 namespace
 {

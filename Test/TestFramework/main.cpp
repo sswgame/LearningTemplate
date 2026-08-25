@@ -14,6 +14,8 @@
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Graphics/RHI/RHIBackendRegistry.h"
 #include "Engine/Input/InputManager.h"
+#include "Engine/Localization/LocalizationManager.h"
+#include "Engine/Localization/StringTable.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Utility/CommandStack.h"
 #include "Engine/Utility/Debug/DebugOverlayState.h"
@@ -21,8 +23,6 @@
 #include "Engine/Utility/Module/LiveReloadManager.h"
 #include "Engine/Utility/Resource/AssetStreamingQueue.h"
 #include "Engine/Utility/Resource/ResourceManager.h"
-#include "Engine/Localization/LocalizationManager.h"
-#include "Engine/Localization/StringTable.h"
 #include "Engine/Utility/Task/TaskManager.h"
 
 #include "RuntimeAPI/GameService.h"
@@ -37,28 +37,28 @@ int main( int32 argc, utf8* argv[] )
 	// ------------------------------------------------------------------------------
 	// 0) 코어 매니저 — 로거·프로파일러·커맨드라인·엔진 서비스
 	// ------------------------------------------------------------------------------
-	sw::unique_ptr<sw::Logger>				  logger			 = sw::make_unique<sw::Logger>();
-	sw::unique_ptr<sw::DeadlockDetector>	  deadlockDetector	 = sw::make_unique<sw::DeadlockDetector>();
-	sw::unique_ptr<sw::MemoryProfiler>		  memoryProfiler	 = sw::make_unique<sw::MemoryProfiler>();
-	sw::unique_ptr<sw::CommandLineManager>	  commandLineManager = sw::make_unique<sw::CommandLineManager>();
-	sw::unique_ptr<sw::TaskManager>			  taskManager		 = sw::make_unique<sw::TaskManager>();
-	sw::unique_ptr<sw::GlobalVariableManager> globalVarManager	 = sw::make_unique<sw::GlobalVariableManager>();
-	sw::unique_ptr<sw::TypeRegistry>		  typeRegistry		 = sw::make_unique<sw::TypeRegistry>();
+	sw::unique_ptr<sw::Logger>				  logger			  = sw::make_unique<sw::Logger>();
+	sw::unique_ptr<sw::DeadlockDetector>	  deadlockDetector	  = sw::make_unique<sw::DeadlockDetector>();
+	sw::unique_ptr<sw::MemoryProfiler>		  memoryProfiler	  = sw::make_unique<sw::MemoryProfiler>();
+	sw::unique_ptr<sw::CommandLineManager>	  commandLineManager  = sw::make_unique<sw::CommandLineManager>();
+	sw::unique_ptr<sw::TaskManager>			  taskManager		  = sw::make_unique<sw::TaskManager>();
+	sw::unique_ptr<sw::GlobalVariableManager> globalVarManager	  = sw::make_unique<sw::GlobalVariableManager>();
+	sw::unique_ptr<sw::TypeRegistry>		  typeRegistry		  = sw::make_unique<sw::TypeRegistry>();
 	sw::unique_ptr<sw::LocalizationManager>	  localizationManager = sw::make_unique<sw::LocalizationManager>();
-	sw::unique_ptr<sw::LiveReloadManager>	  liveReloadManager	 = sw::make_unique<sw::LiveReloadManager>();
-	sw::unique_ptr<sw::ReloadFileManager>	  reloadFileManager	 = sw::make_unique<sw::ReloadFileManager>();
-	sw::unique_ptr<sw::SceneManager>		  sceneManager		 = sw::make_unique<sw::SceneManager>();
-	sw::unique_ptr<sw::InputManager>		  inputManager		 = sw::make_unique<sw::InputManager>();
-	sw::unique_ptr<sw::CommandStack>		  commandStack		 = sw::make_unique<sw::CommandStack>();
-	sw::unique_ptr<sw::RHIBackendRegistry>	  rhiRegistry		 = sw::make_unique<sw::RHIBackendRegistry>();
-	sw::unique_ptr<sw::IAudioSystem>		  audioSystem		 = sw::IAudioSystem::create();
-	sw::unique_ptr<sw::EventDispatcher>		  eventDispatcher	 = sw::make_unique<sw::EventDispatcher>();
-	sw::unique_ptr<sw::ResourceManager>		  resourceManager	 = sw::make_unique<sw::ResourceManager>();
-	sw::unique_ptr<sw::EngineData>			  engineData		 = sw::make_unique<sw::EngineData>();
+	sw::unique_ptr<sw::LiveReloadManager>	  liveReloadManager	  = sw::make_unique<sw::LiveReloadManager>();
+	sw::unique_ptr<sw::ReloadFileManager>	  reloadFileManager	  = sw::make_unique<sw::ReloadFileManager>();
+	sw::unique_ptr<sw::SceneManager>		  sceneManager		  = sw::make_unique<sw::SceneManager>();
+	sw::unique_ptr<sw::InputManager>		  inputManager		  = sw::make_unique<sw::InputManager>();
+	sw::unique_ptr<sw::CommandStack>		  commandStack		  = sw::make_unique<sw::CommandStack>();
+	sw::unique_ptr<sw::RHIBackendRegistry>	  rhiRegistry		  = sw::make_unique<sw::RHIBackendRegistry>();
+	sw::unique_ptr<sw::IAudioSystem>		  audioSystem		  = sw::IAudioSystem::create();
+	sw::unique_ptr<sw::EventDispatcher>		  eventDispatcher	  = sw::make_unique<sw::EventDispatcher>();
+	sw::unique_ptr<sw::ResourceManager>		  resourceManager	  = sw::make_unique<sw::ResourceManager>();
+	sw::unique_ptr<sw::EngineData>			  engineData		  = sw::make_unique<sw::EngineData>();
 	sw::unique_ptr<sw::AssetStreamingQueue>	  assetStreamingQueue = sw::make_unique<sw::AssetStreamingQueue>();
-	sw::unique_ptr<sw::DebugOverlayState>	  debugOverlayState	 = sw::make_unique<sw::DebugOverlayState>();
-	sw::unique_ptr<sw::DebugDrawQueue>		  debugDrawQueue	 = sw::make_unique<sw::DebugDrawQueue>();
-	sw::unique_ptr<sw::FrameDoubleBuffer>	  frameDoubleBuffer	 = sw::make_unique<sw::FrameDoubleBuffer>();
+	sw::unique_ptr<sw::DebugOverlayState>	  debugOverlayState	  = sw::make_unique<sw::DebugOverlayState>();
+	sw::unique_ptr<sw::DebugDrawQueue>		  debugDrawQueue	  = sw::make_unique<sw::DebugDrawQueue>();
+	sw::unique_ptr<sw::FrameDoubleBuffer>	  frameDoubleBuffer	  = sw::make_unique<sw::FrameDoubleBuffer>();
 
 	logger->initialize();
 	deadlockDetector->initialize();
@@ -95,7 +95,7 @@ int main( int32 argc, utf8* argv[] )
 	sw::EngineServices services{};
 	services._pCommandLineManager	 = commandLineManager.get();
 	services._pGlobalVariableManager = globalVarManager.get();
-	services._pLocalizationManager   = localizationManager.get();
+	services._pLocalizationManager	 = localizationManager.get();
 	services._pTaskManager			 = taskManager.get();
 	services._pTypeRegistry			 = typeRegistry.get();
 	services._pCommandStack			 = commandStack.get();

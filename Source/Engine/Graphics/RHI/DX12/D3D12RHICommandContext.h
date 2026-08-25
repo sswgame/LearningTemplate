@@ -1,5 +1,6 @@
 #pragma once
 #include "Core/Common/Types.h"
+
 #include "Engine/Common/EnginePlatformHeaders.h"
 #include "Engine/Graphics/RHI/IRHICommandContext.h"
 

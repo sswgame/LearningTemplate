@@ -1,12 +1,21 @@
 #include "pch.h"
 
+#include "Engine/EngineLoop.h"
+
+#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/Concurrency/DeadlockDetector.h"
+#include "Core/Event/EventDispatcher.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Math/MatrixMath.h"
+#include "Core/Memory/FrameArenaAllocator.h"
+#include "Core/Memory/MemoryProfiler.h"
+
 #include "Engine/Audio/IAudioSystem.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"
-#include "Engine/Config/GameConfig.h"
 #include "Engine/Config/EngineData.h"
-#include "Engine/EngineLoop.h"
+#include "Engine/Config/GameConfig.h"
 #include "Engine/Game/GameState.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Graphics/Material/Material.h"
@@ -22,6 +31,8 @@
 #include "Engine/Graphics/Shader/ShaderCache.h"
 #include "Engine/Input/ActionMap.h"
 #include "Engine/Input/InputManager.h"
+#include "Engine/Localization/LocalizationManager.h"
+#include "Engine/Localization/StringTable.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Utility/CommandStack.h"
 #include "Engine/Utility/Debug/DebugOverlayState.h"
@@ -29,23 +40,13 @@
 #include "Engine/Utility/Module/LiveReloadManager.h"
 #include "Engine/Utility/Resource/AssetStreamingQueue.h"
 #include "Engine/Utility/Resource/ResourceManager.h"
-#include "Engine/Localization/LocalizationManager.h"
-#include "Engine/Localization/StringTable.h"
 #include "Engine/Utility/Task/TaskManager.h"
 #include "Engine/Window/IWindow.h"
 
-#include "Core/CommandLine/CommandLineManager.h"
-#include "Core/Concurrency/DeadlockDetector.h"
-#include "Core/Event/EventDispatcher.h"
-#include "Core/GlobalVariable/GlobalVariableManager.h"
-#include "Core/Math/MatrixMath.h"
-#include "Core/Memory/FrameArenaAllocator.h"
-#include "Core/Memory/MemoryProfiler.h"
-
 #include "RuntimeAPI/PluginAPI.h"
 
-#include <sw/config/ConfigConstants.h>
-#include <sw/config/ShippingHostDefaults.h>
+#include "sw/config/ConfigConstants.h"
+#include "sw/config/ShippingHostDefaults.h"
 
 namespace sw
 {
@@ -155,7 +156,7 @@ namespace sw
 			EngineServices services{};
 			services._pCommandLineManager	 = _commandLineManager.get();
 			services._pGlobalVariableManager = _globalVariableManager.get();
-			services._pLocalizationManager   = _localizationManager.get();
+			services._pLocalizationManager	 = _localizationManager.get();
 			services._pTaskManager			 = _taskManager.get();
 			services._pTypeRegistry			 = _typeRegistry.get();
 			services._pSceneManager			 = _sceneManager.get();
@@ -193,7 +194,6 @@ namespace sw
 			if ( _audioSystem->initialize() == false )
 				return false;
 		}
-
 
 		BLOCK( "엔진 기본 설정 로드 및 RHI 백엔드 선정 & 초기화" )
 		{

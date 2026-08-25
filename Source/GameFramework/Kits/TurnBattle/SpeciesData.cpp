@@ -32,7 +32,6 @@ namespace sw
 			species().push_back( { "starter_a", "Leaf Pup", 45, 11, 0, 1 } );
 		}
 
-
 	} // namespace
 
 	bool SpeciesCatalog::loadFromResource( string_view assetRelativePath )

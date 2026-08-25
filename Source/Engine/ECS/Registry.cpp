@@ -1,7 +1,8 @@
 #include "pch.h"
 
-#include "Engine/Common/EngineServices.h"
 #include "Engine/ECS/Registry.h"
+
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Utility/Task/TaskManager.h"
 
@@ -325,7 +326,7 @@ namespace sw
 		// exchange 로 읽고 지워야 웨이브를 만드는 동안 들어온 변경을 다음 프레임에 놓치지 않습니다.
 		if ( _bIsTickWavesDirty.exchange( false, std::memory_order_acq_rel ) )
 		{
-			vector<Component*>		   listAllComponents;
+			vector<Component*> listAllComponents;
 
 			{
 				std::shared_lock<std::shared_mutex> readLock{ _mapPoolsLock };
@@ -344,7 +345,8 @@ namespace sw
 				array<vector<Component*>, 4> groupList;
 				for ( Component* pComp : listAllComponents )
 				{
-					if ( pComp == nullptr ) continue;
+					if ( pComp == nullptr )
+						continue;
 					const uint8 groupIndex = static_cast<uint8>( pComp->getTickGroup() );
 					if ( groupIndex < groupList.size() )
 						groupList[groupIndex].push_back( pComp );
@@ -353,7 +355,8 @@ namespace sw
 				_listCachedTickWaves.clear();
 				for ( const vector<Component*>& wave : groupList )
 				{
-					if ( wave.empty() ) continue;
+					if ( wave.empty() )
+						continue;
 					vector<ComponentHandle> listTargets;
 					listTargets.reserve( wave.size() );
 					for ( Component* pComp : wave )
@@ -378,7 +381,6 @@ namespace sw
 			dispatchWaveVal( this, deltaTime, wave );
 		}
 	}
-
 
 	/**
 	 * @brief 동적 로드된 DLL 모듈의 컴포넌트 팩토리 체인 헤드를 전역 사전에 등록합니다.
@@ -588,7 +590,8 @@ namespace sw
 			{
 				auto& sig	= it->second;
 				auto  sigIt = std::lower_bound( sig.begin(), sig.end(), matchedTypeId,
-					[]( const EntitySignatureEntry& entry, uint32 val ) { return entry._typeId < val; } );
+												[]( const EntitySignatureEntry& entry, uint32 val )
+				{ return entry._typeId < val; } );
 				if ( sigIt != sig.end() && sigIt->_typeId == matchedTypeId )
 					sig.erase( sigIt );
 			}

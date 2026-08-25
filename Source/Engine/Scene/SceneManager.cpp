@@ -1,17 +1,18 @@
 #include "pch.h"
 
+#include "Engine/Scene/SceneManager.h"
+
+#include "Core/Concurrency/mutex.h"
+
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Scene/SceneDescriptor.h"
-#include "Engine/Scene/SceneManager.h"
 #include "Engine/Utility/CommandStack.h"
 #include "Engine/Utility/Resource/ResourceManager.h"
 #include "Engine/Utility/Task/TaskManager.h"
-
-#include "Core/Concurrency/mutex.h"
 
 namespace sw
 {

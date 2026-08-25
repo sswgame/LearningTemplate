@@ -13,18 +13,36 @@ else()
 	set(SWGAME_LIB_TYPE MODULE)
 endif()
 
-sw_addLibrary(SWGame
-	TYPE ${SWGAME_LIB_TYPE}
-	LINK_LIBRARIES
+file(GLOB_RECURSE GAME_SOURCES CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp")
+
+add_library(SWGame ${SWGAME_LIB_TYPE} ${GAME_SOURCES})
+
+target_include_directories(SWGame PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
+target_link_libraries(SWGame
+	PRIVATE
 		Engine
 		RuntimeAPI
 		GameFramework
 		GF_Overworld
 		GF_TurnBattle
 		GF_ActionCombat
-	LOG_TAG Game
-	PCH
+		sw_global_options
 )
+if(sw_flag_libraries)
+	target_link_libraries(SWGame PRIVATE ${sw_flag_libraries})
+endif()
+
+target_compile_definitions(SWGame
+	PRIVATE
+		"SW_LOG_TAG=\"Game\""
+		SW_GAME_INTERNAL
+)
+if(SWGAME_LIB_TYPE STREQUAL "MODULE")
+	target_compile_definitions(SWGame PRIVATE SW_MODULE_EXPORTS)
+	sw_setModuleBinOutput(SWGame)
+endif()
+
+target_precompile_headers(SWGame PRIVATE "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
 
 if(COMMAND sw_setUnityBuild)
 	sw_setUnityBuild(SWGame BATCH_SIZE 8)
@@ -52,5 +70,3 @@ sw_addReflectionStep(SWGame
 		${DEMO_GAME_HEADERS}
 	INCLUDES "${CMAKE_SOURCE_DIR}/Source"
 )
-
-target_compile_definitions(SWGame PRIVATE SW_GAME_INTERNAL)

@@ -7,6 +7,7 @@
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
+
 namespace sw
 {
 	// ------------------------------------------------------------------------------

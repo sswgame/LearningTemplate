@@ -1,9 +1,10 @@
 #include "pch.h"
 
+#include "Editor/Tools/SpriteClipTool.h"
+
 #include "Editor/Config/EditorConfig.h"
 #include "Editor/Config/EditorData.h"
 #include "Editor/EditorUtil.h"
-#include "Editor/Tools/SpriteClipTool.h"
 
 #include "Engine/Serialization/Format/JsonSerializer.h"
 
@@ -75,7 +76,6 @@ namespace sw
 			StringUtil::strncpy( _arrAtlasPath, atlas.c_str(), sizeof( _arrAtlasPath ) - 1 );
 		_listFrames.push_back( Frame{} );
 	}
-
 
 	void SpriteClipTool::draw( const EditorUIContext& /*ctx*/ )
 	{

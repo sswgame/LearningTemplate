@@ -13,6 +13,7 @@
 
 #include <atomic>
 #include <thread>
+
 using namespace sw;
 
 // ------------------------------------------------------------------------------
@@ -238,17 +239,17 @@ SW_TEST_CASE( ECS, ConcurrentReadWithCommandBufferDestroy )
 	std::atomic<bool>  stop{ false };
 	std::atomic<int32> reads{ 0 };
 	std::thread		   reader( [&]()
-	   {
-		   started.store( true, std::memory_order_release );
-		   while ( stop.load( std::memory_order_acquire ) == false )
-		   {
-			   for ( size_t entityIndex = 1; entityIndex < constEnts.size(); entityIndex += 2 )
-			   {
-				   if ( reg.has<Position>( constEnts[entityIndex] ) )
-					   reads.fetch_add( 1, std::memory_order_relaxed );
-			   }
-		   }
-	   } );
+	{
+		started.store( true, std::memory_order_release );
+		while ( stop.load( std::memory_order_acquire ) == false )
+		{
+			for ( size_t entityIndex = 1; entityIndex < constEnts.size(); entityIndex += 2 )
+			{
+				if ( reg.has<Position>( constEnts[entityIndex] ) )
+					reads.fetch_add( 1, std::memory_order_relaxed );
+			}
+		}
+	} );
 
 	while ( started.load( std::memory_order_acquire ) == false )
 		std::this_thread::yield();
@@ -352,10 +353,10 @@ SW_TEST_CASE( ECS, WithComponentHelper )
 	const Registry& constReg = reg;
 	bool			bConstCalled{ false };
 	bool			bConstFound = constReg.withComponentConst<Position>( e, [&]( const Position& pos )
-			   {
-		   bConstCalled = true;
-		   SW_EXPECT_EQUAL( 99.0f, pos.x );
-	   } );
+	{
+		bConstCalled = true;
+		SW_EXPECT_EQUAL( 99.0f, pos.x );
+	} );
 
 	SW_EXPECT_TRUE( bConstFound );
 	SW_EXPECT_TRUE( bConstCalled );
@@ -631,9 +632,9 @@ SW_TEST_CASE( ECS, BVHTree3D_AABBRaySphereAndFrustumQueries )
 	// 1) AABB Query
 	vector<Entity> listAabb;
 	AABB		   testBox{
-				  {-1.0f, -1.0f,  0.0f},
-				  { 6.0f,  5.0f, 15.0f}
-	};
+		{-1.0f, -1.0f,	0.0f},
+		{ 6.0f,	5.0f, 15.0f}
+	  };
 	bvh.queryAABB( testBox, listAabb );
 	SW_EXPECT_EQUAL( 2u, static_cast<uint32>( listAabb.size() ) );
 

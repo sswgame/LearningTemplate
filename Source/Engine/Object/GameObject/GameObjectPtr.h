@@ -2,9 +2,10 @@
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/SpinLock.h"
 #include "Core/String/hashed_string.h"
+
+#include "Engine/ECS/Entity.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/ECS/Entity.h"
 
 namespace sw
 {
@@ -39,19 +40,29 @@ namespace sw
 		GameObjectPtr& operator=( GameObjectPtr&& other ) noexcept;
 
 		/** @brief 캐싱된 빠른 메모리 주소를 반환합니다. */
-		GameObject* get() const { resolveLazy(); return _pCachedPtr; }
+		GameObject* get() const
+		{
+			resolveLazy();
+			return _pCachedPtr;
+		}
 
-		bool isValid() const { resolveLazy(); return _pCachedPtr != nullptr; }
+		bool isValid() const
+		{
+			resolveLazy();
+			return _pCachedPtr != nullptr;
+		}
 
-		GameObject* operator->() const { resolveLazy(); return _pCachedPtr; }
-		explicit	operator bool() const { return isValid(); }
+		GameObject* operator->() const
+		{
+			resolveLazy();
+			return _pCachedPtr;
+		}
+		explicit operator bool() const { return isValid(); }
 
 		bool operator==( const GameObjectPtr& other ) const { return _targetName == other._targetName; }
 		bool operator!=( const GameObjectPtr& other ) const { return _targetName != other._targetName; }
 
 		hashed_string getTargetName() const { return _targetName; }
-
-
 
 	private:
 		void resolveLazy() const;
@@ -60,8 +71,8 @@ namespace sw
 		PROPERTY()
 		hashed_string _targetName;
 
-		mutable GameObject* _pCachedPtr{ nullptr };
-		mutable sw::Entity  _cachedEntity{ sw::kNullEntity };
+		mutable GameObject*			   _pCachedPtr{ nullptr };
+		mutable sw::Entity			   _cachedEntity{ sw::kNullEntity };
 		mutable sw::GameObjectManager* _pManager{ nullptr };
 	};
 

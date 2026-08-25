@@ -1,6 +1,7 @@
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Memory/FrameArenaAllocator.h"
+
 #include "RuntimeAPI/PluginAPI.h"
 
 namespace sw

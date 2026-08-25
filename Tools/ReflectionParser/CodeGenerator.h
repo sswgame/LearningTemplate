@@ -3,10 +3,10 @@
  * @brief 파싱된 타입/열거형 메타데이터로부터 .gen.cpp 생성 (골격=.tpl, 분기=CodeEmit)
  */
 #pragma once
-#include "CodeEmit.h"
-#include "ParsedReflection.h"
-
 #include "Engine/EngineMinimal.h"
+
+#include "ReflectionParser/CodeEmit.h"
+#include "ReflectionParser/ParsedReflection.h"
 
 namespace sw
 {
@@ -82,8 +82,8 @@ namespace sw
 									const unordered_map<string, string>& vars );
 
 	private:
-		const vector<ParsedTypeInfo>& _types;
-		const vector<ParsedEnumInfo>& _enums;
+		const vector<ParsedTypeInfo>& _listTypes;
+		const vector<ParsedEnumInfo>& _listEnums;
 		string						  _sourceFilePath;
 		string						  _outputDir;
 		string						  _outputFilePath;

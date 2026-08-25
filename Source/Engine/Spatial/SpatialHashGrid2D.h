@@ -1,11 +1,11 @@
 #pragma once
-#include "Engine/ECS/Entity.h"
-#include "Engine/Spatial/SpatialTree.h"
-
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+
+#include "Engine/ECS/Entity.h"
+#include "Engine/Spatial/SpatialTree.h"
 
 namespace sw
 {

@@ -43,7 +43,6 @@ namespace sw
 			return box;
 		}
 
-
 	} // namespace
 
 	ActionRoom::ActionRoom()
@@ -65,7 +64,6 @@ namespace sw
 		_layers.setLayerCollision( kLayerEnemy, kLayerEnemy, false );
 		_layers.setLayerCollision( kLayerProjectile, kLayerEnemy, false );
 	}
-
 
 	void ActionRoom::clear()
 	{

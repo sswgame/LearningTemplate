@@ -1,7 +1,8 @@
 #include "pch.h"
 
-#include "Core/Common/PlatformOsHeaders.h"
 #include "Core/File/Windows/WindowsFileDialog.h"
+
+#include "Core/Common/PlatformOsHeaders.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
 

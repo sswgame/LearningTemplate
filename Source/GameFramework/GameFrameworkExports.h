@@ -10,6 +10,7 @@
 //    Windows: dllexport/dllimport, 그 외: default visibility
 //    STATIC(Shipping)에서는 빈 매크로
 // ------------------------------------------------------------------------------
+
 #if defined( SW_PLATFORM_WINDOWS )
 	#if defined( SW_GF_EXPORTS )
 		#define SW_GF_API __declspec( dllexport )

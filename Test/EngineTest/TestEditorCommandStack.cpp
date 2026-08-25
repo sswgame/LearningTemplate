@@ -1,8 +1,7 @@
 #include "pch.h"
 
-#include "Engine/Utility/CommandStack.h"
-
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Utility/CommandStack.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -11,7 +10,7 @@ using namespace sw;
 SW_TEST_CASE( CommandStack, PushUndoRedoAndBranch )
 {
 	CommandStack stack;
-	int32			   value{ 0 };
+	int32		 value{ 0 };
 
 	CommandStack::Command inc;
 	inc._label = "inc";
@@ -112,8 +111,8 @@ SW_TEST_CASE( CommandStack, GlobalSingletonAndMultiStepChain )
 SW_TEST_CASE( CommandStack, CompoundTransaction )
 {
 	CommandStack stack;
-	int32			   valA{ 0 };
-	int32			   valB{ 10 };
+	int32		 valA{ 0 };
+	int32		 valB{ 10 };
 
 	stack.beginTransaction( "MultiEdit" );
 	SW_EXPECT_TRUE( stack.isInsideTransaction() );
@@ -192,7 +191,7 @@ SW_TEST_CASE( CommandStack, CompoundTransaction )
 SW_TEST_CASE( CommandStack, PushCoalesce )
 {
 	CommandStack stack;
-	float32			   sliderValue{ 0.0f };
+	float32		 sliderValue{ 0.0f };
 
 	// 슬라이더를 0.0 -> 1.0 -> 2.5 -> 5.0 으로 드래그했을 때
 	const float32 initialVal			= 0.0f;

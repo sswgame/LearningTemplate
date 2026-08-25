@@ -33,9 +33,10 @@ def main() -> int:
 
     # 1. CheckIncludeOrder 실행 (중복 제거 및 순서 자동 수정)
     print("\n[1/2] Include 순서 및 중복 검사 실행 중...")
+    sourceHeaderMap, testHeaderMap, toolsHeaderMap = CheckIncludeOrder.buildHeaderLookupMap(projectRoot)
     allViolations = []
     for filePath in modifiedFiles:
-        violations = CheckIncludeOrder.processFile(filePath, projectRoot)
+        violations = CheckIncludeOrder.processFile(filePath, projectRoot, sourceHeaderMap, testHeaderMap, toolsHeaderMap)
         if violations:
             allViolations.extend(violations)
 

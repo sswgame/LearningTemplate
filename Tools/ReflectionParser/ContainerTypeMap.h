@@ -9,6 +9,7 @@
 #include "Core/Container/vector.h"
 
 #include "Engine/Reflection/ReflectionContainers.h"
+
 namespace sw
 {
 	// ------------------------------------------------------------------------------

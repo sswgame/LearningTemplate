@@ -1,12 +1,16 @@
 #include "pch.h"
 
 #include "Core/Concurrency/mutex.h"
+#include "Core/Math/MathUtil.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Object/Component/ComponentPtr.h"
 #include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/Component/TagSystem.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectManagerInternal.h"
 #include "Engine/Object/GameObject/GameObjectPtr.h"
+#include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 
@@ -15,6 +19,7 @@
 // ------------------------------------------------------------------------------
 // 0) 헬퍼 — 모의 컴포넌트 TypeInfo·팩토리
 // ------------------------------------------------------------------------------
+
 namespace sw
 {
 	namespace
@@ -284,9 +289,6 @@ SW_TEST_CASE( GameObjectTest, ReflectionSupport )
 	SW_EXPECT_TRUE( meshComp->getComponentId() != 0 );
 }
 
-#include "Core/Math/MathUtil.h"
-#include "Engine/Object/Component/TagSystem.h"
-
 using namespace sw;
 
 // ------------------------------------------------------------------------------
@@ -481,9 +483,6 @@ SW_TEST_CASE( MathTest, Double3VectorOperations )
 	float3 convertedF3 = d3FromF3.toFloat3();
 	SW_EXPECT_NEAR_EQUAL( 10.0f, convertedF3._x, 1e-4f );
 }
-
-#include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/ObjectStateSerializer.h"
 
 // ------------------------------------------------------------------------------
 // 6) GameObjectManagerTest — 생성·검색·지연 파괴

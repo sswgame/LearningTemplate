@@ -1,10 +1,12 @@
+#include "pch.h"
 
-#include "EmitTemplateStore.h"
-#include "ParserContext.h"
-#include "ParserDefines.h"
+#include "ReflectionParser/EmitTemplateStore.h"
 
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+
+#include "ReflectionParser/ParserContext.h"
+#include "ReflectionParser/ParserDefines.h"
 
 namespace sw
 {
@@ -39,7 +41,7 @@ namespace sw
 
 	void EmitTemplateStore::clear()
 	{
-		_templates.clear();
+		_mapTemplates.clear();
 		_bLoaded = false;
 	}
 
@@ -67,7 +69,7 @@ namespace sw
 				SW_LOG_WARNING( "[EmitTemplate] Empty or unreadable: %#", path );
 				continue;
 			}
-			_templates.insert_or_assign( stem, text );
+			_mapTemplates.insert_or_assign( stem, text );
 			++count;
 		}
 
@@ -84,14 +86,14 @@ namespace sw
 
 	bool EmitTemplateStore::has( const std::string_view name ) const
 	{
-		return _templates.find( string( name ) ) != _templates.end();
+		return _mapTemplates.find( string( name ) ) != _mapTemplates.end();
 	}
 
 	string EmitTemplateStore::render( const std::string_view			   name,
 									  const unordered_map<string, string>& vars ) const
 	{
-		const auto it = _templates.find( string( name ) );
-		if ( it == _templates.end() )
+		const auto it = _mapTemplates.find( string( name ) );
+		if ( it == _mapTemplates.end() )
 		{
 			SW_LOG_WARNING( "[EmitTemplate] Missing template: %#", name );
 			return {};

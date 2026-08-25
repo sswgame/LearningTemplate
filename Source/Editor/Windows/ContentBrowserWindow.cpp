@@ -1,10 +1,11 @@
 #include "pch.h"
 
 #include "Editor/Windows/ContentBrowserWindow.h"
-#include "Editor/Workspace/AssetEditorRegistry.h"
-#include "Editor/Workspace/EditorWorkspace.h"
 
 #include "Core/Concurrency/mutex.h"
+
+#include "Editor/Workspace/AssetEditorRegistry.h"
+#include "Editor/Workspace/EditorWorkspace.h"
 
 #include "Engine/Utility/Resource/AssetDatabase.h"
 #include "Engine/Utility/Resource/ResourceManager.h"
@@ -68,7 +69,6 @@ namespace sw
 		, _reservedFlags{ 0 }
 	{
 	}
-
 
 	void ContentBrowserWindow::draw( const EditorUIContext& /*ctx*/ )
 	{

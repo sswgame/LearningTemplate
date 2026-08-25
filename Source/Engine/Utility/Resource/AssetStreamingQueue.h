@@ -1,6 +1,6 @@
 #pragma once
-
 #include "Core/Delegate/Delegate.h"
+
 #include "Engine/EngineMinimal.h"
 
 namespace sw

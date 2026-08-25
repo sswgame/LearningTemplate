@@ -10,7 +10,6 @@
 namespace sw
 {
 
-
 	namespace
 	{
 		void mulMat4( const float32 a[16], const float32 b[16], float32 out[16] )
@@ -25,7 +24,6 @@ namespace sw
 		}
 
 	} // namespace
-
 
 	void FrameRenderer::updatePassConstants()
 	{
@@ -157,9 +155,9 @@ namespace sw
 			upY = 0.0f;
 			upZ = 1.0f;
 		}
-		float32 sx = upY * lz - upZ * ly;
-		float32 sy = upZ * lx - upX * lz;
-		float32 sz = upX * ly - upY * lx;
+		float32		  sx = upY * lz - upZ * ly;
+		float32		  sy = upZ * lx - upX * lz;
+		float32		  sz = upX * ly - upY * lx;
 		const float32 sl = MathUtil::sqrt( sx * sx + sy * sy + sz * sz );
 		if ( sl > 1e-4f )
 		{

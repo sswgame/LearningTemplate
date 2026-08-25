@@ -1,5 +1,6 @@
+#include "pch.h"
 
-#include "AnnotationMeta.h"
+#include "ReflectionParser/AnnotationMeta.h"
 
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
@@ -16,8 +17,8 @@ namespace sw
 
 	void AnnotationMeta::clear()
 	{
-		_bare.clear();
-		_keys.clear();
+		_mapBare.clear();
+		_mapKeys.clear();
 		_bLoaded = false;
 	}
 
@@ -26,9 +27,9 @@ namespace sw
 		if ( alias.empty() )
 			return;
 		if ( binding._kind == AnnotationBinding::Kind::Flag || binding._kind == AnnotationBinding::Kind::NetRole )
-			_bare[scope].insert_or_assign( alias, binding );
+			_mapBare[scope].insert_or_assign( alias, binding );
 		else
-			_keys[scope].insert_or_assign( alias, binding );
+			_mapKeys[scope].insert_or_assign( alias, binding );
 	}
 
 	bool AnnotationMeta::loadFile( const std::string_view absPath )
@@ -100,8 +101,8 @@ namespace sw
 	const AnnotationBinding* AnnotationMeta::findBare( const std::string_view scope,
 													   const std::string_view token ) const
 	{
-		const auto scopeIt = _bare.find( string( scope ) );
-		if ( scopeIt == _bare.end() )
+		const auto scopeIt = _mapBare.find( string( scope ) );
+		if ( scopeIt == _mapBare.end() )
 			return nullptr;
 		const auto it = scopeIt->second.find( string( token ) );
 		return ( it != scopeIt->second.end() ) ? &it->second : nullptr;
@@ -110,8 +111,8 @@ namespace sw
 	const AnnotationBinding* AnnotationMeta::findKey( const std::string_view scope,
 													  const std::string_view key ) const
 	{
-		const auto scopeIt = _keys.find( string( scope ) );
-		if ( scopeIt == _keys.end() )
+		const auto scopeIt = _mapKeys.find( string( scope ) );
+		if ( scopeIt == _mapKeys.end() )
 			return nullptr;
 		const auto it = scopeIt->second.find( string( key ) );
 		return ( it != scopeIt->second.end() ) ? &it->second : nullptr;
