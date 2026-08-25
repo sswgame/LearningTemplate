@@ -1,4 +1,6 @@
-# ReflectionParser (리플렉션 코드 생성기)
+# ReflectionParser (리플렉션 파서)
+
+> **[🏠 위키 홈으로 돌아가기](../../../README.md)** | **[📖 서브시스템 목록](../../../docs/02_EngineSubsystems.md)**
 
 엔진/게임 헤더의 `REFLECT`, `PROPERTY`, `FUNCTION`, `ENUM` 등을 **libclang으로 파싱**해  
 런타임 메타데이터 소스(`*.gen.cpp` / `*.gen.h`)를 만드는 **호스트 콘솔 도구**입니다.
@@ -233,6 +235,23 @@ LLVM이 없으면 파서 타겟이 스킵될 수 있습니다.
 - **Core** STATIC만 링크 (Engine.dll 순환 방지)
 
 ARCHITECTURE의 “ReflectionParser는 Core만 링크” 규칙과 같습니다.
+
+---
+
+## 강력한 주석 처리 (Robust Comment Handling)
+
+`ReflectionParser`는 매크로 스캔 과정에서 **C/C++ 스타일의 주석(`//`, `/* */`) 내부에 작성된 문자열을 완벽하게 무시**합니다 (`rfindOutsideComments` 알고리즘).
+따라서 다음과 같이 주석 안에 예제 코드를 작성해도 파서가 이를 실제 매크로로 오인식하지 않습니다.
+
+```cpp
+/**
+ * @brief 예제: REFLECT_SCRIPT() 나 PROPERTY() 를 주석에 적어도
+ *        ReflectionParser는 이를 투명하게 무시합니다!
+ */
+REFLECT()
+struct MyComponent : public Component
+```
+주석 내부의 텍스트가 파싱을 방해하지 않으므로, 개발자는 런타임 버그나 빌드 실패 걱정 없이 자유롭게 문서화를 진행할 수 있습니다.
 
 ---
 

@@ -1,5 +1,8 @@
 # Architecture (엔진 아키텍처 및 시스템 가이드)
 
+> **[🏠 위키 홈으로 돌아가기](README.md)** | **[🚀 시작하기](docs/01_GettingStarted.md)**
+> ---
+
 이 문서는 SW Engine의 각 서브시스템(Subsystem)이 어떻게 구성되어 있고, 어떤 개념으로 동작하는지 설명합니다. 개발 중 꼭 지켜야 할 주요 **주의사항(Gotchas)** 도 이곳에서 다룹니다.
 
 엔진을 처음 사용하시거나 빌드 방법이 궁금하시다면 먼저 [README.md](README.md)를 참고해 주세요.
@@ -30,6 +33,9 @@ Core (STATIC)     — 로그·파일·문자열·메모리. OBJECT를 Engine과 
 - `Resource/engine/` — 엔진 기본 셰이더, 기본 텍스처, 파이프라인 에셋
 - `Resource/common/` — 공유 공통 에셋
 - `Resource/game/` — 활성 게임별 프로젝트 에셋 (`demo`, `empty` 등)
+
+### 외부 의존성 (ThirdParty & Vcpkg)
+프로젝트의 의존성은 주로 `vcpkg` 매니페스트(`vcpkg.json`)를 통해 통합 관리됩니다. `Scripts/setup/SetupVcpkg.py`가 필요한 의존성을 설치하며, 커스텀 패키지(예: `imgui-node-editor`)나 직접 소스 포함이 필요한 일부 라이브러리들은 `ThirdParty/` 디렉터리에 위치합니다.
 
 ---
 

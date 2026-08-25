@@ -1,5 +1,8 @@
 # Task (TaskManager · 비동기 작업)
 
+> **[🏠 위키 홈으로 돌아가기](../../../../README.md)** | **[📖 서브시스템 목록](../../../../docs/02_EngineSubsystems.md)**
+> ---
+
 엔진의 **스레드 풀 + 작업 스케줄러**입니다.  
 무거운 일을 워커 스레드에 맡기거나, 여러 일을 의존성(순서) 있게 이어서 실행할 때 사용합니다.
 
@@ -245,14 +248,17 @@ flowchart TB
 
 ---
 
-## 수명 · 초기화
+## 수명 · 초기화 및 큐 비우기 (Clear)
 
 ```cpp
 tm.initialize( 0 );  // 0 = 논리 코어 수에 맞춤
 // ... 엔진 가동 ...
 tm.waitAll();
+tm.clear();          // 대기 중인 모든 작업을 안전하게 취소 (Shutdown 직전)
 tm.shutdown();
 ```
+
+- **안전한 취소 (Thread-safe Clear)**: `TaskManager::clear()`는 큐를 비울 때 반복자(iterator) 무효화나 락 경합(lock contention)을 방지하기 위해 `std::erase_if`를 사용하지 않습니다. 대신 **`Queue::steal()`을 통해 작업을 원자적으로 가져와(steal) 안전하게 메모리를 해제**합니다. 엔진 종료 시나 씬 전환 시 락 경합 없이 잔여 작업을 빠르게 비울 수 있습니다.
 
 - App이 `EngineLoop` 초기화 때 TaskManager를 만들고 `engine::bindEngineServices` 로 붙입니다.  
 - 게임 모듈은 보통 **직접 TaskManager를 만들지 않고**, 이미 돌아가는 엔진 서비스를 쓰거나 Object씬/리소스 API** 뒤에 숨은 비동기를 사용합니다.

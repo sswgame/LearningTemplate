@@ -5,12 +5,24 @@ CMake, Ninja, LLVM Clang-cl 및 sccache를 결합하여 **초고속 증분 빌�
 
 ---
 
-## 📑 목차
+## 📚 Wiki Navigation (문서 목차)
+
+초심자이신가요? 아래의 주제별 위키 인덱스를 순서대로 읽어보시면 프로젝트의 전체 구조를 쉽게 파악할 수 있습니다.
+
+- 🚀 **[Getting Started (시작하기)](docs/01_GettingStarted.md)**: 빌드 환경 구성(vcpkg, CMake) 및 첫 빌드/테스트 실행 가이드
+- 🧩 **[Engine Subsystems (서브시스템 개요)](docs/02_EngineSubsystems.md)**: 렌더링, ECS, 스레드 풀, 리플렉션 등 핵심 엔진 기능 찾아보기
+- 🔄 **[LiveReload & ABI (핫리로드 및 아키텍처)](docs/03_LiveReload_and_ABI.md)**: 게임을 끄지 않고 코드를 수정하는 원리와 주의사항
+- 📝 **[Coding Guidelines (코딩 규칙)](docs/04_CodingGuidelines.md)**: 프로젝트에 기여할 때 지켜야 하는 C++ / CMake 네이밍 규칙
+
+> **심화 문서**: 전체 아키텍처 다이어그램 및 제약 사항은 **[ARCHITECTURE.md](ARCHITECTURE.md)**를 참고하세요.
+
+---
+
+## 📑 상세 목차 (본문)
 
 1. [📖 핵심 아키텍처 및 빌드 모드](#1-핵심-아키텍처-및-빌드-모드)
 2. [📂 디렉터리 레이아웃](#2-디렉터리-레이아웃)
-3. [🚀 빠른 시작 가이드 (초심자용)](#3-빠른-시작-가이드-초심자용)
-4. [📦 압축 직렬화 스트림 (Compression Stream & Pluggable Codecs)](#4-압축-직렬화-스트림-compression-stream--pluggable-codecs)
+3. [📦 압축 직렬화 스트림 (Compression Stream & Pluggable Codecs)](#3-압축-직렬화-스트림-compression-stream--pluggable-codecs)
    - [설계 원리 및 인터페이스 분리](#41-설계-원리-및-인터페이스-분리)
    - [바이너리 컨테이너 헤더 규격](#42-바이너리-컨테이너-헤더-규격)
    - [신규 코덱 확장 및 등록 방법 (LZ4 / Zstd 등)](#43-신규-코덱-확장-및-등록-방법-lz4--zstd-등)
@@ -88,33 +100,9 @@ CMake, Ninja, LLVM Clang-cl 및 sccache를 결합하여 **초고속 증분 빌�
 
 ---
 
-## 3. 빠른 시작 가이드 (초심자용)
-
-### 3.1 원클릭 환경 구성
-엔진에 필요한 LLVM Clang, Ninja, Sccache, vcpkg 종속성을 자동으로 설정합니다:
-```powershell
-# Windows PowerShell
-py -3 Scripts/setup/SetupEnvironment.py
-py -3 Scripts/setup/SetupVcpkg.py --install
-```
-
-### 3.2 CMake 빌드 및 실행
-```powershell
-# 1) 빌드 환경 생성 (Ninja-Debug 프리셋)
-cmake --preset Ninja-Debug
-
-# 2) 엔진 전체 빌드
-cmake --build --preset Ninja-Debug
-
-# 3) 게임 실행 (바이너리는 build/Ninja-Debug/Bin 에 생성됨)
-build/Ninja-Debug/Bin/App.exe
-```
-
-> 💡 **빌드 속도 팁**: `sccache`가 설치되어 있다면 CMake 구성 시 `-DSW_USE_SCCACHE=ON` 옵션을 주면 컴파일 캐싱으로 빌드 속도가 수배 이상 빨라집니다.
-
 ---
 
-## 4. 압축 직렬화 스트림 (Compression Stream & Pluggable Codecs)
+## 3. 압축 직렬화 스트림 (Compression Stream & Pluggable Codecs)
 
 SW Engine은 세이브 파일, 네트워크 패킷, 바이너리 씬 데이터의 디스크 I/O 최적화를 위해 **플러그형 압축 직렬화 스트림**을 제공합니다.
 
