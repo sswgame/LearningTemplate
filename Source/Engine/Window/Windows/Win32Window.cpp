@@ -62,8 +62,10 @@ namespace sw
 		if ( _hWnd == nullptr )
 			return false;
 
-		ShowWindow( _hWnd, SW_SHOWNA );
+		ShowWindow( _hWnd, SW_SHOWNORMAL );
 		UpdateWindow( _hWnd );
+		SetForegroundWindow( _hWnd );
+		SetFocus( _hWnd );
 
 		SW_LOG_INFO( "[Win32Window] Native Win32 Window created successfully! (%#x%#)", width, height );
 		return true;
@@ -103,11 +105,11 @@ namespace sw
 		const uint32 height = _height;
 		_bRecreating		= true;
 		destroy();
-		_bRecreating	   = false;
 		_bShouldClose	   = false;
 		const string title = StringUtil::utf16ToUtf8( _title.c_str() );
 
 		const bool ok = initializeWindow( title.c_str(), width, height );
+		_bRecreating  = false;
 		_restoreX	  = CW_USEDEFAULT;
 		_restoreY	  = CW_USEDEFAULT;
 		return ok;
@@ -158,19 +160,21 @@ namespace sw
 				case WM_SIZE:
 					pThis->_width  = LOWORD( lParam );
 					pThis->_height = HIWORD( lParam );
-					if ( pThis->_onResize.isBound() )
+					if ( pThis->_bRecreating == false && pThis->_onResize.isBound() )
 						pThis->_onResize( pThis->_width, pThis->_height );
 					return 0;
 
 				case WM_CLOSE:
 					if ( pThis->_bRecreating == false )
 						pThis->_bShouldClose = true;
-					DestroyWindow( hWnd );
 					return 0;
 
 				case WM_DESTROY:
 					if ( pThis->_bRecreating == false )
+					{
 						pThis->_bShouldClose = true;
+						pThis->_hWnd		 = nullptr;
+					}
 					return 0;
 
 				default:

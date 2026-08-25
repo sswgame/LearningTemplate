@@ -20,6 +20,7 @@
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
 #include "Engine/Graphics/RenderPass/RenderFramePacket.h"
+#include "Engine/Graphics/RenderPass/RenderThread.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
@@ -127,6 +128,7 @@ namespace sw
 			pRHIBackendVar->_onValueChanged = SW_DELEGATE_METHOD( GlobalVariableChangedDelegate, &App::onRhiBackendChanged, this );
 
 		_engineLoop.setPresentHook( SW_DELEGATE_METHOD( PresentHookDelegate, &App::onEditorRender, this ) );
+		_engineLoop.setPostPresentHook( SW_DELEGATE_METHOD( PresentHookDelegate, &App::onEditorPostPresent, this ) );
 
 		return true;
 	}
@@ -183,6 +185,17 @@ namespace sw
 
 			_moduleHost->updateGame( deltaTime );
 
+			if ( _bEnableEditor )
+			{
+				RenderThread* pRenderThread = _engineLoop.getRenderThread();
+				if ( pRenderThread != nullptr )
+					pRenderThread->waitIdle();
+
+				const Scene* pHookScene = engine::areEngineServicesBound() ? engine::getSceneManager().getActiveScene() : nullptr;
+				_moduleHost->setEditorGameMaterial( pHookScene != nullptr ? pHookScene->getMaterial() : nullptr );
+				_moduleHost->updateEditorUI( deltaTime );
+			}
+
 			// 렌더 프레임 제출과 에디터 렌더 훅을 EngineLoop로 넘깁니다.
 			const auto& [gameRenderTarget, gameViewportWidth, gameViewportHeight] = _moduleHost->getEditorViewportInfo();
 			_engineLoop.tick( deltaTime, _bEnableEditor, gameRenderTarget, gameViewportWidth, gameViewportHeight );
@@ -204,23 +217,26 @@ namespace sw
 	void App::onResize( const uint32 width, const uint32 height )
 	{
 		RHI* pRHI = _engineLoop.getRHI();
-		if ( pRHI == nullptr )
+		if ( pRHI == nullptr || pRHI->hasDevice() == false )
 			return;
 
-		pRHI->getDevice().getSwapChain()->resize( width, height );
+		IRHISwapChain* pSwapChain = pRHI->getDevice().getSwapChain();
+		if ( pSwapChain != nullptr )
+			pSwapChain->resize( width, height );
 	}
 
 	bool App::onWindowMessage( const NativeWindowEvent& event )
 	{
 		// 이벤트를 ModuleHost(ImGui 등)로 먼저 보냄
-		if ( _moduleHost != nullptr && _moduleHost->onWindowMessage( event ) )
-			return true;
+		const bool bConsumedByEditor = ( _moduleHost != nullptr && _moduleHost->onWindowMessage( event ) );
 
-		// 처리되지 않았다면 InputManager로 이벤트를 전달합니다.
-		if ( engine::areEngineServicesBound() == false )
-			return false;
+		// 에디터가 가로채지 않은 경우에만 게임 InputManager로 전달
+		if ( bConsumedByEditor == false && engine::areEngineServicesBound() )
+		{
+			engine::getInputManager().processNativeEvent( event );
+		}
 
-		engine::getInputManager().processNativeEvent( event );
+		// Win32 OS 레벨 포커스/활성화(DefWindowProc)가 정상 동작하도록 false 반환
 		return false;
 	}
 
@@ -259,8 +275,7 @@ namespace sw
 #endif
 
 		_moduleHost->drainRenderWorkers();
-		_moduleHost->onBeforeEditorReload();
-		_moduleHost->onBeforeGameReload();
+		_moduleHost->onBeforeRhiSwap();
 		_moduleHost->destroyGameViewportTexture();
 
 		const bool bSuccess = _engineLoop.applyPendingBackendChange();
@@ -296,12 +311,18 @@ namespace sw
 			editorAPI.preRender( pEditor, &renderDevice );
 
 		if ( editorAPI.render != nullptr )
-		{
-			const Scene* pHookScene = engine::areEngineServicesBound() ? engine::getSceneManager().getActiveScene() : nullptr;
-			_moduleHost->setEditorGameMaterial( pHookScene != nullptr ? pHookScene->getMaterial() : nullptr );
-			editorAPI.render( pEditor, &_moduleHost->getEditorUIContext() );
-		}
+			editorAPI.render( pEditor, &renderDevice );
+	}
 
+	void App::onEditorPostPresent( IRHIDevice& renderDevice, const RenderFramePacket& framePacket )
+	{
+		std::ignore = framePacket;
+
+		const EditorHandle pEditor = _moduleHost->getEditor();
+		if ( pEditor == nullptr )
+			return;
+
+		const EditorAPI& editorAPI = _moduleHost->getEditorAPI();
 		if ( editorAPI.postPresent != nullptr )
 			editorAPI.postPresent( pEditor, &renderDevice );
 	}

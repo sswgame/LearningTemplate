@@ -240,8 +240,9 @@ namespace sw
 	void ImGuiVulkanRendererBackend::render( class IRHIDevice* pRhiDevice )
 	{
 		VkCommandBuffer cmdBuffer = static_cast<VkCommandBuffer>( pRhiDevice->getNativeContext() );
-		if ( cmdBuffer != nullptr && ImGui::GetIO().BackendRendererUserData != nullptr )
-			ImGui_ImplVulkan_RenderDrawData( ImGui::GetDrawData(), cmdBuffer );
+		ImDrawData*		pDrawData = ImGui::GetDrawData();
+		if ( cmdBuffer != nullptr && pDrawData != nullptr && ImGui::GetIO().BackendRendererUserData != nullptr )
+			ImGui_ImplVulkan_RenderDrawData( pDrawData, cmdBuffer );
 	}
 
 	void* ImGuiVulkanRendererBackend::registerTexture( RHITextureHandle texture )

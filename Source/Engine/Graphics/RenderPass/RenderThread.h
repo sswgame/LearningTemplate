@@ -16,6 +16,8 @@
 
 namespace sw
 {
+	extern SW_API bool gv_useRenderThread;
+
 	class IRHIDevice;
 	class FrameRenderer;
 	class Scene;
@@ -62,6 +64,8 @@ namespace sw
 
 		/** @brief 씬 렌더 후 Present 전 훅 (execute와 같은 스레드). */
 		void setPresentHook( PresentHookDelegate hook ) { _presentHook = std::move( hook ); }
+		/** @brief Present 완료 후 훅 (멀티 뷰포트 / 플랫폼 윈도우 처리용). */
+		void setPostPresentHook( PresentHookDelegate hook ) { _postPresentHook = std::move( hook ); }
 
 		/** @brief 워커가 돌아가면 true. */
 		bool isRunning() const { return _bRunning.load( std::memory_order_acquire ); }
@@ -80,6 +84,7 @@ namespace sw
 		IRHIDevice*			_pDevice;
 		FrameRenderer*		_pFrameRenderer;
 		PresentHookDelegate _presentHook;
+		PresentHookDelegate _postPresentHook;
 		std::thread			_thread;
 		std::atomic<bool>	_bRunning;
 		std::atomic<bool>	_bStop;

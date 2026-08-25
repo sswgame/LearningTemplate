@@ -305,6 +305,8 @@ namespace sw
 				_inputManager->shutdown();
 			if ( _audioSystem != nullptr )
 				_audioSystem->shutdown();
+			if ( _resourceManager != nullptr )
+				_resourceManager->detachReloadFileManager();
 			if ( _reloadFileManager != nullptr )
 				_reloadFileManager->shutdown();
 			if ( _taskManager != nullptr )
@@ -529,6 +531,12 @@ namespace sw
 	{
 		if ( _renderThread != nullptr )
 			_renderThread->setPresentHook( std::move( presentHook ) );
+	}
+
+	void EngineLoop::setPostPresentHook( PresentHookDelegate postPresentHook )
+	{
+		if ( _renderThread != nullptr )
+			_renderThread->setPostPresentHook( std::move( postPresentHook ) );
 	}
 
 	void EngineLoop::updateShellActions( float32 deltaTime )

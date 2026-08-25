@@ -207,12 +207,21 @@ namespace sw
 			return false;
 		}
 
-		IWindow* pWindow = IWindow::getActiveWindow();
+		IWindow*		 pWindow		 = IWindow::getActiveWindow();
+		const RHIBackend previousBackend = _committedRHIBackend;
+
 		if ( _device )
 		{
 			_device->waitIdle();
 			_device->shutdown();
 			_device.reset();
+		}
+
+		const RHICapabilities currentCaps  = RHIAvailability::query( backend );
+		const RHICapabilities previousCaps = RHIAvailability::query( previousBackend );
+		if ( ( currentCaps._bRequiresWindowRecreate != 0 || previousCaps._bRequiresWindowRecreate != 0 ) && pWindow != nullptr )
+		{
+			pWindow->recreate();
 		}
 
 		gv_rhiBackend = backend;

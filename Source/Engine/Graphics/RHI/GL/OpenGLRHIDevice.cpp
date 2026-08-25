@@ -192,11 +192,18 @@ namespace sw
 		pfd.cDepthBits			  = 24;
 		pfd.cStencilBits		  = 8;
 
-		// SetPixelFormat is once-per-HWND. Reuse after GL↔DXGI hot-swap on the same window.
+		// SetPixelFormat is once-per-HWND. Verify PFD_SUPPORT_OPENGL if already set.
 		int32 pixelFormat = GetPixelFormat( hDC );
+		bool  bFormatSet  = false;
 		if ( pixelFormat != 0 )
-			DescribePixelFormat( hDC, pixelFormat, sizeof( pfd ), &pfd );
-		else
+		{
+			PIXELFORMATDESCRIPTOR currentPfd{};
+			DescribePixelFormat( hDC, pixelFormat, sizeof( currentPfd ), &currentPfd );
+			if ( ( currentPfd.dwFlags & PFD_SUPPORT_OPENGL ) != 0 )
+				bFormatSet = true;
+		}
+
+		if ( bFormatSet == false )
 		{
 			pixelFormat = ChoosePixelFormat( hDC, &pfd );
 			if ( pixelFormat == 0 )
@@ -714,6 +721,8 @@ namespace sw
 	{
 		if ( _bInitialized == false )
 			return;
+
+		ScopedOpenGLContext ctxScope( this );
 		glFinish();
 		_releaseQueue.flushAll();
 	}
@@ -727,6 +736,8 @@ namespace sw
 			return false;
 		if ( wglMakeCurrent( static_cast<HDC>( _pHDC ), static_cast<HGLRC>( _pHRC ) ) == FALSE )
 		{
+			if ( _bInitialized == false )
+				return false;
 			SW_LOG_ERROR( "[OpenGL] bindGraphicsContext wglMakeCurrent failed (err=%#)",
 						  static_cast<uint32>( GetLastError() ) );
 			return false;
@@ -940,7 +951,13 @@ namespace sw
 			glDrawBuffers( static_cast<GLsizei>( attachedColors ), drawBuffers );
 
 		if ( depthTex != 0 )
-			glFramebufferTexture2D( GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, depthTex, 0 );
+		{
+			const OpenGLTextureRecord* pDepthRec = resolveTexture( depth );
+			const GLenum depthAttachment		 = ( pDepthRec != nullptr && pDepthRec->format == RHIFormat::D24_UNORM_S8_UINT )
+													   ? GL_DEPTH_STENCIL_ATTACHMENT
+													   : GL_DEPTH_ATTACHMENT;
+			glFramebufferTexture2D( GL_FRAMEBUFFER, depthAttachment, GL_TEXTURE_2D, depthTex, 0 );
+		}
 
 		const GLenum status = glCheckFramebufferStatus( GL_FRAMEBUFFER );
 		glBindFramebuffer( GL_FRAMEBUFFER, 0 );

@@ -184,9 +184,11 @@ namespace sw
 		{
 			GlobalVariableManager& gvm = *editor::getService<GlobalVariableManager>();
 			ImGui::Text( "%zu variables registered", gvm.getAllVariables().size() );
+			if ( ImGui::Button( "Open Global Variables Window" ) )
+				EditorWorkspace::requestOpenWindow( "Global Variables" );
+			ImGui::SameLine();
 			if ( ImGui::Button( "Reset All Defaults" ) )
 				gvm.resetAllToDefault();
-			ImGui::TextDisabled( "Former Global Variables panel ??folded into Inspector." );
 		}
 
 		ImGui::Separator();

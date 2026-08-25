@@ -80,6 +80,7 @@ namespace sw
 		// 헬퍼
 		// ----------------------------------------------------------------------
 		void setPresentHook( sw::PresentHookDelegate presentHook );
+		void setPostPresentHook( sw::PresentHookDelegate postPresentHook );
 		void updateShellActions( float32 deltaTime );
 		void pollDebugHotkeys( bool bEnableEditor, const Delegate<void( const utf8* )>& forceReloadCallback );
 

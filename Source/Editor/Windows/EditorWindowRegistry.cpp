@@ -12,6 +12,7 @@
 #include "Editor/Windows/ConsoleWindow.h"
 #include "Editor/Windows/ContentBrowserWindow.h"
 #include "Editor/Windows/GameViewWindow.h"
+#include "Editor/Windows/GlobalVariablesWindow.h"
 #include "Editor/Windows/HierarchyWindow.h"
 #include "Editor/Windows/InspectorWindow.h"
 #include "Editor/Windows/ProfilerWindow.h"
@@ -147,6 +148,7 @@ namespace sw
 		registerWindowImpl( make_unique<ContentBrowserWindow>(), EditorWindowCategory::Core, "Content Browser" );
 
 		// 온디맨드 도구 (Tool)
+		registerWindowImpl( make_unique<GlobalVariablesWindow>(), EditorWindowCategory::Tool, "Global Variables" );
 		registerWindowImpl( make_unique<SequencerTool>(), EditorWindowCategory::Tool, "Sequencer" );
 		registerWindowImpl( make_unique<AnimationGraphTool>(), EditorWindowCategory::Tool, "Animation Graph" );
 		registerWindowImpl( make_unique<DialogueGraphTool>(), EditorWindowCategory::Tool, "Dialogue Graph" );

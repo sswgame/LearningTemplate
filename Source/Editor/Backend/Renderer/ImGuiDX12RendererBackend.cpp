@@ -138,7 +138,7 @@ namespace sw
 		ImGui_ImplDX12_InitInfo initInfo = {};
 		initInfo.Device					 = pDevice;
 		initInfo.CommandQueue			 = static_cast<ID3D12CommandQueue*>( _pRHIDevice->getNativeCommandQueue() );
-		initInfo.NumFramesInFlight		 = 2;
+		initInfo.NumFramesInFlight		 = 3;
 		initInfo.RTVFormat				 = DXGI_FORMAT_R8G8B8A8_UNORM;
 		initInfo.SrvDescriptorHeap		 = _d3d12SrvHeap.Get();
 		initInfo.UserData				 = this;
@@ -197,11 +197,12 @@ namespace sw
 		}
 
 		ID3D12GraphicsCommandList* pCmdList = static_cast<ID3D12GraphicsCommandList*>( pRhiDevice->getNativeContext() );
-		if ( pCmdList != nullptr && _d3d12SrvHeap != nullptr && ImGui::GetIO().BackendRendererUserData != nullptr )
+		ImDrawData*				   pDrawData = ImGui::GetDrawData();
+		if ( pCmdList != nullptr && pDrawData != nullptr && _d3d12SrvHeap != nullptr && ImGui::GetIO().BackendRendererUserData != nullptr )
 		{
 			ID3D12DescriptorHeap* heaps[] = { _d3d12SrvHeap.Get() };
 			pCmdList->SetDescriptorHeaps( 1, heaps );
-			ImGui_ImplDX12_RenderDrawData( ImGui::GetDrawData(), pCmdList );
+			ImGui_ImplDX12_RenderDrawData( pDrawData, pCmdList );
 		}
 #else
 		(void)pRhiDevice;

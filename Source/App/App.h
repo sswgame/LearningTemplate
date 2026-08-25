@@ -45,6 +45,8 @@ namespace sw
 		void onForceReload( const utf8* pModuleName );
 		/** @brief 에디터 렌더 훅 콜백 */
 		void onEditorRender( IRHIDevice& renderDevice, const RenderFramePacket& framePacket );
+		/** @brief 에디터 멀티 뷰포트 / 플랫폼 윈도우 훅 콜백 (Present 이후 실행) */
+		void onEditorPostPresent( IRHIDevice& renderDevice, const RenderFramePacket& framePacket );
 
 	private:
 		EngineLoop			   _engineLoop;

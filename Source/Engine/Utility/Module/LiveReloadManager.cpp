@@ -119,6 +119,15 @@ namespace sw
 
 	void LiveReloadManager::shutdown()
 	{
+		_drainWorkers		 = {};
+		_onBeforeCommitBatch = {};
+
+		for ( auto& [name, ctx] : _mapModule )
+		{
+			ctx._onBeforeReload = {};
+			ctx._onAfterReload	= {};
+		}
+
 		cleanStaleShadowArtifacts( FileUtil::getDirectoryPart( FileUtil::getExecutablePath() ) );
 		if ( getDelayLoadLiveReloadManager() == this )
 			setDelayLoadLiveReloadManager( nullptr );

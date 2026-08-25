@@ -88,6 +88,8 @@ namespace sw
 		// ------------------------------------------------------------------------------
 		// 3) 조회 — initialize 이후
 		// ------------------------------------------------------------------------------
+		/** @brief 디바이스가 활성화되어 있는지 여부를 반환합니다. */
+		bool hasDevice() const { return _device != nullptr; }
 		/** @brief 활성 IRHIDevice를 반환합니다. */
 		IRHIDevice& getDevice() const { return *_device; }
 		/** @brief 활성 LiveShaderManager를 반환합니다. */

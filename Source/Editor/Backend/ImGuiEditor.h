@@ -36,10 +36,12 @@ namespace sw
 		bool initialize( IWindow* pWindow, IRHIDevice* pRhiDevice ) override;
 		/** @brief 에디터 리소스를 해제합니다. */
 		void shutdown() override;
+		/** @brief 메인 스레드에서 ImGui 프레임 갱신, 패널 그리기 및 플랫폼 윈도우를 업데이트합니다. */
+		void updateUI( const EditorUIContext& context ) override;
 		/** @brief UI 그리기 전 패널 GPU 작업을 수행합니다. */
 		void preRender( IRHIDevice* pRhiDevice ) override;
-		/** @brief ImGui 프레임과 패널을 그립니다. */
-		void render( const EditorUIContext& context ) override;
+		/** @brief GPU 상에 에디터 UI DrawData를 렌더링합니다. */
+		void render( IRHIDevice* pRhiDevice ) override;
 		/** @brief 메인 스왑체인 Present 이후 멀티 뷰포트를 렌더합니다. */
 		void postPresent( IRHIDevice* pRhiDevice ) override;
 		/** @brief 네이티브 이벤트를 ImGui 플랫폼 레이어로 전달합니다. */

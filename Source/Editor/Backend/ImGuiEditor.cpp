@@ -100,17 +100,24 @@ namespace sw
 #if !defined( SW_SHIPPING )
 		BLOCK( "EditorConfig host load" )
 		{
-			EditorConfig cfg{};
-			string		 jsonStr;
-			if ( FileUtil::readTextFile( config::kFileRuntimeEditorConfig, jsonStr ) )
+			EditorConfig	cfg{};
+			string			jsonStr;
+			const TypeInfo* pTypeInfo	= EditorConfig::StaticType();
+			const string	projectRoot = EditorUtil::getProjectRootPath();
+			string			configPath	= FileUtil::normalizeSeparators( config::kFileRuntimeEditorConfig );
+			const bool		bAbsolute	= ( configPath.size() >= 2 && configPath[1] == ':' ) || ( configPath.empty() == false && ( configPath[0] == '/' || configPath[0] == '\\' ) );
+			if ( projectRoot.empty() == false && bAbsolute == false )
+				configPath = FileUtil::joinPath( projectRoot, configPath );
+
+			if ( pTypeInfo != nullptr && FileUtil::readTextFile( configPath.c_str(), jsonStr ) )
 			{
-				if ( JsonSerializer::deserialize( &cfg, *EditorConfig::StaticType(), jsonStr ) )
-					SW_LOG_INFO( "[Editor] EditorConfig source=file" );
+				if ( JsonSerializer::deserialize( &cfg, *pTypeInfo, jsonStr ) )
+					SW_LOG_INFO( "[Editor] EditorConfig source=file (%#)", configPath.c_str() );
 				else
 					SW_LOG_WARNING( "[Editor] EditorConfig deserialize failed — cpp defaults" );
 			}
 			else
-				SW_LOG_WARNING( "[Editor] EditorConfig missing — cpp defaults" );
+				SW_LOG_WARNING( "[Editor] EditorConfig missing or reflection unavailable — cpp defaults" );
 			EditorConfig::setActive( cfg );
 			_editorData = make_unique<EditorData>();
 			_editorData->loadFromHostPath( cfg._editorData );
@@ -286,10 +293,13 @@ namespace sw
 		}
 	}
 
-	void ImGuiEditor::render( const EditorUIContext& ctx )
+	void ImGuiEditor::updateUI( const EditorUIContext& ctx )
 	{
 		if ( _bInitialized == false )
 			return;
+
+		ctx._bIsGameViewFocused = false;
+		ctx._bIsGameViewHovered = false;
 
 		BLOCK( "ImGui NewFrame / Dockspace" )
 		{
@@ -337,16 +347,43 @@ namespace sw
 			EditorNotificationManager::updateAndDraw( ImGui::GetIO().DeltaTime, 1920.0f, 1080.0f );
 		}
 
-		BLOCK( "ImGui Render / Backend Submit" )
+		BLOCK( "ImGui EndFrame / Platform Windows Update" )
 		{
 			endFrame();
-			auto* const pRhiDevice = static_cast<IRHIDevice*>( ctx._pRHIDevice );
+
+			ImGuiIO& io = ImGui::GetIO();
+			if ( io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable )
+			{
+				// 메인 스레드에서 플랫폼 윈도우(HWND)를 생성, 위치 이동, 파괴합니다.
+				ImGui::UpdatePlatformWindows();
+			}
+		}
+	}
+
+	void ImGuiEditor::render( IRHIDevice* pRhiDevice )
+	{
+		if ( _bInitialized == false || pRhiDevice == nullptr )
+			return;
+
+		ImDrawData* pDrawData = ImGui::GetDrawData();
+		if ( pDrawData == nullptr )
+			return;
+
+		BLOCK( "ImGui Render / Backend Submit" )
+		{
 			renderBackend( pRhiDevice );
 		}
 	}
 
 	void ImGuiEditor::postPresent( IRHIDevice* pRhiDevice )
 	{
+		if ( _bInitialized == false || pRhiDevice == nullptr )
+			return;
+
+		ImDrawData* pDrawData = ImGui::GetDrawData();
+		if ( pDrawData == nullptr )
+			return;
+
 		renderPlatformWindows( pRhiDevice );
 	}
 
@@ -355,11 +392,11 @@ namespace sw
 		if ( _bInitialized == false )
 			return false;
 
-		bool bConsumed = false;
 		if ( _platformBackend )
-			bConsumed = _platformBackend->processEvent( event );
+			_platformBackend->processEvent( event );
 
-		// ImGui 캡처 상태(마우스/키보드 점유 여부)에 따른 게임 입력 강제 차단 필터링
+		// ImGui 캡처 상태(마우스/키보드 점유 여부)에 따른 게임 입력 차단 필터링
+		bool bConsumedForGame = false;
 #if defined( SW_PLATFORM_WINDOWS )
 		const ImGuiIO& io		   = ImGui::GetIO();
 		const uint32   msg		   = event._message;
@@ -368,19 +405,27 @@ namespace sw
 
 		if ( bIsMouse )
 		{
-			if ( io.WantCaptureMouse && pContext != nullptr && pContext->_bIsGameViewHovered == false )
-				bConsumed = true;
+			const bool bIsMouseRelease = ( msg == 0x0202 /*WM_LBUTTONUP*/ || msg == 0x0205 /*WM_RBUTTONUP*/ || msg == 0x0208 /*WM_MBUTTONUP*/ || msg == 0x020C /*WM_XBUTTONUP*/ );
+			if ( bIsMouseRelease == false && io.WantCaptureMouse )
+			{
+				if ( pContext == nullptr || pContext->_bIsGameViewHovered == false )
+					bConsumedForGame = true;
+			}
 		}
 		else if ( bIsKeyboard )
 		{
-			if ( io.WantCaptureKeyboard && pContext != nullptr && pContext->_bIsGameViewFocused == false )
-				bConsumed = true;
+			const bool bIsKeyRelease = ( msg == 0x0101 /*WM_KEYUP*/ || msg == 0x0105 /*WM_SYSKEYUP*/ );
+			if ( bIsKeyRelease == false && io.WantCaptureKeyboard )
+			{
+				if ( pContext == nullptr || pContext->_bIsGameViewFocused == false )
+					bConsumedForGame = true;
+			}
 		}
 #else
 		(void)pContext;
 #endif
 
-		return bConsumed;
+		return bConsumedForGame;
 	}
 
 	void* ImGuiEditor::registerTexture( RHITextureHandle texture )
@@ -518,8 +563,7 @@ namespace sw
 		if ( ( io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable ) == 0 )
 			return;
 
-		// Present 복원 전에 플랫폼 뷰포트(멀티 뷰포트)를 갱신/렌더합니다.
-		ImGui::UpdatePlatformWindows();
+		// Present 복원 전에 플랫폼 뷰포트(멀티 뷰포트) GPU 버퍼를 렌더/출력합니다.
 		ImGui::RenderPlatformWindowsDefault();
 
 		// 멀티 뷰포트 GL 백엔드는 MakeCurrent를 바꾸므로 메인 디바이스 컨텍스트를 복원합니다.

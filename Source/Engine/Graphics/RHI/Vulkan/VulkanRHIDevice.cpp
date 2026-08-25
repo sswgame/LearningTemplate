@@ -655,6 +655,31 @@ namespace sw
 		scissor.offset = { 0, 0 };
 		scissor.extent = { _swapChainExtentWidth, _swapChainExtentHeight };
 		vkCmdSetScissor( _listCommandBuffers[_currentFrame], 0, 1, &scissor );
+
+		if ( _renderPass != VK_NULL_HANDLE && _listSwapChainFramebuffers.empty() == false && _imageIndex < _listSwapChainFramebuffers.size() )
+		{
+			VkRenderPassBeginInfo rpBeginInfo{};
+			rpBeginInfo.sType			  = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+			rpBeginInfo.renderPass		  = _renderPass;
+			rpBeginInfo.framebuffer		  = _listSwapChainFramebuffers[_imageIndex];
+			rpBeginInfo.renderArea.offset = { 0, 0 };
+			rpBeginInfo.renderArea.extent = { _swapChainExtentWidth, _swapChainExtentHeight };
+
+			VkClearValue clearVal{};
+			if ( clearColor != nullptr )
+			{
+				clearVal.color = { { clearColor[0], clearColor[1], clearColor[2], clearColor[3] } };
+			}
+			else
+			{
+				clearVal.color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
+			}
+			rpBeginInfo.clearValueCount = 1;
+			rpBeginInfo.pClearValues	= &clearVal;
+
+			vkCmdBeginRenderPass( _listCommandBuffers[_currentFrame], &rpBeginInfo, VK_SUBPASS_CONTENTS_INLINE );
+			_bRenderPassActive = true;
+		}
 	}
 
 	void VulkanRHIDevice::endFrame( bool vsync, bool bPresent )

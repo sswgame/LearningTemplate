@@ -61,6 +61,8 @@ namespace sw
 		void shutdown();
 
 		// 3) 프레임 단위 처리
+		/** @brief 메인 스레드에서 에디터 UI 및 플랫폼 윈도우를 갱신합니다. */
+		void updateEditorUI( float32 deltaTime );
 		/** @brief 게임 업데이트를 호출합니다. */
 		void updateGame( float32 deltaTime );
 		/** @brief 물리 등 고정 주기 게임 업데이트를 호출합니다. */
@@ -105,6 +107,8 @@ namespace sw
 		void onBeforeGameplayDllReload();
 		void onAfterGameplayDllReload( void* pLibraryModule );
 		void onBeforeCommitBatch( const vector<string>& moduleNames );
+		/** @brief RHI 백엔드 핫스왑 전 기존 에디터 및 게임 런타임 인스턴스를 안전하게 정리합니다. */
+		void onBeforeRhiSwap();
 		void drainRenderWorkers();
 		void poisonLiveReload( const utf8* pReason );
 

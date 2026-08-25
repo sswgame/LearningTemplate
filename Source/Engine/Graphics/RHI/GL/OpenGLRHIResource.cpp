@@ -82,6 +82,10 @@ namespace sw
 
 	RHIPipelineStateHandle OpenGLRHIResource::createPipelineState( const RHIPipelineStateDesc& desc )
 	{
+		if ( _pDevice->_bInitialized == false )
+			return 0;
+
+		ScopedOpenGLContext ctxScope( _pDevice );
 		OpenGLRHIDevice::OpenGLPipelineStateRecord record{};
 
 		auto fillDefines = [&]( ShaderCompileDesc& cd )
@@ -371,6 +375,8 @@ namespace sw
 		if ( _pDevice->_bInitialized == false )
 			return 0;
 
+		ScopedOpenGLContext ctxScope( _pDevice );
+
 		if ( hasFlag( desc._usage, RHIBufferUsage::Vertex ) && desc._pInitialData != nullptr && desc._sizeBytes > 0 )
 			return createVertexBuffer( desc._pInitialData, desc._sizeBytes );
 		if ( hasFlag( desc._usage, RHIBufferUsage::Constant ) )
@@ -414,6 +420,7 @@ namespace sw
 		if ( _pDevice->_bInitialized == false || pData == nullptr || sizeBytes == 0 )
 			return 0;
 
+		ScopedOpenGLContext ctxScope( _pDevice );
 		GLuint vbo{ 0 };
 		glGenBuffers( 1, &vbo );
 		glBindBuffer( GL_ARRAY_BUFFER, vbo );
@@ -427,6 +434,8 @@ namespace sw
 	{
 		if ( buffer == 0 )
 			return;
+
+		ScopedOpenGLContext ctxScope( _pDevice );
 		if ( buffer == _pDevice->_boundMeshVb )
 			_pDevice->_boundMeshVb = 0;
 		if ( buffer == _pDevice->_boundIndexBuffer )
@@ -449,8 +458,7 @@ namespace sw
 			rec.buffer = 0;
 		}
 
-		const GLuint glBuffer  = glName;
-		auto		 releaseCb = [glBuffer]()
+		auto releaseCb = [glBuffer = glName]()
 		{
 			GLuint name = glBuffer;
 			glDeleteBuffers( 1, &name );
@@ -463,6 +471,7 @@ namespace sw
 		if ( _pDevice->_bInitialized == false || desc._width == 0 || desc._height == 0 )
 			return 0;
 
+		ScopedOpenGLContext ctxScope( _pDevice );
 		const uint32 mipLevels	 = desc._mipLevels > 0 ? desc._mipLevels : 1;
 		const GLenum internalFmt = toGlInternalFormat( desc._format );
 		const bool	 bDepth		 = desc._bIsDepthStencil || desc._format == RHIFormat::D24_UNORM_S8_UINT;
@@ -519,7 +528,10 @@ namespace sw
 			glBindFramebuffer( GL_FRAMEBUFFER, fbo );
 			if ( bDepth )
 			{
-				glFramebufferTexture2D( GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, tex, 0 );
+				const GLenum depthAttachment = ( desc._format == RHIFormat::D24_UNORM_S8_UINT )
+												   ? GL_DEPTH_STENCIL_ATTACHMENT
+												   : GL_DEPTH_ATTACHMENT;
+				glFramebufferTexture2D( GL_FRAMEBUFFER, depthAttachment, GL_TEXTURE_2D, tex, 0 );
 				glDrawBuffer( GL_NONE );
 				glReadBuffer( GL_NONE );
 			}
@@ -545,6 +557,7 @@ namespace sw
 		if ( texture == 0 )
 			return;
 
+		ScopedOpenGLContext ctxScope( _pDevice );
 		OpenGLRHIDevice::OpenGLTextureRecord owned;
 		if ( _pDevice->_gpuTextures.take( texture, owned ) == false )
 			return;

@@ -73,7 +73,6 @@ namespace sw
 			return;
 		}
 
-		SW_LOG_INFO( "[FrameRenderer] executePass: name='%#', type='%#'", passName, passType );
 		_pCmd->beginEventMarker( string( passName ).c_str() );
 
 		float32 arrClearColor[4];

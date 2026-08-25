@@ -268,6 +268,7 @@ namespace sw
 
 		void unregisterModuleTypes( string_view moduleName )
 		{
+			getModuleHeadCache().erase( string( moduleName ) );
 			sw::Registry::unregisterModuleFactoryHead( moduleName );
 			GameObjectManager::unregisterModuleScriptSystemHead( moduleName );
 			for ( const auto& scene : getSceneManager().getLoadedScenes() )
@@ -281,8 +282,6 @@ namespace sw
 			}
 			getTypeRegistry().unregisterTypesByModule( moduleName );
 			getGlobalVariableManager().unregisterVariablesByModule( moduleName );
-			if ( moduleName != "Engine" )
-				getModuleHeadCache().erase( string( moduleName ) );
 		}
 	} // namespace engine
 } // namespace sw

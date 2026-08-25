@@ -51,6 +51,11 @@ namespace sw
 			pAllocator->Reset();
 			_pDevice->_commandList->Reset( pAllocator, nullptr );
 			_pDevice->_bRecording = 1;
+			if ( _pDevice->_cbvHeap != nullptr )
+			{
+				ID3D12DescriptorHeap* heaps[] = { _pDevice->_cbvHeap.Get() };
+				_pDevice->_commandList->SetDescriptorHeaps( 1, heaps );
+			}
 		}
 		_pDevice->_frameIndex = _pDevice->_swapChain->GetCurrentBackBufferIndex();
 

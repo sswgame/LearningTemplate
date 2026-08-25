@@ -127,8 +127,9 @@ namespace sw
 	{
 		(void)pRhiDevice;
 #if defined( SW_PLATFORM_WINDOWS )
-		if ( ImGui::GetIO().BackendRendererUserData != nullptr )
-			ImGui_ImplDX11_RenderDrawData( ImGui::GetDrawData() );
+		ImDrawData* pDrawData = ImGui::GetDrawData();
+		if ( pDrawData != nullptr && ImGui::GetIO().BackendRendererUserData != nullptr )
+			ImGui_ImplDX11_RenderDrawData( pDrawData );
 #endif
 	}
 

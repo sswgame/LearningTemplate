@@ -269,4 +269,32 @@ namespace sw
 		sw::unique_ptr<OpenGLRHISwapChain>		_swapChainImpl;
 		sw::unique_ptr<OpenGLRHIResource>		_resourceImpl;
 	};
+
+	/**
+	 * @struct ScopedOpenGLContext
+	 * @brief OpenGL 배타적 그래픽스 컨텍스트 바인딩이 필요한 작업 시 컨텍스트를 획득하고 해제하는 RAII 가드
+	 */
+	struct ScopedOpenGLContext
+	{
+		IRHIDevice* _pDevice{ nullptr };
+		bool		_bNeedsUnbind{ false };
+
+		explicit ScopedOpenGLContext( IRHIDevice* pDevice )
+			: _pDevice{ pDevice }
+			, _bNeedsUnbind{ false }
+		{
+			if ( _pDevice != nullptr && _pDevice->requiresExclusiveContextThread() )
+			{
+				_bNeedsUnbind = _pDevice->bindGraphicsContext();
+			}
+		}
+
+		~ScopedOpenGLContext()
+		{
+			if ( _bNeedsUnbind && _pDevice != nullptr )
+			{
+				_pDevice->unbindGraphicsContext();
+			}
+		}
+	};
 } // namespace sw

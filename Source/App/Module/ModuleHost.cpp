@@ -209,6 +209,12 @@ namespace sw
 
 	void ModuleHost::shutdown()
 	{
+		if ( _pLiveReloadManager != nullptr )
+		{
+			_pLiveReloadManager->setDrainWorkers( {} );
+			_pLiveReloadManager->setOnBeforeCommitBatch( {} );
+		}
+
 		onBeforeEditorReload();
 		onBeforeGameReload();
 		destroyGameViewportTexture();
@@ -217,6 +223,15 @@ namespace sw
 	// ======================================================================
 	// 프레임 단위 처리
 	// ======================================================================
+
+	void ModuleHost::updateEditorUI( float32 deltaTime )
+	{
+		std::ignore = deltaTime;
+		if ( _bEnableEditor == false || _editor == nullptr || _editorApi.updateUI == nullptr )
+			return;
+
+		_editorApi.updateUI( _editor, &_editorContext );
+	}
 
 	void ModuleHost::updateGame( float32 deltaTime )
 	{
@@ -651,9 +666,25 @@ namespace sw
 	}
 
 	// ======================================================================
-	// RHI 핫스왑 후 재초기화
+	// RHI 핫스왑 전/후 처리
 	// ======================================================================
-	// ... (Game View RT)
+
+	void ModuleHost::onBeforeRhiSwap()
+	{
+		drainRenderWorkers();
+
+		if ( _editor != nullptr && _editorApi.shutdown != nullptr )
+			_editorApi.shutdown( _editor );
+		if ( _editor != nullptr && _editorApi.destroy != nullptr )
+			_editorApi.destroy( _editor );
+		_editor = nullptr;
+
+		if ( _game != nullptr && _gameApi.shutdown != nullptr )
+			_gameApi.shutdown( _game );
+		if ( _game != nullptr && _gameApi.destroy != nullptr )
+			_gameApi.destroy( _game );
+		_game = nullptr;
+	}
 
 	bool ModuleHost::reinitializeAfterRhiSwap( void* pEditorModule, void* pGameModule )
 	{
@@ -664,16 +695,35 @@ namespace sw
 			const uint32 vpW = _editorContext._gameViewportWidth > 0 ? _editorContext._gameViewportWidth : 1280;
 			const uint32 vpH = _editorContext._gameViewportHeight > 0 ? _editorContext._gameViewportHeight : 720;
 			if ( createGameViewportTexture( vpW, vpH ) == false )
-				SW_LOG_WARNING( "[Hot-Swap] Game viewport texture recreate failed (%# x %#).", vpW, vpH );
-			onAfterEditorReload( pEditorModule );
+				SW_LOG_WARNING( "[Hot-Swap] 게임 뷰포트 텍스처 재생성 실패 (%# x %#).", vpW, vpH );
+
+			if ( _editorApi.create != nullptr && _editorApi.initialize != nullptr )
+			{
+				_editor = _editorApi.create();
+				if ( _editor != nullptr )
+					_editorApi.initialize( _editor, _pWindow, &_pRHI->getDevice() );
+			}
+			else
+			{
+				onAfterEditorReload( pEditorModule );
+			}
 		}
 
+		if ( _gameApi.create != nullptr && _gameApi.initialize != nullptr )
+		{
+			_game = _gameApi.create();
+			if ( _game != nullptr )
+				_gameApi.initialize( _game, _pWindow, &_pRHI->getDevice() );
+		}
+		else
+		{
 #if defined( SW_SHIPPING )
-		(void)pGameModule;
-		onAfterGameReload( nullptr );
+			(void)pGameModule;
+			onAfterGameReload( nullptr );
 #else
-		onAfterGameReload( pGameModule );
+			onAfterGameReload( pGameModule );
 #endif
+		}
 
 		_editorContext._pRHIDevice = &_pRHI->getDevice();
 		return true;

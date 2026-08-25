@@ -139,6 +139,8 @@ int main( int32 argc, utf8* argv[] )
 	sceneManager->shutdown();
 	inputManager->shutdown();
 	audioSystem->shutdown();
+	if ( resourceManager != nullptr )
+		resourceManager->detachReloadFileManager();
 	reloadFileManager->shutdown();
 	liveReloadManager->shutdown();
 	taskManager->shutdown();

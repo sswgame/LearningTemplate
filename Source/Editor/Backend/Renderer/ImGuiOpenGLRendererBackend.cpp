@@ -93,7 +93,10 @@ static void Hook_Renderer_SwapBuffers( ImGuiViewport* pViewport, void* )
 {
 	WGL_WindowData* pData = static_cast<WGL_WindowData*>( pViewport->RendererUserData );
 	if ( pData != nullptr )
+	{
 		SwapBuffers( pData->_hDC );
+		wglMakeCurrent( nullptr, nullptr );
+	}
 }
 #elif defined( SW_PLATFORM_LINUX )
 static void Hook_Renderer_CreateWindow_GLX( ImGuiViewport* pViewport )
@@ -143,7 +146,10 @@ static void Hook_Renderer_SwapBuffers_GLX( ImGuiViewport* pViewport, void* )
 {
 	GLX_WindowData* pData = static_cast<GLX_WindowData*>( pViewport->RendererUserData );
 	if ( pData != nullptr )
+	{
 		glXSwapBuffers( pData->_pDisplay, pData->_win );
+		glXMakeCurrent( pData->_pDisplay, None, nullptr );
+	}
 }
 #endif
 
@@ -153,7 +159,11 @@ namespace sw
 	{
 		_pRHIDevice = ( pRhiDevice != nullptr && pRhiDevice->getBackendType() == RHIBackend::OpenGL ) ? pRhiDevice : nullptr;
 
-		bool bResult = ImGui_ImplOpenGL3_Init( "#version 460" );
+		if ( _pRHIDevice != nullptr )
+			_pRHIDevice->bindGraphicsContext();
+		const bool bResult = ImGui_ImplOpenGL3_Init( "#version 460" );
+		if ( _pRHIDevice != nullptr )
+			_pRHIDevice->unbindGraphicsContext();
 
 #if defined( SW_PLATFORM_WINDOWS )
 		ImGuiIO& io = ImGui::GetIO();
@@ -186,22 +196,31 @@ namespace sw
 
 	void ImGuiOpenGLRendererBackend::shutdown()
 	{
+		if ( _pRHIDevice != nullptr )
+			_pRHIDevice->bindGraphicsContext();
 		if ( ImGui::GetIO().BackendRendererUserData != nullptr )
 			ImGui_ImplOpenGL3_Shutdown();
+		if ( _pRHIDevice != nullptr )
+			_pRHIDevice->unbindGraphicsContext();
 		_pRHIDevice = nullptr;
 	}
 
 	void ImGuiOpenGLRendererBackend::newFrame()
 	{
+		if ( _pRHIDevice != nullptr )
+			_pRHIDevice->bindGraphicsContext();
 		if ( ImGui::GetIO().BackendRendererUserData != nullptr )
 			ImGui_ImplOpenGL3_NewFrame();
+		if ( _pRHIDevice != nullptr )
+			_pRHIDevice->unbindGraphicsContext();
 	}
 
 	void ImGuiOpenGLRendererBackend::render( class IRHIDevice* pRhiDevice )
 	{
 		(void)pRhiDevice;
-		if ( ImGui::GetIO().BackendRendererUserData != nullptr )
-			ImGui_ImplOpenGL3_RenderDrawData( ImGui::GetDrawData() );
+		ImDrawData* pDrawData = ImGui::GetDrawData();
+		if ( pDrawData != nullptr && ImGui::GetIO().BackendRendererUserData != nullptr )
+			ImGui_ImplOpenGL3_RenderDrawData( pDrawData );
 	}
 
 	void* ImGuiOpenGLRendererBackend::registerTexture( RHITextureHandle texture )

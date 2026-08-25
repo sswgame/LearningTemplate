@@ -25,6 +25,7 @@ namespace sw
 		uint8 _bGpuCulling{ 0 };			   ///< 컴퓨트 컬 + 인디렉트 인자 경로
 		uint8 _bMultiDrawIndirect{ 0 };		   ///< 멀티 드로우 / count 버퍼 (DX12/VK/GL; DX11은 루프)
 		uint8 _bParallelCommandRecording{ 0 }; ///< 멀티스레드 커맨드 리스트 병렬 기록 및 제출 지원 (DX12/VK)
+		uint8 _bRequiresWindowRecreate{ 0 };   ///< OS 윈도우 픽셀 포맷 1회 제한(Windows WGL 등)으로 핫스왑 시 윈도우 재생성 필요
 
 		/** @brief 기본값 (컴퓨트만 켠 보수적 기본). */
 		RHICapabilities() noexcept = default;
@@ -101,6 +102,9 @@ namespace sw
 					caps._bGpuCulling				= 1;
 					caps._bMultiDrawIndirect		= 1;
 					caps._bParallelCommandRecording = 0;
+#if defined( SW_PLATFORM_WINDOWS )
+					caps._bRequiresWindowRecreate   = 1;
+#endif
 					break;
 				case RHIBackend::Vulkan:
 					caps._bBindless					= 1;

@@ -383,6 +383,9 @@ namespace sw
 		if ( _commandQueue == nullptr || _fence == nullptr )
 			return;
 
+		if ( _device != nullptr && FAILED( _device->GetDeviceRemovedReason() ) )
+			return;
+
 		const UINT64  fenceToWait = _fenceValue;
 		const HRESULT signalHr	  = _commandQueue->Signal( _fence.Get(), fenceToWait );
 		_fenceValue++;
@@ -406,13 +409,16 @@ namespace sw
 				SW_LOG_ERROR( "[D3D12] Fence wait timed out (result=%#, fence=%#)", static_cast<uint32>( waitResult ), static_cast<uint32>( fenceToWait ) );
 		}
 
-		if ( _swapChain != nullptr )
+		if ( _swapChain != nullptr && ( _device == nullptr || SUCCEEDED( _device->GetDeviceRemovedReason() ) ) )
 			_frameIndex = _swapChain->GetCurrentBackBufferIndex();
 	}
 
 	void D3D12RHIDevice::waitForRingSlot()
 	{
 		if ( _fence == nullptr )
+			return;
+
+		if ( _device != nullptr && FAILED( _device->GetDeviceRemovedReason() ) )
 			return;
 
 		const uint64 completed = _fence->GetCompletedValue();
@@ -433,6 +439,10 @@ namespace sw
 	{
 		if ( _commandQueue == nullptr || _fence == nullptr )
 			return;
+
+		if ( _device != nullptr && FAILED( _device->GetDeviceRemovedReason() ) )
+			return;
+
 		const UINT64  fenceToSignal = _fenceValue;
 		const HRESULT signalHr		= _commandQueue->Signal( _fence.Get(), fenceToSignal );
 		_fenceValue++;
@@ -674,20 +684,59 @@ namespace sw
 	{
 	#if defined( SW_DEBUG )
 		Microsoft::WRL::ComPtr<ID3D12InfoQueue> infoQueue;
-		if ( FAILED( _device.As( &infoQueue ) ) || infoQueue == nullptr )
-			return;
-
-		const uint64 messageCount = infoQueue->GetNumStoredMessages();
-		for ( uint64 messageIndex = 0; messageIndex < messageCount; ++messageIndex )
+		if ( SUCCEEDED( _device.As( &infoQueue ) ) && infoQueue != nullptr )
 		{
-			SIZE_T messageLength{ 0 };
-			infoQueue->GetMessage( messageIndex, nullptr, &messageLength );
-			vector<uint8>  bytes( messageLength );
-			D3D12_MESSAGE* pMessage = reinterpret_cast<D3D12_MESSAGE*>( bytes.data() );
-			if ( SUCCEEDED( infoQueue->GetMessage( messageIndex, pMessage, &messageLength ) ) )
-				SW_LOG_ERROR( "[D3D12 InfoQueue:%#] %#", pStage, pMessage->pDescription );
+			const uint64 messageCount = infoQueue->GetNumStoredMessages();
+			for ( uint64 messageIndex = 0; messageIndex < messageCount; ++messageIndex )
+			{
+				SIZE_T messageLength{ 0 };
+				infoQueue->GetMessage( messageIndex, nullptr, &messageLength );
+				vector<uint8>  bytes( messageLength );
+				D3D12_MESSAGE* pMessage = reinterpret_cast<D3D12_MESSAGE*>( bytes.data() );
+				if ( SUCCEEDED( infoQueue->GetMessage( messageIndex, pMessage, &messageLength ) ) )
+					SW_LOG_ERROR( "[D3D12 InfoQueue:%#] %#", pStage, pMessage->pDescription );
+			}
+			infoQueue->ClearStoredMessages();
 		}
-		infoQueue->ClearStoredMessages();
+
+		if ( _device != nullptr && FAILED( _device->GetDeviceRemovedReason() ) )
+		{
+			Microsoft::WRL::ComPtr<ID3D12DeviceRemovedExtendedData> dred;
+			if ( SUCCEEDED( _device.As( &dred ) ) && dred != nullptr )
+			{
+				D3D12_DRED_AUTO_BREADCRUMBS_OUTPUT autoBreadcrumbsOutput{};
+				if ( SUCCEEDED( dred->GetAutoBreadcrumbsOutput( &autoBreadcrumbsOutput ) ) )
+				{
+					const D3D12_AUTO_BREADCRUMB_NODE* pNode = autoBreadcrumbsOutput.pHeadAutoBreadcrumbNode;
+					while ( pNode != nullptr )
+					{
+						const uint32 executed = ( pNode->pCommandHistory != nullptr && pNode->pLastBreadcrumbValue != nullptr )
+													? *pNode->pLastBreadcrumbValue
+													: 0;
+						SW_LOG_ERROR( "[DRED Breadcrumbs] CommandList='%#', Total=%#, Executed=%#",
+									  pNode->pCommandListDebugNameA ? pNode->pCommandListDebugNameA : "unnamed",
+									  pNode->BreadcrumbCount, executed );
+						if ( pNode->pCommandHistory != nullptr && executed > 0 && executed <= pNode->BreadcrumbCount )
+						{
+							SW_LOG_ERROR( "[DRED Breadcrumbs] Last completed Op index=%#, OpType=%#",
+										  executed - 1, static_cast<uint32>( pNode->pCommandHistory[executed - 1] ) );
+							if ( executed < pNode->BreadcrumbCount )
+							{
+								SW_LOG_ERROR( "[DRED Breadcrumbs] Failed/In-Flight Op index=%#, OpType=%#",
+											  executed, static_cast<uint32>( pNode->pCommandHistory[executed] ) );
+							}
+						}
+						pNode = pNode->pNext;
+					}
+				}
+
+				D3D12_DRED_PAGE_FAULT_OUTPUT pageFaultOutput{};
+				if ( SUCCEEDED( dred->GetPageFaultAllocationOutput( &pageFaultOutput ) ) )
+				{
+					SW_LOG_ERROR( "[DRED PageFault] PageFault VA=0x%016llX", static_cast<uint64>( pageFaultOutput.PageFaultVA ) );
+				}
+			}
+		}
 	#else
 		(void)pStage;
 	#endif

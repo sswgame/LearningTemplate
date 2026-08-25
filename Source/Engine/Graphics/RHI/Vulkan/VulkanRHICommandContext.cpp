@@ -202,7 +202,7 @@ namespace sw
 		if ( cmd == VK_NULL_HANDLE || texture == 0 )
 			return;
 		VulkanRHIDevice::VulkanTextureRecord* pResolved = _pDevice->resolveTexture( texture );
-		if ( pResolved == nullptr || pResolved->image == VK_NULL_HANDLE || pResolved->_bDepthStencil != 0 )
+		if ( pResolved == nullptr || pResolved->image == VK_NULL_HANDLE )
 			return;
 
 		if ( _pDevice->_bRenderPassActive )
@@ -212,12 +212,17 @@ namespace sw
 		}
 
 		VulkanRHIDevice::VulkanTextureRecord& record = *pResolved;
-		if ( record.layout == static_cast<uint32>( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ) )
+		const uint32 targetLayout = ( record._bDepthStencil != 0 )
+										? static_cast<uint32>( VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL )
+										: static_cast<uint32>( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+		if ( record.layout == targetLayout )
 			return;
-		_pDevice->transitionImageLayout( cmd, record.image, record.layout,
-										 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-										 VK_IMAGE_ASPECT_COLOR_BIT );
-		record.layout = static_cast<uint32>( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+
+		const uint32 aspect = ( record._bDepthStencil != 0 )
+								  ? _pDevice->depthAspectMask()
+								  : static_cast<uint32>( VK_IMAGE_ASPECT_COLOR_BIT );
+		_pDevice->transitionImageLayout( cmd, record.image, record.layout, targetLayout, aspect );
+		record.layout = targetLayout;
 	}
 
 	void VulkanRHICommandContext::endOffscreenPass( RHITextureHandle colorTarget )
@@ -420,6 +425,7 @@ namespace sw
 				if ( _pDevice->_renderPass == VK_NULL_HANDLE || _pDevice->_listSwapChainFramebuffers.empty() || _pDevice->_imageIndex >= _pDevice->_listSwapChainFramebuffers.size() )
 					return;
 				framebuffer = _pDevice->_listSwapChainFramebuffers[_pDevice->_imageIndex];
+				extent		= { _pDevice->_swapChainExtentWidth, _pDevice->_swapChainExtentHeight };
 			}
 
 			if ( _pDevice->_bRenderPassActive )
@@ -434,7 +440,10 @@ namespace sw
 		}
 
 		if ( beginInfo._width > 0 && beginInfo._height > 0 )
-			extent = { beginInfo._width, beginInfo._height };
+		{
+			extent.width  = MathUtil::min( extent.width, beginInfo._width );
+			extent.height = MathUtil::min( extent.height, beginInfo._height );
+		}
 
 		VkRenderPassBeginInfo renderPassInfo{};
 		renderPassInfo.sType			 = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;

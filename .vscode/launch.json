@@ -17,8 +17,7 @@
             "terminal": "integrated",
             "sourceLanguages": [
                 "cpp"
-            ],
-            "preLaunchTask": "CMake: Build App (Ninja-Debug)"
+            ]
         },
         {
             "name": "App + Editor DX11 (CodeLLDB)",
@@ -36,8 +35,7 @@
             "terminal": "integrated",
             "sourceLanguages": [
                 "cpp"
-            ],
-            "preLaunchTask": "CMake: Build App (Ninja-Debug)"
+            ]
         },
         {
             "name": "App + Editor Vulkan (CodeLLDB)",
@@ -55,8 +53,7 @@
             "terminal": "integrated",
             "sourceLanguages": [
                 "cpp"
-            ],
-            "preLaunchTask": "CMake: Build App (Ninja-Debug)"
+            ]
         },
         {
             "name": "App + Editor OpenGL (CodeLLDB)",
@@ -74,8 +71,7 @@
             "terminal": "integrated",
             "sourceLanguages": [
                 "cpp"
-            ],
-            "preLaunchTask": "CMake: Build App (Ninja-Debug)"
+            ]
         },
         {
             "name": "App Game DX12 (CodeLLDB)",
@@ -92,8 +88,7 @@
             "terminal": "integrated",
             "sourceLanguages": [
                 "cpp"
-            ],
-            "preLaunchTask": "CMake: Build App (Ninja-Debug)"
+            ]
         },
         {
             "name": "EngineTest (CodeLLDB)",
@@ -108,8 +103,7 @@
             "terminal": "integrated",
             "sourceLanguages": [
                 "cpp"
-            ],
-            "preLaunchTask": "CMake: Build All (Ninja-Debug)"
+            ]
         },
         {
             "name": "SmokeTest (CodeLLDB)",
@@ -124,8 +118,7 @@
             "terminal": "integrated",
             "sourceLanguages": [
                 "cpp"
-            ],
-            "preLaunchTask": "CMake: Build All (Ninja-Debug)"
+            ]
         },
         {
             "name": "CoreTest (CodeLLDB)",
@@ -140,8 +133,7 @@
             "terminal": "integrated",
             "sourceLanguages": [
                 "cpp"
-            ],
-            "preLaunchTask": "CMake: Build All (Ninja-Debug)"
+            ]
         },
         {
             "name": "ReflectionTest (CodeLLDB)",
@@ -156,8 +148,7 @@
             "terminal": "integrated",
             "sourceLanguages": [
                 "cpp"
-            ],
-            "preLaunchTask": "CMake: Build All (Ninja-Debug)"
+            ]
         },
         {
             "name": "Attach App (CodeLLDB)",

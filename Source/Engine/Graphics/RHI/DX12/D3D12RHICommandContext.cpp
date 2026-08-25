@@ -49,6 +49,7 @@ namespace sw
 		pAllocator->Reset();
 		_pDevice->_commandList->Reset( pAllocator, nullptr );
 		_pDevice->_bRecording = 1;
+		bindDescriptorHeaps();
 	}
 
 	void D3D12RHICommandContext::bindDescriptorHeaps()
@@ -280,7 +281,7 @@ namespace sw
 		auto it = _pDevice->_mapOffscreenTextures.find( texture );
 		if ( it == _pDevice->_mapOffscreenTextures.end() )
 			return;
-		if ( it->second._bHasRtv == 0 )
+		if ( it->second._bHasRtv == 0 && it->second._bHasDsv == 0 )
 			return;
 
 		transitionTexture( texture, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE );
@@ -322,6 +323,7 @@ namespace sw
 		if ( pPsoRec == nullptr || pPsoRec->pso == nullptr )
 			return;
 
+		bindDescriptorHeaps();
 		_pDevice->_commandList->SetGraphicsRootSignature( _pDevice->_rootSignature.Get() );
 		_pDevice->_commandList->SetPipelineState( pPsoRec->pso.Get() );
 		bindMaterialCbv( materialDescriptorIndex );
@@ -374,6 +376,7 @@ namespace sw
 
 		if ( _pDevice->_rootSignature != nullptr )
 		{
+			bindDescriptorHeaps();
 			_pDevice->_commandList->SetGraphicsRootSignature( _pDevice->_rootSignature.Get() );
 			bindMaterialCbv( materialDescriptorIndex );
 		}
@@ -430,7 +433,10 @@ namespace sw
 		if ( pRootSig == nullptr )
 			pRootSig = _pDevice->_rootSignature.Get();
 		if ( pRootSig != nullptr )
+		{
+			bindDescriptorHeaps();
 			_pDevice->_commandList->SetComputeRootSignature( pRootSig );
+		}
 
 		_pDevice->_commandList->SetComputeRoot32BitConstants( paramIndex, count, pData, destOffsetIn32BitValues );
 	}
@@ -495,7 +501,10 @@ namespace sw
 			return;
 
 		if ( _pDevice->_rootSignature != nullptr )
+		{
+			bindDescriptorHeaps();
 			_pDevice->_commandList->SetGraphicsRootSignature( _pDevice->_rootSignature.Get() );
+		}
 		_pDevice->_commandList->SetPipelineState( pRecord->pso.Get() );
 	}
 
@@ -512,7 +521,10 @@ namespace sw
 		if ( pRootSig == nullptr )
 			pRootSig = _pDevice->_rootSignature.Get();
 		if ( pRootSig != nullptr )
+		{
+			bindDescriptorHeaps();
 			_pDevice->_commandList->SetComputeRootSignature( pRootSig );
+		}
 		_pDevice->_commandList->SetPipelineState( pRecord->pso.Get() );
 	}
 
@@ -674,25 +686,7 @@ namespace sw
 		if ( colorTarget == 0 || _pDevice->_commandList == nullptr )
 			return;
 
-		auto it = _pDevice->_mapOffscreenTextures.find( colorTarget );
-		if ( it == _pDevice->_mapOffscreenTextures.end() )
-			return;
-
-		D3D12RHIDevice::OffscreenTextureRecord& record	  = it->second;
-		ID3D12Resource*							pResource = _pDevice->resolveTexture( colorTarget );
-		if ( pResource == nullptr )
-			return;
-		if ( record._state != D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE )
-		{
-			D3D12_RESOURCE_BARRIER barrier{};
-			barrier.Type				   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-			barrier.Transition.pResource   = pResource;
-			barrier.Transition.StateBefore = record._state;
-			barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-			barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-			_pDevice->_commandList->ResourceBarrier( 1, &barrier );
-			record._state = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-		}
+		transitionTexture( colorTarget, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE );
 	}
 } // namespace sw
 #endif

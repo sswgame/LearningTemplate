@@ -60,6 +60,9 @@ namespace sw
 		if ( bind( pDevice, pFrameRenderer ) == false )
 			return false;
 
+		if ( pDevice != nullptr )
+			pDevice->unbindGraphicsContext();
+
 		_bStop	  = false;
 		_bRunning = true;
 		_thread	  = std::thread( &RenderThread::threadMain, this );
@@ -69,7 +72,7 @@ namespace sw
 
 	void RenderThread::stop()
 	{
-		if ( _bRunning == false )
+		if ( _bRunning.exchange( false, std::memory_order_acq_rel ) == false )
 		{
 			_pDevice		= nullptr;
 			_pFrameRenderer = nullptr;
@@ -81,8 +84,10 @@ namespace sw
 		_cvConsume.notify_all();
 		_cvIdle.notify_all();
 		if ( _thread.joinable() )
-			_thread.join();
-		_bRunning.store( false, std::memory_order_release );
+		{
+			if ( std::this_thread::get_id() != _thread.get_id() )
+				_thread.join();
+		}
 		_pDevice		= nullptr;
 		_pFrameRenderer = nullptr;
 		_bContextBound	= false;
@@ -97,7 +102,31 @@ namespace sw
 			return;
 		}
 
-		if ( _bRunning == false )
+		// 런타임에 gv_useRenderThread 상태가 동적으로 변경되었을 때 스레드 모드를 핫스왑합니다.
+		const bool bShouldRunWorker = gv_useRenderThread;
+		if ( _bRunning.load( std::memory_order_acquire ) != bShouldRunWorker )
+		{
+			IRHIDevice*	   pSavedDevice		   = _pDevice;
+			FrameRenderer* pSavedFrameRenderer = _pFrameRenderer;
+
+			if ( bShouldRunWorker )
+			{
+				if ( _bContextBound )
+				{
+					_pDevice->unbindGraphicsContext();
+					_bContextBound = false;
+				}
+				start( pSavedDevice, pSavedFrameRenderer );
+			}
+			else
+			{
+				waitIdle();
+				stop();
+				bind( pSavedDevice, pSavedFrameRenderer );
+			}
+		}
+
+		if ( _bRunning.load( std::memory_order_acquire ) == false )
 		{
 			executeInline( packet );
 			return;
@@ -122,12 +151,16 @@ namespace sw
 
 	void RenderThread::waitIdle()
 	{
-		if ( _bRunning.load( std::memory_order_relaxed ) )
+		if ( _bRunning.load( std::memory_order_acquire ) == false )
+			return;
+
+		if ( std::this_thread::get_id() != _thread.get_id() )
 		{
 			std::unique_lock<mutex> lock{ _mutex };
 			_cvIdle.wait( lock, [this]()
 			{ return _bStop.load( std::memory_order_relaxed ) || _tail.load( std::memory_order_acquire ) == _head.load( std::memory_order_acquire ); } );
 		}
+
 		if ( _pDevice != nullptr )
 			_pDevice->waitIdle();
 	}
@@ -160,7 +193,6 @@ namespace sw
 	void RenderThread::threadMain()
 	{
 		_bContextBound = false;
-		ensureContextOnCurrentThread();
 
 		for ( ;; )
 		{
@@ -204,6 +236,8 @@ namespace sw
 		if ( _pDevice == nullptr || packet._bValid == 0 )
 			return;
 
+		ensureContextOnCurrentThread();
+
 		const bool			bOffscreen = packet._gameRenderTarget != 0;
 		IRHICommandContext* pImm	   = _pDevice->getImmediateContext();
 		if ( bOffscreen )
@@ -240,6 +274,15 @@ namespace sw
 
 		if ( _pDevice->getSwapChain() != nullptr )
 			_pDevice->getSwapChain()->endFrame( true );
+
+		if ( _postPresentHook.isBound() )
+			_postPresentHook( *_pDevice, packet );
+
+		if ( _pDevice->requiresExclusiveContextThread() )
+		{
+			_pDevice->unbindGraphicsContext();
+			_bContextBound = false;
+		}
 	}
 
 	bool RenderThread::ensureContextOnCurrentThread()
@@ -256,12 +299,6 @@ namespace sw
 			return false;
 		}
 		_bContextBound = true;
-		if ( _pDevice->requiresExclusiveContextThread() )
-		{
-			SW_LOG_INFO( "[RenderThread] Exclusive graphics context on %# executor (%#)",
-						 _bRunning.load( std::memory_order_relaxed ) ? "dedicated" : "inline/GT",
-						 _pDevice->getBackendName() );
-		}
 		return true;
 	}
 } // namespace sw

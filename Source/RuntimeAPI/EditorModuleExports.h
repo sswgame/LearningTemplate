@@ -27,14 +27,18 @@
 			EditorClass* pInstance = static_cast<EditorClass*>( editorHandle );                                                                                       \
 			if ( pInstance != nullptr )                                                                                                                        \
 				pInstance->shutdown(); };                                                                                   \
+		pOutApi->updateUI		   = []( sw::EditorHandle editorHandle, const sw::EditorUIContext* pContext ) {                                                 \
+			EditorClass* pInstance = static_cast<EditorClass*>( editorHandle );                                                                                       \
+			if ( pInstance != nullptr && pContext != nullptr )                                                                                                 \
+				pInstance->updateUI( *pContext ); };                                                                        \
 		pOutApi->preRender		   = []( sw::EditorHandle editorHandle, sw::RHIDeviceHandle rhiDeviceHandle ) {                                                 \
 			EditorClass* pInstance = static_cast<EditorClass*>( editorHandle );                                                                                       \
 			if ( pInstance != nullptr )                                                                                                                        \
 				pInstance->preRender( static_cast<sw::IRHIDevice*>( rhiDeviceHandle ) ); };                                              \
-		pOutApi->render			   = []( sw::EditorHandle editorHandle, const sw::EditorUIContext* pContext ) {                                                 \
+		pOutApi->render			   = []( sw::EditorHandle editorHandle, sw::RHIDeviceHandle rhiDeviceHandle ) {                                                 \
 			EditorClass* pInstance = static_cast<EditorClass*>( editorHandle );                                                                                       \
-			if ( pInstance != nullptr && pContext != nullptr )                                                                                                 \
-				pInstance->render( *pContext ); };                                              \
+			if ( pInstance != nullptr )                                                                                                                        \
+				pInstance->render( static_cast<sw::IRHIDevice*>( rhiDeviceHandle ) ); };                                           \
 		pOutApi->postPresent	   = []( sw::EditorHandle editorHandle, sw::RHIDeviceHandle rhiDeviceHandle ) {                                                 \
 			EditorClass* pInstance = static_cast<EditorClass*>( editorHandle );                                                                                       \
 			if ( pInstance != nullptr )                                                                                                                        \

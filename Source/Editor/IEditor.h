@@ -33,12 +33,14 @@ namespace sw
 		virtual void shutdown() = 0;
 
 		// ------------------------------------------------------------------------------
-		// 2) 프레임 — preRender → render → postPresent
+		// 2) 프레임 — updateUI (Main Thread) → preRender / render / postPresent (RenderThread)
 		// ------------------------------------------------------------------------------
+		/** @brief 메인 스레드에서 ImGui 프레임 갱신, 패널 그리기 및 플랫폼 윈도우를 업데이트합니다. */
+		virtual void updateUI( const EditorUIContext& context ) = 0;
 		/** @brief UI 그리기 전 패널 GPU 작업을 수행합니다. */
 		virtual void preRender( IRHIDevice* pRhiDevice ) = 0;
-		/** @brief ImGui 프레임과 패널을 그립니다. */
-		virtual void render( const EditorUIContext& context ) = 0;
+		/** @brief GPU 상에 에디터 UI DrawData를 렌더링합니다. */
+		virtual void render( IRHIDevice* pRhiDevice ) = 0;
 		/** @brief 메인 스왑체인 Present 이후 호출 (멀티 뷰포트 보조 윈도우 렌더) */
 		virtual void postPresent( IRHIDevice* pRhiDevice ) = 0;
 

@@ -29,9 +29,12 @@ namespace sw
 
 	void GameViewWindow::draw( const EditorUIContext& ctx )
 	{
-		const bool	  bFocused = ImGui::IsWindowFocused();
-		const bool	  bHovered = ImGui::IsWindowHovered();
+		const bool	  bFocused = ImGui::IsWindowFocused( ImGuiFocusedFlags_RootAndChildWindows );
+		const bool	  bHovered = ImGui::IsWindowHovered( ImGuiHoveredFlags_RootAndChildWindows );
 		const float32 dt	   = ImGui::GetIO().DeltaTime;
+
+		ctx._bIsGameViewFocused = bFocused;
+		ctx._bIsGameViewHovered = bHovered;
 
 		_viewportClient.update( dt, bFocused, bHovered );
 
