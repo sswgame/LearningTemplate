@@ -27,43 +27,54 @@
     "cmake.useCMakePresets": "always",
     "cmake.parallelJobs": 0,
     "cmake.exportCompileCommandsFile": true, // clangd가 CMake 빌드 트리를 즉시 읽도록 연동
-    "cmake.debugConfig": {
-        "args": [
-            "-vulkan",
-            "EnableEditor"
-        ],
-        "miDebuggerPath": "/usr/bin/gdb",
-        "debuginfod": {
-            "enabled": false
-        }
-    },
     "cmake.options.statusBarVisibility": "compact",
-    "cmake.options.advanced": {
-        "ctest": {
-            "statusBarVisibility": "hidden"
-        },
-        "cpack": {
-            "statusBarVisibility": "hidden",
-            "projectStatusVisibility": "hidden"
-        },
-        "workflow": {
-            "statusBarVisibility": "hidden"
-        },
-        "packagePreset": {
-            "statusBarVisibility": "hidden"
-        },
-        "workflowPreset": {
-            "statusBarVisibility": "hidden"
-        },
-        "testPreset": {
-            "statusBarVisibility": "hidden"
-        }
-    },
     "lldb.launch.expressions": "native",
     "lldb.launch.terminal": "integrated",
     "editor.colorDecorators": true,
     // ==========================================
-    // 3. C++ Semantic Highlighting (ReSharper Custom)
+    // 3. 파일 감시 및 검색 성능 최적화 (RAM/CPU 절약)
+    // ==========================================
+    "files.watcherExclude": {
+        "**/build/**": true,
+        "**/Tools/vcpkg/**": true,
+        "**/Tools/LLVM/**": true,
+        "**/.git/**": true
+    },
+    "search.exclude": {
+        "**/build/**": true,
+        "**/Tools/vcpkg/**": true,
+        "**/Tools/LLVM/**": true
+    },
+    // ==========================================
+    // 4. 에디터 및 코드 포맷팅 자동화
+    // ==========================================
+    "editor.formatOnSave": true,
+    "files.insertFinalNewline": true,
+    "files.trimTrailingWhitespace": true,
+    "[cpp]": {
+        "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd"
+    },
+    "[cmake]": {
+        "editor.tabSize": 4,
+        "editor.insertSpaces": false
+    },
+    "[python]": {
+        "editor.tabSize": 4,
+        "editor.insertSpaces": true
+    },
+    // ==========================================
+    // 5. 엔진 전용 파일 형식 연동
+    // ==========================================
+    "files.associations": {
+        "*.xxx": "cpp",
+        "*.gen.cpp": "cpp",
+        "*.gen.h": "cpp",
+        "*.scene.xml": "xml",
+        "*.prefab.json": "json",
+        "*.input.xml": "xml"
+    },
+    // ==========================================
+    // 6. C++ Semantic Highlighting (ReSharper Custom)
     // ==========================================
     "editor.semanticHighlighting.enabled": true,
     "editor.semanticTokenColorCustomizations": {
@@ -87,7 +98,7 @@
             "keyword": "#569CD6",
             "keyword.control": "#569CD6",
             // 3. 네임스페이스
-            "namespace": "#569CD6",
+            "namespace": "#FFB6C1",
             // 4. 정적 메서드 / 정적 함수 (Tomato 주황색)
             "method.static": "#FF6347",
             "function.static": "#FF6347",
@@ -121,7 +132,7 @@
         }
     },
     // ==========================================
-    // 4. TextMate Fallback Grammar
+    // 7. TextMate Fallback Grammar
     // ==========================================
     "editor.tokenColorCustomizations": {
         "textMateRules": [
@@ -171,7 +182,7 @@
                     "entity.name.scope-resolution.cpp"
                 ],
                 "settings": {
-                    "foreground": "#FF3333"
+                    "foreground": "#FFB6C1"
                 }
             },
             {

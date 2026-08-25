@@ -1,23 +1,16 @@
 {
     "version": "2.0.0",
+    "options": {
+        "cwd": "${workspaceFolder}"
+    },
     "tasks": [
-        {
-            "label": "CMake: Configure Ninja-Debug",
-            "type": "shell",
-            "command": "cmake --preset Ninja-Debug",
-            "options": {
-                "cwd": "${workspaceFolder}"
-            },
-            "problemMatcher": [],
-            "group": "build"
-        },
+        // ==========================================
+        // 1. Build & Configure Tasks
+        // ==========================================
         {
             "label": "CMake: Build App (Ninja-Debug)",
             "type": "shell",
-            "command": "cmake --build --preset Ninja-Debug --target App EditorModule SWGame -j",
-            "options": {
-                "cwd": "${workspaceFolder}"
-            },
+            "command": "cmake --build --preset Ninja-Debug --target App EditorModule SWGame",
             "problemMatcher": [
                 "$gcc"
             ],
@@ -25,13 +18,62 @@
                 "kind": "build",
                 "isDefault": true
             },
-            "dependsOn": [],
             "presentation": {
                 "reveal": "silent",
                 "panel": "shared",
-                "showReuseMessage": false,
-                "clear": false
+                "showReuseMessage": false
             }
+        },
+        {
+            "label": "CMake: Build All (Ninja-Debug)",
+            "type": "shell",
+            "command": "cmake --build --preset Ninja-Debug",
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": "build"
+        },
+        {
+            "label": "CMake: Clean Rebuild (Ninja-Debug)",
+            "type": "shell",
+            "command": "cmake --build --preset Ninja-Debug --clean-first",
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": "build"
+        },
+        {
+            "label": "CMake: Configure Ninja-Debug",
+            "type": "shell",
+            "command": "cmake --preset Ninja-Debug",
+            "group": "build"
+        },
+
+        // ==========================================
+        // 2. Test & Quality Tasks
+        // ==========================================
+        {
+            "label": "CTest: Run All Tests",
+            "type": "shell",
+            "command": "ctest --test-dir build/Ninja-Debug --output-on-failure",
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "Lint: PreCommitLint",
+            "type": "shell",
+            "command": "py -3 Scripts/lint/PreCommitLint.py"
+        },
+
+        // ==========================================
+        // 3. Environment & Setup Tasks
+        // ==========================================
+        {
+            "label": "Setup: SetupEnvironment",
+            "type": "shell",
+            "command": "py -3 Scripts/setup/SetupEnvironment.py"
         }
     ]
 }

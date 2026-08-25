@@ -78,7 +78,7 @@
             "preLaunchTask": "CMake: Build App (Ninja-Debug)"
         },
         {
-            "name": "App DX12 (CodeLLDB)",
+            "name": "App Game DX12 (CodeLLDB)",
             "type": "lldb",
             "request": "launch",
             "program": "${workspaceFolder}/build/Ninja-Debug/Bin/App.exe",
@@ -94,6 +94,70 @@
                 "cpp"
             ],
             "preLaunchTask": "CMake: Build App (Ninja-Debug)"
+        },
+        {
+            "name": "EngineTest (CodeLLDB)",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/Ninja-Debug/Bin/EngineTest.exe",
+            "args": [],
+            "cwd": "${workspaceFolder}/build/Ninja-Debug/Bin",
+            "env": {
+                "PATH": "${workspaceFolder}/build/Ninja-Debug/Bin;${workspaceFolder}/build/vcpkg_installed/x64-windows/debug/bin;${workspaceFolder}/build/vcpkg_installed/x64-windows/bin;${env:PATH}"
+            },
+            "terminal": "integrated",
+            "sourceLanguages": [
+                "cpp"
+            ],
+            "preLaunchTask": "CMake: Build All (Ninja-Debug)"
+        },
+        {
+            "name": "SmokeTest (CodeLLDB)",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/Ninja-Debug/Bin/SmokeTest.exe",
+            "args": [],
+            "cwd": "${workspaceFolder}/build/Ninja-Debug/Bin",
+            "env": {
+                "PATH": "${workspaceFolder}/build/Ninja-Debug/Bin;${workspaceFolder}/build/vcpkg_installed/x64-windows/debug/bin;${workspaceFolder}/build/vcpkg_installed/x64-windows/bin;${env:PATH}"
+            },
+            "terminal": "integrated",
+            "sourceLanguages": [
+                "cpp"
+            ],
+            "preLaunchTask": "CMake: Build All (Ninja-Debug)"
+        },
+        {
+            "name": "CoreTest (CodeLLDB)",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/Ninja-Debug/Bin/CoreTest.exe",
+            "args": [],
+            "cwd": "${workspaceFolder}/build/Ninja-Debug/Bin",
+            "env": {
+                "PATH": "${workspaceFolder}/build/Ninja-Debug/Bin;${workspaceFolder}/build/vcpkg_installed/x64-windows/debug/bin;${workspaceFolder}/build/vcpkg_installed/x64-windows/bin;${env:PATH}"
+            },
+            "terminal": "integrated",
+            "sourceLanguages": [
+                "cpp"
+            ],
+            "preLaunchTask": "CMake: Build All (Ninja-Debug)"
+        },
+        {
+            "name": "ReflectionTest (CodeLLDB)",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/Ninja-Debug/Bin/ReflectionTest.exe",
+            "args": [],
+            "cwd": "${workspaceFolder}/build/Ninja-Debug/Bin",
+            "env": {
+                "PATH": "${workspaceFolder}/build/Ninja-Debug/Bin;${workspaceFolder}/build/vcpkg_installed/x64-windows/debug/bin;${workspaceFolder}/build/vcpkg_installed/x64-windows/bin;${env:PATH}"
+            },
+            "terminal": "integrated",
+            "sourceLanguages": [
+                "cpp"
+            ],
+            "preLaunchTask": "CMake: Build All (Ninja-Debug)"
         },
         {
             "name": "Attach App (CodeLLDB)",
