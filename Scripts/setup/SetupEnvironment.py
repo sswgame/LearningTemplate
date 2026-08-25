@@ -9,6 +9,7 @@ Scripts/setup/SetupEnvironment.py
 """
 
 from __future__ import annotations
+
 import argparse
 import json
 import logging
@@ -17,18 +18,21 @@ import platform
 import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Callable, Dict, Tuple
+from typing import Any, Callable
 
-# Scripts/ → sys.path (ConfigHelper 문서의 표준 부트스트랩)
+# Scripts/ → sys.path (common 패키지 부트스트랩)
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from ConfigHelper import (
+from common import (
     autoBootstrapEnabled,
+    getOrFindCached,
+    getProjectRoot,
+    isVcpkgRoot,
     kDirConfigEnv,
     kEnvSwVcpkgAutoBootstrap,
-    kFileToolchainConfig,
     kFileParserConfig,
     kFileParserDefaults,
+    kFileToolchainConfig,
     kKeyClangFlags,
     kKeyEmit,
     kKeyLibclangDllPath,
@@ -47,11 +51,8 @@ from ConfigHelper import (
     kKeyVcpkgRoot,
     kKeyWindowsSdkDir,
     kKeyWindowsSdkVersion,
-    getOrFindCached,
-    getProjectRoot,
-    isVcpkgRoot,
-    loadToolchainConfig,
     loadSearchPaths,
+    loadToolchainConfig,
     mergeJsonDictInternal,
     normalizePath,
     readJsonDictInternal,
@@ -72,63 +73,29 @@ def asDictInternal(value: Any) -> dict:
 
 
 def unionStrListInternal(base: Any, extra: Any) -> list[str]:
-    outList: list[str] = []
+    combined: list[str] = []
     if isinstance(base, list):
-        outList.extend(str(item) for item in base)
+        combined.extend(str(item) for item in base)
     if isinstance(extra, list):
-        outList.extend(str(item) for item in extra)
-    uniqueSet: set[str] = set()
-    resultList: list[str] = []
-    for item in outList:
-        if item in uniqueSet:
-            continue
-        uniqueSet.add(item)
-        resultList.append(item)
-    return resultList
+        combined.extend(str(item) for item in extra)
+    return list(dict.fromkeys(combined))
 
-
-def rewriteLegacyClangArgsInternal(argList: list) -> list:
-    """구버전/잘못된 clang 인자 철자를 교정합니다."""
-    if not isinstance(argList, list):
-        return []
-    rewritten = []
-    for arg in argList:
-        if not isinstance(arg, str):
-            continue
-        if arg == "-fno-spellchecking":
-            rewritten.append("-fno-spell-checking")
-            continue
-        rewritten.append(arg)
-    return rewritten
 
 def normalizeParserConfigInternal(raw: dict) -> dict:
-    """Ensure nested parser_args/paths/emit/tuning schema."""
+    """parser_args, paths, emit, tuning 등 중첩 스키마 구조를 정규화합니다."""
     out = dict(raw)
-    rawArgs = out.get(kKeyParserArgsSection)
-    if isinstance(rawArgs, list):
-        argsSection = {
-            kKeyParserArgsDefault: rawArgs,
-            kKeyParserArgsPlatform: {},
-            kKeyParserArgsExtra: [],
-        }
-    else:
-        argsSection = asDictInternal(rawArgs)
-    argsSection[kKeyParserArgsDefault] = rewriteLegacyClangArgsInternal(
-        argsSection.get(kKeyParserArgsDefault, [])
-    )
-    argsSection[kKeyParserArgsExtra] = rewriteLegacyClangArgsInternal(
-        argsSection.get(kKeyParserArgsExtra, [])
-    )
-    platformArgs = asDictInternal(argsSection.get(kKeyParserArgsPlatform))
-    for osKey, osArgs in list(platformArgs.items()):
-        platformArgs[osKey] = rewriteLegacyClangArgsInternal(osArgs)
-    argsSection[kKeyParserArgsPlatform] = platformArgs
-    out[kKeyParserArgsSection] = argsSection
+    argsSection = asDictInternal(out.get(kKeyParserArgsSection))
+    out[kKeyParserArgsSection] = {
+        kKeyParserArgsDefault: list(argsSection.get(kKeyParserArgsDefault, [])),
+        kKeyParserArgsPlatform: asDictInternal(argsSection.get(kKeyParserArgsPlatform)),
+        kKeyParserArgsExtra: list(argsSection.get(kKeyParserArgsExtra, [])),
+    }
     out[kKeyPaths] = asDictInternal(out.get(kKeyPaths))
     out[kKeyClangFlags] = asDictInternal(out.get(kKeyClangFlags))
     out[kKeyEmit] = asDictInternal(out.get(kKeyEmit))
     out[kKeyTuning] = asDictInternal(out.get(kKeyTuning))
     return out
+
 
 # ==============================================================================
 # 1) 설정용 Dataclass
@@ -149,66 +116,69 @@ class EngineConfig:
     sccache_path: str
     system_include_dirs: list[str]
 
+
 # ==============================================================================
-# 2) EnvironmentSetupManager 클래스
+# 2) 통합 환경 구성 매니저 (Class)
 # ==============================================================================
 class EnvironmentSetupManager:
     def __init__(self, force_refresh: bool = False):
+        self.force_refresh = force_refresh
         self.project_root = getProjectRoot()
         self.config_dir = self.project_root / kDirConfigEnv
-        self.config_dir.mkdir(parents=True, exist_ok=True)
         self.toolchain_config_file = self.config_dir / kFileToolchainConfig
         self.parser_config_file = self.config_dir / kFileParserConfig
-        
-        # force_refresh가 참이면 기존 설정을 무시합니다.
-        self.existing_config = {} if force_refresh else loadToolchainConfig()
+
         self.logger = logging.getLogger("SetupEnvironment")
+        self.existing_config: dict[str, Any] = {}
+        if not self.force_refresh:
+            self.existing_config = loadToolchainConfig()
 
-    def safeCallInternal(self, label: str, fn: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
-        """안전하게 콜러블을 실행하고 예외 발생 시 Fast-Fail 처리합니다."""
+    def safeCallInternal(self, name: str, callback: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
         try:
-            return fn(*args, **kwargs)
-        except Exception as exc:
-            self.logger.fatal(f"[{label}] failed: {exc}")
-            sys.exit(1)
+            return callback(*args, **kwargs)
+        except Exception as exception:
+            self.logger.warning(f"[{name}] Warning/Skipped: {exception}")
+            return None
 
-    def resolveLlvmInternal(self) -> Tuple[str, str]:
-        cached_llvm = self.existing_config.get(kKeyLlvmPath, "")
-        if cached_llvm and isMinimalLlvmRoot(str(cached_llvm)):
-            llvm_path = normalizePath(str(cached_llvm))
+    def resolveLlvmInternal(self) -> tuple[str, str]:
+        cachedLlvm = self.existing_config.get(kKeyLlvmPath, "")
+        if cachedLlvm and isMinimalLlvmRoot(cachedLlvm):
+            llvmPath = normalizePath(str(cachedLlvm))
         else:
             from setup.SetupLlvm import setupLlvm
+
             path = self.safeCallInternal("SetupLlvm", setupLlvm, allowBootstrap=False)
-            llvm_path = normalizePath(path or "")
-            
-        libclang_path = getOrFindCached(
-            self.existing_config, kKeyLibclangDllPath, findLibClangDllPath, llvm_path
+            llvmPath = normalizePath(path or "")
+
+        libclangPath = getOrFindCached(
+            self.existing_config, kKeyLibclangDllPath, findLibClangDllPath, llvmPath
         )
-        if llvm_path:
+        if llvmPath:
             from setup.SetupLlvm import ensureClangFormat
-            self.safeCallInternal("EnsureClangFormat", ensureClangFormat, llvm_path, allowDownload=True)
-        return llvm_path, libclang_path
 
-    def resolveWindowsSdkInternal(self) -> Tuple[str, str, str, str, str]:
-        sdk_dir = self.existing_config.get(kKeyWindowsSdkDir, "")
-        sdk_ver = self.existing_config.get(kKeyWindowsSdkVersion, "")
-        
-        if platform.system() == "Windows" and (not sdk_dir or not os.path.exists(sdk_dir)):
-            sdk_dir, sdk_ver = findWindowsSdkPath()
+            self.safeCallInternal("EnsureClangFormat", ensureClangFormat, llvmPath, allowDownload=True)
+        return llvmPath, libclangPath
+
+    def resolveWindowsSdkInternal(self) -> tuple[str, str, str, str, str]:
+        sdkDirectory = self.existing_config.get(kKeyWindowsSdkDir, "")
+        sdkVersion = self.existing_config.get(kKeyWindowsSdkVersion, "")
+
+        if platform.system() == "Windows" and (not sdkDirectory or not os.path.exists(sdkDirectory)):
+            sdkDirectory, sdkVersion = findWindowsSdkPath()
         elif platform.system() != "Windows":
-            sdk_dir, sdk_ver = "", ""
-            
-        found_dxc, found_dxil = findDxcDlls(sdk_dir, sdk_ver, self.project_root)
-        msvc_path = getOrFindCached(self.existing_config, kKeyMsvcToolsDir, findMsvcPath)
-        return sdk_dir, sdk_ver, found_dxc, found_dxil, msvc_path
+            sdkDirectory, sdkVersion = "", ""
 
-    def resolveToolsInternal(self) -> Tuple[str, str, str, list[str]]:
-        cached_vcpkg = self.existing_config.get(kKeyVcpkgRoot, "")
-        if cached_vcpkg and isVcpkgRoot(cached_vcpkg):
-            vcpkg_path = normalizePath(str(cached_vcpkg))
+        foundDxc, foundDxil = findDxcDlls(sdkDirectory, sdkVersion, self.project_root)
+        msvcPath = getOrFindCached(self.existing_config, kKeyMsvcToolsDir, findMsvcPath)
+        return sdkDirectory, sdkVersion, foundDxc, foundDxil, msvcPath
+
+    def resolveToolsInternal(self) -> tuple[str, str, str, list[str]]:
+        cachedVcpkg = self.existing_config.get(kKeyVcpkgRoot, "")
+        if cachedVcpkg and isVcpkgRoot(cachedVcpkg):
+            vcpkgPath = normalizePath(str(cachedVcpkg))
         else:
             from setup.SetupVcpkg import setupVcpkg
-            # search_paths / SW_VCPKG_AUTO_BOOTSTRAP 이 켜져 있으면 SetupEnvironment에서도 clone 허용
+
             allowBootstrap = autoBootstrapEnabled(
                 False,
                 kKeyVcpkgAutoBootstrap,
@@ -216,90 +186,84 @@ class EnvironmentSetupManager:
                 search=loadSearchPaths(),
             )
             path = self.safeCallInternal("SetupVcpkg", setupVcpkg, allowBootstrap=allowBootstrap)
-            vcpkg_path = normalizePath(str(path)) if path else ""
+            vcpkgPath = normalizePath(str(path)) if path else ""
 
-        # lambda closure to delay execution for getOrFindCached
-        ninja_path = getOrFindCached(self.existing_config, kKeyNinjaPath, lambda: normalizePath(setupNinja() or ""))
-        sccache_path = getOrFindCached(self.existing_config, kKeySccachePath, lambda: normalizePath(setupSccache() or ""))
-        sys_includes = getOrFindCached(self.existing_config, kKeySystemIncludeDirs, findSystemIncludeDirs)
-        
-        return vcpkg_path, ninja_path, sccache_path, sys_includes
+        ninjaPath = getOrFindCached(
+            self.existing_config, kKeyNinjaPath, lambda: normalizePath(setupNinja() or "")
+        )
+        sccachePath = getOrFindCached(
+            self.existing_config, kKeySccachePath, lambda: normalizePath(setupSccache() or "")
+        )
+        systemIncludes = getOrFindCached(
+            self.existing_config, kKeySystemIncludeDirs, findSystemIncludeDirs
+        )
 
-    def runLinuxSetupInternal(self):
+        return vcpkgPath, ninjaPath, sccachePath, systemIncludes
+
+    def runLinuxSetupInternal(self) -> None:
         if platform.system() == "Linux":
             try:
                 from setup.SetupLinuxDevEnvironment import setupLinuxDevEnvironment
-                setupLinuxDevEnvironment()
-            except Exception as exc:
-                self.logger.warning(f"SetupLinuxDevEnvironment skipped: {exc}")
 
-    def installPreCommitHookInternal(self):
-        hook_path = self.project_root / ".git" / "hooks" / "pre-commit"
-        if not hook_path.parent.exists():
-            return
-            
-        # Write the bash script that calls PreCommitLint.py
-        hook_content = (
-            "#!/bin/sh\n"
-            "# Auto-generated by SetupEnvironment.py\n\n"
-            "python Scripts/lint/PreCommitLint.py\n"
-            "if [ $? -ne 0 ]; then\n"
-            "  exit 1\n"
-            "fi\n"
-        )
-        
+                setupLinuxDevEnvironment()
+            except Exception as exception:
+                self.logger.warning(f"SetupLinuxDevEnvironment skipped: {exception}")
+
+    def installPreCommitHookInternal(self) -> None:
         try:
-            hook_path.write_text(hook_content, encoding="utf-8")
-            if platform.system() != "Windows":
-                os.chmod(hook_path, 0o755)
-            self.logger.info("[SetupEnvironment] Installed git pre-commit hook (Scripts/lint/PreCommitLint.py).")
-        except Exception as exc:
-            self.logger.warning(f"[SetupEnvironment] Failed to install pre-commit hook: {exc}")
+            from setup.InstallGitHooks import installPreCommitHook
+
+            if installPreCommitHook(self.project_root):
+                self.logger.info("[SetupEnvironment] Installed git pre-commit hook (Scripts/lint/PreCommitLint.py).")
+        except Exception as exception:
+            self.logger.warning(f"[SetupEnvironment] Failed to install pre-commit hook: {exception}")
 
     def run(self) -> EngineConfig:
-        llvm_path, libclang_path = self.resolveLlvmInternal()
-        sdk_dir, sdk_ver, dxc, dxil, msvc = self.resolveWindowsSdkInternal()
-        vcpkg, ninja, sccache, sys_incs = self.resolveToolsInternal()
+        llvmPath, libclangPath = self.resolveLlvmInternal()
+        sdkDirectory, sdkVersion, dxcPath, dxilPath, msvcPath = self.resolveWindowsSdkInternal()
+        vcpkgPath, ninjaPath, sccachePath, systemIncludes = self.resolveToolsInternal()
 
         config = EngineConfig(
             target_platform=platform.system().lower(),
             target_arch=platform.machine().lower(),
-            llvm_path=llvm_path,
-            libclang_dll_path=libclang_path,
-            windows_sdk_dir=sdk_dir,
-            windows_sdk_version=sdk_ver,
-            dxc_dll_path=dxc,
-            dxil_dll_path=dxil,
-            msvc_tools_dir=msvc,
-            vcpkg_root=vcpkg,
-            ninja_path=ninja,
-            sccache_path=sccache,
-            system_include_dirs=sys_incs,
+            llvm_path=llvmPath,
+            libclang_dll_path=libclangPath,
+            windows_sdk_dir=sdkDirectory,
+            windows_sdk_version=sdkVersion,
+            dxc_dll_path=dxcPath,
+            dxil_dll_path=dxilPath,
+            msvc_tools_dir=msvcPath,
+            vcpkg_root=vcpkgPath,
+            ninja_path=ninjaPath,
+            sccache_path=sccachePath,
+            system_include_dirs=systemIncludes,
         )
 
-        new_json = json.dumps(asdict(config), indent=4)
-        should_write = True
-        
-        if self.toolchain_config_file.exists():
+        newJson = json.dumps(asdict(config), indent=4)
+        shouldWrite = True
+
+        if self.toolchain_config_file.is_file():
             try:
-                if self.toolchain_config_file.read_text(encoding="utf-8") == new_json:
-                    should_write = False
+                if self.toolchain_config_file.read_text(encoding="utf-8") == newJson:
+                    shouldWrite = False
             except OSError:
                 pass
-                
-        if should_write:
-            self.toolchain_config_file.write_text(new_json, encoding="utf-8")
+
+        if shouldWrite:
+            self.toolchain_config_file.write_text(newJson, encoding="utf-8")
 
         self.updateParserConfigInternal(config.target_platform)
         self.runLinuxSetupInternal()
         self.installPreCommitHookInternal()
 
-        self.logger.info(f"[SetupEnvironment] Resolved {kDirConfigEnv}/{kFileToolchainConfig} for OS '{platform.system()}':")
-        for key, val in asdict(config).items():
-            self.logger.info(f"  - {key:22}: {val}")
+        self.logger.info(
+            f"[SetupEnvironment] Resolved {kDirConfigEnv}/{kFileToolchainConfig} for OS '{platform.system()}':"
+        )
+        for key, value in asdict(config).items():
+            self.logger.info(f"  - {key:22}: {value}")
         self.logger.info(
             f"  - config_file          : {normalizePath(str(self.toolchain_config_file))} "
-            f"({'updated' if should_write else 'unchanged'})"
+            f"({'updated' if shouldWrite else 'unchanged'})"
         )
         return config
 
@@ -359,28 +323,31 @@ class EnvironmentSetupManager:
             f"(platform '{targetOs}', default args={len(mergedArgs[kKeyParserArgsDefault])})."
         )
 
-def setupEnvironment(force_refresh: bool = False) -> Dict[str, Any]:
-    """레거시 모듈 임포트 호환성을 위한 래퍼 함수입니다."""
-    # cmake에서 subprocess로 호출되거나 python 내에서 import로 불릴 때를 위해 남겨둠
+
+def setupEnvironment(force_refresh: bool = False) -> dict[str, Any]:
+    """
+    개발 환경 설정을 탐색 및 구성하고 toolchain_config.json / parser_config.json에 저장합니다.
+    """
     manager = EnvironmentSetupManager(force_refresh=force_refresh)
-    # 기존 코드들이 딕셔너리로 받으므로 asdict() 변환해서 리턴
     return asdict(manager.run())
+
 
 def main():
     parser = argparse.ArgumentParser(description="SW Engine Setup Environment Script")
-    parser.add_argument("--force", action="store_true", help="기존 캐시를 무시하고 설정을 처음부터 다시 탐색합니다.")
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="기존 캐시를 무시하고 설정을 처음부터 다시 탐색합니다.",
+    )
     parser.add_argument("--verbose", action="store_true", help="상세 로그를 출력합니다.")
     args = parser.parse_args()
 
-    # 기본 레벨은 INFO, --verbose 시 DEBUG (모던 CLI 스탠다드)
     log_level = logging.DEBUG if args.verbose else logging.INFO
-    logging.basicConfig(
-        level=log_level,
-        format="%(message)s"  # 기존의 심플한 로그 포맷 유지 (print 대체)
-    )
+    logging.basicConfig(level=log_level, format="%(message)s")
 
     manager = EnvironmentSetupManager(force_refresh=args.force)
     manager.run()
+
 
 if __name__ == "__main__":
     main()

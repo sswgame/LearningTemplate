@@ -1,12 +1,12 @@
 # ==============================================================================
 # @file cmake/internal/ConfigConstants.cmake
-# @brief Python의 ConfigHelper.py에 대응하는 CMake 내부 상수(경로, JSON 키 등) 선언
+# @brief Python의 Constants.py에 대응하는 CMake 내부 상수(경로, JSON 키 등) 선언
 # ==============================================================================
 
 # 1. 파이썬 실행 헬퍼 포함 (sw_executePythonScript)
 include("${CMAKE_CURRENT_LIST_DIR}/Python.cmake")
 
-# 2. ConfigHelper.py를 읽어 CMake 상수를 자동 생성하는 스크립트 실행
+# 2. Constants.py를 읽어 CMake 상수를 자동 생성하는 스크립트 실행
 # (Python이 Single Source of Truth가 됨)
 set(SW_GENERATED_CMAKE_VARS "${CMAKE_BINARY_DIR}/generated/sw/config/ConfigVars.cmake")
 sw_executePythonScript("Scripts/setup/GenerateCMakeConstants.py" 
@@ -25,7 +25,7 @@ configure_file(
 
 # 5. Shipping/Dev 폴백용 호스트 기본값 베이크 (커밋된 Engine/Game Config JSON)
 set(SW_SHIPPING_HOST_DEFAULTS_H "${CMAKE_BINARY_DIR}/generated/sw/config/ShippingHostDefaults.h")
-sw_executePythonScript("Scripts/BakeShippingHostDefaults.py"
+sw_executePythonScript("Scripts/generate/BakeShippingHostDefaults.py"
 	ARGS "${SW_SHIPPING_HOST_DEFAULTS_H}"
 	REQUIRED
 )

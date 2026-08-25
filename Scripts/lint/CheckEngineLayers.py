@@ -25,49 +25,52 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from ConfigHelper import getProjectRoot
-import ConfigHelper
+from common import (
+    collectSourceFiles,
+    getProjectRoot,
+    kDirSourceEngine,
+    kDirSourceGameFramework,
+    kDirSourceGames,
+    kFileEngineServices,
+    kFileGameObjectManagerInternal,
+)
 
 _kIncludeRe = re.compile(r'^\s*#\s*include\s*[<"]([^>"]+)[>"]', re.MULTILINE)
 
-def includeHitsBanInternal(inc: str, ban: str) -> bool:
-    normParts = inc.replace("\\", "/").split("/")
-    banParts = [p for p in ban.replace("\\", "/").split("/") if p]
-    if not banParts:
+
+def includeHitsBanInternal(includePath: str, bannedPattern: str) -> bool:
+    normalizedParts = includePath.replace("\\", "/").split("/")
+    bannedParts = [part for part in bannedPattern.replace("\\", "/").split("/") if part]
+    if not bannedParts:
         return False
-    for i in range(len(normParts) - len(banParts) + 1):
-        if normParts[i : i + len(banParts)] == banParts:
+    for partIndex in range(len(normalizedParts) - len(bannedParts) + 1):
+        if normalizedParts[partIndex : partIndex + len(bannedParts)] == bannedParts:
             return True
     return False
 
-_kDirSourceEngine = ConfigHelper.kDirSourceEngine
-_kDirSourceGames = ConfigHelper.kDirSourceGames
-_kDirSourceGameFramework = ConfigHelper.kDirSourceGameFramework
-_kFileGameObjectManagerInternal = ConfigHelper.kFileGameObjectManagerInternal
-_kFileEngineServices = ConfigHelper.kFileEngineServices
 
 _kForbiddenRules: list[tuple[str, tuple[str, ...]]] = [
     (
-        f"{_kDirSourceEngine}/",
+        f"{kDirSourceEngine}/",
         (
             "Editor/",
             "Source/Editor/",
             "GameFramework/",
             "Games/",
-            f"{_kDirSourceGames}/",
+            f"{kDirSourceGames}/",
         ),
     ),
     (
-        f"{_kDirSourceGames}/",
-        (_kFileGameObjectManagerInternal, _kFileEngineServices, "EngineServices.h"),
+        f"{kDirSourceGames}/",
+        (kFileGameObjectManagerInternal, kFileEngineServices, "EngineServices.h"),
     ),
     (
-        f"{_kDirSourceGameFramework}/",
-        (_kFileGameObjectManagerInternal, _kFileEngineServices, "EngineServices.h"),
+        f"{kDirSourceGameFramework}/",
+        (kFileGameObjectManagerInternal, kFileEngineServices, "EngineServices.h"),
     ),
 ]
 
-# Strict mode: reverse edges that fight the intended layer order.
+# 엄격 모드(--strict): 상위 레이어를 역참조하는 인클루드 관계 목록
 _kStrictReverse: list[tuple[str, str]] = [
     ("Utility", "Graphics"),
     ("Reflection", "Object"),
@@ -75,57 +78,55 @@ _kStrictReverse: list[tuple[str, str]] = [
     ("Animation", "Graphics"),
 ]
 
-def iterSourceFiles(engineRoot: Path) -> list[Path]:
-    exts = {".h", ".hpp", ".inl", ".c", ".cpp", ".cc", ".cxx"}
-    return [p for p in engineRoot.rglob("*") if p.is_file() and p.suffix.lower() in exts]
 
-def processFile(path: Path, repo: Path, strict: bool) -> tuple[list[str], list[str], Optional[str]]:
-    rel = path.relative_to(repo).as_posix()
+def processFile(filePath: Path, repositoryRoot: Path, strict: bool) -> tuple[list[str], list[str], str | None]:
+    relativeFilePath = filePath.relative_to(repositoryRoot).as_posix()
     try:
-        text = path.read_text(encoding="utf-8", errors="strict")
-    except UnicodeDecodeError as exc:
-        return [], [], f"[CheckEngineLayers] UTF-8 인코딩 오류: {rel}: {exc}"
-    except OSError as exc:
-        return [], [], f"[CheckEngineLayers] 읽기 실패: {rel}: {exc}"
+        text = filePath.read_text(encoding="utf-8", errors="strict")
+    except UnicodeDecodeError as exception:
+        return [], [], f"[CheckEngineLayers] UTF-8 인코딩 오류: {relativeFilePath}: {exception}"
+    except OSError as exception:
+        return [], [], f"[CheckEngineLayers] 읽기 실패: {relativeFilePath}: {exception}"
 
     fileViolations: list[str] = []
     fileStrictWarns: list[str] = []
-    prefix = f"{_kDirSourceEngine}/"
+    prefix = f"{kDirSourceEngine}/"
 
-    for rulePrefix, banned in _kForbiddenRules:
-        if not rel.startswith(rulePrefix):
+    for rulePrefix, bannedList in _kForbiddenRules:
+        if not relativeFilePath.startswith(rulePrefix):
             continue
-        for inc in _kIncludeRe.findall(text):
-            norm = inc.replace("\\", "/")
-            for ban in banned:
-                if includeHitsBanInternal(norm, ban):
-                    fileViolations.append(f'{rel}: #include "{inc}"  (금지: {ban})')
+        for includePath in _kIncludeRe.findall(text):
+            normalizedInclude = includePath.replace("\\", "/")
+            for bannedPattern in bannedList:
+                if includeHitsBanInternal(normalizedInclude, bannedPattern):
+                    fileViolations.append(f'{relativeFilePath}: #include "{includePath}"  (금지: {bannedPattern})')
 
-    srcLayer = ""
-    if rel.startswith(prefix) and "/" in rel[len(prefix) :]:
-        srcLayer = rel[len(prefix) :].split("/", 1)[0]
+    sourceLayer = ""
+    if relativeFilePath.startswith(prefix) and "/" in relativeFilePath[len(prefix) :]:
+        sourceLayer = relativeFilePath[len(prefix) :].split("/", 1)[0]
 
     # ReflectGenerated.h는 .gen.cpp 리플렉션 생성 코드 전용 preamble이며, ResourceManager.cpp는 파사드 구현체입니다.
-    if rel.endswith("ReflectGenerated.h") or rel.endswith("ResourceManager.cpp"):
+    if relativeFilePath.endswith("ReflectGenerated.h") or relativeFilePath.endswith("ResourceManager.cpp"):
         return fileViolations, [], None
 
-    for inc in _kIncludeRe.findall(text):
-        norm = inc.replace("\\", "/")
-        if "Engine/" not in norm:
+    for includePath in _kIncludeRe.findall(text):
+        normalizedInclude = includePath.replace("\\", "/")
+        if "Engine/" not in normalizedInclude:
             continue
-        dstParts = norm.split("Engine/", 1)[-1].split("/")
-        if not dstParts:
+        destParts = normalizedInclude.split("Engine/", 1)[-1].split("/")
+        if not destParts:
             continue
-        dstLayer = dstParts[0]
-        for srcBan, dstBan in _kStrictReverse:
-            if srcLayer == srcBan and dstLayer == dstBan:
-                msg = f'{rel}: #include "{inc}"  (레이어 {srcBan}->{dstBan})'
+        destLayer = destParts[0]
+        for sourceBannedLayer, destBannedLayer in _kStrictReverse:
+            if sourceLayer == sourceBannedLayer and destLayer == destBannedLayer:
+                violationMessage = f'{relativeFilePath}: #include "{includePath}"  (레이어 {sourceBannedLayer}->{destBannedLayer})'
                 if strict:
-                    fileViolations.append(msg)
+                    fileViolations.append(violationMessage)
                 else:
-                    fileStrictWarns.append(msg)
+                    fileStrictWarns.append(violationMessage)
 
     return fileViolations, fileStrictWarns, None
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Engine 레이어 금지 include 검사")
@@ -133,31 +134,27 @@ def main() -> int:
     parser.add_argument("--strict", action="store_true", help="내부 reverse-edge도 실패로 처리")
     args = parser.parse_args()
     repo = (args.root or getProjectRoot()).resolve()
-    engineDir = repo / _kDirSourceEngine
+    engineDir = repo / kDirSourceEngine
     if not engineDir.is_dir():
         print(f"[CheckEngineLayers] Engine 경로 없음: {engineDir}", file=sys.stderr)
         return 2
 
-    scanRoots = [engineDir, repo / _kDirSourceGames, repo / _kDirSourceGameFramework]
-
-    allFiles: list[Path] = []
-    for scanRoot in scanRoots:
-        if scanRoot.is_dir():
-            allFiles.extend(iterSourceFiles(scanRoot))
+    scanRoots = [engineDir, repo / kDirSourceGames, repo / kDirSourceGameFramework]
+    allFiles = collectSourceFiles(scanRoots)
 
     violations: list[str] = []
     strictWarns: list[str] = []
 
     maxWorkers = min(32, (os.cpu_count() or 4) * 2)
     with concurrent.futures.ThreadPoolExecutor(max_workers=maxWorkers) as executor:
-        futures = [executor.submit(processFile, p, repo, args.strict) for p in allFiles]
+        futures = [executor.submit(processFile, path, repo, args.strict) for path in allFiles]
         for future in concurrent.futures.as_completed(futures):
-            v, sw, err = future.result()
-            if err:
-                print(err, file=sys.stderr)
+            fileViolations, fileStrictWarns, errorMessage = future.result()
+            if errorMessage:
+                print(errorMessage, file=sys.stderr)
                 return 2
-            violations.extend(v)
-            strictWarns.extend(sw)
+            violations.extend(fileViolations)
+            strictWarns.extend(fileStrictWarns)
 
     if strictWarns and not args.strict:
         print(f"[CheckEngineLayers] 내부 레이어 경고 {len(strictWarns)}건 (--strict 시 실패):")
@@ -174,6 +171,7 @@ def main() -> int:
 
     print(f"[CheckEngineLayers] OK ({len(allFiles)} files scanned in parallel)")
     return 0
+
 
 if __name__ == "__main__":
     sys.exit(main())

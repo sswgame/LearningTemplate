@@ -2,83 +2,48 @@
 """
 Scripts/lint/RunClangFormat.py
 
-CI와 동일하게 Source / Test / Tools/ReflectionParser 에 clang-format 적용.
+CI 환경과 동일하게 Source / Test / Tools/ReflectionParser 내 모든 C++ 코드에 대해
+clang-format 포맷팅을 실행하거나 검사합니다.
 
-  py -3 Scripts/lint/RunClangFormat.py           # in-place
-  py -3 Scripts/lint/RunClangFormat.py --check   # dry-run --Werror
+사용법:
+  py -3 Scripts/lint/RunClangFormat.py           # 파일 직접 수정 (in-place)
+  py -3 Scripts/lint/RunClangFormat.py --check   # 수정 없이 규칙 위반만 검사 (dry-run --Werror)
 """
 
 from __future__ import annotations
 
 import argparse
-import subprocess
 import sys
 from pathlib import Path
-from typing import List
+from typing import Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from ConfigHelper import getProjectRoot, loadToolchainConfig, kKeyLlvmPath
-from setup.SetupLlvm import ensureClangFormat
+from common import collectSourceFiles, getProjectRoot, runClangFormatBatch
 
 _kFormatRoots = ("Source", "Test", "Tools/ReflectionParser")
-_kSuffixes = {".cpp", ".h", ".hpp"}
 
-def collectFilesInternal(root: Path) -> List[Path]:
-    fileList: List[Path] = []
-    for rel in _kFormatRoots:
-        base = root / rel
-        if not base.is_dir():
-            continue
-        for path in base.rglob("*"):
-            if path.is_file() and path.suffix.lower() in _kSuffixes:
-                fileList.append(path)
-    return sorted(fileList)
 
-def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Run clang-format on Source/Test/ReflectionParser.")
+def main(argv: Sequence[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="Source/Test/ReflectionParser 전체에 clang-format을 적용합니다.")
     parser.add_argument(
         "--check",
         action="store_true",
-        help="dry-run with --Werror (CI parity); do not modify files",
+        help="파일을 수정하지 않고 포맷팅 규칙 준수 여부만 검사합니다 (CI용 --Werror 모드)",
     )
     args = parser.parse_args(argv)
 
     root = getProjectRoot()
-    toolchain = loadToolchainConfig()
-    llvmPath = str(toolchain.get(kKeyLlvmPath, "") or "")
-    import shutil
-    clangFormat = shutil.which("clang-format")
-    if not clangFormat:
-        clangFormat = ensureClangFormat(llvmPath, allowDownload=True)
-    if not clangFormat:
-        sys.stderr.write(
-            "[RunClangFormat] clang-format not available. "
-            "Re-run SetupEnvironment / SetupLlvm or install LLVM.\n"
-        )
-        return 1
+    roots = [root / rel for rel in _kFormatRoots]
+    fileList = collectSourceFiles(roots)
 
-    fileList = collectFilesInternal(root)
     if not fileList:
-        sys.stderr.write("[RunClangFormat] No source files found.\n")
+        sys.stderr.write("[RunClangFormat] 포맷팅 대상 C++ 파일이 없습니다.\n")
         return 1
 
-    print(f"[RunClangFormat] Using {clangFormat} on {len(fileList)} files", file=sys.stderr)
-    # Batch to avoid command-line length limits on Windows.
-    batchSize = 64
-    for start in range(0, len(fileList), batchSize):
-        batch = fileList[start : start + batchSize]
-        cmd = [clangFormat]
-        if args.check:
-            cmd.extend(["--dry-run", "--Werror"])
-        else:
-            cmd.append("-i")
-        cmd.extend(str(path) for path in batch)
-        result = subprocess.run(cmd, cwd=str(root), check=False)
-        if result.returncode != 0:
-            sys.stderr.write(f"[RunClangFormat] clang-format failed (exit {result.returncode})\n")
-            return result.returncode
-    return 0
+    print(f"[RunClangFormat] {len(fileList)}개 파일에 대해 clang-format 적용 중...", file=sys.stderr)
+    return runClangFormatBatch(fileList, checkOnly=args.check, cwd=root)
+
 
 if __name__ == "__main__":
     sys.exit(main())

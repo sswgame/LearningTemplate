@@ -16,11 +16,10 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
-from typing import Optional
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from ConfigHelper import (
+from common import (
     autoBootstrapEnabled,
     ensureGitOnPath,
     findFirstValidRoot,
@@ -37,33 +36,25 @@ from ConfigHelper import (
     platformSearchRoots,
     recordEnginePath,
     resolveToolsSubdir,
+    runGit,
 )
 
-def runGitInternal(gitExe: str, argList: list[str], *, cwd: Optional[Path] = None) -> subprocess.CompletedProcess:
-    """git 실행 파일을 절대 경로로 호출합니다."""
-    return subprocess.run(
-        [gitExe, *argList],
-        cwd=str(cwd) if cwd is not None else None,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
 
-def pinVcpkgCommitInternal(root: Path, commit: str, gitExe: str) -> None:
+def pinVcpkgCommitInternal(vcpkgRoot: Path, commit: str, gitExe: str) -> None:
     """
-    Tools/vcpkg가 이미 있으면 search_paths.vcpkg_git_commit으로 detach checkout.
-    VCPKG_ROOT/PATH로 잡은 외부 트리는 건드리지 않는다.
+    Tools/vcpkg 디렉터리가 Git 워크트리인 경우, search_paths.json에 지정된 특정 커밋(vcpkg_git_commit)으로 체크아웃합니다.
+    (단, 시스템 환경변수 VCPKG_ROOT나 PATH로 탐색된 외부 트리는 수정하지 않습니다.)
     """
     commit = (commit or "").strip()
     if not commit:
         return
-    gitProbe = runGitInternal(gitExe, ["-C", str(root), "rev-parse", "--is-inside-work-tree"])
+    gitProbe = runGit(["-C", str(vcpkgRoot), "rev-parse", "--is-inside-work-tree"])
     if gitProbe.returncode != 0 or gitProbe.stdout.strip() != "true":
-        print(f"[SetupVcpkg] Skip pin (not a git work tree): {root}", file=sys.stderr)
+        print(f"[SetupVcpkg] Skip pin (not a git work tree): {vcpkgRoot}", file=sys.stderr)
         return
 
-    head = runGitInternal(gitExe, ["-C", str(root), "rev-parse", "HEAD"])
-    resolved = runGitInternal(gitExe, ["-C", str(root), "rev-parse", commit])
+    head = runGit(["-C", str(vcpkgRoot), "rev-parse", "HEAD"])
+    resolved = runGit(["-C", str(vcpkgRoot), "rev-parse", commit])
     if (
         head.returncode == 0
         and resolved.returncode == 0
@@ -71,84 +62,93 @@ def pinVcpkgCommitInternal(root: Path, commit: str, gitExe: str) -> None:
     ):
         return
 
-    print(f"[SetupVcpkg] Pinning {root} to {commit}", file=sys.stderr)
-    checkout = runGitInternal(gitExe, ["-C", str(root), "checkout", "--detach", commit])
+    print(f"[SetupVcpkg] Pinning {vcpkgRoot} to {commit}", file=sys.stderr)
+    checkout = runGit(["-C", str(vcpkgRoot), "checkout", "--detach", commit])
     if checkout.returncode == 0:
         return
-    fetch = runGitInternal(gitExe, ["-C", str(root), "fetch", "--depth", "1", "origin", commit])
+    fetch = runGit(["-C", str(vcpkgRoot), "fetch", "--depth", "1", "origin", commit])
     if fetch.returncode != 0:
         sys.stderr.write(
             f"[SetupVcpkg] Could not fetch {commit} ({fetch.stderr.strip() or checkout.stderr.strip()})\n"
         )
         return
-    checkout = runGitInternal(gitExe, ["-C", str(root), "checkout", "--detach", commit])
+    checkout = runGit(["-C", str(vcpkgRoot), "checkout", "--detach", commit])
     if checkout.returncode != 0:
         sys.stderr.write(f"[SetupVcpkg] checkout {commit} failed: {checkout.stderr.strip()}\n")
 
-def removeIncompleteVcpkgTreeInternal(tools: Path) -> None:
-    """실패한/불완전한 Tools/vcpkg 잔여물을 지웁니다."""
-    if not tools.exists():
-        return
-    if isVcpkgRoot(tools):
-        return
-    print(f"[SetupVcpkg] Removing incomplete vcpkg tree: {tools}", file=sys.stderr)
-    shutil.rmtree(tools, ignore_errors=True)
 
-def bootstrapVcpkgInternal(tools: Path, gitUrl: str, gitCommit: str, gitExe: str) -> bool:
-    """
-    Tools/vcpkg로 clone + bootstrap.
-    @return 성공 시 True
-    """
-    tools.parent.mkdir(parents=True, exist_ok=True)
-    removeIncompleteVcpkgTreeInternal(tools)
+def removeIncompleteVcpkgTreeInternal(toolsDir: Path) -> None:
+    """다운로드나 부트스트랩 도중 중단되어 불완전하게 남은 Tools/vcpkg 디렉터리를 삭제하여 정리합니다."""
+    if not toolsDir.exists():
+        return
+    if isVcpkgRoot(toolsDir):
+        return
+    print(f"[SetupVcpkg] Removing incomplete vcpkg tree: {toolsDir}", file=sys.stderr)
+    shutil.rmtree(toolsDir, ignore_errors=True)
 
-    print(f"[SetupVcpkg] Cloning into {tools}...", file=sys.stderr)
+
+def bootstrapVcpkgInternal(toolsDir: Path, gitUrl: str, gitCommit: str, gitExe: str) -> bool:
+    """
+    vcpkg Git 저장소를 Tools/vcpkg로 클론하고 bootstrap 스크립트를 실행하여 빌드 환경을 구축합니다.
+
+    Returns:
+        부트스트랩 성공 시 True, 실패 시 False
+    """
+    toolsDir.parent.mkdir(parents=True, exist_ok=True)
+    removeIncompleteVcpkgTreeInternal(toolsDir)
+
+    print(f"[SetupVcpkg] Cloning into {toolsDir}...", file=sys.stderr)
     print(f"[SetupVcpkg] Using git: {gitExe}", file=sys.stderr)
 
-    clone = runGitInternal(gitExe, ["clone", gitUrl, str(tools)])
+    clone = runGit(["clone", gitUrl, str(toolsDir)])
     if clone.returncode != 0:
-        sys.stderr.write(f"[SetupVcpkg Error] git clone failed:\n{clone.stderr.strip() or clone.stdout.strip()}\n")
-        removeIncompleteVcpkgTreeInternal(tools)
+        sys.stderr.write(
+            f"[SetupVcpkg Error] git clone failed:\n{clone.stderr.strip() or clone.stdout.strip()}\n"
+        )
+        removeIncompleteVcpkgTreeInternal(toolsDir)
         return False
 
     if gitCommit:
-        checkout = runGitInternal(gitExe, ["-C", str(tools), "checkout", "--detach", gitCommit])
+        checkout = runGit(["-C", str(toolsDir), "checkout", "--detach", gitCommit])
         if checkout.returncode != 0:
             sys.stderr.write(
                 f"[SetupVcpkg Error] checkout {gitCommit} failed:\n{checkout.stderr.strip()}\n"
             )
-            removeIncompleteVcpkgTreeInternal(tools)
+            removeIncompleteVcpkgTreeInternal(toolsDir)
             return False
 
-    if sys.platform == "win32":
-        bootstrap = tools / "bootstrap-vcpkg.bat"
-        bootstrapCmd = ["cmd", "/c", str(bootstrap)]
-    else:
-        bootstrap = tools / "bootstrap-vcpkg.sh"
-        bootstrapCmd = ["bash", str(bootstrap)]
+    bootstrap = (
+        toolsDir / "bootstrap-vcpkg.bat" if sys.platform == "win32" else toolsDir / "bootstrap-vcpkg.sh"
+    )
+    bootstrapCmd = (
+        ["cmd", "/c", str(bootstrap)] if sys.platform == "win32" else ["bash", str(bootstrap)]
+    )
 
     if not bootstrap.is_file():
         sys.stderr.write(f"[SetupVcpkg Error] bootstrap script missing: {bootstrap}\n")
-        removeIncompleteVcpkgTreeInternal(tools)
+        removeIncompleteVcpkgTreeInternal(toolsDir)
         return False
 
     print(f"[SetupVcpkg] Running {bootstrap.name}...", file=sys.stderr)
-    boot = subprocess.run(bootstrapCmd, cwd=str(tools), capture_output=True, text=True, check=False)
-    if boot.returncode != 0:
+    bootstrapProcess = subprocess.run(
+        bootstrapCmd, cwd=str(toolsDir), capture_output=True, text=True, check=False
+    )
+    if bootstrapProcess.returncode != 0:
         sys.stderr.write(
-            f"[SetupVcpkg Error] bootstrap failed (exit {boot.returncode}):\n"
-            f"{boot.stderr.strip() or boot.stdout.strip()}\n"
+            f"[SetupVcpkg Error] bootstrap failed (exit {bootstrapProcess.returncode}):\n"
+            f"{bootstrapProcess.stderr.strip() or bootstrapProcess.stdout.strip()}\n"
         )
-        removeIncompleteVcpkgTreeInternal(tools)
+        removeIncompleteVcpkgTreeInternal(toolsDir)
         return False
 
-    if not isVcpkgRoot(tools):
+    if not isVcpkgRoot(toolsDir):
         sys.stderr.write("[SetupVcpkg Error] bootstrap finished but vcpkg.cmake is missing.\n")
-        removeIncompleteVcpkgTreeInternal(tools)
+        removeIncompleteVcpkgTreeInternal(toolsDir)
         return False
     return True
 
-def setupVcpkg(allowBootstrap: bool = False) -> Optional[Path]:
+
+def setupVcpkg(allowBootstrap: bool = False) -> Path | None:
     """
     시스템 또는 프로젝트 내에서 vcpkg 경로를 탐색하고, 필요한 경우 새로 부트스트랩합니다.
 
@@ -160,17 +160,15 @@ def setupVcpkg(allowBootstrap: bool = False) -> Optional[Path]:
         탐색된 vcpkg 경로(Path 객체). 찾지 못한 경우 None을 반환합니다.
     """
     search = loadSearchPaths()
-    tools = resolveToolsSubdir(kKeyVcpkgToolsSubdir, kDirToolsVcpkg, search)
+    toolsDir = resolveToolsSubdir(kKeyVcpkgToolsSubdir, kDirToolsVcpkg, search)
     extras = {kKeyVcpkgToolsSubdir: search.get(kKeyVcpkgToolsSubdir, kDirToolsVcpkg)}
 
     for envVar in ("VCPKG_ROOT", "VCPKG_INSTALLATION_ROOT"):
-        val = os.environ.get(envVar)
-        if val and isVcpkgRoot(val):
-            print(f"[SetupVcpkg] Using {envVar}: {val}", file=sys.stderr)
-            return Path(recordEnginePath(kKeyVcpkgRoot, val))
+        if (envValue := os.environ.get(envVar)) and isVcpkgRoot(envValue):
+            print(f"[SetupVcpkg] Using {envVar}: {envValue}", file=sys.stderr)
+            return Path(recordEnginePath(kKeyVcpkgRoot, envValue))
 
-    vcpkgBin = shutil.which("vcpkg")
-    if vcpkgBin:
+    if vcpkgBin := shutil.which("vcpkg"):
         binPath = Path(vcpkgBin).resolve()
         for candidate in (binPath.parent, binPath.parent.parent):
             if isVcpkgRoot(candidate):
@@ -181,19 +179,19 @@ def setupVcpkg(allowBootstrap: bool = False) -> Optional[Path]:
         platformSearchRoots(search, kKeyVcpkgSearchRoots),
         isVcpkgRoot,
         extras=extras,
-        skip=tools,
+        skip=toolsDir,
     )
     if found:
         print(f"[SetupVcpkg] Using search root: {found}", file=sys.stderr)
         return Path(recordEnginePath(kKeyVcpkgRoot, found))
 
-    if isVcpkgRoot(tools):
+    if isVcpkgRoot(toolsDir):
         gitExe = ensureGitOnPath()
         gitCommit = str(search.get(kKeyVcpkgGitCommit, "")).strip()
         if gitExe is not None and gitCommit:
-            pinVcpkgCommitInternal(tools, gitCommit, gitExe)
-        print(f"[SetupVcpkg] Using project kit: {tools}", file=sys.stderr)
-        return Path(recordEnginePath(kKeyVcpkgRoot, tools))
+            pinVcpkgCommitInternal(toolsDir, gitCommit, gitExe)
+        print(f"[SetupVcpkg] Using project kit: {toolsDir}", file=sys.stderr)
+        return Path(recordEnginePath(kKeyVcpkgRoot, toolsDir))
 
     if not autoBootstrapEnabled(
         allowBootstrap,
@@ -219,11 +217,12 @@ def setupVcpkg(allowBootstrap: bool = False) -> Optional[Path]:
 
     gitUrl = str(search.get(kKeyVcpkgGitUrl, "https://github.com/microsoft/vcpkg.git"))
     gitCommit = str(search.get(kKeyVcpkgGitCommit, "")).strip()
-    if not bootstrapVcpkgInternal(tools, gitUrl, gitCommit, gitExe):
+    if not bootstrapVcpkgInternal(toolsDir, gitUrl, gitCommit, gitExe):
         return None
-    return Path(recordEnginePath(kKeyVcpkgRoot, tools))
+    return Path(recordEnginePath(kKeyVcpkgRoot, toolsDir))
 
-def main(argv: Optional[list] = None) -> int:
+
+def main(argv: list[str] | None = None) -> int:
     """
     vcpkg 설정 스크립트의 CLI 진입점입니다.
 
@@ -239,13 +238,14 @@ def main(argv: Optional[list] = None) -> int:
         action="store_true",
         help="If not found, git clone + bootstrap under Tools/vcpkg",
     )
-    args = parser.parse_args(argv)
-    path = setupVcpkg(allowBootstrap=args.install)
-    if path:
-        print(path.as_posix())
+    parsedArgs = parser.parse_args(argv)
+    resolvedPath = setupVcpkg(allowBootstrap=parsedArgs.install)
+    if resolvedPath:
+        print(resolvedPath.as_posix())
         return 0
     sys.stderr.write("[SetupVcpkg Error] vcpkg not found\n")
     return 1
+
 
 if __name__ == "__main__":
     sys.exit(main())

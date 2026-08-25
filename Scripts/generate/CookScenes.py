@@ -3,26 +3,28 @@ Scripts/generate/CookScenes.py
 
 저작 기본은 XML입니다. Resource/**/scenes/*.scene.xml -> .scene.bin (SCN1).
 
-Binary layout (little-endian, matches SceneDescriptor::saveSceneDescriptorToBinary):
-  u32 magic 0x53434E31 ('SCN1')
-  u32 version (currently 0)
-  u32 nameLen + name bytes
-  u32 entityCount
-  for each entity:
-    u32 nameLen + name bytes
-    u32 prefabLen + prefab bytes
-    u32 embeddedXmlLen + embeddedXml bytes
+바이너리 레이아웃 (리틀 엔디안, SceneDescriptor::saveSceneDescriptorToBinary 규격과 일치):
+  u32 매직넘버 0x53434E31 ('SCN1')
+  u32 버전 (현재 0)
+  u32 씬이름길이 + 씬이름 바이트열
+  u32 엔티티 개수
+  각 엔티티:
+    u32 엔티티이름길이 + 이름 바이트열
+    u32 프리팹경로길이 + 경로 바이트열
+    u32 임베디드XML길이 + XML본문 바이트열
 """
 
 from __future__ import annotations
 
+import concurrent.futures
+import os
 import struct
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from ConfigHelper import getProjectRoot
+from common import getProjectRoot
 
 kScn1Magic = 0x53434E31
 kScn1Version = 0
@@ -41,68 +43,79 @@ def readXmlSceneInternal(path: Path) -> tuple[str, list[tuple[str, str, str]]]:
     tree = ET.parse(path)
     root = tree.getroot()
     sceneName = root.get("name", "")
-    nameNode = root.find("name")
-    if nameNode is not None and nameNode.text:
+    if (nameNode := root.find("name")) is not None and nameNode.text:
         sceneName = nameNode.text.strip()
     if not sceneName:
         sceneName = path.stem.split(".")[0]
 
     entitiesList: list[tuple[str, str, str]] = []
-    entitiesNode = root.find("entities")
-    if entitiesNode is not None:
+    if (entitiesNode := root.find("entities")) is not None:
         for entityNode in entitiesNode.findall("entity"):
-            entName = entityNode.get("name", "")
-            entNameChild = entityNode.find("name")
-            if entNameChild is not None and entNameChild.text:
-                entName = entNameChild.text.strip()
-            if not entName:
-                entName = "Entity"
+            entityName = entityNode.get("name", "")
+            if (entNameChild := entityNode.find("name")) is not None and entNameChild.text:
+                entityName = entNameChild.text.strip()
+            if not entityName:
+                entityName = "Entity"
 
             prefabPath = entityNode.get("prefab", "")
-            prefabChild = entityNode.find("prefab")
-            if prefabChild is not None and prefabChild.text:
+            if (prefabChild := entityNode.find("prefab")) is not None and prefabChild.text:
                 prefabPath = prefabChild.text.strip()
 
             embeddedXml = ""
-            stateNode = entityNode.find("GameObjectState")
-            if stateNode is not None:
+            if (stateNode := entityNode.find("GameObjectState")) is not None:
                 embeddedXml = ET.tostring(stateNode, encoding="unicode")
 
-            entitiesList.append((entName, prefabPath, embeddedXml))
+            entitiesList.append((entityName, prefabPath, embeddedXml))
 
     return sceneName, entitiesList
 
 
-def writeScn1Internal(outPath: Path, sceneName: str, entitiesList: list[tuple[str, str, str]]) -> None:
+def writeScn1Internal(outputPath: Path, sceneName: str, entitiesList: list[tuple[str, str, str]]) -> bool:
     """
-    파싱된 씬 데이터를 자체 바이너리 형식(SCN1)으로 출력 파일에 기록합니다.
+    파싱된 씬 데이터를 자체적인 바이너리 형식(SCN1)으로 출력 파일에 기록합니다.
+    (기존 바이너리와 동일하면 디스크 쓰기를 생략합니다.)
 
     Args:
-        outPath: 저장할 출력 파일 경로
+        outputPath: 저장할 출력 파일 경로
         sceneName: 씬 이름
-        entitiesList: 엔티티 튜플 리스트
+        entitiesList: [(엔티티이름, 프리팹경로, 임베디드XML), ...] 목록
+
+    Returns:
+        새로 작성되었으면 True, 기존과 동일하면 False
     """
     nameBytes = sceneName.encode("utf-8")
-    blob = struct.pack("<I", kScn1Magic)
-    blob += struct.pack("<I", kScn1Version)
-    blob += struct.pack("<I", len(nameBytes)) + nameBytes
-    blob += struct.pack("<I", len(entitiesList))
+    chunks = [
+        struct.pack("<II", kScn1Magic, kScn1Version),
+        struct.pack("<I", len(nameBytes)),
+        nameBytes,
+        struct.pack("<I", len(entitiesList)),
+    ]
 
-    for entName, prefabPath, embeddedXml in entitiesList:
-        entBytes = entName.encode("utf-8")
+    for entityName, prefabPath, embeddedXml in entitiesList:
+        entityNameBytes = entityName.encode("utf-8")
         prefabBytes = prefabPath.encode("utf-8")
         xmlBytes = embeddedXml.encode("utf-8")
-        blob += struct.pack("<I", len(entBytes)) + entBytes
-        blob += struct.pack("<I", len(prefabBytes)) + prefabBytes
-        blob += struct.pack("<I", len(xmlBytes)) + xmlBytes
+        chunks.extend([
+            struct.pack("<I", len(entityNameBytes)),
+            entityNameBytes,
+            struct.pack("<I", len(prefabBytes)),
+            prefabBytes,
+            struct.pack("<I", len(xmlBytes)),
+            xmlBytes,
+        ])
 
-    outPath.parent.mkdir(parents=True, exist_ok=True)
-    outPath.write_bytes(blob)
+    blob = b"".join(chunks)
+    if outputPath.is_file() and outputPath.read_bytes() == blob:
+        return False
+
+    outputPath.parent.mkdir(parents=True, exist_ok=True)
+    outputPath.write_bytes(blob)
+    return True
 
 
 def cookScenes(resourceRoot: Path | None = None) -> int:
     """
-    지정된 리소스 루트 내의 모든 .scene.xml 파일을 .scene.bin으로 변환합니다.
+    지정된 리소스 루트 내의 모든 .scene.xml 파일을 .scene.bin으로 변환합니다 (병렬 처리).
 
     Args:
         resourceRoot: 리소스 루트 경로 (None일 경우 프로젝트 루트/Resource 사용)
@@ -116,23 +129,39 @@ def cookScenes(resourceRoot: Path | None = None) -> int:
         return 0
 
     sceneFiles = sorted(root.rglob("*.scene.xml"))
-    cookedCount = 0
+    if not sceneFiles:
+        print(f"[CookScenes] No .scene.xml found under {root}")
+        return 0
 
-    for xmlPath in sceneFiles:
-        outBin = xmlPath.with_suffix("").with_suffix(".bin")
+    def cookOneScene(xmlPath: Path) -> tuple[int, int]:
+        outputBinaryFile = xmlPath.with_suffix("").with_suffix(".bin")
         sceneName, entitiesList = readXmlSceneInternal(xmlPath)
-        writeScn1Internal(outBin, sceneName, entitiesList)
-        cookedCount += 1
-        print(f"[CookScenes] Cooked {xmlPath.relative_to(root)} -> {outBin.name} ({len(entitiesList)} entities)")
+        wrote = writeScn1Internal(outputBinaryFile, sceneName, entitiesList)
+        if wrote:
+            print(f"[CookScenes] Cooked {xmlPath.relative_to(root)} -> {outputBinaryFile.name} ({len(entitiesList)} entities)")
+        return 1, (1 if wrote else 0)
 
-    print(f"[CookScenes] Finished cooking {cookedCount} scenes.")
+    cookedCount = 0
+    updatedCount = 0
+    maxWorkers = min(32, (os.cpu_count() or 4) * 2)
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=maxWorkers) as executor:
+        futures = [executor.submit(cookOneScene, xmlPath) for xmlPath in sceneFiles]
+        for future in concurrent.futures.as_completed(futures):
+            try:
+                total, updated = future.result()
+                cookedCount += total
+                updatedCount += updated
+            except Exception as exception:
+                print(f"[CookScenes Error] {exception}")
+                return 1
+
+    print(f"[CookScenes] Finished checking {cookedCount} scenes, {updatedCount} updated.")
     return 0
 
 
 def main() -> int:
-    resourceRoot: Path | None = None
-    if len(sys.argv) > 1:
-        resourceRoot = Path(sys.argv[1]).resolve()
+    resourceRoot = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else None
     return cookScenes(resourceRoot)
 
 

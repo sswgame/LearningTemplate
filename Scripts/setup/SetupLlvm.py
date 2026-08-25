@@ -18,11 +18,11 @@ import shutil
 import sys
 import tarfile
 from pathlib import Path
-from typing import Iterable, List, Optional, Set
+from typing import Iterable, Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from ConfigHelper import (
+from common import (
     autoBootstrapEnabled,
     ensureCachedDownload,
     findFirstExistingFile,
@@ -45,7 +45,7 @@ from ConfigHelper import (
     toolsCacheDir,
 )
 
-_kWinKeepBinExes: Set[str] = {
+_kWinKeepBinExes: set[str] = {
     "clang-cl.exe",
     "clang.exe",
     "clang++.exe",
@@ -54,7 +54,7 @@ _kWinKeepBinExes: Set[str] = {
     "lld.exe",
     "llvm-rc.exe",
 }
-_kPosixKeepBinNames: Set[str] = {
+_kPosixKeepBinNames: set[str] = {
     "clang",
     "clang++",
     "clang-cl",
@@ -72,7 +72,7 @@ _kTarKeepPrefixes = (
 _kClangFormatWin = "clang-format.exe"
 _kClangFormatPosix = "clang-format"
 
-# --- discovery ---------------------------------------------------------------
+# --- 1. LLVM 탐색 -----------------------------------------------------------
 
 def findLibClangDllPath(llvmPath: str) -> str:
     """
@@ -104,7 +104,7 @@ def findLibClangDllPath(llvmPath: str) -> str:
     return ""
 
 def llvmResourceMajor(path: str) -> int:
-    """lib/clang/<major>/include 에서 가장 큰 major 버전을 읽습니다."""
+    """lib/clang/<major>/include 디렉터리에서 가장 큰 Major 버전을 읽어 반환합니다."""
     clangRes = Path(path) / "lib" / "clang"
     if not clangRes.is_dir():
         return 0
@@ -122,15 +122,18 @@ def llvmResourceMajor(path: str) -> int:
 
 def requiredLlvmMajor() -> int:
     """
-    Windows + VS 2022/18 STL 은 Clang 20+ 를 요구합니다 (STL1000).
-    그 외 플랫폼은 최소 키트만 있으면 됩니다.
+    Windows 환경의 최신 MSVC STL(VS 2022/18)은 Clang 20 이상 버전을 요구합니다 (STL1000 오류 방지).
+    다른 플랫폼은 기본 최소 키트만 만족하면 됩니다.
     """
     if platform.system() == "Windows":
         return 20
     return 0
 
 def isMinimalLlvmRoot(path: str) -> bool:
-    """clang-cl/clang + libclang + resource-dir (+ Windows import lib/headers)."""
+    """
+    지정된 디렉터리가 clang-cl/clang 컴파일러, libclang, 리소스 디렉터리 및 헤더를 포함하는
+    최소 유효 LLVM 키트인지 검사합니다.
+    """
     if not path:
         return False
     root = Path(path)
@@ -169,14 +172,14 @@ def isMinimalLlvmRoot(path: str) -> bool:
     return True
 
 def findLlvmPath() -> str:
-    """env → PATH → llvm_search_roots → Tools/LLVM. 최소 키트만."""
+    """
+    환경변수 → 시스템 PATH → search_paths.json 탐색 루트 → Tools/LLVM 순서로 유효한 LLVM 키트를 찾습니다.
+    """
     for envKey in ("LLVM_DIR", "LLVM_HOME", "LLVM_ROOT", "LLVM_PATH"):
-        envLlvm = os.environ.get(envKey)
-        if envLlvm and isMinimalLlvmRoot(envLlvm):
+        if (envLlvm := os.environ.get(envKey)) and isMinimalLlvmRoot(envLlvm):
             return normalizePath(envLlvm)
 
-    llvmBin = shutil.which("clang-cl") or shutil.which("clang")
-    if llvmBin:
+    if llvmBin := shutil.which("clang-cl") or shutil.which("clang"):
         parent = Path(llvmBin).resolve().parent.parent
         if isMinimalLlvmRoot(str(parent)):
             return normalizePath(str(parent))
@@ -196,7 +199,7 @@ def findLlvmPath() -> str:
         return normalizePath(str(tools))
     return ""
 
-# --- bootstrap ---------------------------------------------------------------
+# --- 2. LLVM 부트스트랩 및 설치 --------------------------------------------
 
 def recordInternal(root: Path) -> str:
     resolved = recordEnginePath(kKeyLlvmPath, root.resolve())
@@ -214,17 +217,13 @@ def findClangFormatPath(llvmPath: str = "") -> str:
     Tools/LLVM/bin → PATH 순으로 clang-format을 찾습니다.
     """
     name = clangFormatFileNameInternal()
-    if llvmPath:
-        candidate = Path(llvmPath) / "bin" / name
-        if candidate.is_file():
-            return normalizePath(candidate)
-    which = shutil.which("clang-format")
-    if which:
+    if llvmPath and (candidate := Path(llvmPath) / "bin" / name).is_file():
+        return normalizePath(candidate)
+    if which := shutil.which("clang-format"):
         return normalizePath(which)
     search = loadSearchPaths()
     tools = resolveToolsSubdir(kKeyLlvmToolsSubdir, kDirToolsLlvm, search)
-    candidate = tools / "bin" / name
-    if candidate.is_file():
+    if (candidate := tools / "bin" / name).is_file():
         return normalizePath(candidate)
     return ""
 
@@ -259,8 +258,10 @@ def extractClangFormatFromArchiveInternal(archive: Path, destBin: Path) -> bool:
 
 def ensureClangFormat(llvmPath: str = "", *, allowDownload: bool = True) -> str:
     """
-    clang-format이 없으면 llvm_download_urls 아카이브에서 bin만 뽑아 Tools/LLVM/bin에 넣습니다.
-    @return clang-format 절대 경로 (실패 시 "")
+    clang-format 실행 파일이 없으면 llvm_download_urls 아카이브에서 추출하여 Tools/LLVM/bin에 설치합니다.
+
+    Returns:
+        clang-format 실행 파일의 절대 경로 (실패 시 빈 문자열 "")
     """
     found = findClangFormatPath(llvmPath)
     if found:
@@ -283,22 +284,22 @@ def ensureClangFormat(llvmPath: str = "", *, allowDownload: bool = True) -> str:
     url = str(urls.get(platformKey(), "")).strip()
     if not url:
         sys.stderr.write(
-            "[SetupLlvm] clang-format missing and no llvm_download_urls entry; "
-            "install GitHub LLVM kit or put clang-format on PATH.\n"
+            "[SetupLlvm] clang-format을 찾을 수 없으며 search_paths.json에 다운로드 URL이 없습니다. "
+            "LLVM을 설치하거나 PATH에 clang-format을 추가해주세요.\n"
         )
         return ""
 
     cacheName = Path(url).name or "llvm-clang-format-src.tar.xz"
     archive = ensureCachedDownload(url, toolsCacheDir() / cacheName, label="LLVM(clang-format)")
     if not extractClangFormatFromArchiveInternal(archive, destBin):
-        sys.stderr.write("[SetupLlvm] clang-format not found inside LLVM archive.\n")
+        sys.stderr.write("[SetupLlvm] LLVM 아카이브 내에서 clang-format을 찾을 수 없습니다.\n")
         return ""
     return findClangFormatPath(str(destRoot))
 
 def replaceDirInternal(src: Path, dest: Path) -> None:
     """
-    src 디렉터리를 dest 로 교체합니다.
-    Windows 에서 dest 가 잠겨 있으면 rmtree 가 실패하므로, dest -> .old rename 후 src -> dest 로 올립니다.
+    src 디렉터리를 dest 디렉터리로 안전하게 교체합니다.
+    (Windows 환경에서 프로세스가 폴더를 점유 중일 경우를 대비해 .old로 먼저 이름 변경 후 교체합니다.)
     """
     parent = dest.parent
     old = parent / f"{dest.name}.old"
@@ -312,69 +313,68 @@ def replaceDirInternal(src: Path, dest: Path) -> None:
             dest.rename(old)
         except OSError as exc:
             raise RuntimeError(
-                f"Cannot move locked '{dest}' aside (close clangd / clang-cl / IDE using Tools/LLVM). "
-                f"OS error: {exc}"
+                f"점유 중인 '{dest}' 디렉터리를 이동할 수 없습니다 (clangd, clang-cl, IDE 등을 종료해주세요). "
+                f"OS 오류: {exc}"
             ) from exc
 
     try:
         src.rename(dest)
     except OSError as exc:
-        # Roll back so a broken half-install is not left as the only kit.
+        # 실패 시 롤백하여 기존 설치본을 복구합니다.
         if old.exists() and not dest.exists():
             try:
                 old.rename(dest)
             except OSError:
                 pass
         raise RuntimeError(
-            f"Cannot move '{src}' -> '{dest}' (close processes locking Tools/). OS error: {exc}"
+            f"'{src}' -> '{dest}' 이동 실패 (Tools 폴더를 점유 중인 프로세스를 닫아주세요). OS 오류: {exc}"
         ) from exc
 
     shutil.rmtree(old, ignore_errors=True)
     if old.exists():
         print(
-            f"[SetupLlvm] Warning: could not delete '{old}' "
-            "(files still locked). Safe to remove after closing clangd."
+            f"[SetupLlvm] 경고: '{old}' 임시 폴더를 삭제할 수 없습니다 "
+            "(파일이 아직 점유 중입니다. IDE나 clangd 종료 후 수동 삭제 가능합니다)."
         )
 
-def extractTarMinimalInternal(archive: Path, destRoot: Path) -> None:
+def extractTarMinimalInternal(archive: Path, destRootDir: Path) -> None:
     """
-    tar 의 top-level 폴더를 벗겨 staging 에 푼 뒤 destRoot 로 교체합니다.
-    (기존 dest 를 직접 wipe 하지 않아 Windows 파일 잠금에 덜 취약합니다.)
+    LLVM 아카이브에서 빌드에 필요한 최소 구성 파일들만 임시 스테이징 폴더에 압축 해제한 뒤 destRootDir로 교체합니다.
     """
-    parent = destRoot.parent
+    parent = destRootDir.parent
     parent.mkdir(parents=True, exist_ok=True)
-    stagingParent = parent / f".{destRoot.name}_extract_{os.getpid()}"
+    stagingParent = parent / f".{destRootDir.name}_extract_{os.getpid()}"
     if stagingParent.exists():
         shutil.rmtree(stagingParent, ignore_errors=True)
     stagingParent.mkdir(parents=True, exist_ok=True)
 
     try:
-        with tarfile.open(archive, "r:*") as tar:
+        with tarfile.open(archive, "r:*") as tarHandle:
             members = []
-            top: Optional[str] = None
-            for m in tar.getmembers():
-                parts = Path(m.name).parts
+            topDirectory: Optional[str] = None
+            for member in tarHandle.getmembers():
+                parts = Path(member.name).parts
                 if not parts:
                     continue
-                if top is None:
-                    top = parts[0]
-                rel = "/".join(parts[1:]) if top and parts[0] == top else m.name
-                if any(rel == p.rstrip("/") or rel.startswith(p) for p in _kTarKeepPrefixes):
-                    members.append(m)
+                if topDirectory is None:
+                    topDirectory = parts[0]
+                relativeMemberPath = "/".join(parts[1:]) if topDirectory and parts[0] == topDirectory else member.name
+                if any(relativeMemberPath == p.rstrip("/") or relativeMemberPath.startswith(p) for p in _kTarKeepPrefixes):
+                    members.append(member)
             print(f"[SetupLlvm] Extracting {len(members)} archive members (minimal)...")
-            safe = [
-                m
-                for m in members
-                if not m.name.replace("\\", "/").startswith("/")
-                and ".." not in Path(m.name).parts
+            safeMembers = [
+                member
+                for member in members
+                if not member.name.replace("\\", "/").startswith("/")
+                and ".." not in Path(member.name).parts
             ]
-            tar.extractall(path=stagingParent, members=safe)
+            tarHandle.extractall(path=stagingParent, members=safeMembers)
 
-        extracted = stagingParent / (top or "")
-        if not extracted.is_dir():
+        extractedDir = stagingParent / (topDirectory or "")
+        if not extractedDir.is_dir():
             raise RuntimeError(f"Extracted LLVM root not found under {stagingParent}")
 
-        replaceDirInternal(extracted, destRoot)
+        replaceDirInternal(extractedDir, destRootDir)
     finally:
         shutil.rmtree(stagingParent, ignore_errors=True)
 
@@ -428,10 +428,10 @@ def pruneLibIncludeInternal(root: Path) -> None:
                 shutil.rmtree(path, ignore_errors=True)
             else:
                 path.unlink(missing_ok=True)
-    for drop in ("share", "libexec", "msvc", "python", "tools", "local"):
-        p = root / drop
-        if p.is_dir():
-            shutil.rmtree(p, ignore_errors=True)
+    for dropFolder in ("share", "libexec", "msvc", "python", "tools", "local"):
+        dropPath = root / dropFolder
+        if dropPath.is_dir():
+            shutil.rmtree(dropPath, ignore_errors=True)
 
 def setupLlvm(allowBootstrap: bool = False) -> str:
     """
@@ -504,18 +504,18 @@ def setupLlvm(allowBootstrap: bool = False) -> str:
         sys.stderr.write(f"[SetupLlvm Error] {exc}\n")
         return ""
 
-def main(argv: Optional[Iterable[str]] = None) -> int:
+def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Locate or bootstrap a minimal clang-cl + libclang kit under Tools/LLVM."
     )
     parser.add_argument("--install", action="store_true", help="Bootstrap when missing.")
     args = parser.parse_args(list(argv) if argv is not None else None)
-    path = setupLlvm(allowBootstrap=args.install)
-    if path:
+    if path := setupLlvm(allowBootstrap=args.install):
         print(path)
         return 0
     sys.stderr.write("[SetupLlvm Error] LLVM kit not available\n")
     return 1
+
 
 if __name__ == "__main__":
     sys.exit(main())
