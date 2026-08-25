@@ -1,0 +1,96 @@
+# ==============================================================================
+# @file cmake/internal/FindWindowsArchiveAndMt.cmake
+# @brief Windows lib.exe / mt.exe 탐색 (SetupEnvironment · ClangCl · vcpkg ports 공용)
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# 1) sw_findWindowsArchiveAndMt — lib.exe(아카이버) / mt.exe 경로
+#    우선순위: llvm-lib·llvm-mt → toolchain_config MSVC/SDK → Windows Kits
+#    OUT_AR, OUT_MT
+# ------------------------------------------------------------------------------
+function(sw_findWindowsArchiveAndMt OUT_AR OUT_MT)
+	set(swAr "")
+	set(swMt "")
+
+	set(swCfgJson "")
+	set(swSdkDir "")
+	set(swSdkVer "")
+	set(swMsvcTools "")
+	foreach(candidateRoot IN ITEMS "${CMAKE_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}")
+		get_filename_component(absRoot "${candidateRoot}" ABSOLUTE)
+		set(cfgCandidate "${absRoot}/Config/Environment/toolchain_config.json")
+		if(EXISTS "${cfgCandidate}")
+			set(swCfgJson "${cfgCandidate}")
+			file(READ "${swCfgJson}" cfgContent)
+			string(JSON swSdkDir ERROR_VARIABLE e1 GET "${cfgContent}" "windows_sdk_dir")
+			string(JSON swSdkVer ERROR_VARIABLE e2 GET "${cfgContent}" "windows_sdk_version")
+			string(JSON swMsvcTools ERROR_VARIABLE e3 GET "${cfgContent}" "msvc_tools_dir")
+			break()
+		endif()
+	endforeach()
+
+	if(DEFINED ENV{LLVM_DIR} AND EXISTS "$ENV{LLVM_DIR}/bin/llvm-lib.exe")
+
+		set(swAr "$ENV{LLVM_DIR}/bin/llvm-lib.exe")
+	elseif(DEFINED ENV{LLVM_ROOT} AND EXISTS "$ENV{LLVM_ROOT}/bin/llvm-lib.exe")
+		set(swAr "$ENV{LLVM_ROOT}/bin/llvm-lib.exe")
+	elseif(swMsvcTools AND NOT swMsvcTools STREQUAL "")
+		foreach(hostArch IN ITEMS Hostx64 Hostx86)
+			foreach(targetArch IN ITEMS x64 x86)
+				set(arCandidate "${swMsvcTools}/bin/${hostArch}/${targetArch}/lib.exe")
+				if(EXISTS "${arCandidate}")
+					set(swAr "${arCandidate}")
+					break()
+				endif()
+			endforeach()
+			if(swAr)
+				break()
+			endif()
+		endforeach()
+	endif()
+
+	if(DEFINED ENV{LLVM_DIR} AND EXISTS "$ENV{LLVM_DIR}/bin/llvm-mt.exe")
+		set(swMt "$ENV{LLVM_DIR}/bin/llvm-mt.exe")
+	elseif(DEFINED ENV{LLVM_ROOT} AND EXISTS "$ENV{LLVM_ROOT}/bin/llvm-mt.exe")
+		set(swMt "$ENV{LLVM_ROOT}/bin/llvm-mt.exe")
+	elseif(swSdkDir AND swSdkVer AND NOT swSdkDir STREQUAL "" AND NOT swSdkVer STREQUAL "")
+		foreach(arch IN ITEMS x64 x86)
+			set(mtCandidate "${swSdkDir}/bin/${swSdkVer}/${arch}/mt.exe")
+			if(EXISTS "${mtCandidate}")
+				set(swMt "${mtCandidate}")
+				break()
+			endif()
+		endforeach()
+	endif()
+
+	if(NOT swMt)
+		foreach(kitsRoot IN ITEMS
+			"C:/Program Files (x86)/Windows Kits/10"
+			"C:/Program Files/Windows Kits/10"
+		)
+			if(NOT IS_DIRECTORY "${kitsRoot}/bin")
+				continue()
+			endif()
+			file(GLOB sdkVerDirs LIST_DIRECTORIES true "${kitsRoot}/bin/10.*")
+			list(SORT sdkVerDirs COMPARE NATURAL ORDER DESCENDING)
+			foreach(verDir IN LISTS sdkVerDirs)
+				foreach(arch IN ITEMS x64 x86)
+					set(mtCandidate "${verDir}/${arch}/mt.exe")
+					if(EXISTS "${mtCandidate}")
+						set(swMt "${mtCandidate}")
+						break()
+					endif()
+				endforeach()
+				if(swMt)
+					break()
+				endif()
+			endforeach()
+			if(swMt)
+				break()
+			endif()
+		endforeach()
+	endif()
+
+	set(${OUT_AR} "${swAr}" PARENT_SCOPE)
+	set(${OUT_MT} "${swMt}" PARENT_SCOPE)
+endfunction()

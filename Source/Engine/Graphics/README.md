@@ -1,0 +1,188 @@
+# Graphics (RHI · Material · RenderPass)
+
+렌더링 스택입니다. **백엔드(RHI)** 위에서 **머티리얼/셰이더**를 올리고, **파이프라인 XML → RenderGraph → FrameRenderer** 로 한 프레임을 그립니다.
+
+경로: `Source/Engine/Graphics/`  
+상위 레이어: [Engine/README.md](../README.md)  
+개념 개요: [ARCHITECTURE.md](../../../ARCHITECTURE.md) (RHI · RenderPass · Pipeline)
+
+---
+
+## 한 줄로 이해하기
+
+```text
+Asset (Material / Shader / Mesh)
+        ↓
+RenderPass (pipeline XML → RenderGraph → FrameRenderer)
+        ↓
+RHI (IRHIDevice / IRHICommandContext / Resources)
+        ↓
+DX11 · DX12 · OpenGL · Vulkan
+```
+
+| 폴더 | 역할 |
+|------|------|
+| **RHI/** | 백엔드 추상화·구현·(옵션) RHI DLL 모듈 |
+| **Material/** | XML 머티리얼, 인스턴스, 패킹, 캐시 |
+| **Shader/** | 컴파일 · 리플렉션 · 배리언트 · 핫리로드 |
+| **Mesh/** | 메시 버퍼 |
+| **RenderPass/** | FrameRenderer, RenderGraph, GpuScene, RenderThread |
+| **Render/** | InstanceBuffer 등 보조 |
+| **Debug/** | DebugDrawQueue (라인/스피어 큐 → Editor GameView ImGui 소비) |
+
+---
+
+## 용어집 (Glossary)
+
+| 용어 | 뜻 |
+|------|-----|
+| RHI | Rendering Hardware Interface — GPU API(DX/VK/GL) 앞의 엔진 추상화 |
+| Backend | RHI의 구체 구현 (DX11/DX12/Vulkan/OpenGL). **구현 수준은 네 백엔드 패리티** |
+| Device (`IRHIDevice`) | GPU 장치·리소스 생성·커맨드 제출의 진입점 |
+| Context (`IRHICommandContext`) | 실제 draw/dispatch/barrier 등을 내는 제출/기록 슬롯 |
+| CommandList / CL | 프레임에서 쌓는 명령 묶음(이 엔진은 소프트웨어 `Cmd` 벡터) |
+| Immediate / Deferred | **Mode**(언제 재생) 또는 **Context**(어느 슬롯) — 반드시 구분 (아래) |
+| Replay | 기록된 `Cmd`를 Context API로 순서 재생 (네이티브 Execute ≠) |
+| Resource / Handle | GPU 버퍼·텍스처 등 + 엔진 쪽 핸들 테이블 식별자 |
+| PSO / PipelineState | 셰이더+고정 상태 묶음 (그래픽스/컴퓨트) |
+| SwapChain | 화면 present용 백버퍼 체인 |
+| Material / MaterialInstance | 셰이더·파라미터 정의 / 인스턴스 값 |
+| ShaderVariant · Reflection · Compiler | 배리언트 키 · 바인딩 메타 · 컴파일 |
+| RenderPass (개념) | 한 번의 begin/end 렌더 타깃 구간 (XML 패스와 혼동 주의) |
+| RenderGraph | 패스·리소스 의존성 그래프로 프레임 순서 결정 |
+| FrameRenderer | 한 프레임: 패킷 → 그래프 → CL 기록/실행 |
+| RenderThread | 렌더 스레드 루프 (offscreen/present 등) |
+| GpuScene | 씬 → GPU 업로드용 데이터 |
+| Frame packet | 프레임에 넘기는 CPU 측 렌더 입력 묶음 |
+| Bindless / Descriptor | 리소스 인덱스로 셰이더 접근; 디스크립터 테이블/힙 |
+| DebugDrawQueue | 디버그 라인/스피어 **큐** (즉시 GPU 드로우 아님) |
+
+## 주요 클래스 역할
+
+| 클래스 | 폴더 | 한 줄 역할 |
+|--------|------|------------|
+| `RHI` | RHI/ | 백엔드 선택·디바이스 수명·`gv_rhiCommandListMode` |
+| `IRHIDevice` (+ 백엔드 `*RHIDevice`) | RHI/ | 리소스·PSO·CL 생성, Context 소유, execute |
+| `IRHICommandContext` (+ `*RHICommandContext`) | RHI/ | draw/dispatch/barrier/blit 실행면 |
+| `IRHICommandList` / `RHIDeferredCommandList` | RHI/ | 명령 기록·Mode별 flush/replay |
+| `IRHIResource` / `IRHISwapChain` | RHI/ | 리소스·스왑체인 추상 |
+| `RHIHandleTable` · `FrameResourceRing` · `RHIReleaseQueue` | RHI/ | 핸들·프레임링·지연 해제 |
+| `Material` · `MaterialInstance` · `MaterialCache` | Material/ | 정의·인스턴스·캐시 |
+| `ShaderCompiler` · `ShaderReflection` · `ShaderVariant` · `ShaderCache` · `LiveShaderManager` | Shader/ | 컴파일·리플렉션·배리언트·캐시·핫리로드 |
+| `Mesh` | Mesh/ | 메시 버퍼 |
+| `FrameRenderer` · `RenderGraph` · `RenderThread` · `GpuScene` | RenderPass/ | 프레임 오케스트레이션 |
+| `RenderPassManager` · `RenderPassResource` · `RenderPipelineResource` | RenderPass/ | XML/에셋 쪽 패스·파이프라인 |
+| `RenderFramePacket` | RenderPass/ | 프레임 입력 패킷 |
+| `InstanceBuffer` | Render/ | 인스턴싱 보조 |
+| `DebugDrawQueue` | Debug/ | 디버그 드로우 큐 |
+
+---
+
+## CommandList Mode vs Context (헷갈리기 쉬운 용어)
+
+**Mode는 “언제 GPU에 내느냐”, Context는 “어느 제출/기록 슬롯이냐”.**  
+`gv_rhiCommandListMode`가 Mode를 고르고, Context 쌍은 디바이스가 항상 들고 있다.
+
+| 용어 | 무엇인가 | 역할 |
+|------|----------|------|
+| Immediate **Context** (`getImmediateContext`) | GPU에 바로/최종 제출하는 컨텍스트 | present, offscreen, Deferred CL **replay 대상** |
+| Deferred **Context** (`getDeferredCommandContext`) | 기록용 컨텍스트(soft 또는 네이티브) | Mode=Deferred일 때 CL에 바인딩; **present 대상 아님** |
+| Immediate **CommandList** (`RHICommandListMode::Immediate`) | 소프트웨어 CL 모드 | `endCommandList`에서 Immediate Context로 flush |
+| Deferred **CommandList** (`RHICommandListMode::Deferred`) | 소프트웨어 CL 모드 | 기록만; `executeCommandList` → Immediate Context에 replay |
+
+### CL `replay`가 하는 일
+
+이 엔진의 CL은 네이티브 DX12/VK command buffer 제출이 아니라, CPU `vector<Cmd>`에 op를 쌓은 **소프트웨어 커맨드 리스트**다.
+
+1. 인자 Context에 대해 `_cmds`를 **기록 순서대로** 순회한다.
+2. 각 `Cmd.op`를 같은 이름의 `IRHICommandContext` 가상 호출로 넘긴다.
+3. Context 구현체가 백엔드 API로 GPU 작업을 낸다. **replay ≠ queue submit / ExecuteCommandLists.**
+4. context null이면 no-op; `_cmds`는 호출 측이 clear/markApplied.
+
+- Immediate Mode: `endCommandList` → `replay(_context)` → clear + markApplied  
+- Deferred Mode: `executeDeferredCommandList` → `replay(getImmediateContext())` → markApplied  
+
+---
+
+## 초심자: 어디부터 읽나?
+
+| 궁금한 것 | 열 곳 |
+|-----------|--------|
+| 용어·클래스 역할 | 위 Glossary / 클래스 표 |
+| 한 프레임이 어떻게 도나 | `RenderPass/FrameRenderer.*` (+ `PassExecute` / `Draw` / `Pso` …) |
+| 패스 순서·의존성 | `pipeline/*.xml` + `RenderGraph` |
+| 머티리얼 파라미터 | `Material/Material.*` · `MaterialInstance.*` |
+| GPU API 호출 | `RHI/IRHI*.h` → 활성 백엔드 `RHI/<Backend>/` |
+| 셰이더 컴파일 | `Shader/ShaderCompiler.*` · `ShaderReflection.*` |
+
+`FrameRenderer` 는 **한 클래스·여러 .cpp** 로 이미 나뉘어 있습니다. 클래스를 더 쪼개기보다 파일 역할만 익히면 됩니다.
+
+---
+
+## 백엔드 성숙도 (패리티)
+
+Windows에서 **DX11 · DX12 · Vulkan · OpenGL**은 Device / Context / SwapChain·Resource facade / dual Context+Mode / CommandList execute 경로에서 **같은 구현 수준**을 목표로 한다.
+
+| | Vulkan | DX11 | GL | DX12 |
+|--|:------:|:----:|:--:|:----:|
+| Device / Resource | ● | ● | ● | ● |
+| Immediate + Deferred Context | ● | ● | ● | ● |
+| CommandContext (draw/barrier/…) | ● | ● | ● | ● |
+| SwapChain | Device 로직 + thin facade | 동상 | 동상 | SwapChain TU에 로직 |
+| Native bindless | 런타임 세트 기준 | 에뮬 | 에뮬 | `_bHeapDirectlyIndexed` |
+
+**의도적 차이(패리티 예외):**
+
+- DX11/GL `prepareTextureForShaderRead` — 상태리스라 no-op (DX12/VK는 barrier/layout)
+- DX11 `transitionBuffer` no-op; GL은 `glMemoryBarrier` soft
+- Exclusive graphics context thread — DX11/GL만
+- Native bindless sampling — DX12/VK; DX11/GL은 bind-at-draw로 기능 동등
+- Vulkan `createRenderPass(desc)` — 비어 있으면 swapchain RP alias; 어태치먼트가 있으면 **소유** VkRenderPass 생성
+
+얇은 `*RHISwapChain.cpp`(VK/GL/DX11) 는 미완 스텁이 아니라 **Device로 위임하는 facade** 입니다.
+
+---
+
+## 의존 · 레이어
+
+- Graphics → Reflection / Object 참조 **허용**
+- Graphics → Editor / GameFramework / Games **금지** (`CheckEngineLayers.py`)
+- RHI 모듈 DLL (`SW_RHI_AS_MODULES`) 시 백엔드는 별도 모듈 엔트리 (`RHI/Modules/`)
+
+---
+
+## 자주 하는 실수
+
+| 실수 | 결과 |
+|------|------|
+| Caps의 bindless = 실제 native | DX12는 `supportsNativeBindlessSampling()` → `_bHeapDirectlyIndexed` 확인 |
+| DebugDrawQueue = GPU 즉시 드로우 | 큐 API; 화면 표시는 Editor GameView 등 소비 측 |
+| Immediate Context = Immediate CommandList | Mode vs Context 혼동 — 위 표 참고 |
+| gen/머티리얼 XML을 코드에 하드코딩 | `Resource/engine/` 파이프라인·머티리얼 에셋 사용 |
+| DX11/GL prepareTexture가 “미구현 stub” | **의도적** 상태리스 no-op |
+
+---
+
+## 알려진 보강 후보 (우선순위)
+
+문서화된 로드맵이지, 이 README가 기능을 새로 만들지 않습니다.
+
+완료됨 (참고):
+- **P0** — 전 백엔드 dual Immediate/Deferred Context + Mode 배선
+- **P0** — SSAO/TAA/Tonemap/GpuCull 패스 실행 경로
+- **P0** — DX11/GL `prepareTextureForShaderRead` 정의 (의도적 no-op)
+- **P1** — DX12 `_bHeapDirectlyIndexed` ↔ `supportsNativeBindlessSampling()` / `getCapabilities()._bNativeBindless`
+- **P1** — DebugDrawQueue 스피어 → `GameViewWindow` ImGui 원으로 소비
+- **P2** — DX12 `HEAP_DIRECTLY_INDEXED` 실패 시 bind-at-draw (런타임 Caps, WARNING 제거)
+- **P2** — Vulkan `createRenderPass(desc)` 소유 VkRenderPass 생성 + `destroy`/`shutdown`에서 해제 (빈 desc는 swapchain RP alias)
+- **P2** — DX11 native `FinishCommandList`는 **채택하지 않음** — 전 백엔드 soft `Cmd` replay가 Mode/Context 모델 (의도적)
+- **P2** — `MaterialTypes.h` 분리, `ShaderReflection` 포맷별 TU + exhaustive switch, `IRHIDevice::executeOffscreenPipelineSmoke`, FrameRenderer `FrameRendererStatus`, GpuMaterialRetireQueue
+- **Perf** — Transparent 연속 mesh/mat 머지, GpuScene 내용·카메라 핑거프린트 캐시, Deferred CL 기본·`_frameCmd` 재사용·Cmd reserve 256
+
+---
+
+## 더 볼 곳
+
+- [ARCHITECTURE.md](../../../ARCHITECTURE.md) — RHI · RenderPass · Pipeline  
+- `Resource/engine/pipeline/` · `Resource/engine/renderpass/`  
+- [Engine/README.md](../README.md) — 레이어 규칙

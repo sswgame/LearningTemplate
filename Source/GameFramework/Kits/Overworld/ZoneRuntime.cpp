@@ -1,0 +1,212 @@
+#include "pch.h"
+
+#include "GameFramework/Kits/Overworld/ZoneRuntime.h"
+
+namespace sw
+{
+
+	namespace
+	{
+
+		ZoneRole zoneRoleFromText( string_view roleText, string_view mapPath )
+		{
+			if ( roleText.empty() )
+				return zoneRoleFromMapPath( mapPath );
+			string r( roleText );
+			for ( utf8& ch : r )
+			{
+				if ( ch >= 'A' && ch <= 'Z' )
+					ch = static_cast<utf8>( ch - 'A' + 'a' );
+			}
+			if ( r == "boss" )
+				return ZoneRole::Boss;
+			if ( r == "dungeon" )
+				return ZoneRole::Dungeon;
+			if ( r == "battle" )
+				return ZoneRole::Battle;
+			if ( r == "route" )
+				return ZoneRole::Route;
+			if ( r == "center" )
+				return ZoneRole::Center;
+			if ( r == "mart" )
+				return ZoneRole::Mart;
+			if ( r == "gym" )
+				return ZoneRole::Gym;
+			if ( r == "wild" )
+				return ZoneRole::Wild;
+			return ZoneRole::Town;
+		}
+
+		bool roleUsesClearGate( ZoneRole role )
+		{
+			return role == ZoneRole::Gym || role == ZoneRole::Dungeon || role == ZoneRole::Boss;
+		}
+
+
+	} // namespace
+
+	ZoneDef::ZoneDef()
+		: _id{}
+		, _role{ ZoneRole::Town }
+		, _bounds{}
+		, _listTags{}
+		, _bClearGateLocked{ 0 }
+		, _reserved{ 0 }
+	{
+	}
+
+	ZoneRuntime::ZoneRuntime()
+		: _listZones{}
+		, _activeIndex{ -1 }
+	{
+	}
+
+
+	bool ZoneDef::hasTag( string_view tag ) const
+	{
+		for ( const string& existingTag : _listTags )
+		{
+			if ( existingTag == tag )
+				return true;
+		}
+		return false;
+	}
+
+	void ZoneDef::addTag( string_view tag )
+	{
+		if ( tag.empty() || hasTag( tag ) )
+			return;
+		_listTags.emplace_back( tag );
+	}
+
+	void ZoneRuntime::clear()
+	{
+		_listZones.clear();
+		_activeIndex = -1;
+	}
+
+	void ZoneRuntime::setFromMap( string_view mapPath, string_view mapName, int32 width, int32 height,
+								  string_view roleText )
+	{
+		clear();
+		ZoneDef z{};
+		z._id				= mapName.empty() ? mapPath : mapName;
+		z._role				= zoneRoleFromText( roleText, mapPath );
+		z._bounds._minX		= 0;
+		z._bounds._minY		= 0;
+		z._bounds._maxX		= width > 0 ? width - 1 : 0;
+		z._bounds._maxY		= height > 0 ? height - 1 : 0;
+		z._bClearGateLocked = roleUsesClearGate( z._role ) ? 1 : 0;
+		// 역할을 태그로 미러해 장르 비의존 코드가 ZoneRole 없이 조회할 수 있게 합니다.
+		switch ( z._role )
+		{
+			case ZoneRole::Town:
+				z.addTag( "town" );
+				break;
+			case ZoneRole::Route:
+				z.addTag( "route" );
+				break;
+			case ZoneRole::Dungeon:
+				z.addTag( "dungeon" );
+				break;
+			case ZoneRole::Boss:
+				z.addTag( "boss" );
+				break;
+			case ZoneRole::Battle:
+				z.addTag( "battle" );
+				break;
+			case ZoneRole::Center:
+				z.addTag( "center" );
+				break;
+			case ZoneRole::Mart:
+				z.addTag( "mart" );
+				break;
+			case ZoneRole::Gym:
+				z.addTag( "gym" );
+				break;
+			case ZoneRole::Wild:
+				z.addTag( "wild" );
+				break;
+		}
+		_listZones.push_back( std::move( z ) );
+		_activeIndex = 0;
+	}
+
+	void ZoneRuntime::activate( string_view zoneId )
+	{
+		for ( size_t zoneIndex = 0; zoneIndex < _listZones.size(); ++zoneIndex )
+		{
+			if ( _listZones[zoneIndex]._id == zoneId )
+			{
+				_activeIndex = static_cast<int32>( zoneIndex );
+				return;
+			}
+		}
+	}
+
+	void ZoneRuntime::setClearGateLocked( bool locked )
+	{
+		if ( _activeIndex < 0 || _activeIndex >= static_cast<int32>( _listZones.size() ) )
+			return;
+		_listZones[static_cast<size_t>( _activeIndex )]._bClearGateLocked = locked ? 1 : 0;
+	}
+
+	bool ZoneRuntime::isClearGateLocked() const
+	{
+		const ZoneDef* pZone = getActiveZone();
+		return pZone != nullptr && pZone->_bClearGateLocked != 0;
+	}
+
+	bool ZoneRuntime::activeHasTag( string_view tag ) const
+	{
+		const ZoneDef* pZone = getActiveZone();
+		return pZone != nullptr && pZone->hasTag( tag );
+	}
+
+	const ZoneDef* ZoneRuntime::getActiveZone() const
+	{
+		if ( _activeIndex < 0 || _activeIndex >= static_cast<int32>( _listZones.size() ) )
+			return nullptr;
+		return &_listZones[static_cast<size_t>( _activeIndex )];
+	}
+
+	string ZoneRuntime::getActiveZoneId() const
+	{
+		const ZoneDef* pZone = getActiveZone();
+		return pZone != nullptr ? pZone->_id : string{};
+	}
+
+	ZoneRole ZoneRuntime::getActiveRole() const
+	{
+		const ZoneDef* pZone = getActiveZone();
+		return pZone != nullptr ? pZone->_role : ZoneRole::Town;
+	}
+
+	const ZoneBounds& ZoneRuntime::getCameraBounds() const
+	{
+		static ZoneBounds s_empty{};
+		const ZoneDef*	  pZone = getActiveZone();
+		return pZone != nullptr ? pZone->_bounds : s_empty;
+	}
+
+	ZoneRole zoneRoleFromMapPath( string_view mapPath )
+	{
+		if ( mapPath.find( "dungeon_boss" ) != string::npos || mapPath.find( "boss" ) != string::npos )
+			return ZoneRole::Boss;
+		if ( mapPath.find( "dungeon" ) != string::npos )
+			return ZoneRole::Dungeon;
+		if ( mapPath.find( "battle" ) != string::npos )
+			return ZoneRole::Battle;
+		if ( mapPath.find( "route" ) != string::npos )
+			return ZoneRole::Route;
+		if ( mapPath.find( "center" ) != string::npos )
+			return ZoneRole::Center;
+		if ( mapPath.find( "mart" ) != string::npos )
+			return ZoneRole::Mart;
+		if ( mapPath.find( "gym" ) != string::npos )
+			return ZoneRole::Gym;
+		if ( mapPath.find( "wild" ) != string::npos )
+			return ZoneRole::Wild;
+		return ZoneRole::Town;
+	}
+} // namespace sw

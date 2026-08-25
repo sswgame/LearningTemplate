@@ -1,0 +1,9 @@
+/**
+ * @file PredefinedContainerKind.xxx
+ * @brief ContainerKind 열거자 목록 (엔진 enum + 파서 문자열 파싱 공유).
+ * @details include 전에 REGISTER_CONTAINER_KIND(Name) 정의.
+ */
+
+REGISTER_CONTAINER_KIND( None )
+REGISTER_CONTAINER_KIND( Sequence )
+REGISTER_CONTAINER_KIND( Map )

@@ -1,0 +1,9 @@
+{
+  "name": "imgui-notify",
+  "version": "0.0.3",
+  "description": "ImGuiNotify header-only library",
+  "homepage": "https://github.com/TyomaVader/ImGuiNotify",
+  "dependencies": [
+    "imgui"
+  ]
+}

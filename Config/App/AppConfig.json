@@ -1,0 +1,23 @@
+{
+    "_gameKitModuleList": [
+        {
+            "_name": "GF_Overworld",
+            "_dependencyModuleList": [
+                "GameFramework"
+            ]
+        },
+        {
+            "_name": "GF_TurnBattle",
+            "_dependencyModuleList": [
+                "GameFramework"
+            ]
+        },
+        {
+            "_name": "GF_ActionCombat",
+            "_dependencyModuleList": [
+                "GameFramework",
+                "GF_Overworld"
+            ]
+        }
+    ]
+}

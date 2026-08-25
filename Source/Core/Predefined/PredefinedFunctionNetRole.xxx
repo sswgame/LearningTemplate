@@ -1,0 +1,10 @@
+/**
+ * @file PredefinedFunctionNetRole.xxx
+ * @brief FunctionNetRole 열거자 목록 (엔진 enum + FUNCTION 어노테이션 파싱 공유).
+ * @details include 전에 REGISTER_FUNCTION_NET_ROLE(Name) 정의.
+ */
+
+REGISTER_FUNCTION_NET_ROLE( Local )
+REGISTER_FUNCTION_NET_ROLE( Server )
+REGISTER_FUNCTION_NET_ROLE( Client )
+REGISTER_FUNCTION_NET_ROLE( Multicast )

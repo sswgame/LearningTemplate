@@ -1,0 +1,217 @@
+#include "pch.h"
+
+#include "Engine/Object/Component/TagComponent.h"
+#include "Engine/Object/Component/TagSystem.h"
+
+#include "TestFramework/TestFramework.h"
+
+using namespace sw;
+
+// ------------------------------------------------------------------------------
+// 1) TagSystemTest — 계층 리터럴·매칭
+// ------------------------------------------------------------------------------
+/**
+ * @brief [TagSystemTest] 계층 리터럴의 부모 해시
+ */
+SW_TEST_CASE( TagSystemTest, ParentHashOnHierarchicalLiteral )
+{
+	constexpr TagID root	= "Faction"_tag;
+	constexpr TagID child	= "Faction.Player"_tag;
+	constexpr TagID sibling = "Faction.Enemy"_tag;
+
+	SW_ASSERT_TRUE( root.isValid() );
+	SW_ASSERT_TRUE( child.isValid() );
+	SW_EXPECT_TRUE( child.isSubtagOf( root ) );
+	SW_EXPECT_FALSE( root.isSubtagOf( child ) );
+	SW_EXPECT_FALSE( child.isSubtagOf( sibling ) );
+	SW_EXPECT_TRUE( child != sibling );
+
+	constexpr TagID deep = "Faction.Player.Scout"_tag;
+	SW_EXPECT_TRUE( deep.isSubtagOf( child ) );
+	SW_EXPECT_TRUE( deep.isSubtagOf( root ) );
+}
+
+/**
+ * @brief [TagSystemTest] 정확 매칭 vs 포함 매칭
+ */
+SW_TEST_CASE( TagSystemTest, ExactVsSubsumptionMatch )
+{
+	constexpr TagID combat	  = "State.Combat"_tag;
+	constexpr TagID attacking = "State.Combat.Attacking"_tag;
+
+	TagContainer container{ attacking };
+
+	SW_EXPECT_TRUE( container.hasTag( attacking, true ) );
+	SW_EXPECT_FALSE( container.hasTag( combat, true ) );
+	SW_EXPECT_TRUE( container.hasTag( combat, false ) );
+	SW_EXPECT_TRUE( container.hasTag( attacking, false ) );
+}
+
+/**
+ * @brief [TagSystemTest] hasAll / hasAny / match
+ */
+SW_TEST_CASE( TagSystemTest, HasAllHasAnyAndMatch )
+{
+	TagContainer owned{ "Status.Buff"_tag, "Status.Invincible"_tag, "Team.Ally"_tag };
+	TagContainer needAll{ "Status.Buff"_tag, "Team.Ally"_tag };
+	TagContainer needAny{ "Status.Poison"_tag, "Team.Ally"_tag };
+	TagContainer forbidden{ "Status.Dead"_tag };
+
+	SW_EXPECT_TRUE( owned.hasAllTags( needAll ) );
+	SW_EXPECT_TRUE( owned.hasAnyTag( needAny ) );
+	SW_EXPECT_TRUE( owned.matchTags( needAll, forbidden ) );
+
+	TagContainer missing{ "Status.Buff"_tag, "Status.Haste"_tag };
+	SW_EXPECT_FALSE( owned.hasAllTags( missing ) );
+
+	TagContainer blocked{ "Status.Invincible"_tag };
+	SW_EXPECT_FALSE( owned.matchTags( needAll, blocked ) );
+}
+
+/**
+ * @brief [TagSystemTest] 추가·삭제·중복 제거·클리어
+ */
+SW_TEST_CASE( TagSystemTest, AddRemoveDedupAndClear )
+{
+	TagContainer tags;
+	const TagID	 a = "A"_tag;
+	const TagID	 b = "B"_tag;
+
+	tags.addTag( a );
+	tags.addTag( a );
+	tags.addTag( b );
+	SW_EXPECT_EQUAL( 2u, tags.getTagCount() );
+
+	tags.removeTag( a );
+	SW_EXPECT_EQUAL( 1u, tags.getTagCount() );
+	SW_EXPECT_FALSE( tags.hasTag( a, true ) );
+	SW_EXPECT_TRUE( tags.hasTag( b, true ) );
+
+	tags.clear();
+	SW_EXPECT_EQUAL( 0u, tags.getTagCount() );
+	SW_EXPECT_EMPTY( tags.getTags() );
+}
+
+/**
+ * @brief [TagSystemTest] GameObject 에 내장된 TagContainer 부착 및 질의 검증
+ */
+SW_TEST_CASE( TagSystemTest, GameObjectTagContainerQuery )
+{
+	sw::GameObjectManager manager;
+	sw::GameObject*		  obj = manager.createGameObject( sw::hashed_string( "PlayerActor" ) );
+	SW_ASSERT_NOT_NULL( obj );
+
+	obj->addTag( "Character.Player"_tag );
+	obj->addTag( "Buff.Invincible"_tag );
+
+	SW_EXPECT_TRUE( obj->hasTag( "Character.Player"_tag ) );
+	SW_EXPECT_TRUE( obj->hasTag( "Character"_tag, false ) ); // 서브태그 포함 매칭
+	SW_EXPECT_FALSE( obj->hasTag( "Character"_tag, true ) ); // 정확 매칭
+	SW_EXPECT_TRUE( obj->hasTag( "Buff.Invincible"_tag ) );
+
+	obj->removeTag( "Buff.Invincible"_tag );
+	SW_EXPECT_FALSE( obj->hasTag( "Buff.Invincible"_tag ) );
+	SW_EXPECT_TRUE( obj->hasTag( "Character.Player"_tag ) );
+
+	obj->clearTags();
+	SW_EXPECT_FALSE( obj->hasTag( "Character.Player"_tag ) );
+}
+
+/**
+ * @brief [TagSystemTest] TagQuery 기본 매칭 (All/Any/None) 및 서브태그 계층 검증
+ */
+SW_TEST_CASE( TagSystemTest, TagQueryBasicAndHierarchical )
+{
+	TagContainer playerTags{ "Faction.Player.Hero"_tag, "Status.Buff.Speed"_tag };
+
+	// 1) AllMatch
+	TagQuery allQuery = TagQuery::createAllMatch( TagContainer{ "Faction.Player"_tag, "Status.Buff"_tag } );
+	SW_EXPECT_TRUE( allQuery.matches( playerTags ) );
+
+	TagQuery allFailQuery = TagQuery::createAllMatch( TagContainer{ "Faction.Player"_tag, "Status.Debuff"_tag } );
+	SW_EXPECT_FALSE( allFailQuery.matches( playerTags ) );
+
+	// 2) AnyMatch
+	TagQuery anyQuery = TagQuery::createAnyMatch( TagContainer{ "Faction.Enemy"_tag, "Status.Buff.Speed"_tag } );
+	SW_EXPECT_TRUE( anyQuery.matches( playerTags ) );
+
+	TagQuery anyFailQuery = TagQuery::createAnyMatch( TagContainer{ "Faction.Enemy"_tag, "Status.Poison"_tag } );
+	SW_EXPECT_FALSE( anyFailQuery.matches( playerTags ) );
+
+	// 3) NoMatch
+	TagQuery noQuery = TagQuery::createNoMatch( TagContainer{ "Faction.Enemy"_tag, "Status.Dead"_tag } );
+	SW_EXPECT_TRUE( noQuery.matches( playerTags ) );
+
+	TagQuery noFailQuery = TagQuery::createNoMatch( TagContainer{ "Status.Buff"_tag } );
+	SW_EXPECT_FALSE( noFailQuery.matches( playerTags ) );
+}
+
+/**
+ * @brief [TagSystemTest] TagQueryExpr AST 복합 불리언 표현식 트리 (AND/OR/NOT 조합) 검증
+ */
+SW_TEST_CASE( TagSystemTest, TagQueryComplexAstExpression )
+{
+	// Query: (Faction.Player OR Faction.Ally) AND NOT (Status.Dead OR Status.Stunned)
+	TagQueryExpr exprFactionAny;
+	exprFactionAny._type = TagQueryExprType::AnyTagsMatch;
+	exprFactionAny._tags.addTag( "Faction.Player"_tag );
+	exprFactionAny._tags.addTag( "Faction.Ally"_tag );
+
+	TagQueryExpr exprDebuffAny;
+	exprDebuffAny._type = TagQueryExprType::AnyTagsMatch;
+	exprDebuffAny._tags.addTag( "Status.Dead"_tag );
+	exprDebuffAny._tags.addTag( "Status.Stunned"_tag );
+
+	TagQueryExpr exprNotDebuff;
+	exprNotDebuff._type = TagQueryExprType::NotExprMatch;
+	exprNotDebuff._listSubExprs.push_back( std::move( exprDebuffAny ) );
+
+	TagQueryExpr rootExpr;
+	rootExpr._type = TagQueryExprType::AllExprMatch;
+	rootExpr._listSubExprs.push_back( std::move( exprFactionAny ) );
+	rootExpr._listSubExprs.push_back( std::move( exprNotDebuff ) );
+
+	TagQuery compositeQuery = TagQuery::createExpression( std::move( rootExpr ) );
+
+	// Case 1: Active Player -> Match
+	TagContainer livePlayer{ "Faction.Player.Warrior"_tag, "Status.Buff.Shield"_tag };
+	SW_EXPECT_TRUE( compositeQuery.matches( livePlayer ) );
+
+	// Case 2: Dead Player -> Fail (NOT debuff violated)
+	TagContainer deadPlayer{ "Faction.Player.Warrior"_tag, "Status.Dead"_tag };
+	SW_EXPECT_FALSE( compositeQuery.matches( deadPlayer ) );
+
+	// Case 3: Live Enemy -> Fail (Faction mismatch)
+	TagContainer liveEnemy{ "Faction.Enemy.Orc"_tag, "Status.Buff.Berserk"_tag };
+	SW_EXPECT_FALSE( compositeQuery.matches( liveEnemy ) );
+
+	// Case 4: Ally -> Match
+	TagContainer liveAlly{ "Faction.Ally.Healer"_tag };
+	SW_EXPECT_TRUE( compositeQuery.matches( liveAlly ) );
+}
+
+/**
+ * @brief [TagSystemTest] GameObject 및 TagComponent의 TagQuery 연동 질의 검증
+ */
+SW_TEST_CASE( TagSystemTest, GameObjectAndTagComponentQueryIntegration )
+{
+	sw::GameObjectManager manager;
+	sw::GameObject*		  pObj = manager.createGameObject( sw::hashed_string( "HeroObject" ) );
+	SW_ASSERT_NOT_NULL( pObj );
+
+	pObj->addTag( "Faction.Player"_tag );
+	pObj->addTag( "State.Buff.Haste"_tag );
+
+	TagQuery goodQuery = TagQuery::createAllMatch( TagContainer{ "Faction.Player"_tag, "State.Buff"_tag } );
+	TagQuery badQuery  = TagQuery::createAllMatch( TagContainer{ "Faction.Player"_tag, "State.Debuff"_tag } );
+
+	SW_EXPECT_TRUE( pObj->matchesTagQuery( goodQuery ) );
+	SW_EXPECT_FALSE( pObj->matchesTagQuery( badQuery ) );
+
+	// TagComponent Facade 테스트
+	sw::TagComponent* pTagComp = pObj->addComponent<sw::TagComponent>();
+	SW_ASSERT_NOT_NULL( pTagComp );
+
+	SW_EXPECT_TRUE( pTagComp->matchesQuery( goodQuery ) );
+	SW_EXPECT_FALSE( pTagComp->matchesQuery( badQuery ) );
+}

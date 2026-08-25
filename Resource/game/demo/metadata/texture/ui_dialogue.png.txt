@@ -1,0 +1,61 @@
+ui_dialogue.png
+SPRITE NAME
+dialogue_body
+X
+0
+Y
+0
+WIDTH
+1600
+HEIGHT
+300
+OFFSET X
+0.5
+OFFSET Y
+0.5
+
+SPRITE NAME
+dialogue_select
+X
+1600
+Y
+0
+WIDTH
+295
+HEIGHT
+131
+OFFSET X
+0.5
+OFFSET Y
+0.5
+
+SPRITE NAME
+dialogue_select_on
+X
+0
+Y
+300
+WIDTH
+255
+HEIGHT
+48
+OFFSET X
+0.5
+OFFSET Y
+0.5
+
+SPRITE NAME
+
+X
+0
+Y
+512
+WIDTH
+0
+HEIGHT
+0
+OFFSET X
+0
+OFFSET Y
+1
+

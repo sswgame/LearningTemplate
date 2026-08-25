@@ -1,0 +1,102 @@
+# ==============================================================================
+# Build & Output Directories
+# ==============================================================================
+[Bb]uild/
+[Oo]utput/
+[Oo]utput[Ff]ile*/
+out/
+generated/
+
+# ==============================================================================
+# IDE & Tooling
+# ==============================================================================
+.vs/
+.idea/
+.vscode/*
+!.vscode/launch.json
+!.vscode/tasks.json
+!.vscode/settings.json
+!.vscode/extensions.json
+launch.json
+.cache
+__pycache__/
+*.pyc
+
+# ==============================================================================
+# Runtime & Logs
+# ==============================================================================
+/Saved/
+/Log/
+Docs/Doxygen/
+
+# ==============================================================================
+# Binary & Compiled Objects
+# ==============================================================================
+*.exe
+*.dll
+*.so
+*.dylib
+*.a
+*.lib
+*.obj
+*.o
+*.pdb
+*.ilk
+*.idb
+*.exp
+*.gen.cpp
+test_output_temp.bin
+
+# ==============================================================================
+# External Tools & Dependencies
+# ==============================================================================
+Tools/Ninja/
+Tools/LLVM/
+Tools/Sccache/
+Tools/_cache/
+Tools/_deps/
+
+# vcpkg
+/vcpkg/
+Tools/vcpkg/
+.vcpkg/
+vcpkg_installed/
+
+# ==============================================================================
+# Temporary Files & Scratch
+# ==============================================================================
+*.tmp
+*.temp
+*~
+scratch/
+
+# ==============================================================================
+# Local Config & Generated Files
+# ==============================================================================
+# Machine-specific generated configs (Seeds *.defaults.json are committed)
+Config/Environment/toolchain_config.json
+Config/Environment/parser_config.json
+Config/Environment/search_paths.json
+Config/toolchain_config.json
+Config/parser_config.json
+Config/search_paths.json
+# Editor user layouts (committed: EditorConfig.json, editordata.xml)
+Config/Editor/imgui.ini
+Config/Editor/windows.ini
+Config/Editor/*.local.json
+Config/Editor/AnimationGraph.json
+Config/Editor/AnimationGraphData.json
+Config/Editor/SpriteClip.json
+
+# Runtime editor layouts & caches
+/imgui.ini
+/NodeEditor.json
+Resource/config/editor/
+Resource/Config/Editor/
+Resource/cache/
+Resource/Cache/
+/cache/
+/Cache/
+**/ShaderCache/
+**/shader_cache/
+*.shadercache

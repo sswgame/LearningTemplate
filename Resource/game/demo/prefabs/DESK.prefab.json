@@ -1,0 +1,22 @@
+{
+    "Name": "DESK",
+    "IsActive": true,
+    "ParentGO": "",
+    "Tags": [],
+    "Components": {
+        "SceneComponent#0": {
+            "_bActive": true
+        },
+        "SpriteComponent#0": {
+            "_bActive": true,
+            "Mesh": "RectMesh",
+            "Material": "materials/Std2DMtrl.material",
+            "Texture": "textures/object.png",
+            "SpriteName": "TortureTable1"
+        }
+    },
+    "SceneTransforms": {
+        "SceneComponent#0": "0,0,0;0,0,0;300,300,1;",
+        "SpriteComponent#0": "0,0,0;0,0,0;1,1,1;SceneComponent#0"
+    }
+}

@@ -1,0 +1,67 @@
+# Visual Studio에서 생성한 .clang 형식 파일입니다.
+
+# 이 파일의 스타일 옵션은 도구 > 옵션에서
+# 현재 IDE 서식 구성을 복제하려는 최선의 시도입니다. 그러나 다음
+# 스타일 옵션을 확인해야 합니다:
+# AfterClass, AfterControlStatement, AfterEnum, AfterFunction, AfterNamespace, 
+# AfterStruct, AfterUnion
+
+BasedOnStyle: LLVM
+AccessModifierOffset: -4
+AlignAfterOpenBracket: Align
+AllowShortBlocksOnASingleLine: Always
+AllowShortFunctionsOnASingleLine: All
+BreakBeforeBraces: Allman
+ColumnLimit: 0
+Cpp11BracedListStyle: true
+ShortNamespaceLines : 0
+FixNamespaceComments: true
+# PreprocessorConditionalComment: true  # not a clang-format option (VS leftover)
+IndentCaseLabels: true
+IndentWidth: 4
+MaxEmptyLinesToKeep: 10
+NamespaceIndentation: All
+PointerAlignment: Left
+SortIncludes: CaseSensitive
+IncludeCategories:
+  - Regex:           '^"pch\.h"'
+    Priority:        -1
+  - Regex:           '^<imgui\.h>'
+    Priority:        1
+  - Regex:           '^<imgui_internal\.h>'
+    Priority:        2
+  - Regex:           '^<Im.*>'
+    Priority:        3
+  - Regex:           '^<implot.*>'
+    Priority:        3
+  - Regex:           '^<imgui-.*>'
+    Priority:        3
+  - Regex:           '.*'
+    Priority:        4
+SortUsingDeclarations: false
+SpaceAfterCStyleCast: false
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeParens: ControlStatements
+SpaceInEmptyParentheses: false
+SpacesInCStyleCastParentheses: false
+SpacesInParentheses: true
+SpacesInSquareBrackets: false
+TabWidth: 4
+UseTab: Always
+AlignConsecutiveAssignments : Consecutive
+AlignConsecutiveDeclarations : Consecutive
+AlignConsecutiveMacros : Consecutive
+AlignEscapedNewlines : Right
+AllowAllConstructorInitializersOnNextLine  : false
+ConstructorInitializerAllOnOneLineOrOnePerLine : true
+AllowAllArgumentsOnNextLine : false
+IndentPPDirectives : BeforeHash
+AlignArrayOfStructures : Right
+AlignConsecutiveBitFields : Consecutive
+AlignOperands : AlignAfterOperator
+AllowAllParametersOfDeclarationOnNextLine : false
+LambdaBodyIndentation : OuterScope
+BreakConstructorInitializers : BeforeComma
+BreakAfterAttributes  : Leave
+IncludeBlocks : Preserve
+InsertNewlineAtEOF : true

@@ -1,0 +1,37 @@
+{
+    "Name": "DOOR_RIGHT",
+    "IsActive": true,
+    "ParentGO": "",
+    "Tags": [],
+    "Components": {
+        "SceneComponent#0": {
+            "_bActive": true
+        },
+        "SpriteAnimatorComponent#0": {
+            "_bActive": true,
+            "currentAnimation": "IDLE",
+            "repeat": true,
+            "animations": [
+                "CLOSE",
+                "IDLE",
+                "OPEN"
+            ]
+        },
+        "SpriteComponent#0": {
+            "_bActive": true,
+            "Mesh": "RectMesh",
+            "Material": "materials/Std2DMtrl.material",
+            "Texture": "",
+            "SpriteName": ""
+        },
+        "PortalComponent#0": {
+            "_bActive": true,
+            "nextSceneName": ""
+        }
+    },
+    "SceneTransforms": {
+        "SceneComponent#0": "770,-420,0;0,0,1.571;500,800,1;",
+        "SpriteAnimatorComponent#0": "0,0,0;0,0,0;1,1,1;SceneComponent#0",
+        "SpriteComponent#0": "0,0,0;0,0,0;1,1,1;SceneComponent#0"
+    }
+}

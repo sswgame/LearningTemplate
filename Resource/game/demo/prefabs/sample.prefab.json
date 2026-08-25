@@ -1,0 +1,4 @@
+{
+  "name": "SamplePrefab",
+  "xmlBody": "<GameObjectState>\n\t\t<Name>SamplePrefab</Name>\n\t\t<IsActive>1</IsActive>\n\t\t<ParentGO></ParentGO>\n\t\t<Tags/>\n\t\t<Components/>\n\t\t<SceneTransforms/>\n\t</GameObjectState>"
+}

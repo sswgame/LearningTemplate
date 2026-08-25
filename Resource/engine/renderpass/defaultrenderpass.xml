@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<RenderPassDesc formatVersion="0">
+	<_name>DefaultMainPass</_name>
+	<_attachments>
+		<item>
+			<_name>MainColorBuffer</_name>
+			<_format>R8G8B8A8_UNORM</_format>
+			<_clearColor>0.100000 0.200000 0.300000 1.000000</_clearColor>
+			<_bClear>true</_bClear>
+		</item>
+		<item>
+			<_name>MainDepthBuffer</_name>
+			<_format>D24_UNORM_S8_UINT</_format>
+			<_clearColor>1.000000 0.000000 0.000000 0.000000</_clearColor>
+			<_bClear>true</_bClear>
+		</item>
+	</_attachments>
+</RenderPassDesc>

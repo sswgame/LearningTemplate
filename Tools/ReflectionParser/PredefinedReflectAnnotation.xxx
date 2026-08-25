@@ -1,0 +1,15 @@
+/**
+ * @file PredefinedReflectAnnotation.xxx
+ * @brief clang annotate 접두사 — ReflectionMacros.h / Macros.h 의 annotate() 문자열과 맞출 것.
+ * @details include 전에 REGISTER_REFLECT_ANNOTATION( Id, MacroName, AnnotatePrefix, ScopeName ) 정의.
+ *          MacroName: 소스 매크로 철자 (REFLECT)
+ *          Prefix:    annotate("...") 접두사 (REFLECT;)
+ *          Scope:     AnnotationMeta.txt 섹션명
+ */
+
+REGISTER_REFLECT_ANNOTATION( Reflect, "REFLECT", "REFLECT;", "REFLECT" )
+REGISTER_REFLECT_ANNOTATION( ReflectScript, "REFLECT_SCRIPT", "reflect-script;", "REFLECT" )
+REGISTER_REFLECT_ANNOTATION( Enum, "ENUM", "ENUM;", "ENUM" )
+REGISTER_REFLECT_ANNOTATION( Property, "PROPERTY", "PROPERTY;", "PROPERTY" )
+REGISTER_REFLECT_ANNOTATION( Function, "FUNCTION", "FUNCTION;", "FUNCTION" )
+REGISTER_REFLECT_ANNOTATION( ReflectContainer, "REFLECT_CONTAINER", "REFLECT_CONTAINER;", "REFLECT_CONTAINER" )

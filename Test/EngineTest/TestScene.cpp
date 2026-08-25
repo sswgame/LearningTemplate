@@ -1,0 +1,112 @@
+#include "pch.h"
+
+#include "Engine/Object/GameObject/GameObjectManager.h"
+
+#include "TestFramework/TestFramework.h"
+
+// ------------------------------------------------------------------------------
+// 1) SceneTest — 활성 씬·비동기 로드
+// ------------------------------------------------------------------------------
+/**
+ * @brief [SceneTest] 빈 매니저에서 createScene 이 활성 씬을 설정
+ */
+SW_TEST_CASE( SceneTest, CreateSceneSetsActiveWhenEmpty )
+{
+	sw::SceneManager manager;
+	SW_ASSERT_TRUE( manager.initialize() );
+	SW_EXPECT_NULL( manager.getActiveScene() );
+	SW_EXPECT_EQUAL( size_t( 0 ), manager.getLoadedScenes().size() );
+
+	sw::Scene* scene = manager.createScene( "Main" );
+	SW_ASSERT_NOT_NULL( scene );
+	SW_EXPECT_STREQ( "Main", scene->getName() );
+	SW_EXPECT_EQUAL( scene, manager.getActiveScene() );
+	SW_EXPECT_EQUAL( size_t( 1 ), manager.getLoadedScenes().size() );
+
+	manager.shutdown();
+}
+
+/**
+ * @brief [SceneTest] 여러 씬이 있어도 첫 활성 씬 유지
+ */
+SW_TEST_CASE( SceneTest, MultipleScenesKeepFirstActive )
+{
+	sw::SceneManager manager;
+	SW_ASSERT_TRUE( manager.initialize() );
+
+	sw::Scene* first  = manager.createScene( "Level_A" );
+	sw::Scene* second = manager.createScene( "Level_B" );
+	SW_ASSERT_NOT_NULL( first );
+	SW_ASSERT_NOT_NULL( second );
+	SW_EXPECT_EQUAL( first, manager.getActiveScene() );
+	SW_EXPECT_EQUAL( size_t( 2 ), manager.getLoadedScenes().size() );
+	SW_EXPECT_STREQ( "Level_B", second->getName() );
+
+	manager.shutdown();
+}
+
+/**
+ * @brief [SceneTest] GameObjectManager 소유
+ */
+SW_TEST_CASE( SceneTest, OwnsGameObjectManager )
+{
+	sw::SceneManager manager;
+	SW_ASSERT_TRUE( manager.initialize() );
+
+	sw::Scene* scene = manager.createScene( "World" );
+	SW_ASSERT_NOT_NULL( scene );
+	SW_ASSERT_NOT_NULL( scene->getObjectManager() );
+
+	sw::GameObject* obj = scene->getObjectManager()->createGameObject( sw::hashed_string( "Hero" ) );
+	SW_ASSERT_NOT_NULL( obj );
+	SW_EXPECT_EQUAL( obj, scene->getObjectManager()->findGameObjectByName( sw::hashed_string( "Hero" ) ) );
+
+	manager.shutdown();
+}
+
+/**
+ * @brief [SceneTest] RHI 없이 update 안전
+ */
+SW_TEST_CASE( SceneTest, UpdateWithoutRhiIsSafe )
+{
+	sw::SceneManager manager;
+	SW_ASSERT_TRUE( manager.initialize() );
+
+	sw::Scene* scene = manager.createScene( "TickWorld" );
+	SW_ASSERT_NOT_NULL( scene );
+	scene->getObjectManager()->createGameObject( sw::hashed_string( "EmptyActor" ) );
+
+	manager.tick( 0.016f );
+	SW_EXPECT_EQUAL( size_t( 1 ), scene->getObjectManager()->getAllGameObjects().size() );
+
+	manager.shutdown();
+}
+
+/**
+ * @brief [SceneTest] 씬 내 엔티티 수명 및 셧다운 후 정리 검증
+ */
+SW_TEST_CASE( SceneTest, SceneEntityLifecycleAndShutdownCleanup )
+{
+	sw::SceneManager manager;
+	SW_ASSERT_TRUE( manager.initialize() );
+
+	sw::Scene* sceneA = manager.createScene( "DungeonLevel" );
+	SW_ASSERT_NOT_NULL( sceneA );
+
+	// 오브젝트 여러 개 생성
+	sw::GameObject* hero	= sceneA->getObjectManager()->createGameObject( sw::hashed_string( "Hero" ) );
+	sw::GameObject* monster = sceneA->getObjectManager()->createGameObject( sw::hashed_string( "Monster" ) );
+	SW_ASSERT_NOT_NULL( hero );
+	SW_ASSERT_NOT_NULL( monster );
+
+	SW_EXPECT_EQUAL( 2u, sceneA->getObjectManager()->getAllGameObjects().size() );
+
+	// 틱 실행 및 정상 상태 검증
+	manager.tick( 0.016f );
+	SW_EXPECT_EQUAL( 2u, sceneA->getObjectManager()->getAllGameObjects().size() );
+
+	// 셧다운 시 모든 씬 및 오브젝트 정리
+	manager.shutdown();
+	SW_EXPECT_NULL( manager.getActiveScene() );
+	SW_EXPECT_EQUAL( 0u, manager.getLoadedScenes().size() );
+}

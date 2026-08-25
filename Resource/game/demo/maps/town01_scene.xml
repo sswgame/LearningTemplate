@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<SceneDescriptor>
+	<name>Town01Scene</name>
+	<entities>
+		<entity name="PlayerSpawn" prefab="game/demo/prefabs/sample.prefab.xml"/>
+		<entity name="TownSign"/>
+	</entities>
+</SceneDescriptor>

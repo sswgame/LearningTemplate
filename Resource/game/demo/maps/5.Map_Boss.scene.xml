@@ -1,0 +1,9 @@
+<?xml version="1.0" ?>
+<SceneDescriptor formatVersion="0" name="5.Map_Boss">
+    <entities>
+        <entity name="MONSTER_SUMMON" prefab="game/demo/prefabs/MONSTER_SUMMON.prefab.json"/>
+        <entity name="DOOR_LEFT" prefab="game/demo/prefabs/5.Map_Boss_DOOR_LEFT_1.prefab.json"/>
+        <entity name="DOOR_RIGHT" prefab="game/demo/prefabs/5.Map_Boss_DOOR_RIGHT_2.prefab.json"/>
+        <entity name="MAP_BOSS_ROOM" prefab="game/demo/prefabs/5.Map_Boss_MAP_BOSS_ROOM_3.prefab.json"/>
+    </entities>
+</SceneDescriptor>

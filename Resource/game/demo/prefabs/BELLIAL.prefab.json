@@ -1,0 +1,48 @@
+{
+    "Name": "BELLIAL",
+    "IsActive": true,
+    "ParentGO": "",
+    "Tags": [],
+    "Components": {
+        "SceneComponent#0": {
+            "_bActive": true
+        },
+        "BoxCollider2DComponent#0": {
+            "_bActive": true,
+            "colliderType": 0,
+            "offsetPos": "25,-30",
+            "offsetScale": "250,300"
+        },
+        "SpriteAnimatorComponent#0": {
+            "_bActive": true,
+            "currentAnimation": "ATTACK_BULLET",
+            "repeat": true,
+            "animations": [
+                "ATTACK_BULLET",
+                "IDLE"
+            ]
+        },
+        "SpriteComponent#0": {
+            "_bActive": true,
+            "Mesh": "RectMesh",
+            "Material": "materials/Monster.material",
+            "Texture": "",
+            "SpriteName": ""
+        },
+        "BossComponent#0": {
+            "_bActive": true
+        },
+        "BossComponent#1": {
+            "_bActive": true
+        },
+        "UnitStatsComponent#0": {
+            "_bActive": true
+        }
+    },
+    "SceneTransforms": {
+        "SceneComponent#0": "0,0,0;0,0,0;500,500,1;",
+        "BoxCollider2DComponent#0": "0,0,0;0,0,0;1,1,1;SceneComponent#0",
+        "SpriteAnimatorComponent#0": "0,0,0;0,0,0;1,1,1;SceneComponent#0",
+        "SpriteComponent#0": "0,0,0;0,0,0;1,1,1;SceneComponent#0"
+    }
+}

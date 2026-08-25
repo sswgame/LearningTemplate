@@ -1,0 +1,34 @@
+#pragma once
+
+#include "Core/Common/Macros.h"
+#include "Core/Common/Types.h"
+
+namespace sw
+{
+	class TypeRegistry;
+	SW_API TypeRegistry&			getTypeRegistry();
+	SW_API class TaskManager&		getTaskManager();
+	SW_API class FrameDoubleBuffer& getFrameDoubleBuffer();
+
+	struct TypeRegistrar;
+	struct EnumRegistrar;
+	struct ScriptSystemRegistrar;
+	struct ComponentFactoryRegistrar;
+
+	namespace engine
+	{
+		/** @brief DLL 로드 직후: 해당 모듈의 리플렉션 타입, 컴포넌트 팩토리, 스크립트 시스템을 등록합니다. */
+		SW_API void registerModuleTypes( string_view moduleName );
+
+		/** @brief DLL 로드 직후: 지정된 헤드 포인터들로부터 모듈의 타입들을 등록합니다. */
+		SW_API void registerModuleTypes(
+			string_view					   moduleName,
+			TypeRegistrar*				   pTypeHead,
+			EnumRegistrar*				   pEnumHead,
+			sw::ComponentFactoryRegistrar* pFactoryHead,
+			ScriptSystemRegistrar*		   pScriptHead );
+
+		/** @brief DLL 언로드 직전: 해당 모듈의 리플렉션 타입, 컴포넌트 팩토리, 스크립트 시스템을 정리합니다. */
+		SW_API void unregisterModuleTypes( string_view moduleName );
+	} // namespace engine
+} // namespace sw

@@ -1,0 +1,33 @@
+{
+    "Name": "ENTER_SCENE",
+    "IsActive": true,
+    "ParentGO": "",
+    "Tags": [],
+    "Components": {
+        "SceneComponent#0": {
+            "_bActive": true
+        },
+        "BoxCollider2DComponent#0": {
+            "_bActive": true,
+            "colliderType": 0,
+            "offsetPos": "0,0",
+            "offsetScale": "300,100"
+        },
+        "SpriteComponent#0": {
+            "_bActive": true,
+            "Mesh": "RectMesh_LineStrip",
+            "Material": "materials/Collider2DMtrl.material",
+            "Texture": "",
+            "SpriteName": ""
+        },
+        "StageComponent#0": {
+            "_bActive": true,
+            "sceneFileName": ""
+        }
+    },
+    "SceneTransforms": {
+        "SceneComponent#0": "0,0,0;0,0,0;1,1,1;",
+        "BoxCollider2DComponent#0": "0,0,0;0,0,0;1,1,1;SceneComponent#0",
+        "SpriteComponent#0": "0,0,0;0,0,0;1,1,1;SceneComponent#0"
+    }
+}

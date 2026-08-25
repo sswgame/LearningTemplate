@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+
+  <!-- sw::array<T, N> -->
+  <Type Name="sw::array&lt;*,*&gt;">
+    <DisplayString>{{ size={$T2} }}</DisplayString>
+    <Expand>
+      <ArrayItems>
+        <Size>$T2</Size>
+        <ValuePointer>_elems</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+
+  <!-- sw::basic_hashed_string -->
+  <Type Name="sw::basic_hashed_string&lt;*,*&gt;">
+    <DisplayString Condition="_stringKeyIndex == 0">"" (None)</DisplayString>
+    <DisplayString>Index = {_stringKeyIndex}</DisplayString>
+    <Expand>
+      <Item Name="Index">_stringKeyIndex</Item>
+    </Expand>
+  </Type>
+
+  <!-- sw::fixed_string<T, N> -->
+  <Type Name="sw::fixed_string&lt;*,*&gt;">
+    <DisplayString>{_buffer,s}</DisplayString>
+    <StringView>_buffer,s</StringView>
+    <Expand>
+      <Item Name="Length">_length</Item>
+      <Item Name="Capacity">$T2</Item>
+      <ArrayItems>
+        <Size>_length</Size>
+        <ValuePointer>_buffer</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+
+  <!-- sw::vector<T, Alloc> (디버그 래퍼인 경우 Base 상속) -->
+  <Type Name="sw::vector&lt;*,*&gt;">
+    <DisplayString>{*(std::vector&lt;$T1,$T2&gt;*)this}</DisplayString>
+    <Expand>
+      <ExpandedItem>*(std::vector&lt;$T1,$T2&gt;*)this</ExpandedItem>
+    </Expand>
+  </Type>
+
+  <!-- sw::deque<T, Alloc> -->
+  <Type Name="sw::deque&lt;*,*&gt;">
+    <DisplayString>{*(std::deque&lt;$T1,$T2&gt;*)this}</DisplayString>
+    <Expand>
+      <ExpandedItem>*(std::deque&lt;$T1,$T2&gt;*)this</ExpandedItem>
+    </Expand>
+  </Type>
+
+  <!-- sw::list<T, Alloc> -->
+  <Type Name="sw::list&lt;*,*&gt;">
+    <DisplayString>{*(std::list&lt;$T1,$T2&gt;*)this}</DisplayString>
+    <Expand>
+      <ExpandedItem>*(std::list&lt;$T1,$T2&gt;*)this</ExpandedItem>
+    </Expand>
+  </Type>
+
+  <!-- sw::unordered_map<K, V, ...> -->
+  <Type Name="sw::unordered_map&lt;*,*,*,*,*&gt;">
+    <DisplayString>{*(std::unordered_map&lt;$T1,$T2,$T3,$T4,$T5&gt;*)this}</DisplayString>
+    <Expand>
+      <ExpandedItem>*(std::unordered_map&lt;$T1,$T2,$T3,$T4,$T5&gt;*)this</ExpandedItem>
+    </Expand>
+  </Type>
+
+  <!-- sw::unordered_set<K, ...> -->
+  <Type Name="sw::unordered_set&lt;*,*,*,*&gt;">
+    <DisplayString>{*(std::unordered_set&lt;$T1,$T2,$T3,$T4&gt;*)this}</DisplayString>
+    <Expand>
+      <ExpandedItem>*(std::unordered_set&lt;$T1,$T2,$T3,$T4&gt;*)this</ExpandedItem>
+    </Expand>
+  </Type>
+
+  <!-- sw::basic_string<T, ...> -->
+  <Type Name="sw::basic_string&lt;*,*,*&gt;">
+    <DisplayString>{*(std::basic_string&lt;$T1,$T2,$T3&gt;*)this}</DisplayString>
+    <Expand>
+      <ExpandedItem>*(std::basic_string&lt;$T1,$T2,$T3&gt;*)this</ExpandedItem>
+    </Expand>
+  </Type>
+
+</AutoVisualizer>

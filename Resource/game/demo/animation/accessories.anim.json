@@ -1,0 +1,3772 @@
+{
+  "name": "accessories.anim",
+  "animationCount": 79,
+  "animations": {
+    "AutoReloader": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            0.0,
+            0.0
+          ],
+          "slice": [
+            16.0,
+            17.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "AutoReloader0-0": {
+      "frameCount": 7,
+      "frames": [
+        {
+          "leftTop": [
+            16.0,
+            0.0
+          ],
+          "slice": [
+            16.0,
+            17.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            32.0,
+            0.0
+          ],
+          "slice": [
+            16.0,
+            17.0
+          ],
+          "offset": [
+            0.0,
+            -1.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            48.0,
+            0.0
+          ],
+          "slice": [
+            16.0,
+            17.0
+          ],
+          "offset": [
+            0.0,
+            1.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            64.0,
+            0.0
+          ],
+          "slice": [
+            16.0,
+            17.0
+          ],
+          "offset": [
+            0.0,
+            -1.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            80.0,
+            0.0
+          ],
+          "slice": [
+            16.0,
+            17.0
+          ],
+          "offset": [
+            0.0,
+            1.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            96.0,
+            0.0
+          ],
+          "slice": [
+            18.0,
+            21.0
+          ],
+          "offset": [
+            -1.0,
+            0.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            114.0,
+            0.0
+          ],
+          "slice": [
+            16.0,
+            17.0
+          ],
+          "offset": [
+            0.0,
+            1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "BabyBatBullet0-0": {
+      "frameCount": 5,
+      "frames": [
+        {
+          "leftTop": [
+            130.0,
+            0.0
+          ],
+          "slice": [
+            8.0,
+            8.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            138.0,
+            0.0
+          ],
+          "slice": [
+            8.0,
+            8.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            146.0,
+            0.0
+          ],
+          "slice": [
+            8.0,
+            8.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            154.0,
+            0.0
+          ],
+          "slice": [
+            8.0,
+            8.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            162.0,
+            0.0
+          ],
+          "slice": [
+            10.0,
+            10.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "BabyBatBulletFX-0": {
+      "frameCount": 7,
+      "frames": [
+        {
+          "leftTop": [
+            172.0,
+            0.0
+          ],
+          "slice": [
+            10.0,
+            10.0
+          ],
+          "offset": [
+            0.0,
+            -6.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            182.0,
+            0.0
+          ],
+          "slice": [
+            12.0,
+            12.0
+          ],
+          "offset": [
+            0.0,
+            -6.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            194.0,
+            0.0
+          ],
+          "slice": [
+            14.0,
+            14.0
+          ],
+          "offset": [
+            0.0,
+            -5.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            208.0,
+            0.0
+          ],
+          "slice": [
+            16.0,
+            16.0
+          ],
+          "offset": [
+            0.0,
+            -4.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            224.0,
+            0.0
+          ],
+          "slice": [
+            18.0,
+            18.0
+          ],
+          "offset": [
+            0.0,
+            -3.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            242.0,
+            0.0
+          ],
+          "slice": [
+            21.0,
+            18.0
+          ],
+          "offset": [
+            -1.0,
+            -3.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            263.0,
+            0.0
+          ],
+          "slice": [
+            22.0,
+            22.0
+          ],
+          "offset": [
+            0.0,
+            -1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "BombPouch": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            300.0,
+            0.0
+          ],
+          "slice": [
+            14.0,
+            13.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "BombPouch0-0": {
+      "frameCount": 12,
+      "frames": [
+        {
+          "leftTop": [
+            314.0,
+            0.0
+          ],
+          "slice": [
+            26.0,
+            26.0
+          ],
+          "offset": [
+            -3.0,
+            3.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            340.0,
+            0.0
+          ],
+          "slice": [
+            29.0,
+            35.0
+          ],
+          "offset": [
+            -10.0,
+            0.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            369.0,
+            0.0
+          ],
+          "slice": [
+            15.0,
+            16.0
+          ],
+          "offset": [
+            -3.0,
+            0.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            384.0,
+            0.0
+          ],
+          "slice": [
+            43.0,
+            18.0
+          ],
+          "offset": [
+            -3.0,
+            -1.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            427.0,
+            0.0
+          ],
+          "slice": [
+            43.0,
+            24.0
+          ],
+          "offset": [
+            2.0,
+            1.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            470.0,
+            0.0
+          ],
+          "slice": [
+            21.0,
+            12.0
+          ],
+          "offset": [
+            -3.0,
+            -7.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            0.0,
+            35.0
+          ],
+          "slice": [
+            29.0,
+            29.0
+          ],
+          "offset": [
+            0.0,
+            -2.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            29.0,
+            35.0
+          ],
+          "slice": [
+            43.0,
+            39.0
+          ],
+          "offset": [
+            -1.0,
+            0.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            72.0,
+            35.0
+          ],
+          "slice": [
+            41.0,
+            36.0
+          ],
+          "offset": [
+            0.0,
+            1.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            113.0,
+            35.0
+          ],
+          "slice": [
+            44.0,
+            40.0
+          ],
+          "offset": [
+            0.0,
+            2.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            157.0,
+            35.0
+          ],
+          "slice": [
+            37.0,
+            29.0
+          ],
+          "offset": [
+            -1.0,
+            -1.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            194.0,
+            35.0
+          ],
+          "slice": [
+            36.0,
+            22.0
+          ],
+          "offset": [
+            0.0,
+            1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "BombPouch1-0": {
+      "frameCount": 5,
+      "frames": [
+        {
+          "leftTop": [
+            230.0,
+            35.0
+          ],
+          "slice": [
+            26.0,
+            26.0
+          ],
+          "offset": [
+            -3.0,
+            3.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            256.0,
+            35.0
+          ],
+          "slice": [
+            29.0,
+            35.0
+          ],
+          "offset": [
+            -10.0,
+            0.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            285.0,
+            35.0
+          ],
+          "slice": [
+            15.0,
+            16.0
+          ],
+          "offset": [
+            -3.0,
+            0.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            300.0,
+            35.0
+          ],
+          "slice": [
+            43.0,
+            18.0
+          ],
+          "offset": [
+            -3.0,
+            -1.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            343.0,
+            35.0
+          ],
+          "slice": [
+            43.0,
+            24.0
+          ],
+          "offset": [
+            2.0,
+            1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "CarpCoinPurse": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            386.0,
+            35.0
+          ],
+          "slice": [
+            17.0,
+            9.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "DadBatBulletFX-0": {
+      "frameCount": 11,
+      "frames": [
+        {
+          "leftTop": [
+            403.0,
+            35.0
+          ],
+          "slice": [
+            26.0,
+            26.0
+          ],
+          "offset": [
+            1.0,
+            -3.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            429.0,
+            35.0
+          ],
+          "slice": [
+            28.0,
+            28.0
+          ],
+          "offset": [
+            0.0,
+            -3.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            457.0,
+            35.0
+          ],
+          "slice": [
+            26.0,
+            26.0
+          ],
+          "offset": [
+            0.0,
+            -3.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            483.0,
+            35.0
+          ],
+          "slice": [
+            28.0,
+            28.0
+          ],
+          "offset": [
+            0.0,
+            -3.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            0.0,
+            75.0
+          ],
+          "slice": [
+            30.0,
+            30.0
+          ],
+          "offset": [
+            0.0,
+            -2.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            30.0,
+            75.0
+          ],
+          "slice": [
+            37.0,
+            34.0
+          ],
+          "offset": [
+            0.0,
+            -2.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            67.0,
+            75.0
+          ],
+          "slice": [
+            40.0,
+            36.0
+          ],
+          "offset": [
+            0.0,
+            -2.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            107.0,
+            75.0
+          ],
+          "slice": [
+            39.0,
+            39.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            146.0,
+            75.0
+          ],
+          "slice": [
+            35.0,
+            38.0
+          ],
+          "offset": [
+            0.0,
+            -1.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            181.0,
+            75.0
+          ],
+          "slice": [
+            37.0,
+            40.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            218.0,
+            75.0
+          ],
+          "slice": [
+            38.0,
+            35.0
+          ],
+          "offset": [
+            -1.0,
+            -2.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "DaisyRing": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            256.0,
+            75.0
+          ],
+          "slice": [
+            8.0,
+            9.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "DemonBoots": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            264.0,
+            75.0
+          ],
+          "slice": [
+            16.0,
+            11.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "DemonBoots0-0": {
+      "frameCount": 6,
+      "frames": [
+        {
+          "leftTop": [
+            280.0,
+            75.0
+          ],
+          "slice": [
+            3.0,
+            4.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            283.0,
+            75.0
+          ],
+          "slice": [
+            5.0,
+            7.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            288.0,
+            75.0
+          ],
+          "slice": [
+            5.0,
+            8.0
+          ],
+          "offset": [
+            0.0,
+            1.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            293.0,
+            75.0
+          ],
+          "slice": [
+            8.0,
+            10.0
+          ],
+          "offset": [
+            0.0,
+            3.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            301.0,
+            75.0
+          ],
+          "slice": [
+            5.0,
+            4.0
+          ],
+          "offset": [
+            -2.0,
+            2.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            306.0,
+            75.0
+          ],
+          "slice": [
+            9.0,
+            3.0
+          ],
+          "offset": [
+            -4.0,
+            1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "GoldenCandy": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            315.0,
+            75.0
+          ],
+          "slice": [
+            6.0,
+            6.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "GreenBat0-0": {
+      "frameCount": 6,
+      "frames": [
+        {
+          "leftTop": [
+            321.0,
+            75.0
+          ],
+          "slice": [
+            27.0,
+            7.0
+          ],
+          "offset": [
+            -13.0,
+            3.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            348.0,
+            75.0
+          ],
+          "slice": [
+            27.0,
+            8.0
+          ],
+          "offset": [
+            -13.0,
+            4.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            375.0,
+            75.0
+          ],
+          "slice": [
+            46.0,
+            23.0
+          ],
+          "offset": [
+            1.0,
+            0.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            421.0,
+            75.0
+          ],
+          "slice": [
+            36.0,
+            18.0
+          ],
+          "offset": [
+            -1.0,
+            -3.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            457.0,
+            75.0
+          ],
+          "slice": [
+            32.0,
+            24.0
+          ],
+          "offset": [
+            2.0,
+            -1.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            0.0,
+            115.0
+          ],
+          "slice": [
+            27.0,
+            14.0
+          ],
+          "offset": [
+            0.0,
+            -5.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "GreenDadBat1-0": {
+      "frameCount": 7,
+      "frames": [
+        {
+          "leftTop": [
+            27.0,
+            115.0
+          ],
+          "slice": [
+            55.0,
+            16.0
+          ],
+          "offset": [
+            2.0,
+            3.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            82.0,
+            115.0
+          ],
+          "slice": [
+            69.0,
+            20.0
+          ],
+          "offset": [
+            0.0,
+            2.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            151.0,
+            115.0
+          ],
+          "slice": [
+            54.0,
+            24.0
+          ],
+          "offset": [
+            3.0,
+            -7.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            205.0,
+            115.0
+          ],
+          "slice": [
+            64.0,
+            36.0
+          ],
+          "offset": [
+            3.0,
+            -2.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            269.0,
+            115.0
+          ],
+          "slice": [
+            53.0,
+            51.0
+          ],
+          "offset": [
+            1.0,
+            -8.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            322.0,
+            115.0
+          ],
+          "slice": [
+            49.0,
+            54.0
+          ],
+          "offset": [
+            1.0,
+            -5.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            371.0,
+            115.0
+          ],
+          "slice": [
+            53.0,
+            28.0
+          ],
+          "offset": [
+            2.0,
+            -3.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "GreenMomBat2-0": {
+      "frameCount": 7,
+      "frames": [
+        {
+          "leftTop": [
+            424.0,
+            115.0
+          ],
+          "slice": [
+            51.0,
+            16.0
+          ],
+          "offset": [
+            3.0,
+            3.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            0.0,
+            169.0
+          ],
+          "slice": [
+            50.0,
+            17.0
+          ],
+          "offset": [
+            3.0,
+            4.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            50.0,
+            169.0
+          ],
+          "slice": [
+            50.0,
+            23.0
+          ],
+          "offset": [
+            5.0,
+            -9.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            100.0,
+            169.0
+          ],
+          "slice": [
+            61.0,
+            36.0
+          ],
+          "offset": [
+            4.0,
+            -2.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            161.0,
+            169.0
+          ],
+          "slice": [
+            53.0,
+            41.0
+          ],
+          "offset": [
+            3.0,
+            -3.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            214.0,
+            169.0
+          ],
+          "slice": [
+            46.0,
+            55.0
+          ],
+          "offset": [
+            2.0,
+            -5.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            260.0,
+            169.0
+          ],
+          "slice": [
+            46.0,
+            55.0
+          ],
+          "offset": [
+            2.0,
+            -3.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "HeartOfCosmos": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            306.0,
+            169.0
+          ],
+          "slice": [
+            12.0,
+            15.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "HeartOfCosmos0-0": {
+      "frameCount": 20,
+      "frames": [
+        {
+          "leftTop": [
+            318.0,
+            169.0
+          ],
+          "slice": [
+            39.0,
+            39.0
+          ],
+          "offset": [
+            0.0,
+            -3.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            357.0,
+            169.0
+          ],
+          "slice": [
+            47.0,
+            47.0
+          ],
+          "offset": [
+            0.0,
+            -1.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            404.0,
+            169.0
+          ],
+          "slice": [
+            61.0,
+            52.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            0.0,
+            224.0
+          ],
+          "slice": [
+            61.0,
+            58.0
+          ],
+          "offset": [
+            4.0,
+            0.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            61.0,
+            224.0
+          ],
+          "slice": [
+            57.0,
+            52.0
+          ],
+          "offset": [
+            -1.0,
+            -1.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            118.0,
+            224.0
+          ],
+          "slice": [
+            59.0,
+            54.0
+          ],
+          "offset": [
+            4.0,
+            -1.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            177.0,
+            224.0
+          ],
+          "slice": [
+            54.0,
+            53.0
+          ],
+          "offset": [
+            5.0,
+            -2.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            231.0,
+            224.0
+          ],
+          "slice": [
+            60.0,
+            56.0
+          ],
+          "offset": [
+            -1.0,
+            0.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            291.0,
+            224.0
+          ],
+          "slice": [
+            65.0,
+            54.0
+          ],
+          "offset": [
+            1.0,
+            -1.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            356.0,
+            224.0
+          ],
+          "slice": [
+            35.0,
+            22.0
+          ],
+          "offset": [
+            5.0,
+            -3.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            391.0,
+            224.0
+          ],
+          "slice": [
+            29.0,
+            30.0
+          ],
+          "offset": [
+            -5.0,
+            -11.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            420.0,
+            224.0
+          ],
+          "slice": [
+            15.0,
+            14.0
+          ],
+          "offset": [
+            0.0,
+            -5.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            435.0,
+            224.0
+          ],
+          "slice": [
+            34.0,
+            25.0
+          ],
+          "offset": [
+            5.0,
+            -9.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            469.0,
+            224.0
+          ],
+          "slice": [
+            21.0,
+            22.0
+          ],
+          "offset": [
+            0.0,
+            -3.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            0.0,
+            282.0
+          ],
+          "slice": [
+            35.0,
+            22.0
+          ],
+          "offset": [
+            9.0,
+            -3.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            35.0,
+            282.0
+          ],
+          "slice": [
+            29.0,
+            30.0
+          ],
+          "offset": [
+            -2.0,
+            -12.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            64.0,
+            282.0
+          ],
+          "slice": [
+            15.0,
+            14.0
+          ],
+          "offset": [
+            0.0,
+            -5.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            79.0,
+            282.0
+          ],
+          "slice": [
+            27.0,
+            32.0
+          ],
+          "offset": [
+            -4.0,
+            4.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            106.0,
+            282.0
+          ],
+          "slice": [
+            12.0,
+            20.0
+          ],
+          "offset": [
+            0.0,
+            -5.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            118.0,
+            282.0
+          ],
+          "slice": [
+            4.0,
+            8.0
+          ],
+          "offset": [
+            -2.0,
+            4.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "HeartOfCosmosF-0": {
+      "frameCount": 11,
+      "frames": [
+        {
+          "leftTop": [
+            122.0,
+            282.0
+          ],
+          "slice": [
+            35.0,
+            22.0
+          ],
+          "offset": [
+            14.0,
+            -7.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            157.0,
+            282.0
+          ],
+          "slice": [
+            29.0,
+            30.0
+          ],
+          "offset": [
+            -14.0,
+            15.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            186.0,
+            282.0
+          ],
+          "slice": [
+            15.0,
+            14.0
+          ],
+          "offset": [
+            7.0,
+            -8.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            201.0,
+            282.0
+          ],
+          "slice": [
+            34.0,
+            25.0
+          ],
+          "offset": [
+            11.0,
+            -13.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            235.0,
+            282.0
+          ],
+          "slice": [
+            21.0,
+            22.0
+          ],
+          "offset": [
+            4.0,
+            -7.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            256.0,
+            282.0
+          ],
+          "slice": [
+            35.0,
+            22.0
+          ],
+          "offset": [
+            13.0,
+            -7.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            291.0,
+            282.0
+          ],
+          "slice": [
+            18.0,
+            15.0
+          ],
+          "offset": [
+            4.0,
+            -9.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            309.0,
+            282.0
+          ],
+          "slice": [
+            15.0,
+            14.0
+          ],
+          "offset": [
+            2.0,
+            -8.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            324.0,
+            282.0
+          ],
+          "slice": [
+            27.0,
+            32.0
+          ],
+          "offset": [
+            -2.0,
+            0.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            351.0,
+            282.0
+          ],
+          "slice": [
+            12.0,
+            20.0
+          ],
+          "offset": [
+            0.0,
+            -9.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            363.0,
+            282.0
+          ],
+          "slice": [
+            4.0,
+            8.0
+          ],
+          "offset": [
+            -2.0,
+            4.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "IceBall": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            367.0,
+            282.0
+          ],
+          "slice": [
+            8.0,
+            8.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "IceBall0-0": {
+      "frameCount": 7,
+      "frames": [
+        {
+          "leftTop": [
+            375.0,
+            282.0
+          ],
+          "slice": [
+            11.0,
+            11.0
+          ],
+          "offset": [
+            0.0,
+            -4.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            386.0,
+            282.0
+          ],
+          "slice": [
+            11.0,
+            11.0
+          ],
+          "offset": [
+            0.0,
+            -4.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            397.0,
+            282.0
+          ],
+          "slice": [
+            11.0,
+            11.0
+          ],
+          "offset": [
+            0.0,
+            -4.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            408.0,
+            282.0
+          ],
+          "slice": [
+            11.0,
+            11.0
+          ],
+          "offset": [
+            0.0,
+            -4.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            419.0,
+            282.0
+          ],
+          "slice": [
+            11.0,
+            11.0
+          ],
+          "offset": [
+            0.0,
+            -4.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            430.0,
+            282.0
+          ],
+          "slice": [
+            11.0,
+            11.0
+          ],
+          "offset": [
+            0.0,
+            -4.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            441.0,
+            282.0
+          ],
+          "slice": [
+            11.0,
+            11.0
+          ],
+          "offset": [
+            0.0,
+            -4.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "Jarngreipr": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            452.0,
+            282.0
+          ],
+          "slice": [
+            11.0,
+            13.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "Magnet": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            463.0,
+            282.0
+          ],
+          "slice": [
+            7.0,
+            9.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "MagnifyingGlass": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            470.0,
+            282.0
+          ],
+          "slice": [
+            17.0,
+            16.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "MetalBoots": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            487.0,
+            282.0
+          ],
+          "slice": [
+            12.0,
+            9.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "MiniEarth": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            499.0,
+            282.0
+          ],
+          "slice": [
+            10.0,
+            10.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "MiniEarth0-0": {
+      "frameCount": 9,
+      "frames": [
+        {
+          "leftTop": [
+            0.0,
+            314.0
+          ],
+          "slice": [
+            10.0,
+            10.0
+          ],
+          "offset": [
+            -5.0,
+            5.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            10.0,
+            314.0
+          ],
+          "slice": [
+            10.0,
+            10.0
+          ],
+          "offset": [
+            -5.0,
+            5.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            20.0,
+            314.0
+          ],
+          "slice": [
+            10.0,
+            10.0
+          ],
+          "offset": [
+            -5.0,
+            5.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            30.0,
+            314.0
+          ],
+          "slice": [
+            10.0,
+            10.0
+          ],
+          "offset": [
+            -5.0,
+            5.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            40.0,
+            314.0
+          ],
+          "slice": [
+            10.0,
+            10.0
+          ],
+          "offset": [
+            -5.0,
+            5.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            50.0,
+            314.0
+          ],
+          "slice": [
+            10.0,
+            10.0
+          ],
+          "offset": [
+            -5.0,
+            5.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            60.0,
+            314.0
+          ],
+          "slice": [
+            10.0,
+            10.0
+          ],
+          "offset": [
+            -5.0,
+            5.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            70.0,
+            314.0
+          ],
+          "slice": [
+            10.0,
+            10.0
+          ],
+          "offset": [
+            -5.0,
+            5.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            80.0,
+            314.0
+          ],
+          "slice": [
+            10.0,
+            10.0
+          ],
+          "offset": [
+            -5.0,
+            5.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "MultiBullet": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            90.0,
+            314.0
+          ],
+          "slice": [
+            12.0,
+            19.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "SecretMap": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            102.0,
+            314.0
+          ],
+          "slice": [
+            13.0,
+            14.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "Seeri": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            115.0,
+            314.0
+          ],
+          "slice": [
+            30.0,
+            19.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "Seeri0-0": {
+      "frameCount": 9,
+      "frames": [
+        {
+          "leftTop": [
+            145.0,
+            314.0
+          ],
+          "slice": [
+            32.0,
+            31.0
+          ],
+          "offset": [
+            1.0,
+            0.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            177.0,
+            314.0
+          ],
+          "slice": [
+            32.0,
+            28.0
+          ],
+          "offset": [
+            1.0,
+            1.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            209.0,
+            314.0
+          ],
+          "slice": [
+            32.0,
+            31.0
+          ],
+          "offset": [
+            1.0,
+            0.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            241.0,
+            314.0
+          ],
+          "slice": [
+            32.0,
+            31.0
+          ],
+          "offset": [
+            1.0,
+            0.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            273.0,
+            314.0
+          ],
+          "slice": [
+            32.0,
+            32.0
+          ],
+          "offset": [
+            1.0,
+            1.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            305.0,
+            314.0
+          ],
+          "slice": [
+            32.0,
+            31.0
+          ],
+          "offset": [
+            1.0,
+            0.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            337.0,
+            314.0
+          ],
+          "slice": [
+            32.0,
+            31.0
+          ],
+          "offset": [
+            1.0,
+            0.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            369.0,
+            314.0
+          ],
+          "slice": [
+            32.0,
+            25.0
+          ],
+          "offset": [
+            1.0,
+            0.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            401.0,
+            314.0
+          ],
+          "slice": [
+            32.0,
+            23.0
+          ],
+          "offset": [
+            1.0,
+            2.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "SeeriBullet": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            433.0,
+            314.0
+          ],
+          "slice": [
+            11.0,
+            7.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "SeeriBullet0-0": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            444.0,
+            314.0
+          ],
+          "slice": [
+            4.0,
+            3.0
+          ],
+          "offset": [
+            1.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "SeeriBullet0-1": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            448.0,
+            314.0
+          ],
+          "slice": [
+            7.0,
+            5.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "SeeriBullet0-2": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            455.0,
+            314.0
+          ],
+          "slice": [
+            8.0,
+            5.0
+          ],
+          "offset": [
+            -1.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "SeeriBullet0-3": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            463.0,
+            314.0
+          ],
+          "slice": [
+            11.0,
+            8.0
+          ],
+          "offset": [
+            -3.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "SeeriBullet0-4": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            474.0,
+            314.0
+          ],
+          "slice": [
+            8.0,
+            8.0
+          ],
+          "offset": [
+            -4.0,
+            -1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "SeeriBullet0-5": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            482.0,
+            314.0
+          ],
+          "slice": [
+            3.0,
+            8.0
+          ],
+          "offset": [
+            -1.0,
+            4.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "SilverBullet": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            499.0,
+            314.0
+          ],
+          "slice": [
+            6.0,
+            11.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "SpikeBall": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            0.0,
+            346.0
+          ],
+          "slice": [
+            15.0,
+            15.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "SpikeBoots": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            15.0,
+            346.0
+          ],
+          "slice": [
+            13.0,
+            12.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "SpringShoes": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            28.0,
+            346.0
+          ],
+          "slice": [
+            13.0,
+            16.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "StrawBerry": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            41.0,
+            346.0
+          ],
+          "slice": [
+            9.0,
+            12.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "TAANA": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            50.0,
+            346.0
+          ],
+          "slice": [
+            13.0,
+            17.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "TAANA0-0": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            63.0,
+            346.0
+          ],
+          "slice": [
+            13.0,
+            17.0
+          ],
+          "offset": [
+            0.0,
+            -5.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "TAANA0-1": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            76.0,
+            346.0
+          ],
+          "slice": [
+            14.0,
+            17.0
+          ],
+          "offset": [
+            0.0,
+            -5.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "TAANA0-2": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            90.0,
+            346.0
+          ],
+          "slice": [
+            14.0,
+            17.0
+          ],
+          "offset": [
+            0.0,
+            -5.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "TAANA0-3": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            104.0,
+            346.0
+          ],
+          "slice": [
+            15.0,
+            17.0
+          ],
+          "offset": [
+            0.0,
+            -5.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "TAANA0-4": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            119.0,
+            346.0
+          ],
+          "slice": [
+            16.0,
+            17.0
+          ],
+          "offset": [
+            -1.0,
+            -5.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "TAANA0-5": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            135.0,
+            346.0
+          ],
+          "slice": [
+            15.0,
+            17.0
+          ],
+          "offset": [
+            -2.0,
+            -5.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "TAANA0-6": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            150.0,
+            346.0
+          ],
+          "slice": [
+            14.0,
+            17.0
+          ],
+          "offset": [
+            -3.0,
+            -5.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "Voluspa": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            164.0,
+            346.0
+          ],
+          "slice": [
+            7.0,
+            10.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "Voluspa0": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            171.0,
+            346.0
+          ],
+          "slice": [
+            111.0,
+            13.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "Watcher": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            282.0,
+            346.0
+          ],
+          "slice": [
+            13.0,
+            11.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "Watcher0-0": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            295.0,
+            346.0
+          ],
+          "slice": [
+            13.0,
+            11.0
+          ],
+          "offset": [
+            0.0,
+            -5.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "Watcher0-1": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            308.0,
+            346.0
+          ],
+          "slice": [
+            13.0,
+            11.0
+          ],
+          "offset": [
+            0.0,
+            -5.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "Watcher0-2": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            321.0,
+            346.0
+          ],
+          "slice": [
+            13.0,
+            11.0
+          ],
+          "offset": [
+            0.0,
+            -5.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "Watcher0-3": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            334.0,
+            346.0
+          ],
+          "slice": [
+            13.0,
+            10.0
+          ],
+          "offset": [
+            0.0,
+            -6.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "Watcher0-4": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            347.0,
+            346.0
+          ],
+          "slice": [
+            13.0,
+            9.0
+          ],
+          "offset": [
+            0.0,
+            -7.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "Watcher0-5": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            360.0,
+            346.0
+          ],
+          "slice": [
+            18.0,
+            10.0
+          ],
+          "offset": [
+            0.0,
+            -6.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "Watcher0-6": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            378.0,
+            346.0
+          ],
+          "slice": [
+            13.0,
+            9.0
+          ],
+          "offset": [
+            0.0,
+            -7.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "Watcher1-0": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            391.0,
+            346.0
+          ],
+          "slice": [
+            11.0,
+            15.0
+          ],
+          "offset": [
+            0.0,
+            -2.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "Watcher1-1": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            402.0,
+            346.0
+          ],
+          "slice": [
+            11.0,
+            15.0
+          ],
+          "offset": [
+            0.0,
+            -2.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "Watcher1-10": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            0.0,
+            363.0
+          ],
+          "slice": [
+            12.0,
+            10.0
+          ],
+          "offset": [
+            0.0,
+            -3.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "Watcher1-11": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            12.0,
+            363.0
+          ],
+          "slice": [
+            11.0,
+            9.0
+          ],
+          "offset": [
+            0.0,
+            -2.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "Watcher1-12": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            23.0,
+            363.0
+          ],
+          "slice": [
+            9.0,
+            10.0
+          ],
+          "offset": [
+            0.0,
+            -3.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "Watcher1-2": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            413.0,
+            346.0
+          ],
+          "slice": [
+            11.0,
+            14.0
+          ],
+          "offset": [
+            0.0,
+            -1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "Watcher1-3": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            424.0,
+            346.0
+          ],
+          "slice": [
+            13.0,
+            16.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "Watcher1-4": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            437.0,
+            346.0
+          ],
+          "slice": [
+            10.0,
+            8.0
+          ],
+          "offset": [
+            0.0,
+            -2.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "Watcher1-5": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            447.0,
+            346.0
+          ],
+          "slice": [
+            9.0,
+            9.0
+          ],
+          "offset": [
+            0.0,
+            -2.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "Watcher1-6": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            456.0,
+            346.0
+          ],
+          "slice": [
+            9.0,
+            12.0
+          ],
+          "offset": [
+            0.0,
+            -2.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "Watcher1-7": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            465.0,
+            346.0
+          ],
+          "slice": [
+            10.0,
+            15.0
+          ],
+          "offset": [
+            0.0,
+            -2.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "Watcher1-8": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            475.0,
+            346.0
+          ],
+          "slice": [
+            11.0,
+            15.0
+          ],
+          "offset": [
+            0.0,
+            -2.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "Watcher1-9": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            486.0,
+            346.0
+          ],
+          "slice": [
+            15.0,
+            13.0
+          ],
+          "offset": [
+            0.0,
+            -2.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "Wing": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            32.0,
+            363.0
+          ],
+          "slice": [
+            23.0,
+            16.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "Wing0": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            55.0,
+            363.0
+          ],
+          "slice": [
+            11.0,
+            16.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "Wingboots": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            66.0,
+            363.0
+          ],
+          "slice": [
+            14.0,
+            12.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "babyGreenBat": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            285.0,
+            0.0
+          ],
+          "slice": [
+            15.0,
+            6.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    },
+    "selected": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            485.0,
+            314.0
+          ],
+          "slice": [
+            14.0,
+            14.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/Accessories.png",
+      "texturePath": "textures/Accessories.png"
+    }
+  },
+  "currentAnimation": "",
+  "repeat": false
+}

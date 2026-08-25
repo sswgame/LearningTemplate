@@ -1,0 +1,9 @@
+<?xml version="1.0" ?>
+<SceneDescriptor formatVersion="0" name="test">
+    <entities>
+        <entity name="Mouse" prefab="game/demo/prefabs/Mouse.prefab.json"/>
+        <entity name="Main_Camera" prefab="game/demo/prefabs/Main_Camera.prefab.json"/>
+        <entity name="MAP_ROOM" prefab="game/demo/prefabs/test_MAP_ROOM_2.prefab.json"/>
+        <entity name="DOOR_EFFECT" prefab="game/demo/prefabs/test_DOOR_EFFECT_3.prefab.json"/>
+    </entities>
+</SceneDescriptor>

@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  InputMap — resource-driven actions, per-bind triggers, and layers.
+  layers: priority (higher wins), enabled, blockLower (suppresses lower-priority layers),
+  alwaysOn (enableOnlyLayer does not disable; do not combine with blockLower).
+  trigger on bind/action: Pressed | Released | Down | DoubleClicked | HoldThreshold
+  layer on action/bind: must match a declared layer name (default = defaultLayer).
+-->
+<InputMap defaultLayer="Gameplay" doubleClickTime="0.35" doubleClickMaxDistance="6" holdThreshold="0.4">
+	<layers>
+		<layer name="Gameplay" priority="0" enabled="1" blockLower="0"/>
+		<layer name="UI" priority="10" enabled="0" blockLower="1"/>
+		<layer name="Title" priority="50" enabled="0" blockLower="1"/>
+		<layer name="Cinematic" priority="100" enabled="0" blockLower="1"/>
+		<layer name="Debug" priority="1000" enabled="1" blockLower="0" alwaysOn="1"/>
+	</layers>
+
+	<gameplayIds>
+		<id key="moveUp">MoveUp</id>
+		<id key="moveDown">MoveDown</id>
+		<id key="moveLeft">MoveLeft</id>
+		<id key="moveRight">MoveRight</id>
+		<id key="interact">Interact</id>
+		<id key="confirm">Confirm</id>
+		<id key="cancel">Cancel</id>
+		<id key="continue">Continue</id>
+		<id key="fightMove0">FightMove0</id>
+		<id key="fightMove1">FightMove1</id>
+		<id key="attack">Attack</id>
+		<id key="dash">Dash</id>
+		<id key="point">Point</id>
+		<id key="quickSave">QuickSave</id>
+		<id key="quickLoad">QuickLoad</id>
+		<id key="reloadShaders">ReloadShaders</id>
+		<id key="reloadEditor">ReloadEditor</id>
+		<id key="reloadGame">ReloadGame</id>
+		<id key="layerGameplay">Gameplay</id>
+		<id key="layerUI">UI</id>
+		<id key="layerTitle">Title</id>
+		<id key="layerCinematic">Cinematic</id>
+		<id key="layerDebug">Debug</id>
+	</gameplayIds>
+
+	<!-- ===== Gameplay ===== -->
+	<action name="MoveUp" layer="Gameplay" trigger="Down">
+		<bind source="key" code="W"/>
+		<bind source="key" code="Up"/>
+		<bind source="gamepad" code="DPadUp"/>
+	</action>
+	<action name="MoveDown" layer="Gameplay" trigger="Down">
+		<bind source="key" code="S"/>
+		<bind source="key" code="Down"/>
+		<bind source="gamepad" code="DPadDown"/>
+	</action>
+	<action name="MoveLeft" layer="Gameplay" trigger="Down">
+		<bind source="key" code="A"/>
+		<bind source="key" code="Left"/>
+		<bind source="gamepad" code="DPadLeft"/>
+	</action>
+	<action name="MoveRight" layer="Gameplay" trigger="Down">
+		<bind source="key" code="D"/>
+		<bind source="key" code="Right"/>
+		<bind source="gamepad" code="DPadRight"/>
+	</action>
+	<action name="Interact" layer="Gameplay" trigger="Pressed">
+		<bind source="key" code="E"/>
+		<bind source="key" code="Z"/>
+		<bind source="gamepad" code="X"/>
+	</action>
+	<action name="Attack" layer="Gameplay">
+		<bind source="key" code="J" trigger="Pressed"/>
+		<bind source="key" code="Digit1" trigger="Pressed"/>
+		<bind source="gamepad" code="RightShoulder" trigger="Pressed"/>
+		<bind source="mouse" code="Left" trigger="Pressed"/>
+		<bind source="mouse" code="Left" trigger="DoubleClicked"/>
+	</action>
+	<action name="Dash" layer="Gameplay">
+		<bind source="key" code="L" trigger="Pressed"/>
+		<bind source="gamepad" code="LeftShoulder" trigger="Pressed"/>
+		<bind source="key" code="LeftShift" trigger="Pressed"/>
+		<bind source="key" code="LeftShift" trigger="HoldThreshold"/>
+	</action>
+	<action name="Point" layer="Gameplay" trigger="Down">
+		<bind source="mouse" code="Left"/>
+	</action>
+	<action name="FightMove0" layer="Gameplay" trigger="Pressed">
+		<bind source="key" code="Digit1"/>
+	</action>
+	<action name="FightMove1" layer="Gameplay" trigger="Pressed">
+		<bind source="key" code="Digit2"/>
+	</action>
+	<!-- Gameplay Cancel (pause / run) — blocked while UI/Title/Cinematic active -->
+	<action name="Cancel" layer="Gameplay" trigger="Pressed">
+		<bind source="key" code="Escape"/>
+		<bind source="gamepad" code="B"/>
+	</action>
+	<action name="Confirm" layer="Gameplay" trigger="Pressed">
+		<bind source="key" code="Enter"/>
+		<bind source="key" code="Space"/>
+		<bind source="gamepad" code="A"/>
+	</action>
+	<action name="QuickSave" layer="Gameplay" trigger="Pressed">
+		<bind source="key" code="F5"/>
+	</action>
+	<action name="QuickLoad" layer="Gameplay" trigger="Pressed">
+		<bind source="key" code="F9"/>
+	</action>
+
+	<!-- ===== UI / Inventory (blockLower → Gameplay silenced) ===== -->
+	<layer name="UI" priority="10" enabled="0" blockLower="1">
+		<action name="Confirm" trigger="Pressed">
+			<bind source="key" code="Enter"/>
+			<bind source="key" code="Space"/>
+			<bind source="gamepad" code="A"/>
+			<bind source="mouse" code="Left" trigger="Pressed"/>
+			<bind source="mouse" code="Left" trigger="DoubleClicked"/>
+		</action>
+		<action name="Cancel" trigger="Pressed">
+			<bind source="key" code="Escape"/>
+			<bind source="gamepad" code="B"/>
+			<bind source="mouse" code="Right"/>
+		</action>
+	</layer>
+
+	<!-- ===== Title ===== -->
+	<layer name="Title" priority="50" enabled="0" blockLower="1">
+		<action name="Confirm" trigger="Pressed">
+			<bind source="key" code="Enter"/>
+			<bind source="key" code="Space"/>
+			<bind source="gamepad" code="A"/>
+		</action>
+		<action name="Continue" trigger="Pressed">
+			<bind source="key" code="C"/>
+		</action>
+		<action name="Cancel" trigger="Pressed">
+			<bind source="key" code="Escape"/>
+		</action>
+	</layer>
+
+	<!-- ===== Cinematic / cutscene — only skip ===== -->
+	<layer name="Cinematic" priority="100" enabled="0" blockLower="1">
+		<action name="Cancel" trigger="Pressed">
+			<bind source="key" code="Escape"/>
+			<bind source="key" code="Space"/>
+			<bind source="gamepad" code="B"/>
+			<bind source="mouse" code="Left"/>
+		</action>
+	</layer>
+	<!-- ===== Debug (alwaysOn — enableOnlyLayer 가 끄지 않음, blockLower 없음) ===== -->
+	<layer name="Debug" priority="1000" enabled="1" blockLower="0" alwaysOn="1">
+		<action name="ReloadShaders" trigger="Pressed">
+			<bind source="key" code="F8"/>
+		</action>
+		<action name="ReloadEditor" trigger="Pressed">
+			<bind source="key" code="F6"/>
+		</action>
+		<action name="ReloadGame" trigger="Pressed">
+			<bind source="key" code="F7"/>
+		</action>
+	</layer>
+</InputMap>

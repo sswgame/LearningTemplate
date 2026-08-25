@@ -1,0 +1,59 @@
+# =============================================================================
+# AnnotationMeta — REFLECT / PROPERTY / FUNCTION 토큰 → canonical 필드
+# =============================================================================
+# [SCOPE]
+#   kind.필드이름 = 별칭, 별칭2
+#
+# kinds (토큰 철자는 PredefinedAnnotationKind.xxx 와 동일):
+#   flag     단독 토큰 → bool 필드
+#   bool     key=value → bool (true/1/True)
+#   string   key=value → 문자열 필드
+#   float    key=value → float (Min/Max 범위)
+#   netrole  단독 토큰 → FunctionNetRole (PredefinedFunctionNetRole.xxx)
+#
+# 별칭만 추가할 때는 여기만 수정.
+# 새 *필드*를 만들면 AstVisitor apply에 한 줄도 필요하다.
+# =============================================================================
+
+[REFLECT]
+flag.Abstract = Abstract, abstract
+flag.Static = Static, static
+# 직렬화/핫리로드용 옛 타입명. 복수: Alias="OldA, OldB"
+string.Alias = Alias, PreviousName, PreviousNames
+
+[ENUM]
+string.Alias = Alias, PreviousName, PreviousNames
+# enumerator 개명: ValueAlias="OldIdle:Idle, OldMoving:Moving"
+string.ValueAlias = ValueAlias, EnumeratorAlias
+# 비트플래그 연산자(|,&,^,~) 생성. 직렬화 EnumInfo::_bIsBitFlag 도 켠다.
+flag.Flags = Flags, BitFlag, FLAG, Bitwise
+# TypeRegistry::enumToString / enumFromString 용 Invalid / exclusive Count 센티널
+string.Invalid = Invalid, InvalidValue
+string.Count = Count, CountValue
+
+[PROPERTY]
+flag.ReadOnly = ReadOnly
+flag.XmlAttribute = XmlAttribute, xmlAttribute
+flag.AssetPath = AssetPath, assetPath
+flag.Polymorphic = Polymorphic, polymorphic
+# 복수: Alias="hp, HitPoints" (따옴표 필수 — 콤마가 토큰 분리에 안 먹히게)
+string.Alias = Alias, PreviousName, PreviousNames
+string.Category = Category
+string.DisplayName = DisplayName
+string.Tooltip = Tooltip
+string.DefaultValue = Default, DefaultValue
+string.AssetType = AssetType
+float.MinRange = Min
+float.MaxRange = Max
+bool.ReadOnly = ReadOnly
+bool.XmlAttribute = XmlAttribute
+
+[FUNCTION]
+netrole.Server = Server
+netrole.Client = Client
+netrole.Multicast = Multicast, NetMulticast
+flag.Reliable = Reliable
+flag.Validate = Validate
+string.Category = Category
+string.DisplayName = DisplayName
+string.Tooltip = Tooltip

@@ -1,0 +1,17 @@
+{
+    "Name": "DASH_UI",
+    "IsActive": true,
+    "ParentGO": "",
+    "Tags": [],
+    "Components": {
+        "SceneComponent#0": {
+            "_bActive": true
+        },
+        "DashUIComponent#0": {
+            "_bActive": true
+        }
+    },
+    "SceneTransforms": {
+        "SceneComponent#0": "-157.5,-65,0;0,0,0;1,1,1;"
+    }
+}

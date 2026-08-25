@@ -1,0 +1,54 @@
+{
+  "name": "sw-engine",
+  "version-string": "1.0.0",
+  "builtin-baseline": "c5a15727ee70fddf0296f0d8aafc3f58916fefac",
+  "dependencies": [
+    "rapidxml",
+    "nlohmann-json",
+    {
+      "name": "directx-dxc",
+      "platform": "windows | linux"
+    },
+    {
+      "name": "glad",
+      "features": [
+        "gl-api-46"
+      ]
+    },
+    "vulkan-headers",
+    {
+      "name": "vulkan-loader",
+      "features": [
+        "xcb",
+        "xlib"
+      ],
+      "platform": "linux"
+    },
+    {
+      "name": "vulkan-loader",
+      "platform": "!linux"
+    },
+    "vulkan-validationlayers",
+    {
+      "name": "imgui",
+      "features": [
+        "docking-experimental",
+        "opengl3-binding",
+        "vulkan-binding"
+      ]
+    },
+    {
+      "name": "imgui",
+      "features": [
+        "win32-binding",
+        "dx11-binding",
+        "dx12-binding"
+      ],
+      "platform": "windows & !uwp"
+    },
+    "implot",
+    "imguizmo",
+    "imgui-node-editor",
+    "imgui-notify"
+  ]
+}

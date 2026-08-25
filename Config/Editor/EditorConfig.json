@@ -1,0 +1,10 @@
+{
+    "_editorData": "Config/Editor/editordata.xml",
+    "_configFolder": "Config",
+    "_editorConfigFolder": "Editor",
+    "_imguiIniFile": "imgui.ini",
+    "_windowsIniFile": "windows.ini",
+    "_animationGraphSettingsFile": "AnimationGraph.json",
+    "_animationGraphDataFile": "AnimationGraphData.json",
+    "_spriteClipFile": "SpriteClip.json"
+}

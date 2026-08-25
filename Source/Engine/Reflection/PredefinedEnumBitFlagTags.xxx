@@ -1,0 +1,9 @@
+/**
+ * @file PredefinedEnumBitFlagTags.xxx
+ * @brief ENUM(...) 비트플래그 인식용 annotate 접미사 (ENUM;BitFlag 등).
+ * @details include 전에 REGISTER_ENUM_BITFLAG_TAG(Tag) 정의. Tag는 ENUM; 뒤 부분.
+ */
+
+REGISTER_ENUM_BITFLAG_TAG( BitFlag )
+REGISTER_ENUM_BITFLAG_TAG( FLAG )
+REGISTER_ENUM_BITFLAG_TAG( Bitwise )

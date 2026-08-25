@@ -1,0 +1,447 @@
+/**
+ * @file set.h
+ * @brief 정렬 집합. 기본은 벡터 이진 검색, SW_ENABLE_STL_CONTAINER 이면 std::set 래퍼.
+ */
+#pragma once
+#include "Core/Concurrency/DataRaceDetector.h"
+#include "Core/Container/set.h"
+#include "Core/Container/vector.h"
+
+#include <algorithm>
+#include <initializer_list>
+#include <set>
+#include <vector>
+
+// 이 매크로를 정의하면 표준 std::set 구현으로 되돌립니다.
+// #define SW_ENABLE_STL_CONTAINER
+
+namespace sw
+{
+#if defined( SW_ENABLE_STL_CONTAINER )
+	template <typename Key, typename Compare = std::less<Key>, typename Allocator = std::allocator<Key>>
+	using set = std::set<Key, Compare, Allocator>;
+#else
+	/** @brief 정렬된 벡터 집합. 조회는 이진 검색, 삽입은 정렬 유지. */
+	template <typename Key, typename Compare = std::less<void>, typename Allocator = Allocator<Key>>
+	class set
+	{
+	public:
+		using key_type				 = Key;
+		using value_type			 = Key;
+		using size_type				 = size_t;
+		using difference_type		 = std::ptrdiff_t;
+		using key_compare			 = Compare;
+		using value_compare			 = Compare;
+		using allocator_type		 = Allocator;
+		using reference				 = value_type&;
+		using const_reference		 = const value_type&;
+		using pointer				 = value_type*;
+		using const_pointer			 = const value_type*;
+		using Container				 = std::vector<value_type, Allocator>;
+		using iterator				 = typename Container::iterator;
+		using const_iterator		 = typename Container::const_iterator;
+		using reverse_iterator		 = typename Container::reverse_iterator;
+		using const_reverse_iterator = typename Container::const_reverse_iterator;
+
+	private:
+		Container				  _data;
+		Compare					  _comp;
+		mutable RaceDetectContext _raceCtx{};
+
+	public:
+		// ------------------------------------------------------------------------------
+		// 1) 생성 · 대입 — 정렬 벡터 + 비교자. 레이스 컨텍스트는 공유하지 않음
+		// ------------------------------------------------------------------------------
+		/** @brief 빈 집합으로 둡니다. */
+		set()
+			: _data{}
+			, _comp{} {}
+
+		/** @brief 비교자와 할당자를 지정합니다. */
+		explicit set( const Compare& comp, const Allocator& alloc = Allocator() )
+			: _data{ alloc }
+			, _comp{ comp } {}
+
+		/** @brief 지정 할당자로 빈 집합을 둡니다. */
+		explicit set( const Allocator& alloc )
+			: _data{ alloc }
+			, _comp{} {}
+
+		/** @brief [first, last) 를 삽입해 정렬합니다. */
+		template <class InputIt>
+		set( InputIt first, InputIt last, const Compare& comp = Compare(), const Allocator& alloc = Allocator() )
+			: _data{ alloc }
+			, _comp{ comp } { insert( first, last ); }
+
+		/** @brief 복사 생성합니다. */
+		set( const set& other )
+			: _data{ other._data }
+			, _comp{ other._comp } {}
+
+		/** @brief 이동 생성합니다. */
+		set( set&& other ) noexcept
+			: _data{ std::move( other._data ) }
+			, _comp{ std::move( other._comp ) } {}
+
+		/** @brief 초기화 리스트를 삽입해 정렬합니다. */
+		set( std::initializer_list<value_type> init, const Compare& comp = Compare(), const Allocator& alloc = Allocator() )
+			: _data{ alloc }
+			, _comp{ comp } { insert( init.begin(), init.end() ); }
+
+		/** @brief 복사 대입합니다. */
+		set& operator=( const set& other )
+		{
+			if ( this != &other )
+			{
+				ScopedRaceWrite lockThis( _raceCtx );
+				ScopedRaceRead	lockOther( other._raceCtx );
+				_data = other._data;
+				_comp = other._comp;
+			}
+			return *this;
+		}
+
+		/** @brief 이동 대입합니다. */
+		set& operator=( set&& other ) noexcept
+		{
+			if ( this != &other )
+			{
+				ScopedRaceWrite lockThis( _raceCtx );
+				ScopedRaceWrite lockOther( other._raceCtx );
+				_data = std::move( other._data );
+				_comp = std::move( other._comp );
+			}
+			return *this;
+		}
+
+		/** @brief 초기화 리스트로 대입합니다. */
+		set& operator=( std::initializer_list<value_type> ilist )
+		{
+			ScopedRaceWrite lockThis( _raceCtx );
+			clear();
+			insert( ilist.begin(), ilist.end() );
+			return *this;
+		}
+
+		// ------------------------------------------------------------------------------
+		// 2) 조회 — 이진 검색 · 이터레이터 · 크기
+		// ------------------------------------------------------------------------------
+		/** @brief 사용 중인 할당자입니다. */
+		allocator_type get_allocator() const noexcept
+		{
+			ScopedRaceRead lock( _raceCtx );
+			return _data.get_allocator();
+		}
+
+		/** @brief 시작 이터레이터를 반환합니다. */
+		iterator begin() noexcept
+		{
+			ScopedRaceRead lock( _raceCtx );
+			return _data.begin();
+		}
+
+		const_iterator begin() const noexcept
+		{
+			ScopedRaceRead lock( _raceCtx );
+			return _data.begin();
+		}
+
+		const_iterator cbegin() const noexcept
+		{
+			ScopedRaceRead lock( _raceCtx );
+			return _data.cbegin();
+		}
+
+		/** @brief 끝 이터레이터를 반환합니다. */
+		iterator end() noexcept
+		{
+			ScopedRaceRead lock( _raceCtx );
+			return _data.end();
+		}
+
+		const_iterator end() const noexcept
+		{
+			ScopedRaceRead lock( _raceCtx );
+			return _data.end();
+		}
+
+		const_iterator cend() const noexcept
+		{
+			ScopedRaceRead lock( _raceCtx );
+			return _data.cend();
+		}
+
+		/** @brief 역방향 시작 이터레이터를 반환합니다. */
+		reverse_iterator rbegin() noexcept
+		{
+			ScopedRaceRead lock( _raceCtx );
+			return _data.rbegin();
+		}
+
+		const_reverse_iterator rbegin() const noexcept
+		{
+			ScopedRaceRead lock( _raceCtx );
+			return _data.rbegin();
+		}
+
+		const_reverse_iterator crbegin() const noexcept
+		{
+			ScopedRaceRead lock( _raceCtx );
+			return _data.crbegin();
+		}
+
+		/** @brief 역방향 끝 이터레이터를 반환합니다. */
+		reverse_iterator rend() noexcept
+		{
+			ScopedRaceRead lock( _raceCtx );
+			return _data.rend();
+		}
+
+		const_reverse_iterator rend() const noexcept
+		{
+			ScopedRaceRead lock( _raceCtx );
+			return _data.rend();
+		}
+
+		const_reverse_iterator crend() const noexcept
+		{
+			ScopedRaceRead lock( _raceCtx );
+			return _data.crend();
+		}
+
+		/** @brief 비어 있는지 반환합니다. */
+		bool empty() const noexcept
+		{
+			ScopedRaceRead lock( _raceCtx );
+			return _data.empty();
+		}
+
+		/** @brief 원소 개수를 반환합니다. */
+		size_type size() const noexcept
+		{
+			ScopedRaceRead lock( _raceCtx );
+			return _data.size();
+		}
+
+		/** @brief 담을 수 있는 최대 원소 개수를 반환합니다. */
+		size_type max_size() const noexcept
+		{
+			ScopedRaceRead lock( _raceCtx );
+			return _data.max_size();
+		}
+
+		/** @brief 용량을 예약합니다. */
+		void reserve( size_type new_cap )
+		{
+			ScopedRaceWrite lock( _raceCtx );
+			_data.reserve( new_cap );
+		}
+
+		/** @brief 현재 용량을 반환합니다. */
+		size_type capacity() const noexcept
+		{
+			ScopedRaceRead lock( _raceCtx );
+			return _data.capacity();
+		}
+
+		// ------------------------------------------------------------------------------
+		// 3) 변경 — 정렬을 유지하며 insert/erase
+		// ------------------------------------------------------------------------------
+		/** @brief 모든 원소를 제거합니다. */
+		void clear() noexcept
+		{
+			ScopedRaceWrite lock( _raceCtx );
+			_data.clear();
+		}
+
+		/** @brief 원소를 삽입합니다. */
+		std::pair<iterator, bool> insert( const value_type& value )
+		{
+			ScopedRaceWrite lock( _raceCtx );
+			auto			it = std::lower_bound( _data.begin(), _data.end(), value, _comp );
+			if ( it != _data.end() && !_comp( value, *it ) )
+				return { it, false };
+			it = _data.insert( it, value );
+			return { it, true };
+		}
+
+		/** @brief 원소를 삽입합니다. */
+		std::pair<iterator, bool> insert( value_type&& value )
+		{
+			ScopedRaceWrite lock( _raceCtx );
+			auto			it = std::lower_bound( _data.begin(), _data.end(), value, _comp );
+			if ( it != _data.end() && !_comp( value, *it ) )
+				return { it, false };
+			it = _data.insert( it, std::move( value ) );
+			return { it, true };
+		}
+
+		/** @brief 원소를 삽입합니다. */
+		iterator insert( const_iterator hint, const value_type& value ) { return insert( value ).first; }
+
+		/** @brief 원소를 삽입합니다. */
+		iterator insert( const_iterator hint, value_type&& value ) { return insert( std::move( value ) ).first; }
+
+		/** @brief 원소를 삽입합니다. */
+		template <class InputIt>
+		void insert( InputIt first, InputIt last )
+		{
+			ScopedRaceWrite lock( _raceCtx );
+			for ( ; first != last; ++first )
+			{
+				auto it = std::lower_bound( _data.begin(), _data.end(), *first, _comp );
+				if ( it == _data.end() || _comp( *first, *it ) )
+					_data.insert( it, *first );
+			}
+		}
+
+		/** @brief 원소를 삽입합니다. */
+		void insert( std::initializer_list<value_type> ilist ) { insert( ilist.begin(), ilist.end() ); }
+
+		/** @brief 원소를 제자리 생성합니다. */
+		template <class... Args>
+		std::pair<iterator, bool> emplace( Args&&... args )
+		{
+			value_type val( std::forward<Args>( args )... );
+			return insert( std::move( val ) );
+		}
+
+		/** @brief 힌트 위치에 원소를 제자리 생성합니다. */
+		template <class... Args>
+		iterator emplace_hint( const_iterator hint, Args&&... args ) { return emplace( std::forward<Args>( args )... ).first; }
+
+		/** @brief 원소를 제거합니다. */
+		iterator erase( iterator pos )
+		{
+			ScopedRaceWrite lock( _raceCtx );
+			return _data.erase( pos );
+		}
+
+		/** @brief 원소를 제거합니다. */
+		iterator erase( const_iterator pos )
+		{
+			ScopedRaceWrite lock( _raceCtx );
+			return _data.erase( pos );
+		}
+
+		/** @brief 원소를 제거합니다. */
+		iterator erase( const_iterator first, const_iterator last )
+		{
+			ScopedRaceWrite lock( _raceCtx );
+			return _data.erase( first, last );
+		}
+
+		/** @brief 원소를 제거합니다. */
+		template <typename K>
+		size_type erase( const K& key )
+		{
+			ScopedRaceWrite lock( _raceCtx );
+			auto			it = std::lower_bound( _data.begin(), _data.end(), key, _comp );
+			if ( it != _data.end() && !_comp( key, *it ) )
+			{
+				_data.erase( it );
+				return 1;
+			}
+			return 0;
+		}
+
+		/** @brief 내용을 교환합니다. */
+		void swap( set& other ) noexcept
+		{
+			ScopedRaceWrite lockThis( _raceCtx );
+			ScopedRaceWrite lockOther( other._raceCtx );
+			_data.swap( other._data );
+			std::swap( _comp, other._comp );
+		}
+
+		/** @brief 키와 일치하는 원소 개수를 반환합니다. */
+		template <typename K>
+		size_type count( const K& key ) const
+		{
+			ScopedRaceRead lock( _raceCtx );
+			auto		   it = std::lower_bound( _data.begin(), _data.end(), key, _comp );
+			if ( it != _data.end() && !_comp( key, *it ) )
+				return 1;
+			return 0;
+		}
+
+		/** @brief 키를 찾습니다. */
+		template <typename K>
+		iterator find( const K& key )
+		{
+			ScopedRaceRead lock( _raceCtx );
+			auto		   it = std::lower_bound( _data.begin(), _data.end(), key, _comp );
+			return ( it != _data.end() && !_comp( key, *it ) ) ? it : _data.end();
+		}
+
+		/** @brief 키를 찾습니다. */
+		template <typename K>
+		const_iterator find( const K& key ) const
+		{
+			ScopedRaceRead lock( _raceCtx );
+			auto		   it = std::lower_bound( _data.begin(), _data.end(), key, _comp );
+			return ( it != _data.end() && !_comp( key, *it ) ) ? it : _data.end();
+		}
+
+		/** @brief 키 포함 여부를 반환합니다. */
+		template <typename K>
+		bool contains( const K& key ) const { return count( key ) > 0; }
+
+		/** @brief 동등 범위를 반환합니다. */
+		template <typename K>
+		std::pair<iterator, iterator> equal_range( const K& key )
+		{
+			ScopedRaceRead lock( _raceCtx );
+			auto		   first = std::lower_bound( _data.begin(), _data.end(), key, _comp );
+			auto		   last	 = first;
+			if ( first != _data.end() && !_comp( key, *first ) )
+				++last;
+			return { first, last };
+		}
+
+		/** @brief 동등 범위를 반환합니다. */
+		template <typename K>
+		std::pair<const_iterator, const_iterator> equal_range( const K& key ) const
+		{
+			ScopedRaceRead lock( _raceCtx );
+			auto		   first = std::lower_bound( _data.begin(), _data.end(), key, _comp );
+			auto		   last	 = first;
+			if ( first != _data.end() && !_comp( key, *first ) )
+				++last;
+			return { first, last };
+		}
+
+		/** @brief 하한 이터레이터를 반환합니다. */
+		template <typename K>
+		iterator lower_bound( const K& key )
+		{
+			ScopedRaceRead lock( _raceCtx );
+			return std::lower_bound( _data.begin(), _data.end(), key, _comp );
+		}
+
+		/** @brief 하한 이터레이터를 반환합니다. */
+		template <typename K>
+		const_iterator lower_bound( const K& key ) const
+		{
+			ScopedRaceRead lock( _raceCtx );
+			return std::lower_bound( _data.begin(), _data.end(), key, _comp );
+		}
+
+		/** @brief 상한 이터레이터를 반환합니다. */
+		template <typename K>
+		iterator upper_bound( const K& key )
+		{
+			ScopedRaceRead lock( _raceCtx );
+			return std::upper_bound( _data.begin(), _data.end(), key, _comp );
+		}
+
+		/** @brief 상한 이터레이터를 반환합니다. */
+		template <typename K>
+		const_iterator upper_bound( const K& key ) const
+		{
+			ScopedRaceRead lock( _raceCtx );
+			return std::upper_bound( _data.begin(), _data.end(), key, _comp );
+		}
+	};
+#endif
+} // namespace sw

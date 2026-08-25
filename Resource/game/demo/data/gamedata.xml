@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Game-owned bootstrap and component defaults (loaded by GameData / ComponentDefaults). -->
+<GameData>
+	<startMap>game/demo/maps/town01.xml</startMap>
+	<titleScene>game/demo/maps/0.Title.scene.xml</titleScene>
+	<entranceScene>game/demo/maps/1.Entrance.scene.xml</entranceScene>
+	<battleMap>game/demo/maps/battle01.xml</battleMap>
+	<battleScene>game/demo/maps/battle01_scene.xml</battleScene>
+	<defaultSavePath>game/demo/save/default_slot.sav</defaultSavePath>
+	<speciesData>game/demo/data/species.xml</speciesData>
+	<stringsData>game/demo/data/strings.xml</stringsData>
+	<monstersData>game/demo/data/monsters.xml</monstersData>
+	<encounterRate>0.33</encounterRate>
+	<starterId>starter_a</starterId>
+	<starterLevel>5</starterLevel>
+	<maxPartySize>6</maxPartySize>
+	<defaultEncounterId>critter_a</defaultEncounterId>
+	<dungeonBgm>game/demo/audio/1.jailfield.mp3</dungeonBgm>
+	<bossBgm>game/demo/audio/1.jailboss.mp3</bossBgm>
+	<bossDefeatSfx>game/demo/audio/bossdefeat.mp3</bossDefeatSfx>
+	<attackSfx>game/demo/audio/belialbullet.mp3</attackSfx>
+	<inputMap>game/demo/input/default.input.xml</inputMap>
+	<renderPipeline>engine/pipeline/forwardpipeline.xml</renderPipeline>
+	<defaultMaterial>engine/materials/defaultmaterial.material</defaultMaterial>
+	<glassMaterialInstance>game/demo/materials/glassorange.materialinstance</glassMaterialInstance>
+
+	<Defaults>
+		<UnitStats hp="100" maxHp="100" attack="10" defense="0" moveSpeed="200.0" invincibilityTime="0.5" />
+		<Gravity gravity="-980.0" />
+		<CameraController followSpeed="8.0" shakeFrequency="35.0" />
+		<AttackBase damage="10" duration="0.5" />
+		<Attack knockbackPower="100" />
+		<HPBar lerpSpeed="5.0" />
+		<DamageUI lifeTime="0.8" floatSpeed="60.0" />
+		<EffectBase duration="1.0" />
+		<Title nextSceneName="game/demo/maps/1.Entrance.scene.xml" frontCloudSpeed="100" startFrontPosX="-1280" maxFrontPosX="1280" backCloudSpeed="60" startBackCloudPosX="-1280" maxBackCloudPosX="1280" />
+		<Player speed="400" jumpPower="600" dashSpeed="1200" dashTime="0.2" dashCoolTime="1.5" maxDashCount="2" />
+		<Portal triggerRadius="50" />
+		<Monster patrolRange="200" detectRange="400" attackRange="50" moveSpeed="150" attackCoolTime="1.5" />
+		<Weapon weaponName="Sword" attackPower="20" attackSpeed="1.0" skillCoolTime="3.0" />
+		<SkelBow chargeSpeed="2.0" arrowSpeed="500" arrowDamage="20" />
+		<VFX blinkRate="5.0" ghostAlpha="0.5" />
+		<Boss patternCooldown="3.0" phase1Cooldown="3.0" phase2Cooldown="2.0" phase3Cooldown="1.2" phase2HpRatio="0.6" phase3HpRatio="0.25" />
+		<BossPart attackInterval="3.0" />
+		<MonsterSummon summonCount="3" summonRadius="150" monsterPrefab="Monster" />
+		<Inventory maxSlots="16" usedSlots="2" gold="500" />
+		<ItemHolder equippedWeapon="Sword" gold="500" />
+		<PlayerInfoUI playerLevel="1" playerHp="100" playerMaxHp="100" playerMp="50" />
+		<DashUI availableDashes="2" />
+		<Text fontSize="16" />
+		<WeaponUI weaponName="BasicSword" />
+	</Defaults>
+</GameData>

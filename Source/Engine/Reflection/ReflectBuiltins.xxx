@@ -1,0 +1,53 @@
+/**
+ * @file Engine/Reflection/ReflectBuiltins.xxx
+ * @brief 기본 타입·컨테이너 단일 등록표 (엔진 X-macro include + ReflectionParser 파싱).
+ * @details
+ * - 내 타입: REFLECT() / REFLECT_CONTAINER() — 여기 넣지 않음.
+ * - 손댈 수 없는 타입(sw::vector, int …): 이 파일에 한 번만.
+ * - Serialize/Rpc/TypeRegistry: include 전에 SW_REFLECT_BUILTIN_* 를 정의한 뒤 여러 번 include 가능
+ *   (#pragma once 없음 — X-macro 파일).
+ *
+ * SW_REFLECT_BUILTIN_TYPE( Canonical, CppType, TextConvOrNone, NamespaceOr-, aliases... )
+ *   TextConv: stoi|stoll|stoul|stoull|stof|stod|none
+ *   별칭이 없으면 마지막에 _ 를 둔다 (빈 __VA_ARGS__ 경고 방지; 로더가 무시).
+ * SW_REFLECT_BUILTIN_CONTAINER( Match, Kind, WrapperStem )
+ */
+
+// -----------------------------------------------------------------------------
+// 스칼라·수학·커스텀
+// -----------------------------------------------------------------------------
+SW_REFLECT_BUILTIN_TYPE( int8, int8, stoi, sw, signed char, int8_t )
+SW_REFLECT_BUILTIN_TYPE( int16, int16, stoi, sw, short, signed short, short int, int16_t )
+SW_REFLECT_BUILTIN_TYPE( int32, int32, stoi, sw, int, signed int, int32_t )
+SW_REFLECT_BUILTIN_TYPE( int64, int64, stoll, sw, long long, signed long long, int64_t )
+SW_REFLECT_BUILTIN_TYPE( uint8, uint8, stoul, sw, unsigned char, uint8_t )
+SW_REFLECT_BUILTIN_TYPE( uint16, uint16, stoul, sw, unsigned short, uint16_t )
+SW_REFLECT_BUILTIN_TYPE( uint32, uint32, stoul, sw, unsigned int, unsigned, uint32_t )
+SW_REFLECT_BUILTIN_TYPE( uint64, uint64, stoull, sw, unsigned long long, uint64_t )
+SW_REFLECT_BUILTIN_TYPE( float32, float32, stof, sw, float )
+SW_REFLECT_BUILTIN_TYPE( float64, float64, stod, sw, double )
+SW_REFLECT_BUILTIN_TYPE( bool, bool, none, -, _ )
+SW_REFLECT_BUILTIN_TYPE( string, std::string, none, std, basic_string<char>, sw::string )
+SW_REFLECT_BUILTIN_TYPE( hashed_string, sw::hashed_string, none, sw, _ )
+SW_REFLECT_BUILTIN_TYPE( float2, sw::float2, none, sw, _ )
+SW_REFLECT_BUILTIN_TYPE( float3, sw::float3, none, sw, _ )
+SW_REFLECT_BUILTIN_TYPE( float4, sw::float4, none, sw, _ )
+SW_REFLECT_BUILTIN_TYPE( float4x4, sw::float4x4, none, sw, _ )
+SW_REFLECT_BUILTIN_TYPE( quaternion, sw::quaternion, none, sw, _ )
+SW_REFLECT_BUILTIN_TYPE( ObjectHandle, sw::ObjectHandle, none, sw, _ )
+SW_REFLECT_BUILTIN_TYPE( Entity, sw::Entity, none, sw, EntityHandle, sw::Entity )
+SW_REFLECT_BUILTIN_TYPE( ComponentHandle, sw::ComponentHandle, none, sw, sw::ComponentHandle )
+
+// -----------------------------------------------------------------------------
+// std:: / 서드파티 컨테이너
+// -----------------------------------------------------------------------------
+SW_REFLECT_BUILTIN_CONTAINER( unordered_map, Map, UnorderedMap )
+SW_REFLECT_BUILTIN_CONTAINER( map, Map, Map )
+SW_REFLECT_BUILTIN_CONTAINER( unordered_set, Sequence, UnorderedSet )
+SW_REFLECT_BUILTIN_CONTAINER( set, Sequence, Set )
+SW_REFLECT_BUILTIN_CONTAINER( vector, Sequence, Vector )
+SW_REFLECT_BUILTIN_CONTAINER( TArray, Sequence, Vector )
+SW_REFLECT_BUILTIN_CONTAINER( list, Sequence, List )
+SW_REFLECT_BUILTIN_CONTAINER( deque, Sequence, Deque )
+SW_REFLECT_BUILTIN_CONTAINER( array, Sequence, Array )
+SW_REFLECT_BUILTIN_CONTAINER( sparse_set, Map, SparseSet )

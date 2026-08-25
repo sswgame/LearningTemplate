@@ -1,0 +1,100 @@
+/**
+ * @file RenderThread.h
+ * @brief 전용 렌더 스레드, 또는 같은 스레드(inline)에서 패킷 실행
+ * @details start() → 워커가 그래픽스 컨텍스트를 소유, GT는 submit()만
+ *          bind()만 (start 없음) → submit()이 호출 스레드에서 executeInline
+ */
+#pragma once
+#include "Engine/EngineMinimal.h"
+#include "Engine/Graphics/RenderPass/RenderFramePacket.h"
+
+#include "Core/Concurrency/mutex.h"
+#include "Core/Memory/LinearAllocator.h"
+
+#include <array>
+#include <condition_variable>
+
+namespace sw
+{
+	class IRHIDevice;
+	class FrameRenderer;
+	class Scene;
+
+	/**
+	 * @class RenderThread
+	 * @details RHI draw/present는 워커(start) 또는 submit() inline.
+	 *          패킷을 실행하는 스레드에서 bindGraphicsContext를 호출합니다.
+	 */
+	class SW_API RenderThread
+	{
+	public:
+		/** @brief 워커 없이 시작합니다. bind/start로 붙입니다. */
+		RenderThread();
+		/** @brief 스레드를 멈추고 조인합니다. */
+		~RenderThread();
+
+		/** @brief 복사를 금지합니다. */
+		RenderThread( const RenderThread& ) = delete;
+		/** @brief 대입을 금지합니다. */
+		RenderThread& operator=( const RenderThread& ) = delete;
+
+		/**
+		 * @brief 워커 없이 디바이스/렌더러를 붙입니다 (GT inline).
+		 * @details submit()은 호출 스레드에서 executePacket 합니다.
+		 */
+		bool bind( IRHIDevice* pDevice, FrameRenderer* pFrameRenderer );
+		/**
+		 * @brief 전용 워커를 띄웁니다. bindGraphicsContext는 그 스레드에서 실행됩니다.
+		 */
+		bool start( IRHIDevice* pDevice, FrameRenderer* pFrameRenderer );
+		/** @brief 워커를 멈춥니다. */
+		void stop();
+
+		/** @brief 워커가 있으면 큐에 넣고, 없으면 executeInline. */
+		void submit( RenderFramePacket&& packet );
+		/** @brief RT 큐를 비웁니다 (inline이면 no-op). 붙어 있으면 device waitIdle. */
+		void waitIdle();
+		/** @brief 호출 스레드에서 패킷 하나를 처리합니다. */
+		void executeInline( RenderFramePacket& packet );
+
+		/** @brief 현재 제출 대기 중인 프레임 패킷의 임시 메모리를 할당합니다. */
+		void* allocateFrameMemory( size_t size, size_t alignment = alignof( std::max_align_t ) );
+
+		/** @brief 씬 렌더 후 Present 전 훅 (execute와 같은 스레드). */
+		void setPresentHook( PresentHookDelegate hook ) { _presentHook = std::move( hook ); }
+
+		/** @brief 워커가 돌아가면 true. */
+		bool isRunning() const { return _bRunning.load( std::memory_order_acquire ); }
+		/** @brief 디바이스가 붙어 있으면 true. */
+		bool isBound() const { return _pDevice != nullptr; }
+
+	private:
+		/** @brief 렌더 스레드 루프: 패킷을 꺼내 executePacket. */
+		void threadMain();
+		/** @brief 패킷을 실행합니다. */
+		void executePacket( RenderFramePacket& packet );
+		/** @brief 현재 스레드에 그래픽스 컨텍스트가 있는지 확인합니다. */
+		bool ensureContextOnCurrentThread();
+
+	private:
+		IRHIDevice*			_pDevice;
+		FrameRenderer*		_pFrameRenderer;
+		PresentHookDelegate _presentHook;
+		std::thread			_thread;
+		std::atomic<bool>	_bRunning;
+		std::atomic<bool>	_bStop;
+		std::atomic<bool>	_bContextBound; ///< bindGraphicsContext succeeded on current executor
+
+		static constexpr uint32 _s_kRingCapacity{ 3 }; // Triple buffering
+		// sw::array 대신 std::array 사용 (Game Thread와 Render Thread 간의 동시 접근 시 DataRaceDetector 오탐 방지)
+		std::array<RenderFramePacket, _s_kRingCapacity> _arrRingBuffer;
+		LinearAllocator									_arrFrameAllocators[_s_kRingCapacity];
+		std::atomic<uint32>								_head; ///< 생산자(GT)가 씀
+		std::atomic<uint32>								_tail; ///< Written by consumer (RT)
+
+		mutex						_mutex;
+		std::condition_variable_any _cvProduce;
+		std::condition_variable_any _cvConsume;
+		std::condition_variable_any _cvIdle;
+	};
+} // namespace sw

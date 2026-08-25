@@ -1,0 +1,226 @@
+{
+    // ==========================================
+    // 1. clangd 초고속 성능 최적화 플래그
+    // ==========================================
+    "clangd.detectExtensionConflicts": true,
+    "C_Cpp.intelliSenseEngine": "disabled",
+    "clangd.arguments": [
+        // 백그라운드 인덱싱 활성화 및 우선순위 설정
+        "--background-index",
+        "--background-index-priority=normal",
+        // PCH(미리 컴파일된 헤더)를 디스크 대신 RAM에 캐싱하여 파싱 속도 대폭 향상
+        "--pch-storage=memory",
+        // CMake Tools 확장의 현재 활성 빌드 프리셋 디렉터리를 동적으로 참조
+        "--compile-commands-dir=${command:cmake.buildDirectory}",
+        // 자동완성 및 크로스 레퍼런스 응답 속도 최적화 (IPC 데이터 오버헤드 감소)
+        "--completion-style=detailed",
+        "--header-insertion=iwyu",
+        "--header-insertion-decorators",
+        "--limit-results=100",
+        "--limit-references=500",
+        // 실시간 Clang-Tidy 분석 활성화
+        "--clang-tidy"
+    ],
+    // ==========================================
+    // 2. CMake & Debugging 설정
+    // ==========================================
+    "cmake.useCMakePresets": "always",
+    "cmake.parallelJobs": 0,
+    "cmake.exportCompileCommandsFile": true, // clangd가 CMake 빌드 트리를 즉시 읽도록 연동
+    "cmake.debugConfig": {
+        "args": [
+            "-vulkan",
+            "EnableEditor"
+        ],
+        "miDebuggerPath": "/usr/bin/gdb",
+        "debuginfod": {
+            "enabled": false
+        }
+    },
+    "cmake.options.statusBarVisibility": "compact",
+    "cmake.options.advanced": {
+        "ctest": {
+            "statusBarVisibility": "hidden"
+        },
+        "cpack": {
+            "statusBarVisibility": "hidden",
+            "projectStatusVisibility": "hidden"
+        },
+        "workflow": {
+            "statusBarVisibility": "hidden"
+        },
+        "packagePreset": {
+            "statusBarVisibility": "hidden"
+        },
+        "workflowPreset": {
+            "statusBarVisibility": "hidden"
+        },
+        "testPreset": {
+            "statusBarVisibility": "hidden"
+        }
+    },
+    "lldb.launch.expressions": "native",
+    "lldb.launch.terminal": "integrated",
+    "editor.colorDecorators": true,
+    // ==========================================
+    // 3. C++ Semantic Highlighting (ReSharper Custom)
+    // ==========================================
+    "editor.semanticHighlighting.enabled": true,
+    "editor.semanticTokenColorCustomizations": {
+        "rules": {
+            // 1. 모든 사용자 정의 타입 및 별칭 (청록색 강제)
+            "class": "#4EC9B0",
+            "struct": "#4EC9B0",
+            "type": "#4EC9B0",
+            "typeAlias": "#4EC9B0",
+            "typeAlias.declaration": "#4EC9B0",
+            "typeAlias.definition": "#4EC9B0",
+            "typedef": "#4EC9B0",
+            "typedef.declaration": "#4EC9B0",
+            "type.declaration": "#4EC9B0",
+            "type.definition": "#4EC9B0",
+            "typeParameter": "#B8D7A3",
+            "interface": "#B8D7A3",
+            "enum": "#4EC9B0",
+            "enumMember": "#BDC78B",
+            // 2. 기본 C++ 키워드 및 원시 타입
+            "keyword": "#569CD6",
+            "keyword.control": "#569CD6",
+            // 3. 네임스페이스
+            "namespace": "#569CD6",
+            // 4. 정적 메서드 / 정적 함수 (Tomato 주황색)
+            "method.static": "#FF6347",
+            "function.static": "#FF6347",
+            "member.static": "#FF6347",
+            // 5. 전역 변수 (금색 - clangd fileScope 호환)
+            "variable.global": "#FFD700",
+            "variable.fileScope": "#FFD700",
+            "variable.globalScope": "#FFD700",
+            // 6. 멤버 변수 / 필드 (살짝 밝은 연보라)
+            "variable.member": "#D49BD0",
+            "property": "#D49BD0",
+            "field": "#D49BD0",
+            "variable.member.static": {
+                "foreground": "#D49BD0",
+                "fontStyle": "bold"
+            },
+            // 7. 지역 변수 & 매개변수 (그레이)
+            "variable": "#8C8C8C",
+            "parameter": "#8C8C8C",
+            "variable.local": "#8C8C8C",
+            // 8. 함수
+            "function": "#9CDCFE",
+            "method": "#DCDCAA",
+            "method.virtual": {
+                "foreground": "#DCDCAA",
+                "fontStyle": "italic"
+            },
+            // 9. 매크로
+            "macro": "#BD63C5",
+            "preprocess": "#BD63C5"
+        }
+    },
+    // ==========================================
+    // 4. TextMate Fallback Grammar
+    // ==========================================
+    "editor.tokenColorCustomizations": {
+        "textMateRules": [
+            {
+                "scope": [
+                    "entity.name.type.alias.cpp",
+                    "entity.name.type.typedef.cpp",
+                    "entity.name.type.using.cpp",
+                    "entity.name.type.class.cpp",
+                    "entity.name.type.struct.cpp",
+                    "entity.name.type.cpp",
+                    "entity.name.type",
+                    "meta.type.alias.cpp entity.name.type"
+                ],
+                "settings": {
+                    "foreground": "#4EC9B0"
+                }
+            },
+            {
+                "scope": [
+                    "storage.type.built-in.cpp",
+                    "storage.type.primitive.cpp",
+                    "keyword.type.cpp"
+                ],
+                "settings": {
+                    "foreground": "#569CD6"
+                }
+            },
+            {
+                "scope": [
+                    "keyword.other.using.cpp",
+                    "keyword.declaration.type.alias.cpp",
+                    "keyword.declaration.class.cpp",
+                    "keyword.declaration.struct.cpp",
+                    "keyword.control.cpp",
+                    "keyword.control",
+                    "keyword",
+                    "storage.modifier.cpp"
+                ],
+                "settings": {
+                    "foreground": "#569CD6"
+                }
+            },
+            {
+                "scope": [
+                    "entity.name.namespace.cpp",
+                    "entity.name.scope-resolution.cpp"
+                ],
+                "settings": {
+                    "foreground": "#FF3333"
+                }
+            },
+            {
+                "scope": [
+                    "variable.other.member.cpp",
+                    "variable.other.property.cpp",
+                    "entity.name.variable.field.cpp"
+                ],
+                "settings": {
+                    "foreground": "#D49BD0"
+                }
+            },
+            {
+                "scope": [
+                    "entity.name.function.cpp",
+                    "support.function.cpp"
+                ],
+                "settings": {
+                    "foreground": "#9CDCFE"
+                }
+            },
+            {
+                "scope": [
+                    "entity.name.function.member.cpp",
+                    "meta.function.member.cpp"
+                ],
+                "settings": {
+                    "foreground": "#DCDCAA"
+                }
+            },
+            {
+                "scope": [
+                    "variable.other.global.cpp",
+                    "variable.other.readwrite.global.cpp"
+                ],
+                "settings": {
+                    "foreground": "#FFD700"
+                }
+            },
+            {
+                "scope": [
+                    "variable.other.local.cpp",
+                    "variable.parameter.cpp",
+                    "variable.other.cpp"
+                ],
+                "settings": {
+                    "foreground": "#8C8C8C"
+                }
+            }
+        ]
+    }
+}

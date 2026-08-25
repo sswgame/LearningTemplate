@@ -1,0 +1,30 @@
+/**
+ * @file CoreMinimal.h
+ * @brief Core TU 프리루드 — 기본 타입·컨테이너·문자열·로그·메모리·수학·파일.
+ */
+#pragma once
+#include "Core/Common/Defines.h"
+#include "Core/Common/Macros.h"
+#include "Core/Common/StdHeaders.h"
+#include "Core/Common/Types.h"
+#include "Core/Container/array.h"
+#include "Core/Container/deque.h"
+#include "Core/Container/list.h"
+#include "Core/Container/map.h"
+#include "Core/Container/set.h"
+#include "Core/Container/sparse_set.h"
+#include "Core/Container/string.h"
+#include "Core/Container/unordered_map.h"
+#include "Core/Container/unordered_set.h"
+#include "Core/Container/vector.h"
+#include "Core/Delegate/Delegate.h"
+#include "Core/File/FileUtil.h"
+#include "Core/Log/Logger.h"
+#include "Core/Math/Math.h"
+#include "Core/Memory/Memory.h"
+#include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
+#include "Core/String/hashed_string.h"
+#include "Core/String/string_splitter.h"

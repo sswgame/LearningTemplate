@@ -1,0 +1,208 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  build-windows:
+    runs-on: windows-2022
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v5
+
+    - name: MSVC developer environment
+      uses: ilammy/msvc-dev-cmd@v1
+
+    - name: Install LLVM (clang-cl, matches local Ninja-Debug)
+      run: |
+        choco install llvm --yes --no-progress
+        echo "C:\Program Files\LLVM\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+    - name: Setup vcpkg
+      uses: lukka/run-vcpkg@v11
+      with:
+        vcpkgDirectory: ${{ github.workspace }}/Tools/vcpkg
+        vcpkgJsonGlob: 'vcpkg.json'
+
+    - name: Configure (CI-Debug preset, clang-cl)
+      env:
+        CC: clang-cl
+        CXX: clang-cl
+        VCPKG_OVERLAY_TRIPLETS: ${{ github.workspace }}/cmake/Modules/Toolchain/Vcpkg
+      run: |
+        cmake --preset CI-Debug
+
+    - name: Build
+      run: |
+        cmake --build --preset CI-Debug
+
+    # Full ctest: GPU / soft-SKIP quarantines may SKIP (not fake-pass) — see TestRHI, TestMaterial, ARCHITECTURE.md.
+    - name: Test
+      run: |
+        ctest --test-dir build/CI-Debug --output-on-failure
+
+    - name: Source glob lint
+      run: |
+        python Scripts/lint/CheckSourceGlob.py --build ${{ github.workspace }}/build/CI-Debug
+
+  build-linux:
+    runs-on: ubuntu-22.04
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v5
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ninja-build cmake \
+          xorg-dev libgl1-mesa-dev libglu1-mesa-dev \
+          libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev \
+          libxcb1-dev libx11-xcb-dev libvulkan-dev wayland-protocols libwayland-dev libxkbcommon-dev libtinfo5
+
+    - name: Setup vcpkg
+      uses: lukka/run-vcpkg@v11
+      with:
+        vcpkgDirectory: ${{ github.workspace }}/Tools/vcpkg
+        vcpkgJsonGlob: 'vcpkg.json'
+
+    - name: Configure (CI-Debug preset)
+      env:
+        VCPKG_OVERLAY_TRIPLETS: ${{ github.workspace }}/cmake/Modules/Toolchain/Vcpkg
+      run: |
+        cmake --preset CI-Debug
+
+    - name: Build
+      run: |
+        cmake --build --preset CI-Debug
+
+    # NoGPU label only; soft-SKIP cases still report as skipped.
+    - name: Test (NoGPU)
+      run: |
+        ctest --test-dir build/CI-Debug -L nogpu --output-on-failure
+
+    - name: Source glob lint
+      run: |
+        python3 Scripts/lint/CheckSourceGlob.py --build ${{ github.workspace }}/build/CI-Debug
+
+  build-linux-asan:
+    runs-on: ubuntu-22.04
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v5
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ninja-build cmake \
+          xorg-dev libgl1-mesa-dev libglu1-mesa-dev \
+          libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev \
+          libxcb1-dev libx11-xcb-dev libvulkan-dev wayland-protocols libwayland-dev libxkbcommon-dev libtinfo5
+
+    - name: Setup vcpkg
+      uses: lukka/run-vcpkg@v11
+      with:
+        vcpkgDirectory: ${{ github.workspace }}/Tools/vcpkg
+        vcpkgJsonGlob: 'vcpkg.json'
+
+    - name: Configure (CI-Debug-ASAN preset)
+      env:
+        VCPKG_OVERLAY_TRIPLETS: ${{ github.workspace }}/cmake/Modules/Toolchain/Vcpkg
+      run: |
+        cmake --preset CI-Debug-ASAN
+
+    - name: Build
+      run: |
+        cmake --build --preset CI-Debug-ASAN
+
+    - name: Test (NoGPU + ASan)
+      run: |
+        ctest --test-dir build/CI-Debug-ASAN -L nogpu --output-on-failure
+
+  build-windows-shipping:
+    runs-on: windows-2022
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v5
+
+    - name: Setup vcpkg
+      uses: lukka/run-vcpkg@v11
+      with:
+        vcpkgDirectory: ${{ github.workspace }}/Tools/vcpkg
+        vcpkgJsonGlob: 'vcpkg.json'
+
+    - name: Configure (CI-Shipping preset)
+      env:
+        VCPKG_OVERLAY_TRIPLETS: ${{ github.workspace }}/cmake/Modules/Toolchain/Vcpkg
+      run: |
+        cmake --preset CI-Shipping
+
+    - name: Build App + CoreTest
+      run: |
+        cmake --build --preset CI-Shipping --target App CoreTest
+
+    - name: Test (NoGPU under Shipping)
+      run: |
+        ctest --test-dir build/CI-Shipping -L nogpu --output-on-failure
+
+  build-linux-shipping:
+    runs-on: ubuntu-22.04
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v5
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ninja-build cmake \
+          xorg-dev libgl1-mesa-dev libglu1-mesa-dev \
+          libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev \
+          libxcb1-dev libx11-xcb-dev libvulkan-dev wayland-protocols libwayland-dev libxkbcommon-dev libtinfo5
+
+    - name: Setup vcpkg
+      uses: lukka/run-vcpkg@v11
+      with:
+        vcpkgDirectory: ${{ github.workspace }}/Tools/vcpkg
+        vcpkgJsonGlob: 'vcpkg.json'
+
+    - name: Configure (CI-Shipping preset)
+      env:
+        VCPKG_OVERLAY_TRIPLETS: ${{ github.workspace }}/cmake/Modules/Toolchain/Vcpkg
+      run: |
+        cmake --preset CI-Shipping
+
+    - name: Build App + CoreTest
+      run: |
+        cmake --build --preset CI-Shipping --target App CoreTest
+
+    - name: Test (NoGPU under Shipping)
+      run: |
+        ctest --test-dir build/CI-Shipping -L nogpu --output-on-failure
+
+  lint-format:
+    runs-on: ubuntu-22.04
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v5
+
+    # Install the latest clang-format via pip.
+    - name: Install clang-format
+      run: |
+        python3 -m pip install clang-format
+        clang-format --version
+
+    - name: Check formatting
+      run: |
+        find Source Test Tools/ReflectionParser \( -name "*.cpp" -o -name "*.h" -o -name "*.hpp" \) | xargs clang-format --dry-run --Werror
+
+    - name: Engine layer lint
+      run: |
+        python3 Scripts/lint/CheckEngineLayers.py --strict

@@ -1,0 +1,3885 @@
+{
+  "name": "object.anim",
+  "animationCount": 137,
+  "animations": {
+    "AniPalette1-0": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            0.0,
+            0.0
+          ],
+          "slice": [
+            5.0,
+            14.0
+          ],
+          "offset": [
+            0.0,
+            -1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "AniPalette1-1": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            5.0,
+            0.0
+          ],
+          "slice": [
+            11.0,
+            17.0
+          ],
+          "offset": [
+            2.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "AniPalette1-2": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            16.0,
+            0.0
+          ],
+          "slice": [
+            14.0,
+            19.0
+          ],
+          "offset": [
+            1.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "AniPalette1-3": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            30.0,
+            0.0
+          ],
+          "slice": [
+            18.0,
+            20.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "BasicTresureClosed": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            48.0,
+            0.0
+          ],
+          "slice": [
+            18.0,
+            11.0
+          ],
+          "offset": [
+            1.0,
+            -2.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "BasicTresureOpened": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            66.0,
+            0.0
+          ],
+          "slice": [
+            21.0,
+            16.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "BlueTresureClosed": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            87.0,
+            0.0
+          ],
+          "slice": [
+            24.0,
+            12.0
+          ],
+          "offset": [
+            1.0,
+            -2.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "BlueTresureOpened": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            111.0,
+            0.0
+          ],
+          "slice": [
+            27.0,
+            16.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "BossTresureClosed": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            138.0,
+            0.0
+          ],
+          "slice": [
+            33.0,
+            22.0
+          ],
+          "offset": [
+            3.0,
+            -3.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "BossTresureOpened": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            171.0,
+            0.0
+          ],
+          "slice": [
+            41.0,
+            30.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "Box0": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            212.0,
+            0.0
+          ],
+          "slice": [
+            16.0,
+            12.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "BoxParticle0_0": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            228.0,
+            0.0
+          ],
+          "slice": [
+            10.0,
+            13.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "BoxParticle0_1": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            238.0,
+            0.0
+          ],
+          "slice": [
+            7.0,
+            10.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "BoxParticle0_2": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            245.0,
+            0.0
+          ],
+          "slice": [
+            5.0,
+            8.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "BoxParticle0_3": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            250.0,
+            0.0
+          ],
+          "slice": [
+            4.0,
+            9.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "BoxParticle0_4": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            254.0,
+            0.0
+          ],
+          "slice": [
+            7.0,
+            4.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "BoxParticle0_5": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            261.0,
+            0.0
+          ],
+          "slice": [
+            9.0,
+            4.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "BoxParticle0_6": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            270.0,
+            0.0
+          ],
+          "slice": [
+            4.0,
+            9.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "BrokenCell0": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            274.0,
+            0.0
+          ],
+          "slice": [
+            73.0,
+            42.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "CandleOn1-0": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            347.0,
+            0.0
+          ],
+          "slice": [
+            5.0,
+            16.0
+          ],
+          "offset": [
+            0.0,
+            -1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "CandleOn1-1": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            352.0,
+            0.0
+          ],
+          "slice": [
+            5.0,
+            14.0
+          ],
+          "offset": [
+            0.0,
+            -1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "CandleOn1-2": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            357.0,
+            0.0
+          ],
+          "slice": [
+            5.0,
+            15.0
+          ],
+          "offset": [
+            0.0,
+            -1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "CandleOn1-3": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            362.0,
+            0.0
+          ],
+          "slice": [
+            5.0,
+            15.0
+          ],
+          "offset": [
+            0.0,
+            -1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "CandleOn1-4": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            367.0,
+            0.0
+          ],
+          "slice": [
+            5.0,
+            14.0
+          ],
+          "offset": [
+            0.0,
+            -1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "CandleOn1-5": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            372.0,
+            0.0
+          ],
+          "slice": [
+            5.0,
+            15.0
+          ],
+          "offset": [
+            0.0,
+            -1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "CandleOn2-0": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            377.0,
+            0.0
+          ],
+          "slice": [
+            5.0,
+            10.0
+          ],
+          "offset": [
+            0.0,
+            -1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "CandleOn2-1": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            382.0,
+            0.0
+          ],
+          "slice": [
+            5.0,
+            11.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "CandleOn2-2": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            387.0,
+            0.0
+          ],
+          "slice": [
+            5.0,
+            10.0
+          ],
+          "offset": [
+            0.0,
+            -1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "CandleOn2-3": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            392.0,
+            0.0
+          ],
+          "slice": [
+            5.0,
+            10.0
+          ],
+          "offset": [
+            0.0,
+            -1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "CandleOn2-4": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            397.0,
+            0.0
+          ],
+          "slice": [
+            5.0,
+            10.0
+          ],
+          "offset": [
+            0.0,
+            -1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "CandleOn2-5": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            402.0,
+            0.0
+          ],
+          "slice": [
+            5.0,
+            9.0
+          ],
+          "offset": [
+            0.0,
+            -1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "CandleOn3-0": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            407.0,
+            0.0
+          ],
+          "slice": [
+            12.0,
+            16.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "CandleOn3-1": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            419.0,
+            0.0
+          ],
+          "slice": [
+            12.0,
+            15.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "CandleOn3-2": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            431.0,
+            0.0
+          ],
+          "slice": [
+            12.0,
+            16.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "CandleOn3-3": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            443.0,
+            0.0
+          ],
+          "slice": [
+            12.0,
+            18.0
+          ],
+          "offset": [
+            0.0,
+            1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "CandleOn3-4": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            455.0,
+            0.0
+          ],
+          "slice": [
+            12.0,
+            17.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "CandleOn3-5": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            467.0,
+            0.0
+          ],
+          "slice": [
+            12.0,
+            16.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "Door1-0": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            132.0,
+            94.0
+          ],
+          "slice": [
+            57.0,
+            65.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "Door1-1": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            189.0,
+            94.0
+          ],
+          "slice": [
+            57.0,
+            65.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "Door1-2": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            246.0,
+            94.0
+          ],
+          "slice": [
+            57.0,
+            65.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "Door1-3": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            303.0,
+            94.0
+          ],
+          "slice": [
+            57.0,
+            65.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "Door1-4": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            360.0,
+            94.0
+          ],
+          "slice": [
+            57.0,
+            65.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "Door1-5": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            417.0,
+            94.0
+          ],
+          "slice": [
+            57.0,
+            65.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "Door1-6": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            0.0,
+            159.0
+          ],
+          "slice": [
+            57.0,
+            65.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "Door1-7": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            57.0,
+            159.0
+          ],
+          "slice": [
+            57.0,
+            65.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "Door1-8": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            114.0,
+            159.0
+          ],
+          "slice": [
+            57.0,
+            65.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "Door1-9": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            171.0,
+            159.0
+          ],
+          "slice": [
+            57.0,
+            65.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "GoldCoin0": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            234.0,
+            224.0
+          ],
+          "slice": [
+            7.0,
+            7.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "OakDrum0": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            40.0,
+            255.0
+          ],
+          "slice": [
+            13.0,
+            14.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "OakDrumParticle0_0": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            53.0,
+            255.0
+          ],
+          "slice": [
+            10.0,
+            8.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "OakDrumParticle0_1": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            63.0,
+            255.0
+          ],
+          "slice": [
+            10.0,
+            10.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "OakDrumParticle0_2": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            73.0,
+            255.0
+          ],
+          "slice": [
+            4.0,
+            7.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "OakDrumParticle0_3": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            77.0,
+            255.0
+          ],
+          "slice": [
+            6.0,
+            3.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "OakDrumParticle0_4": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            83.0,
+            255.0
+          ],
+          "slice": [
+            5.0,
+            8.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "TortureTable0": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            225.0,
+            255.0
+          ],
+          "slice": [
+            45.0,
+            14.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "TortureTable1": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            270.0,
+            255.0
+          ],
+          "slice": [
+            45.0,
+            19.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "UpperCell0": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            315.0,
+            255.0
+          ],
+          "slice": [
+            51.0,
+            59.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "UpperCell1": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            366.0,
+            255.0
+          ],
+          "slice": [
+            51.0,
+            45.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "YellowTresureClosed": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            417.0,
+            255.0
+          ],
+          "slice": [
+            31.0,
+            19.0
+          ],
+          "offset": [
+            3.0,
+            -1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "YellowTresureOpened": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            448.0,
+            255.0
+          ],
+          "slice": [
+            38.0,
+            23.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "door-0": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            0.0,
+            42.0
+          ],
+          "slice": [
+            66.0,
+            8.0
+          ],
+          "offset": [
+            0.0,
+            -1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "door-1": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            66.0,
+            42.0
+          ],
+          "slice": [
+            66.0,
+            8.0
+          ],
+          "offset": [
+            0.0,
+            -1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "door-10": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            192.0,
+            52.0
+          ],
+          "slice": [
+            64.0,
+            8.0
+          ],
+          "offset": [
+            0.0,
+            -1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "door-11": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            256.0,
+            52.0
+          ],
+          "slice": [
+            64.0,
+            8.0
+          ],
+          "offset": [
+            0.0,
+            -1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "door-12": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            320.0,
+            52.0
+          ],
+          "slice": [
+            64.0,
+            8.0
+          ],
+          "offset": [
+            0.0,
+            -1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "door-13": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            384.0,
+            52.0
+          ],
+          "slice": [
+            64.0,
+            8.0
+          ],
+          "offset": [
+            0.0,
+            -1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "door-14": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            448.0,
+            52.0
+          ],
+          "slice": [
+            64.0,
+            8.0
+          ],
+          "offset": [
+            0.0,
+            -1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "door-15": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            0.0,
+            60.0
+          ],
+          "slice": [
+            64.0,
+            8.0
+          ],
+          "offset": [
+            0.0,
+            -1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "door-16": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            64.0,
+            60.0
+          ],
+          "slice": [
+            64.0,
+            8.0
+          ],
+          "offset": [
+            0.0,
+            -1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "door-17": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            128.0,
+            60.0
+          ],
+          "slice": [
+            64.0,
+            8.0
+          ],
+          "offset": [
+            0.0,
+            -1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "door-18": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            192.0,
+            60.0
+          ],
+          "slice": [
+            64.0,
+            8.0
+          ],
+          "offset": [
+            0.0,
+            -1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "door-19": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            256.0,
+            60.0
+          ],
+          "slice": [
+            64.0,
+            8.0
+          ],
+          "offset": [
+            0.0,
+            -1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "door-2": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            132.0,
+            42.0
+          ],
+          "slice": [
+            66.0,
+            9.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "door-20": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            320.0,
+            60.0
+          ],
+          "slice": [
+            66.0,
+            8.0
+          ],
+          "offset": [
+            0.0,
+            -1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "door-21": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            386.0,
+            60.0
+          ],
+          "slice": [
+            66.0,
+            8.0
+          ],
+          "offset": [
+            0.0,
+            -1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "door-22": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            0.0,
+            68.0
+          ],
+          "slice": [
+            66.0,
+            8.0
+          ],
+          "offset": [
+            0.0,
+            -1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "door-23": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            66.0,
+            68.0
+          ],
+          "slice": [
+            66.0,
+            8.0
+          ],
+          "offset": [
+            0.0,
+            1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "door-24": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            132.0,
+            68.0
+          ],
+          "slice": [
+            66.0,
+            8.0
+          ],
+          "offset": [
+            0.0,
+            1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "door-25": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            198.0,
+            68.0
+          ],
+          "slice": [
+            66.0,
+            9.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "door-26": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            264.0,
+            68.0
+          ],
+          "slice": [
+            64.0,
+            10.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "door-27": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            328.0,
+            68.0
+          ],
+          "slice": [
+            64.0,
+            8.0
+          ],
+          "offset": [
+            0.0,
+            1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "door-28": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            392.0,
+            68.0
+          ],
+          "slice": [
+            64.0,
+            8.0
+          ],
+          "offset": [
+            0.0,
+            1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "door-29": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            0.0,
+            78.0
+          ],
+          "slice": [
+            64.0,
+            8.0
+          ],
+          "offset": [
+            0.0,
+            1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "door-3": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            198.0,
+            42.0
+          ],
+          "slice": [
+            64.0,
+            10.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "door-30": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            64.0,
+            78.0
+          ],
+          "slice": [
+            64.0,
+            8.0
+          ],
+          "offset": [
+            0.0,
+            1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "door-31": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            128.0,
+            78.0
+          ],
+          "slice": [
+            64.0,
+            8.0
+          ],
+          "offset": [
+            0.0,
+            1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "door-32": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            192.0,
+            78.0
+          ],
+          "slice": [
+            64.0,
+            8.0
+          ],
+          "offset": [
+            0.0,
+            1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "door-33": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            256.0,
+            78.0
+          ],
+          "slice": [
+            64.0,
+            8.0
+          ],
+          "offset": [
+            0.0,
+            1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "door-34": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            320.0,
+            78.0
+          ],
+          "slice": [
+            64.0,
+            8.0
+          ],
+          "offset": [
+            0.0,
+            1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "door-35": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            384.0,
+            78.0
+          ],
+          "slice": [
+            64.0,
+            8.0
+          ],
+          "offset": [
+            0.0,
+            1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "door-36": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            448.0,
+            78.0
+          ],
+          "slice": [
+            64.0,
+            8.0
+          ],
+          "offset": [
+            0.0,
+            1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "door-37": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            0.0,
+            86.0
+          ],
+          "slice": [
+            64.0,
+            8.0
+          ],
+          "offset": [
+            0.0,
+            1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "door-38": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            64.0,
+            86.0
+          ],
+          "slice": [
+            64.0,
+            8.0
+          ],
+          "offset": [
+            0.0,
+            1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "door-39": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            128.0,
+            86.0
+          ],
+          "slice": [
+            64.0,
+            8.0
+          ],
+          "offset": [
+            0.0,
+            1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "door-4": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            262.0,
+            42.0
+          ],
+          "slice": [
+            64.0,
+            8.0
+          ],
+          "offset": [
+            0.0,
+            -1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "door-40": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            192.0,
+            86.0
+          ],
+          "slice": [
+            64.0,
+            8.0
+          ],
+          "offset": [
+            0.0,
+            1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "door-41": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            256.0,
+            86.0
+          ],
+          "slice": [
+            64.0,
+            8.0
+          ],
+          "offset": [
+            0.0,
+            1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "door-42": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            320.0,
+            86.0
+          ],
+          "slice": [
+            64.0,
+            8.0
+          ],
+          "offset": [
+            0.0,
+            1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "door-43": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            384.0,
+            86.0
+          ],
+          "slice": [
+            66.0,
+            8.0
+          ],
+          "offset": [
+            0.0,
+            1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "door-44": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            0.0,
+            94.0
+          ],
+          "slice": [
+            66.0,
+            8.0
+          ],
+          "offset": [
+            0.0,
+            1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "door-45": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            66.0,
+            94.0
+          ],
+          "slice": [
+            66.0,
+            8.0
+          ],
+          "offset": [
+            0.0,
+            1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "door-5": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            326.0,
+            42.0
+          ],
+          "slice": [
+            64.0,
+            8.0
+          ],
+          "offset": [
+            0.0,
+            -1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "door-6": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            390.0,
+            42.0
+          ],
+          "slice": [
+            64.0,
+            8.0
+          ],
+          "offset": [
+            0.0,
+            -1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "door-7": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            0.0,
+            52.0
+          ],
+          "slice": [
+            64.0,
+            8.0
+          ],
+          "offset": [
+            0.0,
+            -1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "door-8": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            64.0,
+            52.0
+          ],
+          "slice": [
+            64.0,
+            8.0
+          ],
+          "offset": [
+            0.0,
+            -1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "door-9": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            128.0,
+            52.0
+          ],
+          "slice": [
+            64.0,
+            8.0
+          ],
+          "offset": [
+            0.0,
+            -1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "door_openEffect": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            228.0,
+            159.0
+          ],
+          "slice": [
+            4.0,
+            4.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "gate_eat-0": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            232.0,
+            159.0
+          ],
+          "slice": [
+            26.0,
+            31.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "gate_eat-1": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            258.0,
+            159.0
+          ],
+          "slice": [
+            26.0,
+            31.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "gate_eat-2": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            284.0,
+            159.0
+          ],
+          "slice": [
+            23.0,
+            26.0
+          ],
+          "offset": [
+            0.0,
+            -2.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "gate_eat-3": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            307.0,
+            159.0
+          ],
+          "slice": [
+            22.0,
+            7.0
+          ],
+          "offset": [
+            0.0,
+            -12.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "gate_idle-0": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            329.0,
+            159.0
+          ],
+          "slice": [
+            24.0,
+            31.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "gate_idle-1": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            353.0,
+            159.0
+          ],
+          "slice": [
+            24.0,
+            31.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "gate_idle-2": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            377.0,
+            159.0
+          ],
+          "slice": [
+            24.0,
+            31.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "gate_idle-3": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            401.0,
+            159.0
+          ],
+          "slice": [
+            24.0,
+            31.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "gate_idle-4": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            425.0,
+            159.0
+          ],
+          "slice": [
+            24.0,
+            31.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "gate_idle-5": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            449.0,
+            159.0
+          ],
+          "slice": [
+            24.0,
+            31.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "gate_idle-6": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            473.0,
+            159.0
+          ],
+          "slice": [
+            24.0,
+            31.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "gate_idle-7": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            0.0,
+            224.0
+          ],
+          "slice": [
+            24.0,
+            31.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "gate_idle-8": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            24.0,
+            224.0
+          ],
+          "slice": [
+            24.0,
+            31.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "goldBullion-0": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            48.0,
+            224.0
+          ],
+          "slice": [
+            20.0,
+            9.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "goldBullion-1": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            68.0,
+            224.0
+          ],
+          "slice": [
+            20.0,
+            9.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "goldBullion-2": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            88.0,
+            224.0
+          ],
+          "slice": [
+            20.0,
+            9.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "goldBullion-3": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            108.0,
+            224.0
+          ],
+          "slice": [
+            20.0,
+            9.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "goldBullion-4": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            128.0,
+            224.0
+          ],
+          "slice": [
+            20.0,
+            9.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "goldBullion-5": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            148.0,
+            224.0
+          ],
+          "slice": [
+            20.0,
+            9.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "goldBullion-6": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            168.0,
+            224.0
+          ],
+          "slice": [
+            20.0,
+            9.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "goldCoin-0": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            188.0,
+            224.0
+          ],
+          "slice": [
+            7.0,
+            7.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "goldCoin-1": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            195.0,
+            224.0
+          ],
+          "slice": [
+            6.0,
+            7.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "goldCoin-2": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            201.0,
+            224.0
+          ],
+          "slice": [
+            5.0,
+            7.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "goldCoin-3": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            206.0,
+            224.0
+          ],
+          "slice": [
+            3.0,
+            7.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "goldCoin-4": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            209.0,
+            224.0
+          ],
+          "slice": [
+            5.0,
+            7.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "goldCoin-5": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            214.0,
+            224.0
+          ],
+          "slice": [
+            6.0,
+            7.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "goldCoin-6": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            220.0,
+            224.0
+          ],
+          "slice": [
+            7.0,
+            7.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "goldCoin-7": {
+      "frameCount": 1,
+      "frames": [
+        {
+          "leftTop": [
+            227.0,
+            224.0
+          ],
+          "slice": [
+            7.0,
+            7.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "midFairy-0": {
+      "frameCount": 16,
+      "frames": [
+        {
+          "leftTop": [
+            241.0,
+            224.0
+          ],
+          "slice": [
+            20.0,
+            16.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            261.0,
+            224.0
+          ],
+          "slice": [
+            15.0,
+            16.0
+          ],
+          "offset": [
+            0.0,
+            1.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            276.0,
+            224.0
+          ],
+          "slice": [
+            20.0,
+            18.0
+          ],
+          "offset": [
+            0.0,
+            1.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            296.0,
+            224.0
+          ],
+          "slice": [
+            20.0,
+            14.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            316.0,
+            224.0
+          ],
+          "slice": [
+            18.0,
+            17.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            334.0,
+            224.0
+          ],
+          "slice": [
+            15.0,
+            16.0
+          ],
+          "offset": [
+            0.0,
+            1.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            349.0,
+            224.0
+          ],
+          "slice": [
+            20.0,
+            18.0
+          ],
+          "offset": [
+            0.0,
+            1.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            369.0,
+            224.0
+          ],
+          "slice": [
+            19.0,
+            19.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            388.0,
+            224.0
+          ],
+          "slice": [
+            20.0,
+            18.0
+          ],
+          "offset": [
+            0.0,
+            -1.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            408.0,
+            224.0
+          ],
+          "slice": [
+            15.0,
+            16.0
+          ],
+          "offset": [
+            0.0,
+            1.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            423.0,
+            224.0
+          ],
+          "slice": [
+            20.0,
+            15.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            443.0,
+            224.0
+          ],
+          "slice": [
+            20.0,
+            14.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            463.0,
+            224.0
+          ],
+          "slice": [
+            20.0,
+            15.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            483.0,
+            224.0
+          ],
+          "slice": [
+            20.0,
+            16.0
+          ],
+          "offset": [
+            0.0,
+            1.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            0.0,
+            255.0
+          ],
+          "slice": [
+            20.0,
+            18.0
+          ],
+          "offset": [
+            0.0,
+            1.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            20.0,
+            255.0
+          ],
+          "slice": [
+            20.0,
+            14.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    },
+    "torch-0": {
+      "frameCount": 7,
+      "frames": [
+        {
+          "leftTop": [
+            88.0,
+            255.0
+          ],
+          "slice": [
+            19.0,
+            24.0
+          ],
+          "offset": [
+            0.0,
+            -1.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            107.0,
+            255.0
+          ],
+          "slice": [
+            20.0,
+            23.0
+          ],
+          "offset": [
+            0.0,
+            -1.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            127.0,
+            255.0
+          ],
+          "slice": [
+            19.0,
+            26.0
+          ],
+          "offset": [
+            0.0,
+            -1.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            146.0,
+            255.0
+          ],
+          "slice": [
+            19.0,
+            27.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            165.0,
+            255.0
+          ],
+          "slice": [
+            20.0,
+            28.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            185.0,
+            255.0
+          ],
+          "slice": [
+            20.0,
+            21.0
+          ],
+          "offset": [
+            0.0,
+            -2.0
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            205.0,
+            255.0
+          ],
+          "slice": [
+            20.0,
+            24.0
+          ],
+          "offset": [
+            0.0,
+            -1.0
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        128.0,
+        128.0
+      ],
+      "textureKey": "textures/object.png",
+      "texturePath": "textures/object.png"
+    }
+  },
+  "currentAnimation": "",
+  "repeat": false
+}

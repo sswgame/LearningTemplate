@@ -1,0 +1,25 @@
+{
+    "Name": "AfterImage",
+    "IsActive": true,
+    "ParentGO": "",
+    "Tags": [],
+    "Components": {
+        "SceneComponent#0": {
+            "_bActive": true
+        },
+        "SpriteComponent#0": {
+            "_bActive": true,
+            "Mesh": "RectMesh",
+            "Material": "materials/AfterImage.material",
+            "Texture": "textures/player.png",
+            "SpriteName": "base_player_jump_shadow"
+        },
+        "AfterImageComponent#0": {
+            "_bActive": true
+        }
+    },
+    "SceneTransforms": {
+        "SceneComponent#0": "0,0,0;0,0,0;400,400,1;",
+        "SpriteComponent#0": "0,0,0;0,0,0;1,1,1;SceneComponent#0"
+    }
+}

@@ -1,0 +1,260 @@
+{
+  "version": 8,
+
+  "configurePresets": [
+    {
+      "name": "base-vcpkg",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/${presetName}",
+        "VCPKG_INSTALLED_DIR": "${sourceDir}/build/vcpkg_installed",
+        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/Tools/vcpkg/scripts/buildsystems/vcpkg.cmake"
+      },
+      "environment": {
+        "VCPKG_BINARY_SOURCES": "clear;files,${sourceDir}/build/vcpkg_cache,readwrite",
+        "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/cmake/Modules/Toolchain/Vcpkg",
+        "SCCACHE_DIR": "${sourceDir}/build/sccache_cache"
+      }
+    },
+    {
+      "name": "base-windows",
+
+      "hidden": true,
+      "inherits": "base-vcpkg",
+      "architecture": {
+        "value": "x64",
+        "strategy": "external"
+      },
+      "environment": {
+        "CC": "clang-cl",
+        "CXX": "clang-cl"
+      }
+    },
+
+    {
+      "name": "base-wsl",
+      "hidden": true,
+      "inherits": "base-vcpkg",
+      "environment": {
+        "CC": "clang",
+        "CXX": "clang++"
+      },
+      "vendor": {
+        "microsoft.com/VisualStudioRemoteSettings/CMake/1.0": {
+          "remoteCopySources": true,
+          "remoteCopySourcesMethod": "rsync",
+          "remoteCopySourcesExclusionList": [
+            ".vs",
+            ".git",
+            "${sourceDir}/Tools/vcpkg/buildtrees",
+            "${sourceDir}/Tools/vcpkg/packages",
+            "${sourceDir}/Tools/vcpkg/downloads"
+          ]
+        }
+      }
+    },
+
+    {
+      "name": "Ninja-Debug",
+      "displayName": "Windows Ninja Debug (Clang-cl)",
+      "description": "Windows Debug build using Ninja + Clang-cl",
+      "inherits": "base-windows",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+
+    {
+      "name": "Ninja-Debug-ASAN",
+      "displayName": "Windows Ninja Debug + ASan (Clang-cl)",
+      "description": "Debug build with AddressSanitizer (clang-cl /fsanitize=address)",
+      "inherits": "base-windows",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "SW_ENABLE_SANITIZER": "ON"
+      }
+    },
+
+    {
+      "name": "Ninja-Release",
+      "displayName": "Windows Ninja Release (Clang-cl)",
+      "description": "Windows Release build using Ninja + Clang-cl",
+      "inherits": "base-windows",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+
+    {
+      "name": "Ninja-Shipping",
+      "displayName": "Windows Ninja Shipping (Clang-cl)",
+      "description": "Windows Shipping build using Ninja + Clang-cl",
+      "inherits": "base-windows",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "SW_SHIPPING_BUILD": "ON"
+      }
+    },
+
+    {
+      "name": "WSL-Debug",
+      "displayName": "WSL Ninja Debug (Clang)",
+      "description": "WSL Ubuntu Debug build using Ninja + Clang",
+      "inherits": "base-wsl",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+
+    {
+      "name": "WSL-Release",
+      "displayName": "WSL Ninja Release (Clang)",
+      "description": "WSL Ubuntu Release build using Ninja + Clang",
+      "inherits": "base-wsl",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+
+    {
+      "name": "WSL-Shipping",
+      "displayName": "WSL Ninja Shipping (Clang)",
+      "description": "WSL Ubuntu Shipping build using Ninja + Clang",
+      "inherits": "base-wsl",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "SW_SHIPPING_BUILD": "ON"
+      }
+    },
+
+    {
+      "name": "CI-Debug",
+      "displayName": "CI Debug (Ninja)",
+      "description": "CI Debug. Windows job sets clang-cl; Linux uses the system compiler.",
+      "inherits": "base-vcpkg",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+
+    {
+      "name": "CI-Shipping",
+      "displayName": "CI Shipping (Ninja, system compiler)",
+      "description": "CI Shipping without clang-cl env — runners use MSVC/system CXX",
+      "inherits": "base-vcpkg",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "SW_SHIPPING_BUILD": "ON"
+      }
+    },
+
+    {
+      "name": "CI-Debug-ASAN",
+      "displayName": "CI Debug + ASan (Ninja)",
+      "description": "CI Debug with AddressSanitizer enabled",
+      "inherits": "base-vcpkg",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "SW_ENABLE_SANITIZER": "ON",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    }
+  ],
+
+  "buildPresets": [
+    {
+      "name": "Ninja-Debug",
+      "configurePreset": "Ninja-Debug"
+    },
+    {
+      "name": "Ninja-Debug-ASAN",
+      "configurePreset": "Ninja-Debug-ASAN"
+    },
+    {
+      "name": "Ninja-Release",
+      "configurePreset": "Ninja-Release"
+    },
+    {
+      "name": "Ninja-Shipping",
+      "configurePreset": "Ninja-Shipping"
+    },
+    {
+      "name": "WSL-Debug",
+      "configurePreset": "WSL-Debug"
+    },
+    {
+      "name": "WSL-Release",
+      "configurePreset": "WSL-Release"
+    },
+    {
+      "name": "WSL-Shipping",
+      "configurePreset": "WSL-Shipping"
+    },
+    {
+      "name": "CI-Debug",
+      "configurePreset": "CI-Debug"
+    },
+    {
+      "name": "CI-Debug-ASAN",
+      "configurePreset": "CI-Debug-ASAN"
+    },
+    {
+      "name": "CI-Shipping",
+      "configurePreset": "CI-Shipping"
+    }
+  ],
+
+  "testPresets": [
+    {
+      "name": "Ninja-Debug-lint",
+      "configurePreset": "Ninja-Debug",
+      "output": { "outputOnFailure": true },
+      "filter": {
+        "include": { "label": "lint" }
+      }
+    },
+    {
+      "name": "Ninja-Debug-nogpu",
+      "configurePreset": "Ninja-Debug",
+      "output": { "outputOnFailure": true },
+      "filter": {
+        "include": { "label": "nogpu" }
+      }
+    },
+    {
+      "name": "Ninja-Debug-ASAN-nogpu",
+      "configurePreset": "Ninja-Debug-ASAN",
+      "output": { "outputOnFailure": true },
+      "filter": {
+        "include": { "label": "nogpu" }
+      }
+    },
+    {
+      "name": "WSL-Debug-nogpu",
+      "configurePreset": "WSL-Debug",
+      "output": { "outputOnFailure": true },
+      "filter": {
+        "include": { "label": "nogpu" }
+      }
+    },
+    {
+      "name": "CI-Debug-nogpu",
+      "configurePreset": "CI-Debug",
+      "output": { "outputOnFailure": true },
+      "filter": {
+        "include": { "label": "nogpu" }
+      }
+    },
+    {
+      "name": "CI-Debug-ASAN-nogpu",
+      "configurePreset": "CI-Debug-ASAN",
+      "output": { "outputOnFailure": true },
+      "filter": {
+        "include": { "label": "nogpu" }
+      }
+    }
+  ]
+}

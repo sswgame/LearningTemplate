@@ -1,0 +1,11 @@
+/**
+ * @file PredefinedAnnotationKind.xxx
+ * @brief AnnotationMeta.txt 의 kind 토큰 ↔ AnnotationBinding::Kind.
+ * @details include 전에 REGISTER_ANNOTATION_KIND(EnumName, TokenSpelling) 정의.
+ */
+
+REGISTER_ANNOTATION_KIND( Flag, flag )
+REGISTER_ANNOTATION_KIND( Bool, bool )
+REGISTER_ANNOTATION_KIND( String, string )
+REGISTER_ANNOTATION_KIND( Float, float )
+REGISTER_ANNOTATION_KIND( NetRole, netrole )

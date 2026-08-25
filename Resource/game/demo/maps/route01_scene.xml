@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<SceneDescriptor>
+	<name>Route01Scene</name>
+	<entities>
+		<entity name="GrassPatch"/>
+		<entity name="RouteSign"/>
+	</entities>
+</SceneDescriptor>

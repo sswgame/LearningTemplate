@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Species / move catalog (loaded by SpeciesCatalog) -->
+<SpeciesCatalog>
+	<moves>
+		<move id="tackle" name="Tackle" power="40" ppMax="35"/>
+		<move id="growl" name="Growl" power="0" ppMax="40"/>
+		<move id="ember" name="Ember" power="40" ppMax="25"/>
+		<move id="vine_whip" name="Vine Whip" power="45" ppMax="25"/>
+	</moves>
+	<species>
+		<entry id="critter_a" name="Wild Critter" baseHp="40" baseAtk="10" move0="tackle" move1="growl"/>
+		<entry id="critter_b" name="Brush Hopper" baseHp="35" baseAtk="12" move0="tackle" move1="vine_whip"/>
+		<entry id="starter_a" name="Leaf Pup" baseHp="45" baseAtk="11" move0="vine_whip" move1="growl"/>
+	</species>
+</SpeciesCatalog>

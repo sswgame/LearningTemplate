@@ -1,0 +1,648 @@
+#include "pch.h"
+
+#include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Serialization/Core/SchemaMigrate.h"
+#include "Engine/Serialization/Core/SerializerInternal.h"
+#include "Engine/Serialization/Format/XmlSerializer.h"
+#include "Engine/Utility/Xml/XmlDocument.h"
+
+namespace sw
+{
+	struct XmlDocumentBackend::Impl
+	{
+		XmlDocument		doc;
+		XmlNode			currentParent;
+		vector<XmlNode> listNodeStack;
+
+		static string sanitizeTag( const utf8* pName )
+		{
+			string s( pName != nullptr ? pName : "" );
+			for ( size_t pos = 0; ( pos = s.find( "::", pos ) ) != string::npos; pos += 2 )
+			{
+				s.replace( pos, 2, "__" );
+			}
+			return s;
+		}
+	};
+
+	XmlDocumentBackend::XmlDocumentBackend()
+		: _impl{ make_unique<Impl>() } {}
+
+	XmlDocumentBackend::~XmlDocumentBackend() = default;
+
+	void XmlDocumentBackend::initXmlSerialization( const utf8* pRootTagName )
+	{
+		_impl->doc.clear();
+		string	tag			 = Impl::sanitizeTag( pRootTagName );
+		XmlNode root		 = _impl->doc.appendRoot( tag.c_str() );
+		_impl->currentParent = root;
+		_impl->listNodeStack.push_back( root );
+	}
+
+	void XmlDocumentBackend::writeValue( const utf8* pTagName, const utf8* pValueString )
+	{
+		if ( _impl->currentParent.isValid() == false )
+			return;
+
+		string	sTag = Impl::sanitizeTag( pTagName );
+		XmlNode node = _impl->currentParent.appendChild( sTag.c_str() );
+		if ( pValueString != nullptr && pValueString[0] != '\0' )
+			node.setValue( pValueString );
+	}
+
+	void XmlDocumentBackend::writeAttribute( const utf8* pAttrName, const utf8* pValueString )
+	{
+		if ( _impl->currentParent.isValid() == false )
+			return;
+
+		string sName = Impl::sanitizeTag( pAttrName );
+		_impl->currentParent.appendAttr( sName.c_str(), pValueString != nullptr ? pValueString : "" );
+	}
+
+	void XmlDocumentBackend::beginArray( const utf8* pTagName )
+	{
+		beginMap( pTagName );
+	}
+
+	void XmlDocumentBackend::writeArrayItem( const utf8* pValueString )
+	{
+		writeValue( "item", pValueString );
+	}
+
+	void XmlDocumentBackend::endArray()
+	{
+		endMap();
+	}
+
+	void XmlDocumentBackend::beginMap( const utf8* pTagName )
+	{
+		if ( _impl->currentParent.isValid() == false )
+			return;
+
+		string	sTag = Impl::sanitizeTag( pTagName );
+		XmlNode node = _impl->currentParent.appendChild( sTag.c_str() );
+		_impl->listNodeStack.push_back( node );
+		_impl->currentParent = node;
+	}
+
+	void XmlDocumentBackend::beginMapEntry()
+	{
+		beginMap( "entry" );
+	}
+
+	void XmlDocumentBackend::writeMapKey( const utf8* pKeyString )
+	{
+		writeValue( "key", pKeyString );
+	}
+
+	void XmlDocumentBackend::writeMapValue( const utf8* pValueString )
+	{
+		writeValue( "value", pValueString );
+	}
+
+	void XmlDocumentBackend::endMapEntry()
+	{
+		endMap();
+	}
+
+	void XmlDocumentBackend::endMap()
+	{
+		if ( _impl->listNodeStack.size() > 1 )
+		{
+			_impl->listNodeStack.pop_back();
+			_impl->currentParent = _impl->listNodeStack.back();
+		}
+	}
+
+	string XmlDocumentBackend::endSerialize()
+	{
+		return _impl->doc.saveToString();
+	}
+
+	bool XmlDocumentBackend::initXmlDeserialization( const utf8* pXmlStr, const utf8* pRootTagName )
+	{
+		_impl->doc.clear();
+		if ( pXmlStr == nullptr || pXmlStr[0] == '\0' )
+			return false;
+
+		if ( _impl->doc.parse( pXmlStr ) == false )
+			return false;
+
+		string	sTag = Impl::sanitizeTag( pRootTagName );
+		XmlNode root = _impl->doc.root( sTag.c_str(), ignoreCaseKeys() );
+		if ( root.isValid() == false )
+			root = _impl->doc.root( nullptr, ignoreCaseKeys() );
+
+		if ( root.isValid() == false )
+			return false;
+
+		_impl->currentParent = root;
+		return true;
+	}
+
+	bool XmlDocumentBackend::readValue( const utf8* pTagName, string& outValue )
+	{
+		if ( _impl->currentParent.isValid() == false )
+			return false;
+
+		string	sTag = Impl::sanitizeTag( pTagName );
+		XmlNode node = _impl->currentParent.child( sTag.c_str(), ignoreCaseKeys() );
+		if ( node.isValid() == false )
+			return false;
+
+		outValue = node.text() != nullptr ? node.text() : "";
+		return true;
+	}
+
+	bool XmlDocumentBackend::readAttribute( const utf8* pAttrName, string& outValue )
+	{
+		if ( _impl->currentParent.isValid() == false )
+			return false;
+
+		string		sName = Impl::sanitizeTag( pAttrName );
+		const utf8* pVal  = _impl->currentParent.attr( sName.c_str(), ignoreCaseKeys() );
+		if ( pVal == nullptr )
+			return false;
+
+		outValue = pVal;
+		return true;
+	}
+
+	bool XmlDocumentBackend::iterateArray( const utf8* pTagName, const XmlArrayItemDelegate& callback )
+	{
+		if ( _impl->currentParent.isValid() == false )
+			return false;
+
+		const bool bIgnore = ignoreCaseKeys();
+		string	   sTag	   = Impl::sanitizeTag( pTagName );
+		XmlNode	   arrNode = _impl->currentParent.child( sTag.c_str(), bIgnore );
+		if ( arrNode.isValid() == false )
+			return false;
+
+		for ( XmlNode item = arrNode.child( "item", bIgnore ); item; item = item.next( "item", bIgnore ) )
+		{
+			callback( item.text() != nullptr ? item.text() : "" );
+		}
+
+		return true;
+	}
+
+	bool XmlDocumentBackend::iterateMap( const utf8* pTagName, const XmlMapItemDelegate& callback )
+	{
+		if ( _impl->currentParent.isValid() == false )
+			return false;
+
+		const bool bIgnore = ignoreCaseKeys();
+		string	   sTag	   = Impl::sanitizeTag( pTagName );
+		XmlNode	   mapNode = _impl->currentParent.child( sTag.c_str(), bIgnore );
+		if ( mapNode.isValid() == false )
+			return false;
+
+		for ( XmlNode entry = mapNode.child( "entry", bIgnore ); entry; entry = entry.next( "entry", bIgnore ) )
+		{
+			XmlNode kNode = entry.child( "key", bIgnore );
+			XmlNode vNode = entry.child( "value", bIgnore );
+			if ( kNode.isValid() && vNode.isValid() )
+				callback( kNode.text() != nullptr ? kNode.text() : "", vNode.text() != nullptr ? vNode.text() : "" );
+		}
+		return true;
+	}
+
+
+	namespace
+	{
+		void writeXmlProperties( const void* pInstance, const TypeInfo& typeInfo, IXmlBackend& backend,
+								 const SerializeContext& ctx )
+		{
+			for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )
+			{
+				const void* pPropPtr = prop.getValuePtr<void>( pInstance );
+
+				if ( prop._bIsContainer && prop._containerWrapper != nullptr )
+				{
+					ISequenceContainerWrapper* pSeq		= prop._containerWrapper->asSequence();
+					IMapContainerWrapper*	   pMapWrap = prop._containerWrapper->asMap();
+					if ( pSeq != nullptr )
+					{
+						backend.beginArray( prop._name.c_str() );
+						size_t sz = pSeq->getSize( pPropPtr );
+						for ( size_t elemIndex = 0; elemIndex < sz; ++elemIndex )
+						{
+							const void*								pElemPtr = pSeq->getElementConst( pPropPtr, elemIndex );
+							StringBuilder<constant::kMaxBuffer8192> ss;
+							valueToText( ss, pElemPtr, prop._elementTypeName, ctx );
+							backend.writeArrayItem( string( ss.view() ).c_str() );
+						}
+						backend.endArray();
+					}
+					else if ( pMapWrap != nullptr )
+					{
+						backend.beginMap( prop._name.c_str() );
+						pMapWrap->forEach( pPropPtr, [&]( const void* pKPtr, const void* pVPtr )
+						{
+							backend.beginMapEntry();
+
+							StringBuilder<constant::kMaxBuffer8192> kSs, vSs;
+							valueToText( kSs, pKPtr, prop._keyTypeName, ctx );
+							valueToText( vSs, pVPtr, prop._elementTypeName, ctx );
+
+							backend.writeMapKey( string( kSs.view() ).c_str() );
+							backend.writeMapValue( string( vSs.view() ).c_str() );
+							backend.endMapEntry();
+						} );
+						backend.endMap();
+					}
+				}
+				else
+				{
+					StringBuilder<constant::kMaxBuffer8192> ss;
+					valueToText( ss, pPropPtr, prop._typeName, ctx );
+					const string value( ss.view() );
+					if ( prop._metadata._bXmlAttribute != 0 )
+						backend.writeAttribute( prop._name.c_str(), value.c_str() );
+					else
+						backend.writeValue( prop._name.c_str(), value.c_str() );
+				}
+			}
+		}
+
+		static void noteCoerceFailVal( vector<SchemaOrphanValue>* pOutOrphans, bool& bFieldError, const PropertyInfo& prop, string_view strValue )
+		{
+			bFieldError = true;
+			if ( pOutOrphans != nullptr )
+			{
+				SchemaOrphanValue orphan;
+				orphan._name		 = prop._name;
+				orphan._nameHash	 = prop.getNameHash();
+				orphan._wireTypeHash = 0;
+				orphan._text		 = string( strValue );
+				pOutOrphans->push_back( std::move( orphan ) );
+			}
+		}
+
+		static vector<const utf8*> getContainerTagNames( const PropertyInfo& prop )
+		{
+			vector<const utf8*> listTags;
+			listTags.push_back( prop._name.c_str() );
+			for ( const hashed_string& alias : prop._listAliases )
+			{
+				if ( alias.empty() == false )
+					listTags.push_back( alias.c_str() );
+			}
+			return listTags;
+		}
+
+		static bool isNameKnown( const unordered_set<string>& uniqueKnownNames, const utf8* pChildName )
+		{
+			if ( pChildName == nullptr )
+				return false;
+			if ( uniqueKnownNames.find( pChildName ) != uniqueKnownNames.end() )
+				return true;
+			// 대소문자만 다른 태그는 orphan 이 아님 (JsonSerializer bCaseVariant 와 동일).
+			for ( const string& known : uniqueKnownNames )
+			{
+				if ( StringUtil::equalsIgnoreCase( known.c_str(), pChildName ) )
+					return true;
+			}
+			return false;
+		}
+
+		bool readXmlIntoInstance( void* pInstance, const TypeInfo& typeInfo, IXmlBackend& backend, const SerializeContext& ctx,
+								  vector<SchemaOrphanValue>* pOutOrphans )
+		{
+			unordered_set<uint32> uniqueSeen;
+			bool				  bFieldError{ false };
+
+			for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )
+			{
+				void* pPropPtr = prop.getValuePtr<void>( pInstance );
+
+				if ( prop._bIsContainer && prop._containerWrapper != nullptr )
+				{
+
+					ISequenceContainerWrapper* pSeq		= prop._containerWrapper->asSequence();
+					IMapContainerWrapper*	   pMapWrap = prop._containerWrapper->asMap();
+					if ( pSeq != nullptr )
+					{
+						pSeq->clear( pPropPtr );
+						size_t elemIndex{ 0 };
+						bool   any{ false };
+						for ( const utf8* pTag : getContainerTagNames( prop ) )
+						{
+							backend.iterateArray( pTag, SW_DELEGATE_LAMBDA( XmlArrayItemDelegate, [&]( string_view itemStr )
+							{
+								any = true;
+								pSeq->addElementDefault( pPropPtr );
+								void* pElemPtr = pSeq->getElement( pPropPtr, elemIndex++ );
+								if ( parseTextValueCoerced( pElemPtr, prop._elementTypeName, itemStr, ctx ) == false )
+									noteCoerceFailVal( pOutOrphans, bFieldError, prop, itemStr );
+							} ) );
+							if ( any )
+								break;
+						}
+						if ( any )
+							uniqueSeen.insert( prop.getNameHash() );
+						else
+							applyPropertyDefault( pPropPtr, prop, ctx );
+					}
+					else if ( pMapWrap != nullptr )
+					{
+						pMapWrap->clear( pPropPtr );
+						vector<uint8> listKBuf( pMapWrap->getKeySize() );
+						vector<uint8> listVBuf( pMapWrap->getValueSize() );
+						bool		  any{ false };
+						for ( const utf8* pTag : getContainerTagNames( prop ) )
+						{
+							backend.iterateMap( pTag, SW_DELEGATE_LAMBDA( XmlMapItemDelegate, [&]( string_view kStr, string_view vStr )
+							{
+								any = true;
+								pMapWrap->defaultConstructKey( listKBuf.data() );
+								pMapWrap->defaultConstructValue( listVBuf.data() );
+								const bool kOk = parseTextValueCoerced( listKBuf.data(), prop._keyTypeName, kStr, ctx );
+								const bool vOk = parseTextValueCoerced( listVBuf.data(), prop._elementTypeName, vStr, ctx );
+								if ( kOk && vOk )
+									pMapWrap->insertKeyValue( pPropPtr, listKBuf.data(), listVBuf.data() );
+								else
+									noteCoerceFailVal( pOutOrphans, bFieldError, prop, vStr );
+								pMapWrap->destroyKey( listKBuf.data() );
+								pMapWrap->destroyValue( listVBuf.data() );
+							} ) );
+							if ( any )
+								break;
+						}
+						if ( any )
+							uniqueSeen.insert( prop.getNameHash() );
+						else
+							applyPropertyDefault( pPropPtr, prop, ctx );
+					}
+				}
+				else
+				{
+					string strValue;
+					bool   readOk{ false };
+					if ( prop._metadata._bXmlAttribute != 0 )
+					{
+						readOk = backend.readAttribute( prop._name.c_str(), strValue );
+						if ( readOk == false )
+						{
+							for ( const hashed_string& alias : prop._listAliases )
+							{
+								if ( alias.empty() == false && backend.readAttribute( alias.c_str(), strValue ) )
+								{
+									readOk = true;
+									break;
+								}
+							}
+						}
+					}
+					else
+					{
+						readOk = backend.readValueOrAttribute( prop._name.c_str(), strValue );
+						if ( readOk == false )
+						{
+							for ( const hashed_string& alias : prop._listAliases )
+							{
+								if ( alias.empty() == false && backend.readValueOrAttribute( alias.c_str(), strValue ) )
+								{
+									readOk = true;
+									break;
+								}
+							}
+						}
+					}
+
+					if ( readOk )
+					{
+						uniqueSeen.insert( prop.getNameHash() );
+						if ( parseTextValueCoerced( pPropPtr, prop._typeName, strValue, ctx ) == false )
+							noteCoerceFailVal( pOutOrphans, bFieldError, prop, strValue );
+					}
+					else
+						applyPropertyDefault( pPropPtr, prop, ctx );
+				}
+			}
+
+			(void)uniqueSeen;
+			if ( pOutOrphans != nullptr )
+				return true;
+			return bFieldError == false;
+		}
+
+		void appendUnknownXmlChildOrphans( XmlNode root, const TypeInfo& typeInfo, bool bIgnore,
+										   vector<SchemaOrphanValue>* pOutOrphans )
+		{
+			if ( pOutOrphans == nullptr || root.isValid() == false )
+				return;
+
+			unordered_set<string> uniqueKnownNames;
+			for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )
+			{
+				uniqueKnownNames.insert( prop._name.c_str() );
+				for ( const hashed_string& alias : prop._listAliases )
+				{
+					if ( alias.empty() == false )
+						uniqueKnownNames.insert( alias.c_str() );
+				}
+			}
+
+			// 대소문자만 다른 태그는 setIgnoreCaseKeys(false) 로 의도적으로 바인딩을 거른 것이므로
+			// 모르는 필드(orphan)로 올리지 않는다. bIgnore 와 무관하게 무시 대소문자로 판정한다.
+			for ( XmlNode child = root.child( nullptr, bIgnore ); child.isValid(); child = child.next( nullptr, bIgnore ) )
+			{
+				const utf8* pChildName = child.name();
+				if ( pChildName == nullptr )
+					continue;
+				if ( StringUtil::strcmp( pChildName, kSchemaVersionKey ) == 0 )
+					continue;
+				if ( isNameKnown( uniqueKnownNames, pChildName ) )
+					continue;
+
+				const hashed_string nameHs( pChildName );
+				SchemaOrphanValue	orphan;
+				orphan._name	 = nameHs;
+				orphan._nameHash = nameHs.getHash();
+				orphan._text	 = child.text() != nullptr ? child.text() : "";
+				pOutOrphans->push_back( std::move( orphan ) );
+			}
+		}
+
+		bool tryAppendUnknownXmlChildOrphans( string_view xmlStr, const TypeInfo& typeInfo,
+											  const SerializeContext& ctx, vector<SchemaOrphanValue>* pOutOrphans )
+		{
+			if ( xmlStr.empty() || pOutOrphans == nullptr )
+				return false;
+
+			XmlDocument doc;
+			if ( doc.parse( xmlStr ) == false )
+				return false;
+
+			const bool bIgnore = ctx.ignoreCaseKeys();
+			XmlNode	   root	   = doc.root( typeInfo._name.c_str(), bIgnore );
+			if ( root.isValid() == false )
+				root = doc.root( nullptr, bIgnore );
+			if ( root.isValid() == false )
+				return false;
+
+			appendUnknownXmlChildOrphans( root, typeInfo, bIgnore, pOutOrphans );
+			return true;
+		}
+
+	} // namespace
+
+
+	string XmlSerializer::serialize( const void* pInstance, const TypeInfo& typeInfo,
+									 IXmlBackend& backend, const SerializeContext& ctx )
+	{
+		backend.initXmlSerialization( typeInfo._name.c_str() );
+		writeXmlProperties( pInstance, typeInfo, backend, ctx );
+		return backend.endSerialize();
+	}
+
+	bool XmlSerializer::deserialize( void* pInstance, const TypeInfo& typeInfo,
+									 IXmlBackend& backend, string_view xmlStr,
+									 const SerializeContext& ctx )
+	{
+		if ( xmlStr.empty() )
+			return false;
+
+		backend.setIgnoreCaseKeys( ctx.ignoreCaseKeys() );
+
+		if ( backend.initXmlDeserialization( xmlStr.data(), typeInfo._name.c_str() ) == false )
+			return false;
+
+		if ( readXmlIntoInstance( pInstance, typeInfo, backend, ctx, nullptr ) == false )
+			return false;
+
+		vector<SchemaOrphanValue> listOrphans;
+		if ( tryAppendUnknownXmlChildOrphans( xmlStr, typeInfo, ctx, &listOrphans ) && listOrphans.empty() == false )
+			return false;
+		return true;
+	}
+
+	string XmlSerializer::serialize( const void* pInstance, const TypeInfo& typeInfo, const SerializeContext& ctx )
+	{
+		XmlDocumentBackend backend;
+		return serialize( pInstance, typeInfo, backend, ctx );
+	}
+
+	bool XmlSerializer::deserialize( void* pInstance, const TypeInfo& typeInfo, string_view xmlStr, const SerializeContext& ctx )
+	{
+		if ( xmlStr.empty() )
+			return false;
+		vector<SchemaOrphanValue> listOrphans;
+		if ( deserializeSoft( pInstance, typeInfo, xmlStr, &listOrphans, nullptr, ctx ) == false )
+			return false;
+		return listOrphans.empty();
+	}
+
+	bool XmlSerializer::deserializeSoft( void* pInstance, const TypeInfo& typeInfo, string_view xmlStr,
+										 vector<SchemaOrphanValue>* pOutOrphans, uint32* pOutVersion,
+										 const SerializeContext& ctx )
+	{
+		if ( xmlStr.empty() )
+			return false;
+
+		XmlDocument doc;
+		if ( doc.parse( xmlStr ) == false )
+			return false;
+
+		const bool bIgnore = ctx.ignoreCaseKeys();
+		XmlNode	   root	   = doc.root( typeInfo._name.c_str(), bIgnore );
+		if ( root.isValid() == false )
+			root = doc.root( nullptr, bIgnore );
+		if ( root.isValid() == false )
+			return false;
+
+		if ( pOutVersion != nullptr )
+		{
+			*pOutVersion	 = 0;
+			const utf8* pVer = root.attr( kSchemaVersionKey, bIgnore );
+			if ( pVer != nullptr )
+				*pOutVersion = static_cast<uint32>( StringUtil::strtoull( pVer, nullptr, 10 ) );
+		}
+
+		XmlDocumentBackend backend;
+		backend.setIgnoreCaseKeys( bIgnore );
+		if ( backend.initXmlDeserialization( xmlStr.data(), typeInfo._name.c_str() ) == false )
+			return false;
+		if ( readXmlIntoInstance( pInstance, typeInfo, backend, ctx, pOutOrphans ) == false )
+			return false;
+
+		if ( pOutOrphans != nullptr )
+			appendUnknownXmlChildOrphans( root, typeInfo, bIgnore, pOutOrphans );
+
+		return true;
+	}
+
+	string XmlSerializer::serializeVersioned( uint32 version, const void* pInstance, const TypeInfo& typeInfo,
+											  const SerializeContext& ctx )
+	{
+		XmlDocumentBackend backend;
+		backend.initXmlSerialization( typeInfo._name.c_str() );
+		const string verStr = to_string( version );
+		backend.writeAttribute( kSchemaVersionKey, verStr.c_str() );
+		writeXmlProperties( pInstance, typeInfo, backend, ctx );
+		return backend.endSerialize();
+	}
+
+	bool XmlSerializer::deserializeVersioned( uint32& outVersion, void* pInstance, const TypeInfo& typeInfo,
+											  string_view xmlStr, uint32 currentVersion, SchemaMigrateFn migrate,
+											  const TypeInfo* pLegacyTypeInfo, const SerializeContext& ctx )
+	{
+		vector<SchemaOrphanValue> listOrphans;
+		vector<uint8>			  listLegacyStorage;
+		void*					  pLegacyPtr{ nullptr };
+		outVersion = 0;
+
+		if ( pLegacyTypeInfo != nullptr && pLegacyTypeInfo->_size > 0 )
+		{
+			pLegacyPtr = createScratchInstance( *pLegacyTypeInfo, listLegacyStorage );
+			uint32 legacyVer{ 0 };
+			if ( pLegacyPtr == nullptr ||
+				 deserializeSoft( pLegacyPtr, *pLegacyTypeInfo, xmlStr, &listOrphans, &legacyVer, ctx ) == false )
+			{
+				destroyScratchInstance( pLegacyPtr, *pLegacyTypeInfo );
+				return false;
+			}
+			outVersion = legacyVer;
+		}
+
+		uint32 softVer{ 0 };
+		if ( deserializeSoft( pInstance, typeInfo, xmlStr, &listOrphans, &softVer, ctx ) == false )
+		{
+			if ( pLegacyPtr != nullptr )
+				destroyScratchInstance( pLegacyPtr, *pLegacyTypeInfo );
+			return false;
+		}
+		if ( pLegacyPtr == nullptr )
+			outVersion = softVer;
+		else if ( softVer != 0 )
+			outVersion = softVer;
+
+		const bool needsMigrate = migrate != nullptr && ( outVersion != currentVersion || listOrphans.empty() == false || pLegacyPtr != nullptr );
+		bool	   ok{ true };
+		if ( needsMigrate )
+		{
+			SchemaMigrateContext mctx;
+			mctx._fromVersion	  = outVersion;
+			mctx._toVersion		  = currentVersion;
+			mctx._pInstance		  = pInstance;
+			mctx._pTypeInfo		  = &typeInfo;
+			mctx._pLegacyInstance = pLegacyPtr;
+			mctx._pLegacyTypeInfo = pLegacyTypeInfo;
+			mctx._pOrphans		  = &listOrphans;
+			mctx._pSerializeCtx	  = &ctx;
+			ok					  = migrate( mctx );
+		}
+		else if ( migrate == nullptr && ( outVersion != currentVersion || listOrphans.empty() == false ) )
+		{
+			SW_LOG_WARNING( "[XmlSerializer] schema version %# -> %# with no migrate callback (%# listOrphans)",
+							outVersion, currentVersion, static_cast<uint32>( listOrphans.size() ) );
+			ok = false;
+		}
+		if ( pLegacyPtr != nullptr )
+			destroyScratchInstance( pLegacyPtr, *pLegacyTypeInfo );
+		return ok;
+	}
+
+} // namespace sw

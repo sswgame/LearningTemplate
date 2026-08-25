@@ -1,0 +1,253 @@
+#include "pch.h"
+
+#include "Engine/Utility/File/ReloadFileManager.h"
+
+#if defined( SW_PLATFORM_WINDOWS )
+	#include "Core/File/Windows/WindowsFileWatcher.h"
+#elif defined( SW_PLATFORM_LINUX )
+	#include "Core/File/Linux/LinuxFileWatcher.h"
+#elif defined( SW_PLATFORM_MACOS )
+	#include "Core/File/Mac/MacFileWatcher.h"
+#endif
+
+namespace sw
+{
+	ReloadFileManager::ReloadFileManager() = default;
+
+	ReloadFileManager::~ReloadFileManager()
+	{
+		shutdown();
+	}
+
+	bool ReloadFileManager::initialize()
+	{
+#if defined( SW_PLATFORM_WINDOWS )
+		_fileWatcher = make_unique<WindowsFileWatcher>();
+#elif defined( SW_PLATFORM_LINUX )
+		_fileWatcher = make_unique<LinuxFileWatcher>();
+#elif defined( SW_PLATFORM_MACOS )
+		_fileWatcher = make_unique<MacFileWatcher>();
+#endif
+
+#if defined( SW_PLATFORM_WINDOWS ) || defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
+		const string& rootPath = ResourceUtil::getRootFolderPath();
+		if ( rootPath.empty() == false )
+		{
+			if ( _fileWatcher->startWatching( rootPath, true ) == false )
+			{
+				SW_LOG_ERROR( "ReloadFileManager failed to start watching: %#", rootPath );
+				_fileWatcher.reset();
+				_bUseMtimePoll = true;
+				SW_LOG_WARNING( "ReloadFileManager: Falling back to mtime poll." );
+			}
+		}
+		else
+		{
+			SW_LOG_WARNING( "ReloadFileManager: Root resource path is empty." );
+			_bUseMtimePoll = true;
+		}
+#else
+		_bUseMtimePoll = true;
+		SW_LOG_INFO( "ReloadFileManager: Using mtime poll fallback (no native file watcher)." );
+#endif
+		return true;
+	}
+
+	void ReloadFileManager::shutdown()
+	{
+		_listWatches.clear();
+		_mapPollMtimes.clear();
+		_bUseMtimePoll = false;
+		if ( _fileWatcher )
+		{
+			_fileWatcher->stopWatching();
+			_fileWatcher.reset();
+		}
+	}
+
+	void ReloadFileManager::update()
+	{
+		vector<FileChangeEvent> listEvents;
+
+		if ( _fileWatcher )
+			_fileWatcher->pollEvents( listEvents );
+		else if ( _bUseMtimePoll )
+			pollMtimeFallback( listEvents );
+		else
+			return;
+
+		if ( listEvents.empty() )
+			return;
+
+		dispatchEvents( listEvents );
+	}
+
+	FileWatchHandle ReloadFileManager::registerWatch( string_view pathPrefix, const vector<string>& extensions, const FileWatchMatchDelegate& onMatch )
+	{
+		WatchEntry entry{};
+		entry._handle = FileWatchHandle{ _nextWatchId++ };
+		// Keep real FS path for mtime poll / native watchers; matching uses normalizePath.
+		entry._pathPrefix	  = FileUtil::normalizeSeparators( pathPrefix );
+		entry._listExtensions = extensions;
+		entry._onMatch		  = onMatch;
+		_listWatches.push_back( entry );
+
+		SW_LOG_INFO( "[ReloadFileManager] Registered watch %# (ext count %#)", entry._pathPrefix, static_cast<uint32>( extensions.size() ) );
+		return entry._handle;
+	}
+
+	void ReloadFileManager::unregisterWatch( FileWatchHandle handle )
+	{
+		if ( handle.isValid() == false )
+			return;
+
+		_listWatches.erase( std::remove_if( _listWatches.begin(), _listWatches.end(),
+											[&]( const WatchEntry& entry )
+		{ return entry._handle == handle; } ),
+							_listWatches.end() );
+	}
+
+	bool ReloadFileManager::matchesWatch( const WatchEntry& entry, const FileChangeEvent& ev ) const
+	{
+		const string fullPath = FileUtil::normalizePath( ev._directory + "/" + ev._filename );
+		const string prefix	  = FileUtil::normalizePath( entry._pathPrefix );
+
+		if ( fullPath.size() < prefix.size() )
+			return false;
+
+		const bool bPrefixMatch = ( fullPath.compare( 0, prefix.size(), prefix ) == 0 );
+		if ( bPrefixMatch == false )
+			return false;
+
+		if ( fullPath.size() > prefix.size() )
+		{
+			const utf8 next = fullPath[prefix.size()];
+			if ( next != '/' && next != '\\' )
+				return false;
+		}
+
+		return extensionAllowed( entry, ev._filename );
+	}
+
+	void ReloadFileManager::dispatchEvents( const vector<FileChangeEvent>& listEvents )
+	{
+		for ( const FileChangeEvent& ev : listEvents )
+		{
+			bool bAnyMatch{ false };
+			for ( const WatchEntry& entry : _listWatches )
+			{
+				if ( matchesWatch( entry, ev ) == false )
+					continue;
+
+				bAnyMatch = true;
+				if ( entry._onMatch.isBound() )
+					entry._onMatch( ev );
+			}
+
+			if ( bAnyMatch )
+			{
+				const utf8* pActionStr = "Unknown";
+				switch ( ev._action )
+				{
+					case FileWatcherAction::Added:
+						pActionStr = "Added";
+						break;
+					case FileWatcherAction::Removed:
+						pActionStr = "Removed";
+						break;
+					case FileWatcherAction::Modified:
+						pActionStr = "Modified";
+						break;
+					case FileWatcherAction::RenamedOldName:
+						pActionStr = "RenamedOld";
+						break;
+					case FileWatcherAction::RenamedNewName:
+						pActionStr = "RenamedNew";
+						break;
+				}
+				SW_LOG_INFO( "[ReloadFileManager] %# : %#/%#", pActionStr, ev._directory.c_str(), ev._filename.c_str() );
+				_onFileChanged.broadcast( ev );
+			}
+		}
+	}
+
+	namespace
+	{
+		static void considerFileVal( unordered_map<string, uint64>& mapPollMtimes, vector<FileChangeEvent>& listOutEvents, const vector<string>& listExtensions, const string& filePath )
+		{
+			if ( FileUtil::fileExists( filePath ) == false )
+				return;
+
+			const string filename		  = FileUtil::getFileNamePart( filePath );
+			bool		 extensionAllowed = listExtensions.empty();
+			if ( extensionAllowed == false )
+			{
+				for ( const string& allowed : listExtensions )
+				{
+					if ( FileUtil::hasExtension( filename, allowed ) )
+					{
+						extensionAllowed = true;
+						break;
+					}
+				}
+			}
+			if ( extensionAllowed == false )
+				return;
+
+			const uint64 mtime = FileUtil::getFileTimestamp( filePath );
+			if ( mtime == 0 )
+				return;
+
+			const string								  normalized = FileUtil::normalizePath( filePath );
+			const unordered_map<string, uint64>::iterator it		 = mapPollMtimes.find( normalized );
+			if ( it == mapPollMtimes.end() )
+			{
+				mapPollMtimes.emplace( normalized, mtime );
+				return;
+			}
+
+			if ( it->second != mtime )
+			{
+				it->second = mtime;
+				FileChangeEvent ev{};
+				ev._action	  = FileWatcherAction::Modified;
+				ev._directory = FileUtil::normalizePath( FileUtil::getDirectoryPart( filePath ) );
+				ev._filename  = filename;
+				listOutEvents.push_back( std::move( ev ) );
+			}
+		}
+	} // namespace
+
+	void ReloadFileManager::pollMtimeFallback( vector<FileChangeEvent>& listOutEvents )
+	{
+		for ( const WatchEntry& entry : _listWatches )
+		{
+			if ( FileUtil::fileExists( entry._pathPrefix ) == false &&
+				 FileUtil::directoryExists( entry._pathPrefix ) == false )
+				continue;
+
+			if ( FileUtil::fileExists( entry._pathPrefix ) )
+				considerFileVal( _mapPollMtimes, listOutEvents, entry._listExtensions, entry._pathPrefix );
+			else
+			{
+				vector<string> listFiles;
+				FileUtil::collectFiles( entry._pathPrefix, {}, listFiles, true, false );
+				for ( const string& filePath : listFiles )
+					considerFileVal( _mapPollMtimes, listOutEvents, entry._listExtensions, filePath );
+			}
+		}
+	}
+
+	bool ReloadFileManager::extensionAllowed( const WatchEntry& entry, string_view filename ) const
+	{
+		if ( entry._listExtensions.empty() )
+			return true;
+
+		for ( const string& allowed : entry._listExtensions )
+		{
+			if ( FileUtil::hasExtension( filename, allowed ) )
+				return true;
+		}
+		return false;
+	}
+} // namespace sw

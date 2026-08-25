@@ -1,0 +1,46 @@
+{
+    "Name": "DASH_INSIDE",
+    "IsActive": true,
+    "ParentGO": "",
+    "Tags": [],
+    "Components": {
+        "SceneComponent#0": {
+            "_bActive": true
+        },
+        "SpriteComponent#0": {
+            "_bActive": true,
+            "Mesh": "RectMesh",
+            "Material": "materials/Std2DMtrl.material",
+            "Texture": "textures/ui_basic.png",
+            "SpriteName": "DashBase"
+        }
+    },
+    "SceneTransforms": {
+        "SceneComponent#0": "40,0,0;0,0,0;900,900,1;",
+        "SpriteComponent#0": "0,0,0;0,0,0;1,1,1;SceneComponent#0"
+    },
+    "Children": [
+        {
+            "Name": "SLOT",
+            "IsActive": true,
+            "ParentGO": "DASH_INSIDE",
+            "Tags": [],
+            "Components": {
+                "SceneComponent#0": {
+                    "_bActive": true
+                },
+                "SpriteComponent#0": {
+                    "_bActive": true,
+                    "Mesh": "RectMesh",
+                    "Material": "materials/Std2DMtrl.material",
+                    "Texture": "textures/ui_basic.png",
+                    "SpriteName": "DashCount"
+                }
+            },
+            "SceneTransforms": {
+                "SceneComponent#0": "0,0,-5;0,0,0;1,1,1;",
+                "SpriteComponent#0": "0,0,0;0,0,0;1,1,1;SceneComponent#0"
+            }
+        }
+    ]
+}

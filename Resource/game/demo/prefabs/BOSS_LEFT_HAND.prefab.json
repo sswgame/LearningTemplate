@@ -1,0 +1,35 @@
+{
+    "Name": "BOSS_LEFT_HAND",
+    "IsActive": true,
+    "ParentGO": "",
+    "Tags": [],
+    "Components": {
+        "SceneComponent#0": {
+            "_bActive": true
+        },
+        "SpriteAnimatorComponent#0": {
+            "_bActive": true,
+            "currentAnimation": "ATTACK",
+            "repeat": true,
+            "animations": [
+                "ATTACK",
+                "IDLE"
+            ]
+        },
+        "SpriteComponent#0": {
+            "_bActive": true,
+            "Mesh": "RectMesh",
+            "Material": "materials/Std2DMtrl.material",
+            "Texture": "",
+            "SpriteName": ""
+        },
+        "BossHandComponent#0": {
+            "_bActive": true
+        }
+    },
+    "SceneTransforms": {
+        "SceneComponent#0": "-260,-150,0;0,0,0;500,500,1;",
+        "SpriteAnimatorComponent#0": "0,0,0;0,0,0;1,1,1;SceneComponent#0",
+        "SpriteComponent#0": "0,0,0;0,0,0;1,1,1;SceneComponent#0"
+    }
+}

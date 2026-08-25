@@ -1,0 +1,191 @@
+{
+    "Name": "TITLE",
+    "IsActive": true,
+    "ParentGO": "",
+    "Tags": [],
+    "Components": {
+        "SceneComponent#0": {
+            "_bActive": true
+        },
+        "SpriteComponent#0": {
+            "_bActive": true,
+            "Mesh": "RectMesh",
+            "Material": "materials/Std2DMtrl.material",
+            "Texture": "",
+            "SpriteName": ""
+        },
+        "TitleComponent#0": {
+            "_bActive": true,
+            "frontCloudSpeed": 100.0,
+            "backCloudSpeed": 80.0,
+            "nextSceneName": ""
+        }
+    },
+    "SceneTransforms": {
+        "SceneComponent#0": "0,0,0;0,0,0;1,1,1;",
+        "SpriteComponent#0": "0,0,0;0,0,0;1,1,1;SceneComponent#0"
+    },
+    "Children": [
+        {
+            "Name": "PLAY",
+            "IsActive": true,
+            "ParentGO": "TITLE",
+            "Tags": [],
+            "Components": {
+                "SceneComponent#0": {
+                    "_bActive": true
+                },
+                "BoxCollider2DComponent#0": {
+                    "_bActive": true,
+                    "colliderType": 0,
+                    "offsetPos": "0,0",
+                    "offsetScale": "200,50"
+                },
+                "SpriteAnimatorComponent#0": {
+                    "_bActive": true,
+                    "currentAnimation": "PLAY_OFF",
+                    "repeat": true,
+                    "animations": [
+                        "PLAY_OFF",
+                        "PLAY_ON"
+                    ]
+                },
+                "SpriteComponent#0": {
+                    "_bActive": true,
+                    "Mesh": "RectMesh",
+                    "Material": "materials/Std2DMtrl.material",
+                    "Texture": "",
+                    "SpriteName": ""
+                }
+            },
+            "SceneTransforms": {
+                "SceneComponent#0": "0,-100,0;0,0,0;3000,3000,1;",
+                "BoxCollider2DComponent#0": "0,0,0;0,0,0;1,1,1;SceneComponent#0",
+                "SpriteAnimatorComponent#0": "0,0,0;0,0,0;1,1,1;SceneComponent#0",
+                "SpriteComponent#0": "0,0,0;0,0,0;1,1,1;SceneComponent#0"
+            }
+        },
+        {
+            "Name": "OPTION",
+            "IsActive": true,
+            "ParentGO": "TITLE",
+            "Tags": [],
+            "Components": {
+                "SceneComponent#0": {
+                    "_bActive": true
+                },
+                "BoxCollider2DComponent#0": {
+                    "_bActive": true,
+                    "colliderType": 0,
+                    "offsetPos": "0,0",
+                    "offsetScale": "200,50"
+                },
+                "SpriteAnimatorComponent#0": {
+                    "_bActive": true,
+                    "currentAnimation": "OPTION_OFF",
+                    "repeat": true,
+                    "animations": [
+                        "OPTION_OFF",
+                        "OPTION_ON"
+                    ]
+                },
+                "SpriteComponent#0": {
+                    "_bActive": true,
+                    "Mesh": "RectMesh",
+                    "Material": "materials/Std2DMtrl.material",
+                    "Texture": "",
+                    "SpriteName": ""
+                }
+            },
+            "SceneTransforms": {
+                "SceneComponent#0": "0,-175,0;0,0,0;3000,3000,1;",
+                "BoxCollider2DComponent#0": "0,0,0;0,0,0;1,1,1;SceneComponent#0",
+                "SpriteAnimatorComponent#0": "0,0,0;0,0,0;1,1,1;SceneComponent#0",
+                "SpriteComponent#0": "0,0,0;0,0,0;1,1,1;SceneComponent#0"
+            }
+        },
+        {
+            "Name": "EXIT",
+            "IsActive": true,
+            "ParentGO": "TITLE",
+            "Tags": [],
+            "Components": {
+                "SceneComponent#0": {
+                    "_bActive": true
+                },
+                "BoxCollider2DComponent#0": {
+                    "_bActive": true,
+                    "colliderType": 0,
+                    "offsetPos": "0,0",
+                    "offsetScale": "200,50"
+                },
+                "SpriteAnimatorComponent#0": {
+                    "_bActive": true,
+                    "currentAnimation": "EXIT_OFF",
+                    "repeat": true,
+                    "animations": [
+                        "EXIT_OFF",
+                        "EXIT_ON"
+                    ]
+                },
+                "SpriteComponent#0": {
+                    "_bActive": true,
+                    "Mesh": "RectMesh",
+                    "Material": "materials/Std2DMtrl.material",
+                    "Texture": "",
+                    "SpriteName": ""
+                }
+            },
+            "SceneTransforms": {
+                "SceneComponent#0": "0,-245,0;0,0,0;3000,3000,1;",
+                "BoxCollider2DComponent#0": "0,0,0;0,0,0;1,1,1;SceneComponent#0",
+                "SpriteAnimatorComponent#0": "0,0,0;0,0,0;1,1,1;SceneComponent#0",
+                "SpriteComponent#0": "0,0,0;0,0,0;1,1,1;SceneComponent#0"
+            }
+        },
+        {
+            "Name": "LOGO",
+            "IsActive": true,
+            "ParentGO": "TITLE",
+            "Tags": [],
+            "Components": {
+                "SceneComponent#0": {
+                    "_bActive": true
+                },
+                "SpriteComponent#0": {
+                    "_bActive": true,
+                    "Mesh": "RectMesh",
+                    "Material": "materials/Std2DMtrl.material",
+                    "Texture": "textures/title.png",
+                    "SpriteName": "MainLogo"
+                }
+            },
+            "SceneTransforms": {
+                "SceneComponent#0": "0,200,0;0,0,0;3000,3000,1;",
+                "SpriteComponent#0": "0,0,0;0,0,0;1,1,1;SceneComponent#0"
+            }
+        },
+        {
+            "Name": "COPYRIGHT",
+            "IsActive": true,
+            "ParentGO": "TITLE",
+            "Tags": [],
+            "Components": {
+                "SceneComponent#0": {
+                    "_bActive": true
+                },
+                "SpriteComponent#0": {
+                    "_bActive": true,
+                    "Mesh": "RectMesh",
+                    "Material": "materials/Std2DMtrl.material",
+                    "Texture": "textures/title.png",
+                    "SpriteName": "Copyright"
+                }
+            },
+            "SceneTransforms": {
+                "SceneComponent#0": "0,-400,0;0,0,0;3000,3000,1;",
+                "SpriteComponent#0": "0,0,0;0,0,0;1,1,1;SceneComponent#0"
+            }
+        }
+    ]
+}
