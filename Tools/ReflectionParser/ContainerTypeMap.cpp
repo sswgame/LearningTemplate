@@ -1,10 +1,10 @@
+#include "pch.h"
 
 #include "ContainerTypeMap.h"
 
 #include "Core/Log/Logger.h"
 
 #include "Engine/Reflection/ReflectionEnumNames.h"
-
 namespace sw
 {
 	ContainerTypeMap& ContainerTypeMap::instance()
@@ -15,7 +15,7 @@ namespace sw
 
 	void ContainerTypeMap::clear()
 	{
-		_rules.clear();
+		_listRules.clear();
 		_bLoaded = false;
 	}
 
@@ -27,7 +27,7 @@ namespace sw
 		rule._match = match;
 		rule._kind	= kind;
 		rule._type	= type;
-		_rules.push_back( std::move( rule ) );
+		_listRules.push_back( std::move( rule ) );
 	}
 
 	void ContainerTypeMap::registerRule( const string& match, const string& kindSpelling,
@@ -41,7 +41,7 @@ namespace sw
 
 	const ContainerTypeRule* ContainerTypeMap::match( const std::string_view clangTypeSpelling ) const
 	{
-		for ( const ContainerTypeRule& rule : _rules )
+		for ( const ContainerTypeRule& rule : _listRules )
 		{
 			if ( clangTypeSpelling.find( rule._match ) != std::string_view::npos )
 				return &rule;

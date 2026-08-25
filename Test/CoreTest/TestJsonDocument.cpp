@@ -3,7 +3,6 @@
 #include "Engine/Utility/Json/JsonDocument.h"
 
 #include "TestFramework/TestFramework.h"
-
 // ------------------------------------------------------------------------------
 // 1) Core_Json — 파싱·탐색과 대소문자 무시 키
 // ------------------------------------------------------------------------------
@@ -91,7 +90,7 @@ SW_TEST_CASE( Core_Json, WriteAndDumpRoundtrip )
  */
 SW_TEST_CASE( Core_Json, BooleanFloatAndDeepNestedObject )
 {
-	const char* jsonStr = R"({
+	const utf8* jsonStr = R"({
 		"bEnabled": true,
 		"bPaused": false,
 		"scale": 2.75,

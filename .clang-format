@@ -19,10 +19,10 @@ FixNamespaceComments: true
 # PreprocessorConditionalComment: true  # not a clang-format option (VS leftover)
 IndentCaseLabels: true
 IndentWidth: 4
-MaxEmptyLinesToKeep: 10
+MaxEmptyLinesToKeep: 1
 NamespaceIndentation: All
 PointerAlignment: Left
-SortIncludes: CaseSensitive
+SortIncludes: Never
 IncludeCategories:
   - Regex:           '^"pch\.h"'
     Priority:        -1

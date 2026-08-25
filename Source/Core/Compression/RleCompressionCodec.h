@@ -1,7 +1,5 @@
 #pragma once
-
 #include "Core/Compression/ICompressionCodec.h"
-
 namespace sw
 {
 	/**
@@ -20,7 +18,7 @@ namespace sw
 		RleCompressionCodec& operator=( RleCompressionCodec&& ) noexcept = default;
 
 		virtual CompressionCodecType getCodecType() const override;
-		virtual const char*			 getCodecName() const override;
+		virtual const utf8*			 getCodecName() const override;
 		virtual size_t				 compressBound( size_t uncompressedSize ) const override;
 
 		virtual bool compress( const void* pSrc,

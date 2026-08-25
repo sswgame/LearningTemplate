@@ -23,7 +23,6 @@
 
 #include <chrono>
 #include <thread>
-
 namespace
 {
 	void* getGameService( sw::GameServiceId id )
@@ -105,9 +104,9 @@ namespace sw
  */
 SW_TEST_CASE( Architecture, AllRHIModulesAbiStampExports )
 {
-	const char* kRhiModules[] = { "RHI_DX11", "RHI_DX12", "RHI_Vulkan", "RHI_GL" };
+	const utf8* kRhiModules[] = { "RHI_DX11", "RHI_DX12", "RHI_Vulkan", "RHI_GL" };
 
-	for ( const char* modName : kRhiModules )
+	for ( const utf8* modName : kRhiModules )
 	{
 		const sw::string path = sw::modulePath( modName );
 		if ( sw::FileUtil::fileExists( path ) == false )
@@ -137,7 +136,6 @@ SW_TEST_CASE( Architecture, AllRHIModulesAbiStampExports )
 		sw::FileUtil::unloadDynamicLibrary( handle );
 	}
 }
-
 
 /**
  * @brief [Architecture] 원본 없으면 LiveReload 가 이전 모듈을 유지
@@ -275,7 +273,6 @@ SW_TEST_CASE( Architecture, LiveReloadSuccessfulShadowReload )
 		if ( onAfterCalled )
 			break;
 	}
-
 
 	SW_EXPECT_FALSE( manager.isGraphBroken() );
 	SW_EXPECT_TRUE( onBeforeCalled );
@@ -423,9 +420,9 @@ SW_TEST_CASE( Architecture, LiveReloadEditorModule )
  */
 SW_TEST_CASE( Architecture, LiveReloadGenreKitsIndividuallyAndCascaded )
 {
-	const char* kKits[] = { "GF_Overworld", "GF_TurnBattle", "GF_ActionCombat" };
+	const utf8* kKits[] = { "GF_Overworld", "GF_TurnBattle", "GF_ActionCombat" };
 
-	for ( const char* kitName : kKits )
+	for ( const utf8* kitName : kKits )
 	{
 		const sw::string kitPath = sw::modulePath( kitName );
 		if ( sw::FileUtil::fileExists( kitPath ) == false )
@@ -565,11 +562,11 @@ SW_TEST_CASE( Architecture, MaterialCacheAcquireReleaseNoGpu )
  */
 SW_TEST_CASE( Architecture, RHIBackendDynamicSwapAndReload )
 {
-	const char* const kRhiBackends[] = { "RHI_DX11", "RHI_DX12", "RHI_Vulkan", "RHI_GL" };
+	const utf8* const kRhiBackends[] = { "RHI_DX11", "RHI_DX12", "RHI_Vulkan", "RHI_GL" };
 
 	for ( int32 cycle = 0; cycle < 2; ++cycle )
 	{
-		for ( const char* backendName : kRhiBackends )
+		for ( const utf8* backendName : kRhiBackends )
 		{
 			const sw::string modPath = sw::modulePath( backendName );
 			if ( sw::FileUtil::fileExists( modPath ) == false )
@@ -601,7 +598,6 @@ SW_TEST_CASE( Architecture, RHIBackendDynamicSwapAndReload )
 #endif // !SW_SHIPPING
 
 #if defined( SW_SHIPPING )
-
 
 // ------------------------------------------------------------------------------
 // 2) ModuleAPI — fillGameAPI / fillEditorAPI
@@ -726,9 +722,9 @@ SW_TEST_CASE( ModuleAPI, FullGameSceneAndComponentLifecycle )
 		api.update( game, 0.016f );
 	}
 
-	auto waitForSceneLoad = [&]( const char* path ) -> sw::Scene*
+	auto waitForSceneLoad = [&]( const utf8* path ) -> sw::Scene*
 	{
-		auto pathMatches = []( const sw::string& a, const char* b ) -> bool
+		auto pathMatches = []( const sw::string& a, const utf8* b ) -> bool
 		{
 			if ( b == nullptr || a.empty() )
 				return false;
@@ -845,7 +841,7 @@ SW_TEST_CASE( ModuleAPI, FillEditorAPI )
  */
 SW_TEST_CASE( ModuleAPI, GameFrameworkKitsModuleTypeRegistration )
 {
-	for ( const char* kitName : { "GF_Overworld", "GF_TurnBattle", "GF_ActionCombat" } )
+	for ( const utf8* kitName : { "GF_Overworld", "GF_TurnBattle", "GF_ActionCombat" } )
 	{
 		void* handle = sw::loadModule( kitName );
 		if ( handle )

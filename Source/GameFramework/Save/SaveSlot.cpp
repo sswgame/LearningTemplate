@@ -8,7 +8,6 @@
 #include "Engine/Utility/File/KeyValueFile.h"
 
 #include "GameFramework/Save/ISaveGame.h"
-
 namespace sw
 {
 	namespace
@@ -178,7 +177,7 @@ namespace sw
 		BLOCK( "Parse Flags" )
 		{
 			_mapFlags.clear();
-			constexpr const char* kFlagPrefix = "flag.";
+			constexpr const utf8* kFlagPrefix = "flag.";
 			const size_t		  prefixLen	  = StringUtil::strlen( kFlagPrefix );
 			for ( const auto& [key, val] : map )
 			{

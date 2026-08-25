@@ -9,11 +9,13 @@
 sw_addExecutable(ReflectionTest
     NO_INSTALL
     LINK_LIBRARIES Engine TestFramework
+    EXCLUDE "^.*Fail.*\\.cpp$"
 )
 sw_setLogTag(ReflectionTest Test)
 sw_configurePch(ReflectionTest)
 
 sw_addReflectionStep(ReflectionTest
+    HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/TestSampleActor.h"
     INCLUDES
         "${CMAKE_SOURCE_DIR}/Source"
         "${CMAKE_SOURCE_DIR}/Test"
@@ -39,6 +41,7 @@ if(BUILD_TESTING)
     sw_setLogTag(CompileFail_ComponentVariable Test)
     sw_configurePch(CompileFail_ComponentVariable)
     sw_addReflectionStep(CompileFail_ComponentVariable
+        HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/FailComponent.h"
         INCLUDES "${CMAKE_SOURCE_DIR}/Source" "${CMAKE_SOURCE_DIR}/Test"
     )
     set_target_properties(CompileFail_ComponentVariable PROPERTIES EXCLUDE_FROM_ALL TRUE)

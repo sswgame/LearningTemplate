@@ -1,6 +1,5 @@
 #include "pch.h"
 
-#include "GameFramework/Data/GameData.h"
 #include "GameFramework/Kits/TurnBattle/SaveGame.h"
 
 #include "Core/String/StringBuilder.h"
@@ -8,6 +7,7 @@
 
 #include "Engine/Utility/File/KeyValueFile.h"
 
+#include "GameFramework/Data/GameData.h"
 namespace sw
 {
 
@@ -26,7 +26,6 @@ namespace sw
 			fs.append( pField );
 			return fs;
 		}
-
 
 	} // namespace
 
@@ -148,7 +147,7 @@ namespace sw
 			ensureStarterParty();
 
 		_mapFlags.clear();
-		constexpr const char* kFlagPrefix = "flag.";
+		constexpr const utf8* kFlagPrefix = "flag.";
 		const size_t		  prefixLen	  = StringUtil::strlen( kFlagPrefix );
 		for ( const auto& [key, val] : map )
 		{

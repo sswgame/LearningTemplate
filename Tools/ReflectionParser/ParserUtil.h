@@ -7,8 +7,6 @@
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
-
-
 namespace sw
 {
 	// ------------------------------------------------------------------------------
@@ -36,9 +34,9 @@ namespace sw
 		int32		   depth	  = 0;
 		size_t		   tokenStart = 0;
 
-		for ( size_t i = 0; i < inner.size(); ++i )
+		for ( size_t index = 0; index < inner.size(); ++index )
 		{
-			const utf8 c = inner[i];
+			const utf8 c = inner[index];
 			if ( c == '<' )
 				++depth;
 			else if ( c == '>' )
@@ -46,13 +44,13 @@ namespace sw
 
 			if ( c == ',' && depth == 0 )
 			{
-				if ( i > tokenStart )
+				if ( index > tokenStart )
 				{
-					std::string_view token = StringUtil::trim( inner.substr( tokenStart, i - tokenStart ) );
+					std::string_view token = StringUtil::trim( inner.substr( tokenStart, index - tokenStart ) );
 					if ( token.empty() == false )
 						out.emplace_back( token );
 				}
-				tokenStart = i + 1;
+				tokenStart = index + 1;
 			}
 		}
 		if ( inner.size() > tokenStart )

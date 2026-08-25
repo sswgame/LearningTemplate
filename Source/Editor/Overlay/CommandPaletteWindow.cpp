@@ -1,7 +1,8 @@
 #include "pch.h"
 
-#include "Editor/Common/EditorContext.h"
 #include "Editor/Overlay/CommandPaletteWindow.h"
+
+#include "Editor/Common/EditorContext.h"
 #include "Editor/Windows/EditorWindowRegistry.h"
 #include "Editor/Workspace/EditorWorkspace.h"
 #include "Editor/Workspace/SelectionManager.h"
@@ -13,9 +14,8 @@
 
 #include "RuntimeAPI/EditorService.h"
 
-#include <imgui.h>
 #include <algorithm>
-
+#include <imgui.h>
 namespace sw
 {
 	namespace
@@ -38,8 +38,8 @@ namespace sw
 			size_t patternIdx = 0;
 			for ( size_t textIdx = 0; textIdx < text.size(); ++textIdx )
 			{
-				const char tc = static_cast<char>( std::tolower( static_cast<unsigned char>( text[textIdx] ) ) );
-				const char pc = static_cast<char>( std::tolower( static_cast<unsigned char>( pattern[patternIdx] ) ) );
+				const utf8 tc = static_cast<utf8>( std::tolower( static_cast<uint8>( text[textIdx] ) ) );
+				const utf8 pc = static_cast<utf8>( std::tolower( static_cast<uint8>( pattern[patternIdx] ) ) );
 				if ( tc == pc )
 				{
 					++patternIdx;
@@ -193,7 +193,7 @@ namespace sw
 
 		ImGuiViewport* pViewport = ImGui::GetMainViewport();
 		const ImVec2   center	 = pViewport ? ImVec2{ pViewport->Pos.x + pViewport->Size.x * 0.5f,
-													   pViewport->Pos.y + pViewport->Size.y * 0.28f }
+												   pViewport->Pos.y + pViewport->Size.y * 0.28f }
 											 : ImVec2{ 400.0f, 200.0f };
 
 		constexpr float32 paletteWidth	= 580.0f;

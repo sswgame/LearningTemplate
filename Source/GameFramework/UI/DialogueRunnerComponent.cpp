@@ -7,7 +7,6 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Utility/Json/JsonDocument.h"
-
 namespace sw
 {
 	DialogueRunnerComponent::DialogueRunnerComponent()
@@ -153,7 +152,7 @@ namespace sw
 								else if ( pinOffset >= 10 )
 								{
 									// Choice Pins (kPinChoiceBase = 10 + index)
-									const int32 choiceIndex				   = pinOffset - 10;
+									const int32 choiceIndex					= pinOffset - 10;
 									srcNode._mapChoiceToNodeId[choiceIndex] = targetNodeId;
 								}
 							}
@@ -363,7 +362,7 @@ namespace sw
 		while ( flagKey.empty() == false && ( flagKey.back() == ' ' || flagKey.back() == '\t' ) )
 			flagKey.pop_back();
 
-		constexpr const char* kPrefix = "flag.";
+		constexpr const utf8* kPrefix = "flag.";
 		if ( flagKey.rfind( kPrefix, 0 ) == 0 )
 			flagKey = flagKey.substr( StringUtil::strlen( kPrefix ) );
 
@@ -383,7 +382,7 @@ namespace sw
 		if ( _pSaveSlot != nullptr )
 		{
 			// Example action: set_flag:quest_started:1
-			constexpr const char* kSetFlag = "set_flag:";
+			constexpr const utf8* kSetFlag = "set_flag:";
 			if ( actionCmd.rfind( kSetFlag, 0 ) == 0 )
 			{
 				const string rest  = actionCmd.substr( StringUtil::strlen( kSetFlag ) );

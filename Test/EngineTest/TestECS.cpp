@@ -1,8 +1,11 @@
 #include "pch.h"
 
+#include "Core/Container/vector.h"
+
 #include "Engine/ECS/ArchetypeChunkPool.h"
 #include "Engine/ECS/Registry.h"
 #include "Engine/ECS/View.h"
+#include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Spatial/BVHTree3D.h"
 #include "Engine/Spatial/SpatialHashGrid2D.h"
 
@@ -10,11 +13,7 @@
 
 #include <atomic>
 #include <thread>
-
 using namespace sw;
-
-#include "Core/Container/vector.h"
-#include "Engine/Reflection/ReflectionCore.h"
 
 // ------------------------------------------------------------------------------
 // 0) 헬퍼 — Position / Velocity 테스트 컴포넌트
@@ -145,7 +144,7 @@ SW_TEST_CASE( ECS, View_Iteration )
 	reg.emplace<Position>( e3, 3.0f, 0.0f, 0.0f );
 	reg.emplace<Velocity>( e3, 0.0f, 1.0f, 0.0f );
 
-	int matchCount{ 0 };
+	int32 matchCount{ 0 };
 
 	View<Position, Velocity> view( reg );
 	view.each( [&]( Entity e, Position& /*pos*/, Velocity& /*vel*/ )
@@ -239,17 +238,17 @@ SW_TEST_CASE( ECS, ConcurrentReadWithCommandBufferDestroy )
 	std::atomic<bool>  stop{ false };
 	std::atomic<int32> reads{ 0 };
 	std::thread		   reader( [&]()
-	{
-		started.store( true, std::memory_order_release );
-		while ( stop.load( std::memory_order_acquire ) == false )
-		{
-			for ( size_t entityIndex = 1; entityIndex < constEnts.size(); entityIndex += 2 )
-			{
-				if ( reg.has<Position>( constEnts[entityIndex] ) )
-					reads.fetch_add( 1, std::memory_order_relaxed );
-			}
-		}
-	} );
+	   {
+		   started.store( true, std::memory_order_release );
+		   while ( stop.load( std::memory_order_acquire ) == false )
+		   {
+			   for ( size_t entityIndex = 1; entityIndex < constEnts.size(); entityIndex += 2 )
+			   {
+				   if ( reg.has<Position>( constEnts[entityIndex] ) )
+					   reads.fetch_add( 1, std::memory_order_relaxed );
+			   }
+		   }
+	   } );
 
 	while ( started.load( std::memory_order_acquire ) == false )
 		std::this_thread::yield();
@@ -353,10 +352,10 @@ SW_TEST_CASE( ECS, WithComponentHelper )
 	const Registry& constReg = reg;
 	bool			bConstCalled{ false };
 	bool			bConstFound = constReg.withComponentConst<Position>( e, [&]( const Position& pos )
-	{
-		bConstCalled = true;
-		SW_EXPECT_EQUAL( 99.0f, pos.x );
-	} );
+			   {
+		   bConstCalled = true;
+		   SW_EXPECT_EQUAL( 99.0f, pos.x );
+	   } );
 
 	SW_EXPECT_TRUE( bConstFound );
 	SW_EXPECT_TRUE( bConstCalled );
@@ -632,9 +631,9 @@ SW_TEST_CASE( ECS, BVHTree3D_AABBRaySphereAndFrustumQueries )
 	// 1) AABB Query
 	vector<Entity> listAabb;
 	AABB		   testBox{
-		{-1.0f, -1.0f,	0.0f},
-		{ 6.0f,	5.0f, 15.0f}
-	  };
+				  {-1.0f, -1.0f,  0.0f},
+				  { 6.0f,  5.0f, 15.0f}
+	};
 	bvh.queryAABB( testBox, listAabb );
 	SW_EXPECT_EQUAL( 2u, static_cast<uint32>( listAabb.size() ) );
 
@@ -745,7 +744,7 @@ SW_TEST_CASE( ECS, Emplace_ReturnsComponentHandle_DeferredAndImmediate )
  */
 SW_TEST_CASE( ECS, Registry_MassEntityCreationDestruction_ShrinkToFit )
 {
-	Registry reg;
+	Registry		 reg;
 	constexpr size_t totalEntities = 5000;
 	vector<Entity>	 listEntities;
 	listEntities.reserve( totalEntities );
@@ -796,7 +795,7 @@ SW_TEST_CASE( ECS, Registry_MassEntityCreationDestruction_ShrinkToFit )
  */
 SW_TEST_CASE( ECS, Registry_ClearAndShrinkReclaimsMemory )
 {
-	Registry reg;
+	Registry		 reg;
 	constexpr size_t totalEntities = 2000;
 	vector<Entity>	 listEntities;
 	listEntities.reserve( totalEntities );
@@ -887,15 +886,15 @@ SW_TEST_CASE( ECS, ArchetypeChunkPoolMultiAlignmentAndLifecycle )
 	SW_EXPECT_TRUE( ( reinterpret_cast<uintptr_t>( pCol3 ) % alignof( Comp16B ) ) == 0 );
 
 	// 데이터 쓰기 및 읽기
-	Comp1B* pComp0 = static_cast<Comp1B*>( pChunk->getComponent( 0, rowIdx0 ) );
-	Comp4B* pComp1 = static_cast<Comp4B*>( pChunk->getComponent( 1, rowIdx0 ) );
-	Comp8B* pComp2 = static_cast<Comp8B*>( pChunk->getComponent( 2, rowIdx0 ) );
+	Comp1B*	 pComp0 = static_cast<Comp1B*>( pChunk->getComponent( 0, rowIdx0 ) );
+	Comp4B*	 pComp1 = static_cast<Comp4B*>( pChunk->getComponent( 1, rowIdx0 ) );
+	Comp8B*	 pComp2 = static_cast<Comp8B*>( pChunk->getComponent( 2, rowIdx0 ) );
 	Comp16B* pComp3 = static_cast<Comp16B*>( pChunk->getComponent( 3, rowIdx0 ) );
 
-	pComp0->_val = 0xFE;
-	pComp1->_id = 999;
+	pComp0->_val   = 0xFE;
+	pComp1->_id	   = 999;
 	pComp2->_ticks = 5555ULL;
-	pComp3->_v[0] = 7.7f;
+	pComp3->_v[0]  = 7.7f;
 
 	SW_EXPECT_EQUAL( uint8( 0xFE ), static_cast<const Comp1B*>( pChunk->getComponent( 0, rowIdx0 ) )->_val );
 	SW_EXPECT_EQUAL( uint32( 999 ), static_cast<const Comp4B*>( pChunk->getComponent( 1, rowIdx0 ) )->_id );
@@ -906,4 +905,3 @@ SW_TEST_CASE( ECS, ArchetypeChunkPoolMultiAlignmentAndLifecycle )
 	SW_EXPECT_TRUE( pool.freeEntity( chunkIdx0, rowIdx0 ) );
 	SW_EXPECT_EQUAL( size_t( 0 ), pool.getTotalEntities() );
 }
-

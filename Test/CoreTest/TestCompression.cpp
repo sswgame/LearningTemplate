@@ -6,7 +6,6 @@
 #include "Core/Compression/RleCompressionCodec.h"
 
 #include "TestFramework/TestFramework.h"
-
 // ------------------------------------------------------------------------------
 // 1) Core_Compression — Null 코덱 검증
 // ------------------------------------------------------------------------------
@@ -30,7 +29,7 @@ SW_TEST_CASE( Core_Compression, NullCodecPassthrough )
 	SW_EXPECT_TRUE( codec.decompress( compressed.data(), compressedSize, decompressed.data(), decompressed.size(), decompressedSize ) );
 	SW_EXPECT_EQUAL( original.size(), decompressedSize );
 
-	const sw::string restored( reinterpret_cast<const char*>( decompressed.data() ), decompressedSize );
+	const sw::string restored( reinterpret_cast<const utf8*>( decompressed.data() ), decompressedSize );
 	SW_EXPECT_EQUAL( original, restored );
 }
 
@@ -112,7 +111,7 @@ SW_TEST_CASE( Core_Compression, CompressionStreamRoundtrip )
 	SW_EXPECT_TRUE( sw::CompressionStream::decompressBuffer( compressedStream.data(), compressedStream.size(), decompressed ) );
 	SW_EXPECT_EQUAL( original.size(), decompressed.size() );
 
-	const sw::string restored( reinterpret_cast<const char*>( decompressed.data() ), decompressed.size() );
+	const sw::string restored( reinterpret_cast<const utf8*>( decompressed.data() ), decompressed.size() );
 	SW_EXPECT_EQUAL( original, restored );
 
 	// 4) 손상된 데이터 방어 검증 (체크섬 불일치)

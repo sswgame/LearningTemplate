@@ -7,7 +7,6 @@
 #include "GameFramework/UI/DialogueRunnerComponent.h"
 
 #include "TestFramework/TestFramework.h"
-
 using namespace sw;
 
 // ------------------------------------------------------------------------------
@@ -137,7 +136,7 @@ SW_TEST_CASE( GameFrameworkTest, TransitionOrchestratorBattleAndReturnFlow )
 
 	TransitionCallbacks callbacks{};
 	callbacks.startBattle		 = Delegate<void()>::create( [&]()
-	{ bBattleStarted = true; } );
+	   { bBattleStarted = true; } );
 	callbacks.finishBattleReturn = Delegate<void()>::create( [&]()
 	{ bBattleReturned = true; } );
 	orchestrator.setCallbacks( std::move( callbacks ) );
@@ -259,7 +258,7 @@ SW_TEST_CASE( GameFrameworkTest, SaveSlotChecksumValidation )
  */
 SW_TEST_CASE( GameFrameworkTest, StringUtilCrc32StandardVector )
 {
-	constexpr const char* kTestStr = "123456789";
+	constexpr const utf8* kTestStr = "123456789";
 	const uint32		  crc	   = StringUtil::computeCrc32( kTestStr, 9 );
 	SW_EXPECT_EQUAL( 0xCBF43926u, crc );
 }

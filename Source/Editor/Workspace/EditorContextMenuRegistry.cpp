@@ -1,10 +1,10 @@
 #include "pch.h"
 
-#include "Editor/Common/EditorContext.h"
 #include "Editor/Workspace/EditorContextMenuRegistry.h"
 
-#include <imgui.h>
+#include "Editor/Common/EditorContext.h"
 
+#include <imgui.h>
 namespace sw
 {
 	namespace
@@ -63,7 +63,7 @@ namespace sw
 			if ( item._enabledPredicate.isBound() )
 				bEnabled = item._enabledPredicate();
 
-			const char* pShortcut = item._shortcut.empty() ? nullptr : item._shortcut.c_str();
+			const utf8* pShortcut = item._shortcut.empty() ? nullptr : item._shortcut.c_str();
 
 			// Submenu support (e.g. "Create/3D Object")
 			const size_t slashPos = item._path.find( '/' );

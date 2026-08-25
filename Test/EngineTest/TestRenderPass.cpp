@@ -2,13 +2,26 @@
 
 #include "Core/Memory/FrameArenaAllocator.h"
 
+#include "Engine/Graphics/Material/Material.h"
+#include "Engine/Graphics/Mesh/Mesh.h"
+#include "Engine/Graphics/RHI/IRHIDevice.h"
+#include "Engine/Graphics/RHI/IRHISwapChain.h"
+#include "Engine/Graphics/RHI/RHI.h"
+#include "Engine/Graphics/RHI/RHICapabilities.h"
+#include "Engine/Graphics/RenderPass/FrameRenderer.h"
+#include "Engine/Graphics/RenderPass/GpuScene.h"
+#include "Engine/Graphics/RenderPass/RenderGraph.h"
 #include "Engine/Graphics/RenderPass/RenderPassManager.h"
 #include "Engine/Graphics/RenderPass/RenderPassResource.h"
+#include "Engine/Graphics/RenderPass/RenderPipelineResource.h"
+#include "Engine/Object/Component/3D/MeshComponent.h"
+#include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Scene/Scene.h"
 #include "Engine/Utility/Task/TaskManager.h"
+#include "Engine/Window/IWindow.h"
 
 #include "TestFramework/TestFramework.h"
-
 // ------------------------------------------------------------------------------
 // 1) RenderPassTest — XML·그래프 위상
 // ------------------------------------------------------------------------------
@@ -42,11 +55,6 @@ SW_TEST_CASE( RenderPassTest, XmlSerializationRoundtrip )
 
 	sw::FileUtil::removeFile( testPath );
 }
-
-#include "Engine/Graphics/Mesh/Mesh.h"
-#include "Engine/Graphics/RenderPass/RenderPipelineResource.h"
-#include "Engine/Object/Component/3D/MeshComponent.h"
-#include "Engine/Object/Component/CameraComponent.h"
 
 /**
  * @brief [RenderPassTest] 단위 큐브 메시 컴포넌트
@@ -159,8 +167,6 @@ SW_TEST_CASE( RenderPassTest, PipelineRejectsLegacyRenderPassDescRoot )
 	SW_EXPECT_FALSE( loaded.loadFromXmlFile( testPath ) );
 	sw::FileUtil::removeFile( testPath );
 }
-
-#include "Engine/Graphics/RenderPass/RenderGraph.h"
 
 // ------------------------------------------------------------------------------
 // 2) RenderGraph — 위상·사이클·컬링·export
@@ -308,11 +314,6 @@ SW_TEST_CASE( RenderPassTest, RenderGraphExecuteParallel )
 	taskManager.shutdown();
 }
 
-#include "Engine/Graphics/Material/Material.h"
-#include "Engine/Graphics/RenderPass/GpuScene.h"
-#include "Engine/Scene/Scene.h"
-
-
 /**
  * @brief GpuScene: opaque 머지, transparent 연속 머지 + back-to-front, 빌드 캐시
  */
@@ -327,7 +328,7 @@ SW_TEST_CASE( RenderPassTest, GpuSceneBuildBatchesAndSortTransparent )
 	sw::shared_ptr<sw::Mesh> cube = sw::Mesh::createUnitCube();
 	SW_ASSERT_NOT_NULL( cube.get() );
 
-	auto addMeshAt = [&]( const utf8* name, float x, float z, sw::RHIBlendMode blend )
+	auto addMeshAt = [&]( const utf8* name, float32 x, float32 z, sw::RHIBlendMode blend )
 	{
 		sw::GameObject* go = objects->createGameObject( sw::hashed_string( name ) );
 		SW_ASSERT_NOT_NULL( go );
@@ -416,14 +417,6 @@ SW_TEST_CASE( RenderPassTest, GpuSceneTransparentDifferentKeysStaySeparate )
 	SW_EXPECT_EQUAL( 2u, static_cast<uint32>( gpuScene.getTransparentBatches().size() ) );
 }
 
-#include "Engine/Graphics/RHI/IRHIDevice.h"
-#include "Engine/Graphics/RHI/IRHISwapChain.h"
-#include "Engine/Graphics/RHI/RHI.h"
-#include "Engine/Graphics/RHI/RHICapabilities.h"
-#include "Engine/Graphics/RenderPass/FrameRenderer.h"
-#include "Engine/Window/IWindow.h"
-
-
 namespace
 {
 	bool tryInitDeviceForFrameRenderer( sw::RHIBackend backend, sw::unique_ptr<sw::IWindow>& outWindow,
@@ -464,7 +457,7 @@ SW_TEST_CASE( RenderPassTest, FrameRendererInitializeAndExecuteSmoke )
 	sw::unique_ptr<sw::IWindow>	   window;
 	sw::shared_ptr<sw::IRHIDevice> device;
 	const sw::RHIBackend		   backends[] = {
-		sw::RHIBackend::DirectX11, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL, sw::RHIBackend::DirectX12 };
+		  sw::RHIBackend::DirectX11, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL, sw::RHIBackend::DirectX12 };
 	bool bOk{ false };
 	for ( sw::RHIBackend backend : backends )
 	{
@@ -612,26 +605,26 @@ SW_TEST_CASE( RenderPassTest, AutomaticPassCulling )
 SW_TEST_CASE( RenderPassTest, RenderGraphExecutionAndSerialFallback )
 {
 	sw::RenderGraph graph;
-	uint32 passAExecuted = 0;
-	uint32 passBExecuted = 0;
+	uint32			passAExecuted = 0;
+	uint32			passBExecuted = 0;
 
 	graph.addPass(
 		sw::hashed_string( "PassA" ),
 		{},
 		{ sw::hashed_string( "ResA" ) },
 		SW_DELEGATE_LAMBDA( sw::RenderGraphPassExecuteFn, [&]( const sw::RenderGraphPassContext& )
-		{
-			++passAExecuted;
-		} ) );
+	{
+		++passAExecuted;
+	} ) );
 
 	graph.addPass(
 		sw::hashed_string( "PassB" ),
 		{ sw::hashed_string( "ResA" ) },
 		{ sw::hashed_string( "FinalColor" ) },
 		SW_DELEGATE_LAMBDA( sw::RenderGraphPassExecuteFn, [&]( const sw::RenderGraphPassContext& )
-		{
-			++passBExecuted;
-		} ) );
+	{
+		++passBExecuted;
+	} ) );
 
 	SW_EXPECT_TRUE( graph.compile() );
 

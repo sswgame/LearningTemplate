@@ -7,12 +7,11 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/MatrixMath.h"
-
 namespace sw
 {
 	/**
 	 * @class InstanceBuffer
-	 * @brief 드로우 업로드용 인스턴스 float4x4 (또는 raw float)를 모읍니다.
+	 * @brief 드로우 업로드용 인스턴스 float4x4 (또는 raw float32)를 모읍니다.
 	 */
 	class SW_API InstanceBuffer
 	{
@@ -27,7 +26,7 @@ namespace sw
 
 		/** @brief 행렬을 넣습니다. */
 		void push( const float4x4& matrix );
-		/** @brief float 배열을 행렬로 넣습니다. */
+		/** @brief float32 배열을 행렬로 넣습니다. */
 		void pushFloats( const float32* pValues, uint32 floatCount );
 
 		/** @brief 행렬 배열 포인터. 비었으면 nullptr. */
@@ -39,7 +38,7 @@ namespace sw
 		/** @brief 비었는지 반환합니다. */
 		bool empty() const { return _listMatrices.empty(); }
 
-		/** @brief 행렬을 float 배열로 봅니다 (인스턴스당 16개). */
+		/** @brief 행렬을 float32 배열로 봅니다 (인스턴스당 16개). */
 		const float32* floats() const { return _listMatrices.empty() ? nullptr : reinterpret_cast<const float32*>( _listMatrices.data() ); }
 		/** @brief 개수를 반환합니다. */
 		uint32 floatCount() const { return count() * 16u; }

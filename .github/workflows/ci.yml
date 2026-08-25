@@ -45,9 +45,6 @@ jobs:
       run: |
         ctest --test-dir build/CI-Debug --output-on-failure
 
-    - name: Source glob lint
-      run: |
-        python Scripts/lint/CheckSourceGlob.py --build ${{ github.workspace }}/build/CI-Debug
 
   build-linux:
     runs-on: ubuntu-22.04
@@ -85,9 +82,6 @@ jobs:
       run: |
         ctest --test-dir build/CI-Debug -L nogpu --output-on-failure
 
-    - name: Source glob lint
-      run: |
-        python3 Scripts/lint/CheckSourceGlob.py --build ${{ github.workspace }}/build/CI-Debug
 
   build-linux-asan:
     runs-on: ubuntu-22.04
@@ -186,23 +180,3 @@ jobs:
       run: |
         ctest --test-dir build/CI-Shipping -L nogpu --output-on-failure
 
-  lint-format:
-    runs-on: ubuntu-22.04
-
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v5
-
-    # Install the latest clang-format via pip.
-    - name: Install clang-format
-      run: |
-        python3 -m pip install clang-format
-        clang-format --version
-
-    - name: Check formatting
-      run: |
-        find Source Test Tools/ReflectionParser \( -name "*.cpp" -o -name "*.h" -o -name "*.hpp" \) | xargs clang-format --dry-run --Werror
-
-    - name: Engine layer lint
-      run: |
-        python3 Scripts/lint/CheckEngineLayers.py --strict

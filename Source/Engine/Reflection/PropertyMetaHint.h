@@ -1,8 +1,6 @@
 #pragma once
-
 #include "Engine/EngineMinimal.h"
 #include "Engine/Reflection/ReflectionTypes.h"
-
 namespace sw
 {
 	/**
@@ -41,6 +39,6 @@ namespace sw
 		/**
 		 * @brief 에셋 피커가 허용할 확장자 필터를 반환합니다.
 		 */
-		static const char* getAssetFilter( const PropertyMetadata& meta );
+		static const utf8* getAssetFilter( const PropertyMetadata& meta );
 	};
 } // namespace sw

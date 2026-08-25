@@ -2,7 +2,6 @@
 #include "Core/Common/Types.h"
 
 #include <type_traits>
-
 namespace sw
 {
 	// ------------------------------------------------------------------------------
@@ -13,7 +12,7 @@ namespace sw
 	{
 	private:
 		template <typename T>
-		static constexpr decltype( &T::tick, std::true_type{} ) check( int );
+		static constexpr decltype( &T::tick, std::true_type{} ) check( int32 );
 
 		template <typename T>
 		static constexpr std::false_type check( ... );
@@ -27,7 +26,7 @@ namespace sw
 	{
 	private:
 		template <typename T>
-		static constexpr decltype( &T::beginPlay, std::true_type{} ) check( int );
+		static constexpr decltype( &T::beginPlay, std::true_type{} ) check( int32 );
 
 		template <typename T>
 		static constexpr std::false_type check( ... );
@@ -41,7 +40,7 @@ namespace sw
 	{
 	private:
 		template <typename T>
-		static constexpr decltype( &T::endPlay, std::true_type{} ) check( int );
+		static constexpr decltype( &T::endPlay, std::true_type{} ) check( int32 );
 
 		template <typename T>
 		static constexpr std::false_type check( ... );
@@ -55,7 +54,7 @@ namespace sw
 	{
 	private:
 		template <typename T>
-		static constexpr decltype( &T::onTick, std::true_type{} ) check( int );
+		static constexpr decltype( &T::onTick, std::true_type{} ) check( int32 );
 
 		template <typename T>
 		static constexpr std::false_type check( ... );
@@ -69,7 +68,7 @@ namespace sw
 	{
 	private:
 		template <typename T>
-		static constexpr decltype( &T::onBeginPlay, std::true_type{} ) check( int );
+		static constexpr decltype( &T::onBeginPlay, std::true_type{} ) check( int32 );
 
 		template <typename T>
 		static constexpr std::false_type check( ... );
@@ -83,7 +82,7 @@ namespace sw
 	{
 	private:
 		template <typename T>
-		static constexpr decltype( &T::onEndPlay, std::true_type{} ) check( int );
+		static constexpr decltype( &T::onEndPlay, std::true_type{} ) check( int32 );
 
 		template <typename T>
 		static constexpr std::false_type check( ... );
@@ -97,7 +96,7 @@ namespace sw
 	{
 	private:
 		template <typename T>
-		static constexpr decltype( &T::owner, std::true_type{} ) check( int );
+		static constexpr decltype( &T::owner, std::true_type{} ) check( int32 );
 
 		template <typename T>
 		static constexpr std::false_type check( ... );
@@ -111,7 +110,7 @@ namespace sw
 	{
 	private:
 		template <typename T>
-		static constexpr decltype( std::declval<T>().isActive(), std::true_type{} ) check( int );
+		static constexpr decltype( std::declval<T>().isActive(), std::true_type{} ) check( int32 );
 
 		template <typename T>
 		static constexpr std::false_type check( ... );
@@ -125,7 +124,7 @@ namespace sw
 	{
 	private:
 		template <typename T>
-		static constexpr decltype( std::declval<T>().isPendingKill(), std::true_type{} ) check( int );
+		static constexpr decltype( std::declval<T>().isPendingKill(), std::true_type{} ) check( int32 );
 
 		template <typename T>
 		static constexpr std::false_type check( ... );
@@ -139,7 +138,7 @@ namespace sw
 	{
 	private:
 		template <typename T>
-		static constexpr decltype( std::declval<T>().setOwner( static_cast<GameObject*>( nullptr ) ), std::true_type{} ) check( int );
+		static constexpr decltype( std::declval<T>().setOwner( static_cast<GameObject*>( nullptr ) ), std::true_type{} ) check( int32 );
 
 		template <typename T>
 		static constexpr std::false_type check( ... );

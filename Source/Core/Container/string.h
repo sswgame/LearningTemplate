@@ -8,7 +8,6 @@
 #include "Core/Memory/Memory.h"
 
 #include <string>
-
 namespace sw
 {
 #if defined( SW_ENABLE_STL_CONTAINER )
@@ -117,7 +116,7 @@ namespace sw
 		basic_string& operator=( const Base& other )
 		{
 			ScopedRaceWrite lockThis( _raceCtx );
-			Base::operator=( other );
+			Base::			operator=( other );
 			return *this;
 		}
 
@@ -125,7 +124,7 @@ namespace sw
 		basic_string& operator=( Base&& other ) noexcept
 		{
 			ScopedRaceWrite lockThis( _raceCtx );
-			Base::operator=( std::move( other ) );
+			Base::			operator=( std::move( other ) );
 			return *this;
 		}
 
@@ -136,7 +135,7 @@ namespace sw
 			{
 				ScopedRaceWrite lockThis( _raceCtx );
 				ScopedRaceRead	lockOther( other._raceCtx );
-				Base::operator=( static_cast<const Base&>( other ) );
+				Base::			operator=( static_cast<const Base&>( other ) );
 			}
 			return *this;
 		}
@@ -148,7 +147,7 @@ namespace sw
 			{
 				ScopedRaceWrite lockThis( _raceCtx );
 				ScopedRaceWrite lockOther( other._raceCtx );
-				Base::operator=( std::move( static_cast<Base&>( other ) ) );
+				Base::			operator=( std::move( static_cast<Base&>( other ) ) );
 			}
 			return *this;
 		}
@@ -157,7 +156,7 @@ namespace sw
 		basic_string& operator=( const CharT* s )
 		{
 			ScopedRaceWrite lockThis( _raceCtx );
-			Base::operator=( s );
+			Base::			operator=( s );
 			return *this;
 		}
 
@@ -165,7 +164,7 @@ namespace sw
 		basic_string& operator=( CharT ch )
 		{
 			ScopedRaceWrite lockThis( _raceCtx );
-			Base::operator=( ch );
+			Base::			operator=( ch );
 			return *this;
 		}
 
@@ -173,7 +172,7 @@ namespace sw
 		basic_string& operator=( std::initializer_list<CharT> ilist )
 		{
 			ScopedRaceWrite lockThis( _raceCtx );
-			Base::operator=( ilist );
+			Base::			operator=( ilist );
 			return *this;
 		}
 
@@ -182,7 +181,7 @@ namespace sw
 		basic_string& operator=( const StringViewLike& t )
 		{
 			ScopedRaceWrite lockThis( _raceCtx );
-			Base::operator=( t );
+			Base::			operator=( t );
 			return *this;
 		}
 
@@ -207,14 +206,14 @@ namespace sw
 		reference operator[]( size_type pos )
 		{
 			ScopedRaceWrite lock( _raceCtx );
-			return Base::operator[]( pos );
+			return Base::	operator[]( pos );
 		}
 
 		/** @brief 지정 위치의 원소를 반환합니다. */
 		const_reference operator[]( size_type pos ) const
 		{
 			ScopedRaceRead lock( _raceCtx );
-			return Base::operator[]( pos );
+			return Base::  operator[]( pos );
 		}
 
 		/** @brief 첫 원소를 반환합니다. */
@@ -578,7 +577,7 @@ namespace sw
 		basic_string& operator+=( const Base& str )
 		{
 			ScopedRaceWrite lockThis( _raceCtx );
-			Base::operator+=( str );
+			Base::			operator+=( str );
 			return *this;
 		}
 
@@ -729,7 +728,7 @@ namespace std
 		/** @brief 내용 바이트를 해시합니다. */
 		size_t operator()( const sw::string& s ) const noexcept { return hash<std::string_view>{}( std::string_view{ s.data(), s.size() } ); }
 		size_t operator()( std::string_view s ) const noexcept { return hash<std::string_view>{}( s ); }
-		size_t operator()( const char* s ) const noexcept { return hash<std::string_view>{}( std::string_view{ s } ); }
+		size_t operator()( const utf8* s ) const noexcept { return hash<std::string_view>{}( std::string_view{ s } ); }
 	};
 
 	/** @brief sw::wstring 을 unordered_map 키로 쓸 때 std::wstring_view 해시를 씁니다. */
@@ -740,6 +739,6 @@ namespace std
 		/** @brief 내용 바이트를 해시합니다. */
 		size_t operator()( const sw::wstring& s ) const noexcept { return hash<std::wstring_view>{}( std::wstring_view{ s.data(), s.size() } ); }
 		size_t operator()( std::wstring_view s ) const noexcept { return hash<std::wstring_view>{}( s ); }
-		size_t operator()( const wchar_t* s ) const noexcept { return hash<std::wstring_view>{}( std::wstring_view{ s } ); }
+		size_t operator()( const utf16* s ) const noexcept { return hash<std::wstring_view>{}( std::wstring_view{ s } ); }
 	};
 } // namespace std

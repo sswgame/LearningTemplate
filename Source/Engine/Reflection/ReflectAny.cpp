@@ -1,10 +1,10 @@
 #include "pch.h"
 
 #include "Engine/Reflection/ReflectAny.h"
+
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Serialization/Core/SerializeContext.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
-
 namespace sw
 {
 
@@ -57,7 +57,7 @@ namespace sw
 			// Compact JSON: {"t":"fqn","b":"hex..."} — keep simple: type|base64-ish hex
 			string hex;
 			hex.reserve( any._listBytes.size() * 2 );
-			static constexpr const char* kDigits = "0123456789abcdef";
+			static constexpr const utf8* kDigits = "0123456789abcdef";
 			for ( uint8 byte : any._listBytes )
 			{
 				hex.push_back( kDigits[( byte >> 4 ) & 0xF] );
@@ -100,7 +100,6 @@ namespace sw
 			}
 			return true;
 		}
-
 
 	} // namespace
 

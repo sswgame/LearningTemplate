@@ -3,7 +3,6 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
-
 namespace sw
 {
 	/** @brief 커맨드 팔레트 항목 */
@@ -49,7 +48,7 @@ namespace sw
 	private:
 		vector<CommandPaletteEntry> _listStaticCommands;
 		vector<CommandPaletteEntry> _listAllCommands;
-		char						_arrSearchBuffer[128]{ 0 };
+		utf8						_arrSearchBuffer[128]{ 0 };
 		int32						_selectedIndex{ 0 };
 		bool						_bOpen{ false };
 		bool						_bJustOpened{ false };

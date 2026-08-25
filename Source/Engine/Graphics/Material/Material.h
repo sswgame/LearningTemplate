@@ -6,11 +6,10 @@
  *  - MaterialInstance: per-use parameter / keyword / multi_compile overrides → own CB
  */
 #pragma once
-#include "Engine/Graphics/Material/MaterialTypes.h"
-#include "Engine/Utility/Task/TaskTypes.h"
-
 #include "Core/Concurrency/mutex.h"
 
+#include "Engine/Graphics/Material/MaterialTypes.h"
+#include "Engine/Utility/Task/TaskTypes.h"
 namespace sw
 {
 	class IRHIDevice;
@@ -88,7 +87,7 @@ namespace sw
 		void setMultiCompile( hashed_string name, string_view selectedOption );
 		/** @brief 블렌드 모드를 설정합니다. */
 		void setBlendMode( RHIBlendMode mode );
-		/** @brief float 파라미터를 설정합니다. */
+		/** @brief float32 파라미터를 설정합니다. */
 		bool setParameterFloat( IRHIDevice* pRhi, hashed_string name, float32 value );
 
 		/** @brief 디스크립터를 반환합니다. */
@@ -125,7 +124,7 @@ namespace sw
 		RHIBufferHandle getConstantBuffer() const { return _constantBuffer; }
 		/** @brief 블렌드 모드를 반환합니다. */
 		RHIBlendMode getBlendMode() const { return _blendMode; }
-		/** @brief float 파라미터를 읽습니다. */
+		/** @brief float32 파라미터를 읽습니다. */
 		bool getParameterFloat( hashed_string name, float32& outValue ) const;
 
 	private:

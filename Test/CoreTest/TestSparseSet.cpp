@@ -5,7 +5,6 @@
 #include "TestFramework/TestFramework.h"
 
 #include <tuple>
-
 using namespace sw;
 
 // ------------------------------------------------------------------------------
@@ -16,13 +15,13 @@ using namespace sw;
  */
 SW_TEST_CASE( SparseSet, BasicOperations )
 {
-	sparse_set<int> set;
+	sparse_set<int32> set;
 
 	SW_EXPECT_FALSE( set.contains( 0 ) );
 	set.emplace( 0, 100 );
 	SW_EXPECT_TRUE( set.contains( 0 ) );
 
-	int val{ 0 };
+	int32 val{ 0 };
 	if ( set.contains( 0 ) )
 		val = set[0];
 	SW_EXPECT_EQUAL( 100, val );
@@ -71,7 +70,7 @@ SW_TEST_CASE( SparseSet, SwapRemoveKeepsRemainingValues )
  */
 SW_TEST_CASE( SparseSet, OverwriteAndReuseKey )
 {
-	sparse_set<int> set;
+	sparse_set<int32> set;
 	set.emplace( 7, 1 );
 	set.emplace( 7, 2 );
 	SW_EXPECT_EQUAL( 1, set.size() );

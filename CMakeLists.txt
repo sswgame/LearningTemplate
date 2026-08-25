@@ -130,6 +130,15 @@ if(SW_ENABLE_TESTING AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Test")
 		)
 		set_tests_properties(CheckEngineLayers PROPERTIES LABELS "lint")
 	endif()
+
+	if(TARGET CheckIncludeOrder AND Python3_Interpreter_FOUND)
+		add_test(
+			NAME CheckIncludeOrder
+			COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/Scripts/lint/CheckIncludeOrder.py"
+				--root "${CMAKE_SOURCE_DIR}"
+		)
+		set_tests_properties(CheckIncludeOrder PROPERTIES LABELS "lint")
+	endif()
 	if(TARGET CheckSourceGlob AND Python3_Interpreter_FOUND)
 		add_test(
 			NAME CheckSourceGlob

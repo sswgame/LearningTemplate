@@ -1,7 +1,5 @@
 #include "pch.h"
 
-#include "Editor/Config/EditorConfig.h"
-#include "Editor/EditorUtil.h"
 #include "Editor/Tools/DialogueGraphTool.h"
 
 #include "Core/File/FileUtil.h"
@@ -9,11 +7,13 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
+#include "Editor/Config/EditorConfig.h"
+#include "Editor/EditorUtil.h"
+
 #include "RuntimeAPI/EditorUIContext.h"
 
-#include <imgui.h>
 #include <imgui-node-editor/imgui_node_editor.h>
-
+#include <imgui.h>
 namespace ed = ax::NodeEditor;
 
 namespace sw
@@ -414,19 +414,19 @@ namespace sw
 
 				if ( pSelectedNode->_type == DialogueNodeType::Dialogue )
 				{
-					char speakerBuf[64]{};
+					utf8 speakerBuf[64]{};
 					StringUtil::strncpy( speakerBuf, pSelectedNode->_speaker.c_str(), sizeof( speakerBuf ) - 1 );
 					if ( ImGui::InputText( "Speaker", speakerBuf, sizeof( speakerBuf ) ) )
 						pSelectedNode->_speaker = speakerBuf;
 
-					char textBuf[512]{};
+					utf8 textBuf[512]{};
 					StringUtil::strncpy( textBuf, pSelectedNode->_text.c_str(), sizeof( textBuf ) - 1 );
 					if ( ImGui::InputTextMultiline( "Text", textBuf, sizeof( textBuf ), ImVec2( -1, 100 ) ) )
 						pSelectedNode->_text = textBuf;
 				}
 				else if ( pSelectedNode->_type == DialogueNodeType::Choice )
 				{
-					char promptBuf[128]{};
+					utf8 promptBuf[128]{};
 					StringUtil::strncpy( promptBuf, pSelectedNode->_text.c_str(), sizeof( promptBuf ) - 1 );
 					if ( ImGui::InputText( "Prompt", promptBuf, sizeof( promptBuf ) ) )
 						pSelectedNode->_text = promptBuf;
@@ -435,7 +435,7 @@ namespace sw
 					for ( size_t choiceIndex = 0; choiceIndex < pSelectedNode->_listChoices.size(); ++choiceIndex )
 					{
 						ImGui::PushID( static_cast<int32>( choiceIndex ) );
-						char choiceBuf[128]{};
+						utf8 choiceBuf[128]{};
 						StringUtil::strncpy( choiceBuf, pSelectedNode->_listChoices[choiceIndex].c_str(), sizeof( choiceBuf ) - 1 );
 						if ( ImGui::InputText( "##Choice", choiceBuf, sizeof( choiceBuf ) ) )
 							pSelectedNode->_listChoices[choiceIndex] = choiceBuf;
@@ -454,7 +454,7 @@ namespace sw
 				}
 				else if ( pSelectedNode->_type == DialogueNodeType::Branch )
 				{
-					char condBuf[128]{};
+					utf8 condBuf[128]{};
 					StringUtil::strncpy( condBuf, pSelectedNode->_condition.c_str(), sizeof( condBuf ) - 1 );
 					if ( ImGui::InputText( "Condition", condBuf, sizeof( condBuf ) ) )
 						pSelectedNode->_condition = condBuf;
@@ -462,7 +462,7 @@ namespace sw
 				}
 				else if ( pSelectedNode->_type == DialogueNodeType::Action )
 				{
-					char cmdBuf[128]{};
+					utf8 cmdBuf[128]{};
 					StringUtil::strncpy( cmdBuf, pSelectedNode->_actionCommand.c_str(), sizeof( cmdBuf ) - 1 );
 					if ( ImGui::InputText( "Command", cmdBuf, sizeof( cmdBuf ) ) )
 						pSelectedNode->_actionCommand = cmdBuf;
@@ -475,7 +475,6 @@ namespace sw
 
 		ImGui::End();
 	}
-
 
 	void DialogueGraphTool::ensureDefaults()
 	{

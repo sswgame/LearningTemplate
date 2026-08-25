@@ -1,10 +1,10 @@
 #include "pch.h"
 
-#include "Engine/Graphics/RHI/DX12/D3D12RHICommandContext.h"
 #include "Engine/Graphics/RHI/DX12/D3D12RHIDevice.h"
+
+#include "Engine/Graphics/RHI/DX12/D3D12RHICommandContext.h"
 #include "Engine/Graphics/RHI/DX12/D3D12RHIResource.h"
 #include "Engine/Graphics/RHI/DX12/D3D12RHISwapChain.h"
-
 #if defined( SW_PLATFORM_WINDOWS )
 	#if defined( SW_DEBUG )
 		#include <d3d12sdklayers.h>
@@ -39,8 +39,6 @@ namespace sw
 		SW_LOG_ASSERT( false, "Unsupported RHIFormat: %#", static_cast<uint32>( format ) );
 		return DXGI_FORMAT_UNKNOWN;
 	}
-
-
 
 	D3D12RHIDevice::D3D12RHIDevice()
 		: _device{ nullptr }
@@ -110,7 +108,6 @@ namespace sw
 		_swapChainImpl = sw::make_unique<D3D12RHISwapChain>( this );
 		_resourceImpl  = sw::make_unique<D3D12RHIResource>( this );
 	}
-
 
 	D3D12RHIDevice::~D3D12RHIDevice()
 	{
@@ -326,13 +323,10 @@ namespace sw
 		_releaseQueue.flushAll();
 	}
 
-
-
 	void* D3D12RHIDevice::getNativeTexturePointer( RHITextureHandle texture ) const
 	{
 		return resolveTexture( texture );
 	}
-
 
 	// ------------------------------------------------------------------------------
 	// D3D12RHISwapChain Implementation
@@ -341,7 +335,6 @@ namespace sw
 	// ------------------------------------------------------------------------------
 	// D3D12RHIResource Implementation
 	// ------------------------------------------------------------------------------
-
 
 	unique_ptr<IRHICommandList> D3D12RHIDevice::createCommandList( RHICommandListMode mode )
 	{
@@ -562,7 +555,7 @@ namespace sw
 		rootSigDesc.NumStaticSamplers = _countof( staticSamplers );
 		rootSigDesc.pStaticSamplers	  = staticSamplers;
 		rootSigDesc.Flags			  = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
-										D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED;
+							D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED;
 
 		Microsoft::WRL::ComPtr<ID3DBlob> signatureBlob;
 		Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;
@@ -576,7 +569,7 @@ namespace sw
 			if ( FAILED( D3D12SerializeRootSignature( &rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1_0, &signatureBlob, &errorBlob ) ) )
 			{
 				if ( errorBlob )
-					SW_LOG_ERROR( "[D3D12] Root Signature Serialize Error: %s", static_cast<const char*>( errorBlob->GetBufferPointer() ) );
+					SW_LOG_ERROR( "[D3D12] Root Signature Serialize Error: %s", static_cast<const utf8*>( errorBlob->GetBufferPointer() ) );
 				return false;
 			}
 			_rootSignature.Reset();
@@ -699,16 +692,10 @@ namespace sw
 	#endif
 	}
 
-
 	IRHISwapChain*		D3D12RHIDevice::getSwapChain() { return _swapChainImpl.get(); }
 	IRHIResource*		D3D12RHIDevice::getResource() { return _resourceImpl.get(); }
 	IRHICommandContext* D3D12RHIDevice::getImmediateContext() { return _immContext.get(); }
 	IRHICommandContext* D3D12RHIDevice::getDeferredCommandContext() { return _deferredContext.get(); }
-
-
-
-
-
 
 } // namespace sw
 #endif

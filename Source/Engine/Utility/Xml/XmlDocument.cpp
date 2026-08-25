@@ -2,20 +2,19 @@
 
 #include "Engine/Utility/Xml/XmlDocument.h"
 
-#define RAPIDXML_NO_EXCEPTIONS
 #include <rapidxml/rapidxml.hpp>
 #include <rapidxml/rapidxml_print.hpp>
+#define RAPIDXML_NO_EXCEPTIONS
 
 // RAPIDXML_NO_EXCEPTIONS 정의 시 RapidXML 내부에서 파싱 실패 시 호출하는 콜백 함수입니다.
 namespace rapidxml
 {
-	void parse_error_handler( const char* what, void* where )
+	void parse_error_handler( const utf8* what, void* where )
 	{
 		(void)where;
 		SW_LOG_ERROR( "[XmlDocument] RapidXML Parse Error: %#", what != nullptr ? what : "unknown" );
 	}
 } // namespace rapidxml
-
 
 namespace sw
 {
@@ -81,7 +80,6 @@ namespace sw
 			}
 			return nullptr;
 		}
-
 
 	} // namespace
 

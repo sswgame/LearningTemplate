@@ -1,29 +1,27 @@
 #include "pch.h"
 
+#include "Engine/Object/Prefab/PrefabAsset.h"
+
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
-#include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Serialization/Object/ObjectDiffSerializer.h"
 #include "Engine/Utility/Json/JsonDocument.h"
 #include "Engine/Utility/Resource/AssetFormat.h"
 #include "Engine/Utility/Resource/ResourceManager.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
-
 namespace sw
 {
 
 	namespace
 	{
 
-
-		constexpr const char* kRoot			   = "Prefab";
-		constexpr const char* kName			   = "name";
-		constexpr const char* kGameObjectState  = "GameObjectState";
-		constexpr const char* kDefaultInstance  = "PrefabInstance";
-		constexpr uint32	  kPrefabBinMagic2  = 0x50464232u; // 'PFB2'
+		constexpr const utf8* kRoot				= "Prefab";
+		constexpr const utf8* kName				= "name";
+		constexpr const utf8* kGameObjectState	= "GameObjectState";
+		constexpr const utf8* kDefaultInstance	= "PrefabInstance";
+		constexpr uint32	  kPrefabBinMagic2	= 0x50464232u; // 'PFB2'
 		constexpr uint32	  kPrefabBinVersion = 0;
-
 
 		string makePrefabCacheKey( string_view assetRelativePath )
 		{
@@ -60,7 +58,6 @@ namespace sw
 			xmlBody = bodyNode.toString();
 			return true;
 		}
-
 
 	} // namespace
 

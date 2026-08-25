@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/File/FileUtil.h"
+
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Localization/StringTable.h"
@@ -9,14 +11,10 @@
 
 #include "RuntimeAPI/GameService.h"
 
-#include "Core/File/FileUtil.h"
-
 #include "TestFramework/TestFramework.h"
-
 // ------------------------------------------------------------------------------
 // LocalizationManagerTest -- 비-싱글톤 다국어 매니저 동작 및 파일 로드 검증
 // ------------------------------------------------------------------------------
-
 /**
  * @brief [LocalizationManagerTest] 독립적인 복수 인스턴스 생성 및 비-싱글톤 동작 검증
  */
@@ -225,11 +223,11 @@ SW_TEST_CASE( LocalizationManagerTest, LanguageChangedCallbackNotification )
 
 	const uint32 callbackId = loc.registerLanguageChangedCallback(
 		[&]( const sw::string& oldLang, const sw::string& newLang )
-		{
-			recordedOldLang = oldLang;
-			recordedNewLang = newLang;
-			++callCount;
-		} );
+	{
+		recordedOldLang = oldLang;
+		recordedNewLang = newLang;
+		++callCount;
+	} );
 
 	SW_EXPECT_TRUE( callbackId > 0 );
 
@@ -296,11 +294,11 @@ SW_TEST_CASE( LocalizationManagerTest, StringTableDirectMultiFormatFileLoading )
 	const utf8* kKv =
 		"KEY_KV=KV 텍스트\n";
 
-	const sw::string tempDir = sw::FileUtil::getTempDirectory();
+	const sw::string tempDir  = sw::FileUtil::getTempDirectory();
 	const sw::string pathJson = sw::FileUtil::joinPath( tempDir, "st_test.json" );
 	const sw::string pathXml  = sw::FileUtil::joinPath( tempDir, "st_test.xml" );
 	const sw::string pathIni  = sw::FileUtil::joinPath( tempDir, "st_test.ini" );
-	const sw::string pathKv   = sw::FileUtil::joinPath( tempDir, "st_test.kv" );
+	const sw::string pathKv	  = sw::FileUtil::joinPath( tempDir, "st_test.kv" );
 
 	SW_EXPECT_TRUE( sw::FileUtil::writeFile( pathJson, reinterpret_cast<const uint8*>( kJson ), strlen( kJson ) ) );
 	SW_EXPECT_TRUE( sw::FileUtil::writeFile( pathXml, reinterpret_cast<const uint8*>( kXml ), strlen( kXml ) ) );
@@ -365,9 +363,9 @@ SW_TEST_CASE( LocalizationManagerTest, GameStringsFullLifecycleAndMultiLanguageS
 	})";
 
 	const sw::string tempDir = sw::FileUtil::getTempDirectory();
-	const sw::string pathKo  = sw::FileUtil::joinPath( tempDir, "gs_test_ko.json" );
-	const sw::string pathEn  = sw::FileUtil::joinPath( tempDir, "gs_test_en.json" );
-	const sw::string pathJa  = sw::FileUtil::joinPath( tempDir, "gs_test_ja.json" );
+	const sw::string pathKo	 = sw::FileUtil::joinPath( tempDir, "gs_test_ko.json" );
+	const sw::string pathEn	 = sw::FileUtil::joinPath( tempDir, "gs_test_en.json" );
+	const sw::string pathJa	 = sw::FileUtil::joinPath( tempDir, "gs_test_ja.json" );
 
 	SW_EXPECT_TRUE( sw::FileUtil::writeFile( pathKo, reinterpret_cast<const uint8*>( kKoJson ), strlen( kKoJson ) ) );
 	SW_EXPECT_TRUE( sw::FileUtil::writeFile( pathEn, reinterpret_cast<const uint8*>( kEnJson ), strlen( kEnJson ) ) );
@@ -392,15 +390,15 @@ SW_TEST_CASE( LocalizationManagerTest, GameStringsFullLifecycleAndMultiLanguageS
 	// 언어 변경 알림 콜백 등록
 	sw::string notifiedOldLang;
 	sw::string notifiedNewLang;
-	uint32 callbackCount{ 0 };
+	uint32	   callbackCount{ 0 };
 
 	uint32 cbId = sw::GameStrings::onLanguageChanged(
 		[&]( const sw::string& oldLang, const sw::string& newLang )
-		{
-			notifiedOldLang = oldLang;
-			notifiedNewLang = newLang;
-			++callbackCount;
-		} );
+	{
+		notifiedOldLang = oldLang;
+		notifiedNewLang = newLang;
+		++callbackCount;
+	} );
 
 	// 2) 한국어로 전환
 	SW_EXPECT_TRUE( sw::GameStrings::setLanguage( "ko_KR" ) );
@@ -470,10 +468,10 @@ SW_TEST_CASE( LocalizationManagerTest, GameStringsSetupLocalizationFromDirectory
 	const sw::string pathJa = sw::FileUtil::joinPath( packDir, "ja_JP.xml" );
 	const sw::string pathZh = sw::FileUtil::joinPath( packDir, "zh_CN.kv" );
 
-	const char* jsonKo = R"({ "UI_PLAY": "플레이", "UI_QUIT": "종료", "UI_SAVE": "저장" })";
-	const char* jsonEn = R"({ "UI_PLAY": "Play", "UI_QUIT": "Quit", "UI_SAVE": "Save", "UI_ONLY_EN": "English Exclusive" })";
-	const char* xmlJa	= R"(<?xml version="1.0" encoding="UTF-8"?><StringTable><String key="UI_PLAY" value="プレイ"/><String key="UI_QUIT" value="終了"/><String key="UI_SAVE" value="セーブ"/></StringTable>)";
-	const char* kvZh	= "UI_PLAY = 开始游戏\nUI_QUIT = 退出\nUI_SAVE = 保存\n";
+	const utf8* jsonKo = R"({ "UI_PLAY": "플레이", "UI_QUIT": "종료", "UI_SAVE": "저장" })";
+	const utf8* jsonEn = R"({ "UI_PLAY": "Play", "UI_QUIT": "Quit", "UI_SAVE": "Save", "UI_ONLY_EN": "English Exclusive" })";
+	const utf8* xmlJa  = R"(<?xml version="1.0" encoding="UTF-8"?><StringTable><String key="UI_PLAY" value="プレイ"/><String key="UI_QUIT" value="終了"/><String key="UI_SAVE" value="セーブ"/></StringTable>)";
+	const utf8* kvZh   = "UI_PLAY = 开始游戏\nUI_QUIT = 退出\nUI_SAVE = 保存\n";
 
 	sw::FileUtil::writeTextFile( pathKo, jsonKo );
 	sw::FileUtil::writeTextFile( pathEn, jsonEn );
@@ -531,8 +529,8 @@ SW_TEST_CASE( LocalizationManagerTest, GameStringsSetupLocalizationFromDirectory
  */
 SW_TEST_CASE( LocalizationManagerTest, StringTableAndLocalizationBinaryCooking )
 {
-	const sw::string tempDir = sw::FileUtil::getTempDirectory();
-	const sw::string stBinPath = sw::FileUtil::joinPath( tempDir, "test_st.bin" );
+	const sw::string tempDir	= sw::FileUtil::getTempDirectory();
+	const sw::string stBinPath	= sw::FileUtil::joinPath( tempDir, "test_st.bin" );
 	const sw::string locBinPath = sw::FileUtil::joinPath( tempDir, "test_loc.bin" );
 
 	// 1) StringTable binary save / load
@@ -591,9 +589,9 @@ SW_TEST_CASE( LocalizationManagerTest, GameModeStateMachineLifecycle )
 	class TestModeHandler : public sw::IGameModeHandler
 	{
 	public:
-		uint32 _enterCount{ 0 };
-		uint32 _updateCount{ 0 };
-		uint32 _exitCount{ 0 };
+		uint32			 _enterCount{ 0 };
+		uint32			 _updateCount{ 0 };
+		uint32			 _exitCount{ 0 };
 		sw::GamePlayMode _lastPreviousMode{ sw::GamePlayMode::None };
 		sw::GamePlayMode _lastNextMode{ sw::GamePlayMode::None };
 
@@ -617,23 +615,23 @@ SW_TEST_CASE( LocalizationManagerTest, GameModeStateMachineLifecycle )
 	};
 
 	sw::GameModeStateMachine fsm;
-	auto titleHandler = std::make_shared<TestModeHandler>();
-	auto battleHandler = std::make_shared<TestModeHandler>();
+	auto					 titleHandler  = std::make_shared<TestModeHandler>();
+	auto					 battleHandler = std::make_shared<TestModeHandler>();
 
 	fsm.registerHandler( sw::GamePlayMode::Title, titleHandler );
 	fsm.registerHandler( sw::GamePlayMode::TurnBattle, battleHandler );
 
 	sw::GamePlayMode notifiedOld{ sw::GamePlayMode::None };
 	sw::GamePlayMode notifiedNew{ sw::GamePlayMode::None };
-	uint32 notifyCount{ 0 };
+	uint32			 notifyCount{ 0 };
 
 	fsm.setOnModeChanged(
 		SW_DELEGATE_LAMBDA( sw::GameModeStateMachine::ModeChangedDelegate, [&]( sw::GamePlayMode oldMode, sw::GamePlayMode newMode )
-		{
-			notifiedOld = oldMode;
-			notifiedNew = newMode;
-			++notifyCount;
-		} ) );
+	{
+		notifiedOld = oldMode;
+		notifiedNew = newMode;
+		++notifyCount;
+	} ) );
 
 	// 1) Title 모드로 전이
 	SW_EXPECT_TRUE( fsm.transitionTo( sw::GamePlayMode::Title ) );
@@ -662,4 +660,3 @@ SW_TEST_CASE( LocalizationManagerTest, GameModeStateMachineLifecycle )
 	SW_EXPECT_TRUE( fsm.getCurrentMode() == sw::GamePlayMode::None );
 	SW_EXPECT_EQUAL( uint32( 1 ), battleHandler->_exitCount );
 }
-

@@ -1,11 +1,9 @@
+#include "pch.h"
 
 #include "AstVisitor.h"
+
 #include "AnnotationApply.h"
 #include "ContainerTypeMap.h"
-#include "ParserContext.h"
-#include "ParserDefines.h"
-#include "ParserUtil.h"
-#include "TypeNameMap.h"
 
 #include "Core/Common/Types.h"
 #include "Core/File/FileUtil.h"
@@ -17,6 +15,10 @@
 #include "Engine/Common/Common.h"
 #include "Engine/Reflection/ReflectionEnumNames.h"
 
+#include "ParserContext.h"
+#include "ParserDefines.h"
+#include "ParserUtil.h"
+#include "TypeNameMap.h"
 namespace sw
 {
 	namespace
@@ -82,7 +84,7 @@ namespace sw
 
 			string content;
 			FileUtil::readTextFile( path, content );
-			auto [insertedIt, _] = s_fileContentCache.emplace( path, std::move( content ) );
+			auto [insertedIt, dummy] = s_fileContentCache.emplace( path, std::move( content ) );
 			return insertedIt->second;
 		}
 
@@ -99,21 +101,21 @@ namespace sw
 
 				bool bInLineComment	 = false;
 				bool bInBlockComment = false;
-				for ( size_t i = 0; i < pos; ++i )
+				for ( size_t index = 0; index < pos; ++index )
 				{
 					if ( !bInLineComment && !bInBlockComment )
 					{
-						if ( window[i] == '/' && i + 1 < pos )
+						if ( window[index] == '/' && index + 1 < pos )
 						{
-							if ( window[i + 1] == '/' )
+							if ( window[index + 1] == '/' )
 							{
 								bInLineComment = true;
-								++i;
+								++index;
 							}
-							else if ( window[i + 1] == '*' )
+							else if ( window[index + 1] == '*' )
 							{
 								bInBlockComment = true;
-								++i;
+								++index;
 							}
 						}
 					}
@@ -378,7 +380,7 @@ namespace sw
 		{
 			const vector<string> args = extractTemplateArgs( typeSpelling );
 			const int32			 numClangArgs =
-				( type.kind == CXType_Invalid ) ? 0 : clang_Type_getNumTemplateArguments( type );
+				 ( type.kind == CXType_Invalid ) ? 0 : clang_Type_getNumTemplateArguments( type );
 
 			if ( node._containerKind == ContainerKind::Map )
 			{
@@ -598,7 +600,7 @@ namespace sw
 			const CXType   baseType = clang_getCursorType( cursor );
 			const CXCursor baseDecl = clang_getTypeDeclaration( baseType );
 			const string   baseFQN =
-				( clang_Cursor_isNull( baseDecl ) == 0 ) ? AstVisitor::buildFullyQualifiedName( baseDecl ) : string{};
+				  ( clang_Cursor_isNull( baseDecl ) == 0 ) ? AstVisitor::buildFullyQualifiedName( baseDecl ) : string{};
 
 			++collector->baseCount;
 			if ( collector->baseCount > 1 )
@@ -786,8 +788,8 @@ namespace sw
 		{
 			const bool bHasFunction = hasAnnotateAttrPrefix( cursor, annotationConstants::kFunctionPrefix ) ||
 									  sourceHasPrimaryAnnotation( cursor, annotationConstants::kFunctionPrefix );
-			const bool bHasBody		= hasAnnotateAttrPrefix( cursor, "REFLECT_BODY" ) ||
-									  ( cxStringToStd( clang_getCursorSpelling( cursor ) ) == annotationConstants::kReflectBodyMarkerFn );
+			const bool bHasBody = hasAnnotateAttrPrefix( cursor, "REFLECT_BODY" ) ||
+								  ( cxStringToStd( clang_getCursorSpelling( cursor ) ) == annotationConstants::kReflectBodyMarkerFn );
 			if ( bHasFunction || bHasBody )
 			{
 				CXCursor   parent		  = clang_getCursorSemanticParent( cursor );

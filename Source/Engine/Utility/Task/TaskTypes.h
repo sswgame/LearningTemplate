@@ -8,7 +8,6 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/String/StringUtil.h"
-
 namespace sw
 {
 	/**
@@ -16,7 +15,7 @@ namespace sw
 	 * @brief 이종(Heterogeneous) 데이터 타입을 런타임에 안전하게 보관하는 타입 소거(Type Erasure) 컨테이너입니다.
 	 * @details
 	 * - **SBO (Small Buffer Optimization, 32바이트)**:
-	 *   기본형(int, float, 포인터 등) 및 32바이트 이하의 소형 구조체는 별도의 힙 메모리 할당(new/delete) 없이
+	 *   기본형(int32, float32, 포인터 등) 및 32바이트 이하의 소형 구조체는 별도의 힙 메모리 할당(new/delete) 없이
 	 *   인라인 스택 버퍼(`_storage`)에 즉시 저장하여 고성능 0-Alloc을 보장합니다.
 	 * - **큰 객체 자동 힙 할당**:
 	 *   32바이트를 초과하는 대형 객체는 자동으로 힙에 할당하고 포인터로 관리합니다.

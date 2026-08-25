@@ -1,7 +1,6 @@
 #include "pch.h"
 
 #include "TestFramework/TestFramework.h"
-
 // ------------------------------------------------------------------------------
 // 1) Core_String — Util·해시·스플리터·빌더
 // ------------------------------------------------------------------------------
@@ -259,15 +258,15 @@ SW_TEST_CASE( Core_String, StringUtilUtf8Validation )
 	SW_EXPECT_TRUE( sw::StringUtil::isValidUTF8( "A" ) );
 	SW_EXPECT_TRUE( sw::StringUtil::isValidUTF8( "Short" ) );
 	SW_EXPECT_TRUE( sw::StringUtil::isValidUTF8( "Exactly8" ) );
-	SW_EXPECT_TRUE( sw::StringUtil::isValidUTF8( "This is a long ASCII sentence for SWAR fast path testing." ) );
+	SW_EXPECT_TRUE( sw::StringUtil::isValidUTF8( "This is a int32 ASCII sentence for SWAR fast path testing." ) );
 
 	// 3) 유효한 2바이트, 3바이트, 4바이트 UTF-8
-	SW_EXPECT_TRUE( sw::StringUtil::isValidUTF8( "\xC2\xA9" ) );			 // © (U+00A9)
-	SW_EXPECT_TRUE( sw::StringUtil::isValidUTF8( "\xC3\xA9" ) );			 // é (U+00E9)
-	SW_EXPECT_TRUE( sw::StringUtil::isValidUTF8( "\xE2\x82\xAC" ) );		 // € (U+20AC)
+	SW_EXPECT_TRUE( sw::StringUtil::isValidUTF8( "\xC2\xA9" ) );			   // © (U+00A9)
+	SW_EXPECT_TRUE( sw::StringUtil::isValidUTF8( "\xC3\xA9" ) );			   // é (U+00E9)
+	SW_EXPECT_TRUE( sw::StringUtil::isValidUTF8( "\xE2\x82\xAC" ) );		   // € (U+20AC)
 	SW_EXPECT_TRUE( sw::StringUtil::isValidUTF8( "안녕하세요 엔진 테스트" ) ); // 한글 3바이트
-	SW_EXPECT_TRUE( sw::StringUtil::isValidUTF8( "\xF0\x9F\x9A\x80" ) );	 // 🚀 (U+1F680)
-	SW_EXPECT_TRUE( sw::StringUtil::isValidUTF8( "\xF0\x9F\x98\x80" ) );	 // 😀 (U+1F600)
+	SW_EXPECT_TRUE( sw::StringUtil::isValidUTF8( "\xF0\x9F\x9A\x80" ) );	   // 🚀 (U+1F680)
+	SW_EXPECT_TRUE( sw::StringUtil::isValidUTF8( "\xF0\x9F\x98\x80" ) );	   // 😀 (U+1F600)
 
 	// 4) 불완전/잘린 시퀀스 (Truncated sequences)
 	SW_EXPECT_FALSE( sw::StringUtil::isValidUTF8( "\xC2" ) );		  // 2바이트 리드 바이트만 존재
@@ -358,21 +357,21 @@ SW_TEST_CASE( Core_String, FixedStringExtendedOperations )
 SW_TEST_CASE( Core_String, Utf8BomHandling )
 {
 	// 1) string_view 기반 BOM 스킵 검증
-	const char* pWithBom = "\xEF\xBB\xBFHello UTF-8 BOM!";
-	const char* pWithoutBom = "Hello Without BOM!";
+	const utf8* pWithBom	= "\xEF\xBB\xBFHello UTF-8 BOM!";
+	const utf8* pWithoutBom = "Hello Without BOM!";
 
 	SW_EXPECT_EQUAL( std::string_view( "Hello UTF-8 BOM!" ), sw::FileUtil::skipUtf8Bom( pWithBom ) );
 	SW_EXPECT_EQUAL( std::string_view( pWithoutBom ), sw::FileUtil::skipUtf8Bom( pWithoutBom ) );
 
 	// 2) 포인터 및 크기 기반 BOM 스킵 검증
 	const uint8* pBytes = reinterpret_cast<const uint8*>( pWithBom );
-	size_t size = strlen( pWithBom );
+	size_t		 size	= strlen( pWithBom );
 	sw::FileUtil::skipUtf8Bom( pBytes, size );
 	SW_EXPECT_EQUAL( strlen( "Hello UTF-8 BOM!" ), size );
-	SW_EXPECT_EQUAL( 'H', static_cast<char>( pBytes[0] ) );
+	SW_EXPECT_EQUAL( 'H', static_cast<utf8>( pBytes[0] ) );
 
 	// 3) 파일 I/O 자동 BOM 제거 검증
-	const sw::string tempDir = sw::FileUtil::getTempDirectory();
+	const sw::string tempDir	 = sw::FileUtil::getTempDirectory();
 	const sw::string bomFilePath = sw::FileUtil::joinPath( tempDir, "test_bom.txt" );
 	SW_EXPECT_TRUE( sw::FileUtil::writeFile( bomFilePath, reinterpret_cast<const uint8*>( pWithBom ), strlen( pWithBom ) ) );
 

@@ -1,7 +1,6 @@
 #include "pch.h"
 
 #include "Editor/Backend/Platform/ImGuiX11Platform.h"
-
 #if defined( SW_PLATFORM_LINUX )
 	#include <imgui.h>
 	#include "Core/Time/CpuTimer.h"
@@ -297,7 +296,7 @@ namespace sw
 			{
 				case ClientMessage:
 				{
-					if ( s_wmDelete == 0 || pEvent->xclient.data.l[0] != static_cast<long>( s_wmDelete ) )
+					if ( s_wmDelete == 0 || pEvent->xclient.data.l[0] != static_cast<int32>( s_wmDelete ) )
 						return false;
 
 					if ( pEvent->xclient.window == s_mainWindow )

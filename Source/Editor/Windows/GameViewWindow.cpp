@@ -1,7 +1,8 @@
 #include "pch.h"
 
-#include "Editor/Widgets/EditorWidgets.h"
 #include "Editor/Windows/GameViewWindow.h"
+
+#include "Editor/Widgets/EditorWidgets.h"
 #include "Editor/Workspace/EditorAssetDrop.h"
 #include "Editor/Workspace/EditorTransaction.h"
 #include "Editor/Workspace/EditorWorkspace.h"
@@ -17,9 +18,8 @@
 #include "RuntimeAPI/EditorService.h"
 #include "RuntimeAPI/EditorUIContext.h"
 
-#include <imgui.h>
 #include <ImGuizmo.h>
-
+#include <imgui.h>
 namespace sw
 {
 	GameViewWindow::GameViewWindow()
@@ -78,7 +78,7 @@ namespace sw
 		{
 			if ( const ImGuiPayload* pPayload = ImGui::AcceptDragDropPayload( "SW_CONTENT_BROWSER_ASSET" ) )
 			{
-				const char* pPath = static_cast<const char*>( pPayload->Data );
+				const utf8* pPath = static_cast<const utf8*>( pPayload->Data );
 				if ( pPath != nullptr )
 				{
 					SceneManager* pSceneManager = editor::getService<SceneManager>();

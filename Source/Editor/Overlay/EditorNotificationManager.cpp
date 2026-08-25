@@ -1,11 +1,11 @@
 #include "pch.h"
 
-#include "Editor/Common/EditorContext.h"
 #include "Editor/Overlay/EditorNotificationManager.h"
 
-#include <imgui.h>
-#include <algorithm>
+#include "Editor/Common/EditorContext.h"
 
+#include <algorithm>
+#include <imgui.h>
 namespace sw
 {
 	namespace
@@ -133,7 +133,7 @@ namespace sw
 			ImGui::PushStyleVar( ImGuiStyleVar_WindowRounding, 6.0f );
 			ImGui::PushStyleVar( ImGuiStyleVar_WindowBorderSize, 1.5f );
 
-			char windowId[32];
+			utf8 windowId[32];
 			formatstring( windowId, sizeof( windowId ), "##Toast_%#", static_cast<uint64>( notificationIndex ) );
 
 			const ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoInputs |

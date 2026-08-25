@@ -69,6 +69,15 @@ if(Python3_Interpreter_FOUND)
     )
     set_target_properties(CheckEngineLayers PROPERTIES FOLDER "Engine/Scripts")
 
+    add_custom_target(CheckIncludeOrder
+        COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/Scripts/lint/CheckIncludeOrder.py"
+            --root "${CMAKE_SOURCE_DIR}"
+        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+        COMMENT "Checking Include Order rules..."
+        VERBATIM
+    )
+    set_target_properties(CheckIncludeOrder PROPERTIES FOLDER "Engine/Scripts")
+
     add_custom_target(CheckSourceGlob
         COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/Scripts/lint/CheckSourceGlob.py"
             --root "${CMAKE_SOURCE_DIR}"

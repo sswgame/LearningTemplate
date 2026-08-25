@@ -1,18 +1,18 @@
 #include "pch.h"
 
+#include "Engine/Object/GameObject/ObjectStateSerializer.h"
+
+#include "Core/String/StringBuilder.h"
+
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Serialization/Core/Serializer.h"
 #include "Engine/Serialization/Format/JsonSerializer.h"
 #include "Engine/Serialization/Format/XmlSerializer.h"
 #include "Engine/Utility/Json/JsonDocument.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
-
-#include "Core/String/StringBuilder.h"
-
 namespace sw
 {
 	namespace
@@ -84,7 +84,7 @@ namespace sw
 				}
 				if ( _offset + size > _size )
 					return false;
-				outStr.assign( reinterpret_cast<const char*>( _pData + _offset ), size );
+				outStr.assign( reinterpret_cast<const utf8*>( _pData + _offset ), size );
 				_offset += size;
 				return true;
 			}
@@ -947,8 +947,6 @@ namespace sw
 
 		return true;
 	}
-
-
 
 	size_t ObjectStateSerializer::loadFromBinaryBuffer( GameObject* pGameObject, const uint8* pData, size_t size, string& outParentName )
 	{

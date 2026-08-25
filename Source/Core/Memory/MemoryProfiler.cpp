@@ -1,11 +1,11 @@
 #include "pch.h"
 
+#include "Core/Memory/MemoryProfiler.h"
+
 #include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
-#include "Core/Memory/MemoryProfiler.h"
 #include "Core/String/formatString.h"
-
 #if defined( SW_PLATFORM_WINDOWS ) && defined( SW_DEBUG ) && !defined( SW_SHIPPING )
 	#define SW_HAS_CRT_LEAK_CHECK 1
 	#include "Core/Container/vector.h"
@@ -22,7 +22,7 @@
 #endif
 
 #if defined( SW_HAS_LSAN_LEAK_CHECK )
-extern "C" int __lsan_do_recoverable_leak_check( void );
+extern "C" int32 __lsan_do_recoverable_leak_check( void );
 #endif
 
 namespace sw

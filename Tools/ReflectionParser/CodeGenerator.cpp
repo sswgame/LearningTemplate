@@ -1,19 +1,21 @@
+#include "pch.h"
 
 #include "CodeGenerator.h"
-#include "EmitTemplateStore.h"
-#include "ParserContext.h"
-#include "ParserDefines.h"
-#include "ParserUtil.h"
-#include "TypeNameMap.h"
 
 #include "Core/Common/Types.h"
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
+#include "EmitTemplateStore.h"
+
 #include "Engine/Common/Common.h"
 #include "Engine/Reflection/ReflectionEnumNames.h"
 
+#include "ParserContext.h"
+#include "ParserDefines.h"
+#include "ParserUtil.h"
+#include "TypeNameMap.h"
 namespace sw
 {
 	namespace
@@ -43,7 +45,7 @@ namespace sw
 		}
 
 		/**
-		 * @brief 2중, 3중 중첩 컨테이너(예: vector<vector<int>>)에 대한 중첩 래퍼 표기를 생성합니다.
+		 * @brief 2중, 3중 중첩 컨테이너(예: vector<vector<int32>>)에 대한 중첩 래퍼 표기를 생성합니다.
 		 */
 		static string makeNestedWrapperType( const string& containerType, int32 depth )
 		{

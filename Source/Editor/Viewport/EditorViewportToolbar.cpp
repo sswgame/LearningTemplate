@@ -3,7 +3,6 @@
 #include "Editor/Viewport/EditorViewportToolbar.h"
 
 #include <imgui.h>
-
 namespace sw
 {
 	void EditorViewportToolbar::draw( ViewportToolbarSettings& settings, float32 viewportWidth )
@@ -27,8 +26,8 @@ namespace sw
 
 			ImGui::SameLine();
 			ImGui::SetNextItemWidth( 65.0f );
-			const float32 arrSnapValues[] = { 0.1f, 0.5f, 1.0f, 5.0f, 10.0f };
-			const char*	  arrSnapLabels[] = { "0.1", "0.5", "1.0", "5.0", "10.0" };
+			const float32 arrSnapValues[]  = { 0.1f, 0.5f, 1.0f, 5.0f, 10.0f };
+			const utf8*	  arrSnapLabels[]  = { "0.1", "0.5", "1.0", "5.0", "10.0" };
 			int32		  currentSnapIndex = 2;
 			for ( int32 snapIndex = 0; snapIndex < 5; ++snapIndex )
 			{
@@ -57,8 +56,8 @@ namespace sw
 
 			ImGui::SameLine();
 			ImGui::SetNextItemWidth( 60.0f );
-			const float32 arrRotValues[] = { 5.0f, 15.0f, 45.0f, 90.0f };
-			const char*	  arrRotLabels[] = { "5 deg", "15 deg", "45 deg", "90 deg" };
+			const float32 arrRotValues[]  = { 5.0f, 15.0f, 45.0f, 90.0f };
+			const utf8*	  arrRotLabels[]  = { "5 deg", "15 deg", "45 deg", "90 deg" };
 			int32		  currentRotIndex = 1;
 			for ( int32 rotIndex = 0; rotIndex < 4; ++rotIndex )
 			{
@@ -76,7 +75,7 @@ namespace sw
 		// 3) View Mode
 		{
 			ImGui::SetNextItemWidth( 85.0f );
-			const char* arrModeLabels[] = { "Lit", "Unlit", "Wireframe" };
+			const utf8* arrModeLabels[] = { "Lit", "Unlit", "Wireframe" };
 			int32		modeIndex		= static_cast<int32>( settings._renderMode );
 			if ( ImGui::Combo( "##ViewMode", &modeIndex, arrModeLabels, 3 ) )
 				settings._renderMode = static_cast<ViewportRenderMode>( modeIndex );

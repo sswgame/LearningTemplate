@@ -1,7 +1,6 @@
 #include "pch.h"
 
 #include "Engine/Reflection/PropertyMetaHint.h"
-
 namespace sw
 {
 	PropertyWidgetType PropertyMetaHint::deduceWidgetType( const PropertyMetadata& meta, string_view typeName )
@@ -31,7 +30,7 @@ namespace sw
 		return true;
 	}
 
-	const char* PropertyMetaHint::getAssetFilter( const PropertyMetadata& meta )
+	const utf8* PropertyMetaHint::getAssetFilter( const PropertyMetadata& meta )
 	{
 		if ( meta._assetType == "Texture" || meta._assetType == "Sprite" )
 			return "Image Files (*.png;*.jpg;*.dds)\0*.png;*.jpg;*.dds\0";

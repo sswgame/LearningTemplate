@@ -1,11 +1,11 @@
 #include "pch.h"
 
 #include "Engine/Graphics/Shader/ShaderCompiler.h"
-#include "Engine/Utility/Resource/ResourceUtil.h"
 
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Utility/Resource/ResourceUtil.h"
 namespace sw
 {
 
@@ -146,43 +146,43 @@ namespace sw
 	#endif
 #endif
 
-	static std::atomic<bool> s_bDiskCacheEnabled{ true };
+		static std::atomic<bool> s_bDiskCacheEnabled{ true };
 
-	string getShaderCacheDirectory()
-	{
-		const string& root = ResourceUtil::getRootFolderPath();
-		const string baseRoot = root.empty() ? FileUtil::joinPath( ResourceUtil::getProjectFolderPath(), "Resource" ) : root;
-		return FileUtil::normalizeSeparators( FileUtil::joinPath( baseRoot, "cache/shaders" ) );
-	}
-
-	string computeCachePath( const ShaderCompileDesc& desc, const string& absPathStr )
-	{
-		const string cacheDir = getShaderCacheDirectory();
-		if ( cacheDir.empty() )
-			return "";
-
-		vector<uint8> sourceBytes;
-		FileUtil::readFile( absPathStr, sourceBytes );
-
-		uint64 hash = StringUtil::computeHash64( desc._filePath, false );
-		hash		= StringUtil::computeHash64( desc._entryPoint, false, hash );
-		hash		= StringUtil::computeHash64( to_string( static_cast<uint32>( desc._stage ) ), false, hash );
-		hash		= StringUtil::computeHash64( to_string( static_cast<uint32>( desc._targetFormat ) ), false, hash );
-		for ( const auto& def : desc._listDefines )
+		string getShaderCacheDirectory()
 		{
-			hash = StringUtil::computeHash64( def._name, false, hash );
-			hash = StringUtil::computeHash64( def._value, false, hash );
-		}
-		if ( sourceBytes.empty() == false )
-		{
-			const string_view sourceStr( reinterpret_cast<const char*>( sourceBytes.data() ), sourceBytes.size() );
-			hash = StringUtil::computeHash64( sourceStr, false, hash );
+			const string& root	   = ResourceUtil::getRootFolderPath();
+			const string  baseRoot = root.empty() ? FileUtil::joinPath( ResourceUtil::getProjectFolderPath(), "Resource" ) : root;
+			return FileUtil::normalizeSeparators( FileUtil::joinPath( baseRoot, "cache/shaders" ) );
 		}
 
-		char buf[64]{};
-		snprintf( buf, sizeof( buf ), "%016llx.bin", static_cast<unsigned long long>( hash ) );
-		return cacheDir + "/" + buf;
-	}
+		string computeCachePath( const ShaderCompileDesc& desc, const string& absPathStr )
+		{
+			const string cacheDir = getShaderCacheDirectory();
+			if ( cacheDir.empty() )
+				return "";
+
+			vector<uint8> sourceBytes;
+			FileUtil::readFile( absPathStr, sourceBytes );
+
+			uint64 hash = StringUtil::computeHash64( desc._filePath, false );
+			hash		= StringUtil::computeHash64( desc._entryPoint, false, hash );
+			hash		= StringUtil::computeHash64( to_string( static_cast<uint32>( desc._stage ) ), false, hash );
+			hash		= StringUtil::computeHash64( to_string( static_cast<uint32>( desc._targetFormat ) ), false, hash );
+			for ( const auto& def : desc._listDefines )
+			{
+				hash = StringUtil::computeHash64( def._name, false, hash );
+				hash = StringUtil::computeHash64( def._value, false, hash );
+			}
+			if ( sourceBytes.empty() == false )
+			{
+				const string_view sourceStr( reinterpret_cast<const utf8*>( sourceBytes.data() ), sourceBytes.size() );
+				hash = StringUtil::computeHash64( sourceStr, false, hash );
+			}
+
+			utf8 buf[64]{};
+			snprintf( buf, sizeof( buf ), "%016llx.bin", static_cast<uint64>( hash ) );
+			return cacheDir + "/" + buf;
+		}
 
 	} // namespace
 
@@ -463,11 +463,11 @@ namespace sw
 
 					DxcComPtr<IDxcResult> compileResult;
 					HRESULT				  hrCompile = compiler->Compile(
-						&sourceBuffer,
-						listArguments.data(),
-						static_cast<uint32>( listArguments.size() ),
-						dxcGet( includeHandler ),
-						IID_PPV_ARGS( dxcAddressOf( compileResult ) ) );
+						  &sourceBuffer,
+						  listArguments.data(),
+						  static_cast<uint32>( listArguments.size() ),
+						  dxcGet( includeHandler ),
+						  IID_PPV_ARGS( dxcAddressOf( compileResult ) ) );
 
 					if ( FAILED( hrCompile ) )
 						SW_LOG_ERROR( "[ShaderCompiler] DXC compiler->Compile failed with HRESULT: 0x%#", hrCompile );

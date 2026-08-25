@@ -8,7 +8,6 @@
 #include "Core/Concurrency/DataRaceDetector.h"
 #include "Core/Container/InlineAllocator.h"
 #include "Core/Memory/Memory.h"
-
 namespace sw
 {
 #if defined( SW_ENABLE_STL_CONTAINER )
@@ -51,7 +50,7 @@ namespace sw
 		explicit vector( const Allocator& alloc ) noexcept;
 		vector( size_type count, const T& value, const Allocator& alloc = Allocator() );
 		explicit vector( size_type count, const Allocator& alloc = Allocator() );
-		template <class InputIt, typename std::enable_if_t<!std::is_integral_v<InputIt>, int> = 0>
+		template <class InputIt, typename std::enable_if_t<!std::is_integral_v<InputIt>, int32> = 0>
 		vector( InputIt first, InputIt last, const Allocator& alloc = Allocator() );
 		vector( const vector& other );
 		vector( vector&& other ) noexcept;
@@ -62,7 +61,7 @@ namespace sw
 		vector& operator=( vector&& other ) noexcept;
 		vector& operator=( std::initializer_list<T> ilist );
 		void	assign( size_type count, const T& value );
-		template <class InputIt, typename std::enable_if_t<!std::is_integral_v<InputIt>, int> = 0>
+		template <class InputIt, typename std::enable_if_t<!std::is_integral_v<InputIt>, int32> = 0>
 		void assign( InputIt first, InputIt last );
 		void assign( std::initializer_list<T> ilist );
 
@@ -106,7 +105,7 @@ namespace sw
 		iterator insert( const_iterator pos, const T& value );
 		iterator insert( const_iterator pos, T&& value );
 		iterator insert( const_iterator pos, size_type count, const T& value );
-		template <class InputIt, typename std::enable_if_t<!std::is_integral_v<InputIt>, int> = 0>
+		template <class InputIt, typename std::enable_if_t<!std::is_integral_v<InputIt>, int32> = 0>
 		iterator insert( const_iterator pos, InputIt first, InputIt last );
 		iterator insert( const_iterator pos, std::initializer_list<T> ilist );
 		template <class... Args>
@@ -285,7 +284,7 @@ namespace sw
 	}
 
 	template <typename T, typename Allocator>
-	template <class InputIt, typename std::enable_if_t<!std::is_integral_v<InputIt>, int>>
+	template <class InputIt, typename std::enable_if_t<!std::is_integral_v<InputIt>, int32>>
 	inline vector<T, Allocator>::vector( InputIt first, InputIt last, const Allocator& alloc )
 		: Allocator( alloc )
 	{
@@ -464,7 +463,7 @@ namespace sw
 	}
 
 	template <typename T, typename Allocator>
-	template <class InputIt, typename std::enable_if_t<!std::is_integral_v<InputIt>, int>>
+	template <class InputIt, typename std::enable_if_t<!std::is_integral_v<InputIt>, int32>>
 	inline void vector<T, Allocator>::assign( InputIt first, InputIt last )
 	{
 		ScopedRaceWrite lock( _raceCtx );
@@ -809,7 +808,7 @@ namespace sw
 	}
 
 	template <typename T, typename Allocator>
-	template <class InputIt, typename std::enable_if_t<!std::is_integral_v<InputIt>, int>>
+	template <class InputIt, typename std::enable_if_t<!std::is_integral_v<InputIt>, int32>>
 	inline typename vector<T, Allocator>::iterator vector<T, Allocator>::insert( const_iterator pos, InputIt first, InputIt last )
 	{
 		size_t offset = pos - _pData;

@@ -4,7 +4,6 @@
 #include "Engine/Object/Prefab/PrefabAsset.h"
 
 #include "TestFramework/TestFramework.h"
-
 namespace sw
 {
 	namespace
@@ -128,7 +127,7 @@ SW_TEST_CASE( PrefabTest, InMemoryJsonPrefabCreationAndSpawn )
 #if defined( SW_SHIPPING )
 	SW_TEST_SKIP( "InMemory JSON prefab spawn is Dev-only (Shipping requires cooked .bin)" );
 #else
-	const char* prefabJson = R"({
+	const utf8* prefabJson = R"({
 		"Name": "DynamicPrefabActor"
 	})";
 

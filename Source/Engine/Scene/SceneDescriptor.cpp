@@ -1,25 +1,24 @@
 #include "pch.h"
 
-#include "Engine/Common/EngineServices.h"
 #include "Engine/Scene/SceneDescriptor.h"
+
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Utility/Resource/AssetFormat.h"
 #include "Engine/Utility/Resource/ResourceManager.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
-
 namespace sw
 {
 
 	namespace
 	{
 
-
-		constexpr const char* kRoot			   = "SceneDescriptor";
-		constexpr const char* kName			   = "name";
-		constexpr const char* kEntities		   = "entities";
-		constexpr const char* kEntity		   = "entity";
-		constexpr const char* kPrefab		   = "prefab";
-		constexpr const char* kGameObjectState = "GameObjectState";
-		constexpr const char* kDefaultEntity   = "Entity";
+		constexpr const utf8* kRoot			   = "SceneDescriptor";
+		constexpr const utf8* kName			   = "name";
+		constexpr const utf8* kEntities		   = "entities";
+		constexpr const utf8* kEntity		   = "entity";
+		constexpr const utf8* kPrefab		   = "prefab";
+		constexpr const utf8* kGameObjectState = "GameObjectState";
+		constexpr const utf8* kDefaultEntity   = "Entity";
 		constexpr uint32	  kSceneBinMagic   = 0x53434E31u; // 'SCN1'
 		constexpr uint32	  kSceneBinVersion = 0;
 
@@ -56,7 +55,6 @@ namespace sw
 			appendU32Val( listBlob, static_cast<uint32>( text.size() ) );
 			listBlob.insert( listBlob.end(), text.begin(), text.end() );
 		}
-
 
 		string xmlEscape( string_view text )
 		{
@@ -130,7 +128,6 @@ namespace sw
 
 			out.append( "</" ).append( node.name() ).append( '>' );
 		}
-
 
 	} // namespace
 

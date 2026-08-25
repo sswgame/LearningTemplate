@@ -8,8 +8,6 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
-
-
 namespace sw
 {
 	// ------------------------------------------------------------------------------
@@ -40,7 +38,7 @@ namespace sw
 		/** @brief alias 키를 canonical 에 연결합니다. */
 		void addKey( const string& key, const string& canonical );
 
-		unordered_map<string, string> _aliasToCanonical;
+		unordered_map<string, string> _mapAliasToCanonical;
 		bool						  _bLoaded = false;
 	};
 

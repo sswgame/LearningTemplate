@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Editor/Overlay/BoneHierarchyPopup.h"
+
 #include "Editor/Workspace/EditorWorkspace.h"
 
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -8,7 +9,6 @@
 #include "RuntimeAPI/EditorService.h"
 
 #include <imgui.h>
-
 namespace sw
 {
 	namespace
@@ -18,11 +18,11 @@ namespace sw
 			if ( pComp == nullptr )
 				return;
 
-			const char*		  pCompName = "SceneComponent";
+			const utf8*		  pCompName = "SceneComponent";
 			const GameObject* pOwner	= pComp->getOwner();
 			if ( pOwner != nullptr )
 			{
-				const char* pNameStr = pOwner->getName().c_str();
+				const utf8* pNameStr = pOwner->getName().c_str();
 				if ( pNameStr != nullptr && pNameStr[0] != '\0' )
 					pCompName = pNameStr;
 			}

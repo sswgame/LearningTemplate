@@ -1,7 +1,8 @@
 #include "pch.h"
 
-#include "Editor/Widgets/EditorWidgets.h"
 #include "Editor/Windows/HierarchyWindow.h"
+
+#include "Editor/Widgets/EditorWidgets.h"
 #include "Editor/Workspace/EditorAssetDrop.h"
 #include "Editor/Workspace/EditorContextMenuRegistry.h"
 #include "Editor/Workspace/EditorTransaction.h"
@@ -14,15 +15,14 @@
 #include "RuntimeAPI/EditorService.h"
 #include "RuntimeAPI/EditorUIContext.h"
 
-#include <imgui.h>
 #include <algorithm>
-
+#include <imgui.h>
 namespace sw
 {
 
 	namespace
 	{
-		constexpr const char* kHierarchyGoPayload = "SW_HIERARCHY_GO";
+		constexpr const utf8* kHierarchyGoPayload = "SW_HIERARCHY_GO";
 
 		bool typeMatchesFilter( GameObject* pObj, string_view typeFilter )
 		{

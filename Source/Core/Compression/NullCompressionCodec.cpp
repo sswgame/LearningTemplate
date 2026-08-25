@@ -1,8 +1,8 @@
 #include "pch.h"
 
 #include "Core/Compression/NullCompressionCodec.h"
-#include "Core/Memory/Memory.h"
 
+#include "Core/Memory/Memory.h"
 namespace sw
 {
 	CompressionCodecType NullCompressionCodec::getCodecType() const
@@ -10,7 +10,7 @@ namespace sw
 		return CompressionCodecType::None;
 	}
 
-	const char* NullCompressionCodec::getCodecName() const
+	const utf8* NullCompressionCodec::getCodecName() const
 	{
 		return "Null";
 	}

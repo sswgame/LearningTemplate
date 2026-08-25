@@ -3,7 +3,6 @@
  * @brief 고정 용량 스택 할당 문자열 (basic_fixed_string)
  */
 #pragma once
-
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
@@ -11,7 +10,6 @@
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringUtil.h"
-
 namespace sw
 {
 	// ------------------------------------------------------------------------------
@@ -242,7 +240,7 @@ namespace sw
 		if ( str != nullptr )
 		{
 			const uint32 length = StringUtil::strlen( str );
-			SW_LOG_ASSERT( length <= N, "String too long for basic_fixed_string capacity" );
+			SW_LOG_ASSERT( length <= N, "String too int32 for basic_fixed_string capacity" );
 			Memory::copy( _arrData, str, sizeof( T ) * length );
 			_size = length;
 		}
@@ -254,7 +252,7 @@ namespace sw
 		: _arrData{}
 		, _size{ 0 }
 	{
-		SW_LOG_ASSERT( str.length() <= N, "String too long for basic_fixed_string capacity" );
+		SW_LOG_ASSERT( str.length() <= N, "String too int32 for basic_fixed_string capacity" );
 		Memory::copy( _arrData, str.data(), sizeof( T ) * str.length() );
 		_size			= static_cast<uint32>( str.length() );
 		_arrData[_size] = T{ 0 };
@@ -265,7 +263,7 @@ namespace sw
 		: _arrData{}
 		, _size{ 0 }
 	{
-		SW_LOG_ASSERT( str.length() <= N, "String too long for basic_fixed_string capacity" );
+		SW_LOG_ASSERT( str.length() <= N, "String too int32 for basic_fixed_string capacity" );
 		Memory::copy( _arrData, str.data(), sizeof( T ) * str.length() );
 		_size			= static_cast<uint32>( str.length() );
 		_arrData[_size] = T{ 0 };
@@ -276,7 +274,7 @@ namespace sw
 		: _arrData{}
 		, _size{ count }
 	{
-		SW_LOG_ASSERT( count <= N, "String too long for basic_fixed_string capacity" );
+		SW_LOG_ASSERT( count <= N, "String too int32 for basic_fixed_string capacity" );
 		std::fill_n( _arrData, count, ch );
 		_arrData[_size] = T{ 0 };
 	}
@@ -306,7 +304,7 @@ namespace sw
 		if ( str != nullptr )
 		{
 			const uint32 length = StringUtil::strlen( str );
-			SW_LOG_ASSERT( length <= N, "String too long for basic_fixed_string capacity" );
+			SW_LOG_ASSERT( length <= N, "String too int32 for basic_fixed_string capacity" );
 			Memory::copy( _arrData, str, sizeof( T ) * length );
 			_size = length;
 		}
@@ -321,7 +319,7 @@ namespace sw
 	template <typename T, uint32 N>
 	basic_fixed_string<T, N>& basic_fixed_string<T, N>::operator=( const std::basic_string<T>& str )
 	{
-		SW_LOG_ASSERT( str.length() <= N, "String too long for basic_fixed_string capacity" );
+		SW_LOG_ASSERT( str.length() <= N, "String too int32 for basic_fixed_string capacity" );
 		Memory::copy( _arrData, str.data(), sizeof( T ) * str.length() );
 		_size			= static_cast<uint32>( str.length() );
 		_arrData[_size] = T{ 0 };
@@ -331,7 +329,7 @@ namespace sw
 	template <typename T, uint32 N>
 	basic_fixed_string<T, N>& basic_fixed_string<T, N>::operator=( const std::basic_string_view<T>& str )
 	{
-		SW_LOG_ASSERT( str.length() <= N, "String too long for basic_fixed_string capacity" );
+		SW_LOG_ASSERT( str.length() <= N, "String too int32 for basic_fixed_string capacity" );
 		Memory::copy( _arrData, str.data(), sizeof( T ) * str.length() );
 		_size			= static_cast<uint32>( str.length() );
 		_arrData[_size] = T{ 0 };
@@ -412,7 +410,7 @@ namespace sw
 			return *this;
 
 		SW_LOG_ASSERT( pos <= _size, "Insert position out of range" );
-		SW_LOG_ASSERT( _size + length <= N, "Resulting string too long" );
+		SW_LOG_ASSERT( _size + length <= N, "Resulting string too int32" );
 
 		Memory::move( _arrData + pos + length, _arrData + pos, sizeof( T ) * ( _size - pos + 1 ) );
 		Memory::copy( _arrData + pos, pStr, sizeof( T ) * length );
@@ -467,7 +465,7 @@ namespace sw
 		if ( pStr != nullptr )
 		{
 			const uint32 length = StringUtil::strlen( pStr );
-			SW_LOG_ASSERT( _size + length <= N, "Resulting string too long" );
+			SW_LOG_ASSERT( _size + length <= N, "Resulting string too int32" );
 			Memory::copy( _arrData + _size, pStr, sizeof( T ) * length );
 			_size += length;
 			_arrData[_size] = T{ 0 };
@@ -491,7 +489,7 @@ namespace sw
 	basic_fixed_string<T, N>& basic_fixed_string<T, N>::append( const std::basic_string_view<T>& str )
 	{
 		const uint32 length = static_cast<uint32>( str.length() );
-		SW_LOG_ASSERT( _size + length <= N, "Resulting string too long" );
+		SW_LOG_ASSERT( _size + length <= N, "Resulting string too int32" );
 		Memory::copy( _arrData + _size, str.data(), sizeof( T ) * length );
 		_size += length;
 		_arrData[_size] = T{ 0 };

@@ -1,11 +1,11 @@
 #include "pch.h"
 
+#include "Core/File/Mac/MacFileWatcher.h"
+
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
-#include "Core/File/Mac/MacFileWatcher.h"
 #include "Core/Log/Logger.h"
-
 #if defined( SW_PLATFORM_MACOS )
 	#include <CoreServices/CoreServices.h>
 
@@ -28,7 +28,7 @@ namespace sw
 
 	void MacFileWatcher::handlePaths( size_t numEvents, void* pEventPaths, const uint32* pFlags )
 	{
-		char** ppPaths = static_cast<char**>( pEventPaths );
+		utf8** ppPaths = static_cast<utf8**>( pEventPaths );
 		for ( size_t eventIndex = 0; eventIndex < numEvents; ++eventIndex )
 		{
 			if ( ppPaths == nullptr || ppPaths[eventIndex] == nullptr )

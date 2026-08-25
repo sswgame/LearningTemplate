@@ -8,7 +8,6 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/String/hashed_string.h"
-
 namespace sw
 {
 	/**
@@ -26,9 +25,9 @@ namespace sw
 			: _bVisible{ 1 }
 			, _reserved{ 0 } {}
 
-		/** @brief float 값을 넣습니다. */
+		/** @brief float32 값을 넣습니다. */
 		void setFloat( hashed_string key, float32 value );
-		/** @brief float 값을 읽습니다. */
+		/** @brief float32 값을 읽습니다. */
 		float32 getFloat( hashed_string key, float32 defaultValue = 0.0f ) const;
 		/** @brief 문자열 값을 넣습니다. */
 		void setString( hashed_string key, string_view value );

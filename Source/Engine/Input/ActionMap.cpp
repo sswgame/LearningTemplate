@@ -1,43 +1,42 @@
 #include "pch.h"
 
-#include "Engine/Common/EngineServices.h"
-#include "Engine/Config/EngineData.h"
 #include "Engine/Input/ActionMap.h"
-#include "Engine/Input/InputManager.h"
-#include "Engine/Input/Windows/GamepadXInput.h"
-#include "Engine/Utility/Xml/XmlDocument.h"
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Common/EngineServices.h"
+#include "Engine/Config/EngineData.h"
+#include "Engine/Input/InputManager.h"
+#include "Engine/Input/Windows/GamepadXInput.h"
+#include "Engine/Utility/Xml/XmlDocument.h"
 namespace sw
 {
-
 
 	namespace
 	{
 		namespace InputMapXml
 		{
-			constexpr const char* kRoot				  = "InputMap";
-			constexpr const char* kLayers				  = "layers";
-			constexpr const char* kLayer				  = "layer";
-			constexpr const char* kAction				  = "action";
-			constexpr const char* kBind					  = "bind";
-			constexpr const char* kAttrDefaultLayer		  = "defaultLayer";
-			constexpr const char* kAttrDoubleClick		  = "doubleClickTime";
-			constexpr const char* kAttrDoubleClickDist	  = "doubleClickMaxDistance";
-			constexpr const char* kAttrHoldThreshold	  = "holdThreshold";
-			constexpr const char* kAttrName				  = "name";
-			constexpr const char* kAttrPriority			  = "priority";
-			constexpr const char* kAttrEnabled			  = "enabled";
-			constexpr const char* kAttrBlockLower		  = "blockLower";
-			constexpr const char* kAttrAlwaysOn			  = "alwaysOn";
-			constexpr const char* kAttrLayer			  = "layer";
-			constexpr const char* kAttrTrigger			  = "trigger";
-			constexpr const char* kAttrSource			  = "source";
-			constexpr const char* kAttrCode				  = "code";
-			constexpr const char* kSourceKey			  = "key";
-			constexpr const char* kSourceGamepad		  = "gamepad";
-			constexpr const char* kSourceMouse			  = "mouse";
+			constexpr const utf8* kRoot				   = "InputMap";
+			constexpr const utf8* kLayers			   = "layers";
+			constexpr const utf8* kLayer			   = "layer";
+			constexpr const utf8* kAction			   = "action";
+			constexpr const utf8* kBind				   = "bind";
+			constexpr const utf8* kAttrDefaultLayer	   = "defaultLayer";
+			constexpr const utf8* kAttrDoubleClick	   = "doubleClickTime";
+			constexpr const utf8* kAttrDoubleClickDist = "doubleClickMaxDistance";
+			constexpr const utf8* kAttrHoldThreshold   = "holdThreshold";
+			constexpr const utf8* kAttrName			   = "name";
+			constexpr const utf8* kAttrPriority		   = "priority";
+			constexpr const utf8* kAttrEnabled		   = "enabled";
+			constexpr const utf8* kAttrBlockLower	   = "blockLower";
+			constexpr const utf8* kAttrAlwaysOn		   = "alwaysOn";
+			constexpr const utf8* kAttrLayer		   = "layer";
+			constexpr const utf8* kAttrTrigger		   = "trigger";
+			constexpr const utf8* kAttrSource		   = "source";
+			constexpr const utf8* kAttrCode			   = "code";
+			constexpr const utf8* kSourceKey		   = "key";
+			constexpr const utf8* kSourceGamepad	   = "gamepad";
+			constexpr const utf8* kSourceMouse		   = "mouse";
 		} // namespace InputMapXml
 
 		bool parseBoolAttr( const utf8* pText, bool fallback )
@@ -74,7 +73,6 @@ namespace sw
 		};
 
 	} // namespace
-
 
 	ActionMap::ActionMap()
 		: _pInput{ nullptr }

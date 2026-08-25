@@ -3,9 +3,9 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/ECS/ArchetypeChunkPool.h"
 #include "Engine/Graphics/RHI/BindlessTable.h"
-#include "Engine/Graphics/RenderPass/RenderGraph.h"
 #include "Engine/Graphics/RenderPass/ComputePass.h"
 #include "Engine/Graphics/RenderPass/IndirectDrawBuffer.h"
+#include "Engine/Graphics/RenderPass/RenderGraph.h"
 #include "Engine/Reflection/PropertyMetaHint.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Serialization/Format/CompressedBinarySerializer.h"
@@ -15,7 +15,6 @@
 #include "Engine/Utility/Resource/AssetStreamingQueue.h"
 
 #include "TestFramework/TestFramework.h"
-
 // ------------------------------------------------------------------------------
 // 1) SpatialQuadTree 2D 공간 분할 및 범위 쿼리 검증
 // ------------------------------------------------------------------------------
@@ -267,9 +266,9 @@ SW_TEST_CASE( Engine_File, ReloadFileManagerLifecycle )
 	bool	   bCallbackCalled = false;
 	const auto handle		   = manager.registerWatch( "Resource/shaders", { ".hlsl" },
 														SW_DELEGATE_LAMBDA( sw::FileWatchMatchDelegate, [&bCallbackCalled]( const sw::FileChangeEvent& )
-	{
-		bCallbackCalled = true;
-	} ) );
+			 {
+		 bCallbackCalled = true;
+	 } ) );
 
 	SW_EXPECT_TRUE( handle.isValid() );
 	manager.unregisterWatch( handle );
@@ -329,7 +328,7 @@ namespace
 			++s_activeCustomStringCount;
 		}
 
-		explicit CustomStringComponent( const char* pVal )
+		explicit CustomStringComponent( const utf8* pVal )
 			: _str{ pVal }
 		{
 			++s_activeCustomStringCount;
@@ -481,7 +480,7 @@ SW_TEST_CASE( Engine_Streaming, AssetStreamingQueueInFlightMulticastCallbacks )
 	int32 callback3Count = 0;
 
 	// 동일한 가상 에셋 경로에 대해 연속으로 3회 요청
-	const char* pTestAsset = "Resource/test_dummy_asset.png";
+	const utf8* pTestAsset = "Resource/test_dummy_asset.png";
 
 	queue.requestAsset( pTestAsset, sw::StreamingPriority::Normal,
 						SW_DELEGATE_LAMBDA( sw::OnStreamingCompleteDelegate, [&callback1Count]( string_view path, bool bSuccess )

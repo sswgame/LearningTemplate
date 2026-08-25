@@ -1,8 +1,8 @@
 #include "pch.h"
 
 #include "Core/Compression/RleCompressionCodec.h"
-#include "Core/Memory/Memory.h"
 
+#include "Core/Memory/Memory.h"
 namespace sw
 {
 	namespace
@@ -16,7 +16,7 @@ namespace sw
 		return CompressionCodecType::RLE;
 	}
 
-	const char* RleCompressionCodec::getCodecName() const
+	const utf8* RleCompressionCodec::getCodecName() const
 	{
 		return "RLE";
 	}

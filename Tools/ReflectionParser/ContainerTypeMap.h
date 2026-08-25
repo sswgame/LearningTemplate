@@ -5,12 +5,10 @@
 #pragma once
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
-
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+
 #include "Engine/Reflection/ReflectionContainers.h"
-
-
 namespace sw
 {
 	// ------------------------------------------------------------------------------
@@ -47,7 +45,7 @@ namespace sw
 		void setLoaded( bool bLoaded ) { _bLoaded = bLoaded; }
 
 	private:
-		vector<ContainerTypeRule> _rules;
+		vector<ContainerTypeRule> _listRules;
 		bool					  _bLoaded = false;
 	};
 } // namespace sw

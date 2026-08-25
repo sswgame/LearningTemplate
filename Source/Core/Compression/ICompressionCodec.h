@@ -1,8 +1,6 @@
 #pragma once
-
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
-
 namespace sw
 {
 	/**
@@ -41,7 +39,7 @@ namespace sw
 		/**
 		 * @brief 사람이 읽을 수 있는 코덱 이름을 반환합니다.
 		 */
-		virtual const char* getCodecName() const = 0;
+		virtual const utf8* getCodecName() const = 0;
 
 		/**
 		 * @brief 주어진 원본 크기에 대해 압축 시 최악의 경우 필요한 최대 버퍼 크기를 계산합니다.

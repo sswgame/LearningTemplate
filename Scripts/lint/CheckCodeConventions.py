@@ -97,6 +97,10 @@ _kConstantNamingRe = re.compile(
     r'^\s*static\s+constexpr\s+(?:\w+)\s+([A-Z][a-zA-Z0-9_]*)\s*='
 )
 
+_kBasicTypesRe = re.compile(
+    r'\b(?:unsigned\s+int|unsigned\s+short|unsigned\s+long\s+long|unsigned\s+char|long\s+long|unsigned\s+long|long|int|float|double|short|char|wchar_t)\b'
+)
+
 # --- Inspection Logic --------------------------------------------------------
 
 def checkFileConventionsInternal( filePath: Path, rootDir: Path ) -> List[ConventionViolation]:
@@ -249,6 +253,25 @@ def checkFileConventionsInternal( filePath: Path, rootDir: Path ) -> List[Conven
                         )
                     )
 
+        # 4.9. Basic Type Aliases check (int -> int32, etc)
+        # Exception for int main and #include and some macros
+        if not trimmed.startswith("#") and "int main" not in trimmed and "Types.h" not in relPath:
+            basicTypeMatch = _kBasicTypesRe.search( line )
+            if basicTypeMatch:
+                typeName = basicTypeMatch.group(0)
+                # Ignore std::int32_t etc. that might accidentally match if our regex is not perfect,
+                # though \b protects us. 
+                # Also ignore "unsigned int" if it's part of a string, but regex doesn't parse strings.
+                violations.append(
+                    ConventionViolation(
+                        file_path=relPath,
+                        line_number=lineNum,
+                        rule_category="Style/BasicTypeAlias",
+                        message=f"Basic type '{typeName}' is not allowed. Use Types.h aliases (int32, float32, etc).",
+                        snippet=trimmed,
+                    )
+                )
+
         # 5. Constructor initializer formatting check (one initializer per line starting with : or ,)
         if trimmed.startswith( ":" ) or trimmed.startswith( "," ):
             initMatch = re.search( r'^[,\:]\s*([a-zA-Z0-9_]+)\s*(\([^\)]*\)|\{[^\}]*\})', trimmed )
@@ -390,16 +413,35 @@ def checkFileConventionsInternal( filePath: Path, rootDir: Path ) -> List[Conven
 
 # --- Public API & Entry Point ------------------------------------------------
 
-def runConventionsCheck( rootDir: Optional[Path] = None ) -> List[ConventionViolation]:
+def runConventionsCheck( rootDir: Optional[Path] = None, specificFiles: Optional[List[str]] = None ) -> List[ConventionViolation]:
     if rootDir is None:
         rootDir = Path( getProjectRoot() )
+
+    allViolations: List[ConventionViolation] = []
+
+    if specificFiles:
+        for f in specificFiles:
+            p = Path(f).resolve()
+            if not p.exists() or not p.is_file(): continue
+            normPath = str(p).replace("\\", "/")
+            if "ThirdParty" in normPath or "build" in normPath or ".vcpkg" in normPath: continue
+            if p.suffix.lower() not in (".h", ".hpp", ".inl", ".cpp", ".c", ".cc"): continue
+            
+            # Find closest root dir for relative paths
+            relRootDir = rootDir
+            if rootDir not in p.parents:
+                for parent in p.parents:
+                    if (parent / "Source").exists() or (parent / "Test").exists():
+                        relRootDir = parent
+                        break
+            
+            allViolations.extend( checkFileConventionsInternal( p, relRootDir ) )
+        return allViolations
 
     searchDirs = [
         rootDir / "Source",
         rootDir / "Test",
     ]
-
-    allViolations: List[ConventionViolation] = []
 
     for searchDir in searchDirs:
         if not searchDir.exists():
@@ -421,10 +463,11 @@ def main() -> int:
     parser.add_argument( "--category", type=str, default=None, help="Filter by rule category" )
     parser.add_argument( "--exclude-category", type=str, default=None, help="Exclude specific rule category" )
     parser.add_argument( "--json", action="store_true", help="Output results in JSON format" )
+    parser.add_argument( "--files", nargs="*", help="Specific files to check instead of scanning entire root" )
     args = parser.parse_args()
 
     rootDir = args.root if args.root else Path( getProjectRoot() )
-    violations = runConventionsCheck( rootDir )
+    violations = runConventionsCheck( rootDir, args.files )
 
     if args.category:
         violations = [v for v in violations if args.category.lower() in v.rule_category.lower()]

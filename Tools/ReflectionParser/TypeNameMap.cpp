@@ -1,10 +1,11 @@
+#include "pch.h"
 
 #include "TypeNameMap.h"
-#include "ParserDefines.h"
 
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
+#include "ParserDefines.h"
 namespace sw
 {
 	namespace
@@ -41,7 +42,7 @@ namespace sw
 
 	void TypeNameMap::clear()
 	{
-		_aliasToCanonical.clear();
+		_mapAliasToCanonical.clear();
 		_bLoaded = false;
 	}
 
@@ -49,7 +50,7 @@ namespace sw
 	{
 		if ( key.empty() )
 			return;
-		_aliasToCanonical.insert_or_assign( key, canonical );
+		_mapAliasToCanonical.insert_or_assign( key, canonical );
 	}
 
 	void TypeNameMap::registerEntry( const string& canonical, const string& nameSpace,
