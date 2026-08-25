@@ -1,14 +1,20 @@
 # ==============================================================================
-# @file cmake/internal/FindWindowsArchiveAndMt.cmake
-# @brief Windows lib.exe / mt.exe 탐색 (SetupEnvironment · ClangCl · vcpkg ports 공용)
+# @file cmake/Environment/FindWindowsTools.cmake
+# @brief Windows lib.exe / mt.exe 탐색 및 clang-cl 아카이버 재바인딩 헬퍼 (캐시 최적화)
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
 # 1) sw_findWindowsArchiveAndMt — lib.exe(아카이버) / mt.exe 경로
 #    우선순위: llvm-lib·llvm-mt → toolchain_config MSVC/SDK → Windows Kits
-#    OUT_AR, OUT_MT
+#    결과를 SW_CACHED_WIN_AR / SW_CACHED_WIN_MT에 캐싱하여 불필요한 디스크 I/O 방지
 # ------------------------------------------------------------------------------
 function(sw_findWindowsArchiveAndMt OUT_AR OUT_MT)
+	if(DEFINED CACHE{SW_CACHED_WIN_AR} AND DEFINED CACHE{SW_CACHED_WIN_MT})
+		set(${OUT_AR} "$CACHE{SW_CACHED_WIN_AR}" PARENT_SCOPE)
+		set(${OUT_MT} "$CACHE{SW_CACHED_WIN_MT}" PARENT_SCOPE)
+		return()
+	endif()
+
 	set(swAr "")
 	set(swMt "")
 
@@ -30,7 +36,6 @@ function(sw_findWindowsArchiveAndMt OUT_AR OUT_MT)
 	endforeach()
 
 	if(DEFINED ENV{LLVM_DIR} AND EXISTS "$ENV{LLVM_DIR}/bin/llvm-lib.exe")
-
 		set(swAr "$ENV{LLVM_DIR}/bin/llvm-lib.exe")
 	elseif(DEFINED ENV{LLVM_ROOT} AND EXISTS "$ENV{LLVM_ROOT}/bin/llvm-lib.exe")
 		set(swAr "$ENV{LLVM_ROOT}/bin/llvm-lib.exe")
@@ -91,6 +96,49 @@ function(sw_findWindowsArchiveAndMt OUT_AR OUT_MT)
 		endforeach()
 	endif()
 
+	set(SW_CACHED_WIN_AR "${swAr}" CACHE INTERNAL "Cached Windows ar tool")
+	set(SW_CACHED_WIN_MT "${swMt}" CACHE INTERNAL "Cached Windows mt tool")
 	set(${OUT_AR} "${swAr}" PARENT_SCOPE)
 	set(${OUT_MT} "${swMt}" PARENT_SCOPE)
 endfunction()
+
+# ------------------------------------------------------------------------------
+# 2) sw_bindClangClWindowsTools — project() 직후 clang-cl + Ninja 정적 아카이버 재바인딩
+# ------------------------------------------------------------------------------
+macro(sw_bindClangClWindowsTools)
+	if(WIN32 AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+		set(swArTool "")
+		if(CMAKE_AR AND NOT CMAKE_AR MATCHES "NOTFOUND" AND EXISTS "${CMAKE_AR}")
+			set(swArTool "${CMAKE_AR}")
+		endif()
+
+		if(NOT swArTool)
+			sw_findWindowsArchiveAndMt(swFoundAr swFoundMt)
+			if(swFoundAr)
+				set(swArTool "${swFoundAr}")
+			endif()
+			if(swFoundMt AND (NOT CMAKE_MT OR CMAKE_MT MATCHES "NOTFOUND"))
+				set(CMAKE_MT "${swFoundMt}" CACHE FILEPATH "매니페스트 도구" FORCE)
+			endif()
+		endif()
+
+		if(swArTool)
+			set(CMAKE_AR "${swArTool}" CACHE FILEPATH "정적 라이브러리 아카이버" FORCE)
+			set(CMAKE_C_COMPILER_AR "${swArTool}" CACHE FILEPATH "" FORCE)
+			set(CMAKE_CXX_COMPILER_AR "${swArTool}" CACHE FILEPATH "" FORCE)
+
+			set(CMAKE_C_CREATE_STATIC_LIBRARY "<CMAKE_AR> /nologo <LINK_FLAGS> /out:<TARGET> <OBJECTS>")
+			set(CMAKE_CXX_CREATE_STATIC_LIBRARY "<CMAKE_AR> /nologo <LINK_FLAGS> /out:<TARGET> <OBJECTS>")
+			set(CMAKE_C_ARCHIVE_CREATE "<CMAKE_AR> /nologo <LINK_FLAGS> /out:<TARGET> <OBJECTS>")
+			set(CMAKE_CXX_ARCHIVE_CREATE "<CMAKE_AR> /nologo <LINK_FLAGS> /out:<TARGET> <OBJECTS>")
+			set(CMAKE_C_ARCHIVE_APPEND "<CMAKE_AR> /nologo <LINK_FLAGS> /out:<TARGET> <OBJECTS>")
+			set(CMAKE_CXX_ARCHIVE_APPEND "<CMAKE_AR> /nologo <LINK_FLAGS> /out:<TARGET> <OBJECTS>")
+			set(CMAKE_C_ARCHIVE_FINISH "")
+			set(CMAKE_CXX_ARCHIVE_FINISH "")
+
+			message(STATUS "[FindWindowsTools] archive tool=${swArTool}")
+		else()
+			message(WARNING "[FindWindowsTools] lib.exe not found — static libraries may fail to link")
+		endif()
+	endif()
+endmacro()

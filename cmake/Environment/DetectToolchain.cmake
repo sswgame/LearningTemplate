@@ -1,5 +1,5 @@
 # ==============================================================================
-# @file cmake/internal/SetupEnvironment.cmake
+# @file cmake/Environment/DetectToolchain.cmake
 # @brief Scripts/setup/SetupEnvironment.py를 실행하여 개발 환경을 탐색하고,
 #        생성된 Config/Environment/toolchain_config.json으로부터 LLVM/vcpkg/SDK 경로를 CMake에 주입
 #
@@ -12,7 +12,7 @@
 # ------------------------------------------------------------------------------
 # 1) Python 헬퍼 로드 및 자동 부트스트랩 환경 변수 전달
 # ------------------------------------------------------------------------------
-include("${CMAKE_CURRENT_LIST_DIR}/Python.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/PythonUtils.cmake")
 
 if(SW_VCPKG_AUTO_BOOTSTRAP)
 	set(ENV{SW_VCPKG_AUTO_BOOTSTRAP} "1")
@@ -35,7 +35,7 @@ set(swEngineCfg "${CMAKE_SOURCE_DIR}/${SW_DIR_CONFIG_ENV}/${SW_FILE_TOOLCHAIN_CO
 if(EXISTS "${swEngineCfg}")
     file(READ "${swEngineCfg}" swEngineCfgJson)
 
-# JSON 키별 경로 추출
+    # JSON 키별 경로 추출
     string(JSON swLlvmPath ERROR_VARIABLE swJsonErr GET "${swEngineCfgJson}" "${SW_KEY_LLVM_PATH}")
     if(swJsonErr)
         set(swLlvmPath "")
@@ -65,19 +65,12 @@ if(EXISTS "${swEngineCfg}")
         set(swSccachePath "")
     endif()
 
-    # 1) vcpkg 툴체인 및 오버레이 포트 설정
+    # 1) vcpkg 툴체인 및 루트 주입
     if(swVcpkgRoot AND EXISTS "${swVcpkgRoot}/scripts/buildsystems/vcpkg.cmake")
-        file(GLOB swOverlayPorts "${CMAKE_SOURCE_DIR}/ThirdParty/*/vcpkg-port")
-        if(swOverlayPorts)
-            set(VCPKG_OVERLAY_PORTS "${swOverlayPorts}" CACHE STRING "vcpkg 오버레이 포트 경로(들)" FORCE)
-        endif()
-        set(swOverlayTriplets "${CMAKE_SOURCE_DIR}/cmake/Modules/Toolchain/Vcpkg")
-        if(EXISTS "${swOverlayTriplets}")
-            set(ENV{VCPKG_OVERLAY_TRIPLETS} "${swOverlayTriplets}")
-        endif()
+        set(sw_vcpkg_root "${swVcpkgRoot}" CACHE PATH "vcpkg 루트 디렉터리" FORCE)
         set(CMAKE_TOOLCHAIN_FILE "${swVcpkgRoot}/scripts/buildsystems/vcpkg.cmake" CACHE FILEPATH "vcpkg 툴체인" FORCE)
         set(ENV{VCPKG_ROOT} "${swVcpkgRoot}")
-        message(STATUS "[SetupEnvironment] Using vcpkg: ${swVcpkgRoot}")
+        message(STATUS "[DetectToolchain] Using vcpkg: ${swVcpkgRoot}")
     endif()
 
     # 2) LLVM / Clang 컴파일러 및 링커 설정
@@ -101,85 +94,31 @@ if(EXISTS "${swEngineCfg}")
                 set(CMAKE_RC_COMPILER "${swLlvmPath}/bin/llvm-rc.exe" CACHE FILEPATH "RC 컴파일러" FORCE)
             endif()
 
-            # 정적 아카이브: llvm-lib, 없으면 MSVC lib.exe (프로젝트 LLVM 키트에 llvm-lib가 없을 수 있음).
-            set(swAr "")
-            if(EXISTS "${swLlvmPath}/bin/llvm-lib.exe")
-                set(swAr "${swLlvmPath}/bin/llvm-lib.exe")
-            elseif(swMsvcTools AND NOT swMsvcTools STREQUAL "")
-                foreach(hostArch IN ITEMS Hostx64 Hostx86)
-                    foreach(targetArch IN ITEMS x64 x86)
-                        set(arCandidate "${swMsvcTools}/bin/${hostArch}/${targetArch}/lib.exe")
-                        if(EXISTS "${arCandidate}")
-                            set(swAr "${arCandidate}")
-                            break()
-                        endif()
-                    endforeach()
-                    if(swAr)
-                        break()
-                    endif()
-                endforeach()
-            endif()
+            # 정적 아카이브(lib.exe/llvm-lib.exe) 및 매니페스트 도구(mt.exe/llvm-mt.exe) 탐색
+            include("${CMAKE_CURRENT_LIST_DIR}/FindWindowsTools.cmake")
+            sw_findWindowsArchiveAndMt(swAr swMt)
+
             if(swAr)
                 set(CMAKE_AR "${swAr}" CACHE FILEPATH "정적 라이브러리 아카이버" FORCE)
                 set(CMAKE_C_COMPILER_AR "${swAr}" CACHE FILEPATH "" FORCE)
                 set(CMAKE_CXX_COMPILER_AR "${swAr}" CACHE FILEPATH "" FORCE)
-                message(STATUS "[SetupEnvironment] CMAKE_AR=${CMAKE_AR}")
+                message(STATUS "[DetectToolchain] CMAKE_AR=${CMAKE_AR}")
             else()
-                message(WARNING "[SetupEnvironment] lib.exe / llvm-lib not found — static libs (e.g. Core.lib) may fail")
+                message(WARNING "[DetectToolchain] lib.exe / llvm-lib not found — static libs (e.g. Core.lib) may fail")
             endif()
 
-            # clang-cl + Ninja는 vslinkexe를 쓰며, 매니페스트 도구 mt.exe가 필요함.
-            set(swMt "")
-            if(EXISTS "${swLlvmPath}/bin/llvm-mt.exe")
-                set(swMt "${swLlvmPath}/bin/llvm-mt.exe")
-            elseif(swSdkDir AND swSdkVer AND NOT swSdkDir STREQUAL "" AND NOT swSdkVer STREQUAL "")
-                foreach(arch IN ITEMS x64 x86)
-                    set(mtCandidate "${swSdkDir}/bin/${swSdkVer}/${arch}/mt.exe")
-                    if(EXISTS "${mtCandidate}")
-                        set(swMt "${mtCandidate}")
-                        break()
-                    endif()
-                endforeach()
-            endif()
-            if(NOT swMt)
-                foreach(kitsRoot IN ITEMS
-                    "C:/Program Files (x86)/Windows Kits/10"
-                    "C:/Program Files/Windows Kits/10"
-                )
-                    if(NOT IS_DIRECTORY "${kitsRoot}/bin")
-                        continue()
-                    endif()
-                    file(GLOB sdkVerDirs LIST_DIRECTORIES true "${kitsRoot}/bin/10.*")
-                    list(SORT sdkVerDirs COMPARE NATURAL ORDER DESCENDING)
-                    foreach(verDir IN LISTS sdkVerDirs)
-                        foreach(arch IN ITEMS x64 x86)
-                            set(mtCandidate "${verDir}/${arch}/mt.exe")
-                            if(EXISTS "${mtCandidate}")
-                                set(swMt "${mtCandidate}")
-                                break()
-                            endif()
-                        endforeach()
-                        if(swMt)
-                            break()
-                        endif()
-                    endforeach()
-                    if(swMt)
-                        break()
-                    endif()
-                endforeach()
-            endif()
             if(swMt)
                 set(CMAKE_MT "${swMt}" CACHE FILEPATH "매니페스트 도구" FORCE)
-                message(STATUS "[SetupEnvironment] CMAKE_MT=${CMAKE_MT}")
+                message(STATUS "[DetectToolchain] CMAKE_MT=${CMAKE_MT}")
             else()
-                message(WARNING "[SetupEnvironment] mt.exe / llvm-mt not found — clang-cl link test may fail")
+                message(WARNING "[DetectToolchain] mt.exe / llvm-mt not found — clang-cl link test may fail")
             endif()
 
-            message(STATUS "[SetupEnvironment] Using clang-cl from ${swLlvmPath}/bin")
+            message(STATUS "[DetectToolchain] Using clang-cl from ${swLlvmPath}/bin")
         elseif(EXISTS "${swLlvmPath}/bin/clang")
             set(CMAKE_C_COMPILER "${swLlvmPath}/bin/clang" CACHE FILEPATH "C 컴파일러" FORCE)
             set(CMAKE_CXX_COMPILER "${swLlvmPath}/bin/clang++" CACHE FILEPATH "CXX 컴파일러" FORCE)
-            message(STATUS "[SetupEnvironment] Using clang from ${swLlvmPath}/bin")
+            message(STATUS "[DetectToolchain] Using clang from ${swLlvmPath}/bin")
         endif()
     endif()
 
@@ -191,7 +130,7 @@ if(EXISTS "${swEngineCfg}")
         else()
             set(ENV{PATH} "${swNinjaDir}:$ENV{PATH}")
         endif()
-        message(STATUS "[SetupEnvironment] Using Ninja: ${swNinjaPath}")
+        message(STATUS "[DetectToolchain] Using Ninja: ${swNinjaPath}")
     endif()
 endif()
 
@@ -208,8 +147,8 @@ if(SW_USE_SCCACHE)
     if(SW_SCCACHE_EXE)
         set(CMAKE_C_COMPILER_LAUNCHER "${SW_SCCACHE_EXE}" CACHE FILEPATH "C 컴파일러 런처" FORCE)
         set(CMAKE_CXX_COMPILER_LAUNCHER "${SW_SCCACHE_EXE}" CACHE FILEPATH "CXX 컴파일러 런처" FORCE)
-        message(STATUS "[SetupEnvironment] Using sccache: ${SW_SCCACHE_EXE}")
+        message(STATUS "[DetectToolchain] Using sccache: ${SW_SCCACHE_EXE}")
     else()
-        message(STATUS "[SetupEnvironment] sccache not found. Skipping compiler cache.")
+        message(STATUS "[DetectToolchain] sccache not found. Skipping compiler cache.")
     endif()
 endif()

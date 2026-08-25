@@ -156,7 +156,7 @@ sequenceDiagram
   Eng->>Eng: 기동 시 TypeRegistrar 로 TypeRegistry 채움
 ```
 
-CMake 헬퍼: `cmake/internal/Reflection.cmake` (`sw_addReflectionStep`)
+CMake 헬퍼: `cmake/Engine/ReflectionCodeGen.cmake` (`sw_addReflectionStep`)
 
 1. ReflectionParser 실행 파일 빌드  
 2. REFLECT 헤더 스캔 → `OutputDir/Foo.gen.cpp`  

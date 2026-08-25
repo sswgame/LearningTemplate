@@ -1,6 +1,6 @@
 # ==============================================================================
-# @file cmake/internal/Reflection.cmake
-# @brief ReflectionParser로 .gen.cpp를 생성하는 CMake 헬퍼
+# @file cmake/Engine/ReflectionCodeGen.cmake
+# @brief ReflectionParser로 .gen.cpp를 생성하는 CMake 코드젠 파이프라인
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
@@ -68,7 +68,7 @@ function(sw_addReflectionStep TARGET_NAME)
         endif()
     endforeach()
 
-file(MAKE_DIRECTORY "${ARG_OUTPUT_DIR}")
+    file(MAKE_DIRECTORY "${ARG_OUTPUT_DIR}")
     set(generatedFiles "")
     foreach(header IN LISTS ARG_HEADERS)
         get_filename_component(stem "${header}" NAME_WE)

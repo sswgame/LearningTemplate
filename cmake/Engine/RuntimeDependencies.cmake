@@ -1,7 +1,7 @@
 # ==============================================================================
-# @file cmake/internal/VcpkgRuntime.cmake
+# @file cmake/Engine/RuntimeDependencies.cmake
 # @brief project() 이후: vcpkg include/bin 경로 조회 + 런타임 DLL 복사 헬퍼
-# @note Targets.cmake 의 sw_queueRuntimeCopy 이후에 include 할 것
+# @note ModuleBuildRules.cmake 의 sw_queueRuntimeCopy 이후에 include 할 것
 # ==============================================================================
 
 if(NOT SW_USE_VCPKG)

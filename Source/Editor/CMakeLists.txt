@@ -19,10 +19,10 @@ if(NOT SW_SHIPPING_BUILD)
 			Engine
 			RuntimeAPI
 			imgui
-			implot
-			imguizmo
 			imgui_nodeeditor
 			imgui_notify
+			imguizmo
+			implot
 			sw_graphics_libs
 			sw_global_options
 	)
@@ -39,7 +39,10 @@ if(NOT SW_SHIPPING_BUILD)
 	target_precompile_headers(EditorModule PRIVATE "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
 
 	sw_setModuleBinOutput(EditorModule)
-	set_property(TARGET EditorModule PROPERTY INTERPROCEDURAL_OPTIMIZATION FALSE)
+	set_target_properties(EditorModule PROPERTIES
+		INTERPROCEDURAL_OPTIMIZATION FALSE
+		FOLDER "Source/Editor"
+	)
 
 	if(COMMAND sw_setUnityBuild)
 		sw_setUnityBuild(EditorModule OFF)

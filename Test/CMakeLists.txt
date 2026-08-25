@@ -14,7 +14,7 @@ set(CMAKE_INTERPROCEDURAL_OPTIMIZATION FALSE)
 add_subdirectory(TestFramework)
 add_subdirectory(CoreTest)
 add_subdirectory(EngineTest)
-add_subdirectory(SmokeTest)
 add_subdirectory(ReflectionTest)
+add_subdirectory(SmokeTest)
 
 target_compile_definitions(TestFramework PUBLIC SW_TEST_INTERNAL)

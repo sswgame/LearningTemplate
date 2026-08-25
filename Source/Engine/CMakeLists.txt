@@ -19,7 +19,7 @@ else()
     set(coreLibType SHARED)
 endif()
 
-include("${CMAKE_SOURCE_DIR}/cmake/RhiSources.cmake")
+include("${CMAKE_SOURCE_DIR}/cmake/Engine/RhiBackendSources.cmake")
 
 set(coreExclude
     "Graphics/RHI/Modules/"
@@ -115,14 +115,31 @@ endif()
 #    SW_DELAYLOAD_HOOK_SOURCE는 sw_addDelayloadHook(Targets.cmake)이 참조
 # ------------------------------------------------------------------------------
 sw_configureEngineDllExports(Engine ${coreLibType})
+set_target_properties(Engine PROPERTIES FOLDER "Source/Engine")
 
 set_property(TARGET Engine PROPERTY SW_DELAYLOAD_HOOK_SOURCE
     "${CMAKE_CURRENT_SOURCE_DIR}/Utility/Module/DelayLoadNotifyHook.cpp")
 
 # Windows: Input(XInput) + Audio(XAudio2) + 파일 대화상자 + 셰이더 컴파일러 유틸리티
 if(WIN32)
-    target_link_libraries(Engine PRIVATE xaudio2.lib mfplat.lib mfreadwrite.lib mfuuid.lib comdlg32 ole32 shell32 dbghelp d3dcompiler.lib delayimp.lib)
-    target_link_options(Engine PRIVATE /DELAYLOAD:mfplat.dll /DELAYLOAD:mfreadwrite.dll /DELAYLOAD:d3dcompiler_47.dll /DELAYLOAD:xaudio2_9.dll)
+    target_link_libraries(Engine PRIVATE
+        comdlg32.lib
+        d3dcompiler.lib
+        dbghelp.lib
+        delayimp.lib
+        mfplat.lib
+        mfreadwrite.lib
+        mfuuid.lib
+        ole32.lib
+        shell32.lib
+        xaudio2.lib
+    )
+    target_link_options(Engine PRIVATE
+        /DELAYLOAD:d3dcompiler_47.dll
+        /DELAYLOAD:mfplat.dll
+        /DELAYLOAD:mfreadwrite.dll
+        /DELAYLOAD:xaudio2_9.dll
+    )
 endif()
 
 if(SW_RHI_AS_MODULES)

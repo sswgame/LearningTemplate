@@ -1,10 +1,9 @@
 # ==============================================================================
-# @file cmake/internal/AuxTargets.cmake
-# @brief 보조 커스텀 타겟 (changelog / docs) — Scripts/generate 위임
-# @note LoadFlagModules 명시 include 목록에 넣지 않음 — 컴파일 플래그와 분리
+# @file cmake/Engine/AssetAndToolTargets.cmake
+# @brief 에셋 쿠킹(CookAssets), Doxygen 문서(GenerateDocs), 린트 스크립트 및 CTest 등록 헬퍼
 # ==============================================================================
 
-include("${CMAKE_CURRENT_LIST_DIR}/Python.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/../Environment/PythonUtils.cmake")
 
 # ------------------------------------------------------------------------------
 # 1) Doxygen — SW_BUILD_DOCS일 때만 GenerateDocs
@@ -89,3 +88,39 @@ if(Python3_Interpreter_FOUND)
     )
     set_target_properties(CheckSourceGlob PROPERTIES FOLDER "Engine/Scripts")
 endif()
+
+# ------------------------------------------------------------------------------
+# 3) CTest 린트 테스트 등록 헬퍼
+# ------------------------------------------------------------------------------
+function(sw_registerLintTests)
+    if(NOT Python3_Interpreter_FOUND)
+        return()
+    endif()
+
+    if(TARGET CheckEngineLayers)
+        add_test(
+            NAME CheckEngineLayers
+            COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/${SW_SCRIPT_LINT_CHECK_ENGINE_LAYERS}"
+                --root "${CMAKE_SOURCE_DIR}"
+        )
+        set_tests_properties(CheckEngineLayers PROPERTIES LABELS "lint" TIMEOUT 15)
+    endif()
+
+    if(TARGET CheckIncludeOrder)
+        add_test(
+            NAME CheckIncludeOrder
+            COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/Scripts/lint/CheckIncludeOrder.py"
+                --root "${CMAKE_SOURCE_DIR}"
+        )
+        set_tests_properties(CheckIncludeOrder PROPERTIES LABELS "lint" TIMEOUT 15)
+    endif()
+
+    if(TARGET CheckSourceGlob)
+        add_test(
+            NAME CheckSourceGlob
+            COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/${SW_SCRIPT_LINT_CHECK_SOURCE_GLOB}"
+                --root "${CMAKE_SOURCE_DIR}" --build "${CMAKE_BINARY_DIR}" --active-game "${SW_ACTIVE_GAME}"
+        )
+        set_tests_properties(CheckSourceGlob PROPERTIES LABELS "lint" TIMEOUT 15)
+    endif()
+endfunction()

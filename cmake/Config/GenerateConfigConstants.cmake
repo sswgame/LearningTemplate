@@ -1,10 +1,10 @@
 # ==============================================================================
-# @file cmake/internal/ConfigConstants.cmake
-# @brief Python의 Constants.py에 대응하는 CMake 내부 상수(경로, JSON 키 등) 선언
+# @file cmake/Config/GenerateConfigConstants.cmake
+# @brief Python Constants.py를 읽어 CMake 내부 상수 및 C++ ConfigConstants.h를 자동 생성
 # ==============================================================================
 
 # 1. 파이썬 실행 헬퍼 포함 (sw_executePythonScript)
-include("${CMAKE_CURRENT_LIST_DIR}/Python.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/../Environment/PythonUtils.cmake")
 
 # 2. Constants.py를 읽어 CMake 상수를 자동 생성하는 스크립트 실행
 # (Python이 Single Source of Truth가 됨)

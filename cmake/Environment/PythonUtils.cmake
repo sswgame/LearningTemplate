@@ -1,6 +1,6 @@
 # ==============================================================================
-# @file cmake/internal/Python.cmake
-# @brief Scripts/*.py 호출 헬퍼 (execute_process / 경로)
+# @file cmake/Environment/PythonUtils.cmake
+# @brief Scripts/*.py 서브프로세스 실행 유틸리티 헬퍼 (sw_executePythonScript)
 # ==============================================================================
 
 find_package(Python3 QUIET COMPONENTS Interpreter)
@@ -53,7 +53,7 @@ function(sw_executePythonScript SCRIPT_REL)
         return()
     endif()
 
-    # 호출 측 listfile이 아니라 이 함수가 정의된 cmake/internal 기준 → 저장소 루트
+    # 호출 측 listfile이 아니라 이 함수가 정의된 cmake/Environment 기준 → 저장소 루트
     get_filename_component(SW_ROOT_DIR "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/../.." ABSOLUTE)
     set(script "${SW_ROOT_DIR}/${SCRIPT_REL}")
     if(NOT EXISTS "${script}")
@@ -69,42 +69,37 @@ function(sw_executePythonScript SCRIPT_REL)
         return()
     endif()
 
-    set(wd "${SW_ROOT_DIR}")
+    set(workDir "${SW_ROOT_DIR}")
     if(SW_PY_WORKING_DIRECTORY)
-        set(wd "${SW_PY_WORKING_DIRECTORY}")
+        set(workDir "${SW_PY_WORKING_DIRECTORY}")
     endif()
 
+    set(cmd "${Python3_EXECUTABLE}" "${script}" ${SW_PY_ARGS})
     execute_process(
-        COMMAND "${Python3_EXECUTABLE}" "${script}" ${SW_PY_ARGS}
-        WORKING_DIRECTORY "${wd}"
-        RESULT_VARIABLE swPyResult
-        OUTPUT_VARIABLE swPyOutput
-        ERROR_VARIABLE swPyError
+        COMMAND ${cmd}
+        WORKING_DIRECTORY "${workDir}"
+        RESULT_VARIABLE res
+        OUTPUT_VARIABLE out
+        ERROR_VARIABLE err
         OUTPUT_STRIP_TRAILING_WHITESPACE
         ERROR_STRIP_TRAILING_WHITESPACE
     )
 
     if(SW_PY_OUTPUT_VARIABLE)
-        set(${SW_PY_OUTPUT_VARIABLE} "${swPyOutput}" PARENT_SCOPE)
+        set(${SW_PY_OUTPUT_VARIABLE} "${out}" PARENT_SCOPE)
     endif()
     if(SW_PY_RESULT_VARIABLE)
-        set(${SW_PY_RESULT_VARIABLE} "${swPyResult}" PARENT_SCOPE)
+        set(${SW_PY_RESULT_VARIABLE} ${res} PARENT_SCOPE)
     endif()
 
-    if(NOT swPyResult EQUAL 0)
+    if(NOT res EQUAL 0)
         if(SW_PY_REQUIRED)
-            message(FATAL_ERROR
-                "[Python] ${SCRIPT_REL} failed (exit ${swPyResult}).\n"
-                "${swPyOutput}\n${swPyError}"
-            )
+            message(FATAL_ERROR "[Python] ${SCRIPT_REL} failed (${res}):\n${out}\n${err}")
         elseif(SW_PY_WARN)
-            message(WARNING
-                "[Python] ${SCRIPT_REL} failed (exit ${swPyResult}).\n"
-                "${swPyOutput}\n${swPyError}"
-            )
+            message(WARNING "[Python] ${SCRIPT_REL} exited with ${res}:\n${out}\n${err}")
+        elseif(NOT SW_PY_QUIET)
+            message(STATUS "[Python] ${SCRIPT_REL} (${res}): ${err}")
         endif()
-    elseif(swPyOutput AND NOT SW_PY_QUIET)
-        message(STATUS "${swPyOutput}")
     endif()
 endfunction()
 endif()

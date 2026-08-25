@@ -17,6 +17,7 @@ file(GLOB_RECURSE GF_SOURCES CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp")
 list(FILTER GF_SOURCES EXCLUDE REGEX "Kits/")
 
 add_library(GameFramework ${gfLibType} ${GF_SOURCES})
+set_target_properties(GameFramework PROPERTIES FOLDER "Source/GameFramework")
 
 target_include_directories(GameFramework PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 target_link_libraries(GameFramework

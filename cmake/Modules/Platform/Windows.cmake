@@ -26,12 +26,12 @@ target_link_libraries(sw_platform_windows INTERFACE
 # ------------------------------------------------------------------------------
 if(NOT TARGET sw_graphics_dx11_libs)
     add_library(sw_graphics_dx11_libs INTERFACE)
-    target_link_libraries(sw_graphics_dx11_libs INTERFACE d3d11.lib dxgi.lib d3dcompiler.lib)
+    target_link_libraries(sw_graphics_dx11_libs INTERFACE d3d11.lib d3dcompiler.lib dxgi.lib)
 endif()
 
 if(NOT TARGET sw_graphics_dx12_libs)
     add_library(sw_graphics_dx12_libs INTERFACE)
-    target_link_libraries(sw_graphics_dx12_libs INTERFACE d3d12.lib dxgi.lib d3dcompiler.lib)
+    target_link_libraries(sw_graphics_dx12_libs INTERFACE d3d12.lib d3dcompiler.lib dxgi.lib)
 endif()
 
 if(NOT TARGET sw_graphics_gl_libs)

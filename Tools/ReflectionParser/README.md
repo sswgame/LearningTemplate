@@ -23,7 +23,7 @@ flowchart TD
 ```
 
 CMake는 `ReflectionParser` 타겟이 준비된 뒤에야 `sw_addReflectionStep` 으로 gen을 돌립니다.  
-(`cmake/internal/Reflection.cmake`)
+(`cmake/Engine/ReflectionCodeGen.cmake`)
 
 ---
 
@@ -64,7 +64,7 @@ ParserDefines.h        ← 매크로/CLI/tpl 이름 계약 (JSON이 아님)
 | 3. AST 순회 | `AstVisitor` | 타입·멤버 커서 수집 |
 | 4. 어노테이션 적용 | `AnnotationMeta` → `AnnotationApply` | 별칭 토큰 → `Parsed*` 필드 |
 | 5. 코드 생성 | `CodeGenerator` + `Templates/` | `.gen.cpp` / `.gen.h` |
-| 6. 빌드 포함 | CMake `Reflection.cmake` | gen을 타겟에 넣어 컴파일 |
+| 6. 빌드 포함 | CMake `ReflectionCodeGen.cmake` | gen을 타겟에 넣어 컴파일 |
 
 ```mermaid
 flowchart TD
@@ -270,7 +270,7 @@ struct MyComponent : public Component
 ## 더 볼 곳
 
 - [Source/Engine/Reflection/README.md](../../Source/Engine/Reflection/README.md) — 매크로·TypeRegistry  
-- `cmake/internal/Reflection.cmake` — CMake 연동  
+- `cmake/Engine/ReflectionCodeGen.cmake` — CMake 연동  
 - `Source/Core/Predefined/AnnotationMeta.txt` — 별칭  
 - `Source/Engine/Reflection/ReflectBuiltins.h` — 빌트인  
 - [ARCHITECTURE.md](../../ARCHITECTURE.md) — 리플렉션·직렬화 개요  

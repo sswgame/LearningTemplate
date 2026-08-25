@@ -10,7 +10,7 @@ if(
 	return()
 endif()
 
-# sccache/ccache는 SetupEnvironment.cmake(SW_USE_SCCACHE)에서만 설정한다.
+# sccache/ccache는 DetectToolchain.cmake(SW_USE_SCCACHE)에서만 설정한다.
 
 add_library(sw_compiler_clang INTERFACE)
 
@@ -27,60 +27,61 @@ else()
 endif()
 
 # ------------------------------------------------------------------------------
-# 2) 컴파일 — 문자셋 → 코드젠 → 경고 → 외부 → 설정
+# 2) 컴파일 — 문자셋 → 코드젠 → 경고 → 서드파티 → 빌드설정(Debug/Release)
 # ------------------------------------------------------------------------------
 target_compile_options(sw_compiler_clang INTERFACE
-	# 문자셋
+	# 문자셋 (Clang GNU vs Clang-cl MSVC)
 	$<$<NOT:$<BOOL:${MSVC}>>:-finput-charset=UTF-8>
 	$<$<NOT:$<BOOL:${MSVC}>>:-fexec-charset=UTF-8>
 	$<$<AND:$<CXX_COMPILER_ID:Clang>,$<BOOL:${MSVC}>>:/utf-8>
 
-	# 코드젠
+	# 코드젠 / 최적화 기본 설정
 	$<$<BOOL:${MSVC}>:/bigobj>
 	$<$<BOOL:${MSVC}>:/GR->
-	$<$<BOOL:${MSVC}>:/Zc:inline>
 	$<$<BOOL:${MSVC}>:/Gw>
+	$<$<BOOL:${MSVC}>:/Zc:inline>
+	$<$<BOOL:${MSVC}>:-clang:-fdelayed-template-parsing>
 	$<$<BOOL:${MSVC}>:-clang:-fmerge-all-constants>
 	$<$<BOOL:${MSVC}>:-clang:-fno-spell-checking>
-	$<$<BOOL:${MSVC}>:-clang:-fdelayed-template-parsing>
 	$<$<AND:$<NOT:$<BOOL:${MSVC}>>,$<COMPILE_LANGUAGE:CXX>>:-fno-rtti>
 
-	# 경고 (활성화)
+	# 경고 활성화
 	-Wall
 	-Wextra
 
-	# 경고 (노이즈/의도적 비활성)
+	# 경고 비활성화 (알파벳 정렬)
 	-Wno-c++98-compat
 	-Wno-c++98-compat-pedantic
-	-Wno-pre-c++17-compat
-	-Wno-unsafe-buffer-usage
-	-Wno-global-constructors
-	-Wno-exit-time-destructors
-	-Wno-padded
-	-Wno-switch-default
-	-Wno-covered-switch-default
-	-Wno-format-nonliteral
-	-Wno-nonportable-include-path
 	-Wno-cast-function-type-strict
+	-Wno-covered-switch-default
+	-Wno-exit-time-destructors
+	-Wno-format-nonliteral
+	-Wno-global-constructors
 	-Wno-invalid-offsetof
+	-Wno-nonportable-include-path
+	-Wno-padded
+	-Wno-pre-c++17-compat
+	-Wno-switch-default
+	-Wno-unsafe-buffer-usage
 	-Wno-unused-command-line-argument
 	$<$<BOOL:${MSVC}>:-Qunused-arguments>
 	$<$<BOOL:${MSVC}>:-Wno-language-extension-token>
 
-	# 벤더 ThirdParty (clang-cl /external; SYSTEM은 위의 /imsvc 사용)
-	$<$<BOOL:${MSVC}>:/external:W0>
+	# 서드파티 외부 헤더 경고 억제 (clang-cl /external; SYSTEM은 위의 /imsvc 사용)
 	$<$<BOOL:${MSVC}>:/external:I${CMAKE_SOURCE_DIR}/ThirdParty>
+	$<$<BOOL:${MSVC}>:/external:W0>
 
-	# Debug
+	# 빌드 설정별 최적화 및 디버그 심볼
+	# Debug: 디버그 심볼 & 최적화 끄기
 	$<$<CONFIG:Debug>:-g>
-	$<$<AND:$<BOOL:${MSVC}>,$<CONFIG:Debug>>:/Z7>
 	$<$<AND:$<NOT:$<BOOL:${MSVC}>>,$<CONFIG:Debug>>:-O0>
 	$<$<AND:$<BOOL:${MSVC}>,$<CONFIG:Debug>>:/Od>
+	$<$<AND:$<BOOL:${MSVC}>,$<CONFIG:Debug>>:/Z7>
 
-	# Release
+	# Release: 최고 최적화 & AVX2 활성화
 	$<$<AND:$<NOT:$<BOOL:${MSVC}>>,$<CONFIG:Release>>:-O3>
-	$<$<AND:$<BOOL:${MSVC}>,$<CONFIG:Release>>:/O2>
 	$<$<AND:$<NOT:$<BOOL:${MSVC}>>,$<CONFIG:Release>>:-mavx2>
+	$<$<AND:$<BOOL:${MSVC}>,$<CONFIG:Release>>:/O2>
 	$<$<AND:$<BOOL:${MSVC}>,$<CONFIG:Release>>:/arch:AVX2>
 )
 

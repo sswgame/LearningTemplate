@@ -1,6 +1,6 @@
 # ==============================================================================
-# @file cmake/internal/Targets.cmake
-# @brief 출력 디렉터리, 글로벌 옵션, DLL 익스포트 및 런타임 유틸리티
+# @file cmake/Engine/ModuleBuildRules.cmake
+# @brief 엔진 모듈, RHI 백엔드, 장르 키트 타겟 생성 헬퍼 및 링킹/익스포트 규칙
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
@@ -95,6 +95,232 @@ function(sw_setModuleBinOutput TARGET_NAME)
 		LIBRARY_OUTPUT_DIRECTORY_DEBUG "${sw_output_directory}/Bin"
 		LIBRARY_OUTPUT_DIRECTORY_RELEASE "${sw_output_directory}/Bin"
 	)
+endfunction()
+
+# App의 런타임/플러그인/모듈 의존성을 구성합니다.
+function(sw_configureAppDependencies TARGET_NAME)
+	if(NOT TARGET ${TARGET_NAME})
+		return()
+	endif()
+
+	# 1) RHI 플러그인 빌드 순서 종속성 연결 (App이 런타임에 동적 로드)
+	foreach(rhiMod IN ITEMS RHI_DX11 RHI_DX12 RHI_GL RHI_Vulkan)
+		if(TARGET ${rhiMod})
+			add_dependencies(${TARGET_NAME} ${rhiMod})
+		endif()
+	endforeach()
+
+	# 2) Dev 에디터 모듈 빌드 순서 종속성 연결
+	if(NOT SW_SHIPPING_BUILD AND TARGET EditorModule)
+		add_dependencies(${TARGET_NAME} EditorModule)
+	endif()
+
+	# 3) Shipping / Dev 모듈 연결
+	# Shipping: SWGame 정적 링크 및 CookAssets 자동 선행 실행
+	# Dev: delay-load이므로 링크하지 않고 DLL이 App보다 먼저 빌드되도록 종속성만 연결
+	if(SW_SHIPPING_BUILD)
+		if(TARGET SWGame)
+			target_link_libraries(${TARGET_NAME} PRIVATE SWGame)
+		endif()
+		if(TARGET CookAssets)
+			add_dependencies(${TARGET_NAME} CookAssets)
+		endif()
+	else()
+		if(TARGET SWGame)
+			get_property(dynMods GLOBAL PROPERTY SW_DYNAMIC_MODULES)
+			foreach(mod IN LISTS dynMods)
+				if(TARGET ${mod})
+					add_dependencies(${TARGET_NAME} ${mod})
+				endif()
+			endforeach()
+		endif()
+	endif()
+endfunction()
+
+# RHI 그래픽스 백엔드 MODULE 타겟을 정의하고 공통 속성을 바인딩합니다.
+function(sw_addRhiBackendModule BACKEND_NAME GRAPHICS_LIB)
+	cmake_parse_arguments(ARG "" "" "SOURCES" ${ARGN})
+	add_library(${BACKEND_NAME} MODULE "${CMAKE_CURRENT_SOURCE_DIR}/ModuleEntry.cpp" ${ARG_SOURCES})
+
+	target_include_directories(${BACKEND_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
+	target_link_libraries(${BACKEND_NAME}
+		PRIVATE
+			Engine
+			${GRAPHICS_LIB}
+			sw_third_party_includes
+			sw_global_options
+	)
+	if(sw_flag_libraries)
+		target_link_libraries(${BACKEND_NAME} PRIVATE ${sw_flag_libraries})
+	endif()
+
+	target_compile_definitions(${BACKEND_NAME}
+		PRIVATE
+			"SW_LOG_TAG=\"RHI\""
+			SW_MODULE_EXPORTS
+	)
+	target_precompile_headers(${BACKEND_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
+	sw_setModuleBinOutput(${BACKEND_NAME})
+	set_target_properties(${BACKEND_NAME} PROPERTIES FOLDER "Source/Engine/Graphics/RHI/Modules")
+endfunction()
+
+# GameFramework 장르 키트 라이브러리 타겟을 정의하고 빌드 모드에 맞게 구성합니다.
+function(sw_addGameFrameworkKit KIT_NAME)
+	if(SW_SHIPPING_BUILD)
+		set(kitType STATIC)
+	else()
+		set(kitType SHARED)
+	endif()
+
+	file(GLOB_RECURSE kitSources CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp")
+	add_library(${KIT_NAME} ${kitType} ${kitSources})
+
+	target_include_directories(${KIT_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
+	target_link_libraries(${KIT_NAME}
+		PUBLIC
+			GameFramework
+			Engine
+			sw_public_source_includes
+		PRIVATE
+			sw_global_options
+	)
+	if(sw_flag_libraries)
+		target_link_libraries(${KIT_NAME} PRIVATE ${sw_flag_libraries})
+	endif()
+
+	target_compile_definitions(${KIT_NAME} PRIVATE "SW_LOG_TAG=\"${KIT_NAME}\"")
+	target_precompile_headers(${KIT_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
+
+	sw_configureGfExports(${KIT_NAME} ${kitType})
+	if(kitType STREQUAL "SHARED")
+		sw_setModuleBinOutput(${KIT_NAME})
+		if(WIN32)
+			sw_addDelayloadHook(${KIT_NAME} DLLS GameFramework.dll)
+		endif()
+	endif()
+	set_property(GLOBAL APPEND PROPERTY SW_DYNAMIC_MODULES ${KIT_NAME})
+	set_target_properties(${KIT_NAME} PROPERTIES FOLDER "Source/GameFramework/Kits")
+
+	file(GLOB kitHeaders "${CMAKE_CURRENT_SOURCE_DIR}/*.h")
+	sw_addReflectionStep(${KIT_NAME}
+		HEADERS ${kitHeaders}
+		INCLUDES "${CMAKE_SOURCE_DIR}/Source"
+	)
+endfunction()
+
+# 게임 팩 모듈(SWGame) 타겟을 정의하고 링크 및 리플렉션/딜레이로드를 구성합니다.
+function(sw_addGameModule TARGET_NAME)
+	cmake_parse_arguments(ARG "" "" "KITS;HEADERS;EXCLUDE" ${ARGN})
+	if(SW_SHIPPING_BUILD)
+		set(gameLibType STATIC)
+	else()
+		set(gameLibType MODULE)
+	endif()
+
+	file(GLOB_RECURSE gameSources CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp")
+	foreach(exPattern IN LISTS ARG_EXCLUDE)
+		list(FILTER gameSources EXCLUDE REGEX "${exPattern}")
+	endforeach()
+
+	add_library(${TARGET_NAME} ${gameLibType} ${gameSources})
+	set_target_properties(${TARGET_NAME} PROPERTIES FOLDER "Source/Games")
+
+	target_include_directories(${TARGET_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
+	target_link_libraries(${TARGET_NAME}
+		PRIVATE
+			Engine
+			RuntimeAPI
+			GameFramework
+			${ARG_KITS}
+			sw_global_options
+	)
+	if(sw_flag_libraries)
+		target_link_libraries(${TARGET_NAME} PRIVATE ${sw_flag_libraries})
+	endif()
+
+	target_compile_definitions(${TARGET_NAME}
+		PRIVATE
+			"SW_LOG_TAG=\"Game\""
+			SW_GAME_INTERNAL
+	)
+	if(gameLibType STREQUAL "MODULE")
+		target_compile_definitions(${TARGET_NAME} PRIVATE SW_MODULE_EXPORTS)
+		sw_setModuleBinOutput(${TARGET_NAME})
+	endif()
+
+	target_precompile_headers(${TARGET_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
+
+	if(COMMAND sw_setUnityBuild)
+		sw_setUnityBuild(${TARGET_NAME} BATCH_SIZE 8)
+	endif()
+
+	if(NOT SW_SHIPPING_BUILD AND WIN32)
+		set(delayDlls GameFramework.dll)
+		foreach(kit IN LISTS ARG_KITS)
+			list(APPEND delayDlls "${kit}.dll")
+		endforeach()
+		sw_addDelayloadHook(${TARGET_NAME} DLLS ${delayDlls})
+	endif()
+
+	if(ARG_HEADERS)
+		sw_addReflectionStep(${TARGET_NAME}
+			HEADERS ${ARG_HEADERS}
+			INCLUDES "${CMAKE_SOURCE_DIR}/Source"
+		)
+	else()
+		sw_addReflectionStep(${TARGET_NAME}
+			INCLUDES "${CMAKE_SOURCE_DIR}/Source"
+		)
+	endif()
+endfunction()
+
+# 테스트 실행 파일 타겟을 정의하고 공통 PCH, 로그 태그, CTest 등록을 수행합니다.
+function(sw_addTestExecutable TARGET_NAME)
+	cmake_parse_arguments(ARG "RUN_SERIAL" "TIMEOUT" "SOURCES;LIBS;LABELS;DEFINITIONS" ${ARGN})
+	if(NOT ARG_SOURCES)
+		file(GLOB_RECURSE ARG_SOURCES CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp")
+	endif()
+
+	add_executable(${TARGET_NAME} ${ARG_SOURCES})
+	set_target_properties(${TARGET_NAME} PROPERTIES FOLDER "Test")
+
+	target_include_directories(${TARGET_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
+	target_link_libraries(${TARGET_NAME}
+		PRIVATE
+			TestFramework
+			${ARG_LIBS}
+			sw_global_options
+	)
+	if(sw_flag_libraries)
+		target_link_libraries(${TARGET_NAME} PRIVATE ${sw_flag_libraries})
+	endif()
+
+	target_compile_definitions(${TARGET_NAME}
+		PRIVATE
+			"SW_LOG_TAG=\"Test\""
+			${ARG_DEFINITIONS}
+	)
+	target_precompile_headers(${TARGET_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
+
+	if(BUILD_TESTING)
+		add_test(NAME ${TARGET_NAME} COMMAND ${TARGET_NAME})
+		set(timeout 30)
+		if(ARG_TIMEOUT)
+			set(timeout ${ARG_TIMEOUT})
+		endif()
+		set(labels "unit")
+		if(ARG_LABELS)
+			set(labels "${ARG_LABELS}")
+		endif()
+		set_tests_properties(${TARGET_NAME} PROPERTIES
+			WORKING_DIRECTORY "${sw_output_directory}/Bin"
+			LABELS "${labels}"
+			TIMEOUT ${timeout}
+		)
+		if(ARG_RUN_SERIAL)
+			set_tests_properties(${TARGET_NAME} PROPERTIES RUN_SERIAL TRUE)
+		endif()
+	endif()
 endfunction()
 
 # ------------------------------------------------------------------------------
@@ -202,7 +428,9 @@ function(sw_addVcpkgConfigLib)
 		set(ARG_CONFIG_TARGET "${ARG_NAME}::${ARG_NAME}")
 	endif()
 	find_package(${ARG_PACKAGE} CONFIG QUIET)
-	if(TARGET ${ARG_CONFIG_TARGET})
+	if(TARGET ${ARG_NAME})
+		# Target already exists as imported library from find_package
+	elseif(TARGET ${ARG_CONFIG_TARGET})
 		add_library(${ARG_NAME} INTERFACE)
 		target_link_libraries(${ARG_NAME} INTERFACE ${ARG_CONFIG_TARGET})
 	else()

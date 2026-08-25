@@ -14,8 +14,8 @@
 # @note 런타임 헬퍼(sw_copy_vcpkg_*)는 cmake/internal/VcpkgRuntime.cmake
 #       VcpkgRuntime은 Targets.cmake의 sw_queueRuntimeCopy에 의존하므로 internal에 유지
 # ==============================================================================
-include("${CMAKE_CURRENT_LIST_DIR}/../../../internal/Python.cmake")
-include("${CMAKE_CURRENT_LIST_DIR}/../../../internal/ConfigConstants.cmake" OPTIONAL)
+include("${CMAKE_CURRENT_LIST_DIR}/../../../Environment/PythonUtils.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/../../../Config/GenerateConfigConstants.cmake" OPTIONAL)
 
 # ------------------------------------------------------------------------------
 # 1) sw_vcpkgComputeManifestHash — manifest + overlay port/triplet SHA256
