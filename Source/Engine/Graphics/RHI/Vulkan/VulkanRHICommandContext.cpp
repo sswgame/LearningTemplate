@@ -211,16 +211,16 @@ namespace sw
 			_pDevice->_bRenderPassActive = false;
 		}
 
-		VulkanRHIDevice::VulkanTextureRecord& record = *pResolved;
-		const uint32 targetLayout = ( record._bDepthStencil != 0 )
-										? static_cast<uint32>( VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL )
-										: static_cast<uint32>( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+		VulkanRHIDevice::VulkanTextureRecord& record	   = *pResolved;
+		const uint32						  targetLayout = ( record._bDepthStencil != 0 )
+															   ? static_cast<uint32>( VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL )
+															   : static_cast<uint32>( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
 		if ( record.layout == targetLayout )
 			return;
 
 		const uint32 aspect = ( record._bDepthStencil != 0 )
-								  ? _pDevice->depthAspectMask()
-								  : static_cast<uint32>( VK_IMAGE_ASPECT_COLOR_BIT );
+								? _pDevice->depthAspectMask()
+								: static_cast<uint32>( VK_IMAGE_ASPECT_COLOR_BIT );
 		_pDevice->transitionImageLayout( cmd, record.image, record.layout, targetLayout, aspect );
 		record.layout = targetLayout;
 	}

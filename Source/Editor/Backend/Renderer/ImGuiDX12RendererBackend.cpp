@@ -196,7 +196,7 @@ namespace sw
 			}
 		}
 
-		ID3D12GraphicsCommandList* pCmdList = static_cast<ID3D12GraphicsCommandList*>( pRhiDevice->getNativeContext() );
+		ID3D12GraphicsCommandList* pCmdList	 = static_cast<ID3D12GraphicsCommandList*>( pRhiDevice->getNativeContext() );
 		ImDrawData*				   pDrawData = ImGui::GetDrawData();
 		if ( pCmdList != nullptr && pDrawData != nullptr && _d3d12SrvHeap != nullptr && ImGui::GetIO().BackendRendererUserData != nullptr )
 		{

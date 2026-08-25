@@ -94,7 +94,7 @@ namespace sw
 			ImGui::Separator();
 
 			// 2) 변수 목록 수집 및 정렬
-			const auto&							   mapVars = pGvm->getAllVariables();
+			const auto&						  mapVars = pGvm->getAllVariables();
 			vector<const GlobalVariableInfo*> listFiltered;
 			listFiltered.reserve( mapVars.size() );
 
@@ -225,8 +225,8 @@ namespace sw
 									int32*			pVal	  = static_cast<int32*>( pInfo->_pData );
 									auto*			pRegistry = editor::getService<TypeRegistry>();
 									const EnumInfo* pEnumInfo = ( pRegistry != nullptr && pInfo->_enumType.empty() == false )
-																	? pRegistry->findEnum( hashed_string( pInfo->_enumType.c_str() ) )
-																	: nullptr;
+																  ? pRegistry->findEnum( hashed_string( pInfo->_enumType.c_str() ) )
+																  : nullptr;
 									if ( pEnumInfo != nullptr && pEnumInfo->_mapValueToName.empty() == false )
 									{
 										const utf8* pName	 = pRegistry->enumToString( hashed_string( pInfo->_enumType.c_str() ), *pVal );
@@ -265,11 +265,11 @@ namespace sw
 								case GlobalVariableType::String:
 								{
 									string* pVal = static_cast<string*>( pInfo->_pData );
-									char	buf[256];
-									StringUtil::strncpy( buf, pVal->c_str(), sizeof( buf ) );
-									if ( ImGui::InputText( "##val", buf, sizeof( buf ) ) )
+									utf8	arrBuf[256];
+									StringUtil::strncpy( arrBuf, pVal->c_str(), sizeof( arrBuf ) );
+									if ( ImGui::InputText( "##val", arrBuf, sizeof( arrBuf ) ) )
 									{
-										*pVal = buf;
+										*pVal = arrBuf;
 										if ( pInfo->_onValueChanged.isBound() )
 											pInfo->_onValueChanged( pInfo );
 									}
@@ -362,8 +362,8 @@ namespace sw
 					int32*			pVal	  = static_cast<int32*>( info._pData );
 					auto*			pRegistry = editor::getService<TypeRegistry>();
 					const EnumInfo* pEnumInfo = ( pRegistry != nullptr && info._enumType.empty() == false )
-													? pRegistry->findEnum( hashed_string( info._enumType.c_str() ) )
-													: nullptr;
+												  ? pRegistry->findEnum( hashed_string( info._enumType.c_str() ) )
+												  : nullptr;
 					if ( pEnumInfo != nullptr && pEnumInfo->_mapValueToName.empty() == false )
 					{
 						const utf8* pName	 = pRegistry->enumToString( hashed_string( info._enumType.c_str() ), *pVal );
@@ -402,11 +402,11 @@ namespace sw
 				case GlobalVariableType::String:
 				{
 					string* pVal = static_cast<string*>( info._pData );
-					char	buf[256];
-					StringUtil::strncpy( buf, pVal->c_str(), sizeof( buf ) );
-					if ( ImGui::InputText( "##val", buf, sizeof( buf ) ) )
+					utf8	arrBuf[256];
+					StringUtil::strncpy( arrBuf, pVal->c_str(), sizeof( arrBuf ) );
+					if ( ImGui::InputText( "##val", arrBuf, sizeof( arrBuf ) ) )
 					{
-						*pVal = buf;
+						*pVal = arrBuf;
 						if ( info._onValueChanged.isBound() )
 							info._onValueChanged( &info );
 					}

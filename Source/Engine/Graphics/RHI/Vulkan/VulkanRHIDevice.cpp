@@ -668,11 +668,15 @@ namespace sw
 			VkClearValue clearVal{};
 			if ( clearColor != nullptr )
 			{
-				clearVal.color = { { clearColor[0], clearColor[1], clearColor[2], clearColor[3] } };
+				clearVal.color = {
+					{ clearColor[0], clearColor[1], clearColor[2], clearColor[3] }
+				   };
 			}
 			else
 			{
-				clearVal.color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
+				clearVal.color = {
+					{ 0.0f, 0.0f, 0.0f, 1.0f }
+				   };
 			}
 			rpBeginInfo.clearValueCount = 1;
 			rpBeginInfo.pClearValues	= &clearVal;

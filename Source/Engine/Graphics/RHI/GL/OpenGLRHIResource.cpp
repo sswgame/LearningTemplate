@@ -85,7 +85,7 @@ namespace sw
 		if ( _pDevice->_bInitialized == false )
 			return 0;
 
-		ScopedOpenGLContext ctxScope( _pDevice );
+		ScopedOpenGLContext						   ctxScope( _pDevice );
 		OpenGLRHIDevice::OpenGLPipelineStateRecord record{};
 
 		auto fillDefines = [&]( ShaderCompileDesc& cd )
@@ -421,7 +421,7 @@ namespace sw
 			return 0;
 
 		ScopedOpenGLContext ctxScope( _pDevice );
-		GLuint vbo{ 0 };
+		GLuint				vbo{ 0 };
 		glGenBuffers( 1, &vbo );
 		glBindBuffer( GL_ARRAY_BUFFER, vbo );
 		glBufferData( GL_ARRAY_BUFFER, static_cast<GLsizeiptr>( sizeBytes ), pData, GL_STATIC_DRAW );
@@ -472,9 +472,9 @@ namespace sw
 			return 0;
 
 		ScopedOpenGLContext ctxScope( _pDevice );
-		const uint32 mipLevels	 = desc._mipLevels > 0 ? desc._mipLevels : 1;
-		const GLenum internalFmt = toGlInternalFormat( desc._format );
-		const bool	 bDepth		 = desc._bIsDepthStencil || desc._format == RHIFormat::D24_UNORM_S8_UINT;
+		const uint32		mipLevels	= desc._mipLevels > 0 ? desc._mipLevels : 1;
+		const GLenum		internalFmt = toGlInternalFormat( desc._format );
+		const bool			bDepth		= desc._bIsDepthStencil || desc._format == RHIFormat::D24_UNORM_S8_UINT;
 
 		GLuint tex{ 0 };
 		glGenTextures( 1, &tex );
@@ -529,8 +529,8 @@ namespace sw
 			if ( bDepth )
 			{
 				const GLenum depthAttachment = ( desc._format == RHIFormat::D24_UNORM_S8_UINT )
-												   ? GL_DEPTH_STENCIL_ATTACHMENT
-												   : GL_DEPTH_ATTACHMENT;
+												 ? GL_DEPTH_STENCIL_ATTACHMENT
+												 : GL_DEPTH_ATTACHMENT;
 				glFramebufferTexture2D( GL_FRAMEBUFFER, depthAttachment, GL_TEXTURE_2D, tex, 0 );
 				glDrawBuffer( GL_NONE );
 				glReadBuffer( GL_NONE );
@@ -557,7 +557,7 @@ namespace sw
 		if ( texture == 0 )
 			return;
 
-		ScopedOpenGLContext ctxScope( _pDevice );
+		ScopedOpenGLContext					 ctxScope( _pDevice );
 		OpenGLRHIDevice::OpenGLTextureRecord owned;
 		if ( _pDevice->_gpuTextures.take( texture, owned ) == false )
 			return;

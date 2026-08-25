@@ -711,8 +711,8 @@ namespace sw
 					while ( pNode != nullptr )
 					{
 						const uint32 executed = ( pNode->pCommandHistory != nullptr && pNode->pLastBreadcrumbValue != nullptr )
-													? *pNode->pLastBreadcrumbValue
-													: 0;
+												  ? *pNode->pLastBreadcrumbValue
+												  : 0;
 						SW_LOG_ERROR( "[DRED Breadcrumbs] CommandList='%#', Total=%#, Executed=%#",
 									  pNode->pCommandListDebugNameA ? pNode->pCommandListDebugNameA : "unnamed",
 									  pNode->BreadcrumbCount, executed );

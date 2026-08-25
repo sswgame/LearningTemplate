@@ -103,7 +103,7 @@ namespace sw
 					caps._bMultiDrawIndirect		= 1;
 					caps._bParallelCommandRecording = 0;
 #if defined( SW_PLATFORM_WINDOWS )
-					caps._bRequiresWindowRecreate   = 1;
+					caps._bRequiresWindowRecreate = 1;
 #endif
 					break;
 				case RHIBackend::Vulkan:

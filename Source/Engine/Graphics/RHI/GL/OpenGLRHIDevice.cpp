@@ -952,10 +952,10 @@ namespace sw
 
 		if ( depthTex != 0 )
 		{
-			const OpenGLTextureRecord* pDepthRec = resolveTexture( depth );
-			const GLenum depthAttachment		 = ( pDepthRec != nullptr && pDepthRec->format == RHIFormat::D24_UNORM_S8_UINT )
-													   ? GL_DEPTH_STENCIL_ATTACHMENT
-													   : GL_DEPTH_ATTACHMENT;
+			const OpenGLTextureRecord* pDepthRec	   = resolveTexture( depth );
+			const GLenum			   depthAttachment = ( pDepthRec != nullptr && pDepthRec->format == RHIFormat::D24_UNORM_S8_UINT )
+														   ? GL_DEPTH_STENCIL_ATTACHMENT
+														   : GL_DEPTH_ATTACHMENT;
 			glFramebufferTexture2D( GL_FRAMEBUFFER, depthAttachment, GL_TEXTURE_2D, depthTex, 0 );
 		}
 
