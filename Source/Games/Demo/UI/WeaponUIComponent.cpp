@@ -9,7 +9,7 @@
 
 #include "Games/Demo/Actors/WeaponComponent.h"
 
-#include "RuntimeAPI/GameService.h"
+#include "RuntimeAPI/Service/GameService.h"
 
 namespace sw
 {

@@ -5,7 +5,7 @@
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "RuntimeAPI/GameService.h"
+#include "RuntimeAPI/Service/GameService.h"
 
 namespace sw
 {

@@ -6,7 +6,7 @@
 
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 
-#include "RuntimeAPI/GameService.h"
+#include "RuntimeAPI/Service/GameService.h"
 
 #include <algorithm>
 

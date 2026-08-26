@@ -13,10 +13,9 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 
-#include "RuntimeAPI/EditorAPI.h"
-#include "RuntimeAPI/EditorService.h"
-#include "RuntimeAPI/GameAPI.h"
-#include "RuntimeAPI/GameService.h"
+#include "RuntimeAPI/ABI/EditorAPI.h"
+#include "RuntimeAPI/ABI/GameAPI.h"
+#include "RuntimeAPI/Service/GameService.h"
 #include "RuntimeAPI/PluginAPI.h"
 
 #include "TestFramework/TestFramework.h"
@@ -26,37 +25,42 @@
 
 namespace
 {
-	void* getGameService( sw::GameServiceId id )
+	void* getGameService( uint32 id )
 	{
-		switch ( id )
+		if ( id >= sw::kModuleServiceCount )
+			return nullptr;
+
+		switch ( static_cast<sw::ModuleServiceId>( id ) )
 		{
-			case sw::GameServiceId::LocalizationManager:
+			case sw::ModuleServiceId::LocalizationManager:
 				return &sw::engine::getLocalizationManager();
-			case sw::GameServiceId::EventDispatcher:
+			case sw::ModuleServiceId::EventDispatcher:
 				return &sw::engine::getEventDispatcher();
-			case sw::GameServiceId::GlobalVariableManager:
+			case sw::ModuleServiceId::GlobalVariableManager:
 				return &sw::engine::getGlobalVariableManager();
-			case sw::GameServiceId::AudioSystem:
+			case sw::ModuleServiceId::AudioSystem:
 				return &sw::engine::getAudioSystem();
-			case sw::GameServiceId::TypeRegistry:
+			case sw::ModuleServiceId::TypeRegistry:
 				return &sw::engine::getTypeRegistry();
-			case sw::GameServiceId::InputManager:
+			case sw::ModuleServiceId::InputManager:
 				return &sw::engine::getInputManager();
-			case sw::GameServiceId::SceneManager:
+			case sw::ModuleServiceId::SceneManager:
 				return &sw::engine::getSceneManager();
-			case sw::GameServiceId::ResourceManager:
+			case sw::ModuleServiceId::ResourceManager:
 				return &sw::engine::getResourceManager();
-			case sw::GameServiceId::DebugDrawQueue:
+			case sw::ModuleServiceId::DebugDrawQueue:
 				return &sw::engine::getDebugDrawQueue();
-			case sw::GameServiceId::DebugOverlayState:
+			case sw::ModuleServiceId::DebugOverlayState:
 				return &sw::engine::getDebugOverlayState();
+			case sw::ModuleServiceId::Count:
+				break;
 		}
 		return nullptr;
 	}
 
-	void fillGameService( sw::GameService& gs )
+	void fillGameService( sw::ModuleService& gameService )
 	{
-		gs.getService = getGameService;
+		gameService.getService = getGameService;
 	}
 } // namespace
 
@@ -697,9 +701,9 @@ SW_TEST_CASE( ModuleAPI, FullGameSceneAndComponentLifecycle )
 
 	if ( api.bindService )
 	{
-		sw::GameService gs{};
-		fillGameService( gs );
-		api.bindService( &gs );
+		sw::ModuleService gameService{};
+		fillGameService( gameService );
+		api.bindService( &gameService );
 	}
 
 	sw::GameHandle game = api.create();
@@ -871,9 +875,9 @@ SW_TEST_CASE( ModuleAPI, GameModuleRepeatedReloadCycle )
 
 		if ( api.bindService )
 		{
-			sw::GameService gs{};
-			fillGameService( gs );
-			api.bindService( &gs );
+			sw::ModuleService gameService{};
+			fillGameService( gameService );
+			api.bindService( &gameService );
 		}
 
 		sw::GameHandle game = api.create();

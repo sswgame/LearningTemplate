@@ -12,7 +12,7 @@
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Utility/CommandStack.h"
 
-#include "RuntimeAPI/EditorService.h"
+#include "RuntimeAPI/Service/EditorService.h"
 
 namespace sw
 {

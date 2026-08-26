@@ -5,7 +5,7 @@
 #include "Editor/Config/EditorConfig.h"
 #include "Editor/Config/EditorData.h"
 
-#include "RuntimeAPI/EditorService.h"
+#include "RuntimeAPI/Service/EditorService.h"
 
 namespace sw
 {

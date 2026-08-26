@@ -13,7 +13,7 @@
 #include "GameFramework/Data/UnitStatsComponent.h"
 #include "GameFramework/Kits/ActionCombat/ProjectileComponent.h"
 
-#include "RuntimeAPI/GameService.h"
+#include "RuntimeAPI/Service/GameService.h"
 
 namespace sw
 {

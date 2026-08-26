@@ -33,9 +33,9 @@
 #include "Engine/Utility/File/KeyValueFile.h"
 #include "Engine/Window/NativeWindowEvent.h"
 
-#include "RuntimeAPI/EditorModuleExports.h"
-#include "RuntimeAPI/EditorService.h"
-#include "RuntimeAPI/EditorUIContext.h"
+#include "RuntimeAPI/Export/EditorModuleExports.h"
+#include "RuntimeAPI/Service/EditorService.h"
+#include "RuntimeAPI/ABI/EditorUIContext.h"
 
 #include "sw/config/ConfigConstants.h"
 

@@ -12,9 +12,9 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
-#include "RuntimeAPI/EditorAPI.h"
-#include "RuntimeAPI/EditorUIContext.h"
-#include "RuntimeAPI/GameAPI.h"
+#include "RuntimeAPI/ABI/EditorAPI.h"
+#include "RuntimeAPI/ABI/EditorUIContext.h"
+#include "RuntimeAPI/ABI/GameAPI.h"
 
 namespace sw
 {

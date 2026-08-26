@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "RuntimeAPI/GameService.h"
+#include "RuntimeAPI/Service/GameService.h"
 #include "RuntimeAPI/PluginAPI.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -17,12 +17,12 @@ namespace sw
 
 	namespace
 	{
-		GameService s_gameService{};
+		ModuleService s_gameService{};
 	} // namespace
 
 	namespace game
 	{
-		SW_GAMESERVICE_API void bindGameService( const GameService& service )
+		SW_GAMESERVICE_API void bindGameService( const ModuleService& service )
 		{
 			s_gameService = service;
 		}
@@ -34,10 +34,13 @@ namespace sw
 			return s_gameService.getService != nullptr;
 		}
 
-		SW_GAMESERVICE_API void* getRawService( GameServiceId id )
+		SW_GAMESERVICE_API void* getRawService( ModuleServiceId id )
 		{
 			SW_LOG_ASSERT( s_gameService.getService != nullptr, "GameService is not bound" );
-			return s_gameService.getService( id );
+			const uint32 rawId = toRawServiceId( id );
+			if ( rawId >= kModuleServiceCount )
+				return nullptr;
+			return s_gameService.getService( rawId );
 		}
 	} // namespace game
 } // namespace sw

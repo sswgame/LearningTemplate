@@ -5,8 +5,8 @@
 #pragma once
 #include "Core/Memory/Memory.h"
 
-#include "RuntimeAPI/EditorAPI.h"
-#include "RuntimeAPI/EditorService.h"
+#include "RuntimeAPI/ABI/EditorAPI.h"
+#include "RuntimeAPI/Service/EditorService.h"
 
 /**
  * @brief 에디터 모듈의 C-ABI 함수 테이블을 1줄로 구현 및 export하는 매크로
@@ -53,7 +53,7 @@
 			EditorClass* pInstance = static_cast<EditorClass*>( editorHandle );                                                                                       \
 			if ( pInstance != nullptr )                                                                                                                        \
 				pInstance->unregisterTexture( pTextureId ); };                                                                 \
-		pOutApi->bindService	   = []( const sw::EditorService* pService ) {                                                                                  \
+		pOutApi->bindService	   = []( const sw::ModuleService* pService ) {                                                                                  \
 			if ( pService != nullptr )                                                                                                                         \
 				sw::editor::bindEditorService( *pService );                                                                                                    \
 			else                                                                                                                                               \

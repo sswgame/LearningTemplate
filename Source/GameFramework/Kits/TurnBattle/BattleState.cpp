@@ -7,7 +7,7 @@
 #include "GameFramework/Data/GameData.h"
 #include "GameFramework/Data/GameStrings.h"
 
-#include "RuntimeAPI/GameService.h"
+#include "RuntimeAPI/Service/GameService.h"
 
 namespace sw
 {

@@ -6,7 +6,7 @@
  *       Material*, IRHIDevice*, ShaderReflectionData* 등은 App이 소유한 Engine 그래픽/RHI
  *       객체이며, EditorModule은 같은 주소 공간의 MODULE으로서 이 타입을 통해 호출할 수 있다.
  *       프로세스 간 직렬화하거나 안정 ABI로 취급하지 말 것.
- *       create/destroy용 opaque 핸들은 RuntimeHandles.h에 둔다.
+ *       create/destroy용 opaque 핸들은 ABI/RuntimeHandles.h에 둔다.
  *
  * @note 데모/게임플레이 트윅(playerSpeed 등)은 이 컨텍스트에 두지 않는다.
  *       GlobalVariableManager / 게임 채널을 사용한다.

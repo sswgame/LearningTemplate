@@ -4,7 +4,7 @@
 
 #include "Core/Memory/MemoryProfiler.h"
 
-#include "RuntimeAPI/EditorService.h"
+#include "RuntimeAPI/Service/EditorService.h"
 
 #include <imgui.h>
 

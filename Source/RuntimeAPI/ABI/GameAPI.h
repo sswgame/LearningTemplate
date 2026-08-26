@@ -6,7 +6,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 
-#include "RuntimeAPI/RuntimeHandles.h"
+#include "RuntimeAPI/ABI/RuntimeHandles.h"
 
 namespace sw
 {
@@ -17,7 +17,7 @@ namespace sw
 	/** @brief 게임 인스턴스를 가리키는 불투명(opaque) 핸들 */
 	using GameHandle = void*;
 
-	struct GameService;
+	struct ModuleService;
 
 	/** @brief GameAPI 테이블 ABI 버전 */
 	// Bump this whenever the GameAPI layout or a function signature changes.
@@ -39,7 +39,7 @@ namespace sw
 		void ( *shutdown )( GameHandle game ){ nullptr };													/**< @brief 게임을 종료합니다. */
 		void ( *update )( GameHandle game, float32 deltaTime ){ nullptr };									/**< @brief 프레임 업데이트를 수행합니다. */
 		void ( *fixedUpdate )( GameHandle game, float32 fixedDeltaTime ){ nullptr };						/**< @brief 고정 프레임 업데이트를 수행합니다. */
-		void ( *bindService )( const GameService* pService ){ nullptr };									/**< @brief GameService를 게임 모듈에 주입하거나 nullptr로 해제합니다. */
+		void ( *bindService )( const ModuleService* pService ){ nullptr };									/**< @brief ModuleService를 게임 모듈에 주입하거나 nullptr로 해제합니다. */
 		bool ( *serializeState )( GameHandle game, void* pOutBuffer, uint32* pInOutSize ){ nullptr };		/**< @brief 게임 상태를 버퍼에 직렬화하거나 크기를 반환합니다. */
 		bool ( *deserializeState )( GameHandle game, const void* pInBuffer, uint32 size ){ nullptr };		/**< @brief 버퍼에서 게임 상태를 복원합니다. */
 	};

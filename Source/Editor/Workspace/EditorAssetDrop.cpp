@@ -6,7 +6,7 @@
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Utility/Resource/ResourceManager.h"
 
-#include "RuntimeAPI/EditorService.h"
+#include "RuntimeAPI/Service/EditorService.h"
 
 namespace sw::editor
 {

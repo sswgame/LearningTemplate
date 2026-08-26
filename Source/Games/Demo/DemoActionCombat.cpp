@@ -13,7 +13,7 @@
 
 #include "Games/Demo/DemoGame.h"
 
-#include "RuntimeAPI/GameService.h"
+#include "RuntimeAPI/Service/GameService.h"
 
 namespace sw
 {

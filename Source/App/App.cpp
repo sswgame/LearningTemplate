@@ -28,7 +28,7 @@
 #include "Engine/Window/IWindow.h"
 #include "Engine/Window/NativeWindowEvent.h"
 
-#include "RuntimeAPI/EditorAPI.h"
+#include "RuntimeAPI/ABI/EditorAPI.h"
 
 #include "sw/config/ConfigConstants.h"
 

@@ -5,8 +5,8 @@
 #pragma once
 #include "Core/Memory/Memory.h"
 
-#include "RuntimeAPI/GameAPI.h"
-#include "RuntimeAPI/GameService.h"
+#include "RuntimeAPI/ABI/GameAPI.h"
+#include "RuntimeAPI/Service/GameService.h"
 
 /**
  * @brief 게임 모듈의 C-ABI 함수 테이블을 1줄로 구현 및 export하는 매크로
@@ -35,7 +35,7 @@
 			GameClass* pInstance = static_cast<GameClass*>( gameHandle );                                                                                           \
 			if ( pInstance != nullptr )                                                                                                                        \
 				pInstance->fixedUpdate( fixedDeltaTime ); };                                                     \
-		pOutApi->bindService	  = []( const sw::GameService* pService ) {                                                                                     \
+		pOutApi->bindService	  = []( const sw::ModuleService* pService ) {                                                                                     \
 			if ( pService != nullptr )                                                                                                                         \
 				sw::game::bindGameService( *pService );                                                                                                        \
 			else                                                                                                                                               \

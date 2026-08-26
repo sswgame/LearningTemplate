@@ -19,8 +19,7 @@
 #include "Engine/Window/IWindow.h"
 #include "Engine/Window/NativeWindowEvent.h"
 
-#include "RuntimeAPI/EditorService.h"
-#include "RuntimeAPI/GameService.h"
+#include "RuntimeAPI/Service/EditorService.h"
 #include "RuntimeAPI/PluginAPI.h"
 
 #include "sw/config/ConfigConstants.h"
@@ -29,62 +28,53 @@ namespace
 {
 	sw::EditorUIContext* s_pEditorUIContext = nullptr;
 
-	void* getEditorService( sw::EditorServiceId id )
+	void* getModuleService( uint32 id )
 	{
-		switch ( id )
-		{
-			case sw::EditorServiceId::LocalizationManager:
-				return &sw::engine::getLocalizationManager();
-			case sw::EditorServiceId::TaskManager:
-				return &sw::engine::getTaskManager();
-			case sw::EditorServiceId::SceneManager:
-				return &sw::engine::getSceneManager();
-			case sw::EditorServiceId::GlobalVariableManager:
-				return &sw::engine::getGlobalVariableManager();
-			case sw::EditorServiceId::ResourceManager:
-				return &sw::engine::getResourceManager();
-			case sw::EditorServiceId::TypeRegistry:
-				return &sw::engine::getTypeRegistry();
-			case sw::EditorServiceId::MemoryProfiler:
-				return sw::engine::getMemoryProfiler();
-			case sw::EditorServiceId::UIContext:
-				return s_pEditorUIContext;
-			case sw::EditorServiceId::CommandStack:
-				return &sw::engine::getCommandStack();
-			case sw::EditorServiceId::DebugOverlayState:
-				return &sw::engine::getDebugOverlayState();
-			case sw::EditorServiceId::DebugDrawQueue:
-				return &sw::engine::getDebugDrawQueue();
-			case sw::EditorServiceId::EngineData:
-				return const_cast<sw::EngineData*>( &sw::engine::getEngineData() );
-		}
-		return nullptr;
-	}
+		using sw::EditorServiceId;
+		using sw::ModuleServiceId;
 
-	void* getGameService( sw::GameServiceId id )
-	{
-		switch ( id )
+		if ( id < sw::kModuleServiceCount )
 		{
-			case sw::GameServiceId::LocalizationManager:
-				return &sw::engine::getLocalizationManager();
-			case sw::GameServiceId::EventDispatcher:
-				return &sw::engine::getEventDispatcher();
-			case sw::GameServiceId::GlobalVariableManager:
-				return &sw::engine::getGlobalVariableManager();
-			case sw::GameServiceId::AudioSystem:
-				return &sw::engine::getAudioSystem();
-			case sw::GameServiceId::TypeRegistry:
-				return &sw::engine::getTypeRegistry();
-			case sw::GameServiceId::InputManager:
-				return &sw::engine::getInputManager();
-			case sw::GameServiceId::SceneManager:
-				return &sw::engine::getSceneManager();
-			case sw::GameServiceId::ResourceManager:
-				return &sw::engine::getResourceManager();
-			case sw::GameServiceId::DebugDrawQueue:
-				return &sw::engine::getDebugDrawQueue();
-			case sw::GameServiceId::DebugOverlayState:
-				return &sw::engine::getDebugOverlayState();
+			switch ( static_cast<ModuleServiceId>( id ) )
+			{
+				case ModuleServiceId::LocalizationManager:
+					return &sw::engine::getLocalizationManager();
+				case ModuleServiceId::EventDispatcher:
+					return &sw::engine::getEventDispatcher();
+				case ModuleServiceId::GlobalVariableManager:
+					return &sw::engine::getGlobalVariableManager();
+				case ModuleServiceId::AudioSystem:
+					return &sw::engine::getAudioSystem();
+				case ModuleServiceId::TypeRegistry:
+					return &sw::engine::getTypeRegistry();
+				case ModuleServiceId::InputManager:
+					return &sw::engine::getInputManager();
+				case ModuleServiceId::SceneManager:
+					return &sw::engine::getSceneManager();
+				case ModuleServiceId::ResourceManager:
+					return &sw::engine::getResourceManager();
+				case ModuleServiceId::DebugDrawQueue:
+					return &sw::engine::getDebugDrawQueue();
+				case ModuleServiceId::DebugOverlayState:
+					return &sw::engine::getDebugOverlayState();
+				case ModuleServiceId::Count:
+					break;
+			}
+			return nullptr;
+		}
+
+		switch ( static_cast<EditorServiceId>( id ) )
+		{
+			case EditorServiceId::TaskManager:
+				return &sw::engine::getTaskManager();
+			case EditorServiceId::MemoryProfiler:
+				return sw::engine::getMemoryProfiler();
+			case EditorServiceId::UIContext:
+				return s_pEditorUIContext;
+			case EditorServiceId::CommandStack:
+				return &sw::engine::getCommandStack();
+			case EditorServiceId::EngineData:
+				return const_cast<sw::EngineData*>( &sw::engine::getEngineData() );
 		}
 		return nullptr;
 	}
@@ -532,9 +522,9 @@ namespace sw
 		if ( _editorApi.bindService != nullptr )
 		{
 			s_pEditorUIContext = &_editorContext;
-			EditorService es{};
-			es.getService = getEditorService;
-			_editorApi.bindService( &es );
+			ModuleService editorService{};
+			editorService.getService = getModuleService;
+			_editorApi.bindService( &editorService );
 		}
 
 		engine::registerModuleTypes( sw::config::kTargetEditorModule );
@@ -572,9 +562,9 @@ namespace sw
 
 		if ( _gameApi.bindService != nullptr )
 		{
-			GameService gs{};
-			gs.getService = getGameService;
-			_gameApi.bindService( &gs );
+			ModuleService gameService{};
+			gameService.getService = getModuleService;
+			_gameApi.bindService( &gameService );
 		}
 
 		engine::registerModuleTypes( sw::config::kTargetGameModule );

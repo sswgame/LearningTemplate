@@ -7,7 +7,7 @@
 
 #include "Games/Demo/Actors/PlayerComponent.h"
 
-#include "RuntimeAPI/GameService.h"
+#include "RuntimeAPI/Service/GameService.h"
 
 namespace sw
 {

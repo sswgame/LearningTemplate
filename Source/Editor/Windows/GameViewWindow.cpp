@@ -15,8 +15,8 @@
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Utility/Debug/DebugOverlayState.h"
 
-#include "RuntimeAPI/EditorService.h"
-#include "RuntimeAPI/EditorUIContext.h"
+#include "RuntimeAPI/Service/EditorService.h"
+#include "RuntimeAPI/ABI/EditorUIContext.h"
 
 #include <imgui.h>
 #include <ImGuizmo.h>

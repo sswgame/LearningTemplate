@@ -4,7 +4,7 @@
 
 #include "Engine/Localization/LocalizationManager.h"
 
-#include "RuntimeAPI/GameService.h"
+#include "RuntimeAPI/Service/GameService.h"
 
 #include <utility>
 

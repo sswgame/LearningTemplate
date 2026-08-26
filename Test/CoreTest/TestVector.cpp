@@ -2,8 +2,8 @@
 
 #include "Core/Container/vector.h"
 
-#include "RuntimeAPI/EditorAPI.h"
-#include "RuntimeAPI/GameAPI.h"
+#include "RuntimeAPI/ABI/EditorAPI.h"
+#include "RuntimeAPI/ABI/GameAPI.h"
 
 #include "TestFramework/TestFramework.h"
 

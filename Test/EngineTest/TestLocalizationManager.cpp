@@ -9,7 +9,7 @@
 #include "GameFramework/Data/GameStrings.h"
 #include "GameFramework/Transition/GameModeStateMachine.h"
 
-#include "RuntimeAPI/GameService.h"
+#include "RuntimeAPI/Service/GameService.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -338,14 +338,14 @@ SW_TEST_CASE( LocalizationManagerTest, StringTableDirectMultiFormatFileLoading )
  */
 SW_TEST_CASE( LocalizationManagerTest, GameStringsFullLifecycleAndMultiLanguageSwitching )
 {
-	sw::GameService gs{};
-	gs.getService = []( sw::GameServiceId id ) -> void*
+	sw::ModuleService gameService{};
+	gameService.getService = []( uint32 id ) -> void*
 	{
-		if ( id == sw::GameServiceId::LocalizationManager )
+		if ( id == sw::toRawServiceId( sw::ModuleServiceId::LocalizationManager ) )
 			return &sw::engine::getLocalizationManager();
 		return nullptr;
 	};
-	sw::game::bindGameService( gs );
+	sw::game::bindGameService( gameService );
 
 	const utf8* kKoJson = R"({
 		"UI_TITLE": "신비의 섬",
@@ -452,14 +452,14 @@ SW_TEST_CASE( LocalizationManagerTest, GameStringsFullLifecycleAndMultiLanguageS
  */
 SW_TEST_CASE( LocalizationManagerTest, GameStringsSetupLocalizationFromDirectory )
 {
-	sw::GameService gs{};
-	gs.getService = []( sw::GameServiceId id ) -> void*
+	sw::ModuleService gameService{};
+	gameService.getService = []( uint32 id ) -> void*
 	{
-		if ( id == sw::GameServiceId::LocalizationManager )
+		if ( id == sw::toRawServiceId( sw::ModuleServiceId::LocalizationManager ) )
 			return &sw::engine::getLocalizationManager();
 		return nullptr;
 	};
-	sw::game::bindGameService( gs );
+	sw::game::bindGameService( gameService );
 
 	const sw::string tempDir = sw::FileUtil::getTempDirectory();
 	const sw::string packDir = sw::FileUtil::joinPath( tempDir, "temp_localization_pack" );

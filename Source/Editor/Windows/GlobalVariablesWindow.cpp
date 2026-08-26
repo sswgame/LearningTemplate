@@ -8,7 +8,7 @@
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
-#include "RuntimeAPI/EditorService.h"
+#include "RuntimeAPI/Service/EditorService.h"
 
 #include <imgui.h>
 #include <algorithm>

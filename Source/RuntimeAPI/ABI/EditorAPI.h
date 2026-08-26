@@ -6,7 +6,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 
-#include "RuntimeAPI/RuntimeHandles.h"
+#include "RuntimeAPI/ABI/RuntimeHandles.h"
 
 namespace sw
 {
@@ -21,7 +21,7 @@ namespace sw
 
 	struct EditorUIContext;
 	struct NativeWindowEvent;
-	struct EditorService;
+	struct ModuleService;
 
 	/** @brief EditorAPI 테이블 ABI 버전 */
 	// Bump this whenever the EditorAPI layout or a function signature changes.
@@ -48,7 +48,7 @@ namespace sw
 		bool ( *processEvent )( EditorHandle editor, const NativeWindowEvent* pEvent, const EditorUIContext* pContext ){ nullptr }; /**< @brief 네이티브 이벤트를 에디터로 전달합니다. */
 		void* ( *registerTexture )(EditorHandle editor, TextureHandle texture){ nullptr };											/**< @brief 텍스처를 ImGui에 등록합니다. */
 		void ( *unregisterTexture )( EditorHandle editor, void* pTextureId ){ nullptr };											/**< @brief 텍스처를 ImGui에서 해제합니다. */
-		void ( *bindService )( const EditorService* pService ){ nullptr };															/**< @brief EditorService를 에디터 모듈에 주입하거나 nullptr로 해제합니다. */
+		void ( *bindService )( const ModuleService* pService ){ nullptr };															/**< @brief ModuleService를 에디터 모듈에 주입하거나 nullptr로 해제합니다. */
 	};
 
 	/** @brief EditorModule이 export하는 API 테이블 채우기 심볼 이름: fillEditorAPI */

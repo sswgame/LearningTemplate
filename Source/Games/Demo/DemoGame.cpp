@@ -23,9 +23,9 @@
 
 #include "Games/Demo/DemoGameHelpers.h"
 
-#include "RuntimeAPI/GameAPI.h"
-#include "RuntimeAPI/GameModuleExports.h"
-#include "RuntimeAPI/GameService.h"
+#include "RuntimeAPI/ABI/GameAPI.h"
+#include "RuntimeAPI/Export/GameModuleExports.h"
+#include "RuntimeAPI/Service/GameService.h"
 
 namespace sw
 {
