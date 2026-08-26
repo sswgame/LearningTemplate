@@ -3,16 +3,16 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 
 #include "Editor/Common/Platform/IImGuiRendererBackend.h"
-#include "Editor/Popups/CommandPalettePopup.h"
-#include "Editor/Popups/EditorNotificationManager.h"
-#include "Editor/Inspector/ComponentDrawerRegistry.h"
-#include "Editor/Inspector/IComponentDrawer.h"
-#include "Editor/Inspector/IPropertyDrawer.h"
-#include "Editor/Inspector/PropertyDrawerRegistry.h"
-#include "Editor/Panels/EditorPanelRegistry.h"
 #include "Editor/Common/Workspace/AssetEditorRegistry.h"
 #include "Editor/Common/Workspace/EditorContextMenuRegistry.h"
 #include "Editor/Common/Workspace/SelectionManager.h"
+#include "Editor/Panels/EditorPanelRegistry.h"
+#include "Editor/Panels/Inspector/IInspectorComponent.h"
+#include "Editor/Panels/Inspector/IInspectorProperty.h"
+#include "Editor/Panels/Inspector/InspectorComponentRegistry.h"
+#include "Editor/Panels/Inspector/InspectorPropertyRegistry.h"
+#include "Editor/Popups/CommandPalettePopup.h"
+#include "Editor/Popups/EditorNotificationManager.h"
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResource.h"
@@ -43,16 +43,15 @@ namespace sw
 		_pContextMenuRegistry	  = make_unique<EditorContextMenuRegistry>();
 		_pCommandPalette		  = make_unique<CommandPalettePopup>();
 		_pPanelRegistry		  = make_unique<EditorPanelRegistry>();
-		_pAssetEditorRegistry	  = make_unique<AssetEditorRegistry>();
-		_pComponentDrawerRegistry = make_unique<ComponentDrawerRegistry>();
-		_pPropertyDrawerRegistry  = make_unique<PropertyDrawerRegistry>();
+		_pAssetEditorRegistry		   = make_unique<AssetEditorRegistry>();
+		_pInspectorComponentRegistry = make_unique<InspectorComponentRegistry>();
+		_pInspectorPropertyRegistry	 = make_unique<InspectorPropertyRegistry>();
 
 		setActive( this );
 
-		// 기본 드로어 및 매핑 등록
 		_pAssetEditorRegistry->registerDefaultMappings();
-		_pComponentDrawerRegistry->registerDefaultDrawers();
-		_pPropertyDrawerRegistry->registerDefaultDrawers();
+		_pInspectorComponentRegistry->registerDefaults();
+		_pInspectorPropertyRegistry->registerDefaults();
 	}
 
 	void EditorContext::shutdown()
@@ -62,8 +61,8 @@ namespace sw
 		if ( s_pActiveContext == this )
 			setActive( nullptr );
 
-		_pPropertyDrawerRegistry.reset();
-		_pComponentDrawerRegistry.reset();
+		_pInspectorPropertyRegistry.reset();
+		_pInspectorComponentRegistry.reset();
 		_pAssetEditorRegistry.reset();
 		_pPanelRegistry.reset();
 		_pCommandPalette.reset();

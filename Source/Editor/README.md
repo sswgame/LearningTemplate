@@ -20,7 +20,7 @@
 ### 기능
 
 - **Panels/**: Hierarchy, Inspector, Game View, Content Browser, Console, Profiler
-- **Inspector/**: 인스펙터 프로퍼티/컴포넌트 드로어
+  - `Panels/Inspector/`: 프로퍼티·컴포넌트 인스펙터 확장
 - **Tools/**: AnimationGraph, Sequencer, SpriteClip, TileMap, DialogueGraph
 - **Viewport/**: 뷰포트 클라이언트와 툴바
 - **Popups/**: 커맨드 팔레트, 토스트, 본 계층 팝업

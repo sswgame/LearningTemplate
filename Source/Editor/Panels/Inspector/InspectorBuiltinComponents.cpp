@@ -1,11 +1,12 @@
 #include "pch.h"
 
-#include "Editor/Inspector/DefaultComponentDrawers.h"
+#include "Editor/Panels/Inspector/InspectorBuiltin.h"
 
-#include "Editor/Inspector/ComponentDrawerRegistry.h"
-#include "Editor/Inspector/IComponentDrawer.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
+
+#include "Editor/Panels/Inspector/IInspectorComponent.h"
+#include "Editor/Panels/Inspector/InspectorComponentRegistry.h"
 
 #include "Engine/Object/Component/2D/SpriteComponent.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
@@ -54,8 +55,8 @@ namespace sw
 			return true;
 		}
 
-		/** @brief SceneComponent 전용 트랜스폼 및 기즈모 컨트롤 드로어 */
-		class SceneComponentDrawer : public IComponentDrawer
+		/** @brief SceneComponent 전용 트랜스폼 및 기즈모 컨트롤 */
+		class SceneComponentInspector : public IInspectorComponent
 		{
 		public:
 			bool drawBody( Component* pComponent, IRHIDevice* /*pRhiDevice*/ ) override
@@ -64,8 +65,8 @@ namespace sw
 			}
 		};
 
-		/** @brief TagComponent 전용 칩 스타일 드로어 */
-		class TagComponentDrawer : public IComponentDrawer
+		/** @brief TagComponent 전용 칩 스타일 */
+		class TagComponentInspector : public IInspectorComponent
 		{
 		public:
 			void drawFooter( Component* pComponent, IRHIDevice* /*pRhiDevice*/ ) override
@@ -86,8 +87,8 @@ namespace sw
 			}
 		};
 
-		/** @brief SpriteComponent 전용 프리뷰 및 애셋 슬롯 드로어 */
-		class SpriteComponentDrawer : public IComponentDrawer
+		/** @brief SpriteComponent 전용 프리뷰 및 애셋 슬롯 */
+		class SpriteComponentInspector : public IInspectorComponent
 		{
 		public:
 			void drawFooter( Component* /*pComponent*/, IRHIDevice* /*pRhiDevice*/ ) override
@@ -100,8 +101,8 @@ namespace sw
 			}
 		};
 
-		/** @brief MeshComponent 전용 트랜스폼 + 가시성 드로어 */
-		class MeshComponentDrawer : public IComponentDrawer
+		/** @brief MeshComponent 전용 트랜스폼 + 가시성 */
+		class MeshComponentInspector : public IInspectorComponent
 		{
 		public:
 			bool drawBody( Component* pComponent, IRHIDevice* /*pRhiDevice*/ ) override
@@ -118,11 +119,11 @@ namespace sw
 		};
 	} // namespace
 
-	void registerDefaultComponentDrawers()
+	void registerInspectorBuiltinComponents()
 	{
-		ComponentDrawerRegistry::registerComponentDrawer<SceneComponent, SceneComponentDrawer>();
-		ComponentDrawerRegistry::registerComponentDrawer<TagComponent, TagComponentDrawer>();
-		ComponentDrawerRegistry::registerComponentDrawer<SpriteComponent, SpriteComponentDrawer>();
-		ComponentDrawerRegistry::registerComponentDrawer<MeshComponent, MeshComponentDrawer>();
+		InspectorComponentRegistry::registerComponent<SceneComponent, SceneComponentInspector>();
+		InspectorComponentRegistry::registerComponent<TagComponent, TagComponentInspector>();
+		InspectorComponentRegistry::registerComponent<SpriteComponent, SpriteComponentInspector>();
+		InspectorComponentRegistry::registerComponent<MeshComponent, MeshComponentInspector>();
 	}
 } // namespace sw

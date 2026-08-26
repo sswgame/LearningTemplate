@@ -4,16 +4,15 @@
 
 #include "Core/Task/TaskTypes.h"
 
-#include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Inspector/ComponentDrawerRegistry.h"
-#include "Editor/Inspector/DefaultPropertyDrawers.h"
-#include "Editor/Inspector/IComponentDrawer.h"
-#include "Editor/Inspector/IPropertyDrawer.h"
-#include "Editor/Inspector/PropertyDrawerHelper.h"
-#include "Editor/Inspector/PropertyDrawerRegistry.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
+#include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/SelectionManager.h"
+#include "Editor/Panels/Inspector/IInspectorComponent.h"
+#include "Editor/Panels/Inspector/IInspectorProperty.h"
+#include "Editor/Panels/Inspector/InspectorComponentRegistry.h"
+#include "Editor/Panels/Inspector/InspectorPropertyRegistry.h"
+#include "Editor/Panels/Inspector/InspectorPropertyUndo.h"
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -240,16 +239,16 @@ namespace sw
 		ImGui::TextDisabled( "ID: %llu", static_cast<uint64>( pComp->getComponentId() ) );
 
 		const TypeInfo*	  pTypeInfo = pComp->getTypeInfo();
-		IComponentDrawer* pDrawer	= ( pTypeInfo != nullptr )
-										? ComponentDrawerRegistry::getDrawer( pTypeInfo->_name.c_str() )
-										: nullptr;
+		IInspectorComponent* pInspector = ( pTypeInfo != nullptr )
+											  ? InspectorComponentRegistry::find( pTypeInfo->_name.c_str() )
+											  : nullptr;
 
-		if ( pDrawer != nullptr )
-			pDrawer->drawHeader( pComp );
+		if ( pInspector != nullptr )
+			pInspector->drawHeader( pComp );
 
 		bool bHandledByCustomBody{ false };
-		if ( pDrawer != nullptr )
-			bHandledByCustomBody = pDrawer->drawBody( pComp, pRhiDevice );
+		if ( pInspector != nullptr )
+			bHandledByCustomBody = pInspector->drawBody( pComp, pRhiDevice );
 
 		if ( bHandledByCustomBody == false )
 		{
@@ -267,8 +266,8 @@ namespace sw
 				ImGui::TextDisabled( "No TypeInfo registered for this component." );
 		}
 
-		if ( pDrawer != nullptr )
-			pDrawer->drawFooter( pComp, pRhiDevice );
+		if ( pInspector != nullptr )
+			pInspector->drawFooter( pComp, pRhiDevice );
 	}
 
 	void InspectorPanel::drawTypeProperties( void* pInstance, const TypeInfo* pTypeInfo )
@@ -315,10 +314,10 @@ namespace sw
 
 	void InspectorPanel::drawPropertyWidget( void* pInstance, const PropertyInfo& prop )
 	{
-		IPropertyDrawer* pDrawer = PropertyDrawerRegistry::getDrawer( prop._typeName.c_str() );
-		if ( pDrawer != nullptr )
+		IInspectorProperty* pProperty = InspectorPropertyRegistry::find( prop._typeName.c_str() );
+		if ( pProperty != nullptr )
 		{
-			if ( pDrawer->draw( pInstance, prop ) )
+			if ( pProperty->draw( pInstance, prop ) )
 				return;
 		}
 
@@ -387,7 +386,7 @@ namespace sw
 			return;
 		}
 
-		ImGui::TextDisabled( "No PropertyDrawer for %s", prop._typeName.c_str() );
+		ImGui::TextDisabled( "No inspector for %s", prop._typeName.c_str() );
 	}
 
 	void InspectorPanel::drawTypeMethods( void* pInstance, const TypeInfo* pTypeInfo )

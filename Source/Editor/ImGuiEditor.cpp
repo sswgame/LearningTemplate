@@ -12,8 +12,6 @@
 #include "Editor/Common/Platform/IImGuiRendererBackend.h"
 #include "Editor/Common/Workspace/AssetEditorRegistry.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Inspector/ComponentDrawerRegistry.h"
-#include "Editor/Inspector/DefaultPropertyDrawers.h"
 #include "Editor/Panels/EditorPanelRegistry.h"
 #include "Editor/Popups/BoneHierarchyPopup.h"
 #include "Editor/Popups/CommandPalettePopup.h"
@@ -78,8 +76,6 @@ namespace sw
 		if ( _bInitialized != 0 )
 			return true;
 
-		registerDefaultPropertyDrawers();
-		ComponentDrawerRegistry::registerDefaultDrawers();
 		AssetEditorRegistry::registerDefaultMappings();
 
 #if !defined( SW_SHIPPING )

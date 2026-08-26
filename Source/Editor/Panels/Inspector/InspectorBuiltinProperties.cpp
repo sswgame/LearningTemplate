@@ -1,19 +1,16 @@
 #include "pch.h"
 
-#include "Editor/Inspector/DefaultPropertyDrawers.h"
+#include "Editor/Panels/Inspector/InspectorBuiltin.h"
 
-#include "Editor/Inspector/IPropertyDrawer.h"
-#include "Editor/Inspector/PropertyDrawerHelper.h"
-#include "Editor/Inspector/PropertyDrawerRegistry.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
+#include "Editor/Panels/Inspector/IInspectorProperty.h"
+#include "Editor/Panels/Inspector/InspectorPropertyRegistry.h"
+#include "Editor/Panels/Inspector/InspectorPropertyUndo.h"
 
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/Utility/CommandStack.h"
-
-#include "RuntimeAPI/Service/EditorService.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -21,124 +18,12 @@
 
 namespace sw
 {
-	void trackPodPropertyUndo( void* pData, size_t size, const utf8* pLabel )
-	{
-		if ( pData == nullptr || size == 0 || size > 512 )
-			return;
-
-		struct Entry
-		{
-			vector<uint8> _listBefore;
-			void*		  _pPtr{ nullptr };
-			size_t		  _size{ 0 };
-			string		  _label;
-		};
-		static unordered_map<ImGuiID, Entry> s_mapPending;
-
-		const ImGuiID id = ImGui::GetItemID();
-		if ( ImGui::IsItemActivated() )
-		{
-			Entry e;
-			e._pPtr	 = pData;
-			e._size	 = size;
-			e._label = ( pLabel != nullptr ) ? pLabel : "Property";
-			e._listBefore.assign( static_cast<const uint8*>( pData ), static_cast<const uint8*>( pData ) + size );
-			s_mapPending[id] = std::move( e );
-		}
-		if ( ImGui::IsItemDeactivatedAfterEdit() == false )
-			return;
-
-		const auto it = s_mapPending.find( id );
-		if ( it == s_mapPending.end() )
-			return;
-
-		vector<uint8> after( static_cast<const uint8*>( pData ), static_cast<const uint8*>( pData ) + size );
-		if ( after == it->second._listBefore )
-		{
-			s_mapPending.erase( it );
-			return;
-		}
-
-		void*		  pPtr		 = it->second._pPtr;
-		const size_t  sz		 = it->second._size;
-		vector<uint8> listBefore = std::move( it->second._listBefore );
-		const string  lbl		 = string( "Edit " ) + it->second._label;
-		s_mapPending.erase( it );
-
-		uint64				  selectedId = EditorWorkspace::selectedObjectId();
-		CommandStack::Command cmd;
-		cmd._label = lbl;
-		cmd._undo  = [pPtr, sz, listBefore, selectedId]()
-		{
-			if ( pPtr != nullptr && ( selectedId == 0 || EditorWorkspace::selectedObjectId() == selectedId ) )
-				Memory::copy( pPtr, listBefore.data(), sz );
-		};
-		cmd._redo = [pPtr, sz, after, selectedId]()
-		{
-			if ( pPtr != nullptr && ( selectedId == 0 || EditorWorkspace::selectedObjectId() == selectedId ) )
-				Memory::copy( pPtr, after.data(), sz );
-		};
-		editor::getService<CommandStack>()->push( std::move( cmd ) );
-	}
-
-	void trackStringPropertyUndo( string* pPtr, const utf8* pLabel )
-	{
-		if ( pPtr == nullptr )
-			return;
-		struct Entry
-		{
-			string	_before;
-			string* _pPtr{ nullptr };
-			string	_label;
-		};
-		static unordered_map<ImGuiID, Entry> s_mapPending;
-		const ImGuiID						 id = ImGui::GetItemID();
-		if ( ImGui::IsItemActivated() )
-		{
-			Entry e;
-			e._pPtr			 = pPtr;
-			e._before		 = *pPtr;
-			e._label		 = ( pLabel != nullptr ) ? pLabel : "Property";
-			s_mapPending[id] = std::move( e );
-		}
-		if ( ImGui::IsItemDeactivatedAfterEdit() == false )
-			return;
-		const auto it = s_mapPending.find( id );
-		if ( it == s_mapPending.end() )
-			return;
-		string after = *pPtr;
-		if ( after == it->second._before )
-		{
-			s_mapPending.erase( it );
-			return;
-		}
-		string*		 pTarget = it->second._pPtr;
-		string		 before	 = std::move( it->second._before );
-		const string lbl	 = string( "Edit " ) + it->second._label;
-		s_mapPending.erase( it );
-
-		uint64				  selectedId = EditorWorkspace::selectedObjectId();
-		CommandStack::Command cmd;
-		cmd._label = lbl;
-		cmd._undo  = [pTarget, before, selectedId]()
-		{
-			if ( pTarget != nullptr && ( selectedId == 0 || EditorWorkspace::selectedObjectId() == selectedId ) )
-				*pTarget = before;
-		};
-		cmd._redo = [pTarget, after, selectedId]()
-		{
-			if ( pTarget != nullptr && ( selectedId == 0 || EditorWorkspace::selectedObjectId() == selectedId ) )
-				*pTarget = after;
-		};
-		editor::getService<CommandStack>()->push( std::move( cmd ) );
-	}
-
 	namespace
 	{
-		class BuiltinDrawerBase : public IPropertyDrawer
+		class BuiltinPropertyBase : public IInspectorProperty
 		{
 		protected:
-			const utf8* pLabel = "##value";
+			const utf8* _pLabel = "##value";
 			void		showTooltipIfHovered( const PropertyInfo& prop )
 			{
 				if ( prop._metadata._tooltip.empty() == false && ImGui::IsItemHovered() )
@@ -146,13 +31,13 @@ namespace sw
 			}
 			void drawReadOnlyText( const PropertyInfo& prop, const utf8* pValue )
 			{
-				ImGui::TextDisabled( "%s", pLabel );
+				ImGui::TextDisabled( "%s", _pLabel );
 				ImGui::SameLine();
 				ImGui::TextUnformatted( pValue != nullptr ? pValue : "" );
 				showTooltipIfHovered( prop );
 			}
 		};
-		class Int32Drawer : public BuiltinDrawerBase
+		class Int32Property : public BuiltinPropertyBase
 		{
 		public:
 			bool draw( void* pInstance, const PropertyInfo& prop ) override
@@ -175,15 +60,15 @@ namespace sw
 					return true;
 				}
 				if ( bHasRange )
-					ImGui::DragInt( pLabel, pPtr, 1.0f, minI, maxI );
+					ImGui::DragInt( _pLabel, pPtr, 1.0f, minI, maxI );
 				else
-					ImGui::DragInt( pLabel, pPtr );
-				trackPodPropertyUndo( pPtr, sizeof( *pPtr ), pLabel );
+					ImGui::DragInt( _pLabel, pPtr );
+				trackPodPropertyUndo( pPtr, sizeof( *pPtr ), _pLabel );
 				return true;
 			}
 		};
 
-		class Uint32Drawer : public BuiltinDrawerBase
+		class Uint32Property : public BuiltinPropertyBase
 		{
 		public:
 			bool draw( void* pInstance, const PropertyInfo& prop ) override
@@ -208,17 +93,17 @@ namespace sw
 				int32 tmp = static_cast<int32>( *pPtr );
 				if ( bHasRange )
 				{
-					if ( ImGui::DragInt( pLabel, &tmp, 1.0f, minI, maxI ) )
+					if ( ImGui::DragInt( _pLabel, &tmp, 1.0f, minI, maxI ) )
 						*pPtr = static_cast<uint32>( tmp );
 				}
-				else if ( ImGui::DragInt( pLabel, &tmp, 1.0f, 0 ) )
+				else if ( ImGui::DragInt( _pLabel, &tmp, 1.0f, 0 ) )
 					*pPtr = static_cast<uint32>( tmp );
-				trackPodPropertyUndo( pPtr, sizeof( *pPtr ), pLabel );
+				trackPodPropertyUndo( pPtr, sizeof( *pPtr ), _pLabel );
 				return true;
 			}
 		};
 
-		class Int64Drawer : public BuiltinDrawerBase
+		class Int64Property : public BuiltinPropertyBase
 		{
 		public:
 			bool draw( void* pInstance, const PropertyInfo& prop ) override
@@ -243,17 +128,17 @@ namespace sw
 				int32 tmp = static_cast<int32>( *pPtr );
 				if ( bHasRange )
 				{
-					if ( ImGui::DragInt( pLabel, &tmp, 1.0f, minI, maxI ) )
+					if ( ImGui::DragInt( _pLabel, &tmp, 1.0f, minI, maxI ) )
 						*pPtr = static_cast<int64>( tmp );
 				}
-				else if ( ImGui::DragInt( pLabel, &tmp ) )
+				else if ( ImGui::DragInt( _pLabel, &tmp ) )
 					*pPtr = static_cast<int64>( tmp );
-				trackPodPropertyUndo( pPtr, sizeof( *pPtr ), pLabel );
+				trackPodPropertyUndo( pPtr, sizeof( *pPtr ), _pLabel );
 				return true;
 			}
 		};
 
-		class Float32Drawer : public BuiltinDrawerBase
+		class Float32Property : public BuiltinPropertyBase
 		{
 		public:
 			bool draw( void* pInstance, const PropertyInfo& prop ) override
@@ -276,15 +161,15 @@ namespace sw
 					return true;
 				}
 				if ( bHasRange )
-					ImGui::DragFloat( pLabel, pPtr, 0.01f, minF, maxF );
+					ImGui::DragFloat( _pLabel, pPtr, 0.01f, minF, maxF );
 				else
-					ImGui::DragFloat( pLabel, pPtr, 0.01f );
-				trackPodPropertyUndo( pPtr, sizeof( *pPtr ), pLabel );
+					ImGui::DragFloat( _pLabel, pPtr, 0.01f );
+				trackPodPropertyUndo( pPtr, sizeof( *pPtr ), _pLabel );
 				return true;
 			}
 		};
 
-		class Float64Drawer : public BuiltinDrawerBase
+		class Float64Property : public BuiltinPropertyBase
 		{
 		public:
 			bool draw( void* pInstance, const PropertyInfo& prop ) override
@@ -309,17 +194,17 @@ namespace sw
 				float32 tmp = static_cast<float32>( *pPtr );
 				if ( bHasRange )
 				{
-					if ( ImGui::DragFloat( pLabel, &tmp, 0.01f, minF, maxF ) )
+					if ( ImGui::DragFloat( _pLabel, &tmp, 0.01f, minF, maxF ) )
 						*pPtr = static_cast<float64>( tmp );
 				}
-				else if ( ImGui::DragFloat( pLabel, &tmp, 0.01f ) )
+				else if ( ImGui::DragFloat( _pLabel, &tmp, 0.01f ) )
 					*pPtr = static_cast<float64>( tmp );
-				trackPodPropertyUndo( pPtr, sizeof( *pPtr ), pLabel );
+				trackPodPropertyUndo( pPtr, sizeof( *pPtr ), _pLabel );
 				return true;
 			}
 		};
 
-		class BoolDrawer : public BuiltinDrawerBase
+		class BoolProperty : public BuiltinPropertyBase
 		{
 		public:
 			bool draw( void* pInstance, const PropertyInfo& prop ) override
@@ -339,13 +224,13 @@ namespace sw
 					drawReadOnlyText( prop, *pPtr ? "true" : "false" );
 					return true;
 				}
-				ImGui::Checkbox( pLabel, pPtr );
-				trackPodPropertyUndo( pPtr, sizeof( *pPtr ), pLabel );
+				ImGui::Checkbox( _pLabel, pPtr );
+				trackPodPropertyUndo( pPtr, sizeof( *pPtr ), _pLabel );
 				return true;
 			}
 		};
 
-		class StringDrawer : public BuiltinDrawerBase
+		class StringProperty : public BuiltinPropertyBase
 		{
 		public:
 			bool draw( void* pInstance, const PropertyInfo& prop ) override
@@ -367,14 +252,14 @@ namespace sw
 				}
 				utf8 buf[constant::kMaxBuffer512];
 				formatstring( buf, sizeof( buf ), "%#", pPtr->c_str() );
-				if ( ImGui::InputText( pLabel, buf, sizeof( buf ) ) )
+				if ( ImGui::InputText( _pLabel, buf, sizeof( buf ) ) )
 					*pPtr = buf;
-				trackStringPropertyUndo( pPtr, pLabel );
+				trackStringPropertyUndo( pPtr, _pLabel );
 				return true;
 			}
 		};
 
-		class Float3Drawer : public BuiltinDrawerBase
+		class Float3Property : public BuiltinPropertyBase
 		{
 		public:
 			bool draw( void* pInstance, const PropertyInfo& prop ) override
@@ -398,13 +283,13 @@ namespace sw
 					drawReadOnlyText( prop, buf );
 					return true;
 				}
-				editor::drawVec3Control( pLabel, *pPtr, 0.0f, 100.0f, 0.1f );
-				trackPodPropertyUndo( pPtr, sizeof( *pPtr ), pLabel );
+				editor::drawVec3Control( _pLabel, *pPtr, 0.0f, 100.0f, 0.1f );
+				trackPodPropertyUndo( pPtr, sizeof( *pPtr ), _pLabel );
 				return true;
 			}
 		};
 
-		class Float2Drawer : public BuiltinDrawerBase
+		class Float2Property : public BuiltinPropertyBase
 		{
 		public:
 			bool draw( void* pInstance, const PropertyInfo& prop ) override
@@ -427,13 +312,13 @@ namespace sw
 					drawReadOnlyText( prop, buf );
 					return true;
 				}
-				ImGui::DragFloat2( pLabel, &pPtr->_x, 0.1f );
-				trackPodPropertyUndo( pPtr, sizeof( *pPtr ), pLabel );
+				ImGui::DragFloat2( _pLabel, &pPtr->_x, 0.1f );
+				trackPodPropertyUndo( pPtr, sizeof( *pPtr ), _pLabel );
 				return true;
 			}
 		};
 
-		class Float4Drawer : public BuiltinDrawerBase
+		class Float4Property : public BuiltinPropertyBase
 		{
 		public:
 			bool draw( void* pInstance, const PropertyInfo& prop ) override
@@ -457,13 +342,13 @@ namespace sw
 					drawReadOnlyText( prop, buf );
 					return true;
 				}
-				ImGui::DragFloat4( pLabel, &pPtr->_x, 0.01f );
-				trackPodPropertyUndo( pPtr, sizeof( *pPtr ), pLabel );
+				ImGui::DragFloat4( _pLabel, &pPtr->_x, 0.01f );
+				trackPodPropertyUndo( pPtr, sizeof( *pPtr ), _pLabel );
 				return true;
 			}
 		};
 
-		class Hashed_stringDrawer : public BuiltinDrawerBase
+		class HashedStringProperty : public BuiltinPropertyBase
 		{
 		public:
 			bool draw( void* pInstance, const PropertyInfo& prop ) override
@@ -485,7 +370,7 @@ namespace sw
 				}
 				utf8 buf[constant::kMaxBuffer256];
 				formatstring( buf, sizeof( buf ), "%#", pPtr->c_str() );
-				if ( ImGui::InputText( pLabel, buf, sizeof( buf ), ImGuiInputTextFlags_EnterReturnsTrue ) )
+				if ( ImGui::InputText( _pLabel, buf, sizeof( buf ), ImGuiInputTextFlags_EnterReturnsTrue ) )
 					*pPtr = hashed_string( buf );
 				return true;
 			}
@@ -493,18 +378,18 @@ namespace sw
 
 	} // namespace
 
-	void registerDefaultPropertyDrawers()
+	void registerInspectorBuiltinProperties()
 	{
-		PropertyDrawerRegistry::registerDrawer( "int32", make_unique<Int32Drawer>() );
-		PropertyDrawerRegistry::registerDrawer( "uint32", make_unique<Uint32Drawer>() );
-		PropertyDrawerRegistry::registerDrawer( "int64", make_unique<Int64Drawer>() );
-		PropertyDrawerRegistry::registerDrawer( "float32", make_unique<Float32Drawer>() );
-		PropertyDrawerRegistry::registerDrawer( "float64", make_unique<Float64Drawer>() );
-		PropertyDrawerRegistry::registerDrawer( "bool", make_unique<BoolDrawer>() );
-		PropertyDrawerRegistry::registerDrawer( "string", make_unique<StringDrawer>() );
-		PropertyDrawerRegistry::registerDrawer( "float3", make_unique<Float3Drawer>() );
-		PropertyDrawerRegistry::registerDrawer( "float2", make_unique<Float2Drawer>() );
-		PropertyDrawerRegistry::registerDrawer( "float4", make_unique<Float4Drawer>() );
-		PropertyDrawerRegistry::registerDrawer( "hashed_string", make_unique<Hashed_stringDrawer>() );
+		InspectorPropertyRegistry::registerType( "int32", make_unique<Int32Property>() );
+		InspectorPropertyRegistry::registerType( "uint32", make_unique<Uint32Property>() );
+		InspectorPropertyRegistry::registerType( "int64", make_unique<Int64Property>() );
+		InspectorPropertyRegistry::registerType( "float32", make_unique<Float32Property>() );
+		InspectorPropertyRegistry::registerType( "float64", make_unique<Float64Property>() );
+		InspectorPropertyRegistry::registerType( "bool", make_unique<BoolProperty>() );
+		InspectorPropertyRegistry::registerType( "string", make_unique<StringProperty>() );
+		InspectorPropertyRegistry::registerType( "float3", make_unique<Float3Property>() );
+		InspectorPropertyRegistry::registerType( "float2", make_unique<Float2Property>() );
+		InspectorPropertyRegistry::registerType( "float4", make_unique<Float4Property>() );
+		InspectorPropertyRegistry::registerType( "hashed_string", make_unique<HashedStringProperty>() );
 	}
 } // namespace sw

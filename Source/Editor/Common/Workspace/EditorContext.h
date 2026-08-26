@@ -10,8 +10,8 @@ namespace sw
 	class CommandPalettePopup;
 	class EditorPanelRegistry;
 	class AssetEditorRegistry;
-	class ComponentDrawerRegistry;
-	class PropertyDrawerRegistry;
+	class InspectorComponentRegistry;
+	class InspectorPropertyRegistry;
 	class IRHIDevice;
 	class IImGuiRendererBackend;
 
@@ -49,9 +49,9 @@ namespace sw
 		EditorContextMenuRegistry& getContextMenuRegistry() { return *_pContextMenuRegistry; }
 		CommandPalettePopup&	   getCommandPalette() { return *_pCommandPalette; }
 		EditorPanelRegistry&	   getPanelRegistry() { return *_pPanelRegistry; }
-		AssetEditorRegistry&	   getAssetEditorRegistry() { return *_pAssetEditorRegistry; }
-		ComponentDrawerRegistry&   getComponentDrawerRegistry() { return *_pComponentDrawerRegistry; }
-		PropertyDrawerRegistry&	   getPropertyDrawerRegistry() { return *_pPropertyDrawerRegistry; }
+		AssetEditorRegistry&		getAssetEditorRegistry() { return *_pAssetEditorRegistry; }
+		InspectorComponentRegistry& getInspectorComponentRegistry() { return *_pInspectorComponentRegistry; }
+		InspectorPropertyRegistry&	getInspectorPropertyRegistry() { return *_pInspectorPropertyRegistry; }
 
 		void		  setRhiDevice( IRHIDevice* pDevice ) { _pRhiDevice = pDevice; }
 		IRHIDevice*	  getRhiDevice() const { return _pRhiDevice; }
@@ -71,9 +71,9 @@ namespace sw
 		unique_ptr<EditorContextMenuRegistry> _pContextMenuRegistry;
 		unique_ptr<CommandPalettePopup>	  _pCommandPalette;
 		unique_ptr<EditorPanelRegistry>	  _pPanelRegistry;
-		unique_ptr<AssetEditorRegistry>		  _pAssetEditorRegistry;
-		unique_ptr<ComponentDrawerRegistry>	  _pComponentDrawerRegistry;
-		unique_ptr<PropertyDrawerRegistry>	  _pPropertyDrawerRegistry;
+		unique_ptr<AssetEditorRegistry>		   _pAssetEditorRegistry;
+		unique_ptr<InspectorComponentRegistry> _pInspectorComponentRegistry;
+		unique_ptr<InspectorPropertyRegistry>  _pInspectorPropertyRegistry;
 		IRHIDevice*							  _pRhiDevice;
 		IImGuiRendererBackend*				  _pRendererBackend;
 		EditorGameView						  _gameView;
