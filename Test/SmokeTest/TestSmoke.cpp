@@ -56,17 +56,7 @@ namespace
 
 	void fillGameService( sw::GameService& gs )
 	{
-		gs.getService			   = getGameService;
-		gs._pLocalizationManager   = &sw::engine::getLocalizationManager();
-		gs._pEventDispatcher	   = &sw::engine::getEventDispatcher();
-		gs._pGlobalVariableManager = &sw::engine::getGlobalVariableManager();
-		gs._pAudioSystem		   = &sw::engine::getAudioSystem();
-		gs._pTypeRegistry		   = &sw::engine::getTypeRegistry();
-		gs._pInputManager		   = &sw::engine::getInputManager();
-		gs._pSceneManager		   = &sw::engine::getSceneManager();
-		gs._pResourceManager	   = &sw::engine::getResourceManager();
-		gs._pDebugDrawQueue		   = &sw::engine::getDebugDrawQueue();
-		gs._pDebugOverlayState	   = &sw::engine::getDebugOverlayState();
+		gs.getService = getGameService;
 	}
 } // namespace
 
