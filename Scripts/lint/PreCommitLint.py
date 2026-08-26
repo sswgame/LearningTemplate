@@ -45,16 +45,9 @@ def main() -> int:
     sourceHeaderMap, testHeaderMap, toolsHeaderMap = CheckIncludeOrder.buildHeaderLookupMap(projectRoot)
     for filePath in stagedFiles:
         try:
-            oldContent = filePath.read_text(encoding="utf-8-sig")
-            violations = CheckIncludeOrder.processFile(filePath, projectRoot, sourceHeaderMap, testHeaderMap, toolsHeaderMap)
+            violations = CheckIncludeOrder.processFile(filePath, projectRoot, sourceHeaderMap, testHeaderMap, toolsHeaderMap, checkOnly=True)
             if violations:
-                newContent = filePath.read_text(encoding="utf-8-sig")
-                if oldContent != newContent:
-                    print(
-                        f"  [Error] {filePath.relative_to(projectRoot)}: Include 순서/중복 문제가 발견되었습니다. "
-                        "파일이 자동으로 수정되었으나 변경사항을 다시 'git add' 해야 합니다."
-                    )
-                    hasErrors = True
+                hasErrors = True
                 for violation in violations:
                     print(f"    - {violation}")
         except Exception as exception:

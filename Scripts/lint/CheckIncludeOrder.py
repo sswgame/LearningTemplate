@@ -57,7 +57,8 @@ def buildHeaderLookupMap(repositoryRoot: Path) -> tuple[dict[str, str], dict[str
 def processFile(filePath: Path, repositoryRoot: Path,
                 sourceHeaderMap: dict[str, str] | None = None,
                 testHeaderMap: dict[str, str] | None = None,
-                toolsHeaderMap: dict[str, str] | None = None) -> list[str]:
+                toolsHeaderMap: dict[str, str] | None = None,
+                checkOnly: bool = False) -> list[str]:
     relativeFilePath = filePath.relative_to(repositoryRoot).as_posix()
     try:
         text = filePath.read_text(encoding="utf-8", errors="strict")
@@ -223,10 +224,13 @@ def processFile(filePath: Path, repositoryRoot: Path,
         newText += "\n"
 
     if newText != text:
-        try:
-            filePath.write_text(newText, encoding="utf-8")
-        except Exception as exception:
-            violationsList.append(f'{relativeFilePath}: 파일 쓰기 실패: {exception}')
+        if checkOnly:
+            violationsList.append(f'{relativeFilePath}: Include 순서/중복 문제가 발견되었습니다. (FormatModified.py를 실행하세요)')
+        else:
+            try:
+                filePath.write_text(newText, encoding="utf-8")
+            except Exception as exception:
+                violationsList.append(f'{relativeFilePath}: 파일 쓰기 실패: {exception}')
 
     return violationsList
 
