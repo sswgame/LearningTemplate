@@ -9,7 +9,7 @@
 namespace sw
 {
 	struct PropertyInfo;
-}
+} // namespace sw
 
 namespace sw::editor
 {

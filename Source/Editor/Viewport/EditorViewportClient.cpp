@@ -2,12 +2,12 @@
 
 #include "Editor/Viewport/EditorViewportClient.h"
 
-#include "Editor/Common/Workspace/EditorWorkspace.h"
-#include "Editor/Common/Workspace/SelectionManager.h"
-
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Memory/Memory.h"
+
+#include "Editor/Common/Workspace/EditorWorkspace.h"
+#include "Editor/Common/Workspace/SelectionManager.h"
 
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
@@ -322,9 +322,9 @@ namespace sw::editor
 		if ( canvasSize._x <= 1.0f || canvasSize._y <= 1.0f )
 			return;
 
-		const ImVec2 mouse = ImGui::GetIO().MousePos;
-		const float32 u	   = ( mouse.x - canvasPos._x ) / canvasSize._x;
-		const float32 v	   = ( mouse.y - canvasPos._y ) / canvasSize._y;
+		const ImVec2  mouse = ImGui::GetIO().MousePos;
+		const float32 u		= ( mouse.x - canvasPos._x ) / canvasSize._x;
+		const float32 v		= ( mouse.y - canvasPos._y ) / canvasSize._y;
 		const bool	  bInside =
 			( u >= 0.0f && u <= 1.0f && v >= 0.0f && v <= 1.0f );
 		if ( bInside == false )
@@ -350,15 +350,15 @@ namespace sw::editor
 		if ( unproject( invViewProj, ndcX, ndcY, 1.0f, farPt ) == false )
 			return;
 
-		float3 dir = farPt - nearPt;
+		float3		  dir	 = farPt - nearPt;
 		const float32 dirLen = dir.getLength();
 		if ( dirLen < 1e-8f )
 			return;
 		dir = dir * ( 1.0f / dirLen );
 
-		GameObject*	  pBestObj{ nullptr };
+		GameObject*	   pBestObj{ nullptr };
 		MeshComponent* pBestMesh{ nullptr };
-		float32		  bestT{ MathUtil::MaxFloat };
+		float32		   bestT{ MathUtil::MaxFloat };
 
 		const vector<GameObject*> listObjects = pManager->getAllGameObjects();
 		for ( GameObject* pObj : listObjects )
@@ -372,13 +372,13 @@ namespace sw::editor
 			if ( pMeshComp->isVisible() == false )
 				continue;
 
-			const float3  scale		= pMeshComp->getLocalScale();
+			const float3  scale	   = pMeshComp->getLocalScale();
 			const float32 absX	   = MathUtil::abs( scale._x );
 			const float32 absY	   = MathUtil::abs( scale._y );
 			const float32 absZ	   = MathUtil::abs( scale._z );
 			const float32 maxScale = MathUtil::max( absX, MathUtil::max( absY, absZ ) );
-			const float32 radius	= pMeshComp->getBoundsRadius() * MathUtil::max( maxScale, 0.001f );
-			const float3  center	= pMeshComp->getWorldPosition();
+			const float32 radius   = pMeshComp->getBoundsRadius() * MathUtil::max( maxScale, 0.001f );
+			const float3  center   = pMeshComp->getWorldPosition();
 			float32		  hitT{ 0.0f };
 			if ( rayHitsSphere( nearPt, dir, center, radius, hitT ) == false )
 				continue;

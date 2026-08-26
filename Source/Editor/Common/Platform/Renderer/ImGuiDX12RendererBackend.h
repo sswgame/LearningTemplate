@@ -14,7 +14,7 @@ struct D3D12_GPU_DESCRIPTOR_HANDLE;
 namespace sw
 {
 	class IRHIDevice;
-}
+} // namespace sw
 
 namespace sw::editor
 {

@@ -2,8 +2,8 @@
 
 #include "Editor/Popups/EditorNotificationManager.h"
 
-#include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Gui/EditorChrome.h"
+#include "Editor/Common/Workspace/EditorContext.h"
 
 #include <imgui.h>
 #include <algorithm>
@@ -131,15 +131,15 @@ namespace sw::editor
 			formatstring( windowId, sizeof( windowId ), "##Toast_%#", static_cast<uint64>( notificationIndex ) );
 
 			editor::EditorOverlayDesc toastDesc{};
-			toastDesc._pId		 = windowId;
-			toastDesc._anchorPos = float2{ posX, currentY };
-			toastDesc._size		 = float2{ toastWidth, 0.0f };
+			toastDesc._pId		  = windowId;
+			toastDesc._anchorPos  = float2{ posX, currentY };
+			toastDesc._size		  = float2{ toastWidth, 0.0f };
 			toastDesc._rounding	  = 6.0f;
 			toastDesc._borderSize = 1.5f;
 			toastDesc._bgAlpha	  = bgCol.w;
 			toastDesc._flags	  = editor::EditorOverlayFlags::NoDecoration | editor::EditorOverlayFlags::NoInputs |
-							   editor::EditorOverlayFlags::NoNav | editor::EditorOverlayFlags::AutoResize |
-							   editor::EditorOverlayFlags::NoSavedSettings | editor::EditorOverlayFlags::NoFocusOnAppearing;
+									editor::EditorOverlayFlags::NoNav | editor::EditorOverlayFlags::AutoResize |
+									editor::EditorOverlayFlags::NoSavedSettings | editor::EditorOverlayFlags::NoFocusOnAppearing;
 
 			ImGui::PushStyleColor( ImGuiCol_WindowBg, bgCol );
 			ImGui::PushStyleColor( ImGuiCol_Border, borderCol );

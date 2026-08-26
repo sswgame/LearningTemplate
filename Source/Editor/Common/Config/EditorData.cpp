@@ -2,10 +2,10 @@
 
 #include "Editor/Common/Config/EditorData.h"
 
+#include "Core/File/FileUtil.h"
+
 #include "Editor/Common/Config/EditorConfig.h"
 #include "Editor/Common/EditorUtil.h"
-
-#include "Core/File/FileUtil.h"
 
 #include "Engine/Utility/Xml/XmlDocument.h"
 

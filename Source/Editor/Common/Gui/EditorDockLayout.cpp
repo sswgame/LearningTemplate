@@ -2,14 +2,13 @@
 
 #include "Editor/Common/Gui/EditorDockLayout.h"
 
-#include "Editor/Common/Config/EditorConfig.h"
-#include "Editor/Common/EditorUtil.h"
-
-#include "Editor/Panels/EditorPanelRegistry.h"
-
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
+
+#include "Editor/Common/Config/EditorConfig.h"
+#include "Editor/Common/EditorUtil.h"
+#include "Editor/Panels/EditorPanelRegistry.h"
 
 #include "Engine/Utility/File/KeyValueFile.h"
 

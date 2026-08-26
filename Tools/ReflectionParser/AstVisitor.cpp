@@ -455,7 +455,7 @@ namespace sw
 		{
 			const vector<string> args = extractTemplateArgs( typeSpelling );
 			const int32			 numClangArgs =
-				 ( type.kind == CXType_Invalid ) ? 0 : clang_Type_getNumTemplateArguments( type );
+				( type.kind == CXType_Invalid ) ? 0 : clang_Type_getNumTemplateArguments( type );
 
 			if ( node._containerKind == ContainerKind::Map )
 			{
@@ -695,7 +695,7 @@ namespace sw
 			const CXType   baseType = clang_getCursorType( cursor );
 			const CXCursor baseDecl = clang_getTypeDeclaration( baseType );
 			const string   baseFQN =
-				  ( clang_Cursor_isNull( baseDecl ) == 0 ) ? AstVisitor::buildFullyQualifiedName( baseDecl ) : string{};
+				( clang_Cursor_isNull( baseDecl ) == 0 ) ? AstVisitor::buildFullyQualifiedName( baseDecl ) : string{};
 
 			++collector->baseCount;
 			if ( collector->baseCount > 1 )
@@ -891,8 +891,8 @@ namespace sw
 		{
 			const bool bHasFunction = hasAnnotateAttrPrefix( cursor, annotationConstants::kFunctionPrefix ) ||
 									  sourceHasPrimaryAnnotation( cursor, annotationConstants::kFunctionPrefix );
-			const bool bHasBody = hasAnnotateAttrPrefix( cursor, "REFLECT_BODY" ) ||
-								  ( cxStringToStd( clang_getCursorSpelling( cursor ) ) == annotationConstants::kReflectBodyMarkerFn );
+			const bool bHasBody		= hasAnnotateAttrPrefix( cursor, "REFLECT_BODY" ) ||
+									  ( cxStringToStd( clang_getCursorSpelling( cursor ) ) == annotationConstants::kReflectBodyMarkerFn );
 			if ( bHasFunction || bHasBody )
 			{
 				CXCursor   parent		  = clang_getCursorSemanticParent( cursor );

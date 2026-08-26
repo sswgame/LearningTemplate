@@ -179,12 +179,7 @@ namespace sw
 
 		/** @brief 복사 생성합니다. */
 		unordered_map( const unordered_map& other )
-#if SW_DEBUG
-			: _raceCtx{}
-			, _listBuckets{ other._listBuckets }
-#else
 			: _listBuckets{ other._listBuckets }
-#endif
 			, _listDenseData{ other._listDenseData }
 			, _hasher{ other._hasher }
 			, _equal{ other._equal }
@@ -194,12 +189,7 @@ namespace sw
 
 		/** @brief 이동 생성합니다. */
 		unordered_map( unordered_map&& other ) noexcept
-#if SW_DEBUG
-			: _raceCtx{}
-			, _listBuckets{ std::move( other._listBuckets ) }
-#else
 			: _listBuckets{ std::move( other._listBuckets ) }
-#endif
 			, _listDenseData{ std::move( other._listDenseData ) }
 			, _hasher{ std::move( other._hasher ) }
 			, _equal{ std::move( other._equal ) }

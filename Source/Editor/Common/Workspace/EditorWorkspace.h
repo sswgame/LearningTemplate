@@ -17,7 +17,7 @@ namespace sw
 	class GameObject;
 	class GameObjectManager;
 	class Component;
-}
+} // namespace sw
 
 namespace sw::editor
 {

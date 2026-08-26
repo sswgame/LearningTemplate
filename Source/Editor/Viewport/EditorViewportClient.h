@@ -10,7 +10,7 @@ namespace sw
 {
 	class IRHIDevice;
 	class CameraComponent;
-}
+} // namespace sw
 
 namespace sw::editor
 {

@@ -14,7 +14,7 @@
  */
 
 #define SW_IMPLEMENT_GAME_MODULE( GameClass )                                                                                                        \
-	extern "C" SW_MODULE_API bool exportGameAPI( sw::GameAPI* pOutApi )                                                                                \
+	extern "C" SW_MODULE_API bool exportGameAPI( sw::GameAPI* pOutApi )                                                                              \
 	{                                                                                                                                                \
 		if ( pOutApi == nullptr )                                                                                                                    \
 			return false;                                                                                                                            \
@@ -39,7 +39,7 @@
 			if ( pService != nullptr )                                                                                                                         \
 				sw::game::bindGameService( *pService );                                                                                                        \
 			else                                                                                                                                               \
-				sw::game::unbindGameService(); };                                                                       \
+				sw::game::unbindGameService(); };                                                                     \
 		pOutApi->serializeState	  = []( sw::GameHandle gameHandle, void* pOutBuffer, uint32* pInOutSize ) -> bool {                                             \
 			GameClass* pInstance = static_cast<GameClass*>( gameHandle );                                                                                           \
 			return pInstance != nullptr ? pInstance->serializeState( pOutBuffer, pInOutSize ) : false; };                               \

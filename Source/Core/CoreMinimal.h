@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file CoreMinimal.h
  * @brief Core TU 프리루드 — 기본 타입·컨테이너·문자열·로그·메모리·수학·파일.
  */
@@ -18,13 +18,10 @@
 #include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
-
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
-
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
-
 #include "Core/String/FormatString.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"

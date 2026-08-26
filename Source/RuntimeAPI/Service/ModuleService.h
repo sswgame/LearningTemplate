@@ -40,7 +40,7 @@ namespace sw
 		return static_cast<uint32>( id );
 	}
 
-	using ModuleServiceFn = void* ( * )( uint32 );
+	using ModuleServiceFn = void* (*)( uint32 );
 
 	struct ModuleService
 	{

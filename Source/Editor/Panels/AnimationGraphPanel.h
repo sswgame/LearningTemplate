@@ -67,9 +67,9 @@ namespace sw::editor
 		void addNamedNode( const utf8* pName );
 
 	private:
-		EditorNodeGraph _nodeGraph;
-		bool					_bLoaded;
-		vector<GraphNode>		_listNodes;
-		vector<GraphLink>		_listLinks;
+		EditorNodeGraph	  _nodeGraph;
+		bool			  _bLoaded;
+		vector<GraphNode> _listNodes;
+		vector<GraphLink> _listLinks;
 	};
 } // namespace sw::editor

@@ -2,12 +2,12 @@
 
 #include "Editor/Panels/ContentBrowserPanel.h"
 
+#include "Core/Concurrency/mutex.h"
+
 #include "Editor/Common/Gui/EditorChrome.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/AssetEditorRegistry.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
-
-#include "Core/Concurrency/mutex.h"
 
 #include "Engine/Utility/Resource/AssetDatabase.h"
 #include "Engine/Utility/Resource/ResourceManager.h"

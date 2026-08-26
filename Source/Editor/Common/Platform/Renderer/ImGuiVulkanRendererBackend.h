@@ -15,7 +15,7 @@ struct VkSampler_T;
 namespace sw
 {
 	class IRHIDevice;
-}
+} // namespace sw
 
 namespace sw::editor
 {

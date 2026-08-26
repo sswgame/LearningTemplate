@@ -22,7 +22,7 @@ namespace sw::editor
 	class CommandPalettePopup
 	{
 	public:
-		CommandPalettePopup()	= default;
+		CommandPalettePopup()  = default;
 		~CommandPalettePopup() = default;
 
 		// Static Public API

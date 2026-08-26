@@ -15,7 +15,7 @@ namespace sw
 	class Component;
 	struct TypeInfo;
 	struct PropertyInfo;
-}
+} // namespace sw
 
 namespace sw::editor
 {

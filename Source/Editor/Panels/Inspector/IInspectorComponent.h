@@ -9,7 +9,7 @@ namespace sw
 {
 	class Component;
 	class IRHIDevice;
-}
+} // namespace sw
 
 namespace sw::editor
 {

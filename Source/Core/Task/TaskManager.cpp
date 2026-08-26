@@ -285,8 +285,8 @@ namespace sw
 #endif
 			pMem->_rangeStart = 0;
 			pMem->_rangeEnd	  = 0;
-			pMem->_affinity		   = TaskThreadAffinity::Any;
-			pMem->_priority		   = TaskPriority::Normal;
+			pMem->_affinity	  = TaskThreadAffinity::Any;
+			pMem->_priority	  = TaskPriority::Normal;
 			return pMem;
 		}
 

@@ -1,10 +1,9 @@
 #include "pch.h"
 
-#include "Editor/Panels/Inspector/InspectorBuiltin.h"
-
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Panels/Inspector/IInspectorProperty.h"
+#include "Editor/Panels/Inspector/InspectorBuiltin.h"
 #include "Editor/Panels/Inspector/InspectorPropertyRegistry.h"
 #include "Editor/Panels/Inspector/InspectorPropertyUndo.h"
 

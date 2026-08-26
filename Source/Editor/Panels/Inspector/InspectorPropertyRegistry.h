@@ -19,13 +19,13 @@ namespace sw::editor
 		InspectorPropertyRegistry()	 = default;
 		~InspectorPropertyRegistry() = default;
 
-		static void					registerType( string_view typeName, unique_ptr<IInspectorProperty> pProperty );
+		static void				   registerType( string_view typeName, unique_ptr<IInspectorProperty> pProperty );
 		static IInspectorProperty* find( string_view typeName );
-		static void					registerDefaults();
+		static void				   registerDefaults();
 
-		void				   registerTypeImpl( string_view typeName, unique_ptr<IInspectorProperty> pProperty );
-		IInspectorProperty*	   findImpl( string_view typeName ) const;
-		void				   registerDefaultsImpl();
+		void				registerTypeImpl( string_view typeName, unique_ptr<IInspectorProperty> pProperty );
+		IInspectorProperty* findImpl( string_view typeName ) const;
+		void				registerDefaultsImpl();
 
 	private:
 		map<string, unique_ptr<IInspectorProperty>> _mapProperties;

@@ -9,7 +9,7 @@
 namespace sw
 {
 	class IRHIDevice;
-}
+} // namespace sw
 
 namespace sw::editor
 {
@@ -24,9 +24,9 @@ namespace sw::editor
 	/** @brief 등록된 에디터 패널 항목 메타데이터 */
 	struct EditorPanelEntry
 	{
-		string					  _title;
-		string					  _menuPath;
-		EditorPanelCategory	  _category{ EditorPanelCategory::Core };
+		string					 _title;
+		string					 _menuPath;
+		EditorPanelCategory		 _category{ EditorPanelCategory::Core };
 		unique_ptr<IEditorPanel> _pInstance;
 	};
 
@@ -37,47 +37,47 @@ namespace sw::editor
 	class EditorPanelRegistry
 	{
 	public:
-		EditorPanelRegistry()	= default;
+		EditorPanelRegistry()  = default;
 		~EditorPanelRegistry() = default;
 
 		// ------------------------------------------------------------------------------
 		// 정적(Static) 공개 API
 		// ------------------------------------------------------------------------------
 		static void registerPanel( unique_ptr<IEditorPanel> pPanel,
-									EditorPanelCategory	  category = EditorPanelCategory::Core,
-									string_view				  menuPath = {} );
+								   EditorPanelCategory		category = EditorPanelCategory::Core,
+								   string_view				menuPath = {} );
 
 		template <typename TPanel, typename... TArgs>
 		static TPanel* registerPanel( EditorPanelCategory category = EditorPanelCategory::Core,
-										string_view			 menuPath = {}, TArgs&&... args )
+									  string_view		  menuPath = {}, TArgs&&... args )
 		{
-			auto	 pPanel = make_unique<TPanel>( std::forward<TArgs>( args )... );
-			TPanel* pRaw	 = pPanel.get();
+			auto	pPanel = make_unique<TPanel>( std::forward<TArgs>( args )... );
+			TPanel* pRaw   = pPanel.get();
 			registerPanel( std::move( pPanel ), category, menuPath );
 			return pRaw;
 		}
 
 		static const vector<EditorPanelEntry>& getPanels();
-		static vector<EditorPanelEntry>&		getPanelsMutable();
-		static IEditorPanel*					findPanel( string_view title );
-		static bool								setPanelOpen( string_view title, bool bOpen );
-		static void								clear();
-		static void								registerDefaultPanels();
-		static void								drawOpenPanels();
-		static void								preRenderOpenPanels( IRHIDevice* pRhiDevice );
-		static void								shutdownAllPanels( IRHIDevice* pRhiDevice );
+		static vector<EditorPanelEntry>&	   getPanelsMutable();
+		static IEditorPanel*				   findPanel( string_view title );
+		static bool							   setPanelOpen( string_view title, bool bOpen );
+		static void							   clear();
+		static void							   registerDefaultPanels();
+		static void							   drawOpenPanels();
+		static void							   preRenderOpenPanels( IRHIDevice* pRhiDevice );
+		static void							   shutdownAllPanels( IRHIDevice* pRhiDevice );
 
 		// ------------------------------------------------------------------------------
 		// 인스턴스 메서드 (EditorContext 소유)
 		// ------------------------------------------------------------------------------
-		void							 registerPanelImpl( unique_ptr<IEditorPanel> pPanel, EditorPanelCategory category,
-															 string_view menuPath );
+		void							registerPanelImpl( unique_ptr<IEditorPanel> pPanel, EditorPanelCategory category,
+														   string_view menuPath );
 		const vector<EditorPanelEntry>& getPanelsImpl() const { return _listPanels; }
-		vector<EditorPanelEntry>&		 getPanelsImpl() { return _listPanels; }
-		IEditorPanel*					 findPanelImpl( string_view title ) const;
-		bool							 setPanelOpenImpl( string_view title, bool bOpen );
-		void							 clearImpl();
-		void							 registerDefaultPanelsImpl();
+		vector<EditorPanelEntry>&		getPanelsImpl() { return _listPanels; }
+		IEditorPanel*					findPanelImpl( string_view title ) const;
+		bool							setPanelOpenImpl( string_view title, bool bOpen );
+		void							clearImpl();
+		void							registerDefaultPanelsImpl();
 
 	private:
 		vector<EditorPanelEntry> _listPanels;

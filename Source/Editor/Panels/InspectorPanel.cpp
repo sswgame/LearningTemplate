@@ -237,10 +237,10 @@ namespace sw::editor
 	{
 		ImGui::TextDisabled( "ID: %llu", static_cast<uint64>( pComp->getComponentId() ) );
 
-		const TypeInfo*	  pTypeInfo = pComp->getTypeInfo();
+		const TypeInfo*		 pTypeInfo	= pComp->getTypeInfo();
 		IInspectorComponent* pInspector = ( pTypeInfo != nullptr )
-											  ? InspectorComponentRegistry::find( pTypeInfo->_name.c_str() )
-											  : nullptr;
+											? InspectorComponentRegistry::find( pTypeInfo->_name.c_str() )
+											: nullptr;
 
 		if ( pInspector != nullptr )
 			pInspector->drawHeader( pComp );

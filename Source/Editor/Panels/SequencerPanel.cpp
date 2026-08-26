@@ -2,7 +2,6 @@
 
 #include "Editor/Panels/SequencerPanel.h"
 
-
 #include <imgui.h>
 #include <ImGuizmo.h>
 #include <ImSequencer.h>

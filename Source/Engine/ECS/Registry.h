@@ -285,7 +285,7 @@ namespace sw
 				auto&								sig = _mapEntitySignatures[entity];
 				auto								it	= std::lower_bound( sig.begin(), sig.end(), typeId,
 																			[]( const EntitySignatureEntry& entry, uint32 val )
-												{ return entry._typeId < val; } );
+				{ return entry._typeId < val; } );
 				if ( it == sig.end() || it->_typeId != typeId )
 					sig.insert( it, EntitySignatureEntry{ typeId, &pool } );
 			}
@@ -323,7 +323,7 @@ namespace sw
 					auto& sig	= it->second;
 					auto  sigIt = std::lower_bound( sig.begin(), sig.end(), typeId,
 													[]( const EntitySignatureEntry& entry, uint32 val )
-					 { return entry._typeId < val; } );
+					{ return entry._typeId < val; } );
 					if ( sigIt != sig.end() && sigIt->_typeId == typeId )
 						sig.erase( sigIt );
 				}

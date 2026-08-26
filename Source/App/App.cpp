@@ -188,9 +188,9 @@ namespace sw
 				_moduleHost->updateEditorUI( deltaTime );
 			}
 
-			uint64 gameRenderTarget	   = 0;
-			uint32 gameViewportWidth   = 0;
-			uint32 gameViewportHeight  = 0;
+			uint64 gameRenderTarget	  = 0;
+			uint32 gameViewportWidth  = 0;
+			uint32 gameViewportHeight = 0;
 			_moduleHost->getGameViewport( gameRenderTarget, gameViewportWidth, gameViewportHeight );
 			_engineLoop.tick( deltaTime, _bEnableEditor, gameRenderTarget, gameViewportWidth, gameViewportHeight );
 

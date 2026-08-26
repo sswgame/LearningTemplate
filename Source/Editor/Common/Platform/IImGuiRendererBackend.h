@@ -11,7 +11,7 @@ namespace sw
 {
 	class IRHIDevice;
 	enum class RHIBackend : uint32;
-}
+} // namespace sw
 
 namespace sw::editor
 {

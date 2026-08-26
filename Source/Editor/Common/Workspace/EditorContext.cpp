@@ -38,12 +38,12 @@ namespace sw::editor
 
 	void EditorContext::initialize()
 	{
-		_pSelectionManager		  = make_unique<SelectionManager>();
-		_pNotificationManager	  = make_unique<EditorNotificationManager>();
-		_pContextMenuRegistry	  = make_unique<EditorContextMenuRegistry>();
-		_pCommandPalette		  = make_unique<CommandPalettePopup>();
-		_pPanelRegistry		  = make_unique<EditorPanelRegistry>();
-		_pAssetEditorRegistry		   = make_unique<AssetEditorRegistry>();
+		_pSelectionManager			 = make_unique<SelectionManager>();
+		_pNotificationManager		 = make_unique<EditorNotificationManager>();
+		_pContextMenuRegistry		 = make_unique<EditorContextMenuRegistry>();
+		_pCommandPalette			 = make_unique<CommandPalettePopup>();
+		_pPanelRegistry				 = make_unique<EditorPanelRegistry>();
+		_pAssetEditorRegistry		 = make_unique<AssetEditorRegistry>();
 		_pInspectorComponentRegistry = make_unique<InspectorComponentRegistry>();
 		_pInspectorPropertyRegistry	 = make_unique<InspectorPropertyRegistry>();
 

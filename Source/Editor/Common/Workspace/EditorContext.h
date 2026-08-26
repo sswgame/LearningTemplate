@@ -5,7 +5,7 @@
 namespace sw
 {
 	class IRHIDevice;
-}
+} // namespace sw
 
 namespace sw::editor
 {
@@ -48,39 +48,39 @@ namespace sw::editor
 		/** @brief 활성 에디터 컨텍스트 포인터를 설정합니다. */
 		static void setActive( EditorContext* pContext ) { s_pActiveContext = pContext; }
 
-		SelectionManager&		   getSelectionManager() { return *_pSelectionManager; }
-		EditorNotificationManager& getNotificationManager() { return *_pNotificationManager; }
-		EditorContextMenuRegistry& getContextMenuRegistry() { return *_pContextMenuRegistry; }
-		CommandPalettePopup&	   getCommandPalette() { return *_pCommandPalette; }
-		EditorPanelRegistry&	   getPanelRegistry() { return *_pPanelRegistry; }
+		SelectionManager&			getSelectionManager() { return *_pSelectionManager; }
+		EditorNotificationManager&	getNotificationManager() { return *_pNotificationManager; }
+		EditorContextMenuRegistry&	getContextMenuRegistry() { return *_pContextMenuRegistry; }
+		CommandPalettePopup&		getCommandPalette() { return *_pCommandPalette; }
+		EditorPanelRegistry&		getPanelRegistry() { return *_pPanelRegistry; }
 		AssetEditorRegistry&		getAssetEditorRegistry() { return *_pAssetEditorRegistry; }
 		InspectorComponentRegistry& getInspectorComponentRegistry() { return *_pInspectorComponentRegistry; }
 		InspectorPropertyRegistry&	getInspectorPropertyRegistry() { return *_pInspectorPropertyRegistry; }
 
-		void		  setRhiDevice( IRHIDevice* pDevice ) { _pRhiDevice = pDevice; }
-		IRHIDevice*	  getRhiDevice() const { return _pRhiDevice; }
-		void		  setRendererBackend( IImGuiRendererBackend* pBackend ) { _pRendererBackend = pBackend; }
-		void		  setGameViewHovered( bool bHovered ) { _bGameViewHovered = bHovered ? 1 : 0; }
-		void		  setGameViewFocused( bool bFocused ) { _bGameViewFocused = bFocused ? 1 : 0; }
-		bool		  isGameViewHovered() const { return _bGameViewHovered != 0; }
-		bool		  isGameViewFocused() const { return _bGameViewFocused != 0; }
+		void		setRhiDevice( IRHIDevice* pDevice ) { _pRhiDevice = pDevice; }
+		IRHIDevice* getRhiDevice() const { return _pRhiDevice; }
+		void		setRendererBackend( IImGuiRendererBackend* pBackend ) { _pRendererBackend = pBackend; }
+		void		setGameViewHovered( bool bHovered ) { _bGameViewHovered = bHovered ? 1 : 0; }
+		void		setGameViewFocused( bool bFocused ) { _bGameViewFocused = bFocused ? 1 : 0; }
+		bool		isGameViewHovered() const { return _bGameViewHovered != 0; }
+		bool		isGameViewFocused() const { return _bGameViewFocused != 0; }
 
 		const EditorGameView& getGameView() const { return _gameView; }
 		void				  ensureGameViewSize( uint32 width, uint32 height );
 		void				  destroyGameView();
 
 	private:
-		unique_ptr<SelectionManager>		  _pSelectionManager;
-		unique_ptr<EditorNotificationManager> _pNotificationManager;
-		unique_ptr<EditorContextMenuRegistry> _pContextMenuRegistry;
-		unique_ptr<CommandPalettePopup>	  _pCommandPalette;
-		unique_ptr<EditorPanelRegistry>	  _pPanelRegistry;
+		unique_ptr<SelectionManager>		   _pSelectionManager;
+		unique_ptr<EditorNotificationManager>  _pNotificationManager;
+		unique_ptr<EditorContextMenuRegistry>  _pContextMenuRegistry;
+		unique_ptr<CommandPalettePopup>		   _pCommandPalette;
+		unique_ptr<EditorPanelRegistry>		   _pPanelRegistry;
 		unique_ptr<AssetEditorRegistry>		   _pAssetEditorRegistry;
 		unique_ptr<InspectorComponentRegistry> _pInspectorComponentRegistry;
 		unique_ptr<InspectorPropertyRegistry>  _pInspectorPropertyRegistry;
-		IRHIDevice*							  _pRhiDevice;
-		IImGuiRendererBackend*				  _pRendererBackend;
-		EditorGameView						  _gameView;
+		IRHIDevice*							   _pRhiDevice;
+		IImGuiRendererBackend*				   _pRendererBackend;
+		EditorGameView						   _gameView;
 
 		uint8				   _bGameViewHovered : 1;
 		uint8				   _bGameViewFocused : 1;

@@ -11,7 +11,7 @@
 namespace sw
 {
 	struct GlobalVariableInfo;
-}
+} // namespace sw
 
 namespace sw::editor
 {

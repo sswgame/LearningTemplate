@@ -5,7 +5,6 @@
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
 
-
 #include <imgui.h>
 
 namespace sw::editor

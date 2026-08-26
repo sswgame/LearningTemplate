@@ -2,6 +2,8 @@
 
 #include "Editor/Panels/GameViewPanel.h"
 
+#include "Core/Math/MathUtil.h"
+
 #include "Editor/Common/Gui/EditorChrome.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorAssetDrop.h"
@@ -9,8 +11,6 @@
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/SelectionManager.h"
-
-#include "Core/Math/MathUtil.h"
 
 #include "Engine/Game/GameState.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

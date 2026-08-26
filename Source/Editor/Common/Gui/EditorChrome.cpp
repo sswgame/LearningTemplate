@@ -8,7 +8,7 @@ namespace sw::editor
 {
 	namespace
 	{
-		constexpr int32 kMaxSectionDepth	 = 8;
+		constexpr int32 kMaxSectionDepth = 8;
 		constexpr int32 kMaxOverlayDepth = 8;
 
 		ImGuiWindowFlags toImGuiPanelFlags( EditorPanelFlags flags )
@@ -50,10 +50,10 @@ namespace sw::editor
 		}
 
 		thread_local EditorSectionKind s_arrSectionStack[kMaxSectionDepth]{};
-		thread_local int32			 s_sectionDepth{ 0 };
-		thread_local int32			 s_floatingBarDisabledDepth{ 0 };
-		thread_local int32			 s_arrOverlayStyleVars[kMaxOverlayDepth]{};
-		thread_local int32			 s_overlayDepth{ 0 };
+		thread_local int32			   s_sectionDepth{ 0 };
+		thread_local int32			   s_floatingBarDisabledDepth{ 0 };
+		thread_local int32			   s_arrOverlayStyleVars[kMaxOverlayDepth]{};
+		thread_local int32			   s_overlayDepth{ 0 };
 	} // namespace
 
 	EditorFloatingBarDesc::EditorFloatingBarDesc()

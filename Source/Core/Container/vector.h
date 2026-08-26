@@ -748,7 +748,7 @@ namespace sw
 	inline typename vector<T, Allocator>::iterator vector<T, Allocator>::insert( const_iterator pos, T&& value )
 	{
 		SW_SCOPED_RACE_WRITE();
-		size_t			offset = pos - _pData;
+		size_t offset = pos - _pData;
 		SW_ASSERT( offset <= _size );
 		if ( _size >= _capacity )
 			reserveInternal( _capacity == 0 ? 4 : _capacity * 2 );
@@ -774,7 +774,7 @@ namespace sw
 	inline typename vector<T, Allocator>::iterator vector<T, Allocator>::insert( const_iterator pos, size_type count, const T& value )
 	{
 		SW_SCOPED_RACE_WRITE();
-		size_t			offset = pos - _pData;
+		size_t offset = pos - _pData;
 		SW_ASSERT( offset <= _size );
 		if ( _size + count > _capacity )
 			reserveInternal( std::max( _capacity * 2, _size + count ) );
@@ -838,7 +838,7 @@ namespace sw
 	inline typename vector<T, Allocator>::iterator vector<T, Allocator>::erase( const_iterator pos )
 	{
 		SW_SCOPED_RACE_WRITE();
-		size_t			offset = pos - _pData;
+		size_t offset = pos - _pData;
 		SW_ASSERT( offset < _size );
 		for ( size_t itemIndex = offset; itemIndex < _size - 1; ++itemIndex )
 		{
@@ -853,8 +853,8 @@ namespace sw
 	inline typename vector<T, Allocator>::iterator vector<T, Allocator>::erase( const_iterator first, const_iterator last )
 	{
 		SW_SCOPED_RACE_WRITE();
-		size_t			offset = first - _pData;
-		size_t			count  = last - first;
+		size_t offset = first - _pData;
+		size_t count  = last - first;
 		SW_ASSERT( offset + count <= _size );
 		if ( count > 0 )
 		{

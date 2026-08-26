@@ -2,13 +2,13 @@
 
 #include "Editor/Common/Gui/EditorMenuBar.h"
 
+#include "Core/File/FileUtil.h"
+
 #include "Editor/Common/Gui/EditorDockLayout.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Panels/EditorPanelRegistry.h"
 #include "Editor/Popups/CommandPalettePopup.h"
-
-#include "Core/File/FileUtil.h"
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
@@ -113,10 +113,10 @@ namespace sw::editor
 			ImGui::EndMenu();
 		}
 
-		EditorContext* pContext	  = EditorContext::get();
-		IRHIDevice*	   pRhiDevice = ( pContext != nullptr ) ? pContext->getRhiDevice() : nullptr;
-		const utf8*	   pBackend	  = ( pRhiDevice != nullptr ) ? pRhiDevice->getBackendName() : "n/a";
-		constexpr float32 statusW = 280.0f;
+		EditorContext*	  pContext	 = EditorContext::get();
+		IRHIDevice*		  pRhiDevice = ( pContext != nullptr ) ? pContext->getRhiDevice() : nullptr;
+		const utf8*		  pBackend	 = ( pRhiDevice != nullptr ) ? pRhiDevice->getBackendName() : "n/a";
+		constexpr float32 statusW	 = 280.0f;
 		ImGui::SameLine( ImGui::GetWindowWidth() - statusW );
 		ImGui::TextDisabled( "RHI %s | %.0f FPS", pBackend, static_cast<float64>( ImGui::GetIO().Framerate ) );
 		if ( ImGui::IsItemHovered() )

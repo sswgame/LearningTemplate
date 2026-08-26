@@ -532,7 +532,7 @@ namespace sw::editor
 		if ( FileUtil::fileExists( path ) == false )
 		{
 			ensureDefaults();
-			_bLoaded			 = true;
+			_bLoaded = true;
 			_nodeGraph.requestContentFit();
 			return;
 		}
@@ -541,7 +541,7 @@ namespace sw::editor
 		if ( FileUtil::readFile( path, listData ) == false || listData.empty() )
 		{
 			ensureDefaults();
-			_bLoaded			 = true;
+			_bLoaded = true;
 			_nodeGraph.requestContentFit();
 			return;
 		}

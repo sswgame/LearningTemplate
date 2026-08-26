@@ -5,8 +5,8 @@
 #pragma once
 #include "Core/Common/Types.h"
 
-#include "Editor/Viewport/EditorViewportClient.h"
 #include "Editor/Common/Gui/IEditorPanel.h"
+#include "Editor/Viewport/EditorViewportClient.h"
 
 namespace sw::editor
 {

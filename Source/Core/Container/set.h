@@ -44,8 +44,8 @@ namespace sw
 		using const_reverse_iterator = typename Container::const_reverse_iterator;
 
 	private:
-		Container				  _data;
-		Compare					  _comp;
+		Container _data;
+		Compare	  _comp;
 		SW_RACE_CTX_MEMBER
 
 	public:
@@ -258,7 +258,7 @@ namespace sw
 		std::pair<iterator, bool> insert( const value_type& value )
 		{
 			SW_SCOPED_RACE_WRITE();
-			auto			it = std::lower_bound( _data.begin(), _data.end(), value, _comp );
+			auto it = std::lower_bound( _data.begin(), _data.end(), value, _comp );
 			if ( it != _data.end() && !_comp( value, *it ) )
 				return { it, false };
 			it = _data.insert( it, value );
@@ -269,7 +269,7 @@ namespace sw
 		std::pair<iterator, bool> insert( value_type&& value )
 		{
 			SW_SCOPED_RACE_WRITE();
-			auto			it = std::lower_bound( _data.begin(), _data.end(), value, _comp );
+			auto it = std::lower_bound( _data.begin(), _data.end(), value, _comp );
 			if ( it != _data.end() && !_comp( value, *it ) )
 				return { it, false };
 			it = _data.insert( it, std::move( value ) );
@@ -336,7 +336,7 @@ namespace sw
 		size_type erase( const K& key )
 		{
 			SW_SCOPED_RACE_WRITE();
-			auto			it = std::lower_bound( _data.begin(), _data.end(), key, _comp );
+			auto it = std::lower_bound( _data.begin(), _data.end(), key, _comp );
 			if ( it != _data.end() && !_comp( key, *it ) )
 			{
 				_data.erase( it );
@@ -359,7 +359,7 @@ namespace sw
 		size_type count( const K& key ) const
 		{
 			SW_SCOPED_RACE_READ();
-			auto		   it = std::lower_bound( _data.begin(), _data.end(), key, _comp );
+			auto it = std::lower_bound( _data.begin(), _data.end(), key, _comp );
 			if ( it != _data.end() && !_comp( key, *it ) )
 				return 1;
 			return 0;
@@ -370,7 +370,7 @@ namespace sw
 		iterator find( const K& key )
 		{
 			SW_SCOPED_RACE_READ();
-			auto		   it = std::lower_bound( _data.begin(), _data.end(), key, _comp );
+			auto it = std::lower_bound( _data.begin(), _data.end(), key, _comp );
 			return ( it != _data.end() && !_comp( key, *it ) ) ? it : _data.end();
 		}
 
@@ -379,7 +379,7 @@ namespace sw
 		const_iterator find( const K& key ) const
 		{
 			SW_SCOPED_RACE_READ();
-			auto		   it = std::lower_bound( _data.begin(), _data.end(), key, _comp );
+			auto it = std::lower_bound( _data.begin(), _data.end(), key, _comp );
 			return ( it != _data.end() && !_comp( key, *it ) ) ? it : _data.end();
 		}
 
@@ -392,8 +392,8 @@ namespace sw
 		std::pair<iterator, iterator> equal_range( const K& key )
 		{
 			SW_SCOPED_RACE_READ();
-			auto		   first = std::lower_bound( _data.begin(), _data.end(), key, _comp );
-			auto		   last	 = first;
+			auto first = std::lower_bound( _data.begin(), _data.end(), key, _comp );
+			auto last  = first;
 			if ( first != _data.end() && !_comp( key, *first ) )
 				++last;
 			return { first, last };
@@ -404,8 +404,8 @@ namespace sw
 		std::pair<const_iterator, const_iterator> equal_range( const K& key ) const
 		{
 			SW_SCOPED_RACE_READ();
-			auto		   first = std::lower_bound( _data.begin(), _data.end(), key, _comp );
-			auto		   last	 = first;
+			auto first = std::lower_bound( _data.begin(), _data.end(), key, _comp );
+			auto last  = first;
 			if ( first != _data.end() && !_comp( key, *first ) )
 				++last;
 			return { first, last };

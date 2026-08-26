@@ -30,14 +30,14 @@ namespace sw::editor
 		}
 
 		const vector<EditorPanelEntry> s_emptyEntries{};
-		vector<EditorPanelEntry>		s_emptyEntriesMutable{};
+		vector<EditorPanelEntry>	   s_emptyEntriesMutable{};
 	} // namespace
 
 	// ------------------------------------------------------------------------------
 	// Static Public Methods
 	// ------------------------------------------------------------------------------
 	void EditorPanelRegistry::registerPanel( unique_ptr<IEditorPanel> pPanel,
-											   EditorPanelCategory category, string_view menuPath )
+											 EditorPanelCategory category, string_view menuPath )
 	{
 		EditorPanelRegistry* pRegistry = getImpl();
 		if ( pRegistry != nullptr )
@@ -121,12 +121,12 @@ namespace sw::editor
 	// Instance Implementations
 	// ------------------------------------------------------------------------------
 	void EditorPanelRegistry::registerPanelImpl( unique_ptr<IEditorPanel> pPanel,
-												   EditorPanelCategory category, string_view menuPath )
+												 EditorPanelCategory category, string_view menuPath )
 	{
 		if ( pPanel == nullptr )
 			return;
 
-		const utf8*		  pTitle = pPanel->getPanelTitle();
+		const utf8*		 pTitle = pPanel->getPanelTitle();
 		EditorPanelEntry entry{};
 		entry._title	 = pTitle != nullptr ? pTitle : "";
 		entry._menuPath	 = menuPath.empty() == false ? string{ menuPath } : entry._title;

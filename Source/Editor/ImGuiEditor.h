@@ -71,7 +71,7 @@ namespace sw::editor
 		unique_ptr<EditorContext>		  _editorContext;
 		EditorDockLayout				  _dockLayout;
 
-		uint8				   _bInitialized : 1;
+		uint8				   _bInitialized  : 1;
 		[[maybe_unused]] uint8 _reservedFlags : 7;
 	};
 } // namespace sw::editor

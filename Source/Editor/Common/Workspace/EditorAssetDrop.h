@@ -9,7 +9,7 @@ namespace sw
 {
 	class GameObject;
 	class GameObjectManager;
-}
+} // namespace sw
 
 namespace sw::editor
 {

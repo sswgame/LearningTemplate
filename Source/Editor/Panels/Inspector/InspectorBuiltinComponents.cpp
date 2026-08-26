@@ -1,11 +1,9 @@
 #include "pch.h"
 
-#include "Editor/Panels/Inspector/InspectorBuiltin.h"
-
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
-
 #include "Editor/Panels/Inspector/IInspectorComponent.h"
+#include "Editor/Panels/Inspector/InspectorBuiltin.h"
 #include "Editor/Panels/Inspector/InspectorComponentRegistry.h"
 
 #include "Engine/Object/Component/2D/SpriteComponent.h"

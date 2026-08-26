@@ -6,8 +6,8 @@ namespace sw::editor
 {
 	namespace
 	{
-		ModuleService	   s_editorService{};
-		EditorData*		   s_pEditorData{ nullptr };
+		ModuleService s_editorService{};
+		EditorData*	  s_pEditorData{ nullptr };
 	} // namespace
 
 	void bindEditorService( const ModuleService& service )

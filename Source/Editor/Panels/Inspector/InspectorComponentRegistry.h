@@ -19,9 +19,9 @@ namespace sw::editor
 		InspectorComponentRegistry()  = default;
 		~InspectorComponentRegistry() = default;
 
-		static void					 registerType( string_view typeName, unique_ptr<IInspectorComponent> pInspector );
+		static void					registerType( string_view typeName, unique_ptr<IInspectorComponent> pInspector );
 		static IInspectorComponent* find( string_view typeName );
-		static void					 registerDefaults();
+		static void					registerDefaults();
 
 		template <typename TComponent, typename TInspector, typename... TArgs>
 		static void registerComponent( TArgs&&... args )
@@ -30,9 +30,9 @@ namespace sw::editor
 						  make_unique<TInspector>( std::forward<TArgs>( args )... ) );
 		}
 
-		void					registerTypeImpl( string_view typeName, unique_ptr<IInspectorComponent> pInspector );
-		IInspectorComponent*	findImpl( string_view typeName ) const;
-		void					registerDefaultsImpl();
+		void				 registerTypeImpl( string_view typeName, unique_ptr<IInspectorComponent> pInspector );
+		IInspectorComponent* findImpl( string_view typeName ) const;
+		void				 registerDefaultsImpl();
 
 	private:
 		map<string, unique_ptr<IInspectorComponent>> _mapInspectors;

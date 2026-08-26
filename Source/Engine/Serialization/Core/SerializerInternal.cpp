@@ -311,7 +311,7 @@ namespace sw
 
 		const hashed_string resolved  = resolveHandlerTypeName( typeName, ctx );
 		const bool			bIsString = ( resolved.isPredefinedType( PredefinedNameType::NameType_string ) ||
-								  resolved.isPredefinedType( PredefinedNameType::NameType_hashed_string ) );
+										  resolved.isPredefinedType( PredefinedNameType::NameType_hashed_string ) );
 		const bool			bIsBool	  = ( resolved.isPredefinedType( PredefinedNameType::NameType_bool ) );
 		const bool			bIsEnum	  = ( engine::getTypeRegistry().findEnum( typeName ) != nullptr );
 

@@ -2,12 +2,12 @@
 
 #include "Editor/Popups/CommandPalettePopup.h"
 
-#include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Gui/EditorChrome.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Panels/EditorPanelRegistry.h"
+#include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/SelectionManager.h"
+#include "Editor/Panels/EditorPanelRegistry.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -87,7 +87,7 @@ namespace sw::editor
 	}
 
 	void CommandPalettePopup::registerCommand( string_view category, string_view label, string_view detail,
-												Delegate<void()> action )
+											   Delegate<void()> action )
 	{
 		CommandPalettePopup* pWin = getImpl();
 		if ( pWin != nullptr )
@@ -127,7 +127,7 @@ namespace sw::editor
 	}
 
 	void CommandPalettePopup::registerCommandImpl( string_view category, string_view label, string_view detail,
-													Delegate<void()> action )
+												   Delegate<void()> action )
 	{
 		CommandPaletteEntry entry;
 		entry._category = string{ category };
@@ -214,7 +214,7 @@ namespace sw::editor
 		overlayDesc._rounding	= 8.0f;
 		overlayDesc._borderSize = 1.5f;
 		overlayDesc._flags		= editor::EditorOverlayFlags::NoTitleBar | editor::EditorOverlayFlags::NoResize |
-							 editor::EditorOverlayFlags::NoMove | editor::EditorOverlayFlags::NoSavedSettings;
+								  editor::EditorOverlayFlags::NoMove | editor::EditorOverlayFlags::NoSavedSettings;
 
 		ImGui::PushStyleColor( ImGuiCol_WindowBg, ImVec4{ 0.12f, 0.12f, 0.14f, 0.96f } );
 		ImGui::PushStyleColor( ImGuiCol_Border, ImVec4{ 0.25f, 0.45f, 0.75f, 1.0f } );
@@ -263,9 +263,9 @@ namespace sw::editor
 			const bool bExecuteSelected = ImGui::IsKeyPressed( ImGuiKey_Enter );
 
 			editor::EditorSectionDesc resultsDesc{};
-			resultsDesc._pId	= "##PaletteResults";
-			resultsDesc._kind	= editor::EditorSectionKind::Child;
-			resultsDesc._flags	= editor::EditorSectionFlags::Border;
+			resultsDesc._pId   = "##PaletteResults";
+			resultsDesc._kind  = editor::EditorSectionKind::Child;
+			resultsDesc._flags = editor::EditorSectionFlags::Border;
 			if ( editor::beginSection( resultsDesc ) )
 			{
 				for ( size_t itemIndex = 0; itemIndex < listFiltered.size(); ++itemIndex )

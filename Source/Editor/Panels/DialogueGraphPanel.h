@@ -84,10 +84,10 @@ namespace sw::editor
 		void addNode( DialogueNodeType type, const utf8* pSpeaker = "", const utf8* pText = "" );
 
 	private:
-		EditorNodeGraph _nodeGraph;
-		bool					_bLoaded;
-		int32					_selectedNodeId;
-		vector<DialogueNode>	_listNodes;
-		vector<DialogueLink>	_listLinks;
+		EditorNodeGraph		 _nodeGraph;
+		bool				 _bLoaded;
+		int32				 _selectedNodeId;
+		vector<DialogueNode> _listNodes;
+		vector<DialogueLink> _listLinks;
 	};
 } // namespace sw::editor

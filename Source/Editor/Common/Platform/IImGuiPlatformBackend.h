@@ -11,7 +11,7 @@ namespace sw
 	class IWindow;
 	struct NativeWindowEvent;
 	enum class RHIBackend : uint32;
-}
+} // namespace sw
 
 namespace sw::editor
 {

@@ -8,7 +8,7 @@
 namespace sw
 {
 	class IRHIDevice;
-}
+} // namespace sw
 
 namespace sw::editor
 {

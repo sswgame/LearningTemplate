@@ -2,10 +2,10 @@
 
 #include "Editor/Panels/ConsolePanel.h"
 
+#include "Core/Concurrency/mutex.h"
+
 #include "Editor/Common/Gui/EditorChrome.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-
-#include "Core/Concurrency/mutex.h"
 
 #include <imgui.h>
 
