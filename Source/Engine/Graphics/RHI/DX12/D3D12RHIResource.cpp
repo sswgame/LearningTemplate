@@ -702,10 +702,12 @@ namespace sw
 		if ( pRes == nullptr )
 			return kInvalidDescriptorIndex;
 		RHIDescriptorIndex descriptorIndex{ 0 };
+		bool			   bReuseHeapSlot = false;
 		if ( _pDevice->_listFreeUav.empty() == false )
 		{
 			descriptorIndex = _pDevice->_listFreeUav.back();
 			_pDevice->_listFreeUav.pop_back();
+			bReuseHeapSlot = true;
 		}
 		else
 		{
@@ -713,19 +715,29 @@ namespace sw
 			_pDevice->_listRegisteredUAVs.push_back( D3D12RHIDevice::BindlessResourceRecord{} );
 		}
 
-		// RWByteAddressBuffer / RAW UAV: R32_TYPELESS + RAW, StructureByteStride must be 0.
-		if ( _pDevice->_allocatedDescriptorsCount >= D3D12RHIDevice::kMaxShaderVisibleDescriptors )
+		D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle{};
+		D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle{};
+		if ( bReuseHeapSlot && descriptorIndex < _pDevice->_listRegisteredUAVs.size() &&
+			 _pDevice->_listRegisteredUAVs[descriptorIndex]._cpuHandle.ptr != 0 )
 		{
-			SW_LOG_ERROR( "[D3D12RHIResource] Shader visible descriptor heap overflow! Max: %#", D3D12RHIDevice::kMaxShaderVisibleDescriptors );
-			return kInvalidDescriptorIndex;
+			cpuHandle = _pDevice->_listRegisteredUAVs[descriptorIndex]._cpuHandle;
+			gpuHandle = _pDevice->_listRegisteredUAVs[descriptorIndex]._gpuHandle;
 		}
-		const RHIDescriptorIndex	heapSlot  = _pDevice->_allocatedDescriptorsCount++;
-		D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle = _pDevice->_cbvHeap->GetCPUDescriptorHandleForHeapStart();
-		cpuHandle.ptr += heapSlot * _pDevice->_cbvDescriptorSize;
+		else
+		{
+			if ( _pDevice->_allocatedDescriptorsCount >= D3D12RHIDevice::kMaxShaderVisibleDescriptors )
+			{
+				SW_LOG_ERROR( "[D3D12RHIResource] Shader visible descriptor heap overflow! Max: %#", D3D12RHIDevice::kMaxShaderVisibleDescriptors );
+				return kInvalidDescriptorIndex;
+			}
+			const RHIDescriptorIndex heapSlot = _pDevice->_allocatedDescriptorsCount++;
+			cpuHandle						  = _pDevice->_cbvHeap->GetCPUDescriptorHandleForHeapStart();
+			cpuHandle.ptr += heapSlot * _pDevice->_cbvDescriptorSize;
+			gpuHandle = _pDevice->_cbvHeap->GetGPUDescriptorHandleForHeapStart();
+			gpuHandle.ptr += heapSlot * _pDevice->_cbvDescriptorSize;
+		}
 
-		D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle = _pDevice->_cbvHeap->GetGPUDescriptorHandleForHeapStart();
-		gpuHandle.ptr += heapSlot * _pDevice->_cbvDescriptorSize;
-
+		// RWByteAddressBuffer / RAW UAV: R32_TYPELESS + RAW, StructureByteStride must be 0.
 		D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc{};
 		uavDesc.ViewDimension			   = D3D12_UAV_DIMENSION_BUFFER;
 		uavDesc.Format					   = DXGI_FORMAT_R32_TYPELESS;

@@ -104,15 +104,29 @@ namespace sw
 			if ( node.isValid() == false )
 				return;
 
-			out.append( '<' ).append( node.name() );
+			const utf8* pNodeName = node.name();
+			if ( pNodeName == nullptr || pNodeName[0] == '\0' )
+				return;
+
+			out.append( '<' ).append( pNodeName );
 			for ( XmlAttribute attr = node.firstAttr(); attr; attr = attr.next() )
 			{
 				out.append( ' ' ).append( attr.name() ).append( "=\"" ).append( xmlEscape( attr.value() != nullptr ? attr.value() : "" ) ).append( '"' );
 			}
 
-			const bool bHasChildren = node.child().isValid();
-			const bool bHasValue	= node.text() != nullptr && node.text()[0] != '\0' && bHasChildren == false;
-			if ( bHasChildren == false && bHasValue == false )
+			bool bHasElementChild = false;
+			for ( XmlNode child = node.child(); child; child = child.next() )
+			{
+				const utf8* pChildName = child.name();
+				if ( pChildName != nullptr && pChildName[0] != '\0' )
+				{
+					bHasElementChild = true;
+					break;
+				}
+			}
+
+			const bool bHasValue = node.text() != nullptr && node.text()[0] != '\0';
+			if ( bHasElementChild == false && bHasValue == false )
 			{
 				out.append( "/>" );
 				return;
@@ -124,10 +138,12 @@ namespace sw
 
 			for ( XmlNode child = node.child(); child; child = child.next() )
 			{
-				appendNodeXml( out, child );
+				const utf8* pChildName = child.name();
+				if ( pChildName != nullptr && pChildName[0] != '\0' )
+					appendNodeXml( out, child );
 			}
 
-			out.append( "</" ).append( node.name() ).append( '>' );
+			out.append( "</" ).append( pNodeName ).append( '>' );
 		}
 
 	} // namespace

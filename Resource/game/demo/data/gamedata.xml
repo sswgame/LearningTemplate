@@ -2,7 +2,7 @@
 <!-- Game-owned bootstrap and component defaults (loaded by GameData / ComponentDefaults). -->
 <GameData>
 	<startMap>game/demo/maps/town01.xml</startMap>
-	<titleScene>game/demo/maps/0.Title.scene.xml</titleScene>
+	<titleScene>game/demo/maps/TestScene.scene.xml</titleScene>
 	<entranceScene>game/demo/maps/1.Entrance.scene.xml</entranceScene>
 	<battleMap>game/demo/maps/battle01.xml</battleMap>
 	<battleScene>game/demo/maps/battle01_scene.xml</battleScene>

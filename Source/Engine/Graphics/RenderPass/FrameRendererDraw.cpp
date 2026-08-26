@@ -14,6 +14,8 @@
 #include "Engine/Graphics/RenderPass/FrameRenderer.h"
 #include "Engine/Graphics/RenderPass/FrameRendererInternal.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
+
+#include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManagerInternal.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 
@@ -30,17 +32,18 @@ namespace sw
 			return;
 		}
 
+		if ( _gpuScene.getInstances().empty() == false )
+		{
+			drawGpuSceneMeshes( pso, cbIndex, bTransparentPass );
+			return;
+		}
+
 		if ( pso != 0 )
 			_pCmd->setPipelineState( pso );
 
 		GameObjectManager* pObjects = ( _pScene != nullptr ) ? _pScene->getObjectManager() : nullptr;
 		if ( pObjects == nullptr )
-		{
-			// Packet path without Scene*: draw from GpuScene CPU fallback counts via indirect
-			if ( _gpuScene.isUploaded() )
-				drawGpuBatches( pso, cbIndex, bTransparentPass );
 			return;
-		}
 
 		if ( _bSceneTransformsFlushed == 0 )
 		{
@@ -154,6 +157,62 @@ namespace sw
 					_pCmd->draw( item._mesh->getVertexCount(), 0, item._cbIndex );
 					++drawn;
 				}
+			}
+		}
+
+		if ( drawn == 0 )
+		{
+			setIdentityWorld();
+			commitBindlessTextureBindings();
+		}
+	}
+
+	void FrameRenderer::drawGpuSceneMeshes( RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex, bool bTransparentPass )
+	{
+		if ( _pDevice == nullptr || _pCmd == nullptr )
+			return;
+		if ( _gpuScene.getInstances().empty() )
+			return;
+
+		const vector<GpuMeshBatch>& batches =
+			bTransparentPass ? _gpuScene.getTransparentBatches() : _gpuScene.getOpaqueBatches();
+		const vector<GpuInstance>& listInstances = _gpuScene.getInstances();
+
+		if ( pso != 0 )
+			_pCmd->setPipelineState( pso );
+
+		uint32 drawn{ 0 };
+		for ( const GpuMeshBatch& batch : batches )
+		{
+			Mesh* pMesh = batch._pMesh;
+			if ( pMesh == nullptr || pMesh->getVertexCount() == 0 )
+				continue;
+			if ( pMesh->upload( _pDevice ) == false )
+				continue;
+
+			const RHIBufferHandle vb = pMesh->getVertexBuffer();
+			if ( vb == 0 )
+				continue;
+			_pCmd->setVertexBuffer( 0, vb, sizeof( RHIVertex ), 0 );
+
+			const RHIDescriptorIndex drawCb =
+				batch._materialCb != kInvalidDescriptorIndex ? batch._materialCb : cbIndex;
+			if ( batch._pMaterialInstance != nullptr )
+				batch._pMaterialInstance->applyToGpu( _pDevice );
+
+			for ( uint32 instanceIndex = 0; instanceIndex < batch._instanceCount; ++instanceIndex )
+			{
+				const uint32 globalIndex = batch._instanceBase + instanceIndex;
+				if ( globalIndex >= listInstances.size() )
+					break;
+				const GpuInstance& inst = listInstances[globalIndex];
+				if ( Memory::compare( _passConstants._world, inst._world, sizeof( _passConstants._world ) ) != 0 )
+				{
+					Memory::copy( _passConstants._world, inst._world, sizeof( _passConstants._world ) );
+					commitBindlessTextureBindings();
+				}
+				_pCmd->draw( pMesh->getVertexCount(), 0, drawCb );
+				++drawn;
 			}
 		}
 

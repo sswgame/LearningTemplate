@@ -14,7 +14,6 @@
 #include "Editor/Overlay/BoneHierarchyPopup.h"
 #include "Editor/Overlay/CommandPaletteWindow.h"
 #include "Editor/Overlay/EditorNotificationManager.h"
-#include "Editor/Overlay/EditorTransportBar.h"
 #include "Editor/Property/ComponentDrawerRegistry.h"
 #include "Editor/Property/DefaultPropertyDrawers.h"
 #include "Editor/Windows/EditorWindowRegistry.h"
@@ -28,9 +27,12 @@
 #include "Engine/Graphics/RHI/RHICapabilities.h"
 #include "Engine/Graphics/RenderPass/RenderPassResource.h"
 #include "Engine/Graphics/RenderPass/RenderPipelineResource.h"
+#include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Format/JsonSerializer.h"
 #include "Engine/Utility/CommandStack.h"
 #include "Engine/Utility/File/KeyValueFile.h"
+#include "Engine/Utility/Resource/AssetDatabase.h"
+#include "Engine/Utility/Resource/ResourceUtil.h"
 #include "Engine/Window/NativeWindowEvent.h"
 
 #include "RuntimeAPI/Export/EditorModuleExports.h"
@@ -69,6 +71,55 @@
 
 namespace sw
 {
+	namespace
+	{
+		void openSceneFileDialog()
+		{
+			FileDialogParams params{};
+			params._type				= FileDialogParams::Type::Open;
+			params._title				= "Open Scene";
+			params._description			= "Scene";
+			params._bEnableMultiselect	= false;
+			params._filterExtensionList = { ".scene.xml", ".xml" };
+
+			const string mapsDir = FileUtil::joinPath( ResourceUtil::getGameFolderPath(), "demo/maps" );
+			if ( FileUtil::directoryExists( mapsDir ) )
+				params._initialDirectory = mapsDir;
+			else if ( ResourceUtil::getGameFolderPath().empty() == false )
+				params._initialDirectory = ResourceUtil::getGameFolderPath();
+
+			FileUtil::openFileDialog( params, SW_DELEGATE_LAMBDA( FileDialogDelegate, []( const vector<string>& listPaths )
+			{
+				if ( listPaths.empty() == false )
+					EditorWorkspace::requestLoadScene( listPaths[0] );
+			} ) );
+		}
+
+		void processPendingSceneLoad()
+		{
+			string scenePath;
+			if ( EditorWorkspace::consumeLoadScene( scenePath ) == false )
+				return;
+
+			string loadPath = AssetDatabase::toRelativePath( scenePath );
+			if ( loadPath.empty() )
+				loadPath = scenePath;
+
+			SceneManager* pSceneManager = editor::getService<SceneManager>();
+			if ( pSceneManager == nullptr )
+			{
+				SW_LOG_ERROR( "[Editor] Open Scene: SceneManager unavailable" );
+				return;
+			}
+
+			if ( pSceneManager->requestLoadAsync( loadPath ) )
+			{
+				EditorWorkspace::clearSelection();
+				SW_LOG_INFO( "[Editor] Open Scene: %#", loadPath );
+			}
+		}
+	} // namespace
+
 	ImGuiEditor::ImGuiEditor()
 		: _platformBackend{ nullptr }
 		, _rendererBackend{ nullptr }
@@ -312,7 +363,6 @@ namespace sw
 		{
 			beginFrame();
 			drawMainMenuBar();
-			drawEditorTransportBar();
 			beginDockspace();
 		}
 
@@ -325,6 +375,8 @@ namespace sw
 					editor::getService<CommandStack>()->undo();
 				if ( ImGui::IsKeyPressed( ImGuiKey_Y, false ) )
 					editor::getService<CommandStack>()->redo();
+				if ( ImGui::IsKeyPressed( ImGuiKey_O, false ) )
+					openSceneFileDialog();
 				if ( ImGui::IsKeyPressed( ImGuiKey_P, false ) || ImGui::IsKeyPressed( ImGuiKey_Space, false ) )
 					CommandPaletteWindow::toggle();
 			}
@@ -340,6 +392,11 @@ namespace sw
 					ImGui::SetWindowFocus( openTitle.c_str() );
 				}
 			}
+		}
+
+		BLOCK( "Open Scene Requests" )
+		{
+			processPendingSceneLoad();
 		}
 
 		BLOCK( "Editor Windows Draw" )
@@ -596,7 +653,8 @@ namespace sw
 
 		if ( ImGui::BeginMenu( "File" ) )
 		{
-			ImGui::TextDisabled( "Scene IO ? use Content Browser" );
+			if ( ImGui::MenuItem( "Open Scene...", "Ctrl+O" ) )
+				openSceneFileDialog();
 			ImGui::EndMenu();
 		}
 

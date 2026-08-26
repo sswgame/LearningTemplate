@@ -27,7 +27,7 @@ namespace sw
 
 	/**
 	 * @class EditorViewportToolbar
-	 * @brief 뷰포트 상단 스냅/뷰모드/카메라 속도 오버레이 툴바
+	 * @brief 뷰포트 상단 뷰모드/카메라 속도 툴바
 	 */
 	class EditorViewportToolbar
 	{

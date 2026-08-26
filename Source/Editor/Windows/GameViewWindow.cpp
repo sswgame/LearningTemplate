@@ -3,7 +3,8 @@
 #include "Editor/Windows/GameViewWindow.h"
 
 #include "Editor/Common/EditorContext.h"
-#include "Editor/Widgets/EditorWidgets.h"
+#include "Editor/Overlay/EditorTransformBar.h"
+#include "Editor/Overlay/EditorTransportBar.h"
 #include "Editor/Workspace/EditorAssetDrop.h"
 #include "Editor/Workspace/EditorTransaction.h"
 #include "Editor/Workspace/EditorWorkspace.h"
@@ -11,7 +12,6 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Game/GameState.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/Scene.h"
@@ -31,9 +31,24 @@ namespace sw
 
 	void GameViewWindow::draw()
 	{
+		if ( ImGui::Begin( getWindowTitle(), getOpenPtr() ) == false )
+		{
+			EditorContext* pClosedContext = EditorContext::get();
+			if ( pClosedContext != nullptr )
+			{
+				pClosedContext->setGameViewFocused( false );
+				pClosedContext->setGameViewHovered( false );
+			}
+			ImGui::End();
+			return;
+		}
+
 		EditorContext* pEditorContext = EditorContext::get();
 		if ( pEditorContext == nullptr )
+		{
+			ImGui::End();
 			return;
+		}
 
 		const bool	  bFocused = ImGui::IsWindowFocused( ImGuiFocusedFlags_RootAndChildWindows );
 		const bool	  bHovered = ImGui::IsWindowHovered( ImGuiHoveredFlags_RootAndChildWindows );
@@ -44,28 +59,11 @@ namespace sw
 
 		_viewportClient.update( dt, bFocused, bHovered );
 
-		// 상단 기본 기즈모 모드 칩
-		int32& op = EditorWorkspace::gizmoOperation();
-		ImGui::RadioButton( "Translate", &op, 0 );
+		drawEditorTransportControls();
 		ImGui::SameLine();
-		ImGui::RadioButton( "Rotate", &op, 1 );
+		ImGui::TextDisabled( "|" );
 		ImGui::SameLine();
-		ImGui::RadioButton( "Scale", &op, 2 );
-		ImGui::SameLine();
-		bool& bLocal = EditorWorkspace::gizmoLocalSpace();
-		ImGui::Checkbox( "Local", &bLocal );
-
-		const GameState gs = getGameState();
-		if ( gs == GameState::Playing )
-		{
-			ImGui::SameLine();
-			editor::drawChip( "Playing", editor::style::kOk );
-		}
-		else if ( gs == GameState::Paused )
-		{
-			ImGui::SameLine();
-			editor::drawChip( "Paused", editor::style::kWarn );
-		}
+		_viewportClient.drawViewportToolbar( ImGui::GetContentRegionAvail().x );
 
 		const ImVec2 size = ImGui::GetContentRegionAvail();
 		if ( size.x > 1.0f && size.y > 1.0f )
@@ -80,6 +78,7 @@ namespace sw
 				pEditorContext->ensureGameViewSize( wantW, wantH );
 		}
 
+		const ImVec2 imagePos = ImGui::GetCursorScreenPos();
 		_viewportClient.draw( pEditorContext->getGameView()._pTextureId, float2{ size.x, size.y } );
 
 		// 애셋 드롭 타깃 (Content Browser -> Viewport)
@@ -107,6 +106,14 @@ namespace sw
 				}
 			}
 			ImGui::EndDragDropTarget();
+		}
+
+		ImGui::End();
+
+		if ( size.x > 1.0f && size.y > 1.0f )
+		{
+			const float2 barAnchor{ imagePos.x + size.x * 0.5f, imagePos.y + 8.0f };
+			drawEditorTransformBar( _viewportClient.getToolbarSettings(), barAnchor );
 		}
 	}
 } // namespace sw

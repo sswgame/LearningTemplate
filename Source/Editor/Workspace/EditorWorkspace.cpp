@@ -2,6 +2,8 @@
 
 #include "Editor/Workspace/EditorWorkspace.h"
 
+#include "Core/Concurrency/mutex.h"
+
 #include "Editor/Workspace/SelectionManager.h"
 
 #include "Engine/Object/Component/Component.h"
@@ -86,6 +88,9 @@ namespace sw
 			}
 			return nullptr;
 		}
+
+		mutex  s_pendingSceneMutex;
+		string s_pendingScenePath;
 
 	} // namespace
 
@@ -242,6 +247,22 @@ namespace sw
 			return false;
 		outTitle = pendingOpenWindowTitle();
 		pendingOpenWindowTitle().clear();
+		return true;
+	}
+
+	void EditorWorkspace::requestLoadScene( string_view path )
+	{
+		std::scoped_lock<mutex> lock{ s_pendingSceneMutex };
+		s_pendingScenePath = path;
+	}
+
+	bool EditorWorkspace::consumeLoadScene( string& outPath )
+	{
+		std::scoped_lock<mutex> lock{ s_pendingSceneMutex };
+		if ( s_pendingScenePath.empty() )
+			return false;
+		outPath = s_pendingScenePath;
+		s_pendingScenePath.clear();
 		return true;
 	}
 

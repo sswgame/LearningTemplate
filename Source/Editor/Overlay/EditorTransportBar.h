@@ -1,15 +1,11 @@
 /**
  * @file EditorTransportBar.h
- * @brief 플로팅 Play/Sim/Pause/Step/Stop 바 (도크 윈도우가 아님)
+ * @brief Game View 상단 Play/Sim/Pause/Step/Stop 컨트롤
  */
 #pragma once
 
 namespace sw
 {
-	// ------------------------------------------------------------------------------
-	// 1) EditorTransportBar — Play/Sim/Pause/Step/Stop
-	//    GameState를 바꾸고, 도크 레이아웃 밖 플로팅 바
-	// ------------------------------------------------------------------------------
-	/** @brief 에디터 트랜스포트 바를 그립니다. */
-	void drawEditorTransportBar();
+	/** @brief Play/Sim/Pause/Step/Stop 버튼을 인라인으로 그립니다. */
+	void drawEditorTransportControls();
 } // namespace sw

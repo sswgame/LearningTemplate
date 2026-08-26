@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<SceneDescriptor formatVersion="0" name="TestScene">
+	<entities>
+		<entity name="TestCube">
+			<GameObjectState>
+				<Name>TestCube</Name>
+				<IsActive>true</IsActive>
+				<ParentGO></ParentGO>
+				<Tags/>
+				<Components>
+					<entry>
+						<key>MeshComponent</key>
+						<value>&lt;MeshData schemaVersion="0"&gt;&lt;_meshId&gt;Cube&lt;/_meshId&gt;&lt;/MeshData&gt;</value>
+					</entry>
+				</Components>
+				<SceneTransforms>
+					<entry>
+						<key>MeshComponent#0</key>
+						<value>0,0,0;0,0,0;1,1,1;</value>
+					</entry>
+				</SceneTransforms>
+			</GameObjectState>
+		</entity>
+	</entities>
+</SceneDescriptor>

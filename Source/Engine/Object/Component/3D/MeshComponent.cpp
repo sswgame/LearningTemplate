@@ -38,6 +38,14 @@ namespace sw
 		return sw::ensureEcsData<MeshData>( getOwner(), getTypeInfo() );
 	}
 
+	void MeshComponent::resolveRuntimeMesh()
+	{
+		MeshData* pData = ensureMeshData();
+		if ( pData == nullptr || pData->_mesh != nullptr )
+			return;
+		pData->_mesh = Mesh::createPrimitive( pData->_meshId );
+	}
+
 	void MeshComponent::setMesh( shared_ptr<Mesh> mesh )
 	{
 		MeshData* pData = ensureMeshData();

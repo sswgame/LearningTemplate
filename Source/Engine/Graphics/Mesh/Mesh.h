@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Common/Macros.h"
+#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 
@@ -39,6 +40,11 @@ namespace sw
 
 		/** @brief 원점 중심 단위 2D 쿼드(범위 [-0.5,0.5])를 공유 생성합니다. */
 		static shared_ptr<Mesh> createRectMesh();
+		/**
+		 * @brief 프리미티브 id로 내장 메시를 반환합니다.
+		 * @details 비어 있거나 "Cube"면 단위 큐브, "Quad"/"Rect"면 쿼드. 모르면 nullptr.
+		 */
+		static shared_ptr<Mesh> createPrimitive( string_view meshId );
 
 		/** @brief CPU 정점 배열을 설정합니다. */
 		void setVertices( const vector<RHIVertex>& vertices );

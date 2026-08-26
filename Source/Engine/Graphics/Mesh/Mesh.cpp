@@ -2,6 +2,7 @@
 
 #include "Engine/Graphics/Mesh/Mesh.h"
 
+#include "Core/String/StringUtil.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -74,6 +75,15 @@ namespace sw
 		return s_cube;
 	}
 
+	shared_ptr<Mesh> Mesh::createPrimitive( string_view meshId )
+	{
+		if ( meshId.empty() || StringUtil::equalsIgnoreCase( meshId, "Cube" ) )
+			return createUnitCube();
+		if ( StringUtil::equalsIgnoreCase( meshId, "Quad" ) || StringUtil::equalsIgnoreCase( meshId, "Rect" ) )
+			return createRectMesh();
+		return {};
+	}
+
 	shared_ptr<Mesh> Mesh::createRectMesh()
 	{
 		static shared_ptr<Mesh> s_rect;
@@ -108,8 +118,10 @@ namespace sw
 
 	bool Mesh::upload( IRHIDevice* pDevice )
 	{
+		// GPU 버퍼 생성은 RHI 컨텍스트 스레드에서 한다 (메인 인라인 submit 또는 RenderThread).
+		// TaskManager 워커에는 그래픽스 컨텍스트가 없다.
 		if ( engine::areEngineServicesBound() )
-			engine::getTaskManager().ensureMainThread();
+			SW_ASSERT( engine::getTaskManager().isWorkerThread() == false );
 
 		if ( pDevice == nullptr || _listVertices.empty() )
 			return false;

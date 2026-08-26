@@ -259,8 +259,9 @@ namespace sw
 				setPassTexture( _passConstants._texSource, pSrcName );
 			if ( _taaHistory != 0 )
 			{
-				const RHIDescriptorIndex histIdx = _pDevice->getResource()->registerBindlessTexture( _taaHistory );
-				_passConstants._texAlbedo		 = histIdx;
+				if ( _taaHistorySrv == kInvalidDescriptorIndex )
+					_taaHistorySrv = _pDevice->getResource()->registerBindlessTexture( _taaHistory );
+				_passConstants._texAlbedo = _taaHistorySrv;
 			}
 			beginColorPass( taaTarget, "", _arrClearColor, colorLoadFor( taaTarget, false ), RHIRenderPassLoadOp::Load );
 			const RHIPipelineStateHandle taaPso = getEnginePso( PassType::kTaa );
@@ -282,6 +283,8 @@ namespace sw
 					histDesc._bIsRenderTarget	= 1;
 					histDesc._bIsShaderResource = 1;
 					_taaHistory					= _pDevice->getResource()->createTexture2D( histDesc );
+					if ( _taaHistory != 0 )
+						_taaHistorySrv = _pDevice->getResource()->registerBindlessTexture( _taaHistory );
 				}
 				if ( _taaHistory != 0 )
 					_pCmd->blitTexture( taaOut, _taaHistory );

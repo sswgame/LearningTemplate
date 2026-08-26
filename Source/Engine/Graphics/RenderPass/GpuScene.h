@@ -115,7 +115,7 @@ namespace sw
 		/** @brief CPU/GPU 스냅샷을 비웁니다. */
 		void clear();
 		/**
-		 * @brief MeshComponent를 수집합니다. 개수가 많으면 TaskManager 병렬 샤드를 씁니다.
+		 * @brief MeshData를 수집합니다. 개수가 많으면 TaskManager 병렬 샤드를 씁니다.
 		 * @param pTaskManager 선택적 병렬 구축. null이면 단일 스레드 수집
 		 * @details 내용·카메라가 이전과 같으면 재구축을 건너뜁니다. 카메라만 바뀌면
 		 *          transparent 재정렬 + 배치 재구성만 합니다.

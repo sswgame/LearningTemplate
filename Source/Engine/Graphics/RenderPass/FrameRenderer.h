@@ -145,7 +145,9 @@ namespace sw
 		void setIdentityWorld();
 		/** @brief 씬 메시를 직접 그립니다. */
 		void drawSceneMeshes( RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex, bool bTransparentPass );
-		/** @brief GpuScene 배치를 그립니다. */
+		/** @brief GpuScene CPU 스냅샷을 월드 행렬 + draw()로 그립니다 (GPU-driven 꺼짐). */
+		void drawGpuSceneMeshes( RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex, bool bTransparentPass );
+		/** @brief GpuScene 배치를 간접 드로우로 그립니다. */
 		void drawGpuBatches( RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex, bool bTransparentPass );
 		/** @brief 풀스크린 삼각형을 그립니다. */
 		void drawFullscreen( RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex );
@@ -247,7 +249,8 @@ namespace sw
 		uint32										  _transientWidth;
 		uint32										  _transientHeight;
 		RHITextureHandle							  _outputRenderTarget;
-		RHITextureHandle							  _taaHistory; ///< TAA resolve history (ping copy of last TaaColor)
+		RHITextureHandle							  _taaHistory;	  ///< TAA resolve history (ping copy of last TaaColor)
+		RHIDescriptorIndex							  _taaHistorySrv; ///< `_taaHistory` bindless SRV (프레임마다 재등록하지 않음)
 		FrameRendererStatus							  _status;
 		string										  _statusMessage;
 		uint8										  _bCallbacksBound			: 1;

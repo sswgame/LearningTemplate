@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/string.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"
@@ -26,6 +27,8 @@ namespace sw
 		shared_ptr<Mesh>			 _mesh;
 		Material*					 _pMaterial;
 		shared_ptr<MaterialInstance> _materialInstance;
+		PROPERTY()
+		string _meshId;
 		float32						 _boundsRadius;
 		RHIBlendMode				 _blendMode;
 		uint8						 _bVisible : 1;
@@ -35,6 +38,7 @@ namespace sw
 			: _mesh{}
 			, _pMaterial{ nullptr }
 			, _materialInstance{}
+			, _meshId{}
 			, _boundsRadius{ 0.866f }
 			, _blendMode{ RHIBlendMode::Opaque }
 			, _bVisible{ 1 }
@@ -73,6 +77,11 @@ namespace sw
 		MeshData* getMeshData() const;
 		/** @brief 메시 ECS 데이터를 확보합니다. */
 		MeshData* ensureMeshData();
+		/**
+		 * @brief `_meshId` 프리미티브를 GPU 메시로 해석합니다.
+		 * @details 이미 메시가 있으면 그대로 둡니다. 비어 있거나 "Cube"면 단위 큐브.
+		 */
+		void resolveRuntimeMesh();
 
 		/** @brief 메시를 설정합니다. */
 		void setMesh( shared_ptr<Mesh> mesh );

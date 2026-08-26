@@ -42,6 +42,7 @@ namespace sw
 		, _transientHeight{ 0 }
 		, _outputRenderTarget{ 0 }
 		, _taaHistory{ 0 }
+		, _taaHistorySrv{ kInvalidDescriptorIndex }
 		, _status{ FrameRendererStatus::Uninitialized }
 		, _statusMessage{}
 		, _bCallbacksBound{ 0 }
@@ -282,8 +283,7 @@ namespace sw
 				pCam->getCameraPosition( camPos );
 		}
 		_gpuScene.buildFromScene( pScene, camPos, _pTaskManager );
-		if ( _bUseGpuDriven != 0 )
-			_gpuScene.upload( pDevice );
+		_gpuScene.upload( pDevice );
 
 		if ( _bCallbacksBound == 0 )
 			bindPassCallbacks();
@@ -328,8 +328,7 @@ namespace sw
 		_bSceneTransformsFlushed  = 0;
 		_bHasExecutedDepthPrepass = 0;
 
-		if ( _bUseGpuDriven != 0 )
-			_gpuScene.upload( pDevice );
+		_gpuScene.upload( pDevice );
 
 		if ( _bCallbacksBound == 0 )
 			bindPassCallbacks();

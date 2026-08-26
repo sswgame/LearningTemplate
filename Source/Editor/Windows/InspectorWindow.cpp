@@ -2,13 +2,9 @@
 
 #include "Editor/Windows/InspectorWindow.h"
 
-#include "Core/GlobalVariable/GlobalVariableManager.h"
-#include "Core/Math/VectorMath.h"
 #include "Core/Task/TaskTypes.h"
 
-#include "Editor/Common/EditorConstants.h"
 #include "Editor/Common/EditorContext.h"
-#include "Editor/Config/EditorData.h"
 #include "Editor/Property/ComponentDrawerRegistry.h"
 #include "Editor/Property/DefaultPropertyDrawers.h"
 #include "Editor/Property/IComponentDrawer.h"
@@ -16,11 +12,9 @@
 #include "Editor/Property/PropertyDrawerHelper.h"
 #include "Editor/Property/PropertyDrawerRegistry.h"
 #include "Editor/Widgets/EditorWidgets.h"
-#include "Editor/Workspace/EditorAssetDrop.h"
 #include "Editor/Workspace/EditorWorkspace.h"
 #include "Editor/Workspace/SelectionManager.h"
 
-#include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionCore.h"
@@ -44,71 +38,6 @@ namespace sw
 			if ( prop._listAliases.empty() == false && prop._listAliases.front().empty() == false )
 				return prop._listAliases.front().c_str();
 			return prop._name.c_str();
-		}
-
-		string defaultMaterialDir()
-		{
-			const string& mat	= editor::getEditorData()._defaultMaterial;
-			const size_t  slash = mat.find_last_of( "/\\" );
-			if ( slash == string::npos )
-				return {};
-			return mat.substr( 0, slash + 1 );
-		}
-
-		// trackPodPropertyUndo moved to DefaultPropertyDrawers.cpp
-		// trackStringPropertyUndo moved to DefaultPropertyDrawers.cpp
-
-		bool propertyNameHintsAsset( const PropertyInfo& prop, const utf8* pPath )
-		{
-			if ( pPath == nullptr || pPath[0] == '\0' )
-				return false;
-
-			auto containsCaseless = []( string_view hay, const utf8* pNeedle ) -> bool
-			{
-				const size_t nlen = StringUtil::strlen( pNeedle );
-				if ( nlen == 0 )
-					return true;
-				if ( hay.size() < nlen )
-					return false;
-				for ( size_t matchIndex = 0; matchIndex <= hay.size() - nlen; ++matchIndex )
-				{
-					if ( StringUtil::strnicmp( hay.data() + matchIndex, pNeedle, static_cast<uint32>( nlen ) ) == 0 )
-						return true;
-				}
-				return false;
-			};
-
-			auto aliasContains = [&]( const utf8* pNeedle ) -> bool
-			{
-				for ( const hashed_string& alias : prop._listAliases )
-				{
-					if ( alias.empty() )
-						continue;
-					if ( containsCaseless( alias.c_str(), pNeedle ) )
-						return true;
-				}
-				return false;
-			};
-
-			const string_view name = prop._name.c_str();
-			if ( editor::isTextureAssetPath( pPath ) )
-			{
-				return containsCaseless( name, "texture" ) || containsCaseless( name, "tex" ) ||
-					   aliasContains( "texture" ) || aliasContains( "tex" );
-			}
-			if ( editor::isMaterialAssetPath( pPath ) )
-				return containsCaseless( name, "material" ) || aliasContains( "material" );
-			if ( editor::isPrefabAssetPath( pPath ) )
-			{
-				return containsCaseless( name, "prefab" ) || containsCaseless( name, "asset" ) ||
-					   aliasContains( "prefab" ) || aliasContains( "asset" );
-			}
-			return false;
-		}
-
-		bool typeNameIs( const PropertyInfo& prop, const utf8* pCanonicalName )
-		{
-			return editor::getService<TypeRegistry>()->isType( prop._typeName, pCanonicalName );
 		}
 
 		bool isSupportedMethodArgType( string_view typeName )
@@ -179,38 +108,6 @@ namespace sw
 
 		editor::pushInspectorStyle();
 		drawSelectionSection();
-		ImGui::Separator();
-		if ( ImGui::CollapsingHeader( "Engine / Material", ImGuiTreeNodeFlags_DefaultOpen ) )
-			drawEngineSection();
-
-		if ( ImGui::CollapsingHeader( "Debug / Global Variables" ) )
-		{
-			GlobalVariableManager& gvm = *editor::getService<GlobalVariableManager>();
-			ImGui::Text( "%zu variables registered", gvm.getAllVariables().size() );
-			if ( ImGui::Button( "Open Global Variables Window" ) )
-				EditorWorkspace::requestOpenWindow( "Global Variables" );
-			ImGui::SameLine();
-			if ( ImGui::Button( "Reset All Defaults" ) )
-				gvm.resetAllToDefault();
-		}
-
-		ImGui::Separator();
-		ImGui::TextUnformatted( "Asset Drop Target" );
-		ImGui::TextDisabled( "Drag a path from Content Browser (SW_ASSET_PATH). Materials / textures / prefabs apply to matching selection properties." );
-		if ( _lastDroppedAsset.empty() == false )
-			ImGui::TextDisabled( "Last dropped: %s", _lastDroppedAsset.c_str() );
-		ImGui::Button( "Drop asset path here", ImVec2( -1.0f, 36.0f ) );
-		if ( ImGui::BeginDragDropTarget() )
-		{
-			const ImGuiPayload* pPayload = ImGui::AcceptDragDropPayload( "SW_ASSET_PATH" );
-			if ( pPayload != nullptr )
-			{
-				const utf8* pPath = static_cast<const utf8*>( pPayload->Data );
-				if ( pPath != nullptr )
-					acceptAssetDrop( pPath );
-			}
-			ImGui::EndDragDropTarget();
-		}
 
 		if ( ImGui::IsWindowFocused( ImGuiFocusedFlags_RootAndChildWindows ) )
 		{
@@ -231,71 +128,6 @@ namespace sw
 		ImGui::End();
 	}
 
-	void InspectorWindow::drawEngineSection()
-	{
-		EditorContext* pEditorContext = EditorContext::get();
-		IRHIDevice*	   pRHIDevice	  = ( pEditorContext != nullptr ) ? pEditorContext->getRhiDevice() : nullptr;
-		if ( pRHIDevice != nullptr )
-			ImGui::Text( "Active RHI Backend : %s", pRHIDevice->getBackendName() );
-
-		GlobalVariableInfo* pGvSpeed = editor::getService<GlobalVariableManager>()->findVariable( string( editor::kGlobalVarPlayerSpeed ) );
-		if ( pGvSpeed != nullptr )
-		{
-			float32* pSpeed = static_cast<float32*>( pGvSpeed->_pData );
-			if ( pSpeed != nullptr )
-				ImGui::SliderFloat( "Player Speed", pSpeed, 0.0f, 20.0f );
-		}
-
-		Material*	  pMaterial		= nullptr;
-		SceneManager* pSceneManager = editor::getService<SceneManager>();
-		if ( pSceneManager != nullptr )
-		{
-			Scene* pScene = pSceneManager->getActiveScene();
-			if ( pScene != nullptr )
-				pMaterial = pScene->getMaterial();
-		}
-		if ( pMaterial != nullptr )
-		{
-			renderMaterialUI( pMaterial, pRHIDevice );
-			if ( ImGui::Button( "Save Material" ) )
-			{
-				const string dir = defaultMaterialDir();
-				if ( dir.empty() )
-					SW_LOG_WARNING( "[Inspector] Material save skipped — EditorData defaultMaterial is empty." );
-				else
-				{
-					const string savePath = dir + pMaterial->getName() + string( editor::kMaterialExtension );
-					if ( pMaterial->saveToFile( savePath ) )
-						SW_LOG_INFO( "[Inspector] Saved material %#", savePath.c_str() );
-					else
-						SW_LOG_WARNING( "[Inspector] Material save failed: %#", savePath.c_str() );
-				}
-			}
-		}
-
-		if ( ImGui::Button( "Reset Engine Settings" ) )
-		{
-			const EditorData& data = editor::getEditorData();
-			if ( pGvSpeed != nullptr )
-			{
-				float32* pSpeed = static_cast<float32*>( pGvSpeed->_pData );
-				if ( pSpeed != nullptr )
-					*pSpeed = data._playerSpeed;
-			}
-
-			if ( pMaterial != nullptr && pRHIDevice != nullptr )
-			{
-				const string& matPath = editor::getEditorData()._defaultMaterial;
-				if ( matPath.empty() == false )
-				{
-					pMaterial->loadFromFile( matPath );
-					pMaterial->setPropertyData( pRHIDevice, 0, static_cast<uint32>( pMaterial->getBuffer().size() ),
-												pMaterial->getBuffer().data() );
-				}
-			}
-		}
-	}
-
 	void InspectorWindow::drawSelectionSection()
 	{
 		ImGui::TextUnformatted( "Selection" );
@@ -311,7 +143,7 @@ namespace sw
 
 		if ( EditorWorkspace::selectedObjectId() == 0 )
 		{
-			ImGui::TextDisabled( "Nothing selected. Use Hierarchy." );
+			ImGui::TextDisabled( "Nothing selected. Pick in Game View or use Hierarchy." );
 			return;
 		}
 
@@ -384,9 +216,6 @@ namespace sw
 				break;
 			}
 		}
-
-		if ( ImGui::Button( "Open Bone Hierarchy" ) )
-			EditorWorkspace::boneHierarchyPopupOpen() = true;
 	}
 
 	void InspectorWindow::drawGameObjectHeader( GameObject* pObj )
@@ -665,183 +494,5 @@ namespace sw
 
 			ImGui::PopID();
 		}
-	}
-
-	void InspectorWindow::renderMaterialUI( Material* pMaterial, IRHIDevice* pRHIDevice )
-	{
-		if ( pMaterial == nullptr || pRHIDevice == nullptr )
-			return;
-
-		ImGui::PushID( pMaterial );
-
-		const vector<MaterialProperty>& props  = pMaterial->getProperties();
-		const vector<uint8>&			buffer = pMaterial->getBuffer();
-
-		bool		  bChanged{ false };
-		vector<uint8> listTempBuffer = buffer;
-
-		for ( const MaterialProperty& prop : props )
-		{
-			ImGui::PushID( prop._name.c_str() );
-
-			if ( prop._type == MaterialPropertyType::Float )
-			{
-				float32* pPtr = reinterpret_cast<float32*>( listTempBuffer.data() + prop._offset );
-				if ( ImGui::DragFloat( prop._name.c_str(), pPtr, 0.01f ) )
-					bChanged = true;
-			}
-			else if ( prop._type == MaterialPropertyType::Float2 )
-			{
-				float32* pPtr = reinterpret_cast<float32*>( listTempBuffer.data() + prop._offset );
-				if ( ImGui::DragFloat2( prop._name.c_str(), pPtr, 0.01f ) )
-					bChanged = true;
-			}
-			else if ( prop._type == MaterialPropertyType::Float3 )
-			{
-				float32* pPtr = reinterpret_cast<float32*>( listTempBuffer.data() + prop._offset );
-				if ( ImGui::DragFloat3( prop._name.c_str(), pPtr, 0.01f ) )
-					bChanged = true;
-			}
-			else if ( prop._type == MaterialPropertyType::Float4 )
-			{
-				float32* pPtr = reinterpret_cast<float32*>( listTempBuffer.data() + prop._offset );
-				if ( ImGui::ColorEdit4( prop._name.c_str(), pPtr ) )
-					bChanged = true;
-			}
-			else if ( prop._type == MaterialPropertyType::Float4x4 )
-			{
-				float32* pPtr = reinterpret_cast<float32*>( listTempBuffer.data() + prop._offset );
-				ImGui::Text( "%s", prop._name.c_str() );
-				if ( ImGui::DragFloat4( "##r0", pPtr, 0.01f ) )
-					bChanged = true;
-				if ( ImGui::DragFloat4( "##r1", pPtr + 4, 0.01f ) )
-					bChanged = true;
-				if ( ImGui::DragFloat4( "##r2", pPtr + 8, 0.01f ) )
-					bChanged = true;
-				if ( ImGui::DragFloat4( "##r3", pPtr + 12, 0.01f ) )
-					bChanged = true;
-			}
-			else if ( prop._type == MaterialPropertyType::Uint || prop._type == MaterialPropertyType::Int )
-			{
-				int32* pPtr = reinterpret_cast<int32*>( listTempBuffer.data() + prop._offset );
-				if ( ImGui::InputInt( prop._name.c_str(), pPtr ) )
-					bChanged = true;
-			}
-			else if ( prop._type == MaterialPropertyType::Uint2 || prop._type == MaterialPropertyType::Int2 )
-			{
-				int32* pPtr = reinterpret_cast<int32*>( listTempBuffer.data() + prop._offset );
-				if ( ImGui::InputInt2( prop._name.c_str(), pPtr ) )
-					bChanged = true;
-			}
-			else if ( prop._type == MaterialPropertyType::Uint3 || prop._type == MaterialPropertyType::Int3 )
-			{
-				int32* pPtr = reinterpret_cast<int32*>( listTempBuffer.data() + prop._offset );
-				if ( ImGui::InputInt3( prop._name.c_str(), pPtr ) )
-					bChanged = true;
-			}
-			else if ( prop._type == MaterialPropertyType::Uint4 || prop._type == MaterialPropertyType::Int4 )
-			{
-				int32* pPtr = reinterpret_cast<int32*>( listTempBuffer.data() + prop._offset );
-				if ( ImGui::InputInt4( prop._name.c_str(), pPtr ) )
-					bChanged = true;
-			}
-
-			ImGui::PopID();
-		}
-
-		if ( bChanged )
-			pMaterial->setPropertyData( pRHIDevice, 0, static_cast<uint32>( listTempBuffer.size() ), listTempBuffer.data() );
-
-		ImGui::PopID();
-	}
-
-	void InspectorWindow::acceptAssetDrop( const utf8* pPath )
-	{
-		if ( pPath == nullptr || pPath[0] == '\0' )
-			return;
-
-		setLastDroppedAsset( pPath );
-
-		Scene* pScene = editor::getService<SceneManager>()->getActiveScene();
-		if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
-		{
-			SW_LOG_INFO( "[Inspector] Stored dropped asset (no scene): %#", pPath );
-			return;
-		}
-
-		GameObject* pObj = pScene->getObjectManager()->findGameObjectById( EditorWorkspace::selectedObjectId() );
-		Component*	pComp{ nullptr };
-		if ( pObj != nullptr && EditorWorkspace::selectedComponentId() != 0 )
-		{
-			for ( Component* pC : pObj->getAllComponents() )
-			{
-				if ( pC != nullptr && pC->getComponentId() == EditorWorkspace::selectedComponentId() )
-				{
-					pComp = pC;
-					break;
-				}
-			}
-		}
-
-		auto tryAssign = [&]( void* pInstance, const TypeInfo* pTypeInfo ) -> bool
-		{
-			if ( pInstance == nullptr || pTypeInfo == nullptr )
-				return false;
-
-			bool bAssigned{ false };
-			for ( const PropertyInfo& prop : pTypeInfo->_propertyList )
-			{
-				if ( prop._metadata._bReadOnly || prop._bIsContainer )
-					continue;
-				if ( prop._typeName.isPredefinedType( PredefinedNameType::NameType_string ) == false && prop._typeName.isPredefinedType( PredefinedNameType::NameType_hashed_string ) == false )
-					continue;
-				if ( propertyNameHintsAsset( prop, pPath ) == false )
-					continue;
-
-				if ( prop._typeName.isPredefinedType( PredefinedNameType::NameType_string ) )
-				{
-					string* pPtr = prop.getValuePtr<string>( pInstance );
-					if ( pPtr != nullptr )
-					{
-						*pPtr	  = pPath;
-						bAssigned = true;
-					}
-				}
-				else if ( typeNameIs( prop, "hashed_string" ) )
-				{
-					hashed_string* pPtr = prop.getValuePtr<hashed_string>( pInstance );
-					if ( pPtr != nullptr )
-					{
-						*pPtr	  = hashed_string( pPath );
-						bAssigned = true;
-					}
-				}
-			}
-			return bAssigned;
-		};
-
-		bool bAssigned{ false };
-		if ( pComp != nullptr )
-		{
-			const TypeInfo* pTypeInfo = pComp->getTypeInfo();
-			if ( pTypeInfo != nullptr )
-				bAssigned = tryAssign( pComp, pTypeInfo );
-		}
-		else if ( pObj != nullptr )
-		{
-			const TypeInfo* pTypeInfo = pObj->getTypeInfo();
-			if ( pTypeInfo != nullptr )
-				bAssigned = tryAssign( pObj, pTypeInfo );
-		}
-
-		if ( bAssigned )
-			SW_LOG_INFO( "[Inspector] Assigned asset path to selection: %#", pPath );
-		else
-			SW_LOG_INFO( "[Inspector] Stored dropped asset (no matching property): %#", pPath );
-	}
-
-	void InspectorWindow::setLastDroppedAsset( const utf8* pPath )
-	{
-		_lastDroppedAsset = ( pPath != nullptr ) ? pPath : "";
 	}
 } // namespace sw

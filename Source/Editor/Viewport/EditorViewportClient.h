@@ -9,6 +9,7 @@
 namespace sw
 {
 	class IRHIDevice;
+	class CameraComponent;
 
 	/** @brief 에디터 카메라 제어 모드 */
 	enum class CameraControlMode : uint8
@@ -34,6 +35,9 @@ namespace sw
 		/** @brief 뷰포트 UI 및 ImGuizmo 렌더링 */
 		void draw( const void* pTextureId, const float2& canvasSize );
 
+		/** @brief 뷰포트 렌더 모드/카메라 속도 툴바를 그립니다. */
+		void drawViewportToolbar( float32 viewportWidth );
+
 		/** @brief View Matrix 계산 */
 		void getViewMatrix( float32* pOutMatrix ) const;
 		/** @brief Projection Matrix 계산 */
@@ -53,6 +57,7 @@ namespace sw
 	private:
 		void processFlyInput( float32 deltaTime );
 		void processOrbitInput();
+		void processPicking( const float2& canvasPos, const float2& canvasSize, CameraComponent* pCamera );
 		void drawGizmo( GameObjectPtr pObj, const float32* pView, const float32* pProj,
 						const float2& canvasPos, const float2& canvasSize );
 

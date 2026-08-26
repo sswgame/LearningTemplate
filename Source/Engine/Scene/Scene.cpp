@@ -8,7 +8,9 @@
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RenderPass/FrameRenderer.h"
+#include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
+#include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Utility/Resource/ResourceManager.h"
 
@@ -24,6 +26,30 @@ namespace sw
 		string resolveDefaultMaterialPath()
 		{
 			return engine::getEngineData()._defaultMaterial;
+		}
+
+		/** @brief MeshComponent의 프리미티브 메시와 씬 기본 머티리얼을 채웁니다. */
+		void bindSceneMeshDefaults( Scene* pScene )
+		{
+			if ( pScene == nullptr )
+				return;
+			GameObjectManager* pObjectManager = pScene->getObjectManager();
+			if ( pObjectManager == nullptr )
+				return;
+
+			Material* pDefaultMaterial = pScene->getMaterial();
+			for ( GameObject* pObj : pObjectManager->getAllGameObjects() )
+			{
+				if ( pObj == nullptr )
+					continue;
+				MeshComponent* pMeshComp = pObj->getComponent<MeshComponent>().get();
+				if ( pMeshComp == nullptr )
+					continue;
+				pMeshComp->resolveRuntimeMesh();
+				if ( pMeshComp->getMaterial() == nullptr && pDefaultMaterial != nullptr )
+					pMeshComp->setMaterial( pDefaultMaterial );
+			}
+			pObjectManager->flushSceneTransforms();
 		}
 
 	} // namespace
@@ -68,6 +94,7 @@ namespace sw
 			}
 		}
 		ensureDefaultCameras();
+		bindSceneMeshDefaults( this );
 		return true;
 	}
 

@@ -11,7 +11,6 @@ namespace rapidxml
 {
 	void parse_error_handler( const utf8* what, void* where )
 	{
-		(void)where;
 		SW_LOG_ERROR( "[XmlDocument] RapidXML Parse Error: %#", what != nullptr ? what : "unknown" );
 	}
 } // namespace rapidxml

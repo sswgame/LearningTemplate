@@ -21,7 +21,7 @@ namespace sw
 	struct SW_GF_API GameData
 	{
 		string	_startMap{ "game/demo/maps/town01.xml" };									  ///< 시작 맵
-		string	_titleScene{ "game/demo/maps/0.Title.scene.xml" };							  ///< 타이틀 씬
+		string	_titleScene{ "game/demo/maps/TestScene.scene.xml" };							  ///< 타이틀 씬
 		string	_entranceScene{ "game/demo/maps/1.Entrance.scene.xml" };					  ///< 타이틀 다음 씬
 		string	_battleMap{ "game/demo/maps/battle01.xml" };								  ///< 전투 맵
 		string	_battleScene{ "game/demo/maps/battle01_scene.xml" };						  ///< 전투 씬

@@ -18,46 +18,49 @@ namespace sw
 {
 	namespace
 	{
+		bool drawTransformInspector( SceneComponent* pSceneComp )
+		{
+			if ( pSceneComp == nullptr )
+				return false;
+
+			ImGui::SeparatorText( "Transform" );
+
+			int32& op = EditorWorkspace::gizmoOperation();
+			ImGui::RadioButton( "Translate", &op, 0 );
+			ImGui::SameLine();
+			ImGui::RadioButton( "Rotate", &op, 1 );
+			ImGui::SameLine();
+			ImGui::RadioButton( "Scale", &op, 2 );
+			bool& bLocal = EditorWorkspace::gizmoLocalSpace();
+			ImGui::SameLine();
+			ImGui::Checkbox( "Local", &bLocal );
+
+			float3 pos = pSceneComp->getLocalPosition();
+			float3 rot = pSceneComp->getLocalRotation();
+			float3 scl = pSceneComp->getLocalScale();
+
+			if ( editor::drawVec3Control( "Position", pos, 0.0f, 80.0f, 0.1f ) )
+				pSceneComp->setLocalPosition( pos );
+			if ( editor::drawVec3Control( "Rotation", rot, 0.0f, 80.0f, 0.5f ) )
+				pSceneComp->setLocalRotation( rot );
+			if ( editor::drawVec3Control( "Scale", scl, 1.0f, 80.0f, 0.01f ) )
+				pSceneComp->setLocalScale( scl );
+
+			const float3 world = pSceneComp->getWorldPosition();
+			ImGui::TextDisabled( "World: %.2f, %.2f, %.2f",
+								 static_cast<float64>( world._x ),
+								 static_cast<float64>( world._y ),
+								 static_cast<float64>( world._z ) );
+			return true;
+		}
+
 		/** @brief SceneComponent 전용 트랜스폼 및 기즈모 컨트롤 드로어 */
 		class SceneComponentDrawer : public IComponentDrawer
 		{
 		public:
 			bool drawBody( Component* pComponent, IRHIDevice* /*pRhiDevice*/ ) override
 			{
-				auto* pSceneComp = static_cast<SceneComponent*>( pComponent );
-				if ( pSceneComp == nullptr )
-					return false;
-
-				ImGui::SeparatorText( "Transform" );
-
-				int32& op = EditorWorkspace::gizmoOperation();
-				ImGui::RadioButton( "Translate", &op, 0 );
-				ImGui::SameLine();
-				ImGui::RadioButton( "Rotate", &op, 1 );
-				ImGui::SameLine();
-				ImGui::RadioButton( "Scale", &op, 2 );
-				bool& bLocal = EditorWorkspace::gizmoLocalSpace();
-				ImGui::SameLine();
-				ImGui::Checkbox( "Local", &bLocal );
-
-				float3 pos = pSceneComp->getLocalPosition();
-				float3 rot = pSceneComp->getLocalRotation();
-				float3 scl = pSceneComp->getLocalScale();
-
-				if ( editor::drawVec3Control( "Position", pos, 0.0f, 80.0f, 0.1f ) )
-					pSceneComp->setLocalPosition( pos );
-				if ( editor::drawVec3Control( "Rotation", rot, 0.0f, 80.0f, 0.5f ) )
-					pSceneComp->setLocalRotation( rot );
-				if ( editor::drawVec3Control( "Scale", scl, 1.0f, 80.0f, 0.01f ) )
-					pSceneComp->setLocalScale( scl );
-
-				const float3 world = pSceneComp->getWorldPosition();
-				ImGui::TextDisabled( "World: %.2f, %.2f, %.2f",
-									 static_cast<float64>( world._x ),
-									 static_cast<float64>( world._y ),
-									 static_cast<float64>( world._z ) );
-
-				return true; // 커스텀 바디로 완전 대체
+				return drawTransformInspector( static_cast<SceneComponent*>( pComponent ) );
 			}
 		};
 
@@ -97,13 +100,20 @@ namespace sw
 			}
 		};
 
-		/** @brief MeshComponent 전용 퀵 액션 드로어 */
+		/** @brief MeshComponent 전용 트랜스폼 + 가시성 드로어 */
 		class MeshComponentDrawer : public IComponentDrawer
 		{
 		public:
-			void drawFooter( Component* /*pComponent*/, IRHIDevice* /*pRhiDevice*/ ) override
+			bool drawBody( Component* pComponent, IRHIDevice* /*pRhiDevice*/ ) override
 			{
-				ImGui::TextDisabled( "Mesh Component Ready" );
+				MeshComponent* pMeshComp = static_cast<MeshComponent*>( pComponent );
+				if ( drawTransformInspector( pMeshComp ) == false )
+					return false;
+
+				bool bVisible = pMeshComp->isVisible();
+				if ( ImGui::Checkbox( "Visible", &bVisible ) )
+					pMeshComp->setVisible( bVisible );
+				return true;
 			}
 		};
 	} // namespace

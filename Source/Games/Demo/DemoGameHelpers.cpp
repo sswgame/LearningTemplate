@@ -7,7 +7,10 @@
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
+#include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneManager.h"
 
 #include "GameFramework/Data/GameData.h"
 #include "GameFramework/Data/UnitStatsComponent.h"

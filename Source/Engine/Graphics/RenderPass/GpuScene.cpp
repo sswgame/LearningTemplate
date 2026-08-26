@@ -11,6 +11,8 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResource.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
+
+#include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManagerInternal.h"
 
 namespace sw
@@ -258,31 +260,28 @@ namespace sw
 		_listScratchCandidates.clear();
 		_listScratchCandidates.reserve( 1024 );
 
-		Registry&			reg = GameObjectManagerAccess::get( *pObjects );
-		View<MeshComponent> view( reg );
-		view.each( [&]( Entity /*e*/, MeshComponent& meshRef )
+		Registry&									   reg = GameObjectManagerAccess::get( *pObjects );
+		View<MeshData, TransformData, EntityStateData> view( reg );
+		for ( auto [entity, mdata, tdata, state] : view )
 		{
-			if ( meshRef.isActive() == false || meshRef.isVisible() == false )
-				return;
+			(void)entity;
+			if ( mdata._bVisible == 0 )
+				continue;
+			if ( state.bIsActiveInHierarchy == 0 || state.bIsPendingKill != 0 )
+				continue;
+			if ( mdata._mesh == nullptr || mdata._mesh->getVertexCount() == 0 )
+				continue;
 
-			GameObject* pObj = meshRef.getOwner();
-			if ( pObj == nullptr || pObj->isActiveInHierarchy() == false )
-				return;
-
-			if ( meshRef.getMesh() == nullptr || meshRef.getMesh()->getVertexCount() == 0 )
-				return;
-
-			DrawCandidate  cand{};
-			const float4x4 world = meshRef.getWorldMatrix();
-			Memory::copy( cand._world, &world._11, sizeof( cand._world ) );
-			extractTranslation( world, cand._boundsCenter );
-			cand._boundsRadius = meshRef.getBoundsRadius();
-			cand._blendMode	   = static_cast<uint32>( meshRef.getBlendMode() );
-			cand._pMesh		   = meshRef.getMesh().get();
-			cand._pMaterial	   = meshRef.getMaterial();
-			cand._pInstance	   = meshRef.getMaterialInstance().get();
+			DrawCandidate cand{};
+			Memory::copy( cand._world, &tdata.cachedWorldMatrix._11, sizeof( cand._world ) );
+			extractTranslation( tdata.cachedWorldMatrix, cand._boundsCenter );
+			cand._boundsRadius = mdata._boundsRadius;
+			cand._blendMode	   = static_cast<uint32>( mdata._blendMode );
+			cand._pMesh		   = mdata._mesh.get();
+			cand._pMaterial	   = mdata._pMaterial;
+			cand._pInstance	   = mdata._materialInstance.get();
 			_listScratchCandidates.push_back( cand );
-		} );
+		}
 
 		if ( _listScratchCandidates.empty() )
 		{

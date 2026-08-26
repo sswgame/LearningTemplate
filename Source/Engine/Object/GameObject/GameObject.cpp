@@ -244,7 +244,20 @@ namespace sw
 
 	SceneComponent* GameObject::getPrimarySceneComponent() const
 	{
-		return getComponent<SceneComponent>().get();
+		SceneComponent* pExact = getComponent<SceneComponent>().get();
+		if ( pExact != nullptr )
+			return pExact;
+
+		const vector<Component*>& listComponents = getAllComponents();
+		for ( Component* pComp : listComponents )
+		{
+			if ( pComp == nullptr )
+				continue;
+			SceneComponent* pSceneComp = pComp->asSceneComponent();
+			if ( pSceneComp != nullptr )
+				return pSceneComp;
+		}
+		return nullptr;
 	}
 
 	void GameObject::addTag( TagID tag )

@@ -142,6 +142,7 @@ namespace sw
 			_gpuCullCb		= 0;
 			_gpuCullCbIndex = kInvalidDescriptorIndex;
 			_taaHistory		= 0;
+			_taaHistorySrv	= kInvalidDescriptorIndex;
 			_mapEnginePsos.clear();
 			_mapMaterialPassPsos.clear();
 			_bPassResourcesReady = 0;
@@ -178,6 +179,11 @@ namespace sw
 		{
 			_pDevice->getResource()->destroyBuffer( _passCb );
 			_passCb = 0;
+		}
+		if ( _taaHistorySrv != kInvalidDescriptorIndex )
+		{
+			_pDevice->getResource()->unregisterBindlessResource( _taaHistorySrv );
+			_taaHistorySrv = kInvalidDescriptorIndex;
 		}
 		if ( _taaHistory != 0 )
 		{
