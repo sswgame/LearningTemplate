@@ -16,9 +16,8 @@
 
 #include <imgui.h>
 
-namespace sw
+namespace sw::editor
 {
-
 	namespace
 	{
 		ImVec4 colorForExtension( string_view ext )
@@ -727,4 +726,4 @@ namespace sw
 		if ( copied > 0 )
 			_bFolderDirty = true;
 	}
-} // namespace sw
+} // namespace sw::editor

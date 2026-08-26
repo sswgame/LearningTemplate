@@ -10,7 +10,7 @@
 
 #include <imgui.h>
 
-namespace sw
+namespace sw::editor
 {
 	void trackPodPropertyUndo( void* pData, size_t size, const utf8* pLabel )
 	{
@@ -123,5 +123,4 @@ namespace sw
 		};
 		editor::getService<CommandStack>()->push( std::move( cmd ) );
 	}
-
-} // namespace sw
+} // namespace sw::editor

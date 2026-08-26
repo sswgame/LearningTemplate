@@ -23,7 +23,7 @@
 #include <imgui.h>
 #include <ImGuizmo.h>
 
-namespace sw
+namespace sw::editor
 {
 	namespace
 	{
@@ -456,4 +456,4 @@ namespace sw
 			pSceneComp->setLocalScale( scale );
 		}
 	}
-} // namespace sw
+} // namespace sw::editor

@@ -9,7 +9,10 @@
 namespace sw
 {
 	struct PropertyInfo;
+}
 
+namespace sw::editor
+{
 	/** @brief 프로퍼티 타입 하나의 인스펙터 위젯 */
 	class IInspectorProperty
 	{
@@ -22,4 +25,4 @@ namespace sw
 		 */
 		virtual bool draw( void* pInstance, const PropertyInfo& prop ) = 0;
 	};
-} // namespace sw
+} // namespace sw::editor

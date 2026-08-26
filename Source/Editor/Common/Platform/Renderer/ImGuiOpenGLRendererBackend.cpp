@@ -153,7 +153,7 @@ static void Hook_Renderer_SwapBuffers_GLX( ImGuiViewport* pViewport, void* )
 }
 #endif
 
-namespace sw
+namespace sw::editor
 {
 	bool ImGuiOpenGLRendererBackend::initialize( class IRHIDevice* pRhiDevice )
 	{
@@ -244,4 +244,4 @@ namespace sw
 		// GL 텍스처 이름은 RHI가 소유하고, ImGui는 ID만 저장합니다.
 		(void)pTextureID;
 	}
-} // namespace sw
+} // namespace sw::editor

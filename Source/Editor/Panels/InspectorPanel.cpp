@@ -25,9 +25,8 @@
 
 #include <imgui.h>
 
-namespace sw
+namespace sw::editor
 {
-
 	namespace
 	{
 		const utf8* propLabel( const PropertyInfo& prop )
@@ -486,4 +485,4 @@ namespace sw
 			ImGui::PopID();
 		}
 	}
-} // namespace sw
+} // namespace sw::editor

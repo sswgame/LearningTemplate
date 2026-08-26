@@ -2,7 +2,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Math/VectorMath.h"
 
-namespace sw
+namespace sw::editor
 {
 	/** @brief 뷰포트 렌더 모드 */
 	enum class ViewportRenderMode : uint8
@@ -41,4 +41,4 @@ namespace sw
 		/** @brief 선택된 오브젝트의 Translate/Rotate/Scale 및 스냅 플로팅 바를 그립니다. */
 		void drawTransformBar( ViewportToolbarSettings& settings, const float2& anchorPos, bool bEnabled );
 	};
-} // namespace sw
+} // namespace sw::editor

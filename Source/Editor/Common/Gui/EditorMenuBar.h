@@ -4,13 +4,10 @@
  */
 #pragma once
 
-namespace sw
-{
-	class EditorDockLayout;
-}
-
 namespace sw::editor
 {
+	class EditorDockLayout;
+
 	/** @brief File / Edit / Assets / Panel 메뉴와 RHI 상태줄을 그립니다. */
 	void drawMainMenuBar( EditorDockLayout& dockLayout );
 	/** @brief Ctrl+Z/Y/O, Ctrl+P/Space 등 메뉴와 같은 단축키를 처리합니다. */

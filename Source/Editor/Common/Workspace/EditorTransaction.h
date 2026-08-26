@@ -5,7 +5,7 @@
 
 #include "Engine/Object/GameObject/GameObjectPtr.h"
 
-namespace sw
+namespace sw::editor
 {
 	/**
 	 * @class EditorTransaction
@@ -34,4 +34,4 @@ namespace sw
 		/** @brief 현재 게임오브젝트의 전체 상태를 XML 스냅샷 문자열로 캡처합니다. */
 		static string captureSnapshot( GameObjectPtr pObj );
 	};
-} // namespace sw
+} // namespace sw::editor

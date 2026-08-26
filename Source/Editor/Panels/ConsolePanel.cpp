@@ -9,9 +9,8 @@
 
 #include <imgui.h>
 
-namespace sw
+namespace sw::editor
 {
-
 	namespace
 	{
 		ImVec4 colorForLevel( LogLevel level )
@@ -192,4 +191,4 @@ namespace sw
 			_logListenerHandle = {};
 		}
 	}
-} // namespace sw
+} // namespace sw::editor

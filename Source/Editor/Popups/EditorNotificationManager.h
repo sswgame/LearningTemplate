@@ -3,7 +3,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
-namespace sw
+namespace sw::editor
 {
 	/** @brief 알림 유형 */
 	enum class NotificationType : uint8
@@ -50,4 +50,4 @@ namespace sw
 	private:
 		vector<NotificationItem> _listNotifications;
 	};
-} // namespace sw
+} // namespace sw::editor

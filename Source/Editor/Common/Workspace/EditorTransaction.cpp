@@ -14,7 +14,7 @@
 
 #include "RuntimeAPI/Service/EditorService.h"
 
-namespace sw
+namespace sw::editor
 {
 	namespace
 	{
@@ -188,4 +188,4 @@ namespace sw
 
 		editor::getService<CommandStack>()->push( std::move( cmd ) );
 	}
-} // namespace sw
+} // namespace sw::editor

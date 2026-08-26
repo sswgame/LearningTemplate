@@ -10,7 +10,7 @@
 
 #include "Editor/Common/Gui/IEditorPanel.h"
 
-namespace sw
+namespace sw::editor
 {
 	/** @brief 활성 씬의 오브젝트 아웃라이너 */
 	class HierarchyPanel : public IEditorPanel
@@ -31,4 +31,4 @@ namespace sw
 	private:
 		utf8 _arrFilterBuffer[constant::kMaxBuffer128]{};
 	};
-} // namespace sw
+} // namespace sw::editor

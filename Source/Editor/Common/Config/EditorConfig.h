@@ -8,7 +8,7 @@
 #include "Engine/Config/IConfig.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
-namespace sw
+namespace sw::editor
 {
 	/**
 	 * @brief Dev/에디터 호스트 설정 (Shipping 미포함)
@@ -48,4 +48,4 @@ namespace sw
 		/** @brief Host JSON을 읽어 active 설정을 채웁니다. 파일이 없으면 cpp 기본값입니다. */
 		static void loadFromHost();
 	};
-} // namespace sw
+} // namespace sw::editor

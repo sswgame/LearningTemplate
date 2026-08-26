@@ -8,7 +8,7 @@
 #include "Editor/Common/Gui/EditorDockLayout.h"
 #include "Editor/IEditor.h"
 
-namespace sw
+namespace sw::editor
 {
 	struct EditorData;
 	class IImGuiPlatformBackend;
@@ -45,7 +45,7 @@ namespace sw
 		/** @brief 네이티브 이벤트를 ImGui 플랫폼 레이어로 전달합니다. */
 		bool processEvent( const NativeWindowEvent& event ) override;
 		/** @brief RHI 텍스처를 ImGui 텍스처 ID로 등록합니다. */
-		void* registerTexture( RHITextureHandle texture ) override;
+		void* registerTexture( uint64 texture ) override;
 		/** @brief 등록된 ImGui 텍스처 ID를 해제합니다. */
 		void unregisterTexture( void* pTextureID ) override;
 		/** @brief 이번 프레임 Game View RT 핸들과 크기를 조회합니다. */
@@ -74,4 +74,4 @@ namespace sw
 		uint8				   _bInitialized : 1;
 		[[maybe_unused]] uint8 _reservedFlags : 7;
 	};
-} // namespace sw
+} // namespace sw::editor

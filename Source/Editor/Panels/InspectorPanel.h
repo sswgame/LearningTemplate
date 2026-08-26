@@ -15,7 +15,10 @@ namespace sw
 	class Component;
 	struct TypeInfo;
 	struct PropertyInfo;
+}
 
+namespace sw::editor
+{
 	/** @brief 현재 아웃라이너 선택을 검사하고 편집합니다 */
 	class InspectorPanel : public IEditorPanel
 	{
@@ -57,4 +60,4 @@ namespace sw
 		utf8	_arrArgString[8][256]{};
 		utf8	_arrLastInvokeResult[256]{};
 	};
-} // namespace sw
+} // namespace sw::editor

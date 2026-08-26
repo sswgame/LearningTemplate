@@ -1,5 +1,5 @@
 /**
- * @file TileMapTool.h
+ * @file TileMapPanel.h
  * @brief 에디터 측 TileMap XML 페인터 (SWGame 링크 없음, Game TileMap 포맷을 미러)
  */
 #pragma once
@@ -10,14 +10,14 @@
 
 #include "Editor/Common/Gui/IEditorPanel.h"
 
-namespace sw
+namespace sw::editor
 {
 	/** @brief Game TileMap XML의 Visual / Walkable / Encounter / Warp / PassThrough 레이어를 페인트합니다 */
-	class TileMapTool : public IEditorPanel
+	class TileMapPanel : public IEditorPanel
 	{
 	public:
 		/** @brief 타일맵 도구를 생성합니다. */
-		TileMapTool();
+		TileMapPanel();
 
 		// ------------------------------------------------------------------------------
 		// 1) IEditorPanel — 제목/그리기
@@ -109,5 +109,4 @@ namespace sw
 		vector<EditorTileWarp>	 _listWarps;
 		string					 _status;
 	};
-
-} // namespace sw
+} // namespace sw::editor

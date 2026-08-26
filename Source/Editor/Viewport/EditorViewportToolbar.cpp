@@ -10,7 +10,7 @@
 
 #include <imgui.h>
 
-namespace sw
+namespace sw::editor
 {
 	namespace
 	{
@@ -116,4 +116,4 @@ namespace sw
 
 		editor::endFloatingBar();
 	}
-} // namespace sw
+} // namespace sw::editor

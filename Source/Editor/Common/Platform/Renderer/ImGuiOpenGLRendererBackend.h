@@ -8,7 +8,10 @@
 namespace sw
 {
 	class IRHIDevice;
+}
 
+namespace sw::editor
+{
 	/** @brief ImGui OpenGL 렌더러 */
 	class ImGuiOpenGLRendererBackend : public IImGuiRendererBackend
 	{
@@ -43,4 +46,4 @@ namespace sw
 	private:
 		IRHIDevice* _pRHIDevice{ nullptr };
 	};
-} // namespace sw
+} // namespace sw::editor

@@ -20,7 +20,7 @@ bool ImGui_ImplOSX_HandleEvent( void* pEvent, void* pView );
 	#include "Editor/Common/Platform/ImGuiX11Platform.h"
 #endif
 
-namespace sw
+namespace sw::editor
 {
 	class ImGuiPlatformBackend : public IImGuiPlatformBackend
 	{
@@ -104,4 +104,4 @@ namespace sw
 	{
 		return make_unique<ImGuiPlatformBackend>();
 	}
-} // namespace sw
+} // namespace sw::editor

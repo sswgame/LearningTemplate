@@ -11,11 +11,9 @@ namespace sw
 	class IWindow;
 	struct NativeWindowEvent;
 
-	using RHITextureHandle = uint64;
-
 	/**
 	 * @class IEditor
-	 * @brief EditorAPI 함수 테이블이 위임하는 최소 표면 (구현은 ImGuiEditor)
+	 * @brief EditorAPI 함수 테이블이 위임하는 최소 표면 (구현은 sw::editor::ImGuiEditor)
 	 */
 	class IEditor
 	{
@@ -49,7 +47,7 @@ namespace sw
 		/** @brief 네이티브 이벤트를 ImGui 플랫폼 레이어로 전달합니다. */
 		virtual bool processEvent( const NativeWindowEvent& event ) = 0;
 		/** @brief RHI 텍스처를 ImGui 텍스처 ID로 등록합니다. */
-		virtual void* registerTexture( RHITextureHandle texture ) = 0;
+		virtual void* registerTexture( uint64 texture ) = 0;
 		/** @brief 등록된 ImGui 텍스처 ID를 해제합니다. */
 		virtual void unregisterTexture( void* pTextureID ) = 0;
 		/** @brief 이번 프레임 Game View RT 핸들과 크기를 조회합니다. */

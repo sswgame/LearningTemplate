@@ -4,20 +4,20 @@
 
 #include "Editor/Common/Gui/EditorChrome.h"
 
-namespace sw
+namespace sw::editor
 {
 	void IEditorPanel::draw()
 	{
-		editor::setNextPanelSize( getInitialPanelSize() );
+		setNextPanelSize( getInitialPanelSize() );
 
-		if ( editor::beginPanel( getPanelTitle(), getOpenPtr(), getPanelFlags() ) == false )
+		if ( beginPanel( getPanelTitle(), getOpenPtr(), getPanelFlags() ) == false )
 		{
 			onPanelCollapsed();
-			editor::endPanel();
+			endPanel();
 			return;
 		}
 
 		drawContent();
-		editor::endPanel();
+		endPanel();
 	}
-} // namespace sw
+} // namespace sw::editor

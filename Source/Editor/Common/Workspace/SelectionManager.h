@@ -6,7 +6,7 @@
 
 #include "Engine/Object/GameObject/GameObjectPtr.h"
 
-namespace sw
+namespace sw::editor
 {
 	/** @brief 선택 모드 */
 	enum class SelectionMode : uint8
@@ -77,4 +77,4 @@ namespace sw
 		vector<string>		  _listSelectedAssets;
 		Delegate<void()>	  _onSelectionChanged;
 	};
-} // namespace sw
+} // namespace sw::editor

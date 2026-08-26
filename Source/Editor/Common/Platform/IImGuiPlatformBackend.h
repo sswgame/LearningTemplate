@@ -11,7 +11,10 @@ namespace sw
 	class IWindow;
 	struct NativeWindowEvent;
 	enum class RHIBackend : uint32;
+}
 
+namespace sw::editor
+{
 	/** @brief ImGui 윈도우/입력 백엔드 (Win32 / GLFW / X11) */
 	class IImGuiPlatformBackend
 	{
@@ -38,4 +41,4 @@ namespace sw
 		/** @brief 현재 플랫폼용 ImGui 플랫폼 백엔드를 생성합니다. */
 		static unique_ptr<IImGuiPlatformBackend> createPlatformBackend();
 	};
-} // namespace sw
+} // namespace sw::editor

@@ -11,7 +11,10 @@
 namespace sw
 {
 	struct GlobalVariableInfo;
+}
 
+namespace sw::editor
+{
 	/** @brief 등록된 모든 전역 변수를 목록화하고 실시간으로 편집하는 에디터 도구 윈도우 */
 	class GlobalVariablesPanel : public IEditorPanel
 	{
@@ -42,5 +45,4 @@ namespace sw
 		uint8				   _bGroupByModule : 1;
 		[[maybe_unused]] uint8 _reserved	   : 7;
 	};
-
-} // namespace sw
+} // namespace sw::editor

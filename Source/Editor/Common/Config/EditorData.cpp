@@ -11,7 +11,7 @@
 
 #include "sw/config/ConfigConstants.h"
 
-namespace sw
+namespace sw::editor
 {
 	namespace
 	{
@@ -100,4 +100,4 @@ namespace sw
 		SW_LOG_INFO( "[EditorData] Loaded from %#", absPath );
 		return true;
 	}
-} // namespace sw
+} // namespace sw::editor

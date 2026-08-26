@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Tools/PrefabEditorTool.h"
+#include "Editor/Panels/PrefabEditorPanel.h"
 
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
@@ -8,9 +8,9 @@
 
 #include <imgui.h>
 
-namespace sw
+namespace sw::editor
 {
-	PrefabEditorTool::PrefabEditorTool()
+	PrefabEditorPanel::PrefabEditorPanel()
 		: _selectedPrefabPath{ "Prefabs/Characters/Orc_Warrior.prefab" }
 		, _selectedInstanceName{ "Orc_Warrior_Instance_1" }
 		, _listOverrides{}
@@ -20,7 +20,7 @@ namespace sw
 		scanPrefabOverrides( _selectedPrefabPath.c_str() );
 	}
 
-	void PrefabEditorTool::scanPrefabOverrides( const utf8* pPrefabPath )
+	void PrefabEditorPanel::scanPrefabOverrides( const utf8* pPrefabPath )
 	{
 		_listOverrides.clear();
 		_listNestedPrefabs.clear();
@@ -40,7 +40,7 @@ namespace sw
 		_listOverrides.push_back( PrefabOverrideItem{ "MaterialComponent", "tintColor", "(1.0, 1.0, 1.0, 1.0)", "(1.0, 0.8, 0.8, 1.0)", true } );
 	}
 
-	void PrefabEditorTool::drawContent()
+	void PrefabEditorPanel::drawContent()
 	{
 		// Header Information
 		ImGui::TextColored( ImVec4( 0.4f, 0.8f, 1.0f, 1.0f ), "Prefab Asset:" );
@@ -157,4 +157,4 @@ namespace sw
 			SW_LOG_INFO( "[PrefabTool] Reverted all overrides on %s", _selectedInstanceName.c_str() );
 		}
 	}
-} // namespace sw
+} // namespace sw::editor

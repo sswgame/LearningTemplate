@@ -8,7 +8,7 @@
 	#include <X11/Xatom.h>
 	#include <X11/keysym.h>
 
-namespace sw
+namespace sw::editor
 {
 	namespace
 	{
@@ -351,8 +351,7 @@ namespace sw
 		}
 
 	} // namespace
-} // namespace sw
-
+} // namespace sw::editor
 bool ImGui_ImplX11_Init( Display* pDisplay, Window window )
 {
 	return sw::initImpl( pDisplay, window );

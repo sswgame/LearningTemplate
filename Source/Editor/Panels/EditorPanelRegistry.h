@@ -9,12 +9,16 @@
 namespace sw
 {
 	class IRHIDevice;
+}
+
+namespace sw::editor
+{
 	/** @brief 에디터 패널 카테고리 */
 	enum class EditorPanelCategory : uint8
 	{
 		Core = 0, // Hierarchy, Inspector, GameView, Console, Profiler, ContentBrowser
 		Tool,	  // Sequencer, AnimationGraph, DialogueGraph, PrefabEditor, TileMap, SpriteClip
-		Custom	  // 게임/플러그인 커스텀 도구
+		Custom	  // 게임/플러그인 커스텀 패널
 	};
 
 	/** @brief 등록된 에디터 패널 항목 메타데이터 */
@@ -28,7 +32,7 @@ namespace sw
 
 	/**
 	 * @class EditorPanelRegistry
-	 * @brief 에디터 패널 및 도구 인스턴스를 중앙에서 등록 및 관리하는 정적 레지스트리
+	 * @brief 에디터 패널 인스턴스를 중앙에서 등록 및 관리하는 정적 레지스트리
 	 */
 	class EditorPanelRegistry
 	{
@@ -78,4 +82,4 @@ namespace sw
 	private:
 		vector<EditorPanelEntry> _listPanels;
 	};
-} // namespace sw
+} // namespace sw::editor

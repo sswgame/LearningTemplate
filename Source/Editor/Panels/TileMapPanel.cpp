@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Tools/TileMapTool.h"
+#include "Editor/Panels/TileMapPanel.h"
 
 #include "Editor/Common/Config/EditorData.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
@@ -11,9 +11,9 @@
 
 #include <imgui.h>
 
-namespace sw
+namespace sw::editor
 {
-	TileMapTool::TileMapTool()
+	TileMapPanel::TileMapPanel()
 		: IEditorPanel( false )
 		, _arrPathBuffer{}
 		, _arrNameBuffer{}
@@ -49,7 +49,7 @@ namespace sw
 		resize( 8, 8 );
 	}
 
-	void TileMapTool::drawContent()
+	void TileMapPanel::drawContent()
 	{
 		const string& focused = EditorWorkspace::focusedAssetPath();
 		if ( focused.empty() == false && focused.find( ".xml" ) != string::npos && focused != _arrPathBuffer )
@@ -74,7 +74,7 @@ namespace sw
 		if ( ImGui::Button( "Load" ) )
 		{
 			if ( loadXml( _arrPathBuffer ) == false )
-				SW_LOG_WARNING( "[TileMapTool] %#", _status.c_str() );
+				SW_LOG_WARNING( "[TileMapPanel] %#", _status.c_str() );
 		}
 		ImGui::SameLine();
 		if ( ImGui::Button( "Save" ) )
@@ -199,7 +199,7 @@ namespace sw
 		}
 	}
 
-	void TileMapTool::resize( int32 width, int32 height )
+	void TileMapPanel::resize( int32 width, int32 height )
 	{
 		if ( width <= 0 || height <= 0 )
 			return;
@@ -213,7 +213,7 @@ namespace sw
 		_listWarps.clear();
 	}
 
-	bool TileMapTool::loadXml( string_view assetRelativePath )
+	bool TileMapPanel::loadXml( string_view assetRelativePath )
 	{
 		string absPath = ResourceUtil::getResourcePath( assetRelativePath );
 		if ( absPath.empty() )
@@ -336,7 +336,7 @@ namespace sw
 		return true;
 	}
 
-	bool TileMapTool::saveXml( string_view assetRelativePath ) const
+	bool TileMapPanel::saveXml( string_view assetRelativePath ) const
 	{
 		string absPath = ResourceUtil::getResourcePath( assetRelativePath );
 		if ( absPath.empty() )
@@ -386,7 +386,7 @@ namespace sw
 		return FileUtil::writeTextFile( absPath, sb.c_str() );
 	}
 
-	void TileMapTool::paintCell( int32 x, int32 y )
+	void TileMapPanel::paintCell( int32 x, int32 y )
 	{
 		if ( inBounds( x, y ) == false )
 			return;
@@ -435,7 +435,7 @@ namespace sw
 		}
 	}
 
-	void TileMapTool::paintEdgeWarp( int32 edge )
+	void TileMapPanel::paintEdgeWarp( int32 edge )
 	{
 		const utf8* targets[] = { _arrEdgeTargetN, _arrEdgeTargetE, _arrEdgeTargetS, _arrEdgeTargetW };
 		if ( edge < 0 || edge > 3 || targets[edge][0] == '\0' )
@@ -488,13 +488,13 @@ namespace sw
 		}
 	}
 
-	bool TileMapTool::inBounds( int32 x, int32 y ) const
+	bool TileMapPanel::inBounds( int32 x, int32 y ) const
 	{
 		return x >= 0 && y >= 0 && x < _width && y < _height;
 	}
 
-	size_t TileMapTool::indexOf( int32 x, int32 y ) const
+	size_t TileMapPanel::indexOf( int32 x, int32 y ) const
 	{
 		return static_cast<size_t>( y * _width + x );
 	}
-} // namespace sw
+} // namespace sw::editor

@@ -11,7 +11,10 @@
 namespace sw
 {
 	class IRHIDevice;
+}
 
+namespace sw::editor
+{
 	/**
 	 * @class IEditorPanel
 	 * @brief 도킹 가능한 ImGui 패널. 파생은 drawContent()만 구현합니다.
@@ -63,11 +66,11 @@ namespace sw
 		/** @brief 패널이 접히거나 탭이 숨겨졌을 때 호출됩니다. */
 		virtual void onPanelCollapsed() {}
 		/** @brief EditorPanelFlags 조합. 기본은 None. */
-		virtual editor::EditorPanelFlags getPanelFlags() const { return editor::EditorPanelFlags::None; }
+		virtual EditorPanelFlags getPanelFlags() const { return EditorPanelFlags::None; }
 		/** @brief FirstUseEver 크기. (0,0)이면 적용하지 않습니다. */
 		virtual float2 getInitialPanelSize() const { return float2{ 0.0f, 0.0f }; }
 
 	private:
 		bool _bOpen;
 	};
-} // namespace sw
+} // namespace sw::editor

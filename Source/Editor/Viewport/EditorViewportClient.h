@@ -10,7 +10,10 @@ namespace sw
 {
 	class IRHIDevice;
 	class CameraComponent;
+}
 
+namespace sw::editor
+{
 	/** @brief 에디터 카메라 제어 모드 */
 	enum class CameraControlMode : uint8
 	{
@@ -75,4 +78,4 @@ namespace sw
 		ViewportToolbarSettings _toolbarSettings{};
 		EditorViewportToolbar	_toolbar{};
 	};
-} // namespace sw
+} // namespace sw::editor

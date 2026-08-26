@@ -16,7 +16,7 @@
 #include <imgui_internal.h>
 #include <imgui_stdlib.h>
 
-namespace sw
+namespace sw::editor
 {
 	namespace
 	{
@@ -392,4 +392,4 @@ namespace sw
 		InspectorPropertyRegistry::registerType( "float4", make_unique<Float4Property>() );
 		InspectorPropertyRegistry::registerType( "hashed_string", make_unique<HashedStringProperty>() );
 	}
-} // namespace sw
+} // namespace sw::editor

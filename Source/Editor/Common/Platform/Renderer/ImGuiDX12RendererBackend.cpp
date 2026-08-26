@@ -10,7 +10,7 @@
 	#include <imgui_impl_dx12.h>
 #endif
 
-namespace sw
+namespace sw::editor
 {
 #if defined( SW_PLATFORM_WINDOWS )
 	namespace
@@ -310,4 +310,4 @@ namespace sw
 		if ( index < _maxDescriptors )
 			_listFreeDescriptors.push_back( index );
 	}
-} // namespace sw
+} // namespace sw::editor

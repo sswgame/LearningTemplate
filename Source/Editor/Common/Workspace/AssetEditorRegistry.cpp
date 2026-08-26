@@ -5,7 +5,7 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
-namespace sw
+namespace sw::editor
 {
 	namespace
 	{
@@ -99,4 +99,4 @@ namespace sw
 		registerAssetEditorImpl( ".png", "Sprite Clip" );
 		registerAssetEditorImpl( ".jpg", "Sprite Clip" );
 	}
-} // namespace sw
+} // namespace sw::editor

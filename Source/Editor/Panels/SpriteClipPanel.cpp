@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Tools/SpriteClipTool.h"
+#include "Editor/Panels/SpriteClipPanel.h"
 
 #include "Editor/Common/Config/EditorConfig.h"
 #include "Editor/Common/Config/EditorData.h"
@@ -12,9 +12,8 @@
 
 #include <imgui.h>
 
-namespace sw
+namespace sw::editor
 {
-
 	namespace
 	{
 		bool parseFloatAfter( string_view src, size_t from, const utf8* pKey, float32& out )
@@ -61,7 +60,7 @@ namespace sw
 
 	} // namespace
 
-	SpriteClipTool::SpriteClipTool()
+	SpriteClipPanel::SpriteClipPanel()
 		: IEditorPanel( false )
 		, _arrAtlasPath{}
 		, _listFrames{}
@@ -76,7 +75,7 @@ namespace sw
 		_listFrames.push_back( Frame{} );
 	}
 
-	void SpriteClipTool::drawContent()
+	void SpriteClipPanel::drawContent()
 	{
 		ImGui::InputText( "Atlas", _arrAtlasPath, sizeof( _arrAtlasPath ) );
 		if ( ImGui::Button( "Load" ) )
@@ -168,7 +167,7 @@ namespace sw
 		}
 	}
 
-	void SpriteClipTool::loadJson()
+	void SpriteClipPanel::loadJson()
 	{
 		const string path = EditorUtil::resolveEditorConfigFile( EditorConfig::getActive()._spriteClipFile.c_str() );
 		if ( path.empty() || FileUtil::fileExists( path ) == false )
@@ -251,7 +250,7 @@ namespace sw
 		_status		   = "Loaded SpriteClip.json";
 	}
 
-	void SpriteClipTool::saveJson() const
+	void SpriteClipPanel::saveJson() const
 	{
 		const string path = EditorUtil::resolveEditorConfigFile( EditorConfig::getActive()._spriteClipFile.c_str() );
 		if ( path.empty() )
@@ -287,4 +286,4 @@ namespace sw
 								  text.size() ) )
 			SW_LOG_INFO( "[SpriteClip] Saved %#", path.c_str() );
 	}
-} // namespace sw
+} // namespace sw::editor

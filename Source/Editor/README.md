@@ -2,26 +2,27 @@
 
 씬을 편집하고 디버깅하는 **에디터 UI(ImGui)** 입니다. Dev에서만 `EditorModule` MODULE로 빌드됩니다.
 
-루트에는 모듈 진입점만 둡니다: `IEditor.h`, `ImGuiEditor.*`
+루트에는 모듈 진입점만 둡니다: `IEditor.h` (`sw`, App 계약), `ImGuiEditor.*` (`sw::editor`, 구현).
+에디터 폴더의 나머지 타입은 `sw::editor`에 둡니다.
 
 ## 디렉터리 구조
 
 ### 공통 (`Common/`)
 
-에디터 기능이 공통으로 쓰는 프레임워크입니다. 새 패널/툴을 만들 때 여기부터 찾으면 됩니다.
+에디터 기능이 공통으로 쓰는 프레임워크입니다. 새 패널을 만들 때 여기부터 찾으면 됩니다.
 
 - **EditorUtil**: 폰트·설정 경로 등 공용 유틸
 - **Platform/**: ImGui OS/GPU 백엔드
 - **Gui/**: `EditorChrome`, `EditorMenuBar`, `EditorDockLayout`
-- **Widgets/**: 검색, 헤더, 툴바 구분선 등 공유 위젯
+- **Widgets/**: 검색, 헤더, 툴바 구분선, 노드 그래프 캔버스(`EditorNodeGraph`)
 - **Workspace/**: 세션, 선택, 커맨드 스택, 애셋 드롭, 프리팹 인스턴스
 - **Config/**: Host JSON(`EditorConfig`)과 XML 시드(`EditorData`)
 
 ### 기능
 
-- **Panels/**: Hierarchy, Inspector, Game View, Content Browser, Console, Profiler
+- **Panels/**: Hierarchy, Inspector, Game View, Content Browser, Console, Profiler,
+  Sequencer, Animation Graph, Dialogue Graph, Prefab Editor, Tile Map, Sprite Clip
   - `Panels/Inspector/`: 프로퍼티·컴포넌트 인스펙터 확장
-- **Tools/**: AnimationGraph, Sequencer, SpriteClip, TileMap, DialogueGraph
 - **Viewport/**: 뷰포트 클라이언트와 툴바
 - **Popups/**: 커맨드 팔레트, 토스트, 본 계층 팝업
 

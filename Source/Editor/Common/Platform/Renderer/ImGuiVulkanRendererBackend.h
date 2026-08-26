@@ -15,7 +15,10 @@ struct VkSampler_T;
 namespace sw
 {
 	class IRHIDevice;
+}
 
+namespace sw::editor
+{
 	/** @brief ImGui Vulkan 렌더러 (디스크립터 풀 · 샘플러) */
 	class ImGuiVulkanRendererBackend : public IImGuiRendererBackend
 	{
@@ -53,4 +56,4 @@ namespace sw
 		IRHIDevice*							   _pRHIDevice{ nullptr };
 		unordered_map<void*, RHITextureHandle> _mapTextureIds;
 	};
-} // namespace sw
+} // namespace sw::editor

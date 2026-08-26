@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Tools/DialogueGraphTool.h"
+#include "Editor/Panels/DialogueGraphPanel.h"
 
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
@@ -17,7 +17,7 @@
 
 namespace ed = ax::NodeEditor;
 
-namespace sw
+namespace sw::editor
 {
 	namespace
 	{
@@ -105,8 +105,9 @@ namespace sw
 
 	} // namespace
 
-	DialogueGraphTool::DialogueGraphTool()
-		: BaseNodeGraphEditor{ false }
+	DialogueGraphPanel::DialogueGraphPanel()
+		: IEditorPanel{ false }
+		, _nodeGraph{}
 		, _bLoaded{ false }
 		, _selectedNodeId{ 0 }
 		, _listNodes{}
@@ -114,7 +115,12 @@ namespace sw
 	{
 	}
 
-	void DialogueGraphTool::drawContent()
+	void DialogueGraphPanel::shutdown( IRHIDevice* /*pRhiDevice*/ )
+	{
+		_nodeGraph.shutdown();
+	}
+
+	void DialogueGraphPanel::drawContent()
 	{
 		if ( _bLoaded == false )
 			loadGraphData();
@@ -151,27 +157,19 @@ namespace sw
 				_listNodes.clear();
 				_listLinks.clear();
 				ensureDefaults();
-				_bNavigatedToContent = false;
+				_nodeGraph.requestContentFit();
 			}
 			ImGui::SameLine();
 			if ( ImGui::Button( "Zoom Fit" ) )
-				_bNavigatedToContent = false;
+				_nodeGraph.requestContentFit();
 
 			ImGui::SameLine();
 			ImGui::TextDisabled( "(Nodes: %zu, Links: %zu)", _listNodes.size(), _listLinks.size() );
 		}
 
-		ensureEditorContext( "DialogueGraphEditor.json" );
-		if ( _pEditor == nullptr )
-		{
-			ImGui::TextUnformatted( "Failed to create Dialogue Node Editor context." );
-			return;
-		}
-
 		const float32 availWidth  = ImGui::GetContentRegionAvail().x;
 		const float32 canvasWidth = _selectedNodeId > 0 ? availWidth * 0.72f : availWidth;
 
-		// 1) 캔버스 영역
 		editor::EditorSectionDesc canvasDesc{};
 		canvasDesc._pId		  = "DialogueCanvasRegion";
 		canvasDesc._kind	  = editor::EditorSectionKind::Child;
@@ -179,8 +177,12 @@ namespace sw
 		canvasDesc._flags	  = editor::EditorSectionFlags::NoScrollbar | editor::EditorSectionFlags::NoScrollWithMouse;
 		editor::beginSection( canvasDesc );
 
-		ed::SetCurrentEditor( _pEditor );
-		ed::Begin( "DialogueGraphCanvas" );
+		if ( _nodeGraph.beginCanvas( "DialogueGraphCanvas", "DialogueGraphEditor.json" ) == false )
+		{
+			ImGui::TextUnformatted( "Failed to create Dialogue Node Editor context." );
+			editor::endSection();
+			return;
+		}
 
 		// 노드 렌더링
 		for ( DialogueNode& node : _listNodes )
@@ -282,7 +284,7 @@ namespace sw
 
 			ed::EndNode();
 
-			if ( _bNavigatedToContent == false )
+			if ( _nodeGraph.needsContentFit() )
 				ed::SetNodePosition( nodeId, ImVec2( node._x, node._y ) );
 		}
 
@@ -371,11 +373,7 @@ namespace sw
 		if ( count > 0 )
 			_selectedNodeId = static_cast<int32>( selectedNodes[0].Get() );
 
-		if ( _bNavigatedToContent == false )
-		{
-			ed::NavigateToContent( 0.1f );
-			_bNavigatedToContent = true;
-		}
+		_nodeGraph.applyContentFitIfNeeded();
 
 		// 위치 캐시
 		for ( DialogueNode& node : _listNodes )
@@ -385,8 +383,7 @@ namespace sw
 			node._y			 = pos.y;
 		}
 
-		ed::End();
-		ed::SetCurrentEditor( nullptr );
+		_nodeGraph.endCanvas();
 		editor::endSection();
 
 		// 2) 선택된 노드 상세 인스펙터 패널
@@ -476,7 +473,7 @@ namespace sw
 		}
 	}
 
-	void DialogueGraphTool::ensureDefaults()
+	void DialogueGraphPanel::ensureDefaults()
 	{
 		_listNodes.clear();
 		_listLinks.clear();
@@ -529,14 +526,14 @@ namespace sw
 		_listLinks.push_back( DialogueLink{ 5, pinOut( 4 ), pinIn( 5 ) } );
 	}
 
-	void DialogueGraphTool::loadGraphData()
+	void DialogueGraphPanel::loadGraphData()
 	{
 		const string path = "Saved/Dialogue/default_dialogue.json";
 		if ( FileUtil::fileExists( path ) == false )
 		{
 			ensureDefaults();
 			_bLoaded			 = true;
-			_bNavigatedToContent = false;
+			_nodeGraph.requestContentFit();
 			return;
 		}
 
@@ -545,7 +542,7 @@ namespace sw
 		{
 			ensureDefaults();
 			_bLoaded			 = true;
-			_bNavigatedToContent = false;
+			_nodeGraph.requestContentFit();
 			return;
 		}
 
@@ -690,11 +687,11 @@ namespace sw
 		if ( _listNodes.empty() )
 			ensureDefaults();
 
-		_bLoaded			 = true;
-		_bNavigatedToContent = false;
+		_bLoaded = true;
+		_nodeGraph.requestContentFit();
 	}
 
-	void DialogueGraphTool::saveGraphData() const
+	void DialogueGraphPanel::saveGraphData() const
 	{
 		const string path = "Saved/Dialogue/default_dialogue.json";
 		FileUtil::ensureDirectoryExists( path );
@@ -732,10 +729,10 @@ namespace sw
 		sb.append( "  ]\n}\n" );
 
 		FileUtil::writeTextFile( path, sb.view() );
-		SW_LOG_INFO( "[DialogueGraphTool] Saved %zu nodes, %zu links -> %#", _listNodes.size(), _listLinks.size(), path );
+		SW_LOG_INFO( "[DialogueGraphPanel] Saved %zu nodes, %zu links -> %#", _listNodes.size(), _listLinks.size(), path );
 	}
 
-	int32 DialogueGraphTool::nextNodeId() const
+	int32 DialogueGraphPanel::nextNodeId() const
 	{
 		int32 maxId = 0;
 		for ( const DialogueNode& node : _listNodes )
@@ -746,7 +743,7 @@ namespace sw
 		return maxId + 1;
 	}
 
-	int32 DialogueGraphTool::nextLinkId() const
+	int32 DialogueGraphPanel::nextLinkId() const
 	{
 		int32 maxId = 0;
 		for ( const DialogueLink& link : _listLinks )
@@ -757,7 +754,7 @@ namespace sw
 		return maxId + 1;
 	}
 
-	void DialogueGraphTool::addNode( DialogueNodeType type, const utf8* pSpeaker, const utf8* pText )
+	void DialogueGraphPanel::addNode( DialogueNodeType type, const utf8* pSpeaker, const utf8* pText )
 	{
 		DialogueNode node{};
 		node._id	  = nextNodeId();
@@ -773,4 +770,4 @@ namespace sw
 		_listNodes.push_back( node );
 		_selectedNodeId = node._id;
 	}
-} // namespace sw
+} // namespace sw::editor

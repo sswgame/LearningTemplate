@@ -6,7 +6,7 @@
 
 #include <imgui.h>
 
-namespace sw
+namespace sw::editor
 {
 	namespace
 	{
@@ -92,4 +92,4 @@ namespace sw
 			}
 		}
 	}
-} // namespace sw
+} // namespace sw::editor

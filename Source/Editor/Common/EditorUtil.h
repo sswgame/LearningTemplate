@@ -8,7 +8,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
-namespace sw
+namespace sw::editor
 {
 	/** @brief 에디터 폰트·설정 경로 해석 */
 	class EditorUtil
@@ -57,4 +57,4 @@ namespace sw
 		 */
 		static string resolveEditorConfigFile( const utf8* pFileName );
 	};
-} // namespace sw
+} // namespace sw::editor

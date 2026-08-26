@@ -6,7 +6,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 
-namespace sw
+namespace sw::editor
 {
 	/** @brief 메인 도크 레이아웃과 패널 가시성 저장 */
 	class EditorDockLayout
@@ -35,4 +35,4 @@ namespace sw
 		uint8				   _bApplied : 1;
 		[[maybe_unused]] uint8 _reserved : 7;
 	};
-} // namespace sw
+} // namespace sw::editor

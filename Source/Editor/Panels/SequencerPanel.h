@@ -1,5 +1,5 @@
 /**
- * @file SequencerTool.h
+ * @file SequencerPanel.h
  * @brief 실험적 시퀀서 UI 프로토타입 (저장/엔진 타임라인 바인딩 없음)
  */
 #pragma once
@@ -9,17 +9,17 @@
 
 #include "Editor/Common/Gui/IEditorPanel.h"
 
-namespace sw
+namespace sw::editor
 {
 	struct ClipSequence;
 
 	/** @brief 실험적 클립/이벤트 트랙 시퀀서 UI. 엔진 시퀀스 자산과 연결되어 있지 않습니다. */
-	class SequencerTool : public IEditorPanel
+	class SequencerPanel : public IEditorPanel
 	{
 	public:
 		/** @brief 기본 클립 시퀀스로 시작합니다. */
-		SequencerTool();
-		~SequencerTool() override;
+		SequencerPanel();
+		~SequencerPanel() override;
 
 		// ------------------------------------------------------------------------------
 		// 1) IEditorPanel — 제목/그리기
@@ -39,4 +39,4 @@ namespace sw
 		utf8					 _arrCinematicNote[512];
 		unique_ptr<ClipSequence> _sequence;
 	};
-} // namespace sw
+} // namespace sw::editor

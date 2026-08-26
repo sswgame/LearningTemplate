@@ -13,7 +13,7 @@
 #include <imgui.h>
 #include <algorithm>
 
-namespace sw
+namespace sw::editor
 {
 	namespace
 	{
@@ -421,5 +421,4 @@ namespace sw
 
 		ImGui::Columns( 1 );
 	}
-
-} // namespace sw
+} // namespace sw::editor

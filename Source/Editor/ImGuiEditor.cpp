@@ -52,7 +52,7 @@
 	#endif
 #endif
 
-namespace sw
+namespace sw::editor
 {
 	ImGuiEditor::ImGuiEditor()
 		: _platformBackend{ nullptr }
@@ -356,7 +356,7 @@ namespace sw
 		return false;
 	}
 
-	void* ImGuiEditor::registerTexture( RHITextureHandle texture )
+	void* ImGuiEditor::registerTexture( uint64 texture )
 	{
 		if ( _rendererBackend != nullptr )
 			return _rendererBackend->registerTexture( texture );
@@ -437,9 +437,8 @@ namespace sw
 		if ( pRhiDevice->getBackendType() == RHIBackend::OpenGL )
 			pRhiDevice->bindGraphicsContext();
 	}
-} // namespace sw
-
+} // namespace sw::editor
 // ==============================================================================
 // EditorModule C-ABI 진입점 매크로 자동 구현
 // ==============================================================================
-SW_IMPLEMENT_EDITOR_MODULE( sw::ImGuiEditor );
+SW_IMPLEMENT_EDITOR_MODULE( sw::editor::ImGuiEditor );

@@ -1,13 +1,13 @@
 #include "pch.h"
 
-#include "Editor/Tools/SequencerTool.h"
+#include "Editor/Panels/SequencerPanel.h"
 
 
 #include <imgui.h>
 #include <ImGuizmo.h>
 #include <ImSequencer.h>
 
-namespace sw
+namespace sw::editor
 {
 	struct Item
 	{
@@ -97,7 +97,7 @@ namespace sw
 		}
 	};
 
-	SequencerTool::SequencerTool()
+	SequencerPanel::SequencerPanel()
 		: IEditorPanel{ false }
 		, _bExpanded{ true }
 		, _currentFrame{ 0 }
@@ -115,9 +115,9 @@ namespace sw
 		_sequence->_listItems[1]._end	= 40;
 	}
 
-	SequencerTool::~SequencerTool() = default;
+	SequencerPanel::~SequencerPanel() = default;
 
-	void SequencerTool::drawContent()
+	void SequencerPanel::drawContent()
 	{
 		ImGui::SliderInt( "Scrub Frame", &_currentFrame, _sequence->_frameMin, _sequence->_frameMax );
 		ImGui::Text( "Current Frame: %d", _currentFrame );
@@ -137,4 +137,4 @@ namespace sw
 		ImSequencer::Sequencer( _sequence.get(), &_currentFrame, &_bExpanded, &_selected, &_firstFrame,
 								ImSequencer::SEQUENCER_EDIT_STARTEND | ImSequencer::SEQUENCER_ADD | ImSequencer::SEQUENCER_DEL | ImSequencer::SEQUENCER_CHANGE_FRAME );
 	}
-} // namespace sw
+} // namespace sw::editor

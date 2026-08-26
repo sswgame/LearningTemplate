@@ -17,7 +17,10 @@ namespace sw
 	class GameObject;
 	class GameObjectManager;
 	class Component;
+}
 
+namespace sw::editor
+{
 	/** @brief 인스펙터가 보여주는 대상 */
 	enum class InspectMode : uint8
 	{
@@ -107,4 +110,4 @@ namespace sw
 		/** @brief 본 계층 구조 팝업의 열림 상태를 반환합니다. */
 		static bool& boneHierarchyPopupOpen();
 	};
-} // namespace sw
+} // namespace sw::editor

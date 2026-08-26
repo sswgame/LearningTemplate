@@ -6,7 +6,7 @@
 #include "Editor/Common/Platform/Renderer/ImGuiOpenGLRendererBackend.h"
 #include "Editor/Common/Platform/Renderer/ImGuiVulkanRendererBackend.h"
 
-namespace sw
+namespace sw::editor
 {
 	unique_ptr<IImGuiRendererBackend> IImGuiRendererBackend::createRendererBackend( RHIBackend backend )
 	{
@@ -24,4 +24,4 @@ namespace sw
 				return make_unique<ImGuiDX11RendererBackend>();
 		}
 	}
-} // namespace sw
+} // namespace sw::editor

@@ -8,7 +8,7 @@
 #include "Core/Container/string.h"
 #include "Core/Memory/Memory.h"
 
-namespace sw
+namespace sw::editor
 {
 	class IInspectorProperty;
 
@@ -30,4 +30,4 @@ namespace sw
 	private:
 		map<string, unique_ptr<IInspectorProperty>> _mapProperties;
 	};
-} // namespace sw
+} // namespace sw::editor

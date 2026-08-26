@@ -10,7 +10,7 @@
 
 #include "sw/config/ConfigConstants.h"
 
-namespace sw
+namespace sw::editor
 {
 	namespace
 	{
@@ -51,4 +51,4 @@ namespace sw
 
 		setActive( cfg );
 	}
-} // namespace sw
+} // namespace sw::editor

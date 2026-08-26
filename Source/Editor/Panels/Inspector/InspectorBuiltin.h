@@ -4,8 +4,8 @@
  */
 #pragma once
 
-namespace sw
+namespace sw::editor
 {
 	void registerInspectorBuiltinProperties();
 	void registerInspectorBuiltinComponents();
-} // namespace sw
+} // namespace sw::editor

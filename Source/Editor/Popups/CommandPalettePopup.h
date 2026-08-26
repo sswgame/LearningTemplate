@@ -4,7 +4,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 
-namespace sw
+namespace sw::editor
 {
 	/** @brief 커맨드 팔레트 항목 */
 	struct CommandPaletteEntry
@@ -54,4 +54,4 @@ namespace sw
 		bool						_bOpen{ false };
 		bool						_bJustOpened{ false };
 	};
-} // namespace sw
+} // namespace sw::editor

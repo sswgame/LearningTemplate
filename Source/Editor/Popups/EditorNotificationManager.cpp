@@ -8,7 +8,7 @@
 #include <imgui.h>
 #include <algorithm>
 
-namespace sw
+namespace sw::editor
 {
 	namespace
 	{
@@ -169,4 +169,4 @@ namespace sw
 			currentY -= 8.0f;
 		}
 	}
-} // namespace sw
+} // namespace sw::editor

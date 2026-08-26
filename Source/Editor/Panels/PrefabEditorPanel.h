@@ -6,7 +6,7 @@
 
 #include "Editor/Common/Gui/IEditorPanel.h"
 
-namespace sw
+namespace sw::editor
 {
 	/**
 	 * @brief 프리팹 인스턴스 컴포넌트 프로퍼티 오버라이드 항목
@@ -23,11 +23,11 @@ namespace sw
 	/**
 	 * @brief 프리팹 인스턴스 오버라이드 검사, 복원/적용 및 중첩 프리팹 비주얼 관리 도구
 	 */
-	class PrefabEditorTool : public IEditorPanel
+	class PrefabEditorPanel : public IEditorPanel
 	{
 	public:
-		PrefabEditorTool();
-		~PrefabEditorTool() override = default;
+		PrefabEditorPanel();
+		~PrefabEditorPanel() override = default;
 
 		bool		isToolPanel() const override { return true; }
 		const utf8* getPanelTitle() const override { return "Prefab Inspector & Overrides"; }
@@ -43,4 +43,4 @@ namespace sw
 		vector<string>			   _listNestedPrefabs;
 		bool					   _bShowOnlyModified;
 	};
-} // namespace sw
+} // namespace sw::editor

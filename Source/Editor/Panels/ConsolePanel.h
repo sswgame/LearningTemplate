@@ -11,7 +11,7 @@
 
 #include "Editor/Common/Gui/IEditorPanel.h"
 
-namespace sw
+namespace sw::editor
 {
 	/** @brief Logger 출력을 미러링하는 라이브 콘솔 */
 	class ConsolePanel : public IEditorPanel
@@ -55,5 +55,4 @@ namespace sw
 		uint8				   _bHasNewLogs	  : 1;
 		[[maybe_unused]] uint8 _reservedFlags : 7;
 	};
-
-} // namespace sw
+} // namespace sw::editor

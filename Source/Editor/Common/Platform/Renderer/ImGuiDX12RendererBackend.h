@@ -14,7 +14,10 @@ struct D3D12_GPU_DESCRIPTOR_HANDLE;
 namespace sw
 {
 	class IRHIDevice;
+}
 
+namespace sw::editor
+{
 	/** @brief ImGui DirectX12 렌더러 (SRV 힙 풀 포함) */
 	class ImGuiDX12RendererBackend : public IImGuiRendererBackend
 	{
@@ -64,4 +67,4 @@ namespace sw
 		vector<uint32>								 _listFreeDescriptors;
 #endif
 	};
-} // namespace sw
+} // namespace sw::editor

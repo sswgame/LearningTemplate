@@ -12,7 +12,7 @@
 
 #include <imgui.h>
 
-namespace sw
+namespace sw::editor
 {
 	namespace
 	{
@@ -112,4 +112,4 @@ namespace sw
 
 		editor::endPanel();
 	}
-} // namespace sw
+} // namespace sw::editor

@@ -19,7 +19,7 @@
 	#include <vulkan/vulkan_metal.h>
 #endif
 
-namespace sw
+namespace sw::editor
 {
 	namespace
 	{
@@ -281,4 +281,4 @@ namespace sw
 		ImGui_ImplVulkan_RemoveTexture( static_cast<VkDescriptorSet>( pTextureID ) );
 		_mapTextureIds.erase( it );
 	}
-} // namespace sw
+} // namespace sw::editor

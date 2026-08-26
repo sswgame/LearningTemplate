@@ -15,7 +15,7 @@
 
 #include <imgui.h>
 
-namespace sw
+namespace sw::editor
 {
 	namespace
 	{
@@ -126,4 +126,4 @@ namespace sw
 		InspectorComponentRegistry::registerComponent<SpriteComponent, SpriteComponentInspector>();
 		InspectorComponentRegistry::registerComponent<MeshComponent, MeshComponentInspector>();
 	}
-} // namespace sw
+} // namespace sw::editor

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Tools/AnimationGraphTool.h"
+#include "Editor/Panels/AnimationGraphPanel.h"
 
 #include "Editor/Common/Config/EditorConfig.h"
 #include "Editor/Common/EditorUtil.h"
@@ -13,9 +13,8 @@
 
 namespace ed = ax::NodeEditor;
 
-namespace sw
+namespace sw::editor
 {
-
 	namespace
 	{
 		int32 pinIn( int32 nodeId )
@@ -42,15 +41,21 @@ namespace sw
 
 	} // namespace
 
-	AnimationGraphTool::AnimationGraphTool()
-		: BaseNodeGraphEditor{ false }
+	AnimationGraphPanel::AnimationGraphPanel()
+		: IEditorPanel{ false }
+		, _nodeGraph{}
 		, _bLoaded{ false }
 		, _listNodes{}
 		, _listLinks{}
 	{
 	}
 
-	void AnimationGraphTool::drawContent()
+	void AnimationGraphPanel::shutdown( IRHIDevice* /*pRhiDevice*/ )
+	{
+		_nodeGraph.shutdown();
+	}
+
+	void AnimationGraphPanel::drawContent()
 	{
 		if ( _bLoaded == false )
 			loadGraphData();
@@ -86,15 +91,12 @@ namespace sw
 		ImGui::TextDisabled( "Nodes: %zu  Links: %zu  (%s)", _listNodes.size(), _listLinks.size(),
 							 EditorConfig::getActive()._animationGraphDataFile.c_str() );
 
-		ensureEditorContext( EditorConfig::getActive()._animationGraphSettingsFile.c_str() );
-		if ( _pEditor == nullptr )
+		if ( _nodeGraph.beginCanvas( "AnimationGraphCanvas",
+									 EditorConfig::getActive()._animationGraphSettingsFile.c_str() ) == false )
 		{
 			ImGui::TextUnformatted( "Failed to create Animation Graph editor context." );
 			return;
 		}
-
-		ed::SetCurrentEditor( _pEditor );
-		ed::Begin( "AnimationGraphCanvas" );
 
 		for ( GraphNode& node : _listNodes )
 		{
@@ -110,7 +112,7 @@ namespace sw
 			ed::EndPin();
 			ed::EndNode();
 
-			if ( _bNavigatedToContent == false )
+			if ( _nodeGraph.needsContentFit() )
 				ed::SetNodePosition( nodeId, ImVec2( node._x, node._y ) );
 		}
 
@@ -183,11 +185,7 @@ namespace sw
 			ed::EndDelete();
 		}
 
-		if ( _bNavigatedToContent == false )
-		{
-			ed::NavigateToContent( 0.1f );
-			_bNavigatedToContent = true;
-		}
+		_nodeGraph.applyContentFitIfNeeded();
 
 		// 저장용 위치를 캐시합니다.
 		for ( GraphNode& node : _listNodes )
@@ -197,11 +195,10 @@ namespace sw
 			node._y			 = pos.y;
 		}
 
-		ed::End();
-		ed::SetCurrentEditor( nullptr );
+		_nodeGraph.endCanvas();
 	}
 
-	void AnimationGraphTool::ensureDefaults()
+	void AnimationGraphPanel::ensureDefaults()
 	{
 		if ( _listNodes.empty() == false )
 			return;
@@ -210,7 +207,7 @@ namespace sw
 		_listLinks.push_back( GraphLink{ 100, 1, 2 } );
 	}
 
-	void AnimationGraphTool::loadGraphData()
+	void AnimationGraphPanel::loadGraphData()
 	{
 		const string path = EditorUtil::resolveEditorConfigFile( EditorConfig::getActive()._animationGraphDataFile.c_str() );
 		if ( path.empty() || FileUtil::fileExists( path ) == false )
@@ -321,11 +318,11 @@ namespace sw
 
 		if ( _listNodes.empty() )
 			ensureDefaults();
-		_bLoaded			 = true;
-		_bNavigatedToContent = false;
+		_bLoaded = true;
+		_nodeGraph.requestContentFit();
 	}
 
-	void AnimationGraphTool::saveGraphData() const
+	void AnimationGraphPanel::saveGraphData() const
 	{
 		const string path = EditorUtil::resolveEditorConfigFile( EditorConfig::getActive()._animationGraphDataFile.c_str() );
 		if ( path.empty() )
@@ -339,13 +336,12 @@ namespace sw
 			const GraphNode& n = _listNodes[nodeIndex];
 			float32			 x = n._x;
 			float32			 y = n._y;
-			if ( _pEditor != nullptr )
+			if ( _nodeGraph.bind() )
 			{
-				ed::SetCurrentEditor( _pEditor );
 				const ImVec2 pos = ed::GetNodePosition( toNodeId( n._id ) );
 				x				 = pos.x;
 				y				 = pos.y;
-				ed::SetCurrentEditor( nullptr );
+				_nodeGraph.unbind();
 			}
 			sb.append( "    { \"id\": " ).append( n._id ).append( ", \"name\": \"" ).append( JsonSerializer::escapeString( n._name ).c_str() ).append( "\", \"x\": " ).append( x ).append( ", \"y\": " ).append( y ).append( " }" );
 			if ( nodeIndex + 1 < _listNodes.size() )
@@ -369,7 +365,7 @@ namespace sw
 			SW_LOG_INFO( "[AnimationGraph] Saved %#", path.c_str() );
 	}
 
-	int32 AnimationGraphTool::nextNodeId() const
+	int32 AnimationGraphPanel::nextNodeId() const
 	{
 		int32 maxId{ 0 };
 		for ( const GraphNode& node : _listNodes )
@@ -379,7 +375,7 @@ namespace sw
 		return maxId + 1;
 	}
 
-	int32 AnimationGraphTool::nextLinkId() const
+	int32 AnimationGraphPanel::nextLinkId() const
 	{
 		int32 maxId{ 0 };
 		for ( const GraphLink& link : _listLinks )
@@ -389,7 +385,7 @@ namespace sw
 		return maxId + 1;
 	}
 
-	void AnimationGraphTool::addNamedNode( const utf8* pName )
+	void AnimationGraphPanel::addNamedNode( const utf8* pName )
 	{
 		GraphNode n{};
 		n._id	= nextNodeId();
@@ -398,4 +394,4 @@ namespace sw
 		n._y	= 40.0f + static_cast<float32>( _listNodes.size() ) * 30.0f;
 		_listNodes.push_back( std::move( n ) );
 	}
-} // namespace sw
+} // namespace sw::editor

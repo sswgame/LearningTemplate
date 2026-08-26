@@ -3,7 +3,7 @@
 #include "Core/Container/map.h"
 #include "Core/Container/string.h"
 
-namespace sw
+namespace sw::editor
 {
 	/**
 	 * @class AssetEditorRegistry
@@ -34,4 +34,4 @@ namespace sw
 	private:
 		map<string, string> _mapExtToWindowTitle;
 	};
-} // namespace sw
+} // namespace sw::editor

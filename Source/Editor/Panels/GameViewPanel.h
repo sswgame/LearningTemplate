@@ -8,7 +8,7 @@
 #include "Editor/Viewport/EditorViewportClient.h"
 #include "Editor/Common/Gui/IEditorPanel.h"
 
-namespace sw
+namespace sw::editor
 {
 	/** @brief 게임 프레임버퍼를 표시하고 선택된 오브젝트 트랜스폼을 편집합니다 */
 	class GameViewPanel : public IEditorPanel
@@ -36,4 +36,4 @@ namespace sw
 	private:
 		EditorViewportClient _viewportClient;
 	};
-} // namespace sw
+} // namespace sw::editor

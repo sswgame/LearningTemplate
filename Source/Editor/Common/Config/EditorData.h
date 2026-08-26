@@ -8,7 +8,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
-namespace sw
+namespace sw::editor
 {
 	// ------------------------------------------------------------------------------
 	// 1) EditorData — 맵/아틀라스/폰트 시드
@@ -58,5 +58,4 @@ namespace sw
 		 */
 		bool loadFromHostPath( string_view hostRelativePath = {} );
 	};
-
-} // namespace sw
+} // namespace sw::editor

@@ -11,7 +11,7 @@
 
 #include "Editor/Common/Gui/IEditorPanel.h"
 
-namespace sw
+namespace sw::editor
 {
 	/** @brief 콘텐츠 루트를 탐색하고 애셋을 선택·엽니다 */
 	class ContentBrowserPanel : public IEditorPanel
@@ -129,5 +129,4 @@ namespace sw
 		uint8				   _bFolderDirty  : 1;
 		[[maybe_unused]] uint8 _reservedFlags : 6;
 	};
-
-} // namespace sw
+} // namespace sw::editor

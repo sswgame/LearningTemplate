@@ -5,7 +5,7 @@
 #pragma once
 #include "Editor/Common/Gui/IEditorPanel.h"
 
-namespace sw
+namespace sw::editor
 {
 	/** @brief 메모리 프로파일러 탭을 표시하는 에디터 도구 윈도우 */
 	class ProfilerPanel : public IEditorPanel
@@ -30,5 +30,4 @@ namespace sw
 		/** @brief 메모리 프로파일 탭을 그립니다. */
 		void drawMemoryTab();
 	};
-
-} // namespace sw
+} // namespace sw::editor

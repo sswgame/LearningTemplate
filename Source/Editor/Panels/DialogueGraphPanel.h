@@ -3,9 +3,10 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
-#include "Editor/Tools/BaseNodeGraphEditor.h"
+#include "Editor/Common/Gui/IEditorPanel.h"
+#include "Editor/Common/Widgets/EditorNodeGraph.h"
 
-namespace sw
+namespace sw::editor
 {
 	/** @brief 대화 노드 타입 */
 	enum class DialogueNodeType : uint8
@@ -19,17 +20,20 @@ namespace sw
 	};
 
 	/** @brief imgui-node-editor 기반 비주얼 대화/퀘스트 노드 그래프 에디터 */
-	class DialogueGraphTool : public BaseNodeGraphEditor
+	class DialogueGraphPanel : public IEditorPanel
 	{
 	public:
 		/** @brief 대화 그래프 도구를 생성합니다. */
-		DialogueGraphTool();
+		DialogueGraphPanel();
 		/** @brief 노드 에디터 컨텍스트를 해제합니다. */
-		virtual ~DialogueGraphTool() override = default;
+		virtual ~DialogueGraphPanel() override = default;
 
 		// ------------------------------------------------------------------------------
 		// 1) IEditorPanel — 수명주기 및 UI 렌더링
 		// ------------------------------------------------------------------------------
+		void shutdown( IRHIDevice* pRhiDevice ) override;
+		/** @brief 온디맨드 패널이므로 기본적으로 닫힌 채 시작합니다. */
+		bool isToolPanel() const override { return true; }
 		/** @brief 대화 노드 그래프 UI를 렌더링합니다. */
 		void drawContent() override;
 		/** @brief 윈도우 제목을 반환합니다. */
@@ -80,10 +84,10 @@ namespace sw
 		void addNode( DialogueNodeType type, const utf8* pSpeaker = "", const utf8* pText = "" );
 
 	private:
-		bool				 _bLoaded;
-		int32				 _selectedNodeId;
-		vector<DialogueNode> _listNodes;
-		vector<DialogueLink> _listLinks;
+		EditorNodeGraph _nodeGraph;
+		bool					_bLoaded;
+		int32					_selectedNodeId;
+		vector<DialogueNode>	_listNodes;
+		vector<DialogueLink>	_listLinks;
 	};
-
-} // namespace sw
+} // namespace sw::editor

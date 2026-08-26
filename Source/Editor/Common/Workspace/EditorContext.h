@@ -4,6 +4,11 @@
 
 namespace sw
 {
+	class IRHIDevice;
+}
+
+namespace sw::editor
+{
 	class SelectionManager;
 	class EditorNotificationManager;
 	class EditorContextMenuRegistry;
@@ -12,7 +17,6 @@ namespace sw
 	class AssetEditorRegistry;
 	class InspectorComponentRegistry;
 	class InspectorPropertyRegistry;
-	class IRHIDevice;
 	class IImGuiRendererBackend;
 
 	/** @brief 에디터가 소유하는 Game View RT. App은 매 프레임 핸들만 조회합니다. */
@@ -84,4 +88,4 @@ namespace sw
 
 		static EditorContext* s_pActiveContext;
 	};
-} // namespace sw
+} // namespace sw::editor

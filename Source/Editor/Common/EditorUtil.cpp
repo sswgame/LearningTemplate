@@ -11,9 +11,8 @@
 #include <fa_solid_900.h>
 #include <IconsFontAwesome6.h>
 
-namespace sw
+namespace sw::editor
 {
-
 	namespace
 	{
 		/**
@@ -232,4 +231,4 @@ namespace sw
 
 		return FileUtil::joinPath( configDir, pFileName );
 	}
-} // namespace sw
+} // namespace sw::editor

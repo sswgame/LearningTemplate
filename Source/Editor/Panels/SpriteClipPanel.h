@@ -1,5 +1,5 @@
 /**
- * @file SpriteClipTool.h
+ * @file SpriteClipPanel.h
  * @brief 아틀라스 스프라이트 프레임 / 트랜스폼 키 클립 에디터 (파일명은 editordata.xml)
  */
 #pragma once
@@ -10,14 +10,14 @@
 
 #include "Editor/Common/Gui/IEditorPanel.h"
 
-namespace sw
+namespace sw::editor
 {
 	/** @brief 프레임 목록과 선택적 TransformAnimation 키를 편집합니다 (AnimGraph과 별개) */
-	class SpriteClipTool : public IEditorPanel
+	class SpriteClipPanel : public IEditorPanel
 	{
 	public:
 		/** @brief 스프라이트 클립 도구를 생성합니다. */
-		SpriteClipTool();
+		SpriteClipPanel();
 
 		// ------------------------------------------------------------------------------
 		// 1) IEditorPanel — 제목/그리기
@@ -68,4 +68,4 @@ namespace sw
 		int32				 _selectedKey;
 		string				 _status;
 	};
-} // namespace sw
+} // namespace sw::editor

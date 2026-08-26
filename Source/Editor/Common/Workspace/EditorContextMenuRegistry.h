@@ -4,7 +4,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 
-namespace sw
+namespace sw::editor
 {
 	/** @brief 컨텍스트 메뉴 표시 위치 */
 	enum class ContextMenuLocation : uint8
@@ -47,4 +47,4 @@ namespace sw
 	private:
 		vector<ContextMenuItem> _mapItems[4];
 	};
-} // namespace sw
+} // namespace sw::editor

@@ -11,6 +11,10 @@ namespace sw
 {
 	class IRHIDevice;
 	enum class RHIBackend : uint32;
+}
+
+namespace sw::editor
+{
 	using RHITextureHandle = uint64;
 
 	/** @brief ImGui GPU 렌더러 백엔드 (DX11 / DX12 / Vulkan / OpenGL) */
@@ -46,4 +50,4 @@ namespace sw
 		/** @brief 지정 RHI 백엔드에 맞는 렌더러 구현을 생성합니다. */
 		static unique_ptr<IImGuiRendererBackend> createRendererBackend( RHIBackend backend );
 	};
-} // namespace sw
+} // namespace sw::editor

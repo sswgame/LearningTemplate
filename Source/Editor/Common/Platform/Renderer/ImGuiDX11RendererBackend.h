@@ -11,7 +11,10 @@
 namespace sw
 {
 	class IRHIDevice;
+}
 
+namespace sw::editor
+{
 	/** @brief ImGui Direct3D 11 렌더러 (SRV 목록) */
 	class ImGuiDX11RendererBackend : public IImGuiRendererBackend
 	{
@@ -48,4 +51,4 @@ namespace sw
 		vector<Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>> _listRegisteredSrvs;
 #endif
 	};
-} // namespace sw
+} // namespace sw::editor

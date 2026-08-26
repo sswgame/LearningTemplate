@@ -19,7 +19,7 @@
 #include <imgui.h>
 #include <algorithm>
 
-namespace sw
+namespace sw::editor
 {
 	namespace
 	{
@@ -304,4 +304,4 @@ namespace sw
 
 		ImGui::PopStyleColor( 2 );
 	}
-} // namespace sw
+} // namespace sw::editor

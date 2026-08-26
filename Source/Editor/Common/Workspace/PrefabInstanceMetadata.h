@@ -3,7 +3,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
-namespace sw
+namespace sw::editor
 {
 	/** @brief 개별 프로퍼티 오버라이드 기록 */
 	struct PrefabPropertyOverride
@@ -42,4 +42,4 @@ namespace sw
 		string						   _prefabPath;
 		vector<PrefabPropertyOverride> _listOverrides;
 	};
-} // namespace sw
+} // namespace sw::editor

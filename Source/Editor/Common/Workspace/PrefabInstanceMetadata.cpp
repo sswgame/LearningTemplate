@@ -2,7 +2,7 @@
 
 #include "Editor/Common/Workspace/PrefabInstanceMetadata.h"
 
-namespace sw
+namespace sw::editor
 {
 	bool PrefabInstanceMetadata::isOverridden( string_view componentName, string_view propertyName ) const
 	{
@@ -43,4 +43,4 @@ namespace sw
 				++overrideIndex;
 		}
 	}
-} // namespace sw
+} // namespace sw::editor

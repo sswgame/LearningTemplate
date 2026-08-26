@@ -21,7 +21,7 @@
 
 #include <imgui.h>
 
-namespace sw
+namespace sw::editor
 {
 	GameViewPanel::GameViewPanel()
 	{
@@ -157,4 +157,4 @@ namespace sw
 			}
 		}
 	}
-} // namespace sw
+} // namespace sw::editor

@@ -8,7 +8,7 @@
 
 #include <imgui.h>
 
-namespace sw
+namespace sw::editor
 {
 	ProfilerPanel::ProfilerPanel()
 		: IEditorPanel( false ) // starts closed
@@ -121,5 +121,4 @@ namespace sw
 		else if ( bDetailed == false )
 			ImGui::Text( "Detailed CallStack tracking is disabled." );
 	}
-
-} // namespace sw
+} // namespace sw::editor

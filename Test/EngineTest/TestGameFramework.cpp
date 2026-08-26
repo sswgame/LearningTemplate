@@ -437,13 +437,13 @@ SW_TEST_CASE( GameFrameworkTest, DialogueRunnerComponentChoiceBranchAndAction )
 }
 
 /**
- * @brief [GameFrameworkTest] DialogueGraphTool 에디터 100배수 핀 포맷 파싱 및 실행 검증
+ * @brief [GameFrameworkTest] DialogueGraphPanel 에디터 100배수 핀 포맷 파싱 및 실행 검증
  */
 SW_TEST_CASE( GameFrameworkTest, DialogueRunnerComponentEditorTool100ScaleFormat )
 {
 	DialogueRunnerComponent runner;
 
-	// DialogueGraphTool 형식:
+	// DialogueGraphPanel 형식:
 	// Start(1) Output(102) -> Dialogue(2) Input(201)
 	// Dialogue(2) Choice 0(210) -> End(3) Input(301)
 	const string testJson = R"({

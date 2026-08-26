@@ -16,7 +16,7 @@
 #include <imgui.h>
 #include <imgui_internal.h>
 
-namespace sw
+namespace sw::editor
 {
 	EditorDockLayout::EditorDockLayout()
 		: _imguiIniPath{}
@@ -172,4 +172,4 @@ namespace sw
 
 		ImGui::DockBuilderFinish( id );
 	}
-} // namespace sw
+} // namespace sw::editor

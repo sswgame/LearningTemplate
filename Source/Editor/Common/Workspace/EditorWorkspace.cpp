@@ -13,7 +13,7 @@
 #include "Engine/Object/GameObject/GameObjectPtr.h"
 #include "Engine/Reflection/ReflectionCore.h"
 
-namespace sw
+namespace sw::editor
 {
 	namespace
 	{
@@ -283,4 +283,4 @@ namespace sw
 		static bool s_open{ false };
 		return s_open;
 	}
-} // namespace sw
+} // namespace sw::editor

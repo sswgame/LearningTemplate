@@ -18,9 +18,8 @@
 #include <imgui.h>
 #include <algorithm>
 
-namespace sw
+namespace sw::editor
 {
-
 	namespace
 	{
 		constexpr const utf8* kHierarchyGoPayload = "SW_HIERARCHY_GO";
@@ -511,4 +510,4 @@ namespace sw
 		}
 		editor::endSection();
 	}
-} // namespace sw
+} // namespace sw::editor

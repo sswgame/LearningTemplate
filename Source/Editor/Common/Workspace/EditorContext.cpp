@@ -17,7 +17,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResource.h"
 
-namespace sw
+namespace sw::editor
 {
 	EditorContext* EditorContext::s_pActiveContext = nullptr;
 
@@ -125,4 +125,4 @@ namespace sw
 		if ( _pRendererBackend != nullptr )
 			_gameView._pTextureId = _pRendererBackend->registerTexture( _gameView._renderTarget );
 	}
-} // namespace sw
+} // namespace sw::editor

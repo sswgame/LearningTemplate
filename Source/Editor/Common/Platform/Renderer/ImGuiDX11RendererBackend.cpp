@@ -10,7 +10,7 @@
 	#include <imgui_impl_dx11.h>
 #endif
 
-namespace sw
+namespace sw::editor
 {
 #if defined( SW_PLATFORM_WINDOWS )
 	namespace
@@ -192,4 +192,4 @@ namespace sw
 		(void)pTextureID;
 #endif
 	}
-} // namespace sw
+} // namespace sw::editor

@@ -9,7 +9,10 @@ namespace sw
 {
 	class Component;
 	class IRHIDevice;
+}
 
+namespace sw::editor
+{
 	/** @brief 컴포넌트 헤더/본문/푸터를 커스텀하는 인스펙터 */
 	class IInspectorComponent
 	{
@@ -28,4 +31,4 @@ namespace sw
 		/** @brief 기본 프로퍼티 이후 푸터 UI */
 		virtual void drawFooter( Component* /*pComponent*/, IRHIDevice* /*pRhiDevice*/ ) {}
 	};
-} // namespace sw
+} // namespace sw::editor

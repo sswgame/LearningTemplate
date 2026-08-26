@@ -6,7 +6,7 @@
 #include "Editor/Panels/Inspector/IInspectorProperty.h"
 #include "Editor/Panels/Inspector/InspectorBuiltin.h"
 
-namespace sw
+namespace sw::editor
 {
 	namespace
 	{
@@ -63,4 +63,4 @@ namespace sw
 	{
 		registerInspectorBuiltinProperties();
 	}
-} // namespace sw
+} // namespace sw::editor

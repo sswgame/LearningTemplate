@@ -3,21 +3,21 @@
 #include "Editor/Panels/EditorPanelRegistry.h"
 
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Tools/AnimationGraphTool.h"
-#include "Editor/Tools/DialogueGraphTool.h"
-#include "Editor/Tools/PrefabEditorTool.h"
-#include "Editor/Tools/SequencerTool.h"
-#include "Editor/Tools/SpriteClipTool.h"
-#include "Editor/Tools/TileMapTool.h"
+#include "Editor/Panels/AnimationGraphPanel.h"
 #include "Editor/Panels/ConsolePanel.h"
 #include "Editor/Panels/ContentBrowserPanel.h"
+#include "Editor/Panels/DialogueGraphPanel.h"
 #include "Editor/Panels/GameViewPanel.h"
 #include "Editor/Panels/GlobalVariablesPanel.h"
 #include "Editor/Panels/HierarchyPanel.h"
 #include "Editor/Panels/InspectorPanel.h"
+#include "Editor/Panels/PrefabEditorPanel.h"
 #include "Editor/Panels/ProfilerPanel.h"
+#include "Editor/Panels/SequencerPanel.h"
+#include "Editor/Panels/SpriteClipPanel.h"
+#include "Editor/Panels/TileMapPanel.h"
 
-namespace sw
+namespace sw::editor
 {
 	namespace
 	{
@@ -176,11 +176,11 @@ namespace sw
 
 		// 온디맨드 도구 (Tool)
 		registerPanelImpl( make_unique<GlobalVariablesPanel>(), EditorPanelCategory::Tool, "Global Variables" );
-		registerPanelImpl( make_unique<SequencerTool>(), EditorPanelCategory::Tool, "Sequencer" );
-		registerPanelImpl( make_unique<AnimationGraphTool>(), EditorPanelCategory::Tool, "Animation Graph" );
-		registerPanelImpl( make_unique<DialogueGraphTool>(), EditorPanelCategory::Tool, "Dialogue Graph" );
-		registerPanelImpl( make_unique<PrefabEditorTool>(), EditorPanelCategory::Tool, "Prefab Editor" );
-		registerPanelImpl( make_unique<TileMapTool>(), EditorPanelCategory::Tool, "Tile Map Tool" );
-		registerPanelImpl( make_unique<SpriteClipTool>(), EditorPanelCategory::Tool, "Sprite Clip" );
+		registerPanelImpl( make_unique<SequencerPanel>(), EditorPanelCategory::Tool, "Sequencer" );
+		registerPanelImpl( make_unique<AnimationGraphPanel>(), EditorPanelCategory::Tool, "Animation Graph" );
+		registerPanelImpl( make_unique<DialogueGraphPanel>(), EditorPanelCategory::Tool, "Dialogue Graph" );
+		registerPanelImpl( make_unique<PrefabEditorPanel>(), EditorPanelCategory::Tool, "Prefab Editor" );
+		registerPanelImpl( make_unique<TileMapPanel>(), EditorPanelCategory::Tool, "Tile Map Tool" );
+		registerPanelImpl( make_unique<SpriteClipPanel>(), EditorPanelCategory::Tool, "Sprite Clip" );
 	}
-} // namespace sw
+} // namespace sw::editor

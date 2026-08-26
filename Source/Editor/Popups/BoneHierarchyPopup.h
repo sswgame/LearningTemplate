@@ -4,7 +4,7 @@
  */
 #pragma once
 
-namespace sw
+namespace sw::editor
 {
 	// ------------------------------------------------------------------------------
 	// 1) BoneHierarchyPopup — 플로팅 유틸 (도크 아님)
@@ -12,4 +12,4 @@ namespace sw
 	// ------------------------------------------------------------------------------
 	/** @brief 본 계층 팝업을 그립니다. */
 	void drawBoneHierarchyPopup();
-} // namespace sw
+} // namespace sw::editor

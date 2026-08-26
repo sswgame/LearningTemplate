@@ -16,7 +16,6 @@ namespace sw
 	class TaskManager;
 	class MemoryProfiler;
 	class CommandStack;
-	struct EditorData;
 	struct EngineData;
 
 	enum class EditorServiceId : uint32
@@ -52,6 +51,8 @@ namespace sw
 
 	namespace editor
 	{
+		struct EditorData;
+
 		SW_MODULE_API void bindEditorService( const ModuleService& service );
 		SW_MODULE_API void unbindEditorService();
 

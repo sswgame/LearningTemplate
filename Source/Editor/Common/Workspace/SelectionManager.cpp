@@ -9,7 +9,7 @@
 
 #include <algorithm>
 
-namespace sw
+namespace sw::editor
 {
 	namespace
 	{
@@ -367,4 +367,4 @@ namespace sw
 		if ( _onSelectionChanged.isBound() )
 			_onSelectionChanged();
 	}
-} // namespace sw
+} // namespace sw::editor

@@ -10,7 +10,7 @@
 
 /**
  * @brief 에디터 모듈의 C-ABI 함수 테이블을 1줄로 구현 및 export하는 매크로
- * @param EditorClass sw::IEditor 인터페이스를 구현하는 에디터 클래스
+ * @param EditorClass sw::IEditor를 구현하는 에디터 클래스 (보통 sw::editor::ImGuiEditor)
  */
 
 #define SW_IMPLEMENT_EDITOR_MODULE( EditorClass )                                                                                                               \
