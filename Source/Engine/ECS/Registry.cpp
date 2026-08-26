@@ -299,10 +299,10 @@ namespace sw
 			const ComponentHandle* pRawHandles = wave.data();
 			const uint32		   totalCount  = static_cast<uint32>( wave.size() );
 			ParallelTaskDelegate   delegate	   = SW_DELEGATE_LAMBDA( ParallelTaskDelegate, [pRegistry, deltaTime, pRawHandles, totalCount]( uint32 index )
-			{
-				if ( index < totalCount )
-					resolveAndTickVal( pRegistry, deltaTime, pRawHandles[index] );
-			} );
+				 {
+				 if ( index < totalCount )
+					 resolveAndTickVal( pRegistry, deltaTime, pRawHandles[index] );
+			 } );
 
 			TaskStageHandle stage  = engine::getTaskManager().createAnonymousStage( "ComponentWave" );
 			TaskHandle		handle = engine::getTaskManager().emplaceParallel( totalCount, delegate );
@@ -326,8 +326,6 @@ namespace sw
 		// exchange 로 읽고 지워야 웨이브를 만드는 동안 들어온 변경을 다음 프레임에 놓치지 않습니다.
 		if ( _bIsTickWavesDirty.exchange( false, std::memory_order_acq_rel ) )
 		{
-			vector<Component*> listAllComponents;
-
 			{
 				std::shared_lock<std::shared_mutex> readLock{ _mapPoolsLock };
 				vector<std::unique_lock<mutex>>		poolLocks;
@@ -337,19 +335,17 @@ namespace sw
 					poolLocks.emplace_back( pool->getMutex() );
 				}
 
+				array<vector<Component*>, 4> groupList;
 				for ( auto& [typeId, pool] : _mapPools )
 				{
-					pool->collectComponents( listAllComponents );
-				}
-
-				array<vector<Component*>, 4> groupList;
-				for ( Component* pComp : listAllComponents )
-				{
-					if ( pComp == nullptr )
-						continue;
-					const uint8 groupIndex = static_cast<uint8>( pComp->getTickGroup() );
-					if ( groupIndex < groupList.size() )
-						groupList[groupIndex].push_back( pComp );
+					pool->forEachComponent( [&]( Component* pComp )
+					{
+						if ( pComp == nullptr )
+							return;
+						const uint8 groupIndex = static_cast<uint8>( pComp->getTickGroup() );
+						if ( groupIndex < groupList.size() )
+							groupList[groupIndex].push_back( pComp );
+					} );
 				}
 
 				_listCachedTickWaves.clear();
@@ -454,14 +450,12 @@ namespace sw
 		std::shared_lock<std::shared_mutex> readLock{ _mapPoolsLock };
 		for ( auto& [typeId, pool] : _mapPools )
 		{
-			vector<Component*>		listComponents;
 			std::scoped_lock<mutex> lock{ pool->getMutex() };
-			pool->collectComponents( listComponents );
-			for ( Component* pComp : listComponents )
+			pool->forEachComponent( []( Component* pComp )
 			{
 				if ( pComp != nullptr )
 					pComp->clearCachedTypeInfo();
-			}
+			} );
 		}
 	}
 
@@ -474,18 +468,16 @@ namespace sw
 		std::shared_lock<std::shared_mutex> readLock{ _mapPoolsLock };
 		for ( auto& [typeId, pool] : _mapPools )
 		{
-			vector<Component*>		listComponents;
 			std::scoped_lock<mutex> lock{ pool->getMutex() };
-			pool->collectComponents( listComponents );
-			for ( Component* pComp : listComponents )
+			pool->forEachComponent( [&typeRegistry]( Component* pComp )
 			{
 				if ( pComp == nullptr )
-					continue;
+					return;
 				const hashed_string typeKey = pComp->getComponentName();
 				if ( typeKey.empty() )
-					continue;
+					return;
 				pComp->setCachedTypeInfo( typeRegistry.findType( typeKey ) );
-			}
+			} );
 		}
 
 		// 리로드 후 풀 구성과 tick 의존성이 바뀌었을 수 있으므로 웨이브를 다시 만듭니다.
@@ -591,7 +583,7 @@ namespace sw
 				auto& sig	= it->second;
 				auto  sigIt = std::lower_bound( sig.begin(), sig.end(), matchedTypeId,
 												[]( const EntitySignatureEntry& entry, uint32 val )
-				{ return entry._typeId < val; } );
+				 { return entry._typeId < val; } );
 				if ( sigIt != sig.end() && sigIt->_typeId == matchedTypeId )
 					sig.erase( sigIt );
 			}

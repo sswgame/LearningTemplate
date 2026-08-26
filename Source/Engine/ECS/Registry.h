@@ -65,8 +65,8 @@ namespace sw
 		virtual void shrinkToFit() = 0;
 		/** @brief 엔티티의 Component 포인터를 반환합니다. 없으면 nullptr. */
 		virtual Component* getComponent( Entity entity ) = 0;
-		/** @brief 풀의 모든 Component 포인터를 모읍니다. 호출자가 getMutex()를 잠가야 합니다. */
-		virtual void collectComponents( vector<Component*>& outComponents ) = 0;
+		/** @brief 풀의 모든 Component 포인터를 순회합니다. 호출자가 getMutex()를 잠가야 합니다. */
+		virtual void forEachComponent( Delegate<void( Component* )> callback ) = 0;
 		/** @brief 이 풀의 구조 변경을 직렬화하는 뮤텍스. */
 		virtual mutex& getMutex() = 0;
 	};
@@ -121,15 +121,15 @@ namespace sw
 			return nullptr;
 		}
 
-		/** @brief 풀의 모든 Component 포인터를 모읍니다. 호출자가 getMutex()를 잠가야 합니다. */
-		void collectComponents( vector<Component*>& outComponents ) override
+		/** @brief 풀의 모든 Component 포인터를 순회합니다. 호출자가 getMutex()를 잠가야 합니다. */
+		void forEachComponent( Delegate<void( Component* )> callback ) override
 		{
 			if constexpr ( std::is_base_of_v<Component, T> )
 			{
 				for ( auto tuple : _uniqueSparseSet )
 				{
 					auto& comp = std::get<1>( tuple );
-					outComponents.push_back( static_cast<Component*>( &comp ) );
+					callback( static_cast<Component*>( &comp ) );
 				}
 			}
 		}
@@ -285,7 +285,7 @@ namespace sw
 				auto&								sig = _mapEntitySignatures[entity];
 				auto								it	= std::lower_bound( sig.begin(), sig.end(), typeId,
 																			[]( const EntitySignatureEntry& entry, uint32 val )
-				{ return entry._typeId < val; } );
+												{ return entry._typeId < val; } );
 				if ( it == sig.end() || it->_typeId != typeId )
 					sig.insert( it, EntitySignatureEntry{ typeId, &pool } );
 			}
@@ -323,7 +323,7 @@ namespace sw
 					auto& sig	= it->second;
 					auto  sigIt = std::lower_bound( sig.begin(), sig.end(), typeId,
 													[]( const EntitySignatureEntry& entry, uint32 val )
-					{ return entry._typeId < val; } );
+					 { return entry._typeId < val; } );
 					if ( sigIt != sig.end() && sigIt->_typeId == typeId )
 						sig.erase( sigIt );
 				}

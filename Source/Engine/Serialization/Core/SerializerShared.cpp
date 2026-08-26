@@ -309,13 +309,11 @@ namespace sw
 			return;
 
 		const hashed_string resolved  = resolveHandlerTypeName( typeName, ctx );
-		const bool			bIsString = ( resolved == hashed_string( "string" ) ||
-										  resolved == hashed_string( "sw::string" ) ||
-										  resolved == hashed_string( "hashed_string" ) ||
-										  resolved == hashed_string( "sw::hashed_string" ) ||
-										  engine::getTypeRegistry().isType( resolved, "string" ) ||
-										  engine::getTypeRegistry().isType( resolved, "hashed_string" ) );
-		const bool			bIsBool	  = ( resolved == hashed_string( "bool" ) || resolved == hashed_string( "sw::bool" ) );
+		const bool			bIsString = ( resolved.isPredefinedType( PredefinedNameType::NameType_string ) ||
+								  resolved.isPredefinedType( PredefinedNameType::NameType_hashed_string ) ||
+								  engine::getTypeRegistry().isType( resolved, "string" ) ||
+								  engine::getTypeRegistry().isType( resolved, "hashed_string" ) );
+		const bool			bIsBool	  = ( resolved.isPredefinedType( PredefinedNameType::NameType_bool ) );
 		const bool			bIsEnum	  = ( engine::getTypeRegistry().findEnum( typeName ) != nullptr );
 
 		if ( bIsString || bIsEnum )

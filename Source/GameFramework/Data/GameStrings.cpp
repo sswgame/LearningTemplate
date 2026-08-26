@@ -34,7 +34,7 @@ namespace sw
 		return bLoaded;
 	}
 
-	bool GameStrings::setupLocalization( string_view directoryOrResourcePath, const string& defaultLanguage, const string& fallbackLanguage )
+	bool GameStrings::setupLocalization( string_view directoryOrResourcePath, string_view defaultLanguage, string_view fallbackLanguage )
 	{
 		clear();
 
@@ -48,7 +48,7 @@ namespace sw
 		return pLoc->setupLocalization( directoryOrResourcePath, defaultLanguage, fallbackLanguage );
 	}
 
-	bool GameStrings::loadLanguage( const string& languageCode, string_view assetRelativePath )
+	bool GameStrings::loadLanguage( string_view languageCode, string_view assetRelativePath )
 	{
 		LocalizationManager* pLoc = game::getService<LocalizationManager>();
 		if ( pLoc == nullptr )
@@ -60,7 +60,7 @@ namespace sw
 		return pLoc->loadLanguageResource( languageCode, assetRelativePath );
 	}
 
-	bool GameStrings::loadLanguageFile( const string& languageCode, const string& filePath )
+	bool GameStrings::loadLanguageFile( string_view languageCode, string_view filePath )
 	{
 		LocalizationManager* pLoc = game::getService<LocalizationManager>();
 		if ( pLoc == nullptr )
@@ -72,7 +72,7 @@ namespace sw
 		return pLoc->loadLanguageFile( languageCode, filePath );
 	}
 
-	bool GameStrings::loadLanguageDirectory( const string& directoryPath, string_view filterExtension, bool bRecursive )
+	bool GameStrings::loadLanguageDirectory( string_view directoryPath, string_view filterExtension, bool bRecursive )
 	{
 		LocalizationManager* pLoc = game::getService<LocalizationManager>();
 		if ( pLoc == nullptr )
@@ -84,7 +84,7 @@ namespace sw
 		return pLoc->loadLanguageDirectory( directoryPath, filterExtension, bRecursive );
 	}
 
-	bool GameStrings::setLanguage( const string& languageCode )
+	bool GameStrings::setLanguage( string_view languageCode )
 	{
 		LocalizationManager* pLoc = game::getService<LocalizationManager>();
 		if ( pLoc == nullptr )
@@ -102,7 +102,7 @@ namespace sw
 		return pLoc->getCurrentLanguage();
 	}
 
-	void GameStrings::setFallbackLanguage( const string& languageCode )
+	void GameStrings::setFallbackLanguage( string_view languageCode )
 	{
 		LocalizationManager* pLoc = game::getService<LocalizationManager>();
 		if ( pLoc != nullptr )
@@ -118,7 +118,7 @@ namespace sw
 		return pLoc->getFallbackLanguage();
 	}
 
-	bool GameStrings::hasLanguage( const string& languageCode )
+	bool GameStrings::hasLanguage( string_view languageCode )
 	{
 		LocalizationManager* pLoc = game::getService<LocalizationManager>();
 		if ( pLoc == nullptr )
@@ -148,7 +148,7 @@ namespace sw
 		return pLoc->getString( hashed_string( pKey ), pFallback );
 	}
 
-	const utf8* GameStrings::getFromLanguage( const string& languageCode, const utf8* pKey, const utf8* pFallback )
+	const utf8* GameStrings::getFromLanguage( string_view languageCode, const utf8* pKey, const utf8* pFallback )
 	{
 		if ( pKey == nullptr )
 			return pFallback;

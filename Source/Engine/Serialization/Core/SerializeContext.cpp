@@ -278,7 +278,6 @@ namespace sw
 				return true;
 			};
 			ctx.registerTextHandler( hashed_string( "bool" ), boolWrite, boolRead );
-			ctx.registerTextHandler( hashed_string( "sw::bool" ), boolWrite, boolRead );
 
 			TextWriteFn strWriteTxt = []( const void* pPtr )
 			{ return string( static_cast<const string*>( pPtr )->c_str() ); };
@@ -294,7 +293,6 @@ namespace sw
 			};
 
 			ctx.registerTextHandler( hashed_string( "string" ), strWriteTxt, strReadTxt );
-			ctx.registerTextHandler( hashed_string( "sw::string" ), strWriteTxt, strReadTxt );
 
 			TextWriteFn hashedStrWriteTxt = []( const void* pPtr )
 			{ return string( static_cast<const hashed_string*>( pPtr )->c_str() ); };
@@ -310,7 +308,6 @@ namespace sw
 			};
 
 			ctx.registerTextHandler( hashed_string( "hashed_string" ), hashedStrWriteTxt, hashedStrReadTxt );
-			ctx.registerTextHandler( hashed_string( "sw::hashed_string" ), hashedStrWriteTxt, hashedStrReadTxt );
 
 			auto packedWrite = []( const void* pPtr ) -> string
 			{

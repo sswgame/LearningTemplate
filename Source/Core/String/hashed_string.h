@@ -119,6 +119,20 @@ namespace sw
 		/** @brief 인턴 인덱스를 반환합니다. */
 		uint32 getIndex() const noexcept { return _stringKeyIndex; }
 
+		/** @brief 사전 정의된 이름 타입인지 확인합니다. */
+		bool isPredefinedType( PredefinedNameType type ) const noexcept
+		{
+			return _stringKeyIndex == static_cast<uint32>( type );
+		}
+
+		/** @brief 사전 정의된 이름 타입을 반환합니다. 사전 정의되지 않았다면 NameType_None을 반환합니다. */
+		PredefinedNameType getPredefinedType() const noexcept
+		{
+			if ( _stringKeyIndex < static_cast<uint32>( PredefinedNameType::Count ) )
+				return static_cast<PredefinedNameType>( _stringKeyIndex );
+			return PredefinedNameType::NameType_None;
+		}
+
 	private:
 		/** @brief 해시 인턴 인덱스를 구합니다. */
 		static uint32 helper( const T* str ) noexcept { return helper( str, StringUtil::strlen( str ) ); }

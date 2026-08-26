@@ -8,9 +8,9 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Delegate.h"
 #include "Core/String/hashed_string.h"
 
-#include <functional>
 #include <memory>
 #include <shared_mutex>
 
@@ -25,7 +25,7 @@ namespace sw
 	class SW_API LocalizationManager
 	{
 	public:
-		using LanguageChangedCallback = std::function<void( const string& oldLanguage, const string& newLanguage )>;
+		using LanguageChangedCallback = sw::Delegate<void( string_view oldLanguage, string_view newLanguage )>;
 
 		LocalizationManager();
 		~LocalizationManager();
@@ -45,19 +45,19 @@ namespace sw
 		// 2) 로딩 및 등록
 		// ------------------------------------------------------------------------------
 		/** @brief 파일 확장자(.json, .xml, .ini, .kv 등)를 자동 감지하여 언어 파일을 로드합니다. */
-		bool loadLanguageFile( const string& languageCode, const string& filePath );
+		bool loadLanguageFile( string_view languageCode, string_view filePath );
 
 		/** @brief 리소스 상대 경로에서 언어 파일을 로드합니다. */
-		bool loadLanguageResource( const string& languageCode, string_view assetRelativePath );
+		bool loadLanguageResource( string_view languageCode, string_view assetRelativePath );
 
 		/** @brief JSON 텍스트에서 언어 테이블을 로드합니다. */
-		bool loadLanguageJson( const string& languageCode, string_view jsonText );
+		bool loadLanguageJson( string_view languageCode, string_view jsonText );
 
 		/** @brief XML 텍스트에서 언어 테이블을 로드합니다. (<GameStrings><string key="...">...</string></GameStrings>) */
-		bool loadLanguageXml( const string& languageCode, string_view xmlText );
+		bool loadLanguageXml( string_view languageCode, string_view xmlText );
 
 		/** @brief KeyValue/INI 텍스트에서 언어 테이블을 로드합니다. (key=value) */
-		bool loadLanguageKeyValue( const string& languageCode, string_view kvText );
+		bool loadLanguageKeyValue( string_view languageCode, string_view kvText );
 
 		/**
 		 * @brief 지정 디렉터리 내의 모든 언어 파일(예: ko_KR.json, en_US.json 등)을 파일명을 언어 코드로 하여 일괄 로드합니다.
@@ -65,7 +65,7 @@ namespace sw
 		 * @param filterExtension 탐색할 확장자 (기본: ".json", "" 전달 시 모든 파일)
 		 * @param bRecursive 하위 폴더 포함 여부
 		 */
-		bool loadLanguageDirectory( const string& directoryPath, string_view filterExtension = ".json", bool bRecursive = false );
+		bool loadLanguageDirectory( string_view directoryPath, string_view filterExtension = ".json", bool bRecursive = false );
 
 		/**
 		 * @brief 언어 팩 디렉터리나 리소스 파일을 탐색하여 언어 팩들을 로드하고 활성/폴백 언어를 자동으로 세팅합니다.
@@ -74,7 +74,7 @@ namespace sw
 		 * @param fallbackLanguage 대체(Fallback) 언어 코드 (예: "en_US")
 		 * @return 하나 이상의 언어 파일이 성공적으로 로드되고 설정되었는지 여부
 		 */
-		bool setupLocalization( string_view directoryOrResourcePath, const string& defaultLanguage = "ko_KR", const string& fallbackLanguage = "en_US" );
+		bool setupLocalization( string_view directoryOrResourcePath, string_view defaultLanguage = "ko_KR", string_view fallbackLanguage = "en_US" );
 
 		/** @brief 등록된 모든 언어 테이블을 단일 바이너리 로컬라이제이션 팩(LOC1) 파일로 저장합니다. */
 		bool saveToBinaryPack( string_view filePath ) const;
@@ -82,28 +82,28 @@ namespace sw
 		bool loadFromBinaryPack( string_view filePath );
 
 		/** @brief 언어 테이블을 직접 등록하거나 기존 테이블을 대체합니다. */
-		void registerLanguageTable( const string& languageCode, unique_ptr<StringTable> pStringTable );
+		void registerLanguageTable( string_view languageCode, unique_ptr<StringTable> pStringTable );
 
 		/** @brief 특정 언어 테이블을 언로드합니다. */
-		void unloadLanguage( const string& languageCode );
+		void unloadLanguage( string_view languageCode );
 
 		// ------------------------------------------------------------------------------
 		// 3) 언어 설정 및 조회
 		// ------------------------------------------------------------------------------
 		/** @brief 현재 활성 언어를 설정합니다. 언어가 변경되면 등록된 콜백이 호출됩니다. */
-		bool setCurrentLanguage( const string& languageCode );
+		bool setCurrentLanguage( string_view languageCode );
 
 		/** @brief 현재 활성 언어 코드를 반환합니다. */
 		const string& getCurrentLanguage() const;
 
 		/** @brief 대체(Fallback) 언어를 설정합니다 (현재 언어에 키가 누락되었을 때 사용). */
-		void setFallbackLanguage( const string& languageCode );
+		void setFallbackLanguage( string_view languageCode );
 
 		/** @brief 대체(Fallback) 언어 코드를 반환합니다. */
 		const string& getFallbackLanguage() const;
 
 		/** @brief 특정 언어가 로드되어 있는지 확인합니다. */
-		bool hasLanguage( const string& languageCode ) const;
+		bool hasLanguage( string_view languageCode ) const;
 
 		/** @brief 현재 등록된 모든 언어 코드 목록을 반환합니다. */
 		vector<string> getAvailableLanguages() const;
@@ -123,22 +123,22 @@ namespace sw
 		/**
 		 * @brief 지정한 특정 언어에서 문자열을 직접 조회합니다 (Fallback 없음).
 		 */
-		const utf8* getStringFromLanguage( const string& languageCode, const hashed_string& key, const utf8* pDefaultText = nullptr ) const;
+		const utf8* getStringFromLanguage( string_view languageCode, const hashed_string& key, const utf8* pDefaultText = nullptr ) const;
 
 		/** @brief 현재 언어 또는 Fallback 언어에 해당 키가 존재하는지 확인합니다. */
 		bool hasString( const hashed_string& key ) const;
 
 		/** @brief 지정 언어에 해당 키가 존재하는지 확인합니다. */
-		bool hasStringInLanguage( const string& languageCode, const hashed_string& key ) const;
+		bool hasStringInLanguage( string_view languageCode, const hashed_string& key ) const;
 
 		/** @brief 특정 언어 테이블에 문자열을 직접 설정합니다. */
-		void setString( const string& languageCode, const hashed_string& key, const string& value );
+		void setString( string_view languageCode, const hashed_string& key, string_view value );
 
 		/** @brief 특정 언어의 StringTable 포인터를 가져옵니다 (없으면 nullptr). */
-		const StringTable* getLanguageTable( const string& languageCode ) const;
+		const StringTable* getLanguageTable( string_view languageCode ) const;
 
 		/** @brief 특정 언어의 StringTable 포인터를 가져오거나 없으면 새로 생성하여 반환합니다. */
-		StringTable* getOrCreateLanguageTable( const string& languageCode );
+		StringTable* getOrCreateLanguageTable( string_view languageCode );
 
 		// ------------------------------------------------------------------------------
 		// 5) 언어 변경 이벤트 알림
@@ -150,7 +150,7 @@ namespace sw
 		void unregisterLanguageChangedCallback( uint32 callbackId );
 
 	private:
-		void notifyLanguageChanged( const string& oldLanguage, const string& newLanguage );
+		void notifyLanguageChanged( string_view oldLanguage, string_view newLanguage );
 
 		mutable std::shared_mutex					   _mutex;
 		string										   _currentLanguage;
