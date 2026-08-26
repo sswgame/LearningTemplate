@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Common/Platform/Renderer/ImGuiOpenGLRendererBackend.h"
+#include "Editor/Common/Backend/Render/ImGuiOpenGLRendererBackend.h"
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 
@@ -19,9 +19,7 @@ static HGLRC s_MainWindowRC{ nullptr };
 	// vcpkg Khronos glxext.h가 X11 Status를 참조해 일부 include 순서에서 깨집니다.
 	#define GLX_GLXEXT_LEGACY
 	#include <GL/glx.h>
-	#ifdef None
-		#undef None
-	#endif
+	#include "Core/Common/X11MacroUndef.h"
 
 struct GLX_WindowData
 {
@@ -118,7 +116,7 @@ static void Hook_Renderer_CreateWindow_GLX( ImGuiViewport* pViewport )
 	}
 	if ( pVi != nullptr )
 	{
-		pData->_ctx = glXCreateContext( pData->_pDisplay, pVi, s_MainContext, True );
+		pData->_ctx = glXCreateContext( pData->_pDisplay, pVi, s_MainContext, 1 );
 		XFree( pVi );
 	}
 	pViewport->RendererUserData = pData;
@@ -148,7 +146,7 @@ static void Hook_Renderer_SwapBuffers_GLX( ImGuiViewport* pViewport, void* )
 	if ( pData != nullptr )
 	{
 		glXSwapBuffers( pData->_pDisplay, pData->_win );
-		glXMakeCurrent( pData->_pDisplay, None, nullptr );
+		glXMakeCurrent( pData->_pDisplay, 0, nullptr );
 	}
 }
 #endif

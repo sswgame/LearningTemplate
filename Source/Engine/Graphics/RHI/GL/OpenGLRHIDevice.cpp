@@ -21,14 +21,12 @@
 using PFNWGLCREATECONTEXTATTRIBSARBPROC = HGLRC( WINAPI* )( HDC hDC, HGLRC hShareContext, const int32* pAttribList );
 #elif defined( SW_PLATFORM_LINUX )
 	#include <GL/glx.h>
-	#ifdef None
-		#undef None
-	#endif
+	#include "Core/Common/X11MacroUndef.h"
 	#define GLX_CONTEXT_MAJOR_VERSION_ARB	 0x2091
 	#define GLX_CONTEXT_MINOR_VERSION_ARB	 0x2092
 	#define GLX_CONTEXT_PROFILE_MASK_ARB	 0x9126
 	#define GLX_CONTEXT_CORE_PROFILE_BIT_ARB 0x00000001
-typedef GLXContext ( *PFNGLXCREATECONTEXTATTRIBSARBPROC )( Display*, GLXFBConfig, GLXContext, Bool, const int32* );
+typedef GLXContext ( *PFNGLXCREATECONTEXTATTRIBSARBPROC )( Display*, GLXFBConfig, GLXContext, int32, const int32* );
 
 namespace sw
 {
@@ -58,14 +56,14 @@ namespace sw
 			~GlxXErrorScope()
 			{
 				if ( _pDpy != nullptr )
-					XSync( _pDpy, False );
+					XSync( _pDpy, 0 );
 				XSetErrorHandler( _prev );
 			}
 
 			bool failed()
 			{
 				if ( _pDpy != nullptr )
-					XSync( _pDpy, False );
+					XSync( _pDpy, 0 );
 				const bool b = t_glxXError != 0;
 				t_glxXError	 = 0;
 				return b;
@@ -341,7 +339,7 @@ namespace sw
 						GLX_CONTEXT_MINOR_VERSION_ARB, ver[1],
 						GLX_CONTEXT_PROFILE_MASK_ARB, GLX_CONTEXT_CORE_PROFILE_BIT_ARB,
 						0 };
-					ctx = glXCreateContextAttribsARB( pDpy, chosen, nullptr, True, arrContextAttribs );
+					ctx = glXCreateContextAttribsARB( pDpy, chosen, nullptr, 1, arrContextAttribs );
 					if ( ctx != nullptr && trap.failed() == false )
 					{
 						SW_LOG_INFO( "[OpenGL] GLX core context %#.%#", ver[0], ver[1] );
@@ -357,7 +355,7 @@ namespace sw
 			}
 			if ( ctx == nullptr )
 			{
-				ctx = glXCreateNewContext( pDpy, chosen, GLX_RGBA_TYPE, nullptr, True );
+				ctx = glXCreateNewContext( pDpy, chosen, GLX_RGBA_TYPE, nullptr, 1 );
 				if ( ctx == nullptr || trap.failed() )
 				{
 					if ( ctx != nullptr )
@@ -375,7 +373,7 @@ namespace sw
 			SW_LOG_ERROR( "[OpenGL] Failed to create GLX context (WSLg often lacks GL 4.x — use -vulkan)" );
 			return false;
 		}
-		if ( glXMakeCurrent( pDpy, win, ctx ) == False )
+		if ( glXMakeCurrent( pDpy, win, ctx ) == 0 )
 		{
 			SW_LOG_ERROR( "[OpenGL] glXMakeCurrent failed" );
 			glXDestroyContext( pDpy, ctx );
@@ -650,7 +648,7 @@ namespace sw
 #elif defined( SW_PLATFORM_LINUX )
 		if ( _pHDC != nullptr && _pHRC != nullptr )
 		{
-			glXMakeCurrent( static_cast<Display*>( _pHDC ), None, nullptr );
+			glXMakeCurrent( static_cast<Display*>( _pHDC ), 0, nullptr );
 			glXDestroyContext( static_cast<Display*>( _pHDC ), static_cast<GLXContext>( _pHRC ) );
 		}
 		_pHDC = nullptr;
@@ -743,7 +741,7 @@ namespace sw
 			return false;
 		}
 #elif defined( SW_PLATFORM_LINUX )
-		if ( glXMakeCurrent( (Display*)_pHDC, (Window)(uintptr_t)_pHWnd, (GLXContext)_pHRC ) == False )
+		if ( glXMakeCurrent( (Display*)_pHDC, (Window)(uintptr_t)_pHWnd, (GLXContext)_pHRC ) == 0 )
 		{
 			SW_LOG_ERROR( "[OpenGL] bindGraphicsContext glXMakeCurrent failed" );
 			return false;

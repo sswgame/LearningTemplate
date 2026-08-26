@@ -6,7 +6,7 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/Container/unordered_map.h"
 
-#include "Editor/Common/Platform/IImGuiRendererBackend.h"
+#include "Editor/Common/Backend/IImGuiRendererBackend.h"
 
 struct VkDescriptorPool_T;
 struct VkDevice_T;

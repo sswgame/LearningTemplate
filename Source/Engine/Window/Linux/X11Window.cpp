@@ -47,7 +47,7 @@ namespace sw
 
 		XStoreName( pDisplay, win, pTitle != nullptr ? pTitle : "" );
 
-		Atom wmDeleteMessage = XInternAtom( pDisplay, "WM_DELETE_WINDOW", False );
+		Atom wmDeleteMessage = XInternAtom( pDisplay, "WM_DELETE_WINDOW", 0 );
 		XSetWMProtocols( pDisplay, win, &wmDeleteMessage, 1 );
 
 		XSelectInput( pDisplay, win,

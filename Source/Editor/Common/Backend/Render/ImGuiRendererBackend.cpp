@@ -1,10 +1,10 @@
 #include "pch.h"
 
-#include "Editor/Common/Platform/IImGuiRendererBackend.h"
-#include "Editor/Common/Platform/Renderer/ImGuiDX11RendererBackend.h"
-#include "Editor/Common/Platform/Renderer/ImGuiDX12RendererBackend.h"
-#include "Editor/Common/Platform/Renderer/ImGuiOpenGLRendererBackend.h"
-#include "Editor/Common/Platform/Renderer/ImGuiVulkanRendererBackend.h"
+#include "Editor/Common/Backend/IImGuiRendererBackend.h"
+#include "Editor/Common/Backend/Render/ImGuiDX11RendererBackend.h"
+#include "Editor/Common/Backend/Render/ImGuiDX12RendererBackend.h"
+#include "Editor/Common/Backend/Render/ImGuiOpenGLRendererBackend.h"
+#include "Editor/Common/Backend/Render/ImGuiVulkanRendererBackend.h"
 
 namespace sw::editor
 {

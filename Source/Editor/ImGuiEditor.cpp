@@ -4,12 +4,12 @@
 
 #include "Core/Task/TaskManager.h"
 
+#include "Editor/Common/Backend/IImGuiPlatformBackend.h"
+#include "Editor/Common/Backend/IImGuiRendererBackend.h"
 #include "Editor/Common/Config/EditorConfig.h"
 #include "Editor/Common/Config/EditorData.h"
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Gui/EditorMenuBar.h"
-#include "Editor/Common/Platform/IImGuiPlatformBackend.h"
-#include "Editor/Common/Platform/IImGuiRendererBackend.h"
 #include "Editor/Common/Workspace/AssetEditorRegistry.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Panels/EditorPanelRegistry.h"
@@ -31,26 +31,6 @@
 #include <ImGuiNotify.hpp>
 #include <ImGuizmo.h>
 #include <implot.h>
-
-// X11 매크로(None/Success/…)가 ImGui / notify 식별자와 충돌합니다 — 에디터 전용.
-
-#if defined( SW_PLATFORM_LINUX )
-	#ifdef None
-		#undef None
-	#endif
-	#ifdef Success
-		#undef Success
-	#endif
-	#ifdef Status
-		#undef Status
-	#endif
-	#ifdef Always
-		#undef Always
-	#endif
-	#ifdef Complex
-		#undef Complex
-	#endif
-#endif
 
 namespace sw::editor
 {
@@ -113,10 +93,7 @@ namespace sw::editor
 			style.Colors[ImGuiCol_WindowBg].w = 1.0f;
 		}
 
-		BLOCK( "Fonts Setup" )
-		{
-			EditorUtil::setupFonts();
-		}
+		EditorUtil::setupFonts();
 
 		BLOCK( "Platform Backend create / init" )
 		{
@@ -160,27 +137,28 @@ namespace sw::editor
 			const shared_ptr<RenderPassResource>	 defaultPass	 = sw::make_shared<RenderPassResource>();
 			const shared_ptr<RenderPipelineResource> forwardPipeline = sw::make_shared<RenderPipelineResource>();
 
-			TaskHandle hDefault = editor::getService<TaskManager>()->emplaceTask( "EditorSplash_DefaultRenderPass",
-																				  SW_DELEGATE_LAMBDA( TaskDelegate, [defaultPass]()
+			TaskManager* pTaskManager = editor::getService<TaskManager>();
+			TaskHandle	 hDefault	  = pTaskManager->emplaceTask( "EditorSplash_DefaultRenderPass",
+																   SW_DELEGATE_LAMBDA( TaskDelegate, [defaultPass]()
 			{
 				SW_LOG_INFO( "[ImGuiEditor] Splash: reading DefaultRenderPass.xml" );
 				defaultPass->loadFromXmlFile( editor::getService<const EngineData>()->_defaultRenderPass );
 			} ) );
 
-			TaskHandle hForward = editor::getService<TaskManager>()->emplaceTask( "EditorSplash_ForwardPipeline",
-																				  SW_DELEGATE_LAMBDA( TaskDelegate, [forwardPipeline]()
+			TaskHandle hForward = pTaskManager->emplaceTask( "EditorSplash_ForwardPipeline",
+															 SW_DELEGATE_LAMBDA( TaskDelegate, [forwardPipeline]()
 			{
 				SW_LOG_INFO( "[ImGuiEditor] Splash: reading ForwardPipeline.xml" );
 				forwardPipeline->loadFromXmlFile( editor::getService<const EngineData>()->_defaultForwardPipeline );
 			} ) );
 
-			TaskStageHandle stage = editor::getService<TaskManager>()->getOrCreateStage( "EditorSplash" );
+			TaskStageHandle stage = pTaskManager->getOrCreateStage( "EditorSplash" );
 			stage.addTask( hDefault ).addTask( hForward );
 
 			hDefault.submit();
 			hForward.submit();
 
-			editor::getService<TaskManager>()->waitStage( stage );
+			pTaskManager->waitStage( stage );
 		}
 
 		BLOCK( "Register Default Windows" )
@@ -264,20 +242,9 @@ namespace sw::editor
 			_dockLayout.beginDockspace();
 		}
 
-		BLOCK( "Editor Hotkeys" )
-		{
-			editor::processMenuHotkeys();
-		}
-
-		BLOCK( "Open Panel Requests" )
-		{
-			editor::processOpenPanelRequests();
-		}
-
-		BLOCK( "Open Scene Requests" )
-		{
-			editor::processPendingSceneLoad();
-		}
+		editor::processMenuHotkeys();
+		editor::processOpenPanelRequests();
+		editor::processPendingSceneLoad();
 
 		BLOCK( "Editor Panels Draw" )
 		{
@@ -292,11 +259,9 @@ namespace sw::editor
 			endFrame();
 
 			ImGuiIO& io = ImGui::GetIO();
+			// 메인 스레드에서 플랫폼 윈도우(HWND)를 생성, 위치 이동, 파괴합니다.
 			if ( io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable )
-			{
-				// 메인 스레드에서 플랫폼 윈도우(HWND)를 생성, 위치 이동, 파괴합니다.
 				ImGui::UpdatePlatformWindows();
-			}
 		}
 	}
 
@@ -309,10 +274,7 @@ namespace sw::editor
 		if ( pDrawData == nullptr )
 			return;
 
-		BLOCK( "ImGui Render / Backend Submit" )
-		{
-			renderBackend( pRhiDevice );
-		}
+		renderBackend( pRhiDevice );
 	}
 
 	void ImGuiEditor::postPresent( IRHIDevice* pRhiDevice )
@@ -438,6 +400,7 @@ namespace sw::editor
 			pRhiDevice->bindGraphicsContext();
 	}
 } // namespace sw::editor
+
 // ==============================================================================
 // EditorModule C-ABI 진입점 매크로 자동 구현
 // ==============================================================================

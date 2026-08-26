@@ -12,7 +12,9 @@
 에디터 기능이 공통으로 쓰는 프레임워크입니다. 새 패널을 만들 때 여기부터 찾으면 됩니다.
 
 - **EditorUtil**: 폰트·설정 경로 등 공용 유틸
-- **Platform/**: ImGui OS/GPU 백엔드
+- **Backend/**: ImGui 백엔드 인터페이스 (`IImGuiPlatformBackend`, `IImGuiRendererBackend`)
+  - `Backend/Platform/`: Win32 / OSX / X11
+  - `Backend/Render/`: DX11 / DX12 / Vulkan / OpenGL
 - **Gui/**: `EditorChrome`, `EditorMenuBar`, `EditorDockLayout`
 - **Widgets/**: 검색, 헤더, 툴바 구분선, 노드 그래프 캔버스(`EditorNodeGraph`)
 - **Workspace/**: 세션, 선택, 커맨드 스택, 애셋 드롭, 프리팹 인스턴스

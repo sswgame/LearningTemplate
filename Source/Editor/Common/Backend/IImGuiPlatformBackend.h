@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
+#include "Core/Memory/Memory.h"
 
 namespace sw
 {
@@ -15,7 +16,7 @@ namespace sw
 
 namespace sw::editor
 {
-	/** @brief ImGui 윈도우/입력 백엔드 (Win32 / GLFW / X11) */
+	/** @brief ImGui 윈도우/입력 백엔드 (Win32 / OSX / X11) */
 	class IImGuiPlatformBackend
 	{
 	public:

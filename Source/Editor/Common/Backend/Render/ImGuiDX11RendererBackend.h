@@ -6,7 +6,7 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/Container/vector.h"
 
-#include "Editor/Common/Platform/IImGuiRendererBackend.h"
+#include "Editor/Common/Backend/IImGuiRendererBackend.h"
 
 namespace sw
 {

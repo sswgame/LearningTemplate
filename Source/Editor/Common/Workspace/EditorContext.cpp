@@ -2,7 +2,7 @@
 
 #include "Editor/Common/Workspace/EditorContext.h"
 
-#include "Editor/Common/Platform/IImGuiRendererBackend.h"
+#include "Editor/Common/Backend/IImGuiRendererBackend.h"
 #include "Editor/Common/Workspace/AssetEditorRegistry.h"
 #include "Editor/Common/Workspace/EditorContextMenuRegistry.h"
 #include "Editor/Common/Workspace/SelectionManager.h"

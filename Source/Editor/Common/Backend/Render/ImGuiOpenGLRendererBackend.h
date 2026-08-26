@@ -3,7 +3,7 @@
  * @brief ImGui OpenGL 렌더러 백엔드
  */
 #pragma once
-#include "Editor/Common/Platform/IImGuiRendererBackend.h"
+#include "Editor/Common/Backend/IImGuiRendererBackend.h"
 
 namespace sw
 {
