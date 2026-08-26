@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file StringBuilder.h
  * @brief 고정 크기 스택 버퍼(Small String Optimization)로 시작해 용량 초과 시 힙으로 확장하는 고성능 문자열 빌더(sw::StringBuilder)
  *
@@ -14,8 +14,8 @@
 #include "Core/Common/Types.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/FormatString.h"
 #include "Core/String/StringUtil.h"
-#include "Core/String/formatString.h"
 
 namespace sw
 {

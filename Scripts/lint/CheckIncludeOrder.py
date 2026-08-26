@@ -165,6 +165,11 @@ def processFile(filePath: Path, repositoryRoot: Path,
     # 로컬 인클루드는 알파벳순 정렬, 시스템/서드파티(<...>) 인클루드는 선언 순서 유지 (헤더 간 순서 의존성 보존)
     localIncludesList.sort()
 
+    if isCpp and not pchLine:
+        if "ThirdParty" not in relativeFilePath and "Tools/vcpkg" not in relativeFilePath:
+            pchLine = '#include "pch.h"'
+            violationsList.append(f'{relativeFilePath}: "pch.h"가 누락되어 자동 추가했습니다.')
+
     sortedIncludesList = []
     if pchLine:
         sortedIncludesList.append(pchLine)
@@ -213,10 +218,7 @@ def processFile(filePath: Path, repositoryRoot: Path,
     if finalTopLines and bottomLines:
         finalTopLines.append("")
 
-    # 4. .cpp 파일의 경우 첫 번째 인클루드가 "pch.h"인지 검사 (검사 결과만 리포트)
-    if isCpp and not pchLine:
-        if "ThirdParty" not in relativeFilePath and "Tools/vcpkg" not in relativeFilePath:
-            violationsList.append(f'{relativeFilePath}: .cpp 파일에 "pch.h" 인클루드가 없거나 최상단이 아닙니다.')
+    # 4. (기존 검사 로직은 위에서 자동 추가로 대체됨)
 
     # 변경사항이 있다면 파일에 쓰기
     newText = "\n".join(finalTopLines + bottomLines)

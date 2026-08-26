@@ -8,6 +8,7 @@
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Serialization/Core/BinaryStream.h"
 #include "Engine/Serialization/Core/Serializer.h"
 #include "Engine/Serialization/Format/JsonSerializer.h"
 #include "Engine/Serialization/Format/XmlSerializer.h"
@@ -18,109 +19,6 @@ namespace sw
 {
 	namespace
 	{
-		class BinaryStreamWriter
-		{
-		public:
-			explicit BinaryStreamWriter( vector<uint8>& bufferList )
-				: _bufferList{ bufferList }
-			{
-			}
-
-			void writeString( string_view str )
-			{
-				const uint32 size = static_cast<uint32>( str.size() );
-				write( size );
-				if ( size > 0 )
-				{
-					const size_t oldSize = _bufferList.size();
-					_bufferList.resize( oldSize + size );
-					Memory::copy( _bufferList.data() + oldSize, str.data(), size );
-				}
-			}
-
-			template <typename T>
-			void write( const T& value )
-			{
-				const size_t oldSize = _bufferList.size();
-				_bufferList.resize( oldSize + sizeof( T ) );
-				Memory::copy( _bufferList.data() + oldSize, &value, sizeof( T ) );
-			}
-
-			void writeBytes( const vector<uint8>& byteList )
-			{
-				write( static_cast<uint32>( byteList.size() ) );
-				if ( byteList.empty() == false )
-				{
-					const size_t oldSize = _bufferList.size();
-					_bufferList.resize( oldSize + byteList.size() );
-					Memory::copy( _bufferList.data() + oldSize, byteList.data(), byteList.size() );
-				}
-			}
-
-		private:
-			vector<uint8>& _bufferList;
-		};
-
-		class BinaryStreamReader
-		{
-		public:
-			BinaryStreamReader( const uint8* pData, size_t size )
-				: _pData{ pData }
-				, _size{ size }
-				, _offset{ 0 }
-			{
-			}
-
-			size_t getOffset() const { return _offset; }
-
-			bool readString( string& outStr )
-			{
-				uint32 size{ 0 };
-				if ( read( size ) == false )
-					return false;
-				if ( size == 0 )
-				{
-					outStr.clear();
-					return true;
-				}
-				if ( _offset + size > _size )
-					return false;
-				outStr.assign( reinterpret_cast<const utf8*>( _pData + _offset ), size );
-				_offset += size;
-				return true;
-			}
-
-			template <typename T>
-			bool read( T& outValue )
-			{
-				if ( _offset + sizeof( T ) > _size )
-					return false;
-				Memory::copy( &outValue, _pData + _offset, sizeof( T ) );
-				_offset += sizeof( T );
-				return true;
-			}
-
-			bool readBytes( vector<uint8>& outByteList )
-			{
-				uint32 size{ 0 };
-				if ( read( size ) == false )
-					return false;
-				outByteList.resize( size );
-				if ( size > 0 )
-				{
-					if ( _offset + size > _size )
-						return false;
-					Memory::copy( outByteList.data(), _pData + _offset, size );
-					_offset += size;
-				}
-				return true;
-			}
-
-		private:
-			const uint8* _pData;
-			size_t		 _size;
-			size_t		 _offset;
-		};
 
 		namespace
 		{

@@ -146,6 +146,15 @@ namespace sw
 			return false;
 		}
 
+		/** @brief 이 프로퍼티가 직렬화 가능한 컨테이너 래퍼를 가지고 있는지 반환합니다. */
+		bool hasContainerWrapper() const noexcept
+		{
+			return _containerWrapper != nullptr;
+		}
+
+		/** @brief 단일 컨테이너든 중첩 컨테이너든 동일하게 처리하기 위한 shape 정보를 반환합니다. */
+		NestedContainerInfo getContainerShape() const;
+
 		/** @brief 값 변경 콜백을 바인딩합니다. */
 		void bindOnChanged( PropertyBindingDelegate delegate ) const { _onPropertyBoundChanged = std::move( delegate ); }
 

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file CoreMinimal.h
  * @brief Core TU 프리루드 — 기본 타입·컨테이너·문자열·로그·메모리·수학·파일.
  */
@@ -22,9 +22,9 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/FormatString.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
-#include "Core/String/formatString.h"
 #include "Core/String/hashed_string.h"
 #include "Core/String/string_splitter.h"

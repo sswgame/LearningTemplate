@@ -26,21 +26,10 @@ namespace sw
 			thread_local vector<uint8> t_listModBytes;
 			t_listCdoBytes.clear();
 			t_listModBytes.clear();
-			if ( prop._bIsContainer && prop._nestedContainer != nullptr )
+			if ( prop._bIsContainer && prop.hasContainerWrapper() )
 			{
-				serializeNestedContainerBinary( pCdoPtr, *prop._nestedContainer, t_listCdoBytes, ctx );
-				serializeNestedContainerBinary( pModPtr, *prop._nestedContainer, t_listModBytes, ctx );
-			}
-			else if ( prop._bIsContainer && prop._containerWrapper != nullptr )
-			{
-				// Flat container: reuse nested helper shape via temporary NestedContainerInfo.
-				NestedContainerInfo flat{};
-				flat._kind			  = prop._containerKind;
-				flat._elementTypeName = prop._elementTypeName;
-				flat._keyTypeName	  = prop._keyTypeName;
-				flat._wrapper		  = prop._containerWrapper;
-				serializeNestedContainerBinary( pCdoPtr, flat, t_listCdoBytes, ctx );
-				serializeNestedContainerBinary( pModPtr, flat, t_listModBytes, ctx );
+				serializeNestedContainerBinary( pCdoPtr, prop.getContainerShape(), t_listCdoBytes, ctx );
+				serializeNestedContainerBinary( pModPtr, prop.getContainerShape(), t_listModBytes, ctx );
 			}
 			else
 			{
@@ -96,20 +85,10 @@ namespace sw
 				bool   ok{ true };
 				if ( pDest != nullptr )
 				{
-					if ( pProp->_bIsContainer && pProp->_nestedContainer != nullptr )
+					if ( pProp->_bIsContainer && pProp->hasContainerWrapper() )
 					{
-						ok = deserializeNestedContainerBinary( pDest, *pProp->_nestedContainer, pDiffData + offset, payload,
+						ok = deserializeNestedContainerBinary( pDest, pProp->getContainerShape(), pDiffData + offset, payload,
 															   local, ctx );
-					}
-					else if ( pProp->_bIsContainer && pProp->_containerWrapper != nullptr )
-					{
-						NestedContainerInfo flat{};
-						flat._kind			  = pProp->_containerKind;
-						flat._elementTypeName = pProp->_elementTypeName;
-						flat._keyTypeName	  = pProp->_keyTypeName;
-						flat._wrapper		  = pProp->_containerWrapper;
-						ok					  = deserializeNestedContainerBinary( pDest, flat, pDiffData + offset, payload, local,
-																				  ctx );
 					}
 					else
 						ok = deserializeValueBinary( pDest, pProp->_typeName, pDiffData + offset, payload, local, ctx );

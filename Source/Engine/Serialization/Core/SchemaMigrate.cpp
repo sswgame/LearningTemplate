@@ -46,16 +46,14 @@ namespace sw
 			void* pPropPtr = prop.getValuePtr<void>( pBase );
 			if ( pPropPtr == nullptr )
 				continue;
-			if ( prop._bIsContainer )
+			NestedContainerInfo shape = prop.getContainerShape();
+			if ( shape._wrapper != nullptr )
 			{
-				if ( prop._containerWrapper != nullptr )
-					prop._containerWrapper->constructEmpty( pPropPtr );
-				else if ( prop._nestedContainer != nullptr && prop._nestedContainer->_wrapper != nullptr )
-					prop._nestedContainer->_wrapper->constructEmpty( pPropPtr );
+				shape._wrapper->constructEmpty( pPropPtr );
 			}
-			else if ( engine::getTypeRegistry().isType( prop._typeName, "string" ) )
+			else if ( prop._typeName.isPredefinedType( PredefinedNameType::NameType_string ) )
 				sw_placement_new( pPropPtr ) string();
-			else if ( engine::getTypeRegistry().isType( prop._typeName, "hashed_string" ) )
+			else if ( prop._typeName.isPredefinedType( PredefinedNameType::NameType_hashed_string ) )
 				sw_placement_new( pPropPtr ) hashed_string();
 			else
 			{
@@ -78,16 +76,14 @@ namespace sw
 			void* pPropPtr = prop.getValuePtr<void>( pInstance );
 			if ( pPropPtr == nullptr )
 				continue;
-			if ( prop._bIsContainer )
+			NestedContainerInfo shape = prop.getContainerShape();
+			if ( shape._wrapper != nullptr )
 			{
-				if ( prop._containerWrapper != nullptr )
-					prop._containerWrapper->destroyContainer( pPropPtr );
-				else if ( prop._nestedContainer != nullptr && prop._nestedContainer->_wrapper != nullptr )
-					prop._nestedContainer->_wrapper->destroyContainer( pPropPtr );
+				shape._wrapper->destroyContainer( pPropPtr );
 			}
-			else if ( engine::getTypeRegistry().isType( prop._typeName, "string" ) )
+			else if ( prop._typeName.isPredefinedType( PredefinedNameType::NameType_string ) )
 				std::destroy_at( static_cast<string*>( pPropPtr ) );
-			else if ( engine::getTypeRegistry().isType( prop._typeName, "hashed_string" ) )
+			else if ( prop._typeName.isPredefinedType( PredefinedNameType::NameType_hashed_string ) )
 				std::destroy_at( static_cast<hashed_string*>( pPropPtr ) );
 			else
 			{
@@ -112,8 +108,8 @@ namespace sw
 
 		bool isStringType( hashed_string typeName )
 		{
-			TypeRegistry& registry = engine::getTypeRegistry();
-			return registry.isType( typeName, "string" ) || registry.isType( typeName, "hashed_string" );
+			return typeName.isPredefinedType( PredefinedNameType::NameType_string ) ||
+				   typeName.isPredefinedType( PredefinedNameType::NameType_hashed_string );
 		}
 
 		hashed_string resolveWireTypeHash( uint32 wireTypeHash )
@@ -123,17 +119,16 @@ namespace sw
 
 		bool isNumericTypeName( hashed_string typeName )
 		{
-			TypeRegistry&	registry = engine::getTypeRegistry();
-			const TypeInfo* pInfo	 = registry.findType( typeName );
+			const TypeInfo* pInfo = engine::getTypeRegistry().findType( typeName );
 			if ( pInfo == nullptr || pInfo->isPrimitive() == false )
 				return false;
-			return registry.isType( typeName, "string" ) == false &&
-				   registry.isType( typeName, "hashed_string" ) == false &&
-				   registry.isType( typeName, "float2" ) == false &&
-				   registry.isType( typeName, "float3" ) == false &&
-				   registry.isType( typeName, "float4" ) == false &&
-				   registry.isType( typeName, "float4x4" ) == false &&
-				   registry.isType( typeName, "quaternion" ) == false;
+			return typeName.isPredefinedType( PredefinedNameType::NameType_string ) == false &&
+				   typeName.isPredefinedType( PredefinedNameType::NameType_hashed_string ) == false &&
+				   typeName.isPredefinedType( PredefinedNameType::NameType_float2 ) == false &&
+				   typeName.isPredefinedType( PredefinedNameType::NameType_float3 ) == false &&
+				   typeName.isPredefinedType( PredefinedNameType::NameType_float4 ) == false &&
+				   typeName.isPredefinedType( PredefinedNameType::NameType_float4x4 ) == false &&
+				   typeName.isPredefinedType( PredefinedNameType::NameType_quaternion ) == false;
 		}
 
 		template <typename T>

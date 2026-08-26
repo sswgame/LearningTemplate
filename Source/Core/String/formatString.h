@@ -1,5 +1,5 @@
-/**
- * @file formatString.h
+﻿/**
+ * @file FormatString.h
  * @brief printf 스타일 포맷 헬퍼
  */
 #pragma once

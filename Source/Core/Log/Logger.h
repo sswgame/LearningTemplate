@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file Logger.h
  * @brief 엔진 전체에서 사용되는 로깅 시스템
  *
@@ -14,7 +14,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Delegate/Delegate.h"
-#include "Core/String/formatString.h"
+#include "Core/String/FormatString.h"
 
 #if !defined( SW_LOG_TAG )
 	/** @brief 호출 모듈 태그. 모듈 헤드에서 재정의합니다. */

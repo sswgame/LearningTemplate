@@ -211,6 +211,116 @@ namespace sw
 
 	namespace
 	{
+		void writeNestedContainerXml( const void* pContainerPtr, const NestedContainerInfo& nested, const utf8* pTagName, IXmlBackend& backend, const SerializeContext& ctx )
+		{
+			if ( pContainerPtr == nullptr || nested._wrapper == nullptr )
+				return;
+			ISequenceContainerWrapper* pSeq		= nested._wrapper->asSequence();
+			IMapContainerWrapper*	   pMapWrap = nested._wrapper->asMap();
+			if ( pSeq != nullptr )
+			{
+				backend.beginArray( pTagName );
+				size_t sz = pSeq->getSize( pContainerPtr );
+				for ( size_t elemIndex = 0; elemIndex < sz; ++elemIndex )
+				{
+					const void* pElemPtr = pSeq->getElementConst( pContainerPtr, elemIndex );
+					if ( nested._elementNested != nullptr )
+						writeNestedContainerXml( pElemPtr, *nested._elementNested, "item", backend, ctx );
+					else
+					{
+						StringBuilder<constant::kMaxBuffer8192> ss;
+						valueToText( ss, pElemPtr, nested._elementTypeName, ctx );
+						backend.writeArrayItem( string( ss.view() ).c_str() );
+					}
+				}
+				backend.endArray();
+			}
+			else if ( pMapWrap != nullptr )
+			{
+				backend.beginMap( pTagName );
+				pMapWrap->forEach( pContainerPtr, [&]( const void* pKPtr, const void* pVPtr )
+				{
+					backend.beginMapEntry();
+
+					StringBuilder<constant::kMaxBuffer8192> kSs;
+					valueToText( kSs, pKPtr, nested._keyTypeName, ctx );
+					backend.writeMapKey( string( kSs.view() ).c_str() );
+
+					if ( nested._elementNested != nullptr )
+						writeNestedContainerXml( pVPtr, *nested._elementNested, "value", backend, ctx );
+					else
+					{
+						StringBuilder<constant::kMaxBuffer8192> vSs;
+						valueToText( vSs, pVPtr, nested._elementTypeName, ctx );
+						backend.writeMapValue( string( vSs.view() ).c_str() );
+					}
+					backend.endMapEntry();
+				} );
+				backend.endMap();
+			}
+		}
+
+		static void noteCoerceFailVal( vector<SchemaOrphanValue>* pOutOrphans, bool& bFieldError, const PropertyInfo& prop, string_view strValue );
+
+		bool readNestedContainerXml( void* pContainerPtr, const NestedContainerInfo& nested, const utf8* pTagName, IXmlBackend& backend, const SerializeContext& ctx, bool& bOutFieldError, vector<SchemaOrphanValue>* pOutOrphans, const PropertyInfo& propForOrphan )
+		{
+			if ( pContainerPtr == nullptr || nested._wrapper == nullptr )
+				return false;
+			nested._wrapper->clear( pContainerPtr );
+
+			ISequenceContainerWrapper* pSeq		= nested._wrapper->asSequence();
+			IMapContainerWrapper*	   pMapWrap = nested._wrapper->asMap();
+			if ( pSeq != nullptr )
+			{
+				size_t elemIndex{ 0 };
+				bool   any{ false };
+				backend.iterateArray( pTagName, SW_DELEGATE_LAMBDA( XmlArrayItemDelegate, [&]( string_view itemStr )
+				{
+					any = true;
+					pSeq->addElementDefault( pContainerPtr );
+					void* pElemPtr = pSeq->getElement( pContainerPtr, elemIndex++ );
+					if ( nested._elementNested != nullptr )
+					{
+						// Nested array item parsing is not directly supported by IXmlBackend's string view callback.
+						// The string itemStr would be the raw text content which isn't sufficient for recursive parsing.
+					}
+					else if ( parseTextValueCoerced( pElemPtr, nested._elementTypeName, itemStr, ctx ) == false )
+						noteCoerceFailVal( pOutOrphans, bOutFieldError, propForOrphan, itemStr );
+				} ) );
+				return any;
+			}
+			else if ( pMapWrap != nullptr )
+			{
+				vector<uint8> listKBuf( pMapWrap->getKeySize() );
+				vector<uint8> listVBuf( pMapWrap->getValueSize() );
+				bool		  any{ false };
+				backend.iterateMap( pTagName, SW_DELEGATE_LAMBDA( XmlMapItemDelegate, [&]( string_view kStr, string_view vStr )
+				{
+					any = true;
+					pMapWrap->defaultConstructKey( listKBuf.data() );
+					pMapWrap->defaultConstructValue( listVBuf.data() );
+					const bool kOk = parseTextValueCoerced( listKBuf.data(), nested._keyTypeName, kStr, ctx );
+					bool	   vOk = false;
+					if ( nested._elementNested != nullptr )
+					{
+						// Map value is a nested container, same limitation as array items in XML.
+					}
+					else
+					{
+						vOk = parseTextValueCoerced( listVBuf.data(), nested._elementTypeName, vStr, ctx );
+					}
+					if ( kOk && vOk )
+						pMapWrap->insertKeyValue( pContainerPtr, listKBuf.data(), listVBuf.data() );
+					else
+						noteCoerceFailVal( pOutOrphans, bOutFieldError, propForOrphan, vStr );
+					pMapWrap->destroyKey( listKBuf.data() );
+					pMapWrap->destroyValue( listVBuf.data() );
+				} ) );
+				return any;
+			}
+			return false;
+		}
+
 		void writeXmlProperties( const void* pInstance, const TypeInfo& typeInfo, IXmlBackend& backend,
 								 const SerializeContext& ctx )
 		{
@@ -218,40 +328,9 @@ namespace sw
 			{
 				const void* pPropPtr = prop.getValuePtr<void>( pInstance );
 
-				if ( prop._bIsContainer && prop._containerWrapper != nullptr )
+				if ( prop._bIsContainer && prop.hasContainerWrapper() )
 				{
-					ISequenceContainerWrapper* pSeq		= prop._containerWrapper->asSequence();
-					IMapContainerWrapper*	   pMapWrap = prop._containerWrapper->asMap();
-					if ( pSeq != nullptr )
-					{
-						backend.beginArray( prop._name.c_str() );
-						size_t sz = pSeq->getSize( pPropPtr );
-						for ( size_t elemIndex = 0; elemIndex < sz; ++elemIndex )
-						{
-							const void*								pElemPtr = pSeq->getElementConst( pPropPtr, elemIndex );
-							StringBuilder<constant::kMaxBuffer8192> ss;
-							valueToText( ss, pElemPtr, prop._elementTypeName, ctx );
-							backend.writeArrayItem( string( ss.view() ).c_str() );
-						}
-						backend.endArray();
-					}
-					else if ( pMapWrap != nullptr )
-					{
-						backend.beginMap( prop._name.c_str() );
-						pMapWrap->forEach( pPropPtr, [&]( const void* pKPtr, const void* pVPtr )
-						{
-							backend.beginMapEntry();
-
-							StringBuilder<constant::kMaxBuffer8192> kSs, vSs;
-							valueToText( kSs, pKPtr, prop._keyTypeName, ctx );
-							valueToText( vSs, pVPtr, prop._elementTypeName, ctx );
-
-							backend.writeMapKey( string( kSs.view() ).c_str() );
-							backend.writeMapValue( string( vSs.view() ).c_str() );
-							backend.endMapEntry();
-						} );
-						backend.endMap();
-					}
+					writeNestedContainerXml( pPropPtr, prop.getContainerShape(), prop._name.c_str(), backend, ctx );
 				}
 				else
 				{
@@ -317,64 +396,21 @@ namespace sw
 			{
 				void* pPropPtr = prop.getValuePtr<void>( pInstance );
 
-				if ( prop._bIsContainer && prop._containerWrapper != nullptr )
+				if ( prop._bIsContainer && prop.hasContainerWrapper() )
 				{
-
-					ISequenceContainerWrapper* pSeq		= prop._containerWrapper->asSequence();
-					IMapContainerWrapper*	   pMapWrap = prop._containerWrapper->asMap();
-					if ( pSeq != nullptr )
+					bool any = false;
+					for ( const utf8* pTag : getContainerTagNames( prop ) )
 					{
-						pSeq->clear( pPropPtr );
-						size_t elemIndex{ 0 };
-						bool   any{ false };
-						for ( const utf8* pTag : getContainerTagNames( prop ) )
+						if ( readNestedContainerXml( pPropPtr, prop.getContainerShape(), pTag, backend, ctx, bFieldError, pOutOrphans, prop ) )
 						{
-							backend.iterateArray( pTag, SW_DELEGATE_LAMBDA( XmlArrayItemDelegate, [&]( string_view itemStr )
-							{
-								any = true;
-								pSeq->addElementDefault( pPropPtr );
-								void* pElemPtr = pSeq->getElement( pPropPtr, elemIndex++ );
-								if ( parseTextValueCoerced( pElemPtr, prop._elementTypeName, itemStr, ctx ) == false )
-									noteCoerceFailVal( pOutOrphans, bFieldError, prop, itemStr );
-							} ) );
-							if ( any )
-								break;
+							any = true;
+							break;
 						}
-						if ( any )
-							uniqueSeen.insert( prop.getNameHash() );
-						else
-							applyPropertyDefault( pPropPtr, prop, ctx );
 					}
-					else if ( pMapWrap != nullptr )
-					{
-						pMapWrap->clear( pPropPtr );
-						vector<uint8> listKBuf( pMapWrap->getKeySize() );
-						vector<uint8> listVBuf( pMapWrap->getValueSize() );
-						bool		  any{ false };
-						for ( const utf8* pTag : getContainerTagNames( prop ) )
-						{
-							backend.iterateMap( pTag, SW_DELEGATE_LAMBDA( XmlMapItemDelegate, [&]( string_view kStr, string_view vStr )
-							{
-								any = true;
-								pMapWrap->defaultConstructKey( listKBuf.data() );
-								pMapWrap->defaultConstructValue( listVBuf.data() );
-								const bool kOk = parseTextValueCoerced( listKBuf.data(), prop._keyTypeName, kStr, ctx );
-								const bool vOk = parseTextValueCoerced( listVBuf.data(), prop._elementTypeName, vStr, ctx );
-								if ( kOk && vOk )
-									pMapWrap->insertKeyValue( pPropPtr, listKBuf.data(), listVBuf.data() );
-								else
-									noteCoerceFailVal( pOutOrphans, bFieldError, prop, vStr );
-								pMapWrap->destroyKey( listKBuf.data() );
-								pMapWrap->destroyValue( listVBuf.data() );
-							} ) );
-							if ( any )
-								break;
-						}
-						if ( any )
-							uniqueSeen.insert( prop.getNameHash() );
-						else
-							applyPropertyDefault( pPropPtr, prop, ctx );
-					}
+					if ( any )
+						uniqueSeen.insert( prop.getNameHash() );
+					else
+						applyPropertyDefault( pPropPtr, prop, ctx );
 				}
 				else
 				{

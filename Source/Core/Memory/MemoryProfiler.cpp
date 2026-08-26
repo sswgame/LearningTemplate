@@ -1,3 +1,4 @@
+﻿#include "pch.h"
 #include "pch.h"
 
 #include "Core/Memory/MemoryProfiler.h"
@@ -5,7 +6,7 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
-#include "Core/String/formatString.h"
+#include "Core/String/FormatString.h"
 
 #if defined( SW_PLATFORM_WINDOWS ) && defined( SW_DEBUG ) && !defined( SW_SHIPPING )
 	#define SW_HAS_CRT_LEAK_CHECK 1

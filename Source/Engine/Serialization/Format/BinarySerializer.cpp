@@ -3,6 +3,7 @@
 #include "Engine/Serialization/Format/BinarySerializer.h"
 
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Serialization/Core/BinaryStream.h"
 #include "Engine/Serialization/Core/SchemaMigrate.h"
 #include "Engine/Serialization/Core/SerializerInternal.h"
 
@@ -12,13 +13,10 @@ namespace sw
 	{
 		bool deserializeUntransacted( void* pInstance, const TypeInfo& typeInfo, const uint8* pData, size_t dataSize, const SerializeContext& ctx )
 		{
-			size_t offset{ 0 };
-			if ( offset + sizeof( uint32 ) > dataSize )
+			BinaryStreamReader reader( pData, dataSize );
+			uint32			   propCount{ 0 };
+			if ( reader.read( propCount ) == false )
 				return false;
-
-			uint32 propCount{ 0 };
-			Memory::copy( &propCount, pData + offset, sizeof( uint32 ) );
-			offset += sizeof( uint32 );
 
 			const vector<PropertyInfo>& listProps = typeInfo.getPropertiesWithBase();
 			unordered_set<uint32>		uniqueSeenPropHashes;
@@ -26,21 +24,14 @@ namespace sw
 
 			for ( uint32 propIndex = 0; propIndex < propCount; ++propIndex )
 			{
-				if ( offset + sizeof( uint32 ) * 3 > dataSize )
-					return false;
-
 				uint32 tagHash{ 0 };
 				uint32 wireTypeHash{ 0 };
 				uint32 payloadSize{ 0 };
-				Memory::copy( &tagHash, pData + offset, sizeof( uint32 ) );
-				offset += sizeof( uint32 );
-				Memory::copy( &wireTypeHash, pData + offset, sizeof( uint32 ) );
-				offset += sizeof( uint32 );
-				Memory::copy( &payloadSize, pData + offset, sizeof( uint32 ) );
-				offset += sizeof( uint32 );
+				if ( reader.read( tagHash ) == false || reader.read( wireTypeHash ) == false || reader.read( payloadSize ) == false )
+					return false;
 
-				const size_t payloadStart = offset;
-				if ( offset + payloadSize > dataSize )
+				const size_t payloadStart = reader.getOffset();
+				if ( payloadStart + payloadSize > dataSize )
 					return false;
 
 				const PropertyInfo* pTargetProp = nullptr;
@@ -57,10 +48,14 @@ namespace sw
 				{
 					if ( ctx.allowUnknownProperties() )
 					{
-						offset = payloadStart + payloadSize;
-						continue;
+						// Skip payload, no need to update stream offset if we recreate stream, but wait, we need to advance the main reader
+						BinaryStreamReader skipReader( pData, dataSize );
+						// Wait, it's easier to just recreate reader at next prop
 					}
-					return false;
+					else
+					{
+						return false;
+					}
 				}
 
 				const PropertyInfo& prop = *pTargetProp;
@@ -71,72 +66,15 @@ namespace sw
 				{
 					if ( tryCoerceBinaryPayload( pPropPtr, prop._typeName, pData + payloadStart, payloadSize, ctx ) == false )
 						return false;
-					offset = payloadStart + payloadSize;
+					reader.skip( payloadSize );
 					continue;
 				}
 
-				if ( prop._bIsContainer && prop._nestedContainer != nullptr )
+				if ( prop._bIsContainer && prop.hasContainerWrapper() )
 				{
 					size_t local = payloadStart;
-					if ( deserializeNestedContainerBinary( pPropPtr, *prop._nestedContainer, pData, payloadStart + payloadSize, local, ctx ) == false )
+					if ( deserializeNestedContainerBinary( pPropPtr, prop.getContainerShape(), pData, payloadStart + payloadSize, local, ctx ) == false )
 						return false;
-					if ( local != payloadStart + payloadSize )
-						return false;
-				}
-				else if ( prop._bIsContainer && prop._containerWrapper != nullptr )
-				{
-					prop._containerWrapper->clear( pPropPtr );
-
-					size_t					   local	= payloadStart;
-					ISequenceContainerWrapper* pSeq		= prop._containerWrapper->asSequence();
-					IMapContainerWrapper*	   pMapWrap = prop._containerWrapper->asMap();
-					if ( pSeq != nullptr )
-					{
-						if ( local + sizeof( uint32 ) > payloadStart + payloadSize )
-							return false;
-						uint32 count{ 0 };
-						Memory::copy( &count, pData + local, sizeof( uint32 ) );
-						local += sizeof( uint32 );
-
-						pSeq->reserve( pPropPtr, count );
-
-						for ( size_t elemIndex = 0; elemIndex < count; ++elemIndex )
-						{
-							pSeq->addElementDefault( pPropPtr );
-							void* pElemPtr = pSeq->getElement( pPropPtr, elemIndex );
-							if ( deserializeValueBinary( pElemPtr, prop._elementTypeName, pData, payloadStart + payloadSize, local, ctx ) == false )
-								return false;
-						}
-					}
-					else if ( pMapWrap != nullptr )
-					{
-						if ( local + sizeof( uint32 ) > payloadStart + payloadSize )
-							return false;
-						uint32 count{ 0 };
-						Memory::copy( &count, pData + local, sizeof( uint32 ) );
-						local += sizeof( uint32 );
-
-						vector<uint8> listKBuf( pMapWrap->getKeySize() );
-						vector<uint8> listVBuf( pMapWrap->getValueSize() );
-
-						for ( size_t elemIndex = 0; elemIndex < count; ++elemIndex )
-						{
-							pMapWrap->defaultConstructKey( listKBuf.data() );
-							pMapWrap->defaultConstructValue( listVBuf.data() );
-
-							bool kOk = deserializeValueBinary( listKBuf.data(), prop._keyTypeName, pData, payloadStart + payloadSize, local, ctx );
-							bool vOk = deserializeValueBinary( listVBuf.data(), prop._elementTypeName, pData, payloadStart + payloadSize, local, ctx );
-
-							if ( kOk && vOk )
-								pMapWrap->insertKeyValue( pPropPtr, listKBuf.data(), listVBuf.data() );
-
-							pMapWrap->destroyKey( listKBuf.data() );
-							pMapWrap->destroyValue( listVBuf.data() );
-
-							if ( kOk == false || vOk == false )
-								return false;
-						}
-					}
 					if ( local != payloadStart + payloadSize )
 						return false;
 				}
@@ -149,7 +87,7 @@ namespace sw
 						return false;
 				}
 
-				offset = payloadStart + payloadSize;
+				reader.skip( payloadSize );
 			}
 
 			// Omitted tags: apply PROPERTY(Default) when present (Binary is tag-driven, not TypeInfo-driven).
@@ -168,67 +106,35 @@ namespace sw
 	void BinarySerializer::serialize( const void* pInstance, const TypeInfo& typeInfo, vector<uint8>& listOutBuffer,
 									  const SerializeContext& ctx )
 	{
+		BinaryStreamWriter			writer( listOutBuffer );
 		const vector<PropertyInfo>& listProps = typeInfo.getPropertiesWithBase();
 		uint32						propCount = static_cast<uint32>( listProps.size() );
 		listOutBuffer.reserve( listOutBuffer.size() + sizeof( uint32 ) + propCount * 32 );
-		const uint8* pCountBytes = reinterpret_cast<const uint8*>( &propCount );
-		listOutBuffer.insert( listOutBuffer.end(), pCountBytes, pCountBytes + sizeof( uint32 ) );
+		writer.write( propCount );
 
 		for ( const PropertyInfo& prop : listProps )
 		{
 			const void* pPropPtr = prop.getValuePtr<void>( pInstance );
 
-			uint32		 hashVal	= prop.getNameHash();
-			const uint8* pHashBytes = reinterpret_cast<const uint8*>( &hashVal );
-			listOutBuffer.insert( listOutBuffer.end(), pHashBytes, pHashBytes + sizeof( uint32 ) );
+			uint32 hashVal = prop.getNameHash();
+			writer.write( hashVal );
 
-			uint32		 typeHash		= prop._typeName.getHash();
-			const uint8* pTypeHashBytes = reinterpret_cast<const uint8*>( &typeHash );
-			listOutBuffer.insert( listOutBuffer.end(), pTypeHashBytes, pTypeHashBytes + sizeof( uint32 ) );
+			uint32 typeHash = prop._typeName.getHash();
+			writer.write( typeHash );
 
-			size_t		 sizeHeaderPos = listOutBuffer.size();
-			uint32		 dummySize{ 0 };
-			const uint8* pDummyBytes = reinterpret_cast<const uint8*>( &dummySize );
-			listOutBuffer.insert( listOutBuffer.end(), pDummyBytes, pDummyBytes + sizeof( uint32 ) );
+			size_t sizeHeaderPos = writer.getOffset();
+			uint32 dummySize{ 0 };
+			writer.write( dummySize );
 
-			size_t payloadStart = listOutBuffer.size();
+			size_t payloadStart = writer.getOffset();
 
-			if ( prop._bIsContainer && prop._nestedContainer != nullptr )
-				serializeNestedContainerBinary( pPropPtr, *prop._nestedContainer, listOutBuffer, ctx );
-			else if ( prop._bIsContainer && prop._containerWrapper != nullptr )
-			{
-				ISequenceContainerWrapper* pSeq		= prop._containerWrapper->asSequence();
-				IMapContainerWrapper*	   pMapWrap = prop._containerWrapper->asMap();
-				if ( pSeq != nullptr )
-				{
-					uint32		 count	 = static_cast<uint32>( pSeq->getSize( pPropPtr ) );
-					const uint8* pCBytes = reinterpret_cast<const uint8*>( &count );
-					listOutBuffer.insert( listOutBuffer.end(), pCBytes, pCBytes + sizeof( uint32 ) );
-
-					for ( size_t elemIndex = 0; elemIndex < count; ++elemIndex )
-					{
-						const void* pElemPtr = pSeq->getElementConst( pPropPtr, elemIndex );
-						serializeValueBinary( pElemPtr, prop._elementTypeName, listOutBuffer, ctx );
-					}
-				}
-				else if ( pMapWrap != nullptr )
-				{
-					uint32		 count	 = static_cast<uint32>( pMapWrap->getSize( pPropPtr ) );
-					const uint8* pCBytes = reinterpret_cast<const uint8*>( &count );
-					listOutBuffer.insert( listOutBuffer.end(), pCBytes, pCBytes + sizeof( uint32 ) );
-
-					pMapWrap->forEach( pPropPtr, [&]( const void* pKPtr, const void* pVPtr )
-					{
-						serializeValueBinary( pKPtr, prop._keyTypeName, listOutBuffer, ctx );
-						serializeValueBinary( pVPtr, prop._elementTypeName, listOutBuffer, ctx );
-					} );
-				}
-			}
+			if ( prop._bIsContainer && prop.hasContainerWrapper() )
+				serializeNestedContainerBinary( pPropPtr, prop.getContainerShape(), listOutBuffer, ctx );
 			else
 				serializeValueBinary( pPropPtr, prop._typeName, listOutBuffer, ctx );
 
-			uint32 payloadSize = static_cast<uint32>( listOutBuffer.size() - payloadStart );
-			Memory::copy( &listOutBuffer[sizeHeaderPos], &payloadSize, sizeof( uint32 ) );
+			uint32 payloadSize = static_cast<uint32>( writer.getOffset() - payloadStart );
+			writer.writeAt( sizeHeaderPos, payloadSize );
 		}
 	}
 
@@ -289,13 +195,10 @@ namespace sw
 	bool BinarySerializer::deserializeSoft( void* pInstance, const TypeInfo& typeInfo, const uint8* pData, size_t dataSize,
 											vector<SchemaOrphanValue>* pOutOrphans, const SerializeContext& ctx )
 	{
-		size_t offset{ 0 };
-		if ( pData == nullptr || offset + sizeof( uint32 ) > dataSize )
+		BinaryStreamReader reader( pData, dataSize );
+		uint32			   propCount{ 0 };
+		if ( reader.read( propCount ) == false )
 			return false;
-
-		uint32 propCount{ 0 };
-		Memory::copy( &propCount, pData + offset, sizeof( uint32 ) );
-		offset += sizeof( uint32 );
 
 		const vector<PropertyInfo>& listProps = typeInfo.getPropertiesWithBase();
 		unordered_set<uint32>		uniqueSeenPropHashes;
@@ -303,24 +206,17 @@ namespace sw
 
 		for ( uint32 propIndex = 0; propIndex < propCount; ++propIndex )
 		{
-			if ( offset + sizeof( uint32 ) * 3 > dataSize )
-				return false;
-
 			uint32 tagHash{ 0 };
 			uint32 wireTypeHash{ 0 };
 			uint32 payloadSize{ 0 };
-			Memory::copy( &tagHash, pData + offset, sizeof( uint32 ) );
-			offset += sizeof( uint32 );
-			Memory::copy( &wireTypeHash, pData + offset, sizeof( uint32 ) );
-			offset += sizeof( uint32 );
-			Memory::copy( &payloadSize, pData + offset, sizeof( uint32 ) );
-			offset += sizeof( uint32 );
-
-			if ( offset + payloadSize > dataSize )
+			if ( reader.read( tagHash ) == false || reader.read( wireTypeHash ) == false || reader.read( payloadSize ) == false )
 				return false;
 
-			const size_t		payloadStart = offset;
-			const PropertyInfo* pTargetProp	 = nullptr;
+			const size_t payloadStart = reader.getOffset();
+			if ( payloadStart + payloadSize > dataSize )
+				return false;
+
+			const PropertyInfo* pTargetProp = nullptr;
 			for ( const PropertyInfo& prop : listProps )
 			{
 				if ( prop.matchesNameHash( tagHash ) )
@@ -333,7 +229,7 @@ namespace sw
 			if ( pTargetProp == nullptr )
 			{
 				pushOrphanVal( pOutOrphans, {}, tagHash, wireTypeHash, pData + payloadStart, payloadSize );
-				offset = payloadStart + payloadSize;
+				reader.skip( payloadSize );
 				continue;
 			}
 
@@ -343,62 +239,8 @@ namespace sw
 			bool   applied{ false };
 			size_t local = payloadStart;
 
-			if ( prop._bIsContainer && prop._nestedContainer != nullptr )
-				applied = deserializeNestedContainerBinary( pPropPtr, *prop._nestedContainer, pData, payloadStart + payloadSize, local, ctx );
-			else if ( prop._bIsContainer && prop._containerWrapper != nullptr )
-			{
-				prop._containerWrapper->clear( pPropPtr );
-				ISequenceContainerWrapper* pSeq		= prop._containerWrapper->asSequence();
-				IMapContainerWrapper*	   pMapWrap = prop._containerWrapper->asMap();
-				if ( pSeq != nullptr )
-				{
-					if ( local + sizeof( uint32 ) <= payloadStart + payloadSize )
-					{
-						uint32 count{ 0 };
-						Memory::copy( &count, pData + local, sizeof( uint32 ) );
-						local += sizeof( uint32 );
-						pSeq->reserve( pPropPtr, count );
-						applied = true;
-						for ( size_t elemIndex = 0; elemIndex < count; ++elemIndex )
-						{
-							pSeq->addElementDefault( pPropPtr );
-							void* pElemPtr = pSeq->getElement( pPropPtr, elemIndex );
-							if ( deserializeValueBinary( pElemPtr, prop._elementTypeName, pData, payloadStart + payloadSize, local, ctx ) == false )
-							{
-								applied = false;
-								break;
-							}
-						}
-					}
-				}
-				else if ( pMapWrap != nullptr )
-				{
-					if ( local + sizeof( uint32 ) <= payloadStart + payloadSize )
-					{
-						uint32 count{ 0 };
-						Memory::copy( &count, pData + local, sizeof( uint32 ) );
-						local += sizeof( uint32 );
-						vector<uint8> listKBuf( pMapWrap->getKeySize() );
-						vector<uint8> listVBuf( pMapWrap->getValueSize() );
-						applied = true;
-						for ( size_t elemIndex = 0; elemIndex < count; ++elemIndex )
-						{
-							pMapWrap->defaultConstructKey( listKBuf.data() );
-							pMapWrap->defaultConstructValue( listVBuf.data() );
-							const bool kOk = deserializeValueBinary( listKBuf.data(), prop._keyTypeName, pData, payloadStart + payloadSize, local, ctx );
-							const bool vOk = deserializeValueBinary( listVBuf.data(), prop._elementTypeName, pData, payloadStart + payloadSize, local, ctx );
-							if ( kOk && vOk )
-								pMapWrap->insertKeyValue( pPropPtr, listKBuf.data(), listVBuf.data() );
-							else
-								applied = false;
-							pMapWrap->destroyKey( listKBuf.data() );
-							pMapWrap->destroyValue( listVBuf.data() );
-							if ( applied == false )
-								break;
-						}
-					}
-				}
-			}
+			if ( prop._bIsContainer && prop.hasContainerWrapper() )
+				applied = deserializeNestedContainerBinary( pPropPtr, prop.getContainerShape(), pData, payloadStart + payloadSize, local, ctx );
 			else
 			{
 				applied = deserializeValueBinary( pPropPtr, prop._typeName, pData, payloadStart + payloadSize, local, ctx );
@@ -409,7 +251,7 @@ namespace sw
 			if ( applied == false )
 				pushOrphanVal( pOutOrphans, prop._name, tagHash, wireTypeHash, pData + payloadStart, payloadSize );
 
-			offset = payloadStart + payloadSize;
+			reader.skip( payloadSize );
 		}
 
 		for ( const PropertyInfo& prop : listProps )
@@ -425,8 +267,8 @@ namespace sw
 	void BinarySerializer::serializeVersioned( uint32 version, const void* pInstance, const TypeInfo& typeInfo, vector<uint8>& listOutBuffer,
 											   const SerializeContext& ctx )
 	{
-		const uint8* pVerBytes = reinterpret_cast<const uint8*>( &version );
-		listOutBuffer.insert( listOutBuffer.end(), pVerBytes, pVerBytes + sizeof( uint32 ) );
+		BinaryStreamWriter writer( listOutBuffer );
+		writer.write( version );
 		serialize( pInstance, typeInfo, listOutBuffer, ctx );
 	}
 
@@ -434,12 +276,12 @@ namespace sw
 												 uint32 currentVersion, SchemaMigrateFn migrate, const TypeInfo* pLegacyTypeInfo,
 												 const SerializeContext& ctx )
 	{
-		if ( pData == nullptr || dataSize < sizeof( uint32 ) )
+		BinaryStreamReader reader( pData, dataSize );
+		if ( reader.read( outVersion ) == false )
 			return false;
 
-		Memory::copy( &outVersion, pData, sizeof( uint32 ) );
-		const uint8* pBody	  = pData + sizeof( uint32 );
-		const size_t bodySize = dataSize - sizeof( uint32 );
+		const uint8* pBody	  = pData + reader.getOffset();
+		const size_t bodySize = dataSize - reader.getOffset();
 
 		vector<SchemaOrphanValue> listOrphans;
 		vector<uint8>			  listLegacyStorage;

@@ -14,37 +14,10 @@ namespace sw
 		void writeProperty( JsonValue field, const PropertyInfo& prop, const void* pInstance, const SerializeContext& ctx )
 		{
 			const void* pPropPtr = prop.getValuePtr<void>( pInstance );
-			if ( prop._bIsContainer && prop._nestedContainer != nullptr )
+			if ( prop._bIsContainer && prop.hasContainerWrapper() )
 			{
-				writeNestedContainerJson( field, pPropPtr, *prop._nestedContainer, ctx );
+				writeNestedContainerJson( field, pPropPtr, prop.getContainerShape(), ctx );
 				return;
-			}
-			if ( prop._bIsContainer && prop._containerWrapper != nullptr )
-			{
-				ISequenceContainerWrapper* pSeq = prop._containerWrapper->asSequence();
-				if ( pSeq != nullptr )
-				{
-					field.setArray();
-					const size_t sz = pSeq->getSize( pPropPtr );
-					for ( size_t elemIndex = 0; elemIndex < sz; ++elemIndex )
-					{
-						const void* pElemPtr = pSeq->getElementConst( pPropPtr, elemIndex );
-						writeJsonValue( field.pushBack(), pElemPtr, prop._elementTypeName, ctx );
-					}
-					return;
-				}
-				IMapContainerWrapper* pMapWrap = prop._containerWrapper->asMap();
-				if ( pMapWrap != nullptr )
-				{
-					field.setObject();
-					pMapWrap->forEach( pPropPtr, [&]( const void* pKPtr, const void* pVPtr )
-					{
-						StringBuilder<constant::kMaxBuffer8192> keySs;
-						valueToText( keySs, pKPtr, prop._keyTypeName, ctx );
-						writeJsonValue( field.set( keySs.view(), false ), pVPtr, prop._elementTypeName, ctx );
-					} );
-					return;
-				}
 			}
 			writeJsonValue( field, pPropPtr, prop._typeName, ctx );
 		}
@@ -52,54 +25,8 @@ namespace sw
 		bool readProperty( const JsonValue& field, const PropertyInfo& prop, void* pInstance, const SerializeContext& ctx )
 		{
 			void* pPropPtr = prop.getValuePtr<void>( pInstance );
-			if ( prop._bIsContainer && prop._nestedContainer != nullptr )
-				return readNestedContainerJson( pPropPtr, *prop._nestedContainer, field, ctx );
-			if ( prop._bIsContainer && prop._containerWrapper != nullptr )
-			{
-				prop._containerWrapper->clear( pPropPtr );
-				ISequenceContainerWrapper* pSeq = prop._containerWrapper->asSequence();
-				if ( pSeq != nullptr )
-				{
-					if ( field.isArray() == false )
-						return false;
-					pSeq->reserve( pPropPtr, field.size() );
-					bool bElemOk{ true };
-					for ( size_t elemIndex = 0; elemIndex < field.size(); ++elemIndex )
-					{
-						pSeq->addElementDefault( pPropPtr );
-						void* pElemPtr = pSeq->getElement( pPropPtr, elemIndex );
-						if ( readJsonValue( pElemPtr, prop._elementTypeName, field.at( elemIndex ), ctx ) == false )
-							bElemOk = false;
-					}
-					return bElemOk;
-				}
-				IMapContainerWrapper* pMapWrap = prop._containerWrapper->asMap();
-				if ( pMapWrap != nullptr )
-				{
-					if ( field.isObject() == false )
-						return false;
-					vector<uint8> listKBuf( pMapWrap->getKeySize() );
-					vector<uint8> listVBuf( pMapWrap->getValueSize() );
-					bool		  bAllOk{ true };
-					for ( const string& key : field.memberNames() )
-					{
-						pMapWrap->defaultConstructKey( listKBuf.data() );
-						pMapWrap->defaultConstructValue( listVBuf.data() );
-						JsonDocument keyDoc;
-						keyDoc.root().setString( key );
-						const bool kOk = readJsonValue( listKBuf.data(), prop._keyTypeName, keyDoc.root(), ctx );
-						const bool vOk = readJsonValue( listVBuf.data(), prop._elementTypeName, field.get( key, false ), ctx );
-						if ( kOk && vOk )
-							pMapWrap->insertKeyValue( pPropPtr, listKBuf.data(), listVBuf.data() );
-						else
-							bAllOk = false;
-						pMapWrap->destroyKey( listKBuf.data() );
-						pMapWrap->destroyValue( listVBuf.data() );
-					}
-					return bAllOk;
-				}
-				return false;
-			}
+			if ( prop._bIsContainer && prop.hasContainerWrapper() )
+				return readNestedContainerJson( pPropPtr, prop.getContainerShape(), field, ctx );
 			return readJsonValue( pPropPtr, prop._typeName, field, ctx );
 		}
 

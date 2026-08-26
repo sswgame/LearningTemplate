@@ -110,10 +110,10 @@ namespace sw
 
 		bool isSupportedMethodArgType( string_view typeName )
 		{
-			TypeRegistry& registry = *editor::getService<TypeRegistry>();
-			return registry.isType( typeName, "int32" ) || registry.isType( typeName, "int64" ) ||
-				   registry.isType( typeName, "float32" ) || registry.isType( typeName, "bool" ) ||
-				   registry.isType( typeName, "string" );
+			hashed_string hashedName( typeName );
+			return hashedName.isPredefinedType( PredefinedNameType::NameType_int32 ) || hashedName.isPredefinedType( PredefinedNameType::NameType_int64 ) ||
+				   hashedName.isPredefinedType( PredefinedNameType::NameType_float32 ) || hashedName.isPredefinedType( PredefinedNameType::NameType_bool ) ||
+				   hashedName.isPredefinedType( PredefinedNameType::NameType_string );
 		}
 
 		bool formatTaskValue( const TaskValue& value, string_view returnType, utf8* pOutBuf, size_t outSize )
@@ -153,7 +153,7 @@ namespace sw
 				formatstring( pOutBuf, cap, "%#", value.getValue<bool>() ? "true" : "false" );
 				return true;
 			}
-			if ( registry.isType( returnType, "string" ) )
+			if ( hashed_string( returnType ).isPredefinedType( PredefinedNameType::NameType_string ) )
 			{
 				formatstring( pOutBuf, cap, "%#", value.getValue<string>().c_str() );
 				return true;
@@ -532,7 +532,7 @@ namespace sw
 		}
 
 		const TypeInfo* pFieldType = pRegistry->findType( prop._typeName );
-		if ( pFieldType != nullptr )
+		if ( pFieldType != nullptr || prop._typeName.isPredefinedType( PredefinedNameType::NameType_string ) )
 		{
 			void* pNestedPtr = prop.getValuePtr<void>( pInstance );
 			if ( pNestedPtr == nullptr )
@@ -614,7 +614,7 @@ namespace sw
 					ImGui::DragFloat( label, &_arrArgFloat[paramIndex], 0.1f );
 				else if ( registry.isType( p, "bool" ) )
 					ImGui::Checkbox( label, &_arrArgBool[paramIndex] );
-				else if ( registry.isType( p, "string" ) )
+				else if ( hashed_string( p ).isPredefinedType( PredefinedNameType::NameType_string ) )
 					ImGui::InputText( label, _arrArgString[paramIndex], sizeof( _arrArgString[paramIndex] ) );
 				else
 					ImGui::TextDisabled( "%s (unsupported in UI)", label );
@@ -647,7 +647,7 @@ namespace sw
 						args.add( _arrArgFloat[paramIndex] );
 					else if ( registry.isType( p, "bool" ) )
 						args.add( _arrArgBool[paramIndex] );
-					else if ( registry.isType( p, "string" ) )
+					else if ( hashed_string( p ).isPredefinedType( PredefinedNameType::NameType_string ) )
 						args.add( string( _arrArgString[paramIndex] ) );
 				}
 
@@ -786,12 +786,12 @@ namespace sw
 			{
 				if ( prop._metadata._bReadOnly || prop._bIsContainer )
 					continue;
-				if ( typeNameIs( prop, "string" ) == false && typeNameIs( prop, "hashed_string" ) == false )
+				if ( prop._typeName.isPredefinedType( PredefinedNameType::NameType_string ) == false && prop._typeName.isPredefinedType( PredefinedNameType::NameType_hashed_string ) == false )
 					continue;
 				if ( propertyNameHintsAsset( prop, pPath ) == false )
 					continue;
 
-				if ( typeNameIs( prop, "string" ) )
+				if ( prop._typeName.isPredefinedType( PredefinedNameType::NameType_string ) )
 				{
 					string* pPtr = prop.getValuePtr<string>( pInstance );
 					if ( pPtr != nullptr )

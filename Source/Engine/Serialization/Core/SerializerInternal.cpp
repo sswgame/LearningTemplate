@@ -1,9 +1,10 @@
 #include "pch.h"
 
+#include "Engine/Serialization/Core/SerializerInternal.h"
+
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Serialization/Core/SchemaMigrate.h"
-#include "Engine/Serialization/Core/SerializerInternal.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/Serialization/Format/JsonSerializer.h"
 #include "Engine/Utility/Json/JsonDocument.h"
@@ -310,9 +311,7 @@ namespace sw
 
 		const hashed_string resolved  = resolveHandlerTypeName( typeName, ctx );
 		const bool			bIsString = ( resolved.isPredefinedType( PredefinedNameType::NameType_string ) ||
-								  resolved.isPredefinedType( PredefinedNameType::NameType_hashed_string ) ||
-								  engine::getTypeRegistry().isType( resolved, "string" ) ||
-								  engine::getTypeRegistry().isType( resolved, "hashed_string" ) );
+								  resolved.isPredefinedType( PredefinedNameType::NameType_hashed_string ) );
 		const bool			bIsBool	  = ( resolved.isPredefinedType( PredefinedNameType::NameType_bool ) );
 		const bool			bIsEnum	  = ( engine::getTypeRegistry().findEnum( typeName ) != nullptr );
 
@@ -361,14 +360,6 @@ namespace sw
 		dst.setString( text.view() );
 	}
 
-	void appendNestedContainerJson( StringBuilder<constant::kMaxBuffer8192>& ss, const void* pContainerPtr,
-									const NestedContainerInfo& nested, const SerializeContext& ctx )
-	{
-		JsonDocument doc;
-		writeNestedContainerJson( doc.root(), pContainerPtr, nested, ctx );
-		ss.append( doc.dump().c_str() );
-	}
-
 	void writeNestedContainerJson( JsonValue dst, const void* pContainerPtr, const NestedContainerInfo& nested,
 								   const SerializeContext& ctx )
 	{
@@ -405,15 +396,6 @@ namespace sw
 					writeJsonValue( dst.set( keySs.view(), false ), pVPtr, nested._elementTypeName, ctx );
 			} );
 		}
-	}
-
-	bool parseNestedContainerFromJson( void* pContainerPtr, const NestedContainerInfo& nested,
-									   string_view json, const SerializeContext& ctx )
-	{
-		JsonDocument doc;
-		if ( doc.parse( json ) == false )
-			return false;
-		return readNestedContainerJson( pContainerPtr, nested, doc.root(), ctx );
 	}
 
 	bool readNestedContainerJson( void* pContainerPtr, const NestedContainerInfo& nested, const JsonValue& src,

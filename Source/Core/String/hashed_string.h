@@ -71,6 +71,10 @@ namespace sw
 		basic_hashed_string() noexcept
 			: _stringKeyIndex{ static_cast<uint32>( PredefinedNameType::NameType_None ) } {}
 
+		/** @brief 사전 정의된 이름 타입으로 직접 생성합니다 (O(1) 속도). */
+		explicit basic_hashed_string( PredefinedNameType type ) noexcept
+			: _stringKeyIndex{ static_cast<uint32>( type ) } {}
+
 		/** @brief 길이만큼 intern 하고 인덱스를 붙입니다. */
 		basic_hashed_string( const value_type* str, const size_type length ) noexcept
 			: _stringKeyIndex{ helper( str, length ) } {}

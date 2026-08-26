@@ -46,6 +46,19 @@ namespace sw
 		, _bIsContainer{ 0 }
 		, _reservedFlags{ 0 } {}
 
+	NestedContainerInfo PropertyInfo::getContainerShape() const
+	{
+		if ( _nestedContainer != nullptr )
+			return *_nestedContainer;
+
+		NestedContainerInfo flat{};
+		flat._kind			  = _containerKind;
+		flat._elementTypeName = _elementTypeName;
+		flat._keyTypeName	  = _keyTypeName;
+		flat._wrapper		  = _containerWrapper;
+		return flat;
+	}
+
 	PropertyInfo::PropertyInfo( hashed_string name, hashed_string typeName, size_t offset,
 								bool bIsContainer, ContainerKind containerKind,
 								hashed_string elementTypeName, hashed_string keyTypeName,

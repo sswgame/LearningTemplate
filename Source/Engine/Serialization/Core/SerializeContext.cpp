@@ -68,8 +68,6 @@ namespace sw
 				return true;
 			};
 			ctx.registerBinaryHandler( hashed_string( pName ), writeFn, readFn );
-			const string qualified = string( "sw::" ) + pName;
-			ctx.registerBinaryHandler( hashed_string( qualified.c_str() ), writeFn, readFn );
 		}
 	} // namespace
 
@@ -116,8 +114,7 @@ namespace sw
 				return true;
 			};
 
-			ctx.registerBinaryHandler( hashed_string( "string" ), strWriteBin, strReadBin );
-			ctx.registerBinaryHandler( hashed_string( "sw::string" ), strWriteBin, strReadBin );
+			ctx.registerBinaryHandler( hashed_string( PredefinedNameType::NameType_string ), strWriteBin, strReadBin );
 
 			BinaryWriteFn hashedStrWriteBin = []( const void* pPtr, vector<uint8>& listBuf )
 			{
@@ -149,8 +146,7 @@ namespace sw
 				return true;
 			};
 
-			ctx.registerBinaryHandler( hashed_string( "hashed_string" ), hashedStrWriteBin, hashedStrReadBin );
-			ctx.registerBinaryHandler( hashed_string( "sw::hashed_string" ), hashedStrWriteBin, hashedStrReadBin );
+			ctx.registerBinaryHandler( hashed_string( PredefinedNameType::NameType_hashed_string ), hashedStrWriteBin, hashedStrReadBin );
 
 #define SW_BUILTIN_TEXT_none( Canon, CppType )
 #define SW_BUILTIN_TEXT_stoi( Canon, CppType )                                                                    \
@@ -166,9 +162,7 @@ namespace sw
 			*static_cast<CppType*>( pPtr ) = static_cast<CppType>( val );                                         \
 			return true;                                                                                          \
 		};                                                                                                        \
-		ctx.registerTextHandler( hashed_string( #Canon ), writeFn, readFn );                                      \
-		const string qualified = string( "sw::" ) + #Canon;                                                       \
-		ctx.registerTextHandler( hashed_string( qualified.c_str() ), writeFn, readFn );                           \
+		ctx.registerTextHandler( hashed_string( PredefinedNameType::NameType_##Canon ), writeFn, readFn );        \
 	}
 #define SW_BUILTIN_TEXT_stoll( Canon, CppType )                                                                   \
 	{                                                                                                             \
@@ -183,9 +177,7 @@ namespace sw
 			*static_cast<CppType*>( pPtr ) = static_cast<CppType>( val );                                         \
 			return true;                                                                                          \
 		};                                                                                                        \
-		ctx.registerTextHandler( hashed_string( #Canon ), writeFn, readFn );                                      \
-		const string qualified = string( "sw::" ) + #Canon;                                                       \
-		ctx.registerTextHandler( hashed_string( qualified.c_str() ), writeFn, readFn );                           \
+		ctx.registerTextHandler( hashed_string( PredefinedNameType::NameType_##Canon ), writeFn, readFn );        \
 	}
 #define SW_BUILTIN_TEXT_stoul( Canon, CppType )                                                                    \
 	{                                                                                                              \
@@ -200,9 +192,7 @@ namespace sw
 			*static_cast<CppType*>( pPtr ) = static_cast<CppType>( val );                                          \
 			return true;                                                                                           \
 		};                                                                                                         \
-		ctx.registerTextHandler( hashed_string( #Canon ), writeFn, readFn );                                       \
-		const string qualified = string( "sw::" ) + #Canon;                                                        \
-		ctx.registerTextHandler( hashed_string( qualified.c_str() ), writeFn, readFn );                            \
+		ctx.registerTextHandler( hashed_string( PredefinedNameType::NameType_##Canon ), writeFn, readFn );         \
 	}
 #define SW_BUILTIN_TEXT_stoull( Canon, CppType )                                                                   \
 	{                                                                                                              \
@@ -217,9 +207,7 @@ namespace sw
 			*static_cast<CppType*>( pPtr ) = static_cast<CppType>( val );                                          \
 			return true;                                                                                           \
 		};                                                                                                         \
-		ctx.registerTextHandler( hashed_string( #Canon ), writeFn, readFn );                                       \
-		const string qualified = string( "sw::" ) + #Canon;                                                        \
-		ctx.registerTextHandler( hashed_string( qualified.c_str() ), writeFn, readFn );                            \
+		ctx.registerTextHandler( hashed_string( PredefinedNameType::NameType_##Canon ), writeFn, readFn );         \
 	}
 #define SW_BUILTIN_TEXT_stof( Canon, CppType )                                                                   \
 	{                                                                                                            \
@@ -234,9 +222,7 @@ namespace sw
 			*static_cast<CppType*>( pPtr ) = static_cast<CppType>( val );                                        \
 			return true;                                                                                         \
 		};                                                                                                       \
-		ctx.registerTextHandler( hashed_string( #Canon ), writeFn, readFn );                                     \
-		const string qualified = string( "sw::" ) + #Canon;                                                      \
-		ctx.registerTextHandler( hashed_string( qualified.c_str() ), writeFn, readFn );                          \
+		ctx.registerTextHandler( hashed_string( PredefinedNameType::NameType_##Canon ), writeFn, readFn );       \
 	}
 #define SW_BUILTIN_TEXT_stod( Canon, CppType )                                                                   \
 	{                                                                                                            \
@@ -251,9 +237,7 @@ namespace sw
 			*static_cast<CppType*>( pPtr ) = static_cast<CppType>( val );                                        \
 			return true;                                                                                         \
 		};                                                                                                       \
-		ctx.registerTextHandler( hashed_string( #Canon ), writeFn, readFn );                                     \
-		const string qualified = string( "sw::" ) + #Canon;                                                      \
-		ctx.registerTextHandler( hashed_string( qualified.c_str() ), writeFn, readFn );                          \
+		ctx.registerTextHandler( hashed_string( PredefinedNameType::NameType_##Canon ), writeFn, readFn );       \
 	}
 
 #define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, TextConv, Ns, ... ) SW_BUILTIN_TEXT_##TextConv( Canon, CppType )
@@ -277,7 +261,7 @@ namespace sw
 				*static_cast<bool*>( pPtr ) = ( strView == "true" || strView == "1" );
 				return true;
 			};
-			ctx.registerTextHandler( hashed_string( "bool" ), boolWrite, boolRead );
+			ctx.registerTextHandler( hashed_string( PredefinedNameType::NameType_bool ), boolWrite, boolRead );
 
 			TextWriteFn strWriteTxt = []( const void* pPtr )
 			{ return string( static_cast<const string*>( pPtr )->c_str() ); };
@@ -292,7 +276,7 @@ namespace sw
 				return true;
 			};
 
-			ctx.registerTextHandler( hashed_string( "string" ), strWriteTxt, strReadTxt );
+			ctx.registerTextHandler( hashed_string( PredefinedNameType::NameType_string ), strWriteTxt, strReadTxt );
 
 			TextWriteFn hashedStrWriteTxt = []( const void* pPtr )
 			{ return string( static_cast<const hashed_string*>( pPtr )->c_str() ); };
@@ -307,7 +291,7 @@ namespace sw
 				return true;
 			};
 
-			ctx.registerTextHandler( hashed_string( "hashed_string" ), hashedStrWriteTxt, hashedStrReadTxt );
+			ctx.registerTextHandler( hashed_string( PredefinedNameType::NameType_hashed_string ), hashedStrWriteTxt, hashedStrReadTxt );
 
 			auto packedWrite = []( const void* pPtr ) -> string
 			{

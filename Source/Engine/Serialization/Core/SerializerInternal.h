@@ -50,15 +50,10 @@ namespace sw
 					  const SerializeContext& ctx );
 	/** @brief dst 노드에 JSON 값을 씁니다. */
 	void writeJsonValue( JsonValue dst, const void* pValPtr, const hashed_string& typeName, const SerializeContext& ctx );
-	/** @brief 중첩 컨테이너를 JSON으로 이어 붙입니다. */
-	void appendNestedContainerJson( StringBuilder<constant::kMaxBuffer8192>& ss, const void* pContainerPtr,
-									const NestedContainerInfo& nested, const SerializeContext& ctx );
 	/** @brief 중첩 컨테이너를 dst 노드에 씁니다. */
 	void writeNestedContainerJson( JsonValue dst, const void* pContainerPtr, const NestedContainerInfo& nested,
 								   const SerializeContext& ctx );
-	/** @brief JSON에서 중첩 컨테이너를 파싱합니다. */
-	bool parseNestedContainerFromJson( void* pContainerPtr, const NestedContainerInfo& nested,
-									   string_view json, const SerializeContext& ctx );
+
 	/** @brief JsonValue에서 중첩 컨테이너를 읽습니다. */
 	bool readNestedContainerJson( void* pContainerPtr, const NestedContainerInfo& nested, const JsonValue& src,
 								  const SerializeContext& ctx );
