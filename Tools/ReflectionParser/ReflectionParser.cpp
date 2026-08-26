@@ -4,6 +4,7 @@
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Task/TaskManager.h"
 #include "Core/Time/CpuTimer.h"
 
 #include "ReflectionParser/AnnotationMeta.h"
@@ -17,37 +18,6 @@
 
 namespace sw
 {
-	/** @brief C++17 호환 카운팅 세마포어 (스레드 풀 작업 슬롯 제어) */
-	class CountingSemaphore
-	{
-	public:
-		explicit CountingSemaphore( int64 desired )
-			: _count{ desired }
-		{
-		}
-
-		void acquire()
-		{
-			std::unique_lock<std::mutex> lock( _mutex );
-			_cv.wait( lock, [this]
-			{ return _count > 0; } );
-			--_count;
-		}
-
-		void release()
-		{
-			{
-				std::lock_guard<std::mutex> lock( _mutex );
-				++_count;
-			}
-			_cv.notify_one();
-		}
-
-	private:
-		std::mutex				_mutex;
-		std::condition_variable _cv;
-		int64					_count;
-	};
 	/** @brief 소스 전체를 읽고 리플렉션 키워드가 있으면 true. outContent에 버퍼를 남깁니다. */
 	static bool loadSourceIfHasReflectionKeywords( const sw::string& filePath, sw::string& outContent )
 	{
@@ -284,7 +254,7 @@ namespace sw
  *  2) builtins-gen 전용 모드면 여기서 종료
  *  3) builtins / AnnotationMeta / Templates 로드
  *  4) ParserContext 공유 clang 설정 1회 로드
- *  5) 타임스탬프 캐시 후 입력 파일별 std::async → processInputFile
+ *  5) 타임스탬프 캐시 후 TaskManager 워커 풀에서 processInputFile
  */
 int32 main( int32 argc, utf8* argv[] )
 {
@@ -402,35 +372,39 @@ int32 main( int32 argc, utf8* argv[] )
 
 	std::atomic<int32> errorCount{ 0 };
 
-	const uint32 workerCount = std::max( 1u, std::thread::hardware_concurrency() );
+	uint32 workerCount = std::thread::hardware_concurrency();
+	if ( workerCount == 0 )
+		workerCount = 1;
 	SW_LOG_INFO( "[ReflectionParser] Parsing %# input(s) with %# worker(s).", args.inputFiles.size(), workerCount );
-
-	// sw::CountingSemaphore 를 이용한 연속 큐잉 방식:
-	// 각 태스크가 완료되는 즉시 새 파일을 투입하여 워커가 항상 최대로 활용됩니다.
-	// 기존 배치 방식(배치 내 가장 느린 파일이 다음 배치를 블로킹)의 straggler 문제가 없습니다.
-	sw::CountingSemaphore		  workerSlots( workerCount );
-	sw::vector<std::future<void>> futureList;
-	futureList.reserve( args.inputFiles.size() );
 
 	sw::CpuTimer parseTimer;
 	parseTimer.resetTimer();
 	parseTimer.startTimer();
 
-	for ( const sw::string& inputFile : args.inputFiles )
+	if ( args.inputFiles.empty() == false )
 	{
-		workerSlots.acquire(); // 슬롯이 빌 때까지 대기
-		futureList.push_back( std::async(
-			std::launch::async,
-			[&workerSlots, &args, &errorCount]( sw::string file )
+		sw::TaskManager taskManager;
+		if ( taskManager.initialize( workerCount ) == false )
 		{
-			sw::processInputFile( file, args, errorCount );
-			workerSlots.release(); // 완료 시 슬롯 반환
-		},
-			inputFile ) );
-	}
+			SW_LOG_ERROR( "[ReflectionParser] Failed to initialize TaskManager." );
+			logger->shutdown();
+			return 1;
+		}
 
-	for ( std::future<void>& future : futureList )
-		future.get();
+		for ( const sw::string& inputFile : args.inputFiles )
+		{
+			sw::TaskHandle handle = taskManager.emplaceTask(
+				"ParseHeader",
+				SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&args, &errorCount, inputFile]()
+			{
+				sw::processInputFile( inputFile, args, errorCount );
+			} ) );
+			handle.submit();
+		}
+
+		taskManager.waitAll();
+		taskManager.shutdown();
+	}
 
 	parseTimer.updateTimer();
 	const float32 elapsedMs = parseTimer.getDeltaTime() * 1000.0f;

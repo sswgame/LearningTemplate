@@ -84,7 +84,7 @@ flowchart TD
 2. builtins-gen 전용 모드면 여기서 종료  
 3. builtins / AnnotationMeta / Templates 로드  
 4. `ParserContext::ensureSharedConfig` (clang 인자 1회 캐시)  
-5. 타임스탬프 캐시 후 입력별 `std::async` → `processInputFile`
+5. 타임스탬프 캐시 후 `TaskManager` 워커 풀에서 `processInputFile`
 
 ---
 

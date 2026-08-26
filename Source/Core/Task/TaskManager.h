@@ -23,7 +23,7 @@ namespace sw
 	 * - **MPSC / Work-Stealing 큐**: 각 워커마다 독립된 고정 크기 락-프리 큐를 보유하며, 유휴 워커는 다른 워커의 작업을 스틸(Steal)합니다.
 	 * - **DAG 의존성 기반 자동 스케줄링**: 선행 태스크가 완료되면 카운트다운을 거쳐 후속 태스크가 자동으로 큐에 인큐됩니다.
 	 * - **Work Helping**: 부모 태스크가 자식/병렬 태스크의 완료를 기다릴 때 단순 슬립(Sleep)하지 않고 큐의 다른 작업을 직접 수행하여 데드락을 방지하고 스레드 활용률을 극대화합니다.
-	 * - **Fast Adaptive Spin**: 작업이 빈번하게 도착할 때 `sw::cpuPause()` 기반 어댑티브 스핀을 거쳐 커널 컨텍스트 스위칭 비용을 최소화합니다.
+	 * - **Event Wait**: 유휴 워커와 waitAll/waitStage는 짧은 스핀 후 조건 변수로 대기하고, 제출/완료 시점에 즉시 깨어납니다.
 	 */
 	class SW_API TaskManager
 	{
@@ -190,6 +190,10 @@ namespace sw
 		void executeTask( TaskNode* pNode );
 		/** @brief 태스크 완료 시 후속 태스크들의 카운트다운을 감소시키고 완료 조건을 전파합니다. */
 		void onTaskFinished( TaskNode* pNode );
+		/** @brief 워커 로컬/글로벌 큐와 스틸로 실행할 태스크를 가져옵니다. */
+		bool tryTakeTask( uint32 workerId, TaskNode*& pNode );
+		/** @brief 현재 스레드의 로컬 큐를 비운 뒤, 다른 워커 작업을 도와 실행합니다. */
+		bool tryHelpAndExecute();
 		/** @brief 다른 워커의 큐에서 작업을 훔쳐와(Work Stealing) 즉시 실행합니다. */
 		bool tryStealAndExecute( uint32 excludedWorkerId );
 

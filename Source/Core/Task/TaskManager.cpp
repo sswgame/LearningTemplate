@@ -6,6 +6,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 
+#include <cstring>
 #include <variant>
 
 namespace sw
@@ -17,6 +18,9 @@ namespace sw
 		thread_local bool	   t_bInsideParallelTask = false;	///< 현재 병렬 배치 태스크 내부 실행 중인지 여부
 		thread_local int32	   t_currentWorkerIndex	 = -1;		///< 현재 워커 스레드의 인덱스
 		thread_local TaskNode* t_pCurrentRunningTask = nullptr; ///< 현재 스레드에서 실행 중인 태스크 노드 포인터
+
+		constexpr uint32 kIdleSpinCount	   = 64;
+		constexpr uint32 kTaskNameCapacity = 31;
 
 		/**
 		 * @brief 병렬 태스크 진입/퇴출 시 스레드 로컬 플래그를 관리하는 RAII 스코프 구조체
@@ -55,6 +59,26 @@ namespace sw
 		TaskArgsPayload,
 		ParallelTaskDelegate,
 		ParallelBlockDelegate>;
+
+	struct SharedTaskCallable
+	{
+		TaskCallable	   _callable;
+		std::atomic<int32> _refCount{ 0 };
+
+		static SharedTaskCallable* create( TaskCallable callable, int32 refCount )
+		{
+			SharedTaskCallable* pShared = sw_new SharedTaskCallable();
+			pShared->_callable			= std::move( callable );
+			pShared->_refCount.store( refCount, std::memory_order_relaxed );
+			return pShared;
+		}
+
+		void release()
+		{
+			if ( _refCount.fetch_sub( 1, std::memory_order_acq_rel ) == 1 )
+				sw_delete( this );
+		}
+	};
 
 	struct TaskNode;
 
@@ -140,9 +164,10 @@ namespace sw
 
 		void release();
 
-		string				_name;
+		utf8				_arrName[kTaskNameCapacity + 1]{};
 		InlineSuccessorList _successors;
 		TaskCallable		_callable;
+		SharedTaskCallable* _pSharedCallable{ nullptr };
 		weak_ptr<StageNode> _parentStage;
 
 		uint32			   _rangeStart{ 0 };
@@ -159,6 +184,19 @@ namespace sw
 		std::atomic<int32> _activeChildren{ 0 };
 		std::atomic<int32> _refCount{ 1 };
 	};
+
+	static void setTaskName( TaskNode* pNode, string_view name )
+	{
+		if ( pNode == nullptr )
+			return;
+
+		uint32 len = static_cast<uint32>( name.size() );
+		if ( len > kTaskNameCapacity )
+			len = kTaskNameCapacity;
+		if ( len > 0 )
+			std::memcpy( pNode->_arrName, name.data(), len );
+		pNode->_arrName[len] = 0;
+	}
 
 	class TaskNodePool
 	{
@@ -228,12 +266,14 @@ namespace sw
 			pMem->_state.store( TaskState::Pending, std::memory_order_relaxed );
 			pMem->_bCancelled.store( false, std::memory_order_relaxed );
 			pMem->_refCount.store( 1, std::memory_order_relaxed );
-			pMem->_pOwner	  = nullptr;
-			pMem->_pParent	  = nullptr;
-			pMem->_rangeStart = 0;
-			pMem->_rangeEnd	  = 0;
-			pMem->_affinity	  = TaskThreadAffinity::Any;
-			pMem->_priority	  = TaskPriority::Normal;
+			pMem->_pOwner		   = nullptr;
+			pMem->_pParent		   = nullptr;
+			pMem->_pSharedCallable = nullptr;
+			pMem->_arrName[0]	   = 0;
+			pMem->_rangeStart	   = 0;
+			pMem->_rangeEnd		   = 0;
+			pMem->_affinity		   = TaskThreadAffinity::Any;
+			pMem->_priority		   = TaskPriority::Normal;
 			return pMem;
 		}
 
@@ -244,7 +284,12 @@ namespace sw
 			pNode->_successors.clearAndRelease();
 			pNode->_callable = std::monostate{};
 			pNode->_parentStage.reset();
-			pNode->_name.clear();
+			pNode->_arrName[0] = 0;
+			if ( pNode->_pSharedCallable != nullptr )
+			{
+				pNode->_pSharedCallable->release();
+				pNode->_pSharedCallable = nullptr;
+			}
 			pNode->_pOwner = nullptr;
 
 			if ( _freeQueue.enqueue( pNode ) == false )
@@ -486,8 +531,11 @@ namespace sw
 
 		BLOCK( "Stop Worker Threads" )
 		{
-			_bStop = true;
-			_cvWorker.notify_all();
+			{
+				std::scoped_lock<mutex> lock{ _workerMutex };
+				_bStop = true;
+				_cvWorker.notify_all();
+			}
 
 			for ( std::thread& worker : _listWorkers )
 			{
@@ -555,9 +603,9 @@ namespace sw
 			return TaskHandle{};
 		}
 
-		TaskNode* pNode	 = TaskNodePool::get().allocate();
-		pNode->_pOwner	 = this;
-		pNode->_name	 = name;
+		TaskNode* pNode = TaskNodePool::get().allocate();
+		pNode->_pOwner	= this;
+		setTaskName( pNode, name );
 		pNode->_affinity = affinity;
 		pNode->_callable = delegate;
 		pNode->_state	 = TaskState::Pending;
@@ -585,9 +633,9 @@ namespace sw
 			return TaskHandle{};
 		}
 
-		TaskNode* pNode	 = TaskNodePool::get().allocate();
-		pNode->_pOwner	 = this;
-		pNode->_name	 = name;
+		TaskNode* pNode = TaskNodePool::get().allocate();
+		pNode->_pOwner	= this;
+		setTaskName( pNode, name );
 		pNode->_affinity = affinity;
 		pNode->_callable = TaskArgsPayload{ delegate, args };
 		pNode->_state	 = TaskState::Pending;
@@ -618,18 +666,23 @@ namespace sw
 
 		uint32 numChunks = MathUtil::min( count, workerCount * 2 );
 		uint32 chunkSize = ( count + numChunks - 1 ) / numChunks;
+		if ( chunkSize == 0 )
+			chunkSize = 1;
+		numChunks = ( count + chunkSize - 1 ) / chunkSize;
 
-		string	   parentName = string( name ) + "_SyncParent";
-		TaskHandle parentTask = emplaceTask( parentName, TaskDelegate{}, affinity );
+		TaskHandle parentTask = emplaceTask( name, TaskDelegate{}, affinity );
+		if ( parentTask.isValid() == false )
+			return parentTask;
 
+		SharedTaskCallable* pSharedCallable = SharedTaskCallable::create( TaskCallable{ delegate }, static_cast<int32>( numChunks ) );
 		for ( uint32 start = 0; start < count; start += chunkSize )
 		{
 			uint32	  end	   = MathUtil::min( start + chunkSize, count );
 			TaskNode* pSubTask = TaskNodePool::get().allocate();
 
-			pSubTask->_pOwner	  = this;
-			pSubTask->_name		  = string( name ) + "_Chunk";
-			pSubTask->_callable	  = delegate;
+			pSubTask->_pOwner		   = this;
+			pSubTask->_pSharedCallable = pSharedCallable;
+			setTaskName( pSubTask, name );
 			pSubTask->_rangeStart = start;
 			pSubTask->_rangeEnd	  = end;
 			pSubTask->_state	  = TaskState::Pending;
@@ -656,18 +709,24 @@ namespace sw
 
 		uint32 numChunks = MathUtil::min( count, workerCount * 2 );
 		uint32 chunkSize = ( count + numChunks - 1 ) / numChunks;
+		if ( chunkSize == 0 )
+			chunkSize = 1;
+		numChunks = ( count + chunkSize - 1 ) / chunkSize;
 
-		TaskHandle parentTask = emplaceTask( "ParallelBlockTask_SyncParent", TaskDelegate{}, affinity );
+		TaskHandle parentTask = emplaceTask( "ParallelBlockTask", TaskDelegate{}, affinity );
+		if ( parentTask.isValid() == false )
+			return parentTask;
 
+		SharedTaskCallable* pSharedCallable = SharedTaskCallable::create( TaskCallable{ delegate }, static_cast<int32>( numChunks ) );
 		for ( uint32 offset = 0; offset < count; offset += chunkSize )
 		{
 			uint32	  chunkStart = start + offset;
 			uint32	  chunkEnd	 = MathUtil::min( chunkStart + chunkSize, end );
 			TaskNode* pSubTask	 = TaskNodePool::get().allocate();
 
-			pSubTask->_pOwner	  = this;
-			pSubTask->_name		  = "ParallelBlockTask_Chunk";
-			pSubTask->_callable	  = delegate;
+			pSubTask->_pOwner		   = this;
+			pSubTask->_pSharedCallable = pSharedCallable;
+			setTaskName( pSubTask, "ParallelBlockTask" );
 			pSubTask->_rangeStart = chunkStart;
 			pSubTask->_rangeEnd	  = chunkEnd;
 			pSubTask->_state	  = TaskState::Pending;
@@ -735,20 +794,28 @@ namespace sw
 		if ( stage._node == nullptr )
 			return;
 
+		uint32 spinCount = 0;
 		while ( stage._node->_remainingTasks.load( std::memory_order_acquire ) > 0 )
 		{
 			if ( isMainThread() )
 				dispatchMainThreadTasks();
 
-			if ( tryStealAndExecute( ~0u ) )
-				continue;
-
-			std::unique_lock<mutex> lock{ stage._node->_mutex };
-			if ( stage._node->_remainingTasks.load( std::memory_order_acquire ) > 0 )
+			if ( tryHelpAndExecute() )
 			{
-				stage._node->_cv.wait_for( lock, std::chrono::milliseconds( 1 ), [&]()
-				{ return stage._node->_remainingTasks.load( std::memory_order_acquire ) == 0; } );
+				spinCount = 0;
+				continue;
 			}
+
+			if ( spinCount < kIdleSpinCount )
+			{
+				sw::cpuPause();
+				++spinCount;
+				continue;
+			}
+
+			std::unique_lock<mutex> lock{ _waitAllMutex };
+			if ( stage._node->_remainingTasks.load( std::memory_order_acquire ) > 0 )
+				_cvWaitAll.wait( lock );
 		}
 
 		{
@@ -785,19 +852,16 @@ namespace sw
 	bool TaskManager::waitAll( uint32 timeoutMs )
 	{
 		const auto startTime = std::chrono::steady_clock::now();
+		uint32	   spinCount = 0;
 		while ( _activeTaskCount.load( std::memory_order_acquire ) > 0 )
 		{
 			if ( isMainThread() )
 				dispatchMainThreadTasks();
 
-			if ( tryStealAndExecute( ~0u ) )
-				continue;
-
-			if ( _activeTaskCount.load( std::memory_order_acquire ) > 0 )
+			if ( tryHelpAndExecute() )
 			{
-				std::unique_lock<mutex> lock{ _waitAllMutex };
-				_cvWaitAll.wait_for( lock, std::chrono::milliseconds( 1 ), [&]()
-				{ return _activeTaskCount.load( std::memory_order_acquire ) == 0; } );
+				spinCount = 0;
+				continue;
 			}
 
 			if ( timeoutMs > 0 )
@@ -805,7 +869,24 @@ namespace sw
 				const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::steady_clock::now() - startTime ).count();
 				if ( elapsed >= static_cast<int64>( timeoutMs ) )
 					return _activeTaskCount.load( std::memory_order_acquire ) == 0;
+
+				const uint32			remainingMs = static_cast<uint32>( static_cast<int64>( timeoutMs ) - elapsed );
+				std::unique_lock<mutex> lock{ _waitAllMutex };
+				if ( _activeTaskCount.load( std::memory_order_acquire ) > 0 )
+					_cvWaitAll.wait_for( lock, std::chrono::milliseconds( remainingMs ) );
+				continue;
 			}
+
+			if ( spinCount < kIdleSpinCount )
+			{
+				sw::cpuPause();
+				++spinCount;
+				continue;
+			}
+
+			std::unique_lock<mutex> lock{ _waitAllMutex };
+			if ( _activeTaskCount.load( std::memory_order_acquire ) > 0 )
+				_cvWaitAll.wait( lock );
 		}
 		return true;
 	}
@@ -971,8 +1052,9 @@ namespace sw
 
 			BLOCK( "Execute Task Delegate" )
 			{
+				TaskCallable&		 callable = pNode->_pSharedCallable != nullptr ? pNode->_pSharedCallable->_callable : pNode->_callable;
 				TaskExecutionVisitor visitor{ pNode->_rangeStart, pNode->_rangeEnd };
-				std::visit( visitor, pNode->_callable );
+				std::visit( visitor, callable );
 			}
 
 			t_pCurrentRunningTask = pPrevRunningTask;
@@ -984,6 +1066,47 @@ namespace sw
 		}
 
 		pNode->release(); // Release queue reference
+	}
+
+	bool TaskManager::tryTakeTask( uint32 workerId, TaskNode*& pNode )
+	{
+		pNode = nullptr;
+
+		WorkerQueue& localQ = *std::as_const( _listWorkerQueues )[workerId];
+		if ( localQ._queue.pop( pNode ) && pNode != nullptr )
+			return true;
+
+		if ( _globalWorkerQueue.dequeue( pNode ) && pNode != nullptr )
+			return true;
+
+		const uint32 numWorkers = static_cast<uint32>( _listWorkerQueues.size() );
+		for ( uint32 workerIndex = 1; workerIndex < numWorkers; ++workerIndex )
+		{
+			const uint32 targetId = ( workerId + workerIndex ) % numWorkers;
+			WorkerQueue& targetQ  = *std::as_const( _listWorkerQueues )[targetId];
+			if ( targetQ._queue.steal( pNode ) && pNode != nullptr )
+				return true;
+		}
+
+		pNode = nullptr;
+		return false;
+	}
+
+	bool TaskManager::tryHelpAndExecute()
+	{
+		const int32 workerId = getCurrentWorkerIndex();
+		if ( workerId >= 0 )
+		{
+			TaskNode*	 pNode{ nullptr };
+			WorkerQueue& localQ = *std::as_const( _listWorkerQueues )[static_cast<uint32>( workerId )];
+			if ( localQ._queue.pop( pNode ) && pNode != nullptr )
+			{
+				executeTask( pNode );
+				return true;
+			}
+		}
+
+		return tryStealAndExecute( ~0u );
 	}
 
 	bool TaskManager::tryStealAndExecute( uint32 excludedWorkerId )
@@ -1016,58 +1139,23 @@ namespace sw
 
 	void TaskManager::workerLoop( uint32 workerId )
 	{
-		t_bTaskWorkerThread		= true;
-		t_currentWorkerIndex	= static_cast<int32>( workerId );
-		const uint32 numWorkers = static_cast<uint32>( _listWorkerQueues.size() );
+		t_bTaskWorkerThread	 = true;
+		t_currentWorkerIndex = static_cast<int32>( workerId );
 
-		while ( true )
+		while ( _bStop.load( std::memory_order_relaxed ) == false )
 		{
 			TaskNode* pNode{ nullptr };
-
-			// 1. Try local queue
-			{
-				WorkerQueue& localQ = *std::as_const( _listWorkerQueues )[workerId];
-				localQ._queue.pop( pNode );
-			}
-
-			// 2. Try global queue
-			if ( pNode == nullptr )
-			{
-				_globalWorkerQueue.dequeue( pNode );
-			}
-
-			// 3. Try stealing
-			if ( pNode == nullptr && numWorkers > 1 )
-			{
-				for ( uint32 workerIndex = 1; workerIndex < numWorkers; ++workerIndex )
-				{
-					uint32		 targetId = ( workerId + workerIndex ) % numWorkers;
-					WorkerQueue& targetQ  = *std::as_const( _listWorkerQueues )[targetId];
-					if ( targetQ._queue.steal( pNode ) )
-						break;
-				}
-			}
-
-			if ( pNode != nullptr )
+			if ( tryTakeTask( workerId, pNode ) )
 			{
 				executeTask( pNode );
 				continue;
 			}
 
-			// 4. Spin-wait backoff before sleeping
-			bool bFoundInSpin{ false };
-			for ( uint32 spin = 0; spin < constant::kMaxBuffer32; ++spin )
+			bool bFoundInSpin = false;
+			for ( uint32 spin = 0; spin < kIdleSpinCount; ++spin )
 			{
 				sw::cpuPause();
-
-				if ( _globalWorkerQueue.dequeue( pNode ) && pNode != nullptr )
-				{
-					bFoundInSpin = true;
-					break;
-				}
-
-				WorkerQueue& localQ = *std::as_const( _listWorkerQueues )[workerId];
-				if ( localQ._queue.pop( pNode ) && pNode != nullptr )
+				if ( tryTakeTask( workerId, pNode ) )
 				{
 					bFoundInSpin = true;
 					break;
@@ -1080,17 +1168,18 @@ namespace sw
 				continue;
 			}
 
-			// 4. Sleep if still empty
+			_sleepingWorkerCount.fetch_add( 1, std::memory_order_relaxed );
 			{
-				_sleepingWorkerCount.fetch_add( 1, std::memory_order_relaxed );
 				std::unique_lock<mutex> lock{ _workerMutex };
-				_cvWorker.wait_for( lock, std::chrono::milliseconds( 2 ) );
-				_sleepingWorkerCount.fetch_sub( 1, std::memory_order_relaxed );
+				if ( _bStop.load( std::memory_order_relaxed ) == false && tryTakeTask( workerId, pNode ) == false )
+					_cvWorker.wait( lock );
+			}
+			_sleepingWorkerCount.fetch_sub( 1, std::memory_order_relaxed );
 
-				if ( _bStop.load( std::memory_order_relaxed ) )
-				{
-					break;
-				}
+			if ( pNode != nullptr )
+			{
+				executeTask( pNode );
+				continue;
 			}
 		}
 
@@ -1115,6 +1204,8 @@ namespace sw
 				{
 					std::this_thread::yield();
 				}
+				std::scoped_lock<mutex> waitLock{ _waitAllMutex };
+				_cvWaitAll.notify_one();
 			}
 			else
 			{
@@ -1138,10 +1229,8 @@ namespace sw
 						}
 					}
 
-					if ( _sleepingWorkerCount.load( std::memory_order_relaxed ) > 0 )
-					{
-						_cvWorker.notify_one();
-					}
+					std::scoped_lock<mutex> workerLock{ _workerMutex };
+					_cvWorker.notify_one();
 				}
 			}
 		}
@@ -1149,11 +1238,9 @@ namespace sw
 
 	void TaskManager::onTaskFinished( TaskNode* pNode )
 	{
-		pNode->_state.store( TaskState::WaitingForChildren, std::memory_order_seq_cst );
-		if ( pNode->_activeChildren.load( std::memory_order_seq_cst ) > 0 )
-		{
+		pNode->_state.store( TaskState::WaitingForChildren, std::memory_order_release );
+		if ( pNode->_activeChildren.load( std::memory_order_acquire ) > 0 )
 			return;
-		}
 
 		pNode->_state.store( TaskState::Completed, std::memory_order_release );
 
@@ -1162,8 +1249,8 @@ namespace sw
 			TaskNode* pParent = pNode->_pParent;
 			if ( pParent != nullptr )
 			{
-				int32 remaining = pParent->_activeChildren.fetch_sub( 1, std::memory_order_seq_cst ) - 1;
-				if ( remaining == 0 && pParent->_state.load( std::memory_order_seq_cst ) == TaskState::WaitingForChildren )
+				int32 remaining = pParent->_activeChildren.fetch_sub( 1, std::memory_order_acq_rel ) - 1;
+				if ( remaining == 0 && pParent->_state.load( std::memory_order_acquire ) == TaskState::WaitingForChildren )
 					onTaskFinished( pParent );
 			}
 		}
@@ -1176,8 +1263,12 @@ namespace sw
 				uint32 prev = pStage->_remainingTasks.fetch_sub( 1, std::memory_order_release );
 				if ( prev == 1 )
 				{
-					std::scoped_lock<mutex> lock{ pStage->_mutex };
-					pStage->_cv.notify_all();
+					{
+						std::scoped_lock<mutex> lock{ pStage->_mutex };
+						pStage->_cv.notify_all();
+					}
+					std::scoped_lock<mutex> waitLock{ _waitAllMutex };
+					_cvWaitAll.notify_all();
 				}
 			}
 		}
