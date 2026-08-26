@@ -298,8 +298,9 @@ namespace sw
 
 			const ComponentHandle* pRawHandles = wave.data();
 			const uint32		   totalCount  = static_cast<uint32>( wave.size() );
-			ParallelTaskDelegate   delegate	   = SW_DELEGATE_LAMBDA( ParallelTaskDelegate, [pRegistry, deltaTime, pRawHandles, totalCount]( uint32 index )
-				 {
+			ParallelTaskDelegate   delegate	   = SW_DELEGATE_LAMBDA(
+				 ParallelTaskDelegate, [pRegistry, deltaTime, pRawHandles, totalCount]( uint32 index )
+			 {
 				 if ( index < totalCount )
 					 resolveAndTickVal( pRegistry, deltaTime, pRawHandles[index] );
 			 } );
