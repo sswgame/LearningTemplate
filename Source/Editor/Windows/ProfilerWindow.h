@@ -22,7 +22,7 @@ namespace sw
 		/** @brief 윈도우 제목을 반환합니다. */
 		const utf8* getWindowTitle() const override { return "Profiler"; }
 		/** @brief 프로파일러 UI를 그립니다. */
-		void draw( const EditorUIContext& ctx ) override;
+		void draw() override;
 		/** @brief 온디맨드 도구이므로 기본적으로 닫힌 채 시작합니다. */
 		bool isToolWindow() const override { return true; }
 

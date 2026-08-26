@@ -1,6 +1,6 @@
 /**
  * @file ModuleHost.h
- * @brief 에디터/게임 모듈 라이프사이클 관리 — LiveReload 콜백·API 바인딩·Game View RT
+ * @brief 에디터/게임 모듈 라이프사이클 관리 — LiveReload 콜백·API 바인딩
  *
  * @note RuntimeAPI 레이어에 위치하여 호스트↔모듈 계약의 라이프사이클을 관리합니다.
  *       Engine은 Editor를 모르고, App은 EditorAPI/GameAPI 세부사항을 모릅니다.
@@ -13,7 +13,6 @@
 #include "Core/Container/vector.h"
 
 #include "RuntimeAPI/ABI/EditorAPI.h"
-#include "RuntimeAPI/ABI/EditorUIContext.h"
 #include "RuntimeAPI/ABI/GameAPI.h"
 
 namespace sw
@@ -28,21 +27,17 @@ namespace sw
 
 	/**
 	 * @class ModuleHost
-	 * @brief 에디터·게임 모듈의 생명주기·API 바인딩·Game View RT를 캡슐화합니다.
+	 * @brief 에디터·게임 모듈의 생명주기·API 바인딩을 캡슐화합니다.
 	 *
 	 * @details
 	 *   App은 ModuleHost를 unique_ptr으로 소유합니다.
 	 *   - initialize()에서 LiveReloadManager에 콜백을 등록합니다.
 	 *   - 핫리로드 시 onBefore/onAfter 콜백이 자동으로 호출됩니다.
-	 *   - Game View RT 생성·재생성·리사이즈 디바운스도 이 클래스가 담당합니다.
 	 */
 	class ModuleHost
 	{
 	public:
-		// 1) EditorUIContext Getter
-		EditorUIContext& getEditorUIContext() { return _editorContext; }
-
-		// 2) ctor/dtor → initialize/shutdown
+		// 1) ctor/dtor → initialize/shutdown
 		ModuleHost();
 		~ModuleHost();
 
@@ -69,13 +64,10 @@ namespace sw
 		void fixedUpdateGame( float32 fixedDeltaTime );
 		/** @brief 네이티브 윈도우 이벤트를 에디터에 전달합니다. */
 		bool onWindowMessage( const NativeWindowEvent& event );
-		/** @brief GameViewPanel이 요청한 크기를 디바운스한 뒤 적용합니다. */
-		void processGameViewportResizeRequest();
 
-		/** @brief 에디터가 게임 씬을 렌더링할 때 사용할 머티리얼을 갱신합니다. */
-		void setEditorGameMaterial( class Material* pMaterial ) { _editorContext._pMaterial = pMaterial; }
+		/** @brief 이번 프레임 Game View RT 핸들과 크기를 에디터에서 조회합니다. */
+		void getGameViewport( uint64& renderTarget, uint32& width, uint32& height ) const;
 
-		// getter
 		/** @brief 에디터 인스턴스 핸들을 반환합니다. */
 		EditorHandle getEditor() const { return _editor; }
 		/** @brief 게임 인스턴스 핸들을 반환합니다. */
@@ -86,18 +78,6 @@ namespace sw
 		const GameAPI& getGameAPI() const { return _gameApi; }
 		/** @brief 에디터 모드인지를 반환합니다. */
 		bool isEditorEnabled() const { return _bEnableEditor; }
-
-		/** @brief 에디터 Game View 렌더 타겟 및 뷰포트 크기를 읽는 접근자입니다. */
-		struct ViewportInfo
-		{
-			uint64 _gameRenderTarget{};
-			uint32 _gameViewportWidth{};
-			uint32 _gameViewportHeight{};
-		};
-		ViewportInfo getEditorViewportInfo() const
-		{
-			return { _editorContext._gameRenderTarget, _editorContext._gameViewportWidth, _editorContext._gameViewportHeight };
-		}
 
 		// 4) LiveReload 콜백 — LiveReloadManager의 델리게이트가 호출
 		void onBeforeEditorReload();
@@ -112,12 +92,9 @@ namespace sw
 		void drainRenderWorkers();
 		void poisonLiveReload( const utf8* pReason );
 
-		// 5) 모듈 바인딩 · Game View RT
+		// 5) 모듈 바인딩
 		bool bindEditorAPI( void* pLibraryModule );
 		bool bindGameAPI( void* pLibraryModule );
-		bool createGameViewportTexture( uint32 width = 1280, uint32 height = 720 );
-		bool recreateGameViewportTexture( uint32 width, uint32 height );
-		void destroyGameViewportTexture();
 
 		/** @brief 에디터·게임 모듈이 필수 리소스를 로드한 후 Splash를 내립니다. */
 		void notifyModulesReady();
@@ -126,11 +103,10 @@ namespace sw
 		bool reinitializeAfterRhiSwap( void* pEditorModule, void* pGameModule );
 
 	private:
-		EditorAPI		_editorApi;
-		GameAPI			_gameApi;
-		EditorHandle	_editor;
-		GameHandle		_game;
-		EditorUIContext _editorContext;
+		EditorAPI	 _editorApi;
+		GameAPI		 _gameApi;
+		EditorHandle _editor;
+		GameHandle	 _game;
 
 		LiveReloadManager* _pLiveReloadManager; // non-owning
 		RHI*			   _pRHI;				// non-owning

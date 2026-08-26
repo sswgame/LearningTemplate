@@ -29,16 +29,16 @@ namespace sw
 		/** @brief 윈도우 제목을 반환합니다. */
 		const utf8* getWindowTitle() const override { return "Inspector"; }
 		/** @brief 인스펙터 UI를 그립니다. */
-		void draw( const EditorUIContext& ctx ) override;
+		void draw() override;
 
 	private:
 		// ------------------------------------------------------------------------------
 		// 2) 엔진 / 선택 / 컴포넌트
 		// ------------------------------------------------------------------------------
 		/** @brief 엔진 전역 설정 섹션을 그립니다. */
-		void drawEngineSection( const EditorUIContext& ctx );
+		void drawEngineSection();
 		/** @brief 현재 선택 섹션을 그립니다. */
-		void drawSelectionSection( const EditorUIContext& ctx );
+		void drawSelectionSection();
 		/** @brief GameObject 헤더(이름 등)를 그립니다. */
 		void drawGameObjectHeader( GameObject* pObj );
 		/** @brief 컴포넌트 섹션을 그립니다. */

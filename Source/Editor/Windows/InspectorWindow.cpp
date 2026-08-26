@@ -7,6 +7,7 @@
 #include "Core/Task/TaskTypes.h"
 
 #include "Editor/Common/EditorConstants.h"
+#include "Editor/Common/EditorContext.h"
 #include "Editor/Config/EditorData.h"
 #include "Editor/Property/ComponentDrawerRegistry.h"
 #include "Editor/Property/DefaultPropertyDrawers.h"
@@ -17,15 +18,17 @@
 #include "Editor/Widgets/EditorWidgets.h"
 #include "Editor/Workspace/EditorAssetDrop.h"
 #include "Editor/Workspace/EditorWorkspace.h"
+#include "Editor/Workspace/SelectionManager.h"
 
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneManager.h"
 #include "Engine/Utility/CommandStack.h"
 
 #include "RuntimeAPI/Service/EditorService.h"
-#include "RuntimeAPI/ABI/EditorUIContext.h"
 
 #include <imgui.h>
 
@@ -166,7 +169,7 @@ namespace sw
 
 	} // namespace
 
-	void InspectorWindow::draw( const EditorUIContext& ctx )
+	void InspectorWindow::draw()
 	{
 		if ( ImGui::Begin( getWindowTitle(), getOpenPtr() ) == false )
 		{
@@ -175,10 +178,10 @@ namespace sw
 		}
 
 		editor::pushInspectorStyle();
-		drawSelectionSection( ctx );
+		drawSelectionSection();
 		ImGui::Separator();
 		if ( ImGui::CollapsingHeader( "Engine / Material", ImGuiTreeNodeFlags_DefaultOpen ) )
-			drawEngineSection( ctx );
+			drawEngineSection();
 
 		if ( ImGui::CollapsingHeader( "Debug / Global Variables" ) )
 		{
@@ -228,9 +231,10 @@ namespace sw
 		ImGui::End();
 	}
 
-	void InspectorWindow::drawEngineSection( const EditorUIContext& ctx )
+	void InspectorWindow::drawEngineSection()
 	{
-		IRHIDevice* pRHIDevice = static_cast<IRHIDevice*>( ctx._pRHIDevice );
+		EditorContext* pEditorContext = EditorContext::get();
+		IRHIDevice*	   pRHIDevice	  = ( pEditorContext != nullptr ) ? pEditorContext->getRhiDevice() : nullptr;
 		if ( pRHIDevice != nullptr )
 			ImGui::Text( "Active RHI Backend : %s", pRHIDevice->getBackendName() );
 
@@ -242,12 +246,14 @@ namespace sw
 				ImGui::SliderFloat( "Player Speed", pSpeed, 0.0f, 20.0f );
 		}
 
-		if ( ImGui::CollapsingHeader( "App Frame (Read Only)", ImGuiTreeNodeFlags_DefaultOpen ) )
+		Material*	  pMaterial		= nullptr;
+		SceneManager* pSceneManager = editor::getService<SceneManager>();
+		if ( pSceneManager != nullptr )
 		{
-			ImGui::ColorEdit4( "Clear Color", ctx._arrClearColor );
+			Scene* pScene = pSceneManager->getActiveScene();
+			if ( pScene != nullptr )
+				pMaterial = pScene->getMaterial();
 		}
-
-		Material* pMaterial = static_cast<Material*>( ctx._pMaterial );
 		if ( pMaterial != nullptr )
 		{
 			renderMaterialUI( pMaterial, pRHIDevice );
@@ -290,7 +296,7 @@ namespace sw
 		}
 	}
 
-	void InspectorWindow::drawSelectionSection( const EditorUIContext& ctx )
+	void InspectorWindow::drawSelectionSection()
 	{
 		ImGui::TextUnformatted( "Selection" );
 		ImGui::Separator();
@@ -336,8 +342,9 @@ namespace sw
 		}
 
 		ImGui::SeparatorText( "Components" );
-		auto*					  pRhiDevice	 = static_cast<IRHIDevice*>( ctx._pRHIDevice );
-		const vector<Component*>& listComponents = pObj->getAllComponents();
+		EditorContext*			  pSelEditorContext = EditorContext::get();
+		IRHIDevice*				  pRhiDevice		= ( pSelEditorContext != nullptr ) ? pSelEditorContext->getRhiDevice() : nullptr;
+		const vector<Component*>& listComponents	= pObj->getAllComponents();
 		for ( Component* pComp : listComponents )
 		{
 			if ( pComp == nullptr )

@@ -62,7 +62,7 @@ namespace sw
 	{
 	}
 
-	void GlobalVariablesWindow::draw( const EditorUIContext& /*ctx*/ )
+	void GlobalVariablesWindow::draw()
 	{
 		if ( isOpen() == false )
 			return;

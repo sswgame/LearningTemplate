@@ -70,7 +70,7 @@ namespace sw
 	{
 	}
 
-	void ContentBrowserWindow::draw( const EditorUIContext& /*ctx*/ )
+	void ContentBrowserWindow::draw()
 	{
 		if ( ImGui::Begin( getWindowTitle(), getOpenPtr() ) == false )
 		{

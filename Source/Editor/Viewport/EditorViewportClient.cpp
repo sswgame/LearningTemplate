@@ -8,8 +8,6 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 
-#include "RuntimeAPI/ABI/EditorUIContext.h"
-
 #include <imgui.h>
 #include <ImGuizmo.h>
 
@@ -193,7 +191,7 @@ namespace sw
 							 _orbitTarget._z - forward._z * _orbitDistance };
 	}
 
-	void EditorViewportClient::draw( const EditorUIContext& /*ctx*/, const void* pTextureId, const float2& canvasSize )
+	void EditorViewportClient::draw( const void* pTextureId, const float2& canvasSize )
 	{
 		// 1) 툴바
 		_toolbar.draw( _toolbarSettings, canvasSize._x );

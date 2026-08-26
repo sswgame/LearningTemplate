@@ -60,7 +60,7 @@ namespace sw
 		unsubscribe();
 	}
 
-	void ConsoleWindow::draw( const EditorUIContext& /*ctx*/ )
+	void ConsoleWindow::draw()
 	{
 		if ( ImGui::Begin( getWindowTitle(), getOpenPtr() ) == false )
 		{

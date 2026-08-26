@@ -8,7 +8,6 @@
 #include "Engine/Utility/Xml/XmlDocument.h"
 
 #include "RuntimeAPI/Service/EditorService.h"
-#include "RuntimeAPI/ABI/EditorUIContext.h"
 
 #include <imgui.h>
 
@@ -50,7 +49,7 @@ namespace sw
 		resize( 8, 8 );
 	}
 
-	void TileMapTool::draw( const EditorUIContext& /*ctx*/ )
+	void TileMapTool::draw()
 	{
 		if ( ImGui::Begin( getWindowTitle(), getOpenPtr() ) == false )
 		{

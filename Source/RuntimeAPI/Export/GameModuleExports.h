@@ -14,9 +14,9 @@
  */
 
 #define SW_IMPLEMENT_GAME_MODULE( GameClass )                                                                                                        \
-	extern "C" SW_MODULE_API bool fillGameAPI( sw::GameAPI* pOutApi )                                                                                \
+	extern "C" SW_MODULE_API bool exportGameAPI( sw::GameAPI* pOutApi )                                                                                \
 	{                                                                                                                                                \
-		if ( pOutApi == nullptr || pOutApi->_abiVersion != sw::kGameAPIAbiVersion || pOutApi->_structSize < sizeof( sw::GameAPI ) )                  \
+		if ( pOutApi == nullptr )                                                                                                                    \
 			return false;                                                                                                                            \
 		pOutApi->create			  = []() -> sw::GameHandle { return sw_new GameClass(); };                                                           \
 		pOutApi->destroy		  = []( sw::GameHandle gameHandle ) { sw_delete( static_cast<GameClass*>( gameHandle ) ); };                         \

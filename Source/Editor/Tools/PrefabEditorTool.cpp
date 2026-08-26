@@ -5,7 +5,6 @@
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
 
-#include "RuntimeAPI/ABI/EditorUIContext.h"
 
 #include <imgui.h>
 
@@ -41,7 +40,7 @@ namespace sw
 		_listOverrides.push_back( PrefabOverrideItem{ "MaterialComponent", "tintColor", "(1.0, 1.0, 1.0, 1.0)", "(1.0, 0.8, 0.8, 1.0)", true } );
 	}
 
-	void PrefabEditorTool::draw( [[maybe_unused]] const EditorUIContext& ctx )
+	void PrefabEditorTool::draw()
 	{
 		ImGui::SetNextWindowSize( ImVec2( 650.0f, 480.0f ), ImGuiCond_FirstUseEver );
 

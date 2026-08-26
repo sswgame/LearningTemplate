@@ -15,7 +15,6 @@ namespace sw
 {
 	class TaskManager;
 	class MemoryProfiler;
-	struct EditorUIContext;
 	class CommandStack;
 	struct EditorData;
 	struct EngineData;
@@ -24,7 +23,6 @@ namespace sw
 	{
 		TaskManager = kModuleServiceCount,
 		MemoryProfiler,
-		UIContext,
 		CommandStack,
 		EngineData
 	};
@@ -49,7 +47,6 @@ namespace sw
 
 	SW_DECLARE_EDITOR_SERVICE( TaskManager, EditorServiceId::TaskManager );
 	SW_DECLARE_EDITOR_SERVICE( MemoryProfiler, EditorServiceId::MemoryProfiler );
-	SW_DECLARE_EDITOR_SERVICE( EditorUIContext, EditorServiceId::UIContext );
 	SW_DECLARE_EDITOR_SERVICE( CommandStack, EditorServiceId::CommandStack );
 	SW_DECLARE_EDITOR_SERVICE( const EngineData, EditorServiceId::EngineData );
 

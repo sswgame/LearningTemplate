@@ -13,7 +13,6 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "RuntimeAPI/Service/EditorService.h"
-#include "RuntimeAPI/ABI/EditorUIContext.h"
 
 #include <imgui.h>
 #include <algorithm>
@@ -465,7 +464,7 @@ namespace sw
 
 	} // namespace
 
-	void HierarchyWindow::draw( const EditorUIContext& /*ctx*/ )
+	void HierarchyWindow::draw()
 	{
 		if ( ImGui::Begin( getWindowTitle(), getOpenPtr() ) == false )
 		{

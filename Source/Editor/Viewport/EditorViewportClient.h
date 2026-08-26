@@ -9,7 +9,6 @@
 namespace sw
 {
 	class IRHIDevice;
-	struct EditorUIContext;
 
 	/** @brief 에디터 카메라 제어 모드 */
 	enum class CameraControlMode : uint8
@@ -33,7 +32,7 @@ namespace sw
 		void update( float32 deltaTime, bool bWindowFocused, bool bWindowHovered );
 
 		/** @brief 뷰포트 UI 및 ImGuizmo 렌더링 */
-		void draw( const EditorUIContext& ctx, const void* pTextureId, const float2& canvasSize );
+		void draw( const void* pTextureId, const float2& canvasSize );
 
 		/** @brief View Matrix 계산 */
 		void getViewMatrix( float32* pOutMatrix ) const;

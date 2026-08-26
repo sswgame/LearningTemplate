@@ -21,7 +21,7 @@ namespace sw
 		// 1) IEditorWindow — 제목/그리기
 		// ------------------------------------------------------------------------------
 		/** @brief 애니메이션 그래프 UI를 그립니다. */
-		void draw( const EditorUIContext& ctx ) override;
+		void draw() override;
 		/** @brief 윈도우 제목을 반환합니다. */
 		const utf8* getWindowTitle() const override { return "Animation Graph"; }
 

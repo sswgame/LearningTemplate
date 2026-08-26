@@ -5,7 +5,7 @@
 ## 동작 흐름
 1. `App`이 실행되면서 창(Window)을 만들고 렌더러(RHI)를 초기화합니다.
 2. 개발 모드(Dev)라면 백그라운드에서 핫리로드를 관장하는 `LiveReloadManager`를 가동합니다.
-3. 이후 `EditorModule` DLL과 `SWGame` DLL을 불러와 함수 포인터(`fillGameAPI`)를 연결하고 게임 루프를 시작합니다.
+3. 이후 `EditorModule` DLL과 `SWGame` DLL을 불러와 함수 포인터(`exportGameAPI`)를 연결하고 게임 루프를 시작합니다.
 
 윈도우 메시지는 `NativeWindowEvent`로만 받고, 키/마우스 해석은 `InputManager`가 합니다.
 App은 GameFramework를 링크하지 않으므로 셸 전용 `ActionMap`(`_shellActions`)을 둡니다. Debug 레이어(`alwaysOn`)로 ReloadShaders=F8, ReloadEditor=F6, ReloadGame=F7을 조회합니다. 퀵세이브/로드(F5/F9)는 게임플레이 `gameActions()` 쪽입니다.

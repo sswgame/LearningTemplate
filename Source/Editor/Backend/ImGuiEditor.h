@@ -37,7 +37,7 @@ namespace sw
 		/** @brief 에디터 리소스를 해제합니다. */
 		void shutdown() override;
 		/** @brief 메인 스레드에서 ImGui 프레임 갱신, 패널 그리기 및 플랫폼 윈도우를 업데이트합니다. */
-		void updateUI( const EditorUIContext& context ) override;
+		void updateUI() override;
 		/** @brief UI 그리기 전 패널 GPU 작업을 수행합니다. */
 		void preRender( IRHIDevice* pRhiDevice ) override;
 		/** @brief GPU 상에 에디터 UI DrawData를 렌더링합니다. */
@@ -45,11 +45,13 @@ namespace sw
 		/** @brief 메인 스왑체인 Present 이후 멀티 뷰포트를 렌더합니다. */
 		void postPresent( IRHIDevice* pRhiDevice ) override;
 		/** @brief 네이티브 이벤트를 ImGui 플랫폼 레이어로 전달합니다. */
-		bool processEvent( const NativeWindowEvent& event, const EditorUIContext* pContext ) override;
+		bool processEvent( const NativeWindowEvent& event ) override;
 		/** @brief RHI 텍스처를 ImGui 텍스처 ID로 등록합니다. */
 		void* registerTexture( RHITextureHandle texture ) override;
 		/** @brief 등록된 ImGui 텍스처 ID를 해제합니다. */
 		void unregisterTexture( void* pTextureID ) override;
+		/** @brief 이번 프레임 Game View RT 핸들과 크기를 조회합니다. */
+		void getGameViewport( uint64* pRenderTarget, uint32* pWidth, uint32* pHeight ) const override;
 
 	private:
 		// ------------------------------------------------------------------------------
@@ -73,7 +75,7 @@ namespace sw
 		//    기본 레이아웃은 최초 1회, 이후 imgui.ini / windows.ini
 		// ------------------------------------------------------------------------------
 		/** @brief 메인 메뉴바를 그립니다. */
-		void drawMainMenuBar( const EditorUIContext& ctx );
+		void drawMainMenuBar();
 		/** @brief 도크스페이스를 시작합니다. */
 		void beginDockspace();
 		/** @brief 기본 도킹 레이아웃을 적용합니다. */

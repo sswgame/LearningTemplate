@@ -2,11 +2,14 @@
 
 #include "Editor/Windows/GameViewWindow.h"
 
+#include "Editor/Common/EditorContext.h"
 #include "Editor/Widgets/EditorWidgets.h"
 #include "Editor/Workspace/EditorAssetDrop.h"
 #include "Editor/Workspace/EditorTransaction.h"
 #include "Editor/Workspace/EditorWorkspace.h"
 #include "Editor/Workspace/SelectionManager.h"
+
+#include "Core/Math/MathUtil.h"
 
 #include "Engine/Game/GameState.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
@@ -16,7 +19,6 @@
 #include "Engine/Utility/Debug/DebugOverlayState.h"
 
 #include "RuntimeAPI/Service/EditorService.h"
-#include "RuntimeAPI/ABI/EditorUIContext.h"
 
 #include <imgui.h>
 #include <ImGuizmo.h>
@@ -27,14 +29,18 @@ namespace sw
 	{
 	}
 
-	void GameViewWindow::draw( const EditorUIContext& ctx )
+	void GameViewWindow::draw()
 	{
+		EditorContext* pEditorContext = EditorContext::get();
+		if ( pEditorContext == nullptr )
+			return;
+
 		const bool	  bFocused = ImGui::IsWindowFocused( ImGuiFocusedFlags_RootAndChildWindows );
 		const bool	  bHovered = ImGui::IsWindowHovered( ImGuiHoveredFlags_RootAndChildWindows );
 		const float32 dt	   = ImGui::GetIO().DeltaTime;
 
-		ctx._bIsGameViewFocused = bFocused;
-		ctx._bIsGameViewHovered = bHovered;
+		pEditorContext->setGameViewFocused( bFocused );
+		pEditorContext->setGameViewHovered( bHovered );
 
 		_viewportClient.update( dt, bFocused, bHovered );
 
@@ -64,18 +70,17 @@ namespace sw
 		const ImVec2 size = ImGui::GetContentRegionAvail();
 		if ( size.x > 1.0f && size.y > 1.0f )
 		{
-			const uint32 wantW = static_cast<uint32>( MathUtil::round( size.x ) );
-			const uint32 wantH = static_cast<uint32>( MathUtil::round( size.y ) );
-			const int32	 dW	   = static_cast<int32>( wantW ) - static_cast<int32>( ctx._gameViewportWidth );
-			const int32	 dH	   = static_cast<int32>( wantH ) - static_cast<int32>( ctx._gameViewportHeight );
-			if ( ( dW > 1 || dW < -1 || dH > 1 || dH < -1 ) && wantW > 0 && wantH > 0 )
-			{
-				ctx._requestGameViewportWidth  = wantW;
-				ctx._requestGameViewportHeight = wantH;
-			}
+			const uint32			  wantW = static_cast<uint32>( MathUtil::round( size.x ) );
+			const uint32			  wantH = static_cast<uint32>( MathUtil::round( size.y ) );
+			const EditorGameView&	  view	= pEditorContext->getGameView();
+			const int32				  dW	= static_cast<int32>( wantW ) - static_cast<int32>( view._width );
+			const int32				  dH	= static_cast<int32>( wantH ) - static_cast<int32>( view._height );
+			const bool bNeedResize = ( dW > 1 || dW < -1 || dH > 1 || dH < -1 ) && wantW > 0 && wantH > 0;
+			if ( bNeedResize )
+				pEditorContext->ensureGameViewSize( wantW, wantH );
 		}
 
-		_viewportClient.draw( ctx, ctx._pGameTextureID, float2{ size.x, size.y } );
+		_viewportClient.draw( pEditorContext->getGameView()._pTextureId, float2{ size.x, size.y } );
 
 		// 애셋 드롭 타깃 (Content Browser -> Viewport)
 		if ( ImGui::BeginDragDropTarget() )

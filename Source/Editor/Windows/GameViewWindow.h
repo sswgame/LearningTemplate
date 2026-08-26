@@ -23,7 +23,7 @@ namespace sw
 		/** @brief 윈도우 제목을 반환합니다. */
 		const utf8* getWindowTitle() const override { return "Game View"; }
 		/** @brief 게임 캔버스와 선택된 오브젝트의 기즈모를 그립니다. */
-		void draw( const EditorUIContext& ctx ) override;
+		void draw() override;
 
 		EditorViewportClient& getViewportClient() { return _viewportClient; }
 

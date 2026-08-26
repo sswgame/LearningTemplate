@@ -11,17 +11,12 @@
 namespace sw
 {
 	// ------------------------------------------------------------------------------
-	// 1) 핸들 · ABI 버전
-	//    호스트가 _abiVersion/structSize를 채운 뒤 fillGameAPI가 포인터를 넣음
+	// 1) 핸들
 	// ------------------------------------------------------------------------------
 	/** @brief 게임 인스턴스를 가리키는 불투명(opaque) 핸들 */
 	using GameHandle = void*;
 
 	struct ModuleService;
-
-	/** @brief GameAPI 테이블 ABI 버전 */
-	// Bump this whenever the GameAPI layout or a function signature changes.
-	inline constexpr uint32 kGameAPIAbiVersion = 1;
 
 	// ------------------------------------------------------------------------------
 	// 2) GameAPI — C ABI 함수 테이블
@@ -30,9 +25,6 @@ namespace sw
 	/** @brief App이 채우고 SWGame이 구현하는 함수 포인터 테이블 */
 	struct GameAPI
 	{
-		uint32 _abiVersion{ 0 }; /**< @brief 호스트가 API를 채우기 전에 예상하는 버전을 설정합니다. */
-		uint32 _structSize{ 0 }; /**< @brief 호스트가 API를 채우기 전에 GameAPI 구조체의 크기를 설정합니다. */
-
 		GameHandle ( *create )(){ nullptr };																/**< @brief 게임 인스턴스를 생성합니다. */
 		void ( *destroy )( GameHandle game ){ nullptr };													/**< @brief 게임 인스턴스를 파괴합니다. */
 		bool ( *initialize )( GameHandle game, WindowHandle window, RHIDeviceHandle rhiDevice ){ nullptr }; /**< @brief 윈도우 및 RHI 디바이스로 게임을 초기화합니다. */
@@ -44,8 +36,8 @@ namespace sw
 		bool ( *deserializeState )( GameHandle game, const void* pInBuffer, uint32 size ){ nullptr };		/**< @brief 버퍼에서 게임 상태를 복원합니다. */
 	};
 
-	/** @brief SWGame export 심볼: fillGameAPI */
-	using PFN_FillGameAPI = bool ( * )( GameAPI* pOutApi );
+	/** @brief SWGame export 심볼: exportGameAPI */
+	using PFN_ExportGameAPI = bool ( * )( GameAPI* pOutApi );
 
 	class IWindow;
 	class IRHIDevice;
@@ -56,6 +48,6 @@ extern "C"
 	// ------------------------------------------------------------------------------
 	// 3) export — SWGame이 채우는 진입점
 	// ------------------------------------------------------------------------------
-	/** @brief SWGame API 테이블을 채웁니다. */
-	SW_MODULE_API bool fillGameAPI( sw::GameAPI* pOutApi );
+	/** @brief SWGame API 테이블을 내보냅니다. */
+	SW_MODULE_API bool exportGameAPI( sw::GameAPI* pOutApi );
 }

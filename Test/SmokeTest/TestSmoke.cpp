@@ -15,8 +15,8 @@
 
 #include "RuntimeAPI/ABI/EditorAPI.h"
 #include "RuntimeAPI/ABI/GameAPI.h"
-#include "RuntimeAPI/Service/GameService.h"
 #include "RuntimeAPI/PluginAPI.h"
+#include "RuntimeAPI/Service/GameService.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -395,15 +395,13 @@ SW_TEST_CASE( Architecture, LiveReloadEditorModule )
 	SW_EXPECT_TRUE( onAfterCalled );
 	SW_ASSERT_NOT_NULL( newHandle );
 
-	// 새로 로드된 모듈에서 C-ABI fillEditorAPI 정상 동작 검증
-	const sw::PFN_FillEditorAPI fill = reinterpret_cast<sw::PFN_FillEditorAPI>(
-		sw::FileUtil::getDynamicSymbol( newHandle, "fillEditorAPI" ) );
-	SW_ASSERT_NOT_NULL( fill );
+	// 새로 로드된 모듈에서 C-ABI exportEditorAPI 정상 동작 검증
+	const sw::PFN_ExportEditorAPI pfnExport = reinterpret_cast<sw::PFN_ExportEditorAPI>(
+		sw::FileUtil::getDynamicSymbol( newHandle, "exportEditorAPI" ) );
+	SW_ASSERT_NOT_NULL( pfnExport );
 
 	sw::EditorAPI api{};
-	api._abiVersion = sw::kEditorAPIAbiVersion;
-	api._structSize = static_cast<uint32>( sizeof( sw::EditorAPI ) );
-	SW_EXPECT_TRUE( fill( &api ) );
+	SW_EXPECT_TRUE( pfnExport( &api ) );
 	SW_EXPECT_TRUE( api.create != nullptr );
 	SW_EXPECT_TRUE( api.render != nullptr );
 
@@ -595,17 +593,15 @@ SW_TEST_CASE( Architecture, RHIBackendDynamicSwapAndReload )
 #if defined( SW_SHIPPING )
 
 // ------------------------------------------------------------------------------
-// 2) ModuleAPI — fillGameAPI / fillEditorAPI
+// 2) ModuleAPI — exportGameAPI / exportEditorAPI
 // ------------------------------------------------------------------------------
 /**
- * @brief [ModuleAPI] Shipping 정적 fillGameAPI
+ * @brief [ModuleAPI] Shipping 정적 exportGameAPI
  */
-SW_TEST_CASE( ModuleAPI, FillGameAPI_ShippingStatic )
+SW_TEST_CASE( ModuleAPI, ExportGameAPI_ShippingStatic )
 {
 	sw::GameAPI api{};
-	api._abiVersion = sw::kGameAPIAbiVersion;
-	api._structSize = static_cast<uint32>( sizeof( sw::GameAPI ) );
-	SW_EXPECT_TRUE( fillGameAPI( &api ) );
+	SW_EXPECT_TRUE( exportGameAPI( &api ) );
 	SW_EXPECT_TRUE( api.create != nullptr );
 	SW_EXPECT_TRUE( api.destroy != nullptr );
 	SW_EXPECT_TRUE( api.initialize != nullptr );
@@ -621,28 +617,26 @@ SW_TEST_CASE( ModuleAPI, FillGameAPI_ShippingStatic )
 #else
 
 /**
- * @brief [ModuleAPI] SWGame DLL fillGameAPI
+ * @brief [ModuleAPI] SWGame DLL exportGameAPI
  */
-SW_TEST_CASE( ModuleAPI, FillGameAPI )
+SW_TEST_CASE( ModuleAPI, ExportGameAPI )
 {
 	void* handle = sw::loadModule( "SWGame" );
 	SW_EXPECT_TRUE( handle != nullptr );
 	if ( handle == nullptr )
 		return;
 
-	const sw::PFN_FillGameAPI fill = reinterpret_cast<sw::PFN_FillGameAPI>(
-		sw::FileUtil::getDynamicSymbol( handle, "fillGameAPI" ) );
-	SW_EXPECT_TRUE( fill != nullptr );
-	if ( fill == nullptr )
+	const sw::PFN_ExportGameAPI pfnExport = reinterpret_cast<sw::PFN_ExportGameAPI>(
+		sw::FileUtil::getDynamicSymbol( handle, "exportGameAPI" ) );
+	SW_EXPECT_TRUE( pfnExport != nullptr );
+	if ( pfnExport == nullptr )
 	{
 		sw::FileUtil::unloadDynamicLibrary( handle );
 		return;
 	}
 
 	sw::GameAPI api{};
-	api._abiVersion = sw::kGameAPIAbiVersion;
-	api._structSize = static_cast<uint32>( sizeof( sw::GameAPI ) );
-	SW_EXPECT_TRUE( fill( &api ) );
+	SW_EXPECT_TRUE( pfnExport( &api ) );
 	SW_EXPECT_TRUE( api.create != nullptr );
 	SW_EXPECT_TRUE( api.destroy != nullptr );
 	SW_EXPECT_TRUE( api.initialize != nullptr );
@@ -679,10 +673,9 @@ SW_TEST_CASE( ModuleAPI, FullGameSceneAndComponentLifecycle )
 
 	sw::engine::registerModuleTypes( "SWGame" );
 
-	const sw::PFN_FillGameAPI fill = reinterpret_cast<sw::PFN_FillGameAPI>(
-		sw::FileUtil::getDynamicSymbol( handle, "fillGameAPI" ) );
-	SW_EXPECT_TRUE( fill != nullptr );
-	if ( fill == nullptr )
+	const sw::PFN_ExportGameAPI pfnExport = reinterpret_cast<sw::PFN_ExportGameAPI>( sw::FileUtil::getDynamicSymbol( handle, "exportGameAPI" ) );
+	SW_EXPECT_TRUE( pfnExport != nullptr );
+	if ( pfnExport == nullptr )
 	{
 		sw::engine::unregisterModuleTypes( "SWGame" );
 		if ( hOverworld != nullptr )
@@ -695,9 +688,7 @@ SW_TEST_CASE( ModuleAPI, FullGameSceneAndComponentLifecycle )
 	}
 
 	sw::GameAPI api{};
-	api._abiVersion = sw::kGameAPIAbiVersion;
-	api._structSize = static_cast<uint32>( sizeof( sw::GameAPI ) );
-	SW_EXPECT_TRUE( fill( &api ) );
+	SW_EXPECT_TRUE( pfnExport( &api ) );
 
 	if ( api.bindService )
 	{
@@ -808,21 +799,19 @@ SW_TEST_CASE( ModuleAPI, FullGameSceneAndComponentLifecycle )
 }
 
 /**
- * @brief [ModuleAPI] EditorModule DLL fillEditorAPI
+ * @brief [ModuleAPI] EditorModule DLL exportEditorAPI
  */
-SW_TEST_CASE( ModuleAPI, FillEditorAPI )
+SW_TEST_CASE( ModuleAPI, ExportEditorAPI )
 {
 	void* handle = sw::loadModule( "EditorModule" );
 	SW_ASSERT_NOT_NULL( handle );
 
-	const sw::PFN_FillEditorAPI fill = reinterpret_cast<sw::PFN_FillEditorAPI>(
-		sw::FileUtil::getDynamicSymbol( handle, "fillEditorAPI" ) );
-	SW_ASSERT_NOT_NULL( fill );
+	const sw::PFN_ExportEditorAPI pfnExport = reinterpret_cast<sw::PFN_ExportEditorAPI>(
+		sw::FileUtil::getDynamicSymbol( handle, "exportEditorAPI" ) );
+	SW_ASSERT_NOT_NULL( pfnExport );
 
 	sw::EditorAPI api{};
-	api._abiVersion = sw::kEditorAPIAbiVersion;
-	api._structSize = static_cast<uint32>( sizeof( sw::EditorAPI ) );
-	SW_EXPECT_TRUE( fill( &api ) );
+	SW_EXPECT_TRUE( pfnExport( &api ) );
 	SW_ASSERT_NOT_NULL( api.create );
 
 	sw::engine::registerModuleTypes( "EditorModule" );
@@ -864,14 +853,12 @@ SW_TEST_CASE( ModuleAPI, GameModuleRepeatedReloadCycle )
 
 		sw::engine::registerModuleTypes( "SWGame" );
 
-		const sw::PFN_FillGameAPI fill = reinterpret_cast<sw::PFN_FillGameAPI>(
-			sw::FileUtil::getDynamicSymbol( handle, "fillGameAPI" ) );
-		SW_ASSERT_NOT_NULL( fill );
+		const sw::PFN_ExportGameAPI pfnExport = reinterpret_cast<sw::PFN_ExportGameAPI>(
+			sw::FileUtil::getDynamicSymbol( handle, "exportGameAPI" ) );
+		SW_ASSERT_NOT_NULL( pfnExport );
 
 		sw::GameAPI api{};
-		api._abiVersion = sw::kGameAPIAbiVersion;
-		api._structSize = static_cast<uint32>( sizeof( sw::GameAPI ) );
-		SW_EXPECT_TRUE( fill( &api ) );
+		SW_EXPECT_TRUE( pfnExport( &api ) );
 
 		if ( api.bindService )
 		{

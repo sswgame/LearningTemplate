@@ -10,7 +10,6 @@
 #include "Editor/Config/EditorConfig.h"
 #include "Editor/EditorUtil.h"
 
-#include "RuntimeAPI/ABI/EditorUIContext.h"
 
 #include <imgui.h>
 #include <imgui-node-editor/imgui_node_editor.h>
@@ -114,7 +113,7 @@ namespace sw
 	{
 	}
 
-	void DialogueGraphTool::draw( const EditorUIContext& /*ctx*/ )
+	void DialogueGraphTool::draw()
 	{
 		if ( ImGui::Begin( getWindowTitle(), getOpenPtr() ) == false )
 		{

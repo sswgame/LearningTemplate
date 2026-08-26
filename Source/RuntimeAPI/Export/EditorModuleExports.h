@@ -14,9 +14,9 @@
  */
 
 #define SW_IMPLEMENT_EDITOR_MODULE( EditorClass )                                                                                                               \
-	extern "C" SW_MODULE_API bool fillEditorAPI( sw::EditorAPI* pOutApi )                                                                                       \
+	extern "C" SW_MODULE_API bool exportEditorAPI( sw::EditorAPI* pOutApi )                                                                                       \
 	{                                                                                                                                                           \
-		if ( pOutApi == nullptr || pOutApi->_abiVersion != sw::kEditorAPIAbiVersion || pOutApi->_structSize < sizeof( sw::EditorAPI ) )                         \
+		if ( pOutApi == nullptr )                                                                                                                               \
 			return false;                                                                                                                                       \
 		pOutApi->create			   = []() -> sw::EditorHandle { return sw_new EditorClass(); };                                                                 \
 		pOutApi->destroy		   = []( sw::EditorHandle editorHandle ) { sw_delete( static_cast<EditorClass*>( editorHandle ) ); };                           \
@@ -27,10 +27,10 @@
 			EditorClass* pInstance = static_cast<EditorClass*>( editorHandle );                                                                                       \
 			if ( pInstance != nullptr )                                                                                                                        \
 				pInstance->shutdown(); };                                                                                   \
-		pOutApi->updateUI		   = []( sw::EditorHandle editorHandle, const sw::EditorUIContext* pContext ) {                                                 \
+		pOutApi->updateUI		   = []( sw::EditorHandle editorHandle ) {                                                                                      \
 			EditorClass* pInstance = static_cast<EditorClass*>( editorHandle );                                                                                       \
-			if ( pInstance != nullptr && pContext != nullptr )                                                                                                 \
-				pInstance->updateUI( *pContext ); };                                              \
+			if ( pInstance != nullptr )                                                                                                                        \
+				pInstance->updateUI(); };                                              \
 		pOutApi->preRender		   = []( sw::EditorHandle editorHandle, sw::RHIDeviceHandle rhiDeviceHandle ) {                                                 \
 			EditorClass* pInstance = static_cast<EditorClass*>( editorHandle );                                                                                       \
 			if ( pInstance != nullptr )                                                                                                                        \
@@ -43,9 +43,9 @@
 			EditorClass* pInstance = static_cast<EditorClass*>( editorHandle );                                                                                       \
 			if ( pInstance != nullptr )                                                                                                                        \
 				pInstance->postPresent( static_cast<sw::IRHIDevice*>( rhiDeviceHandle ) ); };                                              \
-		pOutApi->processEvent	   = []( sw::EditorHandle editorHandle, const sw::NativeWindowEvent* pEvent, const sw::EditorUIContext* pContext ) -> bool {                                                 \
+		pOutApi->processEvent	   = []( sw::EditorHandle editorHandle, const sw::NativeWindowEvent* pEvent ) -> bool {                                         \
 			EditorClass* pInstance = static_cast<EditorClass*>( editorHandle );                                                                                       \
-			return ( pInstance != nullptr && pEvent != nullptr ) ? pInstance->processEvent( *pEvent, pContext ) : false; }; \
+			return ( pInstance != nullptr && pEvent != nullptr ) ? pInstance->processEvent( *pEvent ) : false; }; \
 		pOutApi->registerTexture   = []( sw::EditorHandle editorHandle, sw::TextureHandle textureHandle ) -> void* {                                           \
 			EditorClass* pInstance = static_cast<EditorClass*>( editorHandle );                                                                                       \
 			return pInstance != nullptr ? pInstance->registerTexture( static_cast<sw::RHITextureHandle>( textureHandle ) ) : nullptr; };                                         \
@@ -53,6 +53,10 @@
 			EditorClass* pInstance = static_cast<EditorClass*>( editorHandle );                                                                                       \
 			if ( pInstance != nullptr )                                                                                                                        \
 				pInstance->unregisterTexture( pTextureId ); };                                                                 \
+		pOutApi->getGameViewport   = []( sw::EditorHandle editorHandle, uint64* pRenderTarget, uint32* pWidth, uint32* pHeight ) {                             \
+			EditorClass* pInstance = static_cast<EditorClass*>( editorHandle );                                                                                       \
+			if ( pInstance != nullptr )                                                                                                                        \
+				pInstance->getGameViewport( pRenderTarget, pWidth, pHeight ); };                                                           \
 		pOutApi->bindService	   = []( const sw::ModuleService* pService ) {                                                                                  \
 			if ( pService != nullptr )                                                                                                                         \
 				sw::editor::bindEditorService( *pService );                                                                                                    \

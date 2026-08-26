@@ -2,7 +2,6 @@
 
 #include "Editor/Tools/SequencerTool.h"
 
-#include "RuntimeAPI/ABI/EditorUIContext.h"
 
 #include <imgui.h>
 #include <ImGuizmo.h>
@@ -118,7 +117,7 @@ namespace sw
 
 	SequencerTool::~SequencerTool() = default;
 
-	void SequencerTool::draw( const EditorUIContext& /*ctx*/ )
+	void SequencerTool::draw()
 	{
 		if ( ImGui::Begin( getWindowTitle(), getOpenPtr() ) == false )
 		{

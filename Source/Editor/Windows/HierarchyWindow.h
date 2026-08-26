@@ -22,7 +22,7 @@ namespace sw
 		/** @brief 윈도우 제목을 반환합니다. */
 		const utf8* getWindowTitle() const override { return "Hierarchy"; }
 		/** @brief Hierarchy UI를 그립니다. */
-		void draw( const EditorUIContext& ctx ) override;
+		void draw() override;
 
 	private:
 		/** @brief Save Scene 파일 대화상자 결과. */

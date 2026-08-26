@@ -9,7 +9,6 @@
 #include "Engine/Serialization/Format/JsonSerializer.h"
 
 #include "RuntimeAPI/Service/EditorService.h"
-#include "RuntimeAPI/ABI/EditorUIContext.h"
 
 #include <imgui.h>
 
@@ -77,7 +76,7 @@ namespace sw
 		_listFrames.push_back( Frame{} );
 	}
 
-	void SpriteClipTool::draw( const EditorUIContext& /*ctx*/ )
+	void SpriteClipTool::draw()
 	{
 		if ( ImGui::Begin( getWindowTitle(), getOpenPtr() ) == false )
 		{

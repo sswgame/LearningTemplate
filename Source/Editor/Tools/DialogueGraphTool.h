@@ -31,7 +31,7 @@ namespace sw
 		// 1) IEditorWindow — 수명주기 및 UI 렌더링
 		// ------------------------------------------------------------------------------
 		/** @brief 대화 노드 그래프 UI를 렌더링합니다. */
-		void draw( const EditorUIContext& ctx ) override;
+		void draw() override;
 		/** @brief 윈도우 제목을 반환합니다. */
 		const utf8* getWindowTitle() const override { return "Dialogue Graph"; }
 

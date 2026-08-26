@@ -35,7 +35,6 @@
 
 #include "RuntimeAPI/Export/EditorModuleExports.h"
 #include "RuntimeAPI/Service/EditorService.h"
-#include "RuntimeAPI/ABI/EditorUIContext.h"
 
 #include "sw/config/ConfigConstants.h"
 
@@ -227,6 +226,8 @@ namespace sw
 		{
 			_editorContext = make_unique<EditorContext>();
 			_editorContext->initialize();
+			_editorContext->setRhiDevice( pRhiDevice );
+			_editorContext->setRendererBackend( _rendererBackend.get() );
 
 			registerDefaultWindows();
 			loadWindowVisibility();
@@ -243,6 +244,9 @@ namespace sw
 			return;
 
 		saveEditorLayout();
+
+		if ( _editorContext != nullptr )
+			_editorContext->destroyGameView();
 
 		for ( const EditorWindowEntry& entry : EditorWindowRegistry::getWindows() )
 		{
@@ -293,19 +297,22 @@ namespace sw
 		}
 	}
 
-	void ImGuiEditor::updateUI( const EditorUIContext& ctx )
+	void ImGuiEditor::updateUI()
 	{
 		if ( _bInitialized == false )
 			return;
 
-		ctx._bIsGameViewFocused = false;
-		ctx._bIsGameViewHovered = false;
+		if ( _editorContext != nullptr )
+		{
+			_editorContext->setGameViewFocused( false );
+			_editorContext->setGameViewHovered( false );
+		}
 
 		BLOCK( "ImGui NewFrame / Dockspace" )
 		{
 			beginFrame();
-			drawMainMenuBar( ctx );
-			drawEditorTransportBar( ctx );
+			drawMainMenuBar();
+			drawEditorTransportBar();
 			beginDockspace();
 		}
 
@@ -340,7 +347,7 @@ namespace sw
 			for ( const EditorWindowEntry& entry : EditorWindowRegistry::getWindows() )
 			{
 				if ( entry._pInstance && entry._pInstance->isOpen() )
-					entry._pInstance->draw( ctx );
+					entry._pInstance->draw();
 			}
 			drawBoneHierarchyPopup();
 			CommandPaletteWindow::draw();
@@ -387,7 +394,7 @@ namespace sw
 		renderPlatformWindows( pRhiDevice );
 	}
 
-	bool ImGuiEditor::processEvent( const NativeWindowEvent& event, const EditorUIContext* pContext )
+	bool ImGuiEditor::processEvent( const NativeWindowEvent& event )
 	{
 		if ( _bInitialized == false )
 			return false;
@@ -402,13 +409,15 @@ namespace sw
 		const uint32   msg		   = event._message;
 		const bool	   bIsMouse	   = ( msg >= 0x0200 && msg <= 0x020E );
 		const bool	   bIsKeyboard = ( msg >= 0x0100 && msg <= 0x0109 );
+		const bool	   bGameViewHovered = _editorContext != nullptr && _editorContext->isGameViewHovered();
+		const bool	   bGameViewFocused = _editorContext != nullptr && _editorContext->isGameViewFocused();
 
 		if ( bIsMouse )
 		{
 			const bool bIsMouseRelease = ( msg == 0x0202 /*WM_LBUTTONUP*/ || msg == 0x0205 /*WM_RBUTTONUP*/ || msg == 0x0208 /*WM_MBUTTONUP*/ || msg == 0x020C /*WM_XBUTTONUP*/ );
 			if ( bIsMouseRelease == false && io.WantCaptureMouse )
 			{
-				if ( pContext == nullptr || pContext->_bIsGameViewHovered == false )
+				if ( bGameViewHovered == false )
 					bConsumedForGame = true;
 			}
 		}
@@ -417,12 +426,10 @@ namespace sw
 			const bool bIsKeyRelease = ( msg == 0x0101 /*WM_KEYUP*/ || msg == 0x0105 /*WM_SYSKEYUP*/ );
 			if ( bIsKeyRelease == false && io.WantCaptureKeyboard )
 			{
-				if ( pContext == nullptr || pContext->_bIsGameViewFocused == false )
+				if ( bGameViewFocused == false )
 					bConsumedForGame = true;
 			}
 		}
-#else
-		(void)pContext;
 #endif
 
 		return bConsumedForGame;
@@ -439,6 +446,17 @@ namespace sw
 	{
 		if ( _rendererBackend )
 			_rendererBackend->unregisterTexture( pTextureID );
+	}
+
+	void ImGuiEditor::getGameViewport( uint64* pRenderTarget, uint32* pWidth, uint32* pHeight ) const
+	{
+		const EditorGameView* pGameView = ( _editorContext != nullptr ) ? &_editorContext->getGameView() : nullptr;
+		if ( pRenderTarget != nullptr )
+			*pRenderTarget = ( pGameView != nullptr ) ? pGameView->_renderTarget : 0;
+		if ( pWidth != nullptr )
+			*pWidth = ( pGameView != nullptr ) ? pGameView->_width : 0;
+		if ( pHeight != nullptr )
+			*pHeight = ( pGameView != nullptr ) ? pGameView->_height : 0;
 	}
 
 	void ImGuiEditor::registerDefaultWindows()
@@ -571,7 +589,7 @@ namespace sw
 			pRhiDevice->bindGraphicsContext();
 	}
 
-	void ImGuiEditor::drawMainMenuBar( const EditorUIContext& ctx )
+	void ImGuiEditor::drawMainMenuBar()
 	{
 		if ( ImGui::BeginMainMenuBar() == false )
 			return;
@@ -637,7 +655,7 @@ namespace sw
 			ImGui::EndMenu();
 		}
 
-		auto* const		  pRhiDevice = static_cast<IRHIDevice*>( ctx._pRHIDevice );
+		IRHIDevice*		  pRhiDevice = ( _editorContext != nullptr ) ? _editorContext->getRhiDevice() : nullptr;
 		const utf8*		  pBackend	 = ( pRhiDevice != nullptr ) ? pRhiDevice->getBackendName() : "n/a";
 		constexpr float32 statusW	 = 280.0f;
 		ImGui::SameLine( ImGui::GetWindowWidth() - statusW );

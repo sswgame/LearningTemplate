@@ -7,7 +7,6 @@
 
 #include "Engine/Serialization/Format/JsonSerializer.h"
 
-#include "RuntimeAPI/ABI/EditorUIContext.h"
 
 #include <imgui.h>
 #include <imgui-node-editor/imgui_node_editor.h>
@@ -51,7 +50,7 @@ namespace sw
 	{
 	}
 
-	void AnimationGraphTool::draw( const EditorUIContext& /*ctx*/ )
+	void AnimationGraphTool::draw()
 	{
 		if ( ImGui::Begin( getWindowTitle(), getOpenPtr() ) == false )
 		{

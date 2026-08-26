@@ -25,8 +25,8 @@
 #include "Engine/Utility/Resource/AssetStreamingQueue.h"
 #include "Engine/Utility/Resource/ResourceManager.h"
 
-#include "RuntimeAPI/Service/GameService.h"
 #include "RuntimeAPI/PluginAPI.h"
+#include "RuntimeAPI/Service/GameService.h"
 
 #include "TestFramework/TestFramework.h"
 

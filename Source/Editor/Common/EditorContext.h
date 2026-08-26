@@ -12,6 +12,17 @@ namespace sw
 	class AssetEditorRegistry;
 	class ComponentDrawerRegistry;
 	class PropertyDrawerRegistry;
+	class IRHIDevice;
+	class IImGuiRendererBackend;
+
+	/** @brief 에디터가 소유하는 Game View RT. App은 매 프레임 핸들만 조회합니다. */
+	struct EditorGameView
+	{
+		uint64 _renderTarget{ 0 };
+		void*  _pTextureId{ nullptr };
+		uint32 _width{ 0 };
+		uint32 _height{ 0 };
+	};
 
 	/**
 	 * @class EditorContext
@@ -42,6 +53,18 @@ namespace sw
 		ComponentDrawerRegistry&   getComponentDrawerRegistry() { return *_pComponentDrawerRegistry; }
 		PropertyDrawerRegistry&	   getPropertyDrawerRegistry() { return *_pPropertyDrawerRegistry; }
 
+		void		  setRhiDevice( IRHIDevice* pDevice ) { _pRhiDevice = pDevice; }
+		IRHIDevice*	  getRhiDevice() const { return _pRhiDevice; }
+		void		  setRendererBackend( IImGuiRendererBackend* pBackend ) { _pRendererBackend = pBackend; }
+		void		  setGameViewHovered( bool bHovered ) { _bGameViewHovered = bHovered ? 1 : 0; }
+		void		  setGameViewFocused( bool bFocused ) { _bGameViewFocused = bFocused ? 1 : 0; }
+		bool		  isGameViewHovered() const { return _bGameViewHovered != 0; }
+		bool		  isGameViewFocused() const { return _bGameViewFocused != 0; }
+
+		const EditorGameView& getGameView() const { return _gameView; }
+		void				  ensureGameViewSize( uint32 width, uint32 height );
+		void				  destroyGameView();
+
 	private:
 		unique_ptr<SelectionManager>		  _pSelectionManager;
 		unique_ptr<EditorNotificationManager> _pNotificationManager;
@@ -51,6 +74,13 @@ namespace sw
 		unique_ptr<AssetEditorRegistry>		  _pAssetEditorRegistry;
 		unique_ptr<ComponentDrawerRegistry>	  _pComponentDrawerRegistry;
 		unique_ptr<PropertyDrawerRegistry>	  _pPropertyDrawerRegistry;
+		IRHIDevice*							  _pRhiDevice;
+		IImGuiRendererBackend*				  _pRendererBackend;
+		EditorGameView						  _gameView;
+
+		uint8				   _bGameViewHovered : 1;
+		uint8				   _bGameViewFocused : 1;
+		[[maybe_unused]] uint8 _reserved		 : 6;
 
 		static EditorContext* s_pActiveContext;
 	};

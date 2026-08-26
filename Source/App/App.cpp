@@ -22,8 +22,6 @@
 #include "Engine/Graphics/RenderPass/RenderFramePacket.h"
 #include "Engine/Graphics/RenderPass/RenderThread.h"
 #include "Engine/Input/InputManager.h"
-#include "Engine/Scene/Scene.h"
-#include "Engine/Scene/SceneManager.h"
 #include "Engine/Utility/Module/LiveReloadManager.h"
 #include "Engine/Window/IWindow.h"
 #include "Engine/Window/NativeWindowEvent.h"
@@ -116,9 +114,6 @@ namespace sw
 			return false;
 		}
 
-		if ( _bEnableEditor )
-			_moduleHost->createGameViewportTexture( width, height );
-
 		// 4. 윈도우 콜백 및 이벤트 라우팅 설정
 		_window->setResizeCallback( SW_DELEGATE_METHOD( WindowResizeDelegate, &App::onResize, this ) );
 		_window->setCustomMessageHandler( SW_DELEGATE_METHOD( WindowMessageHandlerDelegate, &App::onWindowMessage, this ) );
@@ -136,7 +131,7 @@ namespace sw
 	void App::shutdown()
 	{
 		// NOTE: ModuleHost를 EngineLoop보다 먼저 종료해야 합니다.
-		//       ModuleHost::destroyGameViewportTexture()가 내부에서 RenderThread와 RHI Device를 사용하기 때문입니다.
+		//       에디터 shutdown이 Game View RT를 해제할 때 RenderThread와 RHI Device를 사용합니다.
 		BLOCK( "Game / Editor 인스턴스 정리" )
 		{
 			if ( _moduleHost != nullptr )
@@ -175,7 +170,6 @@ namespace sw
 			_engineLoop.beginFrame();
 
 			_engineLoop.updateShellActions( deltaTime );
-			_moduleHost->processGameViewportResizeRequest();
 
 			while ( accumulator >= kFixedDeltaTime )
 			{
@@ -191,13 +185,13 @@ namespace sw
 				if ( pRenderThread != nullptr )
 					pRenderThread->waitIdle();
 
-				const Scene* pHookScene = engine::areEngineServicesBound() ? engine::getSceneManager().getActiveScene() : nullptr;
-				_moduleHost->setEditorGameMaterial( pHookScene != nullptr ? pHookScene->getMaterial() : nullptr );
 				_moduleHost->updateEditorUI( deltaTime );
 			}
 
-			// 렌더 프레임 제출과 에디터 렌더 훅을 EngineLoop로 넘깁니다.
-			const auto& [gameRenderTarget, gameViewportWidth, gameViewportHeight] = _moduleHost->getEditorViewportInfo();
+			uint64 gameRenderTarget	   = 0;
+			uint32 gameViewportWidth   = 0;
+			uint32 gameViewportHeight  = 0;
+			_moduleHost->getGameViewport( gameRenderTarget, gameViewportWidth, gameViewportHeight );
 			_engineLoop.tick( deltaTime, _bEnableEditor, gameRenderTarget, gameViewportWidth, gameViewportHeight );
 
 			const RHI* pRHI = _engineLoop.getRHI();
@@ -276,7 +270,6 @@ namespace sw
 
 		_moduleHost->drainRenderWorkers();
 		_moduleHost->onBeforeRhiSwap();
-		_moduleHost->destroyGameViewportTexture();
 
 		const bool bSuccess = _engineLoop.applyPendingBackendChange();
 		if ( bSuccess == false )

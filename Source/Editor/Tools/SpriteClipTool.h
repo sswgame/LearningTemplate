@@ -27,7 +27,7 @@ namespace sw
 		/** @brief 윈도우 제목을 반환합니다. */
 		const utf8* getWindowTitle() const override { return "Sprite Clip"; }
 		/** @brief 스프라이트 클립 편집 UI를 그립니다. */
-		void draw( const EditorUIContext& ctx ) override;
+		void draw() override;
 
 	private:
 		// ------------------------------------------------------------------------------

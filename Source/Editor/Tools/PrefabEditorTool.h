@@ -31,7 +31,7 @@ namespace sw
 
 		bool		isToolWindow() const override { return true; }
 		const utf8* getWindowTitle() const override { return "Prefab Inspector & Overrides"; }
-		void		draw( const EditorUIContext& ctx ) override;
+		void draw() override;
 
 	private:
 		void scanPrefabOverrides( const utf8* pPrefabPath );

@@ -9,7 +9,6 @@ namespace sw
 {
 	class IRHIDevice;
 	class IWindow;
-	struct EditorUIContext;
 	struct NativeWindowEvent;
 
 	using RHITextureHandle = uint64;
@@ -36,7 +35,7 @@ namespace sw
 		// 2) 프레임 — updateUI (Main Thread) → preRender / render / postPresent (RenderThread)
 		// ------------------------------------------------------------------------------
 		/** @brief 메인 스레드에서 ImGui 프레임 갱신, 패널 그리기 및 플랫폼 윈도우를 업데이트합니다. */
-		virtual void updateUI( const EditorUIContext& context ) = 0;
+		virtual void updateUI() = 0;
 		/** @brief UI 그리기 전 패널 GPU 작업을 수행합니다. */
 		virtual void preRender( IRHIDevice* pRhiDevice ) = 0;
 		/** @brief GPU 상에 에디터 UI DrawData를 렌더링합니다. */
@@ -48,10 +47,12 @@ namespace sw
 		// 3) 입력 · ImGui 텍스처
 		// ------------------------------------------------------------------------------
 		/** @brief 네이티브 이벤트를 ImGui 플랫폼 레이어로 전달합니다. */
-		virtual bool processEvent( const NativeWindowEvent& event, const EditorUIContext* pContext ) = 0;
+		virtual bool processEvent( const NativeWindowEvent& event ) = 0;
 		/** @brief RHI 텍스처를 ImGui 텍스처 ID로 등록합니다. */
 		virtual void* registerTexture( RHITextureHandle texture ) = 0;
 		/** @brief 등록된 ImGui 텍스처 ID를 해제합니다. */
 		virtual void unregisterTexture( void* pTextureID ) = 0;
+		/** @brief 이번 프레임 Game View RT 핸들과 크기를 조회합니다. */
+		virtual void getGameViewport( uint64* pRenderTarget, uint32* pWidth, uint32* pHeight ) const = 0;
 	};
 } // namespace sw

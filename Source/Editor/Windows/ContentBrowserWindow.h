@@ -26,7 +26,7 @@ namespace sw
 		/** @brief 윈도우 제목을 반환합니다. */
 		const utf8* getWindowTitle() const override { return "Content Browser"; }
 		/** @brief 소스 트리, 브레드크럼, 애셋 타일/리스트를 그립니다. */
-		void draw( const EditorUIContext& ctx ) override;
+		void draw() override;
 
 	private:
 		// ------------------------------------------------------------------------------

@@ -2,9 +2,6 @@
 
 #include "Core/Container/vector.h"
 
-#include "RuntimeAPI/ABI/EditorAPI.h"
-#include "RuntimeAPI/ABI/GameAPI.h"
-
 #include "TestFramework/TestFramework.h"
 
 namespace
@@ -98,18 +95,4 @@ SW_TEST_CASE( Core_Vector, ValueLifetimeAndMutation )
 	}
 
 	SW_EXPECT_EQUAL( 0, TrackedValue::s_liveCount );
-}
-
-/**
- * @brief [Core_RuntimeAPI] 모듈 C-ABI는 0이 아닌 명시적 버전을 사용한다.
- */
-SW_TEST_CASE( Core_RuntimeAPI, AbiVersionsAreExplicit )
-{
-	SW_EXPECT_TRUE( sw::kGameAPIAbiVersion > 0 );
-	SW_EXPECT_TRUE( sw::kEditorAPIAbiVersion > 0 );
-
-	sw::GameAPI	  gameApi{};
-	sw::EditorAPI editorApi{};
-	SW_EXPECT_EQUAL( 0u, gameApi._abiVersion );
-	SW_EXPECT_EQUAL( 0u, editorApi._abiVersion );
 }

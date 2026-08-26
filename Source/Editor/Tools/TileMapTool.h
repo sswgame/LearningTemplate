@@ -27,7 +27,7 @@ namespace sw
 		/** @brief 윈도우 제목을 반환합니다. */
 		const utf8* getWindowTitle() const override { return "Tile Map Tool"; }
 		/** @brief 타일맵 페인트 UI를 그립니다. */
-		void draw( const EditorUIContext& ctx ) override;
+		void draw() override;
 
 	private:
 		// ------------------------------------------------------------------------------

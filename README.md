@@ -74,7 +74,7 @@ CMake, Ninja, LLVM Clang-cl 및 sccache를 결합하여 **초고속 증분 빌�
 - **Shipping (배포 모드)**:
   - 에디터 및 핫리로드 레이어가 제거되고, 모든 서브시스템이 단일 `.exe` 바이너리로 정적 링크(STATIC)되어 오버헤드가 제로화됩니다.
 - **RuntimeAPI 계약**:
-  - `App.exe`와 DLL 모듈 간의 통신은 버전 핸드셰이크(`_abiVersion`, `_structSize`)가 포함된 순수 C-ABI 헤더(`RuntimeAPI`)를 통해 완전히 격리됩니다.
+  - `App.exe`와 DLL 모듈 간의 통신은 순수 C-ABI 헤더(`RuntimeAPI`)의 함수 테이블을 통해 완전히 격리됩니다.
 - **DLL Export / Import (API) 매크로 규칙**:
   - `SW_API`: **Engine.dll**의 심볼을 노출하거나 참조할 때 사용합니다. (`SW_EXPORTS` 매크로에 반응)
   - `SW_MODULE_API`: **동적 모듈 플러그인(Editor.dll, Demo.dll, RHI 백엔드 등)**의 진입점(C-ABI Entry Point)을 노출할 때 공통으로 사용하는 매크로입니다. (`SW_MODULE_EXPORTS`에 반응)

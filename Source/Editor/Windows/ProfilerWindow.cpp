@@ -15,7 +15,7 @@ namespace sw
 	{
 	}
 
-	void ProfilerWindow::draw( const EditorUIContext& /*ctx*/ )
+	void ProfilerWindow::draw()
 	{
 		if ( isOpen() == false )
 			return;

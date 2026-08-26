@@ -8,7 +8,6 @@
 namespace sw
 {
 	class IRHIDevice;
-	struct EditorUIContext;
 
 	/** @brief 도킹 가능한 ImGui 윈도우 (Hierarchy, Inspector, Tools, ...) */
 	class IEditorWindow
@@ -28,7 +27,7 @@ namespace sw
 		/** @brief 윈도우 제목을 반환합니다. */
 		virtual const utf8* getWindowTitle() const = 0;
 		/** @brief 에디터 윈도우의 UI를 그립니다. */
-		virtual void draw( const EditorUIContext& ctx ) = 0;
+		virtual void draw() = 0;
 		/** @brief 렌더링 전에 필요한 RHI 리소스를 업데이트합니다. */
 		virtual void preRender( IRHIDevice* /*rhiDevice*/ ) {}
 		/** @brief 윈도우 종료 시 리소스를 정리합니다. */

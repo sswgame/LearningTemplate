@@ -1,7 +1,7 @@
 #include "pch.h"
 
-#include "RuntimeAPI/Service/GameService.h"
 #include "RuntimeAPI/PluginAPI.h"
+#include "RuntimeAPI/Service/GameService.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 

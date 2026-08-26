@@ -9,7 +9,6 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Game/GameState.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
-#include "Engine/Graphics/RHI/IRHIResource.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RenderPass/RenderThread.h"
 #include "Engine/Object/Component/ComponentPtr.h"
@@ -19,15 +18,13 @@
 #include "Engine/Window/IWindow.h"
 #include "Engine/Window/NativeWindowEvent.h"
 
-#include "RuntimeAPI/Service/EditorService.h"
 #include "RuntimeAPI/PluginAPI.h"
+#include "RuntimeAPI/Service/EditorService.h"
 
 #include "sw/config/ConfigConstants.h"
 
 namespace
 {
-	sw::EditorUIContext* s_pEditorUIContext = nullptr;
-
 	void* getModuleService( uint32 id )
 	{
 		using sw::EditorServiceId;
@@ -69,8 +66,6 @@ namespace
 				return &sw::engine::getTaskManager();
 			case EditorServiceId::MemoryProfiler:
 				return sw::engine::getMemoryProfiler();
-			case EditorServiceId::UIContext:
-				return s_pEditorUIContext;
 			case EditorServiceId::CommandStack:
 				return &sw::engine::getCommandStack();
 			case EditorServiceId::EngineData:
@@ -87,7 +82,6 @@ namespace sw
 		, _gameApi{}
 		, _editor{ nullptr }
 		, _game{ nullptr }
-		, _editorContext{}
 		, _pLiveReloadManager{ nullptr }
 		, _pRHI{ nullptr }
 		, _pWindow{ nullptr }
@@ -120,9 +114,6 @@ namespace sw
 		_pWindow			= pWindow;
 		_pRenderThread		= pRenderThread;
 		_bEnableEditor		= bEnableEditor;
-
-		if ( _pRHI != nullptr )
-			_editorContext._pRHIDevice = &_pRHI->getDevice();
 
 #if defined( SW_SHIPPING )
 		(void)gameKitModuleList;
@@ -207,7 +198,6 @@ namespace sw
 
 		onBeforeEditorReload();
 		onBeforeGameReload();
-		destroyGameViewportTexture();
 	}
 
 	// ======================================================================
@@ -220,7 +210,7 @@ namespace sw
 		if ( _bEnableEditor == false || _editor == nullptr || _editorApi.updateUI == nullptr )
 			return;
 
-		_editorApi.updateUI( _editor, &_editorContext );
+		_editorApi.updateUI( _editor );
 	}
 
 	void ModuleHost::updateGame( float32 deltaTime )
@@ -245,22 +235,18 @@ namespace sw
 			return false;
 
 		// 에디터 내부 상태 업데이트 및 입력 필터링은 Editor Module 내부에서 캡슐화 처리
-		return _editorApi.processEvent( _editor, &event, &_editorContext );
+		return _editorApi.processEvent( _editor, &event );
 	}
 
-	void ModuleHost::processGameViewportResizeRequest()
+	void ModuleHost::getGameViewport( uint64& renderTarget, uint32& width, uint32& height ) const
 	{
-		if ( _editorContext._requestGameViewportWidth != 0 && _editorContext._requestGameViewportHeight != 0 )
-		{
-			const uint32 wantW						  = _editorContext._requestGameViewportWidth;
-			const uint32 wantH						  = _editorContext._requestGameViewportHeight;
-			_editorContext._requestGameViewportWidth  = 0;
-			_editorContext._requestGameViewportHeight = 0;
-			if ( wantW != _editorContext._gameViewportWidth || wantH != _editorContext._gameViewportHeight )
-			{
-				recreateGameViewportTexture( wantW, wantH );
-			}
-		}
+		renderTarget = 0;
+		width		 = 0;
+		height		 = 0;
+		if ( _bEnableEditor == false || _editor == nullptr || _editorApi.getGameViewport == nullptr )
+			return;
+
+		_editorApi.getGameViewport( _editor, &renderTarget, &width, &height );
 	}
 
 	// ======================================================================
@@ -309,9 +295,6 @@ namespace sw
 			poisonLiveReload( "Editor initialize failed after reload" );
 			return;
 		}
-
-		if ( _editorContext._gameRenderTarget != 0 && _editorApi.registerTexture != nullptr )
-			_editorContext._pGameTextureID = _editorApi.registerTexture( _editor, static_cast<TextureHandle>( _editorContext._gameRenderTarget ) );
 
 		SW_LOG_INFO( "[ModuleHost] Editor initialized successfully via EditorAPI." );
 	}
@@ -500,28 +483,19 @@ namespace sw
 
 	bool ModuleHost::bindEditorAPI( void* pLibraryModule )
 	{
-		_editorApi			   = {};
-		_editorApi._abiVersion = kEditorAPIAbiVersion;
-		_editorApi._structSize = static_cast<uint32>( sizeof( EditorAPI ) );
+		_editorApi = {};
 		if ( pLibraryModule == nullptr )
 			return false;
 
-		PFN_FillEditorAPI pfnFill = reinterpret_cast<PFN_FillEditorAPI>( FileUtil::getDynamicSymbol( pLibraryModule, "fillEditorAPI" ) );
-		if ( pfnFill == nullptr || pfnFill( &_editorApi ) == false )
+		PFN_ExportEditorAPI pfnExport = reinterpret_cast<PFN_ExportEditorAPI>( FileUtil::getDynamicSymbol( pLibraryModule, "exportEditorAPI" ) );
+		if ( pfnExport == nullptr || pfnExport( &_editorApi ) == false )
 		{
 			SW_LOG_ERROR( "[ModuleHost] Failed to bind EditorAPI from module" );
-			return false;
-		}
-		if ( _editorApi._abiVersion != kEditorAPIAbiVersion )
-		{
-			SW_LOG_ERROR( "[ModuleHost] EditorAPI ABI mismatch (got %# expected %#)", _editorApi._abiVersion, kEditorAPIAbiVersion );
-			_editorApi = {};
 			return false;
 		}
 
 		if ( _editorApi.bindService != nullptr )
 		{
-			s_pEditorUIContext = &_editorContext;
 			ModuleService editorService{};
 			editorService.getService = getModuleService;
 			_editorApi.bindService( &editorService );
@@ -533,12 +507,10 @@ namespace sw
 
 	bool ModuleHost::bindGameAPI( void* pLibraryModule )
 	{
-		_gameApi			 = {};
-		_gameApi._abiVersion = kGameAPIAbiVersion;
-		_gameApi._structSize = static_cast<uint32>( sizeof( GameAPI ) );
+		_gameApi = {};
 #if defined( SW_SHIPPING )
 		(void)pLibraryModule;
-		if ( fillGameAPI( &_gameApi ) == false )
+		if ( exportGameAPI( &_gameApi ) == false )
 		{
 			SW_LOG_ERROR( "[ModuleHost] Failed to bind GameAPI (shipping)" );
 			return false;
@@ -546,19 +518,13 @@ namespace sw
 #else
 		if ( pLibraryModule == nullptr )
 			return false;
-		PFN_FillGameAPI pfnFill = reinterpret_cast<PFN_FillGameAPI>( FileUtil::getDynamicSymbol( pLibraryModule, "fillGameAPI" ) );
-		if ( pfnFill == nullptr || pfnFill( &_gameApi ) == false )
+		PFN_ExportGameAPI pfnExport = reinterpret_cast<PFN_ExportGameAPI>( FileUtil::getDynamicSymbol( pLibraryModule, "exportGameAPI" ) );
+		if ( pfnExport == nullptr || pfnExport( &_gameApi ) == false )
 		{
 			SW_LOG_ERROR( "[ModuleHost] Failed to bind GameAPI from module" );
 			return false;
 		}
 #endif
-		if ( _gameApi._abiVersion != kGameAPIAbiVersion )
-		{
-			SW_LOG_ERROR( "[ModuleHost] GameAPI ABI mismatch (got %# expected %#)", _gameApi._abiVersion, kGameAPIAbiVersion );
-			_gameApi = {};
-			return false;
-		}
 
 		if ( _gameApi.bindService != nullptr )
 		{
@@ -569,71 +535,6 @@ namespace sw
 
 		engine::registerModuleTypes( sw::config::kTargetGameModule );
 		return _gameApi.create != nullptr && _gameApi.destroy != nullptr;
-	}
-
-	// ======================================================================
-	// Game View RT
-	// ======================================================================
-
-	bool ModuleHost::createGameViewportTexture( uint32 width, uint32 height )
-	{
-		if ( _pRHI == nullptr || width == 0 || height == 0 )
-			return false;
-
-		RHITextureDesc rtDesc{};
-		rtDesc._width			  = width;
-		rtDesc._height			  = height;
-		rtDesc._format			  = RHIFormat::R8G8B8A8_UNORM;
-		rtDesc._bIsRenderTarget	  = true;
-		rtDesc._bIsShaderResource = true;
-		rtDesc._mipLevels		  = 1;
-		rtDesc._arrClearColor[0]  = _editorContext._arrClearColor[0];
-		rtDesc._arrClearColor[1]  = _editorContext._arrClearColor[1];
-		rtDesc._arrClearColor[2]  = _editorContext._arrClearColor[2];
-		rtDesc._arrClearColor[3]  = _editorContext._arrClearColor[3];
-
-		_editorContext._gameRenderTarget   = _pRHI->getDevice().getResource()->createTexture2D( rtDesc );
-		_editorContext._gameViewportWidth  = width;
-		_editorContext._gameViewportHeight = height;
-		return _editorContext._gameRenderTarget != 0;
-	}
-
-	void ModuleHost::destroyGameViewportTexture()
-	{
-		drainRenderWorkers();
-
-		if ( _editorContext._pGameTextureID != nullptr && _editor != nullptr && _editorApi.unregisterTexture != nullptr )
-		{
-			_editorApi.unregisterTexture( _editor, _editorContext._pGameTextureID );
-			_editorContext._pGameTextureID = nullptr;
-		}
-
-		if ( _editorContext._gameRenderTarget != 0 && _pRHI != nullptr && _pRHI->getDevice().getNativeDevice() != nullptr )
-		{
-			_pRHI->getDevice().getResource()->destroyTexture( _editorContext._gameRenderTarget );
-			_editorContext._gameRenderTarget = 0;
-			_editorContext._pGameTextureID	 = nullptr;
-		}
-	}
-
-	bool ModuleHost::recreateGameViewportTexture( uint32 width, uint32 height )
-	{
-		if ( _pRHI == nullptr || width == 0 || height == 0 )
-			return false;
-
-		destroyGameViewportTexture();
-
-		if ( createGameViewportTexture( width, height ) == false )
-		{
-			SW_LOG_WARNING( "[ModuleHost] Game View RT recreate failed (%# x %#)", width, height );
-			_editorContext._pGameTextureID = nullptr;
-			return false;
-		}
-
-		if ( _editor != nullptr && _editorApi.registerTexture != nullptr )
-			_editorContext._pGameTextureID = _editorApi.registerTexture( _editor, static_cast<TextureHandle>( _editorContext._gameRenderTarget ) );
-
-		return true;
 	}
 
 	// ======================================================================
@@ -670,13 +571,6 @@ namespace sw
 	{
 		if ( _bEnableEditor )
 		{
-			// 핫스왑 전 destroyGameViewportTexture()가 먼저 호출되므로 크기는 이전 값이 보존됩니다.
-			// 단, 뷰포트가 한 번도 생성되지 않았다면 0이 될 수 있으므로 기본값으로 폴백합니다.
-			const uint32 vpW = _editorContext._gameViewportWidth > 0 ? _editorContext._gameViewportWidth : 1280;
-			const uint32 vpH = _editorContext._gameViewportHeight > 0 ? _editorContext._gameViewportHeight : 720;
-			if ( createGameViewportTexture( vpW, vpH ) == false )
-				SW_LOG_WARNING( "[Hot-Swap] 게임 뷰포트 텍스처 재생성 실패 (%# x %#).", vpW, vpH );
-
 			if ( _editorApi.create != nullptr && _editorApi.initialize != nullptr )
 			{
 				_editor = _editorApi.create();
@@ -705,7 +599,6 @@ namespace sw
 #endif
 		}
 
-		_editorContext._pRHIDevice = &_pRHI->getDevice();
 		return true;
 	}
 } // namespace sw

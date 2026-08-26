@@ -9,13 +9,12 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "RuntimeAPI/Service/EditorService.h"
-#include "RuntimeAPI/ABI/EditorUIContext.h"
 
 #include <imgui.h>
 
 namespace sw
 {
-	void drawEditorTransportBar( const EditorUIContext& /*ctx*/ )
+	void drawEditorTransportBar()
 	{
 		const ImGuiViewport* pViewport = ImGui::GetMainViewport();
 		constexpr float32	 barH	   = 36.0f;
