@@ -4,7 +4,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
-#include "Editor/Windows/IEditorWindow.h"
+#include "Editor/Common/Gui/IEditorPanel.h"
 
 namespace sw
 {
@@ -23,15 +23,16 @@ namespace sw
 	/**
 	 * @brief 프리팹 인스턴스 오버라이드 검사, 복원/적용 및 중첩 프리팹 비주얼 관리 도구
 	 */
-	class PrefabEditorTool : public IEditorWindow
+	class PrefabEditorTool : public IEditorPanel
 	{
 	public:
 		PrefabEditorTool();
 		~PrefabEditorTool() override = default;
 
-		bool		isToolWindow() const override { return true; }
-		const utf8* getWindowTitle() const override { return "Prefab Inspector & Overrides"; }
-		void draw() override;
+		bool		isToolPanel() const override { return true; }
+		const utf8* getPanelTitle() const override { return "Prefab Inspector & Overrides"; }
+		void		drawContent() override;
+		float2		getInitialPanelSize() const override { return float2{ 650.0f, 480.0f }; }
 
 	private:
 		void scanPrefabOverrides( const utf8* pPrefabPath );

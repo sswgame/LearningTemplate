@@ -16,6 +16,7 @@ namespace sw
 	struct ParserClangConfig
 	{
 		vector<string> baseArgList;
+		vector<string> forceIncludeList;
 		bool		   bLoaded = false;
 
 		// paths
@@ -29,6 +30,7 @@ namespace sw
 		string flagIncludePrefix{ "-I" };
 		string flagIsystem{ "-isystem" };
 		string flagResourceDir{ "-resource-dir" };
+		string flagForceInclude{ "-include" };
 		string flagFmsCompatibility{ "-fms-compatibility" };
 		string flagFmsExtensions{ "-fms-extensions" };
 		string flagFmsCompatVersionPrefix{ "-fms-compatibility-version" };

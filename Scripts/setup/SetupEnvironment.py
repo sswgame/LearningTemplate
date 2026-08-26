@@ -41,6 +41,7 @@ from common import (
     kKeyNinjaPath,
     kKeyParserArgsDefault,
     kKeyParserArgsExtra,
+    kKeyParserArgsForceInclude,
     kKeyParserArgsPlatform,
     kKeyParserArgsSection,
     kKeyPaths,
@@ -89,6 +90,7 @@ def normalizeParserConfigInternal(raw: dict) -> dict:
         kKeyParserArgsDefault: list(argsSection.get(kKeyParserArgsDefault, [])),
         kKeyParserArgsPlatform: asDictInternal(argsSection.get(kKeyParserArgsPlatform)),
         kKeyParserArgsExtra: list(argsSection.get(kKeyParserArgsExtra, [])),
+        kKeyParserArgsForceInclude: list(argsSection.get(kKeyParserArgsForceInclude, [])),
     }
     out[kKeyPaths] = asDictInternal(out.get(kKeyPaths))
     out[kKeyClangFlags] = asDictInternal(out.get(kKeyClangFlags))
@@ -301,6 +303,9 @@ class EnvironmentSetupManager:
             },
             kKeyParserArgsExtra: unionStrListInternal(
                 seedArgs.get(kKeyParserArgsExtra), localArgs.get(kKeyParserArgsExtra)
+            ),
+            kKeyParserArgsForceInclude: unionStrListInternal(
+                seedArgs.get(kKeyParserArgsForceInclude), localArgs.get(kKeyParserArgsForceInclude)
             ),
         }
         parserData[kKeyParserArgsSection] = mergedArgs

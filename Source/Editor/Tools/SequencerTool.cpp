@@ -98,7 +98,7 @@ namespace sw
 	};
 
 	SequencerTool::SequencerTool()
-		: IEditorWindow{ false }
+		: IEditorPanel{ false }
 		, _bExpanded{ true }
 		, _currentFrame{ 0 }
 		, _selected{ -1 }
@@ -117,14 +117,8 @@ namespace sw
 
 	SequencerTool::~SequencerTool() = default;
 
-	void SequencerTool::draw()
+	void SequencerTool::drawContent()
 	{
-		if ( ImGui::Begin( getWindowTitle(), getOpenPtr() ) == false )
-		{
-			ImGui::End();
-			return;
-		}
-
 		ImGui::SliderInt( "Scrub Frame", &_currentFrame, _sequence->_frameMin, _sequence->_frameMax );
 		ImGui::Text( "Current Frame: %d", _currentFrame );
 
@@ -142,7 +136,5 @@ namespace sw
 
 		ImSequencer::Sequencer( _sequence.get(), &_currentFrame, &_bExpanded, &_selected, &_firstFrame,
 								ImSequencer::SEQUENCER_EDIT_STARTEND | ImSequencer::SEQUENCER_ADD | ImSequencer::SEQUENCER_DEL | ImSequencer::SEQUENCER_CHANGE_FRAME );
-
-		ImGui::End();
 	}
 } // namespace sw

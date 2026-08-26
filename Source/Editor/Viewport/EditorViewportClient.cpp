@@ -2,8 +2,8 @@
 
 #include "Editor/Viewport/EditorViewportClient.h"
 
-#include "Editor/Workspace/EditorWorkspace.h"
-#include "Editor/Workspace/SelectionManager.h"
+#include "Editor/Common/Workspace/EditorWorkspace.h"
+#include "Editor/Common/Workspace/SelectionManager.h"
 
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
@@ -265,6 +265,12 @@ namespace sw
 	void EditorViewportClient::drawViewportToolbar( float32 viewportWidth )
 	{
 		_toolbar.draw( _toolbarSettings, viewportWidth );
+	}
+
+	void EditorViewportClient::drawTransformBar( const float2& anchorPos )
+	{
+		const bool bHasSelection = SelectionManager::getSelectedObjectCount() > 0;
+		_toolbar.drawTransformBar( _toolbarSettings, anchorPos, bHasSelection );
 	}
 
 	void EditorViewportClient::draw( const void* pTextureId, const float2& canvasSize )

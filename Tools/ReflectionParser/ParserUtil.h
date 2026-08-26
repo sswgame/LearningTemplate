@@ -25,6 +25,28 @@ namespace sw
 		return FileUtil::joinPath( outputDir, fileName );
 	}
 
+	/**
+	 * @brief 소스 헤더를 clang --include 루트 기준 include 문자열로 바꿉니다.
+	 */
+	inline string makeHeaderIncludePath( const string& sourceFilePath, const vector<string>& includePaths )
+	{
+		const string sourceSep = FileUtil::normalizeSeparators( sourceFilePath );
+		for ( const string& includeRoot : includePaths )
+		{
+			const string rootSep = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( includeRoot ) );
+			if ( rootSep.empty() )
+				continue;
+			const string rootPrefix = rootSep + "/";
+			if ( sourceSep.size() <= rootPrefix.size() )
+				continue;
+			const string sourcePrefix = sourceSep.substr( 0, rootPrefix.size() );
+			if ( FileUtil::pathsEqualNormalized( sourcePrefix, rootPrefix ) == false )
+				continue;
+			return sourceSep.substr( rootPrefix.size() );
+		}
+		return FileUtil::getFileNamePart( sourceFilePath );
+	}
+
 	// ------------------------------------------------------------------------------
 	// 2) parse — 템플릿 인자 토큰 분할
 	// ------------------------------------------------------------------------------

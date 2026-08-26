@@ -110,6 +110,8 @@ ENUM( Flags )
 enum class CollisionMask : uint32 { None = 0, World = 1, Pawn = 2 };
 ```
 
+`ENUM(Flags)` 비트 연산자는 `FlagOps.gen.h`로 생성되어 해당 타겟에 강제 include 됩니다.
+
 ### 4) 별칭 (옛 이름 호환)
 
 ```cpp

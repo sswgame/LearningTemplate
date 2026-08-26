@@ -119,6 +119,7 @@ namespace sw
 			assignIfPresent( config.flagIncludePrefix, obj, jsonKeyConstants::kFlagIncludePrefix );
 			assignIfPresent( config.flagIsystem, obj, jsonKeyConstants::kFlagIsystem );
 			assignIfPresent( config.flagResourceDir, obj, jsonKeyConstants::kFlagResourceDir );
+			assignIfPresent( config.flagForceInclude, obj, jsonKeyConstants::kFlagForceInclude );
 			assignIfPresent( config.flagFmsCompatibility, obj, jsonKeyConstants::kFlagFmsCompatibility );
 			assignIfPresent( config.flagFmsExtensions, obj, jsonKeyConstants::kFlagFmsExtensions );
 			assignIfPresent( config.flagFmsCompatVersionPrefix, obj, jsonKeyConstants::kFlagFmsCompatVerPrefix );
@@ -180,6 +181,14 @@ namespace sw
 			return outList;
 		}
 
+		static vector<string> loadForceIncludeFromDocument( const nlohmann::json& doc )
+		{
+			const auto itArgs = doc.find( jsonKeyConstants::kParserArgsSection );
+			if ( itArgs == doc.end() || itArgs->is_object() == false )
+				return {};
+			return collectStringArray( itArgs->value( jsonKeyConstants::kArgsForceInclude, nlohmann::json{} ) );
+		}
+
 #if !defined( SW_PLATFORM_WINDOWS )
 		static bool isMsvcCompatArg( const string& arg, const string& fmsCompatibility, const string& fmsExtensions,
 									 const string& fmsCompatVersionPrefix )
@@ -218,6 +227,7 @@ namespace sw
 	bool ParserClangConfig::load()
 	{
 		baseArgList.clear();
+		forceIncludeList.clear();
 		bLoaded = false;
 
 		string llvmPath;
@@ -264,6 +274,12 @@ namespace sw
 			mergeConfigSection( *this, defaultsDoc, localDoc, jsonKeyConstants::kClangFlags, applyClangFlagsSection );
 			mergeConfigSection( *this, defaultsDoc, localDoc, jsonKeyConstants::kEmit, applyEmitSection );
 			mergeConfigSection( *this, defaultsDoc, localDoc, jsonKeyConstants::kTuning, applyTuningSection );
+		}
+
+		BLOCK( "Load force_include" )
+		{
+			appendUnique( forceIncludeList, loadForceIncludeFromDocument( defaultsDoc ) );
+			appendUnique( forceIncludeList, loadForceIncludeFromDocument( localDoc ) );
 		}
 
 		BLOCK( "Load Engine Config" )
@@ -351,9 +367,14 @@ namespace sw
 	vector<string> ParserClangConfig::buildArgs( const vector<string>& includePathList ) const
 	{
 		vector<string> argList = baseArgList;
-		argList.reserve( argList.size() + includePathList.size() );
+		argList.reserve( argList.size() + includePathList.size() + forceIncludeList.size() * 2 );
 		for ( const string& includePath : includePathList )
 			argList.push_back( flagIncludePrefix + includePath );
+		for ( const string& forceInclude : forceIncludeList )
+		{
+			argList.push_back( flagForceInclude );
+			argList.push_back( forceInclude );
+		}
 		return argList;
 	}
 

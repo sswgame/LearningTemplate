@@ -18,10 +18,13 @@
 #include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
+
 #include "Core/String/FormatString.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"

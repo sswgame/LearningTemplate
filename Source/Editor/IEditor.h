@@ -15,7 +15,7 @@ namespace sw
 
 	/**
 	 * @class IEditor
-	 * @brief EditorAPI 함수 테이블이 위임하는 최소 표면 (위젯/도킹은 ImGuiEditor 내부)
+	 * @brief EditorAPI 함수 테이블이 위임하는 최소 표면 (구현은 ImGuiEditor)
 	 */
 	class IEditor
 	{

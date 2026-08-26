@@ -172,7 +172,7 @@ Windows에서 **DX11 · DX12 · Vulkan · OpenGL**은 Device / Context / SwapCha
 - **P0** — SSAO/TAA/Tonemap/GpuCull 패스 실행 경로
 - **P0** — DX11/GL `prepareTextureForShaderRead` 정의 (의도적 no-op)
 - **P1** — DX12 `_bHeapDirectlyIndexed` ↔ `supportsNativeBindlessSampling()` / `getCapabilities()._bNativeBindless`
-- **P1** — DebugDrawQueue 스피어 → `GameViewWindow` ImGui 원으로 소비
+- **P1** — DebugDrawQueue 스피어 → `GameViewPanel` ImGui 원으로 소비
 - **P2** — DX12 `HEAP_DIRECTLY_INDEXED` 실패 시 bind-at-draw (런타임 Caps, WARNING 제거)
 - **P2** — Vulkan `createRenderPass(desc)` 소유 VkRenderPass 생성 + `destroy`/`shutdown`에서 해제 (빈 desc는 swapchain RP alias)
 - **P2** — DX11 native `FinishCommandList`는 **채택하지 않음** — 전 백엔드 soft `Cmd` replay가 Mode/Context 모델 (의도적)

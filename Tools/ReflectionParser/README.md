@@ -151,6 +151,7 @@ ReflectionParser/
   - Component면 ComponentFactoryRegistrar
   - REFLECT_SCRIPT면 ScriptSystem 등록 조각
 …/MonsterComponent.gen.h   (필요 시 enum 비트 연산자 등)
+…/FlagOps.gen.h            (ENUM(Flags) 비트 연산자 우산)
 ```
 
 **손으로 gen을 고치지 마세요.** 다음 파서 실행에 덮어씁니다.  
@@ -168,6 +169,7 @@ clang 인자·SDK 상대경로·emit 확장자·튜닝의 **단일 소스**입�
 | `parser_args.default` | 공통 clang 인자 (`-std`, `-D__REFLECT_PARSER__` …) |
 | `parser_args.platform.*` | OS별 추가 (windows MS 호환 등) |
 | `parser_args.extra` | 공통 추가 (예: `-fno-spell-checking`) |
+| `parser_args.force_include` | clang `-include` 선포함 (엔진 PCH와 같은 전제. 기본 `Core/CoreMinimal.h`) |
 | `paths` | LLVM/MSVC/WinSDK 상대 경로 |
 | `clang_flags` | `-I` / `-isystem` / `-resource-dir` |
 | `emit` | `.gen.cpp` 확장자·배너·generated 네임스페이스 |

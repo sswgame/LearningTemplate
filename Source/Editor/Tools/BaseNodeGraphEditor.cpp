@@ -4,7 +4,7 @@
 
 #include "Core/File/FileUtil.h"
 
-#include "Editor/EditorUtil.h"
+#include "Editor/Common/EditorUtil.h"
 
 #include <imgui-node-editor/imgui_node_editor.h>
 
@@ -13,7 +13,7 @@ namespace ed = ax::NodeEditor;
 namespace sw
 {
 	BaseNodeGraphEditor::BaseNodeGraphEditor( bool bDefaultOpen )
-		: IEditorWindow{ bDefaultOpen }
+		: IEditorPanel{ bDefaultOpen }
 		, _pEditor{ nullptr }
 		, _settingsPath{}
 		, _bNavigatedToContent{ false }

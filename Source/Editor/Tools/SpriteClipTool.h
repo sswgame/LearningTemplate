@@ -8,26 +8,26 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
-#include "Editor/Windows/IEditorWindow.h"
+#include "Editor/Common/Gui/IEditorPanel.h"
 
 namespace sw
 {
 	/** @brief 프레임 목록과 선택적 TransformAnimation 키를 편집합니다 (AnimGraph과 별개) */
-	class SpriteClipTool : public IEditorWindow
+	class SpriteClipTool : public IEditorPanel
 	{
 	public:
 		/** @brief 스프라이트 클립 도구를 생성합니다. */
 		SpriteClipTool();
 
 		// ------------------------------------------------------------------------------
-		// 1) IEditorWindow — 제목/그리기
+		// 1) IEditorPanel — 제목/그리기
 		// ------------------------------------------------------------------------------
 		/** @brief 온디맨드 도구이므로 기본적으로 닫힌 채 시작합니다. */
-		bool isToolWindow() const override { return true; }
+		bool isToolPanel() const override { return true; }
 		/** @brief 윈도우 제목을 반환합니다. */
-		const utf8* getWindowTitle() const override { return "Sprite Clip"; }
+		const utf8* getPanelTitle() const override { return "Sprite Clip"; }
 		/** @brief 스프라이트 클립 편집 UI를 그립니다. */
-		void draw() override;
+		void drawContent() override;
 
 	private:
 		// ------------------------------------------------------------------------------

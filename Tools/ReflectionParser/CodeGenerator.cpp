@@ -34,6 +34,14 @@ namespace sw
 			return name;
 		}
 
+		static string enclosingNamespaceOf( const string& fqn )
+		{
+			const size_t pos = fqn.rfind( "::" );
+			if ( pos == string::npos )
+				return {};
+			return fqn.substr( 0, pos );
+		}
+
 		/**
 		 * @brief 컨테이너 필드에 대한 래퍼 타입 문자열(예: `sw::VectorWrapper<decltype(std::declval<MyClass>().myList)>`)을 생성합니다.
 		 */
@@ -693,6 +701,12 @@ namespace sw
 				continue;
 
 			const string& fqn = enumInfo._fullyQualifiedName;
+			const string  ns  = enclosingNamespaceOf( fqn );
+			if ( ns.empty() == false )
+			{
+				e.linef( "namespace %#", ns );
+				e.line( "{" );
+			}
 			e.linef( "SW_INLINE constexpr %# operator|( %# lhs, %# rhs )", fqn, fqn, fqn );
 			e.line( "{" );
 			e.push();
@@ -739,6 +753,9 @@ namespace sw
 			e.line( "return lhs = lhs ^ rhs;" );
 			e.pop();
 			e.line( "}" );
+			e.blank();
+			if ( ns.empty() == false )
+				e.line( "}" );
 			e.blank();
 		}
 

@@ -18,12 +18,12 @@ namespace sw
 		virtual ~AnimationGraphTool() override = default;
 
 		// ------------------------------------------------------------------------------
-		// 1) IEditorWindow — 제목/그리기
+		// 1) IEditorPanel — 제목/그리기
 		// ------------------------------------------------------------------------------
 		/** @brief 애니메이션 그래프 UI를 그립니다. */
-		void draw() override;
+		void drawContent() override;
 		/** @brief 윈도우 제목을 반환합니다. */
-		const utf8* getWindowTitle() const override { return "Animation Graph"; }
+		const utf8* getPanelTitle() const override { return "Animation Graph"; }
 
 	private:
 		// ------------------------------------------------------------------------------

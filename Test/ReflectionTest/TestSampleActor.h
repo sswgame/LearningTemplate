@@ -312,7 +312,3 @@ enum class TestFlag : uint32
 	Write	= 1 << 1,
 	Execute = 1 << 2
 };
-
-#ifndef __REFLECT_PARSER__
-	#include "TestSampleActor.gen.h"
-#endif

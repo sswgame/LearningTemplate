@@ -2,8 +2,8 @@
 
 #include "Editor/Tools/TileMapTool.h"
 
-#include "Editor/Config/EditorData.h"
-#include "Editor/Workspace/EditorWorkspace.h"
+#include "Editor/Common/Config/EditorData.h"
+#include "Editor/Common/Workspace/EditorWorkspace.h"
 
 #include "Engine/Utility/Xml/XmlDocument.h"
 
@@ -14,7 +14,7 @@
 namespace sw
 {
 	TileMapTool::TileMapTool()
-		: IEditorWindow( false )
+		: IEditorPanel( false )
 		, _arrPathBuffer{}
 		, _arrNameBuffer{}
 		, _arrEdgeTargetN{}
@@ -49,14 +49,8 @@ namespace sw
 		resize( 8, 8 );
 	}
 
-	void TileMapTool::draw()
+	void TileMapTool::drawContent()
 	{
-		if ( ImGui::Begin( getWindowTitle(), getOpenPtr() ) == false )
-		{
-			ImGui::End();
-			return;
-		}
-
 		const string& focused = EditorWorkspace::focusedAssetPath();
 		if ( focused.empty() == false && focused.find( ".xml" ) != string::npos && focused != _arrPathBuffer )
 		{
@@ -203,8 +197,6 @@ namespace sw
 			ImGui::Separator();
 			ImGui::TextDisabled( "%s", _status.c_str() );
 		}
-
-		ImGui::End();
 	}
 
 	void TileMapTool::resize( int32 width, int32 height )

@@ -83,6 +83,12 @@ function(sw_addReflectionStep TARGET_NAME)
         endif()
     endforeach()
 
+    set(_swFlagOpsHeader "${ARG_OUTPUT_DIR}/FlagOps.gen.h")
+    list(APPEND generatedFiles "${_swFlagOpsHeader}")
+    if(NOT EXISTS "${_swFlagOpsHeader}")
+        file(WRITE "${_swFlagOpsHeader}" "// AUTO-GENERATED placeholder\n#pragma once\n#if !defined(__REFLECT_PARSER__)\n// no ENUM(Flags) in this target\n#endif\n")
+    endif()
+
     add_custom_command(
         OUTPUT ${generatedFiles}
         COMMAND ${CMAKE_COMMAND} -E make_directory "${ARG_OUTPUT_DIR}"
@@ -103,6 +109,25 @@ function(sw_addReflectionStep TARGET_NAME)
     target_sources(${TARGET_NAME} PRIVATE ${generatedCppFiles})
     set_source_files_properties(${generatedCppFiles} PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
     target_include_directories(${TARGET_NAME} PRIVATE "${ARG_OUTPUT_DIR}")
+
+    set(_swHasFlagEnum FALSE)
+    foreach(header IN LISTS ARG_HEADERS)
+        if(EXISTS "${header}")
+            file(STRINGS "${header}" _swFlagLines LIMIT_COUNT 1 REGEX "^[ \t]*ENUM[ \t]*\\([ \t]*Flags")
+            if(_swFlagLines)
+                set(_swHasFlagEnum TRUE)
+                break()
+            endif()
+        endif()
+    endforeach()
+    if(_swHasFlagEnum)
+        if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+            target_compile_options(${TARGET_NAME} PRIVATE "/FI${_swFlagOpsHeader}")
+        else()
+            target_compile_options(${TARGET_NAME} PRIVATE "-include" "${_swFlagOpsHeader}")
+        endif()
+    endif()
+
     add_custom_target(${TARGET_NAME}_ReflectionGen DEPENDS ${generatedFiles})
     add_dependencies(${TARGET_NAME} ReflectionParser ${TARGET_NAME}_ReflectionGen)
 

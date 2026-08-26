@@ -2,8 +2,8 @@
 
 #include "Editor/Tools/AnimationGraphTool.h"
 
-#include "Editor/Config/EditorConfig.h"
-#include "Editor/EditorUtil.h"
+#include "Editor/Common/Config/EditorConfig.h"
+#include "Editor/Common/EditorUtil.h"
 
 #include "Engine/Serialization/Format/JsonSerializer.h"
 
@@ -50,14 +50,8 @@ namespace sw
 	{
 	}
 
-	void AnimationGraphTool::draw()
+	void AnimationGraphTool::drawContent()
 	{
-		if ( ImGui::Begin( getWindowTitle(), getOpenPtr() ) == false )
-		{
-			ImGui::End();
-			return;
-		}
-
 		if ( _bLoaded == false )
 			loadGraphData();
 
@@ -96,7 +90,6 @@ namespace sw
 		if ( _pEditor == nullptr )
 		{
 			ImGui::TextUnformatted( "Failed to create Animation Graph editor context." );
-			ImGui::End();
 			return;
 		}
 
@@ -206,7 +199,6 @@ namespace sw
 
 		ed::End();
 		ed::SetCurrentEditor( nullptr );
-		ImGui::End();
 	}
 
 	void AnimationGraphTool::ensureDefaults()

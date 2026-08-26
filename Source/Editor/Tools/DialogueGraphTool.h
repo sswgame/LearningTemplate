@@ -28,12 +28,12 @@ namespace sw
 		virtual ~DialogueGraphTool() override = default;
 
 		// ------------------------------------------------------------------------------
-		// 1) IEditorWindow — 수명주기 및 UI 렌더링
+		// 1) IEditorPanel — 수명주기 및 UI 렌더링
 		// ------------------------------------------------------------------------------
 		/** @brief 대화 노드 그래프 UI를 렌더링합니다. */
-		void draw() override;
+		void drawContent() override;
 		/** @brief 윈도우 제목을 반환합니다. */
-		const utf8* getWindowTitle() const override { return "Dialogue Graph"; }
+		const utf8* getPanelTitle() const override { return "Dialogue Graph"; }
 
 	private:
 		// ------------------------------------------------------------------------------

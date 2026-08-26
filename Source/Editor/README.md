@@ -2,12 +2,28 @@
 
 씬을 편집하고 디버깅하는 **에디터 UI(ImGui)** 입니다. Dev에서만 `EditorModule` MODULE로 빌드됩니다.
 
+루트에는 모듈 진입점만 둡니다: `IEditor.h`, `ImGuiEditor.*`
+
 ## 디렉터리 구조
-- **Backend/**: ImGui 플랫폼/렌더러 백엔드 (`ImGuiEditor`)
-- **Windows/**: Hierarchy, Inspector, Game View, Content Browser, Console, Profiler
-- **Tools/**: AnimationGraph, Sequencer, SpriteClip, TileMap
-- **Workspace/**: 도킹 레이아웃, 선택, 커맨드 스택, 애셋 드롭
-- **Widgets/** · **Shell/** (트랜스포트 바) · **Overlay/** (본 계층 팝업)
+
+### 공통 (`Common/`)
+
+에디터 기능이 공통으로 쓰는 프레임워크입니다. 새 패널/툴을 만들 때 여기부터 찾으면 됩니다.
+
+- **EditorUtil**: 폰트·설정 경로 등 공용 유틸
+- **Platform/**: ImGui OS/GPU 백엔드
+- **Gui/**: `EditorChrome`, `EditorMenuBar`, `EditorDockLayout`
+- **Widgets/**: 검색, 헤더, 툴바 구분선 등 공유 위젯
+- **Workspace/**: 세션, 선택, 커맨드 스택, 애셋 드롭, 프리팹 인스턴스
+- **Config/**: Host JSON(`EditorConfig`)과 XML 시드(`EditorData`)
+
+### 기능
+
+- **Panels/**: Hierarchy, Inspector, Game View, Content Browser, Console, Profiler
+- **Inspector/**: 인스펙터 프로퍼티/컴포넌트 드로어
+- **Tools/**: AnimationGraph, Sequencer, SpriteClip, TileMap, DialogueGraph
+- **Viewport/**: 뷰포트 클라이언트와 툴바
+- **Popups/**: 커맨드 팔레트, 토스트, 본 계층 팝업
 
 ## ⚠️ 핵심 특징 및 규칙
 - **Dev 모드 전용**: 이 폴더의 코드는 개발(Dev) 모드에서만 `MODULE DLL`로 빌드되고 동작합니다. 배포(Shipping) 빌드를 할 때는 **코드가 통째로 날아갑니다.**

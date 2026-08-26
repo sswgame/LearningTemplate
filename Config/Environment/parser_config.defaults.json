@@ -24,6 +24,9 @@
         },
         "extra": [
             "-fno-spell-checking"
+        ],
+        "force_include": [
+            "Core/CoreMinimal.h"
         ]
     },
     "paths": {
@@ -37,6 +40,7 @@
         "include_prefix": "-I",
         "isystem": "-isystem",
         "resource_dir": "-resource-dir",
+        "force_include": "-include",
         "fms_compatibility": "-fms-compatibility",
         "fms_extensions": "-fms-extensions",
         "fms_compat_version_prefix": "-fms-compatibility-version"

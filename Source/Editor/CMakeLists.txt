@@ -49,13 +49,14 @@ if(NOT SW_SHIPPING_BUILD)
 	endif()
 
 	set_source_files_properties(
-		"${CMAKE_CURRENT_SOURCE_DIR}/Backend/Renderer/ImGuiVulkanRendererBackend.cpp"
+		"${CMAKE_CURRENT_SOURCE_DIR}/Common/Platform/Renderer/ImGuiVulkanRendererBackend.cpp"
 		PROPERTIES SKIP_PRECOMPILE_HEADERS ON
 	)
 
 	sw_addReflectionStep(EditorModule
 		INCLUDES "${CMAKE_SOURCE_DIR}/Source"
 		HEADERS
-			"${CMAKE_CURRENT_SOURCE_DIR}/Config/EditorConfig.h"
+			"${CMAKE_CURRENT_SOURCE_DIR}/Common/Config/EditorConfig.h"
+			"${CMAKE_CURRENT_SOURCE_DIR}/Common/Gui/EditorChrome.h"
 	)
 endif()

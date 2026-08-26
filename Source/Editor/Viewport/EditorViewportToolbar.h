@@ -1,5 +1,6 @@
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Math/VectorMath.h"
 
 namespace sw
 {
@@ -27,7 +28,7 @@ namespace sw
 
 	/**
 	 * @class EditorViewportToolbar
-	 * @brief 뷰포트 상단 뷰모드/카메라 속도 툴바
+	 * @brief 뷰포트 상단 툴바와 기즈모 트랜스폼 바
 	 */
 	class EditorViewportToolbar
 	{
@@ -35,7 +36,9 @@ namespace sw
 		EditorViewportToolbar()	 = default;
 		~EditorViewportToolbar() = default;
 
-		/** @brief 뷰포트 상단 툴바 UI를 렌더링합니다. */
+		/** @brief 뷰포트 상단 뷰모드/카메라 속도 툴바를 그립니다. */
 		void draw( ViewportToolbarSettings& settings, float32 viewportWidth );
+		/** @brief 선택된 오브젝트의 Translate/Rotate/Scale 및 스냅 플로팅 바를 그립니다. */
+		void drawTransformBar( ViewportToolbarSettings& settings, const float2& anchorPos, bool bEnabled );
 	};
 } // namespace sw

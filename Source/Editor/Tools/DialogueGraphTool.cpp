@@ -7,9 +7,10 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
-#include "Editor/Config/EditorConfig.h"
-#include "Editor/EditorUtil.h"
-
+#include "Editor/Common/Config/EditorConfig.h"
+#include "Editor/Common/EditorUtil.h"
+#include "Editor/Common/Gui/EditorChrome.h"
+#include "Editor/Common/Widgets/EditorWidgets.h"
 
 #include <imgui.h>
 #include <imgui-node-editor/imgui_node_editor.h>
@@ -113,14 +114,8 @@ namespace sw
 	{
 	}
 
-	void DialogueGraphTool::draw()
+	void DialogueGraphTool::drawContent()
 	{
-		if ( ImGui::Begin( getWindowTitle(), getOpenPtr() ) == false )
-		{
-			ImGui::End();
-			return;
-		}
-
 		if ( _bLoaded == false )
 			loadGraphData();
 
@@ -141,8 +136,7 @@ namespace sw
 			if ( ImGui::Button( "+ End" ) )
 				addNode( DialogueNodeType::End );
 			ImGui::SameLine();
-			ImGui::TextDisabled( "|" );
-			ImGui::SameLine();
+			editor::drawToolbarSeparator();
 			if ( ImGui::Button( "Save" ) )
 				saveGraphData();
 			ImGui::SameLine();
@@ -171,7 +165,6 @@ namespace sw
 		if ( _pEditor == nullptr )
 		{
 			ImGui::TextUnformatted( "Failed to create Dialogue Node Editor context." );
-			ImGui::End();
 			return;
 		}
 
@@ -179,7 +172,12 @@ namespace sw
 		const float32 canvasWidth = _selectedNodeId > 0 ? availWidth * 0.72f : availWidth;
 
 		// 1) 캔버스 영역
-		ImGui::BeginChild( "DialogueCanvasRegion", ImVec2( canvasWidth, 0 ), false, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse );
+		editor::EditorSectionDesc canvasDesc{};
+		canvasDesc._pId		  = "DialogueCanvasRegion";
+		canvasDesc._kind	  = editor::EditorSectionKind::Child;
+		canvasDesc._childSize = float2{ canvasWidth, 0.0f };
+		canvasDesc._flags	  = editor::EditorSectionFlags::NoScrollbar | editor::EditorSectionFlags::NoScrollWithMouse;
+		editor::beginSection( canvasDesc );
 
 		ed::SetCurrentEditor( _pEditor );
 		ed::Begin( "DialogueGraphCanvas" );
@@ -389,13 +387,17 @@ namespace sw
 
 		ed::End();
 		ed::SetCurrentEditor( nullptr );
-		ImGui::EndChild();
+		editor::endSection();
 
 		// 2) 선택된 노드 상세 인스펙터 패널
 		if ( _selectedNodeId > 0 )
 		{
 			ImGui::SameLine();
-			ImGui::BeginChild( "DialogueNodeInspector", ImVec2( 0, 0 ), true );
+			editor::EditorSectionDesc inspectorDesc{};
+			inspectorDesc._pId	 = "DialogueNodeInspector";
+			inspectorDesc._kind	 = editor::EditorSectionKind::Child;
+			inspectorDesc._flags = editor::EditorSectionFlags::Border;
+			editor::beginSection( inspectorDesc );
 
 			DialogueNode* pSelectedNode{ nullptr };
 			for ( DialogueNode& node : _listNodes )
@@ -470,10 +472,8 @@ namespace sw
 				}
 			}
 
-			ImGui::EndChild();
+			editor::endSection();
 		}
-
-		ImGui::End();
 	}
 
 	void DialogueGraphTool::ensureDefaults()

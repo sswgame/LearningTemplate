@@ -7,7 +7,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 
-#include "Editor/Windows/IEditorWindow.h"
+#include "Editor/Common/Gui/IEditorPanel.h"
 
 namespace ax::NodeEditor
 {
@@ -67,14 +67,14 @@ namespace sw
 	 * @class BaseNodeGraphEditor
 	 * @brief imgui-node-editor 컨텍스트 수명주기 및 캔버스 기본 동작을 관리하는 기반 클래스
 	 */
-	class BaseNodeGraphEditor : public IEditorWindow
+	class BaseNodeGraphEditor : public IEditorPanel
 	{
 	public:
 		BaseNodeGraphEditor( bool bDefaultOpen = false );
 		virtual ~BaseNodeGraphEditor() override;
 
 		void shutdown( IRHIDevice* pRhiDevice ) override;
-		bool isToolWindow() const override { return true; }
+		bool isToolPanel() const override { return true; }
 
 	protected:
 		void ensureEditorContext( const utf8* pSettingsFileName );

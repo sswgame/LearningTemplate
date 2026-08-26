@@ -2,9 +2,9 @@
 
 #include "Editor/Tools/SpriteClipTool.h"
 
-#include "Editor/Config/EditorConfig.h"
-#include "Editor/Config/EditorData.h"
-#include "Editor/EditorUtil.h"
+#include "Editor/Common/Config/EditorConfig.h"
+#include "Editor/Common/Config/EditorData.h"
+#include "Editor/Common/EditorUtil.h"
 
 #include "Engine/Serialization/Format/JsonSerializer.h"
 
@@ -62,7 +62,7 @@ namespace sw
 	} // namespace
 
 	SpriteClipTool::SpriteClipTool()
-		: IEditorWindow( false )
+		: IEditorPanel( false )
 		, _arrAtlasPath{}
 		, _listFrames{}
 		, _listKeys{}
@@ -76,14 +76,8 @@ namespace sw
 		_listFrames.push_back( Frame{} );
 	}
 
-	void SpriteClipTool::draw()
+	void SpriteClipTool::drawContent()
 	{
-		if ( ImGui::Begin( getWindowTitle(), getOpenPtr() ) == false )
-		{
-			ImGui::End();
-			return;
-		}
-
 		ImGui::InputText( "Atlas", _arrAtlasPath, sizeof( _arrAtlasPath ) );
 		if ( ImGui::Button( "Load" ) )
 			loadJson();
@@ -172,8 +166,6 @@ namespace sw
 			ImGui::Separator();
 			ImGui::TextDisabled( "%s", _status.c_str() );
 		}
-
-		ImGui::End();
 	}
 
 	void SpriteClipTool::loadJson()

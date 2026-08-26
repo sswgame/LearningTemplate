@@ -40,16 +40,8 @@ namespace sw
 		_listOverrides.push_back( PrefabOverrideItem{ "MaterialComponent", "tintColor", "(1.0, 1.0, 1.0, 1.0)", "(1.0, 0.8, 0.8, 1.0)", true } );
 	}
 
-	void PrefabEditorTool::draw()
+	void PrefabEditorTool::drawContent()
 	{
-		ImGui::SetNextWindowSize( ImVec2( 650.0f, 480.0f ), ImGuiCond_FirstUseEver );
-
-		if ( ImGui::Begin( getWindowTitle(), getOpenPtr() ) == false )
-		{
-			ImGui::End();
-			return;
-		}
-
 		// Header Information
 		ImGui::TextColored( ImVec4( 0.4f, 0.8f, 1.0f, 1.0f ), "Prefab Asset:" );
 		ImGui::SameLine();
@@ -164,7 +156,5 @@ namespace sw
 			}
 			SW_LOG_INFO( "[PrefabTool] Reverted all overrides on %s", _selectedInstanceName.c_str() );
 		}
-
-		ImGui::End();
 	}
 } // namespace sw

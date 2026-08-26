@@ -7,14 +7,14 @@
 #include "Core/Common/Types.h"
 #include "Core/Memory/Memory.h"
 
-#include "Editor/Windows/IEditorWindow.h"
+#include "Editor/Common/Gui/IEditorPanel.h"
 
 namespace sw
 {
 	struct ClipSequence;
 
 	/** @brief 실험적 클립/이벤트 트랙 시퀀서 UI. 엔진 시퀀스 자산과 연결되어 있지 않습니다. */
-	class SequencerTool : public IEditorWindow
+	class SequencerTool : public IEditorPanel
 	{
 	public:
 		/** @brief 기본 클립 시퀀스로 시작합니다. */
@@ -22,14 +22,14 @@ namespace sw
 		~SequencerTool() override;
 
 		// ------------------------------------------------------------------------------
-		// 1) IEditorWindow — 제목/그리기
+		// 1) IEditorPanel — 제목/그리기
 		// ------------------------------------------------------------------------------
 		/** @brief 온디맨드 도구이므로 기본적으로 닫힌 채 시작합니다. */
-		bool isToolWindow() const override { return true; }
+		bool isToolPanel() const override { return true; }
 		/** @brief 윈도우 제목을 반환합니다. */
-		const utf8* getWindowTitle() const override { return "Sequencer"; }
+		const utf8* getPanelTitle() const override { return "Sequencer"; }
 		/** @brief 시퀀서 UI를 그립니다. */
-		void draw() override;
+		void drawContent() override;
 
 	private:
 		bool					 _bExpanded;

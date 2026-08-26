@@ -73,6 +73,7 @@ namespace sw
 		inline static constexpr const utf8* kRegisterTypeMarker	  = "RegisterType";
 		inline static constexpr const utf8* kRegisterEnumMarker	  = "RegisterEnum";
 		inline static constexpr const utf8* kFlagOrOperatorMarker = "operator|";
+		inline static constexpr const utf8* kFlagOpsHeaderName	  = "FlagOps.gen.h";
 	}; // struct genConstants
 
 	// ------------------------------------------------------------------------------
@@ -118,6 +119,7 @@ namespace sw
 		inline static constexpr const utf8* kArgsDefault	   = "default";
 		inline static constexpr const utf8* kArgsPlatform	   = "platform";
 		inline static constexpr const utf8* kArgsExtra		   = "extra";
+		inline static constexpr const utf8* kArgsForceInclude  = "force_include";
 		inline static constexpr const utf8* kPaths			   = "paths";
 		inline static constexpr const utf8* kClangFlags		   = "clang_flags";
 		inline static constexpr const utf8* kEmit			   = "emit";
@@ -134,6 +136,7 @@ namespace sw
 		inline static constexpr const utf8* kFlagIncludePrefix		= "include_prefix";
 		inline static constexpr const utf8* kFlagIsystem			= "isystem";
 		inline static constexpr const utf8* kFlagResourceDir		= "resource_dir";
+		inline static constexpr const utf8* kFlagForceInclude		= "force_include";
 		inline static constexpr const utf8* kFlagFmsCompatibility	= "fms_compatibility";
 		inline static constexpr const utf8* kFlagFmsExtensions		= "fms_extensions";
 		inline static constexpr const utf8* kFlagFmsCompatVerPrefix = "fms_compat_version_prefix";
