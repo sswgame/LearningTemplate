@@ -232,7 +232,7 @@ def checkFileConventionsInternal(filePath: Path, rootDir: Path) -> list[Conventi
     isSource = filePath.suffix.lower() in kCppSourceExtensions
 
     try:
-        content = filePath.read_text(encoding="utf-8")
+        content = filePath.read_text(encoding="utf-8-sig")
     except UnicodeDecodeError:
         try:
             content = filePath.read_text(encoding="latin-1")

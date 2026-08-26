@@ -61,7 +61,7 @@ def processFile(filePath: Path, repositoryRoot: Path,
                 checkOnly: bool = False) -> list[str]:
     relativeFilePath = filePath.relative_to(repositoryRoot).as_posix()
     try:
-        text = filePath.read_text(encoding="utf-8", errors="strict")
+        text = filePath.read_text(encoding="utf-8-sig", errors="strict")
     except Exception as exception:
         return [f"[CheckIncludeOrder] 읽기 실패: {relativeFilePath}: {exception}"]
 
