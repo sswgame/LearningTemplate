@@ -45,7 +45,7 @@ namespace sw
 		_bLoaded = false;
 	}
 
-	bool EmitTemplateStore::loadDirectory( const std::string_view absDir )
+	bool EmitTemplateStore::loadDirectory( const string_view absDir )
 	{
 		clear();
 
@@ -84,12 +84,12 @@ namespace sw
 		return true;
 	}
 
-	bool EmitTemplateStore::has( const std::string_view name ) const
+	bool EmitTemplateStore::has( const string_view name ) const
 	{
 		return _mapTemplates.find( string( name ) ) != _mapTemplates.end();
 	}
 
-	string EmitTemplateStore::render( const std::string_view			   name,
+	string EmitTemplateStore::render( const string_view					   name,
 									  const unordered_map<string, string>& vars ) const
 	{
 		const auto it = _mapTemplates.find( string( name ) );
@@ -101,7 +101,7 @@ namespace sw
 		return expand( it->second, vars );
 	}
 
-	string EmitTemplateStore::expand( const std::string_view			   tpl,
+	string EmitTemplateStore::expand( const string_view					   tpl,
 									  const unordered_map<string, string>& vars )
 	{
 		string out;
@@ -129,7 +129,7 @@ namespace sw
 			{
 				++keyEnd;
 				const size_t close = tpl.find( '}', keyEnd );
-				if ( close == std::string_view::npos )
+				if ( close == string_view::npos )
 				{
 					out.push_back( tpl[charIndex++] );
 					continue;

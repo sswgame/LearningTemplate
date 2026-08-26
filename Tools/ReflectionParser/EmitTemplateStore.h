@@ -23,18 +23,18 @@ namespace sw
 		/** @brief 로드된 템플릿을 비웁니다. */
 		void clear();
 		/** @brief 절대 경로 디렉터리에서 *.tpl 을 로드합니다. */
-		bool loadDirectory( const std::string_view absDir );
+		bool loadDirectory( const string_view absDir );
 		/** @brief 템플릿이 로드되었는지 반환합니다. */
 		bool isLoaded() const noexcept { return _bLoaded; }
 
 		/** @brief 이름에 해당하는 템플릿이 있는지 조회합니다. */
-		bool has( const std::string_view name ) const;
+		bool has( const string_view name ) const;
 		/** @brief 템플릿을 확장합니다. 모르는 변수는 빈 문자열, 없으면 빈 결과를 반환합니다. */
-		string render( const std::string_view				name,
+		string render( const string_view					name,
 					   const unordered_map<string, string>& vars ) const;
 
 		/** @brief 메모리 속 골격을 확장합니다(테스트·폴백용). */
-		static string expand( const std::string_view			   tpl,
+		static string expand( const string_view					   tpl,
 							  const unordered_map<string, string>& vars );
 
 	private:

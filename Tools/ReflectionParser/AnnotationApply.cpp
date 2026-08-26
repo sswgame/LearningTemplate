@@ -14,17 +14,17 @@
 
 namespace sw
 {
-	string annotationArgText( const string& spelling, const utf8* prefix )
+	string_view annotationArgText( string_view spelling, string_view prefix )
 	{
 		const size_t pos = spelling.find( prefix );
-		if ( pos == string::npos )
+		if ( pos == string_view::npos )
 			return {};
-		return spelling.substr( pos + StringUtil::strlen( prefix ) );
+		return spelling.substr( pos + prefix.size() );
 	}
 	/**
 	 * @brief `key="value"` 또는 `key=value` 형태의 단일 토큰에서 따옴표를 고려하여 값 문자열을 추출합니다.
 	 */
-	static string parseAnnotationStringValue( const string& token, size_t eqPos )
+	static string_view parseAnnotationStringValue( string_view token, size_t eqPos )
 	{
 		size_t valueStart = eqPos + 1;
 		while ( valueStart < token.size() && ( token[valueStart] == ' ' || token[valueStart] == '\t' ) )
@@ -36,7 +36,7 @@ namespace sw
 		if ( token[valueStart] == '"' )
 		{
 			const size_t endQuote = token.find( '"', valueStart + 1 );
-			if ( endQuote == string::npos )
+			if ( endQuote == string_view::npos )
 				return {};
 			return token.substr( valueStart + 1, endQuote - valueStart - 1 );
 		}
@@ -52,7 +52,7 @@ namespace sw
 		return token.substr( valueStart, valueEnd - valueStart );
 	}
 
-	vector<string> splitAnnotationArgs( std::string_view args )
+	vector<string> splitAnnotationArgs( string_view args )
 	{
 		while ( args.empty() == false && ( args.back() == ')' || args.back() == ';' ) )
 			args.remove_suffix( 1 );
@@ -75,7 +75,7 @@ namespace sw
 			{
 				if ( charIndex > tokenStart )
 				{
-					std::string_view token = StringUtil::trim( args.substr( tokenStart, charIndex - tokenStart ) );
+					string_view token = StringUtil::trim( args.substr( tokenStart, charIndex - tokenStart ) );
 					if ( token.empty() == false )
 						tokens.emplace_back( token );
 				}
@@ -84,7 +84,7 @@ namespace sw
 		}
 		if ( args.size() > tokenStart )
 		{
-			std::string_view token = StringUtil::trim( args.substr( tokenStart ) );
+			string_view token = StringUtil::trim( args.substr( tokenStart ) );
 			if ( token.empty() == false )
 				tokens.emplace_back( token );
 		}
@@ -92,14 +92,14 @@ namespace sw
 	}
 
 	/** @brief 빈 값·true·1·True 를 참으로 봅니다. */
-	static bool parseAnnotationBool( const string& val )
+	static bool parseAnnotationBool( string_view val )
 	{
 		return val.empty() || val == "true" || val == "1" || val == "True";
 	}
 
 	/** @brief 필드 이름에 맞는 테이블 항목을 찾습니다. */
 	template <typename Entry, size_t N>
-	const Entry* findFieldEntry( const Entry ( &table )[N], const std::string_view field )
+	const Entry* findFieldEntry( const Entry ( &table )[N], const string_view field )
 	{
 		for ( const Entry& entry : table )
 		{
@@ -111,7 +111,7 @@ namespace sw
 
 	struct ReflectFlagEntry
 	{
-		std::string_view _field;
+		string_view _field;
 		void ( *apply )( ParsedTypeInfo& );
 	};
 
@@ -127,7 +127,7 @@ namespace sw
 	static void appendTypeAliases( vector<string>& outAliases, const string& raw )
 	{
 		const string_splitter parts( raw, { ",", ";" } );
-		for ( const std::string_view token : parts.getSplitList() )
+		for ( const string_view token : parts.getSplitList() )
 		{
 			const string trimmed = StringUtil::trim( string( token ).c_str() );
 			if ( trimmed.empty() == false )
@@ -137,7 +137,7 @@ namespace sw
 
 	struct ReflectStringEntry
 	{
-		std::string_view _field;
+		string_view _field;
 		void ( *apply )( ParsedTypeInfo&, const string& );
 	};
 
@@ -152,7 +152,7 @@ namespace sw
 
 	struct EnumStringEntry
 	{
-		std::string_view _field;
+		string_view _field;
 		void ( *apply )( ParsedEnumInfo&, const string& );
 	};
 
@@ -160,7 +160,7 @@ namespace sw
 	static void appendEnumValueAliases( ParsedEnumInfo& enumInfo, const string& raw )
 	{
 		const string_splitter parts( raw, { ",", ";" } );
-		for ( const std::string_view tokenView : parts.getSplitList() )
+		for ( const string_view tokenView : parts.getSplitList() )
 		{
 			string token = StringUtil::trim( string( tokenView ).c_str() );
 			if ( token.empty() )
@@ -204,7 +204,7 @@ namespace sw
 
 	struct EnumFlagEntry
 	{
-		std::string_view _field;
+		string_view _field;
 		void ( *apply )( ParsedEnumInfo& );
 	};
 
@@ -220,7 +220,7 @@ namespace sw
 
 	struct PropBoolEntry
 	{
-		std::string_view _field;
+		string_view _field;
 		void ( *apply )( ParsedPropertyInfo&, bool );
 	};
 
@@ -238,7 +238,7 @@ namespace sw
 
 	struct PropStringEntry
 	{
-		std::string_view _field;
+		string_view _field;
 		void ( *apply )( ParsedPropertyInfo&, const string& );
 	};
 
@@ -267,7 +267,7 @@ namespace sw
 
 	struct PropFloatEntry
 	{
-		std::string_view _field;
+		string_view _field;
 		void ( *apply )( ParsedPropertyInfo&, float32 );
 	};
 
@@ -289,7 +289,7 @@ namespace sw
 
 	struct FuncFlagEntry
 	{
-		std::string_view _field;
+		string_view _field;
 		void ( *apply )( ParsedFunctionInfo& );
 	};
 
@@ -303,7 +303,7 @@ namespace sw
 
 	struct FuncStringEntry
 	{
-		std::string_view _field;
+		string_view _field;
 		void ( *apply )( ParsedFunctionInfo&, const string& );
 	};
 
@@ -318,21 +318,21 @@ namespace sw
 	};
 
 	/** @brief REFLECT(...) 토큰을 ParsedTypeInfo 플래그·별칭에 적용합니다. */
-	void parseReflectAnnotation( const string& annotationSpelling, ParsedTypeInfo& typeInfo )
+	void parseReflectAnnotation( string_view annotationSpelling, ParsedTypeInfo& typeInfo )
 	{
-		const utf8* prefix	  = annotationConstants::kReflectPrefix;
+		string_view prefix	  = annotationConstants::kReflectPrefix;
 		size_t		prefixPos = annotationSpelling.find( prefix );
-		if ( prefixPos == string::npos )
+		if ( prefixPos == string_view::npos )
 		{
 			prefix	  = annotationConstants::kReflectScriptPrefix;
 			prefixPos = annotationSpelling.find( prefix );
 		}
-		if ( prefixPos == string::npos )
+		if ( prefixPos == string_view::npos )
 			return;
 
 		const AnnotationMeta& meta = AnnotationMeta::instance();
 		for ( const string& token :
-			  splitAnnotationArgs( annotationSpelling.substr( prefixPos + StringUtil::strlen( prefix ) ) ) )
+			  splitAnnotationArgs( annotationSpelling.substr( prefixPos + prefix.size() ) ) )
 		{
 			if ( token.empty() )
 				continue;
@@ -348,21 +348,21 @@ namespace sw
 				continue;
 			}
 
-			const string			 key	 = StringUtil::trim( token.substr( 0, eqPos ).c_str() );
-			const string			 val	 = parseAnnotationStringValue( token, eqPos );
+			const string_view		 key	 = StringUtil::trim( string_view( token.data(), eqPos ) );
+			const string_view		 val	 = parseAnnotationStringValue( token, eqPos );
 			const AnnotationBinding* binding = meta.findKey( annotationConstants::kReflectScope, key );
 			if ( binding == nullptr || binding->_kind != AnnotationBinding::Kind::String )
 				continue;
 			if ( const ReflectStringEntry* entry = findFieldEntry( kReflectStrings, binding->_field ) )
-				entry->apply( typeInfo, val );
+				entry->apply( typeInfo, string( val ) );
 		}
 	}
 
 	/** @brief ENUM(...) 토큰을 ParsedEnumInfo 에 적용합니다. */
-	void parseEnumAnnotation( const string& annotationSpelling, ParsedEnumInfo& enumInfo )
+	void parseEnumAnnotation( string_view annotationSpelling, ParsedEnumInfo& enumInfo )
 	{
-		const string args = annotationArgText( annotationSpelling, annotationConstants::kEnumPrefix );
-		if ( annotationSpelling.find( annotationConstants::kEnumPrefix ) == string::npos )
+		const string_view args = annotationArgText( annotationSpelling, annotationConstants::kEnumPrefix );
+		if ( annotationSpelling.find( annotationConstants::kEnumPrefix ) == string_view::npos )
 			return;
 
 		const AnnotationMeta& meta = AnnotationMeta::instance();
@@ -384,18 +384,18 @@ namespace sw
 				continue;
 			}
 
-			const string			 key	 = StringUtil::trim( token.substr( 0, eqPos ).c_str() );
-			const string			 val	 = parseAnnotationStringValue( token, eqPos );
+			const string_view		 key	 = StringUtil::trim( string_view( token.data(), eqPos ) );
+			const string_view		 val	 = parseAnnotationStringValue( token, eqPos );
 			const AnnotationBinding* binding = meta.findKey( annotationConstants::kEnumScope, key );
 			if ( binding == nullptr || binding->_kind != AnnotationBinding::Kind::String )
 				continue;
 			if ( const EnumStringEntry* entry = findFieldEntry( kEnumStrings, binding->_field ) )
-				entry->apply( enumInfo, val );
+				entry->apply( enumInfo, string( val ) );
 		}
 	}
 
 	/** @brief PROPERTY 바인딩 Kind 에 따라 프로퍼티 필드를 채웁니다. */
-	static void applyPropertyBinding( ParsedPropertyInfo& prop, const AnnotationBinding& binding, const string& val )
+	static void applyPropertyBinding( ParsedPropertyInfo& prop, const AnnotationBinding& binding, string_view val )
 	{
 		using Kind = AnnotationBinding::Kind;
 		switch ( binding._kind )
@@ -407,11 +407,11 @@ namespace sw
 				break;
 			case Kind::String:
 				if ( const PropStringEntry* entry = findFieldEntry( kPropStrings, binding._field ) )
-					entry->apply( prop, val );
+					entry->apply( prop, string( val ) );
 				break;
 			case Kind::Float:
 				if ( const PropFloatEntry* entry = findFieldEntry( kPropFloats, binding._field ) )
-					entry->apply( prop, std::strtof( val.c_str(), nullptr ) );
+					entry->apply( prop, std::strtof( string( val ).c_str(), nullptr ) );
 				break;
 			case Kind::NetRole:
 				break;
@@ -419,10 +419,10 @@ namespace sw
 	}
 
 	/** @brief PROPERTY(...) 토큰을 ParsedPropertyInfo 에 적용합니다. */
-	void parsePropertyAnnotation( const string& annotationSpelling, ParsedPropertyInfo& prop )
+	void parsePropertyAnnotation( string_view annotationSpelling, ParsedPropertyInfo& prop )
 	{
-		const string args = annotationArgText( annotationSpelling, annotationConstants::kPropertyPrefix );
-		if ( annotationSpelling.find( annotationConstants::kPropertyPrefix ) == string::npos )
+		const string_view args = annotationArgText( annotationSpelling, annotationConstants::kPropertyPrefix );
+		if ( annotationSpelling.find( annotationConstants::kPropertyPrefix ) == string_view::npos )
 			return;
 
 		const AnnotationMeta& meta = AnnotationMeta::instance();
@@ -439,18 +439,18 @@ namespace sw
 				continue;
 			}
 
-			const string key = StringUtil::trim( token.substr( 0, eqPos ).c_str() );
-			const string val = parseAnnotationStringValue( token, eqPos );
+			const string_view key = StringUtil::trim( string_view( token.data(), eqPos ) );
+			const string_view val = parseAnnotationStringValue( token, eqPos );
 			if ( const AnnotationBinding* binding = meta.findKey( annotationConstants::kPropertyScope, key ) )
 				applyPropertyBinding( prop, *binding, val );
 		}
 	}
 
 	/** @brief FUNCTION(...) 토큰을 ParsedFunctionInfo 에 적용합니다. */
-	void parseFunctionAnnotation( const string& annotationSpelling, ParsedFunctionInfo& method )
+	void parseFunctionAnnotation( string_view annotationSpelling, ParsedFunctionInfo& method )
 	{
-		const string args = annotationArgText( annotationSpelling, annotationConstants::kFunctionPrefix );
-		if ( annotationSpelling.find( annotationConstants::kFunctionPrefix ) == string::npos )
+		const string_view args = annotationArgText( annotationSpelling, annotationConstants::kFunctionPrefix );
+		if ( annotationSpelling.find( annotationConstants::kFunctionPrefix ) == string_view::npos )
 			return;
 
 		const AnnotationMeta& meta = AnnotationMeta::instance();
@@ -477,14 +477,14 @@ namespace sw
 				}
 				continue;
 			}
-			const string key = StringUtil::trim( token.substr( 0, eqPos ).c_str() );
-			const string val = parseAnnotationStringValue( token, eqPos );
+			const string_view key = StringUtil::trim( string_view( token.data(), eqPos ) );
+			const string_view val = parseAnnotationStringValue( token, eqPos );
 			if ( const AnnotationBinding* binding = meta.findKey( annotationConstants::kFunctionScope, key ) )
 			{
 				if ( binding->_kind == AnnotationBinding::Kind::String )
 				{
 					if ( const FuncStringEntry* entry = findFieldEntry( kFuncStrings, binding->_field ) )
-						entry->apply( method, val );
+						entry->apply( method, string( val ) );
 				}
 			}
 		}

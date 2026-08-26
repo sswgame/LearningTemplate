@@ -40,11 +40,11 @@ namespace sw
 		registerRule( match, kind, type );
 	}
 
-	const ContainerTypeRule* ContainerTypeMap::match( const std::string_view clangTypeSpelling ) const
+	const ContainerTypeRule* ContainerTypeMap::match( const string_view clangTypeSpelling ) const
 	{
 		for ( const ContainerTypeRule& rule : _listRules )
 		{
-			if ( clangTypeSpelling.find( rule._match ) != std::string_view::npos )
+			if ( clangTypeSpelling.find( rule._match ) != string_view::npos )
 				return &rule;
 		}
 		return nullptr;

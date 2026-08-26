@@ -25,11 +25,11 @@ namespace sw
 		/**
 		 * @brief 열거형 전체 FQN(예: "sw::EState::Idle")에서 말단 열거자 이름("Idle")을 추출합니다.
 		 */
-		static string enumeratorLeaf( const string& spec )
+		static string_view enumeratorLeaf( string_view spec )
 		{
-			string		 name = StringUtil::trim( spec.c_str() );
+			string_view	 name = StringUtil::trim( spec );
 			const size_t last = name.rfind( "::" );
-			if ( last != string::npos && last + 2 < name.size() )
+			if ( last != string_view::npos && last + 2 < name.size() )
 				name = name.substr( last + 2 );
 			return name;
 		}
@@ -123,7 +123,7 @@ namespace sw
 	{
 	}
 
-	void CodeGenerator::appendTemplate( CodeEmitBuffer& out, const std::string_view name,
+	void CodeGenerator::appendTemplate( CodeEmitBuffer& out, const string_view name,
 										const unordered_map<string, string>& vars )
 	{
 		out.append( EmitTemplateStore::instance().render( name, vars ) );
@@ -641,11 +641,11 @@ namespace sw
 		} );
 	}
 
-	const ParsedEnumeratorInfo* CodeGenerator::findEnumerator( const ParsedEnumInfo& enumInfo, const string& spec )
+	const ParsedEnumeratorInfo* CodeGenerator::findEnumerator( const ParsedEnumInfo& enumInfo, string_view spec )
 	{
 		if ( spec.empty() )
 			return nullptr;
-		const string leaf = enumeratorLeaf( spec );
+		const string_view leaf = enumeratorLeaf( spec );
 		for ( const ParsedEnumeratorInfo& en : enumInfo._listEnumerators )
 		{
 			if ( en._name == spec || en._name == leaf )
@@ -753,10 +753,10 @@ namespace sw
 		return true;
 	}
 
-	string CodeGenerator::sanitizeIdentifier( const string& fqn )
+	string CodeGenerator::sanitizeIdentifier( string_view fqn )
 	{
-		string result = fqn;
-		size_t pos	  = 0;
+		string result( fqn );
+		size_t pos = 0;
 		while ( ( pos = result.find( "::", pos ) ) != string::npos )
 		{
 			result.replace( pos, 2, "_" );

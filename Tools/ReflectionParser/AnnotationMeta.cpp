@@ -32,7 +32,7 @@ namespace sw
 			_mapKeys[scope].insert_or_assign( alias, binding );
 	}
 
-	bool AnnotationMeta::loadFile( const std::string_view absPath )
+	bool AnnotationMeta::loadFile( const string_view absPath )
 	{
 		clear();
 
@@ -47,7 +47,7 @@ namespace sw
 		uint32 bindingCount = 0;
 
 		const string_splitter lines( text, { "\r\n", "\n" } );
-		for ( const std::string_view rawLine : lines.getSplitList() )
+		for ( const string_view rawLine : lines.getSplitList() )
 		{
 			const string line = StringUtil::trim( string( rawLine ).c_str() );
 			if ( line.empty() || line.front() == '#' || line.front() == ';' )
@@ -83,7 +83,7 @@ namespace sw
 
 			binding._field = left.substr( dot + 1 );
 			const string_splitter aliases( right, { "," } );
-			for ( const std::string_view aliasView : aliases.getSplitList() )
+			for ( const string_view aliasView : aliases.getSplitList() )
 			{
 				const string alias = StringUtil::trim( string( aliasView ).c_str() );
 				if ( alias.empty() )
@@ -98,8 +98,8 @@ namespace sw
 		return true;
 	}
 
-	const AnnotationBinding* AnnotationMeta::findBare( const std::string_view scope,
-													   const std::string_view token ) const
+	const AnnotationBinding* AnnotationMeta::findBare( const string_view scope,
+													   const string_view token ) const
 	{
 		const auto scopeIt = _mapBare.find( string( scope ) );
 		if ( scopeIt == _mapBare.end() )
@@ -108,8 +108,8 @@ namespace sw
 		return ( it != scopeIt->second.end() ) ? &it->second : nullptr;
 	}
 
-	const AnnotationBinding* AnnotationMeta::findKey( const std::string_view scope,
-													  const std::string_view key ) const
+	const AnnotationBinding* AnnotationMeta::findKey( const string_view scope,
+													  const string_view key ) const
 	{
 		const auto scopeIt = _mapKeys.find( string( scope ) );
 		if ( scopeIt == _mapKeys.end() )

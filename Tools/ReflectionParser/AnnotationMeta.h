@@ -27,7 +27,7 @@ namespace sw
 	};
 
 	/** @brief 철자 토큰을 AnnotationBinding::Kind 로 파싱합니다. */
-	inline bool tryParseAnnotationKind( const std::string_view spelling, AnnotationBinding::Kind& out ) noexcept
+	inline bool tryParseAnnotationKind( const string_view spelling, AnnotationBinding::Kind& out ) noexcept
 	{
 #define REGISTER_ANNOTATION_KIND( Name, Token ) \
 	if ( spelling == #Token )                   \
@@ -50,15 +50,15 @@ namespace sw
 		static AnnotationMeta& instance();
 
 		/** @brief AnnotationMeta.txt 를 로드합니다. */
-		bool loadFile( const std::string_view absPath );
+		bool loadFile( const string_view absPath );
 		/** @brief 파일이 로드되었는지 반환합니다. */
 		bool isLoaded() const noexcept { return _bLoaded; }
 
 		/** @brief 단독 플래그/넷롤 토큰을 조회합니다 (scope: REFLECT|PROPERTY|FUNCTION). */
-		const AnnotationBinding* findBare( const std::string_view scope, const std::string_view token ) const;
+		const AnnotationBinding* findBare( const string_view scope, const string_view token ) const;
 
 		/** @brief key= 쪽 바인딩을 조회합니다. */
-		const AnnotationBinding* findKey( const std::string_view scope, const std::string_view key ) const;
+		const AnnotationBinding* findKey( const string_view scope, const string_view key ) const;
 
 	private:
 		/** @brief 로드된 바인딩을 비웁니다. */

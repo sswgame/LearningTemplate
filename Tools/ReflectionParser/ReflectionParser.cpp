@@ -16,6 +16,37 @@
 
 namespace sw
 {
+	/** @brief C++17 호환 카운팅 세마포어 (스레드 풀 작업 슬롯 제어) */
+	class CountingSemaphore
+	{
+	public:
+		explicit CountingSemaphore( int64 desired )
+			: _count{ desired }
+		{
+		}
+
+		void acquire()
+		{
+			std::unique_lock<std::mutex> lock( _mutex );
+			_cv.wait( lock, [this]
+			{ return _count > 0; } );
+			--_count;
+		}
+
+		void release()
+		{
+			{
+				std::lock_guard<std::mutex> lock( _mutex );
+				++_count;
+			}
+			_cv.notify_one();
+		}
+
+	private:
+		std::mutex				_mutex;
+		std::condition_variable _cv;
+		int64					_count;
+	};
 	/** @brief 소스 전체를 읽고 리플렉션 키워드가 있으면 true. outContent에 버퍼를 남깁니다. */
 	static bool loadSourceIfHasReflectionKeywords( const sw::string& filePath, sw::string& outContent )
 	{
@@ -56,7 +87,7 @@ namespace sw
 	{
 		for ( int32 argIndex = 1; argIndex < argc; ++argIndex )
 		{
-			const std::string_view arg = argv[argIndex];
+			const string_view arg = argv[argIndex];
 
 			if ( arg == sw::cliConstants::kInput && argIndex + 1 < argc )
 			{
@@ -373,19 +404,28 @@ int32 main( int32 argc, utf8* argv[] )
 	const uint32 workerCount = std::max( 1u, std::thread::hardware_concurrency() );
 	SW_LOG_INFO( "[ReflectionParser] Parsing %# input(s) with %# worker(s).", args.inputFiles.size(), workerCount );
 
-	size_t nextIndex = 0;
-	while ( nextIndex < args.inputFiles.size() )
+	// sw::CountingSemaphore 를 이용한 연속 큐잉 방식:
+	// 각 태스크가 완료되는 즉시 새 파일을 투입하여 워커가 항상 최대로 활용됩니다.
+	// 기존 배치 방식(배치 내 가장 느린 파일이 다음 배치를 블로킹)의 straggler 문제가 없습니다.
+	sw::CountingSemaphore		  workerSlots( workerCount );
+	sw::vector<std::future<void>> futureList;
+	futureList.reserve( args.inputFiles.size() );
+
+	for ( const sw::string& inputFile : args.inputFiles )
 	{
-		sw::vector<std::future<void>> batch;
-		batch.reserve( workerCount );
-		for ( uint32 worker = 0; worker < workerCount && nextIndex < args.inputFiles.size(); ++worker, ++nextIndex )
+		workerSlots.acquire(); // 슬롯이 빌 때까지 대기
+		futureList.push_back( std::async(
+			std::launch::async,
+			[&workerSlots, &args, &errorCount]( sw::string file )
 		{
-			batch.push_back( std::async( std::launch::async, sw::processInputFile, args.inputFiles[nextIndex],
-										 std::cref( args ), std::ref( errorCount ) ) );
-		}
-		for ( std::future<void>& future : batch )
-			future.get();
+			sw::processInputFile( file, args, errorCount );
+			workerSlots.release(); // 완료 시 슬롯 반환
+		},
+			inputFile ) );
 	}
+
+	for ( std::future<void>& future : futureList )
+		future.get();
 
 	const int32 totalErrors = errorCount.load();
 	if ( totalErrors == 0 )

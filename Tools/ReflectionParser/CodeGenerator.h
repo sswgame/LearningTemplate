@@ -68,17 +68,17 @@ namespace sw
 		// 3) maps — enumerator·식별자·ContainerKind 표기
 		// ------------------------------------------------------------------------------
 		/** @brief 이름 또는 FQN으로 enumerator 를 찾습니다. */
-		static const ParsedEnumeratorInfo* findEnumerator( const ParsedEnumInfo& enumInfo, const string& spec );
+		static const ParsedEnumeratorInfo* findEnumerator( const ParsedEnumInfo& enumInfo, string_view spec );
 
 		/** @brief FQN을 C++ 식별자로 안전하게 바꿉니다. */
-		static string sanitizeIdentifier( const string& fqn );
+		static string sanitizeIdentifier( string_view fqn );
 		/** @brief ContainerKind 의 C++ 표현식을 반환합니다. */
 		static const utf8* containerKindExpr( ContainerKind kind );
 		/** @brief 컨테이너 peel 멤버 이름을 반환합니다. */
 		static const utf8* peelMember( ContainerKind kind );
 
 		/** @brief 로드된 EmitTemplateStore 골격을 렌더해 버퍼에 붙입니다. */
-		static void appendTemplate( CodeEmitBuffer& out, const std::string_view name,
+		static void appendTemplate( CodeEmitBuffer& out, const string_view name,
 									const unordered_map<string, string>& vars );
 
 	private:

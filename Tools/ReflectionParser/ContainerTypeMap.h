@@ -33,7 +33,7 @@ namespace sw
 		bool isLoaded() const noexcept { return _bLoaded; }
 
 		/** @brief clang 타입 표기에 맞는 규칙을 찾습니다. */
-		const ContainerTypeRule* match( const std::string_view clangTypeSpelling ) const;
+		const ContainerTypeRule* match( const string_view clangTypeSpelling ) const;
 
 		/** @brief 매칭 문자열·종류·래퍼 stem 규칙을 등록합니다. */
 		void registerRule( const string& match, ContainerKind kind, const string& type );

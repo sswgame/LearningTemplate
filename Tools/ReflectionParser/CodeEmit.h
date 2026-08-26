@@ -48,7 +48,7 @@ namespace sw
 		// 2) emit — 원문·줄·할당·플래그
 		// ------------------------------------------------------------------------------
 		/** @brief 들여쓰기·개행 없이 원문을 붙입니다. */
-		CodeEmit& raw( const std::string_view text )
+		CodeEmit& raw( const string_view text )
 		{
 			_out.append( text );
 			return *this;
@@ -62,7 +62,7 @@ namespace sw
 		}
 
 		/** @brief 들여쓰기 후 한 줄을 출력합니다. */
-		CodeEmit& line( const std::string_view text )
+		CodeEmit& line( const string_view text )
 		{
 			writeIndent();
 			_out.append( text );
@@ -72,7 +72,7 @@ namespace sw
 
 		/** @brief 들여쓰기 후 서식 문자열을 한 줄로 출력합니다. */
 		template <typename... Args>
-		CodeEmit& linef( const std::string_view format, const Args&... args )
+		CodeEmit& linef( const string_view format, const Args&... args )
 		{
 			writeIndent();
 			_out.appendFormat( format, args... );
@@ -81,13 +81,13 @@ namespace sw
 		}
 
 		/** @brief `lhs = rhs;` 할당문을 출력합니다. */
-		CodeEmit& assign( const std::string_view lhs, const std::string_view rhs )
+		CodeEmit& assign( const string_view lhs, const string_view rhs )
 		{
 			return linef( "%# = %#;", lhs, rhs );
 		}
 
 		/** @brief cond가 참이면 `lhs = rhs;` 를 출력합니다. */
-		CodeEmit& assignIf( bool cond, const std::string_view lhs, const std::string_view rhs )
+		CodeEmit& assignIf( bool cond, const string_view lhs, const string_view rhs )
 		{
 			if ( cond )
 				assign( lhs, rhs );
@@ -95,7 +95,7 @@ namespace sw
 		}
 
 		/** @brief cond가 참이면 비트/불리언 플래그 `field = value;` 를 출력합니다. */
-		CodeEmit& flagIf( bool cond, const std::string_view field, const std::string_view value = "1" )
+		CodeEmit& flagIf( bool cond, const string_view field, const string_view value = "1" )
 		{
 			if ( cond )
 				assign( field, value );
@@ -103,7 +103,7 @@ namespace sw
 		}
 
 		/** @brief cond가 참이고 값이 비어 있지 않으면 `field = "이스케이프된문자열";` 를 출력합니다. */
-		CodeEmit& assignQuotedIf( bool cond, const std::string_view field, const string& value )
+		CodeEmit& assignQuotedIf( bool cond, const string_view field, const string& value )
 		{
 			if ( cond )
 				linef( "%# = \"%#\";", field, escapeCppString( value ) );
@@ -114,7 +114,7 @@ namespace sw
 		// 3) emit — hashed_string / 따옴표 / 이스케이프
 		// ------------------------------------------------------------------------------
 		/** @brief `::sw::hashed_string( "name" )` 표현식을 만듭니다. 이름은 이스케이프해서 넣습니다. */
-		static string hs( const std::string_view name )
+		static string hs( const string_view name )
 		{
 			StringBuilder<constant::kMaxBuffer1024> b;
 			b.appendFormat( "::sw::hashed_string( \"%#\" )", escapeCppString( string( name ) ) );
@@ -125,7 +125,7 @@ namespace sw
 		static string hsEmpty() { return "::sw::hashed_string()"; }
 
 		/** @brief 이스케이프된 C++ 문자열 리터럴 `"..."` 을 만듭니다. */
-		static string quoted( const std::string_view value )
+		static string quoted( const string_view value )
 		{
 			StringBuilder<constant::kMaxBuffer1024> b;
 			b.appendFormat( "\"%#\"", escapeCppString( string( value ) ) );

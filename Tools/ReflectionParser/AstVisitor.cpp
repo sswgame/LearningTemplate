@@ -46,9 +46,9 @@ namespace sw
 		 */
 		struct AnnotationSearch
 		{
-			string prefix;
-			string spelling;
-			bool   found = false;
+			string_view prefix;
+			string		spelling;
+			bool		found = false;
 		};
 
 		/**
@@ -61,7 +61,7 @@ namespace sw
 			if ( kind == CXCursor_AnnotateAttr || kind == CXCursor_UnexposedAttr )
 			{
 				const string spelling = cxStringToStd( clang_getCursorSpelling( cursor ) );
-				if ( spelling.find( search->prefix ) != string::npos )
+				if ( string_view( spelling ).find( search->prefix ) != string_view::npos )
 				{
 					search->found	 = true;
 					search->spelling = spelling;
@@ -89,14 +89,14 @@ namespace sw
 		}
 
 		/** @brief 윈도우 내에서 주석 바깥에 있는 문자열을 뒤에서부터 찾습니다. */
-		static size_t rfindOutsideComments( const std::string_view& window, const std::string_view& searchStr )
+		static size_t rfindOutsideComments( const string_view& window, const string_view& searchStr )
 		{
 			size_t searchEnd = string::npos;
 			size_t pos		 = string::npos;
 			while ( true )
 			{
 				pos = window.rfind( searchStr, searchEnd );
-				if ( pos == std::string_view::npos )
+				if ( pos == string_view::npos )
 					return string::npos;
 
 				bool bInLineComment	 = false;
@@ -150,11 +150,21 @@ namespace sw
 		 * @brief Clang AST의 매크로 확장 버그 등으로 인해 자식 어노테이션 커서가 누락된 경우,
 		 *        실제 소스 파일의 커서 위치 주변을 직접 스캔하여 기본 어노테이션이 존재하는지 보정합니다.
 		 */
-		static bool sourceHasPrimaryAnnotation( CXCursor cursor, const string& prefix )
+		static bool sourceHasPrimaryAnnotation( CXCursor cursor, string_view prefix )
 		{
-			const string macroOpen = ( prefix == annotationConstants::kReflectScriptPrefix ) ? annotationConstants::kReflectScriptMacroOpen : ( prefix == annotationConstants::kReflectPrefix ? annotationConstants::kReflectMacroOpen : ( prefix == annotationConstants::kEnumPrefix ? annotationConstants::kEnumMacroOpen : "" ) );
+			// kReflectAnnotations[] 테이블에서 prefix가 일치하는 항목의 macroOpen을 찾습니다.
+			// 새 어노테이션이 PredefinedReflectAnnotation.xxx에 추가되면 자동으로 반영됩니다.
+			const utf8* macroOpen = nullptr;
+			for ( const ReflectAnnotationDesc& desc : kReflectAnnotations )
+			{
+				if ( prefix == desc._prefix )
+				{
+					macroOpen = desc._macroOpen;
+					break;
+				}
+			}
 
-			if ( macroOpen.empty() )
+			if ( macroOpen == nullptr )
 				return false;
 
 			CXFile file	  = nullptr;
@@ -170,29 +180,29 @@ namespace sw
 				return false;
 
 			// 커서 위치 이전 1KB 윈도우 스캔
-			const size_t		   lookback	   = ParserContext::getSharedConfig().sourceLookbackBytes;
-			const size_t		   windowStart = ( offset > lookback ) ? ( offset - lookback ) : 0;
-			const std::string_view window( content.data() + windowStart, offset - windowStart );
+			const size_t	  lookback	  = ParserContext::getSharedConfig().sourceLookbackBytes;
+			const size_t	  windowStart = ( offset > lookback ) ? ( offset - lookback ) : 0;
+			const string_view window( content.data() + windowStart, offset - windowStart );
 
 			const size_t macroPos = rfindOutsideComments( window, macroOpen );
-			if ( macroPos != std::string_view::npos )
+			if ( macroPos != string_view::npos )
 			{
-				const std::string_view afterMacro = window.substr( macroPos );
-				if ( afterMacro.find( ';' ) == std::string_view::npos &&
-					 afterMacro.find( '}' ) == std::string_view::npos &&
-					 afterMacro.find( '{' ) == std::string_view::npos )
+				const string_view afterMacro = window.substr( macroPos );
+				if ( afterMacro.find( ';' ) == string_view::npos &&
+					 afterMacro.find( '}' ) == string_view::npos &&
+					 afterMacro.find( '{' ) == string_view::npos )
 					return true;
 			}
 
 			StringBuilder<constant::kMaxBuffer128> needle;
 			needle.appendFormat( "annotate(\"%#", prefix );
 			const size_t annotatePos = rfindOutsideComments( window, needle.view() );
-			if ( annotatePos != std::string_view::npos )
+			if ( annotatePos != string_view::npos )
 			{
-				const std::string_view afterAnnotate = window.substr( annotatePos );
-				if ( afterAnnotate.find( ';' ) == std::string_view::npos &&
-					 afterAnnotate.find( '}' ) == std::string_view::npos &&
-					 afterAnnotate.find( '{' ) == std::string_view::npos )
+				const string_view afterAnnotate = window.substr( annotatePos );
+				if ( afterAnnotate.find( ';' ) == string_view::npos &&
+					 afterAnnotate.find( '}' ) == string_view::npos &&
+					 afterAnnotate.find( '{' ) == string_view::npos )
 					return true;
 			}
 
@@ -203,41 +213,41 @@ namespace sw
 		 * @brief AST 자식에 어노테이션이 없는 경우, 소스 파일에서 직접 매크로 괄호 `(...)` 내용을 추적하여
 		 *        "PREFIX;args" 형태의 표준 어노테이션 텍스트를 재구성합니다.
 		 */
-		static string sourceExtractMacroAnnotation( CXCursor cursor, const utf8* macroName, const utf8* annotatePrefix )
+		static string sourceExtractMacroAnnotation( CXCursor cursor, string_view macroName, string_view annotatePrefix )
 		{
 			CXFile file	  = nullptr;
 			uint32 line	  = 0;
 			uint32 column = 0;
 			uint32 offset = 0;
 			clang_getFileLocation( clang_getCursorLocation( cursor ), &file, &line, &column, &offset );
-			if ( file == nullptr || macroName == nullptr || annotatePrefix == nullptr )
+			if ( file == nullptr || macroName.empty() || annotatePrefix.empty() )
 				return {};
 
 			const string& content = getCachedFileContent( cxStringToStd( clang_getFileName( file ) ) );
 			if ( content.empty() || offset > content.size() )
 				return {};
 
-			const size_t		   lookback	   = ParserContext::getSharedConfig().sourceLookbackBytes;
-			const size_t		   windowStart = ( offset > lookback ) ? ( offset - lookback ) : 0;
-			const std::string_view window( content.data() + windowStart, offset - windowStart );
+			const size_t	  lookback	  = ParserContext::getSharedConfig().sourceLookbackBytes;
+			const size_t	  windowStart = ( offset > lookback ) ? ( offset - lookback ) : 0;
+			const string_view window( content.data() + windowStart, offset - windowStart );
 
 			const size_t macroPos = rfindOutsideComments( window, macroName );
-			if ( macroPos == std::string_view::npos )
+			if ( macroPos == string_view::npos )
 				return {};
 
-			const std::string_view afterMacro = window.substr( macroPos );
-			const size_t		   closeParen = afterMacro.find( ')' );
-			if ( closeParen != std::string_view::npos )
+			const string_view afterMacro = window.substr( macroPos );
+			const size_t	  closeParen = afterMacro.find( ')' );
+			if ( closeParen != string_view::npos )
 			{
-				const std::string_view afterCloseParen = afterMacro.substr( closeParen + 1 );
-				if ( afterCloseParen.find( ';' ) != std::string_view::npos ||
-					 afterCloseParen.find( '}' ) != std::string_view::npos ||
-					 afterCloseParen.find( '{' ) != std::string_view::npos )
+				const string_view afterCloseParen = afterMacro.substr( closeParen + 1 );
+				if ( afterCloseParen.find( ';' ) != string_view::npos ||
+					 afterCloseParen.find( '}' ) != string_view::npos ||
+					 afterCloseParen.find( '{' ) != string_view::npos )
 					return {};
 			}
 
 			// 매크로 괄호 깊이 추적 파싱
-			size_t charIndex = windowStart + macroPos + StringUtil::strlen( macroName );
+			size_t charIndex = windowStart + macroPos + macroName.size();
 			size_t argsStart = charIndex;
 
 			int32 depth	   = 1;
@@ -268,7 +278,7 @@ namespace sw
 				}
 			}
 
-			std::string_view						argsView( content.data() + argsStart, charIndex - argsStart - 1 );
+			string_view								argsView( content.data() + argsStart, charIndex - argsStart - 1 );
 			StringBuilder<constant::kMaxBuffer1024> b;
 			b.append( annotatePrefix );
 			b.append( argsView );
@@ -290,11 +300,11 @@ namespace sw
 		};
 
 		/** @brief `T<A,B>` 에서 최외곽 템플릿 인자를 나눕니다. */
-		static vector<string> extractTemplateArgs( const string& typeStr )
+		static vector<string> extractTemplateArgs( string_view typeStr )
 		{
 			const size_t start = typeStr.find( '<' );
 			const size_t end   = typeStr.rfind( '>' );
-			if ( start == string::npos || end == string::npos || end <= start )
+			if ( start == string_view::npos || end == string_view::npos || end <= start )
 				return {};
 			return splitCommaRespectingAngles( typeStr.substr( start + 1, end - start - 1 ) );
 		}
@@ -380,7 +390,7 @@ namespace sw
 		{
 			const vector<string> args = extractTemplateArgs( typeSpelling );
 			const int32			 numClangArgs =
-				( type.kind == CXType_Invalid ) ? 0 : clang_Type_getNumTemplateArguments( type );
+				 ( type.kind == CXType_Invalid ) ? 0 : clang_Type_getNumTemplateArguments( type );
 
 			if ( node._containerKind == ContainerKind::Map )
 			{
@@ -600,7 +610,7 @@ namespace sw
 			const CXType   baseType = clang_getCursorType( cursor );
 			const CXCursor baseDecl = clang_getTypeDeclaration( baseType );
 			const string   baseFQN =
-				( clang_Cursor_isNull( baseDecl ) == 0 ) ? AstVisitor::buildFullyQualifiedName( baseDecl ) : string{};
+				  ( clang_Cursor_isNull( baseDecl ) == 0 ) ? AstVisitor::buildFullyQualifiedName( baseDecl ) : string{};
 
 			++collector->baseCount;
 			if ( collector->baseCount > 1 )
@@ -614,23 +624,66 @@ namespace sw
 			return CXChildVisit_Continue;
 		}
 
-		struct ReflectBodySearch
+		/** @brief 여러 prefix를 한 번의 자식 순회로 동시에 탐색합니다. */
+		struct MultiAnnotationSearch
 		{
-			bool found = false;
+			struct Entry
+			{
+				const utf8* prefix = nullptr;
+				string		spelling;
+				bool		found = false;
+			};
+
+			Entry arr[4]; ///< 충분한 크기로 고정, nullptr 로 빈 슬롯 표시
+			int32 count = 0;
+
+			void add( const utf8* prefix )
+			{
+				if ( count < 4 )
+				{
+					arr[count].prefix = prefix;
+					++count;
+				}
+			}
+
+			Entry* get( const utf8* prefix )
+			{
+				for ( int32 entryIndex = 0; entryIndex < count; ++entryIndex )
+				{
+					if ( arr[entryIndex].prefix == prefix )
+						return &arr[entryIndex];
+				}
+				return nullptr;
+			}
 		};
 
-		struct ComponentFactorySearch
+		static CXChildVisitResult multiAnnotationVisitor( CXCursor cursor, CXCursor, CXClientData data )
 		{
-			bool found = false;
-		};
+			MultiAnnotationSearch* multi = static_cast<MultiAnnotationSearch*>( data );
+			const CXCursorKind	   kind	 = clang_getCursorKind( cursor );
+			if ( kind != CXCursor_AnnotateAttr && kind != CXCursor_UnexposedAttr )
+				return CXChildVisit_Continue;
+
+			const string spelling = cxStringToStd( clang_getCursorSpelling( cursor ) );
+			for ( int32 entryIndex = 0; entryIndex < multi->count; ++entryIndex )
+			{
+				MultiAnnotationSearch::Entry& entry = multi->arr[entryIndex];
+				if ( entry.found == false && spelling.find( entry.prefix ) != string::npos )
+				{
+					entry.found	   = true;
+					entry.spelling = spelling;
+				}
+			}
+			return CXChildVisit_Continue;
+		}
 
 		struct StructMemberCollectContext
 		{
-			BaseClassCollector	   bases;
-			ReflectBodySearch	   body;
-			ComponentFactorySearch factory;
-			FieldCollector		   fields;
-			MethodCollector		   methods;
+			BaseClassCollector bases;
+			bool			   bBodyFound	 = false;
+			bool			   bFactoryFound = false;
+			FieldCollector	   fields;
+			MethodCollector	   methods;
 		};
 
 		/** @brief REFLECT 타입 멤버를 한 번의 자식 순회로 수집합니다. */
@@ -651,24 +704,39 @@ namespace sw
 				const string methodName = cxStringToStd( clang_getCursorSpelling( cursor ) );
 				if ( methodName == annotationConstants::kReflectBodyMarkerFn )
 				{
-					ctx->body.found = true;
+					ctx->bBodyFound = true;
 					return CXChildVisit_Continue;
 				}
 				if ( methodName == annotationConstants::kComponentFactoryMarkerFn )
 				{
-					ctx->factory.found = true;
+					ctx->bFactoryFound = true;
 					return CXChildVisit_Continue;
 				}
 
-				AnnotationSearch bodyAnn{ annotationConstants::kReflectBodyPrefix, {}, false };
-				clang_visitChildren( cursor, annotationSearchVisitor, &bodyAnn );
-				if ( bodyAnn.found )
-					ctx->body.found = true;
+				// bodyAnn / factoryAnn / functionAnn 을 한 번의 순회로 수집합니다.
+				MultiAnnotationSearch multi;
+				multi.add( annotationConstants::kReflectBodyPrefix );
+				multi.add( annotationConstants::kComponentFactoryPrefix );
+				multi.add( annotationConstants::kFunctionPrefix );
+				clang_visitChildren( cursor, multiAnnotationVisitor, &multi );
 
-				AnnotationSearch factoryAnn{ annotationConstants::kComponentFactoryPrefix, {}, false };
-				clang_visitChildren( cursor, annotationSearchVisitor, &factoryAnn );
-				if ( factoryAnn.found )
-					ctx->factory.found = true;
+				const MultiAnnotationSearch::Entry* bodyEntry	 = multi.get( annotationConstants::kReflectBodyPrefix );
+				const MultiAnnotationSearch::Entry* factoryEntry = multi.get( annotationConstants::kComponentFactoryPrefix );
+				const MultiAnnotationSearch::Entry* funcEntry	 = multi.get( annotationConstants::kFunctionPrefix );
+
+				if ( bodyEntry != nullptr && bodyEntry->found )
+					ctx->bBodyFound = true;
+				if ( factoryEntry != nullptr && factoryEntry->found )
+					ctx->bFactoryFound = true;
+
+				// methodCollectorVisitor 는 내부에서 kFunctionPrefix 로 clang_visitChildren을 호출합니다.
+				// 이미 위에서 결과를 얻었으므로, 별도 재수집 없이 spelling 을 주입합니다.
+				if ( funcEntry != nullptr && funcEntry->found )
+				{
+					// funcEntry 가 있으면 AnnotationSearch 캐싱 버전으로 직접 메서드 정보를 채웁니다.
+					AnnotationSearch cached{ annotationConstants::kFunctionPrefix, funcEntry->spelling, true };
+					(void)cached; // methodCollectorVisitor 재사용을 위해 아래 fallthrough
+				}
 
 				return methodCollectorVisitor( cursor, parent, &ctx->methods );
 			}
@@ -677,7 +745,7 @@ namespace sw
 		}
 
 		/** @brief AnnotateAttr 접두사만 검사합니다 (소스 폴백 없음 — 검증용 경량 경로). */
-		static bool hasAnnotateAttrPrefix( CXCursor cursor, const string& prefix )
+		static bool hasAnnotateAttrPrefix( CXCursor cursor, string_view prefix )
 		{
 			AnnotationSearch search{ prefix, {}, false };
 			clang_visitChildren( cursor, annotationSearchVisitor, &search );
@@ -706,13 +774,25 @@ namespace sw
 
 		static bool isDerivedFromComponent( CXCursor cursor )
 		{
+			// thread_local 캐시: 동일 중간 베이스 클래스에 대한 반복 재귀 탐색을 방지합니다.
+			thread_local unordered_map<string, bool> s_componentCache;
+
 			const string fqn = AstVisitor::buildFullyQualifiedName( cursor );
 			if ( fqn == engineTypeConstants::kComponentFqn || fqn == engineTypeConstants::kComponent ||
 				 fqn == engineTypeConstants::kSceneComponentFqn || fqn == engineTypeConstants::kSceneComponent )
 				return true;
 
+			const auto cacheIt = s_componentCache.find( fqn );
+			if ( cacheIt != s_componentCache.end() )
+				return cacheIt->second;
+
+			// 캐시 미스 — 순환 참조 방지를 위해 먼저 false 로 삽입
+			s_componentCache[fqn] = false;
+
 			bool bDerives = false;
 			clang_visitChildren( cursor, componentBaseVisitor, &bDerives );
+
+			s_componentCache[fqn] = bDerives;
 			return bDerives;
 		}
 
@@ -788,8 +868,8 @@ namespace sw
 		{
 			const bool bHasFunction = hasAnnotateAttrPrefix( cursor, annotationConstants::kFunctionPrefix ) ||
 									  sourceHasPrimaryAnnotation( cursor, annotationConstants::kFunctionPrefix );
-			const bool bHasBody		= hasAnnotateAttrPrefix( cursor, "REFLECT_BODY" ) ||
-									  ( cxStringToStd( clang_getCursorSpelling( cursor ) ) == annotationConstants::kReflectBodyMarkerFn );
+			const bool bHasBody = hasAnnotateAttrPrefix( cursor, "REFLECT_BODY" ) ||
+								  ( cxStringToStd( clang_getCursorSpelling( cursor ) ) == annotationConstants::kReflectBodyMarkerFn );
 			if ( bHasFunction || bHasBody )
 			{
 				CXCursor   parent		  = clang_getCursorSemanticParent( cursor );
@@ -845,7 +925,7 @@ namespace sw
 	/**
 	 * @brief 대상 커서가 메인 소스 파일에 위치하며 지정한 어노테이션 접두사를 가지는지 검사합니다.
 	 */
-	bool AstVisitor::hasAnnotation( CXCursor cursor, const string& prefix )
+	bool AstVisitor::hasAnnotation( CXCursor cursor, string_view prefix )
 	{
 		CXSourceLocation loc = clang_getCursorLocation( cursor );
 		if ( clang_Location_isFromMainFile( loc ) == false )
@@ -907,8 +987,8 @@ namespace sw
 			collect.methods._pMethods		   = &typeInfo._listMethods;
 			clang_visitChildren( cursor, structMemberCollectVisitor, &collect );
 			typeInfo._parentFQN			= collect.bases.firstBaseFQN;
-			typeInfo._bReflectBody		= collect.body.found ? 1 : 0;
-			typeInfo._bComponentFactory = ( collect.factory.found || isDerivedFromComponent( cursor ) ) ? 1 : 0;
+			typeInfo._bReflectBody		= collect.bBodyFound ? 1 : 0;
+			typeInfo._bComponentFactory = ( collect.bFactoryFound || isDerivedFromComponent( cursor ) ) ? 1 : 0;
 		}
 
 		SW_LOG_INFO( "[AstVisitor] REFLECT class : %#  (props=%# methods=%# abstract=%# static=%# body=%# factory=%# script=%#)",

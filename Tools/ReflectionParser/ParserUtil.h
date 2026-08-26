@@ -18,7 +18,7 @@ namespace sw
 	 * @note FileUtil::normalizePath는 Windows에서 소문자화하므로 CMake OUTPUT과 맞추기 위해 사용하지 않음
 	 */
 	inline string makeGeneratedPath( const string& outputDir, const string& sourceFilePath,
-									 const std::string_view extension )
+									 const string_view extension )
 	{
 		string fileName = FileUtil::removeExtension( FileUtil::getFileNamePart( sourceFilePath ) );
 		fileName += extension;
@@ -29,7 +29,7 @@ namespace sw
 	// 2) parse — 템플릿 인자 토큰 분할
 	// ------------------------------------------------------------------------------
 	/** @brief `<>` 밖의 `,` 만 분할하고 각 토큰을 trim 합니다. */
-	inline vector<string> splitCommaRespectingAngles( std::string_view inner )
+	inline vector<string> splitCommaRespectingAngles( string_view inner )
 	{
 		vector<string> out;
 		int32		   depth	  = 0;
@@ -47,7 +47,7 @@ namespace sw
 			{
 				if ( index > tokenStart )
 				{
-					std::string_view token = StringUtil::trim( inner.substr( tokenStart, index - tokenStart ) );
+					string_view token = StringUtil::trim( inner.substr( tokenStart, index - tokenStart ) );
 					if ( token.empty() == false )
 						out.emplace_back( token );
 				}
@@ -56,7 +56,7 @@ namespace sw
 		}
 		if ( inner.size() > tokenStart )
 		{
-			std::string_view token = StringUtil::trim( inner.substr( tokenStart ) );
+			string_view token = StringUtil::trim( inner.substr( tokenStart ) );
 			if ( token.empty() == false )
 				out.emplace_back( token );
 		}

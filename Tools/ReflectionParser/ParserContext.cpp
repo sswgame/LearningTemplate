@@ -11,6 +11,8 @@
 
 #include "ReflectionParser/ParserDefines.h"
 
+#include <nlohmann/json.hpp>
+
 namespace sw
 {
 	namespace
@@ -36,150 +38,23 @@ namespace sw
 			return {};
 		}
 
-		static string jsonKeyToken( const string& key )
+		// ------------------------------------------------------------------------------
+		// nlohmann/json 기반 헬퍼 — parseDocument / applyXxx / mergeConfigSection
+		// ------------------------------------------------------------------------------
+
+		/** @brief JSON 문자열을 파싱합니다. 실패 시 null 객체를 반환합니다. */
+		static nlohmann::json parseDocument( const string& text )
 		{
-			StringBuilder<constant::kMaxBuffer128> builder;
-			builder.appendFormat( "\"%#\"", key );
-			return string( builder.view() );
-		}
-
-		static size_t findJsonKey( const string& json, const string& keyToken )
-		{
-			size_t pos = json.find( keyToken );
-			while ( pos != string::npos )
+			if ( text.empty() )
+				return nlohmann::json{};
+			try
 			{
-				size_t after = pos + keyToken.size();
-				while ( after < json.size() &&
-						( json[after] == ' ' || json[after] == '\t' || json[after] == '\r' || json[after] == '\n' ) )
-					++after;
-
-				if ( after < json.size() && json[after] == ':' )
-					return pos;
-
-				pos = json.find( keyToken, pos + 1 );
+				return nlohmann::json::parse( text );
 			}
-			return string::npos;
-		}
-
-		static string unescapeJsonString( const string& escaped )
-		{
-			string out;
-			out.reserve( escaped.size() );
-			for ( size_t charIndex = 0; charIndex < escaped.size(); ++charIndex )
+			catch ( const nlohmann::json::parse_error& )
 			{
-				if ( escaped[charIndex] == '\\' && charIndex + 1 < escaped.size() )
-				{
-					const utf8 next = escaped[charIndex + 1];
-					if ( next == '"' || next == '\\' || next == '/' )
-					{
-						out.push_back( next );
-						++charIndex;
-						continue;
-					}
-					if ( next == 'n' )
-					{
-						out.push_back( '\n' );
-						++charIndex;
-						continue;
-					}
-					if ( next == 't' )
-					{
-						out.push_back( '\t' );
-						++charIndex;
-						continue;
-					}
-				}
-				out.push_back( escaped[charIndex] );
+				return nlohmann::json{};
 			}
-			return out;
-		}
-
-		static vector<string> extractJsonArray( const string& json, const string& key )
-		{
-			vector<string> resultList;
-			const string   keyToken = jsonKeyToken( key );
-			const size_t   pos		= findJsonKey( json, keyToken );
-			if ( pos == string::npos )
-				return resultList;
-
-			const size_t lbracket = json.find( '[', pos );
-			if ( lbracket == string::npos )
-				return resultList;
-
-			size_t cursor	= lbracket + 1;
-			bool   inString = false;
-			size_t depth	= 1;
-			size_t rbracket = string::npos;
-			while ( cursor < json.size() )
-			{
-				const utf8 c = json[cursor];
-				if ( inString )
-				{
-					if ( c == '\\' && cursor + 1 < json.size() )
-					{
-						cursor += 2;
-						continue;
-					}
-					if ( c == '"' )
-						inString = false;
-					++cursor;
-					continue;
-				}
-				if ( c == '"' )
-				{
-					inString = true;
-					++cursor;
-					continue;
-				}
-				if ( c == '[' )
-				{
-					++depth;
-					++cursor;
-					continue;
-				}
-				if ( c == ']' )
-				{
-					--depth;
-					if ( depth == 0 )
-					{
-						rbracket = cursor;
-						break;
-					}
-					++cursor;
-					continue;
-				}
-				++cursor;
-			}
-			if ( rbracket == string::npos )
-				return resultList;
-
-			const string arrayContent = json.substr( lbracket + 1, rbracket - lbracket - 1 );
-			cursor					  = 0;
-			while ( cursor < arrayContent.size() )
-			{
-				const size_t q1 = arrayContent.find( '"', cursor );
-				if ( q1 == string::npos )
-					break;
-
-				size_t q2 = q1 + 1;
-				while ( q2 < arrayContent.size() )
-				{
-					if ( arrayContent[q2] == '\\' )
-					{
-						q2 += ( q2 + 1 < arrayContent.size() ) ? 2 : 1;
-						continue;
-					}
-					if ( arrayContent[q2] == '"' )
-						break;
-					++q2;
-				}
-				if ( q2 >= arrayContent.size() )
-					break;
-
-				resultList.push_back( unescapeJsonString( arrayContent.substr( q1 + 1, q2 - q1 - 1 ) ) );
-				cursor = q2 + 1;
-			}
-			return resultList;
 		}
 
 		static string rewriteLegacyClangArg( const string& arg )
@@ -199,195 +74,109 @@ namespace sw
 			}
 		}
 
-		static string extractJsonValue( const string& json, const string& key )
+		/** @brief JSON 객체에서 key의 문자열 값을 dst에 덮어씁니다 (키 없으면 그대로). */
+		static void assignIfPresent( string& dst, const nlohmann::json& obj, const utf8* key )
 		{
-			const string keyToken = jsonKeyToken( key );
-			const size_t pos	  = findJsonKey( json, keyToken );
-			if ( pos == string::npos )
-				return {};
+			const auto it = obj.find( key );
+			if ( it != obj.end() && it->is_string() )
+				dst = it->get_ref<const std::string&>().c_str();
+		}
 
-			const size_t colon = json.find( ':', pos );
-			if ( colon == string::npos )
-				return {};
+		/** @brief JSON 객체에서 key의 uint 값을 읽습니다 (키 없으면 defaultValue). */
+		static uint32 getUintOrDefault( const nlohmann::json& obj, const utf8* key, uint32 defaultValue )
+		{
+			const auto it = obj.find( key );
+			if ( it != obj.end() && it->is_number_unsigned() )
+				return it->get<uint32>();
+			return defaultValue;
+		}
 
-			const size_t q1 = json.find( '"', colon );
-			if ( q1 == string::npos )
-				return {};
-
-			size_t q2 = q1 + 1;
-			while ( q2 < json.size() )
+		/** @brief JSON 배열 항목들을 string 벡터로 변환합니다. */
+		static vector<string> collectStringArray( const nlohmann::json& arr )
+		{
+			vector<string> resultList;
+			if ( arr.is_array() == false )
+				return resultList;
+			for ( const auto& item : arr )
 			{
-				if ( json[q2] == '\\' )
-				{
-					q2 += ( q2 + 1 < json.size() ) ? 2 : 1;
-					continue;
-				}
-				if ( json[q2] == '"' )
-					break;
-				++q2;
+				if ( item.is_string() )
+					resultList.push_back( item.get_ref<const std::string&>().c_str() );
 			}
-			if ( q2 >= json.size() )
-				return {};
-
-			return unescapeJsonString( json.substr( q1 + 1, q2 - q1 - 1 ) );
+			return resultList;
 		}
 
-		static string extractJsonObjectBody( const string& json, const string& key )
+		static void applyPathsSection( ParserClangConfig& config, const nlohmann::json& obj )
 		{
-			const string keyToken = jsonKeyToken( key );
-			const size_t pos	  = findJsonKey( json, keyToken );
-			if ( pos == string::npos )
-				return {};
-
-			const size_t lbrace = json.find( '{', pos + keyToken.size() );
-			if ( lbrace == string::npos )
-				return {};
-
-			size_t cursor	= lbrace + 1;
-			bool   inString = false;
-			size_t depth	= 1;
-			while ( cursor < json.size() )
-			{
-				const utf8 c = json[cursor];
-				if ( inString )
-				{
-					if ( c == '\\' && cursor + 1 < json.size() )
-					{
-						cursor += 2;
-						continue;
-					}
-					if ( c == '"' )
-						inString = false;
-					++cursor;
-					continue;
-				}
-				if ( c == '"' )
-				{
-					inString = true;
-					++cursor;
-					continue;
-				}
-				if ( c == '{' )
-				{
-					++depth;
-					++cursor;
-					continue;
-				}
-				if ( c == '}' )
-				{
-					--depth;
-					if ( depth == 0 )
-						return json.substr( lbrace + 1, cursor - lbrace - 1 );
-					++cursor;
-					continue;
-				}
-				++cursor;
-			}
-			return {};
+			assignIfPresent( config.llvmClangRel, obj, jsonKeyConstants::kLlvmClangRel );
+			assignIfPresent( config.clangIncludeRel, obj, jsonKeyConstants::kClangIncludeRel );
+			assignIfPresent( config.msvcIncludeRel, obj, jsonKeyConstants::kMsvcIncludeRel );
+			assignIfPresent( config.winSdkIncludeRel, obj, jsonKeyConstants::kWinSdkIncludeRel );
+			assignIfPresent( config.winSdkUcrtRel, obj, jsonKeyConstants::kWinSdkUcrtRel );
 		}
 
-		static uint32 extractJsonUint( const string& json, const string& key, uint32 defaultValue )
+		static void applyClangFlagsSection( ParserClangConfig& config, const nlohmann::json& obj )
 		{
-			const string keyToken = jsonKeyToken( key );
-			const size_t pos	  = findJsonKey( json, keyToken );
-			if ( pos == string::npos )
-				return defaultValue;
-
-			const size_t colon = json.find( ':', pos );
-			if ( colon == string::npos )
-				return defaultValue;
-
-			size_t cursor = colon + 1;
-			while ( cursor < json.size() &&
-					( json[cursor] == ' ' || json[cursor] == '\t' || json[cursor] == '\r' || json[cursor] == '\n' ) )
-				++cursor;
-
-			if ( cursor >= json.size() || json[cursor] < '0' || json[cursor] > '9' )
-				return defaultValue;
-
-			uint32 value = 0;
-			while ( cursor < json.size() && json[cursor] >= '0' && json[cursor] <= '9' )
-			{
-				value = value * 10u + static_cast<uint32>( json[cursor] - '0' );
-				++cursor;
-			}
-			return value;
+			assignIfPresent( config.flagIncludePrefix, obj, jsonKeyConstants::kFlagIncludePrefix );
+			assignIfPresent( config.flagIsystem, obj, jsonKeyConstants::kFlagIsystem );
+			assignIfPresent( config.flagResourceDir, obj, jsonKeyConstants::kFlagResourceDir );
+			assignIfPresent( config.flagFmsCompatibility, obj, jsonKeyConstants::kFlagFmsCompatibility );
+			assignIfPresent( config.flagFmsExtensions, obj, jsonKeyConstants::kFlagFmsExtensions );
+			assignIfPresent( config.flagFmsCompatVersionPrefix, obj, jsonKeyConstants::kFlagFmsCompatVerPrefix );
 		}
 
-		static void assignIfPresent( string& dst, const string& json, const utf8* key )
+		static void applyEmitSection( ParserClangConfig& config, const nlohmann::json& obj )
 		{
-			const string value = extractJsonValue( json, key );
-			if ( value.empty() == false )
-				dst = value;
+			assignIfPresent( config.emitCppExtension, obj, jsonKeyConstants::kEmitCppExtension );
+			assignIfPresent( config.emitHeaderExtension, obj, jsonKeyConstants::kEmitHeaderExtension );
+			assignIfPresent( config.emitTemplateExtension, obj, jsonKeyConstants::kEmitTemplateExtension );
+			assignIfPresent( config.emitAutoGeneratedBanner, obj, jsonKeyConstants::kEmitAutoGeneratedBanner );
+			assignIfPresent( config.emitPlaceholderMarker, obj, jsonKeyConstants::kEmitPlaceholderMarker );
+			assignIfPresent( config.emitRegenByParserMarker, obj, jsonKeyConstants::kEmitRegenMarker );
+			assignIfPresent( config.emitGeneratedNsOpen, obj, jsonKeyConstants::kEmitGeneratedNsOpen );
+			assignIfPresent( config.emitGeneratedNsClose, obj, jsonKeyConstants::kEmitGeneratedNsClose );
 		}
 
-		static void applyPathsSection( ParserClangConfig& config, const string& body )
+		static void applyTuningSection( ParserClangConfig& config, const nlohmann::json& obj )
 		{
-			assignIfPresent( config.llvmClangRel, body, jsonKeyConstants::kLlvmClangRel );
-			assignIfPresent( config.clangIncludeRel, body, jsonKeyConstants::kClangIncludeRel );
-			assignIfPresent( config.msvcIncludeRel, body, jsonKeyConstants::kMsvcIncludeRel );
-			assignIfPresent( config.winSdkIncludeRel, body, jsonKeyConstants::kWinSdkIncludeRel );
-			assignIfPresent( config.winSdkUcrtRel, body, jsonKeyConstants::kWinSdkUcrtRel );
+			config.sourceLookbackBytes = getUintOrDefault( obj, jsonKeyConstants::kSourceLookbackBytes, config.sourceLookbackBytes );
 		}
 
-		static void applyClangFlagsSection( ParserClangConfig& config, const string& body )
+		using ApplyFn = void ( * )( ParserClangConfig&, const nlohmann::json& );
+
+		static void mergeConfigSection( ParserClangConfig& config, const nlohmann::json& defaultsDoc,
+										const nlohmann::json& localDoc, const utf8* sectionKey, ApplyFn applyFn )
 		{
-			assignIfPresent( config.flagIncludePrefix, body, jsonKeyConstants::kFlagIncludePrefix );
-			assignIfPresent( config.flagIsystem, body, jsonKeyConstants::kFlagIsystem );
-			assignIfPresent( config.flagResourceDir, body, jsonKeyConstants::kFlagResourceDir );
-			assignIfPresent( config.flagFmsCompatibility, body, jsonKeyConstants::kFlagFmsCompatibility );
-			assignIfPresent( config.flagFmsExtensions, body, jsonKeyConstants::kFlagFmsExtensions );
-			assignIfPresent( config.flagFmsCompatVersionPrefix, body, jsonKeyConstants::kFlagFmsCompatVerPrefix );
+			const auto itDefaults = defaultsDoc.find( sectionKey );
+			if ( itDefaults != defaultsDoc.end() && itDefaults->is_object() )
+				applyFn( config, *itDefaults );
+			const auto itLocal = localDoc.find( sectionKey );
+			if ( itLocal != localDoc.end() && itLocal->is_object() )
+				applyFn( config, *itLocal );
 		}
 
-		static void applyEmitSection( ParserClangConfig& config, const string& body )
-		{
-			assignIfPresent( config.emitCppExtension, body, jsonKeyConstants::kEmitCppExtension );
-			assignIfPresent( config.emitHeaderExtension, body, jsonKeyConstants::kEmitHeaderExtension );
-			assignIfPresent( config.emitTemplateExtension, body, jsonKeyConstants::kEmitTemplateExtension );
-			assignIfPresent( config.emitAutoGeneratedBanner, body, jsonKeyConstants::kEmitAutoGeneratedBanner );
-			assignIfPresent( config.emitPlaceholderMarker, body, jsonKeyConstants::kEmitPlaceholderMarker );
-			assignIfPresent( config.emitRegenByParserMarker, body, jsonKeyConstants::kEmitRegenMarker );
-			assignIfPresent( config.emitGeneratedNsOpen, body, jsonKeyConstants::kEmitGeneratedNsOpen );
-			assignIfPresent( config.emitGeneratedNsClose, body, jsonKeyConstants::kEmitGeneratedNsClose );
-		}
-
-		static void applyTuningSection( ParserClangConfig& config, const string& body )
-		{
-			config.sourceLookbackBytes =
-				extractJsonUint( body, jsonKeyConstants::kSourceLookbackBytes, config.sourceLookbackBytes );
-		}
-
-		static void mergeConfigSection( ParserClangConfig& config, const string& defaultsJson, const string& localJson,
-										const utf8* sectionKey, void ( *applyFn )( ParserClangConfig&, const string& ) )
-		{
-			const string fromDefaults = extractJsonObjectBody( defaultsJson, sectionKey );
-			const string fromLocal	  = extractJsonObjectBody( localJson, sectionKey );
-			if ( fromDefaults.empty() == false )
-				applyFn( config, fromDefaults );
-			if ( fromLocal.empty() == false )
-				applyFn( config, fromLocal );
-		}
-
-		static vector<string> loadArgsFromDocument( const string& json, const utf8* platformKey )
+		static vector<string> loadArgsFromDocument( const nlohmann::json& doc, const utf8* platformKey )
 		{
 			vector<string> outList;
-			const string   argsSection = extractJsonObjectBody( json, jsonKeyConstants::kParserArgsSection );
-			if ( argsSection.empty() == false )
-			{
-				appendUnique( outList, extractJsonArray( argsSection, jsonKeyConstants::kArgsDefault ) );
-				const string platformObj = extractJsonObjectBody( argsSection, jsonKeyConstants::kArgsPlatform );
-				const string platformSrc = platformObj.empty() ? argsSection : platformObj;
-#if defined( SW_PLATFORM_WINDOWS ) || defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
-				appendUnique( outList, extractJsonArray( platformSrc, platformKey ) );
-#else
-				(void)platformKey;
-				(void)platformSrc;
-#endif
-				appendUnique( outList, extractJsonArray( argsSection, jsonKeyConstants::kArgsExtra ) );
+			const auto	   itArgs = doc.find( jsonKeyConstants::kParserArgsSection );
+			if ( itArgs == doc.end() || itArgs->is_object() == false )
 				return outList;
-			}
 
+			const nlohmann::json& argsSection = *itArgs;
+			appendUnique( outList, collectStringArray( argsSection.value( jsonKeyConstants::kArgsDefault, nlohmann::json{} ) ) );
+
+#if defined( SW_PLATFORM_WINDOWS ) || defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
+			{
+				const auto			  itPlatform  = argsSection.find( jsonKeyConstants::kArgsPlatform );
+				const nlohmann::json& platformSrc = ( itPlatform != argsSection.end() && itPlatform->is_object() )
+													  ? *itPlatform
+													  : argsSection;
+				appendUnique( outList, collectStringArray( platformSrc.value( platformKey, nlohmann::json{} ) ) );
+			}
+#else
+			(void)platformKey;
+#endif
+
+			appendUnique( outList, collectStringArray( argsSection.value( jsonKeyConstants::kArgsExtra, nlohmann::json{} ) ) );
 			return outList;
 		}
 
@@ -446,19 +235,22 @@ namespace sw
 		constexpr const utf8* kPlatformParserKey = "";
 #endif
 
-		string		 defaultsJson;
-		string		 localJson;
+		string		 defaultsText;
+		string		 localText;
 		const string defaultsPath = findConfigFile( pathConstants::kParserConfigDefaults );
 		const string localPath	  = findConfigFile( pathConstants::kParserConfig );
 		if ( defaultsPath.empty() == false )
-			FileUtil::readTextFile( defaultsPath, defaultsJson );
+			FileUtil::readTextFile( defaultsPath, defaultsText );
 		if ( localPath.empty() == false )
-			FileUtil::readTextFile( localPath, localJson );
+			FileUtil::readTextFile( localPath, localText );
+
+		const nlohmann::json defaultsDoc = parseDocument( defaultsText );
+		const nlohmann::json localDoc	 = parseDocument( localText );
 
 		BLOCK( "Load Base Arguments from Config" )
 		{
-			vector<string> mergedList = loadArgsFromDocument( defaultsJson, kPlatformParserKey );
-			appendUnique( mergedList, loadArgsFromDocument( localJson, kPlatformParserKey ) );
+			vector<string> mergedList = loadArgsFromDocument( defaultsDoc, kPlatformParserKey );
+			appendUnique( mergedList, loadArgsFromDocument( localDoc, kPlatformParserKey ) );
 			baseArgList = std::move( mergedList );
 
 #if !defined( SW_PLATFORM_WINDOWS )
@@ -468,10 +260,10 @@ namespace sw
 
 		BLOCK( "Load paths / clang_flags / emit / tuning" )
 		{
-			mergeConfigSection( *this, defaultsJson, localJson, jsonKeyConstants::kPaths, applyPathsSection );
-			mergeConfigSection( *this, defaultsJson, localJson, jsonKeyConstants::kClangFlags, applyClangFlagsSection );
-			mergeConfigSection( *this, defaultsJson, localJson, jsonKeyConstants::kEmit, applyEmitSection );
-			mergeConfigSection( *this, defaultsJson, localJson, jsonKeyConstants::kTuning, applyTuningSection );
+			mergeConfigSection( *this, defaultsDoc, localDoc, jsonKeyConstants::kPaths, applyPathsSection );
+			mergeConfigSection( *this, defaultsDoc, localDoc, jsonKeyConstants::kClangFlags, applyClangFlagsSection );
+			mergeConfigSection( *this, defaultsDoc, localDoc, jsonKeyConstants::kEmit, applyEmitSection );
+			mergeConfigSection( *this, defaultsDoc, localDoc, jsonKeyConstants::kTuning, applyTuningSection );
 		}
 
 		BLOCK( "Load Engine Config" )
@@ -479,15 +271,13 @@ namespace sw
 			const string engineCfgPath = findConfigFile( pathConstants::kToolchainConfig );
 			if ( engineCfgPath.empty() == false )
 			{
-				string fullJson;
-				FileUtil::readTextFile( engineCfgPath, fullJson );
-				if ( fullJson.empty() == false )
-				{
-					llvmPath	 = extractJsonValue( fullJson, jsonKeyConstants::kLlvmPath );
-					msvcToolsDir = extractJsonValue( fullJson, jsonKeyConstants::kMsvcToolsDir );
-					winSdkDir	 = extractJsonValue( fullJson, jsonKeyConstants::kWindowsSdkDir );
-					winSdkVer	 = extractJsonValue( fullJson, jsonKeyConstants::kWindowsSdkVersion );
-				}
+				string engineCfgText;
+				FileUtil::readTextFile( engineCfgPath, engineCfgText );
+				const nlohmann::json engineDoc = parseDocument( engineCfgText );
+				assignIfPresent( llvmPath, engineDoc, jsonKeyConstants::kLlvmPath );
+				assignIfPresent( msvcToolsDir, engineDoc, jsonKeyConstants::kMsvcToolsDir );
+				assignIfPresent( winSdkDir, engineDoc, jsonKeyConstants::kWindowsSdkDir );
+				assignIfPresent( winSdkVer, engineDoc, jsonKeyConstants::kWindowsSdkVersion );
 			}
 		}
 

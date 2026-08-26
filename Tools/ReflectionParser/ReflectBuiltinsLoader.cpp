@@ -42,10 +42,10 @@ namespace sw
 		}
 
 		/** @brief 주석/전처리기를 건너뛰고 매크로 줄을 수집합니다. */
-		static void collectMacroLines( const std::string_view text, vector<string>& outLineList )
+		static void collectMacroLines( const string_view text, vector<string>& outLineList )
 		{
 			const string_splitter lines( text, { "\r\n", "\n" } );
-			for ( const std::string_view rawLine : lines.getSplitList() )
+			for ( const string_view rawLine : lines.getSplitList() )
 			{
 				const string line = StringUtil::trim( string( rawLine ).c_str() );
 				if ( line.empty() || line.front() == '#' || line.front() == '/' )
@@ -112,7 +112,7 @@ namespace sw
 		}
 	} // namespace
 
-	bool loadReflectBuiltins( const std::string_view absPath )
+	bool loadReflectBuiltins( const string_view absPath )
 	{
 		string text;
 		if ( FileUtil::readTextFile( absPath, text ) == false )
@@ -150,7 +150,7 @@ namespace sw
 		return typeCount > 0 || containerCount > 0;
 	}
 
-	bool emitReflectBuiltinsGen( const std::string_view builtinsAbsPath, const std::string_view outCppAbsPath )
+	bool emitReflectBuiltinsGen( const string_view builtinsAbsPath, const string_view outCppAbsPath )
 	{
 		string text;
 		if ( FileUtil::readTextFile( builtinsAbsPath, text ) == false )

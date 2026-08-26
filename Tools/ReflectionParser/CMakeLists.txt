@@ -75,6 +75,7 @@ target_include_directories(ReflectionParser PUBLIC
     "${CMAKE_SOURCE_DIR}/Tools"
     "${CMAKE_SOURCE_DIR}/Source"
     "${CMAKE_SOURCE_DIR}/Source/Core"
+    "${CMAKE_SOURCE_DIR}/ThirdParty/nlohmann-json"
 )
 target_include_directories(ReflectionParser SYSTEM PRIVATE "${LIBCLANG_INCLUDE_DIR}")
 target_include_directories(ReflectionParser PRIVATE "${CMAKE_BINARY_DIR}/generated")

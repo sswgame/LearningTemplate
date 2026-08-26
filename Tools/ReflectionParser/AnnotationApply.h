@@ -15,16 +15,16 @@ namespace sw
 	// 1) token — 어노테이션 문자열 유틸
 	// ------------------------------------------------------------------------------
 	/** @brief `PREFIX;args` 에서 접두사 이후 인자 텍스트만 반환합니다. */
-	string annotationArgText( const string& spelling, const utf8* prefix );
+	string_view annotationArgText( string_view spelling, string_view prefix );
 
 	/** @brief 따옴표를 존중하며 쉼표로 인자 토큰을 나눕니다. */
-	vector<string> splitAnnotationArgs( std::string_view args );
+	vector<string> splitAnnotationArgs( string_view args );
 
 	// ------------------------------------------------------------------------------
 	// 2) apply — 매크로별 Parsed* 채우기
 	// ------------------------------------------------------------------------------
-	void parseReflectAnnotation( const string& annotationSpelling, ParsedTypeInfo& typeInfo );
-	void parseEnumAnnotation( const string& annotationSpelling, ParsedEnumInfo& enumInfo );
-	void parsePropertyAnnotation( const string& annotationSpelling, ParsedPropertyInfo& prop );
-	void parseFunctionAnnotation( const string& annotationSpelling, ParsedFunctionInfo& method );
+	void parseReflectAnnotation( string_view annotationSpelling, ParsedTypeInfo& typeInfo );
+	void parseEnumAnnotation( string_view annotationSpelling, ParsedEnumInfo& enumInfo );
+	void parsePropertyAnnotation( string_view annotationSpelling, ParsedPropertyInfo& prop );
+	void parseFunctionAnnotation( string_view annotationSpelling, ParsedFunctionInfo& method );
 } // namespace sw
