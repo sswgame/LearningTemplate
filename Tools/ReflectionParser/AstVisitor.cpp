@@ -42,6 +42,17 @@ namespace sw
 		}
 
 		/**
+		 * @brief CXString을 힙 할당 없이 즉시 string_view로 비교 후 안전하게 해제합니다.
+		 */
+		static bool cxStringEquals( CXString cxStr, string_view target )
+		{
+			const utf8* cStr = clang_getCString( cxStr );
+			const bool	bEq	 = ( cStr != nullptr && string_view( cStr ) == target );
+			clang_disposeString( cxStr );
+			return bEq;
+		}
+
+		/**
 		 * @brief 특정 접두사(예: "REFLECT;", "PROPERTY;")와 일치하는 AnnotateAttr 커서 탐색 상태
 		 */
 		struct AnnotationSearch
@@ -66,6 +77,59 @@ namespace sw
 					search->found	 = true;
 					search->spelling = spelling;
 					return CXChildVisit_Break; // 원하는 어노테이션을 찾았으므로 순회 중단
+				}
+			}
+			return CXChildVisit_Continue;
+		}
+
+		/** @brief 여러 prefix를 한 번의 자식 순회로 동시에 탐색합니다. */
+		struct MultiAnnotationSearch
+		{
+			struct Entry
+			{
+				const utf8* prefix = nullptr;
+				string		spelling;
+				bool		found = false;
+			};
+
+			Entry arr[4]; ///< 충분한 크기로 고정, nullptr 로 빈 슬롯 표시
+			int32 count = 0;
+
+			void add( const utf8* prefix )
+			{
+				if ( count < 4 )
+				{
+					arr[count].prefix = prefix;
+					++count;
+				}
+			}
+
+			Entry* get( const utf8* prefix )
+			{
+				for ( int32 entryIndex = 0; entryIndex < count; ++entryIndex )
+				{
+					if ( arr[entryIndex].prefix == prefix )
+						return &arr[entryIndex];
+				}
+				return nullptr;
+			}
+		};
+
+		static CXChildVisitResult multiAnnotationVisitor( CXCursor cursor, CXCursor, CXClientData data )
+		{
+			MultiAnnotationSearch* multi = static_cast<MultiAnnotationSearch*>( data );
+			const CXCursorKind	   kind	 = clang_getCursorKind( cursor );
+			if ( kind != CXCursor_AnnotateAttr && kind != CXCursor_UnexposedAttr )
+				return CXChildVisit_Continue;
+
+			const string spelling = cxStringToStd( clang_getCursorSpelling( cursor ) );
+			for ( int32 entryIndex = 0; entryIndex < multi->count; ++entryIndex )
+			{
+				MultiAnnotationSearch::Entry& entry = multi->arr[entryIndex];
+				if ( entry.found == false && spelling.find( entry.prefix ) != string::npos )
+				{
+					entry.found	   = true;
+					entry.spelling = spelling;
 				}
 			}
 			return CXChildVisit_Continue;
@@ -295,8 +359,9 @@ namespace sw
 
 		struct MethodCollector
 		{
-			vector<ParsedFunctionInfo>* _pMethods		   = nullptr;
-			bool						_bSkipConstructors = false; ///< Abstract / Static 타입
+			vector<ParsedFunctionInfo>*			_pMethods		   = nullptr;
+			const MultiAnnotationSearch::Entry* _pFuncEntry		   = nullptr;
+			bool								_bSkipConstructors = false; ///< Abstract / Static 타입
 		};
 
 		/** @brief `T<A,B>` 에서 최외곽 템플릿 인자를 나눕니다. */
@@ -513,9 +578,9 @@ namespace sw
 			if ( kind != CXCursor_CXXMethod && kind != CXCursor_Constructor && kind != CXCursor_FunctionTemplate )
 				return CXChildVisit_Continue;
 
-			const string methodName = cxStringToStd( clang_getCursorSpelling( cursor ) );
 			// REFLECT_BODY / COMPONENT_FACTORY 마커 — 리플렉트 FUNCTION 이 아님.
-			if ( methodName == annotationConstants::kReflectBodyMarkerFn || methodName == annotationConstants::kComponentFactoryMarkerFn )
+			if ( cxStringEquals( clang_getCursorSpelling( cursor ), annotationConstants::kReflectBodyMarkerFn ) ||
+				 cxStringEquals( clang_getCursorSpelling( cursor ), annotationConstants::kComponentFactoryMarkerFn ) )
 				return CXChildVisit_Continue;
 
 			// REFLECT 타입: 사용자/암시 생성자를 자동 등록합니다(FUNCTION 불필요).
@@ -543,10 +608,17 @@ namespace sw
 						cxStringToStd( clang_getTypeSpelling( clang_getCursorType( argCursor ) ) ) ) );
 				}
 
-				AnnotationSearch search{ annotationConstants::kFunctionPrefix, {}, false };
-				clang_visitChildren( cursor, annotationSearchVisitor, &search );
-				if ( search.found )
-					sw::parseFunctionAnnotation( search.spelling, method );
+				if ( collector->_pFuncEntry != nullptr && collector->_pFuncEntry->found )
+				{
+					sw::parseFunctionAnnotation( collector->_pFuncEntry->spelling, method );
+				}
+				else
+				{
+					AnnotationSearch search{ annotationConstants::kFunctionPrefix, {}, false };
+					clang_visitChildren( cursor, annotationSearchVisitor, &search );
+					if ( search.found )
+						sw::parseFunctionAnnotation( search.spelling, method );
+				}
 
 				collector->_pMethods->push_back( std::move( method ) );
 				return CXChildVisit_Continue;
@@ -558,11 +630,24 @@ namespace sw
 			if ( kind == CXCursor_Destructor )
 				return CXChildVisit_Continue;
 
-			AnnotationSearch search{ annotationConstants::kFunctionPrefix, {}, false };
-			clang_visitChildren( cursor, annotationSearchVisitor, &search );
+			bool   bHasFuncAnn = false;
+			string funcSpelling;
+			if ( collector->_pFuncEntry != nullptr && collector->_pFuncEntry->found )
+			{
+				bHasFuncAnn	 = true;
+				funcSpelling = collector->_pFuncEntry->spelling;
+			}
+			else
+			{
+				AnnotationSearch search{ annotationConstants::kFunctionPrefix, {}, false };
+				clang_visitChildren( cursor, annotationSearchVisitor, &search );
+				bHasFuncAnn	 = search.found;
+				funcSpelling = search.spelling;
+			}
+
 			// 순수 가상은 실제 AnnotateAttr 가 있어야 합니다. 소스 창 휴리스틱이
 			// 이전 타입의 FUNCTION(...) 을 집어 `= 0` 메서드를 잘못 등록할 수 있습니다.
-			if ( search.found == false )
+			if ( bHasFuncAnn == false )
 			{
 				if ( clang_CXXMethod_isPureVirtual( cursor ) )
 					return CXChildVisit_Continue;
@@ -585,8 +670,8 @@ namespace sw
 					cxStringToStd( clang_getTypeSpelling( clang_getCursorType( argCursor ) ) ) ) );
 			}
 
-			if ( search.found )
-				sw::parseFunctionAnnotation( search.spelling, method );
+			if ( bHasFuncAnn )
+				sw::parseFunctionAnnotation( funcSpelling, method );
 
 			collector->_pMethods->push_back( std::move( method ) );
 			return CXChildVisit_Continue;
@@ -624,59 +709,6 @@ namespace sw
 			return CXChildVisit_Continue;
 		}
 
-		/** @brief 여러 prefix를 한 번의 자식 순회로 동시에 탐색합니다. */
-		struct MultiAnnotationSearch
-		{
-			struct Entry
-			{
-				const utf8* prefix = nullptr;
-				string		spelling;
-				bool		found = false;
-			};
-
-			Entry arr[4]; ///< 충분한 크기로 고정, nullptr 로 빈 슬롯 표시
-			int32 count = 0;
-
-			void add( const utf8* prefix )
-			{
-				if ( count < 4 )
-				{
-					arr[count].prefix = prefix;
-					++count;
-				}
-			}
-
-			Entry* get( const utf8* prefix )
-			{
-				for ( int32 entryIndex = 0; entryIndex < count; ++entryIndex )
-				{
-					if ( arr[entryIndex].prefix == prefix )
-						return &arr[entryIndex];
-				}
-				return nullptr;
-			}
-		};
-
-		static CXChildVisitResult multiAnnotationVisitor( CXCursor cursor, CXCursor, CXClientData data )
-		{
-			MultiAnnotationSearch* multi = static_cast<MultiAnnotationSearch*>( data );
-			const CXCursorKind	   kind	 = clang_getCursorKind( cursor );
-			if ( kind != CXCursor_AnnotateAttr && kind != CXCursor_UnexposedAttr )
-				return CXChildVisit_Continue;
-
-			const string spelling = cxStringToStd( clang_getCursorSpelling( cursor ) );
-			for ( int32 entryIndex = 0; entryIndex < multi->count; ++entryIndex )
-			{
-				MultiAnnotationSearch::Entry& entry = multi->arr[entryIndex];
-				if ( entry.found == false && spelling.find( entry.prefix ) != string::npos )
-				{
-					entry.found	   = true;
-					entry.spelling = spelling;
-				}
-			}
-			return CXChildVisit_Continue;
-		}
-
 		struct StructMemberCollectContext
 		{
 			BaseClassCollector bases;
@@ -701,13 +733,12 @@ namespace sw
 			if ( kind == CXCursor_CXXMethod || kind == CXCursor_Constructor || kind == CXCursor_FunctionTemplate ||
 				 kind == CXCursor_FunctionDecl || kind == CXCursor_Destructor )
 			{
-				const string methodName = cxStringToStd( clang_getCursorSpelling( cursor ) );
-				if ( methodName == annotationConstants::kReflectBodyMarkerFn )
+				if ( cxStringEquals( clang_getCursorSpelling( cursor ), annotationConstants::kReflectBodyMarkerFn ) )
 				{
 					ctx->bBodyFound = true;
 					return CXChildVisit_Continue;
 				}
-				if ( methodName == annotationConstants::kComponentFactoryMarkerFn )
+				if ( cxStringEquals( clang_getCursorSpelling( cursor ), annotationConstants::kComponentFactoryMarkerFn ) )
 				{
 					ctx->bFactoryFound = true;
 					return CXChildVisit_Continue;
@@ -729,15 +760,7 @@ namespace sw
 				if ( factoryEntry != nullptr && factoryEntry->found )
 					ctx->bFactoryFound = true;
 
-				// methodCollectorVisitor 는 내부에서 kFunctionPrefix 로 clang_visitChildren을 호출합니다.
-				// 이미 위에서 결과를 얻었으므로, 별도 재수집 없이 spelling 을 주입합니다.
-				if ( funcEntry != nullptr && funcEntry->found )
-				{
-					// funcEntry 가 있으면 AnnotationSearch 캐싱 버전으로 직접 메서드 정보를 채웁니다.
-					AnnotationSearch cached{ annotationConstants::kFunctionPrefix, funcEntry->spelling, true };
-					(void)cached; // methodCollectorVisitor 재사용을 위해 아래 fallthrough
-				}
-
+				ctx->methods._pFuncEntry = funcEntry;
 				return methodCollectorVisitor( cursor, parent, &ctx->methods );
 			}
 
@@ -1075,6 +1098,12 @@ namespace sw
 
 	string AstVisitor::buildFullyQualifiedName( CXCursor cursor )
 	{
+		thread_local unordered_map<uint32, string> s_fqnCache;
+		const uint32							   cursorHash = clang_hashCursor( cursor );
+		const auto								   cacheIt	  = s_fqnCache.find( cursorHash );
+		if ( cacheIt != s_fqnCache.end() )
+			return cacheIt->second;
+
 		vector<string> parts;
 		CXCursor	   current = cursor;
 		while ( true )
@@ -1097,6 +1126,8 @@ namespace sw
 				fqn.append( "::" );
 			fqn.append( *it );
 		}
-		return string( fqn.view() );
+		string result( fqn.view() );
+		s_fqnCache.emplace( cursorHash, result );
+		return result;
 	}
 } // namespace sw

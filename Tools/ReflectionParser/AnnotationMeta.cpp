@@ -22,14 +22,22 @@ namespace sw
 		_bLoaded = false;
 	}
 
-	void AnnotationMeta::addAlias( const string& scope, const string& alias, AnnotationBinding binding )
+	uint64 AnnotationMeta::hashScopeAndKey( string_view scope, string_view key ) noexcept
+	{
+		const uint64 scopeHash = StringUtil::computeHash64( scope, false );
+		const uint64 delimHash = ( scopeHash ^ static_cast<uint64>( ':' ) ) * StringUtil::kPrime64;
+		return StringUtil::computeHash64( key, false, delimHash );
+	}
+
+	void AnnotationMeta::addAlias( const string_view scope, const string_view alias, AnnotationBinding binding )
 	{
 		if ( alias.empty() )
 			return;
+		const uint64 hash = hashScopeAndKey( scope, alias );
 		if ( binding._kind == AnnotationBinding::Kind::Flag || binding._kind == AnnotationBinding::Kind::NetRole )
-			_mapBare[scope].insert_or_assign( alias, binding );
+			_mapBare.insert_or_assign( hash, std::move( binding ) );
 		else
-			_mapKeys[scope].insert_or_assign( alias, binding );
+			_mapKeys.insert_or_assign( hash, std::move( binding ) );
 	}
 
 	bool AnnotationMeta::loadFile( const string_view absPath )
@@ -85,7 +93,7 @@ namespace sw
 			const string_splitter aliases( right, { "," } );
 			for ( const string_view aliasView : aliases.getSplitList() )
 			{
-				const string alias = StringUtil::trim( string( aliasView ).c_str() );
+				const string_view alias = StringUtil::trim( aliasView );
 				if ( alias.empty() )
 					continue;
 				addAlias( currentScope, alias, binding );
@@ -101,20 +109,14 @@ namespace sw
 	const AnnotationBinding* AnnotationMeta::findBare( const string_view scope,
 													   const string_view token ) const
 	{
-		const auto scopeIt = _mapBare.find( string( scope ) );
-		if ( scopeIt == _mapBare.end() )
-			return nullptr;
-		const auto it = scopeIt->second.find( string( token ) );
-		return ( it != scopeIt->second.end() ) ? &it->second : nullptr;
+		const auto it = _mapBare.find( hashScopeAndKey( scope, token ) );
+		return ( it != _mapBare.end() ) ? &it->second : nullptr;
 	}
 
 	const AnnotationBinding* AnnotationMeta::findKey( const string_view scope,
 													  const string_view key ) const
 	{
-		const auto scopeIt = _mapKeys.find( string( scope ) );
-		if ( scopeIt == _mapKeys.end() )
-			return nullptr;
-		const auto it = scopeIt->second.find( string( key ) );
-		return ( it != scopeIt->second.end() ) ? &it->second : nullptr;
+		const auto it = _mapKeys.find( hashScopeAndKey( scope, key ) );
+		return ( it != _mapKeys.end() ) ? &it->second : nullptr;
 	}
 } // namespace sw

@@ -80,6 +80,8 @@ namespace sw
 		/** @brief 로드된 EmitTemplateStore 골격을 렌더해 버퍼에 붙입니다. */
 		static void appendTemplate( CodeEmitBuffer& out, const string_view name,
 									const unordered_map<string, string>& vars );
+		static void appendTemplate( CodeEmitBuffer& out, const string_view name,
+									std::initializer_list<std::pair<string_view, string_view>> vars );
 
 	private:
 		const vector<ParsedTypeInfo>& _listTypes;

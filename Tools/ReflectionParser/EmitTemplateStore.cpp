@@ -101,6 +101,18 @@ namespace sw
 		return expand( it->second, vars );
 	}
 
+	string EmitTemplateStore::render( const string_view											 name,
+									  std::initializer_list<std::pair<string_view, string_view>> vars ) const
+	{
+		const auto it = _mapTemplates.find( string( name ) );
+		if ( it == _mapTemplates.end() )
+		{
+			SW_LOG_WARNING( "[EmitTemplate] Missing template: %#", name );
+			return {};
+		}
+		return expand( it->second, vars );
+	}
+
 	string EmitTemplateStore::expand( const string_view					   tpl,
 									  const unordered_map<string, string>& vars )
 	{
@@ -123,8 +135,8 @@ namespace sw
 				continue;
 			}
 
-			string key;
-			size_t keyEnd = charIndex + 1;
+			string_view key;
+			size_t		keyEnd = charIndex + 1;
 			if ( keyEnd < tpl.size() && tpl[keyEnd] == '{' )
 			{
 				++keyEnd;
@@ -134,7 +146,7 @@ namespace sw
 					out.push_back( tpl[charIndex++] );
 					continue;
 				}
-				key	   = string( tpl.substr( keyEnd, close - keyEnd ) );
+				key	   = tpl.substr( keyEnd, close - keyEnd );
 				keyEnd = close + 1;
 			}
 			else if ( keyEnd < tpl.size() && isIdentStart( tpl[keyEnd] ) )
@@ -143,7 +155,7 @@ namespace sw
 				++keyEnd;
 				while ( keyEnd < tpl.size() && isIdentChar( tpl[keyEnd] ) )
 					++keyEnd;
-				key = string( tpl.substr( start, keyEnd - start ) );
+				key = tpl.substr( start, keyEnd - start );
 			}
 			else
 			{
@@ -151,7 +163,71 @@ namespace sw
 				continue;
 			}
 
-			out += lookupVar( vars, key );
+			out += lookupVar( vars, string( key ) );
+			charIndex = keyEnd;
+		}
+
+		return out;
+	}
+
+	string EmitTemplateStore::expand( const string_view											 tpl,
+									  std::initializer_list<std::pair<string_view, string_view>> vars )
+	{
+		string out;
+		out.reserve( tpl.size() + 64 );
+
+		for ( size_t charIndex = 0; charIndex < tpl.size(); )
+		{
+			if ( tpl[charIndex] != '$' )
+			{
+				out.push_back( tpl[charIndex++] );
+				continue;
+			}
+
+			// 이스케이프: $$ → $
+			if ( charIndex + 1 < tpl.size() && tpl[charIndex + 1] == '$' )
+			{
+				out.push_back( '$' );
+				charIndex += 2;
+				continue;
+			}
+
+			string_view key;
+			size_t		keyEnd = charIndex + 1;
+			if ( keyEnd < tpl.size() && tpl[keyEnd] == '{' )
+			{
+				++keyEnd;
+				const size_t close = tpl.find( '}', keyEnd );
+				if ( close == string_view::npos )
+				{
+					out.push_back( tpl[charIndex++] );
+					continue;
+				}
+				key	   = tpl.substr( keyEnd, close - keyEnd );
+				keyEnd = close + 1;
+			}
+			else if ( keyEnd < tpl.size() && isIdentStart( tpl[keyEnd] ) )
+			{
+				const size_t start = keyEnd;
+				++keyEnd;
+				while ( keyEnd < tpl.size() && isIdentChar( tpl[keyEnd] ) )
+					++keyEnd;
+				key = tpl.substr( start, keyEnd - start );
+			}
+			else
+			{
+				out.push_back( tpl[charIndex++] );
+				continue;
+			}
+
+			for ( const auto& [k, v] : vars )
+			{
+				if ( k == key )
+				{
+					out.append( v.data(), v.size() );
+					break;
+				}
+			}
 			charIndex = keyEnd;
 		}
 

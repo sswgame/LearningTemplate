@@ -4,6 +4,7 @@
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Time/CpuTimer.h"
 
 #include "ReflectionParser/AnnotationMeta.h"
 #include "ReflectionParser/AstVisitor.h"
@@ -411,6 +412,10 @@ int32 main( int32 argc, utf8* argv[] )
 	sw::vector<std::future<void>> futureList;
 	futureList.reserve( args.inputFiles.size() );
 
+	sw::CpuTimer parseTimer;
+	parseTimer.resetTimer();
+	parseTimer.startTimer();
+
 	for ( const sw::string& inputFile : args.inputFiles )
 	{
 		workerSlots.acquire(); // 슬롯이 빌 때까지 대기
@@ -427,11 +432,14 @@ int32 main( int32 argc, utf8* argv[] )
 	for ( std::future<void>& future : futureList )
 		future.get();
 
+	parseTimer.updateTimer();
+	const float32 elapsedMs = parseTimer.getDeltaTime() * 1000.0f;
+
 	const int32 totalErrors = errorCount.load();
 	if ( totalErrors == 0 )
-		SW_LOG_INFO( "[ReflectionParser] Done. All files processed successfully." );
+		SW_LOG_INFO( "[ReflectionParser] Done in %# ms. All files processed successfully.", elapsedMs );
 	else
-		SW_LOG_ERROR( "[ReflectionParser] Done with %# error(s).", totalErrors );
+		SW_LOG_ERROR( "[ReflectionParser] Done in %# ms with %# error(s).", elapsedMs, totalErrors );
 
 	logger->shutdown();
 	return totalErrors == 0 ? 0 : 1;

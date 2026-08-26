@@ -64,11 +64,12 @@ namespace sw
 		/** @brief 로드된 바인딩을 비웁니다. */
 		void clear();
 		/** @brief scope·alias 에 바인딩을 추가합니다. */
-		void addAlias( const string& scope, const string& alias, AnnotationBinding binding );
+		void addAlias( const string_view scope, const string_view alias, AnnotationBinding binding );
 
-		using ScopeMap = unordered_map<string, AnnotationBinding>;
-		unordered_map<string, ScopeMap> _mapBare; ///< scope → alias → 바인딩
-		unordered_map<string, ScopeMap> _mapKeys;
-		bool							_bLoaded = false;
+		static uint64 hashScopeAndKey( string_view scope, string_view key ) noexcept;
+
+		unordered_map<uint64, AnnotationBinding> _mapBare; ///< (scope, alias) 해시 → 바인딩
+		unordered_map<uint64, AnnotationBinding> _mapKeys;
+		bool									 _bLoaded = false;
 	};
 } // namespace sw
