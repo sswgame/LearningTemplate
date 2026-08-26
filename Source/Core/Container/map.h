@@ -48,7 +48,7 @@ namespace sw
 	private:
 		Container				  _data;
 		Compare					  _comp;
-		mutable RaceDetectContext _raceCtx{};
+		SW_RACE_CTX_MEMBER
 
 		/** @brief 키만 비교해 정렬 위치를 찾습니다. */
 		struct KeyCompare
@@ -110,8 +110,8 @@ namespace sw
 		{
 			if ( this != &other )
 			{
-				ScopedRaceWrite lockThis( _raceCtx );
-				ScopedRaceRead	lockOther( other._raceCtx );
+				SW_SCOPED_RACE_WRITE();
+				SW_SCOPED_RACE_READ_OTHER( other );
 				_data = other._data;
 				_comp = other._comp;
 			}
@@ -123,8 +123,8 @@ namespace sw
 		{
 			if ( this != &other )
 			{
-				ScopedRaceWrite lockThis( _raceCtx );
-				ScopedRaceWrite lockOther( other._raceCtx );
+				SW_SCOPED_RACE_WRITE();
+				SW_SCOPED_RACE_WRITE_OTHER( other );
 				_data = std::move( other._data );
 				_comp = std::move( other._comp );
 			}
@@ -134,7 +134,7 @@ namespace sw
 		/** @brief 초기화 리스트로 대입합니다. */
 		map& operator=( std::initializer_list<value_type> ilist )
 		{
-			ScopedRaceWrite lockThis( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			clear();
 			insert( ilist.begin(), ilist.end() );
 			return *this;
@@ -146,7 +146,7 @@ namespace sw
 		/** @brief 사용 중인 할당자입니다. */
 		allocator_type get_allocator() const noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return _data.get_allocator();
 		}
 
@@ -154,7 +154,7 @@ namespace sw
 		template <typename K>
 		T& at( const K& key )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			auto			it = lower_bound( key );
 			if ( it != end() && !_comp( key, it->first ) )
 				return it->second;
@@ -165,7 +165,7 @@ namespace sw
 		template <typename K>
 		const T& at( const K& key ) const
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			auto		   it = lower_bound( key );
 			if ( it != end() && !_comp( key, it->first ) )
 				return it->second;
@@ -175,7 +175,7 @@ namespace sw
 		/** @brief 지정 위치의 원소를 반환합니다. */
 		T& operator[]( const Key& key )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			auto			it = std::lower_bound( _data.begin(), _data.end(), key, KeyCompare{ _comp } );
 			if ( it != _data.end() && !_comp( key, it->first ) )
 				return it->second;
@@ -186,7 +186,7 @@ namespace sw
 		/** @brief 지정 위치의 원소를 반환합니다. */
 		T& operator[]( Key&& key )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			auto			it = std::lower_bound( _data.begin(), _data.end(), key, KeyCompare{ _comp } );
 			if ( it != _data.end() && !_comp( key, it->first ) )
 				return it->second;
@@ -197,111 +197,111 @@ namespace sw
 		/** @brief 시작 이터레이터를 반환합니다. */
 		iterator begin() noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return _data.begin();
 		}
 
 		const_iterator begin() const noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return _data.begin();
 		}
 
 		const_iterator cbegin() const noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return _data.cbegin();
 		}
 
 		/** @brief 끝 이터레이터를 반환합니다. */
 		iterator end() noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return _data.end();
 		}
 
 		const_iterator end() const noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return _data.end();
 		}
 
 		const_iterator cend() const noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return _data.cend();
 		}
 
 		/** @brief 역방향 시작 이터레이터를 반환합니다. */
 		reverse_iterator rbegin() noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return _data.rbegin();
 		}
 
 		const_reverse_iterator rbegin() const noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return _data.rbegin();
 		}
 
 		const_reverse_iterator crbegin() const noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return _data.crbegin();
 		}
 
 		/** @brief 역방향 끝 이터레이터를 반환합니다. */
 		reverse_iterator rend() noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return _data.rend();
 		}
 
 		const_reverse_iterator rend() const noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return _data.rend();
 		}
 
 		const_reverse_iterator crend() const noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return _data.crend();
 		}
 
 		/** @brief 비어 있는지 반환합니다. */
 		bool empty() const noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return _data.empty();
 		}
 
 		/** @brief 원소 개수를 반환합니다. */
 		size_type size() const noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return _data.size();
 		}
 
 		/** @brief 담을 수 있는 최대 원소 개수를 반환합니다. */
 		size_type max_size() const noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return _data.max_size();
 		}
 
 		/** @brief 용량을 예약합니다. */
 		void reserve( size_type new_cap )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			_data.reserve( new_cap );
 		}
 
 		/** @brief 현재 용량을 반환합니다. */
 		size_type capacity() const noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return _data.capacity();
 		}
 
@@ -311,14 +311,14 @@ namespace sw
 		/** @brief 모든 원소를 제거합니다. */
 		void clear() noexcept
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			_data.clear();
 		}
 
 		/** @brief 원소를 삽입합니다. */
 		std::pair<iterator, bool> insert( const value_type& value )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			auto			it = std::lower_bound( _data.begin(), _data.end(), value.first, KeyCompare{ _comp } );
 			if ( it != _data.end() && !_comp( value.first, it->first ) )
 				return { it, false };
@@ -329,7 +329,7 @@ namespace sw
 		/** @brief 원소를 삽입합니다. */
 		std::pair<iterator, bool> insert( value_type&& value )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			auto			it = std::lower_bound( _data.begin(), _data.end(), value.first, KeyCompare{ _comp } );
 			if ( it != _data.end() && !_comp( value.first, it->first ) )
 				return { it, false };
@@ -347,7 +347,7 @@ namespace sw
 		template <class InputIt>
 		void insert( InputIt first, InputIt last )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			for ( ; first != last; ++first )
 			{
 				auto it = std::lower_bound( _data.begin(), _data.end(), first->first, KeyCompare{ _comp } );
@@ -376,7 +376,7 @@ namespace sw
 		template <class... Args>
 		std::pair<iterator, bool> try_emplace( const Key& k, Args&&... args )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			auto			it = std::lower_bound( _data.begin(), _data.end(), k, KeyCompare{ _comp } );
 			if ( it != _data.end() && !_comp( k, it->first ) )
 				return { it, false };
@@ -388,7 +388,7 @@ namespace sw
 		template <class... Args>
 		std::pair<iterator, bool> try_emplace( Key&& k, Args&&... args )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			auto			it = std::lower_bound( _data.begin(), _data.end(), k, KeyCompare{ _comp } );
 			if ( it != _data.end() && !_comp( k, it->first ) )
 				return { it, false };
@@ -399,21 +399,21 @@ namespace sw
 		/** @brief 원소를 제거합니다. */
 		iterator erase( iterator pos )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			return _data.erase( pos );
 		}
 
 		/** @brief 원소를 제거합니다. */
 		iterator erase( const_iterator pos )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			return _data.erase( pos );
 		}
 
 		/** @brief 원소를 제거합니다. */
 		iterator erase( const_iterator first, const_iterator last )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			return _data.erase( first, last );
 		}
 
@@ -421,7 +421,7 @@ namespace sw
 		template <typename K>
 		size_type erase( const K& key )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			auto			it = std::lower_bound( _data.begin(), _data.end(), key, KeyCompare{ _comp } );
 			if ( it != _data.end() && !_comp( key, it->first ) )
 			{
@@ -434,8 +434,8 @@ namespace sw
 		/** @brief 내용을 교환합니다. */
 		void swap( map& other ) noexcept
 		{
-			ScopedRaceWrite lockThis( _raceCtx );
-			ScopedRaceWrite lockOther( other._raceCtx );
+			SW_SCOPED_RACE_WRITE();
+			SW_SCOPED_RACE_WRITE_OTHER( other );
 			_data.swap( other._data );
 			std::swap( _comp, other._comp );
 		}
@@ -444,7 +444,7 @@ namespace sw
 		template <typename K>
 		size_type count( const K& key ) const
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			auto		   it = std::lower_bound( _data.begin(), _data.end(), key, KeyCompare{ _comp } );
 			if ( it != _data.end() && !_comp( key, it->first ) )
 				return 1;
@@ -455,7 +455,7 @@ namespace sw
 		template <typename K>
 		iterator find( const K& key )
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			auto		   it = std::lower_bound( _data.begin(), _data.end(), key, KeyCompare{ _comp } );
 			return ( it != _data.end() && !_comp( key, it->first ) ) ? it : _data.end();
 		}
@@ -464,7 +464,7 @@ namespace sw
 		template <typename K>
 		const_iterator find( const K& key ) const
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			auto		   it = std::lower_bound( _data.begin(), _data.end(), key, KeyCompare{ _comp } );
 			return ( it != _data.end() && !_comp( key, it->first ) ) ? it : _data.end();
 		}
@@ -477,7 +477,7 @@ namespace sw
 		template <typename K>
 		std::pair<iterator, iterator> equal_range( const K& key )
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			auto		   first = std::lower_bound( _data.begin(), _data.end(), key, KeyCompare{ _comp } );
 			auto		   last	 = first;
 			if ( first != _data.end() && !_comp( key, first->first ) )
@@ -489,7 +489,7 @@ namespace sw
 		template <typename K>
 		std::pair<const_iterator, const_iterator> equal_range( const K& key ) const
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			auto		   first = std::lower_bound( _data.begin(), _data.end(), key, KeyCompare{ _comp } );
 			auto		   last	 = first;
 			if ( first != _data.end() && !_comp( key, first->first ) )
@@ -501,7 +501,7 @@ namespace sw
 		template <typename K>
 		iterator lower_bound( const K& key )
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return std::lower_bound( _data.begin(), _data.end(), key, KeyCompare{ _comp } );
 		}
 
@@ -509,7 +509,7 @@ namespace sw
 		template <typename K>
 		const_iterator lower_bound( const K& key ) const
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return std::lower_bound( _data.begin(), _data.end(), key, KeyCompare{ _comp } );
 		}
 
@@ -517,7 +517,7 @@ namespace sw
 		template <typename K>
 		iterator upper_bound( const K& key )
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return std::upper_bound( _data.begin(), _data.end(), key, KeyCompare{ _comp } );
 		}
 
@@ -525,7 +525,7 @@ namespace sw
 		template <typename K>
 		const_iterator upper_bound( const K& key ) const
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return std::upper_bound( _data.begin(), _data.end(), key, KeyCompare{ _comp } );
 		}
 	};

@@ -20,7 +20,7 @@ namespace sw
 	class basic_string : public std::basic_string<CharT, Traits, Allocator>
 	{
 		using Base = std::basic_string<CharT, Traits, Allocator>;
-		mutable RaceDetectContext _raceCtx{};
+		SW_RACE_CTX_MEMBER
 
 	public:
 		using traits_type			 = typename Base::traits_type;
@@ -116,7 +116,7 @@ namespace sw
 		/** @brief 복사 대입합니다. */
 		basic_string& operator=( const Base& other )
 		{
-			ScopedRaceWrite lockThis( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			Base::operator=( other );
 			return *this;
 		}
@@ -124,7 +124,7 @@ namespace sw
 		/** @brief 이동 대입합니다. */
 		basic_string& operator=( Base&& other ) noexcept
 		{
-			ScopedRaceWrite lockThis( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			Base::operator=( std::move( other ) );
 			return *this;
 		}
@@ -134,8 +134,8 @@ namespace sw
 		{
 			if ( this != &other )
 			{
-				ScopedRaceWrite lockThis( _raceCtx );
-				ScopedRaceRead	lockOther( other._raceCtx );
+				SW_SCOPED_RACE_WRITE();
+				SW_SCOPED_RACE_READ_OTHER( other );
 				Base::operator=( static_cast<const Base&>( other ) );
 			}
 			return *this;
@@ -146,8 +146,8 @@ namespace sw
 		{
 			if ( this != &other )
 			{
-				ScopedRaceWrite lockThis( _raceCtx );
-				ScopedRaceWrite lockOther( other._raceCtx );
+				SW_SCOPED_RACE_WRITE();
+				SW_SCOPED_RACE_WRITE_OTHER( other );
 				Base::operator=( std::move( static_cast<Base&>( other ) ) );
 			}
 			return *this;
@@ -156,7 +156,7 @@ namespace sw
 		/** @brief 복사 대입합니다. */
 		basic_string& operator=( const CharT* s )
 		{
-			ScopedRaceWrite lockThis( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			Base::operator=( s );
 			return *this;
 		}
@@ -164,7 +164,7 @@ namespace sw
 		/** @brief 대입합니다. */
 		basic_string& operator=( CharT ch )
 		{
-			ScopedRaceWrite lockThis( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			Base::operator=( ch );
 			return *this;
 		}
@@ -172,7 +172,7 @@ namespace sw
 		/** @brief 초기화 리스트로 대입합니다. */
 		basic_string& operator=( std::initializer_list<CharT> ilist )
 		{
-			ScopedRaceWrite lockThis( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			Base::operator=( ilist );
 			return *this;
 		}
@@ -181,7 +181,7 @@ namespace sw
 		template <class StringViewLike>
 		basic_string& operator=( const StringViewLike& t )
 		{
-			ScopedRaceWrite lockThis( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			Base::operator=( t );
 			return *this;
 		}
@@ -192,77 +192,77 @@ namespace sw
 		/** @brief 범위 검사와 함께 원소를 반환합니다. */
 		reference at( size_type pos )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			return Base::at( pos );
 		}
 
 		/** @brief 범위 검사와 함께 원소를 반환합니다. */
 		const_reference at( size_type pos ) const
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return Base::at( pos );
 		}
 
 		/** @brief 지정 위치의 원소를 반환합니다. */
 		reference operator[]( size_type pos )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			return Base::operator[]( pos );
 		}
 
 		/** @brief 지정 위치의 원소를 반환합니다. */
 		const_reference operator[]( size_type pos ) const
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return Base::operator[]( pos );
 		}
 
 		/** @brief 첫 원소를 반환합니다. */
 		reference front()
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			return Base::front();
 		}
 
 		/** @brief 첫 원소를 반환합니다. */
 		const_reference front() const
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return Base::front();
 		}
 
 		/** @brief 마지막 원소를 반환합니다. */
 		reference back()
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			return Base::back();
 		}
 
 		/** @brief 마지막 원소를 반환합니다. */
 		const_reference back() const
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return Base::back();
 		}
 
 		/** @brief 내부 버퍼 포인터를 반환합니다. */
 		const CharT* data() const noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return Base::data();
 		}
 
 		/** @brief 내부 버퍼 포인터를 반환합니다. */
 		CharT* data() noexcept
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			return Base::data();
 		}
 
 		/** @brief 널 종료 C 문자열을 반환합니다. */
 		const CharT* c_str() const noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return Base::c_str();
 		}
 
@@ -270,84 +270,84 @@ namespace sw
 		/** @brief 시작 이터레이터를 반환합니다. */
 		iterator begin() noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return Base::begin();
 		}
 
 		/** @brief 시작 이터레이터를 반환합니다. */
 		const_iterator begin() const noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return Base::begin();
 		}
 
 		/** @brief 상수 시작 이터레이터를 반환합니다. */
 		const_iterator cbegin() const noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return Base::cbegin();
 		}
 
 		/** @brief 끝 이터레이터를 반환합니다. */
 		iterator end() noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return Base::end();
 		}
 
 		/** @brief 끝 이터레이터를 반환합니다. */
 		const_iterator end() const noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return Base::end();
 		}
 
 		/** @brief 상수 끝 이터레이터를 반환합니다. */
 		const_iterator cend() const noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return Base::cend();
 		}
 
 		/** @brief 역방향 시작 이터레이터를 반환합니다. */
 		reverse_iterator rbegin() noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return Base::rbegin();
 		}
 
 		/** @brief 역방향 시작 이터레이터를 반환합니다. */
 		const_reverse_iterator rbegin() const noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return Base::rbegin();
 		}
 
 		/** @brief 상수 역방향 시작 이터레이터를 반환합니다. */
 		const_reverse_iterator crbegin() const noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return Base::crbegin();
 		}
 
 		/** @brief 역방향 끝 이터레이터를 반환합니다. */
 		reverse_iterator rend() noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return Base::rend();
 		}
 
 		/** @brief 역방향 끝 이터레이터를 반환합니다. */
 		const_reverse_iterator rend() const noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return Base::rend();
 		}
 
 		/** @brief 상수 역방향 끝 이터레이터를 반환합니다. */
 		const_reverse_iterator crend() const noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return Base::crend();
 		}
 
@@ -355,49 +355,49 @@ namespace sw
 		/** @brief 비어 있는지 반환합니다. */
 		bool empty() const noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return Base::empty();
 		}
 
 		/** @brief 원소 개수를 반환합니다. */
 		size_type size() const noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return Base::size();
 		}
 
 		/** @brief 길이를 반환합니다. */
 		size_type length() const noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return Base::length();
 		}
 
 		/** @brief 담을 수 있는 최대 원소 개수를 반환합니다. */
 		size_type max_size() const noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return Base::max_size();
 		}
 
 		/** @brief 용량을 예약합니다. */
 		void reserve( size_type new_cap )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			Base::reserve( new_cap );
 		}
 
 		/** @brief 현재 용량을 반환합니다. */
 		size_type capacity() const noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return Base::capacity();
 		}
 
 		/** @brief 용량을 크기에 맞춥니다. */
 		void shrink_to_fit()
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			Base::shrink_to_fit();
 		}
 
@@ -408,14 +408,14 @@ namespace sw
 		// ------------------------------------------------------------------------------
 		void clear() noexcept
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			Base::clear();
 		}
 
 		/** @brief 원소를 삽입합니다. */
 		basic_string& insert( size_type index, size_type count, CharT ch )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			Base::insert( index, count, ch );
 			return *this;
 		}
@@ -423,7 +423,7 @@ namespace sw
 		/** @brief 원소를 삽입합니다. */
 		basic_string& insert( size_type index, const CharT* s )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			Base::insert( index, s );
 			return *this;
 		}
@@ -431,7 +431,7 @@ namespace sw
 		/** @brief 원소를 삽입합니다. */
 		basic_string& insert( size_type index, const CharT* s, size_type count )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			Base::insert( index, s, count );
 			return *this;
 		}
@@ -439,7 +439,7 @@ namespace sw
 		/** @brief 원소를 삽입합니다. */
 		basic_string& insert( size_type index, const basic_string& str )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			Base::insert( index, static_cast<const Base&>( str ) );
 			return *this;
 		}
@@ -447,7 +447,7 @@ namespace sw
 		/** @brief 원소를 삽입합니다. */
 		basic_string& insert( size_type index, const basic_string& str, size_type index_str, size_type count = npos )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			Base::insert( index, static_cast<const Base&>( str ), index_str, count );
 			return *this;
 		}
@@ -455,14 +455,14 @@ namespace sw
 		/** @brief 원소를 삽입합니다. */
 		iterator insert( const_iterator pos, CharT ch )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			return Base::insert( pos, ch );
 		}
 
 		/** @brief 원소를 삽입합니다. */
 		iterator insert( const_iterator pos, size_type count, CharT ch )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			return Base::insert( pos, count, ch );
 		}
 
@@ -470,21 +470,21 @@ namespace sw
 		template <class InputIt>
 		iterator insert( const_iterator pos, InputIt first, InputIt last )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			return Base::insert( pos, first, last );
 		}
 
 		/** @brief 원소를 삽입합니다. */
 		iterator insert( const_iterator pos, std::initializer_list<CharT> ilist )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			return Base::insert( pos, ilist );
 		}
 
 		/** @brief 원소를 제거합니다. */
 		basic_string& erase( size_type index = 0, size_type count = npos )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			Base::erase( index, count );
 			return *this;
 		}
@@ -492,35 +492,35 @@ namespace sw
 		/** @brief 원소를 제거합니다. */
 		iterator erase( const_iterator pos )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			return Base::erase( pos );
 		}
 
 		/** @brief 원소를 제거합니다. */
 		iterator erase( const_iterator first, const_iterator last )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			return Base::erase( first, last );
 		}
 
 		/** @brief 뒤에 원소를 추가합니다. */
 		void push_back( CharT ch )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			Base::push_back( ch );
 		}
 
 		/** @brief 마지막 원소를 제거합니다. */
 		void pop_back()
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			Base::pop_back();
 		}
 
 		/** @brief 뒤에 이어 붙입니다. */
 		basic_string& append( size_type count, CharT ch )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			Base::append( count, ch );
 			return *this;
 		}
@@ -528,7 +528,7 @@ namespace sw
 		/** @brief 뒤에 이어 붙입니다. */
 		basic_string& append( const basic_string& str )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			Base::append( static_cast<const Base&>( str ) );
 			return *this;
 		}
@@ -536,7 +536,7 @@ namespace sw
 		/** @brief 뒤에 이어 붙입니다. */
 		basic_string& append( const basic_string& str, size_type pos, size_type count = npos )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			Base::append( static_cast<const Base&>( str ), pos, count );
 			return *this;
 		}
@@ -544,7 +544,7 @@ namespace sw
 		/** @brief 뒤에 이어 붙입니다. */
 		basic_string& append( const CharT* s, size_type count )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			Base::append( s, count );
 			return *this;
 		}
@@ -552,7 +552,7 @@ namespace sw
 		/** @brief 뒤에 이어 붙입니다. */
 		basic_string& append( const CharT* s )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			Base::append( s );
 			return *this;
 		}
@@ -561,7 +561,7 @@ namespace sw
 		template <class InputIt>
 		basic_string& append( InputIt first, InputIt last )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			Base::append( first, last );
 			return *this;
 		}
@@ -569,7 +569,7 @@ namespace sw
 		/** @brief 뒤에 이어 붙입니다. */
 		basic_string& append( std::initializer_list<CharT> ilist )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			Base::append( ilist );
 			return *this;
 		}
@@ -577,7 +577,7 @@ namespace sw
 		/** @brief 더한 뒤 대입합니다. */
 		basic_string& operator+=( const Base& str )
 		{
-			ScopedRaceWrite lockThis( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			Base::operator+=( str );
 			return *this;
 		}
@@ -602,7 +602,7 @@ namespace sw
 		/** @brief 더한 뒤 대입합니다. */
 		basic_string& operator+=( std::string_view sv )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			Base::append( sv.data(), sv.size() );
 			return *this;
 		}
@@ -610,45 +610,45 @@ namespace sw
 		/** @brief 사전순으로 비교합니다. */
 		int32 compare( const basic_string& str ) const noexcept
 		{
-			ScopedRaceRead lockThis( _raceCtx );
-			ScopedRaceRead lockOther( str._raceCtx );
+			SW_SCOPED_RACE_READ();
+			SW_SCOPED_RACE_READ_OTHER( str );
 			return Base::compare( static_cast<const Base&>( str ) );
 		}
 
 		/** @brief 사전순으로 비교합니다. */
 		int32 compare( size_type pos1, size_type count1, const basic_string& str ) const
 		{
-			ScopedRaceRead lockThis( _raceCtx );
-			ScopedRaceRead lockOther( str._raceCtx );
+			SW_SCOPED_RACE_READ();
+			SW_SCOPED_RACE_READ_OTHER( str );
 			return Base::compare( pos1, count1, static_cast<const Base&>( str ) );
 		}
 
 		/** @brief 사전순으로 비교합니다. */
 		int32 compare( size_type pos1, size_type count1, const basic_string& str, size_type pos2, size_type count2 = npos ) const
 		{
-			ScopedRaceRead lockThis( _raceCtx );
-			ScopedRaceRead lockOther( str._raceCtx );
+			SW_SCOPED_RACE_READ();
+			SW_SCOPED_RACE_READ_OTHER( str );
 			return Base::compare( pos1, count1, static_cast<const Base&>( str ), pos2, count2 );
 		}
 
 		/** @brief 사전순으로 비교합니다. */
 		int32 compare( const CharT* s ) const
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return Base::compare( s );
 		}
 
 		/** @brief 사전순으로 비교합니다. */
 		int32 compare( size_type pos1, size_type count1, const CharT* s ) const
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return Base::compare( pos1, count1, s );
 		}
 
 		/** @brief 사전순으로 비교합니다. */
 		int32 compare( size_type pos1, size_type count1, const CharT* s, size_type count2 ) const
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return Base::compare( pos1, count1, s, count2 );
 		}
 
@@ -682,29 +682,29 @@ namespace sw
 		/** @brief 키를 찾습니다. */
 		size_type find( const basic_string& str, size_type pos = 0 ) const noexcept
 		{
-			ScopedRaceRead lockThis( _raceCtx );
-			ScopedRaceRead lockOther( str._raceCtx );
+			SW_SCOPED_RACE_READ();
+			SW_SCOPED_RACE_READ_OTHER( str );
 			return Base::find( static_cast<const Base&>( str ), pos );
 		}
 
 		/** @brief 키를 찾습니다. */
 		size_type find( const CharT* s, size_type pos, size_type count ) const
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return Base::find( s, pos, count );
 		}
 
 		/** @brief 키를 찾습니다. */
 		size_type find( const CharT* s, size_type pos = 0 ) const
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return Base::find( s, pos );
 		}
 
 		/** @brief 키를 찾습니다. */
 		size_type find( CharT ch, size_type pos = 0 ) const noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return Base::find( ch, pos );
 		}
 	};

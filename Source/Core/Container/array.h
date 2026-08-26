@@ -23,7 +23,7 @@ namespace sw
 	template <typename T, size_t N>
 	class array
 	{
-		mutable RaceDetectContext _raceCtx{};
+		SW_RACE_CTX_MEMBER
 
 	public:
 		using value_type			 = T;
@@ -62,7 +62,7 @@ namespace sw
 
 		array( const array& other )
 		{
-			ScopedRaceRead lockOther( other._raceCtx );
+			SW_SCOPED_RACE_READ_OTHER( other );
 			for ( size_type index = 0; index < N; ++index )
 			{
 				_elems[index] = other._elems[index];
@@ -73,8 +73,8 @@ namespace sw
 		{
 			if ( this != &other )
 			{
-				ScopedRaceWrite lockThis( _raceCtx );
-				ScopedRaceRead	lockOther( other._raceCtx );
+				SW_SCOPED_RACE_WRITE();
+				SW_SCOPED_RACE_READ_OTHER( other );
 				for ( size_type index = 0; index < N; ++index )
 				{
 					_elems[index] = other._elems[index];
@@ -85,7 +85,7 @@ namespace sw
 
 		array( array&& other ) noexcept
 		{
-			ScopedRaceWrite lockOther( other._raceCtx );
+			SW_SCOPED_RACE_WRITE_OTHER( other );
 			for ( size_type index = 0; index < N; ++index )
 			{
 				_elems[index] = std::move( other._elems[index] );
@@ -96,8 +96,8 @@ namespace sw
 		{
 			if ( this != &other )
 			{
-				ScopedRaceWrite lockThis( _raceCtx );
-				ScopedRaceWrite lockOther( other._raceCtx );
+				SW_SCOPED_RACE_WRITE();
+				SW_SCOPED_RACE_WRITE_OTHER( other );
 				for ( size_type index = 0; index < N; ++index )
 				{
 					_elems[index] = std::move( other._elems[index] );
@@ -111,7 +111,7 @@ namespace sw
 		// ------------------------------------------------------------------------------
 		[[nodiscard]] reference at( size_type pos )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			if ( pos >= N )
 				throw std::out_of_range( "array::at: index out of range" );
 			return _elems[pos];
@@ -119,7 +119,7 @@ namespace sw
 
 		[[nodiscard]] const_reference at( size_type pos ) const
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			if ( pos >= N )
 				throw std::out_of_range( "array::at: index out of range" );
 			return _elems[pos];
@@ -127,49 +127,49 @@ namespace sw
 
 		[[nodiscard]] reference operator[]( size_type pos ) noexcept
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			return _elems[pos];
 		}
 
 		[[nodiscard]] const_reference operator[]( size_type pos ) const noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return _elems[pos];
 		}
 
 		[[nodiscard]] reference front() noexcept
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			return _elems[0];
 		}
 
 		[[nodiscard]] const_reference front() const noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return _elems[0];
 		}
 
 		[[nodiscard]] reference back() noexcept
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			return _elems[N > 0 ? N - 1 : 0];
 		}
 
 		[[nodiscard]] const_reference back() const noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return _elems[N > 0 ? N - 1 : 0];
 		}
 
 		[[nodiscard]] pointer data() noexcept
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			return _elems;
 		}
 
 		[[nodiscard]] const_pointer data() const noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return _elems;
 		}
 
@@ -178,37 +178,37 @@ namespace sw
 		// ------------------------------------------------------------------------------
 		[[nodiscard]] iterator begin() noexcept
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			return _elems;
 		}
 
 		[[nodiscard]] const_iterator begin() const noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return _elems;
 		}
 
 		[[nodiscard]] const_iterator cbegin() const noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return _elems;
 		}
 
 		[[nodiscard]] iterator end() noexcept
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			return _elems + N;
 		}
 
 		[[nodiscard]] const_iterator end() const noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return _elems + N;
 		}
 
 		[[nodiscard]] const_iterator cend() const noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return _elems + N;
 		}
 
@@ -238,7 +238,7 @@ namespace sw
 		// ------------------------------------------------------------------------------
 		void fill( const T& value )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			for ( size_type index = 0; index < N; ++index )
 			{
 				_elems[index] = value;
@@ -247,8 +247,8 @@ namespace sw
 
 		void swap( array& other ) noexcept( std::is_nothrow_swappable_v<T> )
 		{
-			ScopedRaceWrite lockThis( _raceCtx );
-			ScopedRaceWrite lockOther( other._raceCtx );
+			SW_SCOPED_RACE_WRITE();
+			SW_SCOPED_RACE_WRITE_OTHER( other );
 			for ( size_type index = 0; index < N; ++index )
 			{
 				using std::swap;

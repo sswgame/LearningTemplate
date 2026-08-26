@@ -21,7 +21,7 @@ namespace sw
 	class list : public std::list<T, Allocator>
 	{
 		using Base = std::list<T, Allocator>;
-		mutable RaceDetectContext _raceCtx{};
+		SW_RACE_CTX_MEMBER
 
 	public:
 		using value_type			 = typename Base::value_type;
@@ -92,7 +92,7 @@ namespace sw
 		/** @brief 복사 대입합니다. */
 		list& operator=( const Base& other )
 		{
-			ScopedRaceWrite lockThis( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			Base::operator=( other );
 			return *this;
 		}
@@ -100,7 +100,7 @@ namespace sw
 		/** @brief 이동 대입합니다. */
 		list& operator=( Base&& other ) noexcept
 		{
-			ScopedRaceWrite lockThis( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			Base::operator=( std::move( other ) );
 			return *this;
 		}
@@ -110,8 +110,8 @@ namespace sw
 		{
 			if ( this != &other )
 			{
-				ScopedRaceWrite lockThis( _raceCtx );
-				ScopedRaceRead	lockOther( other._raceCtx );
+				SW_SCOPED_RACE_WRITE();
+				SW_SCOPED_RACE_READ_OTHER( other );
 				Base::operator=( static_cast<const Base&>( other ) );
 			}
 			return *this;
@@ -122,8 +122,8 @@ namespace sw
 		{
 			if ( this != &other )
 			{
-				ScopedRaceWrite lockThis( _raceCtx );
-				ScopedRaceWrite lockOther( other._raceCtx );
+				SW_SCOPED_RACE_WRITE();
+				SW_SCOPED_RACE_WRITE_OTHER( other );
 				Base::operator=( std::move( static_cast<Base&>( other ) ) );
 			}
 			return *this;
@@ -132,7 +132,7 @@ namespace sw
 		/** @brief 초기화 리스트로 대입합니다. */
 		list& operator=( std::initializer_list<T> ilist )
 		{
-			ScopedRaceWrite lockThis( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			Base::operator=( ilist );
 			return *this;
 		}
@@ -140,7 +140,7 @@ namespace sw
 		/** @brief 내용을 새로 할당합니다. */
 		void assign( size_type count, const T& value )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			Base::assign( count, value );
 		}
 
@@ -148,14 +148,14 @@ namespace sw
 		template <class InputIt>
 		void assign( InputIt first, InputIt last )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			Base::assign( first, last );
 		}
 
 		/** @brief 내용을 새로 할당합니다. */
 		void assign( std::initializer_list<T> ilist )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			Base::assign( ilist );
 		}
 
@@ -165,7 +165,7 @@ namespace sw
 		/** @brief 사용 중인 할당자입니다. */
 		allocator_type get_allocator() const noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return Base::get_allocator();
 		}
 
@@ -173,28 +173,28 @@ namespace sw
 		/** @brief 첫 원소를 반환합니다. */
 		reference front()
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			return Base::front();
 		}
 
 		/** @brief 첫 원소를 반환합니다. */
 		const_reference front() const
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return Base::front();
 		}
 
 		/** @brief 마지막 원소를 반환합니다. */
 		reference back()
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			return Base::back();
 		}
 
 		/** @brief 마지막 원소를 반환합니다. */
 		const_reference back() const
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return Base::back();
 		}
 
@@ -202,84 +202,84 @@ namespace sw
 		/** @brief 시작 이터레이터를 반환합니다. */
 		iterator begin() noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return Base::begin();
 		}
 
 		/** @brief 시작 이터레이터를 반환합니다. */
 		const_iterator begin() const noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return Base::begin();
 		}
 
 		/** @brief 상수 시작 이터레이터를 반환합니다. */
 		const_iterator cbegin() const noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return Base::cbegin();
 		}
 
 		/** @brief 끝 이터레이터를 반환합니다. */
 		iterator end() noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return Base::end();
 		}
 
 		/** @brief 끝 이터레이터를 반환합니다. */
 		const_iterator end() const noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return Base::end();
 		}
 
 		/** @brief 상수 끝 이터레이터를 반환합니다. */
 		const_iterator cend() const noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return Base::cend();
 		}
 
 		/** @brief 역방향 시작 이터레이터를 반환합니다. */
 		reverse_iterator rbegin() noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return Base::rbegin();
 		}
 
 		/** @brief 역방향 시작 이터레이터를 반환합니다. */
 		const_reverse_iterator rbegin() const noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return Base::rbegin();
 		}
 
 		/** @brief 상수 역방향 시작 이터레이터를 반환합니다. */
 		const_reverse_iterator crbegin() const noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return Base::crbegin();
 		}
 
 		/** @brief 역방향 끝 이터레이터를 반환합니다. */
 		reverse_iterator rend() noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return Base::rend();
 		}
 
 		/** @brief 역방향 끝 이터레이터를 반환합니다. */
 		const_reverse_iterator rend() const noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return Base::rend();
 		}
 
 		/** @brief 상수 역방향 끝 이터레이터를 반환합니다. */
 		const_reverse_iterator crend() const noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return Base::crend();
 		}
 
@@ -287,21 +287,21 @@ namespace sw
 		/** @brief 비어 있는지 반환합니다. */
 		bool empty() const noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return Base::empty();
 		}
 
 		/** @brief 원소 개수를 반환합니다. */
 		size_type size() const noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return Base::size();
 		}
 
 		/** @brief 담을 수 있는 최대 원소 개수를 반환합니다. */
 		size_type max_size() const noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return Base::max_size();
 		}
 
@@ -312,28 +312,28 @@ namespace sw
 		/** @brief 모든 원소를 제거합니다. */
 		void clear() noexcept
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			Base::clear();
 		}
 
 		/** @brief 원소를 삽입합니다. */
 		iterator insert( const_iterator pos, const T& value )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			return Base::insert( pos, value );
 		}
 
 		/** @brief 원소를 삽입합니다. */
 		iterator insert( const_iterator pos, T&& value )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			return Base::insert( pos, std::move( value ) );
 		}
 
 		/** @brief 원소를 삽입합니다. */
 		iterator insert( const_iterator pos, size_type count, const T& value )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			return Base::insert( pos, count, value );
 		}
 
@@ -341,14 +341,14 @@ namespace sw
 		template <class InputIt>
 		iterator insert( const_iterator pos, InputIt first, InputIt last )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			return Base::insert( pos, first, last );
 		}
 
 		/** @brief 원소를 삽입합니다. */
 		iterator insert( const_iterator pos, std::initializer_list<T> ilist )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			return Base::insert( pos, ilist );
 		}
 
@@ -356,35 +356,35 @@ namespace sw
 		template <class... Args>
 		iterator emplace( const_iterator pos, Args&&... args )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			return Base::emplace( pos, std::forward<Args>( args )... );
 		}
 
 		/** @brief 원소를 제거합니다. */
 		iterator erase( const_iterator pos )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			return Base::erase( pos );
 		}
 
 		/** @brief 원소를 제거합니다. */
 		iterator erase( const_iterator first, const_iterator last )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			return Base::erase( first, last );
 		}
 
 		/** @brief 뒤에 원소를 추가합니다. */
 		void push_back( const T& value )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			Base::push_back( value );
 		}
 
 		/** @brief 뒤에 원소를 추가합니다. */
 		void push_back( T&& value )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			Base::push_back( std::move( value ) );
 		}
 
@@ -392,28 +392,28 @@ namespace sw
 		template <class... Args>
 		reference emplace_back( Args&&... args )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			return Base::emplace_back( std::forward<Args>( args )... );
 		}
 
 		/** @brief 마지막 원소를 제거합니다. */
 		void pop_back()
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			Base::pop_back();
 		}
 
 		/** @brief 앞에 원소를 추가합니다. */
 		void push_front( const T& value )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			Base::push_front( value );
 		}
 
 		/** @brief 앞에 원소를 추가합니다. */
 		void push_front( T&& value )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			Base::push_front( std::move( value ) );
 		}
 
@@ -421,36 +421,36 @@ namespace sw
 		template <class... Args>
 		reference emplace_front( Args&&... args )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			return Base::emplace_front( std::forward<Args>( args )... );
 		}
 
 		/** @brief 첫 원소를 제거합니다. */
 		void pop_front()
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			Base::pop_front();
 		}
 
 		/** @brief 크기를 변경합니다. */
 		void resize( size_type count )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			Base::resize( count );
 		}
 
 		/** @brief 크기를 변경합니다. */
 		void resize( size_type count, const value_type& value )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			Base::resize( count, value );
 		}
 
 		/** @brief 내용을 교환합니다. */
 		void swap( list& other ) noexcept( noexcept( std::allocator_traits<Allocator>::is_always_equal::value ) )
 		{
-			ScopedRaceWrite lockThis( _raceCtx );
-			ScopedRaceWrite lockOther( other._raceCtx );
+			SW_SCOPED_RACE_WRITE();
+			SW_SCOPED_RACE_WRITE_OTHER( other );
 			Base::swap( static_cast<Base&>( other ) );
 		}
 
@@ -458,16 +458,16 @@ namespace sw
 		/** @brief 다른 컨테이너의 원소를 병합합니다. */
 		void merge( list& other )
 		{
-			ScopedRaceWrite lockThis( _raceCtx );
-			ScopedRaceWrite lockOther( other._raceCtx );
+			SW_SCOPED_RACE_WRITE();
+			SW_SCOPED_RACE_WRITE_OTHER( other );
 			Base::merge( static_cast<Base&>( other ) );
 		}
 
 		/** @brief 다른 컨테이너의 원소를 병합합니다. */
 		void merge( list&& other )
 		{
-			ScopedRaceWrite lockThis( _raceCtx );
-			ScopedRaceWrite lockOther( other._raceCtx );
+			SW_SCOPED_RACE_WRITE();
+			SW_SCOPED_RACE_WRITE_OTHER( other );
 			Base::merge( std::move( static_cast<Base&>( other ) ) );
 		}
 
@@ -475,8 +475,8 @@ namespace sw
 		template <class Compare>
 		void merge( list& other, Compare comp )
 		{
-			ScopedRaceWrite lockThis( _raceCtx );
-			ScopedRaceWrite lockOther( other._raceCtx );
+			SW_SCOPED_RACE_WRITE();
+			SW_SCOPED_RACE_WRITE_OTHER( other );
 			Base::merge( static_cast<Base&>( other ), comp );
 		}
 
@@ -484,63 +484,63 @@ namespace sw
 		template <class Compare>
 		void merge( list&& other, Compare comp )
 		{
-			ScopedRaceWrite lockThis( _raceCtx );
-			ScopedRaceWrite lockOther( other._raceCtx );
+			SW_SCOPED_RACE_WRITE();
+			SW_SCOPED_RACE_WRITE_OTHER( other );
 			Base::merge( std::move( static_cast<Base&>( other ) ), comp );
 		}
 
 		/** @brief 다른 리스트의 원소를 이어 붙입니다. */
 		void splice( const_iterator pos, list& other )
 		{
-			ScopedRaceWrite lockThis( _raceCtx );
-			ScopedRaceWrite lockOther( other._raceCtx );
+			SW_SCOPED_RACE_WRITE();
+			SW_SCOPED_RACE_WRITE_OTHER( other );
 			Base::splice( pos, static_cast<Base&>( other ) );
 		}
 
 		/** @brief 다른 리스트의 원소를 이어 붙입니다. */
 		void splice( const_iterator pos, list&& other )
 		{
-			ScopedRaceWrite lockThis( _raceCtx );
-			ScopedRaceWrite lockOther( other._raceCtx );
+			SW_SCOPED_RACE_WRITE();
+			SW_SCOPED_RACE_WRITE_OTHER( other );
 			Base::splice( pos, std::move( static_cast<Base&>( other ) ) );
 		}
 
 		/** @brief 다른 리스트의 원소를 이어 붙입니다. */
 		void splice( const_iterator pos, list& other, const_iterator it )
 		{
-			ScopedRaceWrite lockThis( _raceCtx );
-			ScopedRaceWrite lockOther( other._raceCtx );
+			SW_SCOPED_RACE_WRITE();
+			SW_SCOPED_RACE_WRITE_OTHER( other );
 			Base::splice( pos, static_cast<Base&>( other ), it );
 		}
 
 		/** @brief 다른 리스트의 원소를 이어 붙입니다. */
 		void splice( const_iterator pos, list&& other, const_iterator it )
 		{
-			ScopedRaceWrite lockThis( _raceCtx );
-			ScopedRaceWrite lockOther( other._raceCtx );
+			SW_SCOPED_RACE_WRITE();
+			SW_SCOPED_RACE_WRITE_OTHER( other );
 			Base::splice( pos, std::move( static_cast<Base&>( other ) ), it );
 		}
 
 		/** @brief 다른 리스트의 원소를 이어 붙입니다. */
 		void splice( const_iterator pos, list& other, const_iterator first, const_iterator last )
 		{
-			ScopedRaceWrite lockThis( _raceCtx );
-			ScopedRaceWrite lockOther( other._raceCtx );
+			SW_SCOPED_RACE_WRITE();
+			SW_SCOPED_RACE_WRITE_OTHER( other );
 			Base::splice( pos, static_cast<Base&>( other ), first, last );
 		}
 
 		/** @brief 다른 리스트의 원소를 이어 붙입니다. */
 		void splice( const_iterator pos, list&& other, const_iterator first, const_iterator last )
 		{
-			ScopedRaceWrite lockThis( _raceCtx );
-			ScopedRaceWrite lockOther( other._raceCtx );
+			SW_SCOPED_RACE_WRITE();
+			SW_SCOPED_RACE_WRITE_OTHER( other );
 			Base::splice( pos, std::move( static_cast<Base&>( other ) ), first, last );
 		}
 
 		/** @brief 값과 일치하는 원소를 제거합니다. */
 		void remove( const T& value )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			Base::remove( value );
 		}
 
@@ -548,21 +548,21 @@ namespace sw
 		template <class UnaryPredicate>
 		void remove_if( UnaryPredicate p )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			Base::remove_if( p );
 		}
 
 		/** @brief 순서를 뒤집습니다. */
 		void reverse() noexcept
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			Base::reverse();
 		}
 
 		/** @brief 연속 중복 원소를 제거합니다. */
 		void unique()
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			Base::unique();
 		}
 
@@ -570,14 +570,14 @@ namespace sw
 		template <class BinaryPredicate>
 		void unique( BinaryPredicate p )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			Base::unique( p );
 		}
 
 		/** @brief 정렬합니다. */
 		void sort()
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			Base::sort();
 		}
 
@@ -585,7 +585,7 @@ namespace sw
 		template <class Compare>
 		void sort( Compare comp )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			Base::sort( comp );
 		}
 	};

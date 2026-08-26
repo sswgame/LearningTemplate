@@ -35,7 +35,7 @@ namespace sw
 	template <typename Key, typename T, typename Hash = std::hash<Key>, typename KeyEqual = std::equal_to<Key>, typename Allocator = Allocator<std::pair<const Key, T>>>
 	class unordered_map
 	{
-		mutable RaceDetectContext _raceCtx;
+		SW_RACE_CTX_MEMBER
 
 	public:
 		using key_type		  = Key;
@@ -179,24 +179,32 @@ namespace sw
 
 		/** @brief 복사 생성합니다. */
 		unordered_map( const unordered_map& other )
+#if SW_DEBUG
 			: _raceCtx{}
 			, _listBuckets{ other._listBuckets }
+#else
+			: _listBuckets{ other._listBuckets }
+#endif
 			, _listDenseData{ other._listDenseData }
 			, _hasher{ other._hasher }
 			, _equal{ other._equal }
 		{
-			ScopedRaceRead lockOther( other._raceCtx );
+			SW_SCOPED_RACE_READ_OTHER( other );
 		}
 
 		/** @brief 이동 생성합니다. */
 		unordered_map( unordered_map&& other ) noexcept
+#if SW_DEBUG
 			: _raceCtx{}
 			, _listBuckets{ std::move( other._listBuckets ) }
+#else
+			: _listBuckets{ std::move( other._listBuckets ) }
+#endif
 			, _listDenseData{ std::move( other._listDenseData ) }
 			, _hasher{ std::move( other._hasher ) }
 			, _equal{ std::move( other._equal ) }
 		{
-			ScopedRaceWrite lockOther( other._raceCtx );
+			SW_SCOPED_RACE_WRITE_OTHER( other );
 		}
 
 		/** @brief 복사 대입합니다. */
@@ -204,8 +212,8 @@ namespace sw
 		{
 			if ( this != &other )
 			{
-				ScopedRaceWrite lockThis( _raceCtx );
-				ScopedRaceRead	lockOther( other._raceCtx );
+				SW_SCOPED_RACE_WRITE();
+				SW_SCOPED_RACE_READ_OTHER( other );
 				_listBuckets   = other._listBuckets;
 				_listDenseData = other._listDenseData;
 				_hasher		   = other._hasher;
@@ -219,8 +227,8 @@ namespace sw
 		{
 			if ( this != &other )
 			{
-				ScopedRaceWrite lockThis( _raceCtx );
-				ScopedRaceWrite lockOther( other._raceCtx );
+				SW_SCOPED_RACE_WRITE();
+				SW_SCOPED_RACE_WRITE_OTHER( other );
 				_listBuckets   = std::move( other._listBuckets );
 				_listDenseData = std::move( other._listDenseData );
 				_hasher		   = std::move( other._hasher );
@@ -232,38 +240,38 @@ namespace sw
 		/** @brief 시작 이터레이터를 반환합니다. */
 		iterator begin() noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return iterator( this, 0 );
 		}
 
 		/** @brief 끝 이터레이터를 반환합니다. */
 		iterator end() noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return iterator( this, _listDenseData.size() );
 		}
 
 		const_iterator begin() const noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return const_iterator( this, 0 );
 		}
 
 		const_iterator end() const noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return const_iterator( this, _listDenseData.size() );
 		}
 
 		const_iterator cbegin() const noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return const_iterator( this, 0 );
 		}
 
 		const_iterator cend() const noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return const_iterator( this, _listDenseData.size() );
 		}
 
@@ -273,14 +281,14 @@ namespace sw
 		/** @brief 비어 있는지 반환합니다. */
 		bool empty() const noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return _listDenseData.empty();
 		}
 
 		/** @brief 원소 개수를 반환합니다. */
 		size_type size() const noexcept
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			return _listDenseData.size();
 		}
 
@@ -290,7 +298,7 @@ namespace sw
 		/** @brief 모든 원소를 제거합니다. */
 		void clear() noexcept
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			_listDenseData.clear();
 			for ( size_t& bucket : _listBuckets )
 			{
@@ -301,7 +309,7 @@ namespace sw
 		/** @brief 키를 찾습니다. */
 		iterator find( const Key& key )
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			if ( _listBuckets.empty() )
 				return end();
 			size_t		  hash		= _hasher( key );
@@ -321,7 +329,7 @@ namespace sw
 		/** @brief 키를 찾습니다. */
 		const_iterator find( const Key& key ) const
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			if ( _listBuckets.empty() )
 				return end();
 			size_t		  hash		= _hasher( key );
@@ -342,7 +350,7 @@ namespace sw
 		template <typename K, typename = std::enable_if_t<!std::is_same_v<std::decay_t<K>, Key>>>
 		iterator find( const K& key )
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			if ( _listBuckets.empty() )
 				return end();
 			size_t		  hash		= _hasher( key );
@@ -371,7 +379,7 @@ namespace sw
 		template <typename K, typename = std::enable_if_t<!std::is_same_v<std::decay_t<K>, Key>>>
 		const_iterator find( const K& key ) const
 		{
-			ScopedRaceRead lock( _raceCtx );
+			SW_SCOPED_RACE_READ();
 			if ( _listBuckets.empty() )
 				return end();
 			size_t		  hash		= _hasher( key );
@@ -413,7 +421,7 @@ namespace sw
 		/** @brief 지정 위치의 원소를 반환합니다. */
 		T& operator[]( const Key& key )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			check_expand();
 			size_t		 hash	   = _hasher( key );
 			const size_t bucketIdx = hash % _listBuckets.size();
@@ -434,7 +442,7 @@ namespace sw
 		/** @brief 지정 위치의 원소를 반환합니다. */
 		T& operator[]( Key&& key )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			check_expand();
 			size_t		 hash	   = _hasher( key );
 			const size_t bucketIdx = hash % _listBuckets.size();
@@ -455,7 +463,7 @@ namespace sw
 		/** @brief 원소를 삽입합니다. */
 		std::pair<iterator, bool> insert( const value_type& value )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			check_expand();
 			size_t		 hash	   = _hasher( value.first );
 			const size_t bucketIdx = hash % _listBuckets.size();
@@ -485,7 +493,7 @@ namespace sw
 		template <typename... Args>
 		std::pair<iterator, bool> emplace( Args&&... args )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			check_expand();
 			// 키를 알려면 일단 만들어야 함. 표준 emplace 는 제자리 생성.
 			// 밀집 배열은 끝에 만든 뒤 키가 이미 있으면 pop 합니다.
@@ -533,7 +541,7 @@ namespace sw
 		template <typename M>
 		std::pair<iterator, bool> insert_or_assign( const Key& key, M&& obj )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			check_expand();
 			size_t		 hash	   = _hasher( key );
 			const size_t bucketIdx = hash % _listBuckets.size();
@@ -558,7 +566,7 @@ namespace sw
 		template <typename M>
 		std::pair<iterator, bool> insert_or_assign( Key&& key, M&& obj )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			check_expand();
 			size_t		 hash	   = _hasher( key );
 			const size_t bucketIdx = hash % _listBuckets.size();
@@ -582,7 +590,7 @@ namespace sw
 		/** @brief 원소를 제거합니다. */
 		size_type erase( const Key& key )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			if ( _listBuckets.empty() )
 				return 0;
 
@@ -639,7 +647,7 @@ namespace sw
 		/** @brief 버킷 수를 재해시합니다. */
 		void rehash( size_type count )
 		{
-			ScopedRaceWrite lock( _raceCtx );
+			SW_SCOPED_RACE_WRITE();
 			rehash_internal( count );
 		}
 

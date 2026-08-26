@@ -5,13 +5,15 @@
 #pragma once
 #include "Core/Common/Macros.h"
 
-#include <atomic>
+#if SW_DEBUG
+	#include <atomic>
+#endif
 
 namespace sw
 {
 	// ------------------------------------------------------------------------------
 	// 1) RaceDetectContext — 읽기/쓰기 카운트. 동시 write 또는 read+write 면 Fatal
-	//    Release 에서는 enter/exit 가 no-op
+	//    컨테이너 멤버(_raceCtx)는 Debug 전용. Release 에서는 공간을 차지하지 않음
 	// ------------------------------------------------------------------------------
 	/**
 	 * @class RaceDetectContext
@@ -133,3 +135,26 @@ namespace sw
 #endif
 	};
 } // namespace sw
+
+// ------------------------------------------------------------------------------
+// 3) 컨테이너 훅 — Release/C++17 에서 멤버·락이 바이너리에 남지 않게 한다
+//    [[no_unique_address]] 는 C++20 전용이므로 쓰지 않는다
+// ------------------------------------------------------------------------------
+#if SW_DEBUG
+	#define SW_RACE_CTX_MEMBER mutable ::sw::RaceDetectContext _raceCtx{};
+
+	#define SW_SCOPED_RACE_READ() \
+		const ::sw::ScopedRaceRead SW_CONCAT( _swRaceRead_, __LINE__ ) { _raceCtx }
+	#define SW_SCOPED_RACE_WRITE() \
+		const ::sw::ScopedRaceWrite SW_CONCAT( _swRaceWrite_, __LINE__ ) { _raceCtx }
+	#define SW_SCOPED_RACE_READ_OTHER( otherObj ) \
+		const ::sw::ScopedRaceRead SW_CONCAT( _swRaceReadOther_, __LINE__ ) { ( otherObj )._raceCtx }
+	#define SW_SCOPED_RACE_WRITE_OTHER( otherObj ) \
+		const ::sw::ScopedRaceWrite SW_CONCAT( _swRaceWriteOther_, __LINE__ ) { ( otherObj )._raceCtx }
+#else
+	#define SW_RACE_CTX_MEMBER
+	#define SW_SCOPED_RACE_READ()
+	#define SW_SCOPED_RACE_WRITE()
+	#define SW_SCOPED_RACE_READ_OTHER( otherObj )
+	#define SW_SCOPED_RACE_WRITE_OTHER( otherObj )
+#endif

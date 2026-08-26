@@ -140,7 +140,7 @@ namespace sw
 		void		   clearInternal() noexcept;
 
 	private:
-		mutable RaceDetectContext _raceCtx{};
+		SW_RACE_CTX_MEMBER
 
 		T*	   _pData	 = nullptr;
 		size_t _size	 = 0;
@@ -301,7 +301,7 @@ namespace sw
 	inline vector<T, Allocator>::vector( const vector& other )
 		: Allocator( std::allocator_traits<Allocator>::select_on_container_copy_construction( other.get_allocator() ) )
 	{
-		ScopedRaceRead lockOther( other._raceCtx );
+		SW_SCOPED_RACE_READ_OTHER( other );
 		if ( has_inline_buffer() )
 		{
 			_pData	  = get_inline_ptr();
@@ -319,7 +319,7 @@ namespace sw
 	inline vector<T, Allocator>::vector( vector&& other ) noexcept
 		: Allocator( std::move( other.get_allocator() ) )
 	{
-		ScopedRaceWrite lockOther( other._raceCtx );
+		SW_SCOPED_RACE_WRITE_OTHER( other );
 		if ( other.is_inline( other._pData ) )
 		{
 			_pData	  = get_inline_ptr();
@@ -378,8 +378,8 @@ namespace sw
 	{
 		if ( this != &other )
 		{
-			ScopedRaceWrite lockThis( _raceCtx );
-			ScopedRaceRead	lockOther( other._raceCtx );
+			SW_SCOPED_RACE_WRITE();
+			SW_SCOPED_RACE_READ_OTHER( other );
 			clearInternal();
 			reserveInternal( other._size );
 			for ( size_t index = 0; index < other._size; ++index )
@@ -396,8 +396,8 @@ namespace sw
 	{
 		if ( this != &other )
 		{
-			ScopedRaceWrite lockThis( _raceCtx );
-			ScopedRaceWrite lockOther( other._raceCtx );
+			SW_SCOPED_RACE_WRITE();
+			SW_SCOPED_RACE_WRITE_OTHER( other );
 			clearInternal();
 			if ( is_inline( _pData ) == false )
 			{
@@ -453,7 +453,7 @@ namespace sw
 	template <typename T, typename Allocator>
 	inline void vector<T, Allocator>::assign( size_type count, const T& value )
 	{
-		ScopedRaceWrite lock( _raceCtx );
+		SW_SCOPED_RACE_WRITE();
 		clearInternal();
 		reserveInternal( count );
 		for ( size_t index = 0; index < count; ++index )
@@ -467,7 +467,7 @@ namespace sw
 	template <class InputIt, typename std::enable_if_t<!std::is_integral_v<InputIt>, int32>>
 	inline void vector<T, Allocator>::assign( InputIt first, InputIt last )
 	{
-		ScopedRaceWrite lock( _raceCtx );
+		SW_SCOPED_RACE_WRITE();
 		clearInternal();
 		size_t count = static_cast<size_t>( std::distance( first, last ) );
 		reserveInternal( count );
@@ -486,14 +486,14 @@ namespace sw
 	template <typename T, typename Allocator>
 	inline typename vector<T, Allocator>::allocator_type vector<T, Allocator>::get_allocator() const noexcept
 	{
-		ScopedRaceRead lock( _raceCtx );
+		SW_SCOPED_RACE_READ();
 		return *this;
 	}
 
 	template <typename T, typename Allocator>
 	inline typename vector<T, Allocator>::reference vector<T, Allocator>::at( size_type pos )
 	{
-		ScopedRaceWrite lock( _raceCtx );
+		SW_SCOPED_RACE_WRITE();
 		SW_ASSERT( pos < _size );
 		return _pData[pos];
 	}
@@ -501,7 +501,7 @@ namespace sw
 	template <typename T, typename Allocator>
 	inline typename vector<T, Allocator>::const_reference vector<T, Allocator>::at( size_type pos ) const
 	{
-		ScopedRaceRead lock( _raceCtx );
+		SW_SCOPED_RACE_READ();
 		SW_ASSERT( pos < _size );
 		return _pData[pos];
 	}
@@ -509,7 +509,7 @@ namespace sw
 	template <typename T, typename Allocator>
 	inline typename vector<T, Allocator>::reference vector<T, Allocator>::operator[]( size_type pos )
 	{
-		ScopedRaceWrite lock( _raceCtx );
+		SW_SCOPED_RACE_WRITE();
 		SW_ASSERT( pos < _size );
 		return _pData[pos];
 	}
@@ -517,7 +517,7 @@ namespace sw
 	template <typename T, typename Allocator>
 	inline typename vector<T, Allocator>::const_reference vector<T, Allocator>::operator[]( size_type pos ) const
 	{
-		ScopedRaceRead lock( _raceCtx );
+		SW_SCOPED_RACE_READ();
 		SW_ASSERT( pos < _size );
 		return _pData[pos];
 	}
@@ -525,7 +525,7 @@ namespace sw
 	template <typename T, typename Allocator>
 	inline typename vector<T, Allocator>::reference vector<T, Allocator>::front()
 	{
-		ScopedRaceWrite lock( _raceCtx );
+		SW_SCOPED_RACE_WRITE();
 		SW_ASSERT( _size > 0 );
 		return _pData[0];
 	}
@@ -533,7 +533,7 @@ namespace sw
 	template <typename T, typename Allocator>
 	inline typename vector<T, Allocator>::const_reference vector<T, Allocator>::front() const
 	{
-		ScopedRaceRead lock( _raceCtx );
+		SW_SCOPED_RACE_READ();
 		SW_ASSERT( _size > 0 );
 		return _pData[0];
 	}
@@ -541,7 +541,7 @@ namespace sw
 	template <typename T, typename Allocator>
 	inline typename vector<T, Allocator>::reference vector<T, Allocator>::back()
 	{
-		ScopedRaceWrite lock( _raceCtx );
+		SW_SCOPED_RACE_WRITE();
 		SW_ASSERT( _size > 0 );
 		return _pData[_size - 1];
 	}
@@ -549,7 +549,7 @@ namespace sw
 	template <typename T, typename Allocator>
 	inline typename vector<T, Allocator>::const_reference vector<T, Allocator>::back() const
 	{
-		ScopedRaceRead lock( _raceCtx );
+		SW_SCOPED_RACE_READ();
 		SW_ASSERT( _size > 0 );
 		return _pData[_size - 1];
 	}
@@ -557,119 +557,119 @@ namespace sw
 	template <typename T, typename Allocator>
 	inline T* vector<T, Allocator>::data() noexcept
 	{
-		ScopedRaceWrite lock( _raceCtx );
+		SW_SCOPED_RACE_WRITE();
 		return _pData;
 	}
 
 	template <typename T, typename Allocator>
 	inline const T* vector<T, Allocator>::data() const noexcept
 	{
-		ScopedRaceRead lock( _raceCtx );
+		SW_SCOPED_RACE_READ();
 		return _pData;
 	}
 
 	template <typename T, typename Allocator>
 	inline typename vector<T, Allocator>::iterator vector<T, Allocator>::begin() noexcept
 	{
-		ScopedRaceRead lock( _raceCtx );
+		SW_SCOPED_RACE_READ();
 		return _pData;
 	}
 
 	template <typename T, typename Allocator>
 	inline typename vector<T, Allocator>::const_iterator vector<T, Allocator>::begin() const noexcept
 	{
-		ScopedRaceRead lock( _raceCtx );
+		SW_SCOPED_RACE_READ();
 		return _pData;
 	}
 
 	template <typename T, typename Allocator>
 	inline typename vector<T, Allocator>::const_iterator vector<T, Allocator>::cbegin() const noexcept
 	{
-		ScopedRaceRead lock( _raceCtx );
+		SW_SCOPED_RACE_READ();
 		return _pData;
 	}
 
 	template <typename T, typename Allocator>
 	inline typename vector<T, Allocator>::iterator vector<T, Allocator>::end() noexcept
 	{
-		ScopedRaceRead lock( _raceCtx );
+		SW_SCOPED_RACE_READ();
 		return _pData + _size;
 	}
 
 	template <typename T, typename Allocator>
 	inline typename vector<T, Allocator>::const_iterator vector<T, Allocator>::end() const noexcept
 	{
-		ScopedRaceRead lock( _raceCtx );
+		SW_SCOPED_RACE_READ();
 		return _pData + _size;
 	}
 
 	template <typename T, typename Allocator>
 	inline typename vector<T, Allocator>::const_iterator vector<T, Allocator>::cend() const noexcept
 	{
-		ScopedRaceRead lock( _raceCtx );
+		SW_SCOPED_RACE_READ();
 		return _pData + _size;
 	}
 
 	template <typename T, typename Allocator>
 	inline typename vector<T, Allocator>::reverse_iterator vector<T, Allocator>::rbegin() noexcept
 	{
-		ScopedRaceRead lock( _raceCtx );
+		SW_SCOPED_RACE_READ();
 		return reverse_iterator( end() );
 	}
 
 	template <typename T, typename Allocator>
 	inline typename vector<T, Allocator>::const_reverse_iterator vector<T, Allocator>::rbegin() const noexcept
 	{
-		ScopedRaceRead lock( _raceCtx );
+		SW_SCOPED_RACE_READ();
 		return const_reverse_iterator( end() );
 	}
 
 	template <typename T, typename Allocator>
 	inline typename vector<T, Allocator>::const_reverse_iterator vector<T, Allocator>::crbegin() const noexcept
 	{
-		ScopedRaceRead lock( _raceCtx );
+		SW_SCOPED_RACE_READ();
 		return const_reverse_iterator( cend() );
 	}
 
 	template <typename T, typename Allocator>
 	inline typename vector<T, Allocator>::reverse_iterator vector<T, Allocator>::rend() noexcept
 	{
-		ScopedRaceRead lock( _raceCtx );
+		SW_SCOPED_RACE_READ();
 		return reverse_iterator( begin() );
 	}
 
 	template <typename T, typename Allocator>
 	inline typename vector<T, Allocator>::const_reverse_iterator vector<T, Allocator>::rend() const noexcept
 	{
-		ScopedRaceRead lock( _raceCtx );
+		SW_SCOPED_RACE_READ();
 		return const_reverse_iterator( begin() );
 	}
 
 	template <typename T, typename Allocator>
 	inline typename vector<T, Allocator>::const_reverse_iterator vector<T, Allocator>::crend() const noexcept
 	{
-		ScopedRaceRead lock( _raceCtx );
+		SW_SCOPED_RACE_READ();
 		return const_reverse_iterator( cbegin() );
 	}
 
 	template <typename T, typename Allocator>
 	inline bool vector<T, Allocator>::empty() const noexcept
 	{
-		ScopedRaceRead lock( _raceCtx );
+		SW_SCOPED_RACE_READ();
 		return _size == 0;
 	}
 
 	template <typename T, typename Allocator>
 	inline typename vector<T, Allocator>::size_type vector<T, Allocator>::size() const noexcept
 	{
-		ScopedRaceRead lock( _raceCtx );
+		SW_SCOPED_RACE_READ();
 		return _size;
 	}
 
 	template <typename T, typename Allocator>
 	inline typename vector<T, Allocator>::size_type vector<T, Allocator>::capacity() const noexcept
 	{
-		ScopedRaceRead lock( _raceCtx );
+		SW_SCOPED_RACE_READ();
 		return _capacity;
 	}
 
@@ -682,14 +682,14 @@ namespace sw
 	template <typename T, typename Allocator>
 	inline void vector<T, Allocator>::reserve( size_type new_cap )
 	{
-		ScopedRaceWrite lock( _raceCtx );
+		SW_SCOPED_RACE_WRITE();
 		reserveInternal( new_cap );
 	}
 
 	template <typename T, typename Allocator>
 	inline void vector<T, Allocator>::shrink_to_fit()
 	{
-		ScopedRaceWrite lock( _raceCtx );
+		SW_SCOPED_RACE_WRITE();
 		if ( _capacity > _size && !is_inline( _pData ) )
 		{
 			if ( has_inline_buffer() && _size <= get_inline_cap() )
@@ -734,7 +734,7 @@ namespace sw
 	template <typename T, typename Allocator>
 	inline void vector<T, Allocator>::clear() noexcept
 	{
-		ScopedRaceWrite lock( _raceCtx );
+		SW_SCOPED_RACE_WRITE();
 		clearInternal();
 	}
 
@@ -747,7 +747,7 @@ namespace sw
 	template <typename T, typename Allocator>
 	inline typename vector<T, Allocator>::iterator vector<T, Allocator>::insert( const_iterator pos, T&& value )
 	{
-		ScopedRaceWrite lock( _raceCtx );
+		SW_SCOPED_RACE_WRITE();
 		size_t			offset = pos - _pData;
 		SW_ASSERT( offset <= _size );
 		if ( _size >= _capacity )
@@ -773,7 +773,7 @@ namespace sw
 	template <typename T, typename Allocator>
 	inline typename vector<T, Allocator>::iterator vector<T, Allocator>::insert( const_iterator pos, size_type count, const T& value )
 	{
-		ScopedRaceWrite lock( _raceCtx );
+		SW_SCOPED_RACE_WRITE();
 		size_t			offset = pos - _pData;
 		SW_ASSERT( offset <= _size );
 		if ( _size + count > _capacity )
@@ -837,7 +837,7 @@ namespace sw
 	template <typename T, typename Allocator>
 	inline typename vector<T, Allocator>::iterator vector<T, Allocator>::erase( const_iterator pos )
 	{
-		ScopedRaceWrite lock( _raceCtx );
+		SW_SCOPED_RACE_WRITE();
 		size_t			offset = pos - _pData;
 		SW_ASSERT( offset < _size );
 		for ( size_t itemIndex = offset; itemIndex < _size - 1; ++itemIndex )
@@ -852,7 +852,7 @@ namespace sw
 	template <typename T, typename Allocator>
 	inline typename vector<T, Allocator>::iterator vector<T, Allocator>::erase( const_iterator first, const_iterator last )
 	{
-		ScopedRaceWrite lock( _raceCtx );
+		SW_SCOPED_RACE_WRITE();
 		size_t			offset = first - _pData;
 		size_t			count  = last - first;
 		SW_ASSERT( offset + count <= _size );
@@ -874,7 +874,7 @@ namespace sw
 	template <typename T, typename Allocator>
 	inline void vector<T, Allocator>::push_back( const T& value )
 	{
-		ScopedRaceWrite lock( _raceCtx );
+		SW_SCOPED_RACE_WRITE();
 		if ( _size >= _capacity )
 		{
 			T copy = value;
@@ -891,7 +891,7 @@ namespace sw
 	template <typename T, typename Allocator>
 	inline void vector<T, Allocator>::push_back( T&& value )
 	{
-		ScopedRaceWrite lock( _raceCtx );
+		SW_SCOPED_RACE_WRITE();
 		if ( _size >= _capacity )
 			reserveInternal( _capacity == 0 ? 4 : _capacity * 2 );
 		sw_placement_new( ( _pData + ( _size ) ) ) T( std::move( value ) );
@@ -902,7 +902,7 @@ namespace sw
 	template <class... Args>
 	inline typename vector<T, Allocator>::reference vector<T, Allocator>::emplace_back( Args&&... args )
 	{
-		ScopedRaceWrite lock( _raceCtx );
+		SW_SCOPED_RACE_WRITE();
 		if ( _size >= _capacity )
 			reserveInternal( _capacity == 0 ? 4 : _capacity * 2 );
 		sw_placement_new( ( _pData + ( _size ) ) ) T( std::forward<Args>( args )... );
@@ -913,7 +913,7 @@ namespace sw
 	template <typename T, typename Allocator>
 	inline void vector<T, Allocator>::pop_back()
 	{
-		ScopedRaceWrite lock( _raceCtx );
+		SW_SCOPED_RACE_WRITE();
 		SW_ASSERT( _size > 0 );
 		_pData[_size - 1].~T();
 		--_size;
@@ -922,7 +922,7 @@ namespace sw
 	template <typename T, typename Allocator>
 	inline void vector<T, Allocator>::resize( size_type count )
 	{
-		ScopedRaceWrite lock( _raceCtx );
+		SW_SCOPED_RACE_WRITE();
 		if ( count < _size )
 		{
 			for ( size_t itemIndex = count; itemIndex < _size; ++itemIndex )
@@ -940,7 +940,7 @@ namespace sw
 	template <typename T, typename Allocator>
 	inline void vector<T, Allocator>::resize( size_type count, const value_type& value )
 	{
-		ScopedRaceWrite lock( _raceCtx );
+		SW_SCOPED_RACE_WRITE();
 		if ( count < _size )
 		{
 			for ( size_t itemIndex = count; itemIndex < _size; ++itemIndex )
@@ -958,8 +958,8 @@ namespace sw
 	template <typename T, typename Allocator>
 	inline void vector<T, Allocator>::swap( vector& other ) noexcept
 	{
-		ScopedRaceWrite lockThis( _raceCtx );
-		ScopedRaceWrite lockOther( other._raceCtx );
+		SW_SCOPED_RACE_WRITE();
+		SW_SCOPED_RACE_WRITE_OTHER( other );
 
 		if ( is_inline( _pData ) || other.is_inline( other._pData ) )
 		{
@@ -978,8 +978,8 @@ namespace sw
 	template <typename T, typename Allocator>
 	inline bool vector<T, Allocator>::operator==( const vector& other ) const
 	{
-		ScopedRaceRead lockThis( _raceCtx );
-		ScopedRaceRead lockOther( other._raceCtx );
+		SW_SCOPED_RACE_READ();
+		SW_SCOPED_RACE_READ_OTHER( other );
 		if ( _size != other._size )
 			return false;
 		for ( size_t index = 0; index < _size; ++index )
