@@ -6,7 +6,9 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 
-#include <cstring>
+#if !defined( SW_SHIPPING )
+	#include <cstring>
+#endif
 #include <variant>
 
 namespace sw
@@ -19,8 +21,10 @@ namespace sw
 		thread_local int32	   t_currentWorkerIndex	 = -1;		///< 현재 워커 스레드의 인덱스
 		thread_local TaskNode* t_pCurrentRunningTask = nullptr; ///< 현재 스레드에서 실행 중인 태스크 노드 포인터
 
-		constexpr uint32 kIdleSpinCount	   = 64;
+		constexpr uint32 kIdleSpinCount = 64;
+#if !defined( SW_SHIPPING )
 		constexpr uint32 kTaskNameCapacity = 31;
+#endif
 
 		/**
 		 * @brief 병렬 태스크 진입/퇴출 시 스레드 로컬 플래그를 관리하는 RAII 스코프 구조체
@@ -164,7 +168,9 @@ namespace sw
 
 		void release();
 
-		utf8				_arrName[kTaskNameCapacity + 1]{};
+#if !defined( SW_SHIPPING )
+		utf8 _arrName[kTaskNameCapacity + 1]{};
+#endif
 		InlineSuccessorList _successors;
 		TaskCallable		_callable;
 		SharedTaskCallable* _pSharedCallable{ nullptr };
@@ -187,6 +193,7 @@ namespace sw
 
 	static void setTaskName( TaskNode* pNode, string_view name )
 	{
+#if !defined( SW_SHIPPING )
 		if ( pNode == nullptr )
 			return;
 
@@ -196,6 +203,10 @@ namespace sw
 		if ( len > 0 )
 			std::memcpy( pNode->_arrName, name.data(), len );
 		pNode->_arrName[len] = 0;
+#else
+		(void)pNode;
+		(void)name;
+#endif
 	}
 
 	class TaskNodePool
@@ -269,9 +280,11 @@ namespace sw
 			pMem->_pOwner		   = nullptr;
 			pMem->_pParent		   = nullptr;
 			pMem->_pSharedCallable = nullptr;
-			pMem->_arrName[0]	   = 0;
-			pMem->_rangeStart	   = 0;
-			pMem->_rangeEnd		   = 0;
+#if !defined( SW_SHIPPING )
+			pMem->_arrName[0] = 0;
+#endif
+			pMem->_rangeStart = 0;
+			pMem->_rangeEnd	  = 0;
 			pMem->_affinity		   = TaskThreadAffinity::Any;
 			pMem->_priority		   = TaskPriority::Normal;
 			return pMem;
@@ -284,7 +297,9 @@ namespace sw
 			pNode->_successors.clearAndRelease();
 			pNode->_callable = std::monostate{};
 			pNode->_parentStage.reset();
+#if !defined( SW_SHIPPING )
 			pNode->_arrName[0] = 0;
+#endif
 			if ( pNode->_pSharedCallable != nullptr )
 			{
 				pNode->_pSharedCallable->release();
