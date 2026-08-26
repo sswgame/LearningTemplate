@@ -2,9 +2,10 @@
 
 #include "Engine/ECS/Registry.h"
 
+#include "Core/Task/TaskManager.h"
+
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectionCore.h"
-#include "Engine/Utility/Task/TaskManager.h"
 
 namespace sw
 {
@@ -299,11 +300,11 @@ namespace sw
 			const ComponentHandle* pRawHandles = wave.data();
 			const uint32		   totalCount  = static_cast<uint32>( wave.size() );
 			ParallelTaskDelegate   delegate	   = SW_DELEGATE_LAMBDA(
-				 ParallelTaskDelegate, [pRegistry, deltaTime, pRawHandles, totalCount]( uint32 index )
-			 {
-				 if ( index < totalCount )
-					 resolveAndTickVal( pRegistry, deltaTime, pRawHandles[index] );
-			 } );
+				ParallelTaskDelegate, [pRegistry, deltaTime, pRawHandles, totalCount]( uint32 index )
+			{
+				if ( index < totalCount )
+					resolveAndTickVal( pRegistry, deltaTime, pRawHandles[index] );
+			} );
 
 			TaskStageHandle stage  = engine::getTaskManager().createAnonymousStage( "ComponentWave" );
 			TaskHandle		handle = engine::getTaskManager().emplaceParallel( totalCount, delegate );
@@ -584,7 +585,7 @@ namespace sw
 				auto& sig	= it->second;
 				auto  sigIt = std::lower_bound( sig.begin(), sig.end(), matchedTypeId,
 												[]( const EntitySignatureEntry& entry, uint32 val )
-				 { return entry._typeId < val; } );
+				{ return entry._typeId < val; } );
 				if ( sigIt != sig.end() && sigIt->_typeId == matchedTypeId )
 					sig.erase( sigIt );
 			}

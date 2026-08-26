@@ -4,10 +4,10 @@
  */
 #pragma once
 #include "Core/Container/unordered_set.h"
+#include "Core/Task/TaskTypes.h"
 
 #include "Engine/EngineMinimal.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
-#include "Engine/Utility/Task/TaskTypes.h"
 
 namespace sw
 {

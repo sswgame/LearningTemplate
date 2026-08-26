@@ -2,9 +2,10 @@
 
 #include "TestFramework/TestFramework.h"
 
+#include "Core/Task/TaskManager.h"
+
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/Utility/Task/TaskManager.h"
 
 namespace test
 {

@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Memory/FrameArenaAllocator.h"
+#include "Core/Task/TaskManager.h"
 
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
@@ -18,7 +19,6 @@
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Scene/Scene.h"
-#include "Engine/Utility/Task/TaskManager.h"
 #include "Engine/Window/IWindow.h"
 
 #include "TestFramework/TestFramework.h"

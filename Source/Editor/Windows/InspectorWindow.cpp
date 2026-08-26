@@ -4,6 +4,7 @@
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/Task/TaskTypes.h"
 
 #include "Editor/Common/EditorConstants.h"
 #include "Editor/Config/EditorData.h"
@@ -22,7 +23,6 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Utility/CommandStack.h"
-#include "Engine/Utility/Task/TaskTypes.h"
 
 #include "RuntimeAPI/EditorService.h"
 #include "RuntimeAPI/EditorUIContext.h"

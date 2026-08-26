@@ -9,11 +9,11 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Task/TaskTypes.h"
 
 #include "Engine/Common/Common.h"
 #include "Engine/Graphics/RenderPass/RenderPassResource.h"
 #include "Engine/Reflection/ReflectionCore.h"
-#include "Engine/Utility/Task/TaskTypes.h"
 
 namespace sw
 {

@@ -29,7 +29,8 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
 - **Input/**: `InputManager` + `ActionMap` (XML 레이어/트리거). 플랫폼별 구현 분리
 - **Window/** · **Audio/** · **Game/** (`GameState`)
 - **Physics/** · **Animation/**: 실험용 스텁 (각 폴더 README)
-- **Utility/**: LiveReload, Task([Task/README.md](Utility/Task/README.md)), Archive, Xml, Json, Resource
+- **Utility/**: LiveReload, Archive, Xml, Json, Resource
+- **Task 시스템**: Core의 [Task/README.md](../Core/Task/README.md) (`TaskManager` / `TaskHandle`)
 
 ## 동작 방식
 - **개발 모드(Dev)**: `SHARED` (DLL) 형태로 빌드되어 동적으로 로드됩니다.

@@ -2,8 +2,9 @@
 
 #include "Engine/Audio/XAudio2System.h"
 
+#include "Core/Task/TaskManager.h"
+
 #include "Engine/Common/EngineServices.h"
-#include "Engine/Utility/Task/TaskManager.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
 	#include <mfapi.h>

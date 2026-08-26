@@ -2,11 +2,12 @@
 
 #include "Engine/Graphics/RenderPass/RenderPipelineResource.h"
 
+#include "Core/Task/TaskManager.h"
+
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RenderPass/RenderPassXmlUtil.h"
 #include "Engine/Utility/Resource/AssetFormat.h"
 #include "Engine/Utility/Resource/ResourceManager.h"
-#include "Engine/Utility/Task/TaskManager.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
 
 namespace sw

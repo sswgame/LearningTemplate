@@ -155,7 +155,7 @@ waitStage / waitAll
 ```
 
 같은 엔티티의 여러 컴포넌트가 한 웨이브에 겹치지 않도록 서브웨이브로 쪼갭니다.  
-→ 엔티티 내부 레이스를 줄이기 위함입니다. ([Task README](../Utility/Task/README.md))
+→ 엔티티 내부 레이스를 줄이기 위함입니다. ([Task README](../../Core/Task/README.md))
 
 ---
 
@@ -174,6 +174,6 @@ waitStage / waitAll
 ## 더 볼 곳
 
 - [Object/README.md](../Object/README.md) — GO · addComponent · 틱 흐름  
-- [Task/README.md](../Utility/Task/README.md) — 병렬 웨이브  
+- [Task/README.md](../../Core/Task/README.md) — 병렬 웨이브  
 - [Reflection/README.md](../Reflection/README.md) — 컴포넌트 타입 ID · 팩토리  
 - `Registry.h` — API 주석

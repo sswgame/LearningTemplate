@@ -1,15 +1,15 @@
 # Task (TaskManager · 비동기 작업)
 
-> **[🏠 위키 홈으로 돌아가기](../../../../README.md)** | **[📖 서브시스템 목록](../../../../docs/02_EngineSubsystems.md)**
+> **[🏠 위키 홈으로 돌아가기](../../../README.md)** | **[📖 서브시스템 목록](../../../docs/02_EngineSubsystems.md)**
 > ---
 
 엔진의 **스레드 풀 + 작업 스케줄러**입니다.  
 무거운 일을 워커 스레드에 맡기거나, 여러 일을 의존성(순서) 있게 이어서 실행할 때 사용합니다.
 
-경로: `Source/Engine/Utility/Task/`  
+경로: `Source/Core/Task/`  
 접근: App/Engine 쪽에서는 `engine::getTaskManager()` (Editor는 `editor::getTaskManager()`)
 
-관련: [엔진 개요](../../README.md) · [Object 틱과의 관계](../../Object/README.md)
+관련: [Core 개요](../README.md) · [엔진 개요](../../Engine/README.md) · [Object 틱과의 관계](../../Engine/Object/README.md)
 
 ---
 
@@ -294,5 +294,5 @@ Games에서 `EngineServices` 를 include 하지 않는 규칙은 [Object README]
 
 - `TaskManager.h` — API 주석  
 - `TaskTypes.h` — `TaskHandle::precede` / `then` / `submit`  
-- [Object/README.md](../../Object/README.md) — 병렬 tick과 `waitAll` 타이밍  
-- [ARCHITECTURE.md](../../../../ARCHITECTURE.md) — 병렬 tick Gotcha
+- [Object/README.md](../../Engine/Object/README.md) — 병렬 tick과 `waitAll` 타이밍  
+- [ARCHITECTURE.md](../../../ARCHITECTURE.md) — 병렬 tick Gotcha

@@ -4,9 +4,7 @@
  */
 #pragma once
 #include "Core/Concurrency/mutex.h"
-
-#include "Engine/EngineMinimal.h"
-#include "Engine/Utility/Task/TaskTypes.h"
+#include "Core/Task/TaskTypes.h"
 
 #include <atomic>
 #include <condition_variable>

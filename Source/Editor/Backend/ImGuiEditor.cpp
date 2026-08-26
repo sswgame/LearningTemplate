@@ -3,6 +3,7 @@
 #include "Editor/Backend/ImGuiEditor.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/Task/TaskManager.h"
 
 #include "Editor/Backend/IImGuiPlatformBackend.h"
 #include "Editor/Backend/IImGuiRendererBackend.h"
@@ -30,7 +31,6 @@
 #include "Engine/Serialization/Format/JsonSerializer.h"
 #include "Engine/Utility/CommandStack.h"
 #include "Engine/Utility/File/KeyValueFile.h"
-#include "Engine/Utility/Task/TaskManager.h"
 #include "Engine/Window/NativeWindowEvent.h"
 
 #include "RuntimeAPI/EditorModuleExports.h"

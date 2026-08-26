@@ -3,8 +3,9 @@
  * @brief FUNCTION 호출을 Binary 봉투로 로컬 pack/unpack (네트워크 전송은 별도)
  */
 #pragma once
+#include "Core/Task/TaskTypes.h"
+
 #include "Engine/EngineMinimal.h"
-#include "Engine/Utility/Task/TaskTypes.h"
 
 namespace sw
 {

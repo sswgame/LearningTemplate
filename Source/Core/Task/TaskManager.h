@@ -9,8 +9,7 @@
 #include "Core/Concurrency/ConcurrentQueue.h"
 #include "Core/Concurrency/WorkStealingDeque.h"
 #include "Core/Concurrency/mutex.h"
-
-#include "Engine/Utility/Task/TaskTypes.h"
+#include "Core/Task/TaskTypes.h"
 
 namespace sw
 {

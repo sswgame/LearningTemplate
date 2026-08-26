@@ -7,9 +7,9 @@
  */
 #pragma once
 #include "Core/Concurrency/mutex.h"
+#include "Core/Task/TaskTypes.h"
 
 #include "Engine/Graphics/Material/MaterialTypes.h"
-#include "Engine/Utility/Task/TaskTypes.h"
 
 namespace sw
 {

@@ -5,6 +5,7 @@
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Event/EventDispatcher.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Task/TaskManager.h"
 
 #include "Engine/Audio/IAudioSystem.h"
 #include "Engine/ECS/Registry.h"
@@ -14,7 +15,6 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Utility/Resource/ResourceManager.h"
-#include "Engine/Utility/Task/TaskManager.h"
 
 #include "RuntimeAPI/PluginAPI.h"
 

@@ -4,11 +4,11 @@
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Memory/MemoryProfiler.h"
+#include "Core/Task/TaskManager.h"
 
 #include "Engine/Localization/StringTable.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Utility/Resource/ResourceManager.h"
-#include "Engine/Utility/Task/TaskManager.h"
 
 namespace sw
 {

@@ -448,7 +448,7 @@ auto handle = sw::ReloadFileManager::get().registerWatch(
 CPU 코어를 100% 활용할 수 있는 작업 훔치기(Work-stealing) 기반 비동기 태스크 시스템입니다.
 
 ```cpp
-#include "Engine/Utility/Task/TaskManager.h"
+#include "Core/Task/TaskManager.h"
 
 // 1. 백그라운드 비동기 태스크 디스패치
 auto task = sw::TaskManager::get().run( sw::TaskPriority::Normal, []()
@@ -632,8 +632,8 @@ C++20 코루틴을 사용할 수 없는 C++17 환경에서도 콜백 지옥 없�
 | **주요 사용처** | 씬 트랜스폼 계산, 물리 시뮬레이션, 렌더 패스 DAG, 파티클 | 에셋 스트리밍, 네트워크 패킷 파싱, 설정 파일 비동기 로드/변환 |
 
 ```cpp
-#include "Engine/Utility/Task/TaskFuture.h"
-#include "Engine/Utility/Task/TaskManager.h"
+#include "Core/Task/TaskFuture.h"
+#include "Core/Task/TaskManager.h"
 
 // [예제 1]: Fluent Monadic 체이닝 (.then) - 데이터 흐름 파이프라인
 sw::TaskPromise<int32> promise;

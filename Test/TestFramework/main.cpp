@@ -6,6 +6,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Memory/FrameArenaAllocator.h"
 #include "Core/Memory/MemoryProfiler.h"
+#include "Core/Task/TaskManager.h"
 
 #include "Engine/Audio/IAudioSystem.h"
 #include "Engine/Common/EngineServices.h"
@@ -23,7 +24,6 @@
 #include "Engine/Utility/Module/LiveReloadManager.h"
 #include "Engine/Utility/Resource/AssetStreamingQueue.h"
 #include "Engine/Utility/Resource/ResourceManager.h"
-#include "Engine/Utility/Task/TaskManager.h"
 
 #include "RuntimeAPI/GameService.h"
 #include "RuntimeAPI/PluginAPI.h"

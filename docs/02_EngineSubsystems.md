@@ -20,10 +20,10 @@ SW Engine은 철저하게 모듈화되어 있으며, 각 기능은 서브시스�
   - **문서 이동:** `Source/Engine/Object/README.md`
 
 ### 3. 비동기 작업 및 스레드 (Task System)
-- **[TaskManager](../Source/Engine/Utility/Task/README.md)**
-  - 워커 스레드 풀과 작업 스케줄러(DAG) 시스템입니다.
+- **[TaskManager](../Source/Core/Task/README.md)**
+  - 워커 스레드 풀과 작업 스케줄러(DAG) 시스템입니다. Foundation(`Source/Core`)에 있습니다.
   - 병렬 틱(Parallel Tick) 처리, Work-Stealing, 안전한 동기화 및 큐 비우기(`clear`)를 지원하여 엔진의 퍼포먼스를 극대화합니다.
-  - **문서 이동:** `Source/Engine/Utility/Task/README.md`
+  - **문서 이동:** `Source/Core/Task/README.md`
 
 ### 4. 리플렉션 및 파서 (Reflection & Parser)
 - **[Reflection Core](../Source/Engine/Reflection/README.md)** 

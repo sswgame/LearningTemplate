@@ -1,12 +1,10 @@
 #include "pch.h"
 
-#include "Engine/Utility/Task/TaskManager.h"
+#include "Core/Task/TaskManager.h"
 
 #include "Core/Concurrency/mutex.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
-
-#include "Engine/Common/EngineServices.h"
 
 #include <variant>
 
@@ -156,6 +154,7 @@ namespace sw
 		std::atomic<TaskState> _state{ TaskState::Pending };
 		std::atomic<bool>	   _bCancelled{ false };
 
+		TaskManager*	   _pOwner{ nullptr };
 		TaskNode*		   _pParent{ nullptr };
 		std::atomic<int32> _activeChildren{ 0 };
 		std::atomic<int32> _refCount{ 1 };
@@ -229,6 +228,7 @@ namespace sw
 			pMem->_state.store( TaskState::Pending, std::memory_order_relaxed );
 			pMem->_bCancelled.store( false, std::memory_order_relaxed );
 			pMem->_refCount.store( 1, std::memory_order_relaxed );
+			pMem->_pOwner	  = nullptr;
 			pMem->_pParent	  = nullptr;
 			pMem->_rangeStart = 0;
 			pMem->_rangeEnd	  = 0;
@@ -245,6 +245,7 @@ namespace sw
 			pNode->_callable = std::monostate{};
 			pNode->_parentStage.reset();
 			pNode->_name.clear();
+			pNode->_pOwner = nullptr;
 
 			if ( _freeQueue.enqueue( pNode ) == false )
 			{
@@ -391,7 +392,10 @@ namespace sw
 
 	TaskHandle TaskHandle::then( TaskDelegate nextTaskDelegate, TaskThreadAffinity affinity )
 	{
-		TaskHandle nextTask = engine::getTaskManager().emplaceTask( "ChainedTask", nextTaskDelegate, affinity );
+		if ( _pNode == nullptr || _pNode->_pOwner == nullptr )
+			return TaskHandle{};
+
+		TaskHandle nextTask = _pNode->_pOwner->emplaceTask( "ChainedTask", nextTaskDelegate, affinity );
 		precede( nextTask );
 		return nextTask;
 	}
@@ -413,7 +417,9 @@ namespace sw
 
 	void TaskHandle::submit()
 	{
-		engine::getTaskManager().submit( *this );
+		if ( _pNode == nullptr || _pNode->_pOwner == nullptr )
+			return;
+		_pNode->_pOwner->submit( *this );
 	}
 
 	TaskStageHandle& TaskStageHandle::addTask( TaskHandle task )
@@ -550,6 +556,7 @@ namespace sw
 		}
 
 		TaskNode* pNode	 = TaskNodePool::get().allocate();
+		pNode->_pOwner	 = this;
 		pNode->_name	 = name;
 		pNode->_affinity = affinity;
 		pNode->_callable = delegate;
@@ -579,6 +586,7 @@ namespace sw
 		}
 
 		TaskNode* pNode	 = TaskNodePool::get().allocate();
+		pNode->_pOwner	 = this;
 		pNode->_name	 = name;
 		pNode->_affinity = affinity;
 		pNode->_callable = TaskArgsPayload{ delegate, args };
@@ -619,6 +627,7 @@ namespace sw
 			uint32	  end	   = MathUtil::min( start + chunkSize, count );
 			TaskNode* pSubTask = TaskNodePool::get().allocate();
 
+			pSubTask->_pOwner	  = this;
 			pSubTask->_name		  = string( name ) + "_Chunk";
 			pSubTask->_callable	  = delegate;
 			pSubTask->_rangeStart = start;
@@ -656,6 +665,7 @@ namespace sw
 			uint32	  chunkEnd	 = MathUtil::min( chunkStart + chunkSize, end );
 			TaskNode* pSubTask	 = TaskNodePool::get().allocate();
 
+			pSubTask->_pOwner	  = this;
 			pSubTask->_name		  = "ParallelBlockTask_Chunk";
 			pSubTask->_callable	  = delegate;
 			pSubTask->_rangeStart = chunkStart;
