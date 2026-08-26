@@ -164,7 +164,12 @@ namespace sw
 		void setValue( ObjectType* pInstance, const T& newValue ) const
 		{
 			T* pPtr = reinterpret_cast<T*>( reinterpret_cast<utf8*>( pInstance ) + _offset );
-			if ( *pPtr == newValue )
+			if constexpr ( std::is_same_v<T, float32> || std::is_same_v<T, float64> )
+			{
+				if ( MathUtil::nearEqual( *pPtr, newValue ) )
+					return;
+			}
+			else if ( *pPtr == newValue )
 				return;
 
 			*pPtr = newValue;
