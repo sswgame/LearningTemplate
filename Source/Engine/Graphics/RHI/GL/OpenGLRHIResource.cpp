@@ -212,6 +212,10 @@ namespace sw
 
 	RHIPipelineStateHandle OpenGLRHIResource::createComputePipelineState( string_view shaderPath, string_view entryPoint )
 	{
+		if ( _pDevice->_bInitialized == false )
+			return 0;
+
+		ScopedOpenGLContext						   ctxScope( _pDevice );
 		OpenGLRHIDevice::OpenGLPipelineStateRecord record{};
 
 		ShaderCompileDesc csDesc{};
