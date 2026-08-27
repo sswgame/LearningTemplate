@@ -2,6 +2,7 @@
 
 #include "Editor/Panels/Inspector/InspectorPropertyUndo.h"
 
+#include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
 #include "Engine/Utility/CommandStack.h"
@@ -12,7 +13,7 @@
 
 namespace sw::editor
 {
-	void trackPodPropertyUndo( void* pData, size_t size, const utf8* pLabel )
+	void InspectorPropertyUndo::trackPod( void* pData, size_t size, const utf8* pLabel )
 	{
 		if ( pData == nullptr || size == 0 || size > 512 )
 			return;
@@ -33,7 +34,8 @@ namespace sw::editor
 			e._pPtr	 = pData;
 			e._size	 = size;
 			e._label = ( pLabel != nullptr ) ? pLabel : "Property";
-			e._listBefore.assign( static_cast<const uint8*>( pData ), static_cast<const uint8*>( pData ) + size );
+			e._listBefore.resize( size );
+			Memory::copy( e._listBefore.data(), pData, size );
 			s_mapPending[id] = std::move( e );
 		}
 		if ( ImGui::IsItemDeactivatedAfterEdit() == false )
@@ -43,7 +45,8 @@ namespace sw::editor
 		if ( it == s_mapPending.end() )
 			return;
 
-		vector<uint8> after( static_cast<const uint8*>( pData ), static_cast<const uint8*>( pData ) + size );
+		vector<uint8> after( size );
+		Memory::copy( after.data(), pData, size );
 		if ( after == it->second._listBefore )
 		{
 			s_mapPending.erase( it );
@@ -56,23 +59,23 @@ namespace sw::editor
 		const string  lbl		 = string( "Edit " ) + it->second._label;
 		s_mapPending.erase( it );
 
-		uint64				  selectedId = EditorWorkspace::selectedObjectId();
+		uint64				  selectedId = EditorContext::get()->getWorkspace().getSelectedObjectId();
 		CommandStack::Command cmd;
 		cmd._label = lbl;
 		cmd._undo  = [pPtr, sz, listBefore, selectedId]()
 		{
-			if ( pPtr != nullptr && ( selectedId == 0 || EditorWorkspace::selectedObjectId() == selectedId ) )
+			if ( pPtr != nullptr && ( selectedId == 0 || EditorContext::get()->getWorkspace().getSelectedObjectId() == selectedId ) )
 				Memory::copy( pPtr, listBefore.data(), sz );
 		};
 		cmd._redo = [pPtr, sz, after, selectedId]()
 		{
-			if ( pPtr != nullptr && ( selectedId == 0 || EditorWorkspace::selectedObjectId() == selectedId ) )
+			if ( pPtr != nullptr && ( selectedId == 0 || EditorContext::get()->getWorkspace().getSelectedObjectId() == selectedId ) )
 				Memory::copy( pPtr, after.data(), sz );
 		};
 		editor::getService<CommandStack>()->push( std::move( cmd ) );
 	}
 
-	void trackStringPropertyUndo( string* pPtr, const utf8* pLabel )
+	void InspectorPropertyUndo::trackString( string* pPtr, const utf8* pLabel )
 	{
 		if ( pPtr == nullptr )
 			return;
@@ -108,17 +111,17 @@ namespace sw::editor
 		const string lbl	 = string( "Edit " ) + it->second._label;
 		s_mapPending.erase( it );
 
-		uint64				  selectedId = EditorWorkspace::selectedObjectId();
+		uint64				  selectedId = EditorContext::get()->getWorkspace().getSelectedObjectId();
 		CommandStack::Command cmd;
 		cmd._label = lbl;
 		cmd._undo  = [pTarget, before, selectedId]()
 		{
-			if ( pTarget != nullptr && ( selectedId == 0 || EditorWorkspace::selectedObjectId() == selectedId ) )
+			if ( pTarget != nullptr && ( selectedId == 0 || EditorContext::get()->getWorkspace().getSelectedObjectId() == selectedId ) )
 				*pTarget = before;
 		};
 		cmd._redo = [pTarget, after, selectedId]()
 		{
-			if ( pTarget != nullptr && ( selectedId == 0 || EditorWorkspace::selectedObjectId() == selectedId ) )
+			if ( pTarget != nullptr && ( selectedId == 0 || EditorContext::get()->getWorkspace().getSelectedObjectId() == selectedId ) )
 				*pTarget = after;
 		};
 		editor::getService<CommandStack>()->push( std::move( cmd ) );

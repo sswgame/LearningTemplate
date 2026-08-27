@@ -11,158 +11,9 @@
 
 namespace sw::editor
 {
-	namespace
-	{
-		SelectionManager* getImpl()
-		{
-			EditorContext* pContext = EditorContext::get();
-			if ( pContext != nullptr )
-				return &pContext->getSelectionManager();
-			return nullptr;
-		}
-
-		const vector<GameObjectPtr> s_emptyObjects{};
-		const vector<string>		s_emptyAssets{};
-		Delegate<void()>			s_emptyDelegate{};
-	} // namespace
-
-	// ------------------------------------------------------------------------------
-	// Static Methods
-	// ------------------------------------------------------------------------------
 	void SelectionManager::selectObject( GameObjectPtr pObj, SelectionMode mode )
 	{
-		SelectionManager* pManager = getImpl();
-		if ( pManager != nullptr )
-			pManager->selectObjectImpl( pObj, mode );
-	}
-
-	void SelectionManager::selectObjects( const vector<GameObjectPtr>& listObjs, SelectionMode mode )
-	{
-		SelectionManager* pManager = getImpl();
-		if ( pManager != nullptr )
-			pManager->selectObjectsImpl( listObjs, mode );
-	}
-
-	bool SelectionManager::hasObject( const GameObjectPtr& pObj )
-	{
-		SelectionManager* pManager = getImpl();
-		if ( pManager != nullptr )
-			return pManager->hasObjectImpl( pObj );
-		return false;
-	}
-
-	GameObjectPtr SelectionManager::getPrimaryObject()
-	{
-		SelectionManager* pManager = getImpl();
-		if ( pManager != nullptr )
-			return pManager->getPrimaryObjectImpl();
-		return GameObjectPtr{};
-	}
-
-	uint64 SelectionManager::getPrimaryObjectId()
-	{
-		SelectionManager* pManager = getImpl();
-		if ( pManager != nullptr )
-			return pManager->getPrimaryObjectIdImpl();
-		return 0;
-	}
-
-	const vector<GameObjectPtr>& SelectionManager::getSelectedObjects()
-	{
-		SelectionManager* pManager = getImpl();
-		if ( pManager != nullptr )
-			return pManager->getSelectedObjectsImpl();
-		return s_emptyObjects;
-	}
-
-	size_t SelectionManager::getSelectedObjectCount()
-	{
-		SelectionManager* pManager = getImpl();
-		if ( pManager != nullptr )
-			return pManager->getSelectedObjectCountImpl();
-		return 0;
-	}
-
-	void SelectionManager::selectAsset( string_view assetPath, SelectionMode mode )
-	{
-		SelectionManager* pManager = getImpl();
-		if ( pManager != nullptr )
-			pManager->selectAssetImpl( assetPath, mode );
-	}
-
-	void SelectionManager::selectAssets( const vector<string>& listAssetPaths, SelectionMode mode )
-	{
-		SelectionManager* pManager = getImpl();
-		if ( pManager != nullptr )
-			pManager->selectAssetsImpl( listAssetPaths, mode );
-	}
-
-	bool SelectionManager::hasAsset( string_view assetPath )
-	{
-		SelectionManager* pManager = getImpl();
-		if ( pManager != nullptr )
-			return pManager->hasAssetImpl( assetPath );
-		return false;
-	}
-
-	string_view SelectionManager::getPrimaryAsset()
-	{
-		SelectionManager* pManager = getImpl();
-		if ( pManager != nullptr )
-			return pManager->getPrimaryAssetImpl();
-		return {};
-	}
-
-	const vector<string>& SelectionManager::getSelectedAssets()
-	{
-		SelectionManager* pManager = getImpl();
-		if ( pManager != nullptr )
-			return pManager->getSelectedAssetsImpl();
-		return s_emptyAssets;
-	}
-
-	void SelectionManager::clearObjectSelection()
-	{
-		SelectionManager* pManager = getImpl();
-		if ( pManager != nullptr )
-			pManager->clearObjectSelectionImpl();
-	}
-
-	void SelectionManager::clearAssetSelection()
-	{
-		SelectionManager* pManager = getImpl();
-		if ( pManager != nullptr )
-			pManager->clearAssetSelectionImpl();
-	}
-
-	void SelectionManager::clearAll()
-	{
-		SelectionManager* pManager = getImpl();
-		if ( pManager != nullptr )
-			pManager->clearAllImpl();
-	}
-
-	void SelectionManager::pruneInvalid()
-	{
-		SelectionManager* pManager = getImpl();
-		if ( pManager != nullptr )
-			pManager->pruneInvalidImpl();
-	}
-
-	Delegate<void()>& SelectionManager::onSelectionChanged()
-	{
-		SelectionManager* pManager = getImpl();
-		if ( pManager != nullptr )
-			return pManager->onSelectionChangedImpl();
-		return s_emptyDelegate;
-	}
-
-	// ------------------------------------------------------------------------------
-	// Instance Implementations
-	// ------------------------------------------------------------------------------
-	void SelectionManager::selectObjectImpl( GameObjectPtr pObj, SelectionMode mode )
-	{
-		pruneInvalidImpl();
+		pruneInvalid();
 
 		switch ( mode )
 		{
@@ -175,7 +26,7 @@ namespace sw::editor
 			}
 			case SelectionMode::Add:
 			{
-				if ( pObj.isValid() && hasObjectImpl( pObj ) == false )
+				if ( pObj.isValid() && hasObject( pObj ) == false )
 					_listSelectedObjects.push_back( pObj );
 				break;
 			}
@@ -200,9 +51,9 @@ namespace sw::editor
 		notifyChanged();
 	}
 
-	void SelectionManager::selectObjectsImpl( const vector<GameObjectPtr>& listObjs, SelectionMode mode )
+	void SelectionManager::selectObjects( const vector<GameObjectPtr>& listObjs, SelectionMode mode )
 	{
-		pruneInvalidImpl();
+		pruneInvalid();
 
 		if ( mode == SelectionMode::Replace )
 			_listSelectedObjects.clear();
@@ -218,7 +69,7 @@ namespace sw::editor
 				if ( it != _listSelectedObjects.end() )
 					_listSelectedObjects.erase( it );
 			}
-			else if ( hasObjectImpl( pObj ) == false )
+			else if ( hasObject( pObj ) == false )
 			{
 				_listSelectedObjects.push_back( pObj );
 			}
@@ -227,20 +78,20 @@ namespace sw::editor
 		notifyChanged();
 	}
 
-	bool SelectionManager::hasObjectImpl( const GameObjectPtr& pObj ) const
+	bool SelectionManager::hasObject( const GameObjectPtr& pObj ) const
 	{
 		return std::find( _listSelectedObjects.begin(), _listSelectedObjects.end(), pObj ) !=
 			   _listSelectedObjects.end();
 	}
 
-	GameObjectPtr SelectionManager::getPrimaryObjectImpl() const
+	GameObjectPtr SelectionManager::getPrimaryObject() const
 	{
 		if ( _listSelectedObjects.empty() )
 			return GameObjectPtr{};
 		return _listSelectedObjects.front();
 	}
 
-	uint64 SelectionManager::getPrimaryObjectIdImpl() const
+	uint64 SelectionManager::getPrimaryObjectId() const
 	{
 		if ( _listSelectedObjects.empty() )
 			return 0;
@@ -248,39 +99,37 @@ namespace sw::editor
 		return ( pRaw != nullptr ) ? pRaw->getObjectId() : 0;
 	}
 
-	void SelectionManager::selectAssetImpl( string_view assetPath, SelectionMode mode )
+	void SelectionManager::selectAsset( string_view assetPath, SelectionMode mode )
 	{
-		const string pathStr{ assetPath };
-
 		switch ( mode )
 		{
 			case SelectionMode::Replace:
 			{
 				_listSelectedAssets.clear();
-				if ( pathStr.empty() == false )
-					_listSelectedAssets.push_back( pathStr );
+				if ( assetPath.empty() == false )
+					_listSelectedAssets.emplace_back( assetPath );
 				break;
 			}
 			case SelectionMode::Add:
 			{
-				if ( pathStr.empty() == false && hasAssetImpl( assetPath ) == false )
-					_listSelectedAssets.push_back( pathStr );
+				if ( assetPath.empty() == false && hasAsset( assetPath ) == false )
+					_listSelectedAssets.emplace_back( assetPath );
 				break;
 			}
 			case SelectionMode::Remove:
 			{
-				auto it = std::find( _listSelectedAssets.begin(), _listSelectedAssets.end(), pathStr );
+				auto it = std::find( _listSelectedAssets.begin(), _listSelectedAssets.end(), assetPath );
 				if ( it != _listSelectedAssets.end() )
 					_listSelectedAssets.erase( it );
 				break;
 			}
 			case SelectionMode::Toggle:
 			{
-				auto it = std::find( _listSelectedAssets.begin(), _listSelectedAssets.end(), pathStr );
+				auto it = std::find( _listSelectedAssets.begin(), _listSelectedAssets.end(), assetPath );
 				if ( it != _listSelectedAssets.end() )
 					_listSelectedAssets.erase( it );
-				else if ( pathStr.empty() == false )
-					_listSelectedAssets.push_back( pathStr );
+				else if ( assetPath.empty() == false )
+					_listSelectedAssets.emplace_back( assetPath );
 				break;
 			}
 		}
@@ -288,7 +137,7 @@ namespace sw::editor
 		notifyChanged();
 	}
 
-	void SelectionManager::selectAssetsImpl( const vector<string>& listAssetPaths, SelectionMode mode )
+	void SelectionManager::selectAssets( const vector<string>& listAssetPaths, SelectionMode mode )
 	{
 		if ( mode == SelectionMode::Replace )
 			_listSelectedAssets.clear();
@@ -304,7 +153,7 @@ namespace sw::editor
 				if ( it != _listSelectedAssets.end() )
 					_listSelectedAssets.erase( it );
 			}
-			else if ( hasAssetImpl( path ) == false )
+			else if ( hasAsset( path ) == false )
 			{
 				_listSelectedAssets.push_back( path );
 			}
@@ -313,20 +162,20 @@ namespace sw::editor
 		notifyChanged();
 	}
 
-	bool SelectionManager::hasAssetImpl( string_view assetPath ) const
+	bool SelectionManager::hasAsset( string_view assetPath ) const
 	{
-		return std::find( _listSelectedAssets.begin(), _listSelectedAssets.end(), string{ assetPath } ) !=
+		return std::find( _listSelectedAssets.begin(), _listSelectedAssets.end(), assetPath ) !=
 			   _listSelectedAssets.end();
 	}
 
-	string_view SelectionManager::getPrimaryAssetImpl() const
+	string_view SelectionManager::getPrimaryAsset() const
 	{
 		if ( _listSelectedAssets.empty() )
 			return {};
 		return _listSelectedAssets.front();
 	}
 
-	void SelectionManager::clearObjectSelectionImpl()
+	void SelectionManager::clearObjectSelection()
 	{
 		if ( _listSelectedObjects.empty() == false )
 		{
@@ -335,7 +184,7 @@ namespace sw::editor
 		}
 	}
 
-	void SelectionManager::clearAssetSelectionImpl()
+	void SelectionManager::clearAssetSelection()
 	{
 		if ( _listSelectedAssets.empty() == false )
 		{
@@ -344,22 +193,29 @@ namespace sw::editor
 		}
 	}
 
-	void SelectionManager::clearAllImpl()
+	void SelectionManager::clearAll()
 	{
-		const bool bHadAny = ( _listSelectedObjects.empty() == false ) || ( _listSelectedAssets.empty() == false );
+		const bool bHadObjects = _listSelectedObjects.empty() == false;
+		const bool bHadAssets  = _listSelectedAssets.empty() == false;
+
 		_listSelectedObjects.clear();
 		_listSelectedAssets.clear();
-		if ( bHadAny )
+
+		if ( bHadObjects || bHadAssets )
 			notifyChanged();
 	}
 
-	void SelectionManager::pruneInvalidImpl()
+	void SelectionManager::pruneInvalid()
 	{
+		const size_t countBefore = _listSelectedObjects.size();
 		_listSelectedObjects.erase(
 			std::remove_if( _listSelectedObjects.begin(), _listSelectedObjects.end(),
 							[]( const GameObjectPtr& pObj )
 		{ return pObj.isValid() == false; } ),
 			_listSelectedObjects.end() );
+
+		if ( _listSelectedObjects.size() != countBefore )
+			notifyChanged();
 	}
 
 	void SelectionManager::notifyChanged()

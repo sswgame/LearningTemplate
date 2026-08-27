@@ -1,10 +1,10 @@
 #include "pch.h"
 
+#include "Editor/Panels/Inspector/InspectorPropertyManager.h"
+
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Panels/Inspector/IInspectorProperty.h"
-#include "Editor/Panels/Inspector/InspectorBuiltin.h"
-#include "Editor/Panels/Inspector/InspectorPropertyRegistry.h"
 #include "Editor/Panels/Inspector/InspectorPropertyUndo.h"
 
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -36,6 +36,7 @@ namespace sw::editor
 				showTooltipIfHovered( prop );
 			}
 		};
+
 		class Int32Property : public BuiltinPropertyBase
 		{
 		public:
@@ -62,7 +63,7 @@ namespace sw::editor
 					ImGui::DragInt( _pLabel, pPtr, 1.0f, minI, maxI );
 				else
 					ImGui::DragInt( _pLabel, pPtr );
-				trackPodPropertyUndo( pPtr, sizeof( *pPtr ), _pLabel );
+				InspectorPropertyUndo::trackPod( pPtr, sizeof( *pPtr ), _pLabel );
 				return true;
 			}
 		};
@@ -97,7 +98,7 @@ namespace sw::editor
 				}
 				else if ( ImGui::DragInt( _pLabel, &tmp, 1.0f, 0 ) )
 					*pPtr = static_cast<uint32>( tmp );
-				trackPodPropertyUndo( pPtr, sizeof( *pPtr ), _pLabel );
+				InspectorPropertyUndo::trackPod( pPtr, sizeof( *pPtr ), _pLabel );
 				return true;
 			}
 		};
@@ -132,7 +133,7 @@ namespace sw::editor
 				}
 				else if ( ImGui::DragInt( _pLabel, &tmp ) )
 					*pPtr = static_cast<int64>( tmp );
-				trackPodPropertyUndo( pPtr, sizeof( *pPtr ), _pLabel );
+				InspectorPropertyUndo::trackPod( pPtr, sizeof( *pPtr ), _pLabel );
 				return true;
 			}
 		};
@@ -163,7 +164,7 @@ namespace sw::editor
 					ImGui::DragFloat( _pLabel, pPtr, 0.01f, minF, maxF );
 				else
 					ImGui::DragFloat( _pLabel, pPtr, 0.01f );
-				trackPodPropertyUndo( pPtr, sizeof( *pPtr ), _pLabel );
+				InspectorPropertyUndo::trackPod( pPtr, sizeof( *pPtr ), _pLabel );
 				return true;
 			}
 		};
@@ -198,7 +199,7 @@ namespace sw::editor
 				}
 				else if ( ImGui::DragFloat( _pLabel, &tmp, 0.01f ) )
 					*pPtr = static_cast<float64>( tmp );
-				trackPodPropertyUndo( pPtr, sizeof( *pPtr ), _pLabel );
+				InspectorPropertyUndo::trackPod( pPtr, sizeof( *pPtr ), _pLabel );
 				return true;
 			}
 		};
@@ -224,7 +225,7 @@ namespace sw::editor
 					return true;
 				}
 				ImGui::Checkbox( _pLabel, pPtr );
-				trackPodPropertyUndo( pPtr, sizeof( *pPtr ), _pLabel );
+				InspectorPropertyUndo::trackPod( pPtr, sizeof( *pPtr ), _pLabel );
 				return true;
 			}
 		};
@@ -253,7 +254,7 @@ namespace sw::editor
 				formatstring( buf, sizeof( buf ), "%#", pPtr->c_str() );
 				if ( ImGui::InputText( _pLabel, buf, sizeof( buf ) ) )
 					*pPtr = buf;
-				trackStringPropertyUndo( pPtr, _pLabel );
+				InspectorPropertyUndo::trackString( pPtr, _pLabel );
 				return true;
 			}
 		};
@@ -271,7 +272,6 @@ namespace sw::editor
 				[[maybe_unused]] const int32 maxI	   = static_cast<int32>( maxF );
 
 				float3* pPtr = prop.getValuePtr<float3>( pInstance );
-				// 쓰기 가능하면 RGB 축 컨트롤을 우선합니다.
 				if ( pPtr == nullptr )
 					return true;
 				if ( bReadOnly )
@@ -283,7 +283,7 @@ namespace sw::editor
 					return true;
 				}
 				editor::drawVec3Control( _pLabel, *pPtr, 0.0f, 100.0f, 0.1f );
-				trackPodPropertyUndo( pPtr, sizeof( *pPtr ), _pLabel );
+				InspectorPropertyUndo::trackPod( pPtr, sizeof( *pPtr ), _pLabel );
 				return true;
 			}
 		};
@@ -312,7 +312,7 @@ namespace sw::editor
 					return true;
 				}
 				ImGui::DragFloat2( _pLabel, &pPtr->_x, 0.1f );
-				trackPodPropertyUndo( pPtr, sizeof( *pPtr ), _pLabel );
+				InspectorPropertyUndo::trackPod( pPtr, sizeof( *pPtr ), _pLabel );
 				return true;
 			}
 		};
@@ -342,7 +342,7 @@ namespace sw::editor
 					return true;
 				}
 				ImGui::DragFloat4( _pLabel, &pPtr->_x, 0.01f );
-				trackPodPropertyUndo( pPtr, sizeof( *pPtr ), _pLabel );
+				InspectorPropertyUndo::trackPod( pPtr, sizeof( *pPtr ), _pLabel );
 				return true;
 			}
 		};
@@ -374,21 +374,33 @@ namespace sw::editor
 				return true;
 			}
 		};
-
 	} // namespace
 
-	void registerInspectorBuiltinProperties()
+	void InspectorPropertyManager::registerType( string_view typeName, unique_ptr<IInspectorProperty> pProperty )
 	{
-		InspectorPropertyRegistry::registerType( "int32", make_unique<Int32Property>() );
-		InspectorPropertyRegistry::registerType( "uint32", make_unique<Uint32Property>() );
-		InspectorPropertyRegistry::registerType( "int64", make_unique<Int64Property>() );
-		InspectorPropertyRegistry::registerType( "float32", make_unique<Float32Property>() );
-		InspectorPropertyRegistry::registerType( "float64", make_unique<Float64Property>() );
-		InspectorPropertyRegistry::registerType( "bool", make_unique<BoolProperty>() );
-		InspectorPropertyRegistry::registerType( "string", make_unique<StringProperty>() );
-		InspectorPropertyRegistry::registerType( "float3", make_unique<Float3Property>() );
-		InspectorPropertyRegistry::registerType( "float2", make_unique<Float2Property>() );
-		InspectorPropertyRegistry::registerType( "float4", make_unique<Float4Property>() );
-		InspectorPropertyRegistry::registerType( "hashed_string", make_unique<HashedStringProperty>() );
+		_mapProperties[string{ typeName }] = std::move( pProperty );
+	}
+
+	IInspectorProperty* InspectorPropertyManager::find( string_view typeName ) const
+	{
+		const auto it = _mapProperties.find( string{ typeName } );
+		if ( it != _mapProperties.end() )
+			return it->second.get();
+		return nullptr;
+	}
+
+	void InspectorPropertyManager::registerDefaults()
+	{
+		registerType( "int32", make_unique<Int32Property>() );
+		registerType( "uint32", make_unique<Uint32Property>() );
+		registerType( "int64", make_unique<Int64Property>() );
+		registerType( "float32", make_unique<Float32Property>() );
+		registerType( "float64", make_unique<Float64Property>() );
+		registerType( "bool", make_unique<BoolProperty>() );
+		registerType( "string", make_unique<StringProperty>() );
+		registerType( "float3", make_unique<Float3Property>() );
+		registerType( "float2", make_unique<Float2Property>() );
+		registerType( "float4", make_unique<Float4Property>() );
+		registerType( "hashed_string", make_unique<HashedStringProperty>() );
 	}
 } // namespace sw::editor

@@ -76,6 +76,5 @@ namespace sw::editor
 		float32					_farZ{ 1000.0f };
 		CameraControlMode		_cameraMode{ CameraControlMode::Fly };
 		ViewportToolbarSettings _toolbarSettings{};
-		EditorViewportToolbar	_toolbar{};
 	};
 } // namespace sw::editor

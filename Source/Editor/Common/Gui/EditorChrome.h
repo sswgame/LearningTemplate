@@ -12,7 +12,7 @@
 namespace sw::editor
 {
 	// ------------------------------------------------------------------------------
-	// 1) Panel — 도킹 가능한 에디터 패널
+	// 1) Panel Flags & Descs
 	// ------------------------------------------------------------------------------
 	ENUM( Flags )
 	enum class EditorPanelFlags : uint32
@@ -25,17 +25,8 @@ namespace sw::editor
 		UnsavedDocument = SW_BIT( 4 )
 	};
 
-	/** @brief 도킹 패널을 엽니다. false면 접힘/탭 숨김. 항상 endPanel()을 호출합니다. */
-	bool beginPanel( const utf8* pTitle, bool* pOpen, EditorPanelFlags flags = EditorPanelFlags::None );
-	/** @brief beginPanel()과 짝을 이룹니다. */
-	void endPanel();
-	/** @brief FirstUseEver 크기를 다음 패널에 적용합니다. */
-	void setNextPanelSize( const float2& size );
-	/** @brief 메인 뷰포트 위치/크기를 얻습니다. */
-	bool tryGetMainViewportRect( float2& outPos, float2& outSize );
-
 	// ------------------------------------------------------------------------------
-	// 2) Section — 패널 내부 영역 (툴바 스트립 / Child)
+	// 2) Section Flags & Descs
 	// ------------------------------------------------------------------------------
 	enum class EditorSectionKind : uint8
 	{
@@ -64,13 +55,8 @@ namespace sw::editor
 		EditorSectionFlags _flags{ EditorSectionFlags::None };
 	};
 
-	/** @brief 섹션을 엽니다. beginSection 이후에는 반환값과 관계없이 endSection()을 호출합니다. */
-	bool beginSection( const EditorSectionDesc& desc );
-	/** @brief beginSection()과 짝을 이룹니다. */
-	void endSection();
-
 	// ------------------------------------------------------------------------------
-	// 3) FloatingBar — 장식 없는 오버레이 바
+	// 3) FloatingBar Flags & Descs
 	// ------------------------------------------------------------------------------
 	ENUM( Flags )
 	enum class EditorFloatingBarFlags : uint32
@@ -94,13 +80,8 @@ namespace sw::editor
 		EditorFloatingBarDesc();
 	};
 
-	/** @brief 플로팅 바를 엽니다. 항상 endFloatingBar()를 호출합니다. */
-	bool beginFloatingBar( const EditorFloatingBarDesc& desc );
-	/** @brief beginFloatingBar()와 짝을 이룹니다. */
-	void endFloatingBar();
-
 	// ------------------------------------------------------------------------------
-	// 4) Overlay — 커맨드 팔레트 / 토스트 등 비도킹 오버레이
+	// 4) Overlay Flags & Descs
 	// ------------------------------------------------------------------------------
 	ENUM( Flags )
 	enum class EditorOverlayFlags : uint32
@@ -131,8 +112,51 @@ namespace sw::editor
 		float32			   _bgAlpha{ -1.0f };
 	};
 
-	/** @brief 오버레이를 엽니다. 항상 endOverlay()를 호출합니다. */
-	bool beginOverlay( const EditorOverlayDesc& desc );
-	/** @brief beginOverlay()와 짝을 이룹니다. */
-	void endOverlay();
+	// ------------------------------------------------------------------------------
+	// 5) EditorChrome 클래스
+	// ------------------------------------------------------------------------------
+	class EditorChrome
+	{
+	public:
+		/** @brief 도킹 패널을 엽니다. false면 접힘/탭 숨김. 항상 endPanel()을 호출합니다. */
+		static bool beginPanel( const utf8* pTitle, bool* pOpen, EditorPanelFlags flags = EditorPanelFlags::None );
+		/** @brief beginPanel()과 짝을 이룹니다. */
+		static void endPanel();
+		/** @brief FirstUseEver 크기를 다음 패널에 적용합니다. */
+		static void setNextPanelSize( const float2& size );
+		/** @brief 메인 뷰포트 위치/크기를 얻습니다. */
+		static bool tryGetMainViewportRect( float2& outPos, float2& outSize );
+
+		/** @brief 섹션을 엽니다. beginSection 이후에는 반환값과 관계없이 endSection()을 호출합니다. */
+		static bool beginSection( const EditorSectionDesc& desc );
+		/** @brief beginSection()과 짝을 이룹니다. */
+		static void endSection();
+
+		/** @brief 플로팅 바를 엽니다. 항상 endFloatingBar()를 호출합니다. */
+		static bool beginFloatingBar( const EditorFloatingBarDesc& desc );
+		/** @brief beginFloatingBar()와 짝을 이룹니다. */
+		static void endFloatingBar();
+
+		/** @brief 오버레이를 엽니다. 항상 endOverlay()를 호출합니다. */
+		static bool beginOverlay( const EditorOverlayDesc& desc );
+		/** @brief beginOverlay()와 짝을 이룹니다. */
+		static void endOverlay();
+	};
+
+	// ------------------------------------------------------------------------------
+	// 편의용 네임스페이스 인라인 포워딩
+	// ------------------------------------------------------------------------------
+	inline bool beginPanel( const utf8* pTitle, bool* pOpen, EditorPanelFlags flags = EditorPanelFlags::None )
+	{
+		return EditorChrome::beginPanel( pTitle, pOpen, flags );
+	}
+	inline void endPanel() { EditorChrome::endPanel(); }
+	inline void setNextPanelSize( const float2& size ) { EditorChrome::setNextPanelSize( size ); }
+	inline bool tryGetMainViewportRect( float2& outPos, float2& outSize ) { return EditorChrome::tryGetMainViewportRect( outPos, outSize ); }
+	inline bool beginSection( const EditorSectionDesc& desc ) { return EditorChrome::beginSection( desc ); }
+	inline void endSection() { EditorChrome::endSection(); }
+	inline bool beginFloatingBar( const EditorFloatingBarDesc& desc ) { return EditorChrome::beginFloatingBar( desc ); }
+	inline void endFloatingBar() { EditorChrome::endFloatingBar(); }
+	inline bool beginOverlay( const EditorOverlayDesc& desc ) { return EditorChrome::beginOverlay( desc ); }
+	inline void endOverlay() { EditorChrome::endOverlay(); }
 } // namespace sw::editor

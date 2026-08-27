@@ -3,16 +3,17 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 
 #include "Editor/Common/Backend/IImGuiRendererBackend.h"
-#include "Editor/Common/Workspace/AssetEditorRegistry.h"
-#include "Editor/Common/Workspace/EditorContextMenuRegistry.h"
+#include "Editor/Common/Workspace/AssetEditorManager.h"
+#include "Editor/Common/Workspace/EditorActionMenuManager.h"
+#include "Editor/Common/Workspace/EditorNotificationManager.h"
+#include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/SelectionManager.h"
-#include "Editor/Panels/EditorPanelRegistry.h"
+#include "Editor/Panels/EditorPanelManager.h"
 #include "Editor/Panels/Inspector/IInspectorComponent.h"
 #include "Editor/Panels/Inspector/IInspectorProperty.h"
-#include "Editor/Panels/Inspector/InspectorComponentRegistry.h"
-#include "Editor/Panels/Inspector/InspectorPropertyRegistry.h"
-#include "Editor/Popups/CommandPalettePopup.h"
-#include "Editor/Popups/EditorNotificationManager.h"
+#include "Editor/Panels/Inspector/InspectorComponentManager.h"
+#include "Editor/Panels/Inspector/InspectorPropertyManager.h"
+#include "Editor/Popups/EditorPopupManager.h"
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResource.h"
@@ -25,8 +26,8 @@ namespace sw::editor
 		: _pRhiDevice{ nullptr }
 		, _pRendererBackend{ nullptr }
 		, _gameView{}
-		, _bGameViewHovered{ 0 }
-		, _bGameViewFocused{ 0 }
+		, _bGameViewHovered{ SW_FALSE }
+		, _bGameViewFocused{ SW_FALSE }
 		, _reserved{ 0 }
 	{
 	}
@@ -38,20 +39,22 @@ namespace sw::editor
 
 	void EditorContext::initialize()
 	{
-		_pSelectionManager			 = make_unique<SelectionManager>();
-		_pNotificationManager		 = make_unique<EditorNotificationManager>();
-		_pContextMenuRegistry		 = make_unique<EditorContextMenuRegistry>();
-		_pCommandPalette			 = make_unique<CommandPalettePopup>();
-		_pPanelRegistry				 = make_unique<EditorPanelRegistry>();
-		_pAssetEditorRegistry		 = make_unique<AssetEditorRegistry>();
-		_pInspectorComponentRegistry = make_unique<InspectorComponentRegistry>();
-		_pInspectorPropertyRegistry	 = make_unique<InspectorPropertyRegistry>();
+		_pSelectionManager			= make_unique<SelectionManager>();
+		_pWorkspace					= make_unique<EditorWorkspace>();
+		_pNotificationManager		= make_unique<EditorNotificationManager>();
+		_pActionMenuManager			= make_unique<EditorActionMenuManager>();
+		_pPanelManager				= make_unique<EditorPanelManager>();
+		_pPopupManager				= make_unique<EditorPopupManager>();
+		_pAssetEditorManager		= make_unique<AssetEditorManager>();
+		_pInspectorComponentManager = make_unique<InspectorComponentManager>();
+		_pInspectorPropertyManager	= make_unique<InspectorPropertyManager>();
 
 		setActive( this );
 
-		_pAssetEditorRegistry->registerDefaultMappings();
-		_pInspectorComponentRegistry->registerDefaults();
-		_pInspectorPropertyRegistry->registerDefaults();
+		_pAssetEditorManager->registerDefaultMappings();
+		_pInspectorComponentManager->registerDefaults();
+		_pInspectorPropertyManager->registerDefaults();
+		_pPopupManager->registerDefaultPopups();
 	}
 
 	void EditorContext::shutdown()
@@ -61,13 +64,14 @@ namespace sw::editor
 		if ( s_pActiveContext == this )
 			setActive( nullptr );
 
-		_pInspectorPropertyRegistry.reset();
-		_pInspectorComponentRegistry.reset();
-		_pAssetEditorRegistry.reset();
-		_pPanelRegistry.reset();
-		_pCommandPalette.reset();
-		_pContextMenuRegistry.reset();
+		_pInspectorPropertyManager.reset();
+		_pInspectorComponentManager.reset();
+		_pAssetEditorManager.reset();
+		_pPopupManager.reset();
+		_pPanelManager.reset();
+		_pActionMenuManager.reset();
 		_pNotificationManager.reset();
+		_pWorkspace.reset();
 		_pSelectionManager.reset();
 		_pRendererBackend = nullptr;
 		_pRhiDevice		  = nullptr;

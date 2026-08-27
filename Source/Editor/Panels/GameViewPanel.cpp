@@ -4,9 +4,9 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Gui/EditorChrome.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Common/Workspace/EditorAssetDrop.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
@@ -92,11 +92,11 @@ namespace sw::editor
 						GameObjectManager* pManager = pSceneManager->getActiveScene()->getObjectManager();
 						if ( pManager != nullptr )
 						{
-							GameObject* pSpawned = editor::spawnPrefabFromAssetPath( pManager, pPath );
+							GameObject* pSpawned = EditorUtil::spawnPrefabFromAssetPath( pManager, pPath );
 							if ( pSpawned != nullptr )
 							{
 								EditorTransaction::recordCreation( GameObjectPtr{ pSpawned }, "Spawn Prefab" );
-								EditorWorkspace::selectGameObject( GameObjectPtr{ pSpawned }, SelectionMode::Replace );
+								EditorContext::get()->getWorkspace().selectGameObject( GameObjectPtr{ pSpawned }, SelectionMode::Replace );
 							}
 						}
 					}
@@ -153,7 +153,7 @@ namespace sw::editor
 			{
 				Scene* pScene = pSceneManager->getActiveScene();
 				if ( pScene != nullptr )
-					EditorWorkspace::remapSelectionByObjectName( pScene->getObjectManager() );
+					EditorContext::get()->getWorkspace().remapSelectionByObjectName( pScene->getObjectManager() );
 			}
 		}
 	}

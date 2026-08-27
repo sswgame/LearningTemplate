@@ -3,6 +3,7 @@
 #include "Editor/Panels/TileMapPanel.h"
 
 #include "Editor/Common/Config/EditorData.h"
+#include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
 #include "Engine/Utility/Xml/XmlDocument.h"
@@ -51,7 +52,7 @@ namespace sw::editor
 
 	void TileMapPanel::drawContent()
 	{
-		const string& focused = EditorWorkspace::focusedAssetPath();
+		const string& focused = EditorContext::get()->getWorkspace().getFocusedAssetPath();
 		if ( focused.empty() == false && focused.find( ".xml" ) != string::npos && focused != _arrPathBuffer )
 		{
 			StringUtil::strncpy( _arrPathBuffer, focused.c_str(), sizeof( _arrPathBuffer ) - 1 );

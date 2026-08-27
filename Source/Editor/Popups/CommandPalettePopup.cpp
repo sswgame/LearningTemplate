@@ -7,7 +7,8 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/SelectionManager.h"
-#include "Editor/Panels/EditorPanelRegistry.h"
+#include "Editor/Panels/EditorPanelManager.h"
+#include "Editor/Popups/EditorPopupManager.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -23,14 +24,6 @@ namespace sw::editor
 {
 	namespace
 	{
-		CommandPalettePopup* getImpl()
-		{
-			EditorContext* pContext = EditorContext::get();
-			if ( pContext != nullptr )
-				return &pContext->getCommandPalette();
-			return nullptr;
-		}
-
 		bool fuzzyMatch( string_view text, string_view pattern )
 		{
 			if ( pattern.empty() )
@@ -55,79 +48,53 @@ namespace sw::editor
 	} // namespace
 
 	// ------------------------------------------------------------------------------
+	// Constructor
+	// ------------------------------------------------------------------------------
+	CommandPalettePopup::CommandPalettePopup()
+		: IEditorPopup{ false }
+		, _listStaticCommands{}
+		, _listAllCommands{}
+		, _selectedIndex{ 0 }
+		, _bJustOpened{ false }
+	{
+	}
+
+	// ------------------------------------------------------------------------------
 	// Static Methods
 	// ------------------------------------------------------------------------------
 	void CommandPalettePopup::open()
 	{
-		CommandPalettePopup* pWin = getImpl();
-		if ( pWin != nullptr )
-			pWin->openImpl();
+		EditorContext::get()->getPopupManager().openPopup( "CommandPalette" );
 	}
 
 	void CommandPalettePopup::close()
 	{
-		CommandPalettePopup* pWin = getImpl();
-		if ( pWin != nullptr )
-			pWin->closeImpl();
+		EditorContext::get()->getPopupManager().closePopup( "CommandPalette" );
 	}
 
 	void CommandPalettePopup::toggle()
 	{
-		CommandPalettePopup* pWin = getImpl();
-		if ( pWin != nullptr )
-			pWin->toggleImpl();
+		EditorContext::get()->getPopupManager().togglePopup( "CommandPalette" );
 	}
 
 	bool CommandPalettePopup::isOpen()
 	{
-		CommandPalettePopup* pWin = getImpl();
-		if ( pWin != nullptr )
-			return pWin->isOpenImpl();
-		return false;
+		return EditorContext::get()->getPopupManager().isPopupOpen( "CommandPalette" );
 	}
 
 	void CommandPalettePopup::registerCommand( string_view category, string_view label, string_view detail,
 											   Delegate<void()> action )
 	{
-		CommandPalettePopup* pWin = getImpl();
-		if ( pWin != nullptr )
-			pWin->registerCommandImpl( category, label, detail, std::move( action ) );
-	}
-
-	void CommandPalettePopup::draw()
-	{
-		CommandPalettePopup* pWin = getImpl();
-		if ( pWin != nullptr )
-			pWin->drawImpl();
+		CommandPalettePopup* pPopup = EditorContext::get()->getPopupManager().findPopup<CommandPalettePopup>( "CommandPalette" );
+		if ( pPopup != nullptr )
+			pPopup->registerCommandInstance( category, label, detail, std::move( action ) );
 	}
 
 	// ------------------------------------------------------------------------------
 	// Instance Implementations
 	// ------------------------------------------------------------------------------
-	void CommandPalettePopup::openImpl()
-	{
-		_bOpen				= true;
-		_bJustOpened		= true;
-		_selectedIndex		= 0;
-		_arrSearchBuffer[0] = '\0';
-		rebuildDynamicEntries();
-	}
-
-	void CommandPalettePopup::closeImpl()
-	{
-		_bOpen = false;
-	}
-
-	void CommandPalettePopup::toggleImpl()
-	{
-		if ( _bOpen )
-			closeImpl();
-		else
-			openImpl();
-	}
-
-	void CommandPalettePopup::registerCommandImpl( string_view category, string_view label, string_view detail,
-												   Delegate<void()> action )
+	void CommandPalettePopup::registerCommandInstance( string_view category, string_view label, string_view detail,
+													   Delegate<void()> action )
 	{
 		CommandPaletteEntry entry;
 		entry._category = string{ category };
@@ -137,12 +104,20 @@ namespace sw::editor
 		_listStaticCommands.push_back( std::move( entry ) );
 	}
 
+	void CommandPalettePopup::onOpen()
+	{
+		_bJustOpened		= true;
+		_selectedIndex		= 0;
+		_arrSearchBuffer[0] = '\0';
+		rebuildDynamicEntries();
+	}
+
 	void CommandPalettePopup::rebuildDynamicEntries()
 	{
 		_listAllCommands = _listStaticCommands;
 
 		// 1) 등록된 모든 에디터 패널 토글 커맨드
-		for ( const EditorPanelEntry& win : EditorPanelRegistry::getPanels() )
+		for ( const EditorPanelEntry& win : EditorContext::get()->getPanelManager().getPanels() )
 		{
 			const string		winTitle = win._title;
 			CommandPaletteEntry entry;
@@ -150,7 +125,7 @@ namespace sw::editor
 			entry._label	= "Open Panel: " + winTitle;
 			entry._detail	= "Editor Panel";
 			entry._action	= [winTitle]()
-			{ EditorPanelRegistry::setPanelOpen( winTitle.c_str(), true ); };
+			{ EditorContext::get()->getPanelManager().setPanelOpen( winTitle.c_str(), true ); };
 			_listAllCommands.push_back( std::move( entry ) );
 		}
 
@@ -180,7 +155,7 @@ namespace sw::editor
 						{
 							GameObject* pFound = pMgr->getActiveScene()->getObjectManager()->findGameObjectById( objId );
 							if ( pFound )
-								SelectionManager::selectObject( GameObjectPtr{ pFound }, SelectionMode::Replace );
+								EditorContext::get()->getSelectionManager().selectObject( GameObjectPtr{ pFound }, SelectionMode::Replace );
 						}
 					};
 					_listAllCommands.push_back( std::move( entry ) );
@@ -189,11 +164,8 @@ namespace sw::editor
 		}
 	}
 
-	void CommandPalettePopup::drawImpl()
+	void CommandPalettePopup::drawContent()
 	{
-		if ( _bOpen == false )
-			return;
-
 		float2 viewportPos{};
 		float2 viewportSize{};
 		if ( editor::tryGetMainViewportRect( viewportPos, viewportSize ) == false )
@@ -214,7 +186,7 @@ namespace sw::editor
 		overlayDesc._rounding	= 8.0f;
 		overlayDesc._borderSize = 1.5f;
 		overlayDesc._flags		= editor::EditorOverlayFlags::NoTitleBar | editor::EditorOverlayFlags::NoResize |
-								  editor::EditorOverlayFlags::NoMove | editor::EditorOverlayFlags::NoSavedSettings;
+							 editor::EditorOverlayFlags::NoMove | editor::EditorOverlayFlags::NoSavedSettings;
 
 		ImGui::PushStyleColor( ImGuiCol_WindowBg, ImVec4{ 0.12f, 0.12f, 0.14f, 0.96f } );
 		ImGui::PushStyleColor( ImGuiCol_Border, ImVec4{ 0.25f, 0.45f, 0.75f, 1.0f } );

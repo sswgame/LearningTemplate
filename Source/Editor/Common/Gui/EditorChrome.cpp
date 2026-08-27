@@ -66,7 +66,7 @@ namespace sw::editor
 	{
 	}
 
-	bool beginPanel( const utf8* pTitle, bool* pOpen, EditorPanelFlags flags )
+	bool EditorChrome::beginPanel( const utf8* pTitle, bool* pOpen, EditorPanelFlags flags )
 	{
 		if ( pTitle == nullptr )
 			return false;
@@ -81,29 +81,30 @@ namespace sw::editor
 		return bVisible;
 	}
 
-	void endPanel()
+	void EditorChrome::endPanel()
 	{
 		ImGui::End();
 	}
 
-	void setNextPanelSize( const float2& size )
+	void EditorChrome::setNextPanelSize( const float2& size )
 	{
 		if ( size._x <= 0.0f || size._y <= 0.0f )
 			return;
 		ImGui::SetNextWindowSize( ImVec2{ size._x, size._y }, ImGuiCond_FirstUseEver );
 	}
 
-	bool tryGetMainViewportRect( float2& outPos, float2& outSize )
+	bool EditorChrome::tryGetMainViewportRect( float2& outPos, float2& outSize )
 	{
 		const ImGuiViewport* pViewport = ImGui::GetMainViewport();
 		if ( pViewport == nullptr )
 			return false;
+
 		outPos	= float2{ pViewport->Pos.x, pViewport->Pos.y };
 		outSize = float2{ pViewport->Size.x, pViewport->Size.y };
 		return true;
 	}
 
-	bool beginSection( const EditorSectionDesc& desc )
+	bool EditorChrome::beginSection( const EditorSectionDesc& desc )
 	{
 		const utf8* pId = desc._pId != nullptr ? desc._pId : "##Section";
 		if ( s_sectionDepth < kMaxSectionDepth )
@@ -141,7 +142,7 @@ namespace sw::editor
 		return true;
 	}
 
-	void endSection()
+	void EditorChrome::endSection()
 	{
 		EditorSectionKind kind = EditorSectionKind::Toolbar;
 		if ( s_sectionDepth > 0 )
@@ -160,7 +161,7 @@ namespace sw::editor
 		ImGui::PopStyleVar( 2 );
 	}
 
-	bool beginFloatingBar( const EditorFloatingBarDesc& desc )
+	bool EditorChrome::beginFloatingBar( const EditorFloatingBarDesc& desc )
 	{
 		const utf8* pId = desc._pId != nullptr ? desc._pId : "##FloatingBar";
 
@@ -191,7 +192,7 @@ namespace sw::editor
 		return bVisible;
 	}
 
-	void endFloatingBar()
+	void EditorChrome::endFloatingBar()
 	{
 		if ( s_floatingBarDisabledDepth > 0 )
 		{
@@ -201,7 +202,7 @@ namespace sw::editor
 		ImGui::End();
 	}
 
-	bool beginOverlay( const EditorOverlayDesc& desc )
+	bool EditorChrome::beginOverlay( const EditorOverlayDesc& desc )
 	{
 		const utf8* pId = desc._pId != nullptr ? desc._pId : "##Overlay";
 
@@ -232,7 +233,7 @@ namespace sw::editor
 		return ImGui::Begin( pId, desc._pOpen, toImGuiOverlayFlags( desc._flags ) );
 	}
 
-	void endOverlay()
+	void EditorChrome::endOverlay()
 	{
 		ImGui::End();
 

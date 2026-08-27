@@ -6,6 +6,7 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Memory/Memory.h"
 
+#include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/SelectionManager.h"
 
@@ -222,7 +223,7 @@ namespace sw::editor
 
 		const float32 speed = _toolbarSettings._cameraSpeed * ( io.KeyShift ? 3.0f : 1.0f ) * deltaTime;
 		_cameraPos			= float3{ _cameraPos._x + moveDir._x * speed, _cameraPos._y + moveDir._y * speed,
-									  _cameraPos._z + moveDir._z * speed };
+							  _cameraPos._z + moveDir._z * speed };
 	}
 
 	void EditorViewportClient::processOrbitInput()
@@ -264,13 +265,13 @@ namespace sw::editor
 
 	void EditorViewportClient::drawViewportToolbar( float32 viewportWidth )
 	{
-		_toolbar.draw( _toolbarSettings, viewportWidth );
+		EditorViewportToolbar::draw( _toolbarSettings, viewportWidth );
 	}
 
 	void EditorViewportClient::drawTransformBar( const float2& anchorPos )
 	{
-		const bool bHasSelection = SelectionManager::getSelectedObjectCount() > 0;
-		_toolbar.drawTransformBar( _toolbarSettings, anchorPos, bHasSelection );
+		const bool bHasSelection = EditorContext::get()->getSelectionManager().getSelectedObjectCount() > 0;
+		EditorViewportToolbar::drawTransformBar( _toolbarSettings, anchorPos, bHasSelection );
 	}
 
 	void EditorViewportClient::draw( const void* pTextureId, const float2& canvasSize )
@@ -296,7 +297,7 @@ namespace sw::editor
 
 			processPicking( canvasPos, canvasSize, pCamera );
 
-			GameObjectPtr pPrimary = SelectionManager::getPrimaryObject();
+			GameObjectPtr pPrimary = EditorContext::get()->getSelectionManager().getPrimaryObject();
 			if ( pPrimary.isValid() )
 			{
 				const float32 aspect = canvasSize._x / ( canvasSize._y > 0.0f ? canvasSize._y : 1.0f );
@@ -391,9 +392,9 @@ namespace sw::editor
 		}
 
 		if ( pBestObj != nullptr )
-			EditorWorkspace::selectComponent( GameObjectPtr{ pBestObj }, ComponentPtr{ pBestMesh } );
+			EditorContext::get()->getWorkspace().selectComponent( GameObjectPtr{ pBestObj }, ComponentPtr{ pBestMesh } );
 		else
-			EditorWorkspace::clearSelection();
+			EditorContext::get()->getWorkspace().clearSelection();
 	}
 
 	void EditorViewportClient::drawGizmo( GameObjectPtr pObj, const float32* pView, const float32* pProj,
@@ -413,14 +414,15 @@ namespace sw::editor
 		float32 arrMatrix[16];
 		storeColumnMajor( arrMatrix, pSceneComp->getWorldMatrix() );
 
-		const int32			opInt = EditorWorkspace::gizmoOperation();
+		EditorWorkspace&	ws	  = EditorContext::get()->getWorkspace();
+		const int32			opInt = ws.getGizmoOperation();
 		ImGuizmo::OPERATION op	  = ImGuizmo::TRANSLATE;
 		if ( opInt == 1 )
 			op = ImGuizmo::ROTATE;
 		else if ( opInt == 2 )
 			op = ImGuizmo::SCALE;
 
-		const ImGuizmo::MODE mode = EditorWorkspace::gizmoLocalSpace() ? ImGuizmo::LOCAL : ImGuizmo::WORLD;
+		const ImGuizmo::MODE mode = ws.isGizmoLocalSpace() ? ImGuizmo::LOCAL : ImGuizmo::WORLD;
 
 		float32 arrSnap[3] = { 0.0f, 0.0f, 0.0f };
 		if ( op == ImGuizmo::TRANSLATE && _toolbarSettings._bGridSnap )

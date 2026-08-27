@@ -5,6 +5,11 @@
 #include "Editor/Common/Config/EditorConfig.h"
 #include "Editor/Common/Config/EditorData.h"
 
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/Prefab/PrefabAsset.h"
+#include "Engine/Utility/Resource/ResourceManager.h"
+
 #include "RuntimeAPI/Service/EditorService.h"
 
 #include <imgui.h>
@@ -175,8 +180,8 @@ namespace sw::editor
 
 		BLOCK( "Font Awesome 6 (ImGuiNotify icons)" )
 		{
-			const float32			 iconFontSize  = data._fontSize * 2.0f / 3.0f;
-			static constexpr ImWchar iconsRanges[] = { ICON_MIN_FA, ICON_MAX_16_FA, 0 };
+			const float32			 iconFontSize	   = data._fontSize * 2.0f / 3.0f;
+			static constexpr ImWchar kArrIconsRanges[] = { ICON_MIN_FA, ICON_MAX_16_FA, 0 };
 			ImFontConfig			 iconsConfig{};
 			iconsConfig.MergeMode			 = true;
 			iconsConfig.PixelSnapH			 = true;
@@ -184,7 +189,7 @@ namespace sw::editor
 			iconsConfig.FontDataOwnedByAtlas = false;
 			io.Fonts->AddFontFromMemoryTTF( const_cast<void*>( static_cast<const void*>( fa_solid_900 ) ),
 											sizeof( fa_solid_900 ), iconFontSize, &iconsConfig,
-											iconsRanges );
+											kArrIconsRanges );
 		}
 
 		io.FontDefault = pBaseFont;
@@ -227,5 +232,54 @@ namespace sw::editor
 			return {};
 
 		return FileUtil::joinPath( configDir, pFileName );
+	}
+
+	bool EditorUtil::isPrefabAssetPath( const utf8* pPath )
+	{
+		if ( pPath == nullptr )
+			return false;
+		return FileUtil::endsWithIgnoreCase( pPath, ".prefab.xml" ) ||
+			   FileUtil::endsWithIgnoreCase( pPath, ".prefab.json" ) ||
+			   FileUtil::endsWithIgnoreCase( pPath, ".prefab.bin" ) ||
+			   FileUtil::endsWithIgnoreCase( pPath, ".prefab" );
+	}
+
+	bool EditorUtil::isTextureAssetPath( const utf8* pPath )
+	{
+		if ( pPath == nullptr )
+			return false;
+		return FileUtil::hasExtension( pPath, ".png" ) || FileUtil::hasExtension( pPath, ".jpg" ) ||
+			   FileUtil::hasExtension( pPath, ".jpeg" ) || FileUtil::hasExtension( pPath, ".tga" ) ||
+			   FileUtil::hasExtension( pPath, ".dds" ) || FileUtil::hasExtension( pPath, ".hdr" );
+	}
+
+	bool EditorUtil::isMaterialAssetPath( const utf8* pPath )
+	{
+		return pPath != nullptr && FileUtil::hasExtension( pPath, "._material" );
+	}
+
+	GameObject* EditorUtil::spawnPrefabFromAssetPath( GameObjectManager* pManager, const utf8* pPath, GameObject* pParent )
+	{
+		if ( pManager == nullptr || pPath == nullptr || pPath[0] == '\0' )
+			return nullptr;
+
+		if ( isPrefabAssetPath( pPath ) == false )
+		{
+			SW_LOG_INFO( "[EditorUtil] Not a prefab path: %#", pPath );
+			return nullptr;
+		}
+
+		GameObject* pSpawned = editor::getService<ResourceManager>()->getPrefabManager().spawn( pManager, pPath );
+		if ( pSpawned == nullptr )
+		{
+			SW_LOG_WARNING( "[EditorUtil] Failed to spawn prefab: %#", pPath );
+			return nullptr;
+		}
+
+		if ( pParent != nullptr )
+			pSpawned->attachToParent( pParent );
+
+		SW_LOG_INFO( "[EditorUtil] Spawned prefab from %#", pPath );
+		return pSpawned;
 	}
 } // namespace sw::editor

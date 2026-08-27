@@ -1,10 +1,11 @@
 #include "pch.h"
 
+#include "Editor/Panels/Inspector/InspectorComponentManager.h"
+
 #include "Editor/Common/Widgets/EditorWidgets.h"
+#include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Panels/Inspector/IInspectorComponent.h"
-#include "Editor/Panels/Inspector/InspectorBuiltin.h"
-#include "Editor/Panels/Inspector/InspectorComponentRegistry.h"
 
 #include "Engine/Object/Component/2D/SpriteComponent.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
@@ -24,13 +25,13 @@ namespace sw::editor
 
 			ImGui::SeparatorText( "Transform" );
 
-			int32& op = EditorWorkspace::gizmoOperation();
+			int32& op = EditorContext::get()->getWorkspace().getGizmoOperationRef();
 			ImGui::RadioButton( "Translate", &op, 0 );
 			ImGui::SameLine();
 			ImGui::RadioButton( "Rotate", &op, 1 );
 			ImGui::SameLine();
 			ImGui::RadioButton( "Scale", &op, 2 );
-			bool& bLocal = EditorWorkspace::gizmoLocalSpace();
+			bool& bLocal = EditorContext::get()->getWorkspace().getGizmoLocalSpaceRef();
 			ImGui::SameLine();
 			ImGui::Checkbox( "Local", &bLocal );
 
@@ -91,10 +92,9 @@ namespace sw::editor
 		public:
 			void drawFooter( Component* /*pComponent*/, IRHIDevice* /*pRhiDevice*/ ) override
 			{
-				// 스프라이트 퀵 액션
 				if ( ImGui::SmallButton( "Open Sprite Clip Tool" ) )
 				{
-					EditorWorkspace::requestOpenPanel( "Sprite Clip" );
+					EditorContext::get()->getWorkspace().requestOpenPanel( "Sprite Clip" );
 				}
 			}
 		};
@@ -117,11 +117,24 @@ namespace sw::editor
 		};
 	} // namespace
 
-	void registerInspectorBuiltinComponents()
+	void InspectorComponentManager::registerType( string_view typeName, unique_ptr<IInspectorComponent> pInspector )
 	{
-		InspectorComponentRegistry::registerComponent<SceneComponent, SceneComponentInspector>();
-		InspectorComponentRegistry::registerComponent<TagComponent, TagComponentInspector>();
-		InspectorComponentRegistry::registerComponent<SpriteComponent, SpriteComponentInspector>();
-		InspectorComponentRegistry::registerComponent<MeshComponent, MeshComponentInspector>();
+		_mapInspectors[string{ typeName }] = std::move( pInspector );
+	}
+
+	IInspectorComponent* InspectorComponentManager::find( string_view typeName ) const
+	{
+		const auto it = _mapInspectors.find( string{ typeName } );
+		if ( it != _mapInspectors.end() )
+			return it->second.get();
+		return nullptr;
+	}
+
+	void InspectorComponentManager::registerDefaults()
+	{
+		registerComponent<SceneComponent, SceneComponentInspector>();
+		registerComponent<TagComponent, TagComponentInspector>();
+		registerComponent<SpriteComponent, SpriteComponentInspector>();
+		registerComponent<MeshComponent, MeshComponentInspector>();
 	}
 } // namespace sw::editor

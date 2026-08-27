@@ -1,3 +1,7 @@
+/**
+ * @file SelectionManager.h
+ * @brief 에디터의 게임오브젝트 및 애셋 다중 선택 상태 관리자 (EditorContext 소유)
+ */
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
@@ -19,7 +23,7 @@ namespace sw::editor
 
 	/**
 	 * @class SelectionManager
-	 * @brief 에디터의 게임오브젝트 및 애셋 다중 선택 상태를 관리하는 정적 인터페이스 클래스
+	 * @brief 에디터의 게임오브젝트 및 애셋 다중 선택 상태를 관리하는 멤버 클래스
 	 */
 	class SelectionManager
 	{
@@ -28,46 +32,27 @@ namespace sw::editor
 		~SelectionManager() = default;
 
 		// ------------------------------------------------------------------------------
-		// 정적(Static) 공개 API
+		// 멤버 메서드
 		// ------------------------------------------------------------------------------
-		static void							selectObject( GameObjectPtr pObj, SelectionMode mode = SelectionMode::Replace );
-		static void							selectObjects( const vector<GameObjectPtr>& listObjs, SelectionMode mode = SelectionMode::Replace );
-		static bool							hasObject( const GameObjectPtr& pObj );
-		static GameObjectPtr				getPrimaryObject();
-		static uint64						getPrimaryObjectId();
-		static const vector<GameObjectPtr>& getSelectedObjects();
-		static size_t						getSelectedObjectCount();
-		static void							selectAsset( string_view assetPath, SelectionMode mode = SelectionMode::Replace );
-		static void							selectAssets( const vector<string>& listAssetPaths, SelectionMode mode = SelectionMode::Replace );
-		static bool							hasAsset( string_view assetPath );
-		static string_view					getPrimaryAsset();
-		static const vector<string>&		getSelectedAssets();
-		static void							clearObjectSelection();
-		static void							clearAssetSelection();
-		static void							clearAll();
-		static void							pruneInvalid();
-		static Delegate<void()>&			onSelectionChanged();
+		void						 selectObject( GameObjectPtr pObj, SelectionMode mode = SelectionMode::Replace );
+		void						 selectObjects( const vector<GameObjectPtr>& listObjs, SelectionMode mode = SelectionMode::Replace );
+		bool						 hasObject( const GameObjectPtr& pObj ) const;
+		GameObjectPtr				 getPrimaryObject() const;
+		uint64						 getPrimaryObjectId() const;
+		const vector<GameObjectPtr>& getSelectedObjects() const { return _listSelectedObjects; }
+		size_t						 getSelectedObjectCount() const { return _listSelectedObjects.size(); }
 
-		// ------------------------------------------------------------------------------
-		// 인스턴스 구현체 메서드 (EditorContext 소유)
-		// ------------------------------------------------------------------------------
-		void						 selectObjectImpl( GameObjectPtr pObj, SelectionMode mode );
-		void						 selectObjectsImpl( const vector<GameObjectPtr>& listObjs, SelectionMode mode );
-		bool						 hasObjectImpl( const GameObjectPtr& pObj ) const;
-		GameObjectPtr				 getPrimaryObjectImpl() const;
-		uint64						 getPrimaryObjectIdImpl() const;
-		const vector<GameObjectPtr>& getSelectedObjectsImpl() const { return _listSelectedObjects; }
-		size_t						 getSelectedObjectCountImpl() const { return _listSelectedObjects.size(); }
-		void						 selectAssetImpl( string_view assetPath, SelectionMode mode );
-		void						 selectAssetsImpl( const vector<string>& listAssetPaths, SelectionMode mode );
-		bool						 hasAssetImpl( string_view assetPath ) const;
-		string_view					 getPrimaryAssetImpl() const;
-		const vector<string>&		 getSelectedAssetsImpl() const { return _listSelectedAssets; }
-		void						 clearObjectSelectionImpl();
-		void						 clearAssetSelectionImpl();
-		void						 clearAllImpl();
-		void						 pruneInvalidImpl();
-		Delegate<void()>&			 onSelectionChangedImpl() { return _onSelectionChanged; }
+		void				  selectAsset( string_view assetPath, SelectionMode mode = SelectionMode::Replace );
+		void				  selectAssets( const vector<string>& listAssetPaths, SelectionMode mode = SelectionMode::Replace );
+		bool				  hasAsset( string_view assetPath ) const;
+		string_view			  getPrimaryAsset() const;
+		const vector<string>& getSelectedAssets() const { return _listSelectedAssets; }
+
+		void			  clearObjectSelection();
+		void			  clearAssetSelection();
+		void			  clearAll();
+		void			  pruneInvalid();
+		Delegate<void()>& onSelectionChanged() { return _onSelectionChanged; }
 
 	private:
 		void notifyChanged();

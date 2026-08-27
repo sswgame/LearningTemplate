@@ -8,6 +8,10 @@
 
 namespace sw::editor
 {
-	void trackPodPropertyUndo( void* pData, size_t size, const utf8* pLabel );
-	void trackStringPropertyUndo( string* pPtr, const utf8* pLabel );
+	class InspectorPropertyUndo
+	{
+	public:
+		static void trackPod( void* pData, size_t size, const utf8* pLabel );
+		static void trackString( string* pPtr, const utf8* pLabel );
+	};
 } // namespace sw::editor

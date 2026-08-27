@@ -6,7 +6,8 @@
 
 #include "Editor/Common/Gui/EditorChrome.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Common/Workspace/AssetEditorRegistry.h"
+#include "Editor/Common/Workspace/AssetEditorManager.h"
+#include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
 #include "Engine/Utility/Resource/AssetDatabase.h"
@@ -73,10 +74,10 @@ namespace sw::editor
 
 	void ContentBrowserPanel::drawContent()
 	{
-		if ( _bRootsDirty )
+		if ( _bRootsDirty == SW_TRUE )
 			refreshRoots();
 		processPendingImports();
-		if ( _bFolderDirty )
+		if ( _bFolderDirty == SW_TRUE )
 			refreshCurrentFolder();
 
 		drawToolbar();
@@ -111,7 +112,7 @@ namespace sw::editor
 		if ( _selectedFolderAbs.empty() && _listRoots.empty() == false )
 			selectFolder( _listRoots.front()._absolutePath, _listRoots.front()._displayName );
 
-		_bRootsDirty = false;
+		_bRootsDirty = SW_FALSE;
 	}
 
 	void ContentBrowserPanel::refreshCurrentFolder()
@@ -119,13 +120,13 @@ namespace sw::editor
 		_listEntries.clear();
 		if ( _selectedFolderAbs.empty() )
 		{
-			_bFolderDirty = false;
+			_bFolderDirty = SW_FALSE;
 			return;
 		}
 
 		if ( FileUtil::directoryExists( _selectedFolderAbs ) == false )
 		{
-			_bFolderDirty = false;
+			_bFolderDirty = SW_FALSE;
 			return;
 		}
 
@@ -178,7 +179,7 @@ namespace sw::editor
 			return entryA._name < entryB._name;
 		} );
 
-		_bFolderDirty = false;
+		_bFolderDirty = SW_FALSE;
 	}
 
 	bool ContentBrowserPanel::passesTypeFilter( const AssetEntry& entry ) const
@@ -221,10 +222,10 @@ namespace sw::editor
 
 		ImGui::SameLine();
 		ImGui::SetNextItemWidth( 140.0f );
-		static const utf8* kFilterNames[] = { "All", "Materials", "Shaders", "Other" };
-		int32			   filterIdx	  = static_cast<int32>( _typeFilter );
-		if ( ImGui::Combo( "##cb_type", &filterIdx, kFilterNames, static_cast<int32>( AssetTypeFilter::Count ) ) )
-			_typeFilter = static_cast<AssetTypeFilter>( filterIdx );
+		static const utf8* kArrFilterNames[] = { "All", "Materials", "Shaders", "Other" };
+		int32			   filterIndex		 = static_cast<int32>( _typeFilter );
+		if ( ImGui::Combo( "##cb_type", &filterIndex, kArrFilterNames, static_cast<int32>( AssetTypeFilter::Count ) ) )
+			_typeFilter = static_cast<AssetTypeFilter>( filterIndex );
 
 		ImGui::SameLine();
 		if ( ImGui::RadioButton( "Tiles", _viewMode == ViewMode::Tiles ) )
@@ -612,7 +613,7 @@ namespace sw::editor
 	{
 		_selectedAssetAbs = entry._absolutePath;
 		if ( entry._bIsDirectory == false )
-			EditorWorkspace::setFocusedAssetPath( entry._relativePath.c_str() );
+			EditorContext::get()->getWorkspace().setFocusedAssetPath( entry._relativePath.c_str() );
 	}
 
 	void ContentBrowserPanel::openAsset( const AssetEntry& entry )
@@ -627,7 +628,7 @@ namespace sw::editor
 		selectAsset( entry );
 		SW_LOG_INFO( "[Content Browser] Open: %#", entry._relativePath.c_str() );
 
-		if ( AssetEditorRegistry::openAssetInEditor( entry._relativePath ) )
+		if ( EditorContext::get()->getAssetEditorManager().openAssetInEditor( entry._relativePath ) )
 			return;
 
 		const string lower = StringUtil::toLower( entry._extension.c_str() );
@@ -636,7 +637,7 @@ namespace sw::editor
 		if ( bSceneXml )
 			editor::getService<SceneManager>()->requestLoadAsync( entry._relativePath );
 		else if ( lower == "._material" )
-			EditorWorkspace::setInspectMode( InspectMode::Asset );
+			EditorContext::get()->getWorkspace().setInspectMode( InspectMode::Asset );
 	}
 
 	void ContentBrowserPanel::importFilesFromDialog()

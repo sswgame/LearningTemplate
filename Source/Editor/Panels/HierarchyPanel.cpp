@@ -2,10 +2,11 @@
 
 #include "Editor/Panels/HierarchyPanel.h"
 
+#include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Gui/EditorChrome.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Common/Workspace/EditorAssetDrop.h"
-#include "Editor/Common/Workspace/EditorContextMenuRegistry.h"
+#include "Editor/Common/Workspace/EditorActionMenuManager.h"
+#include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/SelectionManager.h"
@@ -109,7 +110,7 @@ namespace sw::editor
 				pCreated->attachToParent( pParent );
 
 			EditorTransaction::recordCreation( GameObjectPtr{ pCreated }, "Create GameObject" );
-			EditorWorkspace::selectGameObject( GameObjectPtr{ pCreated }, SelectionMode::Replace );
+			EditorContext::get()->getWorkspace().selectGameObject( GameObjectPtr{ pCreated }, SelectionMode::Replace );
 			return pCreated;
 		}
 
@@ -148,7 +149,7 @@ namespace sw::editor
 			{
 				const string afterXml = EditorTransaction::captureSnapshot( GameObjectPtr{ pDragged } );
 				EditorTransaction::recordModify( GameObjectPtr{ pDragged }, beforeXml, afterXml, "Reparent GameObject" );
-				EditorWorkspace::selectGameObject( GameObjectPtr{ pDragged }, SelectionMode::Replace );
+				EditorContext::get()->getWorkspace().selectGameObject( GameObjectPtr{ pDragged }, SelectionMode::Replace );
 			}
 		}
 
@@ -177,11 +178,11 @@ namespace sw::editor
 					const utf8* pPath = static_cast<const utf8*>( pAssetPayload->Data );
 					if ( pPath != nullptr )
 					{
-						GameObject* pSpawned = editor::spawnPrefabFromAssetPath( pManager, pPath, pObj );
+						GameObject* pSpawned = EditorUtil::spawnPrefabFromAssetPath( pManager, pPath, pObj );
 						if ( pSpawned != nullptr )
 						{
 							EditorTransaction::recordCreation( GameObjectPtr{ pSpawned }, "Spawn Prefab" );
-							EditorWorkspace::selectGameObject( GameObjectPtr{ pSpawned }, SelectionMode::Replace );
+							EditorContext::get()->getWorkspace().selectGameObject( GameObjectPtr{ pSpawned }, SelectionMode::Replace );
 						}
 					}
 				}
@@ -195,15 +196,16 @@ namespace sw::editor
 				return;
 
 			if ( ImGui::MenuItem( "Select Owner GameObject" ) )
-				EditorWorkspace::selectGameObject( GameObjectPtr{ pObj } );
+				EditorContext::get()->getWorkspace().selectGameObject( GameObjectPtr{ pObj } );
 
 			if ( ImGui::MenuItem( "Remove Component" ) && pComp != nullptr && pManager != nullptr )
 			{
-				if ( EditorWorkspace::selectedObjectId() == pObj->getObjectId() &&
-					 EditorWorkspace::selectedComponentId() == pComp->getComponentId() )
+				EditorWorkspace& ws = EditorContext::get()->getWorkspace();
+				if ( ws.getSelectedObjectId() == pObj->getObjectId() &&
+					 ws.getSelectedComponentId() == pComp->getComponentId() )
 				{
-					EditorWorkspace::selectedComponentId() = 0;
-					EditorWorkspace::selectedComponentKey().clear();
+					ws.setSelectedComponentId( 0 );
+					ws.setSelectedComponentKey( "" );
 				}
 				pManager->destroyComponent( pComp );
 			}
@@ -261,9 +263,9 @@ namespace sw::editor
 				}
 			}
 
-			GameObject* pSelected = pManager->findGameObjectById( EditorWorkspace::selectedObjectId() );
+			GameObject* pSelected = pManager->findGameObjectById( EditorContext::get()->getWorkspace().getSelectedObjectId() );
 			const bool	bCanParentToSelected =
-				pSelected != nullptr && pSelected != pObj && EditorWorkspace::selectedComponentId() == 0;
+				pSelected != nullptr && pSelected != pObj && EditorContext::get()->getWorkspace().getSelectedComponentId() == 0;
 			if ( bCanParentToSelected )
 			{
 				bool		bWouldCycle{ false };
@@ -298,14 +300,14 @@ namespace sw::editor
 			}
 
 			// 동적 확장 메뉴
-			EditorContextMenuRegistry::drawContextMenu( ContextMenuLocation::Hierarchy );
+			EditorContext::get()->getActionMenuManager().drawActionMenu( ActionMenuLocation::Hierarchy );
 
 			ImGui::Separator();
 			if ( ImGui::MenuItem( "Destroy GameObject" ) )
 			{
 				EditorTransaction::recordDestruction( GameObjectPtr{ pObj }, "Destroy GameObject" );
-				if ( SelectionManager::hasObject( GameObjectPtr{ pObj } ) )
-					SelectionManager::selectObject( GameObjectPtr{ pObj }, SelectionMode::Remove );
+				if ( EditorContext::get()->getSelectionManager().hasObject( GameObjectPtr{ pObj } ) )
+					EditorContext::get()->getSelectionManager().selectObject( GameObjectPtr{ pObj }, SelectionMode::Remove );
 				pManager->destroyObject( pObj );
 			}
 
@@ -319,8 +321,9 @@ namespace sw::editor
 
 			ImGui::PushID( static_cast<int32>( pSceneComp->getComponentId() ) );
 
-			const bool bSelected = ( EditorWorkspace::selectedObjectId() == pObj->getObjectId() &&
-									 EditorWorkspace::selectedComponentId() == pSceneComp->getComponentId() );
+			EditorWorkspace& ws		   = EditorContext::get()->getWorkspace();
+			const bool		 bSelected = ( ws.getSelectedObjectId() == pObj->getObjectId() &&
+									   ws.getSelectedComponentId() == pSceneComp->getComponentId() );
 
 			const utf8* pCompName = pSceneComp->getComponentName().empty() == false
 									  ? pSceneComp->getComponentName().c_str()
@@ -346,7 +349,7 @@ namespace sw::editor
 
 			const bool bOpen = ImGui::TreeNodeEx( arrLabel, flags );
 			if ( ImGui::IsItemClicked() )
-				EditorWorkspace::selectComponent( GameObjectPtr{ pObj }, ComponentPtr{ pSceneComp } );
+				ws.selectComponent( GameObjectPtr{ pObj }, ComponentPtr{ pSceneComp } );
 			drawComponentContextMenu( pObj, pSceneComp, pManager );
 
 			if ( bOpen )
@@ -375,7 +378,7 @@ namespace sw::editor
 
 			const uint64  objectId = pObj->getObjectId();
 			GameObjectPtr ptrObj{ pObj };
-			const bool	  bSelected = SelectionManager::hasObject( ptrObj );
+			const bool	  bSelected = EditorContext::get()->getSelectionManager().hasObject( ptrObj );
 
 			ImGui::PushID( static_cast<int32>( objectId ) );
 
@@ -408,7 +411,7 @@ namespace sw::editor
 				else if ( io.KeyShift )
 					mode = SelectionMode::Add;
 
-				EditorWorkspace::selectGameObject( ptrObj, mode );
+				EditorContext::get()->getWorkspace().selectGameObject( ptrObj, mode );
 			}
 
 			drawGameObjectContextMenu( pObj, pManager );
@@ -439,8 +442,9 @@ namespace sw::editor
 
 					ImGui::PushID( static_cast<int32>( pComp->getComponentId() ) );
 
-					const bool bCompSelected = ( EditorWorkspace::selectedObjectId() == pObj->getObjectId() &&
-												 EditorWorkspace::selectedComponentId() == pComp->getComponentId() );
+					EditorWorkspace& ws			   = EditorContext::get()->getWorkspace();
+					const bool		 bCompSelected = ( ws.getSelectedObjectId() == pObj->getObjectId() &&
+												   ws.getSelectedComponentId() == pComp->getComponentId() );
 
 					const utf8* pCompName = pComp->getComponentName().empty() == false
 											  ? pComp->getComponentName().c_str()
@@ -451,7 +455,7 @@ namespace sw::editor
 								  pComp->getComponentId() );
 
 					if ( ImGui::Selectable( arrCompLabel, bCompSelected ) )
-						EditorWorkspace::selectComponent( ptrObj, ComponentPtr{ pComp } );
+						ws.selectComponent( ptrObj, ComponentPtr{ pComp } );
 					drawComponentContextMenu( pObj, pComp, pManager );
 
 					ImGui::PopID();
@@ -504,7 +508,7 @@ namespace sw::editor
 				if ( ImGui::MenuItem( "Create Empty GameObject" ) )
 					createGameObjectWithRoot( pManager, nullptr );
 
-				EditorContextMenuRegistry::drawContextMenu( ContextMenuLocation::Hierarchy );
+				EditorContext::get()->getActionMenuManager().drawActionMenu( ActionMenuLocation::Hierarchy );
 				ImGui::EndPopup();
 			}
 		}

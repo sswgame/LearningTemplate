@@ -6,6 +6,7 @@
 
 #include "Editor/Common/Gui/EditorChrome.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
+#include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
 #include <imgui.h>
@@ -90,14 +91,14 @@ namespace sw::editor
 			return;
 		}
 
-		int32& op = EditorWorkspace::gizmoOperation();
+		int32& op = EditorContext::get()->getWorkspace().getGizmoOperationRef();
 		ImGui::RadioButton( "Translate", &op, 0 );
 		ImGui::SameLine();
 		ImGui::RadioButton( "Rotate", &op, 1 );
 		ImGui::SameLine();
 		ImGui::RadioButton( "Scale", &op, 2 );
 		ImGui::SameLine();
-		bool& bLocal = EditorWorkspace::gizmoLocalSpace();
+		bool& bLocal = EditorContext::get()->getWorkspace().getGizmoLocalSpaceRef();
 		ImGui::Checkbox( "Local", &bLocal );
 
 		editor::drawToolbarSeparator();

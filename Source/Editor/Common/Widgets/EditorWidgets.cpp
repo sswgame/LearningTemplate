@@ -13,19 +13,13 @@ namespace sw::editor
 {
 	namespace
 	{
-		/**
-		 * @brief Color4 구조체를 ImGui의 ImVec4 포맷으로 변환합니다.
-		 * @param c 변환할 Color4 색상
-		 * @return ImVec4 구조체
-		 */
 		ImVec4 toIm( const Color4& c )
 		{
 			return ImVec4( c._r, c._g, c._b, c._a );
 		}
-
 	} // namespace
 
-	bool drawVec3Control( const utf8* pLabel, float3& values, float32 resetValue, float32 columnWidth, float32 speed )
+	bool EditorWidgets::drawVec3Control( const utf8* pLabel, float3& values, float32 resetValue, float32 columnWidth, float32 speed )
 	{
 		ImGui::PushID( pLabel );
 
@@ -72,7 +66,7 @@ namespace sw::editor
 		return bChanged;
 	}
 
-	bool beginComponentCard( const utf8* pName, uint64 id, bool* pBActive, bool* pBRemoveRequested, bool bAccent )
+	bool EditorWidgets::beginComponentCard( const utf8* pName, uint64 id, bool* pBActive, bool* pBRemoveRequested, bool bAccent )
 	{
 		constexpr ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_Framed |
 											 ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_AllowOverlap |
@@ -121,13 +115,13 @@ namespace sw::editor
 		return open;
 	}
 
-	void endComponentCard()
+	void EditorWidgets::endComponentCard()
 	{
 		ImGui::TreePop();
 		ImGui::PopID();
 	}
 
-	void drawSectionHeader( const utf8* pTitle, const utf8* pSubtitle )
+	void EditorWidgets::drawSectionHeader( const utf8* pTitle, const utf8* pSubtitle )
 	{
 		ImGui::TextUnformatted( pTitle );
 		if ( pSubtitle != nullptr && pSubtitle[0] != '\0' )
@@ -135,22 +129,22 @@ namespace sw::editor
 		ImGui::Separator();
 	}
 
-	void drawToolbarSeparator()
+	void EditorWidgets::drawToolbarSeparator()
 	{
 		ImGui::SameLine();
 		ImGui::TextDisabled( "|" );
 		ImGui::SameLine();
 	}
 
-	void drawEmptyHint( const utf8* pText )
+	void EditorWidgets::drawEmptyHint( const utf8* pText )
 	{
 		if ( pText == nullptr )
 			return;
 		ImGui::TextDisabled( "%s", pText );
 	}
 
-	bool drawSearchField( const utf8* pId, utf8* pBuffer, uint32 bufferBytes, const utf8* pHint, float32 width,
-						  bool bShowClear )
+	bool EditorWidgets::drawSearchField( const utf8* pId, utf8* pBuffer, uint32 bufferBytes, const utf8* pHint, float32 width,
+										 bool bShowClear )
 	{
 		if ( pBuffer == nullptr || bufferBytes == 0 )
 			return false;
@@ -182,7 +176,7 @@ namespace sw::editor
 		return bChanged;
 	}
 
-	void drawChip( const utf8* pLabel, const Color4& color )
+	void EditorWidgets::drawChip( const utf8* pLabel, const Color4& color )
 	{
 		ImGui::PushStyleColor( ImGuiCol_Button, toIm( color ) );
 		ImGui::PushStyleColor( ImGuiCol_ButtonHovered, toIm( color ) );
@@ -191,7 +185,7 @@ namespace sw::editor
 		ImGui::PopStyleColor( 3 );
 	}
 
-	bool drawPropertyRowBegin( const utf8* pLabel, float32 labelWidth )
+	bool EditorWidgets::drawPropertyRowBegin( const utf8* pLabel, float32 labelWidth )
 	{
 		ImGui::AlignTextToFramePadding();
 		ImGui::TextDisabled( "%s", pLabel );
@@ -200,11 +194,11 @@ namespace sw::editor
 		return true;
 	}
 
-	void drawPropertyRowEnd()
+	void EditorWidgets::drawPropertyRowEnd()
 	{
 	}
 
-	bool drawSearchFilter( const utf8* pId, string& filterText, float32 width )
+	bool EditorWidgets::drawSearchFilter( const utf8* pId, string& filterText, float32 width )
 	{
 		utf8 buffer[256]{};
 		StringUtil::strncpy( buffer, filterText.c_str(), sizeof( buffer ) - 1 );
@@ -214,7 +208,7 @@ namespace sw::editor
 		return bChanged;
 	}
 
-	bool drawAssetSlot( const utf8* pLabel, string& assetPath, const utf8* pExpectedExt, float32 labelWidth )
+	bool EditorWidgets::drawAssetSlot( const utf8* pLabel, string& assetPath, const utf8* pExpectedExt, float32 labelWidth )
 	{
 		ImGui::PushID( pLabel );
 		bool bChanged{ false };
@@ -272,8 +266,8 @@ namespace sw::editor
 		return bChanged;
 	}
 
-	bool drawSplitter( const utf8* pId, bool bVertical, float32 thickness, float32* pSize1, float32* pSize2,
-					   float32 minSize1, float32 minSize2 )
+	bool EditorWidgets::drawSplitter( const utf8* pId, bool bVertical, float32 thickness, float32* pSize1, float32* pSize2,
+									  float32 minSize1, float32 minSize2 )
 	{
 		ImGuiContext& g		  = *GImGui;
 		ImGuiWindow*  pWindow = g.CurrentWindow;
@@ -288,7 +282,7 @@ namespace sw::editor
 										0.0f );
 	}
 
-	bool drawColorEdit( const utf8* pLabel, Color4& color, float32 labelWidth )
+	bool EditorWidgets::drawColorEdit( const utf8* pLabel, Color4& color, float32 labelWidth )
 	{
 		ImGui::PushID( pLabel );
 		if ( pLabel != nullptr && pLabel[0] != '\0' )
@@ -312,14 +306,14 @@ namespace sw::editor
 		return bChanged;
 	}
 
-	void pushInspectorStyle()
+	void EditorWidgets::pushInspectorStyle()
 	{
 		ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, 1.0f );
 		ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( 2.0f, 2.0f ) );
 		ImGui::PushStyleVar( ImGuiStyleVar_WindowRounding, 5.0f );
 	}
 
-	void popInspectorStyle()
+	void EditorWidgets::popInspectorStyle()
 	{
 		ImGui::PopStyleVar( 3 );
 	}

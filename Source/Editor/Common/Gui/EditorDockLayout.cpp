@@ -8,7 +8,8 @@
 
 #include "Editor/Common/Config/EditorConfig.h"
 #include "Editor/Common/EditorUtil.h"
-#include "Editor/Panels/EditorPanelRegistry.h"
+#include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Panels/EditorPanelManager.h"
 
 #include "Engine/Utility/File/KeyValueFile.h"
 
@@ -20,7 +21,7 @@ namespace sw::editor
 	EditorDockLayout::EditorDockLayout()
 		: _imguiIniPath{}
 		, _windowsIniPath{}
-		, _bApplied{ 0 }
+		, _bApplied{ SW_FALSE }
 		, _reserved{ 0 }
 	{
 	}
@@ -65,7 +66,7 @@ namespace sw::editor
 			return;
 		}
 
-		for ( const EditorPanelEntry& entry : EditorPanelRegistry::getPanels() )
+		for ( const EditorPanelEntry& entry : EditorContext::get()->getPanelManager().getPanels() )
 		{
 			if ( entry._pInstance == nullptr )
 				continue;
@@ -87,7 +88,7 @@ namespace sw::editor
 			StringBuilder<2048> sb;
 			sb.append( "# Editor panel visibility (1=open, 0=closed)\n" );
 			sb.append( "[WindowVisibility]\n" );
-			for ( const EditorPanelEntry& entry : EditorPanelRegistry::getPanels() )
+			for ( const EditorPanelEntry& entry : EditorContext::get()->getPanelManager().getPanels() )
 			{
 				if ( entry._pInstance == nullptr )
 					continue;
@@ -118,22 +119,22 @@ namespace sw::editor
 
 		const ImGuiViewport* pViewport	 = ImGui::GetMainViewport();
 		const ImGuiID		 dockspaceId = ImGui::DockSpaceOverViewport(
-			ImGui::GetID( "EditorMainDockSpace_v6" ), pViewport, ImGuiDockNodeFlags_PassthruCentralNode );
+			   ImGui::GetID( "EditorMainDockSpace_v6" ), pViewport, ImGuiDockNodeFlags_PassthruCentralNode );
 
-		if ( _bApplied == 0 )
+		if ( _bApplied == SW_FALSE )
 		{
 			const ImGuiDockNode* const pNode = ImGui::DockBuilderGetNode( dockspaceId );
 			const bool				   bEmpty =
 				( pNode == nullptr ) || ( pNode->IsSplitNode() == false && pNode->Windows.Size == 0 );
 			if ( bEmpty )
 				applyDefaultDockLayout( dockspaceId );
-			_bApplied = 1;
+			_bApplied = SW_TRUE;
 		}
 	}
 
 	void EditorDockLayout::requestResetDefault()
 	{
-		_bApplied = 0;
+		_bApplied = SW_FALSE;
 	}
 
 	void EditorDockLayout::applyDefaultDockLayout( uint32 dockspaceId )

@@ -10,13 +10,14 @@ namespace sw
 namespace sw::editor
 {
 	class SelectionManager;
+	class EditorWorkspace;
 	class EditorNotificationManager;
-	class EditorContextMenuRegistry;
-	class CommandPalettePopup;
-	class EditorPanelRegistry;
-	class AssetEditorRegistry;
-	class InspectorComponentRegistry;
-	class InspectorPropertyRegistry;
+	class EditorActionMenuManager;
+	class EditorPanelManager;
+	class EditorPopupManager;
+	class AssetEditorManager;
+	class InspectorComponentManager;
+	class InspectorPropertyManager;
 	class IImGuiRendererBackend;
 
 	/** @brief 에디터가 소유하는 Game View RT. App은 매 프레임 핸들만 조회합니다. */
@@ -48,39 +49,41 @@ namespace sw::editor
 		/** @brief 활성 에디터 컨텍스트 포인터를 설정합니다. */
 		static void setActive( EditorContext* pContext ) { s_pActiveContext = pContext; }
 
-		SelectionManager&			getSelectionManager() { return *_pSelectionManager; }
-		EditorNotificationManager&	getNotificationManager() { return *_pNotificationManager; }
-		EditorContextMenuRegistry&	getContextMenuRegistry() { return *_pContextMenuRegistry; }
-		CommandPalettePopup&		getCommandPalette() { return *_pCommandPalette; }
-		EditorPanelRegistry&		getPanelRegistry() { return *_pPanelRegistry; }
-		AssetEditorRegistry&		getAssetEditorRegistry() { return *_pAssetEditorRegistry; }
-		InspectorComponentRegistry& getInspectorComponentRegistry() { return *_pInspectorComponentRegistry; }
-		InspectorPropertyRegistry&	getInspectorPropertyRegistry() { return *_pInspectorPropertyRegistry; }
+		SelectionManager&		   getSelectionManager() { return *_pSelectionManager; }
+		EditorWorkspace&		   getWorkspace() { return *_pWorkspace; }
+		EditorNotificationManager& getNotificationManager() { return *_pNotificationManager; }
+		EditorActionMenuManager&   getActionMenuManager() { return *_pActionMenuManager; }
+		EditorPanelManager&		   getPanelManager() { return *_pPanelManager; }
+		EditorPopupManager&		   getPopupManager() { return *_pPopupManager; }
+		AssetEditorManager&		   getAssetEditorManager() { return *_pAssetEditorManager; }
+		InspectorComponentManager& getInspectorComponentManager() { return *_pInspectorComponentManager; }
+		InspectorPropertyManager&  getInspectorPropertyManager() { return *_pInspectorPropertyManager; }
 
 		void		setRhiDevice( IRHIDevice* pDevice ) { _pRhiDevice = pDevice; }
 		IRHIDevice* getRhiDevice() const { return _pRhiDevice; }
 		void		setRendererBackend( IImGuiRendererBackend* pBackend ) { _pRendererBackend = pBackend; }
-		void		setGameViewHovered( bool bHovered ) { _bGameViewHovered = bHovered ? 1 : 0; }
-		void		setGameViewFocused( bool bFocused ) { _bGameViewFocused = bFocused ? 1 : 0; }
-		bool		isGameViewHovered() const { return _bGameViewHovered != 0; }
-		bool		isGameViewFocused() const { return _bGameViewFocused != 0; }
+		void		setGameViewHovered( bool bHovered ) { _bGameViewHovered = bHovered ? SW_TRUE : SW_FALSE; }
+		void		setGameViewFocused( bool bFocused ) { _bGameViewFocused = bFocused ? SW_TRUE : SW_FALSE; }
+		bool		isGameViewHovered() const { return _bGameViewHovered == SW_TRUE; }
+		bool		isGameViewFocused() const { return _bGameViewFocused == SW_TRUE; }
 
 		const EditorGameView& getGameView() const { return _gameView; }
 		void				  ensureGameViewSize( uint32 width, uint32 height );
 		void				  destroyGameView();
 
 	private:
-		unique_ptr<SelectionManager>		   _pSelectionManager;
-		unique_ptr<EditorNotificationManager>  _pNotificationManager;
-		unique_ptr<EditorContextMenuRegistry>  _pContextMenuRegistry;
-		unique_ptr<CommandPalettePopup>		   _pCommandPalette;
-		unique_ptr<EditorPanelRegistry>		   _pPanelRegistry;
-		unique_ptr<AssetEditorRegistry>		   _pAssetEditorRegistry;
-		unique_ptr<InspectorComponentRegistry> _pInspectorComponentRegistry;
-		unique_ptr<InspectorPropertyRegistry>  _pInspectorPropertyRegistry;
-		IRHIDevice*							   _pRhiDevice;
-		IImGuiRendererBackend*				   _pRendererBackend;
-		EditorGameView						   _gameView;
+		unique_ptr<SelectionManager>		  _pSelectionManager;
+		unique_ptr<EditorWorkspace>			  _pWorkspace;
+		unique_ptr<EditorNotificationManager> _pNotificationManager;
+		unique_ptr<EditorActionMenuManager>	  _pActionMenuManager;
+		unique_ptr<EditorPanelManager>		  _pPanelManager;
+		unique_ptr<EditorPopupManager>		  _pPopupManager;
+		unique_ptr<AssetEditorManager>		  _pAssetEditorManager;
+		unique_ptr<InspectorComponentManager> _pInspectorComponentManager;
+		unique_ptr<InspectorPropertyManager>  _pInspectorPropertyManager;
+		IRHIDevice*							  _pRhiDevice;
+		IImGuiRendererBackend*				  _pRendererBackend;
+		EditorGameView						  _gameView;
 
 		uint8				   _bGameViewHovered : 1;
 		uint8				   _bGameViewFocused : 1;

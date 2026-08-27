@@ -2,8 +2,7 @@
 
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
-#include "Core/Concurrency/mutex.h"
-
+#include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/SelectionManager.h"
 
 #include "Engine/Object/Component/Component.h"
@@ -88,74 +87,93 @@ namespace sw::editor
 			}
 			return nullptr;
 		}
-
-		mutex  s_pendingSceneMutex;
-		string s_pendingScenePath;
-
 	} // namespace
 
-	uint64 EditorWorkspace::selectedObjectId()
+	// ------------------------------------------------------------------------------
+	// Constructor
+	// ------------------------------------------------------------------------------
+	EditorWorkspace::EditorWorkspace()
+		: _selectedComponentId{ 0 }
+		, _selectedComponentKey{}
+		, _focusedAssetPath{}
+		, _inspectMode{ InspectMode::GameObject }
+		, _gizmoOperation{ 0 }
+		, _pendingOpenPanelTitle{}
+		, _pendingScenePath{}
+		, _pendingSceneMutex{}
+		, _scrollToComponentId{ 0 }
+		, _scrollToObjectId{ 0 }
+		, _bGizmoLocalSpace{ true }
+		, _bBoneHierarchyPopupOpen{ false }
 	{
-		return SelectionManager::getPrimaryObjectId();
 	}
 
-	GameObjectPtr EditorWorkspace::selectedObject()
+	// ------------------------------------------------------------------------------
+	// Member Methods
+	// ------------------------------------------------------------------------------
+	uint64 EditorWorkspace::getSelectedObjectId() const
 	{
-		return SelectionManager::getPrimaryObject();
+		EditorContext* pContext = EditorContext::get();
+		if ( pContext != nullptr )
+			return pContext->getSelectionManager().getPrimaryObjectId();
+		return 0;
 	}
 
-	uint64& EditorWorkspace::selectedComponentId()
+	GameObjectPtr EditorWorkspace::getSelectedObject() const
 	{
-		static uint64 s_id{ 0 };
-		return s_id;
+		EditorContext* pContext = EditorContext::get();
+		if ( pContext != nullptr )
+			return pContext->getSelectionManager().getPrimaryObject();
+		return GameObjectPtr{};
 	}
 
-	string EditorWorkspace::selectedObjectName()
+	string EditorWorkspace::getSelectedObjectName() const
 	{
-		GameObject* pObj = SelectionManager::getPrimaryObject().get();
-		if ( pObj != nullptr )
-			return string{ pObj->getName().c_str() };
+		GameObjectPtr pObj = getSelectedObject();
+		if ( pObj.isValid() )
+			return string{ pObj.get()->getName().c_str() };
 		return {};
-	}
-
-	string& EditorWorkspace::selectedComponentKey()
-	{
-		static string s_key;
-		return s_key;
 	}
 
 	void EditorWorkspace::clearSelection()
 	{
-		SelectionManager::clearAll();
-		selectedComponentId() = 0;
-		selectedComponentKey().clear();
+		EditorContext* pContext = EditorContext::get();
+		if ( pContext != nullptr )
+			pContext->getSelectionManager().clearAll();
+		_selectedComponentId = 0;
+		_selectedComponentKey.clear();
 	}
 
 	void EditorWorkspace::selectGameObject( GameObjectPtr pObj, SelectionMode mode )
 	{
-		SelectionManager::selectObject( pObj, mode );
-		selectedComponentId() = 0;
-		selectedComponentKey().clear();
-		inspectMode() = InspectMode::GameObject;
+		EditorContext* pContext = EditorContext::get();
+		if ( pContext != nullptr )
+			pContext->getSelectionManager().selectObject( pObj, mode );
+		_selectedComponentId = 0;
+		_selectedComponentKey.clear();
+		_inspectMode = InspectMode::GameObject;
 	}
 
 	void EditorWorkspace::selectComponent( GameObjectPtr pObj, ComponentPtr pComp )
 	{
-		SelectionManager::selectObject( pObj, SelectionMode::Replace );
+		EditorContext* pContext = EditorContext::get();
+		if ( pContext != nullptr )
+			pContext->getSelectionManager().selectObject( pObj, SelectionMode::Replace );
+
 		Component* pRawComp = pComp.get();
 		if ( pRawComp != nullptr )
-			selectedComponentId() = pRawComp->getComponentId();
+			_selectedComponentId = pRawComp->getComponentId();
 		else
-			selectedComponentId() = 0;
+			_selectedComponentId = 0;
 
 		GameObject* pRawObj = pObj.get();
 		if ( pRawObj != nullptr && pRawComp != nullptr )
-			selectedComponentKey() = computeStableComponentKey( pRawObj, pRawComp );
+			_selectedComponentKey = computeStableComponentKey( pRawObj, pRawComp );
 		else
-			selectedComponentKey().clear();
+			_selectedComponentKey.clear();
 
-		scrollToComponentId() = selectedComponentId();
-		inspectMode()		  = InspectMode::GameObject;
+		_scrollToComponentId = _selectedComponentId;
+		_inspectMode		 = InspectMode::GameObject;
 	}
 
 	void EditorWorkspace::remapSelectionByObjectName( GameObjectManager* pGameObjectManager )
@@ -163,11 +181,11 @@ namespace sw::editor
 		if ( pGameObjectManager == nullptr )
 			return;
 
-		const string name = selectedObjectName();
+		const string name = getSelectedObjectName();
 		if ( name.empty() )
 		{
-			selectedComponentId() = 0;
-			selectedComponentKey().clear();
+			_selectedComponentId = 0;
+			_selectedComponentKey.clear();
 			return;
 		}
 
@@ -178,109 +196,61 @@ namespace sw::editor
 			return;
 		}
 
-		SelectionManager::selectObject( GameObjectPtr{ pObj }, SelectionMode::Replace );
+		EditorContext* pContext = EditorContext::get();
+		if ( pContext != nullptr )
+			pContext->getSelectionManager().selectObject( GameObjectPtr{ pObj }, SelectionMode::Replace );
 
-		const string& key = selectedComponentKey();
-		if ( key.empty() )
+		if ( _selectedComponentKey.empty() )
 		{
-			selectedComponentId() = 0;
+			_selectedComponentId = 0;
 			return;
 		}
 
-		Component* pRematerialized = findComponentByStableKey( pObj, key );
+		Component* pRematerialized = findComponentByStableKey( pObj, _selectedComponentKey );
 		if ( pRematerialized != nullptr )
-			selectedComponentId() = pRematerialized->getComponentId();
+			_selectedComponentId = pRematerialized->getComponentId();
 		else
-			selectedComponentId() = 0;
-	}
-
-	string& EditorWorkspace::focusedAssetPath()
-	{
-		static string s_path;
-		return s_path;
+			_selectedComponentId = 0;
 	}
 
 	void EditorWorkspace::setFocusedAssetPath( const utf8* pPath )
 	{
-		focusedAssetPath() = ( pPath != nullptr ) ? pPath : "";
+		_focusedAssetPath = ( pPath != nullptr ) ? pPath : "";
 		if ( pPath != nullptr && pPath[0] != '\0' )
-			SelectionManager::selectAsset( pPath, SelectionMode::Replace );
-	}
-
-	InspectMode& EditorWorkspace::inspectMode()
-	{
-		static InspectMode s_mode = InspectMode::GameObject;
-		return s_mode;
-	}
-
-	void EditorWorkspace::setInspectMode( InspectMode mode )
-	{
-		inspectMode() = mode;
-	}
-
-	int32& EditorWorkspace::gizmoOperation()
-	{
-		static int32 s_op{ 0 };
-		return s_op;
-	}
-
-	bool& EditorWorkspace::gizmoLocalSpace()
-	{
-		static bool s_local{ true };
-		return s_local;
-	}
-
-	string& EditorWorkspace::pendingOpenPanelTitle()
-	{
-		static string s_title;
-		return s_title;
+		{
+			EditorContext* pContext = EditorContext::get();
+			if ( pContext != nullptr )
+				pContext->getSelectionManager().selectAsset( pPath, SelectionMode::Replace );
+		}
 	}
 
 	void EditorWorkspace::requestOpenPanel( const utf8* pTitle )
 	{
-		pendingOpenPanelTitle() = ( pTitle != nullptr ) ? pTitle : "";
+		_pendingOpenPanelTitle = ( pTitle != nullptr ) ? pTitle : "";
 	}
 
 	bool EditorWorkspace::consumeOpenPanel( string& outTitle )
 	{
-		if ( pendingOpenPanelTitle().empty() )
+		if ( _pendingOpenPanelTitle.empty() )
 			return false;
-		outTitle = pendingOpenPanelTitle();
-		pendingOpenPanelTitle().clear();
+		outTitle = _pendingOpenPanelTitle;
+		_pendingOpenPanelTitle.clear();
 		return true;
 	}
 
 	void EditorWorkspace::requestLoadScene( string_view path )
 	{
-		std::scoped_lock<mutex> lock{ s_pendingSceneMutex };
-		s_pendingScenePath = path;
+		std::scoped_lock<mutex> lock{ _pendingSceneMutex };
+		_pendingScenePath = path;
 	}
 
 	bool EditorWorkspace::consumeLoadScene( string& outPath )
 	{
-		std::scoped_lock<mutex> lock{ s_pendingSceneMutex };
-		if ( s_pendingScenePath.empty() )
+		std::scoped_lock<mutex> lock{ _pendingSceneMutex };
+		if ( _pendingScenePath.empty() )
 			return false;
-		outPath = s_pendingScenePath;
-		s_pendingScenePath.clear();
+		outPath = _pendingScenePath;
+		_pendingScenePath.clear();
 		return true;
-	}
-
-	uint64& EditorWorkspace::scrollToComponentId()
-	{
-		static uint64 s_id{ 0 };
-		return s_id;
-	}
-
-	uint64& EditorWorkspace::scrollToObjectId()
-	{
-		static uint64 s_id{ 0 };
-		return s_id;
-	}
-
-	bool& EditorWorkspace::boneHierarchyPopupOpen()
-	{
-		static bool s_open{ false };
-		return s_open;
 	}
 } // namespace sw::editor

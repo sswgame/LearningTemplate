@@ -7,8 +7,9 @@
 
 #include "Editor/Common/Gui/EditorDockLayout.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorNotificationManager.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
-#include "Editor/Panels/EditorPanelRegistry.h"
+#include "Editor/Panels/EditorPanelManager.h"
 #include "Editor/Popups/CommandPalettePopup.h"
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -30,7 +31,7 @@ namespace sw::editor
 		void onOpenSceneDialogResult( const vector<string>& listPaths )
 		{
 			if ( listPaths.empty() == false )
-				EditorWorkspace::requestLoadScene( listPaths[0] );
+				EditorContext::get()->getWorkspace().requestLoadScene( listPaths[0] );
 		}
 
 		void openSceneFileDialog()
@@ -52,7 +53,7 @@ namespace sw::editor
 		}
 	} // namespace
 
-	void drawMainMenuBar( EditorDockLayout& dockLayout )
+	void EditorMenuBar::draw( EditorDockLayout& dockLayout )
 	{
 		if ( ImGui::BeginMainMenuBar() == false )
 			return;
@@ -120,20 +121,20 @@ namespace sw::editor
 		if ( ImGui::BeginMenu( "Assets" ) )
 		{
 			if ( ImGui::MenuItem( "Tile Map Tool" ) )
-				EditorWorkspace::requestOpenPanel( "Tile Map Tool" );
+				EditorContext::get()->getWorkspace().requestOpenPanel( "Tile Map Tool" );
 			if ( ImGui::MenuItem( "Sprite Clip" ) )
-				EditorWorkspace::requestOpenPanel( "Sprite Clip" );
+				EditorContext::get()->getWorkspace().requestOpenPanel( "Sprite Clip" );
 			if ( ImGui::MenuItem( "Animation Graph" ) )
-				EditorWorkspace::requestOpenPanel( "Animation Graph" );
+				EditorContext::get()->getWorkspace().requestOpenPanel( "Animation Graph" );
 			if ( ImGui::MenuItem( "Sequencer" ) )
-				EditorWorkspace::requestOpenPanel( "Sequencer" );
+				EditorContext::get()->getWorkspace().requestOpenPanel( "Sequencer" );
 			ImGui::EndMenu();
 		}
 
 		if ( ImGui::BeginMenu( "Panel" ) )
 		{
 			ImGui::SeparatorText( "Panels" );
-			for ( const EditorPanelEntry& entry : EditorPanelRegistry::getPanels() )
+			for ( const EditorPanelEntry& entry : EditorContext::get()->getPanelManager().getPanels() )
 			{
 				if ( entry._pInstance == nullptr || entry._category != EditorPanelCategory::Core )
 					continue;
@@ -143,7 +144,7 @@ namespace sw::editor
 			}
 
 			ImGui::SeparatorText( "Tools" );
-			for ( const EditorPanelEntry& entry : EditorPanelRegistry::getPanels() )
+			for ( const EditorPanelEntry& entry : EditorContext::get()->getPanelManager().getPanels() )
 			{
 				if ( entry._pInstance == nullptr || entry._category == EditorPanelCategory::Core )
 					continue;
@@ -163,11 +164,36 @@ namespace sw::editor
 		ImGui::SameLine( ImGui::GetWindowWidth() - statusW );
 
 		// --- Live Coding Compile Button & Status ---
+		static BuildState s_lastObservedState = BuildState::Idle;
+
 		IModuleCompiler* pCompiler = getService<IModuleCompiler>();
 		if ( pCompiler != nullptr )
 		{
 			const bool		 bCompiling = pCompiler->isCompiling();
 			const BuildState state		= pCompiler->getBuildState();
+
+			// 컴파일 완료 상태 전이 감지 (Compiling -> Success / Failed)
+			if ( s_lastObservedState == BuildState::Compiling && bCompiling == false )
+			{
+				const string  targetName  = pCompiler->getTargetName();
+				const string  displayName = targetName.empty() ? "All Modules" : targetName;
+				const float32 duration	  = pCompiler->getLastDurationSec();
+
+				if ( state == BuildState::Success )
+				{
+					utf8 contentBuf[128];
+					snprintf( contentBuf, sizeof( contentBuf ), "%s compiled and reloaded in %.2fs", displayName.c_str(), static_cast<float64>( duration ) );
+					EditorContext::get()->getNotificationManager().push( "Live Coding Succeeded", contentBuf, NotificationType::Success, 4.0f );
+				}
+				else if ( state == BuildState::Failed )
+				{
+					utf8 contentBuf[128];
+					snprintf( contentBuf, sizeof( contentBuf ), "%s build failed (Exit: %d). See Output Log.", displayName.c_str(), pCompiler->getLastExitCode() );
+					EditorContext::get()->getNotificationManager().push( "Live Coding Failed", contentBuf, NotificationType::Error, 6.0f );
+				}
+			}
+
+			s_lastObservedState = bCompiling ? BuildState::Compiling : state;
 
 			if ( bCompiling )
 			{
@@ -194,7 +220,11 @@ namespace sw::editor
 			}
 
 			ImGui::SameLine();
-			if ( state == BuildState::Success )
+			if ( state == BuildState::Compiling )
+			{
+				ImGui::TextColored( ImVec4( 0.95f, 0.75f, 0.25f, 1.0f ), "Compiling..." );
+			}
+			else if ( state == BuildState::Success )
 			{
 				ImGui::TextColored( ImVec4( 0.35f, 0.85f, 0.35f, 1.0f ), "Built (%.1fs)", static_cast<float64>( pCompiler->getLastDurationSec() ) );
 			}
@@ -230,7 +260,7 @@ namespace sw::editor
 		ImGui::EndMainMenuBar();
 	}
 
-	void processMenuHotkeys()
+	void EditorMenuBar::processHotkeys()
 	{
 		ImGuiIO& io = ImGui::GetIO();
 		if ( io.WantTextInput == false )
@@ -266,19 +296,19 @@ namespace sw::editor
 		}
 	}
 
-	void processOpenPanelRequests()
+	void EditorMenuBar::processOpenPanelRequests()
 	{
 		string openTitle;
-		if ( EditorWorkspace::consumeOpenPanel( openTitle ) == false )
+		if ( EditorContext::get()->getWorkspace().consumeOpenPanel( openTitle ) == false )
 			return;
-		if ( EditorPanelRegistry::setPanelOpen( openTitle, true ) )
+		if ( EditorContext::get()->getPanelManager().setPanelOpen( openTitle, true ) )
 			ImGui::SetWindowFocus( openTitle.c_str() );
 	}
 
-	void processPendingSceneLoad()
+	void EditorMenuBar::processPendingSceneLoad()
 	{
 		string scenePath;
-		if ( EditorWorkspace::consumeLoadScene( scenePath ) == false )
+		if ( EditorContext::get()->getWorkspace().consumeLoadScene( scenePath ) == false )
 			return;
 
 		string loadPath = AssetDatabase::toRelativePath( scenePath );
@@ -294,7 +324,7 @@ namespace sw::editor
 
 		if ( pSceneManager->requestLoadAsync( loadPath ) )
 		{
-			EditorWorkspace::clearSelection();
+			EditorContext::get()->getWorkspace().clearSelection();
 			SW_LOG_INFO( "[Editor] Open Scene: %#", loadPath );
 		}
 	}

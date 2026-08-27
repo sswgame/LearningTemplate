@@ -33,11 +33,11 @@ namespace sw::editor
 
 		const utf8* levelName( LogLevel level )
 		{
-			static constexpr const utf8* kNames[] = { "Error", "Warning", "Info", "Trace" };
-			const uint8					 idx	  = static_cast<uint8>( level );
-			if ( idx >= 4 )
+			static constexpr const utf8* kArrNames[] = { "Error", "Warning", "Info", "Trace" };
+			const uint8					 index		 = static_cast<uint8>( level );
+			if ( index >= 4 )
 				return "Info";
-			return kNames[idx];
+			return kArrNames[index];
 		}
 
 	} // namespace
@@ -50,7 +50,7 @@ namespace sw::editor
 		, _arrFilterBuffer{}
 		, _bAutoScroll{ true }
 		, _arrLevelEnabled{ true, true, true, true }
-		, _bHasNewLogs{ 1 }
+		, _bHasNewLogs{ SW_TRUE }
 		, _reservedFlags{ 0 }
 	{
 		_logListenerHandle = Logger::addGlobalListener(
@@ -67,11 +67,11 @@ namespace sw::editor
 		bool bNewLogs{ false };
 		{
 			std::scoped_lock<mutex> lock{ _entriesMutex };
-			if ( _bHasNewLogs )
+			if ( _bHasNewLogs == SW_TRUE )
 			{
 				_listDrawSnapshot.assign( _listEntries.begin(), _listEntries.end() );
 				bNewLogs	 = true;
-				_bHasNewLogs = false;
+				_bHasNewLogs = SW_FALSE;
 			}
 		}
 
@@ -80,7 +80,7 @@ namespace sw::editor
 			std::scoped_lock<mutex> lock{ _entriesMutex };
 			_listEntries.clear();
 			_listDrawSnapshot.clear();
-			_bHasNewLogs = false;
+			_bHasNewLogs = SW_FALSE;
 			bNewLogs	 = false;
 		}
 		ImGui::SameLine();
@@ -159,7 +159,7 @@ namespace sw::editor
 			}
 		}
 
-		if ( _bAutoScroll && bNewLogs )
+		if ( _bAutoScroll == true && bNewLogs == true )
 			ImGui::SetScrollHereY( 1.0f );
 
 		editor::endSection();
@@ -180,7 +180,7 @@ namespace sw::editor
 		{
 			_listEntries.pop_front();
 		}
-		_bHasNewLogs = true;
+		_bHasNewLogs = SW_TRUE;
 	}
 
 	void ConsolePanel::unsubscribe()

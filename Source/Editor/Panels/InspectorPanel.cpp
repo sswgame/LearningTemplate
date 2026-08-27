@@ -10,8 +10,8 @@
 #include "Editor/Common/Workspace/SelectionManager.h"
 #include "Editor/Panels/Inspector/IInspectorComponent.h"
 #include "Editor/Panels/Inspector/IInspectorProperty.h"
-#include "Editor/Panels/Inspector/InspectorComponentRegistry.h"
-#include "Editor/Panels/Inspector/InspectorPropertyRegistry.h"
+#include "Editor/Panels/Inspector/InspectorComponentManager.h"
+#include "Editor/Panels/Inspector/InspectorPropertyManager.h"
 #include "Editor/Panels/Inspector/InspectorPropertyUndo.h"
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -123,7 +123,7 @@ namespace sw::editor
 	{
 		editor::drawSectionHeader( "Selection" );
 
-		const size_t selCount = SelectionManager::getSelectedObjectCount();
+		const size_t selCount = EditorContext::get()->getSelectionManager().getSelectedObjectCount();
 		if ( selCount > 1 )
 		{
 			ImGui::TextColored( ImVec4{ 0.4f, 0.7f, 1.0f, 1.0f }, "Multi-Selection (%u objects)",
@@ -131,7 +131,8 @@ namespace sw::editor
 			ImGui::Separator();
 		}
 
-		if ( EditorWorkspace::selectedObjectId() == 0 )
+		EditorWorkspace& ws = EditorContext::get()->getWorkspace();
+		if ( ws.getSelectedObjectId() == 0 )
 		{
 			editor::drawEmptyHint( "Nothing selected. Pick in Game View or use Hierarchy." );
 			return;
@@ -144,11 +145,11 @@ namespace sw::editor
 			return;
 		}
 
-		GameObject* pObj = pScene->getObjectManager()->findGameObjectById( EditorWorkspace::selectedObjectId() );
+		GameObject* pObj = pScene->getObjectManager()->findGameObjectById( ws.getSelectedObjectId() );
 		if ( pObj == nullptr )
 		{
 			ImGui::TextDisabled( "Selected object no longer exists." );
-			EditorWorkspace::clearSelection();
+			ws.clearSelection();
 			return;
 		}
 
@@ -176,13 +177,13 @@ namespace sw::editor
 			bool		bActive = pComp->isActive();
 			bool		bRemove{ false };
 			const bool	bAccent	  = ( pComp->asSceneComponent() != nullptr );
-			const bool	bScrollTo = ( EditorWorkspace::scrollToComponentId() != 0 &&
-									  EditorWorkspace::scrollToComponentId() == pComp->getComponentId() );
+			const bool	bScrollTo = ( ws.getScrollToComponentId() != 0 &&
+									  ws.getScrollToComponentId() == pComp->getComponentId() );
 
 			if ( bScrollTo )
 			{
 				ImGui::SetNextItemOpen( true );
-				EditorWorkspace::scrollToComponentId() = 0;
+				ws.setScrollToComponentId( 0 );
 			}
 
 			if ( editor::beginComponentCard( pName, pComp->getComponentId(), &bActive, &bRemove, bAccent ) )
@@ -239,7 +240,7 @@ namespace sw::editor
 
 		const TypeInfo*		 pTypeInfo	= pComp->getTypeInfo();
 		IInspectorComponent* pInspector = ( pTypeInfo != nullptr )
-											? InspectorComponentRegistry::find( pTypeInfo->_name.c_str() )
+											? EditorContext::get()->getInspectorComponentManager().find( pTypeInfo->_name.c_str() )
 											: nullptr;
 
 		if ( pInspector != nullptr )
@@ -313,7 +314,7 @@ namespace sw::editor
 
 	void InspectorPanel::drawPropertyWidget( void* pInstance, const PropertyInfo& prop )
 	{
-		IInspectorProperty* pProperty = InspectorPropertyRegistry::find( prop._typeName.c_str() );
+		IInspectorProperty* pProperty = EditorContext::get()->getInspectorPropertyManager().find( prop._typeName.c_str() );
 		if ( pProperty != nullptr )
 		{
 			if ( pProperty->draw( pInstance, prop ) )
@@ -353,7 +354,7 @@ namespace sw::editor
 				}
 				ImGui::EndCombo();
 			}
-			trackPodPropertyUndo( pEnumValue, sizeof( *pEnumValue ), pLabel );
+			InspectorPropertyUndo::trackPod( pEnumValue, sizeof( *pEnumValue ), pLabel );
 			return;
 		}
 

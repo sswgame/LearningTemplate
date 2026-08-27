@@ -1,3 +1,7 @@
+/**
+ * @file EditorNotificationManager.h
+ * @brief 에디터 비동기 토스트 알림 관리자 (EditorContext 소유)
+ */
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
@@ -27,7 +31,7 @@ namespace sw::editor
 
 	/**
 	 * @class EditorNotificationManager
-	 * @brief 화면 우측 하단 비동기 토스트 알림 및 프로그레스 바 렌더링을 총괄하는 정적 클래스
+	 * @brief 화면 우측 하단 비동기 토스트 알림 및 프로그레스 바 렌더링을 총괄하는 클래스
 	 */
 	class EditorNotificationManager
 	{
@@ -35,17 +39,11 @@ namespace sw::editor
 		EditorNotificationManager()	 = default;
 		~EditorNotificationManager() = default;
 
-		// Static Public API
-		static void	  push( string_view title, string_view message, NotificationType type = NotificationType::Info,
-							float32 durationSec = 4.0f, float32 progress = -1.0f );
-		static void	  updateAndDraw( float32 deltaTime, float32 screenWidth, float32 screenHeight );
-		static size_t getNotificationCount();
-
-		// Implementation methods (owned by EditorContext)
-		void   pushImpl( string_view title, string_view message, NotificationType type, float32 durationSec,
-						 float32 progress );
-		void   updateAndDrawImpl( float32 deltaTime, float32 screenWidth, float32 screenHeight );
-		size_t getNotificationCountImpl() const { return _listNotifications.size(); }
+		void   push( string_view title, string_view message, NotificationType type = NotificationType::Info,
+					 float32 durationSec = 4.0f, float32 progress = -1.0f );
+		void   updateAndDraw( float32 deltaTime, float32 screenWidth, float32 screenHeight );
+		size_t getNotificationCount() const { return _listNotifications.size(); }
+		void   clear() { _listNotifications.clear(); }
 
 	private:
 		vector<NotificationItem> _listNotifications;

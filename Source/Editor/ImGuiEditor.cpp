@@ -10,12 +10,11 @@
 #include "Editor/Common/Config/EditorData.h"
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Gui/EditorMenuBar.h"
-#include "Editor/Common/Workspace/AssetEditorRegistry.h"
+#include "Editor/Common/Workspace/AssetEditorManager.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Panels/EditorPanelRegistry.h"
-#include "Editor/Popups/BoneHierarchyPopup.h"
-#include "Editor/Popups/CommandPalettePopup.h"
-#include "Editor/Popups/EditorNotificationManager.h"
+#include "Editor/Common/Workspace/EditorNotificationManager.h"
+#include "Editor/Panels/EditorPanelManager.h"
+#include "Editor/Popups/EditorPopupManager.h"
 
 #include "Engine/Config/EngineData.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -75,8 +74,6 @@ namespace sw::editor
 		SW_LOG_INFO( "ImGuiEditor::initialize Start" );
 		if ( _bInitialized != SW_FALSE )
 			return true;
-
-		AssetEditorRegistry::registerDefaultMappings();
 
 #if !defined( SW_SHIPPING )
 		BLOCK( "EditorConfig host load" )
@@ -184,7 +181,7 @@ namespace sw::editor
 			_editorContext->setRhiDevice( pRhiDevice );
 			_editorContext->setRendererBackend( _rendererBackend.get() );
 
-			EditorPanelRegistry::registerDefaultPanels();
+			_editorContext->getPanelManager().registerDefaultPanels();
 			_dockLayout.loadPanelVisibility();
 		}
 
@@ -200,10 +197,11 @@ namespace sw::editor
 		_dockLayout.save();
 
 		if ( _editorContext != nullptr )
+		{
 			_editorContext->destroyGameView();
-
-		EditorPanelRegistry::shutdownAllPanels( nullptr );
-		EditorPanelRegistry::clear();
+			_editorContext->getPanelManager().shutdownAllPanels( nullptr );
+			_editorContext->getPanelManager().clear();
+		}
 
 		if ( _rendererBackend != nullptr )
 		{
@@ -236,10 +234,10 @@ namespace sw::editor
 
 	void ImGuiEditor::preRender( IRHIDevice* pRhiDevice )
 	{
-		if ( _bInitialized == SW_FALSE )
+		if ( _bInitialized == SW_FALSE || _editorContext == nullptr )
 			return;
 
-		EditorPanelRegistry::preRenderOpenPanels( pRhiDevice );
+		_editorContext->getPanelManager().preRenderOpenPanels( pRhiDevice );
 	}
 
 	void ImGuiEditor::updateUI()
@@ -256,20 +254,22 @@ namespace sw::editor
 		BLOCK( "ImGui NewFrame / Dockspace" )
 		{
 			beginFrame();
-			editor::drawMainMenuBar( _dockLayout );
+			EditorMenuBar::draw( _dockLayout );
 			_dockLayout.beginDockspace();
 		}
 
-		editor::processMenuHotkeys();
-		editor::processOpenPanelRequests();
-		editor::processPendingSceneLoad();
+		EditorMenuBar::processHotkeys();
+		EditorMenuBar::processOpenPanelRequests();
+		EditorMenuBar::processPendingSceneLoad();
 
 		BLOCK( "Editor Panels Draw" )
 		{
-			EditorPanelRegistry::drawOpenPanels();
-			drawBoneHierarchyPopup();
-			CommandPalettePopup::draw();
-			EditorNotificationManager::updateAndDraw( ImGui::GetIO().DeltaTime, 1920.0f, 1080.0f );
+			if ( _editorContext != nullptr )
+			{
+				_editorContext->getPanelManager().drawOpenPanels();
+				_editorContext->getPopupManager().drawOpenPopups();
+				_editorContext->getNotificationManager().updateAndDraw( ImGui::GetIO().DeltaTime, 1920.0f, 1080.0f );
+			}
 		}
 
 		BLOCK( "ImGui EndFrame / Platform Windows Update" )

@@ -33,12 +33,9 @@ namespace sw::editor
 	class EditorViewportToolbar
 	{
 	public:
-		EditorViewportToolbar()	 = default;
-		~EditorViewportToolbar() = default;
-
 		/** @brief 뷰포트 상단 뷰모드/카메라 속도 툴바를 그립니다. */
-		void draw( ViewportToolbarSettings& settings, float32 viewportWidth );
+		static void draw( ViewportToolbarSettings& settings, float32 viewportWidth );
 		/** @brief 선택된 오브젝트의 Translate/Rotate/Scale 및 스냅 플로팅 바를 그립니다. */
-		void drawTransformBar( ViewportToolbarSettings& settings, const float2& anchorPos, bool bEnabled );
+		static void drawTransformBar( ViewportToolbarSettings& settings, const float2& anchorPos, bool bEnabled );
 	};
 } // namespace sw::editor

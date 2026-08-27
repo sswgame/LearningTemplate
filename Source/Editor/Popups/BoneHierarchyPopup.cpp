@@ -4,7 +4,9 @@
 
 #include "Editor/Common/Gui/EditorChrome.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
+#include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
+#include "Editor/Popups/EditorPopupManager.h"
 
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
@@ -29,20 +31,16 @@ namespace sw::editor
 				if ( pNameStr != nullptr && pNameStr[0] != '\0' )
 					pCompName = pNameStr;
 			}
+			const ImGuiID			 nodeId = static_cast<ImGuiID>( pComp->getComponentId() );
+			const ImGuiTreeNodeFlags flags	= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_SpanAvailWidth;
+
+			ImGui::TreeNodeEx( reinterpret_cast<void*>( static_cast<uintptr_t>( nodeId ) ), flags, "%s", pCompName );
 
 			const vector<SceneComponent*>& listChildren = pComp->getChildren();
-			ImGuiTreeNodeFlags			   flags		= ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_DefaultOpen;
-			if ( listChildren.empty() )
-				flags |= ImGuiTreeNodeFlags_Leaf;
-
-			const bool bOpen = ImGui::TreeNodeEx( pComp, flags, "%s", pCompName );
-			if ( bOpen )
+			for ( const SceneComponent* pChild : listChildren )
 			{
-				for ( const SceneComponent* pChild : listChildren )
-				{
+				if ( pChild != nullptr )
 					drawSceneComponentHierarchy( pChild );
-				}
-				ImGui::TreePop();
 			}
 		}
 
@@ -76,19 +74,51 @@ namespace sw::editor
 		}
 	} // namespace
 
-	void drawBoneHierarchyPopup()
+	// ------------------------------------------------------------------------------
+	// Constructor
+	// ------------------------------------------------------------------------------
+	BoneHierarchyPopup::BoneHierarchyPopup()
+		: IEditorPopup{ false }
 	{
-		if ( EditorWorkspace::boneHierarchyPopupOpen() == false )
-			return;
+	}
 
-		if ( editor::beginPanel( "Hierarchy / Skeleton View", &EditorWorkspace::boneHierarchyPopupOpen() ) == false )
+	// ------------------------------------------------------------------------------
+	// Static Methods
+	// ------------------------------------------------------------------------------
+	void BoneHierarchyPopup::open()
+	{
+		EditorContext::get()->getPopupManager().openPopup( "BoneHierarchy" );
+	}
+
+	void BoneHierarchyPopup::close()
+	{
+		EditorContext::get()->getPopupManager().closePopup( "BoneHierarchy" );
+	}
+
+	void BoneHierarchyPopup::toggle()
+	{
+		EditorContext::get()->getPopupManager().togglePopup( "BoneHierarchy" );
+	}
+
+	bool BoneHierarchyPopup::isOpen()
+	{
+		return EditorContext::get()->getPopupManager().isPopupOpen( "BoneHierarchy" );
+	}
+
+	// ------------------------------------------------------------------------------
+	// Draw Content
+	// ------------------------------------------------------------------------------
+	void BoneHierarchyPopup::drawContent()
+	{
+		if ( editor::beginPanel( getPopupTitle(), &_bOpen ) == false )
 		{
 			editor::endPanel();
 			return;
 		}
 
-		const string name = EditorWorkspace::selectedObjectName();
-		if ( name.empty() || EditorWorkspace::selectedObjectId() == 0 )
+		EditorWorkspace& ws	  = EditorContext::get()->getWorkspace();
+		const string	 name = ws.getSelectedObjectName();
+		if ( name.empty() || ws.getSelectedObjectId() == 0 )
 		{
 			editor::drawEmptyHint( "No selection. Select an object in the Hierarchy." );
 			editor::endPanel();
@@ -101,7 +131,7 @@ namespace sw::editor
 		Scene* pScene = editor::getService<SceneManager>()->getActiveScene();
 		if ( pScene != nullptr && pScene->getObjectManager() != nullptr )
 		{
-			GameObject* pSelectedObj = pScene->getObjectManager()->findGameObjectById( EditorWorkspace::selectedObjectId() );
+			GameObject* pSelectedObj = pScene->getObjectManager()->findGameObjectById( ws.getSelectedObjectId() );
 			if ( pSelectedObj != nullptr )
 				drawGameObjectHierarchy( pSelectedObj );
 			else

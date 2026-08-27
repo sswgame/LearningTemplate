@@ -2,6 +2,7 @@
 
 #include "Editor/Common/Workspace/EditorTransaction.h"
 
+#include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/SelectionManager.h"
 
@@ -120,8 +121,8 @@ namespace sw::editor
 			GameObject* pTarget = pManager->findGameObjectById( objId );
 			if ( pTarget != nullptr )
 			{
-				if ( SelectionManager::hasObject( GameObjectPtr{ pTarget } ) )
-					SelectionManager::selectObject( GameObjectPtr{ pTarget }, SelectionMode::Remove );
+				if ( EditorContext::get()->getSelectionManager().hasObject( GameObjectPtr{ pTarget } ) )
+					EditorContext::get()->getSelectionManager().selectObject( GameObjectPtr{ pTarget }, SelectionMode::Remove );
 				pManager->destroyObject( pTarget );
 			}
 		};
@@ -137,7 +138,7 @@ namespace sw::editor
 			{
 				ObjectStateSerializer::loadFromXmlString( pCreated, stateXml );
 				ObjectStateSerializer::rebindSceneHierarchy( pCreated, stateXml );
-				SelectionManager::selectObject( GameObjectPtr{ pCreated }, SelectionMode::Replace );
+				EditorContext::get()->getSelectionManager().selectObject( GameObjectPtr{ pCreated }, SelectionMode::Replace );
 			}
 		};
 
@@ -167,7 +168,7 @@ namespace sw::editor
 			{
 				ObjectStateSerializer::loadFromXmlString( pCreated, stateXml );
 				ObjectStateSerializer::rebindSceneHierarchy( pCreated, stateXml );
-				SelectionManager::selectObject( GameObjectPtr{ pCreated }, SelectionMode::Replace );
+				EditorContext::get()->getSelectionManager().selectObject( GameObjectPtr{ pCreated }, SelectionMode::Replace );
 			}
 		};
 
@@ -180,8 +181,8 @@ namespace sw::editor
 			GameObject* pTarget = pManager->findGameObjectById( objId );
 			if ( pTarget != nullptr )
 			{
-				if ( SelectionManager::hasObject( GameObjectPtr{ pTarget } ) )
-					SelectionManager::selectObject( GameObjectPtr{ pTarget }, SelectionMode::Remove );
+				if ( EditorContext::get()->getSelectionManager().hasObject( GameObjectPtr{ pTarget } ) )
+					EditorContext::get()->getSelectionManager().selectObject( GameObjectPtr{ pTarget }, SelectionMode::Remove );
 				pManager->destroyObject( pTarget );
 			}
 		};
