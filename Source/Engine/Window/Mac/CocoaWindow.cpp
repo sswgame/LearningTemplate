@@ -63,7 +63,7 @@ namespace sw
 
 		SEL initSel	  = sel_registerName( "initWithContentRect:styleMask:backing:defer:" );
 		id	windowObj = ( (id ( * )( id, SEL, SW_CGRect, uint64, uint64, bool ))objc_msgSend )(
-			windowAlloc, initSel, frameRect, styleMask, backing, false );
+			 windowAlloc, initSel, frameRect, styleMask, backing, false );
 
 		if ( windowObj == nullptr )
 			return false;

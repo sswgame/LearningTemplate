@@ -132,9 +132,9 @@ namespace sw
 		if ( ok && bWasVisible )
 			showWindow( true );
 
-		_bRecreating  = false;
-		_restoreX	  = CW_USEDEFAULT;
-		_restoreY	  = CW_USEDEFAULT;
+		_bRecreating = false;
+		_restoreX	 = CW_USEDEFAULT;
+		_restoreY	 = CW_USEDEFAULT;
 		return ok;
 	}
 

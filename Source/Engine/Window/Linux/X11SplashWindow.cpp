@@ -91,17 +91,17 @@ namespace sw
 			XFillRectangle( pDisplay, win, gc, 1, 1, _width - 2, 3 );
 
 			XSetForeground( pDisplay, gc, 0xF0F5FF );
-			XDrawString( pDisplay, win, gc, 32, 50, _title.c_str(), static_cast<int>( _title.length() ) );
+			XDrawString( pDisplay, win, gc, 32, 50, _title.c_str(), static_cast<int32>( _title.length() ) );
 			XSetForeground( pDisplay, gc, 0x8296B4 );
 			XDrawString( pDisplay, win, gc, 32, 85, "Game & Editor Engine Template (LiveReload Enabled)", 50 );
 
 			XSetForeground( pDisplay, gc, 0xB4CDEB );
-			XDrawString( pDisplay, win, gc, 32, static_cast<int>( _height ) - 50, _status.c_str(), static_cast<int>( _status.length() ) );
+			XDrawString( pDisplay, win, gc, 32, static_cast<int32>( _height ) - 50, _status.c_str(), static_cast<int32>( _status.length() ) );
 
 			XSetForeground( pDisplay, gc, 0x262C3A );
-			XFillRectangle( pDisplay, win, gc, 32, static_cast<int>( _height ) - 38, _width - 64, 6 );
+			XFillRectangle( pDisplay, win, gc, 32, static_cast<int32>( _height ) - 38, _width - 64, 6 );
 			XSetForeground( pDisplay, gc, 0x3C82F0 );
-			XFillRectangle( pDisplay, win, gc, 32, static_cast<int>( _height ) - 38, _width - 110, 6 );
+			XFillRectangle( pDisplay, win, gc, 32, static_cast<int32>( _height ) - 38, _width - 110, 6 );
 
 			XFlush( pDisplay );
 		}

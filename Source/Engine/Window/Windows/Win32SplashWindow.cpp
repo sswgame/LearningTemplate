@@ -10,7 +10,7 @@ namespace sw
 {
 	namespace
 	{
-		constexpr const wchar_t* kSplashClassName = L"SWSplashWindowClass";
+		constexpr const utf16* kSplashClassName = L"SWSplashWindowClass";
 
 		LRESULT CALLBACK splashWndProcInternal( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam )
 		{

@@ -147,8 +147,8 @@ namespace sw
 		if ( ok && bWasVisible )
 			showWindow( true );
 
-		_restoreX		   = 100;
-		_restoreY		   = 100;
+		_restoreX = 100;
+		_restoreY = 100;
 		return ok;
 	}
 
