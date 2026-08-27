@@ -287,19 +287,19 @@ namespace sw::editor
 
 		if ( pCamera != nullptr )
 		{
-			SceneManager* pSceneManager = editor::getService<SceneManager>();
-			if ( pSceneManager != nullptr )
-			{
-				Scene* pScene = pSceneManager->getActiveScene();
-				if ( pScene != nullptr && pScene->getObjectManager() != nullptr )
-					pScene->getObjectManager()->flushSceneTransforms();
-			}
-
 			processPicking( canvasPos, canvasSize, pCamera );
 
 			GameObjectPtr pPrimary = EditorContext::get()->getSelectionManager().getPrimaryObject();
 			if ( pPrimary.isValid() )
 			{
+				SceneManager* pSceneManager = editor::getService<SceneManager>();
+				if ( pSceneManager != nullptr )
+				{
+					Scene* pScene = pSceneManager->getActiveScene();
+					if ( pScene != nullptr && pScene->getObjectManager() != nullptr )
+						pScene->getObjectManager()->flushSceneTransforms();
+				}
+
 				const float32 aspect = canvasSize._x / ( canvasSize._y > 0.0f ? canvasSize._y : 1.0f );
 				float32		  arrView[16];
 				float32		  arrProj[16];
@@ -338,6 +338,7 @@ namespace sw::editor
 		if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
 			return;
 		GameObjectManager* pManager = pScene->getObjectManager();
+		pManager->flushSceneTransforms();
 
 		const float32  aspect	   = canvasSize._x / canvasSize._y;
 		const float4x4 invViewProj = pCamera->getViewProjectionMatrix( aspect ).invert();

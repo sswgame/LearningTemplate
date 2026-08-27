@@ -6,6 +6,7 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/deque.h"
+#include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Log/Logger.h"
 
@@ -43,16 +44,21 @@ namespace sw::editor
 		void onLogWritten( const LogEntry& entry );
 		/** @brief Logger 구독을 제거합니다. */
 		void unsubscribe();
+		/** @brief 필터링된 로그 포인터 목록을 재구성합니다. */
+		void updateFilteredEntries( const string& filterStr );
 
 	private:
-		deque<LogEntry>		   _listEntries;
-		vector<LogEntry>	   _listDrawSnapshot;
-		mutex				   _entriesMutex;
-		DelegateHandle		   _logListenerHandle;
-		utf8				   _arrFilterBuffer[constant::kMaxBuffer128];
-		bool				   _bAutoScroll;
-		bool				   _arrLevelEnabled[4];
-		uint8				   _bHasNewLogs	  : 1;
-		[[maybe_unused]] uint8 _reservedFlags : 7;
+		deque<LogEntry>			_listEntries;
+		vector<LogEntry>		_listDrawSnapshot;
+		vector<const LogEntry*> _listVisible;
+		string					_cachedFilter;
+		mutex					_entriesMutex;
+		DelegateHandle			_logListenerHandle;
+		utf8					_arrFilterBuffer[constant::kMaxBuffer128];
+		bool					_arrLevelEnabled[4];
+		bool					_arrCachedLevelEnabled[4];
+		bool					_bAutoScroll;
+		uint8					_bHasNewLogs   : 1;
+		[[maybe_unused]] uint8	_reservedFlags : 7;
 	};
 } // namespace sw::editor

@@ -68,18 +68,7 @@ namespace sw::editor
 			}
 
 			// 3) General name matching
-			const string_view name = pObj->getName().c_str();
-			const size_t	  flen = StringUtil::strlen( pFilter );
-			if ( flen == 0 )
-				return true;
-			if ( name.size() < flen )
-				return false;
-			for ( size_t matchIndex = 0; matchIndex <= name.size() - flen; ++matchIndex )
-			{
-				if ( StringUtil::strnicmp( name.data() + matchIndex, pFilter, static_cast<uint32>( flen ) ) == 0 )
-					return true;
-			}
-			return false;
+			return StringUtil::stristr( pObj->getName().c_str(), pFilter ) != nullptr;
 		}
 
 		bool subtreeMatchesFilter( GameObject* pObj, const utf8* pFilter )
@@ -386,7 +375,7 @@ namespace sw::editor
 			bool bActive = pObj->isActiveInHierarchy();
 			if ( ImGui::Button( bActive ? "[V]" : "[.]", ImVec2{ 24.0f, 0.0f } ) )
 			{
-				pObj->setActive( !bActive );
+				pObj->setActive( bActive == false );
 			}
 			ImGui::SameLine();
 

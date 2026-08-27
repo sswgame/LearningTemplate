@@ -3,6 +3,7 @@
 #include "Editor/Panels/ConsolePanel.h"
 
 #include "Core/Concurrency/mutex.h"
+#include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Gui/EditorChrome.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -45,11 +46,14 @@ namespace sw::editor
 	ConsolePanel::ConsolePanel()
 		: _listEntries{}
 		, _listDrawSnapshot{}
+		, _listVisible{}
+		, _cachedFilter{}
 		, _entriesMutex{}
 		, _logListenerHandle{}
 		, _arrFilterBuffer{}
-		, _bAutoScroll{ true }
 		, _arrLevelEnabled{ true, true, true, true }
+		, _arrCachedLevelEnabled{ true, true, true, true }
+		, _bAutoScroll{ true }
 		, _bHasNewLogs{ SW_TRUE }
 		, _reservedFlags{ 0 }
 	{
@@ -60,6 +64,38 @@ namespace sw::editor
 	ConsolePanel::~ConsolePanel()
 	{
 		unsubscribe();
+	}
+
+	void ConsolePanel::updateFilteredEntries( const string& filterStr )
+	{
+		_listVisible.clear();
+		_listVisible.reserve( _listDrawSnapshot.size() );
+
+		for ( const LogEntry& entry : _listDrawSnapshot )
+		{
+			const uint8 levelIndex = static_cast<uint8>( entry.level );
+			if ( levelIndex >= 4 || _arrLevelEnabled[levelIndex] == false )
+				continue;
+
+			if ( filterStr.empty() == false )
+			{
+				auto contains = [&]( const string& text )
+				{
+					if ( text.empty() )
+						return false;
+					return StringUtil::stristr( text.c_str(), filterStr.c_str() ) != nullptr;
+				};
+
+				if ( contains( entry.message ) == false && contains( entry.tag ) == false && contains( entry.file ) == false )
+					continue;
+			}
+
+			_listVisible.push_back( &entry );
+		}
+
+		_cachedFilter = filterStr;
+		for ( int32 levelIndex = 0; levelIndex < 4; ++levelIndex )
+			_arrCachedLevelEnabled[levelIndex] = _arrLevelEnabled[levelIndex];
 	}
 
 	void ConsolePanel::drawContent()
@@ -80,6 +116,7 @@ namespace sw::editor
 			std::scoped_lock<mutex> lock{ _entriesMutex };
 			_listEntries.clear();
 			_listDrawSnapshot.clear();
+			_listVisible.clear();
 			_bHasNewLogs = SW_FALSE;
 			bNewLogs	 = false;
 		}
@@ -102,28 +139,22 @@ namespace sw::editor
 
 		const string filterStr = StringUtil::trim( _arrFilterBuffer );
 
-		vector<const LogEntry*> listVisible;
-		listVisible.reserve( _listDrawSnapshot.size() );
-		for ( const LogEntry& entry : _listDrawSnapshot )
+		// 필터 또는 레벨 설정이 바뀌었거나 새 로그가 들어왔을 때만 재계산
+		bool bLevelChanged{ false };
+		for ( int32 levelIndex = 0; levelIndex < 4; ++levelIndex )
 		{
-			const uint8 levelIdx = static_cast<uint8>( entry.level );
-			if ( levelIdx >= 4 || _arrLevelEnabled[levelIdx] == false )
-				continue;
-
-			if ( filterStr.empty() == false )
+			if ( _arrCachedLevelEnabled[levelIndex] != _arrLevelEnabled[levelIndex] )
 			{
-				auto contains = [&]( const string& text )
-				{
-					if ( text.empty() )
-						return false;
-					return StringUtil::stristr( text.c_str(), filterStr.c_str() ) != nullptr;
-				};
-
-				if ( contains( entry.message ) == false && contains( entry.tag ) == false && contains( entry.file ) == false )
-					continue;
+				bLevelChanged = true;
+				break;
 			}
+		}
 
-			listVisible.push_back( &entry );
+		const bool bFilterChanged = ( filterStr != _cachedFilter );
+
+		if ( bNewLogs || bFilterChanged || bLevelChanged )
+		{
+			updateFilteredEntries( filterStr );
 		}
 
 		editor::EditorSectionDesc logDesc{};
@@ -134,12 +165,12 @@ namespace sw::editor
 		editor::beginSection( logDesc );
 
 		ImGuiListClipper clipper;
-		clipper.Begin( static_cast<int32>( listVisible.size() ) );
+		clipper.Begin( static_cast<int32>( _listVisible.size() ) );
 		while ( clipper.Step() )
 		{
 			for ( int32 logIndex = clipper.DisplayStart; logIndex < clipper.DisplayEnd; ++logIndex )
 			{
-				const LogEntry& entry = *listVisible[static_cast<size_t>( logIndex )];
+				const LogEntry& entry = *_listVisible[static_cast<size_t>( logIndex )];
 				ImGui::PushID( logIndex );
 
 				ImGui::TextDisabled( "[%s]", entry.timeStamp.c_str() );
@@ -164,7 +195,7 @@ namespace sw::editor
 
 		editor::endSection();
 
-		ImGui::TextDisabled( "%d / %d lines", static_cast<int32>( listVisible.size() ), static_cast<int32>( _listDrawSnapshot.size() ) );
+		ImGui::TextDisabled( "%d / %d lines", static_cast<int32>( _listVisible.size() ), static_cast<int32>( _listDrawSnapshot.size() ) );
 	}
 
 	void ConsolePanel::shutdown( IRHIDevice* /*rhiDevice*/ )
