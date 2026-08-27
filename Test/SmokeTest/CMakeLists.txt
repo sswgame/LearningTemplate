@@ -13,6 +13,9 @@ endif()
 
 sw_addTestExecutable(SmokeTest
 	RUN_SERIAL
+	SOURCES
+		TestSmoke.cpp
+		${CMAKE_SOURCE_DIR}/Source/App/Module/ModuleCompiler.cpp
 	LIBS
 		${smokeLibs}
 	LABELS
@@ -20,6 +23,8 @@ sw_addTestExecutable(SmokeTest
 	TIMEOUT
 		180
 )
+
+target_include_directories(SmokeTest PRIVATE "${CMAKE_SOURCE_DIR}/Source/App")
 
 if(NOT SW_SHIPPING_BUILD)
 	target_compile_definitions(SmokeTest PRIVATE

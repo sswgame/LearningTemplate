@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "App/Module/ModuleCompiler.h"
+
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Task/TaskManager.h"
 
@@ -527,6 +529,98 @@ SW_TEST_CASE( Architecture, MultiModuleFullStackLiveReload )
 	SW_EXPECT_TRUE( editorReloaded );
 
 	manager.shutdown();
+}
+
+/**
+ * @brief [Architecture] ModuleCompiler (CMake 백그라운드 컴파일) -> LiveReloadManager (DLL 핫스왑) End-to-End 전체 파이프라인 검증
+ */
+SW_TEST_CASE( Architecture, ModuleCompilerAndLiveReloadE2E )
+{
+	#if defined( SW_SHIPPING )
+	SW_TEST_SKIP( "ModuleCompiler is only supported in Dev / non-shipping builds" );
+	#else
+	const sw::string editorPath = sw::modulePath( "EditorModule" );
+	if ( sw::FileUtil::fileExists( editorPath ) == false )
+		SW_TEST_SKIP( "EditorModule not built in this config" );
+
+	sw::LiveReloadManager manager;
+	if ( manager.registerModule( "EditorModule" ) == false )
+		SW_TEST_SKIP( "EditorModule registration failed" );
+
+	void* const initialHandle = manager.getModuleHandle( "EditorModule" );
+	SW_ASSERT_NOT_NULL( initialHandle );
+
+	bool  onBeforeCalled{ false };
+	bool  onAfterCalled{ false };
+	void* newHandle{ nullptr };
+
+	manager.setOnBeforeReload(
+		"EditorModule",
+		SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnBeforeReloadDelegate, [&onBeforeCalled]()
+	{
+		onBeforeCalled = true;
+	} ) );
+
+	manager.setOnAfterReload(
+		"EditorModule",
+		SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&onAfterCalled, &newHandle]( void* h )
+	{
+		onAfterCalled = true;
+		newHandle	  = h;
+	} ) );
+
+	sw::ModuleCompiler compiler{ &manager };
+
+	// 1) 초기 상태 머신 검증
+	SW_EXPECT_EQUAL( static_cast<int32>( sw::BuildState::Idle ), static_cast<int32>( compiler.getBuildState() ) );
+	SW_EXPECT_FALSE( compiler.isCompiling() );
+
+	// 2) EditorModule 대상 비동기 컴파일 시작
+	const bool bStarted = compiler.compileModule( "EditorModule" );
+	SW_EXPECT_TRUE( bStarted );
+	SW_EXPECT_TRUE( compiler.isCompiling() );
+
+	// 3) 백그라운드 컴파일 완료 대기 (최대 60초)
+	const auto startTime = std::chrono::steady_clock::now();
+	while ( compiler.isCompiling() )
+	{
+		std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+		manager.update();
+
+		const auto elapsedSec = std::chrono::duration_cast<std::chrono::seconds>( std::chrono::steady_clock::now() - startTime ).count();
+		if ( elapsedSec > 60 )
+			break;
+	}
+
+	// 4) 컴파일 성공 후 핫스왑 완료 대기
+	for ( int32 stepIndex = 0; stepIndex < 50 && onAfterCalled == false; ++stepIndex )
+	{
+		std::this_thread::sleep_for( std::chrono::milliseconds( 20 ) );
+		manager.update();
+	}
+
+	SW_EXPECT_FALSE( compiler.isCompiling() );
+	SW_EXPECT_EQUAL( static_cast<int32>( sw::BuildState::Success ), static_cast<int32>( compiler.getBuildState() ) );
+	SW_EXPECT_EQUAL( 0, compiler.getLastExitCode() );
+
+	// 5) 컴파일 완료 후 LiveReloadManager가 모듈 핫스왑 콜백을 정상 실행했는지 검증
+	SW_EXPECT_TRUE( onBeforeCalled );
+	SW_EXPECT_TRUE( onAfterCalled );
+	SW_ASSERT_NOT_NULL( newHandle );
+
+	// 6) 새로 핫스왑된 모듈에서 C-ABI exportEditorAPI 심볼 및 함수 테이블 유효성 검증
+	const sw::PFN_ExportEditorAPI pfnExport = reinterpret_cast<sw::PFN_ExportEditorAPI>(
+		sw::FileUtil::getDynamicSymbol( newHandle, "exportEditorAPI" ) );
+	SW_ASSERT_NOT_NULL( pfnExport );
+
+	sw::EditorAPI api{};
+	SW_EXPECT_TRUE( pfnExport( &api ) );
+	SW_EXPECT_TRUE( api.create != nullptr );
+	SW_EXPECT_TRUE( api.render != nullptr );
+
+	compiler.shutdown();
+	manager.shutdown();
+	#endif
 }
 
 /**
