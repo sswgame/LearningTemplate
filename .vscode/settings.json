@@ -233,5 +233,32 @@
                 }
             }
         ]
-    }
+    },
+    // ==========================================
+    // 8. Git 스마트 커밋 및 실시간 변경사항 자동 연동
+    // ==========================================
+    "git.enableSmartCommit": true,
+    "git.suggestSmartCommit": false,
+    "git.smartCommitChanges": "all",
+    "git.autorefresh": true,
+    "git.untrackedChanges": "mixed",
+    // ==========================================
+    // 9. 파일 저장 시 자동 Git Staging (multi-command)
+    // ==========================================
+    "multiCommand.commands": [
+        {
+            "command": "multiCommand.saveAndStage",
+            "sequence": [
+                "workbench.action.files.save",
+                "git.stage"
+            ]
+        },
+        {
+            "command": "multiCommand.saveAllAndStageAll",
+            "sequence": [
+                "workbench.action.files.saveAll",
+                "git.stageAll"
+            ]
+        }
+    ]
 }
