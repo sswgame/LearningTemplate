@@ -60,7 +60,7 @@ namespace sw::editor
 		, _editorData{ nullptr }
 		, _editorContext{ nullptr }
 		, _dockLayout{}
-		, _bInitialized{ 0 }
+		, _bInitialized{ SW_FALSE }
 		, _reservedFlags{ 0 }
 	{
 	}
@@ -73,7 +73,7 @@ namespace sw::editor
 	bool ImGuiEditor::initialize( IWindow* pWindow, IRHIDevice* pRhiDevice )
 	{
 		SW_LOG_INFO( "ImGuiEditor::initialize Start" );
-		if ( _bInitialized != 0 )
+		if ( _bInitialized != SW_FALSE )
 			return true;
 
 		AssetEditorRegistry::registerDefaultMappings();
@@ -159,9 +159,9 @@ namespace sw::editor
 
 			TaskManager* pTaskManager = editor::getService<TaskManager>();
 			TaskHandle	 hDefault	  = pTaskManager->emplaceTask(
-				"EditorSplash_DefaultRenderPass",
-				SW_DELEGATE_FUNCTION( TaskArgsDelegate, loadSplashDefaultRenderPass ),
-				MakeTaskArgs( defaultPass ) );
+				  "EditorSplash_DefaultRenderPass",
+				  SW_DELEGATE_FUNCTION( TaskArgsDelegate, loadSplashDefaultRenderPass ),
+				  MakeTaskArgs( defaultPass ) );
 
 			TaskHandle hForward = pTaskManager->emplaceTask(
 				"EditorSplash_ForwardPipeline",
@@ -188,13 +188,13 @@ namespace sw::editor
 			_dockLayout.loadPanelVisibility();
 		}
 
-		_bInitialized = true;
+		_bInitialized = SW_TRUE;
 		return true;
 	}
 
 	void ImGuiEditor::shutdown()
 	{
-		if ( _bInitialized == false )
+		if ( _bInitialized == SW_FALSE )
 			return;
 
 		_dockLayout.save();
@@ -215,7 +215,6 @@ namespace sw::editor
 		{
 			_platformBackend->shutdown();
 			_platformBackend.reset();
-
 			editor::setEditorData( nullptr );
 			_editorData.reset();
 		}
@@ -226,15 +225,18 @@ namespace sw::editor
 			_editorContext.reset();
 		}
 
+		if ( ImPlot::GetCurrentContext() != nullptr )
+			ImPlot::DestroyContext();
+
 		if ( ImGui::GetCurrentContext() != nullptr )
 			ImGui::DestroyContext();
 
-		_bInitialized = false;
+		_bInitialized = SW_FALSE;
 	}
 
 	void ImGuiEditor::preRender( IRHIDevice* pRhiDevice )
 	{
-		if ( _bInitialized == false )
+		if ( _bInitialized == SW_FALSE )
 			return;
 
 		EditorPanelRegistry::preRenderOpenPanels( pRhiDevice );
@@ -242,7 +244,7 @@ namespace sw::editor
 
 	void ImGuiEditor::updateUI()
 	{
-		if ( _bInitialized == false )
+		if ( _bInitialized == SW_FALSE )
 			return;
 
 		if ( _editorContext != nullptr )
@@ -283,7 +285,7 @@ namespace sw::editor
 
 	void ImGuiEditor::render( IRHIDevice* pRhiDevice )
 	{
-		if ( _bInitialized == false || pRhiDevice == nullptr )
+		if ( _bInitialized == SW_FALSE || pRhiDevice == nullptr )
 			return;
 
 		ImDrawData* pDrawData = ImGui::GetDrawData();
@@ -295,7 +297,7 @@ namespace sw::editor
 
 	void ImGuiEditor::postPresent( IRHIDevice* pRhiDevice )
 	{
-		if ( _bInitialized == false || pRhiDevice == nullptr )
+		if ( _bInitialized == SW_FALSE || pRhiDevice == nullptr )
 			return;
 
 		ImDrawData* pDrawData = ImGui::GetDrawData();
@@ -307,7 +309,7 @@ namespace sw::editor
 
 	bool ImGuiEditor::processEvent( const NativeWindowEvent& event )
 	{
-		if ( _bInitialized == false )
+		if ( _bInitialized == SW_FALSE )
 			return false;
 
 		if ( _platformBackend != nullptr )
@@ -360,7 +362,7 @@ namespace sw::editor
 
 	void ImGuiEditor::beginFrame()
 	{
-		if ( _bInitialized == false )
+		if ( _bInitialized == SW_FALSE )
 			return;
 
 		if ( _rendererBackend != nullptr )
@@ -377,7 +379,7 @@ namespace sw::editor
 
 	void ImGuiEditor::endFrame()
 	{
-		if ( _bInitialized == false )
+		if ( _bInitialized == SW_FALSE )
 			return;
 
 		ImGui::PushStyleVar( ImGuiStyleVar_WindowRounding, 0.0f );
@@ -392,7 +394,7 @@ namespace sw::editor
 
 	void ImGuiEditor::renderBackend( IRHIDevice* pRhiDevice )
 	{
-		if ( _bInitialized == false )
+		if ( _bInitialized == SW_FALSE )
 			return;
 
 		if ( _rendererBackend != nullptr )
@@ -401,7 +403,7 @@ namespace sw::editor
 
 	void ImGuiEditor::renderPlatformWindows( IRHIDevice* pRhiDevice )
 	{
-		if ( _bInitialized == false || pRhiDevice == nullptr )
+		if ( _bInitialized == SW_FALSE || pRhiDevice == nullptr )
 			return;
 
 		ImGuiIO& io = ImGui::GetIO();

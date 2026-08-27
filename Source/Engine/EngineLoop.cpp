@@ -125,7 +125,6 @@ namespace sw
 
 			_globalVariableManager = make_unique<GlobalVariableManager>();
 			_globalVariableManager->registerPendingVariables( "Engine", GlobalVariableRegistrar::getHead() );
-			_globalVariableManager->registerPendingVariables( "App", GlobalVariableRegistrar::getHead() );
 			_globalVariableManager->registerToCommandLine( _commandLineManager.get() );
 			_commandLineManager->parse( argc, pArgv );
 			_globalVariableManager->updateFromCommandLine( _commandLineManager.get() );
@@ -205,7 +204,7 @@ namespace sw
 
 			const hashed_string kGameConfigHash = hashed_string{ "GameConfig" };
 			const GameConfig*	pGameConfig		= _configManager->ensureConfig<GameConfig>(
-				kGameConfigHash, config::kFileRuntimeGameConfig, shipping_host::kGameConfigJson );
+				  kGameConfigHash, config::kFileRuntimeGameConfig, shipping_host::kGameConfigJson );
 			if ( pGameConfig != nullptr )
 				GameConfig::setActive( *pGameConfig );
 

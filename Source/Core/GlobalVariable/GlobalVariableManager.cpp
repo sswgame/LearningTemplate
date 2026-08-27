@@ -308,20 +308,16 @@ namespace sw
 	 */
 	void GlobalVariableManager::registerPendingVariables( string_view moduleName, const GlobalVariableRegistrar* pHead )
 	{
-		// pHead는 단일 모듈의 링크드 리스트여야 하며, 다른 DLL과 섞인 체인이 아니어야 합니다.
 		const GlobalVariableRegistrar* pCurrent = pHead;
 		while ( pCurrent != nullptr )
 		{
-			if ( findVariable( pCurrent->_name ) == nullptr )
-			{
-				registerVariable( pCurrent->_name,
-								  pCurrent->_type,
-								  pCurrent->_pData,
-								  pCurrent->_defaultValue,
-								  pCurrent->_description,
-								  pCurrent->_enumType,
-								  moduleName );
-			}
+			registerVariable( pCurrent->_name,
+							  pCurrent->_type,
+							  pCurrent->_pData,
+							  pCurrent->_defaultValue,
+							  pCurrent->_description,
+							  pCurrent->_enumType,
+							  moduleName );
 			pCurrent = pCurrent->_pNext;
 		}
 	}
@@ -374,11 +370,44 @@ namespace sw
 	 */
 	void GlobalVariableManager::resetAllToDefault()
 	{
-		std::unique_lock<std::shared_mutex> lock{ _mutex };
-		for ( auto& [name, info] : _mapVariable )
+		// Step 1: unique_lock 안에서 값만 직접 리셋, 콜백 목록을 추출
+		vector<std::pair<GlobalVariableChangedDelegate, GlobalVariableInfo*>> listPendingCallbacks;
 		{
-			info.resetToDefault();
-		}
+			std::unique_lock<std::shared_mutex> lock{ _mutex };
+			for ( auto& [name, info] : _mapVariable )
+			{
+				if ( info._pData == nullptr )
+					continue;
+
+				switch ( info._type )
+				{
+					case GlobalVariableType::Boolean:
+						if ( std::holds_alternative<bool>( info._defaultValue ) )
+							*static_cast<bool*>( info._pData ) = std::get<bool>( info._defaultValue );
+						break;
+					case GlobalVariableType::Int32:
+					case GlobalVariableType::Enum:
+						if ( std::holds_alternative<int32>( info._defaultValue ) )
+							*static_cast<int32*>( info._pData ) = std::get<int32>( info._defaultValue );
+						break;
+					case GlobalVariableType::Float:
+						if ( std::holds_alternative<float32>( info._defaultValue ) )
+							*static_cast<float32*>( info._pData ) = std::get<float32>( info._defaultValue );
+						break;
+					case GlobalVariableType::String:
+						if ( std::holds_alternative<string>( info._defaultValue ) )
+							*static_cast<string*>( info._pData ) = std::get<string>( info._defaultValue );
+						break;
+				}
+
+				if ( info._onValueChanged.isBound() )
+					listPendingCallbacks.push_back( { info._onValueChanged, &info } );
+			}
+		} // unique_lock 해제
+
+		// Step 2: 락 밖에서 콜백 호출 (재진입 안전)
+		for ( auto& [delegate, pInfo] : listPendingCallbacks )
+			delegate( pInfo );
 	}
 
 	/**
@@ -398,11 +427,27 @@ namespace sw
 	}
 
 	/**
-	 * @brief 등록된 전체 변수 맵의 상수 참조를 반환합니다.
+	 * @brief 등록된 변수 이름 목록을 스냅샷으로 반환합니다. (thread-safe)
+	 *
+	 * 패널 등에서 반복 후 findVariable 로 편집 가능한 포인터를 얻으려는 용도로 설계되었습니다.
 	 */
-	const unordered_map<string, GlobalVariableInfo>& GlobalVariableManager::getAllVariables() const
+	vector<string> GlobalVariableManager::collectVariableNames() const
 	{
-		return _mapVariable;
+		std::shared_lock<std::shared_mutex> lock{ _mutex };
+		vector<string>						listNames;
+		listNames.reserve( static_cast<uint32>( _mapVariable.size() ) );
+		for ( const auto& [name, info] : _mapVariable )
+			listNames.push_back( name );
+		return listNames;
+	}
+
+	/**
+	 * @brief 등록된 변수 수를 반환합니다. (thread-safe)
+	 */
+	uint32 GlobalVariableManager::getVariableCount() const
+	{
+		std::shared_lock<std::shared_mutex> lock{ _mutex };
+		return static_cast<uint32>( _mapVariable.size() );
 	}
 
 	// ============================================================================

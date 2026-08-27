@@ -51,7 +51,6 @@ namespace sw
 			SW_LOG_ERROR( "EngineLoop initialization failed." );
 			return false;
 		}
-		_engineLoop.pollDebugHotkeys( _bEnableEditor, SW_DELEGATE_METHOD( Delegate<void( const utf8* )>, &App::onForceReload, this ) );
 
 		const ConfigManager*	  pConfigManager	  = _engineLoop.getConfigManager();
 		const CommandLineManager* pCommandLineManager = _engineLoop.getCommandLineManager();
@@ -96,7 +95,7 @@ namespace sw
 #if !defined( SW_SHIPPING )
 		const hashed_string kAppConfigHash = hashed_string{ "AppConfig" };
 		const AppConfig*	pAppConfig	   = _engineLoop.getConfigManager()->ensureConfig<AppConfig>(
-			kAppConfigHash, config::kFileRuntimeAppConfig, nullptr );
+			   kAppConfigHash, config::kFileRuntimeAppConfig, nullptr );
 		if ( pAppConfig != nullptr )
 			gameKitModuleList = pAppConfig->_gameKitModuleList;
 #endif
@@ -170,6 +169,7 @@ namespace sw
 			_engineLoop.beginFrame();
 
 			_engineLoop.updateShellActions( deltaTime );
+			_engineLoop.pollDebugHotkeys( _bEnableEditor, SW_DELEGATE_METHOD( Delegate<void( const utf8* )>, &App::onForceReload, this ) );
 
 			while ( accumulator >= kFixedDeltaTime )
 			{

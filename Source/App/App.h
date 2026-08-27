@@ -24,7 +24,6 @@ namespace sw
 		App();
 		~App();
 
-	public:
 		/** @brief 윈도우 생성 및 모듈/엔진 초기화 */
 		bool initialize( int32 argc, utf8* pArgv[] );
 		/** @brief 모든 리소스 해제 */

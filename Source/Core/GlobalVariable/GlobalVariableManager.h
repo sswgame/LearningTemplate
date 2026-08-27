@@ -13,7 +13,6 @@
 #include <variant>
 
 namespace sw
-
 {
 	/** @brief 커맨드라인 파서. registerToCommandLine / updateFromCommandLine 에 넘깁니다. */
 	class CommandLineManager;
@@ -109,8 +108,11 @@ namespace sw
 		/** @brief 이름으로 전역 변수 정보를 찾습니다. */
 		GlobalVariableInfo* findVariable( string_view name );
 
-		/** @brief 등록된 모든 전역 변수 정보입니다. */
-		const unordered_map<string, GlobalVariableInfo>& getAllVariables() const;
+		/** @brief 등록된 변수 이름 목록을 스냅샷으로 반환합니다. (thread-safe) */
+		vector<string> collectVariableNames() const;
+
+		/** @brief 등록된 변수 수를 반환합니다. (thread-safe) */
+		uint32 getVariableCount() const;
 
 	private:
 		mutable std::shared_mutex				  _mutex;

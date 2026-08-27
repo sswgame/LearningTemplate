@@ -56,8 +56,8 @@ SW_TEST_CASE( Engine_GlobalVariable, Registration )
 		SW_EXPECT_EQUAL( sw::string( "InitialValue" ), pStrInfo->getValueAsString() );
 	}
 
-	const sw::unordered_map<sw::string, sw::GlobalVariableInfo>& allVars = sw::engine::getGlobalVariableManager().getAllVariables();
-	SW_EXPECT_TRUE( allVars.size() >= 4u );
+	const uint32 varCount = sw::engine::getGlobalVariableManager().getVariableCount();
+	SW_EXPECT_TRUE( varCount >= 4u );
 }
 
 /**
