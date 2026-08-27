@@ -62,11 +62,6 @@ namespace sw
 		if ( _hWnd == nullptr )
 			return false;
 
-		ShowWindow( _hWnd, SW_SHOWNORMAL );
-		UpdateWindow( _hWnd );
-		SetForegroundWindow( _hWnd );
-		SetFocus( _hWnd );
-
 		SW_LOG_INFO( "[Win32Window] Native Win32 Window created successfully! (%#x%#)", width, height );
 		return true;
 	}
@@ -83,6 +78,29 @@ namespace sw
 		}
 	}
 
+	void Win32Window::showWindow( bool bShow )
+	{
+		if ( _hWnd == nullptr )
+			return;
+
+		if ( bShow )
+		{
+			ShowWindow( _hWnd, SW_SHOWNORMAL );
+			UpdateWindow( _hWnd );
+			SetForegroundWindow( _hWnd );
+			SetFocus( _hWnd );
+		}
+		else
+		{
+			ShowWindow( _hWnd, SW_HIDE );
+		}
+	}
+
+	bool Win32Window::isVisible() const
+	{
+		return ( _hWnd != nullptr ) ? ( IsWindowVisible( _hWnd ) != FALSE ) : false;
+	}
+
 	/**
 	 * @brief RHI 백엔드 핫스왑 등을 위해 이전 윈도우 좌표를 유지한 채 윈도우를 다시 생성합니다.
 	 */
@@ -90,6 +108,8 @@ namespace sw
 	{
 		if ( _title.empty() )
 			return false;
+
+		const bool bWasVisible = isVisible();
 
 		if ( _hWnd != nullptr )
 		{
@@ -109,6 +129,9 @@ namespace sw
 		const string title = StringUtil::utf16ToUtf8( _title.c_str() );
 
 		const bool ok = initializeWindow( title.c_str(), width, height );
+		if ( ok && bWasVisible )
+			showWindow( true );
+
 		_bRecreating  = false;
 		_restoreX	  = CW_USEDEFAULT;
 		_restoreY	  = CW_USEDEFAULT;

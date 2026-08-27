@@ -699,6 +699,7 @@ SW Engine 소스코드를 작성할 때는 [AGENTS.md](AGENTS.md) 및 [GEMINI.md
 | **컨테이너 접두어/접미어** | 고정 배열: `arr` / 연관 맵: `map` / 리스트: `list` / 고유 셋: `unique` | `vector<int32> _listValues;`, `unordered_map<int32, string> _mapIdToName;` |
 | **스마트 포인터** | `std::unique_ptr` 등은 `p` 접두어를 붙이지 않음 | `unique_ptr<Node> _rootNode;`, `shared_ptr<Material> _material;` |
 | **불리언 비교** | `!` 부정 연산자 금지, 반드시 명시적 비교 작성 | `if (_bValid == false)`, `if (pPtr == nullptr)` |
+| **범위(Range) 비교** | 변수를 안쪽(중간)에 배치하여 수학적 범위($min \le val \le max$)로 표기 | `if (kMin <= value && value <= kMax)` |
 | **헤더 선언 순서** | 1. `public` 변수 $\rightarrow$ 2. `ctor`/`dtor` $\rightarrow$ 3. `init`/`shutdown` $\rightarrow$ 4. `process` $\rightarrow$ 5. `getter`/`setter` $\rightarrow$ 6. `private` 함수 $\rightarrow$ 7. `private` 변수 (맨 아래) |
 | **생성자 초기화** | 헤더 인라인 초기화 지양, 생성자 본문에서 선언 순서대로 `{}` 중괄호 초기화 | `: _memberA{ 0 }<br>, _memberB{ nullptr }` |
 

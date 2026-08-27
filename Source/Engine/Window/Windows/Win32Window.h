@@ -44,6 +44,11 @@ namespace sw
 		/** @brief Windows 메시지 큐(PeekMessage)를 처리합니다. */
 		bool processMessages() override;
 
+		/** @brief 윈도우를 화면에 표시하거나 숨깁니다. */
+		void showWindow( bool bShow ) override;
+		/** @brief 윈도우 표시 여부를 반환합니다. */
+		bool isVisible() const override;
+
 		/** @brief 네이티브 윈도우 핸들(HWND)을 반환합니다. */
 		void* getNativeHandle() const override { return _hWnd; }
 

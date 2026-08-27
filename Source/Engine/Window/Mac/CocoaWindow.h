@@ -25,6 +25,10 @@ namespace sw
 		bool recreate() override;
 		/** @brief Cocoa 이벤트를 처리합니다. 종료 요청 시 false를 반환합니다. */
 		bool processMessages() override;
+		/** @brief 창 표시 / 숨김 제어 */
+		void showWindow( bool bShow ) override;
+		/** @brief 창이 현재 표시 중인지 여부 */
+		bool isVisible() const override;
 
 #if defined( SW_PLATFORM_MACOS )
 		/** @brief Metal 레이어 포인터를 반환합니다. */

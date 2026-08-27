@@ -139,6 +139,7 @@ namespace sw
 			pObj->_objectId		 = id;
 			pObj->_pOwnerManager = this;
 			pObj->_entityId		 = _registry.create();
+			_registry.emplace<EntityStateData>( pObj->_entityId );
 
 			_mapNameToObject.insert_or_assign( uniqueName, pObj );
 			_mapIdToObject.insert_or_assign( id, pObj );

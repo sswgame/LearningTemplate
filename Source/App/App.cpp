@@ -25,6 +25,7 @@
 #include "Engine/Utility/Module/LiveReloadManager.h"
 #include "Engine/Window/IWindow.h"
 #include "Engine/Window/NativeWindowEvent.h"
+#include "Engine/Window/SplashWindow.h"
 
 #include "RuntimeAPI/ABI/EditorAPI.h"
 
@@ -45,21 +46,33 @@ namespace sw
 
 	bool App::initialize( int32 argc, utf8* pArgv[] )
 	{
+		SplashWindow splash;
+		splash.initialize( "SW Engine", "Initializing Engine Subsystems..." );
+
 		// 1. 코어 매니저들은 모두 EngineLoop가 초기화
 		if ( _engineLoop.initialize( argc, pArgv ) == false )
 		{
 			SW_LOG_ERROR( "EngineLoop initialization failed." );
+			splash.dismiss();
 			return false;
 		}
+
+		splash.updateStatus( "Loading Configuration & Display..." );
 
 		const ConfigManager*	  pConfigManager	  = _engineLoop.getConfigManager();
 		const CommandLineManager* pCommandLineManager = _engineLoop.getCommandLineManager();
 		if ( pConfigManager == nullptr || pCommandLineManager == nullptr )
+		{
+			splash.dismiss();
 			return false;
+		}
 
 		const EngineConfig* pEngineConfig = pConfigManager->getConfig<EngineConfig>( hashed_string( "EngineConfig" ) );
 		if ( pEngineConfig == nullptr )
+		{
+			splash.dismiss();
 			return false;
+		}
 
 		_maxFrameDeltaTime = pEngineConfig->_maxFrameDeltaTime;
 
@@ -68,7 +81,7 @@ namespace sw
 		pCommandLineManager->getArgument( CommandLineArgument::WIDTH, width );
 		pCommandLineManager->getArgument( CommandLineArgument::HEIGHT, height );
 
-		// 2. 윈도우 소유권 획득
+		// 2. 윈도우 소유권 획득 (초기화 중에는 숨김 상태로 시작)
 		_window.reset( IWindow::getActiveWindow() );
 		if ( _window == nullptr )
 		{
@@ -76,8 +89,10 @@ namespace sw
 			if ( _window == nullptr || _window->initializeWindow( pEngineConfig->_window._title.c_str(), width, height ) == false )
 			{
 				SW_LOG_ERROR( "Failed to create platform window!" );
+				splash.dismiss();
 				return false;
 			}
+			_window->showWindow( false );
 			IWindow::setActiveWindow( _window.get() );
 		}
 
@@ -89,6 +104,8 @@ namespace sw
 			SW_LOG_WARNING( "[App] Editor requested but backend %# does not set _bEditorSupported — disabling editor.", RHI::getBackendTypeName( gv_rhiBackend ) );
 			_bEnableEditor = false;
 		}
+
+		splash.updateStatus( "Loading Modules & Compiling Shaders..." );
 
 		// 3. ModuleHost (에디터/게임 라이프사이클) 바인딩
 		vector<GameKitConfig> gameKitModuleList{};
@@ -110,6 +127,7 @@ namespace sw
 		if ( bResult == false )
 		{
 			SW_LOG_ERROR( "ModuleHost initialization failed." );
+			splash.dismiss();
 			return false;
 		}
 
@@ -123,6 +141,10 @@ namespace sw
 
 		_engineLoop.setPresentHook( SW_DELEGATE_METHOD( PresentHookDelegate, &App::onEditorRender, this ) );
 		_engineLoop.setPostPresentHook( SW_DELEGATE_METHOD( PresentHookDelegate, &App::onEditorPostPresent, this ) );
+
+		// 준비 완료 -> 스플래시 창을 닫고 메인 윈도우를 화면에 표시
+		splash.dismiss();
+		_window->showWindow( true );
 
 		return true;
 	}

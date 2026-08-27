@@ -108,3 +108,4 @@ cmake --build --preset Ninja-Debug
   types.
 - Avoid lambdas unless they offer a performance benefit.
 - Apply `const` wherever it is appropriate unless doing so harms performance.
+- For range comparisons, place the variable in the middle (between lower and upper bounds) to reflect mathematical range notation: write `kMin <= value && value <= kMax` instead of `value >= kMin && value <= kMax`.

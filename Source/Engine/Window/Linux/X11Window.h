@@ -26,6 +26,11 @@ namespace sw
 		/** @brief X11 이벤트를 처리합니다. 종료 요청 시 false를 반환합니다. */
 		bool processMessages() override;
 
+		/** @brief X11 윈도우를 화면에 표시하거나 숨깁니다. */
+		void showWindow( bool bShow ) override;
+		/** @brief X11 윈도우 표시 여부를 반환합니다. */
+		bool isVisible() const override;
+
 #if defined( SW_PLATFORM_LINUX )
 		/** @brief X11 윈도우 핸들을 반환합니다. */
 		void* getNativeHandle() const override { return reinterpret_cast<void*>( _x11Window ); }

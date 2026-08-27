@@ -109,7 +109,7 @@ namespace sw
 		class GameObjectManager* getManager() const { return _pOwnerManager; }
 
 		/** @brief 지연 삭제 (Tombstone) 플래그 마킹 */
-		void markPendingKill() { _bIsPendingKill.store( true, std::memory_order_release ); }
+		void markPendingKill();
 
 		/** @brief 현재 이 오브젝트가 삭제 예정인지 확인 */
 		bool isPendingKill() const { return _bIsPendingKill.load( std::memory_order_acquire ); }

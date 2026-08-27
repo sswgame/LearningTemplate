@@ -65,8 +65,10 @@ namespace sw
 		virtual uint32 getWidth() const { return _width; }
 		/** @brief 클라이언트 높이를 반환합니다. */
 		virtual uint32 getHeight() const { return _height; }
-		/** @brief 종료 요청 여부를 반환합니다. */
-		virtual bool shouldClose() const { return _bShouldClose; }
+		/** @brief 윈도우를 화면에 표시하거나 숨깁니다. */
+		virtual void showWindow( bool bShow ) { (void)bShow; }
+		/** @brief 윈도우 표시 여부를 반환합니다. */
+		virtual bool isVisible() const { return true; }
 
 		/** @brief 외부 이벤트 핸들러(예: ImGui)를 연결합니다. */
 		void setCustomMessageHandler( WindowMessageHandlerDelegate handler ) { _customHandler = handler; }

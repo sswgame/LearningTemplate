@@ -53,7 +53,6 @@ namespace sw
 		XSelectInput( pDisplay, win,
 					  ExposureMask | KeyPressMask | KeyReleaseMask | StructureNotifyMask |
 						  ButtonPressMask | ButtonReleaseMask | PointerMotionMask | FocusChangeMask );
-		XMapWindow( pDisplay, win );
 		XFlush( pDisplay );
 
 		_pX11Display  = pDisplay;
@@ -79,10 +78,51 @@ namespace sw
 		}
 	}
 
+	void X11Window::showWindow( bool bShow )
+	{
+	#if defined( SW_PLATFORM_LINUX )
+		if ( _pX11Display != nullptr && _x11Window != 0 )
+		{
+			Display* pDisplay = static_cast<Display*>( _pX11Display );
+			Window	 win	  = static_cast<Window>( _x11Window );
+			if ( bShow )
+			{
+				XMapWindow( pDisplay, win );
+				XRaiseWindow( pDisplay, win );
+				XFlush( pDisplay );
+			}
+			else
+			{
+				XUnmapWindow( pDisplay, win );
+				XFlush( pDisplay );
+			}
+		}
+	#else
+		(void)bShow;
+	#endif
+	}
+
+	bool X11Window::isVisible() const
+	{
+	#if defined( SW_PLATFORM_LINUX )
+		if ( _pX11Display != nullptr && _x11Window != 0 )
+		{
+			Display*		  pDisplay = static_cast<Display*>( _pX11Display );
+			Window			  win	   = static_cast<Window>( _x11Window );
+			XWindowAttributes attrs{};
+			if ( XGetWindowAttributes( pDisplay, win, &attrs ) != 0 )
+				return attrs.map_state == IsViewable;
+		}
+	#endif
+		return false;
+	}
+
 	bool X11Window::recreate()
 	{
 		if ( _title.empty() )
 			return false;
+
+		const bool bWasVisible = isVisible();
 
 		if ( _pX11Display != nullptr && _x11Window != 0 )
 		{
@@ -104,6 +144,9 @@ namespace sw
 		_bShouldClose	   = false;
 		const string title = StringUtil::utf16ToUtf8( _title.c_str() );
 		const bool	 ok	   = initializeWindow( title.c_str(), width, height );
+		if ( ok && bWasVisible )
+			showWindow( true );
+
 		_restoreX		   = 100;
 		_restoreY		   = 100;
 		return ok;
@@ -183,6 +226,16 @@ namespace sw
 	bool X11Window::processMessages()
 	{
 		return _bShouldClose == false;
+	}
+
+	void X11Window::showWindow( bool bShow )
+	{
+		(void)bShow;
+	}
+
+	bool X11Window::isVisible() const
+	{
+		return false;
 	}
 #endif
 } // namespace sw

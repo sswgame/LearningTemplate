@@ -114,6 +114,17 @@ namespace sw
 		_pOwnerManager->destroyObject( this );
 	}
 
+	void GameObject::markPendingKill()
+	{
+		_bIsPendingKill.store( true, std::memory_order_release );
+		if ( _pOwnerManager != nullptr && _entityId != sw::kNullEntity )
+		{
+			EntityStateData* pState = _pOwnerManager->getRegistry().getPtr<EntityStateData>( _entityId );
+			if ( pState != nullptr )
+				pState->bIsPendingKill.store( true, std::memory_order_relaxed );
+		}
+	}
+
 	/**
 	 * @brief 게임 오브젝트 이름을 변경하고 GameObjectManager의 이름 검색 인덱스를 갱신합니다.
 	 */

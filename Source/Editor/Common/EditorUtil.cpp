@@ -8,6 +8,7 @@
 #include "RuntimeAPI/Service/EditorService.h"
 
 #include <imgui.h>
+#include <imgui_freetype.h>
 #include <fa_solid_900.h>
 #include <IconsFontAwesome6.h>
 
@@ -91,20 +92,12 @@ namespace sw::editor
 				return candidate;
 		}
 
-		// 프로젝트 내부에 없으면 OS 시스템 폰트 폴더 검색
+		// 프로젝트 내부에 없으면 OS 시스템 폰트 폴더 직접 검색 (재귀 스캔 제외하여 I/O 지연 방지)
 		for ( const string& fontsDir : getSystemFontsDirectories() )
 		{
 			string direct = FileUtil::joinPath( fontsDir, pFileName );
 			if ( FileUtil::fileExists( direct ) )
 				return string( std::move( direct ) );
-
-			vector<string> listNested;
-			FileUtil::collectFiles( fontsDir, {}, listNested, true, false );
-			for ( const string& nestedPath : listNested )
-			{
-				if ( FileUtil::getFileNamePart( nestedPath ) == pFileName )
-					return FileUtil::normalizeSeparators( nestedPath );
-			}
 		}
 
 		return {};
@@ -131,6 +124,10 @@ namespace sw::editor
 		ImGuiIO& io = ImGui::GetIO();
 		io.Fonts->Clear();
 
+		// FreeType 폰트 로더 연동 (고속 래스터라이징 및 서브픽셀 앤티에일리어싱/힌팅)
+		io.Fonts->SetFontLoader( ImGuiFreeType::GetFontLoader() );
+		io.Fonts->FontLoaderFlags = ImGuiFreeTypeLoaderFlags_LightHinting;
+
 		const EditorData& data		 = editor::getEditorData();
 		const string	  basePath	 = resolveFontFile( data._listBaseFonts );
 		const string	  koreanPath = resolveFontFile( data._listKoreanFonts );
@@ -139,7 +136,7 @@ namespace sw::editor
 		BLOCK( "Base Font" )
 		{
 			ImFontConfig baseConfig{};
-			baseConfig.OversampleH = 2;
+			baseConfig.OversampleH = 1;
 			baseConfig.OversampleV = 1;
 			// 명시적 크기가 필요합니다: MergeMode가 명시 크기를 쓰는데
 			// 대상 폰트가 암시적 참조 크기(AddFontDefault)이면 ImGui가 assert합니다.

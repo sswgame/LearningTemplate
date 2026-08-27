@@ -148,6 +148,39 @@ namespace sw
 
 		return _bShouldClose == false;
 	}
+
+	void CocoaWindow::showWindow( bool bShow )
+	{
+		if ( _pCocoaWindow != nullptr )
+		{
+			if ( bShow )
+			{
+				SEL makeKeySel = sel_registerName( "makeKeyAndOrderFront:" );
+				( (void ( * )( id, SEL, id ))objc_msgSend )( (id)_pCocoaWindow, makeKeySel, nullptr );
+
+				if ( _pCocoaApp != nullptr )
+				{
+					SEL activateSel = sel_registerName( "activateIgnoringOtherApps:" );
+					( (void ( * )( id, SEL, bool ))objc_msgSend )( (id)_pCocoaApp, activateSel, true );
+				}
+			}
+			else
+			{
+				SEL orderOutSel = sel_registerName( "orderOut:" );
+				( (void ( * )( id, SEL, id ))objc_msgSend )( (id)_pCocoaWindow, orderOutSel, nullptr );
+			}
+		}
+	}
+
+	bool CocoaWindow::isVisible() const
+	{
+		if ( _pCocoaWindow != nullptr )
+		{
+			SEL isVisibleSel = sel_registerName( "isVisible" );
+			return ( (bool ( * )( id, SEL ))objc_msgSend )( (id)_pCocoaWindow, isVisibleSel );
+		}
+		return false;
+	}
 #else
 	bool CocoaWindow::initializeWindow( const utf8* pTitle, uint32 width, uint32 height )
 	{
@@ -169,6 +202,16 @@ namespace sw
 	bool CocoaWindow::processMessages()
 	{
 		return _bShouldClose == false;
+	}
+
+	void CocoaWindow::showWindow( bool bShow )
+	{
+		(void)bShow;
+	}
+
+	bool CocoaWindow::isVisible() const
+	{
+		return false;
 	}
 #endif
 } // namespace sw
