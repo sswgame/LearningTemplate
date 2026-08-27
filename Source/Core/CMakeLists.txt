@@ -28,6 +28,7 @@ set(cfSources
 	"${CMAKE_CURRENT_SOURCE_DIR}/Memory/Memory.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Memory/MemoryProfiler.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Memory/PoolAllocator.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/Process/Process.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/String/StringUtil.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/String/hashed_string.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Task/TaskManager.cpp"
@@ -38,12 +39,15 @@ set(cfSources
 if(WIN32)
 	list(APPEND cfSources "${CMAKE_CURRENT_SOURCE_DIR}/File/Windows/WindowsFileDialog.cpp")
 	list(APPEND cfSources "${CMAKE_CURRENT_SOURCE_DIR}/File/Windows/WindowsFileWatcher.cpp")
+	list(APPEND cfSources "${CMAKE_CURRENT_SOURCE_DIR}/Process/Windows/WindowsProcess.cpp")
 elseif(APPLE)
 	list(APPEND cfSources "${CMAKE_CURRENT_SOURCE_DIR}/File/Mac/MacFileDialog.cpp")
 	list(APPEND cfSources "${CMAKE_CURRENT_SOURCE_DIR}/File/Mac/MacFileWatcher.cpp")
+	list(APPEND cfSources "${CMAKE_CURRENT_SOURCE_DIR}/Process/Mac/MacProcess.cpp")
 elseif(UNIX)
 	list(APPEND cfSources "${CMAKE_CURRENT_SOURCE_DIR}/File/Linux/LinuxFileDialog.cpp")
 	list(APPEND cfSources "${CMAKE_CURRENT_SOURCE_DIR}/File/Linux/LinuxFileWatcher.cpp")
+	list(APPEND cfSources "${CMAKE_CURRENT_SOURCE_DIR}/Process/Linux/LinuxProcess.cpp")
 endif()
 
 # ------------------------------------------------------------------------------

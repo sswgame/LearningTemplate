@@ -2,6 +2,8 @@
 
 #include "App/Module/ModuleHost.h"
 
+#include "App/Module/ModuleCompiler.h"
+
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Task/TaskManager.h"
@@ -25,6 +27,8 @@
 
 namespace
 {
+	sw::ModuleHost* s_pCurrentModuleHost{ nullptr };
+
 	void* getModuleService( uint32 id )
 	{
 		using sw::EditorServiceId;
@@ -70,6 +74,8 @@ namespace
 				return &sw::engine::getCommandStack();
 			case EditorServiceId::EngineData:
 				return const_cast<sw::EngineData*>( &sw::engine::getEngineData() );
+			case EditorServiceId::ModuleCompiler:
+				return ( s_pCurrentModuleHost != nullptr ) ? s_pCurrentModuleHost->getModuleCompiler() : nullptr;
 		}
 		return nullptr;
 	}
@@ -78,7 +84,8 @@ namespace
 namespace sw
 {
 	ModuleHost::ModuleHost()
-		: _editorApi{}
+		: _moduleCompiler{ nullptr }
+		, _editorApi{}
 		, _gameApi{}
 		, _editor{ nullptr }
 		, _game{ nullptr }
@@ -109,17 +116,22 @@ namespace sw
 
 	bool ModuleHost::initialize( LiveReloadManager* pLiveReloadManager, RHI* pRHI, IWindow* pWindow, RenderThread* pRenderThread, bool bEnableEditor, const vector<GameKitConfig>& gameKitModuleList )
 	{
-		_pLiveReloadManager = pLiveReloadManager;
-		_pRHI				= pRHI;
-		_pWindow			= pWindow;
-		_pRenderThread		= pRenderThread;
-		_bEnableEditor		= bEnableEditor;
+		s_pCurrentModuleHost = this;
+		_pLiveReloadManager	 = pLiveReloadManager;
+		_pRHI				 = pRHI;
+		_pWindow			 = pWindow;
+		_pRenderThread		 = pRenderThread;
+		_bEnableEditor		 = bEnableEditor ? SW_TRUE : SW_FALSE;
+
+#if !defined( SW_SHIPPING )
+		_moduleCompiler = make_unique<ModuleCompiler>( _pLiveReloadManager );
+#endif
 
 #if defined( SW_SHIPPING )
 		(void)gameKitModuleList;
 		onAfterGameReload( nullptr );
 #else
-		if ( _bEnableEditor && _pLiveReloadManager != nullptr )
+		if ( _bEnableEditor == SW_TRUE && _pLiveReloadManager != nullptr )
 		{
 			BLOCK( "에디터: 뷰포트 / EditorModule 등록" )
 			{
@@ -190,6 +202,15 @@ namespace sw
 
 	void ModuleHost::shutdown()
 	{
+		if ( _moduleCompiler != nullptr )
+		{
+			_moduleCompiler->shutdown();
+			_moduleCompiler.reset();
+		}
+
+		if ( s_pCurrentModuleHost == this )
+			s_pCurrentModuleHost = nullptr;
+
 		if ( _pLiveReloadManager != nullptr )
 		{
 			_pLiveReloadManager->setDrainWorkers( {} );
@@ -207,7 +228,7 @@ namespace sw
 	void ModuleHost::updateEditorUI( float32 deltaTime )
 	{
 		std::ignore = deltaTime;
-		if ( _bEnableEditor == false || _editor == nullptr || _editorApi.updateUI == nullptr )
+		if ( _bEnableEditor == SW_FALSE || _editor == nullptr || _editorApi.updateUI == nullptr )
 			return;
 
 		_editorApi.updateUI( _editor );
@@ -231,7 +252,7 @@ namespace sw
 
 	bool ModuleHost::onWindowMessage( const NativeWindowEvent& event )
 	{
-		if ( _bEnableEditor == false || _editor == nullptr || _editorApi.processEvent == nullptr )
+		if ( _bEnableEditor == SW_FALSE || _editor == nullptr || _editorApi.processEvent == nullptr )
 			return false;
 
 		// 에디터 내부 상태 업데이트 및 입력 필터링은 Editor Module 내부에서 캡슐화 처리
@@ -243,7 +264,7 @@ namespace sw
 		renderTarget = 0;
 		width		 = 0;
 		height		 = 0;
-		if ( _bEnableEditor == false || _editor == nullptr || _editorApi.getGameViewport == nullptr )
+		if ( _bEnableEditor == SW_FALSE || _editor == nullptr || _editorApi.getGameViewport == nullptr )
 			return;
 
 		_editorApi.getGameViewport( _editor, &renderTarget, &width, &height );

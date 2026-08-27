@@ -16,6 +16,7 @@ namespace sw
 	class TaskManager;
 	class MemoryProfiler;
 	class CommandStack;
+	class IModuleCompiler;
 	struct EngineData;
 
 	enum class EditorServiceId : uint32
@@ -23,7 +24,8 @@ namespace sw
 		TaskManager = kModuleServiceCount,
 		MemoryProfiler,
 		CommandStack,
-		EngineData
+		EngineData,
+		ModuleCompiler
 	};
 
 	inline constexpr uint32 toRawServiceId( EditorServiceId id )
@@ -48,6 +50,7 @@ namespace sw
 	SW_DECLARE_EDITOR_SERVICE( MemoryProfiler, EditorServiceId::MemoryProfiler );
 	SW_DECLARE_EDITOR_SERVICE( CommandStack, EditorServiceId::CommandStack );
 	SW_DECLARE_EDITOR_SERVICE( const EngineData, EditorServiceId::EngineData );
+	SW_DECLARE_EDITOR_SERVICE( IModuleCompiler, EditorServiceId::ModuleCompiler );
 
 	namespace editor
 	{

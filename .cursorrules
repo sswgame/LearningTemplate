@@ -153,11 +153,22 @@
     if (_bValid == false) 
       return;
     ```
-2. if문 안의 코드가 1줄인 경우 괄호를 생략한다.
+2. 비트 필드(bit field) 플래그(예: `uint8 _bFlag : 1;`)는 `true`/`false` 대신 `SW_TRUE`(1) / `SW_FALSE`(0)를 사용하여 대입 및 비교한다.
+    ```cpp
+    //BAD
+    _bFlag = true;
+    if (_bFlag == true)
+    if (_bFlag == false)
+    //GOOD
+    _bFlag = SW_TRUE;
+    if (_bFlag == SW_TRUE)
+    if (_bFlag == SW_FALSE)
+    ```
+3. if문 안의 코드가 1줄인 경우 괄호를 생략한다.
    - 단 else/else if문과 존재한다면, 해당 블록들도 1줄이 아니면 괄호를 사용한다.
-3. if문 초기화는 사용하지 않는다.
-4. 조건이 여러 개일 때, 뜻이 불명확해보이거나, 3개 이상이면 지역변수로 조건 내용을 정의하여 사용한다.
-5. 범위(Range) 비교 시 변수를 안쪽(중간)에 위치하도록 작성하여 수학적 범위 표기법($min \le value \ \&\&\ value \le max$)을 따른다.
+4. if문 초기화는 사용하지 않는다.
+5. 조건이 여러 개일 때, 뜻이 불명확해보이거나, 3개 이상이면 지역변수로 조건 내용을 정의하여 사용한다.
+6. 범위(Range) 비교 시 변수를 안쪽(중간)에 위치하도록 작성하여 수학적 범위 표기법($min \le value \ \&\&\ value \le max$)을 따른다.
     ```cpp
     //BAD
     if (value >= kMin && value <= kMax)

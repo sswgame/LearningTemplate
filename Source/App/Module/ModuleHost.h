@@ -11,6 +11,7 @@
 
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Memory/Memory.h"
 
 #include "RuntimeAPI/ABI/EditorAPI.h"
 #include "RuntimeAPI/ABI/GameAPI.h"
@@ -22,6 +23,7 @@ namespace sw
 	class IRHIDevice;
 	class RHI;
 	class LiveReloadManager;
+	class ModuleCompiler;
 	class RenderThread;
 	struct NativeWindowEvent;
 
@@ -77,7 +79,9 @@ namespace sw
 		/** @brief GameAPI 테이블을 반환합니다. */
 		const GameAPI& getGameAPI() const { return _gameApi; }
 		/** @brief 에디터 모드인지를 반환합니다. */
-		bool isEditorEnabled() const { return _bEnableEditor; }
+		bool isEditorEnabled() const { return _bEnableEditor == SW_TRUE; }
+		/** @brief ModuleCompiler 인스턴스를 반환합니다. */
+		ModuleCompiler* getModuleCompiler() const { return _moduleCompiler.get(); }
 
 		// 4) LiveReload 콜백 — LiveReloadManager의 델리게이트가 호출
 		void onBeforeEditorReload();
@@ -103,6 +107,8 @@ namespace sw
 		bool reinitializeAfterRhiSwap( void* pEditorModule, void* pGameModule );
 
 	private:
+		unique_ptr<ModuleCompiler> _moduleCompiler;
+
 		EditorAPI	 _editorApi;
 		GameAPI		 _gameApi;
 		EditorHandle _editor;

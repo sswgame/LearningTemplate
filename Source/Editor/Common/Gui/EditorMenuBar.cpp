@@ -3,6 +3,7 @@
 #include "Editor/Common/Gui/EditorMenuBar.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Gui/EditorDockLayout.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -18,6 +19,7 @@
 #include "Engine/Utility/Resource/ResourceUtil.h"
 
 #include "RuntimeAPI/Service/EditorService.h"
+#include "RuntimeAPI/Service/IModuleCompiler.h"
 
 #include <imgui.h>
 
@@ -59,17 +61,59 @@ namespace sw::editor
 		{
 			if ( ImGui::MenuItem( "Open Scene...", "Ctrl+O" ) )
 				openSceneFileDialog();
+
+			ImGui::Separator();
+			if ( ImGui::MenuItem( "Command Palette...", "Ctrl+P / Ctrl+Space" ) )
+				CommandPalettePopup::open();
+
+			ImGui::Separator();
+			if ( ImGui::MenuItem( "Exit", "Alt+F4" ) )
+			{
+				// App 종료 요청 등
+			}
 			ImGui::EndMenu();
 		}
 
 		if ( ImGui::BeginMenu( "Edit" ) )
 		{
-			const bool bCanUndo = getService<CommandStack>()->canUndo();
-			const bool bCanRedo = getService<CommandStack>()->canRedo();
-			if ( ImGui::MenuItem( "Undo", "Ctrl+Z", false, bCanUndo ) )
+			if ( ImGui::MenuItem( "Undo", "Ctrl+Z" ) )
 				getService<CommandStack>()->undo();
-			if ( ImGui::MenuItem( "Redo", "Ctrl+Y", false, bCanRedo ) )
+			if ( ImGui::MenuItem( "Redo", "Ctrl+Y" ) )
 				getService<CommandStack>()->redo();
+			ImGui::EndMenu();
+		}
+
+		if ( ImGui::BeginMenu( "Build" ) )
+		{
+			IModuleCompiler* pCompiler	= getService<IModuleCompiler>();
+			const bool		 bCompiling = ( pCompiler != nullptr && pCompiler->isCompiling() );
+
+			if ( ImGui::MenuItem( "Compile Game (SWGame)", "Ctrl+Alt+F11", false, bCompiling == false ) )
+			{
+				if ( pCompiler != nullptr )
+					pCompiler->compileModule( "SWGame" );
+			}
+
+			if ( ImGui::MenuItem( "Compile Editor (EditorModule)", nullptr, false, bCompiling == false ) )
+			{
+				if ( pCompiler != nullptr )
+					pCompiler->compileModule( "EditorModule" );
+			}
+
+			if ( ImGui::MenuItem( "Compile All Modules", "Ctrl+Shift+B", false, bCompiling == false ) )
+			{
+				if ( pCompiler != nullptr )
+					pCompiler->compileAll();
+			}
+
+			ImGui::Separator();
+
+			if ( ImGui::MenuItem( "Cancel Build", nullptr, false, bCompiling ) )
+			{
+				if ( pCompiler != nullptr )
+					pCompiler->cancel();
+			}
+
 			ImGui::EndMenu();
 		}
 
@@ -115,11 +159,62 @@ namespace sw::editor
 			ImGui::EndMenu();
 		}
 
-		EditorContext*	  pContext	 = EditorContext::get();
-		IRHIDevice*		  pRhiDevice = ( pContext != nullptr ) ? pContext->getRhiDevice() : nullptr;
-		const utf8*		  pBackend	 = ( pRhiDevice != nullptr ) ? pRhiDevice->getBackendName() : "n/a";
-		constexpr float32 statusW	 = 280.0f;
+		constexpr float32 statusW = 460.0f;
 		ImGui::SameLine( ImGui::GetWindowWidth() - statusW );
+
+		// --- Live Coding Compile Button & Status ---
+		IModuleCompiler* pCompiler = getService<IModuleCompiler>();
+		if ( pCompiler != nullptr )
+		{
+			const bool		 bCompiling = pCompiler->isCompiling();
+			const BuildState state		= pCompiler->getBuildState();
+
+			if ( bCompiling )
+			{
+				const float32 elapsed = pCompiler->getElapsedTimeSec();
+				ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0.7f, 0.5f, 0.1f, 1.0f ) );
+				ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImVec4( 0.8f, 0.3f, 0.2f, 1.0f ) );
+				utf8 label[64];
+				snprintf( label, sizeof( label ), "Compiling (%.1fs) [Cancel]", static_cast<float64>( elapsed ) );
+				if ( ImGui::SmallButton( label ) )
+					pCompiler->cancel();
+				ImGui::PopStyleColor( 2 );
+			}
+			else
+			{
+				if ( ImGui::SmallButton( "Compile" ) )
+					pCompiler->compileModule( "SWGame" );
+
+				if ( ImGui::IsItemHovered() )
+				{
+					ImGui::BeginTooltip();
+					ImGui::TextUnformatted( "Live Coding: Compile SWGame (Ctrl+Alt+F11 / F7)" );
+					ImGui::EndTooltip();
+				}
+			}
+
+			ImGui::SameLine();
+			if ( state == BuildState::Success )
+			{
+				ImGui::TextColored( ImVec4( 0.35f, 0.85f, 0.35f, 1.0f ), "Built (%.1fs)", static_cast<float64>( pCompiler->getLastDurationSec() ) );
+			}
+			else if ( state == BuildState::Failed )
+			{
+				ImGui::TextColored( ImVec4( 0.95f, 0.35f, 0.35f, 1.0f ), "Build Failed" );
+			}
+			else
+			{
+				ImGui::TextDisabled( "Ready" );
+			}
+
+			ImGui::SameLine();
+			ImGui::TextDisabled( "|" );
+			ImGui::SameLine();
+		}
+
+		EditorContext* pContext	  = EditorContext::get();
+		IRHIDevice*	   pRhiDevice = ( pContext != nullptr ) ? pContext->getRhiDevice() : nullptr;
+		const utf8*	   pBackend	  = ( pRhiDevice != nullptr ) ? pRhiDevice->getBackendName() : "n/a";
 		ImGui::TextDisabled( "RHI %s | %.0f FPS", pBackend, static_cast<float64>( ImGui::GetIO().Framerate ) );
 		if ( ImGui::IsItemHovered() )
 		{
@@ -138,16 +233,36 @@ namespace sw::editor
 	void processMenuHotkeys()
 	{
 		ImGuiIO& io = ImGui::GetIO();
-		if ( io.WantTextInput == false && ( io.KeyCtrl || io.KeySuper ) )
+		if ( io.WantTextInput == false )
 		{
-			if ( ImGui::IsKeyPressed( ImGuiKey_Z, false ) )
-				getService<CommandStack>()->undo();
-			if ( ImGui::IsKeyPressed( ImGuiKey_Y, false ) )
-				getService<CommandStack>()->redo();
-			if ( ImGui::IsKeyPressed( ImGuiKey_O, false ) )
-				openSceneFileDialog();
-			if ( ImGui::IsKeyPressed( ImGuiKey_P, false ) || ImGui::IsKeyPressed( ImGuiKey_Space, false ) )
-				CommandPalettePopup::toggle();
+			IModuleCompiler* pCompiler = getService<IModuleCompiler>();
+
+			if ( io.KeyCtrl || io.KeySuper )
+			{
+				if ( ImGui::IsKeyPressed( ImGuiKey_Z, false ) )
+					getService<CommandStack>()->undo();
+				if ( ImGui::IsKeyPressed( ImGuiKey_Y, false ) )
+					getService<CommandStack>()->redo();
+				if ( ImGui::IsKeyPressed( ImGuiKey_O, false ) )
+					openSceneFileDialog();
+				if ( ImGui::IsKeyPressed( ImGuiKey_P, false ) || ImGui::IsKeyPressed( ImGuiKey_Space, false ) )
+					CommandPalettePopup::toggle();
+				if ( io.KeyAlt && ImGui::IsKeyPressed( ImGuiKey_F11, false ) )
+				{
+					if ( pCompiler != nullptr )
+						pCompiler->compileModule( "SWGame" );
+				}
+				if ( io.KeyShift && ImGui::IsKeyPressed( ImGuiKey_B, false ) )
+				{
+					if ( pCompiler != nullptr )
+						pCompiler->compileAll();
+				}
+			}
+			else if ( ImGui::IsKeyPressed( ImGuiKey_F7, false ) )
+			{
+				if ( pCompiler != nullptr )
+					pCompiler->compileModule( "SWGame" );
+			}
 		}
 	}
 

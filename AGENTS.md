@@ -100,6 +100,7 @@ cmake --build --preset Ninja-Debug
 - Arrange fields to minimize byte padding; use bit packing where appropriate.
 - Do not compare booleans through negation: write explicit comparisons such as
   `if (_bValid == false)`. Explicitly compare pointers to `nullptr` when needed.
+- Bitfield flags (e.g. `uint8 _bFlag : 1;`) must be compared and assigned using `SW_TRUE` (1) and `SW_FALSE` (0) instead of `true`/`false`: write `if (_bFlag == SW_TRUE)` / `if (_bFlag == SW_FALSE)` and `_bFlag = SW_TRUE;`.
 - Omit braces for a single-line `if` body. If an `else`/`else if` is present,
   use braces for any multi-line blocks.
 - Do not use `if` initializers. For unclear conditions or conditions with three
