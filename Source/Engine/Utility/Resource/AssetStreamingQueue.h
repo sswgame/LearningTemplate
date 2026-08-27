@@ -1,5 +1,6 @@
 #pragma once
 #include "Core/Delegate/Delegate.h"
+#include "Core/Task/TaskTypes.h"
 
 #include "Engine/EngineMinimal.h"
 
@@ -63,6 +64,9 @@ namespace sw
 			bool						_bSuccess;
 			OnStreamingCompleteDelegate _callback;
 		};
+
+		/** @brief TaskArgs: path string. 워커에서 파일 존재 여부를 확인합니다. */
+		void processAssetTask( const TaskArgs& args );
 
 	private:
 		mutable mutex											   _mutex;

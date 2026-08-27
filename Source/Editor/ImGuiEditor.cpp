@@ -34,6 +34,26 @@
 
 namespace sw::editor
 {
+	namespace
+	{
+		void loadSplashDefaultRenderPass( const TaskArgs& args )
+		{
+			shared_ptr<RenderPassResource> pPass = args.get<shared_ptr<RenderPassResource>>( 0 );
+			if ( pPass == nullptr )
+				return;
+			SW_LOG_INFO( "[ImGuiEditor] Splash: reading DefaultRenderPass.xml" );
+			pPass->loadFromXmlFile( editor::getService<const EngineData>()->_defaultRenderPass );
+		}
+
+		void loadSplashForwardPipeline( const TaskArgs& args )
+		{
+			shared_ptr<RenderPipelineResource> pPipeline = args.get<shared_ptr<RenderPipelineResource>>( 0 );
+			if ( pPipeline == nullptr )
+				return;
+			SW_LOG_INFO( "[ImGuiEditor] Splash: reading ForwardPipeline.xml" );
+			pPipeline->loadFromXmlFile( editor::getService<const EngineData>()->_defaultForwardPipeline );
+		}
+	} // namespace
 	ImGuiEditor::ImGuiEditor()
 		: _platformBackend{ nullptr }
 		, _rendererBackend{ nullptr }
@@ -138,19 +158,15 @@ namespace sw::editor
 			const shared_ptr<RenderPipelineResource> forwardPipeline = sw::make_shared<RenderPipelineResource>();
 
 			TaskManager* pTaskManager = editor::getService<TaskManager>();
-			TaskHandle	 hDefault	  = pTaskManager->emplaceTask( "EditorSplash_DefaultRenderPass",
-																   SW_DELEGATE_LAMBDA( TaskDelegate, [defaultPass]()
-			{
-				SW_LOG_INFO( "[ImGuiEditor] Splash: reading DefaultRenderPass.xml" );
-				defaultPass->loadFromXmlFile( editor::getService<const EngineData>()->_defaultRenderPass );
-			} ) );
+			TaskHandle	 hDefault	  = pTaskManager->emplaceTask(
+				"EditorSplash_DefaultRenderPass",
+				SW_DELEGATE_FUNCTION( TaskArgsDelegate, loadSplashDefaultRenderPass ),
+				MakeTaskArgs( defaultPass ) );
 
-			TaskHandle hForward = pTaskManager->emplaceTask( "EditorSplash_ForwardPipeline",
-															 SW_DELEGATE_LAMBDA( TaskDelegate, [forwardPipeline]()
-			{
-				SW_LOG_INFO( "[ImGuiEditor] Splash: reading ForwardPipeline.xml" );
-				forwardPipeline->loadFromXmlFile( editor::getService<const EngineData>()->_defaultForwardPipeline );
-			} ) );
+			TaskHandle hForward = pTaskManager->emplaceTask(
+				"EditorSplash_ForwardPipeline",
+				SW_DELEGATE_FUNCTION( TaskArgsDelegate, loadSplashForwardPipeline ),
+				MakeTaskArgs( forwardPipeline ) );
 
 			TaskStageHandle stage = pTaskManager->getOrCreateStage( "EditorSplash" );
 			stage.addTask( hDefault ).addTask( hForward );

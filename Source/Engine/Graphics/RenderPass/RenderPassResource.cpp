@@ -158,12 +158,20 @@ namespace sw
 
 	TaskHandle RenderPassResource::loadFromXmlFileAsync( string_view assetRelativePath )
 	{
-		TaskHandle handle = engine::getTaskManager().emplaceTask( "LoadRenderPassAsync", SW_DELEGATE_LAMBDA( TaskDelegate, [this, path = string( assetRelativePath )]()
-		{
-			this->loadFromXmlFile( path );
-		} ) );
+		TaskHandle handle = engine::getTaskManager().emplaceTask(
+			"LoadRenderPassAsync",
+			SW_DELEGATE_FUNCTION( TaskArgsDelegate, RenderPassResource::loadFromXmlFileAsyncJob ),
+			MakeTaskArgs( this, string( assetRelativePath ) ) );
 		handle.submit();
 		return handle;
+	}
+
+	void RenderPassResource::loadFromXmlFileAsyncJob( const TaskArgs& args )
+	{
+		RenderPassResource* pResource = args.get<RenderPassResource*>( 0 );
+		if ( pResource == nullptr )
+			return;
+		pResource->loadFromXmlFile( args.get<string>( 1 ) );
 	}
 
 } // namespace sw

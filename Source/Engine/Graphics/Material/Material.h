@@ -142,6 +142,8 @@ namespace sw
 		void applyDescToRuntime();
 		/** @brief 런타임 프로퍼티를 Desc에 다시 씁니다 (저장용). */
 		void syncDescFromRuntime() const;
+		/** @brief TaskArgs: AsyncLoadState shared_ptr, path string. */
+		static void loadFromFileAsyncJob( const TaskArgs& args );
 
 		MaterialDesc			   _desc;
 		MaterialData			   _data;

@@ -170,13 +170,36 @@ namespace sw
 			}
 		};
 
-		SW_DECLARE_DELEGATE( void, ChannelEventCallback, const IEvent& );
-
 		/** @brief 한 채널의 lock-free 이벤트 연결 리스트 헤드입니다. */
 		struct ChannelEventList
 		{
 			std::atomic<IEvent*> _pHead{ nullptr };
 		};
+
+		/** @brief 타입 소거된 채널 방송. 람다 없이 함수 포인터 + 멀티캐스트입니다. */
+		struct ChannelDispatchEntry
+		{
+			using BroadcastFn = void ( * )( void* pMulticast, const IEvent& eventRef );
+
+			BroadcastFn		 _pfnBroadcast{ nullptr };
+			shared_ptr<void> _pMulticast;
+
+			/** @brief 엔트리가 호출 가능하면 true입니다. */
+			bool isBound() const { return _pfnBroadcast != nullptr && _pMulticast != nullptr; }
+			/** @brief 저장된 멀티캐스트로 이벤트를 방송합니다. */
+			void invoke( const IEvent& eventRef ) const
+			{
+				if ( isBound() )
+					_pfnBroadcast( _pMulticast.get(), eventRef );
+			}
+		};
+
+		/** @brief typed 멀티캐스트에 IEvent를 캐스팅해 방송합니다. */
+		template <typename T>
+		static void broadcastTypedChannel( void* pMulticast, const IEvent& eventRef )
+		{
+			static_cast<MulticastDelegate<void( const T& )>*>( pMulticast )->broadcast( static_cast<const T&>( eventRef ) );
+		}
 
 		/** @brief 채널+타입 멀티캐스트를 찾거나 만듭니다. */
 		template <typename T>
@@ -191,12 +214,7 @@ namespace sw
 
 			shared_ptr<MulticastDelegate<void( const T& )>> mcast = sw::make_shared<MulticastDelegate<void( const T& )>>();
 			_mapChannelDelegates[key]							  = mcast;
-
-			_mapChannelDispatchTable[key] = SW_DELEGATE_LAMBDA( ChannelEventCallback, [mcast]( const IEvent& eventRef )
-			{
-				mcast->broadcast( static_cast<const T&>( eventRef ) );
-			} );
-
+			_mapChannelDispatchTable[key]						  = ChannelDispatchEntry{ &broadcastTypedChannel<T>, mcast };
 			return mcast;
 		}
 
@@ -204,7 +222,7 @@ namespace sw
 		mutable SpinLock																	 _busSpinLock;
 		mutable SpinLock																	 _queueSpinLock;
 		unordered_map<std::pair<hashed_string, EventTypeId>, shared_ptr<void>, HashPair>	 _mapChannelDelegates;
-		unordered_map<std::pair<hashed_string, EventTypeId>, ChannelEventCallback, HashPair> _mapChannelDispatchTable;
+		unordered_map<std::pair<hashed_string, EventTypeId>, ChannelDispatchEntry, HashPair> _mapChannelDispatchTable;
 		unordered_map<hashed_string, unique_ptr<ChannelEventList>>							 _mapChannelQueue;
 
 		LinearAllocator	   _arrFrameAllocators[2];

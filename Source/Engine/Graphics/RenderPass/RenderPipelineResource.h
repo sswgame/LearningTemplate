@@ -76,6 +76,10 @@ namespace sw
 		const vector<RenderPassAttachment>& getAttachments() const { return _desc._listAttachments; }
 
 	private:
+		/** @brief TaskArgs: this, path string. */
+		static void loadFromXmlFileAsyncJob( const TaskArgs& args );
+
+	private:
 		RenderPipelineDesc _desc;
 	};
 } // namespace sw

@@ -238,6 +238,11 @@ namespace sw
 		}
 	}
 
+	void GpuScene::fillScratchRange( uint32 start, uint32 end )
+	{
+		fillRangeVal( _listScratchCandidates, _listScratchRaw, start, end );
+	}
+
 	void GpuScene::buildFromScene( Scene* pScene, const float32 cameraPos[3],
 								   TaskManager* pTaskManager )
 	{
@@ -311,10 +316,8 @@ namespace sw
 				if ( _snapshotStage.isValid() == false )
 					_snapshotStage = pTaskManager->createAnonymousStage( "GpuSceneSnapshot" );
 
-				TaskHandle handle = pTaskManager->emplaceParallelBlock( 0, count, SW_DELEGATE_LAMBDA( ParallelBlockDelegate, [this]( uint32 begin, uint32 end )
-				{
-					fillRangeVal( _listScratchCandidates, _listScratchRaw, begin, end );
-				} ) );
+				TaskHandle handle = pTaskManager->emplaceParallelBlock(
+					0, count, SW_DELEGATE_METHOD( ParallelBlockDelegate, &GpuScene::fillScratchRange, this ) );
 				_snapshotStage.addTask( handle );
 				handle.submit();
 				pTaskManager->waitStage( _snapshotStage );

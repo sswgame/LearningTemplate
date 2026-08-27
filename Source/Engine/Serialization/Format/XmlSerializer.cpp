@@ -262,6 +262,61 @@ namespace sw
 
 		static void noteCoerceFailVal( vector<SchemaOrphanValue>* pOutOrphans, bool& bFieldError, const PropertyInfo& prop, string_view strValue );
 
+		struct NestedArrayReadCallback
+		{
+			void*					   _pContainerPtr{ nullptr };
+			ISequenceContainerWrapper* _pSeq{ nullptr };
+			const NestedContainerInfo* _pNested{ nullptr };
+			const SerializeContext*	   _pCtx{ nullptr };
+			vector<SchemaOrphanValue>* _pOutOrphans{ nullptr };
+			const PropertyInfo*		   _pPropForOrphan{ nullptr };
+			size_t*					   _pElemIndex{ nullptr };
+			bool*					   _pAny{ nullptr };
+			bool*					   _pFieldError{ nullptr };
+
+			void invoke( string_view itemStr )
+			{
+				*_pAny = true;
+				_pSeq->addElementDefault( _pContainerPtr );
+				void* pElemPtr = _pSeq->getElement( _pContainerPtr, ( *_pElemIndex )++ );
+				if ( _pNested->_elementNested != nullptr )
+					return;
+				if ( parseTextValueCoerced( pElemPtr, _pNested->_elementTypeName, itemStr, *_pCtx ) == false )
+					noteCoerceFailVal( _pOutOrphans, *_pFieldError, *_pPropForOrphan, itemStr );
+			}
+		};
+
+		struct NestedMapReadCallback
+		{
+			void*					   _pContainerPtr{ nullptr };
+			IMapContainerWrapper*	   _pMapWrap{ nullptr };
+			const NestedContainerInfo* _pNested{ nullptr };
+			const SerializeContext*	   _pCtx{ nullptr };
+			vector<SchemaOrphanValue>* _pOutOrphans{ nullptr };
+			const PropertyInfo*		   _pPropForOrphan{ nullptr };
+			vector<uint8>*			   _pListKBuf{ nullptr };
+			vector<uint8>*			   _pListVBuf{ nullptr };
+			bool*					   _pAny{ nullptr };
+			bool*					   _pFieldError{ nullptr };
+
+			void invoke( string_view kStr, string_view vStr )
+			{
+				*_pAny = true;
+				_pMapWrap->defaultConstructKey( _pListKBuf->data() );
+				_pMapWrap->defaultConstructValue( _pListVBuf->data() );
+				const bool kOk = parseTextValueCoerced( _pListKBuf->data(), _pNested->_keyTypeName, kStr, *_pCtx );
+				bool	   vOk = false;
+				if ( _pNested->_elementNested == nullptr )
+					vOk = parseTextValueCoerced( _pListVBuf->data(), _pNested->_elementTypeName, vStr, *_pCtx );
+				if ( kOk && vOk )
+					_pMapWrap->insertKeyValue( _pContainerPtr, _pListKBuf->data(), _pListVBuf->data() );
+				else
+					noteCoerceFailVal( _pOutOrphans, *_pFieldError, *_pPropForOrphan, vStr );
+				_pMapWrap->destroyKey( _pListKBuf->data() );
+				_pMapWrap->destroyValue( _pListVBuf->data() );
+			}
+		};
+
 		bool readNestedContainerXml( void* pContainerPtr, const NestedContainerInfo& nested, const utf8* pTagName, IXmlBackend& backend, const SerializeContext& ctx, bool& bOutFieldError, vector<SchemaOrphanValue>* pOutOrphans, const PropertyInfo& propForOrphan )
 		{
 			if ( pContainerPtr == nullptr || nested._wrapper == nullptr )
@@ -272,50 +327,38 @@ namespace sw
 			IMapContainerWrapper*	   pMapWrap = nested._wrapper->asMap();
 			if ( pSeq != nullptr )
 			{
-				size_t elemIndex{ 0 };
-				bool   any{ false };
-				backend.iterateArray( pTagName, SW_DELEGATE_LAMBDA( XmlArrayItemDelegate, [&]( string_view itemStr )
-				{
-					any = true;
-					pSeq->addElementDefault( pContainerPtr );
-					void* pElemPtr = pSeq->getElement( pContainerPtr, elemIndex++ );
-					if ( nested._elementNested != nullptr )
-					{
-						// Nested array item parsing is not directly supported by IXmlBackend's string view callback.
-						// The string itemStr would be the raw text content which isn't sufficient for recursive parsing.
-					}
-					else if ( parseTextValueCoerced( pElemPtr, nested._elementTypeName, itemStr, ctx ) == false )
-						noteCoerceFailVal( pOutOrphans, bOutFieldError, propForOrphan, itemStr );
-				} ) );
+				size_t					 elemIndex{ 0 };
+				bool					 any{ false };
+				NestedArrayReadCallback	 arrayCb{};
+				arrayCb._pContainerPtr	= pContainerPtr;
+				arrayCb._pSeq			= pSeq;
+				arrayCb._pNested		= &nested;
+				arrayCb._pCtx			= &ctx;
+				arrayCb._pOutOrphans	= pOutOrphans;
+				arrayCb._pPropForOrphan = &propForOrphan;
+				arrayCb._pElemIndex		= &elemIndex;
+				arrayCb._pAny			= &any;
+				arrayCb._pFieldError	= &bOutFieldError;
+				backend.iterateArray( pTagName, SW_DELEGATE_METHOD( XmlArrayItemDelegate, &NestedArrayReadCallback::invoke, &arrayCb ) );
 				return any;
 			}
 			else if ( pMapWrap != nullptr )
 			{
-				vector<uint8> listKBuf( pMapWrap->getKeySize() );
-				vector<uint8> listVBuf( pMapWrap->getValueSize() );
-				bool		  any{ false };
-				backend.iterateMap( pTagName, SW_DELEGATE_LAMBDA( XmlMapItemDelegate, [&]( string_view kStr, string_view vStr )
-				{
-					any = true;
-					pMapWrap->defaultConstructKey( listKBuf.data() );
-					pMapWrap->defaultConstructValue( listVBuf.data() );
-					const bool kOk = parseTextValueCoerced( listKBuf.data(), nested._keyTypeName, kStr, ctx );
-					bool	   vOk = false;
-					if ( nested._elementNested != nullptr )
-					{
-						// Map value is a nested container, same limitation as array items in XML.
-					}
-					else
-					{
-						vOk = parseTextValueCoerced( listVBuf.data(), nested._elementTypeName, vStr, ctx );
-					}
-					if ( kOk && vOk )
-						pMapWrap->insertKeyValue( pContainerPtr, listKBuf.data(), listVBuf.data() );
-					else
-						noteCoerceFailVal( pOutOrphans, bOutFieldError, propForOrphan, vStr );
-					pMapWrap->destroyKey( listKBuf.data() );
-					pMapWrap->destroyValue( listVBuf.data() );
-				} ) );
+				vector<uint8>			listKBuf( pMapWrap->getKeySize() );
+				vector<uint8>			listVBuf( pMapWrap->getValueSize() );
+				bool					any{ false };
+				NestedMapReadCallback	mapCb{};
+				mapCb._pContainerPtr	= pContainerPtr;
+				mapCb._pMapWrap			= pMapWrap;
+				mapCb._pNested			= &nested;
+				mapCb._pCtx				= &ctx;
+				mapCb._pOutOrphans		= pOutOrphans;
+				mapCb._pPropForOrphan	= &propForOrphan;
+				mapCb._pListKBuf		= &listKBuf;
+				mapCb._pListVBuf		= &listVBuf;
+				mapCb._pAny				= &any;
+				mapCb._pFieldError		= &bOutFieldError;
+				backend.iterateMap( pTagName, SW_DELEGATE_METHOD( XmlMapItemDelegate, &NestedMapReadCallback::invoke, &mapCb ) );
 				return any;
 			}
 			return false;

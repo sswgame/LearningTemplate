@@ -602,6 +602,77 @@ namespace sw
 		return _impl != nullptr && _impl->_bInitialized != 0;
 	}
 
+	void XAudio2System::playDecodedClipTask( const TaskArgs& args )
+	{
+#if defined( SW_PLATFORM_WINDOWS )
+		if ( _impl == nullptr || _impl->_pXAudio == nullptr )
+			return;
+
+		const string abs			= args.get<string>( 0 );
+		const bool	 loop			= args.get<bool>( 1 );
+		const string requestedPath	= args.get<string>( 2 );
+
+		shared_ptr<PcmClip> pClip = _impl->getOrLoadClip( abs );
+		if ( pClip == nullptr || pClip->listData.empty() )
+		{
+			SW_LOG_WARNING( "[XAudio2System] Failed to decode: %#", abs );
+			return;
+		}
+
+		std::scoped_lock<mutex> lock{ _impl->_voiceMutex };
+
+		if ( loop && _impl->_musicPath != requestedPath )
+			return;
+
+		IXAudio2SourceVoice* pVoice{ nullptr };
+		HRESULT				 hr = _impl->_pXAudio->CreateSourceVoice( &pVoice, &pClip->format );
+		if ( FAILED( hr ) || pVoice == nullptr )
+		{
+			SW_LOG_WARNING( "[XAudio2System] CreateSourceVoice failed (0x%#)", static_cast<uint32>( hr ) );
+			return;
+		}
+
+		XAUDIO2_BUFFER buf{};
+		buf.AudioBytes = static_cast<UINT32>( pClip->listData.size() );
+		buf.pAudioData = pClip->listData.data();
+		if ( loop )
+		{
+			buf.LoopCount		= XAUDIO2_LOOP_INFINITE;
+			_impl->_pMusicClip	= pClip;
+			_impl->_pMusicVoice = pVoice;
+			pVoice->SetVolume( _impl->_musicVolume );
+		}
+		else
+		{
+			buf.Flags = XAUDIO2_END_OF_STREAM;
+			_impl->_listActiveVoices.push_back( VoiceBuffer{} );
+			VoiceBuffer& slot = _impl->_listActiveVoices.back();
+			slot._pClip		  = pClip;
+			slot._pVoice	  = pVoice;
+			pVoice->SetVolume( _impl->_sfxVolume );
+		}
+
+		hr = pVoice->SubmitSourceBuffer( &buf );
+		if ( FAILED( hr ) )
+		{
+			SW_LOG_WARNING( "[XAudio2System] SubmitSourceBuffer failed (0x%#)", static_cast<uint32>( hr ) );
+			if ( loop )
+			{
+				_impl->_pMusicVoice->DestroyVoice();
+				_impl->_pMusicVoice = nullptr;
+				_impl->_pMusicClip.reset();
+				_impl->_musicPath.clear();
+			}
+			return;
+		}
+		pVoice->Start( 0 );
+		SW_LOG_INFO( "[XAudio2System] Playing %# (%# loop=%#)", abs, static_cast<uint32>( buf.AudioBytes ),
+					 loop ? 1 : 0 );
+#else
+		(void)args;
+#endif
+	}
+
 	/**
 	 * @brief 오디오 파일을 로드/디코딩하여 XAudio2 소스 보이스를 생성하고 버퍼를 제출하여 재생을 시작합니다.
 	 */
@@ -628,69 +699,12 @@ namespace sw
 
 		const string requestedPath = string( path );
 
-		engine::getTaskManager().emplaceTask(
-									[this, abs, loop, requestedPath]()
-		{
-			shared_ptr<PcmClip> pClip = _impl->getOrLoadClip( abs );
-			if ( pClip == nullptr || pClip->listData.empty() )
-			{
-				SW_LOG_WARNING( "[XAudio2System] Failed to decode: %#", abs );
-				return;
-			}
-
-			std::scoped_lock<mutex> lock{ _impl->_voiceMutex };
-
-			if ( loop && _impl->_musicPath != requestedPath )
-			{
-				// Music was changed or stopped while decoding
-				return;
-			}
-
-			IXAudio2SourceVoice* pVoice{ nullptr };
-			HRESULT				 hr = _impl->_pXAudio->CreateSourceVoice( &pVoice, &pClip->format );
-			if ( FAILED( hr ) || pVoice == nullptr )
-			{
-				SW_LOG_WARNING( "[XAudio2System] CreateSourceVoice failed (0x%#)", static_cast<uint32>( hr ) );
-				return;
-			}
-
-			XAUDIO2_BUFFER buf{};
-			buf.AudioBytes = static_cast<UINT32>( pClip->listData.size() );
-			buf.pAudioData = pClip->listData.data();
-			if ( loop )
-			{
-				buf.LoopCount		= XAUDIO2_LOOP_INFINITE;
-				_impl->_pMusicClip	= pClip;
-				_impl->_pMusicVoice = pVoice;
-				pVoice->SetVolume( _impl->_musicVolume );
-			}
-			else
-			{
-				buf.Flags = XAUDIO2_END_OF_STREAM;
-				_impl->_listActiveVoices.push_back( VoiceBuffer{} );
-				VoiceBuffer& slot = _impl->_listActiveVoices.back();
-				slot._pClip		  = pClip;
-				slot._pVoice	  = pVoice;
-				pVoice->SetVolume( _impl->_sfxVolume );
-			}
-
-			hr = pVoice->SubmitSourceBuffer( &buf );
-			if ( FAILED( hr ) )
-			{
-				SW_LOG_WARNING( "[XAudio2System] SubmitSourceBuffer failed (0x%#)", static_cast<uint32>( hr ) );
-				if ( loop )
-				{
-					_impl->_pMusicVoice->DestroyVoice();
-					_impl->_pMusicVoice = nullptr;
-					_impl->_pMusicClip.reset();
-					_impl->_musicPath.clear();
-				}
-				return;
-			}
-			pVoice->Start( 0 );
-			SW_LOG_INFO( "[XAudio2System] Playing %# (%# loop=%#)", abs, static_cast<uint32>( buf.AudioBytes ),
-						 loop ? 1 : 0 );
-		} ).submit();
+		engine::getTaskManager()
+			.emplaceTask(
+				"XAudio2Play",
+				SW_DELEGATE_METHOD( TaskArgsDelegate, &XAudio2System::playDecodedClipTask, this ),
+				MakeTaskArgs( abs, loop, requestedPath ) )
+			.submit();
 
 		if ( loop )
 			_impl->_musicPath = requestedPath;

@@ -85,7 +85,7 @@ namespace sw
 
 				for ( IEvent* pEvent = pHead; pEvent != nullptr; )
 				{
-					ChannelEventCallback callback;
+					ChannelDispatchEntry callback;
 					{
 						std::scoped_lock<SpinLock>			  lock{ _busSpinLock };
 						std::pair<hashed_string, EventTypeId> key( channel, pEvent->getEventType() );
@@ -95,7 +95,7 @@ namespace sw
 					}
 
 					if ( callback.isBound() )
-						callback( *pEvent );
+						callback.invoke( *pEvent );
 
 					IEvent* pNextEvent = pEvent->_next.load( std::memory_order_relaxed );
 					pEvent->~IEvent();

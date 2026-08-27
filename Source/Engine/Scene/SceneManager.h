@@ -66,6 +66,8 @@ namespace sw
 	private:
 		/** @brief 씬을 언로드하고 목록에서 제거합니다. */
 		void unloadScene( Scene* pScene );
+		/** @brief TaskArgs: AsyncLoadSlot shared_ptr, path string. */
+		static void loadSceneAsyncJob( const TaskArgs& args );
 
 	private:
 		struct AsyncLoadSlot

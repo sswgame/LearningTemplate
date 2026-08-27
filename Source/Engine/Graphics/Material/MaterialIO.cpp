@@ -40,16 +40,24 @@ namespace sw
 
 	TaskHandle Material::loadFromFileAsync( string_view assetRelativePath )
 	{
-		shared_ptr<AsyncLoadState> state  = _asyncLoadState;
-		TaskHandle				   handle = engine::getTaskManager().emplaceTask( "LoadMaterialAsync", SW_DELEGATE_LAMBDA( TaskDelegate, [state, path = string( assetRelativePath )]()
-		{
-			std::scoped_lock<mutex> lock{ state->_mutex };
-			if ( state->_pMaterial == nullptr )
-				return;
-			state->_pMaterial->loadFromFile( path );
-		} ) );
+		TaskHandle handle = engine::getTaskManager().emplaceTask(
+			"LoadMaterialAsync",
+			SW_DELEGATE_FUNCTION( TaskArgsDelegate, Material::loadFromFileAsyncJob ),
+			MakeTaskArgs( _asyncLoadState, string( assetRelativePath ) ) );
 		handle.submit();
 		return handle;
+	}
+
+	void Material::loadFromFileAsyncJob( const TaskArgs& args )
+	{
+		shared_ptr<AsyncLoadState> state = args.get<shared_ptr<AsyncLoadState>>( 0 );
+		if ( state == nullptr )
+			return;
+
+		std::scoped_lock<mutex> lock{ state->_mutex };
+		if ( state->_pMaterial == nullptr )
+			return;
+		state->_pMaterial->loadFromFile( args.get<string>( 1 ) );
 	}
 
 	bool Material::saveToFile( string_view assetRelativePath ) const

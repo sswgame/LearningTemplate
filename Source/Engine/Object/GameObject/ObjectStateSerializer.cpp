@@ -210,6 +210,37 @@ namespace sw
 				}
 			}
 
+			struct TagArrayCallback
+			{
+				GameObject* _pGameObject{ nullptr };
+
+				void invoke( string_view itemStr )
+				{
+					TagID tag{};
+					if ( parseTagId( itemStr, tag ) )
+						_pGameObject->addTag( tag );
+				}
+			};
+
+			struct ComponentMapCallback
+			{
+				GameObject* _pGameObject{ nullptr };
+
+				void invoke( string_view keyStr, string_view valStr )
+				{
+					if ( keyStr.empty() )
+						return;
+
+					Component* pComp = _pGameObject->addComponentByName(
+						hashed_string( keyStr.data(), static_cast<uint32>( keyStr.size() ) ), false );
+					if ( pComp == nullptr )
+						return;
+
+					if ( valStr.empty() == false )
+						deserializeComponentXml( pComp, valStr );
+				}
+			};
+
 			/** @brief Build stableKey -> Component* for all components on a GO (occurrence by base name). */
 			void buildStableComponentKeyMap( const GameObject*					pGameObject,
 											 unordered_map<string, Component*>& outMap )
@@ -383,6 +414,83 @@ namespace sw
 				string			_parentStableKey;
 			};
 
+			struct SceneTransformMapCallback
+			{
+				GameObject*						   _pGameObject{ nullptr };
+				unordered_map<string, Component*>* _pKeyMap{ nullptr };
+				uint32*							   _pXformCount{ nullptr };
+				uint32*							   _pAppliedCount{ nullptr };
+				vector<PendingAttach>*			   _pPending{ nullptr };
+				bool							   _bApplyTransforms{ false };
+
+				void invoke( string_view keyStr, string_view valStr )
+				{
+					if ( keyStr.empty() )
+						return;
+
+					++( *_pXformCount );
+
+					Component* pComp{ nullptr };
+					auto	   mapIt = _pKeyMap->find( string( keyStr ) );
+					if ( mapIt != _pKeyMap->end() )
+						pComp = mapIt->second;
+
+					if ( pComp == nullptr )
+					{
+						const string key( keyStr );
+						SW_LOG_ERROR( "[ObjectStateSerializer] SceneTransform key '%#' not found on GameObject '%#'.",
+									  key.c_str(),
+									  _pGameObject->getName().c_str() );
+						return;
+					}
+
+					SceneComponent* pSceneComp = pComp->asSceneComponent();
+					if ( pSceneComp == nullptr )
+					{
+						const string key( keyStr );
+						SW_LOG_ERROR( "[ObjectStateSerializer] SceneTransform key '%#' is not a SceneComponent on '%#'.",
+									  key.c_str(),
+									  _pGameObject->getName().c_str() );
+						return;
+					}
+
+					if ( valStr.empty() )
+						return;
+
+					float3 pos{};
+					float3 rot{};
+					float3 scl{ 1.0f, 1.0f, 1.0f };
+					string parentOwner;
+					string parentKey;
+					if ( parseSceneTransform( valStr, pos, rot, scl, parentOwner, parentKey ) == false )
+					{
+						const string key( keyStr );
+						SW_LOG_ERROR( "[ObjectStateSerializer] Failed to parse SceneTransform for key '%#' on '%#'.",
+									  key.c_str(),
+									  _pGameObject->getName().c_str() );
+						return;
+					}
+
+					if ( _bApplyTransforms )
+					{
+						pSceneComp->setLocalPosition( pos );
+						pSceneComp->setLocalRotation( rot );
+						pSceneComp->setLocalScale( scl );
+					}
+
+					++( *_pAppliedCount );
+
+					if ( parentKey.empty() == false )
+					{
+						PendingAttach link;
+						link._pChild		  = pSceneComp;
+						link._parentOwnerName = std::move( parentOwner );
+						link._parentStableKey = std::move( parentKey );
+						_pPending->push_back( std::move( link ) );
+					}
+				}
+			};
+
 			void applyPendingAttaches( GameObject* pGameObject, const vector<PendingAttach>& pendingAttaches )
 			{
 				if ( pGameObject == nullptr || pendingAttaches.empty() )
@@ -497,77 +605,15 @@ namespace sw
 				vector<PendingAttach>  listLocalPending;
 				vector<PendingAttach>& pending = outPendingAttaches != nullptr ? *outPendingAttaches : listLocalPending;
 
-				XmlMapItemDelegate xformCb = SW_DELEGATE_LAMBDA(
-					XmlMapItemDelegate,
-					[pGameObject, &keyMap, &xformCount, &appliedCount, &pending, bApplyTransforms]( string_view keyStr,
-																									string_view valStr )
-				{
-					(void)pGameObject;
-					if ( keyStr.empty() )
-						return;
-
-					++xformCount;
-
-					Component* pComp{ nullptr };
-					const auto it = keyMap.find( string( keyStr ) );
-					if ( it != keyMap.end() )
-						pComp = it->second;
-
-					if ( pComp == nullptr )
-					{
-						const string key( keyStr );
-						SW_LOG_ERROR( "[ObjectStateSerializer] SceneTransform key '%#' not found on GameObject '%#'.",
-									  key.c_str(),
-									  pGameObject->getName().c_str() );
-						return;
-					}
-
-					SceneComponent* pSceneComp = pComp->asSceneComponent();
-					if ( pSceneComp == nullptr )
-					{
-						const string key( keyStr );
-						SW_LOG_ERROR( "[ObjectStateSerializer] SceneTransform key '%#' is not a SceneComponent on '%#'.",
-									  key.c_str(),
-									  pGameObject->getName().c_str() );
-						return;
-					}
-
-					if ( valStr.empty() )
-						return;
-
-					float3 pos{};
-					float3 rot{};
-					float3 scl{ 1.0f, 1.0f, 1.0f };
-					string parentOwner;
-					string parentKey;
-					if ( parseSceneTransform( valStr, pos, rot, scl, parentOwner, parentKey ) == false )
-					{
-						const string key( keyStr );
-						SW_LOG_ERROR( "[ObjectStateSerializer] Failed to parse SceneTransform for key '%#' on '%#'.",
-									  key.c_str(),
-									  pGameObject->getName().c_str() );
-						return;
-					}
-
-					if ( bApplyTransforms )
-					{
-						pSceneComp->setLocalPosition( pos );
-						pSceneComp->setLocalRotation( rot );
-						pSceneComp->setLocalScale( scl );
-					}
-
-					++appliedCount;
-
-					if ( parentKey.empty() == false )
-					{
-						PendingAttach link;
-						link._pChild		  = pSceneComp;
-						link._parentOwnerName = std::move( parentOwner );
-						link._parentStableKey = std::move( parentKey );
-						pending.push_back( std::move( link ) );
-					}
-				} );
-				xmlBackend.iterateMap( "SceneTransforms", xformCb );
+				SceneTransformMapCallback xformCb{};
+				xformCb._pGameObject	   = pGameObject;
+				xformCb._pKeyMap		   = &keyMap;
+				xformCb._pXformCount	   = &xformCount;
+				xformCb._pAppliedCount	   = &appliedCount;
+				xformCb._pPending		   = &pending;
+				xformCb._bApplyTransforms  = bApplyTransforms;
+				xmlBackend.iterateMap( "SceneTransforms",
+									   SW_DELEGATE_METHOD( XmlMapItemDelegate, &SceneTransformMapCallback::invoke, &xformCb ) );
 
 				if ( xformCount != sceneCompCount )
 				{
@@ -987,33 +1033,13 @@ namespace sw
 			}
 		}
 
-		XmlArrayItemDelegate tagCb = SW_DELEGATE_LAMBDA( XmlArrayItemDelegate, [pGameObject]( string_view itemStr )
-		{
-			TagID tag{};
-			if ( parseTagId( itemStr, tag ) )
-				pGameObject->addTag( tag );
-		} );
-		xmlBackend.iterateArray( "Tags", tagCb );
+		TagArrayCallback tagCb{};
+		tagCb._pGameObject = pGameObject;
+		xmlBackend.iterateArray( "Tags", SW_DELEGATE_METHOD( XmlArrayItemDelegate, &TagArrayCallback::invoke, &tagCb ) );
 
-		XmlMapItemDelegate compCb = SW_DELEGATE_LAMBDA( XmlMapItemDelegate, [pGameObject]( string_view keyStr, string_view valStr )
-		{
-			if ( keyStr.empty() )
-				return;
-
-			Component* pComp = pGameObject->addComponentByName(
-				hashed_string( keyStr.data(), static_cast<uint32>( keyStr.size() ) ), false );
-			if ( pComp == nullptr )
-			{
-				const string typeName( keyStr );
-				// [Temp] 핫리로드 시 불필요한 고아(Orphan) 로그 스팸 억제
-				// SW_LOG_WARNING( "[ObjectStateSerializer] Failed to re_create component '%#'", typeName.c_str() );
-				return;
-			}
-
-			if ( valStr.empty() == false )
-				deserializeComponentXml( pComp, valStr );
-		} );
-		xmlBackend.iterateMap( "Components", compCb );
+		ComponentMapCallback compCb{};
+		compCb._pGameObject = pGameObject;
+		xmlBackend.iterateMap( "Components", SW_DELEGATE_METHOD( XmlMapItemDelegate, &ComponentMapCallback::invoke, &compCb ) );
 
 		vector<PendingAttach> listPendingAttaches;
 		collectAndApplySceneTransforms( pGameObject, xmlBackend, &listPendingAttaches, true );

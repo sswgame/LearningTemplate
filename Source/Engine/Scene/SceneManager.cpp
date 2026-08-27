@@ -1,6 +1,8 @@
 #include "pch.h"
 
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneDescriptor.h"
 
 #include "Core/Concurrency/mutex.h"
 #include "Core/Task/TaskManager.h"
@@ -10,7 +12,6 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
-#include "Engine/Scene/SceneDescriptor.h"
 #include "Engine/Utility/CommandStack.h"
 #include "Engine/Utility/Resource/ResourceManager.h"
 
@@ -144,97 +145,99 @@ namespace sw
 		SW_LOG_INFO( "[SceneManager] requestLoadAsync: %#", path );
 
 		shared_ptr<AsyncLoadSlot> slot = _asyncLoad;
-		_loadHandle					   = engine::getTaskManager().emplaceTask( "SceneLoadAsync",
-																			   SW_DELEGATE_LAMBDA( TaskDelegate, [slot, pathStr = string( path )]()
-		{
-			if ( slot == nullptr || slot->_bAccepting.load( std::memory_order_acquire ) == false )
-				return;
-
-			SceneDescriptor desc{};
-			const bool		ok = loadSceneDescriptor( pathStr, desc );
-
-			sw::unique_ptr<Scene> newScene;
-			if ( ok )
-			{
-				newScene = sw::make_unique<Scene>( desc._name.empty() ? "LoadedScene" : desc._name );
-				newScene->setSourcePath( pathStr );
-
-				GameObjectManager* pObjects = newScene->getObjectManager();
-				if ( pObjects != nullptr )
-				{
-					vector<std::pair<GameObject*, string_view>> listRebindTargets;
-					listRebindTargets.reserve( desc._listEntities.size() );
-
-					for ( const SceneEntityPlaceholder& ent : desc._listEntities )
-					{
-						if ( slot->_bAccepting.load( std::memory_order_relaxed ) == false )
-						{
-							newScene->shutdown();
-							newScene.reset();
-							return;
-						}
-						SW_LOG_INFO( "[SceneManager] Spawning entity '%#' prefab '%#'", ent._name, ent._prefab );
-						GameObject* pGo{ nullptr };
-						if ( ent._prefab.empty() == false )
-						{
-							pGo = engine::getResourceManager().getPrefabManager().spawn( pObjects, ent._prefab, ent._name.c_str() );
-							if ( pGo == nullptr )
-								SW_LOG_WARNING( "[SceneManager] Prefab spawn failed '%#' (%#)", ent._name, ent._prefab );
-						}
-						else
-							pGo = pObjects->createGameObject( hashed_string( ent._name.c_str() ) );
-
-						if ( pGo != nullptr && ent._embeddedXml.empty() == false )
-						{
-							if ( ObjectStateSerializer::loadFromXmlString( pGo, ent._embeddedXml ) == false )
-								SW_LOG_WARNING( "[SceneManager] Embedded state apply failed for '%#'", ent._name );
-
-							const bool bHasHierarchy = ( ent._embeddedXml.find( "parent=" ) != string::npos ||
-														 ent._embeddedXml.find( "<ParentGO>" ) != string::npos );
-							if ( bHasHierarchy )
-								listRebindTargets.emplace_back( pGo, ent._embeddedXml );
-						}
-					}
-
-					for ( const auto& [pTargetGo, xmlView] : listRebindTargets )
-					{
-						if ( pTargetGo != nullptr )
-							ObjectStateSerializer::rebindSceneHierarchy( pTargetGo, xmlView );
-					}
-
-					pObjects->mergePendingAdds();
-					pObjects->flushSceneTransforms();
-				}
-			}
-
-			if ( slot->_bAccepting.load( std::memory_order_acquire ) == false )
-			{
-				if ( newScene != nullptr )
-				{
-					newScene->shutdown();
-					newScene.reset();
-				}
-				return;
-			}
-
-			const bool bSuccess = ( newScene != nullptr );
-			{
-				std::scoped_lock<mutex> lock{ slot->_mutex };
-				slot->_scene = std::move( newScene );
-			}
-			slot->_bReady.store( true, std::memory_order_release );
-			if ( bSuccess )
-			{
-				SW_LOG_INFO( "[SceneManager] Async load task completed for '%#'", pathStr );
-			}
-			else
-			{
-				SW_LOG_ERROR( "[SceneManager] Async load task failed for '%#'", pathStr );
-			}
-		} ) );
+		_loadHandle					   = engine::getTaskManager().emplaceTask(
+			"SceneLoadAsync",
+			SW_DELEGATE_FUNCTION( TaskArgsDelegate, SceneManager::loadSceneAsyncJob ),
+			MakeTaskArgs( slot, string( path ) ) );
 
 		_loadHandle.submit();
 		return _loadHandle.isValid();
+	}
+
+	void SceneManager::loadSceneAsyncJob( const TaskArgs& args )
+	{
+		shared_ptr<AsyncLoadSlot> slot	  = args.get<shared_ptr<AsyncLoadSlot>>( 0 );
+		const string			  pathStr = args.get<string>( 1 );
+		if ( slot == nullptr || slot->_bAccepting.load( std::memory_order_acquire ) == false )
+			return;
+
+		SceneDescriptor desc{};
+		const bool		ok = loadSceneDescriptor( pathStr, desc );
+
+		sw::unique_ptr<Scene> newScene;
+		if ( ok )
+		{
+			newScene = sw::make_unique<Scene>( desc._name.empty() ? "LoadedScene" : desc._name );
+			newScene->setSourcePath( pathStr );
+
+			GameObjectManager* pObjects = newScene->getObjectManager();
+			if ( pObjects != nullptr )
+			{
+				vector<std::pair<GameObject*, string_view>> listRebindTargets;
+				listRebindTargets.reserve( desc._listEntities.size() );
+
+				for ( const SceneEntityPlaceholder& ent : desc._listEntities )
+				{
+					if ( slot->_bAccepting.load( std::memory_order_relaxed ) == false )
+					{
+						newScene->shutdown();
+						newScene.reset();
+						return;
+					}
+					SW_LOG_INFO( "[SceneManager] Spawning entity '%#' prefab '%#'", ent._name, ent._prefab );
+					GameObject* pGo{ nullptr };
+					if ( ent._prefab.empty() == false )
+					{
+						pGo = engine::getResourceManager().getPrefabManager().spawn( pObjects, ent._prefab, ent._name.c_str() );
+						if ( pGo == nullptr )
+							SW_LOG_WARNING( "[SceneManager] Prefab spawn failed '%#' (%#)", ent._name, ent._prefab );
+					}
+					else
+						pGo = pObjects->createGameObject( hashed_string( ent._name.c_str() ) );
+
+					if ( pGo != nullptr && ent._embeddedXml.empty() == false )
+					{
+						if ( ObjectStateSerializer::loadFromXmlString( pGo, ent._embeddedXml ) == false )
+							SW_LOG_WARNING( "[SceneManager] Embedded state apply failed for '%#'", ent._name );
+
+						const bool bHasHierarchy = ( ent._embeddedXml.find( "parent=" ) != string::npos ||
+													 ent._embeddedXml.find( "<ParentGO>" ) != string::npos );
+						if ( bHasHierarchy )
+							listRebindTargets.emplace_back( pGo, ent._embeddedXml );
+					}
+				}
+
+				for ( const auto& [pTargetGo, xmlView] : listRebindTargets )
+				{
+					if ( pTargetGo != nullptr )
+						ObjectStateSerializer::rebindSceneHierarchy( pTargetGo, xmlView );
+				}
+
+				pObjects->mergePendingAdds();
+				pObjects->flushSceneTransforms();
+			}
+		}
+
+		if ( slot->_bAccepting.load( std::memory_order_acquire ) == false )
+		{
+			if ( newScene != nullptr )
+			{
+				newScene->shutdown();
+				newScene.reset();
+			}
+			return;
+		}
+
+		const bool bSuccess = ( newScene != nullptr );
+		{
+			std::scoped_lock<mutex> lock{ slot->_mutex };
+			slot->_scene = std::move( newScene );
+		}
+		slot->_bReady.store( true, std::memory_order_release );
+		if ( bSuccess )
+			SW_LOG_INFO( "[SceneManager] Async load task completed for '%#'", pathStr );
+		else
+			SW_LOG_ERROR( "[SceneManager] Async load task failed for '%#'", pathStr );
 	}
 
 	void SceneManager::cancelPendingAsyncLoads()

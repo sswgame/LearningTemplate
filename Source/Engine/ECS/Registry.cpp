@@ -284,6 +284,20 @@ namespace sw
 			pComp->onTick( deltaTime );
 		}
 
+		struct ComponentWaveTick
+		{
+			Registry*			   _pRegistry{ nullptr };
+			const ComponentHandle* _pRawHandles{ nullptr };
+			float32				   _deltaTime{ 0.0f };
+			uint32				   _totalCount{ 0 };
+
+			void tickIndex( uint32 index )
+			{
+				if ( index < _totalCount )
+					resolveAndTickVal( _pRegistry, _deltaTime, _pRawHandles[index] );
+			}
+		};
+
 		static void dispatchWaveVal( Registry* pRegistry, float32 deltaTime, const vector<ComponentHandle>& wave )
 		{
 			if ( wave.empty() )
@@ -299,15 +313,15 @@ namespace sw
 
 			const ComponentHandle* pRawHandles = wave.data();
 			const uint32		   totalCount  = static_cast<uint32>( wave.size() );
-			ParallelTaskDelegate   delegate	   = SW_DELEGATE_LAMBDA(
-				ParallelTaskDelegate, [pRegistry, deltaTime, pRawHandles, totalCount]( uint32 index )
-			{
-				if ( index < totalCount )
-					resolveAndTickVal( pRegistry, deltaTime, pRawHandles[index] );
-			} );
+			ComponentWaveTick	   waveTick{};
+			waveTick._pRegistry	  = pRegistry;
+			waveTick._deltaTime	  = deltaTime;
+			waveTick._pRawHandles = pRawHandles;
+			waveTick._totalCount  = totalCount;
 
 			TaskStageHandle stage  = engine::getTaskManager().createAnonymousStage( "ComponentWave" );
-			TaskHandle		handle = engine::getTaskManager().emplaceParallel( totalCount, delegate );
+			TaskHandle		handle = engine::getTaskManager().emplaceParallel(
+				totalCount, SW_DELEGATE_METHOD( ParallelTaskDelegate, &ComponentWaveTick::tickIndex, &waveTick ) );
 			stage.addTask( handle );
 			handle.submit();
 			engine::getTaskManager().waitStage( stage );

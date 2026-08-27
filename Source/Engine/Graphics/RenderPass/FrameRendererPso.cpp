@@ -1,11 +1,12 @@
 #include "pch.h"
 
+#include "Engine/Graphics/RenderPass/FrameRenderer.h"
+
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResource.h"
-#include "Engine/Graphics/RenderPass/FrameRenderer.h"
 #include "Engine/Graphics/RenderPass/FrameRendererInternal.h"
 
 namespace sw
@@ -137,6 +138,30 @@ namespace sw
 		return _pDevice->getResource()->createPipelineState( desc );
 	}
 
+	void FrameRenderer::compileMaterialPsoTask( const TaskArgs& args )
+	{
+		const string			 passTypeStr	   = args.get<string>( 0 );
+		const string			 defaultShaderStr  = args.get<string>( 1 );
+		const bool				 bDepthTest		   = args.get<bool>( 2 );
+		const uint32			 numRenderTargets  = args.get<uint32>( 3 );
+		const vector<RHIFormat>	 rtvFormatsCopy	   = args.get<vector<RHIFormat>>( 4 );
+		const bool				 bDefaultBlend	   = args.get<bool>( 5 );
+		const bool				 bDefaultDepthWrite = args.get<bool>( 6 );
+		const vector<string>	 definesCopy	   = args.get<vector<string>>( 7 );
+		const uint64			 cacheKey		   = args.get<uint64>( 8 );
+
+		const RHIPipelineStateHandle pso = createPsoForPassType(
+			passTypeStr, defaultShaderStr, bDepthTest, numRenderTargets,
+			rtvFormatsCopy.empty() ? nullptr : rtvFormatsCopy.data(),
+			bDefaultBlend, bDefaultDepthWrite, &definesCopy );
+
+		if ( pso != 0 )
+		{
+			std::scoped_lock<mutex> lock{ _psoMutex };
+			_mapMaterialPassPsos[cacheKey] = pso;
+		}
+	}
+
 	RHIPipelineStateHandle FrameRenderer::getOrCreateMaterialPassPso( string_view passType, string_view defaultShader,
 																	  bool bDepthTest, Material* pMaterial, MaterialInstance* pMaterialInstance,
 																	  uint32 numRenderTargets, const RHIFormat* pRtvFormats,
@@ -180,20 +205,11 @@ namespace sw
 			if ( pRtvFormats != nullptr && numRenderTargets > 0 )
 				rtvFormatsCopy.assign( pRtvFormats, pRtvFormats + numRenderTargets );
 
-			TaskHandle handle = _pTaskManager->emplaceTask( "CompileMaterialPso", SW_DELEGATE_LAMBDA( TaskDelegate, [this, passTypeStr, defaultShaderStr, bDepthTest,
-																													 numRenderTargets, rtvFormatsCopy, bDefaultBlend, bDefaultDepthWrite, definesCopy, cacheKey]()
-			{
-				const RHIPipelineStateHandle pso = createPsoForPassType(
-					passTypeStr, defaultShaderStr, bDepthTest, numRenderTargets,
-					rtvFormatsCopy.empty() ? nullptr : rtvFormatsCopy.data(),
-					bDefaultBlend, bDefaultDepthWrite, &definesCopy );
-
-				if ( pso != 0 )
-				{
-					std::scoped_lock<mutex> lock{ _psoMutex };
-					_mapMaterialPassPsos[cacheKey] = pso;
-				}
-			} ) );
+			TaskHandle handle = _pTaskManager->emplaceTask(
+				"CompileMaterialPso",
+				SW_DELEGATE_METHOD( TaskArgsDelegate, &FrameRenderer::compileMaterialPsoTask, this ),
+				MakeTaskArgs( passTypeStr, defaultShaderStr, bDepthTest, numRenderTargets, rtvFormatsCopy, bDefaultBlend,
+							  bDefaultDepthWrite, definesCopy, cacheKey ) );
 			_pTaskManager->submit( handle );
 
 			return 0; // Return pending

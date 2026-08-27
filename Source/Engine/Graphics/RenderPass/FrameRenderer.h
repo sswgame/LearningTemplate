@@ -24,6 +24,7 @@ namespace sw
 	class Scene;
 	class CameraComponent;
 	class TaskManager;
+	class TaskArgs;
 	struct RenderFramePacket;
 
 	/** @brief FrameRenderer 초기화/파이프라인 상태. */
@@ -221,6 +222,10 @@ namespace sw
 														   bool bDefaultBlend = false, bool bDefaultDepthWrite = true );
 		/** @brief passType 키로 엔진 내장 PSO를 조회합니다. 없으면 0 반환. */
 		RHIPipelineStateHandle getEnginePso( string_view passType ) const;
+
+	private:
+		/** @brief TaskArgs: passType, defaultShader, depth, numRT, rtvFormats, blend, depthWrite, defines, cacheKey. */
+		void compileMaterialPsoTask( const TaskArgs& args );
 
 	private:
 		IRHIDevice*									  _pDevice;

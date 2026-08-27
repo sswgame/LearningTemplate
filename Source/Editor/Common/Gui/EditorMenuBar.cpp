@@ -25,6 +25,12 @@ namespace sw::editor
 {
 	namespace
 	{
+		void onOpenSceneDialogResult( const vector<string>& listPaths )
+		{
+			if ( listPaths.empty() == false )
+				EditorWorkspace::requestLoadScene( listPaths[0] );
+		}
+
 		void openSceneFileDialog()
 		{
 			FileDialogParams params{};
@@ -40,11 +46,7 @@ namespace sw::editor
 			else if ( ResourceUtil::getGameFolderPath().empty() == false )
 				params._initialDirectory = ResourceUtil::getGameFolderPath();
 
-			FileUtil::openFileDialog( params, SW_DELEGATE_LAMBDA( FileDialogDelegate, []( const vector<string>& listPaths )
-			{
-				if ( listPaths.empty() == false )
-					EditorWorkspace::requestLoadScene( listPaths[0] );
-			} ) );
+			FileUtil::openFileDialog( params, SW_DELEGATE_FUNCTION( FileDialogDelegate, onOpenSceneDialogResult ) );
 		}
 	} // namespace
 

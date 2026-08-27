@@ -121,6 +121,10 @@ namespace sw
 		RenderPassDesc&		  getDesc() { return _desc; }
 
 	private:
+		/** @brief TaskArgs: this, path string. */
+		static void loadFromXmlFileAsyncJob( const TaskArgs& args );
+
+	private:
 		RenderPassDesc _desc;
 	};
 } // namespace sw

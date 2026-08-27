@@ -6,6 +6,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Task/TaskTypes.h"
 
 #include "Engine/Audio/IAudioSystem.h"
 
@@ -78,6 +79,8 @@ namespace sw
 	private:
 		/** @brief 경로를 해석해 보이스를 재생합니다. */
 		bool playInternal( string_view path, bool loop );
+		/** @brief TaskArgs: abs path, loop bool, requested path. */
+		void playDecodedClipTask( const TaskArgs& args );
 
 	private:
 		unique_ptr<XAudio2SystemImpl> _impl;

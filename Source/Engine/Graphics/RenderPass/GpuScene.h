@@ -160,6 +160,8 @@ namespace sw
 		void flushMaterialRetire( IRHIDevice* pDevice ) { _materialRetire.flushAfterGpu( pDevice ); }
 
 	private:
+		/** @brief 후보를 GpuInstance scratch로 채웁니다. ParallelBlockDelegate 시그니처입니다. */
+		void fillScratchRange( uint32 start, uint32 end );
 		/** @brief 수집된 인스턴스를 배치로 묶습니다. */
 		void buildBatches();
 		/** @brief 투명 인덱스를 카메라 거리순(먼→가까운)으로 정렬합니다. */

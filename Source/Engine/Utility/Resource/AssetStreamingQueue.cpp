@@ -84,29 +84,11 @@ namespace sw
 		if ( engine::areEngineServicesBound() )
 		{
 			TaskManager& taskManager = engine::getTaskManager();
-			TaskHandle	 handle		 = taskManager.emplaceTask( "AssetStreamingTask", SW_DELEGATE_LAMBDA( TaskDelegate, [this, pathStr]()
-			{
-				const bool bExists = FileUtil::fileExists( pathStr );
-
-				std::scoped_lock<mutex> innerLock{ _mutex };
-				_mapLoadedAssets[pathStr] = bExists;
-				_uniqueActiveRequests.erase( pathStr );
-
-				auto itCallbacks = _mapInFlightCallbacks.find( pathStr );
-				if ( itCallbacks != _mapInFlightCallbacks.end() )
-				{
-					for ( const auto& cb : itCallbacks->second )
-					{
-						CompletedItem item{};
-						item._path	   = pathStr;
-						item._bSuccess = bExists;
-						item._callback = cb;
-						_listCompletedItems.push_back( std::move( item ) );
-					}
-					_mapInFlightCallbacks.erase( itCallbacks );
-				}
-			} ),
-																TaskThreadAffinity::Any );
+			TaskHandle handle = taskManager.emplaceTask(
+				"AssetStreamingTask",
+				SW_DELEGATE_METHOD( TaskArgsDelegate, &AssetStreamingQueue::processAssetTask, this ),
+				MakeTaskArgs( pathStr ),
+				TaskThreadAffinity::Any );
 			handle.submit();
 		}
 		else
@@ -132,6 +114,30 @@ namespace sw
 		}
 
 		return true;
+	}
+
+	void AssetStreamingQueue::processAssetTask( const TaskArgs& args )
+	{
+		const string pathStr  = args.get<string>( 0 );
+		const bool	 bExists = FileUtil::fileExists( pathStr );
+
+		std::scoped_lock<mutex> innerLock{ _mutex };
+		_mapLoadedAssets[pathStr] = bExists;
+		_uniqueActiveRequests.erase( pathStr );
+
+		auto itCallbacks = _mapInFlightCallbacks.find( pathStr );
+		if ( itCallbacks != _mapInFlightCallbacks.end() )
+		{
+			for ( const auto& cb : itCallbacks->second )
+			{
+				CompletedItem item{};
+				item._path	   = pathStr;
+				item._bSuccess = bExists;
+				item._callback = cb;
+				_listCompletedItems.push_back( std::move( item ) );
+			}
+			_mapInFlightCallbacks.erase( itCallbacks );
+		}
 	}
 
 	void AssetStreamingQueue::cancelRequest( string_view assetPath )

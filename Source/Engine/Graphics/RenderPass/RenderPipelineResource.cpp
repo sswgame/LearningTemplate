@@ -315,12 +315,20 @@ namespace sw
 
 	TaskHandle RenderPipelineResource::loadFromXmlFileAsync( string_view assetRelativePath )
 	{
-		TaskHandle handle = engine::getTaskManager().emplaceTask( "LoadRenderPipelineAsync", SW_DELEGATE_LAMBDA( TaskDelegate, [this, path = string( assetRelativePath )]()
-		{
-			this->loadFromXmlFile( path );
-		} ) );
+		TaskHandle handle = engine::getTaskManager().emplaceTask(
+			"LoadRenderPipelineAsync",
+			SW_DELEGATE_FUNCTION( TaskArgsDelegate, RenderPipelineResource::loadFromXmlFileAsyncJob ),
+			MakeTaskArgs( this, string( assetRelativePath ) ) );
 		handle.submit();
 		return handle;
+	}
+
+	void RenderPipelineResource::loadFromXmlFileAsyncJob( const TaskArgs& args )
+	{
+		RenderPipelineResource* pResource = args.get<RenderPipelineResource*>( 0 );
+		if ( pResource == nullptr )
+			return;
+		pResource->loadFromXmlFile( args.get<string>( 1 ) );
 	}
 
 } // namespace sw
