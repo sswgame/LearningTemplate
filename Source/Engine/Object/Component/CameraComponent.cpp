@@ -153,7 +153,7 @@ namespace sw
 		forward = forward.normalize();
 
 		const float32 yaw	= MathUtil::atan2( forward._x, forward._z );
-		const float32 pitch = MathUtil::asin( MathUtil::clamp( forward._y, -1.0f, 1.0f ) );
+		const float32 pitch = -MathUtil::asin( MathUtil::clamp( forward._y, -1.0f, 1.0f ) );
 		(void)up;
 		setLocalRotation( float3( pitch, yaw, 0.0f ) );
 	}

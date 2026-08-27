@@ -28,8 +28,10 @@ namespace sw
 		Material*					 _pMaterial;
 		shared_ptr<MaterialInstance> _materialInstance;
 		PROPERTY()
-		string		 _meshId;
-		float32		 _boundsRadius;
+		string _meshId;
+		PROPERTY()
+		float32 _boundsRadius;
+		PROPERTY()
 		RHIBlendMode _blendMode;
 		uint8		 _bVisible : 1;
 		uint8		 _reserved : 7;

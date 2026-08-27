@@ -172,20 +172,32 @@ namespace sw::editor
 
 	void EditorViewportClient::update( float32 deltaTime, bool bWindowFocused, bool bWindowHovered )
 	{
-		if ( bWindowHovered == false && bWindowFocused == false )
-			return;
-
-		ImGuiIO& io = ImGui::GetIO();
-
-		if ( io.KeyAlt )
+		if ( bWindowHovered || bWindowFocused )
 		{
-			_cameraMode = CameraControlMode::Orbit;
-			processOrbitInput();
+			ImGuiIO& io = ImGui::GetIO();
+
+			if ( io.KeyAlt )
+			{
+				_cameraMode = CameraControlMode::Orbit;
+				processOrbitInput();
+			}
+			else if ( io.MouseDown[1] )
+			{
+				_cameraMode = CameraControlMode::Fly;
+				processFlyInput( deltaTime );
+			}
 		}
-		else if ( io.MouseDown[1] )
+
+		CameraComponent* pCam = getGameViewCamera();
+		if ( pCam != nullptr )
 		{
-			_cameraMode = CameraControlMode::Fly;
-			processFlyInput( deltaTime );
+			pCam->setLocalPosition( _cameraPos );
+			const float32 pitchRad = MathUtil::toRadian( _cameraRot._x );
+			const float32 yawRad   = MathUtil::toRadian( _cameraRot._y );
+			const float3  forward{ MathUtil::sin( yawRad ) * MathUtil::cos( pitchRad ), -MathUtil::sin( pitchRad ),
+								   MathUtil::cos( yawRad ) * MathUtil::cos( pitchRad ) };
+			const float3  target{ _cameraPos._x + forward._x, _cameraPos._y + forward._y, _cameraPos._z + forward._z };
+			pCam->lookAt( target );
 		}
 	}
 

@@ -203,20 +203,28 @@ namespace sw
 		_bPassResourcesReady = 0;
 	}
 
-	void FrameRenderer::ensureTransientResources()
+	void FrameRenderer::ensureTransientResources( uint32 overrideWidth, uint32 overrideHeight )
 	{
 		if ( _pDevice == nullptr )
 			return;
 
-		uint32	 width	 = kDefaultTransientSize;
-		uint32	 height	 = kDefaultTransientSize;
-		IWindow* pWindow = IWindow::getActiveWindow();
-		if ( pWindow != nullptr )
+		uint32 width  = kDefaultTransientSize;
+		uint32 height = kDefaultTransientSize;
+		if ( overrideWidth > 0 && overrideHeight > 0 )
 		{
-			if ( pWindow->getWidth() > 0 )
-				width = pWindow->getWidth();
-			if ( pWindow->getHeight() > 0 )
-				height = pWindow->getHeight();
+			width  = overrideWidth;
+			height = overrideHeight;
+		}
+		else
+		{
+			IWindow* pWindow = IWindow::getActiveWindow();
+			if ( pWindow != nullptr )
+			{
+				if ( pWindow->getWidth() > 0 )
+					width = pWindow->getWidth();
+				if ( pWindow->getHeight() > 0 )
+					height = pWindow->getHeight();
+			}
 		}
 
 		if ( width == _transientWidth && height == _transientHeight && _mapTransients.empty() == false )

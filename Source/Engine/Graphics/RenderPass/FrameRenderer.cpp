@@ -311,7 +311,7 @@ namespace sw
 		_outputRenderTarget = packet._gameRenderTarget;
 		_gpuScene			= std::move( packet._gpuScene );
 		ensurePassResources();
-		ensureTransientResources();
+		ensureTransientResources( packet._viewportWidth, packet._viewportHeight );
 		setIdentityWorld();
 		buildLightViewProj( _passConstants._lightViewProj );
 		if ( packet._bHasViewProj != 0 )

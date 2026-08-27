@@ -30,16 +30,14 @@ namespace sw
 		buildLightViewProj( _passConstants._lightViewProj );
 		buildCascadeShadowMatrices( _passConstants._cascadeViewProj, _passConstants._cascadeSplits );
 
-		CameraComponent* pCam{ nullptr };
 		if ( _pScene != nullptr )
 		{
-			// Prefer game camera during Scene::render; App packet path sets matrices explicitly.
-			pCam = _pScene->getActiveRenderCamera( false );
+			CameraComponent* pCam = _pScene->getActiveRenderCamera( false );
+			if ( pCam != nullptr )
+				applyViewFromCamera( pCam );
+			else
+				buildViewProj( _passConstants._viewProj );
 		}
-		if ( pCam != nullptr )
-			applyViewFromCamera( pCam );
-		else
-			buildViewProj( _passConstants._viewProj );
 
 		_passConstants._outlineParams[1] = _transientWidth > 0 ? ( 1.0f / static_cast<float32>( _transientWidth ) ) : 0.001f;
 		_passConstants._outlineParams[2] = _transientHeight > 0 ? ( 1.0f / static_cast<float32>( _transientHeight ) ) : 0.001f;

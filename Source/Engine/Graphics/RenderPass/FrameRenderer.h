@@ -123,7 +123,7 @@ namespace sw
 		/** @brief 패스용 상주 GPU 자원을 해제합니다. */
 		void releasePassResources();
 		/** @brief 일시 텍스처를 확보합니다. */
-		void ensureTransientResources();
+		void ensureTransientResources( uint32 overrideWidth = 0, uint32 overrideHeight = 0 );
 		/** @brief 일시 텍스처를 해제합니다. */
 		void releaseTransientResources();
 		/** @brief 그래프 패스 콜백을 한 번 바인딩합니다. */

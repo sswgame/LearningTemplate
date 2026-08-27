@@ -78,21 +78,23 @@ namespace sw
 				return true;
 			}
 
-			/** @brief Type FQN, else component name, else "Component". */
+			/** @brief Type name, else FQN, else component name, else "Component". */
 			string componentTypeBaseName( const Component* pComp )
 			{
 				if ( pComp == nullptr )
 					return "Component";
 
+				if ( pComp->getComponentName().empty() == false )
+					return pComp->getComponentName().c_str();
+
 				const TypeInfo* pTypeInfo = pComp->getTypeInfo();
 				if ( pTypeInfo != nullptr )
 				{
+					if ( pTypeInfo->_name.empty() == false )
+						return pTypeInfo->_name.c_str();
 					if ( pTypeInfo->_fullyQualifiedName.empty() == false )
 						return pTypeInfo->_fullyQualifiedName.c_str();
 				}
-
-				if ( pComp->getComponentName().empty() == false )
-					return pComp->getComponentName().c_str();
 
 				return "Component";
 			}
@@ -263,6 +265,15 @@ namespace sw
 
 					const int32 occ = occurrence[base]++;
 					outMap.emplace( makeStableComponentKey( pComp, occ ), pComp );
+
+					const TypeInfo* pTypeInfo = pComp->getTypeInfo();
+					if ( pTypeInfo != nullptr )
+					{
+						if ( pTypeInfo->_name.empty() == false )
+							outMap.emplace( string( pTypeInfo->_name.c_str() ) + '#' + to_string( occ ), pComp );
+						if ( pTypeInfo->_fullyQualifiedName.empty() == false )
+							outMap.emplace( string( pTypeInfo->_fullyQualifiedName.c_str() ) + '#' + to_string( occ ), pComp );
+					}
 				}
 			}
 
@@ -606,12 +617,12 @@ namespace sw
 				vector<PendingAttach>& pending = outPendingAttaches != nullptr ? *outPendingAttaches : listLocalPending;
 
 				SceneTransformMapCallback xformCb{};
-				xformCb._pGameObject	   = pGameObject;
-				xformCb._pKeyMap		   = &keyMap;
-				xformCb._pXformCount	   = &xformCount;
-				xformCb._pAppliedCount	   = &appliedCount;
-				xformCb._pPending		   = &pending;
-				xformCb._bApplyTransforms  = bApplyTransforms;
+				xformCb._pGameObject	  = pGameObject;
+				xformCb._pKeyMap		  = &keyMap;
+				xformCb._pXformCount	  = &xformCount;
+				xformCb._pAppliedCount	  = &appliedCount;
+				xformCb._pPending		  = &pending;
+				xformCb._bApplyTransforms = bApplyTransforms;
 				xmlBackend.iterateMap( "SceneTransforms",
 									   SW_DELEGATE_METHOD( XmlMapItemDelegate, &SceneTransformMapCallback::invoke, &xformCb ) );
 
@@ -676,8 +687,14 @@ namespace sw
 			if ( pComp == nullptr )
 				continue;
 
+			string base;
+			if ( pComp->getComponentName().empty() == false )
+				base = pComp->getComponentName().c_str();
+			else
+				base = componentTypeBaseName( pComp );
+
 			xmlBackend.beginMapEntry();
-			xmlBackend.writeMapKey( pComp->getComponentName().c_str() );
+			xmlBackend.writeMapKey( base.c_str() );
 
 			xmlBackend.writeMapValue( serializeComponentXml( pComp ).c_str() );
 			xmlBackend.endMapEntry();

@@ -544,7 +544,8 @@ namespace sw
 		_pDevice->_activeColorTargetCount = 0;
 		_pDevice->_bActiveSwapchainRT	  = 0;
 
-		for ( uint32 attachmentIndex = 0; attachmentIndex < beginInfo._colorTargetCount; ++attachmentIndex )
+		const uint32 wantCount = ( beginInfo._colorTargetCount > 0 ) ? beginInfo._colorTargetCount : ( bBindColor ? 1 : 0 );
+		for ( uint32 attachmentIndex = 0; attachmentIndex < wantCount; ++attachmentIndex )
 		{
 			const RHITextureHandle		colorHandle = ( beginInfo._colorTargetCount > 0 )
 														? beginInfo._arrColorTargets[attachmentIndex]

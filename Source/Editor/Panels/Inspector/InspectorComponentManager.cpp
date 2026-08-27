@@ -9,6 +9,7 @@
 
 #include "Engine/Object/Component/2D/SpriteComponent.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
+#include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/Component/TagComponent.h"
 
@@ -61,6 +62,47 @@ namespace sw::editor
 			bool drawBody( Component* pComponent, IRHIDevice* /*pRhiDevice*/ ) override
 			{
 				return drawTransformInspector( static_cast<SceneComponent*>( pComponent ) );
+			}
+		};
+
+		/** @brief CameraComponent 전용 트랜스폼 및 카메라 투영 컨트롤 */
+		class CameraComponentInspector : public IInspectorComponent
+		{
+		public:
+			bool drawBody( Component* pComponent, IRHIDevice* /*pRhiDevice*/ ) override
+			{
+				auto* pCameraComp = static_cast<CameraComponent*>( pComponent );
+				if ( drawTransformInspector( pCameraComp ) == false )
+					return false;
+
+				CameraData* pData = pCameraComp->getCameraData();
+				if ( pData != nullptr )
+				{
+					ImGui::SeparatorText( "Camera" );
+					float32 fovDeg = MathUtil::toDegree( pData->fovY );
+					if ( ImGui::SliderFloat( "FOV (Deg)", &fovDeg, 10.0f, 140.0f, "%.1f" ) )
+						pCameraComp->setFieldOfViewY( MathUtil::toRadian( fovDeg ) );
+
+					float32 nearZ = pData->nearZ;
+					if ( ImGui::DragFloat( "Near Plane", &nearZ, 0.01f, 0.001f, 10.0f ) )
+						pCameraComp->setNearPlane( nearZ );
+
+					float32 farZ = pData->farZ;
+					if ( ImGui::DragFloat( "Far Plane", &farZ, 1.0f, 1.0f, 10000.0f ) )
+						pCameraComp->setFarPlane( farZ );
+
+					bool bOrtho = pData->bOrthographic;
+					if ( ImGui::Checkbox( "Orthographic", &bOrtho ) )
+						pCameraComp->setOrthographic( bOrtho );
+
+					if ( bOrtho )
+					{
+						float32 orthoH = pData->orthoHeight;
+						if ( ImGui::DragFloat( "Ortho Height", &orthoH, 0.1f, 0.1f, 100.0f ) )
+							pCameraComp->setOrthoHeight( orthoH );
+					}
+				}
+				return true;
 			}
 		};
 
@@ -133,6 +175,7 @@ namespace sw::editor
 	void InspectorComponentManager::registerDefaults()
 	{
 		registerComponent<SceneComponent, SceneComponentInspector>();
+		registerComponent<CameraComponent, CameraComponentInspector>();
 		registerComponent<TagComponent, TagComponentInspector>();
 		registerComponent<SpriteComponent, SpriteComponentInspector>();
 		registerComponent<MeshComponent, MeshComponentInspector>();

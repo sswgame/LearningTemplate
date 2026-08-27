@@ -21,7 +21,7 @@ namespace sw::editor
 		string _defaultMap{ "game/demo/maps/town01.xml" };
 		string _warpMap{ "game/demo/maps/route01.xml" };
 		string _spriteAtlas{ "game/demo/textures/00_character/00_player/00_player.png" };
-		string _defaultMaterial{ "engine/materials/defaultmaterial._material" };
+		string _defaultMaterial{ "engine/materials/defaultmaterial.material" };
 
 		float32 _fontSize{ 16.0f };
 		float32 _playerSpeed{ 5.0f };
