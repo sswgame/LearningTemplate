@@ -39,7 +39,7 @@ namespace sw::editor
 		/** @brief 팝업을 닫습니다. */
 		void close()
 		{
-			if ( _bOpen == true )
+			if ( _bOpen )
 			{
 				_bOpen = false;
 				onClose();
@@ -49,7 +49,7 @@ namespace sw::editor
 		/** @brief 팝업 열림/닫힘 상태를 토글합니다. */
 		void toggle()
 		{
-			if ( _bOpen == true )
+			if ( _bOpen )
 				close();
 			else
 				open();
@@ -58,7 +58,7 @@ namespace sw::editor
 		/** @brief 팝업 열림 상태를 직접 설정합니다. */
 		void setOpen( bool bOpen )
 		{
-			if ( bOpen == true )
+			if ( bOpen )
 				open();
 			else
 				close();

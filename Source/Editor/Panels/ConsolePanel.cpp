@@ -159,7 +159,7 @@ namespace sw::editor
 			}
 		}
 
-		if ( _bAutoScroll == true && bNewLogs == true )
+		if ( _bAutoScroll && bNewLogs )
 			ImGui::SetScrollHereY( 1.0f );
 
 		editor::endSection();
