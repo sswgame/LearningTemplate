@@ -350,33 +350,35 @@ namespace sw
 	/// @brief 등록된 타입: FQN, 프로퍼티/메서드, 생성 가능 여부
 	struct SW_API TypeInfo
 	{
-		hashed_string _name;
-		hashed_string _fullyQualifiedName;
-		hashed_string _parentFQN;
-		hashed_string _moduleName;
-		uint32		  _typeId;
-		size_t		  _size;
+		size_t													  _size;
 		/** @brief `$ctor`로 placement-new 된 인스턴스를 파괴합니다. 없으면 nullptr. */
 		void ( *_destroyInstance )( void* ) = nullptr;
+		hashed_string											  _name;
+		hashed_string											  _fullyQualifiedName;
+		hashed_string											  _parentFQN;
+		hashed_string											  _moduleName;
 		vector<PropertyInfo>									  _propertyList;
 		vector<FunctionInfo>									  _listMethod;
+		mutable vector<PropertyInfo>							  _propertyListWithBase;
 		mutable unordered_map<hashed_string, const PropertyInfo*> _mapNameToProperty;
 		mutable unordered_map<hashed_string, const FunctionInfo*> _mapNameToMethod;
-		mutable vector<PropertyInfo>							  _propertyListWithBase;
+		uint32													  _typeId;
 		/** @brief REFLECT(Abstract) / C++ abstract — not constructible (UCLASS(Abstract)). */
 		uint8 _bAbstract : 1;
 		/** @brief REFLECT(Static) type (function-library). Not the same as FunctionMetadata::_bStatic. */
 		uint8 _bStatic : 1;
 		/** @brief 내장 스칼라/문자열 (int32, bool, sw::string, …). REFLECT codegen 없음. */
-		uint8				   _bPrimitive				   : 1;
-		mutable uint8		   _bIsCacheBuilt			   : 1;
-		mutable uint8		   _bIsPODFastPath			   : 1;
-		mutable uint8		   _bIsPODCalculated		   : 1;
-		mutable uint8		   _bPropertyListWithBaseBuilt : 1;
-		[[maybe_unused]] uint8 _reservedTypeFlags		   : 1;
+		uint8								   _bPrimitive				   : 1;
+		mutable uint8						   _bIsCacheBuilt			   : 1;
+		mutable uint8						   _bIsPODFastPath			   : 1;
+		mutable uint8						   _bIsPODCalculated		   : 1;
+		mutable uint8						   _bPropertyListWithBaseBuilt : 1;
+		[[maybe_unused]] uint8				   _reservedTypeFlags		   : 1;
+		[[maybe_unused]] uint8				   _reservedPadding[3];
 
 		/** @brief 빈 TypeInfo. */
 		TypeInfo() noexcept;
+		~TypeInfo() = default;
 		TypeInfo( const TypeInfo& other );
 		TypeInfo( TypeInfo&& other ) noexcept;
 		TypeInfo& operator=( const TypeInfo& other );
@@ -426,7 +428,7 @@ namespace sw
 		/** @brief 이름 또는 alias로 프로퍼티를 찾습니다. */
 		const PropertyInfo* findProperty( const hashed_string& propNameOrAlias ) const
 		{
-			if ( _propertyList.size() <= 4 )
+			if ( _propertyList.size() <= constants::reflection::kLinearSearchThreshold )
 			{
 				for ( const PropertyInfo& prop : _propertyList )
 				{
@@ -444,7 +446,7 @@ namespace sw
 		/** @brief 이름 메서드를 찾습니다. */
 		const FunctionInfo* findMethod( const hashed_string& methodName ) const
 		{
-			if ( _listMethod.size() <= 4 )
+			if ( _listMethod.size() <= constants::reflection::kLinearSearchThreshold )
 			{
 				for ( const FunctionInfo& method : _listMethod )
 				{

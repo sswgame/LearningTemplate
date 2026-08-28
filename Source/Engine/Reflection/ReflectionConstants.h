@@ -37,6 +37,8 @@ namespace sw::constants::reflection
 	inline constexpr const utf8* kClassPrefix = "class ";
 	/** @brief struct 접두어입니다. */
 	inline constexpr const utf8* kStructPrefix = "struct ";
+	/** @brief 소규모 프로퍼티/메서드 목록 선형 탐색 임계값입니다. */
+	inline constexpr size_t kLinearSearchThreshold = 4;
 } // namespace sw::constants::reflection
 
 namespace sw::constants::propertyHint

@@ -96,18 +96,18 @@ namespace sw
 		, _reservedFlags{ 0 } {}
 
 	TypeInfo::TypeInfo() noexcept
-		: _name{}
+		: _size{ 0 }
+		, _destroyInstance{ nullptr }
+		, _name{}
 		, _fullyQualifiedName{}
 		, _parentFQN{}
 		, _moduleName{}
-		, _typeId{ 0 }
-		, _size{ 0 }
-		, _destroyInstance{ nullptr }
 		, _propertyList{}
 		, _listMethod{}
+		, _propertyListWithBase{}
 		, _mapNameToProperty{}
 		, _mapNameToMethod{}
-		, _propertyListWithBase{}
+		, _typeId{ 0 }
 		, _bAbstract{ 0 }
 		, _bStatic{ 0 }
 		, _bPrimitive{ 0 }
@@ -115,21 +115,22 @@ namespace sw
 		, _bIsPODFastPath{ 0 }
 		, _bIsPODCalculated{ 0 }
 		, _bPropertyListWithBaseBuilt{ 0 }
-		, _reservedTypeFlags{ 0 } {}
+		, _reservedTypeFlags{ 0 }
+		, _reservedPadding{ 0, 0, 0 } {}
 
 	TypeInfo::TypeInfo( const TypeInfo& other )
-		: _name{ other._name }
+		: _size{ other._size }
+		, _destroyInstance{ other._destroyInstance }
+		, _name{ other._name }
 		, _fullyQualifiedName{ other._fullyQualifiedName }
 		, _parentFQN{ other._parentFQN }
 		, _moduleName{ other._moduleName }
-		, _typeId{ other._typeId }
-		, _size{ other._size }
-		, _destroyInstance{ other._destroyInstance }
 		, _propertyList{ other._propertyList }
 		, _listMethod{ other._listMethod }
+		, _propertyListWithBase{}
 		, _mapNameToProperty{}
 		, _mapNameToMethod{}
-		, _propertyListWithBase{}
+		, _typeId{ other._typeId }
 		, _bAbstract{ other._bAbstract }
 		, _bStatic{ other._bStatic }
 		, _bPrimitive{ other._bPrimitive }
@@ -138,22 +139,23 @@ namespace sw
 		, _bIsPODCalculated{ 0 }
 		, _bPropertyListWithBaseBuilt{ 0 }
 		, _reservedTypeFlags{ 0 }
+		, _reservedPadding{ 0, 0, 0 }
 	{
 	}
 
 	TypeInfo::TypeInfo( TypeInfo&& other ) noexcept
-		: _name{ std::move( other._name ) }
+		: _size{ other._size }
+		, _destroyInstance{ other._destroyInstance }
+		, _name{ std::move( other._name ) }
 		, _fullyQualifiedName{ std::move( other._fullyQualifiedName ) }
 		, _parentFQN{ std::move( other._parentFQN ) }
 		, _moduleName{ std::move( other._moduleName ) }
-		, _typeId{ other._typeId }
-		, _size{ other._size }
-		, _destroyInstance{ other._destroyInstance }
 		, _propertyList{ std::move( other._propertyList ) }
 		, _listMethod{ std::move( other._listMethod ) }
+		, _propertyListWithBase{}
 		, _mapNameToProperty{}
 		, _mapNameToMethod{}
-		, _propertyListWithBase{}
+		, _typeId{ other._typeId }
 		, _bAbstract{ other._bAbstract }
 		, _bStatic{ other._bStatic }
 		, _bPrimitive{ other._bPrimitive }
@@ -162,6 +164,7 @@ namespace sw
 		, _bIsPODCalculated{ 0 }
 		, _bPropertyListWithBaseBuilt{ 0 }
 		, _reservedTypeFlags{ 0 }
+		, _reservedPadding{ 0, 0, 0 }
 	{
 		other._typeId		   = 0;
 		other._size			   = 0;
@@ -174,22 +177,22 @@ namespace sw
 		if ( this == &other )
 			return *this;
 
+		_size				= other._size;
+		_destroyInstance	= other._destroyInstance;
 		_name				= other._name;
 		_fullyQualifiedName = other._fullyQualifiedName;
 		_parentFQN			= other._parentFQN;
 		_moduleName			= other._moduleName;
-		_typeId				= other._typeId;
-		_size				= other._size;
-		_destroyInstance	= other._destroyInstance;
 		_propertyList		= other._propertyList;
 		_listMethod			= other._listMethod;
+		_typeId				= other._typeId;
 		_bAbstract			= other._bAbstract;
 		_bStatic			= other._bStatic;
 		_bPrimitive			= other._bPrimitive;
 
+		_propertyListWithBase.clear();
 		_mapNameToProperty.clear();
 		_mapNameToMethod.clear();
-		_propertyListWithBase.clear();
 		_bIsCacheBuilt				= 0;
 		_bIsPODFastPath				= 0;
 		_bIsPODCalculated			= 0;
@@ -203,22 +206,22 @@ namespace sw
 		if ( this == &other )
 			return *this;
 
+		_size				= other._size;
+		_destroyInstance	= other._destroyInstance;
 		_name				= std::move( other._name );
 		_fullyQualifiedName = std::move( other._fullyQualifiedName );
 		_parentFQN			= std::move( other._parentFQN );
 		_moduleName			= std::move( other._moduleName );
-		_typeId				= other._typeId;
-		_size				= other._size;
-		_destroyInstance	= other._destroyInstance;
 		_propertyList		= std::move( other._propertyList );
 		_listMethod			= std::move( other._listMethod );
+		_typeId				= other._typeId;
 		_bAbstract			= other._bAbstract;
 		_bStatic			= other._bStatic;
 		_bPrimitive			= other._bPrimitive;
 
+		_propertyListWithBase.clear();
 		_mapNameToProperty.clear();
 		_mapNameToMethod.clear();
-		_propertyListWithBase.clear();
 		_bIsCacheBuilt				= 0;
 		_bIsPODFastPath				= 0;
 		_bIsPODCalculated			= 0;
@@ -281,12 +284,15 @@ namespace sw
 		if ( _bPropertyListWithBaseBuilt != 0 )
 			return _propertyListWithBase;
 
+		const TypeInfo*				pParent		 = engine::getTypeRegistry().findType( _parentFQN );
+		const vector<PropertyInfo>* pParentProps = ( pParent != nullptr ) ? &pParent->getPropertiesWithBase() : nullptr;
+		const size_t				totalCount	 = ( pParentProps != nullptr ? pParentProps->size() : 0 ) + _propertyList.size();
+
 		_propertyListWithBase.clear();
-		const TypeInfo* pParent = engine::getTypeRegistry().findType( _parentFQN );
-		if ( pParent != nullptr )
+		_propertyListWithBase.reserve( totalCount );
+		if ( pParentProps != nullptr )
 		{
-			const vector<PropertyInfo>& parentProps = pParent->getPropertiesWithBase();
-			_propertyListWithBase					= parentProps;
+			_propertyListWithBase = *pParentProps;
 		}
 
 		for ( const PropertyInfo& prop : _propertyList )
@@ -342,9 +348,15 @@ namespace sw
 			stored._typeId = _s_typeIdCounter.fetch_add( 1, std::memory_order_relaxed ) + 1;
 		}
 
+		const hashed_string canonicalName = stored._name.empty() == false ? stored._name : stored._fullyQualifiedName;
+
 		_mapNameToClassType.insert_or_assign( stored._fullyQualifiedName, stored );
+		_mapHashToCanonicalName.insert_or_assign( stored._fullyQualifiedName.getHash(), canonicalName );
 		if ( stored._name.empty() == false && stored._name != stored._fullyQualifiedName )
+		{
 			_mapNameToClassType.insert_or_assign( stored._name, stored );
+			_mapHashToCanonicalName.insert_or_assign( stored._name.getHash(), canonicalName );
+		}
 	}
 
 	void TypeRegistry::registerEnum( const EnumInfo& info )
@@ -429,6 +441,13 @@ namespace sw
 			else
 				++it;
 		}
+
+		_mapHashToCanonicalName.clear();
+		for ( const auto& [key, info] : _mapNameToClassType )
+		{
+			const hashed_string canonicalName = info._name.empty() == false ? info._name : info._fullyQualifiedName;
+			_mapHashToCanonicalName.insert_or_assign( key.getHash(), canonicalName );
+		}
 	}
 
 	void TypeRegistry::registerTypeAlias( const utf8* pAliasName, const utf8* pCanonicalName )
@@ -444,12 +463,20 @@ namespace sw
 			return;
 
 		// insert_or_assign: 핫리로드 재등록 시 옛 TypeInfo 복사본이 남지 않게 함.
-		const TypeInfo stored = it->second;
-		_mapNameToClassType.insert_or_assign( hashed_string( pAliasName ), stored );
+		const TypeInfo		stored		  = it->second;
+		const hashed_string canonicalName = stored._name.empty() == false ? stored._name : stored._fullyQualifiedName;
+		const hashed_string aliasHash{ pAliasName };
+
+		_mapNameToClassType.insert_or_assign( aliasHash, stored );
+		_mapHashToCanonicalName.insert_or_assign( aliasHash.getHash(), canonicalName );
 
 		const string qualified = qualifyAliasWithNamespace( pAliasName, pCanonicalName );
 		if ( qualified.empty() == false )
-			_mapNameToClassType.insert_or_assign( hashed_string( qualified.c_str() ), stored );
+		{
+			const hashed_string qualHash{ qualified.c_str() };
+			_mapNameToClassType.insert_or_assign( qualHash, stored );
+			_mapHashToCanonicalName.insert_or_assign( qualHash.getHash(), canonicalName );
+		}
 	}
 
 	void TypeRegistry::registerEnumAlias( const utf8* pAliasName, const utf8* pCanonicalName )
@@ -489,16 +516,8 @@ namespace sw
 	hashed_string TypeRegistry::canonicalTypeNameByHash( const uint32 nameHash ) const
 	{
 		std::shared_lock<std::shared_mutex> lock{ _mutex };
-		for ( const auto& [key, info] : _mapNameToClassType )
-		{
-			if ( key.getHash() == nameHash )
-			{
-				if ( info._name.empty() == false )
-					return info._name;
-				return info._fullyQualifiedName;
-			}
-		}
-		return {};
+		auto								it = _mapHashToCanonicalName.find( nameHash );
+		return it != _mapHashToCanonicalName.end() ? it->second : hashed_string{};
 	}
 
 	const utf8* TypeRegistry::enumToString( const hashed_string& enumName, int64 value ) const

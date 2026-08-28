@@ -240,6 +240,7 @@ namespace sw
 		mutable std::shared_mutex			   _mutex;
 		unordered_map<hashed_string, TypeInfo> _mapNameToClassType;
 		unordered_map<hashed_string, EnumInfo> _mapNameToEnum;
+		unordered_map<uint32, hashed_string>   _mapHashToCanonicalName;
 		hashed_string						   _activeModuleName;
 	};
 
@@ -255,14 +256,15 @@ namespace sw
 		/** @brief Core.dll 전용 registrar 리스트 헤드. */
 		static TypeRegistrar*& getHead();
 
-		/** @brief Core::getHead()에 연결합니다 (Core TU 전용). */
+		/** @brief Core.dll 정적 등록에 사용합니다. */
 		TypeRegistrar( void ( *registerFunc )( TypeRegistry& ) );
-		/** @brief 모듈 로컬 헤드에 연결합니다 (핫리로드 안전). */
+		/** @brief 핫리로드 모듈 등 외부 registrar 등록에 사용합니다. */
 		TypeRegistrar( void ( *registerFunc )( TypeRegistry& ), TypeRegistrar*& pModuleHead );
 	};
 
 	// ------------------------------------------------------------------------------
-	// 8) EnumRegistrar — TypeRegistrar와 동일한 링크 규칙
+	// 8) EnumRegistrar — 정적 초기화로 Enum 등록 함수를 체인에 연결
+	//    Core TU는 getHead(), 핫리로드 모듈은 모듈 로컬 헤드
 	// ------------------------------------------------------------------------------
 	struct SW_API EnumRegistrar
 	{
@@ -272,9 +274,9 @@ namespace sw
 		/** @brief Core.dll 전용 enum registrar 리스트 헤드. */
 		static EnumRegistrar*& getHead();
 
-		/** @brief Core::getHead()에 연결합니다 (Core TU 전용). */
+		/** @brief Core.dll 정적 등록에 사용합니다. */
 		EnumRegistrar( void ( *registerFunc )( TypeRegistry& ) );
-		/** @brief 모듈 로컬 헤드에 연결합니다 (핫리로드 안전). */
+		/** @brief 핫리로드 모듈 등 외부 registrar 등록에 사용합니다. */
 		EnumRegistrar( void ( *registerFunc )( TypeRegistry& ), EnumRegistrar*& pModuleHead );
 	};
 
@@ -285,7 +287,9 @@ namespace sw
 	#define SW_ENUM_MODULE_HEAD() ( ::sw::EnumRegistrar::getHead() )
 #endif
 
-	/** @brief 별칭 포함 조회 후 canonical `_name` (미등록이면 입력 그대로). */
+	// ------------------------------------------------------------------------------
+	// 9) 인라인 구현 — 조회 / 검사
+	// ------------------------------------------------------------------------------
 	inline hashed_string TypeRegistry::canonicalTypeName( const hashed_string& nameOrFqn ) const
 	{
 		const TypeInfo* pInfo = findType( nameOrFqn );
