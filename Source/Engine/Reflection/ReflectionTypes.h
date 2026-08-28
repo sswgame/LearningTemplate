@@ -202,6 +202,18 @@ namespace sw
 		{
 			return reinterpret_cast<const T*>( reinterpret_cast<const utf8*>( pInstance ) + _offset );
 		}
+
+		/** @brief 인스턴스 기준 프로퍼티의 원시 메모리 시작 포인터를 반환합니다. */
+		void* getRawPtr( void* pInstance ) const noexcept
+		{
+			return reinterpret_cast<utf8*>( pInstance ) + _offset;
+		}
+
+		/** @brief 인스턴스 기준 프로퍼티의 원시 메모리 const 시작 포인터를 반환합니다. */
+		const void* getRawPtr( const void* pInstance ) const noexcept
+		{
+			return reinterpret_cast<const utf8*>( pInstance ) + _offset;
+		}
 	};
 
 	/// @brief 등록된 enum: 이름↔값, Flags, Invalid/Count 센티널
@@ -472,6 +484,39 @@ namespace sw
 			buildLookupCache();
 			auto it = _mapNameToMethod.find( methodName );
 			return it != _mapNameToMethod.end() ? it->second : nullptr;
+		}
+
+		/** @brief 현재 클래스 및 부모 상속 체인에서 프로퍼티를 검색합니다 (평탄화 캐시 미사용 제로 할당 검색). */
+		const PropertyInfo* findPropertyInHierarchy( const hashed_string& propNameOrAlias ) const;
+
+		template <typename Func>
+		/** @brief 프로퍼티를 순회합니다. bIncludeBase가 true이면 상속 체인 포함. */
+		void forEachProperty( Func&& func, bool bIncludeBase = false ) const
+		{
+			if ( bIncludeBase == false )
+			{
+				for ( const PropertyInfo& prop : _propertyList )
+				{
+					func( prop );
+				}
+			}
+			else
+			{
+				for ( const PropertyInfo& prop : getPropertiesWithBase() )
+				{
+					func( prop );
+				}
+			}
+		}
+
+		template <typename Func>
+		/** @brief 메서드를 순회합니다. */
+		void forEachMethod( Func&& func ) const
+		{
+			for ( const FunctionInfo& method : _listMethod )
+			{
+				func( method );
+			}
 		}
 	};
 

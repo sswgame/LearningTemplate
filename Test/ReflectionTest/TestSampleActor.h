@@ -287,6 +287,9 @@ namespace sw
 	{
 		REFLECT_BODY();
 
+		PROPERTY()
+		float32 _grandChildSpeed{ 3.0f };
+
 		uint32 _grandChildTickCount{ 0 };
 
 		/** @brief 부모 틱 후 손자 틱 카운트를 더합니다. */

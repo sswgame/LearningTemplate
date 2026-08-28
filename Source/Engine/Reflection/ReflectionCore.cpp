@@ -620,4 +620,17 @@ namespace sw
 		}
 		return false;
 	}
+
+	const PropertyInfo* TypeInfo::findPropertyInHierarchy( const hashed_string& propNameOrAlias ) const
+	{
+		const PropertyInfo* pProp = findProperty( propNameOrAlias );
+		if ( pProp != nullptr )
+			return pProp;
+
+		if ( _parentFQN.empty() )
+			return nullptr;
+
+		const TypeInfo* pParent = engine::getTypeRegistry().findType( _parentFQN );
+		return pParent != nullptr ? pParent->findPropertyInHierarchy( propNameOrAlias ) : nullptr;
+	}
 } // namespace sw

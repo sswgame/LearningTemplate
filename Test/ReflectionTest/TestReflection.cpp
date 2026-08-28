@@ -2505,3 +2505,61 @@ SW_TEST_CASE( Reflection_Component, ComponentPropertySerialization )
 	pSpeedProp->setValue<float32>( &comp, 2.718f );
 	SW_EXPECT_TRUE( sw::MathUtil::abs( comp._scriptSpeed - 2.718f ) < 0.0001f );
 }
+
+/**
+ * @brief [Reflection_GenericQuery] TypeRegistry 템플릿 조회 및 isA 헬퍼 검증
+ */
+SW_TEST_CASE( Reflection_GenericQuery, FindTypeAndIsA )
+{
+	const sw::TypeInfo* pType = sw::engine::getTypeRegistry().findType<sw::TestDerivedScriptComponent>();
+	SW_ASSERT_NOT_NULL( pType );
+	SW_EXPECT_TRUE( pType->_name == sw::hashed_string( "TestDerivedScriptComponent" ) );
+
+	sw::TestDerivedScriptComponent comp;
+	SW_EXPECT_TRUE( sw::isA<sw::TestDerivedScriptComponent>( &comp ) );
+	SW_EXPECT_TRUE( sw::isA<sw::TestScriptComponent>( &comp ) );
+	SW_EXPECT_TRUE( sw::isA<sw::Component>( &comp ) );
+	SW_EXPECT_TRUE( sw::isA<sw::DummyActor>( &comp ) == false );
+}
+
+/**
+ * @brief [Reflection_GenericQuery] TypeRegistry forEachType 및 getDerivedTypes 검증
+ */
+SW_TEST_CASE( Reflection_GenericQuery, ForEachTypeAndDerivedTypes )
+{
+	uint32 typeCount{ 0 };
+	sw::engine::getTypeRegistry().forEachType(
+		[&typeCount]( const sw::TypeInfo& )
+	{
+		++typeCount;
+	} );
+	SW_EXPECT_TRUE( typeCount > 0 );
+
+	const auto derivedComponents = sw::engine::getTypeRegistry().getDerivedTypes<sw::TestScriptComponent>();
+	SW_EXPECT_TRUE( derivedComponents.size() >= 2 ); // TestDerivedScriptComponent, TestGrandChildScriptComponent
+}
+
+/**
+ * @brief [Reflection_GenericQuery] PropertyInfo getRawPtr 및 findPropertyInHierarchy 검증
+ */
+SW_TEST_CASE( Reflection_GenericQuery, HierarchyPropertyLookupAndRawPtr )
+{
+	const sw::TypeInfo* pGrandChildType = sw::engine::getTypeRegistry().findType<sw::TestGrandChildScriptComponent>();
+	SW_ASSERT_NOT_NULL( pGrandChildType );
+
+	// 직계 프로퍼티
+	const sw::PropertyInfo* pDirectProp = pGrandChildType->findProperty( sw::hashed_string( "_grandChildSpeed" ) );
+	SW_ASSERT_NOT_NULL( pDirectProp );
+
+	// 부모 프로퍼티 (findPropertyInHierarchy)
+	const sw::PropertyInfo* pInheritedProp = pGrandChildType->findPropertyInHierarchy( sw::hashed_string( "_scriptSpeed" ) );
+	SW_ASSERT_NOT_NULL( pInheritedProp );
+
+	sw::TestGrandChildScriptComponent comp;
+	comp._scriptSpeed = 42.0f;
+
+	const void* pRaw = pInheritedProp->getRawPtr( &comp );
+	SW_ASSERT_NOT_NULL( pRaw );
+	const float32 val = *reinterpret_cast<const float32*>( pRaw );
+	SW_EXPECT_TRUE( sw::MathUtil::abs( val - 42.0f ) < 0.0001f );
+}

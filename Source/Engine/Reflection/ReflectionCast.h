@@ -63,6 +63,20 @@ namespace sw
 	template <typename T>
 	inline constexpr bool HasOwnReflectBody_v = HasOwnReflectBody<T>::value;
 
+	template <typename T, typename = void>
+	/// @brief getTypeInfo() 멤버 함수 존재 여부
+	struct HasGetTypeInfo : std::false_type
+	{
+	};
+
+	template <typename T>
+	struct HasGetTypeInfo<T, std::void_t<decltype( std::declval<const T>().getTypeInfo() )>> : std::true_type
+	{
+	};
+
+	template <typename T>
+	inline constexpr bool HasGetTypeInfo_v = HasGetTypeInfo<T>::value;
+
 	template <typename To, typename From>
 	/** @brief TypeInfo 상속 체인을 보고 To*로 캐스트. 실패 시 nullptr. */
 	To* castTo( From* pSrc )
@@ -78,14 +92,32 @@ namespace sw
 			pToType = To::StaticType();
 		else if constexpr ( HasReflectStaticType_v<To> )
 			pToType = ReflectTypeTraits<To>::StaticType();
+		else if constexpr ( std::is_base_of_v<To, From> || std::is_base_of_v<From, To> )
+			return static_cast<To*>( pSrc );
 		else
-			return static_cast<To*>( pSrc );
+			return nullptr;
 
-		const TypeInfo* pSrcType = pSrc->getTypeInfo();
+		const TypeInfo* pSrcType = nullptr;
+		if constexpr ( HasGetTypeInfo_v<From> )
+		{
+			pSrcType = pSrc->getTypeInfo();
+			if constexpr ( HasStaticType_v<From> )
+			{
+				if ( pSrcType == nullptr || ( pToType != nullptr && pSrcType != pToType && pSrcType->isDerivedFrom( pToType->_fullyQualifiedName ) == false ) )
+				{
+					pSrcType = From::StaticType();
+				}
+			}
+		}
+		else if constexpr ( HasStaticType_v<From> )
+			pSrcType = From::StaticType();
+		else if constexpr ( HasReflectStaticType_v<From> )
+			pSrcType = ReflectTypeTraits<From>::StaticType();
+
 		if ( pSrcType == pToType )
-			return static_cast<To*>( pSrc );
+			return reinterpret_cast<To*>( pSrc );
 		if ( pSrcType != nullptr && pToType != nullptr && pSrcType->isDerivedFrom( pToType->_fullyQualifiedName ) )
-			return static_cast<To*>( pSrc );
+			return reinterpret_cast<To*>( pSrc );
 		return nullptr;
 	}
 
@@ -94,6 +126,13 @@ namespace sw
 	const To* castTo( const From* pSrc )
 	{
 		return castTo<To>( const_cast<From*>( pSrc ) );
+	}
+
+	template <typename To, typename From>
+	/** @brief pSrc가 To 타입이거나 To로부터 파생되었는지 검사합니다. */
+	bool isA( const From* pSrc )
+	{
+		return castTo<To>( pSrc ) != nullptr;
 	}
 
 } // namespace sw

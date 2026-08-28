@@ -6,6 +6,7 @@
 #include "Core/Task/TaskTypes.h"
 
 #include "Engine/EngineMinimal.h"
+#include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 
 #include <shared_mutex>
@@ -72,14 +73,7 @@ namespace sw
 	/** @brief 컴파일러 시그니처에서 enum FQN을 추출합니다. */
 	hashed_string typeFqn()
 	{
-// 시그니처 매크로는 반드시 typeFqn 본문에서 읽어야 합니다. 람다 안에서 읽으면
-// 람다의 operator() 시그니처가 잡혀 템플릿 인자 E 가 사라집니다.
-#if defined( _MSC_VER ) && !defined( __clang__ )
-		constexpr string_view sig = __FUNCSIG__;
-#else
-		const string_view sig = __PRETTY_FUNCTION__;
-#endif
-		static const hashed_string kFqn = parseTypeFromSignature( sig );
+		static const hashed_string kFqn = parseTypeFromSignature( SW_FUNCTION_SIGNATURE );
 		return kFqn;
 	}
 
@@ -134,6 +128,71 @@ namespace sw
 		const TypeInfo* findType( const hashed_string& nameOrFqn ) const;
 		/** @brief 이름 또는 FQN으로 EnumInfo를 찾습니다. */
 		const EnumInfo* findEnum( const hashed_string& nameOrFqn ) const;
+
+		template <typename T>
+		/** @brief 템플릿 인자 타입 T의 TypeInfo를 조회합니다. */
+		const TypeInfo* findType() const
+		{
+			if constexpr ( HasStaticType_v<T> )
+				return T::StaticType();
+			else if constexpr ( HasReflectStaticType_v<T> )
+				return ReflectTypeTraits<T>::StaticType();
+			else
+				return findType( typeFqn<T>() );
+		}
+
+		template <typename E>
+		/** @brief 템플릿 enum 타입 E의 EnumInfo를 조회합니다. */
+		const EnumInfo* findEnum() const
+		{
+			return findEnumOf<E>();
+		}
+
+		template <typename Func>
+		/** @brief 등록된 모든 고유 TypeInfo를 순회합니다. */
+		void forEachType( Func&& func ) const
+		{
+			std::shared_lock<std::shared_mutex> lock( _mutex );
+			for ( const auto& [key, typeInfo] : _mapNameToClassType )
+			{
+				if ( key == typeInfo._fullyQualifiedName )
+					func( typeInfo );
+			}
+		}
+
+		template <typename Func>
+		/** @brief 등록된 모든 고유 EnumInfo를 순회합니다. */
+		void forEachEnum( Func&& func ) const
+		{
+			std::shared_lock<std::shared_mutex> lock( _mutex );
+			for ( const auto& [key, enumInfo] : _mapNameToEnum )
+			{
+				if ( key == enumInfo._fullyQualifiedName )
+					func( enumInfo );
+			}
+		}
+
+		template <typename BaseType>
+		/** @brief BaseType으로부터 파생된 모든 등록 TypeInfo 목록을 반환합니다. */
+		vector<const TypeInfo*> getDerivedTypes() const
+		{
+			const TypeInfo* pBaseType = findType<BaseType>();
+			if ( pBaseType == nullptr )
+				return {};
+
+			const hashed_string&	baseFqn = pBaseType->_fullyQualifiedName;
+			vector<const TypeInfo*> listResult;
+
+			std::shared_lock<std::shared_mutex> lock( _mutex );
+			for ( const auto& [key, typeInfo] : _mapNameToClassType )
+			{
+				if ( key == typeInfo._fullyQualifiedName && &typeInfo != pBaseType && typeInfo.isDerivedFrom( baseFqn ) )
+				{
+					listResult.push_back( &typeInfo );
+				}
+			}
+			return listResult;
+		}
 
 		/** @brief 별칭 포함 조회 후 canonical `_name` (미등록이면 입력 그대로). */
 		hashed_string canonicalTypeName( const hashed_string& nameOrFqn ) const;
@@ -280,13 +339,6 @@ namespace sw
 		EnumRegistrar( void ( *registerFunc )( TypeRegistry& ), EnumRegistrar*& pModuleHead );
 	};
 
-#ifndef SW_TYPE_MODULE_HEAD
-	#define SW_TYPE_MODULE_HEAD() ( ::sw::TypeRegistrar::getHead() )
-#endif
-#ifndef SW_ENUM_MODULE_HEAD
-	#define SW_ENUM_MODULE_HEAD() ( ::sw::EnumRegistrar::getHead() )
-#endif
-
 	// ------------------------------------------------------------------------------
 	// 9) 인라인 구현 — 조회 / 검사
 	// ------------------------------------------------------------------------------
@@ -324,5 +376,11 @@ namespace sw
 	}
 
 	/** @brief 부모 FQN을 따라가며 targetFqn에서 파생됐는지 검사합니다. */
-
 } // namespace sw
+
+#ifndef SW_TYPE_MODULE_HEAD
+	#define SW_TYPE_MODULE_HEAD() ( ::sw::TypeRegistrar::getHead() )
+#endif
+#ifndef SW_ENUM_MODULE_HEAD
+	#define SW_ENUM_MODULE_HEAD() ( ::sw::EnumRegistrar::getHead() )
+#endif
