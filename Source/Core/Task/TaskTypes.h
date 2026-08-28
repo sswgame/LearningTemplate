@@ -37,9 +37,9 @@ namespace sw
 		/** @brief 타입별 소멸, 복사 생성, 이동 생성을 관리하는 가상 함수 테이블 구조체 */
 		struct VTable
 		{
-			void ( *destroy )( void* pStorage );			 ///< 객체 소멸자 호출 함수
-			void ( *clone )( const void* pSrc, void* pDst ); ///< 복사 생성 함수
-			void ( *move )( void* pSrc, void* pDst );		 ///< 이동 생성 함수
+			void ( *_pDestroy )( void* pStorage );			   ///< 객체 소멸자 호출 함수
+			void ( *_pClone )( const void* pSrc, void* pDst ); ///< 복사 생성 함수
+			void ( *_pMove )( void* pSrc, void* pDst );		   ///< 이동 생성 함수
 			size_t _typeSize{ 0 };
 			bool   _bIsInline{ false };
 		};
@@ -104,7 +104,7 @@ namespace sw
 			if ( other._pVtable != nullptr )
 			{
 				_pVtable = other._pVtable;
-				_pVtable->clone( other._arrStorage, _arrStorage );
+				_pVtable->_pClone( other._arrStorage, _arrStorage );
 			}
 		}
 
@@ -113,7 +113,7 @@ namespace sw
 			if ( other._pVtable != nullptr )
 			{
 				_pVtable = other._pVtable;
-				_pVtable->move( other._arrStorage, _arrStorage );
+				_pVtable->_pMove( other._arrStorage, _arrStorage );
 				other._pVtable = nullptr;
 			}
 		}
@@ -126,7 +126,7 @@ namespace sw
 				if ( other._pVtable != nullptr )
 				{
 					_pVtable = other._pVtable;
-					_pVtable->clone( other._arrStorage, _arrStorage );
+					_pVtable->_pClone( other._arrStorage, _arrStorage );
 				}
 			}
 			return *this;
@@ -140,7 +140,7 @@ namespace sw
 				if ( other._pVtable != nullptr )
 				{
 					_pVtable = other._pVtable;
-					_pVtable->move( other._arrStorage, _arrStorage );
+					_pVtable->_pMove( other._arrStorage, _arrStorage );
 					other._pVtable = nullptr;
 				}
 			}
@@ -168,7 +168,7 @@ namespace sw
 		{
 			if ( _pVtable != nullptr )
 			{
-				_pVtable->destroy( _arrStorage );
+				_pVtable->_pDestroy( _arrStorage );
 				_pVtable = nullptr;
 			}
 		}
@@ -183,7 +183,7 @@ namespace sw
 			if ( _pVtable == nullptr )
 				return nullptr;
 #if defined( SW_DEBUG )
-			SW_ASSERT( _pVtable->destroy != nullptr );
+			SW_ASSERT( _pVtable->_pDestroy != nullptr );
 			SW_ASSERT( _pVtable->_bIsInline == kIsInline<Stored> );
 			SW_ASSERT( _pVtable->_typeSize == sizeof( Stored ) );
 #endif

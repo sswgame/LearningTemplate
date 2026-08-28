@@ -6,6 +6,7 @@
 
 #include "RuntimeAPI/PluginAPI.h"
 
+SW_LOG_CALLER( "GameService" );
 namespace sw
 {
 	SW_GF_API void registerGameFrameworkTypes()

@@ -4,6 +4,7 @@
 
 #include "Core/CoreMinimal.h"
 
+SW_LOG_CALLER( "StringUtil" );
 namespace sw
 {
 	/**

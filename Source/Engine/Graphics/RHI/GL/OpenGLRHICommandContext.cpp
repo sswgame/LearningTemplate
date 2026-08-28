@@ -35,11 +35,11 @@ namespace sw
 			return;
 
 		const OpenGLRHIDevice::OpenGLTextureRecord* pRecord = _pDevice->resolveTexture( colorTarget );
-		if ( pRecord == nullptr || pRecord->fbo == 0 )
+		if ( pRecord == nullptr || pRecord->_fbo == 0 )
 			return;
 
-		glBindFramebuffer( GL_FRAMEBUFFER, pRecord->fbo );
-		glViewport( 0, 0, static_cast<GLsizei>( pRecord->width ), static_cast<GLsizei>( pRecord->height ) );
+		glBindFramebuffer( GL_FRAMEBUFFER, pRecord->_fbo );
+		glViewport( 0, 0, static_cast<GLsizei>( pRecord->_width ), static_cast<GLsizei>( pRecord->_height ) );
 		glClearColor( clearColor[0], clearColor[1], clearColor[2], clearColor[3] );
 		glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 	}
@@ -60,7 +60,7 @@ namespace sw
 			return;
 
 		const OpenGLRHIDevice::OpenGLTextureRecord* pSrcRec = _pDevice->resolveTexture( src );
-		if ( pSrcRec == nullptr || pSrcRec->fbo == 0 || pSrcRec->_bDepthStencil != 0 )
+		if ( pSrcRec == nullptr || pSrcRec->_fbo == 0 || pSrcRec->_bDepthStencil != 0 )
 			return;
 
 		GLuint dstFbo{ 0 };
@@ -69,16 +69,16 @@ namespace sw
 		if ( dst != 0 )
 		{
 			const OpenGLRHIDevice::OpenGLTextureRecord* pDstRec = _pDevice->resolveTexture( dst );
-			if ( pDstRec == nullptr || pDstRec->fbo == 0 || pDstRec->_bDepthStencil != 0 )
+			if ( pDstRec == nullptr || pDstRec->_fbo == 0 || pDstRec->_bDepthStencil != 0 )
 				return;
-			dstFbo = pDstRec->fbo;
-			dstW   = pDstRec->width;
-			dstH   = pDstRec->height;
+			dstFbo = pDstRec->_fbo;
+			dstW   = pDstRec->_width;
+			dstH   = pDstRec->_height;
 		}
 
-		glBindFramebuffer( GL_READ_FRAMEBUFFER, pSrcRec->fbo );
+		glBindFramebuffer( GL_READ_FRAMEBUFFER, pSrcRec->_fbo );
 		glBindFramebuffer( GL_DRAW_FRAMEBUFFER, dstFbo );
-		glBlitFramebuffer( 0, 0, static_cast<GLint>( pSrcRec->width ), static_cast<GLint>( pSrcRec->height ),
+		glBlitFramebuffer( 0, 0, static_cast<GLint>( pSrcRec->_width ), static_cast<GLint>( pSrcRec->_height ),
 						   0, 0, static_cast<GLint>( dstW ), static_cast<GLint>( dstH ),
 						   GL_COLOR_BUFFER_BIT, GL_LINEAR );
 		glBindFramebuffer( GL_FRAMEBUFFER, 0 );
@@ -90,25 +90,25 @@ namespace sw
 		if ( pRecord == nullptr )
 			return;
 
-		if ( pRecord->program == 0 )
+		if ( pRecord->_program == 0 )
 			return;
 
 		_pDevice->_boundGraphicsPso = pso;
-		glUseProgram( pRecord->program );
+		glUseProgram( pRecord->_program );
 
-		if ( pRecord->vao != 0 )
-			glBindVertexArray( pRecord->vao );
+		if ( pRecord->_vao != 0 )
+			glBindVertexArray( pRecord->_vao );
 		else if ( _pDevice->_vao != 0 )
 			glBindVertexArray( _pDevice->_vao );
 
-		glPolygonMode( GL_FRONT_AND_BACK, pRecord->fillMode == RHIFillMode::Wireframe ? GL_LINE : GL_FILL );
+		glPolygonMode( GL_FRONT_AND_BACK, pRecord->_fillMode == RHIFillMode::Wireframe ? GL_LINE : GL_FILL );
 
-		if ( pRecord->cullMode == RHICullMode::None )
+		if ( pRecord->_cullMode == RHICullMode::None )
 			glDisable( GL_CULL_FACE );
 		else
 		{
 			glEnable( GL_CULL_FACE );
-			glCullFace( pRecord->cullMode == RHICullMode::Front ? GL_FRONT : GL_BACK );
+			glCullFace( pRecord->_cullMode == RHICullMode::Front ? GL_FRONT : GL_BACK );
 			glFrontFace( GL_CW ); // match DirectX / clip-control path
 		}
 
@@ -139,8 +139,8 @@ namespace sw
 		if ( pRecord == nullptr )
 			return;
 
-		if ( pRecord->program != 0 )
-			glUseProgram( pRecord->program );
+		if ( pRecord->_program != 0 )
+			glUseProgram( pRecord->_program );
 	}
 
 	void OpenGLRHICommandContext::beginRenderPass( const RHIRenderPassBeginInfo& beginInfo )
@@ -179,12 +179,12 @@ namespace sw
 			const OpenGLRHIDevice::OpenGLTextureRecord* pRec = _pDevice->resolveTexture( colorHandles[0] );
 			if ( pRec != nullptr )
 			{
-				fbo		   = pRec->fbo;
+				fbo		   = pRec->_fbo;
 				bDepthOnly = pRec->_bDepthStencil != 0;
 				if ( beginInfo._width == 0 )
-					w = pRec->width;
+					w = pRec->_width;
 				if ( beginInfo._height == 0 )
-					h = pRec->height;
+					h = pRec->_height;
 			}
 		}
 
@@ -300,9 +300,9 @@ namespace sw
 			return;
 
 		if ( index < static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredUAV.size() ) &&
-			 _pDevice->_listRegisteredUAV[index].buffer != 0 )
+			 _pDevice->_listRegisteredUAV[index]._buffer != 0 )
 		{
-			GLuint ssbo = _pDevice->resolveGlBuffer( _pDevice->_listRegisteredUAV[index].buffer );
+			GLuint ssbo = _pDevice->resolveGlBuffer( _pDevice->_listRegisteredUAV[index]._buffer );
 			if ( ssbo != 0 )
 			{
 				glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 48 + slot, ssbo );
@@ -311,9 +311,9 @@ namespace sw
 		}
 
 		if ( index < static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindlessVector.size() ) &&
-			 _pDevice->_listRegisteredBindlessVector[index].buffer != 0 )
+			 _pDevice->_listRegisteredBindlessVector[index]._buffer != 0 )
 		{
-			GLuint ssbo = _pDevice->resolveGlBuffer( _pDevice->_listRegisteredBindlessVector[index].buffer );
+			GLuint ssbo = _pDevice->resolveGlBuffer( _pDevice->_listRegisteredBindlessVector[index]._buffer );
 			if ( ssbo != 0 )
 			{
 				glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 48 + slot, ssbo );
@@ -328,10 +328,10 @@ namespace sw
 			return;
 
 		if ( index < static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredTexture.size() ) &&
-			 _pDevice->_listRegisteredTexture[index].texture != 0 )
+			 _pDevice->_listRegisteredTexture[index]._texture != 0 )
 		{
-			const OpenGLRHIDevice::OpenGLTextureRecord* pRec = _pDevice->resolveTexture( _pDevice->_listRegisteredTexture[index].texture );
-			const GLuint								tex	 = pRec != nullptr ? pRec->texture : 0;
+			const OpenGLRHIDevice::OpenGLTextureRecord* pRec = _pDevice->resolveTexture( _pDevice->_listRegisteredTexture[index]._texture );
+			const GLuint								tex	 = pRec != nullptr ? pRec->_texture : 0;
 			if ( tex != 0 )
 			{
 				glBindTextureUnit( slot, tex );
@@ -340,9 +340,9 @@ namespace sw
 		}
 
 		if ( index < static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindlessVector.size() ) &&
-			 _pDevice->_listRegisteredBindlessVector[index].buffer != 0 )
+			 _pDevice->_listRegisteredBindlessVector[index]._buffer != 0 )
 		{
-			GLuint ssbo = _pDevice->resolveGlBuffer( _pDevice->_listRegisteredBindlessVector[index].buffer );
+			GLuint ssbo = _pDevice->resolveGlBuffer( _pDevice->_listRegisteredBindlessVector[index]._buffer );
 			if ( ssbo != 0 )
 			{
 				glBindBufferBase( GL_SHADER_STORAGE_BUFFER, slot, ssbo );
@@ -377,10 +377,10 @@ namespace sw
 		const OpenGLRHIDevice::OpenGLPipelineStateRecord* pPso = _pDevice->_pipelineStates.get( _pDevice->_boundGraphicsPso );
 		if ( pPso != nullptr )
 		{
-			if ( pPso->program != 0 )
+			if ( pPso->_program != 0 )
 			{
-				program = pPso->program;
-				mode	= toGlPrimitive( pPso->topology );
+				program = pPso->_program;
+				mode	= toGlPrimitive( pPso->_topology );
 			}
 		}
 
@@ -391,7 +391,7 @@ namespace sw
 
 		if ( materialDescriptorIndex != kInvalidDescriptorIndex && materialDescriptorIndex < static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindlessVector.size() ) )
 		{
-			GLuint ubo = _pDevice->resolveGlBuffer( _pDevice->_listRegisteredBindlessVector[materialDescriptorIndex].buffer );
+			GLuint ubo = _pDevice->resolveGlBuffer( _pDevice->_listRegisteredBindlessVector[materialDescriptorIndex]._buffer );
 			if ( ubo != 0 )
 				glBindBufferBase( GL_UNIFORM_BUFFER, 16, ubo );
 		}
@@ -406,10 +406,10 @@ namespace sw
 				glBindBuffer( GL_ARRAY_BUFFER, vbo );
 				glEnableVertexAttribArray( 0 );
 				glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, stride,
-									   reinterpret_cast<const void*>( static_cast<uintptr_t>( _pDevice->_boundMeshOffset + offsetof( RHIVertex, position ) ) ) );
+									   reinterpret_cast<const void*>( static_cast<uintptr_t>( _pDevice->_boundMeshOffset + SW_OFFSET_OF( RHIVertex, _arrPosition ) ) ) );
 				glEnableVertexAttribArray( 1 );
 				glVertexAttribPointer( 1, 4, GL_FLOAT, GL_FALSE, stride,
-									   reinterpret_cast<const void*>( static_cast<uintptr_t>( _pDevice->_boundMeshOffset + offsetof( RHIVertex, color ) ) ) );
+									   reinterpret_cast<const void*>( static_cast<uintptr_t>( _pDevice->_boundMeshOffset + SW_OFFSET_OF( RHIVertex, _arrColor ) ) ) );
 				glDrawArrays( mode, static_cast<GLint>( startVertex ), static_cast<GLsizei>( vertexCount ) );
 				glBindVertexArray( 0 );
 				glBindBuffer( GL_ARRAY_BUFFER, 0 );
@@ -430,8 +430,8 @@ namespace sw
 
 		GLuint											  program = _pDevice->_shaderProgram;
 		const OpenGLRHIDevice::OpenGLPipelineStateRecord* pPso	  = _pDevice->_pipelineStates.get( _pDevice->_boundGraphicsPso );
-		if ( pPso != nullptr && pPso->program != 0 )
-			program = pPso->program;
+		if ( pPso != nullptr && pPso->_program != 0 )
+			program = pPso->_program;
 
 		if ( program != 0 )
 			glUseProgram( program );
@@ -487,10 +487,10 @@ namespace sw
 		const OpenGLRHIDevice::OpenGLPipelineStateRecord* pPso = _pDevice->_pipelineStates.get( _pDevice->_boundGraphicsPso );
 		if ( pPso != nullptr )
 		{
-			if ( pPso->program != 0 )
+			if ( pPso->_program != 0 )
 			{
-				program = pPso->program;
-				mode	= toGlPrimitive( pPso->topology );
+				program = pPso->_program;
+				mode	= toGlPrimitive( pPso->_topology );
 			}
 		}
 
@@ -502,7 +502,7 @@ namespace sw
 		if ( materialDescriptorIndex != kInvalidDescriptorIndex &&
 			 materialDescriptorIndex < static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindlessVector.size() ) )
 		{
-			GLuint ubo = _pDevice->resolveGlBuffer( _pDevice->_listRegisteredBindlessVector[materialDescriptorIndex].buffer );
+			GLuint ubo = _pDevice->resolveGlBuffer( _pDevice->_listRegisteredBindlessVector[materialDescriptorIndex]._buffer );
 			if ( ubo != 0 )
 				glBindBufferBase( GL_UNIFORM_BUFFER, 16, ubo );
 		}
@@ -517,10 +517,10 @@ namespace sw
 		glBindBuffer( GL_ARRAY_BUFFER, vbo );
 		glEnableVertexAttribArray( 0 );
 		glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, stride,
-							   reinterpret_cast<const void*>( static_cast<uintptr_t>( _pDevice->_boundMeshOffset + offsetof( RHIVertex, position ) ) ) );
+							   reinterpret_cast<const void*>( static_cast<uintptr_t>( _pDevice->_boundMeshOffset + SW_OFFSET_OF( RHIVertex, _arrPosition ) ) ) );
 		glEnableVertexAttribArray( 1 );
 		glVertexAttribPointer( 1, 4, GL_FLOAT, GL_FALSE, stride,
-							   reinterpret_cast<const void*>( static_cast<uintptr_t>( _pDevice->_boundMeshOffset + offsetof( RHIVertex, color ) ) ) );
+							   reinterpret_cast<const void*>( static_cast<uintptr_t>( _pDevice->_boundMeshOffset + SW_OFFSET_OF( RHIVertex, _arrColor ) ) ) );
 
 		glBindBuffer( GL_DRAW_INDIRECT_BUFFER, buf );
 		glDrawArraysIndirect( mode, reinterpret_cast<const void*>( static_cast<uintptr_t>( argumentBufferOffset ) ) );
@@ -541,10 +541,10 @@ namespace sw
 		const OpenGLRHIDevice::OpenGLPipelineStateRecord* pPso = _pDevice->_pipelineStates.get( _pDevice->_boundGraphicsPso );
 		if ( pPso != nullptr )
 		{
-			if ( pPso->program != 0 )
+			if ( pPso->_program != 0 )
 			{
-				program = pPso->program;
-				mode	= toGlPrimitive( pPso->topology );
+				program = pPso->_program;
+				mode	= toGlPrimitive( pPso->_topology );
 			}
 		}
 
@@ -563,10 +563,10 @@ namespace sw
 			glBindBuffer( GL_ARRAY_BUFFER, vbo );
 			glEnableVertexAttribArray( 0 );
 			glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, stride,
-								   reinterpret_cast<const void*>( static_cast<uintptr_t>( _pDevice->_boundMeshOffset + offsetof( RHIVertex, position ) ) ) );
+								   reinterpret_cast<const void*>( static_cast<uintptr_t>( _pDevice->_boundMeshOffset + SW_OFFSET_OF( RHIVertex, _arrPosition ) ) ) );
 			glEnableVertexAttribArray( 1 );
 			glVertexAttribPointer( 1, 4, GL_FLOAT, GL_FALSE, stride,
-								   reinterpret_cast<const void*>( static_cast<uintptr_t>( _pDevice->_boundMeshOffset + offsetof( RHIVertex, color ) ) ) );
+								   reinterpret_cast<const void*>( static_cast<uintptr_t>( _pDevice->_boundMeshOffset + SW_OFFSET_OF( RHIVertex, _arrColor ) ) ) );
 			if ( ibo != 0 )
 				glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, ibo );
 		}
@@ -623,10 +623,10 @@ namespace sw
 			glBindBuffer( GL_ARRAY_BUFFER, vbo );
 			glEnableVertexAttribArray( 0 );
 			glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, stride,
-								   reinterpret_cast<const void*>( static_cast<uintptr_t>( _pDevice->_boundMeshOffset + offsetof( RHIVertex, position ) ) ) );
+								   reinterpret_cast<const void*>( static_cast<uintptr_t>( _pDevice->_boundMeshOffset + SW_OFFSET_OF( RHIVertex, _arrPosition ) ) ) );
 			glEnableVertexAttribArray( 1 );
 			glVertexAttribPointer( 1, 4, GL_FLOAT, GL_FALSE, stride,
-								   reinterpret_cast<const void*>( static_cast<uintptr_t>( _pDevice->_boundMeshOffset + offsetof( RHIVertex, color ) ) ) );
+								   reinterpret_cast<const void*>( static_cast<uintptr_t>( _pDevice->_boundMeshOffset + SW_OFFSET_OF( RHIVertex, _arrColor ) ) ) );
 		}
 
 		GLuint buf = _pDevice->resolveGlBuffer( argumentBuffer );

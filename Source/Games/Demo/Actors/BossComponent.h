@@ -22,37 +22,37 @@ namespace sw
 		REFLECT_BODY();
 
 		PROPERTY()
-		int32 phase;
+		int32 _phase;
 
 		PROPERTY()
-		float32 stateTimer;
+		float32 _stateTimer;
 
 		PROPERTY()
-		float32 patternCooldown;
+		float32 _patternCooldown;
 
 		PROPERTY()
-		int32 currentPattern;
+		int32 _currentPattern;
 
 		PROPERTY()
-		BossAiState bossState;
+		BossAiState _bossState;
 
 		PROPERTY()
-		bool bLaserActive;
+		bool _bLaserActive;
 
 		PROPERTY()
-		float32 phase1Cooldown;
+		float32 _phase1Cooldown;
 
 		PROPERTY()
-		float32 phase2Cooldown;
+		float32 _phase2Cooldown;
 
 		PROPERTY()
-		float32 phase3Cooldown;
+		float32 _phase3Cooldown;
 
 		PROPERTY()
-		float32 phase2HpRatio;
+		float32 _phase2HpRatio;
 
 		PROPERTY()
-		float32 phase3HpRatio;
+		float32 _phase3HpRatio;
 
 		BossComponent();
 		virtual ~BossComponent() override					 = default;

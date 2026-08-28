@@ -10,16 +10,16 @@ namespace sw
 		REFLECT_BODY();
 
 		PROPERTY()
-		int32 playerLevel;
+		int32 _playerLevel;
 
 		PROPERTY()
-		int32 playerHp;
+		int32 _playerHp;
 
 		PROPERTY()
-		int32 playerMaxHp;
+		int32 _playerMaxHp;
 
 		PROPERTY()
-		int32 playerMp;
+		int32 _playerMp;
 
 		PlayerInfoUIComponent();
 		virtual ~PlayerInfoUIComponent() override							 = default;

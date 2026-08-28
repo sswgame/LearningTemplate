@@ -12,13 +12,13 @@ namespace sw
 		REFLECT_BODY();
 
 		PROPERTY()
-		string targetScenePath{};
+		string _targetScenePath{};
 
 		PROPERTY()
-		bool bIsOpen{ true };
+		bool _bIsOpen{ true };
 
 		PROPERTY()
-		float32 triggerRadius{ 0.0f };
+		float32 _triggerRadius{ 0.0f };
 
 		PortalComponent()										 = default;
 		virtual ~PortalComponent() override						 = default;

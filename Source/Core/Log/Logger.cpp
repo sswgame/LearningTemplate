@@ -153,7 +153,7 @@ namespace sw
 		const string execPath = FileUtil::getExecutablePath();
 		const string baseDir  = execPath.empty() ? FileUtil::getCurrentPath() : FileUtil::getDirectoryPart( execPath );
 
-		_logFolderPath = FileUtil::joinPath( FileUtil::joinPath( baseDir, "Saved" ), "Logs" );
+		_logFolderPath = FileUtil::joinPath( FileUtil::joinPath( baseDir, path::kSavedFolder ), path::kLogsFolder );
 		FileUtil::ensureDirectoryExists( _logFolderPath );
 		_bInitialized = true;
 
@@ -235,8 +235,8 @@ namespace sw
 		static constexpr const utf8* kArrHeader[] = { "Error", "Warning", "Info", "Trace" };
 		static_assert( SW_COUNT_OF( kArrHeader ) == static_cast<uint32>( LogLevel::Count ), "LogLevel과 같아야 합니다" );
 
-		const utf8* effectiveTag  = ( StringUtil::isNullOrEmpty( pTag ) ) ? "Engine" : pTag;
-		const utf8* effectiveFile = ( StringUtil::isNullOrEmpty( pFile ) ) ? "unknown" : pFile;
+		const utf8* effectiveTag  = ( StringUtil::isNullOrEmpty( pTag ) ) ? constant::kDefaultLogTag : pTag;
+		const utf8* effectiveFile = ( StringUtil::isNullOrEmpty( pFile ) ) ? constant::kDefaultLogFile : pFile;
 		const utf8* effectiveMsg  = ( pMessage != nullptr ) ? pMessage : "";
 
 		// 2단계: 스택 8KB fixed_string 버퍼에 1회 포맷팅 (동적 힙 메모리 할당 0건)
@@ -280,13 +280,13 @@ namespace sw
 		if ( bHasListeners && listenersCopy.isBound() )
 		{
 			LogEntry entry;
-			entry.level		= level;
-			entry.tag		= effectiveTag;
-			entry.caller	= ( pCaller != nullptr ) ? pCaller : "";
-			entry.message	= effectiveMsg;
-			entry.file		= effectiveFile;
-			entry.line		= line;
-			entry.timeStamp = dateStr.c_str();
+			entry._level	 = level;
+			entry._tag		 = effectiveTag;
+			entry._caller	 = ( pCaller != nullptr ) ? pCaller : "";
+			entry._message	 = effectiveMsg;
+			entry._file		 = effectiveFile;
+			entry._line		 = line;
+			entry._timeStamp = dateStr.c_str();
 			listenersCopy.broadcast( entry );
 		}
 	}

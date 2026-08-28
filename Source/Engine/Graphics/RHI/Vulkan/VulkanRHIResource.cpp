@@ -118,11 +118,11 @@ namespace sw
 		arrAttributeDescriptions[0].binding	 = 0;
 		arrAttributeDescriptions[0].location = 0;
 		arrAttributeDescriptions[0].format	 = VK_FORMAT_R32G32B32_SFLOAT;
-		arrAttributeDescriptions[0].offset	 = offsetof( RHIVertex, position );
+		arrAttributeDescriptions[0].offset	 = SW_OFFSET_OF( RHIVertex, _arrPosition );
 		arrAttributeDescriptions[1].binding	 = 0;
 		arrAttributeDescriptions[1].location = 1;
 		arrAttributeDescriptions[1].format	 = VK_FORMAT_R32G32B32A32_SFLOAT;
-		arrAttributeDescriptions[1].offset	 = offsetof( RHIVertex, color );
+		arrAttributeDescriptions[1].offset	 = SW_OFFSET_OF( RHIVertex, _arrColor );
 
 		vertexInputInfo.vertexBindingDescriptionCount	= 1;
 		vertexInputInfo.pVertexBindingDescriptions		= &bindingDescription;
@@ -220,7 +220,7 @@ namespace sw
 			vkDestroyShaderModule( _pDevice->_device, fragShaderModule, nullptr );
 
 		VulkanRHIDevice::VulkanPipelineStateRecord record{};
-		record.pipeline = newPipeline;
+		record._pipeline = newPipeline;
 		return _pDevice->_pipelineStates.insert( std::move( record ) );
 	}
 
@@ -264,7 +264,7 @@ namespace sw
 		vkDestroyShaderModule( _pDevice->_device, compShaderModule, nullptr );
 
 		VulkanRHIDevice::VulkanPipelineStateRecord record{};
-		record.pipeline = newPipeline;
+		record._pipeline = newPipeline;
 		return _pDevice->_pipelineStates.insert( std::move( record ) );
 	}
 
@@ -273,10 +273,10 @@ namespace sw
 		VulkanRHIDevice::VulkanPipelineStateRecord record{};
 		if ( _pDevice->_pipelineStates.take( pso, record ) == false )
 			return;
-		if ( record.pipeline != VK_NULL_HANDLE && record.pipeline != _pDevice->_pipeline )
+		if ( record._pipeline != VK_NULL_HANDLE && record._pipeline != _pDevice->_pipeline )
 		{
 			VkDevice   dev	= _pDevice->_device;
-			VkPipeline pipe = record.pipeline;
+			VkPipeline pipe = record._pipeline;
 			_pDevice->_releaseQueue.enqueueRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, pipe]()
 			{
 				vkDestroyPipeline( dev, pipe, nullptr );
@@ -362,8 +362,8 @@ namespace sw
 
 		if ( attachCount == 0 )
 		{
-			record.renderPass = _pDevice->_renderPass;
-			record.bOwned	  = 0;
+			record._renderPass = _pDevice->_renderPass;
+			record._bOwned	   = 0;
 			_pDevice->_listRenderPass.push_back( record );
 			return _pDevice->_listRenderPass.size();
 		}
@@ -398,8 +398,8 @@ namespace sw
 			return 0;
 		}
 
-		record.renderPass = created;
-		record.bOwned	  = 1;
+		record._renderPass = created;
+		record._bOwned	   = 1;
 		_pDevice->_listRenderPass.push_back( record );
 		return _pDevice->_listRenderPass.size();
 	}
@@ -409,10 +409,10 @@ namespace sw
 		if ( pass == 0 || pass > _pDevice->_listRenderPass.size() )
 			return;
 		VulkanRHIDevice::VulkanRenderPassRecord& record = _pDevice->_listRenderPass[pass - 1];
-		if ( record.bOwned != 0 && record.renderPass != VK_NULL_HANDLE &&
-			 record.renderPass != _pDevice->_renderPass )
+		if ( record._bOwned != 0 && record._renderPass != VK_NULL_HANDLE &&
+			 record._renderPass != _pDevice->_renderPass )
 		{
-			vkDestroyRenderPass( _pDevice->_device, record.renderPass, nullptr );
+			vkDestroyRenderPass( _pDevice->_device, record._renderPass, nullptr );
 		}
 		record = {};
 	}
@@ -433,7 +433,7 @@ namespace sw
 		if ( pRecord == nullptr || pData == nullptr || size == 0 )
 			return;
 
-		if ( pRecord->memory == VK_NULL_HANDLE )
+		if ( pRecord->_memory == VK_NULL_HANDLE )
 			return;
 
 		uint32	   slotSize = size;
@@ -443,10 +443,10 @@ namespace sw
 		const uint32 offset = ( _pDevice->_currentFrame % FrameResourceRing::kFrameCount ) * slotSize;
 
 		void* mapped{ nullptr };
-		if ( vkMapMemory( _pDevice->_device, pRecord->memory, offset, size, 0, &mapped ) == VK_SUCCESS )
+		if ( vkMapMemory( _pDevice->_device, pRecord->_memory, offset, size, 0, &mapped ) == VK_SUCCESS )
 		{
 			Memory::copy( mapped, pData, size );
-			vkUnmapMemory( _pDevice->_device, pRecord->memory );
+			vkUnmapMemory( _pDevice->_device, pRecord->_memory );
 		}
 
 		for ( size_t bufferIndex = 0; bufferIndex < _pDevice->_listBindlessSourceBuffer.size(); ++bufferIndex )
@@ -457,7 +457,7 @@ namespace sw
 			if ( set == VK_NULL_HANDLE )
 				continue;
 			VkDescriptorBufferInfo bufferInfo{};
-			bufferInfo.buffer = pRecord->buffer;
+			bufferInfo.buffer = pRecord->_buffer;
 			bufferInfo.offset = offset;
 			bufferInfo.range  = slotSize;
 			VkWriteDescriptorSet descriptorWrite{};
@@ -538,9 +538,9 @@ namespace sw
 		}
 
 		VulkanRHIDevice::VulkanBufferRecord record{};
-		record.buffer = buffer;
-		record.memory = memory;
-		record.size	  = sizeBytes;
+		record._buffer = buffer;
+		record._memory = memory;
+		record._size   = sizeBytes;
 		return _pDevice->_gpuBuffers.insert( std::move( record ) );
 	}
 
@@ -595,8 +595,8 @@ namespace sw
 			_pDevice->_uavFreeList.push_back( static_cast<uint32>( bufferIndex ) );
 		}
 
-		VkBuffer	   buf = owned.buffer;
-		VkDeviceMemory mem = owned.memory;
+		VkBuffer	   buf = owned._buffer;
+		VkDeviceMemory mem = owned._memory;
 		VkDevice	   dev = _pDevice->_device;
 		_pDevice->_releaseQueue.enqueueRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, buf, mem]()
 		{
@@ -648,27 +648,27 @@ namespace sw
 		imageInfo.sharingMode	= VK_SHARING_MODE_EXCLUSIVE;
 
 		VulkanRHIDevice::VulkanTextureRecord record{};
-		record.width		  = desc._width;
-		record.height		  = desc._height;
-		record.format		  = static_cast<uint32>( format );
-		record.layout		  = static_cast<uint32>( VK_IMAGE_LAYOUT_UNDEFINED );
+		record._width		  = desc._width;
+		record._height		  = desc._height;
+		record._format		  = static_cast<uint32>( format );
+		record._layout		  = static_cast<uint32>( VK_IMAGE_LAYOUT_UNDEFINED );
 		record._bRenderTarget = desc._bIsRenderTarget ? 1 : 0;
 		record._bDepthStencil = desc._bIsDepthStencil ? 1 : 0;
-		record.bindlessIndex  = kInvalidDescriptorIndex;
+		record._bindlessIndex = kInvalidDescriptorIndex;
 
-		if ( vkCreateImage( _pDevice->_device, &imageInfo, nullptr, &record.image ) != VK_SUCCESS )
+		if ( vkCreateImage( _pDevice->_device, &imageInfo, nullptr, &record._image ) != VK_SUCCESS )
 		{
 			SW_LOG_ERROR( "Failed to create VkImage for Texture2D." );
 			return 0;
 		}
 
 		VkMemoryRequirements memRequirements;
-		vkGetImageMemoryRequirements( _pDevice->_device, record.image, &memRequirements );
+		vkGetImageMemoryRequirements( _pDevice->_device, record._image, &memRequirements );
 
 		uint32 memoryTypeIndex{ 0 };
 		if ( _pDevice->findMemoryType( memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, memoryTypeIndex ) == false )
 		{
-			vkDestroyImage( _pDevice->_device, record.image, nullptr );
+			vkDestroyImage( _pDevice->_device, record._image, nullptr );
 			SW_LOG_ERROR( "Failed to find a device local memory type for Texture2D." );
 			return 0;
 		}
@@ -678,14 +678,14 @@ namespace sw
 		allocInfo.allocationSize  = memRequirements.size;
 		allocInfo.memoryTypeIndex = memoryTypeIndex;
 
-		if ( vkAllocateMemory( _pDevice->_device, &allocInfo, nullptr, &record.memory ) != VK_SUCCESS )
+		if ( vkAllocateMemory( _pDevice->_device, &allocInfo, nullptr, &record._memory ) != VK_SUCCESS )
 		{
-			vkDestroyImage( _pDevice->_device, record.image, nullptr );
+			vkDestroyImage( _pDevice->_device, record._image, nullptr );
 			SW_LOG_ERROR( "Failed to allocate memory for Texture2D." );
 			return 0;
 		}
 
-		vkBindImageMemory( _pDevice->_device, record.image, record.memory, 0 );
+		vkBindImageMemory( _pDevice->_device, record._image, record._memory, 0 );
 
 		VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT;
 		if ( desc._bIsDepthStencil != 0 )
@@ -693,7 +693,7 @@ namespace sw
 
 		VkImageViewCreateInfo viewInfo{};
 		viewInfo.sType							 = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-		viewInfo.image							 = record.image;
+		viewInfo.image							 = record._image;
 		viewInfo.viewType						 = VK_IMAGE_VIEW_TYPE_2D;
 		viewInfo.format							 = format;
 		viewInfo.subresourceRange.aspectMask	 = aspect;
@@ -702,10 +702,10 @@ namespace sw
 		viewInfo.subresourceRange.baseArrayLayer = 0;
 		viewInfo.subresourceRange.layerCount	 = 1;
 
-		if ( vkCreateImageView( _pDevice->_device, &viewInfo, nullptr, &record.imageView ) != VK_SUCCESS )
+		if ( vkCreateImageView( _pDevice->_device, &viewInfo, nullptr, &record._imageView ) != VK_SUCCESS )
 		{
-			vkDestroyImage( _pDevice->_device, record.image, nullptr );
-			vkFreeMemory( _pDevice->_device, record.memory, nullptr );
+			vkDestroyImage( _pDevice->_device, record._image, nullptr );
+			vkFreeMemory( _pDevice->_device, record._memory, nullptr );
 			SW_LOG_ERROR( "Failed to create VkImageView for Texture2D." );
 			return 0;
 		}
@@ -727,9 +727,9 @@ namespace sw
 
 		_pDevice->destroyCompositeFramebuffersUsing( texture );
 
-		if ( pSlot->bindlessIndex != kInvalidDescriptorIndex )
+		if ( pSlot->_bindlessIndex != kInvalidDescriptorIndex )
 		{
-			const RHIDescriptorIndex index = pSlot->bindlessIndex;
+			const RHIDescriptorIndex index = pSlot->_bindlessIndex;
 			if ( _pDevice->_bindlessTextureSet != VK_NULL_HANDLE && index < _pDevice->_listRegisteredTexture.size() &&
 				 _pDevice->_listRegisteredTexture[index] == _pDevice->_bindlessTextureSet )
 			{
@@ -749,7 +749,7 @@ namespace sw
 				_pDevice->_listRegisteredTexture[index] = VK_NULL_HANDLE;
 				_pDevice->_textureFreeList.push_back( index );
 			}
-			pSlot->bindlessIndex = kInvalidDescriptorIndex;
+			pSlot->_bindlessIndex = kInvalidDescriptorIndex;
 		}
 
 		_pDevice->destroyOffscreenFramebuffer( *pSlot );
@@ -757,9 +757,9 @@ namespace sw
 		if ( _pDevice->_gpuTextures.take( texture, owned ) == false )
 			return;
 		VkDevice	   dev	 = _pDevice->_device;
-		VkImageView	   view	 = owned.imageView;
-		VkImage		   image = owned.image;
-		VkDeviceMemory mem	 = owned.memory;
+		VkImageView	   view	 = owned._imageView;
+		VkImage		   image = owned._image;
+		VkDeviceMemory mem	 = owned._memory;
 		_pDevice->_releaseQueue.enqueueRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, view, image, mem]()
 		{
 			if ( view != VK_NULL_HANDLE )
@@ -777,7 +777,7 @@ namespace sw
 			return kInvalidDescriptorIndex;
 
 		VulkanRHIDevice::VulkanTextureRecord* pResolved = _pDevice->resolveTexture( texture );
-		if ( pResolved == nullptr || pResolved->imageView == VK_NULL_HANDLE )
+		if ( pResolved == nullptr || pResolved->_imageView == VK_NULL_HANDLE )
 			return kInvalidDescriptorIndex;
 
 		// DEPTH|STENCIL image views cannot be written as sampled descriptors.
@@ -785,8 +785,8 @@ namespace sw
 			return kInvalidDescriptorIndex;
 
 		VulkanRHIDevice::VulkanTextureRecord& record = *pResolved;
-		if ( record.bindlessIndex != kInvalidDescriptorIndex )
-			return record.bindlessIndex;
+		if ( record._bindlessIndex != kInvalidDescriptorIndex )
+			return record._bindlessIndex;
 
 		RHIDescriptorIndex descriptorIndex;
 		if ( _pDevice->_textureFreeList.empty() == false )
@@ -805,11 +805,11 @@ namespace sw
 
 		if ( _pDevice->_bindlessTextureSet != VK_NULL_HANDLE )
 		{
-			_pDevice->writeBindlessTextureSlot( descriptorIndex, record.imageView );
+			_pDevice->writeBindlessTextureSlot( descriptorIndex, record._imageView );
 			if ( descriptorIndex >= _pDevice->_listRegisteredTexture.size() )
 				_pDevice->_listRegisteredTexture.resize( descriptorIndex + 1 );
 			_pDevice->_listRegisteredTexture[descriptorIndex] = _pDevice->_bindlessTextureSet; // shared array set
-			record.bindlessIndex							  = descriptorIndex;
+			record._bindlessIndex							  = descriptorIndex;
 			return descriptorIndex;
 		}
 
@@ -832,7 +832,7 @@ namespace sw
 
 		VkDescriptorImageInfo imageInfo{};
 		imageInfo.sampler	  = _pDevice->_defaultSampler;
-		imageInfo.imageView	  = record.imageView;
+		imageInfo.imageView	  = record._imageView;
 		imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
 		VkWriteDescriptorSet write{};
@@ -847,7 +847,7 @@ namespace sw
 		if ( descriptorIndex >= _pDevice->_listRegisteredTexture.size() )
 			_pDevice->_listRegisteredTexture.resize( descriptorIndex + 1 );
 		_pDevice->_listRegisteredTexture[descriptorIndex] = descriptorSet;
-		record.bindlessIndex							  = descriptorIndex;
+		record._bindlessIndex							  = descriptorIndex;
 		return descriptorIndex;
 	}
 
@@ -856,7 +856,7 @@ namespace sw
 		const VulkanRHIDevice::VulkanBufferRecord* pRecord = _pDevice->resolveAllocatedBuffer( buffer );
 		if ( pRecord == nullptr || _pDevice->_descriptorPool == VK_NULL_HANDLE || _pDevice->_descriptorSetLayout == VK_NULL_HANDLE )
 			return kInvalidDescriptorIndex;
-		const bool			  bIsStorage = ( pRecord->usage & VK_BUFFER_USAGE_STORAGE_BUFFER_BIT ) != 0;
+		const bool			  bIsStorage = ( pRecord->_usage & VK_BUFFER_USAGE_STORAGE_BUFFER_BIT ) != 0;
 		VkDescriptorSetLayout setLayout	 = bIsStorage ? _pDevice->_uavDescriptorSetLayout : _pDevice->_descriptorSetLayout;
 
 		VkDescriptorSetAllocateInfo allocInfo{};
@@ -870,10 +870,10 @@ namespace sw
 			return kInvalidDescriptorIndex;
 
 		VkDescriptorBufferInfo bufferInfo{};
-		bufferInfo.buffer = pRecord->buffer;
+		bufferInfo.buffer = pRecord->_buffer;
 		bufferInfo.offset = 0;
 		const auto slotIt = _pDevice->_mapCbSlotSize.find( buffer );
-		bufferInfo.range  = ( slotIt != _pDevice->_mapCbSlotSize.end() ) ? slotIt->second : pRecord->size;
+		bufferInfo.range  = ( slotIt != _pDevice->_mapCbSlotSize.end() ) ? slotIt->second : pRecord->_size;
 
 		VkWriteDescriptorSet descriptorWrite{};
 		descriptorWrite.sType			= VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -946,9 +946,9 @@ namespace sw
 		}
 
 		VkDescriptorBufferInfo bufferInfo{};
-		bufferInfo.buffer = pRecord->buffer;
+		bufferInfo.buffer = pRecord->_buffer;
 		bufferInfo.offset = 0;
-		bufferInfo.range  = pRecord->size;
+		bufferInfo.range  = pRecord->_size;
 
 		VkWriteDescriptorSet descriptorWrite{};
 		descriptorWrite.sType			= VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;

@@ -93,8 +93,8 @@ namespace sw
 		{
 			struct Candidate
 			{
-				const utf8*	  name;
-				DialogBackend backend;
+				const utf8*	  _pName;
+				DialogBackend _backend;
 			};
 
 			static constexpr Candidate kArrCandidates[] = {
@@ -107,9 +107,9 @@ namespace sw
 
 			for ( const Candidate& candidate : kArrCandidates )
 			{
-				outToolPath = findExecutable( candidate.name );
+				outToolPath = findExecutable( candidate._pName );
 				if ( outToolPath.empty() == false )
-					return candidate.backend;
+					return candidate._backend;
 			}
 
 			outToolPath.clear();

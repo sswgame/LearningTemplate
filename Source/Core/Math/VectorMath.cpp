@@ -5,6 +5,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 
+SW_LOG_CALLER( "VectorMath" );
 namespace sw
 {
 

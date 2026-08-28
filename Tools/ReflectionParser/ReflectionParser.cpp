@@ -43,16 +43,16 @@ namespace sw
 	/** @brief ReflectionParser CLI (--input/--output/--builtins 등). */
 	struct CommandLineArgs
 	{
-		sw::vector<sw::string> inputFiles;
-		sw::string			   outputDir;
-		sw::vector<sw::string> includePaths;
-		sw::string			   builtinsPath;
-		sw::string			   annotationMetaPath;
-		sw::string			   emitTemplatesDir;
-		sw::string			   emitBuiltinsGenPath; ///< --builtins 와 함께 설정 시 ReflectBuiltins.gen.cpp 전용 모드
-		uint64				   maxTemplateTimestamp	   = 0;
-		uint64				   builtinsTimestamp	   = 0;
-		uint64				   annotationMetaTimestamp = 0;
+		sw::vector<sw::string> _listInputFiles;
+		sw::string			   _outputDir;
+		sw::vector<sw::string> _listIncludePaths;
+		sw::string			   _builtinsPath;
+		sw::string			   _annotationMetaPath;
+		sw::string			   _emitTemplatesDir;
+		sw::string			   _emitBuiltinsGenPath; ///< --builtins 와 함께 설정 시 ReflectBuiltins.gen.cpp 전용 모드
+		uint64				   _maxTemplateTimestamp	= 0;
+		uint64				   _builtinsTimestamp		= 0;
+		uint64				   _annotationMetaTimestamp = 0;
 	};
 
 	/** @brief --input/--output/--include/--builtins 등 CLI를 채웁니다. */
@@ -64,31 +64,31 @@ namespace sw
 
 			if ( arg == sw::cliConstants::kInput && argIndex + 1 < argc )
 			{
-				outArgs.inputFiles.emplace_back( argv[++argIndex] );
+				outArgs._listInputFiles.emplace_back( argv[++argIndex] );
 			}
 			else if ( arg == sw::cliConstants::kOutput && argIndex + 1 < argc )
 			{
-				outArgs.outputDir = argv[++argIndex];
+				outArgs._outputDir = argv[++argIndex];
 			}
 			else if ( arg == sw::cliConstants::kInclude && argIndex + 1 < argc )
 			{
-				outArgs.includePaths.emplace_back( argv[++argIndex] );
+				outArgs._listIncludePaths.emplace_back( argv[++argIndex] );
 			}
 			else if ( arg == sw::cliConstants::kBuiltins && argIndex + 1 < argc )
 			{
-				outArgs.builtinsPath = argv[++argIndex];
+				outArgs._builtinsPath = argv[++argIndex];
 			}
 			else if ( arg == sw::cliConstants::kAnnotationMeta && argIndex + 1 < argc )
 			{
-				outArgs.annotationMetaPath = argv[++argIndex];
+				outArgs._annotationMetaPath = argv[++argIndex];
 			}
 			else if ( arg == sw::cliConstants::kEmitTemplates && argIndex + 1 < argc )
 			{
-				outArgs.emitTemplatesDir = argv[++argIndex];
+				outArgs._emitTemplatesDir = argv[++argIndex];
 			}
 			else if ( arg == sw::cliConstants::kEmitBuiltinsGen && argIndex + 1 < argc )
 			{
-				outArgs.emitBuiltinsGenPath = argv[++argIndex];
+				outArgs._emitBuiltinsGenPath = argv[++argIndex];
 			}
 			else
 			{
@@ -97,9 +97,9 @@ namespace sw
 			}
 		}
 
-		if ( outArgs.emitBuiltinsGenPath.empty() == false )
+		if ( outArgs._emitBuiltinsGenPath.empty() == false )
 		{
-			if ( outArgs.builtinsPath.empty() )
+			if ( outArgs._builtinsPath.empty() )
 			{
 				SW_LOG_ERROR( "%# requires %#.", sw::cliConstants::kEmitBuiltinsGen, sw::cliConstants::kBuiltins );
 				return false;
@@ -107,12 +107,12 @@ namespace sw
 			return true;
 		}
 
-		if ( outArgs.inputFiles.empty() )
+		if ( outArgs._listInputFiles.empty() )
 		{
 			SW_LOG_ERROR( "No --input files specified." );
 			return false;
 		}
-		if ( outArgs.outputDir.empty() )
+		if ( outArgs._outputDir.empty() )
 		{
 			SW_LOG_ERROR( "No --output directory specified." );
 			return false;
@@ -125,8 +125,8 @@ namespace sw
 	static bool isPlaceholder( const sw::string& existingGen )
 	{
 		const sw::ParserClangConfig& cfg = sw::ParserContext::getSharedConfig();
-		return existingGen.find( cfg.emitPlaceholderMarker ) != sw::string::npos ||
-			   ( existingGen.find( cfg.emitRegenByParserMarker ) != sw::string::npos &&
+		return existingGen.find( cfg._emitPlaceholderMarker ) != sw::string::npos ||
+			   ( existingGen.find( cfg._emitRegenByParserMarker ) != sw::string::npos &&
 				 existingGen.find( sw::genConstants::kRegisterTypeMarker ) == sw::string::npos &&
 				 existingGen.find( sw::genConstants::kRegisterEnumMarker ) == sw::string::npos &&
 				 existingGen.find( sw::genConstants::kFlagOrOperatorMarker ) == sw::string::npos );
@@ -139,18 +139,18 @@ namespace sw
 			return false;
 
 		const sw::string genHeaderPath =
-			sw::makeGeneratedPath( args.outputDir, inputFile, sw::ParserContext::getSharedConfig().emitHeaderExtension );
+			sw::makeGeneratedPath( args._outputDir, inputFile, sw::ParserContext::getSharedConfig()._emitHeaderExtension );
 		if ( sw::FileUtil::fileExists( genHeaderPath ) == false )
 			return false;
 
 		const uint64 genTime = sw::FileUtil::getFileTimestamp( genPath );
 		if ( genTime < sw::FileUtil::getFileTimestamp( inputFile ) )
 			return false;
-		if ( args.builtinsTimestamp > 0 && genTime < args.builtinsTimestamp )
+		if ( args._builtinsTimestamp > 0 && genTime < args._builtinsTimestamp )
 			return false;
-		if ( args.annotationMetaTimestamp > 0 && genTime < args.annotationMetaTimestamp )
+		if ( args._annotationMetaTimestamp > 0 && genTime < args._annotationMetaTimestamp )
 			return false;
-		if ( args.maxTemplateTimestamp > 0 && genTime < args.maxTemplateTimestamp )
+		if ( args._maxTemplateTimestamp > 0 && genTime < args._maxTemplateTimestamp )
 			return false;
 
 		// 타임스탬프가 최신인 경우에만 플레이스홀더 검사 (헤더 수 KB만 읽어 I/O 축소)
@@ -179,7 +179,7 @@ namespace sw
 		const sw::vector<sw::ParsedTypeInfo> noTypes;
 		const sw::vector<sw::ParsedEnumInfo> noEnums;
 
-		sw::CodeGenerator generator( noTypes, noEnums, inputFile, args.outputDir );
+		sw::CodeGenerator generator( noTypes, noEnums, inputFile, args._outputDir );
 		return generator.generate();
 	}
 
@@ -187,7 +187,7 @@ namespace sw
 	static void processInputFile( const sw::string& inputFile, const CommandLineArgs& args, std::atomic<int32>& errorCount )
 	{
 		const sw::string genPath =
-			sw::makeGeneratedPath( args.outputDir, inputFile, sw::ParserContext::getSharedConfig().emitCppExtension );
+			sw::makeGeneratedPath( args._outputDir, inputFile, sw::ParserContext::getSharedConfig()._emitCppExtension );
 
 		if ( isUpToDate( genPath, inputFile, args ) )
 		{
@@ -214,9 +214,9 @@ namespace sw
 
 		SW_LOG_TRACE( "── Parsing: %#", inputFile );
 
-		sw::vector<sw::string> includePaths = args.includePaths;
-		if ( args.outputDir.empty() == false )
-			includePaths.insert( includePaths.begin(), args.outputDir );
+		sw::vector<sw::string> includePaths = args._listIncludePaths;
+		if ( args._outputDir.empty() == false )
+			includePaths.insert( includePaths.begin(), args._outputDir );
 
 		sw::ParserContext context;
 		if ( context.parse( inputFile, includePaths, &sourceContent ) == false )
@@ -233,7 +233,7 @@ namespace sw
 			visitor.getCollectedTypes(),
 			visitor.getCollectedEnums(),
 			inputFile,
-			args.outputDir );
+			args._outputDir );
 
 		if ( generator.generate() == false )
 		{
@@ -250,19 +250,19 @@ namespace sw
 	static bool emitFlagOpsUmbrella( const CommandLineArgs& args )
 	{
 		const ParserClangConfig& cfg	 = ParserContext::getSharedConfig();
-		const string			 outPath = FileUtil::joinPath( args.outputDir, genConstants::kFlagOpsHeaderName );
+		const string			 outPath = FileUtil::joinPath( args._outputDir, genConstants::kFlagOpsHeaderName );
 
 		CodeEmitBuffer buffer;
 		CodeEmit	   e( buffer );
-		e.line( cfg.emitAutoGeneratedBanner );
+		e.line( cfg._emitAutoGeneratedBanner );
 		e.line( "#pragma once" );
 		e.blank();
 		e.line( "#if !defined(__REFLECT_PARSER__)" );
 
 		bool bAnyFlags = false;
-		for ( const string& inputFile : args.inputFiles )
+		for ( const string& inputFile : args._listInputFiles )
 		{
-			const string genHeader = makeGeneratedPath( args.outputDir, inputFile, cfg.emitHeaderExtension );
+			const string genHeader = makeGeneratedPath( args._outputDir, inputFile, cfg._emitHeaderExtension );
 			string		 genText;
 			if ( FileUtil::fileExists( genHeader ) == false || FileUtil::readTextFile( genHeader, genText ) == false )
 				continue;
@@ -270,7 +270,7 @@ namespace sw
 				continue;
 
 			bAnyFlags			   = true;
-			const string headerInc = makeHeaderIncludePath( inputFile, args.includePaths );
+			const string headerInc = makeHeaderIncludePath( inputFile, args._listIncludePaths );
 			const string genInc	   = FileUtil::getFileNamePart( genHeader );
 			e.linef( "#include \"%#\"", headerInc );
 			e.linef( "#include \"%#\"", genInc );
@@ -332,31 +332,31 @@ int32 main( int32 argc, utf8* argv[] )
 	}
 
 	// 2) ReflectBuiltins.gen.cpp 전용 모드
-	if ( args.emitBuiltinsGenPath.empty() == false )
+	if ( args._emitBuiltinsGenPath.empty() == false )
 	{
-		if ( args.emitTemplatesDir.empty() )
+		if ( args._emitTemplatesDir.empty() )
 		{
 			SW_LOG_ERROR( "%# requires %#.", sw::cliConstants::kEmitBuiltinsGen, sw::cliConstants::kEmitTemplates );
 			logger->shutdown();
 			return 1;
 		}
-		if ( sw::EmitTemplateStore::instance().loadDirectory( args.emitTemplatesDir ) == false )
+		if ( sw::EmitTemplateStore::instance().loadDirectory( args._emitTemplatesDir ) == false )
 		{
-			SW_LOG_ERROR( "Failed to load --emit-templates: %#", args.emitTemplatesDir );
+			SW_LOG_ERROR( "Failed to load --emit-templates: %#", args._emitTemplatesDir );
 			logger->shutdown();
 			return 1;
 		}
-		const bool ok = sw::emitReflectBuiltinsGen( args.builtinsPath, args.emitBuiltinsGenPath );
+		const bool ok = sw::emitReflectBuiltinsGen( args._builtinsPath, args._emitBuiltinsGenPath );
 		logger->shutdown();
 		return ok ? 0 : 1;
 	}
 
 	// 3) 공유 테이블 로드 (builtins / AnnotationMeta / Templates)
-	if ( args.builtinsPath.empty() == false )
+	if ( args._builtinsPath.empty() == false )
 	{
-		if ( sw::loadReflectBuiltins( args.builtinsPath ) == false )
+		if ( sw::loadReflectBuiltins( args._builtinsPath ) == false )
 		{
-			SW_LOG_ERROR( "Failed to load --builtins: %#", args.builtinsPath );
+			SW_LOG_ERROR( "Failed to load --builtins: %#", args._builtinsPath );
 			logger->shutdown();
 			return 1;
 		}
@@ -366,11 +366,11 @@ int32 main( int32 argc, utf8* argv[] )
 		SW_LOG_WARNING( "No --builtins; scalar aliases / std containers will not be registered." );
 	}
 
-	if ( args.annotationMetaPath.empty() == false )
+	if ( args._annotationMetaPath.empty() == false )
 	{
-		if ( sw::AnnotationMeta::instance().loadFile( args.annotationMetaPath ) == false )
+		if ( sw::AnnotationMeta::instance().loadFile( args._annotationMetaPath ) == false )
 		{
-			SW_LOG_ERROR( "Failed to load --annotation-meta: %#", args.annotationMetaPath );
+			SW_LOG_ERROR( "Failed to load --annotation-meta: %#", args._annotationMetaPath );
 			logger->shutdown();
 			return 1;
 		}
@@ -380,11 +380,11 @@ int32 main( int32 argc, utf8* argv[] )
 		SW_LOG_WARNING( "No --annotation-meta; PROPERTY/FUNCTION/REFLECT tokens will be ignored." );
 	}
 
-	if ( args.emitTemplatesDir.empty() == false )
+	if ( args._emitTemplatesDir.empty() == false )
 	{
-		if ( sw::EmitTemplateStore::instance().loadDirectory( args.emitTemplatesDir ) == false )
+		if ( sw::EmitTemplateStore::instance().loadDirectory( args._emitTemplatesDir ) == false )
 		{
-			SW_LOG_ERROR( "Failed to load --emit-templates: %#", args.emitTemplatesDir );
+			SW_LOG_ERROR( "Failed to load --emit-templates: %#", args._emitTemplatesDir );
 			logger->shutdown();
 			return 1;
 		}
@@ -404,22 +404,22 @@ int32 main( int32 argc, utf8* argv[] )
 	}
 
 	// 5) 증분 스킵용 타임스탬프 + 파일별 병렬 파싱
-	if ( args.builtinsPath.empty() == false && sw::FileUtil::fileExists( args.builtinsPath ) )
-		args.builtinsTimestamp = sw::FileUtil::getFileTimestamp( args.builtinsPath );
+	if ( args._builtinsPath.empty() == false && sw::FileUtil::fileExists( args._builtinsPath ) )
+		args._builtinsTimestamp = sw::FileUtil::getFileTimestamp( args._builtinsPath );
 
-	if ( args.annotationMetaPath.empty() == false && sw::FileUtil::fileExists( args.annotationMetaPath ) )
-		args.annotationMetaTimestamp = sw::FileUtil::getFileTimestamp( args.annotationMetaPath );
+	if ( args._annotationMetaPath.empty() == false && sw::FileUtil::fileExists( args._annotationMetaPath ) )
+		args._annotationMetaTimestamp = sw::FileUtil::getFileTimestamp( args._annotationMetaPath );
 
-	if ( args.emitTemplatesDir.empty() == false )
+	if ( args._emitTemplatesDir.empty() == false )
 	{
 		sw::vector<sw::string> templates;
-		if ( sw::FileUtil::collectFiles( args.emitTemplatesDir, sw::ParserContext::getSharedConfig().emitTemplateExtension, templates, false, false ) )
+		if ( sw::FileUtil::collectFiles( args._emitTemplatesDir, sw::ParserContext::getSharedConfig()._emitTemplateExtension, templates, false, false ) )
 		{
 			for ( const sw::string& tplPath : templates )
 			{
 				const uint64 tplTime = sw::FileUtil::getFileTimestamp( tplPath );
-				if ( tplTime > args.maxTemplateTimestamp )
-					args.maxTemplateTimestamp = tplTime;
+				if ( tplTime > args._maxTemplateTimestamp )
+					args._maxTemplateTimestamp = tplTime;
 			}
 		}
 	}
@@ -429,13 +429,13 @@ int32 main( int32 argc, utf8* argv[] )
 	uint32 workerCount = std::thread::hardware_concurrency();
 	if ( workerCount == 0 )
 		workerCount = 1;
-	SW_LOG_INFO( "Parsing %# input(s) with %# worker(s).", args.inputFiles.size(), workerCount );
+	SW_LOG_INFO( "Parsing %# input(s) with %# worker(s).", args._listInputFiles.size(), workerCount );
 
 	sw::CpuTimer parseTimer;
 	parseTimer.resetTimer();
 	parseTimer.startTimer();
 
-	if ( args.inputFiles.empty() == false )
+	if ( args._listInputFiles.empty() == false )
 	{
 		sw::TaskManager taskManager;
 		if ( taskManager.initialize( workerCount ) == false )
@@ -445,7 +445,7 @@ int32 main( int32 argc, utf8* argv[] )
 			return 1;
 		}
 
-		for ( const sw::string& inputFile : args.inputFiles )
+		for ( const sw::string& inputFile : args._listInputFiles )
 		{
 			sw::TaskHandle handle = taskManager.emplaceTask(
 				"ParseHeader",

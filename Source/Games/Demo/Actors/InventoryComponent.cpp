@@ -12,7 +12,7 @@ namespace sw
 		GameObject* pOwner = getOwner();
 		if ( pOwner != nullptr )
 			pOwner->addTag( "Inventory"_tag );
-		usedSlots = static_cast<int32>( itemList.size() );
+		_usedSlots = static_cast<int32>( _listItem.size() );
 	}
 
 	void InventoryComponent::onEndPlay()
@@ -22,12 +22,12 @@ namespace sw
 	void InventoryComponent::onTick( float32 deltaTime )
 	{
 		(void)deltaTime;
-		usedSlots = static_cast<int32>( itemList.size() );
+		_usedSlots = static_cast<int32>( _listItem.size() );
 	}
 
 	void InventoryComponent::toggleInventory()
 	{
-		bIsOpen = ( bIsOpen == false );
+		_bIsOpen = ( _bIsOpen == false );
 	}
 
 	bool InventoryComponent::addItem( const string& itemId, int32 count )
@@ -37,14 +37,14 @@ namespace sw
 
 		for ( int32 itemIndex = 0; itemIndex < count; ++itemIndex )
 		{
-			if ( static_cast<int32>( itemList.size() ) >= maxSlots )
+			if ( static_cast<int32>( _listItem.size() ) >= _maxSlots )
 			{
-				usedSlots = static_cast<int32>( itemList.size() );
+				_usedSlots = static_cast<int32>( _listItem.size() );
 				return false;
 			}
-			itemList.push_back( itemId );
+			_listItem.push_back( itemId );
 		}
-		usedSlots = static_cast<int32>( itemList.size() );
+		_usedSlots = static_cast<int32>( _listItem.size() );
 		return true;
 	}
 
@@ -54,11 +54,11 @@ namespace sw
 			return false;
 
 		int32 removedCount{ 0 };
-		for ( auto itemIter = itemList.begin(); itemIter != itemList.end() && removedCount < count; )
+		for ( auto itemIter = _listItem.begin(); itemIter != _listItem.end() && removedCount < count; )
 		{
 			if ( *itemIter == itemId )
 			{
-				itemIter = itemList.erase( itemIter );
+				itemIter = _listItem.erase( itemIter );
 				removedCount++;
 			}
 			else
@@ -66,7 +66,7 @@ namespace sw
 				++itemIter;
 			}
 		}
-		usedSlots = static_cast<int32>( itemList.size() );
+		_usedSlots = static_cast<int32>( _listItem.size() );
 		return ( removedCount == count );
 	}
 
@@ -76,7 +76,7 @@ namespace sw
 			return false;
 
 		int32 foundCount{ 0 };
-		for ( const string& item : itemList )
+		for ( const string& item : _listItem )
 		{
 			if ( item == itemId )
 			{
@@ -91,16 +91,16 @@ namespace sw
 	void InventoryComponent::addGold( int32 amount )
 	{
 		if ( amount > 0 )
-			gold += amount;
+			_gold += amount;
 	}
 
 	bool InventoryComponent::spendGold( int32 amount )
 	{
 		if ( amount <= 0 )
 			return true;
-		if ( gold >= amount )
+		if ( _gold >= amount )
 		{
-			gold -= amount;
+			_gold -= amount;
 			return true;
 		}
 		return false;

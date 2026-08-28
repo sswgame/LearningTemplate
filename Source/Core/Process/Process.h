@@ -19,8 +19,8 @@ namespace sw
 	 */
 	struct ProcessOptions
 	{
-		string workingDirectory{};
-		bool   bCreateWindow{ false };
+		string _workingDirectory{};
+		bool   _bCreateWindow{ false };
 	};
 
 	/**

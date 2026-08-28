@@ -23,16 +23,16 @@ namespace sw
 		REFLECT_BODY();
 
 		PROPERTY()
-		AttackKind attackKind;
+		AttackKind _attackKind;
 
 		PROPERTY()
-		float32 knockbackPower;
+		float32 _knockbackPower;
 
 		PROPERTY()
-		float2 hitboxSize;
+		float2 _hitboxSize;
 
 		PROPERTY()
-		vector<uint64> hitVictimList;
+		vector<uint64> _listHitVictim;
 
 		AttackComponent();
 		virtual ~AttackComponent() override						 = default;

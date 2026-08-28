@@ -25,8 +25,8 @@ namespace sw
 		 */
 		struct PcmClip
 		{
-			WAVEFORMATEX  format{};
-			vector<uint8> listData;
+			WAVEFORMATEX  _format{};
+			vector<uint8> _listData;
 		};
 
 		struct VoiceBuffer
@@ -149,8 +149,8 @@ namespace sw
 				if ( fmt.wFormatTag != WAVE_FORMAT_PCM || fmt.nChannels == 0 || fmt.nSamplesPerSec == 0 || fmt.nBlockAlign == 0 )
 					return false;
 
-				out.format = fmt;
-				out.listData.assign( pData, pData + dataSize );
+				out._format = fmt;
+				out._listData.assign( pData, pData + dataSize );
 				return true;
 			}
 
@@ -235,8 +235,8 @@ namespace sw
 
 				if ( listPcm.empty() )
 					return false;
-				out.format	 = fmt;
-				out.listData = std::move( listPcm );
+				out._format	  = fmt;
+				out._listData = std::move( listPcm );
 				return true;
 			}
 
@@ -614,7 +614,7 @@ namespace sw
 		const string requestedPath = args.get<string>( 2 );
 
 		shared_ptr<PcmClip> pClip = _impl->getOrLoadClip( abs );
-		if ( pClip == nullptr || pClip->listData.empty() )
+		if ( pClip == nullptr || pClip->_listData.empty() )
 		{
 			SW_LOG_WARNING( "Failed to decode: %#", abs );
 			return;
@@ -626,7 +626,7 @@ namespace sw
 			return;
 
 		IXAudio2SourceVoice* pVoice{ nullptr };
-		HRESULT				 hr = _impl->_pXAudio->CreateSourceVoice( &pVoice, &pClip->format );
+		HRESULT				 hr = _impl->_pXAudio->CreateSourceVoice( &pVoice, &pClip->_format );
 		if ( FAILED( hr ) || pVoice == nullptr )
 		{
 			SW_LOG_WARNING( "CreateSourceVoice failed (0x%#)", static_cast<uint32>( hr ) );
@@ -634,8 +634,8 @@ namespace sw
 		}
 
 		XAUDIO2_BUFFER buf{};
-		buf.AudioBytes = static_cast<UINT32>( pClip->listData.size() );
-		buf.pAudioData = pClip->listData.data();
+		buf.AudioBytes = static_cast<UINT32>( pClip->_listData.size() );
+		buf.pAudioData = pClip->_listData.data();
 		if ( loop )
 		{
 			buf.LoopCount		= XAUDIO2_LOOP_INFINITE;

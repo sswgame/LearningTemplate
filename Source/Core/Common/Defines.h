@@ -36,10 +36,26 @@ namespace sw
 		inline constexpr uint32 kMaxBuffer4096 = 4096;
 		/** @brief 로그/어서션 포맷용 최대 스택 버퍼입니다. */
 		inline constexpr uint32 kMaxBuffer8192 = 8192;
+
+		/** @brief 기본 로그 태그입니다. */
+		inline constexpr const utf8* kDefaultLogTag = "Engine";
+		/** @brief 기본 로그 파일 식별자입니다. */
+		inline constexpr const utf8* kDefaultLogFile = "unknown";
 	} // namespace constant
 
 	// ------------------------------------------------------------------------------
-	// 2) 무효 인덱스 — 부호 없는 형은 전비트 1, 부호 있는 형은 -1
+	// 2) 폴더 및 공통 경로 상수
+	// ------------------------------------------------------------------------------
+	namespace path
+	{
+		/** @brief 기본 저장 폴더 이름입니다. */
+		inline constexpr const utf8* kSavedFolder = "Saved";
+		/** @brief 기본 로그 폴더 이름입니다. */
+		inline constexpr const utf8* kLogsFolder = "Logs";
+	} // namespace path
+
+	// ------------------------------------------------------------------------------
+	// 3) 무효 인덱스 — 부호 없는 형은 전비트 1, 부호 있는 형은 -1
 	// ------------------------------------------------------------------------------
 	namespace invalid_index
 	{

@@ -115,7 +115,7 @@ namespace sw::editor
 	bool ImGuiDX12RendererBackend::initialize( class IRHIDevice* pRhiDevice )
 	{
 	#if defined( SW_PLATFORM_WINDOWS )
-		SW_LOG_TRACE( "ImGuiDX12RendererBackend::initialize Start" );
+		SW_LOG_TRACE( "Initialize start." );
 		_pRHIDevice = pRhiDevice;
 		if ( _pRHIDevice == nullptr )
 			return false;

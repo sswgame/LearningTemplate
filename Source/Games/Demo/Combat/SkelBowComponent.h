@@ -10,22 +10,22 @@ namespace sw
 		REFLECT_BODY();
 
 		PROPERTY()
-		float32 aimAngle{ 0.0f };
+		float32 _aimAngle{ 0.0f };
 
 		PROPERTY()
-		float32 chargeAmount{ 0.0f };
+		float32 _chargeAmount{ 0.0f };
 
 		PROPERTY()
-		bool bAiming{ false };
+		bool _bAiming{ false };
 
 		PROPERTY()
-		float32 chargeSpeed{ 0.0f };
+		float32 _chargeSpeed{ 0.0f };
 
 		PROPERTY()
-		float32 arrowSpeed{ 0.0f };
+		float32 _arrowSpeed{ 0.0f };
 
 		PROPERTY()
-		int32 arrowDamage{ 0 };
+		int32 _arrowDamage{ 0 };
 
 		SkelBowComponent()										   = default;
 		virtual ~SkelBowComponent() override					   = default;

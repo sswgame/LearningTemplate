@@ -46,7 +46,7 @@ SW_TEST_CASE( SparseSet, SwapRemoveKeepsRemainingValues )
 {
 	struct Item
 	{
-		int32 value{ 0 };
+		int32 _value{ 0 };
 	};
 
 	sparse_set<Item> set;
@@ -57,13 +57,13 @@ SW_TEST_CASE( SparseSet, SwapRemoveKeepsRemainingValues )
 	set.erase( 1 );
 	SW_EXPECT_FALSE( set.contains( 1 ) );
 	SW_EXPECT_EQUAL( 2, set.size() );
-	SW_EXPECT_EQUAL( 10, set[0].value );
-	SW_EXPECT_EQUAL( 30, set[2].value );
+	SW_EXPECT_EQUAL( 10, set[0]._value );
+	SW_EXPECT_EQUAL( 30, set[2]._value );
 
 	set.emplace( 3, Item{ 40 } );
-	SW_EXPECT_EQUAL( 10, set[0].value );
-	SW_EXPECT_EQUAL( 30, set[2].value );
-	SW_EXPECT_EQUAL( 40, set[3].value );
+	SW_EXPECT_EQUAL( 10, set[0]._value );
+	SW_EXPECT_EQUAL( 30, set[2]._value );
+	SW_EXPECT_EQUAL( 40, set[3]._value );
 }
 
 /**

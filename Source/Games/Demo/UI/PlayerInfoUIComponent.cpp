@@ -12,10 +12,10 @@
 namespace sw
 {
 	PlayerInfoUIComponent::PlayerInfoUIComponent()
-		: playerLevel{ 0 }
-		, playerHp{ 0 }
-		, playerMaxHp{ 0 }
-		, playerMp{ 0 }
+		: _playerLevel{ 0 }
+		, _playerHp{ 0 }
+		, _playerMaxHp{ 0 }
+		, _playerMp{ 0 }
 	{
 	}
 
@@ -51,13 +51,13 @@ namespace sw
 		if ( pUnitStats == nullptr )
 			return;
 
-		playerHp	= pUnitStats->getHp();
-		playerMaxHp = pUnitStats->getMaxHp();
+		_playerHp	 = pUnitStats->getHp();
+		_playerMaxHp = pUnitStats->getMaxHp();
 	}
 
 	void PlayerInfoUIComponent::updateStats( int32 hp, int32 maxHp )
 	{
-		playerHp	= hp;
-		playerMaxHp = maxHp;
+		_playerHp	 = hp;
+		_playerMaxHp = maxHp;
 	}
 } // namespace sw

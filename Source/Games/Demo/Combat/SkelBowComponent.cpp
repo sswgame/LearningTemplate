@@ -19,8 +19,8 @@ namespace sw
 		GameObject* pOwner = getOwner();
 		if ( pOwner != nullptr )
 			pOwner->addTag( "Weapon"_tag );
-		chargeAmount = 0.0f;
-		bAiming		 = false;
+		_chargeAmount = 0.0f;
+		_bAiming	  = false;
 	}
 
 	void SkelBowComponent::onEndPlay()
@@ -29,34 +29,34 @@ namespace sw
 
 	void SkelBowComponent::onTick( float32 deltaTime )
 	{
-		if ( bAiming )
+		if ( _bAiming )
 		{
-			chargeAmount += deltaTime * chargeSpeed;
-			if ( chargeAmount > 1.0f )
-				chargeAmount = 1.0f;
+			_chargeAmount += deltaTime * _chargeSpeed;
+			if ( _chargeAmount > 1.0f )
+				_chargeAmount = 1.0f;
 		}
 	}
 
 	void SkelBowComponent::startAiming()
 	{
-		bAiming		 = true;
-		chargeAmount = 0.0f;
+		_bAiming	  = true;
+		_chargeAmount = 0.0f;
 	}
 
 	void SkelBowComponent::stopAiming()
 	{
-		bAiming		 = false;
-		chargeAmount = 0.0f;
+		_bAiming	  = false;
+		_chargeAmount = 0.0f;
 	}
 
 	void SkelBowComponent::setAimAngle( float32 angle )
 	{
-		aimAngle = angle;
+		_aimAngle = angle;
 	}
 
 	void SkelBowComponent::fire()
 	{
-		if ( chargeAmount <= 0.0f )
+		if ( _chargeAmount <= 0.0f )
 			return;
 
 		GameObject* pOwner = getOwner();
@@ -76,10 +76,10 @@ namespace sw
 			return;
 
 		const float3  ownerWorldPos = pOwnerSceneComp->getWorldPosition();
-		const float32 firedCharge	= chargeAmount;
-		const float32 firedAngle	= aimAngle;
-		const float32 firedSpeed	= arrowSpeed;
-		const int32	  firedDamage	= arrowDamage;
+		const float32 firedCharge	= _chargeAmount;
+		const float32 firedAngle	= _aimAngle;
+		const float32 firedSpeed	= _arrowSpeed;
+		const int32	  firedDamage	= _arrowDamage;
 
 		auto spawnArrow = [pGameObjectManager, ownerWorldPos, firedCharge, firedAngle, firedSpeed, firedDamage]()
 		{
@@ -106,7 +106,7 @@ namespace sw
 
 		pGameObjectManager->executeOrDeferPostTick( spawnArrow );
 
-		bAiming		 = false;
-		chargeAmount = 0.0f;
+		_bAiming	  = false;
+		_chargeAmount = 0.0f;
 	}
 } // namespace sw

@@ -10,10 +10,10 @@ namespace sw
 		REFLECT_BODY();
 
 		PROPERTY()
-		int32 availableDashes;
+		int32 _availableDashes;
 
 		PROPERTY()
-		float32 rechargeRatio;
+		float32 _rechargeRatio;
 
 		DashUIComponent();
 		virtual ~DashUIComponent() override						 = default;

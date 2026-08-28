@@ -21,40 +21,40 @@ namespace sw
 		REFLECT_BODY();
 
 		PROPERTY()
-		float32 speed{ 0.0f };
+		float32 _speed{ 0.0f };
 
 		PROPERTY()
-		float32 jumpPower{ 0.0f };
+		float32 _jumpPower{ 0.0f };
 
 		PROPERTY()
-		float32 dashSpeed{ 0.0f };
+		float32 _dashSpeed{ 0.0f };
 
 		PROPERTY()
-		float32 dashTime{ 0.0f };
+		float32 _dashTime{ 0.0f };
 
 		PROPERTY()
-		float32 dashTimer{ 0.0f };
+		float32 _dashTimer{ 0.0f };
 
 		PROPERTY()
-		float32 dashCoolTime{ 0.0f };
+		float32 _dashCoolTime{ 0.0f };
 
 		PROPERTY()
-		float32 dashCoolTimer{ 0.0f };
+		float32 _dashCoolTimer{ 0.0f };
 
 		PROPERTY()
-		int32 dashCount{ 0 };
+		int32 _dashCount{ 0 };
 
 		PROPERTY()
-		int32 maxDashCount{ 0 };
+		int32 _maxDashCount{ 0 };
 
 		PROPERTY()
-		int32 moveDir{ 1 }; // 1 = right, -1 = left
+		int32 _moveDir{ 1 }; // 1 = right, -1 = left
 
 		PROPERTY()
-		PlayerMoveState currentState{ PlayerMoveState::Idle };
+		PlayerMoveState _currentState{ PlayerMoveState::Idle };
 
 		PROPERTY()
-		string currentCostume{ "basic_" };
+		string _currentCostume{ "basic_" };
 
 		PlayerComponent()										 = default;
 		virtual ~PlayerComponent() override						 = default;

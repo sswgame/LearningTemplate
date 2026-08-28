@@ -13,19 +13,19 @@ namespace sw
 		REFLECT_BODY();
 
 		PROPERTY()
-		int32 maxSlots{ 0 };
+		int32 _maxSlots{ 0 };
 
 		PROPERTY()
-		int32 usedSlots{ 0 };
+		int32 _usedSlots{ 0 };
 
 		PROPERTY()
-		int32 gold{ 0 };
+		int32 _gold{ 0 };
 
 		PROPERTY()
-		bool bIsOpen{ false };
+		bool _bIsOpen{ false };
 
 		PROPERTY()
-		vector<string> itemList;
+		vector<string> _listItem;
 
 		InventoryComponent()										   = default;
 		virtual ~InventoryComponent() override						   = default;

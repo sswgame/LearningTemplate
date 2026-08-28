@@ -324,10 +324,10 @@ namespace sw
 		/** @brief %# 위치와 그 자리에 쓸 Format 입니다. */
 		struct PlaceholderMatch
 		{
-			size_t pos = string_view::npos;
-			size_t len{ 0 };
-			Format overrideFormat{};
-			bool   hasOverrideFormat{ false };
+			size_t _pos = string_view::npos;
+			size_t _len{ 0 };
+			Format _overrideFormat{};
+			bool   _bHasOverrideFormat{ false };
 		};
 
 		/** @brief 다음 플레이스홀더를 찾습니다. */
@@ -348,32 +348,32 @@ namespace sw
 							continue;
 						}
 
-						match.pos = charIndex;
+						match._pos = charIndex;
 						if ( nextChar == '#' || nextChar == 's' || nextChar == 'd' || nextChar == 'i' ||
 							 nextChar == 'u' || nextChar == 'f' || nextChar == 'c' || nextChar == 'g' || nextChar == 'e' )
 						{
-							match.len = 2;
+							match._len = 2;
 							return match;
 						}
 						if ( nextChar == 'x' )
 						{
-							match.len = 2;
-							match.overrideFormat.hex();
-							match.hasOverrideFormat = true;
+							match._len = 2;
+							match._overrideFormat.hex();
+							match._bHasOverrideFormat = true;
 							return match;
 						}
 						if ( nextChar == 'X' )
 						{
-							match.len = 2;
-							match.overrideFormat.hexUpper();
-							match.hasOverrideFormat = true;
+							match._len = 2;
+							match._overrideFormat.hexUpper();
+							match._bHasOverrideFormat = true;
 							return match;
 						}
 						if ( nextChar == 'p' )
 						{
-							match.len = 2;
-							match.overrideFormat.hex();
-							match.hasOverrideFormat = true;
+							match._len = 2;
+							match._overrideFormat.hex();
+							match._bHasOverrideFormat = true;
 							return match;
 						}
 
@@ -383,16 +383,16 @@ namespace sw
 							utf8 spec = format[charIndex + 3];
 							if ( spec == 'd' || spec == 'i' || spec == 'u' || spec == 'x' || spec == 'X' )
 							{
-								match.len = 4;
+								match._len = 4;
 								if ( spec == 'x' )
 								{
-									match.overrideFormat.hex();
-									match.hasOverrideFormat = true;
+									match._overrideFormat.hex();
+									match._bHasOverrideFormat = true;
 								}
 								else if ( spec == 'X' )
 								{
-									match.overrideFormat.hexUpper();
-									match.hasOverrideFormat = true;
+									match._overrideFormat.hexUpper();
+									match._bHasOverrideFormat = true;
 								}
 								return match;
 							}
@@ -402,22 +402,22 @@ namespace sw
 							utf8 spec = format[charIndex + 2];
 							if ( spec == 'd' || spec == 'i' || spec == 'u' || spec == 'f' || spec == 'x' || spec == 'X' )
 							{
-								match.len = 3;
+								match._len = 3;
 								if ( spec == 'x' )
 								{
-									match.overrideFormat.hex();
-									match.hasOverrideFormat = true;
+									match._overrideFormat.hex();
+									match._bHasOverrideFormat = true;
 								}
 								else if ( spec == 'X' )
 								{
-									match.overrideFormat.hexUpper();
-									match.hasOverrideFormat = true;
+									match._overrideFormat.hexUpper();
+									match._bHasOverrideFormat = true;
 								}
 								return match;
 							}
 						}
 
-						match.len = 2;
+						match._len = 2;
 						return match;
 					}
 				}
@@ -448,15 +448,15 @@ namespace sw
 		static uint32 formatInternal( utf8* SW_RESTRICT pBuffer, uint32 pos, uint32 capacity, string_view format, T&& value, Args&&... args ) noexcept
 		{
 			PlaceholderMatch match = findNextPlaceholder( format );
-			if ( match.pos != string_view::npos )
+			if ( match._pos != string_view::npos )
 			{
-				pos = writeFormatPrefix( pBuffer, pos, capacity, format.substr( 0, match.pos ) );
-				if ( match.hasOverrideFormat )
-					pos = addValueWithFormat( pBuffer, pos, capacity, std::forward<T>( value ), match.overrideFormat );
+				pos = writeFormatPrefix( pBuffer, pos, capacity, format.substr( 0, match._pos ) );
+				if ( match._bHasOverrideFormat )
+					pos = addValueWithFormat( pBuffer, pos, capacity, std::forward<T>( value ), match._overrideFormat );
 				else
 					pos = addValue( pBuffer, pos, capacity, std::forward<T>( value ) );
 
-				string_view nextFormat = format.substr( match.pos + match.len );
+				string_view nextFormat = format.substr( match._pos + match._len );
 				if constexpr ( sizeof...( args ) > 0 )
 					return formatInternal( pBuffer, pos, capacity, nextFormat, std::forward<Args>( args )... );
 				else

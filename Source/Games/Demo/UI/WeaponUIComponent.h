@@ -12,13 +12,13 @@ namespace sw
 		REFLECT_BODY();
 
 		PROPERTY()
-		string weaponName;
+		string _weaponName;
 
 		PROPERTY()
-		float32 coolTimeRatio;
+		float32 _coolTimeRatio;
 
 		PROPERTY()
-		int32 slotIndex;
+		int32 _slotIndex;
 
 		WeaponUIComponent();
 		virtual ~WeaponUIComponent() override						 = default;

@@ -57,7 +57,7 @@ namespace sw
 
 		string	cmdStr	   = string( command );
 		wstring wsCmdLine  = StringUtil::utf8ToUtf16( cmdStr.c_str() );
-		wstring wsBuildDir = StringUtil::utf8ToUtf16( options.workingDirectory.c_str() );
+		wstring wsBuildDir = StringUtil::utf8ToUtf16( options._workingDirectory.c_str() );
 
 		STARTUPINFOW si{};
 		si.cb		  = sizeof( STARTUPINFOW );
@@ -65,7 +65,7 @@ namespace sw
 		si.hStdOutput = hStdOutWrite;
 		si.dwFlags |= STARTF_USESTDHANDLES;
 
-		const DWORD creationFlags = options.bCreateWindow ? 0 : CREATE_NO_WINDOW;
+		const DWORD creationFlags = options._bCreateWindow ? 0 : CREATE_NO_WINDOW;
 
 		PROCESS_INFORMATION pi{};
 		const BOOL			bCreated = CreateProcessW(
@@ -76,7 +76,7 @@ namespace sw
 			 TRUE,
 			 creationFlags,
 			 nullptr,
-			 options.workingDirectory.empty() ? nullptr : wsBuildDir.c_str(),
+			 options._workingDirectory.empty() ? nullptr : wsBuildDir.c_str(),
 			 &si,
 			 &pi );
 

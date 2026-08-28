@@ -43,13 +43,13 @@ namespace sw
 	/** @brief 싱크·리스너에 넘기는 한 줄입니다. */
 	struct LogEntry
 	{
-		LogLevel level = LogLevel::Info;
-		string	 tag;
-		string	 caller;
-		string	 message;
-		string	 file;
-		int32	 line{ 0 };
-		string	 timeStamp;
+		LogLevel _level = LogLevel::Info;
+		string	 _tag;
+		string	 _caller;
+		string	 _message;
+		string	 _file;
+		int32	 _line{ 0 };
+		string	 _timeStamp;
 	};
 
 	SW_DECLARE_MULTI_CAST_DELEGATE( void, LogWrittenMulticast, const LogEntry& );

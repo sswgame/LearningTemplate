@@ -23,43 +23,43 @@ namespace sw
 		REFLECT_BODY();
 
 		PROPERTY()
-		string monsterId;
+		string _monsterId;
 
 		PROPERTY()
-		MonsterArchetype archetype;
+		MonsterArchetype _archetype;
 
 		PROPERTY()
-		float32 patrolRange;
+		float32 _patrolRange;
 
 		PROPERTY()
-		float32 detectRange;
+		float32 _detectRange;
 
 		PROPERTY()
-		float32 attackRange;
+		float32 _attackRange;
 
 		PROPERTY()
-		float32 moveSpeed;
+		float32 _moveSpeed;
 
 		PROPERTY()
-		float32 attackCoolTime;
+		float32 _attackCoolTime;
 
 		PROPERTY()
-		int32 moveDir;
+		int32 _moveDir;
 
 		PROPERTY()
-		float32 stateTimer;
+		float32 _stateTimer;
 
 		PROPERTY()
-		MonsterAiState aiState;
+		MonsterAiState _aiState;
 
 		PROPERTY()
-		string projectilePrefab;
+		string _projectilePrefab;
 
 		PROPERTY()
-		float32 startX;
+		float32 _startX;
 
 		PROPERTY()
-		float32 attackTimer;
+		float32 _attackTimer;
 
 		MonsterComponent();
 		virtual ~MonsterComponent() override					   = default;

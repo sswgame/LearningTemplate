@@ -79,7 +79,7 @@ namespace sw
 		if ( texture == 0 )
 			return 0;
 		const OpenGLTextureRecord* pRec = resolveTexture( texture );
-		return pRec != nullptr ? pRec->texture : 0;
+		return pRec != nullptr ? pRec->_texture : 0;
 	}
 
 	RHIPipelineStateHandle OpenGLRHIResource::createPipelineState( const RHIPipelineStateDesc& desc )
@@ -169,7 +169,7 @@ namespace sw
 				GLint isLinked{ 0 };
 				glGetProgramiv( program, GL_LINK_STATUS, &isLinked );
 				if ( isLinked == GL_TRUE )
-					record.program = program;
+					record._program = program;
 				else
 				{
 					GLchar infoLog[constant::kMaxBuffer1024];
@@ -198,16 +198,16 @@ namespace sw
 				glDeleteShader( ps );
 		}
 
-		if ( record.program == 0 )
+		if ( record._program == 0 )
 			return 0;
 
-		record.topology			  = desc._topology;
-		record.fillMode			  = desc._fillMode;
-		record.cullMode			  = desc._cullMode;
+		record._topology		  = desc._topology;
+		record._fillMode		  = desc._fillMode;
+		record._cullMode		  = desc._cullMode;
 		record._bEnableDepthTest  = desc._bEnableDepthTest ? 1 : 0;
 		record._bEnableDepthWrite = desc._bEnableDepthWrite ? 1 : 0;
 		record._bEnableBlend	  = desc._bEnableBlend ? 1 : 0;
-		record.reserved			  = 0;
+		record._reserved		  = 0;
 
 		return _pDevice->_pipelineStates.insert( std::move( record ) );
 	}
@@ -252,7 +252,7 @@ namespace sw
 				GLint isLinked{ 0 };
 				glGetProgramiv( program, GL_LINK_STATUS, &isLinked );
 				if ( isLinked == GL_TRUE )
-					record.program = program;
+					record._program = program;
 				else
 				{
 					GLchar infoLog[constant::kMaxBuffer1024];
@@ -269,7 +269,7 @@ namespace sw
 			}
 			glDeleteShader( cs );
 		}
-		if ( record.program == 0 )
+		if ( record._program == 0 )
 			return 0;
 
 		return _pDevice->_pipelineStates.insert( std::move( record ) );
@@ -282,8 +282,8 @@ namespace sw
 			return;
 
 		OpenGLRHIDevice::OpenGLPipelineStateRecord& record	= *pRecordPtr;
-		const GLuint								program = record.program;
-		const GLuint								vao		= record.vao;
+		const GLuint								program = record._program;
+		const GLuint								vao		= record._vao;
 		_pDevice->_pipelineStates.erase( pso );
 
 		if ( _pDevice->_boundGraphicsPso == pso )
@@ -311,9 +311,9 @@ namespace sw
 	RHIRenderPassHandle OpenGLRHIResource::createRenderPass( const RHIRenderPassDesc& desc )
 	{
 		OpenGLRHIDevice::OpenGLRenderPassRecord record{};
-		record.desc		= desc;
-		record._bAlive	= 1;
-		record.reserved = 0;
+		record._desc	 = desc;
+		record._bAlive	 = 1;
+		record._reserved = 0;
 		_pDevice->_listRenderPass.push_back( record );
 		return _pDevice->_listRenderPass.size();
 	}
@@ -323,7 +323,7 @@ namespace sw
 		if ( pass == 0 || pass > _pDevice->_listRenderPass.size() )
 			return;
 		_pDevice->_listRenderPass[pass - 1]._bAlive = 0;
-		_pDevice->_listRenderPass[pass - 1].desc	= RHIRenderPassDesc{};
+		_pDevice->_listRenderPass[pass - 1]._desc	= RHIRenderPassDesc{};
 	}
 
 	RHIBufferHandle OpenGLRHIResource::createConstantBuffer( uint32 size )
@@ -453,15 +453,15 @@ namespace sw
 
 		for ( OpenGLRHIDevice::BindlessResourceRecord& rec : _pDevice->_listRegisteredBindlessVector )
 		{
-			if ( rec.buffer != buffer )
+			if ( rec._buffer != buffer )
 				continue;
-			rec.buffer = 0;
+			rec._buffer = 0;
 		}
 		for ( OpenGLRHIDevice::BindlessResourceRecord& rec : _pDevice->_listRegisteredUAV )
 		{
-			if ( rec.buffer != buffer )
+			if ( rec._buffer != buffer )
 				continue;
-			rec.buffer = 0;
+			rec._buffer = 0;
 		}
 
 		auto releaseCb = [glBuffer = glName]()
@@ -518,14 +518,14 @@ namespace sw
 		glBindTexture( GL_TEXTURE_2D, 0 );
 
 		OpenGLRHIDevice::OpenGLTextureRecord record{};
-		record.texture		  = tex;
-		record.width		  = desc._width;
-		record.height		  = desc._height;
-		record.mipLevels	  = mipLevels;
-		record.format		  = desc._format;
+		record._texture		  = tex;
+		record._width		  = desc._width;
+		record._height		  = desc._height;
+		record._mipLevels	  = mipLevels;
+		record._format		  = desc._format;
 		record._bDepthStencil = bDepth ? 1 : 0;
 		record._bUAV		  = desc._bIsUnorderedAccess ? 1 : 0;
-		record.reserved		  = 0;
+		record._reserved	  = 0;
 
 		if ( desc._bIsRenderTarget || bDepth )
 		{
@@ -552,7 +552,7 @@ namespace sw
 				glDeleteFramebuffers( 1, &fbo );
 			}
 			else
-				record.fbo = fbo;
+				record._fbo = fbo;
 		}
 
 		return _pDevice->_gpuTextures.insert( std::move( record ) );
@@ -587,14 +587,14 @@ namespace sw
 				++compIt;
 		}
 
-		const GLuint fboName = owned.fbo;
-		const GLuint texName = owned.texture;
+		const GLuint fboName = owned._fbo;
+		const GLuint texName = owned._texture;
 
 		for ( size_t textureIndex = 0; textureIndex < _pDevice->_listRegisteredTexture.size(); ++textureIndex )
 		{
-			if ( _pDevice->_listRegisteredTexture[textureIndex].texture != texture )
+			if ( _pDevice->_listRegisteredTexture[textureIndex]._texture != texture )
 				continue;
-			_pDevice->_listRegisteredTexture[textureIndex].texture = 0;
+			_pDevice->_listRegisteredTexture[textureIndex]._texture = 0;
 			_pDevice->_listTextureFree.push_back( static_cast<uint32>( textureIndex ) );
 		}
 
@@ -635,7 +635,7 @@ namespace sw
 		if ( index >= _pDevice->_listRegisteredTexture.size() )
 			_pDevice->_listRegisteredTexture.resize( index + 1 );
 
-		_pDevice->_listRegisteredTexture[index].texture = texture;
+		_pDevice->_listRegisteredTexture[index]._texture = texture;
 		return index;
 	}
 
@@ -658,7 +658,7 @@ namespace sw
 
 		if ( index >= _pDevice->_listRegisteredBindlessVector.size() )
 			_pDevice->_listRegisteredBindlessVector.resize( index + 1 );
-		_pDevice->_listRegisteredBindlessVector[index].buffer = buffer;
+		_pDevice->_listRegisteredBindlessVector[index]._buffer = buffer;
 		return index;
 	}
 
@@ -666,7 +666,7 @@ namespace sw
 	{
 		if ( index < _pDevice->_listRegisteredBindlessVector.size() )
 		{
-			_pDevice->_listRegisteredBindlessVector[index].buffer = 0;
+			_pDevice->_listRegisteredBindlessVector[index]._buffer = 0;
 			_pDevice->_listBindlessFree.push_back( index );
 		}
 	}
@@ -690,7 +690,7 @@ namespace sw
 
 		if ( index >= _pDevice->_listRegisteredUAV.size() )
 			_pDevice->_listRegisteredUAV.resize( index + 1 );
-		_pDevice->_listRegisteredUAV[index].buffer = buffer;
+		_pDevice->_listRegisteredUAV[index]._buffer = buffer;
 		return index;
 	}
 
@@ -698,7 +698,7 @@ namespace sw
 	{
 		if ( index < _pDevice->_listRegisteredUAV.size() )
 		{
-			_pDevice->_listRegisteredUAV[index].buffer = 0;
+			_pDevice->_listRegisteredUAV[index]._buffer = 0;
 			_pDevice->_listUavFree.push_back( index );
 		}
 	}

@@ -12,10 +12,10 @@
 namespace sw
 {
 	AttackComponent::AttackComponent()
-		: attackKind{ AttackKind::MeleeSweep }
-		, knockbackPower{ 0.0f }
-		, hitboxSize{ 64.0f, 64.0f }
-		, hitVictimList{}
+		: _attackKind{ AttackKind::MeleeSweep }
+		, _knockbackPower{ 0.0f }
+		, _hitboxSize{ 64.0f, 64.0f }
+		, _listHitVictim{}
 	{
 	}
 
@@ -25,7 +25,7 @@ namespace sw
 		GameObject* pOwner = getOwner();
 		if ( pOwner != nullptr )
 			pOwner->addTag( "Attack"_tag );
-		hitVictimList.clear();
+		_listHitVictim.clear();
 	}
 
 	void AttackComponent::onEndPlay()
@@ -39,7 +39,7 @@ namespace sw
 
 		if ( isAttackActive() == false )
 		{
-			hitVictimList.clear();
+			_listHitVictim.clear();
 			return;
 		}
 
@@ -60,7 +60,7 @@ namespace sw
 			return;
 
 		const float3 ownerWorldPos = pOwnerSceneComp->getWorldPosition();
-		const float2 halfHitbox{ hitboxSize._x * 0.5f, hitboxSize._y * 0.5f };
+		const float2 halfHitbox{ _hitboxSize._x * 0.5f, _hitboxSize._y * 0.5f };
 		const float2 attackMin{ ownerWorldPos._x - halfHitbox._x, ownerWorldPos._y - halfHitbox._y };
 		const float2 attackMax{ ownerWorldPos._x + halfHitbox._x, ownerWorldPos._y + halfHitbox._y };
 
@@ -75,7 +75,7 @@ namespace sw
 				continue;
 
 			const uint64 targetId = pTargetObj->getObjectId();
-			if ( std::find( hitVictimList.begin(), hitVictimList.end(), targetId ) != hitVictimList.end() )
+			if ( std::find( _listHitVictim.begin(), _listHitVictim.end(), targetId ) != _listHitVictim.end() )
 				continue;
 
 			SceneComponent* pTargetSceneComp = pTargetObj->getPrimarySceneComponent();
@@ -93,13 +93,13 @@ namespace sw
 				{
 					const int32 damageAmount = getDamage() > 0 ? getDamage() : 10;
 					pStats->takeDamage( damageAmount );
-					hitVictimList.push_back( targetId );
+					_listHitVictim.push_back( targetId );
 
-					if ( knockbackPower > 0.0f )
+					if ( _knockbackPower > 0.0f )
 					{
 						const float32 dirX	 = ( targetWorldPos._x >= ownerWorldPos._x ) ? 1.0f : -1.0f;
 						float3		  newPos = pTargetSceneComp->getLocalPosition();
-						newPos._x += dirX * ( knockbackPower * 0.1f );
+						newPos._x += dirX * ( _knockbackPower * 0.1f );
 						pTargetSceneComp->setLocalPosition( newPos );
 					}
 				}
@@ -109,9 +109,9 @@ namespace sw
 
 	void AttackComponent::triggerAttack( AttackKind kind, float32 damage, float32 duration, const float2& size )
 	{
-		attackKind = kind;
+		_attackKind = kind;
 		beginAttack( static_cast<int32>( damage ), duration );
-		hitboxSize = size;
-		hitVictimList.clear();
+		_hitboxSize = size;
+		_listHitVictim.clear();
 	}
 } // namespace sw

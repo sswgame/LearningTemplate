@@ -12,34 +12,34 @@ namespace sw
 		REFLECT_BODY();
 
 		PROPERTY()
-		float32 frontCloudSpeed{ 0.0f };
+		float32 _frontCloudSpeed{ 0.0f };
 
 		PROPERTY()
-		float32 startFrontPosX{ 0.0f };
+		float32 _startFrontPosX{ 0.0f };
 
 		PROPERTY()
-		float32 maxFrontPosX{ 0.0f };
+		float32 _maxFrontPosX{ 0.0f };
 
 		PROPERTY()
-		float32 backCloudSpeed{ 0.0f };
+		float32 _backCloudSpeed{ 0.0f };
 
 		PROPERTY()
-		float32 startBackCloudPosX{ 0.0f };
+		float32 _startBackCloudPosX{ 0.0f };
 
 		PROPERTY()
-		float32 maxBackCloudPosX{ 0.0f };
+		float32 _maxBackCloudPosX{ 0.0f };
 
 		PROPERTY()
-		string nextSceneName{};
+		string _nextSceneName{};
 
 		PROPERTY()
-		int32 selectIndex{ 0 };
+		int32 _selectIndex{ 0 };
 
 		PROPERTY()
-		float32 frontCloudCurrentX{ 0.0f };
+		float32 _frontCloudCurrentX{ 0.0f };
 
 		PROPERTY()
-		float32 backCloudCurrentX{ 0.0f };
+		float32 _backCloudCurrentX{ 0.0f };
 
 		TitleComponent()									   = default;
 		virtual ~TitleComponent() override					   = default;

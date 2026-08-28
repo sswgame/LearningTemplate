@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file CallStackCapture.h
  * @brief 크로스플랫폼 콜 스택 캡처 및 심볼 변환 유틸리티
  */
@@ -18,19 +18,19 @@ namespace sw
 	 */
 	struct SW_API CallStack
 	{
-		static constexpr uint32 kMaxFrames		   = 16;
-		void*					frames[kMaxFrames] = { nullptr };
-		uint32					frameCount{ 0 };
-		uint64					hash{ 0 };
+		static constexpr uint32 kMaxFrames			   = 16;
+		void*					_arrFrames[kMaxFrames] = { nullptr };
+		uint32					_frameCount{ 0 };
+		uint64					_hash{ 0 };
 
 		/** @brief 해시·프레임 수·주소가 모두 같으면 true 입니다. */
 		bool operator==( const CallStack& other ) const
 		{
-			if ( hash != other.hash || frameCount != other.frameCount )
+			if ( _hash != other._hash || _frameCount != other._frameCount )
 				return false;
-			for ( uint32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
+			for ( uint32 frameIndex = 0; frameIndex < _frameCount; ++frameIndex )
 			{
-				if ( frames[frameIndex] != other.frames[frameIndex] )
+				if ( _arrFrames[frameIndex] != other._arrFrames[frameIndex] )
 					return false;
 			}
 			return true;
@@ -44,12 +44,12 @@ namespace sw
 
 namespace std
 {
-	/** @brief CallStack 을 unordered_map 키로 쓸 때 해시는 stack.hash 입니다. */
+	/** @brief CallStack 을 unordered_map 키로 쓸 때 해시는 stack._hash 입니다. */
 	template <>
 	struct hash<sw::CallStack>
 	{
 		/** @brief 미리 계산된 스택 해시를 size_t 로 돌려줍니다. */
-		size_t operator()( const sw::CallStack& stack ) const { return stack.hash; }
+		size_t operator()( const sw::CallStack& stack ) const { return stack._hash; }
 	};
 } // namespace std
 

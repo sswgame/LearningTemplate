@@ -9,17 +9,17 @@
 namespace sw
 {
 	BossComponent::BossComponent()
-		: phase{ 1 }
-		, stateTimer{ 0.0f }
-		, patternCooldown{ 0.0f }
-		, currentPattern{ 0 }
-		, bossState{ BossAiState::Idle }
-		, bLaserActive{ false }
-		, phase1Cooldown{ 0.0f }
-		, phase2Cooldown{ 0.0f }
-		, phase3Cooldown{ 0.0f }
-		, phase2HpRatio{ 0.0f }
-		, phase3HpRatio{ 0.0f }
+		: _phase{ 1 }
+		, _stateTimer{ 0.0f }
+		, _patternCooldown{ 0.0f }
+		, _currentPattern{ 0 }
+		, _bossState{ BossAiState::Idle }
+		, _bLaserActive{ false }
+		, _phase1Cooldown{ 0.0f }
+		, _phase2Cooldown{ 0.0f }
+		, _phase3Cooldown{ 0.0f }
+		, _phase2HpRatio{ 0.0f }
+		, _phase3HpRatio{ 0.0f }
 	{
 	}
 
@@ -32,11 +32,11 @@ namespace sw
 			pOwner->addTag( "Boss"_tag );
 			pOwner->addTag( "Monster"_tag );
 		}
-		phase		   = 1;
-		stateTimer	   = 0.0f;
-		currentPattern = 0;
-		bossState	   = BossAiState::Spawn;
-		bLaserActive   = false;
+		_phase			= 1;
+		_stateTimer		= 0.0f;
+		_currentPattern = 0;
+		_bossState		= BossAiState::Spawn;
+		_bLaserActive	= false;
 	}
 
 	void BossComponent::onEndPlay()
@@ -45,7 +45,7 @@ namespace sw
 
 	void BossComponent::onTick( float32 deltaTime )
 	{
-		stateTimer += deltaTime;
+		_stateTimer += deltaTime;
 		updatePhase();
 		executePattern( deltaTime );
 	}
@@ -59,23 +59,23 @@ namespace sw
 			if ( pStats != nullptr && pStats->getMaxHp() > 0 )
 			{
 				const float32 hpRatio = static_cast<float32>( pStats->getHp() ) / static_cast<float32>( pStats->getMaxHp() );
-				const bool	  bPhase3 = ( phase3HpRatio > 0.0f && hpRatio <= phase3HpRatio );
-				const bool	  bPhase2 = ( phase2HpRatio > 0.0f && hpRatio <= phase2HpRatio );
+				const bool	  bPhase3 = ( _phase3HpRatio > 0.0f && hpRatio <= _phase3HpRatio );
+				const bool	  bPhase2 = ( _phase2HpRatio > 0.0f && hpRatio <= _phase2HpRatio );
 
 				if ( bPhase3 )
 				{
-					phase			= 3;
-					patternCooldown = phase3Cooldown;
+					_phase			 = 3;
+					_patternCooldown = _phase3Cooldown;
 				}
 				else if ( bPhase2 )
 				{
-					phase			= 2;
-					patternCooldown = phase2Cooldown;
+					_phase			 = 2;
+					_patternCooldown = _phase2Cooldown;
 				}
 				else
 				{
-					phase			= 1;
-					patternCooldown = phase1Cooldown;
+					_phase			 = 1;
+					_patternCooldown = _phase1Cooldown;
 				}
 			}
 		}
@@ -84,23 +84,23 @@ namespace sw
 	void BossComponent::executePattern( float32 deltaTime )
 	{
 		(void)deltaTime;
-		if ( stateTimer >= patternCooldown )
+		if ( _stateTimer >= _patternCooldown )
 		{
-			stateTimer	   = 0.0f;
-			currentPattern = ( currentPattern + 1 ) % 3;
-			switch ( currentPattern )
+			_stateTimer		= 0.0f;
+			_currentPattern = ( _currentPattern + 1 ) % 3;
+			switch ( _currentPattern )
 			{
 				case 0:
-					bossState	 = BossAiState::Laser;
-					bLaserActive = true;
+					_bossState	  = BossAiState::Laser;
+					_bLaserActive = true;
 					break;
 				case 1:
-					bossState	 = BossAiState::BulletHell;
-					bLaserActive = false;
+					_bossState	  = BossAiState::BulletHell;
+					_bLaserActive = false;
 					break;
 				case 2:
-					bossState	 = BossAiState::SwordRain;
-					bLaserActive = false;
+					_bossState	  = BossAiState::SwordRain;
+					_bLaserActive = false;
 					break;
 			}
 		}

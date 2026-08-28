@@ -2,6 +2,7 @@
 
 #include "RuntimeAPI/Service/EditorService.h"
 
+SW_LOG_CALLER( "EditorService" );
 namespace sw::editor
 {
 	namespace

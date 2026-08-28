@@ -13,8 +13,8 @@ namespace sw
 	/// @brief 가상 키 ↔ 엔진 Key 한 쌍
 	struct InputVkKeyPair
 	{
-		int32 vk;
-		Key	  key;
+		int32 _vk;
+		Key	  _key;
 	};
 
 	/** @brief Win32 가상 키를 Key로 변환합니다. */

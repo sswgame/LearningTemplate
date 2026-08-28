@@ -12,8 +12,8 @@
 namespace sw
 {
 	HPBarComponent::HPBarComponent()
-		: targetKind{ HPBarTargetKind::Monster }
-		, bossName{}
+		: _targetKind{ HPBarTargetKind::Monster }
+		, _bossName{}
 	{
 	}
 
@@ -41,7 +41,7 @@ namespace sw
 
 		GameObject* pTargetObj{ nullptr };
 
-		switch ( targetKind )
+		switch ( _targetKind )
 		{
 			case HPBarTargetKind::Player:
 			{
@@ -52,10 +52,10 @@ namespace sw
 			{
 				vector<GameObject*> bossList;
 				pGameObjectManager->findGameObjectsByTag( "Boss"_tag, bossList );
-				const hashed_string targetBossName( bossName.c_str() );
+				const hashed_string targetBossName( _bossName.c_str() );
 				for ( GameObject* pObj : bossList )
 				{
-					if ( bossName.empty() || ( pObj != nullptr && pObj->getName() == targetBossName ) )
+					if ( _bossName.empty() || ( pObj != nullptr && pObj->getName() == targetBossName ) )
 					{
 						pTargetObj = pObj;
 						break;

@@ -16,10 +16,10 @@ namespace sw
 		if ( pOwner != nullptr )
 			pOwner->addTag( "Player"_tag );
 
-		dashCount	  = maxDashCount;
-		dashTimer	  = 0.0f;
-		dashCoolTimer = 0.0f;
-		currentState  = PlayerMoveState::Idle;
+		_dashCount	   = _maxDashCount;
+		_dashTimer	   = 0.0f;
+		_dashCoolTimer = 0.0f;
+		_currentState  = PlayerMoveState::Idle;
 	}
 
 	void PlayerComponent::onEndPlay()
@@ -28,26 +28,26 @@ namespace sw
 
 	void PlayerComponent::onTick( float32 deltaTime )
 	{
-		if ( dashTimer > 0.0f )
+		if ( _dashTimer > 0.0f )
 		{
-			dashTimer -= deltaTime;
-			if ( dashTimer <= 0.0f )
+			_dashTimer -= deltaTime;
+			if ( _dashTimer <= 0.0f )
 			{
-				dashTimer	 = 0.0f;
-				currentState = PlayerMoveState::Idle;
+				_dashTimer	  = 0.0f;
+				_currentState = PlayerMoveState::Idle;
 			}
 		}
 
-		if ( dashCount < maxDashCount )
+		if ( _dashCount < _maxDashCount )
 		{
-			dashCoolTimer += deltaTime;
-			while ( dashCoolTimer >= dashCoolTime && dashCount < maxDashCount )
+			_dashCoolTimer += deltaTime;
+			while ( _dashCoolTimer >= _dashCoolTime && _dashCount < _maxDashCount )
 			{
-				dashCoolTimer -= dashCoolTime;
-				dashCount++;
+				_dashCoolTimer -= _dashCoolTime;
+				_dashCount++;
 			}
-			if ( dashCount >= maxDashCount )
-				dashCoolTimer = 0.0f;
+			if ( _dashCount >= _maxDashCount )
+				_dashCoolTimer = 0.0f;
 		}
 
 		handleInput( deltaTime );
@@ -61,10 +61,10 @@ namespace sw
 			return;
 
 		float3 localPos = pSceneComp->getLocalPosition();
-		if ( dashTimer > 0.0f )
-			localPos._x += static_cast<float32>( moveDir ) * dashSpeed * deltaTime;
-		else if ( currentState == PlayerMoveState::Run )
-			localPos._x += static_cast<float32>( moveDir ) * speed * deltaTime;
+		if ( _dashTimer > 0.0f )
+			localPos._x += static_cast<float32>( _moveDir ) * _dashSpeed * deltaTime;
+		else if ( _currentState == PlayerMoveState::Run )
+			localPos._x += static_cast<float32>( _moveDir ) * _speed * deltaTime;
 		pSceneComp->setLocalPosition( localPos );
 	}
 
@@ -73,19 +73,19 @@ namespace sw
 		(void)deltaTime;
 		InputManager& inputManager = *game::getService<InputManager>();
 
-		if ( dashTimer > 0.0f )
+		if ( _dashTimer > 0.0f )
 			return;
 
 		bool bMoving{ false };
 		if ( inputManager.isKeyDown( Key::A ) || inputManager.isKeyDown( Key::Left ) )
 		{
-			moveDir = -1;
-			bMoving = true;
+			_moveDir = -1;
+			bMoving	 = true;
 		}
 		else if ( inputManager.isKeyDown( Key::D ) || inputManager.isKeyDown( Key::Right ) )
 		{
-			moveDir = 1;
-			bMoving = true;
+			_moveDir = 1;
+			bMoving	 = true;
 		}
 
 		if ( inputManager.wasKeyPressed( Key::Space ) )
@@ -94,22 +94,22 @@ namespace sw
 		if ( inputManager.wasKeyPressed( Key::LeftShift ) || inputManager.wasKeyPressed( Key::RightShift ) )
 			tryDash();
 
-		if ( dashTimer <= 0.0f )
-			currentState = bMoving ? PlayerMoveState::Run : PlayerMoveState::Idle;
+		if ( _dashTimer <= 0.0f )
+			_currentState = bMoving ? PlayerMoveState::Run : PlayerMoveState::Idle;
 	}
 
 	void PlayerComponent::tryDash()
 	{
-		if ( dashCount > 0 && dashTimer <= 0.0f )
+		if ( _dashCount > 0 && _dashTimer <= 0.0f )
 		{
-			dashCount--;
-			dashTimer	 = dashTime;
-			currentState = PlayerMoveState::Dash;
+			_dashCount--;
+			_dashTimer	  = _dashTime;
+			_currentState = PlayerMoveState::Dash;
 		}
 	}
 
 	void PlayerComponent::tryJump()
 	{
-		currentState = PlayerMoveState::Jump;
+		_currentState = PlayerMoveState::Jump;
 	}
 } // namespace sw

@@ -78,11 +78,11 @@ static void RegisterTypes( sw::TypeRegistry& registry )
 		info._propertyList =
 			{
 				{	  sw::hashed_string( "_hp" ),	  sw::hashed_string( "int32" ),
-				  offsetof( sw::DummyActor,	_hp ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr},
+				  SW_OFFSET_OF( sw::DummyActor,	_hp ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr},
 				{ sw::hashed_string( "_name" ),	sw::hashed_string( "string" ),
-				  offsetof( sw::DummyActor,	_name ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr},
+				  SW_OFFSET_OF( sw::DummyActor,	_name ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr},
 				{sw::hashed_string( "_speed" ), sw::hashed_string( "float32" ),
-				  offsetof( sw::DummyActor, _speed ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr},
+				  SW_OFFSET_OF( sw::DummyActor, _speed ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr},
 		};
 		registry.registerClass( info );
 	}
@@ -96,16 +96,16 @@ static void RegisterTypes( sw::TypeRegistry& registry )
 		info._propertyList =
 			{
 				{ sw::hashed_string( "_id" ), sw::hashed_string( "int32" ),
-				  offsetof( sw::ComplexData, _id ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr },
+				  SW_OFFSET_OF( sw::ComplexData, _id ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr },
 				{ sw::hashed_string( "_title" ), sw::hashed_string( "string" ),
-				  offsetof( sw::ComplexData, _title ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr },
+				  SW_OFFSET_OF( sw::ComplexData, _title ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr },
 				{ sw::hashed_string( "_flags" ), sw::hashed_string( "sw::DummyBitFlag" ),
-				  offsetof( sw::ComplexData, _flags ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr },
+				  SW_OFFSET_OF( sw::ComplexData, _flags ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr },
 				{ sw::hashed_string( "_scores" ), sw::hashed_string( "vector" ),
-				  offsetof( sw::ComplexData, _scores ), true, sw::ContainerKind::Sequence, sw::hashed_string( "int32" ), sw::hashed_string(),
+				  SW_OFFSET_OF( sw::ComplexData, _scores ), true, sw::ContainerKind::Sequence, sw::hashed_string( "int32" ), sw::hashed_string(),
 				  sw::make_shared<sw::VectorWrapper<sw::vector<int32>>>() },
 				{ sw::hashed_string( "_stats" ), sw::hashed_string( "map" ),
-				  offsetof( sw::ComplexData, _stats ), true, sw::ContainerKind::Map, sw::hashed_string( "int32" ), sw::hashed_string( "string" ),
+				  SW_OFFSET_OF( sw::ComplexData, _stats ), true, sw::ContainerKind::Map, sw::hashed_string( "int32" ), sw::hashed_string( "string" ),
 				  sw::make_shared<sw::MapWrapper<sw::map<sw::string, int32>>>() },
 		};
 		registry.registerClass( info );
@@ -338,7 +338,7 @@ SW_TEST_CASE( Reflection_Serialization, ObjectDiffSerializationDelta )
 	aliasInfo._fullyQualifiedName = sw::hashed_string( "sw::DiffAliasActor" );
 	aliasInfo._size				  = sizeof( DiffAliasActor );
 	sw::PropertyInfo hpProp( sw::hashed_string( "_currentHp" ), sw::hashed_string( "int32" ),
-							 offsetof( DiffAliasActor, _currentHp ) );
+							 SW_OFFSET_OF( DiffAliasActor, _currentHp ) );
 	hpProp._listAlias.push_back( sw::hashed_string( "hp" ) );
 	aliasInfo._propertyList.push_back( hpProp );
 
@@ -452,13 +452,13 @@ SW_TEST_CASE( Reflection_PropertyInfo, OffsetCorrectness )
 	SW_EXPECT_TRUE( speedProp != nullptr );
 
 	if ( hpProp != nullptr )
-		SW_EXPECT_EQUAL( offsetof( sw::DummyActor, _hp ), hpProp->_offset );
+		SW_EXPECT_EQUAL( SW_OFFSET_OF( sw::DummyActor, _hp ), hpProp->_offset );
 
 	if ( nameProp != nullptr )
-		SW_EXPECT_EQUAL( offsetof( sw::DummyActor, _name ), nameProp->_offset );
+		SW_EXPECT_EQUAL( SW_OFFSET_OF( sw::DummyActor, _name ), nameProp->_offset );
 
 	if ( speedProp != nullptr )
-		SW_EXPECT_EQUAL( offsetof( sw::DummyActor, _speed ), speedProp->_offset );
+		SW_EXPECT_EQUAL( SW_OFFSET_OF( sw::DummyActor, _speed ), speedProp->_offset );
 }
 
 /**
@@ -831,54 +831,54 @@ SW_TEST_CASE( Reflection_Serialization, XmlRapidXmlRoundtrip )
 
 struct SimpleXmlBackend : public sw::IXmlBackend
 {
-	sw::string								  result;
-	sw::string								  rootTagName;
-	sw::vector<sw::string>					  listOpenTags;
-	sw::unordered_map<sw::string, sw::string> kvMap;
-	bool									  bOpenTagPending{ false };
+	sw::string								  _result;
+	sw::string								  _rootTagName;
+	sw::vector<sw::string>					  _listOpenTags;
+	sw::unordered_map<sw::string, sw::string> _mapKv;
+	bool									  _bOpenTagPending{ false };
 
 	void closeOpenTag()
 	{
-		if ( bOpenTagPending == false )
+		if ( _bOpenTagPending == false )
 			return;
-		result += ">";
-		bOpenTagPending = false;
+		_result += ">";
+		_bOpenTagPending = false;
 	}
 
 	void beginNamedElement( const utf8* pTag )
 	{
 		closeOpenTag();
 		sw::string tag( pTag != nullptr ? pTag : "" );
-		result += "<" + tag;
-		bOpenTagPending = true;
-		listOpenTags.push_back( tag );
+		_result += "<" + tag;
+		_bOpenTagPending = true;
+		_listOpenTags.push_back( tag );
 	}
 
 	void endNamedElement()
 	{
 		closeOpenTag();
-		if ( listOpenTags.empty() )
+		if ( _listOpenTags.empty() )
 			return;
-		result += "</" + listOpenTags.back() + ">";
-		listOpenTags.pop_back();
+		_result += "</" + _listOpenTags.back() + ">";
+		_listOpenTags.pop_back();
 	}
 
 	void initXmlSerialization( const utf8* rootTag ) override
 	{
-		rootTagName		= rootTag != nullptr ? rootTag : "";
-		result			= "<" + rootTagName;
-		bOpenTagPending = true;
+		_rootTagName	 = rootTag != nullptr ? rootTag : "";
+		_result			 = "<" + _rootTagName;
+		_bOpenTagPending = true;
 	}
 	void writeValue( const utf8* tag, const utf8* value ) override
 	{
 		closeOpenTag();
-		result += "<" + sw::string( tag ) + ">" + sw::string( value ) + "</" + sw::string( tag ) + ">";
-		kvMap[sw::string( tag )] = value != nullptr ? value : "";
+		_result += "<" + sw::string( tag ) + ">" + sw::string( value ) + "</" + sw::string( tag ) + ">";
+		_mapKv[sw::string( tag )] = value != nullptr ? value : "";
 	}
 	void writeAttribute( const utf8* attr, const utf8* value ) override
 	{
-		result += " " + sw::string( attr ) + "=\"" + sw::string( value ) + "\"";
-		kvMap[sw::string( attr )] = value != nullptr ? value : "";
+		_result += " " + sw::string( attr ) + "=\"" + sw::string( value ) + "\"";
+		_mapKv[sw::string( attr )] = value != nullptr ? value : "";
 	}
 	void beginArray( const utf8* tag ) override
 	{
@@ -887,7 +887,7 @@ struct SimpleXmlBackend : public sw::IXmlBackend
 	void writeArrayItem( const utf8* value ) override
 	{
 		closeOpenTag();
-		result += "<item>" + sw::string( value ) + "</item>";
+		_result += "<item>" + sw::string( value ) + "</item>";
 	}
 	void endArray() override
 	{
@@ -904,12 +904,12 @@ struct SimpleXmlBackend : public sw::IXmlBackend
 	void writeMapKey( const utf8* key ) override
 	{
 		closeOpenTag();
-		result += "<key>" + sw::string( key ) + "</key>";
+		_result += "<key>" + sw::string( key ) + "</key>";
 	}
 	void writeMapValue( const utf8* value ) override
 	{
 		closeOpenTag();
-		result += "<value>" + sw::string( value ) + "</value>";
+		_result += "<value>" + sw::string( value ) + "</value>";
 	}
 	void endMapEntry() override
 	{
@@ -922,9 +922,9 @@ struct SimpleXmlBackend : public sw::IXmlBackend
 	sw::string endSerialize() override
 	{
 		closeOpenTag();
-		if ( rootTagName.empty() == false )
-			result += "</" + rootTagName + ">";
-		return result;
+		if ( _rootTagName.empty() == false )
+			_result += "</" + _rootTagName + ">";
+		return _result;
 	}
 
 	bool initXmlDeserialization( const utf8* xmlStr, const utf8* rootTag ) override
@@ -966,8 +966,8 @@ struct SimpleXmlBackend : public sw::IXmlBackend
 							size_t valEnd = attrs.find( '"', valBegin );
 							if ( valEnd == sw::string::npos )
 								break;
-							kvMap[attrName] = attrs.substr( valBegin, valEnd - valBegin );
-							attrPos			= valEnd + 1;
+							_mapKv[attrName] = attrs.substr( valBegin, valEnd - valBegin );
+							attrPos			 = valEnd + 1;
 						}
 						else
 							break;
@@ -978,7 +978,7 @@ struct SimpleXmlBackend : public sw::IXmlBackend
 				if ( endTagPos != sw::string::npos )
 				{
 					sw::string val = str.substr( closeTag + 1, endTagPos - closeTag - 1 );
-					kvMap[tag]	   = val;
+					_mapKv[tag]	   = val;
 				}
 			}
 			pos = closeTag + 1;
@@ -987,8 +987,8 @@ struct SimpleXmlBackend : public sw::IXmlBackend
 	}
 	bool readValue( const utf8* tag, sw::string& outValue ) override
 	{
-		auto it = kvMap.find( sw::string( tag ) );
-		if ( it != kvMap.end() )
+		auto it = _mapKv.find( sw::string( tag ) );
+		if ( it != _mapKv.end() )
 		{
 			outValue = it->second;
 			return true;
@@ -1442,10 +1442,10 @@ SW_TEST_CASE( Reflection_Serialization, PropertyDefaultOnMissing )
 	info._size				 = sizeof( DefaultActor );
 
 	sw::PropertyInfo manaProp( sw::hashed_string( "_mana" ), sw::hashed_string( "int32" ),
-							   offsetof( DefaultActor, _mana ) );
+							   SW_OFFSET_OF( DefaultActor, _mana ) );
 	manaProp._metadata._defaultValue = "75";
 	sw::PropertyInfo titleProp( sw::hashed_string( "_title" ), sw::hashed_string( "string" ),
-								offsetof( DefaultActor, _title ) );
+								SW_OFFSET_OF( DefaultActor, _title ) );
 	titleProp._metadata._defaultValue  = "Apprentice";
 	titleProp._metadata._bXmlAttribute = 1;
 	info._propertyList				   = { manaProp, titleProp };
@@ -1488,7 +1488,7 @@ SW_TEST_CASE( Reflection_Serialization, PropertyAliasAndReorderingTest )
 	info._size				 = sizeof( AliasTestActor );
 	info._propertyList		 = {
 		  { sw::hashed_string( "_currentHp" ), sw::hashed_string( "int32" ),
-			offsetof( AliasTestActor, _currentHp ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr, sw::hashed_string( "hp" ) }
+			SW_OFFSET_OF( AliasTestActor, _currentHp ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr, sw::hashed_string( "hp" ) }
 	   };
 
 	sw::string	   oldJson = "{\"hp\": 250}";
@@ -1530,9 +1530,9 @@ SW_TEST_CASE( Reflection_Serialization, PropertyAliasAndReorderingTest )
 	info1._size				  = sizeof( ReorderActor1 );
 	info1._propertyList		  = {
 		  {sw::hashed_string( "_fieldA" ), sw::hashed_string( "int32" ),
-			offsetof( ReorderActor1, _fieldA ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr},
+			SW_OFFSET_OF( ReorderActor1, _fieldA ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr},
 		  {sw::hashed_string( "_fieldB" ), sw::hashed_string( "int32" ),
-			offsetof( ReorderActor1, _fieldB ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr}
+			SW_OFFSET_OF( ReorderActor1, _fieldB ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr}
 	};
 
 	ReorderActor1	  src;
@@ -1624,15 +1624,15 @@ SW_TEST_CASE( Reflection_Serialization, LayoutEvolveAddRemoveRename )
 	infoV1._fullyQualifiedName = sw::hashed_string( "sw::LayoutActor" );
 	infoV1._size			   = sizeof( LayoutV1 );
 	infoV1._propertyList	   = {
-		  {	sw::hashed_string( "_hp" ), sw::hashed_string( "int32" ), offsetof( LayoutV1,	  _hp )},
-		  {sw::hashed_string( "_score" ), sw::hashed_string( "int32" ), offsetof( LayoutV1, _score )},
+		  {	sw::hashed_string( "_hp" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( LayoutV1,	  _hp )},
+		  {sw::hashed_string( "_score" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( LayoutV1, _score )},
 	  };
 
-	sw::PropertyInfo hpV2( sw::hashed_string( "_hp" ), sw::hashed_string( "int32" ), offsetof( LayoutV2, _hp ),
+	sw::PropertyInfo hpV2( sw::hashed_string( "_hp" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( LayoutV2, _hp ),
 						   false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr,
 						   sw::hashed_string( "health" ) ); ///< 개명: 옛 키 health
 	sw::PropertyInfo manaV2( sw::hashed_string( "_mana" ), sw::hashed_string( "int32" ),
-							 offsetof( LayoutV2, _mana ) );
+							 SW_OFFSET_OF( LayoutV2, _mana ) );
 	manaV2._metadata._defaultValue = "9";
 
 	sw::TypeInfo infoV2;
@@ -1687,7 +1687,7 @@ SW_TEST_CASE( Reflection_Serialization, LayoutEvolveAddRemoveRename )
 	intAliasInfo._fullyQualifiedName = sw::hashed_string( "sw::IntAliasHolder" );
 	intAliasInfo._size				 = sizeof( IntAliasHolder );
 	intAliasInfo._propertyList		 = {
-		  { sw::hashed_string( "_v" ), sw::hashed_string( "int32" ), offsetof( IntAliasHolder, _v ) }
+		  { sw::hashed_string( "_v" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( IntAliasHolder, _v ) }
 	  };
 	IntAliasHolder holder{};
 	SW_EXPECT_TRUE( sw::XmlSerializer::deserialize(
@@ -1757,7 +1757,7 @@ struct TestBindingActor
  */
 SW_TEST_CASE( Reflection_Binding, BiDirectionalPropertyBinding )
 {
-	sw::PropertyInfo prop( sw::hashed_string( "score" ), sw::hashed_string( "uint32" ), offsetof( TestBindingActor, _score ) );
+	sw::PropertyInfo prop( sw::hashed_string( "score" ), sw::hashed_string( "uint32" ), SW_OFFSET_OF( TestBindingActor, _score ) );
 
 	bool bCalled{ false };
 	prop.bindOnChanged( SW_DELEGATE_LAMBDA( sw::PropertyInfo::PropertyBindingDelegate, [&bCalled]( const sw::PropertyInfo& p, const void* inst )
@@ -1795,9 +1795,9 @@ SW_TEST_CASE( Reflection_Serialization, BinaryVersionHeaderTest )
 	info._size				 = sizeof( VersionedActor );
 	info._propertyList		 = {
 		  {sw::hashed_string( "_fieldA" ), sw::hashed_string( "int32" ),
-			offsetof( VersionedActor, _fieldA ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr},
+			SW_OFFSET_OF( VersionedActor, _fieldA ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr},
 		  {sw::hashed_string( "_fieldB" ), sw::hashed_string( "int32" ),
-			offsetof( VersionedActor, _fieldB ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr}
+			SW_OFFSET_OF( VersionedActor, _fieldB ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr}
 	 };
 
 	sw::vector<uint8> buffer;
@@ -1855,7 +1855,7 @@ SW_TEST_CASE( Reflection_Serialization, FieldTypeChangeAndTextVersioned )
 	intInfo._fullyQualifiedName = sw::hashed_string( "sw::IntHp" );
 	intInfo._size				= sizeof( IntHp );
 	intInfo._propertyList		= {
-		  { sw::hashed_string( "_hp" ), sw::hashed_string( "int32" ), offsetof( IntHp, _hp ) }
+		  { sw::hashed_string( "_hp" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( IntHp, _hp ) }
 	   };
 
 	sw::TypeInfo strInfo;
@@ -1863,7 +1863,7 @@ SW_TEST_CASE( Reflection_Serialization, FieldTypeChangeAndTextVersioned )
 	strInfo._fullyQualifiedName = sw::hashed_string( "sw::StrHp" );
 	strInfo._size				= sizeof( StrHp );
 	strInfo._propertyList		= {
-		  { sw::hashed_string( "_hp" ), sw::hashed_string( "string" ), offsetof( StrHp, _hp ) }
+		  { sw::hashed_string( "_hp" ), sw::hashed_string( "string" ), SW_OFFSET_OF( StrHp, _hp ) }
 	};
 
 	IntHp			  src{ 42 };
@@ -1912,7 +1912,7 @@ SW_TEST_CASE( Reflection_Serialization, VersionedDeserializeFailsWithoutMigrate 
 	info._fullyQualifiedName = sw::hashed_string( "sw::VersionMismatchActor" );
 	info._size				 = sizeof( VersionedActor );
 	info._propertyList		 = {
-		  { sw::hashed_string( "_fieldA" ), sw::hashed_string( "int32" ), offsetof( VersionedActor, _fieldA ) }
+		  { sw::hashed_string( "_fieldA" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( VersionedActor, _fieldA ) }
 	};
 
 	VersionedActor	  actor{ 7 };
@@ -1956,7 +1956,7 @@ SW_TEST_CASE( Reflection_Serialization, StructuralMoveAndPropertyAlias )
 	nestedStatsInfo._fullyQualifiedName = sw::hashed_string( "sw::NestedStats" );
 	nestedStatsInfo._size				= sizeof( NestedStats );
 	nestedStatsInfo._propertyList		= {
-		  { sw::hashed_string( "_hp" ), sw::hashed_string( "int32" ), offsetof( NestedStats, _hp ) }
+		  { sw::hashed_string( "_hp" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( NestedStats, _hp ) }
 	 };
 	sw::engine::getTypeRegistry().registerClass( nestedStatsInfo );
 
@@ -1965,7 +1965,7 @@ SW_TEST_CASE( Reflection_Serialization, StructuralMoveAndPropertyAlias )
 	nestedActorInfo._fullyQualifiedName = sw::hashed_string( "sw::NestedActor" );
 	nestedActorInfo._size				= sizeof( NestedActor );
 	nestedActorInfo._propertyList		= {
-		  { sw::hashed_string( "_stats" ), sw::hashed_string( "sw::NestedStats" ), offsetof( NestedActor, _stats ) }
+		  { sw::hashed_string( "_stats" ), sw::hashed_string( "sw::NestedStats" ), SW_OFFSET_OF( NestedActor, _stats ) }
 	 };
 
 	// JSON orphan `_hp` → `_stats._hp`
@@ -1985,7 +1985,7 @@ SW_TEST_CASE( Reflection_Serialization, StructuralMoveAndPropertyAlias )
 	renamedInfo._fullyQualifiedName = sw::hashed_string( "sw::RenamedActor" );
 	renamedInfo._size				= sizeof( RenamedActor );
 	sw::PropertyInfo hpProp( sw::hashed_string( "_hitPoints" ), sw::hashed_string( "int32" ),
-							 offsetof( RenamedActor, _hitPoints ) );
+							 SW_OFFSET_OF( RenamedActor, _hitPoints ) );
 	hpProp._listAlias.push_back( sw::hashed_string( "_hp" ) );
 	renamedInfo._propertyList.push_back( hpProp );
 
@@ -2012,7 +2012,7 @@ SW_TEST_CASE( Reflection_Serialization, JsonPrettyPrint )
 	info._size				 = sizeof( SimpleJsonActor );
 	info._propertyList		 = {
 		  { sw::hashed_string( "_val" ), sw::hashed_string( "int32" ),
-			offsetof( SimpleJsonActor, _val ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr }
+			SW_OFFSET_OF( SimpleJsonActor, _val ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr }
 	   };
 
 	sw::string prettyStr = sw::JsonSerializer::serializePretty( &actor, info, 4 );
@@ -2100,8 +2100,8 @@ SW_TEST_CASE( Reflection_Cloning, ObjectDeepCopyClone )
 	info._fullyQualifiedName = sw::hashed_string( "sw::CloneableActor" );
 	info._size				 = sizeof( CloneableActor );
 	info._propertyList		 = {
-		  {sw::hashed_string( "_health" ),	sw::hashed_string( "int32" ), offsetof( CloneableActor, _health ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr},
-		  { sw::hashed_string( "_speed" ), sw::hashed_string( "float32" ), offsetof( CloneableActor,	 _speed ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr}
+		  {sw::hashed_string( "_health" ),	sw::hashed_string( "int32" ), SW_OFFSET_OF( CloneableActor, _health ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr},
+		  { sw::hashed_string( "_speed" ), sw::hashed_string( "float32" ), SW_OFFSET_OF( CloneableActor,	 _speed ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr}
 	   };
 
 	bool cloneOk = sw::BinarySerializer::cloneObject( &dstActor, &srcActor, info );

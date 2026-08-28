@@ -12,22 +12,22 @@ namespace sw
 		REFLECT_BODY();
 
 		PROPERTY()
-		string weaponName{};
+		string _weaponName{};
 
 		PROPERTY()
-		int32 attackPower{ 0 };
+		int32 _attackPower{ 0 };
 
 		PROPERTY()
-		float32 attackSpeed{ 0.0f };
+		float32 _attackSpeed{ 0.0f };
 
 		PROPERTY()
-		float32 skillCoolTime{ 0.0f };
+		float32 _skillCoolTime{ 0.0f };
 
 		PROPERTY()
-		float32 currentSkillCoolTime{ 0.0f };
+		float32 _currentSkillCoolTime{ 0.0f };
 
 		PROPERTY()
-		bool bAttacking{ false };
+		bool _bAttacking{ false };
 
 		WeaponComponent()										 = default;
 		virtual ~WeaponComponent() override						 = default;

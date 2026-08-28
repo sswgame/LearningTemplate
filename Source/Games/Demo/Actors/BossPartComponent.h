@@ -20,19 +20,19 @@ namespace sw
 		REFLECT_BODY();
 
 		PROPERTY()
-		BossPartType partType{ BossPartType::Hand };
+		BossPartType _partType{ BossPartType::Hand };
 
 		PROPERTY()
-		float32 attackTimer{ 0.0f };
+		float32 _attackTimer{ 0.0f };
 
 		PROPERTY()
-		float32 attackInterval{ 0.0f };
+		float32 _attackInterval{ 0.0f };
 
 		PROPERTY()
-		float2 offsetFromBoss{ 0.0f, 0.0f };
+		float2 _offsetFromBoss{ 0.0f, 0.0f };
 
 		PROPERTY()
-		bool bIsActive{ true };
+		bool _bIsActive{ true };
 
 		BossPartComponent()											 = default;
 		virtual ~BossPartComponent() override						 = default;

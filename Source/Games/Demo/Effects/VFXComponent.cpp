@@ -10,7 +10,7 @@ namespace sw
 	{
 		EffectBaseComponent::onTick( deltaTime );
 
-		switch ( vfxType )
+		switch ( _vfxType )
 		{
 			case VFXType::AlphaFade:
 			{
@@ -21,12 +21,12 @@ namespace sw
 			case VFXType::AfterImage:
 			{
 				if ( getDuration() > 0.0f )
-					setCurrentAlpha( ghostAlpha * ( 1.0f - ( getCurrentTimer() / getDuration() ) ) );
+					setCurrentAlpha( _ghostAlpha * ( 1.0f - ( getCurrentTimer() / getDuration() ) ) );
 				break;
 			}
 			case VFXType::WarningBlink:
 			{
-				const float32 freq	 = blinkRate;
+				const float32 freq	 = _blinkRate;
 				const float32 sinVal = MathUtil::sin( getCurrentTimer() * freq * ( MathUtil::Pi * 2.0f ) );
 				setCurrentAlpha( ( sinVal > 0.0f ) ? 1.0f : 0.2f );
 				break;

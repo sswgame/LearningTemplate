@@ -10,13 +10,13 @@ namespace sw
 		REFLECT_BODY();
 
 		PROPERTY()
-		int32 totalMonsters;
+		int32 _totalMonsters;
 
 		PROPERTY()
-		int32 remainingMonsters;
+		int32 _remainingMonsters;
 
 		PROPERTY()
-		bool bStageCleared;
+		bool _bStageCleared;
 
 		StageComponent();
 		virtual ~StageComponent() override					   = default;

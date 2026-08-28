@@ -17,6 +17,7 @@
 
 #include "RuntimeAPI/PluginAPI.h"
 
+SW_LOG_CALLER( "EngineServices" );
 namespace sw
 {
 	namespace

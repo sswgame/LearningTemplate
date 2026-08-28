@@ -34,9 +34,9 @@ namespace sw
 		/** @brief 구독 해제에 쓰는 채널·타입·핸들 토큰입니다. */
 		struct EventSubscription
 		{
-			hashed_string  channel;
-			EventTypeId	   eventType;
-			DelegateHandle handle;
+			hashed_string  _channel;
+			EventTypeId	   _eventType;
+			DelegateHandle _handle;
 		};
 
 		/** @brief 이벤트를 구독합니다. */
@@ -55,10 +55,10 @@ namespace sw
 		void unsubscribe( const EventSubscription& token )
 		{
 			std::scoped_lock<SpinLock>			  lock{ _busSpinLock };
-			std::pair<hashed_string, EventTypeId> key( token.channel, token.eventType );
+			std::pair<hashed_string, EventTypeId> key( token._channel, token._eventType );
 			auto								  iter = _mapChannelDelegate.find( key );
 			if ( iter != _mapChannelDelegate.end() )
-				std::static_pointer_cast<IMulticastDelegateBase>( iter->second )->remove( token.handle );
+				std::static_pointer_cast<IMulticastDelegateBase>( iter->second )->remove( token._handle );
 		}
 
 		/** @brief 이벤트 구독을 해제합니다. */

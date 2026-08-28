@@ -41,8 +41,8 @@ namespace sw
 
 		struct CustomPlayerData
 		{
-			sw::string name;
-			int32	   level{ 0 };
+			sw::string _name;
+			int32	   _level{ 0 };
 		};
 
 		static CustomPlayerData	 s_recPlayer;
@@ -139,8 +139,8 @@ SW_TEST_CASE( Engine_Task, ArbitraryArgsTask )
 	taskMgr.emplaceTask( "CustomArgsTask", customDel, customArgs ).submit();
 	taskMgr.waitAll();
 
-	SW_EXPECT_EQUAL( sw::string( "Antigravity" ), sw::s_recPlayer.name );
-	SW_EXPECT_EQUAL( 99, sw::s_recPlayer.level );
+	SW_EXPECT_EQUAL( sw::string( "Antigravity" ), sw::s_recPlayer._name );
+	SW_EXPECT_EQUAL( 99, sw::s_recPlayer._level );
 	SW_EXPECT_EQUAL( 3u, static_cast<uint32>( sw::s_recItems.size() ) );
 	if ( sw::s_recItems.size() == 3 )
 	{

@@ -156,19 +156,19 @@ namespace sw
 		/// @brief VS/PS + 래스터/블렌드/깊이 상태 묶음
 		struct D3D11PipelineStateRecord
 		{
-			Microsoft::WRL::ComPtr<ID3D11VertexShader>		vs;
-			Microsoft::WRL::ComPtr<ID3D11PixelShader>		ps;
-			Microsoft::WRL::ComPtr<ID3D11ComputeShader>		cs;
-			Microsoft::WRL::ComPtr<ID3D11InputLayout>		inputLayout;
-			Microsoft::WRL::ComPtr<ID3D11RasterizerState>	rasterizerState;
-			Microsoft::WRL::ComPtr<ID3D11BlendState>		blendState;
-			Microsoft::WRL::ComPtr<ID3D11DepthStencilState> depthStencilState;
+			Microsoft::WRL::ComPtr<ID3D11VertexShader>		_vs;
+			Microsoft::WRL::ComPtr<ID3D11PixelShader>		_ps;
+			Microsoft::WRL::ComPtr<ID3D11ComputeShader>		_cs;
+			Microsoft::WRL::ComPtr<ID3D11InputLayout>		_inputLayout;
+			Microsoft::WRL::ComPtr<ID3D11RasterizerState>	_rasterizerState;
+			Microsoft::WRL::ComPtr<ID3D11BlendState>		_blendState;
+			Microsoft::WRL::ComPtr<ID3D11DepthStencilState> _depthStencilState;
 		};
 
 		/// @brief 렌더 패스 서술 캐시
 		struct D3D11RenderPassRecord
 		{
-			RHIRenderPassDesc desc{};
+			RHIRenderPassDesc _desc{};
 			uint8			  _bAlive	: 1;
 			uint8			  _reserved : 7;
 		};

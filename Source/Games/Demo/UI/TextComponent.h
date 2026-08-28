@@ -12,13 +12,13 @@ namespace sw
 		REFLECT_BODY();
 
 		PROPERTY()
-		string text{ "Text" };
+		string _text{ "Text" };
 
 		PROPERTY()
-		float4 textColor{ 1.0f, 1.0f, 1.0f, 1.0f };
+		float4 _textColor{ 1.0f, 1.0f, 1.0f, 1.0f };
 
 		PROPERTY()
-		float32 fontSize{ 0.0f };
+		float32 _fontSize{ 0.0f };
 
 		TextComponent()										 = default;
 		virtual ~TextComponent() override					 = default;

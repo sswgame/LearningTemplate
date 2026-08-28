@@ -269,7 +269,7 @@ SW_TEST_CASE( RHITest, BindlessResourceLifecycle )
 
 	struct DummyCB
 	{
-		float32 color[4] = { 1.0f, 0.0f, 0.0f, 1.0f };
+		float32 _arrColor[4] = { 1.0f, 0.0f, 0.0f, 1.0f };
 	} cbData;
 
 	sw::RHIBufferHandle buffer = rhiDevice->getResource()->createConstantBuffer( sizeof( DummyCB ) );
@@ -453,15 +453,15 @@ SW_TEST_CASE( RHITypesTest, VertexLayoutBuilderAutoOffset )
 {
 	struct CustomVertex
 	{
-		float32 pos[3];
-		float32 uv[2];
-		uint32	color;
+		float32 _arrPos[3];
+		float32 _arrUv[2];
+		uint32	_color;
 	};
 
 	sw::VertexLayoutBuilder builder;
-	builder.addElement( "POSITION", 0, sw::RHIFormat::R32G32B32_FLOAT, offsetof( CustomVertex, pos ) );
-	builder.addElement( "TEXCOORD", 0, sw::RHIFormat::R32G32_FLOAT, offsetof( CustomVertex, uv ) );
-	builder.addElement( "COLOR", 0, sw::RHIFormat::R8G8B8A8_UNORM, offsetof( CustomVertex, color ) );
+	builder.addElement( "POSITION", 0, sw::RHIFormat::R32G32B32_FLOAT, SW_OFFSET_OF( CustomVertex, _arrPos ) );
+	builder.addElement( "TEXCOORD", 0, sw::RHIFormat::R32G32_FLOAT, SW_OFFSET_OF( CustomVertex, _arrUv ) );
+	builder.addElement( "COLOR", 0, sw::RHIFormat::R8G8B8A8_UNORM, SW_OFFSET_OF( CustomVertex, _color ) );
 
 	sw::vector<sw::RHIInputElement> layout = builder.build();
 	SW_EXPECT_EQUAL( 3u, static_cast<uint32>( layout.size() ) );
@@ -471,10 +471,10 @@ SW_TEST_CASE( RHITypesTest, VertexLayoutBuilderAutoOffset )
 		SW_EXPECT_EQUAL( 0u, layout[0]._alignedByteOffset );
 
 		SW_EXPECT_EQUAL( sw::string( "TEXCOORD" ), layout[1]._semanticName );
-		SW_EXPECT_EQUAL( static_cast<uint32>( offsetof( CustomVertex, uv ) ), layout[1]._alignedByteOffset );
+		SW_EXPECT_EQUAL( static_cast<uint32>( SW_OFFSET_OF( CustomVertex, _arrUv ) ), layout[1]._alignedByteOffset );
 
 		SW_EXPECT_EQUAL( sw::string( "COLOR" ), layout[2]._semanticName );
-		SW_EXPECT_EQUAL( static_cast<uint32>( offsetof( CustomVertex, color ) ), layout[2]._alignedByteOffset );
+		SW_EXPECT_EQUAL( static_cast<uint32>( SW_OFFSET_OF( CustomVertex, _color ) ), layout[2]._alignedByteOffset );
 	}
 }
 

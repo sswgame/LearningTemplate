@@ -24,12 +24,12 @@ SW_TEST_CASE( Core_Memory, FrameArenaAllocatorOperations )
 	struct DummyStruct
 	{
 		float32 x, y, z;
-		uint32	id;
+		uint32	_id;
 	};
 
 	DummyStruct* dummy = arena.construct<DummyStruct>( 1.0f, 2.0f, 3.0f, 100u );
 	SW_EXPECT_TRUE( dummy != nullptr );
-	SW_EXPECT_EQUAL( 100u, dummy->id );
+	SW_EXPECT_EQUAL( 100u, dummy->_id );
 
 	SW_EXPECT_TRUE( arena.getUsedBytes() > 0 );
 	arena.reset();

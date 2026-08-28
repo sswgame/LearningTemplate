@@ -22,10 +22,10 @@ namespace sw
 		REFLECT_BODY();
 
 		PROPERTY()
-		HPBarTargetKind targetKind;
+		HPBarTargetKind _targetKind;
 
 		PROPERTY()
-		string bossName;
+		string _bossName;
 
 		HPBarComponent();
 		virtual ~HPBarComponent() override					   = default;

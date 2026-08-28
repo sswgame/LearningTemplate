@@ -12,6 +12,7 @@
 	#include "Core/Log/Logger.h"
 	#include "Core/String/StringUtil.h"
 
+SW_LOG_CALLER( "WindowsFileWatcher" );
 namespace sw
 {
 	WindowsFileWatcher::WindowsFileWatcher()

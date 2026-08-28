@@ -24,7 +24,7 @@ namespace
 				sw::LogWrittenDelegate,
 				[this]( const sw::LogEntry& entry )
 			{
-				if ( entry.message.rfind( kCapturePrefix, 0 ) == 0 )
+				if ( entry._message.rfind( kCapturePrefix, 0 ) == 0 )
 					_entries.push_back( entry );
 			} ) );
 		}
@@ -119,11 +119,11 @@ SW_TEST_CASE( Core_Log, WriteLogDeliversEveryLevel )
 	for ( uint32 logIndex = 0; logIndex < expectedCount; ++logIndex )
 	{
 		const sw::LogEntry& entry = capture.getEntries()[logIndex];
-		SW_EXPECT_EQUAL( static_cast<uint32>( expectedLevels[logIndex] ), static_cast<uint32>( entry.level ) );
-		SW_EXPECT_STREQ( expectedMessages[logIndex], entry.message );
-		SW_EXPECT_STREQ( SW_LOG_TAG, entry.tag );
-		SW_EXPECT_FALSE( entry.file.empty() );
-		SW_EXPECT_TRUE( entry.line > 0 );
+		SW_EXPECT_EQUAL( static_cast<uint32>( expectedLevels[logIndex] ), static_cast<uint32>( entry._level ) );
+		SW_EXPECT_STREQ( expectedMessages[logIndex], entry._message );
+		SW_EXPECT_STREQ( SW_LOG_TAG, entry._tag );
+		SW_EXPECT_FALSE( entry._file.empty() );
+		SW_EXPECT_TRUE( entry._line > 0 );
 	}
 #else
 	SW_TEST_SKIP( "SW_LOG_* is compiled out when SW_DEBUG is undefined" );
@@ -154,12 +154,12 @@ SW_TEST_CASE( Core_Log, LogMacrosFormatArguments )
 	SW_LOG_TRACE( "[TestLog] SW_LOG_TRACE %#", 3.14f );
 
 	SW_ASSERT_EQUAL( 4u, capture.getCount() );
-	SW_EXPECT_STREQ( "[TestLog] SW_LOG_INFO 123", capture.getEntries()[0].message );
-	SW_EXPECT_STREQ( "[TestLog] SW_LOG_WARNING warning", capture.getEntries()[1].message );
-	SW_EXPECT_STREQ( "[TestLog] SW_LOG_ERROR 404", capture.getEntries()[2].message );
+	SW_EXPECT_STREQ( "[TestLog] SW_LOG_INFO 123", capture.getEntries()[0]._message );
+	SW_EXPECT_STREQ( "[TestLog] SW_LOG_WARNING warning", capture.getEntries()[1]._message );
+	SW_EXPECT_STREQ( "[TestLog] SW_LOG_ERROR 404", capture.getEntries()[2]._message );
 
 	// 실수 자릿수는 기본 정밀도에 달려 있으므로 앞부분만 확인합니다.
-	const sw::string& traceMessage = capture.getEntries()[3].message;
+	const sw::string& traceMessage = capture.getEntries()[3]._message;
 	SW_EXPECT_TRUE( traceMessage.rfind( "[TestLog] SW_LOG_TRACE 3.14", 0 ) == 0 );
 #else
 	SW_TEST_SKIP( "SW_LOG_* is compiled out when SW_DEBUG is undefined" );
@@ -180,7 +180,7 @@ SW_TEST_CASE( Core_Log, NonUtf8FallbackSafety )
 	SW_LOG_INFO( "%#", invalidUtf8Bytes );
 
 	SW_ASSERT_EQUAL( 1u, capture.getCount() );
-	SW_EXPECT_TRUE( capture.getEntries()[0].message.rfind( "[TestLog] Bad:", 0 ) == 0 );
+	SW_EXPECT_TRUE( capture.getEntries()[0]._message.rfind( "[TestLog] Bad:", 0 ) == 0 );
 #else
 	SW_TEST_SKIP( "SW_LOG_* is compiled out when SW_DEBUG is undefined" );
 #endif
@@ -199,10 +199,10 @@ SW_TEST_CASE( Core_Log, LogCallerHandling )
 	SW_LOG_WARNING( "[TestLog] Warning from caller" );
 
 	SW_ASSERT_EQUAL( 2u, capture.getCount() );
-	SW_EXPECT_STREQ( "TestLog", capture.getEntries()[0].caller );
-	SW_EXPECT_STREQ( "[TestLog] Custom caller message", capture.getEntries()[0].message );
-	SW_EXPECT_STREQ( "TestLog", capture.getEntries()[1].caller );
-	SW_EXPECT_STREQ( "[TestLog] Warning from caller", capture.getEntries()[1].message );
+	SW_EXPECT_STREQ( "TestLog", capture.getEntries()[0]._caller );
+	SW_EXPECT_STREQ( "[TestLog] Custom caller message", capture.getEntries()[0]._message );
+	SW_EXPECT_STREQ( "TestLog", capture.getEntries()[1]._caller );
+	SW_EXPECT_STREQ( "[TestLog] Warning from caller", capture.getEntries()[1]._message );
 #else
 	SW_TEST_SKIP( "SW_LOG_* is compiled out when SW_DEBUG is undefined" );
 #endif

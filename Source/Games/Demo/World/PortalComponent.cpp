@@ -25,7 +25,7 @@ namespace sw
 	{
 		(void)deltaTime;
 
-		if ( bIsOpen == false || targetScenePath.empty() )
+		if ( _bIsOpen == false || _targetScenePath.empty() )
 			return;
 
 		GameObject* pOwner = getOwner();
@@ -57,13 +57,13 @@ namespace sw
 			const float32 deltaX		  = playerWorldPos._x - ownerWorldPos._x;
 			const float32 deltaY		  = playerWorldPos._y - ownerWorldPos._y;
 			const float32 distSq		  = deltaX * deltaX + deltaY * deltaY;
-			const float32 triggerRadiusSq = triggerRadius * triggerRadius;
+			const float32 triggerRadiusSq = _triggerRadius * _triggerRadius;
 
-			if ( triggerRadius > 0.0f && distSq <= triggerRadiusSq )
+			if ( _triggerRadius > 0.0f && distSq <= triggerRadiusSq )
 			{
 				SceneManager& sceneManager = *game::getService<SceneManager>();
-				sceneManager.requestLoadAsync( targetScenePath );
-				bIsOpen = false;
+				sceneManager.requestLoadAsync( _targetScenePath );
+				_bIsOpen = false;
 			}
 		}
 	}

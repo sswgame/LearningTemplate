@@ -38,6 +38,6 @@ namespace sw
 
 	static_assert( sizeof( FrameConstants ) == 16, "FrameConstants must be 16 bytes (shader mirror)" );
 	static_assert( sizeof( ViewConstants ) == 96, "ViewConstants must be 96 bytes (shader mirror)" );
-	static_assert( offsetof( ViewConstants, _cameraPos ) == 64, "ViewConstants cameraPos offset" );
-	static_assert( offsetof( ViewConstants, _screenSize ) == 80, "ViewConstants screenSize offset" );
+	static_assert( SW_OFFSET_OF( ViewConstants, _cameraPos ) == 64, "ViewConstants cameraPos offset" );
+	static_assert( SW_OFFSET_OF( ViewConstants, _screenSize ) == 80, "ViewConstants screenSize offset" );
 } // namespace sw

@@ -2,6 +2,7 @@
 
 #include "Engine/Utility/Resource/ResourceUtil.h"
 
+SW_LOG_CALLER( "ResourceUtil" );
 namespace sw
 {
 

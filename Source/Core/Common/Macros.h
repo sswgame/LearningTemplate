@@ -6,6 +6,7 @@
 #pragma once
 #include "Core/Common/Types.h"
 
+#include <cstddef>
 #include <type_traits>
 
 // ------------------------------------------------------------------------------
@@ -14,6 +15,9 @@
 
 #define SW_CONCAT_IMPL( x, y ) x##y
 #define SW_CONCAT( x, y )	   SW_CONCAT_IMPL( x, y )
+
+/** @brief 구조체/클래스 내 멤버 오프셋을 바이트 단위로 반환합니다. */
+#define SW_OFFSET_OF( type, member ) offsetof( type, member )
 
 // ------------------------------------------------------------------------------
 // 2) 디버그 브레이크 — 어서션 실패 시 디버거에 멈춤

@@ -10,13 +10,13 @@ namespace sw
 		REFLECT_BODY();
 
 		PROPERTY()
-		bool bHudVisible{ true };
+		bool _bHudVisible{ true };
 
 		PROPERTY()
-		bool bPauseMenuOpen{ false };
+		bool _bPauseMenuOpen{ false };
 
 		PROPERTY()
-		bool bInventoryOpen{ false };
+		bool _bInventoryOpen{ false };
 
 		UIManagerComponent()										   = default;
 		virtual ~UIManagerComponent() override						   = default;

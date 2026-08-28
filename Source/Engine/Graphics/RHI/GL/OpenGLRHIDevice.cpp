@@ -443,7 +443,7 @@ namespace sw
 			glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, static_cast<GLsizei>( sizeof( RHIVertex ) ), reinterpret_cast<void*>( 0 ) );
 			glEnableVertexAttribArray( 1 );
 			glVertexAttribPointer( 1, 4, GL_FLOAT, GL_FALSE, static_cast<GLsizei>( sizeof( RHIVertex ) ),
-								   reinterpret_cast<void*>( offsetof( RHIVertex, color ) ) );
+								   reinterpret_cast<void*>( SW_OFFSET_OF( RHIVertex, _arrColor ) ) );
 			glBindVertexArray( 0 );
 			glBindBuffer( GL_ARRAY_BUFFER, 0 );
 
@@ -559,10 +559,10 @@ namespace sw
 
 		_pipelineStates.forEach( []( OpenGLPipelineStateRecord& pso )
 		{
-			if ( pso.program != 0 )
+			if ( pso._program != 0 )
 			{
-				glDeleteProgram( pso.program );
-				pso.program = 0;
+				glDeleteProgram( pso._program );
+				pso._program = 0;
 			}
 		} );
 		_pipelineStates.clear();
@@ -580,15 +580,15 @@ namespace sw
 
 		_gpuTextures.forEach( []( OpenGLTextureRecord& rec )
 		{
-			if ( rec.texture != 0 )
+			if ( rec._texture != 0 )
 			{
-				glDeleteTextures( 1, &rec.texture );
-				rec.texture = 0;
+				glDeleteTextures( 1, &rec._texture );
+				rec._texture = 0;
 			}
-			if ( rec.fbo != 0 )
+			if ( rec._fbo != 0 )
 			{
-				glDeleteFramebuffers( 1, &rec.fbo );
-				rec.fbo = 0;
+				glDeleteFramebuffers( 1, &rec._fbo );
+				rec._fbo = 0;
 			}
 		} );
 		_gpuTextures.clear();
@@ -799,7 +799,7 @@ namespace sw
 		if ( materialDescriptorIndex != kInvalidDescriptorIndex &&
 			 materialDescriptorIndex < static_cast<RHIDescriptorIndex>( _listRegisteredBindlessVector.size() ) )
 		{
-			GLuint ubo = resolveGlBuffer( _listRegisteredBindlessVector[materialDescriptorIndex].buffer );
+			GLuint ubo = resolveGlBuffer( _listRegisteredBindlessVector[materialDescriptorIndex]._buffer );
 			if ( ubo != 0 )
 				glBindBufferBase( GL_UNIFORM_BUFFER, 0, ubo );
 		}
@@ -919,7 +919,7 @@ namespace sw
 			const OpenGLTextureRecord* pRec = resolveTexture( key._arrColors[colorIndex] );
 			if ( pRec == nullptr || pRec->_bDepthStencil != 0 )
 				return 0;
-			colorTexs[attachedColors++] = pRec->texture;
+			colorTexs[attachedColors++] = pRec->_texture;
 		}
 
 		GLuint depthTex{ 0 };
@@ -928,7 +928,7 @@ namespace sw
 			const OpenGLTextureRecord* pDepthRec = resolveTexture( depth );
 			if ( pDepthRec == nullptr || pDepthRec->_bDepthStencil == 0 )
 				return 0;
-			depthTex = pDepthRec->texture;
+			depthTex = pDepthRec->_texture;
 		}
 		if ( attachedColors == 0 && depthTex == 0 )
 			return 0;
@@ -953,7 +953,7 @@ namespace sw
 		if ( depthTex != 0 )
 		{
 			const OpenGLTextureRecord* pDepthRec	   = resolveTexture( depth );
-			const GLenum			   depthAttachment = ( pDepthRec != nullptr && pDepthRec->format == RHIFormat::D24_UNORM_S8_UINT )
+			const GLenum			   depthAttachment = ( pDepthRec != nullptr && pDepthRec->_format == RHIFormat::D24_UNORM_S8_UINT )
 														   ? GL_DEPTH_STENCIL_ATTACHMENT
 														   : GL_DEPTH_ATTACHMENT;
 			glFramebufferTexture2D( GL_FRAMEBUFFER, depthAttachment, GL_TEXTURE_2D, depthTex, 0 );

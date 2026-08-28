@@ -73,7 +73,7 @@ namespace sw::editor
 
 		for ( const LogEntry& entry : _listDrawSnapshot )
 		{
-			const uint8 levelIndex = static_cast<uint8>( entry.level );
+			const uint8 levelIndex = static_cast<uint8>( entry._level );
 			if ( levelIndex >= 4 || _arrLevelEnabled[levelIndex] == false )
 				continue;
 
@@ -86,7 +86,7 @@ namespace sw::editor
 					return StringUtil::stristr( text.c_str(), filterStr.c_str() ) != nullptr;
 				};
 
-				if ( contains( entry.message ) == false && contains( entry.tag ) == false && contains( entry.file ) == false )
+				if ( contains( entry._message ) == false && contains( entry._tag ) == false && contains( entry._file ) == false )
 					continue;
 			}
 
@@ -173,18 +173,18 @@ namespace sw::editor
 				const LogEntry& entry = *_listVisible[static_cast<size_t>( logIndex )];
 				ImGui::PushID( logIndex );
 
-				ImGui::TextDisabled( "[%s]", entry.timeStamp.c_str() );
+				ImGui::TextDisabled( "[%s]", entry._timeStamp.c_str() );
 				ImGui::SameLine( 0.0f, 0.0f );
-				ImGui::TextColored( ImVec4( 0.45f, 0.85f, 0.95f, 1.0f ), " [%s]", entry.tag.c_str() );
+				ImGui::TextColored( ImVec4( 0.45f, 0.85f, 0.95f, 1.0f ), " [%s]", entry._tag.c_str() );
 				ImGui::SameLine( 0.0f, 0.0f );
-				ImGui::TextColored( colorForLevel( entry.level ), " [%s]", levelName( entry.level ) );
+				ImGui::TextColored( colorForLevel( entry._level ), " [%s]", levelName( entry._level ) );
 				ImGui::SameLine( 0.0f, 0.0f );
 				ImGui::TextUnformatted( " - " );
 				ImGui::SameLine( 0.0f, 0.0f );
-				ImGui::TextUnformatted( entry.message.c_str() );
+				ImGui::TextUnformatted( entry._message.c_str() );
 
-				if ( ImGui::IsItemHovered() && entry.file.empty() == false )
-					ImGui::SetTooltip( "%s(%d)", entry.file.c_str(), entry.line );
+				if ( ImGui::IsItemHovered() && entry._file.empty() == false )
+					ImGui::SetTooltip( "%s(%d)", entry._file.c_str(), entry._line );
 
 				ImGui::PopID();
 			}

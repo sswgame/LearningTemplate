@@ -248,13 +248,13 @@ namespace sw
 			CallStack stack;
 			// skipFrames: capture(0), recordAllocation(1), operator new(2) — 상위 2프레임을 건너뜁니다.
 			CallStackCapture::capture( stack, 2 );
-			outHash = stack.hash;
+			outHash = stack._hash;
 
 			t_bIsInsideProfiler = true;
 			{
 				std::scoped_lock<mutex> lock{ _stackMapMutex };
 				auto&					info = _mapCallStackAllocInfo[outHash];
-				if ( info._stack.frameCount == 0 )
+				if ( info._stack._frameCount == 0 )
 					info._stack = stack;
 				info._currentBytes += size;
 				info._currentCount++;

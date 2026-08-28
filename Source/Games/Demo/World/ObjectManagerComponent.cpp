@@ -16,14 +16,14 @@ namespace sw
 		if ( pOwner != nullptr )
 			pOwner->addTag( "Manager"_tag );
 
-		bInitialized	  = true;
-		activeObjectCount = 0;
-		Scene* pScene	  = game::getService<SceneManager>()->getActiveScene();
+		_bInitialized	   = true;
+		_activeObjectCount = 0;
+		Scene* pScene	   = game::getService<SceneManager>()->getActiveScene();
 		if ( pScene != nullptr )
 		{
 			GameObjectManager* pGameObjectManager = pScene->getObjectManager();
 			if ( pGameObjectManager != nullptr )
-				activeObjectCount = static_cast<int32>( pGameObjectManager->getAllGameObjects().size() );
+				_activeObjectCount = static_cast<int32>( pGameObjectManager->getAllGameObjects().size() );
 		}
 	}
 
@@ -39,7 +39,7 @@ namespace sw
 		{
 			GameObjectManager* pGameObjectManager = pScene->getObjectManager();
 			if ( pGameObjectManager != nullptr )
-				activeObjectCount = static_cast<int32>( pGameObjectManager->getAllGameObjects().size() );
+				_activeObjectCount = static_cast<int32>( pGameObjectManager->getAllGameObjects().size() );
 		}
 	}
 } // namespace sw

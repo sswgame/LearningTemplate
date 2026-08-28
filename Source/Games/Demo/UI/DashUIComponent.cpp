@@ -12,8 +12,8 @@
 namespace sw
 {
 	DashUIComponent::DashUIComponent()
-		: availableDashes{ 0 }
-		, rechargeRatio{ 1.0f }
+		: _availableDashes{ 0 }
+		, _rechargeRatio{ 1.0f }
 	{
 	}
 
@@ -23,8 +23,8 @@ namespace sw
 		GameObject* pOwner = getOwner();
 		if ( pOwner != nullptr )
 			pOwner->addTag( "UI"_tag );
-		availableDashes = 2;
-		rechargeRatio	= 1.0f;
+		_availableDashes = 2;
+		_rechargeRatio	 = 1.0f;
 	}
 
 	void DashUIComponent::onEndPlay()
@@ -49,16 +49,16 @@ namespace sw
 			PlayerComponent* pPlayerComp = pPlayerObj->getComponent<PlayerComponent>();
 			if ( pPlayerComp != nullptr )
 			{
-				availableDashes = pPlayerComp->dashCount;
-				if ( pPlayerComp->dashCoolTime > 0.0f )
+				_availableDashes = pPlayerComp->_dashCount;
+				if ( pPlayerComp->_dashCoolTime > 0.0f )
 				{
-					rechargeRatio = pPlayerComp->dashCoolTimer / pPlayerComp->dashCoolTime;
-					if ( rechargeRatio > 1.0f )
-						rechargeRatio = 1.0f;
+					_rechargeRatio = pPlayerComp->_dashCoolTimer / pPlayerComp->_dashCoolTime;
+					if ( _rechargeRatio > 1.0f )
+						_rechargeRatio = 1.0f;
 				}
 				else
 				{
-					rechargeRatio = 1.0f;
+					_rechargeRatio = 1.0f;
 				}
 			}
 		}

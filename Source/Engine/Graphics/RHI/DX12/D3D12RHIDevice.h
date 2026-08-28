@@ -166,7 +166,7 @@ namespace sw
 		/// @brief 네이티브 PSO + 루트 시그니처
 		struct D3D12PipelineStateRecord
 		{
-			Microsoft::WRL::ComPtr<ID3D12PipelineState> pso;
+			Microsoft::WRL::ComPtr<ID3D12PipelineState> _pso;
 		};
 
 		static constexpr uint32 kMaxShaderVisibleDescriptors = 32768;
@@ -174,7 +174,7 @@ namespace sw
 		/// @brief 렌더 패스 서술 캐시
 		struct D3D12RenderPassRecord
 		{
-			RHIRenderPassDesc desc{};
+			RHIRenderPassDesc _desc{};
 			uint8			  _bAlive	: 1;
 			uint8			  _reserved : 7;
 		};

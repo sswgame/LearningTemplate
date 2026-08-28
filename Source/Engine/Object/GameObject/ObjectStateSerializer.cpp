@@ -178,8 +178,8 @@ namespace sw
 		// 6. SceneComponent Attach Hierarchy (intra-GameObject)
 		struct AttachRecord
 		{
-			uint32 childIdx;
-			uint32 parentIdx;
+			uint32 _childIdx;
+			uint32 _parentIdx;
 		};
 		vector<AttachRecord> listAttaches;
 		for ( uint32 componentIndex = 0; componentIndex < listComponents.size(); ++componentIndex )
@@ -199,8 +199,8 @@ namespace sw
 		writer.write( static_cast<uint32>( listAttaches.size() ) );
 		for ( const auto& att : listAttaches )
 		{
-			writer.write( att.childIdx );
-			writer.write( att.parentIdx );
+			writer.write( att._childIdx );
+			writer.write( att._parentIdx );
 		}
 
 		return true;

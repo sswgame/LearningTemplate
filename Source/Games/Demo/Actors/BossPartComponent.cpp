@@ -12,7 +12,7 @@ namespace sw
 		GameObject* pOwner = getOwner();
 		if ( pOwner != nullptr )
 			pOwner->addTag( "BossPart"_tag );
-		attackTimer = 0.0f;
+		_attackTimer = 0.0f;
 	}
 
 	void BossPartComponent::onEndPlay()
@@ -21,12 +21,12 @@ namespace sw
 
 	void BossPartComponent::onTick( float32 deltaTime )
 	{
-		if ( bIsActive == false )
+		if ( _bIsActive == false )
 			return;
 
-		attackTimer += deltaTime;
-		if ( attackTimer >= attackInterval )
-			attackTimer = 0.0f;
+		_attackTimer += deltaTime;
+		if ( _attackTimer >= _attackInterval )
+			_attackTimer = 0.0f;
 
 		GameObject* pOwner = getOwner();
 		if ( pOwner != nullptr )
@@ -42,8 +42,8 @@ namespace sw
 					{
 						const float3 parentWorldPos = pParentSceneComp->getWorldPosition();
 						float3		 myLocalPos		= pMySceneComp->getLocalPosition();
-						myLocalPos._x				= parentWorldPos._x + offsetFromBoss._x;
-						myLocalPos._y				= parentWorldPos._y + offsetFromBoss._y;
+						myLocalPos._x				= parentWorldPos._x + _offsetFromBoss._x;
+						myLocalPos._y				= parentWorldPos._y + _offsetFromBoss._y;
 						pMySceneComp->setLocalPosition( myLocalPos );
 					}
 				}

@@ -15,9 +15,9 @@ namespace sw
 	void TitleComponent::onBeginPlay()
 	{
 		setTickGroup( TickGroup::PrePhysics );
-		frontCloudCurrentX = 0.0f;
-		backCloudCurrentX  = 0.0f;
-		SW_LOG_INFO( "BeginPlay: Next scene='%#'", nextSceneName.c_str() );
+		_frontCloudCurrentX = 0.0f;
+		_backCloudCurrentX	= 0.0f;
+		SW_LOG_INFO( "BeginPlay: Next scene='%#'", _nextSceneName.c_str() );
 	}
 
 	void TitleComponent::onEndPlay()
@@ -33,13 +33,13 @@ namespace sw
 
 	void TitleComponent::moveClouds( float32 deltaTime )
 	{
-		frontCloudCurrentX += frontCloudSpeed * deltaTime;
-		if ( frontCloudCurrentX >= maxFrontPosX )
-			frontCloudCurrentX = startFrontPosX;
+		_frontCloudCurrentX += _frontCloudSpeed * deltaTime;
+		if ( _frontCloudCurrentX >= _maxFrontPosX )
+			_frontCloudCurrentX = _startFrontPosX;
 
-		backCloudCurrentX += backCloudSpeed * deltaTime;
-		if ( backCloudCurrentX >= maxBackCloudPosX )
-			backCloudCurrentX = startBackCloudPosX;
+		_backCloudCurrentX += _backCloudSpeed * deltaTime;
+		if ( _backCloudCurrentX >= _maxBackCloudPosX )
+			_backCloudCurrentX = _startBackCloudPosX;
 	}
 
 	void TitleComponent::checkMenuSelection()
@@ -53,7 +53,7 @@ namespace sw
 	{
 		if ( menuIndex == 0 )
 		{
-			string scene = nextSceneName;
+			string scene = _nextSceneName;
 			if ( scene.empty() )
 				scene = GameData::get()._entranceScene;
 			if ( scene.empty() )

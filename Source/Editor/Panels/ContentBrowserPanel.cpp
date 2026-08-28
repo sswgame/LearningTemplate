@@ -17,6 +17,7 @@
 
 #include <imgui.h>
 
+SW_LOG_CALLER( "ContentBrowserPanel" );
 namespace sw::editor
 {
 	namespace

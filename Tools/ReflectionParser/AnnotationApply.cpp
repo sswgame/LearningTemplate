@@ -113,7 +113,7 @@ namespace sw
 	struct ReflectFlagEntry
 	{
 		string_view _field;
-		void ( *apply )( ParsedTypeInfo& );
+		void ( *_pApply )( ParsedTypeInfo& );
 	};
 
 	static void applyReflectAbstract( ParsedTypeInfo& typeInfo ) { typeInfo._bAbstract = true; }
@@ -139,7 +139,7 @@ namespace sw
 	struct ReflectStringEntry
 	{
 		string_view _field;
-		void ( *apply )( ParsedTypeInfo&, const string& );
+		void ( *_pApply )( ParsedTypeInfo&, const string& );
 	};
 
 	static void applyReflectAlias( ParsedTypeInfo& typeInfo, const string& value )
@@ -154,7 +154,7 @@ namespace sw
 	struct EnumStringEntry
 	{
 		string_view _field;
-		void ( *apply )( ParsedEnumInfo&, const string& );
+		void ( *_pApply )( ParsedEnumInfo&, const string& );
 	};
 
 	/** @brief `Old:Current` 목록을 enumerator ValueAlias 로 넣습니다. */
@@ -206,7 +206,7 @@ namespace sw
 	struct EnumFlagEntry
 	{
 		string_view _field;
-		void ( *apply )( ParsedEnumInfo& );
+		void ( *_pApply )( ParsedEnumInfo& );
 	};
 
 	static void applyEnumFlags( ParsedEnumInfo& enumInfo )
@@ -222,7 +222,7 @@ namespace sw
 	struct PropBoolEntry
 	{
 		string_view _field;
-		void ( *apply )( ParsedPropertyInfo&, bool );
+		void ( *_pApply )( ParsedPropertyInfo&, bool );
 	};
 
 	static void applyPropReadOnly( ParsedPropertyInfo& prop, bool value ) { prop._bReadOnly = value; }
@@ -240,7 +240,7 @@ namespace sw
 	struct PropStringEntry
 	{
 		string_view _field;
-		void ( *apply )( ParsedPropertyInfo&, const string& );
+		void ( *_pApply )( ParsedPropertyInfo&, const string& );
 	};
 
 	static void applyPropAlias( ParsedPropertyInfo& prop, const string& value )
@@ -269,7 +269,7 @@ namespace sw
 	struct PropFloatEntry
 	{
 		string_view _field;
-		void ( *apply )( ParsedPropertyInfo&, float32 );
+		void ( *_pApply )( ParsedPropertyInfo&, float32 );
 	};
 
 	static void applyPropMinRange( ParsedPropertyInfo& prop, float32 value )
@@ -291,7 +291,7 @@ namespace sw
 	struct FuncFlagEntry
 	{
 		string_view _field;
-		void ( *apply )( ParsedFunctionInfo& );
+		void ( *_pApply )( ParsedFunctionInfo& );
 	};
 
 	static void applyFuncReliable( ParsedFunctionInfo& method ) { method._bReliable = true; }
@@ -305,7 +305,7 @@ namespace sw
 	struct FuncStringEntry
 	{
 		string_view _field;
-		void ( *apply )( ParsedFunctionInfo&, const string& );
+		void ( *_pApply )( ParsedFunctionInfo&, const string& );
 	};
 
 	static void applyFuncCategory( ParsedFunctionInfo& method, const string& value ) { method._category = value; }
@@ -340,7 +340,7 @@ namespace sw
 				if ( binding == nullptr || binding->_kind != AnnotationBinding::Kind::Flag )
 					continue;
 				if ( const ReflectFlagEntry* entry = findFieldEntry( kReflectFlags, binding->_field ) )
-					entry->apply( typeInfo );
+					entry->_pApply( typeInfo );
 				continue;
 			}
 
@@ -350,7 +350,7 @@ namespace sw
 			if ( binding == nullptr || binding->_kind != AnnotationBinding::Kind::String )
 				continue;
 			if ( const ReflectStringEntry* entry = findFieldEntry( kReflectStrings, binding->_field ) )
-				entry->apply( typeInfo, string( val ) );
+				entry->_pApply( typeInfo, string( val ) );
 		}
 	}
 
@@ -374,7 +374,7 @@ namespace sw
 					if ( binding->_kind == AnnotationBinding::Kind::Flag )
 					{
 						if ( const EnumFlagEntry* entry = findFieldEntry( kEnumFlags, binding->_field ) )
-							entry->apply( enumInfo );
+							entry->_pApply( enumInfo );
 					}
 				}
 				continue;
@@ -386,7 +386,7 @@ namespace sw
 			if ( binding == nullptr || binding->_kind != AnnotationBinding::Kind::String )
 				continue;
 			if ( const EnumStringEntry* entry = findFieldEntry( kEnumStrings, binding->_field ) )
-				entry->apply( enumInfo, string( val ) );
+				entry->_pApply( enumInfo, string( val ) );
 		}
 	}
 
@@ -399,15 +399,15 @@ namespace sw
 			case Kind::Flag:
 			case Kind::Bool:
 				if ( const PropBoolEntry* entry = findFieldEntry( kPropBools, binding._field ) )
-					entry->apply( prop, binding._kind == Kind::Flag ? true : parseAnnotationBool( val ) );
+					entry->_pApply( prop, binding._kind == Kind::Flag ? true : parseAnnotationBool( val ) );
 				break;
 			case Kind::String:
 				if ( const PropStringEntry* entry = findFieldEntry( kPropStrings, binding._field ) )
-					entry->apply( prop, string( val ) );
+					entry->_pApply( prop, string( val ) );
 				break;
 			case Kind::Float:
 				if ( const PropFloatEntry* entry = findFieldEntry( kPropFloats, binding._field ) )
-					entry->apply( prop, std::strtof( string( val ).c_str(), nullptr ) );
+					entry->_pApply( prop, std::strtof( string( val ).c_str(), nullptr ) );
 				break;
 			case Kind::NetRole:
 				break;
@@ -468,7 +468,7 @@ namespace sw
 					else if ( binding->_kind == AnnotationBinding::Kind::Flag )
 					{
 						if ( const FuncFlagEntry* entry = findFieldEntry( kFuncFlags, binding->_field ) )
-							entry->apply( method );
+							entry->_pApply( method );
 					}
 				}
 				continue;
@@ -480,7 +480,7 @@ namespace sw
 				if ( binding->_kind == AnnotationBinding::Kind::String )
 				{
 					if ( const FuncStringEntry* entry = findFieldEntry( kFuncStrings, binding->_field ) )
-						entry->apply( method, string( val ) );
+						entry->_pApply( method, string( val ) );
 				}
 			}
 		}

@@ -5,13 +5,14 @@
 #include "Engine/Graphics/Shader/ShaderCompiler.h"
 #include "Engine/Graphics/Shader/ShaderReflectionInternal.h"
 
+SW_LOG_CALLER( "ShaderReflection" );
 namespace sw
 {
 	ShaderReflectionData ShaderReflection::reflect( const vector<uint8>& bytecode, ShaderTargetFormat targetFormat )
 	{
 		if ( bytecode.empty() )
 		{
-			SW_LOG_WARNING( "ShaderReflection::reflect called with empty bytecode" );
+			SW_LOG_WARNING( "Reflect called with empty bytecode." );
 			return {};
 		}
 

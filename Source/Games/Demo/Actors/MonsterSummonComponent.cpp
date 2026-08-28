@@ -35,7 +35,7 @@ namespace sw
 
 	void MonsterSummonComponent::spawnMonsters()
 	{
-		if ( summonCount <= 0 )
+		if ( _summonCount <= 0 )
 			return;
 
 		GameObject* pOwner = getOwner();
@@ -55,9 +55,9 @@ namespace sw
 			return;
 
 		const float3  ownerWorldPos = pOwnerSceneComp->getWorldPosition();
-		const int32	  count			= summonCount;
-		const float32 radius		= summonRadius;
-		const string  prefabOrId	= monsterPrefab;
+		const int32	  count			= _summonCount;
+		const float32 radius		= _summonRadius;
+		const string  prefabOrId	= _monsterPrefab;
 
 		auto spawnAll = [pGameObjectManager, ownerWorldPos, count, radius, prefabOrId]()
 		{
@@ -93,7 +93,7 @@ namespace sw
 
 					MonsterComponent* pMonsterComp = pMinion->addComponent<MonsterComponent>();
 					if ( pMonsterComp != nullptr )
-						pMonsterComp->monsterId = prefabOrId;
+						pMonsterComp->_monsterId = prefabOrId;
 				}
 				else
 				{
@@ -102,8 +102,8 @@ namespace sw
 						pSceneComp->setLocalPosition( spawnPos );
 
 					MonsterComponent* pMonsterComp = pMinion->getComponent<MonsterComponent>();
-					if ( pMonsterComp != nullptr && pMonsterComp->monsterId.empty() )
-						pMonsterComp->monsterId = prefabOrId;
+					if ( pMonsterComp != nullptr && pMonsterComp->_monsterId.empty() )
+						pMonsterComp->_monsterId = prefabOrId;
 				}
 
 				pMinion->addTag( "Monster"_tag );

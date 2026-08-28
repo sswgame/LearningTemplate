@@ -13,6 +13,7 @@
 #include <mutex>
 #include <shared_mutex>
 
+SW_LOG_CALLER( "StringTable" );
 namespace sw
 {
 	namespace

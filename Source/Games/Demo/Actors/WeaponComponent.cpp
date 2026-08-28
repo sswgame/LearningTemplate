@@ -12,8 +12,8 @@ namespace sw
 		GameObject* pOwner = getOwner();
 		if ( pOwner != nullptr )
 			pOwner->addTag( "Weapon"_tag );
-		currentSkillCoolTime = 0.0f;
-		bAttacking			 = false;
+		_currentSkillCoolTime = 0.0f;
+		_bAttacking			  = false;
 	}
 
 	void WeaponComponent::onEndPlay()
@@ -22,19 +22,19 @@ namespace sw
 
 	void WeaponComponent::onTick( float32 deltaTime )
 	{
-		if ( currentSkillCoolTime > 0.0f )
+		if ( _currentSkillCoolTime > 0.0f )
 		{
-			currentSkillCoolTime -= deltaTime;
-			if ( currentSkillCoolTime < 0.0f )
-				currentSkillCoolTime = 0.0f;
+			_currentSkillCoolTime -= deltaTime;
+			if ( _currentSkillCoolTime < 0.0f )
+				_currentSkillCoolTime = 0.0f;
 		}
 	}
 
 	bool WeaponComponent::trySkill()
 	{
-		if ( currentSkillCoolTime <= 0.0f )
+		if ( _currentSkillCoolTime <= 0.0f )
 		{
-			currentSkillCoolTime = skillCoolTime;
+			_currentSkillCoolTime = _skillCoolTime;
 			return true;
 		}
 		return false;

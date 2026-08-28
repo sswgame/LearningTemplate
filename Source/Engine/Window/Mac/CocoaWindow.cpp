@@ -2,6 +2,7 @@
 
 #include "Engine/Window/Mac/CocoaWindow.h"
 
+SW_LOG_CALLER( "CocoaWindow" );
 namespace sw
 {
 	CocoaWindow::CocoaWindow()

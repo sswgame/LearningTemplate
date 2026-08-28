@@ -57,8 +57,8 @@ namespace sw
 		 */
 		struct Node
 		{
-			std::pair<Key, T> kv;
-			size_t			  next;
+			std::pair<Key, T> _kv;
+			size_t			  _next;
 		};
 
 		vector<size_t> _listBucket;	   ///< 버킷 헤드 인덱스 테이블
@@ -108,9 +108,9 @@ namespace sw
 			/** @brief 다른지 비교합니다. */
 			bool operator!=( const iterator& other ) const { return _idx != other._idx; }
 			/** @brief 역참조합니다. */
-			reference operator*() const { return *reinterpret_cast<pointer>( const_cast<std::pair<Key, T>*>( &std::as_const( _pMap->_listDenseData ).data()[_idx].kv ) ); }
+			reference operator*() const { return *reinterpret_cast<pointer>( const_cast<std::pair<Key, T>*>( &std::as_const( _pMap->_listDenseData ).data()[_idx]._kv ) ); }
 			/** @brief 멤버에 접근합니다. */
-			pointer operator->() const { return reinterpret_cast<pointer>( const_cast<std::pair<Key, T>*>( &std::as_const( _pMap->_listDenseData ).data()[_idx].kv ) ); }
+			pointer operator->() const { return reinterpret_cast<pointer>( const_cast<std::pair<Key, T>*>( &std::as_const( _pMap->_listDenseData ).data()[_idx]._kv ) ); }
 
 			unordered_map* _pMap;
 			size_t		   _idx;
@@ -146,9 +146,9 @@ namespace sw
 			/** @brief 다른지 비교합니다. */
 			bool operator!=( const const_iterator& other ) const { return _idx != other._idx; }
 			/** @brief 역참조합니다. */
-			reference operator*() const { return *reinterpret_cast<pointer>( &std::as_const( _pMap->_listDenseData ).data()[_idx].kv ); }
+			reference operator*() const { return *reinterpret_cast<pointer>( &std::as_const( _pMap->_listDenseData ).data()[_idx]._kv ); }
 			/** @brief 멤버에 접근합니다. */
-			pointer operator->() const { return reinterpret_cast<pointer>( &std::as_const( _pMap->_listDenseData ).data()[_idx].kv ); }
+			pointer operator->() const { return reinterpret_cast<pointer>( &std::as_const( _pMap->_listDenseData ).data()[_idx]._kv ); }
 
 			const unordered_map* _pMap;
 			size_t				 _idx;
@@ -309,9 +309,9 @@ namespace sw
 			size_t		  curr		= bData[bucketIdx];
 			while ( curr != kEmptySlot )
 			{
-				if ( _equal( dData[curr].kv.first, key ) )
+				if ( _equal( dData[curr]._kv.first, key ) )
 					return iterator( this, curr );
-				curr = dData[curr].next;
+				curr = dData[curr]._next;
 			}
 			return end();
 		}
@@ -329,9 +329,9 @@ namespace sw
 			size_t		  curr		= bData[bucketIdx];
 			while ( curr != kEmptySlot )
 			{
-				if ( _equal( dData[curr].kv.first, key ) )
+				if ( _equal( dData[curr]._kv.first, key ) )
 					return const_iterator( this, curr );
-				curr = dData[curr].next;
+				curr = dData[curr]._next;
 			}
 			return end();
 		}
@@ -352,15 +352,15 @@ namespace sw
 			{
 				if constexpr ( std::is_invocable_v<KeyEqual, const Key&, const K&> )
 				{
-					if ( _equal( dData[curr].kv.first, key ) )
+					if ( _equal( dData[curr]._kv.first, key ) )
 						return iterator( this, curr );
 				}
 				else
 				{
-					if ( dData[curr].kv.first == key )
+					if ( dData[curr]._kv.first == key )
 						return iterator( this, curr );
 				}
-				curr = dData[curr].next;
+				curr = dData[curr]._next;
 			}
 			return end();
 		}
@@ -381,15 +381,15 @@ namespace sw
 			{
 				if constexpr ( std::is_invocable_v<KeyEqual, const Key&, const K&> )
 				{
-					if ( _equal( dData[curr].kv.first, key ) )
+					if ( _equal( dData[curr]._kv.first, key ) )
 						return const_iterator( this, curr );
 				}
 				else
 				{
-					if ( dData[curr].kv.first == key )
+					if ( dData[curr]._kv.first == key )
 						return const_iterator( this, curr );
 				}
-				curr = dData[curr].next;
+				curr = dData[curr]._next;
 			}
 			return end();
 		}
@@ -418,15 +418,15 @@ namespace sw
 			size_t		 curr	   = _listBucket[bucketIdx];
 			while ( curr != kEmptySlot )
 			{
-				if ( _equal( _listDenseData[curr].kv.first, key ) )
-					return _listDenseData[curr].kv.second;
-				curr = _listDenseData[curr].next;
+				if ( _equal( _listDenseData[curr]._kv.first, key ) )
+					return _listDenseData[curr]._kv.second;
+				curr = _listDenseData[curr]._next;
 			}
 
 			const size_t newIdx = _listDenseData.size();
 			_listDenseData.push_back( { std::make_pair( key, T{} ), _listBucket[bucketIdx] } );
 			_listBucket[bucketIdx] = newIdx;
-			return _listDenseData[newIdx].kv.second;
+			return _listDenseData[newIdx]._kv.second;
 		}
 
 		/** @brief 지정 위치의 원소를 반환합니다. */
@@ -439,15 +439,15 @@ namespace sw
 			size_t		 curr	   = _listBucket[bucketIdx];
 			while ( curr != kEmptySlot )
 			{
-				if ( _equal( _listDenseData[curr].kv.first, key ) )
-					return _listDenseData[curr].kv.second;
-				curr = _listDenseData[curr].next;
+				if ( _equal( _listDenseData[curr]._kv.first, key ) )
+					return _listDenseData[curr]._kv.second;
+				curr = _listDenseData[curr]._next;
 			}
 
 			const size_t newIdx = _listDenseData.size();
 			_listDenseData.push_back( { std::make_pair( std::move( key ), T{} ), _listBucket[bucketIdx] } );
 			_listBucket[bucketIdx] = newIdx;
-			return _listDenseData[newIdx].kv.second;
+			return _listDenseData[newIdx]._kv.second;
 		}
 
 		/** @brief 원소를 삽입합니다. */
@@ -460,9 +460,9 @@ namespace sw
 			size_t		 curr	   = _listBucket[bucketIdx];
 			while ( curr != kEmptySlot )
 			{
-				if ( _equal( _listDenseData[curr].kv.first, value.first ) )
+				if ( _equal( _listDenseData[curr]._kv.first, value.first ) )
 					return { iterator( this, curr ), false };
-				curr = _listDenseData[curr].next;
+				curr = _listDenseData[curr]._next;
 			}
 
 			const size_t newIdx = _listDenseData.size();
@@ -488,24 +488,24 @@ namespace sw
 			// 키를 알려면 일단 만들어야 함. 표준 emplace 는 제자리 생성.
 			// 밀집 배열은 끝에 만든 뒤 키가 이미 있으면 pop 합니다.
 			_listDenseData.push_back( { std::pair<Key, T>( std::forward<Args>( args )... ), kEmptySlot } );
-			const Key& key = _listDenseData.back().kv.first;
+			const Key& key = _listDenseData.back()._kv.first;
 
 			size_t		 hash	   = _hasher( key );
 			const size_t bucketIdx = hash % _listBucket.size();
 			size_t		 curr	   = _listBucket[bucketIdx];
 			while ( curr != kEmptySlot )
 			{
-				if ( _equal( _listDenseData[curr].kv.first, key ) )
+				if ( _equal( _listDenseData[curr]._kv.first, key ) )
 				{
 					_listDenseData.pop_back();
 					return { iterator( this, curr ), false };
 				}
-				curr = _listDenseData[curr].next;
+				curr = _listDenseData[curr]._next;
 			}
 
-			const size_t newIdx			= _listDenseData.size() - 1;
-			_listDenseData[newIdx].next = _listBucket[bucketIdx];
-			_listBucket[bucketIdx]		= newIdx;
+			const size_t newIdx			 = _listDenseData.size() - 1;
+			_listDenseData[newIdx]._next = _listBucket[bucketIdx];
+			_listBucket[bucketIdx]		 = newIdx;
 			return { iterator( this, newIdx ), true };
 		}
 
@@ -538,12 +538,12 @@ namespace sw
 			size_t		 curr	   = _listBucket[bucketIdx];
 			while ( curr != kEmptySlot )
 			{
-				if ( _equal( _listDenseData[curr].kv.first, key ) )
+				if ( _equal( _listDenseData[curr]._kv.first, key ) )
 				{
-					_listDenseData[curr].kv.second = std::forward<M>( obj );
+					_listDenseData[curr]._kv.second = std::forward<M>( obj );
 					return { iterator( this, curr ), false };
 				}
-				curr = _listDenseData[curr].next;
+				curr = _listDenseData[curr]._next;
 			}
 
 			const size_t newIdx = _listDenseData.size();
@@ -563,12 +563,12 @@ namespace sw
 			size_t		 curr	   = _listBucket[bucketIdx];
 			while ( curr != kEmptySlot )
 			{
-				if ( _equal( _listDenseData[curr].kv.first, key ) )
+				if ( _equal( _listDenseData[curr]._kv.first, key ) )
 				{
-					_listDenseData[curr].kv.second = std::forward<M>( obj );
+					_listDenseData[curr]._kv.second = std::forward<M>( obj );
 					return { iterator( this, curr ), false };
 				}
-				curr = _listDenseData[curr].next;
+				curr = _listDenseData[curr]._next;
 			}
 
 			const size_t newIdx = _listDenseData.size();
@@ -591,13 +591,13 @@ namespace sw
 
 			while ( curr != kEmptySlot )
 			{
-				if ( _equal( _listDenseData[curr].kv.first, key ) )
+				if ( _equal( _listDenseData[curr]._kv.first, key ) )
 				{
 					// Remove from linked list
 					if ( prev == kEmptySlot )
-						_listBucket[bucketIdx] = _listDenseData[curr].next;
+						_listBucket[bucketIdx] = _listDenseData[curr]._next;
 					else
-						_listDenseData[prev].next = _listDenseData[curr].next;
+						_listDenseData[prev]._next = _listDenseData[curr]._next;
 
 					const size_t lastIdx = _listDenseData.size() - 1;
 					if ( curr != lastIdx )
@@ -606,7 +606,7 @@ namespace sw
 						_listDenseData[curr] = std::move( _listDenseData[lastIdx] );
 
 						// lastIdx 를 가리키던 버킷 체인을 curr 로 바꿉니다.
-						size_t		 lastHash	   = _hasher( _listDenseData[curr].kv.first );
+						size_t		 lastHash	   = _hasher( _listDenseData[curr]._kv.first );
 						const size_t lastBucketIdx = lastHash % _listBucket.size();
 						size_t		 lcurr		   = _listBucket[lastBucketIdx];
 						size_t		 lprev		   = kEmptySlot;
@@ -617,11 +617,11 @@ namespace sw
 								if ( lprev == kEmptySlot )
 									_listBucket[lastBucketIdx] = curr;
 								else
-									_listDenseData[lprev].next = curr;
+									_listDenseData[lprev]._next = curr;
 								break;
 							}
 							lprev = lcurr;
-							lcurr = _listDenseData[lcurr].next;
+							lcurr = _listDenseData[lcurr]._next;
 						}
 					}
 
@@ -629,7 +629,7 @@ namespace sw
 					return 1;
 				}
 				prev = curr;
-				curr = _listDenseData[curr].next;
+				curr = _listDenseData[curr]._next;
 			}
 			return 0;
 		}
@@ -649,10 +649,10 @@ namespace sw
 			_listBucket.assign( count, kEmptySlot );
 			for ( size_t denseIndex = 0; denseIndex < _listDenseData.size(); ++denseIndex )
 			{
-				size_t		 hash				= _hasher( _listDenseData[denseIndex].kv.first );
-				const size_t bucketIdx			= hash % _listBucket.size();
-				_listDenseData[denseIndex].next = _listBucket[bucketIdx];
-				_listBucket[bucketIdx]			= denseIndex;
+				size_t		 hash				 = _hasher( _listDenseData[denseIndex]._kv.first );
+				const size_t bucketIdx			 = hash % _listBucket.size();
+				_listDenseData[denseIndex]._next = _listBucket[bucketIdx];
+				_listBucket[bucketIdx]			 = denseIndex;
 			}
 		}
 

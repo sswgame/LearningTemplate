@@ -43,93 +43,93 @@ namespace sw
 	void RHIDeferredCommandList::setViewport( const RHIViewport& viewport )
 	{
 		Cmd cmd{};
-		cmd.op		 = Op::SetViewport;
-		cmd.viewport = viewport;
+		cmd._op		  = Op::SetViewport;
+		cmd._viewport = viewport;
 		push( std::move( cmd ) );
 	}
 
 	void RHIDeferredCommandList::setPipelineState( RHIPipelineStateHandle pso )
 	{
 		Cmd cmd{};
-		cmd.op	= Op::SetPipelineState;
-		cmd.pso = pso;
+		cmd._op	 = Op::SetPipelineState;
+		cmd._pso = pso;
 		push( std::move( cmd ) );
 	}
 
 	void RHIDeferredCommandList::beginRenderPass( const RHIRenderPassBeginInfo& beginInfo )
 	{
 		Cmd cmd{};
-		cmd.op		  = Op::BeginRenderPass;
-		cmd.beginInfo = beginInfo;
+		cmd._op		   = Op::BeginRenderPass;
+		cmd._beginInfo = beginInfo;
 		push( std::move( cmd ) );
 	}
 
 	void RHIDeferredCommandList::endRenderPass()
 	{
 		Cmd cmd{};
-		cmd.op = Op::EndRenderPass;
+		cmd._op = Op::EndRenderPass;
 		push( std::move( cmd ) );
 	}
 
 	void RHIDeferredCommandList::setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset )
 	{
 		Cmd cmd{};
-		cmd.op	   = Op::SetVertexBuffer;
-		cmd.slot   = slot;
-		cmd.buffer = buffer;
-		cmd.stride = stride;
-		cmd.offset = offset;
+		cmd._op		= Op::SetVertexBuffer;
+		cmd._slot	= slot;
+		cmd._buffer = buffer;
+		cmd._stride = stride;
+		cmd._offset = offset;
 		push( std::move( cmd ) );
 	}
 
 	void RHIDeferredCommandList::draw( uint32 vertexCount, uint32 startVertex, RHIDescriptorIndex materialDescriptorIndex )
 	{
 		Cmd cmd{};
-		cmd.op			  = Op::Draw;
-		cmd.vertexCount	  = vertexCount;
-		cmd.startVertex	  = startVertex;
-		cmd.materialIndex = materialDescriptorIndex;
+		cmd._op			   = Op::Draw;
+		cmd._vertexCount   = vertexCount;
+		cmd._startVertex   = startVertex;
+		cmd._materialIndex = materialDescriptorIndex;
 		push( std::move( cmd ) );
 	}
 
 	void RHIDeferredCommandList::setIndexBuffer( RHIBufferHandle buffer, uint32 indexStride, uint32 offset )
 	{
 		Cmd cmd{};
-		cmd.op			= Op::SetIndexBuffer;
-		cmd.buffer		= buffer;
-		cmd.indexStride = indexStride;
-		cmd.offset		= offset;
+		cmd._op			 = Op::SetIndexBuffer;
+		cmd._buffer		 = buffer;
+		cmd._indexStride = indexStride;
+		cmd._offset		 = offset;
 		push( std::move( cmd ) );
 	}
 
 	void RHIDeferredCommandList::setComputePipelineState( RHIPipelineStateHandle pso )
 	{
 		Cmd cmd{};
-		cmd.op	= Op::SetComputePipelineState;
-		cmd.pso = pso;
+		cmd._op	 = Op::SetComputePipelineState;
+		cmd._pso = pso;
 		push( std::move( cmd ) );
 	}
 
 	void RHIDeferredCommandList::dispatchCompute( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ )
 	{
 		Cmd cmd{};
-		cmd.op		  = Op::DispatchCompute;
-		cmd.dispatchX = threadGroupCountX;
-		cmd.dispatchY = threadGroupCountY;
-		cmd.dispatchZ = threadGroupCountZ;
+		cmd._op		   = Op::DispatchCompute;
+		cmd._dispatchX = threadGroupCountX;
+		cmd._dispatchY = threadGroupCountY;
+		cmd._dispatchZ = threadGroupCountZ;
 		push( std::move( cmd ) );
 	}
 
 	void RHIDeferredCommandList::setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues )
 	{
 		Cmd cmd{};
-		cmd.op						= Op::SetComputeRootConstants;
-		cmd.rootParameterIndex		= rootParameterIndex;
-		cmd.destOffsetIn32BitValues = destOffsetIn32BitValues;
+		cmd._op						 = Op::SetComputeRootConstants;
+		cmd._rootParameterIndex		 = rootParameterIndex;
+		cmd._destOffsetIn32BitValues = destOffsetIn32BitValues;
 		if ( num32BitValues > 0 && pData != nullptr )
 		{
-			cmd.listRootConstantWord.resize( num32BitValues );
-			Memory::copy( cmd.listRootConstantWord.data(), pData, static_cast<size_t>( num32BitValues ) * sizeof( uint32 ) );
+			cmd._listRootConstantWord.resize( num32BitValues );
+			Memory::copy( cmd._listRootConstantWord.data(), pData, static_cast<size_t>( num32BitValues ) * sizeof( uint32 ) );
 		}
 		push( std::move( cmd ) );
 	}
@@ -137,35 +137,35 @@ namespace sw
 	void RHIDeferredCommandList::bindComputeUAV( RHIDescriptorIndex index, uint32 slot )
 	{
 		Cmd cmd{};
-		cmd.op				= Op::BindComputeUAV;
-		cmd.descriptorIndex = index;
-		cmd.slot			= slot;
+		cmd._op				 = Op::BindComputeUAV;
+		cmd._descriptorIndex = index;
+		cmd._slot			 = slot;
 		push( std::move( cmd ) );
 	}
 
 	void RHIDeferredCommandList::bindShaderResource( RHIDescriptorIndex index, uint32 slot )
 	{
 		Cmd cmd{};
-		cmd.op				= Op::BindShaderResource;
-		cmd.descriptorIndex = index;
-		cmd.slot			= slot;
+		cmd._op				 = Op::BindShaderResource;
+		cmd._descriptorIndex = index;
+		cmd._slot			 = slot;
 		push( std::move( cmd ) );
 	}
 
 	void RHIDeferredCommandList::prepareTextureForShaderRead( RHITextureHandle texture )
 	{
 		Cmd cmd{};
-		cmd.op		   = Op::PrepareTextureForShaderRead;
-		cmd.srcTexture = texture;
+		cmd._op			= Op::PrepareTextureForShaderRead;
+		cmd._srcTexture = texture;
 		push( std::move( cmd ) );
 	}
 
 	void RHIDeferredCommandList::blitTexture( RHITextureHandle src, RHITextureHandle dst )
 	{
 		Cmd cmd{};
-		cmd.op		   = Op::BlitTexture;
-		cmd.srcTexture = src;
-		cmd.dstTexture = dst;
+		cmd._op			= Op::BlitTexture;
+		cmd._srcTexture = src;
+		cmd._dstTexture = dst;
 		push( std::move( cmd ) );
 	}
 
@@ -173,37 +173,37 @@ namespace sw
 											   RHIDescriptorIndex materialDescriptorIndex )
 	{
 		Cmd cmd{};
-		cmd.op			   = Op::DrawIndirect;
-		cmd.argumentBuffer = argumentBuffer;
-		cmd.argumentOffset = argumentBufferOffset;
-		cmd.materialIndex  = materialDescriptorIndex;
+		cmd._op				= Op::DrawIndirect;
+		cmd._argumentBuffer = argumentBuffer;
+		cmd._argumentOffset = argumentBufferOffset;
+		cmd._materialIndex	= materialDescriptorIndex;
 		push( std::move( cmd ) );
 	}
 
 	void RHIDeferredCommandList::dispatchIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset )
 	{
 		Cmd cmd{};
-		cmd.op			   = Op::DispatchIndirect;
-		cmd.argumentBuffer = argumentBuffer;
-		cmd.argumentOffset = argumentBufferOffset;
+		cmd._op				= Op::DispatchIndirect;
+		cmd._argumentBuffer = argumentBuffer;
+		cmd._argumentOffset = argumentBufferOffset;
 		push( std::move( cmd ) );
 	}
 
 	void RHIDeferredCommandList::transitionBuffer( RHIBufferHandle buffer, RHIBufferState newState )
 	{
 		Cmd cmd{};
-		cmd.op			   = Op::TransitionBuffer;
-		cmd.argumentBuffer = buffer;
-		cmd.bufferState	   = newState;
+		cmd._op				= Op::TransitionBuffer;
+		cmd._argumentBuffer = buffer;
+		cmd._bufferState	= newState;
 		push( std::move( cmd ) );
 	}
 
 	void RHIDeferredCommandList::drawIndexedIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset )
 	{
 		Cmd cmd{};
-		cmd.op			   = Op::DrawIndexedIndirect;
-		cmd.argumentBuffer = argumentBuffer;
-		cmd.argumentOffset = argumentBufferOffset;
+		cmd._op				= Op::DrawIndexedIndirect;
+		cmd._argumentBuffer = argumentBuffer;
+		cmd._argumentOffset = argumentBufferOffset;
 		push( std::move( cmd ) );
 	}
 
@@ -211,27 +211,27 @@ namespace sw
 													uint32 maxCommandCount, RHIBufferHandle countBuffer, uint32 countBufferOffset )
 	{
 		Cmd cmd{};
-		cmd.op				= Op::MultiDrawIndirect;
-		cmd.argumentBuffer	= argumentBuffer;
-		cmd.argumentOffset	= argumentBufferOffset;
-		cmd.maxCommandCount = maxCommandCount;
-		cmd.countBuffer		= countBuffer;
-		cmd.countOffset		= countBufferOffset;
+		cmd._op				 = Op::MultiDrawIndirect;
+		cmd._argumentBuffer	 = argumentBuffer;
+		cmd._argumentOffset	 = argumentBufferOffset;
+		cmd._maxCommandCount = maxCommandCount;
+		cmd._countBuffer	 = countBuffer;
+		cmd._countOffset	 = countBufferOffset;
 		push( std::move( cmd ) );
 	}
 
 	void RHIDeferredCommandList::beginEventMarker( const utf8* pName )
 	{
 		Cmd cmd{};
-		cmd.op		  = Op::BeginEventMarker;
-		cmd.eventName = pName != nullptr ? pName : "";
+		cmd._op		   = Op::BeginEventMarker;
+		cmd._eventName = pName != nullptr ? pName : "";
 		push( std::move( cmd ) );
 	}
 
 	void RHIDeferredCommandList::endEventMarker()
 	{
 		Cmd cmd{};
-		cmd.op = Op::EndEventMarker;
+		cmd._op = Op::EndEventMarker;
 		push( std::move( cmd ) );
 	}
 
@@ -243,71 +243,71 @@ namespace sw
 		for ( size_t idx = 0; idx < _listCmd.size(); ++idx )
 		{
 			const Cmd& cmd = _listCmd[idx];
-			switch ( cmd.op )
+			switch ( cmd._op )
 			{
 				case Op::SetViewport:
-					pContext->setViewport( cmd.viewport );
+					pContext->setViewport( cmd._viewport );
 					break;
 				case Op::SetPipelineState:
-					pContext->setPipelineState( cmd.pso );
+					pContext->setPipelineState( cmd._pso );
 					break;
 				case Op::BeginRenderPass:
-					pContext->beginRenderPass( cmd.beginInfo );
+					pContext->beginRenderPass( cmd._beginInfo );
 					break;
 				case Op::EndRenderPass:
 					pContext->endRenderPass();
 					break;
 				case Op::SetVertexBuffer:
-					pContext->setVertexBuffer( cmd.slot, cmd.buffer, cmd.stride, cmd.offset );
+					pContext->setVertexBuffer( cmd._slot, cmd._buffer, cmd._stride, cmd._offset );
 					break;
 				case Op::Draw:
-					pContext->draw( cmd.vertexCount, cmd.startVertex, cmd.materialIndex );
+					pContext->draw( cmd._vertexCount, cmd._startVertex, cmd._materialIndex );
 					break;
 				case Op::SetIndexBuffer:
-					pContext->setIndexBuffer( cmd.buffer, cmd.indexStride, cmd.offset );
+					pContext->setIndexBuffer( cmd._buffer, cmd._indexStride, cmd._offset );
 					break;
 				case Op::SetComputePipelineState:
-					pContext->setComputePipelineState( cmd.pso );
+					pContext->setComputePipelineState( cmd._pso );
 					break;
 				case Op::DispatchCompute:
-					pContext->dispatchCompute( cmd.dispatchX, cmd.dispatchY, cmd.dispatchZ );
+					pContext->dispatchCompute( cmd._dispatchX, cmd._dispatchY, cmd._dispatchZ );
 					break;
 				case Op::SetComputeRootConstants:
-					pContext->setComputeRootConstants( cmd.rootParameterIndex,
-													   static_cast<uint32>( cmd.listRootConstantWord.size() ),
-													   cmd.listRootConstantWord.empty() ? nullptr : cmd.listRootConstantWord.data(),
-													   cmd.destOffsetIn32BitValues );
+					pContext->setComputeRootConstants( cmd._rootParameterIndex,
+													   static_cast<uint32>( cmd._listRootConstantWord.size() ),
+													   cmd._listRootConstantWord.empty() ? nullptr : cmd._listRootConstantWord.data(),
+													   cmd._destOffsetIn32BitValues );
 					break;
 				case Op::BindComputeUAV:
-					pContext->bindComputeUAV( cmd.descriptorIndex, cmd.slot );
+					pContext->bindComputeUAV( cmd._descriptorIndex, cmd._slot );
 					break;
 				case Op::BindShaderResource:
-					pContext->bindShaderResource( cmd.descriptorIndex, cmd.slot );
+					pContext->bindShaderResource( cmd._descriptorIndex, cmd._slot );
 					break;
 				case Op::PrepareTextureForShaderRead:
-					pContext->prepareTextureForShaderRead( cmd.srcTexture );
+					pContext->prepareTextureForShaderRead( cmd._srcTexture );
 					break;
 				case Op::BlitTexture:
-					pContext->blitTexture( cmd.srcTexture, cmd.dstTexture );
+					pContext->blitTexture( cmd._srcTexture, cmd._dstTexture );
 					break;
 				case Op::DrawIndirect:
-					pContext->drawIndirect( cmd.argumentBuffer, cmd.argumentOffset, cmd.materialIndex );
+					pContext->drawIndirect( cmd._argumentBuffer, cmd._argumentOffset, cmd._materialIndex );
 					break;
 				case Op::DispatchIndirect:
-					pContext->dispatchIndirect( cmd.argumentBuffer, cmd.argumentOffset );
+					pContext->dispatchIndirect( cmd._argumentBuffer, cmd._argumentOffset );
 					break;
 				case Op::TransitionBuffer:
-					pContext->transitionBuffer( cmd.argumentBuffer, cmd.bufferState );
+					pContext->transitionBuffer( cmd._argumentBuffer, cmd._bufferState );
 					break;
 				case Op::DrawIndexedIndirect:
-					pContext->drawIndexedIndirect( cmd.argumentBuffer, cmd.argumentOffset );
+					pContext->drawIndexedIndirect( cmd._argumentBuffer, cmd._argumentOffset );
 					break;
 				case Op::MultiDrawIndirect:
-					pContext->multiDrawIndirect( cmd.argumentBuffer, cmd.argumentOffset, cmd.maxCommandCount, cmd.countBuffer,
-												 cmd.countOffset );
+					pContext->multiDrawIndirect( cmd._argumentBuffer, cmd._argumentOffset, cmd._maxCommandCount, cmd._countBuffer,
+												 cmd._countOffset );
 					break;
 				case Op::BeginEventMarker:
-					pContext->beginEventMarker( cmd.eventName.empty() ? nullptr : cmd.eventName.data() );
+					pContext->beginEventMarker( cmd._eventName.empty() ? nullptr : cmd._eventName.data() );
 					break;
 				case Op::EndEventMarker:
 					pContext->endEventMarker();

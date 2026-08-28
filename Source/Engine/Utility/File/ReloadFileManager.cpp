@@ -37,10 +37,10 @@ namespace sw
 		{
 			if ( _fileWatcher->startWatching( rootPath, true ) == false )
 			{
-				SW_LOG_ERROR( "ReloadFileManager failed to start watching: %#", rootPath );
+				SW_LOG_ERROR( "Failed to start watching: %#", rootPath );
 				_fileWatcher.reset();
 				_bUseMtimePoll = true;
-				SW_LOG_WARNING( "ReloadFileManager: Falling back to mtime poll." );
+				SW_LOG_WARNING( "Falling back to mtime poll." );
 			}
 		}
 		else

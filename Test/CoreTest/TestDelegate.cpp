@@ -11,11 +11,11 @@ static void freeFunctionTest( int32 val )
 
 struct DummyListener
 {
-	int32 value{ 0 };
+	int32 _value{ 0 };
 	/** @brief 멤버 함수 델리게이트가 누적할 값을 더합니다. */
 	void memberFunc( int32 val )
 	{
-		value += val;
+		_value += val;
 	}
 };
 
@@ -45,7 +45,7 @@ SW_TEST_CASE( Core_Delegate, SingleDelegateMemberFunction )
 	SW_EXPECT_TRUE( del.isBound() );
 
 	del( 25 );
-	SW_EXPECT_EQUAL( 25, listener.value );
+	SW_EXPECT_EQUAL( 25, listener._value );
 }
 
 // ------------------------------------------------------------------------------
@@ -68,7 +68,7 @@ SW_TEST_CASE( Core_Delegate, MulticastDelegateBroadcast )
 
 	multiDel.broadcast( 5 );
 	SW_EXPECT_EQUAL( 5, s_TestValue );
-	SW_EXPECT_EQUAL( 5, listener.value );
+	SW_EXPECT_EQUAL( 5, listener._value );
 }
 
 /**
@@ -109,7 +109,7 @@ SW_TEST_CASE( Core_Delegate, MulticastDelegateRemoveAll )
 
 	multiDel.broadcast( 10 );
 	SW_EXPECT_EQUAL( 0, s_TestValue );
-	SW_EXPECT_EQUAL( 0, listener.value );
+	SW_EXPECT_EQUAL( 0, listener._value );
 }
 
 /**

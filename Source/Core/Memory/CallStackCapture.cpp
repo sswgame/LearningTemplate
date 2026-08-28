@@ -49,38 +49,38 @@ namespace sw
 
 	void CallStackCapture::capture( CallStack& outStack, uint32 skipFrames )
 	{
-		outStack.frameCount = 0;
-		outStack.hash		= 0;
+		outStack._frameCount = 0;
+		outStack._hash		 = 0;
 
 #if defined( SW_PLATFORM_WINDOWS )
 		// 이 capture 함수 자신을 건너뛰기 위해 +1
-		outStack.frameCount = CaptureStackBackTrace( skipFrames + 1, CallStack::kMaxFrames, outStack.frames, nullptr );
+		outStack._frameCount = CaptureStackBackTrace( skipFrames + 1, CallStack::kMaxFrames, outStack._arrFrames, nullptr );
 #elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
 		void* tempFrames[CallStack::kMaxFrames + 16];
 		int32 count		 = backtrace( tempFrames, CallStack::kMaxFrames + skipFrames + 1 );
 		int32 validCount = count - ( skipFrames + 1 );
 		if ( validCount > 0 )
 		{
-			outStack.frameCount = MathUtil::min<uint32>( static_cast<uint32>( validCount ), CallStack::kMaxFrames );
-			for ( uint32 frameIndex = 0; frameIndex < outStack.frameCount; ++frameIndex )
+			outStack._frameCount = MathUtil::min<uint32>( static_cast<uint32>( validCount ), CallStack::kMaxFrames );
+			for ( uint32 frameIndex = 0; frameIndex < outStack._frameCount; ++frameIndex )
 			{
-				outStack.frames[frameIndex] = tempFrames[frameIndex + skipFrames + 1];
+				outStack._arrFrames[frameIndex] = tempFrames[frameIndex + skipFrames + 1];
 			}
 		}
 #endif
 
 		// 프레임 주소로 해시를 계산합니다.
 		uint64 hash{ 0 };
-		for ( uint32 frameIndex = 0; frameIndex < outStack.frameCount; ++frameIndex )
+		for ( uint32 frameIndex = 0; frameIndex < outStack._frameCount; ++frameIndex )
 		{
-			hash ^= reinterpret_cast<uint64>( outStack.frames[frameIndex] ) + 0x9e3779b9 + ( hash << 6 ) + ( hash >> 2 );
+			hash ^= reinterpret_cast<uint64>( outStack._arrFrames[frameIndex] ) + 0x9e3779b9 + ( hash << 6 ) + ( hash >> 2 );
 		}
-		outStack.hash = hash;
+		outStack._hash = hash;
 	}
 
 	string CallStackCapture::symbolize( const CallStack& stack )
 	{
-		if ( stack.frameCount == 0 )
+		if ( stack._frameCount == 0 )
 			return "[Empty CallStack]";
 
 		StringBuilder<2048>		sb;
@@ -93,60 +93,58 @@ namespace sw
 		pSymbol->SizeOfStruct				= sizeof( SYMBOL_INFO );
 		pSymbol->MaxNameLen					= MAX_SYM_NAME;
 
-		IMAGEHLP_LINE64 line;
-		line.SizeOfStruct = sizeof( IMAGEHLP_LINE64 );
-
-		for ( uint32 frameIndex = 0; frameIndex < stack.frameCount; ++frameIndex )
+		for ( uint32 frameIndex = 0; frameIndex < stack._frameCount; ++frameIndex )
 		{
-			DWORD64 address = reinterpret_cast<DWORD64>( stack.frames[frameIndex] );
-			DWORD	displacementLine{ 0 };
-			DWORD64 displacementSym{ 0 };
+			DWORD64 address = reinterpret_cast<DWORD64>( stack._arrFrames[frameIndex] );
+			if ( address == 0 )
+				continue;
 
-			sb.appendFormat( "[%#] ", frameIndex );
-
-			if ( SymFromAddr( process, address, &displacementSym, pSymbol ) )
-				sb.append( pSymbol->Name );
-			else
-				sb.appendFormat( "0x%#", Fmt( address, Format().hex() ) );
-
-			if ( SymGetLineFromAddr64( process, address, &displacementLine, &line ) )
-				sb.append( " (" ).append( line.FileName ).append( ":" ).append( static_cast<uint32>( line.LineNumber ) ).append( ")" );
-			sb.append( "\n" );
-		}
-#elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
-		utf8** symbols = backtrace_symbols( stack.frames, stack.frameCount );
-		if ( symbols )
-		{
-			for ( uint32 frameIndex = 0; frameIndex < stack.frameCount; ++frameIndex )
+			DWORD64 displacement = 0;
+			if ( SymFromAddr( process, address, &displacement, pSymbol ) )
 			{
-				sb.appendFormat( "[%#] ", frameIndex );
+				DWORD			displacementLine = 0;
+				IMAGEHLP_LINE64 lineInfo		 = {};
+				lineInfo.SizeOfStruct			 = sizeof( IMAGEHLP_LINE64 );
 
-				// 선택: abi::__cxa_demangle로 심볼을 복원합니다.
-				Dl_info info;
-				if ( dladdr( stack.frames[frameIndex], &info ) && info.dli_sname )
+				if ( SymGetLineFromAddr64( process, address, &displacementLine, &lineInfo ) )
 				{
-					int32 status;
-					utf8* demangled = abi::__cxa_demangle( info.dli_sname, nullptr, 0, &status );
-					if ( status == 0 && demangled )
-					{
-						sb.append( demangled );
-						// Allocated by abi::__cxa_demangle via libc malloc
-						std::free( demangled );
-					}
-					else
-					{
-						sb.append( info.dli_sname );
-					}
-					sb.appendFormat( " + 0x%#", Fmt( reinterpret_cast<uint64>( (utf8*)stack.frames[frameIndex] - (utf8*)info.dli_saddr ), Format().hex() ) );
+					sb.appendFormat( "  [%#] %# (%#:%#)\n", frameIndex, pSymbol->Name, lineInfo.FileName, lineInfo.LineNumber );
 				}
 				else
 				{
-					sb.append( symbols[frameIndex] );
+					sb.appendFormat( "  [%#] %#\n", frameIndex, pSymbol->Name );
 				}
-				sb.append( "\n" );
 			}
-			// Allocated by backtrace_symbols via libc malloc
-			std::free( symbols );
+			else
+			{
+				sb.appendFormat( "  [%#] 0x%#\n", frameIndex, Fmt( address, Format().hex() ) );
+			}
+		}
+#elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
+		utf8** symbols = backtrace_symbols( stack._arrFrames, stack._frameCount );
+		if ( symbols != nullptr )
+		{
+			for ( uint32 frameIndex = 0; frameIndex < stack._frameCount; ++frameIndex )
+			{
+				string symbolName = symbols[frameIndex];
+
+				// dladdr 로 더 정확한 심볼 정보 시도
+				Dl_info info;
+				if ( dladdr( stack._arrFrames[frameIndex], &info ) && info.dli_sname )
+				{
+					int32 status	 = 0;
+					utf8* pDemangled = abi::__cxa_demangle( info.dli_sname, nullptr, nullptr, &status );
+					symbolName		 = ( status == 0 && pDemangled ) ? pDemangled : info.dli_sname;
+					free( pDemangled );
+				}
+
+				sb.appendFormat( "  [%#] %#\n", frameIndex, symbolName.c_str() );
+				if ( dladdr( stack._arrFrames[frameIndex], &info ) && info.dli_sname )
+				{
+					sb.appendFormat( " + 0x%#", Fmt( reinterpret_cast<uint64>( (utf8*)stack._arrFrames[frameIndex] - (utf8*)info.dli_saddr ), Format().hex() ) );
+				}
+			}
+			free( symbols );
 		}
 #endif
 

@@ -49,16 +49,16 @@ namespace sw
 		/** @brief 키만 비교해 정렬 위치를 찾습니다. */
 		struct KeyCompare
 		{
-			Compare comp;
+			Compare _comp;
 			/** @brief 두 엔트리의 키를 비교합니다. */
-			bool operator()( const value_type& a, const value_type& b ) const { return comp( a.first, b.first ); }
+			bool operator()( const value_type& a, const value_type& b ) const { return _comp( a.first, b.first ); }
 			/** @brief 엔트리 키와 이질 키를 비교합니다. */
 			template <typename K>
-			bool operator()( const value_type& a, const K& b ) const { return comp( a.first, b ); }
+			bool operator()( const value_type& a, const K& b ) const { return _comp( a.first, b ); }
 
 			/** @brief 이질 키와 엔트리 키를 비교합니다. */
 			template <typename K>
-			bool operator()( const K& a, const value_type& b ) const { return comp( a.first, b.first ); }
+			bool operator()( const K& a, const value_type& b ) const { return _comp( a.first, b.first ); }
 		};
 
 	public:

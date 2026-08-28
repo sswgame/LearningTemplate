@@ -74,7 +74,7 @@ namespace sw::editor
 
 	bool ImGuiEditor::initialize( IWindow* pWindow, IRHIDevice* pRhiDevice )
 	{
-		SW_LOG_TRACE( "ImGuiEditor::initialize Start" );
+		SW_LOG_TRACE( "Initialize start." );
 		if ( _bInitialized != SW_FALSE )
 			return true;
 

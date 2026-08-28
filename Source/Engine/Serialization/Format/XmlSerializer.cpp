@@ -16,9 +16,9 @@ namespace sw
 
 	struct XmlDocumentBackend::Impl
 	{
-		XmlDocument		doc;
-		XmlNode			currentParent;
-		vector<XmlNode> listNodeStack;
+		XmlDocument		_doc;
+		XmlNode			_currentParent;
+		vector<XmlNode> _listNodeStack;
 
 		static string sanitizeTag( const utf8* pName )
 		{
@@ -38,31 +38,31 @@ namespace sw
 
 	void XmlDocumentBackend::initXmlSerialization( const utf8* pRootTagName )
 	{
-		_impl->doc.clear();
-		string	tag			 = Impl::sanitizeTag( pRootTagName );
-		XmlNode root		 = _impl->doc.appendRoot( tag.c_str() );
-		_impl->currentParent = root;
-		_impl->listNodeStack.push_back( root );
+		_impl->_doc.clear();
+		string	tag			  = Impl::sanitizeTag( pRootTagName );
+		XmlNode root		  = _impl->_doc.appendRoot( tag.c_str() );
+		_impl->_currentParent = root;
+		_impl->_listNodeStack.push_back( root );
 	}
 
 	void XmlDocumentBackend::writeValue( const utf8* pTagName, const utf8* pValueString )
 	{
-		if ( _impl->currentParent.isValid() == false )
+		if ( _impl->_currentParent.isValid() == false )
 			return;
 
 		string	sTag = Impl::sanitizeTag( pTagName );
-		XmlNode node = _impl->currentParent.appendChild( sTag.c_str() );
+		XmlNode node = _impl->_currentParent.appendChild( sTag.c_str() );
 		if ( pValueString != nullptr && pValueString[0] != '\0' )
 			node.setValue( pValueString );
 	}
 
 	void XmlDocumentBackend::writeAttribute( const utf8* pAttrName, const utf8* pValueString )
 	{
-		if ( _impl->currentParent.isValid() == false )
+		if ( _impl->_currentParent.isValid() == false )
 			return;
 
 		string sName = Impl::sanitizeTag( pAttrName );
-		_impl->currentParent.appendAttr( sName.c_str(), pValueString != nullptr ? pValueString : "" );
+		_impl->_currentParent.appendAttr( sName.c_str(), pValueString != nullptr ? pValueString : "" );
 	}
 
 	void XmlDocumentBackend::beginArray( const utf8* pTagName )
@@ -82,13 +82,13 @@ namespace sw
 
 	void XmlDocumentBackend::beginMap( const utf8* pTagName )
 	{
-		if ( _impl->currentParent.isValid() == false )
+		if ( _impl->_currentParent.isValid() == false )
 			return;
 
 		string	sTag = Impl::sanitizeTag( pTagName );
-		XmlNode node = _impl->currentParent.appendChild( sTag.c_str() );
-		_impl->listNodeStack.push_back( node );
-		_impl->currentParent = node;
+		XmlNode node = _impl->_currentParent.appendChild( sTag.c_str() );
+		_impl->_listNodeStack.push_back( node );
+		_impl->_currentParent = node;
 	}
 
 	void XmlDocumentBackend::beginMapEntry()
@@ -113,48 +113,48 @@ namespace sw
 
 	void XmlDocumentBackend::endMap()
 	{
-		if ( _impl->listNodeStack.size() > 1 )
+		if ( _impl->_listNodeStack.size() > 1 )
 		{
-			_impl->listNodeStack.pop_back();
-			_impl->currentParent = _impl->listNodeStack.back();
+			_impl->_listNodeStack.pop_back();
+			_impl->_currentParent = _impl->_listNodeStack.back();
 		}
 	}
 
 	string XmlDocumentBackend::endSerialize()
 	{
-		return _impl->doc.saveToString();
+		return _impl->_doc.saveToString();
 	}
 
 	bool XmlDocumentBackend::initXmlDeserialization( const utf8* pXmlStr, const utf8* pRootTagName )
 	{
-		_impl->doc.clear();
+		_impl->_doc.clear();
 		if ( pXmlStr == nullptr || pXmlStr[0] == '\0' )
 			return false;
 
-		if ( _impl->doc.parse( pXmlStr ) == false )
+		if ( _impl->_doc.parse( pXmlStr ) == false )
 			return false;
 
 		string	sTag = Impl::sanitizeTag( pRootTagName );
-		XmlNode root = _impl->doc.root( sTag.c_str(), ignoreCaseKeys() );
+		XmlNode root = _impl->_doc.root( sTag.c_str(), ignoreCaseKeys() );
 		if ( root.isValid() == false )
-			root = _impl->doc.root( nullptr, ignoreCaseKeys() );
+			root = _impl->_doc.root( nullptr, ignoreCaseKeys() );
 
 		if ( root.isValid() == false )
 			return false;
 
-		_impl->currentParent = root;
-		_impl->listNodeStack.clear();
-		_impl->listNodeStack.push_back( root );
+		_impl->_currentParent = root;
+		_impl->_listNodeStack.clear();
+		_impl->_listNodeStack.push_back( root );
 		return true;
 	}
 
 	bool XmlDocumentBackend::readValue( const utf8* pTagName, string& outValue )
 	{
-		if ( _impl->currentParent.isValid() == false )
+		if ( _impl->_currentParent.isValid() == false )
 			return false;
 
 		string	sTag = Impl::sanitizeTag( pTagName );
-		XmlNode node = _impl->currentParent.child( sTag.c_str(), ignoreCaseKeys() );
+		XmlNode node = _impl->_currentParent.child( sTag.c_str(), ignoreCaseKeys() );
 		if ( node.isValid() == false )
 			return false;
 
@@ -164,11 +164,11 @@ namespace sw
 
 	bool XmlDocumentBackend::readAttribute( const utf8* pAttrName, string& outValue )
 	{
-		if ( _impl->currentParent.isValid() == false )
+		if ( _impl->_currentParent.isValid() == false )
 			return false;
 
 		string		sName = Impl::sanitizeTag( pAttrName );
-		const utf8* pVal  = _impl->currentParent.attr( sName.c_str(), ignoreCaseKeys() );
+		const utf8* pVal  = _impl->_currentParent.attr( sName.c_str(), ignoreCaseKeys() );
 		if ( pVal == nullptr )
 			return false;
 
@@ -178,15 +178,15 @@ namespace sw
 
 	bool XmlDocumentBackend::iterateArray( const utf8* pTagName, const XmlArrayItemDelegate& callback )
 	{
-		if ( _impl->currentParent.isValid() == false )
+		if ( _impl->_currentParent.isValid() == false )
 			return false;
 
 		const bool bIgnore = ignoreCaseKeys();
-		XmlNode	   arrNode = _impl->currentParent;
+		XmlNode	   arrNode = _impl->_currentParent;
 		if ( pTagName != nullptr && pTagName[0] != '\0' )
 		{
 			string sTag = Impl::sanitizeTag( pTagName );
-			arrNode		= _impl->currentParent.child( sTag.c_str(), bIgnore );
+			arrNode		= _impl->_currentParent.child( sTag.c_str(), bIgnore );
 			if ( arrNode.isValid() == false )
 				return false;
 		}
@@ -201,15 +201,15 @@ namespace sw
 
 	bool XmlDocumentBackend::iterateMap( const utf8* pTagName, const XmlMapItemDelegate& callback )
 	{
-		if ( _impl->currentParent.isValid() == false )
+		if ( _impl->_currentParent.isValid() == false )
 			return false;
 
 		const bool bIgnore = ignoreCaseKeys();
-		XmlNode	   mapNode = _impl->currentParent;
+		XmlNode	   mapNode = _impl->_currentParent;
 		if ( pTagName != nullptr && pTagName[0] != '\0' )
 		{
 			string sTag = Impl::sanitizeTag( pTagName );
-			mapNode		= _impl->currentParent.child( sTag.c_str(), bIgnore );
+			mapNode		= _impl->_currentParent.child( sTag.c_str(), bIgnore );
 			if ( mapNode.isValid() == false )
 				return false;
 		}
@@ -237,27 +237,27 @@ namespace sw
 
 	bool XmlDocumentBackend::pushChild( const utf8* pTagName )
 	{
-		if ( _impl->currentParent.isValid() == false )
+		if ( _impl->_currentParent.isValid() == false )
 			return false;
 
 		string	sTag  = Impl::sanitizeTag( pTagName );
-		XmlNode child = _impl->currentParent.child( sTag.c_str(), ignoreCaseKeys() );
+		XmlNode child = _impl->_currentParent.child( sTag.c_str(), ignoreCaseKeys() );
 		if ( child.isValid() == false )
 			return false;
 
-		_impl->listNodeStack.push_back( child );
-		_impl->currentParent = child;
+		_impl->_listNodeStack.push_back( child );
+		_impl->_currentParent = child;
 		return true;
 	}
 
 	bool XmlDocumentBackend::pushNamedTypeChild( const utf8* pTypeTag, const utf8* pPropName )
 	{
-		if ( _impl->currentParent.isValid() == false || pTypeTag == nullptr || pPropName == nullptr )
+		if ( _impl->_currentParent.isValid() == false || pTypeTag == nullptr || pPropName == nullptr )
 			return false;
 
 		const bool bIgnore = ignoreCaseKeys();
 		string	   sTag	   = Impl::sanitizeTag( pTypeTag );
-		for ( XmlNode child = _impl->currentParent.child( sTag.c_str(), bIgnore ); child.isValid();
+		for ( XmlNode child = _impl->_currentParent.child( sTag.c_str(), bIgnore ); child.isValid();
 			  child			= child.next( sTag.c_str(), bIgnore ) )
 		{
 			const utf8* pNameAttr = child.attr( kXmlPropertyNameAttr, bIgnore );
@@ -268,8 +268,8 @@ namespace sw
 			if ( bMatch == false )
 				continue;
 
-			_impl->listNodeStack.push_back( child );
-			_impl->currentParent = child;
+			_impl->_listNodeStack.push_back( child );
+			_impl->_currentParent = child;
 			return true;
 		}
 		return false;
@@ -277,10 +277,10 @@ namespace sw
 
 	void XmlDocumentBackend::popChild()
 	{
-		if ( _impl->listNodeStack.size() <= 1 )
+		if ( _impl->_listNodeStack.size() <= 1 )
 			return;
-		_impl->listNodeStack.pop_back();
-		_impl->currentParent = _impl->listNodeStack.back();
+		_impl->_listNodeStack.pop_back();
+		_impl->_currentParent = _impl->_listNodeStack.back();
 	}
 
 	namespace

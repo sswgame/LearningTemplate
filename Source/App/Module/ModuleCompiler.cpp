@@ -142,8 +142,8 @@ namespace sw
 		}
 
 		ProcessOptions options{};
-		options.workingDirectory = buildDir;
-		options.bCreateWindow	 = false;
+		options._workingDirectory = buildDir;
+		options._bCreateWindow	  = false;
 
 		auto pProc = make_unique<Process>();
 		if ( pProc->launch( cmdLine, options ) == false )

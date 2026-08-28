@@ -86,23 +86,23 @@ namespace sw
 			return;
 
 		_pDevice->_activeGraphicsPso = pso;
-		if ( pRecord->vs )
-			_pDevice->_deviceContext->VSSetShader( pRecord->vs.Get(), nullptr, 0 );
-		if ( pRecord->ps )
-			_pDevice->_deviceContext->PSSetShader( pRecord->ps.Get(), nullptr, 0 );
-		if ( pRecord->cs )
-			_pDevice->_deviceContext->CSSetShader( pRecord->cs.Get(), nullptr, 0 );
-		if ( pRecord->inputLayout )
-			_pDevice->_deviceContext->IASetInputLayout( pRecord->inputLayout.Get() );
-		if ( pRecord->rasterizerState )
-			_pDevice->_deviceContext->RSSetState( pRecord->rasterizerState.Get() );
-		if ( pRecord->blendState )
+		if ( pRecord->_vs )
+			_pDevice->_deviceContext->VSSetShader( pRecord->_vs.Get(), nullptr, 0 );
+		if ( pRecord->_ps )
+			_pDevice->_deviceContext->PSSetShader( pRecord->_ps.Get(), nullptr, 0 );
+		if ( pRecord->_cs )
+			_pDevice->_deviceContext->CSSetShader( pRecord->_cs.Get(), nullptr, 0 );
+		if ( pRecord->_inputLayout )
+			_pDevice->_deviceContext->IASetInputLayout( pRecord->_inputLayout.Get() );
+		if ( pRecord->_rasterizerState )
+			_pDevice->_deviceContext->RSSetState( pRecord->_rasterizerState.Get() );
+		if ( pRecord->_blendState )
 		{
 			constexpr float32 arrBlendFactor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
-			_pDevice->_deviceContext->OMSetBlendState( pRecord->blendState.Get(), arrBlendFactor, 0xffffffffu );
+			_pDevice->_deviceContext->OMSetBlendState( pRecord->_blendState.Get(), arrBlendFactor, 0xffffffffu );
 		}
-		if ( pRecord->depthStencilState )
-			_pDevice->_deviceContext->OMSetDepthStencilState( pRecord->depthStencilState.Get(), 0 );
+		if ( pRecord->_depthStencilState )
+			_pDevice->_deviceContext->OMSetDepthStencilState( pRecord->_depthStencilState.Get(), 0 );
 	}
 
 	void D3D11RHICommandContext::setComputePipelineState( RHIPipelineStateHandle pso )
@@ -167,16 +167,16 @@ namespace sw
 		const D3D11RHIDevice::D3D11PipelineStateRecord* pRecord = _pDevice->_pipelineStates.get( _pDevice->_activeGraphicsPso );
 		if ( pRecord != nullptr )
 		{
-			if ( pRecord->depthStencilState )
-				_pDevice->_deviceContext->OMSetDepthStencilState( pRecord->depthStencilState.Get(), 0 );
+			if ( pRecord->_depthStencilState )
+				_pDevice->_deviceContext->OMSetDepthStencilState( pRecord->_depthStencilState.Get(), 0 );
 			else if ( pDsv != nullptr && _pDevice->_depthEnabledState )
 				_pDevice->_deviceContext->OMSetDepthStencilState( _pDevice->_depthEnabledState.Get(), 0 );
 			else if ( _pDevice->_depthDisabledState )
 				_pDevice->_deviceContext->OMSetDepthStencilState( _pDevice->_depthDisabledState.Get(), 0 );
-			if ( pRecord->blendState )
+			if ( pRecord->_blendState )
 			{
 				constexpr float32 arrBlendFactor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
-				_pDevice->_deviceContext->OMSetBlendState( pRecord->blendState.Get(), arrBlendFactor, 0xffffffffu );
+				_pDevice->_deviceContext->OMSetBlendState( pRecord->_blendState.Get(), arrBlendFactor, 0xffffffffu );
 			}
 		}
 		else if ( pDsv != nullptr && _pDevice->_depthEnabledState )
@@ -255,12 +255,12 @@ namespace sw
 		const D3D11RHIDevice::D3D11PipelineStateRecord* pPso = _pDevice->_pipelineStates.get( _pDevice->_activeGraphicsPso );
 		if ( pPso != nullptr )
 		{
-			if ( pPso->vs )
-				pVs = pPso->vs.Get();
-			if ( pPso->ps )
-				pPs = pPso->ps.Get();
-			if ( pPso->inputLayout )
-				pIl = pPso->inputLayout.Get();
+			if ( pPso->_vs )
+				pVs = pPso->_vs.Get();
+			if ( pPso->_ps )
+				pPs = pPso->_ps.Get();
+			if ( pPso->_inputLayout )
+				pIl = pPso->_inputLayout.Get();
 		}
 		if ( pVs == nullptr || pPs == nullptr )
 			return;

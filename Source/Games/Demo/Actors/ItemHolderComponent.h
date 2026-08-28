@@ -12,16 +12,16 @@ namespace sw
 		REFLECT_BODY();
 
 		PROPERTY()
-		string equippedWeapon{};
+		string _equippedWeapon{};
 
 		PROPERTY()
-		string equippedAccessory{};
+		string _equippedAccessory{};
 
 		PROPERTY()
-		int32 currentSlot{ 0 };
+		int32 _currentSlot{ 0 };
 
 		PROPERTY()
-		int32 gold{ 0 };
+		int32 _gold{ 0 };
 
 		ItemHolderComponent()											 = default;
 		virtual ~ItemHolderComponent() override							 = default;

@@ -320,12 +320,12 @@ namespace sw
 			return;
 
 		const D3D12RHIDevice::D3D12PipelineStateRecord* pPsoRec = _pDevice->_pipelineStates.get( _pDevice->_activeGraphicsPso );
-		if ( pPsoRec == nullptr || pPsoRec->pso == nullptr )
+		if ( pPsoRec == nullptr || pPsoRec->_pso == nullptr )
 			return;
 
 		bindDescriptorHeaps();
 		_pDevice->_commandList->SetGraphicsRootSignature( _pDevice->_rootSignature.Get() );
-		_pDevice->_commandList->SetPipelineState( pPsoRec->pso.Get() );
+		_pDevice->_commandList->SetPipelineState( pPsoRec->_pso.Get() );
 		bindMaterialCbv( materialDescriptorIndex );
 		_pDevice->_commandList->IASetPrimitiveTopology( D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
 		if ( _pDevice->_boundMeshVb != 0 )
@@ -497,7 +497,7 @@ namespace sw
 
 		_pDevice->_activeGraphicsPso							= pso;
 		const D3D12RHIDevice::D3D12PipelineStateRecord* pRecord = _pDevice->_pipelineStates.get( pso );
-		if ( pRecord == nullptr || pRecord->pso == nullptr )
+		if ( pRecord == nullptr || pRecord->_pso == nullptr )
 			return;
 
 		if ( _pDevice->_rootSignature != nullptr )
@@ -505,7 +505,7 @@ namespace sw
 			bindDescriptorHeaps();
 			_pDevice->_commandList->SetGraphicsRootSignature( _pDevice->_rootSignature.Get() );
 		}
-		_pDevice->_commandList->SetPipelineState( pRecord->pso.Get() );
+		_pDevice->_commandList->SetPipelineState( pRecord->_pso.Get() );
 	}
 
 	void D3D12RHICommandContext::setComputePipelineState( RHIPipelineStateHandle pso )
@@ -514,7 +514,7 @@ namespace sw
 			return;
 
 		const D3D12RHIDevice::D3D12PipelineStateRecord* pRecord = _pDevice->_pipelineStates.get( pso );
-		if ( pRecord == nullptr || pRecord->pso == nullptr )
+		if ( pRecord == nullptr || pRecord->_pso == nullptr )
 			return;
 
 		ID3D12RootSignature* pRootSig = _pDevice->_computeRootSignature.Get();
@@ -525,7 +525,7 @@ namespace sw
 			bindDescriptorHeaps();
 			_pDevice->_commandList->SetComputeRootSignature( pRootSig );
 		}
-		_pDevice->_commandList->SetPipelineState( pRecord->pso.Get() );
+		_pDevice->_commandList->SetPipelineState( pRecord->_pso.Get() );
 	}
 
 	void D3D12RHICommandContext::beginRenderPass( const RHIRenderPassBeginInfo& beginInfo )

@@ -10,19 +10,19 @@ namespace sw
 		REFLECT_BODY();
 
 		PROPERTY()
-		float2 mouseScreenPos{ 0.0f, 0.0f };
+		float2 _mouseScreenPos{ 0.0f, 0.0f };
 
 		PROPERTY()
-		float2 mouseWorldPos{ 0.0f, 0.0f };
+		float2 _mouseWorldPos{ 0.0f, 0.0f };
 
 		PROPERTY()
-		bool bIsLeftDown{ false };
+		bool _bIsLeftDown{ false };
 
 		PROPERTY()
-		bool bIsRightDown{ false };
+		bool _bIsRightDown{ false };
 
 		PROPERTY()
-		bool bMouseHovered{ false };
+		bool _bMouseHovered{ false };
 
 		MouseComponent()									   = default;
 		virtual ~MouseComponent() override					   = default;

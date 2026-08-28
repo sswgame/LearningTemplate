@@ -10,10 +10,10 @@ namespace sw
 		REFLECT_BODY();
 
 		PROPERTY()
-		int32 activeObjectCount{ 0 };
+		int32 _activeObjectCount{ 0 };
 
 		PROPERTY()
-		bool bInitialized{ true };
+		bool _bInitialized{ true };
 
 		ObjectManagerComponent()											   = default;
 		virtual ~ObjectManagerComponent() override							   = default;

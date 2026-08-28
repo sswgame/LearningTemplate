@@ -8,6 +8,8 @@
 #include "Core/String/StringUtil.h"
 #include "Core/String/string_splitter.h"
 
+SW_LOG_CALLER( "CommandLineManager" );
+
 namespace sw
 {
 	/**
@@ -205,7 +207,6 @@ namespace sw
 	case CommandLineArgument::name:                                    \
 		return #name;
 #include "Core/Predefined/ArgumentList.xxx"
-
 #undef SW_REGISTER_ARGUMENT
 
 			case CommandLineArgument::Count:

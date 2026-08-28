@@ -151,7 +151,7 @@ namespace sw
 			return;
 		if ( _pDevice->_activeGraphicsPso == pso )
 			_pDevice->_activeGraphicsPso = 0;
-		Microsoft::WRL::ComPtr<ID3D12PipelineState> owned	  = record.pso;
+		Microsoft::WRL::ComPtr<ID3D12PipelineState> owned	  = record._pso;
 		auto										releaseCb = [owned]()
 		{ (void)owned.Get(); };
 		_pDevice->_releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, releaseCb ), _pDevice->_fenceValue );
@@ -160,7 +160,7 @@ namespace sw
 	RHIRenderPassHandle D3D12RHIResource::createRenderPass( const RHIRenderPassDesc& desc )
 	{
 		D3D12RHIDevice::D3D12RenderPassRecord record{};
-		record.desc	   = desc;
+		record._desc   = desc;
 		record._bAlive = 1;
 		_pDevice->_listRenderPass.push_back( record );
 		return _pDevice->_listRenderPass.size();

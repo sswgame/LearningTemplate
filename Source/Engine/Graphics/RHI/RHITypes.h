@@ -32,8 +32,8 @@ namespace sw
 	 */
 	struct RHIVertex
 	{
-		float32 position[3]; ///< 정점 위치 (X, Y, Z)
-		float32 color[4];	 ///< 정점 색상 (R, G, B, A)
+		float32 _arrPosition[3]; ///< 정점 위치 (X, Y, Z)
+		float32 _arrColor[4];	 ///< 정점 색상 (R, G, B, A)
 	};
 
 	// ------------------------------------------------------------------------------

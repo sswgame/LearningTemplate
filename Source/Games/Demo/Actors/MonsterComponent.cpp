@@ -19,12 +19,12 @@ namespace sw
 {
 	namespace
 	{
-		void queueProjectileAttack( GameObjectManager* pGameObjectManager, const string& projectilePrefab, const float3& selfPos, float32 dirX )
+		void queueProjectileAttack( GameObjectManager* pGameObjectManager, const string& _projectilePrefab, const float3& selfPos, float32 dirX )
 		{
-			if ( pGameObjectManager == nullptr || projectilePrefab.empty() )
+			if ( pGameObjectManager == nullptr || _projectilePrefab.empty() )
 				return;
 
-			const string  prefabPath = projectilePrefab;
+			const string  prefabPath = _projectilePrefab;
 			const float3  spawnPos	 = selfPos;
 			const float32 dir		 = dirX >= 0.0f ? 1.0f : -1.0f;
 
@@ -79,17 +79,17 @@ namespace sw
 	} // namespace
 
 	MonsterComponent::MonsterComponent()
-		: archetype{ MonsterArchetype::MeleePatrol }
-		, patrolRange{ 0.0f }
-		, detectRange{ 0.0f }
-		, attackRange{ 0.0f }
-		, moveSpeed{ 0.0f }
-		, attackCoolTime{ 0.0f }
-		, moveDir{ 1 }
-		, stateTimer{ 0.0f }
-		, aiState{ MonsterAiState::Patrol }
-		, startX{ 0.0f }
-		, attackTimer{ 0.0f }
+		: _archetype{ MonsterArchetype::MeleePatrol }
+		, _patrolRange{ 0.0f }
+		, _detectRange{ 0.0f }
+		, _attackRange{ 0.0f }
+		, _moveSpeed{ 0.0f }
+		, _attackCoolTime{ 0.0f }
+		, _moveDir{ 1 }
+		, _stateTimer{ 0.0f }
+		, _aiState{ MonsterAiState::Patrol }
+		, _startX{ 0.0f }
+		, _attackTimer{ 0.0f }
 	{
 	}
 
@@ -102,19 +102,19 @@ namespace sw
 			pOwner->addTag( "Monster"_tag );
 			SceneComponent* pSceneComp = pOwner->getPrimarySceneComponent();
 			if ( pSceneComp != nullptr )
-				startX = pSceneComp->getLocalPosition()._x;
+				_startX = pSceneComp->getLocalPosition()._x;
 		}
 
-		if ( monsterId.empty() == false )
+		if ( _monsterId.empty() == false )
 		{
-			const MonsterDef* pDef = MonsterDataCatalog::findMonster( monsterId );
+			const MonsterDef* pDef = MonsterDataCatalog::findMonster( _monsterId );
 			if ( pDef != nullptr )
 			{
-				archetype		 = pDef->_archetype;
-				moveSpeed		 = pDef->_speed;
-				attackRange		 = pDef->_attackRange;
-				attackCoolTime	 = pDef->_attackCoolTime;
-				projectilePrefab = pDef->_projectilePrefab;
+				_archetype		  = pDef->_archetype;
+				_moveSpeed		  = pDef->_speed;
+				_attackRange	  = pDef->_attackRange;
+				_attackCoolTime	  = pDef->_attackCoolTime;
+				_projectilePrefab = pDef->_projectilePrefab;
 
 				GameObject* pCurrentOwner = getOwner();
 				if ( pCurrentOwner != nullptr )
@@ -128,9 +128,9 @@ namespace sw
 			}
 		}
 
-		stateTimer	= 0.0f;
-		attackTimer = 0.0f;
-		aiState		= MonsterAiState::Patrol;
+		_stateTimer	 = 0.0f;
+		_attackTimer = 0.0f;
+		_aiState	 = MonsterAiState::Patrol;
 	}
 
 	void MonsterComponent::onEndPlay()
@@ -144,8 +144,8 @@ namespace sw
 
 	void MonsterComponent::updateAI( float32 deltaTime )
 	{
-		stateTimer += deltaTime;
-		attackTimer += deltaTime;
+		_stateTimer += deltaTime;
+		_attackTimer += deltaTime;
 
 		GameObject* pOwner = getOwner();
 		if ( pOwner == nullptr )
@@ -173,15 +173,15 @@ namespace sw
 			const float32 distX		= playerPos._x - selfPos._x;
 			const float32 dist		= MathUtil::abs( distX );
 
-			if ( dist <= attackRange )
+			if ( dist <= _attackRange )
 			{
-				aiState = MonsterAiState::Attack;
-				if ( attackTimer >= attackCoolTime )
+				_aiState = MonsterAiState::Attack;
+				if ( _attackTimer >= _attackCoolTime )
 				{
-					attackTimer = 0.0f;
-					if ( projectilePrefab.empty() == false )
+					_attackTimer = 0.0f;
+					if ( _projectilePrefab.empty() == false )
 					{
-						queueProjectileAttack( pGameObjectManager, projectilePrefab, selfPos, distX );
+						queueProjectileAttack( pGameObjectManager, _projectilePrefab, selfPos, distX );
 					}
 					else
 					{
@@ -197,23 +197,23 @@ namespace sw
 				}
 				return;
 			}
-			if ( dist <= detectRange )
+			if ( dist <= _detectRange )
 			{
-				aiState = MonsterAiState::Chase;
-				moveDir = ( distX >= 0.0f ) ? 1 : -1;
-				selfPos._x += static_cast<float32>( moveDir ) * moveSpeed * deltaTime;
+				_aiState = MonsterAiState::Chase;
+				_moveDir = ( distX >= 0.0f ) ? 1 : -1;
+				selfPos._x += static_cast<float32>( _moveDir ) * _moveSpeed * deltaTime;
 				pSceneComp->setLocalPosition( selfPos );
 				return;
 			}
 		}
 
-		aiState = MonsterAiState::Patrol;
-		if ( selfPos._x >= startX + patrolRange )
-			moveDir = -1;
-		else if ( selfPos._x <= startX - patrolRange )
-			moveDir = 1;
+		_aiState = MonsterAiState::Patrol;
+		if ( selfPos._x >= _startX + _patrolRange )
+			_moveDir = -1;
+		else if ( selfPos._x <= _startX - _patrolRange )
+			_moveDir = 1;
 
-		selfPos._x += static_cast<float32>( moveDir ) * moveSpeed * deltaTime;
+		selfPos._x += static_cast<float32>( _moveDir ) * _moveSpeed * deltaTime;
 		pSceneComp->setLocalPosition( selfPos );
 	}
 } // namespace sw

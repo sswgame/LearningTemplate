@@ -12,13 +12,13 @@ namespace sw
 		REFLECT_BODY();
 
 		PROPERTY()
-		int32 summonCount{ 0 };
+		int32 _summonCount{ 0 };
 
 		PROPERTY()
-		float32 summonRadius{ 0.0f };
+		float32 _summonRadius{ 0.0f };
 
 		PROPERTY()
-		string monsterPrefab{};
+		string _monsterPrefab{};
 
 		MonsterSummonComponent()											   = default;
 		virtual ~MonsterSummonComponent() override							   = default;

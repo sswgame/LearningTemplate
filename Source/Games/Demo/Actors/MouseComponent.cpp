@@ -11,8 +11,8 @@ namespace sw
 	void MouseComponent::onBeginPlay()
 	{
 		setTickGroup( TickGroup::PrePhysics );
-		bIsLeftDown	 = false;
-		bIsRightDown = false;
+		_bIsLeftDown  = false;
+		_bIsRightDown = false;
 	}
 
 	void MouseComponent::onEndPlay()
@@ -31,17 +31,17 @@ namespace sw
 		int32		  mousePosX{ 0 };
 		int32		  mousePosY{ 0 };
 		inputManager.getMousePosition( mousePosX, mousePosY );
-		mouseScreenPos._x = static_cast<float32>( mousePosX );
-		mouseScreenPos._y = static_cast<float32>( mousePosY );
-		mouseWorldPos	  = mouseScreenPos;
-		bIsLeftDown		  = inputManager.isMouseButtonDown( MouseButton::Left );
-		bIsRightDown	  = inputManager.isMouseButtonDown( MouseButton::Right );
+		_mouseScreenPos._x = static_cast<float32>( mousePosX );
+		_mouseScreenPos._y = static_cast<float32>( mousePosY );
+		_mouseWorldPos	   = _mouseScreenPos;
+		_bIsLeftDown	   = inputManager.isMouseButtonDown( MouseButton::Left );
+		_bIsRightDown	   = inputManager.isMouseButtonDown( MouseButton::Right );
 	}
 
 	bool MouseComponent::isPointInside( float2 minBound, float2 maxBound ) const
 	{
-		const bool bWithinX = ( mouseWorldPos._x >= minBound._x && mouseWorldPos._x <= maxBound._x );
-		const bool bWithinY = ( mouseWorldPos._y >= minBound._y && mouseWorldPos._y <= maxBound._y );
+		const bool bWithinX = ( _mouseWorldPos._x >= minBound._x && _mouseWorldPos._x <= maxBound._x );
+		const bool bWithinY = ( _mouseWorldPos._y >= minBound._y && _mouseWorldPos._y <= maxBound._y );
 		return bWithinX && bWithinY;
 	}
 } // namespace sw

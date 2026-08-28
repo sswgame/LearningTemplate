@@ -332,7 +332,7 @@ namespace sw
 			{
 				const VulkanBufferRecord* pRec = resolveAllocatedBuffer( vbHandle );
 				if ( pRec != nullptr )
-					_vertexBuffer = pRec->buffer;
+					_vertexBuffer = pRec->_buffer;
 			}
 			else
 				SW_LOG_WARNING( "Failed to create fullscreen triangle vertex buffer." );
@@ -406,10 +406,10 @@ namespace sw
 
 			_gpuBuffers.forEach( [this]( VulkanBufferRecord& record )
 			{
-				if ( record.buffer != VK_NULL_HANDLE )
-					vkDestroyBuffer( _device, record.buffer, nullptr );
-				if ( record.memory != VK_NULL_HANDLE )
-					vkFreeMemory( _device, record.memory, nullptr );
+				if ( record._buffer != VK_NULL_HANDLE )
+					vkDestroyBuffer( _device, record._buffer, nullptr );
+				if ( record._memory != VK_NULL_HANDLE )
+					vkFreeMemory( _device, record._memory, nullptr );
 			} );
 			_gpuBuffers.clear();
 			_boundMeshVb	  = 0;
@@ -423,22 +423,22 @@ namespace sw
 			_gpuTextures.forEach( [this]( VulkanTextureRecord& record )
 			{
 				destroyOffscreenFramebuffer( record );
-				if ( record.imageView != VK_NULL_HANDLE )
-					vkDestroyImageView( _device, record.imageView, nullptr );
-				if ( record.image != VK_NULL_HANDLE )
-					vkDestroyImage( _device, record.image, nullptr );
-				if ( record.memory != VK_NULL_HANDLE )
-					vkFreeMemory( _device, record.memory, nullptr );
+				if ( record._imageView != VK_NULL_HANDLE )
+					vkDestroyImageView( _device, record._imageView, nullptr );
+				if ( record._image != VK_NULL_HANDLE )
+					vkDestroyImage( _device, record._image, nullptr );
+				if ( record._memory != VK_NULL_HANDLE )
+					vkFreeMemory( _device, record._memory, nullptr );
 			} );
 			_gpuTextures.clear();
 			_listBindlessSourceBuffer.clear();
 			_listUavSourceBuffer.clear();
 			for ( auto& pair : _mapCompositeFramebuffer )
 			{
-				if ( pair.second.framebuffer != VK_NULL_HANDLE )
-					vkDestroyFramebuffer( _device, pair.second.framebuffer, nullptr );
-				if ( pair.second.renderPass != VK_NULL_HANDLE )
-					vkDestroyRenderPass( _device, pair.second.renderPass, nullptr );
+				if ( pair.second._framebuffer != VK_NULL_HANDLE )
+					vkDestroyFramebuffer( _device, pair.second._framebuffer, nullptr );
+				if ( pair.second._renderPass != VK_NULL_HANDLE )
+					vkDestroyRenderPass( _device, pair.second._renderPass, nullptr );
 			}
 			_mapCompositeFramebuffer.clear();
 			for ( auto& pair : _mapPipelineRenderPass )
@@ -492,8 +492,8 @@ namespace sw
 
 			_pipelineStates.forEach( [this]( VulkanPipelineStateRecord& pso )
 			{
-				if ( pso.pipeline != VK_NULL_HANDLE )
-					vkDestroyPipeline( _device, pso.pipeline, nullptr );
+				if ( pso._pipeline != VK_NULL_HANDLE )
+					vkDestroyPipeline( _device, pso._pipeline, nullptr );
 			} );
 			_pipelineStates.clear();
 
@@ -535,9 +535,9 @@ namespace sw
 
 			for ( VulkanRenderPassRecord& rpRecord : _listRenderPass )
 			{
-				if ( rpRecord.bOwned != 0 && rpRecord.renderPass != VK_NULL_HANDLE &&
-					 rpRecord.renderPass != _renderPass )
-					vkDestroyRenderPass( _device, rpRecord.renderPass, nullptr );
+				if ( rpRecord._bOwned != 0 && rpRecord._renderPass != VK_NULL_HANDLE &&
+					 rpRecord._renderPass != _renderPass )
+					vkDestroyRenderPass( _device, rpRecord._renderPass, nullptr );
 			}
 			_listRenderPass.clear();
 
@@ -783,16 +783,16 @@ namespace sw
 	{
 		outImageView					= nullptr;
 		const VulkanTextureRecord* pTex = resolveTexture( texture );
-		if ( pTex == nullptr || pTex->imageView == VK_NULL_HANDLE )
+		if ( pTex == nullptr || pTex->_imageView == VK_NULL_HANDLE )
 			return false;
-		outImageView = reinterpret_cast<void*>( pTex->imageView );
+		outImageView = reinterpret_cast<void*>( pTex->_imageView );
 		return true;
 	}
 
 	void* VulkanRHIDevice::getNativeTexturePointer( RHITextureHandle texture ) const
 	{
 		const VulkanTextureRecord* pTex = resolveTexture( texture );
-		return ( pTex != nullptr && pTex->imageView != VK_NULL_HANDLE ) ? reinterpret_cast<void*>( pTex->imageView ) : nullptr;
+		return ( pTex != nullptr && pTex->_imageView != VK_NULL_HANDLE ) ? reinterpret_cast<void*>( pTex->_imageView ) : nullptr;
 	}
 
 	bool VulkanRHIDevice::checkValidationLayerSupport()
@@ -1855,20 +1855,20 @@ namespace sw
 
 	bool VulkanRHIDevice::createOffscreenFramebuffer( VulkanTextureRecord& record )
 	{
-		if ( record.imageView == VK_NULL_HANDLE || record._bRenderTarget == 0 )
+		if ( record._imageView == VK_NULL_HANDLE || record._bRenderTarget == 0 )
 			return false;
 
-		const bool bUseSharedPass = ( record.format == static_cast<uint32>( VK_FORMAT_R8G8B8A8_UNORM ) );
+		const bool bUseSharedPass = ( record._format == static_cast<uint32>( VK_FORMAT_R8G8B8A8_UNORM ) );
 		if ( bUseSharedPass )
 		{
-			if ( ensureOffscreenRenderPass( record.format ) == false )
+			if ( ensureOffscreenRenderPass( record._format ) == false )
 				return false;
-			record.renderPass = _offscreenRenderPass;
+			record._renderPass = _offscreenRenderPass;
 		}
 		else
 		{
 			VkAttachmentDescription colorAttachment{};
-			colorAttachment.format		   = static_cast<VkFormat>( record.format );
+			colorAttachment.format		   = static_cast<VkFormat>( record._format );
 			colorAttachment.samples		   = VK_SAMPLE_COUNT_1_BIT;
 			colorAttachment.loadOp		   = VK_ATTACHMENT_LOAD_OP_CLEAR;
 			colorAttachment.storeOp		   = VK_ATTACHMENT_STORE_OP_STORE;
@@ -1903,24 +1903,24 @@ namespace sw
 			rpInfo.dependencyCount = 1;
 			rpInfo.pDependencies   = &dependency;
 
-			if ( vkCreateRenderPass( _device, &rpInfo, nullptr, &record.renderPass ) != VK_SUCCESS )
+			if ( vkCreateRenderPass( _device, &rpInfo, nullptr, &record._renderPass ) != VK_SUCCESS )
 				return false;
 		}
 
 		VkFramebufferCreateInfo fbInfo{};
 		fbInfo.sType		   = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-		fbInfo.renderPass	   = record.renderPass;
+		fbInfo.renderPass	   = record._renderPass;
 		fbInfo.attachmentCount = 1;
-		fbInfo.pAttachments	   = &record.imageView;
-		fbInfo.width		   = record.width;
-		fbInfo.height		   = record.height;
+		fbInfo.pAttachments	   = &record._imageView;
+		fbInfo.width		   = record._width;
+		fbInfo.height		   = record._height;
 		fbInfo.layers		   = 1;
 
-		if ( vkCreateFramebuffer( _device, &fbInfo, nullptr, &record.framebuffer ) != VK_SUCCESS )
+		if ( vkCreateFramebuffer( _device, &fbInfo, nullptr, &record._framebuffer ) != VK_SUCCESS )
 		{
-			if ( record.renderPass != _offscreenRenderPass )
-				vkDestroyRenderPass( _device, record.renderPass, nullptr );
-			record.renderPass = VK_NULL_HANDLE;
+			if ( record._renderPass != _offscreenRenderPass )
+				vkDestroyRenderPass( _device, record._renderPass, nullptr );
+			record._renderPass = VK_NULL_HANDLE;
 			return false;
 		}
 		return true;
@@ -1928,15 +1928,15 @@ namespace sw
 
 	void VulkanRHIDevice::destroyOffscreenFramebuffer( VulkanTextureRecord& record )
 	{
-		if ( record.framebuffer != VK_NULL_HANDLE )
+		if ( record._framebuffer != VK_NULL_HANDLE )
 		{
-			vkDestroyFramebuffer( _device, record.framebuffer, nullptr );
-			record.framebuffer = VK_NULL_HANDLE;
+			vkDestroyFramebuffer( _device, record._framebuffer, nullptr );
+			record._framebuffer = VK_NULL_HANDLE;
 		}
 		// Shared offscreen RP is owned by the device; only destroy private per-texture passes.
-		if ( record.renderPass != VK_NULL_HANDLE && record.renderPass != _offscreenRenderPass )
-			vkDestroyRenderPass( _device, record.renderPass, nullptr );
-		record.renderPass = VK_NULL_HANDLE;
+		if ( record._renderPass != VK_NULL_HANDLE && record._renderPass != _offscreenRenderPass )
+			vkDestroyRenderPass( _device, record._renderPass, nullptr );
+		record._renderPass = VK_NULL_HANDLE;
 	}
 
 	VkRenderPass VulkanRHIDevice::ensurePipelineRenderPass( const RHIPipelineStateDesc& desc )
@@ -1951,7 +1951,7 @@ namespace sw
 			VkFormat colorFmt = toVulkanTextureFormat( desc._arrRtvFormats[colorIndex] );
 			if ( colorFmt == VK_FORMAT_UNDEFINED )
 				colorFmt = VK_FORMAT_R8G8B8A8_UNORM;
-			key._colorFormats[colorIndex] = static_cast<uint32>( colorFmt );
+			key._arrColorFormats[colorIndex] = static_cast<uint32>( colorFmt );
 		}
 		if ( desc._bEnableDepthTest != 0 )
 		{
@@ -1971,7 +1971,7 @@ namespace sw
 		VkAttachmentReference	colorRefs[kMaxColorAttachments]{};
 		for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
 		{
-			attachments[colorIndex].format		   = static_cast<VkFormat>( key._colorFormats[colorIndex] );
+			attachments[colorIndex].format		   = static_cast<VkFormat>( key._arrColorFormats[colorIndex] );
 			attachments[colorIndex].samples		   = VK_SAMPLE_COUNT_1_BIT;
 			attachments[colorIndex].loadOp		   = VK_ATTACHMENT_LOAD_OP_CLEAR;
 			attachments[colorIndex].storeOp		   = VK_ATTACHMENT_STORE_OP_STORE;
@@ -2044,7 +2044,7 @@ namespace sw
 		if ( existing != _mapCompositeFramebuffer.end() )
 		{
 			outRecord = existing->second;
-			return outRecord.framebuffer != VK_NULL_HANDLE && outRecord.renderPass != VK_NULL_HANDLE;
+			return outRecord._framebuffer != VK_NULL_HANDLE && outRecord._renderPass != VK_NULL_HANDLE;
 		}
 
 		VkImageView colorViews[kMaxColorAttachments]{};
@@ -2053,13 +2053,13 @@ namespace sw
 		uint32		height{ 0 };
 		for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
 		{
-			VulkanTextureRecord* pTex = resolveTexture( key._colors[colorIndex] );
-			if ( pTex == nullptr || pTex->imageView == VK_NULL_HANDLE || pTex->_bDepthStencil != 0 )
+			VulkanTextureRecord* pTex = resolveTexture( key._arrColors[colorIndex] );
+			if ( pTex == nullptr || pTex->_imageView == VK_NULL_HANDLE || pTex->_bDepthStencil != 0 )
 				return false;
-			colorViews[colorIndex]	 = pTex->imageView;
-			colorFormats[colorIndex] = pTex->format;
-			width					 = pTex->width;
-			height					 = pTex->height;
+			colorViews[colorIndex]	 = pTex->_imageView;
+			colorFormats[colorIndex] = pTex->_format;
+			width					 = pTex->_width;
+			height					 = pTex->_height;
 		}
 
 		VkImageView depthView = VK_NULL_HANDLE;
@@ -2067,14 +2067,14 @@ namespace sw
 		if ( key._depth != 0 )
 		{
 			VulkanTextureRecord* pTex = resolveTexture( key._depth );
-			if ( pTex == nullptr || pTex->imageView == VK_NULL_HANDLE || pTex->_bDepthStencil == 0 )
+			if ( pTex == nullptr || pTex->_imageView == VK_NULL_HANDLE || pTex->_bDepthStencil == 0 )
 				return false;
-			depthView	= pTex->imageView;
-			depthFormat = pTex->format;
+			depthView	= pTex->_imageView;
+			depthFormat = pTex->_format;
 			if ( width == 0 )
 			{
-				width  = pTex->width;
-				height = pTex->height;
+				width  = pTex->_width;
+				height = pTex->_height;
 			}
 		}
 		if ( key._colorCount == 0 && depthView == VK_NULL_HANDLE )
@@ -2087,7 +2087,7 @@ namespace sw
 		{
 			attachments[colorIndex].format		   = static_cast<VkFormat>( colorFormats[colorIndex] );
 			attachments[colorIndex].samples		   = VK_SAMPLE_COUNT_1_BIT;
-			attachments[colorIndex].loadOp		   = toVkLoadOp( static_cast<RHIRenderPassLoadOp>( key._colorLoadOps[colorIndex] ) );
+			attachments[colorIndex].loadOp		   = toVkLoadOp( static_cast<RHIRenderPassLoadOp>( key._arrColorLoadOps[colorIndex] ) );
 			attachments[colorIndex].storeOp		   = VK_ATTACHMENT_STORE_OP_STORE;
 			attachments[colorIndex].stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 			attachments[colorIndex].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -2142,25 +2142,25 @@ namespace sw
 		rpInfo.pDependencies   = &dependency;
 
 		CompositeFbRecord record{};
-		if ( vkCreateRenderPass( _device, &rpInfo, nullptr, &record.renderPass ) != VK_SUCCESS )
+		if ( vkCreateRenderPass( _device, &rpInfo, nullptr, &record._renderPass ) != VK_SUCCESS )
 			return false;
 
 		VkFramebufferCreateInfo fbInfo{};
 		fbInfo.sType		   = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-		fbInfo.renderPass	   = record.renderPass;
+		fbInfo.renderPass	   = record._renderPass;
 		fbInfo.attachmentCount = attachCount;
 		fbInfo.pAttachments	   = fbAttachments;
 		fbInfo.width		   = width;
 		fbInfo.height		   = height;
 		fbInfo.layers		   = 1;
 
-		if ( vkCreateFramebuffer( _device, &fbInfo, nullptr, &record.framebuffer ) != VK_SUCCESS )
+		if ( vkCreateFramebuffer( _device, &fbInfo, nullptr, &record._framebuffer ) != VK_SUCCESS )
 		{
-			vkDestroyRenderPass( _device, record.renderPass, nullptr );
+			vkDestroyRenderPass( _device, record._renderPass, nullptr );
 			return false;
 		}
-		record.width  = width;
-		record.height = height;
+		record._width  = width;
+		record._height = height;
 		_mapCompositeFramebuffer.emplace( key, record );
 		outRecord = record;
 		return true;
@@ -2175,14 +2175,14 @@ namespace sw
 			bool bUses = ( it->first._depth == texture );
 			for ( uint32 colorIndex = 0; colorIndex < it->first._colorCount && bUses == false; ++colorIndex )
 			{
-				bUses = ( it->first._colors[colorIndex] == texture );
+				bUses = ( it->first._arrColors[colorIndex] == texture );
 			}
 			if ( bUses )
 			{
-				if ( it->second.framebuffer != VK_NULL_HANDLE )
-					vkDestroyFramebuffer( _device, it->second.framebuffer, nullptr );
-				if ( it->second.renderPass != VK_NULL_HANDLE )
-					vkDestroyRenderPass( _device, it->second.renderPass, nullptr );
+				if ( it->second._framebuffer != VK_NULL_HANDLE )
+					vkDestroyFramebuffer( _device, it->second._framebuffer, nullptr );
+				if ( it->second._renderPass != VK_NULL_HANDLE )
+					vkDestroyRenderPass( _device, it->second._renderPass, nullptr );
 				it = _mapCompositeFramebuffer.erase( it );
 			}
 			else
@@ -2247,11 +2247,11 @@ namespace sw
 		}
 
 		VulkanBufferRecord record{};
-		record.buffer = buffer;
-		record.memory = memory;
-		record.size	  = sizeBytes;
-		record.usage  = usageFlags;
-		record.state  = RHIBufferState::Common;
+		record._buffer = buffer;
+		record._memory = memory;
+		record._size   = sizeBytes;
+		record._usage  = usageFlags;
+		record._state  = RHIBufferState::Common;
 
 		return _gpuBuffers.insert( std::move( record ) );
 	}

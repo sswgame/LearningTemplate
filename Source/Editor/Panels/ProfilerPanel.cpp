@@ -106,7 +106,7 @@ namespace sw::editor
 						ImGui::TableNextColumn();
 
 						// CallStack을 펼쳐볼 수 있도록 Tree 구성
-						string treeLabel = "Stack Hash: " + to_string( info._stack.hash );
+						string treeLabel = "Stack Hash: " + to_string( info._stack._hash );
 						if ( ImGui::TreeNode( treeLabel.c_str() ) )
 						{
 							string stackStr = CallStackCapture::symbolize( info._stack );

@@ -25,6 +25,6 @@ namespace sw
 
 	void TextComponent::setText( const string& newText )
 	{
-		text = newText;
+		_text = newText;
 	}
 } // namespace sw

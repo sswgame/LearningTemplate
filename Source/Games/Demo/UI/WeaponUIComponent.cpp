@@ -14,9 +14,9 @@
 namespace sw
 {
 	WeaponUIComponent::WeaponUIComponent()
-		: weaponName{}
-		, coolTimeRatio{ 0.0f }
-		, slotIndex{ 0 }
+		: _weaponName{}
+		, _coolTimeRatio{ 0.0f }
+		, _slotIndex{ 0 }
 	{
 	}
 
@@ -50,16 +50,16 @@ namespace sw
 			WeaponComponent* pWeaponComp = pWeaponObj->getComponent<WeaponComponent>();
 			if ( pWeaponComp != nullptr )
 			{
-				if ( pWeaponComp->skillCoolTime > 0.0f )
-					coolTimeRatio = pWeaponComp->currentSkillCoolTime / pWeaponComp->skillCoolTime;
+				if ( pWeaponComp->_skillCoolTime > 0.0f )
+					_coolTimeRatio = pWeaponComp->_currentSkillCoolTime / pWeaponComp->_skillCoolTime;
 				else
-					coolTimeRatio = 0.0f;
+					_coolTimeRatio = 0.0f;
 			}
 		}
 	}
 
 	void WeaponUIComponent::setCoolTime( float32 ratio )
 	{
-		coolTimeRatio = MathUtil::clamp( ratio, 0.0f, 1.0f );
+		_coolTimeRatio = MathUtil::clamp( ratio, 0.0f, 1.0f );
 	}
 } // namespace sw

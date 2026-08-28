@@ -266,38 +266,38 @@ namespace sw
 		/// @brief VkBuffer + 메모리 + 사용 플래그
 		struct VulkanBufferRecord
 		{
-			VkBuffer	   buffer{ nullptr };
-			VkDeviceMemory memory{ nullptr };
-			uint32		   size{ 0 };
-			uint32		   usage{ 0 }; ///< VkBufferUsageFlags
-			RHIBufferState state = RHIBufferState::Common;
+			VkBuffer	   _buffer{ nullptr };
+			VkDeviceMemory _memory{ nullptr };
+			uint32		   _size{ 0 };
+			uint32		   _usage{ 0 }; ///< VkBufferUsageFlags
+			RHIBufferState _state = RHIBufferState::Common;
 		};
 
 		/// @brief VkImage + 뷰 + 현재 레이아웃
 		struct VulkanTextureRecord
 		{
-			VkImage			   image{ nullptr };
-			VkImageView		   imageView{ nullptr };
-			VkDeviceMemory	   memory{ nullptr };
-			VkFramebuffer	   framebuffer{ nullptr };
-			VkRenderPass	   renderPass{ nullptr };
-			uint32			   format{ 0 }; ///< VkFormat
-			uint32			   layout{ 0 }; ///< VkImageLayout (UNDEFINED=0)
-			uint32			   width{ 0 };
-			uint32			   height{ 0 };
+			VkImage			   _image{ nullptr };
+			VkImageView		   _imageView{ nullptr };
+			VkDeviceMemory	   _memory{ nullptr };
+			VkFramebuffer	   _framebuffer{ nullptr };
+			VkRenderPass	   _renderPass{ nullptr };
+			uint32			   _format{ 0 }; ///< VkFormat
+			uint32			   _layout{ 0 }; ///< VkImageLayout (UNDEFINED=0)
+			uint32			   _width{ 0 };
+			uint32			   _height{ 0 };
 			uint8			   _bRenderTarget : 1;
 			uint8			   _bDepthStencil : 1;
 			uint8			   _reserved	  : 6;
-			RHIDescriptorIndex bindlessIndex{ kInvalidDescriptorIndex };
+			RHIDescriptorIndex _bindlessIndex{ kInvalidDescriptorIndex };
 		};
 
 		/// @brief MRT 프레임버퍼 캐시 키 (컬러+깊이 핸들)
 		struct CompositeFbKey
 		{
-			RHITextureHandle _colors[kMaxColorAttachments]{};
+			RHITextureHandle _arrColors[kMaxColorAttachments]{};
 			uint32			 _colorCount{ 0 };
 			RHITextureHandle _depth{ 0 };
-			uint8			 _colorLoadOps[kMaxColorAttachments]{};
+			uint8			 _arrColorLoadOps[kMaxColorAttachments]{};
 			uint8			 _depthLoadOp{ 0 };
 			/** @brief 같으면 true를 반환합니다. */
 			bool operator==( const CompositeFbKey& other ) const
@@ -306,7 +306,7 @@ namespace sw
 					return false;
 				for ( uint32 colorIndex = 0; colorIndex < _colorCount; ++colorIndex )
 				{
-					if ( _colors[colorIndex] != other._colors[colorIndex] || _colorLoadOps[colorIndex] != other._colorLoadOps[colorIndex] )
+					if ( _arrColors[colorIndex] != other._arrColors[colorIndex] || _arrColorLoadOps[colorIndex] != other._arrColorLoadOps[colorIndex] )
 						return false;
 				}
 				return true;
@@ -324,8 +324,8 @@ namespace sw
 				h ^= static_cast<size_t>( key._depthLoadOp ) + 0x9e3779b9u;
 				for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
 				{
-					h ^= static_cast<size_t>( key._colors[colorIndex] ) + 0x9e3779b9u + ( h << 6 ) + ( h >> 2 );
-					h ^= static_cast<size_t>( key._colorLoadOps[colorIndex] ) + 0x9e3779b9u;
+					h ^= static_cast<size_t>( key._arrColors[colorIndex] ) + 0x9e3779b9u + ( h << 6 ) + ( h >> 2 );
+					h ^= static_cast<size_t>( key._arrColorLoadOps[colorIndex] ) + 0x9e3779b9u;
 				}
 				return h;
 			}
@@ -334,18 +334,18 @@ namespace sw
 		/// @brief 캐시된 합성 프레임버퍼
 		struct CompositeFbRecord
 		{
-			VkRenderPass  renderPass{ nullptr };
-			VkFramebuffer framebuffer{ nullptr };
-			uint32		  width{ 0 };
-			uint32		  height{ 0 };
+			VkRenderPass  _renderPass{ nullptr };
+			VkFramebuffer _framebuffer{ nullptr };
+			uint32		  _width{ 0 };
+			uint32		  _height{ 0 };
 		};
 
 		/// @brief PSO에 묶인 렌더 패스 포맷 키
 		struct PipelineRpKey
 		{
 			uint32 _colorCount{ 1 };
-			uint32 _colorFormats[kMaxColorAttachments]{}; ///< VkFormat
-			uint32 _depthFormat{ 0 };					  ///< VkFormat; 0 = no depth
+			uint32 _arrColorFormats[kMaxColorAttachments]{}; ///< VkFormat
+			uint32 _depthFormat{ 0 };						 ///< VkFormat; 0 = no depth
 			/** @brief 같으면 true를 반환합니다. */
 			bool operator==( const PipelineRpKey& other ) const
 			{
@@ -353,7 +353,7 @@ namespace sw
 					return false;
 				for ( uint32 colorIndex = 0; colorIndex < _colorCount; ++colorIndex )
 				{
-					if ( _colorFormats[colorIndex] != other._colorFormats[colorIndex] )
+					if ( _arrColorFormats[colorIndex] != other._arrColorFormats[colorIndex] )
 						return false;
 				}
 				return true;
@@ -370,7 +370,7 @@ namespace sw
 				h ^= static_cast<size_t>( key._colorCount ) + 0x9e3779b9u;
 				for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
 				{
-					h ^= static_cast<size_t>( key._colorFormats[colorIndex] ) + 0x9e3779b9u + ( h << 6 ) + ( h >> 2 );
+					h ^= static_cast<size_t>( key._arrColorFormats[colorIndex] ) + 0x9e3779b9u + ( h << 6 ) + ( h >> 2 );
 				}
 				return h;
 			}
@@ -379,14 +379,14 @@ namespace sw
 		/// @brief VkPipeline + 레이아웃
 		struct VulkanPipelineStateRecord
 		{
-			VkPipeline pipeline{ nullptr };
+			VkPipeline _pipeline{ nullptr };
 		};
 
 		/// @brief VkRenderPass + 소유권 (desc로 만든 RP만 destroy)
 		struct VulkanRenderPassRecord
 		{
-			VkRenderPass renderPass{ nullptr };
-			uint8		 bOwned{ 0 }; ///< 1 = createRenderPass(desc)가 소유, 0 = swapchain RP alias
+			VkRenderPass _renderPass{ nullptr };
+			uint8		 _bOwned{ 0 }; ///< 1 = createRenderPass(desc)가 소유, 0 = swapchain RP alias
 		};
 
 		/** @brief bindless 텍스처 배열을 확보합니다. */

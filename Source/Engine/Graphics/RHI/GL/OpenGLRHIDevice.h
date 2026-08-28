@@ -139,21 +139,21 @@ namespace sw
 		/// @brief 드로우 시 바인드할 버퍼/텍스처 슬롯
 		struct BindlessResourceRecord
 		{
-			RHIBufferHandle buffer{ 0 };
+			RHIBufferHandle _buffer{ 0 };
 		};
 
 		/// @brief GLuint 텍스처 + 타깃/포맷
 		struct OpenGLTextureRecord
 		{
-			uint32	  texture{ 0 };
-			uint32	  fbo{ 0 };
-			uint32	  width{ 0 };
-			uint32	  height{ 0 };
-			uint32	  mipLevels{ 1 };
-			RHIFormat format = RHIFormat::R8G8B8A8_UNORM;
+			uint32	  _texture{ 0 };
+			uint32	  _fbo{ 0 };
+			uint32	  _width{ 0 };
+			uint32	  _height{ 0 };
+			uint32	  _mipLevels{ 1 };
+			RHIFormat _format = RHIFormat::R8G8B8A8_UNORM;
 			uint8	  _bDepthStencil : 1;
 			uint8	  _bUAV			 : 1;
-			uint8	  reserved		 : 6;
+			uint8	  _reserved		 : 6;
 		};
 
 		/// @brief MRT FBO 캐시 키
@@ -195,29 +195,29 @@ namespace sw
 		/// @brief 인덱스 → GL 텍스처 유닛 매핑
 		struct BindlessTextureRecord
 		{
-			RHITextureHandle texture{ 0 };
+			RHITextureHandle _texture{ 0 };
 		};
 
 		/// @brief 프로그램 + 래스터/블렌드/깊이 상태
 		struct OpenGLPipelineStateRecord
 		{
-			uint32				 program{ 0 };
-			uint32				 vao{ 0 };
-			RHIPrimitiveTopology topology = RHIPrimitiveTopology::TriangleList;
-			RHIFillMode			 fillMode = RHIFillMode::Solid;
-			RHICullMode			 cullMode = RHICullMode::None;
+			uint32				 _program{ 0 };
+			uint32				 _vao{ 0 };
+			RHIPrimitiveTopology _topology = RHIPrimitiveTopology::TriangleList;
+			RHIFillMode			 _fillMode = RHIFillMode::Solid;
+			RHICullMode			 _cullMode = RHICullMode::None;
 			uint8				 _bEnableDepthTest	: 1;
 			uint8				 _bEnableDepthWrite : 1;
 			uint8				 _bEnableBlend		: 1;
-			uint8				 reserved			: 5;
+			uint8				 _reserved			: 5;
 		};
 
 		/// @brief 렌더 패스 서술 캐시
 		struct OpenGLRenderPassRecord
 		{
-			RHIRenderPassDesc desc{};
-			uint8			  _bAlive  : 1;
-			uint8			  reserved : 7;
+			RHIRenderPassDesc _desc{};
+			uint8			  _bAlive	: 1;
+			uint8			  _reserved : 7;
 		};
 
 		void*  _pHDC;

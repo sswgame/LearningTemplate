@@ -12,9 +12,9 @@
 namespace sw
 {
 	StageComponent::StageComponent()
-		: totalMonsters{ 0 }
-		, remainingMonsters{ 0 }
-		, bStageCleared{ false }
+		: _totalMonsters{ 0 }
+		, _remainingMonsters{ 0 }
+		, _bStageCleared{ false }
 	{
 	}
 
@@ -38,9 +38,9 @@ namespace sw
 			}
 		}
 
-		totalMonsters	  = count;
-		remainingMonsters = count;
-		bStageCleared	  = ( count == 0 );
+		_totalMonsters	   = count;
+		_remainingMonsters = count;
+		_bStageCleared	   = ( count == 0 );
 	}
 
 	void StageComponent::onEndPlay()
@@ -79,18 +79,18 @@ namespace sw
 			}
 		}
 
-		remainingMonsters = aliveMonsters;
-		if ( remainingMonsters <= 0 && bStageCleared == false )
-			bStageCleared = true;
+		_remainingMonsters = aliveMonsters;
+		if ( _remainingMonsters <= 0 && _bStageCleared == false )
+			_bStageCleared = true;
 	}
 
 	void StageComponent::monsterKilled()
 	{
-		if ( remainingMonsters > 0 )
+		if ( _remainingMonsters > 0 )
 		{
-			remainingMonsters--;
-			if ( remainingMonsters <= 0 )
-				bStageCleared = true;
+			_remainingMonsters--;
+			if ( _remainingMonsters <= 0 )
+				_bStageCleared = true;
 		}
 	}
 } // namespace sw

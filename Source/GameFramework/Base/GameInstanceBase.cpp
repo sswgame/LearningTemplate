@@ -121,11 +121,11 @@ namespace sw
 
 		struct RestoredObject
 		{
-			GameObject* pObj{ nullptr };
-			string		parentName{};
+			GameObject* _pObj{ nullptr };
+			string		_parentName{};
 		};
-		vector<RestoredObject> restoredObjectList;
-		restoredObjectList.reserve( count );
+		vector<RestoredObject> listRestoredObject;
+		listRestoredObject.reserve( count );
 
 		// 1차: 모든 게임오브젝트 생성 및 직렬화 복구
 		for ( uint32 objectIndex = 0; objectIndex < count; ++objectIndex )
@@ -138,23 +138,23 @@ namespace sw
 				SW_LOG_ERROR( "Failed to load binary object state at index %u", objectIndex );
 				break;
 			}
-			restoredObjectList.push_back( { pObj, parentName } );
+			listRestoredObject.push_back( { pObj, parentName } );
 			offset += readBytes;
 		}
 
 		// 2차: 씬 계층 구조(Hierarchy) 및 부모-자식 관계 복원
-		for ( const RestoredObject& restoredObj : restoredObjectList )
+		for ( const RestoredObject& restoredObj : listRestoredObject )
 		{
-			if ( restoredObj.parentName.empty() )
+			if ( restoredObj._parentName.empty() )
 				continue;
 
-			GameObject* pParent = pActiveScene->getObjectManager()->findGameObjectByName( hashed_string( restoredObj.parentName.c_str() ) );
+			GameObject* pParent = pActiveScene->getObjectManager()->findGameObjectByName( hashed_string( restoredObj._parentName.c_str() ) );
 			if ( pParent == nullptr )
 			{
-				SW_LOG_WARNING( "HotReload ParentGO not found: %s", restoredObj.parentName.c_str() );
+				SW_LOG_WARNING( "HotReload ParentGO not found: %s", restoredObj._parentName.c_str() );
 				continue;
 			}
-			restoredObj.pObj->attachToParent( pParent );
+			restoredObj._pObj->attachToParent( pParent );
 		}
 
 		// 핫리로드 된 모든 오브젝트들의 월드 매트릭스를 강제 동기화

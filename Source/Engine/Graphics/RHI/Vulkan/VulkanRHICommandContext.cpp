@@ -68,7 +68,7 @@ namespace sw
 		if ( pResolved == nullptr || _pDevice->_offscreenCommandBuffer == VK_NULL_HANDLE )
 			return;
 		VulkanRHIDevice::VulkanTextureRecord& record = *pResolved;
-		if ( record.framebuffer == VK_NULL_HANDLE || record.renderPass == VK_NULL_HANDLE )
+		if ( record._framebuffer == VK_NULL_HANDLE || record._renderPass == VK_NULL_HANDLE )
 		{
 			SW_LOG_ERROR( "beginOffscreenPass: texture has no framebuffer." );
 			return;
@@ -83,10 +83,10 @@ namespace sw
 		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 		vkBeginCommandBuffer( _pDevice->_offscreenCommandBuffer, &beginInfo );
 
-		_pDevice->transitionImageLayout( _pDevice->_offscreenCommandBuffer, record.image, record.layout,
+		_pDevice->transitionImageLayout( _pDevice->_offscreenCommandBuffer, record._image, record._layout,
 										 VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 										 VK_IMAGE_ASPECT_COLOR_BIT );
-		record.layout = static_cast<uint32>( VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
+		record._layout = static_cast<uint32>( VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
 
 		_pDevice->_bOffscreenPassActive	 = 1;
 		_pDevice->_bFrameStarted		 = 1; // allow Immediate Context draws during offscreen
@@ -96,8 +96,8 @@ namespace sw
 		// Default clear pass (FrameRenderer may restart passes on this same buffer).
 		RHIRenderPassBeginInfo rpBegin{};
 		Memory::copy( rpBegin._arrClearColor, clearColor, sizeof( rpBegin._arrClearColor ) );
-		rpBegin._width	= record.width;
-		rpBegin._height = record.height;
+		rpBegin._width	= record._width;
+		rpBegin._height = record._height;
 		beginRenderPass( rpBegin );
 	}
 
@@ -114,14 +114,14 @@ namespace sw
 		}
 
 		VulkanRHIDevice::VulkanTextureRecord* pSrcResolved = _pDevice->resolveTexture( src );
-		if ( pSrcResolved == nullptr || pSrcResolved->image == VK_NULL_HANDLE || pSrcResolved->_bDepthStencil != 0 )
+		if ( pSrcResolved == nullptr || pSrcResolved->_image == VK_NULL_HANDLE || pSrcResolved->_bDepthStencil != 0 )
 			return;
 
 		VulkanRHIDevice::VulkanTextureRecord& srcRec = *pSrcResolved;
-		_pDevice->transitionImageLayout( cmd, srcRec.image, srcRec.layout,
+		_pDevice->transitionImageLayout( cmd, srcRec._image, srcRec._layout,
 										 VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 										 VK_IMAGE_ASPECT_COLOR_BIT );
-		srcRec.layout = static_cast<uint32>( VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL );
+		srcRec._layout = static_cast<uint32>( VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL );
 
 		VkImage dstImage = VK_NULL_HANDLE;
 		uint32	dstW	 = _pDevice->_swapChainExtentWidth;
@@ -139,26 +139,26 @@ namespace sw
 		else
 		{
 			VulkanRHIDevice::VulkanTextureRecord* pDstResolved = _pDevice->resolveTexture( dst );
-			if ( pDstResolved == nullptr || pDstResolved->image == VK_NULL_HANDLE )
+			if ( pDstResolved == nullptr || pDstResolved->_image == VK_NULL_HANDLE )
 				return;
-			dstImage = pDstResolved->image;
-			dstW	 = pDstResolved->width;
-			dstH	 = pDstResolved->height;
-			_pDevice->transitionImageLayout( cmd, dstImage, pDstResolved->layout,
+			dstImage = pDstResolved->_image;
+			dstW	 = pDstResolved->_width;
+			dstH	 = pDstResolved->_height;
+			_pDevice->transitionImageLayout( cmd, dstImage, pDstResolved->_layout,
 											 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 											 VK_IMAGE_ASPECT_COLOR_BIT );
-			pDstResolved->layout = static_cast<uint32>( VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL );
+			pDstResolved->_layout = static_cast<uint32>( VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL );
 		}
 
 		VkImageBlit blit{};
 		blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 		blit.srcSubresource.layerCount = 1;
-		blit.srcOffsets[1]			   = { static_cast<int32>( srcRec.width ), static_cast<int32>( srcRec.height ), 1 };
+		blit.srcOffsets[1]			   = { static_cast<int32>( srcRec._width ), static_cast<int32>( srcRec._height ), 1 };
 		blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 		blit.dstSubresource.layerCount = 1;
 		blit.dstOffsets[1]			   = { static_cast<int32>( dstW ), static_cast<int32>( dstH ), 1 };
 
-		vkCmdBlitImage( cmd, srcRec.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+		vkCmdBlitImage( cmd, srcRec._image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 						dstImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VK_FILTER_LINEAR );
 
 		if ( dst == 0 )
@@ -174,7 +174,7 @@ namespace sw
 											 VK_IMAGE_ASPECT_COLOR_BIT );
 			VulkanRHIDevice::VulkanTextureRecord* pDstResolved = _pDevice->resolveTexture( dst );
 			if ( pDstResolved != nullptr )
-				pDstResolved->layout = static_cast<uint32>( VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
+				pDstResolved->_layout = static_cast<uint32>( VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
 		}
 	}
 
@@ -203,7 +203,7 @@ namespace sw
 		if ( cmd == VK_NULL_HANDLE || texture == 0 )
 			return;
 		VulkanRHIDevice::VulkanTextureRecord* pResolved = _pDevice->resolveTexture( texture );
-		if ( pResolved == nullptr || pResolved->image == VK_NULL_HANDLE )
+		if ( pResolved == nullptr || pResolved->_image == VK_NULL_HANDLE )
 			return;
 
 		if ( _pDevice->_bRenderPassActive )
@@ -216,14 +216,14 @@ namespace sw
 		const uint32						  targetLayout = ( record._bDepthStencil != 0 )
 															   ? static_cast<uint32>( VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL )
 															   : static_cast<uint32>( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
-		if ( record.layout == targetLayout )
+		if ( record._layout == targetLayout )
 			return;
 
 		const uint32 aspect = ( record._bDepthStencil != 0 )
 								? _pDevice->depthAspectMask()
 								: static_cast<uint32>( VK_IMAGE_ASPECT_COLOR_BIT );
-		_pDevice->transitionImageLayout( cmd, record.image, record.layout, targetLayout, aspect );
-		record.layout = targetLayout;
+		_pDevice->transitionImageLayout( cmd, record._image, record._layout, targetLayout, aspect );
+		record._layout = targetLayout;
 	}
 
 	void VulkanRHICommandContext::endOffscreenPass( RHITextureHandle colorTarget )
@@ -241,11 +241,11 @@ namespace sw
 			vkCmdEndRenderPass( _pDevice->_offscreenCommandBuffer );
 			_pDevice->_bRenderPassActive = false;
 		}
-		_pDevice->transitionImageLayout( _pDevice->_offscreenCommandBuffer, record.image,
+		_pDevice->transitionImageLayout( _pDevice->_offscreenCommandBuffer, record._image,
 										 VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 										 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 										 VK_IMAGE_ASPECT_COLOR_BIT );
-		record.layout = static_cast<uint32>( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+		record._layout = static_cast<uint32>( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
 
 		vkEndCommandBuffer( _pDevice->_offscreenCommandBuffer );
 
@@ -272,8 +272,8 @@ namespace sw
 		const VulkanRHIDevice::VulkanPipelineStateRecord* pRecord = _pDevice->_pipelineStates.get( pso );
 		if ( pRecord != nullptr )
 		{
-			if ( pRecord->pipeline != VK_NULL_HANDLE )
-				pipe = pRecord->pipeline;
+			if ( pRecord->_pipeline != VK_NULL_HANDLE )
+				pipe = pRecord->_pipeline;
 		}
 
 		if ( pipe != VK_NULL_HANDLE )
@@ -295,8 +295,8 @@ namespace sw
 		const VulkanRHIDevice::VulkanPipelineStateRecord* pRecord = _pDevice->_pipelineStates.get( pso );
 		if ( pRecord != nullptr )
 		{
-			if ( pRecord->pipeline != VK_NULL_HANDLE )
-				vkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_COMPUTE, pRecord->pipeline );
+			if ( pRecord->_pipeline != VK_NULL_HANDLE )
+				vkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_COMPUTE, pRecord->_pipeline );
 
 			VkDescriptorSet set0 = _pDevice->_descriptorSet;
 			if ( set0 == VK_NULL_HANDLE && _pDevice->_listRegisteredDescriptorSet.empty() == false )
@@ -345,8 +345,8 @@ namespace sw
 			key._colorCount = ( colorCount > kMaxColorAttachments ) ? kMaxColorAttachments : colorCount;
 			for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
 			{
-				key._colors[colorIndex] = colorHandles[colorIndex];
-				key._colorLoadOps[colorIndex] =
+				key._arrColors[colorIndex] = colorHandles[colorIndex];
+				key._arrColorLoadOps[colorIndex] =
 					static_cast<uint8>( ( beginInfo._colorTargetCount > 0 ) ? beginInfo._arrLoadOps[colorIndex] : beginInfo._loadOp );
 			}
 			key._depth		 = beginInfo._depthTarget;
@@ -360,13 +360,13 @@ namespace sw
 
 			for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
 			{
-				VulkanRHIDevice::VulkanTextureRecord* pTex = _pDevice->resolveTexture( key._colors[colorIndex] );
+				VulkanRHIDevice::VulkanTextureRecord* pTex = _pDevice->resolveTexture( key._arrColors[colorIndex] );
 				if ( pTex == nullptr )
 					return;
 				constexpr uint32 aspect = VK_IMAGE_ASPECT_COLOR_BIT;
-				_pDevice->transitionImageLayout( cmd, pTex->image, pTex->layout,
+				_pDevice->transitionImageLayout( cmd, pTex->_image, pTex->_layout,
 												 VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, aspect );
-				pTex->layout = static_cast<uint32>( VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
+				pTex->_layout = static_cast<uint32>( VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
 			}
 			if ( key._depth != 0 )
 			{
@@ -374,21 +374,21 @@ namespace sw
 				if ( pTex == nullptr )
 					return;
 				const uint32 aspect = _pDevice->depthAspectMask();
-				_pDevice->transitionImageLayout( cmd, pTex->image, pTex->layout,
+				_pDevice->transitionImageLayout( cmd, pTex->_image, pTex->_layout,
 												 VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, aspect );
-				pTex->layout = static_cast<uint32>( VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL );
+				pTex->_layout = static_cast<uint32>( VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL );
 			}
 
 			VulkanRHIDevice::CompositeFbRecord composite{};
 			if ( _pDevice->ensureCompositeFramebuffer( key, composite ) == false )
 				return;
 
-			renderPass	= composite.renderPass;
-			framebuffer = composite.framebuffer;
-			extent		= { composite.width, composite.height };
+			renderPass	= composite._renderPass;
+			framebuffer = composite._framebuffer;
+			extent		= { composite._width, composite._height };
 			// Track RT only — do NOT set _bOffscreenPassActive (that routes to a separate CB).
 			if ( key._colorCount > 0 )
-				_pDevice->_activeOffscreenTarget = key._colors[0];
+				_pDevice->_activeOffscreenTarget = key._arrColors[0];
 
 			for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
 			{
@@ -409,16 +409,16 @@ namespace sw
 			if ( colorTarget != 0 )
 			{
 				VulkanRHIDevice::VulkanTextureRecord* pTex = _pDevice->resolveTexture( colorTarget );
-				if ( pTex == nullptr || pTex->framebuffer == VK_NULL_HANDLE || pTex->renderPass == VK_NULL_HANDLE )
+				if ( pTex == nullptr || pTex->_framebuffer == VK_NULL_HANDLE || pTex->_renderPass == VK_NULL_HANDLE )
 					return;
 
 				constexpr uint32 aspect = VK_IMAGE_ASPECT_COLOR_BIT;
-				_pDevice->transitionImageLayout( cmd, pTex->image, pTex->layout,
+				_pDevice->transitionImageLayout( cmd, pTex->_image, pTex->_layout,
 												 VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, aspect );
-				pTex->layout					 = static_cast<uint32>( VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
-				renderPass						 = pTex->renderPass;
-				framebuffer						 = pTex->framebuffer;
-				extent							 = { pTex->width, pTex->height };
+				pTex->_layout					 = static_cast<uint32>( VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
+				renderPass						 = pTex->_renderPass;
+				framebuffer						 = pTex->_framebuffer;
+				extent							 = { pTex->_width, pTex->_height };
 				_pDevice->_activeOffscreenTarget = colorTarget;
 			}
 			else
@@ -483,7 +483,7 @@ namespace sw
 		if ( cmd == VK_NULL_HANDLE || pRecord == nullptr )
 			return;
 
-		if ( pRecord->buffer == VK_NULL_HANDLE || pRecord->state == newState )
+		if ( pRecord->_buffer == VK_NULL_HANDLE || pRecord->_state == newState )
 			return;
 
 		if ( _pDevice->_bRenderPassActive )
@@ -496,7 +496,7 @@ namespace sw
 		VkAccessFlags		 dstAccess{ 0 };
 		VkPipelineStageFlags srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 		VkPipelineStageFlags dstStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-		mapStateVal( pRecord->state, srcAccess, srcStage );
+		mapStateVal( pRecord->_state, srcAccess, srcStage );
 		mapStateVal( newState, dstAccess, dstStage );
 
 		VkBufferMemoryBarrier barrier{};
@@ -505,12 +505,12 @@ namespace sw
 		barrier.dstAccessMask		= dstAccess;
 		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		barrier.buffer				= pRecord->buffer;
+		barrier.buffer				= pRecord->_buffer;
 		barrier.offset				= 0;
 		barrier.size				= VK_WHOLE_SIZE;
 
 		vkCmdPipelineBarrier( cmd, srcStage, dstStage, 0, 0, nullptr, 1, &barrier, 0, nullptr );
-		pRecord->state = newState;
+		pRecord->_state = newState;
 	}
 
 	void VulkanRHICommandContext::bindComputeUAV( RHIDescriptorIndex index, uint32 slot )
@@ -564,8 +564,8 @@ namespace sw
 		const VulkanRHIDevice::VulkanPipelineStateRecord* pRecord  = _pDevice->_pipelineStates.get( _pDevice->_activeGraphicsPso );
 		if ( pRecord != nullptr )
 		{
-			if ( pRecord->pipeline != VK_NULL_HANDLE )
-				pipeline = pRecord->pipeline;
+			if ( pRecord->_pipeline != VK_NULL_HANDLE )
+				pipeline = pRecord->_pipeline;
 		}
 		else if ( _pDevice->_activeOffscreenTarget != 0 && _pDevice->_offscreenPipeline != VK_NULL_HANDLE )
 			pipeline = _pDevice->_offscreenPipeline;
@@ -602,9 +602,9 @@ namespace sw
 		if ( _pDevice->_boundMeshVb != 0 )
 		{
 			const VulkanRHIDevice::VulkanBufferRecord* pVb = _pDevice->resolveAllocatedBuffer( _pDevice->_boundMeshVb );
-			if ( pVb != nullptr && pVb->buffer != VK_NULL_HANDLE )
+			if ( pVb != nullptr && pVb->_buffer != VK_NULL_HANDLE )
 			{
-				VkBuffer	 arrVertexBuffers[] = { pVb->buffer };
+				VkBuffer	 arrVertexBuffers[] = { pVb->_buffer };
 				VkDeviceSize arrOffsets[]		= { static_cast<VkDeviceSize>( _pDevice->_boundMeshOffset ) };
 				vkCmdBindVertexBuffers( cmd, 0, 1, arrVertexBuffers, arrOffsets );
 			}
@@ -699,12 +699,12 @@ namespace sw
 		if ( _pDevice->_bindlessTextureSet != VK_NULL_HANDLE )
 			vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pDevice->_pipelineLayout, 1, 1, &_pDevice->_bindlessTextureSet, 0, nullptr );
 
-		if ( pRecord->buffer != VK_NULL_HANDLE )
+		if ( pRecord->_buffer != VK_NULL_HANDLE )
 		{
 			const VulkanRHIDevice::VulkanBufferRecord* pVb = _pDevice->resolveAllocatedBuffer( _pDevice->_boundMeshVb );
-			if ( pVb != nullptr && pVb->buffer != VK_NULL_HANDLE )
+			if ( pVb != nullptr && pVb->_buffer != VK_NULL_HANDLE )
 			{
-				VkBuffer	 arrVertexBuffers[] = { pVb->buffer };
+				VkBuffer	 arrVertexBuffers[] = { pVb->_buffer };
 				VkDeviceSize arrOffsets[]		= { static_cast<VkDeviceSize>( _pDevice->_boundMeshOffset ) };
 				vkCmdBindVertexBuffers( cmd, 0, 1, arrVertexBuffers, arrOffsets );
 			}
@@ -714,7 +714,7 @@ namespace sw
 				VkDeviceSize arrOffsets[]		= { 0 };
 				vkCmdBindVertexBuffers( cmd, 0, 1, arrVertexBuffers, arrOffsets );
 			}
-			vkCmdDrawIndirect( cmd, pRecord->buffer, argumentBufferOffset, 1, sizeof( VkDrawIndirectCommand ) );
+			vkCmdDrawIndirect( cmd, pRecord->_buffer, argumentBufferOffset, 1, sizeof( VkDrawIndirectCommand ) );
 		}
 	}
 
@@ -724,21 +724,21 @@ namespace sw
 		const VulkanRHIDevice::VulkanBufferRecord* pArgs = _pDevice->resolveAllocatedBuffer( argumentBuffer );
 		const VulkanRHIDevice::VulkanBufferRecord* pIb	 = _pDevice->resolveAllocatedBuffer( _pDevice->_boundIndexBuffer );
 		const bool								   bValidArgs =
-			( cmd != VK_NULL_HANDLE && pArgs != nullptr && pIb != nullptr && pArgs->buffer != VK_NULL_HANDLE && pIb->buffer != VK_NULL_HANDLE );
+			( cmd != VK_NULL_HANDLE && pArgs != nullptr && pIb != nullptr && pArgs->_buffer != VK_NULL_HANDLE && pIb->_buffer != VK_NULL_HANDLE );
 		if ( bValidArgs == false )
 			return;
 
 		const VulkanRHIDevice::VulkanBufferRecord* pVb = _pDevice->resolveAllocatedBuffer( _pDevice->_boundMeshVb );
 		if ( pVb != nullptr )
 		{
-			VkBuffer	 arrVertexBuffers[] = { pVb->buffer };
+			VkBuffer	 arrVertexBuffers[] = { pVb->_buffer };
 			VkDeviceSize arrOffsets[]		= { static_cast<VkDeviceSize>( _pDevice->_boundMeshOffset ) };
 			vkCmdBindVertexBuffers( cmd, 0, 1, arrVertexBuffers, arrOffsets );
 		}
 
 		const VkIndexType indexType = ( _pDevice->_boundIndexStride == 2 ) ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32;
-		vkCmdBindIndexBuffer( cmd, pIb->buffer, _pDevice->_boundIndexOffset, indexType );
-		vkCmdDrawIndexedIndirect( cmd, pArgs->buffer, argumentBufferOffset, 1, sizeof( VkDrawIndexedIndirectCommand ) );
+		vkCmdBindIndexBuffer( cmd, pIb->_buffer, _pDevice->_boundIndexOffset, indexType );
+		vkCmdDrawIndexedIndirect( cmd, pArgs->_buffer, argumentBufferOffset, 1, sizeof( VkDrawIndexedIndirectCommand ) );
 	}
 
 	void VulkanRHICommandContext::dispatchIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset )
@@ -748,8 +748,8 @@ namespace sw
 		if ( cmd == VK_NULL_HANDLE || pRecord == nullptr )
 			return;
 
-		if ( pRecord->buffer != VK_NULL_HANDLE )
-			vkCmdDispatchIndirect( cmd, pRecord->buffer, argumentBufferOffset );
+		if ( pRecord->_buffer != VK_NULL_HANDLE )
+			vkCmdDispatchIndirect( cmd, pRecord->_buffer, argumentBufferOffset );
 	}
 
 	void VulkanRHICommandContext::multiDrawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset, uint32 maxCommandCount,
@@ -758,7 +758,7 @@ namespace sw
 		VkCommandBuffer							   cmd	 = _pDevice->currentCommandBuffer();
 		const VulkanRHIDevice::VulkanBufferRecord* pArgs = _pDevice->resolveAllocatedBuffer( argumentBuffer );
 		const bool								   bValidMultiArgs =
-			( cmd != VK_NULL_HANDLE && pArgs != nullptr && pArgs->buffer != VK_NULL_HANDLE && maxCommandCount > 0 );
+			( cmd != VK_NULL_HANDLE && pArgs != nullptr && pArgs->_buffer != VK_NULL_HANDLE && maxCommandCount > 0 );
 		if ( bValidMultiArgs == false )
 			return;
 
@@ -769,9 +769,9 @@ namespace sw
 			const VulkanRHIDevice::VulkanBufferRecord* pCountRec = _pDevice->resolveAllocatedBuffer( countBuffer );
 			if ( pCountRec != nullptr )
 			{
-				if ( pCountRec->buffer != VK_NULL_HANDLE )
+				if ( pCountRec->_buffer != VK_NULL_HANDLE )
 				{
-					vkCmdDrawIndirectCount( cmd, pArgs->buffer, argumentBufferOffset, pCountRec->buffer, countBufferOffset,
+					vkCmdDrawIndirectCount( cmd, pArgs->_buffer, argumentBufferOffset, pCountRec->_buffer, countBufferOffset,
 											maxCommandCount, stride );
 					return;
 				}
@@ -780,13 +780,13 @@ namespace sw
 
 		if ( _pDevice->_bMultiDrawIndirect != 0 && maxCommandCount > 1 )
 		{
-			vkCmdDrawIndirect( cmd, pArgs->buffer, argumentBufferOffset, maxCommandCount, stride );
+			vkCmdDrawIndirect( cmd, pArgs->_buffer, argumentBufferOffset, maxCommandCount, stride );
 			return;
 		}
 
 		for ( uint32 commandIndex = 0; commandIndex < maxCommandCount; ++commandIndex )
 		{
-			vkCmdDrawIndirect( cmd, pArgs->buffer, argumentBufferOffset + commandIndex * stride, 1, stride );
+			vkCmdDrawIndirect( cmd, pArgs->_buffer, argumentBufferOffset + commandIndex * stride, 1, stride );
 		}
 	}
 

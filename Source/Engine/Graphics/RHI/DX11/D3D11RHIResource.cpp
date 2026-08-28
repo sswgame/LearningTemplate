@@ -70,12 +70,12 @@ namespace sw
 			ShaderCompileResult res = ShaderCache::getOrCompile( vsDesc );
 			if ( res._bSuccess )
 			{
-				_pDevice->_device->CreateVertexShader( res._listBytecode.data(), res._listBytecode.size(), nullptr, pso.vs.GetAddressOf() );
+				_pDevice->_device->CreateVertexShader( res._listBytecode.data(), res._listBytecode.size(), nullptr, pso._vs.GetAddressOf() );
 				D3D11_INPUT_ELEMENT_DESC inputElementDescs[] = {
 					{"POSITION", 0,	 DXGI_FORMAT_R32G32B32_FLOAT, 0,	 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
 					{	  "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0}
 				  };
-				_pDevice->_device->CreateInputLayout( inputElementDescs, _countof( inputElementDescs ), res._listBytecode.data(), res._listBytecode.size(), pso.inputLayout.GetAddressOf() );
+				_pDevice->_device->CreateInputLayout( inputElementDescs, _countof( inputElementDescs ), res._listBytecode.data(), res._listBytecode.size(), pso._inputLayout.GetAddressOf() );
 			}
 		}
 		if ( desc._pixelShaderPath.empty() == false )
@@ -88,7 +88,7 @@ namespace sw
 			fillDefines( psDesc );
 			ShaderCompileResult res = ShaderCache::getOrCompile( psDesc );
 			if ( res._bSuccess )
-				_pDevice->_device->CreatePixelShader( res._listBytecode.data(), res._listBytecode.size(), nullptr, pso.ps.GetAddressOf() );
+				_pDevice->_device->CreatePixelShader( res._listBytecode.data(), res._listBytecode.size(), nullptr, pso._ps.GetAddressOf() );
 		}
 		if ( desc._computeShaderPath.empty() == false )
 		{
@@ -100,7 +100,7 @@ namespace sw
 			fillDefines( csDesc );
 			ShaderCompileResult res = ShaderCache::getOrCompile( csDesc );
 			if ( res._bSuccess )
-				_pDevice->_device->CreateComputeShader( res._listBytecode.data(), res._listBytecode.size(), nullptr, pso.cs.GetAddressOf() );
+				_pDevice->_device->CreateComputeShader( res._listBytecode.data(), res._listBytecode.size(), nullptr, pso._cs.GetAddressOf() );
 		}
 
 		D3D11_RASTERIZER_DESC rd{};
@@ -108,7 +108,7 @@ namespace sw
 		rd.CullMode		   = ( desc._cullMode == RHICullMode::Front ) ? D3D11_CULL_FRONT : ( ( desc._cullMode == RHICullMode::Back ) ? D3D11_CULL_BACK : D3D11_CULL_NONE );
 		rd.DepthClipEnable = TRUE;
 		if ( _pDevice != nullptr )
-			_pDevice->_device->CreateRasterizerState( &rd, pso.rasterizerState.GetAddressOf() );
+			_pDevice->_device->CreateRasterizerState( &rd, pso._rasterizerState.GetAddressOf() );
 
 		if ( _pDevice != nullptr )
 		{
@@ -124,13 +124,13 @@ namespace sw
 				blendDesc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_INV_SRC_ALPHA;
 				blendDesc.RenderTarget[0].BlendOpAlpha	 = D3D11_BLEND_OP_ADD;
 			}
-			_pDevice->_device->CreateBlendState( &blendDesc, pso.blendState.GetAddressOf() );
+			_pDevice->_device->CreateBlendState( &blendDesc, pso._blendState.GetAddressOf() );
 
 			D3D11_DEPTH_STENCIL_DESC dsDesc{};
 			dsDesc.DepthEnable	  = ( desc._bEnableDepthTest != 0 ) ? TRUE : FALSE;
 			dsDesc.DepthWriteMask = ( desc._bEnableDepthWrite != 0 ) ? D3D11_DEPTH_WRITE_MASK_ALL : D3D11_DEPTH_WRITE_MASK_ZERO;
 			dsDesc.DepthFunc	  = D3D11_COMPARISON_LESS_EQUAL;
-			_pDevice->_device->CreateDepthStencilState( &dsDesc, pso.depthStencilState.GetAddressOf() );
+			_pDevice->_device->CreateDepthStencilState( &dsDesc, pso._depthStencilState.GetAddressOf() );
 		}
 
 		return _pDevice->_pipelineStates.insert( std::move( pso ) );
@@ -147,7 +147,7 @@ namespace sw
 			csDesc._stage			= ShaderStage::Compute;
 			csDesc._targetFormat	= ShaderTargetFormat::DXBC_D3D11;
 			ShaderCompileResult res = ShaderCache::getOrCompile( csDesc );
-			if ( res._bSuccess == false || FAILED( _pDevice->_device->CreateComputeShader( res._listBytecode.data(), res._listBytecode.size(), nullptr, pso.cs.GetAddressOf() ) ) )
+			if ( res._bSuccess == false || FAILED( _pDevice->_device->CreateComputeShader( res._listBytecode.data(), res._listBytecode.size(), nullptr, pso._cs.GetAddressOf() ) ) )
 				return 0;
 		}
 		return _pDevice->_pipelineStates.insert( std::move( pso ) );
@@ -165,7 +165,7 @@ namespace sw
 	RHIRenderPassHandle D3D11RHIResource::createRenderPass( const RHIRenderPassDesc& desc )
 	{
 		D3D11RHIDevice::D3D11RenderPassRecord record{};
-		record.desc	   = desc;
+		record._desc   = desc;
 		record._bAlive = 1;
 		_pDevice->_listRenderPass.push_back( record );
 		return _pDevice->_listRenderPass.size();

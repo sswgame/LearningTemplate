@@ -25,6 +25,6 @@ namespace sw
 
 	void UIManagerComponent::setHudVisible( bool bVisible )
 	{
-		bHudVisible = bVisible;
+		_bHudVisible = bVisible;
 	}
 } // namespace sw

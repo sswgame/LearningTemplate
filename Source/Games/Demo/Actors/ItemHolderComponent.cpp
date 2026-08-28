@@ -25,21 +25,21 @@ namespace sw
 
 	void ItemHolderComponent::equipWeapon( const string& name )
 	{
-		equippedWeapon = name;
+		_equippedWeapon = name;
 	}
 
 	void ItemHolderComponent::equipAccessory( const string& name )
 	{
-		equippedAccessory = name;
+		_equippedAccessory = name;
 	}
 
 	void ItemHolderComponent::unequipWeapon()
 	{
-		equippedWeapon.clear();
+		_equippedWeapon.clear();
 	}
 
 	void ItemHolderComponent::unequipAccessory()
 	{
-		equippedAccessory.clear();
+		_equippedAccessory.clear();
 	}
 } // namespace sw

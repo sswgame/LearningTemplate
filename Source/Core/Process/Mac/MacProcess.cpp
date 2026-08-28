@@ -33,9 +33,9 @@ namespace sw
 		cleanup();
 
 		string cmd = string( command );
-		if ( options.workingDirectory.empty() == false )
+		if ( options._workingDirectory.empty() == false )
 		{
-			cmd = "cd \"" + options.workingDirectory + "\" && " + cmd;
+			cmd = "cd \"" + options._workingDirectory + "\" && " + cmd;
 		}
 		cmd += " 2>&1";
 

@@ -23,9 +23,9 @@ namespace sw::editor
 
 		struct ObjectSnapshot
 		{
-			uint64 objectId{ 0 };
-			string name;
-			string xml;
+			uint64 _objectId{ 0 };
+			string _name;
+			string _xml;
 		};
 
 		vector<ObjectSnapshot> s_listPlaySnapshots;
@@ -87,10 +87,10 @@ namespace sw::editor
 					continue;
 
 				ObjectSnapshot entry;
-				entry.objectId = pObj->getObjectId();
-				entry.name	   = pObj->getName().c_str();
-				entry.xml	   = ObjectStateSerializer::saveToXmlString( pObj );
-				if ( entry.xml.empty() == false )
+				entry._objectId = pObj->getObjectId();
+				entry._name		= pObj->getName().c_str();
+				entry._xml		= ObjectStateSerializer::saveToXmlString( pObj );
+				if ( entry._xml.empty() == false )
 					s_listPlaySnapshots.push_back( std::move( entry ) );
 			}
 
@@ -128,7 +128,7 @@ namespace sw::editor
 				uniqueSnapIds.reserve( s_listPlaySnapshots.size() );
 				for ( const ObjectSnapshot& snap : s_listPlaySnapshots )
 				{
-					uniqueSnapIds.insert( snap.objectId );
+					uniqueSnapIds.insert( snap._objectId );
 				}
 
 				vector<GameObject*> listToDestroy;
@@ -146,32 +146,32 @@ namespace sw::editor
 			// 2. 기존 오브젝트 상태 복구 및 삭제된 오브젝트 재생성
 			for ( const ObjectSnapshot& snap : s_listPlaySnapshots )
 			{
-				GameObject* pObj = pObjects->findGameObjectById( snap.objectId );
+				GameObject* pObj = pObjects->findGameObjectById( snap._objectId );
 				if ( pObj == nullptr )
 				{
-					pObj = pObjects->createGameObject( hashed_string( snap.name.c_str() ) );
+					pObj = pObjects->createGameObject( hashed_string( snap._name.c_str() ) );
 					if ( pObj == nullptr )
 					{
-						SW_LOG_WARNING( "Failed to recreate '%#' from play snapshot.", snap.name.c_str() );
+						SW_LOG_WARNING( "Failed to recreate '%#' from play snapshot.", snap._name.c_str() );
 						continue;
 					}
 				}
 
-				if ( ObjectStateSerializer::loadFromXmlString( pObj, snap.xml ) == false )
-					SW_LOG_WARNING( "Failed to restore '%#' from play snapshot.", snap.name.c_str() );
+				if ( ObjectStateSerializer::loadFromXmlString( pObj, snap._xml ) == false )
+					SW_LOG_WARNING( "Failed to restore '%#' from play snapshot.", snap._name.c_str() );
 			}
 
 			// 3. 계층 관계 리바인딩
 			for ( const ObjectSnapshot& snap : s_listPlaySnapshots )
 			{
-				GameObject* pObj = pObjects->findGameObjectByName( hashed_string( snap.name.c_str() ) );
+				GameObject* pObj = pObjects->findGameObjectByName( hashed_string( snap._name.c_str() ) );
 				if ( pObj == nullptr )
-					pObj = pObjects->findGameObjectById( snap.objectId );
+					pObj = pObjects->findGameObjectById( snap._objectId );
 				if ( pObj == nullptr )
 					continue;
 
-				if ( ObjectStateSerializer::rebindSceneHierarchy( pObj, snap.xml ) == false )
-					SW_LOG_WARNING( "Failed to rebind scene hierarchy for '%#'.", snap.name.c_str() );
+				if ( ObjectStateSerializer::rebindSceneHierarchy( pObj, snap._xml ) == false )
+					SW_LOG_WARNING( "Failed to rebind scene hierarchy for '%#'.", snap._name.c_str() );
 			}
 
 			SW_LOG_TRACE( "Play snapshot restored (%# objects).",

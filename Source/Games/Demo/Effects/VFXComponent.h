@@ -20,13 +20,13 @@ namespace sw
 		REFLECT_BODY();
 
 		PROPERTY()
-		VFXType vfxType{ VFXType::AlphaFade };
+		VFXType _vfxType{ VFXType::AlphaFade };
 
 		PROPERTY()
-		float32 blinkRate{ 0.0f };
+		float32 _blinkRate{ 0.0f };
 
 		PROPERTY()
-		float32 ghostAlpha{ 0.0f };
+		float32 _ghostAlpha{ 0.0f };
 
 		VFXComponent()									   = default;
 		virtual ~VFXComponent() override				   = default;

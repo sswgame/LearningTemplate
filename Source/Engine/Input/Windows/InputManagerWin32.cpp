@@ -74,7 +74,7 @@ namespace sw
 		const InputVkKeyPair* pTable = getWin32PollKeyTable( count );
 		for ( uint32 eventIndex = 0; eventIndex < count; ++eventIndex )
 		{
-			setKeyDown( pTable[eventIndex].key, ( GetAsyncKeyState( pTable[eventIndex].vk ) & 0x8000 ) != 0 );
+			setKeyDown( pTable[eventIndex]._key, ( GetAsyncKeyState( pTable[eventIndex]._vk ) & 0x8000 ) != 0 );
 		}
 
 		setMouseButtonDown( MouseButton::Left, ( GetAsyncKeyState( VK_LBUTTON ) & 0x8000 ) != 0 );

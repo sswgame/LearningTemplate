@@ -57,7 +57,7 @@ namespace sw
 		}
 
 		vector<string> files;
-		FileUtil::collectFiles( absDir, ParserContext::getSharedConfig().emitTemplateExtension, files, false, false );
+		FileUtil::collectFiles( absDir, ParserContext::getSharedConfig()._emitTemplateExtension, files, false, false );
 
 		uint32 count = 0;
 		for ( const string& path : files )

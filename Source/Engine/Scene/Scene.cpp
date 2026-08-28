@@ -213,7 +213,7 @@ namespace sw
 			return; // initialize 실패 시 FrameRenderer가 ERROR 로깅
 
 		if ( _pFrameRenderer->execute( pRhiDevice, _pMaterial, this ) == false )
-			SW_LOG_ERROR( "FrameRenderer::execute failed" );
+			SW_LOG_ERROR( "FrameRenderer execute failed." );
 	}
 
 	namespace
