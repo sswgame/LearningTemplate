@@ -251,30 +251,30 @@ namespace sw
 	{
 		appendTemplate( out, tplConstants::kFileHeader, {
 															{ templateKeyConstants::kSourcePath, _sourceFilePath }
-		  } );
+		   } );
 	}
 
 	void CodeGenerator::emitReflectTypeTraits( CodeEmitBuffer& out, const ParsedTypeInfo& typeInfo ) const
 	{
 		appendTemplate( out, tplConstants::kReflectTypeTraits, {
 																   { templateKeyConstants::kFqn, typeInfo._fullyQualifiedName }
-		   } );
+		} );
 	}
 
 	void CodeGenerator::emitTypeInfoAccessors( CodeEmitBuffer& out, const ParsedTypeInfo& typeInfo ) const
 	{
 		appendTemplate( out, tplConstants::kTypeInfoAccessors, {
 																   { templateKeyConstants::kFqn, typeInfo._fullyQualifiedName }
-		   } );
+		} );
 	}
 
 	void CodeGenerator::emitComponentFactoryRegistrar( CodeEmitBuffer& out, const ParsedTypeInfo& typeInfo ) const
 	{
 		appendTemplate( out, tplConstants::kComponentFactoryRegistrar, {
-																		   { templateKeyConstants::kId, sanitizeIdentifier( typeInfo._fullyQualifiedName )},
-																		   { templateKeyConstants::kFqn, typeInfo._fullyQualifiedName},
-																		   { templateKeyConstants::kName, typeInfo._name},
-																		   { templateKeyConstants::kModuleName, getModuleName()},
+																		   {		 templateKeyConstants::kId, sanitizeIdentifier( typeInfo._fullyQualifiedName )},
+																		   {		 templateKeyConstants::kFqn,						 typeInfo._fullyQualifiedName},
+																		   {		 templateKeyConstants::kName,									  typeInfo._name},
+																		   {templateKeyConstants::kModuleName,									getModuleName()},
 		   } );
 	}
 
@@ -535,12 +535,12 @@ namespace sw
 		}
 
 		appendTemplate( out, tplConstants::kTypeRegistrarBegin, {
-																	{ templateKeyConstants::kId, id},
-																	{ templateKeyConstants::kFqn, typeInfo._fullyQualifiedName},
-																	{ templateKeyConstants::kName, typeInfo._name},
-																	{ templateKeyConstants::kParentFqn, typeInfo._parentFQN},
-																	{ templateKeyConstants::kModuleName, getModuleName()},
-																	{ templateKeyConstants::kFlags, string( flagsBuf.view() )},
+																	{		  templateKeyConstants::kId,							 id},
+																	{		  templateKeyConstants::kFqn, typeInfo._fullyQualifiedName},
+																	{	  templateKeyConstants::kName,			   typeInfo._name},
+																	{ templateKeyConstants::kParentFqn,			typeInfo._parentFQN},
+																	{templateKeyConstants::kModuleName,				 getModuleName()},
+																	{	  templateKeyConstants::kFlags,	string( flagsBuf.view() )},
 		} );
 
 		CodeEmit e( out );
@@ -576,15 +576,15 @@ namespace sw
 		const ParsedEnumeratorInfo* countEn	  = findEnumerator( enumInfo, enumInfo._countEnumerator );
 
 		appendTemplate( out, tplConstants::kEnumRegistrarBegin, {
-																	{ templateKeyConstants::kId, id},
-																	{ templateKeyConstants::kFqn, enumInfo._fullyQualifiedName},
-																	{ templateKeyConstants::kName, enumInfo._name},
-																	{ templateKeyConstants::kModuleName, getModuleName()},
-																	{ templateKeyConstants::kIsBitFlag, enumInfo._bIsBitFlag ? "true" : "false"},
-																	{ templateKeyConstants::kHasInvalid, invalidEn != nullptr ? "true" : "false"},
-																	{ templateKeyConstants::kInvalidValue, invalidEn != nullptr ? to_string( invalidEn->_value ) : string( "0" )},
-																	{ templateKeyConstants::kHasCount, countEn != nullptr ? "true" : "false"},
-																	{ templateKeyConstants::kCountValue, countEn != nullptr ? to_string( countEn->_value ) : string( "0" )},
+																	{		  templateKeyConstants::kId,																	 id},
+																	{		  templateKeyConstants::kFqn,										  enumInfo._fullyQualifiedName},
+																	{		  templateKeyConstants::kName,														   enumInfo._name},
+																	{  templateKeyConstants::kModuleName,														 getModuleName()},
+																	{	  templateKeyConstants::kIsBitFlag,								enumInfo._bIsBitFlag ? "true" : "false"},
+																	{  templateKeyConstants::kHasInvalid,								 invalidEn != nullptr ? "true" : "false"},
+																	{templateKeyConstants::kInvalidValue, invalidEn != nullptr ? to_string( invalidEn->_value ) : string( "0" )},
+																	{	  templateKeyConstants::kHasCount,								   countEn != nullptr ? "true" : "false"},
+																	{  templateKeyConstants::kCountValue,	 countEn != nullptr ? to_string( countEn->_value ) : string( "0" )},
 		} );
 
 		CodeEmit e( out );

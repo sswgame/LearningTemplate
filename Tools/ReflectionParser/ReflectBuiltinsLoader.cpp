@@ -192,7 +192,7 @@ namespace sw
 
 		string out = tpls.render( tplConstants::kBuiltinFileHeader, {
 																		{ templateKeyConstants::kSourcePath, builtinsAbsPath }
-		  } );
+		   } );
 		for ( const BuiltinTypeRow& row : rows )
 		{
 			StringBuilder<constant::kMaxBuffer1024> aliasRegs;
@@ -207,11 +207,11 @@ namespace sw
 			id.appendFormat( "Builtin_%#", row._canonical );
 			out += tpls.render( tplConstants::kBuiltinTypeRegistrar,
 								{
-									{		  templateKeyConstants::kId,		id.view()},
-									{	  templateKeyConstants::kName,	  row._canonical},
-									{  templateKeyConstants::kCppType,	 row._cppType},
+									{		  templateKeyConstants::kId,		 id.view()},
+									{	  templateKeyConstants::kName,   row._canonical},
+									{  templateKeyConstants::kCppType,	  row._cppType},
 									{templateKeyConstants::kAliasRegs, aliasRegs.view()}
-			  } );
+			   } );
 		}
 		out += tpls.render( tplConstants::kBuiltinFileFooter, {} );
 

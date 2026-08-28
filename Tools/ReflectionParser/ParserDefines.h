@@ -207,9 +207,9 @@ namespace sw
 	// ------------------------------------------------------------------------------
 	struct emitDirectiveConstants
 	{
-		inline static constexpr const utf8* kPragmaOnce	 = "#pragma once";
+		inline static constexpr const utf8* kPragmaOnce	  = "#pragma once";
 		inline static constexpr const utf8* kIfndefParser = "#if !defined(__REFLECT_PARSER__)";
-		inline static constexpr const utf8* kEndif		 = "#endif";
-		inline static constexpr const utf8* kNoEnumFlags = "// no ENUM(Flags) in this target";
+		inline static constexpr const utf8* kEndif		  = "#endif";
+		inline static constexpr const utf8* kNoEnumFlags  = "// no ENUM(Flags) in this target";
 	}; // struct emitDirectiveConstants
 } // namespace sw

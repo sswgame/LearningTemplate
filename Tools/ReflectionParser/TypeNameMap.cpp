@@ -16,7 +16,7 @@ namespace sw
 		/** @brief clang 수식어(const/class 등)와 참조를 제거합니다. */
 		static string stripClangDecorations( string_view tView )
 		{
-			tView = StringUtil::trim( tView );
+			tView						 = StringUtil::trim( tView );
 			const ParserClangConfig& cfg = ParserContext::getSharedConfig();
 			for ( const string& prefix : cfg._listTypeStripPrefix )
 			{

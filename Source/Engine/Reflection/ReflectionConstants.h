@@ -41,8 +41,7 @@ namespace sw::constants::propertyHint
 	inline constexpr const utf8* kArrColorTypes[] = {
 		"Color",
 		"sw::Color",
-		"LinearColor"
-	};
+		"LinearColor" };
 
 	/** @brief bool 계열 타입 및 식별자입니다. */
 	inline constexpr const utf8* kBool		 = "bool";
@@ -58,12 +57,12 @@ namespace sw::constants::propertyHint
 
 	/** @brief 에셋 타입별 파일 다이얼로그 필터 매핑 데이터 테이블 */
 	inline constexpr AssetFilterDef kArrAssetFilters[] = {
-		{  "Texture", "Image Files (*.png;*.jpg;*.dds)\0*.png;*.jpg;*.dds\0" },
-		{   "Sprite", "Image Files (*.png;*.jpg;*.dds)\0*.png;*.jpg;*.dds\0" },
-		{ "Material", "Material Files (*.material;*.mat)\0*.material;*.mat\0" },
-		{   "Shader",   "Shader Files (*.hlsl;*.glsl)\0*.hlsl;*.glsl\0" },
-		{    "Scene", "Scene Files (*.scene;*.scene.xml)\0*.scene;*.scene.xml\0" },
-		{    "Audio", "Audio Files (*.wav;*.ogg;*.mp3)\0*.wav;*.ogg;*.mp3\0" },
+		{ "Texture",	 "Image Files (*.png;*.jpg;*.dds)\0*.png;*.jpg;*.dds\0"},
+		{  "Sprite",		"Image Files (*.png;*.jpg;*.dds)\0*.png;*.jpg;*.dds\0"},
+		{"Material",	  "Material Files (*.material;*.mat)\0*.material;*.mat\0"},
+		{  "Shader",			"Shader Files (*.hlsl;*.glsl)\0*.hlsl;*.glsl\0"},
+		{	  "Scene", "Scene Files (*.scene;*.scene.xml)\0*.scene;*.scene.xml\0"},
+		{	  "Audio",	   "Audio Files (*.wav;*.ogg;*.mp3)\0*.wav;*.ogg;*.mp3\0"},
 	};
 
 	/** @brief 기본 전체 파일 필터입니다. */

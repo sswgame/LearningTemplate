@@ -44,7 +44,7 @@ namespace sw
 				inner = sig.substr( lt + kMarker.size(), gt - lt - kMarker.size() );
 		}
 
-		inner = StringUtil::trim( inner );
+		inner											= StringUtil::trim( inner );
 		static constexpr const utf8* kArrEnumPrefixes[] = {
 			constants::reflection::kEnumClassPrefix,
 			constants::reflection::kEnumStructPrefix,
