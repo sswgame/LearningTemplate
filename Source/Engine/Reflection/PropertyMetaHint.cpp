@@ -2,20 +2,37 @@
 
 #include "Engine/Reflection/PropertyMetaHint.h"
 
+#include "Engine/Reflection/ReflectionConstants.h"
+
 namespace sw
 {
+	namespace
+	{
+		static bool isColorProperty( string_view typeName, const string& category )
+		{
+			for ( const utf8* colorType : constants::propertyHint::kArrColorTypes )
+			{
+				if ( typeName == colorType || category == colorType )
+					return true;
+			}
+			return false;
+		}
+	} // namespace
+
 	PropertyWidgetType PropertyMetaHint::deduceWidgetType( const PropertyMetadata& meta, string_view typeName )
 	{
-		if ( meta._bHasRange )
+		if ( meta._bHasRange == SW_TRUE )
 			return PropertyWidgetType::Slider;
 
-		if ( meta._bAssetPath || meta._assetType.empty() == false )
+		if ( meta._bAssetPath == SW_TRUE || meta._assetType.empty() == false )
 			return PropertyWidgetType::AssetPicker;
 
-		if ( typeName == "Color" || typeName == "sw::Color" || typeName == "LinearColor" || meta._category == "Color" )
+		if ( isColorProperty( typeName, meta._category ) )
 			return PropertyWidgetType::ColorPicker;
 
-		if ( typeName == "bool" || ( typeName == "uint8" && meta._displayName.rfind( "b", 0 ) == 0 ) )
+		if ( typeName == constants::propertyHint::kBool ||
+			 ( typeName == constants::propertyHint::kUint8 &&
+			   meta._displayName.rfind( constants::propertyHint::kBoolPrefix, 0 ) == 0 ) )
 			return PropertyWidgetType::Checkbox;
 
 		return PropertyWidgetType::Default;
@@ -23,7 +40,7 @@ namespace sw
 
 	bool PropertyMetaHint::getSliderRange( const PropertyMetadata& meta, float32& outMin, float32& outMax )
 	{
-		if ( meta._bHasRange == 0 )
+		if ( meta._bHasRange == SW_FALSE )
 			return false;
 
 		outMin = meta._minRange;
@@ -33,17 +50,12 @@ namespace sw
 
 	const utf8* PropertyMetaHint::getAssetFilter( const PropertyMetadata& meta )
 	{
-		if ( meta._assetType == "Texture" || meta._assetType == "Sprite" )
-			return "Image Files (*.png;*.jpg;*.dds)\0*.png;*.jpg;*.dds\0";
-		if ( meta._assetType == "Material" )
-			return "Material Files (*.material;*.mat)\0*.material;*.mat\0";
-		if ( meta._assetType == "Shader" )
-			return "Shader Files (*.hlsl;*.glsl)\0*.hlsl;*.glsl\0";
-		if ( meta._assetType == "Scene" )
-			return "Scene Files (*.scene;*.scene.xml)\0*.scene;*.scene.xml\0";
-		if ( meta._assetType == "Audio" )
-			return "Audio Files (*.wav;*.ogg;*.mp3)\0*.wav;*.ogg;*.mp3\0";
+		for ( const constants::propertyHint::AssetFilterDef& mapping : constants::propertyHint::kArrAssetFilters )
+		{
+			if ( meta._assetType == mapping._assetType )
+				return mapping._filter;
+		}
 
-		return "All Files (*.*)\0*.*\0";
+		return constants::propertyHint::kFilterAll;
 	}
 } // namespace sw

@@ -6,6 +6,7 @@
 #include "Core/Task/TaskTypes.h"
 
 #include "Engine/EngineMinimal.h"
+#include "Engine/Reflection/ReflectionConstants.h"
 #include "Engine/Reflection/ReflectionContainers.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -243,7 +244,7 @@ namespace sw
 			if ( val == 0 )
 			{
 				auto iter = _mapValueToName.find( 0 );
-				return iter != _mapValueToName.end() ? iter->second : hashed_string( "None" );
+				return iter != _mapValueToName.end() ? iter->second : hashed_string( constants::reflection::kNone );
 			}
 
 			// _mapValueToName 만 사용 — ValueAlias 가 _mapNameToValue 에 있어도 출력에 중복되지 않음.
@@ -253,7 +254,7 @@ namespace sw
 				if ( bitVal != 0 && ( val & bitVal ) == bitVal )
 				{
 					if ( result.empty() == false )
-						result += " | ";
+						result += constants::reflection::kFlagSeparator;
 					result += name.c_str();
 				}
 			}
@@ -272,7 +273,7 @@ namespace sw
 			}
 
 			int64			intResult{ 0 };
-			string_splitter splitter( flagsStr, { "|" } );
+			string_splitter splitter( flagsStr, { constants::reflection::kFlagSplitDelimiter } );
 			for ( string_view tokenView : splitter.getSplitList() )
 			{
 				string_view trimmedStr = StringUtil::trim( tokenView );

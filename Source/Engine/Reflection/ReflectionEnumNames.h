@@ -6,6 +6,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 
+#include "Engine/Reflection/ReflectionConstants.h"
 #include "Engine/Reflection/ReflectionContainers.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 
@@ -72,7 +73,10 @@ namespace sw
 	}
 
 	/** @brief 바깥 컨테이너에서 한 겹 벗길 멤버 이름 (mapped_type / value_type). */
-	inline const utf8* containerPeelMember( const ContainerKind outerKind ) noexcept { return ( outerKind == ContainerKind::Map ) ? "mapped_type" : "value_type"; }
+	inline const utf8* containerPeelMember( const ContainerKind outerKind ) noexcept
+	{
+		return ( outerKind == ContainerKind::Map ) ? constants::reflection::kMappedType : constants::reflection::kValueType;
+	}
 
 	/** @brief 식별자 문자열을 FunctionNetRole로 파싱합니다. */
 	inline bool tryParseFunctionNetRole( string_view spelling, FunctionNetRole& out ) noexcept

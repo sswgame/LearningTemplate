@@ -5,6 +5,7 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
+#include "ReflectionParser/ParserContext.h"
 #include "ReflectionParser/ParserDefines.h"
 
 SW_LOG_CALLER( "TypeNameMap" );
@@ -16,12 +17,12 @@ namespace sw
 		static string stripClangDecorations( string_view tView )
 		{
 			tView = StringUtil::trim( tView );
-			for ( const utf8* prefix : kClangTypePrefixes )
+			const ParserClangConfig& cfg = ParserContext::getSharedConfig();
+			for ( const string& prefix : cfg._listTypeStripPrefix )
 			{
-				const size_t prefixLen = StringUtil::strlen( prefix );
-				while ( tView.size() >= prefixLen && tView.substr( 0, prefixLen ) == prefix )
+				while ( tView.size() >= prefix.size() && tView.substr( 0, prefix.size() ) == prefix )
 				{
-					tView.remove_prefix( prefixLen );
+					tView.remove_prefix( prefix.size() );
 				}
 			}
 

@@ -806,10 +806,13 @@ namespace sw
 			// thread_local 캐시: 동일 중간 베이스 클래스에 대한 반복 재귀 탐색을 방지합니다.
 			thread_local unordered_map<string, bool> s_componentCache;
 
-			const string fqn = AstVisitor::buildFullyQualifiedName( cursor );
-			if ( fqn == engineTypeConstants::kComponentFqn || fqn == engineTypeConstants::kComponent ||
-				 fqn == engineTypeConstants::kSceneComponentFqn || fqn == engineTypeConstants::kSceneComponent )
-				return true;
+			const string			 fqn = AstVisitor::buildFullyQualifiedName( cursor );
+			const ParserClangConfig& cfg = ParserContext::getSharedConfig();
+			for ( const string& baseType : cfg._listComponentBaseType )
+			{
+				if ( fqn == baseType )
+					return true;
+			}
 
 			const auto cacheIt = s_componentCache.find( fqn );
 			if ( cacheIt != s_componentCache.end() )
@@ -1094,12 +1097,6 @@ namespace sw
 
 	string AstVisitor::buildFullyQualifiedName( CXCursor cursor )
 	{
-		thread_local unordered_map<uint32, string> s_fqnCache;
-		const uint32							   cursorHash = clang_hashCursor( cursor );
-		const auto								   cacheIt	  = s_fqnCache.find( cursorHash );
-		if ( cacheIt != s_fqnCache.end() )
-			return cacheIt->second;
-
 		vector<string> parts;
 		CXCursor	   current = cursor;
 		while ( true )
@@ -1122,8 +1119,6 @@ namespace sw
 				fqn.append( "::" );
 			fqn.append( *it );
 		}
-		string result( fqn.view() );
-		s_fqnCache.emplace( cursorHash, result );
-		return result;
+		return string( fqn.view() );
 	}
 } // namespace sw

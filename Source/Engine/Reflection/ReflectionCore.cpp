@@ -6,11 +6,14 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Reflection/ReflectionConstants.h"
+
+#include "String/hashed_string.h"
 
 namespace sw
 {
 	PropertyMetadata::PropertyMetadata() noexcept
-		: _category{ "General" }
+		: _category{ constants::reflection::kDefaultCategory }
 		, _minRange{ 0.0f }
 		, _maxRange{ 1.0f }
 		, _bHasRange{ 0 }
@@ -21,7 +24,7 @@ namespace sw
 		, _reservedFlags{ 0 } {}
 
 	FunctionMetadata::FunctionMetadata() noexcept
-		: _category{ "General" }
+		: _category{ constants::reflection::kDefaultCategory }
 		, _netRole{ FunctionNetRole::Local }
 		, _bReliable{ 0 }
 		, _bValidate{ 0 }
@@ -234,9 +237,12 @@ namespace sw
 		if ( _bIsPODCalculated )
 			return _bIsPODFastPath;
 
-		static const hashed_string kString{ "string" };
-		static const hashed_string kHashedString{ "hashed_string" };
-		TypeRegistry&			   registry = engine::getTypeRegistry();
+		TypeRegistry& registry = engine::getTypeRegistry();
+
+		static constexpr PredefinedNameType kArrDynamicTypes[] = {
+			PredefinedNameType::NameType_string,
+			PredefinedNameType::NameType_hashed_string,
+		};
 
 		_bIsPODFastPath = true;
 		for ( const PropertyInfo& prop : _propertyList )
@@ -247,7 +253,17 @@ namespace sw
 				break;
 			}
 
-			if ( registry.isType( prop._typeName, kString ) || registry.isType( prop._typeName, kHashedString ) )
+			bool bIsDynamicType = false;
+			for ( const PredefinedNameType dynamicType : kArrDynamicTypes )
+			{
+				if ( registry.isType( prop._typeName, hashed_string{ dynamicType } ) )
+				{
+					bIsDynamicType = true;
+					break;
+				}
+			}
+
+			if ( bIsDynamicType )
 			{
 				_bIsPODFastPath = false;
 				break;
@@ -314,7 +330,7 @@ namespace sw
 		if ( _activeModuleName.empty() == false )
 			stored._moduleName = _activeModuleName;
 		else if ( stored._moduleName.empty() )
-			stored._moduleName = hashed_string( "Engine" );
+			stored._moduleName = hashed_string( constants::reflection::kDefaultModuleName );
 
 		auto existingIt = _mapNameToClassType.find( stored._fullyQualifiedName );
 		if ( existingIt != _mapNameToClassType.end() )
@@ -338,7 +354,7 @@ namespace sw
 		if ( _activeModuleName.empty() == false )
 			stored._moduleName = _activeModuleName;
 		else if ( stored._moduleName.empty() )
-			stored._moduleName = hashed_string( "Engine" );
+			stored._moduleName = hashed_string( constants::reflection::kDefaultModuleName );
 
 		_mapNameToEnum.insert_or_assign( stored._fullyQualifiedName, stored );
 		if ( stored._name.empty() == false && stored._name != stored._fullyQualifiedName )
@@ -357,10 +373,10 @@ namespace sw
 		{
 			const string_view alias{ pAliasName };
 			const string_view canonical{ pCanonicalName };
-			if ( alias.find( "::" ) != string_view::npos )
+			if ( alias.find( constants::reflection::kScopeDelimiter ) != string_view::npos )
 				return {};
 
-			const size_t lastScope = canonical.rfind( "::" );
+			const size_t lastScope = canonical.rfind( constants::reflection::kScopeDelimiter );
 			if ( lastScope == string_view::npos )
 				return {};
 

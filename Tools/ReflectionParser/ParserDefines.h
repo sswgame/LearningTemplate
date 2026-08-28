@@ -1,7 +1,7 @@
 /**
  * @file ParserDefines.h
  * @brief ReflectionParser — 어노테이션/CLI/템플릿 계약 상수
- * @details clang 인자·SDK 상대경로·emit 확장자·lookback 등은
+ * @details clang 인자·SDK 상대경로·emit 확장자·lookback·컴포넌트 베이스 타입 등은
  *          Config/Environment/parser_config.defaults.json 에서 로드합니다.
  *          여기에는 ReflectionMacros / 생성 코드와 맞춰야 하는 컴파일 타임 계약만 둡니다.
  */
@@ -66,18 +66,7 @@ namespace sw
 	}; // struct pathConstants
 
 	// ------------------------------------------------------------------------------
-	// 4) emit — 생성물 내용 마커 (프로토콜; 확장자/배너는 JSON emit 섹션)
-	// ------------------------------------------------------------------------------
-	struct genConstants
-	{
-		inline static constexpr const utf8* kRegisterTypeMarker	  = "RegisterType";
-		inline static constexpr const utf8* kRegisterEnumMarker	  = "RegisterEnum";
-		inline static constexpr const utf8* kFlagOrOperatorMarker = "operator|";
-		inline static constexpr const utf8* kFlagOpsHeaderName	  = "FlagOps.gen.h";
-	}; // struct genConstants
-
-	// ------------------------------------------------------------------------------
-	// 5) parse — CLI 플래그 (CMake Reflection.cmake 계약)
+	// 4) parse — CLI 플래그 (CMake Reflection.cmake 계약)
 	// ------------------------------------------------------------------------------
 	struct cliConstants
 	{
@@ -91,7 +80,7 @@ namespace sw
 	}; // struct cliConstants
 
 	// ------------------------------------------------------------------------------
-	// 6) emit — *.tpl 골격 이름 (Templates/ 파일 stem)
+	// 5) emit — *.tpl 골격 이름 (Templates/ 파일 stem)
 	// ------------------------------------------------------------------------------
 	struct tplConstants
 	{
@@ -109,7 +98,7 @@ namespace sw
 	}; // struct tplConstants
 
 	// ------------------------------------------------------------------------------
-	// 7) parse — parser JSON 섹션/키 (defaults.json 스키마)
+	// 6) parse — parser JSON 섹션/키 (defaults.json 스키마)
 	// ------------------------------------------------------------------------------
 	struct jsonKeyConstants
 	{
@@ -122,6 +111,7 @@ namespace sw
 		inline static constexpr const utf8* kPaths			   = "paths";
 		inline static constexpr const utf8* kClangFlags		   = "clang_flags";
 		inline static constexpr const utf8* kEmit			   = "emit";
+		inline static constexpr const utf8* kParsing		   = "parsing";
 		inline static constexpr const utf8* kTuning			   = "tuning";
 
 		// paths.*
@@ -149,6 +139,14 @@ namespace sw
 		inline static constexpr const utf8* kEmitRegenMarker		 = "regen_by_parser_marker";
 		inline static constexpr const utf8* kEmitGeneratedNsOpen	 = "generated_ns_open";
 		inline static constexpr const utf8* kEmitGeneratedNsClose	 = "generated_ns_close";
+		inline static constexpr const utf8* kEmitFlagOpsHeader		 = "flag_ops_header";
+		inline static constexpr const utf8* kEmitFlagOpsMarker		 = "flag_ops_marker";
+		inline static constexpr const utf8* kEmitRegisterTypeMarker	 = "register_type_marker";
+		inline static constexpr const utf8* kEmitRegisterEnumMarker	 = "register_enum_marker";
+
+		// parsing.*
+		inline static constexpr const utf8* kParsingComponentBaseTypes = "component_base_types";
+		inline static constexpr const utf8* kParsingTypeStripPrefixes  = "type_strip_prefixes";
 
 		// tuning.*
 		inline static constexpr const utf8* kSourceLookbackBytes = "source_lookback_bytes";
@@ -163,7 +161,7 @@ namespace sw
 	}; // struct jsonKeyConstants
 
 	// ------------------------------------------------------------------------------
-	// 8) maps — ReflectBuiltins 매크로·스킵 토큰
+	// 7) maps — ReflectBuiltins 매크로·스킵 토큰
 	// ------------------------------------------------------------------------------
 	struct builtinMacroConstants
 	{
@@ -174,31 +172,44 @@ namespace sw
 	}; // struct builtinMacroConstants
 
 	// ------------------------------------------------------------------------------
-	// 9) parse — 엔진 컴포넌트 타입명
+	// 8) parse — 소스 키워드 스캔
 	// ------------------------------------------------------------------------------
-	struct engineTypeConstants
-	{
-		inline static constexpr const utf8* kComponent		   = "Component";
-		inline static constexpr const utf8* kComponentFqn	   = "sw::Component";
-		inline static constexpr const utf8* kSceneComponent	   = "SceneComponent";
-		inline static constexpr const utf8* kSceneComponentFqn = "sw::SceneComponent";
-	}; // struct engineTypeConstants
-
-	// ------------------------------------------------------------------------------
-	// 10) parse — clang 수식어 접두사·소스 키워드 스캔
-	// ------------------------------------------------------------------------------
-	inline static constexpr const utf8* kClangTypePrefixes[] = {
-		"const ",
-		"volatile ",
-		"class ",
-		"struct ",
-		"enum ",
-	};
-
 	inline static constexpr const utf8* kSourceKeywordScan[] = {
 		annotationConstants::kReflectMacro,
 		annotationConstants::kPropertyMacro,
 		annotationConstants::kFunctionMacro,
 		annotationConstants::kEnumMacro,
 	};
+
+	// ------------------------------------------------------------------------------
+	// 9) emit — 템플릿 치환 변수 키
+	// ------------------------------------------------------------------------------
+	struct templateKeyConstants
+	{
+		inline static constexpr const utf8* kSourcePath	  = "SourcePath";
+		inline static constexpr const utf8* kId			  = "Id";
+		inline static constexpr const utf8* kName		  = "Name";
+		inline static constexpr const utf8* kFqn		  = "FQN";
+		inline static constexpr const utf8* kParentFqn	  = "ParentFQN";
+		inline static constexpr const utf8* kModuleName	  = "ModuleName";
+		inline static constexpr const utf8* kCppType	  = "CppType";
+		inline static constexpr const utf8* kFlags		  = "Flags";
+		inline static constexpr const utf8* kAliasRegs	  = "AliasRegs";
+		inline static constexpr const utf8* kIsBitFlag	  = "IsBitFlag";
+		inline static constexpr const utf8* kHasInvalid	  = "HasInvalid";
+		inline static constexpr const utf8* kInvalidValue = "InvalidValue";
+		inline static constexpr const utf8* kHasCount	  = "HasCount";
+		inline static constexpr const utf8* kCountValue	  = "CountValue";
+	}; // struct templateKeyConstants
+
+	// ------------------------------------------------------------------------------
+	// 10) emit — 코드 생성 지시문 및 주석
+	// ------------------------------------------------------------------------------
+	struct emitDirectiveConstants
+	{
+		inline static constexpr const utf8* kPragmaOnce	 = "#pragma once";
+		inline static constexpr const utf8* kIfndefParser = "#if !defined(__REFLECT_PARSER__)";
+		inline static constexpr const utf8* kEndif		 = "#endif";
+		inline static constexpr const utf8* kNoEnumFlags = "// no ENUM(Flags) in this target";
+	}; // struct emitDirectiveConstants
 } // namespace sw

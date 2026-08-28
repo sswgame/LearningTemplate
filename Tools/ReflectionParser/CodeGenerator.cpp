@@ -250,31 +250,31 @@ namespace sw
 	void CodeGenerator::emitFileHeader( CodeEmitBuffer& out ) const
 	{
 		appendTemplate( out, tplConstants::kFileHeader, {
-															{ "SourcePath", _sourceFilePath }
+															{ templateKeyConstants::kSourcePath, _sourceFilePath }
 		  } );
 	}
 
 	void CodeGenerator::emitReflectTypeTraits( CodeEmitBuffer& out, const ParsedTypeInfo& typeInfo ) const
 	{
 		appendTemplate( out, tplConstants::kReflectTypeTraits, {
-																   { "FQN", typeInfo._fullyQualifiedName }
+																   { templateKeyConstants::kFqn, typeInfo._fullyQualifiedName }
 		   } );
 	}
 
 	void CodeGenerator::emitTypeInfoAccessors( CodeEmitBuffer& out, const ParsedTypeInfo& typeInfo ) const
 	{
 		appendTemplate( out, tplConstants::kTypeInfoAccessors, {
-																   { "FQN", typeInfo._fullyQualifiedName }
+																   { templateKeyConstants::kFqn, typeInfo._fullyQualifiedName }
 		   } );
 	}
 
 	void CodeGenerator::emitComponentFactoryRegistrar( CodeEmitBuffer& out, const ParsedTypeInfo& typeInfo ) const
 	{
 		appendTemplate( out, tplConstants::kComponentFactoryRegistrar, {
-																		   {		 "Id", sanitizeIdentifier( typeInfo._fullyQualifiedName )},
-																		   {		 "FQN",						typeInfo._fullyQualifiedName},
-																		   {		 "Name",									 typeInfo._name},
-																		   {"ModuleName",									   getModuleName()},
+																		   { templateKeyConstants::kId, sanitizeIdentifier( typeInfo._fullyQualifiedName )},
+																		   { templateKeyConstants::kFqn, typeInfo._fullyQualifiedName},
+																		   { templateKeyConstants::kName, typeInfo._name},
+																		   { templateKeyConstants::kModuleName, getModuleName()},
 		   } );
 	}
 
@@ -535,12 +535,12 @@ namespace sw
 		}
 
 		appendTemplate( out, tplConstants::kTypeRegistrarBegin, {
-																	{		  "Id",							id},
-																	{		  "FQN", typeInfo._fullyQualifiedName},
-																	{	  "Name",				  typeInfo._name},
-																	{ "ParentFQN",		   typeInfo._parentFQN},
-																	{"ModuleName",				getModuleName()},
-																	{	  "Flags",	   string( flagsBuf.view() )},
+																	{ templateKeyConstants::kId, id},
+																	{ templateKeyConstants::kFqn, typeInfo._fullyQualifiedName},
+																	{ templateKeyConstants::kName, typeInfo._name},
+																	{ templateKeyConstants::kParentFqn, typeInfo._parentFQN},
+																	{ templateKeyConstants::kModuleName, getModuleName()},
+																	{ templateKeyConstants::kFlags, string( flagsBuf.view() )},
 		} );
 
 		CodeEmit e( out );
@@ -562,8 +562,8 @@ namespace sw
 
 		appendTemplate( out, tplConstants::kTypeRegistrarEnd,
 						{
-							{ "Id", id },
-							{ "AliasRegs",
+							{ templateKeyConstants::kId, id },
+							{ templateKeyConstants::kAliasRegs,
 							  emitAliasRegisterLines( typeInfo._listAlias, typeInfo._fullyQualifiedName, false ) }
 		   } );
 	}
@@ -576,15 +576,15 @@ namespace sw
 		const ParsedEnumeratorInfo* countEn	  = findEnumerator( enumInfo, enumInfo._countEnumerator );
 
 		appendTemplate( out, tplConstants::kEnumRegistrarBegin, {
-																	{		  "Id",																	id},
-																	{		  "FQN",											 enumInfo._fullyQualifiedName},
-																	{		  "Name",														  enumInfo._name},
-																	{  "ModuleName",														getModuleName()},
-																	{	  "IsBitFlag",							   enumInfo._bIsBitFlag ? "true" : "false"},
-																	{  "HasInvalid",								invalidEn != nullptr ? "true" : "false"},
-																	{"InvalidValue", invalidEn != nullptr ? to_string( invalidEn->_value ) : string( "0" )},
-																	{	  "HasCount",								  countEn != nullptr ? "true" : "false"},
-																	{  "CountValue",		countEn != nullptr ? to_string( countEn->_value ) : string( "0" )},
+																	{ templateKeyConstants::kId, id},
+																	{ templateKeyConstants::kFqn, enumInfo._fullyQualifiedName},
+																	{ templateKeyConstants::kName, enumInfo._name},
+																	{ templateKeyConstants::kModuleName, getModuleName()},
+																	{ templateKeyConstants::kIsBitFlag, enumInfo._bIsBitFlag ? "true" : "false"},
+																	{ templateKeyConstants::kHasInvalid, invalidEn != nullptr ? "true" : "false"},
+																	{ templateKeyConstants::kInvalidValue, invalidEn != nullptr ? to_string( invalidEn->_value ) : string( "0" )},
+																	{ templateKeyConstants::kHasCount, countEn != nullptr ? "true" : "false"},
+																	{ templateKeyConstants::kCountValue, countEn != nullptr ? to_string( countEn->_value ) : string( "0" )},
 		} );
 
 		CodeEmit e( out );
@@ -624,8 +624,8 @@ namespace sw
 
 		appendTemplate( out, tplConstants::kEnumRegistrarEnd,
 						{
-							{ "Id", id },
-							{ "AliasRegs",
+							{ templateKeyConstants::kId, id },
+							{ templateKeyConstants::kAliasRegs,
 							  emitAliasRegisterLines( enumInfo._listAlias, enumInfo._fullyQualifiedName, true ) }
 		  } );
 	}

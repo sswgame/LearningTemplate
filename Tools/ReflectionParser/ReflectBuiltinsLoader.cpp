@@ -191,7 +191,7 @@ namespace sw
 		}
 
 		string out = tpls.render( tplConstants::kBuiltinFileHeader, {
-																		{ "SourcePath", builtinsAbsPath }
+																		{ templateKeyConstants::kSourcePath, builtinsAbsPath }
 		  } );
 		for ( const BuiltinTypeRow& row : rows )
 		{
@@ -207,10 +207,10 @@ namespace sw
 			id.appendFormat( "Builtin_%#", row._canonical );
 			out += tpls.render( tplConstants::kBuiltinTypeRegistrar,
 								{
-									{		  "Id",		id.view()},
-									{	  "Name",	  row._canonical},
-									{  "CppType",	 row._cppType},
-									{"AliasRegs", aliasRegs.view()}
+									{		  templateKeyConstants::kId,		id.view()},
+									{	  templateKeyConstants::kName,	  row._canonical},
+									{  templateKeyConstants::kCppType,	 row._cppType},
+									{templateKeyConstants::kAliasRegs, aliasRegs.view()}
 			  } );
 		}
 		out += tpls.render( tplConstants::kBuiltinFileFooter, {} );

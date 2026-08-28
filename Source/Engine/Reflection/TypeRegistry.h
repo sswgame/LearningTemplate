@@ -22,7 +22,7 @@ namespace sw
 	{
 		string_view inner;
 
-		const size_t eq = sig.find( "E = " );
+		const size_t eq = sig.find( constants::reflection::kSignatureEq );
 		if ( eq != string_view::npos )
 		{
 			inner			  = sig.substr( eq + 4 );
@@ -37,22 +37,28 @@ namespace sw
 		}
 		else
 		{
-			constexpr string_view kMarker = "typeFqn<";
+			constexpr string_view kMarker = constants::reflection::kTypeFqnPrefix;
 			const size_t		  lt	  = sig.find( kMarker );
 			const size_t		  gt	  = sig.rfind( '>' );
 			if ( lt != string_view::npos && gt != string_view::npos && gt > lt + kMarker.size() )
 				inner = sig.substr( lt + kMarker.size(), gt - lt - kMarker.size() );
 		}
 
-		inner			 = StringUtil::trim( inner );
-		auto stripPrefix = [&]( string_view prefix )
-		{
-			if ( inner.size() >= prefix.size() && inner.substr( 0, prefix.size() ) == prefix )
-				inner.remove_prefix( prefix.size() );
+		inner = StringUtil::trim( inner );
+		static constexpr const utf8* kArrEnumPrefixes[] = {
+			constants::reflection::kEnumClassPrefix,
+			constants::reflection::kEnumStructPrefix,
+			constants::reflection::kEnumPrefix,
 		};
-		stripPrefix( "enum class " );
-		stripPrefix( "enum struct " );
-		stripPrefix( "enum " );
+		for ( const utf8* prefix : kArrEnumPrefixes )
+		{
+			const size_t prefixLen = StringUtil::strlen( prefix );
+			if ( inner.size() >= prefixLen && inner.substr( 0, prefixLen ) == prefix )
+			{
+				inner.remove_prefix( prefixLen );
+				break;
+			}
+		}
 		inner = StringUtil::trim( inner );
 		if ( inner.empty() )
 			return {};
