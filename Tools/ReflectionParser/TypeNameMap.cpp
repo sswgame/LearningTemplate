@@ -18,15 +18,22 @@ namespace sw
 		{
 			tView						 = StringUtil::trim( tView );
 			const ParserClangConfig& cfg = ParserContext::getSharedConfig();
-			for ( const string& prefix : cfg._listTypeStripPrefix )
+
+			bool bStripped{ true };
+			while ( bStripped && tView.empty() == false )
 			{
-				while ( tView.size() >= prefix.size() && tView.substr( 0, prefix.size() ) == prefix )
+				bStripped = false;
+				for ( const string& prefix : cfg._listTypeStripPrefix )
 				{
-					tView.remove_prefix( prefix.size() );
+					if ( tView.size() >= prefix.size() && tView.substr( 0, prefix.size() ) == prefix )
+					{
+						tView.remove_prefix( prefix.size() );
+						tView	  = StringUtil::trim( tView );
+						bStripped = true;
+					}
 				}
 			}
 
-			tView = StringUtil::trim( tView );
 			while ( tView.empty() == false && tView.back() == '&' )
 			{
 				tView.remove_suffix( 1 );

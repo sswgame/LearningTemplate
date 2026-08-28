@@ -33,6 +33,10 @@ namespace sw::constants::reflection
 	inline constexpr const utf8* kEnumStructPrefix = "enum struct ";
 	/** @brief enum 접두어입니다. */
 	inline constexpr const utf8* kEnumPrefix = "enum ";
+	/** @brief class 접두어입니다. */
+	inline constexpr const utf8* kClassPrefix = "class ";
+	/** @brief struct 접두어입니다. */
+	inline constexpr const utf8* kStructPrefix = "struct ";
 } // namespace sw::constants::reflection
 
 namespace sw::constants::propertyHint

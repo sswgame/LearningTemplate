@@ -46,12 +46,14 @@ namespace sw
 		}
 
 		inner											= StringUtil::trim( inner );
-		static constexpr const utf8* kArrEnumPrefixes[] = {
+		static constexpr const utf8* kArrTypePrefixes[] = {
 			constants::reflection::kEnumClassPrefix,
 			constants::reflection::kEnumStructPrefix,
 			constants::reflection::kEnumPrefix,
+			constants::reflection::kClassPrefix,
+			constants::reflection::kStructPrefix,
 		};
-		for ( const utf8* prefix : kArrEnumPrefixes )
+		for ( const utf8* prefix : kArrTypePrefixes )
 		{
 			const size_t prefixLen = StringUtil::strlen( prefix );
 			if ( inner.size() >= prefixLen && inner.substr( 0, prefixLen ) == prefix )
