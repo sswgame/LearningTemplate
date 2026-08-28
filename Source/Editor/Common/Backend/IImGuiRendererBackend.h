@@ -13,6 +13,8 @@ namespace sw
 	enum class RHIBackend : uint32;
 } // namespace sw
 
+struct ImDrawData;
+
 namespace sw::editor
 {
 	using RHITextureHandle = uint64;
@@ -33,8 +35,8 @@ namespace sw::editor
 		virtual void shutdown() = 0;
 		/** @brief 프레임 시작 시 ImGui 렌더러 상태를 갱신합니다. */
 		virtual void newFrame() = 0;
-		/** @brief 현재 ImGui draw data를 RHI로 그립니다. */
-		virtual void render( IRHIDevice* pRhiDevice ) = 0;
+		/** @brief 지정 DrawData를 RHI로 그립니다. nullptr이면 그리지 않습니다. */
+		virtual void render( IRHIDevice* pRhiDevice, ImDrawData* pDrawData ) = 0;
 
 		// ------------------------------------------------------------------------------
 		// 2) ImGui 텍스처 — Game View RT 등

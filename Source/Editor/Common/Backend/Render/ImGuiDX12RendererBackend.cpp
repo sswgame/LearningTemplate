@@ -184,7 +184,7 @@ namespace sw::editor
 #endif
 	}
 
-	void ImGuiDX12RendererBackend::render( class IRHIDevice* pRhiDevice )
+	void ImGuiDX12RendererBackend::render( class IRHIDevice* pRhiDevice, ImDrawData* pDrawData )
 	{
 #if defined( SW_PLATFORM_WINDOWS )
 		ID3D12Device* pDevice = static_cast<ID3D12Device*>( pRhiDevice->getNativeDevice() );
@@ -198,9 +198,8 @@ namespace sw::editor
 			}
 		}
 
-		ID3D12GraphicsCommandList* pCmdList	 = static_cast<ID3D12GraphicsCommandList*>( pRhiDevice->getNativeContext() );
-		ImDrawData*				   pDrawData = ImGui::GetDrawData();
-		if ( pCmdList != nullptr && pDrawData != nullptr && _d3d12SrvHeap != nullptr && ImGui::GetIO().BackendRendererUserData != nullptr )
+		ID3D12GraphicsCommandList* pCmdList = static_cast<ID3D12GraphicsCommandList*>( pRhiDevice->getNativeContext() );
+		if ( pCmdList != nullptr && pDrawData != nullptr && _d3d12SrvHeap != nullptr )
 		{
 			ID3D12DescriptorHeap* heaps[] = { _d3d12SrvHeap.Get() };
 			pCmdList->SetDescriptorHeaps( 1, heaps );
@@ -208,6 +207,7 @@ namespace sw::editor
 		}
 #else
 		(void)pRhiDevice;
+		(void)pDrawData;
 #endif
 	}
 

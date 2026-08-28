@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Common/StdHeaders.h"
 
+#include "Editor/Common/Backend/EditorDrawDataSnapshot.h"
 #include "Editor/Common/Gui/EditorDockLayout.h"
 #include "Editor/IEditor.h"
 
@@ -63,10 +64,12 @@ namespace sw::editor
 		void beginFrame();
 		/** @brief ImGui 프레임을 종료합니다. */
 		void endFrame();
-		/** @brief ImGui 렌더러 백엔드로 그립니다. */
-		void renderBackend( IRHIDevice* pRhiDevice );
-		/** @brief 멀티 뷰포트 플랫폼 윈도우를 렌더합니다. */
+		/** @brief ImGui 렌더러 백엔드로 지정 DrawData를 그립니다. */
+		void renderBackend( IRHIDevice* pRhiDevice, ImDrawData* pDrawData );
+		/** @brief 스냅샷의 보조 뷰포트를 렌더합니다. */
 		void renderPlatformWindows( IRHIDevice* pRhiDevice );
+		/** @brief 렌더 스레드가 이전 스냅샷을 쓰는 동안 NewFrame을 미룹니다. */
+		void waitForDrawSnapshotIdle();
 
 	private:
 		unique_ptr<IImGuiPlatformBackend> _platformBackend;
@@ -74,6 +77,9 @@ namespace sw::editor
 		unique_ptr<EditorData>			  _editorData;
 		unique_ptr<EditorContext>		  _editorContext;
 		EditorDockLayout				  _dockLayout;
+		EditorDrawDataSnapshot			  _arrDrawSnapshot[2];
+		std::atomic<uint32>				  _publishedDrawSlot;
+		std::atomic<uint32>				  _inFlightDrawSlot;
 
 		uint8				   _bInitialized  : 1;
 		[[maybe_unused]] uint8 _reservedFlags : 7;

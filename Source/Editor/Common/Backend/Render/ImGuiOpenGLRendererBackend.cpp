@@ -215,11 +215,10 @@ namespace sw::editor
 			_pRHIDevice->unbindGraphicsContext();
 	}
 
-	void ImGuiOpenGLRendererBackend::render( class IRHIDevice* pRhiDevice )
+	void ImGuiOpenGLRendererBackend::render( class IRHIDevice* pRhiDevice, ImDrawData* pDrawData )
 	{
 		(void)pRhiDevice;
-		ImDrawData* pDrawData = ImGui::GetDrawData();
-		if ( pDrawData != nullptr && ImGui::GetIO().BackendRendererUserData != nullptr )
+		if ( pDrawData != nullptr && _pRHIDevice != nullptr )
 			ImGui_ImplOpenGL3_RenderDrawData( pDrawData );
 	}
 

@@ -114,7 +114,7 @@ namespace sw
 #if !defined( SW_SHIPPING )
 		const hashed_string kAppConfigHash = hashed_string{ "AppConfig" };
 		const AppConfig*	pAppConfig	   = _engineLoop.getConfigManager()->ensureConfig<AppConfig>(
-			   kAppConfigHash, config::kFileRuntimeAppConfig, nullptr );
+			kAppConfigHash, config::kFileRuntimeAppConfig, nullptr );
 		if ( pAppConfig != nullptr )
 			gameKitModuleList = pAppConfig->_gameKitModuleList;
 #endif
@@ -204,13 +204,7 @@ namespace sw
 			_moduleHost->updateGame( deltaTime );
 
 			if ( _bEnableEditor )
-			{
-				RenderThread* pRenderThread = _engineLoop.getRenderThread();
-				if ( pRenderThread != nullptr )
-					pRenderThread->waitIdle();
-
 				_moduleHost->updateEditorUI( deltaTime );
-			}
 
 			uint64 gameRenderTarget	  = 0;
 			uint32 gameViewportWidth  = 0;

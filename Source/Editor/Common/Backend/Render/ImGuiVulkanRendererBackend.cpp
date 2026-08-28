@@ -239,11 +239,10 @@ namespace sw::editor
 			ImGui_ImplVulkan_NewFrame();
 	}
 
-	void ImGuiVulkanRendererBackend::render( class IRHIDevice* pRhiDevice )
+	void ImGuiVulkanRendererBackend::render( class IRHIDevice* pRhiDevice, ImDrawData* pDrawData )
 	{
 		VkCommandBuffer cmdBuffer = static_cast<VkCommandBuffer>( pRhiDevice->getNativeContext() );
-		ImDrawData*		pDrawData = ImGui::GetDrawData();
-		if ( cmdBuffer != nullptr && pDrawData != nullptr && ImGui::GetIO().BackendRendererUserData != nullptr )
+		if ( cmdBuffer != nullptr && pDrawData != nullptr && _pRHIDevice != nullptr )
 			ImGui_ImplVulkan_RenderDrawData( pDrawData, cmdBuffer );
 	}
 

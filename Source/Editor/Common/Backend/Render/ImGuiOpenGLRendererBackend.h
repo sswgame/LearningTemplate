@@ -36,7 +36,7 @@ namespace sw::editor
 		/** @brief ImGui OpenGL 프레임을 시작합니다. */
 		void newFrame() override;
 		/** @brief ImGui draw data를 OpenGL로 그립니다. */
-		void render( IRHIDevice* pRhiDevice ) override;
+		void render( IRHIDevice* pRhiDevice, ImDrawData* pDrawData ) override;
 
 		/** @brief RHI 텍스처 핸들을 ImGui ImTextureID(GLuint)로 등록합니다. */
 		void* registerTexture( RHITextureHandle texture ) override;

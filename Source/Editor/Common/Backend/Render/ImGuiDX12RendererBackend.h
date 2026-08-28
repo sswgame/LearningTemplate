@@ -41,7 +41,7 @@ namespace sw::editor
 		/** @brief ImGui D3D12 프레임을 시작합니다. */
 		void newFrame() override;
 		/** @brief ImGui draw data를 D3D12로 그립니다. */
-		void render( IRHIDevice* pRhiDevice ) override;
+		void render( IRHIDevice* pRhiDevice, ImDrawData* pDrawData ) override;
 		/** @brief RHI 텍스처를 ImGui용 SRV로 등록합니다. */
 		void* registerTexture( RHITextureHandle texture ) override;
 		/** @brief 등록된 ImGui SRV 디스크립터를 풀에 반환합니다. */

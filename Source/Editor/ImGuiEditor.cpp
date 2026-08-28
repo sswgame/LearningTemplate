@@ -4,6 +4,7 @@
 
 #include "Core/Task/TaskManager.h"
 
+#include "Editor/Common/Backend/EditorDrawDataSnapshot.h"
 #include "Editor/Common/Backend/IImGuiPlatformBackend.h"
 #include "Editor/Common/Backend/IImGuiRendererBackend.h"
 #include "Editor/Common/Config/EditorConfig.h"
@@ -31,6 +32,7 @@
 #include <ImGuiNotify.hpp>
 #include <ImGuizmo.h>
 #include <implot.h>
+#include <thread>
 
 namespace sw::editor
 {
@@ -38,7 +40,9 @@ namespace sw::editor
 
 	namespace
 	{
-		void loadSplashDefaultRenderPass( const TaskArgs& args )
+		constexpr uint32 kInvalidDrawSlot	= 0xFFFFFFFFu;
+		constexpr uint32 kDrawSnapshotCount = 2;
+		void			 loadSplashDefaultRenderPass( const TaskArgs& args )
 		{
 			shared_ptr<RenderPassResource> pPass = args.get<shared_ptr<RenderPassResource>>( 0 );
 			if ( pPass == nullptr )
@@ -62,6 +66,9 @@ namespace sw::editor
 		, _editorData{ nullptr }
 		, _editorContext{ nullptr }
 		, _dockLayout{}
+		, _arrDrawSnapshot{}
+		, _publishedDrawSlot{ 0 }
+		, _inFlightDrawSlot{ kInvalidDrawSlot }
 		, _bInitialized{ SW_FALSE }
 		, _reservedFlags{ 0 }
 	{
@@ -159,9 +166,9 @@ namespace sw::editor
 
 			TaskManager* pTaskManager = editor::getService<TaskManager>();
 			TaskHandle	 hDefault	  = pTaskManager->emplaceTask(
-				  "EditorSplash_DefaultRenderPass",
-				  SW_DELEGATE_FUNCTION( TaskArgsDelegate, loadSplashDefaultRenderPass ),
-				  MakeTaskArgs( defaultPass ) );
+				"EditorSplash_DefaultRenderPass",
+				SW_DELEGATE_FUNCTION( TaskArgsDelegate, loadSplashDefaultRenderPass ),
+				MakeTaskArgs( defaultPass ) );
 
 			TaskHandle hForward = pTaskManager->emplaceTask(
 				"EditorSplash_ForwardPipeline",
@@ -196,6 +203,10 @@ namespace sw::editor
 	{
 		if ( _bInitialized == SW_FALSE )
 			return;
+
+		waitForDrawSnapshotIdle();
+		_arrDrawSnapshot[0].clear();
+		_arrDrawSnapshot[1].clear();
 
 		_dockLayout.save();
 
@@ -248,6 +259,8 @@ namespace sw::editor
 		if ( _bInitialized == SW_FALSE )
 			return;
 
+		waitForDrawSnapshotIdle();
+
 		if ( _editorContext != nullptr )
 		{
 			_editorContext->setGameViewFocused( false );
@@ -280,9 +293,15 @@ namespace sw::editor
 			endFrame();
 
 			ImGuiIO& io = ImGui::GetIO();
-			// 메인 스레드에서 플랫폼 윈도우(HWND)를 생성, 위치 이동, 파괴합니다.
 			if ( io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable )
 				ImGui::UpdatePlatformWindows();
+
+			const uint32 writeSlot = 1u - _publishedDrawSlot.load( std::memory_order_acquire );
+			while ( _inFlightDrawSlot.load( std::memory_order_acquire ) == writeSlot )
+				std::this_thread::yield();
+
+			_arrDrawSnapshot[writeSlot].capture();
+			_publishedDrawSlot.store( writeSlot, std::memory_order_release );
 		}
 	}
 
@@ -291,23 +310,28 @@ namespace sw::editor
 		if ( _bInitialized == SW_FALSE || pRhiDevice == nullptr )
 			return;
 
-		ImDrawData* pDrawData = ImGui::GetDrawData();
+		const uint32 slot = _publishedDrawSlot.load( std::memory_order_acquire );
+		_inFlightDrawSlot.store( slot, std::memory_order_release );
+		if ( slot >= kDrawSnapshotCount )
+			return;
+
+		ImDrawData* pDrawData = _arrDrawSnapshot[slot].getMainDrawData();
 		if ( pDrawData == nullptr )
 			return;
 
-		renderBackend( pRhiDevice );
+		renderBackend( pRhiDevice, pDrawData );
 	}
 
 	void ImGuiEditor::postPresent( IRHIDevice* pRhiDevice )
 	{
 		if ( _bInitialized == SW_FALSE || pRhiDevice == nullptr )
+		{
+			_inFlightDrawSlot.store( kInvalidDrawSlot, std::memory_order_release );
 			return;
-
-		ImDrawData* pDrawData = ImGui::GetDrawData();
-		if ( pDrawData == nullptr )
-			return;
+		}
 
 		renderPlatformWindows( pRhiDevice );
+		_inFlightDrawSlot.store( kInvalidDrawSlot, std::memory_order_release );
 	}
 
 	bool ImGuiEditor::processEvent( const NativeWindowEvent& event )
@@ -405,13 +429,19 @@ namespace sw::editor
 		ImGui::Render();
 	}
 
-	void ImGuiEditor::renderBackend( IRHIDevice* pRhiDevice )
+	void ImGuiEditor::waitForDrawSnapshotIdle()
+	{
+		while ( _inFlightDrawSlot.load( std::memory_order_acquire ) != kInvalidDrawSlot )
+			std::this_thread::yield();
+	}
+
+	void ImGuiEditor::renderBackend( IRHIDevice* pRhiDevice, ImDrawData* pDrawData )
 	{
 		if ( _bInitialized == SW_FALSE )
 			return;
 
 		if ( _rendererBackend != nullptr )
-			_rendererBackend->render( pRhiDevice );
+			_rendererBackend->render( pRhiDevice, pDrawData );
 	}
 
 	void ImGuiEditor::renderPlatformWindows( IRHIDevice* pRhiDevice )
@@ -419,14 +449,12 @@ namespace sw::editor
 		if ( _bInitialized == SW_FALSE || pRhiDevice == nullptr )
 			return;
 
-		ImGuiIO& io = ImGui::GetIO();
-		if ( ( io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable ) == 0 )
+		const uint32 slot = _publishedDrawSlot.load( std::memory_order_acquire );
+		if ( slot >= kDrawSnapshotCount )
 			return;
 
-		// Present 복원 전에 플랫폼 뷰포트(멀티 뷰포트) GPU 버퍼를 렌더/출력합니다.
-		ImGui::RenderPlatformWindowsDefault();
+		_arrDrawSnapshot[slot].presentExtraViewports();
 
-		// 멀티 뷰포트 GL 백엔드는 MakeCurrent를 바꾸므로 메인 디바이스 컨텍스트를 복원합니다.
 		if ( pRhiDevice->getBackendType() == RHIBackend::OpenGL )
 			pRhiDevice->bindGraphicsContext();
 	}

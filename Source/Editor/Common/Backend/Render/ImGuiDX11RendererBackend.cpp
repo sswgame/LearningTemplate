@@ -125,13 +125,14 @@ namespace sw::editor
 #endif
 	}
 
-	void ImGuiDX11RendererBackend::render( class IRHIDevice* pRhiDevice )
+	void ImGuiDX11RendererBackend::render( class IRHIDevice* pRhiDevice, ImDrawData* pDrawData )
 	{
 		(void)pRhiDevice;
 #if defined( SW_PLATFORM_WINDOWS )
-		ImDrawData* pDrawData = ImGui::GetDrawData();
-		if ( pDrawData != nullptr && ImGui::GetIO().BackendRendererUserData != nullptr )
+		if ( pDrawData != nullptr && _pRHIDevice != nullptr )
 			ImGui_ImplDX11_RenderDrawData( pDrawData );
+#else
+		(void)pDrawData;
 #endif
 	}
 
