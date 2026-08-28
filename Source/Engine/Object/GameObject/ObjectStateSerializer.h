@@ -29,11 +29,12 @@ namespace sw
 		/**
 		 * @brief GameObject 상태를 XML 문자열로 직렬화합니다.
 		 * @details 루트는 TypeInfo 이름 `GameObject`. 스칼라는 attribute, `_listComponents`는
-		 *          `<vector>` 아래 런타임 타입 노드. 로컬 TRS와 Attach는 SceneComponent PROPERTY.
+		 *          `<vector _name="_listComponents">` 아래 런타임 타입 노드. 로컬 TRS와 Attach는 SceneComponent PROPERTY.
 		 *          GameObject 부모는 `getParent()`가 SceneComponent `_pParent`에서 유도하므로
 		 *          별도 `_parentGO` 필드/속성을 쓰지 않습니다.
 		 */
 		static string				   saveToXmlString( const GameObject* pGameObject );
+		/** @brief GameObject 상태를 JSON으로 직렬화합니다. XmlSerializer와 같은 PROPERTY 그래프입니다. */
 		[[maybe_unused]] static string saveToJsonString( const GameObject* pGameObject );
 
 		/** @brief GameObject 상태를 바이너리 버퍼로 고속 직렬화합니다 (핫리로드/프리팹용). */

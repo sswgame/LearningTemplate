@@ -11,22 +11,102 @@ namespace sw
 {
 	namespace
 	{
-		void writeProperty( JsonValue field, const PropertyInfo& prop, const void* pInstance, const SerializeContext& ctx )
+		void writeProperty( JsonValue parent, const PropertyInfo& prop, const void* pInstance, const SerializeContext& ctx )
 		{
 			const void* pPropPtr = prop.getValuePtr<void>( pInstance );
 			if ( prop._bIsContainer && prop.hasContainerWrapper() )
 			{
-				writeNestedContainerJson( field, pPropPtr, prop.getContainerShape(), ctx );
+				NestedContainerInfo shape = prop.getContainerShape();
+				if ( shape._typeName.empty() )
+					shape._typeName = prop._typeName;
+				writeTypedContainerJson( parent, prop._name.c_str(), pPropPtr, shape, ctx );
 				return;
 			}
-			writeJsonValue( field, pPropPtr, prop._typeName, ctx );
+			writeJsonValue( parent.set( prop._name.c_str(), false ), pPropPtr, prop._typeName, ctx );
+		}
+
+		bool isContainerTypeKey( const vector<PropertyInfo>& listProps, string_view keyRaw, bool bIgnoreCaseKeys )
+		{
+			for ( const PropertyInfo& prop : listProps )
+			{
+				if ( prop._bIsContainer == false || prop.hasContainerWrapper() == false )
+					continue;
+				NestedContainerInfo shape = prop.getContainerShape();
+				if ( shape._typeName.empty() )
+					shape._typeName = prop._typeName;
+				const utf8* pTypeTag = containerTypeTagName( shape._typeName );
+				if ( pTypeTag != nullptr && keysEqual( keyRaw, pTypeTag, bIgnoreCaseKeys ) )
+					return true;
+			}
+			return false;
+		}
+
+		bool readContainerTypeGroup( const JsonValue& group, const vector<PropertyInfo>& listProps, void* pInstance,
+									 unordered_set<uint32>& uniqueSeen, bool& bFieldError, vector<SchemaOrphanValue>* pOutOrphans,
+									 const SerializeContext& ctx )
+		{
+			if ( group.isArray() == false )
+				return false;
+
+			const bool bIgnore = ctx.ignoreCaseKeys();
+			bool	   bOk{ true };
+			for ( size_t nodeIndex = 0; nodeIndex < group.size(); ++nodeIndex )
+			{
+				const JsonValue node = group.at( nodeIndex );
+				if ( node.isObject() == false )
+				{
+					bOk = false;
+					continue;
+				}
+
+				const string		nameStr	   = node.get( kPropertyNameKey, bIgnore ).asString();
+				bool				bCaseVariant{ false };
+				const PropertyInfo* pMatched = matchProperty( listProps, nameStr, bIgnore, bCaseVariant );
+				if ( pMatched == nullptr || pMatched->_bIsContainer == false || pMatched->hasContainerWrapper() == false )
+				{
+					if ( pOutOrphans != nullptr )
+					{
+						SchemaOrphanValue	orphan;
+						const hashed_string nameHs( nameStr.c_str() );
+						orphan._name	 = nameHs;
+						orphan._nameHash = nameHs.getHash();
+						orphan._text	 = node.dump();
+						pOutOrphans->push_back( std::move( orphan ) );
+					}
+					else
+						bFieldError = true;
+					bOk = false;
+					continue;
+				}
+
+				uniqueSeen.insert( pMatched->getNameHash() );
+				void*				   pPropPtr = pMatched->getValuePtr<void>( pInstance );
+				NestedContainerInfo	   shape	= pMatched->getContainerShape();
+				if ( shape._typeName.empty() )
+					shape._typeName = pMatched->_typeName;
+				if ( readNestedContainerJson( pPropPtr, shape, node, ctx ) == false )
+				{
+					if ( pOutOrphans != nullptr )
+					{
+						SchemaOrphanValue orphan;
+						orphan._name	 = pMatched->_name;
+						orphan._nameHash = pMatched->getNameHash();
+						orphan._text	 = node.dump();
+						pOutOrphans->push_back( std::move( orphan ) );
+					}
+					else
+						bFieldError = true;
+					bOk = false;
+				}
+			}
+			return bOk;
 		}
 
 		bool readProperty( const JsonValue& field, const PropertyInfo& prop, void* pInstance, const SerializeContext& ctx )
 		{
 			void* pPropPtr = prop.getValuePtr<void>( pInstance );
 			if ( prop._bIsContainer && prop.hasContainerWrapper() )
-				return readNestedContainerJson( pPropPtr, prop.getContainerShape(), field, ctx );
+				return readTypedContainerJson( pPropPtr, prop.getContainerShape(), field, ctx );
 			return readJsonValue( pPropPtr, prop._typeName, field, ctx );
 		}
 
@@ -77,7 +157,7 @@ namespace sw
 		dst.setObject();
 		for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )
 		{
-			writeProperty( dst.set( prop._name.c_str(), false ), prop, pInstance, ctx );
+			writeProperty( dst, prop, pInstance, ctx );
 		}
 	}
 
@@ -103,6 +183,14 @@ namespace sw
 			{
 				if ( pOutVersion != nullptr )
 					*pOutVersion = static_cast<uint32>( field.asUint( 0 ) );
+				continue;
+			}
+
+			if ( isContainerTypeKey( listProps, keyRaw, bIgnoreCaseKeys ) )
+			{
+				if ( readContainerTypeGroup( field, listProps, pInstance, uniqueSeen, bFieldError, pOutOrphans, ctx ) == false &&
+					 pOutOrphans == nullptr )
+					bFieldError = true;
 				continue;
 			}
 
@@ -173,7 +261,7 @@ namespace sw
 		root.set( kSchemaVersionKey, false ).setUint( version );
 		for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )
 		{
-			writeProperty( root.set( prop._name.c_str(), false ), prop, pInstance, ctx );
+			writeProperty( root, prop, pInstance, ctx );
 		}
 		return doc.dump();
 	}

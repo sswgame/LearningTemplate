@@ -129,7 +129,7 @@ SW_TEST_CASE( PrefabTest, InMemoryJsonPrefabCreationAndSpawn )
 	SW_TEST_SKIP( "InMemory JSON prefab spawn is Dev-only (Shipping requires cooked .bin)" );
 #else
 	const utf8* prefabJson = R"({
-		"Name": "DynamicPrefabActor"
+		"_name": "DynamicPrefabActor"
 	})";
 
 	const sw::string tempPath = sw::makeTempPrefabPath( "in_memory_test.prefab.json" );

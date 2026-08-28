@@ -15,8 +15,6 @@
 #include "Engine/Serialization/Core/Serializer.h"
 #include "Engine/Serialization/Format/JsonSerializer.h"
 #include "Engine/Serialization/Format/XmlSerializer.h"
-#include "Engine/Utility/Json/JsonDocument.h"
-#include "Engine/Utility/Xml/XmlDocument.h"
 
 namespace sw
 {
@@ -66,102 +64,6 @@ namespace sw
 				return outTag.isValid();
 			}
 
-			/** @brief Type name, else FQN, else component name, else "Component". */
-			string componentTypeBaseName( const Component* pComp )
-			{
-				if ( pComp == nullptr )
-					return "Component";
-
-				if ( pComp->getComponentName().empty() == false )
-					return pComp->getComponentName().c_str();
-
-				const TypeInfo* pTypeInfo = pComp->getTypeInfo();
-				if ( pTypeInfo != nullptr )
-				{
-					if ( pTypeInfo->_name.empty() == false )
-						return pTypeInfo->_name.c_str();
-					if ( pTypeInfo->_fullyQualifiedName.empty() == false )
-						return pTypeInfo->_fullyQualifiedName.c_str();
-				}
-
-				return "Component";
-			}
-
-			/** @brief Attach 참조용 안정 키. 타입(또는 컴포넌트 이름) + 같은 GO 안 출현 순번. */
-			string makeStableComponentKey( const Component* pComp, int32 occurrenceIndex )
-			{
-				string base;
-				if ( pComp != nullptr && pComp->getComponentName().empty() == false )
-					base = pComp->getComponentName().c_str();
-				else
-					base = componentTypeBaseName( pComp );
-
-				base += '#';
-				base += to_string( occurrenceIndex );
-				return base;
-			}
-
-			void mergeJsonObject( JsonValue dest, const JsonValue src )
-			{
-				if ( dest.isObject() == false || src.isObject() == false )
-					return;
-				for ( const string& key : src.memberNames() )
-				{
-					dest.set( key, false ).assignFrom( src.get( key, false ) );
-				}
-			}
-
-			string serializeComponentJson( Component* pComp )
-			{
-				JsonDocument	outDoc;
-				JsonValue		outRoot	  = outDoc.makeObject();
-				const TypeInfo* pTypeInfo = pComp->getTypeInfo();
-				if ( pTypeInfo != nullptr )
-				{
-					const string reflected =
-						JsonSerializer::serializeVersioned( kObjectReflectedSchemaVersion, pComp, *pTypeInfo );
-					JsonDocument src;
-					if ( src.parse( reflected ) && src.root().isObject() )
-						mergeJsonObject( outRoot, src.root() );
-				}
-				return outDoc.dump();
-			}
-
-			void deserializeComponentJson( Component* pComp, string_view json )
-			{
-				if ( json.empty() )
-					return;
-				uint32			ver{ 0 };
-				const TypeInfo* pTypeInfo = pComp->getTypeInfo();
-				if ( pTypeInfo != nullptr )
-					JsonSerializer::deserializeVersioned( ver, pComp, *pTypeInfo, json );
-				SceneComponent* pSceneComp = castTo<SceneComponent>( pComp );
-				if ( pSceneComp != nullptr )
-					pSceneComp->markTransformDirty();
-			}
-
-			string findStableComponentKey( const Component* pComp )
-			{
-				if ( pComp == nullptr || pComp->getOwner() == nullptr )
-					return {};
-
-				unordered_map<string, int32> occurrence;
-				for ( Component* pOther : pComp->getOwner()->getAllComponents() )
-				{
-					if ( pOther == nullptr )
-						continue;
-					string base;
-					if ( pOther->getComponentName().empty() == false )
-						base = pOther->getComponentName().c_str();
-					else
-						base = componentTypeBaseName( pOther );
-					const int32 occ = occurrence[base]++;
-					if ( pOther == pComp )
-						return makeStableComponentKey( pComp, occ );
-				}
-				return {};
-			}
-
 			void* createOwnedComponent( void* pOuter, hashed_string typeName )
 			{
 				GameObject* pGameObject = static_cast<GameObject*>( pOuter );
@@ -187,156 +89,6 @@ namespace sw
 				return ctx;
 			}
 
-			void writeAttachJson( JsonValue dest, const SceneComponent* pSceneComp )
-			{
-				if ( dest.isObject() == false || pSceneComp == nullptr )
-					return;
-				SceneComponent* pParent = pSceneComp->getParent();
-				if ( pParent == nullptr )
-					return;
-				GameObject* pParentOwner = pParent->getOwner();
-				if ( pParentOwner == nullptr )
-					return;
-				const string parentKey = findStableComponentKey( pParent );
-				if ( parentKey.empty() )
-					return;
-				dest.set( "AttachOwner" ).setString( pParentOwner->getName().c_str() );
-				dest.set( "AttachComponent" ).setString( parentKey.c_str() );
-			}
-
-			bool readAttachJson( const JsonValue src, string& outOwner, string& outKey )
-			{
-				outOwner.clear();
-				outKey.clear();
-				if ( src.isObject() == false )
-					return false;
-				outKey = src.get( "AttachComponent" ).asString();
-				if ( outKey.empty() )
-					return false;
-				outOwner = src.get( "AttachOwner" ).asString();
-				return true;
-			}
-
-			struct PendingAttach
-			{
-				SceneComponent* _pChild{ nullptr };
-				string			_parentOwnerName;
-				string			_parentStableKey;
-			};
-
-			/** @brief Build stableKey -> Component* for all components on a GO (occurrence by base name). */
-			void buildStableComponentKeyMap( const GameObject*					pGameObject,
-											 unordered_map<string, Component*>& outMap )
-			{
-				outMap.clear();
-				if ( pGameObject == nullptr )
-					return;
-
-				unordered_map<string, int32> occurrence;
-				for ( Component* pComp : pGameObject->getAllComponents() )
-				{
-					if ( pComp == nullptr )
-						continue;
-
-					string base;
-					if ( pComp->getComponentName().empty() == false )
-						base = pComp->getComponentName().c_str();
-					else
-						base = componentTypeBaseName( pComp );
-
-					const int32 occ = occurrence[base]++;
-					outMap.emplace( makeStableComponentKey( pComp, occ ), pComp );
-
-					const TypeInfo* pTypeInfo = pComp->getTypeInfo();
-					if ( pTypeInfo != nullptr )
-					{
-						if ( pTypeInfo->_name.empty() == false )
-							outMap.emplace( string( pTypeInfo->_name.c_str() ) + '#' + to_string( occ ), pComp );
-						if ( pTypeInfo->_fullyQualifiedName.empty() == false )
-							outMap.emplace( string( pTypeInfo->_fullyQualifiedName.c_str() ) + '#' + to_string( occ ), pComp );
-					}
-				}
-			}
-
-			GameObjectManager* findActiveObjectManager()
-			{
-				Scene* pScene = engine::getSceneManager().getActiveScene();
-				return pScene != nullptr ? pScene->getObjectManager() : nullptr;
-			}
-
-			SceneComponent* resolveParentSceneComponent( GameObject* pChildOwner,
-														 string_view parentOwnerName,
-														 string_view parentStableKey )
-			{
-				if ( parentStableKey.empty() )
-					return nullptr;
-
-				GameObject* pParentOwner = pChildOwner;
-				if ( parentOwnerName.empty() == false )
-				{
-					const bool bSameOwner = pChildOwner != nullptr &&
-											string_view( pChildOwner->getName().c_str() ) == parentOwnerName;
-					if ( bSameOwner == false )
-					{
-						GameObjectManager* pManager = pChildOwner != nullptr ? pChildOwner->getManager() : findActiveObjectManager();
-						if ( pManager == nullptr )
-							return nullptr;
-						pParentOwner = pManager->findGameObjectByName(
-							hashed_string( parentOwnerName.data(), static_cast<uint32>( parentOwnerName.size() ) ) );
-					}
-				}
-
-				if ( pParentOwner == nullptr )
-					return nullptr;
-
-				unordered_map<string, Component*> keyMap;
-				buildStableComponentKeyMap( pParentOwner, keyMap );
-				const auto it = keyMap.find( string( parentStableKey ) );
-				if ( it == keyMap.end() || it->second == nullptr )
-					return nullptr;
-				return castTo<SceneComponent>( it->second );
-			}
-
-			void applyPendingAttaches( GameObject* pGameObject, const vector<PendingAttach>& pendingAttaches )
-			{
-				if ( pGameObject == nullptr || pendingAttaches.empty() )
-					return;
-
-				const string_view ownerName = pGameObject->getName().c_str();
-				for ( const PendingAttach& link : pendingAttaches )
-				{
-					if ( link._pChild == nullptr || link._parentStableKey.empty() )
-						continue;
-
-					// Cross-GO parents are rebound via ParentGO so primary SceneComponents stay aligned
-					// with GameObject::attachToParent. Attach* attributes only restore in-GO SC trees.
-					const bool bCrossGo = link._parentOwnerName.empty() == false &&
-										  string_view( link._parentOwnerName ) != ownerName;
-					if ( bCrossGo )
-						continue;
-
-					SceneComponent* pParent =
-						resolveParentSceneComponent( pGameObject, link._parentOwnerName, link._parentStableKey );
-
-					if ( pParent == nullptr || pParent == link._pChild )
-					{
-						if ( pParent == link._pChild )
-						{
-							SW_LOG_WARNING( "[ObjectStateSerializer] Cannot attach SceneComponent to itself on '%#'.", pGameObject->getName().c_str() );
-							continue;
-						}
-						SW_LOG_ERROR( "[ObjectStateSerializer] Failed to resolve SceneComponent parent "
-									  "(owner='%#' key='%#') for child on '%#'.",
-									  link._parentOwnerName.c_str(),
-									  link._parentStableKey.c_str(),
-									  pGameObject->getName().c_str() );
-						continue;
-					}
-
-					link._pChild->attachToComponent( pParent );
-				}
-			}
-
 		} // namespace
 	} // namespace
 
@@ -360,55 +112,14 @@ namespace sw
 		if ( pGameObject == nullptr )
 			return {};
 
-		JsonDocument doc;
-		JsonValue	 root = doc.makeObject();
-		root.set( "Name" ).setString( pGameObject->getName().c_str() );
-		root.set( "ObjectId" ).setString( to_string( pGameObject->getObjectId() ) );
-		root.set( "IsActive" ).setBool( pGameObject->isActive() );
+		pGameObject->prepareSerialize();
 
-		const GameObject* pParentGo = pGameObject->getParent();
-		root.set( "ParentGO" ).setString( pParentGo != nullptr ? pParentGo->getName().c_str() : "" );
+		const TypeInfo* pTypeInfo = pGameObject->getTypeInfo();
+		if ( pTypeInfo == nullptr )
+			return {};
 
-		JsonValue tagsJson = root.set( "Tags" );
-		tagsJson.setArray();
-		const auto& tags = pGameObject->getTags().getTags();
-		for ( size_t tagIndex = 0; tagIndex < tags.size(); ++tagIndex )
-		{
-			tagsJson.pushBack().setString( formatTagId( tags[tagIndex] ) );
-		}
-
-		const vector<Component*>& listComps = pGameObject->getAllComponents();
-
-		JsonValue compsJson = root.set( "Components" );
-		compsJson.setObject();
-		unordered_map<string, int32> compOccurrence;
-		for ( Component* pComp : listComps )
-		{
-			if ( pComp == nullptr )
-				continue;
-
-			string base;
-			if ( pComp->getComponentName().empty() == false )
-				base = pComp->getComponentName().c_str();
-			else
-				base = componentTypeBaseName( pComp );
-			const int32	 occ = compOccurrence[base]++;
-			const string key = makeStableComponentKey( pComp, occ );
-
-			string		 reflected = serializeComponentJson( pComp );
-			JsonDocument reflectedDoc;
-			JsonValue	 dest = compsJson.set( key, false );
-			if ( reflectedDoc.parse( reflected ) && reflectedDoc.root().isObject() )
-				dest.assignFrom( reflectedDoc.root() );
-			else
-				dest.setObject();
-
-			SceneComponent* pSceneComp = castTo<SceneComponent>( pComp );
-			if ( pSceneComp != nullptr )
-				writeAttachJson( dest, pSceneComp );
-		}
-
-		return doc.dump( 1 );
+		SerializeContext ctx = makeGameObjectXmlContext( const_cast<GameObject*>( pGameObject ) );
+		return JsonSerializer::serializeVersioned( kObjectReflectedSchemaVersion, pGameObject, *pTypeInfo, ctx );
 	}
 
 	bool ObjectStateSerializer::saveToBinaryBuffer( const GameObject* pGameObject, vector<uint8>& outBuffer )
@@ -626,92 +337,24 @@ namespace sw
 		if ( pGameObject == nullptr || jsonString.empty() )
 			return false;
 
-		JsonDocument doc;
-		if ( doc.parse( jsonString ) == false || doc.root().isObject() == false )
+		const TypeInfo* pTypeInfo = pGameObject->getTypeInfo();
+		if ( pTypeInfo == nullptr )
 			return false;
 
-		const JsonValue root = doc.root();
+		const hashed_string oldName = pGameObject->getName();
 		pGameObject->clearComponents();
 
-		const string nameStr = root.get( "Name" ).asString();
-		if ( nameStr.empty() == false )
-			pGameObject->setName( hashed_string( nameStr.c_str() ) );
+		SerializeContext ctx = makeGameObjectXmlContext( pGameObject );
+		uint32			 ver{ 0 };
+		if ( JsonSerializer::deserializeVersioned( ver, pGameObject, *pTypeInfo, jsonString, kObjectReflectedSchemaVersion,
+												   nullptr, nullptr, ctx ) == false )
+			return false;
 
-		const JsonValue active = root.get( "IsActive" );
-		if ( active.isValid() )
-			pGameObject->setActive( active.asBool( pGameObject->isActive() ) );
+		if ( pGameObject->getName() != oldName && pGameObject->getManager() != nullptr )
+			pGameObject->getManager()->notifyNameChanged( pGameObject, oldName, pGameObject->getName() );
 
-		const JsonValue tags = root.get( "Tags" );
-		if ( tags.isArray() )
-		{
-			for ( size_t tagIndex = 0; tagIndex < tags.size(); ++tagIndex )
-			{
-				TagID parsedTag{};
-				if ( parseTagId( tags.at( tagIndex ).asString(), parsedTag ) )
-					pGameObject->addTag( parsedTag );
-			}
-		}
-
-		const JsonValue children = root.get( "Children" );
-		if ( children.isArray() && pGameObject->getManager() != nullptr )
-		{
-			for ( size_t childIndex = 0; childIndex < children.size(); ++childIndex )
-			{
-				const JsonValue childJson = children.at( childIndex );
-				string			childName = childJson.get( "Name" ).asString();
-				if ( childName.empty() )
-					childName = "Child";
-				GameObject* pChildGo = pGameObject->getManager()->createGameObject( hashed_string( childName.c_str() ) );
-				if ( pChildGo != nullptr )
-				{
-					loadFromJsonString( pChildGo, childJson.dump() );
-					pChildGo->attachToParent( pGameObject );
-				}
-			}
-		}
-
-		const JsonValue			  compsJson = root.get( "Components" );
-		vector<PendingAttach>	  listPendingAttaches;
-		if ( compsJson.isObject() )
-		{
-			for ( const string& compName : compsJson.memberNames() )
-			{
-				size_t hashPos = compName.find( '#' );
-				string baseName;
-				if ( hashPos != string::npos )
-					baseName = compName.substr( 0, hashPos );
-				else
-					baseName = compName;
-				hashed_string typeName( baseName.c_str(), static_cast<uint32>( baseName.size() ) );
-				Component*	  pComp = addOrReuseComponentByName( pGameObject, typeName, false );
-				if ( pComp == nullptr )
-				{
-					SW_LOG_ERROR( "loadFromJsonString: Failed to add component %#", compName.c_str() );
-					continue;
-				}
-				pComp->setComponentName( typeName );
-				const JsonValue compJson = compsJson.get( compName, false );
-				deserializeComponentJson( pComp, compJson.dump() );
-
-				SceneComponent* pSceneComp = castTo<SceneComponent>( pComp );
-				if ( pSceneComp != nullptr )
-				{
-					string parentOwner;
-					string parentKey;
-					if ( readAttachJson( compJson, parentOwner, parentKey ) )
-					{
-						PendingAttach link;
-						link._pChild		  = pSceneComp;
-						link._parentOwnerName = std::move( parentOwner );
-						link._parentStableKey = std::move( parentKey );
-						listPendingAttaches.push_back( std::move( link ) );
-					}
-				}
-			}
-		}
-
-		applyPendingAttaches( pGameObject, listPendingAttaches );
-
+		pGameObject->setActive( pGameObject->isActive() );
+		pGameObject->applyLoadedHierarchy();
 		return true;
 	}
 
@@ -727,63 +370,11 @@ namespace sw
 
 	bool ObjectStateSerializer::rebindSceneHierarchyFromJson( GameObject* pGameObject, string_view jsonString )
 	{
-		if ( pGameObject == nullptr || jsonString.empty() )
+		(void)jsonString;
+		if ( pGameObject == nullptr )
 			return false;
 
-		JsonDocument doc;
-		if ( doc.parse( jsonString ) == false || doc.root().isObject() == false )
-			return false;
-
-		const JsonValue root	 = doc.root();
-		const string	parentGo = root.get( "ParentGO" ).asString();
-		if ( parentGo.empty() == false && pGameObject->getManager() != nullptr )
-		{
-			GameObject* pParent = pGameObject->getManager()->findGameObjectByName( hashed_string( parentGo.c_str() ) );
-			if ( pParent != nullptr )
-				pGameObject->attachToParent( pParent );
-		}
-
-		const JsonValue			 compsJson = root.get( "Components" );
-		vector<PendingAttach>	 listPendingAttaches;
-		if ( compsJson.isObject() )
-		{
-			unordered_map<string, Component*> keyMap;
-			buildStableComponentKeyMap( pGameObject, keyMap );
-			for ( const string& compName : compsJson.memberNames() )
-			{
-				const auto mapIt = keyMap.find( compName );
-				Component* pComp = mapIt != keyMap.end() ? mapIt->second : nullptr;
-				SceneComponent* pSceneComp = castTo<SceneComponent>( pComp );
-				if ( pSceneComp == nullptr )
-					continue;
-
-				string parentOwner;
-				string parentKey;
-				if ( readAttachJson( compsJson.get( compName, false ), parentOwner, parentKey ) == false )
-					continue;
-
-				PendingAttach link;
-				link._pChild		  = pSceneComp;
-				link._parentOwnerName = std::move( parentOwner );
-				link._parentStableKey = std::move( parentKey );
-				listPendingAttaches.push_back( std::move( link ) );
-			}
-		}
-		applyPendingAttaches( pGameObject, listPendingAttaches );
-
-		const JsonValue children = root.get( "Children" );
-		if ( children.isArray() && pGameObject->getManager() != nullptr )
-		{
-			for ( size_t childIndex = 0; childIndex < children.size(); ++childIndex )
-			{
-				const JsonValue childJson = children.at( childIndex );
-				const string	childName = childJson.get( "Name" ).asString();
-				GameObject*		pChildGo  = pGameObject->getManager()->findGameObjectByName( hashed_string( childName.c_str() ) );
-				if ( pChildGo != nullptr )
-					rebindSceneHierarchyFromJson( pChildGo, childJson.dump() );
-			}
-		}
-
+		pGameObject->applyLoadedHierarchy();
 		return true;
 	}
 

@@ -50,11 +50,21 @@ namespace sw
 					  const SerializeContext& ctx );
 	/** @brief dst 노드에 JSON 값을 씁니다. */
 	void writeJsonValue( JsonValue dst, const void* pValPtr, const hashed_string& typeName, const SerializeContext& ctx );
-	/** @brief 중첩 컨테이너를 dst 노드에 씁니다. */
+	/** @brief 컨테이너 TypeInfo 이름을 JSON/XML 태그로 씁니다 (`vector`, `map`). */
+	const utf8* containerTypeTagName( hashed_string typeName );
+	/**
+	 * @brief 부모 객체에 `{ "vector": [ { "_name": "prop", "item": [...] } ] }` 형태로 컨테이너를 붙입니다.
+	 */
+	void writeTypedContainerJson( JsonValue parent, const utf8* pPropName, const void* pContainerPtr,
+								  const NestedContainerInfo& nested, const SerializeContext& ctx );
+	/** @brief `{ "_name", "item"|"entry" }` 래퍼 노드에 컨테이너를 씁니다. */
 	void writeNestedContainerJson( JsonValue dst, const void* pContainerPtr, const NestedContainerInfo& nested,
-								   const SerializeContext& ctx );
+								   const utf8* pPropName, const SerializeContext& ctx );
 
-	/** @brief JsonValue에서 중첩 컨테이너를 읽습니다. */
+	/** @brief 타입 태그 객체/배열에서 중첩 컨테이너를 읽습니다. */
+	bool readTypedContainerJson( void* pContainerPtr, const NestedContainerInfo& nested, const JsonValue& src,
+								 const SerializeContext& ctx );
+	/** @brief `{ "_name", "item"|"entry" }` 래퍼 노드에서 컨테이너를 읽습니다. */
 	bool readNestedContainerJson( void* pContainerPtr, const NestedContainerInfo& nested, const JsonValue& src,
 								  const SerializeContext& ctx );
 	/** @brief JsonValue를 값으로 읽습니다. */

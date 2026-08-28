@@ -189,6 +189,8 @@ namespace sw
 		if ( doc.parse( json ) == false )
 			return false;
 		_name	 = doc.root().get( "Name" ).asString();
+		if ( _name.empty() )
+			_name = doc.root().get( "_name" ).asString();
 		_xmlBody = json;
 
 		if ( _name.empty() )

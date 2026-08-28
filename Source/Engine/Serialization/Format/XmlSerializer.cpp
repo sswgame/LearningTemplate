@@ -180,10 +180,14 @@ namespace sw
 			return false;
 
 		const bool bIgnore = ignoreCaseKeys();
-		string	   sTag	   = Impl::sanitizeTag( pTagName );
-		XmlNode	   arrNode = _impl->currentParent.child( sTag.c_str(), bIgnore );
-		if ( arrNode.isValid() == false )
-			return false;
+		XmlNode	   arrNode = _impl->currentParent;
+		if ( pTagName != nullptr && pTagName[0] != '\0' )
+		{
+			string sTag = Impl::sanitizeTag( pTagName );
+			arrNode		= _impl->currentParent.child( sTag.c_str(), bIgnore );
+			if ( arrNode.isValid() == false )
+				return false;
+		}
 
 		for ( XmlNode item = arrNode.child( "item", bIgnore ); item; item = item.next( "item", bIgnore ) )
 		{
@@ -199,10 +203,14 @@ namespace sw
 			return false;
 
 		const bool bIgnore = ignoreCaseKeys();
-		string	   sTag	   = Impl::sanitizeTag( pTagName );
-		XmlNode	   mapNode = _impl->currentParent.child( sTag.c_str(), bIgnore );
-		if ( mapNode.isValid() == false )
-			return false;
+		XmlNode	   mapNode = _impl->currentParent;
+		if ( pTagName != nullptr && pTagName[0] != '\0' )
+		{
+			string sTag = Impl::sanitizeTag( pTagName );
+			mapNode		= _impl->currentParent.child( sTag.c_str(), bIgnore );
+			if ( mapNode.isValid() == false )
+				return false;
+		}
 
 		for ( XmlNode child = mapNode.child( nullptr, bIgnore ); child; child = child.next( nullptr, bIgnore ) )
 		{
@@ -238,6 +246,31 @@ namespace sw
 		_impl->listNodeStack.push_back( child );
 		_impl->currentParent = child;
 		return true;
+	}
+
+	bool XmlDocumentBackend::pushNamedTypeChild( const utf8* pTypeTag, const utf8* pPropName )
+	{
+		if ( _impl->currentParent.isValid() == false || pTypeTag == nullptr || pPropName == nullptr )
+			return false;
+
+		const bool bIgnore = ignoreCaseKeys();
+		string	   sTag	   = Impl::sanitizeTag( pTypeTag );
+		for ( XmlNode child = _impl->currentParent.child( sTag.c_str(), bIgnore ); child.isValid();
+			  child			= child.next( sTag.c_str(), bIgnore ) )
+		{
+			const utf8* pNameAttr = child.attr( kXmlPropertyNameAttr, bIgnore );
+			if ( pNameAttr == nullptr )
+				continue;
+			const bool bMatch = bIgnore ? StringUtil::equalsIgnoreCase( pNameAttr, pPropName )
+										: StringUtil::strcmp( pNameAttr, pPropName ) == 0;
+			if ( bMatch == false )
+				continue;
+
+			_impl->listNodeStack.push_back( child );
+			_impl->currentParent = child;
+			return true;
+		}
+		return false;
 	}
 
 	void XmlDocumentBackend::popChild()
@@ -304,10 +337,10 @@ namespace sw
 			if ( pTypeTag == nullptr )
 				return;
 
-			backend.beginMap( pPropName );
+			backend.beginMap( pTypeTag );
+			backend.writeAttribute( kXmlPropertyNameAttr, pPropName );
 			if ( pSeq != nullptr )
 			{
-				backend.beginArray( pTypeTag );
 				const bool bOwnedPtr = isOwnedPointerElementType( nested._elementTypeName );
 				size_t	   sz		 = pSeq->getSize( pContainerPtr );
 				for ( size_t elemIndex = 0; elemIndex < sz; ++elemIndex )
@@ -347,11 +380,9 @@ namespace sw
 						}
 					}
 				}
-				backend.endArray();
 			}
 			else if ( pMapWrap != nullptr )
 			{
-				backend.beginMap( pTypeTag );
 				pMapWrap->forEach( pContainerPtr, [&]( const void* pKPtr, const void* pVPtr )
 				{
 					backend.beginMapEntry();
@@ -370,7 +401,6 @@ namespace sw
 					}
 					backend.endMapEntry();
 				} );
-				backend.endMap();
 			}
 			backend.endMap();
 		}
@@ -469,7 +499,7 @@ namespace sw
 			}
 		};
 
-		bool readNestedContainerXml( void* pContainerPtr, const NestedContainerInfo& nested, const utf8* pTagName, IXmlBackend& backend, const SerializeContext& ctx, bool& bOutFieldError, vector<SchemaOrphanValue>* pOutOrphans, const PropertyInfo& propForOrphan )
+		bool readNestedContainerXml( void* pContainerPtr, const NestedContainerInfo& nested, IXmlBackend& backend, const SerializeContext& ctx, bool& bOutFieldError, vector<SchemaOrphanValue>* pOutOrphans, const PropertyInfo& propForOrphan )
 		{
 			if ( pContainerPtr == nullptr || nested._wrapper == nullptr )
 				return false;
@@ -487,7 +517,7 @@ namespace sw
 				ptrCb._pCtx			= &ctx;
 				ptrCb._pAny			= &any;
 				ptrCb._pFieldError	= &bOutFieldError;
-				backend.iterateMap( pTagName, SW_DELEGATE_METHOD( XmlMapItemDelegate, &NestedOwnedPointerReadCallback::invoke, &ptrCb ) );
+				backend.iterateMap( nullptr, SW_DELEGATE_METHOD( XmlMapItemDelegate, &NestedOwnedPointerReadCallback::invoke, &ptrCb ) );
 				return any;
 			}
 			if ( pSeq != nullptr )
@@ -504,7 +534,7 @@ namespace sw
 				arrayCb._pElemIndex		= &elemIndex;
 				arrayCb._pAny			= &any;
 				arrayCb._pFieldError	= &bOutFieldError;
-				backend.iterateArray( pTagName, SW_DELEGATE_METHOD( XmlArrayItemDelegate, &NestedArrayReadCallback::invoke, &arrayCb ) );
+				backend.iterateArray( nullptr, SW_DELEGATE_METHOD( XmlArrayItemDelegate, &NestedArrayReadCallback::invoke, &arrayCb ) );
 				return any;
 			}
 			else if ( pMapWrap != nullptr )
@@ -523,7 +553,7 @@ namespace sw
 				mapCb._pListVBuf		= &listVBuf;
 				mapCb._pAny				= &any;
 				mapCb._pFieldError		= &bOutFieldError;
-				backend.iterateMap( pTagName, SW_DELEGATE_METHOD( XmlMapItemDelegate, &NestedMapReadCallback::invoke, &mapCb ) );
+				backend.iterateMap( nullptr, SW_DELEGATE_METHOD( XmlMapItemDelegate, &NestedMapReadCallback::invoke, &mapCb ) );
 				return any;
 			}
 			return false;
@@ -577,16 +607,16 @@ namespace sw
 			}
 		}
 
-		static vector<const utf8*> getContainerTagNames( const PropertyInfo& prop )
+		static vector<const utf8*> getContainerPropNames( const PropertyInfo& prop )
 		{
-			vector<const utf8*> listTags;
-			listTags.push_back( prop._name.c_str() );
+			vector<const utf8*> listNames;
+			listNames.push_back( prop._name.c_str() );
 			for ( const hashed_string& alias : prop._listAliases )
 			{
 				if ( alias.empty() == false )
-					listTags.push_back( alias.c_str() );
+					listNames.push_back( alias.c_str() );
 			}
-			return listTags;
+			return listNames;
 		}
 
 		static bool isNameKnown( const unordered_set<string>& uniqueKnownNames, const utf8* pChildName )
@@ -616,23 +646,25 @@ namespace sw
 
 				if ( prop._bIsContainer && prop.hasContainerWrapper() )
 				{
-					bool entered{ false };
-					for ( const utf8* pTag : getContainerTagNames( prop ) )
+					NestedContainerInfo shape = prop.getContainerShape();
+					if ( shape._typeName.empty() )
+						shape._typeName = prop._typeName;
+					const utf8* pTypeTag = xmlTypeInfoName( shape._typeName );
+					bool		entered{ false };
+					if ( pTypeTag != nullptr )
 					{
-						if ( backend.pushChild( pTag ) )
+						for ( const utf8* pPropName : getContainerPropNames( prop ) )
 						{
-							entered = true;
-							break;
+							if ( backend.pushNamedTypeChild( pTypeTag, pPropName ) )
+							{
+								entered = true;
+								break;
+							}
 						}
 					}
 					if ( entered )
 					{
-						NestedContainerInfo shape = prop.getContainerShape();
-						if ( shape._typeName.empty() )
-							shape._typeName = prop._typeName;
-						const utf8* pTypeTag = xmlTypeInfoName( shape._typeName );
-						if ( readNestedContainerXml( pPropPtr, shape, pTypeTag, backend, ctx, bFieldError, pOutOrphans,
-													 prop ) )
+						if ( readNestedContainerXml( pPropPtr, shape, backend, ctx, bFieldError, pOutOrphans, prop ) )
 							uniqueSeen.insert( prop.getNameHash() );
 						else
 							applyPropertyDefault( pPropPtr, prop, ctx );
@@ -728,6 +760,9 @@ namespace sw
 				if ( StringUtil::strcmp( pChildName, kSchemaVersionKey ) == 0 )
 					continue;
 				if ( isNameKnown( uniqueKnownNames, pChildName ) )
+					continue;
+				const utf8* pNameAttr = child.attr( kXmlPropertyNameAttr, bIgnore );
+				if ( pNameAttr != nullptr && isNameKnown( uniqueKnownNames, pNameAttr ) )
 					continue;
 
 				const hashed_string nameHs( pChildName );

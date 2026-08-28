@@ -833,6 +833,7 @@ struct SimpleXmlBackend : public sw::IXmlBackend
 {
 	sw::string								  result;
 	sw::string								  rootTagName;
+	sw::vector<sw::string>					  listOpenTags;
 	sw::unordered_map<sw::string, sw::string> kvMap;
 	bool									  bOpenTagPending{ false };
 
@@ -842,6 +843,24 @@ struct SimpleXmlBackend : public sw::IXmlBackend
 			return;
 		result += ">";
 		bOpenTagPending = false;
+	}
+
+	void beginNamedElement( const utf8* pTag )
+	{
+		closeOpenTag();
+		sw::string tag( pTag != nullptr ? pTag : "" );
+		result += "<" + tag;
+		bOpenTagPending = true;
+		listOpenTags.push_back( tag );
+	}
+
+	void endNamedElement()
+	{
+		closeOpenTag();
+		if ( listOpenTags.empty() )
+			return;
+		result += "</" + listOpenTags.back() + ">";
+		listOpenTags.pop_back();
 	}
 
 	void initXmlSerialization( const utf8* rootTag ) override
@@ -863,39 +882,42 @@ struct SimpleXmlBackend : public sw::IXmlBackend
 	}
 	void beginArray( const utf8* tag ) override
 	{
-		closeOpenTag();
-		result += "<" + sw::string( tag ) + ">";
+		beginNamedElement( tag );
 	}
 	void writeArrayItem( const utf8* value ) override
 	{
+		closeOpenTag();
 		result += "<item>" + sw::string( value ) + "</item>";
 	}
 	void endArray() override
 	{
-		result += "</array>";
+		endNamedElement();
 	}
 	void beginMap( const utf8* tag ) override
 	{
-		closeOpenTag();
-		result += "<" + sw::string( tag ) + ">";
+		beginNamedElement( tag );
 	}
 	void beginMapEntry() override
 	{
+		beginNamedElement( "entry" );
 	}
 	void writeMapKey( const utf8* key ) override
 	{
+		closeOpenTag();
 		result += "<key>" + sw::string( key ) + "</key>";
 	}
 	void writeMapValue( const utf8* value ) override
 	{
+		closeOpenTag();
 		result += "<value>" + sw::string( value ) + "</value>";
 	}
 	void endMapEntry() override
 	{
+		endNamedElement();
 	}
 	void endMap() override
 	{
-		result += "</map>";
+		endNamedElement();
 	}
 	sw::string endSerialize() override
 	{
@@ -1026,7 +1048,8 @@ SW_TEST_CASE( Reflection_Serialization, XmlJsonKeysIgnoreCaseValuesPreserveCase 
 		return;
 
 	// 프로퍼티 키/태그는 대소문자가 달라도 되고, 문자열 값은 대소문자를 유지해야 한다.
-	const utf8*		json = R"({"_ID":77,"_TITLE":"CaseSensitiveValue","_scores":[1,2]})";
+	const utf8* json =
+		R"({"_ID":77,"_TITLE":"CaseSensitiveValue","vector":[{"_name":"_scores","item":[1,2]}]})";
 	sw::ComplexData fromJson;
 	SW_EXPECT_TRUE( sw::JsonSerializer::deserialize( &fromJson, *typeInfo, json ) );
 	SW_EXPECT_EQUAL( 77, fromJson._id );
@@ -1034,7 +1057,7 @@ SW_TEST_CASE( Reflection_Serialization, XmlJsonKeysIgnoreCaseValuesPreserveCase 
 	SW_EXPECT_EQUAL( 2u, static_cast<uint32>( fromJson._scores.size() ) );
 
 	const utf8* xml =
-		R"(<sw__ComplexData _ID="88" _TITLE="XmlCaseValue"><_scores><vector><item>3</item><ITEM>4</ITEM></vector></_scores></sw__ComplexData>)";
+		R"(<sw__ComplexData _ID="88" _TITLE="XmlCaseValue"><vector _name="_scores"><item>3</item><ITEM>4</ITEM></vector></sw__ComplexData>)";
 	sw::ComplexData fromXml;
 	SW_EXPECT_TRUE( sw::XmlSerializer::deserialize( &fromXml, *typeInfo, xml ) );
 	SW_EXPECT_EQUAL( 88, fromXml._id );
@@ -1075,7 +1098,7 @@ SW_TEST_CASE( Reflection_Serialization, StrictDeserializeFailsOnBadContainerAndF
 	SW_ASSERT_TRUE( typeInfo != nullptr );
 
 	sw::ComplexData jsonContainer;
-	SW_EXPECT_FALSE( sw::JsonSerializer::deserialize( &jsonContainer, *typeInfo, R"({"_scores":[1,"not_an_int"]})" ) );
+	SW_EXPECT_FALSE( sw::JsonSerializer::deserialize( &jsonContainer, *typeInfo, R"({"vector":[{"_name":"_scores","item":[1,"not_an_int"]}]})" ) );
 
 	sw::ComplexData jsonField;
 	SW_EXPECT_FALSE( sw::JsonSerializer::deserialize( &jsonField, *typeInfo, R"({"_id":"not_an_int"})" ) );
@@ -1087,10 +1110,10 @@ SW_TEST_CASE( Reflection_Serialization, StrictDeserializeFailsOnBadContainerAndF
 	sw::ComplexData xmlContainer;
 	SW_EXPECT_FALSE( sw::XmlSerializer::deserialize(
 		&xmlContainer, *typeInfo,
-		R"(<sw__ComplexData><_scores><vector><item>1</item><item>not_an_int</item></vector></_scores></sw__ComplexData>)" ) );
+		R"(<sw__ComplexData><vector _name="_scores"><item>1</item><item>not_an_int</item></vector></sw__ComplexData>)" ) );
 
 	sw::ComplexData jsonOk;
-	SW_EXPECT_TRUE( sw::JsonSerializer::deserialize( &jsonOk, *typeInfo, R"({"_id":7,"_scores":[1,2]})" ) );
+	SW_EXPECT_TRUE( sw::JsonSerializer::deserialize( &jsonOk, *typeInfo, R"({"_id":7,"vector":[{"_name":"_scores","item":[1,2]}]})" ) );
 	SW_EXPECT_EQUAL( 7, jsonOk._id );
 	SW_EXPECT_EQUAL( 2u, static_cast<uint32>( jsonOk._scores.size() ) );
 

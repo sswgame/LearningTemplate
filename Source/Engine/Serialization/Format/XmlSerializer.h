@@ -72,14 +72,24 @@ namespace sw
 			return readValue( pName, outValue );
 		}
 
-		/** @brief 배열 요소를 순회합니다. */
+		/** @brief 배열 요소를 순회합니다. pTagName이 비면 현재 노드에서 `<item>`을 순회합니다. */
 		virtual bool iterateArray( const utf8* pTagName, const XmlArrayItemDelegate& callback ) = 0;
-		/** @brief 맵 항목을 순회합니다. */
+		/** @brief 맵 항목을 순회합니다. pTagName이 비면 현재 노드의 자식을 순회합니다. */
 		virtual bool iterateMap( const utf8* pTagName, const XmlMapItemDelegate& callback ) = 0;
 		/** @brief 현재 부모의 자식 요소로 내려갑니다. 없으면 false. */
 		virtual bool pushChild( const utf8* pTagName )
 		{
 			(void)pTagName;
+			return false;
+		}
+		/**
+		 * @brief 타입 태그 + `_name` 속성으로 자식 요소를 찾아 내려갑니다.
+		 * @details 컨테이너 XML: `<vector _name="_listComponents">`.
+		 */
+		virtual bool pushNamedTypeChild( const utf8* pTypeTag, const utf8* pPropName )
+		{
+			(void)pTypeTag;
+			(void)pPropName;
 			return false;
 		}
 		/** @brief pushChild로 내려간 부모를 복원합니다. */
@@ -154,6 +164,8 @@ namespace sw
 		bool iterateMap( const utf8* pTagName, const XmlMapItemDelegate& callback ) override;
 		/** @brief 현재 부모의 자식 요소로 내려갑니다. 없으면 false. */
 		bool pushChild( const utf8* pTagName ) override;
+		/** @brief 타입 태그 + `_name` 속성으로 자식 요소를 찾아 내려갑니다. */
+		bool pushNamedTypeChild( const utf8* pTypeTag, const utf8* pPropName ) override;
 		/** @brief pushChild로 내려간 부모를 복원합니다. */
 		void popChild() override;
 

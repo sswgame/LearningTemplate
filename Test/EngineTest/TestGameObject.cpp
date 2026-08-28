@@ -712,9 +712,18 @@ SW_TEST_CASE( ObjectStateXmlSerializerTest, SaveAndLoadXmlString )
 	SW_ASSERT_TRUE( xml.empty() == false );
 	SW_EXPECT_TRUE( xml.find( "GameObject" ) != sw::string::npos );
 	SW_EXPECT_TRUE( xml.find( "SerializedHero" ) != sw::string::npos );
+	SW_EXPECT_TRUE( xml.find( "_name=\"_listComponents\"" ) != sw::string::npos );
+	SW_EXPECT_TRUE( xml.find( "<_listComponents>" ) == sw::string::npos );
 	SW_EXPECT_TRUE( xml.find( "SceneTransforms" ) == sw::string::npos );
 	SW_EXPECT_TRUE( xml.find( "_parentGO" ) == sw::string::npos );
 	SW_EXPECT_TRUE( xml.find( "ParentGO" ) == sw::string::npos );
+
+	const sw::string json = ObjectStateSerializer::saveToJsonString( &source );
+	SW_ASSERT_TRUE( json.empty() == false );
+	SW_EXPECT_TRUE( json.find( "\"vector\"" ) != sw::string::npos );
+	SW_EXPECT_TRUE( json.find( "\"_name\":\"_listComponents\"" ) != sw::string::npos );
+	SW_EXPECT_TRUE( json.find( "\"Components\"" ) == sw::string::npos );
+	SW_EXPECT_TRUE( json.find( "ParentGO" ) == sw::string::npos );
 
 	manager.clear();
 
