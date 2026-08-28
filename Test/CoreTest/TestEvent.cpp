@@ -77,7 +77,7 @@ SW_TEST_CASE( Engine_Event, DispatcherCloseAndActivateEvents )
 
 	sw::WindowCloseEvent	closeEvt;
 	sw::WindowActivateEvent activateEvt;
-	activateEvt._bIsActivate = true;
+	activateEvt._bIsActivate = SW_TRUE;
 
 	dispatcher.publish( closeEvt );
 	dispatcher.publish( activateEvt );

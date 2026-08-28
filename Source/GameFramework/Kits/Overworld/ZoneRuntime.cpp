@@ -15,7 +15,7 @@ namespace sw
 			string r( roleText );
 			for ( utf8& ch : r )
 			{
-				if ( ch >= 'A' && ch <= 'Z' )
+				if ( 'A' <= ch && ch <= 'Z' )
 					ch = static_cast<utf8>( ch - 'A' + 'a' );
 			}
 			if ( r == "boss" )

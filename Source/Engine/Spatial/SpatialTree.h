@@ -48,7 +48,7 @@ namespace sw
 
 		bool contains( float32 pointX, float32 pointY ) const noexcept
 		{
-			return pointX >= _minX && pointX <= _maxX && pointY >= _minY && pointY <= _maxY;
+			return _minX <= pointX && pointX <= _maxX && _minY <= pointY && pointY <= _maxY;
 		}
 
 		bool intersects( const AABB2D& other ) const noexcept
@@ -62,7 +62,7 @@ namespace sw
 
 		bool contains( const AABB2D& other ) const noexcept
 		{
-			return other._minX >= _minX && other._maxX <= _maxX && other._minY >= _minY && other._maxY <= _maxY;
+			return _minX <= other._minX && other._maxX <= _maxX && _minY <= other._minY && other._maxY <= _maxY;
 		}
 
 		float32 getWidth() const noexcept { return _maxX - _minX; }

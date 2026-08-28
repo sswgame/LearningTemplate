@@ -25,10 +25,11 @@ namespace sw
 		const size_t eq = sig.find( constants::reflection::kSignatureEq );
 		if ( eq != string_view::npos )
 		{
-			inner			  = sig.substr( eq + 4 );
-			const size_t semi = inner.find( ';' );
-			const size_t br	  = inner.find( ']' );
-			size_t		 end  = inner.size();
+			const size_t eqLen = StringUtil::strlen( constants::reflection::kSignatureEq );
+			inner			   = sig.substr( eq + eqLen );
+			const size_t semi  = inner.find( ';' );
+			const size_t br	   = inner.find( ']' );
+			size_t		 end   = inner.size();
 			if ( semi != string_view::npos )
 				end = semi;
 			if ( br != string_view::npos && br < end )
@@ -223,13 +224,15 @@ namespace sw
 			const utf8* pCstr = fqn.c_str();
 			if ( pCstr == nullptr || *pCstr == 0 )
 				return nullptr;
-			const utf8* pLeaf = pCstr;
-			for ( const utf8* p = pCstr; *p != 0; ++p )
+			const string_view fqnView{ pCstr };
+			const size_t	  lastScope = fqnView.rfind( constants::reflection::kScopeDelimiter );
+			if ( lastScope != string_view::npos )
 			{
-				if ( p[0] == ':' && p[1] == ':' )
-					pLeaf = p + 2;
+				const size_t	  delimiterLen = StringUtil::strlen( constants::reflection::kScopeDelimiter );
+				const string_view leaf		   = fqnView.substr( lastScope + delimiterLen );
+				return findEnum( hashed_string( leaf.data(), static_cast<uint32>( leaf.size() ) ) );
 			}
-			return ( pLeaf != pCstr ) ? findEnum( hashed_string( pLeaf ) ) : nullptr;
+			return nullptr;
 		}
 
 		mutable std::shared_mutex			   _mutex;

@@ -316,13 +316,13 @@ namespace sw
 
 			if constexpr ( sizeof( utf16 ) == 2 )
 			{
-				const bool bIsHighSurrogate = ( codepoint >= 0xD800 ) && ( codepoint <= 0xDBFF );
+				const bool bIsHighSurrogate = ( 0xD800 <= codepoint && codepoint <= 0xDBFF );
 				if ( bIsHighSurrogate )
 				{
 					if ( pos + 1 < length )
 					{
 						const uint32 lowSurrogate = input[pos + 1];
-						if ( lowSurrogate >= 0xDC00 && lowSurrogate <= 0xDFFF )
+						if ( 0xDC00 <= lowSurrogate && lowSurrogate <= 0xDFFF )
 						{
 							codepoint = kUtf16LowBoundary + ( ( codepoint - 0xD800 ) << 10 ) + ( lowSurrogate - 0xDC00 );
 							++pos;
@@ -333,7 +333,7 @@ namespace sw
 					else
 						codepoint = 0xFFFD;
 				}
-				else if ( codepoint >= 0xDC00 && codepoint <= 0xDFFF )
+				else if ( 0xDC00 <= codepoint && codepoint <= 0xDFFF )
 					codepoint = 0xFFFD;
 			}
 

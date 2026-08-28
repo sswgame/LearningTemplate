@@ -238,7 +238,7 @@ namespace sw
 		/** @brief 비트플래그 값을 이름 문자열로 바꿉니다. */
 		hashed_string toStringFlags( int64 val ) const
 		{
-			if ( _bIsBitFlag == false )
+			if ( _bIsBitFlag == SW_FALSE )
 				return toString( val );
 
 			if ( val == 0 )
@@ -265,7 +265,7 @@ namespace sw
 		/** @brief `"A | B"` 플래그 문자열을 값으로 파싱합니다. */
 		int64 stringFlagsToValue( string_view flagsStr ) const
 		{
-			if ( _bIsBitFlag == false )
+			if ( _bIsBitFlag == SW_FALSE )
 			{
 				hashed_string nameKey{ flagsStr };
 				auto		  iter = _mapNameToValue.find( nameKey );
@@ -420,7 +420,7 @@ namespace sw
 				_mapNameToMethod[method._hashName] = &method;
 			}
 
-			_bIsCacheBuilt = true;
+			_bIsCacheBuilt = SW_TRUE;
 		}
 
 		/** @brief 이름 또는 alias로 프로퍼티를 찾습니다. */

@@ -116,8 +116,8 @@ namespace sw
 		void ( *_pApply )( ParsedTypeInfo& );
 	};
 
-	static void applyReflectAbstract( ParsedTypeInfo& typeInfo ) { typeInfo._bAbstract = true; }
-	static void applyReflectStatic( ParsedTypeInfo& typeInfo ) { typeInfo._bStatic = true; }
+	static void applyReflectAbstract( ParsedTypeInfo& typeInfo ) { typeInfo._bAbstract = SW_TRUE; }
+	static void applyReflectStatic( ParsedTypeInfo& typeInfo ) { typeInfo._bStatic = SW_TRUE; }
 
 	constexpr ReflectFlagEntry kReflectFlags[] = {
 		{"Abstract", applyReflectAbstract},
@@ -254,7 +254,7 @@ namespace sw
 	static void applyPropAssetType( ParsedPropertyInfo& prop, const string& value )
 	{
 		prop._assetType	 = value;
-		prop._bAssetPath = true;
+		prop._bAssetPath = SW_TRUE;
 	}
 
 	constexpr PropStringEntry kPropStrings[] = {
@@ -275,12 +275,12 @@ namespace sw
 	static void applyPropMinRange( ParsedPropertyInfo& prop, float32 value )
 	{
 		prop._minRange	= value;
-		prop._bHasRange = true;
+		prop._bHasRange = SW_TRUE;
 	}
 	static void applyPropMaxRange( ParsedPropertyInfo& prop, float32 value )
 	{
 		prop._maxRange	= value;
-		prop._bHasRange = true;
+		prop._bHasRange = SW_TRUE;
 	}
 
 	constexpr PropFloatEntry kPropFloats[] = {
@@ -294,8 +294,8 @@ namespace sw
 		void ( *_pApply )( ParsedFunctionInfo& );
 	};
 
-	static void applyFuncReliable( ParsedFunctionInfo& method ) { method._bReliable = true; }
-	static void applyFuncValidate( ParsedFunctionInfo& method ) { method._bValidate = true; }
+	static void applyFuncReliable( ParsedFunctionInfo& method ) { method._bReliable = SW_TRUE; }
+	static void applyFuncValidate( ParsedFunctionInfo& method ) { method._bValidate = SW_TRUE; }
 
 	constexpr FuncFlagEntry kFuncFlags[] = {
 		{"Reliable", applyFuncReliable},

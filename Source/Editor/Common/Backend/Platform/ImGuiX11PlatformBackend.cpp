@@ -153,7 +153,7 @@ namespace sw::editor
 				{
 					const bool	 bIsDown = ( pEvent->type == KeyPress );
 					const KeySym sym	 = XLookupKeysym( &pEvent->xkey, 0 );
-					if ( bIsDown && sym >= 0x20 && sym <= 0x7E )
+					if ( bIsDown && 0x20 <= sym && sym <= 0x7E )
 						io.AddInputCharacter( static_cast<uint32>( sym ) );
 					return io.WantCaptureKeyboard;
 				}

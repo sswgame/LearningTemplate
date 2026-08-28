@@ -244,12 +244,12 @@ namespace sw
 			PredefinedNameType::NameType_hashed_string,
 		};
 
-		_bIsPODFastPath = true;
+		_bIsPODFastPath = SW_TRUE;
 		for ( const PropertyInfo& prop : _propertyList )
 		{
 			if ( prop._bIsContainer != 0 || prop._containerKind != ContainerKind::None )
 			{
-				_bIsPODFastPath = false;
+				_bIsPODFastPath = SW_FALSE;
 				break;
 			}
 
@@ -265,11 +265,11 @@ namespace sw
 
 			if ( bIsDynamicType )
 			{
-				_bIsPODFastPath = false;
+				_bIsPODFastPath = SW_FALSE;
 				break;
 			}
 		}
-		_bIsPODCalculated = true;
+		_bIsPODCalculated = SW_TRUE;
 		return _bIsPODFastPath;
 	}
 
@@ -278,7 +278,7 @@ namespace sw
 		if ( _parentFQN.empty() )
 			return _propertyList;
 
-		if ( _bPropertyListWithBaseBuilt )
+		if ( _bPropertyListWithBaseBuilt != 0 )
 			return _propertyListWithBase;
 
 		_propertyListWithBase.clear();
@@ -305,7 +305,7 @@ namespace sw
 				_propertyListWithBase.push_back( prop );
 		}
 
-		_bPropertyListWithBaseBuilt = true;
+		_bPropertyListWithBaseBuilt = SW_TRUE;
 		return _propertyListWithBase;
 	}
 

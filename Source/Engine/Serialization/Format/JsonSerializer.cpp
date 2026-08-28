@@ -433,7 +433,7 @@ namespace sw
 		{
 			for ( const PropertyInfo& prop : listProps )
 			{
-				if ( prop._bIsContainer == false || prop.hasContainerWrapper() == false )
+				if ( prop._bIsContainer == SW_FALSE || prop.hasContainerWrapper() == false )
 					continue;
 				NestedContainerInfo shape = prop.getContainerShape();
 				if ( shape._typeName.empty() )
@@ -469,7 +469,7 @@ namespace sw
 				if ( pMatched == nullptr && bCaseVariant )
 					continue;
 
-				if ( pMatched == nullptr || pMatched->_bIsContainer == false || pMatched->hasContainerWrapper() == false )
+				if ( pMatched == nullptr || pMatched->_bIsContainer == SW_FALSE || pMatched->hasContainerWrapper() == false )
 				{
 					if ( pOutOrphans != nullptr )
 					{

@@ -417,16 +417,16 @@ namespace sw
 			const vector<string> tokens =
 				sw::splitAnnotationArgs( sw::annotationArgText( search._spelling, annotationConstants::kReflectContainerPrefix ) );
 			if ( tokens.empty() )
-				return false;
+				return SW_FALSE;
 
-			if ( tryParseContainerKind( tokens[0], outKind ) == false || outKind == ContainerKind::None )
-				return false;
+			if ( tryParseContainerKind( tokens[0], outKind ) == SW_FALSE || outKind == ContainerKind::None )
+				return SW_FALSE;
 
 			if ( tokens.size() >= 2 )
 				outWrapperStem = tokens[1];
 			else
 				outWrapperStem = defaultContainerWrapperStem( outKind );
-			return true;
+			return SW_TRUE;
 		}
 
 		/** @brief clang 타입으로 컨테이너 트리를 만듭니다. */
@@ -445,9 +445,9 @@ namespace sw
 				if ( argType.kind != CXType_Invalid )
 					nested = parseContainerFromType( argType );
 			}
-			if ( ( nested == nullptr || nested->_bIsContainer == false ) && spellingFallback.empty() == false )
+			if ( ( nested == nullptr || nested->_bIsContainer == SW_FALSE ) && spellingFallback.empty() == SW_FALSE )
 				nested = parseContainerFromTypeSpelling( spellingFallback );
-			if ( nested != nullptr && nested->_bIsContainer == false )
+			if ( nested != nullptr && nested->_bIsContainer == SW_FALSE )
 				nested.reset();
 			return nested;
 		}
@@ -467,7 +467,7 @@ namespace sw
 					node._elementNested	  = nestedContainerFromArg( type, numClangArgs, 1, args[1] );
 				}
 			}
-			else if ( args.empty() == false )
+			else if ( args.empty() == SW_FALSE )
 			{
 				node._elementTypeName = normalizeTypeName( args[0] );
 				node._elementNested	  = nestedContainerFromArg( type, numClangArgs, 0, args[0] );
@@ -481,10 +481,10 @@ namespace sw
 			const ContainerTypeRule*			rule = ContainerTypeMap::instance().match( typeSpelling );
 			if ( rule == nullptr )
 			{
-				node->_bIsContainer = false;
+				node->_bIsContainer = SW_FALSE;
 				return node;
 			}
-			node->_bIsContainer	 = true;
+			node->_bIsContainer	 = SW_TRUE;
 			node->_containerKind = rule->_kind;
 			node->_containerType = rule->_type;
 			node->_typeName		 = rule->_match;
@@ -500,7 +500,7 @@ namespace sw
 			sw::shared_ptr<ParsedContainerNode> node = sw::make_shared<ParsedContainerNode>();
 			if ( type.kind == CXType_Invalid )
 			{
-				node->_bIsContainer = false;
+				node->_bIsContainer = SW_FALSE;
 				return node;
 			}
 
@@ -511,7 +511,7 @@ namespace sw
 			string		  wrapperStem;
 			if ( lookupReflectContainer( type, kind, wrapperStem ) )
 			{
-				node->_bIsContainer					 = true;
+				node->_bIsContainer					 = SW_TRUE;
 				node->_containerKind				 = kind;
 				node->_containerType				 = wrapperStem;
 				const ContainerTypeRule* builtinRule = ContainerTypeMap::instance().match( spelling );
@@ -524,10 +524,10 @@ namespace sw
 			const ContainerTypeRule* rule = ContainerTypeMap::instance().match( spelling );
 			if ( rule == nullptr )
 			{
-				node->_bIsContainer = false;
+				node->_bIsContainer = SW_FALSE;
 				return node;
 			}
-			node->_bIsContainer	 = true;
+			node->_bIsContainer	 = SW_TRUE;
 			node->_containerKind = rule->_kind;
 			node->_containerType = rule->_type;
 			node->_typeName		 = rule->_match;
@@ -539,9 +539,9 @@ namespace sw
 		static void parseContainerDetails( ParsedPropertyInfo& prop, CXType fieldType )
 		{
 			prop._containerTree = parseContainerFromType( fieldType );
-			if ( prop._containerTree != nullptr && prop._containerTree->_bIsContainer )
+			if ( prop._containerTree != nullptr && prop._containerTree->_bIsContainer != 0 )
 			{
-				prop._bIsContainer	  = true;
+				prop._bIsContainer	  = SW_TRUE;
 				prop._containerKind	  = prop._containerTree->_containerKind;
 				prop._containerType	  = prop._containerTree->_containerType;
 				prop._elementTypeName = prop._containerTree->_elementTypeName;
@@ -603,7 +603,7 @@ namespace sw
 				ParsedFunctionInfo method;
 				method._name		   = annotationConstants::kCtorLookupName;
 				method._returnTypeName = annotationConstants::kVoidTypeName;
-				method._bConstructor   = true;
+				method._bConstructor   = SW_TRUE;
 				method._category	   = annotationConstants::kConstructorCategory;
 
 				const int32 numArgs = clang_Cursor_getNumArguments( cursor );
@@ -997,7 +997,7 @@ namespace sw
 				sw::parseReflectAnnotation( reflectSearch._spelling, typeInfo );
 			// C++ 순수 가상 함수가 포함된 추상 클래스이면 UCLASS(Abstract)처럼 플래그 설정
 			if ( clang_CXXRecord_isAbstract( cursor ) != 0 )
-				typeInfo._bAbstract = true;
+				typeInfo._bAbstract = SW_TRUE;
 		}
 
 		BLOCK( "Collect Bases / Markers / Fields / Methods" )

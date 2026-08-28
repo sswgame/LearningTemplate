@@ -327,7 +327,7 @@ SW_TEST_CASE( Core_Math, MathUtilFunctionsFull )
 	SW_EXPECT_NEAR_EQUAL( sw::MathUtil::Pi, rad, 1e-4f );
 
 	float32 rndVal = sw::MathUtil::getRandomRange( 1.0f, 5.0f );
-	SW_EXPECT_TRUE( rndVal >= 1.0f && rndVal <= 5.0f );
+	SW_EXPECT_TRUE( 1.0f <= rndVal && rndVal <= 5.0f );
 }
 
 /**

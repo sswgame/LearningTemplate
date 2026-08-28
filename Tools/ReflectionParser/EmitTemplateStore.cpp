@@ -16,13 +16,13 @@ namespace sw
 		/** @brief 식별자 시작 문자인지 판별합니다. */
 		static bool isIdentStart( const utf8 c )
 		{
-			return ( c >= 'A' && c <= 'Z' ) || ( c >= 'a' && c <= 'z' ) || c == '_';
+			return ( 'A' <= c && c <= 'Z' ) || ( 'a' <= c && c <= 'z' ) || c == '_';
 		}
 
 		/** @brief 식별자 중간 문자인지 판별합니다. */
 		static bool isIdentChar( const utf8 c )
 		{
-			return isIdentStart( c ) || ( c >= '0' && c <= '9' );
+			return isIdentStart( c ) || ( '0' <= c && c <= '9' );
 		}
 
 		/** @brief 변수 맵에서 키를 조회하고 없으면 빈 문자열을 반환합니다. */

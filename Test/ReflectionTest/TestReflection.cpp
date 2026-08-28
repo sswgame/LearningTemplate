@@ -120,7 +120,7 @@ static void RegisterEnums( sw::TypeRegistry& registry )
 		sw::EnumInfo info;
 		info._name				 = sw::hashed_string( "DummyType" );
 		info._fullyQualifiedName = sw::hashed_string( "sw::DummyType" );
-		info._bIsBitFlag		 = false;
+		info._bIsBitFlag		 = SW_FALSE;
 		info._mapNameToValue =
 			{
 				{ sw::hashed_string( "None" ), 0},
@@ -140,7 +140,7 @@ static void RegisterEnums( sw::TypeRegistry& registry )
 		sw::EnumInfo info;
 		info._name				 = sw::hashed_string( "DummyBitFlag" );
 		info._fullyQualifiedName = sw::hashed_string( "sw::DummyBitFlag" );
-		info._bIsBitFlag		 = true;
+		info._bIsBitFlag		 = SW_TRUE;
 		info._mapNameToValue =
 			{
 				{	  sw::hashed_string( "None" ), 0},
@@ -290,8 +290,8 @@ SW_TEST_CASE( Reflection_TypeInfo, PropertyMetadataSupport )
 	prop._metadata._tooltip		= "Controls light intensity";
 	prop._metadata._minRange	= 0.0f;
 	prop._metadata._maxRange	= 100.0f;
-	prop._metadata._bHasRange	= true;
-	prop._metadata._bReadOnly	= true;
+	prop._metadata._bHasRange	= SW_TRUE;
+	prop._metadata._bReadOnly	= SW_TRUE;
 
 	SW_EXPECT_EQUAL( sw::string( "Rendering" ), prop._metadata._category );
 	SW_EXPECT_EQUAL( sw::string( "Light Intensity" ), prop._metadata._displayName );
@@ -1723,7 +1723,7 @@ SW_TEST_CASE( Reflection_EnumInfo, EnumInfoFlagsStringConversion )
 {
 	sw::EnumInfo info;
 	info._name			 = sw::hashed_string( "ESampleFlags" );
-	info._bIsBitFlag	 = true;
+	info._bIsBitFlag	 = SW_TRUE;
 	info._mapNameToValue = {
 		{ sw::hashed_string( "None" ), 0},
 		{sw::hashed_string( "FlagA" ), 1},

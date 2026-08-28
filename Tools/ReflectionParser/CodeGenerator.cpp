@@ -285,22 +285,22 @@ namespace sw
 		e.assignQuotedIf( prop._tooltip.empty() == false, "p._metadata._tooltip", prop._tooltip );
 		e.assignQuotedIf( prop._defaultValue.empty() == false, "p._metadata._defaultValue", prop._defaultValue );
 		e.assignQuotedIf( prop._assetType.empty() == false, "p._metadata._assetType", prop._assetType );
-		e.flagIf( prop._bReadOnly, "p._metadata._bReadOnly", "true" );
-		e.flagIf( prop._bXmlAttribute, "p._metadata._bXmlAttribute", "true" );
-		e.flagIf( prop._bAssetPath, "p._metadata._bAssetPath", "true" );
-		e.flagIf( prop._bPolymorphic, "p._metadata._bPolymorphic", "true" );
-		if ( prop._bHasRange )
+		e.flagIf( prop._bReadOnly != 0, "p._metadata._bReadOnly", "SW_TRUE" );
+		e.flagIf( prop._bXmlAttribute != 0, "p._metadata._bXmlAttribute", "SW_TRUE" );
+		e.flagIf( prop._bAssetPath != 0, "p._metadata._bAssetPath", "SW_TRUE" );
+		e.flagIf( prop._bPolymorphic != 0, "p._metadata._bPolymorphic", "SW_TRUE" );
+		if ( prop._bHasRange != 0 )
 		{
 			e.linef( "p._metadata._minRange     = %#f;", prop._minRange );
 			e.linef( "p._metadata._maxRange     = %#f;", prop._maxRange );
-			e.assign( "p._metadata._bHasRange", "true" );
+			e.assign( "p._metadata._bHasRange", "SW_TRUE" );
 		}
 	}
 
 	void CodeGenerator::emitNestedContainerTree( CodeEmit& e, const ParsedTypeInfo& typeInfo,
 												 const ParsedPropertyInfo& prop ) const
 	{
-		if ( prop._containerTree == nullptr || prop._containerTree->_bIsContainer == false )
+		if ( prop._containerTree == nullptr || prop._containerTree->_bIsContainer == SW_FALSE )
 			return;
 
 		const utf8*	 outerKind	  = containerKindExpr( prop._containerKind );
@@ -410,7 +410,7 @@ namespace sw
 		if ( method._listParamTypeName.empty() )
 			e.line( "(void)args;" );
 
-		if ( method._bStatic && method._bConstructor == false )
+		if ( method._bStatic != 0 && method._bConstructor == SW_FALSE )
 		{
 			e.line( "(void)objPtr;" );
 			if ( retType == annotationConstants::kVoidTypeName )
@@ -426,7 +426,7 @@ namespace sw
 		else
 		{
 			e.linef( "auto* self = static_cast<%#*>( objPtr );", typeInfo._fullyQualifiedName );
-			if ( method._bConstructor )
+			if ( method._bConstructor != 0 )
 			{
 				e.linef( "new ( self ) %#(%#);", typeInfo._fullyQualifiedName, callArgs );
 				e.line( "return ::sw::TaskValue{};" );
@@ -453,12 +453,12 @@ namespace sw
 		{
 			const string retType = normalizeTypeName( method._returnTypeName );
 
-			const string lookupName = method._bConstructor ? makeCtorLookupName( method ) : method._name;
+			const string lookupName = ( method._bConstructor != 0 ) ? makeCtorLookupName( method ) : method._name;
 
 			e.line( "{" );
 			e.push();
 			e.line( "::sw::FunctionInfo funcInfo;" );
-			e.assign( "funcInfo._name", CodeEmit::quoted( method._bConstructor ? annotationConstants::kCtorLookupName : method._name ) );
+			e.assign( "funcInfo._name", CodeEmit::quoted( ( method._bConstructor != 0 ) ? annotationConstants::kCtorLookupName : method._name ) );
 			e.linef( "funcInfo._hashName       = %#;", CodeEmit::hs( lookupName ) );
 			e.assign( "funcInfo._returnTypeName", CodeEmit::quoted( retType ) );
 			e.assign( "funcInfo._listParamTypeName", makeQuotedTypeList( method._listParamTypeName ) );
@@ -470,11 +470,11 @@ namespace sw
 			if ( method._netRole != FunctionNetRole::Local )
 				e.assign( "funcInfo._metadata._netRole", toCppExpr( method._netRole ) );
 
-			e.flagIf( method._bReliable, "funcInfo._metadata._bReliable" );
-			e.flagIf( method._bValidate, "funcInfo._metadata._bValidate" );
-			e.flagIf( method._bConstructor, "funcInfo._metadata._bConstructor" );
-			e.flagIf( method._bStatic, "funcInfo._metadata._bStatic" );
-			e.flagIf( method._bConst, "funcInfo._metadata._bConst" );
+			e.flagIf( method._bReliable != 0, "funcInfo._metadata._bReliable", "SW_TRUE" );
+			e.flagIf( method._bValidate != 0, "funcInfo._metadata._bValidate", "SW_TRUE" );
+			e.flagIf( method._bConstructor != 0, "funcInfo._metadata._bConstructor", "SW_TRUE" );
+			e.flagIf( method._bStatic != 0, "funcInfo._metadata._bStatic", "SW_TRUE" );
+			e.flagIf( method._bConst != 0, "funcInfo._metadata._bConst", "SW_TRUE" );
 
 			const string callArgs = makeInvokerCallArgs( method._listParamTypeName );
 
