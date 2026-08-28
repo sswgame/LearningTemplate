@@ -6,6 +6,9 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/String/StringUtil.h"
 
+#include "Editor/Common/Gui/EditorChrome.h"
+#include "Editor/Common/Widgets/EditorWidgets.h"
+
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
@@ -247,7 +250,7 @@ namespace sw::editor
 					{
 						bool* pValPtr = static_cast<bool*>( pInfo->_pData );
 						*pValPtr	  = ( StringUtil::stristr( pVal, "1" ) != nullptr ||
-									  StringUtil::stristr( pVal, "true" ) != nullptr );
+										  StringUtil::stristr( pVal, "true" ) != nullptr );
 						if ( pInfo->_onValueChanged.isBound() )
 							pInfo->_onValueChanged( pInfo );
 						break;
@@ -300,75 +303,73 @@ namespace sw::editor
 			return;
 
 		// 1) 상단 툴바 (검색, 모듈 그룹화, 기본값 리셋, 프리셋 메뉴)
-		ImGui::SetNextItemWidth( 200.0f );
-		ImGui::InputTextWithHint( "##GvSearch", "Filter variables...", _arrSearchFilter, sizeof( _arrSearchFilter ) );
-
-		ImGui::SameLine();
-		if ( ImGui::Button( "Clear" ) )
-			_arrSearchFilter[0] = '\0';
-
-		ImGui::SameLine();
-		bool bGroup = ( _bGroupByModule == SW_TRUE );
-		if ( ImGui::Checkbox( "Group by Module", &bGroup ) )
-			_bGroupByModule = bGroup ? SW_TRUE : SW_FALSE;
-
-		ImGui::SameLine();
-		if ( ImGui::Button( "Reset All" ) )
-			pGvm->resetAllToDefault();
-
-		ImGui::SameLine();
-		if ( ImGui::Button( "Presets..." ) )
-			ImGui::OpenPopup( "##GvPresetsPopup" );
-
-		if ( ImGui::BeginPopup( "##GvPresetsPopup" ) )
+		if ( editor::beginToolbar( "##GvToolbar" ) )
 		{
-			ImGui::Text( "Global Variable Presets" );
-			ImGui::Separator();
+			editor::drawSearchField( "##GvSearch", _arrSearchFilter, sizeof( _arrSearchFilter ),
+									 "Filter variables...", 200.0f, true );
 
-			ImGui::InputTextWithHint( "##PresetNameInput", "Preset Name...", _arrPresetNameBuf,
-									  sizeof( _arrPresetNameBuf ) );
 			ImGui::SameLine();
-			if ( ImGui::Button( "Save" ) && _arrPresetNameBuf[0] != '\0' )
-			{
-				const string presetPath = FileUtil::joinPath(
-					FileUtil::getCurrentPath(),
-					"Resource/game/demo/data/presets/globalvars/" + string( _arrPresetNameBuf ) + ".gvpreset.xml" );
-				savePresetToFile( presetPath, _arrPresetNameBuf );
-				_arrPresetNameBuf[0] = '\0';
-			}
+			bool bGroup = ( _bGroupByModule == SW_TRUE );
+			if ( ImGui::Checkbox( "Group by Module", &bGroup ) )
+				_bGroupByModule = bGroup ? SW_TRUE : SW_FALSE;
 
-			ImGui::Separator();
-			ImGui::TextDisabled( "Saved Presets:" );
+			ImGui::SameLine();
+			if ( ImGui::Button( "Reset All" ) )
+				pGvm->resetAllToDefault();
 
-			const string   presetFolder = FileUtil::joinPath( FileUtil::getCurrentPath(),
-															  "Resource/game/demo/data/presets/globalvars" );
-			vector<string> listPresetFiles;
-			FileUtil::collectFiles( presetFolder, ".gvpreset.xml", listPresetFiles, false, false );
+			ImGui::SameLine();
+			if ( ImGui::Button( "Presets..." ) )
+				ImGui::OpenPopup( "##GvPresetsPopup" );
 
-			if ( listPresetFiles.empty() )
+			if ( ImGui::BeginPopup( "##GvPresetsPopup" ) )
 			{
-				ImGui::TextDisabled( "No presets found." );
-			}
-			else
-			{
-				for ( const string& presetFile : listPresetFiles )
+				ImGui::Text( "Global Variable Presets" );
+				ImGui::Separator();
+
+				ImGui::InputTextWithHint( "##PresetNameInput", "Preset Name...", _arrPresetNameBuf,
+										  sizeof( _arrPresetNameBuf ) );
+				ImGui::SameLine();
+				if ( ImGui::Button( "Save" ) && _arrPresetNameBuf[0] != '\0' )
 				{
-					const string fname		 = FileUtil::getFileNamePart( presetFile );
-					string		 displayName = fname;
-					if ( displayName.size() > 13 && displayName.substr( displayName.size() - 13 ) == ".gvpreset.xml" )
-					{
-						displayName = displayName.substr( 0, displayName.size() - 13 );
-					}
+					const string presetPath = FileUtil::joinPath(
+						FileUtil::getCurrentPath(),
+						"Resource/game/demo/data/presets/globalvars/" + string( _arrPresetNameBuf ) + ".gvpreset.xml" );
+					savePresetToFile( presetPath, _arrPresetNameBuf );
+					_arrPresetNameBuf[0] = '\0';
+				}
 
-					if ( ImGui::MenuItem( displayName.c_str() ) )
+				ImGui::Separator();
+				ImGui::TextDisabled( "Saved Presets:" );
+
+				const string   presetFolder = FileUtil::joinPath( FileUtil::getCurrentPath(),
+																  "Resource/game/demo/data/presets/globalvars" );
+				vector<string> listPresetFiles;
+				FileUtil::collectFiles( presetFolder, ".gvpreset.xml", listPresetFiles, false, false );
+
+				if ( listPresetFiles.empty() )
+				{
+					ImGui::TextDisabled( "No presets found." );
+				}
+				else
+				{
+					for ( const string& presetFile : listPresetFiles )
 					{
-						loadPresetFromFile( presetFile );
+						const string fname		 = FileUtil::getFileNamePart( presetFile );
+						string		 displayName = fname;
+						if ( displayName.size() > 13 && displayName.substr( displayName.size() - 13 ) == ".gvpreset.xml" )
+						{
+							displayName = displayName.substr( 0, displayName.size() - 13 );
+						}
+
+						if ( ImGui::MenuItem( displayName.c_str() ) )
+							loadPresetFromFile( presetFile );
 					}
 				}
-			}
 
-			ImGui::EndPopup();
+				ImGui::EndPopup();
+			}
 		}
+		editor::endToolbar();
 
 		ImGui::Separator();
 
@@ -390,7 +391,7 @@ namespace sw::editor
 
 		std::sort( listFiltered.begin(), listFiltered.end(), compareVariableInfo );
 
-		ImGui::TextDisabled( "%zu / %u variables", listFiltered.size(), totalVarCount );
+		editor::drawCountLabel( static_cast<uint32>( listFiltered.size() ), totalVarCount, "variables" );
 
 		constexpr ImGuiTableFlags kTableFlags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg |
 												ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollY;

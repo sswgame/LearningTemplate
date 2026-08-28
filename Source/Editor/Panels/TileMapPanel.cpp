@@ -3,6 +3,7 @@
 #include "Editor/Panels/TileMapPanel.h"
 
 #include "Editor/Common/Config/EditorData.h"
+#include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
@@ -195,11 +196,7 @@ namespace sw::editor
 			paintCell( gx, gy );
 		}
 
-		if ( _status.empty() == false )
-		{
-			ImGui::Separator();
-			ImGui::TextDisabled( "%s", _status.c_str() );
-		}
+		editor::drawPanelStatus( _status.c_str() );
 	}
 
 	void TileMapPanel::resize( int32 width, int32 height )

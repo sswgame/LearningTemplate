@@ -195,58 +195,25 @@ namespace sw::editor
 
 	void QuickLauncherPopup::drawContent()
 	{
-		float2 viewportPos{};
-		float2 viewportSize{};
-		if ( editor::tryGetMainViewportRect( viewportPos, viewportSize ) == false )
+		editor::EditorSearchOverlayDesc overlayDesc{};
+		overlayDesc._pId		  = "##QuickLauncherOverlay";
+		overlayDesc._pOpen		  = &_bOpen;
+		overlayDesc._size		  = float2{ 620.0f, 400.0f };
+		overlayDesc._borderColor  = float4{ 0.25f, 0.55f, 0.85f, 1.0f };
+		overlayDesc._pFocusOnOpen = &_bJustOpened;
+
+		if ( editor::beginSearchOverlay( overlayDesc ) == false )
 		{
-			viewportPos	 = float2{ 0.0f, 0.0f };
-			viewportSize = float2{ 800.0f, 600.0f };
-		}
-
-		constexpr float32 launcherWidth	 = 620.0f;
-		constexpr float32 launcherHeight = 400.0f;
-
-		editor::EditorOverlayDesc overlayDesc{};
-		overlayDesc._pId		= "##QuickLauncherOverlay";
-		overlayDesc._pOpen		= &_bOpen;
-		overlayDesc._anchorPos	= float2{ viewportPos._x + viewportSize._x * 0.5f,
-										  viewportPos._y + viewportSize._y * 0.28f };
-		overlayDesc._pivot		= float2{ 0.5f, 0.5f };
-		overlayDesc._size		= float2{ launcherWidth, launcherHeight };
-		overlayDesc._rounding	= 8.0f;
-		overlayDesc._borderSize = 1.5f;
-		overlayDesc._flags		= editor::EditorOverlayFlags::NoTitleBar | editor::EditorOverlayFlags::NoResize |
-							 editor::EditorOverlayFlags::NoMove | editor::EditorOverlayFlags::NoSavedSettings;
-
-		ImGui::PushStyleColor( ImGuiCol_WindowBg, ImVec4{ 0.12f, 0.12f, 0.14f, 0.96f } );
-		ImGui::PushStyleColor( ImGuiCol_Border, ImVec4{ 0.25f, 0.55f, 0.85f, 1.0f } );
-
-		if ( editor::beginOverlay( overlayDesc ) == false )
-		{
-			ImGui::PopStyleColor( 2 );
+			editor::endSearchOverlay();
 			close();
 			return;
 		}
 
-		if ( ImGui::IsKeyPressed( ImGuiKey_Escape ) )
-		{
-			close();
-		}
-
-		// 1) Search Input
-		if ( _bJustOpened )
-		{
-			ImGui::SetKeyboardFocusHere();
-			_bJustOpened = false;
-		}
-
-		ImGui::SetNextItemWidth( -1.0f );
 		editor::drawSearchField( "##qlSearch", _arrSearchBuffer, sizeof( _arrSearchBuffer ),
-								 "Type to search assets, scenes, game objects (ESC to cancel)...", 0.0f, true );
+								 "Type to search assets, scenes, game objects (ESC to cancel)...", -1.0f, true );
 
 		const string filter = StringUtil::toLower( _arrSearchBuffer );
 
-		// 2) Filter entries
 		vector<const QuickLauncherItem*> listFiltered;
 		listFiltered.reserve( _listAllItem.size() );
 
@@ -269,95 +236,73 @@ namespace sw::editor
 			}
 		}
 
-		// Keyboard arrow selection & Enter execution
 		const int32 filteredCount = static_cast<int32>( listFiltered.size() );
-		if ( ImGui::IsKeyPressed( ImGuiKey_DownArrow, false ) )
-		{
-			_selectedIndex = std::min( filteredCount - 1, _selectedIndex + 1 );
-		}
-		if ( ImGui::IsKeyPressed( ImGuiKey_UpArrow, false ) )
-		{
-			_selectedIndex = std::max( 0, _selectedIndex - 1 );
-		}
-
-		bool bExecute = false;
-		if ( ImGui::IsKeyPressed( ImGuiKey_Enter, false ) && filteredCount > 0 && 0 <= _selectedIndex &&
-			 _selectedIndex < filteredCount )
-		{
-			bExecute = true;
-		}
+		bool		bExecute	  = editor::updateListSelection( _selectedIndex, filteredCount, false );
 
 		ImGui::Separator();
 
-		// 3) Results List Box
-		ImGui::BeginChild( "##qlResults", ImVec2( 0.0f, 0.0f ), false, ImGuiWindowFlags_AlwaysVerticalScrollbar );
-
-		for ( int32 itemIndex = 0; itemIndex < filteredCount; ++itemIndex )
+		editor::EditorSectionDesc resultsDesc{};
+		resultsDesc._pId  = "##qlResults";
+		resultsDesc._kind = editor::EditorSectionKind::Child;
+		if ( editor::beginSection( resultsDesc ) )
 		{
-			const QuickLauncherItem* pItem	   = listFiltered[static_cast<size_t>( itemIndex )];
-			const bool				 bSelected = ( itemIndex == _selectedIndex );
-
-			ImGui::PushID( itemIndex );
-
-			// Draw item container
-			ImVec2		  cursor	= ImGui::GetCursorScreenPos();
-			ImDrawList*	  pDrawList = ImGui::GetWindowDrawList();
-			const float32 availW	= ImGui::GetContentRegionAvail().x;
-			const float32 itemH		= 34.0f;
-
-			if ( bSelected )
+			for ( int32 itemIndex = 0; itemIndex < filteredCount; ++itemIndex )
 			{
-				pDrawList->AddRectFilled( cursor, ImVec2( cursor.x + availW, cursor.y + itemH ),
-										  IM_COL32( 40, 75, 130, 220 ), 4.0f );
-				pDrawList->AddRect( cursor, ImVec2( cursor.x + availW, cursor.y + itemH ),
-									IM_COL32( 80, 140, 240, 255 ), 4.0f );
+				const QuickLauncherItem* pItem	   = listFiltered[static_cast<size_t>( itemIndex )];
+				const bool				 bSelected = ( itemIndex == _selectedIndex );
+
+				ImGui::PushID( itemIndex );
+
+				ImVec2		  cursor	= ImGui::GetCursorScreenPos();
+				ImDrawList*	  pDrawList = ImGui::GetWindowDrawList();
+				const float32 availW	= ImGui::GetContentRegionAvail().x;
+				const float32 itemH		= 34.0f;
+
+				if ( bSelected )
+				{
+					pDrawList->AddRectFilled( cursor, ImVec2( cursor.x + availW, cursor.y + itemH ),
+											  IM_COL32( 40, 75, 130, 220 ), 4.0f );
+					pDrawList->AddRect( cursor, ImVec2( cursor.x + availW, cursor.y + itemH ),
+										IM_COL32( 80, 140, 240, 255 ), 4.0f );
+				}
+
+				const ImVec4 catCol = getCategoryColor( pItem->_category );
+				utf8		 arrBadge[32];
+				formatstring( arrBadge, sizeof( arrBadge ), "[%s]", pItem->_category.c_str() );
+
+				pDrawList->AddText( ImVec2( cursor.x + 8.0f, cursor.y + 8.0f ), ImGui::ColorConvertFloat4ToU32( catCol ),
+									arrBadge );
+
+				pDrawList->AddText( ImVec2( cursor.x + 95.0f, cursor.y + 8.0f ), IM_COL32( 240, 240, 245, 255 ),
+									pItem->_title.c_str() );
+
+				pDrawList->AddText( ImVec2( cursor.x + 300.0f, cursor.y + 8.0f ), IM_COL32( 150, 155, 170, 200 ),
+									pItem->_detail.c_str() );
+
+				if ( ImGui::InvisibleButton( "##itemBtn", ImVec2( availW, itemH ) ) )
+				{
+					_selectedIndex = itemIndex;
+					bExecute	   = true;
+				}
+
+				if ( bSelected )
+					ImGui::SetScrollHereY( 0.5f );
+
+				ImGui::PopID();
 			}
 
-			// Category Badge
-			const ImVec4 catCol = getCategoryColor( pItem->_category );
-			utf8		 arrBadge[32];
-			formatstring( arrBadge, sizeof( arrBadge ), "[%s]", pItem->_category.c_str() );
-
-			pDrawList->AddText( ImVec2( cursor.x + 8.0f, cursor.y + 8.0f ), ImGui::ColorConvertFloat4ToU32( catCol ),
-								arrBadge );
-
-			// Title
-			pDrawList->AddText( ImVec2( cursor.x + 95.0f, cursor.y + 8.0f ), IM_COL32( 240, 240, 245, 255 ),
-								pItem->_title.c_str() );
-
-			// Detail
-			pDrawList->AddText( ImVec2( cursor.x + 300.0f, cursor.y + 8.0f ), IM_COL32( 150, 155, 170, 200 ),
-								pItem->_detail.c_str() );
-
-			if ( ImGui::InvisibleButton( "##itemBtn", ImVec2( availW, itemH ) ) )
-			{
-				_selectedIndex = itemIndex;
-				bExecute	   = true;
-			}
-
-			if ( bSelected )
-				ImGui::SetScrollHereY( 0.5f );
-
-			ImGui::PopID();
+			if ( filteredCount == 0 )
+				editor::drawEmptyHint( "No matching assets or game objects found." );
 		}
+		editor::endSection();
 
-		if ( filteredCount == 0 )
-		{
-			editor::drawEmptyHint( "No matching assets or game objects found." );
-		}
-
-		ImGui::EndChild();
-
-		editor::endOverlay();
-		ImGui::PopStyleColor( 2 );
+		editor::endSearchOverlay();
 
 		if ( bExecute && filteredCount > 0 && 0 <= _selectedIndex && _selectedIndex < filteredCount )
 		{
 			const QuickLauncherItem* pTarget = listFiltered[static_cast<size_t>( _selectedIndex )];
 			if ( pTarget != nullptr && pTarget->_action.isBound() )
-			{
 				pTarget->_action();
-			}
 			close();
 		}
 	}

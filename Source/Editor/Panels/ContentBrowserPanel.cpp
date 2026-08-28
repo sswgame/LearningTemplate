@@ -404,61 +404,58 @@ namespace sw::editor
 
 	void ContentBrowserPanel::drawToolbar()
 	{
-		editor::drawSearchField( "##cb_search", _arrSearchBuffer, sizeof( _arrSearchBuffer ), "Search Content", 160.0f,
-								 false );
-
-		ImGui::SameLine();
-		static const utf8* kArrFilterNames[] = { "All", "Scenes", "Prefabs", "Textures",
-												 "Shaders", "Materials", "Audio", "Data" };
-		for ( int32 filterIdx = 0; filterIdx < 8; ++filterIdx )
+		if ( editor::beginToolbar( "##cb_toolbar" ) )
 		{
-			const bool bActive = ( static_cast<int32>( _typeFilter ) == filterIdx );
-			if ( bActive )
-				ImGui::PushStyleColor( ImGuiCol_Button, ImVec4{ 0.22f, 0.45f, 0.75f, 1.0f } );
-			else
-				ImGui::PushStyleColor( ImGuiCol_Button, ImVec4{ 0.16f, 0.16f, 0.18f, 0.8f } );
+			editor::drawSearchField( "##cb_search", _arrSearchBuffer, sizeof( _arrSearchBuffer ), "Search Content", 160.0f,
+									 false );
 
-			if ( ImGui::Button( kArrFilterNames[filterIdx] ) )
-				_typeFilter = static_cast<AssetTypeFilter>( filterIdx );
-
-			ImGui::PopStyleColor();
 			ImGui::SameLine();
-		}
+			static const utf8* kArrFilterNames[] = { "All", "Scenes", "Prefabs", "Textures",
+													 "Shaders", "Materials", "Audio", "Data" };
+			for ( int32 filterIdx = 0; filterIdx < 8; ++filterIdx )
+			{
+				const bool bActive = ( static_cast<int32>( _typeFilter ) == filterIdx );
+				if ( editor::drawToggleButton( kArrFilterNames[filterIdx], bActive ) )
+					_typeFilter = static_cast<AssetTypeFilter>( filterIdx );
+				ImGui::SameLine();
+			}
 
-		if ( ImGui::RadioButton( "Tiles", _viewMode == ViewMode::Tiles ) )
-			_viewMode = ViewMode::Tiles;
-		ImGui::SameLine();
-		if ( ImGui::RadioButton( "List", _viewMode == ViewMode::List ) )
-			_viewMode = ViewMode::List;
-
-		if ( _viewMode == ViewMode::Tiles )
-		{
+			if ( ImGui::RadioButton( "Tiles", _viewMode == ViewMode::Tiles ) )
+				_viewMode = ViewMode::Tiles;
 			ImGui::SameLine();
-			ImGui::SetNextItemWidth( 80.0f );
-			ImGui::SliderFloat( "##cb_tile", &_tileSize, 64.0f, 160.0f, "%.0f" );
-		}
+			if ( ImGui::RadioButton( "List", _viewMode == ViewMode::List ) )
+				_viewMode = ViewMode::List;
 
-		ImGui::SameLine();
-		const bool canImport = _selectedFolderAbs.empty() == false;
-		if ( canImport == false )
-			ImGui::BeginDisabled();
-		const bool importClicked = ImGui::Button( "Import..." );
-		const bool importHovered = ImGui::IsItemHovered( ImGuiHoveredFlags_AllowWhenDisabled );
-		if ( canImport == false )
-			ImGui::EndDisabled();
-		if ( importClicked )
-			importFilesFromDialog();
-		if ( importHovered && canImport == false )
-			ImGui::SetTooltip( "Select a destination folder first." );
+			if ( _viewMode == ViewMode::Tiles )
+			{
+				ImGui::SameLine();
+				ImGui::SetNextItemWidth( 80.0f );
+				ImGui::SliderFloat( "##cb_tile", &_tileSize, 64.0f, 160.0f, "%.0f" );
+			}
 
-		ImGui::SameLine();
-		if ( ImGui::Button( "Refresh" ) )
-		{
-			_listEntry.clear();
-			_selectedAssetAbs.clear();
-			refreshRoots();
-			refreshCurrentFolder();
+			ImGui::SameLine();
+			const bool canImport = _selectedFolderAbs.empty() == false;
+			if ( canImport == false )
+				ImGui::BeginDisabled();
+			const bool importClicked = ImGui::Button( "Import..." );
+			const bool importHovered = ImGui::IsItemHovered( ImGuiHoveredFlags_AllowWhenDisabled );
+			if ( canImport == false )
+				ImGui::EndDisabled();
+			if ( importClicked )
+				importFilesFromDialog();
+			if ( importHovered && canImport == false )
+				ImGui::SetTooltip( "Select a destination folder first." );
+
+			ImGui::SameLine();
+			if ( ImGui::Button( "Refresh" ) )
+			{
+				_listEntry.clear();
+				_selectedAssetAbs.clear();
+				refreshRoots();
+				refreshCurrentFolder();
+			}
 		}
+		editor::endToolbar();
 	}
 
 	void ContentBrowserPanel::drawSourcesSection()
@@ -608,7 +605,7 @@ namespace sw::editor
 
 		editor::endSection();
 
-		ImGui::Text( "%d items", static_cast<int32>( listVisible.size() ) );
+		editor::drawCountLabel( static_cast<uint32>( listVisible.size() ), 0, "items" );
 		if ( _selectedAssetAbs.empty() == false )
 		{
 			ImGui::SameLine();
@@ -738,13 +735,8 @@ namespace sw::editor
 					drawAssetContextMenu( entry );
 					if ( ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked( ImGuiMouseButton_Left ) )
 						openAsset( entry );
-					if ( entry._bIsDirectory == false && ImGui::BeginDragDropSource( ImGuiDragDropFlags_SourceAllowNullID ) )
-					{
-						ImGui::SetDragDropPayload( "SW_ASSET_PATH", entry._relativePath.c_str(),
-												   entry._relativePath.size() + 1 );
-						ImGui::TextUnformatted( entry._relativePath.c_str() );
-						ImGui::EndDragDropSource();
-					}
+					if ( entry._bIsDirectory == false )
+						editor::drawAssetDragSource( entry._relativePath.c_str(), true );
 
 					ImDrawList*		  pDrawList = ImGui::GetWindowDrawList();
 					constexpr float32 inset		= 6.0f;
@@ -794,13 +786,8 @@ namespace sw::editor
 							openAsset( entry );
 					}
 					drawAssetContextMenu( entry );
-					if ( entry._bIsDirectory == false && ImGui::BeginDragDropSource() )
-					{
-						ImGui::SetDragDropPayload( "SW_ASSET_PATH", entry._relativePath.c_str(),
-												   entry._relativePath.size() + 1 );
-						ImGui::TextUnformatted( entry._relativePath.c_str() );
-						ImGui::EndDragDropSource();
-					}
+					if ( entry._bIsDirectory == false )
+						editor::drawAssetDragSource( entry._relativePath.c_str() );
 
 					ImGui::TableSetColumnIndex( 1 );
 					ImGui::TextColored( colorForExtension( entry._bIsDirectory ? string{} : entry._extension ),

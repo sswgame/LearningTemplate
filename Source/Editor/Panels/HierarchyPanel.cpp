@@ -188,18 +188,14 @@ namespace sw::editor
 				if ( pPayload != nullptr )
 					handleHierarchyReparentDrop( pObj, pPayload, pManager );
 
-				const ImGuiPayload* pAssetPayload = ImGui::AcceptDragDropPayload( "SW_ASSET_PATH" );
-				if ( pAssetPayload != nullptr )
+				string droppedAssetPath;
+				if ( editor::tryAcceptAssetPayload( droppedAssetPath ) )
 				{
-					const utf8* pPath = static_cast<const utf8*>( pAssetPayload->Data );
-					if ( pPath != nullptr )
+					GameObject* pSpawned = EditorUtil::spawnPrefabFromAssetPath( pManager, droppedAssetPath.c_str(), pObj );
+					if ( pSpawned != nullptr )
 					{
-						GameObject* pSpawned = EditorUtil::spawnPrefabFromAssetPath( pManager, pPath, pObj );
-						if ( pSpawned != nullptr )
-						{
-							EditorTransaction::recordCreation( GameObjectPtr{ pSpawned }, "Spawn Prefab" );
-							EditorContext::get()->getWorkspace().selectGameObject( GameObjectPtr{ pSpawned }, SelectionMode::Replace );
-						}
+						EditorTransaction::recordCreation( GameObjectPtr{ pSpawned }, "Spawn Prefab" );
+						EditorContext::get()->getWorkspace().selectGameObject( GameObjectPtr{ pSpawned }, SelectionMode::Replace );
 					}
 				}
 				ImGui::EndDragDropTarget();
@@ -409,7 +405,7 @@ namespace sw::editor
 
 			EditorWorkspace& ws		   = EditorContext::get()->getWorkspace();
 			const bool		 bSelected = ( ws.getSelectedObjectId() == pObj->getObjectId() &&
-									   ws.getSelectedComponentId() == pSceneComp->getComponentId() );
+										   ws.getSelectedComponentId() == pSceneComp->getComponentId() );
 
 			const utf8* pCompName = pSceneComp->getComponentName().empty() == false
 									  ? pSceneComp->getComponentName().c_str()
@@ -600,7 +596,7 @@ namespace sw::editor
 
 					EditorWorkspace& ws			   = EditorContext::get()->getWorkspace();
 					const bool		 bCompSelected = ( ws.getSelectedObjectId() == pObj->getObjectId() &&
-												   ws.getSelectedComponentId() == pComp->getComponentId() );
+													   ws.getSelectedComponentId() == pComp->getComponentId() );
 
 					const utf8* pCompName = pComp->getComponentName().empty() == false
 											  ? pComp->getComponentName().c_str()
@@ -645,12 +641,16 @@ namespace sw::editor
 		const vector<GameObject*>& listObjects = pManager->getAllGameObjects();
 
 		// 상단 툴바: 생성 버튼 + 검색창
-		if ( ImGui::Button( "+ Create" ) )
-			createGameObjectWithRoot( pManager, nullptr );
+		if ( editor::beginToolbar( "##HierarchyToolbar" ) )
+		{
+			if ( ImGui::Button( "+ Create" ) )
+				createGameObjectWithRoot( pManager, nullptr );
 
-		ImGui::SameLine();
-		editor::drawSearchField( "##HierarchyFilter", _arrFilterBuffer, sizeof( _arrFilterBuffer ),
-								 "Search (t:Mesh, tag:Player)...", 0.0f, false );
+			ImGui::SameLine();
+			editor::drawSearchField( "##HierarchyFilter", _arrFilterBuffer, sizeof( _arrFilterBuffer ),
+									 "Search (t:Mesh, tag:Player)...", 0.0f, false );
+		}
+		editor::endToolbar();
 
 		ImGui::Separator();
 
@@ -686,19 +686,15 @@ namespace sw::editor
 					}
 				}
 
-				const ImGuiPayload* pAssetPayload = ImGui::AcceptDragDropPayload( "SW_ASSET_PATH" );
-				if ( pAssetPayload != nullptr )
+				string droppedAssetPath;
+				if ( editor::tryAcceptAssetPayload( droppedAssetPath ) )
 				{
-					const utf8* pPath = static_cast<const utf8*>( pAssetPayload->Data );
-					if ( pPath != nullptr )
+					GameObject* pSpawned = EditorUtil::spawnPrefabFromAssetPath( pManager, droppedAssetPath.c_str(), nullptr );
+					if ( pSpawned != nullptr )
 					{
-						GameObject* pSpawned = EditorUtil::spawnPrefabFromAssetPath( pManager, pPath, nullptr );
-						if ( pSpawned != nullptr )
-						{
-							EditorTransaction::recordCreation( GameObjectPtr{ pSpawned }, "Spawn Prefab" );
-							EditorContext::get()->getWorkspace().selectGameObject( GameObjectPtr{ pSpawned },
-																				   SelectionMode::Replace );
-						}
+						EditorTransaction::recordCreation( GameObjectPtr{ pSpawned }, "Spawn Prefab" );
+						EditorContext::get()->getWorkspace().selectGameObject( GameObjectPtr{ pSpawned },
+																			   SelectionMode::Replace );
 					}
 				}
 				ImGui::EndDragDropTarget();

@@ -5,15 +5,11 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Editor/Common/EditorPlaySession.h"
-#include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Gui/EditorChrome.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
-#include "Editor/Common/Workspace/SelectionManager.h"
 
-#include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 
@@ -52,16 +48,13 @@ namespace sw::editor
 
 		_viewportClient.update( dt, bFocused, bHovered );
 
-		editor::EditorSectionDesc toolbarDesc{};
-		toolbarDesc._pId  = "##GameViewToolbar";
-		toolbarDesc._kind = editor::EditorSectionKind::Toolbar;
-		if ( editor::beginSection( toolbarDesc ) )
+		if ( editor::beginToolbar( "##GameViewToolbar" ) )
 		{
 			drawTransportControls();
 			editor::drawToolbarSeparator();
 			_viewportClient.drawViewportToolbar( ImGui::GetContentRegionAvail().x );
 		}
-		editor::endSection();
+		editor::endToolbar();
 
 		const ImVec2 size = ImGui::GetContentRegionAvail();
 		if ( size.x > 1.0f && size.y > 1.0f )
@@ -78,32 +71,6 @@ namespace sw::editor
 
 		const ImVec2 imagePos = ImGui::GetCursorScreenPos();
 		_viewportClient.draw( pEditorContext->getGameView()._pTextureId, float2{ size.x, size.y } );
-
-		if ( ImGui::BeginDragDropTarget() )
-		{
-			if ( const ImGuiPayload* pPayload = ImGui::AcceptDragDropPayload( "SW_CONTENT_BROWSER_ASSET" ) )
-			{
-				const utf8* pPath = static_cast<const utf8*>( pPayload->Data );
-				if ( pPath != nullptr )
-				{
-					SceneManager* pSceneManager = editor::getService<SceneManager>();
-					if ( pSceneManager != nullptr && pSceneManager->getActiveScene() != nullptr )
-					{
-						GameObjectManager* pManager = pSceneManager->getActiveScene()->getObjectManager();
-						if ( pManager != nullptr )
-						{
-							GameObject* pSpawned = EditorUtil::spawnPrefabFromAssetPath( pManager, pPath );
-							if ( pSpawned != nullptr )
-							{
-								EditorTransaction::recordCreation( GameObjectPtr{ pSpawned }, "Spawn Prefab" );
-								EditorContext::get()->getWorkspace().selectGameObject( GameObjectPtr{ pSpawned }, SelectionMode::Replace );
-							}
-						}
-					}
-				}
-			}
-			ImGui::EndDragDropTarget();
-		}
 
 		if ( size.x > 1.0f && size.y > 1.0f )
 		{

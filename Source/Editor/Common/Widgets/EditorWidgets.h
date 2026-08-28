@@ -35,7 +35,13 @@ namespace sw::editor
 		inline constexpr Color4 kHeader{ 0.22f, 0.35f, 0.48f, 1.0f };
 		inline constexpr Color4 kOk{ 0.20f, 0.65f, 0.30f, 1.0f };
 		inline constexpr Color4 kWarn{ 0.85f, 0.65f, 0.15f, 1.0f };
+		inline constexpr Color4 kError{ 0.70f, 0.20f, 0.20f, 1.0f };
+		inline constexpr Color4 kToggleActive{ 0.22f, 0.45f, 0.75f, 1.0f };
+		inline constexpr Color4 kToggleInactive{ 0.20f, 0.20f, 0.20f, 0.60f };
 	} // namespace style
+
+	/** @brief 콘텐츠 브라우저 → 뷰포트/인스펙터 애셋 드래그 페이로드 */
+	inline constexpr const utf8* kAssetPathPayload = "SW_ASSET_PATH";
 
 	// ------------------------------------------------------------------------------
 	// 2) 공유 위젯 클래스 — Vec3 / 컴포넌트 카드 / 헤더 / 칩 / 프로퍼티 행
@@ -67,8 +73,21 @@ namespace sw::editor
 		/** @brief 툴바 컨트롤 사이 `|` 구분. SameLine 뒤에 이어서 그립니다. */
 		static void drawToolbarSeparator();
 
+		/**
+		 * @brief 활성/비활성 색이 바뀌는 토글·필터 칩 버튼. 클릭되면 true.
+		 */
+		static bool drawToggleButton( const utf8* pLabel, bool bActive, const Color4& activeColor = style::kToggleActive );
+
 		/** @brief 비활성 안내 문구. */
 		static void drawEmptyHint( const utf8* pText );
+
+		/**
+		 * @brief 건수 라벨. total이 0이면 "12 items", 아니면 "12 / 40 lines".
+		 */
+		static void drawCountLabel( uint32 visible, uint32 total, const utf8* pUnit = nullptr );
+
+		/** @brief 비어 있지 않으면 Separator + 비활성 상태 문구. */
+		static void drawPanelStatus( const utf8* pText );
 
 		/**
 		 * @brief C 버퍼 검색 필드. width 0이면 가용 너비, 음수면 한 줄 전체.
@@ -122,6 +141,26 @@ namespace sw::editor
 		 * @brief pushInspectorStyle()로 적용한 스타일을 스택에서 팝하여 원래대로 되돌립니다.
 		 */
 		static void popInspectorStyle();
+
+		/**
+		 * @brief 현재 아이템을 애셋 경로 드래그 소스로 등록합니다.
+		 */
+		static void drawAssetDragSource( const utf8* pRelativePath, bool bAllowNullId = false );
+
+		/**
+		 * @brief BeginDragDropTarget 안에서 애셋 경로 페이로드를 받습니다.
+		 */
+		static bool tryAcceptAssetPayload( string& outPath );
+
+		/**
+		 * @brief 현재 아이템을 애셋 드롭 타깃으로 만들고 경로를 받습니다.
+		 */
+		static bool acceptAssetDrop( string& outPath );
+
+		/**
+		 * @brief 검색 결과 목록에서 Up/Down으로 선택을 움직이고 Enter면 true.
+		 */
+		static bool updateListSelection( int32& selectedIndex, int32 itemCount, bool bRepeat = true );
 	};
 
 	// ------------------------------------------------------------------------------
@@ -138,7 +177,16 @@ namespace sw::editor
 	inline void endComponentCard() { EditorWidgets::endComponentCard(); }
 	inline void drawSectionHeader( const utf8* pTitle, const utf8* pSubtitle = nullptr ) { EditorWidgets::drawSectionHeader( pTitle, pSubtitle ); }
 	inline void drawToolbarSeparator() { EditorWidgets::drawToolbarSeparator(); }
+	inline bool drawToggleButton( const utf8* pLabel, bool bActive, const Color4& activeColor = style::kToggleActive )
+	{
+		return EditorWidgets::drawToggleButton( pLabel, bActive, activeColor );
+	}
 	inline void drawEmptyHint( const utf8* pText ) { EditorWidgets::drawEmptyHint( pText ); }
+	inline void drawCountLabel( uint32 visible, uint32 total, const utf8* pUnit = nullptr )
+	{
+		EditorWidgets::drawCountLabel( visible, total, pUnit );
+	}
+	inline void drawPanelStatus( const utf8* pText ) { EditorWidgets::drawPanelStatus( pText ); }
 	inline bool drawSearchField( const utf8* pId, utf8* pBuffer, uint32 bufferBytes, const utf8* pHint = "Search...", float32 width = 0.0f, bool bShowClear = true )
 	{
 		return EditorWidgets::drawSearchField( pId, pBuffer, bufferBytes, pHint, width, bShowClear );
@@ -158,4 +206,14 @@ namespace sw::editor
 	inline bool drawColorEdit( const utf8* pLabel, Color4& color, float32 labelWidth = 120.0f ) { return EditorWidgets::drawColorEdit( pLabel, color, labelWidth ); }
 	inline void pushInspectorStyle() { EditorWidgets::pushInspectorStyle(); }
 	inline void popInspectorStyle() { EditorWidgets::popInspectorStyle(); }
+	inline void drawAssetDragSource( const utf8* pRelativePath, bool bAllowNullId = false )
+	{
+		EditorWidgets::drawAssetDragSource( pRelativePath, bAllowNullId );
+	}
+	inline bool tryAcceptAssetPayload( string& outPath ) { return EditorWidgets::tryAcceptAssetPayload( outPath ); }
+	inline bool acceptAssetDrop( string& outPath ) { return EditorWidgets::acceptAssetDrop( outPath ); }
+	inline bool updateListSelection( int32& selectedIndex, int32 itemCount, bool bRepeat = true )
+	{
+		return EditorWidgets::updateListSelection( selectedIndex, itemCount, bRepeat );
+	}
 } // namespace sw::editor

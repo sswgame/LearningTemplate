@@ -330,12 +330,9 @@ namespace sw::editor
 
 					if ( ImGui::BeginDragDropTarget() )
 					{
-						if ( const ImGuiPayload* pPayload = ImGui::AcceptDragDropPayload( "SW_ASSET_PATH" ) )
-						{
-							const utf8* pDropped = static_cast<const utf8*>( pPayload->Data );
-							if ( pDropped != nullptr )
-								*pPtr = pDropped;
-						}
+						string droppedPath;
+						if ( editor::tryAcceptAssetPayload( droppedPath ) )
+							*pPtr = droppedPath;
 						ImGui::EndDragDropTarget();
 					}
 
@@ -474,12 +471,9 @@ namespace sw::editor
 
 					if ( ImGui::BeginDragDropTarget() )
 					{
-						if ( const ImGuiPayload* pPayload = ImGui::AcceptDragDropPayload( "SW_ASSET_PATH" ) )
-						{
-							const utf8* pDropped = static_cast<const utf8*>( pPayload->Data );
-							if ( pDropped != nullptr )
-								*pPtr = hashed_string( pDropped );
-						}
+						string droppedPath;
+						if ( editor::tryAcceptAssetPayload( droppedPath ) )
+							*pPtr = hashed_string( droppedPath.c_str() );
 						ImGui::EndDragDropTarget();
 					}
 

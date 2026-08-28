@@ -166,48 +166,19 @@ namespace sw::editor
 
 	void CommandPalettePopup::drawContent()
 	{
-		float2 viewportPos{};
-		float2 viewportSize{};
-		if ( editor::tryGetMainViewportRect( viewportPos, viewportSize ) == false )
+		editor::EditorSearchOverlayDesc overlayDesc{};
+		overlayDesc._pId		  = "##CommandPalette";
+		overlayDesc._pOpen		  = &_bOpen;
+		overlayDesc._size		  = float2{ 580.0f, 360.0f };
+		overlayDesc._pFocusOnOpen = &_bJustOpened;
+
+		if ( editor::beginSearchOverlay( overlayDesc ) )
 		{
-			viewportPos	 = float2{ 0.0f, 0.0f };
-			viewportSize = float2{ 800.0f, 600.0f };
-		}
-
-		constexpr float32 paletteWidth	= 580.0f;
-		constexpr float32 paletteHeight = 360.0f;
-
-		editor::EditorOverlayDesc overlayDesc{};
-		overlayDesc._pId		= "##CommandPalette";
-		overlayDesc._pOpen		= &_bOpen;
-		overlayDesc._anchorPos	= float2{ viewportPos._x + viewportSize._x * 0.5f, viewportPos._y + viewportSize._y * 0.28f };
-		overlayDesc._pivot		= float2{ 0.5f, 0.5f };
-		overlayDesc._size		= float2{ paletteWidth, paletteHeight };
-		overlayDesc._rounding	= 8.0f;
-		overlayDesc._borderSize = 1.5f;
-		overlayDesc._flags		= editor::EditorOverlayFlags::NoTitleBar | editor::EditorOverlayFlags::NoResize |
-							 editor::EditorOverlayFlags::NoMove | editor::EditorOverlayFlags::NoSavedSettings;
-
-		ImGui::PushStyleColor( ImGuiCol_WindowBg, ImVec4{ 0.12f, 0.12f, 0.14f, 0.96f } );
-		ImGui::PushStyleColor( ImGuiCol_Border, ImVec4{ 0.25f, 0.45f, 0.75f, 1.0f } );
-
-		if ( editor::beginOverlay( overlayDesc ) )
-		{
-			if ( ImGui::IsKeyPressed( ImGuiKey_Escape ) )
-				_bOpen = false;
-
-			if ( _bJustOpened )
-			{
-				ImGui::SetKeyboardFocusHere();
-				_bJustOpened = false;
-			}
-
 			editor::drawSearchField( "##PaletteSearch", _arrSearchBuffer, sizeof( _arrSearchBuffer ),
 									 "Type a command or search objects... (Esc to close)", -1.0f, false );
 
 			ImGui::Separator();
 
-			// 필터링된 커맨드 목록 수집
 			vector<const CommandPaletteEntry*> listFiltered;
 			const string_view				   pattern{ _arrSearchBuffer };
 			for ( const CommandPaletteEntry& entry : _listAllCommand )
@@ -219,20 +190,8 @@ namespace sw::editor
 				}
 			}
 
-			if ( ImGui::IsKeyPressed( ImGuiKey_DownArrow ) )
-			{
-				++_selectedIndex;
-				if ( _selectedIndex >= static_cast<int32>( listFiltered.size() ) )
-					_selectedIndex = static_cast<int32>( listFiltered.size() ) - 1;
-			}
-			if ( ImGui::IsKeyPressed( ImGuiKey_UpArrow ) )
-			{
-				--_selectedIndex;
-				if ( _selectedIndex < 0 )
-					_selectedIndex = 0;
-			}
-
-			const bool bExecuteSelected = ImGui::IsKeyPressed( ImGuiKey_Enter );
+			const bool bExecuteSelected =
+				editor::updateListSelection( _selectedIndex, static_cast<int32>( listFiltered.size() ) );
 
 			editor::EditorSectionDesc resultsDesc{};
 			resultsDesc._pId   = "##PaletteResults";
@@ -263,7 +222,7 @@ namespace sw::editor
 					if ( entry._detail.empty() == false )
 					{
 						ImGui::SameLine();
-						ImGui::SetCursorPosX( paletteWidth - 180.0f );
+						ImGui::SetCursorPosX( overlayDesc._size._x - 180.0f );
 						ImGui::TextDisabled( "%s", entry._detail.c_str() );
 					}
 
@@ -272,8 +231,6 @@ namespace sw::editor
 			}
 			editor::endSection();
 		}
-		editor::endOverlay();
-
-		ImGui::PopStyleColor( 2 );
+		editor::endSearchOverlay();
 	}
 } // namespace sw::editor

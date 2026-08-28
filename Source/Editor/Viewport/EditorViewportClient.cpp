@@ -8,6 +8,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Editor/Common/EditorUtil.h"
+#include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
@@ -471,7 +472,7 @@ namespace sw::editor
 
 		const float32 speed = _toolbarSettings._cameraSpeed * ( io.KeyShift ? 3.0f : 1.0f ) * deltaTime;
 		_cameraPos			= float3{ _cameraPos._x + moveDir._x * speed, _cameraPos._y + moveDir._y * speed,
-							  _cameraPos._z + moveDir._z * speed };
+									  _cameraPos._z + moveDir._z * speed };
 	}
 
 	void EditorViewportClient::processOrbitInput()
@@ -575,15 +576,9 @@ namespace sw::editor
 
 			if ( ImGui::BeginDragDropTarget() )
 			{
-				const ImGuiPayload* pPayload = ImGui::AcceptDragDropPayload( "SW_ASSET_PATH" );
-				if ( pPayload != nullptr )
-				{
-					const utf8* pAssetPath = static_cast<const utf8*>( pPayload->Data );
-					if ( pAssetPath != nullptr )
-					{
-						handleViewportAssetDrop( pAssetPath, canvasPos, canvasSize, arrView, arrProj );
-					}
-				}
+				string droppedAssetPath;
+				if ( editor::tryAcceptAssetPayload( droppedAssetPath ) )
+					handleViewportAssetDrop( droppedAssetPath.c_str(), canvasPos, canvasSize, arrView, arrProj );
 				ImGui::EndDragDropTarget();
 			}
 		}

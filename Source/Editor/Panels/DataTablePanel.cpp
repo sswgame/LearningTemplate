@@ -8,6 +8,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
 
+#include "Editor/Common/Gui/EditorChrome.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 
@@ -78,43 +79,46 @@ namespace sw::editor
 
 	void DataTablePanel::drawLocalizationTab()
 	{
-		// 툴바: 검색, 새로고침, 저장, 새 키 추가
-		editor::drawSearchField( "##locFilter", _arrLocFilter, sizeof( _arrLocFilter ), "Search keys or translations...", 240.0f, false );
-		ImGui::SameLine();
-
-		if ( ImGui::Button( "Save Localization" ) )
-			saveLocalization();
-
-		ImGui::SameLine();
-		if ( ImGui::Button( "Reload" ) )
-			reloadLocalization();
-
-		ImGui::SameLine();
-		ImGui::SetNextItemWidth( 160.0f );
-		ImGui::InputTextWithHint( "##newKey", "New string key...", _arrNewKeyBuffer, sizeof( _arrNewKeyBuffer ) );
-		ImGui::SameLine();
-		if ( ImGui::Button( "Add Key" ) && _arrNewKeyBuffer[0] != '\0' )
+		if ( editor::beginToolbar( "##locToolbar" ) )
 		{
-			const string newKey{ _arrNewKeyBuffer };
-			bool		 bExists{ false };
-			for ( const LocRecord& rec : _listLocRecord )
+			editor::drawSearchField( "##locFilter", _arrLocFilter, sizeof( _arrLocFilter ), "Search keys or translations...", 240.0f, false );
+			ImGui::SameLine();
+
+			if ( ImGui::Button( "Save Localization" ) )
+				saveLocalization();
+
+			ImGui::SameLine();
+			if ( ImGui::Button( "Reload" ) )
+				reloadLocalization();
+
+			ImGui::SameLine();
+			ImGui::SetNextItemWidth( 160.0f );
+			ImGui::InputTextWithHint( "##newKey", "New string key...", _arrNewKeyBuffer, sizeof( _arrNewKeyBuffer ) );
+			ImGui::SameLine();
+			if ( ImGui::Button( "Add Key" ) && _arrNewKeyBuffer[0] != '\0' )
 			{
-				if ( rec._key == newKey )
+				const string newKey{ _arrNewKeyBuffer };
+				bool		 bExists{ false };
+				for ( const LocRecord& rec : _listLocRecord )
 				{
-					bExists = true;
-					break;
+					if ( rec._key == newKey )
+					{
+						bExists = true;
+						break;
+					}
+				}
+
+				if ( bExists == false )
+				{
+					LocRecord newRec{};
+					newRec._key		  = newKey;
+					newRec._bModified = true;
+					_listLocRecord.push_back( std::move( newRec ) );
+					_arrNewKeyBuffer[0] = '\0';
 				}
 			}
-
-			if ( bExists == false )
-			{
-				LocRecord newRec{};
-				newRec._key		  = newKey;
-				newRec._bModified = true;
-				_listLocRecord.push_back( std::move( newRec ) );
-				_arrNewKeyBuffer[0] = '\0';
-			}
 		}
+		editor::endToolbar();
 
 		ImGui::Separator();
 
@@ -210,24 +214,30 @@ namespace sw::editor
 	void DataTablePanel::drawGameDataTab()
 	{
 		ImGui::BeginGroup();
-		// Left: File list
 		ImGui::Text( "XML Data Files" );
 		ImGui::Separator();
 		if ( ImGui::Button( "Refresh Files" ) )
 			reloadGameDataFiles();
 
-		ImGui::BeginChild( "##DataFileList", ImVec2( 200.0f, 0.0f ), true );
-		for ( size_t fileIndex = 0; fileIndex < _listGameDataFile.size(); ++fileIndex )
+		editor::EditorSectionDesc listDesc{};
+		listDesc._pId		= "##DataFileList";
+		listDesc._kind		= editor::EditorSectionKind::Child;
+		listDesc._childSize = float2{ 200.0f, 0.0f };
+		listDesc._flags		= editor::EditorSectionFlags::Border | editor::EditorSectionFlags::ResizeX;
+		if ( editor::beginSection( listDesc ) )
 		{
-			const GameDataFileEntry& entry	   = _listGameDataFile[fileIndex];
-			const bool				 bSelected = ( _selectedGameDataIndex == static_cast<int32>( fileIndex ) );
-			if ( ImGui::Selectable( entry._fileName.c_str(), bSelected ) )
+			for ( size_t fileIndex = 0; fileIndex < _listGameDataFile.size(); ++fileIndex )
 			{
-				_selectedGameDataIndex = static_cast<int32>( fileIndex );
-				loadSelectedGameDataFile();
+				const GameDataFileEntry& entry	   = _listGameDataFile[fileIndex];
+				const bool				 bSelected = ( _selectedGameDataIndex == static_cast<int32>( fileIndex ) );
+				if ( ImGui::Selectable( entry._fileName.c_str(), bSelected ) )
+				{
+					_selectedGameDataIndex = static_cast<int32>( fileIndex );
+					loadSelectedGameDataFile();
+				}
 			}
 		}
-		ImGui::EndChild();
+		editor::endSection();
 		ImGui::EndGroup();
 
 		ImGui::SameLine();

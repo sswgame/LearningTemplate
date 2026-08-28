@@ -20,15 +20,8 @@ namespace sw::editor
 								  const float32* arrValues, const utf8* const* arrLabels, int32 valueCount,
 								  float32 comboWidth, int32 fallbackIndex )
 		{
-			const bool bActive = bEnabled;
-			if ( bActive )
-				ImGui::PushStyleColor( ImGuiCol_Button, ImVec4{ 0.25f, 0.45f, 0.75f, 1.0f } );
-
-			if ( ImGui::Button( pButtonLabel ) )
+			if ( editor::drawToggleButton( pButtonLabel, bEnabled ) )
 				bEnabled = ( bEnabled == false );
-
-			if ( bActive )
-				ImGui::PopStyleColor();
 
 			ImGui::SameLine();
 			ImGui::SetNextItemWidth( comboWidth );
@@ -70,14 +63,8 @@ namespace sw::editor
 
 		{
 			const bool b2D = settings._bIs2DMode;
-			if ( b2D )
-				ImGui::PushStyleColor( ImGuiCol_Button, ImVec4{ 0.22f, 0.45f, 0.75f, 1.0f } );
-
-			if ( ImGui::Button( b2D ? "2D Mode" : "3D Mode" ) )
+			if ( editor::drawToggleButton( b2D ? "2D Mode" : "3D Mode", b2D ) )
 				settings._bIs2DMode = ( settings._bIs2DMode == false );
-
-			if ( b2D )
-				ImGui::PopStyleColor();
 
 			if ( ImGui::IsItemHovered() )
 				ImGui::SetTooltip( "Toggle 2D (XY Plane Grid) / 3D (XZ Plane Grid) View Mode" );

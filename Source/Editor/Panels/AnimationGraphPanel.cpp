@@ -4,6 +4,8 @@
 
 #include "Editor/Common/Config/EditorConfig.h"
 #include "Editor/Common/EditorUtil.h"
+#include "Editor/Common/Gui/EditorChrome.h"
+#include "Editor/Common/Widgets/EditorWidgets.h"
 
 #include "Engine/Serialization/Format/JsonSerializer.h"
 
@@ -61,36 +63,40 @@ namespace sw::editor
 		if ( _bLoaded == false )
 			loadGraphData();
 
-		if ( ImGui::Button( "Add Idle" ) )
-			addNamedNode( "Idle" );
-		ImGui::SameLine();
-		if ( ImGui::Button( "Add Walk" ) )
-			addNamedNode( "Walk" );
-		ImGui::SameLine();
-		if ( ImGui::Button( "Add Attack" ) )
-			addNamedNode( "Attack" );
-		ImGui::SameLine();
-		if ( ImGui::Button( "Link Selected" ) && _listNode.size() >= 2 )
+		if ( editor::beginToolbar( "##AnimGraphToolbar" ) )
 		{
-			// 선택돼 보이는 앞 두 노드를 연결합니다: 목록의 마지막 두 개를 간단한 작성 보조로 씁니다.
-			GraphLink l{};
-			l._id		= nextLinkId();
-			l._fromNode = _listNode[_listNode.size() - 2]._id;
-			l._toNode	= _listNode[_listNode.size() - 1]._id;
-			_listLink.push_back( l );
-		}
-		ImGui::SameLine();
-		if ( ImGui::Button( "Load" ) )
-		{
-			_bLoaded = false;
-			loadGraphData();
-		}
-		ImGui::SameLine();
-		if ( ImGui::Button( "Save" ) )
-			saveGraphData();
+			if ( ImGui::Button( "Add Idle" ) )
+				addNamedNode( "Idle" );
+			ImGui::SameLine();
+			if ( ImGui::Button( "Add Walk" ) )
+				addNamedNode( "Walk" );
+			ImGui::SameLine();
+			if ( ImGui::Button( "Add Attack" ) )
+				addNamedNode( "Attack" );
+			ImGui::SameLine();
+			if ( ImGui::Button( "Link Selected" ) && _listNode.size() >= 2 )
+			{
+				GraphLink l{};
+				l._id		= nextLinkId();
+				l._fromNode = _listNode[_listNode.size() - 2]._id;
+				l._toNode	= _listNode[_listNode.size() - 1]._id;
+				_listLink.push_back( l );
+			}
+			ImGui::SameLine();
+			if ( ImGui::Button( "Load" ) )
+			{
+				_bLoaded = false;
+				loadGraphData();
+			}
+			ImGui::SameLine();
+			if ( ImGui::Button( "Save" ) )
+				saveGraphData();
 
-		ImGui::TextDisabled( "Nodes: %zu  Links: %zu  (%s)", _listNode.size(), _listLink.size(),
-							 EditorConfig::getActive()._animationGraphDataFile.c_str() );
+			ImGui::SameLine();
+			ImGui::TextDisabled( "Nodes: %zu  Links: %zu  (%s)", _listNode.size(), _listLink.size(),
+								 EditorConfig::getActive()._animationGraphDataFile.c_str() );
+		}
+		editor::endToolbar();
 
 		if ( _nodeGraph.beginCanvas( "AnimationGraphCanvas",
 									 EditorConfig::getActive()._animationGraphSettingsFile.c_str() ) == false )

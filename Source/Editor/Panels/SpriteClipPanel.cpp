@@ -5,6 +5,7 @@
 #include "Editor/Common/Config/EditorConfig.h"
 #include "Editor/Common/Config/EditorData.h"
 #include "Editor/Common/EditorUtil.h"
+#include "Editor/Common/Widgets/EditorWidgets.h"
 
 #include "Engine/Serialization/Format/JsonSerializer.h"
 
@@ -162,11 +163,7 @@ namespace sw::editor
 			ImGui::DragFloat( "angleDeg", &k._angleDeg, 0.5f );
 		}
 
-		if ( _status.empty() == false )
-		{
-			ImGui::Separator();
-			ImGui::TextDisabled( "%s", _status.c_str() );
-		}
+		editor::drawPanelStatus( _status.c_str() );
 	}
 
 	void SpriteClipPanel::loadJson()

@@ -1,6 +1,6 @@
 /**
  * @file EditorChrome.h
- * @brief 에디터 셸 크롬 — Panel / Section / FloatingBar / Overlay (ImGui 헤더 비포함)
+ * @brief 에디터 셸 크롬 — Panel / Section / Toolbar / FloatingBar / Overlay / SearchOverlay (ImGui 헤더 비포함)
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -113,7 +113,24 @@ namespace sw::editor
 	};
 
 	// ------------------------------------------------------------------------------
-	// 5) EditorChrome 클래스
+	// 5) Search Overlay — 뷰포트 중앙 검색 팝업 (커맨드 팔레트 / 퀵 런처)
+	// ------------------------------------------------------------------------------
+	/** @brief 검색 오버레이 열기 서술 */
+	struct EditorSearchOverlayDesc
+	{
+		const utf8* _pId{ "##SearchOverlay" };
+		bool*		_pOpen{ nullptr };
+		float2		_size{ 580.0f, 360.0f };
+		float32		_viewportYFrac{ 0.28f };
+		float32		_rounding{ 8.0f };
+		float32		_borderSize{ 1.5f };
+		float4		_bgColor{ 0.12f, 0.12f, 0.14f, 0.96f };
+		float4		_borderColor{ 0.25f, 0.45f, 0.75f, 1.0f };
+		bool*		_pFocusOnOpen{ nullptr };
+	};
+
+	// ------------------------------------------------------------------------------
+	// 6) EditorChrome 클래스
 	// ------------------------------------------------------------------------------
 	class EditorChrome
 	{
@@ -132,6 +149,11 @@ namespace sw::editor
 		/** @brief beginSection()과 짝을 이룹니다. */
 		static void endSection();
 
+		/** @brief 가로 툴바 섹션을 엽니다. 항상 endToolbar()를 호출합니다. */
+		static bool beginToolbar( const utf8* pId = "##Toolbar" );
+		/** @brief beginToolbar()와 짝을 이룹니다. */
+		static void endToolbar();
+
 		/** @brief 플로팅 바를 엽니다. 항상 endFloatingBar()를 호출합니다. */
 		static bool beginFloatingBar( const EditorFloatingBarDesc& desc );
 		/** @brief beginFloatingBar()와 짝을 이룹니다. */
@@ -141,6 +163,11 @@ namespace sw::editor
 		static bool beginOverlay( const EditorOverlayDesc& desc );
 		/** @brief beginOverlay()와 짝을 이룹니다. */
 		static void endOverlay();
+
+		/** @brief 뷰포트 중앙 검색 오버레이를 엽니다. 항상 endSearchOverlay()를 호출합니다. */
+		static bool beginSearchOverlay( const EditorSearchOverlayDesc& desc );
+		/** @brief beginSearchOverlay()와 짝을 이룹니다. */
+		static void endSearchOverlay();
 	};
 
 	// ------------------------------------------------------------------------------
@@ -155,8 +182,12 @@ namespace sw::editor
 	inline bool tryGetMainViewportRect( float2& outPos, float2& outSize ) { return EditorChrome::tryGetMainViewportRect( outPos, outSize ); }
 	inline bool beginSection( const EditorSectionDesc& desc ) { return EditorChrome::beginSection( desc ); }
 	inline void endSection() { EditorChrome::endSection(); }
+	inline bool beginToolbar( const utf8* pId = "##Toolbar" ) { return EditorChrome::beginToolbar( pId ); }
+	inline void endToolbar() { EditorChrome::endToolbar(); }
 	inline bool beginFloatingBar( const EditorFloatingBarDesc& desc ) { return EditorChrome::beginFloatingBar( desc ); }
 	inline void endFloatingBar() { EditorChrome::endFloatingBar(); }
 	inline bool beginOverlay( const EditorOverlayDesc& desc ) { return EditorChrome::beginOverlay( desc ); }
 	inline void endOverlay() { EditorChrome::endOverlay(); }
+	inline bool beginSearchOverlay( const EditorSearchOverlayDesc& desc ) { return EditorChrome::beginSearchOverlay( desc ); }
+	inline void endSearchOverlay() { EditorChrome::endSearchOverlay(); }
 } // namespace sw::editor

@@ -137,77 +137,63 @@ namespace sw::editor
 			}
 		}
 
-		if ( ImGui::Button( "Clear" ) )
+		if ( editor::beginToolbar( "##ConsoleToolbar" ) )
 		{
-			std::scoped_lock<mutex> lock{ _entriesMutex };
-			_listEntry.clear();
-			_listDrawSnapshot.clear();
-			_listVisible.clear();
-			_bHasNewLogs = SW_FALSE;
-			bNewLogs	 = false;
-		}
-		ImGui::SameLine();
-		ImGui::Checkbox( "Auto-scroll", &_bAutoScroll );
-
-		utf8 arrErrLabel[32], arrWarnLabel[32], arrInfoLabel[32], arrTraceLabel[32];
-		formatstring( arrErrLabel, sizeof( arrErrLabel ), "Error (%zu)", errorCount );
-		formatstring( arrWarnLabel, sizeof( arrWarnLabel ), "Warning (%zu)", warnCount );
-		formatstring( arrInfoLabel, sizeof( arrInfoLabel ), "Info (%zu)", infoCount );
-		formatstring( arrTraceLabel, sizeof( arrTraceLabel ), "Trace (%zu)", traceCount );
-
-		ImGui::SameLine();
-		if ( _arrLevelEnabled[0] )
-			ImGui::PushStyleColor( ImGuiCol_Button, ImVec4{ 0.7f, 0.2f, 0.2f, 1.0f } );
-		else
-			ImGui::PushStyleColor( ImGuiCol_Button, ImVec4{ 0.2f, 0.2f, 0.2f, 0.6f } );
-		if ( ImGui::Button( arrErrLabel ) )
-			_arrLevelEnabled[0] = ( _arrLevelEnabled[0] == false );
-		ImGui::PopStyleColor();
-
-		ImGui::SameLine();
-		if ( _arrLevelEnabled[1] )
-			ImGui::PushStyleColor( ImGuiCol_Button, ImVec4{ 0.7f, 0.55f, 0.15f, 1.0f } );
-		else
-			ImGui::PushStyleColor( ImGuiCol_Button, ImVec4{ 0.2f, 0.2f, 0.2f, 0.6f } );
-		if ( ImGui::Button( arrWarnLabel ) )
-			_arrLevelEnabled[1] = ( _arrLevelEnabled[1] == false );
-		ImGui::PopStyleColor();
-
-		ImGui::SameLine();
-		if ( _arrLevelEnabled[2] )
-			ImGui::PushStyleColor( ImGuiCol_Button, ImVec4{ 0.2f, 0.5f, 0.75f, 1.0f } );
-		else
-			ImGui::PushStyleColor( ImGuiCol_Button, ImVec4{ 0.2f, 0.2f, 0.2f, 0.6f } );
-		if ( ImGui::Button( arrInfoLabel ) )
-			_arrLevelEnabled[2] = ( _arrLevelEnabled[2] == false );
-		ImGui::PopStyleColor();
-
-		ImGui::SameLine();
-		if ( _arrLevelEnabled[3] )
-			ImGui::PushStyleColor( ImGuiCol_Button, ImVec4{ 0.4f, 0.4f, 0.45f, 1.0f } );
-		else
-			ImGui::PushStyleColor( ImGuiCol_Button, ImVec4{ 0.2f, 0.2f, 0.2f, 0.6f } );
-		if ( ImGui::Button( arrTraceLabel ) )
-			_arrLevelEnabled[3] = ( _arrLevelEnabled[3] == false );
-		ImGui::PopStyleColor();
-
-		ImGui::SameLine();
-		if ( ImGui::Button( "Copy All" ) && _listVisible.empty() == false )
-		{
-			string allLogs;
-			for ( const LogEntry* pEntry : _listVisible )
+			if ( ImGui::Button( "Clear" ) )
 			{
-				if ( pEntry != nullptr )
-				{
-					allLogs += "[" + pEntry->_timeStamp + "] [" + pEntry->_tag + "] [" + levelName( pEntry->_level ) +
-							   "] - " + pEntry->_message + "\n";
-				}
+				std::scoped_lock<mutex> lock{ _entriesMutex };
+				_listEntry.clear();
+				_listDrawSnapshot.clear();
+				_listVisible.clear();
+				_bHasNewLogs = SW_FALSE;
+				bNewLogs	 = false;
 			}
-			ImGui::SetClipboardText( allLogs.c_str() );
-		}
+			ImGui::SameLine();
+			ImGui::Checkbox( "Auto-scroll", &_bAutoScroll );
 
-		editor::drawSearchField( "##log_filter", _arrFilterBuffer, sizeof( _arrFilterBuffer ),
-								 "Filter (tag / message / file)", -1.0f, false );
+			utf8 arrErrLabel[32], arrWarnLabel[32], arrInfoLabel[32], arrTraceLabel[32];
+			formatstring( arrErrLabel, sizeof( arrErrLabel ), "Error (%zu)", errorCount );
+			formatstring( arrWarnLabel, sizeof( arrWarnLabel ), "Warning (%zu)", warnCount );
+			formatstring( arrInfoLabel, sizeof( arrInfoLabel ), "Info (%zu)", infoCount );
+			formatstring( arrTraceLabel, sizeof( arrTraceLabel ), "Trace (%zu)", traceCount );
+
+			constexpr editor::Color4 kTraceChip{ 0.40f, 0.40f, 0.45f, 1.0f };
+
+			ImGui::SameLine();
+			if ( editor::drawToggleButton( arrErrLabel, _arrLevelEnabled[0], editor::style::kError ) )
+				_arrLevelEnabled[0] = ( _arrLevelEnabled[0] == false );
+
+			ImGui::SameLine();
+			if ( editor::drawToggleButton( arrWarnLabel, _arrLevelEnabled[1], editor::style::kWarn ) )
+				_arrLevelEnabled[1] = ( _arrLevelEnabled[1] == false );
+
+			ImGui::SameLine();
+			if ( editor::drawToggleButton( arrInfoLabel, _arrLevelEnabled[2] ) )
+				_arrLevelEnabled[2] = ( _arrLevelEnabled[2] == false );
+
+			ImGui::SameLine();
+			if ( editor::drawToggleButton( arrTraceLabel, _arrLevelEnabled[3], kTraceChip ) )
+				_arrLevelEnabled[3] = ( _arrLevelEnabled[3] == false );
+
+			ImGui::SameLine();
+			if ( ImGui::Button( "Copy All" ) && _listVisible.empty() == false )
+			{
+				string allLogs;
+				for ( const LogEntry* pEntry : _listVisible )
+				{
+					if ( pEntry != nullptr )
+					{
+						allLogs += "[" + pEntry->_timeStamp + "] [" + pEntry->_tag + "] [" + levelName( pEntry->_level ) +
+								   "] - " + pEntry->_message + "\n";
+					}
+				}
+				ImGui::SetClipboardText( allLogs.c_str() );
+			}
+
+			editor::drawSearchField( "##log_filter", _arrFilterBuffer, sizeof( _arrFilterBuffer ),
+									 "Filter (tag / message / file)", -1.0f, false );
+		}
+		editor::endToolbar();
 
 		ImGui::Separator();
 
@@ -284,7 +270,8 @@ namespace sw::editor
 
 		editor::endSection();
 
-		ImGui::TextDisabled( "%d / %d lines", static_cast<int32>( _listVisible.size() ), static_cast<int32>( _listDrawSnapshot.size() ) );
+		editor::drawCountLabel( static_cast<uint32>( _listVisible.size() ), static_cast<uint32>( _listDrawSnapshot.size() ),
+								"lines" );
 	}
 
 	void ConsolePanel::shutdown( IRHIDevice* /*rhiDevice*/ )

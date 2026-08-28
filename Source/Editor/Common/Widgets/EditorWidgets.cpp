@@ -3,6 +3,7 @@
 #include "Editor/Common/Widgets/EditorWidgets.h"
 
 #include "Core/Container/string.h"
+#include "Core/File/FileUtil.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/StringUtil.h"
 
@@ -136,10 +137,45 @@ namespace sw::editor
 		ImGui::SameLine();
 	}
 
+	bool EditorWidgets::drawToggleButton( const utf8* pLabel, bool bActive, const Color4& activeColor )
+	{
+		const Color4& color = bActive ? activeColor : style::kToggleInactive;
+		ImGui::PushStyleColor( ImGuiCol_Button, toIm( color ) );
+		const bool bClicked = ImGui::Button( pLabel );
+		ImGui::PopStyleColor();
+		return bClicked;
+	}
+
 	void EditorWidgets::drawEmptyHint( const utf8* pText )
 	{
 		if ( pText == nullptr )
 			return;
+		ImGui::TextDisabled( "%s", pText );
+	}
+
+	void EditorWidgets::drawCountLabel( uint32 visible, uint32 total, const utf8* pUnit )
+	{
+		const bool bHasUnit = ( pUnit != nullptr && pUnit[0] != '\0' );
+		if ( total == 0 )
+		{
+			if ( bHasUnit )
+				ImGui::TextDisabled( "%u %s", visible, pUnit );
+			else
+				ImGui::TextDisabled( "%u", visible );
+			return;
+		}
+
+		if ( bHasUnit )
+			ImGui::TextDisabled( "%u / %u %s", visible, total, pUnit );
+		else
+			ImGui::TextDisabled( "%u / %u", visible, total );
+	}
+
+	void EditorWidgets::drawPanelStatus( const utf8* pText )
+	{
+		if ( pText == nullptr || pText[0] == '\0' )
+			return;
+		ImGui::Separator();
 		ImGui::TextDisabled( "%s", pText );
 	}
 
@@ -232,21 +268,16 @@ namespace sw::editor
 
 		if ( ImGui::BeginDragDropTarget() )
 		{
-			if ( const ImGuiPayload* pPayload = ImGui::AcceptDragDropPayload( "SW_ASSET_PATH" ) )
+			string droppedPath;
+			if ( tryAcceptAssetPayload( droppedPath ) )
 			{
-				const utf8* pDropped = static_cast<const utf8*>( pPayload->Data );
-				if ( pDropped != nullptr )
+				bool bAccept{ true };
+				if ( pExpectedExt != nullptr && pExpectedExt[0] != '\0' )
+					bAccept = FileUtil::endsWithIgnoreCase( droppedPath.c_str(), pExpectedExt );
+				if ( bAccept )
 				{
-					bool bAccept{ true };
-					if ( pExpectedExt != nullptr && pExpectedExt[0] != '\0' )
-					{
-						bAccept = FileUtil::endsWithIgnoreCase( pDropped, pExpectedExt );
-					}
-					if ( bAccept )
-					{
-						assetPath = pDropped;
-						bChanged  = true;
-					}
+					assetPath = droppedPath;
+					bChanged  = true;
 				}
 			}
 			ImGui::EndDragDropTarget();
@@ -316,5 +347,75 @@ namespace sw::editor
 	void EditorWidgets::popInspectorStyle()
 	{
 		ImGui::PopStyleVar( 3 );
+	}
+
+	void EditorWidgets::drawAssetDragSource( const utf8* pRelativePath, bool bAllowNullId )
+	{
+		if ( pRelativePath == nullptr || pRelativePath[0] == '\0' )
+			return;
+
+		ImGuiDragDropFlags flags = 0;
+		if ( bAllowNullId )
+			flags |= ImGuiDragDropFlags_SourceAllowNullID;
+
+		if ( ImGui::BeginDragDropSource( flags ) == false )
+			return;
+
+		const uint32 pathBytes = StringUtil::strlen( pRelativePath ) + 1;
+		ImGui::SetDragDropPayload( kAssetPathPayload, pRelativePath, pathBytes );
+		ImGui::TextUnformatted( pRelativePath );
+		ImGui::EndDragDropSource();
+	}
+
+	bool EditorWidgets::tryAcceptAssetPayload( string& outPath )
+	{
+		const ImGuiPayload* pPayload = ImGui::AcceptDragDropPayload( kAssetPathPayload );
+		if ( pPayload == nullptr || pPayload->Data == nullptr )
+			return false;
+
+		outPath = static_cast<const utf8*>( pPayload->Data );
+		return true;
+	}
+
+	bool EditorWidgets::acceptAssetDrop( string& outPath )
+	{
+		if ( ImGui::BeginDragDropTarget() == false )
+			return false;
+
+		const bool bAccepted = tryAcceptAssetPayload( outPath );
+		ImGui::EndDragDropTarget();
+		return bAccepted;
+	}
+
+	bool EditorWidgets::updateListSelection( int32& selectedIndex, int32 itemCount, bool bRepeat )
+	{
+		if ( itemCount <= 0 )
+		{
+			selectedIndex = 0;
+			return false;
+		}
+
+		if ( selectedIndex >= itemCount )
+			selectedIndex = itemCount - 1;
+		if ( selectedIndex < 0 )
+			selectedIndex = 0;
+
+		if ( ImGui::IsKeyPressed( ImGuiKey_DownArrow, bRepeat ) )
+		{
+			++selectedIndex;
+			if ( selectedIndex >= itemCount )
+				selectedIndex = itemCount - 1;
+		}
+		if ( ImGui::IsKeyPressed( ImGuiKey_UpArrow, bRepeat ) )
+		{
+			--selectedIndex;
+			if ( selectedIndex < 0 )
+				selectedIndex = 0;
+		}
+
+		const bool bValidSelection = ( 0 <= selectedIndex && selectedIndex < itemCount );
+		if ( bValidSelection == false )
+			return false;
+		return ImGui::IsKeyPressed( ImGuiKey_Enter, bRepeat );
 	}
 } // namespace sw::editor

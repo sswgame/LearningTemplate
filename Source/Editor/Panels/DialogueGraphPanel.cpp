@@ -129,44 +129,48 @@ namespace sw::editor
 
 		BLOCK( "Toolbar" )
 		{
-			if ( ImGui::Button( "+ Dialogue" ) )
-				addNode( DialogueNodeType::Dialogue, "NPC", "Enter dialogue text..." );
-			ImGui::SameLine();
-			if ( ImGui::Button( "+ Choice" ) )
-				addNode( DialogueNodeType::Choice, "", "Player options" );
-			ImGui::SameLine();
-			if ( ImGui::Button( "+ Branch" ) )
-				addNode( DialogueNodeType::Branch, "", "flag.visited == 1" );
-			ImGui::SameLine();
-			if ( ImGui::Button( "+ Action" ) )
-				addNode( DialogueNodeType::Action, "", "give_item:potion:1" );
-			ImGui::SameLine();
-			if ( ImGui::Button( "+ End" ) )
-				addNode( DialogueNodeType::End );
-			ImGui::SameLine();
-			editor::drawToolbarSeparator();
-			if ( ImGui::Button( "Save" ) )
-				saveGraphData();
-			ImGui::SameLine();
-			if ( ImGui::Button( "Reload" ) )
+			if ( editor::beginToolbar( "##DialogueToolbar" ) )
 			{
-				_bLoaded = false;
-				loadGraphData();
-			}
-			ImGui::SameLine();
-			if ( ImGui::Button( "Reset Default" ) )
-			{
-				_listNode.clear();
-				_listLink.clear();
-				ensureDefaults();
-				_nodeGraph.requestContentFit();
-			}
-			ImGui::SameLine();
-			if ( ImGui::Button( "Zoom Fit" ) )
-				_nodeGraph.requestContentFit();
+				if ( ImGui::Button( "+ Dialogue" ) )
+					addNode( DialogueNodeType::Dialogue, "NPC", "Enter dialogue text..." );
+				ImGui::SameLine();
+				if ( ImGui::Button( "+ Choice" ) )
+					addNode( DialogueNodeType::Choice, "", "Player options" );
+				ImGui::SameLine();
+				if ( ImGui::Button( "+ Branch" ) )
+					addNode( DialogueNodeType::Branch, "", "flag.visited == 1" );
+				ImGui::SameLine();
+				if ( ImGui::Button( "+ Action" ) )
+					addNode( DialogueNodeType::Action, "", "give_item:potion:1" );
+				ImGui::SameLine();
+				if ( ImGui::Button( "+ End" ) )
+					addNode( DialogueNodeType::End );
+				ImGui::SameLine();
+				editor::drawToolbarSeparator();
+				if ( ImGui::Button( "Save" ) )
+					saveGraphData();
+				ImGui::SameLine();
+				if ( ImGui::Button( "Reload" ) )
+				{
+					_bLoaded = false;
+					loadGraphData();
+				}
+				ImGui::SameLine();
+				if ( ImGui::Button( "Reset Default" ) )
+				{
+					_listNode.clear();
+					_listLink.clear();
+					ensureDefaults();
+					_nodeGraph.requestContentFit();
+				}
+				ImGui::SameLine();
+				if ( ImGui::Button( "Zoom Fit" ) )
+					_nodeGraph.requestContentFit();
 
-			ImGui::SameLine();
-			ImGui::TextDisabled( "(Nodes: %zu, Links: %zu)", _listNode.size(), _listLink.size() );
+				ImGui::SameLine();
+				ImGui::TextDisabled( "(Nodes: %zu, Links: %zu)", _listNode.size(), _listLink.size() );
+			}
+			editor::endToolbar();
 		}
 
 		const float32 availWidth  = ImGui::GetContentRegionAvail().x;

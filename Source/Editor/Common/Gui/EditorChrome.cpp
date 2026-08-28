@@ -246,4 +246,64 @@ namespace sw::editor
 		if ( styleVarCount > 0 )
 			ImGui::PopStyleVar( styleVarCount );
 	}
+
+	bool EditorChrome::beginToolbar( const utf8* pId )
+	{
+		EditorSectionDesc desc{};
+		desc._pId  = pId != nullptr ? pId : "##Toolbar";
+		desc._kind = EditorSectionKind::Toolbar;
+		return beginSection( desc );
+	}
+
+	void EditorChrome::endToolbar()
+	{
+		endSection();
+	}
+
+	bool EditorChrome::beginSearchOverlay( const EditorSearchOverlayDesc& desc )
+	{
+		float2 viewportPos{};
+		float2 viewportSize{};
+		if ( tryGetMainViewportRect( viewportPos, viewportSize ) == false )
+		{
+			viewportPos	 = float2{ 0.0f, 0.0f };
+			viewportSize = float2{ 800.0f, 600.0f };
+		}
+
+		EditorOverlayDesc overlayDesc{};
+		overlayDesc._pId		= desc._pId != nullptr ? desc._pId : "##SearchOverlay";
+		overlayDesc._pOpen		= desc._pOpen;
+		overlayDesc._anchorPos	= float2{ viewportPos._x + viewportSize._x * 0.5f,
+										  viewportPos._y + viewportSize._y * desc._viewportYFrac };
+		overlayDesc._pivot		= float2{ 0.5f, 0.5f };
+		overlayDesc._size		= desc._size;
+		overlayDesc._rounding	= desc._rounding;
+		overlayDesc._borderSize = desc._borderSize;
+		overlayDesc._flags		= EditorOverlayFlags::NoTitleBar | EditorOverlayFlags::NoResize |
+								  EditorOverlayFlags::NoMove | EditorOverlayFlags::NoSavedSettings;
+
+		ImGui::PushStyleColor( ImGuiCol_WindowBg, ImVec4{ desc._bgColor._x, desc._bgColor._y, desc._bgColor._z, desc._bgColor._w } );
+		ImGui::PushStyleColor( ImGuiCol_Border,
+							   ImVec4{ desc._borderColor._x, desc._borderColor._y, desc._borderColor._z, desc._borderColor._w } );
+
+		const bool bVisible = beginOverlay( overlayDesc );
+		if ( bVisible == false )
+			return false;
+
+		if ( ImGui::IsKeyPressed( ImGuiKey_Escape ) && desc._pOpen != nullptr )
+			*desc._pOpen = false;
+
+		if ( desc._pFocusOnOpen != nullptr && *desc._pFocusOnOpen )
+		{
+			ImGui::SetKeyboardFocusHere();
+			*desc._pFocusOnOpen = false;
+		}
+		return true;
+	}
+
+	void EditorChrome::endSearchOverlay()
+	{
+		endOverlay();
+		ImGui::PopStyleColor( 2 );
+	}
 } // namespace sw::editor

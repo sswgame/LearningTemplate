@@ -2,6 +2,7 @@
 
 #include "Editor/Panels/HistoryPanel.h"
 
+#include "Editor/Common/Gui/EditorChrome.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
@@ -35,27 +36,31 @@ namespace sw::editor
 		const bool	  bCanRedo	= cmdStack.canRedo();
 
 		// 상단 툴바: 실행 취소, 다시 실행, 히스토리 지우기
-		if ( bCanUndo == false )
-			ImGui::BeginDisabled();
-		if ( ImGui::Button( "Undo (Ctrl+Z)" ) )
-			cmdStack.undo();
-		if ( bCanUndo == false )
-			ImGui::EndDisabled();
+		if ( editor::beginToolbar( "##HistoryToolbar" ) )
+		{
+			if ( bCanUndo == false )
+				ImGui::BeginDisabled();
+			if ( ImGui::Button( "Undo (Ctrl+Z)" ) )
+				cmdStack.undo();
+			if ( bCanUndo == false )
+				ImGui::EndDisabled();
 
-		ImGui::SameLine();
-		if ( bCanRedo == false )
-			ImGui::BeginDisabled();
-		if ( ImGui::Button( "Redo (Ctrl+Y)" ) )
-			cmdStack.redo();
-		if ( bCanRedo == false )
-			ImGui::EndDisabled();
+			ImGui::SameLine();
+			if ( bCanRedo == false )
+				ImGui::BeginDisabled();
+			if ( ImGui::Button( "Redo (Ctrl+Y)" ) )
+				cmdStack.redo();
+			if ( bCanRedo == false )
+				ImGui::EndDisabled();
 
-		ImGui::SameLine();
-		if ( ImGui::Button( "Clear" ) )
-			cmdStack.clear();
+			ImGui::SameLine();
+			if ( ImGui::Button( "Clear" ) )
+				cmdStack.clear();
 
-		ImGui::SameLine();
-		ImGui::TextDisabled( "(%zu / %zu)", currIndex, cmdCount );
+			ImGui::SameLine();
+			editor::drawCountLabel( static_cast<uint32>( currIndex ), static_cast<uint32>( cmdCount ) );
+		}
+		editor::endToolbar();
 
 		ImGui::Separator();
 
