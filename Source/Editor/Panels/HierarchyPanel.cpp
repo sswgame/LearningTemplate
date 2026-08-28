@@ -15,6 +15,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionCast.h"
+#include "Engine/Reflection/TypeRegistry.h"
 
 #include "RuntimeAPI/Service/EditorService.h"
 
@@ -216,12 +217,48 @@ namespace sw::editor
 				ImGui::TextDisabled( "No registered component types." );
 			else
 			{
+				auto* pRegistry = editor::getService<TypeRegistry>();
+
+				map<string, vector<std::pair<hashed_string, const TypeInfo*>>> mapCategorized;
 				for ( const hashed_string& typeName : listTypes )
 				{
-					if ( ImGui::MenuItem( typeName.c_str() ) )
+					const TypeInfo* pTypeInfo = ( pRegistry != nullptr ) ? pRegistry->findType( typeName ) : nullptr;
+					if ( pTypeInfo != nullptr && pTypeInfo->isHiddenInMenu() )
+						continue;
+
+					string category = ( pTypeInfo != nullptr && pTypeInfo->getCategory().empty() == false )
+										? pTypeInfo->getCategory()
+										: "General";
+					mapCategorized[category].emplace_back( typeName, pTypeInfo );
+				}
+
+				auto drawItem = [&]( const hashed_string& typeName, const TypeInfo* pTypeInfo )
+				{
+					const utf8* pDisplayName = ( pTypeInfo != nullptr ) ? pTypeInfo->getDisplayName() : typeName.c_str();
+					if ( ImGui::MenuItem( pDisplayName ) )
 					{
 						if ( pObj->getManager()->addComponentByName( pObj, typeName ) == nullptr )
 							ImGui::OpenPopup( "AddCompFailed" );
+					}
+					if ( pTypeInfo != nullptr && pTypeInfo->getTooltip().empty() == false && ImGui::IsItemHovered() )
+						ImGui::SetTooltip( "%s", pTypeInfo->getTooltip().c_str() );
+				};
+
+				for ( const auto& [category, items] : mapCategorized )
+				{
+					if ( category == "General" )
+					{
+						for ( const auto& [typeName, pTypeInfo] : items )
+							drawItem( typeName, pTypeInfo );
+					}
+					else
+					{
+						if ( ImGui::BeginMenu( category.c_str() ) )
+						{
+							for ( const auto& [typeName, pTypeInfo] : items )
+								drawItem( typeName, pTypeInfo );
+							ImGui::EndMenu();
+						}
 					}
 				}
 			}

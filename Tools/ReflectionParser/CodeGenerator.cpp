@@ -280,15 +280,29 @@ namespace sw
 
 	void CodeGenerator::emitPropertyMetadata( CodeEmit& e, const ParsedPropertyInfo& prop ) const
 	{
+		e.line( "#if !defined( SW_SHIPPING )" );
 		e.assignQuotedIf( prop._category.empty() == false, "p._metadata._category", prop._category );
 		e.assignQuotedIf( prop._displayName.empty() == false, "p._metadata._displayName", prop._displayName );
 		e.assignQuotedIf( prop._tooltip.empty() == false, "p._metadata._tooltip", prop._tooltip );
+		e.flagIf( prop._bHideInInspector != 0, "p._metadata._bHideInInspector", "SW_TRUE" );
+		if ( prop._listCustomMeta.empty() == false )
+		{
+			e.line( "p._metadata._mapCustomMeta = {" );
+			e.push();
+			for ( const auto& [key, val] : prop._listCustomMeta )
+				e.linef( "{ %#, %# },", CodeEmit::hs( key ), CodeEmit::quoted( val ) );
+			e.pop();
+			e.line( "};" );
+		}
+		e.line( "#endif" );
+
 		e.assignQuotedIf( prop._defaultValue.empty() == false, "p._metadata._defaultValue", prop._defaultValue );
 		e.assignQuotedIf( prop._assetType.empty() == false, "p._metadata._assetType", prop._assetType );
 		e.flagIf( prop._bReadOnly != 0, "p._metadata._bReadOnly", "SW_TRUE" );
 		e.flagIf( prop._bXmlAttribute != 0, "p._metadata._bXmlAttribute", "SW_TRUE" );
 		e.flagIf( prop._bAssetPath != 0, "p._metadata._bAssetPath", "SW_TRUE" );
 		e.flagIf( prop._bPolymorphic != 0, "p._metadata._bPolymorphic", "SW_TRUE" );
+		e.flagIf( prop._bTransient != 0, "p._metadata._bTransient", "SW_TRUE" );
 		if ( prop._bHasRange != 0 )
 		{
 			e.linef( "p._metadata._minRange     = %#f;", prop._minRange );
@@ -328,16 +342,19 @@ namespace sw
 				const utf8* peel = peelMember( prevKind );
 				e.linef( "using NestC%# = typename NestC%#::%#;", depth, depth - 1, peel );
 
-				const string wrapper = makeNestedWrapperType( node->_containerType, depth );
-
+				const string wrapperType = makeNestedWrapperType( node->_containerType, depth );
+				e.line( "{" );
+				e.push();
 				e.linef( "auto nested%# = sw::make_shared<sw::NestedContainerInfo>();", depth );
 				e.linef( "nested%#->_kind = %#;", depth, kind );
 				e.linef( "nested%#->_typeName = %#;", depth, CodeEmit::hs( node->_typeName ) );
 				e.linef( "nested%#->_elementTypeName = %#;", depth,
 						 CodeEmit::hs( normalizeTypeName( node->_elementTypeName ) ) );
-				e.linef( "nested%#->_keyTypeName = %#;", depth, CodeEmit::hs( normalizeTypeName( node->_keyTypeName ) ) );
-				e.linef( "nested%#->_wrapper = sw::make_shared<%#>();", depth, wrapper );
+				e.linef( "nested%#->_keyTypeName = %#;", depth, CodeEmit::hs( node->_keyTypeName ) );
+				e.linef( "nested%#->_wrapper = sw::make_shared<%#>();", depth, wrapperType );
 				e.linef( "nested%#->_elementNested = nested%#;", depth - 1, depth );
+				e.pop();
+				e.line( "}" );
 
 				prevKind = node->_containerKind;
 				node	 = ( node->_elementNested != nullptr ) ? node->_elementNested.get() : nullptr;
@@ -355,7 +372,7 @@ namespace sw
 	{
 		e.line( "[]() {" );
 		e.push();
-		// 강제로 Component/GameObject 파생 클래스가 값(또는 원시 포인터)으로 들어가는 것을 막는 static_assert
+		// 강제로 Component/GameObject 파생 클래스가 값으로 들어가는 것을 막는 static_assert
 		e.linef( "using PropDecl = decltype(%#::%#);", typeInfo._fullyQualifiedName, prop._name );
 		e.line( "constexpr bool kIsInvalidValue = std::is_pointer_v<std::remove_cv_t<std::remove_reference_t<PropDecl>>> == false && (std::is_base_of_v<sw::Component, std::remove_cv_t<std::remove_reference_t<PropDecl>>> || std::is_base_of_v<sw::GameObject, std::remove_cv_t<std::remove_reference_t<PropDecl>>>);" );
 		e.line( "static_assert(!kIsInvalidValue, \"GameObject or Component cannot be stored by value inside a PROPERTY(). Use a pointer, GameObjectPtr, or ComponentPtr instead.\");" );
@@ -363,7 +380,7 @@ namespace sw
 		e.push();
 		e.linef( "%#,", CodeEmit::hs( prop._name ) );
 		e.linef( "%#,", CodeEmit::hs( normalizeTypeName( prop._typeName ) ) );
-		e.linef( "SW_OFFSET_OF(  %#, %# ),", typeInfo._fullyQualifiedName, prop._name );
+		e.linef( "offsetof(%#, %#),", typeInfo._fullyQualifiedName, prop._name );
 
 		if ( prop._bIsContainer )
 		{
@@ -463,9 +480,21 @@ namespace sw
 			e.assign( "funcInfo._returnTypeName", CodeEmit::quoted( retType ) );
 			e.assign( "funcInfo._listParamTypeName", makeQuotedTypeList( method._listParamTypeName ) );
 
+			e.line( "#if !defined( SW_SHIPPING )" );
 			e.assignQuotedIf( method._category.empty() == false, "funcInfo._metadata._category", method._category );
 			e.assignQuotedIf( method._displayName.empty() == false, "funcInfo._metadata._displayName", method._displayName );
 			e.assignQuotedIf( method._tooltip.empty() == false, "funcInfo._metadata._tooltip", method._tooltip );
+			e.flagIf( method._bCallInEditor != 0, "funcInfo._metadata._bCallInEditor", "SW_TRUE" );
+			if ( method._listCustomMeta.empty() == false )
+			{
+				e.line( "funcInfo._metadata._mapCustomMeta = {" );
+				e.push();
+				for ( const auto& [key, val] : method._listCustomMeta )
+					e.linef( "{ %#, %# },", CodeEmit::hs( key ), CodeEmit::quoted( val ) );
+				e.pop();
+				e.line( "};" );
+			}
+			e.line( "#endif" );
 
 			if ( method._netRole != FunctionNetRole::Local )
 				e.assign( "funcInfo._metadata._netRole", toCppExpr( method._netRole ) );
@@ -546,6 +575,22 @@ namespace sw
 		CodeEmit e( out );
 		e.push( 3 );
 
+		e.line( "#if !defined( SW_SHIPPING )" );
+		e.assignQuotedIf( typeInfo._category.empty() == false, "info._metadata._category", typeInfo._category );
+		e.assignQuotedIf( typeInfo._displayName.empty() == false, "info._metadata._displayName", typeInfo._displayName );
+		e.assignQuotedIf( typeInfo._tooltip.empty() == false, "info._metadata._tooltip", typeInfo._tooltip );
+		e.flagIf( typeInfo._bHideInMenu != 0, "info._metadata._bHideInMenu", "SW_TRUE" );
+		if ( typeInfo._listCustomMeta.empty() == false )
+		{
+			e.line( "info._metadata._mapCustomMeta = {" );
+			e.push();
+			for ( const auto& [key, val] : typeInfo._listCustomMeta )
+				e.linef( "{ %#, %# },", CodeEmit::hs( key ), CodeEmit::quoted( val ) );
+			e.pop();
+			e.line( "};" );
+		}
+		e.line( "#endif" );
+
 		if ( typeInfo._listProperty.empty() == false )
 		{
 			e.line( "info._propertyList =" );
@@ -589,6 +634,18 @@ namespace sw
 
 		CodeEmit e( out );
 		e.push( 3 );
+
+		if ( enumInfo._listCustomMeta.empty() == false )
+		{
+			e.line( "#if !defined( SW_SHIPPING )" );
+			e.line( "info._mapCustomMeta = {" );
+			e.push();
+			for ( const auto& [key, val] : enumInfo._listCustomMeta )
+				e.linef( "{ %#, %# },", CodeEmit::hs( key ), CodeEmit::quoted( val ) );
+			e.pop();
+			e.line( "};" );
+			e.line( "#endif" );
+		}
 
 		if ( enumInfo._listEnumerator.empty() == false )
 		{

@@ -2563,3 +2563,134 @@ SW_TEST_CASE( Reflection_GenericQuery, HierarchyPropertyLookupAndRawPtr )
 	const float32 val = *reinterpret_cast<const float32*>( pRaw );
 	SW_EXPECT_TRUE( sw::MathUtil::abs( val - 42.0f ) < 0.0001f );
 }
+
+// ------------------------------------------------------------------------------
+// 6) Reflection_Metadata — Rich Metadata & Transient Serialization 검증
+// ------------------------------------------------------------------------------
+/**
+ * @brief [Reflection_Metadata] TypeMetadata (Category, DisplayName, Tooltip, HideInMenu, CustomMeta) 검증
+ */
+SW_TEST_CASE( Reflection_Metadata, TypeMetadataQuery )
+{
+	const sw::TypeInfo* pType = sw::engine::getTypeRegistry().findType<sw::MetaTestActor>();
+	SW_ASSERT_NOT_NULL( pType );
+
+	SW_EXPECT_TRUE( pType->getCategory() == "Gameplay" );
+	SW_EXPECT_TRUE( sw::string( pType->getDisplayName() ) == "Meta Test Actor" );
+	SW_EXPECT_TRUE( pType->getTooltip() == "Actor for testing rich metadata" );
+	SW_EXPECT_TRUE( pType->isHiddenInMenu() == true );
+
+	const sw::string* pCustomVal = pType->findCustomMeta( sw::hashed_string( "CustomTag" ) );
+	SW_ASSERT_NOT_NULL( pCustomVal );
+	SW_EXPECT_TRUE( *pCustomVal == "ActorVal" );
+
+	const sw::string* pPriority = pType->findCustomMeta( sw::hashed_string( "Priority" ) );
+	SW_ASSERT_NOT_NULL( pPriority );
+	SW_EXPECT_TRUE( *pPriority == "10" );
+}
+
+/**
+ * @brief [Reflection_Metadata] PropertyMetadata (DisplayName, Category, Tooltip, Transient, HideInInspector, CustomMeta) 검증
+ */
+SW_TEST_CASE( Reflection_Metadata, PropertyMetadataQuery )
+{
+	const sw::TypeInfo* pType = sw::engine::getTypeRegistry().findType<sw::MetaTestActor>();
+	SW_ASSERT_NOT_NULL( pType );
+
+	const sw::PropertyInfo* pHealth = pType->findProperty( sw::hashed_string( "_health" ) );
+	SW_ASSERT_NOT_NULL( pHealth );
+
+	SW_EXPECT_TRUE( pHealth->_metadata._bTransient == SW_TRUE );
+	SW_EXPECT_TRUE( pHealth->_metadata._bHideInInspector == SW_TRUE );
+	SW_EXPECT_TRUE( pHealth->_metadata._displayName == "Health Points" );
+	SW_EXPECT_TRUE( pHealth->_metadata._category == "Stats" );
+	SW_EXPECT_TRUE( pHealth->_metadata._tooltip == "Current health" );
+
+	const sw::string* pUnits = pHealth->findCustomMeta( sw::hashed_string( "Units" ) );
+	SW_ASSERT_NOT_NULL( pUnits );
+	SW_EXPECT_TRUE( *pUnits == "HP" );
+
+	const sw::string* pClamp = pHealth->findCustomMeta( sw::hashed_string( "Clamp" ) );
+	SW_ASSERT_NOT_NULL( pClamp );
+	SW_EXPECT_TRUE( *pClamp == "True" );
+
+	const sw::PropertyInfo* pArmor = pType->findProperty( sw::hashed_string( "_armor" ) );
+	SW_ASSERT_NOT_NULL( pArmor );
+	SW_EXPECT_TRUE( pArmor->_metadata._bTransient == SW_FALSE );
+	SW_EXPECT_TRUE( pArmor->_metadata._bHideInInspector == SW_FALSE );
+}
+
+/**
+ * @brief [Reflection_Metadata] FunctionMetadata (DisplayName, Category, Tooltip, CallInEditor, CustomMeta) 검증
+ */
+SW_TEST_CASE( Reflection_Metadata, FunctionMetadataQuery )
+{
+	const sw::TypeInfo* pType = sw::engine::getTypeRegistry().findType<sw::MetaTestActor>();
+	SW_ASSERT_NOT_NULL( pType );
+
+	const sw::FunctionInfo* pMethod = pType->findMethod( sw::hashed_string( "resetHealth" ) );
+	SW_ASSERT_NOT_NULL( pMethod );
+
+	SW_EXPECT_TRUE( pMethod->_metadata._bCallInEditor == SW_TRUE );
+	SW_EXPECT_TRUE( pMethod->_metadata._displayName == "Reset Health" );
+	SW_EXPECT_TRUE( pMethod->_metadata._category == "Actions" );
+	SW_EXPECT_TRUE( pMethod->_metadata._tooltip == "Resets health to 100" );
+
+	const sw::string* pActionType = pMethod->findCustomMeta( sw::hashed_string( "ActionType" ) );
+	SW_ASSERT_NOT_NULL( pActionType );
+	SW_EXPECT_TRUE( *pActionType == "Reset" );
+}
+
+/**
+ * @brief [Reflection_Metadata] EnumInfo CustomMeta 검증
+ */
+SW_TEST_CASE( Reflection_Metadata, EnumMetadataQuery )
+{
+	const sw::EnumInfo* pEnumInfo = sw::engine::getTypeRegistry().findEnum( sw::hashed_string( "TestMetaEnum" ) );
+	SW_ASSERT_NOT_NULL( pEnumInfo );
+
+	const sw::string* pDoc = pEnumInfo->findCustomMeta( sw::hashed_string( "Doc" ) );
+	SW_ASSERT_NOT_NULL( pDoc );
+	SW_EXPECT_TRUE( *pDoc == "EnumForTesting" );
+
+	const sw::string* pVersion = pEnumInfo->findCustomMeta( sw::hashed_string( "Version" ) );
+	SW_ASSERT_NOT_NULL( pVersion );
+	SW_EXPECT_TRUE( *pVersion == "2" );
+}
+
+/**
+ * @brief [Reflection_Metadata] Transient 프로퍼티의 JSON 및 Binary 직렬화 제외 검증
+ */
+SW_TEST_CASE( Reflection_Metadata, TransientPropertySerialization )
+{
+	const sw::TypeInfo* pType = sw::engine::getTypeRegistry().findType<sw::MetaTestActor>();
+	SW_ASSERT_NOT_NULL( pType );
+
+	sw::MetaTestActor sourceActor;
+	sourceActor._health = 999;
+	sourceActor._armor	= 77;
+
+	// 1) JSON 직렬화 검증: _health는 제외되고 _armor만 직렬화되어야 함
+	const sw::string json = sw::JsonSerializer::serialize( &sourceActor, *pType );
+	SW_EXPECT_TRUE( json.find( "_armor" ) != sw::string::npos );
+	SW_EXPECT_TRUE( json.find( "_health" ) == sw::string::npos );
+	SW_EXPECT_TRUE( json.find( "Health Points" ) == sw::string::npos );
+
+	// 2) JSON 역직렬화 검증: targetActor의 _health는 기본값을 유지해야 함
+	sw::MetaTestActor targetActor;
+	targetActor._health = 50;
+	targetActor._armor	= 0;
+	SW_EXPECT_TRUE( sw::JsonSerializer::deserialize( &targetActor, *pType, json ) );
+	SW_EXPECT_EQUAL( 77, targetActor._armor );
+	SW_EXPECT_EQUAL( 50, targetActor._health );
+
+	// 3) Binary 직렬화/역직렬화 검증
+	sw::vector<uint8> listBin;
+	sw::BinarySerializer::serialize( &sourceActor, *pType, listBin );
+	sw::MetaTestActor binTarget;
+	binTarget._health = 30;
+	binTarget._armor  = 0;
+	SW_EXPECT_TRUE( sw::BinarySerializer::deserialize( &binTarget, *pType, listBin.data(), listBin.size() ) );
+	SW_EXPECT_EQUAL( 77, binTarget._armor );
+	SW_EXPECT_EQUAL( 30, binTarget._health );
+}

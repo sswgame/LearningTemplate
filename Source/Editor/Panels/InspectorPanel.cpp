@@ -292,6 +292,8 @@ namespace sw::editor
 		map<string, vector<const PropertyInfo*>> grouped;
 		pTypeInfo->forEachProperty( [&]( const PropertyInfo& prop )
 		{
+			if ( prop._metadata._bHideInInspector == SW_TRUE )
+				return;
 			const string category =
 				prop._metadata._category.empty() ? "General" : string( prop._metadata._category.c_str() );
 			grouped[category].push_back( &prop );
@@ -314,6 +316,16 @@ namespace sw::editor
 
 					ImGui::AlignTextToFramePadding();
 					ImGui::TextUnformatted( propLabel( *prop ) );
+					if ( prop->_metadata._tooltip.empty() == false && ImGui::IsItemHovered() )
+						ImGui::SetTooltip( "%s", prop->_metadata._tooltip.c_str() );
+
+					if ( prop->_metadata._bTransient == SW_TRUE )
+					{
+						ImGui::SameLine();
+						ImGui::TextDisabled( "(T)" );
+						if ( ImGui::IsItemHovered() )
+							ImGui::SetTooltip( "Transient property: not saved to disk" );
+					}
 
 					ImGui::TableNextColumn();
 					ImGui::PushID( prop->_name.c_str() );
@@ -427,6 +439,11 @@ namespace sw::editor
 			ImGui::PushID( method._hashName.c_str() );
 			ImGui::Text( "%s (%s)", pLabelName,
 						 method._returnTypeName.empty() ? "?" : method._returnTypeName.c_str() );
+			if ( method._metadata._bCallInEditor != 0 )
+			{
+				ImGui::SameLine();
+				ImGui::TextColored( ImVec4{ 0.3f, 0.8f, 1.0f, 1.0f }, "[Editor]" );
+			}
 			if ( method._metadata._tooltip.empty() == false && ImGui::IsItemHovered() )
 				ImGui::SetTooltip( "%s", method._metadata._tooltip.c_str() );
 

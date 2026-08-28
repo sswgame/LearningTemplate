@@ -47,6 +47,8 @@ namespace sw
 				{
 					if ( listProps[propSearchIdx].matchesNameHash( tagHash ) )
 					{
+						if ( listProps[propSearchIdx]._metadata._bTransient == SW_TRUE )
+							break;
 						pTargetProp	 = &listProps[propSearchIdx];
 						matchedIndex = propSearchIdx;
 						break;
@@ -125,12 +127,20 @@ namespace sw
 	{
 		BinaryStreamWriter			writer( listOutBuffer );
 		const vector<PropertyInfo>& listProps = typeInfo.getPropertiesWithBase();
-		uint32						propCount = static_cast<uint32>( listProps.size() );
+		uint32						propCount{ 0 };
+		for ( const PropertyInfo& prop : listProps )
+		{
+			if ( prop._metadata._bTransient == SW_TRUE )
+				continue;
+			++propCount;
+		}
 		listOutBuffer.reserve( listOutBuffer.size() + sizeof( uint32 ) + propCount * 32 );
 		writer.write( propCount );
 
 		for ( const PropertyInfo& prop : listProps )
 		{
+			if ( prop._metadata._bTransient == SW_TRUE )
+				continue;
 			const void* pPropPtr = prop.getRawPtr( pInstance );
 
 			uint32 hashVal = prop.getNameHash();
@@ -242,6 +252,8 @@ namespace sw
 			{
 				if ( listProps[propSearchIdx].matchesNameHash( tagHash ) )
 				{
+					if ( listProps[propSearchIdx]._metadata._bTransient == SW_TRUE )
+						break;
 					pTargetProp	 = &listProps[propSearchIdx];
 					matchedIndex = propSearchIdx;
 					break;

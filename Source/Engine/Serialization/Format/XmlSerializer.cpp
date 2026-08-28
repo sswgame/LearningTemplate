@@ -566,6 +566,8 @@ namespace sw
 		{
 			typeInfo.forEachProperty( [&]( const PropertyInfo& prop )
 			{
+				if ( prop._metadata._bTransient == SW_TRUE )
+					return;
 				const void* pPropPtr = prop.getRawPtr( pInstance );
 
 				if ( prop._bIsContainer && prop.hasContainerWrapper() )
@@ -631,6 +633,8 @@ namespace sw
 
 			typeInfo.forEachProperty( [&]( const PropertyInfo& prop )
 			{
+				if ( prop._metadata._bTransient == SW_TRUE )
+					return;
 				void* pPropPtr = prop.getRawPtr( pInstance );
 
 				if ( prop._bIsContainer && prop.hasContainerWrapper() )

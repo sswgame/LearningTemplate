@@ -55,6 +55,38 @@ namespace sw
 	}; // struct annotationConstants
 
 	// ------------------------------------------------------------------------------
+	// 2.1) parse — AnnotationMeta 필드 Canonical 상수 계약
+	// ------------------------------------------------------------------------------
+	struct annotationFieldConstants
+	{
+		inline static constexpr const utf8* kAbstract		 = "Abstract";
+		inline static constexpr const utf8* kStatic			 = "Static";
+		inline static constexpr const utf8* kHideInMenu		 = "HideInMenu";
+		inline static constexpr const utf8* kAlias			 = "Alias";
+		inline static constexpr const utf8* kCategory		 = "Category";
+		inline static constexpr const utf8* kDisplayName	 = "DisplayName";
+		inline static constexpr const utf8* kTooltip		 = "Tooltip";
+		inline static constexpr const utf8* kMeta			 = "Meta";
+		inline static constexpr const utf8* kValueAlias		 = "ValueAlias";
+		inline static constexpr const utf8* kFlags			 = "Flags";
+		inline static constexpr const utf8* kInvalid		 = "Invalid";
+		inline static constexpr const utf8* kCount			 = "Count";
+		inline static constexpr const utf8* kReadOnly		 = "ReadOnly";
+		inline static constexpr const utf8* kXmlAttribute	 = "XmlAttribute";
+		inline static constexpr const utf8* kAssetPath		 = "AssetPath";
+		inline static constexpr const utf8* kPolymorphic	 = "Polymorphic";
+		inline static constexpr const utf8* kTransient		 = "Transient";
+		inline static constexpr const utf8* kHideInInspector = "HideInInspector";
+		inline static constexpr const utf8* kDefaultValue	 = "DefaultValue";
+		inline static constexpr const utf8* kAssetType		 = "AssetType";
+		inline static constexpr const utf8* kMinRange		 = "MinRange";
+		inline static constexpr const utf8* kMaxRange		 = "MaxRange";
+		inline static constexpr const utf8* kReliable		 = "Reliable";
+		inline static constexpr const utf8* kValidate		 = "Validate";
+		inline static constexpr const utf8* kCallInEditor	 = "CallInEditor";
+	}; // struct annotationFieldConstants
+
+	// ------------------------------------------------------------------------------
 	// 3) path — config 파일 이름 (ConfigConstants)
 	// ------------------------------------------------------------------------------
 	struct pathConstants

@@ -21,6 +21,8 @@ namespace sw
 
 		typeInfo.forEachProperty( [&]( const PropertyInfo& prop )
 		{
+			if ( prop._metadata._bTransient == SW_TRUE )
+				return;
 			const void* pCdoPtr = prop.getRawPtr( pCdoInstance );
 			const void* pModPtr = prop.getRawPtr( pModifiedInstance );
 			if ( pCdoPtr == nullptr || pModPtr == nullptr )
@@ -76,6 +78,8 @@ namespace sw
 			{
 				if ( propInfo.matchesNameHash( nameHash ) )
 				{
+					if ( propInfo._metadata._bTransient == SW_TRUE )
+						break;
 					pProp = &propInfo;
 					break;
 				}

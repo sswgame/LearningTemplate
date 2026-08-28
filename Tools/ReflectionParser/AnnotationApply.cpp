@@ -118,10 +118,12 @@ namespace sw
 
 	static void applyReflectAbstract( ParsedTypeInfo& typeInfo ) { typeInfo._bAbstract = SW_TRUE; }
 	static void applyReflectStatic( ParsedTypeInfo& typeInfo ) { typeInfo._bStatic = SW_TRUE; }
+	static void applyReflectHideInMenu( ParsedTypeInfo& typeInfo ) { typeInfo._bHideInMenu = SW_TRUE; }
 
 	constexpr ReflectFlagEntry kReflectFlags[] = {
-		{"Abstract", applyReflectAbstract},
-		{  "Static",	applyReflectStatic},
+		{  annotationFieldConstants::kAbstract,   applyReflectAbstract},
+		{	  annotationFieldConstants::kStatic,	 applyReflectStatic},
+		{annotationFieldConstants::kHideInMenu, applyReflectHideInMenu},
 	};
 
 	/** @brief 쉼표/세미콜론으로 나눈 타입 별칭을 붙입니다. */
@@ -136,6 +138,30 @@ namespace sw
 		}
 	}
 
+	/** @brief `Key=Value, Key2=Value2` 목록을 커스텀 메타데이터 페어로 파싱합니다. */
+	static void parseCustomMetaPairs( string_view raw, vector<std::pair<string, string>>& outList )
+	{
+		const string_splitter parts( raw, { ",", ";" } );
+		for ( const string_view tokenView : parts.getSplitList() )
+		{
+			string token = StringUtil::trim( string( tokenView ).c_str() );
+			if ( token.empty() )
+				continue;
+			const size_t eqPos = token.find( '=' );
+			if ( eqPos != string::npos )
+			{
+				string key = StringUtil::trim( token.substr( 0, eqPos ).c_str() );
+				string val = StringUtil::trim( token.substr( eqPos + 1 ).c_str() );
+				if ( key.empty() == false )
+					outList.emplace_back( std::move( key ), std::move( val ) );
+			}
+			else
+			{
+				outList.emplace_back( std::move( token ), "1" );
+			}
+		}
+	}
+
 	struct ReflectStringEntry
 	{
 		string_view _field;
@@ -146,9 +172,20 @@ namespace sw
 	{
 		appendTypeAliases( typeInfo._listAlias, value );
 	}
+	static void applyReflectCategory( ParsedTypeInfo& typeInfo, const string& value ) { typeInfo._category = value; }
+	static void applyReflectDisplayName( ParsedTypeInfo& typeInfo, const string& value ) { typeInfo._displayName = value; }
+	static void applyReflectTooltip( ParsedTypeInfo& typeInfo, const string& value ) { typeInfo._tooltip = value; }
+	static void applyReflectMeta( ParsedTypeInfo& typeInfo, const string& value )
+	{
+		parseCustomMetaPairs( value, typeInfo._listCustomMeta );
+	}
 
 	constexpr ReflectStringEntry kReflectStrings[] = {
-		{ "Alias", applyReflectAlias },
+		{	  annotationFieldConstants::kAlias,		applyReflectAlias},
+		{	  annotationFieldConstants::kCategory,	   applyReflectCategory},
+		{annotationFieldConstants::kDisplayName, applyReflectDisplayName},
+		{	  annotationFieldConstants::kTooltip,	  applyReflectTooltip},
+		{		  annotationFieldConstants::kMeta,		   applyReflectMeta},
 	};
 
 	struct EnumStringEntry
@@ -195,12 +232,17 @@ namespace sw
 	{
 		enumInfo._countEnumerator = value;
 	}
+	static void applyEnumMeta( ParsedEnumInfo& enumInfo, const string& value )
+	{
+		parseCustomMetaPairs( value, enumInfo._listCustomMeta );
+	}
 
 	constexpr EnumStringEntry kEnumStrings[] = {
-		{	  "Alias",	   applyEnumAlias},
-		{"ValueAlias", applyEnumValueAlias},
-		{	  "Invalid",	 applyEnumInvalid},
-		{	  "Count",	   applyEnumCount},
+		{	  annotationFieldConstants::kAlias,		applyEnumAlias},
+		{annotationFieldConstants::kValueAlias, applyEnumValueAlias},
+		{	  annotationFieldConstants::kInvalid,	  applyEnumInvalid},
+		{	  annotationFieldConstants::kCount,		applyEnumCount},
+		{	  annotationFieldConstants::kMeta,	   applyEnumMeta},
 	};
 
 	struct EnumFlagEntry
@@ -216,7 +258,7 @@ namespace sw
 	}
 
 	constexpr EnumFlagEntry kEnumFlags[] = {
-		{ "Flags", applyEnumFlags },
+		{ annotationFieldConstants::kFlags, applyEnumFlags },
 	};
 
 	struct PropBoolEntry
@@ -229,12 +271,16 @@ namespace sw
 	static void applyPropXmlAttribute( ParsedPropertyInfo& prop, bool value ) { prop._bXmlAttribute = value; }
 	static void applyPropAssetPath( ParsedPropertyInfo& prop, bool value ) { prop._bAssetPath = value; }
 	static void applyPropPolymorphic( ParsedPropertyInfo& prop, bool value ) { prop._bPolymorphic = value; }
+	static void applyPropTransient( ParsedPropertyInfo& prop, bool value ) { prop._bTransient = value; }
+	static void applyPropHideInInspector( ParsedPropertyInfo& prop, bool value ) { prop._bHideInInspector = value; }
 
 	constexpr PropBoolEntry kPropBools[] = {
-		{	  "ReadOnly",	  applyPropReadOnly},
-		{"XmlAttribute", applyPropXmlAttribute},
-		{	  "AssetPath",	   applyPropAssetPath},
-		{ "Polymorphic",	 applyPropPolymorphic},
+		{		  annotationFieldConstants::kReadOnly,		   applyPropReadOnly},
+		{	  annotationFieldConstants::kXmlAttribute,	   applyPropXmlAttribute},
+		{	  annotationFieldConstants::kAssetPath,		applyPropAssetPath},
+		{	  annotationFieldConstants::kPolymorphic,	  applyPropPolymorphic},
+		{	  annotationFieldConstants::kTransient,		applyPropTransient},
+		{annotationFieldConstants::kHideInInspector, applyPropHideInInspector},
 	};
 
 	struct PropStringEntry
@@ -256,14 +302,19 @@ namespace sw
 		prop._assetType	 = value;
 		prop._bAssetPath = SW_TRUE;
 	}
+	static void applyPropMeta( ParsedPropertyInfo& prop, const string& value )
+	{
+		parseCustomMetaPairs( value, prop._listCustomMeta );
+	}
 
 	constexpr PropStringEntry kPropStrings[] = {
-		{		  "Alias",		   applyPropAlias},
-		{	  "Category",	  applyPropCategory},
-		{ "DisplayName",	 applyPropDisplayName},
-		{	  "Tooltip",		 applyPropTooltip},
-		{"DefaultValue", applyPropDefaultValue},
-		{	  "AssetType",	   applyPropAssetType},
+		{		  annotationFieldConstants::kAlias,		applyPropAlias},
+		{	  annotationFieldConstants::kCategory,	   applyPropCategory},
+		{ annotationFieldConstants::kDisplayName,  applyPropDisplayName},
+		{	  annotationFieldConstants::kTooltip,	  applyPropTooltip},
+		{annotationFieldConstants::kDefaultValue, applyPropDefaultValue},
+		{	  annotationFieldConstants::kAssetType,	applyPropAssetType},
+		{		  annotationFieldConstants::kMeta,		   applyPropMeta},
 	};
 
 	struct PropFloatEntry
@@ -284,8 +335,8 @@ namespace sw
 	}
 
 	constexpr PropFloatEntry kPropFloats[] = {
-		{"MinRange", applyPropMinRange},
-		{"MaxRange", applyPropMaxRange},
+		{annotationFieldConstants::kMinRange, applyPropMinRange},
+		{annotationFieldConstants::kMaxRange, applyPropMaxRange},
 	};
 
 	struct FuncFlagEntry
@@ -296,10 +347,12 @@ namespace sw
 
 	static void applyFuncReliable( ParsedFunctionInfo& method ) { method._bReliable = SW_TRUE; }
 	static void applyFuncValidate( ParsedFunctionInfo& method ) { method._bValidate = SW_TRUE; }
+	static void applyFuncCallInEditor( ParsedFunctionInfo& method ) { method._bCallInEditor = SW_TRUE; }
 
 	constexpr FuncFlagEntry kFuncFlags[] = {
-		{"Reliable", applyFuncReliable},
-		{"Validate", applyFuncValidate},
+		{	  annotationFieldConstants::kReliable,	   applyFuncReliable},
+		{	  annotationFieldConstants::kValidate,	   applyFuncValidate},
+		{annotationFieldConstants::kCallInEditor, applyFuncCallInEditor},
 	};
 
 	struct FuncStringEntry
@@ -311,11 +364,16 @@ namespace sw
 	static void applyFuncCategory( ParsedFunctionInfo& method, const string& value ) { method._category = value; }
 	static void applyFuncDisplayName( ParsedFunctionInfo& method, const string& value ) { method._displayName = value; }
 	static void applyFuncTooltip( ParsedFunctionInfo& method, const string& value ) { method._tooltip = value; }
+	static void applyFuncMeta( ParsedFunctionInfo& method, const string& value )
+	{
+		parseCustomMetaPairs( value, method._listCustomMeta );
+	}
 
 	constexpr FuncStringEntry kFuncStrings[] = {
-		{	  "Category",	  applyFuncCategory},
-		{"DisplayName", applyFuncDisplayName},
-		{	  "Tooltip",	 applyFuncTooltip},
+		{	  annotationFieldConstants::kCategory,	   applyFuncCategory},
+		{annotationFieldConstants::kDisplayName, applyFuncDisplayName},
+		{	  annotationFieldConstants::kTooltip,	  applyFuncTooltip},
+		{		  annotationFieldConstants::kMeta,		   applyFuncMeta},
 	};
 
 	/** @brief REFLECT(...) 토큰을 ParsedTypeInfo 플래그·별칭에 적용합니다. */
@@ -347,10 +405,21 @@ namespace sw
 			const string_view		 key	 = StringUtil::trim( string_view( token.data(), eqPos ) );
 			const string_view		 val	 = parseAnnotationStringValue( token, eqPos );
 			const AnnotationBinding* binding = meta.findKey( annotationConstants::kReflectScope, key );
-			if ( binding == nullptr || binding->_kind != AnnotationBinding::Kind::String )
+			if ( binding == nullptr )
 				continue;
-			if ( const ReflectStringEntry* entry = findFieldEntry( kReflectStrings, binding->_field ) )
-				entry->_pApply( typeInfo, string( val ) );
+			if ( binding->_kind == AnnotationBinding::Kind::Bool )
+			{
+				if ( parseAnnotationBool( val ) )
+				{
+					if ( const ReflectFlagEntry* entry = findFieldEntry( kReflectFlags, binding->_field ) )
+						entry->_pApply( typeInfo );
+				}
+			}
+			else if ( binding->_kind == AnnotationBinding::Kind::String )
+			{
+				if ( const ReflectStringEntry* entry = findFieldEntry( kReflectStrings, binding->_field ) )
+					entry->_pApply( typeInfo, string( val ) );
+			}
 		}
 	}
 
@@ -407,7 +476,7 @@ namespace sw
 				break;
 			case Kind::Float:
 				if ( const PropFloatEntry* entry = findFieldEntry( kPropFloats, binding._field ) )
-					entry->_pApply( prop, std::strtof( string( val ).c_str(), nullptr ) );
+					entry->_pApply( prop, StringUtil::strtof( string( val ).c_str() ) );
 				break;
 			case Kind::NetRole:
 				break;
@@ -477,7 +546,15 @@ namespace sw
 			const string_view val = parseAnnotationStringValue( token, eqPos );
 			if ( const AnnotationBinding* binding = meta.findKey( annotationConstants::kFunctionScope, key ) )
 			{
-				if ( binding->_kind == AnnotationBinding::Kind::String )
+				if ( binding->_kind == AnnotationBinding::Kind::Bool )
+				{
+					if ( parseAnnotationBool( val ) )
+					{
+						if ( const FuncFlagEntry* entry = findFieldEntry( kFuncFlags, binding->_field ) )
+							entry->_pApply( method );
+					}
+				}
+				else if ( binding->_kind == AnnotationBinding::Kind::String )
 				{
 					if ( const FuncStringEntry* entry = findFieldEntry( kFuncStrings, binding->_field ) )
 						entry->_pApply( method, string( val ) );

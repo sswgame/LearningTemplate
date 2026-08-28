@@ -12,8 +12,31 @@
 
 namespace sw
 {
-	PropertyMetadata::PropertyMetadata() noexcept
+	TypeMetadata::TypeMetadata() noexcept
+#if !defined( SW_SHIPPING )
 		: _category{ constants::reflection::kDefaultCategory }
+		, _displayName{}
+		, _tooltip{}
+		, _mapCustomMeta{}
+		, _bHideInMenu{ 0 }
+		, _reservedFlags{ 0 }
+#else
+		: _reservedEmpty{ 0 }
+#endif
+	{
+	}
+
+	PropertyMetadata::PropertyMetadata() noexcept
+#if !defined( SW_SHIPPING )
+		: _category{ constants::reflection::kDefaultCategory }
+		, _displayName{}
+		, _tooltip{}
+		, _mapCustomMeta{}
+		, _defaultValue{}
+#else
+		: _defaultValue{}
+#endif
+		, _assetType{}
 		, _minRange{ 0.0f }
 		, _maxRange{ 1.0f }
 		, _bHasRange{ 0 }
@@ -21,17 +44,39 @@ namespace sw
 		, _bXmlAttribute{ 0 }
 		, _bAssetPath{ 0 }
 		, _bPolymorphic{ 0 }
-		, _reservedFlags{ 0 } {}
+		, _bTransient{ 0 }
+#if !defined( SW_SHIPPING )
+		, _bHideInInspector{ 0 }
+		, _reservedFlags{ 0 }
+#else
+		, _reservedFlags{ 0 }
+#endif
+	{
+	}
 
 	FunctionMetadata::FunctionMetadata() noexcept
+#if !defined( SW_SHIPPING )
 		: _category{ constants::reflection::kDefaultCategory }
+		, _displayName{}
+		, _tooltip{}
+		, _mapCustomMeta{}
 		, _netRole{ FunctionNetRole::Local }
+#else
+		: _netRole{ FunctionNetRole::Local }
+#endif
 		, _bReliable{ 0 }
 		, _bValidate{ 0 }
 		, _bConstructor{ 0 }
 		, _bStatic{ 0 }
 		, _bConst{ 0 }
-		, _reserved{ 0 } {}
+#if !defined( SW_SHIPPING )
+		, _bCallInEditor{ 0 }
+		, _reserved{ 0 }
+#else
+		, _reserved{ 0 }
+#endif
+	{
+	}
 
 	PropertyInfo::PropertyInfo() noexcept
 		: _containerWrapper{ nullptr }
@@ -88,12 +133,22 @@ namespace sw
 	}
 
 	EnumInfo::EnumInfo() noexcept
-		: _invalidValue{ 0 }
+		: _mapNameToValue{}
+		, _mapValueToName{}
+#if !defined( SW_SHIPPING )
+		, _mapCustomMeta{}
+#endif
+		, _name{}
+		, _fullyQualifiedName{}
+		, _moduleName{}
+		, _invalidValue{ 0 }
 		, _countValue{ 0 }
 		, _bIsBitFlag{ 0 }
 		, _bHasInvalid{ 0 }
 		, _bHasCount{ 0 }
-		, _reservedFlags{ 0 } {}
+		, _reservedFlags{ 0 }
+	{
+	}
 
 	TypeInfo::TypeInfo() noexcept
 		: _size{ 0 }
@@ -104,6 +159,7 @@ namespace sw
 		, _moduleName{}
 		, _propertyList{}
 		, _listMethod{}
+		, _metadata{}
 		, _propertyListWithBase{}
 		, _mapNameToProperty{}
 		, _mapNameToMethod{}
@@ -127,6 +183,7 @@ namespace sw
 		, _moduleName{ other._moduleName }
 		, _propertyList{ other._propertyList }
 		, _listMethod{ other._listMethod }
+		, _metadata{ other._metadata }
 		, _propertyListWithBase{}
 		, _mapNameToProperty{}
 		, _mapNameToMethod{}
@@ -152,6 +209,7 @@ namespace sw
 		, _moduleName{ std::move( other._moduleName ) }
 		, _propertyList{ std::move( other._propertyList ) }
 		, _listMethod{ std::move( other._listMethod ) }
+		, _metadata{ std::move( other._metadata ) }
 		, _propertyListWithBase{}
 		, _mapNameToProperty{}
 		, _mapNameToMethod{}
@@ -185,6 +243,7 @@ namespace sw
 		_moduleName			= other._moduleName;
 		_propertyList		= other._propertyList;
 		_listMethod			= other._listMethod;
+		_metadata			= other._metadata;
 		_typeId				= other._typeId;
 		_bAbstract			= other._bAbstract;
 		_bStatic			= other._bStatic;
@@ -214,6 +273,7 @@ namespace sw
 		_moduleName			= std::move( other._moduleName );
 		_propertyList		= std::move( other._propertyList );
 		_listMethod			= std::move( other._listMethod );
+		_metadata			= std::move( other._metadata );
 		_typeId				= other._typeId;
 		_bAbstract			= other._bAbstract;
 		_bStatic			= other._bStatic;

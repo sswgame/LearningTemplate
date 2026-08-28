@@ -45,6 +45,7 @@ namespace sw
 		string								_tooltip;
 		string								_defaultValue;
 		string								_assetType;
+		vector<std::pair<string, string>>	_listCustomMeta;
 		ContainerKind						_containerKind = ContainerKind::None;
 		string								_containerType;
 		string								_elementTypeName;
@@ -52,13 +53,14 @@ namespace sw
 		sw::shared_ptr<ParsedContainerNode> _containerTree;
 		float32								_minRange = 0.0f;
 		float32								_maxRange = 1.0f;
-		uint8								_bReadOnly	   : 1;
-		uint8								_bXmlAttribute : 1;
-		uint8								_bAssetPath	   : 1;
-		uint8								_bPolymorphic  : 1;
-		uint8								_bHasRange	   : 1;
-		uint8								_bIsContainer  : 1;
-		[[maybe_unused]] uint8				_reserved	   : 2;
+		uint8								_bReadOnly		  : 1;
+		uint8								_bXmlAttribute	  : 1;
+		uint8								_bAssetPath		  : 1;
+		uint8								_bPolymorphic	  : 1;
+		uint8								_bHasRange		  : 1;
+		uint8								_bIsContainer	  : 1;
+		uint8								_bTransient		  : 1;
+		uint8								_bHideInInspector : 1;
 
 		ParsedPropertyInfo() noexcept
 			: _bReadOnly{ 0 }
@@ -67,7 +69,8 @@ namespace sw
 			, _bPolymorphic{ 0 }
 			, _bHasRange{ 0 }
 			, _bIsContainer{ 0 }
-			, _reserved{ 0 }
+			, _bTransient{ 0 }
+			, _bHideInInspector{ 0 }
 		{
 		}
 	};
@@ -75,19 +78,21 @@ namespace sw
 	/** @brief FUNCTION(...) 가 붙은 메서드(또는 자동 등록 생성자) */
 	struct ParsedFunctionInfo
 	{
-		string				   _name;
-		string				   _returnTypeName;
-		vector<string>		   _listParamTypeName;
-		string				   _category = annotationConstants::kDefaultMethodCategory;
-		string				   _displayName;
-		string				   _tooltip;
-		FunctionNetRole		   _netRole = FunctionNetRole::Local;
-		uint8				   _bReliable	 : 1;
-		uint8				   _bValidate	 : 1;
-		uint8				   _bConstructor : 1;
-		uint8				   _bStatic		 : 1;
-		uint8				   _bConst		 : 1;
-		[[maybe_unused]] uint8 _reserved	 : 3;
+		string							  _name;
+		string							  _returnTypeName;
+		vector<string>					  _listParamTypeName;
+		string							  _category = annotationConstants::kDefaultMethodCategory;
+		string							  _displayName;
+		string							  _tooltip;
+		vector<std::pair<string, string>> _listCustomMeta;
+		FunctionNetRole					  _netRole = FunctionNetRole::Local;
+		uint8							  _bReliable	 : 1;
+		uint8							  _bValidate	 : 1;
+		uint8							  _bConstructor	 : 1;
+		uint8							  _bStatic		 : 1;
+		uint8							  _bConst		 : 1;
+		uint8							  _bCallInEditor : 1;
+		[[maybe_unused]] uint8			  _reserved		 : 2;
 
 		ParsedFunctionInfo() noexcept
 			: _bReliable{ 0 }
@@ -95,6 +100,7 @@ namespace sw
 			, _bConstructor{ 0 }
 			, _bStatic{ 0 }
 			, _bConst{ 0 }
+			, _bCallInEditor{ 0 }
 			, _reserved{ 0 }
 		{
 		}
@@ -103,23 +109,29 @@ namespace sw
 	/** @brief REFLECT 가 붙은 클래스·구조체 */
 	struct ParsedTypeInfo
 	{
-		string					   _name;
-		string					   _fullyQualifiedName;
-		string					   _parentFQN;
-		vector<string>			   _listAlias;
-		vector<ParsedPropertyInfo> _listProperty;
-		vector<ParsedFunctionInfo> _listMethod;
-		uint8					   _bAbstract		  : 1;
-		uint8					   _bStatic			  : 1;
-		uint8					   _bReflectBody	  : 1;
-		uint8					   _bComponentFactory : 1;
-		[[maybe_unused]] uint8	   _reserved		  : 4;
+		string							  _name;
+		string							  _fullyQualifiedName;
+		string							  _parentFQN;
+		string							  _category;
+		string							  _displayName;
+		string							  _tooltip;
+		vector<string>					  _listAlias;
+		vector<std::pair<string, string>> _listCustomMeta;
+		vector<ParsedPropertyInfo>		  _listProperty;
+		vector<ParsedFunctionInfo>		  _listMethod;
+		uint8							  _bAbstract		 : 1;
+		uint8							  _bStatic			 : 1;
+		uint8							  _bReflectBody		 : 1;
+		uint8							  _bComponentFactory : 1;
+		uint8							  _bHideInMenu		 : 1;
+		[[maybe_unused]] uint8			  _reserved			 : 3;
 
 		ParsedTypeInfo() noexcept
 			: _bAbstract{ 0 }
 			, _bStatic{ 0 }
 			, _bReflectBody{ 0 }
 			, _bComponentFactory{ 0 }
+			, _bHideInMenu{ 0 }
 			, _reserved{ 0 }
 		{
 		}
@@ -142,6 +154,7 @@ namespace sw
 		string							  _fullyQualifiedName;
 		vector<string>					  _listAlias;
 		vector<std::pair<string, string>> _listValueAlias;
+		vector<std::pair<string, string>> _listCustomMeta;
 		vector<ParsedEnumeratorInfo>	  _listEnumerator;
 		string							  _invalidEnumerator;
 		string							  _countEnumerator;

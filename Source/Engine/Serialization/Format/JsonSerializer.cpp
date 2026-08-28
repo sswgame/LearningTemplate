@@ -564,6 +564,8 @@ namespace sw
 		dst.setObject();
 		typeInfo.forEachProperty( [&]( const PropertyInfo& prop )
 		{
+			if ( prop._metadata._bTransient == SW_TRUE )
+				return;
 			writeProperty( dst, prop, pInstance, ctx );
 		} );
 	}
@@ -606,7 +608,7 @@ namespace sw
 			if ( pMatched == nullptr && bCaseVariant )
 				continue;
 
-			if ( pMatched == nullptr )
+			if ( pMatched == nullptr || pMatched->_metadata._bTransient == SW_TRUE )
 			{
 				if ( pOutOrphans != nullptr )
 				{
@@ -668,6 +670,8 @@ namespace sw
 		root.set( kSchemaVersionKey, false ).setUint( version );
 		typeInfo.forEachProperty( [&]( const PropertyInfo& prop )
 		{
+			if ( prop._metadata._bTransient == SW_TRUE )
+				return;
 			writeProperty( root, prop, pInstance, ctx );
 		} );
 		return doc.dump();

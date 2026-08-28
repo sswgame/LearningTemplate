@@ -299,6 +299,23 @@ namespace sw
 			_grandChildTickCount += 3;
 		}
 	};
+	REFLECT( Category = "Gameplay", DisplayName = "Meta Test Actor", Tooltip = "Actor for testing rich metadata", HideInMenu, Meta = "CustomTag=ActorVal, Priority=10" )
+	struct MetaTestActor
+	{
+		REFLECT_BODY();
+
+		PROPERTY( Category = "Stats", DisplayName = "Health Points", Tooltip = "Current health", Transient, HideInInspector, Meta = "Units=HP, Clamp=True" )
+		int32 _health = 100;
+
+		PROPERTY( Category = "Stats", DisplayName = "Armor", Tooltip = "Armor rating" )
+		int32 _armor = 50;
+
+		FUNCTION( Category = "Actions", DisplayName = "Reset Health", Tooltip = "Resets health to 100", CallInEditor, Meta = "ActionType=Reset" )
+		void resetHealth()
+		{
+			_health = 100;
+		}
+	};
 } // namespace sw
 
 // ------------------------------------------------------------------------------
@@ -311,4 +328,11 @@ enum class TestFlag : uint32
 	Read	= 1 << 0,
 	Write	= 1 << 1,
 	Execute = 1 << 2
+};
+
+ENUM( Meta = "Doc=EnumForTesting, Version=2" )
+enum class TestMetaEnum : uint32
+{
+	First  = 0,
+	Second = 1
 };

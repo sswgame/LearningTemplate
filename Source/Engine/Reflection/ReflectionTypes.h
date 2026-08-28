@@ -22,12 +22,44 @@ namespace sw
 #undef REGISTER_FUNCTION_NET_ROLE
 	};
 
+	/// @brief REFLECT() 클래스/구조체 저작 메타
+	struct SW_API TypeMetadata
+	{
+#if !defined( SW_SHIPPING )
+		string								 _category;
+		string								 _displayName;
+		string								 _tooltip;
+		unordered_map<hashed_string, string> _mapCustomMeta;
+		uint8								 _bHideInMenu	: 1; ///< "Add Component" 메뉴 숨김
+		[[maybe_unused]] uint8				 _reservedFlags : 7;
+#else
+		[[maybe_unused]] uint8 _reservedEmpty;
+#endif
+
+		TypeMetadata() noexcept;
+
+		/** @brief 커스텀 메타데이터 태그를 조회합니다. (Shipping 빌드에서는 nullptr) */
+		const string* findCustomMeta( const hashed_string& key ) const noexcept
+		{
+#if !defined( SW_SHIPPING )
+			auto iter = _mapCustomMeta.find( key );
+			return ( iter != _mapCustomMeta.end() ) ? &iter->second : nullptr;
+#else
+			(void)key;
+			return nullptr;
+#endif
+		}
+	};
+
 	/// @brief PROPERTY() 저작 메타 (카테고리, 기본값, 범위, XML 속성)
 	struct SW_API PropertyMetadata
 	{
-		string _category;
-		string _displayName;
-		string _tooltip;
+#if !defined( SW_SHIPPING )
+		string								 _category;
+		string								 _displayName;
+		string								 _tooltip;
+		unordered_map<hashed_string, string> _mapCustomMeta;
+#endif
 		/**
 		 * @brief 에셋이 이 프로퍼티를 생략할 때 쓰는 저작 기본값 (PROPERTY(Default="...")).
 		 * @details Xml/Json/Binary deserialize가 적용. C++ 멤버 초기화자와는 별개이므로 맞춰 두세요.
@@ -43,29 +75,69 @@ namespace sw
 		uint8 _bXmlAttribute : 1;
 		uint8 _bAssetPath	 : 1;
 		/** @brief 값이 ReflectAny (또는 type+blob 다형 페이로드). */
-		uint8				   _bPolymorphic  : 1;
-		[[maybe_unused]] uint8 _reservedFlags : 3;
+		uint8 _bPolymorphic : 1;
+		/** @brief 직렬화(Json/Xml/Binary/Diff) 저장/로드 대상에서 제외 (Transient / NonSerialized). */
+		uint8 _bTransient : 1;
+#if !defined( SW_SHIPPING )
+		/** @brief 에디터 인스펙터 패널 UI에서 숨김 (HideInInspector). */
+		uint8				   _bHideInInspector : 1;
+		[[maybe_unused]] uint8 _reservedFlags	 : 1;
+#else
+		[[maybe_unused]] uint8 _reservedFlags : 2;
+#endif
 
 		/** @brief 범위/플래그 끈 기본값. */
 		PropertyMetadata() noexcept;
+
+		/** @brief 커스텀 메타데이터 태그를 조회합니다. (Shipping 빌드에서는 nullptr) */
+		const string* findCustomMeta( const hashed_string& key ) const noexcept
+		{
+#if !defined( SW_SHIPPING )
+			auto iter = _mapCustomMeta.find( key );
+			return ( iter != _mapCustomMeta.end() ) ? &iter->second : nullptr;
+#else
+			(void)key;
+			return nullptr;
+#endif
+		}
 	};
 
 	/// @brief FUNCTION() 저작 메타 (카테고리, NetRole, static/const)
 	struct SW_API FunctionMetadata
 	{
-		string				   _category;
-		string				   _displayName;
-		string				   _tooltip;
-		FunctionNetRole		   _netRole;
-		uint8				   _bReliable	 : 1;
-		uint8				   _bValidate	 : 1;
-		uint8				   _bConstructor : 1; ///< REFLECT 타입 ctor invoker (objPtr에 placement-new)
-		uint8				   _bStatic		 : 1; ///< C++ static member / FUNCTION on static
-		uint8				   _bConst		 : 1; ///< const member function
-		[[maybe_unused]] uint8 _reserved	 : 3;
+#if !defined( SW_SHIPPING )
+		string								 _category;
+		string								 _displayName;
+		string								 _tooltip;
+		unordered_map<hashed_string, string> _mapCustomMeta;
+#endif
+		FunctionNetRole _netRole;
+		uint8			_bReliable	  : 1;
+		uint8			_bValidate	  : 1;
+		uint8			_bConstructor : 1; ///< REFLECT 타입 ctor invoker (objPtr에 placement-new)
+		uint8			_bStatic	  : 1; ///< C++ static member / FUNCTION on static
+		uint8			_bConst		  : 1; ///< const member function
+#if !defined( SW_SHIPPING )
+		uint8				   _bCallInEditor : 1; ///< 에디터 인스펙터 패널에서 원클릭 실행 버튼 노출
+		[[maybe_unused]] uint8 _reserved	  : 2;
+#else
+		[[maybe_unused]] uint8 _reserved : 3;
+#endif
 
 		/** @brief 플래그 끈 기본값. */
 		FunctionMetadata() noexcept;
+
+		/** @brief 커스텀 메타데이터 태그를 조회합니다. (Shipping 빌드에서는 nullptr) */
+		const string* findCustomMeta( const hashed_string& key ) const noexcept
+		{
+#if !defined( SW_SHIPPING )
+			auto iter = _mapCustomMeta.find( key );
+			return ( iter != _mapCustomMeta.end() ) ? &iter->second : nullptr;
+#else
+			(void)key;
+			return nullptr;
+#endif
+		}
 	};
 
 	/**
@@ -214,6 +286,12 @@ namespace sw
 		{
 			return reinterpret_cast<const utf8*>( pInstance ) + _offset;
 		}
+
+		/** @brief 커스텀 메타데이터 태그를 조회합니다. */
+		const string* findCustomMeta( const hashed_string& key ) const noexcept
+		{
+			return _metadata.findCustomMeta( key );
+		}
 	};
 
 	/// @brief 등록된 enum: 이름↔값, Flags, Invalid/Count 센티널
@@ -221,18 +299,33 @@ namespace sw
 	{
 		unordered_map<hashed_string, int64> _mapNameToValue;
 		unordered_map<int64, hashed_string> _mapValueToName;
-		hashed_string						_name;
-		hashed_string						_fullyQualifiedName;
-		hashed_string						_moduleName;
-		int64								_invalidValue{ 0 };
-		int64								_countValue{ 0 };
-		uint8								_bIsBitFlag	   : 1;
-		uint8								_bHasInvalid   : 1;
-		uint8								_bHasCount	   : 1;
-		[[maybe_unused]] uint8				_reservedFlags : 5;
+#if !defined( SW_SHIPPING )
+		unordered_map<hashed_string, string> _mapCustomMeta;
+#endif
+		hashed_string		   _name;
+		hashed_string		   _fullyQualifiedName;
+		hashed_string		   _moduleName;
+		int64				   _invalidValue{ 0 };
+		int64				   _countValue{ 0 };
+		uint8				   _bIsBitFlag	  : 1;
+		uint8				   _bHasInvalid	  : 1;
+		uint8				   _bHasCount	  : 1;
+		[[maybe_unused]] uint8 _reservedFlags : 5;
 
 		/** @brief 빈 이름↔값 맵. */
 		EnumInfo() noexcept;
+
+		/** @brief 커스텀 메타데이터 태그를 조회합니다. (Shipping 빌드에서는 nullptr) */
+		const string* findCustomMeta( const hashed_string& key ) const noexcept
+		{
+#if !defined( SW_SHIPPING )
+			auto iter = _mapCustomMeta.find( key );
+			return ( iter != _mapCustomMeta.end() ) ? &iter->second : nullptr;
+#else
+			(void)key;
+			return nullptr;
+#endif
+		}
 
 		/** @brief ENUM(Invalid/Count) 센티널을 반영한 유효성. 메타가 없으면 true. */
 		bool isValidValue( int64 value ) const noexcept
@@ -367,6 +460,12 @@ namespace sw
 		vector<string>								  _listParamTypeName; ///< clang spellings in declaration order
 		FunctionMetadata							  _metadata;
 		Delegate<TaskValue( void*, const TaskArgs& )> _invoker; ///< instance + args → TaskValue
+
+		/** @brief 커스텀 메타데이터 태그를 조회합니다. */
+		const string* findCustomMeta( const hashed_string& key ) const noexcept
+		{
+			return _metadata.findCustomMeta( key );
+		}
 	};
 
 	/// @brief 등록된 타입: FQN, 프로퍼티/메서드, 생성 가능 여부
@@ -381,6 +480,7 @@ namespace sw
 		hashed_string											  _moduleName;
 		vector<PropertyInfo>									  _propertyList;
 		vector<FunctionInfo>									  _listMethod;
+		TypeMetadata											  _metadata;
 		mutable vector<PropertyInfo>							  _propertyListWithBase;
 		mutable unordered_map<hashed_string, const PropertyInfo*> _mapNameToProperty;
 		mutable unordered_map<hashed_string, const FunctionInfo*> _mapNameToMethod;
@@ -405,6 +505,54 @@ namespace sw
 		TypeInfo( TypeInfo&& other ) noexcept;
 		TypeInfo& operator=( const TypeInfo& other );
 		TypeInfo& operator=( TypeInfo&& other ) noexcept;
+
+		/** @brief 커스텀 메타데이터 태그를 조회합니다. */
+		const string* findCustomMeta( const hashed_string& key ) const noexcept
+		{
+			return _metadata.findCustomMeta( key );
+		}
+
+		/** @brief 카테고리를 반환합니다. */
+		const string& getCategory() const noexcept
+		{
+#if !defined( SW_SHIPPING )
+			return _metadata._category;
+#else
+			static const string s_empty;
+			return s_empty;
+#endif
+		}
+
+		/** @brief 표시 이름을 반환합니다. DisplayName 메타가 없으면 C++ 타입 이름을 반환합니다. */
+		const utf8* getDisplayName() const noexcept
+		{
+#if !defined( SW_SHIPPING )
+			if ( _metadata._displayName.empty() == false )
+				return _metadata._displayName.c_str();
+#endif
+			return _name.c_str();
+		}
+
+		/** @brief 툴팁 문자열을 반환합니다. */
+		const string& getTooltip() const noexcept
+		{
+#if !defined( SW_SHIPPING )
+			return _metadata._tooltip;
+#else
+			static const string s_empty;
+			return s_empty;
+#endif
+		}
+
+		/** @brief "Add Component" 메뉴에서 숨겨야 하는지 여부를 반환합니다. */
+		bool isHiddenInMenu() const noexcept
+		{
+#if !defined( SW_SHIPPING )
+			return _metadata._bHideInMenu != 0;
+#else
+			return false;
+#endif
+		}
 
 		/** @brief 팩토리/$ctor가 인스턴스를 만들 수 있으면 true. */
 		bool canConstruct() const noexcept { return _bAbstract == 0 && _bStatic == 0 && _bPrimitive == 0; }

@@ -18,13 +18,20 @@
 [REFLECT]
 flag.Abstract = Abstract, abstract
 flag.Static = Static, static
+flag.HideInMenu = HideInMenu, HiddenInMenu, EditorHidden
 # 직렬화/핫리로드용 옛 타입명. 복수: Alias="OldA, OldB"
 string.Alias = Alias, PreviousName, PreviousNames
+string.Category = Category
+string.DisplayName = DisplayName
+string.Tooltip = Tooltip
+string.Meta = Meta, meta, CustomMeta
+bool.HideInMenu = HideInMenu, HiddenInMenu, EditorHidden
 
 [ENUM]
 string.Alias = Alias, PreviousName, PreviousNames
 # enumerator 개명: ValueAlias="OldIdle:Idle, OldMoving:Moving"
 string.ValueAlias = ValueAlias, EnumeratorAlias
+string.Meta = Meta, meta, CustomMeta
 # 비트플래그 연산자(|,&,^,~) 생성. 직렬화 EnumInfo::_bIsBitFlag 도 켠다.
 flag.Flags = Flags, BitFlag, FLAG, Bitwise
 # TypeRegistry::enumToString / enumFromString 용 Invalid / exclusive Count 센티널
@@ -36,6 +43,8 @@ flag.ReadOnly = ReadOnly
 flag.XmlAttribute = XmlAttribute, xmlAttribute
 flag.AssetPath = AssetPath, assetPath
 flag.Polymorphic = Polymorphic, polymorphic
+flag.Transient = Transient, transient, NonSerialized, nonSerialized
+flag.HideInInspector = HideInInspector, hideInInspector, HiddenInInspector, EditorHidden
 # 복수: Alias="hp, HitPoints" (따옴표 필수 — 콤마가 토큰 분리에 안 먹히게)
 string.Alias = Alias, PreviousName, PreviousNames
 string.Category = Category
@@ -43,10 +52,13 @@ string.DisplayName = DisplayName
 string.Tooltip = Tooltip
 string.DefaultValue = Default, DefaultValue
 string.AssetType = AssetType
+string.Meta = Meta, meta, CustomMeta
 float.MinRange = Min
 float.MaxRange = Max
 bool.ReadOnly = ReadOnly
 bool.XmlAttribute = XmlAttribute
+bool.Transient = Transient, transient, NonSerialized, nonSerialized
+bool.HideInInspector = HideInInspector, hideInInspector, HiddenInInspector, EditorHidden
 
 [FUNCTION]
 netrole.Server = Server
@@ -54,6 +66,9 @@ netrole.Client = Client
 netrole.Multicast = Multicast, NetMulticast
 flag.Reliable = Reliable
 flag.Validate = Validate
+flag.CallInEditor = CallInEditor, callInEditor, ExecInEditor
 string.Category = Category
 string.DisplayName = DisplayName
 string.Tooltip = Tooltip
+string.Meta = Meta, meta, CustomMeta
+bool.CallInEditor = CallInEditor, callInEditor, ExecInEditor
