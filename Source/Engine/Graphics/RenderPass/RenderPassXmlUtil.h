@@ -39,9 +39,6 @@ namespace sw
 	{
 		XmlNode list = parent.appendChild( pListName );
 		for ( const string& valueStr : values )
-		{
-			XmlNode item = list.appendChild( "item" );
-			item.setValue( valueStr.c_str() );
-		}
+			list.appendChild( "item", valueStr );
 	}
 } // namespace sw

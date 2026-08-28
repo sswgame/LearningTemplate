@@ -20,34 +20,11 @@ namespace sw
 
 	bool RenderPassResource::loadFromXmlFile( string_view assetRelativePath )
 	{
-		string absPath = ResourceUtil::getResourcePath( assetRelativePath );
-		if ( absPath.empty() )
-			absPath = assetRelativePath;
-
-		if ( FileUtil::fileExists( absPath ) == false )
-		{
-			SW_LOG_ERROR( "XML file not found: %#", absPath );
-			return false;
-		}
-
-		vector<uint8> listFileData;
-		if ( FileUtil::readFile( absPath, listFileData ) == false )
-		{
-			SW_LOG_ERROR( "Failed to open XML file: %#", absPath );
-			return false;
-		}
-
-		if ( listFileData.empty() )
-		{
-			SW_LOG_ERROR( "XML file is empty: %#", absPath );
-			return false;
-		}
-
-		string		xmlStr( reinterpret_cast<const utf8*>( listFileData.data() ), listFileData.size() );
+		string		absPath;
 		XmlDocument doc;
-		if ( doc.parse( xmlStr ) == false )
+		if ( doc.loadPath( assetRelativePath, &absPath ) == false )
 		{
-			SW_LOG_ERROR( "Failed to parse XML: %#", absPath );
+			SW_LOG_ERROR( "XML file not found: %#", assetRelativePath );
 			return false;
 		}
 
@@ -86,9 +63,7 @@ namespace sw
 				const utf8* pAttFormat = attNode.childText( "_format" );
 				if ( pAttFormat != nullptr )
 					att._format = pAttFormat;
-				const utf8* pAttClear = attNode.childText( "_bClear" );
-				if ( pAttClear != nullptr )
-					att._bClear = ( string( pAttClear ) == "1" || string( pAttClear ) == "true" );
+				att._bClear				   = attNode.childBool( "_bClear", false );
 				const utf8* pAttClearColor = attNode.childText( "_clearColor" );
 				if ( pAttClearColor != nullptr )
 				{
@@ -116,23 +91,16 @@ namespace sw
 		XmlNode root = doc.appendRoot( "RenderPassDesc" );
 		engine::getResourceManager().getAssetFormatRegistry().writeXmlVersion( root, AssetFormatVersions::kRenderPass );
 
-		XmlNode nameNode = root.appendChild( "_name" );
-		nameNode.setValue( _desc._name.c_str() );
+		root.appendChild( "_name", _desc._name );
 
 		XmlNode attachsNode = root.appendChild( "_attachments" );
 
 		for ( const RenderPassAttachment& att : _desc._listAttachment )
 		{
 			XmlNode attNode = attachsNode.appendChild( "item" );
-
-			XmlNode nName = attNode.appendChild( "_name" );
-			nName.setValue( att._name.c_str() );
-
-			XmlNode nFormat = attNode.appendChild( "_format" );
-			nFormat.setValue( att._format.c_str() );
-
-			XmlNode nClear = attNode.appendChild( "_bClear" );
-			nClear.setValue( att._bClear ? "1" : "0" );
+			attNode.appendChild( "_name", att._name );
+			attNode.appendChild( "_format", att._format );
+			attNode.appendChild( "_bClear", att._bClear );
 
 			StringBuilder<constant::kMaxBuffer128> colorSS;
 			constexpr Format					   colorFmt( 4 );
@@ -141,13 +109,10 @@ namespace sw
 								  Fmt( att._arrClearColor[1], colorFmt ),
 								  Fmt( att._arrClearColor[2], colorFmt ),
 								  Fmt( att._arrClearColor[3], colorFmt ) );
-			XmlNode nColor = attNode.appendChild( "_clearColor" );
-			nColor.setValue( colorSS.c_str() );
+			attNode.appendChild( "_clearColor", colorSS.view() );
 		}
 
-		string xmlStr = doc.saveToString();
-
-		if ( FileUtil::writeFile( absPath, reinterpret_cast<const uint8*>( xmlStr.data() ), xmlStr.size() ) == false )
+		if ( doc.saveFile( absPath ) == false )
 		{
 			SW_LOG_ERROR( "Failed to write XML file: %#", absPath );
 			return false;

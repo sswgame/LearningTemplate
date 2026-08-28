@@ -2,6 +2,10 @@
 
 #include "Engine/Utility/Json/JsonDocument.h"
 
+#include "Core/File/FileUtil.h"
+
+#include "Engine/Utility/Resource/ResourceUtil.h"
+
 #include <nlohmann/json.hpp>
 
 namespace sw
@@ -342,6 +346,19 @@ namespace sw
 		return parse( text );
 	}
 
+	bool JsonDocument::loadPath( string_view path, string* pOutAbsPath )
+	{
+		if ( path.empty() )
+			return false;
+		if ( FileUtil::fileExists( path ) )
+		{
+			if ( pOutAbsPath != nullptr )
+				*pOutAbsPath = string{ path };
+			return loadFile( path );
+		}
+		return loadResource( path, pOutAbsPath );
+	}
+
 	JsonValue JsonDocument::root() const
 	{
 		if ( _impl == nullptr )
@@ -370,6 +387,13 @@ namespace sw
 		if ( _impl == nullptr )
 			return "null";
 		return dumpValue( _impl->root, indent );
+	}
+
+	bool JsonDocument::saveFile( string_view absPath, int32 indent ) const
+	{
+		if ( absPath.empty() )
+			return false;
+		return FileUtil::writeTextFile( absPath, dump( indent ) );
 	}
 
 	string JsonDocument::escapeString( string_view value )

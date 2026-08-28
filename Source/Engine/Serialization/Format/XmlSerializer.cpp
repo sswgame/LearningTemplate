@@ -2,6 +2,7 @@
 
 #include "Engine/Serialization/Format/XmlSerializer.h"
 
+#include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -855,6 +856,22 @@ namespace sw
 		if ( deserializeSoft( pInstance, typeInfo, xmlStr, &listOrphans, nullptr, ctx ) == false )
 			return false;
 		return listOrphans.empty();
+	}
+
+	bool XmlSerializer::saveFile( string_view absPath, const void* pInstance, const TypeInfo& typeInfo,
+								  const SerializeContext& ctx )
+	{
+		if ( absPath.empty() )
+			return false;
+		return FileUtil::writeTextFile( absPath, serialize( pInstance, typeInfo, ctx ) );
+	}
+
+	bool XmlSerializer::loadFile( string_view path, void* pInstance, const TypeInfo& typeInfo, const SerializeContext& ctx )
+	{
+		XmlDocument doc;
+		if ( doc.loadPath( path ) == false )
+			return false;
+		return deserialize( pInstance, typeInfo, doc.saveToString(), ctx );
 	}
 
 	bool XmlSerializer::deserializeSoft( void* pInstance, const TypeInfo& typeInfo, string_view xmlStr,

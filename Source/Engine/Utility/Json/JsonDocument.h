@@ -161,6 +161,12 @@ namespace sw
 		/** @brief 리소스 상대 경로를 해석한 뒤 읽고 파싱합니다. */
 		bool loadResource( string_view relativePath, string* pOutAbsPath = nullptr );
 
+		/**
+		 * @brief 절대/작업 경로가 있으면 loadFile, 없으면 loadResource.
+		 * @details 에셋 상대 경로와 에디터 절대 경로를 한 호출로 처리합니다.
+		 */
+		bool loadPath( string_view path, string* pOutAbsPath = nullptr );
+
 		/** @brief 루트 값. */
 		JsonValue root() const;
 
@@ -173,6 +179,8 @@ namespace sw
 		JsonValue makeArray();
 		/** @brief 현재 문서를 JSON 문자열로 직렬화합니다. indent<0 이면 한 줄. */
 		string dump( int32 indent = -1 ) const;
+		/** @brief 현재 문서를 절대 경로에 씁니다. indent<0 이면 한 줄. */
+		bool saveFile( string_view absPath, int32 indent = -1 ) const;
 
 		// ------------------------------------------------------------------------------
 		// 6) 문자열 유틸 — 따옴표 안의 이스케이프

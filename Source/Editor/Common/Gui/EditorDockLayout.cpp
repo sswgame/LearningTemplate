@@ -3,8 +3,6 @@
 #include "Editor/Common/Gui/EditorDockLayout.h"
 
 #include "Core/File/FileUtil.h"
-#include "Core/String/StringBuilder.h"
-#include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Config/EditorConfig.h"
 #include "Editor/Common/EditorUtil.h"
@@ -62,7 +60,7 @@ namespace sw::editor
 			return;
 
 		KeyValueMap visibilityKv;
-		if ( KeyValueFile::loadFile( _windowsIniPath, visibilityKv ) == false )
+		if ( KeyValueFile::loadPath( _windowsIniPath, visibilityKv ) == false )
 		{
 			SW_LOG_WARNING( "Failed to open windows.ini: %#", _windowsIniPath.c_str() );
 			return;
@@ -72,11 +70,7 @@ namespace sw::editor
 		{
 			if ( entry._pInstance == nullptr )
 				continue;
-			const utf8* pValue = KeyValueFile::get( visibilityKv, entry._title.c_str(), nullptr );
-			if ( pValue == nullptr )
-				continue;
-			const bool bOpen = ( StringUtil::strcmp( pValue, "1" ) == 0 || StringUtil::strcmp( pValue, "true" ) == 0 ||
-								 StringUtil::strcmp( pValue, "True" ) == 0 );
+			const bool bOpen = KeyValueFile::getBool( visibilityKv, entry._title.c_str(), entry._pInstance->isOpen() );
 			entry._pInstance->setOpen( bOpen );
 		}
 
@@ -87,20 +81,16 @@ namespace sw::editor
 	{
 		if ( _windowsIniPath.empty() == false )
 		{
-			StringBuilder<2048> sb;
-			sb.append( "# Editor panel visibility (1=open, 0=closed)\n" );
-			sb.append( "[WindowVisibility]\n" );
+			KeyValueMap visibilityKv;
 			for ( const EditorPanelEntry& entry : EditorContext::get()->getPanelManager().getPanels() )
 			{
 				if ( entry._pInstance == nullptr )
 					continue;
-				sb.append( entry._title.c_str() )
-					.append( '=' )
-					.append( entry._pInstance->isOpen() ? '1' : '0' )
-					.append( '\n' );
+				visibilityKv[entry._title] = entry._pInstance->isOpen() ? "1" : "0";
 			}
 
-			if ( FileUtil::writeTextFile( _windowsIniPath, sb.c_str() ) )
+			if ( KeyValueFile::saveFile( _windowsIniPath, visibilityKv, "Editor panel visibility (1=open, 0=closed)",
+										 "WindowVisibility" ) )
 				SW_LOG_TRACE( "Saved panel visibility to %#", _windowsIniPath.c_str() );
 			else
 				SW_LOG_WARNING( "Failed to write windows.ini: %#", _windowsIniPath.c_str() );
@@ -121,7 +111,7 @@ namespace sw::editor
 
 		const ImGuiViewport* pViewport	 = ImGui::GetMainViewport();
 		const ImGuiID		 dockspaceId = ImGui::DockSpaceOverViewport(
-			   ImGui::GetID( "EditorMainDockSpace_v6" ), pViewport, ImGuiDockNodeFlags_PassthruCentralNode );
+			ImGui::GetID( "EditorMainDockSpace_v6" ), pViewport, ImGuiDockNodeFlags_PassthruCentralNode );
 
 		if ( _bApplied == SW_FALSE )
 		{

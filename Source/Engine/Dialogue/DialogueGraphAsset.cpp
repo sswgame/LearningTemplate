@@ -3,11 +3,11 @@
 #include "Engine/Dialogue/DialogueGraphAsset.h"
 
 #include "Core/File/FileUtil.h"
-#include "Core/String/StringBuilder.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Localization/LocalizationManager.h"
-#include "Engine/Serialization/Format/SimpleJsonWalk.h"
+#include "Engine/Utility/Json/JsonDocument.h"
+#include "Engine/Utility/Resource/ResourceUtil.h"
 
 namespace sw
 {
@@ -54,13 +54,13 @@ namespace sw
 	{
 		_listNode.clear();
 		_listLink.clear();
-		if ( path.empty() || FileUtil::fileExists( path ) == false )
+		if ( path.empty() )
 			return false;
 
-		string json;
-		if ( FileUtil::readTextFile( path, json ) == false || json.empty() )
+		JsonDocument doc;
+		if ( doc.loadPath( path ) == false )
 			return false;
-		return parseJson( json );
+		return parseJson( doc.dump( -1 ) );
 	}
 
 	bool DialogueGraphAsset::saveToFile( string_view path ) const
@@ -70,85 +70,113 @@ namespace sw
 		const string dir = FileUtil::getDirectoryPart( path );
 		if ( dir.empty() == false )
 			FileUtil::ensureDirectoryExists( dir );
-		const string json = toJson();
-		return FileUtil::writeTextFile( path, json );
+		return FileUtil::writeTextFile( path, toJson() );
 	}
 
 	bool DialogueGraphAsset::parseJson( string_view jsonView )
 	{
 		_listNode.clear();
 		_listLink.clear();
-		const string json{ jsonView };
 
-		vector<size_t> listNodeObj;
-		collectJsonObjectArrayStarts( json, "nodes", listNodeObj );
-		const size_t nodesEnd = findJsonArrayEnd( json, "nodes" );
-		for ( const size_t obj : listNodeObj )
+		JsonDocument doc;
+		if ( doc.parse( jsonView ) == false )
+			return false;
+
+		const JsonValue root	 = doc.root();
+		const JsonValue nodesVal = root.get( "nodes" );
+		if ( nodesVal.isArray() )
 		{
-			DialogueAssetNode node{};
-			parseJsonIntField( json, obj, nodesEnd, "id", node._id );
-			string typeName;
-			if ( parseJsonStringField( json, obj, nodesEnd, "type", typeName ) )
-				node._type = parseDialogueAssetType( typeName );
-			parseJsonStringField( json, obj, nodesEnd, "speaker", node._speaker );
-			parseJsonStringField( json, obj, nodesEnd, "text", node._text );
-			parseJsonStringField( json, obj, nodesEnd, "condition", node._condition );
-			parseJsonStringField( json, obj, nodesEnd, "action", node._actionCommand );
-			parseJsonFloatField( json, obj, nodesEnd, "x", node._x );
-			parseJsonFloatField( json, obj, nodesEnd, "y", node._y );
-			if ( node._id > 0 )
-				_listNode.push_back( std::move( node ) );
+			const size_t nodeCount = nodesVal.size();
+			for ( size_t nodeIndex = 0; nodeIndex < nodeCount; ++nodeIndex )
+			{
+				const JsonValue nodeJson = nodesVal.at( nodeIndex );
+				if ( nodeJson.isObject() == false )
+					continue;
+
+				DialogueAssetNode node{};
+				node._id			= static_cast<int32>( nodeJson.get( "id" ).asInt( 0 ) );
+				node._type			= parseDialogueAssetType( nodeJson.get( "type" ).asString() );
+				node._speaker		= nodeJson.get( "speaker" ).asString();
+				node._text			= nodeJson.get( "text" ).asString();
+				node._condition		= nodeJson.get( "condition" ).asString();
+				node._actionCommand = nodeJson.get( "action" ).asString();
+				node._x				= static_cast<float32>( nodeJson.get( "x" ).asFloat( 40.0 ) );
+				node._y				= static_cast<float32>( nodeJson.get( "y" ).asFloat( 40.0 ) );
+
+				const JsonValue choicesVal = nodeJson.get( "choices" );
+				if ( choicesVal.isArray() )
+				{
+					const size_t choiceCount = choicesVal.size();
+					node._listChoice.reserve( choiceCount );
+					for ( size_t choiceIndex = 0; choiceIndex < choiceCount; ++choiceIndex )
+						node._listChoice.push_back( choicesVal.at( choiceIndex ).asString() );
+				}
+
+				if ( node._id > 0 )
+					_listNode.push_back( std::move( node ) );
+			}
 		}
 
-		vector<size_t> listLinkObj;
-		collectJsonObjectArrayStarts( json, "links", listLinkObj );
-		const size_t linksEnd = findJsonArrayEnd( json, "links" );
-		for ( const size_t obj : listLinkObj )
+		const JsonValue linksVal = root.get( "links" );
+		if ( linksVal.isArray() )
 		{
-			DialogueAssetLink link{};
-			parseJsonIntField( json, obj, linksEnd, "id", link._id );
-			parseJsonIntField( json, obj, linksEnd, "from", link._fromPin );
-			parseJsonIntField( json, obj, linksEnd, "to", link._toPin );
-			if ( link._id > 0 )
-				_listLink.push_back( link );
+			const size_t linkCount = linksVal.size();
+			for ( size_t linkIndex = 0; linkIndex < linkCount; ++linkIndex )
+			{
+				const JsonValue linkJson = linksVal.at( linkIndex );
+				if ( linkJson.isObject() == false )
+					continue;
+
+				DialogueAssetLink link{};
+				link._id	  = static_cast<int32>( linkJson.get( "id" ).asInt( 0 ) );
+				link._fromPin = static_cast<int32>( linkJson.get( "from" ).asInt( 0 ) );
+				link._toPin	  = static_cast<int32>( linkJson.get( "to" ).asInt( 0 ) );
+				if ( link._id > 0 )
+					_listLink.push_back( link );
+			}
 		}
 		return true;
 	}
 
 	string DialogueGraphAsset::toJson() const
 	{
-		StringBuilder<constant::kMaxBuffer4096> sb;
-		sb.append( "{\n  \"nodes\": [\n" );
-		for ( size_t nodeIndex = 0; nodeIndex < _listNode.size(); ++nodeIndex )
+		JsonDocument	doc;
+		const JsonValue root = doc.makeObject();
+
+		const JsonValue nodesVal = root.set( "nodes" );
+		nodesVal.setArray();
+		for ( const DialogueAssetNode& node : _listNode )
 		{
-			const DialogueAssetNode& node = _listNode[nodeIndex];
-			sb.append( "    { \"id\": " ).append( node._id );
-			sb.append( ", \"type\": \"" ).append( dialogueAssetTypeName( node._type ) ).append( "\"" );
-			sb.append( ", \"speaker\": \"" ).append( node._speaker.c_str() ).append( "\"" );
-			sb.append( ", \"text\": \"" ).append( node._text.c_str() ).append( "\"" );
-			sb.append( ", \"condition\": \"" ).append( node._condition.c_str() ).append( "\"" );
-			sb.append( ", \"action\": \"" ).append( node._actionCommand.c_str() ).append( "\"" );
-			sb.append( ", \"x\": " ).append( node._x );
-			sb.append( ", \"y\": " ).append( node._y );
-			sb.append( " }" );
-			if ( nodeIndex + 1 < _listNode.size() )
-				sb.append( "," );
-			sb.append( "\n" );
+			const JsonValue nodeJson = nodesVal.pushBack();
+			nodeJson.setObject();
+			nodeJson.set( "id" ).setInt( node._id );
+			nodeJson.set( "type" ).setString( dialogueAssetTypeName( node._type ) );
+			nodeJson.set( "speaker" ).setString( node._speaker );
+			nodeJson.set( "text" ).setString( node._text );
+			nodeJson.set( "condition" ).setString( node._condition );
+			nodeJson.set( "action" ).setString( node._actionCommand );
+
+			const JsonValue choicesVal = nodeJson.set( "choices" );
+			choicesVal.setArray();
+			for ( const string& choice : node._listChoice )
+				choicesVal.pushBack().setString( choice );
+
+			nodeJson.set( "x" ).setFloat( static_cast<float64>( node._x ) );
+			nodeJson.set( "y" ).setFloat( static_cast<float64>( node._y ) );
 		}
-		sb.append( "  ],\n  \"links\": [\n" );
-		for ( size_t linkIndex = 0; linkIndex < _listLink.size(); ++linkIndex )
+
+		const JsonValue linksVal = root.set( "links" );
+		linksVal.setArray();
+		for ( const DialogueAssetLink& link : _listLink )
 		{
-			const DialogueAssetLink& link = _listLink[linkIndex];
-			sb.append( "    { \"id\": " ).append( link._id );
-			sb.append( ", \"from\": " ).append( link._fromPin );
-			sb.append( ", \"to\": " ).append( link._toPin );
-			sb.append( " }" );
-			if ( linkIndex + 1 < _listLink.size() )
-				sb.append( "," );
-			sb.append( "\n" );
+			const JsonValue linkJson = linksVal.pushBack();
+			linkJson.setObject();
+			linkJson.set( "id" ).setInt( link._id );
+			linkJson.set( "from" ).setInt( link._fromPin );
+			linkJson.set( "to" ).setInt( link._toPin );
 		}
-		sb.append( "  ]\n}\n" );
-		return string{ sb.c_str() };
+
+		return doc.dump( 2 );
 	}
 
 	const DialogueAssetNode* DialogueGraphAsset::findStartNode() const
@@ -171,6 +199,57 @@ namespace sw
 				return &node;
 		}
 		return nullptr;
+	}
+
+	int32 DialogueGraphAsset::decodePinNodeId( int32 pin )
+	{
+		if ( pin <= 0 )
+			return 0;
+		const int32 scale = ( pin >= 100 ) ? 100 : 10;
+		return pin / scale;
+	}
+
+	int32 DialogueGraphAsset::decodePinOffset( int32 pin )
+	{
+		if ( pin <= 0 )
+			return 0;
+		const int32 scale = ( pin >= 100 ) ? 100 : 10;
+		return pin % scale;
+	}
+
+	int32 DialogueGraphAsset::findLinkedNodeId( int32 fromNodeId, int32 pinOffset ) const
+	{
+		for ( const DialogueAssetLink& link : _listLink )
+		{
+			if ( decodePinNodeId( link._fromPin ) != fromNodeId )
+				continue;
+			if ( decodePinOffset( link._fromPin ) != pinOffset )
+				continue;
+			return decodePinNodeId( link._toPin );
+		}
+		return 0;
+	}
+
+	int32 DialogueGraphAsset::findDefaultNextNodeId( int32 fromNodeId ) const
+	{
+		constexpr int32 kPinOut = 2;
+		return findLinkedNodeId( fromNodeId, kPinOut );
+	}
+
+	int32 DialogueGraphAsset::findChoiceNextNodeId( int32 fromNodeId, int32 choiceIndex ) const
+	{
+		constexpr int32 kPinChoiceBase = 10;
+		const int32		nextId		   = findLinkedNodeId( fromNodeId, kPinChoiceBase + choiceIndex );
+		if ( nextId > 0 )
+			return nextId;
+		return findDefaultNextNodeId( fromNodeId );
+	}
+
+	int32 DialogueGraphAsset::findBranchNextNodeId( int32 fromNodeId, bool bTrue ) const
+	{
+		constexpr int32 kPinTrue  = 3;
+		constexpr int32 kPinFalse = 4;
+		return findLinkedNodeId( fromNodeId, bTrue ? kPinTrue : kPinFalse );
 	}
 
 	string DialogueGraphAsset::resolveLocalizedText( string_view textOrKey )

@@ -2,6 +2,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Editor/Viewport/EditorViewportToolbar.h"
@@ -95,7 +96,7 @@ namespace sw::editor
 		string					_gizmoUndoBeforeXml;
 		vector<GameObjectPtr>	_listGizmoObject;
 		vector<string>			_listGizmoUndoXml;
-		vector<float3>			_listGizmoOffset;
+		vector<float4x4>		_listGizmoRelativeWorld;
 		float32					_arrGizmoGroupMatrix[16];
 		bool					_bRulerActive;
 		uint8					_bGizmoTracking : 1;

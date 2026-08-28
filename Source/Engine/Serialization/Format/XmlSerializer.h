@@ -200,6 +200,13 @@ namespace sw
 		static bool deserialize( void* pInstance, const TypeInfo& typeInfo, string_view xmlStr,
 								 const SerializeContext& ctx = SerializeContext::getDefault() );
 
+		/** @brief XML을 절대 경로에 씁니다. */
+		static bool saveFile( string_view absPath, const void* pInstance, const TypeInfo& typeInfo,
+							  const SerializeContext& ctx = SerializeContext::getDefault() );
+		/** @brief 절대/리소스 경로에서 XML을 읽어 역직렬화합니다. */
+		static bool loadFile( string_view path, void* pInstance, const TypeInfo& typeInfo,
+							  const SerializeContext& ctx = SerializeContext::getDefault() );
+
 		// ------------------------------------------------------------------------------
 		// 5) Soft · 버전 — orphan 수집, 루트 _schemaVersion
 		// ------------------------------------------------------------------------------

@@ -69,6 +69,8 @@ namespace sw
 		int32 attrInt( const utf8* pName, int32 fallback = 0, bool bIgnoreCaseKeys = true ) const;
 		/** @brief 속성 값을 실수로 반환합니다. */
 		float32 attrFloat( const utf8* pName, float32 fallback = 0.f, bool bIgnoreCaseKeys = true ) const;
+		/** @brief 속성 값을 bool로 반환합니다 (1/true/yes/on). */
+		bool attrBool( const utf8* pName, bool fallback = false, bool bIgnoreCaseKeys = true ) const;
 
 		/** @brief 자식 노드를 찾습니다. pName==nullptr이면 첫 자식. */
 		XmlNode child( const utf8* pName = nullptr, bool bIgnoreCaseKeys = true ) const;
@@ -76,6 +78,12 @@ namespace sw
 		XmlNode next( const utf8* pName = nullptr, bool bIgnoreCaseKeys = true ) const;
 		/** @brief 지정 이름 자식의 텍스트를 반환합니다. */
 		const utf8* childText( const utf8* pName, bool bIgnoreCaseKeys = true ) const;
+		/** @brief 지정 이름 자식 텍스트를 정수로 반환합니다. */
+		int32 childInt( const utf8* pName, int32 fallback = 0, bool bIgnoreCaseKeys = true ) const;
+		/** @brief 지정 이름 자식 텍스트를 실수로 반환합니다. */
+		float32 childFloat( const utf8* pName, float32 fallback = 0.f, bool bIgnoreCaseKeys = true ) const;
+		/** @brief 지정 이름 자식 텍스트를 bool로 반환합니다. */
+		bool childBool( const utf8* pName, bool fallback = false, bool bIgnoreCaseKeys = true ) const;
 
 		/** @brief 비어 있지 않은 자식 텍스트를 dst에 복사합니다. 썼으면 true. */
 		bool takeChildText( const utf8* pName, string& dst, bool bIgnoreCaseKeys = true ) const;
@@ -88,14 +96,57 @@ namespace sw
 		// ------------------------------------------------------------------------------
 		/** @brief 새 자식 노드를 추가합니다. */
 		XmlNode appendChild( const utf8* pName ) const;
+		/** @brief 새 자식 노드를 추가하고 텍스트를 설정합니다. */
+		XmlNode appendChild( const utf8* pName, string_view value ) const;
+		/** @brief 새 자식 노드를 추가하고 정수 텍스트를 설정합니다. */
+		XmlNode appendChild( const utf8* pName, int32 value ) const;
+		/** @brief 새 자식 노드를 추가하고 부호 없는 정수 텍스트를 설정합니다. */
+		XmlNode appendChild( const utf8* pName, uint32 value ) const;
+		/** @brief 새 자식 노드를 추가하고 실수 텍스트를 설정합니다. */
+		XmlNode appendChild( const utf8* pName, float32 value ) const;
+		/** @brief 새 자식 노드를 추가하고 bool 텍스트(1/0)를 설정합니다. */
+		XmlNode appendChild( const utf8* pName, bool value ) const;
+
 		/** @brief 새 속성을 추가합니다. */
 		void appendAttr( const utf8* pName, const utf8* pValue ) const;
+		/** @brief 새 속성을 추가합니다. */
+		void appendAttr( const utf8* pName, string_view value ) const;
+		/** @brief 정수 속성을 추가합니다. */
+		void appendAttr( const utf8* pName, int32 value ) const;
+		/** @brief 부호 없는 정수 속성을 추가합니다. */
+		void appendAttr( const utf8* pName, uint32 value ) const;
+		/** @brief 실수 속성을 추가합니다. */
+		void appendAttr( const utf8* pName, float32 value ) const;
+		/** @brief bool 속성(1/0)을 추가합니다. */
+		void appendAttr( const utf8* pName, bool value ) const;
+
 		/** @brief 기존 속성 값을 바꾸거나, 없으면 추가합니다. */
 		void setAttr( const utf8* pName, const utf8* pValue ) const;
+		/** @brief 기존 속성 값을 바꾸거나, 없으면 추가합니다. */
+		void setAttr( const utf8* pName, string_view value ) const;
+		/** @brief 정수 속성을 설정합니다. */
+		void setAttr( const utf8* pName, int32 value ) const;
+		/** @brief 부호 없는 정수 속성을 설정합니다. */
+		void setAttr( const utf8* pName, uint32 value ) const;
+		/** @brief 실수 속성을 설정합니다. */
+		void setAttr( const utf8* pName, float32 value ) const;
+		/** @brief bool 속성(1/0)을 설정합니다. */
+		void setAttr( const utf8* pName, bool value ) const;
+
 		/** @brief 노드 이름을 설정합니다. */
 		void setName( const utf8* pName ) const;
 		/** @brief 노드 값을 설정합니다. */
 		void setValue( const utf8* pValue ) const;
+		/** @brief 노드 값을 설정합니다. */
+		void setValue( string_view value ) const;
+		/** @brief 노드 값을 정수로 설정합니다. */
+		void setValue( int32 value ) const;
+		/** @brief 노드 값을 부호 없는 정수로 설정합니다. */
+		void setValue( uint32 value ) const;
+		/** @brief 노드 값을 실수로 설정합니다. */
+		void setValue( float32 value ) const;
+		/** @brief 노드 값을 bool(1/0)로 설정합니다. */
+		void setValue( bool value ) const;
 
 		/** @brief 이 서브트리를 XML 문자열로 직렬화합니다 (Prefab/임베드용). */
 		string toString() const;
@@ -148,6 +199,12 @@ namespace sw
 		/** @brief 리소스 상대 경로를 해석한 뒤 읽고 파싱합니다. */
 		bool loadResource( string_view relativePath, string* pOutAbsPath = nullptr );
 
+		/**
+		 * @brief 절대/작업 경로가 있으면 loadFile, 없으면 loadResource.
+		 * @details 에셋 상대 경로와 에디터 절대 경로를 한 호출로 처리합니다.
+		 */
+		bool loadPath( string_view path, string* pOutAbsPath = nullptr );
+
 		/** @brief 첫 엘리먼트. pName이 있으면 이름으로 매칭 (기본 대소문자 무시). */
 		XmlNode root( const utf8* pName = nullptr, bool bIgnoreCaseKeys = true ) const;
 
@@ -158,6 +215,8 @@ namespace sw
 		XmlNode appendRoot( const utf8* pName );
 		/** @brief 현재 문서를 XML 문자열로 직렬화합니다. */
 		string saveToString() const;
+		/** @brief 현재 문서를 절대 경로에 씁니다. */
+		bool saveFile( string_view absPath ) const;
 
 	private:
 		struct Impl;

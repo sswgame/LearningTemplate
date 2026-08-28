@@ -52,6 +52,13 @@ namespace sw
 		static bool deserialize( void* pInstance, const TypeInfo& typeInfo, string_view jsonStr,
 								 const SerializeContext& ctx = SerializeContext::getDefault() );
 
+		/** @brief Pretty JSON을 절대 경로에 씁니다. indentSpaces==0 이면 serializePretty 기본(4). */
+		static bool saveFile( string_view absPath, const void* pInstance, const TypeInfo& typeInfo, uint32 indentSpaces = 4,
+							  const SerializeContext& ctx = SerializeContext::getDefault() );
+		/** @brief 절대/리소스 경로에서 JSON을 읽어 역직렬화합니다. */
+		static bool loadFile( string_view path, void* pInstance, const TypeInfo& typeInfo,
+							  const SerializeContext& ctx = SerializeContext::getDefault() );
+
 		/** @brief JsonValue 객체에 리플렉션 필드를 씁니다. dst는 객체여야 합니다. */
 		static void writeObject( JsonValue dst, const void* pInstance, const TypeInfo& typeInfo,
 								 const SerializeContext& ctx = SerializeContext::getDefault() );

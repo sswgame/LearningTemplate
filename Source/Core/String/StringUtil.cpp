@@ -882,6 +882,20 @@ namespace sw
 		return std::wcstoll( str, nullptr, 10 );
 	}
 
+	bool StringUtil::parseBool( string_view token, bool fallback )
+	{
+		const string_view trimmed = trim( token );
+		if ( trimmed.empty() )
+			return fallback;
+		if ( trimmed == "1" || equalsIgnoreCase( trimmed, "true" ) || equalsIgnoreCase( trimmed, "yes" ) ||
+			 equalsIgnoreCase( trimmed, "on" ) )
+			return true;
+		if ( trimmed == "0" || equalsIgnoreCase( trimmed, "false" ) || equalsIgnoreCase( trimmed, "no" ) ||
+			 equalsIgnoreCase( trimmed, "off" ) )
+			return false;
+		return fallback;
+	}
+
 	float64 StringUtil::atof( const utf8* str )
 	{
 		if ( isNullOrEmpty( str ) )

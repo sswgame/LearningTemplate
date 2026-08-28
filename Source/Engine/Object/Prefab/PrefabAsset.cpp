@@ -38,6 +38,51 @@ namespace sw
 			return key;
 		}
 
+		void collectPrefabRefsFromText( const utf8* pText, vector<string>& outPathList )
+		{
+			if ( pText == nullptr || pText[0] == '\0' )
+				return;
+			if ( StringUtil::stristr( pText, ".prefab" ) == nullptr )
+				return;
+			outPathList.push_back( pText );
+		}
+
+		void collectPrefabRefsFromXml( XmlNode node, vector<string>& outPathList )
+		{
+			if ( node.isValid() == false )
+				return;
+			collectPrefabRefsFromText( node.text(), outPathList );
+			for ( XmlAttribute attr = node.firstAttr(); attr; attr = attr.next() )
+				collectPrefabRefsFromText( attr.value(), outPathList );
+			for ( XmlNode childNode = node.child(); childNode; childNode = childNode.next() )
+				collectPrefabRefsFromXml( childNode, outPathList );
+		}
+
+		void collectPrefabRefsFromJson( JsonValue value, vector<string>& outPathList )
+		{
+			if ( value.isValid() == false )
+				return;
+			if ( value.isString() )
+			{
+				const string text = value.asString();
+				collectPrefabRefsFromText( text.c_str(), outPathList );
+				return;
+			}
+			if ( value.isObject() )
+			{
+				const vector<string> listKeys = value.memberNames();
+				for ( const string& key : listKeys )
+					collectPrefabRefsFromJson( value.get( key ), outPathList );
+				return;
+			}
+			if ( value.isArray() )
+			{
+				const size_t count = value.size();
+				for ( size_t index = 0; index < count; ++index )
+					collectPrefabRefsFromJson( value.at( index ), outPathList );
+			}
+		}
+
 		bool upgradePrefabXmlBody( string& xmlBody )
 		{
 			if ( xmlBody.empty() )
@@ -110,26 +155,12 @@ namespace sw
 
 	bool PrefabAsset::loadFromXmlFile( string_view assetRelativePath )
 	{
-		_bValid		   = 0;
-		string absPath = ResourceUtil::getResourcePath( assetRelativePath );
-		if ( absPath.empty() )
-			absPath = assetRelativePath;
-
-		if ( FileUtil::fileExists( absPath ) == false )
-		{
-			SW_LOG_ERROR( "Not found: %#", absPath );
-			return false;
-		}
-
-		vector<uint8> listFileData;
-		if ( FileUtil::readFile( absPath, listFileData ) == false || listFileData.empty() )
-			return false;
-
-		string		xmlStr( reinterpret_cast<const utf8*>( listFileData.data() ), listFileData.size() );
+		_bValid = 0;
+		string		absPath;
 		XmlDocument doc;
-		if ( doc.parse( xmlStr ) == false )
+		if ( doc.loadPath( assetRelativePath, &absPath ) == false )
 		{
-			SW_LOG_ERROR( "XML parse failed: %#", absPath );
+			SW_LOG_ERROR( "Not found: %#", assetRelativePath );
 			return false;
 		}
 
@@ -157,7 +188,7 @@ namespace sw
 			if ( bodyNode.isValid() )
 				_stateData = bodyNode.toString();
 			else
-				_stateData = xmlStr;
+				_stateData = doc.saveToString();
 		}
 		else
 		{
@@ -168,7 +199,7 @@ namespace sw
 				const utf8* pNameAttr = goNode.attr( "_name" );
 				if ( pNameAttr != nullptr )
 					_name = pNameAttr;
-				_stateData = xmlStr;
+				_stateData = doc.saveToString();
 			}
 			else
 			{
@@ -187,26 +218,12 @@ namespace sw
 
 	bool PrefabAsset::loadFromJsonFile( string_view assetRelativePath )
 	{
-		_bValid		   = 0;
-		string absPath = ResourceUtil::getResourcePath( assetRelativePath );
-		if ( absPath.empty() )
-			absPath = assetRelativePath;
-
-		if ( FileUtil::fileExists( absPath ) == false )
-		{
-			SW_LOG_ERROR( "Not found: %#", absPath );
-			return false;
-		}
-
-		vector<uint8> listFileData;
-		if ( FileUtil::readFile( absPath, listFileData ) == false || listFileData.empty() )
-			return false;
-
-		const string json( listFileData.begin(), listFileData.end() );
+		_bValid = 0;
+		string		 absPath;
 		JsonDocument doc;
-		if ( doc.parse( json ) == false )
+		if ( doc.loadPath( assetRelativePath, &absPath ) == false )
 		{
-			SW_LOG_ERROR( "JSON parse failed: %#", absPath );
+			SW_LOG_ERROR( "Not found: %#", assetRelativePath );
 			return false;
 		}
 
@@ -232,7 +249,7 @@ namespace sw
 			_name = root.get( "_name" ).asString();
 			if ( _name.empty() )
 				_name = root.get( "Name" ).asString();
-			_stateData = json;
+			_stateData = doc.dump( 0 );
 		}
 
 		if ( _name.empty() )
@@ -385,6 +402,26 @@ namespace sw
 		_name	   = pGameObject->getName().c_str();
 		_stateData = ObjectStateSerializer::saveToXmlString( pGameObject );
 		_bValid	   = _stateData.empty() == false ? 1 : 0;
+	}
+
+	void PrefabAsset::collectReferencedPrefabPaths( vector<string>& outPathList ) const
+	{
+		outPathList.clear();
+		const string trimmed = StringUtil::trim( _stateData.c_str() );
+		if ( trimmed.empty() )
+			return;
+		if ( trimmed.front() == '{' )
+		{
+			JsonDocument doc;
+			if ( doc.parse( trimmed ) == false )
+				return;
+			collectPrefabRefsFromJson( doc.root(), outPathList );
+			return;
+		}
+		XmlDocument doc;
+		if ( doc.parse( trimmed ) == false )
+			return;
+		collectPrefabRefsFromXml( doc.root(), outPathList );
 	}
 
 	PrefabAsset* PrefabManager::loadPrefab( string_view assetRelativePath )

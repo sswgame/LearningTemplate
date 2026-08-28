@@ -2,24 +2,22 @@
 
 #include "GameFramework/UI/DialogueRunnerComponent.h"
 
-#include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
-
-#include "Engine/Utility/Json/JsonDocument.h"
 
 namespace sw
 {
 	SW_LOG_CALLER( "DialogueRunnerComponent" );
 
 	DialogueRunnerComponent::DialogueRunnerComponent()
-		: _pSaveSlot{ nullptr }
+		: _graphPath{}
+		, _graph{}
+		, _pSaveSlot{ nullptr }
 		, _state{ DialogueRunnerState::Idle }
 		, _currentNodeId{ 0 }
 		, _currentSpeaker{}
 		, _currentText{}
 		, _listCurrentChoice{}
-		, _mapNode{}
 		, _onLine{}
 		, _onChoices{}
 		, _onEvent{}
@@ -29,6 +27,8 @@ namespace sw
 
 	void DialogueRunnerComponent::onBeginPlay()
 	{
+		if ( _graphPath.empty() == false )
+			loadGraphFile( _graphPath );
 	}
 
 	void DialogueRunnerComponent::onEndPlay()
@@ -42,161 +42,29 @@ namespace sw
 
 	bool DialogueRunnerComponent::loadGraphFile( string_view jsonPath )
 	{
-		vector<uint8> listData;
-		if ( FileUtil::readFile( jsonPath, listData ) == false || listData.empty() )
+		if ( _graph.loadFromFile( jsonPath ) == false )
 		{
 			SW_LOG_WARNING( "Failed to read graph file: %#", jsonPath );
 			return false;
 		}
-
-		const string json( listData.begin(), listData.end() );
-		return loadGraphJson( json );
+		SW_LOG_INFO( "Loaded dialogue graph (%# nodes)", static_cast<uint32>( _graph._listNode.size() ) );
+		return true;
 	}
 
 	bool DialogueRunnerComponent::loadGraphJson( string_view jsonContent )
 	{
-		_mapNode.clear();
-
-		JsonDocument doc;
-		if ( doc.parse( jsonContent ) == false )
+		if ( _graph.parseJson( jsonContent ) == false )
 		{
 			SW_LOG_WARNING( "Failed to parse graph JSON" );
 			return false;
 		}
-
-		const JsonValue root = doc.root();
-
-		// 1) Parse Nodes
-		if ( root.has( "nodes" ) )
-		{
-			const JsonValue nodesVal = root.get( "nodes" );
-			if ( nodesVal.isArray() )
-			{
-				const size_t nodeCount = nodesVal.size();
-				for ( size_t nodeIndex = 0; nodeIndex < nodeCount; ++nodeIndex )
-				{
-					const JsonValue nodeJson = nodesVal.at( nodeIndex );
-					if ( nodeJson.isObject() == false )
-						continue;
-
-					RuntimeNode node{};
-					node._id		= static_cast<int32>( nodeJson.get( "id" ).asInt( 0 ) );
-					node._type		= nodeJson.get( "type" ).asString();
-					node._speaker	= nodeJson.get( "speaker" ).asString();
-					node._text		= nodeJson.get( "text" ).asString();
-					node._condition = nodeJson.get( "condition" ).asString();
-					node._action	= nodeJson.get( "action" ).asString();
-
-					if ( nodeJson.has( "choices" ) )
-					{
-						const JsonValue choicesVal = nodeJson.get( "choices" );
-						if ( choicesVal.isArray() )
-						{
-							const size_t choiceCount = choicesVal.size();
-							node._listChoice.reserve( choiceCount );
-							for ( size_t choiceIndex = 0; choiceIndex < choiceCount; ++choiceIndex )
-							{
-								node._listChoice.push_back( choicesVal.at( choiceIndex ).asString() );
-							}
-						}
-					}
-
-					if ( node._id > 0 )
-						_mapNode[node._id] = std::move( node );
-				}
-			}
-		}
-
-		// 2) Parse Links
-		if ( root.has( "links" ) )
-		{
-			const JsonValue linksVal = root.get( "links" );
-			if ( linksVal.isArray() )
-			{
-				const size_t linkCount = linksVal.size();
-				for ( size_t linkIndex = 0; linkIndex < linkCount; ++linkIndex )
-				{
-					const JsonValue linkJson = linksVal.at( linkIndex );
-					if ( linkJson.isObject() == false )
-						continue;
-
-					const int32 fromPin = static_cast<int32>( linkJson.get( "from" ).asInt( 0 ) );
-					const int32 toPin	= static_cast<int32>( linkJson.get( "to" ).asInt( 0 ) );
-
-					if ( fromPin > 0 && toPin > 0 )
-					{
-						const bool	bIsHundredScale = ( fromPin >= 100 );
-						const int32 scale			= bIsHundredScale ? 100 : 10;
-						const int32 sourceNodeId	= fromPin / scale;
-						const int32 targetNodeId	= toPin / scale;
-						const int32 pinOffset		= fromPin % scale;
-
-						auto it = _mapNode.find( sourceNodeId );
-						if ( it != _mapNode.end() )
-						{
-							RuntimeNode& srcNode = it->second;
-							if ( bIsHundredScale )
-							{
-								if ( pinOffset == 2 )
-								{
-									// Default Out Pin (kPinOutputOffset = 2)
-									srcNode._nextDefaultNodeId = targetNodeId;
-								}
-								else if ( pinOffset == 3 )
-								{
-									// Branch True (kPinTrueOffset = 3)
-									srcNode._trueNodeId = targetNodeId;
-								}
-								else if ( pinOffset == 4 )
-								{
-									// Branch False (kPinFalseOffset = 4)
-									srcNode._falseNodeId = targetNodeId;
-								}
-								else if ( pinOffset >= 10 )
-								{
-									// Choice Pins (kPinChoiceBase = 10 + index)
-									const int32 choiceIndex					= pinOffset - 10;
-									srcNode._mapChoiceToNodeId[choiceIndex] = targetNodeId;
-								}
-							}
-							else
-							{
-								if ( pinOffset == 1 )
-								{
-									// Default Out Pin
-									srcNode._nextDefaultNodeId = targetNodeId;
-								}
-								else if ( pinOffset == 2 )
-								{
-									// Branch True (or choice 0)
-									srcNode._trueNodeId			  = targetNodeId;
-									srcNode._mapChoiceToNodeId[0] = targetNodeId;
-								}
-								else if ( pinOffset == 3 )
-								{
-									// Branch False (or choice 1)
-									srcNode._falseNodeId		  = targetNodeId;
-									srcNode._mapChoiceToNodeId[1] = targetNodeId;
-								}
-								else if ( pinOffset >= 4 )
-								{
-									// Additional Choice Pins
-									srcNode._mapChoiceToNodeId[pinOffset - 2] = targetNodeId;
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-
-		SW_LOG_INFO( "Loaded dialogue graph (%# nodes)", static_cast<uint32>( _mapNode.size() ) );
-		return _mapNode.empty() == false;
+		SW_LOG_INFO( "Loaded dialogue graph (%# nodes)", static_cast<uint32>( _graph._listNode.size() ) );
+		return _graph._listNode.empty() == false;
 	}
 
 	bool DialogueRunnerComponent::startDialogue( int32 startNodeId )
 	{
-		if ( _mapNode.empty() )
+		if ( _graph._listNode.empty() )
 		{
 			SW_LOG_WARNING( "Cannot start dialogue: no nodes loaded." );
 			return false;
@@ -205,18 +73,11 @@ namespace sw
 		int32 targetId = startNodeId;
 		if ( targetId <= 0 )
 		{
-			// Find Start node
-			for ( const auto& [id, node] : _mapNode )
-			{
-				if ( node._type == "Start" )
-				{
-					targetId = id;
-					break;
-				}
-			}
-			if ( targetId <= 0 )
-				targetId = _mapNode.begin()->first;
+			const DialogueAssetNode* pStart = _graph.findStartNode();
+			targetId						= ( pStart != nullptr ) ? pStart->_id : 0;
 		}
+		if ( targetId <= 0 )
+			return false;
 
 		executeNode( targetId );
 		return true;
@@ -227,14 +88,7 @@ namespace sw
 		if ( _state != DialogueRunnerState::ShowingDialogue )
 			return false;
 
-		auto it = _mapNode.find( _currentNodeId );
-		if ( it == _mapNode.end() )
-		{
-			stopDialogue();
-			return false;
-		}
-
-		executeNode( it->second._nextDefaultNodeId );
+		executeNode( _graph.findDefaultNextNodeId( _currentNodeId ) );
 		return true;
 	}
 
@@ -243,24 +97,10 @@ namespace sw
 		if ( _state != DialogueRunnerState::WaitingForChoice )
 			return false;
 
-		auto it = _mapNode.find( _currentNodeId );
-		if ( it == _mapNode.end() )
+		const int32 nextId = _graph.findChoiceNextNodeId( _currentNodeId, choiceIndex );
+		if ( nextId > 0 )
 		{
-			stopDialogue();
-			return false;
-		}
-
-		const auto& mapChoices = it->second._mapChoiceToNodeId;
-		auto		chIt	   = mapChoices.find( choiceIndex );
-		if ( chIt != mapChoices.end() )
-		{
-			executeNode( chIt->second );
-			return true;
-		}
-
-		if ( it->second._nextDefaultNodeId > 0 )
-		{
-			executeNode( it->second._nextDefaultNodeId );
+			executeNode( nextId );
 			return true;
 		}
 
@@ -359,7 +199,6 @@ namespace sw
 			}
 		}
 
-		// Trim whitespace and flag. prefix
 		while ( flagKey.empty() == false && ( flagKey.front() == ' ' || flagKey.front() == '\t' ) )
 			flagKey.erase( flagKey.begin() );
 		while ( flagKey.empty() == false && ( flagKey.back() == ' ' || flagKey.back() == '\t' ) )
@@ -384,7 +223,6 @@ namespace sw
 
 		if ( _pSaveSlot != nullptr )
 		{
-			// Example action: set_flag:quest_started:1
 			constexpr const utf8* kSetFlag = "set_flag:";
 			if ( actionCmd.rfind( kSetFlag, 0 ) == 0 )
 			{
@@ -407,8 +245,8 @@ namespace sw
 			return;
 		}
 
-		auto it = _mapNode.find( nodeId );
-		if ( it == _mapNode.end() )
+		const DialogueAssetNode* pNode = _graph.findNode( nodeId );
+		if ( pNode == nullptr )
 		{
 			SW_LOG_WARNING( "Node %# not found in graph.", nodeId );
 			_state = DialogueRunnerState::Finished;
@@ -417,45 +255,50 @@ namespace sw
 			return;
 		}
 
-		_currentNodeId			= nodeId;
-		const RuntimeNode& node = it->second;
+		_currentNodeId				  = nodeId;
+		const DialogueAssetNode& node = *pNode;
 
-		if ( node._type == "Start" )
+		if ( node._type == DialogueAssetNodeType::Start )
 		{
-			executeNode( node._nextDefaultNodeId );
+			executeNode( _graph.findDefaultNextNodeId( nodeId ) );
 		}
-		else if ( node._type == "Dialogue" )
+		else if ( node._type == DialogueAssetNodeType::Dialogue )
 		{
 			_state			= DialogueRunnerState::ShowingDialogue;
-			_currentSpeaker = node._speaker;
-			_currentText	= node._text;
+			_currentSpeaker = DialogueGraphAsset::resolveLocalizedText( node._speaker );
+			_currentText	= DialogueGraphAsset::resolveLocalizedText( node._text );
 			_listCurrentChoice.clear();
 
 			if ( _onLine.isBound() )
 				_onLine( _currentSpeaker, _currentText );
 		}
-		else if ( node._type == "Choice" )
+		else if ( node._type == DialogueAssetNodeType::Choice )
 		{
-			_state			   = DialogueRunnerState::WaitingForChoice;
-			_currentSpeaker	   = node._speaker;
-			_currentText	   = node._text;
-			_listCurrentChoice = node._listChoice;
+			_state			= DialogueRunnerState::WaitingForChoice;
+			_currentSpeaker = DialogueGraphAsset::resolveLocalizedText( node._speaker );
+			_currentText	= DialogueGraphAsset::resolveLocalizedText( node._text );
+			_listCurrentChoice.clear();
+			_listCurrentChoice.reserve( node._listChoice.size() );
+			for ( const string& choice : node._listChoice )
+				_listCurrentChoice.push_back( DialogueGraphAsset::resolveLocalizedText( choice ) );
 
 			if ( _onChoices.isBound() )
 				_onChoices( _listCurrentChoice );
 		}
-		else if ( node._type == "Branch" )
+		else if ( node._type == DialogueAssetNodeType::Branch )
 		{
-			const bool	bConditionMet = evaluateCondition( node._condition );
-			const int32 nextId		  = bConditionMet ? node._trueNodeId : node._falseNodeId;
-			executeNode( nextId > 0 ? nextId : node._nextDefaultNodeId );
+			const bool bConditionMet = evaluateCondition( node._condition );
+			int32	   nextId		 = _graph.findBranchNextNodeId( nodeId, bConditionMet );
+			if ( nextId <= 0 )
+				nextId = _graph.findDefaultNextNodeId( nodeId );
+			executeNode( nextId );
 		}
-		else if ( node._type == "Action" )
+		else if ( node._type == DialogueAssetNodeType::Action )
 		{
-			executeAction( node._action );
-			executeNode( node._nextDefaultNodeId );
+			executeAction( node._actionCommand );
+			executeNode( _graph.findDefaultNextNodeId( nodeId ) );
 		}
-		else if ( node._type == "End" )
+		else if ( node._type == DialogueAssetNodeType::End )
 		{
 			_state = DialogueRunnerState::Finished;
 			if ( _onFinished.isBound() )

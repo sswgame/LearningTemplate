@@ -1,13 +1,22 @@
 #pragma once
+#include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 
+#include "Engine/Dialogue/DialogueGraphAsset.h"
 #include "Engine/Object/Component/Component.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Save/ISaveGame.h"
 
 namespace sw
 {
+	namespace generated
+	{
+		struct sw_DialogueRunnerComponent_Registrar;
+	} // namespace generated
+
 	REFLECT()
 	enum class DialogueRunnerState : uint8
 	{
@@ -37,6 +46,8 @@ namespace sw
 	REFLECT()
 	class SW_GF_API DialogueRunnerComponent : public Component
 	{
+		friend struct ::sw::generated::sw_DialogueRunnerComponent_Registrar;
+
 	public:
 		REFLECT_BODY();
 
@@ -76,32 +87,19 @@ namespace sw
 		void setOnDialogueFinished( OnDialogueFinishedFunc func );
 
 	private:
-		struct RuntimeNode
-		{
-			int32			  _id;
-			string			  _type;
-			string			  _speaker;
-			string			  _text;
-			string			  _condition;
-			string			  _action;
-			vector<string>	  _listChoice;
-			int32			  _nextDefaultNodeId;
-			map<int32, int32> _mapChoiceToNodeId;
-			int32			  _trueNodeId;
-			int32			  _falseNodeId;
-		};
-
 		bool evaluateCondition( const string& condition ) const;
 		void executeNode( int32 nodeId );
 		void executeAction( const string& actionCmd );
 
-		SaveSlot*				_pSaveSlot;
-		DialogueRunnerState		_state;
-		int32					_currentNodeId;
-		string					_currentSpeaker;
-		string					_currentText;
-		vector<string>			_listCurrentChoice;
-		map<int32, RuntimeNode> _mapNode;
+		PROPERTY( Category = "Dialogue", DisplayName = "Graph", AssetPath, AssetType = "DialogueGraph", Tooltip = "Dialogue graph asset" )
+		string				_graphPath;
+		DialogueGraphAsset	_graph;
+		SaveSlot*			_pSaveSlot;
+		DialogueRunnerState _state;
+		int32				_currentNodeId;
+		string				_currentSpeaker;
+		string				_currentText;
+		vector<string>		_listCurrentChoice;
 
 		OnDialogueLineFunc	   _onLine;
 		OnDialogueChoicesFunc  _onChoices;

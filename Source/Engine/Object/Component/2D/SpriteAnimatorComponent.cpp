@@ -11,6 +11,7 @@ namespace sw
 {
 	SpriteAnimatorComponent::SpriteAnimatorComponent()
 		: _animationGraphPath{}
+		, _graph{}
 		, _currentAnimation{}
 		, _listAnimation{}
 		, _frameRate{ 0.0f }
@@ -20,6 +21,7 @@ namespace sw
 		, _bRepeat{ false }
 		, _bPlaying{ false }
 		, _bPaused{ false }
+		, _bGraphLoaded{ false }
 	{
 		setCanEverTick( true );
 	}
@@ -33,14 +35,25 @@ namespace sw
 		if ( pGameObject != nullptr )
 			pGameObject->addTag( "Animator"_tag );
 
-		if ( _currentAnimation.empty() && _listAnimation.empty() == false )
-			_currentAnimation = _listAnimation[0];
+		tryLoadAnimationGraph();
+
+		if ( _currentAnimation.empty() )
+		{
+			if ( _bGraphLoaded )
+			{
+				const AnimationGraphNode* pEntry = _graph.findEntryNode();
+				if ( pEntry != nullptr )
+					_currentAnimation = pEntry->_name;
+			}
+			else if ( _listAnimation.empty() == false )
+				_currentAnimation = _listAnimation[0];
+		}
 
 		_bPlaying	  = ( _currentAnimation.empty() == false );
 		_bPaused	  = false;
 		_currentFrame = 0;
 		_frameTimer	  = 0.0f;
-		if ( _totalFrames <= 0 && _listAnimation.empty() == false )
+		if ( _bGraphLoaded == false && _totalFrames <= 0 && _listAnimation.empty() == false )
 			_totalFrames = static_cast<int32>( _listAnimation.size() );
 
 		updateSpriteFrame();
@@ -77,6 +90,8 @@ namespace sw
 			{
 				if ( _bRepeat )
 					_currentFrame = 0;
+				else if ( tryAdvanceGraphNode() )
+					break;
 				else
 				{
 					_currentFrame = _totalFrames > 0 ? ( _totalFrames - 1 ) : 0;
@@ -166,6 +181,33 @@ namespace sw
 	bool SpriteAnimatorComponent::isPaused() const
 	{
 		return _bPaused;
+	}
+
+	void SpriteAnimatorComponent::tryLoadAnimationGraph()
+	{
+		_bGraphLoaded = false;
+		_graph		  = AnimationGraphAsset{};
+		if ( _animationGraphPath.empty() )
+			return;
+		if ( _graph.loadFromFile( _animationGraphPath ) == false )
+			return;
+		_bGraphLoaded = true;
+		_graph.collectNodeNames( _listAnimation );
+	}
+
+	bool SpriteAnimatorComponent::tryAdvanceGraphNode()
+	{
+		if ( _bGraphLoaded == false )
+			return false;
+		const AnimationGraphNode* pNode = _graph.findNodeByName( _currentAnimation );
+		if ( pNode == nullptr )
+			return false;
+		const int32				  nextId = _graph.findFirstOutgoingNodeId( pNode->_id );
+		const AnimationGraphNode* pNext	 = _graph.findNode( nextId );
+		if ( pNext == nullptr || pNext->_name.empty() )
+			return false;
+		play( pNext->_name, false );
+		return true;
 	}
 
 	void SpriteAnimatorComponent::updateSpriteFrame()

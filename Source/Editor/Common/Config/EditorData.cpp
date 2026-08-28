@@ -3,6 +3,7 @@
 #include "Editor/Common/Config/EditorData.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Config/EditorConfig.h"
 #include "Editor/Common/EditorUtil.h"
@@ -40,17 +41,25 @@ namespace sw::editor
 			const utf8* pText = root.childText( "clearColor" );
 			if ( pText == nullptr || pText[0] == '\0' )
 				return;
-			float32 r = outColor[0];
-			float32 g = outColor[1];
-			float32 b = outColor[2];
-			float32 a = outColor[3];
-			if ( std::sscanf( pText, "%f %f %f %f", &r, &g, &b, &a ) == 4 )
+			const utf8* pCursor = pText;
+			float32		arrParsed[4]{};
+			uint32		parsedCount{ 0 };
+			while ( parsedCount < 4 )
 			{
-				outColor[0] = r;
-				outColor[1] = g;
-				outColor[2] = b;
-				outColor[3] = a;
+				utf8*		pEnd	   = nullptr;
+				const utf8* pBefore	   = pCursor;
+				arrParsed[parsedCount] = StringUtil::strtof( pCursor, &pEnd );
+				if ( pEnd == nullptr || pEnd == pBefore )
+					break;
+				++parsedCount;
+				pCursor = pEnd;
 			}
+			if ( parsedCount != 4 )
+				return;
+			outColor[0] = arrParsed[0];
+			outColor[1] = arrParsed[1];
+			outColor[2] = arrParsed[2];
+			outColor[3] = arrParsed[3];
 		}
 
 	} // namespace
@@ -89,12 +98,8 @@ namespace sw::editor
 		root.takeChildText( "editorFolder", _editorFolder );
 		root.takeChildText( "fontsFolder", _fontsFolder );
 
-		const utf8* pFontSizeText = root.childText( "fontSize" );
-		if ( pFontSizeText != nullptr )
-			_fontSize = static_cast<float32>( StringUtil::atof( pFontSizeText ) );
-		const utf8* pPlayerSpeedText = root.childText( "playerSpeed" );
-		if ( pPlayerSpeedText != nullptr )
-			_playerSpeed = static_cast<float32>( StringUtil::atof( pPlayerSpeedText ) );
+		_fontSize	 = root.childFloat( "fontSize", _fontSize );
+		_playerSpeed = root.childFloat( "playerSpeed", _playerSpeed );
 		takeClearColor( root, _arrClearColor );
 		takeFontList( root, "baseFonts", _listBaseFonts );
 		takeFontList( root, "koreanFonts", _listKoreanFonts );

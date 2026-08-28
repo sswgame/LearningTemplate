@@ -4,13 +4,10 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
-#include "Core/String/StringUtil.h"
 
 #include "Engine/Utility/Xml/XmlDocument.h"
 
 #include "RuntimeAPI/Service/EditorService.h"
-
-#include <cstdlib>
 
 namespace sw::editor
 {
@@ -52,43 +49,26 @@ namespace sw::editor
 		if ( pGvm == nullptr )
 			return false;
 
-		const vector<string> listAllNames = pGvm->collectVariableNames();
-		string				 xml		  = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n";
-		xml += "<GlobalVariablesPreset name=\"" + presetName + "\">\n";
+		XmlDocument doc;
+		XmlNode		root = doc.appendRoot( "GlobalVariablesPreset" );
+		root.appendAttr( "name", presetName );
 
+		const vector<string> listAllNames = pGvm->collectVariableNames();
 		for ( const string& varName : listAllNames )
 		{
 			const GlobalVariableInfo* pInfo = pGvm->findVariable( varName );
 			if ( pInfo == nullptr || pInfo->_pData == nullptr )
 				continue;
 
-			string valStr;
-			switch ( pInfo->_type )
-			{
-				case GlobalVariableType::Boolean:
-					valStr = ( *static_cast<const bool*>( pInfo->_pData ) ) ? "1" : "0";
-					break;
-				case GlobalVariableType::Int32:
-				case GlobalVariableType::Enum:
-					valStr = to_string( *static_cast<const int32*>( pInfo->_pData ) );
-					break;
-				case GlobalVariableType::Float:
-					valStr = to_string( *static_cast<const float32*>( pInfo->_pData ) );
-					break;
-				case GlobalVariableType::String:
-					valStr = *static_cast<const string*>( pInfo->_pData );
-					break;
-			}
-
-			xml += "    <Var name=\"" + pInfo->_name + "\" type=\"" + getTypeString( *pInfo ) +
-				   "\" value=\"" + valStr + "\" />\n";
+			XmlNode varNode = root.appendChild( "Var" );
+			varNode.appendAttr( "name", pInfo->_name );
+			varNode.appendAttr( "type", getTypeString( *pInfo ) );
+			varNode.appendAttr( "value", pInfo->getValueAsString() );
 		}
-
-		xml += "</GlobalVariablesPreset>\n";
 
 		const string dir = FileUtil::getDirectoryPart( filePath );
 		FileUtil::ensureDirectoryExists( dir );
-		return FileUtil::writeFile( filePath, reinterpret_cast<const uint8*>( xml.c_str() ), xml.size() );
+		return doc.saveFile( filePath );
 	}
 
 	bool EditorGlobalVariableCommands::loadPreset( const string& filePath )
@@ -113,46 +93,9 @@ namespace sw::editor
 				continue;
 
 			GlobalVariableInfo* pInfo = pGvm->findVariable( pName );
-			if ( pInfo == nullptr || pInfo->_pData == nullptr )
+			if ( pInfo == nullptr )
 				continue;
-
-			switch ( pInfo->_type )
-			{
-				case GlobalVariableType::Boolean:
-				{
-					bool* pValPtr = static_cast<bool*>( pInfo->_pData );
-					*pValPtr	  = ( StringUtil::stristr( pVal, "1" ) != nullptr ||
-									  StringUtil::stristr( pVal, "true" ) != nullptr );
-					if ( pInfo->_onValueChanged.isBound() )
-						pInfo->_onValueChanged( pInfo );
-					break;
-				}
-				case GlobalVariableType::Int32:
-				case GlobalVariableType::Enum:
-				{
-					int32* pValPtr = static_cast<int32*>( pInfo->_pData );
-					*pValPtr	   = static_cast<int32>( std::strtol( pVal, nullptr, 10 ) );
-					if ( pInfo->_onValueChanged.isBound() )
-						pInfo->_onValueChanged( pInfo );
-					break;
-				}
-				case GlobalVariableType::Float:
-				{
-					float32* pValPtr = static_cast<float32*>( pInfo->_pData );
-					*pValPtr		 = static_cast<float32>( std::strtod( pVal, nullptr ) );
-					if ( pInfo->_onValueChanged.isBound() )
-						pInfo->_onValueChanged( pInfo );
-					break;
-				}
-				case GlobalVariableType::String:
-				{
-					string* pValPtr = static_cast<string*>( pInfo->_pData );
-					*pValPtr		= pVal;
-					if ( pInfo->_onValueChanged.isBound() )
-						pInfo->_onValueChanged( pInfo );
-					break;
-				}
-			}
+			pInfo->setValueFromString( pVal );
 		}
 		return true;
 	}

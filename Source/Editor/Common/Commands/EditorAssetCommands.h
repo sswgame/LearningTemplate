@@ -66,6 +66,8 @@ namespace sw::editor
 		static void dropAt( GameObjectManager* pManager, const utf8* pPath, const float3& spawnPos );
 		/** @brief 활성 씬을 XML로 저장합니다. path가 비면 씬 소스 경로를 씁니다. */
 		static bool saveActiveScene( string_view path = {} );
+		/** @brief 소스 경로가 있으면 저장하고, 없으면 Save As 대화상자를 엽니다. */
+		static void saveActiveSceneOrPrompt();
 		/** @brief 파일을 Content Browser 폴더로 복사하고 메타를 만듭니다. */
 		static uint32 importFiles( string_view destFolderAbs, const vector<string>& listSourcePath );
 		/** @brief 애셋 파일과 짝 .meta를 삭제합니다. */

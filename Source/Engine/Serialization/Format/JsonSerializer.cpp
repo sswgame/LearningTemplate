@@ -2,6 +2,8 @@
 
 #include "Engine/Serialization/Format/JsonSerializer.h"
 
+#include "Core/File/FileUtil.h"
+
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Serialization/Core/SchemaMigrate.h"
@@ -74,10 +76,10 @@ namespace sw
 
 			const hashed_string resolved  = resolveHandlerTypeName( typeName, ctx );
 			const bool			bIsString = ( resolved.isPredefinedType( PredefinedNameType::NameType_string ) ||
-									  resolved.isPredefinedType( PredefinedNameType::NameType_hashed_string ) ||
-									  resolved.isPredefinedType( PredefinedNameType::NameType_TagID ) );
+											  resolved.isPredefinedType( PredefinedNameType::NameType_hashed_string ) ||
+											  resolved.isPredefinedType( PredefinedNameType::NameType_TagID ) );
 			const bool			bIsBool	  = ( resolved.isPredefinedType( PredefinedNameType::NameType_bool ) ||
-									  resolved.isPredefinedType( PredefinedNameType::NameType_AtomicBool ) );
+											  resolved.isPredefinedType( PredefinedNameType::NameType_AtomicBool ) );
 			const bool			bIsEnum	  = ( engine::getTypeRegistry().findEnum( typeName ) != nullptr );
 
 			if ( bIsString || bIsEnum )
@@ -554,6 +556,23 @@ namespace sw
 									  const SerializeContext& ctx )
 	{
 		return deserializeSoft( pInstance, typeInfo, jsonStr, nullptr, nullptr, ctx );
+	}
+
+	bool JsonSerializer::saveFile( string_view absPath, const void* pInstance, const TypeInfo& typeInfo, uint32 indentSpaces,
+								   const SerializeContext& ctx )
+	{
+		JsonDocument doc;
+		writeObject( doc.makeObject(), pInstance, typeInfo, ctx );
+		const int32 indent = static_cast<int32>( indentSpaces == 0 ? 4 : indentSpaces );
+		return doc.saveFile( absPath, indent );
+	}
+
+	bool JsonSerializer::loadFile( string_view path, void* pInstance, const TypeInfo& typeInfo, const SerializeContext& ctx )
+	{
+		JsonDocument doc;
+		if ( doc.loadPath( path ) == false )
+			return false;
+		return deserialize( pInstance, typeInfo, doc.dump(), ctx );
 	}
 
 	void JsonSerializer::writeObject( JsonValue dst, const void* pInstance, const TypeInfo& typeInfo,

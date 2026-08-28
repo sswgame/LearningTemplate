@@ -107,16 +107,10 @@ namespace sw
 
 	bool MaterialInstance::loadFromFile( string_view assetRelativePath )
 	{
-		string absPath = ResourceUtil::getResourcePath( assetRelativePath );
-		if ( absPath.empty() )
-			absPath = assetRelativePath;
-		if ( FileUtil::fileExists( absPath ) == false )
+		XmlDocument doc;
+		if ( doc.loadPath( assetRelativePath ) == false )
 			return false;
-		vector<uint8> listFileData;
-		if ( FileUtil::readFile( absPath, listFileData ) == false )
-			return false;
-		const string text( reinterpret_cast<const utf8*>( listFileData.data() ), listFileData.size() );
-		return loadFromXml( text );
+		return loadFromXml( doc.saveToString() );
 	}
 
 	bool MaterialInstance::saveToFile( string_view assetRelativePath ) const
@@ -167,8 +161,7 @@ namespace sw
 			}
 		}
 
-		string out = doc.saveToString();
-		return FileUtil::writeFile( absPath, reinterpret_cast<const uint8*>( out.data() ), out.size() );
+		return doc.saveFile( absPath );
 	}
 
 	bool MaterialInstance::applyToGpu( IRHIDevice* pRhi )

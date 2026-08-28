@@ -61,17 +61,9 @@ namespace sw
 				if ( pCullMode != nullptr )
 					pass._cullMode = pCullMode;
 
-				const utf8* pEnableDepthTest = passNode.childText( "_bEnableDepthTest" );
-				if ( pEnableDepthTest != nullptr )
-					pass._bEnableDepthTest = ( string( pEnableDepthTest ) == "1" || string( pEnableDepthTest ) == "true" );
-
-				const utf8* pEnableDepthWrite = passNode.childText( "_bEnableDepthWrite" );
-				if ( pEnableDepthWrite != nullptr )
-					pass._bEnableDepthWrite = ( string( pEnableDepthWrite ) == "1" || string( pEnableDepthWrite ) == "true" );
-
-				const utf8* pEnableBlend = passNode.childText( "_bEnableBlend" );
-				if ( pEnableBlend != nullptr )
-					pass._bEnableBlend = ( string( pEnableBlend ) == "1" || string( pEnableBlend ) == "true" );
+				pass._bEnableDepthTest	= passNode.childBool( "_bEnableDepthTest", pass._bEnableDepthTest );
+				pass._bEnableDepthWrite = passNode.childBool( "_bEnableDepthWrite", pass._bEnableDepthWrite );
+				pass._bEnableBlend		= passNode.childBool( "_bEnableBlend", pass._bEnableBlend );
 
 				outListPasses.push_back( std::move( pass ) );
 			}
@@ -111,9 +103,7 @@ namespace sw
 				const utf8* pFormat = attNode.childText( "_format" );
 				if ( pFormat != nullptr )
 					att._format = pFormat;
-				const utf8* pClear = attNode.childText( "_bClear" );
-				if ( pClear != nullptr )
-					att._bClear = ( string( pClear ) == "1" || string( pClear ) == "true" );
+				att._bClear				= attNode.childBool( "_bClear", att._bClear );
 				const utf8* pClearColor = attNode.childText( "_clearColor" );
 				if ( pClearColor != nullptr )
 				{
@@ -142,28 +132,11 @@ namespace sw
 
 	bool RenderPipelineResource::loadFromXmlFile( string_view assetRelativePath )
 	{
-		string absPath = ResourceUtil::getResourcePath( assetRelativePath );
-		if ( absPath.empty() )
-			absPath = assetRelativePath;
-
-		if ( FileUtil::fileExists( absPath ) == false )
-		{
-			SW_LOG_ERROR( "XML file not found: %#", absPath );
-			return false;
-		}
-
-		vector<uint8> listFileData;
-		if ( FileUtil::readFile( absPath, listFileData ) == false || listFileData.empty() )
-		{
-			SW_LOG_ERROR( "Failed to read XML: %#", absPath );
-			return false;
-		}
-
-		string		xmlStr( reinterpret_cast<const utf8*>( listFileData.data() ), listFileData.size() );
+		string		absPath;
 		XmlDocument doc;
-		if ( doc.parse( xmlStr ) == false )
+		if ( doc.loadPath( assetRelativePath, &absPath ) == false )
 		{
-			SW_LOG_ERROR( "Failed to parse XML: %#", absPath );
+			SW_LOG_ERROR( "XML file not found: %#", assetRelativePath );
 			return false;
 		}
 
@@ -219,24 +192,16 @@ namespace sw
 		XmlNode		root = doc.appendRoot( "RenderPipelineDesc" );
 		engine::getResourceManager().getAssetFormatRegistry().writeXmlVersion( root, AssetFormatVersions::kRenderPipeline );
 
-		XmlNode nameNode = root.appendChild( "_name" );
-		nameNode.setValue( _desc._name.c_str() );
-		XmlNode shadingModelNode = root.appendChild( "_shadingModel" );
-		shadingModelNode.setValue( _desc._shadingModel.c_str() );
+		root.appendChild( "_name", _desc._name );
+		root.appendChild( "_shadingModel", _desc._shadingModel );
 
 		XmlNode attachsNode = root.appendChild( "_attachments" );
 		for ( const RenderPassAttachment& att : _desc._listAttachment )
 		{
 			XmlNode attNode = attachsNode.appendChild( "item" );
-
-			XmlNode nName = attNode.appendChild( "_name" );
-			nName.setValue( att._name.c_str() );
-
-			XmlNode nFormat = attNode.appendChild( "_format" );
-			nFormat.setValue( att._format.c_str() );
-
-			XmlNode nClear = attNode.appendChild( "_bClear" );
-			nClear.setValue( att._bClear ? "1" : "0" );
+			attNode.appendChild( "_name", att._name );
+			attNode.appendChild( "_format", att._format );
+			attNode.appendChild( "_bClear", att._bClear );
 
 			StringBuilder<constant::kMaxBuffer128> colorSS;
 			constexpr Format					   colorFmt( 4 );
@@ -245,56 +210,32 @@ namespace sw
 								  Fmt( att._arrClearColor[1], colorFmt ),
 								  Fmt( att._arrClearColor[2], colorFmt ),
 								  Fmt( att._arrClearColor[3], colorFmt ) );
-			XmlNode nColor = attNode.appendChild( "_clearColor" );
-			nColor.setValue( colorSS.c_str() );
+			attNode.appendChild( "_clearColor", colorSS.view() );
 		}
 
 		XmlNode passesNode = root.appendChild( "_passes" );
 		for ( const RenderGraphPassDesc& pass : _desc._listPass )
 		{
 			XmlNode passNode = passesNode.appendChild( "item" );
-			XmlNode pName	 = passNode.appendChild( "_name" );
-			pName.setValue( pass._name.c_str() );
-
-			XmlNode pType = passNode.appendChild( "_type" );
-			pType.setValue( pass._type.c_str() );
+			passNode.appendChild( "_name", pass._name );
+			passNode.appendChild( "_type", pass._type );
 
 			appendStringList( passNode, "_inputs", pass._listInput );
 			appendStringList( passNode, "_outputs", pass._listOutput );
 			if ( pass._shaderPath.empty() == false )
-			{
-				XmlNode pNode = passNode.appendChild( "_shaderPath" );
-				pNode.setValue( pass._shaderPath.c_str() );
-			}
+				passNode.appendChild( "_shaderPath", pass._shaderPath );
 			if ( pass._vertexEntryPoint.empty() == false )
-			{
-				XmlNode pNode = passNode.appendChild( "_vertexEntryPoint" );
-				pNode.setValue( pass._vertexEntryPoint.c_str() );
-			}
+				passNode.appendChild( "_vertexEntryPoint", pass._vertexEntryPoint );
 			if ( pass._pixelEntryPoint.empty() == false )
-			{
-				XmlNode pNode = passNode.appendChild( "_pixelEntryPoint" );
-				pNode.setValue( pass._pixelEntryPoint.c_str() );
-			}
+				passNode.appendChild( "_pixelEntryPoint", pass._pixelEntryPoint );
 			if ( pass._computeEntryPoint.empty() == false && pass._computeEntryPoint != "CSMain" )
-			{
-				XmlNode pNode = passNode.appendChild( "_computeEntryPoint" );
-				pNode.setValue( pass._computeEntryPoint.c_str() );
-			}
+				passNode.appendChild( "_computeEntryPoint", pass._computeEntryPoint );
 			if ( pass._cullMode.empty() == false )
-			{
-				XmlNode pNode = passNode.appendChild( "_cullMode" );
-				pNode.setValue( pass._cullMode.c_str() );
-			}
+				passNode.appendChild( "_cullMode", pass._cullMode );
 
-			XmlNode pDepthTest = passNode.appendChild( "_bEnableDepthTest" );
-			pDepthTest.setValue( pass._bEnableDepthTest ? "1" : "0" );
-
-			XmlNode pDepthWrite = passNode.appendChild( "_bEnableDepthWrite" );
-			pDepthWrite.setValue( pass._bEnableDepthWrite ? "1" : "0" );
-
-			XmlNode pBlend = passNode.appendChild( "_bEnableBlend" );
-			pBlend.setValue( pass._bEnableBlend ? "1" : "0" );
+			passNode.appendChild( "_bEnableDepthTest", pass._bEnableDepthTest );
+			passNode.appendChild( "_bEnableDepthWrite", pass._bEnableDepthWrite );
+			passNode.appendChild( "_bEnableBlend", pass._bEnableBlend );
 
 			if ( pass._listPermutation.empty() == false )
 				appendStringList( passNode, "_permutations", pass._listPermutation );
@@ -303,8 +244,7 @@ namespace sw
 		if ( _desc._listRenderPassRef.empty() == false )
 			appendStringList( root, "_renderPassRefs", _desc._listRenderPassRef );
 
-		string xmlStr = doc.saveToString();
-		if ( FileUtil::writeFile( absPath, reinterpret_cast<const uint8*>( xmlStr.data() ), xmlStr.size() ) == false )
+		if ( doc.saveFile( absPath ) == false )
 		{
 			SW_LOG_ERROR( "Failed to write: %#", absPath );
 			return false;

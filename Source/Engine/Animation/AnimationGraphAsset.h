@@ -47,6 +47,14 @@ namespace sw
 		string toJson() const;
 		/** @brief 노드 이름 목록을 채웁니다. */
 		void collectNodeNames( vector<string>& outNameList ) const;
+		/** @brief id로 노드를 찾습니다. */
+		const AnimationGraphNode* findNode( int32 nodeId ) const;
+		/** @brief 이름으로 노드를 찾습니다. */
+		const AnimationGraphNode* findNodeByName( string_view name ) const;
+		/** @brief 진입 노드(들어오는 링크가 없는 첫 노드, 없으면 목록 앞)를 반환합니다. */
+		const AnimationGraphNode* findEntryNode() const;
+		/** @brief 해당 노드에서 나가는 첫 링크의 대상 id입니다. 없으면 0입니다. */
+		int32 findFirstOutgoingNodeId( int32 fromNodeId ) const;
 
 		vector<AnimationGraphNode> _listNode;
 		vector<AnimationGraphLink> _listLink;

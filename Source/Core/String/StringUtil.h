@@ -170,6 +170,12 @@ namespace sw
 		/** @brief 실수를 파싱합니다. 실패 시 0입니다. */
 		static float64 atof( const utf16* str );
 
+		/**
+		 * @brief true/false/1/0/yes/no/on/off 토큰을 bool로 파싱합니다 (대소문자 무시).
+		 * @details 트림 후 매칭. 빈 입력이거나 알 수 없으면 fallback.
+		 */
+		static bool parseBool( string_view token, bool fallback = false );
+
 		/** @brief 32비트 실수를 파싱합니다. */
 		static float32 strtof( const utf8* str, utf8** endPtr = nullptr );
 		/** @brief 32비트 실수를 파싱합니다. */

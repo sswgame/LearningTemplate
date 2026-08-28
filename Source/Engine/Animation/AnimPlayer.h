@@ -41,6 +41,10 @@ namespace sw
 		const AnimClip* getNextClip() const { return _pNext; }
 		/** @brief 크로스페이드 중인지 반환합니다. */
 		bool isCrossfading() const { return _fadeDuration > 0.0f && _pNext != nullptr; }
+		/** @brief 현재 클립이 루프 없이 끝까지 재생됐으면 true입니다. */
+		bool hasFinished() const;
+		/** @brief 현재 클립 재생 시각(초)을 반환합니다. */
+		float32 getCurrentTime() const { return _currentTime; }
 
 	private:
 		const AnimClip* _pCurrent{ nullptr };

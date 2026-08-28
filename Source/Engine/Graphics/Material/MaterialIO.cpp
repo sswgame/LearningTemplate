@@ -16,28 +16,10 @@ namespace sw
 
 	bool Material::loadFromFile( string_view assetRelativePath )
 	{
-		string absPath = ResourceUtil::getResourcePath( assetRelativePath );
-		if ( absPath.empty() )
-			absPath = assetRelativePath;
-
-		if ( FileUtil::fileExists( absPath ) == false )
+		XmlDocument doc;
+		if ( doc.loadPath( assetRelativePath ) == false )
 			return false;
-
-		vector<uint8> listFileData;
-		if ( FileUtil::readFile( absPath, listFileData ) == false )
-			return false;
-
-		const string text( reinterpret_cast<const utf8*>( listFileData.data() ), listFileData.size() );
-		const string trimmed = StringUtil::trim( text.c_str() );
-		if ( trimmed.empty() )
-			return false;
-
-		if ( trimmed[0] != '<' )
-		{
-			SW_LOG_ERROR( "Expected XML material file: %#", absPath );
-			return false;
-		}
-		return loadFromXml( text );
+		return loadFromXml( doc.saveToString() );
 	}
 
 	TaskHandle Material::loadFromFileAsync( string_view assetRelativePath )
@@ -106,8 +88,8 @@ namespace sw
 				appendAttr( item, "shaderKeyword", prop._shaderKeyword );
 			if ( prop._type == MaterialPropertyType::Range )
 			{
-				appendAttr( item, "min", to_string( prop._min ) );
-				appendAttr( item, "max", to_string( prop._max ) );
+				item.appendAttr( "min", prop._min );
+				item.appendAttr( "max", prop._max );
 			}
 			if ( prop._type == MaterialPropertyType::Color )
 			{
@@ -128,15 +110,14 @@ namespace sw
 				{
 					XmlNode eItem = list.appendChild( "item" );
 					appendAttr( eItem, "name", enumEntry._name );
-					appendAttr( eItem, "value", to_string( enumEntry._value ) );
+					eItem.appendAttr( "value", enumEntry._value );
 				}
 			}
 		}
 
 		appendPermutationNode( root, _desc._permutations );
 
-		string out = doc.saveToString();
-		return FileUtil::writeFile( absPath, reinterpret_cast<const uint8*>( out.data() ), out.size() );
+		return doc.saveFile( absPath );
 	}
 
 	bool Material::loadFromXml( string_view xmlText )

@@ -55,12 +55,8 @@ namespace sw::editor
 		void mergeLangJson( LocLang lang, const string& locFolder, map<string, LocRecord>& mapRecords )
 		{
 			const string path = FileUtil::joinPath( locFolder, string{ locLangFileStem( lang ) } + ".json" );
-			string		 text;
-			if ( FileUtil::readTextFile( path, text ) == false )
-				return;
-
 			JsonDocument doc;
-			if ( doc.parse( text ) == false || doc.root().isObject() == false )
+			if ( doc.loadFile( path ) == false || doc.root().isObject() == false )
 				return;
 
 			const vector<string> listKeys = doc.root().memberNames();
@@ -74,23 +70,23 @@ namespace sw::editor
 
 		void writeLangJson( LocLang lang, const string& locFolder, const vector<LocRecord>& listRecord )
 		{
-			JsonDocument doc;
-			doc.root().setObject();
+			JsonDocument	doc;
+			const JsonValue root = doc.makeObject();
 
 			for ( const LocRecord& rec : listRecord )
 			{
 				const string& val = getLocField( rec, lang );
 				if ( val.empty() == false )
-					doc.root().set( rec._key ).setString( val );
+					root.set( rec._key ).setString( val );
 			}
 
-			const string path	= FileUtil::joinPath( locFolder, string{ locLangFileStem( lang ) } + ".json" );
-			const string dumped = doc.dump( 4 );
-			FileUtil::writeTextFile( path, dumped );
+			const string path = FileUtil::joinPath( locFolder, string{ locLangFileStem( lang ) } + ".json" );
+			if ( doc.saveFile( path, 4 ) == false )
+				return;
 
 			LocalizationManager* pLocMgr = editor::getService<LocalizationManager>();
 			if ( pLocMgr != nullptr )
-				pLocMgr->loadLanguageJson( locLangFileStem( lang ), dumped );
+				pLocMgr->loadLanguageJson( locLangFileStem( lang ), doc.dump( 4 ) );
 		}
 	} // namespace
 

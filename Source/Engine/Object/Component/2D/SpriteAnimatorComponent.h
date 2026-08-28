@@ -8,6 +8,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
+#include "Engine/Animation/AnimationGraphAsset.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -57,10 +58,13 @@ namespace sw
 		bool  isPaused() const;
 
 	private:
+		void tryLoadAnimationGraph();
+		bool tryAdvanceGraphNode();
 		void updateSpriteFrame();
 
 		PROPERTY( Category = "Animation", DisplayName = "Animation Graph", AssetPath, AssetType = "AnimationGraph", Tooltip = "Animation graph asset used by this animator" )
-		string _animationGraphPath;
+		string				_animationGraphPath;
+		AnimationGraphAsset _graph;
 		PROPERTY( Category = "Animation", DisplayName = "Current Animation", Tooltip = "Currently playing animation name" )
 		string _currentAnimation;
 		PROPERTY( Category = "Animation", DisplayName = "Animation List", Tooltip = "Available animation names" )
@@ -76,5 +80,6 @@ namespace sw
 		bool _bRepeat;
 		bool _bPlaying;
 		bool _bPaused;
+		bool _bGraphLoaded;
 	};
 } // namespace sw

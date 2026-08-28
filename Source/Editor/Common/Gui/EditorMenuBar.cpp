@@ -38,39 +38,9 @@ namespace sw::editor
 				EditorContext::get()->getWorkspace().requestLoadScene( listPaths[0] );
 		}
 
-		void onSaveSceneDialogResult( const vector<string>& listPaths )
-		{
-			if ( listPaths.empty() )
-				return;
-			if ( EditorAssetCommands::saveActiveScene( listPaths[0] ) )
-				EditorContext::get()->getNotificationManager().push( "Scene", "Saved", NotificationType::Success );
-			else
-				EditorContext::get()->getNotificationManager().push( "Scene", "Save failed", NotificationType::Error );
-		}
-
 		void saveSceneOrPrompt()
 		{
-			SceneManager* pSceneManager = editor::getService<SceneManager>();
-			Scene*		  pScene		= ( pSceneManager != nullptr ) ? pSceneManager->getActiveScene() : nullptr;
-			if ( pScene != nullptr && pScene->getSourcePath().empty() == false )
-			{
-				if ( EditorAssetCommands::saveActiveScene( {} ) )
-					EditorContext::get()->getNotificationManager().push( "Scene", "Saved", NotificationType::Success );
-				else
-					EditorContext::get()->getNotificationManager().push( "Scene", "Save failed", NotificationType::Error );
-				return;
-			}
-
-			FileDialogParams params{};
-			params._type				= FileDialogParams::Type::Save;
-			params._title				= "Save Scene";
-			params._description			= "Scene";
-			params._bEnableMultiselect	= false;
-			params._filterExtensionList = { ".scene.xml", ".xml" };
-			const string mapsDir		= FileUtil::joinPath( ResourceUtil::getGameFolderPath(), "demo/maps" );
-			if ( FileUtil::directoryExists( mapsDir ) )
-				params._initialDirectory = mapsDir;
-			FileUtil::openFileDialog( params, SW_DELEGATE_FUNCTION( FileDialogDelegate, onSaveSceneDialogResult ) );
+			EditorAssetCommands::saveActiveSceneOrPrompt();
 		}
 
 		void openSceneFileDialog()

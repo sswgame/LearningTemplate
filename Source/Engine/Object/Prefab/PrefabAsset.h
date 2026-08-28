@@ -7,6 +7,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/Container/vector.h"
 
 #include <shared_mutex>
 
@@ -45,6 +46,8 @@ namespace sw
 		const string& getXmlBody() const { return _stateData; }
 		/** @brief 로드에 성공했으면 true. */
 		bool isValid() const { return _bValid != 0; }
+		/** @brief 상태 XML/JSON 안의 `.prefab` 경로를 수집합니다. */
+		void collectReferencedPrefabPaths( vector<string>& outPathList ) const;
 
 	private:
 		string				   _name;

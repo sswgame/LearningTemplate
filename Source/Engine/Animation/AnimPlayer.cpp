@@ -83,4 +83,15 @@ namespace sw
 		result._transform	   = float4x4::lerp( result._transform, b._transform, alpha );
 		return result;
 	}
+
+	bool AnimPlayer::hasFinished() const
+	{
+		if ( _pCurrent == nullptr )
+			return true;
+		if ( _bCurrentLoop )
+			return false;
+		if ( _pNext != nullptr )
+			return false;
+		return _currentTime >= _pCurrent->getDuration();
+	}
 } // namespace sw

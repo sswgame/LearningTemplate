@@ -2,6 +2,11 @@
 
 #include "Engine/Utility/File/KeyValueFile.h"
 
+#include "Core/File/FileUtil.h"
+#include "Core/String/StringUtil.h"
+
+#include "Engine/Utility/Resource/ResourceUtil.h"
+
 namespace sw
 {
 
@@ -52,6 +57,19 @@ namespace sw
 		return parse( text, mapOut, opt );
 	}
 
+	bool KeyValueFile::loadPath( string_view path, KeyValueMap& mapOut, KeyValueParseOptions opt, string* pOutAbsPath )
+	{
+		if ( path.empty() )
+			return false;
+		if ( FileUtil::fileExists( path ) )
+		{
+			if ( pOutAbsPath != nullptr )
+				*pOutAbsPath = string{ path };
+			return loadFile( path, mapOut, opt );
+		}
+		return loadResource( path, mapOut, opt, pOutAbsPath );
+	}
+
 	const utf8* KeyValueFile::get( const KeyValueMap& mapData, string_view key, const utf8* pFallback )
 	{
 		if ( key.empty() )
@@ -76,5 +94,48 @@ namespace sw
 		if ( pV == nullptr || pV[0] == '\0' )
 			return fallback;
 		return static_cast<float32>( StringUtil::atof( pV ) );
+	}
+
+	bool KeyValueFile::getBool( const KeyValueMap& mapData, string_view key, bool fallback )
+	{
+		const utf8* pV = get( mapData, key, nullptr );
+		if ( pV == nullptr || pV[0] == '\0' )
+			return fallback;
+		return StringUtil::parseBool( pV, fallback );
+	}
+
+	string KeyValueFile::dump( const KeyValueMap& mapData, string_view headerComment, string_view sectionName )
+	{
+		string text;
+		if ( headerComment.empty() == false )
+		{
+			if ( headerComment.front() != '#' )
+				text += "# ";
+			text.append( headerComment.data(), headerComment.size() );
+			if ( text.empty() == false && text.back() != '\n' )
+				text += '\n';
+		}
+		if ( sectionName.empty() == false )
+		{
+			text += '[';
+			text.append( sectionName.data(), sectionName.size() );
+			text += "]\n";
+		}
+		for ( const KeyValueMap::value_type& pair : mapData )
+		{
+			text += pair.first;
+			text += '=';
+			text += pair.second;
+			text += '\n';
+		}
+		return text;
+	}
+
+	bool KeyValueFile::saveFile( string_view absPath, const KeyValueMap& mapData, string_view headerComment,
+								 string_view sectionName )
+	{
+		if ( absPath.empty() )
+			return false;
+		return FileUtil::writeTextFile( absPath, dump( mapData, headerComment, sectionName ) );
 	}
 } // namespace sw

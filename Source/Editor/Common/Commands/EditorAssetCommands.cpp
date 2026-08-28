@@ -10,6 +10,7 @@
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Workspace/AssetEditorManager.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorNotificationManager.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
@@ -17,6 +18,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Utility/Resource/AssetDatabase.h"
 #include "Engine/Utility/Resource/ResourceManager.h"
@@ -30,6 +32,16 @@ namespace sw::editor
 
 	namespace
 	{
+		void onSaveSceneDialogResult( const vector<string>& listPaths )
+		{
+			if ( listPaths.empty() )
+				return;
+			if ( EditorAssetCommands::saveActiveScene( listPaths[0] ) )
+				EditorContext::get()->getNotificationManager().push( "Scene", "Saved", NotificationType::Success );
+			else
+				EditorContext::get()->getNotificationManager().push( "Scene", "Save failed", NotificationType::Error );
+		}
+
 		bool isSceneAssetPath( string_view path )
 		{
 			if ( path.empty() )
@@ -256,6 +268,35 @@ namespace sw::editor
 		if ( pContext != nullptr )
 			pContext->getWorkspace().clearSceneDirty();
 		return true;
+	}
+
+	void EditorAssetCommands::saveActiveSceneOrPrompt()
+	{
+		EditorContext* pContext		 = EditorContext::get();
+		SceneManager*  pSceneManager = editor::getService<SceneManager>();
+		Scene*		   pScene		 = ( pSceneManager != nullptr ) ? pSceneManager->getActiveScene() : nullptr;
+		if ( pScene != nullptr && pScene->getSourcePath().empty() == false )
+		{
+			if ( saveActiveScene( {} ) )
+			{
+				if ( pContext != nullptr )
+					pContext->getNotificationManager().push( "Scene", "Saved", NotificationType::Success );
+			}
+			else if ( pContext != nullptr )
+				pContext->getNotificationManager().push( "Scene", "Save failed", NotificationType::Error );
+			return;
+		}
+
+		FileDialogParams params{};
+		params._type				= FileDialogParams::Type::Save;
+		params._title				= "Save Scene";
+		params._description			= "Scene";
+		params._bEnableMultiselect	= false;
+		params._filterExtensionList = { ".scene.xml", ".xml" };
+		const string mapsDir		= FileUtil::joinPath( ResourceUtil::getGameFolderPath(), "demo/maps" );
+		if ( FileUtil::directoryExists( mapsDir ) )
+			params._initialDirectory = mapsDir;
+		FileUtil::openFileDialog( params, SW_DELEGATE_FUNCTION( FileDialogDelegate, onSaveSceneDialogResult ) );
 	}
 
 	uint32 EditorAssetCommands::importFiles( string_view destFolderAbs, const vector<string>& listSourcePath )

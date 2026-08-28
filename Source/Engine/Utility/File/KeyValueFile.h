@@ -53,6 +53,12 @@ namespace sw
 		static bool loadResource( string_view relativePath, KeyValueMap& mapOut, KeyValueParseOptions opt = {},
 								  string* pOutAbsPath = nullptr );
 
+		/**
+		 * @brief 절대/작업 경로가 있으면 loadFile, 없으면 loadResource.
+		 */
+		static bool loadPath( string_view path, KeyValueMap& mapOut, KeyValueParseOptions opt = {},
+							  string* pOutAbsPath = nullptr );
+
 		// ------------------------------------------------------------------------------
 		// 3) 조회
 		// ------------------------------------------------------------------------------
@@ -62,6 +68,21 @@ namespace sw
 		static int32 getInt( const KeyValueMap& mapData, string_view key, int32 fallback = 0 );
 		/** @brief 키의 float32 값을 반환합니다. 없으면 fallback. */
 		static float32 getFloat( const KeyValueMap& mapData, string_view key, float32 fallback = 0.0f );
+		/** @brief 키의 bool 값을 반환합니다 (1/true/yes/on). */
+		static bool getBool( const KeyValueMap& mapData, string_view key, bool fallback = false );
+
+		// ------------------------------------------------------------------------------
+		// 4) 쓰기
+		// ------------------------------------------------------------------------------
+		/**
+		 * @brief key=value 텍스트를 만듭니다.
+		 * @param headerComment 비어 있지 않으면 `# ` 접두(이미 #이면 그대로) 뒤 개행.
+		 * @param sectionName 비어 있지 않으면 `[sectionName]` 줄을 넣습니다.
+		 */
+		static string dump( const KeyValueMap& mapData, string_view headerComment = {}, string_view sectionName = {} );
+		/** @brief dump 결과를 절대 경로에 씁니다. */
+		static bool saveFile( string_view absPath, const KeyValueMap& mapData, string_view headerComment = {},
+							  string_view sectionName = {} );
 
 		/**
 		 * @brief 비어 있지 않고 주석이 아닌 각 줄에 fn(trimmedLine)을 호출합니다.

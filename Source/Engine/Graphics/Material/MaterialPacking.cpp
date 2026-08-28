@@ -338,7 +338,7 @@ namespace sw
 			for ( const string& valueStr : values )
 			{
 				XmlNode item = list.appendChild( "item" );
-				item.setValue( valueStr.c_str() );
+				item.setValue( valueStr );
 			}
 		}
 
@@ -466,11 +466,7 @@ namespace sw
 
 	bool parseBoolToken( string_view token )
 	{
-		const string tokenNt( token );
-		const string t = StringUtil::trim( tokenNt.c_str() );
-		if ( t == "1" || iequals( t, "true" ) || iequals( t, "on" ) || iequals( t, "yes" ) )
-			return true;
-		return false;
+		return StringUtil::parseBool( token, false );
 	}
 
 	bool packPropertyIntoBuffer( MaterialProperty& prop, vector<uint8>& buffer )
@@ -673,12 +669,12 @@ namespace sw
 	{
 		if ( parent.isValid() == false || pName == nullptr || value.empty() )
 			return;
-		parent.appendAttr( pName, string( value ).c_str() );
+		parent.appendAttr( pName, value );
 	}
 
 	void appendBoolAttr( XmlNode parent, const utf8* pName, bool value )
 	{
-		appendAttr( parent, pName, value ? "1" : "0" );
+		parent.appendAttr( pName, value );
 	}
 
 	RHIBlendMode parseBlendMode( string_view s )
@@ -782,7 +778,7 @@ namespace sw
 	{
 		XmlNode node = root.appendChild( "_permutations" );
 		appendAttr( node, "quality", qualityToString( perm._quality ) );
-		appendAttr( node, "shaderLOD", to_string( perm._shaderLOD ) );
+		node.appendAttr( "shaderLOD", perm._shaderLOD );
 		appendAttr( node, "usage", usageFlagsToString( perm._usage ) );
 		appendMaterialStringList( node, "_alwaysDefines", perm._listAlwaysDefine );
 

@@ -145,19 +145,25 @@ namespace sw::editor
 			return true;
 		}
 
-		void setWorldPosition( SceneComponent* pSc, const float3& worldPos )
+		void applyWorldMatrix( SceneComponent* pSc, const float4x4& world )
 		{
 			if ( pSc == nullptr )
 				return;
-			float4x4 world			 = pSc->getWorldMatrix();
-			world._41				 = worldPos._x;
-			world._42				 = worldPos._y;
-			world._43				 = worldPos._z;
 			float4x4		localMat = world;
 			SceneComponent* pParent	 = pSc->getParent();
 			if ( pParent != nullptr )
 				localMat = world * pParent->getWorldMatrix().invert();
-			pSc->setLocalPosition( float3{ localMat._41, localMat._42, localMat._43 } );
+
+			float32 arrMatrix[16];
+			storeColumnMajor( arrMatrix, localMat );
+			float3 translation{};
+			float3 rotationDeg{};
+			float3 scale{};
+			ImGuizmo::DecomposeMatrixToComponents( arrMatrix, &translation._x, &rotationDeg._x, &scale._x );
+			pSc->setLocalPosition( translation );
+			pSc->setLocalRotation( float3{ MathUtil::toRadian( rotationDeg._x ), MathUtil::toRadian( rotationDeg._y ),
+										   MathUtil::toRadian( rotationDeg._z ) } );
+			pSc->setLocalScale( scale );
 		}
 
 		void considerMeshPick( GameObject* pObj, const float3& nearPt, const float3& dir, float32& bestT, GameObject*& pBestObj,
@@ -409,7 +415,7 @@ namespace sw::editor
 		, _gizmoUndoBeforeXml{}
 		, _listGizmoObject{}
 		, _listGizmoUndoXml{}
-		, _listGizmoOffset{}
+		, _listGizmoRelativeWorld{}
 		, _arrGizmoGroupMatrix{}
 		, _bRulerActive{ false }
 		, _bGizmoTracking{ SW_FALSE }
@@ -813,12 +819,13 @@ namespace sw::editor
 				{
 					_listGizmoObject.clear();
 					_listGizmoUndoXml.clear();
-					_listGizmoOffset.clear();
+					_listGizmoRelativeWorld.clear();
+					const float4x4 invGroup = groupWorld.invert();
 					for ( GameObject* pObj : listGizmo )
 					{
 						_listGizmoObject.push_back( GameObjectPtr{ pObj } );
 						_listGizmoUndoXml.push_back( EditorSceneCommands::captureSnapshot( pObj ) );
-						_listGizmoOffset.push_back( pObj->getPrimarySceneComponent()->getWorldPosition() - centroid );
+						_listGizmoRelativeWorld.push_back( pObj->getPrimarySceneComponent()->getWorldMatrix() * invGroup );
 					}
 				}
 			}
@@ -836,9 +843,7 @@ namespace sw::editor
 					SceneComponent* pSc = pObj->getPrimarySceneComponent();
 					if ( pSc == nullptr )
 						continue;
-					const float3 offset = _listGizmoOffset[objectIndex];
-					const float4 world4 = float4::transform( float4{ offset._x, offset._y, offset._z, 1.0f }, dummyWorld );
-					setWorldPosition( pSc, float3{ world4._x, world4._y, world4._z } );
+					applyWorldMatrix( pSc, _listGizmoRelativeWorld[objectIndex] * dummyWorld );
 				}
 			}
 
@@ -854,7 +859,7 @@ namespace sw::editor
 													   "Gizmo Transform" );
 				_listGizmoObject.clear();
 				_listGizmoUndoXml.clear();
-				_listGizmoOffset.clear();
+				_listGizmoRelativeWorld.clear();
 				_bGizmoTracking = SW_FALSE;
 			}
 			return;

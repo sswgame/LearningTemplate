@@ -5,8 +5,8 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
-#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/formatString.h"
 
 #include "Editor/Common/Commands/EditorInspectorCommands.h"
 #include "Editor/Common/Config/EditorConfig.h"
@@ -28,9 +28,8 @@
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Sequencer/SequenceAsset.h"
 #include "Engine/Serialization/Core/SerializerInternal.h"
-#include "Engine/Serialization/Format/JsonSerializer.h"
-#include "Engine/Serialization/Format/SimpleJsonWalk.h"
 #include "Engine/Utility/CommandStack.h"
+#include "Engine/Utility/Json/JsonDocument.h"
 #include "Engine/Utility/Resource/ResourceManager.h"
 #include "Engine/Utility/Resource/ResourceUtil.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
@@ -57,124 +56,6 @@ namespace sw::editor
 			data._listPassThrough.assign( count, 0 );
 			data._listVisual.assign( count, EditorTileVisual{} );
 			data._listWarp.clear();
-		}
-
-		bool parseJsonIntInRange( const string& json, size_t from, size_t end, const utf8* pKey, int32& outValue )
-		{
-			if ( pKey == nullptr )
-				return false;
-			const string key = string( "\"" ) + pKey + "\"";
-			const size_t pos = json.find( key, from );
-			if ( pos == string::npos || pos > end )
-				return false;
-			const size_t colon = json.find( ':', pos );
-			if ( colon == string::npos || colon > end )
-				return false;
-			utf8* pEndPtr{ nullptr };
-			outValue = static_cast<int32>( StringUtil::strtoll( json.c_str() + colon + 1, &pEndPtr, 10 ) );
-			return true;
-		}
-
-		bool parseJsonFloatInRange( const string& json, size_t from, size_t end, const utf8* pKey, float32& outValue )
-		{
-			if ( pKey == nullptr )
-				return false;
-			const string key = string( "\"" ) + pKey + "\"";
-			const size_t pos = json.find( key, from );
-			if ( pos == string::npos || pos > end )
-				return false;
-			const size_t colon = json.find( ':', pos );
-			if ( colon == string::npos || colon > end )
-				return false;
-			outValue = static_cast<float32>( StringUtil::atof( json.c_str() + colon + 1 ) );
-			return true;
-		}
-
-		bool parseJsonStringInRange( const string& json, size_t from, size_t end, const utf8* pKey, string& outValue )
-		{
-			if ( pKey == nullptr )
-				return false;
-			const string key = string( "\"" ) + pKey + "\"";
-			const size_t pos = json.find( key, from );
-			if ( pos == string::npos || pos > end )
-				return false;
-			const size_t colon = json.find( ':', pos );
-			if ( colon == string::npos || colon > end )
-				return false;
-			const size_t q0 = json.find( '"', colon + 1 );
-			const size_t q1 = json.find( '"', q0 + 1 );
-			if ( q0 == string::npos || q1 == string::npos || q0 > end || q1 > end )
-				return false;
-			outValue.assign( json, q0 + 1, q1 - q0 - 1 );
-			return true;
-		}
-
-		bool parseFloatAfter( string_view src, size_t from, const utf8* pKey, float32& outValue )
-		{
-			const size_t klen = StringUtil::strlen( pKey );
-			if ( klen == 0 || from >= src.size() )
-				return false;
-
-			for ( size_t sliceIndex = from; sliceIndex + klen + 2 <= src.size(); ++sliceIndex )
-			{
-				if ( src[sliceIndex] == '"' && src[sliceIndex + klen + 1] == '"' &&
-					 src.substr( sliceIndex + 1, klen ) == string_view{ pKey, klen } )
-				{
-					const size_t colon = src.find( ':', sliceIndex + klen + 2 );
-					if ( colon == string_view::npos )
-						return false;
-					outValue = static_cast<float32>( StringUtil::atof( src.data() + colon + 1 ) );
-					return true;
-				}
-			}
-			return false;
-		}
-
-		bool parseIntAfter( string_view src, size_t from, const utf8* pKey, int32& outValue )
-		{
-			const size_t klen = StringUtil::strlen( pKey );
-			if ( klen == 0 || from >= src.size() )
-				return false;
-
-			for ( size_t sliceIndex = from; sliceIndex + klen + 2 <= src.size(); ++sliceIndex )
-			{
-				if ( src[sliceIndex] == '"' && src[sliceIndex + klen + 1] == '"' &&
-					 src.substr( sliceIndex + 1, klen ) == string_view{ pKey, klen } )
-				{
-					const size_t colon = src.find( ':', sliceIndex + klen + 2 );
-					if ( colon == string_view::npos )
-						return false;
-					outValue = StringUtil::atoi( src.data() + colon + 1 );
-					return true;
-				}
-			}
-			return false;
-		}
-
-		void parseJsonObjectArray( const string& json, const utf8* pArrayKey, vector<size_t>& outObjStartList )
-		{
-			outObjStartList.clear();
-			const string key	= string( "\"" ) + pArrayKey + "\"";
-			const size_t keyPos = json.find( key );
-			if ( keyPos == string::npos )
-				return;
-			const size_t arr = json.find( '[', keyPos );
-			const size_t end = json.find( ']', arr );
-			if ( arr == string::npos || end == string::npos )
-				return;
-
-			size_t cursor = arr;
-			while ( true )
-			{
-				const size_t obj = json.find( '{', cursor );
-				if ( obj == string::npos || obj > end )
-					break;
-				outObjStartList.push_back( obj );
-				cursor = json.find( '}', obj );
-				if ( cursor == string::npos )
-					break;
-				++cursor;
-			}
 		}
 	} // namespace
 
@@ -390,29 +271,6 @@ namespace sw::editor
 			return "<value>";
 		}
 
-		void collectNestedPrefabPaths( string_view stateData, vector<string>& outNested )
-		{
-			const string xml{ stateData };
-			size_t		 cursor = 0;
-			while ( true )
-			{
-				const size_t prefabPos = xml.find( ".prefab", cursor );
-				if ( prefabPos == string::npos )
-					break;
-				size_t start = prefabPos;
-				while ( start > 0 && xml[start - 1] != '"' && xml[start - 1] != '>' && xml[start - 1] != '=' &&
-						xml[start - 1] != ' ' )
-					--start;
-				size_t end = prefabPos;
-				while ( end < xml.size() && xml[end] != '"' && xml[end] != '<' && xml[end] != ' ' )
-					++end;
-				string nested = xml.substr( start, end - start );
-				if ( nested.empty() == false )
-					outNested.push_back( std::move( nested ) );
-				cursor = prefabPos + 7;
-			}
-		}
-
 		Component* findComponentByTypeName( GameObject* pObj, string_view typeName )
 		{
 			if ( pObj == nullptr )
@@ -593,28 +451,11 @@ namespace sw::editor
 
 	bool EditorToolAssetCommands::loadTileMap( string_view assetRelativePath, EditorTileMapData& outData, string& outStatus )
 	{
-		string absPath = ResourceUtil::getResourcePath( assetRelativePath );
-		if ( absPath.empty() )
-			absPath = assetRelativePath;
-
-		if ( FileUtil::fileExists( absPath ) == false )
-		{
-			outStatus = "Not found: " + absPath;
-			return false;
-		}
-
-		vector<uint8> listFileData;
-		if ( FileUtil::readFile( absPath, listFileData ) == false || listFileData.empty() )
-		{
-			outStatus = "Failed to read file";
-			return false;
-		}
-
-		string		xmlStr( reinterpret_cast<const utf8*>( listFileData.data() ), listFileData.size() );
+		string		absPath;
 		XmlDocument doc;
-		if ( doc.parse( xmlStr ) == false )
+		if ( doc.loadPath( assetRelativePath, &absPath ) == false )
 		{
-			outStatus = "XML parse error";
+			outStatus = "Not found: " + string{ assetRelativePath };
 			return false;
 		}
 
@@ -629,14 +470,8 @@ namespace sw::editor
 		if ( pName != nullptr )
 			outData._name = pName;
 
-		int32		width	   = 8;
-		int32		height	   = 8;
-		const utf8* pWidthText = root.childText( "width" );
-		if ( pWidthText != nullptr )
-			width = StringUtil::atoi( pWidthText );
-		const utf8* pHeightText = root.childText( "height" );
-		if ( pHeightText != nullptr )
-			height = StringUtil::atoi( pHeightText );
+		int32 width	 = root.childInt( "width", 8 );
+		int32 height = root.childInt( "height", 8 );
 		if ( width <= 0 )
 			width = 8;
 		if ( height <= 0 )
@@ -651,32 +486,18 @@ namespace sw::editor
 			for ( XmlNode tileNode = tiles.child( "t" ); tileNode && index < static_cast<int32>( count );
 				  tileNode		   = tileNode.next( "t" ), ++index )
 			{
-				const utf8*	 pV					 = tileNode.text();
-				const size_t tileIndex			 = static_cast<size_t>( index );
-				outData._listWalkable[tileIndex] = ( pV == nullptr || pV[0] != '0' ) ? 1 : 0;
-				const utf8* pEnc				 = tileNode.attr( "enc" );
-				if ( pEnc != nullptr )
-					outData._listEncounter[tileIndex] = ( StringUtil::atoi( pEnc ) != 0 ) ? 1 : 0;
-				const utf8* pPt = tileNode.attr( "pt" );
-				if ( pPt != nullptr )
-					outData._listPassThrough[tileIndex] = ( StringUtil::atoi( pPt ) != 0 ) ? 1 : 0;
+				const utf8*	 pV						= tileNode.text();
+				const size_t tileIndex				= static_cast<size_t>( index );
+				outData._listWalkable[tileIndex]	= ( pV == nullptr || pV[0] != '0' ) ? 1 : 0;
+				outData._listEncounter[tileIndex]	= static_cast<uint8>( tileNode.attrInt( "enc" ) != 0 ? 1 : 0 );
+				outData._listPassThrough[tileIndex] = static_cast<uint8>( tileNode.attrInt( "pt" ) != 0 ? 1 : 0 );
 
 				EditorTileVisual vis{};
-				const utf8*		 pHa = tileNode.attr( "h" );
-				if ( pHa != nullptr )
-					vis._height = static_cast<uint8>( StringUtil::atoi( pHa ) );
-				const utf8* pAtlas = tileNode.attr( "atlas" );
-				if ( pAtlas != nullptr )
-					vis._atlasId = static_cast<uint8>( StringUtil::atoi( pAtlas ) );
-				const utf8* pTr = tileNode.attr( "tr" );
-				if ( pTr != nullptr )
-					vis._tintR = static_cast<uint8>( StringUtil::atoi( pTr ) );
-				const utf8* pTg = tileNode.attr( "tg" );
-				if ( pTg != nullptr )
-					vis._tintG = static_cast<uint8>( StringUtil::atoi( pTg ) );
-				const utf8* pTb = tileNode.attr( "tb" );
-				if ( pTb != nullptr )
-					vis._tintB = static_cast<uint8>( StringUtil::atoi( pTb ) );
+				vis._height					   = static_cast<uint8>( tileNode.attrInt( "h" ) );
+				vis._atlasId				   = static_cast<uint8>( tileNode.attrInt( "atlas" ) );
+				vis._tintR					   = static_cast<uint8>( tileNode.attrInt( "tr" ) );
+				vis._tintG					   = static_cast<uint8>( tileNode.attrInt( "tg" ) );
+				vis._tintB					   = static_cast<uint8>( tileNode.attrInt( "tb" ) );
 				outData._listVisual[tileIndex] = vis;
 			}
 		}
@@ -688,21 +509,13 @@ namespace sw::editor
 			for ( XmlNode warpNode = warps.child( "warp" ); warpNode; warpNode = warpNode.next( "warp" ) )
 			{
 				EditorTileWarp warp{};
-				const utf8*	   pX = warpNode.attr( "x" );
-				if ( pX != nullptr )
-					warp._tileX = StringUtil::atoi( pX );
-				const utf8* pY = warpNode.attr( "y" );
-				if ( pY != nullptr )
-					warp._tileY = StringUtil::atoi( pY );
+				warp._tileX		 = warpNode.attrInt( "x" );
+				warp._tileY		 = warpNode.attrInt( "y" );
 				const utf8* pMap = warpNode.attr( "map" );
 				if ( pMap != nullptr )
 					warp._targetMap = pMap;
-				const utf8* pTx = warpNode.attr( "tx" );
-				if ( pTx != nullptr )
-					warp._targetTileX = StringUtil::atoi( pTx );
-				const utf8* pTy = warpNode.attr( "ty" );
-				if ( pTy != nullptr )
-					warp._targetTileY = StringUtil::atoi( pTy );
+				warp._targetTileX = warpNode.attrInt( "tx" );
+				warp._targetTileY = warpNode.attrInt( "ty" );
 				const utf8* pPair = warpNode.attr( "pair" );
 				if ( pPair != nullptr )
 					warp._pairId = pPair;
@@ -720,48 +533,42 @@ namespace sw::editor
 		if ( absPath.empty() )
 			absPath = assetRelativePath;
 
-		StringBuilder<4096> sb;
-		sb.appendFormat( "<TileMap>\n" );
-		sb.appendFormat( "  <name>%s</name>\n", data._name.c_str() );
-		sb.appendFormat( "  <width>%d</width>\n", data._width );
-		sb.appendFormat( "  <height>%d</height>\n", data._height );
-		sb.appendFormat( "  <tiles>\n" );
+		XmlDocument doc;
+		XmlNode		root = doc.appendRoot( "TileMap" );
+		root.appendChild( "name", data._name );
+		root.appendChild( "width", data._width );
+		root.appendChild( "height", data._height );
 
+		XmlNode		 tiles = root.appendChild( "tiles" );
 		const size_t count = static_cast<size_t>( data._width * data._height );
 		for ( size_t tileIndex = 0; tileIndex < count; ++tileIndex )
 		{
-			const uint8			   walk = data._listWalkable[tileIndex];
-			const uint8			   enc	= data._listEncounter[tileIndex];
-			const uint8			   pt	= data._listPassThrough[tileIndex];
-			const EditorTileVisual vis	= data._listVisual[tileIndex];
-			sb.appendFormat( "    <t enc=\"%u\" pt=\"%u\" h=\"%u\" atlas=\"%u\" tr=\"%u\" tg=\"%u\" tb=\"%u\">%u</t>\n",
-							 static_cast<uint32>( enc ),
-							 static_cast<uint32>( pt ),
-							 static_cast<uint32>( vis._height ),
-							 static_cast<uint32>( vis._atlasId ),
-							 static_cast<uint32>( vis._tintR ),
-							 static_cast<uint32>( vis._tintG ),
-							 static_cast<uint32>( vis._tintB ),
-							 static_cast<uint32>( walk ) );
+			XmlNode tileNode = tiles.appendChild( "t" );
+			tileNode.appendAttr( "enc", static_cast<uint32>( data._listEncounter[tileIndex] ) );
+			tileNode.appendAttr( "pt", static_cast<uint32>( data._listPassThrough[tileIndex] ) );
+			const EditorTileVisual vis = data._listVisual[tileIndex];
+			tileNode.appendAttr( "h", static_cast<uint32>( vis._height ) );
+			tileNode.appendAttr( "atlas", static_cast<uint32>( vis._atlasId ) );
+			tileNode.appendAttr( "tr", static_cast<uint32>( vis._tintR ) );
+			tileNode.appendAttr( "tg", static_cast<uint32>( vis._tintG ) );
+			tileNode.appendAttr( "tb", static_cast<uint32>( vis._tintB ) );
+			tileNode.setValue( static_cast<uint32>( data._listWalkable[tileIndex] ) );
 		}
 
-		sb.appendFormat( "  </tiles>\n" );
-		sb.appendFormat( "  <warps>\n" );
+		XmlNode warps = root.appendChild( "warps" );
 		for ( const EditorTileWarp& warp : data._listWarp )
 		{
-			sb.appendFormat( "    <warp x=\"%d\" y=\"%d\" map=\"%s\" tx=\"%d\" ty=\"%d\"",
-							 warp._tileX,
-							 warp._tileY,
-							 warp._targetMap.c_str(),
-							 warp._targetTileX,
-							 warp._targetTileY );
+			XmlNode warpNode = warps.appendChild( "warp" );
+			warpNode.appendAttr( "x", warp._tileX );
+			warpNode.appendAttr( "y", warp._tileY );
+			warpNode.appendAttr( "map", warp._targetMap );
+			warpNode.appendAttr( "tx", warp._targetTileX );
+			warpNode.appendAttr( "ty", warp._targetTileY );
 			if ( warp._pairId.empty() == false )
-				sb.appendFormat( " pair=\"%s\"", warp._pairId.c_str() );
-			sb.appendFormat( "/>\n" );
+				warpNode.appendAttr( "pair", warp._pairId );
 		}
-		sb.appendFormat( "  </warps>\n" );
-		sb.appendFormat( "</TileMap>\n" );
-		return FileUtil::writeTextFile( absPath, sb.c_str() );
+
+		return doc.saveFile( absPath );
 	}
 
 	bool EditorToolAssetCommands::loadSpriteClip( EditorSpriteClipData& outData, string& outStatus, string_view path )
@@ -785,13 +592,13 @@ namespace sw::editor
 			return false;
 		}
 
-		string json;
-		if ( FileUtil::readTextFile( resolved, json ) == false || json.empty() )
+		JsonDocument doc;
+		if ( doc.loadFile( resolved ) == false )
 		{
 			outStatus = "Failed to read SpriteClip.json";
 			return false;
 		}
-		if ( parseSpriteClip( json, outData ) == false )
+		if ( parseSpriteClip( doc.dump( -1 ), outData ) == false )
 		{
 			outStatus = "Failed to parse SpriteClip.json";
 			return false;
@@ -806,7 +613,7 @@ namespace sw::editor
 		if ( resolved.empty() )
 			return false;
 		const string text = serializeSpriteClip( data );
-		if ( FileUtil::writeFile( resolved, reinterpret_cast<const uint8*>( text.data() ), text.size() ) == false )
+		if ( FileUtil::writeTextFile( resolved, text ) == false )
 			return false;
 		SW_LOG_INFO( "Saved %#", resolved.c_str() );
 		return true;
@@ -814,83 +621,85 @@ namespace sw::editor
 
 	string EditorToolAssetCommands::serializeSpriteClip( const EditorSpriteClipData& data )
 	{
-		StringBuilder<2048> sb;
-		sb.append( "{\n" );
-		sb.append( "  \"atlas\": \"" ).append( JsonSerializer::escapeString( data._atlasPath ).c_str() ).append( "\",\n" );
-		sb.append( "  \"frames\": [\n" );
-		for ( size_t frameIndex = 0; frameIndex < data._listFrame.size(); ++frameIndex )
+		JsonDocument	doc;
+		const JsonValue root = doc.makeObject();
+		root.set( "atlas" ).setString( data._atlasPath );
+
+		const JsonValue framesVal = root.set( "frames" );
+		framesVal.setArray();
+		for ( const EditorSpriteClipFrame& frame : data._listFrame )
 		{
-			const EditorSpriteClipFrame& frame = data._listFrame[frameIndex];
-			sb.append( "    { \"u\": " )
-				.append( frame._u )
-				.append( ", \"v\": " )
-				.append( frame._v )
-				.append( ", \"w\": " )
-				.append( frame._w )
-				.append( ", \"h\": " )
-				.append( frame._h )
-				.append( ", \"durationMs\": " )
-				.append( frame._durationMs )
-				.append( " }" );
-			if ( frameIndex + 1 < data._listFrame.size() )
-				sb.append( "," );
-			sb.append( "\n" );
+			const JsonValue frameJson = framesVal.pushBack();
+			frameJson.setObject();
+			frameJson.set( "u" ).setFloat( static_cast<float64>( frame._u ) );
+			frameJson.set( "v" ).setFloat( static_cast<float64>( frame._v ) );
+			frameJson.set( "w" ).setFloat( static_cast<float64>( frame._w ) );
+			frameJson.set( "h" ).setFloat( static_cast<float64>( frame._h ) );
+			frameJson.set( "durationMs" ).setInt( frame._durationMs );
 		}
-		sb.append( "  ],\n" );
-		sb.append( "  \"transformKeys\": [\n" );
-		for ( size_t keyIndex = 0; keyIndex < data._listKey.size(); ++keyIndex )
+
+		const JsonValue keysVal = root.set( "transformKeys" );
+		keysVal.setArray();
+		for ( const EditorSpriteClipKey& key : data._listKey )
 		{
-			const EditorSpriteClipKey& key = data._listKey[keyIndex];
-			sb.append( "    { \"time\": " )
-				.append( key._time )
-				.append( ", \"x\": " )
-				.append( key._x )
-				.append( ", \"y\": " )
-				.append( key._y )
-				.append( ", \"angleDeg\": " )
-				.append( key._angleDeg )
-				.append( " }" );
-			if ( keyIndex + 1 < data._listKey.size() )
-				sb.append( "," );
-			sb.append( "\n" );
+			const JsonValue keyJson = keysVal.pushBack();
+			keyJson.setObject();
+			keyJson.set( "time" ).setFloat( static_cast<float64>( key._time ) );
+			keyJson.set( "x" ).setFloat( static_cast<float64>( key._x ) );
+			keyJson.set( "y" ).setFloat( static_cast<float64>( key._y ) );
+			keyJson.set( "angleDeg" ).setFloat( static_cast<float64>( key._angleDeg ) );
 		}
-		sb.append( "  ]\n" );
-		sb.append( "}\n" );
-		return string{ sb.c_str() };
+
+		return doc.dump( 2 );
 	}
 
 	bool EditorToolAssetCommands::parseSpriteClip( string_view jsonView, EditorSpriteClipData& outData )
 	{
 		outData._listFrame.clear();
 		outData._listKey.clear();
-		const string json{ jsonView };
-		const string atlas = JsonSerializer::extractStringField( json, "atlas" );
-		if ( atlas.empty() == false )
-			outData._atlasPath = atlas;
 
-		vector<size_t> listFrameObj;
-		parseJsonObjectArray( json, "frames", listFrameObj );
-		for ( const size_t obj : listFrameObj )
+		JsonDocument doc;
+		if ( doc.parse( jsonView ) == false )
+			return false;
+
+		const JsonValue root = doc.root();
+		outData._atlasPath	 = root.get( "atlas" ).asString();
+
+		const JsonValue framesVal = root.get( "frames" );
+		if ( framesVal.isArray() )
 		{
-			EditorSpriteClipFrame frame{};
-			parseFloatAfter( json, obj, "u", frame._u );
-			parseFloatAfter( json, obj, "v", frame._v );
-			parseFloatAfter( json, obj, "w", frame._w );
-			parseFloatAfter( json, obj, "h", frame._h );
-			parseIntAfter( json, obj, "durationMs", frame._durationMs );
-			outData._listFrame.push_back( frame );
+			const size_t frameCount = framesVal.size();
+			for ( size_t frameIndex = 0; frameIndex < frameCount; ++frameIndex )
+			{
+				const JsonValue frameJson = framesVal.at( frameIndex );
+				if ( frameJson.isObject() == false )
+					continue;
+				EditorSpriteClipFrame frame{};
+				frame._u		  = static_cast<float32>( frameJson.get( "u" ).asFloat( 0.0 ) );
+				frame._v		  = static_cast<float32>( frameJson.get( "v" ).asFloat( 0.0 ) );
+				frame._w		  = static_cast<float32>( frameJson.get( "w" ).asFloat( 0.0 ) );
+				frame._h		  = static_cast<float32>( frameJson.get( "h" ).asFloat( 0.0 ) );
+				frame._durationMs = static_cast<int32>( frameJson.get( "durationMs" ).asInt( 0 ) );
+				outData._listFrame.push_back( frame );
+			}
 		}
 
-		vector<size_t> listKeyObj;
-		parseJsonObjectArray( json, "transformKeys", listKeyObj );
-		for ( const size_t obj : listKeyObj )
+		const JsonValue keysVal = root.get( "transformKeys" );
+		if ( keysVal.isArray() )
 		{
-			EditorSpriteClipKey key{};
-			parseFloatAfter( json, obj, "time", key._time );
-			parseFloatAfter( json, obj, "x", key._x );
-			parseFloatAfter( json, obj, "y", key._y );
-			parseFloatAfter( json, obj, "angleDeg", key._angleDeg );
-			outData._listKey.push_back( key );
+			const size_t keyCount = keysVal.size();
+			for ( size_t keyIndex = 0; keyIndex < keyCount; ++keyIndex )
+			{
+				const JsonValue keyJson = keysVal.at( keyIndex );
+				if ( keyJson.isObject() == false )
+					continue;
+				EditorSpriteClipKey key{};
+				key._time	  = static_cast<float32>( keyJson.get( "time" ).asFloat( 0.0 ) );
+				key._x		  = static_cast<float32>( keyJson.get( "x" ).asFloat( 0.0 ) );
+				key._y		  = static_cast<float32>( keyJson.get( "y" ).asFloat( 0.0 ) );
+				key._angleDeg = static_cast<float32>( keyJson.get( "angleDeg" ).asFloat( 0.0 ) );
+				outData._listKey.push_back( key );
+			}
 		}
 		return true;
 	}
@@ -930,7 +739,7 @@ namespace sw::editor
 		if ( pLoaded == nullptr || pLoaded->isValid() == false )
 			return;
 
-		collectNestedPrefabPaths( pLoaded->getStateData(), outNestedPrefab );
+		pLoaded->collectReferencedPrefabPaths( outNestedPrefab );
 
 		if ( pInstance == nullptr )
 			return;
