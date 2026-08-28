@@ -128,7 +128,7 @@ namespace sw
 			if ( pType != nullptr )
 				return pType;
 		}
-		return engine::getTypeRegistry().findType( hashed_string( "sw::Component" ) );
+		return engine::getTypeRegistry().findType<Component>();
 	}
 
 	bool Component::isActive() const

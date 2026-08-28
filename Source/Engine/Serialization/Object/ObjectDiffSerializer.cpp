@@ -16,39 +16,39 @@ namespace sw
 
 		listOutDiffBuffer.clear();
 		const SerializeContext& ctx = SerializeContext::getDefault();
+		vector<uint8>			listCdoBytes;
+		vector<uint8>			listModBytes;
 
-		for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )
+		typeInfo.forEachProperty( [&]( const PropertyInfo& prop )
 		{
-			const void* pCdoPtr = prop.getValuePtr<void>( pCdoInstance );
-			const void* pModPtr = prop.getValuePtr<void>( pModifiedInstance );
+			const void* pCdoPtr = prop.getRawPtr( pCdoInstance );
+			const void* pModPtr = prop.getRawPtr( pModifiedInstance );
 			if ( pCdoPtr == nullptr || pModPtr == nullptr )
-				continue;
+				return;
 
-			thread_local vector<uint8> t_listCdoBytes;
-			thread_local vector<uint8> t_listModBytes;
-			t_listCdoBytes.clear();
-			t_listModBytes.clear();
+			listCdoBytes.clear();
+			listModBytes.clear();
 			if ( prop._bIsContainer && prop.hasContainerWrapper() )
 			{
-				serializeNestedContainerBinary( pCdoPtr, prop.getContainerShape(), t_listCdoBytes, ctx );
-				serializeNestedContainerBinary( pModPtr, prop.getContainerShape(), t_listModBytes, ctx );
+				serializeNestedContainerBinary( pCdoPtr, prop.getContainerShape(), listCdoBytes, ctx );
+				serializeNestedContainerBinary( pModPtr, prop.getContainerShape(), listModBytes, ctx );
 			}
 			else
 			{
-				serializeValueBinary( pCdoPtr, prop._typeName, t_listCdoBytes, ctx );
-				serializeValueBinary( pModPtr, prop._typeName, t_listModBytes, ctx );
+				serializeValueBinary( pCdoPtr, prop._typeName, listCdoBytes, ctx );
+				serializeValueBinary( pModPtr, prop._typeName, listModBytes, ctx );
 			}
-			if ( t_listCdoBytes == t_listModBytes )
-				continue;
+			if ( listCdoBytes == listModBytes )
+				return;
 
 			const uint32 nameHash	= prop.getNameHash();
-			const uint32 size		= static_cast<uint32>( t_listModBytes.size() );
+			const uint32 size		= static_cast<uint32>( listModBytes.size() );
 			const uint8* pHashBytes = reinterpret_cast<const uint8*>( &nameHash );
 			const uint8* pSizeBytes = reinterpret_cast<const uint8*>( &size );
 			listOutDiffBuffer.insert( listOutDiffBuffer.end(), pHashBytes, pHashBytes + sizeof( uint32 ) );
 			listOutDiffBuffer.insert( listOutDiffBuffer.end(), pSizeBytes, pSizeBytes + sizeof( uint32 ) );
-			listOutDiffBuffer.insert( listOutDiffBuffer.end(), t_listModBytes.begin(), t_listModBytes.end() );
-		}
+			listOutDiffBuffer.insert( listOutDiffBuffer.end(), listModBytes.begin(), listModBytes.end() );
+		} );
 
 		return true;
 	}
@@ -82,7 +82,7 @@ namespace sw
 			}
 			if ( pProp != nullptr )
 			{
-				void*  pDest = pProp->getValuePtr<void>( pTargetInstance );
+				void*  pDest = pProp->getRawPtr( pTargetInstance );
 				size_t local{ 0 };
 				bool   ok{ true };
 				if ( pDest != nullptr )

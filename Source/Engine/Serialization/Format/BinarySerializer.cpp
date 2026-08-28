@@ -69,7 +69,7 @@ namespace sw
 				else
 					uniqueSeenPropHashes.insert( prop.getNameHash() );
 
-				void* pPropPtr = prop.getValuePtr<void>( pInstance );
+				void* pPropPtr = prop.getRawPtr( pInstance );
 
 				if ( wireTypeHash != 0 && wireTypeHash != prop._typeName.getHash() )
 				{
@@ -112,7 +112,7 @@ namespace sw
 					if ( uniqueSeenPropHashes.find( listProps[propIdx].getNameHash() ) != uniqueSeenPropHashes.end() )
 						continue;
 				}
-				applyPropertyDefault( listProps[propIdx].getValuePtr<void>( pInstance ), listProps[propIdx], ctx );
+				applyPropertyDefault( listProps[propIdx].getRawPtr( pInstance ), listProps[propIdx], ctx );
 			}
 
 			return true;
@@ -131,7 +131,7 @@ namespace sw
 
 		for ( const PropertyInfo& prop : listProps )
 		{
-			const void* pPropPtr = prop.getValuePtr<void>( pInstance );
+			const void* pPropPtr = prop.getRawPtr( pInstance );
 
 			uint32 hashVal = prop.getNameHash();
 			writer.write( hashVal );

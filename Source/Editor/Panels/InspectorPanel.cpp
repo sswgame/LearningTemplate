@@ -179,7 +179,7 @@ namespace sw::editor
 			const utf8* pName	= pComp->getComponentName().empty() == false ? pComp->getComponentName().c_str() : "Component";
 			bool		bActive = pComp->isActive();
 			bool		bRemove{ false };
-			const bool	bAccent	  = ( castTo<SceneComponent>( pComp ) != nullptr );
+			const bool	bAccent	  = isA<SceneComponent>( pComp );
 			const bool	bScrollTo = ( ws.getScrollToComponentId() != 0 &&
 									  ws.getScrollToComponentId() == pComp->getComponentId() );
 
@@ -290,12 +290,12 @@ namespace sw::editor
 			return;
 
 		map<string, vector<const PropertyInfo*>> grouped;
-		for ( const PropertyInfo& prop : pTypeInfo->getPropertiesWithBase() )
+		pTypeInfo->forEachProperty( [&]( const PropertyInfo& prop )
 		{
 			const string category =
 				prop._metadata._category.empty() ? "General" : string( prop._metadata._category.c_str() );
 			grouped[category].push_back( &prop );
-		}
+		} );
 
 		for ( const auto& [category, props] : grouped )
 		{
@@ -375,7 +375,7 @@ namespace sw::editor
 		const TypeInfo* pFieldType = pRegistry->findType( prop._typeName );
 		if ( pFieldType != nullptr || prop._typeName.isPredefinedType( PredefinedNameType::NameType_string ) )
 		{
-			void* pNestedPtr = prop.getValuePtr<void>( pInstance );
+			void* pNestedPtr = prop.getRawPtr( pInstance );
 			if ( pNestedPtr == nullptr )
 				return;
 
@@ -385,7 +385,7 @@ namespace sw::editor
 
 			if ( bNodeOpen )
 			{
-				for ( const PropertyInfo& nestedProp : pFieldType->getPropertiesWithBase() )
+				pFieldType->forEachProperty( [&]( const PropertyInfo& nestedProp )
 				{
 					ImGui::PushID( nestedProp._name.c_str() );
 					ImGui::AlignTextToFramePadding();
@@ -394,7 +394,7 @@ namespace sw::editor
 					ImGui::SetNextItemWidth( -FLT_MIN );
 					drawPropertyWidget( pNestedPtr, nestedProp );
 					ImGui::PopID();
-				}
+				} );
 				ImGui::TreePop();
 			}
 			return;

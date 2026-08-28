@@ -564,9 +564,9 @@ namespace sw
 		void writeXmlProperties( const void* pInstance, const TypeInfo& typeInfo, IXmlBackend& backend,
 								 const SerializeContext& ctx )
 		{
-			for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )
+			typeInfo.forEachProperty( [&]( const PropertyInfo& prop )
 			{
-				const void* pPropPtr = prop.getValuePtr<void>( pInstance );
+				const void* pPropPtr = prop.getRawPtr( pInstance );
 
 				if ( prop._bIsContainer && prop.hasContainerWrapper() )
 				{
@@ -591,7 +591,7 @@ namespace sw
 						backend.writeAttribute( prop._name.c_str(), ss.c_str() );
 					}
 				}
-			}
+			} );
 		}
 
 		static void noteCoerceFailVal( vector<SchemaOrphanValue>* pOutOrphans, bool& bFieldError, const PropertyInfo& prop, string_view strValue )
@@ -629,9 +629,9 @@ namespace sw
 			unordered_set<uint32> uniqueSeen;
 			bool				  bFieldError{ false };
 
-			for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )
+			typeInfo.forEachProperty( [&]( const PropertyInfo& prop )
 			{
-				void* pPropPtr = prop.getValuePtr<void>( pInstance );
+				void* pPropPtr = prop.getRawPtr( pInstance );
 
 				if ( prop._bIsContainer && prop.hasContainerWrapper() )
 				{
@@ -658,10 +658,9 @@ namespace sw
 					}
 					if ( entered )
 					{
-						if ( readNestedContainerXml( pPropPtr, shape, backend, ctx, bFieldError, pOutOrphans, prop ) )
-							uniqueSeen.insert( prop.getNameHash() );
-						else
-							applyPropertyDefault( pPropPtr, prop, ctx );
+						uniqueSeen.insert( prop.getNameHash() );
+						if ( readNestedContainerXml( pPropPtr, shape, backend, ctx, bFieldError, pOutOrphans, prop ) == false )
+							bFieldError = true;
 						backend.popChild();
 					}
 					else
@@ -693,7 +692,7 @@ namespace sw
 						}
 						else
 							applyPropertyDefault( pPropPtr, prop, ctx );
-						continue;
+						return;
 					}
 
 					string strValue;
@@ -719,7 +718,7 @@ namespace sw
 					else
 						applyPropertyDefault( pPropPtr, prop, ctx );
 				}
-			}
+			} );
 
 			(void)uniqueSeen;
 			if ( pOutOrphans != nullptr )
@@ -734,7 +733,7 @@ namespace sw
 				return;
 
 			unordered_set<string> uniqueKnownNames;
-			for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )
+			typeInfo.forEachProperty( [&]( const PropertyInfo& prop )
 			{
 				uniqueKnownNames.insert( prop._name.c_str() );
 				for ( const hashed_string& alias : prop._listAlias )
@@ -742,7 +741,7 @@ namespace sw
 					if ( alias.empty() == false )
 						uniqueKnownNames.insert( alias.c_str() );
 				}
-			}
+			} );
 
 			// 대소문자만 다른 태그는 setIgnoreCaseKeys(false) 로 의도적으로 바인딩을 거른 것이므로
 			// 모르는 필드(orphan)로 올리지 않는다. bIgnore 와 무관하게 무시 대소문자로 판정한다.

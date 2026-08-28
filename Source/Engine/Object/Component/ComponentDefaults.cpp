@@ -97,11 +97,11 @@ namespace sw
 		if ( compNode.isValid() == false )
 			return;
 
-		for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )
+		typeInfo.forEachProperty( [&]( const PropertyInfo& prop )
 		{
 			const utf8* pPropName = prop._name.c_str();
 			if ( pPropName == nullptr )
-				continue;
+				return;
 			const utf8* pAttrVal = compNode.attr( pPropName );
 			if ( pAttrVal == nullptr )
 			{
@@ -116,11 +116,11 @@ namespace sw
 				}
 			}
 			if ( pAttrVal == nullptr )
-				continue;
+				return;
 
-			void* pPropPtr = reinterpret_cast<uint8*>( pInstance ) + prop._offset;
+			void* pPropPtr = prop.getRawPtr( pInstance );
 			parseTextValueCoerced( pPropPtr, prop._typeName, pAttrVal, SerializeContext::getDefault() );
-		}
+		} );
 	}
 
 	void ComponentDefaults::applyDefaults( Component* pComp, const TypeInfo& typeInfo )

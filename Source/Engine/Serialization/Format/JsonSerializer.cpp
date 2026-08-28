@@ -417,7 +417,7 @@ namespace sw
 		}
 		void writeProperty( JsonValue parent, const PropertyInfo& prop, const void* pInstance, const SerializeContext& ctx )
 		{
-			const void* pPropPtr = prop.getValuePtr<void>( pInstance );
+			const void* pPropPtr = prop.getRawPtr( pInstance );
 			if ( prop._bIsContainer && prop.hasContainerWrapper() )
 			{
 				NestedContainerInfo shape = prop.getContainerShape();
@@ -487,7 +487,7 @@ namespace sw
 				}
 
 				uniqueSeen.insert( pMatched->getNameHash() );
-				void*				pPropPtr = pMatched->getValuePtr<void>( pInstance );
+				void*				pPropPtr = pMatched->getRawPtr( pInstance );
 				NestedContainerInfo shape	 = pMatched->getContainerShape();
 				if ( shape._typeName.empty() )
 					shape._typeName = pMatched->_typeName;
@@ -511,7 +511,7 @@ namespace sw
 
 		bool readProperty( const JsonValue& field, const PropertyInfo& prop, void* pInstance, const SerializeContext& ctx )
 		{
-			void* pPropPtr = prop.getValuePtr<void>( pInstance );
+			void* pPropPtr = prop.getRawPtr( pInstance );
 			if ( prop._bIsContainer && prop.hasContainerWrapper() )
 				return readTypedContainerJson( pPropPtr, prop.getContainerShape(), field, ctx );
 			return readJsonValue( pPropPtr, prop._typeName, field, ctx );
@@ -562,10 +562,10 @@ namespace sw
 		if ( dst.isValid() == false || pInstance == nullptr )
 			return;
 		dst.setObject();
-		for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )
+		typeInfo.forEachProperty( [&]( const PropertyInfo& prop )
 		{
 			writeProperty( dst, prop, pInstance, ctx );
-		}
+		} );
 	}
 
 	bool JsonSerializer::readObject( JsonValue src, void* pInstance, const TypeInfo& typeInfo,
@@ -642,7 +642,7 @@ namespace sw
 		{
 			if ( uniqueSeen.find( prop.getNameHash() ) != uniqueSeen.end() )
 				continue;
-			applyPropertyDefault( prop.getValuePtr<void>( pInstance ), prop, ctx );
+			applyPropertyDefault( prop.getRawPtr( pInstance ), prop, ctx );
 		}
 
 		if ( pOutOrphans != nullptr )
@@ -666,10 +666,10 @@ namespace sw
 		JsonDocument doc;
 		JsonValue	 root = doc.makeObject();
 		root.set( kSchemaVersionKey, false ).setUint( version );
-		for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )
+		typeInfo.forEachProperty( [&]( const PropertyInfo& prop )
 		{
 			writeProperty( root, prop, pInstance, ctx );
-		}
+		} );
 		return doc.dump();
 	}
 

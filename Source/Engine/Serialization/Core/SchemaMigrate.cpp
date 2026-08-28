@@ -44,11 +44,11 @@ namespace sw
 		if ( constructWithDefaultCtor( pBase, typeInfo ) )
 			return pBase;
 
-		for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )
+		typeInfo.forEachProperty( [&]( const PropertyInfo& prop )
 		{
-			void* pPropPtr = prop.getValuePtr<void>( pBase );
+			void* pPropPtr = prop.getRawPtr( pBase );
 			if ( pPropPtr == nullptr )
-				continue;
+				return;
 			NestedContainerInfo shape = prop.getContainerShape();
 			if ( shape._wrapper != nullptr )
 			{
@@ -68,7 +68,7 @@ namespace sw
 				if ( pNested != nullptr )
 					constructWithDefaultCtor( pPropPtr, *pNested );
 			}
-		}
+		} );
 		return pBase;
 	}
 
@@ -78,11 +78,11 @@ namespace sw
 			return;
 		if ( destroyIfDefaultConstructed( pInstance, typeInfo ) )
 			return;
-		for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )
+		typeInfo.forEachProperty( [&]( const PropertyInfo& prop )
 		{
-			void* pPropPtr = prop.getValuePtr<void>( pInstance );
+			void* pPropPtr = prop.getRawPtr( pInstance );
 			if ( pPropPtr == nullptr )
-				continue;
+				return;
 			NestedContainerInfo shape = prop.getContainerShape();
 			if ( shape._wrapper != nullptr )
 			{
@@ -102,7 +102,7 @@ namespace sw
 				if ( pNested != nullptr )
 					destroyIfDefaultConstructed( pPropPtr, *pNested );
 			}
-		}
+		} );
 	}
 
 	namespace
@@ -439,22 +439,11 @@ namespace sw
 		for ( size_t partIndex = 0; partIndex < listParts.size(); ++partIndex )
 		{
 			const hashed_string name( listParts[partIndex].c_str() );
-			const PropertyInfo* pProp = pCurType->findProperty( name );
-			if ( pProp == nullptr )
-			{
-				for ( const PropertyInfo& candidate : pCurType->getPropertiesWithBase() )
-				{
-					if ( candidate.matchesName( name ) )
-					{
-						pProp = &candidate;
-						break;
-					}
-				}
-			}
+			const PropertyInfo* pProp = pCurType->findPropertyInHierarchy( name );
 			if ( pProp == nullptr )
 				return false;
 
-			void* pPropPtr = pProp->getValuePtr<void>( pCur );
+			void* pPropPtr = pProp->getRawPtr( pCur );
 			if ( partIndex + 1 == listParts.size() )
 			{
 				pOutPtr	 = pPropPtr;
