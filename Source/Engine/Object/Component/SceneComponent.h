@@ -23,7 +23,7 @@ namespace sw
 	 * @class SceneComponent
 	 * @brief 로컬 트랜스폼·부모-자식 계층, float32→float64 누적 월드 위치(LWC), 카메라 상대 행렬을 제공하는 씬 컴포넌트
 	 */
-	REFLECT()
+	REFLECT( Category = "Transform", DisplayName = "Scene Component", Tooltip = "Provides Transform (Position, Rotation, Scale) and Hierarchy" )
 	class SW_API SceneComponent : public Component
 	{
 		friend struct ::sw::generated::sw_SceneComponent_Registrar;
@@ -119,15 +119,15 @@ namespace sw
 		void applyAttachSerializeFields();
 
 	private:
-		PROPERTY()
+		PROPERTY( Category = "Transform", DisplayName = "Position", Tooltip = "Local translation vector", Meta = "Units=m" )
 		float3 _localPosition;
-		PROPERTY()
+		PROPERTY( Category = "Transform", DisplayName = "Rotation", Tooltip = "Local Euler angles (Pitch, Yaw, Roll)", Meta = "Units=deg" )
 		float3 _localRotation;
-		PROPERTY()
+		PROPERTY( Category = "Transform", DisplayName = "Scale", Tooltip = "Local scale vector" )
 		float3 _localScale;
-		PROPERTY()
+		PROPERTY( HideInInspector )
 		mutable hashed_string _attachOwner;
-		PROPERTY()
+		PROPERTY( HideInInspector )
 		mutable hashed_string	_attachComponent;
 		float3					_cachedWorldPosition;
 		float4x4				_cachedWorldMatrix;

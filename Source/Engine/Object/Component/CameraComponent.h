@@ -26,7 +26,7 @@ namespace sw
 	 * @class CameraComponent
 	 * @brief GameObject에 붙는 카메라. 트랜스폼은 SceneComponent에서 옵니다.
 	 */
-	REFLECT()
+	REFLECT( Category = "Camera", DisplayName = "Camera Component", Tooltip = "Perspective / Orthographic Viewport Camera" )
 	class SW_API CameraComponent : public SceneComponent
 	{
 		friend struct ::sw::generated::sw_CameraComponent_Registrar;
@@ -95,19 +95,19 @@ namespace sw
 		void getCameraPosition( float32 outPos[3] ) const;
 
 	private:
-		PROPERTY()
+		PROPERTY( Category = "Projection", DisplayName = "Field Of View", Tooltip = "Vertical FOV (radians)", Min = 0.1, Max = 3.14, Meta = "Units=rad" )
 		float32 _fovY;
-		PROPERTY()
+		PROPERTY( Category = "Clipping", DisplayName = "Near Plane", Tooltip = "Near clipping distance", Min = 0.01, Max = 1000.0, Meta = "Units=m" )
 		float32 _nearZ;
-		PROPERTY()
+		PROPERTY( Category = "Clipping", DisplayName = "Far Plane", Tooltip = "Far clipping distance", Min = 1.0, Max = 100000.0, Meta = "Units=m" )
 		float32 _farZ;
-		PROPERTY()
+		PROPERTY( Category = "Projection", DisplayName = "Ortho Height", Tooltip = "Orthographic view height", Min = 0.1, Max = 1000.0 )
 		float32 _orthoHeight;
-		PROPERTY()
+		PROPERTY( Category = "General", DisplayName = "Priority", Tooltip = "Camera selection priority" )
 		int32 _priority;
-		PROPERTY()
+		PROPERTY( Category = "General", DisplayName = "Role", Tooltip = "Camera usage role" )
 		CameraRole _role;
-		PROPERTY()
+		PROPERTY( Category = "Projection", DisplayName = "Orthographic", Tooltip = "Toggle orthographic projection" )
 		bool _bOrthographic;
 	};
 } // namespace sw

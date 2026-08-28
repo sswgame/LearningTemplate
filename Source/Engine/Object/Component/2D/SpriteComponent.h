@@ -17,7 +17,7 @@ namespace sw
 		struct sw_SpriteComponent_Registrar;
 	} // namespace generated
 
-	REFLECT()
+	REFLECT( Category = "Rendering 2D", DisplayName = "Sprite Component", Tooltip = "2D Sprite rendering component" )
 	class SW_API SpriteComponent : public MeshComponent
 	{
 		friend struct ::sw::generated::sw_SpriteComponent_Registrar;
@@ -46,13 +46,13 @@ namespace sw
 		void   setSpriteName( const string& sprite ) { _spriteName = sprite; }
 
 	private:
-		PROPERTY( Alias = "Mesh" )
+		PROPERTY( Category = "Rendering", DisplayName = "Mesh", AssetPath, AssetType = "Mesh", Tooltip = "Mesh asset name", Alias = "Mesh" )
 		string _meshName;
-		PROPERTY( Alias = "Material" )
+		PROPERTY( Category = "Rendering", DisplayName = "Material", AssetPath, AssetType = "Material", Tooltip = "Material asset name", Alias = "Material" )
 		string _materialName;
-		PROPERTY( Alias = "Texture" )
+		PROPERTY( Category = "Rendering", DisplayName = "Texture", AssetPath, AssetType = "Texture", Tooltip = "Texture asset name", Alias = "Texture" )
 		string _textureName;
-		PROPERTY( Alias = "SpriteName" )
+		PROPERTY( Category = "Rendering", DisplayName = "Sprite Clip", Tooltip = "Sprite clip identifier", Alias = "SpriteName" )
 		string _spriteName;
 	};
 } // namespace sw

@@ -27,7 +27,7 @@ namespace sw
 	 * @class MeshComponent
 	 * @brief Drawable mesh attached to a GameObject (world transform from SceneComponent)
 	 */
-	REFLECT()
+	REFLECT( Category = "Rendering 3D", DisplayName = "Mesh Component", Tooltip = "3D Static Mesh Renderer" )
 	class SW_API MeshComponent : public SceneComponent
 	{
 		friend struct ::sw::generated::sw_MeshComponent_Registrar;
@@ -88,11 +88,11 @@ namespace sw
 		shared_ptr<Mesh>			 _mesh;
 		Material*					 _pMaterial;
 		shared_ptr<MaterialInstance> _materialInstance;
-		PROPERTY()
+		PROPERTY( Category = "Rendering", DisplayName = "Mesh Asset", AssetPath, AssetType = "Mesh", Tooltip = "Mesh asset name or path" )
 		string _meshId;
-		PROPERTY()
+		PROPERTY( Category = "Rendering", DisplayName = "Bounds Radius", Tooltip = "Bounding sphere radius", Min = 0.0, Meta = "Units=m" )
 		float32 _boundsRadius;
-		PROPERTY()
+		PROPERTY( Category = "Rendering", DisplayName = "Blend Mode", Tooltip = "RHI blend mode for rasterization" )
 		RHIBlendMode _blendMode;
 		uint8		 _bVisible : 1;
 		uint8		 _reserved : 7;

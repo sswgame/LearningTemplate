@@ -214,11 +214,54 @@ namespace sw::editor
 			if ( pObj != nullptr && pObj->getManager() != nullptr )
 				listTypes = pObj->getManager()->getRegisteredComponentTypeNames();
 			if ( listTypes.empty() )
+			{
 				ImGui::TextDisabled( "No registered component types." );
+				ImGui::EndMenu();
+				return;
+			}
+
+			static utf8 s_searchBuf[64]{ 0 };
+			ImGui::SetNextItemWidth( 180.0f );
+			ImGui::InputTextWithHint( "##compSearch", "Search...", s_searchBuf, sizeof( s_searchBuf ) );
+			const bool bHasFilter = ( s_searchBuf[0] != '\0' );
+
+			auto* pRegistry = editor::getService<TypeRegistry>();
+
+			auto drawItem = [&]( const hashed_string& typeName, const TypeInfo* pTypeInfo )
+			{
+				const utf8* pDisplayName = ( pTypeInfo != nullptr ) ? pTypeInfo->getDisplayName() : typeName.c_str();
+				if ( ImGui::MenuItem( pDisplayName ) )
+				{
+					if ( pObj->getManager()->addComponentByName( pObj, typeName ) == nullptr )
+						ImGui::OpenPopup( "AddCompFailed" );
+				}
+				if ( pTypeInfo != nullptr && pTypeInfo->getTooltip().empty() == false && ImGui::IsItemHovered() )
+					ImGui::SetTooltip( "%s", pTypeInfo->getTooltip().c_str() );
+			};
+
+			if ( bHasFilter )
+			{
+				ImGui::Separator();
+				uint32 matchCount{ 0 };
+				for ( const hashed_string& typeName : listTypes )
+				{
+					const TypeInfo* pTypeInfo = ( pRegistry != nullptr ) ? pRegistry->findType( typeName ) : nullptr;
+					if ( pTypeInfo != nullptr && pTypeInfo->isHiddenInMenu() )
+						continue;
+
+					const utf8* pDisplayName = ( pTypeInfo != nullptr ) ? pTypeInfo->getDisplayName() : typeName.c_str();
+					if ( StringUtil::stristr( pDisplayName, s_searchBuf ) != nullptr ||
+						 StringUtil::stristr( typeName.c_str(), s_searchBuf ) != nullptr )
+					{
+						drawItem( typeName, pTypeInfo );
+						++matchCount;
+					}
+				}
+				if ( matchCount == 0 )
+					ImGui::TextDisabled( "No matching components." );
+			}
 			else
 			{
-				auto* pRegistry = editor::getService<TypeRegistry>();
-
 				map<string, vector<std::pair<hashed_string, const TypeInfo*>>> mapCategorized;
 				for ( const hashed_string& typeName : listTypes )
 				{
@@ -231,18 +274,6 @@ namespace sw::editor
 										: "General";
 					mapCategorized[category].emplace_back( typeName, pTypeInfo );
 				}
-
-				auto drawItem = [&]( const hashed_string& typeName, const TypeInfo* pTypeInfo )
-				{
-					const utf8* pDisplayName = ( pTypeInfo != nullptr ) ? pTypeInfo->getDisplayName() : typeName.c_str();
-					if ( ImGui::MenuItem( pDisplayName ) )
-					{
-						if ( pObj->getManager()->addComponentByName( pObj, typeName ) == nullptr )
-							ImGui::OpenPopup( "AddCompFailed" );
-					}
-					if ( pTypeInfo != nullptr && pTypeInfo->getTooltip().empty() == false && ImGui::IsItemHovered() )
-						ImGui::SetTooltip( "%s", pTypeInfo->getTooltip().c_str() );
-				};
 
 				for ( const auto& [category, items] : mapCategorized )
 				{

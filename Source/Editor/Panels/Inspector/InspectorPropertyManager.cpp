@@ -37,6 +37,30 @@ namespace sw::editor
 				ImGui::TextUnformatted( pValue != nullptr ? pValue : "" );
 				showTooltipIfHovered( prop );
 			}
+			string getFormatWithUnits( const PropertyInfo& prop, const utf8* pDefaultFmt )
+			{
+				const string* pUnits = prop.findCustomMeta( hashed_string( "Units" ) );
+				if ( pUnits != nullptr && pUnits->empty() == false )
+				{
+					string fmt = pDefaultFmt;
+					fmt += " ";
+					fmt += *pUnits;
+					return fmt;
+				}
+				return string{ pDefaultFmt };
+			}
+			bool isSliderRequested( const PropertyInfo& prop )
+			{
+				return prop.findCustomMeta( hashed_string( "Slider" ) ) != nullptr;
+			}
+			bool isColorRequested( const PropertyInfo& prop )
+			{
+				if ( prop.findCustomMeta( hashed_string( "Color" ) ) != nullptr )
+					return true;
+				if ( StringUtil::stristr( prop._name.c_str(), "color" ) != nullptr )
+					return true;
+				return false;
+			}
 		};
 
 		class Int32Property : public BuiltinPropertyBase
@@ -44,12 +68,13 @@ namespace sw::editor
 		public:
 			bool draw( void* pInstance, const PropertyInfo& prop ) override
 			{
-				const bool					 bReadOnly = prop._metadata._bReadOnly != 0;
-				[[maybe_unused]] const bool	 bHasRange = prop._metadata._bHasRange != 0;
-				const float32				 minF	   = prop._metadata._minRange;
-				const float32				 maxF	   = prop._metadata._maxRange;
-				[[maybe_unused]] const int32 minI	   = static_cast<int32>( minF );
-				[[maybe_unused]] const int32 maxI	   = static_cast<int32>( maxF );
+				const bool	  bReadOnly = prop._metadata._bReadOnly != 0;
+				const bool	  bHasRange = prop._metadata._bHasRange != 0;
+				const float32 minF		= prop._metadata._minRange;
+				const float32 maxF		= prop._metadata._maxRange;
+				const int32	  minI		= static_cast<int32>( minF );
+				const int32	  maxI		= static_cast<int32>( maxF );
+				const string  fmt		= getFormatWithUnits( prop, "%d" );
 
 				int32* pPtr = prop.getValuePtr<int32>( pInstance );
 				if ( pPtr == nullptr )
@@ -61,10 +86,13 @@ namespace sw::editor
 					drawReadOnlyText( prop, buf );
 					return true;
 				}
-				if ( bHasRange )
-					ImGui::DragInt( _pLabel, pPtr, 1.0f, minI, maxI );
+				if ( bHasRange && isSliderRequested( prop ) )
+					ImGui::SliderInt( _pLabel, pPtr, minI, maxI, fmt.c_str() );
+				else if ( bHasRange )
+					ImGui::DragInt( _pLabel, pPtr, 1.0f, minI, maxI, fmt.c_str() );
 				else
-					ImGui::DragInt( _pLabel, pPtr );
+					ImGui::DragInt( _pLabel, pPtr, 1.0f, 0, 0, fmt.c_str() );
+				showTooltipIfHovered( prop );
 				InspectorPropertyUndo::trackPod( pPtr, sizeof( *pPtr ), _pLabel );
 				return true;
 			}
@@ -75,12 +103,13 @@ namespace sw::editor
 		public:
 			bool draw( void* pInstance, const PropertyInfo& prop ) override
 			{
-				const bool					 bReadOnly = prop._metadata._bReadOnly != 0;
-				[[maybe_unused]] const bool	 bHasRange = prop._metadata._bHasRange != 0;
-				const float32				 minF	   = prop._metadata._minRange;
-				const float32				 maxF	   = prop._metadata._maxRange;
-				[[maybe_unused]] const int32 minI	   = static_cast<int32>( minF );
-				[[maybe_unused]] const int32 maxI	   = static_cast<int32>( maxF );
+				const bool	  bReadOnly = prop._metadata._bReadOnly != 0;
+				const bool	  bHasRange = prop._metadata._bHasRange != 0;
+				const float32 minF		= prop._metadata._minRange;
+				const float32 maxF		= prop._metadata._maxRange;
+				const int32	  minI		= static_cast<int32>( minF );
+				const int32	  maxI		= static_cast<int32>( maxF );
+				const string  fmt		= getFormatWithUnits( prop, "%u" );
 
 				uint32* pPtr = prop.getValuePtr<uint32>( pInstance );
 				if ( pPtr == nullptr )
@@ -93,13 +122,19 @@ namespace sw::editor
 					return true;
 				}
 				int32 tmp = static_cast<int32>( *pPtr );
-				if ( bHasRange )
+				if ( bHasRange && isSliderRequested( prop ) )
 				{
-					if ( ImGui::DragInt( _pLabel, &tmp, 1.0f, minI, maxI ) )
+					if ( ImGui::SliderInt( _pLabel, &tmp, minI, maxI, fmt.c_str() ) )
 						*pPtr = static_cast<uint32>( tmp );
 				}
-				else if ( ImGui::DragInt( _pLabel, &tmp, 1.0f, 0 ) )
+				else if ( bHasRange )
+				{
+					if ( ImGui::DragInt( _pLabel, &tmp, 1.0f, minI, maxI, fmt.c_str() ) )
+						*pPtr = static_cast<uint32>( tmp );
+				}
+				else if ( ImGui::DragInt( _pLabel, &tmp, 1.0f, 0, 0, fmt.c_str() ) )
 					*pPtr = static_cast<uint32>( tmp );
+				showTooltipIfHovered( prop );
 				InspectorPropertyUndo::trackPod( pPtr, sizeof( *pPtr ), _pLabel );
 				return true;
 			}
@@ -110,12 +145,13 @@ namespace sw::editor
 		public:
 			bool draw( void* pInstance, const PropertyInfo& prop ) override
 			{
-				const bool					 bReadOnly = prop._metadata._bReadOnly != 0;
-				[[maybe_unused]] const bool	 bHasRange = prop._metadata._bHasRange != 0;
-				const float32				 minF	   = prop._metadata._minRange;
-				const float32				 maxF	   = prop._metadata._maxRange;
-				[[maybe_unused]] const int32 minI	   = static_cast<int32>( minF );
-				[[maybe_unused]] const int32 maxI	   = static_cast<int32>( maxF );
+				const bool	  bReadOnly = prop._metadata._bReadOnly != 0;
+				const bool	  bHasRange = prop._metadata._bHasRange != 0;
+				const float32 minF		= prop._metadata._minRange;
+				const float32 maxF		= prop._metadata._maxRange;
+				const int32	  minI		= static_cast<int32>( minF );
+				const int32	  maxI		= static_cast<int32>( maxF );
+				const string  fmt		= getFormatWithUnits( prop, "%lld" );
 
 				int64* pPtr = prop.getValuePtr<int64>( pInstance );
 				if ( pPtr == nullptr )
@@ -128,13 +164,19 @@ namespace sw::editor
 					return true;
 				}
 				int32 tmp = static_cast<int32>( *pPtr );
-				if ( bHasRange )
+				if ( bHasRange && isSliderRequested( prop ) )
 				{
-					if ( ImGui::DragInt( _pLabel, &tmp, 1.0f, minI, maxI ) )
+					if ( ImGui::SliderInt( _pLabel, &tmp, minI, maxI, fmt.c_str() ) )
 						*pPtr = static_cast<int64>( tmp );
 				}
-				else if ( ImGui::DragInt( _pLabel, &tmp ) )
+				else if ( bHasRange )
+				{
+					if ( ImGui::DragInt( _pLabel, &tmp, 1.0f, minI, maxI, fmt.c_str() ) )
+						*pPtr = static_cast<int64>( tmp );
+				}
+				else if ( ImGui::DragInt( _pLabel, &tmp, 1.0f, 0, 0, fmt.c_str() ) )
 					*pPtr = static_cast<int64>( tmp );
+				showTooltipIfHovered( prop );
 				InspectorPropertyUndo::trackPod( pPtr, sizeof( *pPtr ), _pLabel );
 				return true;
 			}
@@ -145,12 +187,11 @@ namespace sw::editor
 		public:
 			bool draw( void* pInstance, const PropertyInfo& prop ) override
 			{
-				const bool					 bReadOnly = prop._metadata._bReadOnly != 0;
-				[[maybe_unused]] const bool	 bHasRange = prop._metadata._bHasRange != 0;
-				const float32				 minF	   = prop._metadata._minRange;
-				const float32				 maxF	   = prop._metadata._maxRange;
-				[[maybe_unused]] const int32 minI	   = static_cast<int32>( minF );
-				[[maybe_unused]] const int32 maxI	   = static_cast<int32>( maxF );
+				const bool	  bReadOnly = prop._metadata._bReadOnly != 0;
+				const bool	  bHasRange = prop._metadata._bHasRange != 0;
+				const float32 minF		= prop._metadata._minRange;
+				const float32 maxF		= prop._metadata._maxRange;
+				const string  fmt		= getFormatWithUnits( prop, "%.2f" );
 
 				float32* pPtr = prop.getValuePtr<float32>( pInstance );
 				if ( pPtr == nullptr )
@@ -162,10 +203,13 @@ namespace sw::editor
 					drawReadOnlyText( prop, buf );
 					return true;
 				}
-				if ( bHasRange )
-					ImGui::DragFloat( _pLabel, pPtr, 0.01f, minF, maxF );
+				if ( bHasRange && isSliderRequested( prop ) )
+					ImGui::SliderFloat( _pLabel, pPtr, minF, maxF, fmt.c_str() );
+				else if ( bHasRange )
+					ImGui::DragFloat( _pLabel, pPtr, 0.01f, minF, maxF, fmt.c_str() );
 				else
-					ImGui::DragFloat( _pLabel, pPtr, 0.01f );
+					ImGui::DragFloat( _pLabel, pPtr, 0.01f, 0.0f, 0.0f, fmt.c_str() );
+				showTooltipIfHovered( prop );
 				InspectorPropertyUndo::trackPod( pPtr, sizeof( *pPtr ), _pLabel );
 				return true;
 			}
@@ -176,12 +220,11 @@ namespace sw::editor
 		public:
 			bool draw( void* pInstance, const PropertyInfo& prop ) override
 			{
-				const bool					 bReadOnly = prop._metadata._bReadOnly != 0;
-				[[maybe_unused]] const bool	 bHasRange = prop._metadata._bHasRange != 0;
-				const float32				 minF	   = prop._metadata._minRange;
-				const float32				 maxF	   = prop._metadata._maxRange;
-				[[maybe_unused]] const int32 minI	   = static_cast<int32>( minF );
-				[[maybe_unused]] const int32 maxI	   = static_cast<int32>( maxF );
+				const bool	  bReadOnly = prop._metadata._bReadOnly != 0;
+				const bool	  bHasRange = prop._metadata._bHasRange != 0;
+				const float32 minF		= prop._metadata._minRange;
+				const float32 maxF		= prop._metadata._maxRange;
+				const string  fmt		= getFormatWithUnits( prop, "%.2f" );
 
 				float64* pPtr = prop.getValuePtr<float64>( pInstance );
 				if ( pPtr == nullptr )
@@ -194,13 +237,19 @@ namespace sw::editor
 					return true;
 				}
 				float32 tmp = static_cast<float32>( *pPtr );
-				if ( bHasRange )
+				if ( bHasRange && isSliderRequested( prop ) )
 				{
-					if ( ImGui::DragFloat( _pLabel, &tmp, 0.01f, minF, maxF ) )
+					if ( ImGui::SliderFloat( _pLabel, &tmp, minF, maxF, fmt.c_str() ) )
 						*pPtr = static_cast<float64>( tmp );
 				}
-				else if ( ImGui::DragFloat( _pLabel, &tmp, 0.01f ) )
+				else if ( bHasRange )
+				{
+					if ( ImGui::DragFloat( _pLabel, &tmp, 0.01f, minF, maxF, fmt.c_str() ) )
+						*pPtr = static_cast<float64>( tmp );
+				}
+				else if ( ImGui::DragFloat( _pLabel, &tmp, 0.01f, 0.0f, 0.0f, fmt.c_str() ) )
 					*pPtr = static_cast<float64>( tmp );
+				showTooltipIfHovered( prop );
 				InspectorPropertyUndo::trackPod( pPtr, sizeof( *pPtr ), _pLabel );
 				return true;
 			}
@@ -211,12 +260,7 @@ namespace sw::editor
 		public:
 			bool draw( void* pInstance, const PropertyInfo& prop ) override
 			{
-				const bool					 bReadOnly = prop._metadata._bReadOnly != 0;
-				[[maybe_unused]] const bool	 bHasRange = prop._metadata._bHasRange != 0;
-				const float32				 minF	   = prop._metadata._minRange;
-				const float32				 maxF	   = prop._metadata._maxRange;
-				[[maybe_unused]] const int32 minI	   = static_cast<int32>( minF );
-				[[maybe_unused]] const int32 maxI	   = static_cast<int32>( maxF );
+				const bool bReadOnly = prop._metadata._bReadOnly != 0;
 
 				bool* pPtr = prop.getValuePtr<bool>( pInstance );
 				if ( pPtr == nullptr )
@@ -227,6 +271,7 @@ namespace sw::editor
 					return true;
 				}
 				ImGui::Checkbox( _pLabel, pPtr );
+				showTooltipIfHovered( prop );
 				InspectorPropertyUndo::trackPod( pPtr, sizeof( *pPtr ), _pLabel );
 				return true;
 			}
@@ -249,6 +294,7 @@ namespace sw::editor
 				}
 				if ( ImGui::Checkbox( _pLabel, &value ) )
 					pPtr->store( value, std::memory_order_relaxed );
+				showTooltipIfHovered( prop );
 				return true;
 			}
 		};
@@ -258,12 +304,8 @@ namespace sw::editor
 		public:
 			bool draw( void* pInstance, const PropertyInfo& prop ) override
 			{
-				const bool					 bReadOnly = prop._metadata._bReadOnly != 0;
-				[[maybe_unused]] const bool	 bHasRange = prop._metadata._bHasRange != 0;
-				const float32				 minF	   = prop._metadata._minRange;
-				const float32				 maxF	   = prop._metadata._maxRange;
-				[[maybe_unused]] const int32 minI	   = static_cast<int32>( minF );
-				[[maybe_unused]] const int32 maxI	   = static_cast<int32>( maxF );
+				const bool bReadOnly  = prop._metadata._bReadOnly != 0;
+				const bool bAssetPath = prop._metadata._bAssetPath != 0 || prop._metadata._assetType.empty() == false;
 
 				string* pPtr = prop.getValuePtr<string>( pInstance );
 				if ( pPtr == nullptr )
@@ -273,10 +315,47 @@ namespace sw::editor
 					drawReadOnlyText( prop, pPtr->c_str() );
 					return true;
 				}
+
+				if ( bAssetPath )
+				{
+					ImGui::PushID( _pLabel );
+					const float32 buttonWidth = 24.0f;
+					const float32 itemWidth	  = ImGui::CalcItemWidth();
+					ImGui::SetNextItemWidth( ( itemWidth > buttonWidth + 10.0f ) ? itemWidth - buttonWidth - 4.0f : itemWidth );
+
+					utf8 buf[constant::kMaxBuffer512];
+					formatstring( buf, sizeof( buf ), "%#", pPtr->c_str() );
+					if ( ImGui::InputText( "##assetInput", buf, sizeof( buf ) ) )
+						*pPtr = buf;
+
+					if ( ImGui::BeginDragDropTarget() )
+					{
+						if ( const ImGuiPayload* pPayload = ImGui::AcceptDragDropPayload( "SW_ASSET_PATH" ) )
+						{
+							const utf8* pDropped = static_cast<const utf8*>( pPayload->Data );
+							if ( pDropped != nullptr )
+								*pPtr = pDropped;
+						}
+						ImGui::EndDragDropTarget();
+					}
+
+					ImGui::SameLine();
+					if ( ImGui::Button( "x##clear", ImVec2( buttonWidth, 0 ) ) )
+						pPtr->clear();
+					if ( ImGui::IsItemHovered() )
+						ImGui::SetTooltip( "Clear asset reference" );
+
+					ImGui::PopID();
+					showTooltipIfHovered( prop );
+					InspectorPropertyUndo::trackString( pPtr, _pLabel );
+					return true;
+				}
+
 				utf8 buf[constant::kMaxBuffer512];
 				formatstring( buf, sizeof( buf ), "%#", pPtr->c_str() );
 				if ( ImGui::InputText( _pLabel, buf, sizeof( buf ) ) )
 					*pPtr = buf;
+				showTooltipIfHovered( prop );
 				InspectorPropertyUndo::trackString( pPtr, _pLabel );
 				return true;
 			}
@@ -287,12 +366,7 @@ namespace sw::editor
 		public:
 			bool draw( void* pInstance, const PropertyInfo& prop ) override
 			{
-				const bool					 bReadOnly = prop._metadata._bReadOnly != 0;
-				[[maybe_unused]] const bool	 bHasRange = prop._metadata._bHasRange != 0;
-				const float32				 minF	   = prop._metadata._minRange;
-				const float32				 maxF	   = prop._metadata._maxRange;
-				[[maybe_unused]] const int32 minI	   = static_cast<int32>( minF );
-				[[maybe_unused]] const int32 maxI	   = static_cast<int32>( maxF );
+				const bool bReadOnly = prop._metadata._bReadOnly != 0;
 
 				float3* pPtr = prop.getValuePtr<float3>( pInstance );
 				if ( pPtr == nullptr )
@@ -305,7 +379,11 @@ namespace sw::editor
 					drawReadOnlyText( prop, buf );
 					return true;
 				}
-				editor::drawVec3Control( _pLabel, *pPtr, 0.0f, 100.0f, 0.1f );
+				if ( isColorRequested( prop ) )
+					ImGui::ColorEdit3( _pLabel, &pPtr->_x, ImGuiColorEditFlags_Float );
+				else
+					editor::drawVec3Control( _pLabel, *pPtr, 0.0f, 100.0f, 0.1f );
+				showTooltipIfHovered( prop );
 				InspectorPropertyUndo::trackPod( pPtr, sizeof( *pPtr ), _pLabel );
 				return true;
 			}
@@ -316,12 +394,7 @@ namespace sw::editor
 		public:
 			bool draw( void* pInstance, const PropertyInfo& prop ) override
 			{
-				const bool					 bReadOnly = prop._metadata._bReadOnly != 0;
-				[[maybe_unused]] const bool	 bHasRange = prop._metadata._bHasRange != 0;
-				const float32				 minF	   = prop._metadata._minRange;
-				const float32				 maxF	   = prop._metadata._maxRange;
-				[[maybe_unused]] const int32 minI	   = static_cast<int32>( minF );
-				[[maybe_unused]] const int32 maxI	   = static_cast<int32>( maxF );
+				const bool bReadOnly = prop._metadata._bReadOnly != 0;
 
 				float2* pPtr = prop.getValuePtr<float2>( pInstance );
 				if ( pPtr == nullptr )
@@ -335,6 +408,7 @@ namespace sw::editor
 					return true;
 				}
 				ImGui::DragFloat2( _pLabel, &pPtr->_x, 0.1f );
+				showTooltipIfHovered( prop );
 				InspectorPropertyUndo::trackPod( pPtr, sizeof( *pPtr ), _pLabel );
 				return true;
 			}
@@ -345,12 +419,7 @@ namespace sw::editor
 		public:
 			bool draw( void* pInstance, const PropertyInfo& prop ) override
 			{
-				const bool					 bReadOnly = prop._metadata._bReadOnly != 0;
-				[[maybe_unused]] const bool	 bHasRange = prop._metadata._bHasRange != 0;
-				const float32				 minF	   = prop._metadata._minRange;
-				const float32				 maxF	   = prop._metadata._maxRange;
-				[[maybe_unused]] const int32 minI	   = static_cast<int32>( minF );
-				[[maybe_unused]] const int32 maxI	   = static_cast<int32>( maxF );
+				const bool bReadOnly = prop._metadata._bReadOnly != 0;
 
 				float4* pPtr = prop.getValuePtr<float4>( pInstance );
 				if ( pPtr == nullptr )
@@ -364,7 +433,11 @@ namespace sw::editor
 					drawReadOnlyText( prop, buf );
 					return true;
 				}
-				ImGui::DragFloat4( _pLabel, &pPtr->_x, 0.01f );
+				if ( isColorRequested( prop ) )
+					ImGui::ColorEdit4( _pLabel, &pPtr->_x, ImGuiColorEditFlags_Float );
+				else
+					ImGui::DragFloat4( _pLabel, &pPtr->_x, 0.01f );
+				showTooltipIfHovered( prop );
 				InspectorPropertyUndo::trackPod( pPtr, sizeof( *pPtr ), _pLabel );
 				return true;
 			}
@@ -375,12 +448,8 @@ namespace sw::editor
 		public:
 			bool draw( void* pInstance, const PropertyInfo& prop ) override
 			{
-				const bool					 bReadOnly = prop._metadata._bReadOnly != 0;
-				[[maybe_unused]] const bool	 bHasRange = prop._metadata._bHasRange != 0;
-				const float32				 minF	   = prop._metadata._minRange;
-				const float32				 maxF	   = prop._metadata._maxRange;
-				[[maybe_unused]] const int32 minI	   = static_cast<int32>( minF );
-				[[maybe_unused]] const int32 maxI	   = static_cast<int32>( maxF );
+				const bool bReadOnly  = prop._metadata._bReadOnly != 0;
+				const bool bAssetPath = prop._metadata._bAssetPath != 0 || prop._metadata._assetType.empty() == false;
 
 				hashed_string* pPtr = prop.getValuePtr<hashed_string>( pInstance );
 				if ( pPtr == nullptr )
@@ -390,10 +459,46 @@ namespace sw::editor
 					drawReadOnlyText( prop, pPtr->c_str() );
 					return true;
 				}
+
+				if ( bAssetPath )
+				{
+					ImGui::PushID( _pLabel );
+					const float32 buttonWidth = 24.0f;
+					const float32 itemWidth	  = ImGui::CalcItemWidth();
+					ImGui::SetNextItemWidth( ( itemWidth > buttonWidth + 10.0f ) ? itemWidth - buttonWidth - 4.0f : itemWidth );
+
+					utf8 buf[constant::kMaxBuffer256];
+					formatstring( buf, sizeof( buf ), "%#", pPtr->c_str() );
+					if ( ImGui::InputText( "##assetInput", buf, sizeof( buf ), ImGuiInputTextFlags_EnterReturnsTrue ) )
+						*pPtr = hashed_string( buf );
+
+					if ( ImGui::BeginDragDropTarget() )
+					{
+						if ( const ImGuiPayload* pPayload = ImGui::AcceptDragDropPayload( "SW_ASSET_PATH" ) )
+						{
+							const utf8* pDropped = static_cast<const utf8*>( pPayload->Data );
+							if ( pDropped != nullptr )
+								*pPtr = hashed_string( pDropped );
+						}
+						ImGui::EndDragDropTarget();
+					}
+
+					ImGui::SameLine();
+					if ( ImGui::Button( "x##clear", ImVec2( buttonWidth, 0 ) ) )
+						*pPtr = hashed_string{};
+					if ( ImGui::IsItemHovered() )
+						ImGui::SetTooltip( "Clear asset reference" );
+
+					ImGui::PopID();
+					showTooltipIfHovered( prop );
+					return true;
+				}
+
 				utf8 buf[constant::kMaxBuffer256];
 				formatstring( buf, sizeof( buf ), "%#", pPtr->c_str() );
 				if ( ImGui::InputText( _pLabel, buf, sizeof( buf ), ImGuiInputTextFlags_EnterReturnsTrue ) )
 					*pPtr = hashed_string( buf );
+				showTooltipIfHovered( prop );
 				return true;
 			}
 		};

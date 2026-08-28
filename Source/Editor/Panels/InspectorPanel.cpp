@@ -436,6 +436,31 @@ namespace sw::editor
 			if ( method._metadata._displayName.empty() == false )
 				pLabelName = method._metadata._displayName.c_str();
 
+			const uint32 paramCount = static_cast<uint32>( method._listParamTypeName.size() );
+
+			if ( method._metadata._bCallInEditor != 0 && paramCount == 0 )
+			{
+				ImGui::PushID( method._hashName.c_str() );
+				ImGui::PushStyleColor( ImGuiCol_Button, ImVec4{ 0.18f, 0.42f, 0.65f, 1.0f } );
+				ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImVec4{ 0.25f, 0.52f, 0.78f, 1.0f } );
+				ImGui::PushStyleColor( ImGuiCol_ButtonActive, ImVec4{ 0.12f, 0.35f, 0.55f, 1.0f } );
+
+				utf8 buttonLabel[constant::kMaxBuffer128];
+				formatstring( buttonLabel, sizeof( buttonLabel ), "Run %#", pLabelName );
+				if ( ImGui::Button( buttonLabel, ImVec2{ -FLT_MIN, 0.0f } ) )
+				{
+					TaskArgs		args;
+					const TaskValue result = editor::getService<TypeRegistry>()->invokeMethod(
+						pInstance, pTypeInfo->_fullyQualifiedName, method._hashName, args );
+					formatTaskValue( result, method._returnTypeName, _arrLastInvokeResult, sizeof( _arrLastInvokeResult ) );
+				}
+				ImGui::PopStyleColor( 3 );
+				if ( method._metadata._tooltip.empty() == false && ImGui::IsItemHovered() )
+					ImGui::SetTooltip( "%s", method._metadata._tooltip.c_str() );
+				ImGui::PopID();
+				continue;
+			}
+
 			ImGui::PushID( method._hashName.c_str() );
 			ImGui::Text( "%s (%s)", pLabelName,
 						 method._returnTypeName.empty() ? "?" : method._returnTypeName.c_str() );
@@ -446,9 +471,7 @@ namespace sw::editor
 			}
 			if ( method._metadata._tooltip.empty() == false && ImGui::IsItemHovered() )
 				ImGui::SetTooltip( "%s", method._metadata._tooltip.c_str() );
-
-			const uint32 paramCount = static_cast<uint32>( method._listParamTypeName.size() );
-			bool		 bArgsOk{ true };
+			bool bArgsOk{ true };
 			for ( uint32 paramIndex = 0; paramIndex < paramCount; ++paramIndex )
 			{
 				if ( paramIndex >= 8 || isSupportedMethodArgType( method._listParamTypeName[paramIndex] ) == false )

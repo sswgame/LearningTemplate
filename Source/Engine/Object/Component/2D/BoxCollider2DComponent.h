@@ -19,7 +19,7 @@ namespace sw
 		struct sw_BoxCollider2DComponent_Registrar;
 	} // namespace generated
 
-	REFLECT()
+	REFLECT( Category = "Physics 2D", DisplayName = "Box Collider 2D", Tooltip = "2D Box collision volume" )
 	class SW_API BoxCollider2DComponent : public SceneComponent
 	{
 		friend struct ::sw::generated::sw_BoxCollider2DComponent_Registrar;
@@ -57,11 +57,11 @@ namespace sw
 		void unregisterPhysicsBody();
 		void syncPhysicsBody();
 
-		PROPERTY()
+		PROPERTY( Category = "Collider", DisplayName = "Collider Type", Tooltip = "Physics collider type index" )
 		int32 _colliderType;
-		PROPERTY()
+		PROPERTY( Category = "Collider", DisplayName = "Offset Position", Tooltip = "2D Offset position as string format" )
 		string _offsetPos;
-		PROPERTY()
+		PROPERTY( Category = "Collider", DisplayName = "Offset Scale", Tooltip = "2D Offset scale as string format" )
 		string		 _offsetScale;
 		float2		 _cachedMin;
 		float2		 _cachedMax;

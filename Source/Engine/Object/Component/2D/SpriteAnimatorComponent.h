@@ -18,7 +18,7 @@ namespace sw
 		struct sw_SpriteAnimatorComponent_Registrar;
 	} // namespace generated
 
-	REFLECT()
+	REFLECT( Category = "Animation 2D", DisplayName = "Sprite Animator Component", Tooltip = "2D Sprite frame animation controller" )
 	class SW_API SpriteAnimatorComponent : public SceneComponent
 	{
 		friend struct ::sw::generated::sw_SpriteAnimatorComponent_Registrar;
@@ -35,8 +35,11 @@ namespace sw
 		void onTick( float32 deltaTime ) override;
 
 		void play( const string& animName, bool loop = true );
+		FUNCTION( Category = "Playback", DisplayName = "Stop", CallInEditor )
 		void stop();
+		FUNCTION( Category = "Playback", DisplayName = "Pause", CallInEditor )
 		void pause();
+		FUNCTION( Category = "Playback", DisplayName = "Resume", CallInEditor )
 		void resume();
 		void setFrame( int32 frame );
 
@@ -56,18 +59,18 @@ namespace sw
 	private:
 		void updateSpriteFrame();
 
-		PROPERTY()
+		PROPERTY( Category = "Animation", DisplayName = "Current Animation", Tooltip = "Currently playing animation name" )
 		string _currentAnimation;
-		PROPERTY()
+		PROPERTY( Category = "Animation", DisplayName = "Animation List", Tooltip = "Available animation names" )
 		vector<string> _listAnimation;
-		PROPERTY()
+		PROPERTY( Category = "Playback", DisplayName = "Frame Rate", Tooltip = "Playback speed in FPS", Min = 1.0, Max = 120.0, Meta = "Units=fps" )
 		float32 _frameRate;
 		float32 _frameTimer;
-		PROPERTY()
+		PROPERTY( Category = "Playback", DisplayName = "Current Frame", Tooltip = "Current playback frame index", Min = 0.0 )
 		int32 _currentFrame;
-		PROPERTY()
+		PROPERTY( Category = "Playback", DisplayName = "Total Frames", Tooltip = "Total frame count of active animation", ReadOnly )
 		int32 _totalFrames;
-		PROPERTY()
+		PROPERTY( Category = "Playback", DisplayName = "Loop", Tooltip = "Loop playback when reaching the end" )
 		bool _bRepeat;
 		bool _bPlaying;
 		bool _bPaused;

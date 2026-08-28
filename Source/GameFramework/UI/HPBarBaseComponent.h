@@ -11,7 +11,7 @@ namespace sw
 		struct sw_HPBarBaseComponent_Registrar;
 	} // namespace generated
 
-	REFLECT()
+	REFLECT( Category = "UI", DisplayName = "HP Bar Base Component", Tooltip = "Smooth lerping HP Bar floating UI component" )
 	class SW_GF_API HPBarBaseComponent : public Component
 	{
 		friend struct ::sw::generated::sw_HPBarBaseComponent_Registrar;
@@ -30,17 +30,17 @@ namespace sw
 		void setTargetRatio( float32 ratio );
 
 	private:
-		PROPERTY( Alias = "hpRatio" )
+		PROPERTY( Category = "Health", DisplayName = "HP Ratio", Tooltip = "Current displayed HP ratio (0..1)", Min = 0.0, Max = 1.0, Meta = "Slider, Units=%", Alias = "hpRatio" )
 		float32 _hpRatio;
-		PROPERTY( Alias = "remainRatio" )
+		PROPERTY( Category = "Health", DisplayName = "Remain Ratio", Tooltip = "Delayed damage trail ratio (0..1)", Min = 0.0, Max = 1.0, Meta = "Slider, Units=%", Alias = "remainRatio" )
 		float32 _remainRatio;
-		PROPERTY( Alias = "targetRatio" )
+		PROPERTY( Category = "Health", DisplayName = "Target Ratio", Tooltip = "Target HP ratio to lerp towards (0..1)", Min = 0.0, Max = 1.0, Meta = "Slider, Units=%", Alias = "targetRatio" )
 		float32 _targetRatio;
-		PROPERTY( Alias = "lerpSpeed" )
+		PROPERTY( Category = "Animation", DisplayName = "Lerp Speed", Tooltip = "Speed of HP bar transition", Min = 0.1, Max = 20.0, Alias = "lerpSpeed" )
 		float32 _lerpSpeed;
-		PROPERTY( Alias = "offsetPos" )
+		PROPERTY( Category = "Layout", DisplayName = "Offset Position", Tooltip = "Offset from attached entity position", Alias = "offsetPos" )
 		float2 _offsetPos;
-		PROPERTY( Alias = "bVisible" )
+		PROPERTY( Category = "Layout", DisplayName = "Visible", Tooltip = "Toggle HP bar visibility", Alias = "bVisible" )
 		bool _bVisible;
 	};
 } // namespace sw

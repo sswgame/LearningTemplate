@@ -16,7 +16,7 @@ namespace sw
 	/**
 	 * @brief GameObject의 태그를 담는 컴포넌트입니다.
 	 */
-	REFLECT()
+	REFLECT( Category = "Gameplay", DisplayName = "Tag Component", Tooltip = "GameObject Tag Container Component" )
 	class SW_API TagComponent : public Component
 	{
 		friend struct ::sw::generated::sw_TagComponent_Registrar;
