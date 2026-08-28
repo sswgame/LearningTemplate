@@ -5,6 +5,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
 
+#include "Editor/Common/Commands/EditorAssetCommands.h"
 #include "Editor/Common/Gui/EditorDockLayout.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorNotificationManager.h"
@@ -15,9 +16,7 @@
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
-#include "Engine/Scene/SceneManager.h"
 #include "Engine/Utility/CommandStack.h"
-#include "Engine/Utility/Resource/AssetDatabase.h"
 #include "Engine/Utility/Resource/ResourceUtil.h"
 
 #include "RuntimeAPI/Service/EditorService.h"
@@ -320,21 +319,6 @@ namespace sw::editor
 		if ( EditorContext::get()->getWorkspace().consumeLoadScene( scenePath ) == false )
 			return;
 
-		string loadPath = AssetDatabase::toRelativePath( scenePath );
-		if ( loadPath.empty() )
-			loadPath = scenePath;
-
-		SceneManager* pSceneManager = getService<SceneManager>();
-		if ( pSceneManager == nullptr )
-		{
-			SW_LOG_ERROR( "Open Scene: SceneManager unavailable" );
-			return;
-		}
-
-		if ( pSceneManager->requestLoadAsync( loadPath ) )
-		{
-			EditorContext::get()->getWorkspace().clearSelection();
-			SW_LOG_INFO( "Open Scene: %#", loadPath );
-		}
+		EditorAssetCommands::loadScene( scenePath );
 	}
 } // namespace sw::editor

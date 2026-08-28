@@ -2,39 +2,15 @@
 
 #include "Editor/Panels/DataTablePanel.h"
 
-#include "Core/Common/Defines.h"
-#include "Core/Container/map.h"
-#include "Core/File/FileUtil.h"
-#include "Core/Log/Logger.h"
-#include "Core/String/StringUtil.h"
-
+#include "Editor/Common/Commands/EditorDataTableCommands.h"
 #include "Editor/Common/Gui/EditorChrome.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Common/Workspace/EditorContext.h"
-
-#include "Engine/Localization/LocalizationManager.h"
-#include "Engine/Utility/Json/JsonDocument.h"
-#include "Engine/Utility/Xml/XmlDocument.h"
-
-#include "RuntimeAPI/Service/EditorService.h"
 
 #include <imgui.h>
 
 SW_LOG_CALLER( "DataTablePanel" );
 namespace sw::editor
 {
-	namespace
-	{
-		string getLocalizationFolderPath()
-		{
-			return FileUtil::joinPath( FileUtil::getCurrentPath(), "Resource/game/demo/data/localization" );
-		}
-
-		string getGameDataFolderPath()
-		{
-			return FileUtil::joinPath( FileUtil::getCurrentPath(), "Resource/game/demo/data" );
-		}
-	} // namespace
 
 	DataTablePanel::DataTablePanel()
 		: _activeTab{ 0 }
@@ -279,98 +255,18 @@ namespace sw::editor
 
 	void DataTablePanel::reloadLocalization()
 	{
-		_listLocRecord.clear();
-		const string locFolder = getLocalizationFolderPath();
-
-		map<string, LocRecord> mapRecords;
-
-		auto loadJsonFile = [&]( string_view langCode, auto memberPtr )
-		{
-			const string path = FileUtil::joinPath( locFolder, string{ langCode } + ".json" );
-			string		 text;
-			if ( FileUtil::readTextFile( path, text ) == false )
-				return;
-
-			JsonDocument doc;
-			if ( doc.parse( text ) == false || doc.root().isObject() == false )
-				return;
-
-			const vector<string> listKeys = doc.root().memberNames();
-			for ( const string& key : listKeys )
-			{
-				LocRecord& rec = mapRecords[key];
-				rec._key	   = key;
-				rec.*memberPtr = doc.root().get( key ).asString();
-			}
-		};
-
-		loadJsonFile( "en_US", &LocRecord::_enUS );
-		loadJsonFile( "ko_KR", &LocRecord::_koKR );
-		loadJsonFile( "ja_JP", &LocRecord::_jaJP );
-
-		_listLocRecord.reserve( mapRecords.size() );
-		for ( auto& pair : mapRecords )
-			_listLocRecord.push_back( std::move( pair.second ) );
-
+		EditorDataTableCommands::loadLocalization( _listLocRecord );
 		_bLocLoaded = true;
 	}
 
 	void DataTablePanel::saveLocalization()
 	{
-		const string locFolder = getLocalizationFolderPath();
-		FileUtil::ensureDirectoryExists( locFolder );
-
-		auto saveJsonFile = [&]( string_view langCode, auto memberPtr )
-		{
-			JsonDocument doc;
-			doc.root().setObject();
-
-			for ( const LocRecord& rec : _listLocRecord )
-			{
-				const string& val = rec.*memberPtr;
-				if ( val.empty() == false )
-					doc.root().set( rec._key ).setString( val );
-			}
-
-			const string path	= FileUtil::joinPath( locFolder, string{ langCode } + ".json" );
-			const string dumped = doc.dump( 4 );
-			FileUtil::writeTextFile( path, dumped );
-
-			LocalizationManager* pLocMgr = editor::getService<LocalizationManager>();
-			if ( pLocMgr != nullptr )
-				pLocMgr->loadLanguageJson( langCode, dumped );
-		};
-
-		saveJsonFile( "en_US", &LocRecord::_enUS );
-		saveJsonFile( "ko_KR", &LocRecord::_koKR );
-		saveJsonFile( "ja_JP", &LocRecord::_jaJP );
-
-		for ( LocRecord& rec : _listLocRecord )
-			rec._bModified = false;
-
-		SW_LOG_INFO( "Successfully saved all localization tables." );
+		EditorDataTableCommands::saveLocalization( _listLocRecord );
 	}
 
 	void DataTablePanel::reloadGameDataFiles()
 	{
-		_listGameDataFile.clear();
-		const string dataFolder = getGameDataFolderPath();
-
-		vector<string> listFiles;
-		FileUtil::collectFiles( dataFolder, ".xml", listFiles, false, false );
-
-		for ( const string& file : listFiles )
-		{
-			if ( FileUtil::hasExtension( file, ".xml" ) )
-			{
-				GameDataFileEntry entry{};
-				entry._fileName		= FileUtil::getFileNamePart( file );
-				entry._absolutePath = FileUtil::normalizeSeparators( file );
-				FileUtil::makePathRelative( FileUtil::getCurrentPath(), file, entry._relativePath );
-				_listGameDataFile.push_back( std::move( entry ) );
-			}
-		}
-
+		EditorDataTableCommands::collectGameDataFiles( _listGameDataFile );
 		_bGameDataLoaded = true;
 	}
 
@@ -380,7 +276,7 @@ namespace sw::editor
 			return;
 
 		const GameDataFileEntry& entry = _listGameDataFile[static_cast<size_t>( _selectedGameDataIndex )];
-		FileUtil::readTextFile( entry._absolutePath, _selectedGameDataRawText );
+		EditorDataTableCommands::loadGameDataFile( entry._absolutePath, _selectedGameDataRawText );
 	}
 
 	void DataTablePanel::saveSelectedGameDataFile()
@@ -389,9 +285,6 @@ namespace sw::editor
 			return;
 
 		const GameDataFileEntry& entry = _listGameDataFile[static_cast<size_t>( _selectedGameDataIndex )];
-		if ( FileUtil::writeTextFile( entry._absolutePath, _selectedGameDataRawText ) )
-		{
-			SW_LOG_INFO( "Saved game data table %#", entry._fileName.c_str() );
-		}
+		EditorDataTableCommands::saveGameDataFile( entry._absolutePath, _selectedGameDataRawText );
 	}
 } // namespace sw::editor

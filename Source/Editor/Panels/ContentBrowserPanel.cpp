@@ -5,9 +5,9 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/File/FileUtil.h"
 
+#include "Editor/Common/Commands/EditorAssetCommands.h"
 #include "Editor/Common/Gui/EditorChrome.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Common/Workspace/AssetEditorManager.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
@@ -831,17 +831,7 @@ namespace sw::editor
 
 		selectAsset( entry );
 		SW_LOG_TRACE( "Open: %#", entry._relativePath.c_str() );
-
-		if ( EditorContext::get()->getAssetEditorManager().openAssetInEditor( entry._relativePath ) )
-			return;
-
-		const string lower = StringUtil::toLower( entry._extension.c_str() );
-
-		const bool bSceneXml = lower == ".xml" && ( FileUtil::endsWithIgnoreCase( entry._relativePath, "_scene.xml" ) || entry._relativePath.find( "scene" ) != string::npos );
-		if ( bSceneXml )
-			editor::getService<SceneManager>()->requestLoadAsync( entry._relativePath );
-		else if ( lower == "._material" )
-			EditorContext::get()->getWorkspace().setInspectMode( InspectMode::Asset );
+		EditorAssetCommands::openPath( entry._relativePath );
 	}
 
 	void ContentBrowserPanel::importFilesFromDialog()

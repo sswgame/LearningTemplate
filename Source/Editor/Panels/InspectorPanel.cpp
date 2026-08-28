@@ -5,6 +5,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Task/TaskTypes.h"
 
+#include "Editor/Common/Commands/EditorGlobalVariableCommands.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
@@ -255,7 +256,7 @@ namespace sw::editor
 													  ? pComp->getComponentName().c_str()
 													  : pTInfo->_name.c_str();
 						const bool	 bCanPaste	  = ( ws.hasCopiedComponent() &&
-												  ws.getCopiedComponentTypeName() == compTypeName );
+													  ws.getCopiedComponentTypeName() == compTypeName );
 						if ( bCanPaste )
 						{
 							if ( ImGui::MenuItem( "Paste Component Values" ) )
@@ -293,10 +294,8 @@ namespace sw::editor
 							ImGui::Separator();
 
 							// List saved presets
-							const string   presetDir = FileUtil::joinPath( FileUtil::getCurrentPath(),
-																		   "Resource/game/demo/data/presets" );
 							vector<string> listPresetFiles;
-							FileUtil::collectFiles( presetDir, ".preset.xml", listPresetFiles, false, false );
+							EditorGlobalVariableCommands::collectComponentPresetFiles( listPresetFiles );
 							const string compPrefix = compTypeName + "_";
 							bool		 bFoundPresets{ false };
 							for ( const string& presetFile : listPresetFiles )

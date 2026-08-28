@@ -1,5 +1,6 @@
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Container/string.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Editor/Viewport/EditorViewportToolbar.h"
@@ -91,6 +92,9 @@ namespace sw::editor
 		float32					_farZ;
 		CameraControlMode		_cameraMode;
 		ViewportToolbarSettings _toolbarSettings;
+		string					_gizmoUndoBeforeXml;
 		bool					_bRulerActive;
+		uint8					_bGizmoTracking : 1;
+		[[maybe_unused]] uint8	_reservedGizmo	: 7;
 	};
 } // namespace sw::editor

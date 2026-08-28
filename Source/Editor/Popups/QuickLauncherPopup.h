@@ -6,7 +6,6 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
-#include "Core/Delegate/Delegate.h"
 
 #include "Editor/Common/Gui/IEditorPopup.h"
 
@@ -15,12 +14,11 @@ namespace sw::editor
 	/** @brief 퀵 런처 검색 항목 */
 	struct QuickLauncherItem
 	{
-		string			 _category; /**< "Scene", "Prefab", "Texture", "Shader", "Data", "GameObject" */
-		string			 _title;
-		string			 _detail;
-		string			 _path;
-		uint64			 _targetObjectId{ 0 };
-		Delegate<void()> _action;
+		string _category; /**< "Scene", "Prefab", "Texture", "Shader", "Data", "GameObject" */
+		string _title;
+		string _detail;
+		string _path;
+		uint64 _targetObjectId{ 0 };
 	};
 
 	/**
@@ -47,6 +45,7 @@ namespace sw::editor
 
 	private:
 		void rebuildIndex();
+		void executeItem( const QuickLauncherItem& item );
 
 	private:
 		vector<QuickLauncherItem> _listAllItem;

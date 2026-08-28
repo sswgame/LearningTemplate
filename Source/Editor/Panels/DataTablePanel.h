@@ -7,28 +7,11 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
+#include "Editor/Common/Commands/EditorDataTableCommands.h"
 #include "Editor/Common/Gui/IEditorPanel.h"
 
 namespace sw::editor
 {
-	/** @brief 로컬라이제이션 문자열 다국어 레코드 */
-	struct LocRecord
-	{
-		string _key;
-		string _enUS;
-		string _koKR;
-		string _jaJP;
-		bool   _bModified{ false };
-	};
-
-	/** @brief 게임 데이터 XML 파일 항목 */
-	struct GameDataFileEntry
-	{
-		string _fileName;
-		string _relativePath;
-		string _absolutePath;
-	};
-
 	/**
 	 * @class DataTablePanel
 	 * @brief 로컬라이제이션 JSON 파일(ko_KR, en_US, ja_JP) 및 데이터 XML 파일을 실시간 검사/편집/저장하는 에디터 윈도우

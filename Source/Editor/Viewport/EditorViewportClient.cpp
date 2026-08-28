@@ -7,7 +7,7 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Memory/Memory.h"
 
-#include "Editor/Common/EditorUtil.h"
+#include "Editor/Common/Commands/EditorAssetCommands.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
@@ -323,7 +323,10 @@ namespace sw::editor
 		, _farZ{ 1000.0f }
 		, _cameraMode{ CameraControlMode::Fly }
 		, _toolbarSettings{}
+		, _gizmoUndoBeforeXml{}
 		, _bRulerActive{ false }
+		, _bGizmoTracking{ SW_FALSE }
+		, _reservedGizmo{ 0 }
 	{
 	}
 
@@ -758,6 +761,9 @@ namespace sw::editor
 			arrSnap[0] = arrSnap[1] = arrSnap[2] = _toolbarSettings._scaleSnapValue;
 
 		const bool bUseSnap = ( arrSnap[0] > 0.0f );
+		if ( _bGizmoTracking == SW_FALSE && ImGuizmo::IsOver() && ImGui::IsMouseClicked( ImGuiMouseButton_Left ) )
+			_gizmoUndoBeforeXml = EditorTransaction::captureSnapshot( pObj );
+
 		if ( ImGuizmo::Manipulate( pView, pProj, op, mode, arrMatrix, nullptr, bUseSnap ? arrSnap : nullptr ) )
 		{
 			float4x4 newWorldMat{};
@@ -849,6 +855,21 @@ namespace sw::editor
 				MathUtil::toRadian( rotationDeg._y ),
 				MathUtil::toRadian( rotationDeg._z ) } );
 			pSceneComp->setLocalScale( scale );
+		}
+
+		if ( ImGuizmo::IsUsing() )
+		{
+			_bGizmoTracking = SW_TRUE;
+		}
+		else if ( _bGizmoTracking == SW_TRUE )
+		{
+			if ( _gizmoUndoBeforeXml.empty() == false )
+			{
+				const string afterXml = EditorTransaction::captureSnapshot( pObj );
+				EditorTransaction::recordModify( pObj, _gizmoUndoBeforeXml, afterXml, "Gizmo Transform" );
+			}
+			_gizmoUndoBeforeXml.clear();
+			_bGizmoTracking = SW_FALSE;
 		}
 	}
 
@@ -1241,49 +1262,6 @@ namespace sw::editor
 			}
 		}
 
-		const string ext = FileUtil::getExtension( pAssetPath );
-		if ( ext == ".prefab" || ext == ".pfb" || StringUtil::stristr( pAssetPath, ".prefab.xml" ) != nullptr )
-		{
-			GameObject* pSpawned = EditorUtil::spawnPrefabFromAssetPath( pManager, pAssetPath, nullptr );
-			if ( pSpawned != nullptr )
-			{
-				SceneComponent* pSc = pSpawned->getPrimarySceneComponent();
-				if ( pSc != nullptr )
-					pSc->setLocalPosition( spawnPos );
-				EditorTransaction::recordCreation( GameObjectPtr{ pSpawned }, "Spawn Prefab in Viewport" );
-				EditorContext::get()->getWorkspace().selectGameObject( GameObjectPtr{ pSpawned },
-																	   SelectionMode::Replace );
-			}
-		}
-		else if ( ext == ".scene" || ( ext == ".xml" && StringUtil::stristr( pAssetPath, ".scene" ) != nullptr ) )
-		{
-			EditorContext::get()->getWorkspace().requestLoadScene( pAssetPath );
-		}
-		else if ( ext == ".png" || ext == ".jpg" || ext == ".dds" || ext == ".tga" || ext == ".bmp" )
-		{
-			string filename = FileUtil::getFileNamePart( pAssetPath );
-			filename		= FileUtil::removeExtension( filename );
-
-			GameObject* pSpawned = pManager->createGameObject( hashed_string( filename ) );
-			if ( pSpawned != nullptr )
-			{
-				SceneComponent* pSc = pSpawned->addComponent<SceneComponent>();
-				if ( pSc != nullptr )
-					pSc->setLocalPosition( spawnPos );
-
-				SpriteComponent* pSprite = pSpawned->addComponent<SpriteComponent>();
-				if ( pSprite != nullptr )
-				{
-					string relPath;
-					FileUtil::makePathRelative( FileUtil::getCurrentPath(), pAssetPath, relPath );
-					relPath = FileUtil::normalizeSeparators( relPath );
-					pSprite->setTextureName( relPath );
-				}
-
-				EditorTransaction::recordCreation( GameObjectPtr{ pSpawned }, "Spawn Sprite in Viewport" );
-				EditorContext::get()->getWorkspace().selectGameObject( GameObjectPtr{ pSpawned },
-																	   SelectionMode::Replace );
-			}
-		}
+		EditorAssetCommands::dropAt( pManager, pAssetPath, spawnPos );
 	}
 } // namespace sw::editor

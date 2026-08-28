@@ -2,9 +2,10 @@
 
 #include "Editor/Popups/QuickLauncherPopup.h"
 
-#include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
 
+#include "Editor/Common/Commands/EditorAssetCommands.h"
+#include "Editor/Common/Commands/EditorSceneCommands.h"
 #include "Editor/Common/Gui/EditorChrome.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -91,7 +92,6 @@ namespace sw::editor
 	{
 		_listAllItem.clear();
 
-		// 1) 씬 내 게임 오브젝트 인덱싱
 		SceneManager* pSceneManager = editor::getService<SceneManager>();
 		if ( pSceneManager != nullptr )
 		{
@@ -103,94 +103,51 @@ namespace sw::editor
 					if ( pObj == nullptr )
 						continue;
 
-					const uint64	  objId	  = pObj->getObjectId();
-					const string	  objName = string{ pObj->getName().c_str() };
+					const uint64	  objId = pObj->getObjectId();
 					QuickLauncherItem item{};
 					item._category		 = "GameObject";
-					item._title			 = objName;
+					item._title			 = string{ pObj->getName().c_str() };
 					item._detail		 = "Scene GameObject (ID: " + std::to_string( objId ) + ")";
 					item._targetObjectId = objId;
-					item._action		 = [objId]()
-					{
-						SceneManager* pMgr = editor::getService<SceneManager>();
-						if ( pMgr != nullptr && pMgr->getActiveScene() != nullptr &&
-							 pMgr->getActiveScene()->getObjectManager() != nullptr )
-						{
-							GameObject* pFound = pMgr->getActiveScene()->getObjectManager()->findGameObjectById( objId );
-							if ( pFound != nullptr )
-							{
-								EditorContext::get()->getWorkspace().selectGameObject( GameObjectPtr{ pFound },
-																					   SelectionMode::Replace );
-							}
-						}
-					};
 					_listAllItem.push_back( std::move( item ) );
 				}
 			}
 		}
 
-		// 2) Resource 폴더 내 모든 에셋 인덱싱 (Scenes, Prefabs, Textures, Shaders, Data XMLs)
-		const string   resourceFolder = FileUtil::joinPath( FileUtil::getCurrentPath(), "Resource" );
-		vector<string> listAllFiles;
-		FileUtil::collectFiles( resourceFolder, "", listAllFiles, true, false );
-
-		for ( const string& file : listAllFiles )
+		vector<EditorResourceIndexEntry> listFileEntry;
+		EditorAssetCommands::collectResourceIndex( listFileEntry );
+		for ( const EditorResourceIndexEntry& entry : listFileEntry )
 		{
-			const string ext	  = FileUtil::getExtension( file );
-			const string filename = FileUtil::getFileNamePart( file );
-			string		 relPath;
-			FileUtil::makePathRelative( FileUtil::getCurrentPath(), file, relPath );
-			relPath = FileUtil::normalizeSeparators( relPath );
-
 			QuickLauncherItem item{};
-			item._path = relPath;
-
-			if ( ext == ".scene" || ( ext == ".xml" && filename.find( ".scene" ) != string::npos ) )
-			{
-				item._category = "Scene";
-				item._title	   = filename;
-				item._detail   = relPath;
-				item._action   = [relPath]()
-				{ EditorContext::get()->getWorkspace().requestLoadScene( relPath ); };
-				_listAllItem.push_back( std::move( item ) );
-			}
-			else if ( ext == ".prefab" || ext == ".pfb" )
-			{
-				item._category = "Prefab";
-				item._title	   = filename;
-				item._detail   = relPath;
-				item._action   = [relPath]()
-				{ EditorContext::get()->getWorkspace().setFocusedAssetPath( relPath.c_str() ); };
-				_listAllItem.push_back( std::move( item ) );
-			}
-			else if ( ext == ".png" || ext == ".jpg" || ext == ".dds" || ext == ".tga" || ext == ".bmp" )
-			{
-				item._category = "Texture";
-				item._title	   = filename;
-				item._detail   = relPath;
-				item._action   = [relPath]()
-				{ EditorContext::get()->getWorkspace().setFocusedAssetPath( relPath.c_str() ); };
-				_listAllItem.push_back( std::move( item ) );
-			}
-			else if ( ext == ".hlsl" || ext == ".glsl" || ext == ".spv" )
-			{
-				item._category = "Shader";
-				item._title	   = filename;
-				item._detail   = relPath;
-				item._action   = [relPath]()
-				{ EditorContext::get()->getWorkspace().setFocusedAssetPath( relPath.c_str() ); };
-				_listAllItem.push_back( std::move( item ) );
-			}
-			else if ( ext == ".xml" || ext == ".json" )
-			{
-				item._category = "Data";
-				item._title	   = filename;
-				item._detail   = relPath;
-				item._action   = [relPath]()
-				{ EditorContext::get()->getWorkspace().setFocusedAssetPath( relPath.c_str() ); };
-				_listAllItem.push_back( std::move( item ) );
-			}
+			item._category = entry._category;
+			item._title	   = entry._title;
+			item._detail   = entry._detail;
+			item._path	   = entry._path;
+			_listAllItem.push_back( std::move( item ) );
 		}
+	}
+
+	void QuickLauncherPopup::executeItem( const QuickLauncherItem& item )
+	{
+		if ( item._category == "GameObject" )
+		{
+			SceneManager* pMgr = editor::getService<SceneManager>();
+			if ( pMgr == nullptr || pMgr->getActiveScene() == nullptr ||
+				 pMgr->getActiveScene()->getObjectManager() == nullptr )
+				return;
+
+			GameObject* pFound = pMgr->getActiveScene()->getObjectManager()->findGameObjectById( item._targetObjectId );
+			EditorSceneCommands::select( pFound, SelectionMode::Replace );
+			return;
+		}
+
+		if ( item._category == "Scene" )
+		{
+			EditorAssetCommands::loadScene( item._path );
+			return;
+		}
+
+		EditorAssetCommands::focusPath( item._path );
 	}
 
 	void QuickLauncherPopup::drawContent()
@@ -301,8 +258,8 @@ namespace sw::editor
 		if ( bExecute && filteredCount > 0 && 0 <= _selectedIndex && _selectedIndex < filteredCount )
 		{
 			const QuickLauncherItem* pTarget = listFiltered[static_cast<size_t>( _selectedIndex )];
-			if ( pTarget != nullptr && pTarget->_action.isBound() )
-				pTarget->_action();
+			if ( pTarget != nullptr )
+				executeItem( *pTarget );
 			close();
 		}
 	}
