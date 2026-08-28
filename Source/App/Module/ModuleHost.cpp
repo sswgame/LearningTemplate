@@ -430,14 +430,6 @@ namespace sw
 	void ModuleHost::onBeforeGameplayDllReload()
 	{
 		onBeforeGameReload();
-
-		if ( engine::areEngineServicesBound() == false )
-			return;
-		for ( const unique_ptr<Scene>& scene : engine::getSceneManager().getLoadedScenes() )
-		{
-			if ( scene != nullptr )
-				scene->getObjectManager()->clearAllCachedTypeInfo();
-		}
 	}
 
 	void ModuleHost::onAfterGameplayDllReload( void* /*hLibraryModule*/ )

@@ -12,11 +12,13 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/ECS/Registry.h"
+#include "Engine/Object/Component/ComponentHandle.h"
 #include "Engine/Object/Component/TagSystem.h"
+
 #include "Engine/Physics/PhysicsWorld.h"
 
 #include <shared_mutex>
+#include <type_traits>
 
 namespace sw
 {
@@ -25,26 +27,23 @@ namespace sw
 	class SceneComponent;
 	class MeshComponent;
 	class GameObjectManager;
-	struct GameObjectManagerAccess;
 
 	/**
-	 * @struct ScriptSystemRegistrar
-	 * @brief 모듈별 스크립트 시스템 정적 등록 연결 리스트 노드
+	 * @struct ComponentFactoryRegistrar
+	 * @brief 정적 초기화로 컴포넌트 팩토리를 체인에 연결합니다.
 	 */
-	struct SW_API ScriptSystemRegistrar
+	struct SW_API ComponentFactoryRegistrar
 	{
-		using RegisterFunc = void ( * )( GameObjectManager* );
-		RegisterFunc		   _registerFunc{ nullptr };
-		ScriptSystemRegistrar* _pNext{ nullptr };
+		void ( *_registerFunc )( GameObjectManager& );
+		ComponentFactoryRegistrar* _pNext;
 
-		static ScriptSystemRegistrar*& getHead();
-
-		ScriptSystemRegistrar( RegisterFunc registerFunc );
-		ScriptSystemRegistrar( RegisterFunc registerFunc, ScriptSystemRegistrar*& moduleHead );
+		static ComponentFactoryRegistrar*& getHead();
+		ComponentFactoryRegistrar( void ( *registerFunc )( GameObjectManager& ) );
+		ComponentFactoryRegistrar( void ( *registerFunc )( GameObjectManager& ), ComponentFactoryRegistrar*& moduleHead );
 	};
 
-#ifndef SW_SCRIPT_SYSTEM_MODULE_HEAD
-	#define SW_SCRIPT_SYSTEM_MODULE_HEAD() ( ::sw::ScriptSystemRegistrar::getHead() )
+#ifndef SW_COMPONENT_FACTORY_MODULE_HEAD
+	#define SW_COMPONENT_FACTORY_MODULE_HEAD() ( ::sw::ComponentFactoryRegistrar::getHead() )
 #endif
 
 	/// @brief GameObject 등록, 지연 삭제, 씬 컴포넌트 루트
@@ -53,10 +52,9 @@ namespace sw
 		friend class GameObject;
 		friend class SceneComponent;
 		friend class MeshComponent;
-		friend struct GameObjectManagerAccess;
 
 	public:
-		/** @brief 레지스트리와 이름 맵을 비운 채 시작합니다. */
+		/** @brief GameObject를 생성하고 이름 맵을 비운 채 시작합니다. */
 		GameObjectManager();
 		/** @brief 등록된 오브젝트를 모두 파괴합니다. */
 		~GameObjectManager();
@@ -70,9 +68,6 @@ namespace sw
 		 */
 		void notifyNameChanged( GameObject* pObj, hashed_string oldName, hashed_string newName );
 
-		/** @brief 엔티티 ID가 지연 생성되었을 때 매핑을 갱신합니다. */
-		void notifyEntityCreated( GameObject* pObj );
-
 		/** @brief rename API — setName과 동일하게 이름 맵을 유지합니다. */
 		bool renameGameObject( GameObject* pObj, hashed_string newName );
 
@@ -81,9 +76,6 @@ namespace sw
 
 		/** @brief 오브젝트 ID로 GameObject를 찾습니다. */
 		GameObject* findGameObjectById( uint64 objectId ) const;
-
-		/** @brief ECS 엔티티 ID로 GameObject를 찾습니다. */
-		GameObject* findGameObjectByEntity( sw::Entity entityId ) const;
 
 		/** @brief 등록된 모든 GameObject 목록의 스냅샷을 반환합니다. pending-add를 포함하며 목록을 바꾸지 않습니다. */
 		vector<GameObject*> getAllGameObjects() const;
@@ -94,16 +86,16 @@ namespace sw
 		/** @brief 태그를 가진 GameObject를 out에 넣습니다. */
 		void findGameObjectsByTag( TagID tag, vector<GameObject*>& out ) const;
 
-		/** @brief 모든 스크립트 시스템의 beginPlay 이벤트를 호출합니다. */
+		/** @brief 등록된 GameObject의 beginPlay를 호출합니다. */
 		void beginPlay();
 
-		/** @brief 모든 스크립트 시스템의 endPlay 이벤트를 호출합니다. */
+		/** @brief 등록된 GameObject의 endPlay를 호출합니다. */
 		void endPlay();
 
 		/**
 		 * @brief 계층-안전 병렬 tick
 		 * @details 1) SceneComponent 월드 캐시 flush (루트→자식, dirty subtree만)
-		 *          2) 병렬 Component/스크립트 tick (트랜스폼 캐시 읽기 전용, 구조 변경 지연)
+		 *          2) 병렬 Component tick (트랜스폼 캐시 읽기 전용, 구조 변경 지연)
 		 *          3) 지연 트랜스폼 적용 후 CommandBuffer 실행, dirty면 다시 flush
 		 */
 		void tick( float32 deltaTime );
@@ -120,7 +112,7 @@ namespace sw
 		/** @brief beginTick/병렬 tick 구간이라 GO 생성·addComponent 등 구조 변경을 미뤄야 하면 true. */
 		bool isStructuralMutationFrozen() const
 		{
-			return isParallelTransformReadOnly() || _registry.isTicking();
+			return isParallelTransformReadOnly() || _bTicking.load( std::memory_order_acquire );
 		}
 
 		using TransformUpdateDelegate = Delegate<void()>;
@@ -172,13 +164,7 @@ namespace sw
 		void clear();
 
 		/**
-		 * @brief 소유 컴포넌트의 TypeInfo 캐시를 모두 null로 만듭니다.
-		 * @details unregisterTypesByModule 직전에 호출해 댕글링 TypeInfo 포인터를 제거합니다.
-		 */
-		void clearAllCachedTypeInfo();
-
-		/**
-		 * @brief 컴포넌트 이름 키로 TypeRegistry에서 TypeInfo를 다시 바인딩합니다.
+		 * @brief 컴포넌트 이름 키로 TypeRegistry에서 기본값을 다시 주입합니다.
 		 * @details registerPendingTypes 직후에 호출합니다.
 		 */
 		void rebindAllCachedTypeInfo();
@@ -186,44 +172,50 @@ namespace sw
 		/** @brief 이번 프레임에 추가된 GO를 활성 목록에 합칩니다. */
 		void mergePendingAdds();
 
-		/** @brief 모듈 컴포넌트 팩토리를 이 매니저의 ECS에 등록합니다. */
+		/** @brief 모듈 컴포넌트 팩토리를 이 매니저에 등록합니다. */
 		void registerPendingFactories( string_view moduleName, sw::ComponentFactoryRegistrar* pHead );
 
 		/** @brief 해당 모듈이 등록한 컴포넌트 팩토리를 제거합니다. */
 		void unregisterFactoriesByModule( string_view moduleName );
 
-		/** @brief 에디터 등에서 추가 가능한 컴포넌트 타입 이름 목록입니다. */
-		vector<hashed_string> getRegisteredComponentTypeNames() const;
+		/** @brief 전역 모듈 팩토리 헤드를 등록합니다. */
+		static void registerModuleFactoryHead( string_view moduleName, sw::ComponentFactoryRegistrar* pHead );
+		/** @brief 전역 모듈 팩토리 헤드를 해제합니다. */
+		static void unregisterModuleFactoryHead( string_view moduleName );
 
-		// --- Script System Delegates ---
-		using ScriptSystemTickDelegate		= MulticastDelegate<void( GameObjectManager*, sw::Registry&, float32, bool /*bParallel*/ )>;
-		using ScriptSystemLifecycleDelegate = MulticastDelegate<void( GameObjectManager*, sw::Registry& )>;
+		using ComponentFactoryDelegate = Delegate<Component*( GameObject* )>;
 
-		/** @brief 추가합니다. */
-		void registerScriptSystemTick( const Delegate<void( GameObjectManager*, sw::Registry&, float32, bool )>& delegate ) { _scriptSystemTick.add( delegate ); }
-		/** @brief 추가합니다. */
-		void registerScriptSystemBeginPlay( const Delegate<void( GameObjectManager*, sw::Registry& )>& delegate ) { _scriptSystemBeginPlay.add( delegate ); }
-		/** @brief 추가합니다. */
-		void registerScriptSystemEndPlay( const Delegate<void( GameObjectManager*, sw::Registry& )>& delegate ) { _scriptSystemEndPlay.add( delegate ); }
-
-		/** @brief 모든 스크립트 시스템 델리게이트를 비웁니다 (핫리로드/모듈 언로드 시 안전 확보). */
-		void clearScriptSystems()
+		template <typename T>
+		/** @brief 타입 이름과 모듈 이름으로 T 팩토리를 등록합니다. */
+		void registerComponentType( hashed_string typeName, hashed_string moduleName = hashed_string() )
 		{
-			_scriptSystemTick.clear();
-			_scriptSystemBeginPlay.clear();
-			_scriptSystemEndPlay.clear();
+			static_assert( std::is_base_of_v<Component, T>, "T must derive from sw::Component" );
+			_mapFactories[typeName] = []( GameObject* pGameObject ) -> Component*
+			{
+				if ( pGameObject == nullptr )
+					return nullptr;
+				return pGameObject->addComponent<T>();
+			};
+
+			if ( _mapFactoryModules.find( typeName ) == _mapFactoryModules.end() )
+			{
+				if ( moduleName.getHash() != 0 )
+					_mapFactoryModules[typeName] = moduleName;
+				else if ( _activeModuleName.getHash() != 0 )
+					_mapFactoryModules[typeName] = _activeModuleName;
+				else
+					_mapFactoryModules[typeName] = hashed_string( "Engine" );
+			}
 		}
 
-		/** @brief 모듈의 스크립트 시스템들을 등록합니다. */
-		void registerPendingScriptSystems( string_view moduleName, ScriptSystemRegistrar* pHead );
+		/** @brief 등록된 이름으로 컴포넌트를 추가합니다. 에디터·직렬화 전용. 게임은 addComponent<T>를 씁니다. */
+		Component* addComponentByName( GameObject* pGameObject, hashed_string typeName, bool bLogWarning = true );
 
-		/** @brief 현재 유효한 스크립트 시스템들을 다시 등록합니다. */
-		void reinitScriptSystems();
+		/** @brief Tick 웨이브를 다음 beginTick에서 다시 만듭니다. */
+		void markTickWavesDirty() { _bIsTickWavesDirty.store( true, std::memory_order_release ); }
 
-		/** @brief 전역 모듈별 스크립트 시스템 헤드를 등록합니다. */
-		static void registerModuleScriptSystemHead( string_view moduleName, ScriptSystemRegistrar* pHead );
-		/** @brief 전역 모듈별 스크립트 시스템 헤드를 해제합니다. */
-		static void unregisterModuleScriptSystemHead( string_view moduleName );
+		/** @brief 에디터 등에서 추가 가능한 컴포넌트 타입 이름 목록입니다. */
+		vector<hashed_string> getRegisteredComponentTypeNames() const;
 
 		/** @brief 트랜스폼이 변경되었음을 매니저에 알려 세대 카운터를 원자적으로 갱신합니다. */
 		void notifyTransformDirtied() { _dirtyTransformGeneration.fetch_add( 1, std::memory_order_relaxed ); }
@@ -234,12 +226,8 @@ namespace sw
 		void registerGameObject( GameObject* pObj );
 
 	private:
-		/** Object 레이어·GameObjectManagerAccess 전용. Game 모듈 API가 아닙니다. */
-		/** @brief ECS 레지스트리를 반환합니다. */
-		sw::Registry& getRegistry() { return _registry; }
-		/** @brief ECS 레지스트리를 반환합니다. */
-		const sw::Registry& getRegistry() const { return _registry; }
-
+		/** @brief 소유 컴포넌트를 TickGroup 순으로 틱합니다. */
+		void tickComponents( float32 deltaTime );
 		/** @brief 서브트리 월드 행렬을 플러시합니다. */
 		void flushSceneComponentSubtree( SceneComponent* pRoot, bool bParentChanged );
 		/** @brief 새 ObjectId를 발급합니다. */
@@ -261,33 +249,33 @@ namespace sw
 		vector<GameObject*>						  _listGameObjects;
 		unordered_map<hashed_string, GameObject*> _mapNameToObject;
 		unordered_map<uint64, GameObject*>		  _mapIdToObject;
-		unordered_map<sw::Entity, GameObject*>	  _mapEntityToObject;
 		vector<GameObject*>						  _listPendingAdds;
 		vector<GameObject*>						  _listPendingDestroyObjects;
-		vector<sw::ComponentHandle>				  _listPendingDestroyComponents;
+		vector<Component*>						  _listPendingDestroyComponents;
 
-		// Double buffering queues for zero-allocation destruction
-		vector<GameObject*>			_listProcessingDestroyObjects;
-		vector<sw::ComponentHandle> _listProcessingDestroyComponents;
+		vector<GameObject*> _listProcessingDestroyObjects;
+		vector<Component*>	_listProcessingDestroyComponents;
 
-		vector<sw::Entity>		  _listRootSceneEntities;
+		vector<SceneComponent*>	  _listRootSceneComponents;
 		mutable std::shared_mutex _mutex;
 		std::atomic<uint64>		  _nextId;
 
-		sw::Registry _registry;
 		PhysicsWorld _physicsWorld;
 
-		ScriptSystemTickDelegate	  _scriptSystemTick;
-		ScriptSystemLifecycleDelegate _scriptSystemBeginPlay;
-		ScriptSystemLifecycleDelegate _scriptSystemEndPlay;
-
 		std::atomic<bool>				_bParallelTransformReadOnly;
+		std::atomic<bool>				_bTicking;
+		std::atomic<bool>				_bIsTickWavesDirty;
+		vector<vector<ComponentHandle>> _listCachedTickWaves;
 		mutex							_deferredTransformMutex;
 		vector<TransformUpdateDelegate> _listDeferredTransformUpdates;
 		vector<TransformUpdateDelegate> _listProcessingTransforms;
 		mutex							_deferredPostTickMutex;
 		vector<PostTickDelegate>		_listDeferredPostTickUpdates;
 		vector<PostTickDelegate>		_listProcessingPostTicks;
+
+		unordered_map<hashed_string, ComponentFactoryDelegate> _mapFactories;
+		unordered_map<hashed_string, hashed_string>			   _mapFactoryModules;
+		hashed_string										   _activeModuleName;
 
 		std::atomic<uint64> _dirtyTransformGeneration;
 		uint64				_lastFlushedTransformGeneration;

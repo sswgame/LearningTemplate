@@ -5,7 +5,6 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/ECS/Registry.h"
 #include "Engine/Game/GameState.h"
 #include "Engine/Input/ActionMap.h"
 #include "Engine/Input/InputManager.h"

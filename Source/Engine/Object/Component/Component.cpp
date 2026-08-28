@@ -3,27 +3,20 @@
 #include "Engine/Object/Component/Component.h"
 
 #include "Engine/Common/EngineServices.h"
-#include "Engine/ECS/Registry.h"
 #include "Engine/Object/Component/ComponentDefaults.h"
+#include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Reflection/ReflectionCore.h"
 
 namespace sw
 {
-
 	Component::Component()
-		: Component{ false }
-	{
-	}
-
-	Component::Component( bool bIsSceneComponent )
 		: _pOwner{ nullptr }
-		, _pCachedTypeInfo{ nullptr }
 		, _componentId{ _s_nextComponentId++ }
 		, _componentName{}
-		, _onTickDelegate{}
 		, _tickGroup{ TickGroup::DuringPhysics }
 		, _bActive{ true }
-		, _bIsSceneComponent{ bIsSceneComponent }
+		, _bCanEverTick{ SW_TRUE }
+		, _reservedFlags{ 0 }
 		, _bIsPendingKill{ false }
 	{
 		initialize();
@@ -31,13 +24,12 @@ namespace sw
 
 	Component::Component( Component&& other ) noexcept
 		: _pOwner{ std::exchange( other._pOwner, nullptr ) }
-		, _pCachedTypeInfo{ other._pCachedTypeInfo }
 		, _componentId{ other._componentId }
 		, _componentName{ std::move( other._componentName ) }
-		, _onTickDelegate{ std::move( other._onTickDelegate ) }
 		, _tickGroup{ other._tickGroup }
 		, _bActive{ other._bActive.load( std::memory_order_relaxed ) }
-		, _bIsSceneComponent{ other._bIsSceneComponent }
+		, _bCanEverTick{ other._bCanEverTick }
+		, _reservedFlags{ other._reservedFlags }
 		, _bIsPendingKill{ other._bIsPendingKill.load( std::memory_order_relaxed ) }
 	{
 	}
@@ -47,13 +39,12 @@ namespace sw
 		if ( this != &other )
 		{
 			_pOwner			 = std::exchange( other._pOwner, nullptr );
-			_pCachedTypeInfo = other._pCachedTypeInfo;
 			_componentId	 = other._componentId;
 			_componentName	 = std::move( other._componentName );
-			_onTickDelegate	 = std::move( other._onTickDelegate );
 			_tickGroup		 = other._tickGroup;
 			_bActive.store( other._bActive.load( std::memory_order_relaxed ), std::memory_order_relaxed );
-			_bIsSceneComponent = other._bIsSceneComponent;
+			_bCanEverTick	   = other._bCanEverTick;
+			_reservedFlags	   = other._reservedFlags;
 			_bIsPendingKill.store( other._bIsPendingKill.load( std::memory_order_relaxed ), std::memory_order_relaxed );
 		}
 		return *this;
@@ -79,8 +70,7 @@ namespace sw
 
 	void Component::onTick( float32 deltaTime )
 	{
-		if ( _bActive != 0 && _onTickDelegate.isBound() )
-			_onTickDelegate( deltaTime );
+		(void)deltaTime;
 	}
 
 	void Component::onDestroy()
@@ -92,9 +82,8 @@ namespace sw
 		(void)propertyName;
 	}
 
-	void Component::setCachedTypeInfo( const TypeInfo* pTypeInfo )
+	void Component::applyTypeDefaults( const TypeInfo* pTypeInfo )
 	{
-		_pCachedTypeInfo = pTypeInfo;
 		if ( pTypeInfo != nullptr )
 			ComponentDefaults::applyDefaults( this, *pTypeInfo );
 	}
@@ -112,39 +101,39 @@ namespace sw
 			_pOwner->markTickOrderDirty();
 	}
 
+	void Component::setCanEverTick( bool bCanEverTick )
+	{
+		const uint8 newValue = bCanEverTick ? SW_TRUE : SW_FALSE;
+		if ( _bCanEverTick == newValue )
+			return;
+		_bCanEverTick = newValue;
+		if ( _pOwner != nullptr )
+			_pOwner->markTickOrderDirty();
+	}
+
 	sw::ComponentHandle Component::getHandle() const
 	{
 		if ( _pOwner == nullptr )
 			return {};
-		uint32			typeId{ 0 };
-		const TypeInfo* pTypeInfo = getTypeInfo();
-		if ( pTypeInfo != nullptr )
-			typeId = pTypeInfo->_typeId;
-		return sw::ComponentHandle::make( _pOwner->getEntityId(), typeId );
+		return sw::ComponentHandle::makeOwned( _pOwner->getObjectId(), _componentId );
 	}
 
 	const TypeInfo* Component::getTypeInfo() const
 	{
-		if ( _pCachedTypeInfo != nullptr )
-			return _pCachedTypeInfo;
-		if ( engine::areEngineServicesBound() )
-			return engine::getTypeRegistry().findType( hashed_string( "sw::Component" ) );
-		return nullptr;
-	}
-
-	Component::EcsDataView Component::ensureEcsData()
-	{
-		return {};
-	}
-
-	Component::EcsDataView Component::getEcsData() const
-	{
-		return {};
+		if ( engine::areEngineServicesBound() == false )
+			return nullptr;
+		if ( _componentName.empty() == false )
+		{
+			const TypeInfo* pType = engine::getTypeRegistry().findType( _componentName );
+			if ( pType != nullptr )
+				return pType;
+		}
+		return engine::getTypeRegistry().findType( hashed_string( "sw::Component" ) );
 	}
 
 	bool Component::isActive() const
 	{
-		if ( _bActive == 0 )
+		if ( _bActive.load( std::memory_order_relaxed ) == false )
 			return false;
 		return _pOwner == nullptr || _pOwner->isActiveInHierarchy();
 	}

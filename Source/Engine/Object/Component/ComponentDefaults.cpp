@@ -104,6 +104,18 @@ namespace sw
 				continue;
 			const utf8* pAttrVal = compNode.attr( pPropName );
 			if ( pAttrVal == nullptr )
+			{
+				for ( const hashed_string& alias : prop._listAliases )
+				{
+					const utf8* pAliasName = alias.c_str();
+					if ( pAliasName == nullptr )
+						continue;
+					pAttrVal = compNode.attr( pAliasName );
+					if ( pAttrVal != nullptr )
+						break;
+				}
+			}
+			if ( pAttrVal == nullptr )
 				continue;
 
 			void* pPropPtr = reinterpret_cast<uint8*>( pInstance ) + prop._offset;

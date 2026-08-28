@@ -11,7 +11,6 @@
 #include "Engine/Audio/IAudioSystem.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineData.h"
-#include "Engine/ECS/Registry.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Graphics/RHI/RHIBackendRegistry.h"
 #include "Engine/Input/InputManager.h"

@@ -13,30 +13,19 @@
 
 namespace sw
 {
-	/**
-	 * @brief Pure ECS Data Struct for Sprite Animation Playback
-	 */
-	REFLECT()
-	struct SW_API SpriteAnimatorData
+	namespace generated
 	{
-		REFLECT_BODY();
-		string		   currentAnimation{ "" };
-		bool		   repeat{ false };
-		vector<string> animations{};
-		float32		   frameRate{ 0.0f };
-		float32		   frameTimer{ 0.0f };
-		int32		   currentFrame{ 0 };
-		int32		   totalFrames{ 0 };
-		bool		   bPlaying{ false };
-		bool		   bPaused{ false };
-	};
+		struct sw_SpriteAnimatorComponent_Registrar;
+	} // namespace generated
 
 	REFLECT()
 	class SW_API SpriteAnimatorComponent : public SceneComponent
 	{
+		friend struct ::sw::generated::sw_SpriteAnimatorComponent_Registrar;
+
 	public:
 		REFLECT_BODY();
-		SpriteAnimatorComponent()												 = default;
+		SpriteAnimatorComponent();
 		virtual ~SpriteAnimatorComponent() override								 = default;
 		SpriteAnimatorComponent( SpriteAnimatorComponent&& ) noexcept			 = default;
 		SpriteAnimatorComponent& operator=( SpriteAnimatorComponent&& ) noexcept = default;
@@ -64,9 +53,23 @@ namespace sw
 		bool  isPlaying() const;
 		bool  isPaused() const;
 
-		SpriteAnimatorData* getAnimatorData() const;
-
 	private:
 		void updateSpriteFrame();
+
+		PROPERTY()
+		string _currentAnimation;
+		PROPERTY()
+		vector<string> _listAnimations;
+		PROPERTY()
+		float32 _frameRate;
+		float32 _frameTimer;
+		PROPERTY()
+		int32 _currentFrame;
+		PROPERTY()
+		int32 _totalFrames;
+		PROPERTY()
+		bool _bRepeat;
+		bool _bPlaying;
+		bool _bPaused;
 	};
 } // namespace sw

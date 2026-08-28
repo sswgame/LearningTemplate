@@ -3,7 +3,6 @@
 #include "Core/Concurrency/SpinLock.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/ECS/Entity.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -72,7 +71,7 @@ namespace sw
 		hashed_string _targetName;
 
 		mutable GameObject*			   _pCachedPtr{ nullptr };
-		mutable sw::Entity			   _cachedEntity{ sw::kNullEntity };
+		mutable uint64				   _cachedObjectId{ 0 };
 		mutable sw::GameObjectManager* _pManager{ nullptr };
 	};
 

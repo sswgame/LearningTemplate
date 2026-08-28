@@ -15,7 +15,10 @@
 #include "Editor/Panels/Inspector/InspectorPropertyUndo.h"
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"
+#include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
@@ -176,7 +179,7 @@ namespace sw::editor
 			const utf8* pName	= pComp->getComponentName().empty() == false ? pComp->getComponentName().c_str() : "Component";
 			bool		bActive = pComp->isActive();
 			bool		bRemove{ false };
-			const bool	bAccent	  = ( pComp->asSceneComponent() != nullptr );
+			const bool	bAccent	  = ( castTo<SceneComponent>( pComp ) != nullptr );
 			const bool	bScrollTo = ( ws.getScrollToComponentId() != 0 &&
 									  ws.getScrollToComponentId() == pComp->getComponentId() );
 
@@ -232,6 +235,20 @@ namespace sw::editor
 		}
 		else
 			ImGui::TextDisabled( "Parent: (root)" );
+
+		const vector<TagID>& listTags = pObj->getTags().getTags();
+		if ( listTags.empty() == false )
+		{
+			ImGui::TextUnformatted( "Tags:" );
+			for ( const TagID& tag : listTags )
+			{
+				if ( tag._pString != nullptr && tag._pString[0] != '\0' )
+				{
+					ImGui::SameLine();
+					editor::drawChip( tag._pString, editor::style::kOk );
+				}
+			}
+		}
 	}
 
 	void InspectorPanel::drawComponentSection( Component* pComp, IRHIDevice* pRhiDevice )
@@ -256,9 +273,6 @@ namespace sw::editor
 			{
 				ImGui::SeparatorText( "Properties" );
 				drawTypeProperties( pComp, pTypeInfo );
-				Component::EcsDataView ecsData = pComp->ensureEcsData();
-				if ( ecsData.instance != nullptr && ecsData.typeInfo != nullptr && ecsData.instance != pComp )
-					drawTypeProperties( ecsData.instance, ecsData.typeInfo );
 				ImGui::SeparatorText( "Methods" );
 				drawTypeMethods( pComp, pTypeInfo );
 			}

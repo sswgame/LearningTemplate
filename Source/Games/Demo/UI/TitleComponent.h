@@ -5,7 +5,7 @@
 
 namespace sw
 {
-	REFLECT_SCRIPT()
+	REFLECT()
 	class TitleComponent : public Component
 	{
 	public:

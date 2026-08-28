@@ -101,7 +101,7 @@ namespace sw
 					if ( pSceneComp != nullptr )
 						pSceneComp->setLocalPosition( spawnPos );
 
-					MonsterComponent* pMonsterComp = pMinion->getComponent<MonsterComponent>().get();
+					MonsterComponent* pMonsterComp = pMinion->getComponent<MonsterComponent>();
 					if ( pMonsterComp != nullptr && pMonsterComp->monsterId.empty() )
 						pMonsterComp->monsterId = prefabOrId;
 				}

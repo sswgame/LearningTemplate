@@ -17,7 +17,6 @@ namespace sw
 
 struct TypeRegistrar;
 struct EnumRegistrar;
-struct ScriptSystemRegistrar;
 
 namespace sw
 {
@@ -108,7 +107,6 @@ namespace sw
 			TypeRegistrar*				   _pTypeHead{ nullptr };
 			EnumRegistrar*				   _pEnumHead{ nullptr };
 			sw::ComponentFactoryRegistrar* _pFactoryHead{ nullptr };
-			ScriptSystemRegistrar*		   _pScriptHead{ nullptr };
 		};
 
 		/** @brief 섀도 복사본을 LoadLibrary 합니다. */

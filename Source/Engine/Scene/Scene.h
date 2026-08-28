@@ -3,7 +3,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 
-#include "Engine/ECS/ComponentHandle.h"
+#include "Engine/Object/Component/ComponentHandle.h"
 
 namespace sw
 {

@@ -9,55 +9,15 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 
-#include "Engine/ECS/Entity.h"
 #include "Engine/Object/Component/Component.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
-	/**
-
-	 * @brief 트랜스폼 ECS 데이터
-	 */
-	REFLECT()
-	struct SW_API TransformData
+	namespace generated
 	{
-		REFLECT_BODY();
-		float3 localPosition{ 0.0f, 0.0f, 0.0f };
-		float3 localRotation{ 0.0f, 0.0f, 0.0f };
-		float3 localScale{ 1.0f, 1.0f, 1.0f };
-
-		float4x4 cachedWorldMatrix{ float4x4::Identity };
-		double3	 cachedWorldPositionLWC{ 0.0, 0.0, 0.0 };
-		float3	 cachedWorldPosition{ 0.0f, 0.0f, 0.0f };
-
-		uint8 bIsTransformDirty	  : 1;
-		uint8 bHasDirtyDescendant : 1;
-		uint8 reserved			  : 6;
-
-		TransformData()
-			: bIsTransformDirty{ 1 }
-			, bHasDirtyDescendant{ 0 }
-			, reserved{ 0 }
-		{
-		}
-	};
-
-	/**
-	 * @brief 계층 ECS 데이터
-	 */
-	REFLECT()
-	struct SW_API HierarchyData
-	{
-		REFLECT_BODY();
-		sw::Entity		   parentEntity;
-		vector<sw::Entity> listChildEntities;
-
-		HierarchyData()
-			: parentEntity{ sw::kNullEntity }
-			, listChildEntities{}
-		{
-		}
-	};
+		struct sw_SceneComponent_Registrar;
+	} // namespace generated
 
 	/**
 	 * @class SceneComponent
@@ -66,6 +26,8 @@ namespace sw
 	REFLECT()
 	class SW_API SceneComponent : public Component
 	{
+		friend struct ::sw::generated::sw_SceneComponent_Registrar;
+
 	public:
 		REFLECT_BODY();
 
@@ -75,14 +37,16 @@ namespace sw
 		virtual ~SceneComponent() override;
 
 		/** @brief 계층 포인터를 이동합니다. */
-		SceneComponent( SceneComponent&& ) noexcept = default;
+		SceneComponent( SceneComponent&& ) noexcept;
 		/** @brief 이동 대입입니다. */
-		SceneComponent& operator=( SceneComponent&& ) noexcept = default;
+		SceneComponent& operator=( SceneComponent&& ) noexcept;
 
 		/** @brief 플레이 시작 시 월드 행렬을 맞춥니다. */
 		void onBeginPlay() override;
 		/** @brief 더티면 월드 행렬을 다시 계산합니다. */
 		void onTick( float32 deltaTime ) override;
+		/** @brief 로컬 TRS PROPERTY 변경 시 월드 캐시를 더티로 표시합니다. */
+		void onPropertyChanged( hashed_string propertyName ) override;
 
 		/** @brief 로컬 위치 설정 */
 		void setLocalPosition( const float3& pos );
@@ -133,26 +97,45 @@ namespace sw
 		/** @brief 부모 컴포넌트로부터 부착 해제 */
 		void detachFromComponent();
 
-		/** @brief 부모 SceneComponent 포인터 반환 (엔티티 ID로 조회) */
-		SceneComponent* getParent() const;
+		/** @brief 부모 SceneComponent 포인터 반환 */
+		SceneComponent* getParent() const { return _pParent; }
 
-		/** @brief 자식 SceneComponent 포인터 목록 반환 (엔티티 ID로 조회) */
-		vector<SceneComponent*> getChildren() const;
+		/** @brief 자식 SceneComponent 포인터 목록 반환 */
+		const vector<SceneComponent*>& getChildren() const { return _listChildren; }
 
 		/** @brief 트랜스폼 변경 시 행렬 캐시 재계산 더티 마킹 */
 		void markTransformDirty();
 
 		/** @brief 트랜스폼 캐시가 더티면 true. */
-		bool isTransformDirty() const;
+		bool isTransformDirty() const { return _bIsTransformDirty == SW_TRUE; }
 		/** @brief 더티 자손이 있으면 true. */
-		bool hasDirtyDescendant() const;
+		bool hasDirtyDescendant() const { return _bHasDirtyDescendant == SW_TRUE; }
 		/** @brief 더티 자손 플래그를 지웁니다. */
-		void clearDirtyDescendant();
+		void clearDirtyDescendant() { _bHasDirtyDescendant = SW_FALSE; }
+
+		/** @brief `_pParent`에서 Attach 직렬화 필드를 채웁니다. */
+		void syncAttachSerializeFields() const;
+		/** @brief 로드된 Attach 필드로 `_pParent`를 복원합니다. 부모 GO가 아직 없으면 no-op. */
+		void applyAttachSerializeFields();
+
+	private:
+		PROPERTY()
+		float3 _localPosition;
+		PROPERTY()
+		float3 _localRotation;
+		PROPERTY()
+		float3 _localScale;
+		PROPERTY()
+		mutable hashed_string _attachOwner;
+		PROPERTY()
+		mutable hashed_string _attachComponent;
+		float3	 _cachedWorldPosition;
+		float4x4 _cachedWorldMatrix;
+		double3	 _cachedWorldPositionLWC;
+		SceneComponent*			_pParent;
+		vector<SceneComponent*> _listChildren;
+		uint8					_bIsTransformDirty	 : 1;
+		uint8					_bHasDirtyDescendant : 1;
+		uint8					_reservedTransform	 : 6;
 	};
-
-	/** @brief SceneComponent면 this, 아니면 nullptr. */
-	inline class SceneComponent* Component::asSceneComponent() { return ( _bIsSceneComponent != 0 ) ? static_cast<class SceneComponent*>( this ) : nullptr; }
-
-	/** @brief SceneComponent면 this, 아니면 nullptr. */
-	inline const class SceneComponent* Component::asSceneComponent() const { return ( _bIsSceneComponent != 0 ) ? static_cast<const class SceneComponent*>( this ) : nullptr; }
 } // namespace sw

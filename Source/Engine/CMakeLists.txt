@@ -24,6 +24,7 @@ include("${CMAKE_SOURCE_DIR}/cmake/Engine/RhiBackendSources.cmake")
 set(coreExclude
     "Graphics/RHI/Modules/"
     "Module/DelayLoadNotifyHook.cpp"
+    "ECS/"
 )
 if(SW_RHI_AS_MODULES OR SW_SHIPPING_BUILD)
     foreach(src IN LISTS SW_RHI_ALL_DEVICE_SOURCES)

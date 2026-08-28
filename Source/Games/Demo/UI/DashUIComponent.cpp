@@ -46,7 +46,7 @@ namespace sw
 		GameObject* pPlayerObj = pGameObjectManager->findGameObjectByTag( "Player"_tag );
 		if ( pPlayerObj != nullptr )
 		{
-			PlayerComponent* pPlayerComp = pPlayerObj->getComponent<PlayerComponent>().get();
+			PlayerComponent* pPlayerComp = pPlayerObj->getComponent<PlayerComponent>();
 			if ( pPlayerComp != nullptr )
 			{
 				availableDashes = pPlayerComp->dashCount;

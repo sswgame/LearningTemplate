@@ -50,13 +50,9 @@ namespace sw
 					ProjectileComponent* pProjComp = pProjObj->addComponent<ProjectileComponent>();
 					if ( pProjComp != nullptr )
 					{
-						ProjectileData* pProjData = pProjComp->ensureProjectileData();
-						if ( pProjData != nullptr )
-						{
-							pProjData->velocity = float2{ dir * 300.0f, 0.0f };
-							pProjData->damage	= 10;
-							pProjData->lifeTime = 3.0f;
-						}
+						pProjComp->setVelocity( float2{ dir * 300.0f, 0.0f } );
+						pProjComp->setDamage( 10 );
+						pProjComp->setLifeTime( 3.0f );
 					}
 					pProjObj->addTag( "Bullet"_tag );
 					return;
@@ -66,18 +62,14 @@ namespace sw
 				if ( pProjSceneComp != nullptr )
 					pProjSceneComp->setLocalPosition( spawnPos );
 
-				ProjectileComponent* pProjComp = pProjObj->getComponent<ProjectileComponent>().get();
+				ProjectileComponent* pProjComp = pProjObj->getComponent<ProjectileComponent>();
 				if ( pProjComp == nullptr )
 					pProjComp = pProjObj->addComponent<ProjectileComponent>();
 				if ( pProjComp != nullptr )
 				{
-					ProjectileData* pProjData = pProjComp->ensureProjectileData();
-					if ( pProjData != nullptr )
-					{
-						pProjData->velocity = float2{ dir * 300.0f, 0.0f };
-						pProjData->damage	= 10;
-						pProjData->lifeTime = 3.0f;
-					}
+					pProjComp->setVelocity( float2{ dir * 300.0f, 0.0f } );
+					pProjComp->setDamage( 10 );
+					pProjComp->setLifeTime( 3.0f );
 				}
 				pProjObj->addTag( "Bullet"_tag );
 			};
@@ -127,19 +119,10 @@ namespace sw
 				GameObject* pCurrentOwner = getOwner();
 				if ( pCurrentOwner != nullptr )
 				{
-					UnitStatsComponent* pStats = pCurrentOwner->getComponent<UnitStatsComponent>().get();
+					UnitStatsComponent* pStats = pCurrentOwner->getComponent<UnitStatsComponent>();
 					if ( pStats != nullptr )
 					{
-						UnitStatsData* pData = pStats->ensureStatsData();
-						if ( pData != nullptr )
-						{
-							pData->hp					= pDef->_hp;
-							pData->maxHp				= pDef->_maxHp;
-							pData->attack				= pDef->_atk;
-							pData->defense				= pDef->_def;
-							pData->moveSpeed			= pDef->_speed;
-							pData->maxInvincibilityTime = pDef->_invincibility;
-						}
+						pStats->setStats( pDef->_hp, pDef->_maxHp, pDef->_atk, pDef->_def, pDef->_speed, pDef->_invincibility );
 					}
 				}
 			}
@@ -203,15 +186,11 @@ namespace sw
 					else
 					{
 						int32				attackDamage = 10;
-						UnitStatsComponent* pSelfStats	 = pOwner->getComponent<UnitStatsComponent>().get();
+						UnitStatsComponent* pSelfStats	 = pOwner->getComponent<UnitStatsComponent>();
 						if ( pSelfStats != nullptr )
-						{
-							UnitStatsData* pSelfData = pSelfStats->getStatsData();
-							if ( pSelfData != nullptr )
-								attackDamage = pSelfData->attack;
-						}
+							attackDamage = pSelfStats->getAttack();
 
-						UnitStatsComponent* pPlayerStats = pPlayerObj->getComponent<UnitStatsComponent>().get();
+						UnitStatsComponent* pPlayerStats = pPlayerObj->getComponent<UnitStatsComponent>();
 						if ( pPlayerStats != nullptr )
 							pPlayerStats->takeDamage( attackDamage );
 					}

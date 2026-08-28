@@ -36,13 +36,7 @@ namespace sw
 			if ( pObjects == nullptr )
 				return;
 
-			for ( GameObject* pObj : pObjects->getAllGameObjects() )
-			{
-				if ( pObj != nullptr && pObj->isActiveInHierarchy() )
-					pObj->beginPlay();
-			}
-
-			pObjects->beginPlay(); // Call ECS Script Systems
+			pObjects->beginPlay();
 		}
 
 		void endPlayActiveScene()
@@ -55,13 +49,7 @@ namespace sw
 			if ( pObjects == nullptr )
 				return;
 
-			for ( GameObject* pObj : pObjects->getAllGameObjects() )
-			{
-				if ( pObj != nullptr && pObj->isActiveInHierarchy() )
-					pObj->endPlay();
-			}
-
-			pObjects->endPlay(); // Call ECS Script Systems
+			pObjects->endPlay();
 		}
 
 		void capturePlaySnapshot()

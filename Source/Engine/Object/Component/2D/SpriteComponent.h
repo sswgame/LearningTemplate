@@ -12,25 +12,19 @@
 
 namespace sw
 {
-	/**
-	 * @brief Pure ECS Data Struct for Sprite Rendering
-	 */
-	REFLECT()
-	struct SW_API SpriteData
+	namespace generated
 	{
-		REFLECT_BODY();
-		string Mesh{ "" };
-		string Material{ "" };
-		string Texture{ "" };
-		string SpriteName{ "" };
-	};
+		struct sw_SpriteComponent_Registrar;
+	} // namespace generated
 
 	REFLECT()
 	class SW_API SpriteComponent : public MeshComponent
 	{
+		friend struct ::sw::generated::sw_SpriteComponent_Registrar;
+
 	public:
 		REFLECT_BODY();
-		SpriteComponent()										 = default;
+		SpriteComponent();
 		virtual ~SpriteComponent() override						 = default;
 		SpriteComponent( SpriteComponent&& ) noexcept			 = default;
 		SpriteComponent& operator=( SpriteComponent&& ) noexcept = default;
@@ -51,10 +45,14 @@ namespace sw
 		string getSpriteName() const;
 		void   setSpriteName( const string& sprite );
 
-		SpriteData* getSpriteData() const;
-		SpriteData* ensureSpriteData();
-
-		Component::EcsDataView ensureEcsData() override;
-		Component::EcsDataView getEcsData() const override;
+	private:
+		PROPERTY( Alias="Mesh" )
+		string _meshName;
+		PROPERTY( Alias="Material" )
+		string _materialName;
+		PROPERTY( Alias="Texture" )
+		string _textureName;
+		PROPERTY( Alias="SpriteName" )
+		string _spriteName;
 	};
 } // namespace sw

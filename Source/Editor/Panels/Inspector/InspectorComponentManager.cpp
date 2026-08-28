@@ -75,32 +75,28 @@ namespace sw::editor
 				if ( drawTransformInspector( pCameraComp ) == false )
 					return false;
 
-				CameraData* pData = pCameraComp->getCameraData();
-				if ( pData != nullptr )
+				ImGui::SeparatorText( "Camera" );
+				float32 fovDeg = MathUtil::toDegree( pCameraComp->getFieldOfViewY() );
+				if ( ImGui::SliderFloat( "FOV (Deg)", &fovDeg, 10.0f, 140.0f, "%.1f" ) )
+					pCameraComp->setFieldOfViewY( MathUtil::toRadian( fovDeg ) );
+
+				float32 nearZ = pCameraComp->getNearPlane();
+				if ( ImGui::DragFloat( "Near Plane", &nearZ, 0.01f, 0.001f, 10.0f ) )
+					pCameraComp->setNearPlane( nearZ );
+
+				float32 farZ = pCameraComp->getFarPlane();
+				if ( ImGui::DragFloat( "Far Plane", &farZ, 1.0f, 1.0f, 10000.0f ) )
+					pCameraComp->setFarPlane( farZ );
+
+				bool bOrtho = pCameraComp->isOrthographic();
+				if ( ImGui::Checkbox( "Orthographic", &bOrtho ) )
+					pCameraComp->setOrthographic( bOrtho );
+
+				if ( bOrtho )
 				{
-					ImGui::SeparatorText( "Camera" );
-					float32 fovDeg = MathUtil::toDegree( pData->fovY );
-					if ( ImGui::SliderFloat( "FOV (Deg)", &fovDeg, 10.0f, 140.0f, "%.1f" ) )
-						pCameraComp->setFieldOfViewY( MathUtil::toRadian( fovDeg ) );
-
-					float32 nearZ = pData->nearZ;
-					if ( ImGui::DragFloat( "Near Plane", &nearZ, 0.01f, 0.001f, 10.0f ) )
-						pCameraComp->setNearPlane( nearZ );
-
-					float32 farZ = pData->farZ;
-					if ( ImGui::DragFloat( "Far Plane", &farZ, 1.0f, 1.0f, 10000.0f ) )
-						pCameraComp->setFarPlane( farZ );
-
-					bool bOrtho = pData->bOrthographic;
-					if ( ImGui::Checkbox( "Orthographic", &bOrtho ) )
-						pCameraComp->setOrthographic( bOrtho );
-
-					if ( bOrtho )
-					{
-						float32 orthoH = pData->orthoHeight;
-						if ( ImGui::DragFloat( "Ortho Height", &orthoH, 0.1f, 0.1f, 100.0f ) )
-							pCameraComp->setOrthoHeight( orthoH );
-					}
+					float32 orthoH = pCameraComp->getOrthoHeight();
+					if ( ImGui::DragFloat( "Ortho Height", &orthoH, 0.1f, 0.1f, 100.0f ) )
+						pCameraComp->setOrthoHeight( orthoH );
 				}
 				return true;
 			}

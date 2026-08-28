@@ -3,8 +3,11 @@
 #include "Engine/Serialization/Core/SchemaMigrate.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Serialization/Core/SerializerInternal.h"
+
+#include "Core/Concurrency/Atomic.h"
 
 namespace sw
 {
@@ -55,6 +58,10 @@ namespace sw
 				sw_placement_new( pPropPtr ) string();
 			else if ( prop._typeName.isPredefinedType( PredefinedNameType::NameType_hashed_string ) )
 				sw_placement_new( pPropPtr ) hashed_string();
+			else if ( prop._typeName.isPredefinedType( PredefinedNameType::NameType_AtomicBool ) )
+				sw_placement_new( pPropPtr ) AtomicBool();
+			else if ( prop._typeName.isPredefinedType( PredefinedNameType::NameType_TagID ) )
+				sw_placement_new( pPropPtr ) TagID();
 			else
 			{
 				const TypeInfo* pNested = engine::getTypeRegistry().findType( prop._typeName );
@@ -85,6 +92,10 @@ namespace sw
 				std::destroy_at( static_cast<string*>( pPropPtr ) );
 			else if ( prop._typeName.isPredefinedType( PredefinedNameType::NameType_hashed_string ) )
 				std::destroy_at( static_cast<hashed_string*>( pPropPtr ) );
+			else if ( prop._typeName.isPredefinedType( PredefinedNameType::NameType_AtomicBool ) )
+				std::destroy_at( static_cast<AtomicBool*>( pPropPtr ) );
+			else if ( prop._typeName.isPredefinedType( PredefinedNameType::NameType_TagID ) )
+				std::destroy_at( static_cast<TagID*>( pPropPtr ) );
 			else
 			{
 				const TypeInfo* pNested = engine::getTypeRegistry().findType( prop._typeName );

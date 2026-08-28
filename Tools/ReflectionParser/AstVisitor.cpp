@@ -486,6 +486,7 @@ namespace sw
 			node->_bIsContainer	 = true;
 			node->_containerKind = rule->_kind;
 			node->_containerType = rule->_type;
+			node->_typeName		 = rule->_match;
 			CXType invalid{};
 			invalid.kind = CXType_Invalid;
 			fillContainerNodeArgs( *node, typeSpelling, invalid );
@@ -512,6 +513,9 @@ namespace sw
 				node->_bIsContainer	 = true;
 				node->_containerKind = kind;
 				node->_containerType = wrapperStem;
+				const ContainerTypeRule* builtinRule = ContainerTypeMap::instance().match( spelling );
+				if ( builtinRule != nullptr )
+					node->_typeName = builtinRule->_match;
 				fillContainerNodeArgs( *node, spelling, type );
 				return node;
 			}
@@ -525,6 +529,7 @@ namespace sw
 			node->_bIsContainer	 = true;
 			node->_containerKind = rule->_kind;
 			node->_containerType = rule->_type;
+			node->_typeName		 = rule->_match;
 			fillContainerNodeArgs( *node, spelling, type );
 			return node;
 		}
@@ -876,11 +881,9 @@ namespace sw
 			{
 				CXCursor parent = clang_getCursorSemanticParent( cursor );
 				if ( hasAnnotateAttrPrefix( parent, annotationConstants::kReflectPrefix ) == false &&
-					 hasAnnotateAttrPrefix( parent, annotationConstants::kReflectScriptPrefix ) == false &&
-					 sourceHasPrimaryAnnotation( parent, annotationConstants::kReflectPrefix ) == false &&
-					 sourceHasPrimaryAnnotation( parent, annotationConstants::kReflectScriptPrefix ) == false )
+					 sourceHasPrimaryAnnotation( parent, annotationConstants::kReflectPrefix ) == false )
 				{
-					SW_LOG_ERROR( "[AstVisitor] ERROR: PROPERTY() is used in class/struct '%#', but it lacks REFLECT() or REFLECT_SCRIPT()!", buildFullyQualifiedName( parent ).c_str() );
+					SW_LOG_ERROR( "[AstVisitor] ERROR: PROPERTY() is used in class/struct '%#', but it lacks REFLECT()!", buildFullyQualifiedName( parent ).c_str() );
 					throw std::runtime_error( "PROPERTY() without REFLECT()" );
 				}
 			}
@@ -897,17 +900,15 @@ namespace sw
 			{
 				CXCursor   parent		  = clang_getCursorSemanticParent( cursor );
 				const bool bParentReflect = hasAnnotateAttrPrefix( parent, annotationConstants::kReflectPrefix ) ||
-											hasAnnotateAttrPrefix( parent, annotationConstants::kReflectScriptPrefix ) ||
-											sourceHasPrimaryAnnotation( parent, annotationConstants::kReflectPrefix ) ||
-											sourceHasPrimaryAnnotation( parent, annotationConstants::kReflectScriptPrefix );
+											sourceHasPrimaryAnnotation( parent, annotationConstants::kReflectPrefix );
 				if ( bParentReflect == false )
 				{
 					if ( bHasFunction )
 					{
-						SW_LOG_ERROR( "[AstVisitor] ERROR: FUNCTION() is used in class/struct '%#', but it lacks REFLECT() or REFLECT_SCRIPT()!", buildFullyQualifiedName( parent ).c_str() );
+						SW_LOG_ERROR( "[AstVisitor] ERROR: FUNCTION() is used in class/struct '%#', but it lacks REFLECT()!", buildFullyQualifiedName( parent ).c_str() );
 						throw std::runtime_error( "FUNCTION() without REFLECT()" );
 					}
-					SW_LOG_ERROR( "[AstVisitor] ERROR: REFLECT_BODY() is used in class/struct '%#', but it lacks REFLECT() or REFLECT_SCRIPT()!", buildFullyQualifiedName( parent ).c_str() );
+					SW_LOG_ERROR( "[AstVisitor] ERROR: REFLECT_BODY() is used in class/struct '%#', but it lacks REFLECT()!", buildFullyQualifiedName( parent ).c_str() );
 					throw std::runtime_error( "REFLECT_BODY() without REFLECT()" );
 				}
 			}
@@ -919,7 +920,7 @@ namespace sw
 
 		if ( kind == CXCursor_ClassTemplate || kind == CXCursor_ClassTemplatePartialSpecialization )
 		{
-			if ( hasAnnotation( cursor, annotationConstants::kReflectPrefix ) || hasAnnotation( cursor, annotationConstants::kReflectScriptPrefix ) )
+			if ( hasAnnotation( cursor, annotationConstants::kReflectPrefix ) )
 			{
 				SW_LOG_WARNING( "[AstVisitor] REFLECT on class template is not supported, skipping: %#",
 								buildFullyQualifiedName( cursor ) );
@@ -929,7 +930,7 @@ namespace sw
 
 		if ( kind == CXCursor_StructDecl || kind == CXCursor_ClassDecl )
 		{
-			if ( hasAnnotation( cursor, annotationConstants::kReflectPrefix ) || hasAnnotation( cursor, annotationConstants::kReflectScriptPrefix ) )
+			if ( hasAnnotation( cursor, annotationConstants::kReflectPrefix ) )
 				self->onStructDecl( cursor );
 
 			return CXChildVisit_Recurse;
@@ -964,7 +965,7 @@ namespace sw
 	}
 
 	/**
-	 * @brief `REFLECT(...)` 또는 `REFLECT_SCRIPT(...)` 매크로가 붙은 struct/class 선언을 파싱합니다.
+	 * @brief `REFLECT(...)` 매크로가 붙은 struct/class 선언을 파싱합니다.
 	 *
 	 * [수집 항목 단계]:
 	 * 1. 클래스 이름 및 전체 네임스페이스 경로(FQN) 추출
@@ -979,19 +980,13 @@ namespace sw
 		typeInfo._name				 = getCursorSpelling( cursor );
 		typeInfo._fullyQualifiedName = buildFullyQualifiedName( cursor );
 
-		const bool bIsScript = hasAnnotation( cursor, annotationConstants::kReflectScriptPrefix );
-		if ( bIsScript )
-			typeInfo._bIsScript = true;
-
 		BLOCK( "Parse REFLECT Annotation" )
 		{
-			const string	 primaryPrefix = bIsScript ? annotationConstants::kReflectScriptPrefix : annotationConstants::kReflectPrefix;
-			const string	 primaryMacro  = bIsScript ? annotationConstants::kReflectScriptMacroOpen : annotationConstants::kReflectMacroOpen;
-			AnnotationSearch reflectSearch{ primaryPrefix, {}, false };
+			AnnotationSearch reflectSearch{ annotationConstants::kReflectPrefix, {}, false };
 			clang_visitChildren( cursor, annotationSearchVisitor, &reflectSearch );
 			if ( reflectSearch.found == false )
 			{
-				reflectSearch.spelling = sourceExtractMacroAnnotation( cursor, primaryMacro.c_str(), primaryPrefix.c_str() );
+				reflectSearch.spelling = sourceExtractMacroAnnotation( cursor, annotationConstants::kReflectMacroOpen, annotationConstants::kReflectPrefix );
 				reflectSearch.found	   = reflectSearch.spelling.empty() == false;
 			}
 			if ( reflectSearch.found )
@@ -1014,10 +1009,10 @@ namespace sw
 			typeInfo._bComponentFactory = ( collect.bFactoryFound || isDerivedFromComponent( cursor ) ) ? 1 : 0;
 		}
 
-		SW_LOG_INFO( "[AstVisitor] REFLECT class : %#  (props=%# methods=%# abstract=%# static=%# body=%# factory=%# script=%#)",
+		SW_LOG_INFO( "[AstVisitor] REFLECT class : %#  (props=%# methods=%# abstract=%# static=%# body=%# factory=%#)",
 					 typeInfo._fullyQualifiedName, typeInfo._listProperties.size(), typeInfo._listMethods.size(),
 					 typeInfo._bAbstract ? 1 : 0, typeInfo._bStatic ? 1 : 0, typeInfo._bReflectBody ? 1 : 0,
-					 typeInfo._bComponentFactory ? 1 : 0, typeInfo._bIsScript ? 1 : 0 );
+					 typeInfo._bComponentFactory ? 1 : 0 );
 		_listTypes.push_back( std::move( typeInfo ) );
 	}
 

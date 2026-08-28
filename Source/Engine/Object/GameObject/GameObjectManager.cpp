@@ -2,54 +2,142 @@
 
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
+#include "Core/Container/array.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Object/Component/Component.h"
+#include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Reflection/ReflectionCore.h"
+
+#include <unordered_set>
 
 namespace sw
 {
 	namespace
 	{
-		mutex& getModuleScriptSystemMutex()
+		mutex& getModuleFactoryHeadsMutex()
 		{
 			static mutex s_mutex;
 			return s_mutex;
 		}
 
-		unordered_map<string, ScriptSystemRegistrar*>& getModuleScriptSystemHeads()
+		unordered_map<string, ComponentFactoryRegistrar*>& getModuleFactoryHeads()
 		{
-			static unordered_map<string, ScriptSystemRegistrar*> s_mapScriptSystemHeads;
-			return s_mapScriptSystemHeads;
+			static unordered_map<string, ComponentFactoryRegistrar*> s_mapFactoryHeads;
+			return s_mapFactoryHeads;
+		}
+
+		vector<vector<ComponentHandle>> splitWaveByObject( const vector<ComponentHandle>& wave )
+		{
+			vector<vector<ComponentHandle>> subwaves;
+			vector<unordered_set<uint64>>	occupied;
+			for ( const ComponentHandle& handle : wave )
+			{
+				if ( handle.isValid() == false )
+					continue;
+				const uint64 objectId = handle.objectId();
+				size_t		 slot{ 0 };
+				for ( ; slot < subwaves.size(); ++slot )
+				{
+					if ( occupied[slot].count( objectId ) == 0 )
+						break;
+				}
+				if ( slot == subwaves.size() )
+				{
+					subwaves.emplace_back();
+					occupied.emplace_back();
+				}
+				subwaves[slot].push_back( handle );
+				occupied[slot].insert( objectId );
+			}
+			return subwaves;
+		}
+
+		void resolveAndTickComponent( GameObjectManager* pManager, float32 deltaTime, const ComponentHandle& handle )
+		{
+			Component* pComp = pManager->resolveComponent( handle );
+			if ( pComp == nullptr || pComp->isActive() == false || pComp->canEverTick() == false )
+				return;
+			GameObject* pOwner = pComp->getOwner();
+			if ( pOwner == nullptr || pOwner->isActiveInHierarchy() == false || pOwner->isPendingKill() )
+				return;
+			pComp->onTick( deltaTime );
+		}
+
+		struct ComponentWaveTick
+		{
+			GameObjectManager*	   _pManager{ nullptr };
+			const ComponentHandle* _pRawHandles{ nullptr };
+			float32				   _deltaTime{ 0.0f };
+			uint32				   _totalCount{ 0 };
+
+			void tickIndex( uint32 index )
+			{
+				if ( index < _totalCount )
+					resolveAndTickComponent( _pManager, _deltaTime, _pRawHandles[index] );
+			}
+		};
+
+		void dispatchWave( GameObjectManager* pManager, float32 deltaTime, const vector<ComponentHandle>& wave )
+		{
+			if ( wave.empty() )
+				return;
+
+			constexpr uint32 kParallelThreshold = 16;
+			if ( wave.size() < kParallelThreshold || engine::areEngineServicesBound() == false )
+			{
+				for ( const ComponentHandle& handle : wave )
+					resolveAndTickComponent( pManager, deltaTime, handle );
+				return;
+			}
+
+			ComponentWaveTick waveTick{};
+			waveTick._pManager	  = pManager;
+			waveTick._deltaTime	  = deltaTime;
+			waveTick._pRawHandles = wave.data();
+			waveTick._totalCount  = static_cast<uint32>( wave.size() );
+
+			TaskStageHandle stage  = engine::getTaskManager().createAnonymousStage( "ComponentWave" );
+			TaskHandle		handle = engine::getTaskManager().emplaceParallel(
+				waveTick._totalCount, SW_DELEGATE_METHOD( ParallelTaskDelegate, &ComponentWaveTick::tickIndex, &waveTick ) );
+			stage.addTask( handle );
+			handle.submit();
+			engine::getTaskManager().waitStage( stage );
 		}
 	} // namespace
 
-	static ScriptSystemRegistrar* _s_engineScriptHead{ nullptr };
-	static bool					  _s_engineScriptHeadSealed{ false };
+	static ComponentFactoryRegistrar* _s_engineHead{ nullptr };
+	static bool						  _s_engineHeadSealed{ false };
 
-	ScriptSystemRegistrar*& ScriptSystemRegistrar::getHead()
+	ComponentFactoryRegistrar*& ComponentFactoryRegistrar::getHead()
 	{
-		static ScriptSystemRegistrar* s_head{ nullptr };
-		return s_head;
+		static ComponentFactoryRegistrar* s_pHead{ nullptr };
+		return s_pHead;
 	}
 
-	ScriptSystemRegistrar::ScriptSystemRegistrar( RegisterFunc registerFunc )
-		: ScriptSystemRegistrar( registerFunc, getHead() )
-	{
-	}
-
-	ScriptSystemRegistrar::ScriptSystemRegistrar( RegisterFunc registerFunc, ScriptSystemRegistrar*& moduleHead )
+	ComponentFactoryRegistrar::ComponentFactoryRegistrar( void ( *registerFunc )( GameObjectManager& ) )
 		: _registerFunc{ registerFunc }
-		, _pNext{ nullptr }
+		, _pNext{ getHead() }
 	{
-		_pNext	   = moduleHead;
+		getHead() = this;
+		if ( _s_engineHeadSealed == false )
+			_s_engineHead = this;
+	}
+
+	ComponentFactoryRegistrar::ComponentFactoryRegistrar( void ( *registerFunc )( GameObjectManager& ), ComponentFactoryRegistrar*& moduleHead )
+		: _registerFunc{ registerFunc }
+		, _pNext{ moduleHead }
+	{
 		moduleHead = this;
-		if ( _s_engineScriptHeadSealed == false && &moduleHead == &getHead() )
-			_s_engineScriptHead = this;
+		if ( _s_engineHeadSealed == false && &moduleHead == &getHead() )
+			_s_engineHead = this;
 	}
 
 	/**
-	 * @brief GameObjectManager 생성자: 기본 엔진 및 모듈 스크립트 시스템들을 등록합니다.
+	 * @brief GameObjectManager 생성자: 기본 엔진 및 모듈 컴포넌트 팩토리들을 등록합니다.
 	 */
 	GameObjectManager::GameObjectChunk::GameObjectChunk()
 		: _pMemory{ static_cast<GameObject*>( sw::Memory::allocMemory( sizeof( GameObject ) * kChunkSize ) ) }
@@ -67,27 +155,28 @@ namespace sw
 		, _listGameObjects{}
 		, _mapNameToObject{}
 		, _mapIdToObject{}
-		, _mapEntityToObject{}
 		, _listPendingAdds{}
 		, _listPendingDestroyObjects{}
 		, _listPendingDestroyComponents{}
 		, _listProcessingDestroyObjects{}
 		, _listProcessingDestroyComponents{}
-		, _listRootSceneEntities{}
+		, _listRootSceneComponents{}
 		, _mutex{}
 		, _nextId{ 1 }
-		, _registry{}
 		, _physicsWorld{}
-		, _scriptSystemTick{}
-		, _scriptSystemBeginPlay{}
-		, _scriptSystemEndPlay{}
 		, _bParallelTransformReadOnly{ false }
+		, _bTicking{ false }
+		, _bIsTickWavesDirty{ true }
+		, _listCachedTickWaves{}
 		, _deferredTransformMutex{}
 		, _listDeferredTransformUpdates{}
 		, _listProcessingTransforms{}
 		, _deferredPostTickMutex{}
 		, _listDeferredPostTickUpdates{}
 		, _listProcessingPostTicks{}
+		, _mapFactories{}
+		, _mapFactoryModules{}
+		, _activeModuleName{}
 		, _dirtyTransformGeneration{ 1 }
 		, _lastFlushedTransformGeneration{ 0 }
 	{
@@ -96,14 +185,24 @@ namespace sw
 		_listDeferredPostTickUpdates.reserve( 128 );
 		_listProcessingPostTicks.reserve( 128 );
 
-		registerPendingScriptSystems( "Engine", ScriptSystemRegistrar::getHead() );
+		ComponentFactoryRegistrar* pEngineHead = ComponentFactoryRegistrar::getHead();
+		if ( pEngineHead == nullptr )
+			pEngineHead = _s_engineHead;
+		registerPendingFactories( "Engine", pEngineHead );
+
+		vector<std::pair<string, ComponentFactoryRegistrar*>> listModuleHeads;
 		{
-			std::scoped_lock<mutex> lock{ getModuleScriptSystemMutex() };
-			for ( const auto& [mod, head] : getModuleScriptSystemHeads() )
-			{
-				if ( head != nullptr )
-					registerPendingScriptSystems( mod.c_str(), head );
-			}
+			std::scoped_lock<mutex> lock{ getModuleFactoryHeadsMutex() };
+			for ( const auto& [mod, head] : getModuleFactoryHeads() )
+				listModuleHeads.push_back( { mod, head } );
+		}
+		for ( const auto& [mod, head] : listModuleHeads )
+		{
+			if ( head == nullptr )
+				continue;
+			if ( mod == "Engine" && pEngineHead != nullptr )
+				continue;
+			registerPendingFactories( mod.c_str(), head );
 		}
 	}
 
@@ -138,12 +237,9 @@ namespace sw
 			const uint64 id		 = generateNewId();
 			pObj->_objectId		 = id;
 			pObj->_pOwnerManager = this;
-			pObj->_entityId		 = _registry.create();
-			_registry.emplace<EntityStateData>( pObj->_entityId );
 
 			_mapNameToObject.insert_or_assign( uniqueName, pObj );
 			_mapIdToObject.insert_or_assign( id, pObj );
-			_mapEntityToObject.insert_or_assign( pObj->_entityId, pObj );
 
 			_listPendingAdds.push_back( pObj );
 		}
@@ -172,15 +268,6 @@ namespace sw
 		_mapNameToObject.insert_or_assign( uniqueName, pObj );
 	}
 
-	void GameObjectManager::notifyEntityCreated( GameObject* pObj )
-	{
-		if ( pObj == nullptr || pObj->getEntityId() == sw::kNullEntity )
-			return;
-
-		std::unique_lock<std::shared_mutex> lock{ _mutex };
-		_mapEntityToObject[pObj->getEntityId()] = pObj;
-	}
-
 	bool GameObjectManager::renameGameObject( GameObject* pObj, hashed_string newName )
 	{
 		if ( pObj == nullptr )
@@ -204,16 +291,6 @@ namespace sw
 		std::shared_lock<std::shared_mutex> lock{ _mutex };
 		auto								it = _mapIdToObject.find( objectId );
 		if ( it == _mapIdToObject.end() )
-			return nullptr;
-		GameObject* pObj = it->second;
-		return ( pObj != nullptr && pObj->isPendingKill() == false ) ? pObj : nullptr;
-	}
-
-	GameObject* GameObjectManager::findGameObjectByEntity( sw::Entity entityId ) const
-	{
-		std::shared_lock<std::shared_mutex> lock{ _mutex };
-		auto								it = _mapEntityToObject.find( entityId );
-		if ( it == _mapEntityToObject.end() )
 			return nullptr;
 		GameObject* pObj = it->second;
 		return ( pObj != nullptr && pObj->isPendingKill() == false ) ? pObj : nullptr;
@@ -264,12 +341,22 @@ namespace sw
 	void GameObjectManager::beginPlay()
 	{
 		mergePendingAdds();
-		_scriptSystemBeginPlay.broadcast( this, _registry );
+		const vector<GameObject*> listObjects = getAllGameObjects();
+		for ( GameObject* pObj : listObjects )
+		{
+			if ( pObj != nullptr && pObj->isActiveInHierarchy() )
+				pObj->beginPlay();
+		}
 	}
 
 	void GameObjectManager::endPlay()
 	{
-		_scriptSystemEndPlay.broadcast( this, _registry );
+		const vector<GameObject*> listObjects = getAllGameObjects();
+		for ( GameObject* pObj : listObjects )
+		{
+			if ( pObj != nullptr && pObj->isActiveInHierarchy() )
+				pObj->endPlay();
+		}
 	}
 
 	void GameObjectManager::tick( float32 deltaTime )
@@ -282,22 +369,18 @@ namespace sw
 		if ( _listGameObjects.empty() )
 			return;
 
-		// Pass 1: publish a stable world-transform snapshot for this frame (dirty subtrees only).
 		flushSceneTransforms();
 
-		// Pass 2: parallel logic ticks via ECS Batch Tick + script systems.
-		// Keep _bTicking true across both so packed-set erase stays deferred.
 		_bParallelTransformReadOnly.store( true, std::memory_order_relaxed );
+		_bTicking.store( true, std::memory_order_release );
 
-		_registry.beginTick();
-		_registry.tickComponents( deltaTime );
-		_scriptSystemTick.broadcast( this, _registry, deltaTime, true );
+		tickComponents( deltaTime );
 
 		if ( engine::areEngineServicesBound() )
 			engine::getTaskManager().waitAll();
 
 		_bParallelTransformReadOnly.store( false, std::memory_order_relaxed );
-		_registry.finishTick();
+		_bTicking.store( false, std::memory_order_release );
 
 		// Apply deferred transforms while instances still exist (CommandBuffer not flushed yet).
 		{
@@ -326,9 +409,6 @@ namespace sw
 		_listProcessingPostTicks.clear();
 		mergePendingAdds();
 
-		_registry.flushCommands();
-
-		// Pass 3: only re-flush if ticks dirtied any transform.
 		if ( hasDirtySceneTransforms() )
 			flushSceneTransforms();
 
@@ -342,11 +422,8 @@ namespace sw
 			return;
 
 		std::shared_lock<std::shared_mutex> lock{ _mutex };
-		for ( sw::Entity rootEnt : _listRootSceneEntities )
+		for ( SceneComponent* pRoot : _listRootSceneComponents )
 		{
-			if ( rootEnt == sw::kNullEntity )
-				continue;
-			SceneComponent* pRoot = _registry.getPtr<SceneComponent>( rootEnt );
 			if ( pRoot != nullptr )
 				flushSceneComponentSubtree( pRoot, false );
 		}
@@ -359,11 +436,8 @@ namespace sw
 			return false;
 
 		std::shared_lock<std::shared_mutex> lock{ _mutex };
-		for ( sw::Entity rootEnt : _listRootSceneEntities )
+		for ( const SceneComponent* pRoot : _listRootSceneComponents )
 		{
-			if ( rootEnt == sw::kNullEntity )
-				continue;
-			const SceneComponent* pRoot = _registry.getPtr<SceneComponent>( rootEnt );
 			if ( pRoot != nullptr )
 			{
 				if ( pRoot->isTransformDirty() || pRoot->hasDirtyDescendant() )
@@ -401,48 +475,62 @@ namespace sw
 
 	void GameObjectManager::registerRootSceneComponent( SceneComponent* pComp )
 	{
-		if ( pComp == nullptr || pComp->getOwner() == nullptr )
+		if ( pComp == nullptr )
 			return;
-		sw::Entity							ent = pComp->getOwner()->getEntityId();
 		std::unique_lock<std::shared_mutex> lock{ _mutex };
-		auto								it = std::find( _listRootSceneEntities.begin(), _listRootSceneEntities.end(), ent );
-		if ( it == _listRootSceneEntities.end() )
-			_listRootSceneEntities.push_back( ent );
+		for ( SceneComponent* pExisting : _listRootSceneComponents )
+		{
+			if ( pExisting == pComp )
+				return;
+		}
+		_listRootSceneComponents.push_back( pComp );
 	}
 
 	void GameObjectManager::unregisterRootSceneComponent( SceneComponent* pComp )
 	{
-		if ( pComp == nullptr || pComp->getOwner() == nullptr )
+		if ( pComp == nullptr )
 			return;
-		sw::Entity							ent = pComp->getOwner()->getEntityId();
 		std::unique_lock<std::shared_mutex> lock{ _mutex };
-		auto								it = std::find( _listRootSceneEntities.begin(), _listRootSceneEntities.end(), ent );
-		if ( it != _listRootSceneEntities.end() )
+		for ( size_t rootIndex = 0; rootIndex < _listRootSceneComponents.size(); ++rootIndex )
 		{
-			*it = _listRootSceneEntities.back();
-			_listRootSceneEntities.pop_back();
+			if ( _listRootSceneComponents[rootIndex] == pComp )
+			{
+				_listRootSceneComponents[rootIndex] = _listRootSceneComponents.back();
+				_listRootSceneComponents.pop_back();
+				return;
+			}
 		}
 	}
 
 	Component* GameObjectManager::resolveComponent( sw::ComponentHandle handle )
 	{
-		return _registry.resolve( handle );
+		if ( handle.isValid() == false )
+			return nullptr;
+		GameObject* pObj = findGameObjectById( handle.objectId() );
+		if ( pObj == nullptr )
+			return nullptr;
+		return pObj->findComponentById( handle.componentId(), true );
 	}
 
 	void GameObjectManager::destroyObject( GameObject* pObj, bool bDestroyChildren )
 	{
 		if ( pObj != nullptr && pObj->isPendingKill() == false )
 		{
+			vector<GameObject*> listChildren;
+			if ( bDestroyChildren )
+				listChildren = pObj->getChildren();
+
 			pObj->markPendingKill();
 			for ( Component* pComp : pObj->getAllComponents() )
 			{
-				pComp->markPendingKill();
+				if ( pComp != nullptr )
+					pComp->markPendingKill();
 			}
 			pObj->refreshActiveInHierarchy();
 
 			if ( bDestroyChildren )
 			{
-				for ( GameObject* pChild : pObj->getChildren() )
+				for ( GameObject* pChild : listChildren )
 				{
 					if ( pChild != nullptr && pChild->isPendingKill() == false )
 						destroyObject( pChild, true );
@@ -461,10 +549,8 @@ namespace sw
 		if ( pComp != nullptr && pComp->isPendingKill() == false )
 		{
 			pComp->markPendingKill();
-			const sw::ComponentHandle handle = pComp->getHandle();
-
 			std::unique_lock<std::shared_mutex> lock{ _mutex };
-			_listPendingDestroyComponents.push_back( handle );
+			_listPendingDestroyComponents.push_back( pComp );
 		}
 	}
 
@@ -479,16 +565,13 @@ namespace sw
 			_listProcessingDestroyComponents.swap( _listPendingDestroyComponents );
 		}
 
-		for ( const sw::ComponentHandle handle : _listProcessingDestroyComponents )
+		for ( Component* pComp : _listProcessingDestroyComponents )
 		{
-			Component* pComp = _registry.resolve( handle, true );
 			if ( pComp == nullptr )
 				continue;
 			GameObject* pOwner = pComp->getOwner();
 			if ( pOwner != nullptr )
 				pOwner->removeComponent( pComp );
-			else
-				SW_LOG_WARNING( "[GameObjectManager] Deferred component destroy with no owner; skipping (ECS pool owns the instance)." );
 		}
 
 		if ( _listProcessingDestroyObjects.empty() == false )
@@ -515,8 +598,6 @@ namespace sw
 					}
 					_mapNameToObject.erase( pObj->getName() );
 					_mapIdToObject.erase( pObj->getObjectId() );
-					if ( pObj->getEntityId() != sw::kNullEntity )
-						_mapEntityToObject.erase( pObj->getEntityId() );
 				}
 			}
 		}
@@ -578,8 +659,7 @@ namespace sw
 			_listPendingAdds.clear();
 			_mapNameToObject.clear();
 			_mapIdToObject.clear();
-			_mapEntityToObject.clear();
-			_listRootSceneEntities.clear();
+			_listRootSceneComponents.clear();
 		}
 
 		for ( GameObject* pObj : listDying )
@@ -594,17 +674,28 @@ namespace sw
 			_listGoFree.clear();
 		}
 
-		_registry.clear();
-	}
-
-	void GameObjectManager::clearAllCachedTypeInfo()
-	{
-		_registry.clearAllCachedTypeInfo();
+		_listCachedTickWaves.clear();
 	}
 
 	void GameObjectManager::rebindAllCachedTypeInfo()
 	{
-		_registry.rebindAllCachedTypeInfo();
+		TypeRegistry&			  typeRegistry = engine::getTypeRegistry();
+		const vector<GameObject*> listObjects  = getAllGameObjects();
+		for ( GameObject* pObj : listObjects )
+		{
+			if ( pObj == nullptr )
+				continue;
+			for ( Component* pComp : pObj->getAllComponents() )
+			{
+				if ( pComp == nullptr )
+					continue;
+				const hashed_string typeKey = pComp->getComponentName();
+				if ( typeKey.empty() )
+					continue;
+				pComp->applyTypeDefaults( typeRegistry.findType( typeKey ) );
+			}
+		}
+		markTickWavesDirty();
 	}
 
 	void GameObjectManager::mergePendingAdds()
@@ -629,8 +720,6 @@ namespace sw
 					_listGameObjects.push_back( pObj );
 					_mapNameToObject[pObj->getName()]	= pObj;
 					_mapIdToObject[pObj->getObjectId()] = pObj;
-					if ( pObj->getEntityId() != sw::kNullEntity )
-						_mapEntityToObject[pObj->getEntityId()] = pObj;
 				}
 			}
 		}
@@ -644,68 +733,145 @@ namespace sw
 
 	void GameObjectManager::registerPendingFactories( string_view moduleName, sw::ComponentFactoryRegistrar* pHead )
 	{
-		_registry.registerPendingFactories( moduleName, pHead );
+		if ( pHead == nullptr )
+			return;
+
+		{
+			std::scoped_lock<mutex> lock{ getModuleFactoryHeadsMutex() };
+			getModuleFactoryHeads()[string( moduleName )] = pHead;
+		}
+		_activeModuleName					= hashed_string( moduleName.data(), static_cast<uint32>( moduleName.size() ) );
+		ComponentFactoryRegistrar* pCurrent = pHead;
+		while ( pCurrent != nullptr )
+		{
+			if ( pCurrent->_registerFunc != nullptr )
+				pCurrent->_registerFunc( *this );
+			pCurrent = pCurrent->_pNext;
+		}
+		_activeModuleName = hashed_string();
 	}
 
 	void GameObjectManager::unregisterFactoriesByModule( string_view moduleName )
 	{
-		_registry.unregisterFactoriesByModule( moduleName );
+		const hashed_string hashModule( moduleName.data(), static_cast<uint32>( moduleName.size() ) );
+		for ( auto it = _mapFactoryModules.begin(); it != _mapFactoryModules.end(); )
+		{
+			if ( it->second == hashModule )
+			{
+				_mapFactories.erase( it->first );
+				it = _mapFactoryModules.erase( it );
+			}
+			else
+				++it;
+		}
+	}
+
+	void GameObjectManager::registerModuleFactoryHead( string_view moduleName, sw::ComponentFactoryRegistrar* pHead )
+	{
+		_s_engineHeadSealed = true;
+		std::scoped_lock<mutex> lock{ getModuleFactoryHeadsMutex() };
+		if ( pHead == nullptr )
+			getModuleFactoryHeads().erase( string( moduleName ) );
+		else
+			getModuleFactoryHeads()[string( moduleName )] = pHead;
+	}
+
+	void GameObjectManager::unregisterModuleFactoryHead( string_view moduleName )
+	{
+		std::scoped_lock<mutex> lock{ getModuleFactoryHeadsMutex() };
+		getModuleFactoryHeads().erase( string( moduleName ) );
+	}
+
+	Component* GameObjectManager::addComponentByName( GameObject* pGameObject, hashed_string typeName, bool bLogWarning )
+	{
+		if ( pGameObject == nullptr )
+			return nullptr;
+
+		hashed_string factoryName = typeName;
+		auto		  it		  = _mapFactories.find( factoryName );
+		if ( it == _mapFactories.end() )
+		{
+			const utf8* pRawName = typeName.c_str();
+			if ( pRawName != nullptr )
+			{
+				const utf8* pHash = nullptr;
+				for ( const utf8* pCursor = pRawName; *pCursor != '\0'; ++pCursor )
+				{
+					if ( *pCursor == '#' )
+						pHash = pCursor;
+				}
+				if ( pHash != nullptr && pHash != pRawName )
+					factoryName = hashed_string( pRawName, static_cast<uint32>( pHash - pRawName ) );
+			}
+			it = _mapFactories.find( factoryName );
+		}
+		if ( it != _mapFactories.end() )
+		{
+			if ( it->second.isBound() == false )
+			{
+				if ( bLogWarning )
+					SW_LOG_WARNING( "[GameObjectManager] Component factory for type '%#' is unbound", typeName.c_str() );
+				return nullptr;
+			}
+			return it->second( pGameObject );
+		}
+		if ( bLogWarning )
+			SW_LOG_WARNING( "[GameObjectManager] Component factory for type '%#' not found (%# factories registered)", typeName.c_str(), static_cast<uint32>( _mapFactories.size() ) );
+		return nullptr;
 	}
 
 	vector<hashed_string> GameObjectManager::getRegisteredComponentTypeNames() const
 	{
-		const auto&			  factories = _registry.getRegisteredFactories();
 		vector<hashed_string> listNames;
-		listNames.reserve( factories.size() );
-		for ( const auto& [name, factory] : factories )
+		listNames.reserve( _mapFactories.size() );
+		for ( const auto& [name, factory] : _mapFactories )
 		{
+			(void)factory;
 			listNames.push_back( name );
 		}
 		return listNames;
 	}
 
-	void GameObjectManager::registerPendingScriptSystems( string_view moduleName, ScriptSystemRegistrar* pHead )
+	void GameObjectManager::tickComponents( float32 deltaTime )
 	{
-		(void)moduleName;
-		ScriptSystemRegistrar* pCurr = pHead;
-		while ( pCurr != nullptr )
+		if ( _bIsTickWavesDirty.exchange( false, std::memory_order_acq_rel ) )
 		{
-			if ( pCurr->_registerFunc != nullptr )
-				pCurr->_registerFunc( this );
-			pCurr = pCurr->_pNext;
-		}
-		if ( pHead == ScriptSystemRegistrar::getHead() )
-			ScriptSystemRegistrar::getHead() = nullptr;
-	}
-
-	void GameObjectManager::reinitScriptSystems()
-	{
-		clearScriptSystems();
-		registerPendingScriptSystems( "Engine", ScriptSystemRegistrar::getHead() );
-		{
-			std::scoped_lock<mutex> lock{ getModuleScriptSystemMutex() };
-			for ( const auto& [mod, head] : getModuleScriptSystemHeads() )
+			array<vector<Component*>, 4> groupList;
+			const vector<GameObject*>	 listObjects = getAllGameObjects();
+			for ( GameObject* pObj : listObjects )
 			{
-				if ( head != nullptr )
-					registerPendingScriptSystems( mod.c_str(), head );
+				if ( pObj == nullptr || pObj->isPendingKill() )
+					continue;
+				for ( Component* pComp : pObj->getAllComponents() )
+				{
+					if ( pComp == nullptr || pComp->canEverTick() == false )
+						continue;
+					const uint8 groupIndex = static_cast<uint8>( pComp->getTickGroup() );
+					if ( groupIndex < groupList.size() )
+						groupList[groupIndex].push_back( pComp );
+				}
+			}
+
+			_listCachedTickWaves.clear();
+			for ( const vector<Component*>& wave : groupList )
+			{
+				if ( wave.empty() )
+					continue;
+				vector<ComponentHandle> listTargets;
+				listTargets.reserve( wave.size() );
+				for ( Component* pComp : wave )
+					listTargets.push_back( pComp->getHandle() );
+				vector<vector<ComponentHandle>> subwaves = splitWaveByObject( listTargets );
+				for ( vector<ComponentHandle>& subwave : subwaves )
+				{
+					if ( subwave.empty() == false )
+						_listCachedTickWaves.push_back( std::move( subwave ) );
+				}
 			}
 		}
-	}
 
-	void GameObjectManager::registerModuleScriptSystemHead( string_view moduleName, ScriptSystemRegistrar* pHead )
-	{
-		_s_engineScriptHeadSealed = true;
-		std::scoped_lock<mutex> lock{ getModuleScriptSystemMutex() };
-		if ( pHead == nullptr )
-			getModuleScriptSystemHeads().erase( string( moduleName ) );
-		else
-			getModuleScriptSystemHeads()[string( moduleName )] = pHead;
-	}
-
-	void GameObjectManager::unregisterModuleScriptSystemHead( string_view moduleName )
-	{
-		std::scoped_lock<mutex> lock{ getModuleScriptSystemMutex() };
-		getModuleScriptSystemHeads().erase( string( moduleName ) );
+		for ( const vector<ComponentHandle>& wave : _listCachedTickWaves )
+			dispatchWave( this, deltaTime, wave );
 	}
 
 	void GameObjectManager::registerGameObject( GameObject* pObj )
@@ -725,9 +891,6 @@ namespace sw
 
 		_mapNameToObject.insert_or_assign( pObj->getName(), pObj );
 		_mapIdToObject.insert_or_assign( id, pObj );
-
-		if ( pObj->_entityId != sw::kNullEntity )
-			_mapEntityToObject.insert_or_assign( pObj->_entityId, pObj );
 
 		_listPendingAdds.push_back( pObj );
 	}

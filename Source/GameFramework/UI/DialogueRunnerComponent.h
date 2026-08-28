@@ -34,7 +34,7 @@ namespace sw
 	SW_DECLARE_DELEGATE( void, OnDialogueEventDelegate, const string& command );
 	using OnDialogueFinishedDelegate = Delegate<void()>;
 
-	REFLECT_SCRIPT()
+	REFLECT()
 	class SW_GF_API DialogueRunnerComponent : public Component
 	{
 	public:

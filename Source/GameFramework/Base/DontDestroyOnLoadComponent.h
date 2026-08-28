@@ -2,27 +2,25 @@
 #include "Core/Container/string.h"
 
 #include "Engine/Object/Component/Component.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
-	REFLECT()
-	struct SW_GF_API DontDestroyOnLoadData
+	namespace generated
 	{
-		REFLECT_BODY();
-		PROPERTY()
-		bool bPersistent{ true };
-		PROPERTY()
-		string persistentTag{ "Persistent" };
-	};
+		struct sw_DontDestroyOnLoadComponent_Registrar;
+	} // namespace generated
 
 	REFLECT()
 	class SW_GF_API DontDestroyOnLoadComponent : public Component
 	{
+		friend struct ::sw::generated::sw_DontDestroyOnLoadComponent_Registrar;
+
 	public:
 		REFLECT_BODY();
-		DontDestroyOnLoadComponent()												   = default;
+		DontDestroyOnLoadComponent();
 		virtual ~DontDestroyOnLoadComponent() override								   = default;
 		DontDestroyOnLoadComponent( DontDestroyOnLoadComponent&& ) noexcept			   = default;
 		DontDestroyOnLoadComponent& operator=( DontDestroyOnLoadComponent&& ) noexcept = default;
@@ -30,10 +28,10 @@ namespace sw
 		void onBeginPlay() override;
 		void onEndPlay() override;
 
-		EcsDataView ensureEcsData() override;
-		EcsDataView getEcsData() const override;
-
-		DontDestroyOnLoadData* getPersistData() const;
-		DontDestroyOnLoadData* ensurePersistData();
+	private:
+		PROPERTY( Alias="bPersistent" )
+		bool _bPersistent;
+		PROPERTY( Alias="persistentTag" )
+		string _persistentTag;
 	};
 } // namespace sw

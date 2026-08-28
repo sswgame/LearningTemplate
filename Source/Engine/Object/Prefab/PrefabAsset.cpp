@@ -19,7 +19,7 @@ namespace sw
 
 		constexpr const utf8* kRoot				= "Prefab";
 		constexpr const utf8* kName				= "name";
-		constexpr const utf8* kGameObjectState	= "GameObjectState";
+		constexpr const utf8* kGameObject = "GameObject";
 		constexpr const utf8* kDefaultInstance	= "PrefabInstance";
 		constexpr uint32	  kPrefabBinMagic2	= 0x50464232u; // 'PFB2'
 		constexpr uint32	  kPrefabBinVersion = 0;
@@ -53,7 +53,7 @@ namespace sw
 			if ( engine::getResourceManager().getAssetFormatRegistry().upgradeXml( AssetKind::Prefab, wrapDoc, wrapRoot,
 																				   AssetFormatVersions::kPrefab ) == false )
 				return false;
-			XmlNode bodyNode = wrapRoot.child( kGameObjectState );
+			XmlNode bodyNode = wrapRoot.child( kGameObject );
 			if ( bodyNode.isValid() == false )
 				return false;
 			xmlBody = bodyNode.toString();
@@ -154,10 +154,10 @@ namespace sw
 				_name = pNameNode;
 		}
 
-		XmlNode bodyNode = root.child( kGameObjectState );
+		XmlNode bodyNode = root.child( kGameObject );
 		if ( bodyNode.isValid() == false )
 		{
-			SW_LOG_ERROR( "[PrefabAsset] Missing <GameObjectState>: %#", absPath );
+			SW_LOG_ERROR( "[PrefabAsset] Missing <GameObject>: %#", absPath );
 			return false;
 		}
 		_xmlBody = bodyNode.toString();
@@ -259,7 +259,7 @@ namespace sw
 		if ( absPath.empty() )
 			absPath = assetRelativePath;
 
-		// _xmlBody 는 완전한 <GameObjectState>...</GameObjectState> 조각.
+		// _xmlBody 는 완전한 <GameObject>...</GameObject> 조각.
 		XmlDocument doc;
 		XmlNode		root = doc.appendRoot( kRoot );
 		engine::getResourceManager().getAssetFormatRegistry().writeXmlVersion( root, AssetFormatVersions::kPrefab );

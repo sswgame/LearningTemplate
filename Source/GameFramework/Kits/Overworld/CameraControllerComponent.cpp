@@ -4,15 +4,22 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Object/Component/EcsDataUtil.h"
-
 namespace sw
 {
+	CameraControllerComponent::CameraControllerComponent()
+		: _targetPos{ 0.0f, 0.0f }
+		, _currentPos{ 0.0f, 0.0f }
+		, _followSpeed{ 0.0f }
+		, _shakeIntensity{ 0.0f }
+		, _shakeDuration{ 0.0f }
+		, _shakeFrequency{ 0.0f }
+	{
+	}
+
 	void CameraControllerComponent::onBeginPlay()
 	{
 		Component::onBeginPlay();
 		setTickGroup( TickGroup::PrePhysics );
-		ensureControllerData();
 	}
 
 	void CameraControllerComponent::onEndPlay()
@@ -24,22 +31,18 @@ namespace sw
 	{
 		Component::onTick( deltaTime );
 
-		CameraControllerData* pData = ensureControllerData();
-		if ( pData == nullptr )
-			return;
-
-		pData->currentPos._x = MathUtil::lerp( pData->currentPos._x, pData->targetPos._x, MathUtil::clamp( pData->followSpeed * deltaTime, 0.0f, 1.0f ) );
-		pData->currentPos._y = MathUtil::lerp( pData->currentPos._y, pData->targetPos._y, MathUtil::clamp( pData->followSpeed * deltaTime, 0.0f, 1.0f ) );
+		_currentPos._x = MathUtil::lerp( _currentPos._x, _targetPos._x, MathUtil::clamp( _followSpeed * deltaTime, 0.0f, 1.0f ) );
+		_currentPos._y = MathUtil::lerp( _currentPos._y, _targetPos._y, MathUtil::clamp( _followSpeed * deltaTime, 0.0f, 1.0f ) );
 
 		float2 shakeOffset{ 0.0f, 0.0f };
-		if ( pData->shakeDuration > 0.0f )
+		if ( _shakeDuration > 0.0f )
 		{
-			pData->shakeDuration -= deltaTime;
-			if ( pData->shakeDuration < 0.0f )
-				pData->shakeDuration = 0.0f;
-			const float32 freq = pData->shakeFrequency;
-			shakeOffset._x	   = MathUtil::sin( pData->shakeDuration * freq ) * pData->shakeIntensity;
-			shakeOffset._y	   = MathUtil::cos( pData->shakeDuration * ( freq * 1.3f ) ) * ( pData->shakeIntensity * 0.75f );
+			_shakeDuration -= deltaTime;
+			if ( _shakeDuration < 0.0f )
+				_shakeDuration = 0.0f;
+			const float32 freq = _shakeFrequency;
+			shakeOffset._x	   = MathUtil::sin( _shakeDuration * freq ) * _shakeIntensity;
+			shakeOffset._y	   = MathUtil::cos( _shakeDuration * ( freq * 1.3f ) ) * ( _shakeIntensity * 0.75f );
 		}
 
 		GameObject* pOwner = getOwner();
@@ -51,42 +54,14 @@ namespace sw
 			return;
 
 		float3 pos = pSceneComp->getLocalPosition();
-		pos._x	   = pData->currentPos._x + shakeOffset._x;
-		pos._y	   = pData->currentPos._y + shakeOffset._y;
+		pos._x	   = _currentPos._x + shakeOffset._x;
+		pos._y	   = _currentPos._y + shakeOffset._y;
 		pSceneComp->setLocalPosition( pos );
-	}
-
-	Component::EcsDataView CameraControllerComponent::ensureEcsData()
-	{
-		CameraControllerData* pData = ensureControllerData();
-		return { pData, CameraControllerData::StaticType() };
-	}
-
-	Component::EcsDataView CameraControllerComponent::getEcsData() const
-	{
-		return { ( getControllerData() ), CameraControllerData::StaticType() };
-	}
-
-	CameraControllerData* CameraControllerComponent::getControllerData() const
-	{
-		GameObject* pOwner = getOwner();
-		if ( pOwner == nullptr )
-			return nullptr;
-		return pOwner->getComponent<CameraControllerData>().get();
-	}
-
-	CameraControllerData* CameraControllerComponent::ensureControllerData()
-	{
-		return sw::ensureEcsData<CameraControllerData>( getOwner(), getTypeInfo() );
 	}
 
 	void CameraControllerComponent::shake( float32 intensity, float32 duration )
 	{
-		CameraControllerData* pData = ensureControllerData();
-		if ( pData == nullptr )
-			return;
-
-		pData->shakeIntensity = intensity;
-		pData->shakeDuration  = duration;
+		_shakeIntensity = intensity;
+		_shakeDuration	= duration;
 	}
 } // namespace sw

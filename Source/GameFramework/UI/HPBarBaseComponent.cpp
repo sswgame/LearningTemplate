@@ -4,22 +4,27 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Object/Component/EcsDataUtil.h"
 #include "Engine/Object/Component/TagSystem.h"
 
 namespace sw
 {
+	HPBarBaseComponent::HPBarBaseComponent()
+		: _hpRatio{ 0.0f }
+		, _remainRatio{ 0.0f }
+		, _targetRatio{ 0.0f }
+		, _lerpSpeed{ 0.0f }
+		, _offsetPos{ 0.0f, 0.0f }
+		, _bVisible{ false }
+	{
+	}
+
 	void HPBarBaseComponent::onBeginPlay()
 	{
 		Component::onBeginPlay();
 		setTickGroup( TickGroup::PostUpdate );
 
-		HPBarBaseData* pData = ensureHPBarData();
-		if ( pData != nullptr )
-		{
-			pData->remainRatio = pData->hpRatio;
-			pData->targetRatio = pData->hpRatio;
-		}
+		_remainRatio = _hpRatio;
+		_targetRatio = _hpRatio;
 
 		GameObject* pOwner = getOwner();
 		if ( pOwner != nullptr )
@@ -35,34 +40,11 @@ namespace sw
 	{
 		Component::onTick( deltaTime );
 
-		HPBarBaseData* pData = ensureHPBarData();
-		if ( pData == nullptr )
-			return;
-
-		pData->remainRatio = MathUtil::lerp( pData->remainRatio, pData->targetRatio, MathUtil::clamp( pData->lerpSpeed * deltaTime, 0.0f, 1.0f ) );
+		_remainRatio = MathUtil::lerp( _remainRatio, _targetRatio, MathUtil::clamp( _lerpSpeed * deltaTime, 0.0f, 1.0f ) );
 	}
 
-	Component::EcsDataView HPBarBaseComponent::ensureEcsData()
+	void HPBarBaseComponent::setTargetRatio( float32 ratio )
 	{
-		HPBarBaseData* pData = ensureHPBarData();
-		return { pData, HPBarBaseData::StaticType() };
-	}
-
-	Component::EcsDataView HPBarBaseComponent::getEcsData() const
-	{
-		return { ( getHPBarData() ), HPBarBaseData::StaticType() };
-	}
-
-	HPBarBaseData* HPBarBaseComponent::getHPBarData() const
-	{
-		GameObject* pOwner = getOwner();
-		if ( pOwner != nullptr )
-			return pOwner->getComponent<HPBarBaseData>().get();
-		return nullptr;
-	}
-
-	HPBarBaseData* HPBarBaseComponent::ensureHPBarData()
-	{
-		return sw::ensureEcsData<HPBarBaseData>( getOwner(), getTypeInfo() );
+		_targetRatio = ratio;
 	}
 } // namespace sw

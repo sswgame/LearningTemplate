@@ -3,144 +3,94 @@
 #include "Engine/Object/Component/CameraComponent.h"
 
 #include "Core/Math/MatrixMath.h"
-
-#include "Engine/Object/Component/EcsDataUtil.h"
+#include "Core/Math/MathUtil.h"
 
 namespace sw
 {
+	CameraComponent::CameraComponent()
+		: _fovY{ 0.70f }
+		, _nearZ{ 0.1f }
+		, _farZ{ 100.0f }
+		, _orthoHeight{ 10.0f }
+		, _priority{ 0 }
+		, _role{ CameraRole::Game }
+		, _bOrthographic{ false }
+	{
+	}
+
 	void CameraComponent::onBeginPlay()
 	{
 		SceneComponent::onBeginPlay();
-		ensureCameraData();
-	}
-
-	Component::EcsDataView CameraComponent::ensureEcsData()
-	{
-		CameraData* pData = ensureCameraData();
-		return { pData, CameraData::StaticType() };
-	}
-
-	Component::EcsDataView CameraComponent::getEcsData() const
-	{
-		return { getCameraData(), CameraData::StaticType() };
-	}
-
-	CameraData* CameraComponent::getCameraData() const
-	{
-		GameObject* pGameObject = getOwner();
-		if ( pGameObject != nullptr )
-			return pGameObject->getComponent<CameraData>().get();
-		return nullptr;
-	}
-
-	CameraData* CameraComponent::ensureCameraData()
-	{
-		return sw::ensureEcsData<CameraData>( getOwner(), getTypeInfo() );
 	}
 
 	void CameraComponent::setRole( CameraRole role )
 	{
-		CameraData* pData = ensureCameraData();
-		if ( pData != nullptr )
-			pData->role = role;
+		_role = role;
 	}
 
 	CameraRole CameraComponent::getRole() const
 	{
-		const CameraData* pData = getCameraData();
-		if ( pData != nullptr )
-			return pData->role;
-		return CameraRole::Game;
+		return _role;
 	}
 
 	void CameraComponent::setFieldOfViewY( float32 fovRadians )
 	{
-		CameraData* pData = ensureCameraData();
-		if ( pData != nullptr )
-			pData->fovY = fovRadians;
+		_fovY = fovRadians;
 	}
 
 	float32 CameraComponent::getFieldOfViewY() const
 	{
-		const CameraData* pData = getCameraData();
-		if ( pData != nullptr )
-			return pData->fovY;
-		return 0.70f;
+		return _fovY;
 	}
 
 	void CameraComponent::setNearPlane( float32 nearZ )
 	{
-		CameraData* pData = ensureCameraData();
-		if ( pData != nullptr )
-			pData->nearZ = nearZ;
+		_nearZ = nearZ;
 	}
 
 	float32 CameraComponent::getNearPlane() const
 	{
-		const CameraData* pData = getCameraData();
-		if ( pData != nullptr )
-			return pData->nearZ;
-		return 0.1f;
+		return _nearZ;
 	}
 
 	void CameraComponent::setFarPlane( float32 farZ )
 	{
-		CameraData* pData = ensureCameraData();
-		if ( pData != nullptr )
-			pData->farZ = farZ;
+		_farZ = farZ;
 	}
 
 	float32 CameraComponent::getFarPlane() const
 	{
-		const CameraData* pData = getCameraData();
-		if ( pData != nullptr )
-			return pData->farZ;
-		return 100.0f;
+		return _farZ;
 	}
 
 	void CameraComponent::setOrthoHeight( float32 height )
 	{
-		CameraData* pData = ensureCameraData();
-		if ( pData != nullptr )
-			pData->orthoHeight = height;
+		_orthoHeight = height;
 	}
 
 	float32 CameraComponent::getOrthoHeight() const
 	{
-		const CameraData* pData = getCameraData();
-		if ( pData != nullptr )
-			return pData->orthoHeight;
-		return 10.0f;
+		return _orthoHeight;
 	}
 
 	void CameraComponent::setOrthographic( bool bOrtho )
 	{
-		CameraData* pData = ensureCameraData();
-		if ( pData != nullptr )
-			pData->bOrthographic = bOrtho;
+		_bOrthographic = bOrtho;
 	}
 
 	bool CameraComponent::isOrthographic() const
 	{
-		const CameraData* pData = getCameraData();
-		if ( pData != nullptr )
-			return pData->bOrthographic;
-		return false;
+		return _bOrthographic;
 	}
 
 	void CameraComponent::setPriority( int32 priority )
 	{
-		CameraData* pData = ensureCameraData();
-		if ( pData != nullptr )
-			pData->priority = priority;
+		_priority = priority;
 	}
 
 	int32 CameraComponent::getPriority() const
 	{
-		const CameraData* pData = getCameraData();
-		if ( pData != nullptr )
-			return pData->priority;
-		return 0;
+		return _priority;
 	}
 
 	void CameraComponent::lookAt( const float3& target, const float3& up )
@@ -171,18 +121,14 @@ namespace sw
 
 	float4x4 CameraComponent::getProjectionMatrix( float32 aspectRatio ) const
 	{
-		const CameraData* pData	 = getCameraData();
-		const float32	  fovY	 = pData != nullptr ? pData->fovY : 0.70f;
-		const float32	  nearZ	 = pData != nullptr ? pData->nearZ : 0.1f;
-		const float32	  farZ	 = pData != nullptr ? pData->farZ : 100.0f;
-		const float32	  aspect = aspectRatio > 1e-4f ? aspectRatio : ( 16.0f / 9.0f );
-		if ( pData != nullptr && pData->bOrthographic )
+		const float32 aspect = aspectRatio > 1e-4f ? aspectRatio : ( 16.0f / 9.0f );
+		if ( _bOrthographic )
 		{
-			const float32 height = pData->orthoHeight > 1e-4f ? pData->orthoHeight : 10.0f;
+			const float32 height = _orthoHeight > 1e-4f ? _orthoHeight : 10.0f;
 			const float32 width	 = height * aspect;
-			return float4x4::createOrthographic( width, height, nearZ, farZ );
+			return float4x4::createOrthographic( width, height, _nearZ, _farZ );
 		}
-		return float4x4::createPerspectiveFieldOfView( fovY, aspect, nearZ, farZ );
+		return float4x4::createPerspectiveFieldOfView( _fovY, aspect, _nearZ, _farZ );
 	}
 
 	float4x4 CameraComponent::getViewProjectionMatrix( float32 aspectRatio ) const

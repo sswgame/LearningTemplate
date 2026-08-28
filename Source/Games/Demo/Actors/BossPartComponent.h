@@ -13,7 +13,7 @@ namespace sw
 		Shield
 	};
 
-	REFLECT_SCRIPT()
+	REFLECT()
 	class BossPartComponent : public Component
 	{
 	public:

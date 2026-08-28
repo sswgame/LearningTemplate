@@ -4,7 +4,6 @@
 #include "Core/Container/ObjectHandle.h"
 #include "Core/Math/VectorMath.h"
 
-#include "Engine/ECS/Entity.h"
 #include "Engine/Physics/AABB.h"
 
 namespace sw
@@ -18,7 +17,7 @@ namespace sw
 		float32		 _time{ 1.0f };
 		float3		 _hitPoint{ 0.0f, 0.0f, 0.0f };
 		float3		 _hitNormal{ 0.0f, 0.0f, 0.0f };
-		sw::Entity	 _hitEntity{ sw::kNullEntity };
+		uint64		 _hitObjectId{ 0 };
 		ObjectHandle _hitBody{};
 	};
 

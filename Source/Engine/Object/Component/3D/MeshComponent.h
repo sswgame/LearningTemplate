@@ -10,44 +10,18 @@
 
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
+	namespace generated
+	{
+		struct sw_MeshComponent_Registrar;
+	} // namespace generated
+
 	class Mesh;
 	class Material;
 	class MaterialInstance;
-
-	/**
-	 * @brief Pure ECS Data Struct for Mesh Rendering
-	 */
-	REFLECT()
-	struct SW_API MeshData
-	{
-		REFLECT_BODY();
-		shared_ptr<Mesh>			 _mesh;
-		Material*					 _pMaterial;
-		shared_ptr<MaterialInstance> _materialInstance;
-		PROPERTY()
-		string _meshId;
-		PROPERTY()
-		float32 _boundsRadius;
-		PROPERTY()
-		RHIBlendMode _blendMode;
-		uint8		 _bVisible : 1;
-		uint8		 _reserved : 7;
-
-		MeshData()
-			: _mesh{}
-			, _pMaterial{ nullptr }
-			, _materialInstance{}
-			, _meshId{}
-			, _boundsRadius{ 0.866f }
-			, _blendMode{ RHIBlendMode::Opaque }
-			, _bVisible{ 1 }
-			, _reserved{ 0 }
-		{
-		}
-	};
 
 	/**
 	 * @class MeshComponent
@@ -56,11 +30,13 @@ namespace sw
 	REFLECT()
 	class SW_API MeshComponent : public SceneComponent
 	{
+		friend struct ::sw::generated::sw_MeshComponent_Registrar;
+
 	public:
 		REFLECT_BODY();
 
 		/** @brief 메시/머티리얼 없는 기본값. */
-		MeshComponent() = default;
+		MeshComponent();
 		/** @brief 메시/머티리얼 참조를 끊습니다. */
 		virtual ~MeshComponent() override = default;
 
@@ -72,13 +48,6 @@ namespace sw
 		/** @brief 수명주기 초기화 */
 		void onBeginPlay() override;
 
-		EcsDataView ensureEcsData() override;
-		EcsDataView getEcsData() const override;
-
-		/** @brief 메시 ECS 데이터. 없으면 nullptr. */
-		MeshData* getMeshData() const;
-		/** @brief 메시 ECS 데이터를 확보합니다. */
-		MeshData* ensureMeshData();
 		/**
 		 * @brief `_meshId` 프리미티브를 GPU 메시로 해석합니다.
 		 * @details 이미 메시가 있으면 그대로 둡니다. 비어 있거나 "Cube"면 단위 큐브.
@@ -114,5 +83,18 @@ namespace sw
 		void setVisible( bool bVisible );
 		/** @brief 가시 여부를 반환합니다. */
 		bool isVisible() const;
+
+	private:
+		shared_ptr<Mesh>			 _mesh;
+		Material*					 _pMaterial;
+		shared_ptr<MaterialInstance> _materialInstance;
+		PROPERTY()
+		string _meshId;
+		PROPERTY()
+		float32 _boundsRadius;
+		PROPERTY()
+		RHIBlendMode _blendMode;
+		uint8		 _bVisible : 1;
+		uint8		 _reserved : 7;
 	};
 } // namespace sw

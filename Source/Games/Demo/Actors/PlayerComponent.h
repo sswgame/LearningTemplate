@@ -14,7 +14,7 @@ namespace sw
 		Jump
 	};
 
-	REFLECT_SCRIPT()
+	REFLECT()
 	class PlayerComponent : public Component
 	{
 	public:

@@ -5,7 +5,7 @@
 
 namespace sw
 {
-	REFLECT_SCRIPT()
+	REFLECT()
 	class WeaponComponent : public Component
 	{
 	public:

@@ -1,10 +1,10 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/ObjectHandle.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 
-#include "Engine/ECS/Entity.h"
 #include "Engine/Physics/AABB.h"
 
 namespace sw
@@ -14,12 +14,12 @@ namespace sw
 	 */
 	struct BVHNode3D
 	{
-		AABB   _bounds{};
-		Entity _entity{ kNullEntity };
-		int32  _parent{ -1 };
-		int32  _leftChild{ -1 };
-		int32  _rightChild{ -1 };
-		int32  _height{ 0 };
+		AABB		 _bounds{};
+		ObjectHandle _handle{};
+		int32		 _parent{ -1 };
+		int32		 _leftChild{ -1 };
+		int32		 _rightChild{ -1 };
+		int32		 _height{ 0 };
 
 		bool isLeaf() const { return _leftChild == -1; }
 	};
@@ -37,17 +37,17 @@ namespace sw
 		BVHTree3D( BVHTree3D&& ) noexcept			 = default;
 		BVHTree3D& operator=( BVHTree3D&& ) noexcept = default;
 
-		int32 insert( Entity entity, const AABB& bounds );
-		void  update( Entity entity, const AABB& bounds );
-		void  remove( Entity entity );
+		int32 insert( ObjectHandle handle, const AABB& bounds );
+		void  update( ObjectHandle handle, const AABB& bounds );
+		void  remove( ObjectHandle handle );
 		void  clear();
 
-		void queryAABB( const AABB& queryBox, vector<Entity>& outEntities ) const;
-		void queryRay( const float3& origin, const float3& direction, float32 maxDist, vector<Entity>& outEntities ) const;
-		void querySphere( const float3& center, float32 radius, vector<Entity>& outEntities ) const;
-		void queryFrustum( const float32 viewProj[16], vector<Entity>& outEntities ) const;
+		void queryAABB( const AABB& queryBox, vector<ObjectHandle>& outHandles ) const;
+		void queryRay( const float3& origin, const float3& direction, float32 maxDist, vector<ObjectHandle>& outHandles ) const;
+		void querySphere( const float3& center, float32 radius, vector<ObjectHandle>& outHandles ) const;
+		void queryFrustum( const float32 viewProj[16], vector<ObjectHandle>& outHandles ) const;
 
-		size_t getEntityCount() const;
+		size_t getHandleCount() const;
 		size_t getNodeCount() const;
 		int32  getTreeHeight() const;
 
@@ -61,9 +61,9 @@ namespace sw
 		static AABB	   combineAABB( const AABB& a, const AABB& b );
 		static float32 getSurfaceArea( const AABB& box );
 
-		int32						 _rootIndex;
-		vector<BVHNode3D>			 _listNodes;
-		vector<int32>				 _listFreeNodes;
-		unordered_map<Entity, int32> _mapEntityToNode;
+		int32							   _rootIndex;
+		vector<BVHNode3D>				   _listNodes;
+		vector<int32>					   _listFreeNodes;
+		unordered_map<ObjectHandle, int32> _mapHandleToNode;
 	};
 } // namespace sw

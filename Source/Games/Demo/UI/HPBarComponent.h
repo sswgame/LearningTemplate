@@ -15,7 +15,7 @@ namespace sw
 		Boss
 	};
 
-	REFLECT_SCRIPT()
+	REFLECT()
 	class HPBarComponent : public HPBarBaseComponent
 	{
 	public:

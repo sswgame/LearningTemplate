@@ -99,7 +99,6 @@ namespace sw
 		inline static constexpr const utf8* kReflectTypeTraits		   = "ReflectTypeTraits";
 		inline static constexpr const utf8* kTypeInfoAccessors		   = "TypeInfoAccessors";
 		inline static constexpr const utf8* kComponentFactoryRegistrar = "ComponentFactoryRegistrar";
-		inline static constexpr const utf8* kScriptSystemRegistrar	   = "ScriptSystemRegistrar";
 		inline static constexpr const utf8* kTypeRegistrarBegin		   = "TypeRegistrarBegin";
 		inline static constexpr const utf8* kTypeRegistrarEnd		   = "TypeRegistrarEnd";
 		inline static constexpr const utf8* kEnumRegistrarBegin		   = "EnumRegistrarBegin";

@@ -3,7 +3,7 @@
 씬에 올라가는 **배우(GameObject)** 와 그에 붙는 **기능 조각(Component)** 을 다루는 레이어입니다.  
 게임 로직을 처음 짤 때 가장 자주 만지는 곳이기도 합니다.
 
-관련 상위 문서: [엔진 개요](../README.md) · [ECS](../ECS/README.md) · [Reflection](../Reflection/README.md) · [아키텍처 / Gotchas](../../../ARCHITECTURE.md)
+관련 상위 문서: [엔진 개요](../README.md) · [Reflection](../Reflection/README.md) · [아키텍처 / Gotchas](../../../ARCHITECTURE.md)
 
 ---
 

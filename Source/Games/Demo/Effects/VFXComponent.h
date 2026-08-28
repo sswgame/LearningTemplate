@@ -13,7 +13,7 @@ namespace sw
 		WarningBlink
 	};
 
-	REFLECT_SCRIPT()
+	REFLECT()
 	class VFXComponent : public EffectBaseComponent
 	{
 	public:

@@ -2,7 +2,6 @@
 
 #include "GameFramework/Data/UnitStatsComponent.h"
 
-#include "Engine/Object/Component/EcsDataUtil.h"
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
@@ -26,7 +25,7 @@ namespace sw
 				if ( pObj == nullptr )
 					return;
 
-				UnitStatsComponent* pStats = pObj->getComponent<UnitStatsComponent>().get();
+				UnitStatsComponent* pStats = pObj->getComponent<UnitStatsComponent>();
 				if ( pStats == nullptr )
 					return;
 
@@ -38,6 +37,18 @@ namespace sw
 		}
 	} // namespace
 
+	UnitStatsComponent::UnitStatsComponent()
+		: _hp{ 0 }
+		, _maxHp{ 0 }
+		, _attack{ 0 }
+		, _defense{ 0 }
+		, _moveSpeed{ 0.0f }
+		, _invincibilityTime{ 0.0f }
+		, _maxInvincibilityTime{ 0.0f }
+		, _bIsDead{ false }
+	{
+	}
+
 	void UnitStatsComponent::onBeginPlay()
 	{
 		Component::onBeginPlay();
@@ -46,7 +57,6 @@ namespace sw
 		GameObject* pOwner = getOwner();
 		if ( pOwner != nullptr )
 			pOwner->addTag( "Stats"_tag );
-		ensureStatsData();
 	}
 
 	void UnitStatsComponent::onEndPlay()
@@ -58,40 +68,52 @@ namespace sw
 	{
 		Component::onTick( deltaTime );
 
-		UnitStatsData* pData = ensureStatsData();
-		if ( pData == nullptr )
-			return;
-
-		if ( pData->invincibilityTime > 0.0f )
+		if ( _invincibilityTime > 0.0f )
 		{
-			pData->invincibilityTime -= deltaTime;
-			if ( pData->invincibilityTime < 0.0f )
-				pData->invincibilityTime = 0.0f;
+			_invincibilityTime -= deltaTime;
+			if ( _invincibilityTime < 0.0f )
+				_invincibilityTime = 0.0f;
 		}
 	}
 
-	Component::EcsDataView UnitStatsComponent::ensureEcsData()
+	int32 UnitStatsComponent::getHp() const
 	{
-		UnitStatsData* pData = ensureStatsData();
-		return { pData, UnitStatsData::StaticType() };
+		return _hp;
 	}
 
-	Component::EcsDataView UnitStatsComponent::getEcsData() const
+	int32 UnitStatsComponent::getMaxHp() const
 	{
-		return { getStatsData(), UnitStatsData::StaticType() };
+		return _maxHp;
 	}
 
-	UnitStatsData* UnitStatsComponent::getStatsData() const
+	int32 UnitStatsComponent::getAttack() const
 	{
-		GameObject* pOwner = getOwner();
-		if ( pOwner != nullptr )
-			return pOwner->getComponent<UnitStatsData>().get();
-		return nullptr;
+		return _attack;
 	}
 
-	UnitStatsData* UnitStatsComponent::ensureStatsData()
+	int32 UnitStatsComponent::getDefense() const
 	{
-		return sw::ensureEcsData<UnitStatsData>( getOwner(), getTypeInfo() );
+		return _defense;
+	}
+
+	float32 UnitStatsComponent::getMoveSpeed() const
+	{
+		return _moveSpeed;
+	}
+
+	bool UnitStatsComponent::isDead() const
+	{
+		return _bIsDead;
+	}
+
+	void UnitStatsComponent::setStats( int32 hp, int32 maxHp, int32 attack, int32 defense, float32 moveSpeed, float32 maxInvincibilityTime )
+	{
+		_hp					  = hp;
+		_maxHp				  = maxHp;
+		_attack				  = attack;
+		_defense			  = defense;
+		_moveSpeed			  = moveSpeed;
+		_maxInvincibilityTime = maxInvincibilityTime;
 	}
 
 	void UnitStatsComponent::takeDamage( int32 amount )
@@ -120,38 +142,31 @@ namespace sw
 
 	void UnitStatsComponent::applyTakeDamage( int32 amount )
 	{
-		UnitStatsData* pData = ensureStatsData();
-		if ( pData == nullptr )
-			return;
-
-		const bool bCannotTakeDamage = ( pData->bIsDead || pData->invincibilityTime > 0.0f );
+		const bool bCannotTakeDamage = ( _bIsDead || _invincibilityTime > 0.0f );
 		if ( bCannotTakeDamage )
 			return;
 
-		int32 actualDamage = amount - pData->defense;
+		int32 actualDamage = amount - _defense;
 		if ( actualDamage < 1 )
 			actualDamage = 1;
 
-		pData->hp -= actualDamage;
-		if ( pData->hp <= 0 )
+		_hp -= actualDamage;
+		if ( _hp <= 0 )
 		{
-			pData->hp	   = 0;
-			pData->bIsDead = true;
+			_hp		 = 0;
+			_bIsDead = true;
 		}
 		else
-		{
-			pData->invincibilityTime = pData->maxInvincibilityTime;
-		}
+			_invincibilityTime = _maxInvincibilityTime;
 	}
 
 	void UnitStatsComponent::applyHeal( int32 amount )
 	{
-		UnitStatsData* pData = ensureStatsData();
-		if ( pData == nullptr || pData->bIsDead )
+		if ( _bIsDead )
 			return;
 
-		pData->hp += amount;
-		if ( pData->hp > pData->maxHp )
-			pData->hp = pData->maxHp;
+		_hp += amount;
+		if ( _hp > _maxHp )
+			_hp = _maxHp;
 	}
 } // namespace sw

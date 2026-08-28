@@ -47,7 +47,7 @@ def readXmlPrefabInternal(path: Path) -> tuple[str, str]:
         name = root.get("name", "")
 
     body = ""
-    for tag in ("GameObjectState", "ObjectState"):
+    for tag in ("GameObject", "GameObjectState", "ObjectState"):
         if (node := root.find(tag)) is not None:
             body = ET.tostring(node, encoding="unicode")
             break

@@ -1,11 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Prefab formatVersion="0" name="SamplePrefab">
-	<GameObjectState>
-		<Name>SamplePrefab</Name>
-		<IsActive>true</IsActive>
-		<ParentGO></ParentGO>
-		<Tags/>
-		<Components/>
-		<SceneTransforms/>
-	</GameObjectState>
+	<GameObject _schemaVersion="0" _name="SamplePrefab" _bActive="true">
+		<_listComponents>
+			<vector/>
+		</_listComponents>
+	</GameObject>
 </Prefab>

@@ -64,11 +64,10 @@ namespace sw
 				{
 					if ( pObj != nullptr )
 					{
-						UnitStatsComponent* pStats = pObj->getComponent<UnitStatsComponent>().get();
+						UnitStatsComponent* pStats = pObj->getComponent<UnitStatsComponent>();
 						if ( pStats != nullptr )
 						{
-							const UnitStatsData* pData = pStats->getStatsData();
-							if ( pData != nullptr && pData->bIsDead == false && pData->hp > 0 )
+							if ( pStats->isDead() == false && pStats->getHp() > 0 )
 								aliveMonsters++;
 						}
 						else

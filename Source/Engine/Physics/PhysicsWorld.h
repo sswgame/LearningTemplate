@@ -5,7 +5,6 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 
-#include "Engine/ECS/Entity.h"
 #include "Engine/Physics/AABB.h"
 #include "Engine/Physics/CCD.h"
 #include "Engine/Physics/CollisionLayers.h"
@@ -17,9 +16,9 @@ namespace sw
 	/** @brief PhysicsWorld에 등록된 AABB 바디입니다. */
 	struct PhysicsBody
 	{
-		AABB	   _aabb{};
-		sw::Entity _entity{ sw::kNullEntity };
-		uint8	   _layer{ 0 };
+		AABB   _aabb{};
+		uint64 _objectId{ 0 };
+		uint8  _layer{ 0 };
 	};
 
 	/**
@@ -35,7 +34,7 @@ namespace sw
 		PhysicsWorld() = default;
 
 		/** @brief AABB 바디를 등록합니다. */
-		BodyHandle addBody( const AABB& aabb, uint8 layer, sw::Entity entity = sw::kNullEntity );
+		BodyHandle addBody( const AABB& aabb, uint8 layer, uint64 objectId = 0 );
 		/** @brief 바디를 제거합니다. */
 		void removeBody( BodyHandle handle );
 		/** @brief 바디 AABB를 갱신합니다. */

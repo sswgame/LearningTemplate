@@ -7,6 +7,7 @@
 
 namespace sw
 {
+	struct TypeInfo;
 
 	/**
 	 * @class SerializeContext
@@ -21,12 +22,18 @@ namespace sw
 		using TextWriteFn = Delegate<string( const void* pValPtr )>;
 		using TextReadFn  = Delegate<bool( void* pValPtr, string_view valStr )>;
 
+		using OwnedPointerCreateFn = void* ( * )( void* pOuter, hashed_string typeName );
+		using RuntimeTypeInfoFn	   = const TypeInfo* ( * )( const void* pInstance );
+
 		// ------------------------------------------------------------------------------
 		// 1) 수명 — 기본은 키 대소문자 무시
 		// ------------------------------------------------------------------------------
 		/** @brief 기본 컨텍스트 (키 대소문자 무시). */
 		SerializeContext() noexcept
-			: _bIgnoreCaseKeys{ 1 }
+			: _pOuterInstance{ nullptr }
+			, _pOwnedPointerCreateFn{ nullptr }
+			, _pRuntimeTypeInfoFn{ nullptr }
+			, _bIgnoreCaseKeys{ 1 }
 			, _bAllowUnknownProperties{ 0 }
 			, _reservedFlags{ 0 } {}
 
@@ -72,6 +79,46 @@ namespace sw
 		/** @brief 알 수 없는 프로퍼티 허용(스킵) 여부. */
 		bool allowUnknownProperties() const { return _bAllowUnknownProperties != 0; }
 
+		/** @brief 소유 포인터 팩토리의 outer 인스턴스를 설정합니다. */
+		SerializeContext& setOuterInstance( void* pOuter )
+		{
+			_pOuterInstance = pOuter;
+			return *this;
+		}
+
+		/** @brief `vector<T*>` 등 소유 포인터 원소를 만들 팩토리를 설정합니다. */
+		SerializeContext& setOwnedPointerFactory( OwnedPointerCreateFn fn )
+		{
+			_pOwnedPointerCreateFn = fn;
+			return *this;
+		}
+
+		/** @brief 소유 포인터 인스턴스의 런타임 TypeInfo를 조회할 함수를 설정합니다. */
+		SerializeContext& setRuntimeTypeInfoFn( RuntimeTypeInfoFn fn )
+		{
+			_pRuntimeTypeInfoFn = fn;
+			return *this;
+		}
+
+		/** @brief 소유 포인터 팩토리 outer. */
+		void* getOuterInstance() const { return _pOuterInstance; }
+
+		/** @brief 팩토리로 소유 포인터 인스턴스를 만듭니다. 없으면 nullptr. */
+		void* createOwnedPointer( hashed_string typeName ) const
+		{
+			if ( _pOwnedPointerCreateFn == nullptr )
+				return nullptr;
+			return _pOwnedPointerCreateFn( _pOuterInstance, typeName );
+		}
+
+		/** @brief 런타임 TypeInfo. 미설정·스킵이면 nullptr. */
+		const TypeInfo* getRuntimeTypeInfo( const void* pInstance ) const
+		{
+			if ( _pRuntimeTypeInfoFn == nullptr || pInstance == nullptr )
+				return nullptr;
+			return _pRuntimeTypeInfoFn( pInstance );
+		}
+
 		/** @brief 기본 전역 직렬화 컨텍스트를 반환합니다. */
 		static const SerializeContext& getDefault();
 
@@ -80,6 +127,9 @@ namespace sw
 		unordered_map<hashed_string, BinaryReadFn>	_mapBinaryReaders;
 		unordered_map<hashed_string, TextWriteFn>	_mapTextWriters;
 		unordered_map<hashed_string, TextReadFn>	_mapTextReaders;
+		void*										_pOuterInstance;
+		OwnedPointerCreateFn						_pOwnedPointerCreateFn;
+		RuntimeTypeInfoFn							_pRuntimeTypeInfoFn;
 		uint8										_bIgnoreCaseKeys		 : 1;
 		uint8										_bAllowUnknownProperties : 1;
 		[[maybe_unused]] uint8						_reservedFlags			 : 6;

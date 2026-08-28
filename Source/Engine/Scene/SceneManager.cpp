@@ -200,8 +200,7 @@ namespace sw
 						if ( ObjectStateSerializer::loadFromXmlString( pGo, ent._embeddedXml ) == false )
 							SW_LOG_WARNING( "[SceneManager] Embedded state apply failed for '%#'", ent._name );
 
-						const bool bHasHierarchy = ( ent._embeddedXml.find( "parent=" ) != string::npos ||
-													 ent._embeddedXml.find( "<ParentGO>" ) != string::npos );
+						const bool bHasHierarchy = ( ent._embeddedXml.find( "_attachOwner=" ) != string::npos );
 						if ( bHasHierarchy )
 							listRebindTargets.emplace_back( pGo, ent._embeddedXml );
 					}

@@ -47,16 +47,12 @@ namespace sw
 		if ( pPlayerObj == nullptr )
 			return;
 
-		UnitStatsComponent* pUnitStats = pPlayerObj->getComponent<UnitStatsComponent>().get();
+		UnitStatsComponent* pUnitStats = pPlayerObj->getComponent<UnitStatsComponent>();
 		if ( pUnitStats == nullptr )
 			return;
 
-		const UnitStatsData* pData = pUnitStats->getStatsData();
-		if ( pData != nullptr )
-		{
-			playerHp	= pData->hp;
-			playerMaxHp = pData->maxHp;
-		}
+		playerHp	= pUnitStats->getHp();
+		playerMaxHp = pUnitStats->getMaxHp();
 	}
 
 	void PlayerInfoUIComponent::updateStats( int32 hp, int32 maxHp )

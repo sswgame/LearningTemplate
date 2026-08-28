@@ -1,12 +1,18 @@
-﻿/**
+/**
  * @file CameraComponent.h
  * @brief 렌더용 뷰/투영 행렬을 만드는 SceneComponent입니다.
  */
 #pragma once
 #include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
+	namespace generated
+	{
+		struct sw_CameraComponent_Registrar;
+	} // namespace generated
+
 	/// @brief 카메라 Role 종류를 정의하는 열거형입니다.
 	ENUM()
 	enum class CameraRole : uint8
@@ -17,40 +23,19 @@ namespace sw
 	};
 
 	/**
-	 * @brief 카메라 투영·역할 ECS 데이터
-	 */
-	REFLECT()
-	struct SW_API CameraData
-	{
-		REFLECT_BODY();
-		PROPERTY()
-		float32 fovY = 0.70f;
-		PROPERTY()
-		float32 nearZ = 0.1f;
-		PROPERTY()
-		float32 farZ = 100.0f;
-		PROPERTY()
-		float32 orthoHeight = 10.0f;
-		PROPERTY()
-		int32 priority{ 0 };
-		PROPERTY()
-		CameraRole role = CameraRole::Game;
-		PROPERTY()
-		bool bOrthographic{ false };
-	};
-
-	/**
 	 * @class CameraComponent
 	 * @brief GameObject에 붙는 카메라. 트랜스폼은 SceneComponent에서 옵니다.
 	 */
 	REFLECT()
 	class SW_API CameraComponent : public SceneComponent
 	{
+		friend struct ::sw::generated::sw_CameraComponent_Registrar;
+
 	public:
 		REFLECT_BODY();
 
 		/** @brief 기본 카메라를 만듭니다. */
-		CameraComponent() = default;
+		CameraComponent();
 		/** @brief 카메라를 해제합니다. */
 		virtual ~CameraComponent() override = default;
 
@@ -60,14 +45,6 @@ namespace sw
 		CameraComponent& operator=( CameraComponent&& ) noexcept = default;
 
 		void onBeginPlay() override;
-
-		EcsDataView ensureEcsData() override;
-		EcsDataView getEcsData() const override;
-
-		/** @brief 카메라 ECS 데이터. 없으면 nullptr. */
-		CameraData* getCameraData() const;
-		/** @brief 카메라 ECS 데이터를 확보합니다. */
-		CameraData* ensureCameraData();
 
 		/** @brief 카메라 역할을 설정합니다. */
 		void setRole( CameraRole role );
@@ -116,5 +93,21 @@ namespace sw
 
 		/** @brief 카메라 월드 위치를 반환합니다. */
 		void getCameraPosition( float32 outPos[3] ) const;
+
+	private:
+		PROPERTY()
+		float32 _fovY;
+		PROPERTY()
+		float32 _nearZ;
+		PROPERTY()
+		float32 _farZ;
+		PROPERTY()
+		float32 _orthoHeight;
+		PROPERTY()
+		int32 _priority;
+		PROPERTY()
+		CameraRole _role;
+		PROPERTY()
+		bool _bOrthographic;
 	};
 } // namespace sw

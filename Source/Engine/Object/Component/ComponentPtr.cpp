@@ -15,7 +15,8 @@ namespace sw
 		: _targetObjectName{}
 		, _targetComponentType{}
 		, _pCachedPtr{ nullptr }
-		, _cachedEntity{ sw::kNullEntity }
+		, _cachedObjectId{ 0 }
+		, _pManager{ nullptr }
 	{
 	}
 
@@ -23,13 +24,13 @@ namespace sw
 		: _targetObjectName{}
 		, _targetComponentType{}
 		, _pCachedPtr{ pTarget }
-		, _cachedEntity{ sw::kNullEntity }
+		, _cachedObjectId{ 0 }
 	{
 		if ( pTarget != nullptr && pTarget->getOwner() != nullptr )
 		{
 			_targetObjectName	 = pTarget->getOwner()->getName();
 			_targetComponentType = pTarget->getComponentName();
-			_cachedEntity		 = pTarget->getOwner()->getEntityId();
+			_cachedObjectId		 = pTarget->getOwner()->getObjectId();
 			_pManager			 = pTarget->getOwner()->getManager();
 		}
 	}
@@ -38,7 +39,7 @@ namespace sw
 		: _targetObjectName{ other._targetObjectName }
 		, _targetComponentType{ other._targetComponentType }
 		, _pCachedPtr{ other._pCachedPtr }
-		, _cachedEntity{ other._cachedEntity }
+		, _cachedObjectId{ other._cachedObjectId }
 		, _pManager{ other._pManager }
 	{
 	}
@@ -47,13 +48,13 @@ namespace sw
 		: _targetObjectName{ std::move( other._targetObjectName ) }
 		, _targetComponentType{ std::move( other._targetComponentType ) }
 		, _pCachedPtr{ other._pCachedPtr }
-		, _cachedEntity{ other._cachedEntity }
+		, _cachedObjectId{ other._cachedObjectId }
 		, _pManager{ other._pManager }
 	{
 		other._pCachedPtr		   = nullptr;
 		other._targetObjectName	   = hashed_string{};
 		other._targetComponentType = hashed_string{};
-		other._cachedEntity		   = sw::kNullEntity;
+		other._cachedObjectId	   = 0;
 		other._pManager			   = nullptr;
 	}
 
@@ -66,14 +67,14 @@ namespace sw
 		{
 			_targetObjectName	 = pTarget->getOwner()->getName();
 			_targetComponentType = pTarget->getComponentName();
-			_cachedEntity		 = pTarget->getOwner()->getEntityId();
+			_cachedObjectId		 = pTarget->getOwner()->getObjectId();
 			_pManager			 = pTarget->getOwner()->getManager();
 		}
 		else
 		{
 			_targetObjectName	 = hashed_string{};
 			_targetComponentType = hashed_string{};
-			_cachedEntity		 = sw::kNullEntity;
+			_cachedObjectId		 = 0;
 			_pManager			 = nullptr;
 		}
 		return *this;
@@ -86,7 +87,7 @@ namespace sw
 			_targetObjectName	 = other._targetObjectName;
 			_targetComponentType = other._targetComponentType;
 			_pCachedPtr			 = other._pCachedPtr;
-			_cachedEntity		 = other._cachedEntity;
+			_cachedObjectId		 = other._cachedObjectId;
 			_pManager			 = other._pManager;
 		}
 		return *this;
@@ -99,13 +100,13 @@ namespace sw
 			_targetObjectName	 = std::move( other._targetObjectName );
 			_targetComponentType = std::move( other._targetComponentType );
 			_pCachedPtr			 = other._pCachedPtr;
-			_cachedEntity		 = other._cachedEntity;
+			_cachedObjectId		 = other._cachedObjectId;
 			_pManager			 = other._pManager;
 
 			other._targetObjectName	   = hashed_string{};
 			other._targetComponentType = hashed_string{};
 			other._pCachedPtr		   = nullptr;
-			other._cachedEntity		   = sw::kNullEntity;
+			other._cachedObjectId	   = 0;
 			other._pManager			   = nullptr;
 		}
 		return *this;
@@ -115,8 +116,8 @@ namespace sw
 	{
 		if ( _targetObjectName.getHash() == 0 || _targetComponentType.getHash() == 0 )
 		{
-			_pCachedPtr	  = nullptr;
-			_cachedEntity = sw::kNullEntity;
+			_pCachedPtr		= nullptr;
+			_cachedObjectId = 0;
 			return;
 		}
 
@@ -138,7 +139,7 @@ namespace sw
 			return;
 
 		// 1) 빠른 경로
-		if ( _cachedEntity != sw::kNullEntity && pObjMgr->findGameObjectByEntity( _cachedEntity ) != nullptr )
+		if ( _cachedObjectId != 0 && pObjMgr->findGameObjectById( _cachedObjectId ) != nullptr )
 		{
 			if ( _pCachedPtr != nullptr && _pCachedPtr->isPendingKill() == false )
 			{
@@ -151,8 +152,8 @@ namespace sw
 		}
 
 		// 2) 느린 경로
-		_pCachedPtr	  = nullptr;
-		_cachedEntity = sw::kNullEntity;
+		_pCachedPtr		= nullptr;
+		_cachedObjectId = 0;
 
 		GameObject* pObj = pObjMgr->findGameObjectByName( _targetObjectName );
 		if ( pObj != nullptr && pObj->isPendingKill() == false )
@@ -161,8 +162,8 @@ namespace sw
 			{
 				if ( pComp->getComponentName() == _targetComponentType )
 				{
-					_pCachedPtr	  = pComp;
-					_cachedEntity = pObj->getEntityId();
+					_pCachedPtr		= pComp;
+					_cachedObjectId = pObj->getObjectId();
 					break;
 				}
 			}

@@ -8,8 +8,14 @@
 #include "Core/Container/vector.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 namespace sw
 {
+	namespace generated
+	{
+		struct sw_TagContainer_Registrar;
+	} // namespace generated
 	// ------------------------------------------------------------------------------
 	// 1) TagID — intern된 문자열 + 해시, 점 계층 (parent.child)
 	// ------------------------------------------------------------------------------
@@ -79,9 +85,13 @@ namespace sw
 	// ------------------------------------------------------------------------------
 	// 3) TagContainer — GameObject에 붙는 태그 집합
 	// ------------------------------------------------------------------------------
+	REFLECT()
 	class SW_API TagContainer
 	{
+		friend struct ::sw::generated::sw_TagContainer_Registrar;
+
 	public:
+		REFLECT_BODY();
 		/** @brief 빈 컨테이너입니다. */
 		TagContainer() = default;
 		/** @brief 초기 태그 목록으로 만듭니다. */
@@ -118,6 +128,7 @@ namespace sw
 		const vector<TagID>& getTags() const { return _listTags; }
 
 	private:
+		PROPERTY()
 		vector<TagID> _listTags;
 	};
 

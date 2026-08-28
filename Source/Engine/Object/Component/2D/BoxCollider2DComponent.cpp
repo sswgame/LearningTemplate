@@ -18,41 +18,18 @@ namespace sw
 			box._max = float3( maxB._x, maxB._y, 0.0f );
 			return box;
 		}
-
-		void unregisterPhysicsBody( BoxCollider2DData* pData, GameObjectManager* pManager )
-		{
-			if ( pData == nullptr || pManager == nullptr || pData->physicsBody.isValid() == false )
-				return;
-			pManager->getPhysicsWorld().removeBody( pData->physicsBody );
-			pData->physicsBody = ObjectHandle{};
-		}
-
-		void syncPhysicsBody( BoxCollider2DComponent& collider, BoxCollider2DData* pData )
-		{
-			if ( pData == nullptr )
-				return;
-			GameObject* pOwner = collider.getOwner();
-			if ( pOwner == nullptr || pOwner->getManager() == nullptr )
-				return;
-
-			GameObjectManager* pManager = pOwner->getManager();
-			float2			   minB{};
-			float2			   maxB{};
-			collider.getBounds( minB, maxB );
-			pData->cachedMin = minB;
-			pData->cachedMax = maxB;
-
-			const AABB	box	  = makeColliderAabb( minB, maxB );
-			const uint8 layer = static_cast<uint8>( pData->colliderType );
-
-			if ( pData->physicsBody.isValid() )
-			{
-				pManager->getPhysicsWorld().setAabb( pData->physicsBody, box );
-				return;
-			}
-			pData->physicsBody = pManager->getPhysicsWorld().addBody( box, layer, pOwner->getEntityId() );
-		}
 	} // namespace
+
+	BoxCollider2DComponent::BoxCollider2DComponent()
+		: _colliderType{ 0 }
+		, _offsetPos{}
+		, _offsetScale{}
+		, _cachedMin{ 0.0f, 0.0f }
+		, _cachedMax{ 0.0f, 0.0f }
+		, _physicsBody{}
+	{
+		setCanEverTick( true );
+	}
 
 	void BoxCollider2DComponent::onBeginPlay()
 	{
@@ -61,91 +38,67 @@ namespace sw
 
 		GameObject* pGameObject = getOwner();
 		if ( pGameObject != nullptr )
-		{
 			pGameObject->addTag( "Collider"_tag );
-			if ( pGameObject->getComponent<BoxCollider2DData>() == nullptr )
-				pGameObject->addComponent<BoxCollider2DData>();
-		}
 
-		syncPhysicsBody( *this, getColliderData() );
+		syncPhysicsBody();
 	}
 
 	void BoxCollider2DComponent::onEndPlay()
 	{
-		GameObject* pGameObject = getOwner();
-		if ( pGameObject != nullptr )
-			unregisterPhysicsBody( getColliderData(), pGameObject->getManager() );
+		unregisterPhysicsBody();
 		SceneComponent::onEndPlay();
 	}
 
 	void BoxCollider2DComponent::onDestroy()
 	{
-		GameObject* pGameObject = getOwner();
-		if ( pGameObject != nullptr )
-			unregisterPhysicsBody( getColliderData(), pGameObject->getManager() );
+		unregisterPhysicsBody();
 		SceneComponent::onDestroy();
 	}
 
 	void BoxCollider2DComponent::onTick( float32 deltaTime )
 	{
 		SceneComponent::onTick( deltaTime );
-		syncPhysicsBody( *this, getColliderData() );
+		syncPhysicsBody();
 	}
 
 	int32 BoxCollider2DComponent::getColliderType() const
 	{
-		const BoxCollider2DData* pData = getColliderData();
-		if ( pData != nullptr )
-			return pData->colliderType;
-		return 0;
+		return _colliderType;
 	}
 
 	void BoxCollider2DComponent::setColliderType( int32 type )
 	{
-		BoxCollider2DData* pData = getColliderData();
-		if ( pData != nullptr )
-			pData->colliderType = type;
+		_colliderType = type;
 	}
 
 	string BoxCollider2DComponent::getOffsetPos() const
 	{
-		const BoxCollider2DData* pData = getColliderData();
-		if ( pData != nullptr )
-			return pData->offsetPos;
-		return "";
+		return _offsetPos;
 	}
 
 	void BoxCollider2DComponent::setOffsetPos( const string& pos )
 	{
-		BoxCollider2DData* pData = getColliderData();
-		if ( pData != nullptr )
-			pData->offsetPos = pos;
+		_offsetPos = pos;
 	}
 
 	string BoxCollider2DComponent::getOffsetScale() const
 	{
-		const BoxCollider2DData* pData = getColliderData();
-		if ( pData != nullptr )
-			return pData->offsetScale;
-		return "";
+		return _offsetScale;
 	}
 
 	void BoxCollider2DComponent::setOffsetScale( const string& scale )
 	{
-		BoxCollider2DData* pData = getColliderData();
-		if ( pData != nullptr )
-			pData->offsetScale = scale;
+		_offsetScale = scale;
 	}
 
 	float2 BoxCollider2DComponent::getOffsetPosition() const
 	{
-		float2		 result{ 0.0f, 0.0f };
-		const string pos = getOffsetPos();
-		if ( pos.empty() == false )
+		float2 result{ 0.0f, 0.0f };
+		if ( _offsetPos.empty() == false )
 		{
 			float32 x{ 0.0f };
 			float32 y{ 0.0f };
-			if ( sscanf( pos.c_str(), "%f,%f", &x, &y ) >= 1 )
+			if ( sscanf( _offsetPos.c_str(), "%f,%f", &x, &y ) >= 1 )
 			{
 				result._x = x;
 				result._y = y;
@@ -156,13 +109,12 @@ namespace sw
 
 	float2 BoxCollider2DComponent::getOffsetScaleVec() const
 	{
-		float2		 result{ 0.0f, 0.0f };
-		const string scale = getOffsetScale();
-		if ( scale.empty() == false )
+		float2 result{ 0.0f, 0.0f };
+		if ( _offsetScale.empty() == false )
 		{
 			float32 w{ 0.0f };
 			float32 h{ 0.0f };
-			if ( sscanf( scale.c_str(), "%f,%f", &w, &h ) >= 1 )
+			if ( sscanf( _offsetScale.c_str(), "%f,%f", &w, &h ) >= 1 )
 			{
 				result._x = w;
 				result._y = h;
@@ -187,12 +139,9 @@ namespace sw
 	{
 		if ( pOther == nullptr )
 			return false;
-		const BoxCollider2DData* pSelfData	= getColliderData();
-		const BoxCollider2DData* pOtherData = pOther->getColliderData();
-		GameObject*				 pOwner		= getOwner();
-		if ( pSelfData != nullptr && pOtherData != nullptr && pOwner != nullptr && pOwner->getManager() != nullptr &&
-			 pSelfData->physicsBody.isValid() && pOtherData->physicsBody.isValid() )
-			return pOwner->getManager()->getPhysicsWorld().overlaps( pSelfData->physicsBody, pOtherData->physicsBody );
+		GameObject* pOwner = getOwner();
+		if ( pOwner != nullptr && pOwner->getManager() != nullptr && _physicsBody.isValid() && pOther->_physicsBody.isValid() )
+			return pOwner->getManager()->getPhysicsWorld().overlaps( _physicsBody, pOther->_physicsBody );
 
 		float2 aMin{}, aMax{}, bMin{}, bMax{};
 		getBounds( aMin, aMax );
@@ -217,11 +166,37 @@ namespace sw
 				 aMin._y <= maxB._y && aMax._y >= minB._y );
 	}
 
-	BoxCollider2DData* BoxCollider2DComponent::getColliderData() const
+	void BoxCollider2DComponent::unregisterPhysicsBody()
 	{
-		GameObject* pGameObject = getOwner();
-		if ( pGameObject != nullptr )
-			return pGameObject->getComponent<BoxCollider2DData>().get();
-		return nullptr;
+		GameObject* pOwner = getOwner();
+		if ( pOwner == nullptr || pOwner->getManager() == nullptr || _physicsBody.isValid() == false )
+			return;
+		pOwner->getManager()->getPhysicsWorld().removeBody( _physicsBody );
+		_physicsBody = ObjectHandle{};
 	}
+
+	void BoxCollider2DComponent::syncPhysicsBody()
+	{
+		GameObject* pOwner = getOwner();
+		if ( pOwner == nullptr || pOwner->getManager() == nullptr )
+			return;
+
+		GameObjectManager* pManager = pOwner->getManager();
+		float2			   minB{};
+		float2			   maxB{};
+		getBounds( minB, maxB );
+		_cachedMin = minB;
+		_cachedMax = maxB;
+
+		const AABB	box	  = makeColliderAabb( minB, maxB );
+		const uint8 layer = static_cast<uint8>( _colliderType );
+
+		if ( _physicsBody.isValid() )
+		{
+			pManager->getPhysicsWorld().setAabb( _physicsBody, box );
+			return;
+		}
+		_physicsBody = pManager->getPhysicsWorld().addBody( box, layer, pOwner->getObjectId() );
+	}
+
 } // namespace sw

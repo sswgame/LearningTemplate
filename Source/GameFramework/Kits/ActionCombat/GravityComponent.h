@@ -1,30 +1,24 @@
 #pragma once
 #include "Engine/Object/Component/Component.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
-	REFLECT()
-	struct SW_GF_API GravityData
+	namespace generated
 	{
-		REFLECT_BODY();
-		PROPERTY()
-		float32 gravity{ 0.0f };
-		PROPERTY()
-		float32 velocityY{ 0.0f };
-		PROPERTY()
-		float32 groundY{ 0.0f };
-		PROPERTY()
-		bool bIsGrounded{ false };
-	};
+		struct sw_GravityComponent_Registrar;
+	} // namespace generated
 
 	REFLECT()
 	class SW_GF_API GravityComponent : public Component
 	{
+		friend struct ::sw::generated::sw_GravityComponent_Registrar;
+
 	public:
 		REFLECT_BODY();
-		GravityComponent()										   = default;
+		GravityComponent();
 		virtual ~GravityComponent() override					   = default;
 		GravityComponent( GravityComponent&& ) noexcept			   = default;
 		GravityComponent& operator=( GravityComponent&& ) noexcept = default;
@@ -33,10 +27,14 @@ namespace sw
 		void onEndPlay() override;
 		void onTick( float32 deltaTime ) override;
 
-		EcsDataView ensureEcsData() override;
-		EcsDataView getEcsData() const override;
-
-		GravityData* getGravityData() const;
-		GravityData* ensureGravityData();
+	private:
+		PROPERTY( Alias="gravity" )
+		float32 _gravity;
+		PROPERTY( Alias="velocityY" )
+		float32 _velocityY;
+		PROPERTY( Alias="groundY" )
+		float32 _groundY;
+		PROPERTY( Alias="bIsGrounded" )
+		bool _bIsGrounded;
 	};
 } // namespace sw

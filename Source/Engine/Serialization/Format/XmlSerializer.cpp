@@ -2,10 +2,13 @@
 
 #include "Engine/Serialization/Format/XmlSerializer.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Serialization/Core/SchemaMigrate.h"
 #include "Engine/Serialization/Core/SerializerInternal.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
+
+#include "Core/String/StringUtil.h"
 
 namespace sw
 {
@@ -138,6 +141,8 @@ namespace sw
 			return false;
 
 		_impl->currentParent = root;
+		_impl->listNodeStack.clear();
+		_impl->listNodeStack.push_back( root );
 		return true;
 	}
 
@@ -199,45 +204,154 @@ namespace sw
 		if ( mapNode.isValid() == false )
 			return false;
 
-		for ( XmlNode entry = mapNode.child( "entry", bIgnore ); entry; entry = entry.next( "entry", bIgnore ) )
+		for ( XmlNode child = mapNode.child( nullptr, bIgnore ); child; child = child.next( nullptr, bIgnore ) )
 		{
-			XmlNode kNode = entry.child( "key", bIgnore );
-			XmlNode vNode = entry.child( "value", bIgnore );
-			if ( kNode.isValid() && vNode.isValid() )
-				callback( kNode.text() != nullptr ? kNode.text() : "", vNode.text() != nullptr ? vNode.text() : "" );
+			const utf8* pChildName = child.name();
+			if ( pChildName == nullptr )
+				continue;
+
+			if ( StringUtil::equalsIgnoreCase( pChildName, "entry" ) )
+			{
+				XmlNode kNode = child.child( "key", bIgnore );
+				XmlNode vNode = child.child( "value", bIgnore );
+				if ( kNode.isValid() && vNode.isValid() )
+					callback( kNode.text() != nullptr ? kNode.text() : "", vNode.text() != nullptr ? vNode.text() : "" );
+				continue;
+			}
+
+			const string nodeXml = child.toString();
+			callback( pChildName, nodeXml );
 		}
 		return true;
 	}
 
+	bool XmlDocumentBackend::pushChild( const utf8* pTagName )
+	{
+		if ( _impl->currentParent.isValid() == false )
+			return false;
+
+		string	sTag = Impl::sanitizeTag( pTagName );
+		XmlNode child = _impl->currentParent.child( sTag.c_str(), ignoreCaseKeys() );
+		if ( child.isValid() == false )
+			return false;
+
+		_impl->listNodeStack.push_back( child );
+		_impl->currentParent = child;
+		return true;
+	}
+
+	void XmlDocumentBackend::popChild()
+	{
+		if ( _impl->listNodeStack.size() <= 1 )
+			return;
+		_impl->listNodeStack.pop_back();
+		_impl->currentParent = _impl->listNodeStack.back();
+	}
+
 	namespace
 	{
-		void writeNestedContainerXml( const void* pContainerPtr, const NestedContainerInfo& nested, const utf8* pTagName, IXmlBackend& backend, const SerializeContext& ctx )
+		const utf8* xmlTypeInfoName( hashed_string typeName )
 		{
-			if ( pContainerPtr == nullptr || nested._wrapper == nullptr )
+			const TypeInfo* pTypeInfo = engine::getTypeRegistry().findType( typeName );
+			if ( pTypeInfo != nullptr )
+			{
+				if ( pTypeInfo->_name.empty() == false )
+					return pTypeInfo->_name.c_str();
+				if ( pTypeInfo->_fullyQualifiedName.empty() == false )
+					return pTypeInfo->_fullyQualifiedName.c_str();
+			}
+			if ( typeName.empty() == false )
+				return typeName.c_str();
+			return nullptr;
+		}
+
+		const TypeInfo* findNestedXmlObjectType( hashed_string typeName, const SerializeContext& ctx )
+		{
+			if ( ctx.findTextWriter( typeName ) != nullptr )
+				return nullptr;
+			if ( engine::getTypeRegistry().findEnum( typeName ) != nullptr )
+				return nullptr;
+			const TypeInfo* pTypeInfo = engine::getTypeRegistry().findType( typeName );
+			if ( pTypeInfo == nullptr || pTypeInfo->isPrimitive() )
+				return nullptr;
+			return pTypeInfo;
+		}
+
+		bool isOwnedPointerElementType( hashed_string elementTypeName )
+		{
+			const utf8* pName = elementTypeName.c_str();
+			if ( pName == nullptr )
+				return false;
+			for ( const utf8* pCursor = pName; *pCursor != '\0'; ++pCursor )
+			{
+				if ( *pCursor == '*' )
+					return true;
+			}
+			return false;
+		}
+
+		void writeXmlProperties( const void* pInstance, const TypeInfo& typeInfo, IXmlBackend& backend,
+								 const SerializeContext& ctx );
+
+		void writeNestedContainerXml( const void* pContainerPtr, const NestedContainerInfo& nested,
+									  const utf8* pPropName, IXmlBackend& backend, const SerializeContext& ctx )
+		{
+			if ( pContainerPtr == nullptr || nested._wrapper == nullptr || pPropName == nullptr )
 				return;
 			ISequenceContainerWrapper* pSeq		= nested._wrapper->asSequence();
 			IMapContainerWrapper*	   pMapWrap = nested._wrapper->asMap();
+			const utf8*				   pTypeTag = xmlTypeInfoName( nested._typeName );
+			if ( pTypeTag == nullptr )
+				return;
+
+			backend.beginMap( pPropName );
 			if ( pSeq != nullptr )
 			{
-				backend.beginArray( pTagName );
-				size_t sz = pSeq->getSize( pContainerPtr );
+				backend.beginArray( pTypeTag );
+				const bool bOwnedPtr = isOwnedPointerElementType( nested._elementTypeName );
+				size_t	   sz		 = pSeq->getSize( pContainerPtr );
 				for ( size_t elemIndex = 0; elemIndex < sz; ++elemIndex )
 				{
 					const void* pElemPtr = pSeq->getElementConst( pContainerPtr, elemIndex );
 					if ( nested._elementNested != nullptr )
+					{
 						writeNestedContainerXml( pElemPtr, *nested._elementNested, "item", backend, ctx );
+					}
+					else if ( bOwnedPtr )
+					{
+						void* const* ppObj = static_cast<void* const*>( pElemPtr );
+						void*		 pObj  = ppObj != nullptr ? *ppObj : nullptr;
+						if ( pObj == nullptr )
+							continue;
+						const TypeInfo* pRuntimeType = ctx.getRuntimeTypeInfo( pObj );
+						if ( pRuntimeType == nullptr )
+							continue;
+						backend.beginMap( pRuntimeType->_name.c_str() );
+						XmlSerializer::serializeVersionedInto( backend, 0, pObj, *pRuntimeType, ctx );
+						backend.endMap();
+					}
 					else
 					{
-						StringBuilder<constant::kMaxBuffer8192> ss;
-						valueToText( ss, pElemPtr, nested._elementTypeName, ctx );
-						backend.writeArrayItem( string( ss.view() ).c_str() );
+						const TypeInfo* pElemType = findNestedXmlObjectType( nested._elementTypeName, ctx );
+						if ( pElemType != nullptr )
+						{
+							backend.beginMap( pElemType->_name.c_str() );
+							writeXmlProperties( pElemPtr, *pElemType, backend, ctx );
+							backend.endMap();
+						}
+						else
+						{
+							StringBuilder<constant::kMaxBuffer8192> ss;
+							valueToText( ss, pElemPtr, nested._elementTypeName, ctx );
+							backend.writeArrayItem( string( ss.view() ).c_str() );
+						}
 					}
 				}
 				backend.endArray();
 			}
 			else if ( pMapWrap != nullptr )
 			{
-				backend.beginMap( pTagName );
+				backend.beginMap( pTypeTag );
 				pMapWrap->forEach( pContainerPtr, [&]( const void* pKPtr, const void* pVPtr )
 				{
 					backend.beginMapEntry();
@@ -258,6 +372,7 @@ namespace sw
 				} );
 				backend.endMap();
 			}
+			backend.endMap();
 		}
 
 		static void noteCoerceFailVal( vector<SchemaOrphanValue>* pOutOrphans, bool& bFieldError, const PropertyInfo& prop, string_view strValue );
@@ -317,14 +432,64 @@ namespace sw
 			}
 		};
 
+		struct NestedOwnedPointerReadCallback
+		{
+			const SerializeContext* _pCtx{ nullptr };
+			bool*					_pAny{ nullptr };
+			bool*					_pFieldError{ nullptr };
+
+			void invoke( string_view typeName, string_view nodeXml )
+			{
+				*_pAny = true;
+				if ( _pCtx == nullptr || typeName.empty() )
+				{
+					*_pFieldError = true;
+					return;
+				}
+
+				const string typeNameNt( typeName );
+				void*		 pObj = _pCtx->createOwnedPointer( hashed_string( typeNameNt.c_str() ) );
+				if ( pObj == nullptr )
+				{
+					*_pFieldError = true;
+					return;
+				}
+
+				const TypeInfo* pType = engine::getTypeRegistry().findType( hashed_string( typeNameNt.c_str() ) );
+				if ( pType == nullptr )
+				{
+					*_pFieldError = true;
+					return;
+				}
+
+				uint32 ver{ 0 };
+				if ( XmlSerializer::deserializeVersioned( ver, pObj, *pType, string( nodeXml ), 0, nullptr, nullptr,
+														  *_pCtx ) == false )
+					*_pFieldError = true;
+			}
+		};
+
 		bool readNestedContainerXml( void* pContainerPtr, const NestedContainerInfo& nested, const utf8* pTagName, IXmlBackend& backend, const SerializeContext& ctx, bool& bOutFieldError, vector<SchemaOrphanValue>* pOutOrphans, const PropertyInfo& propForOrphan )
 		{
 			if ( pContainerPtr == nullptr || nested._wrapper == nullptr )
 				return false;
-			nested._wrapper->clear( pContainerPtr );
+
+			const bool bOwnedPtr = isOwnedPointerElementType( nested._elementTypeName );
+			if ( bOwnedPtr == false )
+				nested._wrapper->clear( pContainerPtr );
 
 			ISequenceContainerWrapper* pSeq		= nested._wrapper->asSequence();
 			IMapContainerWrapper*	   pMapWrap = nested._wrapper->asMap();
+			if ( pSeq != nullptr && bOwnedPtr )
+			{
+				bool							 any{ false };
+				NestedOwnedPointerReadCallback	 ptrCb{};
+				ptrCb._pCtx			= &ctx;
+				ptrCb._pAny			= &any;
+				ptrCb._pFieldError	= &bOutFieldError;
+				backend.iterateMap( pTagName, SW_DELEGATE_METHOD( XmlMapItemDelegate, &NestedOwnedPointerReadCallback::invoke, &ptrCb ) );
+				return any;
+			}
 			if ( pSeq != nullptr )
 			{
 				size_t					 elemIndex{ 0 };
@@ -373,17 +538,27 @@ namespace sw
 
 				if ( prop._bIsContainer && prop.hasContainerWrapper() )
 				{
-					writeNestedContainerXml( pPropPtr, prop.getContainerShape(), prop._name.c_str(), backend, ctx );
+					NestedContainerInfo shape = prop.getContainerShape();
+					if ( shape._typeName.empty() )
+						shape._typeName = prop._typeName;
+					writeNestedContainerXml( pPropPtr, shape, prop._name.c_str(), backend, ctx );
 				}
 				else
 				{
-					StringBuilder<constant::kMaxBuffer8192> ss;
-					valueToText( ss, pPropPtr, prop._typeName, ctx );
-					const string value( ss.view() );
-					if ( prop._metadata._bXmlAttribute != 0 )
-						backend.writeAttribute( prop._name.c_str(), value.c_str() );
+					const TypeInfo* pNestedType = findNestedXmlObjectType( prop._typeName, ctx );
+					if ( pNestedType != nullptr )
+					{
+						backend.beginMap( prop._name.c_str() );
+						writeXmlProperties( pPropPtr, *pNestedType, backend, ctx );
+						backend.endMap();
+					}
 					else
-						backend.writeValue( prop._name.c_str(), value.c_str() );
+					{
+						StringBuilder<constant::kMaxBuffer8192> ss;
+						valueToText( ss, pPropPtr, prop._typeName, ctx );
+						const string value( ss.view() );
+						backend.writeAttribute( prop._name.c_str(), value.c_str() );
+					}
 				}
 			}
 		}
@@ -441,51 +616,70 @@ namespace sw
 
 				if ( prop._bIsContainer && prop.hasContainerWrapper() )
 				{
-					bool any = false;
+					bool entered{ false };
 					for ( const utf8* pTag : getContainerTagNames( prop ) )
 					{
-						if ( readNestedContainerXml( pPropPtr, prop.getContainerShape(), pTag, backend, ctx, bFieldError, pOutOrphans, prop ) )
+						if ( backend.pushChild( pTag ) )
 						{
-							any = true;
+							entered = true;
 							break;
 						}
 					}
-					if ( any )
-						uniqueSeen.insert( prop.getNameHash() );
+					if ( entered )
+					{
+						NestedContainerInfo shape = prop.getContainerShape();
+						if ( shape._typeName.empty() )
+							shape._typeName = prop._typeName;
+						const utf8* pTypeTag = xmlTypeInfoName( shape._typeName );
+						if ( readNestedContainerXml( pPropPtr, shape, pTypeTag, backend, ctx, bFieldError, pOutOrphans,
+													 prop ) )
+							uniqueSeen.insert( prop.getNameHash() );
+						else
+							applyPropertyDefault( pPropPtr, prop, ctx );
+						backend.popChild();
+					}
 					else
 						applyPropertyDefault( pPropPtr, prop, ctx );
 				}
 				else
 				{
-					string strValue;
-					bool   readOk{ false };
-					if ( prop._metadata._bXmlAttribute != 0 )
+					const TypeInfo* pNestedType = findNestedXmlObjectType( prop._typeName, ctx );
+					if ( pNestedType != nullptr )
 					{
-						readOk = backend.readAttribute( prop._name.c_str(), strValue );
-						if ( readOk == false )
+						bool entered = backend.pushChild( prop._name.c_str() );
+						if ( entered == false )
 						{
 							for ( const hashed_string& alias : prop._listAliases )
 							{
-								if ( alias.empty() == false && backend.readAttribute( alias.c_str(), strValue ) )
+								if ( alias.empty() == false && backend.pushChild( alias.c_str() ) )
 								{
-									readOk = true;
+									entered = true;
 									break;
 								}
 							}
 						}
-					}
-					else
-					{
-						readOk = backend.readValueOrAttribute( prop._name.c_str(), strValue );
-						if ( readOk == false )
+						if ( entered )
 						{
-							for ( const hashed_string& alias : prop._listAliases )
+							uniqueSeen.insert( prop.getNameHash() );
+							if ( readXmlIntoInstance( pPropPtr, *pNestedType, backend, ctx, pOutOrphans ) == false )
+								bFieldError = true;
+							backend.popChild();
+						}
+						else
+							applyPropertyDefault( pPropPtr, prop, ctx );
+						continue;
+					}
+
+					string strValue;
+					bool   readOk = backend.readAttribute( prop._name.c_str(), strValue );
+					if ( readOk == false )
+					{
+						for ( const hashed_string& alias : prop._listAliases )
+						{
+							if ( alias.empty() == false && backend.readAttribute( alias.c_str(), strValue ) )
 							{
-								if ( alias.empty() == false && backend.readValueOrAttribute( alias.c_str(), strValue ) )
-								{
-									readOk = true;
-									break;
-								}
+								readOk = true;
+								break;
 							}
 						}
 					}
@@ -541,6 +735,24 @@ namespace sw
 				orphan._name	 = nameHs;
 				orphan._nameHash = nameHs.getHash();
 				orphan._text	 = child.text() != nullptr ? child.text() : "";
+				pOutOrphans->push_back( std::move( orphan ) );
+			}
+
+			for ( XmlAttribute attr = root.firstAttr(); attr.isValid(); attr = attr.next() )
+			{
+				const utf8* pAttrName = attr.name();
+				if ( pAttrName == nullptr )
+					continue;
+				if ( StringUtil::strcmp( pAttrName, kSchemaVersionKey ) == 0 )
+					continue;
+				if ( isNameKnown( uniqueKnownNames, pAttrName ) )
+					continue;
+
+				const hashed_string nameHs( pAttrName );
+				SchemaOrphanValue	orphan;
+				orphan._name	 = nameHs;
+				orphan._nameHash = nameHs.getHash();
+				orphan._text	 = attr.value() != nullptr ? attr.value() : "";
 				pOutOrphans->push_back( std::move( orphan ) );
 			}
 		}
@@ -657,10 +869,16 @@ namespace sw
 	{
 		XmlDocumentBackend backend;
 		backend.initXmlSerialization( typeInfo._name.c_str() );
+		serializeVersionedInto( backend, version, pInstance, typeInfo, ctx );
+		return backend.endSerialize();
+	}
+
+	void XmlSerializer::serializeVersionedInto( IXmlBackend& backend, uint32 version, const void* pInstance,
+												const TypeInfo& typeInfo, const SerializeContext& ctx )
+	{
 		const string verStr = to_string( version );
 		backend.writeAttribute( kSchemaVersionKey, verStr.c_str() );
 		writeXmlProperties( pInstance, typeInfo, backend, ctx );
-		return backend.endSerialize();
 	}
 
 	bool XmlSerializer::deserializeVersioned( uint32& outVersion, void* pInstance, const TypeInfo& typeInfo,
@@ -712,7 +930,13 @@ namespace sw
 			mctx._pSerializeCtx	  = &ctx;
 			ok					  = migrate( mctx );
 		}
-		else if ( migrate == nullptr && ( outVersion != currentVersion || listOrphans.empty() == false ) )
+		else if ( migrate == nullptr && outVersion != currentVersion )
+		{
+			SW_LOG_WARNING( "[XmlSerializer] schema version %# -> %# with no migrate callback (%# listOrphans)",
+							outVersion, currentVersion, static_cast<uint32>( listOrphans.size() ) );
+			ok = false;
+		}
+		else if ( migrate == nullptr && listOrphans.empty() == false && ctx.allowUnknownProperties() == false )
 		{
 			SW_LOG_WARNING( "[XmlSerializer] schema version %# -> %# with no migrate callback (%# listOrphans)",
 							outVersion, currentVersion, static_cast<uint32>( listOrphans.size() ) );

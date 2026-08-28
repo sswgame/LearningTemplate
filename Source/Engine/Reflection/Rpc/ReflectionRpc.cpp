@@ -2,11 +2,12 @@
 
 #include "Engine/Reflection/Rpc/ReflectionRpc.h"
 
+#include "Core/Concurrency/Atomic.h"
 #include "Core/Container/ObjectHandle.h"
 
 #include "Engine/Common/EngineServices.h"
-#include "Engine/ECS/ComponentHandle.h"
-#include "Engine/ECS/Entity.h"
+
+#include "Engine/Object/Component/ComponentHandle.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Core/SerializeContext.h"

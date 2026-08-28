@@ -13,14 +13,15 @@ namespace sw
 	GameObjectPtr::GameObjectPtr()
 		: _targetName{}
 		, _pCachedPtr{ nullptr }
-		, _cachedEntity{ sw::kNullEntity }
+		, _cachedObjectId{ 0 }
+		, _pManager{ nullptr }
 	{
 	}
 
 	GameObjectPtr::GameObjectPtr( GameObject* pTarget )
 		: _targetName{ pTarget != nullptr ? pTarget->getName() : hashed_string{} }
 		, _pCachedPtr{ pTarget }
-		, _cachedEntity{ pTarget != nullptr ? pTarget->getEntityId() : sw::kNullEntity }
+		, _cachedObjectId{ pTarget != nullptr ? pTarget->getObjectId() : 0 }
 		, _pManager{ pTarget != nullptr ? pTarget->getManager() : nullptr }
 	{
 	}
@@ -28,7 +29,7 @@ namespace sw
 	GameObjectPtr::GameObjectPtr( const GameObjectPtr& other )
 		: _targetName{ other._targetName }
 		, _pCachedPtr{ other._pCachedPtr }
-		, _cachedEntity{ other._cachedEntity }
+		, _cachedObjectId{ other._cachedObjectId }
 		, _pManager{ other._pManager }
 	{
 	}
@@ -36,23 +37,23 @@ namespace sw
 	GameObjectPtr::GameObjectPtr( GameObjectPtr&& other ) noexcept
 		: _targetName{ std::move( other._targetName ) }
 		, _pCachedPtr{ other._pCachedPtr }
-		, _cachedEntity{ other._cachedEntity }
+		, _cachedObjectId{ other._cachedObjectId }
 		, _pManager{ other._pManager }
 	{
-		other._targetName	= hashed_string{};
-		other._pCachedPtr	= nullptr;
-		other._cachedEntity = sw::kNullEntity;
-		other._pManager		= nullptr;
+		other._targetName	  = hashed_string{};
+		other._pCachedPtr	  = nullptr;
+		other._cachedObjectId = 0;
+		other._pManager		  = nullptr;
 	}
 
 	GameObjectPtr::~GameObjectPtr() = default;
 
 	GameObjectPtr& GameObjectPtr::operator=( GameObject* pTarget )
 	{
-		_targetName	  = pTarget != nullptr ? pTarget->getName() : hashed_string{};
-		_pCachedPtr	  = pTarget;
-		_cachedEntity = pTarget != nullptr ? pTarget->getEntityId() : sw::kNullEntity;
-		_pManager	  = pTarget != nullptr ? pTarget->getManager() : nullptr;
+		_targetName		  = pTarget != nullptr ? pTarget->getName() : hashed_string{};
+		_pCachedPtr		  = pTarget;
+		_cachedObjectId	  = pTarget != nullptr ? pTarget->getObjectId() : 0;
+		_pManager		  = pTarget != nullptr ? pTarget->getManager() : nullptr;
 		return *this;
 	}
 
@@ -60,10 +61,10 @@ namespace sw
 	{
 		if ( this != &other )
 		{
-			_targetName	  = other._targetName;
-			_pCachedPtr	  = other._pCachedPtr;
-			_cachedEntity = other._cachedEntity;
-			_pManager	  = other._pManager;
+			_targetName		  = other._targetName;
+			_pCachedPtr		  = other._pCachedPtr;
+			_cachedObjectId	  = other._cachedObjectId;
+			_pManager		  = other._pManager;
 		}
 		return *this;
 	}
@@ -72,14 +73,14 @@ namespace sw
 	{
 		if ( this != &other )
 		{
-			_targetName			= std::move( other._targetName );
-			_pCachedPtr			= other._pCachedPtr;
-			_cachedEntity		= other._cachedEntity;
-			_pManager			= other._pManager;
-			other._targetName	= hashed_string{};
-			other._pCachedPtr	= nullptr;
-			other._cachedEntity = sw::kNullEntity;
-			other._pManager		= nullptr;
+			_targetName			  = std::move( other._targetName );
+			_pCachedPtr			  = other._pCachedPtr;
+			_cachedObjectId		  = other._cachedObjectId;
+			_pManager			  = other._pManager;
+			other._targetName	  = hashed_string{};
+			other._pCachedPtr	  = nullptr;
+			other._cachedObjectId = 0;
+			other._pManager		  = nullptr;
 		}
 		return *this;
 	}
@@ -88,8 +89,8 @@ namespace sw
 	{
 		if ( _targetName.getHash() == 0 )
 		{
-			_pCachedPtr	  = nullptr;
-			_cachedEntity = sw::kNullEntity;
+			_pCachedPtr		  = nullptr;
+			_cachedObjectId	  = 0;
 			return;
 		}
 
@@ -110,8 +111,8 @@ namespace sw
 		if ( pObjMgr == nullptr )
 			return;
 
-		// 1) 빠른 경로: 캐시된 엔티티가 여전히 유효하고 이름이 일치하는지 확인
-		if ( _cachedEntity != sw::kNullEntity && pObjMgr->findGameObjectByEntity( _cachedEntity ) != nullptr )
+		// 1) 빠른 경로: 캐시된 오브젝트 ID가 여전히 유효하고 이름이 일치하는지 확인
+		if ( _cachedObjectId != 0 && pObjMgr->findGameObjectById( _cachedObjectId ) != nullptr )
 		{
 			if ( _pCachedPtr != nullptr && _pCachedPtr->getName() == _targetName && _pCachedPtr->isPendingKill() == false )
 			{
@@ -123,12 +124,12 @@ namespace sw
 		_pCachedPtr = pObjMgr->findGameObjectByName( _targetName );
 		if ( _pCachedPtr != nullptr && _pCachedPtr->isPendingKill() == false )
 		{
-			_cachedEntity = _pCachedPtr->getEntityId();
+			_cachedObjectId = _pCachedPtr->getObjectId();
 		}
 		else
 		{
-			_pCachedPtr	  = nullptr;
-			_cachedEntity = sw::kNullEntity;
+			_pCachedPtr		= nullptr;
+			_cachedObjectId = 0;
 		}
 	}
 

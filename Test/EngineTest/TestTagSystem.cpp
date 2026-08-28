@@ -93,7 +93,7 @@ SW_TEST_CASE( TagSystemTest, AddRemoveDedupAndClear )
 }
 
 /**
- * @brief [TagSystemTest] GameObject 에 내장된 TagContainer 부착 및 질의 검증
+ * @brief [TagSystemTest] GameObject addTag가 TagComponent를 만들고 질의한다
  */
 SW_TEST_CASE( TagSystemTest, GameObjectTagContainerQuery )
 {
@@ -208,8 +208,7 @@ SW_TEST_CASE( TagSystemTest, GameObjectAndTagComponentQueryIntegration )
 	SW_EXPECT_TRUE( pObj->matchesTagQuery( goodQuery ) );
 	SW_EXPECT_FALSE( pObj->matchesTagQuery( badQuery ) );
 
-	// TagComponent Facade 테스트
-	sw::TagComponent* pTagComp = pObj->addComponent<sw::TagComponent>();
+	sw::TagComponent* pTagComp = pObj->getComponent<sw::TagComponent>();
 	SW_ASSERT_NOT_NULL( pTagComp );
 
 	SW_EXPECT_TRUE( pTagComp->matchesQuery( goodQuery ) );

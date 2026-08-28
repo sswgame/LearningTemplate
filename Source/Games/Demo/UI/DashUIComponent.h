@@ -3,7 +3,7 @@
 
 namespace sw
 {
-	REFLECT_SCRIPT()
+	REFLECT()
 	class DashUIComponent : public Component
 	{
 	public:

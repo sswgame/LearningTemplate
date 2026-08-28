@@ -6,9 +6,9 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Object/Component/ComponentPtr.h"
 #include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/GameObjectManagerInternal.h"
 #include "Engine/Object/GameObject/GameObjectPtr.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Reflection/ReflectionCore.h"
@@ -25,7 +25,7 @@ namespace sw
 	namespace
 	{
 		/** @brief 테스트 전용 TypeInfo 를 만들거나 캐시에서 반환합니다. */
-		const TypeInfo* makeMockComponentTypeInfo( hashed_string shortName, hashed_string fqn, size_t size )
+		const TypeInfo* makeMockComponentTypeInfo( hashed_string shortName, hashed_string fqn, size_t size, hashed_string parentFqn = hashed_string{} )
 		{
 			// 테스트 로컬 TypeInfo (RTTI 없음). 키는 ComponentManager 팩토리 등록과 일치합니다.
 			static mutex								  s_mutex;
@@ -39,6 +39,7 @@ namespace sw
 			info._name				 = shortName;
 			info._typeId			 = static_cast<uint32>( shortName.getHash() );
 			info._fullyQualifiedName = fqn;
+			info._parentFQN			 = parentFqn;
 			info._size				 = size;
 			it						 = s_types.emplace( shortName, std::move( info ) ).first;
 			if ( engine::areEngineServicesBound() )
@@ -53,20 +54,37 @@ namespace sw
 	public:
 		REFLECT_BODY();
 
-		/** @brief 캐시된 TypeInfo 또는 StaticType 을 반환합니다. */
+		/** @brief 테스트 전용 StaticType 을 반환합니다. */
 		const TypeInfo* getTypeInfo() const override
 		{
-			return _pCachedTypeInfo != nullptr ? _pCachedTypeInfo : StaticType();
+			return StaticType();
 		}
 
 		string _meshName = "CubeMesh";
 		int32  _tickCount{ 0 };
 
-		/** @brief 틱마다 _tickCount 를 증가시킵니다. */
+		GameObjectManager* _pTickDestroyManager{ nullptr };
+		GameObject*		   _pTickDestroyObject{ nullptr };
+		GameObject*		   _pTickRemoveOwner{ nullptr };
+		Component*		   _pTickRemoveComp{ nullptr };
+		SceneComponent*	   _pTickAttachChild{ nullptr };
+		SceneComponent*	   _pTickAttachParent{ nullptr };
+		SceneComponent*	   _pTickMoveComp{ nullptr };
+		float3			   _tickMovePos{};
+
+		/** @brief 틱마다 _tickCount 를 증가시키고, 설정된 틱 액션을 실행합니다. */
 		virtual void onTick( float32 deltaTime ) override
 		{
 			Component::onTick( deltaTime );
 			_tickCount++;
+			if ( _pTickMoveComp != nullptr )
+				_pTickMoveComp->setLocalPosition( _tickMovePos );
+			if ( _pTickDestroyManager != nullptr && _pTickDestroyObject != nullptr )
+				_pTickDestroyManager->destroyObject( _pTickDestroyObject );
+			if ( _pTickRemoveOwner != nullptr && _pTickRemoveComp != nullptr )
+				_pTickRemoveOwner->removeComponent( _pTickRemoveComp );
+			if ( _pTickAttachChild != nullptr && _pTickAttachParent != nullptr )
+				_pTickAttachChild->attachToComponent( _pTickAttachParent );
 		}
 	};
 
@@ -82,10 +100,10 @@ namespace sw
 	public:
 		REFLECT_BODY();
 
-		/** @brief 캐시된 TypeInfo 또는 StaticType 을 반환합니다. */
+		/** @brief 테스트 전용 StaticType 을 반환합니다. */
 		const TypeInfo* getTypeInfo() const override
 		{
-			return _pCachedTypeInfo != nullptr ? _pCachedTypeInfo : StaticType();
+			return StaticType();
 		}
 
 		float32 _volume{ 1.0f };
@@ -111,10 +129,10 @@ namespace sw
 	public:
 		REFLECT_BODY();
 
-		/** @brief 캐시된 TypeInfo 또는 StaticType 을 반환합니다. */
+		/** @brief 테스트 전용 StaticType 을 반환합니다. */
 		const TypeInfo* getTypeInfo() const override
 		{
-			return _pCachedTypeInfo != nullptr ? _pCachedTypeInfo : StaticType();
+			return StaticType();
 		}
 
 		hashed_string _lastChangedProperty;
@@ -135,18 +153,61 @@ namespace sw
 										  sizeof( MockCallbackComponent ) );
 	}
 
-	/** @brief 모의 컴포넌트 TypeInfo 와 ECS 팩토리를 등록합니다. */
-	static void RegisterMockComponents( GameObjectManager& manager )
+	class MockTickSceneComponent : public SceneComponent
 	{
-		MockMeshComponent::StaticType();
-		MockAudioComponent::StaticType();
-		MockCallbackComponent::StaticType();
+	public:
+		REFLECT_BODY();
 
-		sw::Registry& registry = GameObjectManagerAccess::get( manager );
-		registry.registerComponentType<MockMeshComponent>( hashed_string( "MockMeshComponent" ) );
-		registry.registerComponentType<MockAudioComponent>( hashed_string( "MockAudioComponent" ) );
-		registry.registerComponentType<MockCallbackComponent>( hashed_string( "MockCallbackComponent" ) );
+		float3* _pObservedWorld;
+		float3	_tickLocalPos;
+		uint8	_bWriteLocalOnTick : 1;
+
+		MockTickSceneComponent()
+			: _pObservedWorld{ nullptr }
+			, _tickLocalPos{}
+			, _bWriteLocalOnTick{ SW_FALSE }
+		{
+			setCanEverTick( true );
+		}
+
+		/** @brief 테스트 전용 StaticType 을 반환합니다. */
+		const TypeInfo* getTypeInfo() const override
+		{
+			return StaticType();
+		}
+
+		void onTick( float32 deltaTime ) override
+		{
+			SceneComponent::onTick( deltaTime );
+			if ( _pObservedWorld != nullptr )
+				*_pObservedWorld = getWorldPosition();
+			if ( _bWriteLocalOnTick == SW_TRUE )
+				setLocalPosition( _tickLocalPos );
+		}
+	};
+
+	/** @brief MockTickSceneComponent 의 정적 TypeInfo 를 반환합니다. */
+	const TypeInfo* MockTickSceneComponent::StaticType()
+	{
+		return makeMockComponentTypeInfo( hashed_string( "MockTickSceneComponent" ),
+										  hashed_string( "sw::MockTickSceneComponent" ),
+										  sizeof( MockTickSceneComponent ),
+										  hashed_string( "sw::SceneComponent" ) );
 	}
+
+		/** @brief 모의 컴포넌트 TypeInfo 와 팩토리를 등록합니다. */
+		static void RegisterMockComponents( GameObjectManager& manager )
+		{
+			MockMeshComponent::StaticType();
+			MockAudioComponent::StaticType();
+			MockCallbackComponent::StaticType();
+			MockTickSceneComponent::StaticType();
+
+			manager.registerComponentType<MockMeshComponent>( hashed_string( "MockMeshComponent" ) );
+			manager.registerComponentType<MockAudioComponent>( hashed_string( "MockAudioComponent" ) );
+			manager.registerComponentType<MockCallbackComponent>( hashed_string( "MockCallbackComponent" ) );
+			manager.registerComponentType<MockTickSceneComponent>( hashed_string( "MockTickSceneComponent" ) );
+		}
 } // namespace sw
 
 // ------------------------------------------------------------------------------
@@ -168,33 +229,32 @@ SW_TEST_CASE( GameObjectTest, MultiSameComponentAttachment )
 	sw::MockMeshComponent* mesh1 = actor.addComponent<sw::MockMeshComponent>();
 	mesh1->_meshName			 = "HeadMesh";
 
-	// ECS 가 기존 컴포넌트를 교체한다
 	sw::MockMeshComponent* mesh2 = actor.addComponent<sw::MockMeshComponent>();
 	mesh2->_meshName			 = "BodyMesh";
 
 	sw::MockMeshComponent* mesh3 = actor.addComponent<sw::MockMeshComponent>();
 	mesh3->_meshName			 = "WeaponMesh";
 
-	SW_EXPECT_EQUAL( 1u, actor.getComponentCount() );
+	SW_EXPECT_EQUAL( 3u, actor.getComponentCount() );
 
-	auto firstHandle = actor.getComponent<sw::MockMeshComponent>();
-	SW_ASSERT_NOT_NULL( firstHandle.get() );
-	SW_EXPECT_EQUAL( sw::string( "WeaponMesh" ), firstHandle->_meshName );
-
-	sw::MockMeshComponent* firstMesh = firstHandle.get();
-	SW_EXPECT_EQUAL( mesh3, firstMesh );
+	sw::MockMeshComponent* firstMesh = actor.getComponent<sw::MockMeshComponent>();
+	SW_ASSERT_NOT_NULL( firstMesh );
+	SW_EXPECT_EQUAL( sw::string( "HeadMesh" ), firstMesh->_meshName );
+	SW_EXPECT_EQUAL( mesh1, firstMesh );
 
 	manager.tick( 0.016f );
+	SW_EXPECT_EQUAL( 1, mesh1->_tickCount );
+	SW_EXPECT_EQUAL( 1, mesh2->_tickCount );
 	SW_EXPECT_EQUAL( 1, mesh3->_tickCount );
 
 	SW_EXPECT_TRUE( actor.removeComponent( firstMesh ) );
-	SW_EXPECT_EQUAL( 0u, actor.getComponentCount() );
+	SW_EXPECT_EQUAL( 2u, actor.getComponentCount() );
 }
 
 /**
- * @brief [GameObjectTest] 지연 컴포넌트 삭제가 ECS 풀에서 제거한다
+ * @brief [GameObjectTest] 지연 컴포넌트 삭제가 조회에서 빠진다
  */
-SW_TEST_CASE( GameObjectTest, DeferredComponentDestructionRemovesFromEcs )
+SW_TEST_CASE( GameObjectTest, DeferredComponentDestructionRemovesFromObject )
 {
 	sw::GameObjectManager manager;
 	sw::RegisterMockComponents( manager );
@@ -264,7 +324,7 @@ SW_TEST_CASE( GameObjectTest, ParallelComponentTicking )
 
 		for ( sw::GameObject* actor : actors )
 		{
-			sw::MockMeshComponent* meshComp = actor->getComponent<sw::MockMeshComponent>().get();
+			sw::MockMeshComponent* meshComp = actor->getComponent<sw::MockMeshComponent>();
 			SW_EXPECT_NOT_NULL( meshComp );
 			if ( meshComp != nullptr )
 			{
@@ -364,8 +424,8 @@ SW_TEST_CASE( SceneComponentTest, ParentChildHierarchyAndDirtyPropagation )
 	parentActor.addComponent<SceneComponent>();
 	childActor.addComponent<SceneComponent>();
 
-	SceneComponent* parentComp = parentActor.getComponent<SceneComponent>().get();
-	SceneComponent* childComp  = childActor.getComponent<SceneComponent>().get();
+	SceneComponent* parentComp = parentActor.getComponent<SceneComponent>();
+	SceneComponent* childComp  = childActor.getComponent<SceneComponent>();
 
 	parentComp->setLocalPosition( float3( 10.0f, 0.0f, 0.0f ) );
 	childComp->setLocalPosition( float3( 5.0f, 2.0f, 0.0f ) );
@@ -403,8 +463,8 @@ SW_TEST_CASE( SceneComponentTest, ParentRotationScalePropagatesToChild )
 	parentActor.addComponent<SceneComponent>();
 	childActor.addComponent<SceneComponent>();
 
-	SceneComponent* parentComp = parentActor.getComponent<SceneComponent>().get();
-	SceneComponent* childComp  = childActor.getComponent<SceneComponent>().get();
+	SceneComponent* parentComp = parentActor.getComponent<SceneComponent>();
+	SceneComponent* childComp  = childActor.getComponent<SceneComponent>();
 
 	// yaw 90도: 로컬 +X 가 월드 -Z 가 된다(오른손 Y-up).
 	parentComp->setLocalPosition( float3( 10.0f, 0.0f, 0.0f ) );
@@ -561,16 +621,16 @@ SW_TEST_CASE( GameObjectManagerTest, SequentialAndParallelTick )
 	a->addComponent<MockMeshComponent>();
 	b->addComponent<MockMeshComponent>();
 
-	MockMeshComponent* aMesh = a->getComponent<MockMeshComponent>().get();
-	MockMeshComponent* bMesh = b->getComponent<MockMeshComponent>().get();
+	MockMeshComponent* aMesh = a->getComponent<MockMeshComponent>();
+	MockMeshComponent* bMesh = b->getComponent<MockMeshComponent>();
 
 	manager.tick( 0.016f );
 	SW_EXPECT_EQUAL( 1, aMesh->_tickCount );
 	SW_EXPECT_EQUAL( 1, bMesh->_tickCount );
 
 	manager.tick( 0.016f );
-	aMesh = a->getComponent<MockMeshComponent>().get();
-	bMesh = b->getComponent<MockMeshComponent>().get();
+	aMesh = a->getComponent<MockMeshComponent>();
+	bMesh = b->getComponent<MockMeshComponent>();
 	SW_EXPECT_EQUAL( 2, aMesh->_tickCount );
 	SW_EXPECT_EQUAL( 2, bMesh->_tickCount );
 
@@ -588,32 +648,25 @@ SW_TEST_CASE( GameObjectManagerTest, ParallelTickReadsStableHierarchyTransforms 
 	GameObject* parentObj = manager.createGameObject( hashed_string( "Parent" ) );
 	GameObject* childObj  = manager.createGameObject( hashed_string( "Child" ) );
 
-	parentObj->addComponent<SceneComponent>();
-	childObj->addComponent<SceneComponent>();
+	parentObj->addComponent<MockTickSceneComponent>();
+	childObj->addComponent<MockTickSceneComponent>();
 
-	SceneComponent* parentComp = parentObj->getComponent<SceneComponent>().get();
-	SceneComponent* childComp  = childObj->getComponent<SceneComponent>().get();
+	MockTickSceneComponent* parentComp = parentObj->getComponent<MockTickSceneComponent>();
+	MockTickSceneComponent* childComp  = childObj->getComponent<MockTickSceneComponent>();
 
 	parentComp->setLocalPosition( float3( 10.0f, 0.0f, 0.0f ) );
 	childComp->setLocalPosition( float3( 5.0f, 0.0f, 0.0f ) );
 	SW_ASSERT_TRUE( childComp->attachToComponent( parentComp ) );
 
 	float3 observedDuringTick{ 0.0f, 0.0f, 0.0f };
-	childComp->setTickDelegate( SW_DELEGATE_LAMBDA( Component::ComponentTickDelegate,
-													[&observedDuringTick, childComp]( float32 )
-	{
-		observedDuringTick = childComp->getWorldPosition();
-	} ) );
+	childComp->_pObservedWorld = &observedDuringTick;
 
 	manager.tick( 0.016f );
 	SW_EXPECT_NEAR_EQUAL( 15.0f, observedDuringTick._x, 1e-4f );
 
 	// 틱 중 로컬 쓰기는 post-flush 이후에 보이며, 틱 중간 스냅샷에는 없을 수 있다.
-	parentComp->setTickDelegate( SW_DELEGATE_LAMBDA( Component::ComponentTickDelegate,
-													 [parentComp]( float32 )
-	{
-		parentComp->setLocalPosition( float3( 20.0f, 0.0f, 0.0f ) );
-	} ) );
+	parentComp->_tickLocalPos		= float3( 20.0f, 0.0f, 0.0f );
+	parentComp->_bWriteLocalOnTick	= SW_TRUE;
 	manager.tick( 0.016f );
 	SW_EXPECT_NEAR_EQUAL( 25.0f, childComp->getWorldPosition()._x, 1e-4f );
 
@@ -657,9 +710,11 @@ SW_TEST_CASE( ObjectStateXmlSerializerTest, SaveAndLoadXmlString )
 
 	const sw::string xml = ObjectStateSerializer::saveToXmlString( &source );
 	SW_ASSERT_TRUE( xml.empty() == false );
-	SW_EXPECT_TRUE( xml.find( "GameObjectState" ) != sw::string::npos );
+	SW_EXPECT_TRUE( xml.find( "GameObject" ) != sw::string::npos );
 	SW_EXPECT_TRUE( xml.find( "SerializedHero" ) != sw::string::npos );
-	SW_EXPECT_TRUE( xml.find( "ParentGO" ) != sw::string::npos );
+	SW_EXPECT_TRUE( xml.find( "SceneTransforms" ) == sw::string::npos );
+	SW_EXPECT_TRUE( xml.find( "_parentGO" ) == sw::string::npos );
+	SW_EXPECT_TRUE( xml.find( "ParentGO" ) == sw::string::npos );
 
 	manager.clear();
 
@@ -699,6 +754,9 @@ SW_TEST_CASE( ObjectStateXmlSerializerTest, ParentChildHierarchyRoundtrip )
 	parent->addComponent<sw::SceneComponent>();
 	child->addComponent<sw::SceneComponent>();
 	grand->addComponent<sw::SceneComponent>();
+
+	parent->getComponent<sw::SceneComponent>()->setLocalPosition( sw::float3( 1.0f, 2.0f, 3.0f ) );
+	child->getComponent<sw::SceneComponent>()->setLocalPosition( sw::float3( 4.0f, 5.0f, 6.0f ) );
 
 	SW_ASSERT_TRUE( child->attachToParent( parent ) );
 	SW_ASSERT_TRUE( grand->attachToParent( child ) );
@@ -746,6 +804,15 @@ SW_TEST_CASE( ObjectStateXmlSerializerTest, ParentChildHierarchyRoundtrip )
 	SW_EXPECT_EQUAL( size_t( 1 ), child->getChildren().size() );
 	SW_EXPECT_EQUAL( grand, child->getChildren()[0] );
 
+	const sw::float3 parentPos = parent->getComponent<sw::SceneComponent>()->getLocalPosition();
+	const sw::float3 childPos  = child->getComponent<sw::SceneComponent>()->getLocalPosition();
+	SW_EXPECT_NEAR_EQUAL( 1.0f, parentPos._x, 0.0001f );
+	SW_EXPECT_NEAR_EQUAL( 2.0f, parentPos._y, 0.0001f );
+	SW_EXPECT_NEAR_EQUAL( 3.0f, parentPos._z, 0.0001f );
+	SW_EXPECT_NEAR_EQUAL( 4.0f, childPos._x, 0.0001f );
+	SW_EXPECT_NEAR_EQUAL( 5.0f, childPos._y, 0.0001f );
+	SW_EXPECT_NEAR_EQUAL( 6.0f, childPos._z, 0.0001f );
+
 	manager->clear();
 }
 
@@ -765,8 +832,8 @@ SW_TEST_CASE( ComponentTickGroupTest, TickOrderPrePhysicsToPostUpdate )
 	sw::GameObject* actorPre = manager.createGameObject( sw::hashed_string( "TickGroupActorPre" ) );
 	actorPre->addComponent<MockMeshComponent>();
 
-	MockMeshComponent* compPost = actorPost->getComponent<MockMeshComponent>().get();
-	MockMeshComponent* compPre	= actorPre->getComponent<MockMeshComponent>().get();
+	MockMeshComponent* compPost = actorPost->getComponent<MockMeshComponent>();
+	MockMeshComponent* compPre	= actorPre->getComponent<MockMeshComponent>();
 	compPost->setTickGroup( sw::TickGroup::PostPhysics );
 	compPre->setTickGroup( sw::TickGroup::PrePhysics );
 
@@ -906,9 +973,9 @@ SW_TEST_CASE( GameObjectTest, AttachToParentReparentsPrimarySceneComponent )
 	child->addComponent<SceneComponent>();
 	other->addComponent<SceneComponent>();
 
-	SceneComponent* parentSc = parent->getComponent<SceneComponent>().get();
-	SceneComponent* childSc	 = child->getComponent<SceneComponent>().get();
-	SceneComponent* otherSc	 = other->getComponent<SceneComponent>().get();
+	SceneComponent* parentSc = parent->getComponent<SceneComponent>();
+	SceneComponent* childSc	 = child->getComponent<SceneComponent>();
+	SceneComponent* otherSc	 = other->getComponent<SceneComponent>();
 	SW_ASSERT_NOT_NULL( parentSc );
 	SW_ASSERT_NOT_NULL( childSc );
 	SW_ASSERT_NOT_NULL( otherSc );
@@ -936,16 +1003,13 @@ SW_TEST_CASE( GameObjectManagerTest, DestroyDuringTickIsDeferredThenApplied )
 
 	keeper->addComponent<MockMeshComponent>();
 	victim->addComponent<MockMeshComponent>();
-	MockMeshComponent* keeperMesh = keeper->getComponent<MockMeshComponent>().get();
-	MockMeshComponent* victimMesh = victim->getComponent<MockMeshComponent>().get();
+	MockMeshComponent* keeperMesh = keeper->getComponent<MockMeshComponent>();
+	MockMeshComponent* victimMesh = victim->getComponent<MockMeshComponent>();
 	SW_ASSERT_NOT_NULL( keeperMesh );
 	SW_ASSERT_NOT_NULL( victimMesh );
 
-	keeperMesh->setTickDelegate( SW_DELEGATE_LAMBDA( Component::ComponentTickDelegate,
-													 [&manager, victim]( float32 )
-	{
-		manager.destroyObject( victim );
-	} ) );
+	keeperMesh->_pTickDestroyManager = &manager;
+	keeperMesh->_pTickDestroyObject	 = victim;
 
 	manager.tick( 0.016f );
 	SW_EXPECT_NULL( manager.findGameObjectByName( hashed_string( "TickVictim" ) ) );
@@ -965,8 +1029,8 @@ SW_TEST_CASE( GameObjectTest, DeferredDestroyTwoSameTypeComponents )
 	GameObject* b = manager.createGameObject( hashed_string( "DeferredB" ) );
 	a->addComponent<MockMeshComponent>();
 	b->addComponent<MockMeshComponent>();
-	MockMeshComponent* meshA = a->getComponent<MockMeshComponent>().get();
-	MockMeshComponent* meshB = b->getComponent<MockMeshComponent>().get();
+	MockMeshComponent* meshA = a->getComponent<MockMeshComponent>();
+	MockMeshComponent* meshB = b->getComponent<MockMeshComponent>();
 	SW_ASSERT_NOT_NULL( meshA );
 	SW_ASSERT_NOT_NULL( meshB );
 
@@ -989,16 +1053,13 @@ SW_TEST_CASE( GameObjectTest, TickRemoveOtherSameTypeComponent )
 	GameObject* victim = manager.createGameObject( hashed_string( "TickVictimComp" ) );
 	keeper->addComponent<MockMeshComponent>();
 	victim->addComponent<MockMeshComponent>();
-	MockMeshComponent* keeperMesh = keeper->getComponent<MockMeshComponent>().get();
-	MockMeshComponent* victimMesh = victim->getComponent<MockMeshComponent>().get();
+	MockMeshComponent* keeperMesh = keeper->getComponent<MockMeshComponent>();
+	MockMeshComponent* victimMesh = victim->getComponent<MockMeshComponent>();
 	SW_ASSERT_NOT_NULL( keeperMesh );
 	SW_ASSERT_NOT_NULL( victimMesh );
 
-	keeperMesh->setTickDelegate( SW_DELEGATE_LAMBDA( Component::ComponentTickDelegate,
-													 [victim, victimMesh]( float32 )
-	{
-		victim->removeComponent( victimMesh );
-	} ) );
+	keeperMesh->_pTickRemoveOwner = victim;
+	keeperMesh->_pTickRemoveComp	 = victimMesh;
 
 	manager.tick( 0.016f );
 	SW_EXPECT_EQUAL( 0u, victim->getComponentCount() );
@@ -1017,8 +1078,8 @@ SW_TEST_CASE( GameObjectTest, SameEntityComponentsBothTick )
 	GameObject* actor = manager.createGameObject( hashed_string( "SameEntityTick" ) );
 	actor->addComponent<MockMeshComponent>();
 	actor->addComponent<MockAudioComponent>();
-	MockMeshComponent*	mesh  = actor->getComponent<MockMeshComponent>().get();
-	MockAudioComponent* audio = actor->getComponent<MockAudioComponent>().get();
+	MockMeshComponent*	mesh  = actor->getComponent<MockMeshComponent>();
+	MockAudioComponent* audio = actor->getComponent<MockAudioComponent>();
 	SW_ASSERT_NOT_NULL( mesh );
 	SW_ASSERT_NOT_NULL( audio );
 
@@ -1039,17 +1100,15 @@ SW_TEST_CASE( GameObjectManagerTest, DeferredTransformSkipsDestroyedComponent )
 	GameObject* victim = manager.createGameObject( hashed_string( "TransformVictim" ) );
 	keeper->addComponent<MockMeshComponent>();
 	victim->addComponent<SceneComponent>();
-	MockMeshComponent* keeperMesh = keeper->getComponent<MockMeshComponent>().get();
-	SceneComponent*	   victimSc	  = victim->getComponent<SceneComponent>().get();
+	MockMeshComponent* keeperMesh = keeper->getComponent<MockMeshComponent>();
+	SceneComponent*	   victimSc	  = victim->getComponent<SceneComponent>();
 	SW_ASSERT_NOT_NULL( keeperMesh );
 	SW_ASSERT_NOT_NULL( victimSc );
 
-	keeperMesh->setTickDelegate( SW_DELEGATE_LAMBDA( Component::ComponentTickDelegate,
-													 [&manager, victim, victimSc]( float32 )
-	{
-		victimSc->setLocalPosition( float3( 1.0f, 2.0f, 3.0f ) );
-		manager.destroyObject( victim );
-	} ) );
+	keeperMesh->_pTickMoveComp		 = victimSc;
+	keeperMesh->_tickMovePos		 = float3( 1.0f, 2.0f, 3.0f );
+	keeperMesh->_pTickDestroyManager = &manager;
+	keeperMesh->_pTickDestroyObject	 = victim;
 
 	manager.tick( 0.016f );
 	SW_EXPECT_NULL( manager.findGameObjectByName( hashed_string( "TransformVictim" ) ) );
@@ -1057,7 +1116,7 @@ SW_TEST_CASE( GameObjectManagerTest, DeferredTransformSkipsDestroyedComponent )
 }
 
 /**
- * @brief [GameObjectManagerTest] 틱 중 attach는 지연된 뒤 HierarchyData를 만들 수 있다
+ * @brief [GameObjectManagerTest] 틱 중 attach는 지연된 뒤 부모-자식 포인터를 연결한다
  */
 SW_TEST_CASE( GameObjectManagerTest, DeferredAttachDuringTickApplies )
 {
@@ -1070,18 +1129,15 @@ SW_TEST_CASE( GameObjectManagerTest, DeferredAttachDuringTickApplies )
 	parent->addComponent<SceneComponent>();
 	child->addComponent<SceneComponent>();
 	ticker->addComponent<MockMeshComponent>();
-	SceneComponent*	   parentSc	  = parent->getComponent<SceneComponent>().get();
-	SceneComponent*	   childSc	  = child->getComponent<SceneComponent>().get();
-	MockMeshComponent* tickerMesh = ticker->getComponent<MockMeshComponent>().get();
+	SceneComponent*	   parentSc	  = parent->getComponent<SceneComponent>();
+	SceneComponent*	   childSc	  = child->getComponent<SceneComponent>();
+	MockMeshComponent* tickerMesh = ticker->getComponent<MockMeshComponent>();
 	SW_ASSERT_NOT_NULL( parentSc );
 	SW_ASSERT_NOT_NULL( childSc );
 	SW_ASSERT_NOT_NULL( tickerMesh );
 
-	tickerMesh->setTickDelegate( SW_DELEGATE_LAMBDA( Component::ComponentTickDelegate,
-													 [childSc, parentSc]( float32 )
-	{
-		childSc->attachToComponent( parentSc );
-	} ) );
+	tickerMesh->_pTickAttachChild  = childSc;
+	tickerMesh->_pTickAttachParent = parentSc;
 
 	manager.tick( 0.016f );
 	SW_EXPECT_EQUAL( parentSc, childSc->getParent() );
@@ -1103,9 +1159,9 @@ SW_TEST_CASE( SceneComponentTest, LargeWorldCoordinatesHierarchy )
 	child->addComponent<SceneComponent>();
 	grandChild->addComponent<SceneComponent>();
 
-	SceneComponent* rootSc		 = root->getComponent<SceneComponent>().get();
-	SceneComponent* childSc		 = child->getComponent<SceneComponent>().get();
-	SceneComponent* grandChildSc = grandChild->getComponent<SceneComponent>().get();
+	SceneComponent* rootSc		 = root->getComponent<SceneComponent>();
+	SceneComponent* childSc		 = child->getComponent<SceneComponent>();
+	SceneComponent* grandChildSc = grandChild->getComponent<SceneComponent>();
 
 	SW_ASSERT_NOT_NULL( rootSc );
 	SW_ASSERT_NOT_NULL( childSc );
@@ -1195,24 +1251,18 @@ SW_TEST_CASE( SceneHierarchyTest, TransformDirtyPropagationAndEarlyOut )
 	pParentSc->getWorldMatrix();
 	pChildSc->getWorldMatrix();
 
-	auto* pParentTdata = pParentObj->getComponent<sw::TransformData>().get();
-	auto* pChildTdata  = pChildObj->getComponent<sw::TransformData>().get();
-
-	SW_ASSERT_NOT_NULL( pParentTdata );
-	SW_ASSERT_NOT_NULL( pChildTdata );
-
-	SW_EXPECT_EQUAL( 0, static_cast<int32>( pParentTdata->bIsTransformDirty ) );
-	SW_EXPECT_EQUAL( 0, static_cast<int32>( pChildTdata->bIsTransformDirty ) );
+	SW_EXPECT_EQUAL( 0, static_cast<int32>( pParentSc->isTransformDirty() ) );
+	SW_EXPECT_EQUAL( 0, static_cast<int32>( pChildSc->isTransformDirty() ) );
 
 	// Move child only
 	pChildSc->setLocalPosition( sw::float3( 20.0f, 0.0f, 0.0f ) );
 
 	// Child must be dirty
-	SW_EXPECT_EQUAL( 1, static_cast<int32>( pChildTdata->bIsTransformDirty ) );
+	SW_EXPECT_EQUAL( 1, static_cast<int32>( pChildSc->isTransformDirty() ) );
 	// Parent transform must NOT be dirty (child move does not dirty parent)
-	SW_EXPECT_EQUAL( 0, static_cast<int32>( pParentTdata->bIsTransformDirty ) );
+	SW_EXPECT_EQUAL( 0, static_cast<int32>( pParentSc->isTransformDirty() ) );
 	// Parent must have bHasDirtyDescendant == 1
-	SW_EXPECT_EQUAL( 1, static_cast<int32>( pParentTdata->bHasDirtyDescendant ) );
+	SW_EXPECT_EQUAL( 1, static_cast<int32>( pParentSc->hasDirtyDescendant() ) );
 
 	// When child world matrix is queried, it composes correctly from parent
 	const sw::float3 childPos = pChildSc->getWorldPosition();
@@ -1238,7 +1288,7 @@ SW_TEST_CASE( GameObjectTest, DeferredComponentAdditionDuringTick )
 
 	manager.tick( 0.016f );
 
-	sw::MockAudioComponent* pAudioComp = pObj->getComponent<sw::MockAudioComponent>().get();
+	sw::MockAudioComponent* pAudioComp = pObj->getComponent<sw::MockAudioComponent>();
 	SW_ASSERT_NOT_NULL( pAudioComp );
 	SW_EXPECT_EQUAL( pObj, pAudioComp->getOwner() );
 	SW_EXPECT_NEAR_EQUAL( 0.75f, pAudioComp->_volume, 0.001f );
@@ -1348,4 +1398,83 @@ SW_TEST_CASE( GameObjectTest, TransformDirtyGenerationEarlyExit )
 
 	// 변경 없는 경우 hasDirtySceneTransforms()는 서브트리 순회 없이 O(1)로 false 반환
 	SW_EXPECT_FALSE( manager.hasDirtySceneTransforms() );
+}
+
+/**
+ * @brief [GameObjectTest] MeshComponent만 있어도 월드 행렬 flush가 SceneComponent 풀을 요구하지 않는지 검증
+ */
+SW_TEST_CASE( GameObjectTest, MeshComponentOnlyTransformFlush )
+{
+	sw::GameObjectManager manager;
+	sw::GameObject*		  pObj = manager.createGameObject( sw::hashed_string( "MeshOnlyFlush" ) );
+	SW_ASSERT_NOT_NULL( pObj );
+
+	sw::MeshComponent* pMesh = pObj->addComponent<sw::MeshComponent>();
+	SW_ASSERT_NOT_NULL( pMesh );
+	SW_EXPECT_TRUE( pObj->getComponent<sw::SceneComponent>() != nullptr );
+
+	pMesh->setLocalPosition( sw::float3( 10.0f, 0.0f, 0.0f ) );
+	SW_EXPECT_TRUE( manager.hasDirtySceneTransforms() );
+	manager.flushSceneTransforms();
+	SW_EXPECT_FALSE( manager.hasDirtySceneTransforms() );
+
+	SW_EXPECT_EQUAL( 0, static_cast<int32>( pMesh->isTransformDirty() ) );
+	SW_EXPECT_NEAR_EQUAL( 10.0f, pMesh->getWorldPosition()._x, 0.001f );
+}
+
+/**
+ * @brief [GameObjectTest] MeshComponent 계층에서 getParent/getChildren와 자식 월드 합성이 동작하는지 검증
+ */
+SW_TEST_CASE( GameObjectTest, MeshComponentHierarchyLookupAndWorldCompose )
+{
+	sw::GameObjectManager manager;
+	sw::GameObject*		  pParentObj = manager.createGameObject( sw::hashed_string( "MeshParent" ) );
+	sw::GameObject*		  pChildObj	 = manager.createGameObject( sw::hashed_string( "MeshChild" ) );
+	SW_ASSERT_NOT_NULL( pParentObj );
+	SW_ASSERT_NOT_NULL( pChildObj );
+
+	sw::MeshComponent* pParentMesh = pParentObj->addComponent<sw::MeshComponent>();
+	sw::MeshComponent* pChildMesh  = pChildObj->addComponent<sw::MeshComponent>();
+	SW_ASSERT_NOT_NULL( pParentMesh );
+	SW_ASSERT_NOT_NULL( pChildMesh );
+
+	SW_EXPECT_TRUE( pChildObj->attachToParent( pParentObj ) );
+	SW_EXPECT_EQUAL( pParentMesh, pChildMesh->getParent() );
+	SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), pParentMesh->getChildren().size() );
+	SW_EXPECT_EQUAL( pChildMesh, pParentMesh->getChildren()[0] );
+
+	pParentMesh->setLocalPosition( sw::float3( 10.0f, 0.0f, 0.0f ) );
+	pChildMesh->setLocalPosition( sw::float3( 5.0f, 0.0f, 0.0f ) );
+	manager.flushSceneTransforms();
+
+	const sw::float3 childWorld = pChildMesh->getWorldPosition();
+	SW_EXPECT_NEAR_EQUAL( 15.0f, childWorld._x, 0.001f );
+}
+
+/**
+ * @brief [GameObjectTest] 부모 비활성이 자식의 isActiveInHierarchy에 반영되는지 검증
+ */
+SW_TEST_CASE( GameObjectTest, ActiveInHierarchyFollowsParent )
+{
+	sw::GameObjectManager manager;
+	sw::GameObject*		  pParent = manager.createGameObject( sw::hashed_string( "ActiveParent" ) );
+	sw::GameObject*		  pChild  = manager.createGameObject( sw::hashed_string( "ActiveChild" ) );
+	SW_ASSERT_NOT_NULL( pParent );
+	SW_ASSERT_NOT_NULL( pChild );
+
+	pParent->addComponent<sw::SceneComponent>();
+	pChild->addComponent<sw::SceneComponent>();
+	SW_EXPECT_TRUE( pChild->attachToParent( pParent ) );
+
+	pParent->setActive( false );
+	SW_EXPECT_FALSE( pParent->isActiveInHierarchy() );
+	SW_EXPECT_FALSE( pChild->isActiveInHierarchy() );
+
+	pParent->setActive( true );
+	SW_EXPECT_TRUE( pParent->isActiveInHierarchy() );
+	SW_EXPECT_TRUE( pChild->isActiveInHierarchy() );
+
+	pChild->setActive( false );
+	SW_EXPECT_TRUE( pParent->isActiveInHierarchy() );
+	SW_EXPECT_FALSE( pChild->isActiveInHierarchy() );
 }

@@ -8,7 +8,6 @@
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Audio/IAudioSystem.h"
-#include "Engine/ECS/Registry.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Object/Component/TagSystem.h"
@@ -160,7 +159,6 @@ namespace sw
 			TypeRegistrar*				   _pTypeHead{ nullptr };
 			EnumRegistrar*				   _pEnumHead{ nullptr };
 			sw::ComponentFactoryRegistrar* _pFactoryHead{ nullptr };
-			ScriptSystemRegistrar*		   _pScriptHead{ nullptr };
 		};
 
 		static unordered_map<string, ModuleHeadRecord>& getModuleHeadCache()
@@ -177,7 +175,6 @@ namespace sw
 			TypeRegistrar*				   pTypeHead	= TypeRegistrar::getHead();
 			EnumRegistrar*				   pEnumHead	= EnumRegistrar::getHead();
 			sw::ComponentFactoryRegistrar* pFactoryHead = sw::ComponentFactoryRegistrar::getHead();
-			ScriptSystemRegistrar*		   pScriptHead	= ScriptSystemRegistrar::getHead();
 
 			auto it = cache.find( modStr );
 			if ( it != cache.end() )
@@ -196,30 +193,23 @@ namespace sw
 					pFactoryHead = it->second._pFactoryHead;
 				else
 					it->second._pFactoryHead = pFactoryHead;
-
-				if ( pScriptHead == nullptr )
-					pScriptHead = it->second._pScriptHead;
-				else
-					it->second._pScriptHead = pScriptHead;
 			}
-			else if ( pTypeHead != nullptr || pEnumHead != nullptr || pFactoryHead != nullptr || pScriptHead != nullptr )
+			else if ( pTypeHead != nullptr || pEnumHead != nullptr || pFactoryHead != nullptr )
 			{
-				cache[modStr] = ModuleHeadRecord{ pTypeHead, pEnumHead, pFactoryHead, pScriptHead };
+				cache[modStr] = ModuleHeadRecord{ pTypeHead, pEnumHead, pFactoryHead };
 			}
 
-			registerModuleTypes( moduleName, pTypeHead, pEnumHead, pFactoryHead, pScriptHead );
+			registerModuleTypes( moduleName, pTypeHead, pEnumHead, pFactoryHead );
 
 			TypeRegistrar::getHead()				 = nullptr;
 			EnumRegistrar::getHead()				 = nullptr;
 			sw::ComponentFactoryRegistrar::getHead() = nullptr;
-			ScriptSystemRegistrar::getHead()		 = nullptr;
 		}
 
 		void registerModuleTypes( string_view					 moduleName,
 								  TypeRegistrar*				 pTypeHead,
 								  EnumRegistrar*				 pEnumHead,
-								  sw::ComponentFactoryRegistrar* pFactoryHead,
-								  ScriptSystemRegistrar*		 pScriptHead )
+								  sw::ComponentFactoryRegistrar* pFactoryHead )
 		{
 			auto&		 cache = getModuleHeadCache();
 			const string modStr{ moduleName };
@@ -240,27 +230,20 @@ namespace sw
 					it->second._pFactoryHead = pFactoryHead;
 				else
 					pFactoryHead = it->second._pFactoryHead;
-
-				if ( pScriptHead != nullptr )
-					it->second._pScriptHead = pScriptHead;
-				else
-					pScriptHead = it->second._pScriptHead;
 			}
-			else if ( pTypeHead != nullptr || pEnumHead != nullptr || pFactoryHead != nullptr || pScriptHead != nullptr )
+			else if ( pTypeHead != nullptr || pEnumHead != nullptr || pFactoryHead != nullptr )
 			{
-				cache[modStr] = ModuleHeadRecord{ pTypeHead, pEnumHead, pFactoryHead, pScriptHead };
+				cache[modStr] = ModuleHeadRecord{ pTypeHead, pEnumHead, pFactoryHead };
 			}
 
 			getTypeRegistry().registerPendingTypes( moduleName, pTypeHead, pEnumHead );
-			sw::Registry::registerModuleFactoryHead( moduleName, pFactoryHead );
-			GameObjectManager::registerModuleScriptSystemHead( moduleName, pScriptHead );
+			GameObjectManager::registerModuleFactoryHead( moduleName, pFactoryHead );
 
 			for ( const auto& scene : getSceneManager().getLoadedScenes() )
 			{
 				if ( scene && scene->getObjectManager() )
 				{
 					scene->getObjectManager()->registerPendingFactories( moduleName, pFactoryHead );
-					scene->getObjectManager()->registerPendingScriptSystems( moduleName, pScriptHead );
 					scene->getObjectManager()->rebindAllCachedTypeInfo();
 				}
 			}
@@ -269,16 +252,11 @@ namespace sw
 		void unregisterModuleTypes( string_view moduleName )
 		{
 			getModuleHeadCache().erase( string( moduleName ) );
-			sw::Registry::unregisterModuleFactoryHead( moduleName );
-			GameObjectManager::unregisterModuleScriptSystemHead( moduleName );
+			GameObjectManager::unregisterModuleFactoryHead( moduleName );
 			for ( const auto& scene : getSceneManager().getLoadedScenes() )
 			{
 				if ( scene && scene->getObjectManager() )
-				{
 					scene->getObjectManager()->unregisterFactoriesByModule( moduleName );
-					scene->getObjectManager()->clearAllCachedTypeInfo();
-					scene->getObjectManager()->reinitScriptSystems();
-				}
 			}
 			getTypeRegistry().unregisterTypesByModule( moduleName );
 			getGlobalVariableManager().unregisterVariablesByModule( moduleName );

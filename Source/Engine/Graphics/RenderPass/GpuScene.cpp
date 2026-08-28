@@ -4,15 +4,15 @@
 
 #include "Core/Task/TaskManager.h"
 
-#include "Engine/ECS/Registry.h"
-#include "Engine/ECS/View.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResource.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManagerInternal.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
+
+#include "Engine/Reflection/ReflectionCast.h"
 
 namespace sw
 {
@@ -264,27 +264,33 @@ namespace sw
 		_listScratchCandidates.clear();
 		_listScratchCandidates.reserve( 1024 );
 
-		Registry&									   reg = GameObjectManagerAccess::get( *pObjects );
-		View<MeshData, TransformData, EntityStateData> view( reg );
-		for ( auto [entity, mdata, tdata, state] : view )
+		const vector<GameObject*> listObjects = pObjects->getAllGameObjects();
+		for ( GameObject* pObj : listObjects )
 		{
-			(void)entity;
-			if ( mdata._bVisible == 0 )
-				continue;
-			if ( state.bIsActiveInHierarchy == 0 || state.bIsPendingKill != 0 )
-				continue;
-			if ( mdata._mesh == nullptr || mdata._mesh->getVertexCount() == 0 )
+			if ( pObj == nullptr || pObj->isPendingKill() || pObj->isActiveInHierarchy() == false )
 				continue;
 
-			DrawCandidate cand{};
-			Memory::copy( cand._world, &tdata.cachedWorldMatrix._11, sizeof( cand._world ) );
-			extractTranslation( tdata.cachedWorldMatrix, cand._boundsCenter );
-			cand._boundsRadius = mdata._boundsRadius;
-			cand._blendMode	   = static_cast<uint32>( mdata._blendMode );
-			cand._pMesh		   = mdata._mesh.get();
-			cand._pMaterial	   = mdata._pMaterial;
-			cand._pInstance	   = mdata._materialInstance.get();
-			_listScratchCandidates.push_back( cand );
+			for ( Component* pComp : pObj->getAllComponents() )
+			{
+				MeshComponent* pMeshComp = pComp != nullptr ? castTo<MeshComponent>( pComp ) : nullptr;
+				if ( pMeshComp == nullptr || pMeshComp->isVisible() == false )
+					continue;
+				shared_ptr<Mesh> mesh = pMeshComp->getMesh();
+				if ( mesh == nullptr || mesh->getVertexCount() == 0 )
+					continue;
+
+				const float4x4 world = pMeshComp->getWorldMatrix();
+				DrawCandidate  cand{};
+				Memory::copy( cand._world, &world._11, sizeof( cand._world ) );
+				extractTranslation( world, cand._boundsCenter );
+				cand._boundsRadius = pMeshComp->getBoundsRadius();
+				cand._blendMode	   = static_cast<uint32>( pMeshComp->getBlendMode() );
+				cand._pMesh		   = mesh.get();
+				cand._pMaterial	   = pMeshComp->getMaterial();
+				shared_ptr<MaterialInstance> materialInstance = pMeshComp->getMaterialInstance();
+				cand._pInstance	   = materialInstance.get();
+				_listScratchCandidates.push_back( cand );
+			}
 		}
 
 		if ( _listScratchCandidates.empty() )

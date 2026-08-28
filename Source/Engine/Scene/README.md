@@ -43,7 +43,7 @@ SW Engine은 **2D 평면용 해시 그리드**와 **3D 공간용 동적 BVH 트�
    $$\text{cellX} = \lfloor x / \text{cellSize} \rfloor, \quad \text{cellY} = \lfloor y / \text{cellSize} \rfloor$$
 3. **64비트 정수 키 패킹**: 셀 좌표 `(cellX, cellY)`를 64비트 단일 정수 키로 조합하여 해시 테이블(`unordered_map`)에 저장합니다.
    $$\text{Key} = (\text{cellX} \ll 32) \mid (\text{cellY} \ \& \ \text{0xFFFFFFFF})$$
-4. **오브젝트 등록**: 오브젝트의 2D 바운딩 박스(AABB)가 걸쳐있는 모든 셀에 해당 `Entity` 핸들을 추가합니다.
+4. **오브젝트 등록**: 오브젝트의 2D 바운딩 박스(AABB)가 걸쳐있는 모든 셀에 해당 `ObjectHandle`을 추가합니다.
 
 ```
       Cell (0,1)        Cell (1,1)
@@ -75,19 +75,19 @@ SW Engine은 **2D 평면용 해시 그리드**와 **3D 공간용 동적 BVH 트�
 // 1) 64픽셀 단위의 그리드 생성
 sw::SpatialHashGrid2D grid{ 64.0f };
 
-// 2) 엔티티 등록 (Entity, minX, minY, maxX, maxY)
-grid.insert( playerEntity, 100.0f, 100.0f, 132.0f, 132.0f );
-grid.insert( monsterEntity, 120.0f, 110.0f, 150.0f, 140.0f );
+// 2) 핸들 등록 (ObjectHandle, minX, minY, maxX, maxY)
+grid.insert( playerHandle, 100.0f, 100.0f, 132.0f, 132.0f );
+grid.insert( monsterHandle, 120.0f, 110.0f, 150.0f, 140.0f );
 
-// 3) 특정 반경(반경 50px) 내의 엔티티 검색
-sw::vector<sw::Entity> nearbyEnemies;
+// 3) 특정 반경(반경 50px) 내의 객체 검색
+sw::vector<sw::ObjectHandle> nearbyEnemies;
 grid.queryCircle( 100.0f, 100.0f, 50.0f, nearbyEnemies );
 
-// 4) 엔티티 이동 시 업데이트
-grid.update( playerEntity, 105.0f, 100.0f, 137.0f, 132.0f );
+// 4) 이동 시 업데이트
+grid.update( playerHandle, 105.0f, 100.0f, 137.0f, 132.0f );
 
 // 5) 엔티티 사망/제거 시
-grid.remove( monsterEntity );
+grid.remove( monsterHandle );
 ```
 
 ---
@@ -147,17 +147,17 @@ $$\text{Cost} = 2 \times \text{Area}(\text{CombinedAABB}) + \text{InheritanceCos
 // 1) 3D BVH 트리 생성
 sw::BVHTree3D bvh;
 
-// 2) 3D 바운딩 박스를 가진 엔티티 등록
+// 2) 3D 바운딩 박스를 가진 객체 등록
 sw::AABB enemyBounds{ { 10.0f, 0.0f, 50.0f }, { 12.0f, 2.0f, 52.0f } };
-bvh.insert( enemyEntity, enemyBounds );
+bvh.insert( enemyHandle, enemyBounds );
 
 // 3) 총기 사격 레이캐스트 (시작점, 발사방향, 최대거리)
-sw::vector<sw::Entity> hitResults;
+sw::vector<sw::ObjectHandle> hitResults;
 bvh.queryRay( sw::float3{ 0.0f, 1.5f, 0.0f }, sw::float3{ 0.2f, 0.0f, 1.0f }, 100.0f, hitResults );
 
 // 4) 카메라 시야 절두체 컬링 (View-Projection 행렬 전달)
-sw::vector<sw::Entity> visibleEntities;
-bvh.queryFrustum( cameraViewProjMatrix, visibleEntities );
+sw::vector<sw::ObjectHandle> visibleHandles;
+bvh.queryFrustum( cameraViewProjMatrix, visibleHandles );
 ```
 
 ---

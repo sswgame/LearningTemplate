@@ -12,7 +12,7 @@ namespace sw
 		: _rootIndex{ -1 }
 		, _listNodes{}
 		, _listFreeNodes{}
-		, _mapEntityToNode{}
+		, _mapHandleToNode{}
 	{
 	}
 
@@ -59,45 +59,45 @@ namespace sw
 			_listNodes[static_cast<size_t>( nodeIndex )]._parent	 = -1;
 			_listNodes[static_cast<size_t>( nodeIndex )]._leftChild	 = -1;
 			_listNodes[static_cast<size_t>( nodeIndex )]._rightChild = -1;
-			_listNodes[static_cast<size_t>( nodeIndex )]._entity	 = kNullEntity;
+			_listNodes[static_cast<size_t>( nodeIndex )]._handle	 = ObjectHandle{};
 			_listFreeNodes.push_back( nodeIndex );
 		}
 	}
 
-	int32 BVHTree3D::insert( Entity entity, const AABB& bounds )
+	int32 BVHTree3D::insert( ObjectHandle handle, const AABB& bounds )
 	{
-		if ( entity == kNullEntity )
+		if ( handle.isValid() == false )
 			return -1;
 
-		if ( _mapEntityToNode.find( entity ) != _mapEntityToNode.end() )
-			remove( entity );
+		if ( _mapHandleToNode.find( handle ) != _mapHandleToNode.end() )
+			remove( handle );
 
 		const int32 leafIndex = allocateNode();
 		BVHNode3D&	leaf	  = _listNodes[static_cast<size_t>( leafIndex )];
 		leaf._bounds		  = bounds;
-		leaf._entity		  = entity;
+		leaf._handle		  = handle;
 		leaf._height		  = 0;
 
 		insertLeaf( leafIndex );
-		_mapEntityToNode[entity] = leafIndex;
+		_mapHandleToNode[handle] = leafIndex;
 		return leafIndex;
 	}
 
-	void BVHTree3D::update( Entity entity, const AABB& bounds )
+	void BVHTree3D::update( ObjectHandle handle, const AABB& bounds )
 	{
-		insert( entity, bounds );
+		insert( handle, bounds );
 	}
 
-	void BVHTree3D::remove( Entity entity )
+	void BVHTree3D::remove( ObjectHandle handle )
 	{
-		auto it = _mapEntityToNode.find( entity );
-		if ( it == _mapEntityToNode.end() )
+		auto it = _mapHandleToNode.find( handle );
+		if ( it == _mapHandleToNode.end() )
 			return;
 
 		const int32 leafIndex = it->second;
 		removeLeaf( leafIndex );
 		freeNode( leafIndex );
-		_mapEntityToNode.erase( it );
+		_mapHandleToNode.erase( it );
 	}
 
 	void BVHTree3D::clear()
@@ -105,7 +105,7 @@ namespace sw
 		_rootIndex = -1;
 		_listNodes.clear();
 		_listFreeNodes.clear();
-		_mapEntityToNode.clear();
+		_mapHandleToNode.clear();
 	}
 
 	void BVHTree3D::insertLeaf( int32 leafIndex )
@@ -383,7 +383,7 @@ namespace sw
 		return nodeIndex;
 	}
 
-	void BVHTree3D::queryAABB( const AABB& queryBox, vector<Entity>& outEntities ) const
+	void BVHTree3D::queryAABB( const AABB& queryBox, vector<ObjectHandle>& outHandles ) const
 	{
 		if ( _rootIndex == -1 )
 			return;
@@ -401,7 +401,7 @@ namespace sw
 			{
 				if ( node.isLeaf() )
 				{
-					outEntities.push_back( node._entity );
+					outHandles.push_back( node._handle );
 				}
 				else
 				{
@@ -414,7 +414,7 @@ namespace sw
 		}
 	}
 
-	void BVHTree3D::queryRay( const float3& origin, const float3& direction, float32 maxDist, vector<Entity>& outEntities ) const
+	void BVHTree3D::queryRay( const float3& origin, const float3& direction, float32 maxDist, vector<ObjectHandle>& outHandles ) const
 	{
 		if ( _rootIndex == -1 || maxDist <= 0.0f )
 			return;
@@ -457,7 +457,7 @@ namespace sw
 			{
 				if ( node.isLeaf() )
 				{
-					outEntities.push_back( node._entity );
+					outHandles.push_back( node._handle );
 				}
 				else
 				{
@@ -470,7 +470,7 @@ namespace sw
 		}
 	}
 
-	void BVHTree3D::querySphere( const float3& center, float32 radius, vector<Entity>& outEntities ) const
+	void BVHTree3D::querySphere( const float3& center, float32 radius, vector<ObjectHandle>& outHandles ) const
 	{
 		if ( _rootIndex == -1 || radius <= 0.0f )
 			return;
@@ -500,7 +500,7 @@ namespace sw
 			{
 				if ( node.isLeaf() )
 				{
-					outEntities.push_back( node._entity );
+					outHandles.push_back( node._handle );
 				}
 				else
 				{
@@ -513,7 +513,7 @@ namespace sw
 		}
 	}
 
-	void BVHTree3D::queryFrustum( const float32 viewProj[16], vector<Entity>& outEntities ) const
+	void BVHTree3D::queryFrustum( const float32 viewProj[16], vector<ObjectHandle>& outHandles ) const
 	{
 		// Extract 6 frustum planes from column-major viewProj matrix
 		// Left, Right, Bottom, Top, Near, Far
@@ -571,7 +571,7 @@ namespace sw
 			{
 				if ( node.isLeaf() )
 				{
-					outEntities.push_back( node._entity );
+					outHandles.push_back( node._handle );
 				}
 				else
 				{
@@ -584,9 +584,9 @@ namespace sw
 		}
 	}
 
-	size_t BVHTree3D::getEntityCount() const
+	size_t BVHTree3D::getHandleCount() const
 	{
-		return _mapEntityToNode.size();
+		return _mapHandleToNode.size();
 	}
 
 	size_t BVHTree3D::getNodeCount() const

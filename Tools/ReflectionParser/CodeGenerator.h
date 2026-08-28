@@ -55,8 +55,6 @@ namespace sw
 		void emitTypeInfoAccessors( CodeEmitBuffer& out, const ParsedTypeInfo& typeInfo ) const;
 		/** @brief ComponentFactoryRegistrar 를 출력합니다. */
 		void emitComponentFactoryRegistrar( CodeEmitBuffer& out, const ParsedTypeInfo& typeInfo ) const;
-		/** @brief ScriptSystemRegistrar 를 출력합니다. */
-		void emitScriptSystemRegistrar( CodeEmitBuffer& out, const ParsedTypeInfo& typeInfo ) const;
 		/** @brief EnumRegistrar 본문을 출력합니다. */
 		void emitEnumRegistrar( CodeEmitBuffer& out, const ParsedEnumInfo& enumInfo ) const;
 		/** @brief 소스 파일 경로로부터 모듈 이름을 판별합니다. */

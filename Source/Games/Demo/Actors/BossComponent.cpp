@@ -55,13 +55,10 @@ namespace sw
 		GameObject* pOwner = getOwner();
 		if ( pOwner != nullptr )
 		{
-			UnitStatsComponent* pStats = pOwner->getComponent<UnitStatsComponent>().get();
-			if ( pStats != nullptr )
+			UnitStatsComponent* pStats = pOwner->getComponent<UnitStatsComponent>();
+			if ( pStats != nullptr && pStats->getMaxHp() > 0 )
 			{
-				const UnitStatsData* pData = pStats->getStatsData();
-				if ( pData != nullptr && pData->maxHp > 0 )
-				{
-					const float32 hpRatio = static_cast<float32>( pData->hp ) / static_cast<float32>( pData->maxHp );
+					const float32 hpRatio = static_cast<float32>( pStats->getHp() ) / static_cast<float32>( pStats->getMaxHp() );
 					const bool	  bPhase3 = ( phase3HpRatio > 0.0f && hpRatio <= phase3HpRatio );
 					const bool	  bPhase2 = ( phase2HpRatio > 0.0f && hpRatio <= phase2HpRatio );
 
@@ -80,7 +77,6 @@ namespace sw
 						phase			= 1;
 						patternCooldown = phase1Cooldown;
 					}
-				}
 			}
 		}
 	}

@@ -3,7 +3,8 @@
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/EngineServices.h"
-#include "Engine/Object/GameObject/GameObjectManagerInternal.h"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectAny.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/Rpc/ReflectionRpc.h"
@@ -100,10 +101,10 @@ static void RegisterTypes( sw::TypeRegistry& registry )
 				  offsetof( sw::ComplexData, _title ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr },
 				{ sw::hashed_string( "_flags" ), sw::hashed_string( "sw::DummyBitFlag" ),
 				  offsetof( sw::ComplexData, _flags ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr },
-				{ sw::hashed_string( "_scores" ), sw::hashed_string( "sw::vector<int32>" ),
+				{ sw::hashed_string( "_scores" ), sw::hashed_string( "vector" ),
 				  offsetof( sw::ComplexData, _scores ), true, sw::ContainerKind::Sequence, sw::hashed_string( "int32" ), sw::hashed_string(),
 				  sw::make_shared<sw::VectorWrapper<sw::vector<int32>>>() },
-				{ sw::hashed_string( "_stats" ), sw::hashed_string( "sw::map<string, int32>" ),
+				{ sw::hashed_string( "_stats" ), sw::hashed_string( "map" ),
 				  offsetof( sw::ComplexData, _stats ), true, sw::ContainerKind::Map, sw::hashed_string( "int32" ), sw::hashed_string( "string" ),
 				  sw::make_shared<sw::MapWrapper<sw::map<sw::string, int32>>>() },
 		};
@@ -833,15 +834,27 @@ struct SimpleXmlBackend : public sw::IXmlBackend
 	sw::string								  result;
 	sw::string								  rootTagName;
 	sw::unordered_map<sw::string, sw::string> kvMap;
+	bool									  bOpenTagPending{ false };
+
+	void closeOpenTag()
+	{
+		if ( bOpenTagPending == false )
+			return;
+		result += ">";
+		bOpenTagPending = false;
+	}
 
 	void initXmlSerialization( const utf8* rootTag ) override
 	{
-		rootTagName = rootTag != nullptr ? rootTag : "";
-		result += "<" + rootTagName + ">";
+		rootTagName		= rootTag != nullptr ? rootTag : "";
+		result			= "<" + rootTagName;
+		bOpenTagPending = true;
 	}
 	void writeValue( const utf8* tag, const utf8* value ) override
 	{
+		closeOpenTag();
 		result += "<" + sw::string( tag ) + ">" + sw::string( value ) + "</" + sw::string( tag ) + ">";
+		kvMap[sw::string( tag )] = value != nullptr ? value : "";
 	}
 	void writeAttribute( const utf8* attr, const utf8* value ) override
 	{
@@ -850,6 +863,7 @@ struct SimpleXmlBackend : public sw::IXmlBackend
 	}
 	void beginArray( const utf8* tag ) override
 	{
+		closeOpenTag();
 		result += "<" + sw::string( tag ) + ">";
 	}
 	void writeArrayItem( const utf8* value ) override
@@ -862,6 +876,7 @@ struct SimpleXmlBackend : public sw::IXmlBackend
 	}
 	void beginMap( const utf8* tag ) override
 	{
+		closeOpenTag();
 		result += "<" + sw::string( tag ) + ">";
 	}
 	void beginMapEntry() override
@@ -884,6 +899,7 @@ struct SimpleXmlBackend : public sw::IXmlBackend
 	}
 	sw::string endSerialize() override
 	{
+		closeOpenTag();
 		if ( rootTagName.empty() == false )
 			result += "</" + rootTagName + ">";
 		return result;
@@ -902,6 +918,40 @@ struct SimpleXmlBackend : public sw::IXmlBackend
 			sw::string tag = str.substr( pos + 1, closeTag - pos - 1 );
 			if ( tag.empty() == false && tag[0] != '/' )
 			{
+				if ( tag.back() == '/' )
+					tag.pop_back();
+				while ( tag.empty() == false && tag.back() == ' ' )
+					tag.pop_back();
+
+				size_t spacePos = tag.find( ' ' );
+				if ( spacePos != sw::string::npos )
+				{
+					sw::string attrs = tag.substr( spacePos + 1 );
+					tag				 = tag.substr( 0, spacePos );
+					size_t attrPos{ 0 };
+					while ( attrPos < attrs.size() )
+					{
+						while ( attrPos < attrs.size() && attrs[attrPos] == ' ' )
+							++attrPos;
+						size_t eqPos = attrs.find( '=', attrPos );
+						if ( eqPos == sw::string::npos )
+							break;
+						sw::string attrName = attrs.substr( attrPos, eqPos - attrPos );
+						size_t	   valBegin = eqPos + 1;
+						if ( valBegin < attrs.size() && attrs[valBegin] == '"' )
+						{
+							++valBegin;
+							size_t valEnd = attrs.find( '"', valBegin );
+							if ( valEnd == sw::string::npos )
+								break;
+							kvMap[attrName] = attrs.substr( valBegin, valEnd - valBegin );
+							attrPos			= valEnd + 1;
+						}
+						else
+							break;
+					}
+				}
+
 				size_t endTagPos = str.find( "</" + tag + ">", closeTag );
 				if ( endTagPos != sw::string::npos )
 				{
@@ -984,7 +1034,7 @@ SW_TEST_CASE( Reflection_Serialization, XmlJsonKeysIgnoreCaseValuesPreserveCase 
 	SW_EXPECT_EQUAL( 2u, static_cast<uint32>( fromJson._scores.size() ) );
 
 	const utf8* xml =
-		R"(<sw__ComplexData><_ID>88</_ID><_TITLE>XmlCaseValue</_TITLE><_scores><item>3</item><ITEM>4</ITEM></_scores></sw__ComplexData>)";
+		R"(<sw__ComplexData _ID="88" _TITLE="XmlCaseValue"><_scores><vector><item>3</item><ITEM>4</ITEM></vector></_scores></sw__ComplexData>)";
 	sw::ComplexData fromXml;
 	SW_EXPECT_TRUE( sw::XmlSerializer::deserialize( &fromXml, *typeInfo, xml ) );
 	SW_EXPECT_EQUAL( 88, fromXml._id );
@@ -1032,12 +1082,12 @@ SW_TEST_CASE( Reflection_Serialization, StrictDeserializeFailsOnBadContainerAndF
 
 	sw::ComplexData xmlField;
 	SW_EXPECT_FALSE( sw::XmlSerializer::deserialize(
-		&xmlField, *typeInfo, R"(<sw__ComplexData><_id>not_an_int</_id></sw__ComplexData>)" ) );
+		&xmlField, *typeInfo, R"(<sw__ComplexData _id="not_an_int"/>)" ) );
 
 	sw::ComplexData xmlContainer;
 	SW_EXPECT_FALSE( sw::XmlSerializer::deserialize(
 		&xmlContainer, *typeInfo,
-		R"(<sw__ComplexData><_scores><item>1</item><item>not_an_int</item></_scores></sw__ComplexData>)" ) );
+		R"(<sw__ComplexData><_scores><vector><item>1</item><item>not_an_int</item></vector></_scores></sw__ComplexData>)" ) );
 
 	sw::ComplexData jsonOk;
 	SW_EXPECT_TRUE( sw::JsonSerializer::deserialize( &jsonOk, *typeInfo, R"({"_id":7,"_scores":[1,2]})" ) );
@@ -1053,10 +1103,10 @@ SW_TEST_CASE( Reflection_Serialization, StrictDeserializeFailsOnBadContainerAndF
 	sw::ComplexData xmlUnknown;
 	SW_EXPECT_FALSE( sw::XmlSerializer::deserialize(
 		&xmlUnknown, *typeInfo,
-		R"(<sw__ComplexData><_id>1</_id><NotARealField>x</NotARealField></sw__ComplexData>)" ) );
+		R"(<sw__ComplexData _id="1" NotARealField="x"/>)" ) );
 
 	const utf8* xmlUnknownStr =
-		R"(<sw__ComplexData><_id>1</_id><NotARealField>x</NotARealField></sw__ComplexData>)";
+		R"(<sw__ComplexData _id="1" NotARealField="x"/>)";
 	sw::XmlDocumentBackend xmlBackend;
 	sw::ComplexData		   xmlBackendUnknown;
 	SW_EXPECT_FALSE( sw::XmlSerializer::deserialize( &xmlBackendUnknown, *typeInfo, xmlBackend, xmlUnknownStr ) );
@@ -1393,7 +1443,7 @@ SW_TEST_CASE( Reflection_Serialization, PropertyDefaultOnMissing )
 	// 에셋의 명시 값이 Default 메타데이터보다 우선한다.
 	DefaultActor overridden;
 	const utf8*	 filledXml =
-		R"(<?xml version="1.0"?><DefaultActor _title="Mage"><_mana>10</_mana></DefaultActor>)";
+		R"(<?xml version="1.0"?><DefaultActor _title="Mage" _mana="10"/>)";
 	SW_EXPECT_TRUE( sw::XmlSerializer::deserialize( &overridden, info, filledXml ) );
 	SW_EXPECT_EQUAL( 10, overridden._mana );
 	SW_EXPECT_EQUAL( sw::string( "Mage" ), overridden._title );
@@ -1426,7 +1476,7 @@ SW_TEST_CASE( Reflection_Serialization, PropertyAliasAndReorderingTest )
 
 	AliasTestActor xmlActor;
 	xmlActor._currentHp = 100;
-	const utf8* oldXml	= R"(<?xml version="1.0"?><AliasTestActor><hp>250</hp></AliasTestActor>)";
+	const utf8* oldXml	= R"(<?xml version="1.0"?><AliasTestActor hp="250"/>)";
 	SW_EXPECT_TRUE( sw::XmlSerializer::deserialize( &xmlActor, info, oldXml ) );
 	SW_EXPECT_EQUAL( 250, xmlActor._currentHp );
 
@@ -1524,7 +1574,7 @@ SW_TEST_CASE( Reflection_Serialization, TypeAliasXmlLoad )
 
 	sw::RenameCompatActor actor;
 	actor._hp		   = 1;
-	const utf8* oldXml = R"(<?xml version="1.0"?><LegacyRenameActor><_hp>77</_hp></LegacyRenameActor>)";
+	const utf8* oldXml = R"(<?xml version="1.0"?><LegacyRenameActor _hp="77"/>)";
 	SW_EXPECT_TRUE( sw::XmlSerializer::deserialize( &actor, *typeInfo, oldXml ) );
 	SW_EXPECT_EQUAL( 77, actor._hp );
 }
@@ -1587,7 +1637,7 @@ SW_TEST_CASE( Reflection_Serialization, LayoutEvolveAddRemoveRename )
 	fromXml._hp	  = -1;
 	fromXml._mana = -1;
 	const utf8* oldXml =
-		R"(<?xml version="1.0"?><LayoutActor><health>55</health><_score>1</_score></LayoutActor>)";
+		R"(<?xml version="1.0"?><LayoutActor health="55" _score="1"/>)";
 	sw::vector<sw::SchemaOrphanValue> xmlOrphans;
 	SW_EXPECT_TRUE( sw::XmlSerializer::deserializeSoft( &fromXml, infoV2, oldXml, &xmlOrphans ) );
 	SW_EXPECT_EQUAL( 55, fromXml._hp );
@@ -1618,7 +1668,7 @@ SW_TEST_CASE( Reflection_Serialization, LayoutEvolveAddRemoveRename )
 	};
 	IntAliasHolder holder{};
 	SW_EXPECT_TRUE( sw::XmlSerializer::deserialize(
-		&holder, intAliasInfo, R"(<?xml version="1.0"?><IntAliasHolder><_v>123</_v></IntAliasHolder>)" ) );
+		&holder, intAliasInfo, R"(<?xml version="1.0"?><IntAliasHolder _v="123"/>)" ) );
 	SW_EXPECT_EQUAL( 123, holder._v );
 }
 
@@ -2316,71 +2366,46 @@ SW_TEST_CASE( Reflection_Serialization, ReflectAnyPolymorphic )
 }
 
 // ------------------------------------------------------------------------------
-// 25) Reflection_ECS — 스크립트 생명주기·상속
+// 25) Reflection_Component — 생명주기·상속
 // ------------------------------------------------------------------------------
 /**
- * @brief [Reflection_ECS] ScriptSystem 자동 등록 및 병렬 틱 동작 검증 테스트
+ * @brief [Reflection_Component] Component beginPlay / tick / endPlay 동작 검증
  */
-SW_TEST_CASE( Reflection_ECS, ScriptSystemLifecycle )
+SW_TEST_CASE( Reflection_Component, ComponentLifecycle )
 {
-	// GameObjectManager가 생성될 때 TestScriptComponent 등의 등록(Registrar)이 발동됨
 	sw::GameObjectManager manager;
 
-	// 엔티티 생성 및 컴포넌트 부착
 	sw::GameObject* obj1 = manager.createGameObject( sw::hashed_string( "TestObj1" ) );
 	sw::GameObject* obj2 = manager.createGameObject( sw::hashed_string( "TestObj2" ) );
 
-	obj1->addComponent<sw::TestScriptComponent>();
-	obj2->addComponent<sw::TestScriptComponent>();
+	sw::TestScriptComponent* pComp1 = obj1->addComponent<sw::TestScriptComponent>();
+	sw::TestScriptComponent* pComp2 = obj2->addComponent<sw::TestScriptComponent>();
+	SW_ASSERT_NOT_NULL( pComp1 );
+	SW_ASSERT_NOT_NULL( pComp2 );
 
-	manager.beginPlay(); // _beganPlay = true, owner 자동 주입
+	manager.beginPlay();
 
-	auto& reg  = sw::GameObjectManagerAccess::get( manager );
-	auto* view = reg.getSparseSet<sw::TestScriptComponent>();
+	SW_EXPECT_EQUAL( obj1, pComp1->getOwner() );
+	SW_EXPECT_EQUAL( obj2, pComp2->getOwner() );
+	SW_EXPECT_TRUE( pComp1->_beganPlay );
+	SW_EXPECT_TRUE( pComp2->_beganPlay );
 
-	if ( view != nullptr )
-	{
-		for ( auto&& tuple : *view )
-		{
-			auto& comp = std::get<1>( tuple );
-			SW_EXPECT_NOT_NULL( comp.owner );
-			SW_EXPECT_TRUE( comp._beganPlay );
-			if ( comp.owner != nullptr )
-			{
-				SW_EXPECT_TRUE( comp.owner == obj1 || comp.owner == obj2 );
-			}
-		}
-	}
-
-	// 틱 2번 수행
 	manager.tick( 1.0f );
 	manager.tick( 1.0f );
 
-	if ( view != nullptr )
-	{
-		for ( auto&& tuple : *view )
-		{
-			auto& comp = std::get<1>( tuple );
-			SW_EXPECT_EQUAL( 2, comp._tickCount );
-		}
-	}
+	SW_EXPECT_EQUAL( 2, pComp1->_tickCount );
+	SW_EXPECT_EQUAL( 2, pComp2->_tickCount );
 
-	manager.endPlay(); // _endedPlay = true
+	manager.endPlay();
 
-	if ( view != nullptr )
-	{
-		for ( auto&& tuple : *view )
-		{
-			auto& comp = std::get<1>( tuple );
-			SW_EXPECT_TRUE( comp._endedPlay );
-		}
-	}
+	SW_EXPECT_TRUE( pComp1->_endedPlay );
+	SW_EXPECT_TRUE( pComp2->_endedPlay );
 }
 
 /**
- * @brief [Reflection_ECS] Script 다중 상속(Inheritance Chain) 라이프사이클 및 틱 정상 동작 검증 테스트
+ * @brief [Reflection_Component] Component 다중 상속 라이프사이클 및 틱 정상 동작 검증
  */
-SW_TEST_CASE( Reflection_ECS, ScriptInheritanceMultiLevel )
+SW_TEST_CASE( Reflection_Component, ComponentInheritanceMultiLevel )
 {
 	sw::GameObjectManager manager;
 
@@ -2394,24 +2419,22 @@ SW_TEST_CASE( Reflection_ECS, ScriptInheritanceMultiLevel )
 
 	manager.beginPlay();
 
-	// owner 와 beganPlay 확인
-	auto baseComp		= baseObj->getComponent<sw::TestScriptComponent>();
-	auto derivedComp	= derivedObj->getComponent<sw::TestDerivedScriptComponent>();
-	auto grandChildComp = grandChildObj->getComponent<sw::TestGrandChildScriptComponent>();
+	sw::TestScriptComponent*			baseComp	   = baseObj->getComponent<sw::TestScriptComponent>();
+	sw::TestDerivedScriptComponent*		derivedComp	   = derivedObj->getComponent<sw::TestDerivedScriptComponent>();
+	sw::TestGrandChildScriptComponent* grandChildComp = grandChildObj->getComponent<sw::TestGrandChildScriptComponent>();
 
 	SW_ASSERT_NOT_NULL( baseComp );
 	SW_ASSERT_NOT_NULL( derivedComp );
 	SW_ASSERT_NOT_NULL( grandChildComp );
 
-	SW_EXPECT_EQUAL( baseObj, baseComp->owner );
-	SW_EXPECT_EQUAL( derivedObj, derivedComp->owner );
-	SW_EXPECT_EQUAL( grandChildObj, grandChildComp->owner );
+	SW_EXPECT_EQUAL( baseObj, baseComp->getOwner() );
+	SW_EXPECT_EQUAL( derivedObj, derivedComp->getOwner() );
+	SW_EXPECT_EQUAL( grandChildObj, grandChildComp->getOwner() );
 
 	SW_EXPECT_TRUE( baseComp->_beganPlay );
 	SW_EXPECT_TRUE( derivedComp->_beganPlay );
 	SW_EXPECT_TRUE( grandChildComp->_beganPlay );
 
-	// 틱: 병렬 1 + 순차 1 = 2틱
 	manager.tick( 0.016f );
 	manager.tick( 0.016f );
 
@@ -2440,14 +2463,13 @@ SW_TEST_CASE( Reflection_ECS, ScriptInheritanceMultiLevel )
 }
 
 /**
- * @brief [Reflection_ECS] Script에 선언된 PROPERTY가 정상적으로 TypeInfo에 반영되고 직렬화/역직렬화되는지 검증
+ * @brief [Reflection_Component] Component에 선언된 PROPERTY가 TypeInfo에 반영되고 직렬화/역직렬화되는지 검증
  */
-SW_TEST_CASE( Reflection_ECS, ScriptPropertySerialization )
+SW_TEST_CASE( Reflection_Component, ComponentPropertySerialization )
 {
 	const sw::TypeInfo* pType = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::TestScriptComponent" ) );
 	SW_ASSERT_NOT_NULL( pType );
 
-	// PROPERTY() float32 _scriptSpeed 가 등록되어 있어야 함
 	const sw::PropertyInfo* pSpeedProp = pType->findProperty( sw::hashed_string( "_scriptSpeed" ) );
 	SW_ASSERT_NOT_NULL( pSpeedProp );
 	SW_EXPECT_TRUE( pSpeedProp->_typeName == sw::hashed_string( "float32" ) );
@@ -2457,7 +2479,6 @@ SW_TEST_CASE( Reflection_ECS, ScriptPropertySerialization )
 
 	comp._scriptSpeed = 3.14f;
 
-	// 역직렬화 테스트
 	pSpeedProp->setValue<float32>( &comp, 2.718f );
 	SW_EXPECT_TRUE( sw::MathUtil::abs( comp._scriptSpeed - 2.718f ) < 0.0001f );
 }

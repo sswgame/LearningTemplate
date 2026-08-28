@@ -1,6 +1,6 @@
 /**
  * @file ComponentDefaults.h
- * @brief 게임 gamedata.xml `<Defaults>`를 Component/ECS Data PROPERTY에 주입합니다.
+ * @brief 게임 gamedata.xml `<Defaults>`를 Component PROPERTY에 주입합니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -18,7 +18,7 @@ namespace sw
 	class SW_API ComponentDefaults
 	{
 	public:
-		/** @brief 인스턴스에 XML 기본값을 리플렉션으로 주입합니다 (Component 또는 ECS Data). */
+		/** @brief 인스턴스에 XML 기본값을 리플렉션으로 주입합니다. */
 		static void applyDefaults( void* pInstance, const TypeInfo& typeInfo, const TypeInfo* pAliasTypeInfo = nullptr );
 		/** @brief 컴포넌트 인스턴스에 XML 기본값을 리플렉션으로 주입합니다. */
 		static void applyDefaults( Component* pComp, const TypeInfo& typeInfo );

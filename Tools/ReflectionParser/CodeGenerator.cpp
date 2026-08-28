@@ -202,15 +202,6 @@ namespace sw
 				}
 			}
 
-			BLOCK( "Emit Script System Registrars" )
-			{
-				for ( const ParsedTypeInfo& typeInfo : _listTypes )
-				{
-					if ( typeInfo.wantsScriptSystem() )
-						emitScriptSystemRegistrar( buffer, typeInfo );
-				}
-			}
-
 			BLOCK( "Emit Type Traits & Accessors" )
 			{
 				for ( const ParsedTypeInfo& typeInfo : _listTypes )
@@ -286,14 +277,6 @@ namespace sw
 		   } );
 	}
 
-	void CodeGenerator::emitScriptSystemRegistrar( CodeEmitBuffer& out, const ParsedTypeInfo& typeInfo ) const
-	{
-		appendTemplate( out, tplConstants::kScriptSystemRegistrar, {
-																	   {"FQN",						typeInfo._fullyQualifiedName},
-																	   { "Id", sanitizeIdentifier( typeInfo._fullyQualifiedName )}
-		} );
-	}
-
 	void CodeGenerator::emitPropertyMetadata( CodeEmit& e, const ParsedPropertyInfo& prop ) const
 	{
 		e.assignQuotedIf( prop._category.empty() == false, "p._metadata._category", prop._category );
@@ -326,6 +309,7 @@ namespace sw
 		e.push();
 		e.line( "auto nested0 = sw::make_shared<sw::NestedContainerInfo>();" );
 		e.assign( "nested0->_kind", outerKind );
+		e.linef( "nested0->_typeName = %#;", CodeEmit::hs( prop._containerTree->_typeName ) );
 		e.linef( "nested0->_elementTypeName = %#;", CodeEmit::hs( normalizeTypeName( prop._elementTypeName ) ) );
 		e.linef( "nested0->_keyTypeName = %#;", CodeEmit::hs( normalizeTypeName( prop._keyTypeName ) ) );
 		e.linef( "nested0->_wrapper = sw::make_shared<%#>();", outerWrapper );
@@ -347,6 +331,7 @@ namespace sw
 
 				e.linef( "auto nested%# = sw::make_shared<sw::NestedContainerInfo>();", depth );
 				e.linef( "nested%#->_kind = %#;", depth, kind );
+				e.linef( "nested%#->_typeName = %#;", depth, CodeEmit::hs( node->_typeName ) );
 				e.linef( "nested%#->_elementTypeName = %#;", depth,
 						 CodeEmit::hs( normalizeTypeName( node->_elementTypeName ) ) );
 				e.linef( "nested%#->_keyTypeName = %#;", depth, CodeEmit::hs( normalizeTypeName( node->_keyTypeName ) ) );
@@ -370,8 +355,9 @@ namespace sw
 		e.line( "[]() {" );
 		e.push();
 		// 강제로 Component/GameObject 파생 클래스가 값(또는 원시 포인터)으로 들어가는 것을 막는 static_assert
-		e.linef( "constexpr bool kIsInvalidPtr = std::is_base_of_v<sw::Component, std::remove_pointer_t<decltype(%#::%#)>> || std::is_base_of_v<sw::GameObject, std::remove_pointer_t<decltype(%#::%#)>>;", typeInfo._fullyQualifiedName, prop._name, typeInfo._fullyQualifiedName, prop._name );
-		e.line( "static_assert(!kIsInvalidPtr, \"GameObject or Component cannot be stored by value or raw pointer inside a PROPERTY(). Use GameObjectPtr or ComponentPtr instead.\");" );
+		e.linef( "using PropDecl = decltype(%#::%#);", typeInfo._fullyQualifiedName, prop._name );
+		e.line( "constexpr bool kIsInvalidValue = std::is_pointer_v<std::remove_cv_t<std::remove_reference_t<PropDecl>>> == false && (std::is_base_of_v<sw::Component, std::remove_cv_t<std::remove_reference_t<PropDecl>>> || std::is_base_of_v<sw::GameObject, std::remove_cv_t<std::remove_reference_t<PropDecl>>>);" );
+		e.line( "static_assert(!kIsInvalidValue, \"GameObject or Component cannot be stored by value inside a PROPERTY(). Use a pointer, GameObjectPtr, or ComponentPtr instead.\");" );
 		e.line( "sw::PropertyInfo p(" );
 		e.push();
 		e.linef( "%#,", CodeEmit::hs( prop._name ) );
@@ -558,18 +544,6 @@ namespace sw
 
 		CodeEmit e( out );
 		e.push( 3 );
-
-		if ( typeInfo._bComponentFactory && !typeInfo._bIsScript )
-		{
-			if ( typeInfo._parentFQN.empty() == false )
-			{
-				e.linef( "static_assert( sizeof(%#) == sizeof(%#), \"Component-derived classes with member variables MUST use REFLECT_SCRIPT() instead of REFLECT()!\" );", typeInfo._fullyQualifiedName, typeInfo._parentFQN );
-			}
-			else
-			{
-				e.linef( "static_assert( sizeof(%#) == sizeof(sw::Component), \"Component-derived classes with member variables MUST use REFLECT_SCRIPT() instead of REFLECT()!\" );", typeInfo._fullyQualifiedName );
-			}
-		}
 
 		if ( typeInfo._listProperties.empty() == false )
 		{

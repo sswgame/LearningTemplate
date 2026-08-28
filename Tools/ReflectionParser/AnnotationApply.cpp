@@ -323,11 +323,6 @@ namespace sw
 		string_view prefix	  = annotationConstants::kReflectPrefix;
 		size_t		prefixPos = annotationSpelling.find( prefix );
 		if ( prefixPos == string_view::npos )
-		{
-			prefix	  = annotationConstants::kReflectScriptPrefix;
-			prefixPos = annotationSpelling.find( prefix );
-		}
-		if ( prefixPos == string_view::npos )
 			return;
 
 		const AnnotationMeta& meta = AnnotationMeta::instance();

@@ -12,7 +12,11 @@
 #include "Editor/Common/Workspace/SelectionManager.h"
 
 #include "Engine/Game/GameState.h"
+#include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+
+#include "Engine/Reflection/ReflectionCast.h"
 
 #include "RuntimeAPI/Service/EditorService.h"
 
@@ -218,7 +222,7 @@ namespace sw::editor
 				{
 					if ( ImGui::MenuItem( typeName.c_str() ) )
 					{
-						if ( pObj->addComponentByName( typeName ) == nullptr )
+						if ( pObj->getManager()->addComponentByName( pObj, typeName ) == nullptr )
 							ImGui::OpenPopup( "AddCompFailed" );
 					}
 				}
@@ -419,7 +423,7 @@ namespace sw::editor
 					if ( pComp == nullptr )
 						continue;
 
-					SceneComponent* pSceneComp = pComp->asSceneComponent();
+					SceneComponent* pSceneComp = castTo<SceneComponent>( pComp );
 					if ( pSceneComp != nullptr )
 					{
 						const SceneComponent* pParent		= pSceneComp->getParent();

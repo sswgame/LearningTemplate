@@ -16,7 +16,7 @@ namespace sw
 		Attack
 	};
 
-	REFLECT_SCRIPT()
+	REFLECT()
 	class MonsterComponent : public Component
 	{
 	public:

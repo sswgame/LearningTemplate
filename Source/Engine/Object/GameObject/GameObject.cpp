@@ -16,11 +16,11 @@ namespace sw
 		: _objectId{ _s_nextObjectId.fetch_add( 1, std::memory_order_relaxed ) }
 		, _name{ "GameObject" }
 		, _pOwnerManager{ nullptr }
-		, _entityId{ sw::kNullEntity }
 		, _managerIndex{ static_cast<uint32>( -1 ) }
 		, _bActive{ true }
 		, _bIsActiveInHierarchy{ true }
 		, _bIsPendingKill{ false }
+		, _listComponents{}
 	{
 	}
 
@@ -28,16 +28,16 @@ namespace sw
 		: _objectId{ _s_nextObjectId.fetch_add( 1, std::memory_order_relaxed ) }
 		, _name{ name }
 		, _pOwnerManager{ nullptr }
-		, _entityId{ sw::kNullEntity }
 		, _managerIndex{ static_cast<uint32>( -1 ) }
 		, _bActive{ true }
 		, _bIsActiveInHierarchy{ true }
 		, _bIsPendingKill{ false }
+		, _listComponents{}
 	{
 	}
 
 	/**
-	 * @brief 게임 오브젝트 소멸자: 부모 계층 연결을 해제하고 모든 소유 컴포넌트의 onDestroy 호출 및 ECS 엔티티를 파괴합니다.
+	 * @brief 게임 오브젝트 소멸자: 부모 계층 연결을 해제하고 소유 컴포넌트를 파괴합니다.
 	 */
 	GameObject::~GameObject()
 	{
@@ -52,25 +52,12 @@ namespace sw
 				pChildPtr->detachFromParent();
 		}
 
-		if ( _pOwnerManager == nullptr || _entityId == sw::kNullEntity )
-			return;
-
-		_pOwnerManager->getRegistry().forEachComponent( _entityId, [&]( Component* pComp )
-		{
-			if ( pComp == nullptr )
-				return;
-
-			unregisterComponentIfSceneRoot( pComp );
-			pComp->onDestroy();
-		} );
-
-		_pOwnerManager->getRegistry().destroy( _entityId );
-		_entityId = sw::kNullEntity;
+		clearComponents();
 	}
 
 	const TypeInfo* GameObject::getTypeInfo() const
 	{
-		return engine::getTypeRegistry().findType( hashed_string( "sw::GameObject" ) );
+		return StaticType();
 	}
 
 	/**
@@ -78,12 +65,12 @@ namespace sw
 	 */
 	void GameObject::beginPlay()
 	{
-		forEachComponent( [&]( Component* pComp )
+		for ( Component* pComp : _listComponents )
 		{
-			if ( pComp == nullptr || pComp->isActive() == false )
-				return;
+			if ( pComp == nullptr || pComp->isPendingKill() || pComp->isActive() == false )
+				continue;
 			pComp->onBeginPlay();
-		} );
+		}
 	}
 
 	/**
@@ -91,12 +78,12 @@ namespace sw
 	 */
 	void GameObject::endPlay()
 	{
-		forEachComponent( [&]( Component* pComp )
+		for ( Component* pComp : _listComponents )
 		{
-			if ( pComp == nullptr || pComp->isActive() == false )
-				return;
+			if ( pComp == nullptr || pComp->isPendingKill() || pComp->isActive() == false )
+				continue;
 			pComp->onEndPlay();
-		} );
+		}
 	}
 
 	void GameObject::onPropertyChanged( hashed_string propertyName )
@@ -117,12 +104,6 @@ namespace sw
 	void GameObject::markPendingKill()
 	{
 		_bIsPendingKill.store( true, std::memory_order_release );
-		if ( _pOwnerManager != nullptr && _entityId != sw::kNullEntity )
-		{
-			EntityStateData* pState = _pOwnerManager->getRegistry().getPtr<EntityStateData>( _entityId );
-			if ( pState != nullptr )
-				pState->bIsPendingKill.store( true, std::memory_order_relaxed );
-		}
 	}
 
 	/**
@@ -147,28 +128,42 @@ namespace sw
 		_bActive.store( bActive, std::memory_order_relaxed );
 		refreshActiveInHierarchy();
 
-		forEachComponent( [&]( Component* pComp )
+		for ( Component* pComp : _listComponents )
 		{
-			if ( pComp == nullptr )
-				return;
+			if ( pComp == nullptr || pComp->isPendingKill() )
+				continue;
 			pComp->setActive( bActive );
-		} );
+		}
 		onPropertyChanged( hashed_string( "_bActive" ) );
 	}
 
 	bool GameObject::attachToParent( GameObject* pParent )
 	{
-		if ( getManager() != nullptr && getManager()->isParallelTransformReadOnly() )
-		{
-			SW_LOG_ERROR( "[GameObject] attachToParent is not allowed during parallel transform read-only." );
+		if ( pParent == nullptr )
 			return false;
+		if ( getParent() == pParent )
+			return true;
+
+		GameObjectManager* pMgr = getManager();
+		if ( pMgr != nullptr && pMgr->isParallelTransformReadOnly() )
+		{
+			const uint64 childId  = _objectId;
+			const uint64 parentId = pParent->getObjectId();
+			pMgr->deferTransformUpdate( [pMgr, childId, parentId]()
+			{
+				GameObject* pChildObj  = pMgr->findGameObjectById( childId );
+				GameObject* pParentObj = pMgr->findGameObjectById( parentId );
+				if ( pChildObj != nullptr && pParentObj != nullptr )
+					pChildObj->attachToParent( pParentObj );
+			} );
+			return true;
 		}
 
 		SceneComponent* pChildSc = getPrimarySceneComponent();
 		if ( pChildSc == nullptr )
 			return false;
 
-		SceneComponent* pParentSc = pParent != nullptr ? pParent->getPrimarySceneComponent() : nullptr;
+		SceneComponent* pParentSc = pParent->getPrimarySceneComponent();
 		if ( pParentSc == nullptr )
 			return false;
 
@@ -181,9 +176,16 @@ namespace sw
 
 	void GameObject::detachFromParent()
 	{
-		if ( getManager() != nullptr && getManager()->isParallelTransformReadOnly() )
+		GameObjectManager* pMgr = getManager();
+		if ( pMgr != nullptr && pMgr->isParallelTransformReadOnly() )
 		{
-			SW_LOG_ERROR( "[GameObject] detachFromParent is not allowed during parallel transform read-only." );
+			const uint64 childId = _objectId;
+			pMgr->deferTransformUpdate( [pMgr, childId]()
+			{
+				GameObject* pChildObj = pMgr->findGameObjectById( childId );
+				if ( pChildObj != nullptr )
+					pChildObj->detachFromParent();
+			} );
 			return;
 		}
 
@@ -197,15 +199,13 @@ namespace sw
 
 	GameObject* GameObject::getParent() const
 	{
-		if ( _pOwnerManager != nullptr && _entityId != sw::kNullEntity )
-		{
-			HierarchyData* pData = _pOwnerManager->getRegistry().getPtr<HierarchyData>( _entityId );
-			if ( pData != nullptr && pData->parentEntity != sw::kNullEntity )
-			{
-				return _pOwnerManager->findGameObjectByEntity( pData->parentEntity );
-			}
-		}
-		return nullptr;
+		SceneComponent* pSceneComp = getPrimarySceneComponent();
+		if ( pSceneComp == nullptr )
+			return nullptr;
+		SceneComponent* pParentComp = pSceneComp->getParent();
+		if ( pParentComp == nullptr )
+			return nullptr;
+		return pParentComp->getOwner();
 	}
 
 	void GameObject::refreshActiveInHierarchy()
@@ -217,13 +217,6 @@ namespace sw
 
 		_bIsActiveInHierarchy.store( bParentActive, std::memory_order_relaxed );
 
-		if ( _pOwnerManager != nullptr && _entityId != sw::kNullEntity )
-		{
-			EntityStateData* pState = _pOwnerManager->getRegistry().getPtr<EntityStateData>( _entityId );
-			if ( pState != nullptr )
-				pState->bIsActiveInHierarchy.store( bParentActive, std::memory_order_relaxed );
-		}
-
 		for ( GameObject* pChild : getChildren() )
 		{
 			if ( pChild != nullptr )
@@ -234,18 +227,17 @@ namespace sw
 	vector<GameObject*> GameObject::getChildren() const
 	{
 		vector<GameObject*> listResult;
-		if ( _pOwnerManager == nullptr || _entityId == sw::kNullEntity )
+		SceneComponent*		pSceneComp = getPrimarySceneComponent();
+		if ( pSceneComp == nullptr )
 			return listResult;
 
-		HierarchyData* pData = _pOwnerManager->getRegistry().getPtr<HierarchyData>( _entityId );
-		if ( pData == nullptr )
-			return listResult;
-
-		const auto& children = pData->listChildEntities;
-		listResult.reserve( children.size() );
-		for ( sw::Entity childEnt : children )
+		const vector<SceneComponent*>& listChildComps = pSceneComp->getChildren();
+		listResult.reserve( listChildComps.size() );
+		for ( SceneComponent* pChildComp : listChildComps )
 		{
-			GameObject* pChildObj = _pOwnerManager->findGameObjectByEntity( childEnt );
+			if ( pChildComp == nullptr )
+				continue;
+			GameObject* pChildObj = pChildComp->getOwner();
 			if ( pChildObj == nullptr )
 				continue;
 			listResult.push_back( pChildObj );
@@ -255,20 +247,7 @@ namespace sw
 
 	SceneComponent* GameObject::getPrimarySceneComponent() const
 	{
-		SceneComponent* pExact = getComponent<SceneComponent>().get();
-		if ( pExact != nullptr )
-			return pExact;
-
-		const vector<Component*>& listComponents = getAllComponents();
-		for ( Component* pComp : listComponents )
-		{
-			if ( pComp == nullptr )
-				continue;
-			SceneComponent* pSceneComp = pComp->asSceneComponent();
-			if ( pSceneComp != nullptr )
-				return pSceneComp;
-		}
-		return nullptr;
+		return getComponent<SceneComponent>();
 	}
 
 	void GameObject::addTag( TagID tag )
@@ -287,11 +266,11 @@ namespace sw
 			return;
 		}
 
-		TagData* pTagData = getComponent<TagData>().get();
-		if ( pTagData == nullptr )
-			pTagData = addComponent<TagData>();
-		if ( pTagData != nullptr )
-			pTagData->tags.addTag( tag );
+		TagComponent* pTagComp = getComponent<TagComponent>();
+		if ( pTagComp == nullptr )
+			pTagComp = addComponent<TagComponent>();
+		if ( pTagComp != nullptr )
+			pTagComp->addTag( tag );
 	}
 
 	void GameObject::removeTag( TagID tag )
@@ -310,97 +289,152 @@ namespace sw
 			return;
 		}
 
-		TComponentHandle<TagData> tagData = getComponent<TagData>();
-		if ( tagData.isValid() )
-			tagData->tags.removeTag( tag );
+		TagComponent* pTagComp = getComponent<TagComponent>();
+		if ( pTagComp != nullptr )
+			pTagComp->removeTag( tag );
 	}
 
 	void GameObject::clearTags()
 	{
-		TComponentHandle<TagData> tagData = getComponent<TagData>();
-		if ( tagData.isValid() )
-			tagData->tags.clear();
+		TagComponent* pTagComp = getComponent<TagComponent>();
+		if ( pTagComp != nullptr )
+			pTagComp->clearTags();
 	}
 
 	bool GameObject::hasTag( TagID tag, bool bExactMatch ) const
 	{
-		TComponentHandle<TagData> tagData = getComponent<TagData>();
-		if ( tagData.isValid() )
-			return tagData->tags.hasTag( tag, bExactMatch );
-		return false;
-	}
-
-	bool GameObject::matchTags( const TagContainer& required, const TagContainer& forbidden ) const
-	{
-		TComponentHandle<TagData> tagData = getComponent<TagData>();
-		if ( tagData.isValid() )
-			return tagData->tags.matchTags( required, forbidden );
-		return required.getTagCount() == 0;
+		const TagComponent* pTagComp = getComponent<TagComponent>();
+		if ( pTagComp == nullptr )
+			return false;
+		return pTagComp->hasTag( tag, bExactMatch );
 	}
 
 	bool GameObject::matchesTagQuery( const TagQuery& query ) const
 	{
-		TComponentHandle<TagData> tagData = getComponent<TagData>();
-		if ( tagData.isValid() )
-			return query.matches( tagData->tags );
-		static const TagContainer s_emptyTags;
-		return query.matches( s_emptyTags );
+		const TagComponent* pTagComp = getComponent<TagComponent>();
+		if ( pTagComp == nullptr )
+		{
+			static const TagContainer s_emptyTags;
+			return query.matches( s_emptyTags );
+		}
+		return pTagComp->matchesQuery( query );
 	}
 
 	const TagContainer& GameObject::getTags() const
 	{
-		static TagContainer		  s_emptyContainer;
-		TComponentHandle<TagData> tagData = getComponent<TagData>();
-		if ( tagData.isValid() )
-			return tagData->tags;
-		return s_emptyContainer;
+		const TagComponent* pTagComp = getComponent<TagComponent>();
+		if ( pTagComp == nullptr )
+		{
+			static const TagContainer s_emptyTags;
+			return s_emptyTags;
+		}
+		return pTagComp->getTags();
+	}
+
+	TagContainer& GameObject::getTags()
+	{
+		TagComponent* pTagComp = getComponent<TagComponent>();
+		if ( pTagComp == nullptr )
+			pTagComp = addComponent<TagComponent>();
+		if ( pTagComp != nullptr )
+			return pTagComp->getTags();
+
+		static TagContainer s_emptyTags;
+		return s_emptyTags;
 	}
 
 	size_t GameObject::getComponentCount() const
 	{
-		return getAllComponents().size();
+		size_t count = 0;
+		for ( Component* pComp : _listComponents )
+		{
+			if ( pComp != nullptr && pComp->isPendingKill() == false )
+				++count;
+		}
+		return count;
 	}
 
 	vector<Component*> GameObject::getAllComponents() const
 	{
 		vector<Component*> listResult;
-		forEachComponent( [&]( Component* pComp )
+		for ( Component* pComp : _listComponents )
 		{
-			listResult.push_back( pComp );
-		} );
+			if ( pComp != nullptr && pComp->isPendingKill() == false )
+				listResult.push_back( pComp );
+		}
 		return listResult;
+	}
+
+	void GameObject::clearComponents()
+	{
+		vector<Component*> listOwned = _listComponents;
+		_listComponents.clear();
+		for ( Component* pComp : listOwned )
+		{
+			if ( pComp == nullptr )
+				continue;
+			unregisterComponentIfSceneRoot( pComp );
+			pComp->onDestroy();
+			pComp->setOwner( nullptr );
+			sw_delete( pComp );
+		}
+		markTickOrderDirty();
+	}
+
+	Component* GameObject::findComponentById( uint64 componentId, bool bIncludePendingKill ) const
+	{
+		for ( Component* pComp : _listComponents )
+		{
+			if ( pComp == nullptr || pComp->getComponentId() != componentId )
+				continue;
+			if ( bIncludePendingKill == false && pComp->isPendingKill() )
+				return nullptr;
+			return pComp;
+		}
+		return nullptr;
 	}
 
 	bool GameObject::removeComponent( Component* pComp )
 	{
-		if ( pComp == nullptr || _pOwnerManager == nullptr || _entityId == sw::kNullEntity )
-			return false;
-		if ( pComp->getOwner() != this )
+		if ( pComp == nullptr || pComp->getOwner() != this )
 			return false;
 
-		if ( _pOwnerManager->getRegistry().isTicking() )
+		if ( _pOwnerManager != nullptr && _pOwnerManager->isStructuralMutationFrozen() )
 		{
 			_pOwnerManager->destroyComponent( pComp );
 			return true;
 		}
 
 		const hashed_string componentName = pComp->getComponentName();
-		(void)componentName;
 
 		unregisterComponentIfSceneRoot( pComp );
 		pComp->onDestroy();
-		const bool removed = _pOwnerManager->getRegistry().removeComponent( _entityId, pComp );
-		if ( removed == false )
-			SW_LOG_ERROR( "[GameObject] Failed to remove component '%#' from ECS pool.", componentName.c_str() );
+		pComp->setOwner( nullptr );
+
+		bool bRemoved = false;
+		for ( size_t compIndex = 0; compIndex < _listComponents.size(); ++compIndex )
+		{
+			if ( _listComponents[compIndex] == pComp )
+			{
+				_listComponents[compIndex] = _listComponents.back();
+				_listComponents.pop_back();
+				bRemoved = true;
+				break;
+			}
+		}
+		if ( bRemoved == false )
+			SW_LOG_ERROR( "[GameObject] Failed to remove component '%#' from actor list.", componentName.c_str() );
+		else
+			sw_delete( pComp );
 		markTickOrderDirty();
-		return removed;
+		return bRemoved;
 	}
 
 	void GameObject::registerComponentIfSceneRoot( Component* pComp )
 	{
 		if ( pComp == nullptr )
 			return;
-		SceneComponent* pSceneComp = pComp->asSceneComponent();
+		SceneComponent* pSceneComp = castTo<SceneComponent>( pComp );
 		if ( pSceneComp != nullptr )
 		{
 			if ( pSceneComp->getParent() == nullptr )
@@ -425,7 +459,7 @@ namespace sw
 	{
 		if ( pComp == nullptr )
 			return;
-		SceneComponent* pSceneComp = pComp->asSceneComponent();
+		SceneComponent* pSceneComp = castTo<SceneComponent>( pComp );
 		if ( pSceneComp != nullptr )
 		{
 			if ( pSceneComp->getParent() == nullptr )
@@ -446,26 +480,30 @@ namespace sw
 		}
 	}
 
-	void GameObject::moveStateFrom( GameObject& source )
-	{
-		// 1. Move properties
-		setName( source._name );
-		setActive( source._bActive.load( std::memory_order_relaxed ) );
-
-		// Move ECS Entity ownership
-		if ( _pOwnerManager != nullptr )
-		{
-			if ( _entityId != sw::kNullEntity )
-				_pOwnerManager->getRegistry().destroy( _entityId );
-			_entityId		 = source._entityId;
-			source._entityId = sw::kNullEntity;
-		}
-	}
-
 	void GameObject::markTickOrderDirty()
 	{
 		if ( _pOwnerManager != nullptr )
-			_pOwnerManager->getRegistry().markTickWavesDirty();
+			_pOwnerManager->markTickWavesDirty();
+	}
+
+	void GameObject::prepareSerialize() const
+	{
+		for ( Component* pComp : _listComponents )
+		{
+			SceneComponent* pSceneComp = castTo<SceneComponent>( pComp );
+			if ( pSceneComp != nullptr )
+				pSceneComp->syncAttachSerializeFields();
+		}
+	}
+
+	void GameObject::applyLoadedHierarchy()
+	{
+		for ( Component* pComp : _listComponents )
+		{
+			SceneComponent* pSceneComp = castTo<SceneComponent>( pComp );
+			if ( pSceneComp != nullptr )
+				pSceneComp->applyAttachSerializeFields();
+		}
 	}
 
 	std::atomic<uint64> GameObject::_s_nextObjectId{ 1 };

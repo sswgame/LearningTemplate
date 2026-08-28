@@ -11,7 +11,7 @@ namespace sw
 	SpatialHashGrid2D::SpatialHashGrid2D( float32 cellSize )
 		: _cellSize{ cellSize > 1.0f ? cellSize : 64.0f }
 		, _mapBuckets{}
-		, _mapEntityBounds{}
+		, _mapHandleBounds{}
 	{
 	}
 
@@ -21,13 +21,13 @@ namespace sw
 			   ( static_cast<uint64>( static_cast<uint32>( cellY ) ) );
 	}
 
-	void SpatialHashGrid2D::insert( Entity entity, float32 minX, float32 minY, float32 maxX, float32 maxY )
+	void SpatialHashGrid2D::insert( ObjectHandle handle, float32 minX, float32 minY, float32 maxX, float32 maxY )
 	{
-		if ( entity == kNullEntity )
+		if ( handle.isValid() == false )
 			return;
 
-		if ( _mapEntityBounds.find( entity ) != _mapEntityBounds.end() )
-			remove( entity );
+		if ( _mapHandleBounds.find( handle ) != _mapHandleBounds.end() )
+			remove( handle );
 
 		const float32 normMinX = MathUtil::min( minX, maxX );
 		const float32 normMaxX = MathUtil::max( minX, maxX );
@@ -35,7 +35,7 @@ namespace sw
 		const float32 normMaxY = MathUtil::max( minY, maxY );
 
 		const AABB2D bounds{ normMinX, normMinY, normMaxX, normMaxY };
-		_mapEntityBounds[entity] = bounds;
+		_mapHandleBounds[handle] = bounds;
 
 		const int32 startCellX = static_cast<int32>( MathUtil::floor( normMinX / _cellSize ) );
 		const int32 endCellX   = static_cast<int32>( MathUtil::floor( normMaxX / _cellSize ) );
@@ -47,24 +47,24 @@ namespace sw
 			for ( int32 cellY = startCellY; cellY <= endCellY; ++cellY )
 			{
 				const uint64 key = getCellKey( cellX, cellY );
-				_mapBuckets[key].push_back( entity );
+				_mapBuckets[key].push_back( handle );
 			}
 		}
 	}
 
-	void SpatialHashGrid2D::update( Entity entity, float32 minX, float32 minY, float32 maxX, float32 maxY )
+	void SpatialHashGrid2D::update( ObjectHandle handle, float32 minX, float32 minY, float32 maxX, float32 maxY )
 	{
-		insert( entity, minX, minY, maxX, maxY );
+		insert( handle, minX, minY, maxX, maxY );
 	}
 
-	void SpatialHashGrid2D::remove( Entity entity )
+	void SpatialHashGrid2D::remove( ObjectHandle handle )
 	{
-		auto boundIt = _mapEntityBounds.find( entity );
-		if ( boundIt == _mapEntityBounds.end() )
+		auto boundIt = _mapHandleBounds.find( handle );
+		if ( boundIt == _mapHandleBounds.end() )
 			return;
 
 		const AABB2D bounds = boundIt->second;
-		_mapEntityBounds.erase( boundIt );
+		_mapHandleBounds.erase( boundIt );
 
 		const int32 startCellX = static_cast<int32>( MathUtil::floor( bounds._minX / _cellSize ) );
 		const int32 endCellX   = static_cast<int32>( MathUtil::floor( bounds._maxX / _cellSize ) );
@@ -79,17 +79,17 @@ namespace sw
 				auto		 bucketIt = _mapBuckets.find( key );
 				if ( bucketIt != _mapBuckets.end() )
 				{
-					auto& listEntities = bucketIt->second;
-					for ( size_t entityIndex = 0; entityIndex < listEntities.size(); ++entityIndex )
+					auto& listHandles = bucketIt->second;
+					for ( size_t handleIndex = 0; handleIndex < listHandles.size(); ++handleIndex )
 					{
-						if ( listEntities[entityIndex] == entity )
+						if ( listHandles[handleIndex] == handle )
 						{
-							listEntities[entityIndex] = listEntities.back();
-							listEntities.pop_back();
+							listHandles[handleIndex] = listHandles.back();
+							listHandles.pop_back();
 							break;
 						}
 					}
-					if ( listEntities.empty() )
+					if ( listHandles.empty() )
 						_mapBuckets.erase( bucketIt );
 				}
 			}
@@ -99,10 +99,10 @@ namespace sw
 	void SpatialHashGrid2D::clear()
 	{
 		_mapBuckets.clear();
-		_mapEntityBounds.clear();
+		_mapHandleBounds.clear();
 	}
 
-	void SpatialHashGrid2D::queryAABB( float32 minX, float32 minY, float32 maxX, float32 maxY, vector<Entity>& outEntities ) const
+	void SpatialHashGrid2D::queryAABB( float32 minX, float32 minY, float32 maxX, float32 maxY, vector<ObjectHandle>& outHandles ) const
 	{
 		const float32 normMinX = MathUtil::min( minX, maxX );
 		const float32 normMaxX = MathUtil::max( minX, maxX );
@@ -123,15 +123,15 @@ namespace sw
 				auto		 bucketIt = _mapBuckets.find( key );
 				if ( bucketIt != _mapBuckets.end() )
 				{
-					for ( const Entity entity : bucketIt->second )
+					for ( const ObjectHandle handle : bucketIt->second )
 					{
-						auto boundIt = _mapEntityBounds.find( entity );
-						if ( boundIt != _mapEntityBounds.end() )
+						auto boundIt = _mapHandleBounds.find( handle );
+						if ( boundIt != _mapHandleBounds.end() )
 						{
 							if ( queryBounds.intersects( boundIt->second ) )
 							{
-								if ( std::find( outEntities.begin(), outEntities.end(), entity ) == outEntities.end() )
-									outEntities.push_back( entity );
+								if ( std::find( outHandles.begin(), outHandles.end(), handle ) == outHandles.end() )
+									outHandles.push_back( handle );
 							}
 						}
 					}
@@ -140,7 +140,7 @@ namespace sw
 		}
 	}
 
-	void SpatialHashGrid2D::queryCircle( float32 centerX, float32 centerY, float32 radius, vector<Entity>& outEntities ) const
+	void SpatialHashGrid2D::queryCircle( float32 centerX, float32 centerY, float32 radius, vector<ObjectHandle>& outHandles ) const
 	{
 		const float32 radiusSq = radius * radius;
 		const float32 minX	   = centerX - radius;
@@ -161,10 +161,10 @@ namespace sw
 				auto		 bucketIt = _mapBuckets.find( key );
 				if ( bucketIt != _mapBuckets.end() )
 				{
-					for ( const Entity entity : bucketIt->second )
+					for ( const ObjectHandle handle : bucketIt->second )
 					{
-						auto boundIt = _mapEntityBounds.find( entity );
-						if ( boundIt != _mapEntityBounds.end() )
+						auto boundIt = _mapHandleBounds.find( handle );
+						if ( boundIt != _mapHandleBounds.end() )
 						{
 							const AABB2D& b		 = boundIt->second;
 							const float32 closeX = MathUtil::clamp( centerX, b._minX, b._maxX );
@@ -173,8 +173,8 @@ namespace sw
 							const float32 dy	 = centerY - closeY;
 							if ( ( dx * dx + dy * dy ) <= radiusSq )
 							{
-								if ( std::find( outEntities.begin(), outEntities.end(), entity ) == outEntities.end() )
-									outEntities.push_back( entity );
+								if ( std::find( outHandles.begin(), outHandles.end(), handle ) == outHandles.end() )
+									outHandles.push_back( handle );
 							}
 						}
 					}
@@ -183,7 +183,7 @@ namespace sw
 		}
 	}
 
-	void SpatialHashGrid2D::queryRay( float32 startX, float32 startY, float32 dirX, float32 dirY, float32 maxDist, vector<Entity>& outEntities ) const
+	void SpatialHashGrid2D::queryRay( float32 startX, float32 startY, float32 dirX, float32 dirY, float32 maxDist, vector<ObjectHandle>& outHandles ) const
 	{
 		const float32 len = MathUtil::sqrt( dirX * dirX + dirY * dirY );
 		if ( len <= 0.0001f || maxDist <= 0.0f )
@@ -216,13 +216,13 @@ namespace sw
 
 			if ( bucketIt != _mapBuckets.end() )
 			{
-				for ( const Entity entity : bucketIt->second )
+				for ( const ObjectHandle handle : bucketIt->second )
 				{
-					auto boundIt = _mapEntityBounds.find( entity );
-					if ( boundIt != _mapEntityBounds.end() )
+					auto boundIt = _mapHandleBounds.find( handle );
+					if ( boundIt != _mapHandleBounds.end() )
 					{
-						if ( std::find( outEntities.begin(), outEntities.end(), entity ) == outEntities.end() )
-							outEntities.push_back( entity );
+						if ( std::find( outHandles.begin(), outHandles.end(), handle ) == outHandles.end() )
+							outHandles.push_back( handle );
 					}
 				}
 			}
@@ -247,9 +247,9 @@ namespace sw
 		return _cellSize;
 	}
 
-	size_t SpatialHashGrid2D::getEntityCount() const
+	size_t SpatialHashGrid2D::getHandleCount() const
 	{
-		return _mapEntityBounds.size();
+		return _mapHandleBounds.size();
 	}
 
 	size_t SpatialHashGrid2D::getActiveBucketCount() const

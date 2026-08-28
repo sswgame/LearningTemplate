@@ -1,6 +1,6 @@
 /**
  * @file TestSampleActor.h
- * @brief Reflection 테스트용 REFLECT/ENUM/스크립트 샘플 타입
+ * @brief Reflection 테스트용 REFLECT/ENUM 샘플 타입
  */
 #pragma once
 #include "Core/Common/StdHeaders.h"
@@ -8,6 +8,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
+#include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectAny.h"
 #include "Engine/Reflection/ReflectionCore.h"
 
@@ -226,17 +227,13 @@ namespace sw
 		};
 	} // namespace InnerNamespaceForTest
 
-	class GameObject;
-
 	// ------------------------------------------------------------------------------
-	// 4) REFLECT_SCRIPT — 생명주기 훅·상속
+	// 4) Component 생명주기 훅·상속
 	// ------------------------------------------------------------------------------
-	REFLECT_SCRIPT()
-	struct TestScriptComponent
+	REFLECT()
+	struct TestScriptComponent : public Component
 	{
 		REFLECT_BODY();
-
-		GameObject* owner{ nullptr };
 
 		PROPERTY()
 		float32 _scriptSpeed{ 1.5f };
@@ -251,26 +248,26 @@ namespace sw
 		bool   _endedPlay{ false };
 
 		/** @brief 플레이 시작 플래그를 켭니다. */
-		void beginPlay()
+		void onBeginPlay() override
 		{
 			_beganPlay = true;
 		}
 
 		/** @brief 틱 카운트를 증가시킵니다. */
-		void tick( float32 dt )
+		void onTick( float32 dt ) override
 		{
 			(void)dt;
 			_tickCount++;
 		}
 
 		/** @brief 플레이 종료 플래그를 켭니다. */
-		void endPlay()
+		void onEndPlay() override
 		{
 			_endedPlay = true;
 		}
 	};
 
-	REFLECT_SCRIPT()
+	REFLECT()
 	struct TestDerivedScriptComponent : public TestScriptComponent
 	{
 		REFLECT_BODY();
@@ -278,14 +275,14 @@ namespace sw
 		uint32 _derivedTickCount{ 0 };
 
 		/** @brief 부모 틱 후 파생 틱 카운트를 더합니다. */
-		void tick( float32 dt )
+		void onTick( float32 dt ) override
 		{
-			TestScriptComponent::tick( dt );
+			TestScriptComponent::onTick( dt );
 			_derivedTickCount += 2;
 		}
 	};
 
-	REFLECT_SCRIPT()
+	REFLECT()
 	struct TestGrandChildScriptComponent : public TestDerivedScriptComponent
 	{
 		REFLECT_BODY();
@@ -293,9 +290,9 @@ namespace sw
 		uint32 _grandChildTickCount{ 0 };
 
 		/** @brief 부모 틱 후 손자 틱 카운트를 더합니다. */
-		void tick( float32 dt )
+		void onTick( float32 dt ) override
 		{
-			TestDerivedScriptComponent::tick( dt );
+			TestDerivedScriptComponent::onTick( dt );
 			_grandChildTickCount += 3;
 		}
 	};

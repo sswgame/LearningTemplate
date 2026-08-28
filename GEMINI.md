@@ -115,7 +115,6 @@
 #include "Engine/Object/Component.h"
 
 #include "Core/Log/Logger.h"
-#include "Engine/ECS/Registry.h"
 #include "Engine/Object/ComponentDefaults.h"
 #include "Engine/Object/GameObject.h"
 #include "Engine/Reflection/ReflectionCore.h"
@@ -128,7 +127,7 @@
 #include "Engine/Object/Component.h"
 #include "Engine/Object/ComponentDefaults.h"
 #include "Engine/Object/GameObject.h"
-#include "Engine/ECS/Registry.h"
+
 #include "Engine/Reflection/ReflectionCore.h"
 
 #include "Core/Log/Logger.h"

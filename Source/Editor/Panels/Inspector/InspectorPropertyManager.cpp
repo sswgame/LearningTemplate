@@ -7,6 +7,8 @@
 #include "Editor/Panels/Inspector/IInspectorProperty.h"
 #include "Editor/Panels/Inspector/InspectorPropertyUndo.h"
 
+#include "Core/Concurrency/Atomic.h"
+
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Scene/SceneManager.h"
@@ -230,6 +232,27 @@ namespace sw::editor
 			}
 		};
 
+		class AtomicBoolProperty : public BuiltinPropertyBase
+		{
+		public:
+			bool draw( void* pInstance, const PropertyInfo& prop ) override
+			{
+				AtomicBool* pPtr = prop.getValuePtr<AtomicBool>( pInstance );
+				if ( pPtr == nullptr )
+					return true;
+
+				bool value = pPtr->load( std::memory_order_relaxed );
+				if ( prop._metadata._bReadOnly != 0 )
+				{
+					drawReadOnlyText( prop, value ? "true" : "false" );
+					return true;
+				}
+				if ( ImGui::Checkbox( _pLabel, &value ) )
+					pPtr->store( value, std::memory_order_relaxed );
+				return true;
+			}
+		};
+
 		class StringProperty : public BuiltinPropertyBase
 		{
 		public:
@@ -397,6 +420,7 @@ namespace sw::editor
 		registerType( "float32", make_unique<Float32Property>() );
 		registerType( "float64", make_unique<Float64Property>() );
 		registerType( "bool", make_unique<BoolProperty>() );
+		registerType( "AtomicBool", make_unique<AtomicBoolProperty>() );
 		registerType( "string", make_unique<StringProperty>() );
 		registerType( "float3", make_unique<Float3Property>() );
 		registerType( "float2", make_unique<Float2Property>() );

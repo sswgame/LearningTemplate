@@ -1,32 +1,24 @@
 #pragma once
 #include "Engine/Object/Component/Component.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
-	REFLECT()
-	struct SW_GF_API DamageUIData
+	namespace generated
 	{
-		REFLECT_BODY();
-		PROPERTY()
-		int32 damageValue{ 0 };
-		PROPERTY()
-		float32 lifeTime{ 0.0f };
-		PROPERTY()
-		float32 currentLife{ 0.0f };
-		PROPERTY()
-		float32 floatSpeed{ 0.0f };
-		PROPERTY()
-		float32 alpha{ 0.0f };
-	};
+		struct sw_DamageUIComponent_Registrar;
+	} // namespace generated
 
 	REFLECT()
 	class SW_GF_API DamageUIComponent : public Component
 	{
+		friend struct ::sw::generated::sw_DamageUIComponent_Registrar;
+
 	public:
 		REFLECT_BODY();
-		DamageUIComponent()											 = default;
+		DamageUIComponent();
 		virtual ~DamageUIComponent() override						 = default;
 		DamageUIComponent( DamageUIComponent&& ) noexcept			 = default;
 		DamageUIComponent& operator=( DamageUIComponent&& ) noexcept = default;
@@ -35,10 +27,16 @@ namespace sw
 		void onEndPlay() override;
 		void onTick( float32 deltaTime ) override;
 
-		EcsDataView ensureEcsData() override;
-		EcsDataView getEcsData() const override;
-
-		DamageUIData* getDamageUIData() const;
-		DamageUIData* ensureDamageUIData();
+	private:
+		PROPERTY( Alias="damageValue" )
+		int32 _damageValue;
+		PROPERTY( Alias="lifeTime" )
+		float32 _lifeTime;
+		PROPERTY( Alias="currentLife" )
+		float32 _currentLife;
+		PROPERTY( Alias="floatSpeed" )
+		float32 _floatSpeed;
+		PROPERTY( Alias="alpha" )
+		float32 _alpha;
 	};
 } // namespace sw

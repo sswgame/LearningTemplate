@@ -2,11 +2,18 @@
 
 #include "GameFramework/Kits/ActionCombat/GravityComponent.h"
 
-#include "Engine/Object/Component/EcsDataUtil.h"
 #include "Engine/Object/Component/TagSystem.h"
 
 namespace sw
 {
+	GravityComponent::GravityComponent()
+		: _gravity{ 0.0f }
+		, _velocityY{ 0.0f }
+		, _groundY{ 0.0f }
+		, _bIsGrounded{ false }
+	{
+	}
+
 	void GravityComponent::onBeginPlay()
 	{
 		Component::onBeginPlay();
@@ -15,7 +22,6 @@ namespace sw
 		GameObject* pOwner = getOwner();
 		if ( pOwner != nullptr )
 			pOwner->addTag( "Physics"_tag );
-		ensureGravityData();
 	}
 
 	void GravityComponent::onEndPlay()
@@ -27,54 +33,26 @@ namespace sw
 	{
 		Component::onTick( deltaTime );
 
-		GravityData* pData = ensureGravityData();
-		if ( pData == nullptr )
+		GameObject* pOwner = getOwner();
+		if ( pOwner == nullptr )
 			return;
 
-		GameObject* pOwner = getOwner();
-		if ( pOwner != nullptr )
+		SceneComponent* pSceneComp = pOwner->getPrimarySceneComponent();
+		if ( pSceneComp == nullptr )
+			return;
+
+		float3 pos = pSceneComp->getLocalPosition();
+		if ( _bIsGrounded == false )
 		{
-			SceneComponent* pSceneComp = pOwner->getPrimarySceneComponent();
-			if ( pSceneComp != nullptr )
+			_velocityY += _gravity * deltaTime;
+			pos._y += _velocityY * deltaTime;
+			if ( pos._y <= _groundY )
 			{
-				float3 pos = pSceneComp->getLocalPosition();
-				if ( pData->bIsGrounded == false )
-				{
-					pData->velocityY += pData->gravity * deltaTime;
-					pos._y += pData->velocityY * deltaTime;
-					if ( pos._y <= pData->groundY )
-					{
-						pos._y			   = pData->groundY;
-						pData->velocityY   = 0.0f;
-						pData->bIsGrounded = true;
-					}
-				}
-				pSceneComp->setLocalPosition( pos );
+				pos._y		 = _groundY;
+				_velocityY	 = 0.0f;
+				_bIsGrounded = true;
 			}
 		}
-	}
-
-	Component::EcsDataView GravityComponent::ensureEcsData()
-	{
-		GravityData* pData = ensureGravityData();
-		return { pData, GravityData::StaticType() };
-	}
-
-	Component::EcsDataView GravityComponent::getEcsData() const
-	{
-		return { ( getGravityData() ), GravityData::StaticType() };
-	}
-
-	GravityData* GravityComponent::getGravityData() const
-	{
-		GameObject* pOwner = getOwner();
-		if ( pOwner != nullptr )
-			return pOwner->getComponent<GravityData>().get();
-		return nullptr;
-	}
-
-	GravityData* GravityComponent::ensureGravityData()
-	{
-		return sw::ensureEcsData<GravityData>( getOwner(), getTypeInfo() );
+		pSceneComp->setLocalPosition( pos );
 	}
 } // namespace sw

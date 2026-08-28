@@ -2,7 +2,9 @@
 
 #include "Engine/Object/Component/SceneComponent.h"
 
+#include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Reflection/ReflectionCast.h"
 
 namespace sw
 {
@@ -24,24 +26,24 @@ namespace sw
 		/**
 		 * @brief 부모의 월드 행렬과 결합하여 현재 컴포넌트의 월드 행렬 및 64비트 LWC 월드 좌표를 합성합니다.
 		 */
-		void composeWorldFromParent( const float3&		  localPosition,
-									 const float3&		  localRotation,
-									 const float3&		  localScale,
-									 const TransformData* parentData,
-									 float4x4&			  outWorldMatrix,
-									 double3&			  outWorldLWC,
-									 float3&			  outWorldPos )
+		void composeWorldFromParent( const float3&	 localPosition,
+									 const float3&	 localRotation,
+									 const float3&	 localScale,
+									 const float4x4* pParentWorldMatrix,
+									 const double3*	 pParentWorldLWC,
+									 float4x4&		 outWorldMatrix,
+									 double3&		 outWorldLWC,
+									 float3&		 outWorldPos )
 		{
 			const float4x4 localTRS = makeLocalTRS( localPosition, localRotation, localScale );
 
-			if ( parentData != nullptr )
+			if ( pParentWorldMatrix != nullptr && pParentWorldLWC != nullptr )
 			{
-				outWorldMatrix = localTRS * parentData->cachedWorldMatrix;
-				// LWC: 부모의 64비트 월드 좌표에 부모 회전/스케일이 적용된 로컬 오프셋을 가산
-				const float3 offset = float3::transformNormal( localPosition, parentData->cachedWorldMatrix );
-				outWorldLWC			= parentData->cachedWorldPositionLWC + double3( static_cast<float64>( offset._x ),
-																					static_cast<float64>( offset._y ),
-																					static_cast<float64>( offset._z ) );
+				outWorldMatrix		= localTRS * ( *pParentWorldMatrix );
+				const float3 offset = float3::transformNormal( localPosition, *pParentWorldMatrix );
+				outWorldLWC			= *pParentWorldLWC + double3( static_cast<float64>( offset._x ),
+																  static_cast<float64>( offset._y ),
+																  static_cast<float64>( offset._z ) );
 			}
 			else
 			{
@@ -59,70 +61,87 @@ namespace sw
 	} // namespace
 
 	SceneComponent::SceneComponent()
-		: Component{ true }
+		: _localPosition{ 0.0f, 0.0f, 0.0f }
+		, _localRotation{ 0.0f, 0.0f, 0.0f }
+		, _localScale{ 1.0f, 1.0f, 1.0f }
+		, _attachOwner{}
+		, _attachComponent{}
+		, _cachedWorldPosition{ 0.0f, 0.0f, 0.0f }
+		, _cachedWorldMatrix{ float4x4::Identity }
+		, _cachedWorldPositionLWC{ 0.0, 0.0, 0.0 }
+		, _pParent{ nullptr }
+		, _listChildren{}
+		, _bIsTransformDirty{ SW_TRUE }
+		, _bHasDirtyDescendant{ SW_FALSE }
+		, _reservedTransform{ 0 }
 	{
+		_bCanEverTick = SW_FALSE;
 	}
 
-	/**
-	 * @brief SceneComponent 소멸자: 부모 및 자식 계층 연결을 정리하고 루트 씬 컴포넌트 등록을 해제합니다.
-	 */
+	SceneComponent::SceneComponent( SceneComponent&& other ) noexcept
+		: Component{ std::move( other ) }
+		, _localPosition{ other._localPosition }
+		, _localRotation{ other._localRotation }
+		, _localScale{ other._localScale }
+		, _attachOwner{ other._attachOwner }
+		, _attachComponent{ other._attachComponent }
+		, _cachedWorldPosition{ other._cachedWorldPosition }
+		, _cachedWorldMatrix{ other._cachedWorldMatrix }
+		, _cachedWorldPositionLWC{ other._cachedWorldPositionLWC }
+		, _pParent{ nullptr }
+		, _listChildren{}
+		, _bIsTransformDirty{ other._bIsTransformDirty }
+		, _bHasDirtyDescendant{ other._bHasDirtyDescendant }
+		, _reservedTransform{ other._reservedTransform }
+	{
+		other._pParent = nullptr;
+		other._listChildren.clear();
+	}
+
+	SceneComponent& SceneComponent::operator=( SceneComponent&& other ) noexcept
+	{
+		if ( this != &other )
+		{
+			Component::operator=( std::move( other ) );
+			_localPosition			  = other._localPosition;
+			_localRotation			  = other._localRotation;
+			_localScale				  = other._localScale;
+			_attachOwner			  = other._attachOwner;
+			_attachComponent		  = other._attachComponent;
+			_cachedWorldPosition	  = other._cachedWorldPosition;
+			_cachedWorldMatrix		  = other._cachedWorldMatrix;
+			_cachedWorldPositionLWC	  = other._cachedWorldPositionLWC;
+			_bIsTransformDirty		  = other._bIsTransformDirty;
+			_bHasDirtyDescendant	  = other._bHasDirtyDescendant;
+			_reservedTransform		  = other._reservedTransform;
+			_pParent				  = nullptr;
+			_listChildren.clear();
+			other._pParent = nullptr;
+			other._listChildren.clear();
+		}
+		return *this;
+	}
+
 	SceneComponent::~SceneComponent()
 	{
-		if ( getOwner() != nullptr && getOwner()->getManager() != nullptr )
+		detachFromComponent();
+		vector<SceneComponent*> listChildrenCopy = _listChildren;
+		for ( SceneComponent* pChild : listChildrenCopy )
 		{
-			auto&			 reg   = getOwner()->getManager()->getRegistry();
-			const sw::Entity myEnt = getOwner()->getEntityId();
-			if ( myEnt != sw::kNullEntity )
-			{
-				auto* hdata = reg.getPtr<HierarchyData>( myEnt );
-				if ( hdata != nullptr && hdata->parentEntity != sw::kNullEntity )
-				{
-					const sw::Entity pEnt = hdata->parentEntity;
-					hdata->parentEntity	  = sw::kNullEntity;
-					auto* phdata		  = reg.getPtr<HierarchyData>( pEnt );
-					if ( phdata != nullptr )
-					{
-						auto it = std::find( phdata->listChildEntities.begin(), phdata->listChildEntities.end(), myEnt );
-						if ( it != phdata->listChildEntities.end() )
-						{
-							*it = phdata->listChildEntities.back();
-							phdata->listChildEntities.pop_back();
-						}
-					}
-				}
-				if ( hdata != nullptr )
-				{
-					for ( sw::Entity childEnt : hdata->listChildEntities )
-					{
-						if ( childEnt != sw::kNullEntity )
-						{
-							auto* chdata = reg.getPtr<HierarchyData>( childEnt );
-							if ( chdata != nullptr && chdata->parentEntity == myEnt )
-								chdata->parentEntity = sw::kNullEntity;
-						}
-					}
-					hdata->listChildEntities.clear();
-				}
-			}
-			getOwner()->getManager()->unregisterRootSceneComponent( this );
+			if ( pChild != nullptr )
+				pChild->detachFromComponent();
 		}
+		_listChildren.clear();
+
+		GameObject* pOwner = getOwner();
+		if ( pOwner != nullptr && pOwner->getManager() != nullptr )
+			pOwner->getManager()->unregisterRootSceneComponent( this );
 	}
 
-	/**
-	 * @brief 게임플레이 시작 시 ECS 레지스트리에 TransformData 및 HierarchyData 컴포넌트를 보장합니다.
-	 */
 	void SceneComponent::onBeginPlay()
 	{
 		Component::onBeginPlay();
-		if ( getOwner() != nullptr && getOwner()->getManager() != nullptr )
-		{
-			sw::Registry& reg = getOwner()->getManager()->getRegistry();
-			sw::Entity	  ent = getOwner()->getEntityId();
-			if ( reg.has<TransformData>( ent ) == false )
-				reg.emplace<TransformData>( ent );
-			if ( reg.has<HierarchyData>( ent ) == false )
-				reg.emplace<HierarchyData>( ent );
-		}
+		markTransformDirty();
 	}
 
 	void SceneComponent::onTick( float32 deltaTime )
@@ -130,215 +149,132 @@ namespace sw
 		Component::onTick( deltaTime );
 	}
 
+	void SceneComponent::onPropertyChanged( hashed_string propertyName )
+	{
+		Component::onPropertyChanged( propertyName );
+		if ( propertyName == hashed_string( "_localPosition" ) ||
+			 propertyName == hashed_string( "_localRotation" ) ||
+			 propertyName == hashed_string( "_localScale" ) )
+			markTransformDirty();
+	}
+
 	void SceneComponent::setLocalPosition( const float3& pos )
 	{
-		if ( getOwner() != nullptr && getOwner()->getManager() != nullptr )
+		GameObject* pOwner = getOwner();
+		if ( pOwner != nullptr && pOwner->getManager() != nullptr && pOwner->getManager()->isParallelTransformReadOnly() )
 		{
-			if ( getOwner()->getManager()->isParallelTransformReadOnly() )
+			GameObjectManager*		  pMgr	 = pOwner->getManager();
+			const sw::ComponentHandle handle = getHandle();
+			pMgr->deferTransformUpdate( [pMgr, handle, pos]()
 			{
-				GameObjectManager*		  pMgr	 = getOwner()->getManager();
-				const sw::ComponentHandle handle = getHandle();
-				pMgr->deferTransformUpdate( [pMgr, handle, pos]()
-				{
-					SceneComponent* pSelf = static_cast<SceneComponent*>( pMgr->resolveComponent( handle ) );
-					if ( pSelf != nullptr )
-						pSelf->setLocalPosition( pos );
-				} );
-				return;
-			}
-			sw::Registry& reg = getOwner()->getManager()->getRegistry();
-			sw::Entity	  ent = getOwner()->getEntityId();
-			if ( reg.has<TransformData>( ent ) == false )
-				reg.emplace<TransformData>( ent );
-			auto& tdata = reg.get<TransformData>( ent );
-			if ( MathUtil::abs( tdata.localPosition._x - pos._x ) <= 1e-6f &&
-				 MathUtil::abs( tdata.localPosition._y - pos._y ) <= 1e-6f &&
-				 MathUtil::abs( tdata.localPosition._z - pos._z ) <= 1e-6f )
-				return;
-			tdata.localPosition = pos;
-			markTransformDirty();
+				SceneComponent* pSelf = static_cast<SceneComponent*>( pMgr->resolveComponent( handle ) );
+				if ( pSelf != nullptr )
+					pSelf->setLocalPosition( pos );
+			} );
+			return;
 		}
+		if ( MathUtil::abs( _localPosition._x - pos._x ) <= 1e-6f &&
+			 MathUtil::abs( _localPosition._y - pos._y ) <= 1e-6f &&
+			 MathUtil::abs( _localPosition._z - pos._z ) <= 1e-6f )
+			return;
+		_localPosition = pos;
+		markTransformDirty();
 	}
 
 	float3 SceneComponent::getLocalPosition() const
 	{
-		if ( getOwner() != nullptr && getOwner()->getManager() != nullptr )
-		{
-			float3 result{ 0.0f, 0.0f, 0.0f };
-			if ( getOwner()->getManager()->getRegistry().withComponentConst<TransformData>( getOwner()->getEntityId(), [&]( const TransformData& tdata )
-			{
-				result = tdata.localPosition;
-			} ) )
-			{
-				return result;
-			}
-		}
-		return float3( 0.0f, 0.0f, 0.0f );
+		return _localPosition;
 	}
 
 	void SceneComponent::setLocalRotation( const float3& rot )
 	{
-		if ( getOwner() != nullptr && getOwner()->getManager() != nullptr )
+		GameObject* pOwner = getOwner();
+		if ( pOwner != nullptr && pOwner->getManager() != nullptr && pOwner->getManager()->isParallelTransformReadOnly() )
 		{
-			if ( getOwner()->getManager()->isParallelTransformReadOnly() )
+			GameObjectManager*		  pMgr	 = pOwner->getManager();
+			const sw::ComponentHandle handle = getHandle();
+			pMgr->deferTransformUpdate( [pMgr, handle, rot]()
 			{
-				GameObjectManager*		  pMgr	 = getOwner()->getManager();
-				const sw::ComponentHandle handle = getHandle();
-				pMgr->deferTransformUpdate( [pMgr, handle, rot]()
-				{
-					SceneComponent* pSelf = static_cast<SceneComponent*>( pMgr->resolveComponent( handle ) );
-					if ( pSelf != nullptr )
-						pSelf->setLocalRotation( rot );
-				} );
-				return;
-			}
-			sw::Registry& reg = getOwner()->getManager()->getRegistry();
-			sw::Entity	  ent = getOwner()->getEntityId();
-			if ( reg.has<TransformData>( ent ) == false )
-				reg.emplace<TransformData>( ent );
-			auto& tdata = reg.get<TransformData>( ent );
-			if ( MathUtil::abs( tdata.localRotation._x - rot._x ) <= 1e-6f &&
-				 MathUtil::abs( tdata.localRotation._y - rot._y ) <= 1e-6f &&
-				 MathUtil::abs( tdata.localRotation._z - rot._z ) <= 1e-6f )
-				return;
-			tdata.localRotation = rot;
-			markTransformDirty();
+				SceneComponent* pSelf = static_cast<SceneComponent*>( pMgr->resolveComponent( handle ) );
+				if ( pSelf != nullptr )
+					pSelf->setLocalRotation( rot );
+			} );
+			return;
 		}
+		if ( MathUtil::abs( _localRotation._x - rot._x ) <= 1e-6f &&
+			 MathUtil::abs( _localRotation._y - rot._y ) <= 1e-6f &&
+			 MathUtil::abs( _localRotation._z - rot._z ) <= 1e-6f )
+			return;
+		_localRotation = rot;
+		markTransformDirty();
 	}
 
 	float3 SceneComponent::getLocalRotation() const
 	{
-		if ( getOwner() != nullptr && getOwner()->getManager() != nullptr )
-		{
-			float3 result{ 0.0f, 0.0f, 0.0f };
-			if ( getOwner()->getManager()->getRegistry().withComponentConst<TransformData>( getOwner()->getEntityId(), [&]( const TransformData& tdata )
-			{
-				result = tdata.localRotation;
-			} ) )
-			{
-				return result;
-			}
-		}
-		return float3( 0.0f, 0.0f, 0.0f );
+		return _localRotation;
 	}
 
 	void SceneComponent::setLocalScale( const float3& scale )
 	{
-		if ( getOwner() != nullptr && getOwner()->getManager() != nullptr )
+		GameObject* pOwner = getOwner();
+		if ( pOwner != nullptr && pOwner->getManager() != nullptr && pOwner->getManager()->isParallelTransformReadOnly() )
 		{
-			if ( getOwner()->getManager()->isParallelTransformReadOnly() )
+			GameObjectManager*		  pMgr	 = pOwner->getManager();
+			const sw::ComponentHandle handle = getHandle();
+			pMgr->deferTransformUpdate( [pMgr, handle, scale]()
 			{
-				GameObjectManager*		  pMgr	 = getOwner()->getManager();
-				const sw::ComponentHandle handle = getHandle();
-				pMgr->deferTransformUpdate( [pMgr, handle, scale]()
-				{
-					SceneComponent* pSelf = static_cast<SceneComponent*>( pMgr->resolveComponent( handle ) );
-					if ( pSelf != nullptr )
-						pSelf->setLocalScale( scale );
-				} );
-				return;
-			}
-			sw::Registry& reg = getOwner()->getManager()->getRegistry();
-			sw::Entity	  ent = getOwner()->getEntityId();
-			if ( reg.has<TransformData>( ent ) == false )
-				reg.emplace<TransformData>( ent );
-			auto& tdata = reg.get<TransformData>( ent );
-			if ( MathUtil::abs( tdata.localScale._x - scale._x ) <= 1e-6f &&
-				 MathUtil::abs( tdata.localScale._y - scale._y ) <= 1e-6f &&
-				 MathUtil::abs( tdata.localScale._z - scale._z ) <= 1e-6f )
-				return;
-			tdata.localScale = scale;
-			markTransformDirty();
+				SceneComponent* pSelf = static_cast<SceneComponent*>( pMgr->resolveComponent( handle ) );
+				if ( pSelf != nullptr )
+					pSelf->setLocalScale( scale );
+			} );
+			return;
 		}
+		if ( MathUtil::abs( _localScale._x - scale._x ) <= 1e-6f &&
+			 MathUtil::abs( _localScale._y - scale._y ) <= 1e-6f &&
+			 MathUtil::abs( _localScale._z - scale._z ) <= 1e-6f )
+			return;
+		_localScale = scale;
+		markTransformDirty();
 	}
 
 	float3 SceneComponent::getLocalScale() const
 	{
-		if ( getOwner() != nullptr && getOwner()->getManager() != nullptr )
-		{
-			float3 result{ 1.0f, 1.0f, 1.0f };
-			if ( getOwner()->getManager()->getRegistry().withComponentConst<TransformData>( getOwner()->getEntityId(), [&]( const TransformData& tdata )
-			{
-				result = tdata.localScale;
-			} ) )
-			{
-				return result;
-			}
-		}
-		return float3( 1.0f, 1.0f, 1.0f );
+		return _localScale;
 	}
 
 	float3 SceneComponent::getWorldPosition() const
 	{
 		if ( getOwner() == nullptr || getOwner()->getManager() == nullptr || getOwner()->getManager()->isParallelTransformReadOnly() == false )
 			getWorldMatrix();
-		if ( getOwner() != nullptr && getOwner()->getManager() != nullptr )
-		{
-			float3 result{ 0.0f, 0.0f, 0.0f };
-			if ( getOwner()->getManager()->getRegistry().withComponentConst<TransformData>( getOwner()->getEntityId(), [&]( const TransformData& tdata )
-			{
-				result = tdata.cachedWorldPosition;
-			} ) )
-			{
-				return result;
-			}
-		}
-		return float3( 0.0f, 0.0f, 0.0f );
+		return _cachedWorldPosition;
 	}
 
 	double3 SceneComponent::getWorldPositionLWC() const
 	{
 		if ( getOwner() == nullptr || getOwner()->getManager() == nullptr || getOwner()->getManager()->isParallelTransformReadOnly() == false )
 			getWorldMatrix();
-		if ( getOwner() != nullptr && getOwner()->getManager() != nullptr )
-		{
-			double3 result{ 0.0, 0.0, 0.0 };
-			if ( getOwner()->getManager()->getRegistry().withComponentConst<TransformData>( getOwner()->getEntityId(), [&]( const TransformData& tdata )
-			{
-				result = tdata.cachedWorldPositionLWC;
-			} ) )
-			{
-				return result;
-			}
-		}
-		return double3( 0.0, 0.0, 0.0 );
+		return _cachedWorldPositionLWC;
 	}
 
 	float4x4 SceneComponent::getWorldMatrix() const
 	{
-		if ( getOwner() == nullptr || getOwner()->getManager() == nullptr )
-			return float4x4::Identity;
+		GameObject* pOwner = getOwner();
+		if ( pOwner != nullptr && pOwner->getManager() != nullptr && pOwner->getManager()->isParallelTransformReadOnly() )
+			return _cachedWorldMatrix;
 
-		auto& reg	= getOwner()->getManager()->getRegistry();
-		auto* tdata = reg.getPtr<TransformData>( getOwner()->getEntityId() );
-		if ( tdata == nullptr )
-			return float4x4::Identity;
-
-		if ( getOwner()->getManager()->isParallelTransformReadOnly() )
-			return tdata->cachedWorldMatrix;
-
-		if ( tdata->bIsTransformDirty != 0 )
+		if ( _bIsTransformDirty == SW_TRUE )
 		{
-			SceneComponent* parentObj = getParent();
-			if ( parentObj != nullptr )
-			{
-				// Ensure parent is updated
-				parentObj->getWorldMatrix();
-				auto* pdata = reg.getPtr<TransformData>( parentObj->getOwner()->getEntityId() );
-				tdata		= reg.getPtr<TransformData>( getOwner()->getEntityId() );
-				if ( tdata == nullptr )
-					return float4x4::Identity;
-				composeWorldFromParent( tdata->localPosition, tdata->localRotation, tdata->localScale, pdata,
-										tdata->cachedWorldMatrix, tdata->cachedWorldPositionLWC, tdata->cachedWorldPosition );
-			}
-			else
-			{
-				composeWorldFromParent( tdata->localPosition, tdata->localRotation, tdata->localScale, nullptr,
-										tdata->cachedWorldMatrix, tdata->cachedWorldPositionLWC, tdata->cachedWorldPosition );
-			}
-			tdata->bIsTransformDirty = 0;
+			SceneComponent* pParent = _pParent;
+			if ( pParent != nullptr )
+				pParent->getWorldMatrix();
+			const float4x4* pParentWorld = pParent != nullptr ? &pParent->_cachedWorldMatrix : nullptr;
+			const double3*	pParentLwc	 = pParent != nullptr ? &pParent->_cachedWorldPositionLWC : nullptr;
+			SceneComponent* pMutable	 = const_cast<SceneComponent*>( this );
+			composeWorldFromParent( _localPosition, _localRotation, _localScale, pParentWorld, pParentLwc,
+									pMutable->_cachedWorldMatrix, pMutable->_cachedWorldPositionLWC, pMutable->_cachedWorldPosition );
+			pMutable->_bIsTransformDirty = SW_FALSE;
 		}
-		return tdata->cachedWorldMatrix;
+		return _cachedWorldMatrix;
 	}
 
 	float4x4 SceneComponent::getCameraRelativeWorldMatrix( const double3& cameraWorldPos ) const
@@ -356,33 +292,19 @@ namespace sw
 
 	void SceneComponent::updateWorldTransformFromParent()
 	{
-		if ( getOwner() == nullptr || getOwner()->getManager() == nullptr )
-			return;
-		auto& reg	= getOwner()->getManager()->getRegistry();
-		auto* tdata = reg.getPtr<TransformData>( getOwner()->getEntityId() );
-		if ( tdata == nullptr )
-			return;
-
-		SceneComponent* parentObj = getParent();
-		if ( parentObj != nullptr )
-		{
-			auto* pdata = reg.getPtr<TransformData>( parentObj->getOwner()->getEntityId() );
-			composeWorldFromParent( tdata->localPosition, tdata->localRotation, tdata->localScale, pdata,
-									tdata->cachedWorldMatrix, tdata->cachedWorldPositionLWC, tdata->cachedWorldPosition );
-		}
-		else
-		{
-			composeWorldFromParent( tdata->localPosition, tdata->localRotation, tdata->localScale, nullptr,
-									tdata->cachedWorldMatrix, tdata->cachedWorldPositionLWC, tdata->cachedWorldPosition );
-		}
-		tdata->bIsTransformDirty = 0;
+		const float4x4* pParentWorld = _pParent != nullptr ? &_pParent->_cachedWorldMatrix : nullptr;
+		const double3*	pParentLwc	 = _pParent != nullptr ? &_pParent->_cachedWorldPositionLWC : nullptr;
+		composeWorldFromParent( _localPosition, _localRotation, _localScale, pParentWorld, pParentLwc,
+								_cachedWorldMatrix, _cachedWorldPositionLWC, _cachedWorldPosition );
+		_bIsTransformDirty = SW_FALSE;
 	}
 
 	bool SceneComponent::attachToComponent( SceneComponent* pParent )
 	{
-		if ( getOwner() != nullptr && getOwner()->getManager() != nullptr && getOwner()->getManager()->isParallelTransformReadOnly() )
+		GameObject* pOwner = getOwner();
+		if ( pOwner != nullptr && pOwner->getManager() != nullptr && pOwner->getManager()->isParallelTransformReadOnly() )
 		{
-			GameObjectManager*		  pMgr		   = getOwner()->getManager();
+			GameObjectManager*		  pMgr		   = pOwner->getManager();
 			const sw::ComponentHandle selfHandle   = getHandle();
 			const sw::ComponentHandle parentHandle = pParent != nullptr ? pParent->getHandle() : sw::ComponentHandle{};
 			pMgr->deferTransformUpdate( [pMgr, selfHandle, parentHandle]()
@@ -398,7 +320,12 @@ namespace sw
 			return true;
 		}
 
-		if ( pParent == nullptr || pParent == this || pParent == getParent() )
+		if ( pParent == this )
+			return false;
+		if ( pParent == _pParent )
+			return pParent != nullptr;
+
+		if ( pParent == nullptr )
 			return false;
 
 		SceneComponent* pAncestor = pParent;
@@ -406,37 +333,26 @@ namespace sw
 		{
 			if ( pAncestor == this )
 				return false;
-			pAncestor = pAncestor->getParent();
+			pAncestor = pAncestor->_pParent;
 		}
 
 		detachFromComponent();
 
-		if ( getOwner() != nullptr && getOwner()->getManager() != nullptr )
-		{
-			auto&	   reg	 = getOwner()->getManager()->getRegistry();
-			sw::Entity myEnt = getOwner()->getEntityId();
-			sw::Entity pEnt	 = pParent->getOwner()->getEntityId();
+		_pParent = pParent;
+		pParent->_listChildren.push_back( this );
 
-			if ( reg.has<HierarchyData>( myEnt ) == false )
-				reg.emplace<HierarchyData>( myEnt );
-			if ( reg.has<HierarchyData>( pEnt ) == false )
-				reg.emplace<HierarchyData>( pEnt );
-
-			reg.get<HierarchyData>( myEnt ).parentEntity = pEnt;
-			reg.get<HierarchyData>( pEnt ).listChildEntities.push_back( myEnt );
-
-			getOwner()->getManager()->unregisterRootSceneComponent( this );
-			markTransformDirty();
-			return true;
-		}
-		return false;
+		if ( pOwner != nullptr && pOwner->getManager() != nullptr )
+			pOwner->getManager()->unregisterRootSceneComponent( this );
+		markTransformDirty();
+		return true;
 	}
 
 	void SceneComponent::detachFromComponent()
 	{
-		if ( getOwner() != nullptr && getOwner()->getManager() != nullptr && getOwner()->getManager()->isParallelTransformReadOnly() )
+		GameObject* pOwner = getOwner();
+		if ( pOwner != nullptr && pOwner->getManager() != nullptr && pOwner->getManager()->isParallelTransformReadOnly() )
 		{
-			GameObjectManager*		  pMgr	 = getOwner()->getManager();
+			GameObjectManager*		  pMgr	 = pOwner->getManager();
 			const sw::ComponentHandle handle = getHandle();
 			pMgr->deferTransformUpdate( [pMgr, handle]()
 			{
@@ -447,81 +363,32 @@ namespace sw
 			return;
 		}
 
-		if ( getOwner() != nullptr && getOwner()->getManager() != nullptr )
+		if ( _pParent == nullptr )
+			return;
+
+		vector<SceneComponent*>& listSiblings = _pParent->_listChildren;
+		for ( size_t childIndex = 0; childIndex < listSiblings.size(); ++childIndex )
 		{
-			auto&	   reg	 = getOwner()->getManager()->getRegistry();
-			sw::Entity myEnt = getOwner()->getEntityId();
-			if ( myEnt != sw::kNullEntity )
+			if ( listSiblings[childIndex] == this )
 			{
-				auto* hdata = reg.getPtr<HierarchyData>( myEnt );
-				if ( hdata != nullptr && hdata->parentEntity != sw::kNullEntity )
-				{
-					const sw::Entity pEnt = hdata->parentEntity;
-					hdata->parentEntity	  = sw::kNullEntity;
-
-					HierarchyData* pPhdata = reg.getPtr<HierarchyData>( pEnt );
-					if ( pPhdata != nullptr )
-					{
-						vector<sw::Entity>& children = pPhdata->listChildEntities;
-						for ( size_t childIndex = 0; childIndex < children.size(); ++childIndex )
-						{
-							if ( children[childIndex] == myEnt )
-							{
-								children[childIndex] = children.back();
-								children.pop_back();
-								break;
-							}
-						}
-					}
-
-					getOwner()->getManager()->registerRootSceneComponent( this );
-					markTransformDirty();
-				}
+				listSiblings[childIndex] = listSiblings.back();
+				listSiblings.pop_back();
+				break;
 			}
 		}
-	}
+		_pParent = nullptr;
 
-	SceneComponent* SceneComponent::getParent() const
-	{
-		if ( getOwner() != nullptr && getOwner()->getManager() != nullptr )
-		{
-			auto* hdata = getOwner()->getManager()->getRegistry().getPtr<HierarchyData>( getOwner()->getEntityId() );
-			if ( hdata != nullptr && hdata->parentEntity != sw::kNullEntity )
-				return getOwner()->getManager()->getRegistry().getPtr<SceneComponent>( hdata->parentEntity );
-		}
-		return nullptr;
-	}
-
-	vector<SceneComponent*> SceneComponent::getChildren() const
-	{
-		vector<SceneComponent*> listResult;
-		if ( getOwner() != nullptr && getOwner()->getManager() != nullptr )
-		{
-			sw::Registry& reg	= getOwner()->getManager()->getRegistry();
-			auto*		  hdata = reg.getPtr<HierarchyData>( getOwner()->getEntityId() );
-			if ( hdata != nullptr )
-			{
-				const auto& childList = hdata->listChildEntities;
-				listResult.reserve( childList.size() );
-				for ( sw::Entity childEnt : childList )
-				{
-					SceneComponent* pComp = reg.getPtr<SceneComponent>( childEnt );
-					if ( pComp != nullptr )
-						listResult.push_back( pComp );
-				}
-			}
-		}
-		return listResult;
+		if ( pOwner != nullptr && pOwner->getManager() != nullptr )
+			pOwner->getManager()->registerRootSceneComponent( this );
+		markTransformDirty();
 	}
 
 	void SceneComponent::markTransformDirty()
 	{
-		if ( getOwner() == nullptr || getOwner()->getManager() == nullptr )
-			return;
-
-		if ( getOwner()->getManager()->isParallelTransformReadOnly() )
+		GameObject* pOwner = getOwner();
+		if ( pOwner != nullptr && pOwner->getManager() != nullptr && pOwner->getManager()->isParallelTransformReadOnly() )
 		{
-			GameObjectManager*		  pMgr	 = getOwner()->getManager();
+			GameObjectManager*		  pMgr	 = pOwner->getManager();
 			const sw::ComponentHandle handle = getHandle();
 			pMgr->deferTransformUpdate( [pMgr, handle]()
 			{
@@ -532,75 +399,133 @@ namespace sw
 			return;
 		}
 
-		auto& reg	 = getOwner()->getManager()->getRegistry();
-		auto* pTdata = reg.getPtr<TransformData>( getOwner()->getEntityId() );
-		if ( pTdata != nullptr )
-			pTdata->bIsTransformDirty = 1;
+		_bIsTransformDirty = SW_TRUE;
 
-		getOwner()->getManager()->notifyTransformDirtied();
+		if ( pOwner != nullptr && pOwner->getManager() != nullptr )
+			pOwner->getManager()->notifyTransformDirtied();
 
-		SceneComponent* pParentComp = getParent();
+		SceneComponent* pParentComp = _pParent;
 		while ( pParentComp != nullptr )
 		{
-			auto* pParentTdata = reg.getPtr<TransformData>( pParentComp->getOwner()->getEntityId() );
-			if ( pParentTdata != nullptr )
-			{
-				if ( pParentTdata->bHasDirtyDescendant == 1 )
-					break;
-				pParentTdata->bHasDirtyDescendant = 1;
-			}
-			pParentComp = pParentComp->getParent();
+			if ( pParentComp->_bHasDirtyDescendant == SW_TRUE )
+				break;
+			pParentComp->_bHasDirtyDescendant = SW_TRUE;
+			pParentComp						  = pParentComp->_pParent;
 		}
 
-		if ( getOwner() != nullptr && getOwner()->getManager() != nullptr && getOwner()->getManager()->isParallelTransformReadOnly() )
+		for ( SceneComponent* pChild : _listChildren )
+		{
+			if ( pChild != nullptr && pChild->_bIsTransformDirty == SW_FALSE )
+				pChild->markTransformDirty();
+		}
+	}
+
+	namespace
+	{
+		string sceneComponentTypeBaseName( const Component* pComp )
+		{
+			if ( pComp == nullptr )
+				return "Component";
+			if ( pComp->getComponentName().empty() == false )
+				return pComp->getComponentName().c_str();
+			const TypeInfo* pTypeInfo = pComp->getTypeInfo();
+			if ( pTypeInfo != nullptr )
+			{
+				if ( pTypeInfo->_name.empty() == false )
+					return pTypeInfo->_name.c_str();
+				if ( pTypeInfo->_fullyQualifiedName.empty() == false )
+					return pTypeInfo->_fullyQualifiedName.c_str();
+			}
+			return "Component";
+		}
+
+		string makeStableSceneComponentKey( const Component* pComp, int32 occurrenceIndex )
+		{
+			string base = sceneComponentTypeBaseName( pComp );
+			base += '#';
+			base += to_string( occurrenceIndex );
+			return base;
+		}
+
+		string findStableSceneComponentKey( const Component* pComp )
+		{
+			if ( pComp == nullptr || pComp->getOwner() == nullptr )
+				return {};
+
+			unordered_map<string, int32> occurrence;
+			for ( Component* pOther : pComp->getOwner()->getAllComponents() )
+			{
+				if ( pOther == nullptr )
+					continue;
+				const string base = sceneComponentTypeBaseName( pOther );
+				const int32	 occ  = occurrence[base]++;
+				if ( pOther == pComp )
+					return makeStableSceneComponentKey( pComp, occ );
+			}
+			return {};
+		}
+
+		SceneComponent* findSceneComponentByAttachKey( GameObject* pOwner, string_view attachKey )
+		{
+			if ( pOwner == nullptr || attachKey.empty() )
+				return nullptr;
+
+			unordered_map<string, int32> occurrence;
+			for ( Component* pComp : pOwner->getAllComponents() )
+			{
+				if ( pComp == nullptr )
+					continue;
+				const string base = sceneComponentTypeBaseName( pComp );
+				const int32	 occ  = occurrence[base]++;
+				if ( makeStableSceneComponentKey( pComp, occ ) == attachKey )
+					return castTo<SceneComponent>( pComp );
+			}
+			return nullptr;
+		}
+	} // namespace
+
+	void SceneComponent::syncAttachSerializeFields() const
+	{
+		_attachOwner	  = {};
+		_attachComponent  = {};
+		if ( _pParent == nullptr )
 			return;
 
-		auto* pHdata = reg.getPtr<HierarchyData>( getOwner()->getEntityId() );
-		if ( pHdata != nullptr )
-		{
-			for ( sw::Entity childEnt : pHdata->listChildEntities )
-			{
-				TransformData* pCtdata = reg.getPtr<TransformData>( childEnt );
-				if ( pCtdata != nullptr && pCtdata->bIsTransformDirty == 0 )
-				{
-					SceneComponent* pChild = reg.getPtr<SceneComponent>( childEnt );
-					if ( pChild != nullptr )
-						pChild->markTransformDirty();
-				}
-			}
-		}
+		GameObject* pParentOwner = _pParent->getOwner();
+		if ( pParentOwner == nullptr )
+			return;
+
+		const string parentKey = findStableSceneComponentKey( _pParent );
+		if ( parentKey.empty() )
+			return;
+		_attachOwner	 = pParentOwner->getName();
+		_attachComponent = hashed_string( parentKey.c_str() );
 	}
 
-	bool SceneComponent::isTransformDirty() const
+	void SceneComponent::applyAttachSerializeFields()
 	{
-		if ( getOwner() != nullptr && getOwner()->getManager() != nullptr )
-		{
-			auto* tdata = getOwner()->getManager()->getRegistry().getPtr<TransformData>( getOwner()->getEntityId() );
-			if ( tdata != nullptr )
-				return tdata->bIsTransformDirty != 0;
-		}
-		return false;
-	}
+		if ( _attachComponent.empty() )
+			return;
 
-	bool SceneComponent::hasDirtyDescendant() const
-	{
-		if ( getOwner() != nullptr && getOwner()->getManager() != nullptr )
-		{
-			auto* tdata = getOwner()->getManager()->getRegistry().getPtr<TransformData>( getOwner()->getEntityId() );
-			if ( tdata != nullptr )
-				return tdata->bHasDirtyDescendant != 0;
-		}
-		return false;
-	}
+		GameObject* pSelfOwner = getOwner();
+		if ( pSelfOwner == nullptr )
+			return;
 
-	void SceneComponent::clearDirtyDescendant()
-	{
-		if ( getOwner() != nullptr && getOwner()->getManager() != nullptr )
+		GameObject* pParentOwner = pSelfOwner;
+		if ( _attachOwner.empty() == false && _attachOwner != pSelfOwner->getName() )
 		{
-			auto* tdata = getOwner()->getManager()->getRegistry().getPtr<TransformData>( getOwner()->getEntityId() );
-			if ( tdata != nullptr )
-				tdata->bHasDirtyDescendant = 0;
+			GameObjectManager* pManager = pSelfOwner->getManager();
+			if ( pManager == nullptr )
+				return;
+			pParentOwner = pManager->findGameObjectByName( _attachOwner );
+			if ( pParentOwner == nullptr )
+				return;
 		}
+
+		SceneComponent* pParent = findSceneComponentByAttachKey( pParentOwner, _attachComponent.c_str() );
+		if ( pParent == nullptr || pParent == this )
+			return;
+		attachToComponent( pParent );
 	}
 
 } // namespace sw

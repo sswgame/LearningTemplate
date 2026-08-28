@@ -2,29 +2,25 @@
 #include "Core/Math/Math.h"
 
 #include "Engine/Object/Component/Component.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
-	REFLECT()
-	struct SW_GF_API EffectBaseData
+	namespace generated
 	{
-		REFLECT_BODY();
-		PROPERTY()
-		float32 duration{ 0.0f };
-		PROPERTY()
-		float32 currentTimer{ 0.0f };
-		PROPERTY()
-		float32 currentAlpha{ 0.0f };
-	};
+		struct sw_EffectBaseComponent_Registrar;
+	} // namespace generated
 
 	REFLECT()
 	class SW_GF_API EffectBaseComponent : public Component
 	{
+		friend struct ::sw::generated::sw_EffectBaseComponent_Registrar;
+
 	public:
 		REFLECT_BODY();
-		EffectBaseComponent()											 = default;
+		EffectBaseComponent();
 		virtual ~EffectBaseComponent() override							 = default;
 		EffectBaseComponent( EffectBaseComponent&& ) noexcept			 = default;
 		EffectBaseComponent& operator=( EffectBaseComponent&& ) noexcept = default;
@@ -33,10 +29,17 @@ namespace sw
 		void onEndPlay() override;
 		void onTick( float32 deltaTime ) override;
 
-		EcsDataView ensureEcsData() override;
-		EcsDataView getEcsData() const override;
+		float32 getDuration() const;
+		float32 getCurrentTimer() const;
+		float32 getCurrentAlpha() const;
+		void	setCurrentAlpha( float32 alpha );
 
-		EffectBaseData* getEffectData() const;
-		EffectBaseData* ensureEffectData();
+	private:
+		PROPERTY( Alias="duration" )
+		float32 _duration;
+		PROPERTY( Alias="currentTimer" )
+		float32 _currentTimer;
+		PROPERTY( Alias="currentAlpha" )
+		float32 _currentAlpha;
 	};
 } // namespace sw

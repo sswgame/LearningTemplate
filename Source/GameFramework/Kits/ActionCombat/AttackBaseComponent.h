@@ -2,31 +2,25 @@
 #include "Core/Math/Math.h"
 
 #include "Engine/Object/Component/Component.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
-	REFLECT()
-	struct SW_GF_API AttackBaseData
+	namespace generated
 	{
-		REFLECT_BODY();
-		PROPERTY()
-		int32 damage{ 0 };
-		PROPERTY()
-		float32 duration{ 0.0f };
-		PROPERTY()
-		float32 currentDuration{ 0.0f };
-		PROPERTY()
-		bool bActive{ false };
-	};
+		struct sw_AttackBaseComponent_Registrar;
+	} // namespace generated
 
 	REFLECT()
 	class SW_GF_API AttackBaseComponent : public Component
 	{
+		friend struct ::sw::generated::sw_AttackBaseComponent_Registrar;
+
 	public:
 		REFLECT_BODY();
-		AttackBaseComponent()											 = default;
+		AttackBaseComponent();
 		virtual ~AttackBaseComponent() override							 = default;
 		AttackBaseComponent( AttackBaseComponent&& ) noexcept			 = default;
 		AttackBaseComponent& operator=( AttackBaseComponent&& ) noexcept = default;
@@ -35,10 +29,18 @@ namespace sw
 		void onEndPlay() override;
 		void onTick( float32 deltaTime ) override;
 
-		EcsDataView ensureEcsData() override;
-		EcsDataView getEcsData() const override;
+		bool  isAttackActive() const;
+		int32 getDamage() const;
+		void  beginAttack( int32 damage, float32 duration );
 
-		AttackBaseData* getAttackData() const;
-		AttackBaseData* ensureAttackData();
+	private:
+		PROPERTY( Alias="damage" )
+		int32 _damage;
+		PROPERTY( Alias="duration" )
+		float32 _duration;
+		PROPERTY( Alias="currentDuration" )
+		float32 _currentDuration;
+		PROPERTY( Alias="bActive" )
+		bool _bActive;
 	};
 } // namespace sw

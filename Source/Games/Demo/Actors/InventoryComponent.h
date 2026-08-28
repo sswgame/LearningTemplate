@@ -6,7 +6,7 @@
 
 namespace sw
 {
-	REFLECT_SCRIPT()
+	REFLECT()
 	class InventoryComponent : public Component
 	{
 	public:

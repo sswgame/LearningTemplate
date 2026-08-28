@@ -19,7 +19,8 @@ namespace sw
 	struct ParsedContainerNode
 	{
 		ContainerKind						_containerKind = ContainerKind::None;
-		string								_containerType; ///< Vector / Map / ...
+		string								_containerType; ///< VectorWrapper stem
+		string								_typeName;		///< TypeInfo 이름 (vector, unordered_map, …)
 		string								_elementTypeName;
 		string								_keyTypeName;
 		sw::shared_ptr<ParsedContainerNode> _elementNested;
@@ -99,7 +100,7 @@ namespace sw
 		}
 	};
 
-	/** @brief REFLECT / REFLECT_SCRIPT 가 붙은 클래스·구조체 */
+	/** @brief REFLECT 가 붙은 클래스·구조체 */
 	struct ParsedTypeInfo
 	{
 		string					   _name;
@@ -112,22 +113,19 @@ namespace sw
 		uint8					   _bStatic			  : 1;
 		uint8					   _bReflectBody	  : 1;
 		uint8					   _bComponentFactory : 1;
-		uint8					   _bIsScript		  : 1;
-		[[maybe_unused]] uint8	   _reserved		  : 3;
+		[[maybe_unused]] uint8	   _reserved		  : 4;
 
 		ParsedTypeInfo() noexcept
 			: _bAbstract{ 0 }
 			, _bStatic{ 0 }
 			, _bReflectBody{ 0 }
 			, _bComponentFactory{ 0 }
-			, _bIsScript{ 0 }
 			, _reserved{ 0 }
 		{
 		}
 
 		bool wantsTypeApi() const noexcept { return _bReflectBody != 0; }
 		bool wantsComponentFactory() const noexcept { return _bComponentFactory != 0; }
-		bool wantsScriptSystem() const noexcept { return _bIsScript != 0 && _bComponentFactory == 0; }
 	};
 
 	/** @brief 열거형 안의 개별 enumerator */

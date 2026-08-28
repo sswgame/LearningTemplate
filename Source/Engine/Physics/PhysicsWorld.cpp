@@ -102,12 +102,12 @@ namespace sw
 	/**
 	 * @brief 새로운 물리 바디를 월드 풀에 등록하고 공간 그리드에 배치합니다.
 	 */
-	PhysicsWorld::BodyHandle PhysicsWorld::addBody( const AABB& aabb, uint8 layer, sw::Entity entity )
+	PhysicsWorld::BodyHandle PhysicsWorld::addBody( const AABB& aabb, uint8 layer, uint64 objectId )
 	{
 		PhysicsBody body{};
-		body._aabb	 = aabb;
-		body._layer	 = layer;
-		body._entity = entity;
+		body._aabb	   = aabb;
+		body._layer	   = layer;
+		body._objectId = objectId;
 		std::unique_lock<std::shared_mutex> lock{ _mutex };
 		BodyHandle							handle = _bodies.insert( std::move( body ) );
 		insertBodyToGrid( handle, aabb );
@@ -298,7 +298,7 @@ namespace sw
 						bFoundHit			  = true;
 						nearestHit			  = hit;
 						nearestHit._hitBody	  = handle;
-						nearestHit._hitEntity = pBody->_entity;
+						nearestHit._hitObjectId = pBody->_objectId;
 					}
 				}
 			}

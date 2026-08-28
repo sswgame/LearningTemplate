@@ -7,7 +7,6 @@
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/EngineServices.h"
-#include "Engine/ECS/Registry.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
@@ -400,12 +399,10 @@ namespace sw
 			out._pTypeHead	  = TypeRegistrar::getHead();
 			out._pEnumHead	  = EnumRegistrar::getHead();
 			out._pFactoryHead = sw::ComponentFactoryRegistrar::getHead();
-			out._pScriptHead  = ScriptSystemRegistrar::getHead();
 
 			TypeRegistrar::getHead()				 = nullptr;
 			EnumRegistrar::getHead()				 = nullptr;
 			sw::ComponentFactoryRegistrar::getHead() = nullptr;
-			ScriptSystemRegistrar::getHead()		 = nullptr;
 		}
 
 		return true;
@@ -450,12 +447,10 @@ namespace sw
 				ctx._moduleName,
 				prepared._pTypeHead,
 				prepared._pEnumHead,
-				prepared._pFactoryHead,
-				prepared._pScriptHead );
+				prepared._pFactoryHead );
 			prepared._pTypeHead	   = nullptr;
 			prepared._pEnumHead	   = nullptr;
 			prepared._pFactoryHead = nullptr;
-			prepared._pScriptHead  = nullptr;
 
 			if ( ctx._onAfterReload.isBound() )
 				ctx._onAfterReload( ctx._pLibraryModule );
@@ -483,7 +478,6 @@ namespace sw
 		prepared._pTypeHead	   = nullptr;
 		prepared._pEnumHead	   = nullptr;
 		prepared._pFactoryHead = nullptr;
-		prepared._pScriptHead  = nullptr;
 
 		if ( prepared._pHandle != nullptr )
 		{

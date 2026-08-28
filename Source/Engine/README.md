@@ -22,7 +22,6 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
 ## 주요 시스템 디렉터리 구조
 - **Object/**: GameObject · Component · Prefab. 틱/구조 동결·사용법은 [Object/README.md](Object/README.md)
 - **Scene/**: Scene · SceneManager · 2D/3D 공간 분할 가속 구조체 ([Scene/README.md](Scene/README.md))
-- **ECS/**: Entity · Registry · View · Handle. [ECS/README.md](ECS/README.md)
 - **Reflection/**: 매크로 · TypeRegistry · Builtins. [Reflection/README.md](Reflection/README.md) · 생성기 [ReflectionParser](../../Tools/ReflectionParser/README.md)
 - **Graphics/**: RHI · Material · Shader · FrameRenderer. [Graphics/README.md](Graphics/README.md)
 - **Serialization/**: 직렬화 (포맷별 구현, 공통 코어, 객체 특화)

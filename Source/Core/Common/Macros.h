@@ -195,20 +195,7 @@ utf8 ( &arrayCountHelper( const T ( & )[N] ) )[N + 1];
 #endif
 
 // ------------------------------------------------------------------------------
-// 9) REFLECT_SCRIPT — 리플렉션 파서 annotate (일반 컴파일에서는 제거)
-
-// ------------------------------------------------------------------------------
-
-#if defined( __REFLECT_PARSER__ )
-	/** @brief 스크립트 리플렉션 태그를 annotate 합니다. */
-	#define REFLECT_SCRIPT( ... ) __attribute__( ( annotate( "reflect-script;" #__VA_ARGS__ ) ) )
-#else
-	/** @brief 일반 컴파일에서는 리플렉션 태그를 제거합니다. */
-	#define REFLECT_SCRIPT( ... )
-#endif
-
-// ------------------------------------------------------------------------------
-// 10) CPU Pause / Yield — x86/x64, ARM/ARM64, 이기종 플랫폼 호환 스핀 대기 힌트
+// 9) CPU Pause / Yield — x86/x64, ARM/ARM64, 이기종 플랫폼 호환 스핀 대기 힌트
 // ------------------------------------------------------------------------------
 #if defined( _MSC_VER )
 	#if defined( _M_IX86 ) || defined( _M_X64 )

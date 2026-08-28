@@ -16,7 +16,7 @@ namespace sw
 		BossSmash
 	};
 
-	REFLECT_SCRIPT()
+	REFLECT()
 	class AttackComponent : public AttackBaseComponent
 	{
 	public:

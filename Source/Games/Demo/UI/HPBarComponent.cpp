@@ -72,19 +72,13 @@ namespace sw
 
 		if ( pTargetObj != nullptr )
 		{
-			UnitStatsComponent* pStats = pTargetObj->getComponent<UnitStatsComponent>().get();
+			UnitStatsComponent* pStats = pTargetObj->getComponent<UnitStatsComponent>();
 			if ( pStats != nullptr )
 			{
-				const UnitStatsData* pStatsData = pStats->getStatsData();
-				HPBarBaseData*		 pBarData	= ensureHPBarData();
-
-				if ( pStatsData != nullptr && pBarData != nullptr )
-				{
-					if ( pStatsData->maxHp > 0 )
-						pBarData->targetRatio = static_cast<float32>( pStatsData->hp ) / static_cast<float32>( pStatsData->maxHp );
-					else
-						pBarData->targetRatio = 0.0f;
-				}
+				if ( pStats->getMaxHp() > 0 )
+					setTargetRatio( static_cast<float32>( pStats->getHp() ) / static_cast<float32>( pStats->getMaxHp() ) );
+				else
+					setTargetRatio( 0.0f );
 			}
 		}
 	}

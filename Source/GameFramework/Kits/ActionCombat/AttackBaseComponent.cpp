@@ -2,11 +2,18 @@
 
 #include "GameFramework/Kits/ActionCombat/AttackBaseComponent.h"
 
-#include "Engine/Object/Component/EcsDataUtil.h"
 #include "Engine/Object/Component/TagSystem.h"
 
 namespace sw
 {
+	AttackBaseComponent::AttackBaseComponent()
+		: _damage{ 0 }
+		, _duration{ 0.0f }
+		, _currentDuration{ 0.0f }
+		, _bActive{ false }
+	{
+	}
+
 	void AttackBaseComponent::onBeginPlay()
 	{
 		Component::onBeginPlay();
@@ -16,9 +23,7 @@ namespace sw
 		if ( pOwner != nullptr )
 			pOwner->addTag( "Combat"_tag );
 
-		AttackBaseData* pData = ensureAttackData();
-		if ( pData != nullptr )
-			pData->currentDuration = 0.0f;
+		_currentDuration = 0.0f;
 	}
 
 	void AttackBaseComponent::onEndPlay()
@@ -30,42 +35,32 @@ namespace sw
 	{
 		Component::onTick( deltaTime );
 
-		AttackBaseData* pData = ensureAttackData();
-		if ( pData == nullptr )
+		if ( _bActive == false )
 			return;
 
-		if ( pData->bActive )
+		_currentDuration += deltaTime;
+		if ( _duration > 0.0f && _currentDuration >= _duration )
 		{
-			pData->currentDuration += deltaTime;
-			if ( pData->duration > 0.0f && pData->currentDuration >= pData->duration )
-			{
-				pData->bActive		   = false;
-				pData->currentDuration = 0.0f;
-			}
+			_bActive		 = false;
+			_currentDuration = 0.0f;
 		}
 	}
 
-	Component::EcsDataView AttackBaseComponent::ensureEcsData()
+	bool AttackBaseComponent::isAttackActive() const
 	{
-		AttackBaseData* pData = ensureAttackData();
-		return { pData, AttackBaseData::StaticType() };
+		return _bActive;
 	}
 
-	Component::EcsDataView AttackBaseComponent::getEcsData() const
+	int32 AttackBaseComponent::getDamage() const
 	{
-		return { ( getAttackData() ), AttackBaseData::StaticType() };
+		return _damage;
 	}
 
-	AttackBaseData* AttackBaseComponent::getAttackData() const
+	void AttackBaseComponent::beginAttack( int32 damage, float32 duration )
 	{
-		GameObject* pOwner = getOwner();
-		if ( pOwner != nullptr )
-			return pOwner->getComponent<AttackBaseData>().get();
-		return nullptr;
-	}
-
-	AttackBaseData* AttackBaseComponent::ensureAttackData()
-	{
-		return sw::ensureEcsData<AttackBaseData>( getOwner(), getTypeInfo() );
+		_damage			 = damage;
+		_duration		 = duration;
+		_currentDuration = 0.0f;
+		_bActive		 = true;
 	}
 } // namespace sw

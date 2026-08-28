@@ -37,8 +37,7 @@ namespace sw
 	{
 		AttackBaseComponent::onTick( deltaTime );
 
-		AttackBaseData* pAttackData = getAttackData();
-		if ( pAttackData == nullptr || pAttackData->bActive == false )
+		if ( isAttackActive() == false )
 		{
 			hitVictimList.clear();
 			return;
@@ -89,10 +88,10 @@ namespace sw
 
 			if ( bInX && bInY )
 			{
-				UnitStatsComponent* pStats = pTargetObj->getComponent<UnitStatsComponent>().get();
+				UnitStatsComponent* pStats = pTargetObj->getComponent<UnitStatsComponent>();
 				if ( pStats != nullptr )
 				{
-					const int32 damageAmount = pAttackData->damage > 0 ? pAttackData->damage : 10;
+					const int32 damageAmount = getDamage() > 0 ? getDamage() : 10;
 					pStats->takeDamage( damageAmount );
 					hitVictimList.push_back( targetId );
 
@@ -110,15 +109,8 @@ namespace sw
 
 	void AttackComponent::triggerAttack( AttackKind kind, float32 damage, float32 duration, const float2& size )
 	{
-		attackKind					= kind;
-		AttackBaseData* pAttackData = ensureAttackData();
-		if ( pAttackData != nullptr )
-		{
-			pAttackData->damage			 = static_cast<int32>( damage );
-			pAttackData->duration		 = duration;
-			pAttackData->currentDuration = 0.0f;
-			pAttackData->bActive		 = true;
-		}
+		attackKind = kind;
+		beginAttack( static_cast<int32>( damage ), duration );
 		hitboxSize = size;
 		hitVictimList.clear();
 	}

@@ -5,7 +5,7 @@
 
 namespace sw
 {
-	REFLECT_SCRIPT()
+	REFLECT()
 	class PortalComponent : public Component
 	{
 	public:

@@ -2,39 +2,25 @@
 #include "Core/Math/Math.h"
 
 #include "Engine/Object/Component/Component.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
-	REFLECT()
-	struct SW_GF_API UnitStatsData
+	namespace generated
 	{
-		REFLECT_BODY();
-		PROPERTY()
-		int32 hp{ 0 };
-		PROPERTY()
-		int32 maxHp{ 0 };
-		PROPERTY()
-		int32 attack{ 0 };
-		PROPERTY()
-		int32 defense{ 0 };
-		PROPERTY()
-		float32 moveSpeed{ 0.0f };
-		PROPERTY()
-		float32 invincibilityTime{ 0.0f };
-		PROPERTY()
-		float32 maxInvincibilityTime{ 0.0f };
-		PROPERTY()
-		bool bIsDead{ false };
-	};
+		struct sw_UnitStatsComponent_Registrar;
+	} // namespace generated
 
 	REFLECT()
 	class SW_GF_API UnitStatsComponent : public Component
 	{
+		friend struct ::sw::generated::sw_UnitStatsComponent_Registrar;
+
 	public:
 		REFLECT_BODY();
-		UnitStatsComponent()										   = default;
+		UnitStatsComponent();
 		virtual ~UnitStatsComponent() override						   = default;
 		UnitStatsComponent( UnitStatsComponent&& ) noexcept			   = default;
 		UnitStatsComponent& operator=( UnitStatsComponent&& ) noexcept = default;
@@ -43,17 +29,37 @@ namespace sw
 		void onEndPlay() override;
 		void onTick( float32 deltaTime ) override;
 
-		EcsDataView ensureEcsData() override;
-		EcsDataView getEcsData() const override;
-
-		UnitStatsData* getStatsData() const;
-		UnitStatsData* ensureStatsData();
-
 		void takeDamage( int32 amount );
 		void heal( int32 amount );
+
+		int32	getHp() const;
+		int32	getMaxHp() const;
+		int32	getAttack() const;
+		int32	getDefense() const;
+		float32 getMoveSpeed() const;
+		bool	isDead() const;
+
+		void setStats( int32 hp, int32 maxHp, int32 attack, int32 defense, float32 moveSpeed, float32 maxInvincibilityTime );
 
 	private:
 		void applyTakeDamage( int32 amount );
 		void applyHeal( int32 amount );
+
+		PROPERTY( Alias="hp" )
+		int32 _hp;
+		PROPERTY( Alias="maxHp" )
+		int32 _maxHp;
+		PROPERTY( Alias="attack" )
+		int32 _attack;
+		PROPERTY( Alias="defense" )
+		int32 _defense;
+		PROPERTY( Alias="moveSpeed" )
+		float32 _moveSpeed;
+		PROPERTY( Alias="invincibilityTime" )
+		float32 _invincibilityTime;
+		PROPERTY( Alias="maxInvincibilityTime" )
+		float32 _maxInvincibilityTime;
+		PROPERTY( Alias="bIsDead" )
+		bool _bIsDead;
 	};
 } // namespace sw

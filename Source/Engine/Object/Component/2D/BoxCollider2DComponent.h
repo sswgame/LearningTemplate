@@ -14,27 +14,19 @@
 
 namespace sw
 {
-	/**
-	 * @brief Pure ECS Data Struct for 2D Box Collider
-	 */
-	REFLECT()
-	struct SW_API BoxCollider2DData
+	namespace generated
 	{
-		REFLECT_BODY();
-		int32		 colliderType{ 0 };
-		string		 offsetPos{ "" };
-		string		 offsetScale{ "" };
-		float2		 cachedMin{ 0.0f, 0.0f };
-		float2		 cachedMax{ 0.0f, 0.0f };
-		ObjectHandle physicsBody{};
-	};
+		struct sw_BoxCollider2DComponent_Registrar;
+	} // namespace generated
 
 	REFLECT()
 	class SW_API BoxCollider2DComponent : public SceneComponent
 	{
+		friend struct ::sw::generated::sw_BoxCollider2DComponent_Registrar;
+
 	public:
 		REFLECT_BODY();
-		BoxCollider2DComponent()											   = default;
+		BoxCollider2DComponent();
 		virtual ~BoxCollider2DComponent() override							   = default;
 		BoxCollider2DComponent( BoxCollider2DComponent&& ) noexcept			   = default;
 		BoxCollider2DComponent& operator=( BoxCollider2DComponent&& ) noexcept = default;
@@ -61,6 +53,18 @@ namespace sw
 		bool intersects( const float2& point ) const;
 		bool intersects( const float2& minB, const float2& maxB ) const;
 
-		BoxCollider2DData* getColliderData() const;
+	private:
+		void unregisterPhysicsBody();
+		void syncPhysicsBody();
+
+		PROPERTY()
+		int32 _colliderType;
+		PROPERTY()
+		string _offsetPos;
+		PROPERTY()
+		string _offsetScale;
+		float2		 _cachedMin;
+		float2		 _cachedMax;
+		ObjectHandle _physicsBody;
 	};
 } // namespace sw

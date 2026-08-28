@@ -9,6 +9,20 @@
 
 namespace sw
 {
+	SpriteAnimatorComponent::SpriteAnimatorComponent()
+		: _currentAnimation{}
+		, _listAnimations{}
+		, _frameRate{ 0.0f }
+		, _frameTimer{ 0.0f }
+		, _currentFrame{ 0 }
+		, _totalFrames{ 0 }
+		, _bRepeat{ false }
+		, _bPlaying{ false }
+		, _bPaused{ false }
+	{
+		setCanEverTick( true );
+	}
+
 	void SpriteAnimatorComponent::onBeginPlay()
 	{
 		SceneComponent::onBeginPlay();
@@ -16,25 +30,17 @@ namespace sw
 
 		GameObject* pGameObject = getOwner();
 		if ( pGameObject != nullptr )
-		{
 			pGameObject->addTag( "Animator"_tag );
-			if ( pGameObject->getComponent<SpriteAnimatorData>() == nullptr )
-				pGameObject->addComponent<SpriteAnimatorData>();
-		}
 
-		SpriteAnimatorData* pData = getAnimatorData();
-		if ( pData != nullptr )
-		{
-			if ( pData->currentAnimation.empty() && pData->animations.empty() == false )
-				pData->currentAnimation = pData->animations[0];
+		if ( _currentAnimation.empty() && _listAnimations.empty() == false )
+			_currentAnimation = _listAnimations[0];
 
-			pData->bPlaying		= ( pData->currentAnimation.empty() == false );
-			pData->bPaused		= false;
-			pData->currentFrame = 0;
-			pData->frameTimer	= 0.0f;
-			if ( pData->totalFrames <= 0 && pData->animations.empty() == false )
-				pData->totalFrames = static_cast<int32>( pData->animations.size() );
-		}
+		_bPlaying	  = ( _currentAnimation.empty() == false );
+		_bPaused	  = false;
+		_currentFrame = 0;
+		_frameTimer	  = 0.0f;
+		if ( _totalFrames <= 0 && _listAnimations.empty() == false )
+			_totalFrames = static_cast<int32>( _listAnimations.size() );
 
 		updateSpriteFrame();
 	}
@@ -48,33 +54,32 @@ namespace sw
 	{
 		SceneComponent::onTick( deltaTime );
 
-		SpriteAnimatorData* pData = getAnimatorData();
-		if ( pData == nullptr || pData->bPlaying == false || pData->bPaused || pData->currentAnimation.empty() )
+		if ( _bPlaying == false || _bPaused || _currentAnimation.empty() )
 			return;
 
-		const float32 frameDuration = ( pData->frameRate > 0.0f ) ? ( 1.0f / pData->frameRate ) : 0.1f;
-		pData->frameTimer += deltaTime;
+		const float32 frameDuration = ( _frameRate > 0.0f ) ? ( 1.0f / _frameRate ) : 0.1f;
+		_frameTimer += deltaTime;
 
-		while ( pData->frameTimer >= frameDuration )
+		while ( _frameTimer >= frameDuration )
 		{
-			pData->frameTimer -= frameDuration;
-			pData->currentFrame++;
+			_frameTimer -= frameDuration;
+			_currentFrame++;
 
-			if ( pData->totalFrames <= 0 )
+			if ( _totalFrames <= 0 )
 			{
-				pData->currentFrame = 0;
-				pData->bPlaying		= false;
+				_currentFrame = 0;
+				_bPlaying	  = false;
 				break;
 			}
 
-			if ( pData->currentFrame >= pData->totalFrames )
+			if ( _currentFrame >= _totalFrames )
 			{
-				if ( pData->repeat )
-					pData->currentFrame = 0;
+				if ( _bRepeat )
+					_currentFrame = 0;
 				else
 				{
-					pData->currentFrame = pData->totalFrames > 0 ? ( pData->totalFrames - 1 ) : 0;
-					pData->bPlaying		= false;
+					_currentFrame = _totalFrames > 0 ? ( _totalFrames - 1 ) : 0;
+					_bPlaying	  = false;
 					break;
 				}
 			}
@@ -84,149 +89,99 @@ namespace sw
 
 	void SpriteAnimatorComponent::play( const string& animName, bool loop )
 	{
-		SpriteAnimatorData* pData = getAnimatorData();
-		if ( pData != nullptr )
-		{
-			pData->currentAnimation = animName;
-			pData->repeat			= loop;
-			pData->bPlaying			= true;
-			pData->bPaused			= false;
-			pData->currentFrame		= 0;
-			pData->frameTimer		= 0.0f;
-		}
+		_currentAnimation = animName;
+		_bRepeat		  = loop;
+		_bPlaying		  = true;
+		_bPaused		  = false;
+		_currentFrame	  = 0;
+		_frameTimer		  = 0.0f;
 		updateSpriteFrame();
 	}
 
 	void SpriteAnimatorComponent::stop()
 	{
-		SpriteAnimatorData* pData = getAnimatorData();
-		if ( pData != nullptr )
-		{
-			pData->bPlaying		= false;
-			pData->bPaused		= false;
-			pData->currentFrame = 0;
-			pData->frameTimer	= 0.0f;
-		}
+		_bPlaying	  = false;
+		_bPaused	  = false;
+		_currentFrame = 0;
+		_frameTimer	  = 0.0f;
 	}
 
 	void SpriteAnimatorComponent::pause()
 	{
-		SpriteAnimatorData* pData = getAnimatorData();
-		if ( pData != nullptr )
-			pData->bPaused = true;
+		_bPaused = true;
 	}
 
 	void SpriteAnimatorComponent::resume()
 	{
-		SpriteAnimatorData* pData = getAnimatorData();
-		if ( pData != nullptr )
-			pData->bPaused = false;
+		_bPaused = false;
 	}
 
 	void SpriteAnimatorComponent::setFrame( int32 frame )
 	{
-		SpriteAnimatorData* pData = getAnimatorData();
-		if ( pData != nullptr )
-			pData->currentFrame = frame >= 0 ? frame : 0;
+		_currentFrame = frame >= 0 ? frame : 0;
 		updateSpriteFrame();
 	}
 
 	string SpriteAnimatorComponent::getCurrentAnimation() const
 	{
-		const SpriteAnimatorData* pData = getAnimatorData();
-		if ( pData != nullptr )
-			return pData->currentAnimation;
-		return "";
+		return _currentAnimation;
 	}
 
 	void SpriteAnimatorComponent::setCurrentAnimation( const string& anim )
 	{
-		SpriteAnimatorData* pData = getAnimatorData();
-		if ( pData != nullptr )
-			pData->currentAnimation = anim;
+		_currentAnimation = anim;
 	}
 
 	bool SpriteAnimatorComponent::isRepeating() const
 	{
-		const SpriteAnimatorData* pData = getAnimatorData();
-		if ( pData != nullptr )
-			return pData->repeat;
-		return false;
+		return _bRepeat;
 	}
 
 	void SpriteAnimatorComponent::setRepeat( bool bLoop )
 	{
-		SpriteAnimatorData* pData = getAnimatorData();
-		if ( pData != nullptr )
-			pData->repeat = bLoop;
+		_bRepeat = bLoop;
 	}
 
 	float32 SpriteAnimatorComponent::getFrameRate() const
 	{
-		const SpriteAnimatorData* pData = getAnimatorData();
-		if ( pData != nullptr )
-			return pData->frameRate;
-		return 0.0f;
+		return _frameRate;
 	}
 
 	void SpriteAnimatorComponent::setFrameRate( float32 rate )
 	{
-		SpriteAnimatorData* pData = getAnimatorData();
-		if ( pData != nullptr )
-			pData->frameRate = rate;
+		_frameRate = rate;
 	}
 
 	int32 SpriteAnimatorComponent::getCurrentFrame() const
 	{
-		const SpriteAnimatorData* pData = getAnimatorData();
-		if ( pData != nullptr )
-			return pData->currentFrame;
-		return 0;
+		return _currentFrame;
 	}
 
 	bool SpriteAnimatorComponent::isPlaying() const
 	{
-		const SpriteAnimatorData* pData = getAnimatorData();
-		if ( pData != nullptr )
-			return pData->bPlaying;
-		return false;
+		return _bPlaying;
 	}
 
 	bool SpriteAnimatorComponent::isPaused() const
 	{
-		const SpriteAnimatorData* pData = getAnimatorData();
-		if ( pData != nullptr )
-			return pData->bPaused;
-		return false;
-	}
-
-	SpriteAnimatorData* SpriteAnimatorComponent::getAnimatorData() const
-	{
-		GameObject* pGameObject = getOwner();
-		if ( pGameObject != nullptr )
-			return pGameObject->getComponent<SpriteAnimatorData>().get();
-		return nullptr;
+		return _bPaused;
 	}
 
 	void SpriteAnimatorComponent::updateSpriteFrame()
 	{
 		GameObject* pGameObject = getOwner();
-		if ( pGameObject != nullptr )
-		{
-			SpriteComponent* pSpriteComp = pGameObject->getComponent<SpriteComponent>().get();
-			if ( pSpriteComp != nullptr )
-			{
-				const SpriteAnimatorData* pData = getAnimatorData();
-				if ( pData != nullptr )
-				{
-					if ( pData->currentAnimation.empty() == false )
-					{
-						StringBuilder<constant::kMaxBuffer64> sb;
-						sb.append( pData->currentAnimation ).append( '-' ).append( pData->currentFrame );
-						pSpriteComp->setSpriteName( sb.c_str() );
-					}
-				}
-			}
-		}
+		if ( pGameObject == nullptr )
+			return;
+
+		SpriteComponent* pSpriteComp = pGameObject->getComponent<SpriteComponent>();
+		if ( pSpriteComp == nullptr )
+			return;
+
+		if ( _currentAnimation.empty() )
+			return;
+
+		StringBuilder<constant::kMaxBuffer64> sb;
+		sb.append( _currentAnimation ).append( '-' ).append( _currentFrame );
+		pSpriteComp->setSpriteName( sb.c_str() );
 	}
 } // namespace sw

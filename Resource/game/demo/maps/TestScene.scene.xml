@@ -2,24 +2,13 @@
 <SceneDescriptor formatVersion="0" name="TestScene">
 	<entities>
 		<entity name="TestCube">
-			<GameObjectState>
-				<Name>TestCube</Name>
-				<IsActive>true</IsActive>
-				<ParentGO></ParentGO>
-				<Tags/>
-				<Components>
-					<entry>
-						<key>MeshComponent</key>
-						<value>&lt;MeshData schemaVersion="0"&gt;&lt;_meshId&gt;Cube&lt;/_meshId&gt;&lt;/MeshData&gt;</value>
-					</entry>
-				</Components>
-				<SceneTransforms>
-					<entry>
-						<key>MeshComponent#0</key>
-						<value>0,0,0;0,0,0;1,1,1;</value>
-					</entry>
-				</SceneTransforms>
-			</GameObjectState>
+			<GameObject _schemaVersion="0" _name="TestCube" _bActive="true">
+				<_listComponents>
+					<vector>
+						<MeshComponent _schemaVersion="0" _meshId="Cube" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1"/>
+					</vector>
+				</_listComponents>
+			</GameObject>
 		</entity>
 	</entities>
 </SceneDescriptor>

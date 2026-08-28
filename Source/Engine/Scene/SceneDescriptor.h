@@ -18,7 +18,7 @@ namespace sw
 	{
 		string _name;
 		string _prefab;
-		string _embeddedXml; ///< 선택 ObjectStateSerializer XML (`GameObjectState` 문서)
+		string _embeddedXml; ///< 선택 ObjectStateSerializer XML (`GameObject` 문서)
 	};
 
 	// ------------------------------------------------------------------------------

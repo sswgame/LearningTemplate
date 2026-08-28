@@ -2,11 +2,17 @@
 
 #include "GameFramework/Base/EffectBaseComponent.h"
 
-#include "Engine/Object/Component/EcsDataUtil.h"
 #include "Engine/Object/Component/TagSystem.h"
 
 namespace sw
 {
+	EffectBaseComponent::EffectBaseComponent()
+		: _duration{ 0.0f }
+		, _currentTimer{ 0.0f }
+		, _currentAlpha{ 0.0f }
+	{
+	}
+
 	void EffectBaseComponent::onBeginPlay()
 	{
 		Component::onBeginPlay();
@@ -16,12 +22,8 @@ namespace sw
 		if ( pOwner != nullptr )
 			pOwner->addTag( "VFX"_tag );
 
-		EffectBaseData* pData = ensureEffectData();
-		if ( pData != nullptr )
-		{
-			pData->currentTimer = 0.0f;
-			pData->currentAlpha = 1.0f;
-		}
+		_currentTimer = 0.0f;
+		_currentAlpha = 1.0f;
 	}
 
 	void EffectBaseComponent::onEndPlay()
@@ -33,17 +35,13 @@ namespace sw
 	{
 		Component::onTick( deltaTime );
 
-		EffectBaseData* pData = ensureEffectData();
-		if ( pData == nullptr )
-			return;
-
-		pData->currentTimer += deltaTime;
-		if ( pData->duration > 0.0f )
+		_currentTimer += deltaTime;
+		if ( _duration > 0.0f )
 		{
-			pData->currentAlpha = 1.0f - ( pData->currentTimer / pData->duration );
-			if ( pData->currentAlpha < 0.0f )
+			_currentAlpha = 1.0f - ( _currentTimer / _duration );
+			if ( _currentAlpha < 0.0f )
 			{
-				pData->currentAlpha = 0.0f;
+				_currentAlpha		= 0.0f;
 				GameObject* pOwner	= getOwner();
 				if ( pOwner != nullptr )
 					pOwner->markPendingKill();
@@ -51,27 +49,23 @@ namespace sw
 		}
 	}
 
-	Component::EcsDataView EffectBaseComponent::ensureEcsData()
+	float32 EffectBaseComponent::getDuration() const
 	{
-		EffectBaseData* pData = ensureEffectData();
-		return { pData, EffectBaseData::StaticType() };
+		return _duration;
 	}
 
-	Component::EcsDataView EffectBaseComponent::getEcsData() const
+	float32 EffectBaseComponent::getCurrentTimer() const
 	{
-		return { ( getEffectData() ), EffectBaseData::StaticType() };
+		return _currentTimer;
 	}
 
-	EffectBaseData* EffectBaseComponent::getEffectData() const
+	float32 EffectBaseComponent::getCurrentAlpha() const
 	{
-		GameObject* pOwner = getOwner();
-		if ( pOwner != nullptr )
-			return pOwner->getComponent<EffectBaseData>().get();
-		return nullptr;
+		return _currentAlpha;
 	}
 
-	EffectBaseData* EffectBaseComponent::ensureEffectData()
+	void EffectBaseComponent::setCurrentAlpha( float32 alpha )
 	{
-		return sw::ensureEcsData<EffectBaseData>( getOwner(), getTypeInfo() );
+		_currentAlpha = alpha;
 	}
 } // namespace sw

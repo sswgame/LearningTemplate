@@ -5,10 +5,10 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
-#include "Core/Container/vector.h"
-#include "Core/Delegate/Delegate.h"
+#include "Core/Concurrency/Atomic.h"
 
-#include "Engine/ECS/ComponentHandle.h"
+#include "Engine/Object/Component/ComponentHandle.h"
+
 #include "Engine/Reflection/ReflectionCore.h"
 
 #include <atomic>
@@ -39,8 +39,6 @@ namespace sw
 		friend class GameObject;
 
 	public:
-		using ComponentTickDelegate = Delegate<void( float32 )>;
-
 		/** @brief 기본 컴포넌트를 만듭니다. */
 		Component();
 
@@ -53,6 +51,9 @@ namespace sw
 		Component( Component&& other ) noexcept;
 		/** @brief 이동 대입입니다. */
 		Component& operator=( Component&& other ) noexcept;
+
+		/** @brief 가상 소멸. GameObject가 sw_delete로 해제합니다. */
+		virtual ~Component() = default;
 
 		/** @brief 게임 컴포넌트 기본값 XML(gamedata.xml) 경로를 지정합니다. 비어 있으면 주입하지 않습니다. */
 		static void setDefaultGamedataPath( string_view path );
@@ -70,16 +71,16 @@ namespace sw
 		/** @brief 프로퍼티 변경 시 이벤트 콜백 */
 		virtual void onPropertyChanged( hashed_string propertyName );
 
-		/** @brief 팩토리/addComponent가 설정하는 구체 타입 TypeInfo 캐시 */
-		void setCachedTypeInfo( const TypeInfo* pTypeInfo );
-		/** @brief 핫리로드 unregister 직전 캐시 무효화 (댕글링 TypeInfo 방지) */
-		void clearCachedTypeInfo() { _pCachedTypeInfo = nullptr; }
+		/** @brief 구체 타입 TypeInfo로 gamedata 기본값을 주입합니다. */
+		void applyTypeDefaults( const TypeInfo* pTypeInfo );
 		/** @brief 소유자 GameObject 설정 */
 		void setOwner( GameObject* pOwner ) { _pOwner = pOwner; }
 		/** @brief 컴포넌트 활성화/비활성화 상태 설정 */
 		void setActive( bool bActive );
 		/** @brief Tick 그룹 변경 */
 		void setTickGroup( TickGroup group );
+		/** @brief Primary tick 등록 여부를 설정합니다. 비주얼 컴포넌트는 false가 기본입니다. */
+		void setCanEverTick( bool bCanEverTick );
 		/** @brief 컴포넌트 해시 명칭 설정 */
 		void setComponentName( hashed_string name ) { _componentName = name; }
 
@@ -88,24 +89,14 @@ namespace sw
 
 		/** @brief 런타임 타입 리플렉션 정보(TypeInfo) 반환 */
 		virtual const TypeInfo* getTypeInfo() const;
-		/**
-		 * @brief 이 파사드가 다루는 ECS 데이터 (없으면 instance=nullptr).
-		 * @details REFLECT_SCRIPT가 아닌 엔진/프레임워크 컴포넌트는 값을 여기에만 둡니다.
-		 */
-		struct EcsDataView
-		{
-			void*			instance{ nullptr };
-			const TypeInfo* typeInfo{ nullptr };
-		};
-
-		virtual EcsDataView ensureEcsData();
-		virtual EcsDataView getEcsData() const;
 		/** @brief 소유자 GameObject 반환 */
 		GameObject* getOwner() const { return _pOwner; }
 		/** @brief 활성화 상태 확인 (자체 활성화 여부 및 소유자 활성화 여부 모두 확인) */
 		bool isActive() const;
 		/** @brief 현재 Tick 그룹 반환 */
 		TickGroup getTickGroup() const { return static_cast<TickGroup>( _tickGroup ); }
+		/** @brief 매니저 tick 웨이브에 들어가면 true. */
+		bool canEverTick() const { return _bCanEverTick == SW_TRUE; }
 
 		/** @brief 컴포넌트 고유 ID 반환 */
 		uint64 getComponentId() const { return _componentId; }
@@ -117,39 +108,20 @@ namespace sw
 		bool isPendingKill() const { return _bIsPendingKill.load( std::memory_order_acquire ); }
 		/** @brief 컴포넌트 해시 명칭 반환 */
 		hashed_string getComponentName() const { return _componentName; }
-		/** @brief SceneComponent면 this, 아니면 nullptr (dynamic_cast 회피 및 논버추얼 O(1) 캐스트) */
-		inline class SceneComponent* asSceneComponent();
-		/** @brief SceneComponent면 this, 아니면 nullptr. */
-		inline const class SceneComponent* asSceneComponent() const;
-
-		/** @brief Tick 델리게이트를 설정합니다. */
-		void setTickDelegate( const ComponentTickDelegate& delegate ) { _onTickDelegate = delegate; }
-		/** @brief 현재 Tick 델리게이트를 반환합니다. */
-		const ComponentTickDelegate& getTickDelegate() const { return _onTickDelegate; }
 
 	private:
 		void					   initialize();
 		static std::atomic<uint64> _s_nextComponentId; ///< ID 생성 카운터
 
 	protected:
-		/** @brief 가상 소멸. */
-		virtual ~Component() = default;
-
-		explicit Component( bool bIsSceneComponent );
-
 		GameObject*		_pOwner;		  ///< 소유자 GameObject 포인터 참조
-		const TypeInfo* _pCachedTypeInfo; ///< 구체 타입 TypeInfo (팩토리에서 설정)
 		uint64			_componentId;	  ///< 컴포넌트 고유 시리얼 ID
 		hashed_string	_componentName;	  ///< 컴포넌트 식별 이름
 
-		ComponentTickDelegate _onTickDelegate;						  ///< 델리게이트 기반 틱 연동 핸들러
 		TickGroup			  _tickGroup{ TickGroup::DuringPhysics }; ///< TickGroup 슬롯
-		std::atomic<bool>	  _bActive{ true };						  ///< 컴포넌트 개별 활성화
-		bool				  _bIsSceneComponent{ false };
+		AtomicBool			  _bActive{ true };						  ///< 컴포넌트 개별 활성화
+		uint8				  _bCanEverTick : 1;
+		uint8				  _reservedFlags : 7;
 		std::atomic<bool>	  _bIsPendingKill{ false };
 	};
-
-	// ------------------------------------------------------------------------------
-	// Tick 스케줄 — TickGroup 순 (그룹 안에서는 순서 무관 병렬 처리)
-	// ------------------------------------------------------------------------------
 } // namespace sw

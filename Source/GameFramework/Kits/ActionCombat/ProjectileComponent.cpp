@@ -2,11 +2,18 @@
 
 #include "GameFramework/Kits/ActionCombat/ProjectileComponent.h"
 
-#include "Engine/Object/Component/EcsDataUtil.h"
 #include "Engine/Object/Component/TagSystem.h"
 
 namespace sw
 {
+	ProjectileComponent::ProjectileComponent()
+		: _velocity{ 0.0f, 0.0f }
+		, _damage{ 0 }
+		, _lifeTime{ 0.0f }
+		, _currentLife{ 0.0f }
+	{
+	}
+
 	void ProjectileComponent::onBeginPlay()
 	{
 		Component::onBeginPlay();
@@ -16,9 +23,7 @@ namespace sw
 		if ( pOwner != nullptr )
 			pOwner->addTag( "Bullet"_tag );
 
-		ProjectileData* pData = ensureProjectileData();
-		if ( pData != nullptr )
-			pData->currentLife = 0.0f;
+		_currentLife = 0.0f;
 	}
 
 	void ProjectileComponent::onEndPlay()
@@ -30,51 +35,39 @@ namespace sw
 	{
 		Component::onTick( deltaTime );
 
-		ProjectileData* pData = ensureProjectileData();
-		if ( pData == nullptr )
+		_currentLife += deltaTime;
+		GameObject* pOwner = getOwner();
+		if ( pOwner == nullptr )
 			return;
 
-		pData->currentLife += deltaTime;
-		GameObject* pOwner = getOwner();
-		if ( pOwner != nullptr )
+		if ( _lifeTime > 0.0f && _currentLife >= _lifeTime )
 		{
-			if ( pData->lifeTime > 0.0f && pData->currentLife >= pData->lifeTime )
-			{
-				pOwner->markPendingKill();
-				return;
-			}
-			SceneComponent* pSceneComp = pOwner->getPrimarySceneComponent();
-			if ( pSceneComp != nullptr )
-			{
-				float3 pos = pSceneComp->getLocalPosition();
-				pos._x += pData->velocity._x * deltaTime;
-				pos._y += pData->velocity._y * deltaTime;
-				pSceneComp->setLocalPosition( pos );
-			}
+			pOwner->markPendingKill();
+			return;
 		}
+
+		SceneComponent* pSceneComp = pOwner->getPrimarySceneComponent();
+		if ( pSceneComp == nullptr )
+			return;
+
+		float3 pos = pSceneComp->getLocalPosition();
+		pos._x += _velocity._x * deltaTime;
+		pos._y += _velocity._y * deltaTime;
+		pSceneComp->setLocalPosition( pos );
 	}
 
-	Component::EcsDataView ProjectileComponent::ensureEcsData()
+	void ProjectileComponent::setVelocity( const float2& velocity )
 	{
-		ProjectileData* pData = ensureProjectileData();
-		return { pData, ProjectileData::StaticType() };
+		_velocity = velocity;
 	}
 
-	Component::EcsDataView ProjectileComponent::getEcsData() const
+	void ProjectileComponent::setDamage( int32 damage )
 	{
-		return { ( getProjectileData() ), ProjectileData::StaticType() };
+		_damage = damage;
 	}
 
-	ProjectileData* ProjectileComponent::getProjectileData() const
+	void ProjectileComponent::setLifeTime( float32 lifeTime )
 	{
-		GameObject* pOwner = getOwner();
-		if ( pOwner != nullptr )
-			return pOwner->getComponent<ProjectileData>().get();
-		return nullptr;
-	}
-
-	ProjectileData* ProjectileComponent::ensureProjectileData()
-	{
-		return sw::ensureEcsData<ProjectileData>( getOwner(), getTypeInfo() );
+		_lifeTime = lifeTime;
 	}
 } // namespace sw

@@ -4,8 +4,6 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineData.h"
-#include "Engine/ECS/Registry.h"
-#include "Engine/ECS/View.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/RHI/IRHICommandContext.h"
@@ -15,8 +13,9 @@
 #include "Engine/Graphics/RenderPass/FrameRendererInternal.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManagerInternal.h"
-#include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
+
+#include "Engine/Reflection/ReflectionCast.h"
 
 namespace sw
 {
@@ -68,55 +67,59 @@ namespace sw
 				float4x4			   _world;
 			};
 
-			vector<SceneMeshDrawItem>					   listDrawItems;
-			Registry&									   reg = GameObjectManagerAccess::get( *pObjects );
-			View<MeshData, TransformData, EntityStateData> view( reg );
-
-			for ( auto [e, mdata, tdata, state] : view )
+			vector<SceneMeshDrawItem> listDrawItems;
+			const vector<GameObject*> listObjects = pObjects->getAllGameObjects();
+			for ( GameObject* pObj : listObjects )
 			{
-				if ( mdata._bVisible == 0 )
+				if ( pObj == nullptr || pObj->isPendingKill() || pObj->isActiveInHierarchy() == false )
 					continue;
 
-				const bool bTransparent = mdata._blendMode == RHIBlendMode::Transparent;
-				if ( bTransparent != bTransparentPass )
-					continue;
-
-				if ( state.bIsActiveInHierarchy == 0 || state.bIsPendingKill != 0 )
-					continue;
-
-				shared_ptr<Mesh> mesh = mdata._mesh;
-				if ( mesh == nullptr || mesh->getVertexCount() == 0 )
-					continue;
-				if ( mesh->upload( _pDevice ) == false )
-					continue;
-
-				RHIPipelineStateHandle drawPso = pso;
-				if ( mdata._pMaterial != nullptr || mdata._materialInstance != nullptr )
+				for ( Component* pComp : pObj->getAllComponents() )
 				{
-					const RHIPipelineStateHandle matPso = getOrCreateMaterialPassPso(
-						pPassTypeForMat, pDefaultShader, true, mdata._pMaterial, mdata._materialInstance.get(),
-						1, nullptr, bTransparentPass, bTransparentPass == false );
-					if ( matPso != 0 )
-						drawPso = matPso;
+					MeshComponent* pMeshComp = pComp != nullptr ? castTo<MeshComponent>( pComp ) : nullptr;
+					if ( pMeshComp == nullptr || pMeshComp->isVisible() == false )
+						continue;
+
+					const bool bTransparent = pMeshComp->getBlendMode() == RHIBlendMode::Transparent;
+					if ( bTransparent != bTransparentPass )
+						continue;
+
+					shared_ptr<Mesh> mesh = pMeshComp->getMesh();
+					if ( mesh == nullptr || mesh->getVertexCount() == 0 )
+						continue;
+					if ( mesh->upload( _pDevice ) == false )
+						continue;
+
+					RHIPipelineStateHandle drawPso = pso;
+					Material* pMaterial = pMeshComp->getMaterial();
+					shared_ptr<MaterialInstance> materialInstance = pMeshComp->getMaterialInstance();
+					if ( pMaterial != nullptr || materialInstance != nullptr )
+					{
+						const RHIPipelineStateHandle matPso = getOrCreateMaterialPassPso(
+							pPassTypeForMat, pDefaultShader, true, pMaterial, materialInstance.get(),
+							1, nullptr, bTransparentPass, bTransparentPass == false );
+						if ( matPso != 0 )
+							drawPso = matPso;
+					}
+
+					RHIDescriptorIndex drawCb = cbIndex;
+					if ( materialInstance != nullptr )
+						drawCb = materialInstance->getDescriptorIndex();
+					else if ( pMaterial != nullptr )
+						drawCb = pMaterial->getDescriptorIndex();
+
+					const uint64 vbId	 = static_cast<uint64>( mesh->getVertexBuffer() ) & 0xFFFF;
+					const uint64 sortKey = ( static_cast<uint64>( drawPso ) << 32 ) | ( static_cast<uint64>( drawCb ) << 16 ) | vbId;
+
+					SceneMeshDrawItem item{};
+					item._sortKey			= sortKey;
+					item._mesh				= mesh;
+					item._pMaterialInstance = materialInstance.get();
+					item._pso				= drawPso;
+					item._cbIndex			= drawCb;
+					item._world				= pMeshComp->getWorldMatrix();
+					listDrawItems.push_back( std::move( item ) );
 				}
-
-				RHIDescriptorIndex drawCb = cbIndex;
-				if ( mdata._materialInstance != nullptr )
-					drawCb = mdata._materialInstance->getDescriptorIndex();
-				else if ( mdata._pMaterial != nullptr )
-					drawCb = mdata._pMaterial->getDescriptorIndex();
-
-				const uint64 vbId	 = static_cast<uint64>( mesh->getVertexBuffer() ) & 0xFFFF;
-				const uint64 sortKey = ( static_cast<uint64>( drawPso ) << 32 ) | ( static_cast<uint64>( drawCb ) << 16 ) | vbId;
-
-				SceneMeshDrawItem item{};
-				item._sortKey			= sortKey;
-				item._mesh				= mesh;
-				item._pMaterialInstance = mdata._materialInstance.get();
-				item._pso				= drawPso;
-				item._cbIndex			= drawCb;
-				item._world				= tdata.cachedWorldMatrix;
-				listDrawItems.push_back( std::move( item ) );
 			}
 
 			if ( listDrawItems.empty() == false )

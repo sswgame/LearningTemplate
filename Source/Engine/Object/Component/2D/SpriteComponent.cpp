@@ -2,11 +2,18 @@
 
 #include "Engine/Object/Component/2D/SpriteComponent.h"
 
-#include "Engine/Object/Component/EcsDataUtil.h"
 #include "Engine/Object/Component/TagSystem.h"
 
 namespace sw
 {
+	SpriteComponent::SpriteComponent()
+		: _meshName{}
+		, _materialName{}
+		, _textureName{}
+		, _spriteName{}
+	{
+	}
+
 	void SpriteComponent::onBeginPlay()
 	{
 		MeshComponent::onBeginPlay();
@@ -14,11 +21,7 @@ namespace sw
 
 		GameObject* pGameObject = getOwner();
 		if ( pGameObject != nullptr )
-		{
 			pGameObject->addTag( "Sprite"_tag );
-			if ( pGameObject->getComponent<SpriteData>() == nullptr )
-				pGameObject->addComponent<SpriteData>();
-		}
 	}
 
 	void SpriteComponent::onEndPlay()
@@ -33,85 +36,41 @@ namespace sw
 
 	string SpriteComponent::getMeshName() const
 	{
-		const SpriteData* pData = getSpriteData();
-		if ( pData != nullptr )
-			return pData->Mesh;
-		return "";
+		return _meshName;
 	}
 
 	void SpriteComponent::setMeshName( const string& mesh )
 	{
-		SpriteData* pData = getSpriteData();
-		if ( pData != nullptr )
-			pData->Mesh = mesh;
+		_meshName = mesh;
 	}
 
 	string SpriteComponent::getMaterialName() const
 	{
-		const SpriteData* pData = getSpriteData();
-		if ( pData != nullptr )
-			return pData->Material;
-		return "";
+		return _materialName;
 	}
 
 	void SpriteComponent::setMaterialName( const string& mtrl )
 	{
-		SpriteData* pData = getSpriteData();
-		if ( pData != nullptr )
-			pData->Material = mtrl;
+		_materialName = mtrl;
 	}
 
 	string SpriteComponent::getTextureName() const
 	{
-		const SpriteData* pData = getSpriteData();
-		if ( pData != nullptr )
-			return pData->Texture;
-		return "";
+		return _textureName;
 	}
 
 	void SpriteComponent::setTextureName( const string& tex )
 	{
-		SpriteData* pData = getSpriteData();
-		if ( pData != nullptr )
-			pData->Texture = tex;
+		_textureName = tex;
 	}
 
 	string SpriteComponent::getSpriteName() const
 	{
-		const SpriteData* pData = getSpriteData();
-		if ( pData != nullptr )
-			return pData->SpriteName;
-		return "";
+		return _spriteName;
 	}
 
 	void SpriteComponent::setSpriteName( const string& sprite )
 	{
-		SpriteData* pData = getSpriteData();
-		if ( pData != nullptr )
-			pData->SpriteName = sprite;
-	}
-
-	SpriteData* SpriteComponent::getSpriteData() const
-	{
-		GameObject* pGameObject = getOwner();
-		if ( pGameObject != nullptr )
-			return pGameObject->getComponent<SpriteData>().get();
-		return nullptr;
-	}
-
-	SpriteData* SpriteComponent::ensureSpriteData()
-	{
-		return sw::ensureEcsData<SpriteData>( getOwner(), getTypeInfo() );
-	}
-
-	Component::EcsDataView SpriteComponent::ensureEcsData()
-	{
-		SpriteData* pData = ensureSpriteData();
-		return { pData, SpriteData::StaticType() };
-	}
-
-	Component::EcsDataView SpriteComponent::getEcsData() const
-	{
-		return { getSpriteData(), SpriteData::StaticType() };
+		_spriteName = sprite;
 	}
 } // namespace sw

@@ -15,7 +15,7 @@ namespace sw
 		SwordRain
 	};
 
-	REFLECT_SCRIPT()
+	REFLECT()
 	class BossComponent : public Component
 	{
 	public:

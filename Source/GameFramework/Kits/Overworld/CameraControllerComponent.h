@@ -1,37 +1,24 @@
 #pragma once
 #include "Engine/Object/Component/Component.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
-	/**
-	 * @brief Pure ECS Data Struct for Camera Controller
-	 */
-	REFLECT()
-	struct SW_GF_API CameraControllerData
+	namespace generated
 	{
-		REFLECT_BODY();
-		PROPERTY()
-		float2 targetPos{ 0.0f, 0.0f };
-		PROPERTY()
-		float2 currentPos{ 0.0f, 0.0f };
-		PROPERTY()
-		float32 followSpeed{ 0.0f };
-		PROPERTY()
-		float32 shakeIntensity{ 0.0f };
-		PROPERTY()
-		float32 shakeDuration{ 0.0f };
-		PROPERTY()
-		float32 shakeFrequency{ 0.0f };
-	};
+		struct sw_CameraControllerComponent_Registrar;
+	} // namespace generated
 
 	REFLECT()
 	class SW_GF_API CameraControllerComponent : public Component
 	{
+		friend struct ::sw::generated::sw_CameraControllerComponent_Registrar;
+
 	public:
 		REFLECT_BODY();
-		CameraControllerComponent()													 = default;
+		CameraControllerComponent();
 		virtual ~CameraControllerComponent() override								 = default;
 		CameraControllerComponent( CameraControllerComponent&& ) noexcept			 = default;
 		CameraControllerComponent& operator=( CameraControllerComponent&& ) noexcept = default;
@@ -40,12 +27,20 @@ namespace sw
 		void onEndPlay() override;
 		void onTick( float32 deltaTime ) override;
 
-		EcsDataView ensureEcsData() override;
-		EcsDataView getEcsData() const override;
-
-		CameraControllerData* getControllerData() const;
-		CameraControllerData* ensureControllerData();
-
 		void shake( float32 intensity, float32 duration );
+
+	private:
+		PROPERTY( Alias="targetPos" )
+		float2 _targetPos;
+		PROPERTY( Alias="currentPos" )
+		float2 _currentPos;
+		PROPERTY( Alias="followSpeed" )
+		float32 _followSpeed;
+		PROPERTY( Alias="shakeIntensity" )
+		float32 _shakeIntensity;
+		PROPERTY( Alias="shakeDuration" )
+		float32 _shakeDuration;
+		PROPERTY( Alias="shakeFrequency" )
+		float32 _shakeFrequency;
 	};
 } // namespace sw

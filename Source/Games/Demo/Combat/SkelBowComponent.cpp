@@ -94,15 +94,11 @@ namespace sw
 			ProjectileComponent* pProjComp = pArrow->addComponent<ProjectileComponent>();
 			if ( pProjComp != nullptr )
 			{
-				ProjectileData* pProjData = pProjComp->ensureProjectileData();
-				if ( pProjData != nullptr )
-				{
-					const float32 radians = MathUtil::toRadian( firedAngle );
-					const float32 speed	  = firedSpeed * ( 0.5f + 0.5f * firedCharge );
-					pProjData->velocity	  = float2{ MathUtil::cos( radians ) * speed, MathUtil::sin( radians ) * speed };
-					pProjData->damage	  = static_cast<int32>( static_cast<float32>( firedDamage ) * ( 0.5f + 0.5f * firedCharge ) );
-					pProjData->lifeTime	  = 3.0f;
-				}
+				const float32 radians = MathUtil::toRadian( firedAngle );
+				const float32 speed	  = firedSpeed * ( 0.5f + 0.5f * firedCharge );
+				pProjComp->setVelocity( float2{ MathUtil::cos( radians ) * speed, MathUtil::sin( radians ) * speed } );
+				pProjComp->setDamage( static_cast<int32>( static_cast<float32>( firedDamage ) * ( 0.5f + 0.5f * firedCharge ) ) );
+				pProjComp->setLifeTime( 3.0f );
 			}
 
 			pArrow->addTag( "Bullet"_tag );

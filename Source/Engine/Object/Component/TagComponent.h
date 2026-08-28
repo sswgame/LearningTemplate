@@ -1,6 +1,6 @@
 /**
  * @file TagComponent.h
- * @brief GameObject에 태그 정보를 부여하는 컴포넌트 및 순수 ECS TagData
+ * @brief GameObject에 태그 집합을 붙이는 컴포넌트
  */
 #pragma once
 #include "Engine/Object/Component/Component.h"
@@ -9,26 +9,21 @@
 
 namespace sw
 {
-	/**
-	 * @brief Pure ECS Data Struct for Tags
-	 */
-	REFLECT()
-	struct SW_API TagData
+	namespace generated
 	{
-		REFLECT_BODY();
-		TagContainer tags;
-	};
-
+		struct sw_TagComponent_Registrar;
+	} // namespace generated
 	/**
-	 * @brief GameObject가 가지는 태그들을 담는 Facade 컴포넌트입니다.
-	 * @details ECS 체제에서 TagData(Registry 풀)를 참조/조작합니다.
+	 * @brief GameObject의 태그를 담는 컴포넌트입니다.
 	 */
 	REFLECT()
 	class SW_API TagComponent : public Component
 	{
+		friend struct ::sw::generated::sw_TagComponent_Registrar;
+
 	public:
 		REFLECT_BODY();
-		TagComponent()					 = default;
+		TagComponent();
 		virtual ~TagComponent() override = default;
 
 		TagComponent( const TagComponent& )			   = delete;
@@ -39,8 +34,6 @@ namespace sw
 
 		void onBeginPlay() override;
 
-		TagData* getTagData() const;
-
 		TagContainer&		getTags();
 		const TagContainer& getTags() const;
 
@@ -50,5 +43,9 @@ namespace sw
 		bool hasTag( TagID tag, bool bExactMatch = false ) const;
 		bool matchTags( const TagContainer& required, const TagContainer& forbidden ) const;
 		bool matchesQuery( const TagQuery& query ) const;
+
+	private:
+		PROPERTY()
+		TagContainer _tags;
 	};
 } // namespace sw

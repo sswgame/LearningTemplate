@@ -2,10 +2,18 @@
 
 #include "Engine/Object/Component/2D/ColliderTileComponent.h"
 
+#include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/Component/TagSystem.h"
+#include "Engine/Object/GameObject/GameObject.h"
 
 namespace sw
 {
+	ColliderTileComponent::ColliderTileComponent()
+		: _tileType{ 0 }
+		, _collisionSide{ 0 }
+	{
+	}
+
 	void ColliderTileComponent::onBeginPlay()
 	{
 		Component::onBeginPlay();
@@ -13,11 +21,7 @@ namespace sw
 
 		GameObject* pGameObject = getOwner();
 		if ( pGameObject != nullptr )
-		{
 			pGameObject->addTag( "TileCollider"_tag );
-			if ( pGameObject->getComponent<ColliderTileData>() == nullptr )
-				pGameObject->addComponent<ColliderTileData>();
-		}
 	}
 
 	void ColliderTileComponent::onEndPlay()
@@ -32,32 +36,22 @@ namespace sw
 
 	int32 ColliderTileComponent::getTileType() const
 	{
-		const ColliderTileData* pData = getTileData();
-		if ( pData != nullptr )
-			return pData->tileType;
-		return 0;
+		return _tileType;
 	}
 
 	void ColliderTileComponent::setTileType( int32 type )
 	{
-		ColliderTileData* pData = getTileData();
-		if ( pData != nullptr )
-			pData->tileType = type;
+		_tileType = type;
 	}
 
 	int32 ColliderTileComponent::getCollisionSide() const
 	{
-		const ColliderTileData* pData = getTileData();
-		if ( pData != nullptr )
-			return pData->collisionSide;
-		return 0;
+		return _collisionSide;
 	}
 
 	void ColliderTileComponent::setCollisionSide( int32 side )
 	{
-		ColliderTileData* pData = getTileData();
-		if ( pData != nullptr )
-			pData->collisionSide = side;
+		_collisionSide = side;
 	}
 
 	bool ColliderTileComponent::isSolid() const
@@ -73,7 +67,7 @@ namespace sw
 
 		const int32 cSide = getCollisionSide();
 		if ( cSide == 0 )
-			return false; // Solid on all sides
+			return false;
 
 		return ( ( cSide & ( 1 << side ) ) == 0 );
 	}
@@ -84,32 +78,23 @@ namespace sw
 			return false;
 
 		GameObject* pGameObject = getOwner();
-		if ( pGameObject != nullptr )
-		{
-			SceneComponent* pSceneComp = pGameObject->getPrimarySceneComponent();
-			if ( pSceneComp != nullptr )
-			{
-				const float3	 pos = pSceneComp->getWorldPosition();
-				constexpr float2 tileSize{ 32.0f, 32.0f };
+		if ( pGameObject == nullptr )
+			return false;
 
-				const float2 tileMin{ pos._x, pos._y };
-				const float2 tileMax{ pos._x + tileSize._x, pos._y + tileSize._y };
+		SceneComponent* pSceneComp = pGameObject->getPrimarySceneComponent();
+		if ( pSceneComp == nullptr )
+			return false;
 
-				const float2 otherMin = point;
-				const float2 otherMax{ point._x + size._x, point._y + size._y };
+		const float3	 pos = pSceneComp->getWorldPosition();
+		constexpr float2 tileSize{ 32.0f, 32.0f };
 
-				return ( tileMin._x < otherMax._x && tileMax._x > otherMin._x &&
-						 tileMin._y < otherMax._y && tileMax._y > otherMin._y );
-			}
-		}
-		return false;
-	}
+		const float2 tileMin{ pos._x, pos._y };
+		const float2 tileMax{ pos._x + tileSize._x, pos._y + tileSize._y };
 
-	ColliderTileData* ColliderTileComponent::getTileData() const
-	{
-		GameObject* pGameObject = getOwner();
-		if ( pGameObject != nullptr )
-			return pGameObject->getComponent<ColliderTileData>().get();
-		return nullptr;
+		const float2 otherMin = point;
+		const float2 otherMax{ point._x + size._x, point._y + size._y };
+
+		return ( tileMin._x < otherMax._x && tileMax._x > otherMin._x &&
+				 tileMin._y < otherMax._y && tileMax._y > otherMin._y );
 	}
 } // namespace sw

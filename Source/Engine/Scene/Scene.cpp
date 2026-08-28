@@ -42,7 +42,7 @@ namespace sw
 			{
 				if ( pObj == nullptr )
 					continue;
-				MeshComponent* pMeshComp = pObj->getComponent<MeshComponent>().get();
+				MeshComponent* pMeshComp = pObj->getComponent<MeshComponent>();
 				if ( pMeshComp == nullptr )
 					continue;
 				pMeshComp->resolveRuntimeMesh();
@@ -154,7 +154,7 @@ namespace sw
 			if ( pObj == nullptr )
 				return nullptr;
 
-			CameraComponent* pCam = pObj->getComponent<CameraComponent>().get();
+			CameraComponent* pCam = pObj->getComponent<CameraComponent>();
 			if ( pCam == nullptr )
 				pCam = pObj->addComponent<CameraComponent>();
 			if ( pCam == nullptr )
@@ -194,22 +194,22 @@ namespace sw
 
 		if ( pEditorObj != nullptr )
 		{
-			TComponentHandle<CameraComponent> camHandle = pEditorObj->getComponent<CameraComponent>();
-			if ( camHandle.isValid() )
-				camHandle->lookAt( float3( 0.0f, 0.0f, 0.0f ) );
+			CameraComponent* pCam = pEditorObj->getComponent<CameraComponent>();
+			if ( pCam != nullptr )
+				pCam->lookAt( float3( 0.0f, 0.0f, 0.0f ) );
 		}
 		if ( pGameObj != nullptr )
 		{
-			TComponentHandle<CameraComponent> camHandle = pGameObj->getComponent<CameraComponent>();
-			if ( camHandle.isValid() )
-				camHandle->lookAt( float3( 0.0f, 0.0f, 0.0f ) );
+			CameraComponent* pCam = pGameObj->getComponent<CameraComponent>();
+			if ( pCam != nullptr )
+				pCam->lookAt( float3( 0.0f, 0.0f, 0.0f ) );
 		}
 
 		refreshCameraCache();
 		if ( getActiveEditorCamera() == nullptr && pEditorObj != nullptr )
-			setActiveEditorCamera( pEditorObj->getComponent<CameraComponent>().get() );
+			setActiveEditorCamera( pEditorObj->getComponent<CameraComponent>() );
 		if ( getActiveGameCamera() == nullptr && pGameObj != nullptr )
-			setActiveGameCamera( pGameObj->getComponent<CameraComponent>().get() );
+			setActiveGameCamera( pGameObj->getComponent<CameraComponent>() );
 
 		_bCamerasEnsured = true;
 		return true;
@@ -231,18 +231,18 @@ namespace sw
 		{
 			if ( pObj == nullptr || pObj->isActive() == false )
 				continue;
-			auto pCam = pObj->getComponent<CameraComponent>();
+			CameraComponent* pCam = pObj->getComponent<CameraComponent>();
 			if ( pCam == nullptr || pCam->isActive() == false )
 				continue;
 			if ( pCam->getRole() == CameraRole::Game && pCam->getPriority() >= bestGamePri )
 			{
 				bestGamePri = pCam->getPriority();
-				pBestGame	= pCam.get();
+				pBestGame	= pCam;
 			}
 			else if ( pCam->getRole() == CameraRole::Editor && pCam->getPriority() >= bestEditorPri )
 			{
 				bestEditorPri = pCam->getPriority();
-				pBestEditor	  = pCam.get();
+				pBestEditor	  = pCam;
 			}
 		}
 

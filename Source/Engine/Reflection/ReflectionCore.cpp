@@ -53,6 +53,7 @@ namespace sw
 
 		NestedContainerInfo flat{};
 		flat._kind			  = _containerKind;
+		flat._typeName		  = _typeName;
 		flat._elementTypeName = _elementTypeName;
 		flat._keyTypeName	  = _keyTypeName;
 		flat._wrapper		  = _containerWrapper;

@@ -47,7 +47,7 @@ namespace sw
 		GameObject* pWeaponObj = pGameObjectManager->findGameObjectByTag( "Weapon"_tag );
 		if ( pWeaponObj != nullptr )
 		{
-			WeaponComponent* pWeaponComp = pWeaponObj->getComponent<WeaponComponent>().get();
+			WeaponComponent* pWeaponComp = pWeaponObj->getComponent<WeaponComponent>();
 			if ( pWeaponComp != nullptr )
 			{
 				if ( pWeaponComp->skillCoolTime > 0.0f )

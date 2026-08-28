@@ -380,7 +380,7 @@ namespace sw::editor
 			if ( pObj == nullptr || pObj->isActive() == false )
 				continue;
 
-			MeshComponent* pMeshComp = pObj->getComponent<MeshComponent>().get();
+			MeshComponent* pMeshComp = pObj->getComponent<MeshComponent>();
 			if ( pMeshComp == nullptr || pMeshComp->isActive() == false )
 				continue;
 			if ( pMeshComp->isVisible() == false )

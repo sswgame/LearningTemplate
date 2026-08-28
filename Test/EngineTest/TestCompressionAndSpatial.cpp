@@ -1,14 +1,18 @@
 #include "pch.h"
 
+#include "Core/Container/ObjectHandle.h"
+
 #include "Engine/Common/EngineServices.h"
-#include "Engine/ECS/ArchetypeChunkPool.h"
 #include "Engine/Graphics/RHI/BindlessTable.h"
 #include "Engine/Graphics/RenderPass/ComputePass.h"
 #include "Engine/Graphics/RenderPass/IndirectDrawBuffer.h"
 #include "Engine/Graphics/RenderPass/RenderGraph.h"
+#include "Engine/Physics/AABB.h"
 #include "Engine/Reflection/PropertyMetaHint.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Serialization/Format/CompressedBinarySerializer.h"
+#include "Engine/Spatial/BVHTree3D.h"
+#include "Engine/Spatial/SpatialHashGrid2D.h"
 #include "Engine/Spatial/SpatialOctree.h"
 #include "Engine/Spatial/SpatialQuadTree.h"
 #include "Engine/Utility/File/ReloadFileManager.h"
@@ -114,54 +118,7 @@ SW_TEST_CASE( Engine_Spatial, SpatialOctreeInsertAndQuery )
 }
 
 // ------------------------------------------------------------------------------
-// 3) ArchetypeChunkPool SoA 메모리 할당 및 컴포넌트 접근 검증
-// ------------------------------------------------------------------------------
-SW_TEST_CASE( Engine_ECS, ArchetypeChunkPoolSoAOperations )
-{
-	struct TransformData
-	{
-		float32 _posX, _posY, _posZ;
-	};
-	struct VelocityData
-	{
-		float32 _vx, _vy, _vz;
-	};
-
-	sw::vector<sw::ComponentColumnLayout> listLayouts;
-	listLayouts.push_back( sw::ComponentColumnLayout{ 1001, sizeof( TransformData ), alignof( TransformData ) } );
-	listLayouts.push_back( sw::ComponentColumnLayout{ 1002, sizeof( VelocityData ), alignof( VelocityData ) } );
-
-	sw::ArchetypeChunkPool pool( listLayouts );
-	SW_EXPECT_EQUAL( size_t( 0 ), pool.getTotalEntities() );
-
-	size_t chunkIndex = 0;
-	size_t rowIndex	  = 0;
-	pool.allocateEntity( 5001, chunkIndex, rowIndex );
-	SW_EXPECT_EQUAL( size_t( 1 ), pool.getTotalEntities() );
-	SW_EXPECT_EQUAL( size_t( 0 ), chunkIndex );
-	SW_EXPECT_EQUAL( size_t( 0 ), rowIndex );
-
-	sw::ArchetypeChunk* pChunk = pool.getChunk( chunkIndex );
-	SW_EXPECT_TRUE( pChunk != nullptr );
-	SW_EXPECT_EQUAL( uint64( 5001 ), pChunk->getEntityId( rowIndex ) );
-
-	auto* pTransform = static_cast<TransformData*>( pChunk->getComponent( 0, rowIndex ) );
-	SW_EXPECT_TRUE( pTransform != nullptr );
-	pTransform->_posX = 123.0f;
-
-	auto* pVelocity = static_cast<VelocityData*>( pChunk->getComponent( 1, rowIndex ) );
-	SW_EXPECT_TRUE( pVelocity != nullptr );
-	pVelocity->_vx = 456.0f;
-
-	SW_EXPECT_EQUAL( 123.0f, pTransform->_posX );
-	SW_EXPECT_EQUAL( 456.0f, pVelocity->_vx );
-
-	SW_EXPECT_TRUE( pool.freeEntity( chunkIndex, rowIndex ) );
-	SW_EXPECT_EQUAL( size_t( 0 ), pool.getTotalEntities() );
-}
-
-// ------------------------------------------------------------------------------
-// 4) AssetStreamingQueue 비동기 요청 큐 검증
+// 3) AssetStreamingQueue 비동기 요청 큐 검증
 // ------------------------------------------------------------------------------
 SW_TEST_CASE( Engine_Resource, AssetStreamingQueueAsyncOperations )
 {
@@ -314,103 +271,7 @@ SW_TEST_CASE( Engine_Renderer, RenderGraphReadModifyWriteAndLifetimes )
 }
 
 // ------------------------------------------------------------------------------
-// 10) ArchetypeChunkPool 비-Trivial 컴포넌트 수명주기(Option 2) 검증
-// ------------------------------------------------------------------------------
-namespace
-{
-	static int32 s_activeCustomStringCount = 0;
-
-	struct CustomStringComponent
-	{
-		sw::string _str;
-
-		[[maybe_unused]] CustomStringComponent()
-			: _str{ "DefaultVal" }
-		{
-			++s_activeCustomStringCount;
-		}
-
-		explicit CustomStringComponent( const utf8* pVal )
-			: _str{ pVal }
-		{
-			++s_activeCustomStringCount;
-		}
-
-		~CustomStringComponent()
-		{
-			--s_activeCustomStringCount;
-		}
-
-		CustomStringComponent( const CustomStringComponent& rhs )
-			: _str{ rhs._str }
-		{
-			++s_activeCustomStringCount;
-		}
-
-		CustomStringComponent& operator=( const CustomStringComponent& rhs )
-		{
-			if ( this != &rhs )
-				_str = rhs._str;
-			return *this;
-		}
-
-		[[maybe_unused]] CustomStringComponent( CustomStringComponent&& rhs ) noexcept
-			: _str{ std::move( rhs._str ) }
-		{
-			++s_activeCustomStringCount;
-		}
-
-		CustomStringComponent& operator=( CustomStringComponent&& rhs ) noexcept
-		{
-			if ( this != &rhs )
-				_str = std::move( rhs._str );
-			return *this;
-		}
-	};
-} // namespace
-
-SW_TEST_CASE( Engine_ECS, ArchetypeChunkPoolNonTrivialComponentLifecycle )
-{
-	s_activeCustomStringCount = 0;
-
-	sw::vector<sw::ComponentColumnLayout> listLayouts;
-	listLayouts.push_back( sw::makeColumnLayout<CustomStringComponent>( 2001 ) );
-
-	{
-		sw::ArchetypeChunkPool pool( listLayouts );
-
-		size_t chunk0 = 0, row0 = 0;
-		size_t chunk1 = 0, row1 = 0;
-		size_t chunk2 = 0, row2 = 0;
-
-		pool.allocateEntity( 7001, chunk0, row0 );
-		pool.allocateEntity( 7002, chunk1, row1 );
-		pool.allocateEntity( 7003, chunk2, row2 );
-
-		// 메모리 위치에 직접 생성
-		auto* pComp0 = new ( pool.getChunk( chunk0 )->getComponent( 0, row0 ) ) CustomStringComponent( "Entity_7001" );
-		auto* pComp1 = new ( pool.getChunk( chunk1 )->getComponent( 0, row1 ) ) CustomStringComponent( "Entity_7002" );
-		auto* pComp2 = new ( pool.getChunk( chunk2 )->getComponent( 0, row2 ) ) CustomStringComponent( "Entity_7003" );
-
-		SW_EXPECT_EQUAL( 3, s_activeCustomStringCount );
-		SW_EXPECT_EQUAL( sw::string( "Entity_7001" ), pComp0->_str );
-		SW_EXPECT_EQUAL( sw::string( "Entity_7002" ), pComp1->_str );
-		SW_EXPECT_EQUAL( sw::string( "Entity_7003" ), pComp2->_str );
-
-		// Row 0 삭제 (Row 2가 Row 0 자리로 Swap-and-pop 이동되며 Row 0은 정상 소멸되어야 함)
-		SW_EXPECT_TRUE( pool.freeEntity( chunk0, row0 ) );
-		SW_EXPECT_EQUAL( 2, s_activeCustomStringCount );
-
-		auto* pMovedComp = static_cast<CustomStringComponent*>( pool.getChunk( chunk0 )->getComponent( 0, row0 ) );
-		SW_EXPECT_EQUAL( sw::string( "Entity_7003" ), pMovedComp->_str );
-	}
-
-	// Pool 소멸 시 남아있던 2개 인스턴스도 정상 소멸되어야 함
-	SW_EXPECT_EQUAL( 0, s_activeCustomStringCount );
-}
-
-// ------------------------------------------------------------------------------
-// 11) SpatialOctree 및 SpatialQuadTree Node Collapse (트리 축소) 검증
+// 10) SpatialOctree 및 SpatialQuadTree Node Collapse (트리 축소) 검증
 // ------------------------------------------------------------------------------
 SW_TEST_CASE( Engine_Spatial, SpatialOctreeAndQuadTreeNodeCollapse )
 {
@@ -551,4 +412,163 @@ SW_TEST_CASE( Engine_Graphics, BindlessTableDoubleFreeProtection )
 	SW_EXPECT_EQUAL( size_t( 1 ), table.getActiveTextureCount() );
 
 	table.shutdown();
+}
+
+// ------------------------------------------------------------------------------
+// 14) SpatialHashGrid2D 엔티티 등록, 이동, 삭제 및 카운트 검증
+// ------------------------------------------------------------------------------
+SW_TEST_CASE( Engine_Spatial, SpatialHashGrid2DInsertUpdateRemoveAndCount )
+{
+	const sw::ObjectHandle e1 = sw::ObjectHandle::make( 1, 1 );
+	const sw::ObjectHandle e2 = sw::ObjectHandle::make( 2, 1 );
+	const sw::ObjectHandle e3 = sw::ObjectHandle::make( 3, 1 );
+
+	sw::SpatialHashGrid2D grid{ 32.0f };
+	SW_EXPECT_NEAR_EQUAL( 32.0f, grid.getCellSize(), 0.001f );
+	SW_EXPECT_EQUAL( 0u, static_cast<uint32>( grid.getHandleCount() ) );
+	SW_EXPECT_EQUAL( 0u, static_cast<uint32>( grid.getActiveBucketCount() ) );
+
+	grid.insert( e1, 10.0f, 10.0f, 20.0f, 20.0f );
+	grid.insert( e2, 50.0f, 50.0f, 60.0f, 60.0f );
+	grid.insert( e3, 100.0f, 100.0f, 110.0f, 110.0f );
+
+	SW_EXPECT_EQUAL( 3u, static_cast<uint32>( grid.getHandleCount() ) );
+	SW_EXPECT_EQUAL( 3u, static_cast<uint32>( grid.getActiveBucketCount() ) );
+
+	grid.update( e2, 15.0f, 15.0f, 25.0f, 25.0f );
+	SW_EXPECT_EQUAL( 3u, static_cast<uint32>( grid.getHandleCount() ) );
+
+	grid.remove( e3 );
+	SW_EXPECT_EQUAL( 2u, static_cast<uint32>( grid.getHandleCount() ) );
+
+	grid.clear();
+	SW_EXPECT_EQUAL( 0u, static_cast<uint32>( grid.getHandleCount() ) );
+	SW_EXPECT_EQUAL( 0u, static_cast<uint32>( grid.getActiveBucketCount() ) );
+}
+
+// ------------------------------------------------------------------------------
+// 15) SpatialHashGrid2D AABB, Circle 및 Ray 쿼리 필터링 검증
+// ------------------------------------------------------------------------------
+SW_TEST_CASE( Engine_Spatial, SpatialHashGrid2DAABBCircleAndRayQueries )
+{
+	const sw::ObjectHandle eTarget1 = sw::ObjectHandle::make( 1, 1 );
+	const sw::ObjectHandle eTarget2 = sw::ObjectHandle::make( 2, 1 );
+	const sw::ObjectHandle eFarAway = sw::ObjectHandle::make( 3, 1 );
+
+	sw::SpatialHashGrid2D grid{ 64.0f };
+	grid.insert( eTarget1, 10.0f, 10.0f, 30.0f, 30.0f );
+	grid.insert( eTarget2, 40.0f, 40.0f, 60.0f, 60.0f );
+	grid.insert( eFarAway, 500.0f, 500.0f, 520.0f, 520.0f );
+
+	sw::vector<sw::ObjectHandle> listAabb;
+	grid.queryAABB( 0.0f, 0.0f, 70.0f, 70.0f, listAabb );
+	SW_EXPECT_EQUAL( 2u, static_cast<uint32>( listAabb.size() ) );
+
+	sw::vector<sw::ObjectHandle> listCircle;
+	grid.queryCircle( 20.0f, 20.0f, 20.0f, listCircle );
+	SW_EXPECT_EQUAL( 1u, static_cast<uint32>( listCircle.size() ) );
+	if ( listCircle.empty() == false )
+		SW_EXPECT_EQUAL( eTarget1, listCircle[0] );
+
+	sw::vector<sw::ObjectHandle> listRay;
+	grid.queryRay( 0.0f, 0.0f, 1.0f, 1.0f, 120.0f, listRay );
+	SW_EXPECT_EQUAL( 2u, static_cast<uint32>( listRay.size() ) );
+}
+
+// ------------------------------------------------------------------------------
+// 16) BVHTree3D 3D 동적 트리 엔티티 등록, 이동, 삭제 및 트리 균형/높이 검증
+// ------------------------------------------------------------------------------
+SW_TEST_CASE( Engine_Spatial, BVHTree3DInsertUpdateRemoveAndCount )
+{
+	sw::BVHTree3D bvh;
+
+	SW_EXPECT_EQUAL( 0u, static_cast<uint32>( bvh.getHandleCount() ) );
+	SW_EXPECT_EQUAL( 0, bvh.getTreeHeight() );
+
+	const sw::ObjectHandle e1 = sw::ObjectHandle::make( 1, 1 );
+	const sw::ObjectHandle e2 = sw::ObjectHandle::make( 2, 1 );
+	const sw::ObjectHandle e3 = sw::ObjectHandle::make( 3, 1 );
+
+	const sw::AABB b1{
+		{ 0.0f,	0.0f,  0.0f},
+		{10.0f, 10.0f, 10.0f}
+	};
+	const sw::AABB b2{
+		{20.0f, 20.0f, 20.0f},
+		{30.0f, 30.0f, 30.0f}
+	};
+	const sw::AABB b3{
+		{100.0f, 100.0f, 100.0f},
+		{110.0f, 110.0f, 110.0f}
+	};
+
+	bvh.insert( e1, b1 );
+	bvh.insert( e2, b2 );
+	bvh.insert( e3, b3 );
+
+	SW_EXPECT_EQUAL( 3u, static_cast<uint32>( bvh.getHandleCount() ) );
+	SW_EXPECT_TRUE( bvh.getTreeHeight() > 0 );
+
+	const sw::AABB b2Moved{
+		{ 5.0f,	5.0f,  5.0f},
+		{15.0f, 15.0f, 15.0f}
+	};
+	bvh.update( e2, b2Moved );
+	SW_EXPECT_EQUAL( 3u, static_cast<uint32>( bvh.getHandleCount() ) );
+
+	bvh.remove( e3 );
+	SW_EXPECT_EQUAL( 2u, static_cast<uint32>( bvh.getHandleCount() ) );
+
+	bvh.clear();
+	SW_EXPECT_EQUAL( 0u, static_cast<uint32>( bvh.getHandleCount() ) );
+	SW_EXPECT_EQUAL( 0, bvh.getTreeHeight() );
+}
+
+// ------------------------------------------------------------------------------
+// 17) BVHTree3D 3D AABB, Ray, Sphere 쿼리 검증
+// ------------------------------------------------------------------------------
+SW_TEST_CASE( Engine_Spatial, BVHTree3DAABBRaySphereQueries )
+{
+	sw::BVHTree3D bvh;
+
+	const sw::ObjectHandle eNear1 = sw::ObjectHandle::make( 1, 1 );
+	const sw::ObjectHandle eNear2 = sw::ObjectHandle::make( 2, 1 );
+	const sw::ObjectHandle eFar	= sw::ObjectHandle::make( 3, 1 );
+
+	const sw::AABB boxNear1{
+		{0.0f, 0.0f, 5.0f},
+		{2.0f, 2.0f, 7.0f}
+	};
+	const sw::AABB boxNear2{
+		{3.0f, 0.0f, 10.0f},
+		{5.0f, 2.0f, 12.0f}
+	};
+	const sw::AABB boxFar{
+		{50.0f, 50.0f, 200.0f},
+		{60.0f, 60.0f, 210.0f}
+	};
+
+	bvh.insert( eNear1, boxNear1 );
+	bvh.insert( eNear2, boxNear2 );
+	bvh.insert( eFar, boxFar );
+
+	sw::vector<sw::ObjectHandle> listAabb;
+	const sw::AABB		   testBox{
+		{-1.0f, -1.0f,	0.0f},
+		{ 6.0f,	5.0f, 15.0f}
+	};
+	bvh.queryAABB( testBox, listAabb );
+	SW_EXPECT_EQUAL( 2u, static_cast<uint32>( listAabb.size() ) );
+
+	sw::vector<sw::ObjectHandle> listRay;
+	bvh.queryRay( sw::float3{ 1.0f, 1.0f, 0.0f }, sw::float3{ 0.0f, 0.0f, 1.0f }, 20.0f, listRay );
+	SW_EXPECT_EQUAL( 1u, static_cast<uint32>( listRay.size() ) );
+	if ( listRay.empty() == false )
+		SW_EXPECT_EQUAL( eNear1, listRay[0] );
+
+	sw::vector<sw::ObjectHandle> listSphere;
+	bvh.querySphere( sw::float3{ 1.0f, 1.0f, 6.0f }, 3.0f, listSphere );
+	SW_EXPECT_EQUAL( 1u, static_cast<uint32>( listSphere.size() ) );
+	if ( listSphere.empty() == false )
+		SW_EXPECT_EQUAL( eNear1, listSphere[0] );
 }

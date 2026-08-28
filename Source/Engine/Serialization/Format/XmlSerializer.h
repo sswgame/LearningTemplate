@@ -76,6 +76,14 @@ namespace sw
 		virtual bool iterateArray( const utf8* pTagName, const XmlArrayItemDelegate& callback ) = 0;
 		/** @brief 맵 항목을 순회합니다. */
 		virtual bool iterateMap( const utf8* pTagName, const XmlMapItemDelegate& callback ) = 0;
+		/** @brief 현재 부모의 자식 요소로 내려갑니다. 없으면 false. */
+		virtual bool pushChild( const utf8* pTagName )
+		{
+			(void)pTagName;
+			return false;
+		}
+		/** @brief pushChild로 내려간 부모를 복원합니다. */
+		virtual void popChild() {}
 
 		// ------------------------------------------------------------------------------
 		// 3) 키 정책 — 태그/속성 이름만, 값에는 영향 없음
@@ -144,6 +152,10 @@ namespace sw
 		bool iterateArray( const utf8* pTagName, const XmlArrayItemDelegate& callback ) override;
 		/** @brief 맵 항목을 순회합니다. */
 		bool iterateMap( const utf8* pTagName, const XmlMapItemDelegate& callback ) override;
+		/** @brief 현재 부모의 자식 요소로 내려갑니다. 없으면 false. */
+		bool pushChild( const utf8* pTagName ) override;
+		/** @brief pushChild로 내려간 부모를 복원합니다. */
+		void popChild() override;
 
 	private:
 		struct Impl;
@@ -187,6 +199,10 @@ namespace sw
 		/** @brief 루트 attribute `_schemaVersion`을 포함한 XML 직렬화. */
 		static string serializeVersioned( uint32 version, const void* pInstance, const TypeInfo& typeInfo,
 										  const SerializeContext& ctx = SerializeContext::getDefault() );
+
+		/** @brief 이미 열린 부모 요소에 `_schemaVersion`과 PROPERTY를 씁니다. 스칼라는 attribute입니다. */
+		static void serializeVersionedInto( IXmlBackend& backend, uint32 version, const void* pInstance, const TypeInfo& typeInfo,
+											const SerializeContext& ctx = SerializeContext::getDefault() );
 
 		/** @brief 버전 헤더 + soft deserialize, 필요 시 migrate. */
 		static bool deserializeVersioned( uint32& outVersion, void* pInstance, const TypeInfo& typeInfo, string_view xmlStr,

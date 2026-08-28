@@ -18,7 +18,7 @@ namespace sw
 		constexpr const utf8* kEntities		   = "entities";
 		constexpr const utf8* kEntity		   = "entity";
 		constexpr const utf8* kPrefab		   = "prefab";
-		constexpr const utf8* kGameObjectState = "GameObjectState";
+		constexpr const utf8* kGameObject = "GameObject";
 		constexpr const utf8* kDefaultEntity   = "Entity";
 		constexpr uint32	  kSceneBinMagic   = 0x53434E31u; // 'SCN1'
 		constexpr uint32	  kSceneBinVersion = 0;
@@ -228,7 +228,7 @@ namespace sw
 					placeholder._prefab = pPrefab;
 				}
 
-				XmlNode stateNode = entityNode.child( kGameObjectState );
+				XmlNode stateNode = entityNode.child( kGameObject );
 				if ( stateNode.isValid() )
 				{
 					StringBuilder<constant::kMaxBuffer8192> stateSb;

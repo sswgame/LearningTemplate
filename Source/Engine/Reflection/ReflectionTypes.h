@@ -73,6 +73,7 @@ namespace sw
 	struct NestedContainerInfo
 	{
 		ContainerKind					_kind = ContainerKind::None;
+		hashed_string					_typeName; ///< 컨테이너 TypeInfo 이름 (vector, unordered_map, …)
 		hashed_string					_elementTypeName;
 		hashed_string					_keyTypeName;
 		shared_ptr<IContainerWrapper>	_wrapper;

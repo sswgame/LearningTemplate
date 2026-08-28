@@ -62,7 +62,9 @@ def readXmlSceneInternal(path: Path) -> tuple[str, list[tuple[str, str, str]]]:
                 prefabPath = prefabChild.text.strip()
 
             embeddedXml = ""
-            if (stateNode := entityNode.find("GameObjectState")) is not None:
+            if (stateNode := entityNode.find("GameObject")) is not None:
+                embeddedXml = ET.tostring(stateNode, encoding="unicode")
+            elif (stateNode := entityNode.find("GameObjectState")) is not None:
                 embeddedXml = ET.tostring(stateNode, encoding="unicode")
 
             entitiesList.append((entityName, prefabPath, embeddedXml))

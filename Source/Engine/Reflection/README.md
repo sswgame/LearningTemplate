@@ -92,7 +92,7 @@ public:
 ```
 
 `Component` 를 상속하고 `REFLECT_BODY()` 가 있으면 **컴포넌트 팩토리**도 생성되어  
-이름으로 `addComponentByName` / 씬 로드가 가능합니다.
+이름으로 `GameObjectManager::addComponentByName` / 씬 로드가 가능합니다.
 
 ### 3) Enum
 
@@ -199,7 +199,6 @@ CMake 헬퍼: `cmake/Engine/ReflectionCodeGen.cmake` (`sw_addReflectionStep`)
 ## 더 볼 곳
 
 - [ReflectionParser README](../../../Tools/ReflectionParser/README.md) — 파서 CLI · 템플릿 · 생성물  
-- [ECS README](../ECS/README.md) — typeId · 팩토리와 Registry  
 - [Object README](../Object/README.md) — 컴포넌트 수명  
 - `ReflectionMacros.h` — 상세 주석  
 - 루트 [ARCHITECTURE.md](../../../ARCHITECTURE.md) — 리플렉션·직렬화 개요
