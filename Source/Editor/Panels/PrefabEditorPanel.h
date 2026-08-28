@@ -19,7 +19,7 @@ namespace sw::editor
 		~PrefabEditorPanel() override = default;
 
 		bool		isToolPanel() const override { return true; }
-		const utf8* getPanelTitle() const override { return "Prefab Inspector & Overrides"; }
+		const utf8* getPanelTitle() const override { return "Prefab Editor"; }
 		void		drawContent() override;
 		float2		getInitialPanelSize() const override { return float2{ 650.0f, 480.0f }; }
 
@@ -28,6 +28,7 @@ namespace sw::editor
 
 		string					   _selectedPrefabPath;
 		string					   _selectedInstanceName;
+		string					   _lastScanKey;
 		vector<PrefabOverrideItem> _listOverride;
 		vector<string>			   _listNestedPrefab;
 		bool					   _bShowOnlyModified;

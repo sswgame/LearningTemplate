@@ -4,15 +4,38 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
+#include "Editor/Common/Commands/EditorInspectorCommands.h"
 #include "Editor/Common/Config/EditorConfig.h"
 #include "Editor/Common/EditorUtil.h"
+#include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorTransaction.h"
+#include "Editor/Common/Workspace/EditorWorkspace.h"
 
+#include "Engine/Animation/AnimationGraphAsset.h"
+#include "Engine/Dialogue/DialogueGraphAsset.h"
+#include "Engine/Object/Component/Component.h"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/GameObjectPtr.h"
+#include "Engine/Object/GameObject/ObjectStateSerializer.h"
+#include "Engine/Object/Prefab/PrefabAsset.h"
+#include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneManager.h"
+#include "Engine/Sequencer/SequenceAsset.h"
+#include "Engine/Serialization/Core/SerializerInternal.h"
 #include "Engine/Serialization/Format/JsonSerializer.h"
+#include "Engine/Serialization/Format/SimpleJsonWalk.h"
+#include "Engine/Utility/CommandStack.h"
+#include "Engine/Utility/Resource/ResourceManager.h"
 #include "Engine/Utility/Resource/ResourceUtil.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
+
+#include "RuntimeAPI/Service/EditorService.h"
 
 namespace sw::editor
 {
@@ -155,82 +178,340 @@ namespace sw::editor
 		}
 	} // namespace
 
-	bool EditorToolAssetCommands::loadAnimationGraph( EditorAnimGraphData& outData )
+	namespace
+	{
+		bool pathEndsWithIgnoreCase( string_view path, string_view suffix )
+		{
+			return FileUtil::endsWithIgnoreCase( string{ path }, suffix );
+		}
+
+		string resolveExistingOrRelativePath( string_view path )
+		{
+			if ( path.empty() )
+				return {};
+			string absPath = ResourceUtil::getResourcePath( path );
+			if ( absPath.empty() )
+				absPath = string{ path };
+			return absPath;
+		}
+
+		string resolveAnimGraphPath( string_view path )
+		{
+			if ( path.empty() == false )
+				return resolveExistingOrRelativePath( path );
+			return EditorUtil::resolveEditorConfigFile( EditorConfig::getActive()._animationGraphDataFile.c_str() );
+		}
+
+		string resolveDialogueGraphPath( string_view path )
+		{
+			if ( path.empty() == false )
+				return resolveExistingOrRelativePath( path );
+			string absPath = ResourceUtil::getResourcePath( kDialogueGraphPath );
+			if ( absPath.empty() )
+				absPath = kDialogueGraphPath;
+			return absPath;
+		}
+
+		string resolveSpriteClipPath( string_view path )
+		{
+			if ( path.empty() == false )
+				return resolveExistingOrRelativePath( path );
+			return EditorUtil::resolveEditorConfigFile( EditorConfig::getActive()._spriteClipFile.c_str() );
+		}
+
+		void editorFromEngine( const AnimationGraphAsset& src, EditorAnimGraphData& dst )
+		{
+			dst._listNode.clear();
+			dst._listLink.clear();
+			dst._listNode.reserve( src._listNode.size() );
+			dst._listLink.reserve( src._listLink.size() );
+			for ( const AnimationGraphNode& node : src._listNode )
+			{
+				EditorAnimGraphNode editorNode{};
+				editorNode._id	 = node._id;
+				editorNode._name = node._name;
+				editorNode._x	 = node._x;
+				editorNode._y	 = node._y;
+				dst._listNode.push_back( std::move( editorNode ) );
+			}
+			for ( const AnimationGraphLink& link : src._listLink )
+			{
+				EditorAnimGraphLink editorLink{};
+				editorLink._id		 = link._id;
+				editorLink._fromNode = link._fromNode;
+				editorLink._toNode	 = link._toNode;
+				dst._listLink.push_back( editorLink );
+			}
+		}
+
+		void engineFromEditor( const EditorAnimGraphData& src, AnimationGraphAsset& dst )
+		{
+			dst._listNode.clear();
+			dst._listLink.clear();
+			dst._listNode.reserve( src._listNode.size() );
+			dst._listLink.reserve( src._listLink.size() );
+			for ( const EditorAnimGraphNode& node : src._listNode )
+			{
+				AnimationGraphNode engineNode{};
+				engineNode._id	 = node._id;
+				engineNode._name = node._name;
+				engineNode._x	 = node._x;
+				engineNode._y	 = node._y;
+				dst._listNode.push_back( std::move( engineNode ) );
+			}
+			for ( const EditorAnimGraphLink& link : src._listLink )
+			{
+				AnimationGraphLink engineLink{};
+				engineLink._id		 = link._id;
+				engineLink._fromNode = link._fromNode;
+				engineLink._toNode	 = link._toNode;
+				dst._listLink.push_back( engineLink );
+			}
+		}
+
+		void editorFromEngineDialogue( const DialogueGraphAsset& src, EditorDialogueGraphData& dst )
+		{
+			dst._listNode.clear();
+			dst._listLink.clear();
+			dst._listNode.reserve( src._listNode.size() );
+			dst._listLink.reserve( src._listLink.size() );
+			for ( const DialogueAssetNode& node : src._listNode )
+			{
+				EditorDialogueNode editorNode{};
+				editorNode._id			  = node._id;
+				editorNode._type		  = static_cast<DialogueNodeType>( node._type );
+				editorNode._speaker		  = node._speaker;
+				editorNode._text		  = node._text;
+				editorNode._condition	  = node._condition;
+				editorNode._actionCommand = node._actionCommand;
+				editorNode._listChoice	  = node._listChoice;
+				editorNode._x			  = node._x;
+				editorNode._y			  = node._y;
+				dst._listNode.push_back( std::move( editorNode ) );
+			}
+			for ( const DialogueAssetLink& link : src._listLink )
+			{
+				EditorDialogueLink editorLink{};
+				editorLink._id		= link._id;
+				editorLink._fromPin = link._fromPin;
+				editorLink._toPin	= link._toPin;
+				dst._listLink.push_back( editorLink );
+			}
+		}
+
+		void engineFromEditorDialogue( const EditorDialogueGraphData& src, DialogueGraphAsset& dst )
+		{
+			dst._listNode.clear();
+			dst._listLink.clear();
+			dst._listNode.reserve( src._listNode.size() );
+			dst._listLink.reserve( src._listLink.size() );
+			for ( const EditorDialogueNode& node : src._listNode )
+			{
+				DialogueAssetNode engineNode{};
+				engineNode._id			  = node._id;
+				engineNode._type		  = static_cast<DialogueAssetNodeType>( node._type );
+				engineNode._speaker		  = node._speaker;
+				engineNode._text		  = node._text;
+				engineNode._condition	  = node._condition;
+				engineNode._actionCommand = node._actionCommand;
+				engineNode._listChoice	  = node._listChoice;
+				engineNode._x			  = node._x;
+				engineNode._y			  = node._y;
+				dst._listNode.push_back( std::move( engineNode ) );
+			}
+			for ( const EditorDialogueLink& link : src._listLink )
+			{
+				DialogueAssetLink engineLink{};
+				engineLink._id		= link._id;
+				engineLink._fromPin = link._fromPin;
+				engineLink._toPin	= link._toPin;
+				dst._listLink.push_back( engineLink );
+			}
+		}
+
+		string formatPropertyValue( const PropertyInfo& prop, const void* pInstance )
+		{
+			const void* pPtr = prop.getRawPtr( pInstance );
+			if ( pPtr == nullptr )
+				return "<null>";
+
+			const string typeName = prop._typeName.c_str();
+			utf8		 arrBuf[128];
+			if ( typeName == "float32" || typeName == "float" )
+			{
+				float32 value{ 0.0f };
+				Memory::copy( &value, pPtr, sizeof( float32 ) );
+				formatstring( arrBuf, sizeof( arrBuf ), "%.4f", value );
+				return arrBuf;
+			}
+			if ( typeName == "int32" || typeName == "int" )
+			{
+				int32 value{ 0 };
+				Memory::copy( &value, pPtr, sizeof( int32 ) );
+				formatstring( arrBuf, sizeof( arrBuf ), "%d", value );
+				return arrBuf;
+			}
+			if ( typeName == "uint32" )
+			{
+				uint32 value{ 0 };
+				Memory::copy( &value, pPtr, sizeof( uint32 ) );
+				formatstring( arrBuf, sizeof( arrBuf ), "%u", value );
+				return arrBuf;
+			}
+			if ( typeName == "bool" )
+			{
+				bool value{ false };
+				Memory::copy( &value, pPtr, sizeof( bool ) );
+				return value ? "true" : "false";
+			}
+			if ( typeName == "string" )
+				return *static_cast<const string*>( pPtr );
+			if ( typeName == "float3" )
+			{
+				float3 value{};
+				Memory::copy( &value, pPtr, sizeof( float3 ) );
+				formatstring( arrBuf, sizeof( arrBuf ), "(%.3f, %.3f, %.3f)", value._x, value._y, value._z );
+				return arrBuf;
+			}
+			if ( typeName == "float2" )
+			{
+				float2 value{};
+				Memory::copy( &value, pPtr, sizeof( float2 ) );
+				formatstring( arrBuf, sizeof( arrBuf ), "(%.3f, %.3f)", value._x, value._y );
+				return arrBuf;
+			}
+			if ( typeName == "float4" )
+			{
+				float4 value{};
+				Memory::copy( &value, pPtr, sizeof( float4 ) );
+				formatstring( arrBuf, sizeof( arrBuf ), "(%.3f, %.3f, %.3f, %.3f)", value._x, value._y, value._z, value._w );
+				return arrBuf;
+			}
+			return "<value>";
+		}
+
+		void collectNestedPrefabPaths( string_view stateData, vector<string>& outNested )
+		{
+			const string xml{ stateData };
+			size_t		 cursor = 0;
+			while ( true )
+			{
+				const size_t prefabPos = xml.find( ".prefab", cursor );
+				if ( prefabPos == string::npos )
+					break;
+				size_t start = prefabPos;
+				while ( start > 0 && xml[start - 1] != '"' && xml[start - 1] != '>' && xml[start - 1] != '=' &&
+						xml[start - 1] != ' ' )
+					--start;
+				size_t end = prefabPos;
+				while ( end < xml.size() && xml[end] != '"' && xml[end] != '<' && xml[end] != ' ' )
+					++end;
+				string nested = xml.substr( start, end - start );
+				if ( nested.empty() == false )
+					outNested.push_back( std::move( nested ) );
+				cursor = prefabPos + 7;
+			}
+		}
+
+		Component* findComponentByTypeName( GameObject* pObj, string_view typeName )
+		{
+			if ( pObj == nullptr )
+				return nullptr;
+			for ( Component* pComp : pObj->getAllComponents() )
+			{
+				if ( pComp == nullptr || pComp->getTypeInfo() == nullptr )
+					continue;
+				if ( string{ pComp->getTypeInfo()->_name.c_str() } == string{ typeName } )
+					return pComp;
+				if ( string{ pComp->getComponentName().c_str() } == string{ typeName } )
+					return pComp;
+			}
+			return nullptr;
+		}
+	} // namespace
+
+	bool EditorToolAssetCommands::isAnimationGraphPath( string_view path )
+	{
+		return pathEndsWithIgnoreCase( path, ".anim.json" ) || pathEndsWithIgnoreCase( path, ".anim" );
+	}
+
+	bool EditorToolAssetCommands::isDialogueGraphPath( string_view path )
+	{
+		return pathEndsWithIgnoreCase( path, ".dialogue.json" ) || pathEndsWithIgnoreCase( path, ".dialogue" );
+	}
+
+	bool EditorToolAssetCommands::isSpriteClipPath( string_view path )
+	{
+		if ( pathEndsWithIgnoreCase( path, ".sprite.json" ) || pathEndsWithIgnoreCase( path, ".sprite" ) )
+			return true;
+		if ( pathEndsWithIgnoreCase( path, ".png" ) || pathEndsWithIgnoreCase( path, ".jpg" ) ||
+			 pathEndsWithIgnoreCase( path, ".jpeg" ) || pathEndsWithIgnoreCase( path, ".dds" ) ||
+			 pathEndsWithIgnoreCase( path, ".tga" ) )
+			return true;
+		return false;
+	}
+
+	bool EditorToolAssetCommands::isTileMapPath( string_view path )
+	{
+		if ( pathEndsWithIgnoreCase( path, ".tilemap.xml" ) || pathEndsWithIgnoreCase( path, ".tilemap" ) )
+			return true;
+		if ( pathEndsWithIgnoreCase( path, ".xml" ) == false )
+			return false;
+		if ( pathEndsWithIgnoreCase( path, ".scene.xml" ) || pathEndsWithIgnoreCase( path, ".prefab.xml" ) ||
+			 pathEndsWithIgnoreCase( path, ".preset.xml" ) )
+			return false;
+		return true;
+	}
+
+	bool EditorToolAssetCommands::isSequencerPath( string_view path )
+	{
+		return pathEndsWithIgnoreCase( path, ".seq.json" ) || pathEndsWithIgnoreCase( path, ".seq" );
+	}
+
+	bool EditorToolAssetCommands::isPrefabPath( string_view path )
+	{
+		return pathEndsWithIgnoreCase( path, ".prefab.xml" ) || pathEndsWithIgnoreCase( path, ".prefab.json" ) ||
+			   pathEndsWithIgnoreCase( path, ".prefab.bin" ) || pathEndsWithIgnoreCase( path, ".prefab" ) ||
+			   pathEndsWithIgnoreCase( path, ".pfb" );
+	}
+
+	bool EditorToolAssetCommands::loadAnimationGraph( EditorAnimGraphData& outData, string_view path )
 	{
 		outData._listNode.clear();
 		outData._listLink.clear();
 
-		const string path = EditorUtil::resolveEditorConfigFile( EditorConfig::getActive()._animationGraphDataFile.c_str() );
-		if ( path.empty() || FileUtil::fileExists( path ) == false )
+		const string		resolved = resolveAnimGraphPath( path );
+		AnimationGraphAsset asset;
+		if ( asset.loadFromFile( resolved ) == false )
 			return false;
-
-		vector<uint8> listData;
-		if ( FileUtil::readFile( path, listData ) == false || listData.empty() )
-			return false;
-
-		const string   json( listData.begin(), listData.end() );
-		vector<size_t> listNodeObj;
-		parseJsonObjectArray( json, "nodes", listNodeObj );
-		const size_t nodesKey = json.find( "\"nodes\"" );
-		const size_t nodesEnd = ( nodesKey == string::npos ) ? string::npos : json.find( ']', json.find( '[', nodesKey ) );
-		for ( const size_t obj : listNodeObj )
-		{
-			EditorAnimGraphNode node{};
-			parseJsonIntInRange( json, obj, nodesEnd, "id", node._id );
-			parseJsonStringInRange( json, obj, nodesEnd, "name", node._name );
-			parseJsonFloatInRange( json, obj, nodesEnd, "x", node._x );
-			parseJsonFloatInRange( json, obj, nodesEnd, "y", node._y );
-			if ( node._id > 0 )
-				outData._listNode.push_back( std::move( node ) );
-		}
-
-		vector<size_t> listLinkObj;
-		parseJsonObjectArray( json, "links", listLinkObj );
-		const size_t linksKey = json.find( "\"links\"" );
-		const size_t linksEnd = ( linksKey == string::npos ) ? string::npos : json.find( ']', json.find( '[', linksKey ) );
-		for ( const size_t obj : listLinkObj )
-		{
-			EditorAnimGraphLink link{};
-			parseJsonIntInRange( json, obj, linksEnd, "id", link._id );
-			parseJsonIntInRange( json, obj, linksEnd, "from", link._fromNode );
-			parseJsonIntInRange( json, obj, linksEnd, "to", link._toNode );
-			if ( link._id > 0 )
-				outData._listLink.push_back( link );
-		}
+		editorFromEngine( asset, outData );
 		return true;
 	}
 
-	bool EditorToolAssetCommands::saveAnimationGraph( const EditorAnimGraphData& data )
+	bool EditorToolAssetCommands::saveAnimationGraph( const EditorAnimGraphData& data, string_view path )
 	{
-		const string path = EditorUtil::resolveEditorConfigFile( EditorConfig::getActive()._animationGraphDataFile.c_str() );
-		if ( path.empty() )
+		const string		resolved = resolveAnimGraphPath( path );
+		AnimationGraphAsset asset;
+		engineFromEditor( data, asset );
+		if ( asset.saveToFile( resolved ) == false )
 			return false;
+		SW_LOG_INFO( "Saved %#", resolved.c_str() );
+		return true;
+	}
 
-		StringBuilder<2048> sb;
-		sb.append( "{\n  \"nodes\": [\n" );
-		for ( size_t nodeIndex = 0; nodeIndex < data._listNode.size(); ++nodeIndex )
-		{
-			const EditorAnimGraphNode& node = data._listNode[nodeIndex];
-			sb.append( "    { \"id\": " ).append( node._id ).append( ", \"name\": \"" ).append( JsonSerializer::escapeString( node._name ).c_str() ).append( "\", \"x\": " ).append( node._x ).append( ", \"y\": " ).append( node._y ).append( " }" );
-			if ( nodeIndex + 1 < data._listNode.size() )
-				sb.append( "," );
-			sb.append( "\n" );
-		}
-		sb.append( "  ],\n  \"links\": [\n" );
-		for ( size_t linkIndex = 0; linkIndex < data._listLink.size(); ++linkIndex )
-		{
-			const EditorAnimGraphLink& link = data._listLink[linkIndex];
-			sb.append( "    { \"id\": " ).append( link._id ).append( ", \"from\": " ).append( link._fromNode ).append( ", \"to\": " ).append( link._toNode ).append( " }" );
-			if ( linkIndex + 1 < data._listLink.size() )
-				sb.append( "," );
-			sb.append( "\n" );
-		}
-		sb.append( "  ]\n}\n" );
+	string EditorToolAssetCommands::serializeAnimationGraph( const EditorAnimGraphData& data )
+	{
+		AnimationGraphAsset asset;
+		engineFromEditor( data, asset );
+		return asset.toJson();
+	}
 
-		const string text( sb.c_str() );
-		if ( FileUtil::writeFile( path, reinterpret_cast<const uint8*>( text.data() ), text.size() ) == false )
+	bool EditorToolAssetCommands::parseAnimationGraph( string_view json, EditorAnimGraphData& outData )
+	{
+		AnimationGraphAsset asset;
+		if ( asset.parseJson( json ) == false )
 			return false;
-		SW_LOG_INFO( "Saved %#", path.c_str() );
+		editorFromEngine( asset, outData );
 		return true;
 	}
 
@@ -270,95 +551,43 @@ namespace sw::editor
 		return DialogueNodeType::Dialogue;
 	}
 
-	bool EditorToolAssetCommands::loadDialogueGraph( EditorDialogueGraphData& outData )
+	bool EditorToolAssetCommands::loadDialogueGraph( EditorDialogueGraphData& outData, string_view path )
 	{
 		outData._listNode.clear();
 		outData._listLink.clear();
 
-		if ( FileUtil::fileExists( kDialogueGraphPath ) == false )
+		const string	   resolved = resolveDialogueGraphPath( path );
+		DialogueGraphAsset asset;
+		if ( asset.loadFromFile( resolved ) == false )
 			return false;
-
-		vector<uint8> listData;
-		if ( FileUtil::readFile( kDialogueGraphPath, listData ) == false || listData.empty() )
-			return false;
-
-		const string   json( listData.begin(), listData.end() );
-		vector<size_t> listNodeObj;
-		parseJsonObjectArray( json, "nodes", listNodeObj );
-		const size_t nodesKey = json.find( "\"nodes\"" );
-		const size_t nodesEnd = ( nodesKey == string::npos ) ? string::npos : json.find( ']', json.find( '[', nodesKey ) );
-		for ( const size_t obj : listNodeObj )
-		{
-			EditorDialogueNode node{};
-			parseJsonIntInRange( json, obj, nodesEnd, "id", node._id );
-			string typeName;
-			if ( parseJsonStringInRange( json, obj, nodesEnd, "type", typeName ) )
-				node._type = parseDialogueNodeType( typeName );
-			parseJsonStringInRange( json, obj, nodesEnd, "speaker", node._speaker );
-			parseJsonStringInRange( json, obj, nodesEnd, "text", node._text );
-			parseJsonStringInRange( json, obj, nodesEnd, "condition", node._condition );
-			parseJsonStringInRange( json, obj, nodesEnd, "action", node._actionCommand );
-			parseJsonFloatInRange( json, obj, nodesEnd, "x", node._x );
-			parseJsonFloatInRange( json, obj, nodesEnd, "y", node._y );
-			if ( node._id > 0 )
-				outData._listNode.push_back( std::move( node ) );
-		}
-
-		vector<size_t> listLinkObj;
-		parseJsonObjectArray( json, "links", listLinkObj );
-		const size_t linksKey = json.find( "\"links\"" );
-		const size_t linksEnd = ( linksKey == string::npos ) ? string::npos : json.find( ']', json.find( '[', linksKey ) );
-		for ( const size_t obj : listLinkObj )
-		{
-			EditorDialogueLink link{};
-			parseJsonIntInRange( json, obj, linksEnd, "id", link._id );
-			parseJsonIntInRange( json, obj, linksEnd, "from", link._fromPin );
-			parseJsonIntInRange( json, obj, linksEnd, "to", link._toPin );
-			if ( link._id > 0 )
-				outData._listLink.push_back( link );
-		}
+		editorFromEngineDialogue( asset, outData );
 		return true;
 	}
 
-	bool EditorToolAssetCommands::saveDialogueGraph( const EditorDialogueGraphData& data )
+	bool EditorToolAssetCommands::saveDialogueGraph( const EditorDialogueGraphData& data, string_view path )
 	{
-		FileUtil::ensureDirectoryExists( kDialogueGraphPath );
-
-		StringBuilder<constant::kMaxBuffer4096> sb;
-		sb.append( "{\n  \"nodes\": [\n" );
-		for ( size_t nodeIndex = 0; nodeIndex < data._listNode.size(); ++nodeIndex )
-		{
-			const EditorDialogueNode& node = data._listNode[nodeIndex];
-			sb.append( "    { \"id\": " ).append( node._id );
-			sb.append( ", \"type\": \"" ).append( dialogueNodeTypeName( node._type ) ).append( "\"" );
-			sb.append( ", \"speaker\": \"" ).append( node._speaker.c_str() ).append( "\"" );
-			sb.append( ", \"text\": \"" ).append( node._text.c_str() ).append( "\"" );
-			sb.append( ", \"condition\": \"" ).append( node._condition.c_str() ).append( "\"" );
-			sb.append( ", \"action\": \"" ).append( node._actionCommand.c_str() ).append( "\"" );
-			sb.append( ", \"x\": " ).append( node._x );
-			sb.append( ", \"y\": " ).append( node._y );
-			sb.append( " }" );
-			if ( nodeIndex + 1 < data._listNode.size() )
-				sb.append( "," );
-			sb.append( "\n" );
-		}
-		sb.append( "  ],\n  \"links\": [\n" );
-		for ( size_t linkIndex = 0; linkIndex < data._listLink.size(); ++linkIndex )
-		{
-			const EditorDialogueLink& link = data._listLink[linkIndex];
-			sb.append( "    { \"id\": " ).append( link._id );
-			sb.append( ", \"from\": " ).append( link._fromPin );
-			sb.append( ", \"to\": " ).append( link._toPin );
-			sb.append( " }" );
-			if ( linkIndex + 1 < data._listLink.size() )
-				sb.append( "," );
-			sb.append( "\n" );
-		}
-		sb.append( "  ]\n}\n" );
-
-		if ( FileUtil::writeTextFile( kDialogueGraphPath, sb.view() ) == false )
+		const string	   resolved = resolveDialogueGraphPath( path );
+		DialogueGraphAsset asset;
+		engineFromEditorDialogue( data, asset );
+		if ( asset.saveToFile( resolved ) == false )
 			return false;
-		SW_LOG_INFO( "Saved %zu nodes, %zu links -> %#", data._listNode.size(), data._listLink.size(), kDialogueGraphPath );
+		SW_LOG_INFO( "Saved %zu nodes, %zu links -> %#", data._listNode.size(), data._listLink.size(), resolved.c_str() );
+		return true;
+	}
+
+	string EditorToolAssetCommands::serializeDialogueGraph( const EditorDialogueGraphData& data )
+	{
+		DialogueGraphAsset asset;
+		engineFromEditorDialogue( data, asset );
+		return asset.toJson();
+	}
+
+	bool EditorToolAssetCommands::parseDialogueGraph( string_view json, EditorDialogueGraphData& outData )
+	{
+		DialogueGraphAsset asset;
+		if ( asset.parseJson( json ) == false )
+			return false;
+		editorFromEngineDialogue( asset, outData );
 		return true;
 	}
 
@@ -535,26 +764,106 @@ namespace sw::editor
 		return FileUtil::writeTextFile( absPath, sb.c_str() );
 	}
 
-	bool EditorToolAssetCommands::loadSpriteClip( EditorSpriteClipData& outData, string& outStatus )
+	bool EditorToolAssetCommands::loadSpriteClip( EditorSpriteClipData& outData, string& outStatus, string_view path )
 	{
 		outData._listFrame.clear();
 		outData._listKey.clear();
 		outData._atlasPath.clear();
 
-		const string path = EditorUtil::resolveEditorConfigFile( EditorConfig::getActive()._spriteClipFile.c_str() );
-		if ( path.empty() || FileUtil::fileExists( path ) == false )
+		const string resolved = resolveSpriteClipPath( path );
+		if ( resolved.empty() || FileUtil::fileExists( resolved ) == false )
 		{
+			if ( pathEndsWithIgnoreCase( path, ".png" ) || pathEndsWithIgnoreCase( path, ".jpg" ) ||
+				 pathEndsWithIgnoreCase( path, ".jpeg" ) || pathEndsWithIgnoreCase( path, ".dds" ) ||
+				 pathEndsWithIgnoreCase( path, ".tga" ) )
+			{
+				outData._atlasPath = string{ path };
+				outStatus		   = "Atlas from focused texture";
+				return true;
+			}
 			outStatus = "No SpriteClip.json yet";
 			return false;
 		}
 
 		string json;
-		if ( FileUtil::readTextFile( path, json ) == false || json.empty() )
+		if ( FileUtil::readTextFile( resolved, json ) == false || json.empty() )
 		{
 			outStatus = "Failed to read SpriteClip.json";
 			return false;
 		}
+		if ( parseSpriteClip( json, outData ) == false )
+		{
+			outStatus = "Failed to parse SpriteClip.json";
+			return false;
+		}
+		outStatus = "Loaded " + resolved;
+		return true;
+	}
 
+	bool EditorToolAssetCommands::saveSpriteClip( const EditorSpriteClipData& data, string_view path )
+	{
+		const string resolved = resolveSpriteClipPath( path );
+		if ( resolved.empty() )
+			return false;
+		const string text = serializeSpriteClip( data );
+		if ( FileUtil::writeFile( resolved, reinterpret_cast<const uint8*>( text.data() ), text.size() ) == false )
+			return false;
+		SW_LOG_INFO( "Saved %#", resolved.c_str() );
+		return true;
+	}
+
+	string EditorToolAssetCommands::serializeSpriteClip( const EditorSpriteClipData& data )
+	{
+		StringBuilder<2048> sb;
+		sb.append( "{\n" );
+		sb.append( "  \"atlas\": \"" ).append( JsonSerializer::escapeString( data._atlasPath ).c_str() ).append( "\",\n" );
+		sb.append( "  \"frames\": [\n" );
+		for ( size_t frameIndex = 0; frameIndex < data._listFrame.size(); ++frameIndex )
+		{
+			const EditorSpriteClipFrame& frame = data._listFrame[frameIndex];
+			sb.append( "    { \"u\": " )
+				.append( frame._u )
+				.append( ", \"v\": " )
+				.append( frame._v )
+				.append( ", \"w\": " )
+				.append( frame._w )
+				.append( ", \"h\": " )
+				.append( frame._h )
+				.append( ", \"durationMs\": " )
+				.append( frame._durationMs )
+				.append( " }" );
+			if ( frameIndex + 1 < data._listFrame.size() )
+				sb.append( "," );
+			sb.append( "\n" );
+		}
+		sb.append( "  ],\n" );
+		sb.append( "  \"transformKeys\": [\n" );
+		for ( size_t keyIndex = 0; keyIndex < data._listKey.size(); ++keyIndex )
+		{
+			const EditorSpriteClipKey& key = data._listKey[keyIndex];
+			sb.append( "    { \"time\": " )
+				.append( key._time )
+				.append( ", \"x\": " )
+				.append( key._x )
+				.append( ", \"y\": " )
+				.append( key._y )
+				.append( ", \"angleDeg\": " )
+				.append( key._angleDeg )
+				.append( " }" );
+			if ( keyIndex + 1 < data._listKey.size() )
+				sb.append( "," );
+			sb.append( "\n" );
+		}
+		sb.append( "  ]\n" );
+		sb.append( "}\n" );
+		return string{ sb.c_str() };
+	}
+
+	bool EditorToolAssetCommands::parseSpriteClip( string_view jsonView, EditorSpriteClipData& outData )
+	{
+		outData._listFrame.clear();
+		outData._listKey.clear();
+		const string json{ jsonView };
 		const string atlas = JsonSerializer::extractStringField( json, "atlas" );
 		if ( atlas.empty() == false )
 			outData._atlasPath = atlas;
@@ -583,89 +892,201 @@ namespace sw::editor
 			parseFloatAfter( json, obj, "angleDeg", key._angleDeg );
 			outData._listKey.push_back( key );
 		}
-
-		outStatus = "Loaded SpriteClip.json";
 		return true;
 	}
 
-	bool EditorToolAssetCommands::saveSpriteClip( const EditorSpriteClipData& data )
+	bool EditorToolAssetCommands::loadSequence( SequenceAsset& outAsset, string_view path )
 	{
-		const string path = EditorUtil::resolveEditorConfigFile( EditorConfig::getActive()._spriteClipFile.c_str() );
-		if ( path.empty() )
-			return false;
-
-		StringBuilder<2048> sb;
-		sb.append( "{\n" );
-		sb.append( "  \"atlas\": \"" ).append( JsonSerializer::escapeString( data._atlasPath ).c_str() ).append( "\",\n" );
-		sb.append( "  \"frames\": [\n" );
-		for ( size_t frameIndex = 0; frameIndex < data._listFrame.size(); ++frameIndex )
-		{
-			const EditorSpriteClipFrame& frame = data._listFrame[frameIndex];
-			sb.append( "    { \"u\": " ).append( frame._u ).append( ", \"v\": " ).append( frame._v ).append( ", \"w\": " ).append( frame._w ).append( ", \"h\": " ).append( frame._h ).append( ", \"durationMs\": " ).append( frame._durationMs ).append( " }" );
-			if ( frameIndex + 1 < data._listFrame.size() )
-				sb.append( "," );
-			sb.append( "\n" );
-		}
-		sb.append( "  ],\n" );
-		sb.append( "  \"transformKeys\": [\n" );
-		for ( size_t keyIndex = 0; keyIndex < data._listKey.size(); ++keyIndex )
-		{
-			const EditorSpriteClipKey& key = data._listKey[keyIndex];
-			sb.append( "    { \"time\": " ).append( key._time ).append( ", \"x\": " ).append( key._x ).append( ", \"y\": " ).append( key._y ).append( ", \"angleDeg\": " ).append( key._angleDeg ).append( " }" );
-			if ( keyIndex + 1 < data._listKey.size() )
-				sb.append( "," );
-			sb.append( "\n" );
-		}
-		sb.append( "  ]\n" );
-		sb.append( "}\n" );
-
-		const string text( sb.c_str() );
-		if ( FileUtil::writeFile( path, reinterpret_cast<const uint8*>( text.data() ), text.size() ) == false )
-			return false;
-		SW_LOG_INFO( "Saved %#", path.c_str() );
-		return true;
+		const string resolved = resolveExistingOrRelativePath( path );
+		return outAsset.loadFromFile( resolved );
 	}
 
-	void EditorToolAssetCommands::collectPrefabOverrides( const utf8* pPrefabPath, string& outPrefabPath,
-														  vector<PrefabOverrideItem>& outOverride, vector<string>& outNestedPrefab )
+	bool EditorToolAssetCommands::saveSequence( const SequenceAsset& asset, string_view path )
+	{
+		const string resolved = resolveExistingOrRelativePath( path );
+		return asset.saveToFile( resolved );
+	}
+
+	void EditorToolAssetCommands::collectPrefabOverrides( GameObject* pInstance, string_view prefabPath, string& outPrefabPath,
+														  string& outInstanceName, vector<PrefabOverrideItem>& outOverride,
+														  vector<string>& outNestedPrefab )
 	{
 		outOverride.clear();
 		outNestedPrefab.clear();
-		outPrefabPath = pPrefabPath != nullptr ? pPrefabPath : "Prefabs/Characters/Orc_Warrior.prefab";
+		outPrefabPath	= string{ prefabPath };
+		outInstanceName = pInstance != nullptr ? string{ pInstance->getName().c_str() } : string{};
 
-		outNestedPrefab.push_back( "Prefabs/Weapons/BattleAxe_Heavy.prefab" );
-		outNestedPrefab.push_back( "Prefabs/VFX/RageAura_Fire.prefab" );
-		outNestedPrefab.push_back( "Prefabs/UI/WorldHealthBar.prefab" );
+		EditorContext* pContext = EditorContext::get();
+		if ( outPrefabPath.empty() && pInstance != nullptr && pContext != nullptr )
+			outPrefabPath = pContext->getWorkspace().getGameObjectPrefabPath( pInstance->getObjectId() );
+		if ( outPrefabPath.empty() && pContext != nullptr )
+			outPrefabPath = pContext->getWorkspace().getFocusedAssetPath();
 
-		outOverride.push_back( PrefabOverrideItem{ "UnitStatsComponent", "maxHp", "250", "350", true } );
-		outOverride.push_back( PrefabOverrideItem{ "UnitStatsComponent", "attack", "35", "50", true } );
-		outOverride.push_back( PrefabOverrideItem{ "UnitStatsComponent", "defense", "15", "15", false } );
-		outOverride.push_back( PrefabOverrideItem{ "UnitStatsComponent", "moveSpeed", "4.5", "4.5", false } );
-		outOverride.push_back( PrefabOverrideItem{ "TransformComponent", "scale", "(1.0, 1.0, 1.0)", "(1.25, 1.25, 1.25)", true } );
-		outOverride.push_back( PrefabOverrideItem{ "MaterialComponent", "tintColor", "(1.0, 1.0, 1.0, 1.0)", "(1.0, 0.8, 0.8, 1.0)", true } );
-	}
+		ResourceManager* pResources = editor::getService<ResourceManager>();
+		if ( pResources == nullptr || outPrefabPath.empty() )
+			return;
 
-	void EditorToolAssetCommands::revertPrefabOverride( PrefabOverrideItem& item )
-	{
-		item._overriddenValue = item._defaultValue;
-		item._bModified		  = false;
-	}
+		PrefabAsset* pLoaded = pResources->getPrefabManager().loadPrefab( outPrefabPath );
+		if ( pLoaded == nullptr || pLoaded->isValid() == false )
+			return;
 
-	void EditorToolAssetCommands::applyPrefabOverridesToTemplate( vector<PrefabOverrideItem>& listOverride )
-	{
-		for ( PrefabOverrideItem& item : listOverride )
+		collectNestedPrefabPaths( pLoaded->getStateData(), outNestedPrefab );
+
+		if ( pInstance == nullptr )
+			return;
+
+		SceneManager* pSceneManager = editor::getService<SceneManager>();
+		if ( pSceneManager == nullptr )
+			return;
+		Scene* pScene = pSceneManager->getActiveScene();
+		if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
+			return;
+
+		GameObjectManager* pManager = pScene->getObjectManager();
+		GameObject*		   pCdo		= pManager->createGameObject( hashed_string( "__PrefabDiffCdo" ) );
+		if ( pCdo == nullptr )
+			return;
+
+		const string body = StringUtil::trim( pLoaded->getStateData().c_str() );
+		bool		 bLoadedCdo{ false };
+		if ( body.empty() == false && body.front() == '{' )
+			bLoadedCdo = ObjectStateSerializer::loadFromJsonString( pCdo, pLoaded->getStateData() );
+		else if ( body.empty() == false )
+			bLoadedCdo = ObjectStateSerializer::loadFromXmlString( pCdo, pLoaded->getStateData() );
+		if ( bLoadedCdo == false )
 		{
-			if ( item._bModified )
+			pManager->destroyObject( pCdo );
+			return;
+		}
+
+		const SerializeContext& ctx = SerializeContext::getDefault();
+		for ( Component* pInstComp : pInstance->getAllComponents() )
+		{
+			if ( pInstComp == nullptr || pInstComp->getTypeInfo() == nullptr )
+				continue;
+			const TypeInfo* pTypeInfo = pInstComp->getTypeInfo();
+			Component*		pCdoComp  = findComponentByTypeName( pCdo, pTypeInfo->_name.c_str() );
+			if ( pCdoComp == nullptr )
+				continue;
+
+			vector<uint8> listCdoBytes;
+			vector<uint8> listInstBytes;
+			pTypeInfo->forEachProperty(
+				[&]( const PropertyInfo& prop )
 			{
-				item._defaultValue = item._overriddenValue;
-				item._bModified	   = false;
+				if ( prop._metadata._bTransient == SW_TRUE )
+					return;
+				const void* pCdoPtr	 = prop.getRawPtr( pCdoComp );
+				const void* pInstPtr = prop.getRawPtr( pInstComp );
+				if ( pCdoPtr == nullptr || pInstPtr == nullptr )
+					return;
+
+				listCdoBytes.clear();
+				listInstBytes.clear();
+				if ( prop._bIsContainer == SW_TRUE && prop.hasContainerWrapper() )
+				{
+					serializeNestedContainerBinary( pCdoPtr, prop.getContainerShape(), listCdoBytes, ctx );
+					serializeNestedContainerBinary( pInstPtr, prop.getContainerShape(), listInstBytes, ctx );
+				}
+				else
+				{
+					serializeValueBinary( pCdoPtr, prop._typeName, listCdoBytes, ctx );
+					serializeValueBinary( pInstPtr, prop._typeName, listInstBytes, ctx );
+				}
+
+				PrefabOverrideItem item{};
+				item._componentName	  = pTypeInfo->_name.c_str();
+				item._propertyName	  = prop._name.c_str();
+				item._defaultValue	  = formatPropertyValue( prop, pCdoComp );
+				item._overriddenValue = formatPropertyValue( prop, pInstComp );
+				item._bModified		  = ( listCdoBytes != listInstBytes );
+				outOverride.push_back( std::move( item ) );
+			},
+				true );
+		}
+
+		pManager->destroyObject( pCdo );
+	}
+
+	void EditorToolAssetCommands::revertPrefabOverride( GameObject* pInstance, PrefabOverrideItem& item, string_view prefabPath )
+	{
+		if ( pInstance == nullptr || prefabPath.empty() )
+		{
+			item._overriddenValue = item._defaultValue;
+			item._bModified		  = false;
+			return;
+		}
+
+		ResourceManager* pResources = editor::getService<ResourceManager>();
+		if ( pResources == nullptr )
+			return;
+		PrefabAsset* pLoaded = pResources->getPrefabManager().loadPrefab( prefabPath );
+		if ( pLoaded == nullptr )
+			return;
+
+		SceneManager* pSceneManager = editor::getService<SceneManager>();
+		if ( pSceneManager == nullptr || pSceneManager->getActiveScene() == nullptr )
+			return;
+		GameObjectManager* pManager = pSceneManager->getActiveScene()->getObjectManager();
+		if ( pManager == nullptr )
+			return;
+
+		GameObject* pCdo = pManager->createGameObject( hashed_string( "__PrefabRevertCdo" ) );
+		if ( pCdo == nullptr )
+			return;
+		ObjectStateSerializer::loadFromXmlString( pCdo, pLoaded->getStateData() );
+
+		Component* pInstComp = findComponentByTypeName( pInstance, item._componentName );
+		Component* pCdoComp	 = findComponentByTypeName( pCdo, item._componentName );
+		if ( pInstComp != nullptr && pCdoComp != nullptr && pInstComp->getTypeInfo() != nullptr )
+		{
+			const PropertyInfo* pProp = pInstComp->getTypeInfo()->findPropertyInHierarchy( hashed_string( item._propertyName.c_str() ) );
+			if ( pProp != nullptr )
+			{
+				const string			beforeXml = EditorTransaction::captureSnapshot( GameObjectPtr{ pInstance } );
+				void*					pDest	  = pProp->getRawPtr( pInstComp );
+				const void*				pSrc	  = pProp->getRawPtr( pCdoComp );
+				const SerializeContext& ctx		  = SerializeContext::getDefault();
+				if ( pDest != nullptr && pSrc != nullptr )
+				{
+					vector<uint8> listBytes;
+					serializeValueBinary( pSrc, pProp->_typeName, listBytes, ctx );
+					size_t local{ 0 };
+					deserializeValueBinary( pDest, pProp->_typeName, listBytes.data(), listBytes.size(), local, ctx );
+				}
+				const string afterXml = EditorTransaction::captureSnapshot( GameObjectPtr{ pInstance } );
+				EditorTransaction::recordModify( GameObjectPtr{ pInstance }, beforeXml, afterXml, "Revert Prefab Override" );
+				item._overriddenValue = item._defaultValue;
+				item._bModified		  = false;
 			}
 		}
+		pManager->destroyObject( pCdo );
 	}
 
-	void EditorToolAssetCommands::revertAllPrefabOverrides( vector<PrefabOverrideItem>& listOverride )
+	bool EditorToolAssetCommands::applyPrefabOverridesToTemplate( GameObject* pInstance, string_view prefabPath )
 	{
-		for ( PrefabOverrideItem& item : listOverride )
-			revertPrefabOverride( item );
+		return EditorInspectorCommands::applyToPrefab( pInstance, prefabPath );
+	}
+
+	bool EditorToolAssetCommands::revertAllPrefabOverrides( GameObject* pInstance, string_view prefabPath )
+	{
+		return EditorInspectorCommands::revertToPrefab( pInstance, prefabPath );
+	}
+
+	void EditorToolAssetCommands::pushDocumentUndo( Delegate<void()> undo, Delegate<void()> redo, string_view label,
+													string_view coalesceKey )
+	{
+		CommandStack* pStack = editor::getService<CommandStack>();
+		if ( pStack == nullptr )
+			return;
+
+		CommandStack::Command cmd;
+		cmd._label = string{ label };
+		cmd._undo  = std::move( undo );
+		cmd._redo  = std::move( redo );
+		if ( coalesceKey.empty() == false )
+			pStack->pushCoalesce( coalesceKey, std::move( cmd ) );
+		else
+			pStack->push( std::move( cmd ) );
 	}
 } // namespace sw::editor

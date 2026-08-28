@@ -73,7 +73,7 @@ namespace sw
 		void resize( uint32 width, uint32 height );
 		bool createRenderPass();
 		/** @brief 프레임 시작 (vkAcquireNextImageKHR 및 커맨드버퍼 기록 시작) */
-		void beginFrame( float32 clearColor[4] );
+		void beginFrame( const float4& clearColor );
 
 		/** @brief 프레임 종료 (vkQueueSubmit 및 vkQueuePresentKHR 제출) */
 		void endFrame( bool vsync, bool bPresent = true );

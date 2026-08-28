@@ -40,7 +40,9 @@ namespace sw::editor
 	{
 		for ( const EditorPanelEntry& entry : _listPanel )
 		{
-			if ( entry._title == title && entry._pInstance != nullptr )
+			if ( entry._pInstance == nullptr )
+				continue;
+			if ( entry._title == title || entry._menuPath == title )
 				return entry._pInstance.get();
 		}
 		return nullptr;

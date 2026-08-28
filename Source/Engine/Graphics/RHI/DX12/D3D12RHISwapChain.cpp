@@ -42,7 +42,7 @@ namespace sw
 		_pDevice->_frameIndex = _pDevice->_swapChain->GetCurrentBackBufferIndex();
 	}
 
-	void D3D12RHISwapChain::beginFrame( float32 clearColor[4] )
+	void D3D12RHISwapChain::beginFrame( const float4& clearColor )
 	{
 		if ( _pDevice->_bRecording == 0 )
 		{
@@ -77,7 +77,7 @@ namespace sw
 		rtvHandle.ptr += ( _pDevice->_frameIndex * _pDevice->_rtvDescriptorSize );
 
 		_pDevice->_commandList->OMSetRenderTargets( 1, &rtvHandle, FALSE, nullptr );
-		_pDevice->_commandList->ClearRenderTargetView( rtvHandle, clearColor, 0, nullptr );
+		_pDevice->_commandList->ClearRenderTargetView( rtvHandle, &clearColor._x, 0, nullptr );
 
 		constexpr float32 kDefaultViewportX		   = 0.0f;
 		constexpr float32 kDefaultViewportY		   = 0.0f;

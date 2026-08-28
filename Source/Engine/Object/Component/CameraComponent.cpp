@@ -66,13 +66,4 @@ namespace sw
 		return getViewMatrix() * getProjectionMatrix( aspectRatio );
 	}
 
-	void CameraComponent::getCameraPosition( float32 arrOutPos[3] ) const
-	{
-		if ( arrOutPos == nullptr )
-			return;
-		const float3 pos = getWorldPosition();
-		arrOutPos[0]	 = pos._x;
-		arrOutPos[1]	 = pos._y;
-		arrOutPos[2]	 = pos._z;
-	}
 } // namespace sw

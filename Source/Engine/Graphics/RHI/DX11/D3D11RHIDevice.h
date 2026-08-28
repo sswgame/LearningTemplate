@@ -51,7 +51,7 @@ namespace sw
 		void resize( uint32 width, uint32 height );
 
 		/** @brief 프레임 시작 (백버퍼 렌더 타깃 클리어) */
-		void beginFrame( float32 clearColor[4] );
+		void beginFrame( const float4& clearColor );
 
 		/** @brief 스왑체인 Present 실행 */
 		void endFrame( bool vsync = true, bool bPresent = true );
@@ -239,7 +239,7 @@ namespace sw
 		bool initializeInternal( const RHISwapChainDesc& ) { return false; }
 		void shutdownInternal() {}
 		void resize( uint32, uint32 ) {}
-		void beginFrame( float32[4] ) {}
+		void beginFrame( const float4& ) {}
 		void endFrame( bool, bool = true ) {}
 
 		RHIBackend	getBackendType() const { return RHIBackend::DirectX11; }

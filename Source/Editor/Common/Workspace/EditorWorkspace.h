@@ -3,6 +3,7 @@
  * @brief 에디터 선택 / 애셋 포커스 / 기즈모 / 윈도우 열기 허브 (EditorContext 소유)
  */
 #pragma once
+#include "Core/Common/Macros.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
@@ -10,6 +11,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 
+#include "Editor/Common/Commands/EditorTransformCommands.h"
 #include "Editor/Common/Workspace/SelectionManager.h"
 
 #include "Engine/Object/Component/ComponentPtr.h"
@@ -101,6 +103,13 @@ namespace sw::editor
 		void requestLoadScene( string_view path );
 		bool consumeLoadScene( string& outPath );
 
+		/** @brief 활성 씬에 저장되지 않은 에디터 변경이 있음을 표시합니다. */
+		void markSceneDirty() { _bSceneDirty = SW_TRUE; }
+		/** @brief 씬 dirty 플래그를 지웁니다. 저장/로드 성공 시 호출합니다. */
+		void clearSceneDirty() { _bSceneDirty = SW_FALSE; }
+		/** @brief 저장하지 않은 씬 변경이 있으면 true입니다. */
+		bool isSceneDirty() const { return _bSceneDirty == SW_TRUE; }
+
 		// ------------------------------------------------------------------------------
 		// 6) 스크롤 타깃 · 본 계층 팝업
 		// ------------------------------------------------------------------------------
@@ -140,23 +149,6 @@ namespace sw::editor
 		bool		  saveComponentPreset( const Component* pComp, string_view presetName );
 		bool		  loadComponentPreset( Component* pComp, string_view presetFilePath );
 
-		// ------------------------------------------------------------------------------
-		// 10) 다중 오브젝트 정렬 & 지면 착지 툴
-		// ------------------------------------------------------------------------------
-		enum class AlignAxis : uint8
-		{
-			X = 0,
-			Y,
-			Z
-		};
-
-		enum class AlignType : uint8
-		{
-			Min = 0,
-			Center,
-			Max
-		};
-
 		void alignSelectedObjects( AlignAxis axis, AlignType type );
 		void distributeSelectedObjects( AlignAxis axis );
 		void snapSelectedToGround();
@@ -179,5 +171,7 @@ namespace sw::editor
 		string						  _copiedComponentTypeName;
 		bool						  _bGizmoLocalSpace;
 		bool						  _bBoneHierarchyPopupOpen;
+		uint8						  _bSceneDirty		 : 1;
+		[[maybe_unused]] uint8		  _reservedWorkspace : 7;
 	};
 } // namespace sw::editor

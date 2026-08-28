@@ -59,6 +59,8 @@ namespace sw
 	private:
 		void updateSpriteFrame();
 
+		PROPERTY( Category = "Animation", DisplayName = "Animation Graph", AssetPath, AssetType = "AnimationGraph", Tooltip = "Animation graph asset used by this animator" )
+		string _animationGraphPath;
 		PROPERTY( Category = "Animation", DisplayName = "Current Animation", Tooltip = "Currently playing animation name" )
 		string _currentAnimation;
 		PROPERTY( Category = "Animation", DisplayName = "Animation List", Tooltip = "Available animation names" )

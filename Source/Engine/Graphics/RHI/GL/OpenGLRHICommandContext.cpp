@@ -23,7 +23,7 @@ namespace sw
 		}
 	}
 
-	void OpenGLRHICommandContext::beginOffscreenPass( RHITextureHandle colorTarget, float32 clearColor[4] )
+	void OpenGLRHICommandContext::beginOffscreenPass( RHITextureHandle colorTarget, const float4& clearColor )
 	{
 		if ( colorTarget == 0 )
 		{
@@ -40,7 +40,7 @@ namespace sw
 
 		glBindFramebuffer( GL_FRAMEBUFFER, pRecord->_fbo );
 		glViewport( 0, 0, static_cast<GLsizei>( pRecord->_width ), static_cast<GLsizei>( pRecord->_height ) );
-		glClearColor( clearColor[0], clearColor[1], clearColor[2], clearColor[3] );
+		glClearColor( clearColor._x, clearColor._y, clearColor._z, clearColor._w );
 		glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 	}
 

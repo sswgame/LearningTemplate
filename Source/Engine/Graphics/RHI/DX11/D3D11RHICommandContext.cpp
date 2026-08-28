@@ -10,7 +10,7 @@
 namespace sw
 {
 
-	void D3D11RHICommandContext::beginOffscreenPass( RHITextureHandle colorTarget, float32 clearColor[4] )
+	void D3D11RHICommandContext::beginOffscreenPass( RHITextureHandle colorTarget, const float4& clearColor )
 	{
 		if ( colorTarget == 0 )
 		{
@@ -25,7 +25,7 @@ namespace sw
 		if ( pRecord == nullptr || pRecord->_rtv == nullptr )
 			return;
 
-		_pDevice->_deviceContext->ClearRenderTargetView( pRecord->_rtv.Get(), clearColor );
+		_pDevice->_deviceContext->ClearRenderTargetView( pRecord->_rtv.Get(), &clearColor._x );
 		_pDevice->_deviceContext->OMSetRenderTargets( 1, pRecord->_rtv.GetAddressOf(), nullptr );
 
 		D3D11_VIEWPORT vp{};

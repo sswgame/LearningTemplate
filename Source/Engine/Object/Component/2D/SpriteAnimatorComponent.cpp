@@ -10,7 +10,8 @@
 namespace sw
 {
 	SpriteAnimatorComponent::SpriteAnimatorComponent()
-		: _currentAnimation{}
+		: _animationGraphPath{}
+		, _currentAnimation{}
 		, _listAnimation{}
 		, _frameRate{ 0.0f }
 		, _frameTimer{ 0.0f }

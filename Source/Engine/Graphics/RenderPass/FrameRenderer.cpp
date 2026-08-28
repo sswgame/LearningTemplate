@@ -275,16 +275,15 @@ namespace sw
 		_bSceneTransformsFlushed  = 0;
 		_bHasExecutedDepthPrepass = 0;
 
-		float32 camPos[3];
-		Memory::copy( camPos, kDefaultCameraPos, sizeof( camPos ) );
+		float3 cameraPos{ kDefaultCameraPos[0], kDefaultCameraPos[1], kDefaultCameraPos[2] };
 		if ( pScene != nullptr )
 		{
 			pScene->ensureDefaultCameras();
-			CameraComponent* pCam = pScene->getActiveRenderCamera( false );
+			CameraComponent* pCam = pScene->getActiveGameCamera();
 			if ( pCam != nullptr )
-				pCam->getCameraPosition( camPos );
+				cameraPos = pCam->getCameraPosition();
 		}
-		_gpuScene.buildFromScene( pScene, camPos, _pTaskManager );
+		_gpuScene.buildFromScene( pScene, cameraPos, _pTaskManager );
 		_gpuScene.upload( pDevice );
 
 		if ( _bCallbacksBound == 0 )
@@ -317,7 +316,7 @@ namespace sw
 		setIdentityWorld();
 		buildLightViewProj( _passConstants._lightViewProj );
 		if ( packet._bHasViewProj != 0 )
-			Memory::copy( _passConstants._viewProj, packet._viewProj, sizeof( _passConstants._viewProj ) );
+			Memory::copy( _passConstants._viewProj, &packet._viewProj._11, sizeof( _passConstants._viewProj ) );
 		else
 			buildViewProj( _passConstants._viewProj );
 		_passConstants._outlineParams[1] = _transientWidth > 0 ? ( 1.0f / static_cast<float32>( _transientWidth ) ) : 0.001f;

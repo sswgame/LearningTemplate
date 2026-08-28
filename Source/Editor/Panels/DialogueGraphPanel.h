@@ -41,7 +41,7 @@ namespace sw::editor
 		/** @brief 대화 그래프 JSON 파일을 불러옵니다. */
 		void loadGraphData();
 		/** @brief 대화 그래프를 JSON 파일로 저장합니다. */
-		void saveGraphData() const;
+		void saveGraphData();
 
 		/** @brief 새 노드 ID를 발급합니다. */
 		int32 nextNodeId() const;
@@ -53,6 +53,7 @@ namespace sw::editor
 
 	private:
 		EditorNodeGraph		 _nodeGraph;
+		string				 _loadedAssetPath;
 		bool				 _bLoaded;
 		int32				 _selectedNodeId;
 		vector<DialogueNode> _listNode;

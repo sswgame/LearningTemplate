@@ -57,6 +57,9 @@
 			EditorClass* pInstance = static_cast<EditorClass*>( editorHandle );                                                                                       \
 			if ( pInstance != nullptr )                                                                                                                        \
 				pInstance->getGameViewport( pRenderTarget, pWidth, pHeight ); };                     \
+		pOutApi->getViewportCamera = []( sw::EditorHandle editorHandle ) -> void* {                                                                            \
+			EditorClass* pInstance = static_cast<EditorClass*>( editorHandle );                                                                               \
+			return pInstance != nullptr ? static_cast<void*>( pInstance->getViewportCamera() ) : nullptr; };                                                                    \
 		pOutApi->bindService	   = []( const sw::ModuleService* pService ) {                                                                                  \
 			if ( pService != nullptr )                                                                                                                         \
 				sw::editor::bindEditorService( *pService );                                                                                                    \
@@ -65,9 +68,16 @@
 		pOutApi->isPlaying		   = []( sw::EditorHandle editorHandle ) -> bool {                                                                              \
 			EditorClass* pInstance = static_cast<EditorClass*>( editorHandle );                                                                               \
 			return pInstance != nullptr ? pInstance->isPlaying() : false; };                                                                     \
+		pOutApi->isPaused		   = []( sw::EditorHandle editorHandle ) -> bool {                                                                              \
+			EditorClass* pInstance = static_cast<EditorClass*>( editorHandle );                                                                               \
+			return pInstance != nullptr ? pInstance->isPaused() : false; };                                                                     \
 		pOutApi->stopSimulation	   = []( sw::EditorHandle editorHandle ) {                                                                                      \
 			EditorClass* pInstance = static_cast<EditorClass*>( editorHandle );                                                                               \
 			if ( pInstance != nullptr )                                                                                                                        \
 				pInstance->stopSimulation(); };                                                                             \
+		pOutApi->endFrame		   = []( sw::EditorHandle editorHandle ) {                                                                                      \
+			EditorClass* pInstance = static_cast<EditorClass*>( editorHandle );                                                                               \
+			if ( pInstance != nullptr )                                                                                                                        \
+				pInstance->onHostFrameEnd(); };                                                                             \
 		return true;                                                                                                                                      \
 	}

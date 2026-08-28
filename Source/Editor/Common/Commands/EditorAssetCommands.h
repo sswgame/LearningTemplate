@@ -64,6 +64,12 @@ namespace sw::editor
 		static GameObject* spawnSprite( GameObjectManager* pManager, const utf8* pPath, const float3& worldPos );
 		/** @brief 뷰포트 드롭: 히트 위치는 호출 측, 스폰/로드만 수행합니다. */
 		static void dropAt( GameObjectManager* pManager, const utf8* pPath, const float3& spawnPos );
+		/** @brief 활성 씬을 XML로 저장합니다. path가 비면 씬 소스 경로를 씁니다. */
+		static bool saveActiveScene( string_view path = {} );
+		/** @brief 파일을 Content Browser 폴더로 복사하고 메타를 만듭니다. */
+		static uint32 importFiles( string_view destFolderAbs, const vector<string>& listSourcePath );
+		/** @brief 애셋 파일과 짝 .meta를 삭제합니다. */
+		static bool deleteAsset( string_view absolutePath );
 		/** @brief Resource 트리에서 씬/프리팹/텍스처/셰이더/데이터를 분류해 채웁니다. */
 		static void collectResourceIndex( vector<EditorResourceIndexEntry>& outList );
 		/** @brief 폴더의 직속 하위 폴더/파일을 채웁니다. .meta는 제외합니다. */

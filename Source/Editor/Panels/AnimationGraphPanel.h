@@ -42,7 +42,7 @@ namespace sw::editor
 		/** @brief 그래프 데이터를 불러옵니다. */
 		void loadGraphData();
 		/** @brief 그래프 데이터를 저장합니다. */
-		void saveGraphData() const;
+		void saveGraphData();
 		/** @brief 다음에 쓸 노드 ID를 반환합니다. */
 		int32 nextNodeId() const;
 		/** @brief 다음에 쓸 링크 ID를 반환합니다. */
@@ -52,6 +52,7 @@ namespace sw::editor
 
 	private:
 		EditorNodeGraph	  _nodeGraph;
+		string			  _loadedAssetPath;
 		bool			  _bLoaded;
 		vector<GraphNode> _listNode;
 		vector<GraphLink> _listLink;

@@ -40,6 +40,7 @@ namespace sw
 	class RHIBackendRegistry;
 
 	class IRHIDevice;
+	class CameraComponent;
 
 	/**
 	 * @class EngineLoop
@@ -64,12 +65,13 @@ namespace sw
 		/**
 		 * @brief 씬 업데이트, RHI 제출 등을 수행합니다.
 		 * @param deltaTime 델타 타임
-		 * @param bEnableEditor 에디터 활성화 여부
-		 * @param gameRenderTarget 에디터 Game View RT 식별자 (없으면 0)
+		 * @param gameRenderTarget 오프스크린 Game View RT 식별자 (없으면 0 = 백버퍼)
 		 * @param vpWidth 뷰포트 너비
 		 * @param vpHeight 뷰포트 높이
+		 * @param pViewCamera 호스트가 지정한 렌더 카메라. nullptr이면 씬의 게임 카메라.
+		 * @param bTickScene false이면 씬 GameObject tick을 건너뜁니다 (에디터 Pause).
 		 */
-		void tick( float32 deltaTime, bool bEnableEditor, uint64 gameRenderTarget, uint32 vpWidth, uint32 vpHeight );
+		void tick( float32 deltaTime, uint64 gameRenderTarget, uint32 vpWidth, uint32 vpHeight, CameraComponent* pViewCamera, bool bTickScene );
 		/** @brief 입력 종료 등 프레임의 마지막 단계입니다. */
 		void endFrame();
 
@@ -82,7 +84,9 @@ namespace sw
 		void setPresentHook( sw::PresentHookDelegate presentHook );
 		void setPostPresentHook( sw::PresentHookDelegate postPresentHook );
 		void updateShellActions( float32 deltaTime );
-		void pollDebugHotkeys( bool bEnableEditor, const Delegate<void( const utf8* )>& forceReloadCallback );
+		void pollDebugHotkeys( const Delegate<void( const utf8* )>& forceReloadCallback );
+		/** @brief 셸 디버그 ActionMap에서 해당 액션이 이번 프레임 발동했는지 반환합니다. */
+		bool wasDebugActionTriggered( string_view actionName ) const;
 
 		// ----------------------------------------------------------------------
 		// Getter (App이 ModuleHost 등과 연동하기 위해 필요)

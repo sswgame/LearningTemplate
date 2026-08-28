@@ -42,11 +42,11 @@ namespace sw
 		/** @brief FrameRenderer로 GameObject를 렌더링합니다. */
 		virtual void render( IRHIDevice* pRhiDevice );
 		/**
-		 * @brief 없으면 EditorCamera + GameCamera GameObject를 생성합니다.
-		 * @details 각각 CameraComponent(역할 Editor / Game)를 가집니다. init마다 호출해도 안전합니다.
+		 * @brief 없으면 GameCamera GameObject를 생성합니다.
+		 * @details CameraComponent(역할 Game)를 가집니다. init마다 호출해도 안전합니다.
 		 */
 		bool ensureDefaultCameras();
-		/** @brief 씬에서 역할별 최고 우선순위 카메라를 다시 찾습니다. */
+		/** @brief 씬에서 Game 역할 최고 우선순위 카메라를 다시 찾습니다. */
 		void refreshCameraCache();
 
 		/** @brief App이 소유한 FrameRenderer를 연결합니다 (비소유). */
@@ -57,8 +57,6 @@ namespace sw
 		void setSourcePath( string_view path ) { _sourcePath = path; }
 		/** @brief 활성 게임 카메라를 설정합니다. */
 		void setActiveGameCamera( CameraComponent* pCamera );
-		/** @brief 활성 에디터 카메라를 설정합니다. */
-		void setActiveEditorCamera( CameraComponent* pCamera );
 
 		/** @brief 연결된 FrameRenderer를 반환합니다. */
 		FrameRenderer* getFrameRenderer() const { return _pFrameRenderer; }
@@ -74,10 +72,6 @@ namespace sw
 		Material* getMaterial() const { return _pMaterial; }
 		/** @brief 활성 게임 카메라를 반환합니다. */
 		CameraComponent* getActiveGameCamera() const;
-		/** @brief 활성 에디터 카메라를 반환합니다. */
-		CameraComponent* getActiveEditorCamera() const;
-		/** @brief 에디터 모드면 에디터 카메라, 아니면 게임 카메라(없으면 반대쪽). */
-		CameraComponent* getActiveRenderCamera( bool bEditorViewport ) const;
 
 	private:
 		/** @brief 기본 머티리얼 참조를 해제합니다. */
@@ -95,7 +89,6 @@ namespace sw
 		Material*					  _pMaterial;
 		FrameRenderer*				  _pFrameRenderer;
 		sw::ComponentHandle			  _activeGameCamera;
-		sw::ComponentHandle			  _activeEditorCamera;
 		bool						  _bCamerasEnsured;
 	};
 } // namespace sw

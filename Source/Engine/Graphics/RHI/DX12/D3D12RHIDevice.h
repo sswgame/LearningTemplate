@@ -283,7 +283,7 @@ namespace sw
 		bool initializeInternal( const RHISwapChainDesc& ) override { return false; }
 		void shutdownInternal() override {}
 		void resize( uint32, uint32 ) override {}
-		void beginFrame( float32[4] ) override {}
+		void beginFrame( const float4& ) {}
 		void endFrame( bool, bool = true ) override {}
 
 		RHIBackend	getBackendType() const override { return RHIBackend::DirectX12; }

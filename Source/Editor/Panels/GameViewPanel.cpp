@@ -20,6 +20,8 @@
 namespace sw::editor
 {
 	GameViewPanel::GameViewPanel()
+		: _viewportClient{}
+		, _bConfirmUnsavedPlay{ false }
 	{
 	}
 
@@ -56,6 +58,25 @@ namespace sw::editor
 		}
 		editor::endToolbar();
 
+		if ( _bConfirmUnsavedPlay )
+		{
+			ImGui::OpenPopup( "##UnsavedScenePlay" );
+			_bConfirmUnsavedPlay = false;
+		}
+		if ( ImGui::BeginPopupModal( "##UnsavedScenePlay", nullptr, ImGuiWindowFlags_AlwaysAutoResize ) )
+		{
+			ImGui::TextUnformatted( "Scene has unsaved changes. Play anyway?" );
+			if ( ImGui::Button( "Play" ) )
+			{
+				EditorPlaySession::play();
+				ImGui::CloseCurrentPopup();
+			}
+			ImGui::SameLine();
+			if ( ImGui::Button( "Cancel" ) )
+				ImGui::CloseCurrentPopup();
+			ImGui::EndPopup();
+		}
+
 		const ImVec2 size = ImGui::GetContentRegionAvail();
 		if ( size.x > 1.0f && size.y > 1.0f )
 		{
@@ -82,6 +103,8 @@ namespace sw::editor
 	void GameViewPanel::drawTransportControls()
 	{
 		const PlaySessionState currentState = EditorPlaySession::getState();
+		EditorContext*		   pContext		= EditorContext::get();
+		const bool			   bSceneDirty	= ( pContext != nullptr && pContext->getWorkspace().isSceneDirty() );
 
 		if ( currentState == PlaySessionState::Playing )
 		{
@@ -89,11 +112,21 @@ namespace sw::editor
 			ImGui::SameLine();
 		}
 		else if ( ImGui::Button( "Play" ) )
-			EditorPlaySession::play();
+		{
+			if ( bSceneDirty && EditorPlaySession::isStopped() )
+				_bConfirmUnsavedPlay = true;
+			else
+				EditorPlaySession::play();
+		}
 
 		ImGui::SameLine();
 		if ( ImGui::Button( "Simulate" ) )
-			EditorPlaySession::play();
+		{
+			if ( bSceneDirty && EditorPlaySession::isStopped() )
+				_bConfirmUnsavedPlay = true;
+			else
+				EditorPlaySession::play();
+		}
 
 		ImGui::SameLine();
 		if ( currentState == PlaySessionState::Paused )
@@ -106,10 +139,7 @@ namespace sw::editor
 
 		ImGui::SameLine();
 		if ( ImGui::Button( "Step" ) )
-		{
-			if ( currentState != PlaySessionState::Playing )
-				EditorPlaySession::play();
-		}
+			EditorPlaySession::stepOnce();
 
 		ImGui::SameLine();
 		if ( ImGui::Button( "Stop" ) )

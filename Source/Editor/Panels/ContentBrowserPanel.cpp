@@ -225,9 +225,7 @@ namespace sw::editor
 
 			ImGui::Separator();
 			if ( ImGui::MenuItem( "Delete" ) )
-			{
-				FileUtil::removeFile( entry._absolutePath );
-			}
+				EditorAssetCommands::deleteAsset( entry._absolutePath );
 			ImGui::EndPopup();
 		}
 	}
@@ -844,39 +842,7 @@ namespace sw::editor
 			return;
 		}
 
-		uint32 copied{ 0 };
-		for ( const string& sourcePath : listPaths )
-		{
-			if ( FileUtil::fileExists( sourcePath ) == false )
-			{
-				SW_LOG_WARNING( "Import skipped (missing): %#", sourcePath.c_str() );
-				continue;
-			}
-
-			const string fileName = FileUtil::getFileNamePart( sourcePath );
-			// 루트는 FS 대소문자를 유지하고, 상대 폴더+파일명은 저장용으로 소문자 강제합니다.
-			const string destPath = ResourceUtil::makeSavePath( _selectedFolderAbs, fileName );
-
-			if ( FileUtil::pathsEqualNormalized( sourcePath, destPath ) )
-			{
-				SW_LOG_TRACE( "Already in folder: %#", fileName.c_str() );
-				continue;
-			}
-
-			FileUtil::createDirectory( destPath );
-			if ( FileUtil::copyFile( sourcePath, destPath ) )
-			{
-				++copied;
-				const string rel = AssetDatabase::toRelativePath( destPath );
-				if ( rel.empty() == false )
-					editor::getService<ResourceManager>()->getAssetDatabase().ensureMeta( rel, true );
-				SW_LOG_TRACE( "Imported: %# -> %#", sourcePath.c_str(), destPath.c_str() );
-			}
-			else
-				SW_LOG_ERROR( "Failed to import: %#", sourcePath.c_str() );
-		}
-
-		if ( copied > 0 )
+		if ( EditorAssetCommands::importFiles( _selectedFolderAbs, listPaths ) > 0 )
 			_bFolderDirty = true;
 	}
 } // namespace sw::editor

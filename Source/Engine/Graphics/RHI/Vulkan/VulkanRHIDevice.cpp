@@ -590,9 +590,8 @@ namespace sw
 			_bSwapChainDirty = 1;
 	}
 
-	void VulkanRHIDevice::beginFrame( float32 clearColor[4] )
+	void VulkanRHIDevice::beginFrame( const float4& clearColor )
 	{
-		(void)clearColor;
 		_bFrameStarted = false;
 		if ( _width == 0 || _height == 0 )
 			return;
@@ -667,18 +666,9 @@ namespace sw
 			rpBeginInfo.renderArea.extent = { _swapChainExtentWidth, _swapChainExtentHeight };
 
 			VkClearValue clearVal{};
-			if ( clearColor != nullptr )
-			{
-				clearVal.color = {
-					{ clearColor[0], clearColor[1], clearColor[2], clearColor[3] }
-				   };
-			}
-			else
-			{
-				clearVal.color = {
-					{ 0.0f, 0.0f, 0.0f, 1.0f }
-				   };
-			}
+			clearVal.color = {
+				{ clearColor._x, clearColor._y, clearColor._z, clearColor._w }
+			   };
 			rpBeginInfo.clearValueCount = 1;
 			rpBeginInfo.pClearValues	= &clearVal;
 

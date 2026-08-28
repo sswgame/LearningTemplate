@@ -33,11 +33,11 @@ namespace sw
 			return dx * dx + dy * dy + dz * dz;
 		}
 
-		bool cameraNearlyEqual( const float32 a[3], const float32 b[3] )
+		bool cameraNearlyEqual( const float3& a, const float3& b )
 		{
 			constexpr float32 kEps = 1e-5f;
-			return MathUtil::abs( a[0] - b[0] ) <= kEps && MathUtil::abs( a[1] - b[1] ) <= kEps &&
-				   MathUtil::abs( a[2] - b[2] ) <= kEps;
+			return MathUtil::abs( a._x - b._x ) <= kEps && MathUtil::abs( a._y - b._y ) <= kEps &&
+				   MathUtil::abs( a._z - b._z ) <= kEps;
 		}
 
 		void mixHash( uint64& h, uint64 v )
@@ -90,10 +90,10 @@ namespace sw
 
 	void GpuScene::invalidateBuildCache()
 	{
-		_lastContentHash  = 0;
-		_lastCameraPos[0] = _lastCameraPos[1] = _lastCameraPos[2] = 0.0f;
-		_bHasBuildCache											  = 0;
-		_bCpuDirty												  = 1;
+		_lastContentHash = 0;
+		_lastCameraPos	 = float3{};
+		_bHasBuildCache	 = 0;
+		_bCpuDirty		 = 1;
 	}
 
 	void GpuScene::clear()
@@ -242,7 +242,7 @@ namespace sw
 		fillRangeVal( _listScratchCandidate, _listScratchRaw, start, end );
 	}
 
-	void GpuScene::buildFromScene( Scene* pScene, const float32 cameraPos[3],
+	void GpuScene::buildFromScene( Scene* pScene, const float3& cameraPos,
 								   TaskManager* pTaskManager )
 	{
 		if ( pScene == nullptr )
@@ -298,15 +298,10 @@ namespace sw
 			return;
 		}
 
-		const float32 arrCam[3] = {
-			cameraPos != nullptr ? cameraPos[0] : 0.0f,
-			cameraPos != nullptr ? cameraPos[1] : 0.0f,
-			cameraPos != nullptr ? cameraPos[2] : 0.0f };
-
 		const uint64 contentHash = hashCandidates();
 		const bool	 bContentSame =
 			_bHasBuildCache != 0 && contentHash == _lastContentHash && _listInstance.empty() == false;
-		const bool bCamSame = _bHasBuildCache != 0 && cameraNearlyEqual( arrCam, _lastCameraPos );
+		const bool bCamSame = _bHasBuildCache != 0 && cameraNearlyEqual( cameraPos, _lastCameraPos );
 
 		if ( bContentSame && bCamSame )
 			return;
@@ -333,7 +328,7 @@ namespace sw
 			rebuildPartitionTables();
 		}
 
-		sortTransparent( arrCam );
+		sortTransparent( &cameraPos._x );
 
 		_listInstance.clear();
 		_listOpaqueBatch.clear();
@@ -342,9 +337,9 @@ namespace sw
 		buildBatches();
 
 		_lastContentHash = contentHash;
-		Memory::copy( _lastCameraPos, arrCam, sizeof( _lastCameraPos ) );
-		_bHasBuildCache = 1;
-		_bCpuDirty		= 1;
+		_lastCameraPos	 = cameraPos;
+		_bHasBuildCache	 = 1;
+		_bCpuDirty		 = 1;
 	}
 
 	bool GpuScene::upload( IRHIDevice* pDevice )

@@ -19,6 +19,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Utility/Resource/AssetDatabase.h"
+#include "Engine/Utility/Resource/ResourceManager.h"
 #include "Engine/Utility/Resource/ResourceUtil.h"
 
 #include "RuntimeAPI/Service/EditorService.h"
@@ -236,7 +237,83 @@ namespace sw::editor
 		}
 
 		if ( ext == ".png" || ext == ".jpg" || ext == ".dds" || ext == ".tga" || ext == ".bmp" )
+		{
 			spawnSprite( pManager, pPath, spawnPos );
+			return;
+		}
+
+		openPath( pPath );
+	}
+
+	bool EditorAssetCommands::saveActiveScene( string_view path )
+	{
+		SceneManager* pSceneManager = editor::getService<SceneManager>();
+		if ( pSceneManager == nullptr )
+			return false;
+		if ( pSceneManager->saveActiveScene( path ) == false )
+			return false;
+		EditorContext* pContext = EditorContext::get();
+		if ( pContext != nullptr )
+			pContext->getWorkspace().clearSceneDirty();
+		return true;
+	}
+
+	uint32 EditorAssetCommands::importFiles( string_view destFolderAbs, const vector<string>& listSourcePath )
+	{
+		if ( destFolderAbs.empty() )
+		{
+			SW_LOG_WARNING( "Import cancelled — no destination folder." );
+			return 0;
+		}
+
+		uint32 copied{ 0 };
+		for ( const string& sourcePath : listSourcePath )
+		{
+			if ( FileUtil::fileExists( sourcePath ) == false )
+			{
+				SW_LOG_WARNING( "Import skipped (missing): %#", sourcePath.c_str() );
+				continue;
+			}
+
+			const string fileName = FileUtil::getFileNamePart( sourcePath );
+			const string destPath = ResourceUtil::makeSavePath( destFolderAbs, fileName );
+
+			if ( FileUtil::pathsEqualNormalized( sourcePath, destPath ) )
+			{
+				SW_LOG_TRACE( "Already in folder: %#", fileName.c_str() );
+				continue;
+			}
+
+			FileUtil::createDirectory( destPath );
+			if ( FileUtil::copyFile( sourcePath, destPath ) == false )
+			{
+				SW_LOG_ERROR( "Failed to import: %#", sourcePath.c_str() );
+				continue;
+			}
+
+			++copied;
+			const string rel = AssetDatabase::toRelativePath( destPath );
+			if ( rel.empty() == false )
+			{
+				ResourceManager* pResources = editor::getService<ResourceManager>();
+				if ( pResources != nullptr )
+					pResources->getAssetDatabase().ensureMeta( rel, true );
+			}
+			SW_LOG_TRACE( "Imported: %# -> %#", sourcePath.c_str(), destPath.c_str() );
+		}
+		return copied;
+	}
+
+	bool EditorAssetCommands::deleteAsset( string_view absolutePath )
+	{
+		if ( absolutePath.empty() )
+			return false;
+		const string abs{ absolutePath };
+		const bool	 bRemoved = FileUtil::removeFile( abs );
+		const string metaPath = abs + ".meta";
+		if ( FileUtil::fileExists( metaPath ) )
+			FileUtil::removeFile( metaPath );
+		return bRemoved;
 	}
 
 	void EditorAssetCommands::collectResourceIndex( vector<EditorResourceIndexEntry>& outList )

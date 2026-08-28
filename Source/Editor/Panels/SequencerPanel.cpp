@@ -2,6 +2,15 @@
 
 #include "Editor/Panels/SequencerPanel.h"
 
+#include "Core/String/StringUtil.h"
+
+#include "Editor/Common/Commands/EditorToolAssetCommands.h"
+#include "Editor/Common/Gui/EditorChrome.h"
+#include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorWorkspace.h"
+
+#include "Engine/Sequencer/SequenceAsset.h"
+
 #include <imgui.h>
 #include <ImGuizmo.h>
 #include <ImSequencer.h>
@@ -11,6 +20,7 @@ namespace sw::editor
 	struct Item
 	{
 		string _name;
+		string _targetObject;
 		int32  _start{ 0 };
 		int32  _end{ 10 };
 		int32  _type{ 0 };
@@ -103,6 +113,7 @@ namespace sw::editor
 		, _selected{ -1 }
 		, _firstFrame{ 0 }
 		, _arrCinematicNote{}
+		, _loadedAssetPath{}
 		, _sequence{ make_unique<ClipSequence>() }
 	{
 		StringUtil::strncpy( _arrCinematicNote, "Cinematic notes (not a clip track).", sizeof( _arrCinematicNote ) - 1 );
@@ -118,6 +129,23 @@ namespace sw::editor
 
 	void SequencerPanel::drawContent()
 	{
+		loadFromFocusedPath();
+
+		if ( editor::beginToolbar( "##SequencerToolbar" ) )
+		{
+			if ( ImGui::Button( "Load" ) )
+				loadFromFocusedPath();
+			ImGui::SameLine();
+			if ( ImGui::Button( "Save" ) )
+				saveToLoadedPath();
+			ImGui::SameLine();
+			if ( _loadedAssetPath.empty() )
+				ImGui::TextDisabled( "No .seq file focused" );
+			else
+				ImGui::TextDisabled( "%s", _loadedAssetPath.c_str() );
+		}
+		editor::endToolbar();
+
 		ImGui::SliderInt( "Scrub Frame", &_currentFrame, _sequence->_frameMin, _sequence->_frameMax );
 		ImGui::Text( "Current Frame: %d", _currentFrame );
 
@@ -131,9 +159,132 @@ namespace sw::editor
 			arrNameBuf[sizeof( arrNameBuf ) - 1] = '\0';
 			if ( ImGui::InputText( "Clip Name", arrNameBuf, sizeof( arrNameBuf ) ) )
 				item._name = arrNameBuf;
+			utf8 arrTargetBuf[constant::kMaxBuffer128];
+			StringUtil::strncpy( arrTargetBuf, item._targetObject.c_str(), sizeof( arrTargetBuf ) - 1 );
+			arrTargetBuf[sizeof( arrTargetBuf ) - 1] = '\0';
+			if ( ImGui::InputText( "Target Object", arrTargetBuf, sizeof( arrTargetBuf ) ) )
+				item._targetObject = arrTargetBuf;
 		}
 
 		ImSequencer::Sequencer( _sequence.get(), &_currentFrame, &_bExpanded, &_selected, &_firstFrame,
 								ImSequencer::SEQUENCER_EDIT_STARTEND | ImSequencer::SEQUENCER_ADD | ImSequencer::SEQUENCER_DEL | ImSequencer::SEQUENCER_CHANGE_FRAME );
+	}
+
+	void SequencerPanel::loadFromFocusedPath()
+	{
+		EditorContext* pContext = EditorContext::get();
+		if ( pContext == nullptr || _sequence == nullptr )
+			return;
+
+		const string& focused = pContext->getWorkspace().getFocusedAssetPath();
+		if ( focused.empty() || EditorToolAssetCommands::isSequencerPath( focused ) == false )
+			return;
+		if ( focused == _loadedAssetPath )
+			return;
+
+		SequenceAsset asset;
+		if ( EditorToolAssetCommands::loadSequence( asset, focused ) == false )
+			return;
+
+		_loadedAssetPath	 = focused;
+		_sequence->_frameMin = asset._frameMin;
+		_sequence->_frameMax = asset._frameMax;
+		StringUtil::strncpy( _arrCinematicNote, asset._note.c_str(), sizeof( _arrCinematicNote ) - 1 );
+		_arrCinematicNote[sizeof( _arrCinematicNote ) - 1] = '\0';
+		_sequence->_listItems.clear();
+		for ( const SequenceTrackItem& src : asset._listItem )
+		{
+			Item item{};
+			item._name		   = src._name;
+			item._targetObject = src._targetObject;
+			item._start		   = src._start;
+			item._end		   = src._end;
+			item._type		   = src._type;
+			item._color		   = src._color;
+			_sequence->_listItems.push_back( std::move( item ) );
+		}
+	}
+
+	void SequencerPanel::saveToLoadedPath()
+	{
+		if ( _loadedAssetPath.empty() || _sequence == nullptr )
+			return;
+
+		SequenceAsset previous;
+		const bool	  bHadFile	 = EditorToolAssetCommands::loadSequence( previous, _loadedAssetPath );
+		const string  beforeJson = bHadFile ? previous.toJson() : string{};
+
+		SequenceAsset asset;
+		asset._frameMin = _sequence->_frameMin;
+		asset._frameMax = _sequence->_frameMax;
+		asset._note		= _arrCinematicNote;
+		for ( const Item& src : _sequence->_listItems )
+		{
+			SequenceTrackItem item{};
+			item._name		   = src._name;
+			item._targetObject = src._targetObject;
+			item._start		   = src._start;
+			item._end		   = src._end;
+			item._type		   = src._type;
+			item._color		   = src._color;
+			asset._listItem.push_back( std::move( item ) );
+		}
+		if ( EditorToolAssetCommands::saveSequence( asset, _loadedAssetPath ) == false )
+			return;
+
+		const string afterJson = asset.toJson();
+		if ( beforeJson == afterJson )
+			return;
+
+		const string path = _loadedAssetPath;
+		EditorToolAssetCommands::pushDocumentUndo(
+			SW_DELEGATE_LAMBDA( Delegate<void()>, [this, path, beforeJson]()
+		{
+			SequenceAsset restored;
+			if ( beforeJson.empty() == false )
+				restored.parseJson( beforeJson );
+			EditorToolAssetCommands::saveSequence( restored, path );
+			if ( _loadedAssetPath != path || _sequence == nullptr )
+				return;
+			_sequence->_frameMin = restored._frameMin;
+			_sequence->_frameMax = restored._frameMax;
+			StringUtil::strncpy( _arrCinematicNote, restored._note.c_str(), sizeof( _arrCinematicNote ) - 1 );
+			_sequence->_listItems.clear();
+			for ( const SequenceTrackItem& src : restored._listItem )
+			{
+				Item item{};
+				item._name		   = src._name;
+				item._targetObject = src._targetObject;
+				item._start		   = src._start;
+				item._end		   = src._end;
+				item._type		   = src._type;
+				item._color		   = src._color;
+				_sequence->_listItems.push_back( std::move( item ) );
+			}
+		} ),
+			SW_DELEGATE_LAMBDA( Delegate<void()>, [this, path, afterJson]()
+		{
+			SequenceAsset restored;
+			restored.parseJson( afterJson );
+			EditorToolAssetCommands::saveSequence( restored, path );
+			if ( _loadedAssetPath != path || _sequence == nullptr )
+				return;
+			_sequence->_frameMin = restored._frameMin;
+			_sequence->_frameMax = restored._frameMax;
+			StringUtil::strncpy( _arrCinematicNote, restored._note.c_str(), sizeof( _arrCinematicNote ) - 1 );
+			_sequence->_listItems.clear();
+			for ( const SequenceTrackItem& src : restored._listItem )
+			{
+				Item item{};
+				item._name		   = src._name;
+				item._targetObject = src._targetObject;
+				item._start		   = src._start;
+				item._end		   = src._end;
+				item._type		   = src._type;
+				item._color		   = src._color;
+				_sequence->_listItems.push_back( std::move( item ) );
+			}
+		} ),
+			"Save Sequence" );
 	}
 } // namespace sw::editor

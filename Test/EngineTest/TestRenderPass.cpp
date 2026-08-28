@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Memory/FrameArenaAllocator.h"
+#include "Core/String/hashed_string.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Graphics/Material/Material.h"
@@ -17,6 +18,7 @@
 #include "Engine/Graphics/RenderPass/RenderPipelineResource.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Window/IWindow.h"
@@ -79,22 +81,17 @@ SW_TEST_CASE( RenderPassTest, UnitCubeMeshComponent )
 }
 
 /**
- * @brief [RenderPassTest] 에디터·게임 카메라
+ * @brief [RenderPassTest] 게임 카메라
  */
 SW_TEST_CASE( RenderPassTest, EditorAndGameCameras )
 {
 	sw::Scene scene( "CameraTestScene" );
 	SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
 
-	sw::CameraComponent* editorCam = scene.getActiveEditorCamera();
-	sw::CameraComponent* gameCam   = scene.getActiveGameCamera();
-	SW_EXPECT_TRUE( editorCam != nullptr );
+	sw::CameraComponent* gameCam = scene.getActiveGameCamera();
 	SW_EXPECT_TRUE( gameCam != nullptr );
-	SW_EXPECT_TRUE( editorCam->getRole() == sw::CameraRole::Editor );
 	SW_EXPECT_TRUE( gameCam->getRole() == sw::CameraRole::Game );
-
-	SW_EXPECT_TRUE( scene.getActiveRenderCamera( true ) == editorCam );
-	SW_EXPECT_TRUE( scene.getActiveRenderCamera( false ) == gameCam );
+	SW_EXPECT_TRUE( scene.getObjectManager()->findGameObjectByName( sw::hashed_string( "EditorCamera" ) ) == nullptr );
 
 	const sw::float4x4 vp = gameCam->getViewProjectionMatrix( 16.0f / 9.0f );
 	SW_EXPECT_TRUE( std::fabs( vp._11 ) > 1e-6f || std::fabs( vp._22 ) > 1e-6f );
@@ -459,7 +456,7 @@ SW_TEST_CASE( RenderPassTest, FrameRendererInitializeAndExecuteSmoke )
 	sw::unique_ptr<sw::IWindow>	   window;
 	sw::shared_ptr<sw::IRHIDevice> device;
 	const sw::RHIBackend		   backends[] = {
-		  sw::RHIBackend::DirectX11, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL, sw::RHIBackend::DirectX12 };
+		sw::RHIBackend::DirectX11, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL, sw::RHIBackend::DirectX12 };
 	bool bOk{ false };
 	for ( sw::RHIBackend backend : backends )
 	{

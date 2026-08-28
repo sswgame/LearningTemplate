@@ -669,7 +669,7 @@ namespace sw
 		SW_LOG_TRACE( "OpenGL RHI Resized to %# x %#", width, height );
 	}
 
-	void OpenGLRHIDevice::beginFrame( float32 arrClearColor[4] )
+	void OpenGLRHIDevice::beginFrame( const float4& clearColor )
 	{
 		if ( _bInitialized == false )
 			return;
@@ -681,7 +681,7 @@ namespace sw
 
 		glBindFramebuffer( GL_FRAMEBUFFER, 0 );
 		glViewport( 0, 0, static_cast<GLsizei>( _width ), static_cast<GLsizei>( _height ) );
-		glClearColor( arrClearColor[0], arrClearColor[1], arrClearColor[2], arrClearColor[3] );
+		glClearColor( clearColor._x, clearColor._y, clearColor._z, clearColor._w );
 		glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 	}
 

@@ -43,10 +43,11 @@ namespace sw::editor
 		/** @brief SpriteClip.json을 불러옵니다. */
 		void loadJson();
 		/** @brief SpriteClip.json을 저장합니다. */
-		void saveJson() const;
+		void saveJson();
 
 	private:
 		utf8				 _arrAtlasPath[256];
+		string				 _loadedAssetPath;
 		vector<Frame>		 _listFrame;
 		vector<TransformKey> _listKey;
 		int32				 _selectedFrame;

@@ -25,6 +25,7 @@ namespace sw
 	class LiveReloadManager;
 	class ModuleCompiler;
 	class RenderThread;
+	class CameraComponent;
 	struct NativeWindowEvent;
 
 	/**
@@ -69,6 +70,12 @@ namespace sw
 
 		/** @brief 이번 프레임 Game View RT 핸들과 크기를 에디터에서 조회합니다. */
 		void getGameViewport( uint64& renderTarget, uint32& width, uint32& height ) const;
+		/** @brief 이번 프레임 Game View에 쓸 카메라를 에디터에서 조회합니다. */
+		CameraComponent* getViewportCamera() const;
+		/** @brief 에디터가 월드를 틱해야 하면 true입니다. Pause이면서 Step이 아니면 false입니다. */
+		bool shouldTickScene() const;
+		/** @brief 월드 틱 이후 에디터 Step을 소비합니다. */
+		void endEditorFrame();
 
 		/** @brief 에디터 인스턴스 핸들을 반환합니다. */
 		EditorHandle getEditor() const { return _editor; }

@@ -22,7 +22,7 @@ namespace sw
 		virtual void resize( uint32 width, uint32 height ) = 0;
 
 		/** @brief 프레임 렌더를 시작합니다 (백버퍼 클리어). */
-		virtual void beginFrame( float32 clearColor[4] ) = 0;
+		virtual void beginFrame( const float4& clearColor ) = 0;
 
 		/** @brief 프레임 렌더를 끝냅니다. bPresent=false면 GPU submit만 하고 Present는 생략합니다. */
 		virtual void endFrame( bool vsync = true, bool bPresent = true ) = 0;
@@ -31,7 +31,7 @@ namespace sw
 		 * @brief 오프스크린 컬러 타깃에 렌더를 시작합니다.
 		 * @note 기본 구현은 스왑체인 beginFrame으로 떨어집니다. 백엔드는 반드시 override 하세요.
 		 */
-		virtual void beginOffscreenPass( RHITextureHandle colorTarget, float32 clearColor[4] )
+		virtual void beginOffscreenPass( RHITextureHandle colorTarget, const float4& clearColor )
 		{
 			(void)colorTarget;
 			beginFrame( clearColor );

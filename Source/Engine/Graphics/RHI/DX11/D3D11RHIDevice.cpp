@@ -208,7 +208,7 @@ namespace sw
 		createRenderTargetView();
 	}
 
-	void D3D11RHIDevice::beginFrame( float32 clearColor[4] )
+	void D3D11RHIDevice::beginFrame( const float4& clearColor )
 	{
 		if ( _deviceContext == nullptr || _swapChain == nullptr )
 			return;
@@ -219,7 +219,7 @@ namespace sw
 		if ( _renderTargetView == nullptr )
 			return;
 
-		_deviceContext->ClearRenderTargetView( _renderTargetView.Get(), clearColor );
+		_deviceContext->ClearRenderTargetView( _renderTargetView.Get(), &clearColor._x );
 		_deviceContext->OMSetRenderTargets( 1, _renderTargetView.GetAddressOf(), nullptr );
 
 		constexpr float32 kDefaultViewportX		   = 0.0f;

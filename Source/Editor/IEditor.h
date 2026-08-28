@@ -9,6 +9,7 @@ namespace sw
 {
 	class IRHIDevice;
 	class IWindow;
+	class CameraComponent;
 	struct NativeWindowEvent;
 
 	/**
@@ -52,9 +53,15 @@ namespace sw
 		virtual void unregisterTexture( void* pTextureID ) = 0;
 		/** @brief 이번 프레임 Game View RT 핸들과 크기를 조회합니다. */
 		virtual void getGameViewport( uint64* pRenderTarget, uint32* pWidth, uint32* pHeight ) const = 0;
-		/** @brief 에디터 시뮬레이션(PIE)이 실행 중인지 반환합니다. */
+		/** @brief 이번 프레임 Game View에 쓸 카메라를 반환합니다. 편집 모드면 에디터 카메라, PIE면 게임 카메라. */
+		virtual CameraComponent* getViewportCamera() const = 0;
+		/** @brief 에디터 시뮬레이션(PIE)이 실행 중인지 반환합니다. Step 대기 중이면 true입니다. */
 		virtual bool isPlaying() const = 0;
+		/** @brief 에디터 시뮬레이션이 일시정지인지 반환합니다. */
+		virtual bool isPaused() const = 0;
 		/** @brief 에디터 시뮬레이션(PIE)을 정지합니다. */
 		virtual void stopSimulation() = 0;
+		/** @brief 월드 틱 이후 한 프레임 Step을 소비합니다. */
+		virtual void onHostFrameEnd() = 0;
 	};
 } // namespace sw

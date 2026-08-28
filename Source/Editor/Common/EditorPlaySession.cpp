@@ -20,6 +20,7 @@ namespace sw::editor
 	namespace
 	{
 		PlaySessionState s_playState = PlaySessionState::Stopped;
+		uint8			 s_bStepPending{ SW_FALSE };
 
 		struct ObjectSnapshot
 		{
@@ -190,6 +191,8 @@ namespace sw::editor
 
 	bool EditorPlaySession::isPlaying()
 	{
+		if ( s_bStepPending == SW_TRUE )
+			return true;
 		return s_playState == PlaySessionState::Playing;
 	}
 
@@ -203,11 +206,33 @@ namespace sw::editor
 		return s_playState == PlaySessionState::Stopped;
 	}
 
+	bool EditorPlaySession::hasPendingStep()
+	{
+		return s_bStepPending == SW_TRUE;
+	}
+
+	void EditorPlaySession::stepOnce()
+	{
+		if ( s_playState == PlaySessionState::Stopped )
+			setState( PlaySessionState::Playing );
+		s_bStepPending = SW_TRUE;
+	}
+
+	void EditorPlaySession::consumePendingStep()
+	{
+		if ( s_bStepPending == SW_FALSE )
+			return;
+		s_bStepPending = SW_FALSE;
+		if ( s_playState == PlaySessionState::Playing )
+			s_playState = PlaySessionState::Paused;
+	}
+
 	void EditorPlaySession::setState( PlaySessionState state )
 	{
 		if ( s_playState == state )
 			return;
 
+		s_bStepPending					= SW_FALSE;
 		const PlaySessionState previous = s_playState;
 		s_playState						= state;
 

@@ -2,9 +2,14 @@
 
 #include "Editor/Popups/CommandPalettePopup.h"
 
+#include "Editor/Common/Commands/EditorAssetCommands.h"
+#include "Editor/Common/Commands/EditorToolAssetCommands.h"
+#include "Editor/Common/Commands/EditorTransformCommands.h"
+#include "Editor/Common/EditorPlaySession.h"
 #include "Editor/Common/Gui/EditorChrome.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorNotificationManager.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/SelectionManager.h"
 #include "Editor/Panels/EditorPanelManager.h"
@@ -45,6 +50,58 @@ namespace sw::editor
 			}
 			return false;
 		}
+
+		void palettePlay()
+		{
+			EditorContext* pContext = EditorContext::get();
+			if ( pContext != nullptr && pContext->getWorkspace().isSceneDirty() && EditorPlaySession::isStopped() )
+				pContext->getNotificationManager().push( "Play", "Scene has unsaved changes", NotificationType::Warning );
+			EditorPlaySession::play();
+		}
+
+		void paletteSaveScene()
+		{
+			EditorContext* pContext = EditorContext::get();
+			if ( EditorAssetCommands::saveActiveScene( {} ) )
+			{
+				if ( pContext != nullptr )
+					pContext->getNotificationManager().push( "Scene", "Saved", NotificationType::Success );
+			}
+			else if ( pContext != nullptr )
+				pContext->getNotificationManager().push( "Scene", "Save failed — use File > Save Scene As", NotificationType::Warning );
+		}
+
+		void paletteAlignX()
+		{
+			EditorTransformCommands::alignSelectedObjects( AlignAxis::X, AlignType::Center );
+		}
+
+		void paletteAlignY()
+		{
+			EditorTransformCommands::alignSelectedObjects( AlignAxis::Y, AlignType::Center );
+		}
+
+		void paletteAlignZ()
+		{
+			EditorTransformCommands::alignSelectedObjects( AlignAxis::Z, AlignType::Center );
+		}
+
+		void paletteSnapToGround()
+		{
+			EditorTransformCommands::snapSelectedToGround();
+		}
+
+		void paletteApplyPrefab()
+		{
+			EditorContext* pContext = EditorContext::get();
+			if ( pContext == nullptr )
+				return;
+			GameObject* pObj = pContext->getSelectionManager().getPrimaryObject().get();
+			string		path = pContext->getWorkspace().getFocusedAssetPath();
+			if ( path.empty() && pObj != nullptr )
+				path = pContext->getWorkspace().getGameObjectPrefabPath( pObj->getObjectId() );
+			EditorToolAssetCommands::applyPrefabOverridesToTemplate( pObj, path );
+		}
 	} // namespace
 
 	// ------------------------------------------------------------------------------
@@ -57,6 +114,27 @@ namespace sw::editor
 		, _selectedIndex{ 0 }
 		, _bJustOpened{ false }
 	{
+		registerCommandInstance( "Play", "Play", "Start play-in-editor",
+								 SW_DELEGATE_LAMBDA( Delegate<void()>, []()
+		{ palettePlay(); } ) );
+		registerCommandInstance( "Scene", "Save Scene", "Write the active scene to its source path",
+								 SW_DELEGATE_LAMBDA( Delegate<void()>, []()
+		{ paletteSaveScene(); } ) );
+		registerCommandInstance( "Transform", "Align X", "Align selected objects on X",
+								 SW_DELEGATE_LAMBDA( Delegate<void()>, []()
+		{ paletteAlignX(); } ) );
+		registerCommandInstance( "Transform", "Align Y", "Align selected objects on Y",
+								 SW_DELEGATE_LAMBDA( Delegate<void()>, []()
+		{ paletteAlignY(); } ) );
+		registerCommandInstance( "Transform", "Align Z", "Align selected objects on Z",
+								 SW_DELEGATE_LAMBDA( Delegate<void()>, []()
+		{ paletteAlignZ(); } ) );
+		registerCommandInstance( "Transform", "Snap to Ground", "Snap selected objects onto the ground plane",
+								 SW_DELEGATE_LAMBDA( Delegate<void()>, []()
+		{ paletteSnapToGround(); } ) );
+		registerCommandInstance( "Prefab", "Apply Overrides", "Write instance overrides back to the prefab template",
+								 SW_DELEGATE_LAMBDA( Delegate<void()>, []()
+		{ paletteApplyPrefab(); } ) );
 	}
 
 	// ------------------------------------------------------------------------------

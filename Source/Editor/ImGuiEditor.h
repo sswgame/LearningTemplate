@@ -51,10 +51,16 @@ namespace sw::editor
 		void unregisterTexture( void* pTextureID ) override;
 		/** @brief 이번 프레임 Game View RT 핸들과 크기를 조회합니다. */
 		void getGameViewport( uint64* pRenderTarget, uint32* pWidth, uint32* pHeight ) const override;
+		/** @brief 이번 프레임 Game View에 쓸 카메라를 반환합니다. */
+		CameraComponent* getViewportCamera() const override;
 		/** @brief 에디터 시뮬레이션(PIE)이 실행 중인지 반환합니다. */
 		bool isPlaying() const override;
+		/** @brief 에디터 시뮬레이션이 일시정지인지 반환합니다. */
+		bool isPaused() const override;
 		/** @brief 에디터 시뮬레이션(PIE)을 정지합니다. */
 		void stopSimulation() override;
+		/** @brief 월드 틱 이후 Step을 소비합니다. */
+		void onHostFrameEnd() override;
 
 	private:
 		// ------------------------------------------------------------------------------

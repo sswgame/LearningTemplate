@@ -31,6 +31,14 @@ namespace sw::editor
 
 			return pActiveScene->getObjectManager();
 		}
+
+		void markActiveSceneDirty()
+		{
+			EditorContext* pContext = EditorContext::get();
+			if ( pContext == nullptr )
+				return;
+			pContext->getWorkspace().markSceneDirty();
+		}
 	} // namespace
 
 	void EditorTransaction::beginTransaction( string_view label )
@@ -98,6 +106,7 @@ namespace sw::editor
 		};
 
 		editor::getService<CommandStack>()->push( std::move( cmd ) );
+		markActiveSceneDirty();
 	}
 
 	void EditorTransaction::recordCreation( GameObjectPtr pObj, string_view label )
@@ -143,6 +152,7 @@ namespace sw::editor
 		};
 
 		editor::getService<CommandStack>()->push( std::move( cmd ) );
+		markActiveSceneDirty();
 	}
 
 	void EditorTransaction::recordDestruction( GameObjectPtr pObj, string_view label )
@@ -188,5 +198,6 @@ namespace sw::editor
 		};
 
 		editor::getService<CommandStack>()->push( std::move( cmd ) );
+		markActiveSceneDirty();
 	}
 } // namespace sw::editor

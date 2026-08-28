@@ -57,7 +57,7 @@ namespace sw::editor
 	void TileMapPanel::drawContent()
 	{
 		const string& focused = EditorContext::get()->getWorkspace().getFocusedAssetPath();
-		if ( focused.empty() == false && focused.find( ".xml" ) != string::npos && focused != _arrPathBuffer )
+		if ( focused.empty() == false && EditorToolAssetCommands::isTileMapPath( focused ) && focused != _arrPathBuffer )
 		{
 			StringUtil::strncpy( _arrPathBuffer, focused.c_str(), sizeof( _arrPathBuffer ) - 1 );
 			_arrPathBuffer[sizeof( _arrPathBuffer ) - 1] = '\0';
@@ -232,8 +232,12 @@ namespace sw::editor
 		return true;
 	}
 
-	bool TileMapPanel::saveXml( string_view assetRelativePath ) const
+	bool TileMapPanel::saveXml( string_view assetRelativePath )
 	{
+		EditorTileMapData previous;
+		string			  previousStatus;
+		const bool		  bHadFile = EditorToolAssetCommands::loadTileMap( assetRelativePath, previous, previousStatus );
+
 		EditorTileMapData data;
 		data._name			  = _arrNameBuffer;
 		data._width			  = _width;
@@ -243,7 +247,30 @@ namespace sw::editor
 		data._listPassThrough = _listPassThrough;
 		data._listVisual	  = _listVisual;
 		data._listWarp		  = _listWarp;
-		return EditorToolAssetCommands::saveTileMap( assetRelativePath, data );
+		if ( EditorToolAssetCommands::saveTileMap( assetRelativePath, data ) == false )
+			return false;
+
+		if ( bHadFile == false )
+			return true;
+
+		const string path{ assetRelativePath };
+		EditorToolAssetCommands::pushDocumentUndo(
+			SW_DELEGATE_LAMBDA( Delegate<void()>, [this, path, previous]()
+		{
+			EditorToolAssetCommands::saveTileMap( path, previous );
+			if ( string_view{ _arrPathBuffer } != path )
+				return;
+			loadXml( path );
+		} ),
+			SW_DELEGATE_LAMBDA( Delegate<void()>, [this, path, data]()
+		{
+			EditorToolAssetCommands::saveTileMap( path, data );
+			if ( string_view{ _arrPathBuffer } != path )
+				return;
+			loadXml( path );
+		} ),
+			"Save Tile Map" );
+		return true;
 	}
 
 	void TileMapPanel::paintCell( int32 x, int32 y )

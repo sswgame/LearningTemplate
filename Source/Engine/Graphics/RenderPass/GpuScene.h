@@ -120,7 +120,7 @@ namespace sw
 		 * @details 내용·카메라가 이전과 같으면 재구축을 건너뜁니다. 카메라만 바뀌면
 		 *          transparent 재정렬 + 배치 재구성만 합니다.
 		 */
-		void buildFromScene( Scene* pScene, const float32 cameraPos[3],
+		void buildFromScene( Scene* pScene, const float3& cameraPos,
 							 TaskManager* pTaskManager = nullptr );
 		/** @brief 인스턴스 SRV와 배치별 간접 인자를 업로드합니다 (RT/디바이스 스레드). */
 		bool upload( IRHIDevice* pDevice );
@@ -219,10 +219,10 @@ namespace sw
 		uint32			   _instanceCapacity{ 0 };
 		uint32			   _argsCapacity{ 0 };
 
-		uint64	_lastContentHash{ 0 };
-		float32 _lastCameraPos[3]{ 0.0f, 0.0f, 0.0f };
-		uint8	_bHasBuildCache{ 0 };
-		uint8	_bCpuDirty{ 1 };
+		uint64 _lastContentHash{ 0 };
+		float3 _lastCameraPos{};
+		uint8  _bHasBuildCache{ 0 };
+		uint8  _bCpuDirty{ 1 };
 
 		TaskStageHandle		   _snapshotStage;
 		GpuMaterialRetireQueue _materialRetire;

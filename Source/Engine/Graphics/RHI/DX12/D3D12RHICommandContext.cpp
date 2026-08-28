@@ -137,7 +137,7 @@ namespace sw
 		record._state = newState;
 	}
 
-	void D3D12RHICommandContext::beginOffscreenPass( RHITextureHandle colorTarget, float32 clearColor[4] )
+	void D3D12RHICommandContext::beginOffscreenPass( RHITextureHandle colorTarget, const float4& clearColor )
 	{
 		if ( colorTarget == 0 )
 		{
@@ -159,7 +159,7 @@ namespace sw
 		transitionTexture( colorTarget, D3D12_RESOURCE_STATE_RENDER_TARGET );
 
 		_pDevice->_commandList->OMSetRenderTargets( 1, &record._rtvHandle, FALSE, nullptr );
-		_pDevice->_commandList->ClearRenderTargetView( record._rtvHandle, clearColor, 0, nullptr );
+		_pDevice->_commandList->ClearRenderTargetView( record._rtvHandle, &clearColor._x, 0, nullptr );
 
 		_pDevice->_arrActiveColorTargets[0] = colorTarget;
 		_pDevice->_activeColorTargetCount	= 1;

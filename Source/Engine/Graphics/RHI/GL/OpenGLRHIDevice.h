@@ -50,7 +50,7 @@ namespace sw
 		void resize( uint32 width, uint32 height );
 
 		/** @brief 프레임 시작 (glClearColor 및 glClear) */
-		void beginFrame( float32 clearColor[4] );
+		void beginFrame( const float4& clearColor );
 
 		/** @brief 프레임 종료 (SwapBuffers / wglSwapBuffers) */
 		void endFrame( bool vsync, bool bPresent = true );

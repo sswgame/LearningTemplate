@@ -92,7 +92,7 @@ namespace sw
 		float4x4 getViewProjectionMatrix( float32 aspectRatio ) const;
 
 		/** @brief 카메라 월드 위치를 반환합니다. */
-		void getCameraPosition( float32 outPos[3] ) const;
+		float3 getCameraPosition() const { return getWorldPosition(); }
 
 	private:
 		PROPERTY( Category = "Projection", DisplayName = "Field Of View", Tooltip = "Vertical FOV (radians)", Min = 0.1, Max = 3.14, Meta = "Units=rad" )

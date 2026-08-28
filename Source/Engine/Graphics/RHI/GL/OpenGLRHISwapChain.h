@@ -13,7 +13,7 @@ namespace sw
 		explicit OpenGLRHISwapChain( OpenGLRHIDevice* pDevice )
 			: _pDevice{ pDevice } {}
 		void  resize( uint32 width, uint32 height ) override;
-		void  beginFrame( float32 clearColor[4] ) override;
+		void  beginFrame( const float4& clearColor ) override;
 		void  endFrame( bool vsync = true, bool bPresent = true ) override;
 		void* getNativeSwapChain() const override;
 

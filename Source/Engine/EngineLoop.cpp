@@ -205,7 +205,7 @@ namespace sw
 
 			const hashed_string kGameConfigHash = hashed_string{ "GameConfig" };
 			const GameConfig*	pGameConfig		= _configManager->ensureConfig<GameConfig>(
-				  kGameConfigHash, config::kFileRuntimeGameConfig, shipping_host::kGameConfigJson );
+				kGameConfigHash, config::kFileRuntimeGameConfig, shipping_host::kGameConfigJson );
 			if ( pGameConfig != nullptr )
 				GameConfig::setActive( *pGameConfig );
 
@@ -373,11 +373,12 @@ namespace sw
 			_inputManager->beginFrame();
 	}
 
-	void EngineLoop::tick( float32 deltaTime,
-						   bool	   bEnableEditor,
-						   uint64  gameRenderTarget,
-						   uint32  vpWidth,
-						   uint32  vpHeight )
+	void EngineLoop::tick( float32			deltaTime,
+						   uint64			gameRenderTarget,
+						   uint32			vpWidth,
+						   uint32			vpHeight,
+						   CameraComponent* pViewCamera,
+						   bool				bTickScene )
 	{
 		BLOCK( "핫 리로드 / 씬 트랜지션 / 이벤트" )
 		{
@@ -403,7 +404,7 @@ namespace sw
 
 		BLOCK( "Scene update" )
 		{
-			if ( _sceneManager != nullptr )
+			if ( _sceneManager != nullptr && bTickScene )
 				_sceneManager->tick( deltaTime );
 		}
 
@@ -413,28 +414,26 @@ namespace sw
 		{
 			RenderFramePacket packet{};
 			packet._bValid			 = 1;
-			packet._bEnableEditor	 = bEnableEditor ? 1 : 0;
-			packet._gameRenderTarget = bEnableEditor ? gameRenderTarget : 0;
+			packet._gameRenderTarget = gameRenderTarget;
 			packet._pSceneMaterial	 = pActiveScene != nullptr ? pActiveScene->getMaterial() : nullptr;
 			packet._viewportWidth	 = vpWidth;
 			packet._viewportHeight	 = vpHeight;
-			packet._cameraPos[0]	 = 0.0f;
-			packet._cameraPos[1]	 = 1.2f;
-			packet._cameraPos[2]	 = 3.2f;
+			packet._cameraPos		 = float3{ 0.0f, 1.2f, 3.2f };
 
 			if ( pActiveScene != nullptr )
 			{
 				pActiveScene->ensureDefaultCameras();
-				CameraComponent* pCam = pActiveScene->getActiveRenderCamera( bEnableEditor );
+				CameraComponent* pCam = pViewCamera;
+				if ( pCam == nullptr || pCam->isActive() == false )
+					pCam = pActiveScene->getActiveGameCamera();
 				if ( pCam != nullptr )
 				{
-					pCam->getCameraPosition( packet._cameraPos );
+					packet._cameraPos = pCam->getCameraPosition();
 					const float32 aspect =
 						( packet._viewportHeight > 0 )
 							? ( static_cast<float32>( packet._viewportWidth ) / static_cast<float32>( packet._viewportHeight ) )
 							: ( 16.0f / 9.0f );
-					const float4x4 vp = pCam->getViewProjectionMatrix( aspect );
-					Memory::copy( packet._viewProj, &vp._11, sizeof( packet._viewProj ) );
+					packet._viewProj	 = pCam->getViewProjectionMatrix( aspect );
 					packet._bHasViewProj = 1;
 				}
 				packet._gpuScene.buildFromScene( pActiveScene, packet._cameraPos, _taskManager.get() );
@@ -561,7 +560,7 @@ namespace sw
 		_mapDebugAction->update( deltaTime );
 	}
 
-	void EngineLoop::pollDebugHotkeys( [[maybe_unused]] bool bEnableEditor, [[maybe_unused]] const Delegate<void( const utf8* )>& forceReloadCallback )
+	void EngineLoop::pollDebugHotkeys( [[maybe_unused]] const Delegate<void( const utf8* )>& forceReloadCallback )
 	{
 #if !defined( SW_SHIPPING )
 		if ( _mapDebugAction == nullptr )
@@ -574,16 +573,18 @@ namespace sw
 			SW_LOG_INFO( "%#: force shader reload", ActionMapDefaults::kReloadShadersAction );
 	#endif
 		}
-		if ( _mapDebugAction->wasActionTriggered( ActionMapDefaults::kReloadEditorAction ) && bEnableEditor && forceReloadCallback.isBound() )
-		{
-			forceReloadCallback( config::kTargetEditorModule );
-			SW_LOG_INFO( "%#: force EditorModule reload", ActionMapDefaults::kReloadEditorAction );
-		}
 		if ( _mapDebugAction->wasActionTriggered( ActionMapDefaults::kReloadGameAction ) && forceReloadCallback.isBound() )
 		{
 			forceReloadCallback( config::kTargetGameModule );
 			SW_LOG_INFO( "%#: force SWGame reload", ActionMapDefaults::kReloadGameAction );
 		}
 #endif
+	}
+
+	bool EngineLoop::wasDebugActionTriggered( string_view actionName ) const
+	{
+		if ( _mapDebugAction == nullptr )
+			return false;
+		return _mapDebugAction->wasActionTriggered( actionName );
 	}
 } // namespace sw

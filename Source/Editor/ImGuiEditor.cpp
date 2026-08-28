@@ -9,6 +9,7 @@
 #include "Editor/Common/Backend/IImGuiRendererBackend.h"
 #include "Editor/Common/Config/EditorConfig.h"
 #include "Editor/Common/Config/EditorData.h"
+#include "Editor/Common/EditorCamera.h"
 #include "Editor/Common/EditorPlaySession.h"
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Gui/EditorMenuBar.h"
@@ -23,6 +24,9 @@
 #include "Engine/Graphics/RHI/RHICapabilities.h"
 #include "Engine/Graphics/RenderPass/RenderPassResource.h"
 #include "Engine/Graphics/RenderPass/RenderPipelineResource.h"
+#include "Engine/Object/Component/CameraComponent.h"
+#include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneManager.h"
 #include "Engine/Window/NativeWindowEvent.h"
 
 #include "RuntimeAPI/Export/EditorModuleExports.h"
@@ -387,14 +391,32 @@ namespace sw::editor
 			*pHeight = ( pGameView != nullptr ) ? pGameView->_height : 0;
 	}
 
+	CameraComponent* ImGuiEditor::getViewportCamera() const
+	{
+		SceneManager* pSceneManager = editor::getService<SceneManager>();
+		if ( pSceneManager == nullptr )
+			return nullptr;
+		return EditorCamera::getViewportCamera( pSceneManager->getActiveScene(), EditorPlaySession::isPlaying() );
+	}
+
 	bool ImGuiEditor::isPlaying() const
 	{
 		return EditorPlaySession::isPlaying();
 	}
 
+	bool ImGuiEditor::isPaused() const
+	{
+		return EditorPlaySession::isPaused() && EditorPlaySession::hasPendingStep() == false;
+	}
+
 	void ImGuiEditor::stopSimulation()
 	{
 		EditorPlaySession::stop();
+	}
+
+	void ImGuiEditor::onHostFrameEnd()
+	{
+		EditorPlaySession::consumePendingStep();
 	}
 
 	void ImGuiEditor::beginFrame()

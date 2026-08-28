@@ -152,18 +152,18 @@ namespace sw::editor
 						ws.snapSelectedToGround();
 					ImGui::Separator();
 					if ( ImGui::MenuItem( "Align X (Center)" ) )
-						ws.alignSelectedObjects( EditorWorkspace::AlignAxis::X, EditorWorkspace::AlignType::Center );
+						ws.alignSelectedObjects( AlignAxis::X, AlignType::Center );
 					if ( ImGui::MenuItem( "Align Y (Center)" ) )
-						ws.alignSelectedObjects( EditorWorkspace::AlignAxis::Y, EditorWorkspace::AlignType::Center );
+						ws.alignSelectedObjects( AlignAxis::Y, AlignType::Center );
 					if ( ImGui::MenuItem( "Align Z (Center)" ) )
-						ws.alignSelectedObjects( EditorWorkspace::AlignAxis::Z, EditorWorkspace::AlignType::Center );
+						ws.alignSelectedObjects( AlignAxis::Z, AlignType::Center );
 					ImGui::Separator();
 					if ( ImGui::MenuItem( "Distribute X Evenly" ) )
-						ws.distributeSelectedObjects( EditorWorkspace::AlignAxis::X );
+						ws.distributeSelectedObjects( AlignAxis::X );
 					if ( ImGui::MenuItem( "Distribute Y Evenly" ) )
-						ws.distributeSelectedObjects( EditorWorkspace::AlignAxis::Y );
+						ws.distributeSelectedObjects( AlignAxis::Y );
 					if ( ImGui::MenuItem( "Distribute Z Evenly" ) )
-						ws.distributeSelectedObjects( EditorWorkspace::AlignAxis::Z );
+						ws.distributeSelectedObjects( AlignAxis::Z );
 					ImGui::EndPopup();
 				}
 			}

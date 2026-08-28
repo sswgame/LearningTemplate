@@ -1,6 +1,6 @@
 /**
  * @file SerializerInternal.h
- * @brief 직렬화기(Binary/JSON/XML/ObjectDiff) 공유 공통 헬퍼 (Engine TU 전용)
+ * @brief 직렬화기(Binary/JSON/XML/ObjectDiff) 공유 공통 헬퍼
  */
 #pragma once
 #include "Engine/EngineMinimal.h"
@@ -13,20 +13,20 @@ namespace sw
 	// 1) 바이너리 — 스칼라/중첩 컨테이너
 	// ------------------------------------------------------------------------------
 	/** @brief 값을 바이너리로 직렬화합니다. */
-	void serializeValueBinary( const void* pValuePtr, const hashed_string& typeName,
-							   vector<uint8>& listBuffer, const SerializeContext& ctx );
+	SW_API void serializeValueBinary( const void* pValuePtr, const hashed_string& typeName,
+									  vector<uint8>& listBuffer, const SerializeContext& ctx );
 	/** @brief 바이너리에서 값을 역직렬화합니다. */
-	bool deserializeValueBinary( void* pValuePtr, const hashed_string& typeName,
-								 const uint8* pData, size_t dataSize, size_t& offset,
-								 const SerializeContext& ctx );
+	SW_API bool deserializeValueBinary( void* pValuePtr, const hashed_string& typeName,
+										const uint8* pData, size_t dataSize, size_t& offset,
+										const SerializeContext& ctx );
 
 	/** @brief 중첩 컨테이너를 바이너리로 직렬화합니다. */
-	void serializeNestedContainerBinary( const void* pContainerPtr, const NestedContainerInfo& nested,
-										 vector<uint8>& listBuffer, const SerializeContext& ctx );
+	SW_API void serializeNestedContainerBinary( const void* pContainerPtr, const NestedContainerInfo& nested,
+												vector<uint8>& listBuffer, const SerializeContext& ctx );
 	/** @brief 바이너리에서 중첩 컨테이너를 역직렬화합니다. */
-	bool deserializeNestedContainerBinary( void* pContainerPtr, const NestedContainerInfo& nested,
-										   const uint8* pData, size_t dataSize, size_t& offset,
-										   const SerializeContext& ctx );
+	SW_API bool deserializeNestedContainerBinary( void* pContainerPtr, const NestedContainerInfo& nested,
+												  const uint8* pData, size_t dataSize, size_t& offset,
+												  const SerializeContext& ctx );
 
 	// ------------------------------------------------------------------------------
 	// 2) 텍스트 변환 및 파싱 · 프로퍼티 기본값

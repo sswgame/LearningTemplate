@@ -2,6 +2,8 @@
 
 #include "Engine/Scene/Scene.h"
 
+#include "Core/Math/MathUtil.h"
+
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineData.h"
 #include "Engine/Graphics/Material/Material.h"
@@ -66,7 +68,6 @@ namespace sw
 		, _pMaterial{ nullptr }
 		, _pFrameRenderer{ nullptr }
 		, _activeGameCamera{}
-		, _activeEditorCamera{}
 		, _bCamerasEnsured{ false }
 	{
 	}
@@ -243,33 +244,23 @@ namespace sw
 	} // namespace
 
 	/**
-	 * @brief 게임 카메라와 에디터 카메라가 씬에 존재하는지 검사하고 없으면 기본 위치에 자동 생성합니다.
+	 * @brief 게임 카메라가 씬에 존재하는지 검사하고 없으면 기본 위치에 자동 생성합니다.
 	 */
 	bool Scene::ensureDefaultCameras()
 	{
 		if ( _objectManager == nullptr )
 			return false;
 
-		if ( _bCamerasEnsured && getActiveEditorCamera() != nullptr && getActiveGameCamera() != nullptr &&
-			 getActiveEditorCamera()->isPendingKill() == false && getActiveGameCamera()->isPendingKill() == false )
+		if ( _bCamerasEnsured && getActiveGameCamera() != nullptr && getActiveGameCamera()->isPendingKill() == false )
 			return true;
 
 		_objectManager->flushSceneTransforms();
 
-		findOrCreateCamera( _objectManager.get(), hashed_string( "EditorCamera" ), CameraRole::Editor, float3( 2.15f, 1.55f, 2.65f ), float3( 0.0f, 0.0f, 0.0f ) );
 		findOrCreateCamera( _objectManager.get(), hashed_string( "GameCamera" ), CameraRole::Game, float3( 0.0f, 1.2f, 3.2f ), float3( 0.0f, 0.0f, 0.0f ) );
 
 		_objectManager->flushSceneTransforms();
 
-		GameObject* pEditorObj = _objectManager->findGameObjectByName( hashed_string( "EditorCamera" ) );
-		GameObject* pGameObj   = _objectManager->findGameObjectByName( hashed_string( "GameCamera" ) );
-
-		if ( pEditorObj != nullptr )
-		{
-			CameraComponent* pCam = pEditorObj->getComponent<CameraComponent>();
-			if ( pCam != nullptr )
-				pCam->lookAt( float3( 0.0f, 0.0f, 0.0f ) );
-		}
+		GameObject* pGameObj = _objectManager->findGameObjectByName( hashed_string( "GameCamera" ) );
 		if ( pGameObj != nullptr )
 		{
 			CameraComponent* pCam = pGameObj->getComponent<CameraComponent>();
@@ -278,8 +269,6 @@ namespace sw
 		}
 
 		refreshCameraCache();
-		if ( getActiveEditorCamera() == nullptr && pEditorObj != nullptr )
-			setActiveEditorCamera( pEditorObj->getComponent<CameraComponent>() );
 		if ( getActiveGameCamera() == nullptr && pGameObj != nullptr )
 			setActiveGameCamera( pGameObj->getComponent<CameraComponent>() );
 
@@ -289,15 +278,12 @@ namespace sw
 
 	void Scene::refreshCameraCache()
 	{
-		_activeGameCamera	= {};
-		_activeEditorCamera = {};
+		_activeGameCamera = {};
 		if ( _objectManager == nullptr )
 			return;
 
-		int32			 bestGamePri   = MathUtil::MinInt32;
-		int32			 bestEditorPri = MathUtil::MinInt32;
+		int32			 bestGamePri = MathUtil::MinInt32;
 		CameraComponent* pBestGame{ nullptr };
-		CameraComponent* pBestEditor{ nullptr };
 
 		for ( GameObject* pObj : _objectManager->getAllGameObjects() )
 		{
@@ -306,20 +292,15 @@ namespace sw
 			CameraComponent* pCam = pObj->getComponent<CameraComponent>();
 			if ( pCam == nullptr || pCam->isActive() == false )
 				continue;
-			if ( pCam->getRole() == CameraRole::Game && pCam->getPriority() >= bestGamePri )
-			{
-				bestGamePri = pCam->getPriority();
-				pBestGame	= pCam;
-			}
-			else if ( pCam->getRole() == CameraRole::Editor && pCam->getPriority() >= bestEditorPri )
-			{
-				bestEditorPri = pCam->getPriority();
-				pBestEditor	  = pCam;
-			}
+			if ( pCam->getRole() != CameraRole::Game )
+				continue;
+			if ( pCam->getPriority() < bestGamePri )
+				continue;
+			bestGamePri = pCam->getPriority();
+			pBestGame	= pCam;
 		}
 
 		storeCameraHandle( pBestGame, _activeGameCamera );
-		storeCameraHandle( pBestEditor, _activeEditorCamera );
 	}
 
 	void Scene::setActiveGameCamera( CameraComponent* pCamera )
@@ -327,38 +308,9 @@ namespace sw
 		storeCameraHandle( pCamera, _activeGameCamera );
 	}
 
-	void Scene::setActiveEditorCamera( CameraComponent* pCamera )
-	{
-		storeCameraHandle( pCamera, _activeEditorCamera );
-	}
-
 	CameraComponent* Scene::getActiveGameCamera() const
 	{
 		return resolveCamera( _activeGameCamera );
-	}
-
-	CameraComponent* Scene::getActiveEditorCamera() const
-	{
-		return resolveCamera( _activeEditorCamera );
-	}
-
-	CameraComponent* Scene::getActiveRenderCamera( bool bEditorViewport ) const
-	{
-		CameraComponent* pEditorCam = getActiveEditorCamera();
-		CameraComponent* pGameCam	= getActiveGameCamera();
-		if ( bEditorViewport )
-		{
-			if ( pEditorCam != nullptr && pEditorCam->isActive() )
-				return pEditorCam;
-			if ( pGameCam != nullptr && pGameCam->isActive() )
-				return pGameCam;
-			return nullptr;
-		}
-		if ( pGameCam != nullptr && pGameCam->isActive() )
-			return pGameCam;
-		if ( pEditorCam != nullptr && pEditorCam->isActive() )
-			return pEditorCam;
-		return nullptr;
 	}
 
 	void Scene::releaseDefaultMaterial()

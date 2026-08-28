@@ -52,7 +52,7 @@ namespace sw::editor
 		/** @brief Resource 상대 경로의 TileMap XML을 불러옵니다. */
 		bool loadXml( string_view assetRelativePath );
 		/** @brief Resource 상대 경로로 TileMap XML을 저장합니다. */
-		bool saveXml( string_view assetRelativePath ) const;
+		bool saveXml( string_view assetRelativePath );
 		/** @brief 지정 셀에 현재 레이어를 페인트합니다. */
 		void paintCell( int32 x, int32 y );
 		/** @brief 가장자리 워프를 페인트합니다. */

@@ -21,7 +21,9 @@
 #include "Engine/Graphics/RHI/RHICapabilities.h"
 #include "Engine/Graphics/RenderPass/RenderFramePacket.h"
 #include "Engine/Graphics/RenderPass/RenderThread.h"
+#include "Engine/Input/ActionMap.h"
 #include "Engine/Input/InputManager.h"
+#include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Utility/Module/LiveReloadManager.h"
 #include "Engine/Window/IWindow.h"
 #include "Engine/Window/NativeWindowEvent.h"
@@ -193,7 +195,12 @@ namespace sw
 			_engineLoop.beginFrame();
 
 			_engineLoop.updateShellActions( deltaTime );
-			_engineLoop.pollDebugHotkeys( _bEnableEditor, SW_DELEGATE_METHOD( Delegate<void( const utf8* )>, &App::onForceReload, this ) );
+			_engineLoop.pollDebugHotkeys( SW_DELEGATE_METHOD( Delegate<void( const utf8* )>, &App::onForceReload, this ) );
+			if ( _bEnableEditor && _engineLoop.wasDebugActionTriggered( ActionMapDefaults::kReloadEditorAction ) )
+			{
+				onForceReload( config::kTargetEditorModule );
+				SW_LOG_INFO( "%#: force EditorModule reload", ActionMapDefaults::kReloadEditorAction );
+			}
 
 			while ( accumulator >= kFixedDeltaTime )
 			{
@@ -210,7 +217,11 @@ namespace sw
 			uint32 gameViewportWidth  = 0;
 			uint32 gameViewportHeight = 0;
 			_moduleHost->getGameViewport( gameRenderTarget, gameViewportWidth, gameViewportHeight );
-			_engineLoop.tick( deltaTime, _bEnableEditor, gameRenderTarget, gameViewportWidth, gameViewportHeight );
+			CameraComponent* pViewCamera = _bEnableEditor ? _moduleHost->getViewportCamera() : nullptr;
+			const bool		 bTickScene	 = _moduleHost->shouldTickScene();
+			_engineLoop.tick( deltaTime, gameRenderTarget, gameViewportWidth, gameViewportHeight, pViewCamera, bTickScene );
+			if ( _bEnableEditor )
+				_moduleHost->endEditorFrame();
 
 			const RHI* pRHI = _engineLoop.getRHI();
 			if ( pRHI != nullptr && pRHI->hasPendingBackendChange() )

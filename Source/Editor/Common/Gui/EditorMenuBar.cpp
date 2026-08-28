@@ -16,6 +16,8 @@
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
+#include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneManager.h"
 #include "Engine/Utility/CommandStack.h"
 #include "Engine/Utility/Resource/ResourceUtil.h"
 
@@ -34,6 +36,41 @@ namespace sw::editor
 		{
 			if ( listPaths.empty() == false )
 				EditorContext::get()->getWorkspace().requestLoadScene( listPaths[0] );
+		}
+
+		void onSaveSceneDialogResult( const vector<string>& listPaths )
+		{
+			if ( listPaths.empty() )
+				return;
+			if ( EditorAssetCommands::saveActiveScene( listPaths[0] ) )
+				EditorContext::get()->getNotificationManager().push( "Scene", "Saved", NotificationType::Success );
+			else
+				EditorContext::get()->getNotificationManager().push( "Scene", "Save failed", NotificationType::Error );
+		}
+
+		void saveSceneOrPrompt()
+		{
+			SceneManager* pSceneManager = editor::getService<SceneManager>();
+			Scene*		  pScene		= ( pSceneManager != nullptr ) ? pSceneManager->getActiveScene() : nullptr;
+			if ( pScene != nullptr && pScene->getSourcePath().empty() == false )
+			{
+				if ( EditorAssetCommands::saveActiveScene( {} ) )
+					EditorContext::get()->getNotificationManager().push( "Scene", "Saved", NotificationType::Success );
+				else
+					EditorContext::get()->getNotificationManager().push( "Scene", "Save failed", NotificationType::Error );
+				return;
+			}
+
+			FileDialogParams params{};
+			params._type				= FileDialogParams::Type::Save;
+			params._title				= "Save Scene";
+			params._description			= "Scene";
+			params._bEnableMultiselect	= false;
+			params._filterExtensionList = { ".scene.xml", ".xml" };
+			const string mapsDir		= FileUtil::joinPath( ResourceUtil::getGameFolderPath(), "demo/maps" );
+			if ( FileUtil::directoryExists( mapsDir ) )
+				params._initialDirectory = mapsDir;
+			FileUtil::openFileDialog( params, SW_DELEGATE_FUNCTION( FileDialogDelegate, onSaveSceneDialogResult ) );
 		}
 
 		void openSceneFileDialog()
@@ -64,6 +101,8 @@ namespace sw::editor
 		{
 			if ( ImGui::MenuItem( "Open Scene...", "Ctrl+O" ) )
 				openSceneFileDialog();
+			if ( ImGui::MenuItem( "Save Scene", "Ctrl+S" ) )
+				saveSceneOrPrompt();
 
 			ImGui::Separator();
 			if ( ImGui::MenuItem( "Quick Open...", "Ctrl+P" ) )
@@ -279,6 +318,8 @@ namespace sw::editor
 					getService<CommandStack>()->redo();
 				if ( ImGui::IsKeyPressed( ImGuiKey_O, false ) )
 					openSceneFileDialog();
+				if ( ImGui::IsKeyPressed( ImGuiKey_S, false ) )
+					saveSceneOrPrompt();
 				if ( io.KeyShift && ImGui::IsKeyPressed( ImGuiKey_P, false ) )
 					CommandPalettePopup::toggle();
 				else if ( ImGui::IsKeyPressed( ImGuiKey_P, false ) )

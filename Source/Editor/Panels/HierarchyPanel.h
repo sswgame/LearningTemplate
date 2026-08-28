@@ -28,10 +28,6 @@ namespace sw::editor
 		void drawContent() override;
 
 	private:
-		/** @brief Save Scene 파일 대화상자 결과. */
-		static void onSaveScenePicked( const vector<string>& paths );
-
-	private:
 		uint64 _renamingObjectId;
 		utf8   _arrFilterBuffer[constant::kMaxBuffer128];
 		utf8   _arrRenameBuffer[constant::kMaxBuffer256];

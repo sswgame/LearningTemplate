@@ -32,7 +32,7 @@ namespace sw
 
 		if ( _pScene != nullptr )
 		{
-			CameraComponent* pCam = _pScene->getActiveRenderCamera( false );
+			CameraComponent* pCam = _pScene->getActiveGameCamera();
 			if ( pCam != nullptr )
 				applyViewFromCamera( pCam );
 			else

@@ -35,5 +35,6 @@ namespace sw::editor
 
 	private:
 		EditorViewportClient _viewportClient;
+		bool				 _bConfirmUnsavedPlay;
 	};
 } // namespace sw::editor

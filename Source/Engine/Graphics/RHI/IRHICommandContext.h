@@ -94,12 +94,12 @@ namespace sw
 	class SW_API IRHICommandContext : public ICommandReplayTarget
 	{
 	public:
-		IRHICommandContext()																		  = default;
-		virtual ~IRHICommandContext() override														  = default;
-		IRHICommandContext( const IRHICommandContext& )												  = delete;
-		IRHICommandContext& operator=( const IRHICommandContext& )									  = delete;
-		virtual void		beginOffscreenPass( RHITextureHandle colorTarget, float32 clearColor[4] ) = 0;
-		virtual void		endOffscreenPass( RHITextureHandle colorTarget )						  = 0;
+		IRHICommandContext()																			 = default;
+		virtual ~IRHICommandContext() override															 = default;
+		IRHICommandContext( const IRHICommandContext& )													 = delete;
+		IRHICommandContext& operator=( const IRHICommandContext& )										 = delete;
+		virtual void		beginOffscreenPass( RHITextureHandle colorTarget, const float4& clearColor ) = 0;
+		virtual void		endOffscreenPass( RHITextureHandle colorTarget )							 = 0;
 	};
 
 } // namespace sw

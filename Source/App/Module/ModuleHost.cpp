@@ -12,6 +12,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RenderPass/RenderThread.h"
+#include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/ComponentPtr.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectPtr.h"
@@ -257,6 +258,32 @@ namespace sw
 			return;
 
 		_editorApi.getGameViewport( _editor, &renderTarget, &width, &height );
+	}
+
+	CameraComponent* ModuleHost::getViewportCamera() const
+	{
+		if ( _bEnableEditor == SW_FALSE || _editor == nullptr || _editorApi.getViewportCamera == nullptr )
+			return nullptr;
+		return static_cast<CameraComponent*>( _editorApi.getViewportCamera( _editor ) );
+	}
+
+	bool ModuleHost::shouldTickScene() const
+	{
+		if ( _bEnableEditor == SW_FALSE || _editor == nullptr )
+			return true;
+		if ( _editorApi.isPaused != nullptr && _editorApi.isPaused( _editor ) )
+		{
+			if ( _editorApi.isPlaying == nullptr || _editorApi.isPlaying( _editor ) == false )
+				return false;
+		}
+		return true;
+	}
+
+	void ModuleHost::endEditorFrame()
+	{
+		if ( _bEnableEditor == SW_FALSE || _editor == nullptr || _editorApi.endFrame == nullptr )
+			return;
+		_editorApi.endFrame( _editor );
 	}
 
 	// ======================================================================

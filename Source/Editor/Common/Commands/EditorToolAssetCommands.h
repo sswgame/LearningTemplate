@@ -6,6 +6,13 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Delegate.h"
+
+namespace sw
+{
+	class GameObject;
+	class SequenceAsset;
+} // namespace sw
 
 namespace sw::editor
 {
@@ -151,34 +158,67 @@ namespace sw::editor
 	class EditorToolAssetCommands
 	{
 	public:
-		/** @brief 애니메이션 그래프 JSON을 읽습니다. 없거나 비면 false입니다. */
-		static bool loadAnimationGraph( EditorAnimGraphData& outData );
+		/** @brief 애니메이션 그래프 경로인지 여부를 반환합니다. */
+		static bool isAnimationGraphPath( string_view path );
+		/** @brief 대화 그래프 경로인지 여부를 반환합니다. */
+		static bool isDialogueGraphPath( string_view path );
+		/** @brief 스프라이트 클립/아틀라스 경로인지 여부를 반환합니다. */
+		static bool isSpriteClipPath( string_view path );
+		/** @brief 타일맵 경로인지 여부를 반환합니다. */
+		static bool isTileMapPath( string_view path );
+		/** @brief 시퀀서 경로인지 여부를 반환합니다. */
+		static bool isSequencerPath( string_view path );
+		/** @brief 프리팹 경로인지 여부를 반환합니다. */
+		static bool isPrefabPath( string_view path );
+
+		/** @brief 애니메이션 그래프 JSON을 읽습니다. path가 비면 에디터 설정 기본 파일을 씁니다. */
+		static bool loadAnimationGraph( EditorAnimGraphData& outData, string_view path = {} );
 		/** @brief 애니메이션 그래프 JSON을 씁니다. */
-		static bool saveAnimationGraph( const EditorAnimGraphData& data );
+		static bool saveAnimationGraph( const EditorAnimGraphData& data, string_view path = {} );
+		/** @brief 애니메이션 그래프를 JSON 문자열로 직렬화합니다. */
+		static string serializeAnimationGraph( const EditorAnimGraphData& data );
+		/** @brief JSON 문자열을 애니메이션 그래프로 파싱합니다. */
+		static bool parseAnimationGraph( string_view json, EditorAnimGraphData& outData );
 		/** @brief 대화 노드 타입 이름을 반환합니다. */
 		static const utf8* dialogueNodeTypeName( DialogueNodeType type );
 		/** @brief 대화 노드 타입 문자열을 파싱합니다. */
 		static DialogueNodeType parseDialogueNodeType( string_view typeStr );
-		/** @brief 대화 그래프 JSON을 읽습니다. 없거나 비면 false입니다. */
-		static bool loadDialogueGraph( EditorDialogueGraphData& outData );
+		/** @brief 대화 그래프 JSON을 읽습니다. path가 비면 기본 대화 파일을 씁니다. */
+		static bool loadDialogueGraph( EditorDialogueGraphData& outData, string_view path = {} );
 		/** @brief 대화 그래프 JSON을 씁니다. */
-		static bool saveDialogueGraph( const EditorDialogueGraphData& data );
+		static bool saveDialogueGraph( const EditorDialogueGraphData& data, string_view path = {} );
+		/** @brief 대화 그래프를 JSON 문자열로 직렬화합니다. */
+		static string serializeDialogueGraph( const EditorDialogueGraphData& data );
+		/** @brief JSON 문자열을 대화 그래프로 파싱합니다. */
+		static bool parseDialogueGraph( string_view json, EditorDialogueGraphData& outData );
 		/** @brief Resource 상대 경로의 TileMap XML을 읽습니다. */
 		static bool loadTileMap( string_view assetRelativePath, EditorTileMapData& outData, string& outStatus );
 		/** @brief Resource 상대 경로로 TileMap XML을 씁니다. */
 		static bool saveTileMap( string_view assetRelativePath, const EditorTileMapData& data );
-		/** @brief SpriteClip.json을 읽습니다. */
-		static bool loadSpriteClip( EditorSpriteClipData& outData, string& outStatus );
-		/** @brief SpriteClip.json을 씁니다. */
-		static bool saveSpriteClip( const EditorSpriteClipData& data );
-		/** @brief 프리팹 오버라이드 목록을 채웁니다. */
-		static void collectPrefabOverrides( const utf8* pPrefabPath, string& outPrefabPath, vector<PrefabOverrideItem>& outOverride,
+		/** @brief SpriteClip JSON을 읽습니다. path가 비면 에디터 설정 기본 파일을 씁니다. */
+		static bool loadSpriteClip( EditorSpriteClipData& outData, string& outStatus, string_view path = {} );
+		/** @brief SpriteClip JSON을 씁니다. */
+		static bool saveSpriteClip( const EditorSpriteClipData& data, string_view path = {} );
+		/** @brief SpriteClip을 JSON 문자열로 직렬화합니다. */
+		static string serializeSpriteClip( const EditorSpriteClipData& data );
+		/** @brief JSON 문자열을 SpriteClip으로 파싱합니다. */
+		static bool parseSpriteClip( string_view json, EditorSpriteClipData& outData );
+		/** @brief 시퀀서 JSON을 읽습니다. */
+		static bool loadSequence( sw::SequenceAsset& outAsset, string_view path );
+		/** @brief 시퀀서 JSON을 씁니다. */
+		static bool saveSequence( const sw::SequenceAsset& asset, string_view path );
+		/** @brief 선택 인스턴스와 프리팹 CDO를 비교해 오버라이드 목록을 채웁니다. */
+		static void collectPrefabOverrides( sw::GameObject* pInstance, string_view prefabPath, string& outPrefabPath,
+											string& outInstanceName, vector<PrefabOverrideItem>& outOverride,
 											vector<string>& outNestedPrefab );
-		/** @brief 한 오버라이드를 템플릿 기본값으로 되돌립니다. */
-		static void revertPrefabOverride( PrefabOverrideItem& item );
-		/** @brief 수정된 오버라이드를 템플릿 기본값에 적용합니다. */
-		static void applyPrefabOverridesToTemplate( vector<PrefabOverrideItem>& listOverride );
-		/** @brief 모든 오버라이드를 템플릿 기본값으로 되돌립니다. */
-		static void revertAllPrefabOverrides( vector<PrefabOverrideItem>& listOverride );
+		/** @brief 한 오버라이드를 인스턴스에 템플릿 기본값으로 되돌립니다. */
+		static void revertPrefabOverride( sw::GameObject* pInstance, PrefabOverrideItem& item, string_view prefabPath );
+		/** @brief 인스턴스 상태를 프리팹 템플릿에 저장합니다. */
+		static bool applyPrefabOverridesToTemplate( sw::GameObject* pInstance, string_view prefabPath );
+		/** @brief 인스턴스를 프리팹 CDO로 되돌립니다. */
+		static bool revertAllPrefabOverrides( sw::GameObject* pInstance, string_view prefabPath );
+		/** @brief 문서 스냅샷 Undo/Redo를 올립니다. */
+		static void pushDocumentUndo( Delegate<void()> undo, Delegate<void()> redo, string_view label,
+									  string_view coalesceKey = {} );
 	};
 } // namespace sw::editor

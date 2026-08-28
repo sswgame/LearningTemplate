@@ -9,6 +9,7 @@
 
 #include "Editor/Common/Commands/EditorAssetCommands.h"
 #include "Editor/Common/Commands/EditorSceneCommands.h"
+#include "Editor/Common/EditorCamera.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
@@ -19,6 +20,7 @@
 #include "Engine/Object/Component/2D/SpriteComponent.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
+#include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/ComponentPtr.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -143,16 +145,97 @@ namespace sw::editor
 			return true;
 		}
 
+		void setWorldPosition( SceneComponent* pSc, const float3& worldPos )
+		{
+			if ( pSc == nullptr )
+				return;
+			float4x4 world			 = pSc->getWorldMatrix();
+			world._41				 = worldPos._x;
+			world._42				 = worldPos._y;
+			world._43				 = worldPos._z;
+			float4x4		localMat = world;
+			SceneComponent* pParent	 = pSc->getParent();
+			if ( pParent != nullptr )
+				localMat = world * pParent->getWorldMatrix().invert();
+			pSc->setLocalPosition( float3{ localMat._41, localMat._42, localMat._43 } );
+		}
+
+		void considerMeshPick( GameObject* pObj, const float3& nearPt, const float3& dir, float32& bestT, GameObject*& pBestObj,
+							   Component*& pBestComp )
+		{
+			MeshComponent* pMeshComp = pObj->getComponent<MeshComponent>();
+			if ( pMeshComp == nullptr || pMeshComp->isActive() == false || pMeshComp->isVisible() == false )
+				return;
+			const float3  scale	   = pMeshComp->getLocalScale();
+			const float32 absX	   = MathUtil::abs( scale._x );
+			const float32 absY	   = MathUtil::abs( scale._y );
+			const float32 absZ	   = MathUtil::abs( scale._z );
+			const float32 maxScale = MathUtil::max( absX, MathUtil::max( absY, absZ ) );
+			const float32 radius   = pMeshComp->getBoundsRadius() * MathUtil::max( maxScale, 0.001f );
+			float32		  hitT{ 0.0f };
+			if ( rayHitsSphere( nearPt, dir, pMeshComp->getWorldPosition(), radius, hitT ) == false || hitT >= bestT )
+				return;
+			bestT	  = hitT;
+			pBestObj  = pObj;
+			pBestComp = pMeshComp;
+		}
+
+		void considerSpritePick( GameObject* pObj, const float3& nearPt, const float3& dir, float32& bestT, GameObject*& pBestObj,
+								 Component*& pBestComp )
+		{
+			SpriteComponent* pSpriteComp = pObj->getComponent<SpriteComponent>();
+			if ( pSpriteComp == nullptr || pSpriteComp->isActive() == false )
+				return;
+			const float3  scale	 = pSpriteComp->getLocalScale();
+			const float32 absX	 = MathUtil::abs( scale._x );
+			const float32 absY	 = MathUtil::abs( scale._y );
+			const float32 radius = MathUtil::max( absX, absY ) * 0.7f + 0.1f;
+			float32		  hitT{ 0.0f };
+			if ( rayHitsSphere( nearPt, dir, pSpriteComp->getWorldPosition(), radius, hitT ) == false || hitT >= bestT )
+				return;
+			bestT	  = hitT;
+			pBestObj  = pObj;
+			pBestComp = pSpriteComp;
+		}
+
+		void considerBoxPick( GameObject* pObj, const float3& nearPt, const float3& dir, float32& bestT, GameObject*& pBestObj,
+							  Component*& pBestComp )
+		{
+			BoxCollider2DComponent* pBoxComp = pObj->getComponent<BoxCollider2DComponent>();
+			if ( pBoxComp == nullptr || pBoxComp->isActive() == false )
+				return;
+			const float2  offsetPos = pBoxComp->getOffsetPosition();
+			const float2  offsetScl = pBoxComp->getOffsetScaleVec();
+			const float3  center	= pBoxComp->getWorldPosition() + float3{ offsetPos._x, offsetPos._y, 0.0f };
+			const float32 radius	= offsetScl.getLength() * 0.5f + 0.1f;
+			float32		  hitT{ 0.0f };
+			if ( rayHitsSphere( nearPt, dir, center, radius, hitT ) == false || hitT >= bestT )
+				return;
+			bestT	  = hitT;
+			pBestObj  = pObj;
+			pBestComp = pBoxComp;
+		}
+
+		void considerScenePick( GameObject* pObj, const float3& nearPt, const float3& dir, float32& bestT, GameObject*& pBestObj,
+								Component*& pBestComp )
+		{
+			SceneComponent* pSceneComp = pObj->getPrimarySceneComponent();
+			if ( pSceneComp == nullptr || pSceneComp->isActive() == false )
+				return;
+			float32 hitT{ 0.0f };
+			if ( rayHitsSphere( nearPt, dir, pSceneComp->getWorldPosition(), 0.35f, hitT ) == false || hitT >= bestT )
+				return;
+			bestT	  = hitT;
+			pBestObj  = pObj;
+			pBestComp = pSceneComp;
+		}
+
 		CameraComponent* getGameViewCamera()
 		{
 			SceneManager* pSceneManager = editor::getService<SceneManager>();
 			if ( pSceneManager == nullptr )
 				return nullptr;
-			Scene* pScene = pSceneManager->getActiveScene();
-			if ( pScene == nullptr )
-				return nullptr;
-			pScene->ensureDefaultCameras();
-			return pScene->getActiveRenderCamera( true );
+			return EditorCamera::ensure( pSceneManager->getActiveScene() );
 		}
 
 		bool projectPointToScreen( const float4x4& viewProj, const float3& worldPt, const float2& canvasPos,
@@ -324,6 +407,10 @@ namespace sw::editor
 		, _cameraMode{ CameraControlMode::Fly }
 		, _toolbarSettings{}
 		, _gizmoUndoBeforeXml{}
+		, _listGizmoObject{}
+		, _listGizmoUndoXml{}
+		, _listGizmoOffset{}
+		, _arrGizmoGroupMatrix{}
 		, _bRulerActive{ false }
 		, _bGizmoTracking{ SW_FALSE }
 		, _reservedGizmo{ 0 }
@@ -557,8 +644,6 @@ namespace sw::editor
 
 			processPicking( canvasPos, canvasSize, pCamera );
 
-			GameObjectPtr pPrimary = EditorContext::get()->getSelectionManager().getPrimaryObject();
-			if ( pPrimary.isValid() )
 			{
 				SceneManager* pSceneManager = editor::getService<SceneManager>();
 				if ( pSceneManager != nullptr )
@@ -567,8 +652,7 @@ namespace sw::editor
 					if ( pScene != nullptr && pScene->getObjectManager() != nullptr )
 						pScene->getObjectManager()->flushSceneTransforms();
 				}
-
-				drawGizmo( pPrimary, arrView, arrProj, canvasPos, canvasSize );
+				drawGizmo( arrView, arrProj, canvasPos, canvasSize );
 			}
 
 			if ( _toolbarSettings._bShowStats )
@@ -640,83 +724,25 @@ namespace sw::editor
 		float32		bestT{ MathUtil::MaxFloat };
 
 		const vector<GameObject*> listObjects = pManager->getAllGameObjects();
+		const bool				  b2DMode	  = _toolbarSettings._bIs2DMode;
 		for ( GameObject* pObj : listObjects )
 		{
 			if ( pObj == nullptr || pObj->isActive() == false )
 				continue;
 
-			// 1) 3D MeshComponent
-			MeshComponent* pMeshComp = pObj->getComponent<MeshComponent>();
-			if ( pMeshComp != nullptr && pMeshComp->isActive() && pMeshComp->isVisible() )
+			if ( b2DMode )
 			{
-				const float3  scale	   = pMeshComp->getLocalScale();
-				const float32 absX	   = MathUtil::abs( scale._x );
-				const float32 absY	   = MathUtil::abs( scale._y );
-				const float32 absZ	   = MathUtil::abs( scale._z );
-				const float32 maxScale = MathUtil::max( absX, MathUtil::max( absY, absZ ) );
-				const float32 radius   = pMeshComp->getBoundsRadius() * MathUtil::max( maxScale, 0.001f );
-				const float3  center   = pMeshComp->getWorldPosition();
-				float32		  hitT{ 0.0f };
-				if ( rayHitsSphere( nearPt, dir, center, radius, hitT ) && hitT < bestT )
-				{
-					bestT	  = hitT;
-					pBestObj  = pObj;
-					pBestComp = pMeshComp;
-					continue;
-				}
+				considerSpritePick( pObj, nearPt, dir, bestT, pBestObj, pBestComp );
+				considerBoxPick( pObj, nearPt, dir, bestT, pBestObj, pBestComp );
+				considerMeshPick( pObj, nearPt, dir, bestT, pBestObj, pBestComp );
 			}
-
-			// 2) 2D SpriteComponent
-			SpriteComponent* pSpriteComp = pObj->getComponent<SpriteComponent>();
-			if ( pSpriteComp != nullptr && pSpriteComp->isActive() )
+			else
 			{
-				const float3  scale	 = pSpriteComp->getLocalScale();
-				const float32 absX	 = MathUtil::abs( scale._x );
-				const float32 absY	 = MathUtil::abs( scale._y );
-				const float32 radius = MathUtil::max( absX, absY ) * 0.7f + 0.1f;
-				const float3  center = pSpriteComp->getWorldPosition();
-				float32		  hitT{ 0.0f };
-				if ( rayHitsSphere( nearPt, dir, center, radius, hitT ) && hitT < bestT )
-				{
-					bestT	  = hitT;
-					pBestObj  = pObj;
-					pBestComp = pSpriteComp;
-					continue;
-				}
+				considerMeshPick( pObj, nearPt, dir, bestT, pBestObj, pBestComp );
+				considerSpritePick( pObj, nearPt, dir, bestT, pBestObj, pBestComp );
+				considerBoxPick( pObj, nearPt, dir, bestT, pBestObj, pBestComp );
 			}
-
-			// 3) 2D BoxCollider2DComponent
-			BoxCollider2DComponent* pBoxComp = pObj->getComponent<BoxCollider2DComponent>();
-			if ( pBoxComp != nullptr && pBoxComp->isActive() )
-			{
-				const float2  offsetPos = pBoxComp->getOffsetPosition();
-				const float2  offsetScl = pBoxComp->getOffsetScaleVec();
-				const float3  center	= pBoxComp->getWorldPosition() + float3{ offsetPos._x, offsetPos._y, 0.0f };
-				const float32 radius	= offsetScl.getLength() * 0.5f + 0.1f;
-				float32		  hitT{ 0.0f };
-				if ( rayHitsSphere( nearPt, dir, center, radius, hitT ) && hitT < bestT )
-				{
-					bestT	  = hitT;
-					pBestObj  = pObj;
-					pBestComp = pBoxComp;
-					continue;
-				}
-			}
-
-			// 4) Fallback: SceneComponent
-			SceneComponent* pSceneComp = pObj->getPrimarySceneComponent();
-			if ( pSceneComp != nullptr && pSceneComp->isActive() )
-			{
-				const float3  center = pSceneComp->getWorldPosition();
-				const float32 radius = 0.35f;
-				float32		  hitT{ 0.0f };
-				if ( rayHitsSphere( nearPt, dir, center, radius, hitT ) && hitT < bestT )
-				{
-					bestT	  = hitT;
-					pBestObj  = pObj;
-					pBestComp = pSceneComp;
-				}
-			}
+			considerScenePick( pObj, nearPt, dir, bestT, pBestObj, pBestComp );
 		}
 
 		if ( pBestObj != nullptr )
@@ -725,24 +751,30 @@ namespace sw::editor
 			EditorContext::get()->getWorkspace().clearSelection();
 	}
 
-	void EditorViewportClient::drawGizmo( GameObjectPtr pObj, const float32* pView, const float32* pProj,
-										  const float2& canvasPos, const float2& canvasSize )
+	void EditorViewportClient::drawGizmo( const float32* pView, const float32* pProj, const float2& canvasPos,
+										  const float2& canvasSize )
 	{
-		GameObject* pRaw = pObj.get();
-		if ( pRaw == nullptr )
+		EditorContext* pContext = EditorContext::get();
+		if ( pContext == nullptr )
 			return;
 
-		SceneComponent* pSceneComp = pRaw->getPrimarySceneComponent();
-		if ( pSceneComp == nullptr )
+		const vector<GameObjectPtr>& listSelected = pContext->getSelectionManager().getSelectedObjects();
+		vector<GameObject*>			 listGizmo;
+		listGizmo.reserve( listSelected.size() );
+		for ( const GameObjectPtr& pGo : listSelected )
+		{
+			GameObject* pRaw = pGo.get();
+			if ( pRaw == nullptr || pRaw->getPrimarySceneComponent() == nullptr )
+				continue;
+			listGizmo.push_back( pRaw );
+		}
+		if ( listGizmo.empty() )
 			return;
 
 		ImGuizmo::SetDrawlist();
 		ImGuizmo::SetRect( canvasPos._x, canvasPos._y, canvasSize._x, canvasSize._y );
 
-		float32 arrMatrix[16];
-		storeColumnMajor( arrMatrix, pSceneComp->getWorldMatrix() );
-
-		EditorWorkspace&	ws	  = EditorContext::get()->getWorkspace();
+		EditorWorkspace&	ws	  = pContext->getWorkspace();
 		const int32			opInt = ws.getGizmoOperation();
 		ImGuizmo::OPERATION op	  = ImGuizmo::TRANSLATE;
 		if ( opInt == 1 )
@@ -759,8 +791,83 @@ namespace sw::editor
 			arrSnap[0] = arrSnap[1] = arrSnap[2] = _toolbarSettings._rotationSnapValue;
 		else if ( op == ImGuizmo::SCALE && _toolbarSettings._bScaleSnap )
 			arrSnap[0] = arrSnap[1] = arrSnap[2] = _toolbarSettings._scaleSnapValue;
-
 		const bool bUseSnap = ( arrSnap[0] > 0.0f );
+
+		const bool bGroup = ( listGizmo.size() > 1 );
+		if ( bGroup )
+		{
+			if ( _bGizmoTracking == SW_FALSE )
+			{
+				float3 centroid{};
+				for ( GameObject* pObj : listGizmo )
+					centroid = centroid + pObj->getPrimarySceneComponent()->getWorldPosition();
+				const float32 invCount = 1.0f / static_cast<float32>( listGizmo.size() );
+				centroid			   = float3{ centroid._x * invCount, centroid._y * invCount, centroid._z * invCount };
+				float4x4 groupWorld{};
+				groupWorld._41 = centroid._x;
+				groupWorld._42 = centroid._y;
+				groupWorld._43 = centroid._z;
+				storeColumnMajor( _arrGizmoGroupMatrix, groupWorld );
+
+				if ( ImGuizmo::IsOver() && ImGui::IsMouseClicked( ImGuiMouseButton_Left ) )
+				{
+					_listGizmoObject.clear();
+					_listGizmoUndoXml.clear();
+					_listGizmoOffset.clear();
+					for ( GameObject* pObj : listGizmo )
+					{
+						_listGizmoObject.push_back( GameObjectPtr{ pObj } );
+						_listGizmoUndoXml.push_back( EditorSceneCommands::captureSnapshot( pObj ) );
+						_listGizmoOffset.push_back( pObj->getPrimarySceneComponent()->getWorldPosition() - centroid );
+					}
+				}
+			}
+
+			if ( ImGuizmo::Manipulate( pView, pProj, op, mode, _arrGizmoGroupMatrix, nullptr, bUseSnap ? arrSnap : nullptr ) )
+			{
+				float4x4 dummyWorld{};
+				loadColumnMajor( dummyWorld, _arrGizmoGroupMatrix );
+				const uint32 count = static_cast<uint32>( _listGizmoObject.size() );
+				for ( uint32 objectIndex = 0; objectIndex < count; ++objectIndex )
+				{
+					GameObject* pObj = _listGizmoObject[objectIndex].get();
+					if ( pObj == nullptr )
+						continue;
+					SceneComponent* pSc = pObj->getPrimarySceneComponent();
+					if ( pSc == nullptr )
+						continue;
+					const float3 offset = _listGizmoOffset[objectIndex];
+					const float4 world4 = float4::transform( float4{ offset._x, offset._y, offset._z, 1.0f }, dummyWorld );
+					setWorldPosition( pSc, float3{ world4._x, world4._y, world4._z } );
+				}
+			}
+
+			if ( ImGuizmo::IsUsing() )
+			{
+				_bGizmoTracking = SW_TRUE;
+			}
+			else if ( _bGizmoTracking == SW_TRUE )
+			{
+				const uint32 count = static_cast<uint32>( _listGizmoObject.size() );
+				for ( uint32 objectIndex = 0; objectIndex < count; ++objectIndex )
+					EditorSceneCommands::commitModify( _listGizmoObject[objectIndex].get(), _listGizmoUndoXml[objectIndex],
+													   "Gizmo Transform" );
+				_listGizmoObject.clear();
+				_listGizmoUndoXml.clear();
+				_listGizmoOffset.clear();
+				_bGizmoTracking = SW_FALSE;
+			}
+			return;
+		}
+
+		GameObject*		pRaw	   = listGizmo[0];
+		SceneComponent* pSceneComp = pRaw->getPrimarySceneComponent();
+		if ( pSceneComp == nullptr )
+			return;
+
+		float32 arrMatrix[16];
+		storeColumnMajor( arrMatrix, pSceneComp->getWorldMatrix() );
+
 		if ( _bGizmoTracking == SW_FALSE && ImGuizmo::IsOver() && ImGui::IsMouseClicked( ImGuiMouseButton_Left ) )
 			_gizmoUndoBeforeXml = EditorSceneCommands::captureSnapshot( pRaw );
 

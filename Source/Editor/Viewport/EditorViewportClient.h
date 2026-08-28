@@ -1,6 +1,7 @@
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Editor/Viewport/EditorViewportToolbar.h"
@@ -69,8 +70,7 @@ namespace sw::editor
 		void processFlyInput( float32 deltaTime );
 		void processOrbitInput();
 		void processPicking( const float2& canvasPos, const float2& canvasSize, CameraComponent* pCamera );
-		void drawGizmo( GameObjectPtr pObj, const float32* pView, const float32* pProj,
-						const float2& canvasPos, const float2& canvasSize );
+		void drawGizmo( const float32* pView, const float32* pProj, const float2& canvasPos, const float2& canvasSize );
 		void drawStatsOverlay( ImDrawList* pDrawList, const float2& canvasPos, const float2& canvasSize );
 		void drawOrientationCube( ImDrawList* pDrawList, const float2& canvasPos, const float2& canvasSize );
 		void drawAdaptiveGrid( ImDrawList* pDrawList, const float2& canvasPos, const float2& canvasSize,
@@ -93,6 +93,10 @@ namespace sw::editor
 		CameraControlMode		_cameraMode;
 		ViewportToolbarSettings _toolbarSettings;
 		string					_gizmoUndoBeforeXml;
+		vector<GameObjectPtr>	_listGizmoObject;
+		vector<string>			_listGizmoUndoXml;
+		vector<float3>			_listGizmoOffset;
+		float32					_arrGizmoGroupMatrix[16];
 		bool					_bRulerActive;
 		uint8					_bGizmoTracking : 1;
 		[[maybe_unused]] uint8	_reservedGizmo	: 7;

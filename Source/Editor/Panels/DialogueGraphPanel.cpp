@@ -8,6 +8,8 @@
 #include "Editor/Common/Commands/EditorToolAssetCommands.h"
 #include "Editor/Common/Gui/EditorChrome.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
+#include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorWorkspace.h"
 
 #include <imgui.h>
 #include <imgui-node-editor/imgui_node_editor.h>
@@ -71,6 +73,7 @@ namespace sw::editor
 	DialogueGraphPanel::DialogueGraphPanel()
 		: IEditorPanel{ false }
 		, _nodeGraph{}
+		, _loadedAssetPath{}
 		, _bLoaded{ false }
 		, _selectedNodeId{ 0 }
 		, _listNode{}
@@ -85,6 +88,17 @@ namespace sw::editor
 
 	void DialogueGraphPanel::drawContent()
 	{
+		EditorContext* pContext = EditorContext::get();
+		if ( pContext != nullptr )
+		{
+			const string& focused = pContext->getWorkspace().getFocusedAssetPath();
+			if ( focused.empty() == false && EditorToolAssetCommands::isDialogueGraphPath( focused ) && focused != _loadedAssetPath )
+			{
+				_loadedAssetPath = focused;
+				_bLoaded		 = false;
+			}
+		}
+
 		if ( _bLoaded == false )
 			loadGraphData();
 
@@ -496,7 +510,7 @@ namespace sw::editor
 	void DialogueGraphPanel::loadGraphData()
 	{
 		EditorDialogueGraphData data;
-		if ( EditorToolAssetCommands::loadDialogueGraph( data ) )
+		if ( EditorToolAssetCommands::loadDialogueGraph( data, _loadedAssetPath ) )
 		{
 			_listNode = std::move( data._listNode );
 			_listLink = std::move( data._listLink );
@@ -508,12 +522,48 @@ namespace sw::editor
 		_nodeGraph.requestContentFit();
 	}
 
-	void DialogueGraphPanel::saveGraphData() const
+	void DialogueGraphPanel::saveGraphData()
 	{
+		EditorDialogueGraphData previous;
+		const bool				bHadFile   = EditorToolAssetCommands::loadDialogueGraph( previous, _loadedAssetPath );
+		const string			beforeJson = bHadFile ? EditorToolAssetCommands::serializeDialogueGraph( previous ) : string{};
+
 		EditorDialogueGraphData data;
 		data._listNode = _listNode;
 		data._listLink = _listLink;
-		EditorToolAssetCommands::saveDialogueGraph( data );
+		EditorToolAssetCommands::saveDialogueGraph( data, _loadedAssetPath );
+		const string afterJson = EditorToolAssetCommands::serializeDialogueGraph( data );
+		if ( beforeJson == afterJson )
+			return;
+
+		const string path = _loadedAssetPath;
+		EditorToolAssetCommands::pushDocumentUndo(
+			SW_DELEGATE_LAMBDA( Delegate<void()>, [this, path, beforeJson]()
+		{
+			EditorDialogueGraphData restored;
+			if ( beforeJson.empty() == false )
+				EditorToolAssetCommands::parseDialogueGraph( beforeJson, restored );
+			EditorToolAssetCommands::saveDialogueGraph( restored, path );
+			if ( _loadedAssetPath != path )
+				return;
+			_listNode = std::move( restored._listNode );
+			_listLink = std::move( restored._listLink );
+			if ( _listNode.empty() )
+				ensureDefaults();
+			_nodeGraph.requestContentFit();
+		} ),
+			SW_DELEGATE_LAMBDA( Delegate<void()>, [this, path, afterJson]()
+		{
+			EditorDialogueGraphData restored;
+			EditorToolAssetCommands::parseDialogueGraph( afterJson, restored );
+			EditorToolAssetCommands::saveDialogueGraph( restored, path );
+			if ( _loadedAssetPath != path )
+				return;
+			_listNode = std::move( restored._listNode );
+			_listLink = std::move( restored._listLink );
+			_nodeGraph.requestContentFit();
+		} ),
+			"Save Dialogue Graph" );
 	}
 
 	int32 DialogueGraphPanel::nextNodeId() const

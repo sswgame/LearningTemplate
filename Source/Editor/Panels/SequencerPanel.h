@@ -1,10 +1,11 @@
 /**
  * @file SequencerPanel.h
- * @brief 실험적 시퀀서 UI 프로토타입 (저장/엔진 타임라인 바인딩 없음)
+ * @brief 시퀀서 타임라인 패널 (SequenceAsset JSON)
  */
 #pragma once
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/string.h"
 #include "Core/Memory/Memory.h"
 
 #include "Editor/Common/Gui/IEditorPanel.h"
@@ -13,7 +14,7 @@ namespace sw::editor
 {
 	struct ClipSequence;
 
-	/** @brief 실험적 클립/이벤트 트랙 시퀀서 UI. 엔진 시퀀스 자산과 연결되어 있지 않습니다. */
+	/** @brief 클립/이벤트 트랙 시퀀서. SequenceAsset JSON과 로드/저장합니다. */
 	class SequencerPanel : public IEditorPanel
 	{
 	public:
@@ -32,11 +33,16 @@ namespace sw::editor
 		void drawContent() override;
 
 	private:
+		void loadFromFocusedPath();
+		void saveToLoadedPath();
+
+	private:
 		bool					 _bExpanded;
 		int32					 _currentFrame;
 		int32					 _selected;
 		int32					 _firstFrame;
 		utf8					 _arrCinematicNote[512];
+		string					 _loadedAssetPath;
 		unique_ptr<ClipSequence> _sequence;
 	};
 } // namespace sw::editor

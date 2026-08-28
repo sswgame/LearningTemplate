@@ -2,12 +2,15 @@
 
 #include "Editor/Panels/SpriteClipPanel.h"
 
+#include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Commands/EditorToolAssetCommands.h"
 #include "Editor/Common/Config/EditorConfig.h"
 #include "Editor/Common/Config/EditorData.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
+#include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorWorkspace.h"
 
 #include "RuntimeAPI/Service/EditorService.h"
 
@@ -20,6 +23,7 @@ namespace sw::editor
 	SpriteClipPanel::SpriteClipPanel()
 		: IEditorPanel( false )
 		, _arrAtlasPath{}
+		, _loadedAssetPath{}
 		, _listFrame{}
 		, _listKey{}
 		, _selectedFrame{ -1 }
@@ -34,6 +38,26 @@ namespace sw::editor
 
 	void SpriteClipPanel::drawContent()
 	{
+		EditorContext* pContext = EditorContext::get();
+		if ( pContext != nullptr )
+		{
+			const string& focused = pContext->getWorkspace().getFocusedAssetPath();
+			if ( focused.empty() == false && EditorToolAssetCommands::isSpriteClipPath( focused ) && focused != _loadedAssetPath )
+			{
+				_loadedAssetPath = focused;
+				if ( EditorToolAssetCommands::isSpriteClipPath( focused ) &&
+					 ( FileUtil::endsWithIgnoreCase( focused, ".png" ) || FileUtil::endsWithIgnoreCase( focused, ".jpg" ) ||
+					   FileUtil::endsWithIgnoreCase( focused, ".jpeg" ) || FileUtil::endsWithIgnoreCase( focused, ".dds" ) ||
+					   FileUtil::endsWithIgnoreCase( focused, ".tga" ) ) )
+				{
+					StringUtil::strncpy( _arrAtlasPath, focused.c_str(), sizeof( _arrAtlasPath ) - 1 );
+					_arrAtlasPath[sizeof( _arrAtlasPath ) - 1] = '\0';
+				}
+				else
+					loadJson();
+			}
+		}
+
 		ImGui::InputText( "Atlas", _arrAtlasPath, sizeof( _arrAtlasPath ) );
 		if ( ImGui::Button( "Load" ) )
 			loadJson();
@@ -123,7 +147,7 @@ namespace sw::editor
 	void SpriteClipPanel::loadJson()
 	{
 		EditorSpriteClipData data;
-		if ( EditorToolAssetCommands::loadSpriteClip( data, _status ) == false )
+		if ( EditorToolAssetCommands::loadSpriteClip( data, _status, _loadedAssetPath ) == false )
 			return;
 
 		if ( data._atlasPath.empty() == false )
@@ -134,12 +158,53 @@ namespace sw::editor
 		_selectedKey   = _listKey.empty() ? -1 : 0;
 	}
 
-	void SpriteClipPanel::saveJson() const
+	void SpriteClipPanel::saveJson()
 	{
+		EditorSpriteClipData previous;
+		string				 previousStatus;
+		const bool			 bHadFile	= EditorToolAssetCommands::loadSpriteClip( previous, previousStatus, _loadedAssetPath );
+		const string		 beforeJson = bHadFile ? EditorToolAssetCommands::serializeSpriteClip( previous ) : string{};
+
 		EditorSpriteClipData data;
 		data._atlasPath = _arrAtlasPath;
 		data._listFrame = _listFrame;
 		data._listKey	= _listKey;
-		EditorToolAssetCommands::saveSpriteClip( data );
+		EditorToolAssetCommands::saveSpriteClip( data, _loadedAssetPath );
+		const string afterJson = EditorToolAssetCommands::serializeSpriteClip( data );
+		if ( beforeJson == afterJson )
+			return;
+
+		const string path = _loadedAssetPath;
+		EditorToolAssetCommands::pushDocumentUndo(
+			SW_DELEGATE_LAMBDA( Delegate<void()>, [this, path, beforeJson]()
+		{
+			EditorSpriteClipData restored;
+			if ( beforeJson.empty() == false )
+				EditorToolAssetCommands::parseSpriteClip( beforeJson, restored );
+			EditorToolAssetCommands::saveSpriteClip( restored, path );
+			if ( _loadedAssetPath != path )
+				return;
+			if ( restored._atlasPath.empty() == false )
+				StringUtil::strncpy( _arrAtlasPath, restored._atlasPath.c_str(), sizeof( _arrAtlasPath ) - 1 );
+			_listFrame	   = std::move( restored._listFrame );
+			_listKey	   = std::move( restored._listKey );
+			_selectedFrame = _listFrame.empty() ? -1 : 0;
+			_selectedKey   = _listKey.empty() ? -1 : 0;
+		} ),
+			SW_DELEGATE_LAMBDA( Delegate<void()>, [this, path, afterJson]()
+		{
+			EditorSpriteClipData restored;
+			EditorToolAssetCommands::parseSpriteClip( afterJson, restored );
+			EditorToolAssetCommands::saveSpriteClip( restored, path );
+			if ( _loadedAssetPath != path )
+				return;
+			if ( restored._atlasPath.empty() == false )
+				StringUtil::strncpy( _arrAtlasPath, restored._atlasPath.c_str(), sizeof( _arrAtlasPath ) - 1 );
+			_listFrame	   = std::move( restored._listFrame );
+			_listKey	   = std::move( restored._listKey );
+			_selectedFrame = _listFrame.empty() ? -1 : 0;
+			_selectedKey   = _listKey.empty() ? -1 : 0;
+		} ),
+			"Save Sprite Clip" );
 	}
 } // namespace sw::editor
