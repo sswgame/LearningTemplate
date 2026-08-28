@@ -8,6 +8,8 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "RuntimeHud" );
+
 	namespace
 	{
 		static hashed_string keyPlayerHp()
@@ -110,9 +112,9 @@ namespace sw
 	{
 		if ( _dialogue.empty() == false || _fadeAlpha > 0.01f )
 		{
-			SW_LOG_INFO( "[RuntimeHud] rect=(%#,%# %#x%#) fade=%# hp=%#/%# dlg='%#'",
-						 _screen._x, _screen._y, _screen._w, _screen._h,
-						 _fadeAlpha, _playerHp._fill, _foeHp._fill, _dialogue );
+			SW_LOG_TRACE( "rect=(%#,%# %#x%#) fade=%# hp=%#/%# dlg='%#'",
+						  _screen._x, _screen._y, _screen._w, _screen._h,
+						  _fadeAlpha, _playerHp._fill, _foeHp._fill, _dialogue );
 		}
 	}
 } // namespace sw

@@ -20,26 +20,26 @@ namespace sw::editor
 		item._elapsedSec  = 0.0f;
 		item._progress	  = progress;
 
-		_listNotifications.push_back( std::move( item ) );
+		_listNotification.push_back( std::move( item ) );
 	}
 
 	void EditorNotificationManager::updateAndDraw( float32 deltaTime, float32 screenWidth, float32 screenHeight )
 	{
-		if ( _listNotifications.empty() )
+		if ( _listNotification.empty() )
 			return;
 
-		for ( NotificationItem& item : _listNotifications )
+		for ( NotificationItem& item : _listNotification )
 		{
 			item._elapsedSec += deltaTime;
 		}
 
-		_listNotifications.erase(
-			std::remove_if( _listNotifications.begin(), _listNotifications.end(),
+		_listNotification.erase(
+			std::remove_if( _listNotification.begin(), _listNotification.end(),
 							[]( const NotificationItem& item )
 		{ return item._elapsedSec >= item._durationSec; } ),
-			_listNotifications.end() );
+			_listNotification.end() );
 
-		if ( _listNotifications.empty() )
+		if ( _listNotification.empty() )
 			return;
 
 		constexpr float32 toastWidth  = 300.0f;
@@ -55,9 +55,9 @@ namespace sw::editor
 			currentY	 = viewportPos._y + screenHeight - toastMargin;
 		}
 
-		for ( size_t notificationIndex = _listNotifications.size(); notificationIndex > 0; --notificationIndex )
+		for ( size_t notificationIndex = _listNotification.size(); notificationIndex > 0; --notificationIndex )
 		{
-			const NotificationItem& item = _listNotifications[notificationIndex - 1];
+			const NotificationItem& item = _listNotification[notificationIndex - 1];
 
 			const float32 remainingTime = item._durationSec - item._elapsedSec;
 			float32		  alpha			= 1.0f;

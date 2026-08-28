@@ -19,6 +19,8 @@ namespace ed = ax::NodeEditor;
 
 namespace sw::editor
 {
+	SW_LOG_CALLER( "DialogueGraphPanel" );
+
 	namespace
 	{
 		constexpr int32 kPinInputOffset	 = 1;
@@ -110,8 +112,8 @@ namespace sw::editor
 		, _nodeGraph{}
 		, _bLoaded{ false }
 		, _selectedNodeId{ 0 }
-		, _listNodes{}
-		, _listLinks{}
+		, _listNode{}
+		, _listLink{}
 	{
 	}
 
@@ -154,8 +156,8 @@ namespace sw::editor
 			ImGui::SameLine();
 			if ( ImGui::Button( "Reset Default" ) )
 			{
-				_listNodes.clear();
-				_listLinks.clear();
+				_listNode.clear();
+				_listLink.clear();
 				ensureDefaults();
 				_nodeGraph.requestContentFit();
 			}
@@ -164,7 +166,7 @@ namespace sw::editor
 				_nodeGraph.requestContentFit();
 
 			ImGui::SameLine();
-			ImGui::TextDisabled( "(Nodes: %zu, Links: %zu)", _listNodes.size(), _listLinks.size() );
+			ImGui::TextDisabled( "(Nodes: %zu, Links: %zu)", _listNode.size(), _listLink.size() );
 		}
 
 		const float32 availWidth  = ImGui::GetContentRegionAvail().x;
@@ -185,7 +187,7 @@ namespace sw::editor
 		}
 
 		// 노드 렌더링
-		for ( DialogueNode& node : _listNodes )
+		for ( DialogueNode& node : _listNode )
 		{
 			const ed::NodeId nodeId = toNodeId( node._id );
 			ed::BeginNode( nodeId );
@@ -225,7 +227,7 @@ namespace sw::editor
 					ImGui::TextUnformatted( "-> In" );
 					ed::EndPin();
 
-					if ( node._listChoices.empty() )
+					if ( node._listChoice.empty() )
 					{
 						ed::BeginPin( toPinId( pinOut( node._id ) ), ed::PinKind::Output );
 						ImGui::TextUnformatted( "Choice 0 ->" );
@@ -233,10 +235,10 @@ namespace sw::editor
 					}
 					else
 					{
-						for ( size_t choiceIndex = 0; choiceIndex < node._listChoices.size(); ++choiceIndex )
+						for ( size_t choiceIndex = 0; choiceIndex < node._listChoice.size(); ++choiceIndex )
 						{
 							ed::BeginPin( toPinId( pinChoice( node._id, static_cast<int32>( choiceIndex ) ) ), ed::PinKind::Output );
-							ImGui::Text( "#%zu: %s ->", choiceIndex + 1, node._listChoices[choiceIndex].c_str() );
+							ImGui::Text( "#%zu: %s ->", choiceIndex + 1, node._listChoice[choiceIndex].c_str() );
 							ed::EndPin();
 						}
 					}
@@ -289,7 +291,7 @@ namespace sw::editor
 		}
 
 		// 링크 렌더링
-		for ( const DialogueLink& link : _listLinks )
+		for ( const DialogueLink& link : _listLink )
 		{
 			ed::Link( toLinkId( link._id ), toPinId( link._fromPin ), toPinId( link._toPin ) );
 		}
@@ -324,7 +326,7 @@ namespace sw::editor
 							newLink._fromPin = pinA;
 							newLink._toPin	 = pinB;
 						}
-						_listLinks.push_back( newLink );
+						_listLink.push_back( newLink );
 					}
 				}
 			}
@@ -340,10 +342,10 @@ namespace sw::editor
 				if ( ed::AcceptDeletedItem() )
 				{
 					const int32 id = static_cast<int32>( linkId.Get() );
-					_listLinks.erase( std::remove_if( _listLinks.begin(), _listLinks.end(),
-													  [id]( const DialogueLink& l )
+					_listLink.erase( std::remove_if( _listLink.begin(), _listLink.end(),
+													 [id]( const DialogueLink& l )
 					{ return l._id == id; } ),
-									  _listLinks.end() );
+									 _listLink.end() );
 				}
 			}
 			ed::NodeId nodeId;
@@ -352,14 +354,14 @@ namespace sw::editor
 				if ( ed::AcceptDeletedItem() )
 				{
 					const int32 id = static_cast<int32>( nodeId.Get() );
-					_listNodes.erase( std::remove_if( _listNodes.begin(), _listNodes.end(),
-													  [id]( const DialogueNode& n )
+					_listNode.erase( std::remove_if( _listNode.begin(), _listNode.end(),
+													 [id]( const DialogueNode& n )
 					{ return n._id == id; } ),
-									  _listNodes.end() );
-					_listLinks.erase( std::remove_if( _listLinks.begin(), _listLinks.end(),
-													  [id]( const DialogueLink& l )
+									 _listNode.end() );
+					_listLink.erase( std::remove_if( _listLink.begin(), _listLink.end(),
+													 [id]( const DialogueLink& l )
 					{ return ( l._fromPin / 100 ) == id || ( l._toPin / 100 ) == id; } ),
-									  _listLinks.end() );
+									 _listLink.end() );
 					if ( _selectedNodeId == id )
 						_selectedNodeId = 0;
 				}
@@ -376,7 +378,7 @@ namespace sw::editor
 		_nodeGraph.applyContentFitIfNeeded();
 
 		// 위치 캐시
-		for ( DialogueNode& node : _listNodes )
+		for ( DialogueNode& node : _listNode )
 		{
 			const ImVec2 pos = ed::GetNodePosition( toNodeId( node._id ) );
 			node._x			 = pos.x;
@@ -397,7 +399,7 @@ namespace sw::editor
 			editor::beginSection( inspectorDesc );
 
 			DialogueNode* pSelectedNode{ nullptr };
-			for ( DialogueNode& node : _listNodes )
+			for ( DialogueNode& node : _listNode )
 			{
 				if ( node._id == _selectedNodeId )
 				{
@@ -430,18 +432,18 @@ namespace sw::editor
 					if ( ImGui::InputText( "Prompt", promptBuf, sizeof( promptBuf ) ) )
 						pSelectedNode->_text = promptBuf;
 
-					ImGui::Text( "Choices (%zu):", pSelectedNode->_listChoices.size() );
-					for ( size_t choiceIndex = 0; choiceIndex < pSelectedNode->_listChoices.size(); ++choiceIndex )
+					ImGui::Text( "Choices (%zu):", pSelectedNode->_listChoice.size() );
+					for ( size_t choiceIndex = 0; choiceIndex < pSelectedNode->_listChoice.size(); ++choiceIndex )
 					{
 						ImGui::PushID( static_cast<int32>( choiceIndex ) );
 						utf8 choiceBuf[128]{};
-						StringUtil::strncpy( choiceBuf, pSelectedNode->_listChoices[choiceIndex].c_str(), sizeof( choiceBuf ) - 1 );
+						StringUtil::strncpy( choiceBuf, pSelectedNode->_listChoice[choiceIndex].c_str(), sizeof( choiceBuf ) - 1 );
 						if ( ImGui::InputText( "##Choice", choiceBuf, sizeof( choiceBuf ) ) )
-							pSelectedNode->_listChoices[choiceIndex] = choiceBuf;
+							pSelectedNode->_listChoice[choiceIndex] = choiceBuf;
 						ImGui::SameLine();
 						if ( ImGui::Button( "X" ) )
 						{
-							pSelectedNode->_listChoices.erase( pSelectedNode->_listChoices.begin() + choiceIndex );
+							pSelectedNode->_listChoice.erase( pSelectedNode->_listChoice.begin() + choiceIndex );
 							ImGui::PopID();
 							break;
 						}
@@ -449,7 +451,7 @@ namespace sw::editor
 					}
 
 					if ( ImGui::Button( "+ Add Choice Option" ) )
-						pSelectedNode->_listChoices.push_back( "New choice option" );
+						pSelectedNode->_listChoice.push_back( "New choice option" );
 				}
 				else if ( pSelectedNode->_type == DialogueNodeType::Branch )
 				{
@@ -475,15 +477,15 @@ namespace sw::editor
 
 	void DialogueGraphPanel::ensureDefaults()
 	{
-		_listNodes.clear();
-		_listLinks.clear();
+		_listNode.clear();
+		_listLink.clear();
 
 		DialogueNode startNode{};
 		startNode._id	= 1;
 		startNode._type = DialogueNodeType::Start;
 		startNode._x	= 50.0f;
 		startNode._y	= 100.0f;
-		_listNodes.push_back( startNode );
+		_listNode.push_back( startNode );
 
 		DialogueNode diagNode{};
 		diagNode._id	  = 2;
@@ -492,16 +494,16 @@ namespace sw::editor
 		diagNode._text	  = "Greetings adventurer! The ancient ruins ahead are full of peril.";
 		diagNode._x		  = 250.0f;
 		diagNode._y		  = 100.0f;
-		_listNodes.push_back( diagNode );
+		_listNode.push_back( diagNode );
 
 		DialogueNode choiceNode{};
-		choiceNode._id			= 3;
-		choiceNode._type		= DialogueNodeType::Choice;
-		choiceNode._text		= "How do you respond?";
-		choiceNode._listChoices = { "I am ready for any challenge!", "Could you give me some supplies first?" };
-		choiceNode._x			= 650.0f;
-		choiceNode._y			= 100.0f;
-		_listNodes.push_back( choiceNode );
+		choiceNode._id		   = 3;
+		choiceNode._type	   = DialogueNodeType::Choice;
+		choiceNode._text	   = "How do you respond?";
+		choiceNode._listChoice = { "I am ready for any challenge!", "Could you give me some supplies first?" };
+		choiceNode._x		   = 650.0f;
+		choiceNode._y		   = 100.0f;
+		_listNode.push_back( choiceNode );
 
 		DialogueNode actionNode{};
 		actionNode._id			  = 4;
@@ -509,21 +511,21 @@ namespace sw::editor
 		actionNode._actionCommand = "give_item:healing_potion:3";
 		actionNode._x			  = 1050.0f;
 		actionNode._y			  = 220.0f;
-		_listNodes.push_back( actionNode );
+		_listNode.push_back( actionNode );
 
 		DialogueNode endNode{};
 		endNode._id	  = 5;
 		endNode._type = DialogueNodeType::End;
 		endNode._x	  = 1350.0f;
 		endNode._y	  = 120.0f;
-		_listNodes.push_back( endNode );
+		_listNode.push_back( endNode );
 
 		// 기본 링크 연결
-		_listLinks.push_back( DialogueLink{ 1, pinOut( 1 ), pinIn( 2 ) } );
-		_listLinks.push_back( DialogueLink{ 2, pinOut( 2 ), pinIn( 3 ) } );
-		_listLinks.push_back( DialogueLink{ 3, pinChoice( 3, 0 ), pinIn( 5 ) } );
-		_listLinks.push_back( DialogueLink{ 4, pinChoice( 3, 1 ), pinIn( 4 ) } );
-		_listLinks.push_back( DialogueLink{ 5, pinOut( 4 ), pinIn( 5 ) } );
+		_listLink.push_back( DialogueLink{ 1, pinOut( 1 ), pinIn( 2 ) } );
+		_listLink.push_back( DialogueLink{ 2, pinOut( 2 ), pinIn( 3 ) } );
+		_listLink.push_back( DialogueLink{ 3, pinChoice( 3, 0 ), pinIn( 5 ) } );
+		_listLink.push_back( DialogueLink{ 4, pinChoice( 3, 1 ), pinIn( 4 ) } );
+		_listLink.push_back( DialogueLink{ 5, pinOut( 4 ), pinIn( 5 ) } );
 	}
 
 	void DialogueGraphPanel::loadGraphData()
@@ -547,8 +549,8 @@ namespace sw::editor
 		}
 
 		const string json( listData.begin(), listData.end() );
-		_listNodes.clear();
-		_listLinks.clear();
+		_listNode.clear();
+		_listLink.clear();
 
 		// Nodes parsing
 		const size_t nodesPos = json.find( "\"nodes\"" );
@@ -634,7 +636,7 @@ namespace sw::editor
 					}
 
 					if ( node._id > 0 )
-						_listNodes.push_back( node );
+						_listNode.push_back( node );
 
 					cursor = json.find( '}', obj );
 					if ( cursor == string::npos )
@@ -674,7 +676,7 @@ namespace sw::editor
 					parseInt( "from", l._fromPin );
 					parseInt( "to", l._toPin );
 					if ( l._id > 0 )
-						_listLinks.push_back( l );
+						_listLink.push_back( l );
 
 					cursor = json.find( '}', obj );
 					if ( cursor == string::npos )
@@ -684,7 +686,7 @@ namespace sw::editor
 			}
 		}
 
-		if ( _listNodes.empty() )
+		if ( _listNode.empty() )
 			ensureDefaults();
 
 		_bLoaded = true;
@@ -698,9 +700,9 @@ namespace sw::editor
 
 		StringBuilder<constant::kMaxBuffer4096> sb;
 		sb.append( "{\n  \"nodes\": [\n" );
-		for ( size_t nodeIndex = 0; nodeIndex < _listNodes.size(); ++nodeIndex )
+		for ( size_t nodeIndex = 0; nodeIndex < _listNode.size(); ++nodeIndex )
 		{
-			const DialogueNode& n = _listNodes[nodeIndex];
+			const DialogueNode& n = _listNode[nodeIndex];
 			sb.append( "    { \"id\": " ).append( n._id );
 			sb.append( ", \"type\": \"" ).append( getNodeTypeString( n._type ) ).append( "\"" );
 			sb.append( ", \"speaker\": \"" ).append( n._speaker.c_str() ).append( "\"" );
@@ -710,32 +712,32 @@ namespace sw::editor
 			sb.append( ", \"x\": " ).append( n._x );
 			sb.append( ", \"y\": " ).append( n._y );
 			sb.append( " }" );
-			if ( nodeIndex + 1 < _listNodes.size() )
+			if ( nodeIndex + 1 < _listNode.size() )
 				sb.append( "," );
 			sb.append( "\n" );
 		}
 		sb.append( "  ],\n  \"links\": [\n" );
-		for ( size_t linkIndex = 0; linkIndex < _listLinks.size(); ++linkIndex )
+		for ( size_t linkIndex = 0; linkIndex < _listLink.size(); ++linkIndex )
 		{
-			const DialogueLink& l = _listLinks[linkIndex];
+			const DialogueLink& l = _listLink[linkIndex];
 			sb.append( "    { \"id\": " ).append( l._id );
 			sb.append( ", \"from\": " ).append( l._fromPin );
 			sb.append( ", \"to\": " ).append( l._toPin );
 			sb.append( " }" );
-			if ( linkIndex + 1 < _listLinks.size() )
+			if ( linkIndex + 1 < _listLink.size() )
 				sb.append( "," );
 			sb.append( "\n" );
 		}
 		sb.append( "  ]\n}\n" );
 
 		FileUtil::writeTextFile( path, sb.view() );
-		SW_LOG_INFO( "[DialogueGraphPanel] Saved %zu nodes, %zu links -> %#", _listNodes.size(), _listLinks.size(), path );
+		SW_LOG_INFO( "Saved %zu nodes, %zu links -> %#", _listNode.size(), _listLink.size(), path );
 	}
 
 	int32 DialogueGraphPanel::nextNodeId() const
 	{
 		int32 maxId = 0;
-		for ( const DialogueNode& node : _listNodes )
+		for ( const DialogueNode& node : _listNode )
 		{
 			if ( node._id > maxId )
 				maxId = node._id;
@@ -746,7 +748,7 @@ namespace sw::editor
 	int32 DialogueGraphPanel::nextLinkId() const
 	{
 		int32 maxId = 0;
-		for ( const DialogueLink& link : _listLinks )
+		for ( const DialogueLink& link : _listLink )
 		{
 			if ( link._id > maxId )
 				maxId = link._id;
@@ -765,9 +767,9 @@ namespace sw::editor
 		node._y		  = 150.0f + static_cast<float32>( ( node._id % 5 ) * 60 );
 
 		if ( type == DialogueNodeType::Choice )
-			node._listChoices = { "Option 1", "Option 2" };
+			node._listChoice = { "Option 1", "Option 2" };
 
-		_listNodes.push_back( node );
+		_listNode.push_back( node );
 		_selectedNodeId = node._id;
 	}
 } // namespace sw::editor

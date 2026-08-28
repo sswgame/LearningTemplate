@@ -128,11 +128,11 @@ namespace sw
 		void releaseGpu( IRHIDevice* pDevice );
 
 		/** @brief 인스턴스 목록을 반환합니다. */
-		const vector<GpuInstance>& getInstances() const { return _listInstances; }
+		const vector<GpuInstance>& getInstances() const { return _listInstance; }
 		/** @brief 불투명 배치를 반환합니다. */
-		const vector<GpuMeshBatch>& getOpaqueBatches() const { return _listOpaqueBatches; }
+		const vector<GpuMeshBatch>& getOpaqueBatches() const { return _listOpaqueBatch; }
 		/** @brief 투명 배치를 반환합니다. */
-		const vector<GpuMeshBatch>& getTransparentBatches() const { return _listTransparentBatches; }
+		const vector<GpuMeshBatch>& getTransparentBatches() const { return _listTransparentBatch; }
 		/** @brief 인스턴스 버퍼 핸들을 반환합니다. */
 		RHIBufferHandle getInstanceBuffer() const { return _instanceBuffer; }
 		/** @brief 인스턴스 SRV 인덱스를 반환합니다. */
@@ -173,10 +173,10 @@ namespace sw
 		/** @brief 캐시 무효화. */
 		void invalidateBuildCache();
 
-		vector<GpuInstance>	 _listInstances;
-		vector<GpuMeshBatch> _listOpaqueBatches;
-		vector<GpuMeshBatch> _listTransparentBatches;
-		vector<GpuMeshBatch> _listAllBatches; ///< 불투명 다음 투명. 간접 슬롯과 일치
+		vector<GpuInstance>	 _listInstance;
+		vector<GpuMeshBatch> _listOpaqueBatch;
+		vector<GpuMeshBatch> _listTransparentBatch;
+		vector<GpuMeshBatch> _listAllBatch; ///< 불투명 다음 투명. 간접 슬롯과 일치
 
 		/// buildFromScene에서 재사용해 프레임당 힙 할당을 줄입니다.
 		struct DrawCandidate
@@ -190,7 +190,7 @@ namespace sw
 			MaterialInstance* _pInstance{ nullptr };
 		};
 
-		vector<DrawCandidate> _listScratchCandidates;
+		vector<DrawCandidate> _listScratchCandidate;
 		vector<GpuInstance>	  _listScratchRaw;
 
 		struct SortKey
@@ -208,7 +208,7 @@ namespace sw
 			uint32	_srcIdx{ 0 };
 		};
 
-		vector<SortEntry> _listScratchOpaqueEntries;
+		vector<SortEntry> _listScratchOpaqueEntry;
 		vector<uint32>	  _listScratchTransparentIdx;
 
 		RHIBufferHandle	   _instanceBuffer{ 0 };

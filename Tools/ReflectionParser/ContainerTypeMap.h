@@ -46,7 +46,7 @@ namespace sw
 		void setLoaded( bool bLoaded ) { _bLoaded = bLoaded; }
 
 	private:
-		vector<ContainerTypeRule> _listRules;
+		vector<ContainerTypeRule> _listRule;
 		bool					  _bLoaded = false;
 	};
 } // namespace sw

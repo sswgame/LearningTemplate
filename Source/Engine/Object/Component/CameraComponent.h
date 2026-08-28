@@ -47,39 +47,39 @@ namespace sw
 		void onBeginPlay() override;
 
 		/** @brief 카메라 역할을 설정합니다. */
-		void setRole( CameraRole role );
+		void setRole( CameraRole role ) { _role = role; }
 		/** @brief 카메라 역할을 반환합니다. */
-		CameraRole getRole() const;
+		CameraRole getRole() const { return _role; }
 
 		/** @brief 수직 시야각(라디안)을 설정합니다. */
-		void setFieldOfViewY( float32 fovRadians );
+		void setFieldOfViewY( float32 fovRadians ) { _fovY = fovRadians; }
 		/** @brief 수직 시야각(라디안)을 반환합니다. */
-		float32 getFieldOfViewY() const;
+		float32 getFieldOfViewY() const { return _fovY; }
 
 		/** @brief 근평면을 설정합니다. */
-		void setNearPlane( float32 nearZ );
+		void setNearPlane( float32 nearZ ) { _nearZ = nearZ; }
 		/** @brief 근평면을 반환합니다. */
-		float32 getNearPlane() const;
+		float32 getNearPlane() const { return _nearZ; }
 
 		/** @brief 원평면을 설정합니다. */
-		void setFarPlane( float32 farZ );
+		void setFarPlane( float32 farZ ) { _farZ = farZ; }
 		/** @brief 원평면을 반환합니다. */
-		float32 getFarPlane() const;
+		float32 getFarPlane() const { return _farZ; }
 
 		/** @brief 직교 투영 높이를 설정합니다. */
-		void setOrthoHeight( float32 height );
+		void setOrthoHeight( float32 height ) { _orthoHeight = height; }
 		/** @brief 직교 투영 높이를 반환합니다. */
-		float32 getOrthoHeight() const;
+		float32 getOrthoHeight() const { return _orthoHeight; }
 
 		/** @brief 직교 투영 여부를 설정합니다. */
-		void setOrthographic( bool bOrtho );
+		void setOrthographic( bool bOrtho ) { _bOrthographic = bOrtho; }
 		/** @brief 직교 투영인지 반환합니다. */
-		bool isOrthographic() const;
+		bool isOrthographic() const { return _bOrthographic; }
 
 		/** @brief 우선순위를 설정합니다. */
-		void setPriority( int32 priority );
+		void setPriority( int32 priority ) { _priority = priority; }
 		/** @brief 우선순위를 반환합니다. */
-		int32 getPriority() const;
+		int32 getPriority() const { return _priority; }
 
 		/** @brief 월드 공간 타깃을 바라봅니다 (로컬 회전 갱신). */
 		void lookAt( const float3& target, const float3& up = float3( 0.0f, 1.0f, 0.0f ) );

@@ -35,6 +35,8 @@ namespace
 
 namespace sw
 {
+	SW_LOG_CALLER( "VulkanRHIResource" );
+
 	RHIPipelineStateHandle VulkanRHIResource::createPipelineState( const RHIPipelineStateDesc& desc )
 	{
 		ShaderCompileDesc vsDesc{};
@@ -59,14 +61,14 @@ namespace sw
 
 		if ( vsResult._bSuccess == false || ( bHasPixelShader && psResult._bSuccess == false ) )
 		{
-			SW_LOG_WARNING( "[Vulkan] createPipelineState: shader compile failed (vs=%# ps=%#)",
+			SW_LOG_WARNING( "createPipelineState: shader compile failed (vs=%# ps=%#)",
 							vsResult._bSuccess, psResult._bSuccess );
 			return 0;
 		}
 
 		if ( _pDevice->_pipelineLayout == VK_NULL_HANDLE )
 		{
-			SW_LOG_ERROR( "[Vulkan] createPipelineState: pipeline layout is null" );
+			SW_LOG_ERROR( "createPipelineState: pipeline layout is null" );
 			return 0;
 		}
 
@@ -157,8 +159,8 @@ namespace sw
 		VkPipelineColorBlendAttachmentState arrColorBlendAttachments[kMaxColorAttachments]{};
 		for ( uint32 blendIndex = 0; blendIndex < blendCount; ++blendIndex )
 		{
-			arrColorBlendAttachments[blendIndex].colorWriteMask		 = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
-																	   VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+			arrColorBlendAttachments[blendIndex].colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
+																  VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 			arrColorBlendAttachments[blendIndex].blendEnable		 = desc._bEnableBlend ? VK_TRUE : VK_FALSE;
 			arrColorBlendAttachments[blendIndex].srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
 			arrColorBlendAttachments[blendIndex].dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
@@ -288,9 +290,9 @@ namespace sw
 	{
 		VulkanRHIDevice::VulkanRenderPassRecord record{};
 
-		if ( desc._listColorAttachments.empty() && desc._bHasDepthStencil == 0 )
+		if ( desc._listColorAttachment.empty() && desc._bHasDepthStencil == 0 )
 		{
-			SW_LOG_ERROR( "[VulkanRHIResource] createRenderPass requires color or depth attachments." );
+			SW_LOG_ERROR( "createRenderPass requires color or depth attachments." );
 			return 0;
 		}
 
@@ -322,13 +324,13 @@ namespace sw
 		VkAttachmentDescription attachments[kMaxColorAttachments + 1]{};
 		VkAttachmentReference	colorRefs[kMaxColorAttachments]{};
 		const uint32			colorCount =
-			desc._listColorAttachments.size() > kMaxColorAttachments
-				? kMaxColorAttachments
-				: static_cast<uint32>( desc._listColorAttachments.size() );
+			   desc._listColorAttachment.size() > kMaxColorAttachments
+						   ? kMaxColorAttachments
+						   : static_cast<uint32>( desc._listColorAttachment.size() );
 
 		for ( uint32 colorIndex = 0; colorIndex < colorCount; ++colorIndex )
 		{
-			const RHIRenderPassAttachment& att	   = desc._listColorAttachments[colorIndex];
+			const RHIRenderPassAttachment& att	   = desc._listColorAttachment[colorIndex];
 			attachments[colorIndex].format		   = toVulkanTextureFormat( att._format );
 			attachments[colorIndex].samples		   = VK_SAMPLE_COUNT_1_BIT;
 			attachments[colorIndex].loadOp		   = toLoadOp( att._loadOp );
@@ -362,8 +364,8 @@ namespace sw
 		{
 			record.renderPass = _pDevice->_renderPass;
 			record.bOwned	  = 0;
-			_pDevice->_listRenderPasses.push_back( record );
-			return _pDevice->_listRenderPasses.size();
+			_pDevice->_listRenderPass.push_back( record );
+			return _pDevice->_listRenderPass.size();
 		}
 
 		VkSubpassDescription subpass{};
@@ -392,21 +394,21 @@ namespace sw
 		VkRenderPass created = VK_NULL_HANDLE;
 		if ( vkCreateRenderPass( _pDevice->_device, &rpInfo, nullptr, &created ) != VK_SUCCESS )
 		{
-			SW_LOG_ERROR( "[Vulkan] createRenderPass(desc) failed" );
+			SW_LOG_ERROR( "createRenderPass(desc) failed" );
 			return 0;
 		}
 
 		record.renderPass = created;
 		record.bOwned	  = 1;
-		_pDevice->_listRenderPasses.push_back( record );
-		return _pDevice->_listRenderPasses.size();
+		_pDevice->_listRenderPass.push_back( record );
+		return _pDevice->_listRenderPass.size();
 	}
 
 	void VulkanRHIResource::destroyRenderPass( RHIRenderPassHandle pass )
 	{
-		if ( pass == 0 || pass > _pDevice->_listRenderPasses.size() )
+		if ( pass == 0 || pass > _pDevice->_listRenderPass.size() )
 			return;
-		VulkanRHIDevice::VulkanRenderPassRecord& record = _pDevice->_listRenderPasses[pass - 1];
+		VulkanRHIDevice::VulkanRenderPassRecord& record = _pDevice->_listRenderPass[pass - 1];
 		if ( record.bOwned != 0 && record.renderPass != VK_NULL_HANDLE &&
 			 record.renderPass != _pDevice->_renderPass )
 		{
@@ -447,11 +449,11 @@ namespace sw
 			vkUnmapMemory( _pDevice->_device, pRecord->memory );
 		}
 
-		for ( size_t bufferIndex = 0; bufferIndex < _pDevice->_listBindlessSourceBuffers.size(); ++bufferIndex )
+		for ( size_t bufferIndex = 0; bufferIndex < _pDevice->_listBindlessSourceBuffer.size(); ++bufferIndex )
 		{
-			if ( _pDevice->_listBindlessSourceBuffers[bufferIndex] != buffer || bufferIndex >= _pDevice->_listRegisteredDescriptorSets.size() )
+			if ( _pDevice->_listBindlessSourceBuffer[bufferIndex] != buffer || bufferIndex >= _pDevice->_listRegisteredDescriptorSet.size() )
 				continue;
-			VkDescriptorSet set = _pDevice->_listRegisteredDescriptorSets[bufferIndex];
+			VkDescriptorSet set = _pDevice->_listRegisteredDescriptorSet[bufferIndex];
 			if ( set == VK_NULL_HANDLE )
 				continue;
 			VkDescriptorBufferInfo bufferInfo{};
@@ -498,7 +500,7 @@ namespace sw
 		VkBuffer buffer = VK_NULL_HANDLE;
 		if ( vkCreateBuffer( _pDevice->_device, &bufferInfo, nullptr, &buffer ) != VK_SUCCESS )
 		{
-			SW_LOG_ERROR( "[Vulkan] Failed to create VkBuffer for Vertex Buffer!" );
+			SW_LOG_ERROR( "Failed to create VkBuffer for Vertex Buffer!" );
 			return 0;
 		}
 
@@ -509,7 +511,7 @@ namespace sw
 		if ( _pDevice->findMemoryType( memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, memoryTypeIndex ) == false )
 		{
 			vkDestroyBuffer( _pDevice->_device, buffer, nullptr );
-			SW_LOG_ERROR( "[Vulkan] Failed to find a host visible memory type for Vertex Buffer!" );
+			SW_LOG_ERROR( "Failed to find a host visible memory type for Vertex Buffer!" );
 			return 0;
 		}
 
@@ -522,7 +524,7 @@ namespace sw
 		if ( vkAllocateMemory( _pDevice->_device, &allocInfo, nullptr, &memory ) != VK_SUCCESS )
 		{
 			vkDestroyBuffer( _pDevice->_device, buffer, nullptr );
-			SW_LOG_ERROR( "[Vulkan] Failed to allocate memory for Vertex Buffer!" );
+			SW_LOG_ERROR( "Failed to allocate memory for Vertex Buffer!" );
 			return 0;
 		}
 
@@ -556,40 +558,40 @@ namespace sw
 		if ( _pDevice->_gpuBuffers.take( buffer, owned ) == false )
 			return;
 
-		for ( size_t bufferIndex = 0; bufferIndex < _pDevice->_listBindlessSourceBuffers.size(); ++bufferIndex )
+		for ( size_t bufferIndex = 0; bufferIndex < _pDevice->_listBindlessSourceBuffer.size(); ++bufferIndex )
 		{
-			if ( _pDevice->_listBindlessSourceBuffers[bufferIndex] != buffer )
+			if ( _pDevice->_listBindlessSourceBuffer[bufferIndex] != buffer )
 				continue;
-			if ( bufferIndex < _pDevice->_listRegisteredDescriptorSets.size() && _pDevice->_listRegisteredDescriptorSets[bufferIndex] != VK_NULL_HANDLE )
+			if ( bufferIndex < _pDevice->_listRegisteredDescriptorSet.size() && _pDevice->_listRegisteredDescriptorSet[bufferIndex] != VK_NULL_HANDLE )
 			{
 				VkDevice		 dev  = _pDevice->_device;
 				VkDescriptorPool pool = _pDevice->_descriptorPool;
-				VkDescriptorSet	 set  = _pDevice->_listRegisteredDescriptorSets[bufferIndex];
+				VkDescriptorSet	 set  = _pDevice->_listRegisteredDescriptorSet[bufferIndex];
 				_pDevice->_releaseQueue.enqueueRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, pool, set]()
 				{
 					vkFreeDescriptorSets( dev, pool, 1, &set );
 				} ) );
-				_pDevice->_listRegisteredDescriptorSets[bufferIndex] = VK_NULL_HANDLE;
+				_pDevice->_listRegisteredDescriptorSet[bufferIndex] = VK_NULL_HANDLE;
 			}
-			_pDevice->_listBindlessSourceBuffers[bufferIndex] = 0;
+			_pDevice->_listBindlessSourceBuffer[bufferIndex] = 0;
 			_pDevice->_bindlessFreeList.push_back( static_cast<uint32>( bufferIndex ) );
 		}
-		for ( size_t bufferIndex = 0; bufferIndex < _pDevice->_listUavSourceBuffers.size(); ++bufferIndex )
+		for ( size_t bufferIndex = 0; bufferIndex < _pDevice->_listUavSourceBuffer.size(); ++bufferIndex )
 		{
-			if ( _pDevice->_listUavSourceBuffers[bufferIndex] != buffer )
+			if ( _pDevice->_listUavSourceBuffer[bufferIndex] != buffer )
 				continue;
-			if ( bufferIndex < _pDevice->_listRegisteredUAVs.size() && _pDevice->_listRegisteredUAVs[bufferIndex] != VK_NULL_HANDLE )
+			if ( bufferIndex < _pDevice->_listRegisteredUAV.size() && _pDevice->_listRegisteredUAV[bufferIndex] != VK_NULL_HANDLE )
 			{
 				VkDevice		 dev  = _pDevice->_device;
 				VkDescriptorPool pool = _pDevice->_descriptorPool;
-				VkDescriptorSet	 set  = _pDevice->_listRegisteredUAVs[bufferIndex];
+				VkDescriptorSet	 set  = _pDevice->_listRegisteredUAV[bufferIndex];
 				_pDevice->_releaseQueue.enqueueRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, pool, set]()
 				{
 					vkFreeDescriptorSets( dev, pool, 1, &set );
 				} ) );
-				_pDevice->_listRegisteredUAVs[bufferIndex] = VK_NULL_HANDLE;
+				_pDevice->_listRegisteredUAV[bufferIndex] = VK_NULL_HANDLE;
 			}
-			_pDevice->_listUavSourceBuffers[bufferIndex] = 0;
+			_pDevice->_listUavSourceBuffer[bufferIndex] = 0;
 			_pDevice->_uavFreeList.push_back( static_cast<uint32>( bufferIndex ) );
 		}
 
@@ -624,7 +626,7 @@ namespace sw
 		{
 			if ( _pDevice->_depthFormat == 0 )
 			{
-				SW_LOG_ERROR( "[Vulkan] createTexture2D: depth format not selected." );
+				SW_LOG_ERROR( "createTexture2D: depth format not selected." );
 				return 0;
 			}
 			format = static_cast<VkFormat>( _pDevice->_depthFormat );
@@ -656,7 +658,7 @@ namespace sw
 
 		if ( vkCreateImage( _pDevice->_device, &imageInfo, nullptr, &record.image ) != VK_SUCCESS )
 		{
-			SW_LOG_ERROR( "[Vulkan] Failed to create VkImage for Texture2D." );
+			SW_LOG_ERROR( "Failed to create VkImage for Texture2D." );
 			return 0;
 		}
 
@@ -667,7 +669,7 @@ namespace sw
 		if ( _pDevice->findMemoryType( memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, memoryTypeIndex ) == false )
 		{
 			vkDestroyImage( _pDevice->_device, record.image, nullptr );
-			SW_LOG_ERROR( "[Vulkan] Failed to find a device local memory type for Texture2D." );
+			SW_LOG_ERROR( "Failed to find a device local memory type for Texture2D." );
 			return 0;
 		}
 
@@ -679,7 +681,7 @@ namespace sw
 		if ( vkAllocateMemory( _pDevice->_device, &allocInfo, nullptr, &record.memory ) != VK_SUCCESS )
 		{
 			vkDestroyImage( _pDevice->_device, record.image, nullptr );
-			SW_LOG_ERROR( "[Vulkan] Failed to allocate memory for Texture2D." );
+			SW_LOG_ERROR( "Failed to allocate memory for Texture2D." );
 			return 0;
 		}
 
@@ -704,12 +706,12 @@ namespace sw
 		{
 			vkDestroyImage( _pDevice->_device, record.image, nullptr );
 			vkFreeMemory( _pDevice->_device, record.memory, nullptr );
-			SW_LOG_ERROR( "[Vulkan] Failed to create VkImageView for Texture2D." );
+			SW_LOG_ERROR( "Failed to create VkImageView for Texture2D." );
 			return 0;
 		}
 
 		if ( record._bRenderTarget && _pDevice->createOffscreenFramebuffer( record ) == false )
-			SW_LOG_WARNING( "[Vulkan] createTexture2D: framebuffer creation failed — texture kept without offscreen pass." );
+			SW_LOG_WARNING( "createTexture2D: framebuffer creation failed — texture kept without offscreen pass." );
 
 		return _pDevice->_gpuTextures.insert( std::move( record ) );
 	}
@@ -728,23 +730,23 @@ namespace sw
 		if ( pSlot->bindlessIndex != kInvalidDescriptorIndex )
 		{
 			const RHIDescriptorIndex index = pSlot->bindlessIndex;
-			if ( _pDevice->_bindlessTextureSet != VK_NULL_HANDLE && index < _pDevice->_listRegisteredTextures.size() &&
-				 _pDevice->_listRegisteredTextures[index] == _pDevice->_bindlessTextureSet )
+			if ( _pDevice->_bindlessTextureSet != VK_NULL_HANDLE && index < _pDevice->_listRegisteredTexture.size() &&
+				 _pDevice->_listRegisteredTexture[index] == _pDevice->_bindlessTextureSet )
 			{
 				_pDevice->writeBindlessTextureSlot( index, _pDevice->_bindlessDummyView );
-				_pDevice->_listRegisteredTextures[index] = VK_NULL_HANDLE;
+				_pDevice->_listRegisteredTexture[index] = VK_NULL_HANDLE;
 				_pDevice->_textureFreeList.push_back( index );
 			}
-			else if ( index < _pDevice->_listRegisteredTextures.size() && _pDevice->_listRegisteredTextures[index] != VK_NULL_HANDLE )
+			else if ( index < _pDevice->_listRegisteredTexture.size() && _pDevice->_listRegisteredTexture[index] != VK_NULL_HANDLE )
 			{
 				VkDevice		 dev  = _pDevice->_device;
 				VkDescriptorPool pool = _pDevice->_descriptorPool;
-				VkDescriptorSet	 set  = _pDevice->_listRegisteredTextures[index];
+				VkDescriptorSet	 set  = _pDevice->_listRegisteredTexture[index];
 				_pDevice->_releaseQueue.enqueueRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, pool, set]()
 				{
 					vkFreeDescriptorSets( dev, pool, 1, &set );
 				} ) );
-				_pDevice->_listRegisteredTextures[index] = VK_NULL_HANDLE;
+				_pDevice->_listRegisteredTexture[index] = VK_NULL_HANDLE;
 				_pDevice->_textureFreeList.push_back( index );
 			}
 			pSlot->bindlessIndex = kInvalidDescriptorIndex;
@@ -793,21 +795,21 @@ namespace sw
 			_pDevice->_textureFreeList.pop_back();
 		}
 		else
-			descriptorIndex = static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredTextures.size() );
+			descriptorIndex = static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredTexture.size() );
 
 		if ( descriptorIndex >= _pDevice->kBindlessTextureCount )
 		{
-			SW_LOG_ERROR( "[Vulkan] Bindless texture table full." );
+			SW_LOG_ERROR( "Bindless texture table full." );
 			return kInvalidDescriptorIndex;
 		}
 
 		if ( _pDevice->_bindlessTextureSet != VK_NULL_HANDLE )
 		{
 			_pDevice->writeBindlessTextureSlot( descriptorIndex, record.imageView );
-			if ( descriptorIndex >= _pDevice->_listRegisteredTextures.size() )
-				_pDevice->_listRegisteredTextures.resize( descriptorIndex + 1 );
-			_pDevice->_listRegisteredTextures[descriptorIndex] = _pDevice->_bindlessTextureSet; // shared array set
-			record.bindlessIndex							   = descriptorIndex;
+			if ( descriptorIndex >= _pDevice->_listRegisteredTexture.size() )
+				_pDevice->_listRegisteredTexture.resize( descriptorIndex + 1 );
+			_pDevice->_listRegisteredTexture[descriptorIndex] = _pDevice->_bindlessTextureSet; // shared array set
+			record.bindlessIndex							  = descriptorIndex;
 			return descriptorIndex;
 		}
 
@@ -824,7 +826,7 @@ namespace sw
 		VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
 		if ( vkAllocateDescriptorSets( _pDevice->_device, &allocInfo, &descriptorSet ) != VK_SUCCESS )
 		{
-			SW_LOG_ERROR( "[Vulkan] Failed to allocate VkDescriptorSet for bindless texture!" );
+			SW_LOG_ERROR( "Failed to allocate VkDescriptorSet for bindless texture!" );
 			return kInvalidDescriptorIndex;
 		}
 
@@ -842,10 +844,10 @@ namespace sw
 		write.pImageInfo	  = &imageInfo;
 		vkUpdateDescriptorSets( _pDevice->_device, 1, &write, 0, nullptr );
 
-		if ( descriptorIndex >= _pDevice->_listRegisteredTextures.size() )
-			_pDevice->_listRegisteredTextures.resize( descriptorIndex + 1 );
-		_pDevice->_listRegisteredTextures[descriptorIndex] = descriptorSet;
-		record.bindlessIndex							   = descriptorIndex;
+		if ( descriptorIndex >= _pDevice->_listRegisteredTexture.size() )
+			_pDevice->_listRegisteredTexture.resize( descriptorIndex + 1 );
+		_pDevice->_listRegisteredTexture[descriptorIndex] = descriptorSet;
+		record.bindlessIndex							  = descriptorIndex;
 		return descriptorIndex;
 	}
 
@@ -891,23 +893,23 @@ namespace sw
 			_pDevice->_bindlessFreeList.pop_back();
 		}
 		else
-			descriptorIndex = static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredDescriptorSets.size() );
+			descriptorIndex = static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredDescriptorSet.size() );
 
-		if ( descriptorIndex >= _pDevice->_listRegisteredDescriptorSets.size() )
+		if ( descriptorIndex >= _pDevice->_listRegisteredDescriptorSet.size() )
 		{
-			_pDevice->_listRegisteredDescriptorSets.resize( descriptorIndex + 1 );
-			_pDevice->_listBindlessSourceBuffers.resize( descriptorIndex + 1 );
+			_pDevice->_listRegisteredDescriptorSet.resize( descriptorIndex + 1 );
+			_pDevice->_listBindlessSourceBuffer.resize( descriptorIndex + 1 );
 		}
-		_pDevice->_listRegisteredDescriptorSets[descriptorIndex] = descriptorSet;
-		_pDevice->_listBindlessSourceBuffers[descriptorIndex]	 = buffer;
+		_pDevice->_listRegisteredDescriptorSet[descriptorIndex] = descriptorSet;
+		_pDevice->_listBindlessSourceBuffer[descriptorIndex]	= buffer;
 		return descriptorIndex;
 	}
 
 	void VulkanRHIResource::unregisterBindlessResource( RHIDescriptorIndex index )
 	{
-		if ( index < _pDevice->_listRegisteredDescriptorSets.size() )
+		if ( index < _pDevice->_listRegisteredDescriptorSet.size() )
 		{
-			VkDescriptorSet set = _pDevice->_listRegisteredDescriptorSets[index];
+			VkDescriptorSet set = _pDevice->_listRegisteredDescriptorSet[index];
 			if ( set != VK_NULL_HANDLE )
 			{
 				VkDevice		 dev  = _pDevice->_device;
@@ -916,10 +918,10 @@ namespace sw
 				{
 					vkFreeDescriptorSets( dev, pool, 1, &set );
 				} ) );
-				_pDevice->_listRegisteredDescriptorSets[index] = VK_NULL_HANDLE;
+				_pDevice->_listRegisteredDescriptorSet[index] = VK_NULL_HANDLE;
 			}
-			if ( index < _pDevice->_listBindlessSourceBuffers.size() )
-				_pDevice->_listBindlessSourceBuffers[index] = 0;
+			if ( index < _pDevice->_listBindlessSourceBuffer.size() )
+				_pDevice->_listBindlessSourceBuffer[index] = 0;
 			_pDevice->_bindlessFreeList.push_back( index );
 		}
 	}
@@ -939,7 +941,7 @@ namespace sw
 		VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
 		if ( vkAllocateDescriptorSets( _pDevice->_device, &allocInfo, &descriptorSet ) != VK_SUCCESS )
 		{
-			SW_LOG_ERROR( "[Vulkan] Failed to allocate VkDescriptorSet for UAV!" );
+			SW_LOG_ERROR( "Failed to allocate VkDescriptorSet for UAV!" );
 			return kInvalidDescriptorIndex;
 		}
 
@@ -966,23 +968,23 @@ namespace sw
 			_pDevice->_uavFreeList.pop_back();
 		}
 		else
-			descriptorIndex = static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredUAVs.size() );
+			descriptorIndex = static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredUAV.size() );
 
-		if ( descriptorIndex >= _pDevice->_listRegisteredUAVs.size() )
+		if ( descriptorIndex >= _pDevice->_listRegisteredUAV.size() )
 		{
-			_pDevice->_listRegisteredUAVs.resize( descriptorIndex + 1 );
-			_pDevice->_listUavSourceBuffers.resize( descriptorIndex + 1 );
+			_pDevice->_listRegisteredUAV.resize( descriptorIndex + 1 );
+			_pDevice->_listUavSourceBuffer.resize( descriptorIndex + 1 );
 		}
-		_pDevice->_listRegisteredUAVs[descriptorIndex]	 = descriptorSet;
-		_pDevice->_listUavSourceBuffers[descriptorIndex] = buffer;
+		_pDevice->_listRegisteredUAV[descriptorIndex]	= descriptorSet;
+		_pDevice->_listUavSourceBuffer[descriptorIndex] = buffer;
 		return descriptorIndex;
 	}
 
 	void VulkanRHIResource::unregisterBindlessUAV( RHIDescriptorIndex index )
 	{
-		if ( index < _pDevice->_listRegisteredUAVs.size() )
+		if ( index < _pDevice->_listRegisteredUAV.size() )
 		{
-			VkDescriptorSet set = _pDevice->_listRegisteredUAVs[index];
+			VkDescriptorSet set = _pDevice->_listRegisteredUAV[index];
 			if ( set != VK_NULL_HANDLE )
 			{
 				VkDevice		 dev  = _pDevice->_device;
@@ -991,10 +993,10 @@ namespace sw
 				{
 					vkFreeDescriptorSets( dev, pool, 1, &set );
 				} ) );
-				_pDevice->_listRegisteredUAVs[index] = VK_NULL_HANDLE;
+				_pDevice->_listRegisteredUAV[index] = VK_NULL_HANDLE;
 			}
-			if ( index < _pDevice->_listUavSourceBuffers.size() )
-				_pDevice->_listUavSourceBuffers[index] = 0;
+			if ( index < _pDevice->_listUavSourceBuffer.size() )
+				_pDevice->_listUavSourceBuffer[index] = 0;
 			_pDevice->_uavFreeList.push_back( index );
 		}
 	}

@@ -39,7 +39,7 @@ namespace sw
 
 	private:
 		mutable mutex											_mutex;
-		unordered_map<uint8, sw::unique_ptr<ICompressionCodec>> _mapCodecs;
+		unordered_map<uint8, sw::unique_ptr<ICompressionCodec>> _mapCodec;
 		CompressionCodecType									_defaultCodecType;
 	};
 } // namespace sw

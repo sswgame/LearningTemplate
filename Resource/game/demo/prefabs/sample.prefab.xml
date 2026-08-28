@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Prefab formatVersion="0" name="SamplePrefab">
 	<GameObject _schemaVersion="0" _name="SamplePrefab" _bActive="true">
-		<vector _name="_listComponents"/>
+		<vector _name="_listComponent"/>
 	</GameObject>
 </Prefab>

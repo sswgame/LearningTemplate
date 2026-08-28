@@ -295,9 +295,9 @@ namespace sw
 				{
 					if ( hit._time < nearestHit._time || bFoundHit == false )
 					{
-						bFoundHit			  = true;
-						nearestHit			  = hit;
-						nearestHit._hitBody	  = handle;
+						bFoundHit				= true;
+						nearestHit				= hit;
+						nearestHit._hitBody		= handle;
 						nearestHit._hitObjectId = pBody->_objectId;
 					}
 				}

@@ -196,8 +196,8 @@ namespace sw
 
 		ActionRoomKind		   _kind;
 		CollisionLayers		   _layers;
-		vector<Actor>		   _listActors;
-		vector<Projectile>	   _listProjectiles;
+		vector<Actor>		   _listActor;
+		vector<Projectile>	   _listProjectile;
 		float32				   _attackCooldown;
 		float32				   _dashCooldown;
 		float32				   _invulnTimer; ///< 피격 후 무적

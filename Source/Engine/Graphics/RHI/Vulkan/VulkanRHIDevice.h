@@ -163,7 +163,7 @@ namespace sw
 			out._pRenderPass	 = _renderPass;
 			out._queueFamily	 = _graphicsQueueFamilyIndex;
 			out._minImageCount	 = 2;
-			out._imageCount		 = static_cast<uint32>( _listSwapChainImages.empty() ? 2 : _listSwapChainImages.size() );
+			out._imageCount		 = static_cast<uint32>( _listSwapChainImage.empty() ? 2 : _listSwapChainImage.size() );
 			return _device != nullptr;
 		}
 
@@ -423,21 +423,21 @@ namespace sw
 		uint32					 _graphicsQueueFamilyIndex;
 
 		VkSwapchainKHR		  _swapChain;
-		vector<VkImage>		  _listSwapChainImages;
+		vector<VkImage>		  _listSwapChainImage;
 		uint32				  _swapChainImageFormat;
 		uint32				  _swapChainExtentWidth;
 		uint32				  _swapChainExtentHeight;
-		vector<VkImageView>	  _listSwapChainImageViews;
-		vector<VkFramebuffer> _listSwapChainFramebuffers;
+		vector<VkImageView>	  _listSwapChainImageView;
+		vector<VkFramebuffer> _listSwapChainFramebuffer;
 
 		VkRenderPass  _renderPass;
 		VkRenderPass  _offscreenRenderPass; ///< R8G8B8A8_UNORM color-only pass for Game View / RT draws
 		VkCommandPool _commandPool;
 
-		vector<VkCommandBuffer> _listCommandBuffers;
-		vector<VkSemaphore>		_listImageAvailableSemaphores;
-		vector<VkSemaphore>		_listRenderFinishedSemaphores;
-		vector<VkFence>			_listInFlightFences;
+		vector<VkCommandBuffer> _listCommandBuffer;
+		vector<VkSemaphore>		_listImageAvailableSemaphore;
+		vector<VkSemaphore>		_listRenderFinishedSemaphore;
+		vector<VkFence>			_listInFlightFence;
 		vector<VkFence>			_listImagesInFlight;
 
 		void*				   _pHWnd;
@@ -485,20 +485,20 @@ namespace sw
 		RHIBufferHandle						   _boundIndexBuffer;
 		uint32								   _boundIndexStride;
 		uint32								   _boundIndexOffset;
-		vector<VkDescriptorSet>				   _listRegisteredDescriptorSets;
-		vector<RHIBufferHandle>				   _listBindlessSourceBuffers;
-		vector<VkDescriptorSet>				   _listRegisteredUAVs;
-		vector<RHIBufferHandle>				   _listUavSourceBuffers;
+		vector<VkDescriptorSet>				   _listRegisteredDescriptorSet;
+		vector<RHIBufferHandle>				   _listBindlessSourceBuffer;
+		vector<VkDescriptorSet>				   _listRegisteredUAV;
+		vector<RHIBufferHandle>				   _listUavSourceBuffer;
 		vector<uint32>						   _uavFreeList;
 
 		RHIHandleTable<VulkanTextureRecord> _gpuTextures;
 		RHIReleaseQueue						_releaseQueue;
 
-		unordered_map<CompositeFbKey, CompositeFbRecord, CompositeFbKeyHash> _mapCompositeFramebuffers;
-		unordered_map<PipelineRpKey, VkRenderPass, PipelineRpKeyHash>		 _mapPipelineRenderPasses;
+		unordered_map<CompositeFbKey, CompositeFbRecord, CompositeFbKeyHash> _mapCompositeFramebuffer;
+		unordered_map<PipelineRpKey, VkRenderPass, PipelineRpKeyHash>		 _mapPipelineRenderPass;
 
 		VkDescriptorSetLayout	_textureDescriptorSetLayout;
-		vector<VkDescriptorSet> _listRegisteredTextures; ///< 레거시 텍스처별 set (슬롯 바인드 폴백)
+		vector<VkDescriptorSet> _listRegisteredTexture; ///< 레거시 텍스처별 set (슬롯 바인드 폴백)
 		vector<uint32>			_textureFreeList;
 
 		VkDescriptorSetLayout _bindlessTextureArrayLayout;
@@ -508,7 +508,7 @@ namespace sw
 		VkDeviceMemory		  _bindlessDummyMemory;
 
 		RHIHandleTable<VulkanPipelineStateRecord> _pipelineStates;
-		vector<VulkanRenderPassRecord>			  _listRenderPasses;
+		vector<VulkanRenderPassRecord>			  _listRenderPass;
 		VkPipelineCache							  _pipelineCache;
 
 		sw::unique_ptr<VulkanRHICommandContext> _immContext;

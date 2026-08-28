@@ -216,19 +216,19 @@ namespace sw
 
 	void D3D11RHICommandContext::bindComputeUAV( RHIDescriptorIndex index, uint32 slot )
 	{
-		if ( _pDevice->_deviceContext != nullptr && index < _pDevice->_listRegisteredUAVs.size() && _pDevice->_listRegisteredUAVs[index] != nullptr )
+		if ( _pDevice->_deviceContext != nullptr && index < _pDevice->_listRegisteredUAV.size() && _pDevice->_listRegisteredUAV[index] != nullptr )
 		{
-			ID3D11UnorderedAccessView* pUav = _pDevice->_listRegisteredUAVs[index].Get();
+			ID3D11UnorderedAccessView* pUav = _pDevice->_listRegisteredUAV[index].Get();
 			_pDevice->_deviceContext->CSSetUnorderedAccessViews( slot, 1, &pUav, nullptr );
 		}
 	}
 
 	void D3D11RHICommandContext::bindShaderResource( RHIDescriptorIndex index, uint32 slot )
 	{
-		if ( _pDevice->_deviceContext == nullptr || index >= _pDevice->_listRegisteredTextures.size() )
+		if ( _pDevice->_deviceContext == nullptr || index >= _pDevice->_listRegisteredTexture.size() )
 			return;
 		ID3D11ShaderResourceView*	   pSrv{ nullptr };
-		D3D11RHIDevice::TextureRecord* pTex = _pDevice->resolveTexture( _pDevice->_listRegisteredTextures[index] );
+		D3D11RHIDevice::TextureRecord* pTex = _pDevice->resolveTexture( _pDevice->_listRegisteredTexture[index] );
 		if ( pTex != nullptr )
 			pSrv = pTex->_srv.Get();
 		_pDevice->_deviceContext->PSSetShaderResources( slot, 1, &pSrv );

@@ -16,6 +16,7 @@
 #include "ReflectionParser/ParserUtil.h"
 #include "ReflectionParser/TypeNameMap.h"
 
+SW_LOG_CALLER( "CodeGenerator" );
 namespace sw
 {
 	namespace
@@ -69,14 +70,14 @@ namespace sw
 		{
 			StringBuilder<constant::kMaxBuffer1024> b;
 			b.append( annotationConstants::kCtorLookupName );
-			if ( method._listParamTypeNames.empty() == false )
+			if ( method._listParamTypeName.empty() == false )
 			{
 				b.append( '(' );
-				for ( size_t paramIndex = 0; paramIndex < method._listParamTypeNames.size(); ++paramIndex )
+				for ( size_t paramIndex = 0; paramIndex < method._listParamTypeName.size(); ++paramIndex )
 				{
 					if ( paramIndex > 0 )
 						b.append( ',' );
-					b.append( normalizeTypeName( method._listParamTypeNames[paramIndex] ) );
+					b.append( normalizeTypeName( method._listParamTypeName[paramIndex] ) );
 				}
 				b.append( ')' );
 			}
@@ -122,8 +123,8 @@ namespace sw
 		const vector<ParsedEnumInfo>& enums,
 		const string&				  sourceFilePath,
 		const string&				  outputDir )
-		: _listTypes{ types }
-		, _listEnums{ enums }
+		: _listType{ types }
+		, _listEnum{ enums }
 		, _sourceFilePath{ sourceFilePath }
 		, _outputDir{ outputDir }
 		, _outputFilePath{}
@@ -157,7 +158,7 @@ namespace sw
 	{
 		if ( EmitTemplateStore::instance().isLoaded() == false )
 		{
-			SW_LOG_ERROR( "[CodeGenerator] Emit templates not loaded (pass --emit-templates <dir>)." );
+			SW_LOG_ERROR( "Emit templates not loaded (pass --emit-templates <dir>)." );
 			return false;
 		}
 
@@ -170,12 +171,12 @@ namespace sw
 
 		CodeEmitBuffer buffer;
 
-		if ( _listTypes.empty() && _listEnums.empty() )
+		if ( _listType.empty() && _listEnum.empty() )
 		{
 			buffer.appendFormat( "// No reflected types found in %#\n", _sourceFilePath );
 		}
 
-		if ( _listTypes.empty() == false || _listEnums.empty() == false )
+		if ( _listType.empty() == false || _listEnum.empty() == false )
 		{
 			BLOCK( "Emit File Header" )
 			{
@@ -185,9 +186,9 @@ namespace sw
 
 			BLOCK( "Emit Registrars" )
 			{
-				for ( const ParsedTypeInfo& typeInfo : _listTypes )
+				for ( const ParsedTypeInfo& typeInfo : _listType )
 					emitTypeRegistrar( buffer, typeInfo );
-				for ( const ParsedEnumInfo& enumInfo : _listEnums )
+				for ( const ParsedEnumInfo& enumInfo : _listEnum )
 					emitEnumRegistrar( buffer, enumInfo );
 			}
 
@@ -195,7 +196,7 @@ namespace sw
 
 			BLOCK( "Emit Component Factory Registrars" )
 			{
-				for ( const ParsedTypeInfo& typeInfo : _listTypes )
+				for ( const ParsedTypeInfo& typeInfo : _listType )
 				{
 					if ( typeInfo.wantsComponentFactory() )
 						emitComponentFactoryRegistrar( buffer, typeInfo );
@@ -204,7 +205,7 @@ namespace sw
 
 			BLOCK( "Emit Type Traits & Accessors" )
 			{
-				for ( const ParsedTypeInfo& typeInfo : _listTypes )
+				for ( const ParsedTypeInfo& typeInfo : _listType )
 				{
 					emitReflectTypeTraits( buffer, typeInfo );
 					if ( typeInfo.wantsTypeApi() )
@@ -224,7 +225,7 @@ namespace sw
 				FileUtil::readTextFile( _outputFilePath, existingContent );
 				if ( existingContent.empty() == false && existingContent == newContent )
 				{
-					SW_LOG_INFO( "[CodeGenerator] Incremental check: %# is up-to-date, skipping write.", _outputFilePath );
+					SW_LOG_TRACE( "Incremental check: %# is up-to-date, skipping write.", _outputFilePath );
 					bCppUnchanged = true;
 				}
 			}
@@ -233,7 +234,7 @@ namespace sw
 			{
 				if ( FileUtil::writeTextFile( _outputFilePath, newContent ) == false )
 				{
-					SW_LOG_ERROR( "[CodeGenerator] Failed to open output: %#", _outputFilePath );
+					SW_LOG_ERROR( "Failed to open output: %#", _outputFilePath );
 					return false;
 				}
 			}
@@ -242,7 +243,7 @@ namespace sw
 		if ( emitGeneratedHeader() == false )
 			return false;
 
-		SW_LOG_INFO( "[CodeGenerator] Generated: %#", _outputFilePath );
+		SW_LOG_TRACE( "Generated: %#", _outputFilePath );
 		return true;
 	}
 
@@ -384,11 +385,11 @@ namespace sw
 		}
 
 		e.pop(); // 생성자 인자 들여쓰기
-		if ( prop._listAliases.empty() == false )
+		if ( prop._listAlias.empty() == false )
 		{
-			e.line( "p._listAliases = {" );
+			e.line( "p._listAlias = {" );
 			e.push();
-			for ( const string& alias : prop._listAliases )
+			for ( const string& alias : prop._listAlias )
 				e.linef( "%#,", CodeEmit::hs( alias ) );
 			e.pop();
 			e.line( "};" );
@@ -406,7 +407,7 @@ namespace sw
 		e.line( "auto invokerCb = []( void* objPtr, const ::sw::TaskArgs& args ) -> ::sw::TaskValue" );
 		e.line( "{" );
 		e.push();
-		if ( method._listParamTypeNames.empty() )
+		if ( method._listParamTypeName.empty() )
 			e.line( "(void)args;" );
 
 		if ( method._bStatic && method._bConstructor == false )
@@ -443,12 +444,12 @@ namespace sw
 		e.pop();
 		e.line( "};" );
 		e.line( "funcInfo._invoker = SW_DELEGATE_LAMBDA( ::sw::Delegate<::sw::TaskValue( void*, const ::sw::TaskArgs& )>, invokerCb );" );
-		e.line( "info._listMethods.push_back( funcInfo );" );
+		e.line( "info._listMethod.push_back( funcInfo );" );
 	}
 
 	void CodeGenerator::emitMethodList( CodeEmit& e, const ParsedTypeInfo& typeInfo ) const
 	{
-		for ( const ParsedFunctionInfo& method : typeInfo._listMethods )
+		for ( const ParsedFunctionInfo& method : typeInfo._listMethod )
 		{
 			const string retType = normalizeTypeName( method._returnTypeName );
 
@@ -460,7 +461,7 @@ namespace sw
 			e.assign( "funcInfo._name", CodeEmit::quoted( method._bConstructor ? annotationConstants::kCtorLookupName : method._name ) );
 			e.linef( "funcInfo._hashName       = %#;", CodeEmit::hs( lookupName ) );
 			e.assign( "funcInfo._returnTypeName", CodeEmit::quoted( retType ) );
-			e.assign( "funcInfo._listParamTypeNames", makeQuotedTypeList( method._listParamTypeNames ) );
+			e.assign( "funcInfo._listParamTypeName", makeQuotedTypeList( method._listParamTypeName ) );
 
 			e.assignQuotedIf( method._category.empty() == false, "funcInfo._metadata._category", method._category );
 			e.assignQuotedIf( method._displayName.empty() == false, "funcInfo._metadata._displayName", method._displayName );
@@ -475,7 +476,7 @@ namespace sw
 			e.flagIf( method._bStatic, "funcInfo._metadata._bStatic" );
 			e.flagIf( method._bConst, "funcInfo._metadata._bConst" );
 
-			const string callArgs = makeInvokerCallArgs( method._listParamTypeNames );
+			const string callArgs = makeInvokerCallArgs( method._listParamTypeName );
 
 			emitMethodInvoker( e, typeInfo, method, retType, callArgs );
 			e.pop();
@@ -545,26 +546,26 @@ namespace sw
 		CodeEmit e( out );
 		e.push( 3 );
 
-		if ( typeInfo._listProperties.empty() == false )
+		if ( typeInfo._listProperty.empty() == false )
 		{
 			e.line( "info._propertyList =" );
 			e.line( "{" );
 			e.push();
-			for ( const ParsedPropertyInfo& prop : typeInfo._listProperties )
+			for ( const ParsedPropertyInfo& prop : typeInfo._listProperty )
 				emitPropertyInfoEntry( e, typeInfo, prop );
 			e.pop();
 			e.line( "};" );
 		}
 
-		if ( typeInfo._listMethods.empty() == false )
+		if ( typeInfo._listMethod.empty() == false )
 			emitMethodList( e, typeInfo );
 
 		appendTemplate( out, tplConstants::kTypeRegistrarEnd,
 						{
 							{ "Id", id },
 							{ "AliasRegs",
-							  emitAliasRegisterLines( typeInfo._listAliases, typeInfo._fullyQualifiedName, false ) }
-		 } );
+							  emitAliasRegisterLines( typeInfo._listAlias, typeInfo._fullyQualifiedName, false ) }
+		   } );
 	}
 
 	void CodeGenerator::emitEnumRegistrar( CodeEmitBuffer& out, const ParsedEnumInfo& enumInfo ) const
@@ -589,12 +590,12 @@ namespace sw
 		CodeEmit e( out );
 		e.push( 3 );
 
-		if ( enumInfo._listEnumerators.empty() == false )
+		if ( enumInfo._listEnumerator.empty() == false )
 		{
 			e.line( "info._mapNameToValue =" );
 			e.line( "{" );
 			e.push();
-			for ( const ParsedEnumeratorInfo& en : enumInfo._listEnumerators )
+			for ( const ParsedEnumeratorInfo& en : enumInfo._listEnumerator )
 				e.linef( "{ %#, %# },", CodeEmit::hs( en._name ), en._value );
 			e.pop();
 			e.line( "};" );
@@ -602,13 +603,13 @@ namespace sw
 			e.line( "info._mapValueToName =" );
 			e.line( "{" );
 			e.push();
-			for ( const ParsedEnumeratorInfo& en : enumInfo._listEnumerators )
+			for ( const ParsedEnumeratorInfo& en : enumInfo._listEnumerator )
 				e.linef( "{ %#, %# },", en._value, CodeEmit::hs( en._name ) );
 			e.pop();
 			e.line( "};" );
 		}
 
-		for ( const auto& [alias, canonical] : enumInfo._listValueAliases )
+		for ( const auto& [alias, canonical] : enumInfo._listValueAlias )
 		{
 			e.line( "{" );
 			e.push();
@@ -625,8 +626,8 @@ namespace sw
 						{
 							{ "Id", id },
 							{ "AliasRegs",
-							  emitAliasRegisterLines( enumInfo._listAliases, enumInfo._fullyQualifiedName, true ) }
-		} );
+							  emitAliasRegisterLines( enumInfo._listAlias, enumInfo._fullyQualifiedName, true ) }
+		  } );
 	}
 
 	const ParsedEnumeratorInfo* CodeGenerator::findEnumerator( const ParsedEnumInfo& enumInfo, string_view spec )
@@ -634,7 +635,7 @@ namespace sw
 		if ( spec.empty() )
 			return nullptr;
 		const string_view leaf = enumeratorLeaf( spec );
-		for ( const ParsedEnumeratorInfo& en : enumInfo._listEnumerators )
+		for ( const ParsedEnumeratorInfo& en : enumInfo._listEnumerator )
 		{
 			if ( en._name == spec || en._name == leaf )
 				return &en;
@@ -651,15 +652,15 @@ namespace sw
 		e.blank();
 
 		bool bNeedFlags = false;
-		for ( const ParsedEnumInfo& enumInfo : _listEnums )
+		for ( const ParsedEnumInfo& enumInfo : _listEnum )
 		{
 			if ( enumInfo._bEmitFlagOps )
 				bNeedFlags = true;
 			if ( enumInfo._invalidEnumerator.empty() == false && findEnumerator( enumInfo, enumInfo._invalidEnumerator ) == nullptr )
-				SW_LOG_WARNING( "[CodeGenerator] ENUM(Invalid=%#) not found on %#", enumInfo._invalidEnumerator,
+				SW_LOG_WARNING( "ENUM(Invalid=%#) not found on %#", enumInfo._invalidEnumerator,
 								enumInfo._fullyQualifiedName );
 			if ( enumInfo._countEnumerator.empty() == false && findEnumerator( enumInfo, enumInfo._countEnumerator ) == nullptr )
-				SW_LOG_WARNING( "[CodeGenerator] ENUM(Count=%#) not found on %#", enumInfo._countEnumerator,
+				SW_LOG_WARNING( "ENUM(Count=%#) not found on %#", enumInfo._countEnumerator,
 								enumInfo._fullyQualifiedName );
 		}
 
@@ -669,7 +670,7 @@ namespace sw
 			e.blank();
 		}
 
-		for ( const ParsedEnumInfo& enumInfo : _listEnums )
+		for ( const ParsedEnumInfo& enumInfo : _listEnum )
 		{
 			if ( enumInfo._bEmitFlagOps == 0 )
 				continue;
@@ -743,10 +744,10 @@ namespace sw
 		}
 		if ( FileUtil::writeTextFile( _outputHeaderPath, newContent ) == false )
 		{
-			SW_LOG_ERROR( "[CodeGenerator] Failed to write %#", _outputHeaderPath );
+			SW_LOG_ERROR( "Failed to write %#", _outputHeaderPath );
 			return false;
 		}
-		SW_LOG_INFO( "[CodeGenerator] Generated: %#", _outputHeaderPath );
+		SW_LOG_TRACE( "Generated: %#", _outputHeaderPath );
 		return true;
 	}
 

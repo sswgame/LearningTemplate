@@ -299,10 +299,10 @@ namespace sw
 		if ( _pDevice->_bInitialized == false || index == kInvalidDescriptorIndex )
 			return;
 
-		if ( index < static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredUAVs.size() ) &&
-			 _pDevice->_listRegisteredUAVs[index].buffer != 0 )
+		if ( index < static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredUAV.size() ) &&
+			 _pDevice->_listRegisteredUAV[index].buffer != 0 )
 		{
-			GLuint ssbo = _pDevice->resolveGlBuffer( _pDevice->_listRegisteredUAVs[index].buffer );
+			GLuint ssbo = _pDevice->resolveGlBuffer( _pDevice->_listRegisteredUAV[index].buffer );
 			if ( ssbo != 0 )
 			{
 				glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 48 + slot, ssbo );
@@ -327,10 +327,10 @@ namespace sw
 		if ( _pDevice->_bInitialized == false || index == kInvalidDescriptorIndex )
 			return;
 
-		if ( index < static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredTextures.size() ) &&
-			 _pDevice->_listRegisteredTextures[index].texture != 0 )
+		if ( index < static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredTexture.size() ) &&
+			 _pDevice->_listRegisteredTexture[index].texture != 0 )
 		{
-			const OpenGLRHIDevice::OpenGLTextureRecord* pRec = _pDevice->resolveTexture( _pDevice->_listRegisteredTextures[index].texture );
+			const OpenGLRHIDevice::OpenGLTextureRecord* pRec = _pDevice->resolveTexture( _pDevice->_listRegisteredTexture[index].texture );
 			const GLuint								tex	 = pRec != nullptr ? pRec->texture : 0;
 			if ( tex != 0 )
 			{

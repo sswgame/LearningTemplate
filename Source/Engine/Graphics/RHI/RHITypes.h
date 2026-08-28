@@ -365,7 +365,7 @@ namespace sw
 		string _computeShaderPath; ///< 컴퓨트 셰이더 소스 경로
 		string _computeEntryPoint; ///< 컴퓨트 셰이더 진입점
 
-		vector<string> _listShaderDefines; ///< 컴파일 매크로 ("NAME" 또는 "NAME=VALUE") — 셰이더 permutation
+		vector<string> _listShaderDefine; ///< 컴파일 매크로 ("NAME" 또는 "NAME=VALUE") — 셰이더 permutation
 
 		RHIPrimitiveTopology   _topology;							 ///< 프리미티브 위상
 		RHIFillMode			   _fillMode;							 ///< 채우기 모드
@@ -400,7 +400,7 @@ namespace sw
 	 */
 	struct SW_API RHIRenderPassDesc
 	{
-		vector<RHIRenderPassAttachment> _listColorAttachments; ///< 색상 어태치먼트 목록
+		vector<RHIRenderPassAttachment> _listColorAttachment;  ///< 색상 어태치먼트 목록
 		float32							_clearDepth;		   ///< 깊이 초기화 값
 		uint8							_clearStencil;		   ///< 스텐실 초기화 값
 		uint8							_bHasDepthStencil : 1; ///< 깊이/스텐실 어태치먼트 포함
@@ -492,14 +492,14 @@ namespace sw
 			elem._format			= format;
 			elem._alignedByteOffset = offset;
 			elem._inputSlot			= slot;
-			_listElements.push_back( elem );
+			_listElement.push_back( elem );
 			return *this;
 		}
 
 		/** @brief 모은 엘리먼트 목록을 반환합니다. */
-		const vector<RHIInputElement>& build() const { return _listElements; }
+		const vector<RHIInputElement>& build() const { return _listElement; }
 
 	private:
-		vector<RHIInputElement> _listElements;
+		vector<RHIInputElement> _listElement;
 	};
 } // namespace sw

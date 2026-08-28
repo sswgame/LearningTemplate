@@ -38,13 +38,13 @@ namespace sw
 		void setBoneSpaceTransform( int32 boneIndex, const float4x4& boneSpaceTransform );
 		void updateCharacterSpaceTransforms();
 
-		const vector<float4x4>& getSkinningMatrices() const { return _listSkinningMatrices; }
-		const vector<Bone>&		getBones() const { return _listBones; }
-		size_t					getBoneCount() const { return _listBones.size(); }
+		const vector<float4x4>& getSkinningMatrices() const { return _listSkinningMatrix; }
+		const vector<Bone>&		getBones() const { return _listBone; }
+		size_t					getBoneCount() const { return _listBone.size(); }
 		void					clear();
 
 	private:
-		vector<Bone>	 _listBones;
-		vector<float4x4> _listSkinningMatrices;
+		vector<Bone>	 _listBone;
+		vector<float4x4> _listSkinningMatrix;
 	};
 } // namespace sw

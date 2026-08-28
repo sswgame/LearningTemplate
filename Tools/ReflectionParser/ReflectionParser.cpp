@@ -17,6 +17,7 @@
 #include "ReflectionParser/ParserUtil.h"
 #include "ReflectionParser/ReflectBuiltinsLoader.h"
 
+SW_LOG_CALLER( "ReflectionParser" );
 namespace sw
 {
 	/** @brief 소스 전체를 읽고 리플렉션 키워드가 있으면 true. outContent에 버퍼를 남깁니다. */
@@ -25,7 +26,7 @@ namespace sw
 		sw::vector<uint8> fileData;
 		if ( sw::FileUtil::readFile( filePath, fileData ) == false )
 		{
-			SW_LOG_ERROR( "[ReflectionParser] Failed to read for keyword scan: %#", filePath );
+			SW_LOG_ERROR( "Failed to read for keyword scan: %#", filePath );
 			outContent.clear();
 			return false;
 		}
@@ -91,7 +92,7 @@ namespace sw
 			}
 			else
 			{
-				SW_LOG_ERROR( "[ReflectionParser] Unknown argument: %#", argv[argIndex] );
+				SW_LOG_ERROR( "Unknown argument: %#", argv[argIndex] );
 				return false;
 			}
 		}
@@ -100,7 +101,7 @@ namespace sw
 		{
 			if ( outArgs.builtinsPath.empty() )
 			{
-				SW_LOG_ERROR( "[ReflectionParser] %# requires %#.", sw::cliConstants::kEmitBuiltinsGen, sw::cliConstants::kBuiltins );
+				SW_LOG_ERROR( "%# requires %#.", sw::cliConstants::kEmitBuiltinsGen, sw::cliConstants::kBuiltins );
 				return false;
 			}
 			return true;
@@ -108,12 +109,12 @@ namespace sw
 
 		if ( outArgs.inputFiles.empty() )
 		{
-			SW_LOG_ERROR( "[ReflectionParser] No --input files specified." );
+			SW_LOG_ERROR( "No --input files specified." );
 			return false;
 		}
 		if ( outArgs.outputDir.empty() )
 		{
-			SW_LOG_ERROR( "[ReflectionParser] No --output directory specified." );
+			SW_LOG_ERROR( "No --output directory specified." );
 			return false;
 		}
 
@@ -190,7 +191,7 @@ namespace sw
 
 		if ( isUpToDate( genPath, inputFile, args ) )
 		{
-			SW_LOG_INFO( "[ReflectionParser] Up-to-date, skipping AST parsing: %#", inputFile );
+			SW_LOG_TRACE( "Up-to-date, skipping AST parsing: %#", inputFile );
 			return;
 		}
 
@@ -202,16 +203,16 @@ namespace sw
 				++errorCount;
 				return;
 			}
-			SW_LOG_INFO( "[ReflectionParser] No reflection annotations found, emitting empty output: %#", inputFile );
+			SW_LOG_TRACE( "No reflection annotations found, emitting empty output: %#", inputFile );
 			if ( emitEmptyGenerated( inputFile, args ) == false )
 			{
-				SW_LOG_ERROR( "[ReflectionParser] Code generation failed: %#", inputFile );
+				SW_LOG_ERROR( "Code generation failed: %#", inputFile );
 				++errorCount;
 			}
 			return;
 		}
 
-		SW_LOG_INFO( "[ReflectionParser] ── Parsing: %#", inputFile );
+		SW_LOG_TRACE( "── Parsing: %#", inputFile );
 
 		sw::vector<sw::string> includePaths = args.includePaths;
 		if ( args.outputDir.empty() == false )
@@ -220,7 +221,7 @@ namespace sw
 		sw::ParserContext context;
 		if ( context.parse( inputFile, includePaths, &sourceContent ) == false )
 		{
-			SW_LOG_ERROR( "[ReflectionParser] Parse failed: %#", inputFile );
+			SW_LOG_ERROR( "Parse failed: %#", inputFile );
 			++errorCount;
 			return;
 		}
@@ -236,13 +237,13 @@ namespace sw
 
 		if ( generator.generate() == false )
 		{
-			SW_LOG_ERROR( "[ReflectionParser] Code generation failed: %#", inputFile );
+			SW_LOG_ERROR( "Code generation failed: %#", inputFile );
 			++errorCount;
 			return;
 		}
 
 		if ( generator.getOutputFilePath().empty() == false )
-			SW_LOG_INFO( "[ReflectionParser] Generated  : %#", generator.getOutputFilePath() );
+			SW_LOG_TRACE( "Generated  : %#", generator.getOutputFilePath() );
 	}
 
 	/** @brief ENUM(Flags) 비트 연산자 우산 헤더를 씁니다. */
@@ -290,10 +291,10 @@ namespace sw
 		}
 		if ( FileUtil::writeTextFile( outPath, newContent ) == false )
 		{
-			SW_LOG_ERROR( "[ReflectionParser] Failed to write %#", outPath );
+			SW_LOG_ERROR( "Failed to write %#", outPath );
 			return false;
 		}
-		SW_LOG_INFO( "[ReflectionParser] Generated  : %#", outPath );
+		SW_LOG_TRACE( "Generated  : %#", outPath );
 		return true;
 	}
 
@@ -335,13 +336,13 @@ int32 main( int32 argc, utf8* argv[] )
 	{
 		if ( args.emitTemplatesDir.empty() )
 		{
-			SW_LOG_ERROR( "[ReflectionParser] %# requires %#.", sw::cliConstants::kEmitBuiltinsGen, sw::cliConstants::kEmitTemplates );
+			SW_LOG_ERROR( "%# requires %#.", sw::cliConstants::kEmitBuiltinsGen, sw::cliConstants::kEmitTemplates );
 			logger->shutdown();
 			return 1;
 		}
 		if ( sw::EmitTemplateStore::instance().loadDirectory( args.emitTemplatesDir ) == false )
 		{
-			SW_LOG_ERROR( "[ReflectionParser] Failed to load --emit-templates: %#", args.emitTemplatesDir );
+			SW_LOG_ERROR( "Failed to load --emit-templates: %#", args.emitTemplatesDir );
 			logger->shutdown();
 			return 1;
 		}
@@ -355,42 +356,42 @@ int32 main( int32 argc, utf8* argv[] )
 	{
 		if ( sw::loadReflectBuiltins( args.builtinsPath ) == false )
 		{
-			SW_LOG_ERROR( "[ReflectionParser] Failed to load --builtins: %#", args.builtinsPath );
+			SW_LOG_ERROR( "Failed to load --builtins: %#", args.builtinsPath );
 			logger->shutdown();
 			return 1;
 		}
 	}
 	else
 	{
-		SW_LOG_WARNING( "[ReflectionParser] No --builtins; scalar aliases / std containers will not be registered." );
+		SW_LOG_WARNING( "No --builtins; scalar aliases / std containers will not be registered." );
 	}
 
 	if ( args.annotationMetaPath.empty() == false )
 	{
 		if ( sw::AnnotationMeta::instance().loadFile( args.annotationMetaPath ) == false )
 		{
-			SW_LOG_ERROR( "[ReflectionParser] Failed to load --annotation-meta: %#", args.annotationMetaPath );
+			SW_LOG_ERROR( "Failed to load --annotation-meta: %#", args.annotationMetaPath );
 			logger->shutdown();
 			return 1;
 		}
 	}
 	else
 	{
-		SW_LOG_WARNING( "[ReflectionParser] No --annotation-meta; PROPERTY/FUNCTION/REFLECT tokens will be ignored." );
+		SW_LOG_WARNING( "No --annotation-meta; PROPERTY/FUNCTION/REFLECT tokens will be ignored." );
 	}
 
 	if ( args.emitTemplatesDir.empty() == false )
 	{
 		if ( sw::EmitTemplateStore::instance().loadDirectory( args.emitTemplatesDir ) == false )
 		{
-			SW_LOG_ERROR( "[ReflectionParser] Failed to load --emit-templates: %#", args.emitTemplatesDir );
+			SW_LOG_ERROR( "Failed to load --emit-templates: %#", args.emitTemplatesDir );
 			logger->shutdown();
 			return 1;
 		}
 	}
 	else
 	{
-		SW_LOG_ERROR( "[ReflectionParser] %# <Templates dir> is required.", sw::cliConstants::kEmitTemplates );
+		SW_LOG_ERROR( "%# <Templates dir> is required.", sw::cliConstants::kEmitTemplates );
 		logger->shutdown();
 		return 1;
 	}
@@ -428,7 +429,7 @@ int32 main( int32 argc, utf8* argv[] )
 	uint32 workerCount = std::thread::hardware_concurrency();
 	if ( workerCount == 0 )
 		workerCount = 1;
-	SW_LOG_INFO( "[ReflectionParser] Parsing %# input(s) with %# worker(s).", args.inputFiles.size(), workerCount );
+	SW_LOG_INFO( "Parsing %# input(s) with %# worker(s).", args.inputFiles.size(), workerCount );
 
 	sw::CpuTimer parseTimer;
 	parseTimer.resetTimer();
@@ -439,7 +440,7 @@ int32 main( int32 argc, utf8* argv[] )
 		sw::TaskManager taskManager;
 		if ( taskManager.initialize( workerCount ) == false )
 		{
-			SW_LOG_ERROR( "[ReflectionParser] Failed to initialize TaskManager." );
+			SW_LOG_ERROR( "Failed to initialize TaskManager." );
 			logger->shutdown();
 			return 1;
 		}
@@ -467,9 +468,9 @@ int32 main( int32 argc, utf8* argv[] )
 
 	const int32 totalErrors = errorCount.load();
 	if ( totalErrors == 0 )
-		SW_LOG_INFO( "[ReflectionParser] Done in %# ms. All files processed successfully.", elapsedMs );
+		SW_LOG_INFO( "Done in %# ms. All files processed successfully.", elapsedMs );
 	else
-		SW_LOG_ERROR( "[ReflectionParser] Done in %# ms with %# error(s).", elapsedMs, totalErrors );
+		SW_LOG_ERROR( "Done in %# ms with %# error(s).", elapsedMs, totalErrors );
 
 	logger->shutdown();
 	return totalErrors == 0 ? 0 : 1;

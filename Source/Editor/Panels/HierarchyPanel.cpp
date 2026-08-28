@@ -11,11 +11,9 @@
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/SelectionManager.h"
 
-#include "Engine/Game/GameState.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-
 #include "Engine/Reflection/ReflectionCast.h"
 
 #include "RuntimeAPI/Service/EditorService.h"

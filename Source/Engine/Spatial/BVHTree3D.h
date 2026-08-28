@@ -62,8 +62,8 @@ namespace sw
 		static float32 getSurfaceArea( const AABB& box );
 
 		int32							   _rootIndex;
-		vector<BVHNode3D>				   _listNodes;
-		vector<int32>					   _listFreeNodes;
+		vector<BVHNode3D>				   _listNode;
+		vector<int32>					   _listFreeNode;
 		unordered_map<ObjectHandle, int32> _mapHandleToNode;
 	};
 } // namespace sw

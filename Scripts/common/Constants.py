@@ -36,7 +36,6 @@ kDirSourceEditor = "Source/Editor"
 kDirSourceCore = "Source/Core"
 
 kFileReflectBuiltins = "Source/Engine/Reflection/ReflectBuiltins.xxx"
-kFileGameObjectManagerInternal = "GameObjectManagerInternal.h"
 kFileEngineServices = "Engine/Common/EngineServices.h"
 kFileAnnotationMeta = "Source/Core/Predefined/AnnotationMeta.txt"
 kFileTplBuiltinHeader = "BuiltinFileHeader.tpl"

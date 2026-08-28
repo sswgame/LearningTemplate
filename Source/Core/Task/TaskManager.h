@@ -162,7 +162,7 @@ namespace sw
 		void dispatchMainThreadTasks();
 
 		/** @brief 생성된 워커 스레드의 총 개수를 반환합니다. */
-		uint32 getWorkerCount() const { return static_cast<uint32>( _listWorkerQueues.size() ); }
+		uint32 getWorkerCount() const { return static_cast<uint32>( _listWorkerQueue.size() ); }
 
 		/** @brief 현재 호출 스레드가 TaskManager를 초기화한 메인 스레드인지 확인합니다. */
 		bool isMainThread() const;
@@ -207,8 +207,8 @@ namespace sw
 		bool							_bInitialized{ false };		  ///< 매니저 초기화 여부
 		std::thread::id					_mainThreadId{};			  ///< 메인 스레드 고유 ID
 		std::atomic<bool>				_bStop{ false };			  ///< 워커 스레드 종료 플래그
-		vector<std::thread>				_listWorkers;				  ///< 워커 스레드 핸들 목록
-		vector<unique_ptr<WorkerQueue>> _listWorkerQueues;			  ///< 각 워커별 독립 대기열
+		vector<std::thread>				_listWorker;				  ///< 워커 스레드 핸들 목록
+		vector<unique_ptr<WorkerQueue>> _listWorkerQueue;			  ///< 각 워커별 독립 대기열
 		alignas( 64 ) std::atomic<uint32> _nextWorkerQueueIndex{ 0 }; ///< 라운드 로빈 작업 분배용 인덱스
 		alignas( 64 ) std::atomic<int32> _sleepingWorkerCount{ 0 };	  ///< 현재 조건 변수 대기(Sleep) 중인 워커 수
 
@@ -219,7 +219,7 @@ namespace sw
 		mutable mutex					 _waitAllMutex;		 ///< waitAll 대기용 뮤텍스
 		std::condition_variable_any		 _cvWaitAll;		 ///< 모든 작업 완료 알림용 조건 변수
 
-		vector<weak_ptr<StageNode>> _listAllStages;				 ///< 등록된 전체 스테이지 목록 (약한 참조)
+		vector<weak_ptr<StageNode>> _listAllStage;				 ///< 등록된 전체 스테이지 목록 (약한 참조)
 		mutable mutex				_stageMutex;				 ///< 스테이지 목록 동기화 뮤텍스
 		alignas( 64 ) std::atomic<uint32> _activeTaskCount{ 0 }; ///< 현재 시스템에서 실행/대기 중인 활성 태스크 총 개수
 	};

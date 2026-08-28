@@ -2,16 +2,18 @@
 
 #include "Engine/Serialization/Format/XmlSerializer.h"
 
+#include "Core/String/StringUtil.h"
+
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Serialization/Core/SchemaMigrate.h"
 #include "Engine/Serialization/Core/SerializerInternal.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
 
-#include "Core/String/StringUtil.h"
-
 namespace sw
 {
+	SW_LOG_CALLER( "XmlSerializer" );
+
 	struct XmlDocumentBackend::Impl
 	{
 		XmlDocument		doc;
@@ -238,7 +240,7 @@ namespace sw
 		if ( _impl->currentParent.isValid() == false )
 			return false;
 
-		string	sTag = Impl::sanitizeTag( pTagName );
+		string	sTag  = Impl::sanitizeTag( pTagName );
 		XmlNode child = _impl->currentParent.child( sTag.c_str(), ignoreCaseKeys() );
 		if ( child.isValid() == false )
 			return false;
@@ -376,7 +378,7 @@ namespace sw
 						{
 							StringBuilder<constant::kMaxBuffer8192> ss;
 							valueToText( ss, pElemPtr, nested._elementTypeName, ctx );
-							backend.writeArrayItem( string( ss.view() ).c_str() );
+							backend.writeArrayItem( ss.c_str() );
 						}
 					}
 				}
@@ -389,7 +391,7 @@ namespace sw
 
 					StringBuilder<constant::kMaxBuffer8192> kSs;
 					valueToText( kSs, pKPtr, nested._keyTypeName, ctx );
-					backend.writeMapKey( string( kSs.view() ).c_str() );
+					backend.writeMapKey( kSs.c_str() );
 
 					if ( nested._elementNested != nullptr )
 						writeNestedContainerXml( pVPtr, *nested._elementNested, "value", backend, ctx );
@@ -397,7 +399,7 @@ namespace sw
 					{
 						StringBuilder<constant::kMaxBuffer8192> vSs;
 						valueToText( vSs, pVPtr, nested._elementTypeName, ctx );
-						backend.writeMapValue( string( vSs.view() ).c_str() );
+						backend.writeMapValue( vSs.c_str() );
 					}
 					backend.endMapEntry();
 				} );
@@ -512,19 +514,19 @@ namespace sw
 			IMapContainerWrapper*	   pMapWrap = nested._wrapper->asMap();
 			if ( pSeq != nullptr && bOwnedPtr )
 			{
-				bool							 any{ false };
-				NestedOwnedPointerReadCallback	 ptrCb{};
-				ptrCb._pCtx			= &ctx;
-				ptrCb._pAny			= &any;
-				ptrCb._pFieldError	= &bOutFieldError;
+				bool						   any{ false };
+				NestedOwnedPointerReadCallback ptrCb{};
+				ptrCb._pCtx		   = &ctx;
+				ptrCb._pAny		   = &any;
+				ptrCb._pFieldError = &bOutFieldError;
 				backend.iterateMap( nullptr, SW_DELEGATE_METHOD( XmlMapItemDelegate, &NestedOwnedPointerReadCallback::invoke, &ptrCb ) );
 				return any;
 			}
 			if ( pSeq != nullptr )
 			{
-				size_t					 elemIndex{ 0 };
-				bool					 any{ false };
-				NestedArrayReadCallback	 arrayCb{};
+				size_t					elemIndex{ 0 };
+				bool					any{ false };
+				NestedArrayReadCallback arrayCb{};
 				arrayCb._pContainerPtr	= pContainerPtr;
 				arrayCb._pSeq			= pSeq;
 				arrayCb._pNested		= &nested;
@@ -539,20 +541,20 @@ namespace sw
 			}
 			else if ( pMapWrap != nullptr )
 			{
-				vector<uint8>			listKBuf( pMapWrap->getKeySize() );
-				vector<uint8>			listVBuf( pMapWrap->getValueSize() );
-				bool					any{ false };
-				NestedMapReadCallback	mapCb{};
-				mapCb._pContainerPtr	= pContainerPtr;
-				mapCb._pMapWrap			= pMapWrap;
-				mapCb._pNested			= &nested;
-				mapCb._pCtx				= &ctx;
-				mapCb._pOutOrphans		= pOutOrphans;
-				mapCb._pPropForOrphan	= &propForOrphan;
-				mapCb._pListKBuf		= &listKBuf;
-				mapCb._pListVBuf		= &listVBuf;
-				mapCb._pAny				= &any;
-				mapCb._pFieldError		= &bOutFieldError;
+				vector<uint8>		  listKBuf( pMapWrap->getKeySize() );
+				vector<uint8>		  listVBuf( pMapWrap->getValueSize() );
+				bool				  any{ false };
+				NestedMapReadCallback mapCb{};
+				mapCb._pContainerPtr  = pContainerPtr;
+				mapCb._pMapWrap		  = pMapWrap;
+				mapCb._pNested		  = &nested;
+				mapCb._pCtx			  = &ctx;
+				mapCb._pOutOrphans	  = pOutOrphans;
+				mapCb._pPropForOrphan = &propForOrphan;
+				mapCb._pListKBuf	  = &listKBuf;
+				mapCb._pListVBuf	  = &listVBuf;
+				mapCb._pAny			  = &any;
+				mapCb._pFieldError	  = &bOutFieldError;
 				backend.iterateMap( nullptr, SW_DELEGATE_METHOD( XmlMapItemDelegate, &NestedMapReadCallback::invoke, &mapCb ) );
 				return any;
 			}
@@ -586,8 +588,7 @@ namespace sw
 					{
 						StringBuilder<constant::kMaxBuffer8192> ss;
 						valueToText( ss, pPropPtr, prop._typeName, ctx );
-						const string value( ss.view() );
-						backend.writeAttribute( prop._name.c_str(), value.c_str() );
+						backend.writeAttribute( prop._name.c_str(), ss.c_str() );
 					}
 				}
 			}
@@ -605,18 +606,6 @@ namespace sw
 				orphan._text		 = string( strValue );
 				pOutOrphans->push_back( std::move( orphan ) );
 			}
-		}
-
-		static vector<const utf8*> getContainerPropNames( const PropertyInfo& prop )
-		{
-			vector<const utf8*> listNames;
-			listNames.push_back( prop._name.c_str() );
-			for ( const hashed_string& alias : prop._listAliases )
-			{
-				if ( alias.empty() == false )
-					listNames.push_back( alias.c_str() );
-			}
-			return listNames;
 		}
 
 		static bool isNameKnown( const unordered_set<string>& uniqueKnownNames, const utf8* pChildName )
@@ -653,12 +642,17 @@ namespace sw
 					bool		entered{ false };
 					if ( pTypeTag != nullptr )
 					{
-						for ( const utf8* pPropName : getContainerPropNames( prop ) )
+						if ( backend.pushNamedTypeChild( pTypeTag, prop._name.c_str() ) )
+							entered = true;
+						else
 						{
-							if ( backend.pushNamedTypeChild( pTypeTag, pPropName ) )
+							for ( const hashed_string& alias : prop._listAlias )
 							{
-								entered = true;
-								break;
+								if ( alias.empty() == false && backend.pushNamedTypeChild( pTypeTag, alias.c_str() ) )
+								{
+									entered = true;
+									break;
+								}
 							}
 						}
 					}
@@ -681,7 +675,7 @@ namespace sw
 						bool entered = backend.pushChild( prop._name.c_str() );
 						if ( entered == false )
 						{
-							for ( const hashed_string& alias : prop._listAliases )
+							for ( const hashed_string& alias : prop._listAlias )
 							{
 								if ( alias.empty() == false && backend.pushChild( alias.c_str() ) )
 								{
@@ -706,7 +700,7 @@ namespace sw
 					bool   readOk = backend.readAttribute( prop._name.c_str(), strValue );
 					if ( readOk == false )
 					{
-						for ( const hashed_string& alias : prop._listAliases )
+						for ( const hashed_string& alias : prop._listAlias )
 						{
 							if ( alias.empty() == false && backend.readAttribute( alias.c_str(), strValue ) )
 							{
@@ -743,7 +737,7 @@ namespace sw
 			for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )
 			{
 				uniqueKnownNames.insert( prop._name.c_str() );
-				for ( const hashed_string& alias : prop._listAliases )
+				for ( const hashed_string& alias : prop._listAlias )
 				{
 					if ( alias.empty() == false )
 						uniqueKnownNames.insert( alias.c_str() );
@@ -967,13 +961,13 @@ namespace sw
 		}
 		else if ( migrate == nullptr && outVersion != currentVersion )
 		{
-			SW_LOG_WARNING( "[XmlSerializer] schema version %# -> %# with no migrate callback (%# listOrphans)",
+			SW_LOG_WARNING( "schema version %# -> %# with no migrate callback (%# listOrphans)",
 							outVersion, currentVersion, static_cast<uint32>( listOrphans.size() ) );
 			ok = false;
 		}
 		else if ( migrate == nullptr && listOrphans.empty() == false && ctx.allowUnknownProperties() == false )
 		{
-			SW_LOG_WARNING( "[XmlSerializer] schema version %# -> %# with no migrate callback (%# listOrphans)",
+			SW_LOG_WARNING( "schema version %# -> %# with no migrate callback (%# listOrphans)",
 							outVersion, currentVersion, static_cast<uint32>( listOrphans.size() ) );
 			ok = false;
 		}

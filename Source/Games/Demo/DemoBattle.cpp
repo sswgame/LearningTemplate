@@ -2,7 +2,6 @@
 
 #include "Core/Event/EventDispatcher.h"
 
-#include "Engine/Game/GameState.h"
 #include "Engine/Input/ActionMap.h"
 #include "Engine/Input/InputManager.h"
 
@@ -17,6 +16,8 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "DemoGame" );
+
 	void DemoGame::syncPartyLeadFromBattle()
 	{
 		if ( _partyList.empty() )
@@ -40,7 +41,7 @@ namespace sw
 		const bool	  bWasActive   = _battle.isActive();
 		_battle.update( deltaTime );
 
-		if ( _battle.getPhase() == BattlePhase::PlayerChoice && getGameState() == GameState::Playing )
+		if ( _battle.getPhase() == BattlePhase::PlayerChoice )
 		{
 			ActionMap&			 actions = gameActions();
 			const GameActionIds& ids	 = gameActionIds();
@@ -87,7 +88,7 @@ namespace sw
 		_battle.startWithPartyLead( _partyList[0], foeId.c_str() );
 		game::getService<SceneManager>()->requestLoadAsync( _data._battleScene );
 		_hud.setDialogue( _battle.getStatusText() );
-		SW_LOG_INFO( "[DemoGame] Battle scene requested: %# (foe=%#)", _data._battleScene, foeId.c_str() );
+		SW_LOG_INFO( "Battle scene requested: %# (foe=%#)", _data._battleScene, foeId.c_str() );
 	}
 
 	void DemoGame::finishBattleReturnLoad()
@@ -110,13 +111,13 @@ namespace sw
 			gateEvent._bLocked = 0;
 			game::getService<EventDispatcher>()->publish( gameEventChannel(), gateEvent );
 			if ( bWon )
-				SW_LOG_INFO( "[DemoGame] Clear gate unlocked after win." );
+				SW_LOG_TRACE( "Clear gate unlocked after win." );
 		}
 		if ( _returnScenePath.empty() == false )
 			game::getService<SceneManager>()->requestLoadAsync( _returnScenePath );
 		_bBattleReturnPending = 0;
 		_hud.clearDialogue();
-		SW_LOG_INFO( "[DemoGame] Returned to overworld '%#' @ (%#,%#)",
-					 _returnMapPath, _returnPlayerX, _returnPlayerY );
+		SW_LOG_TRACE( "Returned to overworld '%#' @ (%#,%#)",
+					  _returnMapPath, _returnPlayerX, _returnPlayerY );
 	}
 } // namespace sw

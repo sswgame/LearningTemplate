@@ -32,34 +32,42 @@ namespace sw
 		void takeDamage( int32 amount );
 		void heal( int32 amount );
 
-		int32	getHp() const;
-		int32	getMaxHp() const;
-		int32	getAttack() const;
-		int32	getDefense() const;
-		float32 getMoveSpeed() const;
-		bool	isDead() const;
+		int32	getHp() const { return _hp; }
+		int32	getMaxHp() const { return _maxHp; }
+		int32	getAttack() const { return _attack; }
+		int32	getDefense() const { return _defense; }
+		float32 getMoveSpeed() const { return _moveSpeed; }
+		bool	isDead() const { return _bIsDead; }
 
-		void setStats( int32 hp, int32 maxHp, int32 attack, int32 defense, float32 moveSpeed, float32 maxInvincibilityTime );
+		void setStats( int32 hp, int32 maxHp, int32 attack, int32 defense, float32 moveSpeed, float32 maxInvincibilityTime )
+		{
+			_hp					  = hp;
+			_maxHp				  = maxHp;
+			_attack				  = attack;
+			_defense			  = defense;
+			_moveSpeed			  = moveSpeed;
+			_maxInvincibilityTime = maxInvincibilityTime;
+		}
 
 	private:
 		void applyTakeDamage( int32 amount );
 		void applyHeal( int32 amount );
 
-		PROPERTY( Alias="hp" )
+		PROPERTY( Alias = "hp" )
 		int32 _hp;
-		PROPERTY( Alias="maxHp" )
+		PROPERTY( Alias = "maxHp" )
 		int32 _maxHp;
-		PROPERTY( Alias="attack" )
+		PROPERTY( Alias = "attack" )
 		int32 _attack;
-		PROPERTY( Alias="defense" )
+		PROPERTY( Alias = "defense" )
 		int32 _defense;
-		PROPERTY( Alias="moveSpeed" )
+		PROPERTY( Alias = "moveSpeed" )
 		float32 _moveSpeed;
-		PROPERTY( Alias="invincibilityTime" )
+		PROPERTY( Alias = "invincibilityTime" )
 		float32 _invincibilityTime;
-		PROPERTY( Alias="maxInvincibilityTime" )
+		PROPERTY( Alias = "maxInvincibilityTime" )
 		float32 _maxInvincibilityTime;
-		PROPERTY( Alias="bIsDead" )
+		PROPERTY( Alias = "bIsDead" )
 		bool _bIsDead;
 	};
 } // namespace sw

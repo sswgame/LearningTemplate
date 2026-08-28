@@ -19,6 +19,8 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "DemoGame" );
+
 	namespace
 	{
 
@@ -73,7 +75,7 @@ namespace sw
 
 		pSample->addComponent<UnitStatsComponent>();
 
-		SW_LOG_INFO( "[DemoGame] Spawned SampleActor with SceneComponent + UnitStatsComponent." );
+		SW_LOG_TRACE( "Spawned SampleActor with SceneComponent + UnitStatsComponent." );
 	}
 
 	void spawnDemoCubeIfMissing()
@@ -105,7 +107,7 @@ namespace sw
 		if ( pScene->getMaterial() != nullptr )
 			pMeshComp->setMaterial( pScene->getMaterial() );
 
-		SW_LOG_INFO( "[DemoGame] Spawned DemoCube GameObject with MeshComponent (unit cube)." );
+		SW_LOG_TRACE( "Spawned DemoCube GameObject with MeshComponent (unit cube)." );
 
 		const hashed_string glassName( "DemoGlassCube" );
 		if ( pGameObjectManager->findGameObjectByName( glassName ) == nullptr )
@@ -133,7 +135,7 @@ namespace sw
 						}
 						pGlassMesh->setMaterialInstance( s_glassMaterialInstance );
 					}
-					SW_LOG_INFO( "[DemoGame] Spawned DemoGlassCube (Transparent + MaterialInstance overrides)." );
+					SW_LOG_TRACE( "Spawned DemoGlassCube (Transparent + MaterialInstance overrides)." );
 				}
 			}
 		}

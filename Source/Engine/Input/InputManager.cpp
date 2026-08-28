@@ -7,6 +7,8 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "InputManager" );
+
 	InputManager::InputManager()
 		: _gamepad{ nullptr }
 		, _mouseX{ 0 }
@@ -53,7 +55,7 @@ namespace sw
 		_gamepad			= make_unique<GamepadXInput>();
 		_bPollGamepad		= 1;
 		_bInitialized		= 1;
-		SW_LOG_INFO( "[InputManager] Initialized." );
+		SW_LOG_INFO( "Initialized." );
 		return true;
 	}
 
@@ -65,7 +67,7 @@ namespace sw
 		_gamepad.reset();
 		_bPollGamepad = 0;
 		_bInitialized = 0;
-		SW_LOG_INFO( "[InputManager] Shut down." );
+		SW_LOG_INFO( "Shut down." );
 	}
 
 	/**

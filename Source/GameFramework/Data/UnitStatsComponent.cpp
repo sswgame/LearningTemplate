@@ -76,46 +76,6 @@ namespace sw
 		}
 	}
 
-	int32 UnitStatsComponent::getHp() const
-	{
-		return _hp;
-	}
-
-	int32 UnitStatsComponent::getMaxHp() const
-	{
-		return _maxHp;
-	}
-
-	int32 UnitStatsComponent::getAttack() const
-	{
-		return _attack;
-	}
-
-	int32 UnitStatsComponent::getDefense() const
-	{
-		return _defense;
-	}
-
-	float32 UnitStatsComponent::getMoveSpeed() const
-	{
-		return _moveSpeed;
-	}
-
-	bool UnitStatsComponent::isDead() const
-	{
-		return _bIsDead;
-	}
-
-	void UnitStatsComponent::setStats( int32 hp, int32 maxHp, int32 attack, int32 defense, float32 moveSpeed, float32 maxInvincibilityTime )
-	{
-		_hp					  = hp;
-		_maxHp				  = maxHp;
-		_attack				  = attack;
-		_defense			  = defense;
-		_moveSpeed			  = moveSpeed;
-		_maxInvincibilityTime = maxInvincibilityTime;
-	}
-
 	void UnitStatsComponent::takeDamage( int32 amount )
 	{
 		GameObject*		   pOwner	= getOwner();

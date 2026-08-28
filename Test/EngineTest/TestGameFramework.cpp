@@ -137,7 +137,7 @@ SW_TEST_CASE( GameFrameworkTest, TransitionOrchestratorBattleAndReturnFlow )
 
 	TransitionCallbacks callbacks{};
 	callbacks.startBattle		 = Delegate<void()>::create( [&]()
-	{ bBattleStarted = true; } );
+	   { bBattleStarted = true; } );
 	callbacks.finishBattleReturn = Delegate<void()>::create( [&]()
 	{ bBattleReturned = true; } );
 	orchestrator.setCallbacks( std::move( callbacks ) );

@@ -164,12 +164,12 @@ SW_TEST_CASE( TagSystemTest, TagQueryComplexAstExpression )
 
 	TagQueryExpr exprNotDebuff;
 	exprNotDebuff._type = TagQueryExprType::NotExprMatch;
-	exprNotDebuff._listSubExprs.push_back( std::move( exprDebuffAny ) );
+	exprNotDebuff._listSubExpr.push_back( std::move( exprDebuffAny ) );
 
 	TagQueryExpr rootExpr;
 	rootExpr._type = TagQueryExprType::AllExprMatch;
-	rootExpr._listSubExprs.push_back( std::move( exprFactionAny ) );
-	rootExpr._listSubExprs.push_back( std::move( exprNotDebuff ) );
+	rootExpr._listSubExpr.push_back( std::move( exprFactionAny ) );
+	rootExpr._listSubExpr.push_back( std::move( exprNotDebuff ) );
 
 	TagQuery compositeQuery = TagQuery::createExpression( std::move( rootExpr ) );
 

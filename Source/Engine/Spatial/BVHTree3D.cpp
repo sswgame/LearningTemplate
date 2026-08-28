@@ -10,8 +10,8 @@ namespace sw
 {
 	BVHTree3D::BVHTree3D()
 		: _rootIndex{ -1 }
-		, _listNodes{}
-		, _listFreeNodes{}
+		, _listNode{}
+		, _listFreeNode{}
 		, _mapHandleToNode{}
 	{
 	}
@@ -39,28 +39,28 @@ namespace sw
 
 	int32 BVHTree3D::allocateNode()
 	{
-		if ( _listFreeNodes.empty() == false )
+		if ( _listFreeNode.empty() == false )
 		{
-			const int32 nodeIndex = _listFreeNodes.back();
-			_listFreeNodes.pop_back();
-			_listNodes[static_cast<size_t>( nodeIndex )] = BVHNode3D{};
+			const int32 nodeIndex = _listFreeNode.back();
+			_listFreeNode.pop_back();
+			_listNode[static_cast<size_t>( nodeIndex )] = BVHNode3D{};
 			return nodeIndex;
 		}
 
-		const int32 nodeIndex = static_cast<int32>( _listNodes.size() );
-		_listNodes.emplace_back();
+		const int32 nodeIndex = static_cast<int32>( _listNode.size() );
+		_listNode.emplace_back();
 		return nodeIndex;
 	}
 
 	void BVHTree3D::freeNode( int32 nodeIndex )
 	{
-		if ( nodeIndex >= 0 && static_cast<size_t>( nodeIndex ) < _listNodes.size() )
+		if ( nodeIndex >= 0 && static_cast<size_t>( nodeIndex ) < _listNode.size() )
 		{
-			_listNodes[static_cast<size_t>( nodeIndex )]._parent	 = -1;
-			_listNodes[static_cast<size_t>( nodeIndex )]._leftChild	 = -1;
-			_listNodes[static_cast<size_t>( nodeIndex )]._rightChild = -1;
-			_listNodes[static_cast<size_t>( nodeIndex )]._handle	 = ObjectHandle{};
-			_listFreeNodes.push_back( nodeIndex );
+			_listNode[static_cast<size_t>( nodeIndex )]._parent		= -1;
+			_listNode[static_cast<size_t>( nodeIndex )]._leftChild	= -1;
+			_listNode[static_cast<size_t>( nodeIndex )]._rightChild = -1;
+			_listNode[static_cast<size_t>( nodeIndex )]._handle		= ObjectHandle{};
+			_listFreeNode.push_back( nodeIndex );
 		}
 	}
 
@@ -73,7 +73,7 @@ namespace sw
 			remove( handle );
 
 		const int32 leafIndex = allocateNode();
-		BVHNode3D&	leaf	  = _listNodes[static_cast<size_t>( leafIndex )];
+		BVHNode3D&	leaf	  = _listNode[static_cast<size_t>( leafIndex )];
 		leaf._bounds		  = bounds;
 		leaf._handle		  = handle;
 		leaf._height		  = 0;
@@ -103,8 +103,8 @@ namespace sw
 	void BVHTree3D::clear()
 	{
 		_rootIndex = -1;
-		_listNodes.clear();
-		_listFreeNodes.clear();
+		_listNode.clear();
+		_listFreeNode.clear();
 		_mapHandleToNode.clear();
 	}
 
@@ -112,22 +112,22 @@ namespace sw
 	{
 		if ( _rootIndex == -1 )
 		{
-			_rootIndex											  = leafIndex;
-			_listNodes[static_cast<size_t>( _rootIndex )]._parent = -1;
+			_rootIndex											 = leafIndex;
+			_listNode[static_cast<size_t>( _rootIndex )]._parent = -1;
 			return;
 		}
 
 		// Surface Area Heuristic (SAH) to find best sibling
-		const AABB leafAABB = _listNodes[static_cast<size_t>( leafIndex )]._bounds;
+		const AABB leafAABB = _listNode[static_cast<size_t>( leafIndex )]._bounds;
 		int32	   index	= _rootIndex;
 
-		while ( _listNodes[static_cast<size_t>( index )].isLeaf() == false )
+		while ( _listNode[static_cast<size_t>( index )].isLeaf() == false )
 		{
-			const int32 leftChild  = _listNodes[static_cast<size_t>( index )]._leftChild;
-			const int32 rightChild = _listNodes[static_cast<size_t>( index )]._rightChild;
+			const int32 leftChild  = _listNode[static_cast<size_t>( index )]._leftChild;
+			const int32 rightChild = _listNode[static_cast<size_t>( index )]._rightChild;
 
-			const float32 area		   = getSurfaceArea( _listNodes[static_cast<size_t>( index )]._bounds );
-			const AABB	  combinedAABB = combineAABB( _listNodes[static_cast<size_t>( index )]._bounds, leafAABB );
+			const float32 area		   = getSurfaceArea( _listNode[static_cast<size_t>( index )]._bounds );
+			const AABB	  combinedAABB = combineAABB( _listNode[static_cast<size_t>( index )]._bounds, leafAABB );
 			const float32 combinedArea = getSurfaceArea( combinedAABB );
 
 			const float32 cost			  = 2.0f * combinedArea;
@@ -135,30 +135,30 @@ namespace sw
 
 			// Cost of descending into left child
 			float32 costLeft = 0.0f;
-			if ( _listNodes[static_cast<size_t>( leftChild )].isLeaf() )
+			if ( _listNode[static_cast<size_t>( leftChild )].isLeaf() )
 			{
-				const AABB aabb = combineAABB( _listNodes[static_cast<size_t>( leftChild )]._bounds, leafAABB );
+				const AABB aabb = combineAABB( _listNode[static_cast<size_t>( leftChild )]._bounds, leafAABB );
 				costLeft		= getSurfaceArea( aabb ) + inheritanceCost;
 			}
 			else
 			{
-				const AABB	  aabb	  = combineAABB( _listNodes[static_cast<size_t>( leftChild )]._bounds, leafAABB );
-				const float32 oldArea = getSurfaceArea( _listNodes[static_cast<size_t>( leftChild )]._bounds );
+				const AABB	  aabb	  = combineAABB( _listNode[static_cast<size_t>( leftChild )]._bounds, leafAABB );
+				const float32 oldArea = getSurfaceArea( _listNode[static_cast<size_t>( leftChild )]._bounds );
 				const float32 newArea = getSurfaceArea( aabb );
 				costLeft			  = ( newArea - oldArea ) + inheritanceCost;
 			}
 
 			// Cost of descending into right child
 			float32 costRight = 0.0f;
-			if ( _listNodes[static_cast<size_t>( rightChild )].isLeaf() )
+			if ( _listNode[static_cast<size_t>( rightChild )].isLeaf() )
 			{
-				const AABB aabb = combineAABB( _listNodes[static_cast<size_t>( rightChild )]._bounds, leafAABB );
+				const AABB aabb = combineAABB( _listNode[static_cast<size_t>( rightChild )]._bounds, leafAABB );
 				costRight		= getSurfaceArea( aabb ) + inheritanceCost;
 			}
 			else
 			{
-				const AABB	  aabb	  = combineAABB( _listNodes[static_cast<size_t>( rightChild )]._bounds, leafAABB );
-				const float32 oldArea = getSurfaceArea( _listNodes[static_cast<size_t>( rightChild )]._bounds );
+				const AABB	  aabb	  = combineAABB( _listNode[static_cast<size_t>( rightChild )]._bounds, leafAABB );
+				const float32 oldArea = getSurfaceArea( _listNode[static_cast<size_t>( rightChild )]._bounds );
 				const float32 newArea = getSurfaceArea( aabb );
 				costRight			  = ( newArea - oldArea ) + inheritanceCost;
 			}
@@ -172,24 +172,24 @@ namespace sw
 		const int32 sibling = index;
 
 		// Create a new parent node
-		const int32 oldParent = _listNodes[static_cast<size_t>( sibling )]._parent;
+		const int32 oldParent = _listNode[static_cast<size_t>( sibling )]._parent;
 		const int32 newParent = allocateNode();
 
-		_listNodes[static_cast<size_t>( newParent )]._parent	 = oldParent;
-		_listNodes[static_cast<size_t>( newParent )]._bounds	 = combineAABB( leafAABB, _listNodes[static_cast<size_t>( sibling )]._bounds );
-		_listNodes[static_cast<size_t>( newParent )]._height	 = _listNodes[static_cast<size_t>( sibling )]._height + 1;
-		_listNodes[static_cast<size_t>( newParent )]._leftChild	 = sibling;
-		_listNodes[static_cast<size_t>( newParent )]._rightChild = leafIndex;
+		_listNode[static_cast<size_t>( newParent )]._parent		= oldParent;
+		_listNode[static_cast<size_t>( newParent )]._bounds		= combineAABB( leafAABB, _listNode[static_cast<size_t>( sibling )]._bounds );
+		_listNode[static_cast<size_t>( newParent )]._height		= _listNode[static_cast<size_t>( sibling )]._height + 1;
+		_listNode[static_cast<size_t>( newParent )]._leftChild	= sibling;
+		_listNode[static_cast<size_t>( newParent )]._rightChild = leafIndex;
 
-		_listNodes[static_cast<size_t>( sibling )]._parent	 = newParent;
-		_listNodes[static_cast<size_t>( leafIndex )]._parent = newParent;
+		_listNode[static_cast<size_t>( sibling )]._parent	= newParent;
+		_listNode[static_cast<size_t>( leafIndex )]._parent = newParent;
 
 		if ( oldParent != -1 )
 		{
-			if ( _listNodes[static_cast<size_t>( oldParent )]._leftChild == sibling )
-				_listNodes[static_cast<size_t>( oldParent )]._leftChild = newParent;
+			if ( _listNode[static_cast<size_t>( oldParent )]._leftChild == sibling )
+				_listNode[static_cast<size_t>( oldParent )]._leftChild = newParent;
 			else
-				_listNodes[static_cast<size_t>( oldParent )]._rightChild = newParent;
+				_listNode[static_cast<size_t>( oldParent )]._rightChild = newParent;
 		}
 		else
 		{
@@ -197,22 +197,22 @@ namespace sw
 		}
 
 		// Walk back up the tree refitting AABBs and balancing
-		index = _listNodes[static_cast<size_t>( leafIndex )]._parent;
+		index = _listNode[static_cast<size_t>( leafIndex )]._parent;
 		while ( index != -1 )
 		{
 			index = balance( index );
 
-			const int32 leftChild  = _listNodes[static_cast<size_t>( index )]._leftChild;
-			const int32 rightChild = _listNodes[static_cast<size_t>( index )]._rightChild;
+			const int32 leftChild  = _listNode[static_cast<size_t>( index )]._leftChild;
+			const int32 rightChild = _listNode[static_cast<size_t>( index )]._rightChild;
 
-			_listNodes[static_cast<size_t>( index )]._height = 1 + MathUtil::max(
-																	   _listNodes[static_cast<size_t>( leftChild )]._height,
-																	   _listNodes[static_cast<size_t>( rightChild )]._height );
-			_listNodes[static_cast<size_t>( index )]._bounds = combineAABB(
-				_listNodes[static_cast<size_t>( leftChild )]._bounds,
-				_listNodes[static_cast<size_t>( rightChild )]._bounds );
+			_listNode[static_cast<size_t>( index )]._height = 1 + MathUtil::max(
+																	  _listNode[static_cast<size_t>( leftChild )]._height,
+																	  _listNode[static_cast<size_t>( rightChild )]._height );
+			_listNode[static_cast<size_t>( index )]._bounds = combineAABB(
+				_listNode[static_cast<size_t>( leftChild )]._bounds,
+				_listNode[static_cast<size_t>( rightChild )]._bounds );
 
-			index = _listNodes[static_cast<size_t>( index )]._parent;
+			index = _listNode[static_cast<size_t>( index )]._parent;
 		}
 	}
 
@@ -224,20 +224,20 @@ namespace sw
 			return;
 		}
 
-		const int32 parent		= _listNodes[static_cast<size_t>( leafIndex )]._parent;
-		const int32 grandParent = _listNodes[static_cast<size_t>( parent )]._parent;
-		const int32 sibling		= ( _listNodes[static_cast<size_t>( parent )]._leftChild == leafIndex )
-									? _listNodes[static_cast<size_t>( parent )]._rightChild
-									: _listNodes[static_cast<size_t>( parent )]._leftChild;
+		const int32 parent		= _listNode[static_cast<size_t>( leafIndex )]._parent;
+		const int32 grandParent = _listNode[static_cast<size_t>( parent )]._parent;
+		const int32 sibling		= ( _listNode[static_cast<size_t>( parent )]._leftChild == leafIndex )
+									? _listNode[static_cast<size_t>( parent )]._rightChild
+									: _listNode[static_cast<size_t>( parent )]._leftChild;
 
 		if ( grandParent != -1 )
 		{
-			if ( _listNodes[static_cast<size_t>( grandParent )]._leftChild == parent )
-				_listNodes[static_cast<size_t>( grandParent )]._leftChild = sibling;
+			if ( _listNode[static_cast<size_t>( grandParent )]._leftChild == parent )
+				_listNode[static_cast<size_t>( grandParent )]._leftChild = sibling;
 			else
-				_listNodes[static_cast<size_t>( grandParent )]._rightChild = sibling;
+				_listNode[static_cast<size_t>( grandParent )]._rightChild = sibling;
 
-			_listNodes[static_cast<size_t>( sibling )]._parent = grandParent;
+			_listNode[static_cast<size_t>( sibling )]._parent = grandParent;
 			freeNode( parent );
 
 			int32 index = grandParent;
@@ -245,38 +245,38 @@ namespace sw
 			{
 				index = balance( index );
 
-				const int32 leftChild  = _listNodes[static_cast<size_t>( index )]._leftChild;
-				const int32 rightChild = _listNodes[static_cast<size_t>( index )]._rightChild;
+				const int32 leftChild  = _listNode[static_cast<size_t>( index )]._leftChild;
+				const int32 rightChild = _listNode[static_cast<size_t>( index )]._rightChild;
 
-				_listNodes[static_cast<size_t>( index )]._bounds = combineAABB(
-					_listNodes[static_cast<size_t>( leftChild )]._bounds,
-					_listNodes[static_cast<size_t>( rightChild )]._bounds );
-				_listNodes[static_cast<size_t>( index )]._height = 1 + MathUtil::max(
-																		   _listNodes[static_cast<size_t>( leftChild )]._height,
-																		   _listNodes[static_cast<size_t>( rightChild )]._height );
+				_listNode[static_cast<size_t>( index )]._bounds = combineAABB(
+					_listNode[static_cast<size_t>( leftChild )]._bounds,
+					_listNode[static_cast<size_t>( rightChild )]._bounds );
+				_listNode[static_cast<size_t>( index )]._height = 1 + MathUtil::max(
+																		  _listNode[static_cast<size_t>( leftChild )]._height,
+																		  _listNode[static_cast<size_t>( rightChild )]._height );
 
-				index = _listNodes[static_cast<size_t>( index )]._parent;
+				index = _listNode[static_cast<size_t>( index )]._parent;
 			}
 		}
 		else
 		{
-			_rootIndex										   = sibling;
-			_listNodes[static_cast<size_t>( sibling )]._parent = -1;
+			_rootIndex										  = sibling;
+			_listNode[static_cast<size_t>( sibling )]._parent = -1;
 			freeNode( parent );
 		}
 	}
 
 	int32 BVHTree3D::balance( int32 nodeIndex )
 	{
-		BVHNode3D& A = _listNodes[static_cast<size_t>( nodeIndex )];
+		BVHNode3D& A = _listNode[static_cast<size_t>( nodeIndex )];
 		if ( A.isLeaf() || A._height < 2 )
 			return nodeIndex;
 
 		const int32 iB = A._leftChild;
 		const int32 iC = A._rightChild;
 
-		BVHNode3D& B = _listNodes[static_cast<size_t>( iB )];
-		BVHNode3D& C = _listNodes[static_cast<size_t>( iC )];
+		BVHNode3D& B = _listNode[static_cast<size_t>( iB )];
+		BVHNode3D& C = _listNode[static_cast<size_t>( iC )];
 
 		const int32 balanceFactor = C._height - B._height;
 
@@ -285,8 +285,8 @@ namespace sw
 		{
 			const int32 iF = C._leftChild;
 			const int32 iG = C._rightChild;
-			BVHNode3D&	F  = _listNodes[static_cast<size_t>( iF )];
-			BVHNode3D&	G  = _listNodes[static_cast<size_t>( iG )];
+			BVHNode3D&	F  = _listNode[static_cast<size_t>( iF )];
+			BVHNode3D&	G  = _listNode[static_cast<size_t>( iG )];
 
 			C._leftChild = nodeIndex;
 			C._parent	 = A._parent;
@@ -294,10 +294,10 @@ namespace sw
 
 			if ( C._parent != -1 )
 			{
-				if ( _listNodes[static_cast<size_t>( C._parent )]._leftChild == nodeIndex )
-					_listNodes[static_cast<size_t>( C._parent )]._leftChild = iC;
+				if ( _listNode[static_cast<size_t>( C._parent )]._leftChild == nodeIndex )
+					_listNode[static_cast<size_t>( C._parent )]._leftChild = iC;
 				else
-					_listNodes[static_cast<size_t>( C._parent )]._rightChild = iC;
+					_listNode[static_cast<size_t>( C._parent )]._rightChild = iC;
 			}
 			else
 			{
@@ -335,8 +335,8 @@ namespace sw
 		{
 			const int32 iD = B._leftChild;
 			const int32 iE = B._rightChild;
-			BVHNode3D&	D  = _listNodes[static_cast<size_t>( iD )];
-			BVHNode3D&	E  = _listNodes[static_cast<size_t>( iE )];
+			BVHNode3D&	D  = _listNode[static_cast<size_t>( iD )];
+			BVHNode3D&	E  = _listNode[static_cast<size_t>( iE )];
 
 			B._leftChild = nodeIndex;
 			B._parent	 = A._parent;
@@ -344,10 +344,10 @@ namespace sw
 
 			if ( B._parent != -1 )
 			{
-				if ( _listNodes[static_cast<size_t>( B._parent )]._leftChild == nodeIndex )
-					_listNodes[static_cast<size_t>( B._parent )]._leftChild = iB;
+				if ( _listNode[static_cast<size_t>( B._parent )]._leftChild == nodeIndex )
+					_listNode[static_cast<size_t>( B._parent )]._leftChild = iB;
 				else
-					_listNodes[static_cast<size_t>( B._parent )]._rightChild = iB;
+					_listNode[static_cast<size_t>( B._parent )]._rightChild = iB;
 			}
 			else
 			{
@@ -395,7 +395,7 @@ namespace sw
 		while ( stackCount > 0 )
 		{
 			const int32		 nodeIndex = stack[--stackCount];
-			const BVHNode3D& node	   = _listNodes[static_cast<size_t>( nodeIndex )];
+			const BVHNode3D& node	   = _listNode[static_cast<size_t>( nodeIndex )];
 
 			if ( node._bounds.intersects( queryBox ) )
 			{
@@ -451,7 +451,7 @@ namespace sw
 		while ( stackCount > 0 )
 		{
 			const int32		 nodeIndex = stack[--stackCount];
-			const BVHNode3D& node	   = _listNodes[static_cast<size_t>( nodeIndex )];
+			const BVHNode3D& node	   = _listNode[static_cast<size_t>( nodeIndex )];
 
 			if ( rayIntersects( node._bounds ) )
 			{
@@ -494,7 +494,7 @@ namespace sw
 		while ( stackCount > 0 )
 		{
 			const int32		 nodeIndex = stack[--stackCount];
-			const BVHNode3D& node	   = _listNodes[static_cast<size_t>( nodeIndex )];
+			const BVHNode3D& node	   = _listNode[static_cast<size_t>( nodeIndex )];
 
 			if ( sphereIntersects( node._bounds ) )
 			{
@@ -565,7 +565,7 @@ namespace sw
 		while ( stackCount > 0 )
 		{
 			const int32		 nodeIndex = stack[--stackCount];
-			const BVHNode3D& node	   = _listNodes[static_cast<size_t>( nodeIndex )];
+			const BVHNode3D& node	   = _listNode[static_cast<size_t>( nodeIndex )];
 
 			if ( frustumIntersects( node._bounds ) )
 			{
@@ -591,13 +591,13 @@ namespace sw
 
 	size_t BVHTree3D::getNodeCount() const
 	{
-		return _listNodes.size() - _listFreeNodes.size();
+		return _listNode.size() - _listFreeNode.size();
 	}
 
 	int32 BVHTree3D::getTreeHeight() const
 	{
 		if ( _rootIndex == -1 )
 			return 0;
-		return _listNodes[static_cast<size_t>( _rootIndex )]._height;
+		return _listNode[static_cast<size_t>( _rootIndex )]._height;
 	}
 } // namespace sw

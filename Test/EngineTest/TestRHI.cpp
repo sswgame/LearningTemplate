@@ -197,12 +197,12 @@ SW_TEST_CASE( RHITest, UnifiedPipelineStateAndRenderPassAllBackends )
 		sw::RHIRenderPassAttachment colorAtt{};
 		colorAtt._format = sw::RHIFormat::R8G8B8A8_UNORM;
 		colorAtt._loadOp = sw::RHIRenderPassLoadOp::Clear;
-		rpDesc._listColorAttachments.push_back( colorAtt );
+		rpDesc._listColorAttachment.push_back( colorAtt );
 
 		sw::RHIRenderPassHandle pass = device->getResource()->createRenderPass( rpDesc );
 		if ( pass == 0 )
 		{
-			SW_LOG_WARNING( "[RHITest] createRenderPass failed for backend %# — skip", static_cast<uint32>( backend ) );
+			SW_LOG_WARNING( "createRenderPass failed for backend %# — skip", static_cast<uint32>( backend ) );
 			shutdownDeviceWithWindow( device, window );
 			continue;
 		}
@@ -220,7 +220,7 @@ SW_TEST_CASE( RHITest, UnifiedPipelineStateAndRenderPassAllBackends )
 			// Present 없는 오프스크린 경로로 파이프라인 검증 (실패해도 RP/PSO create는 유효).
 			const bool bSmoke = device->executeOffscreenPipelineSmoke( pso );
 			if ( bSmoke == false )
-				SW_LOG_WARNING( "[RHITest] Offscreen pipeline smoke failed (backend %#) — create path still counted",
+				SW_LOG_WARNING( "Offscreen pipeline smoke failed (backend %#) — create path still counted",
 								static_cast<uint32>( backend ) );
 			else
 				SW_EXPECT_TRUE( bSmoke );

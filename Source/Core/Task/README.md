@@ -283,7 +283,7 @@ Games에서 `EngineServices` 를 include 하지 않는 규칙은 [Object README]
 
 ## 엔진 안에서 이미 쓰는 곳 (참고)
 
-- **Object / ECS**: 컴포넌트 tick 웨이브를 `emplaceParallel` + stage wait  
+- **Object / GameObject**: 컴포넌트 tick 웨이브를 `emplaceParallel` + stage wait  
 - **SceneManager**: 씬 비동기 로드 태스크  
 - **RenderPass / Pipeline**: 에셋 비동기 로드  
 - **LiveReload / ModuleHost**: 언로드 전 `waitAll`

@@ -17,7 +17,7 @@ namespace sw
 		const ShaderTargetFormat targetFmt = ( _targetFormat == ShaderTargetFormat::Count ) ? RHI::getShaderTargetFormat( gv_rhiBackend ) : _targetFormat;
 		combined += to_string( static_cast<uint32>( targetFmt ) );
 
-		vector<ShaderMacroDefine> listSortedDefines = _listDefines;
+		vector<ShaderMacroDefine> listSortedDefines = _listDefine;
 		std::sort( listSortedDefines.begin(), listSortedDefines.end(),
 				   []( const ShaderMacroDefine& defA, const ShaderMacroDefine& defB )
 		{ return defA._name < defB._name; } );
@@ -46,7 +46,7 @@ namespace sw
 		compileDesc._entryPoint	  = "VSMain";
 		compileDesc._stage		  = ShaderStage::Vertex;
 		compileDesc._targetFormat = ( variantKey._targetFormat == ShaderTargetFormat::Count ) ? RHI::getShaderTargetFormat( gv_rhiBackend ) : variantKey._targetFormat;
-		compileDesc._listDefines  = variantKey._listDefines;
+		compileDesc._listDefine	  = variantKey._listDefine;
 
 		ShaderCompileResult compileResult = ShaderCompiler::compileHLSL( compileDesc );
 		auto [insertedIter, success]	  = _mapVariantCache.try_emplace( key, std::move( compileResult ) );

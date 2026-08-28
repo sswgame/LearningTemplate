@@ -15,13 +15,13 @@ SW_TEST_CASE( CommandStack, PushUndoRedoAndBranch )
 	CommandStack::Command inc;
 	inc._label = "inc";
 	inc._redo  = SW_DELEGATE_LAMBDA( Delegate<void()>, [&value]()
-	{
-		++value;
-	} );
+	 {
+		 ++value;
+	 } );
 	inc._undo  = SW_DELEGATE_LAMBDA( Delegate<void()>, [&value]()
-	{
-		--value;
-	} );
+	 {
+		 --value;
+	 } );
 	inc._redo();
 	stack.push( std::move( inc ) );
 
@@ -40,13 +40,13 @@ SW_TEST_CASE( CommandStack, PushUndoRedoAndBranch )
 	CommandStack::Command dec;
 	dec._label = "dec";
 	dec._redo  = SW_DELEGATE_LAMBDA( Delegate<void()>, [&value]()
-	{
-		--value;
-	} );
+	 {
+		 --value;
+	 } );
 	dec._undo  = SW_DELEGATE_LAMBDA( Delegate<void()>, [&value]()
-	{
-		++value;
-	} );
+	 {
+		 ++value;
+	 } );
 	stack.undo();
 	dec._redo();
 	stack.push( std::move( dec ) );
@@ -77,9 +77,9 @@ SW_TEST_CASE( CommandStack, GlobalSingletonAndMultiStepChain )
 		sw::CommandStack::Command cmd;
 		cmd._label = "step_" + sw::to_string( cmdIndex );
 		cmd._redo  = SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [&count]()
-		{ ++count; } );
+		 { ++count; } );
 		cmd._undo  = SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [&count]()
-		{ --count; } );
+		 { --count; } );
 		cmd._redo();
 		globalStack.push( std::move( cmd ) );
 	}
@@ -120,26 +120,26 @@ SW_TEST_CASE( CommandStack, CompoundTransaction )
 	CommandStack::Command cmd1;
 	cmd1._label = "op1";
 	cmd1._redo	= SW_DELEGATE_LAMBDA( Delegate<void()>, [&valA]()
-	{
-		valA += 5;
-	} );
+	 {
+		 valA += 5;
+	 } );
 	cmd1._undo	= SW_DELEGATE_LAMBDA( Delegate<void()>, [&valA]()
-	{
-		valA -= 5;
-	} );
+	 {
+		 valA -= 5;
+	 } );
 	cmd1._redo();
 	stack.push( std::move( cmd1 ) );
 
 	CommandStack::Command cmd2;
 	cmd2._label = "op2";
 	cmd2._redo	= SW_DELEGATE_LAMBDA( Delegate<void()>, [&valB]()
-	{
-		valB *= 2;
-	} );
+	 {
+		 valB *= 2;
+	 } );
 	cmd2._undo	= SW_DELEGATE_LAMBDA( Delegate<void()>, [&valB]()
-	{
-		valB /= 2;
-	} );
+	 {
+		 valB /= 2;
+	 } );
 	cmd2._redo();
 	stack.push( std::move( cmd2 ) );
 
@@ -169,13 +169,13 @@ SW_TEST_CASE( CommandStack, CompoundTransaction )
 	CommandStack::Command cmd3;
 	cmd3._label = "op3";
 	cmd3._redo	= SW_DELEGATE_LAMBDA( Delegate<void()>, [&valA]()
-	{
-		valA += 100;
-	} );
+	 {
+		 valA += 100;
+	 } );
 	cmd3._undo	= SW_DELEGATE_LAMBDA( Delegate<void()>, [&valA]()
-	{
-		valA -= 100;
-	} );
+	 {
+		 valA -= 100;
+	 } );
 	cmd3._redo();
 	stack.push( std::move( cmd3 ) );
 	stack.cancelTransaction();
@@ -202,13 +202,13 @@ SW_TEST_CASE( CommandStack, PushCoalesce )
 		CommandStack::Command cmd;
 		cmd._label = "SliderDrag";
 		cmd._redo  = SW_DELEGATE_LAMBDA( Delegate<void()>, [&sliderValue, targetVal]()
-		{
-			sliderValue = targetVal;
-		} );
+		 {
+			 sliderValue = targetVal;
+		 } );
 		cmd._undo  = SW_DELEGATE_LAMBDA( Delegate<void()>, [&sliderValue, initialVal]()
-		{
-			sliderValue = initialVal;
-		} );
+		 {
+			 sliderValue = initialVal;
+		 } );
 		cmd._redo();
 		stack.pushCoalesce( "Transform_PosX", std::move( cmd ) );
 	}

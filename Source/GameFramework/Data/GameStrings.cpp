@@ -10,6 +10,8 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "GameStrings" );
+
 	namespace
 	{
 		static const string s_emptyString{};
@@ -22,7 +24,7 @@ namespace sw
 		LocalizationManager* pLoc = game::getService<LocalizationManager>();
 		if ( pLoc == nullptr )
 		{
-			SW_LOG_ERROR( "[GameStrings] LocalizationManager service is not bound." );
+			SW_LOG_ERROR( "LocalizationManager service is not bound." );
 			return false;
 		}
 
@@ -41,7 +43,7 @@ namespace sw
 		LocalizationManager* pLoc = game::getService<LocalizationManager>();
 		if ( pLoc == nullptr )
 		{
-			SW_LOG_ERROR( "[GameStrings] LocalizationManager service is not bound." );
+			SW_LOG_ERROR( "LocalizationManager service is not bound." );
 			return false;
 		}
 
@@ -53,7 +55,7 @@ namespace sw
 		LocalizationManager* pLoc = game::getService<LocalizationManager>();
 		if ( pLoc == nullptr )
 		{
-			SW_LOG_ERROR( "[GameStrings] LocalizationManager service is not bound." );
+			SW_LOG_ERROR( "LocalizationManager service is not bound." );
 			return false;
 		}
 
@@ -65,7 +67,7 @@ namespace sw
 		LocalizationManager* pLoc = game::getService<LocalizationManager>();
 		if ( pLoc == nullptr )
 		{
-			SW_LOG_ERROR( "[GameStrings] LocalizationManager service is not bound." );
+			SW_LOG_ERROR( "LocalizationManager service is not bound." );
 			return false;
 		}
 
@@ -77,7 +79,7 @@ namespace sw
 		LocalizationManager* pLoc = game::getService<LocalizationManager>();
 		if ( pLoc == nullptr )
 		{
-			SW_LOG_ERROR( "[GameStrings] LocalizationManager service is not bound." );
+			SW_LOG_ERROR( "LocalizationManager service is not bound." );
 			return false;
 		}
 

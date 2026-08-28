@@ -69,7 +69,7 @@ namespace sw::editor
 	private:
 		EditorNodeGraph	  _nodeGraph;
 		bool			  _bLoaded;
-		vector<GraphNode> _listNodes;
-		vector<GraphLink> _listLinks;
+		vector<GraphNode> _listNode;
+		vector<GraphLink> _listLink;
 	};
 } // namespace sw::editor

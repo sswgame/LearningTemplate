@@ -26,8 +26,8 @@ namespace sw
 		/** @brief AST 트리를 방문하며 리플렉션 정보를 수집합니다. */
 		void visit();
 
-		const vector<ParsedTypeInfo>& getCollectedTypes() const { return _listTypes; }
-		const vector<ParsedEnumInfo>& getCollectedEnums() const { return _listEnums; }
+		const vector<ParsedTypeInfo>& getCollectedTypes() const { return _listType; }
+		const vector<ParsedEnumInfo>& getCollectedEnums() const { return _listEnum; }
 
 		/** @brief 커서의 네임스페이스 포함 이름(FQN)을 만듭니다. */
 		static string buildFullyQualifiedName( CXCursor cursor );
@@ -41,7 +41,7 @@ namespace sw
 
 	private:
 		CXTranslationUnit	   _translationUnit;
-		vector<ParsedTypeInfo> _listTypes;
-		vector<ParsedEnumInfo> _listEnums;
+		vector<ParsedTypeInfo> _listType;
+		vector<ParsedEnumInfo> _listEnum;
 	};
 } // namespace sw

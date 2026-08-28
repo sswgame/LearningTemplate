@@ -54,6 +54,6 @@ namespace sw::editor
 		VkDevice_T*							   _pDevice{ nullptr };
 		VkSampler_T*						   _pSampler{ nullptr };
 		IRHIDevice*							   _pRHIDevice{ nullptr };
-		unordered_map<void*, RHITextureHandle> _mapTextureIds;
+		unordered_map<void*, RHITextureHandle> _mapTextureId;
 	};
 } // namespace sw::editor

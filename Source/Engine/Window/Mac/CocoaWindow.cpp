@@ -94,7 +94,7 @@ namespace sw
 		_pCocoaMetalLayer = metalLayer;
 		_bShouldClose	  = false;
 
-		SW_LOG_INFO( "[CocoaWindow macOS] Native Cocoa Window created successfully! (%#x%#)", width, height );
+		SW_LOG_INFO( "Native Cocoa Window created successfully! (%#x%#)", width, height );
 		return true;
 	}
 

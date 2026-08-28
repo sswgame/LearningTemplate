@@ -4,9 +4,9 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/ComponentPtr.h"
 #include "Engine/Object/Component/SceneComponent.h"
-#include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectPtr.h"
@@ -195,19 +195,19 @@ namespace sw
 										  hashed_string( "sw::SceneComponent" ) );
 	}
 
-		/** @brief 모의 컴포넌트 TypeInfo 와 팩토리를 등록합니다. */
-		static void RegisterMockComponents( GameObjectManager& manager )
-		{
-			MockMeshComponent::StaticType();
-			MockAudioComponent::StaticType();
-			MockCallbackComponent::StaticType();
-			MockTickSceneComponent::StaticType();
+	/** @brief 모의 컴포넌트 TypeInfo 와 팩토리를 등록합니다. */
+	static void RegisterMockComponents( GameObjectManager& manager )
+	{
+		MockMeshComponent::StaticType();
+		MockAudioComponent::StaticType();
+		MockCallbackComponent::StaticType();
+		MockTickSceneComponent::StaticType();
 
-			manager.registerComponentType<MockMeshComponent>( hashed_string( "MockMeshComponent" ) );
-			manager.registerComponentType<MockAudioComponent>( hashed_string( "MockAudioComponent" ) );
-			manager.registerComponentType<MockCallbackComponent>( hashed_string( "MockCallbackComponent" ) );
-			manager.registerComponentType<MockTickSceneComponent>( hashed_string( "MockTickSceneComponent" ) );
-		}
+		manager.registerComponentType<MockMeshComponent>( hashed_string( "MockMeshComponent" ) );
+		manager.registerComponentType<MockAudioComponent>( hashed_string( "MockAudioComponent" ) );
+		manager.registerComponentType<MockCallbackComponent>( hashed_string( "MockCallbackComponent" ) );
+		manager.registerComponentType<MockTickSceneComponent>( hashed_string( "MockTickSceneComponent" ) );
+	}
 } // namespace sw
 
 // ------------------------------------------------------------------------------
@@ -665,8 +665,8 @@ SW_TEST_CASE( GameObjectManagerTest, ParallelTickReadsStableHierarchyTransforms 
 	SW_EXPECT_NEAR_EQUAL( 15.0f, observedDuringTick._x, 1e-4f );
 
 	// 틱 중 로컬 쓰기는 post-flush 이후에 보이며, 틱 중간 스냅샷에는 없을 수 있다.
-	parentComp->_tickLocalPos		= float3( 20.0f, 0.0f, 0.0f );
-	parentComp->_bWriteLocalOnTick	= SW_TRUE;
+	parentComp->_tickLocalPos	   = float3( 20.0f, 0.0f, 0.0f );
+	parentComp->_bWriteLocalOnTick = SW_TRUE;
 	manager.tick( 0.016f );
 	SW_EXPECT_NEAR_EQUAL( 25.0f, childComp->getWorldPosition()._x, 1e-4f );
 
@@ -712,8 +712,8 @@ SW_TEST_CASE( ObjectStateXmlSerializerTest, SaveAndLoadXmlString )
 	SW_ASSERT_TRUE( xml.empty() == false );
 	SW_EXPECT_TRUE( xml.find( "GameObject" ) != sw::string::npos );
 	SW_EXPECT_TRUE( xml.find( "SerializedHero" ) != sw::string::npos );
-	SW_EXPECT_TRUE( xml.find( "_name=\"_listComponents\"" ) != sw::string::npos );
-	SW_EXPECT_TRUE( xml.find( "<_listComponents>" ) == sw::string::npos );
+	SW_EXPECT_TRUE( xml.find( "_name=\"_listComponent\"" ) != sw::string::npos );
+	SW_EXPECT_TRUE( xml.find( "<_listComponent>" ) == sw::string::npos );
 	SW_EXPECT_TRUE( xml.find( "SceneTransforms" ) == sw::string::npos );
 	SW_EXPECT_TRUE( xml.find( "_parentGO" ) == sw::string::npos );
 	SW_EXPECT_TRUE( xml.find( "ParentGO" ) == sw::string::npos );
@@ -721,7 +721,7 @@ SW_TEST_CASE( ObjectStateXmlSerializerTest, SaveAndLoadXmlString )
 	const sw::string json = ObjectStateSerializer::saveToJsonString( &source );
 	SW_ASSERT_TRUE( json.empty() == false );
 	SW_EXPECT_TRUE( json.find( "\"vector\"" ) != sw::string::npos );
-	SW_EXPECT_TRUE( json.find( "\"_name\":\"_listComponents\"" ) != sw::string::npos );
+	SW_EXPECT_TRUE( json.find( "\"_name\":\"_listComponent\"" ) != sw::string::npos );
 	SW_EXPECT_TRUE( json.find( "\"Components\"" ) == sw::string::npos );
 	SW_EXPECT_TRUE( json.find( "ParentGO" ) == sw::string::npos );
 
@@ -1068,7 +1068,7 @@ SW_TEST_CASE( GameObjectTest, TickRemoveOtherSameTypeComponent )
 	SW_ASSERT_NOT_NULL( victimMesh );
 
 	keeperMesh->_pTickRemoveOwner = victim;
-	keeperMesh->_pTickRemoveComp	 = victimMesh;
+	keeperMesh->_pTickRemoveComp  = victimMesh;
 
 	manager.tick( 0.016f );
 	SW_EXPECT_EQUAL( 0u, victim->getComponentCount() );

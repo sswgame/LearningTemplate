@@ -22,8 +22,8 @@ namespace sw
 		using TextWriteFn = Delegate<string( const void* pValPtr )>;
 		using TextReadFn  = Delegate<bool( void* pValPtr, string_view valStr )>;
 
-		using OwnedPointerCreateFn = void* ( * )( void* pOuter, hashed_string typeName );
-		using RuntimeTypeInfoFn	   = const TypeInfo* ( * )( const void* pInstance );
+		using OwnedPointerCreateFn = void* (*)( void* pOuter, hashed_string typeName );
+		using RuntimeTypeInfoFn	   = const TypeInfo* (*)( const void* pInstance );
 
 		// ------------------------------------------------------------------------------
 		// 1) 수명 — 기본은 키 대소문자 무시
@@ -123,10 +123,10 @@ namespace sw
 		static const SerializeContext& getDefault();
 
 	private:
-		unordered_map<hashed_string, BinaryWriteFn> _mapBinaryWriters;
-		unordered_map<hashed_string, BinaryReadFn>	_mapBinaryReaders;
-		unordered_map<hashed_string, TextWriteFn>	_mapTextWriters;
-		unordered_map<hashed_string, TextReadFn>	_mapTextReaders;
+		unordered_map<hashed_string, BinaryWriteFn> _mapBinaryWriter;
+		unordered_map<hashed_string, BinaryReadFn>	_mapBinaryReader;
+		unordered_map<hashed_string, TextWriteFn>	_mapTextWriter;
+		unordered_map<hashed_string, TextReadFn>	_mapTextReader;
 		void*										_pOuterInstance;
 		OwnedPointerCreateFn						_pOwnedPointerCreateFn;
 		RuntimeTypeInfoFn							_pRuntimeTypeInfoFn;

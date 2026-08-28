@@ -128,10 +128,10 @@ namespace sw
 		PROPERTY()
 		mutable hashed_string _attachOwner;
 		PROPERTY()
-		mutable hashed_string _attachComponent;
-		float3	 _cachedWorldPosition;
-		float4x4 _cachedWorldMatrix;
-		double3	 _cachedWorldPositionLWC;
+		mutable hashed_string	_attachComponent;
+		float3					_cachedWorldPosition;
+		float4x4				_cachedWorldMatrix;
+		double3					_cachedWorldPositionLWC;
 		SceneComponent*			_pParent;
 		vector<SceneComponent*> _listChildren;
 		uint8					_bIsTransformDirty	 : 1;

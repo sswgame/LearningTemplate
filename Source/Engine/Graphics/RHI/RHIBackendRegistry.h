@@ -79,7 +79,7 @@ namespace sw
 			void*	   _pHandle{ nullptr };
 		};
 
-		vector<RHIBackendEntry> _listEntries;
-		vector<LoadedModule>	_listLoadedModules;
+		vector<RHIBackendEntry> _listEntry;
+		vector<LoadedModule>	_listLoadedModule;
 	};
 } // namespace sw

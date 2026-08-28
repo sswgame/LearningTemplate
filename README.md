@@ -10,7 +10,7 @@ CMake, Ninja, LLVM Clang-cl 및 sccache를 결합하여 **초고속 증분 빌�
 초심자이신가요? 아래의 주제별 위키 인덱스를 순서대로 읽어보시면 프로젝트의 전체 구조를 쉽게 파악할 수 있습니다.
 
 - 🚀 **[Getting Started (시작하기)](docs/01_GettingStarted.md)**: 빌드 환경 구성(vcpkg, CMake) 및 첫 빌드/테스트 실행 가이드
-- 🧩 **[Engine Subsystems (서브시스템 개요)](docs/02_EngineSubsystems.md)**: 렌더링, ECS, 스레드 풀, 리플렉션 등 핵심 엔진 기능 찾아보기
+- 🧩 **[Engine Subsystems (서브시스템 개요)](docs/02_EngineSubsystems.md)**: 렌더링, 오브젝트/컴포넌트, 스레드 풀, 리플렉션 등 핵심 엔진 기능 찾아보기
 - 🔄 **[LiveReload & ABI (핫리로드 및 아키텍처)](docs/03_LiveReload_and_ABI.md)**: 게임을 끄지 않고 코드를 수정하는 원리와 주의사항
 - 📝 **[Coding Guidelines (코딩 규칙)](docs/04_CodingGuidelines.md)**: 프로젝트에 기여할 때 지켜야 하는 C++ / CMake 네이밍 규칙
 
@@ -28,7 +28,7 @@ CMake, Ninja, LLVM Clang-cl 및 sccache를 결합하여 **초고속 증분 빌�
    - [신규 코덱 확장 및 등록 방법 (LZ4 / Zstd 등)](#43-신규-코덱-확장-및-등록-방법-lz4--zstd-등)
    - [C++ 실무 사용 예제 코드](#44-c-실무-사용-예제-코드)
 5. [🧩 엔진 핵심 서브시스템 실무 사용법](#5-엔진-핵심-서브시스템-실무-사용법)
-   - [1. ECS & GameObject 라이프사이클](#51-ecs--gameobject-라이프사이클)
+   - [1. GameObject & Component 라이프사이클](#51-gameobject--component-라이프사이클)
    - [2. RHI 멀티 백엔드 렌더링 파이프라인](#52-rhi-멀티-백엔드-렌더링-파이프라인)
    - [3. 리플렉션 및 다중 포맷 직렬화](#53-리플렉션-및-다중-포맷-직렬화)
    - [4. 씬 관리 및 프리팹 (Prefab) 시스템](#54-씬-관리-및-프리팹-prefab-시스템)
@@ -37,10 +37,12 @@ CMake, Ninja, LLVM Clang-cl 및 sccache를 결합하여 **초고속 증분 빌�
    - [7. 런타임 파일 감시 & 에셋 핫리로드 (ReloadFileManager)](#57-런타임-파일-감시--에셋-핫리로드-reloadfilemanager)
    - [8. 멀티스레드 태스크 시스템 (Task DAG)](#58-멀티스레드-태스크-시스템-task-dag)
    - [9. 오디오 및 2D 물리 시스템](#59-오디오-및-2d-물리-시스템)
-   - [10. SoA 아키타입 청크 메모리 풀 (ArchetypeChunkPool)](#510-soa-아키타입-청크-메모리-풀-archetypechunkpool)
-   - [11. 비동기 에셋 스트리밍 큐 (AssetStreamingQueue)](#511-비동기-에셋-스트리밍-큐-assetstreamingqueue)
-   - [12. GPU-Driven 간접 드로우 & 비동기 컴퓨트 (IndirectDrawBuffer & ComputePass)](#512-gpu-driven-간접-드로우--비동기-컴퓨트-indirectdrawbuffer--computepass)
-   - [13. 티어-3 바인드리스 리소스 테이블 (BindlessTable)](#513-티어-3-바인드리스-리소스-테이블-bindlesstable)
+   - [10. 비동기 에셋 스트리밍 큐 (AssetStreamingQueue)](#510-비동기-에셋-스트리밍-큐-assetstreamingqueue)
+   - [11. GPU-Driven 간접 드로우 & 비동기 컴퓨트 (IndirectDrawBuffer & ComputePass)](#511-gpu-driven-간접-드로우--비동기-컴퓨트-indirectdrawbuffer--computepass)
+   - [12. 티어-3 바인드리스 리소스 테이블 (BindlessTable)](#512-티어-3-바인드리스-리소스-테이블-bindlesstable)
+   - [13. RenderGraph 순차 쓰기/RMW 의존성 및 리소스 수명 주기 분석](#513-rendergraph-순차-쓰기rmw-의존성-및-리소스-수명-주기-분석)
+   - [14. C++17 Fluent Task Continuation & State Machine (TaskFuture / TaskPromise)](#514-c17-fluent-task-continuation--state-machine-taskfuture--taskpromise)
+   - [15. 트랜스폼 세대 카운터 (Transform Dirty Generation Counter)](#515-트랜스폼-세대-카운터-transform-dirty-generation-counter)
 6. [✍️ 코딩 컨벤션 및 네이밍 규칙](#6-코딩-컨벤션-및-네이밍-규칙)
 7. [🧪 자동화 테스트 스위트](#7-자동화-테스트-스위트)
 
@@ -57,7 +59,7 @@ CMake, Ninja, LLVM Clang-cl 및 sccache를 결합하여 **초고속 증분 빌�
                                 ▼                   ▼
         ┌──────────────────────────────────┐   ┌───────────────────────────┐
         │       Engine.dll (Dev)           │   │      RuntimeAPI (Header)  │
-        │  (RHI, Scene, ECS, Reflection)   │   │  (Pure C-ABI Module ABI)  │
+        │  (RHI, Scene, Object, Reflection)│   │  (Pure C-ABI Module ABI)  │
         └───────────────┬──────────────────┘   └─────────────┬─────────────┘
                         │                                    │
                         ▼                                    ▼
@@ -87,7 +89,7 @@ CMake, Ninja, LLVM Clang-cl 및 sccache를 결합하여 **초고속 증분 빌�
 | 폴더 경로 | 역할 및 설명 |
 | :--- | :--- |
 | `Source/Core` | 기초 유틸리티 정적 라이브러리 (로깅, 메모리 풀링, 문자열, 압축, 델리게이트, 파일 I/O 등) |
-| `Source/Engine` | 핵심 엔진 라이브러리 (RHI, ECS, GameObject, 씬/프리팹, 리플렉션, 물리, 오디오, 렌더 그래프 등) |
+| `Source/Engine` | 핵심 엔진 라이브러리 (RHI, GameObject, Component, 씬/프리팹, 리플렉션, 물리, 오디오, 렌더 그래프 등) |
 | `Source/RuntimeAPI` | App ↔ Editor/Game 모듈 간의 순수 C-ABI 통신 인터페이스 (Header-Only) |
 | `Source/Editor` | 개발 모드 전용 ImGui 에디터 툴셋 |
 | `Source/GameFramework` | 장르별 공통 프레임워크 및 플러그형 키트 (`GF_Overworld`, `GF_TurnBattle`, `GF_ActionCombat`) |
@@ -117,7 +119,7 @@ SW Engine은 세이브 파일, 네트워크 패킷, 바이너리 씬 데이터�
                                │
                                ▼
 ┌─────────────────────────────────────────────────────────────┐
-│    CompressedBinarySerializer / CompressionStream (Core)     │
+│       BinarySerializer / CompressionStream (Core)           │
 │   (Magic 'SWCS' · 헤더 캡슐화 · FNV-1a 무결성 체크섬 검증)      │
 └──────────────────────────────┬──────────────────────────────┘
                                │ (ICompressionCodec 포인터 디스패칭)
@@ -136,7 +138,7 @@ SW Engine은 세이브 파일, 네트워크 패킷, 바이너리 씬 데이터�
 - **`RleCompressionCodec`**: 엔진 자체 내장 고속 바이트 런 압축기 (외부 라이브러리 없이 독립 동작).
 - **`CompressionCodecRegistry`**: 런타임/빌드타임에 코덱을 등록, 조회, 교체할 수 있는 중앙 레지스트리.
 - **`CompressionStream`**: 바이너리 헤더(`CompressionHeader`)와 FNV-1a 무결성 체크섬 검증을 캡슐화한 헬퍼.
-- **`CompressedBinarySerializer`**: 리플렉션 객체 직렬화(`BinarySerializer`)와 압축 스트림을 원클릭으로 결합.
+- **`BinarySerializer`**: 리플렉션 객체의 콤팩트 바이너리 직렬화 및 압축 스트림 직렬화(`serializeCompressed`)를 통합 지원.
 
 ---
 
@@ -242,7 +244,7 @@ bool bDecompressed = sw::CompressionStream::decompressBuffer(
 
 #### 2) 리플렉션 객체(세이브 데이터) 원클릭 압축 직렬화
 ```cpp
-#include "Engine/Serialization/Format/CompressedBinarySerializer.h"
+#include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/Reflection/ReflectionCore.h"
 
 // 리플렉션이 선언된 게임 플레이어 데이터 구조체
@@ -255,7 +257,7 @@ playerData._listInventory = { 101, 102, 105 };
 const sw::TypeInfo* pTypeInfo = sw::TypeRegistry::get().findTypeByName( "PlayerSaveData" );
 sw::vector<sw::uint8> listSaveFileBuffer;
 
-sw::CompressedBinarySerializer::serializeCompressed(
+sw::BinarySerializer::serializeCompressed(
     &playerData,
     *pTypeInfo,
     listSaveFileBuffer,
@@ -266,7 +268,7 @@ sw::CompressedBinarySerializer::serializeCompressed(
 
 // 2. 세이브 파일 로드 및 역압축 역직렬화
 PlayerSaveData loadedData{};
-sw::CompressedBinarySerializer::deserializeCompressed(
+sw::BinarySerializer::deserializeCompressed(
     &loadedData,
     *pTypeInfo,
     listSaveFileBuffer.data(),
@@ -278,31 +280,31 @@ sw::CompressedBinarySerializer::deserializeCompressed(
 
 ## 5. 엔진 핵심 서브시스템 실무 사용법
 
-### 5.1 ECS & GameObject 라이프사이클
+### 5.1 GameObject & Component 라이프사이클
 
-`GameObjectManager`와 `Registry`를 기반으로 컴포넌트를 부착하고 라이프사이클을 제어합니다.
+`GameObjectManager`를 기반으로 `GameObject`에 컴포넌트를 부착하고 라이프사이클을 제어합니다.
 
 ```cpp
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/Component/TransformComponent.h"
-#include "Engine/Object/Component/ScriptComponent.h"
+#include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/Component/CameraComponent.h"
 
 // 1. 게임 오브젝트 생성
-sw::GameObject* pPlayer = sw::GameObjectManager::get().createGameObject( "Hero" );
+sw::GameObject* pPlayer = pObjectManager->createGameObject( "Hero" );
 
 // 2. 컴포넌트 부착
-auto* pTransform = pPlayer->addComponent<sw::TransformComponent>();
-pTransform->setPosition( sw::Vector3( 100.0f, 0.0f, 200.0f ) );
+auto* pScene = pPlayer->addComponent<sw::SceneComponent>();
+pScene->setLocalPosition( sw::float3{ 100.0f, 0.0f, 200.0f } );
 
 // 3. 계층 구조 구성 (Parent - Child)
-sw::GameObject* pWeapon = sw::GameObjectManager::get().createGameObject( "Sword" );
-pWeapon->setParent( pPlayer ); // 플레이어의 회전/이동이 자식에 자동 전파됨
+sw::GameObject* pWeapon = pObjectManager->createGameObject( "Sword" );
+pWeapon->attachToParent( pPlayer ); // 플레이어의 회전/이동이 자식에 자동 전파됨
 
 // 4. 태그 등록 및 고속 검색
-pPlayer->addTag( "Player.Hero" );
+pPlayer->addTag( "Player.Hero"_tag );
 sw::vector<sw::GameObject*> listPlayers;
-sw::GameObjectManager::get().findGameObjectsByTag( "Player.Hero", listPlayers );
+pObjectManager->findGameObjectsByTag( "Player.Hero"_tag, listPlayers );
 ```
 
 ---
@@ -360,7 +362,7 @@ public:
 - **JSON 직렬화**: `JsonSerializer::serialize(&stats, *pTypeInfo)`
 - **XML 직렬화**: `XmlSerializer::serialize(&stats, *pTypeInfo)`
 - **바이너리 직렬화**: `BinarySerializer::serialize(&stats, *pTypeInfo, listBuffer)`
-- **압축 바이너리 직렬화**: `CompressedBinarySerializer::serializeCompressed(&stats, *pTypeInfo, listBuffer)`
+- **압축 바이너리 직렬화**: `BinarySerializer::serializeCompressed(&stats, *pTypeInfo, listBuffer)`
 
 ---
 
@@ -492,35 +494,7 @@ if ( sw::PhysicsSystem::get().raycast( sw::Vector2(0,0), sw::Vector2(1,0), 500.0
 
 ---
 
-### 5.10 SoA 아키타입 청크 메모리 풀 (ArchetypeChunkPool)
-
-수만 개 엔티티의 컴포넌트 데이터를 **64바이트 캐시 라인 정렬 SoA (Structure of Arrays)** 구조로 청크 단위 메모리에 연속 배치하여 CPU L1/L2 캐시 미스를 0%에 수렴시킵니다.
-`makeColumnLayout<T>()` 템플릿 헬퍼를 통해 POD 타입의 고속 `memcpy`뿐만 아니라 `std::string`, 동적 배열 등을 소유한 **비-Trivial(Non-trivially copyable/destructible) 컴포넌트의 소멸자 및 이동 대입 라이프사이클**을 안전하게 지원합니다.
-
-```cpp
-#include "Engine/ECS/ArchetypeChunkPool.h"
-
-// 1. Type Traits 기반 자동 라이프사이클 델리게이트가 연결된 SoA 열 레이아웃 생성
-sw::vector<sw::ComponentColumnLayout> listLayouts;
-listLayouts.push_back( sw::makeColumnLayout<TransformData>( 1001 ) );
-listLayouts.push_back( sw::makeColumnLayout<CustomStringComponent>( 1002 ) ); // 비-Trivial 타입 안전 지원
-
-// 2. 청크 풀 생성 및 엔티티 할당
-sw::ArchetypeChunkPool pool( listLayouts );
-size_t chunkIdx = 0, rowIdx = 0;
-pool.allocateEntity( 5001, chunkIdx, rowIdx );
-
-// 3. SoA 연속 열(Column) 데이터에 직접 포인터 접근
-auto* pTransform = static_cast<TransformData*>( pool.getChunk( chunkIdx )->getComponent( 0, rowIdx ) );
-pTransform->_posX = 123.0f;
-
-// 4. 엔티티 안전 제거 (Swap-and-pop 시 이동 대입 및 소멸자 정상 호출)
-pool.freeEntity( chunkIdx, rowIdx );
-```
-
----
-
-### 5.11 비동기 에셋 스트리밍 큐 (AssetStreamingQueue)
+### 5.10 비동기 에셋 스트리밍 큐 (AssetStreamingQueue)
 
 게임플레이 중 버벅임(Frame Drop / Stuttering)을 방지하기 위해 백그라운드 워커 스레드에서 에셋을 사전 로드(Prefetch)하고 완료 콜백을 스레드-안전하게 전달합니다.
 
@@ -546,7 +520,7 @@ sw::AssetStreamingQueue::get().tick();
 
 ---
 
-### 5.12 GPU-Driven 간접 드로우 & 비동기 컴퓨트 (IndirectDrawBuffer & ComputePass)
+### 5.11 GPU-Driven 간접 드로우 & 비동기 컴퓨트 (IndirectDrawBuffer & ComputePass)
 
 CPU 개입 없이 GPU에서 직접 컬링 결과를 기반으로 드로우 콜을 발행하는 **GPU-Driven Rendering** 파이프라인과 **비동기 컴퓨트 셰이더 디스패치**를 지원합니다.
 
@@ -572,7 +546,7 @@ cullingPass.dispatch( pRhiContext, 64, 1, 1 ); // (64 * 64 threads)
 
 ---
 
-### 5.13 티어-3 바인드리스 리소스 테이블 (BindlessTable)
+### 5.12 티어-3 바인드리스 리소스 테이블 (BindlessTable)
 
 DirectX 12 / Vulkan의 티어-3 바인드리스(Bindless Resource Indexing)를 통해 수만 개의 텍스처와 버퍼를 전역 인덱스로 셰이더에서 즉시 접근할 수 있도록 관리합니다.
 
@@ -593,7 +567,7 @@ uint32 textureDescriptorIndex = bindlessTable.allocateTextureSlot( textureHandle
 
 ---
 
-### 5.14 RenderGraph 순차 쓰기/RMW 의존성 및 리소스 수명 주기 분석
+### 5.13 RenderGraph 순차 쓰기/RMW 의존성 및 리소스 수명 주기 분석
 
 RenderGraph는 패스 간 자원 의존성을 DAG 위상 정렬할 때 **Read-Modify-Write (동일 리소스 읽기 및 덮어쓰기)** 및 **순차 쓰기(Sequential Multi-Write)** 체인을 자동으로 추적하며, VRAM 앨리어싱(Transient Aliasing)을 위한 리소스 수명 주기(First ~ Last Pass)를 산출합니다.
 
@@ -618,7 +592,7 @@ for ( const auto& life : listLifetimes )
 
 ---
 
-### 5.15 C++17 Fluent Task Continuation & State Machine (TaskFuture / TaskPromise)
+### 5.14 C++17 Fluent Task Continuation & State Machine (TaskFuture / TaskPromise)
 
 C++20 코루틴을 사용할 수 없는 C++17 환경에서도 콜백 지옥 없이 직관적인 비동기 파이프라인을 구축할 수 있도록 Monadic `.then()` 체이닝 및 단계별 상태 머신(`ITaskStateMachine`)을 제공합니다.
 
@@ -671,7 +645,7 @@ computeFuture.then( []( const std::vector<float>& path )
 
 ---
 
-### 5.16 트랜스폼 세대 카운터 (Transform Dirty Generation Counter)
+### 5.15 트랜스폼 세대 카운터 (Transform Dirty Generation Counter)
 
 수천 개의 정적 환경 오브젝트가 존재하는 대규모 씬에서 불필요한 서브트리 순회를 방지하기 위해 원자적 세대 카운터(`_dirtyTransformGeneration`)를 기반으로 **$O(1)$ 조기 탈출(Early-Exit)** 최적화를 수행합니다.
 
@@ -696,7 +670,7 @@ SW Engine 소스코드를 작성할 때는 [AGENTS.md](AGENTS.md) 및 [GEMINI.md
 | 분류 | 규칙 | 예시 |
 | :--- | :--- | :--- |
 | **포인터 접두어** | Raw 포인터는 반드시 `p` (멤버: `_p`, 이중: `pp`) | `GameObject* pObject;`, `Transform* _pTransform;` |
-| **컨테이너 접두어/접미어** | 고정 배열: `arr` / 연관 맵: `map` / 리스트: `list` / 고유 셋: `unique` | `vector<int32> _listValues;`, `unordered_map<int32, string> _mapIdToName;` |
+| **컨테이너 접두어/접미어** | 고정 배열: `arr` / 연관 맵: `map` / 리스트: `list` / 고유 셋: `unique` | `vector<int32> _listValue;`, `unordered_map<int32, string> _mapIdToName;` |
 | **스마트 포인터** | `std::unique_ptr` 등은 `p` 접두어를 붙이지 않음 | `unique_ptr<Node> _rootNode;`, `shared_ptr<Material> _material;` |
 | **불리언 비교** | `!` 부정 연산자 금지, 반드시 명시적 비교 작성 | `if (_bValid == false)`, `if (pPtr == nullptr)` |
 | **범위(Range) 비교** | 변수를 안쪽(중간)에 배치하여 수학적 범위($min \le val \le max$)로 표기 | `if (kMin <= value && value <= kMax)` |
@@ -721,7 +695,7 @@ build/Ninja-Debug/Bin/SmokeTest.exe
 | :--- | :---: | :--- |
 | **`CoreTest.exe`** | **104개** | 메모리 풀링, 문자열 빌더, CPU 타이머, **플러그형 압축 코덱/스트림**, XML/JSON 파서 |
 | **`ReflectionTest.exe`** | **66개** | C++ 리플렉션 타입/프로퍼티/메서드 동적 호출, 스키마 마이그레이션, 직렬화, 소프트 역직렬화 고아 처리 |
-| **`EngineTest.exe`** | **199개** | RHI 4대 백엔드, 셰이더 컴파일러, ECS, **SpatialQuadTree/SpatialOctree (Node Collapse)**, **ArchetypeChunkPool (Non-Trivial Lifecycle)**, **AssetStreamingQueue (In-Flight Multicast)**, **GPU-Driven IndirectDraw/Bindless (Double-Free 방어)**, **RenderGraph (RMW/Lifetime)**, **C++17 TaskFuture/Promise**, **Transform Dirty Generation**, 오디오, 물리(TLS 수축 가드), 태스크 DAG |
+| **`EngineTest.exe`** | **199개** | RHI 4대 백엔드, 셰이더 컴파일러, GameObject/Component, **SpatialQuadTree/SpatialOctree (Node Collapse)**, **AssetStreamingQueue (In-Flight Multicast)**, **GPU-Driven IndirectDraw/Bindless (Double-Free 방어)**, **RenderGraph (RMW/Lifetime)**, **C++17 TaskFuture/Promise**, **Transform Dirty Generation**, 오디오, 물리(TLS 수축 가드), 태스크 DAG |
 | **`SmokeTest.exe`** | **17개** | App-Editor-Game 동적 모듈 로드, **LiveReload 반복 핫스왑 사이클**, 풀 씬 전환 |
 | **총계** | **386개 (100% PASS)** | **엔진 전체 서브시스템 무결성 보증** |
 

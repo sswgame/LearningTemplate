@@ -12,9 +12,7 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/Component/TagSystem.h"
-
 #include "Engine/Object/GameObject/GameObjectManager.h"
-
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -154,7 +152,7 @@ namespace sw
 
 			if ( _pOwnerManager == nullptr )
 			{
-				SW_LOG_ERROR( "[GameObject] Cannot add component without an owner GameObjectManager!" );
+				SW_LOG_ERROR( "Cannot add component without an owner GameObjectManager!" );
 				return nullptr;
 			}
 
@@ -191,7 +189,7 @@ namespace sw
 			pComp->setComponentName( typeKey );
 			pComp->applyTypeDefaults( pTypeInfo );
 
-			_listComponents.push_back( pComp );
+			_listComponent.push_back( pComp );
 			registerComponentIfSceneRoot( pComp );
 			markTickOrderDirty();
 			return pComp;
@@ -217,7 +215,7 @@ namespace sw
 			static_assert( HasOwnReflectBody_v<T> || HasReflectStaticType_v<T>,
 						   "T must declare its own REFLECT_BODY() (cannot slice to a base class StaticType)" );
 
-			for ( Component* pComp : _listComponents )
+			for ( Component* pComp : _listComponent )
 			{
 				if ( pComp == nullptr || pComp->isPendingKill() )
 					continue;
@@ -258,15 +256,15 @@ namespace sw
 	private:
 		uint64 _objectId; ///< 오브젝트 고유 시리얼 번호
 		PROPERTY()
-		hashed_string		  _name;		  ///< 오브젝트 식별 명칭
-		GameObjectManager*	  _pOwnerManager; ///< registerGameObject 시 설정되는 소유 매니저
-		uint32				  _managerIndex;  ///< Manager의 _gameObjects 내 인덱스
+		hashed_string	   _name;		   ///< 오브젝트 식별 명칭
+		GameObjectManager* _pOwnerManager; ///< registerGameObject 시 설정되는 소유 매니저
+		uint32			   _managerIndex;  ///< Manager의 _gameObjects 내 인덱스
 		PROPERTY()
-		AtomicBool		  _bActive;					   ///< 자체 활성화 비트
-		std::atomic<bool> _bIsActiveInHierarchy;	   ///< 계층 반영 최종 활성 비트
-		std::atomic<bool> _bIsPendingKill;			   ///< 지연 삭제 대기 묘비 플래그
+		AtomicBool		  _bActive;				 ///< 자체 활성화 비트
+		std::atomic<bool> _bIsActiveInHierarchy; ///< 계층 반영 최종 활성 비트
+		std::atomic<bool> _bIsPendingKill;		 ///< 지연 삭제 대기 묘비 플래그
 		PROPERTY()
-		vector<Component*> _listComponents; ///< 이 액터가 소유한 컴포넌트
+		vector<Component*> _listComponent; ///< 이 액터가 소유한 컴포넌트
 	};
 
 } // namespace sw

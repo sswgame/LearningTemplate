@@ -191,18 +191,18 @@ namespace sw
 		vector<RHIBufferHandle> _listRegisteredBindlessVector;
 		vector<uint32>			_bindlessFreeList;
 
-		vector<RHITextureHandle> _listRegisteredTextures;
+		vector<RHITextureHandle> _listRegisteredTexture;
 		vector<uint32>			 _textureFreeList;
 
-		vector<Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView>> _listRegisteredUAVs;
-		vector<RHIBufferHandle>									  _listUavSourceBuffers;
+		vector<Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView>> _listRegisteredUAV;
+		vector<RHIBufferHandle>									  _listUavSourceBuffer;
 		vector<uint32>											  _uavFreeList;
 
 		Microsoft::WRL::ComPtr<ID3D11Buffer> _computeRootConstantCB;
 		uint32								 _arrComputeRootConstantShadow[kMaxComputeRootConstantDwords];
 
 		RHIHandleTable<D3D11PipelineStateRecord> _pipelineStates;
-		vector<D3D11RenderPassRecord>			 _listRenderPasses;
+		vector<D3D11RenderPassRecord>			 _listRenderPass;
 
 		Microsoft::WRL::ComPtr<ID3D11DepthStencilState> _depthEnabledState;
 		Microsoft::WRL::ComPtr<ID3D11DepthStencilState> _depthDisabledState;

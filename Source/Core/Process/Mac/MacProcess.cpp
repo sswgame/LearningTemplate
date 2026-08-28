@@ -13,6 +13,8 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "MacProcess" );
+
 	void Process::cleanup()
 	{
 		if ( _pStdOutRead != nullptr )
@@ -40,7 +42,7 @@ namespace sw
 		FILE* pPipe = popen( cmd.c_str(), "r" );
 		if ( pPipe == nullptr )
 		{
-			SW_LOG_ERROR( "[MacProcess] popen failed for command: %#", cmd.c_str() );
+			SW_LOG_ERROR( "popen failed for command: %#", cmd.c_str() );
 			return false;
 		}
 

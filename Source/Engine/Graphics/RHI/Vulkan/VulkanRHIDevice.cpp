@@ -52,6 +52,7 @@ namespace
 
 namespace sw
 {
+	SW_LOG_CALLER( "Vulkan" );
 
 	namespace
 	{
@@ -88,11 +89,11 @@ namespace sw
 		}
 
 		if ( messageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT )
-			SW_LOG_ERROR( "[Vulkan Validation Error] %#", pCallbackData->pMessage );
+			SW_LOG_ERROR( "%#", pCallbackData->pMessage );
 		else if ( messageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT )
-			SW_LOG_WARNING( "[Vulkan Validation Warning] %#", pCallbackData->pMessage );
+			SW_LOG_WARNING( "%#", pCallbackData->pMessage );
 		else
-			SW_LOG_INFO( "[Vulkan Validation Info] %#", pCallbackData->pMessage );
+			SW_LOG_INFO( "%#", pCallbackData->pMessage );
 		return VK_FALSE;
 	}
 
@@ -123,19 +124,19 @@ namespace sw
 		, _graphicsQueue{ nullptr }
 		, _graphicsQueueFamilyIndex{ 0 }
 		, _swapChain{ nullptr }
-		, _listSwapChainImages{}
+		, _listSwapChainImage{}
 		, _swapChainImageFormat{ 0 }
 		, _swapChainExtentWidth{ 0 }
 		, _swapChainExtentHeight{ 0 }
-		, _listSwapChainImageViews{}
-		, _listSwapChainFramebuffers{}
+		, _listSwapChainImageView{}
+		, _listSwapChainFramebuffer{}
 		, _renderPass{ nullptr }
 		, _offscreenRenderPass{ nullptr }
 		, _commandPool{ nullptr }
-		, _listCommandBuffers{}
-		, _listImageAvailableSemaphores{}
-		, _listRenderFinishedSemaphores{}
-		, _listInFlightFences{}
+		, _listCommandBuffer{}
+		, _listImageAvailableSemaphore{}
+		, _listRenderFinishedSemaphore{}
+		, _listInFlightFence{}
 		, _listImagesInFlight{}
 		, _pHWnd{ nullptr }
 		, _pDisplayHandle{ nullptr }
@@ -182,17 +183,17 @@ namespace sw
 		, _boundIndexBuffer{ 0 }
 		, _boundIndexStride{ 4 }
 		, _boundIndexOffset{ 0 }
-		, _listRegisteredDescriptorSets{}
-		, _listBindlessSourceBuffers{}
-		, _listRegisteredUAVs{}
-		, _listUavSourceBuffers{}
+		, _listRegisteredDescriptorSet{}
+		, _listBindlessSourceBuffer{}
+		, _listRegisteredUAV{}
+		, _listUavSourceBuffer{}
 		, _uavFreeList{}
 		, _gpuTextures{}
 		, _releaseQueue{ 3 }
-		, _mapCompositeFramebuffers{}
-		, _mapPipelineRenderPasses{}
+		, _mapCompositeFramebuffer{}
+		, _mapPipelineRenderPass{}
 		, _textureDescriptorSetLayout{ nullptr }
-		, _listRegisteredTextures{}
+		, _listRegisteredTexture{}
 		, _textureFreeList{}
 		, _bindlessTextureArrayLayout{ nullptr }
 		, _bindlessTextureSet{ nullptr }
@@ -200,7 +201,7 @@ namespace sw
 		, _bindlessDummyView{ nullptr }
 		, _bindlessDummyMemory{ nullptr }
 		, _pipelineStates{}
-		, _listRenderPasses{}
+		, _listRenderPass{}
 		, _pipelineCache{ nullptr }
 		, _immContext{ nullptr }
 		, _deferredContext{ nullptr }
@@ -273,7 +274,7 @@ namespace sw
 
 			if ( selectDepthFormat() == false )
 			{
-				SW_LOG_ERROR( "[Vulkan] No supported depth/stencil format on this GPU." );
+				SW_LOG_ERROR( "No supported depth/stencil format on this GPU." );
 				return false;
 			}
 
@@ -312,7 +313,7 @@ namespace sw
 		{
 			if ( createDescriptorResources() == false )
 			{
-				SW_LOG_ERROR( "[Vulkan] Failed to create descriptor / pipeline layout resources." );
+				SW_LOG_ERROR( "Failed to create descriptor / pipeline layout resources." );
 				return false;
 			}
 			(void)ensureBindlessTextureArray();
@@ -334,7 +335,7 @@ namespace sw
 					_vertexBuffer = pRec->buffer;
 			}
 			else
-				SW_LOG_WARNING( "[Vulkan] Failed to create fullscreen triangle vertex buffer." );
+				SW_LOG_WARNING( "Failed to create fullscreen triangle vertex buffer." );
 		}
 
 		initPipelineCache();
@@ -417,7 +418,7 @@ namespace sw
 			_boundIndexBuffer = 0;
 			_boundIndexStride = 4;
 			_boundIndexOffset = 0;
-			_listRegisteredDescriptorSets.clear();
+			_listRegisteredDescriptorSet.clear();
 
 			_gpuTextures.forEach( [this]( VulkanTextureRecord& record )
 			{
@@ -430,23 +431,23 @@ namespace sw
 					vkFreeMemory( _device, record.memory, nullptr );
 			} );
 			_gpuTextures.clear();
-			_listBindlessSourceBuffers.clear();
-			_listUavSourceBuffers.clear();
-			for ( auto& pair : _mapCompositeFramebuffers )
+			_listBindlessSourceBuffer.clear();
+			_listUavSourceBuffer.clear();
+			for ( auto& pair : _mapCompositeFramebuffer )
 			{
 				if ( pair.second.framebuffer != VK_NULL_HANDLE )
 					vkDestroyFramebuffer( _device, pair.second.framebuffer, nullptr );
 				if ( pair.second.renderPass != VK_NULL_HANDLE )
 					vkDestroyRenderPass( _device, pair.second.renderPass, nullptr );
 			}
-			_mapCompositeFramebuffers.clear();
-			for ( auto& pair : _mapPipelineRenderPasses )
+			_mapCompositeFramebuffer.clear();
+			for ( auto& pair : _mapPipelineRenderPass )
 			{
 				if ( pair.second != VK_NULL_HANDLE )
 					vkDestroyRenderPass( _device, pair.second, nullptr );
 			}
-			_mapPipelineRenderPasses.clear();
-			_listRegisteredTextures.clear();
+			_mapPipelineRenderPass.clear();
+			_listRegisteredTexture.clear();
 			_textureFreeList.clear();
 
 			_bindlessTextureSet = VK_NULL_HANDLE; // owned by descriptor pool
@@ -532,13 +533,13 @@ namespace sw
 			cleanupSwapChain();
 			destroySyncObjects();
 
-			for ( VulkanRenderPassRecord& rpRecord : _listRenderPasses )
+			for ( VulkanRenderPassRecord& rpRecord : _listRenderPass )
 			{
 				if ( rpRecord.bOwned != 0 && rpRecord.renderPass != VK_NULL_HANDLE &&
 					 rpRecord.renderPass != _renderPass )
 					vkDestroyRenderPass( _device, rpRecord.renderPass, nullptr );
 			}
-			_listRenderPasses.clear();
+			_listRenderPass.clear();
 
 			if ( _renderPass )
 				vkDestroyRenderPass( _device, _renderPass, nullptr );
@@ -603,19 +604,19 @@ namespace sw
 		}
 
 		// 재생성이 실패하면 스왑체인/동기화 객체가 없는 상태이므로 프레임을 건너뜁니다.
-		if ( _swapChain == nullptr || _listInFlightFences.empty() || _listImageAvailableSemaphores.empty() )
+		if ( _swapChain == nullptr || _listInFlightFence.empty() || _listImageAvailableSemaphore.empty() )
 			return;
 
-		vkWaitForFences( _device, 1, &_listInFlightFences[_currentFrame], VK_TRUE, UINT64_MAX );
+		vkWaitForFences( _device, 1, &_listInFlightFence[_currentFrame], VK_TRUE, UINT64_MAX );
 
-		VkResult result = vkAcquireNextImageKHR( _device, _swapChain, UINT64_MAX, _listImageAvailableSemaphores[_currentFrame], VK_NULL_HANDLE, &_imageIndex );
+		VkResult result = vkAcquireNextImageKHR( _device, _swapChain, UINT64_MAX, _listImageAvailableSemaphore[_currentFrame], VK_NULL_HANDLE, &_imageIndex );
 		if ( result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR )
 		{
 			recreateSwapChain();
-			if ( _swapChain == nullptr || _listImageAvailableSemaphores.empty() )
+			if ( _swapChain == nullptr || _listImageAvailableSemaphore.empty() )
 				return;
 
-			result = vkAcquireNextImageKHR( _device, _swapChain, UINT64_MAX, _listImageAvailableSemaphores[_currentFrame], VK_NULL_HANDLE, &_imageIndex );
+			result = vkAcquireNextImageKHR( _device, _swapChain, UINT64_MAX, _listImageAvailableSemaphore[_currentFrame], VK_NULL_HANDLE, &_imageIndex );
 			if ( result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR )
 				return;
 		}
@@ -625,14 +626,14 @@ namespace sw
 
 		if ( _listImagesInFlight[_imageIndex] != VK_NULL_HANDLE )
 			vkWaitForFences( _device, 1, &_listImagesInFlight[_imageIndex], VK_TRUE, UINT64_MAX );
-		_listImagesInFlight[_imageIndex] = _listInFlightFences[_currentFrame];
+		_listImagesInFlight[_imageIndex] = _listInFlightFence[_currentFrame];
 
-		vkResetFences( _device, 1, &_listInFlightFences[_currentFrame] );
-		vkResetCommandBuffer( _listCommandBuffers[_currentFrame], 0 );
+		vkResetFences( _device, 1, &_listInFlightFence[_currentFrame] );
+		vkResetCommandBuffer( _listCommandBuffer[_currentFrame], 0 );
 
 		VkCommandBufferBeginInfo beginInfo{};
 		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-		vkBeginCommandBuffer( _listCommandBuffers[_currentFrame], &beginInfo );
+		vkBeginCommandBuffer( _listCommandBuffer[_currentFrame], &beginInfo );
 
 		_bFrameStarted	   = true;
 		_bRenderPassActive = false;
@@ -649,19 +650,19 @@ namespace sw
 		viewport.height	  = -static_cast<float32>( _swapChainExtentHeight );
 		viewport.minDepth = kDefaultViewportMinDepth;
 		viewport.maxDepth = kDefaultViewportMaxDepth;
-		vkCmdSetViewport( _listCommandBuffers[_currentFrame], 0, 1, &viewport );
+		vkCmdSetViewport( _listCommandBuffer[_currentFrame], 0, 1, &viewport );
 
 		VkRect2D scissor{};
 		scissor.offset = { 0, 0 };
 		scissor.extent = { _swapChainExtentWidth, _swapChainExtentHeight };
-		vkCmdSetScissor( _listCommandBuffers[_currentFrame], 0, 1, &scissor );
+		vkCmdSetScissor( _listCommandBuffer[_currentFrame], 0, 1, &scissor );
 
-		if ( _renderPass != VK_NULL_HANDLE && _listSwapChainFramebuffers.empty() == false && _imageIndex < _listSwapChainFramebuffers.size() )
+		if ( _renderPass != VK_NULL_HANDLE && _listSwapChainFramebuffer.empty() == false && _imageIndex < _listSwapChainFramebuffer.size() )
 		{
 			VkRenderPassBeginInfo rpBeginInfo{};
 			rpBeginInfo.sType			  = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 			rpBeginInfo.renderPass		  = _renderPass;
-			rpBeginInfo.framebuffer		  = _listSwapChainFramebuffers[_imageIndex];
+			rpBeginInfo.framebuffer		  = _listSwapChainFramebuffer[_imageIndex];
 			rpBeginInfo.renderArea.offset = { 0, 0 };
 			rpBeginInfo.renderArea.extent = { _swapChainExtentWidth, _swapChainExtentHeight };
 
@@ -681,7 +682,7 @@ namespace sw
 			rpBeginInfo.clearValueCount = 1;
 			rpBeginInfo.pClearValues	= &clearVal;
 
-			vkCmdBeginRenderPass( _listCommandBuffers[_currentFrame], &rpBeginInfo, VK_SUBPASS_CONTENTS_INLINE );
+			vkCmdBeginRenderPass( _listCommandBuffer[_currentFrame], &rpBeginInfo, VK_SUBPASS_CONTENTS_INLINE );
 			_bRenderPassActive = true;
 		}
 	}
@@ -694,28 +695,28 @@ namespace sw
 
 		if ( _bRenderPassActive )
 		{
-			vkCmdEndRenderPass( _listCommandBuffers[_currentFrame] );
+			vkCmdEndRenderPass( _listCommandBuffer[_currentFrame] );
 			_bRenderPassActive = false;
 		}
-		vkEndCommandBuffer( _listCommandBuffers[_currentFrame] );
+		vkEndCommandBuffer( _listCommandBuffer[_currentFrame] );
 
 		VkSubmitInfo submitInfo{};
 		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-		VkSemaphore			 arrWaitSemaphores[] = { _listImageAvailableSemaphores[_currentFrame] };
+		VkSemaphore			 arrWaitSemaphores[] = { _listImageAvailableSemaphore[_currentFrame] };
 		VkPipelineStageFlags arrWaitStages[]	 = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 		submitInfo.waitSemaphoreCount			 = 1;
 		submitInfo.pWaitSemaphores				 = arrWaitSemaphores;
 		submitInfo.pWaitDstStageMask			 = arrWaitStages;
 
 		submitInfo.commandBufferCount = 1;
-		submitInfo.pCommandBuffers	  = &_listCommandBuffers[_currentFrame];
+		submitInfo.pCommandBuffers	  = &_listCommandBuffer[_currentFrame];
 
-		VkSemaphore arrSignalSemaphores[] = { _listRenderFinishedSemaphores[_imageIndex] };
+		VkSemaphore arrSignalSemaphores[] = { _listRenderFinishedSemaphore[_imageIndex] };
 		submitInfo.signalSemaphoreCount	  = 1;
 		submitInfo.pSignalSemaphores	  = arrSignalSemaphores;
 
-		vkQueueSubmit( _graphicsQueue, 1, &submitInfo, _listInFlightFences[_currentFrame] );
+		vkQueueSubmit( _graphicsQueue, 1, &submitInfo, _listInFlightFence[_currentFrame] );
 
 		if ( bPresent )
 		{
@@ -736,7 +737,7 @@ namespace sw
 				_bSwapChainDirty = 1;
 			}
 			else if ( presentResult != VK_SUCCESS )
-				SW_LOG_ERROR( "[Vulkan] vkQueuePresentKHR failed! Error code: %#", static_cast<int32>( presentResult ) );
+				SW_LOG_ERROR( "vkQueuePresentKHR failed! Error code: %#", static_cast<int32>( presentResult ) );
 		}
 
 		_currentFrame  = ( _currentFrame + 1 ) % 2;
@@ -748,8 +749,8 @@ namespace sw
 	{
 		if ( _bOffscreenPassActive && _offscreenCommandBuffer != VK_NULL_HANDLE )
 			return _offscreenCommandBuffer;
-		if ( _bFrameStarted && _listCommandBuffers.empty() == false )
-			return _listCommandBuffers[_currentFrame];
+		if ( _bFrameStarted && _listCommandBuffer.empty() == false )
+			return _listCommandBuffer[_currentFrame];
 		return VK_NULL_HANDLE;
 	}
 
@@ -855,20 +856,20 @@ namespace sw
 		{
 			listExtensions.push_back( VK_KHR_XLIB_SURFACE_EXTENSION_NAME );
 			_linuxWsi = 1;
-			SW_LOG_INFO( "Vulkan WSI: VK_KHR_xlib_surface" );
+			SW_LOG_TRACE( "Vulkan WSI: VK_KHR_xlib_surface" );
 		}
 		else if ( hasExtensionVal( availableExts, VK_KHR_XCB_SURFACE_EXTENSION_NAME ) )
 		{
 			listExtensions.push_back( VK_KHR_XCB_SURFACE_EXTENSION_NAME );
 			_linuxWsi = 2;
-			SW_LOG_INFO( "Vulkan WSI: VK_KHR_xcb_surface (xlib unavailable)" );
+			SW_LOG_TRACE( "Vulkan WSI: VK_KHR_xcb_surface (xlib unavailable)" );
 		}
 		else
 		{
 			SW_LOG_ERROR( "No Vulkan X11 WSI extension (VK_KHR_xlib_surface / VK_KHR_xcb_surface). Enumerated %# instance extensions.",
 						  availableExtCount );
 			for ( const VkExtensionProperties& ext : availableExts )
-				SW_LOG_INFO( "  instance ext: %#", ext.extensionName );
+				SW_LOG_TRACE( "  instance ext: %#", ext.extensionName );
 			SW_LOG_ERROR( "Install libxcb1-dev / libx11-xcb-dev, and rebuild vcpkg vulkan-loader with [xcb,xlib]." );
 			return false;
 		}
@@ -1068,8 +1069,8 @@ namespace sw
 				continue;
 			_depthFormat	  = static_cast<uint32>( format );
 			_bDepthHasStencil = ( format == VK_FORMAT_D32_SFLOAT ) ? 0 : 1;
-			SW_LOG_INFO( "[Vulkan] Selected depth format %# (stencil=%#)", static_cast<uint32>( format ),
-						 static_cast<uint32>( _bDepthHasStencil ) );
+			SW_LOG_TRACE( "Selected depth format %# (stencil=%#)", static_cast<uint32>( format ),
+						  static_cast<uint32>( _bDepthHasStencil ) );
 			return true;
 		}
 		_depthFormat	  = 0;
@@ -1211,8 +1212,8 @@ namespace sw
 			return false;
 
 		vkGetSwapchainImagesKHR( _device, _swapChain, &imageCount, nullptr );
-		_listSwapChainImages.resize( imageCount );
-		vkGetSwapchainImagesKHR( _device, _swapChain, &imageCount, _listSwapChainImages.data() );
+		_listSwapChainImage.resize( imageCount );
+		vkGetSwapchainImagesKHR( _device, _swapChain, &imageCount, _listSwapChainImage.data() );
 
 		_swapChainImageFormat  = static_cast<uint32>( surfaceFormat.format );
 		_swapChainExtentWidth  = extent.width;
@@ -1222,12 +1223,12 @@ namespace sw
 
 	bool VulkanRHIDevice::createImageViews()
 	{
-		_listSwapChainImageViews.resize( _listSwapChainImages.size() );
-		for ( size_t imageIndex = 0; imageIndex < _listSwapChainImages.size(); imageIndex++ )
+		_listSwapChainImageView.resize( _listSwapChainImage.size() );
+		for ( size_t imageIndex = 0; imageIndex < _listSwapChainImage.size(); imageIndex++ )
 		{
 			VkImageViewCreateInfo createInfo{};
 			createInfo.sType						   = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-			createInfo.image						   = _listSwapChainImages[imageIndex];
+			createInfo.image						   = _listSwapChainImage[imageIndex];
 			createInfo.viewType						   = VK_IMAGE_VIEW_TYPE_2D;
 			createInfo.format						   = static_cast<VkFormat>( _swapChainImageFormat );
 			createInfo.components.r					   = VK_COMPONENT_SWIZZLE_IDENTITY;
@@ -1240,7 +1241,7 @@ namespace sw
 			createInfo.subresourceRange.baseArrayLayer = 0;
 			createInfo.subresourceRange.layerCount	   = 1;
 
-			if ( vkCreateImageView( _device, &createInfo, nullptr, &_listSwapChainImageViews[imageIndex] ) != VK_SUCCESS )
+			if ( vkCreateImageView( _device, &createInfo, nullptr, &_listSwapChainImageView[imageIndex] ) != VK_SUCCESS )
 				return false;
 		}
 		return true;
@@ -1248,10 +1249,10 @@ namespace sw
 
 	bool VulkanRHIDevice::createFramebuffers()
 	{
-		_listSwapChainFramebuffers.resize( _listSwapChainImageViews.size() );
-		for ( size_t imageIndex = 0; imageIndex < _listSwapChainImageViews.size(); imageIndex++ )
+		_listSwapChainFramebuffer.resize( _listSwapChainImageView.size() );
+		for ( size_t imageIndex = 0; imageIndex < _listSwapChainImageView.size(); imageIndex++ )
 		{
-			VkImageView				arrAttachments[] = { _listSwapChainImageViews[imageIndex] };
+			VkImageView				arrAttachments[] = { _listSwapChainImageView[imageIndex] };
 			VkFramebufferCreateInfo framebufferInfo{};
 			framebufferInfo.sType			= VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 			framebufferInfo.renderPass		= _renderPass;
@@ -1260,7 +1261,7 @@ namespace sw
 			framebufferInfo.width			= _swapChainExtentWidth;
 			framebufferInfo.height			= _swapChainExtentHeight;
 			framebufferInfo.layers			= 1;
-			if ( vkCreateFramebuffer( _device, &framebufferInfo, nullptr, &_listSwapChainFramebuffers[imageIndex] ) != VK_SUCCESS )
+			if ( vkCreateFramebuffer( _device, &framebufferInfo, nullptr, &_listSwapChainFramebuffer[imageIndex] ) != VK_SUCCESS )
 				return false;
 		}
 		return true;
@@ -1279,14 +1280,14 @@ namespace sw
 
 	bool VulkanRHIDevice::createCommandBuffers()
 	{
-		_listCommandBuffers.resize( 2 );
+		_listCommandBuffer.resize( 2 );
 		VkCommandBufferAllocateInfo allocInfo{};
 		allocInfo.sType				 = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 		allocInfo.commandPool		 = _commandPool;
 		allocInfo.level				 = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-		allocInfo.commandBufferCount = static_cast<uint32>( _listCommandBuffers.size() );
+		allocInfo.commandBufferCount = static_cast<uint32>( _listCommandBuffer.size() );
 
-		if ( vkAllocateCommandBuffers( _device, &allocInfo, _listCommandBuffers.data() ) != VK_SUCCESS )
+		if ( vkAllocateCommandBuffers( _device, &allocInfo, _listCommandBuffer.data() ) != VK_SUCCESS )
 			return false;
 
 		VkCommandBufferAllocateInfo offscreenAlloc{};
@@ -1321,10 +1322,10 @@ namespace sw
 
 	bool VulkanRHIDevice::createSyncObjects()
 	{
-		_listImageAvailableSemaphores.resize( _listSwapChainImages.size() );
-		_listRenderFinishedSemaphores.resize( _listSwapChainImages.size() );
-		_listInFlightFences.resize( 2 );
-		_listImagesInFlight.resize( _listSwapChainImages.size(), VK_NULL_HANDLE );
+		_listImageAvailableSemaphore.resize( _listSwapChainImage.size() );
+		_listRenderFinishedSemaphore.resize( _listSwapChainImage.size() );
+		_listInFlightFence.resize( 2 );
+		_listImagesInFlight.resize( _listSwapChainImage.size(), VK_NULL_HANDLE );
 
 		VkSemaphoreCreateInfo semaphoreInfo{};
 		semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -1332,21 +1333,21 @@ namespace sw
 		fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 		fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-		for ( size_t syncIndex = 0; syncIndex < _listImageAvailableSemaphores.size(); syncIndex++ )
+		for ( size_t syncIndex = 0; syncIndex < _listImageAvailableSemaphore.size(); syncIndex++ )
 		{
-			if ( vkCreateSemaphore( _device, &semaphoreInfo, nullptr, &_listImageAvailableSemaphores[syncIndex] ) != VK_SUCCESS )
+			if ( vkCreateSemaphore( _device, &semaphoreInfo, nullptr, &_listImageAvailableSemaphore[syncIndex] ) != VK_SUCCESS )
 				return false;
 		}
 
 		for ( size_t syncIndex = 0; syncIndex < 2; syncIndex++ )
 		{
-			if ( vkCreateFence( _device, &fenceInfo, nullptr, &_listInFlightFences[syncIndex] ) != VK_SUCCESS )
+			if ( vkCreateFence( _device, &fenceInfo, nullptr, &_listInFlightFence[syncIndex] ) != VK_SUCCESS )
 				return false;
 		}
 
-		for ( size_t syncIndex = 0; syncIndex < _listRenderFinishedSemaphores.size(); syncIndex++ )
+		for ( size_t syncIndex = 0; syncIndex < _listRenderFinishedSemaphore.size(); syncIndex++ )
 		{
-			if ( vkCreateSemaphore( _device, &semaphoreInfo, nullptr, &_listRenderFinishedSemaphores[syncIndex] ) != VK_SUCCESS )
+			if ( vkCreateSemaphore( _device, &semaphoreInfo, nullptr, &_listRenderFinishedSemaphore[syncIndex] ) != VK_SUCCESS )
 				return false;
 		}
 		return true;
@@ -1357,26 +1358,26 @@ namespace sw
 		if ( _device == nullptr )
 			return;
 
-		for ( VkSemaphore semaphore : _listRenderFinishedSemaphores )
+		for ( VkSemaphore semaphore : _listRenderFinishedSemaphore )
 		{
 			if ( semaphore != VK_NULL_HANDLE )
 				vkDestroySemaphore( _device, semaphore, nullptr );
 		}
-		_listRenderFinishedSemaphores.clear();
+		_listRenderFinishedSemaphore.clear();
 
-		for ( VkSemaphore semaphore : _listImageAvailableSemaphores )
+		for ( VkSemaphore semaphore : _listImageAvailableSemaphore )
 		{
 			if ( semaphore != VK_NULL_HANDLE )
 				vkDestroySemaphore( _device, semaphore, nullptr );
 		}
-		_listImageAvailableSemaphores.clear();
+		_listImageAvailableSemaphore.clear();
 
-		for ( VkFence fence : _listInFlightFences )
+		for ( VkFence fence : _listInFlightFence )
 		{
 			if ( fence != VK_NULL_HANDLE )
 				vkDestroyFence( _device, fence, nullptr );
 		}
-		_listInFlightFences.clear();
+		_listInFlightFence.clear();
 
 		// 스왑체인 이미지가 소유하지 않는 참조 사본이므로 비우기만 합니다.
 		_listImagesInFlight.clear();
@@ -1394,22 +1395,22 @@ namespace sw
 
 		if ( createSwapChain() == false )
 		{
-			SW_LOG_ERROR( "[Vulkan] Failed to recreate the swapchain!" );
+			SW_LOG_ERROR( "Failed to recreate the swapchain!" );
 			return;
 		}
 		if ( createImageViews() == false )
 		{
-			SW_LOG_ERROR( "[Vulkan] Failed to recreate the swapchain image views!" );
+			SW_LOG_ERROR( "Failed to recreate the swapchain image views!" );
 			return;
 		}
 		if ( createFramebuffers() == false )
 		{
-			SW_LOG_ERROR( "[Vulkan] Failed to recreate the swapchain framebuffers!" );
+			SW_LOG_ERROR( "Failed to recreate the swapchain framebuffers!" );
 			return;
 		}
 		if ( createSyncObjects() == false )
 		{
-			SW_LOG_ERROR( "[Vulkan] Failed to recreate the swapchain sync objects!" );
+			SW_LOG_ERROR( "Failed to recreate the swapchain sync objects!" );
 			return;
 		}
 
@@ -1421,17 +1422,17 @@ namespace sw
 		if ( _device == nullptr )
 			return;
 
-		for ( VkFramebuffer framebuffer : _listSwapChainFramebuffers )
+		for ( VkFramebuffer framebuffer : _listSwapChainFramebuffer )
 		{
 			vkDestroyFramebuffer( _device, framebuffer, nullptr );
 		}
-		_listSwapChainFramebuffers.clear();
+		_listSwapChainFramebuffer.clear();
 
-		for ( VkImageView imageView : _listSwapChainImageViews )
+		for ( VkImageView imageView : _listSwapChainImageView )
 		{
 			vkDestroyImageView( _device, imageView, nullptr );
 		}
-		_listSwapChainImageViews.clear();
+		_listSwapChainImageView.clear();
 
 		if ( _swapChain )
 		{
@@ -1439,7 +1440,7 @@ namespace sw
 			_swapChain = nullptr;
 		}
 		// 스왑체인 소유 이미지이므로 핸들만 버립니다.
-		_listSwapChainImages.clear();
+		_listSwapChainImage.clear();
 	}
 
 	bool VulkanRHIDevice::initPipelineCache()
@@ -1463,14 +1464,14 @@ namespace sw
 		const VkResult res = vkCreatePipelineCache( _device, &createInfo, nullptr, &_pipelineCache );
 		if ( res != VK_SUCCESS )
 		{
-			SW_LOG_WARNING( "[Vulkan] Failed to create pipeline cache with saved data; falling back to empty cache." );
+			SW_LOG_WARNING( "Failed to create pipeline cache with saved data; falling back to empty cache." );
 			createInfo.initialDataSize = 0;
 			createInfo.pInitialData	   = nullptr;
 			vkCreatePipelineCache( _device, &createInfo, nullptr, &_pipelineCache );
 		}
 		else if ( listCacheData.empty() == false )
 		{
-			SW_LOG_INFO( "[Vulkan] Loaded pipeline cache (%# bytes).", static_cast<uint32>( listCacheData.size() ) );
+			SW_LOG_INFO( "Loaded pipeline cache (%# bytes).", static_cast<uint32>( listCacheData.size() ) );
 		}
 		return _pipelineCache != VK_NULL_HANDLE;
 	}
@@ -1488,7 +1489,7 @@ namespace sw
 			{
 				FileUtil::ensureDirectoryExists( "Saved/ShaderCache" );
 				FileUtil::writeFile( "Saved/ShaderCache/vk_pipeline_cache.bin", listCacheData.data(), static_cast<uint64>( listCacheData.size() ) );
-				SW_LOG_INFO( "[Vulkan] Saved pipeline cache (%# bytes).", static_cast<uint32>( dataSize ) );
+				SW_LOG_INFO( "Saved pipeline cache (%# bytes).", static_cast<uint32>( dataSize ) );
 			}
 		}
 
@@ -1665,7 +1666,7 @@ namespace sw
 		uint32 memoryTypeIndex{ 0 };
 		if ( findMemoryType( memReq.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, memoryTypeIndex ) == false )
 		{
-			SW_LOG_ERROR( "[Vulkan] Failed to find a device local memory type for the bindless dummy image." );
+			SW_LOG_ERROR( "Failed to find a device local memory type for the bindless dummy image." );
 			return false;
 		}
 
@@ -1713,7 +1714,7 @@ namespace sw
 			writes[slotIndex].pImageInfo	  = &infos[slotIndex];
 		}
 		vkUpdateDescriptorSets( _device, kBindlessTextureCount, writes.data(), 0, nullptr );
-		SW_LOG_INFO( "[Vulkan] Bindless texture array ready (%# slots).", kBindlessTextureCount );
+		SW_LOG_INFO( "Bindless texture array ready (%# slots).", kBindlessTextureCount );
 		return true;
 	}
 
@@ -1962,8 +1963,8 @@ namespace sw
 			key._depthFormat = static_cast<uint32>( depthFmt );
 		}
 
-		auto existing = _mapPipelineRenderPasses.find( key );
-		if ( existing != _mapPipelineRenderPasses.end() )
+		auto existing = _mapPipelineRenderPass.find( key );
+		if ( existing != _mapPipelineRenderPass.end() )
 			return existing->second;
 
 		VkAttachmentDescription attachments[kMaxColorAttachments + 1]{};
@@ -2033,14 +2034,14 @@ namespace sw
 		if ( vkCreateRenderPass( _device, &rpInfo, nullptr, &renderPass ) != VK_SUCCESS )
 			return VK_NULL_HANDLE;
 
-		_mapPipelineRenderPasses.emplace( key, renderPass );
+		_mapPipelineRenderPass.emplace( key, renderPass );
 		return renderPass;
 	}
 
 	bool VulkanRHIDevice::ensureCompositeFramebuffer( const CompositeFbKey& key, CompositeFbRecord& outRecord )
 	{
-		auto existing = _mapCompositeFramebuffers.find( key );
-		if ( existing != _mapCompositeFramebuffers.end() )
+		auto existing = _mapCompositeFramebuffer.find( key );
+		if ( existing != _mapCompositeFramebuffer.end() )
 		{
 			outRecord = existing->second;
 			return outRecord.framebuffer != VK_NULL_HANDLE && outRecord.renderPass != VK_NULL_HANDLE;
@@ -2160,7 +2161,7 @@ namespace sw
 		}
 		record.width  = width;
 		record.height = height;
-		_mapCompositeFramebuffers.emplace( key, record );
+		_mapCompositeFramebuffer.emplace( key, record );
 		outRecord = record;
 		return true;
 	}
@@ -2169,7 +2170,7 @@ namespace sw
 	{
 		if ( texture == 0 || _device == nullptr )
 			return;
-		for ( auto it = _mapCompositeFramebuffers.begin(); it != _mapCompositeFramebuffers.end(); )
+		for ( auto it = _mapCompositeFramebuffer.begin(); it != _mapCompositeFramebuffer.end(); )
 		{
 			bool bUses = ( it->first._depth == texture );
 			for ( uint32 colorIndex = 0; colorIndex < it->first._colorCount && bUses == false; ++colorIndex )
@@ -2182,7 +2183,7 @@ namespace sw
 					vkDestroyFramebuffer( _device, it->second.framebuffer, nullptr );
 				if ( it->second.renderPass != VK_NULL_HANDLE )
 					vkDestroyRenderPass( _device, it->second.renderPass, nullptr );
-				it = _mapCompositeFramebuffers.erase( it );
+				it = _mapCompositeFramebuffer.erase( it );
 			}
 			else
 				++it;
@@ -2205,7 +2206,7 @@ namespace sw
 		VkBuffer buffer = VK_NULL_HANDLE;
 		if ( vkCreateBuffer( _device, &bufferInfo, nullptr, &buffer ) != VK_SUCCESS )
 		{
-			SW_LOG_ERROR( "[Vulkan] Failed to create VkBuffer (usage=0x%#).", usageFlags );
+			SW_LOG_ERROR( "Failed to create VkBuffer (usage=0x%#).", usageFlags );
 			return 0;
 		}
 
@@ -2216,7 +2217,7 @@ namespace sw
 		if ( findMemoryType( memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, memoryTypeIndex ) == false )
 		{
 			vkDestroyBuffer( _device, buffer, nullptr );
-			SW_LOG_ERROR( "[Vulkan] Failed to find a host visible memory type for VkBuffer." );
+			SW_LOG_ERROR( "Failed to find a host visible memory type for VkBuffer." );
 			return 0;
 		}
 
@@ -2229,7 +2230,7 @@ namespace sw
 		if ( vkAllocateMemory( _device, &allocInfo, nullptr, &memory ) != VK_SUCCESS )
 		{
 			vkDestroyBuffer( _device, buffer, nullptr );
-			SW_LOG_ERROR( "[Vulkan] Failed to allocate memory for VkBuffer." );
+			SW_LOG_ERROR( "Failed to allocate memory for VkBuffer." );
 			return 0;
 		}
 

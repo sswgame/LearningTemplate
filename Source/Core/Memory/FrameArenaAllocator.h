@@ -108,7 +108,7 @@ namespace sw
 		size_t		  _totalAllocatedBytes;
 		size_t		  _usedBytes;
 		size_t		  _currentChunkIndex;
-		vector<Chunk> _listChunks;
+		vector<Chunk> _listChunk;
 	};
 
 	// ------------------------------------------------------------------------------

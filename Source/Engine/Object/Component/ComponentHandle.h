@@ -33,7 +33,7 @@ namespace sw
 		/** @brief 컴포넌트 인스턴스 ID를 반환합니다. */
 		[[nodiscard]] constexpr uint64 componentId() const noexcept { return _componentId; }
 		/** @brief objectId+componentId가 있으면 true입니다. */
-		[[nodiscard]] constexpr bool isValid() const noexcept { return _objectId != 0 && _componentId != 0; }
+		[[nodiscard]] constexpr bool	 isValid() const noexcept { return _objectId != 0 && _componentId != 0; }
 		[[nodiscard]] constexpr explicit operator bool() const noexcept { return isValid(); }
 
 		friend constexpr bool operator==( ComponentHandle lhs, ComponentHandle rhs ) noexcept

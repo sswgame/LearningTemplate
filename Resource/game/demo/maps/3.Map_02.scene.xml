@@ -1,5 +1,5 @@
 <?xml version="1.0" ?>
-<SceneDescriptor formatVersion="0" name="3.Map_02">
+<Scene formatVersion="0" name="3.Map_02">
     <entities>
         <entity name="NEXT_DOOR_BOTTOM" prefab="game/demo/prefabs/3.Map_02_NEXT_DOOR_BOTTOM_0.prefab.json"/>
         <entity name="NEXT_DOOR_LEFT" prefab="game/demo/prefabs/3.Map_02_NEXT_DOOR_LEFT_1.prefab.json"/>
@@ -9,4 +9,4 @@
         <entity name="SUMMON_GHOST" prefab="game/demo/prefabs/3.Map_02_SUMMON_GHOST_5.prefab.json"/>
         <entity name="MAP_ROOM" prefab="game/demo/prefabs/3.Map_02_MAP_ROOM_6.prefab.json"/>
     </entities>
-</SceneDescriptor>
+</Scene>

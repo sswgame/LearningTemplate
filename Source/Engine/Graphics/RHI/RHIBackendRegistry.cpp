@@ -30,6 +30,7 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "RHIBackendRegistry" );
 
 	namespace
 	{
@@ -146,7 +147,7 @@ namespace sw
 
 	void RHIBackendRegistry::registerBackend( RHIBackend backend, const RHIDeviceFactoryDelegate& factory, const RHICapabilities& caps )
 	{
-		for ( RHIBackendEntry& entry : _listEntries )
+		for ( RHIBackendEntry& entry : _listEntry )
 		{
 			if ( entry._backend == backend )
 			{
@@ -155,12 +156,12 @@ namespace sw
 				return;
 			}
 		}
-		_listEntries.push_back( RHIBackendEntry{ backend, factory, caps } );
+		_listEntry.push_back( RHIBackendEntry{ backend, factory, caps } );
 	}
 
 	const RHIBackendEntry* RHIBackendRegistry::findBackend( RHIBackend backend ) const
 	{
-		for ( const RHIBackendEntry& entry : _listEntries )
+		for ( const RHIBackendEntry& entry : _listEntry )
 		{
 			if ( entry._backend == backend )
 				return &entry;
@@ -177,12 +178,12 @@ namespace sw
 		const RHIBackendEntry* pEntry = findBackend( backend );
 		if ( pEntry == nullptr || pEntry->_factory.isBound() == false )
 		{
-			SW_LOG_ERROR( "[RHIBackendRegistry] No factory registered for backend %#", static_cast<int32>( backend ) );
+			SW_LOG_ERROR( "No factory registered for backend %#", static_cast<int32>( backend ) );
 			return nullptr;
 		}
 		if ( RHIAvailability::isAvailable( backend ) == false )
 		{
-			SW_LOG_ERROR( "[RHIBackendRegistry] Backend %# is not available on this platform", static_cast<int32>( backend ) );
+			SW_LOG_ERROR( "Backend %# is not available on this platform", static_cast<int32>( backend ) );
 			return nullptr;
 		}
 		return pEntry->_factory();
@@ -197,7 +198,7 @@ namespace sw
 		PFN_GetRHIModuleAbiVersion pfnVersion = reinterpret_cast<PFN_GetRHIModuleAbiVersion>( FileUtil::getDynamicSymbol( pModuleHandle, "getRHIModuleAbiVersion" ) );
 		if ( pfnVersion == nullptr || pfnVersion() != kRHIModuleAbiVersion )
 		{
-			SW_LOG_ERROR( "[RHIBackendRegistry] RHI MODULE ABI version mismatch or missing getRHIModuleAbiVersion (%#)", modulePath );
+			SW_LOG_ERROR( "RHI MODULE ABI version mismatch or missing getRHIModuleAbiVersion (%#)", modulePath );
 			FileUtil::unloadDynamicLibrary( pModuleHandle );
 			return false;
 		}
@@ -205,7 +206,7 @@ namespace sw
 		PFN_GetRHIModuleAbiStamp pfnStamp = reinterpret_cast<PFN_GetRHIModuleAbiStamp>( FileUtil::getDynamicSymbol( pModuleHandle, "getRHIModuleAbiStamp" ) );
 		if ( pfnStamp == nullptr || pfnStamp() == nullptr || StringUtil::strcmp( pfnStamp(), kRHIModuleAbiStamp ) != 0 )
 		{
-			SW_LOG_ERROR( "[RHIBackendRegistry] RHI MODULE ABI stamp mismatch or missing getRHIModuleAbiStamp (%#; expected %#)", modulePath, kRHIModuleAbiStamp );
+			SW_LOG_ERROR( "RHI MODULE ABI stamp mismatch or missing getRHIModuleAbiStamp (%#; expected %#)", modulePath, kRHIModuleAbiStamp );
 			FileUtil::unloadDynamicLibrary( pModuleHandle );
 			return false;
 		}
@@ -223,22 +224,22 @@ namespace sw
 		} );
 
 		registerBackend( backend, factory, RHIAvailability::query( backend ) );
-		_listLoadedModules.push_back( LoadedModule{ backend, pModuleHandle } );
+		_listLoadedModule.push_back( LoadedModule{ backend, pModuleHandle } );
 
-		SW_LOG_INFO( "[RHIBackendRegistry] Loaded module %# for backend %#", modulePath, RHI::getBackendTypeName( backend ) );
+		SW_LOG_INFO( "Loaded module %# for backend %#", modulePath, RHI::getBackendTypeName( backend ) );
 		return true;
 	}
 
 	void RHIBackendRegistry::unloadModules()
 	{
-		if ( _listLoadedModules.empty() )
+		if ( _listLoadedModule.empty() )
 			return;
 
 		// Clear factories before FreeLibrary so create() cannot dispatch into unloaded code.
 		// Devices from these factories must already be destroyed (see RHI::shutdown).
-		for ( const auto& [backEnd, handle] : _listLoadedModules )
+		for ( const auto& [backEnd, handle] : _listLoadedModule )
 		{
-			for ( RHIBackendEntry& entry : _listEntries )
+			for ( RHIBackendEntry& entry : _listEntry )
 			{
 				if ( entry._backend == backEnd )
 				{
@@ -248,12 +249,12 @@ namespace sw
 			}
 		}
 
-		for ( const LoadedModule& module : _listLoadedModules )
+		for ( const LoadedModule& module : _listLoadedModule )
 		{
 			if ( module._pHandle != nullptr )
 				FileUtil::unloadDynamicLibrary( module._pHandle );
 		}
-		_listLoadedModules.clear();
+		_listLoadedModule.clear();
 	}
 
 	RHIBackendRegistry::~RHIBackendRegistry()

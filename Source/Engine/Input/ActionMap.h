@@ -188,13 +188,13 @@ namespace sw
 		/** @brief 레이어 우선순위를 반환합니다. */
 		int32 getLayerPriority( string_view layer ) const;
 		/** @brief 등록된 레이어 이름 목록을 반환합니다. */
-		const vector<string>& getLayerNames() const { return _listLayerNames; }
+		const vector<string>& getLayerNames() const { return _listLayerName; }
 		/** @brief 기본 레이어 이름을 반환합니다. */
 		const string& getDefaultLayerName() const { return _defaultLayerName; }
 		/** @brief 액션이 등록되어 있는지 반환합니다. */
 		bool hasAction( string_view action ) const;
 		/** @brief 등록된 액션 이름 목록을 반환합니다. */
-		const vector<string>& getActionNames() const { return _listActionNames; }
+		const vector<string>& getActionNames() const { return _listActionName; }
 		/** @brief 액션의 바인딩 트리거를 반환합니다. */
 		ActionTrigger getBindingTrigger( string_view action, uint32 bindIndex ) const;
 		/** @brief 액션의 바인딩 개수를 반환합니다. */
@@ -301,8 +301,8 @@ namespace sw
 		/// @brief 액션별 바인딩 목록과 이번 프레임 합산 상태
 		struct ActionRuntime
 		{
-			vector<InputBinding>   _listBindings;
-			vector<BindingState>   _listBindStates;
+			vector<InputBinding>   _listBinding;
+			vector<BindingState>   _listBindState;
 			float32				   _holdDuration;
 			uint8				   _bDown		   : 1;
 			uint8				   _bPressed	   : 1;
@@ -314,8 +314,8 @@ namespace sw
 
 			/** @brief 기본 액션 런타임입니다. */
 			ActionRuntime()
-				: _listBindings{}
-				, _listBindStates{}
+				: _listBinding{}
+				, _listBindState{}
 				, _holdDuration{ 0.0f }
 				, _bDown{ 0 }
 				, _bPressed{ 0 }
@@ -377,13 +377,13 @@ namespace sw
 
 	private:
 		InputManager*										  _pInput;
-		map<string, ActionRuntime, std::less<>>				  _mapActions;
-		map<string, LayerDef, std::less<>>					  _mapLayers;
+		map<string, ActionRuntime, std::less<>>				  _mapAction;
+		map<string, LayerDef, std::less<>>					  _mapLayer;
 		map<string, Vector2DBinding, std::less<>>			  _mapVector2D;
-		map<string, vector<GamepadStickBinding>, std::less<>> _mapGamepadSticks;
-		map<string, vector<ChordBinding>, std::less<>>		  _mapChords;
-		vector<string>										  _listActionNames;
-		vector<string>										  _listLayerNames;
+		map<string, vector<GamepadStickBinding>, std::less<>> _mapGamepadStick;
+		map<string, vector<ChordBinding>, std::less<>>		  _mapChord;
+		vector<string>										  _listActionName;
+		vector<string>										  _listLayerName;
 		string												  _defaultLayerName;
 		float32												  _doubleClickTime;
 		float32												  _doubleClickMaxDistance;

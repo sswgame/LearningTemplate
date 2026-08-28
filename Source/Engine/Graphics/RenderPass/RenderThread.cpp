@@ -12,6 +12,8 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "RenderThread" );
+
 	SW_GLOBAL_VARIABLE_BOOL( gv_useRenderThread, true, "전용 RenderThread 사용 (false = 게임 스레드 인라인 submit)" );
 
 	RenderThread::RenderThread()
@@ -41,14 +43,14 @@ namespace sw
 
 		if ( _bRunning.load( std::memory_order_relaxed ) )
 		{
-			SW_LOG_WARNING( "[RenderThread] bind() ignored while worker is running." );
+			SW_LOG_WARNING( "bind() ignored while worker is running." );
 			return false;
 		}
 
 		_pDevice		= pDevice;
 		_pFrameRenderer = pFrameRenderer;
 		_bContextBound	= false;
-		SW_LOG_INFO( "[RenderThread] Bound for inline submit (no dedicated worker). Backend=%#", pDevice->getBackendName() );
+		SW_LOG_INFO( "Bound for inline submit (no dedicated worker). Backend=%#", pDevice->getBackendName() );
 		return true;
 	}
 
@@ -66,7 +68,7 @@ namespace sw
 		_bStop	  = false;
 		_bRunning = true;
 		_thread	  = std::thread( &RenderThread::threadMain, this );
-		SW_LOG_INFO( "[RenderThread] Dedicated worker started" );
+		SW_LOG_TRACE( "Dedicated worker started" );
 		return true;
 	}
 
@@ -91,14 +93,14 @@ namespace sw
 		_pDevice		= nullptr;
 		_pFrameRenderer = nullptr;
 		_bContextBound	= false;
-		SW_LOG_INFO( "[RenderThread] Stopped" );
+		SW_LOG_TRACE( "Stopped" );
 	}
 
 	void RenderThread::submit( RenderFramePacket&& packet )
 	{
 		if ( _pDevice == nullptr )
 		{
-			SW_LOG_WARNING( "[RenderThread] submit() with no bound device — packet dropped." );
+			SW_LOG_WARNING( "submit() with no bound device — packet dropped." );
 			return;
 		}
 
@@ -244,7 +246,7 @@ namespace sw
 		{
 			if ( pImm == nullptr )
 			{
-				SW_LOG_ERROR( "[RenderThread] getImmediateContext() is null; skipping offscreen packet" );
+				SW_LOG_ERROR( "getImmediateContext() is null; skipping offscreen packet" );
 				return;
 			}
 			pImm->beginOffscreenPass( packet._gameRenderTarget, packet._clearColor );
@@ -253,7 +255,7 @@ namespace sw
 		{
 			if ( _pDevice->getSwapChain() == nullptr )
 			{
-				SW_LOG_ERROR( "[RenderThread] getSwapChain() is null; skipping packet" );
+				SW_LOG_ERROR( "getSwapChain() is null; skipping packet" );
 				return;
 			}
 			_pDevice->getSwapChain()->beginFrame( packet._clearColor );
@@ -294,7 +296,7 @@ namespace sw
 
 		if ( _pDevice->bindGraphicsContext() == false )
 		{
-			SW_LOG_ERROR( "[RenderThread] bindGraphicsContext failed on executor thread (%#)",
+			SW_LOG_ERROR( "bindGraphicsContext failed on executor thread (%#)",
 						  _pDevice->getBackendName() );
 			return false;
 		}

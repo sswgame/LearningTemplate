@@ -64,7 +64,7 @@ namespace sw::editor
 		UINT										 _descriptorSize{ 0 };
 		uint32										 _maxDescriptors = 128;
 		uint32										 _nextDescriptor{ 0 };
-		vector<uint32>								 _listFreeDescriptors;
+		vector<uint32>								 _listFreeDescriptor;
 #endif
 	};
 } // namespace sw::editor

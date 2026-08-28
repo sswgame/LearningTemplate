@@ -31,12 +31,12 @@ namespace sw::editor
 		entry._category	 = category;
 		entry._pInstance = std::move( pPanel );
 
-		_listPanels.push_back( std::move( entry ) );
+		_listPanel.push_back( std::move( entry ) );
 	}
 
 	IEditorPanel* EditorPanelManager::findPanel( string_view title ) const
 	{
-		for ( const EditorPanelEntry& entry : _listPanels )
+		for ( const EditorPanelEntry& entry : _listPanel )
 		{
 			if ( entry._title == title && entry._pInstance != nullptr )
 				return entry._pInstance.get();
@@ -57,7 +57,7 @@ namespace sw::editor
 
 	void EditorPanelManager::clear()
 	{
-		_listPanels.clear();
+		_listPanel.clear();
 	}
 
 	void EditorPanelManager::registerDefaultPanels()
@@ -84,7 +84,7 @@ namespace sw::editor
 
 	void EditorPanelManager::drawOpenPanels()
 	{
-		for ( const EditorPanelEntry& entry : _listPanels )
+		for ( const EditorPanelEntry& entry : _listPanel )
 		{
 			if ( entry._pInstance != nullptr && entry._pInstance->isOpen() )
 				entry._pInstance->draw();
@@ -93,7 +93,7 @@ namespace sw::editor
 
 	void EditorPanelManager::preRenderOpenPanels( IRHIDevice* pRhiDevice )
 	{
-		for ( const EditorPanelEntry& entry : _listPanels )
+		for ( const EditorPanelEntry& entry : _listPanel )
 		{
 			if ( entry._pInstance != nullptr && entry._pInstance->isOpen() )
 				entry._pInstance->preRender( pRhiDevice );
@@ -102,7 +102,7 @@ namespace sw::editor
 
 	void EditorPanelManager::shutdownAllPanels( IRHIDevice* pRhiDevice )
 	{
-		for ( const EditorPanelEntry& entry : _listPanels )
+		for ( const EditorPanelEntry& entry : _listPanel )
 		{
 			if ( entry._pInstance != nullptr )
 				entry._pInstance->shutdown( pRhiDevice );

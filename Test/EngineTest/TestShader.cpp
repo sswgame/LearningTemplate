@@ -56,7 +56,7 @@ SW_TEST_CASE( ShaderCompilerTest, BasicCompileAndReflection )
 	SW_EXPECT_FALSE( cacheResult._listBytecode.empty() );
 
 	sw::ShaderReflectionData reflectionData = sw::ShaderReflection::reflect( cacheResult._listBytecode, desc._targetFormat );
-	SW_EXPECT_TRUE( reflectionData._listConstantBuffers.empty() == false || reflectionData._listResources.empty() == false || true );
+	SW_EXPECT_TRUE( reflectionData._listConstantBuffer.empty() == false || reflectionData._listResource.empty() == false || true );
 }
 
 /**
@@ -81,7 +81,7 @@ SW_TEST_CASE( ShaderCompilerTest, MultiTargetCrossCompilation )
 		sw::ShaderCompileResult vsResult = sw::ShaderCompiler::compileHLSL( vsDesc );
 		if ( vsResult._errorMessage.find( "SPIR-V CodeGen not available" ) != sw::string::npos )
 		{
-			SW_LOG_WARNING( "[TestShader] DXC dxcompiler.dll on this host does not support SPIR-V CodeGen. Skipping SPIR-V assertion." );
+			SW_LOG_WARNING( "DXC dxcompiler.dll on this host does not support SPIR-V CodeGen. Skipping SPIR-V assertion." );
 			continue;
 		}
 		if ( sw::isShaderCompilerUnavailable( vsResult ) )
@@ -138,15 +138,15 @@ SW_TEST_CASE( ShaderCompilerTest, ShaderVariantPermutation )
 {
 	sw::ShaderVariantKey key1;
 	key1._shaderPath = "engine/shaders/fullscreentriangle.hlsl";
-	key1._listDefines.push_back( { "USE_ALBEDO_MAP", "1" } );
+	key1._listDefine.push_back( { "USE_ALBEDO_MAP", "1" } );
 
 	sw::ShaderVariantKey key2;
 	key2._shaderPath = "engine/shaders/fullscreentriangle.hlsl";
-	key2._listDefines.push_back( { "USE_ALBEDO_MAP", "1" } );
+	key2._listDefine.push_back( { "USE_ALBEDO_MAP", "1" } );
 
 	sw::ShaderVariantKey key3;
 	key3._shaderPath = "engine/shaders/fullscreentriangle.hlsl";
-	key3._listDefines.push_back( { "SKINNED_MESH", "1" } );
+	key3._listDefine.push_back( { "SKINNED_MESH", "1" } );
 
 	SW_EXPECT_EQUAL( key1.getVariantHashKey().getHash(), key2.getVariantHashKey().getHash() );
 	SW_EXPECT_FALSE( key1.getVariantHashKey() == key3.getVariantHashKey() );
@@ -256,22 +256,22 @@ SW_TEST_CASE( ShaderCompilerTest, MultiBackendVariantKeyIsolation )
 	sw::ShaderVariantKey keyDx11;
 	keyDx11._shaderPath	  = "engine/shaders/fullscreentriangle.hlsl";
 	keyDx11._targetFormat = sw::ShaderTargetFormat::DXBC_D3D11;
-	keyDx11._listDefines.push_back( { "USE_TEXTURE", "1" } );
+	keyDx11._listDefine.push_back( { "USE_TEXTURE", "1" } );
 
 	sw::ShaderVariantKey keyDx12;
 	keyDx12._shaderPath	  = "engine/shaders/fullscreentriangle.hlsl";
 	keyDx12._targetFormat = sw::ShaderTargetFormat::DXIL_D3D12;
-	keyDx12._listDefines.push_back( { "USE_TEXTURE", "1" } );
+	keyDx12._listDefine.push_back( { "USE_TEXTURE", "1" } );
 
 	sw::ShaderVariantKey keyVk;
 	keyVk._shaderPath	= "engine/shaders/fullscreentriangle.hlsl";
 	keyVk._targetFormat = sw::ShaderTargetFormat::SPIRV_Vulkan;
-	keyVk._listDefines.push_back( { "USE_TEXTURE", "1" } );
+	keyVk._listDefine.push_back( { "USE_TEXTURE", "1" } );
 
 	sw::ShaderVariantKey keyGl;
 	keyGl._shaderPath	= "engine/shaders/fullscreentriangle.hlsl";
 	keyGl._targetFormat = sw::ShaderTargetFormat::SPIRV_OpenGL;
-	keyGl._listDefines.push_back( { "USE_TEXTURE", "1" } );
+	keyGl._listDefine.push_back( { "USE_TEXTURE", "1" } );
 
 	// 동일 소스 및 define이라도 targetFormat이 다르면 해시 키가 유일하게 구별되어야 함
 	SW_EXPECT_FALSE( keyDx11.getVariantHashKey() == keyDx12.getVariantHashKey() );

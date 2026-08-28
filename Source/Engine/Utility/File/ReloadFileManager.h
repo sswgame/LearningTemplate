@@ -66,7 +66,7 @@ namespace sw
 		{
 			FileWatchHandle		   _handle;
 			string				   _pathPrefix;
-			vector<string>		   _listExtensions;
+			vector<string>		   _listExtension;
 			FileWatchMatchDelegate _onMatch;
 		};
 
@@ -81,9 +81,9 @@ namespace sw
 
 		unique_ptr<IFileWatcher>	  _fileWatcher;
 		FileChangeMulticastDelegate	  _onFileChanged;
-		vector<WatchEntry>			  _listWatches;
+		vector<WatchEntry>			  _listWatch;
 		uint64						  _nextWatchId{ 1 };
-		unordered_map<string, uint64> _mapPollMtimes;
+		unordered_map<string, uint64> _mapPollMtime;
 		bool						  _bUseMtimePoll{ false };
 	};
 } // namespace sw

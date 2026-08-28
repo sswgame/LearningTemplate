@@ -59,7 +59,7 @@ namespace sw
 		PROPERTY()
 		string _currentAnimation;
 		PROPERTY()
-		vector<string> _listAnimations;
+		vector<string> _listAnimation;
 		PROPERTY()
 		float32 _frameRate;
 		float32 _frameTimer;

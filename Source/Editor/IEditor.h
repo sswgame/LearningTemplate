@@ -52,5 +52,9 @@ namespace sw
 		virtual void unregisterTexture( void* pTextureID ) = 0;
 		/** @brief 이번 프레임 Game View RT 핸들과 크기를 조회합니다. */
 		virtual void getGameViewport( uint64* pRenderTarget, uint32* pWidth, uint32* pHeight ) const = 0;
+		/** @brief 에디터 시뮬레이션(PIE)이 실행 중인지 반환합니다. */
+		virtual bool isPlaying() const = 0;
+		/** @brief 에디터 시뮬레이션(PIE)을 정지합니다. */
+		virtual void stopSimulation() = 0;
 	};
 } // namespace sw

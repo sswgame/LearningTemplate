@@ -9,7 +9,6 @@
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/EngineServices.h"
-#include "Engine/Game/GameState.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RenderPass/RenderThread.h"
@@ -83,6 +82,8 @@ namespace
 
 namespace sw
 {
+	SW_LOG_CALLER( "ModuleHost" );
+
 	ModuleHost::ModuleHost()
 		: _moduleCompiler{ nullptr }
 		, _editorApi{}
@@ -95,23 +96,13 @@ namespace sw
 		, _pRenderThread{ nullptr }
 		, _bEnableEditor{ 0 }
 		, _reserved{ 0 }
-		, _pGameSavedStateBuffer{ nullptr }
-		, _gameSavedStateCapacity{ 0 }
-		, _gameSavedStateSize{ 0 }
+		, _listGameSavedState{}
 	{
 	}
 
 	ModuleHost::~ModuleHost()
 	{
 		shutdown();
-
-		if ( _pGameSavedStateBuffer != nullptr )
-		{
-			std::free( _pGameSavedStateBuffer );
-			_pGameSavedStateBuffer	= nullptr;
-			_gameSavedStateCapacity = 0;
-			_gameSavedStateSize		= 0;
-		}
 	}
 
 	bool ModuleHost::initialize( LiveReloadManager* pLiveReloadManager, RHI* pRHI, IWindow* pWindow, RenderThread* pRenderThread, bool bEnableEditor, const vector<GameKitConfig>& gameKitModuleList )
@@ -147,7 +138,7 @@ namespace sw
 
 				if ( _pLiveReloadManager->isGraphBroken() )
 				{
-					SW_LOG_ERROR( "[ModuleHost] LiveReload graph broken during module registration — aborting initialize" );
+					SW_LOG_ERROR( "LiveReload graph broken during module registration — aborting initialize" );
 					return false;
 				}
 			}
@@ -168,7 +159,7 @@ namespace sw
 
 					if ( _pLiveReloadManager->registerModule( kitConfig._name, listDeps ) == false )
 					{
-						SW_LOG_ERROR( "[ModuleHost] Kit module register failed (%#)", kitConfig._name );
+						SW_LOG_ERROR( "Kit module register failed (%#)", kitConfig._name );
 						return false;
 					}
 					_pLiveReloadManager->setOnBeforeReload( kitConfig._name, SW_DELEGATE_METHOD( LiveReloadManager::OnBeforeReloadDelegate, &ModuleHost::onBeforeGameplayDllReload, this ) );
@@ -181,13 +172,13 @@ namespace sw
 
 				if ( _pLiveReloadManager->registerModule( sw::config::kTargetGameModule, gameModuleList ) == false )
 				{
-					SW_LOG_ERROR( "[ModuleHost] SWGame module register failed" );
+					SW_LOG_ERROR( "SWGame module register failed" );
 					return false;
 				}
 
 				if ( _pLiveReloadManager->isGraphBroken() )
 				{
-					SW_LOG_ERROR( "[ModuleHost] LiveReload graph broken during module registration — aborting initialize" );
+					SW_LOG_ERROR( "LiveReload graph broken during module registration — aborting initialize" );
 					return false;
 				}
 
@@ -236,16 +227,14 @@ namespace sw
 
 	void ModuleHost::updateGame( float32 deltaTime )
 	{
-		const bool bGameplay =
-			getGameState() == GameState::Playing;
+		const bool bGameplay = ( _bEnableEditor == SW_FALSE || _editor == nullptr || _editorApi.isPlaying == nullptr || _editorApi.isPlaying( _editor ) );
 		if ( _game != nullptr && _gameApi.update != nullptr && bGameplay )
 			_gameApi.update( _game, deltaTime );
 	}
 
 	void ModuleHost::fixedUpdateGame( float32 fixedDeltaTime )
 	{
-		const bool bGameplay =
-			getGameState() == GameState::Playing;
+		const bool bGameplay = ( _bEnableEditor == SW_FALSE || _editor == nullptr || _editorApi.isPlaying == nullptr || _editorApi.isPlaying( _editor ) );
 		if ( _game != nullptr && _gameApi.fixedUpdate != nullptr && bGameplay )
 			_gameApi.fixedUpdate( _game, fixedDeltaTime );
 	}
@@ -300,7 +289,7 @@ namespace sw
 		_editor = _editorApi.create();
 		if ( _editor == nullptr )
 		{
-			SW_LOG_ERROR( "[ModuleHost] Failed to create Editor instance" );
+			SW_LOG_ERROR( "Failed to create Editor instance" );
 			_editorApi = {};
 			poisonLiveReload( "Editor create failed after reload" );
 			return;
@@ -308,7 +297,7 @@ namespace sw
 
 		if ( _editorApi.initialize( _editor, _pWindow, &_pRHI->getDevice() ) == false )
 		{
-			SW_LOG_ERROR( "[ModuleHost] Failed to initialize Editor instance" );
+			SW_LOG_ERROR( "Failed to initialize Editor instance" );
 			if ( _editorApi.destroy != nullptr )
 				_editorApi.destroy( _editor );
 			_editor	   = nullptr;
@@ -317,7 +306,7 @@ namespace sw
 			return;
 		}
 
-		SW_LOG_INFO( "[ModuleHost] Editor initialized successfully via EditorAPI." );
+		SW_LOG_INFO( "Editor initialized successfully via EditorAPI." );
 	}
 
 	// ======================================================================
@@ -328,11 +317,10 @@ namespace sw
 	{
 		drainRenderWorkers();
 
-		const GameState state = getGameState();
-		if ( state == GameState::Playing || state == GameState::Paused )
+		if ( _bEnableEditor == SW_TRUE && _editor != nullptr && _editorApi.stopSimulation != nullptr )
 		{
-			SW_LOG_INFO( "[ModuleHost] Forcing GameState::Stopped before game module reload." );
-			setGameState( GameState::Stopped );
+			SW_LOG_INFO( "Stopping editor simulation before game module reload." );
+			_editorApi.stopSimulation( _editor );
 		}
 
 		if ( _game == nullptr )
@@ -344,16 +332,9 @@ namespace sw
 			uint32 size{ 0 };
 			if ( _gameApi.serializeState( _game, nullptr, &size ) && size > 0 )
 			{
-				if ( size > _gameSavedStateCapacity )
-				{
-					if ( _pGameSavedStateBuffer != nullptr )
-						std::free( _pGameSavedStateBuffer );
-					_gameSavedStateCapacity = size;
-					_pGameSavedStateBuffer	= static_cast<uint8*>( std::malloc( size ) );
-				}
-				_gameSavedStateSize = size;
-				if ( _gameApi.serializeState( _game, _pGameSavedStateBuffer, &size ) == false )
-					_gameSavedStateSize = 0;
+				_listGameSavedState.resize( size );
+				if ( _gameApi.serializeState( _game, _listGameSavedState.data(), &size ) == false )
+					_listGameSavedState.clear();
 			}
 		}
 
@@ -392,7 +373,7 @@ namespace sw
 		_game = _gameApi.create();
 		if ( _game == nullptr )
 		{
-			SW_LOG_ERROR( "[ModuleHost] Failed to create Game instance" );
+			SW_LOG_ERROR( "Failed to create Game instance" );
 			_gameApi = {};
 			poisonLiveReload( "Game create failed after reload" );
 			return;
@@ -400,7 +381,7 @@ namespace sw
 
 		if ( _gameApi.initialize( _game, _pWindow, &_pRHI->getDevice() ) == false )
 		{
-			SW_LOG_ERROR( "[ModuleHost] Failed to initialize Game instance" );
+			SW_LOG_ERROR( "Failed to initialize Game instance" );
 			if ( _gameApi.destroy != nullptr )
 				_gameApi.destroy( _game );
 			_game	 = nullptr;
@@ -410,17 +391,17 @@ namespace sw
 		}
 
 		// 상태 복원 역직렬화
-		if ( _gameApi.deserializeState != nullptr && _gameSavedStateSize > 0 )
+		if ( _gameApi.deserializeState != nullptr && _listGameSavedState.empty() == false )
 		{
-			if ( _gameApi.deserializeState( _game, _pGameSavedStateBuffer, static_cast<uint32>( _gameSavedStateSize ) ) )
-				SW_LOG_INFO( "[ModuleHost] Game state successfully restored from %zu bytes.", _gameSavedStateSize );
+			if ( _gameApi.deserializeState( _game, _listGameSavedState.data(), static_cast<uint32>( _listGameSavedState.size() ) ) )
+				SW_LOG_INFO( "Game state successfully restored from %zu bytes.", _listGameSavedState.size() );
 			else
-				SW_LOG_ERROR( "[ModuleHost] Failed to restore game state." );
+				SW_LOG_ERROR( "Failed to restore game state." );
 
-			_gameSavedStateSize = 0;
+			_listGameSavedState.clear();
 		}
 
-		SW_LOG_INFO( "[ModuleHost] SWGame initialized successfully via GameAPI." );
+		SW_LOG_INFO( "SWGame initialized successfully via GameAPI." );
 	}
 
 	// ======================================================================
@@ -475,7 +456,7 @@ namespace sw
 		{
 			if ( engine::getTaskManager().waitAll( 5000 ) == false )
 			{
-				SW_LOG_WARNING( "[ModuleHost] Task fencing timeout (5s) before module reload." );
+				SW_LOG_WARNING( "Task fencing timeout (5s) before module reload." );
 			}
 		}
 	}
@@ -503,7 +484,7 @@ namespace sw
 		PFN_ExportEditorAPI pfnExport = reinterpret_cast<PFN_ExportEditorAPI>( FileUtil::getDynamicSymbol( pLibraryModule, "exportEditorAPI" ) );
 		if ( pfnExport == nullptr || pfnExport( &_editorApi ) == false )
 		{
-			SW_LOG_ERROR( "[ModuleHost] Failed to bind EditorAPI from module" );
+			SW_LOG_ERROR( "Failed to bind EditorAPI from module" );
 			return false;
 		}
 
@@ -525,7 +506,7 @@ namespace sw
 		(void)pLibraryModule;
 		if ( exportGameAPI( &_gameApi ) == false )
 		{
-			SW_LOG_ERROR( "[ModuleHost] Failed to bind GameAPI (shipping)" );
+			SW_LOG_ERROR( "Failed to bind GameAPI (shipping)" );
 			return false;
 		}
 #else
@@ -534,7 +515,7 @@ namespace sw
 		PFN_ExportGameAPI pfnExport = reinterpret_cast<PFN_ExportGameAPI>( FileUtil::getDynamicSymbol( pLibraryModule, "exportGameAPI" ) );
 		if ( pfnExport == nullptr || pfnExport( &_gameApi ) == false )
 		{
-			SW_LOG_ERROR( "[ModuleHost] Failed to bind GameAPI from module" );
+			SW_LOG_ERROR( "Failed to bind GameAPI from module" );
 			return false;
 		}
 #endif

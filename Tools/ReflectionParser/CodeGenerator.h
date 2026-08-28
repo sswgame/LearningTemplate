@@ -82,8 +82,8 @@ namespace sw
 									std::initializer_list<std::pair<string_view, string_view>> vars );
 
 	private:
-		const vector<ParsedTypeInfo>& _listTypes;
-		const vector<ParsedEnumInfo>& _listEnums;
+		const vector<ParsedTypeInfo>& _listType;
+		const vector<ParsedEnumInfo>& _listEnum;
 		string						  _sourceFilePath;
 		string						  _outputDir;
 		string						  _outputFilePath;

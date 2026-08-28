@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file Logger.h
  * @brief 엔진 전체에서 사용되는 로깅 시스템
  *
@@ -45,6 +45,7 @@ namespace sw
 	{
 		LogLevel level = LogLevel::Info;
 		string	 tag;
+		string	 caller;
 		string	 message;
 		string	 file;
 		int32	 line{ 0 };
@@ -71,7 +72,7 @@ namespace sw
 		/** @brief 파일과 리스너를 닫습니다. */
 		virtual void shutdown() = 0;
 		/** @brief 한 줄을 콘솔·파일·리스너에 남깁니다. */
-		virtual void writeLog( LogLevel level, const utf8* pTag, const utf8* pMessage, const utf8* pFile, int32 line ) = 0;
+		virtual void writeLog( LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line ) = 0;
 		/** @brief 한 줄이 쓰일 때 호출할 리스너를 붙입니다. */
 		virtual DelegateHandle addLogWrittenListener( const LogWrittenDelegate& listener ) = 0;
 		/** @brief 핸들로 리스너를 뗍니다. */
@@ -104,7 +105,7 @@ namespace sw
 		void shutdown() override;
 
 		/** @brief 한 줄을 콘솔·파일·리스너에 남깁니다. */
-		void writeLog( LogLevel level, const utf8* pTag, const utf8* pMessage, const utf8* pFile, int32 line ) override;
+		void writeLog( LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line ) override;
 		/** @brief 한 줄이 쓰일 때 호출할 리스너를 붙입니다. */
 		DelegateHandle addLogWrittenListener( const LogWrittenDelegate& listener ) override;
 		/** @brief 핸들로 리스너를 뗍니다. */
@@ -113,7 +114,7 @@ namespace sw
 		/** @brief 매크로가 쓸 전역 싱크를 바꿉니다. */
 		static void setGlobalSink( ILogSink* pSink );
 		/** @brief 전역 싱크로 한 줄을 남깁니다. 싱크가 없으면 무시합니다. */
-		static void writeLogGlobal( LogLevel level, const utf8* pTag, const utf8* pMessage, const utf8* pFile, int32 line );
+		static void writeLogGlobal( LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line );
 		/** @brief 전역 싱크에 리스너를 붙입니다. */
 		static DelegateHandle addGlobalListener( const LogWrittenDelegate& listener );
 		/** @brief 전역 싱크에서 리스너를 뗍니다. */
@@ -128,7 +129,7 @@ namespace sw
 		/** @brief 폴더·파일명을 준비하고 첫 파일을 엽니다. */
 		void initializeInternal();
 		/** @brief 타임스탬프를 붙여 콘솔·파일·리스너에 씁니다. */
-		void writeLogInternal( LogLevel level, const utf8* pTag, const utf8* pMessage, const utf8* pFile, int32 line );
+		void writeLogInternal( LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line );
 		/** @brief 레벨 색으로 콘솔에 한 줄을 씁니다. */
 		void writeLogConsole( LogLevel level, const utf8* pMessage );
 		/** @brief 시각이 바뀌면 파일을 갈아 끼운 뒤 한 줄을 씁니다. */
@@ -154,22 +155,33 @@ namespace sw
 		uint16 _defaultConsoleAttribute; ///< 초기 콘솔 텍스트 색상 속성
 		bool   _bHasConsole;			 ///< 표준 출력 콘솔 유효성 여부
 	};
+
+	[[maybe_unused]] static inline constexpr const ::utf8* swGetLogCaller( ... ) { return nullptr; }
 } // namespace sw
+
+[[maybe_unused]] static inline constexpr const ::utf8* swGetLogCaller( ... ) { return nullptr; }
 
 // ------------------------------------------------------------------------------
 // 4) SW_LOG_* — Debug 에서만 포맷·기록. Release 는 no-op
 // ------------------------------------------------------------------------------
+
+/**
+ * @brief 현재 파일 또는 네임스페이스 스코프의 로그 Caller(클래스/시스템명)를 지정합니다.
+ */
+#define SW_LOG_CALLER( name ) \
+	[[maybe_unused]] static inline constexpr const ::utf8* swGetLogCaller( ::int32 = 0 ) { return name; }
+
 #if defined( SW_DEBUG )
 	/**
 	 * @brief 포맷 문자열(+인자)을 파싱한 뒤 Logger::writeLog 로 전달하는 코어 매크로
 	 * @note 메시지 문자열을 __VA_ARGS__ 첫 인자로 받아, 가변 인자 생략(C++20) 확장을 쓰지 않습니다.
 	 */
-	#define SW_LOG_INTERNAL( level, ... )                                                   \
-		do                                                                                  \
-		{                                                                                   \
-			utf8 arrBuffer[sw::constant::kMaxBuffer8192];                                   \
-			sw::formatstring( arrBuffer, sw::constant::kMaxBuffer8192, __VA_ARGS__ );       \
-			sw::Logger::writeLogGlobal( level, SW_LOG_TAG, arrBuffer, __FILE__, __LINE__ ); \
+	#define SW_LOG_INTERNAL( level, ... )                                                                          \
+		do                                                                                                         \
+		{                                                                                                          \
+			::utf8 arrBuffer[::sw::constant::kMaxBuffer8192];                                                      \
+			::sw::formatstring( arrBuffer, ::sw::constant::kMaxBuffer8192, __VA_ARGS__ );                          \
+			::sw::Logger::writeLogGlobal( level, SW_LOG_TAG, swGetLogCaller( 0 ), arrBuffer, __FILE__, __LINE__ ); \
 		} while ( false )
 
 	/** @brief Error 레벨로 포맷해 남깁니다. */
@@ -180,6 +192,7 @@ namespace sw
 	#define SW_LOG_INFO( ... ) SW_LOG_INTERNAL( sw::LogLevel::Info, __VA_ARGS__ )
 	/** @brief Trace 레벨로 포맷해 남깁니다. */
 	#define SW_LOG_TRACE( ... ) SW_LOG_INTERNAL( sw::LogLevel::Trace, __VA_ARGS__ )
+
 	/**
 	 * @brief 조건 실패 시 메시지·식·파일·함수·라인을 Error로 남기고 디버그 브레이크
 	 * @note Release에서는 no-op. 무조건 실패는 SW_LOG_ASSERT( false, ... )로 호출.
@@ -203,14 +216,9 @@ namespace sw
 			}                                                                                    \
 		} while ( false )
 #else
-	/** @brief Release 에서는 Error 로그를 제거합니다. */
 	#define SW_LOG_ERROR( ... )
-	/** @brief Release 에서는 Warning 로그를 제거합니다. */
 	#define SW_LOG_WARNING( ... )
-	/** @brief Release 에서는 Info 로그를 제거합니다. */
 	#define SW_LOG_INFO( ... )
-	/** @brief Release 에서는 Trace 로그를 제거합니다. */
 	#define SW_LOG_TRACE( ... )
-	/** @brief Release 에서는 어서션을 제거합니다. */
 	#define SW_LOG_ASSERT( expr, ... )
 #endif

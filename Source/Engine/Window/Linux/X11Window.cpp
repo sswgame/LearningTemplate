@@ -6,6 +6,8 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "X11Window" );
+
 	X11Window::X11Window()
 		: _pX11Display{ nullptr }
 		, _x11Window{ 0 }
@@ -31,7 +33,7 @@ namespace sw
 		Display* pDisplay = XOpenDisplay( nullptr );
 		if ( pDisplay == nullptr )
 		{
-			SW_LOG_ERROR( "[X11Window] Failed to open X11 Display!" );
+			SW_LOG_ERROR( "Failed to open X11 Display!" );
 			return false;
 		}
 
@@ -60,7 +62,7 @@ namespace sw
 		_x11WmDelete  = static_cast<uint64>( wmDeleteMessage );
 		_bShouldClose = false;
 
-		SW_LOG_INFO( "[X11Window] Native X11 Window created successfully! (%#x%#)", width, height );
+		SW_LOG_INFO( "Native X11 Window created successfully! (%#x%#)", width, height );
 		return true;
 	}
 

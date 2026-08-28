@@ -33,26 +33,26 @@ namespace sw
 		void onEndPlay() override;
 		void onTick( float32 deltaTime ) override;
 
-		string getMeshName() const;
-		void   setMeshName( const string& mesh );
+		string getMeshName() const { return _meshName; }
+		void   setMeshName( const string& mesh ) { _meshName = mesh; }
 
-		string getMaterialName() const;
-		void   setMaterialName( const string& mtrl );
+		string getMaterialName() const { return _materialName; }
+		void   setMaterialName( const string& mtrl ) { _materialName = mtrl; }
 
-		string getTextureName() const;
-		void   setTextureName( const string& tex );
+		string getTextureName() const { return _textureName; }
+		void   setTextureName( const string& tex ) { _textureName = tex; }
 
-		string getSpriteName() const;
-		void   setSpriteName( const string& sprite );
+		string getSpriteName() const { return _spriteName; }
+		void   setSpriteName( const string& sprite ) { _spriteName = sprite; }
 
 	private:
-		PROPERTY( Alias="Mesh" )
+		PROPERTY( Alias = "Mesh" )
 		string _meshName;
-		PROPERTY( Alias="Material" )
+		PROPERTY( Alias = "Material" )
 		string _materialName;
-		PROPERTY( Alias="Texture" )
+		PROPERTY( Alias = "Texture" )
 		string _textureName;
-		PROPERTY( Alias="SpriteName" )
+		PROPERTY( Alias = "SpriteName" )
 		string _spriteName;
 	};
 } // namespace sw

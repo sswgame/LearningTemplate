@@ -2,52 +2,53 @@
 
 #include "Engine/Serialization/Core/SerializeContext.h"
 
-#include "Engine/Object/Component/ComponentHandle.h"
-#include "Engine/Object/Component/TagSystem.h"
-#include "Engine/Reflection/ReflectAny.h"
-
 #include "Core/Concurrency/Atomic.h"
 #include "Core/Container/ObjectHandle.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/StringBuilder.h"
+
+#include "Engine/Object/Component/ComponentHandle.h"
+#include "Engine/Object/Component/TagSystem.h"
+#include "Engine/Reflection/ReflectAny.h"
+#include "Engine/Serialization/Core/BinaryStream.h"
 
 namespace sw
 {
 
 	void SerializeContext::registerBinaryHandler( hashed_string typeName, BinaryWriteFn writeFn, BinaryReadFn readFn )
 	{
-		_mapBinaryWriters.insert_or_assign( typeName, std::move( writeFn ) );
-		_mapBinaryReaders.insert_or_assign( typeName, std::move( readFn ) );
+		_mapBinaryWriter.insert_or_assign( typeName, std::move( writeFn ) );
+		_mapBinaryReader.insert_or_assign( typeName, std::move( readFn ) );
 	}
 
 	void SerializeContext::registerTextHandler( hashed_string typeName, TextWriteFn writeFn, TextReadFn readFn )
 	{
-		_mapTextWriters.insert_or_assign( typeName, std::move( writeFn ) );
-		_mapTextReaders.insert_or_assign( typeName, std::move( readFn ) );
+		_mapTextWriter.insert_or_assign( typeName, std::move( writeFn ) );
+		_mapTextReader.insert_or_assign( typeName, std::move( readFn ) );
 	}
 
 	const SerializeContext::BinaryWriteFn* SerializeContext::findBinaryWriter( hashed_string typeName ) const
 	{
-		auto it = _mapBinaryWriters.find( typeName );
-		return it != _mapBinaryWriters.end() ? &it->second : nullptr;
+		auto it = _mapBinaryWriter.find( typeName );
+		return it != _mapBinaryWriter.end() ? &it->second : nullptr;
 	}
 
 	const SerializeContext::BinaryReadFn* SerializeContext::findBinaryReader( hashed_string typeName ) const
 	{
-		auto it = _mapBinaryReaders.find( typeName );
-		return it != _mapBinaryReaders.end() ? &it->second : nullptr;
+		auto it = _mapBinaryReader.find( typeName );
+		return it != _mapBinaryReader.end() ? &it->second : nullptr;
 	}
 
 	const SerializeContext::TextWriteFn* SerializeContext::findTextWriter( hashed_string typeName ) const
 	{
-		auto it = _mapTextWriters.find( typeName );
-		return it != _mapTextWriters.end() ? &it->second : nullptr;
+		auto it = _mapTextWriter.find( typeName );
+		return it != _mapTextWriter.end() ? &it->second : nullptr;
 	}
 
 	const SerializeContext::TextReadFn* SerializeContext::findTextReader( hashed_string typeName ) const
 	{
-		auto it = _mapTextReaders.find( typeName );
-		return it != _mapTextReaders.end() ? &it->second : nullptr;
+		auto it = _mapTextReader.find( typeName );
+		return it != _mapTextReader.end() ? &it->second : nullptr;
 	}
 
 	namespace
@@ -55,8 +56,8 @@ namespace sw
 		template <typename T>
 		static void regBuiltinBin( SerializeContext& ctx, const utf8* pName )
 		{
-			if ( StringUtil::strcmp( pName, "string" ) == 0 || StringUtil::strcmp( pName, "hashed_string" ) == 0 ||
-				 StringUtil::strcmp( pName, "AtomicBool" ) == 0 || StringUtil::strcmp( pName, "TagID" ) == 0 )
+			if constexpr ( std::is_same_v<T, string> || std::is_same_v<T, hashed_string> ||
+						   std::is_same_v<T, AtomicBool> || std::is_same_v<T, TagID> )
 				return;
 			auto writeFn = []( const void* pPtr, vector<uint8>& listBuf )
 			{
@@ -74,97 +75,90 @@ namespace sw
 			ctx.registerBinaryHandler( hashed_string( pName ), writeFn, readFn );
 		}
 
-		template <int32 kCount>
-		string formatFloatComma( const float32* pVals )
+		template <typename T>
+		void registerNumericTextHandler( SerializeContext& ctx, const hashed_string& typeName )
 		{
-			StringBuilder<constant::kMaxBuffer64> sb;
-			for ( int32 axisIndex = 0; axisIndex < kCount; ++axisIndex )
+			ctx.registerTextHandler(
+				typeName,
+				[]( const void* pPtr )
+			{ return sw::to_string( *static_cast<const T*>( pPtr ) ); },
+				[]( void* pPtr, string_view strView ) -> bool
 			{
-				if ( axisIndex > 0 )
-					sb.append( ',' );
-				sb.append( pVals[axisIndex] );
-			}
-			return string{ sb.c_str(), sb.size() };
-		}
-
-		template <int32 kCount>
-		bool parseFloatComma( string_view text, float32* pOut )
-		{
-			size_t start{ 0 };
-			for ( int32 axisIndex = 0; axisIndex < kCount; ++axisIndex )
-			{
-				const size_t	sep	  = text.find( ',', start );
-				const string_view token = text.substr( start, sep == string_view::npos ? string_view::npos : sep - start );
-				if ( token.empty() )
-					return false;
-				const fixed_string<constant::kMaxBuffer64> tokenNt{ token };
+				const fixed_string<constant::kMaxBuffer64> tokenNt{ strView };
 				utf8*									   pEndPtr{ nullptr };
-				pOut[axisIndex] = StringUtil::strtof( tokenNt.c_str(), &pEndPtr );
+				if constexpr ( std::is_floating_point_v<T> )
+				{
+					if constexpr ( sizeof( T ) == sizeof( float32 ) )
+						*static_cast<T*>( pPtr ) = static_cast<T>( StringUtil::strtof( tokenNt.c_str(), &pEndPtr ) );
+					else
+						*static_cast<T*>( pPtr ) = static_cast<T>( StringUtil::strtod( tokenNt.c_str(), &pEndPtr ) );
+				}
+				else if constexpr ( std::is_unsigned_v<T> )
+				{
+					*static_cast<T*>( pPtr ) = static_cast<T>( StringUtil::strtoull( tokenNt.c_str(), &pEndPtr, 10 ) );
+				}
+				else
+				{
+					*static_cast<T*>( pPtr ) = static_cast<T>( StringUtil::strtoll( tokenNt.c_str(), &pEndPtr, 10 ) );
+				}
 				if ( pEndPtr == tokenNt.c_str() && tokenNt.empty() == false )
 					return false;
-				if ( sep == string_view::npos )
+				return true;
+			} );
+		}
+
+		template <typename TVec, typename TElem, int32 kCount>
+		void registerVectorTextHandler( SerializeContext& ctx, const hashed_string& typeName )
+		{
+			ctx.registerTextHandler(
+				typeName,
+				[]( const void* pPtr )
+			{
+				const auto*							  pElem = reinterpret_cast<const TElem*>( pPtr );
+				StringBuilder<constant::kMaxBuffer64> sb;
+				for ( int32 axisIndex = 0; axisIndex < kCount; ++axisIndex )
 				{
-					if ( axisIndex != kCount - 1 )
-						return false;
-					break;
+					if ( axisIndex > 0 )
+						sb.append( ',' );
+					sb.append( pElem[axisIndex] );
 				}
-				start = sep + 1;
-			}
-			return true;
+				return string{ sb.c_str(), sb.size() };
+			},
+				[]( void* pPtr, string_view strView )
+			{
+				auto*  pOut = reinterpret_cast<TElem*>( pPtr );
+				size_t start{ 0 };
+				for ( int32 axisIndex = 0; axisIndex < kCount; ++axisIndex )
+				{
+					const size_t	  sep	= strView.find( ',', start );
+					const string_view token = strView.substr( start, sep == string_view::npos ? string_view::npos : sep - start );
+					if ( token.empty() )
+						return false;
+					const fixed_string<constant::kMaxBuffer64> tokenNt{ token };
+					utf8*									   pEndPtr{ nullptr };
+					if constexpr ( std::is_floating_point_v<TElem> )
+						pOut[axisIndex] = static_cast<TElem>( StringUtil::strtod( tokenNt.c_str(), &pEndPtr ) );
+					else
+						pOut[axisIndex] = static_cast<TElem>( StringUtil::strtoll( tokenNt.c_str(), &pEndPtr, 10 ) );
+					if ( pEndPtr == tokenNt.c_str() && tokenNt.empty() == false )
+						return false;
+					if ( sep == string_view::npos )
+					{
+						if ( axisIndex != kCount - 1 )
+							return false;
+						break;
+					}
+					start = sep + 1;
+				}
+				return true;
+			} );
 		}
 
 		void registerFloatVectorTextHandlers( SerializeContext& ctx )
 		{
-			ctx.registerTextHandler(
-				hashed_string( PredefinedNameType::NameType_float2 ),
-				[]( const void* pPtr )
-			{
-				const float2&  value	  = *static_cast<const float2*>( pPtr );
-				const float32  arrVals[2] = { value._x, value._y };
-				return formatFloatComma<2>( arrVals );
-			},
-				[]( void* pPtr, string_view strView )
-			{
-				float32 arrVals[2]{};
-				if ( parseFloatComma<2>( strView, arrVals ) == false )
-					return false;
-				*static_cast<float2*>( pPtr ) = float2( arrVals[0], arrVals[1] );
-				return true;
-			} );
-
-			ctx.registerTextHandler(
-				hashed_string( PredefinedNameType::NameType_float3 ),
-				[]( const void* pPtr )
-			{
-				const float3&  value	  = *static_cast<const float3*>( pPtr );
-				const float32  arrVals[3] = { value._x, value._y, value._z };
-				return formatFloatComma<3>( arrVals );
-			},
-				[]( void* pPtr, string_view strView )
-			{
-				float32 arrVals[3]{};
-				if ( parseFloatComma<3>( strView, arrVals ) == false )
-					return false;
-				*static_cast<float3*>( pPtr ) = float3( arrVals[0], arrVals[1], arrVals[2] );
-				return true;
-			} );
-
-			ctx.registerTextHandler(
-				hashed_string( PredefinedNameType::NameType_float4 ),
-				[]( const void* pPtr )
-			{
-				const float4&  value	  = *static_cast<const float4*>( pPtr );
-				const float32  arrVals[4] = { value._x, value._y, value._z, value._w };
-				return formatFloatComma<4>( arrVals );
-			},
-				[]( void* pPtr, string_view strView )
-			{
-				float32 arrVals[4]{};
-				if ( parseFloatComma<4>( strView, arrVals ) == false )
-					return false;
-				*static_cast<float4*>( pPtr ) = float4( arrVals[0], arrVals[1], arrVals[2], arrVals[3] );
-				return true;
-			} );
+			registerVectorTextHandler<float2, float32, 2>( ctx, hashed_string( PredefinedNameType::NameType_float2 ) );
+			registerVectorTextHandler<float3, float32, 3>( ctx, hashed_string( PredefinedNameType::NameType_float3 ) );
+			registerVectorTextHandler<float4, float32, 4>( ctx, hashed_string( PredefinedNameType::NameType_float4 ) );
 		}
 	} // namespace
 
@@ -183,31 +177,18 @@ namespace sw
 
 			BinaryWriteFn strWriteBin = []( const void* pPtr, vector<uint8>& listBuf )
 			{
-				const string& str		= *static_cast<const string*>( pPtr );
-				uint32		  len		= static_cast<uint32>( str.size() );
-				const uint8*  pLenBytes = reinterpret_cast<const uint8*>( &len );
-				listBuf.insert( listBuf.end(), pLenBytes, pLenBytes + sizeof( uint32 ) );
-				if ( len > 0 )
-				{
-					const uint8* pSBytes = reinterpret_cast<const uint8*>( str.data() );
-					listBuf.insert( listBuf.end(), pSBytes, pSBytes + len );
-				}
+				BinaryStreamWriter writer{ listBuf };
+				writer.writeString( *static_cast<const string*>( pPtr ) );
 			};
 
 			BinaryReadFn strReadBin = []( void* pPtr, const uint8* pData, size_t size, size_t& offset ) -> bool
 			{
-				if ( offset + sizeof( uint32 ) > size )
+				BinaryStreamReader reader{ pData, size };
+				if ( reader.skip( offset ) == false )
 					return false;
-
-				uint32 len{ 0 };
-				Memory::copy( &len, pData + offset, sizeof( uint32 ) );
-				offset += sizeof( uint32 );
-
-				if ( offset + len > size )
+				if ( reader.readString( *static_cast<string*>( pPtr ) ) == false )
 					return false;
-
-				static_cast<string*>( pPtr )->assign( reinterpret_cast<const utf8*>( pData + offset ), len );
-				offset += len;
+				offset = reader.getOffset();
 				return true;
 			};
 
@@ -215,31 +196,20 @@ namespace sw
 
 			BinaryWriteFn hashedStrWriteBin = []( const void* pPtr, vector<uint8>& listBuf )
 			{
-				const hashed_string& str	   = *static_cast<const hashed_string*>( pPtr );
-				uint32				 len	   = StringUtil::strlen( str.c_str() );
-				const uint8*		 pLenBytes = reinterpret_cast<const uint8*>( &len );
-				listBuf.insert( listBuf.end(), pLenBytes, pLenBytes + sizeof( uint32 ) );
-				if ( len > 0 )
-				{
-					const uint8* pSBytes = reinterpret_cast<const uint8*>( str.c_str() );
-					listBuf.insert( listBuf.end(), pSBytes, pSBytes + len );
-				}
+				BinaryStreamWriter writer{ listBuf };
+				writer.writeString( static_cast<const hashed_string*>( pPtr )->c_str() );
 			};
 
 			BinaryReadFn hashedStrReadBin = []( void* pPtr, const uint8* pData, size_t size, size_t& offset ) -> bool
 			{
-				if ( offset + sizeof( uint32 ) > size )
+				BinaryStreamReader reader{ pData, size };
+				if ( reader.skip( offset ) == false )
 					return false;
-
-				uint32 len{ 0 };
-				Memory::copy( &len, pData + offset, sizeof( uint32 ) );
-				offset += sizeof( uint32 );
-
-				if ( offset + len > size )
+				string tempStr;
+				if ( reader.readString( tempStr ) == false )
 					return false;
-
-				*static_cast<hashed_string*>( pPtr ) = hashed_string( reinterpret_cast<const utf8*>( pData + offset ), static_cast<uint32>( len ) );
-				offset += len;
+				*static_cast<hashed_string*>( pPtr ) = hashed_string( tempStr.c_str() );
+				offset								 = reader.getOffset();
 				return true;
 			};
 
@@ -262,129 +232,35 @@ namespace sw
 
 			BinaryWriteFn tagIdWriteBin = []( const void* pPtr, vector<uint8>& listBuf )
 			{
-				const TagID& tag = *static_cast<const TagID*>( pPtr );
-				const utf8*	 pStr = tag._pString != nullptr ? tag._pString : "";
-				const uint32 len  = static_cast<uint32>( StringUtil::strlen( pStr ) );
-				const uint8* pLen = reinterpret_cast<const uint8*>( &len );
-				listBuf.insert( listBuf.end(), pLen, pLen + sizeof( uint32 ) );
-				if ( len > 0 )
-				{
-					const uint8* pBytes = reinterpret_cast<const uint8*>( pStr );
-					listBuf.insert( listBuf.end(), pBytes, pBytes + len );
-				}
+				const TagID&	   tag	= *static_cast<const TagID*>( pPtr );
+				const utf8*		   pStr = tag._pString != nullptr ? tag._pString : "";
+				BinaryStreamWriter writer{ listBuf };
+				writer.writeString( pStr );
 			};
 			BinaryReadFn tagIdReadBin = []( void* pPtr, const uint8* pData, size_t size, size_t& offset ) -> bool
 			{
-				if ( offset + sizeof( uint32 ) > size )
+				BinaryStreamReader reader{ pData, size };
+				if ( reader.skip( offset ) == false )
 					return false;
-				uint32 len{ 0 };
-				Memory::copy( &len, pData + offset, sizeof( uint32 ) );
-				offset += sizeof( uint32 );
-				if ( offset + len > size )
+				string tempStr;
+				if ( reader.readString( tempStr ) == false )
 					return false;
-				if ( len == 0 )
-				{
+				if ( tempStr.empty() )
 					*static_cast<TagID*>( pPtr ) = TagID{};
-					return true;
-				}
-				const string_view text( reinterpret_cast<const utf8*>( pData + offset ), len );
-				offset += len;
-				*static_cast<TagID*>( pPtr ) = requestTag( text );
+				else
+					*static_cast<TagID*>( pPtr ) = requestTag( tempStr );
+				offset = reader.getOffset();
 				return true;
 			};
 			ctx.registerBinaryHandler( hashed_string( PredefinedNameType::NameType_TagID ), tagIdWriteBin, tagIdReadBin );
 
 #define SW_BUILTIN_TEXT_none( Canon, CppType )
-#define SW_BUILTIN_TEXT_stoi( Canon, CppType )                                                                    \
-	{                                                                                                             \
-		auto writeFn = []( const void* pPtr ) { return sw::to_string( *static_cast<const CppType*>( pPtr ) ); };  \
-		auto readFn	 = []( void* pPtr, string_view strView )                                                      \
-		{                                                                                                         \
-			const fixed_string<constant::kMaxBuffer64> strStr{ strView };                                         \
-			utf8*									   pEndPtr{ nullptr };                                        \
-			int64									   val = StringUtil::strtoll( strStr.c_str(), &pEndPtr, 10 ); \
-			if ( pEndPtr == strStr.c_str() && strStr.empty() == false )                                           \
-				return false;                                                                                     \
-			*static_cast<CppType*>( pPtr ) = static_cast<CppType>( val );                                         \
-			return true;                                                                                          \
-		};                                                                                                        \
-		ctx.registerTextHandler( hashed_string( PredefinedNameType::NameType_##Canon ), writeFn, readFn );        \
-	}
-#define SW_BUILTIN_TEXT_stoll( Canon, CppType )                                                                   \
-	{                                                                                                             \
-		auto writeFn = []( const void* pPtr ) { return sw::to_string( *static_cast<const CppType*>( pPtr ) ); };  \
-		auto readFn	 = []( void* pPtr, string_view strView )                                                      \
-		{                                                                                                         \
-			const fixed_string<constant::kMaxBuffer64> strStr{ strView };                                         \
-			utf8*									   pEndPtr{ nullptr };                                        \
-			int64									   val = StringUtil::strtoll( strStr.c_str(), &pEndPtr, 10 ); \
-			if ( pEndPtr == strStr.c_str() && strStr.empty() == false )                                           \
-				return false;                                                                                     \
-			*static_cast<CppType*>( pPtr ) = static_cast<CppType>( val );                                         \
-			return true;                                                                                          \
-		};                                                                                                        \
-		ctx.registerTextHandler( hashed_string( PredefinedNameType::NameType_##Canon ), writeFn, readFn );        \
-	}
-#define SW_BUILTIN_TEXT_stoul( Canon, CppType )                                                                    \
-	{                                                                                                              \
-		auto writeFn = []( const void* pPtr ) { return sw::to_string( *static_cast<const CppType*>( pPtr ) ); };   \
-		auto readFn	 = []( void* pPtr, string_view strView )                                                       \
-		{                                                                                                          \
-			const fixed_string<constant::kMaxBuffer64> strStr{ strView };                                          \
-			utf8*									   pEndPtr{ nullptr };                                         \
-			uint64									   val = StringUtil::strtoull( strStr.c_str(), &pEndPtr, 10 ); \
-			if ( pEndPtr == strStr.c_str() && strStr.empty() == false )                                            \
-				return false;                                                                                      \
-			*static_cast<CppType*>( pPtr ) = static_cast<CppType>( val );                                          \
-			return true;                                                                                           \
-		};                                                                                                         \
-		ctx.registerTextHandler( hashed_string( PredefinedNameType::NameType_##Canon ), writeFn, readFn );         \
-	}
-#define SW_BUILTIN_TEXT_stoull( Canon, CppType )                                                                   \
-	{                                                                                                              \
-		auto writeFn = []( const void* pPtr ) { return sw::to_string( *static_cast<const CppType*>( pPtr ) ); };   \
-		auto readFn	 = []( void* pPtr, string_view strView )                                                       \
-		{                                                                                                          \
-			const fixed_string<constant::kMaxBuffer64> strStr{ strView };                                          \
-			utf8*									   pEndPtr{ nullptr };                                         \
-			uint64									   val = StringUtil::strtoull( strStr.c_str(), &pEndPtr, 10 ); \
-			if ( pEndPtr == strStr.c_str() && strStr.empty() == false )                                            \
-				return false;                                                                                      \
-			*static_cast<CppType*>( pPtr ) = static_cast<CppType>( val );                                          \
-			return true;                                                                                           \
-		};                                                                                                         \
-		ctx.registerTextHandler( hashed_string( PredefinedNameType::NameType_##Canon ), writeFn, readFn );         \
-	}
-#define SW_BUILTIN_TEXT_stof( Canon, CppType )                                                                   \
-	{                                                                                                            \
-		auto writeFn = []( const void* pPtr ) { return sw::to_string( *static_cast<const CppType*>( pPtr ) ); }; \
-		auto readFn	 = []( void* pPtr, string_view strView )                                                     \
-		{                                                                                                        \
-			const fixed_string<constant::kMaxBuffer64> strStr{ strView };                                        \
-			utf8*									   pEndPtr{ nullptr };                                       \
-			float32									   val = StringUtil::strtof( strStr.c_str(), &pEndPtr );     \
-			if ( pEndPtr == strStr.c_str() && strStr.empty() == false )                                          \
-				return false;                                                                                    \
-			*static_cast<CppType*>( pPtr ) = static_cast<CppType>( val );                                        \
-			return true;                                                                                         \
-		};                                                                                                       \
-		ctx.registerTextHandler( hashed_string( PredefinedNameType::NameType_##Canon ), writeFn, readFn );       \
-	}
-#define SW_BUILTIN_TEXT_stod( Canon, CppType )                                                                   \
-	{                                                                                                            \
-		auto writeFn = []( const void* pPtr ) { return sw::to_string( *static_cast<const CppType*>( pPtr ) ); }; \
-		auto readFn	 = []( void* pPtr, string_view strView )                                                     \
-		{                                                                                                        \
-			const fixed_string<constant::kMaxBuffer64> strStr{ strView };                                        \
-			utf8*									   pEndPtr{ nullptr };                                       \
-			float64									   val = StringUtil::strtod( strStr.c_str(), &pEndPtr );     \
-			if ( pEndPtr == strStr.c_str() && strStr.empty() == false )                                          \
-				return false;                                                                                    \
-			*static_cast<CppType*>( pPtr ) = static_cast<CppType>( val );                                        \
-			return true;                                                                                         \
-		};                                                                                                       \
-		ctx.registerTextHandler( hashed_string( PredefinedNameType::NameType_##Canon ), writeFn, readFn );       \
-	}
+#define SW_BUILTIN_TEXT_stoi( Canon, CppType )	 registerNumericTextHandler<CppType>( ctx, hashed_string( PredefinedNameType::NameType_##Canon ) );
+#define SW_BUILTIN_TEXT_stoll( Canon, CppType )	 registerNumericTextHandler<CppType>( ctx, hashed_string( PredefinedNameType::NameType_##Canon ) );
+#define SW_BUILTIN_TEXT_stoul( Canon, CppType )	 registerNumericTextHandler<CppType>( ctx, hashed_string( PredefinedNameType::NameType_##Canon ) );
+#define SW_BUILTIN_TEXT_stoull( Canon, CppType ) registerNumericTextHandler<CppType>( ctx, hashed_string( PredefinedNameType::NameType_##Canon ) );
+#define SW_BUILTIN_TEXT_stof( Canon, CppType )	 registerNumericTextHandler<CppType>( ctx, hashed_string( PredefinedNameType::NameType_##Canon ) );
+#define SW_BUILTIN_TEXT_stod( Canon, CppType )	 registerNumericTextHandler<CppType>( ctx, hashed_string( PredefinedNameType::NameType_##Canon ) );
 
 #define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, TextConv, Ns, ... ) SW_BUILTIN_TEXT_##TextConv( Canon, CppType )
 #define SW_REFLECT_BUILTIN_CONTAINER( ... )

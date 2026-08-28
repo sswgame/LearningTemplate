@@ -71,21 +71,21 @@ namespace sw
 			{
 				if ( loadConfigFromJson<T>( name, string( pBakedJson ), "shipping_host_baked" ) )
 				{
-					SW_LOG_INFO( "[Config] %# source=baked", name.c_str() );
+					SW_LOG_TRACE( "%# source=baked", name.c_str() );
 					return getConfig<T>( name );
 				}
 			}
 #else
 			if ( loadConfig<T>( name, filePath ) )
 			{
-				SW_LOG_INFO( "[Config] %# source=file (%#)", name.c_str(), filePath.c_str() );
+				SW_LOG_TRACE( "%# source=file (%#)", name.c_str(), filePath.c_str() );
 				return getConfig<T>( name );
 			}
 			if ( pBakedJson != nullptr && pBakedJson[0] != '\0' )
 			{
 				if ( loadConfigFromJson<T>( name, string( pBakedJson ), "shipping_host_baked_fallback" ) )
 				{
-					SW_LOG_WARNING( "[Config] %# missing %# — using baked defaults", name.c_str(), filePath.c_str() );
+					SW_LOG_WARNING( "%# missing %# — using baked defaults", name.c_str(), filePath.c_str() );
 					return getConfig<T>( name );
 				}
 			}
@@ -94,7 +94,7 @@ namespace sw
 			unique_ptr<T> fallback	   = make_unique<T>();
 			T*			  pRaw		   = fallback.get();
 			_mapConfig[name.getHash()] = std::move( fallback );
-			SW_LOG_WARNING( "[Config] %# using cpp defaults", name.c_str() );
+			SW_LOG_WARNING( "%# using cpp defaults", name.c_str() );
 			return pRaw;
 		}
 

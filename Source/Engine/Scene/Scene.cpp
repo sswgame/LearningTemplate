@@ -12,10 +12,14 @@
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/ObjectStateSerializer.h"
+#include "Engine/Object/Prefab/PrefabAsset.h"
+#include "Engine/Scene/SceneDocument.h"
 #include "Engine/Utility/Resource/ResourceManager.h"
 
 namespace sw
 {
+	SW_LOG_CALLER( "Scene" );
 
 	namespace
 	{
@@ -87,7 +91,7 @@ namespace sw
 				_pMaterial			 = engine::getResourceManager().getMaterialManager().acquire( materialPath, pRhiDevice );
 				if ( _pMaterial == nullptr )
 				{
-					SW_LOG_ERROR( "[Scene] Failed to acquire Material from %#", materialPath );
+					SW_LOG_ERROR( "Failed to acquire Material from %#", materialPath );
 					_defaultMaterialPath.clear();
 					return false;
 				}
@@ -95,6 +99,74 @@ namespace sw
 		}
 		ensureDefaultCameras();
 		bindSceneMeshDefaults( this );
+		return true;
+	}
+
+	bool Scene::instantiate( const SceneDocument& doc )
+	{
+		if ( _objectManager == nullptr )
+			return false;
+
+		vector<std::pair<GameObject*, string_view>> listRebindTargets;
+		listRebindTargets.reserve( doc._listEntityNode.size() );
+
+		for ( const SceneEntityNode& ent : doc._listEntityNode )
+		{
+			SW_LOG_TRACE( "Spawning entity '%#' prefab '%#'", ent._name, ent._prefab );
+			GameObject* pGo{ nullptr };
+			if ( ent._prefab.empty() == false )
+			{
+				pGo = engine::getResourceManager().getPrefabManager().spawn( _objectManager.get(), ent._prefab, ent._name.c_str() );
+				if ( pGo == nullptr )
+					SW_LOG_WARNING( "Prefab spawn failed '%#' (%#)", ent._name, ent._prefab );
+			}
+			else
+			{
+				pGo = _objectManager->createGameObject( hashed_string( ent._name.c_str() ) );
+			}
+
+			if ( pGo != nullptr && ent._embeddedXml.empty() == false )
+			{
+				if ( ObjectStateSerializer::loadFromXmlString( pGo, ent._embeddedXml ) == false )
+					SW_LOG_WARNING( "Embedded state apply failed for '%#'", ent._name );
+
+				const bool bHasHierarchy = ( ent._embeddedXml.find( "_attachOwner=" ) != string::npos );
+				if ( bHasHierarchy )
+					listRebindTargets.emplace_back( pGo, ent._embeddedXml );
+			}
+		}
+
+		for ( const auto& [pTargetGo, xmlView] : listRebindTargets )
+		{
+			if ( pTargetGo != nullptr )
+				ObjectStateSerializer::rebindSceneHierarchy( pTargetGo, xmlView );
+		}
+
+		_objectManager->mergePendingAdds();
+		_objectManager->flushSceneTransforms();
+		return true;
+	}
+
+	bool Scene::serializeToDocument( SceneDocument& outDoc ) const
+	{
+		if ( _objectManager == nullptr )
+			return false;
+
+		outDoc._name	   = _name;
+		outDoc._sourcePath = _sourcePath;
+		outDoc._listEntityNode.clear();
+		outDoc._bValid = true;
+
+		for ( GameObject* pGo : _objectManager->getAllGameObjects() )
+		{
+			if ( pGo == nullptr || pGo->getParent() != nullptr )
+				continue;
+			SceneEntityNode node{};
+			node._name		  = pGo->getName().c_str();
+			node._embeddedXml = ObjectStateSerializer::saveToXmlString( pGo );
+			if ( node._embeddedXml.empty() == false )
+				outDoc._listEntityNode.push_back( std::move( node ) );
+		}
 		return true;
 	}
 
@@ -133,7 +205,7 @@ namespace sw
 
 		if ( _pFrameRenderer == nullptr )
 		{
-			SW_LOG_WARNING( "[Scene] render: FrameRenderer not set" );
+			SW_LOG_WARNING( "render: FrameRenderer not set" );
 			return;
 		}
 
@@ -141,7 +213,7 @@ namespace sw
 			return; // initialize 실패 시 FrameRenderer가 ERROR 로깅
 
 		if ( _pFrameRenderer->execute( pRhiDevice, _pMaterial, this ) == false )
-			SW_LOG_ERROR( "[Scene] FrameRenderer::execute failed" );
+			SW_LOG_ERROR( "FrameRenderer::execute failed" );
 	}
 
 	namespace

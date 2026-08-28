@@ -1,12 +1,11 @@
 #include "pch.h"
 
-#include "Engine/Graphics/RenderPass/FrameRenderer.h"
-
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResource.h"
+#include "Engine/Graphics/RenderPass/FrameRenderer.h"
 #include "Engine/Graphics/RenderPass/FrameRendererInternal.h"
 
 namespace sw
@@ -65,8 +64,8 @@ namespace sw
 				desc._cullMode = RHICullMode::None;
 			else if ( cull == "Front" || cull == "front" )
 				desc._cullMode = RHICullMode::Front;
-			if ( pPassDesc->_listPermutations.empty() == false )
-				desc._listShaderDefines = pPassDesc->_listPermutations;
+			if ( pPassDesc->_listPermutation.empty() == false )
+				desc._listShaderDefine = pPassDesc->_listPermutation;
 		}
 		else if ( bDepthTest == false )
 			desc._cullMode = RHICullMode::None;
@@ -76,7 +75,7 @@ namespace sw
 			for ( const string& defineStr : *pExtraDefines )
 			{
 				bool found{ false };
-				for ( const string& existing : desc._listShaderDefines )
+				for ( const string& existing : desc._listShaderDefine )
 				{
 					if ( existing == defineStr )
 					{
@@ -85,7 +84,7 @@ namespace sw
 					}
 				}
 				if ( found == false )
-					desc._listShaderDefines.push_back( defineStr );
+					desc._listShaderDefine.push_back( defineStr );
 			}
 		}
 
@@ -99,15 +98,15 @@ namespace sw
 				desc._arrRtvFormats[rtIndex] = pRtvFormats[rtIndex];
 			}
 		}
-		else if ( pPassDesc != nullptr && pPassDesc->_listOutputs.empty() == false )
+		else if ( pPassDesc != nullptr && pPassDesc->_listOutput.empty() == false )
 		{
 			uint32 colorCount{ 0 };
 			bool   bHasDepthOutput{ false };
-			for ( const string& outName : pPassDesc->_listOutputs )
+			for ( const string& outName : pPassDesc->_listOutput )
 			{
 				if ( colorCount >= kMaxColorAttachments )
 					break;
-				for ( const RenderPassAttachment& att : _pipelineResource.getDesc()._listAttachments )
+				for ( const RenderPassAttachment& att : _pipelineResource.getDesc()._listAttachment )
 				{
 					if ( att._name == outName )
 					{
@@ -140,15 +139,15 @@ namespace sw
 
 	void FrameRenderer::compileMaterialPsoTask( const TaskArgs& args )
 	{
-		const string			 passTypeStr	   = args.get<string>( 0 );
-		const string			 defaultShaderStr  = args.get<string>( 1 );
-		const bool				 bDepthTest		   = args.get<bool>( 2 );
-		const uint32			 numRenderTargets  = args.get<uint32>( 3 );
-		const vector<RHIFormat>	 rtvFormatsCopy	   = args.get<vector<RHIFormat>>( 4 );
-		const bool				 bDefaultBlend	   = args.get<bool>( 5 );
-		const bool				 bDefaultDepthWrite = args.get<bool>( 6 );
-		const vector<string>	 definesCopy	   = args.get<vector<string>>( 7 );
-		const uint64			 cacheKey		   = args.get<uint64>( 8 );
+		const string			passTypeStr		   = args.get<string>( 0 );
+		const string			defaultShaderStr   = args.get<string>( 1 );
+		const bool				bDepthTest		   = args.get<bool>( 2 );
+		const uint32			numRenderTargets   = args.get<uint32>( 3 );
+		const vector<RHIFormat> rtvFormatsCopy	   = args.get<vector<RHIFormat>>( 4 );
+		const bool				bDefaultBlend	   = args.get<bool>( 5 );
+		const bool				bDefaultDepthWrite = args.get<bool>( 6 );
+		const vector<string>	definesCopy		   = args.get<vector<string>>( 7 );
+		const uint64			cacheKey		   = args.get<uint64>( 8 );
 
 		const RHIPipelineStateHandle pso = createPsoForPassType(
 			passTypeStr, defaultShaderStr, bDepthTest, numRenderTargets,
@@ -158,7 +157,7 @@ namespace sw
 		if ( pso != 0 )
 		{
 			std::scoped_lock<mutex> lock{ _psoMutex };
-			_mapMaterialPassPsos[cacheKey] = pso;
+			_mapMaterialPassPso[cacheKey] = pso;
 		}
 	}
 
@@ -188,12 +187,12 @@ namespace sw
 
 		{
 			std::scoped_lock<mutex> lock{ _psoMutex };
-			auto					it = _mapMaterialPassPsos.find( cacheKey );
-			if ( it != _mapMaterialPassPsos.end() )
+			auto					it = _mapMaterialPassPso.find( cacheKey );
+			if ( it != _mapMaterialPassPso.end() )
 				return it->second;
 
 			// Mark as pending (0) so we don't dispatch multiple compilation tasks.
-			_mapMaterialPassPsos.insert_or_assign( cacheKey, 0 );
+			_mapMaterialPassPso.insert_or_assign( cacheKey, 0 );
 		}
 
 		if ( _pTaskManager != nullptr )
@@ -221,7 +220,7 @@ namespace sw
 			if ( pso != 0 )
 			{
 				std::scoped_lock<mutex> lock{ _psoMutex };
-				_mapMaterialPassPsos.insert_or_assign( cacheKey, pso );
+				_mapMaterialPassPso.insert_or_assign( cacheKey, pso );
 			}
 			return pso;
 		}

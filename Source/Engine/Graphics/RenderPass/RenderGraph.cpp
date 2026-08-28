@@ -9,6 +9,8 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "RenderGraph" );
+
 	namespace
 	{
 		void recordRenderPassTask( const TaskArgs& args )
@@ -21,8 +23,8 @@ namespace sw
 			pCmdList->beginCommandList();
 			RenderGraphPassContext ctx;
 			ctx._passName	  = pNode->_name;
-			ctx._pListInputs  = &pNode->_listInputs;
-			ctx._pListOutputs = &pNode->_listOutputs;
+			ctx._pListInputs  = &pNode->_listInput;
+			ctx._pListOutputs = &pNode->_listOutput;
 			ctx._pCmdList	  = pCmdList;
 			pNode->_execute( ctx );
 			pCmdList->endCommandList();
@@ -35,12 +37,12 @@ namespace sw
 							   RenderGraphPassExecuteFn execute )
 	{
 		RenderGraphNode node;
-		node._name		  = passName;
-		node._listInputs  = std::move( listInputs );
-		node._listOutputs = std::move( listOutputs );
-		node._execute	  = std::move( execute );
-		node._bCulled	  = false;
-		_listNodes.push_back( std::move( node ) );
+		node._name		 = passName;
+		node._listInput	 = std::move( listInputs );
+		node._listOutput = std::move( listOutputs );
+		node._execute	 = std::move( execute );
+		node._bCulled	 = false;
+		_listNode.push_back( std::move( node ) );
 	}
 
 	/**
@@ -50,17 +52,17 @@ namespace sw
 	{
 		_listCompiledExecutionOrder.clear();
 
-		if ( _listNodes.empty() )
+		if ( _listNode.empty() )
 			return false;
 
-		const size_t nodeCount = _listNodes.size();
+		const size_t nodeCount = _listNode.size();
 
 		// Active (non-culled) node indices
 		vector<size_t> listActiveIndices;
 		listActiveIndices.reserve( nodeCount );
 		for ( size_t nodeIndex = 0; nodeIndex < nodeCount; ++nodeIndex )
 		{
-			if ( _listNodes[nodeIndex]._bCulled == false )
+			if ( _listNode[nodeIndex]._bCulled == false )
 				listActiveIndices.push_back( nodeIndex );
 		}
 
@@ -71,7 +73,7 @@ namespace sw
 		unordered_map<hashed_string, vector<size_t>> mapResourceWriters;
 		for ( size_t nodeIndex : listActiveIndices )
 		{
-			for ( const hashed_string& output : _listNodes[nodeIndex]._listOutputs )
+			for ( const hashed_string& output : _listNode[nodeIndex]._listOutput )
 			{
 				mapResourceWriters[output].push_back( nodeIndex );
 			}
@@ -112,7 +114,7 @@ namespace sw
 		// 3. For each consumer reading an input, find the matching producer
 		for ( size_t consumerIndex : listActiveIndices )
 		{
-			for ( const hashed_string& input : _listNodes[consumerIndex]._listInputs )
+			for ( const hashed_string& input : _listNode[consumerIndex]._listInput )
 			{
 				auto it = mapResourceWriters.find( input );
 				if ( it == mapResourceWriters.end() || it->second.empty() )
@@ -143,7 +145,7 @@ namespace sw
 		{
 			const size_t nodeIndex = queueReady.front();
 			queueReady.pop();
-			_listCompiledExecutionOrder.push_back( _listNodes[nodeIndex]._name );
+			_listCompiledExecutionOrder.push_back( _listNode[nodeIndex]._name );
 
 			unordered_map<size_t, vector<size_t>>::iterator adjIt = adjacency.find( nodeIndex );
 			if ( adjIt == adjacency.end() )
@@ -161,7 +163,7 @@ namespace sw
 
 		if ( _listCompiledExecutionOrder.size() != listActiveIndices.size() )
 		{
-			SW_LOG_WARNING( "[RenderGraph] Cycle detected during compile — %#/%# active passes scheduled.",
+			SW_LOG_WARNING( "Cycle detected during compile — %#/%# active passes scheduled.",
 							static_cast<uint32>( _listCompiledExecutionOrder.size() ),
 							static_cast<uint32>( listActiveIndices.size() ) );
 			_listCompiledExecutionOrder.clear();
@@ -169,10 +171,10 @@ namespace sw
 		}
 
 		_mapNameToIndex.clear();
-		_mapNameToIndex.reserve( _listNodes.size() );
-		for ( size_t nodeIndex = 0; nodeIndex < _listNodes.size(); ++nodeIndex )
+		_mapNameToIndex.reserve( _listNode.size() );
+		for ( size_t nodeIndex = 0; nodeIndex < _listNode.size(); ++nodeIndex )
 		{
-			_mapNameToIndex[_listNodes[nodeIndex]._name] = nodeIndex;
+			_mapNameToIndex[_listNode[nodeIndex]._name] = nodeIndex;
 		}
 
 		return true;
@@ -196,19 +198,19 @@ namespace sw
 			unordered_map<hashed_string, size_t>::iterator indexIt = _mapNameToIndex.find( passName );
 			if ( indexIt == _mapNameToIndex.end() )
 			{
-				SW_LOG_ERROR( "[RenderGraph] execute: unknown pass in order: %#", passName.c_str() );
+				SW_LOG_ERROR( "execute: unknown pass in order: %#", passName.c_str() );
 				return false;
 			}
 
-			RenderGraphNode& node = _listNodes[indexIt->second];
+			RenderGraphNode& node = _listNode[indexIt->second];
 			if ( node._bCulled )
 				continue;
 
-			for ( const hashed_string& input : node._listInputs )
+			for ( const hashed_string& input : node._listInput )
 			{
 				context.transitionTo( input, RenderGraphResourceState::Read );
 			}
-			for ( const hashed_string& output : node._listOutputs )
+			for ( const hashed_string& output : node._listOutput )
 			{
 				context.transitionTo( output, RenderGraphResourceState::Write );
 			}
@@ -217,8 +219,8 @@ namespace sw
 			{
 				RenderGraphPassContext ctx;
 				ctx._passName	  = node._name;
-				ctx._pListInputs  = &node._listInputs;
-				ctx._pListOutputs = &node._listOutputs;
+				ctx._pListInputs  = &node._listInput;
+				ctx._pListOutputs = &node._listOutput;
 				node._execute( ctx );
 			}
 		}
@@ -253,19 +255,19 @@ namespace sw
 			const auto indexIt = _mapNameToIndex.find( passName );
 			if ( indexIt == _mapNameToIndex.end() )
 			{
-				SW_LOG_ERROR( "[RenderGraph] executeParallel: unknown pass in order: %#", passName.c_str() );
+				SW_LOG_ERROR( "executeParallel: unknown pass in order: %#", passName.c_str() );
 				return false;
 			}
 
-			RenderGraphNode& node = _listNodes[indexIt->second];
+			RenderGraphNode& node = _listNode[indexIt->second];
 			if ( node._bCulled )
 				continue;
 
-			for ( const hashed_string& input : node._listInputs )
+			for ( const hashed_string& input : node._listInput )
 			{
 				context.transitionTo( input, RenderGraphResourceState::Read );
 			}
-			for ( const hashed_string& output : node._listOutputs )
+			for ( const hashed_string& output : node._listOutput )
 			{
 				context.transitionTo( output, RenderGraphResourceState::Write );
 			}
@@ -275,7 +277,7 @@ namespace sw
 				unique_ptr<IRHICommandList> passCmd = pDevice->createCommandList( RHICommandListMode::Deferred );
 				if ( passCmd == nullptr )
 				{
-					SW_LOG_WARNING( "[RenderGraph] Deferred command list unsupported by RHI — falling back to serial execute" );
+					SW_LOG_WARNING( "Deferred command list unsupported by RHI — falling back to serial execute" );
 					return execute( context );
 				}
 				listPassEntries.push_back( ParallelPassEntry{ &node, std::move( passCmd ) } );
@@ -328,17 +330,17 @@ namespace sw
 	void RenderGraph::cullUnreferencedPasses( const vector<hashed_string>& listRootOutputs, vector<hashed_string>* pOutCulledPasses )
 	{
 		unordered_set<hashed_string> uniqueRequiredResources;
-		uniqueRequiredResources.reserve( _listNodes.size() * 2 );
+		uniqueRequiredResources.reserve( _listNode.size() * 2 );
 		for ( const hashed_string& rootOut : listRootOutputs )
 		{
 			uniqueRequiredResources.insert( rootOut );
 		}
 
-		for ( auto iter = _listNodes.rbegin(); iter != _listNodes.rend(); ++iter )
+		for ( auto iter = _listNode.rbegin(); iter != _listNode.rend(); ++iter )
 		{
 			RenderGraphNode& node = *iter;
 			bool			 producesRequired{ false };
-			for ( const hashed_string& output : node._listOutputs )
+			for ( const hashed_string& output : node._listOutput )
 			{
 				if ( uniqueRequiredResources.find( output ) != uniqueRequiredResources.end() )
 				{
@@ -350,7 +352,7 @@ namespace sw
 			if ( producesRequired )
 			{
 				node._bCulled = false;
-				for ( const hashed_string& input : node._listInputs )
+				for ( const hashed_string& input : node._listInput )
 				{
 					uniqueRequiredResources.insert( input );
 				}
@@ -371,7 +373,7 @@ namespace sw
 	 */
 	bool RenderGraph::isPassCulled( hashed_string passName ) const
 	{
-		for ( const RenderGraphNode& node : _listNodes )
+		for ( const RenderGraphNode& node : _listNode )
 		{
 			if ( node._name == passName )
 				return node._bCulled;
@@ -385,18 +387,18 @@ namespace sw
 	string RenderGraph::exportToMermaid() const
 	{
 		string result = "graph TD\n";
-		result.reserve( _listNodes.size() * 128 );
-		for ( const RenderGraphNode& node : _listNodes )
+		result.reserve( _listNode.size() * 128 );
+		for ( const RenderGraphNode& node : _listNode )
 		{
 			string passLabel = node._name.c_str();
 			if ( node._bCulled )
 				passLabel += " (Culled)";
 
-			for ( const hashed_string& input : node._listInputs )
+			for ( const hashed_string& input : node._listInput )
 			{
 				result += "    " + string( input.c_str() ) + " --> " + passLabel + "\n";
 			}
-			for ( const hashed_string& output : node._listOutputs )
+			for ( const hashed_string& output : node._listOutput )
 			{
 				result += "    " + passLabel + " --> " + string( output.c_str() ) + "\n";
 			}
@@ -410,18 +412,18 @@ namespace sw
 	string RenderGraph::exportToDot() const
 	{
 		string result = "digraph RenderGraph {\n";
-		result.reserve( _listNodes.size() * 128 );
-		for ( const RenderGraphNode& node : _listNodes )
+		result.reserve( _listNode.size() * 128 );
+		for ( const RenderGraphNode& node : _listNode )
 		{
 			string passName = node._name.c_str();
 			if ( node._bCulled )
 				result += "    \"" + passName + "\" [style=dashed, color=gray];\n";
 
-			for ( const hashed_string& input : node._listInputs )
+			for ( const hashed_string& input : node._listInput )
 			{
 				result += "    \"" + string( input.c_str() ) + "\" -> \"" + passName + "\";\n";
 			}
-			for ( const hashed_string& output : node._listOutputs )
+			for ( const hashed_string& output : node._listOutput )
 			{
 				result += "    \"" + passName + "\" -> \"" + string( output.c_str() ) + "\";\n";
 			}
@@ -444,8 +446,8 @@ namespace sw
 			if ( it == _mapNameToIndex.end() )
 				continue;
 
-			const RenderGraphNode& node = _listNodes[it->second];
-			for ( const hashed_string& input : node._listInputs )
+			const RenderGraphNode& node = _listNode[it->second];
+			for ( const hashed_string& input : node._listInput )
 			{
 				auto lifeIt = mapLifetimes.find( input );
 				if ( lifeIt == mapLifetimes.end() )
@@ -464,7 +466,7 @@ namespace sw
 				}
 			}
 
-			for ( const hashed_string& output : node._listOutputs )
+			for ( const hashed_string& output : node._listOutput )
 			{
 				auto lifeIt = mapLifetimes.find( output );
 				if ( lifeIt == mapLifetimes.end() )
@@ -498,7 +500,7 @@ namespace sw
 	 */
 	void RenderGraph::clear()
 	{
-		_listNodes.clear();
+		_listNode.clear();
 		_listCompiledExecutionOrder.clear();
 		_mapNameToIndex.clear();
 	}

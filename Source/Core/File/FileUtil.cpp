@@ -20,6 +20,7 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "FileUtil" );
 
 	string FileUtil::getCurrentDateTimeAsString()
 	{
@@ -614,7 +615,7 @@ namespace sw
 			bSuccess = MacFileDialog::open( params, listResults );
 #else
 			(void)params;
-			SW_LOG_WARNING( "[FileUtil] openFileDialog is not supported on this platform." );
+			SW_LOG_WARNING( "openFileDialog is not supported on this platform." );
 #endif
 
 			if ( bSuccess && listResults.empty() == false )

@@ -80,9 +80,9 @@ namespace sw
 	/**
 	 * @brief 포맷팅된 로그 메시지를 파일 및 콘솔에 기록합니다.
 	 */
-	void Logger::writeLog( LogLevel level, const utf8* pTag, const utf8* pMessage, const utf8* pFile, int32 line )
+	void Logger::writeLog( LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line )
 	{
-		writeLogInternal( level, pTag, pMessage, pFile, line );
+		writeLogInternal( level, pTag, pCaller, pMessage, pFile, line );
 	}
 
 	/**
@@ -118,13 +118,13 @@ namespace sw
 		return s_globalSink.load( std::memory_order_acquire );
 	}
 
-	void Logger::writeLogGlobal( LogLevel level, const utf8* pTag, const utf8* pMessage, const utf8* pFile, int32 line )
+	void Logger::writeLogGlobal( LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line )
 	{
 		ILogSink* pSink = s_globalSink.load( std::memory_order_acquire );
 		if ( pSink == nullptr )
 			return;
 
-		pSink->writeLog( level, pTag, pMessage, pFile, line );
+		pSink->writeLog( level, pTag, pCaller, pMessage, pFile, line );
 	}
 
 	DelegateHandle Logger::addGlobalListener( const LogWrittenDelegate& listener )
@@ -179,7 +179,7 @@ namespace sw
 #endif
 	}
 
-	void Logger::writeLogInternal( LogLevel level, const utf8* pTag, const utf8* pMessage, const utf8* pFile, int32 line )
+	void Logger::writeLogInternal( LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line )
 	{
 		const uint8 levelIndex = static_cast<uint8>( level );
 		if ( levelIndex >= static_cast<uint8>( LogLevel::Count ) )
@@ -241,9 +241,18 @@ namespace sw
 
 		// 2단계: 스택 8KB fixed_string 버퍼에 1회 포맷팅 (동적 힙 메모리 할당 0건)
 		fixed_string<constant::kMaxBuffer8192> formattedBuffer{};
-		formatstring( formattedBuffer.data(), formattedBuffer.capacity(),
-					  "[%#] [%#] [%#] - %#\n -> %#:%#\n",
-					  dateStr.c_str(), effectiveTag, kArrHeader[levelIndex], effectiveMsg, effectiveFile, line );
+		if ( StringUtil::isNullOrEmpty( pCaller ) == false )
+		{
+			formatstring( formattedBuffer.data(), formattedBuffer.capacity(),
+						  "[%#] [%#] [%#] [%#] - %#\n -> %#:%#\n",
+						  dateStr.c_str(), effectiveTag, pCaller, kArrHeader[levelIndex], effectiveMsg, effectiveFile, line );
+		}
+		else
+		{
+			formatstring( formattedBuffer.data(), formattedBuffer.capacity(),
+						  "[%#] [%#] [%#] - %#\n -> %#:%#\n",
+						  dateStr.c_str(), effectiveTag, kArrHeader[levelIndex], effectiveMsg, effectiveFile, line );
+		}
 
 		// 3단계: 64비트 SWAR 기반 고속 UTF-8 검증 및 Non-UTF8(ANSI/CP949) 한글 안전 자동 변환
 		string		fallbackUtf8;
@@ -273,6 +282,7 @@ namespace sw
 			LogEntry entry;
 			entry.level		= level;
 			entry.tag		= effectiveTag;
+			entry.caller	= ( pCaller != nullptr ) ? pCaller : "";
 			entry.message	= effectiveMsg;
 			entry.file		= effectiveFile;
 			entry.line		= line;

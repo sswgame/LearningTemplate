@@ -13,6 +13,7 @@ namespace sw
 	class Material;
 	class FrameRenderer;
 	class CameraComponent;
+	struct SceneDocument;
 
 	/**
 	 * @class Scene
@@ -30,6 +31,11 @@ namespace sw
 		virtual bool initialize( IRHIDevice* pRhiDevice );
 		/** @brief GPU/머티리얼 보유를 해제합니다. 파기 전·비동기 로드 폐기 시 호출합니다. */
 		virtual void shutdown();
+
+		/** @brief 씬 문서(SceneDocument)로부터 엔티티/프리팹을 스폰하고 계층 구조를 인스턴스화합니다. */
+		bool instantiate( const SceneDocument& doc );
+		/** @brief 현재 씬의 루트 오브젝트 상태를 씬 문서(SceneDocument)로 직렬화 추출합니다. */
+		bool serializeToDocument( SceneDocument& outDoc ) const;
 
 		/** @brief 활성 씬의 GameObject를 병렬 tick합니다. */
 		virtual void tick( float32 deltaTime );

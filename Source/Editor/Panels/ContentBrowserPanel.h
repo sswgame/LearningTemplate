@@ -114,8 +114,8 @@ namespace sw::editor
 		void processPendingImports();
 
 	private:
-		vector<ContentRoot>	   _listRoots;
-		vector<AssetEntry>	   _listEntries;
+		vector<ContentRoot>	   _listRoot;
+		vector<AssetEntry>	   _listEntry;
 		string				   _selectedFolderAbs;
 		string				   _breadcrumb; /**< 예: "Game / Shaders" */
 		string				   _selectedAssetAbs;
@@ -124,7 +124,7 @@ namespace sw::editor
 		AssetTypeFilter		   _typeFilter;
 		ViewMode			   _viewMode;
 		mutex				   _pendingImportMutex;
-		vector<string>		   _listPendingImportPaths;
+		vector<string>		   _listPendingImportPath;
 		uint8				   _bRootsDirty	  : 1;
 		uint8				   _bFolderDirty  : 1;
 		[[maybe_unused]] uint8 _reservedFlags : 6;

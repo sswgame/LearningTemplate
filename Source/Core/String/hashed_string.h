@@ -248,7 +248,7 @@ namespace sw
 	 *   1024개 단위의 Entry 청크 배열(`std::atomic<Entry*> _chunks[64]`)을 관리합니다.
 	 *   인덱스 번호만으로 `chunkIndex = id / 1024`, `offset = id % 1024`로 분해하여
 	 *   어떤 동기화 락(Mutex)도 없이 **0-Lock O(1) 포인터 역참조**로 문자열 포인터, 길이, 해시를 즉시 반환합니다.
-	 * - **String Arena (`_listArenaBlocks`)**:
+	 * - **String Arena (`_listArenaBlock`)**:
 	 *   짧은 문자열마다 매번 개별 `new[]`를 호출하여 발생하는 힙 메모리 파편화를 방지하기 위해,
 	 *   64KB 크기의 연속 메모리 블록을 미리 할당하고 순차적으로 패킹 저장하여 **힙 할당 횟수를 99% 이상 절감**합니다.
 	 * - **32-Way Sharded Mutex (`_shards`)**:
@@ -279,10 +279,10 @@ namespace sw
 		std::atomic<uint32> _entryCount{ 0 };		  /**< 현재까지 등록된 총 문자열 개수 (단조 증가 인덱스) */
 		std::mutex			_globalAppendMutex;		  /**< 신규 청크 생성 및 64KB 아레나 블록 추가 시 사용하는 동기화 뮤텍스 */
 
-		vector<value_type*> _listArenaBlocks;				/**< 64KB 단위 연속 문자열 아레나 블록 목록 */
+		vector<value_type*> _listArenaBlock;				/**< 64KB 단위 연속 문자열 아레나 블록 목록 */
 		value_type*			_pCurrentArenaBlock{ nullptr }; ///< 현재 문자열을 채워넣고 있는 활성 아레나 블록
 		size_t				_arenaOffset{ 0 };				///< 현재 아레나 블록 내의 다음 기록 위치 오프셋
-		vector<value_type*> _listLargeAllocations;			/**< 64KB를 초과하는 대형 문자열 전용 개별 힙 블록 목록 */
+		vector<value_type*> _listLargeAllocation;			/**< 64KB를 초과하는 대형 문자열 전용 개별 힙 블록 목록 */
 
 		Shard _arrShards[kNumShards]; /**< 32-Way 샤드 해시맵 배열 */
 
@@ -318,19 +318,19 @@ namespace sw
 				}
 			}
 
-			for ( value_type* block : _listArenaBlocks )
+			for ( value_type* block : _listArenaBlock )
 			{
 				Memory::freeMemory( block );
 			}
-			_listArenaBlocks.clear();
+			_listArenaBlock.clear();
 			_pCurrentArenaBlock = nullptr;
 			_arenaOffset		= 0;
 
-			for ( value_type* largeBlock : _listLargeAllocations )
+			for ( value_type* largeBlock : _listLargeAllocation )
 			{
 				Memory::freeMemory( largeBlock );
 			}
-			_listLargeAllocations.clear();
+			_listLargeAllocation.clear();
 
 			_entryCount.store( 0, std::memory_order_release );
 		}
@@ -347,7 +347,7 @@ namespace sw
 				value_type* largeBuf = static_cast<value_type*>( Memory::allocMemory( requiredBytes ) );
 				std::char_traits<value_type>::copy( largeBuf, str, length );
 				largeBuf[length] = static_cast<value_type>( 0 );
-				_listLargeAllocations.push_back( largeBuf );
+				_listLargeAllocation.push_back( largeBuf );
 				return largeBuf;
 			}
 
@@ -355,7 +355,7 @@ namespace sw
 			if ( _pCurrentArenaBlock == nullptr || ( _arenaOffset + requiredChars ) * sizeof( value_type ) > kArenaBlockSize )
 			{
 				_pCurrentArenaBlock = static_cast<value_type*>( Memory::allocMemory( kArenaBlockSize ) );
-				_listArenaBlocks.push_back( _pCurrentArenaBlock );
+				_listArenaBlock.push_back( _pCurrentArenaBlock );
 				_arenaOffset = 0;
 			}
 

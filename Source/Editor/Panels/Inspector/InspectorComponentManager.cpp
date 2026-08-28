@@ -157,13 +157,13 @@ namespace sw::editor
 
 	void InspectorComponentManager::registerType( string_view typeName, unique_ptr<IInspectorComponent> pInspector )
 	{
-		_mapInspectors[string{ typeName }] = std::move( pInspector );
+		_mapInspector[string{ typeName }] = std::move( pInspector );
 	}
 
 	IInspectorComponent* InspectorComponentManager::find( string_view typeName ) const
 	{
-		const auto it = _mapInspectors.find( string{ typeName } );
-		if ( it != _mapInspectors.end() )
+		const auto it = _mapInspector.find( string{ typeName } );
+		if ( it != _mapInspector.end() )
 			return it->second.get();
 		return nullptr;
 	}

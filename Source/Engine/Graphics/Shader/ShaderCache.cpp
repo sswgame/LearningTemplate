@@ -19,7 +19,7 @@ namespace sw
 
 		StringBuilder<constant::kMaxBuffer256> sb;
 		sb.append( desc._filePath ).append( '_' ).append( desc._entryPoint ).append( '_' ).append( static_cast<int32>( desc._stage ) ).append( '_' ).append( static_cast<int32>( desc._targetFormat ) );
-		for ( const auto& def : desc._listDefines )
+		for ( const auto& def : desc._listDefine )
 		{
 			sb.append( '_' ).append( def._name ).append( '=' ).append( def._value );
 		}

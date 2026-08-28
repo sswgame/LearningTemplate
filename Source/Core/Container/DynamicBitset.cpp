@@ -7,24 +7,24 @@ namespace sw
 
 	DynamicBitset::DynamicBitset( const uint32 size )
 		: _bitCount{ size }
-		, _listBlocks{}
+		, _listBlock{}
 	{
 		const uint32 blockCount = calculateBlockCount( size );
-		_listBlocks.resize( blockCount, 0 );
+		_listBlock.resize( blockCount, 0 );
 	}
 
 	DynamicBitset::DynamicBitset( string_view str )
 		: _bitCount{ static_cast<uint32>( str.length() ) }
-		, _listBlocks{}
+		, _listBlock{}
 	{
 		const uint32 blockCount = calculateBlockCount( _bitCount );
-		_listBlocks.resize( blockCount, 0 );
+		_listBlock.resize( blockCount, 0 );
 
 		for ( uint32 bitIndex = 0; bitIndex < _bitCount; ++bitIndex )
 		{
 			const utf8 c = str[_bitCount - 1 - bitIndex];
 			if ( c == '1' )
-				_listBlocks[bitIndex / kBitsPerBlock] |= ( 1ULL << ( bitIndex % kBitsPerBlock ) );
+				_listBlock[bitIndex / kBitsPerBlock] |= ( 1ULL << ( bitIndex % kBitsPerBlock ) );
 			else if ( c != '0' )
 				SW_LOG_ERROR( "DynamicBitset: Invalid character %# in bitset string", c );
 		}
@@ -32,12 +32,12 @@ namespace sw
 
 	DynamicBitset::DynamicBitset( const uint32 size, const uint64 value )
 		: _bitCount{ size }
-		, _listBlocks{}
+		, _listBlock{}
 	{
 		const uint32 blockCount = calculateBlockCount( size );
-		_listBlocks.resize( blockCount, 0 );
+		_listBlock.resize( blockCount, 0 );
 		if ( blockCount > 0 )
-			_listBlocks[0] = value;
+			_listBlock[0] = value;
 		sanitize();
 	}
 
@@ -47,7 +47,7 @@ namespace sw
 		const uint32 newBlockCount = calculateBlockCount( newSize );
 
 		_bitCount = newSize;
-		_listBlocks.resize( newBlockCount, value ? ~static_cast<BlockType>( 0 ) : 0 );
+		_listBlock.resize( newBlockCount, value ? ~static_cast<BlockType>( 0 ) : 0 );
 
 		if ( newSize > oldBitCount && value )
 		{
@@ -64,12 +64,12 @@ namespace sw
 	{
 		SW_LOG_ASSERT( pos < _bitCount, "Bit position out of range" );
 		const uint32 blockIndex = getBlockIndex( pos );
-		return ( _listBlocks[blockIndex] & bitMask( pos ) ) != 0;
+		return ( _listBlock[blockIndex] & bitMask( pos ) ) != 0;
 	}
 
 	DynamicBitset& DynamicBitset::set()
 	{
-		std::fill( _listBlocks.begin(), _listBlocks.end(), ~static_cast<BlockType>( 0 ) );
+		std::fill( _listBlock.begin(), _listBlock.end(), ~static_cast<BlockType>( 0 ) );
 		sanitize();
 		return *this;
 	}
@@ -82,22 +82,22 @@ namespace sw
 		const BlockType mask	   = bitMask( pos );
 
 		if ( value )
-			_listBlocks[blockIndex] |= mask;
+			_listBlock[blockIndex] |= mask;
 		else
-			_listBlocks[blockIndex] &= ~mask;
+			_listBlock[blockIndex] &= ~mask;
 
 		return *this;
 	}
 
 	DynamicBitset& DynamicBitset::reset()
 	{
-		std::fill( _listBlocks.begin(), _listBlocks.end(), 0 );
+		std::fill( _listBlock.begin(), _listBlock.end(), 0 );
 		return *this;
 	}
 
 	DynamicBitset& DynamicBitset::flip()
 	{
-		for ( BlockType& block : _listBlocks )
+		for ( BlockType& block : _listBlock )
 		{
 			block = ~block;
 		}
@@ -110,7 +110,7 @@ namespace sw
 		SW_LOG_ASSERT( pos < _bitCount, "Bit position out of range" );
 
 		const uint32 blockIndex = getBlockIndex( pos );
-		_listBlocks[blockIndex] ^= bitMask( pos );
+		_listBlock[blockIndex] ^= bitMask( pos );
 		return *this;
 	}
 
@@ -123,7 +123,7 @@ namespace sw
 
 		for ( uint32 blockIndex = 0; blockIndex < fullBlockCount; ++blockIndex )
 		{
-			if ( _listBlocks[blockIndex] != ~static_cast<BlockType>( 0 ) )
+			if ( _listBlock[blockIndex] != ~static_cast<BlockType>( 0 ) )
 				return false;
 		}
 
@@ -131,7 +131,7 @@ namespace sw
 		if ( restBits != 0 )
 		{
 			const BlockType mask = ( static_cast<BlockType>( 1 ) << restBits ) - 1;
-			if ( ( _listBlocks[fullBlockCount] & mask ) != mask )
+			if ( ( _listBlock[fullBlockCount] & mask ) != mask )
 				return false;
 		}
 
@@ -140,7 +140,7 @@ namespace sw
 
 	bool DynamicBitset::any() const
 	{
-		for ( const BlockType& block : _listBlocks )
+		for ( const BlockType& block : _listBlock )
 		{
 			if ( block != 0 )
 				return true;
@@ -151,7 +151,7 @@ namespace sw
 	uint32 DynamicBitset::count() const
 	{
 		uint32 result{ 0 };
-		for ( const BlockType& block : _listBlocks )
+		for ( const BlockType& block : _listBlock )
 		{
 #if defined( _MSC_VER ) && ( defined( _M_X64 ) || defined( _M_AMD64 ) )
 			result += static_cast<uint32>( __popcnt64( block ) );
@@ -184,10 +184,10 @@ namespace sw
 	{
 		SW_LOG_ASSERT( _bitCount <= 64, "Bitset too large for uint64" );
 
-		if ( _listBlocks.empty() )
+		if ( _listBlock.empty() )
 			return 0;
 
-		return _listBlocks[0];
+		return _listBlock[0];
 	}
 
 	uint32 DynamicBitset::to_ulong() const
@@ -198,7 +198,7 @@ namespace sw
 
 	uint32 DynamicBitset::memory_usage() const
 	{
-		return sizeof( *this ) + static_cast<uint32>( _listBlocks.size() ) * sizeof( BlockType );
+		return sizeof( *this ) + static_cast<uint32>( _listBlock.size() ) * sizeof( BlockType );
 	}
 
 	DynamicBitset DynamicBitset::operator~() const
@@ -211,9 +211,9 @@ namespace sw
 	DynamicBitset& DynamicBitset::operator&=( const DynamicBitset& other )
 	{
 		SW_LOG_ASSERT( _bitCount == other._bitCount, "Bitset sizes must match" );
-		for ( uint32 blockIndex = 0; blockIndex < _listBlocks.size(); ++blockIndex )
+		for ( uint32 blockIndex = 0; blockIndex < _listBlock.size(); ++blockIndex )
 		{
-			_listBlocks[blockIndex] &= other._listBlocks[blockIndex];
+			_listBlock[blockIndex] &= other._listBlock[blockIndex];
 		}
 		return *this;
 	}
@@ -221,9 +221,9 @@ namespace sw
 	DynamicBitset& DynamicBitset::operator|=( const DynamicBitset& other )
 	{
 		SW_LOG_ASSERT( _bitCount == other._bitCount, "Bitset sizes must match" );
-		for ( uint32 blockIndex = 0; blockIndex < _listBlocks.size(); ++blockIndex )
+		for ( uint32 blockIndex = 0; blockIndex < _listBlock.size(); ++blockIndex )
 		{
-			_listBlocks[blockIndex] |= other._listBlocks[blockIndex];
+			_listBlock[blockIndex] |= other._listBlock[blockIndex];
 		}
 		return *this;
 	}
@@ -231,9 +231,9 @@ namespace sw
 	DynamicBitset& DynamicBitset::operator^=( const DynamicBitset& other )
 	{
 		SW_LOG_ASSERT( _bitCount == other._bitCount, "Bitset sizes must match" );
-		for ( uint32 blockIndex = 0; blockIndex < _listBlocks.size(); ++blockIndex )
+		for ( uint32 blockIndex = 0; blockIndex < _listBlock.size(); ++blockIndex )
 		{
-			_listBlocks[blockIndex] ^= other._listBlocks[blockIndex];
+			_listBlock[blockIndex] ^= other._listBlock[blockIndex];
 		}
 		return *this;
 	}
@@ -275,25 +275,25 @@ namespace sw
 
 		if ( blockShift > 0 )
 		{
-			const size_t size	= _listBlocks.size();
+			const size_t size	= _listBlock.size();
 			const size_t bShift = blockShift;
 			for ( size_t blockIndex = size; blockIndex > bShift; --blockIndex )
 			{
-				_listBlocks[blockIndex - 1] = _listBlocks[blockIndex - 1 - bShift];
+				_listBlock[blockIndex - 1] = _listBlock[blockIndex - 1 - bShift];
 			}
-			for ( uint32 blockIndex = 0; blockIndex < blockShift && blockIndex < _listBlocks.size(); ++blockIndex )
+			for ( uint32 blockIndex = 0; blockIndex < blockShift && blockIndex < _listBlock.size(); ++blockIndex )
 			{
-				_listBlocks[blockIndex] = 0;
+				_listBlock[blockIndex] = 0;
 			}
 		}
 
 		if ( bitShift > 0 )
 		{
 			BlockType carry{ 0 };
-			for ( uint32 blockIndex = 0; blockIndex < _listBlocks.size(); ++blockIndex )
+			for ( uint32 blockIndex = 0; blockIndex < _listBlock.size(); ++blockIndex )
 			{
-				const BlockType newCarry = _listBlocks[blockIndex] >> ( kBitsPerBlock - bitShift );
-				_listBlocks[blockIndex]	 = ( _listBlocks[blockIndex] << bitShift ) | carry;
+				const BlockType newCarry = _listBlock[blockIndex] >> ( kBitsPerBlock - bitShift );
+				_listBlock[blockIndex]	 = ( _listBlock[blockIndex] << bitShift ) | carry;
 				carry					 = newCarry;
 			}
 		}
@@ -318,27 +318,27 @@ namespace sw
 
 		if ( blockShift > 0 )
 		{
-			const size_t size	= _listBlocks.size();
+			const size_t size	= _listBlock.size();
 			const size_t bShift = blockShift;
 			for ( size_t blockIndex = 0; blockIndex + bShift < size; ++blockIndex )
 			{
-				_listBlocks[blockIndex] = _listBlocks[blockIndex + bShift];
+				_listBlock[blockIndex] = _listBlock[blockIndex + bShift];
 			}
 			for ( size_t blockIndex = ( size > bShift ? size - bShift : 0 ); blockIndex < size; ++blockIndex )
 			{
-				_listBlocks[blockIndex] = 0;
+				_listBlock[blockIndex] = 0;
 			}
 		}
 
 		if ( bitShift > 0 )
 		{
 			BlockType	 carry{ 0 };
-			const size_t size = _listBlocks.size();
+			const size_t size = _listBlock.size();
 			for ( size_t blockIndex = size; blockIndex > 0; --blockIndex )
 			{
 				const size_t	uIndex	 = blockIndex - 1;
-				const BlockType newCarry = _listBlocks[uIndex] << ( kBitsPerBlock - bitShift );
-				_listBlocks[uIndex]		 = ( _listBlocks[uIndex] >> bitShift ) | carry;
+				const BlockType newCarry = _listBlock[uIndex] << ( kBitsPerBlock - bitShift );
+				_listBlock[uIndex]		 = ( _listBlock[uIndex] >> bitShift ) | carry;
 				carry					 = newCarry;
 			}
 		}
@@ -365,7 +365,7 @@ namespace sw
 	{
 		if ( _bitCount != other._bitCount )
 			return false;
-		return _listBlocks == other._listBlocks;
+		return _listBlock == other._listBlock;
 	}
 
 	bool DynamicBitset::operator<( const DynamicBitset& other ) const
@@ -373,10 +373,10 @@ namespace sw
 		if ( _bitCount != other._bitCount )
 			return _bitCount < other._bitCount;
 
-		for ( uint32 blockIndex = static_cast<uint32>( _listBlocks.size() ); blockIndex > 0; --blockIndex )
+		for ( uint32 blockIndex = static_cast<uint32>( _listBlock.size() ); blockIndex > 0; --blockIndex )
 		{
-			if ( _listBlocks[blockIndex - 1] != other._listBlocks[blockIndex - 1] )
-				return _listBlocks[blockIndex - 1] < other._listBlocks[blockIndex - 1];
+			if ( _listBlock[blockIndex - 1] != other._listBlock[blockIndex - 1] )
+				return _listBlock[blockIndex - 1] < other._listBlock[blockIndex - 1];
 		}
 		return false;
 	}
@@ -389,15 +389,15 @@ namespace sw
 
 	void DynamicBitset::sanitize()
 	{
-		if ( _bitCount == 0 || _listBlocks.empty() )
+		if ( _bitCount == 0 || _listBlock.empty() )
 			return;
 
 		const uint32 restBits = _bitCount & kBlockMask;
 		if ( restBits != 0 )
 		{
-			const uint32	lastBlockIndex = static_cast<uint32>( _listBlocks.size() - 1 );
+			const uint32	lastBlockIndex = static_cast<uint32>( _listBlock.size() - 1 );
 			const BlockType mask		   = ( static_cast<BlockType>( 1 ) << restBits ) - 1;
-			_listBlocks[lastBlockIndex] &= mask;
+			_listBlock[lastBlockIndex] &= mask;
 		}
 	}
 } // namespace sw

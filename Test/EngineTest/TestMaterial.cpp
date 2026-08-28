@@ -238,14 +238,14 @@ SW_TEST_CASE( MaterialTest, MaterialReflectionSchemaSync )
 	colorVar._offset = 0;
 	colorVar._size	 = 16;
 	colorVar._type	 = "Float4";
-	cb._listVariables.push_back( colorVar );
+	cb._listVariable.push_back( colorVar );
 	sw::ShaderVariableInfo roughVar{};
 	roughVar._name	 = "roughness";
 	roughVar._offset = 16;
 	roughVar._size	 = 4;
 	roughVar._type	 = "Float";
-	cb._listVariables.push_back( roughVar );
-	reflection._listConstantBuffers.push_back( cb );
+	cb._listVariable.push_back( roughVar );
+	reflection._listConstantBuffer.push_back( cb );
 
 	SW_EXPECT_TRUE( material.syncPropertiesFromReflection( reflection ) );
 
@@ -299,8 +299,8 @@ SW_TEST_CASE( MaterialTest, MaterialShaderReflectionValidation )
 	colorVar._offset = 0;
 	colorVar._size	 = 16;
 	colorVar._type	 = "Float4";
-	cb._listVariables.push_back( colorVar );
-	reflection._listConstantBuffers.push_back( cb );
+	cb._listVariable.push_back( colorVar );
+	reflection._listConstantBuffer.push_back( cb );
 
 	sw::MaterialInstance instance( &material );
 	instance.setParameter( sw::hashed_string( "color" ), "1.0 0.0 0.0 1.0" );

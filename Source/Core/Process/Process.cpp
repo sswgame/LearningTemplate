@@ -8,6 +8,8 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "Process" );
+
 	Process::Process()
 		: _pNativeHandle{ nullptr }
 		, _pStdOutRead{ nullptr }
@@ -65,7 +67,7 @@ namespace sw
 		Process proc;
 		if ( proc.launch( command, options ) == false )
 		{
-			SW_LOG_ERROR( "[Process] Failed to launch command: %#", string( command ).c_str() );
+			SW_LOG_ERROR( "Failed to launch command: %#", string( command ).c_str() );
 			return -1;
 		}
 

@@ -48,7 +48,7 @@ namespace sw::editor
 	private:
 		IRHIDevice* _pRHIDevice{ nullptr };
 #if defined( SW_PLATFORM_WINDOWS )
-		vector<Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>> _listRegisteredSrvs;
+		vector<Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>> _listRegisteredSrv;
 #endif
 	};
 } // namespace sw::editor

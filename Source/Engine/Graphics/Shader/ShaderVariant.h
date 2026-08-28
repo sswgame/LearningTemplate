@@ -17,7 +17,7 @@ namespace sw
 	struct SW_API ShaderVariantKey
 	{
 		string					  _shaderPath;
-		vector<ShaderMacroDefine> _listDefines;
+		vector<ShaderMacroDefine> _listDefine;
 		ShaderTargetFormat		  _targetFormat{ ShaderTargetFormat::Count };
 
 		/** @brief 경로+define+타깃포맷 해시 permutation 키를 반환합니다. */

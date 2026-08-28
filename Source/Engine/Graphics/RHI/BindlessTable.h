@@ -36,10 +36,10 @@ namespace sw
 
 	private:
 		mutable std::shared_mutex  _mutex;
-		vector<RHITextureHandle>   _listTextures;
-		vector<RHIBufferHandle>	   _listBuffers;
-		vector<RHIDescriptorIndex> _listFreeTextureSlots;
-		vector<RHIDescriptorIndex> _listFreeBufferSlots;
+		vector<RHITextureHandle>   _listTexture;
+		vector<RHIBufferHandle>	   _listBuffer;
+		vector<RHIDescriptorIndex> _listFreeTextureSlot;
+		vector<RHIDescriptorIndex> _listFreeBufferSlot;
 		uint32					   _maxSlots;
 	};
 } // namespace sw

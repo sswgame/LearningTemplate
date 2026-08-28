@@ -31,20 +31,20 @@ namespace sw
 		void pushFloats( const float32* pValues, uint32 floatCount );
 
 		/** @brief 행렬 배열 포인터. 비었으면 nullptr. */
-		const float4x4* data() const { return _listMatrices.empty() ? nullptr : _listMatrices.data(); }
+		const float4x4* data() const { return _listMatrix.empty() ? nullptr : _listMatrix.data(); }
 		/** @brief 행렬 배열 포인터. 비었으면 nullptr. */
-		float4x4* data() { return _listMatrices.empty() ? nullptr : _listMatrices.data(); }
+		float4x4* data() { return _listMatrix.empty() ? nullptr : _listMatrix.data(); }
 		/** @brief 크기를 반환합니다. */
-		uint32 count() const { return static_cast<uint32>( _listMatrices.size() ); }
+		uint32 count() const { return static_cast<uint32>( _listMatrix.size() ); }
 		/** @brief 비었는지 반환합니다. */
-		bool empty() const { return _listMatrices.empty(); }
+		bool empty() const { return _listMatrix.empty(); }
 
 		/** @brief 행렬을 float32 배열로 봅니다 (인스턴스당 16개). */
-		const float32* floats() const { return _listMatrices.empty() ? nullptr : reinterpret_cast<const float32*>( _listMatrices.data() ); }
+		const float32* floats() const { return _listMatrix.empty() ? nullptr : reinterpret_cast<const float32*>( _listMatrix.data() ); }
 		/** @brief 개수를 반환합니다. */
 		uint32 floatCount() const { return count() * 16u; }
 
 	private:
-		vector<float4x4> _listMatrices;
+		vector<float4x4> _listMatrix;
 	};
 } // namespace sw

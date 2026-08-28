@@ -9,6 +9,8 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "WindowsProcess" );
+
 	void Process::cleanup()
 	{
 		if ( _pStdOutRead != nullptr )
@@ -47,7 +49,7 @@ namespace sw
 		HANDLE hStdOutWrite = nullptr;
 		if ( CreatePipe( &hStdOutRead, &hStdOutWrite, &saAttr, 0 ) == FALSE )
 		{
-			SW_LOG_ERROR( "[WindowsProcess] CreatePipe failed!" );
+			SW_LOG_ERROR( "CreatePipe failed!" );
 			return false;
 		}
 
@@ -83,7 +85,7 @@ namespace sw
 		if ( bCreated == FALSE )
 		{
 			CloseHandle( hStdOutRead );
-			SW_LOG_ERROR( "[WindowsProcess] Failed to launch command: %#", cmdStr.c_str() );
+			SW_LOG_ERROR( "Failed to launch command: %#", cmdStr.c_str() );
 			return false;
 		}
 

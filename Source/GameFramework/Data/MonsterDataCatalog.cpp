@@ -8,6 +8,8 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "MonsterDataCatalog" );
+
 	namespace
 	{
 		unordered_map<hashed_string, MonsterDef>& getStorage()
@@ -47,7 +49,7 @@ namespace sw
 		string		absPath;
 		if ( doc.loadResource( assetRelativePath, &absPath ) == false )
 		{
-			SW_LOG_WARNING( "[MonsterDataCatalog] Failed to read %# — using fallback monster definitions.", assetRelativePath );
+			SW_LOG_WARNING( "Failed to read %# — using fallback monster definitions.", assetRelativePath );
 			seedFallback();
 			return false;
 		}
@@ -55,7 +57,7 @@ namespace sw
 		XmlNode root = doc.root( "MonsterCatalog" );
 		if ( root.isValid() == false )
 		{
-			SW_LOG_WARNING( "[MonsterDataCatalog] Missing <MonsterCatalog> root in %# — using fallback.", absPath );
+			SW_LOG_WARNING( "Missing <MonsterCatalog> root in %# — using fallback.", absPath );
 			seedFallback();
 			return false;
 		}
@@ -119,7 +121,7 @@ namespace sw
 			mapMonsters[hashed_string( monsterDef._id.c_str() )] = monsterDef;
 		}
 
-		SW_LOG_INFO( "[MonsterDataCatalog] Loaded %# monster definitions from %#", static_cast<int32>( mapMonsters.size() ), absPath );
+		SW_LOG_INFO( "Loaded %# monster definitions from %#", static_cast<int32>( mapMonsters.size() ), absPath );
 		return true;
 	}
 

@@ -3,7 +3,7 @@ Scripts/generate/CookScenes.py
 
 저작 기본은 XML입니다. Resource/**/scenes/*.scene.xml -> .scene.bin (SCN1).
 
-바이너리 레이아웃 (리틀 엔디안, SceneDescriptor::saveSceneDescriptorToBinary 규격과 일치):
+바이너리 레이아웃 (리틀 엔디안, SceneDocument::saveSceneDocumentToBinary 규격과 일치):
   u32 매직넘버 0x53434E31 ('SCN1')
   u32 버전 (현재 0)
   u32 씬이름길이 + 씬이름 바이트열

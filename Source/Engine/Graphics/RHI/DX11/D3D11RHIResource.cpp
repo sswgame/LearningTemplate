@@ -8,6 +8,8 @@
 #if defined( SW_PLATFORM_WINDOWS )
 namespace sw
 {
+	SW_LOG_CALLER( "D3D11" );
+
 	namespace
 	{
 		DXGI_FORMAT toDxgiFormatD3D11( RHIFormat format )
@@ -38,7 +40,7 @@ namespace sw
 	{
 		auto fillDefines = [&]( ShaderCompileDesc& cd )
 		{
-			for ( const string& def : desc._listShaderDefines )
+			for ( const string& def : desc._listShaderDefine )
 			{
 				ShaderMacroDefine m{};
 				const size_t	  eq = def.find( '=' );
@@ -52,7 +54,7 @@ namespace sw
 					m._name	 = def.substr( 0, eq );
 					m._value = def.substr( eq + 1 );
 				}
-				cd._listDefines.push_back( std::move( m ) );
+				cd._listDefine.push_back( std::move( m ) );
 			}
 		};
 
@@ -165,22 +167,22 @@ namespace sw
 		D3D11RHIDevice::D3D11RenderPassRecord record{};
 		record.desc	   = desc;
 		record._bAlive = 1;
-		_pDevice->_listRenderPasses.push_back( record );
-		return _pDevice->_listRenderPasses.size();
+		_pDevice->_listRenderPass.push_back( record );
+		return _pDevice->_listRenderPass.size();
 	}
 
 	void D3D11RHIResource::destroyRenderPass( RHIRenderPassHandle pass )
 	{
-		if ( pass == 0 || pass > _pDevice->_listRenderPasses.size() )
+		if ( pass == 0 || pass > _pDevice->_listRenderPass.size() )
 			return;
-		_pDevice->_listRenderPasses[pass - 1]._bAlive = 0;
+		_pDevice->_listRenderPass[pass - 1]._bAlive = 0;
 	}
 
 	RHIBufferHandle D3D11RHIResource::createConstantBuffer( uint32 size )
 	{
 		if ( _pDevice == nullptr || _pDevice->_device == nullptr || size == 0 )
 		{
-			SW_LOG_ERROR( "[D3D11] createConstantBuffer: invalid device or size=%#", size );
+			SW_LOG_ERROR( "createConstantBuffer: invalid device or size=%#", size );
 			return 0;
 		}
 
@@ -198,14 +200,14 @@ namespace sw
 		const HRESULT						 hr = _pDevice->_device->CreateBuffer( &bd, nullptr, buffer.GetAddressOf() );
 		if ( FAILED( hr ) )
 		{
-			SW_LOG_ERROR( "[D3D11] CreateBuffer(constant) failed hr=0x%# size=%# aligned=%#",
+			SW_LOG_ERROR( "CreateBuffer(constant) failed hr=0x%# size=%# aligned=%#",
 						  static_cast<uint32>( hr ), size, alignedSize );
 			return 0;
 		}
 
 		const RHIBufferHandle handle = _pDevice->storeBuffer( std::move( buffer ) );
 		if ( handle == 0 )
-			SW_LOG_ERROR( "[D3D11] storeBuffer returned 0 after CreateBuffer success" );
+			SW_LOG_ERROR( "storeBuffer returned 0 after CreateBuffer success" );
 		return handle;
 	}
 
@@ -289,12 +291,12 @@ namespace sw
 			_pDevice->_listRegisteredBindlessVector[bindlessIndex] = 0;
 			_pDevice->_bindlessFreeList.push_back( static_cast<uint32>( bindlessIndex ) );
 		}
-		for ( size_t bufferIndex = 0; bufferIndex < _pDevice->_listUavSourceBuffers.size(); ++bufferIndex )
+		for ( size_t bufferIndex = 0; bufferIndex < _pDevice->_listUavSourceBuffer.size(); ++bufferIndex )
 		{
-			if ( _pDevice->_listUavSourceBuffers[bufferIndex] != buffer )
+			if ( _pDevice->_listUavSourceBuffer[bufferIndex] != buffer )
 				continue;
-			_pDevice->_listRegisteredUAVs[bufferIndex].Reset();
-			_pDevice->_listUavSourceBuffers[bufferIndex] = 0;
+			_pDevice->_listRegisteredUAV[bufferIndex].Reset();
+			_pDevice->_listUavSourceBuffer[bufferIndex] = 0;
 			_pDevice->_uavFreeList.push_back( static_cast<uint32>( bufferIndex ) );
 		}
 
@@ -344,7 +346,7 @@ namespace sw
 
 		if ( FAILED( _pDevice->_device->CreateTexture2D( &texDesc, nullptr, record._texture.GetAddressOf() ) ) )
 		{
-			SW_LOG_ERROR( "[D3D11] Failed to create Texture2D (%#x%#).", desc._width, desc._height );
+			SW_LOG_ERROR( "Failed to create Texture2D (%#x%#).", desc._width, desc._height );
 			return 0;
 		}
 
@@ -352,7 +354,7 @@ namespace sw
 		{
 			if ( FAILED( _pDevice->_device->CreateRenderTargetView( record._texture.Get(), nullptr, record._rtv.GetAddressOf() ) ) )
 			{
-				SW_LOG_ERROR( "[D3D11] Failed to create RTV for Texture2D." );
+				SW_LOG_ERROR( "Failed to create RTV for Texture2D." );
 				return 0;
 			}
 		}
@@ -365,7 +367,7 @@ namespace sw
 			dsvDesc.Texture2D.MipSlice = 0;
 			if ( FAILED( _pDevice->_device->CreateDepthStencilView( record._texture.Get(), &dsvDesc, record._dsv.GetAddressOf() ) ) )
 			{
-				SW_LOG_ERROR( "[D3D11] Failed to create DSV for Texture2D." );
+				SW_LOG_ERROR( "Failed to create DSV for Texture2D." );
 				return 0;
 			}
 		}
@@ -382,7 +384,7 @@ namespace sw
 
 			if ( FAILED( _pDevice->_device->CreateShaderResourceView( record._texture.Get(), bDepth ? &srvDesc : nullptr, record._srv.GetAddressOf() ) ) )
 			{
-				SW_LOG_ERROR( "[D3D11] Failed to create SRV for Texture2D." );
+				SW_LOG_ERROR( "Failed to create SRV for Texture2D." );
 				return 0;
 			}
 		}
@@ -399,11 +401,11 @@ namespace sw
 		if ( pSlot == nullptr )
 			return;
 
-		for ( size_t textureIndex = 0; textureIndex < _pDevice->_listRegisteredTextures.size(); ++textureIndex )
+		for ( size_t textureIndex = 0; textureIndex < _pDevice->_listRegisteredTexture.size(); ++textureIndex )
 		{
-			if ( _pDevice->_listRegisteredTextures[textureIndex] != texture )
+			if ( _pDevice->_listRegisteredTexture[textureIndex] != texture )
 				continue;
-			_pDevice->_listRegisteredTextures[textureIndex] = 0;
+			_pDevice->_listRegisteredTexture[textureIndex] = 0;
 			_pDevice->_textureFreeList.push_back( static_cast<uint32>( textureIndex ) );
 		}
 
@@ -430,12 +432,12 @@ namespace sw
 		{
 			index = _pDevice->_textureFreeList.back();
 			_pDevice->_textureFreeList.pop_back();
-			_pDevice->_listRegisteredTextures[index] = texture;
+			_pDevice->_listRegisteredTexture[index] = texture;
 		}
 		else
 		{
-			index = static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredTextures.size() );
-			_pDevice->_listRegisteredTextures.push_back( texture );
+			index = static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredTexture.size() );
+			_pDevice->_listRegisteredTexture.push_back( texture );
 		}
 		return index;
 	}
@@ -509,14 +511,14 @@ namespace sw
 		{
 			index = _pDevice->_uavFreeList.back();
 			_pDevice->_uavFreeList.pop_back();
-			_pDevice->_listRegisteredUAVs[index]   = uav;
-			_pDevice->_listUavSourceBuffers[index] = buffer;
+			_pDevice->_listRegisteredUAV[index]	  = uav;
+			_pDevice->_listUavSourceBuffer[index] = buffer;
 		}
 		else
 		{
-			index = static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredUAVs.size() );
-			_pDevice->_listRegisteredUAVs.push_back( uav );
-			_pDevice->_listUavSourceBuffers.push_back( buffer );
+			index = static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredUAV.size() );
+			_pDevice->_listRegisteredUAV.push_back( uav );
+			_pDevice->_listUavSourceBuffer.push_back( buffer );
 		}
 		return index;
 	}

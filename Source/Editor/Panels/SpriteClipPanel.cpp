@@ -14,6 +14,8 @@
 
 namespace sw::editor
 {
+	SW_LOG_CALLER( "SpriteClip" );
+
 	namespace
 	{
 		bool parseFloatAfter( string_view src, size_t from, const utf8* pKey, float32& out )
@@ -63,8 +65,8 @@ namespace sw::editor
 	SpriteClipPanel::SpriteClipPanel()
 		: IEditorPanel( false )
 		, _arrAtlasPath{}
-		, _listFrames{}
-		, _listKeys{}
+		, _listFrame{}
+		, _listKey{}
 		, _selectedFrame{ -1 }
 		, _selectedKey{ -1 }
 		, _status{}
@@ -72,7 +74,7 @@ namespace sw::editor
 		const string& atlas = editor::getEditorData()._spriteAtlas;
 		if ( atlas.empty() == false )
 			StringUtil::strncpy( _arrAtlasPath, atlas.c_str(), sizeof( _arrAtlasPath ) - 1 );
-		_listFrames.push_back( Frame{} );
+		_listFrame.push_back( Frame{} );
 	}
 
 	void SpriteClipPanel::drawContent()
@@ -93,19 +95,19 @@ namespace sw::editor
 		ImGui::TextUnformatted( "Frames (u,v,w,h,durationMs)" );
 		if ( ImGui::Button( "Add Frame" ) )
 		{
-			_listFrames.push_back( Frame{} );
-			_selectedFrame = static_cast<int32>( _listFrames.size() ) - 1;
+			_listFrame.push_back( Frame{} );
+			_selectedFrame = static_cast<int32>( _listFrame.size() ) - 1;
 		}
 		ImGui::SameLine();
 		if ( ImGui::Button( "Remove Frame" ) && _selectedFrame >= 0 &&
-			 _selectedFrame < static_cast<int32>( _listFrames.size() ) )
+			 _selectedFrame < static_cast<int32>( _listFrame.size() ) )
 		{
-			_listFrames.erase( _listFrames.begin() + _selectedFrame );
-			if ( _selectedFrame >= static_cast<int32>( _listFrames.size() ) )
-				_selectedFrame = static_cast<int32>( _listFrames.size() ) - 1;
+			_listFrame.erase( _listFrame.begin() + _selectedFrame );
+			if ( _selectedFrame >= static_cast<int32>( _listFrame.size() ) )
+				_selectedFrame = static_cast<int32>( _listFrame.size() ) - 1;
 		}
 
-		for ( int32 frameIndex = 0; frameIndex < static_cast<int32>( _listFrames.size() ); ++frameIndex )
+		for ( int32 frameIndex = 0; frameIndex < static_cast<int32>( _listFrame.size() ); ++frameIndex )
 		{
 			ImGui::PushID( frameIndex );
 			utf8 arrLabel[32];
@@ -115,9 +117,9 @@ namespace sw::editor
 			ImGui::PopID();
 		}
 
-		if ( _selectedFrame >= 0 && _selectedFrame < static_cast<int32>( _listFrames.size() ) )
+		if ( _selectedFrame >= 0 && _selectedFrame < static_cast<int32>( _listFrame.size() ) )
 		{
-			Frame& f = _listFrames[static_cast<size_t>( _selectedFrame )];
+			Frame& f = _listFrame[static_cast<size_t>( _selectedFrame )];
 			ImGui::DragFloat( "u", &f._u, 0.01f );
 			ImGui::DragFloat( "v", &f._v, 0.01f );
 			ImGui::DragFloat( "w", &f._w, 0.01f );
@@ -129,19 +131,19 @@ namespace sw::editor
 		ImGui::TextUnformatted( "TransformAnimation Keys (optional)" );
 		if ( ImGui::Button( "Add Key" ) )
 		{
-			_listKeys.push_back( TransformKey{} );
-			_selectedKey = static_cast<int32>( _listKeys.size() ) - 1;
+			_listKey.push_back( TransformKey{} );
+			_selectedKey = static_cast<int32>( _listKey.size() ) - 1;
 		}
 		ImGui::SameLine();
 		if ( ImGui::Button( "Remove Key" ) && _selectedKey >= 0 &&
-			 _selectedKey < static_cast<int32>( _listKeys.size() ) )
+			 _selectedKey < static_cast<int32>( _listKey.size() ) )
 		{
-			_listKeys.erase( _listKeys.begin() + _selectedKey );
-			if ( _selectedKey >= static_cast<int32>( _listKeys.size() ) )
-				_selectedKey = static_cast<int32>( _listKeys.size() ) - 1;
+			_listKey.erase( _listKey.begin() + _selectedKey );
+			if ( _selectedKey >= static_cast<int32>( _listKey.size() ) )
+				_selectedKey = static_cast<int32>( _listKey.size() ) - 1;
 		}
 
-		for ( int32 keyIndex = 0; keyIndex < static_cast<int32>( _listKeys.size() ); ++keyIndex )
+		for ( int32 keyIndex = 0; keyIndex < static_cast<int32>( _listKey.size() ); ++keyIndex )
 		{
 			ImGui::PushID( 1000 + keyIndex );
 			utf8 arrLabel[32];
@@ -151,9 +153,9 @@ namespace sw::editor
 			ImGui::PopID();
 		}
 
-		if ( _selectedKey >= 0 && _selectedKey < static_cast<int32>( _listKeys.size() ) )
+		if ( _selectedKey >= 0 && _selectedKey < static_cast<int32>( _listKey.size() ) )
 		{
-			TransformKey& k = _listKeys[static_cast<size_t>( _selectedKey )];
+			TransformKey& k = _listKey[static_cast<size_t>( _selectedKey )];
 			ImGui::DragFloat( "time", &k._time, 0.01f );
 			ImGui::DragFloat( "x", &k._x, 0.1f );
 			ImGui::DragFloat( "y", &k._y, 0.1f );
@@ -187,8 +189,8 @@ namespace sw::editor
 		if ( atlas.empty() == false )
 			StringUtil::strncpy( _arrAtlasPath, atlas.c_str(), sizeof( _arrAtlasPath ) - 1 );
 
-		_listFrames.clear();
-		_listKeys.clear();
+		_listFrame.clear();
+		_listKey.clear();
 
 		size_t framesPos = json.find( "\"frames\"" );
 		if ( framesPos != string::npos )
@@ -209,7 +211,7 @@ namespace sw::editor
 					parseFloatAfter( json, obj, "w", f._w );
 					parseFloatAfter( json, obj, "h", f._h );
 					parseIntAfter( json, obj, "durationMs", f._durationMs );
-					_listFrames.push_back( f );
+					_listFrame.push_back( f );
 					cursor = json.find( '}', obj );
 					if ( cursor == string::npos )
 						break;
@@ -236,7 +238,7 @@ namespace sw::editor
 					parseFloatAfter( json, obj, "x", k._x );
 					parseFloatAfter( json, obj, "y", k._y );
 					parseFloatAfter( json, obj, "angleDeg", k._angleDeg );
-					_listKeys.push_back( k );
+					_listKey.push_back( k );
 					cursor = json.find( '}', obj );
 					if ( cursor == string::npos )
 						break;
@@ -245,8 +247,8 @@ namespace sw::editor
 			}
 		}
 
-		_selectedFrame = _listFrames.empty() ? -1 : 0;
-		_selectedKey   = _listKeys.empty() ? -1 : 0;
+		_selectedFrame = _listFrame.empty() ? -1 : 0;
+		_selectedKey   = _listKey.empty() ? -1 : 0;
 		_status		   = "Loaded SpriteClip.json";
 	}
 
@@ -260,21 +262,21 @@ namespace sw::editor
 		sb.append( "{\n" );
 		sb.append( "  \"atlas\": \"" ).append( JsonSerializer::escapeString( _arrAtlasPath ).c_str() ).append( "\",\n" );
 		sb.append( "  \"frames\": [\n" );
-		for ( size_t frameIndex = 0; frameIndex < _listFrames.size(); ++frameIndex )
+		for ( size_t frameIndex = 0; frameIndex < _listFrame.size(); ++frameIndex )
 		{
-			const Frame& f = _listFrames[frameIndex];
+			const Frame& f = _listFrame[frameIndex];
 			sb.append( "    { \"u\": " ).append( f._u ).append( ", \"v\": " ).append( f._v ).append( ", \"w\": " ).append( f._w ).append( ", \"h\": " ).append( f._h ).append( ", \"durationMs\": " ).append( f._durationMs ).append( " }" );
-			if ( frameIndex + 1 < _listFrames.size() )
+			if ( frameIndex + 1 < _listFrame.size() )
 				sb.append( "," );
 			sb.append( "\n" );
 		}
 		sb.append( "  ],\n" );
 		sb.append( "  \"transformKeys\": [\n" );
-		for ( size_t keyIndex = 0; keyIndex < _listKeys.size(); ++keyIndex )
+		for ( size_t keyIndex = 0; keyIndex < _listKey.size(); ++keyIndex )
 		{
-			const TransformKey& k = _listKeys[keyIndex];
+			const TransformKey& k = _listKey[keyIndex];
 			sb.append( "    { \"time\": " ).append( k._time ).append( ", \"x\": " ).append( k._x ).append( ", \"y\": " ).append( k._y ).append( ", \"angleDeg\": " ).append( k._angleDeg ).append( " }" );
-			if ( keyIndex + 1 < _listKeys.size() )
+			if ( keyIndex + 1 < _listKey.size() )
 				sb.append( "," );
 			sb.append( "\n" );
 		}
@@ -284,6 +286,6 @@ namespace sw::editor
 		const string text( sb.c_str() );
 		if ( FileUtil::writeFile( path, reinterpret_cast<const uint8*>( text.data() ),
 								  text.size() ) )
-			SW_LOG_INFO( "[SpriteClip] Saved %#", path.c_str() );
+			SW_LOG_INFO( "Saved %#", path.c_str() );
 	}
 } // namespace sw::editor

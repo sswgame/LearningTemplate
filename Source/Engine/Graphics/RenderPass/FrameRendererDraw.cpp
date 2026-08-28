@@ -14,7 +14,6 @@
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-
 #include "Engine/Reflection/ReflectionCast.h"
 
 namespace sw
@@ -90,8 +89,8 @@ namespace sw
 					if ( mesh->upload( _pDevice ) == false )
 						continue;
 
-					RHIPipelineStateHandle drawPso = pso;
-					Material* pMaterial = pMeshComp->getMaterial();
+					RHIPipelineStateHandle		 drawPso		  = pso;
+					Material*					 pMaterial		  = pMeshComp->getMaterial();
 					shared_ptr<MaterialInstance> materialInstance = pMeshComp->getMaterialInstance();
 					if ( pMaterial != nullptr || materialInstance != nullptr )
 					{

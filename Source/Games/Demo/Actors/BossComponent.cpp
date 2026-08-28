@@ -58,25 +58,25 @@ namespace sw
 			UnitStatsComponent* pStats = pOwner->getComponent<UnitStatsComponent>();
 			if ( pStats != nullptr && pStats->getMaxHp() > 0 )
 			{
-					const float32 hpRatio = static_cast<float32>( pStats->getHp() ) / static_cast<float32>( pStats->getMaxHp() );
-					const bool	  bPhase3 = ( phase3HpRatio > 0.0f && hpRatio <= phase3HpRatio );
-					const bool	  bPhase2 = ( phase2HpRatio > 0.0f && hpRatio <= phase2HpRatio );
+				const float32 hpRatio = static_cast<float32>( pStats->getHp() ) / static_cast<float32>( pStats->getMaxHp() );
+				const bool	  bPhase3 = ( phase3HpRatio > 0.0f && hpRatio <= phase3HpRatio );
+				const bool	  bPhase2 = ( phase2HpRatio > 0.0f && hpRatio <= phase2HpRatio );
 
-					if ( bPhase3 )
-					{
-						phase			= 3;
-						patternCooldown = phase3Cooldown;
-					}
-					else if ( bPhase2 )
-					{
-						phase			= 2;
-						patternCooldown = phase2Cooldown;
-					}
-					else
-					{
-						phase			= 1;
-						patternCooldown = phase1Cooldown;
-					}
+				if ( bPhase3 )
+				{
+					phase			= 3;
+					patternCooldown = phase3Cooldown;
+				}
+				else if ( bPhase2 )
+				{
+					phase			= 2;
+					patternCooldown = phase2Cooldown;
+				}
+				else
+				{
+					phase			= 1;
+					patternCooldown = phase1Cooldown;
+				}
 			}
 		}
 	}

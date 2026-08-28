@@ -3,6 +3,7 @@
 #include "Engine/Object/Prefab/PrefabAsset.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Serialization/Object/ObjectDiffSerializer.h"
@@ -13,13 +14,14 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "PrefabAsset" );
 
 	namespace
 	{
 
 		constexpr const utf8* kRoot				= "Prefab";
 		constexpr const utf8* kName				= "name";
-		constexpr const utf8* kGameObject = "GameObject";
+		constexpr const utf8* kGameObject		= "GameObject";
 		constexpr const utf8* kDefaultInstance	= "PrefabInstance";
 		constexpr uint32	  kPrefabBinMagic2	= 0x50464232u; // 'PFB2'
 		constexpr uint32	  kPrefabBinVersion = 0;
@@ -41,6 +43,10 @@ namespace sw
 			if ( xmlBody.empty() )
 				return false;
 
+			string bodyTrimmed = StringUtil::trim( xmlBody.c_str() );
+			if ( bodyTrimmed.empty() == false && bodyTrimmed.front() == '{' )
+				return true; // JSON 본문은 XML 업그레이드 대상이 아님
+
 			string wrapped = "<Prefab>";
 			wrapped += xmlBody;
 			wrapped += "</Prefab>";
@@ -60,16 +66,6 @@ namespace sw
 			return true;
 		}
 
-	} // namespace
-
-	PrefabAsset::PrefabAsset()
-		: _name{}
-		, _xmlBody{}
-		, _bValid{ 0 }
-		, _reserved{ 0 } {}
-
-	namespace
-	{
 		static bool readU32Val( const vector<uint8>& listBlob, size_t& offset, uint32& outValue )
 		{
 			if ( offset + 4 > listBlob.size() )
@@ -103,7 +99,14 @@ namespace sw
 			appendU32Val( listBlob, static_cast<uint32>( text.size() ) );
 			listBlob.insert( listBlob.end(), text.begin(), text.end() );
 		}
+
 	} // namespace
+
+	PrefabAsset::PrefabAsset()
+		: _name{}
+		, _stateData{}
+		, _bValid{ 0 }
+		, _reserved{ 0 } {}
 
 	bool PrefabAsset::loadFromXmlFile( string_view assetRelativePath )
 	{
@@ -114,7 +117,7 @@ namespace sw
 
 		if ( FileUtil::fileExists( absPath ) == false )
 		{
-			SW_LOG_ERROR( "[PrefabAsset] Not found: %#", absPath );
+			SW_LOG_ERROR( "Not found: %#", absPath );
 			return false;
 		}
 
@@ -126,44 +129,59 @@ namespace sw
 		XmlDocument doc;
 		if ( doc.parse( xmlStr ) == false )
 		{
-			SW_LOG_ERROR( "[PrefabAsset] XML parse failed: %#", absPath );
+			SW_LOG_ERROR( "XML parse failed: %#", absPath );
 			return false;
 		}
 
 		XmlNode root = doc.root( kRoot );
-		if ( root.isValid() == false )
+		if ( root.isValid() )
 		{
-			SW_LOG_ERROR( "[PrefabAsset] Missing <Prefab>: %#", absPath );
-			return false;
-		}
+			if ( engine::getResourceManager().getAssetFormatRegistry().upgradeXml( AssetKind::Prefab, doc, root, AssetFormatVersions::kPrefab ) ==
+				 false )
+			{
+				SW_LOG_ERROR( "formatVersion upgrade failed: %#", absPath );
+				return false;
+			}
 
-		if ( engine::getResourceManager().getAssetFormatRegistry().upgradeXml( AssetKind::Prefab, doc, root, AssetFormatVersions::kPrefab ) ==
-			 false )
-		{
-			SW_LOG_ERROR( "[PrefabAsset] formatVersion upgrade failed: %#", absPath );
-			return false;
-		}
+			const utf8* pNameAttr = root.attr( kName );
+			if ( pNameAttr != nullptr )
+				_name = pNameAttr;
+			else
+			{
+				const utf8* pNameNode = root.childText( kName );
+				if ( pNameNode != nullptr )
+					_name = pNameNode;
+			}
 
-		const utf8* pNameAttr = root.attr( kName );
-		if ( pNameAttr != nullptr )
-			_name = pNameAttr;
+			XmlNode bodyNode = root.child( kGameObject );
+			if ( bodyNode.isValid() )
+				_stateData = bodyNode.toString();
+			else
+				_stateData = xmlStr;
+		}
 		else
 		{
-			const utf8* pNameNode = root.childText( kName );
-			if ( pNameNode != nullptr )
-				_name = pNameNode;
+			// 루트가 <GameObject> 등 직접적인 XML인 경우 지원
+			XmlNode goNode = doc.root( kGameObject );
+			if ( goNode.isValid() )
+			{
+				const utf8* pNameAttr = goNode.attr( "_name" );
+				if ( pNameAttr != nullptr )
+					_name = pNameAttr;
+				_stateData = xmlStr;
+			}
+			else
+			{
+				SW_LOG_ERROR( "Missing <Prefab> or <GameObject>: %#", absPath );
+				return false;
+			}
 		}
 
-		XmlNode bodyNode = root.child( kGameObject );
-		if ( bodyNode.isValid() == false )
-		{
-			SW_LOG_ERROR( "[PrefabAsset] Missing <GameObject>: %#", absPath );
-			return false;
-		}
-		_xmlBody = bodyNode.toString();
+		if ( _name.empty() )
+			_name = FileUtil::removeExtension( FileUtil::getFileNamePart( absPath ) );
 
 		_bValid = 1;
-		SW_LOG_INFO( "[PrefabAsset] Loaded '%#' from %#", _name, absPath );
+		SW_LOG_INFO( "Loaded '%#' from %#", _name, absPath );
 		return true;
 	}
 
@@ -176,7 +194,7 @@ namespace sw
 
 		if ( FileUtil::fileExists( absPath ) == false )
 		{
-			SW_LOG_ERROR( "[PrefabAsset] Not found: %#", absPath );
+			SW_LOG_ERROR( "Not found: %#", absPath );
 			return false;
 		}
 
@@ -187,17 +205,38 @@ namespace sw
 		const string json( listFileData.begin(), listFileData.end() );
 		JsonDocument doc;
 		if ( doc.parse( json ) == false )
-			return false;
-		_name	 = doc.root().get( "Name" ).asString();
-		if ( _name.empty() )
-			_name = doc.root().get( "_name" ).asString();
-		_xmlBody = json;
-
-		if ( _name.empty() )
 		{
-			SW_LOG_ERROR( "[PrefabAsset] Missing Name in JSON: %#", absPath );
+			SW_LOG_ERROR( "JSON parse failed: %#", absPath );
 			return false;
 		}
+
+		JsonValue root = doc.root();
+		if ( root.has( "GameObject" ) )
+		{
+			_name = root.get( "name" ).asString();
+			if ( _name.empty() )
+				_name = root.get( "Name" ).asString();
+			_stateData = root.get( "GameObject" ).dump( 0 );
+		}
+		else if ( root.has( "xmlBody" ) )
+		{
+			// 레거시 xmlBody 임베딩 호환
+			_name = root.get( "name" ).asString();
+			if ( _name.empty() )
+				_name = root.get( "Name" ).asString();
+			_stateData = root.get( "xmlBody" ).asString();
+		}
+		else
+		{
+			// 직접 GameObject JSON인 경우
+			_name = root.get( "_name" ).asString();
+			if ( _name.empty() )
+				_name = root.get( "Name" ).asString();
+			_stateData = json;
+		}
+
+		if ( _name.empty() )
+			_name = FileUtil::removeExtension( FileUtil::getFileNamePart( absPath ) );
 
 		_bValid = 1;
 		return true;
@@ -213,7 +252,7 @@ namespace sw
 		vector<uint8> listBlob;
 		if ( FileUtil::readFile( absPath, listBlob ) == false || listBlob.size() < 12 )
 		{
-			SW_LOG_ERROR( "[PrefabAsset] Binary read failed or too small: %#", absPath );
+			SW_LOG_ERROR( "Binary read failed or too small: %#", absPath );
 			return false;
 		}
 
@@ -222,36 +261,36 @@ namespace sw
 		uint32 magic{ 0 };
 		if ( readU32Val( listBlob, offset, magic ) == false || magic != kPrefabBinMagic2 )
 		{
-			SW_LOG_ERROR( "[PrefabAsset] Bad binary magic: %#", absPath );
+			SW_LOG_ERROR( "Bad binary magic: %#", absPath );
 			return false;
 		}
 		{
 			uint32 version{ 0 };
 			if ( readU32Val( listBlob, offset, version ) == false )
 			{
-				SW_LOG_ERROR( "[PrefabAsset] Binary version truncated: %#", absPath );
+				SW_LOG_ERROR( "Binary version truncated: %#", absPath );
 				return false;
 			}
 			if ( version > kPrefabBinVersion )
 			{
-				SW_LOG_ERROR( "[PrefabAsset] Unsupported binary version %# in %#", version, absPath );
+				SW_LOG_ERROR( "Unsupported binary version %# in %#", version, absPath );
 				return false;
 			}
 		}
-		if ( readStrVal( listBlob, offset, _name ) == false || readStrVal( listBlob, offset, _xmlBody ) == false )
+		if ( readStrVal( listBlob, offset, _name ) == false || readStrVal( listBlob, offset, _stateData ) == false )
 		{
-			SW_LOG_ERROR( "[PrefabAsset] Binary payload truncated: %#", absPath );
+			SW_LOG_ERROR( "Binary payload truncated: %#", absPath );
 			return false;
 		}
 
-		if ( upgradePrefabXmlBody( _xmlBody ) == false )
+		if ( upgradePrefabXmlBody( _stateData ) == false )
 		{
-			SW_LOG_ERROR( "[PrefabAsset] formatVersion upgrade failed: %#", absPath );
+			SW_LOG_ERROR( "formatVersion upgrade failed: %#", absPath );
 			return false;
 		}
 
 		_bValid = 1;
-		SW_LOG_INFO( "[PrefabAsset] Loaded '%#' from binary %#", _name, absPath );
+		SW_LOG_INFO( "Loaded '%#' from binary %#", _name, absPath );
 		return true;
 	}
 
@@ -261,45 +300,28 @@ namespace sw
 		if ( absPath.empty() )
 			absPath = assetRelativePath;
 
-		// _xmlBody 는 완전한 <GameObject>...</GameObject> 조각.
-		XmlDocument doc;
-		XmlNode		root = doc.appendRoot( kRoot );
-		engine::getResourceManager().getAssetFormatRegistry().writeXmlVersion( root, AssetFormatVersions::kPrefab );
-		root.setAttr( kName, _name.c_str() );
-		string shell = doc.saveToString();
-		while ( shell.empty() == false && ( shell.back() == '\n' || shell.back() == '\r' || shell.back() == ' ' || shell.back() == '\t' ) )
+		string xmlBody = _stateData;
+		string trimmed = StringUtil::trim( xmlBody.c_str() );
+
+		// JSON인 경우 GameObject를 통해 XML로 변환
+		if ( trimmed.empty() == false && trimmed.front() == '{' )
 		{
-			shell.pop_back();
+			GameObject tempObj( hashed_string( _name.c_str() ) );
+			if ( ObjectStateSerializer::loadFromJsonString( &tempObj, trimmed ) )
+				xmlBody = ObjectStateSerializer::saveToXmlString( &tempObj );
 		}
 
-		string				  xmlStr;
-		constexpr string_view kClose = "</Prefab>";
-		if ( shell.size() >= kClose.size() && shell.compare( shell.size() - kClose.size(), kClose.size(), kClose.data() ) == 0 )
-		{
-			xmlStr.reserve( shell.size() + _xmlBody.size() );
-			xmlStr.append( shell.data(), shell.size() - kClose.size() );
-		}
-		else if ( shell.size() >= 2 && shell.compare( shell.size() - 2, 2, "/>" ) == 0 )
-		{
-			size_t trimLen = shell.size() - 2;
-			while ( trimLen > 0 && shell[trimLen - 1] == ' ' )
-			{
-				trimLen--;
-			}
-			xmlStr.reserve( trimLen + 1 + _xmlBody.size() + kClose.size() );
-			xmlStr.append( shell.data(), trimLen );
-			xmlStr += ">";
-		}
-		else
-			return false;
-
-		xmlStr += _xmlBody;
-		xmlStr += "</Prefab>";
+		string xmlStr = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n";
+		xmlStr += "<Prefab formatVersion=\"0\" name=\"";
+		xmlStr += _name;
+		xmlStr += "\">\n\t";
+		xmlStr += xmlBody;
+		xmlStr += "\n</Prefab>\n";
 
 		const bool writeOk = FileUtil::writeFile( absPath, reinterpret_cast<const uint8*>( xmlStr.data() ),
 												  xmlStr.size() );
 		if ( writeOk )
-			SW_LOG_INFO( "[PrefabAsset] Saved '%#' -> %#", _name, absPath );
+			SW_LOG_INFO( "Saved '%#' -> %#", _name, absPath );
 		return writeOk;
 	}
 
@@ -309,16 +331,33 @@ namespace sw
 		if ( absPath.empty() )
 			absPath = assetRelativePath;
 
-		JsonDocument doc;
-		JsonValue	 root = doc.makeObject();
-		root.set( "Name" ).setString( _name );
-		root.set( "xmlBody" ).setString( _xmlBody );
-		const string json = doc.dump( 1 );
+		string jsonStr;
+		string trimmed = StringUtil::trim( _stateData.c_str() );
+		if ( trimmed.empty() == false && trimmed.front() == '{' )
+		{
+			jsonStr = _stateData;
+		}
+		else
+		{
+			// XML인 경우 GameObject를 통해 JSON으로 직렬화
+			GameObject tempObj( hashed_string( _name.c_str() ) );
+			if ( ObjectStateSerializer::loadFromXmlString( &tempObj, _stateData ) )
+				jsonStr = ObjectStateSerializer::saveToJsonString( &tempObj );
+			else
+			{
+				JsonDocument doc;
+				JsonValue	 root = doc.makeObject();
+				root.set( "formatVersion" ).setInt( 0 );
+				root.set( "name" ).setString( _name );
+				root.set( "xmlBody" ).setString( _stateData );
+				jsonStr = doc.dump( 1 );
+			}
+		}
 
-		const bool writeOk = FileUtil::writeFile( absPath, reinterpret_cast<const uint8*>( json.data() ),
-												  json.size() );
+		const bool writeOk = FileUtil::writeFile( absPath, reinterpret_cast<const uint8*>( jsonStr.data() ),
+												  jsonStr.size() );
 		if ( writeOk )
-			SW_LOG_INFO( "[PrefabAsset] Saved '%#' JSON %#", _name, absPath );
+			SW_LOG_INFO( "Saved '%#' JSON %#", _name, absPath );
 		return writeOk;
 	}
 
@@ -329,11 +368,10 @@ namespace sw
 			absPath = assetRelativePath;
 
 		vector<uint8> listBlob;
-
 		appendU32Val( listBlob, kPrefabBinMagic2 );
 		appendU32Val( listBlob, kPrefabBinVersion );
 		appendStrVal( listBlob, _name );
-		appendStrVal( listBlob, _xmlBody );
+		appendStrVal( listBlob, _stateData );
 		return FileUtil::writeFile( absPath, listBlob.data(), listBlob.size() );
 	}
 
@@ -344,9 +382,9 @@ namespace sw
 			_bValid = 0;
 			return;
 		}
-		_name	 = pGameObject->getName().c_str();
-		_xmlBody = ObjectStateSerializer::saveToXmlString( pGameObject );
-		_bValid	 = _xmlBody.empty() == false ? 1 : 0;
+		_name	   = pGameObject->getName().c_str();
+		_stateData = ObjectStateSerializer::saveToXmlString( pGameObject );
+		_bValid	   = _stateData.empty() == false ? 1 : 0;
 	}
 
 	PrefabAsset* PrefabManager::loadPrefab( string_view assetRelativePath )
@@ -374,7 +412,7 @@ namespace sw
 #if defined( SW_SHIPPING )
 		if ( asset->loadFromBinaryFile( binPath ) == false )
 		{
-			SW_LOG_ERROR( "[PrefabManager] Shipping requires cooked binary: %#", binPath );
+			SW_LOG_ERROR( "Shipping requires cooked binary: %#", binPath );
 			return nullptr;
 		}
 #else
@@ -411,7 +449,7 @@ namespace sw
 
 		if ( std::find( t_listSpawnStack.begin(), t_listSpawnStack.end(), pathKey ) != t_listSpawnStack.end() )
 		{
-			SW_LOG_ERROR( "[PrefabManager] Circular prefab reference detected for '%#' — spawn aborted to prevent recursion overflow",
+			SW_LOG_ERROR( "Circular prefab reference detected for '%#' — spawn aborted to prevent recursion overflow",
 						  assetRelativePath );
 			return nullptr;
 		}
@@ -438,20 +476,20 @@ namespace sw
 		if ( pGameObject == nullptr )
 			return nullptr;
 
-		if ( pAsset->getXmlBody().empty() == false )
+		if ( pAsset->getStateData().empty() == false )
 		{
 			bool   bLoadSuccess{ false };
-			string bodyStr = StringUtil::trim( pAsset->getXmlBody().c_str() );
+			string bodyStr = StringUtil::trim( pAsset->getStateData().c_str() );
 			if ( bodyStr.empty() == false && bodyStr.front() == '{' )
-				bLoadSuccess = ObjectStateSerializer::loadFromJsonString( pGameObject, pAsset->getXmlBody() );
+				bLoadSuccess = ObjectStateSerializer::loadFromJsonString( pGameObject, pAsset->getStateData() );
 			else if ( bodyStr.empty() == false )
-				bLoadSuccess = ObjectStateSerializer::loadFromXmlString( pGameObject, pAsset->getXmlBody() );
+				bLoadSuccess = ObjectStateSerializer::loadFromXmlString( pGameObject, pAsset->getStateData() );
 			else
 				bLoadSuccess = true;
 
 			if ( bLoadSuccess == false )
 			{
-				SW_LOG_ERROR( "[PrefabManager] ObjectState apply failed for '%#' — spawn aborted", pInstanceNameUtf8 );
+				SW_LOG_ERROR( "ObjectState apply failed for '%#' — spawn aborted", pInstanceNameUtf8 );
 				pGameObjectManager->destroyObject( pGameObject );
 				return nullptr;
 			}
@@ -465,7 +503,7 @@ namespace sw
 			{
 				if ( ObjectDiffSerializer::deserializeDiff( pGameObject, *pTypeInfo, pInstanceDiff, instanceDiffSize ) == false )
 				{
-					SW_LOG_ERROR( "[PrefabManager] Instance diff apply failed for '%#' — spawn aborted", pInstanceNameUtf8 );
+					SW_LOG_ERROR( "Instance diff apply failed for '%#' — spawn aborted", pInstanceNameUtf8 );
 					pGameObjectManager->destroyObject( pGameObject );
 					return nullptr;
 				}

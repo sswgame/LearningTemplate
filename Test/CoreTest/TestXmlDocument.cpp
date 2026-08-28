@@ -15,7 +15,7 @@ SW_TEST_CASE( Core_Xml, ParseAndNavigateIgnoreCaseKeys )
 {
 	sw::XmlDocument doc;
 	const bool		bParsed = doc.parse(
-		R"(<Root Name="Demo">
+		 R"(<Root Name="Demo">
 			<_score>12</_score>
 			<item id="1">A</item>
 			<item id="2">B</item>

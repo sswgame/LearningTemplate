@@ -61,8 +61,8 @@ namespace sw::editor
 		void rebuildDynamicEntries();
 
 	private:
-		vector<CommandPaletteEntry> _listStaticCommands;
-		vector<CommandPaletteEntry> _listAllCommands;
+		vector<CommandPaletteEntry> _listStaticCommand;
+		vector<CommandPaletteEntry> _listAllCommand;
 		utf8						_arrSearchBuffer[128]{ 0 };
 		int32						_selectedIndex{ 0 };
 		bool						_bJustOpened{ false };

@@ -441,12 +441,12 @@ namespace sw
 		{
 			mutex				   _mutex{};
 			TaskPromise<vector<T>> _promise{};
-			vector<T>			   _listResults{};
+			vector<T>			   _listResult{};
 			size_t				   _remaining{ 0 };
 		};
 
 		auto pCtx = sw::make_shared<WhenAllContext>();
-		pCtx->_listResults.resize( listFutures.size() );
+		pCtx->_listResult.resize( listFutures.size() );
 		pCtx->_remaining = listFutures.size();
 
 		for ( size_t futureIndex = 0; futureIndex < listFutures.size(); ++futureIndex )
@@ -456,13 +456,13 @@ namespace sw
 				bool bDone = false;
 				{
 					std::scoped_lock<mutex> lock{ pCtx->_mutex };
-					pCtx->_listResults[futureIndex] = val;
+					pCtx->_listResult[futureIndex] = val;
 					--pCtx->_remaining;
 					if ( pCtx->_remaining == 0 )
 						bDone = true;
 				}
 				if ( bDone )
-					pCtx->_promise.setValue( pCtx->_listResults );
+					pCtx->_promise.setValue( pCtx->_listResult );
 			} );
 		}
 

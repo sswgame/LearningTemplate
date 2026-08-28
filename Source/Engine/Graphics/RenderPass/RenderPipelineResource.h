@@ -30,18 +30,18 @@ namespace sw
 
 		/** @brief 그래프가 쓰는 임시/논리 어태치먼트 */
 		PROPERTY()
-		vector<RenderPassAttachment> _listAttachments;
+		vector<RenderPassAttachment> _listAttachment;
 
 		/** @brief 그래프 노드 (이름, 타입, 입력, 출력) */
 		PROPERTY()
-		vector<RenderGraphPassDesc> _listPasses;
+		vector<RenderGraphPassDesc> _listPass;
 
 		/**
 		 * @brief RHI 템플릿으로 쓰는 RenderPass XML 경로 (선택)
 		 * (예: renderpass/defaultrenderpass.xml 또는 engine/renderpass/...)
 		 */
 		PROPERTY()
-		vector<string> _listRenderPassRefs;
+		vector<string> _listRenderPassRef;
 	};
 
 	/**
@@ -72,8 +72,8 @@ namespace sw
 		const RenderPipelineDesc& getDesc() const { return _desc; }
 		RenderPipelineDesc&		  getDesc() { return _desc; }
 
-		const vector<RenderGraphPassDesc>&	getGraphPasses() const { return _desc._listPasses; }
-		const vector<RenderPassAttachment>& getAttachments() const { return _desc._listAttachments; }
+		const vector<RenderGraphPassDesc>&	getGraphPasses() const { return _desc._listPass; }
+		const vector<RenderPassAttachment>& getAttachments() const { return _desc._listAttachment; }
 
 	private:
 		/** @brief TaskArgs: this, path string. */

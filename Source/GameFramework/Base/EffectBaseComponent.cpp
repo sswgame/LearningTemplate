@@ -41,8 +41,8 @@ namespace sw
 			_currentAlpha = 1.0f - ( _currentTimer / _duration );
 			if ( _currentAlpha < 0.0f )
 			{
-				_currentAlpha		= 0.0f;
-				GameObject* pOwner	= getOwner();
+				_currentAlpha	   = 0.0f;
+				GameObject* pOwner = getOwner();
 				if ( pOwner != nullptr )
 					pOwner->markPendingKill();
 			}

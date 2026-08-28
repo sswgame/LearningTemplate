@@ -16,6 +16,7 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "D3D11" );
 
 	namespace
 	{
@@ -39,15 +40,15 @@ namespace sw
 		, _boundMeshOffset{ 0 }
 		, _listRegisteredBindlessVector{}
 		, _bindlessFreeList{}
-		, _listRegisteredTextures{}
+		, _listRegisteredTexture{}
 		, _textureFreeList{}
-		, _listRegisteredUAVs{}
-		, _listUavSourceBuffers{}
+		, _listRegisteredUAV{}
+		, _listUavSourceBuffer{}
 		, _uavFreeList{}
 		, _computeRootConstantCB{ nullptr }
 		, _arrComputeRootConstantShadow{}
 		, _pipelineStates{}
-		, _listRenderPasses{}
+		, _listRenderPass{}
 		, _depthEnabledState{ nullptr }
 		, _depthDisabledState{ nullptr }
 		, _linearSampler{ nullptr }
@@ -172,10 +173,10 @@ namespace sw
 		_activeGraphicsPso = 0;
 		_listRegisteredBindlessVector.clear();
 		_bindlessFreeList.clear();
-		_listRegisteredTextures.clear();
+		_listRegisteredTexture.clear();
 		_textureFreeList.clear();
-		_listRegisteredUAVs.clear();
-		_listUavSourceBuffers.clear();
+		_listRegisteredUAV.clear();
+		_listUavSourceBuffer.clear();
 		_uavFreeList.clear();
 		_computeRootConstantCB.Reset();
 		Memory::set( _arrComputeRootConstantShadow, 0, sizeof( _arrComputeRootConstantShadow ) );
@@ -201,7 +202,7 @@ namespace sw
 		const HRESULT resizeHr = _swapChain->ResizeBuffers( 0, width, height, DXGI_FORMAT_UNKNOWN, 0 );
 		if ( FAILED( resizeHr ) )
 		{
-			SW_LOG_ERROR( "[D3D11] ResizeBuffers failed hr=0x%#", static_cast<uint32>( resizeHr ) );
+			SW_LOG_ERROR( "ResizeBuffers failed hr=0x%#", static_cast<uint32>( resizeHr ) );
 			return;
 		}
 		createRenderTargetView();
@@ -247,7 +248,7 @@ namespace sw
 		{
 			const HRESULT hr = _swapChain->Present( vsync ? 1 : 0, 0 );
 			if ( FAILED( hr ) )
-				SW_LOG_ERROR( "[D3D11] Present failed hr=%#", static_cast<uint32>( hr ) );
+				SW_LOG_ERROR( "Present failed hr=%#", static_cast<uint32>( hr ) );
 		}
 
 		_releaseQueue.tickFrame();
@@ -298,7 +299,7 @@ namespace sw
 		HRESULT									hr = _swapChain->GetBuffer( 0, IID_PPV_ARGS( backBuffer.GetAddressOf() ) );
 		if ( FAILED( hr ) )
 		{
-			SW_LOG_ERROR( "[D3D11] GetBuffer failed hr=0x%#", static_cast<uint32>( hr ) );
+			SW_LOG_ERROR( "GetBuffer failed hr=0x%#", static_cast<uint32>( hr ) );
 			return;
 		}
 		_device->CreateRenderTargetView( backBuffer.Get(), nullptr, _renderTargetView.GetAddressOf() );
@@ -323,7 +324,7 @@ namespace sw
 		desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 		if ( FAILED( _device->CreateBuffer( &desc, nullptr, _computeRootConstantCB.GetAddressOf() ) ) )
 		{
-			SW_LOG_ERROR( "[D3D11] Failed to create compute root-constant cbuffer." );
+			SW_LOG_ERROR( "Failed to create compute root-constant cbuffer." );
 			return false;
 		}
 		return true;

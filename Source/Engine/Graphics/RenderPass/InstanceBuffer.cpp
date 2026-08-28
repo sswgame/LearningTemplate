@@ -6,17 +6,17 @@ namespace sw
 {
 	void InstanceBuffer::clear()
 	{
-		_listMatrices.clear();
+		_listMatrix.clear();
 	}
 
 	void InstanceBuffer::reserve( uint32 count )
 	{
-		_listMatrices.reserve( count );
+		_listMatrix.reserve( count );
 	}
 
 	void InstanceBuffer::push( const float4x4& matrix )
 	{
-		_listMatrices.push_back( matrix );
+		_listMatrix.push_back( matrix );
 	}
 
 	void InstanceBuffer::pushFloats( const float32* pValues, uint32 floatCount )
@@ -26,7 +26,7 @@ namespace sw
 		const uint32 instanceCount = floatCount / 16u;
 		for ( uint32 instanceIndex = 0; instanceIndex < instanceCount; ++instanceIndex )
 		{
-			_listMatrices.emplace_back( pValues + ( instanceIndex * 16u ) );
+			_listMatrix.emplace_back( pValues + ( instanceIndex * 16u ) );
 		}
 	}
 } // namespace sw

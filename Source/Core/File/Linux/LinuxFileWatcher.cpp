@@ -15,6 +15,8 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "LinuxFileWatcher" );
+
 	namespace
 	{
 
@@ -53,21 +55,21 @@ namespace sw
 
 		if ( FileUtil::directoryExists( directoryPath ) == false )
 		{
-			SW_LOG_ERROR( "[LinuxFileWatcher] Directory does not exist: %#", string{ directoryPath }.c_str() );
+			SW_LOG_ERROR( "Directory does not exist: %#", string{ directoryPath }.c_str() );
 			return false;
 		}
 
 		_inotifyFd = inotify_init1( IN_NONBLOCK | IN_CLOEXEC );
 		if ( _inotifyFd < 0 )
 		{
-			SW_LOG_ERROR( "[LinuxFileWatcher] inotify_init1 failed: %#", strerror( errno ) );
+			SW_LOG_ERROR( "inotify_init1 failed: %#", strerror( errno ) );
 			return false;
 		}
 
 		_wakeFd = eventfd( 0, EFD_NONBLOCK | EFD_CLOEXEC );
 		if ( _wakeFd < 0 )
 		{
-			SW_LOG_ERROR( "[LinuxFileWatcher] eventfd failed: %#", strerror( errno ) );
+			SW_LOG_ERROR( "eventfd failed: %#", strerror( errno ) );
 			close( _inotifyFd );
 			_inotifyFd = -1;
 			return false;
@@ -86,7 +88,7 @@ namespace sw
 		_bIsWatching  = true;
 		_workerThread = std::thread( &LinuxFileWatcher::workerThreadMain, this );
 
-		SW_LOG_INFO( "[LinuxFileWatcher] Started watching directory: %#", _directoryPath.c_str() );
+		SW_LOG_INFO( "Started watching directory: %#", _directoryPath.c_str() );
 		return true;
 	}
 
@@ -154,7 +156,7 @@ namespace sw
 			{
 				if ( errno == EINTR )
 					continue;
-				SW_LOG_ERROR( "[LinuxFileWatcher] select failed: %#", strerror( errno ) );
+				SW_LOG_ERROR( "select failed: %#", strerror( errno ) );
 				break;
 			}
 
@@ -178,7 +180,7 @@ namespace sw
 						break;
 					if ( errno == EINTR )
 						continue;
-					SW_LOG_ERROR( "[LinuxFileWatcher] read failed: %#", strerror( errno ) );
+					SW_LOG_ERROR( "read failed: %#", strerror( errno ) );
 					_bIsWatching = false;
 					return;
 				}
@@ -193,7 +195,7 @@ namespace sw
 
 					if ( event->mask & IN_Q_OVERFLOW )
 					{
-						SW_LOG_WARNING( "[LinuxFileWatcher] inotify queue overflow — emitting synthetic rescan event." );
+						SW_LOG_WARNING( "inotify queue overflow — emitting synthetic rescan event." );
 						pushEvent( FileWatcherAction::Modified, _directoryPath, {} );
 						continue;
 					}
@@ -224,7 +226,7 @@ namespace sw
 						const string childDir = FileUtil::normalizeSeparators( watchedDir + "/" + name );
 						if ( addWatchDirectory( childDir ) == false )
 						{
-							SW_LOG_WARNING( "[LinuxFileWatcher] Failed to watch new directory: %#", childDir.c_str() );
+							SW_LOG_WARNING( "Failed to watch new directory: %#", childDir.c_str() );
 						}
 						pushEvent( FileWatcherAction::Added, watchedDir, name );
 						continue;
@@ -259,7 +261,7 @@ namespace sw
 				continue;
 			if ( addWatchDirectory( it->path().string() ) == false )
 			{
-				SW_LOG_WARNING( "[LinuxFileWatcher] Failed to watch subdirectory: %#", it->path().string().c_str() );
+				SW_LOG_WARNING( "Failed to watch subdirectory: %#", it->path().string().c_str() );
 			}
 		}
 		return true;
@@ -271,7 +273,7 @@ namespace sw
 		const int32	 wd			= inotify_add_watch( _inotifyFd, normalized.c_str(), kInotifyMask );
 		if ( wd < 0 )
 		{
-			SW_LOG_ERROR( "[LinuxFileWatcher] inotify_add_watch failed (%#): %#", normalized.c_str(), strerror( errno ) );
+			SW_LOG_ERROR( "inotify_add_watch failed (%#): %#", normalized.c_str(), strerror( errno ) );
 			return false;
 		}
 

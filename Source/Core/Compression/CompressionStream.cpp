@@ -8,6 +8,8 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "CompressionStream" );
+
 	uint32 CompressionStream::calculateChecksum( const void* pData, size_t dataSize )
 	{
 		if ( pData == nullptr || dataSize == 0 )
@@ -54,7 +56,7 @@ namespace sw
 		ICompressionCodec* pCodec = CompressionCodecRegistry::get().getCodec( codecType );
 		if ( pCodec == nullptr )
 		{
-			SW_LOG_WARNING( "[CompressionStream] Requested codec %# not found, falling back to Null codec", static_cast<uint8>( codecType ) );
+			SW_LOG_WARNING( "Requested codec %# not found, falling back to Null codec", static_cast<uint8>( codecType ) );
 			pCodec = CompressionCodecRegistry::get().getCodec( CompressionCodecType::None );
 			if ( pCodec == nullptr )
 				return false;
@@ -98,7 +100,7 @@ namespace sw
 		CompressionHeader header{};
 		if ( verifyHeader( pSrc, srcSize, header ) == false )
 		{
-			SW_LOG_ERROR( "[CompressionStream] Invalid compression header (size=%#)", srcSize );
+			SW_LOG_ERROR( "Invalid compression header (size=%#)", srcSize );
 			return false;
 		}
 
@@ -142,7 +144,7 @@ namespace sw
 		ICompressionCodec* pCodec	 = CompressionCodecRegistry::get().getCodec( codecType );
 		if ( pCodec == nullptr )
 		{
-			SW_LOG_ERROR( "[CompressionStream] Unsupported codec type in stream: %#", header._codecType );
+			SW_LOG_ERROR( "Unsupported codec type in stream: %#", header._codecType );
 			return false;
 		}
 
@@ -152,7 +154,7 @@ namespace sw
 		const bool bSuccess = pCodec->decompress( pSrcPayload, srcPayloadSize, pDst, dstCapacity, outUncompressedSize );
 		if ( bSuccess == false )
 		{
-			SW_LOG_ERROR( "[CompressionStream] Decompression failed using codec: %#", pCodec->getCodecName() );
+			SW_LOG_ERROR( "Decompression failed using codec: %#", pCodec->getCodecName() );
 			return false;
 		}
 
@@ -161,7 +163,7 @@ namespace sw
 			const uint32 calculatedChecksum = calculateChecksum( pDst, outUncompressedSize );
 			if ( calculatedChecksum != header._checksum )
 			{
-				SW_LOG_ERROR( "[CompressionStream] Checksum mismatch: expected %#x, got %#x", header._checksum, calculatedChecksum );
+				SW_LOG_ERROR( "Checksum mismatch: expected %#x, got %#x", header._checksum, calculatedChecksum );
 				return false;
 			}
 		}

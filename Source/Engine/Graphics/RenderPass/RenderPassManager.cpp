@@ -7,19 +7,21 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "RenderPassManager" );
+
 	RenderPassManager::RenderPassManager()	= default;
 	RenderPassManager::~RenderPassManager() = default;
 
 	bool RenderPassManager::initialize()
 	{
-		SW_LOG_INFO( "[RenderPassManager] Subsystem Initialized." );
+		SW_LOG_INFO( "Subsystem Initialized." );
 		return true;
 	}
 
 	void RenderPassManager::shutdown()
 	{
 		clearCache();
-		SW_LOG_INFO( "[RenderPassManager] Subsystem Shutdown Cleanly." );
+		SW_LOG_INFO( "Subsystem Shutdown Cleanly." );
 	}
 
 	RenderPassResource* RenderPassManager::loadRenderPass( string_view assetRelativePath )
@@ -37,7 +39,7 @@ namespace sw
 			return pExisting;
 
 		RenderPassResource* ptr = res.get();
-		_mapRenderPasses.try_emplace( key, std::move( res ) );
+		_mapRenderPass.try_emplace( key, std::move( res ) );
 		return ptr;
 	}
 
@@ -56,28 +58,28 @@ namespace sw
 			return pExisting;
 
 		RenderPipelineResource* ptr = res.get();
-		_mapPipelines.try_emplace( key, std::move( res ) );
+		_mapPipeline.try_emplace( key, std::move( res ) );
 		return ptr;
 	}
 
 	void RenderPassManager::clearCache()
 	{
-		_mapPipelines.clear();
-		_mapRenderPasses.clear();
+		_mapPipeline.clear();
+		_mapRenderPass.clear();
 	}
 
 	RenderPassResource* RenderPassManager::findRenderPass( hashed_string name )
 	{
-		auto it = _mapRenderPasses.find( name );
-		if ( it != _mapRenderPasses.end() )
+		auto it = _mapRenderPass.find( name );
+		if ( it != _mapRenderPass.end() )
 			return it->second.get();
 		return nullptr;
 	}
 
 	RenderPipelineResource* RenderPassManager::findPipeline( hashed_string name )
 	{
-		auto it = _mapPipelines.find( name );
-		if ( it != _mapPipelines.end() )
+		auto it = _mapPipeline.find( name );
+		if ( it != _mapPipeline.end() )
 			return it->second.get();
 		return nullptr;
 	}

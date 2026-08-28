@@ -4,7 +4,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Scene/SceneDescriptor.h"
+#include "Engine/Scene/SceneDocument.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -41,27 +41,26 @@ SW_TEST_CASE( SceneTest, AsyncRequestCompletes )
 	const sw::string binPath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "sw_test_scene_async.bin" );
 	const sw::string xmlStr =
 		"<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
-		"<SceneDescriptor>\n"
-		"  <name>AsyncTown</name>\n"
+		"<Scene formatVersion=\"0\" name=\"AsyncTown\">\n"
 		"  <entities>\n"
 		"    <entity name=\"PlayerSpawn\"/>\n"
 		"    <entity name=\"Npc\"/>\n"
 		"  </entities>\n"
-		"</SceneDescriptor>\n";
+		"</Scene>\n";
 
 	SW_ASSERT_TRUE( sw::FileUtil::writeFile( xmlPath,
 											 reinterpret_cast<const uint8*>( xmlStr.data() ),
 											 static_cast<uint64>( xmlStr.size() ) ) );
 
-	sw::SceneDescriptor desc{};
-	desc._name = "AsyncTown";
-	sw::SceneEntityPlaceholder entA{};
+	sw::SceneDocument doc{};
+	doc._name = "AsyncTown";
+	sw::SceneEntityNode entA{};
 	entA._name = "PlayerSpawn";
-	desc._listEntities.push_back( std::move( entA ) );
-	sw::SceneEntityPlaceholder entB{};
+	doc._listEntityNode.push_back( std::move( entA ) );
+	sw::SceneEntityNode entB{};
 	entB._name = "Npc";
-	desc._listEntities.push_back( std::move( entB ) );
-	SW_ASSERT_TRUE( sw::saveSceneDescriptorToBinary( binPath, desc ) );
+	doc._listEntityNode.push_back( std::move( entB ) );
+	SW_ASSERT_TRUE( sw::saveSceneDocumentToBinary( binPath, doc ) );
 
 	sw::SceneManager manager;
 	SW_ASSERT_TRUE( manager.initialize() );
@@ -83,67 +82,67 @@ SW_TEST_CASE( SceneTest, AsyncRequestCompletes )
 }
 
 /**
- * @brief [SceneTest] GPU 없이 Descriptor 로드
+ * @brief [SceneTest] GPU 없이 SceneDocument 로드
  */
-SW_TEST_CASE( SceneTest, DescriptorLoadWithoutGpu )
+SW_TEST_CASE( SceneTest, DocumentLoadWithoutGpu )
 {
 	const sw::string xmlPath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "sw_test_scene_desc.xml" );
 	const sw::string binPath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "sw_test_scene_desc.bin" );
 	const sw::string xmlStr =
-		"<SceneDescriptor><name>DescOnly</name><entities><entity name=\"A\"/></entities></SceneDescriptor>";
+		"<Scene formatVersion=\"0\" name=\"DescOnly\"><entities><entity name=\"A\"/></entities></Scene>";
 	SW_ASSERT_TRUE( sw::FileUtil::writeFile( xmlPath,
 											 reinterpret_cast<const uint8*>( xmlStr.data() ),
 											 static_cast<uint64>( xmlStr.size() ) ) );
 
-	sw::SceneDescriptor descSetup{};
-	descSetup._name = "DescOnly";
-	sw::SceneEntityPlaceholder entA{};
+	sw::SceneDocument docSetup{};
+	docSetup._name = "DescOnly";
+	sw::SceneEntityNode entA{};
 	entA._name = "A";
-	descSetup._listEntities.push_back( std::move( entA ) );
-	SW_ASSERT_TRUE( sw::saveSceneDescriptorToBinary( binPath, descSetup ) );
+	docSetup._listEntityNode.push_back( std::move( entA ) );
+	SW_ASSERT_TRUE( sw::saveSceneDocumentToBinary( binPath, docSetup ) );
 
-	sw::SceneDescriptor desc{};
-	SW_ASSERT_TRUE( sw::loadSceneDescriptor( xmlPath, desc ) );
-	SW_EXPECT_TRUE( desc._bValid );
-	SW_EXPECT_STREQ( "DescOnly", desc._name );
-	SW_EXPECT_EQUAL( size_t( 1 ), desc._listEntities.size() );
+	sw::SceneDocument doc{};
+	SW_ASSERT_TRUE( sw::loadSceneDocument( xmlPath, doc ) );
+	SW_EXPECT_TRUE( doc._bValid );
+	SW_EXPECT_STREQ( "DescOnly", doc._name );
+	SW_EXPECT_EQUAL( size_t( 1 ), doc._listEntityNode.size() );
 
 	sw::FileUtil::removeFile( xmlPath );
 	sw::FileUtil::removeFile( binPath );
 }
 
 /**
- * @brief [SceneTest] SceneDescriptor 바이너리(SCN1) 직렬화 및 역직렬화 왕복 테스트
+ * @brief [SceneTest] SceneDocument 바이너리(SCN1) 직렬화 및 역직렬화 왕복 테스트
  */
-SW_TEST_CASE( SceneTest, DescriptorBinaryRoundTrip )
+SW_TEST_CASE( SceneTest, DocumentBinaryRoundTrip )
 {
 	const sw::string binPath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "sw_test_scene_desc.bin" );
 
-	sw::SceneDescriptor originalDesc{};
-	originalDesc._name = "BinaryTestScene";
-	sw::SceneEntityPlaceholder entA{};
+	sw::SceneDocument originalDoc{};
+	originalDoc._name = "BinaryTestScene";
+	sw::SceneEntityNode entA{};
 	entA._name		  = "Hero";
 	entA._prefab	  = "game/demo/prefabs/Hero.prefab";
 	entA._embeddedXml = "<GameObjectState><Name>Hero</Name></GameObjectState>";
-	originalDesc._listEntities.push_back( std::move( entA ) );
+	originalDoc._listEntityNode.push_back( std::move( entA ) );
 
-	sw::SceneEntityPlaceholder entB{};
+	sw::SceneEntityNode entB{};
 	entB._name	 = "Monster";
 	entB._prefab = "game/demo/prefabs/Monster.prefab";
-	originalDesc._listEntities.push_back( std::move( entB ) );
+	originalDoc._listEntityNode.push_back( std::move( entB ) );
 
-	SW_ASSERT_TRUE( sw::saveSceneDescriptorToBinary( binPath, originalDesc ) );
+	SW_ASSERT_TRUE( sw::saveSceneDocumentToBinary( binPath, originalDoc ) );
 
-	sw::SceneDescriptor loadedDesc{};
-	SW_ASSERT_TRUE( sw::loadSceneDescriptorFromBinary( binPath, loadedDesc ) );
-	SW_EXPECT_TRUE( loadedDesc._bValid );
-	SW_EXPECT_STREQ( "BinaryTestScene", loadedDesc._name );
-	SW_ASSERT_EQUAL( size_t( 2 ), loadedDesc._listEntities.size() );
-	SW_EXPECT_STREQ( "Hero", loadedDesc._listEntities[0]._name );
-	SW_EXPECT_STREQ( "game/demo/prefabs/Hero.prefab", loadedDesc._listEntities[0]._prefab );
-	SW_EXPECT_STREQ( "<GameObjectState><Name>Hero</Name></GameObjectState>", loadedDesc._listEntities[0]._embeddedXml );
-	SW_EXPECT_STREQ( "Monster", loadedDesc._listEntities[1]._name );
-	SW_EXPECT_STREQ( "game/demo/prefabs/Monster.prefab", loadedDesc._listEntities[1]._prefab );
+	sw::SceneDocument loadedDoc{};
+	SW_ASSERT_TRUE( sw::loadSceneDocumentFromBinary( binPath, loadedDoc ) );
+	SW_EXPECT_TRUE( loadedDoc._bValid );
+	SW_EXPECT_STREQ( "BinaryTestScene", loadedDoc._name );
+	SW_ASSERT_EQUAL( size_t( 2 ), loadedDoc._listEntityNode.size() );
+	SW_EXPECT_STREQ( "Hero", loadedDoc._listEntityNode[0]._name );
+	SW_EXPECT_STREQ( "game/demo/prefabs/Hero.prefab", loadedDoc._listEntityNode[0]._prefab );
+	SW_EXPECT_STREQ( "<GameObjectState><Name>Hero</Name></GameObjectState>", loadedDoc._listEntityNode[0]._embeddedXml );
+	SW_EXPECT_STREQ( "Monster", loadedDoc._listEntityNode[1]._name );
+	SW_EXPECT_STREQ( "game/demo/prefabs/Monster.prefab", loadedDoc._listEntityNode[1]._prefab );
 
 	sw::FileUtil::removeFile( binPath );
 }
@@ -158,9 +157,9 @@ SW_TEST_CASE( SceneTest, AsyncWarpSequenceQueuesLatest )
 	const sw::string townB = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "sw_test_warp_b.xml" );
 	const sw::string binB  = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "sw_test_warp_b.bin" );
 	const sw::string xmlA =
-		"<SceneDescriptor><name>TownA</name><entities><entity name=\"A\"/></entities></SceneDescriptor>";
+		"<Scene formatVersion=\"0\" name=\"TownA\"><entities><entity name=\"A\"/></entities></Scene>";
 	const sw::string xmlB =
-		"<SceneDescriptor><name>TownB</name><entities><entity name=\"B1\"/><entity name=\"B2\"/></entities></SceneDescriptor>";
+		"<Scene formatVersion=\"0\" name=\"TownB\"><entities><entity name=\"B1\"/><entity name=\"B2\"/></entities></Scene>";
 
 	SW_ASSERT_TRUE( sw::FileUtil::writeFile( townA,
 											 reinterpret_cast<const uint8*>( xmlA.data() ),
@@ -169,22 +168,22 @@ SW_TEST_CASE( SceneTest, AsyncWarpSequenceQueuesLatest )
 											 reinterpret_cast<const uint8*>( xmlB.data() ),
 											 static_cast<uint64>( xmlB.size() ) ) );
 
-	sw::SceneDescriptor descA{};
-	descA._name = "TownA";
-	sw::SceneEntityPlaceholder entA{};
+	sw::SceneDocument docA{};
+	docA._name = "TownA";
+	sw::SceneEntityNode entA{};
 	entA._name = "A";
-	descA._listEntities.push_back( std::move( entA ) );
-	SW_ASSERT_TRUE( sw::saveSceneDescriptorToBinary( binA, descA ) );
+	docA._listEntityNode.push_back( std::move( entA ) );
+	SW_ASSERT_TRUE( sw::saveSceneDocumentToBinary( binA, docA ) );
 
-	sw::SceneDescriptor descB{};
-	descB._name = "TownB";
-	sw::SceneEntityPlaceholder entB1{};
+	sw::SceneDocument docB{};
+	docB._name = "TownB";
+	sw::SceneEntityNode entB1{};
 	entB1._name = "B1";
-	descB._listEntities.push_back( std::move( entB1 ) );
-	sw::SceneEntityPlaceholder entB2{};
+	docB._listEntityNode.push_back( std::move( entB1 ) );
+	sw::SceneEntityNode entB2{};
 	entB2._name = "B2";
-	descB._listEntities.push_back( std::move( entB2 ) );
-	SW_ASSERT_TRUE( sw::saveSceneDescriptorToBinary( binB, descB ) );
+	docB._listEntityNode.push_back( std::move( entB2 ) );
+	SW_ASSERT_TRUE( sw::saveSceneDocumentToBinary( binB, docB ) );
 
 	sw::SceneManager manager;
 	SW_ASSERT_TRUE( manager.initialize() );
@@ -213,17 +212,17 @@ SW_TEST_CASE( SceneTest, AsyncSwapUnloadsPreviousActive )
 	const sw::string xmlPath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "sw_test_scene_replace.xml" );
 	const sw::string binPath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "sw_test_scene_replace.bin" );
 	const sw::string xmlStr =
-		"<SceneDescriptor><name>Replaced</name><entities><entity name=\"Only\"/></entities></SceneDescriptor>";
+		"<Scene formatVersion=\"0\" name=\"Replaced\"><entities><entity name=\"Only\"/></entities></Scene>";
 	SW_ASSERT_TRUE( sw::FileUtil::writeFile( xmlPath,
 											 reinterpret_cast<const uint8*>( xmlStr.data() ),
 											 static_cast<uint64>( xmlStr.size() ) ) );
 
-	sw::SceneDescriptor desc{};
-	desc._name = "Replaced";
-	sw::SceneEntityPlaceholder ent{};
+	sw::SceneDocument doc{};
+	doc._name = "Replaced";
+	sw::SceneEntityNode ent{};
 	ent._name = "Only";
-	desc._listEntities.push_back( std::move( ent ) );
-	SW_ASSERT_TRUE( sw::saveSceneDescriptorToBinary( binPath, desc ) );
+	doc._listEntityNode.push_back( std::move( ent ) );
+	SW_ASSERT_TRUE( sw::saveSceneDocumentToBinary( binPath, doc ) );
 
 	sw::SceneManager manager;
 	SW_ASSERT_TRUE( manager.initialize() );
@@ -253,9 +252,9 @@ SW_TEST_CASE( SceneTest, SceneAsyncLoadCancellationAndRecovery )
 	const sw::string scenePath2 = sw::FileUtil::joinPath( tempDir, "test_rapid_2.scene.xml" );
 
 	const sw::string xmlStr1 =
-		"<SceneDescriptor><name>SceneFirst</name><entities><entity name=\"E1\"/></entities></SceneDescriptor>";
+		"<Scene formatVersion=\"0\" name=\"SceneFirst\"><entities><entity name=\"E1\"/></entities></Scene>";
 	const sw::string xmlStr2 =
-		"<SceneDescriptor><name>SceneSecond</name><entities><entity name=\"E2\"/></entities></SceneDescriptor>";
+		"<Scene formatVersion=\"0\" name=\"SceneSecond\"><entities><entity name=\"E2\"/></entities></Scene>";
 
 	SW_ASSERT_TRUE( sw::FileUtil::writeFile( scenePath1, reinterpret_cast<const uint8*>( xmlStr1.data() ), xmlStr1.size() ) );
 	SW_ASSERT_TRUE( sw::FileUtil::writeFile( scenePath2, reinterpret_cast<const uint8*>( xmlStr2.data() ), xmlStr2.size() ) );

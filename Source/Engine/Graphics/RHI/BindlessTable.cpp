@@ -10,10 +10,10 @@ namespace sw
 {
 	BindlessTable::BindlessTable()
 		: _mutex{}
-		, _listTextures{}
-		, _listBuffers{}
-		, _listFreeTextureSlots{}
-		, _listFreeBufferSlots{}
+		, _listTexture{}
+		, _listBuffer{}
+		, _listFreeTextureSlot{}
+		, _listFreeBufferSlot{}
 		, _maxSlots{ kMaxBindlessSlots }
 	{
 	}
@@ -22,19 +22,19 @@ namespace sw
 	{
 		std::unique_lock<std::shared_mutex> lock{ _mutex };
 		_maxSlots = maxSlots;
-		_listTextures.clear();
-		_listBuffers.clear();
-		_listFreeTextureSlots.clear();
-		_listFreeBufferSlots.clear();
+		_listTexture.clear();
+		_listBuffer.clear();
+		_listFreeTextureSlot.clear();
+		_listFreeBufferSlot.clear();
 	}
 
 	void BindlessTable::shutdown()
 	{
 		std::unique_lock<std::shared_mutex> lock{ _mutex };
-		_listTextures.clear();
-		_listBuffers.clear();
-		_listFreeTextureSlots.clear();
-		_listFreeBufferSlots.clear();
+		_listTexture.clear();
+		_listBuffer.clear();
+		_listFreeTextureSlot.clear();
+		_listFreeBufferSlot.clear();
 	}
 
 	RHIDescriptorIndex BindlessTable::allocateTextureSlot( RHITextureHandle texture )
@@ -43,29 +43,29 @@ namespace sw
 			return kInvalidDescriptorIndex;
 
 		std::unique_lock<std::shared_mutex> lock{ _mutex };
-		if ( _listFreeTextureSlots.empty() == false )
+		if ( _listFreeTextureSlot.empty() == false )
 		{
-			const RHIDescriptorIndex slot = _listFreeTextureSlots.back();
-			_listFreeTextureSlots.pop_back();
-			_listTextures[slot] = texture;
+			const RHIDescriptorIndex slot = _listFreeTextureSlot.back();
+			_listFreeTextureSlot.pop_back();
+			_listTexture[slot] = texture;
 			return slot;
 		}
 
-		if ( _listTextures.size() >= _maxSlots )
+		if ( _listTexture.size() >= _maxSlots )
 			return kInvalidDescriptorIndex;
 
-		const auto slot = static_cast<RHIDescriptorIndex>( _listTextures.size() );
-		_listTextures.push_back( texture );
+		const auto slot = static_cast<RHIDescriptorIndex>( _listTexture.size() );
+		_listTexture.push_back( texture );
 		return slot;
 	}
 
 	void BindlessTable::freeTextureSlot( RHIDescriptorIndex slotIndex )
 	{
 		std::unique_lock<std::shared_mutex> lock{ _mutex };
-		if ( slotIndex < _listTextures.size() && _listTextures[slotIndex] != 0 )
+		if ( slotIndex < _listTexture.size() && _listTexture[slotIndex] != 0 )
 		{
-			_listTextures[slotIndex] = 0;
-			_listFreeTextureSlots.push_back( slotIndex );
+			_listTexture[slotIndex] = 0;
+			_listFreeTextureSlot.push_back( slotIndex );
 		}
 	}
 
@@ -75,57 +75,57 @@ namespace sw
 			return kInvalidDescriptorIndex;
 
 		std::unique_lock<std::shared_mutex> lock{ _mutex };
-		if ( _listFreeBufferSlots.empty() == false )
+		if ( _listFreeBufferSlot.empty() == false )
 		{
-			const RHIDescriptorIndex slot = _listFreeBufferSlots.back();
-			_listFreeBufferSlots.pop_back();
-			_listBuffers[slot] = buffer;
+			const RHIDescriptorIndex slot = _listFreeBufferSlot.back();
+			_listFreeBufferSlot.pop_back();
+			_listBuffer[slot] = buffer;
 			return slot;
 		}
 
-		if ( _listBuffers.size() >= _maxSlots )
+		if ( _listBuffer.size() >= _maxSlots )
 			return kInvalidDescriptorIndex;
 
-		const auto slot = static_cast<RHIDescriptorIndex>( _listBuffers.size() );
-		_listBuffers.push_back( buffer );
+		const auto slot = static_cast<RHIDescriptorIndex>( _listBuffer.size() );
+		_listBuffer.push_back( buffer );
 		return slot;
 	}
 
 	void BindlessTable::freeBufferSlot( RHIDescriptorIndex slotIndex )
 	{
 		std::unique_lock<std::shared_mutex> lock{ _mutex };
-		if ( slotIndex < _listBuffers.size() && _listBuffers[slotIndex] != 0 )
+		if ( slotIndex < _listBuffer.size() && _listBuffer[slotIndex] != 0 )
 		{
-			_listBuffers[slotIndex] = 0;
-			_listFreeBufferSlots.push_back( slotIndex );
+			_listBuffer[slotIndex] = 0;
+			_listFreeBufferSlot.push_back( slotIndex );
 		}
 	}
 
 	RHITextureHandle BindlessTable::getTexture( RHIDescriptorIndex slotIndex ) const
 	{
 		std::shared_lock<std::shared_mutex> lock{ _mutex };
-		if ( slotIndex < _listTextures.size() )
-			return _listTextures[slotIndex];
+		if ( slotIndex < _listTexture.size() )
+			return _listTexture[slotIndex];
 		return 0;
 	}
 
 	RHIBufferHandle BindlessTable::getBuffer( RHIDescriptorIndex slotIndex ) const
 	{
 		std::shared_lock<std::shared_mutex> lock{ _mutex };
-		if ( slotIndex < _listBuffers.size() )
-			return _listBuffers[slotIndex];
+		if ( slotIndex < _listBuffer.size() )
+			return _listBuffer[slotIndex];
 		return 0;
 	}
 
 	size_t BindlessTable::getActiveTextureCount() const
 	{
 		std::shared_lock<std::shared_mutex> lock{ _mutex };
-		return _listTextures.size() - _listFreeTextureSlots.size();
+		return _listTexture.size() - _listFreeTextureSlot.size();
 	}
 
 	size_t BindlessTable::getActiveBufferCount() const
 	{
 		std::shared_lock<std::shared_mutex> lock{ _mutex };
-		return _listBuffers.size() - _listFreeBufferSlots.size();
+		return _listBuffer.size() - _listFreeBufferSlot.size();
 	}
 } // namespace sw

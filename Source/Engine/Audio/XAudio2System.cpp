@@ -15,6 +15,7 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "XAudio2System" );
 
 #if defined( SW_PLATFORM_WINDOWS )
 	namespace
@@ -328,19 +329,19 @@ namespace sw
 		else if ( hr == RPC_E_CHANGED_MODE )
 			_impl->_bComInitialized = 0;
 		else
-			SW_LOG_WARNING( "[XAudio2System] CoInitializeEx failed (0x%#).", static_cast<uint32>( hr ) );
+			SW_LOG_WARNING( "CoInitializeEx failed (0x%#).", static_cast<uint32>( hr ) );
 
 		const HRESULT mfHr = MFStartup( MF_VERSION );
 		if ( SUCCEEDED( mfHr ) )
 			_impl->_bMfInitialized = 1;
 		else
-			SW_LOG_WARNING( "[XAudio2System] MFStartup failed (0x%#).", static_cast<uint32>( mfHr ) );
+			SW_LOG_WARNING( "MFStartup failed (0x%#).", static_cast<uint32>( mfHr ) );
 
 		IXAudio2* pXAudio{ nullptr };
 		hr = XAudio2Create( &pXAudio, 0, XAUDIO2_DEFAULT_PROCESSOR );
 		if ( FAILED( hr ) || pXAudio == nullptr )
 		{
-			SW_LOG_WARNING( "[XAudio2System] XAudio2Create failed (0x%#). Running null audio.", static_cast<uint32>( hr ) );
+			SW_LOG_WARNING( "XAudio2Create failed (0x%#). Running null audio.", static_cast<uint32>( hr ) );
 			_impl->_bInitialized = 1;
 			return true;
 		}
@@ -349,7 +350,7 @@ namespace sw
 		hr = pXAudio->CreateMasteringVoice( &pMasterVoice );
 		if ( FAILED( hr ) || pMasterVoice == nullptr )
 		{
-			SW_LOG_WARNING( "[XAudio2System] CreateMasteringVoice failed (0x%#).", static_cast<uint32>( hr ) );
+			SW_LOG_WARNING( "CreateMasteringVoice failed (0x%#).", static_cast<uint32>( hr ) );
 			pXAudio->Release();
 			_impl->_bInitialized = 1;
 			return true;
@@ -358,9 +359,9 @@ namespace sw
 		_impl->_pXAudio		 = pXAudio;
 		_impl->_pMasterVoice = pMasterVoice;
 		_impl->_pMasterVoice->SetVolume( _impl->_bMuted ? 0.0f : _impl->_masterVolume );
-		SW_LOG_INFO( "[XAudio2System] XAudio2 mastering voice ready." );
+		SW_LOG_INFO( "XAudio2 mastering voice ready." );
 #else
-		SW_LOG_INFO( "[XAudio2System] Null audio backend." );
+		SW_LOG_INFO( "Null audio backend." );
 #endif
 
 		_impl->_bInitialized = 1;
@@ -411,7 +412,7 @@ namespace sw
 		}
 #endif
 		_impl->_bInitialized = 0;
-		SW_LOG_INFO( "[XAudio2System] Shut down." );
+		SW_LOG_INFO( "Shut down." );
 	}
 
 	/**
@@ -608,14 +609,14 @@ namespace sw
 		if ( _impl == nullptr || _impl->_pXAudio == nullptr )
 			return;
 
-		const string abs			= args.get<string>( 0 );
-		const bool	 loop			= args.get<bool>( 1 );
-		const string requestedPath	= args.get<string>( 2 );
+		const string abs		   = args.get<string>( 0 );
+		const bool	 loop		   = args.get<bool>( 1 );
+		const string requestedPath = args.get<string>( 2 );
 
 		shared_ptr<PcmClip> pClip = _impl->getOrLoadClip( abs );
 		if ( pClip == nullptr || pClip->listData.empty() )
 		{
-			SW_LOG_WARNING( "[XAudio2System] Failed to decode: %#", abs );
+			SW_LOG_WARNING( "Failed to decode: %#", abs );
 			return;
 		}
 
@@ -628,7 +629,7 @@ namespace sw
 		HRESULT				 hr = _impl->_pXAudio->CreateSourceVoice( &pVoice, &pClip->format );
 		if ( FAILED( hr ) || pVoice == nullptr )
 		{
-			SW_LOG_WARNING( "[XAudio2System] CreateSourceVoice failed (0x%#)", static_cast<uint32>( hr ) );
+			SW_LOG_WARNING( "CreateSourceVoice failed (0x%#)", static_cast<uint32>( hr ) );
 			return;
 		}
 
@@ -655,7 +656,7 @@ namespace sw
 		hr = pVoice->SubmitSourceBuffer( &buf );
 		if ( FAILED( hr ) )
 		{
-			SW_LOG_WARNING( "[XAudio2System] SubmitSourceBuffer failed (0x%#)", static_cast<uint32>( hr ) );
+			SW_LOG_WARNING( "SubmitSourceBuffer failed (0x%#)", static_cast<uint32>( hr ) );
 			if ( loop )
 			{
 				_impl->_pMusicVoice->DestroyVoice();
@@ -666,8 +667,8 @@ namespace sw
 			return;
 		}
 		pVoice->Start( 0 );
-		SW_LOG_INFO( "[XAudio2System] Playing %# (%# loop=%#)", abs, static_cast<uint32>( buf.AudioBytes ),
-					 loop ? 1 : 0 );
+		SW_LOG_TRACE( "Playing %# (%# loop=%#)", abs, static_cast<uint32>( buf.AudioBytes ),
+					  loop ? 1 : 0 );
 #else
 		(void)args;
 #endif
@@ -684,7 +685,7 @@ namespace sw
 #if defined( SW_PLATFORM_WINDOWS )
 		if ( _impl->_pXAudio == nullptr )
 		{
-			SW_LOG_WARNING( "[XAudio2System] play: null XAudio2 (%#)", string( path ) );
+			SW_LOG_WARNING( "play: null XAudio2 (%#)", string( path ) );
 			return false;
 		}
 
@@ -693,7 +694,7 @@ namespace sw
 			abs = string( path );
 		if ( FileUtil::fileExists( abs ) == false )
 		{
-			SW_LOG_WARNING( "[XAudio2System] File not found: %#", abs );
+			SW_LOG_WARNING( "File not found: %#", abs );
 			return false;
 		}
 
@@ -713,7 +714,7 @@ namespace sw
 #else
 		(void)loop;
 		_impl->_musicPath = string( path );
-		SW_LOG_INFO( "[XAudio2System] play (null): %#", string( path ) );
+		SW_LOG_TRACE( "play (null): %#", string( path ) );
 		return true;
 #endif
 	}

@@ -6,6 +6,7 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "JsonDocument" );
 
 	using JsonImpl = nlohmann::ordered_json;
 
@@ -315,7 +316,7 @@ namespace sw
 		_impl->root = JsonImpl::parse( toStdString( jsonText ), nullptr, false, false );
 		if ( _impl->root.is_discarded() )
 		{
-			SW_LOG_ERROR( "[JsonDocument] Parse error in json text" );
+			SW_LOG_ERROR( "Parse error in json text" );
 			clear();
 			return false;
 		}

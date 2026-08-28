@@ -36,8 +36,8 @@ namespace sw::editor
 		{
 			if ( prop._metadata._displayName.empty() == false )
 				return prop._metadata._displayName.c_str();
-			if ( prop._listAliases.empty() == false && prop._listAliases.front().empty() == false )
-				return prop._listAliases.front().c_str();
+			if ( prop._listAlias.empty() == false && prop._listAlias.front().empty() == false )
+				return prop._listAlias.front().c_str();
 			return prop._name.c_str();
 		}
 
@@ -405,7 +405,7 @@ namespace sw::editor
 
 	void InspectorPanel::drawTypeMethods( void* pInstance, const TypeInfo* pTypeInfo )
 	{
-		if ( pInstance == nullptr || pTypeInfo == nullptr || pTypeInfo->_listMethods.empty() )
+		if ( pInstance == nullptr || pTypeInfo == nullptr || pTypeInfo->_listMethod.empty() )
 		{
 			ImGui::TextDisabled( "No FUNCTION() methods." );
 			return;
@@ -414,7 +414,7 @@ namespace sw::editor
 		if ( _arrLastInvokeResult[0] != '\0' )
 			ImGui::TextDisabled( "Last result: %s", _arrLastInvokeResult );
 
-		for ( const FunctionInfo& method : pTypeInfo->_listMethods )
+		for ( const FunctionInfo& method : pTypeInfo->_listMethod )
 		{
 			// 생성자 인보커는 raw 스토리지(placement-new)를 기대합니다 — 살아있는 인스펙터 인스턴스에는 안전하지 않습니다.
 			if ( method._metadata._bConstructor != 0 )
@@ -430,11 +430,11 @@ namespace sw::editor
 			if ( method._metadata._tooltip.empty() == false && ImGui::IsItemHovered() )
 				ImGui::SetTooltip( "%s", method._metadata._tooltip.c_str() );
 
-			const uint32 paramCount = static_cast<uint32>( method._listParamTypeNames.size() );
+			const uint32 paramCount = static_cast<uint32>( method._listParamTypeName.size() );
 			bool		 bArgsOk{ true };
 			for ( uint32 paramIndex = 0; paramIndex < paramCount; ++paramIndex )
 			{
-				if ( paramIndex >= 8 || isSupportedMethodArgType( method._listParamTypeNames[paramIndex] ) == false )
+				if ( paramIndex >= 8 || isSupportedMethodArgType( method._listParamTypeName[paramIndex] ) == false )
 				{
 					bArgsOk = false;
 					break;
@@ -444,7 +444,7 @@ namespace sw::editor
 			for ( uint32 paramIndex = 0; paramIndex < paramCount && paramIndex < 8; ++paramIndex )
 			{
 				ImGui::PushID( static_cast<int32>( paramIndex ) );
-				const string& p = method._listParamTypeNames[paramIndex];
+				const string& p = method._listParamTypeName[paramIndex];
 				utf8		  label[64];
 				formatstring( label, sizeof( label ), "arg%# (%#)", paramIndex, p.c_str() );
 
@@ -478,7 +478,7 @@ namespace sw::editor
 				TaskArgs args;
 				for ( uint32 paramIndex = 0; paramIndex < paramCount && paramIndex < 8; ++paramIndex )
 				{
-					const string& p		   = method._listParamTypeNames[paramIndex];
+					const string& p		   = method._listParamTypeName[paramIndex];
 					TypeRegistry& registry = *editor::getService<TypeRegistry>();
 					if ( registry.isType( p, "int32" ) )
 						args.add( int32{ _arrArgInt[paramIndex] } );

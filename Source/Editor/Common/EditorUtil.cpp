@@ -19,6 +19,8 @@
 
 namespace sw::editor
 {
+	SW_LOG_CALLER( "EditorUtil" );
+
 	namespace
 	{
 		/**
@@ -151,13 +153,13 @@ namespace sw::editor
 			{
 				pBaseFont = io.Fonts->AddFontFromFileTTF( basePath.c_str(), data._fontSize, &baseConfig,
 														  io.Fonts->GetGlyphRangesDefault() );
-				SW_LOG_INFO( "[EditorUtil] Loaded base font: %#", basePath.c_str() );
+				SW_LOG_TRACE( "Loaded base font: %#", basePath.c_str() );
 			}
 
 			if ( pBaseFont == nullptr )
 			{
 				pBaseFont = io.Fonts->AddFontDefault( &baseConfig );
-				SW_LOG_WARNING( "[EditorUtil] No system UI font found - using ImGui default font." );
+				SW_LOG_WARNING( "No system UI font found - using ImGui default font." );
 			}
 		}
 
@@ -172,10 +174,10 @@ namespace sw::editor
 				mergeConfig.PixelSnapH	= true;
 				io.Fonts->AddFontFromFileTTF( koreanPath.c_str(), data._fontSize, &mergeConfig,
 											  io.Fonts->GetGlyphRangesKorean() );
-				SW_LOG_INFO( "[EditorUtil] Merged Korean glyphs from: %#", koreanPath.c_str() );
+				SW_LOG_TRACE( "Merged Korean glyphs from: %#", koreanPath.c_str() );
 			}
 			else
-				SW_LOG_WARNING( "[EditorUtil] Korean font not found - Hangul may not render." );
+				SW_LOG_WARNING( "Korean font not found - Hangul may not render." );
 		}
 
 		BLOCK( "Font Awesome 6 (ImGuiNotify icons)" )
@@ -265,21 +267,21 @@ namespace sw::editor
 
 		if ( isPrefabAssetPath( pPath ) == false )
 		{
-			SW_LOG_INFO( "[EditorUtil] Not a prefab path: %#", pPath );
+			SW_LOG_TRACE( "Not a prefab path: %#", pPath );
 			return nullptr;
 		}
 
 		GameObject* pSpawned = editor::getService<ResourceManager>()->getPrefabManager().spawn( pManager, pPath );
 		if ( pSpawned == nullptr )
 		{
-			SW_LOG_WARNING( "[EditorUtil] Failed to spawn prefab: %#", pPath );
+			SW_LOG_WARNING( "Failed to spawn prefab: %#", pPath );
 			return nullptr;
 		}
 
 		if ( pParent != nullptr )
 			pSpawned->attachToParent( pParent );
 
-		SW_LOG_INFO( "[EditorUtil] Spawned prefab from %#", pPath );
+		SW_LOG_TRACE( "Spawned prefab from %#", pPath );
 		return pSpawned;
 	}
 } // namespace sw::editor

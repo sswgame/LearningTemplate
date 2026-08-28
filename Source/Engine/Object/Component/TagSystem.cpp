@@ -41,12 +41,12 @@ namespace sw
 	}
 
 	TagContainer::TagContainer( std::initializer_list<TagID> tags )
-		: _listTags{}
+		: _listTag{}
 	{
-		_listTags.reserve( tags.size() );
-		_listTags.assign( tags.begin(), tags.end() );
-		std::sort( _listTags.begin(), _listTags.end() );
-		_listTags.erase( std::unique( _listTags.begin(), _listTags.end() ), _listTags.end() );
+		_listTag.reserve( tags.size() );
+		_listTag.assign( tags.begin(), tags.end() );
+		std::sort( _listTag.begin(), _listTag.end() );
+		_listTag.erase( std::unique( _listTag.begin(), _listTag.end() ), _listTag.end() );
 	}
 
 	void TagContainer::addTag( TagID tag )
@@ -54,26 +54,26 @@ namespace sw
 		if ( tag.isValid() == false )
 			return;
 
-		auto it = std::lower_bound( _listTags.begin(), _listTags.end(), tag );
-		if ( it == _listTags.end() || *it != tag )
+		auto it = std::lower_bound( _listTag.begin(), _listTag.end(), tag );
+		if ( it == _listTag.end() || *it != tag )
 		{
-			const std::ptrdiff_t insertIndex = std::distance( _listTags.begin(), it );
-			_listTags.insert( _listTags.begin() + insertIndex, tag );
+			const std::ptrdiff_t insertIndex = std::distance( _listTag.begin(), it );
+			_listTag.insert( _listTag.begin() + insertIndex, tag );
 		}
 	}
 
 	void TagContainer::removeTag( TagID tag )
 	{
-		auto it = std::lower_bound( _listTags.begin(), _listTags.end(), tag );
-		if ( it != _listTags.end() && *it == tag )
-			_listTags.erase( it );
+		auto it = std::lower_bound( _listTag.begin(), _listTag.end(), tag );
+		if ( it != _listTag.end() && *it == tag )
+			_listTag.erase( it );
 	}
 
 	bool TagContainer::hasTag( TagID tag, bool bExactMatch ) const
 	{
 		if ( bExactMatch )
-			return std::binary_search( _listTags.begin(), _listTags.end(), tag );
-		for ( const TagID& existingTag : _listTags )
+			return std::binary_search( _listTag.begin(), _listTag.end(), tag );
+		for ( const TagID& existingTag : _listTag )
 		{
 			if ( existingTag.isSubtagOf( tag ) || existingTag == tag )
 				return true;
@@ -83,7 +83,7 @@ namespace sw
 
 	bool TagContainer::hasAllTags( const TagContainer& required ) const
 	{
-		for ( const TagID& reqTag : required._listTags )
+		for ( const TagID& reqTag : required._listTag )
 		{
 			if ( hasTag( reqTag, false ) == false )
 				return false;
@@ -93,7 +93,7 @@ namespace sw
 
 	bool TagContainer::hasAnyTag( const TagContainer& other ) const
 	{
-		for ( const TagID& otherTag : other._listTags )
+		for ( const TagID& otherTag : other._listTag )
 		{
 			if ( hasTag( otherTag, false ) )
 				return true;
@@ -161,9 +161,9 @@ namespace sw
 				return container.hasAnyTag( expr._tags ) == false;
 			case TagQueryExprType::AnyExprMatch:
 			{
-				if ( expr._listSubExprs.empty() )
+				if ( expr._listSubExpr.empty() )
 					return true;
-				for ( const TagQueryExpr& subExpr : expr._listSubExprs )
+				for ( const TagQueryExpr& subExpr : expr._listSubExpr )
 				{
 					if ( evalExpr( subExpr, container ) )
 						return true;
@@ -172,9 +172,9 @@ namespace sw
 			}
 			case TagQueryExprType::AllExprMatch:
 			{
-				if ( expr._listSubExprs.empty() )
+				if ( expr._listSubExpr.empty() )
 					return true;
-				for ( const TagQueryExpr& subExpr : expr._listSubExprs )
+				for ( const TagQueryExpr& subExpr : expr._listSubExpr )
 				{
 					if ( evalExpr( subExpr, container ) == false )
 						return false;
@@ -183,9 +183,9 @@ namespace sw
 			}
 			case TagQueryExprType::NotExprMatch:
 			{
-				if ( expr._listSubExprs.empty() )
+				if ( expr._listSubExpr.empty() )
 					return true;
-				return evalExpr( expr._listSubExprs[0], container ) == false;
+				return evalExpr( expr._listSubExpr[0], container ) == false;
 			}
 			default:
 				return false;

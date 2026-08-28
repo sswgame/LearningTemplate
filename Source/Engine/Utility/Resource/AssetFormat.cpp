@@ -4,6 +4,8 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "AssetFormat" );
+
 	void AssetFormatRegistry::ensureBuiltins()
 	{
 		if ( _bBuiltins )
@@ -17,7 +19,7 @@ namespace sw
 	{
 		if ( migrator == nullptr )
 			return;
-		_mapMigrators.insert_or_assign( MigratorKey{ kind, fromVersion }, migrator );
+		_mapMigrator.insert_or_assign( MigratorKey{ kind, fromVersion }, migrator );
 	}
 
 	AssetFormatVersion AssetFormatRegistry::readXmlVersion( XmlNode root ) const
@@ -68,22 +70,22 @@ namespace sw
 
 		if ( version > currentVersion )
 		{
-			SW_LOG_ERROR( "[AssetFormat] %# asset formatVersion %# is newer than supported %#", static_cast<uint32>( kind ), version, currentVersion );
+			SW_LOG_ERROR( "%# asset formatVersion %# is newer than supported %#", static_cast<uint32>( kind ), version, currentVersion );
 			return false;
 		}
 
 		while ( version < currentVersion )
 		{
 			const MigratorKey key{ kind, version };
-			const auto		  it = _mapMigrators.find( key );
-			if ( it == _mapMigrators.end() || it->second == nullptr )
+			const auto		  it = _mapMigrator.find( key );
+			if ( it == _mapMigrator.end() || it->second == nullptr )
 			{
-				SW_LOG_ERROR( "[AssetFormat] Missing migrator kind=%# from=%# to %#", static_cast<uint32>( kind ), version, version + 1 );
+				SW_LOG_ERROR( "Missing migrator kind=%# from=%# to %#", static_cast<uint32>( kind ), version, version + 1 );
 				return false;
 			}
 			if ( it->second( doc, root ) == false || root.isValid() == false )
 			{
-				SW_LOG_ERROR( "[AssetFormat] Migrator failed kind=%# from=%#", static_cast<uint32>( kind ), version );
+				SW_LOG_ERROR( "Migrator failed kind=%# from=%#", static_cast<uint32>( kind ), version );
 				return false;
 			}
 			++version;
@@ -92,7 +94,7 @@ namespace sw
 		writeXmlVersion( root, currentVersion );
 		if ( pOutSourceVersion != nullptr && *pOutSourceVersion < currentVersion )
 		{
-			SW_LOG_INFO( "[AssetFormat] Upgraded kind=%# formatVersion %# -> %#", static_cast<uint32>( kind ), *pOutSourceVersion, currentVersion );
+			SW_LOG_INFO( "Upgraded kind=%# formatVersion %# -> %#", static_cast<uint32>( kind ), *pOutSourceVersion, currentVersion );
 		}
 		return true;
 	}

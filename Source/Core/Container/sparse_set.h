@@ -42,21 +42,21 @@ namespace sw
 
 		void erase( KeyType key );
 
-		size_t				   size() const { return _listDenseKeys.size(); }
-		const vector<KeyType>& getDenseKeys() const { return _listDenseKeys; }
+		size_t				   size() const { return _listDenseKey.size(); }
+		const vector<KeyType>& getDenseKeys() const { return _listDenseKey; }
 
 		void clear()
 		{
 			_listSparse.clear();
-			_listDenseKeys.clear();
-			_listDenseValues.clear();
+			_listDenseKey.clear();
+			_listDenseValue.clear();
 		}
 
 		void shrink_to_fit()
 		{
 			_listSparse.shrink_to_fit();
-			_listDenseKeys.shrink_to_fit();
-			_listDenseValues.shrink_to_fit();
+			_listDenseKey.shrink_to_fit();
+			_listDenseValue.shrink_to_fit();
 		}
 
 		bool contains( KeyType key ) const { return key < _listSparse.size() && std::as_const( _listSparse )[key] != kInvalidKey; }
@@ -65,25 +65,25 @@ namespace sw
 		{
 			if ( contains( key ) == false )
 				return false;
-			outValue = std::as_const( _listDenseValues )[std::as_const( _listSparse )[key]];
+			outValue = std::as_const( _listDenseValue )[std::as_const( _listSparse )[key]];
 			return true;
 		}
 
 		T& operator[]( KeyType key )
 		{
 			SW_ASSERT( contains( key ) );
-			return _listDenseValues[std::as_const( _listSparse )[key]];
+			return _listDenseValue[std::as_const( _listSparse )[key]];
 		}
 
 		const T& operator[]( KeyType key ) const
 		{
 			SW_ASSERT( contains( key ) );
-			return std::as_const( _listDenseValues )[std::as_const( _listSparse )[key]];
+			return std::as_const( _listDenseValue )[std::as_const( _listSparse )[key]];
 		}
 
-		T* find( KeyType key ) { return contains( key ) ? &_listDenseValues[std::as_const( _listSparse )[key]] : nullptr; }
+		T* find( KeyType key ) { return contains( key ) ? &_listDenseValue[std::as_const( _listSparse )[key]] : nullptr; }
 
-		const T* find( KeyType key ) const { return contains( key ) ? &std::as_const( _listDenseValues )[std::as_const( _listSparse )[key]] : nullptr; }
+		const T* find( KeyType key ) const { return contains( key ) ? &std::as_const( _listDenseValue )[std::as_const( _listSparse )[key]] : nullptr; }
 
 		class Iterator
 		{
@@ -100,7 +100,7 @@ namespace sw
 
 			bool					operator!=( const Iterator& other ) const { return _index != other._index; }
 			bool					operator==( const Iterator& other ) const { return _index == other._index; }
-			std::tuple<KeyType, T&> operator*() const { return std::tuple<KeyType, T&>( _pSet->_listDenseKeys[_index], _pSet->_listDenseValues[_index] ); }
+			std::tuple<KeyType, T&> operator*() const { return std::tuple<KeyType, T&>( _pSet->_listDenseKey[_index], _pSet->_listDenseValue[_index] ); }
 
 		private:
 			sparse_set* _pSet;
@@ -122,7 +122,7 @@ namespace sw
 
 			bool						  operator!=( const ConstIterator& other ) const { return _index != other._index; }
 			bool						  operator==( const ConstIterator& other ) const { return _index == other._index; }
-			std::tuple<KeyType, const T&> operator*() const { return std::tuple<KeyType, const T&>( _pSet->_listDenseKeys[_index], _pSet->_listDenseValues[_index] ); }
+			std::tuple<KeyType, const T&> operator*() const { return std::tuple<KeyType, const T&>( _pSet->_listDenseKey[_index], _pSet->_listDenseValue[_index] ); }
 
 		private:
 			const sparse_set* _pSet;
@@ -130,9 +130,9 @@ namespace sw
 		};
 
 		Iterator	  begin() { return Iterator( this, 0 ); }
-		Iterator	  end() { return Iterator( this, _listDenseKeys.size() ); }
+		Iterator	  end() { return Iterator( this, _listDenseKey.size() ); }
 		ConstIterator begin() const { return ConstIterator( this, 0 ); }
-		ConstIterator end() const { return ConstIterator( this, _listDenseKeys.size() ); }
+		ConstIterator end() const { return ConstIterator( this, _listDenseKey.size() ); }
 
 	private:
 		void ensureSparse( KeyType key )
@@ -142,8 +142,8 @@ namespace sw
 		}
 
 		vector<uint32>	_listSparse;
-		vector<KeyType> _listDenseKeys;
-		vector<T>		_listDenseValues;
+		vector<KeyType> _listDenseKey;
+		vector<T>		_listDenseValue;
 	};
 
 	template <typename T>
@@ -152,14 +152,14 @@ namespace sw
 	{
 		if ( contains( key ) )
 		{
-			_listDenseValues[_listSparse[key]] = std::forward<U>( value );
+			_listDenseValue[_listSparse[key]] = std::forward<U>( value );
 			return;
 		}
 
 		ensureSparse( key );
-		_listSparse[key] = static_cast<uint32>( _listDenseKeys.size() );
-		_listDenseKeys.push_back( key );
-		_listDenseValues.push_back( std::forward<U>( value ) );
+		_listSparse[key] = static_cast<uint32>( _listDenseKey.size() );
+		_listDenseKey.push_back( key );
+		_listDenseValue.push_back( std::forward<U>( value ) );
 	}
 
 	template <typename T>
@@ -168,16 +168,16 @@ namespace sw
 	{
 		if ( contains( key ) )
 		{
-			T* ptr = &_listDenseValues[_listSparse[key]];
+			T* ptr = &_listDenseValue[_listSparse[key]];
 			ptr->~T();
 			new ( ptr ) T( std::forward<Args>( args )... );
 			return;
 		}
 
 		ensureSparse( key );
-		_listSparse[key] = static_cast<uint32>( _listDenseKeys.size() );
-		_listDenseKeys.push_back( key );
-		_listDenseValues.emplace_back( std::forward<Args>( args )... );
+		_listSparse[key] = static_cast<uint32>( _listDenseKey.size() );
+		_listDenseKey.push_back( key );
+		_listDenseValue.emplace_back( std::forward<Args>( args )... );
 	}
 
 	template <typename T>
@@ -187,16 +187,16 @@ namespace sw
 			return;
 
 		const uint32 denseIndex		= _listSparse[key];
-		const uint32 lastDenseIndex = static_cast<uint32>( _listDenseKeys.size() - 1 );
+		const uint32 lastDenseIndex = static_cast<uint32>( _listDenseKey.size() - 1 );
 		if ( denseIndex != lastDenseIndex )
 		{
-			const KeyType lastKey		 = _listDenseKeys[lastDenseIndex];
-			_listDenseKeys[denseIndex]	 = lastKey;
-			_listDenseValues[denseIndex] = std::move( _listDenseValues[lastDenseIndex] );
-			_listSparse[lastKey]		 = denseIndex;
+			const KeyType lastKey		= _listDenseKey[lastDenseIndex];
+			_listDenseKey[denseIndex]	= lastKey;
+			_listDenseValue[denseIndex] = std::move( _listDenseValue[lastDenseIndex] );
+			_listSparse[lastKey]		= denseIndex;
 		}
-		_listDenseKeys.pop_back();
-		_listDenseValues.pop_back();
+		_listDenseKey.pop_back();
+		_listDenseValue.pop_back();
 		_listSparse[key] = kInvalidKey;
 	}
 

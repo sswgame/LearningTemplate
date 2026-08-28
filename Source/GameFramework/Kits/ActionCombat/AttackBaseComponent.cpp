@@ -10,7 +10,7 @@ namespace sw
 		: _damage{ 0 }
 		, _duration{ 0.0f }
 		, _currentDuration{ 0.0f }
-		, _bActive{ false }
+		, _bIsAttacking{ false }
 	{
 	}
 
@@ -35,25 +35,15 @@ namespace sw
 	{
 		Component::onTick( deltaTime );
 
-		if ( _bActive == false )
+		if ( _bIsAttacking == false )
 			return;
 
 		_currentDuration += deltaTime;
 		if ( _duration > 0.0f && _currentDuration >= _duration )
 		{
-			_bActive		 = false;
+			_bIsAttacking	 = false;
 			_currentDuration = 0.0f;
 		}
-	}
-
-	bool AttackBaseComponent::isAttackActive() const
-	{
-		return _bActive;
-	}
-
-	int32 AttackBaseComponent::getDamage() const
-	{
-		return _damage;
 	}
 
 	void AttackBaseComponent::beginAttack( int32 damage, float32 duration )
@@ -61,6 +51,6 @@ namespace sw
 		_damage			 = damage;
 		_duration		 = duration;
 		_currentDuration = 0.0f;
-		_bActive		 = true;
+		_bIsAttacking	 = true;
 	}
 } // namespace sw

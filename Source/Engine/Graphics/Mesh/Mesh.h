@@ -50,9 +50,9 @@ namespace sw
 		void setVertices( const vector<RHIVertex>& vertices );
 		void setVertices( vector<RHIVertex>&& vertices );
 		/** @brief CPU 정점 배열을 반환합니다. */
-		const vector<RHIVertex>& getVertices() const { return _listVertices; }
+		const vector<RHIVertex>& getVertices() const { return _listVertex; }
 		/** @brief 정점 개수를 반환합니다. */
-		uint32 getVertexCount() const { return static_cast<uint32>( _listVertices.size() ); }
+		uint32 getVertexCount() const { return static_cast<uint32>( _listVertex.size() ); }
 
 		/** @brief 디바이스에 업로드(또는 재업로드)합니다. 같은 디바이스면 멱등입니다. */
 		bool upload( IRHIDevice* pDevice );
@@ -65,7 +65,7 @@ namespace sw
 		bool isUploaded() const { return _vertexBuffer != 0; }
 
 	private:
-		vector<RHIVertex> _listVertices;
+		vector<RHIVertex> _listVertex;
 		RHIBufferHandle	  _vertexBuffer{ 0 };
 		IRHIDevice*		  _pUploadDevice{ nullptr };
 	};

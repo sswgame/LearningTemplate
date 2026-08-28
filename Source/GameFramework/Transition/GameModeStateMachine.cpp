@@ -6,10 +6,12 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "GameModeStateMachine" );
+
 	GameModeStateMachine::GameModeStateMachine()
 		: _currentMode{ GamePlayMode::None }
 		, _previousMode{ GamePlayMode::None }
-		, _mapHandlers{}
+		, _mapHandler{}
 		, _onModeChanged{}
 	{
 	}
@@ -22,20 +24,20 @@ namespace sw
 			return;
 		}
 
-		_mapHandlers[mode] = std::move( pHandler );
+		_mapHandler[mode] = std::move( pHandler );
 	}
 
 	void GameModeStateMachine::unregisterHandler( GamePlayMode mode )
 	{
-		auto it = _mapHandlers.find( mode );
-		if ( it != _mapHandlers.end() )
+		auto it = _mapHandler.find( mode );
+		if ( it != _mapHandler.end() )
 		{
 			if ( _currentMode == mode )
 			{
 				it->second->onExit( GamePlayMode::None );
 				_currentMode = GamePlayMode::None;
 			}
-			_mapHandlers.erase( it );
+			_mapHandler.erase( it );
 		}
 	}
 
@@ -47,8 +49,8 @@ namespace sw
 		const GamePlayMode oldMode = _currentMode;
 
 		// 1) Exit previous mode handler
-		auto oldIt = _mapHandlers.find( oldMode );
-		if ( oldIt != _mapHandlers.end() && oldIt->second != nullptr )
+		auto oldIt = _mapHandler.find( oldMode );
+		if ( oldIt != _mapHandler.end() && oldIt->second != nullptr )
 		{
 			oldIt->second->onExit( newMode );
 		}
@@ -57,8 +59,8 @@ namespace sw
 		_currentMode  = newMode;
 
 		// 2) Enter new mode handler
-		auto newIt = _mapHandlers.find( newMode );
-		if ( newIt != _mapHandlers.end() && newIt->second != nullptr )
+		auto newIt = _mapHandler.find( newMode );
+		if ( newIt != _mapHandler.end() && newIt->second != nullptr )
 		{
 			newIt->second->onEnter( oldMode );
 		}
@@ -69,14 +71,14 @@ namespace sw
 			_onModeChanged( oldMode, newMode );
 		}
 
-		SW_LOG_INFO( "[GameModeStateMachine] Mode transitioned: %# -> %#", static_cast<uint32>( oldMode ), static_cast<uint32>( newMode ) );
+		SW_LOG_INFO( "Mode transitioned: %# -> %#", static_cast<uint32>( oldMode ), static_cast<uint32>( newMode ) );
 		return true;
 	}
 
 	void GameModeStateMachine::update( float32 deltaTime )
 	{
-		auto it = _mapHandlers.find( _currentMode );
-		if ( it != _mapHandlers.end() && it->second != nullptr )
+		auto it = _mapHandler.find( _currentMode );
+		if ( it != _mapHandler.end() && it->second != nullptr )
 		{
 			it->second->onUpdate( deltaTime );
 		}
@@ -86,8 +88,8 @@ namespace sw
 	{
 		if ( _currentMode != GamePlayMode::None )
 		{
-			auto it = _mapHandlers.find( _currentMode );
-			if ( it != _mapHandlers.end() && it->second != nullptr )
+			auto it = _mapHandler.find( _currentMode );
+			if ( it != _mapHandler.end() && it->second != nullptr )
 			{
 				it->second->onExit( GamePlayMode::None );
 			}
@@ -99,8 +101,8 @@ namespace sw
 
 	IGameModeHandler* GameModeStateMachine::getCurrentHandler() const
 	{
-		auto it = _mapHandlers.find( _currentMode );
-		if ( it != _mapHandlers.end() )
+		auto it = _mapHandler.find( _currentMode );
+		if ( it != _mapHandler.end() )
 			return it->second.get();
 		return nullptr;
 	}

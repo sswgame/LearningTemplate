@@ -12,6 +12,8 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "ModuleCompiler" );
+
 	ModuleCompiler::ModuleCompiler( LiveReloadManager* pLiveReloadManager )
 		: _pLiveReloadManager{ pLiveReloadManager }
 		, _pCurrentProcess{ nullptr }
@@ -48,7 +50,7 @@ namespace sw
 	{
 		if ( _bIsCompiling.load( std::memory_order_relaxed ) )
 		{
-			SW_LOG_WARNING( "[ModuleCompiler] Compilation is already in progress (target: %#)", _targetName.c_str() );
+			SW_LOG_WARNING( "Compilation is already in progress (target: %#)", _targetName.c_str() );
 			return false;
 		}
 
@@ -123,7 +125,7 @@ namespace sw
 		const string buildDir = findBuildDirectory();
 		if ( buildDir.empty() || FileUtil::directoryExists( buildDir ) == false )
 		{
-			SW_LOG_ERROR( "[ModuleCompiler] Failed to find build directory for compilation!" );
+			SW_LOG_ERROR( "Failed to find build directory for compilation!" );
 			_buildState.store( BuildState::Failed, std::memory_order_relaxed );
 			_lastExitCode.store( -1, std::memory_order_relaxed );
 			_bIsCompiling.store( false, std::memory_order_relaxed );
@@ -131,7 +133,7 @@ namespace sw
 		}
 
 		const string targetDisplayName = targetName.empty() ? "all" : targetName;
-		SW_LOG_INFO( "[ModuleCompiler] Starting compilation for target '%#' (Build dir: %#)...", targetDisplayName.c_str(), buildDir.c_str() );
+		SW_LOG_INFO( "Starting compilation for target '%#' (Build dir: %#)...", targetDisplayName.c_str(), buildDir.c_str() );
 
 		string cmdLine = "cmake --build \"" + buildDir + "\"";
 		if ( targetName.empty() == false )
@@ -146,7 +148,7 @@ namespace sw
 		auto pProc = make_unique<Process>();
 		if ( pProc->launch( cmdLine, options ) == false )
 		{
-			SW_LOG_ERROR( "[ModuleCompiler] Failed to launch CMake process! Command: %#", cmdLine.c_str() );
+			SW_LOG_ERROR( "Failed to launch CMake process! Command: %#", cmdLine.c_str() );
 			_buildState.store( BuildState::Failed, std::memory_order_relaxed );
 			_lastExitCode.store( -1, std::memory_order_relaxed );
 			_bIsCompiling.store( false, std::memory_order_relaxed );
@@ -165,11 +167,11 @@ namespace sw
 				continue;
 
 			if ( singleLine.find( "FAILED:" ) != string::npos || singleLine.find( "error:" ) != string::npos || singleLine.find( "Error" ) != string::npos )
-				SW_LOG_ERROR( "[Build] %#", singleLine.c_str() );
+				SW_LOG_ERROR( "%#", singleLine.c_str() );
 			else if ( singleLine.find( "warning:" ) != string::npos || singleLine.find( "Warning" ) != string::npos )
-				SW_LOG_WARNING( "[Build] %#", singleLine.c_str() );
+				SW_LOG_WARNING( "%#", singleLine.c_str() );
 			else
-				SW_LOG_INFO( "[Build] %#", singleLine.c_str() );
+				SW_LOG_INFO( "%#", singleLine.c_str() );
 		}
 
 		int32 exitCode = -1;
@@ -192,12 +194,12 @@ namespace sw
 		if ( _bCancelRequested.load( std::memory_order_relaxed ) )
 		{
 			_buildState.store( BuildState::Failed, std::memory_order_relaxed );
-			SW_LOG_WARNING( "[ModuleCompiler] Compilation was cancelled by user." );
+			SW_LOG_WARNING( "Compilation was cancelled by user." );
 		}
 		else if ( exitCode == 0 )
 		{
 			_buildState.store( BuildState::Success, std::memory_order_relaxed );
-			SW_LOG_INFO( "[ModuleCompiler] Compilation succeeded in %.2fs (target: %#)!", static_cast<float64>( durationSec ), targetDisplayName.c_str() );
+			SW_LOG_INFO( "Compilation succeeded in %.2fs (target: %#)!", static_cast<float64>( durationSec ), targetDisplayName.c_str() );
 
 			if ( _pLiveReloadManager != nullptr && targetName.empty() == false )
 			{
@@ -207,7 +209,7 @@ namespace sw
 		else
 		{
 			_buildState.store( BuildState::Failed, std::memory_order_relaxed );
-			SW_LOG_ERROR( "[ModuleCompiler] Compilation failed with exit code %# (target: %#)", exitCode, targetDisplayName.c_str() );
+			SW_LOG_ERROR( "Compilation failed with exit code %# (target: %#)", exitCode, targetDisplayName.c_str() );
 		}
 
 		_bIsCompiling.store( false, std::memory_order_relaxed );

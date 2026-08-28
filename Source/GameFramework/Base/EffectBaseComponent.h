@@ -35,11 +35,11 @@ namespace sw
 		void	setCurrentAlpha( float32 alpha );
 
 	private:
-		PROPERTY( Alias="duration" )
+		PROPERTY( Alias = "duration" )
 		float32 _duration;
-		PROPERTY( Alias="currentTimer" )
+		PROPERTY( Alias = "currentTimer" )
 		float32 _currentTimer;
-		PROPERTY( Alias="currentAlpha" )
+		PROPERTY( Alias = "currentAlpha" )
 		float32 _currentAlpha;
 	};
 } // namespace sw

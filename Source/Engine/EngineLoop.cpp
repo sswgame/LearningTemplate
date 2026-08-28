@@ -17,7 +17,6 @@
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/EngineData.h"
 #include "Engine/Config/GameConfig.h"
-#include "Engine/Game/GameState.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
@@ -50,6 +49,8 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "EngineLoop" );
+
 	SW_EXTERN_GLOBAL_VARIABLE_BOOL( gv_useRenderThread );
 
 	namespace
@@ -465,7 +466,7 @@ namespace sw
 		if ( requested == previous )
 			return true;
 
-		SW_LOG_INFO( "[Hot-Swap] Soft-recreating RHI: %# → %#",
+		SW_LOG_INFO( "Soft-recreating RHI: %# → %#",
 					 RHI::getBackendTypeName( previous ),
 					 RHI::getBackendTypeName( requested ) );
 
@@ -489,7 +490,7 @@ namespace sw
 
 		if ( _rhi->recreateDevice( requested ) == false )
 		{
-			SW_LOG_ERROR( "[Hot-Swap] recreateDevice failed; reverting gv_rhiBackend to %#",
+			SW_LOG_ERROR( "recreateDevice failed; reverting gv_rhiBackend to %#",
 						  RHI::getBackendTypeName( previous ) );
 			gv_rhiBackend = previous;
 			return false;
@@ -498,7 +499,7 @@ namespace sw
 		BLOCK( "Scene 재초기화" )
 		{
 			if ( engine::getResourceManager().getMaterialManager().reinitializeAll( &_rhi->getDevice() ) == false )
-				SW_LOG_ERROR( "[Hot-Swap] MaterialCache reinitializeAll failed after backend change." );
+				SW_LOG_ERROR( "MaterialCache reinitializeAll failed after backend change." );
 
 			if ( _frameRenderer != nullptr )
 				_frameRenderer->initialize( &_rhi->getDevice(), _taskManager.get() );
@@ -522,7 +523,7 @@ namespace sw
 				pScene->ensureDefaultCameras();
 		}
 
-		SW_LOG_INFO( "[Hot-Swap] Active backend is now %#", RHI::getBackendTypeName( _rhi->getCommittedBackend() ) );
+		SW_LOG_INFO( "Active backend is now %#", RHI::getBackendTypeName( _rhi->getCommittedBackend() ) );
 		return true;
 	}
 
@@ -570,18 +571,18 @@ namespace sw
 		{
 	#if defined( SW_DEBUG )
 			_rhi->getLiveShaderManager().triggerReloadAll();
-			SW_LOG_INFO( "[EngineLoop] %#: force shader reload", ActionMapDefaults::kReloadShadersAction );
+			SW_LOG_INFO( "%#: force shader reload", ActionMapDefaults::kReloadShadersAction );
 	#endif
 		}
 		if ( _mapDebugAction->wasActionTriggered( ActionMapDefaults::kReloadEditorAction ) && bEnableEditor && forceReloadCallback.isBound() )
 		{
 			forceReloadCallback( config::kTargetEditorModule );
-			SW_LOG_INFO( "[EngineLoop] %#: force EditorModule reload", ActionMapDefaults::kReloadEditorAction );
+			SW_LOG_INFO( "%#: force EditorModule reload", ActionMapDefaults::kReloadEditorAction );
 		}
 		if ( _mapDebugAction->wasActionTriggered( ActionMapDefaults::kReloadGameAction ) && forceReloadCallback.isBound() )
 		{
 			forceReloadCallback( config::kTargetGameModule );
-			SW_LOG_INFO( "[EngineLoop] %#: force SWGame reload", ActionMapDefaults::kReloadGameAction );
+			SW_LOG_INFO( "%#: force SWGame reload", ActionMapDefaults::kReloadGameAction );
 		}
 #endif
 	}

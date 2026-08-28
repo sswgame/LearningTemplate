@@ -39,7 +39,7 @@ namespace sw
 	{
 		string								_name;
 		string								_typeName;
-		vector<string>						_listAliases;
+		vector<string>						_listAlias;
 		string								_category;
 		string								_displayName;
 		string								_tooltip;
@@ -77,7 +77,7 @@ namespace sw
 	{
 		string				   _name;
 		string				   _returnTypeName;
-		vector<string>		   _listParamTypeNames;
+		vector<string>		   _listParamTypeName;
 		string				   _category = annotationConstants::kDefaultMethodCategory;
 		string				   _displayName;
 		string				   _tooltip;
@@ -106,9 +106,9 @@ namespace sw
 		string					   _name;
 		string					   _fullyQualifiedName;
 		string					   _parentFQN;
-		vector<string>			   _listAliases;
-		vector<ParsedPropertyInfo> _listProperties;
-		vector<ParsedFunctionInfo> _listMethods;
+		vector<string>			   _listAlias;
+		vector<ParsedPropertyInfo> _listProperty;
+		vector<ParsedFunctionInfo> _listMethod;
 		uint8					   _bAbstract		  : 1;
 		uint8					   _bStatic			  : 1;
 		uint8					   _bReflectBody	  : 1;
@@ -140,9 +140,9 @@ namespace sw
 	{
 		string							  _name;
 		string							  _fullyQualifiedName;
-		vector<string>					  _listAliases;
-		vector<std::pair<string, string>> _listValueAliases;
-		vector<ParsedEnumeratorInfo>	  _listEnumerators;
+		vector<string>					  _listAlias;
+		vector<std::pair<string, string>> _listValueAlias;
+		vector<ParsedEnumeratorInfo>	  _listEnumerator;
 		string							  _invalidEnumerator;
 		string							  _countEnumerator;
 		uint8							  _bIsBitFlag	: 1;

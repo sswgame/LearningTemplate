@@ -131,7 +131,7 @@ namespace sw
 			Delegate newDelegate{};
 			newDelegate._pInstance = nullptr;
 			newDelegate._stubFunc  = static_cast<stub_function>( []( const void*, Args... args ) -> R
-			{ return std::invoke( Function, std::forward<Args>( args )... ); } );
+			 { return std::invoke( Function, std::forward<Args>( args )... ); } );
 
 			return newDelegate;
 		}
@@ -142,10 +142,10 @@ namespace sw
 			Delegate newDelegate{};
 			newDelegate._pInstance = reinterpret_cast<const void*>( func );
 			newDelegate._stubFunc  = static_cast<stub_function>( []( const void* ptr, Args... args ) -> R
-			{
-				auto fn = reinterpret_cast<R ( * )( Args... )>( const_cast<void*>( ptr ) );
-				return fn( std::forward<Args>( args )... );
-			} );
+			 {
+				 auto fn = reinterpret_cast<R ( * )( Args... )>( const_cast<void*>( ptr ) );
+				 return fn( std::forward<Args>( args )... );
+			 } );
 
 			return newDelegate;
 		}
@@ -157,10 +157,10 @@ namespace sw
 			Delegate newDelegate{};
 			newDelegate._pInstance = pClassInstance;
 			newDelegate._stubFunc  = static_cast<stub_function>( []( const void* ptr, Args... args ) -> R
-			{
-				const Class* instance = static_cast<const Class*>( ptr );
-				return std::invoke( MemberFunction, instance, std::forward<Args>( args )... );
-			} );
+			 {
+				 const Class* instance = static_cast<const Class*>( ptr );
+				 return std::invoke( MemberFunction, instance, std::forward<Args>( args )... );
+			 } );
 
 			return newDelegate;
 		}
@@ -172,10 +172,10 @@ namespace sw
 			Delegate newDelegate{};
 			newDelegate._pInstance = pClassInstance;
 			newDelegate._stubFunc  = static_cast<stub_function>( []( const void* pPtr, Args... args ) -> R
-			{
-				Class* pInstance = const_cast<Class*>( static_cast<const Class*>( pPtr ) );
-				return std::invoke( MemberFunction, pInstance, std::forward<Args>( args )... );
-			} );
+			 {
+				 Class* pInstance = const_cast<Class*>( static_cast<const Class*>( pPtr ) );
+				 return std::invoke( MemberFunction, pInstance, std::forward<Args>( args )... );
+			 } );
 
 			return newDelegate;
 		}
@@ -191,10 +191,10 @@ namespace sw
 			Delegate newDelegate{};
 			newDelegate._managerFunc = &lambdaManager<Lambda>;
 			newDelegate._stubFunc	 = static_cast<stub_function>( []( const void* pPtr, Args... args ) -> R
-			{
-				const Lambda* pInstance = static_cast<const Lambda*>( pPtr );
-				return ( const_cast<Lambda*>( pInstance )->operator() )( std::forward<Args>( args )... );
-			} );
+			   {
+				   const Lambda* pInstance = static_cast<const Lambda*>( pPtr );
+				   return ( const_cast<Lambda*>( pInstance )->operator() )( std::forward<Args>( args )... );
+			   } );
 
 			constexpr bool bIsSBO = sizeof( Lambda ) <= kInlineBufferSize && alignof( Lambda ) <= alignof( std::max_align_t ) && std::is_nothrow_move_constructible_v<Lambda>;
 			if constexpr ( bIsSBO )
@@ -355,7 +355,7 @@ namespace sw
 		/** @brief 빈 구독 리스트로 둡니다. */
 		MulticastDelegate() noexcept
 			: _delegateList{}
-			, _listPendingRemoves{}
+			, _listPendingRemove{}
 			, _broadcastDepth{ 0 }
 		{
 		}
@@ -409,11 +409,11 @@ namespace sw
 				return;
 
 			// broadcast 중 요청된 remove를 일괄 처리
-			for ( const DelegateHandle& removeHandle : _listPendingRemoves )
+			for ( const DelegateHandle& removeHandle : _listPendingRemove )
 			{
 				removeNow( removeHandle );
 			}
-			_listPendingRemoves.clear();
+			_listPendingRemove.clear();
 		}
 
 		/** @brief 새로운 델리게이트를 등록하고 핸들을 반환합니다. */
@@ -433,7 +433,7 @@ namespace sw
 			if ( _broadcastDepth > 0 )
 			{
 				// broadcast 완료 후 일괄 처리 (이터레이터 무효화 방지)
-				_listPendingRemoves.push_back( handle );
+				_listPendingRemove.push_back( handle );
 				return;
 			}
 			removeNow( handle );
@@ -459,7 +459,7 @@ namespace sw
 			{
 				for ( const DelegateEntry& entry : _delegateList )
 				{
-					_listPendingRemoves.push_back( entry._handle );
+					_listPendingRemove.push_back( entry._handle );
 				}
 				return;
 			}
@@ -480,8 +480,8 @@ namespace sw
 		}
 
 		vector<DelegateEntry>  _delegateList;
-		vector<DelegateHandle> _listPendingRemoves; ///< broadcast 중 지연된 remove 목록
-		uint32				   _broadcastDepth;		///< 중첩 broadcast 깊이. 0 이 될 때만 지연 제거를 반영
+		vector<DelegateHandle> _listPendingRemove; ///< broadcast 중 지연된 remove 목록
+		uint32				   _broadcastDepth;	   ///< 중첩 broadcast 깊이. 0 이 될 때만 지연 제거를 반영
 	};
 } // namespace sw
 

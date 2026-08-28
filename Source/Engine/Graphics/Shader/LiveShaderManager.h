@@ -77,9 +77,9 @@ namespace sw
 		};
 
 		mutable std::shared_mutex						 _mutex;
-		unordered_map<string, vector<WatchedShaderInfo>> _mapWatchedShaders;
-		unordered_map<string, vector<string>>			 _mapIncludeDependencies;
-		vector<string>									 _listPendingReloadPaths;
+		unordered_map<string, vector<WatchedShaderInfo>> _mapWatchedShader;
+		unordered_map<string, vector<string>>			 _mapIncludeDependency;
+		vector<string>									 _listPendingReloadPath;
 		string											 _watchDirectory;
 		ReloadFileManager*								 _pReloadFiles{ nullptr };
 		FileWatchHandle									 _fileWatchHandle{};

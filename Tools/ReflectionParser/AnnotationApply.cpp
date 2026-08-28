@@ -12,6 +12,7 @@
 #include "ReflectionParser/AnnotationMeta.h"
 #include "ReflectionParser/ParserDefines.h"
 
+SW_LOG_CALLER( "AnnotationApply" );
 namespace sw
 {
 	string_view annotationArgText( string_view spelling, string_view prefix )
@@ -143,7 +144,7 @@ namespace sw
 
 	static void applyReflectAlias( ParsedTypeInfo& typeInfo, const string& value )
 	{
-		appendTypeAliases( typeInfo._listAliases, value );
+		appendTypeAliases( typeInfo._listAlias, value );
 	}
 
 	constexpr ReflectStringEntry kReflectStrings[] = {
@@ -168,19 +169,19 @@ namespace sw
 			const size_t colon = token.find( ':' );
 			if ( colon == string::npos || colon == 0 || colon + 1 >= token.size() )
 			{
-				SW_LOG_WARNING( "[AstVisitor] ENUM ValueAlias expected Old:Current, got '%#'", token );
+				SW_LOG_WARNING( "ENUM ValueAlias expected Old:Current, got '%#'", token );
 				continue;
 			}
 			string alias	 = StringUtil::trim( token.substr( 0, colon ).c_str() );
 			string canonical = StringUtil::trim( token.substr( colon + 1 ).c_str() );
 			if ( alias.empty() == false && canonical.empty() == false )
-				enumInfo._listValueAliases.emplace_back( std::move( alias ), std::move( canonical ) );
+				enumInfo._listValueAlias.emplace_back( std::move( alias ), std::move( canonical ) );
 		}
 	}
 
 	static void applyEnumAlias( ParsedEnumInfo& enumInfo, const string& value )
 	{
-		appendTypeAliases( enumInfo._listAliases, value );
+		appendTypeAliases( enumInfo._listAlias, value );
 	}
 	static void applyEnumValueAlias( ParsedEnumInfo& enumInfo, const string& value )
 	{
@@ -244,7 +245,7 @@ namespace sw
 
 	static void applyPropAlias( ParsedPropertyInfo& prop, const string& value )
 	{
-		appendTypeAliases( prop._listAliases, value );
+		appendTypeAliases( prop._listAlias, value );
 	}
 	static void applyPropCategory( ParsedPropertyInfo& prop, const string& value ) { prop._category = value; }
 	static void applyPropDisplayName( ParsedPropertyInfo& prop, const string& value ) { prop._displayName = value; }

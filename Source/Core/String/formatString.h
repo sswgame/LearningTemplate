@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file FormatString.h
  * @brief printf 스타일 포맷 헬퍼
  */
@@ -246,9 +246,6 @@ namespace sw
 	/** @brief 값과 Format 을 같이 넘길 때 씁니다. */
 	class FormattedValue
 	{
-		T	   _value;
-		Format _format;
-
 	public:
 		/** @brief 이동 생성합니다. */
 		constexpr FormattedValue( T&& value, const Format& format ) noexcept
@@ -269,6 +266,10 @@ namespace sw
 			else if constexpr ( TIndex == 1 )
 				return getFormat();
 		}
+
+	private:
+		T	   _value;
+		Format _format;
 	};
 
 	/** @brief 주어진 값과 포맷 설정을 래핑하여 생성하는 헬퍼 함수입니다. */

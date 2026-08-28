@@ -10,17 +10,19 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "TitleComponent" );
+
 	void TitleComponent::onBeginPlay()
 	{
 		setTickGroup( TickGroup::PrePhysics );
 		frontCloudCurrentX = 0.0f;
 		backCloudCurrentX  = 0.0f;
-		SW_LOG_INFO( "[TitleComponent] BeginPlay: Next scene='%#'", nextSceneName.c_str() );
+		SW_LOG_INFO( "BeginPlay: Next scene='%#'", nextSceneName.c_str() );
 	}
 
 	void TitleComponent::onEndPlay()
 	{
-		SW_LOG_INFO( "[TitleComponent] EndPlay." );
+		SW_LOG_INFO( "EndPlay." );
 	}
 
 	void TitleComponent::onTick( float32 deltaTime )
@@ -56,7 +58,7 @@ namespace sw
 				scene = GameData::get()._entranceScene;
 			if ( scene.empty() )
 				return;
-			SW_LOG_INFO( "[TitleComponent] Loading next scene: '%#'", scene.c_str() );
+			SW_LOG_INFO( "Loading next scene: '%#'", scene.c_str() );
 			game::getService<SceneManager>()->requestLoadAsync( scene );
 		}
 	}

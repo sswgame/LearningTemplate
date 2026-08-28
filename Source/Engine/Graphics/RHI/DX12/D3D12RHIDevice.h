@@ -205,7 +205,7 @@ namespace sw
 		Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> _commandList;
 		FrameResourceRing								  _frameRing;
 
-		vector<Microsoft::WRL::ComPtr<ID3D12Resource>>		   _listRenderTargets;
+		vector<Microsoft::WRL::ComPtr<ID3D12Resource>>		   _listRenderTarget;
 		RHIHandleTable<Microsoft::WRL::ComPtr<ID3D12Resource>> _gpuBuffers;
 		RHIHandleTable<Microsoft::WRL::ComPtr<ID3D12Resource>> _gpuTextures;
 		RHIBufferHandle										   _boundMeshVb;
@@ -214,13 +214,13 @@ namespace sw
 		RHIBufferHandle										   _boundIndexBuffer;
 		uint32												   _boundIndexStride;
 		uint32												   _boundIndexOffset;
-		unordered_map<RHIBufferHandle, D3D12_RESOURCE_STATES>  _mapStructuredBufferStates;
+		unordered_map<RHIBufferHandle, D3D12_RESOURCE_STATES>  _mapStructuredBufferState;
 
-		unordered_map<RHITextureHandle, OffscreenTextureRecord> _mapOffscreenTextures;
+		unordered_map<RHITextureHandle, OffscreenTextureRecord> _mapOffscreenTexture;
 		uint32													_nextOffscreenRtvIndex;
 		uint32													_nextOffscreenDsvIndex;
-		vector<uint32>											_listFreeOffscreenRtvIndices;
-		vector<uint32>											_listFreeOffscreenDsvIndices;
+		vector<uint32>											_listFreeOffscreenRtvIndex;
+		vector<uint32>											_listFreeOffscreenDsvIndex;
 		unordered_map<RHIBufferHandle, uint32>					_mapCbAlignedSize;
 		unordered_map<RHIBufferHandle, void*>					_mapCbMapped;
 
@@ -234,13 +234,13 @@ namespace sw
 		[[maybe_unused]] uint8 _reservedPassFlags	 : 5;
 
 		RHIHandleTable<D3D12PipelineStateRecord> _pipelineStates;
-		vector<D3D12RenderPassRecord>			 _listRenderPasses;
+		vector<D3D12RenderPassRecord>			 _listRenderPass;
 		RHIPipelineStateHandle					 _activeGraphicsPso;
 
 		vector<BindlessResourceRecord> _listRegisteredBindless;
 		vector<uint32>				   _listFreeBindless;
 
-		vector<BindlessResourceRecord> _listRegisteredUAVs;
+		vector<BindlessResourceRecord> _listRegisteredUAV;
 		vector<uint32>				   _listFreeUav;
 
 		UINT _rtvDescriptorSize;

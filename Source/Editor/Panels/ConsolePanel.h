@@ -48,7 +48,7 @@ namespace sw::editor
 		void updateFilteredEntries( const string& filterStr );
 
 	private:
-		deque<LogEntry>			_listEntries;
+		deque<LogEntry>			_listEntry;
 		vector<LogEntry>		_listDrawSnapshot;
 		vector<const LogEntry*> _listVisible;
 		string					_cachedFilter;

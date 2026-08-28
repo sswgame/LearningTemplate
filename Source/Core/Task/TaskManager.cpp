@@ -13,6 +13,8 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "TaskManager" );
+
 	namespace
 	{
 
@@ -517,20 +519,20 @@ namespace sw
 		_mainThreadId = std::this_thread::get_id();
 		_bStop		  = false;
 		_sleepingWorkerCount.store( 0, std::memory_order_relaxed );
-		_listWorkers.reserve( threadCount );
-		_listWorkerQueues.reserve( threadCount );
+		_listWorker.reserve( threadCount );
+		_listWorkerQueue.reserve( threadCount );
 		for ( uint32 workerIndex = 0; workerIndex < threadCount; ++workerIndex )
 		{
-			_listWorkerQueues.push_back( make_unique<WorkerQueue>() );
+			_listWorkerQueue.push_back( make_unique<WorkerQueue>() );
 		}
 
 		for ( uint32 threadIndex = 0; threadIndex < threadCount; ++threadIndex )
 		{
-			_listWorkers.emplace_back( &TaskManager::workerLoop, this, threadIndex );
+			_listWorker.emplace_back( &TaskManager::workerLoop, this, threadIndex );
 		}
 
 		_bInitialized = true;
-		SW_LOG_INFO( "[TaskManager] Initialized with %# worker threads.", threadCount );
+		SW_LOG_INFO( "Initialized with %# worker threads.", threadCount );
 		return true;
 	}
 
@@ -552,13 +554,13 @@ namespace sw
 				_cvWorker.notify_all();
 			}
 
-			for ( std::thread& worker : _listWorkers )
+			for ( std::thread& worker : _listWorker )
 			{
 				if ( worker.joinable() )
 					worker.join();
 			}
-			_listWorkers.clear();
-			_listWorkerQueues.clear();
+			_listWorker.clear();
+			_listWorkerQueue.clear();
 		}
 
 		BLOCK( "Cleanup Resources" )
@@ -567,7 +569,7 @@ namespace sw
 			_mainThreadId = {};
 			_bInitialized = false;
 		}
-		SW_LOG_INFO( "[TaskManager] Shutdown cleanly." );
+		SW_LOG_INFO( "Shutdown cleanly." );
 	}
 
 	bool TaskManager::isMainThread() const
@@ -614,7 +616,7 @@ namespace sw
 	{
 		if ( _bInitialized == false || _bStop.load( std::memory_order_relaxed ) )
 		{
-			SW_LOG_WARNING( "[TaskManager] Cannot emplace task '%#' while TaskManager is not initialized or stopping.", string{ name }.c_str() );
+			SW_LOG_WARNING( "Cannot emplace task '%#' while TaskManager is not initialized or stopping.", string{ name }.c_str() );
 			return TaskHandle{};
 		}
 
@@ -644,7 +646,7 @@ namespace sw
 	{
 		if ( _bInitialized == false || _bStop.load( std::memory_order_relaxed ) )
 		{
-			SW_LOG_WARNING( "[TaskManager] Cannot emplace task '%#' while TaskManager is not initialized or stopping.", string{ name }.c_str() );
+			SW_LOG_WARNING( "Cannot emplace task '%#' while TaskManager is not initialized or stopping.", string{ name }.c_str() );
 			return TaskHandle{};
 		}
 
@@ -766,7 +768,7 @@ namespace sw
 	TaskStageHandle TaskManager::getStage( string_view stageName )
 	{
 		std::scoped_lock<mutex> lock{ _stageMutex };
-		for ( auto it = _listAllStages.begin(); it != _listAllStages.end(); )
+		for ( auto it = _listAllStage.begin(); it != _listAllStage.end(); )
 		{
 			shared_ptr<StageNode> pStage = it->lock();
 			if ( pStage != nullptr )
@@ -776,7 +778,7 @@ namespace sw
 				++it;
 			}
 			else
-				it = _listAllStages.erase( it );
+				it = _listAllStage.erase( it );
 		}
 		return TaskStageHandle{};
 	}
@@ -784,7 +786,7 @@ namespace sw
 	TaskStageHandle TaskManager::getOrCreateStage( string_view stageName )
 	{
 		std::scoped_lock<mutex> lock{ _stageMutex };
-		for ( auto it = _listAllStages.begin(); it != _listAllStages.end(); )
+		for ( auto it = _listAllStage.begin(); it != _listAllStage.end(); )
 		{
 			shared_ptr<StageNode> pStage = it->lock();
 			if ( pStage != nullptr )
@@ -794,12 +796,12 @@ namespace sw
 				++it;
 			}
 			else
-				it = _listAllStages.erase( it );
+				it = _listAllStage.erase( it );
 		}
 
 		shared_ptr<StageNode> stage = sw::make_shared<StageNode>();
 		stage->_name				= stageName;
-		_listAllStages.push_back( stage );
+		_listAllStage.push_back( stage );
 
 		return TaskStageHandle{ stage };
 	}
@@ -910,9 +912,9 @@ namespace sw
 	{
 		{
 			std::scoped_lock<mutex> lock{ _stageMutex };
-			_listAllStages.clear();
+			_listAllStage.clear();
 		}
-		for ( auto& wq : _listWorkerQueues )
+		for ( auto& wq : _listWorkerQueue )
 		{
 			TaskNode* pTemp{ nullptr };
 			while ( wq->_queue.steal( pTemp ) )
@@ -1087,18 +1089,18 @@ namespace sw
 	{
 		pNode = nullptr;
 
-		WorkerQueue& localQ = *std::as_const( _listWorkerQueues )[workerId];
+		WorkerQueue& localQ = *std::as_const( _listWorkerQueue )[workerId];
 		if ( localQ._queue.pop( pNode ) && pNode != nullptr )
 			return true;
 
 		if ( _globalWorkerQueue.dequeue( pNode ) && pNode != nullptr )
 			return true;
 
-		const uint32 numWorkers = static_cast<uint32>( _listWorkerQueues.size() );
+		const uint32 numWorkers = static_cast<uint32>( _listWorkerQueue.size() );
 		for ( uint32 workerIndex = 1; workerIndex < numWorkers; ++workerIndex )
 		{
 			const uint32 targetId = ( workerId + workerIndex ) % numWorkers;
-			WorkerQueue& targetQ  = *std::as_const( _listWorkerQueues )[targetId];
+			WorkerQueue& targetQ  = *std::as_const( _listWorkerQueue )[targetId];
 			if ( targetQ._queue.steal( pNode ) && pNode != nullptr )
 				return true;
 		}
@@ -1113,7 +1115,7 @@ namespace sw
 		if ( workerId >= 0 )
 		{
 			TaskNode*	 pNode{ nullptr };
-			WorkerQueue& localQ = *std::as_const( _listWorkerQueues )[static_cast<uint32>( workerId )];
+			WorkerQueue& localQ = *std::as_const( _listWorkerQueue )[static_cast<uint32>( workerId )];
 			if ( localQ._queue.pop( pNode ) && pNode != nullptr )
 			{
 				executeTask( pNode );
@@ -1126,7 +1128,7 @@ namespace sw
 
 	bool TaskManager::tryStealAndExecute( uint32 excludedWorkerId )
 	{
-		const uint32 numWorkers = static_cast<uint32>( _listWorkerQueues.size() );
+		const uint32 numWorkers = static_cast<uint32>( _listWorkerQueue.size() );
 		if ( numWorkers == 0 )
 			return false;
 
@@ -1142,7 +1144,7 @@ namespace sw
 			if ( workerIndex == excludedWorkerId )
 				continue;
 
-			WorkerQueue& targetQ = *std::as_const( _listWorkerQueues )[workerIndex];
+			WorkerQueue& targetQ = *std::as_const( _listWorkerQueue )[workerIndex];
 			if ( targetQ._queue.steal( pNode ) && pNode != nullptr )
 			{
 				executeTask( pNode );
@@ -1224,13 +1226,13 @@ namespace sw
 			}
 			else
 			{
-				const uint32 numWorkers = static_cast<uint32>( _listWorkerQueues.size() );
+				const uint32 numWorkers = static_cast<uint32>( _listWorkerQueue.size() );
 				if ( numWorkers > 0 )
 				{
 					int32 workerId = getCurrentWorkerIndex();
 					if ( workerId >= 0 )
 					{
-						WorkerQueue& localQ = *std::as_const( _listWorkerQueues )[static_cast<uint32>( workerId )];
+						WorkerQueue& localQ = *std::as_const( _listWorkerQueue )[static_cast<uint32>( workerId )];
 						while ( localQ._queue.push( pNode ) == false )
 						{
 							std::this_thread::yield();

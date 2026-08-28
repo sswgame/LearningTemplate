@@ -2,6 +2,8 @@
 
 #include "Engine/Serialization/Core/SerializerInternal.h"
 
+#include "Core/String/StringUtil.h"
+
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Serialization/Core/SchemaMigrate.h"
@@ -11,7 +13,6 @@
 
 namespace sw
 {
-
 	namespace
 	{
 		/** @brief Alias/옛 이름 → SerializeContext 핸들러용 canonical (_name). */
@@ -30,31 +31,6 @@ namespace sw
 					return pTypeInfo->_name;
 			}
 			return typeName;
-		}
-
-		bool isOwnedPointerElementType( hashed_string elementTypeName )
-		{
-			const utf8* pName = elementTypeName.c_str();
-			if ( pName == nullptr )
-				return false;
-			for ( const utf8* pCursor = pName; *pCursor != '\0'; ++pCursor )
-			{
-				if ( *pCursor == '*' )
-					return true;
-			}
-			return false;
-		}
-
-		const TypeInfo* findNestedJsonObjectType( hashed_string typeName, const SerializeContext& ctx )
-		{
-			if ( ctx.findTextWriter( typeName ) != nullptr )
-				return nullptr;
-			if ( engine::getTypeRegistry().findEnum( typeName ) != nullptr )
-				return nullptr;
-			const TypeInfo* pTypeInfo = engine::getTypeRegistry().findType( typeName );
-			if ( pTypeInfo == nullptr || pTypeInfo->isPrimitive() )
-				return nullptr;
-			return pTypeInfo;
 		}
 
 	} // namespace
@@ -100,15 +76,28 @@ namespace sw
 		{
 			if ( pStructInfo->isPrimitive() == false )
 			{
-				// Size-prefixed blob so nested structs inside containers can advance offset.
-				vector<uint8> listNested;
-				BinarySerializer::serialize( pValuePtr, *pStructInfo, listNested, ctx );
-				const uint32 payloadSize = static_cast<uint32>( listNested.size() );
-				const uint8* pSizeBytes	 = reinterpret_cast<const uint8*>( &payloadSize );
-				listBuffer.insert( listBuffer.end(), pSizeBytes, pSizeBytes + sizeof( uint32 ) );
-				listBuffer.insert( listBuffer.end(), listNested.begin(), listNested.end() );
+				vector<uint8> listStructBuf;
+				BinarySerializer::serialize( pValuePtr, *pStructInfo, listStructBuf, ctx );
+				const uint32 size	= static_cast<uint32>( listStructBuf.size() );
+				const uint8* pBytes = reinterpret_cast<const uint8*>( &size );
+				listBuffer.insert( listBuffer.end(), pBytes, pBytes + sizeof( uint32 ) );
+				listBuffer.insert( listBuffer.end(), listStructBuf.begin(), listStructBuf.end() );
+				return;
 			}
 		}
+
+		const SerializeContext::TextWriteFn* pTextWriter = ctx.findTextWriter( resolved );
+		if ( pTextWriter != nullptr )
+		{
+			string		 str	= ( *pTextWriter )( pValuePtr );
+			const uint32 size	= static_cast<uint32>( str.size() );
+			const uint8* pBytes = reinterpret_cast<const uint8*>( &size );
+			listBuffer.insert( listBuffer.end(), pBytes, pBytes + sizeof( uint32 ) );
+			listBuffer.insert( listBuffer.end(), str.begin(), str.end() );
+			return;
+		}
+
+		listBuffer.push_back( 0 );
 	}
 
 	bool deserializeValueBinary( void* pValuePtr, const hashed_string& typeName,
@@ -126,7 +115,9 @@ namespace sw
 			(void)pEnumInfo;
 			if ( offset + sizeof( int64 ) > dataSize )
 				return false;
-			Memory::copy( pValuePtr, pData + offset, sizeof( int64 ) );
+			int64 val{ 0 };
+			Memory::copy( &val, pData + offset, sizeof( int64 ) );
+			*static_cast<int64*>( pValuePtr ) = val;
 			offset += sizeof( int64 );
 			return true;
 		}
@@ -138,17 +129,37 @@ namespace sw
 			{
 				if ( offset + sizeof( uint32 ) > dataSize )
 					return false;
-				uint32 payloadSize{ 0 };
-				Memory::copy( &payloadSize, pData + offset, sizeof( uint32 ) );
+				uint32 size{ 0 };
+				Memory::copy( &size, pData + offset, sizeof( uint32 ) );
 				offset += sizeof( uint32 );
-				if ( offset + payloadSize > dataSize )
+				if ( offset + size > dataSize )
 					return false;
-				const bool ok = BinarySerializer::deserialize( pValuePtr, *pStructInfo, pData + offset, payloadSize, ctx );
-				offset += payloadSize;
+				const bool ok = BinarySerializer::deserialize( pValuePtr, *pStructInfo, pData + offset, size, ctx );
+				offset += size;
 				return ok;
 			}
 		}
 
+		const SerializeContext::TextReadFn* pTextReader = ctx.findTextReader( resolved );
+		if ( pTextReader != nullptr )
+		{
+			if ( offset + sizeof( uint32 ) > dataSize )
+				return false;
+			uint32 size{ 0 };
+			Memory::copy( &size, pData + offset, sizeof( uint32 ) );
+			offset += sizeof( uint32 );
+			if ( offset + size > dataSize )
+				return false;
+			string str( reinterpret_cast<const utf8*>( pData + offset ), size );
+			offset += size;
+			return ( *pTextReader )( pValuePtr, str );
+		}
+
+		if ( offset < dataSize )
+		{
+			++offset;
+			return true;
+		}
 		return false;
 	}
 
@@ -161,10 +172,12 @@ namespace sw
 		ISequenceContainerWrapper* pSeq = nested._wrapper->asSequence();
 		if ( pSeq != nullptr )
 		{
-			const uint32 count		 = static_cast<uint32>( pSeq->getSize( pContainerPtr ) );
-			const uint8* pCountBytes = reinterpret_cast<const uint8*>( &count );
-			listBuffer.insert( listBuffer.end(), pCountBytes, pCountBytes + sizeof( uint32 ) );
-			for ( uint32 elemIndex = 0; elemIndex < count; ++elemIndex )
+			const size_t sz	   = pSeq->getSize( pContainerPtr );
+			const uint32 count = static_cast<uint32>( sz );
+			const uint8* pB	   = reinterpret_cast<const uint8*>( &count );
+			listBuffer.insert( listBuffer.end(), pB, pB + sizeof( uint32 ) );
+
+			for ( size_t elemIndex = 0; elemIndex < sz; ++elemIndex )
 			{
 				const void* pElem = pSeq->getElementConst( pContainerPtr, elemIndex );
 				if ( nested._elementNested != nullptr )
@@ -178,16 +191,18 @@ namespace sw
 		IMapContainerWrapper* pMapWrap = nested._wrapper->asMap();
 		if ( pMapWrap != nullptr )
 		{
-			const uint32 count		 = static_cast<uint32>( pMapWrap->getSize( pContainerPtr ) );
-			const uint8* pCountBytes = reinterpret_cast<const uint8*>( &count );
-			listBuffer.insert( listBuffer.end(), pCountBytes, pCountBytes + sizeof( uint32 ) );
-			pMapWrap->forEach( pContainerPtr, [&]( const void* pKPtr, const void* pVPtr )
+			const size_t sz	   = pMapWrap->getSize( pContainerPtr );
+			const uint32 count = static_cast<uint32>( sz );
+			const uint8* pB	   = reinterpret_cast<const uint8*>( &count );
+			listBuffer.insert( listBuffer.end(), pB, pB + sizeof( uint32 ) );
+
+			pMapWrap->forEach( pContainerPtr, [&]( const void* pKey, const void* pVal )
 			{
-				serializeValueBinary( pKPtr, nested._keyTypeName, listBuffer, ctx );
+				serializeValueBinary( pKey, nested._keyTypeName, listBuffer, ctx );
 				if ( nested._elementNested != nullptr )
-					serializeNestedContainerBinary( pVPtr, *nested._elementNested, listBuffer, ctx );
+					serializeNestedContainerBinary( pVal, *nested._elementNested, listBuffer, ctx );
 				else
-					serializeValueBinary( pVPtr, nested._elementTypeName, listBuffer, ctx );
+					serializeValueBinary( pVal, nested._elementTypeName, listBuffer, ctx );
 			} );
 		}
 	}
@@ -254,6 +269,41 @@ namespace sw
 		return false;
 	}
 
+	void valueToText( StringBuilder<constant::kMaxBuffer8192>& ss, const void* pValPtr, const hashed_string& typeName,
+					  const SerializeContext& ctx )
+	{
+		const hashed_string					 resolved	 = resolveHandlerTypeName( typeName, ctx );
+		const SerializeContext::TextWriteFn* pTextWriter = ctx.findTextWriter( resolved );
+		if ( pTextWriter != nullptr )
+		{
+			ss.append( ( *pTextWriter )( pValPtr ).c_str() );
+			return;
+		}
+
+		const EnumInfo* pEnumInfo = engine::getTypeRegistry().findEnum( typeName );
+		if ( pEnumInfo != nullptr )
+		{
+			const int64 val = *static_cast<const int64*>( pValPtr );
+			if ( pEnumInfo->_bIsBitFlag )
+				ss.append( pEnumInfo->toStringFlags( val ).c_str() );
+			else
+				ss.append( pEnumInfo->toString( val ).c_str() );
+			return;
+		}
+
+		const TypeInfo* pStructInfo = engine::getTypeRegistry().findType( typeName );
+		if ( pStructInfo != nullptr )
+		{
+			if ( pStructInfo->isPrimitive() == false )
+			{
+				ss.append( JsonSerializer::serialize( pValPtr, *pStructInfo, ctx ) );
+				return;
+			}
+		}
+
+		ss.append( "null" );
+	}
+
 	bool parseTextValue( void* pValPtr, const hashed_string& typeName, string_view valStr,
 						 const SerializeContext& ctx )
 	{
@@ -291,7 +341,6 @@ namespace sw
 		return false;
 	}
 
-	/** @brief PROPERTY(Default="...") when the asset omitted this scalar field. */
 	bool applyPropertyDefault( void* pPropPtr, const PropertyInfo& prop, const SerializeContext& ctx )
 	{
 		if ( pPropPtr == nullptr || prop._bIsContainer != 0 )
@@ -299,410 +348,6 @@ namespace sw
 		if ( prop._metadata._defaultValue.empty() )
 			return false;
 		return parseTextValue( pPropPtr, prop._typeName, prop._metadata._defaultValue, ctx );
-	}
-
-	void valueToText( StringBuilder<constant::kMaxBuffer8192>& ss, const void* pValPtr, const hashed_string& typeName,
-					  const SerializeContext& ctx )
-	{
-		const hashed_string					 resolved	 = resolveHandlerTypeName( typeName, ctx );
-		const SerializeContext::TextWriteFn* pTextWriter = ctx.findTextWriter( resolved );
-		if ( pTextWriter != nullptr )
-		{
-			ss.append( ( *pTextWriter )( pValPtr ).c_str() );
-			return;
-		}
-
-		const EnumInfo* pEnumInfo = engine::getTypeRegistry().findEnum( typeName );
-		if ( pEnumInfo != nullptr )
-		{
-			const int64 val = *static_cast<const int64*>( pValPtr );
-			if ( pEnumInfo->_bIsBitFlag )
-				ss.append( pEnumInfo->toStringFlags( val ).c_str() );
-			else
-				ss.append( pEnumInfo->toString( val ).c_str() );
-			return;
-		}
-
-		const TypeInfo* pStructInfo = engine::getTypeRegistry().findType( typeName );
-		if ( pStructInfo != nullptr )
-		{
-			if ( pStructInfo->isPrimitive() == false )
-			{
-				ss.append( JsonSerializer::serialize( pValPtr, *pStructInfo, ctx ) );
-				return;
-			}
-		}
-
-		ss.append( "null" );
-	}
-
-	void valueToJson( StringBuilder<constant::kMaxBuffer8192>& ss, const void* pValPtr, const hashed_string& typeName,
-					  const SerializeContext& ctx )
-	{
-		JsonDocument doc;
-		writeJsonValue( doc.root(), pValPtr, typeName, ctx );
-		ss.append( doc.dump().c_str() );
-	}
-
-	void writeJsonValue( JsonValue dst, const void* pValPtr, const hashed_string& typeName, const SerializeContext& ctx )
-	{
-		if ( dst.isValid() == false )
-			return;
-
-		const hashed_string resolved  = resolveHandlerTypeName( typeName, ctx );
-		const bool			bIsString = ( resolved.isPredefinedType( PredefinedNameType::NameType_string ) ||
-										  resolved.isPredefinedType( PredefinedNameType::NameType_hashed_string ) ||
-										  resolved.isPredefinedType( PredefinedNameType::NameType_TagID ) );
-		const bool			bIsBool	  = ( resolved.isPredefinedType( PredefinedNameType::NameType_bool ) ||
-								 resolved.isPredefinedType( PredefinedNameType::NameType_AtomicBool ) );
-		const bool			bIsEnum	  = ( engine::getTypeRegistry().findEnum( typeName ) != nullptr );
-
-		if ( bIsString || bIsEnum )
-		{
-			StringBuilder<constant::kMaxBuffer8192> text;
-			valueToText( text, pValPtr, typeName, ctx );
-			dst.setString( text.view() );
-			return;
-		}
-
-		if ( bIsBool )
-		{
-			StringBuilder<constant::kMaxBuffer8192> text;
-			valueToText( text, pValPtr, typeName, ctx );
-			dst.setBool( text.view() == "true" || text.view() == "1" );
-			return;
-		}
-
-		if ( ctx.findTextWriter( resolved ) != nullptr )
-		{
-			StringBuilder<constant::kMaxBuffer8192> text;
-			valueToText( text, pValPtr, typeName, ctx );
-			JsonDocument parsed;
-			if ( parsed.parse( text.view() ) && parsed.root().isObject() == false && parsed.root().isArray() == false )
-			{
-				dst.assignFrom( parsed.root() );
-				return;
-			}
-			dst.setString( text.view() );
-			return;
-		}
-
-		const TypeInfo* pStructInfo = engine::getTypeRegistry().findType( typeName );
-		if ( pStructInfo != nullptr )
-		{
-			if ( pStructInfo->isPrimitive() == false )
-			{
-				JsonSerializer::writeObject( dst, pValPtr, *pStructInfo, ctx );
-				return;
-			}
-		}
-
-		StringBuilder<constant::kMaxBuffer8192> text;
-		valueToText( text, pValPtr, typeName, ctx );
-		dst.setString( text.view() );
-	}
-
-	void writeNestedContainerJson( JsonValue dst, const void* pContainerPtr, const NestedContainerInfo& nested,
-								   const utf8* pPropName, const SerializeContext& ctx )
-	{
-		if ( pContainerPtr == nullptr || nested._wrapper == nullptr || dst.isValid() == false || pPropName == nullptr )
-			return;
-
-		dst.setObject();
-		dst.set( kPropertyNameKey, false ).setString( pPropName );
-
-		ISequenceContainerWrapper* pSeq = nested._wrapper->asSequence();
-		if ( pSeq != nullptr )
-		{
-			JsonValue	   items	 = dst.set( kJsonContainerItemKey, false );
-			const bool	   bOwnedPtr = isOwnedPointerElementType( nested._elementTypeName );
-			items.setArray();
-			const size_t sz = pSeq->getSize( pContainerPtr );
-			for ( size_t elementIndex = 0; elementIndex < sz; ++elementIndex )
-			{
-				const void* pElemPtr = pSeq->getElementConst( pContainerPtr, elementIndex );
-				if ( nested._elementNested != nullptr )
-				{
-					JsonValue slot = items.pushBack();
-					slot.setObject();
-					writeTypedContainerJson( slot, "item", pElemPtr, *nested._elementNested, ctx );
-				}
-				else if ( bOwnedPtr )
-				{
-					void* const* ppObj = static_cast<void* const*>( pElemPtr );
-					void*		 pObj  = ppObj != nullptr ? *ppObj : nullptr;
-					if ( pObj == nullptr )
-						continue;
-					const TypeInfo* pRuntimeType = ctx.getRuntimeTypeInfo( pObj );
-					if ( pRuntimeType == nullptr )
-						continue;
-					JsonValue slot = items.pushBack();
-					slot.setObject();
-					JsonValue body = slot.set( pRuntimeType->_name.c_str(), false );
-					JsonSerializer::writeObject( body, pObj, *pRuntimeType, ctx );
-					body.set( kSchemaVersionKey, false ).setUint( 0 );
-				}
-				else
-				{
-					const TypeInfo* pElemType = findNestedJsonObjectType( nested._elementTypeName, ctx );
-					if ( pElemType != nullptr )
-					{
-						JsonValue slot = items.pushBack();
-						slot.setObject();
-						JsonSerializer::writeObject( slot.set( pElemType->_name.c_str(), false ), pElemPtr, *pElemType, ctx );
-					}
-					else
-						writeJsonValue( items.pushBack(), pElemPtr, nested._elementTypeName, ctx );
-				}
-			}
-			return;
-		}
-
-		IMapContainerWrapper* pMapWrap = nested._wrapper->asMap();
-		if ( pMapWrap != nullptr )
-		{
-			JsonValue entries = dst.set( kJsonContainerEntryKey, false );
-			entries.setObject();
-			pMapWrap->forEach( pContainerPtr, [&]( const void* pKPtr, const void* pVPtr )
-			{
-				StringBuilder<constant::kMaxBuffer8192> keySs;
-				valueToText( keySs, pKPtr, nested._keyTypeName, ctx );
-				if ( nested._elementNested != nullptr )
-				{
-					JsonValue slot = entries.set( keySs.view(), false );
-					slot.setObject();
-					writeTypedContainerJson( slot, "value", pVPtr, *nested._elementNested, ctx );
-				}
-				else
-					writeJsonValue( entries.set( keySs.view(), false ), pVPtr, nested._elementTypeName, ctx );
-			} );
-		}
-	}
-
-	void writeTypedContainerJson( JsonValue parent, const utf8* pPropName, const void* pContainerPtr,
-								  const NestedContainerInfo& nested, const SerializeContext& ctx )
-	{
-		if ( parent.isValid() == false || pPropName == nullptr )
-			return;
-		const utf8* pTypeTag = containerTypeTagName( nested._typeName );
-		if ( pTypeTag == nullptr )
-			return;
-
-		JsonValue group = parent.get( pTypeTag, false );
-		if ( group.isArray() == false )
-		{
-			group = parent.set( pTypeTag, false );
-			group.setArray();
-		}
-		writeNestedContainerJson( group.pushBack(), pContainerPtr, nested, pPropName, ctx );
-	}
-
-	bool readNestedContainerJson( void* pContainerPtr, const NestedContainerInfo& nested, const JsonValue& src,
-								  const SerializeContext& ctx )
-	{
-		if ( pContainerPtr == nullptr || nested._wrapper == nullptr || src.isObject() == false )
-			return false;
-
-		const bool bOwnedPtr = isOwnedPointerElementType( nested._elementTypeName );
-		if ( bOwnedPtr == false )
-			nested._wrapper->clear( pContainerPtr );
-
-		const bool bIgnore = ctx.ignoreCaseKeys();
-		ISequenceContainerWrapper* pSeq = nested._wrapper->asSequence();
-		if ( pSeq != nullptr )
-		{
-			const JsonValue items = src.get( kJsonContainerItemKey, bIgnore );
-			if ( items.isValid() == false )
-				return true;
-			if ( items.isArray() == false )
-				return false;
-
-			if ( bOwnedPtr )
-			{
-				bool bOk{ true };
-				for ( size_t elementIndex = 0; elementIndex < items.size(); ++elementIndex )
-				{
-					const JsonValue elem = items.at( elementIndex );
-					if ( elem.isObject() == false )
-					{
-						bOk = false;
-						continue;
-					}
-					const vector<string> listKeys = elem.memberNames();
-					if ( listKeys.size() != 1 )
-					{
-						bOk = false;
-						continue;
-					}
-					const hashed_string typeName( listKeys[0].c_str() );
-					void*				pObj = ctx.createOwnedPointer( typeName );
-					if ( pObj == nullptr )
-					{
-						bOk = false;
-						continue;
-					}
-					const TypeInfo* pType = engine::getTypeRegistry().findType( typeName );
-					if ( pType == nullptr )
-					{
-						bOk = false;
-						continue;
-					}
-					if ( JsonSerializer::readObject( elem.get( listKeys[0], false ), pObj, *pType, nullptr, nullptr, ctx ) == false )
-						bOk = false;
-				}
-				return bOk;
-			}
-
-			pSeq->reserve( pContainerPtr, items.size() );
-			bool bOk{ true };
-			for ( size_t elementIndex = 0; elementIndex < items.size(); ++elementIndex )
-			{
-				pSeq->addElementDefault( pContainerPtr );
-				void*			pElemPtr = pSeq->getElement( pContainerPtr, elementIndex );
-				const JsonValue elem	 = items.at( elementIndex );
-				if ( nested._elementNested != nullptr )
-				{
-					if ( readTypedContainerJson( pElemPtr, *nested._elementNested, elem, ctx ) == false )
-						bOk = false;
-				}
-				else
-				{
-					const TypeInfo* pElemType = findNestedJsonObjectType( nested._elementTypeName, ctx );
-					if ( pElemType != nullptr )
-					{
-						if ( elem.isObject() == false || elem.memberNames().size() != 1 )
-						{
-							bOk = false;
-							continue;
-						}
-						const string	typeKey = elem.memberNames()[0];
-						const JsonValue body	= elem.get( typeKey, false );
-						if ( JsonSerializer::readObject( body, pElemPtr, *pElemType, nullptr, nullptr, ctx ) == false )
-							bOk = false;
-					}
-					else if ( readJsonValue( pElemPtr, nested._elementTypeName, elem, ctx ) == false )
-						bOk = false;
-				}
-			}
-			return bOk;
-		}
-
-		IMapContainerWrapper* pMapWrap = nested._wrapper->asMap();
-		if ( pMapWrap != nullptr )
-		{
-			const JsonValue entries = src.get( kJsonContainerEntryKey, bIgnore );
-			if ( entries.isValid() == false )
-				return true;
-			if ( entries.isObject() == false )
-				return false;
-
-			vector<uint8> listKBuf( pMapWrap->getKeySize() );
-			vector<uint8> listVBuf( pMapWrap->getValueSize() );
-			for ( const string& key : entries.memberNames() )
-			{
-				pMapWrap->defaultConstructKey( listKBuf.data() );
-				pMapWrap->defaultConstructValue( listVBuf.data() );
-				JsonDocument keyDoc;
-				keyDoc.root().setString( key );
-				bool								kOk{ false };
-				const SerializeContext::TextReadFn* pKeyReader = ctx.findTextReader( nested._keyTypeName );
-				if ( pKeyReader != nullptr )
-					kOk = ( *pKeyReader )( listKBuf.data(), key );
-				else
-					kOk = readJsonValue( listKBuf.data(), nested._keyTypeName, keyDoc.root(), ctx );
-
-				bool			vOk{ false };
-				const JsonValue valJson = entries.get( key, false );
-				if ( nested._elementNested != nullptr )
-					vOk = readTypedContainerJson( listVBuf.data(), *nested._elementNested, valJson, ctx );
-				else
-				{
-					const SerializeContext::TextReadFn* pElemReader = ctx.findTextReader( nested._elementTypeName );
-					if ( pElemReader != nullptr )
-						vOk = ( *pElemReader )( listVBuf.data(), valJson.isString() ? valJson.asString() : valJson.dump() );
-					else
-						vOk = readJsonValue( listVBuf.data(), nested._elementTypeName, valJson, ctx );
-				}
-
-				if ( kOk && vOk )
-					pMapWrap->insertKeyValue( pContainerPtr, listKBuf.data(), listVBuf.data() );
-				pMapWrap->destroyKey( listKBuf.data() );
-				pMapWrap->destroyValue( listVBuf.data() );
-			}
-			return true;
-		}
-		return false;
-	}
-
-	bool readTypedContainerJson( void* pContainerPtr, const NestedContainerInfo& nested, const JsonValue& src,
-								 const SerializeContext& ctx )
-	{
-		if ( src.isObject() == false )
-			return false;
-
-		const utf8* pTypeTag = containerTypeTagName( nested._typeName );
-		if ( pTypeTag != nullptr )
-		{
-			const JsonValue group = src.get( pTypeTag, ctx.ignoreCaseKeys() );
-			if ( group.isArray() )
-			{
-				if ( group.size() == 0 )
-					return true;
-				return readNestedContainerJson( pContainerPtr, nested, group.at( 0 ), ctx );
-			}
-		}
-
-		const bool bIgnore = ctx.ignoreCaseKeys();
-		if ( src.has( kPropertyNameKey, bIgnore ) || src.has( kJsonContainerItemKey, bIgnore ) ||
-			 src.has( kJsonContainerEntryKey, bIgnore ) )
-			return readNestedContainerJson( pContainerPtr, nested, src, ctx );
-		return false;
-	}
-
-	bool readJsonValue( void* pValPtr, const hashed_string& typeName, const JsonValue& src, const SerializeContext& ctx )
-	{
-		if ( pValPtr == nullptr || src.isValid() == false )
-			return false;
-
-		const hashed_string					resolved	= resolveHandlerTypeName( typeName, ctx );
-		const SerializeContext::TextReadFn* pTextReader = ctx.findTextReader( resolved );
-		if ( pTextReader != nullptr )
-		{
-			if ( src.isString() )
-				return ( *pTextReader )( pValPtr, src.asString() );
-			return ( *pTextReader )( pValPtr, src.dump() );
-		}
-
-		const EnumInfo* pEnumInfo = engine::getTypeRegistry().findEnum( typeName );
-		if ( pEnumInfo != nullptr )
-		{
-			if ( src.isString() )
-			{
-				const int64 v					= pEnumInfo->stringFlagsToValue( src.asString() );
-				*static_cast<int64*>( pValPtr ) = v;
-				return true;
-			}
-			if ( src.isNumber() )
-			{
-				*static_cast<int64*>( pValPtr ) = src.asInt( 0 );
-				return true;
-			}
-		}
-
-		const TypeInfo* pStructInfo = engine::getTypeRegistry().findType( typeName );
-		if ( pStructInfo != nullptr )
-		{
-			if ( pStructInfo->isPrimitive() == false )
-			{
-				if ( src.isObject() )
-					return JsonSerializer::readObject( src, pValPtr, *pStructInfo, nullptr, nullptr, ctx );
-				return JsonSerializer::deserialize( pValPtr, *pStructInfo, src.dump(), ctx );
-			}
-		}
-
-		if ( src.isString() )
-			return parseTextValueCoerced( pValPtr, typeName, src.asString(), ctx );
-		return parseTextValueCoerced( pValPtr, typeName, src.dump(), ctx );
 	}
 
 	bool keysEqual( string_view a, string_view b, bool bIgnoreCase )
@@ -724,7 +369,7 @@ namespace sw
 			if ( keysEqual( keyRaw, prop._name.c_str(), bIgnoreCaseKeys ) )
 				return &prop;
 			bCaseVariant = bCaseVariant || keysEqual( keyRaw, prop._name.c_str(), true );
-			for ( const hashed_string& alias : prop._listAliases )
+			for ( const hashed_string& alias : prop._listAlias )
 			{
 				if ( alias.empty() )
 					continue;

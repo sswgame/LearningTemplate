@@ -48,21 +48,21 @@ namespace sw
 		: _id{}
 		, _role{ ZoneRole::Town }
 		, _bounds{}
-		, _listTags{}
+		, _listTag{}
 		, _bClearGateLocked{ 0 }
 		, _reserved{ 0 }
 	{
 	}
 
 	ZoneRuntime::ZoneRuntime()
-		: _listZones{}
+		: _listZone{}
 		, _activeIndex{ -1 }
 	{
 	}
 
 	bool ZoneDef::hasTag( string_view tag ) const
 	{
-		for ( const string& existingTag : _listTags )
+		for ( const string& existingTag : _listTag )
 		{
 			if ( existingTag == tag )
 				return true;
@@ -74,12 +74,12 @@ namespace sw
 	{
 		if ( tag.empty() || hasTag( tag ) )
 			return;
-		_listTags.emplace_back( tag );
+		_listTag.emplace_back( tag );
 	}
 
 	void ZoneRuntime::clear()
 	{
-		_listZones.clear();
+		_listZone.clear();
 		_activeIndex = -1;
 	}
 
@@ -126,15 +126,15 @@ namespace sw
 				z.addTag( "wild" );
 				break;
 		}
-		_listZones.push_back( std::move( z ) );
+		_listZone.push_back( std::move( z ) );
 		_activeIndex = 0;
 	}
 
 	void ZoneRuntime::activate( string_view zoneId )
 	{
-		for ( size_t zoneIndex = 0; zoneIndex < _listZones.size(); ++zoneIndex )
+		for ( size_t zoneIndex = 0; zoneIndex < _listZone.size(); ++zoneIndex )
 		{
-			if ( _listZones[zoneIndex]._id == zoneId )
+			if ( _listZone[zoneIndex]._id == zoneId )
 			{
 				_activeIndex = static_cast<int32>( zoneIndex );
 				return;
@@ -144,9 +144,9 @@ namespace sw
 
 	void ZoneRuntime::setClearGateLocked( bool locked )
 	{
-		if ( _activeIndex < 0 || _activeIndex >= static_cast<int32>( _listZones.size() ) )
+		if ( _activeIndex < 0 || _activeIndex >= static_cast<int32>( _listZone.size() ) )
 			return;
-		_listZones[static_cast<size_t>( _activeIndex )]._bClearGateLocked = locked ? 1 : 0;
+		_listZone[static_cast<size_t>( _activeIndex )]._bClearGateLocked = locked ? 1 : 0;
 	}
 
 	bool ZoneRuntime::isClearGateLocked() const
@@ -163,9 +163,9 @@ namespace sw
 
 	const ZoneDef* ZoneRuntime::getActiveZone() const
 	{
-		if ( _activeIndex < 0 || _activeIndex >= static_cast<int32>( _listZones.size() ) )
+		if ( _activeIndex < 0 || _activeIndex >= static_cast<int32>( _listZone.size() ) )
 			return nullptr;
-		return &_listZones[static_cast<size_t>( _activeIndex )];
+		return &_listZone[static_cast<size_t>( _activeIndex )];
 	}
 
 	string ZoneRuntime::getActiveZoneId() const

@@ -44,18 +44,18 @@ namespace sw
 	MaterialInstance::MaterialInstance()
 		: _pParentMaterial{ nullptr }
 		, _desc{}
-		, _listValueOverrides{}
-		, _listScalarOverrides{}
-		, _listVectorOverrides{}
-		, _listTextureOverrides{}
-		, _listKeywordOverrides{}
-		, _listMultiCompileOverrides{}
+		, _listValueOverride{}
+		, _listScalarOverride{}
+		, _listVectorOverride{}
+		, _listTextureOverride{}
+		, _listKeywordOverride{}
+		, _listMultiCompileOverride{}
 		, _qualityOverride{ MaterialQualityLevel::Count }
 		, _listBuffer{}
 		, _constantBuffer{ 0 }
 		, _descriptorIndex{ kInvalidDescriptorIndex }
 		, _pRHIDevice{ nullptr }
-		, _listCachedDefines{}
+		, _listCachedDefine{}
 		, _cachedPermutationHash{ 0 }
 		, _parentPermutationHash{ 0 }
 		, _bDefinesDirty{ 1 }
@@ -65,18 +65,18 @@ namespace sw
 	MaterialInstance::MaterialInstance( Material* pParentMaterial )
 		: _pParentMaterial{ pParentMaterial }
 		, _desc{}
-		, _listValueOverrides{}
-		, _listScalarOverrides{}
-		, _listVectorOverrides{}
-		, _listTextureOverrides{}
-		, _listKeywordOverrides{}
-		, _listMultiCompileOverrides{}
+		, _listValueOverride{}
+		, _listScalarOverride{}
+		, _listVectorOverride{}
+		, _listTextureOverride{}
+		, _listKeywordOverride{}
+		, _listMultiCompileOverride{}
 		, _qualityOverride{ MaterialQualityLevel::Count }
 		, _listBuffer{}
 		, _constantBuffer{ 0 }
 		, _descriptorIndex{ kInvalidDescriptorIndex }
 		, _pRHIDevice{ nullptr }
-		, _listCachedDefines{}
+		, _listCachedDefine{}
 		, _cachedPermutationHash{ 0 }
 		, _parentPermutationHash{ 0 }
 		, _bDefinesDirty{ 1 }
@@ -137,7 +137,7 @@ namespace sw
 			appendAttr( root, "quality", _desc._quality );
 
 		XmlNode overrides = root.appendChild( "_overrides" );
-		for ( const MaterialInstanceDesc::Override& overrideItem : _desc._listOverrides )
+		for ( const MaterialInstanceDesc::Override& overrideItem : _desc._listOverride )
 		{
 			XmlNode item = overrides.appendChild( "item" );
 			appendAttr( item, "name", overrideItem._name );
@@ -146,20 +146,20 @@ namespace sw
 				appendAttr( item, "assetPath", overrideItem._assetPath );
 		}
 
-		if ( _desc._listKeywords.empty() == false )
+		if ( _desc._listKeyword.empty() == false )
 		{
 			XmlNode list = root.appendChild( "_keywords" );
-			for ( const MaterialInstanceDesc::KeywordOverride& keywordItem : _desc._listKeywords )
+			for ( const MaterialInstanceDesc::KeywordOverride& keywordItem : _desc._listKeyword )
 			{
 				XmlNode item = list.appendChild( "item" );
 				appendAttr( item, "name", keywordItem._name );
 				appendBoolAttr( item, "bEnabled", keywordItem._bEnabled );
 			}
 		}
-		if ( _desc._listMultiCompiles.empty() == false )
+		if ( _desc._listMultiCompile.empty() == false )
 		{
 			XmlNode list = root.appendChild( "_multiCompiles" );
-			for ( const MaterialInstanceDesc::MultiCompileOverride& multiCompileItem : _desc._listMultiCompiles )
+			for ( const MaterialInstanceDesc::MultiCompileOverride& multiCompileItem : _desc._listMultiCompile )
 			{
 				XmlNode item = list.appendChild( "item" );
 				appendAttr( item, "name", multiCompileItem._name );
@@ -185,12 +185,12 @@ namespace sw
 		if ( _listBuffer.empty() )
 			return false;
 
-		for ( const auto& [name, value] : _listValueOverrides )
+		for ( const auto& [name, value] : _listValueOverride )
 		{
 			_pParentMaterial->packNamedValueIntoBuffer( name, value, _listBuffer );
 		}
 
-		for ( const auto& [name, idx] : _listTextureOverrides )
+		for ( const auto& [name, idx] : _listTextureOverride )
 		{
 			_pParentMaterial->packTextureIntoBuffer( name, idx, _listBuffer );
 		}
@@ -210,12 +210,12 @@ namespace sw
 
 	void MaterialInstance::clearOverrides()
 	{
-		_listValueOverrides.clear();
-		_listScalarOverrides.clear();
-		_listVectorOverrides.clear();
-		_listTextureOverrides.clear();
-		_listKeywordOverrides.clear();
-		_listMultiCompileOverrides.clear();
+		_listValueOverride.clear();
+		_listScalarOverride.clear();
+		_listVectorOverride.clear();
+		_listTextureOverride.clear();
+		_listKeywordOverride.clear();
+		_listMultiCompileOverride.clear();
 		_qualityOverride = MaterialQualityLevel::Count;
 		_bDefinesDirty	 = 1;
 		_bGpuDirty		 = 1;
@@ -223,14 +223,14 @@ namespace sw
 
 	void MaterialInstance::enableKeyword( hashed_string keyword )
 	{
-		insertOrAssign( _listKeywordOverrides, keyword, true );
+		insertOrAssign( _listKeywordOverride, keyword, true );
 		_bDefinesDirty = 1;
 		_bGpuDirty	   = 1;
 	}
 
 	void MaterialInstance::disableKeyword( hashed_string keyword )
 	{
-		insertOrAssign( _listKeywordOverrides, keyword, false );
+		insertOrAssign( _listKeywordOverride, keyword, false );
 		_bDefinesDirty = 1;
 		_bGpuDirty	   = 1;
 	}
@@ -244,14 +244,14 @@ namespace sw
 
 	void MaterialInstance::setParameter( hashed_string name, string_view value )
 	{
-		insertOrAssign( _listValueOverrides, name, string( value ) );
+		insertOrAssign( _listValueOverride, name, string( value ) );
 		_bGpuDirty = 1;
 	}
 
 	void MaterialInstance::setScalarParameter( hashed_string name, float32 value )
 	{
-		insertOrAssign( _listScalarOverrides, name, value );
-		insertOrAssign( _listValueOverrides, name, to_string( value ) );
+		insertOrAssign( _listScalarOverride, name, value );
+		insertOrAssign( _listValueOverride, name, to_string( value ) );
 		_bGpuDirty = 1;
 	}
 
@@ -260,17 +260,17 @@ namespace sw
 		if ( color == nullptr )
 			return;
 		array<float32, 4> val = { color[0], color[1], color[2], color[3] };
-		insertOrAssign( _listVectorOverrides, name, val );
+		insertOrAssign( _listVectorOverride, name, val );
 		StringBuilder<64> sb;
 		sb.append( color[0] ).append( ' ' ).append( color[1] ).append( ' ' ).append( color[2] ).append( ' ' ).append( color[3] );
-		insertOrAssign( _listValueOverrides, name, string{ sb.c_str(), sb.size() } );
+		insertOrAssign( _listValueOverride, name, string{ sb.c_str(), sb.size() } );
 		_bGpuDirty = 1;
 	}
 
 	void MaterialInstance::setTextureParameter( hashed_string name, RHIDescriptorIndex descIdx )
 	{
-		insertOrAssign( _listTextureOverrides, name, descIdx );
-		insertOrAssign( _listValueOverrides, name, to_string( descIdx ) );
+		insertOrAssign( _listTextureOverride, name, descIdx );
+		insertOrAssign( _listValueOverride, name, to_string( descIdx ) );
 		_bGpuDirty = 1;
 	}
 
@@ -286,14 +286,14 @@ namespace sw
 
 	void MaterialInstance::setMultiCompile( hashed_string name, string_view selectedOption )
 	{
-		insertOrAssign( _listMultiCompileOverrides, name, string( selectedOption ) );
+		insertOrAssign( _listMultiCompileOverride, name, string( selectedOption ) );
 		_bDefinesDirty = 1;
 		_bGpuDirty	   = 1;
 	}
 
 	bool MaterialInstance::getParameter( hashed_string name, string& outValue ) const
 	{
-		const string* val = findValue( _listValueOverrides, name );
+		const string* val = findValue( _listValueOverride, name );
 		if ( val != nullptr )
 		{
 			outValue = *val;
@@ -313,7 +313,7 @@ namespace sw
 
 	float32 MaterialInstance::getScalarParameter( hashed_string name, float32 defaultValue ) const
 	{
-		const float32* pVal = findValue( _listScalarOverrides, name );
+		const float32* pVal = findValue( _listScalarOverride, name );
 		if ( pVal != nullptr )
 			return *pVal;
 		if ( _pParentMaterial != nullptr )
@@ -327,7 +327,7 @@ namespace sw
 
 	const float32* MaterialInstance::getVectorParameter( hashed_string name ) const
 	{
-		const array<float32, 4>* pVal = findValue( _listVectorOverrides, name );
+		const array<float32, 4>* pVal = findValue( _listVectorOverride, name );
 		if ( pVal != nullptr )
 			return pVal->data();
 		if ( _pParentMaterial != nullptr )
@@ -340,7 +340,7 @@ namespace sw
 
 	RHIDescriptorIndex MaterialInstance::getTextureParameter( hashed_string name ) const
 	{
-		const RHIDescriptorIndex* pVal = findValue( _listTextureOverrides, name );
+		const RHIDescriptorIndex* pVal = findValue( _listTextureOverride, name );
 		if ( pVal != nullptr )
 			return *pVal;
 		if ( _pParentMaterial != nullptr )
@@ -355,7 +355,7 @@ namespace sw
 
 	bool MaterialInstance::isKeywordEnabled( hashed_string keyword ) const
 	{
-		const bool* pVal = findValue( _listKeywordOverrides, keyword );
+		const bool* pVal = findValue( _listKeywordOverride, keyword );
 		if ( pVal != nullptr )
 			return *pVal;
 		if ( _pParentMaterial == nullptr )
@@ -383,52 +383,52 @@ namespace sw
 
 		if ( _bDefinesDirty )
 		{
-			_listCachedDefines.clear();
+			_listCachedDefine.clear();
 			if ( _pParentMaterial != nullptr )
-				_listCachedDefines = _pParentMaterial->getCachedShaderDefines();
+				_listCachedDefine = _pParentMaterial->getCachedShaderDefines();
 
 			if ( _qualityOverride != MaterialQualityLevel::Count )
 			{
-				_listCachedDefines.erase( std::remove_if( _listCachedDefines.begin(), _listCachedDefines.end(),
-														  []( string_view defineStr )
+				_listCachedDefine.erase( std::remove_if( _listCachedDefine.begin(), _listCachedDefine.end(),
+														 []( string_view defineStr )
 				{ return defineStr.rfind( "MATERIAL_QUALITY", 0 ) == 0; } ),
-										  _listCachedDefines.end() );
-				appendQualityDefines( _qualityOverride, _listCachedDefines );
+										 _listCachedDefine.end() );
+				appendQualityDefines( _qualityOverride, _listCachedDefine );
 			}
 
-			for ( const auto& [name, selected] : _listMultiCompileOverrides )
+			for ( const auto& [name, selected] : _listMultiCompileOverride )
 			{
 				if ( _pParentMaterial != nullptr )
 				{
-					for ( const MaterialMultiCompile& mc : _pParentMaterial->getPermutations()._listMultiCompiles )
+					for ( const MaterialMultiCompile& mc : _pParentMaterial->getPermutations()._listMultiCompile )
 					{
 						if ( hashed_string( mc._name.c_str() ) != name )
 							continue;
-						for ( const string& opt : mc._listOptions )
+						for ( const string& opt : mc._listOption )
 						{
-							_listCachedDefines.erase( std::remove( _listCachedDefines.begin(), _listCachedDefines.end(), opt ), _listCachedDefines.end() );
+							_listCachedDefine.erase( std::remove( _listCachedDefine.begin(), _listCachedDefine.end(), opt ), _listCachedDefine.end() );
 						}
 						break;
 					}
 				}
-				appendUniqueDefine( _listCachedDefines, selected );
+				appendUniqueDefine( _listCachedDefine, selected );
 			}
 
-			for ( const auto& [keyword, enabled] : _listKeywordOverrides )
+			for ( const auto& [keyword, enabled] : _listKeywordOverride )
 			{
 				const utf8* pKey = keyword.c_str();
 				if ( pKey == nullptr )
 					continue;
-				_listCachedDefines.erase( std::remove( _listCachedDefines.begin(), _listCachedDefines.end(), string( pKey ) ), _listCachedDefines.end() );
+				_listCachedDefine.erase( std::remove( _listCachedDefine.begin(), _listCachedDefine.end(), string( pKey ) ), _listCachedDefine.end() );
 				if ( enabled )
-					appendUniqueDefine( _listCachedDefines, pKey );
+					appendUniqueDefine( _listCachedDefine, pKey );
 			}
 
-			std::sort( _listCachedDefines.begin(), _listCachedDefines.end() );
-			_cachedPermutationHash = hashDefines( _listCachedDefines );
+			std::sort( _listCachedDefine.begin(), _listCachedDefine.end() );
+			_cachedPermutationHash = hashDefines( _listCachedDefine );
 			_bDefinesDirty		   = 0;
 		}
-		return _listCachedDefines;
+		return _listCachedDefine;
 	}
 
 	uint64 MaterialInstance::getPermutationHash() const
@@ -449,17 +449,17 @@ namespace sw
 
 	bool MaterialInstance::isParameterOverridden( hashed_string name ) const
 	{
-		if ( findValue( _listValueOverrides, name ) != nullptr )
+		if ( findValue( _listValueOverride, name ) != nullptr )
 			return true;
-		if ( findValue( _listScalarOverrides, name ) != nullptr )
+		if ( findValue( _listScalarOverride, name ) != nullptr )
 			return true;
-		if ( findValue( _listVectorOverrides, name ) != nullptr )
+		if ( findValue( _listVectorOverride, name ) != nullptr )
 			return true;
-		if ( findValue( _listTextureOverrides, name ) != nullptr )
+		if ( findValue( _listTextureOverride, name ) != nullptr )
 			return true;
-		if ( findValue( _listKeywordOverrides, name ) != nullptr )
+		if ( findValue( _listKeywordOverride, name ) != nullptr )
 			return true;
-		if ( findValue( _listMultiCompileOverrides, name ) != nullptr )
+		if ( findValue( _listMultiCompileOverride, name ) != nullptr )
 			return true;
 		return false;
 	}
@@ -468,15 +468,15 @@ namespace sw
 	{
 		auto checkParam = [&]( hashed_string paramName ) -> bool
 		{
-			for ( const ShaderBufferInfo& cb : reflectionData._listConstantBuffers )
+			for ( const ShaderBufferInfo& cb : reflectionData._listConstantBuffer )
 			{
-				for ( const ShaderVariableInfo& var : cb._listVariables )
+				for ( const ShaderVariableInfo& var : cb._listVariable )
 				{
 					if ( hashed_string( var._name.c_str() ) == paramName )
 						return true;
 				}
 			}
-			for ( const ShaderResourceBinding& res : reflectionData._listResources )
+			for ( const ShaderResourceBinding& res : reflectionData._listResource )
 			{
 				if ( hashed_string( res._name.c_str() ) == paramName )
 					return true;
@@ -484,7 +484,7 @@ namespace sw
 			return false;
 		};
 
-		for ( const auto& [name, val] : _listValueOverrides )
+		for ( const auto& [name, val] : _listValueOverride )
 		{
 			(void)val;
 			if ( checkParam( name ) == false )
@@ -496,29 +496,29 @@ namespace sw
 	void MaterialInstance::syncDescOverrides() const
 	{
 		auto self = const_cast<MaterialInstance*>( this );
-		self->_desc._listOverrides.clear();
-		for ( const auto& [name, value] : _listValueOverrides )
+		self->_desc._listOverride.clear();
+		for ( const auto& [name, value] : _listValueOverride )
 		{
 			MaterialInstanceDesc::Override o{};
 			o._name	 = name.c_str() ? name.c_str() : "";
 			o._value = value;
-			self->_desc._listOverrides.push_back( std::move( o ) );
+			self->_desc._listOverride.push_back( std::move( o ) );
 		}
-		self->_desc._listKeywords.clear();
-		for ( const auto& [name, enabled] : _listKeywordOverrides )
+		self->_desc._listKeyword.clear();
+		for ( const auto& [name, enabled] : _listKeywordOverride )
 		{
 			MaterialInstanceDesc::KeywordOverride k{};
 			k._name		= name.c_str() ? name.c_str() : "";
 			k._bEnabled = enabled;
-			self->_desc._listKeywords.push_back( std::move( k ) );
+			self->_desc._listKeyword.push_back( std::move( k ) );
 		}
-		self->_desc._listMultiCompiles.clear();
-		for ( const auto& [name, selected] : _listMultiCompileOverrides )
+		self->_desc._listMultiCompile.clear();
+		for ( const auto& [name, selected] : _listMultiCompileOverride )
 		{
 			MaterialInstanceDesc::MultiCompileOverride m{};
 			m._name		= name.c_str() ? name.c_str() : "";
 			m._selected = selected;
-			self->_desc._listMultiCompiles.push_back( std::move( m ) );
+			self->_desc._listMultiCompile.push_back( std::move( m ) );
 		}
 		if ( _qualityOverride != MaterialQualityLevel::Count )
 			self->_desc._quality = qualityToString( _qualityOverride );
@@ -557,7 +557,7 @@ namespace sw
 				o._value	 = fieldText( item, "value" );
 				o._assetPath = fieldText( item, "assetPath" );
 				if ( o._name.empty() == false )
-					_desc._listOverrides.push_back( std::move( o ) );
+					_desc._listOverride.push_back( std::move( o ) );
 			}
 		}
 		XmlNode keywords = root.child( "_keywords" );
@@ -569,7 +569,7 @@ namespace sw
 				k._name		= fieldText( item, "name" );
 				k._bEnabled = parseBoolField( item, "bEnabled", true );
 				if ( k._name.empty() == false )
-					_desc._listKeywords.push_back( std::move( k ) );
+					_desc._listKeyword.push_back( std::move( k ) );
 			}
 		}
 		XmlNode mcs = root.child( "_multiCompiles" );
@@ -581,13 +581,13 @@ namespace sw
 				m._name		= fieldText( item, "name" );
 				m._selected = fieldText( item, "selected" );
 				if ( m._name.empty() == false )
-					_desc._listMultiCompiles.push_back( std::move( m ) );
+					_desc._listMultiCompile.push_back( std::move( m ) );
 			}
 		}
 
-		_listValueOverrides.clear();
-		_listKeywordOverrides.clear();
-		_listMultiCompileOverrides.clear();
+		_listValueOverride.clear();
+		_listKeywordOverride.clear();
+		_listMultiCompileOverride.clear();
 		auto insertOrAssign = []( auto& vec, hashed_string key, const auto& val )
 		{
 			for ( auto& pair : vec )
@@ -601,17 +601,17 @@ namespace sw
 			vec.push_back( { key, val } );
 		};
 
-		for ( const MaterialInstanceDesc::Override& overrideItem : _desc._listOverrides )
+		for ( const MaterialInstanceDesc::Override& overrideItem : _desc._listOverride )
 		{
-			insertOrAssign( _listValueOverrides, hashed_string( overrideItem._name.c_str() ), overrideItem._value );
+			insertOrAssign( _listValueOverride, hashed_string( overrideItem._name.c_str() ), overrideItem._value );
 		}
-		for ( const MaterialInstanceDesc::KeywordOverride& keywordItem : _desc._listKeywords )
+		for ( const MaterialInstanceDesc::KeywordOverride& keywordItem : _desc._listKeyword )
 		{
-			insertOrAssign( _listKeywordOverrides, hashed_string( keywordItem._name.c_str() ), keywordItem._bEnabled );
+			insertOrAssign( _listKeywordOverride, hashed_string( keywordItem._name.c_str() ), keywordItem._bEnabled );
 		}
-		for ( const MaterialInstanceDesc::MultiCompileOverride& multiCompileItem : _desc._listMultiCompiles )
+		for ( const MaterialInstanceDesc::MultiCompileOverride& multiCompileItem : _desc._listMultiCompile )
 		{
-			insertOrAssign( _listMultiCompileOverrides, hashed_string( multiCompileItem._name.c_str() ), multiCompileItem._selected );
+			insertOrAssign( _listMultiCompileOverride, hashed_string( multiCompileItem._name.c_str() ), multiCompileItem._selected );
 		}
 		if ( _desc._quality.empty() == false )
 			_qualityOverride = parseQuality( _desc._quality );

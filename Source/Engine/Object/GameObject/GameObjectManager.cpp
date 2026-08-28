@@ -16,6 +16,8 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "GameObjectManager" );
+
 	namespace
 	{
 		mutex& getModuleFactoryHeadsMutex()
@@ -102,7 +104,7 @@ namespace sw
 
 			TaskStageHandle stage  = engine::getTaskManager().createAnonymousStage( "ComponentWave" );
 			TaskHandle		handle = engine::getTaskManager().emplaceParallel(
-				waveTick._totalCount, SW_DELEGATE_METHOD( ParallelTaskDelegate, &ComponentWaveTick::tickIndex, &waveTick ) );
+				 waveTick._totalCount, SW_DELEGATE_METHOD( ParallelTaskDelegate, &ComponentWaveTick::tickIndex, &waveTick ) );
 			stage.addTask( handle );
 			handle.submit();
 			engine::getTaskManager().waitStage( stage );
@@ -150,40 +152,40 @@ namespace sw
 	}
 
 	GameObjectManager::GameObjectManager()
-		: _listGoChunks{}
+		: _listGoChunk{}
 		, _listGoFree{}
-		, _listGameObjects{}
+		, _listGameObject{}
 		, _mapNameToObject{}
 		, _mapIdToObject{}
-		, _listPendingAdds{}
-		, _listPendingDestroyObjects{}
-		, _listPendingDestroyComponents{}
-		, _listProcessingDestroyObjects{}
-		, _listProcessingDestroyComponents{}
-		, _listRootSceneComponents{}
+		, _listPendingAdd{}
+		, _listPendingDestroyObject{}
+		, _listPendingDestroyComponent{}
+		, _listProcessingDestroyObject{}
+		, _listProcessingDestroyComponent{}
+		, _listRootSceneComponent{}
 		, _mutex{}
 		, _nextId{ 1 }
 		, _physicsWorld{}
 		, _bParallelTransformReadOnly{ false }
 		, _bTicking{ false }
 		, _bIsTickWavesDirty{ true }
-		, _listCachedTickWaves{}
+		, _listCachedTickWave{}
 		, _deferredTransformMutex{}
-		, _listDeferredTransformUpdates{}
-		, _listProcessingTransforms{}
+		, _listDeferredTransformUpdate{}
+		, _listProcessingTransform{}
 		, _deferredPostTickMutex{}
-		, _listDeferredPostTickUpdates{}
-		, _listProcessingPostTicks{}
-		, _mapFactories{}
-		, _mapFactoryModules{}
+		, _listDeferredPostTickUpdate{}
+		, _listProcessingPostTick{}
+		, _mapFactory{}
+		, _mapFactoryModule{}
 		, _activeModuleName{}
 		, _dirtyTransformGeneration{ 1 }
 		, _lastFlushedTransformGeneration{ 0 }
 	{
-		_listDeferredTransformUpdates.reserve( 128 );
-		_listProcessingTransforms.reserve( 128 );
-		_listDeferredPostTickUpdates.reserve( 128 );
-		_listProcessingPostTicks.reserve( 128 );
+		_listDeferredTransformUpdate.reserve( 128 );
+		_listProcessingTransform.reserve( 128 );
+		_listDeferredPostTickUpdate.reserve( 128 );
+		_listProcessingPostTick.reserve( 128 );
 
 		ComponentFactoryRegistrar* pEngineHead = ComponentFactoryRegistrar::getHead();
 		if ( pEngineHead == nullptr )
@@ -226,7 +228,7 @@ namespace sw
 				{
 					_listGoFree.push_back( &chunk->_pMemory[GameObjectChunk::kChunkSize - 1 - slotIndex] );
 				}
-				_listGoChunks.push_back( std::move( chunk ) );
+				_listGoChunk.push_back( std::move( chunk ) );
 			}
 			pObj = _listGoFree.back();
 			_listGoFree.pop_back();
@@ -241,7 +243,7 @@ namespace sw
 			_mapNameToObject.insert_or_assign( uniqueName, pObj );
 			_mapIdToObject.insert_or_assign( id, pObj );
 
-			_listPendingAdds.push_back( pObj );
+			_listPendingAdd.push_back( pObj );
 		}
 		return pObj;
 	}
@@ -300,21 +302,21 @@ namespace sw
 	{
 		std::shared_lock<std::shared_mutex> lock{ _mutex };
 		vector<GameObject*>					listOut;
-		listOut.reserve( _listGameObjects.size() + _listPendingAdds.size() );
-		listOut.insert( listOut.end(), _listGameObjects.begin(), _listGameObjects.end() );
-		listOut.insert( listOut.end(), _listPendingAdds.begin(), _listPendingAdds.end() );
+		listOut.reserve( _listGameObject.size() + _listPendingAdd.size() );
+		listOut.insert( listOut.end(), _listGameObject.begin(), _listGameObject.end() );
+		listOut.insert( listOut.end(), _listPendingAdd.begin(), _listPendingAdd.end() );
 		return listOut;
 	}
 
 	GameObject* GameObjectManager::findGameObjectByTag( TagID tag ) const
 	{
 		std::shared_lock<std::shared_mutex> lock{ _mutex };
-		for ( GameObject* pObj : _listGameObjects )
+		for ( GameObject* pObj : _listGameObject )
 		{
 			if ( pObj != nullptr && pObj->isPendingKill() == false && pObj->hasTag( tag ) )
 				return pObj;
 		}
-		for ( GameObject* pObj : _listPendingAdds )
+		for ( GameObject* pObj : _listPendingAdd )
 		{
 			if ( pObj != nullptr && pObj->isPendingKill() == false && pObj->hasTag( tag ) )
 				return pObj;
@@ -326,12 +328,12 @@ namespace sw
 	{
 		out.clear();
 		std::shared_lock<std::shared_mutex> lock{ _mutex };
-		for ( GameObject* pObj : _listGameObjects )
+		for ( GameObject* pObj : _listGameObject )
 		{
 			if ( pObj != nullptr && pObj->isPendingKill() == false && pObj->hasTag( tag ) )
 				out.push_back( pObj );
 		}
-		for ( GameObject* pObj : _listPendingAdds )
+		for ( GameObject* pObj : _listPendingAdd )
 		{
 			if ( pObj != nullptr && pObj->isPendingKill() == false && pObj->hasTag( tag ) )
 				out.push_back( pObj );
@@ -366,7 +368,7 @@ namespace sw
 		processDeferredDestruction();
 		mergePendingAdds();
 
-		if ( _listGameObjects.empty() )
+		if ( _listGameObject.empty() )
 			return;
 
 		flushSceneTransforms();
@@ -382,31 +384,31 @@ namespace sw
 		_bParallelTransformReadOnly.store( false, std::memory_order_relaxed );
 		_bTicking.store( false, std::memory_order_release );
 
-		// Apply deferred transforms while instances still exist (CommandBuffer not flushed yet).
+		// Apply deferred transforms while instances still exist (before deferred post-tick/destruction).
 		{
 			std::scoped_lock<mutex> lock{ _deferredTransformMutex };
-			if ( _listDeferredTransformUpdates.empty() == false )
-				_listProcessingTransforms.swap( _listDeferredTransformUpdates );
+			if ( _listDeferredTransformUpdate.empty() == false )
+				_listProcessingTransform.swap( _listDeferredTransformUpdate );
 		}
-		for ( auto& func : _listProcessingTransforms )
+		for ( auto& func : _listProcessingTransform )
 		{
 			if ( func.isBound() )
 				func();
 		}
-		_listProcessingTransforms.clear();
+		_listProcessingTransform.clear();
 
 		// Spawns / damage / tags queued from parallel onTick.
 		{
 			std::scoped_lock<mutex> lock{ _deferredPostTickMutex };
-			if ( _listDeferredPostTickUpdates.empty() == false )
-				_listProcessingPostTicks.swap( _listDeferredPostTickUpdates );
+			if ( _listDeferredPostTickUpdate.empty() == false )
+				_listProcessingPostTick.swap( _listDeferredPostTickUpdate );
 		}
-		for ( auto& func : _listProcessingPostTicks )
+		for ( auto& func : _listProcessingPostTick )
 		{
 			if ( func.isBound() )
 				func();
 		}
-		_listProcessingPostTicks.clear();
+		_listProcessingPostTick.clear();
 		mergePendingAdds();
 
 		if ( hasDirtySceneTransforms() )
@@ -422,7 +424,7 @@ namespace sw
 			return;
 
 		std::shared_lock<std::shared_mutex> lock{ _mutex };
-		for ( SceneComponent* pRoot : _listRootSceneComponents )
+		for ( SceneComponent* pRoot : _listRootSceneComponent )
 		{
 			if ( pRoot != nullptr )
 				flushSceneComponentSubtree( pRoot, false );
@@ -436,7 +438,7 @@ namespace sw
 			return false;
 
 		std::shared_lock<std::shared_mutex> lock{ _mutex };
-		for ( const SceneComponent* pRoot : _listRootSceneComponents )
+		for ( const SceneComponent* pRoot : _listRootSceneComponent )
 		{
 			if ( pRoot != nullptr )
 			{
@@ -452,7 +454,7 @@ namespace sw
 		if ( func.isBound() == false )
 			return;
 		std::scoped_lock<mutex> lock{ _deferredTransformMutex };
-		_listDeferredTransformUpdates.push_back( std::move( func ) );
+		_listDeferredTransformUpdate.push_back( std::move( func ) );
 	}
 
 	void GameObjectManager::deferPostTick( PostTickDelegate func )
@@ -460,7 +462,7 @@ namespace sw
 		if ( func.isBound() == false )
 			return;
 		std::scoped_lock<mutex> lock{ _deferredPostTickMutex };
-		_listDeferredPostTickUpdates.push_back( std::move( func ) );
+		_listDeferredPostTickUpdate.push_back( std::move( func ) );
 	}
 
 	void GameObjectManager::executeOrDeferPostTick( PostTickDelegate func )
@@ -478,12 +480,12 @@ namespace sw
 		if ( pComp == nullptr )
 			return;
 		std::unique_lock<std::shared_mutex> lock{ _mutex };
-		for ( SceneComponent* pExisting : _listRootSceneComponents )
+		for ( SceneComponent* pExisting : _listRootSceneComponent )
 		{
 			if ( pExisting == pComp )
 				return;
 		}
-		_listRootSceneComponents.push_back( pComp );
+		_listRootSceneComponent.push_back( pComp );
 	}
 
 	void GameObjectManager::unregisterRootSceneComponent( SceneComponent* pComp )
@@ -491,12 +493,12 @@ namespace sw
 		if ( pComp == nullptr )
 			return;
 		std::unique_lock<std::shared_mutex> lock{ _mutex };
-		for ( size_t rootIndex = 0; rootIndex < _listRootSceneComponents.size(); ++rootIndex )
+		for ( size_t rootIndex = 0; rootIndex < _listRootSceneComponent.size(); ++rootIndex )
 		{
-			if ( _listRootSceneComponents[rootIndex] == pComp )
+			if ( _listRootSceneComponent[rootIndex] == pComp )
 			{
-				_listRootSceneComponents[rootIndex] = _listRootSceneComponents.back();
-				_listRootSceneComponents.pop_back();
+				_listRootSceneComponent[rootIndex] = _listRootSceneComponent.back();
+				_listRootSceneComponent.pop_back();
 				return;
 			}
 		}
@@ -539,7 +541,7 @@ namespace sw
 
 			{
 				std::unique_lock<std::shared_mutex> lock{ _mutex };
-				_listPendingDestroyObjects.push_back( pObj );
+				_listPendingDestroyObject.push_back( pObj );
 			}
 		}
 	}
@@ -550,7 +552,7 @@ namespace sw
 		{
 			pComp->markPendingKill();
 			std::unique_lock<std::shared_mutex> lock{ _mutex };
-			_listPendingDestroyComponents.push_back( pComp );
+			_listPendingDestroyComponent.push_back( pComp );
 		}
 	}
 
@@ -558,14 +560,14 @@ namespace sw
 	{
 		{
 			std::unique_lock<std::shared_mutex> lock{ _mutex };
-			if ( _listPendingDestroyObjects.empty() && _listPendingDestroyComponents.empty() )
+			if ( _listPendingDestroyObject.empty() && _listPendingDestroyComponent.empty() )
 				return;
 
-			_listProcessingDestroyObjects.swap( _listPendingDestroyObjects );
-			_listProcessingDestroyComponents.swap( _listPendingDestroyComponents );
+			_listProcessingDestroyObject.swap( _listPendingDestroyObject );
+			_listProcessingDestroyComponent.swap( _listPendingDestroyComponent );
 		}
 
-		for ( Component* pComp : _listProcessingDestroyComponents )
+		for ( Component* pComp : _listProcessingDestroyComponent )
 		{
 			if ( pComp == nullptr )
 				continue;
@@ -574,27 +576,27 @@ namespace sw
 				pOwner->removeComponent( pComp );
 		}
 
-		if ( _listProcessingDestroyObjects.empty() == false )
+		if ( _listProcessingDestroyObject.empty() == false )
 		{
 			std::unique_lock<std::shared_mutex> lock{ _mutex };
-			for ( GameObject* pObj : _listProcessingDestroyObjects )
+			for ( GameObject* pObj : _listProcessingDestroyObject )
 			{
 				if ( pObj != nullptr )
 				{
-					auto pendingIt = std::find( _listPendingAdds.begin(), _listPendingAdds.end(), pObj );
-					if ( pendingIt != _listPendingAdds.end() )
+					auto pendingIt = std::find( _listPendingAdd.begin(), _listPendingAdd.end(), pObj );
+					if ( pendingIt != _listPendingAdd.end() )
 					{
-						*pendingIt = _listPendingAdds.back();
-						_listPendingAdds.pop_back();
+						*pendingIt = _listPendingAdd.back();
+						_listPendingAdd.pop_back();
 					}
 
 					uint32 idx = pObj->_managerIndex;
-					if ( idx < _listGameObjects.size() && _listGameObjects[idx] == pObj )
+					if ( idx < _listGameObject.size() && _listGameObject[idx] == pObj )
 					{
-						GameObject* pBackObj	= _listGameObjects.back();
-						_listGameObjects[idx]	= pBackObj;
+						GameObject* pBackObj	= _listGameObject.back();
+						_listGameObject[idx]	= pBackObj;
 						pBackObj->_managerIndex = idx;
-						_listGameObjects.pop_back();
+						_listGameObject.pop_back();
 					}
 					_mapNameToObject.erase( pObj->getName() );
 					_mapIdToObject.erase( pObj->getObjectId() );
@@ -605,14 +607,14 @@ namespace sw
 		vector<GameObject*> listDying;
 		{
 			std::unique_lock<std::shared_mutex> lock{ _mutex };
-			for ( GameObject* pObj : _listProcessingDestroyObjects )
+			for ( GameObject* pObj : _listProcessingDestroyObject )
 			{
 				if ( pObj == nullptr )
 					continue;
 				listDying.push_back( pObj );
 			}
-			_listProcessingDestroyObjects.clear();
-			_listProcessingDestroyComponents.clear();
+			_listProcessingDestroyObject.clear();
+			_listProcessingDestroyComponent.clear();
 		}
 
 		for ( GameObject* pObj : listDying )
@@ -635,31 +637,31 @@ namespace sw
 		{
 			std::unique_lock<std::shared_mutex> lock{ _mutex };
 
-			listDying.reserve( _listGameObjects.size() + _listPendingAdds.size() );
-			listDying.insert( listDying.end(), _listGameObjects.begin(), _listGameObjects.end() );
-			listDying.insert( listDying.end(), _listPendingAdds.begin(), _listPendingAdds.end() );
+			listDying.reserve( _listGameObject.size() + _listPendingAdd.size() );
+			listDying.insert( listDying.end(), _listGameObject.begin(), _listGameObject.end() );
+			listDying.insert( listDying.end(), _listPendingAdd.begin(), _listPendingAdd.end() );
 
-			_listPendingDestroyObjects.clear();
-			_listPendingDestroyComponents.clear();
-			_listProcessingDestroyObjects.clear();
-			_listProcessingDestroyComponents.clear();
+			_listPendingDestroyObject.clear();
+			_listPendingDestroyComponent.clear();
+			_listProcessingDestroyObject.clear();
+			_listProcessingDestroyComponent.clear();
 
 			{
 				std::scoped_lock<mutex> lockT{ _deferredTransformMutex };
-				_listDeferredTransformUpdates.clear();
-				_listProcessingTransforms.clear();
+				_listDeferredTransformUpdate.clear();
+				_listProcessingTransform.clear();
 			}
 			{
 				std::scoped_lock<mutex> lockP{ _deferredPostTickMutex };
-				_listDeferredPostTickUpdates.clear();
-				_listProcessingPostTicks.clear();
+				_listDeferredPostTickUpdate.clear();
+				_listProcessingPostTick.clear();
 			}
 
-			_listGameObjects.clear();
-			_listPendingAdds.clear();
+			_listGameObject.clear();
+			_listPendingAdd.clear();
 			_mapNameToObject.clear();
 			_mapIdToObject.clear();
-			_listRootSceneComponents.clear();
+			_listRootSceneComponent.clear();
 		}
 
 		for ( GameObject* pObj : listDying )
@@ -670,11 +672,11 @@ namespace sw
 
 		{
 			std::unique_lock<std::shared_mutex> lock{ _mutex };
-			_listGoChunks.clear();
+			_listGoChunk.clear();
 			_listGoFree.clear();
 		}
 
-		_listCachedTickWaves.clear();
+		_listCachedTickWave.clear();
 	}
 
 	void GameObjectManager::rebindAllCachedTypeInfo()
@@ -703,21 +705,21 @@ namespace sw
 		vector<GameObject*> listLocalPending;
 		{
 			std::unique_lock<std::shared_mutex> lock{ _mutex };
-			if ( _listPendingAdds.empty() )
+			if ( _listPendingAdd.empty() )
 				return;
-			listLocalPending = std::move( _listPendingAdds );
-			_listPendingAdds.clear();
+			listLocalPending = std::move( _listPendingAdd );
+			_listPendingAdd.clear();
 		}
 
 		{
 			std::unique_lock<std::shared_mutex> lock{ _mutex };
-			_listGameObjects.reserve( _listGameObjects.size() + listLocalPending.size() );
+			_listGameObject.reserve( _listGameObject.size() + listLocalPending.size() );
 			for ( GameObject* pObj : listLocalPending )
 			{
 				if ( pObj != nullptr )
 				{
-					pObj->_managerIndex = static_cast<uint32>( _listGameObjects.size() );
-					_listGameObjects.push_back( pObj );
+					pObj->_managerIndex = static_cast<uint32>( _listGameObject.size() );
+					_listGameObject.push_back( pObj );
 					_mapNameToObject[pObj->getName()]	= pObj;
 					_mapIdToObject[pObj->getObjectId()] = pObj;
 				}
@@ -754,12 +756,12 @@ namespace sw
 	void GameObjectManager::unregisterFactoriesByModule( string_view moduleName )
 	{
 		const hashed_string hashModule( moduleName.data(), static_cast<uint32>( moduleName.size() ) );
-		for ( auto it = _mapFactoryModules.begin(); it != _mapFactoryModules.end(); )
+		for ( auto it = _mapFactoryModule.begin(); it != _mapFactoryModule.end(); )
 		{
 			if ( it->second == hashModule )
 			{
-				_mapFactories.erase( it->first );
-				it = _mapFactoryModules.erase( it );
+				_mapFactory.erase( it->first );
+				it = _mapFactoryModule.erase( it );
 			}
 			else
 				++it;
@@ -788,8 +790,8 @@ namespace sw
 			return nullptr;
 
 		hashed_string factoryName = typeName;
-		auto		  it		  = _mapFactories.find( factoryName );
-		if ( it == _mapFactories.end() )
+		auto		  it		  = _mapFactory.find( factoryName );
+		if ( it == _mapFactory.end() )
 		{
 			const utf8* pRawName = typeName.c_str();
 			if ( pRawName != nullptr )
@@ -803,28 +805,28 @@ namespace sw
 				if ( pHash != nullptr && pHash != pRawName )
 					factoryName = hashed_string( pRawName, static_cast<uint32>( pHash - pRawName ) );
 			}
-			it = _mapFactories.find( factoryName );
+			it = _mapFactory.find( factoryName );
 		}
-		if ( it != _mapFactories.end() )
+		if ( it != _mapFactory.end() )
 		{
 			if ( it->second.isBound() == false )
 			{
 				if ( bLogWarning )
-					SW_LOG_WARNING( "[GameObjectManager] Component factory for type '%#' is unbound", typeName.c_str() );
+					SW_LOG_WARNING( "Component factory for type '%#' is unbound", typeName.c_str() );
 				return nullptr;
 			}
 			return it->second( pGameObject );
 		}
 		if ( bLogWarning )
-			SW_LOG_WARNING( "[GameObjectManager] Component factory for type '%#' not found (%# factories registered)", typeName.c_str(), static_cast<uint32>( _mapFactories.size() ) );
+			SW_LOG_WARNING( "Component factory for type '%#' not found (%# factories registered)", typeName.c_str(), static_cast<uint32>( _mapFactory.size() ) );
 		return nullptr;
 	}
 
 	vector<hashed_string> GameObjectManager::getRegisteredComponentTypeNames() const
 	{
 		vector<hashed_string> listNames;
-		listNames.reserve( _mapFactories.size() );
-		for ( const auto& [name, factory] : _mapFactories )
+		listNames.reserve( _mapFactory.size() );
+		for ( const auto& [name, factory] : _mapFactory )
 		{
 			(void)factory;
 			listNames.push_back( name );
@@ -852,7 +854,7 @@ namespace sw
 				}
 			}
 
-			_listCachedTickWaves.clear();
+			_listCachedTickWave.clear();
 			for ( const vector<Component*>& wave : groupList )
 			{
 				if ( wave.empty() )
@@ -865,12 +867,12 @@ namespace sw
 				for ( vector<ComponentHandle>& subwave : subwaves )
 				{
 					if ( subwave.empty() == false )
-						_listCachedTickWaves.push_back( std::move( subwave ) );
+						_listCachedTickWave.push_back( std::move( subwave ) );
 				}
 			}
 		}
 
-		for ( const vector<ComponentHandle>& wave : _listCachedTickWaves )
+		for ( const vector<ComponentHandle>& wave : _listCachedTickWave )
 			dispatchWave( this, deltaTime, wave );
 	}
 
@@ -892,7 +894,7 @@ namespace sw
 		_mapNameToObject.insert_or_assign( pObj->getName(), pObj );
 		_mapIdToObject.insert_or_assign( id, pObj );
 
-		_listPendingAdds.push_back( pObj );
+		_listPendingAdd.push_back( pObj );
 	}
 
 	void GameObjectManager::flushSceneComponentSubtree( SceneComponent* pRoot, bool bParentChanged )
@@ -952,26 +954,26 @@ namespace sw
 			const hashed_string candidate( sb.c_str(), sb.size() );
 			if ( _mapNameToObject.find( candidate ) == _mapNameToObject.end() )
 			{
-				SW_LOG_WARNING( "[GameObjectManager] Duplicate name '%#' — using '%#'", requested.c_str(), candidate.c_str() );
+				SW_LOG_WARNING( "Duplicate name '%#' — using '%#'", requested.c_str(), candidate.c_str() );
 				return candidate;
 			}
 		}
 
 		static std::atomic<uint32> s_fallback{ 0 };
-		for ( uint32 entityIndex = 0; entityIndex < 1024; ++entityIndex )
+		for ( uint32 fallbackIndex = 0; fallbackIndex < 1024; ++fallbackIndex )
 		{
 			sb.clear();
 			sb.append( pBase ).append( "_x" ).append( s_fallback.fetch_add( 1 ) );
 			const hashed_string fallback( sb.c_str(), sb.size() );
 			if ( _mapNameToObject.find( fallback ) == _mapNameToObject.end() )
 			{
-				SW_LOG_ERROR( "[GameObjectManager] Exhausted numeric suffixes for '%#' — using '%#'",
+				SW_LOG_ERROR( "Exhausted numeric suffixes for '%#' — using '%#'",
 							  requested.c_str(), fallback.c_str() );
 				return fallback;
 			}
 		}
 
-		SW_LOG_ERROR( "[GameObjectManager] Failed to uniquify '%#' — creating unnamed object", requested.c_str() );
+		SW_LOG_ERROR( "Failed to uniquify '%#' — creating unnamed object", requested.c_str() );
 		sb.clear();
 		sb.append( "GameObject_anon_" ).append( s_fallback.fetch_add( 1 ) );
 		return hashed_string( sb.c_str(), sb.size() );

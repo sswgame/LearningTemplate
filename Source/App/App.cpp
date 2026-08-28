@@ -33,6 +33,8 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "App" );
+
 	App::App()
 		: _engineLoop{}
 		, _moduleHost{ nullptr }
@@ -101,7 +103,7 @@ namespace sw
 		const RHICapabilities caps = RHIAvailability::query( gv_rhiBackend );
 		if ( _bEnableEditor && caps._bEditorSupported == false )
 		{
-			SW_LOG_WARNING( "[App] Editor requested but backend %# does not set _bEditorSupported — disabling editor.", RHI::getBackendTypeName( gv_rhiBackend ) );
+			SW_LOG_WARNING( "Editor requested but backend %# does not set _bEditorSupported — disabling editor.", RHI::getBackendTypeName( gv_rhiBackend ) );
 			_bEnableEditor = false;
 		}
 
@@ -221,7 +223,7 @@ namespace sw
 			{
 				if ( applyPendingBackendChange() == false )
 				{
-					SW_LOG_ERROR( "[Hot-Swap] Backend soft-recreate failed." );
+					SW_LOG_ERROR( "Backend soft-recreate failed." );
 					gv_rhiBackend = pRHI->getCommittedBackend();
 				}
 			}
@@ -266,7 +268,7 @@ namespace sw
 
 		if ( _bEnableEditor && RHIAvailability::query( requestedBackend )._bEditorSupported == false )
 		{
-			SW_LOG_WARNING( "[Hot-Swap] Backend %# is not editor-supported — reverting.", RHI::getBackendTypeName( requestedBackend ) );
+			SW_LOG_WARNING( "Backend %# is not editor-supported — reverting.", RHI::getBackendTypeName( requestedBackend ) );
 			gv_rhiBackend = pRHI->getCommittedBackend();
 			return;
 		}
@@ -296,7 +298,7 @@ namespace sw
 		const bool bSuccess = _engineLoop.applyPendingBackendChange();
 		if ( bSuccess == false )
 		{
-			SW_LOG_ERROR( "[App] applyPendingBackendChange 실패 — reinitializeAfterRhiSwap을 건너뜁니다." );
+			SW_LOG_ERROR( "applyPendingBackendChange 실패 — reinitializeAfterRhiSwap을 건너뜁니다." );
 			return false;
 		}
 

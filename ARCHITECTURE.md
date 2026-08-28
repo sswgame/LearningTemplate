@@ -82,7 +82,7 @@ DirectX 11/12, OpenGL, Vulkan 등을 추상화하는 그래픽스 백엔드입�
 > **병렬 틱(Tick) 도중 계층 구조 변경 금지**
 > `GameObjectManager::tick` 구간에서는 여러 오브젝트가 멀티스레드로 동시에 `onTick()`을 돕니다. 이때 **자신이나 다른 오브젝트의 부모/자식(Parent/Child) 관계를 수정(`attachToParent`, `detach`)해서는 절대 안 됩니다.**
 >
-> **구조 변경은 자동 지연됩니다.** `Registry::emplace` / `remove`는 tick 중 CommandBuffer로, `GameObject::addComponent`는 `deferPostTick`으로 미룹니다. tick 중 `addComponent`는 `nullptr`을 반환하므로, 생성 직후 필드를 채워야 하면 `GameObjectManager::executeOrDeferPostTick`으로 스폰+초기화를 한 블록에 묶으세요.
+> **구조 변경은 자동 지연됩니다.** `GameObject::addComponent`나 `addTag` 등 구조 변경 작업은 tick 중 `deferPostTick`으로 미룹니다. tick 중 `addComponent`는 `nullptr`을 반환하므로, 생성 직후 필드를 채워야 하면 `GameObjectManager::executeOrDeferPostTick`으로 스폰+초기화를 한 블록에 묶으세요.
 
 > [!WARNING]
 > **RHI DLL 스탬프 불일치 방지**

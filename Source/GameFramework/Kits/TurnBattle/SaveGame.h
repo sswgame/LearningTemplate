@@ -26,7 +26,7 @@ namespace sw
 		int32				_playerX{ 1 };
 		int32				_playerY{ 1 };
 		vector<PartyMember> _listParty;
-		map<string, int32>	_mapFlags; ///< 스토리 플래그
+		map<string, int32>	_mapFlag; ///< 스토리 플래그
 
 		/** @brief 파티를 비웁니다. */
 		void clearParty();

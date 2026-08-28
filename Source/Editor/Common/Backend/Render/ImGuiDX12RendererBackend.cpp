@@ -12,6 +12,8 @@
 
 namespace sw::editor
 {
+	SW_LOG_CALLER( "ImGuiDX12" );
+
 #if defined( SW_PLATFORM_WINDOWS )
 	namespace
 	{
@@ -113,7 +115,7 @@ namespace sw::editor
 	bool ImGuiDX12RendererBackend::initialize( class IRHIDevice* pRhiDevice )
 	{
 	#if defined( SW_PLATFORM_WINDOWS )
-		SW_LOG_INFO( "ImGuiDX12RendererBackend::initialize Start" );
+		SW_LOG_TRACE( "ImGuiDX12RendererBackend::initialize Start" );
 		_pRHIDevice = pRhiDevice;
 		if ( _pRHIDevice == nullptr )
 			return false;
@@ -122,7 +124,7 @@ namespace sw::editor
 		if ( pDevice == nullptr )
 			return false;
 
-		SW_LOG_INFO( "Creating D3D12 Descriptor Heap for ImGui" );
+		SW_LOG_TRACE( "Creating D3D12 Descriptor Heap for ImGui" );
 		D3D12_DESCRIPTOR_HEAP_DESC desc = {};
 		desc.Type						= D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 		desc.NumDescriptors				= _maxDescriptors;
@@ -132,9 +134,9 @@ namespace sw::editor
 
 		_descriptorSize = pDevice->GetDescriptorHandleIncrementSize( D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV );
 		_nextDescriptor = 0;
-		_listFreeDescriptors.clear();
+		_listFreeDescriptor.clear();
 
-		SW_LOG_INFO( "Populating ImGui_ImplDX12_InitInfo" );
+		SW_LOG_TRACE( "Populating ImGui_ImplDX12_InitInfo" );
 		ImGui_ImplDX12_InitInfo initInfo = {};
 		initInfo.Device					 = pDevice;
 		initInfo.CommandQueue			 = static_cast<ID3D12CommandQueue*>( _pRHIDevice->getNativeCommandQueue() );
@@ -145,9 +147,9 @@ namespace sw::editor
 		initInfo.SrvDescriptorAllocFn	 = &ImGuiAllocSrv;
 		initInfo.SrvDescriptorFreeFn	 = &ImGuiFreeSrv;
 
-		SW_LOG_INFO( "Calling ImGui_ImplDX12_Init" );
+		SW_LOG_TRACE( "Calling ImGui_ImplDX12_Init" );
 		const bool bRet = ImGui_ImplDX12_Init( &initInfo );
-		SW_LOG_INFO( "ImGui_ImplDX12_Init Returned: %#", bRet );
+		SW_LOG_TRACE( "ImGui_ImplDX12_Init Returned: %#", bRet );
 		if ( bRet )
 			installViewportGuards();
 		return bRet;
@@ -167,7 +169,7 @@ namespace sw::editor
 			_d3d12SrvHeap.Reset();
 		}
 		_nextDescriptor = 0;
-		_listFreeDescriptors.clear();
+		_listFreeDescriptor.clear();
 		_descriptorSize = 0;
 		_pRHIDevice		= nullptr;
 	#endif
@@ -191,7 +193,7 @@ namespace sw::editor
 			const HRESULT removed = pDevice->GetDeviceRemovedReason();
 			if ( FAILED( removed ) )
 			{
-				SW_LOG_ERROR( "[ImGuiDX12] Device removed before RenderDrawData (hr=%#)", static_cast<uint32>( removed ) );
+				SW_LOG_ERROR( "Device removed before RenderDrawData (hr=%#)", static_cast<uint32>( removed ) );
 				return;
 			}
 		}
@@ -277,16 +279,16 @@ namespace sw::editor
 			return false;
 
 		uint32 index{ 0 };
-		if ( _listFreeDescriptors.empty() == false )
+		if ( _listFreeDescriptor.empty() == false )
 		{
-			index = _listFreeDescriptors.back();
-			_listFreeDescriptors.pop_back();
+			index = _listFreeDescriptor.back();
+			_listFreeDescriptor.pop_back();
 		}
 		else
 		{
 			if ( _nextDescriptor >= _maxDescriptors )
 			{
-				SW_LOG_ERROR( "[ImGuiDX12] SRV descriptor heap exhausted (%#)", _maxDescriptors );
+				SW_LOG_ERROR( "SRV descriptor heap exhausted (%#)", _maxDescriptors );
 				return false;
 			}
 			index = _nextDescriptor++;
@@ -308,6 +310,6 @@ namespace sw::editor
 
 		const uint32 index = static_cast<uint32>( ( cpu.ptr - start ) / _descriptorSize );
 		if ( index < _maxDescriptors )
-			_listFreeDescriptors.push_back( index );
+			_listFreeDescriptor.push_back( index );
 	}
 } // namespace sw::editor

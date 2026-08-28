@@ -11,6 +11,8 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "Mesh" );
+
 	Mesh::~Mesh()
 	{
 		// createUnitCube/createRectMesh static 캐시는 프로세스 종료 시 RHI 디바이스보다 늦게
@@ -107,13 +109,13 @@ namespace sw
 	void Mesh::setVertices( const vector<RHIVertex>& vertices )
 	{
 		releaseGpu();
-		_listVertices = vertices;
+		_listVertex = vertices;
 	}
 
 	void Mesh::setVertices( vector<RHIVertex>&& vertices )
 	{
 		releaseGpu();
-		_listVertices = std::move( vertices );
+		_listVertex = std::move( vertices );
 	}
 
 	bool Mesh::upload( IRHIDevice* pDevice )
@@ -123,7 +125,7 @@ namespace sw
 		if ( engine::areEngineServicesBound() )
 			SW_ASSERT( engine::getTaskManager().isWorkerThread() == false );
 
-		if ( pDevice == nullptr || _listVertices.empty() )
+		if ( pDevice == nullptr || _listVertex.empty() )
 			return false;
 		if ( _vertexBuffer != 0 && _pUploadDevice == pDevice )
 			return true;
@@ -138,14 +140,14 @@ namespace sw
 			_pUploadDevice = nullptr;
 		}
 
-		const uint32  bytes		= static_cast<uint32>( _listVertices.size() * sizeof( RHIVertex ) );
+		const uint32  bytes		= static_cast<uint32>( _listVertex.size() * sizeof( RHIVertex ) );
 		IRHIResource* pResource = pDevice->getResource();
 		if ( pResource == nullptr )
 			return false;
-		_vertexBuffer = pResource->createVertexBuffer( _listVertices.data(), bytes );
+		_vertexBuffer = pResource->createVertexBuffer( _listVertex.data(), bytes );
 		if ( _vertexBuffer == 0 )
 		{
-			SW_LOG_ERROR( "[Mesh] createVertexBuffer failed (%# verts)", _listVertices.size() );
+			SW_LOG_ERROR( "createVertexBuffer failed (%# verts)", _listVertex.size() );
 			return false;
 		}
 		_pUploadDevice = pDevice;

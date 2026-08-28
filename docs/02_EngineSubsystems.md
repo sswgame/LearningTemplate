@@ -13,10 +13,10 @@ SW Engine은 철저하게 모듈화되어 있으며, 각 기능은 서브시스�
   - Bindless 텍스처 접근과 Compute 중심의 모던 렌더링을 지원합니다.
   - **문서 이동:** `Source/Engine/Graphics/README.md`
 
-### 2. 엔티티 컴포넌트 시스템 (ECS)
-- **[Object & ECS](../Source/Engine/Object/README.md)**
-  - 게임 월드를 구성하는 기본 단위인 `GameObject`와 그에 부착되는 `Component`들의 관리 시스템입니다.
-  - 데이터 지향 설계(SoA 기반 `ArchetypeChunkPool`)와 씬(Scene) 계층 구조를 다룹니다.
+### 2. 오브젝트 및 컴포넌트 시스템 (GameObject & Component)
+- **[Object (오브젝트 & 컴포넌트)](../Source/Engine/Object/README.md)**
+  - 게임 월드를 구성하는 기본 단위인 `GameObject`와 그에 부착되는 `Component`들의 수명 주기 및 계층 관리 시스템입니다.
+  - 계층 구조(`SceneComponent`), 병렬 틱(Parallel Tick) 동결 제어 및 씬(Scene) 관리 구조를 다룹니다.
   - **문서 이동:** `Source/Engine/Object/README.md`
 
 ### 3. 비동기 작업 및 스레드 (Task System)

@@ -148,8 +148,7 @@ ReflectionParser/
   - TypeInfo (프로퍼티 이름, 오프셋, 플래그)
   - StaticType() 정의 (REFLECT_BODY 시)
   - TypeRegistrar / EnumRegistrar
-  - Component면 ComponentFactoryRegistrar
-  - REFLECT_SCRIPT면 ScriptSystem 등록 조각
+  - Component면 ComponentFactoryRegistrar (자동 팩토리 등록)
 …/MonsterComponent.gen.h   (필요 시 enum 비트 연산자 등)
 …/FlagOps.gen.h            (ENUM(Flags) 비트 연산자 우산)
 ```
@@ -212,7 +211,6 @@ LLVM이 없으면 파서 타겟이 스킵될 수 있습니다.
 | `TypeRegistrarBegin/End.tpl` | 타입 등록 블록 |
 | `EnumRegistrarBegin/End.tpl` | enum 등록 |
 | `ComponentFactoryRegistrar.tpl` | 이름 → emplace 팩토리 |
-| `ScriptSystemRegistrar.tpl` | 스크립트 시스템 등록 |
 | `Builtin*.tpl` | ReflectBuiltins.gen.cpp |
 
 출력 형식을 바꿀 때는 C++보다 **tpl + CodeGenerator** 를 먼저 보는 편이 안전합니다.
@@ -221,7 +219,7 @@ LLVM이 없으면 파서 타겟이 스킵될 수 있습니다.
 
 ## 헤더만 건드릴 때 체크리스트
 
-1. `REFLECT` / `REFLECT_SCRIPT` + 필요 시 `REFLECT_BODY()`  
+1. `REFLECT` + 필요 시 `REFLECT_BODY()`  
 2. 노출 멤버에 `PROPERTY()` / `FUNCTION()` / `ENUM()`  
 3. 빌드 후 해당 타겟 ReflectionGen 재실행 확인  
 4. `StaticType` 링크 오류 → BODY 누락 또는 gen 미포함  
@@ -247,7 +245,7 @@ ARCHITECTURE의 “ReflectionParser는 Core만 링크” 규칙과 같습니다.
 
 ```cpp
 /**
- * @brief 예제: REFLECT_SCRIPT() 나 PROPERTY() 를 주석에 적어도
+ * @brief 예제: REFLECT() 나 PROPERTY() 를 주석에 적어도
  *        ReflectionParser는 이를 투명하게 무시합니다!
  */
 REFLECT()

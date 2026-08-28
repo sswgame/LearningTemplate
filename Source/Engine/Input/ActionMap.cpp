@@ -12,6 +12,7 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "ActionMap" );
 
 	namespace
 	{
@@ -77,13 +78,13 @@ namespace sw
 
 	ActionMap::ActionMap()
 		: _pInput{ nullptr }
-		, _mapActions{}
-		, _mapLayers{}
+		, _mapAction{}
+		, _mapLayer{}
 		, _mapVector2D{}
-		, _mapGamepadSticks{}
-		, _mapChords{}
-		, _listActionNames{}
-		, _listLayerNames{}
+		, _mapGamepadStick{}
+		, _mapChord{}
+		, _listActionName{}
+		, _listLayerName{}
 		, _defaultLayerName{ ActionMapDefaults::kDefaultLayerName }
 		, _doubleClickTime{ ActionMapDefaults::kDoubleClickTime }
 		, _doubleClickMaxDistance{ ActionMapDefaults::kDoubleClickMaxDistance }
@@ -94,13 +95,13 @@ namespace sw
 
 	void ActionMap::clear()
 	{
-		_mapActions.clear();
-		_mapLayers.clear();
+		_mapAction.clear();
+		_mapLayer.clear();
 		_mapVector2D.clear();
-		_mapGamepadSticks.clear();
-		_mapChords.clear();
-		_listActionNames.clear();
-		_listLayerNames.clear();
+		_mapGamepadStick.clear();
+		_mapChord.clear();
+		_listActionName.clear();
+		_listLayerName.clear();
 		_defaultLayerName.assign( ActionMapDefaults::kDefaultLayerName );
 		_doubleClickTime		= ActionMapDefaults::kDoubleClickTime;
 		_doubleClickMaxDistance = ActionMapDefaults::kDoubleClickMaxDistance;
@@ -114,14 +115,14 @@ namespace sw
 		string		absPath;
 		if ( doc.loadResource( relativePath, &absPath ) == false )
 		{
-			SW_LOG_WARNING( "[ActionMap] Failed to load InputMap %#", relativePath );
+			SW_LOG_WARNING( "Failed to load InputMap %#", relativePath );
 			return false;
 		}
 
 		XmlNode root = doc.root( InputMapXml::kRoot );
 		if ( root.isValid() == false )
 		{
-			SW_LOG_WARNING( "[ActionMap] Missing <InputMap> in %#", absPath );
+			SW_LOG_WARNING( "Missing <InputMap> in %#", absPath );
 			return false;
 		}
 
@@ -262,15 +263,15 @@ namespace sw
 			loadAction( actionNode, {} );
 		}
 
-		if ( _listActionNames.empty() )
+		if ( _listActionName.empty() )
 		{
-			SW_LOG_WARNING( "[ActionMap] No actions in %#", absPath );
+			SW_LOG_WARNING( "No actions in %#", absPath );
 			return false;
 		}
 
 		_cachedBlockFloor = computeBlockFloorPriority();
-		SW_LOG_INFO( "[ActionMap] Loaded %# actions / %# layers from %# (defaultLayer=%#)",
-					 static_cast<uint32>( _listActionNames.size() ), static_cast<uint32>( _listLayerNames.size() ), absPath,
+		SW_LOG_INFO( "Loaded %# actions / %# layers from %# (defaultLayer=%#)",
+					 static_cast<uint32>( _listActionName.size() ), static_cast<uint32>( _listLayerName.size() ), absPath,
 					 _defaultLayerName );
 		return true;
 	}
@@ -280,7 +281,7 @@ namespace sw
 		const string& emergencyPath = engine::getEngineData()._shellInputMap;
 		if ( emergencyPath.empty() == false && loadFromResource( emergencyPath ) )
 		{
-			SW_LOG_WARNING( "[ActionMap] Using emergency InputMap resource %#", emergencyPath );
+			SW_LOG_WARNING( "Using emergency InputMap resource %#", emergencyPath );
 			return;
 		}
 
@@ -296,7 +297,7 @@ namespace sw
 		bind( ActionMapDefaults::kReloadShadersAction, Key::F8, ActionTrigger::Pressed, ActionMapDefaults::kDebugLayerName );
 		bind( ActionMapDefaults::kReloadEditorAction, Key::F6, ActionTrigger::Pressed, ActionMapDefaults::kDebugLayerName );
 		bind( ActionMapDefaults::kReloadGameAction, Key::F7, ActionTrigger::Pressed, ActionMapDefaults::kDebugLayerName );
-		SW_LOG_WARNING( "[ActionMap] Emergency hard-coded fallback (resource %# missing).", emergencyPath );
+		SW_LOG_WARNING( "Emergency hard-coded fallback (resource %# missing).", emergencyPath );
 	}
 
 	void ActionMap::update( float32 deltaSeconds )
@@ -309,10 +310,10 @@ namespace sw
 		if ( _pInput != nullptr )
 			_pInput->getMousePosition( mouseX, mouseY );
 
-		for ( auto& [name, rt] : _mapActions )
+		for ( auto& [name, rt] : _mapAction )
 		{
-			if ( rt._listBindStates.size() != rt._listBindings.size() )
-				rt._listBindStates.resize( rt._listBindings.size() );
+			if ( rt._listBindState.size() != rt._listBinding.size() )
+				rt._listBindState.resize( rt._listBinding.size() );
 
 			rt._bDown		   = 0;
 			rt._bPressed	   = 0;
@@ -322,10 +323,10 @@ namespace sw
 			rt._bTriggered	   = 0;
 			rt._holdDuration   = 0.0f;
 
-			for ( size_t bindIndex = 0; bindIndex < rt._listBindings.size(); ++bindIndex )
+			for ( size_t bindIndex = 0; bindIndex < rt._listBinding.size(); ++bindIndex )
 			{
-				const InputBinding& binding		= rt._listBindings[bindIndex];
-				BindingState&		state		= rt._listBindStates[bindIndex];
+				const InputBinding& binding		= rt._listBinding[bindIndex];
+				BindingState&		state		= rt._listBindState[bindIndex];
 				const bool			layerActive = isBindingLayerActive( binding );
 				const bool			down		= evaluateDown( binding );
 
@@ -405,8 +406,8 @@ namespace sw
 		binding._trigger = trigger;
 		binding._layer	 = layer.empty() ? _defaultLayerName : string( layer );
 		ensureLayer( binding._layer );
-		rt._listBindings.push_back( std::move( binding ) );
-		rt._listBindStates.emplace_back();
+		rt._listBinding.push_back( std::move( binding ) );
+		rt._listBindState.emplace_back();
 	}
 
 	void ActionMap::bind( string_view action, GamepadButton button, ActionTrigger trigger,
@@ -419,8 +420,8 @@ namespace sw
 		binding._trigger = trigger;
 		binding._layer	 = layer.empty() ? _defaultLayerName : string( layer );
 		ensureLayer( binding._layer );
-		rt._listBindings.push_back( std::move( binding ) );
-		rt._listBindStates.emplace_back();
+		rt._listBinding.push_back( std::move( binding ) );
+		rt._listBindState.emplace_back();
 	}
 
 	void ActionMap::bind( string_view action, MouseButton mouse, ActionTrigger trigger, string_view layer )
@@ -432,8 +433,8 @@ namespace sw
 		binding._trigger = trigger;
 		binding._layer	 = layer.empty() ? _defaultLayerName : string( layer );
 		ensureLayer( binding._layer );
-		rt._listBindings.push_back( std::move( binding ) );
-		rt._listBindStates.emplace_back();
+		rt._listBinding.push_back( std::move( binding ) );
+		rt._listBindState.emplace_back();
 	}
 
 	void ActionMap::registerLayer( string_view name, int32 priority, bool enabled, bool blockLower,
@@ -452,7 +453,7 @@ namespace sw
 		LayerDef* pDef = findLayer( layer );
 		if ( pDef == nullptr )
 		{
-			SW_LOG_WARNING( "[ActionMap] Unknown layer '%#'", layer );
+			SW_LOG_WARNING( "Unknown layer '%#'", layer );
 			return;
 		}
 		pDef->_bEnabled	  = enabled ? 1 : 0;
@@ -471,7 +472,7 @@ namespace sw
 
 	void ActionMap::enableOnlyLayer( string_view layer )
 	{
-		for ( auto& [name, def] : _mapLayers )
+		for ( auto& [name, def] : _mapLayer )
 		{
 			if ( def._bAlwaysOn != 0 )
 				continue;
@@ -515,21 +516,21 @@ namespace sw
 
 	bool ActionMap::hasAction( string_view action ) const
 	{
-		return _mapActions.find( action ) != _mapActions.end();
+		return _mapAction.find( action ) != _mapAction.end();
 	}
 
 	ActionTrigger ActionMap::getBindingTrigger( string_view action, uint32 bindIndex ) const
 	{
 		const ActionRuntime* pRt = findRuntime( action );
-		if ( pRt == nullptr || bindIndex >= pRt->_listBindings.size() )
+		if ( pRt == nullptr || bindIndex >= pRt->_listBinding.size() )
 			return ActionTrigger::Pressed;
-		return pRt->_listBindings[bindIndex]._trigger;
+		return pRt->_listBinding[bindIndex]._trigger;
 	}
 
 	uint32 ActionMap::getBindingCount( string_view action ) const
 	{
 		const ActionRuntime* pRt = findRuntime( action );
-		return pRt != nullptr ? static_cast<uint32>( pRt->_listBindings.size() ) : 0;
+		return pRt != nullptr ? static_cast<uint32>( pRt->_listBinding.size() ) : 0;
 	}
 
 	bool ActionMap::wasActionTriggered( string_view action ) const
@@ -735,7 +736,7 @@ namespace sw
 	int32 ActionMap::computeBlockFloorPriority() const
 	{
 		int32 floorPri = -1;
-		for ( const auto& [name, def] : _mapLayers )
+		for ( const auto& [name, def] : _mapLayer )
 		{
 			if ( def._bEnabled == 0 || def._bBlockLower == 0 )
 				continue;
@@ -747,12 +748,12 @@ namespace sw
 
 	void ActionMap::ensureActionListed( string_view action )
 	{
-		for ( const string& name : _listActionNames )
+		for ( const string& name : _listActionName )
 		{
 			if ( name == action )
 				return;
 		}
-		_listActionNames.emplace_back( action );
+		_listActionName.emplace_back( action );
 	}
 
 	ActionMap::LayerDef& ActionMap::ensureLayer( string_view name, int32 priority, bool enabled,
@@ -762,8 +763,8 @@ namespace sw
 		if ( key.empty() )
 			key = _defaultLayerName;
 
-		auto it = _mapLayers.find( key );
-		if ( it != _mapLayers.end() )
+		auto it = _mapLayer.find( key );
+		if ( it != _mapLayer.end() )
 			return it->second;
 
 		LayerDef def{};
@@ -772,38 +773,38 @@ namespace sw
 		def._bEnabled	 = enabled ? 1 : 0;
 		def._bBlockLower = blockLower ? 1 : 0;
 		def._bAlwaysOn	 = alwaysOn ? 1 : 0;
-		_listLayerNames.push_back( key );
-		return _mapLayers.emplace( key, std::move( def ) ).first->second;
+		_listLayerName.push_back( key );
+		return _mapLayer.emplace( key, std::move( def ) ).first->second;
 	}
 
 	ActionMap::ActionRuntime& ActionMap::getOrCreateRuntime( string_view action )
 	{
 		ensureActionListed( action );
-		return _mapActions[string( action )];
+		return _mapAction[string( action )];
 	}
 
 	ActionMap::LayerDef* ActionMap::findLayer( string_view name )
 	{
-		const auto it = _mapLayers.find( name );
-		return it != _mapLayers.end() ? &it->second : nullptr;
+		const auto it = _mapLayer.find( name );
+		return it != _mapLayer.end() ? &it->second : nullptr;
 	}
 
 	const ActionMap::LayerDef* ActionMap::findLayer( string_view name ) const
 	{
-		const auto it = _mapLayers.find( name );
-		return it != _mapLayers.end() ? &it->second : nullptr;
+		const auto it = _mapLayer.find( name );
+		return it != _mapLayer.end() ? &it->second : nullptr;
 	}
 
 	ActionMap::ActionRuntime* ActionMap::findRuntime( string_view action )
 	{
-		const auto it = _mapActions.find( action );
-		return it != _mapActions.end() ? &it->second : nullptr;
+		const auto it = _mapAction.find( action );
+		return it != _mapAction.end() ? &it->second : nullptr;
 	}
 
 	const ActionMap::ActionRuntime* ActionMap::findRuntime( string_view action ) const
 	{
-		const auto it = _mapActions.find( action );
-		return it != _mapActions.end() ? &it->second : nullptr;
+		const auto it = _mapAction.find( action );
+		return it != _mapAction.end() ? &it->second : nullptr;
 	}
 
 	void ActionMap::bindVector2D( string_view action, Key up, Key down, Key left, Key right, float32 deadzone,
@@ -833,7 +834,7 @@ namespace sw
 		binding._stick	  = stick;
 		binding._deadzone = deadzone >= 0.0f ? deadzone : 0.0f;
 
-		_mapGamepadSticks[act].push_back( std::move( binding ) );
+		_mapGamepadStick[act].push_back( std::move( binding ) );
 	}
 
 	float2 ActionMap::getVector2D( string_view action ) const
@@ -842,8 +843,8 @@ namespace sw
 			return float2{ 0.0f, 0.0f };
 
 		// 1) 게임패드 아날로그 스틱 우선 조회
-		const auto itStick = _mapGamepadSticks.find( action );
-		if ( itStick != _mapGamepadSticks.end() && _pInput->getGamepad() != nullptr )
+		const auto itStick = _mapGamepadStick.find( action );
+		if ( itStick != _mapGamepadStick.end() && _pInput->getGamepad() != nullptr )
 		{
 			const GamepadXInput* pPad = _pInput->getGamepad();
 			for ( const GamepadStickBinding& binding : itStick->second )
@@ -938,7 +939,7 @@ namespace sw
 		chord._triggerKey = triggerKey;
 		chord._trigger	  = trigger;
 
-		_mapChords[act].push_back( std::move( chord ) );
+		_mapChord[act].push_back( std::move( chord ) );
 	}
 
 	bool ActionMap::isChordDown( string_view action ) const
@@ -946,8 +947,8 @@ namespace sw
 		if ( _pInput == nullptr )
 			return false;
 
-		const auto it = _mapChords.find( action );
-		if ( it == _mapChords.end() )
+		const auto it = _mapChord.find( action );
+		if ( it == _mapChord.end() )
 			return false;
 
 		for ( const ChordBinding& chord : it->second )
@@ -975,8 +976,8 @@ namespace sw
 		if ( _pInput == nullptr )
 			return false;
 
-		const auto it = _mapChords.find( action );
-		if ( it == _mapChords.end() )
+		const auto it = _mapChord.find( action );
+		if ( it == _mapChord.end() )
 			return false;
 
 		for ( const ChordBinding& chord : it->second )

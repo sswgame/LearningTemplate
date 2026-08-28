@@ -16,6 +16,8 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "GameInstanceBase" );
+
 	bool GameInstanceBase::initialize( IWindow* pWindow, IRHIDevice* pRhiDevice )
 	{
 		_pWindow	= pWindow;
@@ -27,7 +29,7 @@ namespace sw
 		const string_view gameDataFile =
 			gameCfg._gameDataFile.empty() ? string_view( "data/gamedata.xml" ) : string_view( gameCfg._gameDataFile );
 		if ( _bootstrap.load( gameDataFile ) == false )
-			SW_LOG_WARNING( "[GameInstanceBase] Bootstrap load failed for pack '%#' — using defaults.", _bootstrap._packRoot );
+			SW_LOG_WARNING( "Bootstrap load failed for pack '%#' — using defaults.", _bootstrap._packRoot );
 		return onInitialize();
 	}
 
@@ -133,7 +135,7 @@ namespace sw
 			size_t		readBytes = ObjectStateSerializer::loadFromBinaryBuffer( pObj, pData + offset, size - offset, parentName );
 			if ( readBytes == 0 )
 			{
-				SW_LOG_ERROR( "[GameInstanceBase] Failed to load binary object state at index %u", objectIndex );
+				SW_LOG_ERROR( "Failed to load binary object state at index %u", objectIndex );
 				break;
 			}
 			restoredObjectList.push_back( { pObj, parentName } );
@@ -149,7 +151,7 @@ namespace sw
 			GameObject* pParent = pActiveScene->getObjectManager()->findGameObjectByName( hashed_string( restoredObj.parentName.c_str() ) );
 			if ( pParent == nullptr )
 			{
-				SW_LOG_WARNING( "[GameInstanceBase] HotReload ParentGO not found: %s", restoredObj.parentName.c_str() );
+				SW_LOG_WARNING( "HotReload ParentGO not found: %s", restoredObj.parentName.c_str() );
 				continue;
 			}
 			restoredObj.pObj->attachToParent( pParent );

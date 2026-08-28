@@ -12,6 +12,8 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "MacFileWatcher" );
+
 	MacFileWatcher::MacFileWatcher() = default;
 
 	MacFileWatcher::~MacFileWatcher()
@@ -62,7 +64,7 @@ namespace sw
 
 		if ( FileUtil::directoryExists( directoryPath ) == false )
 		{
-			SW_LOG_ERROR( "[MacFileWatcher] Directory does not exist: %#", string{ directoryPath }.c_str() );
+			SW_LOG_ERROR( "Directory does not exist: %#", string{ directoryPath }.c_str() );
 			return false;
 		}
 
@@ -88,7 +90,7 @@ namespace sw
 		CFRelease( pathsToWatch );
 		if ( stream == nullptr )
 		{
-			SW_LOG_ERROR( "[MacFileWatcher] FSEventStreamCreate failed" );
+			SW_LOG_ERROR( "FSEventStreamCreate failed" );
 			return false;
 		}
 
@@ -109,7 +111,7 @@ namespace sw
 		FSEventStreamScheduleWithRunLoop( stream, runLoop, kCFRunLoopDefaultMode );
 		if ( FSEventStreamStart( stream ) == false )
 		{
-			SW_LOG_ERROR( "[MacFileWatcher] FSEventStreamStart failed" );
+			SW_LOG_ERROR( "FSEventStreamStart failed" );
 			_bIsWatching = false;
 			return;
 		}

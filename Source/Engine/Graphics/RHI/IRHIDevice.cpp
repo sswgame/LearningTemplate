@@ -12,6 +12,8 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "RHI" );
+
 	IRHIDevice::~IRHIDevice() = default;
 
 	IRHIDevice::IRHIDevice()
@@ -35,12 +37,12 @@ namespace sw
 		IRHIResource* pResource = getResource();
 		if ( pResource == nullptr )
 		{
-			SW_LOG_WARNING( "[RHI] executeOffscreenPipelineSmoke: missing resource" );
+			SW_LOG_WARNING( "executeOffscreenPipelineSmoke: missing resource" );
 			return false;
 		}
 		if ( getCapabilities()._bOffscreenRT == 0 )
 		{
-			SW_LOG_WARNING( "[RHI] executeOffscreenPipelineSmoke: caps._bOffscreenRT=0" );
+			SW_LOG_WARNING( "executeOffscreenPipelineSmoke: caps._bOffscreenRT=0" );
 			return false;
 		}
 
@@ -58,7 +60,7 @@ namespace sw
 		const RHITextureHandle rt = pResource->createTexture2D( desc );
 		if ( rt == 0 )
 		{
-			SW_LOG_WARNING( "[RHI] executeOffscreenPipelineSmoke: createTexture2D failed" );
+			SW_LOG_WARNING( "executeOffscreenPipelineSmoke: createTexture2D failed" );
 			return false;
 		}
 
@@ -68,7 +70,7 @@ namespace sw
 		unique_ptr<IRHICommandList> cmd = createCommandList( RHICommandListMode::Immediate );
 		if ( cmd == nullptr )
 		{
-			SW_LOG_WARNING( "[RHI] executeOffscreenPipelineSmoke: createCommandList failed" );
+			SW_LOG_WARNING( "executeOffscreenPipelineSmoke: createCommandList failed" );
 			bOk = false;
 		}
 		else

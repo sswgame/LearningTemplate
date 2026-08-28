@@ -18,8 +18,8 @@ namespace sw
 	DeadlockDetector::DeadlockDetector()
 		: _bInitialized{ false }
 		, _mutex{}
-		, _mapThreadStates{}
-		, _mapLockOwners{}
+		, _mapThreadState{}
+		, _mapLockOwner{}
 	{
 	}
 
@@ -75,7 +75,7 @@ namespace sw
 
 		std::scoped_lock<std::mutex> lock{ _mutex };
 
-		ThreadState& state		= _mapThreadStates[tid];
+		ThreadState& state		= _mapThreadState[tid];
 		state._threadId			= tid;
 		state._pWaitingLock		= pLock;
 		state._waitingCallStack = currentStack;
@@ -98,12 +98,12 @@ namespace sw
 		std::thread::id tid = std::this_thread::get_id();
 
 		std::scoped_lock<std::mutex> lock{ _mutex };
-		ThreadState&				 state = _mapThreadStates[tid];
+		ThreadState&				 state = _mapThreadState[tid];
 		state._pWaitingLock				   = nullptr;
-		state._listHeldLocks.push_back( pLock );
-		state._mapAcquiredCallStacks[pLock] = state._waitingCallStack; // 획득 시점 스택은 대기 시작 시점의 스택과 동일
+		state._listHeldLock.push_back( pLock );
+		state._mapAcquiredCallStack[pLock] = state._waitingCallStack; // 획득 시점 스택은 대기 시작 시점의 스택과 동일
 
-		_mapLockOwners[pLock] = tid;
+		_mapLockOwner[pLock] = tid;
 	}
 
 	/**
@@ -117,14 +117,14 @@ namespace sw
 		std::thread::id tid = std::this_thread::get_id();
 
 		std::scoped_lock<std::mutex> lock{ _mutex };
-		ThreadState&				 state = _mapThreadStates[tid];
+		ThreadState&				 state = _mapThreadState[tid];
 
-		auto it = std::find( state._listHeldLocks.begin(), state._listHeldLocks.end(), pLock );
-		if ( it != state._listHeldLocks.end() )
-			state._listHeldLocks.erase( it );
-		state._mapAcquiredCallStacks.erase( pLock );
+		auto it = std::find( state._listHeldLock.begin(), state._listHeldLock.end(), pLock );
+		if ( it != state._listHeldLock.end() )
+			state._listHeldLock.erase( it );
+		state._mapAcquiredCallStack.erase( pLock );
 
-		_mapLockOwners.erase( pLock );
+		_mapLockOwner.erase( pLock );
 	}
 
 	/**
@@ -140,8 +140,8 @@ namespace sw
 		{
 			listPath.push_back( currentThread );
 
-			auto ownerIt = _mapLockOwners.find( pCurrentLock );
-			if ( ownerIt == _mapLockOwners.end() )
+			auto ownerIt = _mapLockOwner.find( pCurrentLock );
+			if ( ownerIt == _mapLockOwner.end() )
 			{
 				// 현재 락의 소유자가 없으면 데드락이 아님
 				return false;
@@ -155,8 +155,8 @@ namespace sw
 				return true;
 			}
 
-			auto stateIt = _mapThreadStates.find( ownerThread );
-			if ( stateIt == _mapThreadStates.end() || stateIt->second._pWaitingLock == nullptr )
+			auto stateIt = _mapThreadState.find( ownerThread );
+			if ( stateIt == _mapThreadState.end() || stateIt->second._pWaitingLock == nullptr )
 			{
 				// 소유자 스레드가 다른 락을 기다리고 있지 않으므로 체인 종료
 				return false;
@@ -182,7 +182,7 @@ namespace sw
 		for ( size_t cycleIndex = 0; cycleIndex < cycle.size(); ++cycleIndex )
 		{
 			std::thread::id tid	  = cycle[cycleIndex];
-			ThreadState&	state = _mapThreadStates[tid];
+			ThreadState&	state = _mapThreadState[tid];
 
 			uint32 tidHash = static_cast<uint32>( std::hash<std::thread::id>{}( tid ) );
 			builder.appendFormat( "Thread [%#] is waiting for lock at address: %#\n", tidHash,
@@ -191,12 +191,12 @@ namespace sw
 			builder.append( CallStackCapture::symbolize( state._waitingCallStack ) );
 			builder.append( "\n" );
 
-			builder.appendFormat( "  But it currently holds %# locks:\n", static_cast<int32>( state._listHeldLocks.size() ) );
-			for ( void* pHeld : state._listHeldLocks )
+			builder.appendFormat( "  But it currently holds %# locks:\n", static_cast<int32>( state._listHeldLock.size() ) );
+			for ( void* pHeld : state._listHeldLock )
 			{
 				builder.appendFormat( "    - Lock at address: %#\n", reinterpret_cast<uintptr_t>( pHeld ) );
 				builder.append( "    - Acquired at Call Stack:\n" );
-				builder.append( CallStackCapture::symbolize( state._mapAcquiredCallStacks[pHeld] ) );
+				builder.append( CallStackCapture::symbolize( state._mapAcquiredCallStack[pHeld] ) );
 				builder.append( "\n" );
 			}
 			builder.append( "-------------------------------------------------------\n" );

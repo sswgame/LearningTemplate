@@ -11,6 +11,7 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "SaveGame" );
 
 	namespace
 	{
@@ -59,13 +60,13 @@ namespace sw
 
 	int32 SaveGame::getFlag( string_view key, int32 defaultValue ) const
 	{
-		const auto it = _mapFlags.find( string( key ) );
-		return it != _mapFlags.end() ? it->second : defaultValue;
+		const auto it = _mapFlag.find( string( key ) );
+		return it != _mapFlag.end() ? it->second : defaultValue;
 	}
 
 	void SaveGame::setFlag( string_view key, int32 value )
 	{
-		_mapFlags[string( key )] = value;
+		_mapFlag[string( key )] = value;
 	}
 
 	bool SaveGame::saveToFile( string_view path ) const
@@ -79,7 +80,7 @@ namespace sw
 			sb.append( "party" ).append( static_cast<int32>( partyIndex ) ).append( ".speciesId=" ).append( m._speciesId.c_str() ).append( '\n' ).append( "party" ).append( static_cast<int32>( partyIndex ) ).append( ".nickname=" ).append( m._nickname.c_str() ).append( '\n' ).append( "party" ).append( static_cast<int32>( partyIndex ) ).append( ".level=" ).append( m._level ).append( '\n' ).append( "party" ).append( static_cast<int32>( partyIndex ) ).append( ".hp=" ).append( m._hp ).append( '\n' ).append( "party" ).append( static_cast<int32>( partyIndex ) ).append( ".hpMax=" ).append( m._hpMax ).append( '\n' ).append( "party" ).append( static_cast<int32>( partyIndex ) ).append( ".pp0=" ).append( m._pp0 ).append( '\n' ).append( "party" ).append( static_cast<int32>( partyIndex ) ).append( ".pp1=" ).append( m._pp1 ).append( '\n' ).append( "party" ).append( static_cast<int32>( partyIndex ) ).append( ".exp=" ).append( m._exp ).append( '\n' );
 		}
 
-		for ( const auto& [key, val] : _mapFlags )
+		for ( const auto& [key, val] : _mapFlag )
 		{
 			sb.append( "flag." ).append( key.c_str() ).append( '=' ).append( val ).append( '\n' );
 		}
@@ -87,7 +88,7 @@ namespace sw
 		const string tempPath = string( path ) + ".tmp";
 		if ( FileUtil::writeTextFile( tempPath, sb.view() ) == false )
 		{
-			SW_LOG_ERROR( "[SaveGame] Failed to write temporary save file: %#", tempPath.c_str() );
+			SW_LOG_ERROR( "Failed to write temporary save file: %#", tempPath.c_str() );
 			return false;
 		}
 
@@ -96,9 +97,9 @@ namespace sw
 		FileUtil::removeFile( tempPath );
 
 		if ( bCopied )
-			SW_LOG_INFO( "[SaveGame] Saved %# (party=%# flags=%#)", path, _listParty.size(), _mapFlags.size() );
+			SW_LOG_INFO( "Saved %# (party=%# flags=%#)", path, _listParty.size(), _mapFlag.size() );
 		else
-			SW_LOG_ERROR( "[SaveGame] Failed to commit atomic save to %#", path );
+			SW_LOG_ERROR( "Failed to commit atomic save to %#", path );
 
 		return bCopied;
 	}
@@ -147,17 +148,17 @@ namespace sw
 		if ( _listParty.empty() )
 			ensureStarterParty();
 
-		_mapFlags.clear();
+		_mapFlag.clear();
 		constexpr const utf8* kFlagPrefix = "flag.";
 		const size_t		  prefixLen	  = StringUtil::strlen( kFlagPrefix );
 		for ( const auto& [key, val] : map )
 		{
 			if ( key.size() > prefixLen && key.compare( 0, prefixLen, kFlagPrefix ) == 0 )
-				_mapFlags[key.substr( prefixLen )] = StringUtil::atoi( val.c_str() );
+				_mapFlag[key.substr( prefixLen )] = StringUtil::atoi( val.c_str() );
 		}
 
-		SW_LOG_INFO( "[SaveGame] Loaded %# @ (%#,%#) party=%# flags=%#",
-					 _mapPath, _playerX, _playerY, _listParty.size(), _mapFlags.size() );
+		SW_LOG_INFO( "Loaded %# @ (%#,%#) party=%# flags=%#",
+					 _mapPath, _playerX, _playerY, _listParty.size(), _mapFlag.size() );
 		return true;
 	}
 } // namespace sw

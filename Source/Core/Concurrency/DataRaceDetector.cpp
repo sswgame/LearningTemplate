@@ -9,6 +9,8 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "DataRaceDetector" );
+
 	/**
 	 * @brief 읽기 작업 시작 진입점
 	 */
@@ -69,7 +71,7 @@ namespace sw
 		CallStackCapture::capture( callStack, 1 );
 		string stackTrace = CallStackCapture::symbolize( callStack );
 
-		SW_LOG_ERROR( "[DataRaceDetector] %s (ctx: %p, readers: %u, writers: %u)", message, this, readers, writers );
+		SW_LOG_ERROR( "%s (ctx: %p, readers: %u, writers: %u)", message, this, readers, writers );
 
 		size_t start{ 0 };
 		while ( start < stackTrace.size() )

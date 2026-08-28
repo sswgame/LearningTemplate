@@ -55,34 +55,34 @@ namespace sw
 		void resolveRuntimeMesh();
 
 		/** @brief 메시를 설정합니다. */
-		void setMesh( shared_ptr<Mesh> mesh );
+		void setMesh( shared_ptr<Mesh> mesh ) { _mesh = std::move( mesh ); }
 		/** @brief 메시를 반환합니다. */
-		shared_ptr<Mesh> getMesh() const;
+		shared_ptr<Mesh> getMesh() const { return _mesh; }
 
 		/** @brief 머티리얼을 설정합니다. */
-		void setMaterial( Material* pMaterial );
+		void setMaterial( Material* pMaterial ) { _pMaterial = pMaterial; }
 		/** @brief 머티리얼을 반환합니다. */
-		Material* getMaterial() const;
+		Material* getMaterial() const { return _pMaterial; }
 
 		/** @brief 머티리얼 인스턴스를 설정합니다. */
-		void setMaterialInstance( shared_ptr<MaterialInstance> instance );
+		void setMaterialInstance( shared_ptr<MaterialInstance> instance ) { _materialInstance = std::move( instance ); }
 		/** @brief 머티리얼 인스턴스를 반환합니다. */
-		shared_ptr<MaterialInstance> getMaterialInstance() const;
+		shared_ptr<MaterialInstance> getMaterialInstance() const { return _materialInstance; }
 
 		/** @brief 블렌드 모드를 설정합니다. */
-		void setBlendMode( RHIBlendMode mode );
+		void setBlendMode( RHIBlendMode mode ) { _blendMode = mode; }
 		/** @brief 블렌드 모드를 반환합니다. */
-		RHIBlendMode getBlendMode() const;
+		RHIBlendMode getBlendMode() const { return _blendMode; }
 
 		/** @brief 바운드 반지름을 설정합니다. */
-		void setBoundsRadius( float32 radius );
+		void setBoundsRadius( float32 radius ) { _boundsRadius = radius; }
 		/** @brief 바운드 반지름을 반환합니다. */
-		float32 getBoundsRadius() const;
+		float32 getBoundsRadius() const { return _boundsRadius; }
 
 		/** @brief 가시 여부를 설정합니다. */
-		void setVisible( bool bVisible );
+		void setVisible( bool bVisible ) { _bVisible = bVisible ? SW_TRUE : SW_FALSE; }
 		/** @brief 가시 여부를 반환합니다. */
-		bool isVisible() const;
+		bool isVisible() const { return _bVisible == SW_TRUE; }
 
 	private:
 		shared_ptr<Mesh>			 _mesh;

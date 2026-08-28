@@ -28,15 +28,15 @@ namespace sw
 		void onTick( float32 deltaTime ) override;
 
 	private:
-		PROPERTY( Alias="damageValue" )
+		PROPERTY( Alias = "damageValue" )
 		int32 _damageValue;
-		PROPERTY( Alias="lifeTime" )
+		PROPERTY( Alias = "lifeTime" )
 		float32 _lifeTime;
-		PROPERTY( Alias="currentLife" )
+		PROPERTY( Alias = "currentLife" )
 		float32 _currentLife;
-		PROPERTY( Alias="floatSpeed" )
+		PROPERTY( Alias = "floatSpeed" )
 		float32 _floatSpeed;
-		PROPERTY( Alias="alpha" )
+		PROPERTY( Alias = "alpha" )
 		float32 _alpha;
 	};
 } // namespace sw

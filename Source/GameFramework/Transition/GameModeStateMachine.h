@@ -95,7 +95,7 @@ namespace sw
 	private:
 		GamePlayMode												   _currentMode;
 		GamePlayMode												   _previousMode;
-		unordered_map<GamePlayMode, std::shared_ptr<IGameModeHandler>> _mapHandlers;
+		unordered_map<GamePlayMode, std::shared_ptr<IGameModeHandler>> _mapHandler;
 		ModeChangedDelegate											   _onModeChanged;
 	};
 } // namespace sw

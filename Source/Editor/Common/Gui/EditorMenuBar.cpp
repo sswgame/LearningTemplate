@@ -26,6 +26,8 @@
 
 namespace sw::editor
 {
+	SW_LOG_CALLER( "Editor" );
+
 	namespace
 	{
 		void onOpenSceneDialogResult( const vector<string>& listPaths )
@@ -318,14 +320,14 @@ namespace sw::editor
 		SceneManager* pSceneManager = getService<SceneManager>();
 		if ( pSceneManager == nullptr )
 		{
-			SW_LOG_ERROR( "[Editor] Open Scene: SceneManager unavailable" );
+			SW_LOG_ERROR( "Open Scene: SceneManager unavailable" );
 			return;
 		}
 
 		if ( pSceneManager->requestLoadAsync( loadPath ) )
 		{
 			EditorContext::get()->getWorkspace().clearSelection();
-			SW_LOG_INFO( "[Editor] Open Scene: %#", loadPath );
+			SW_LOG_INFO( "Open Scene: %#", loadPath );
 		}
 	}
 } // namespace sw::editor

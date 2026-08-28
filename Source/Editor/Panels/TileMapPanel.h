@@ -106,7 +106,7 @@ namespace sw::editor
 		vector<uint8>			 _listEncounter;
 		vector<uint8>			 _listPassThrough;
 		vector<EditorTileVisual> _listVisual;
-		vector<EditorTileWarp>	 _listWarps;
+		vector<EditorTileWarp>	 _listWarp;
 		string					 _status;
 	};
 } // namespace sw::editor

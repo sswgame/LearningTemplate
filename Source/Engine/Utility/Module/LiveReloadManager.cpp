@@ -25,6 +25,7 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "LiveReloadManager" );
 
 	namespace
 	{
@@ -66,7 +67,7 @@ namespace sw
 					return;
 
 				if ( FileUtil::copyFile( originalDebugPath, shadowDebugPath ) == false )
-					SW_LOG_WARNING( "[LiveReloadManager] Failed to copy debug symbols: %#", shadowDebugPath.c_str() );
+					SW_LOG_WARNING( "Failed to copy debug symbols: %#", shadowDebugPath.c_str() );
 			}
 
 			void cleanStaleShadowArtifacts( string_view directoryPath )
@@ -157,7 +158,7 @@ namespace sw
 		vector<string> listOrder;
 		if ( topoSortSubgraph( listNames, listOrder ) == false )
 		{
-			SW_LOG_WARNING( "[LiveReloadManager] Shutdown topo sort failed (cycle?) — unloading in name order" );
+			SW_LOG_WARNING( "Shutdown topo sort failed (cycle?) — unloading in name order" );
 			listOrder = listNames;
 			std::sort( listOrder.begin(), listOrder.end() );
 		}
@@ -183,7 +184,7 @@ namespace sw
 		if ( _fileWatcher && _fileWatcher->isWatching() == false )
 		{
 			_fileWatcher->startWatching( execDir, false ); // no recursive for DLLs
-			SW_LOG_INFO( "[LiveReloadManager] Started FileWatcher on directory: %#", execDir.c_str() );
+			SW_LOG_INFO( "Started FileWatcher on directory: %#", execDir.c_str() );
 		}
 
 		moduleContext._originalModulePath = FileUtil::joinPath( execDir, FileUtil::formatSharedLibraryName( moduleName ) );
@@ -194,7 +195,7 @@ namespace sw
 	{
 		if ( _bReloadGraphBroken )
 		{
-			SW_LOG_ERROR( "[LiveReloadManager] Reload graph is broken — restart the process (ignored %#)", moduleName );
+			SW_LOG_ERROR( "Reload graph is broken — restart the process (ignored %#)", moduleName );
 			return;
 		}
 
@@ -203,7 +204,7 @@ namespace sw
 			return;
 
 		ModuleContext& ctx = iter->second;
-		SW_LOG_INFO( "[LiveReloadManager] Manual Live Reload queued for %# (debounce %#ms)...",
+		SW_LOG_INFO( "Manual Live Reload queued for %# (debounce %#ms)...",
 					 moduleName, kMtimeDebounceMs );
 		ctx._debounceMtime	  = FileUtil::getFileTimestamp( ctx._originalModulePath );
 		ctx._debounceSince	  = std::chrono::steady_clock::now();
@@ -267,7 +268,7 @@ namespace sw
 			const bool bForce	  = ctx._bForceReload.exchange( false );
 			if ( bForce || sourceMtime > ctx._loadedSourceMtime )
 			{
-				SW_LOG_INFO( "[LiveReloadManager] FileWatcher settled — queuing reload for %#", ctx._moduleName );
+				SW_LOG_TRACE( "FileWatcher settled — queuing reload for %#", ctx._moduleName );
 				ctx._bPendingReload = true;
 			}
 		}
@@ -324,9 +325,8 @@ namespace sw
 	{
 		_bReloadGraphBroken = true;
 		(void)reason;
-		SW_LOG_ERROR(
-			"[LiveReloadManager] Reload graph broken (%#) — restart the process; further live reloads are disabled",
-			reason );
+		SW_LOG_ERROR( "Reload graph broken (%#) — restart the process; further live reloads are disabled",
+					  reason );
 	}
 
 	void* LiveReloadManager::getModuleHandle( string_view moduleName ) const
@@ -339,7 +339,7 @@ namespace sw
 	{
 		auto iter = _mapModule.find( string( moduleName ) );
 		if ( iter != _mapModule.end() )
-			iter->second._listEventSubscriptions.push_back( token );
+			iter->second._listEventSubscription.push_back( token );
 	}
 
 	bool LiveReloadManager::loadShadowCopyModule( ModuleContext& ctx )
@@ -360,7 +360,7 @@ namespace sw
 		{
 			if ( FileUtil::fileExists( ctx._originalModulePath ) == false )
 			{
-				SW_LOG_ERROR( "[LiveReloadManager] Original module not found: %#", ctx._originalModulePath.c_str() );
+				SW_LOG_ERROR( "Original module not found: %#", ctx._originalModulePath.c_str() );
 				return false;
 			}
 		}
@@ -377,7 +377,7 @@ namespace sw
 		{
 			if ( copyFileWithRetry( ctx._originalModulePath, out._tempPath ) == false )
 			{
-				SW_LOG_ERROR( "[LiveReloadManager] Failed to create shadow copy (locked): %#", out._tempPath.c_str() );
+				SW_LOG_ERROR( "Failed to create shadow copy (locked): %#", out._tempPath.c_str() );
 				out._tempPath.clear();
 				return false;
 			}
@@ -390,7 +390,7 @@ namespace sw
 			out._pHandle = FileUtil::loadDynamicLibrary( out._tempPath );
 			if ( out._pHandle == nullptr )
 			{
-				SW_LOG_ERROR( "[LiveReloadManager] Failed to load dynamic library (keeping old): %#", out._tempPath.c_str() );
+				SW_LOG_ERROR( "Failed to load dynamic library (keeping old): %#", out._tempPath.c_str() );
 				tryDeleteShadowArtifacts( out._tempPath );
 				out._tempPath.clear();
 				return false;
@@ -427,11 +427,11 @@ namespace sw
 
 			if ( previousHandle != nullptr )
 			{
-				for ( const EventDispatcher::EventSubscription& token : ctx._listEventSubscriptions )
+				for ( const EventDispatcher::EventSubscription& token : ctx._listEventSubscription )
 				{
 					engine::getEventDispatcher().unsubscribe( token );
 				}
-				ctx._listEventSubscriptions.clear();
+				ctx._listEventSubscription.clear();
 
 				drainTasksBeforeUnload();
 				engine::unregisterModuleTypes( ctx._moduleName );
@@ -464,12 +464,12 @@ namespace sw
 
 		if ( _bReloadGraphBroken )
 		{
-			SW_LOG_ERROR( "[LiveReloadManager] Module %# committed but onAfter poisoned the graph",
+			SW_LOG_ERROR( "Module %# committed but onAfter poisoned the graph",
 						  ctx._moduleName );
 			return false;
 		}
 
-		SW_LOG_INFO( "[LiveReloadManager] Module loaded (shadow: %#)", ctx._tempModulePath.c_str() );
+		SW_LOG_INFO( "Module loaded (shadow: %#)", ctx._tempModulePath.c_str() );
 		return true;
 	}
 
@@ -496,12 +496,12 @@ namespace sw
 
 		if ( ctx._pLibraryModule != nullptr )
 		{
-			SW_LOG_INFO( "[LiveReloadManager] Unloading module %# (handle=%#)", ctx._moduleName.c_str(), ctx._pLibraryModule );
-			for ( const EventDispatcher::EventSubscription& token : ctx._listEventSubscriptions )
+			SW_LOG_INFO( "Unloading module %# (handle=%#)", ctx._moduleName.c_str(), ctx._pLibraryModule );
+			for ( const EventDispatcher::EventSubscription& token : ctx._listEventSubscription )
 			{
 				engine::getEventDispatcher().unsubscribe( token );
 			}
-			ctx._listEventSubscriptions.clear();
+			ctx._listEventSubscription.clear();
 
 			drainTasksBeforeUnload();
 
@@ -640,7 +640,7 @@ namespace sw
 					cycleModules += name;
 				}
 			}
-			SW_LOG_ERROR( "[LiveReloadManager] Dependency cycle in module graph (sorted %# / %#). Cyclic modules: %s",
+			SW_LOG_ERROR( "Dependency cycle in module graph (sorted %# / %#). Cyclic modules: %s",
 						  static_cast<uint32>( listOrder.size() ), static_cast<uint32>( uniqueSubgraph.size() ), cycleModules.c_str() );
 			return false;
 		}
@@ -660,7 +660,7 @@ namespace sw
 		if ( listOrder.empty() )
 			return;
 
-		SW_LOG_INFO( "[LiveReloadManager] Cascade reload count=%#", static_cast<uint32>( listOrder.size() ) );
+		SW_LOG_TRACE( "Cascade reload count=%#", static_cast<uint32>( listOrder.size() ) );
 
 		struct PreparedEntry
 		{
@@ -680,7 +680,7 @@ namespace sw
 			entry._pCtx = &found->second;
 			if ( prepareShadowCopy( *entry._pCtx, entry._shadow ) == false )
 			{
-				SW_LOG_ERROR( "[LiveReloadManager] Cascade prepare failed for %# — aborting, previous modules kept",
+				SW_LOG_ERROR( "Cascade prepare failed for %# — aborting, previous modules kept",
 							  name );
 				bPrepareOk = false;
 				break;
@@ -708,9 +708,8 @@ namespace sw
 			PreparedEntry& entry = listPrepared[moduleIndex];
 			if ( _bReloadGraphBroken )
 			{
-				SW_LOG_ERROR(
-					"[LiveReloadManager] Cascade abort before commit of %# — graph already broken",
-					entry._pCtx->_moduleName );
+				SW_LOG_ERROR( "Cascade abort before commit of %# — graph already broken",
+							  entry._pCtx->_moduleName );
 				abortShadowCopy( entry._shadow );
 				for ( size_t otherModuleIndex = moduleIndex + 1; otherModuleIndex < listPrepared.size(); ++otherModuleIndex )
 				{
@@ -728,9 +727,8 @@ namespace sw
 				continue;
 			}
 
-			SW_LOG_ERROR(
-				"[LiveReloadManager] Cascade commit failed for %# — aborting remaining commits",
-				entry._pCtx->_moduleName );
+			SW_LOG_ERROR( "Cascade commit failed for %# — aborting remaining commits",
+						  entry._pCtx->_moduleName );
 			abortShadowCopy( entry._shadow );
 			for ( size_t otherModuleIndex = moduleIndex + 1; otherModuleIndex < listPrepared.size(); ++otherModuleIndex )
 			{
@@ -753,7 +751,7 @@ namespace sw
 		, _originalModulePath{}
 		, _tempModulePath{}
 		, _listDependsOn{}
-		, _listEventSubscriptions{}
+		, _listEventSubscription{}
 		, _pLibraryModule{ nullptr }
 		, _loadedSourceMtime{ 0 }
 		, _debounceMtime{ 0 }
@@ -771,7 +769,7 @@ namespace sw
 		, _originalModulePath{ std::move( other._originalModulePath ) }
 		, _tempModulePath{ std::move( other._tempModulePath ) }
 		, _listDependsOn{ std::move( other._listDependsOn ) }
-		, _listEventSubscriptions{ std::move( other._listEventSubscriptions ) }
+		, _listEventSubscription{ std::move( other._listEventSubscription ) }
 		, _pLibraryModule{ other._pLibraryModule }
 		, _loadedSourceMtime{ other._loadedSourceMtime }
 		, _debounceMtime{ other._debounceMtime }
@@ -790,17 +788,17 @@ namespace sw
 	{
 		if ( this != &other )
 		{
-			_onBeforeReload			= std::move( other._onBeforeReload );
-			_onAfterReload			= std::move( other._onAfterReload );
-			_moduleName				= std::move( other._moduleName );
-			_originalModulePath		= std::move( other._originalModulePath );
-			_tempModulePath			= std::move( other._tempModulePath );
-			_listDependsOn			= std::move( other._listDependsOn );
-			_listEventSubscriptions = std::move( other._listEventSubscriptions );
-			_pLibraryModule			= other._pLibraryModule;
-			_loadedSourceMtime		= other._loadedSourceMtime;
-			_debounceMtime			= other._debounceMtime;
-			_debounceSince			= other._debounceSince;
+			_onBeforeReload		   = std::move( other._onBeforeReload );
+			_onAfterReload		   = std::move( other._onAfterReload );
+			_moduleName			   = std::move( other._moduleName );
+			_originalModulePath	   = std::move( other._originalModulePath );
+			_tempModulePath		   = std::move( other._tempModulePath );
+			_listDependsOn		   = std::move( other._listDependsOn );
+			_listEventSubscription = std::move( other._listEventSubscription );
+			_pLibraryModule		   = other._pLibraryModule;
+			_loadedSourceMtime	   = other._loadedSourceMtime;
+			_debounceMtime		   = other._debounceMtime;
+			_debounceSince		   = other._debounceSince;
 			_bPendingReload.store( other._bPendingReload.load() );
 			_bMtimeDebouncing.store( other._bMtimeDebouncing.load() );
 			_bForceReload.store( other._bForceReload.load() );

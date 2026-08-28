@@ -11,6 +11,8 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "Battle" );
+
 	BattleState::BattleState()
 		: _player{}
 		, _foe{}
@@ -38,7 +40,7 @@ namespace sw
 		_bPlayerWon = 0;
 		formatstring( _arrStatusText, sizeof( _arrStatusText ), GameStrings::get( "battle.wild_appeared", "A wild %# appeared!" ),
 					  _foe._nickname.c_str() );
-		SW_LOG_INFO( "[Battle] %#", _arrStatusText );
+		SW_LOG_TRACE( "%#", _arrStatusText );
 		if ( GameData::get()._dungeonBgm.empty() == false )
 			game::getService<IAudioSystem>()->playMusic( GameData::get()._dungeonBgm );
 	}
@@ -57,7 +59,7 @@ namespace sw
 			_phase = BattlePhase::PlayerChoice;
 			formatstring( _arrStatusText, sizeof( _arrStatusText ), "%#",
 						  GameStrings::get( "battle.prompt_fight", "Fight: 1/2 moves, Enter=Move0, Esc=Run" ) );
-			SW_LOG_INFO( "[Battle] %#", _arrStatusText );
+			SW_LOG_TRACE( "%#", _arrStatusText );
 		}
 		else if ( _phase == BattlePhase::ResolvePlayer )
 		{
@@ -69,7 +71,7 @@ namespace sw
 							  _foe._nickname.c_str() );
 				_phase		= BattlePhase::Ended;
 				_phaseTimer = 0.4f;
-				SW_LOG_INFO( "[Battle] %#", _arrStatusText );
+				SW_LOG_TRACE( "%#", _arrStatusText );
 				return;
 			}
 			applyMove( _foe, _player, pickFoeMoveSlot(), false );
@@ -85,7 +87,7 @@ namespace sw
 							  _player._nickname.c_str() );
 				_phase		= BattlePhase::Ended;
 				_phaseTimer = 0.4f;
-				SW_LOG_INFO( "[Battle] %#", _arrStatusText );
+				SW_LOG_TRACE( "%#", _arrStatusText );
 				return;
 			}
 			_phase = BattlePhase::PlayerChoice;
@@ -95,7 +97,7 @@ namespace sw
 		else if ( _phase == BattlePhase::Ended )
 		{
 			_phase = BattlePhase::Inactive;
-			SW_LOG_INFO( "[Battle] Encounter ended." );
+			SW_LOG_TRACE( "Encounter ended." );
 		}
 	}
 
@@ -114,7 +116,7 @@ namespace sw
 			return;
 		formatstring( _arrStatusText, sizeof( _arrStatusText ), "%#",
 					  GameStrings::get( "battle.got_away", "Got away safely!" ) );
-		SW_LOG_INFO( "[Battle] %#", _arrStatusText );
+		SW_LOG_TRACE( "%#", _arrStatusText );
 		_bPlayerWon = 0;
 		_phase		= BattlePhase::Ended;
 		_phaseTimer = 0.3f;
@@ -155,7 +157,7 @@ namespace sw
 						  attacker._nickname.c_str(), pMove->_name.c_str() );
 		}
 		(void)playerSide;
-		SW_LOG_INFO( "[Battle] %#", _arrStatusText );
+		SW_LOG_TRACE( "%#", _arrStatusText );
 	}
 
 	int32 BattleState::pickFoeMoveSlot() const

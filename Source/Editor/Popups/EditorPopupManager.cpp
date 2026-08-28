@@ -15,7 +15,7 @@ namespace sw::editor
 		const string popupId = string{ pPopup->getPopupId() };
 
 		// 이미 동일 ID가 등록되어 있으면 교체
-		for ( EditorPopupEntry& entry : _listPopups )
+		for ( EditorPopupEntry& entry : _listPopup )
 		{
 			if ( entry._id == popupId )
 			{
@@ -27,7 +27,7 @@ namespace sw::editor
 		EditorPopupEntry entry;
 		entry._id		 = popupId;
 		entry._pInstance = std::move( pPopup );
-		_listPopups.push_back( std::move( entry ) );
+		_listPopup.push_back( std::move( entry ) );
 	}
 
 	IEditorPopup* EditorPopupManager::findPopup( string_view id )
@@ -35,7 +35,7 @@ namespace sw::editor
 		if ( _bDefaultsRegistered == false )
 			registerDefaultPopups();
 
-		for ( EditorPopupEntry& entry : _listPopups )
+		for ( EditorPopupEntry& entry : _listPopup )
 		{
 			if ( entry._id == id && entry._pInstance != nullptr )
 				return entry._pInstance.get();
@@ -66,7 +66,7 @@ namespace sw::editor
 
 	bool EditorPopupManager::isPopupOpen( string_view id ) const
 	{
-		for ( const EditorPopupEntry& entry : _listPopups )
+		for ( const EditorPopupEntry& entry : _listPopup )
 		{
 			if ( entry._id == id && entry._pInstance != nullptr )
 				return entry._pInstance->isOpen();
@@ -79,7 +79,7 @@ namespace sw::editor
 		if ( _bDefaultsRegistered == false )
 			registerDefaultPopups();
 
-		for ( EditorPopupEntry& entry : _listPopups )
+		for ( EditorPopupEntry& entry : _listPopup )
 		{
 			if ( entry._pInstance != nullptr && entry._pInstance->isOpen() )
 			{
@@ -100,7 +100,7 @@ namespace sw::editor
 
 	void EditorPopupManager::clear()
 	{
-		_listPopups.clear();
+		_listPopup.clear();
 		_bDefaultsRegistered = false;
 	}
 } // namespace sw::editor

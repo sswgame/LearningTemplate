@@ -12,6 +12,8 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "ReloadFileManager" );
+
 	ReloadFileManager::ReloadFileManager() = default;
 
 	ReloadFileManager::~ReloadFileManager()
@@ -55,8 +57,8 @@ namespace sw
 
 	void ReloadFileManager::shutdown()
 	{
-		_listWatches.clear();
-		_mapPollMtimes.clear();
+		_listWatch.clear();
+		_mapPollMtime.clear();
 		_bUseMtimePoll = false;
 		if ( _fileWatcher )
 		{
@@ -87,12 +89,12 @@ namespace sw
 		WatchEntry entry{};
 		entry._handle = FileWatchHandle{ _nextWatchId++ };
 		// Keep real FS path for mtime poll / native watchers; matching uses normalizePath.
-		entry._pathPrefix	  = FileUtil::normalizeSeparators( pathPrefix );
-		entry._listExtensions = extensions;
-		entry._onMatch		  = onMatch;
-		_listWatches.push_back( entry );
+		entry._pathPrefix	 = FileUtil::normalizeSeparators( pathPrefix );
+		entry._listExtension = extensions;
+		entry._onMatch		 = onMatch;
+		_listWatch.push_back( entry );
 
-		SW_LOG_INFO( "[ReloadFileManager] Registered watch %# (ext count %#)", entry._pathPrefix, static_cast<uint32>( extensions.size() ) );
+		SW_LOG_TRACE( "Registered watch %# (ext count %#)", entry._pathPrefix, static_cast<uint32>( extensions.size() ) );
 		return entry._handle;
 	}
 
@@ -101,10 +103,10 @@ namespace sw
 		if ( handle.isValid() == false )
 			return;
 
-		_listWatches.erase( std::remove_if( _listWatches.begin(), _listWatches.end(),
-											[&]( const WatchEntry& entry )
+		_listWatch.erase( std::remove_if( _listWatch.begin(), _listWatch.end(),
+										  [&]( const WatchEntry& entry )
 		{ return entry._handle == handle; } ),
-							_listWatches.end() );
+						  _listWatch.end() );
 	}
 
 	bool ReloadFileManager::matchesWatch( const WatchEntry& entry, const FileChangeEvent& ev ) const
@@ -134,7 +136,7 @@ namespace sw
 		for ( const FileChangeEvent& ev : listEvents )
 		{
 			bool bAnyMatch{ false };
-			for ( const WatchEntry& entry : _listWatches )
+			for ( const WatchEntry& entry : _listWatch )
 			{
 				if ( matchesWatch( entry, ev ) == false )
 					continue;
@@ -165,7 +167,7 @@ namespace sw
 						pActionStr = "RenamedNew";
 						break;
 				}
-				SW_LOG_INFO( "[ReloadFileManager] %# : %#/%#", pActionStr, ev._directory.c_str(), ev._filename.c_str() );
+				SW_LOG_TRACE( "%# : %#/%#", pActionStr, ev._directory.c_str(), ev._filename.c_str() );
 				_onFileChanged.broadcast( ev );
 			}
 		}
@@ -220,30 +222,30 @@ namespace sw
 
 	void ReloadFileManager::pollMtimeFallback( vector<FileChangeEvent>& listOutEvents )
 	{
-		for ( const WatchEntry& entry : _listWatches )
+		for ( const WatchEntry& entry : _listWatch )
 		{
 			if ( FileUtil::fileExists( entry._pathPrefix ) == false &&
 				 FileUtil::directoryExists( entry._pathPrefix ) == false )
 				continue;
 
 			if ( FileUtil::fileExists( entry._pathPrefix ) )
-				considerFileVal( _mapPollMtimes, listOutEvents, entry._listExtensions, entry._pathPrefix );
+				considerFileVal( _mapPollMtime, listOutEvents, entry._listExtension, entry._pathPrefix );
 			else
 			{
 				vector<string> listFiles;
 				FileUtil::collectFiles( entry._pathPrefix, {}, listFiles, true, false );
 				for ( const string& filePath : listFiles )
-					considerFileVal( _mapPollMtimes, listOutEvents, entry._listExtensions, filePath );
+					considerFileVal( _mapPollMtime, listOutEvents, entry._listExtension, filePath );
 			}
 		}
 	}
 
 	bool ReloadFileManager::extensionAllowed( const WatchEntry& entry, string_view filename ) const
 	{
-		if ( entry._listExtensions.empty() )
+		if ( entry._listExtension.empty() )
 			return true;
 
-		for ( const string& allowed : entry._listExtensions )
+		for ( const string& allowed : entry._listExtension )
 		{
 			if ( FileUtil::hasExtension( filename, allowed ) )
 				return true;

@@ -3,7 +3,7 @@
 > **[🏠 위키 홈으로 돌아가기](../../../../README.md)** | **[📖 서브시스템 목록](../../../../docs/02_EngineSubsystems.md)**
 
 C++ 타입의 **이름 · 필드 · 함수 · enum** 정보를 런타임에 조회하고,  
-직렬화·에디터·핫리로드·ECS 팩토리가 그걸 쓰게 하는 레이어입니다.
+직렬화·에디터·핫리로드·컴포넌트 팩토리가 그걸 쓰게 하는 레이어입니다.
 
 경로: `Source/Engine/Reflection/`  
 코드 생성기: [Tools/ReflectionParser/README.md](../../../Tools/ReflectionParser/README.md)
@@ -37,7 +37,7 @@ flowchart LR
 
 | 파일 | 내용 |
 |------|------|
-| `ReflectionMacros.h` | `REFLECT`, `PROPERTY`, `FUNCTION`, `ENUM`, `REFLECT_BODY`, `REFLECT_SCRIPT` |
+| `ReflectionMacros.h` | `REFLECT`, `PROPERTY`, `FUNCTION`, `ENUM`, `REFLECT_BODY` |
 | `ReflectionCore.h` | 위 + Cast/Containers/Types/Registry **우산 헤더** |
 | `ReflectionTypes.h` | `TypeInfo`, `PropertyInfo`, `FunctionInfo` 등 |
 | `TypeRegistry.h` | 등록·조회·별칭·enum 문자열 변환 |
@@ -74,10 +74,10 @@ struct UnitStatsData
 - `REFLECT_BODY()` — `StaticType()` 선언 (정의는 `.gen.cpp`)  
 - `PROPERTY()` — 직렬화·에디터에 노출할 멤버
 
-### 2) 스크립트 컴포넌트 (게임에 붙는 Component)
+### 2) 컴포넌트 (게임/엔진 Component)
 
 ```cpp
-REFLECT_SCRIPT()
+REFLECT()
 class MonsterComponent : public Component
 {
 public:
@@ -172,7 +172,6 @@ CMake 헬퍼: `cmake/Engine/ReflectionCodeGen.cmake` (`sw_addReflectionStep`)
 | 매크로 | 용도 |
 |--------|------|
 | `REFLECT(...)` | 타입 노출. `Abstract`, `Alias=…` |
-| `REFLECT_SCRIPT(...)` | 게임/스크립트 컴포넌트 |
 | `REFLECT_BODY()` | `StaticType()` + gen 정의 요청 |
 | `PROPERTY(...)` | 필드. `ReadOnly`, `Min`/`Max`, `Alias`, `Category` … |
 | `FUNCTION(...)` | 함수. RPC용 `Server`/`Client`/`Multicast` 등 |

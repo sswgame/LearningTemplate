@@ -5,10 +5,9 @@ Engine 레이어 금지 include 검사.
 
 강제 규칙:
   1) Source/Engine/** 에서 Editor / GameFramework / Games 경로 include 금지.
-  2) Source/Games/**, Source/GameFramework/** 에서 GameObjectManagerInternal.h / Registry.h / View.h 금지.
-  3) Source/Games/**, Source/GameFramework/** 에서 Engine/Common/EngineServices.h 금지
+  2) Source/Games/**, Source/GameFramework/** 에서 Engine/Common/EngineServices.h 금지
      (게임 쪽은 RuntimeAPI/Service/GameService.h 의 game:: 만 사용).
-  4) 의도 레이어(문서):
+  3) 의도 레이어(문서):
        Common/Utility → Reflection/Serialization → Object/Scene → Graphics/Input/Audio/Window
        Physics / Animation 은 experimental stub.
 
@@ -32,7 +31,6 @@ from common import (
     kDirSourceGameFramework,
     kDirSourceGames,
     kFileEngineServices,
-    kFileGameObjectManagerInternal,
 )
 
 _kIncludeRe = re.compile(r'^\s*#\s*include\s*[<"]([^>"]+)[>"]', re.MULTILINE)
@@ -62,11 +60,11 @@ _kForbiddenRules: list[tuple[str, tuple[str, ...]]] = [
     ),
     (
         f"{kDirSourceGames}/",
-        (kFileGameObjectManagerInternal, "Registry.h", "View.h", kFileEngineServices, "EngineServices.h"),
+        (kFileEngineServices, "EngineServices.h"),
     ),
     (
         f"{kDirSourceGameFramework}/",
-        (kFileGameObjectManagerInternal, "Registry.h", "View.h", kFileEngineServices, "EngineServices.h"),
+        (kFileEngineServices, "EngineServices.h"),
     ),
 ]
 

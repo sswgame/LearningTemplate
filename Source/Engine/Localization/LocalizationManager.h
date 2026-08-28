@@ -155,8 +155,8 @@ namespace sw
 		mutable std::shared_mutex					   _mutex;
 		string										   _currentLanguage;
 		string										   _fallbackLanguage;
-		unordered_map<string, unique_ptr<StringTable>> _mapLanguageTables;
-		unordered_map<uint32, LanguageChangedCallback> _mapCallbacks;
+		unordered_map<string, unique_ptr<StringTable>> _mapLanguageTable;
+		unordered_map<uint32, LanguageChangedCallback> _mapCallback;
 		uint32										   _nextCallbackId;
 	};
 } // namespace sw

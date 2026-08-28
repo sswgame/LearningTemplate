@@ -43,7 +43,7 @@ namespace sw
 		RenderPipelineResource* findPipeline( hashed_string name );
 
 	private:
-		unordered_map<hashed_string, unique_ptr<RenderPassResource>>	 _mapRenderPasses;
-		unordered_map<hashed_string, unique_ptr<RenderPipelineResource>> _mapPipelines;
+		unordered_map<hashed_string, unique_ptr<RenderPassResource>>	 _mapRenderPass;
+		unordered_map<hashed_string, unique_ptr<RenderPipelineResource>> _mapPipeline;
 	};
 } // namespace sw

@@ -6,6 +6,7 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "AssetDatabase" );
 
 	namespace
 	{
@@ -186,7 +187,7 @@ namespace sw
 		const string absMeta = absoluteForRelative( metaRel );
 		if ( absMeta.empty() )
 		{
-			SW_LOG_WARNING( "[AssetDatabase] Cannot resolve meta path for %#", relativePath );
+			SW_LOG_WARNING( "Cannot resolve meta path for %#", relativePath );
 			return false;
 		}
 

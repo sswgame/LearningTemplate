@@ -10,13 +10,14 @@
 #if defined( SW_PLATFORM_WINDOWS )
 namespace sw
 {
+	SW_LOG_CALLER( "D3D12RHIResource" );
 
 	RHIPipelineStateHandle D3D12RHIResource::createPipelineState( const RHIPipelineStateDesc& desc )
 	{
 		Microsoft::WRL::ComPtr<ID3D12PipelineState> pso;
 		auto										fillDefines = [&]( ShaderCompileDesc& cd )
 		{
-			for ( const string& def : desc._listShaderDefines )
+			for ( const string& def : desc._listShaderDefine )
 			{
 				ShaderMacroDefine m{};
 				const size_t	  eq = def.find( '=' );
@@ -30,7 +31,7 @@ namespace sw
 					m._name	 = def.substr( 0, eq );
 					m._value = def.substr( eq + 1 );
 				}
-				cd._listDefines.push_back( std::move( m ) );
+				cd._listDefine.push_back( std::move( m ) );
 			}
 		};
 
@@ -130,7 +131,7 @@ namespace sw
 				const HRESULT hr = _pDevice->_device->CreateComputePipelineState( &psoDesc, IID_PPV_ARGS( pso.GetAddressOf() ) );
 				if ( FAILED( hr ) )
 				{
-					SW_LOG_ERROR( "[D3D12] CreateComputePipelineState failed hr=0x%#", static_cast<uint32>( hr ) );
+					SW_LOG_ERROR( "CreateComputePipelineState failed hr=0x%#", static_cast<uint32>( hr ) );
 					_pDevice->flushDebugMessages( "CreateComputePipelineState" );
 					return 0;
 				}
@@ -161,15 +162,15 @@ namespace sw
 		D3D12RHIDevice::D3D12RenderPassRecord record{};
 		record.desc	   = desc;
 		record._bAlive = 1;
-		_pDevice->_listRenderPasses.push_back( record );
-		return _pDevice->_listRenderPasses.size();
+		_pDevice->_listRenderPass.push_back( record );
+		return _pDevice->_listRenderPass.size();
 	}
 
 	void D3D12RHIResource::destroyRenderPass( RHIRenderPassHandle pass )
 	{
-		if ( pass == 0 || pass > _pDevice->_listRenderPasses.size() )
+		if ( pass == 0 || pass > _pDevice->_listRenderPass.size() )
 			return;
-		_pDevice->_listRenderPasses[pass - 1]._bAlive = 0;
+		_pDevice->_listRenderPass[pass - 1]._bAlive = 0;
 	}
 
 	RHIBufferHandle D3D12RHIResource::createConstantBuffer( uint32 size )
@@ -254,8 +255,8 @@ namespace sw
 		if ( FAILED( _pDevice->_device->CreateCommittedResource( &heapProps, D3D12_HEAP_FLAG_NONE, &resDesc, D3D12_RESOURCE_STATE_COMMON, nullptr, IID_PPV_ARGS( buffer.GetAddressOf() ) ) ) )
 			return 0;
 
-		const RHIBufferHandle handle				 = _pDevice->storeBuffer( buffer );
-		_pDevice->_mapStructuredBufferStates[handle] = D3D12_RESOURCE_STATE_COMMON;
+		const RHIBufferHandle handle				= _pDevice->storeBuffer( buffer );
+		_pDevice->_mapStructuredBufferState[handle] = D3D12_RESOURCE_STATE_COMMON;
 		return handle;
 	}
 
@@ -285,14 +286,14 @@ namespace sw
 		if ( FAILED( _pDevice->_device->CreateCommittedResource( &uploadHeap, D3D12_HEAP_FLAG_NONE, &uploadDesc,
 																 D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS( upload.GetAddressOf() ) ) ) )
 		{
-			SW_LOG_ERROR( "[D3D12] updateStructuredBuffer: failed to create staging upload buffer (%# bytes)", size );
+			SW_LOG_ERROR( "updateStructuredBuffer: failed to create staging upload buffer (%# bytes)", size );
 			return;
 		}
 
 		void* mapped{ nullptr };
 		if ( FAILED( upload->Map( 0, nullptr, &mapped ) ) || mapped == nullptr )
 		{
-			SW_LOG_ERROR( "[D3D12] updateStructuredBuffer: Map failed on staging buffer" );
+			SW_LOG_ERROR( "updateStructuredBuffer: Map failed on staging buffer" );
 			return;
 		}
 		Memory::copy( mapped, pData, size );
@@ -303,13 +304,13 @@ namespace sw
 		if ( FAILED( _pDevice->_device->CreateCommandAllocator( D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS( stagingAllocator.GetAddressOf() ) ) ) ||
 			 FAILED( _pDevice->_device->CreateCommandList( 0, D3D12_COMMAND_LIST_TYPE_DIRECT, stagingAllocator.Get(), nullptr, IID_PPV_ARGS( stagingList.GetAddressOf() ) ) ) )
 		{
-			SW_LOG_ERROR( "[D3D12] updateStructuredBuffer: failed to create staging command list" );
+			SW_LOG_ERROR( "updateStructuredBuffer: failed to create staging command list" );
 			return;
 		}
 
 		D3D12_RESOURCE_STATES														stateBefore = D3D12_RESOURCE_STATE_COMMON;
-		const unordered_map<RHIBufferHandle, D3D12_RESOURCE_STATES>::const_iterator stateIt		= _pDevice->_mapStructuredBufferStates.find( buffer );
-		if ( stateIt != _pDevice->_mapStructuredBufferStates.end() )
+		const unordered_map<RHIBufferHandle, D3D12_RESOURCE_STATES>::const_iterator stateIt		= _pDevice->_mapStructuredBufferState.find( buffer );
+		if ( stateIt != _pDevice->_mapStructuredBufferState.end() )
 			stateBefore = stateIt->second;
 
 		if ( stateBefore != D3D12_RESOURCE_STATE_COPY_DEST )
@@ -338,7 +339,7 @@ namespace sw
 		_pDevice->_commandQueue->ExecuteCommandLists( 1, lists );
 		_pDevice->waitForPreviousFrame();
 
-		_pDevice->_mapStructuredBufferStates[buffer] = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+		_pDevice->_mapStructuredBufferState[buffer] = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
 	}
 
 	RHIBufferHandle D3D12RHIResource::createVertexBuffer( const void* pData, uint32 sizeBytes )
@@ -380,7 +381,7 @@ namespace sw
 			_pDevice->_boundMeshVb = 0;
 		if ( buffer == _pDevice->_boundIndexBuffer )
 			_pDevice->_boundIndexBuffer = 0;
-		_pDevice->_mapStructuredBufferStates.erase( buffer );
+		_pDevice->_mapStructuredBufferState.erase( buffer );
 		const auto mapIt = _pDevice->_mapCbMapped.find( buffer );
 		if ( mapIt != _pDevice->_mapCbMapped.end() && mapIt->second != nullptr )
 		{
@@ -401,7 +402,7 @@ namespace sw
 			rec._resource.Reset();
 			rec._buffer = 0;
 		}
-		for ( D3D12RHIDevice::BindlessResourceRecord& rec : _pDevice->_listRegisteredUAVs )
+		for ( D3D12RHIDevice::BindlessResourceRecord& rec : _pDevice->_listRegisteredUAV )
 		{
 			if ( rec._buffer != buffer )
 				continue;
@@ -484,10 +485,10 @@ namespace sw
 		if ( pNative != nullptr && desc._bIsRenderTarget && _pDevice->_rtvHeap != nullptr )
 		{
 			uint32 rtvSlot{ 0 };
-			if ( _pDevice->_listFreeOffscreenRtvIndices.empty() == false )
+			if ( _pDevice->_listFreeOffscreenRtvIndex.empty() == false )
 			{
-				rtvSlot = _pDevice->_listFreeOffscreenRtvIndices.back();
-				_pDevice->_listFreeOffscreenRtvIndices.pop_back();
+				rtvSlot = _pDevice->_listFreeOffscreenRtvIndex.back();
+				_pDevice->_listFreeOffscreenRtvIndex.pop_back();
 			}
 			else if ( _pDevice->_nextOffscreenRtvIndex < D3D12RHIDevice::kMaxOffscreenRtvs )
 				rtvSlot = _pDevice->_nextOffscreenRtvIndex++;
@@ -511,10 +512,10 @@ namespace sw
 		if ( pNative != nullptr && bDepth && _pDevice->_dsvHeap != nullptr )
 		{
 			uint32 dsvSlot{ 0 };
-			if ( _pDevice->_listFreeOffscreenDsvIndices.empty() == false )
+			if ( _pDevice->_listFreeOffscreenDsvIndex.empty() == false )
 			{
-				dsvSlot = _pDevice->_listFreeOffscreenDsvIndices.back();
-				_pDevice->_listFreeOffscreenDsvIndices.pop_back();
+				dsvSlot = _pDevice->_listFreeOffscreenDsvIndex.back();
+				_pDevice->_listFreeOffscreenDsvIndex.pop_back();
 			}
 			else if ( _pDevice->_nextOffscreenDsvIndex < D3D12RHIDevice::kMaxOffscreenDsvs )
 				dsvSlot = _pDevice->_nextOffscreenDsvIndex++;
@@ -535,7 +536,7 @@ namespace sw
 			}
 		}
 
-		_pDevice->_mapOffscreenTextures[handle] = record;
+		_pDevice->_mapOffscreenTexture[handle] = record;
 		return handle;
 	}
 
@@ -543,14 +544,14 @@ namespace sw
 	{
 		if ( texture == 0 )
 			return;
-		auto it = _pDevice->_mapOffscreenTextures.find( texture );
-		if ( it != _pDevice->_mapOffscreenTextures.end() )
+		auto it = _pDevice->_mapOffscreenTexture.find( texture );
+		if ( it != _pDevice->_mapOffscreenTexture.end() )
 		{
 			if ( it->second._bHasRtv != 0 && it->second._rtvIndex >= _pDevice->_bufferCount )
-				_pDevice->_listFreeOffscreenRtvIndices.push_back( it->second._rtvIndex - _pDevice->_bufferCount );
+				_pDevice->_listFreeOffscreenRtvIndex.push_back( it->second._rtvIndex - _pDevice->_bufferCount );
 			if ( it->second._bHasDsv != 0 )
-				_pDevice->_listFreeOffscreenDsvIndices.push_back( it->second._dsvIndex );
-			_pDevice->_mapOffscreenTextures.erase( it );
+				_pDevice->_listFreeOffscreenDsvIndex.push_back( it->second._dsvIndex );
+			_pDevice->_mapOffscreenTexture.erase( it );
 		}
 		Microsoft::WRL::ComPtr<ID3D12Resource> owned;
 		if ( _pDevice->_gpuTextures.take( texture, owned ) == false )
@@ -587,7 +588,7 @@ namespace sw
 		{
 			if ( _pDevice->_allocatedDescriptorsCount >= D3D12RHIDevice::kMaxShaderVisibleDescriptors )
 			{
-				SW_LOG_ERROR( "[D3D12RHIResource] Shader visible descriptor heap overflow! Max: %#", D3D12RHIDevice::kMaxShaderVisibleDescriptors );
+				SW_LOG_ERROR( "Shader visible descriptor heap overflow! Max: %#", D3D12RHIDevice::kMaxShaderVisibleDescriptors );
 				return kInvalidDescriptorIndex;
 			}
 			index = _pDevice->_allocatedDescriptorsCount++;
@@ -641,7 +642,7 @@ namespace sw
 		{
 			if ( _pDevice->_allocatedDescriptorsCount >= D3D12RHIDevice::kMaxShaderVisibleDescriptors )
 			{
-				SW_LOG_ERROR( "[D3D12RHIResource] Shader visible descriptor heap overflow! Max: %#", D3D12RHIDevice::kMaxShaderVisibleDescriptors );
+				SW_LOG_ERROR( "Shader visible descriptor heap overflow! Max: %#", D3D12RHIDevice::kMaxShaderVisibleDescriptors );
 				return kInvalidDescriptorIndex;
 			}
 			index = _pDevice->_allocatedDescriptorsCount++;
@@ -711,23 +712,23 @@ namespace sw
 		}
 		else
 		{
-			descriptorIndex = static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredUAVs.size() );
-			_pDevice->_listRegisteredUAVs.push_back( D3D12RHIDevice::BindlessResourceRecord{} );
+			descriptorIndex = static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredUAV.size() );
+			_pDevice->_listRegisteredUAV.push_back( D3D12RHIDevice::BindlessResourceRecord{} );
 		}
 
 		D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle{};
 		D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle{};
-		if ( bReuseHeapSlot && descriptorIndex < _pDevice->_listRegisteredUAVs.size() &&
-			 _pDevice->_listRegisteredUAVs[descriptorIndex]._cpuHandle.ptr != 0 )
+		if ( bReuseHeapSlot && descriptorIndex < _pDevice->_listRegisteredUAV.size() &&
+			 _pDevice->_listRegisteredUAV[descriptorIndex]._cpuHandle.ptr != 0 )
 		{
-			cpuHandle = _pDevice->_listRegisteredUAVs[descriptorIndex]._cpuHandle;
-			gpuHandle = _pDevice->_listRegisteredUAVs[descriptorIndex]._gpuHandle;
+			cpuHandle = _pDevice->_listRegisteredUAV[descriptorIndex]._cpuHandle;
+			gpuHandle = _pDevice->_listRegisteredUAV[descriptorIndex]._gpuHandle;
 		}
 		else
 		{
 			if ( _pDevice->_allocatedDescriptorsCount >= D3D12RHIDevice::kMaxShaderVisibleDescriptors )
 			{
-				SW_LOG_ERROR( "[D3D12RHIResource] Shader visible descriptor heap overflow! Max: %#", D3D12RHIDevice::kMaxShaderVisibleDescriptors );
+				SW_LOG_ERROR( "Shader visible descriptor heap overflow! Max: %#", D3D12RHIDevice::kMaxShaderVisibleDescriptors );
 				return kInvalidDescriptorIndex;
 			}
 			const RHIDescriptorIndex heapSlot = _pDevice->_allocatedDescriptorsCount++;
@@ -748,19 +749,19 @@ namespace sw
 
 		_pDevice->_device->CreateUnorderedAccessView( pRes, nullptr, &uavDesc, cpuHandle );
 
-		if ( descriptorIndex >= _pDevice->_listRegisteredUAVs.size() )
-			_pDevice->_listRegisteredUAVs.resize( descriptorIndex + 1 );
-		_pDevice->_listRegisteredUAVs[descriptorIndex]		   = { pRes, cpuHandle, gpuHandle };
-		_pDevice->_listRegisteredUAVs[descriptorIndex]._buffer = buffer;
+		if ( descriptorIndex >= _pDevice->_listRegisteredUAV.size() )
+			_pDevice->_listRegisteredUAV.resize( descriptorIndex + 1 );
+		_pDevice->_listRegisteredUAV[descriptorIndex]		  = { pRes, cpuHandle, gpuHandle };
+		_pDevice->_listRegisteredUAV[descriptorIndex]._buffer = buffer;
 
 		return descriptorIndex;
 	}
 
 	void D3D12RHIResource::unregisterBindlessUAV( RHIDescriptorIndex index )
 	{
-		if ( index < _pDevice->_listRegisteredUAVs.size() )
+		if ( index < _pDevice->_listRegisteredUAV.size() )
 		{
-			_pDevice->_listRegisteredUAVs[index]._resource = nullptr;
+			_pDevice->_listRegisteredUAV[index]._resource = nullptr;
 			_pDevice->_listFreeUav.push_back( index );
 		}
 	}

@@ -78,7 +78,7 @@ namespace sw
 					return v;
 			}
 
-			for ( const MaterialEnumEntry& enumEntry : prop._listEnumEntries )
+			for ( const MaterialEnumEntry& enumEntry : prop._listEnumEntry )
 			{
 				if ( iequals( enumEntry._name, name.c_str() ) )
 					return enumEntry._value;
@@ -665,7 +665,7 @@ namespace sw
 		prop._bSrgb		= parseBoolField( item, "bSrgb", true );
 		prop._bHidden	= parseBoolField( item, "bHidden", false );
 		prop._bAdvanced = parseBoolField( item, "bAdvanced", false );
-		parseEnumEntries( item, prop._listEnumEntries );
+		parseEnumEntries( item, prop._listEnumEntry );
 		return prop;
 	}
 
@@ -742,7 +742,7 @@ namespace sw
 			out._usage = parseUsageFlags( usage );
 
 		XmlNode always = perm.child( "_alwaysDefines" );
-		parseStringListItems( always, out._listAlwaysDefines );
+		parseStringListItems( always, out._listAlwaysDefine );
 
 		XmlNode switches = perm.child( "_staticSwitches" );
 		if ( switches.isValid() )
@@ -758,7 +758,7 @@ namespace sw
 				if ( entry._name.empty() && entry._keyword.empty() == false )
 					entry._name = entry._keyword;
 				if ( entry._keyword.empty() == false || entry._name.empty() == false )
-					out._listStaticSwitches.push_back( std::move( entry ) );
+					out._listStaticSwitch.push_back( std::move( entry ) );
 			}
 		}
 
@@ -771,9 +771,9 @@ namespace sw
 				mc._name	 = fieldText( item, "name" );
 				mc._selected = fieldText( item, "selected" );
 				XmlNode opts = item.child( "_options" );
-				parseStringListItems( opts, mc._listOptions );
-				if ( mc._selected.empty() == false || mc._listOptions.empty() == false )
-					out._listMultiCompiles.push_back( std::move( mc ) );
+				parseStringListItems( opts, mc._listOption );
+				if ( mc._selected.empty() == false || mc._listOption.empty() == false )
+					out._listMultiCompile.push_back( std::move( mc ) );
 			}
 		}
 	}
@@ -784,12 +784,12 @@ namespace sw
 		appendAttr( node, "quality", qualityToString( perm._quality ) );
 		appendAttr( node, "shaderLOD", to_string( perm._shaderLOD ) );
 		appendAttr( node, "usage", usageFlagsToString( perm._usage ) );
-		appendMaterialStringList( node, "_alwaysDefines", perm._listAlwaysDefines );
+		appendMaterialStringList( node, "_alwaysDefines", perm._listAlwaysDefine );
 
-		if ( perm._listStaticSwitches.empty() == false )
+		if ( perm._listStaticSwitch.empty() == false )
 		{
 			XmlNode list = node.appendChild( "_staticSwitches" );
-			for ( const MaterialStaticSwitch& entry : perm._listStaticSwitches )
+			for ( const MaterialStaticSwitch& entry : perm._listStaticSwitch )
 			{
 				XmlNode item = list.appendChild( "item" );
 				appendAttr( item, "name", entry._name );
@@ -801,15 +801,15 @@ namespace sw
 			}
 		}
 
-		if ( perm._listMultiCompiles.empty() == false )
+		if ( perm._listMultiCompile.empty() == false )
 		{
 			XmlNode list = node.appendChild( "_multiCompiles" );
-			for ( const MaterialMultiCompile& mc : perm._listMultiCompiles )
+			for ( const MaterialMultiCompile& mc : perm._listMultiCompile )
 			{
 				XmlNode item = list.appendChild( "item" );
 				appendAttr( item, "name", mc._name );
 				appendAttr( item, "selected", mc._selected );
-				appendMaterialStringList( item, "_options", mc._listOptions );
+				appendMaterialStringList( item, "_options", mc._listOption );
 			}
 		}
 	}

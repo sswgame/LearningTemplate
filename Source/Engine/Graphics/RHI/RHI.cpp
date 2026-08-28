@@ -16,6 +16,8 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "RHI" );
+
 	SW_GLOBAL_VARIABLE_ENUM( gv_rhiBackend, RHIBackend, RHIBackend::Vulkan, "Current RHI Backend" );
 	SW_GLOBAL_VARIABLE_ENUM( gv_rhiCommandListMode, RHICommandListMode, RHICommandListMode::Deferred, "RHI 커맨드 리스트 모드: 0=Deferred, 1=Immediate" );
 
@@ -38,7 +40,7 @@ namespace sw
 	}
 
 	RHIRenderPassDesc::RHIRenderPassDesc() noexcept
-		: _listColorAttachments{}
+		: _listColorAttachment{}
 		, _clearDepth{ 1.0f }
 		, _clearStencil{ 0 }
 		, _bHasDepthStencil{ 0 }
@@ -203,7 +205,7 @@ namespace sw
 	{
 		if ( RHIAvailability::isAvailable( backend ) == false )
 		{
-			SW_LOG_ERROR( "[RHI] recreateDevice: backend unavailable" );
+			SW_LOG_ERROR( "recreateDevice: backend unavailable" );
 			return false;
 		}
 
@@ -241,7 +243,7 @@ namespace sw
 
 		_device->setDefaultCommandListMode( gv_rhiCommandListMode );
 
-		SW_LOG_INFO( "[RHI] Soft-recreated device: %#", getBackendTypeName( backend ) );
+		SW_LOG_INFO( "Soft-recreated device: %#", getBackendTypeName( backend ) );
 		_committedRHIBackend = backend;
 		_pendingRHIBackend	 = backend;
 		return true;
@@ -251,7 +253,7 @@ namespace sw
 	{
 		if ( RHIAvailability::isAvailable( requested ) == false )
 		{
-			SW_LOG_WARNING( "[Hot-Swap] Backend %# unavailable — reverting.", static_cast<int32>( requested ) );
+			SW_LOG_WARNING( "Backend %# unavailable — reverting.", static_cast<int32>( requested ) );
 			gv_rhiBackend = _committedRHIBackend;
 			return;
 		}
@@ -259,7 +261,7 @@ namespace sw
 		if ( requested == _committedRHIBackend )
 			return;
 
-		SW_LOG_INFO( "[Hot-Swap] RHI Backend change queued: %# → %#", getBackendTypeName( _committedRHIBackend ), getBackendTypeName( requested ) );
+		SW_LOG_INFO( "RHI Backend change queued: %# → %#", getBackendTypeName( _committedRHIBackend ), getBackendTypeName( requested ) );
 		_pendingRHIBackend	   = requested;
 		_bPendingBackendChange = true;
 	}

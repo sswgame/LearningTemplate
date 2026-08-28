@@ -15,6 +15,8 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "DemoGame" );
+
 	void DemoGame::syncSaveFromWorld()
 	{
 		_save._mapPath = _currentMapPath;
@@ -92,7 +94,7 @@ namespace sw
 			blockedEvent._zoneId = pZone != nullptr ? pZone->_id : "?";
 			blockedEvent._reason = "clear_gate_locked";
 			game::getService<EventDispatcher>()->publish( gameEventChannel(), blockedEvent );
-			SW_LOG_INFO( "[DemoGame] Warp blocked — clear gate locked (zone=%#)", blockedEvent._zoneId );
+			SW_LOG_TRACE( "Warp blocked — clear gate locked (zone=%#)", blockedEvent._zoneId );
 			_hud.setDialogue( GameStrings::get( "ui.path_sealed", "The path is sealed..." ) );
 			return;
 		}

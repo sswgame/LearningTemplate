@@ -1,6 +1,8 @@
 #include "pch.h"
 
-#include "Engine/Scene/SceneDescriptor.h"
+#include "Engine/Scene/SceneDocument.h"
+
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Utility/Resource/AssetFormat.h"
@@ -9,16 +11,17 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "SceneDocument" );
 
 	namespace
 	{
 
-		constexpr const utf8* kRoot			   = "SceneDescriptor";
+		constexpr const utf8* kRoot			   = "Scene";
 		constexpr const utf8* kName			   = "name";
 		constexpr const utf8* kEntities		   = "entities";
 		constexpr const utf8* kEntity		   = "entity";
 		constexpr const utf8* kPrefab		   = "prefab";
-		constexpr const utf8* kGameObject = "GameObject";
+		constexpr const utf8* kGameObject	   = "GameObject";
 		constexpr const utf8* kDefaultEntity   = "Entity";
 		constexpr uint32	  kSceneBinMagic   = 0x53434E31u; // 'SCN1'
 		constexpr uint32	  kSceneBinVersion = 0;
@@ -148,10 +151,10 @@ namespace sw
 
 	} // namespace
 
-	bool loadSceneDescriptorFromXml( string_view path, SceneDescriptor& outDesc )
+	bool loadSceneDocumentFromXml( string_view path, SceneDocument& outDoc )
 	{
-		outDesc				= {};
-		outDesc._sourcePath = path;
+		outDoc			   = {};
+		outDoc._sourcePath = path;
 
 		XmlDocument doc;
 		string		absPath;
@@ -160,7 +163,7 @@ namespace sw
 			// Absolute fallback
 			if ( doc.loadFile( path ) == false )
 			{
-				SW_LOG_ERROR( "[SceneDescriptor] File not found: %#", path );
+				SW_LOG_ERROR( "File not found: %#", path );
 				return false;
 			}
 			absPath = path;
@@ -169,14 +172,14 @@ namespace sw
 		XmlNode root = doc.root( kRoot );
 		if ( root.isValid() == false )
 		{
-			SW_LOG_ERROR( "[SceneDescriptor] Missing root <SceneDescriptor>: %#", absPath );
+			SW_LOG_ERROR( "Missing root <Scene>: %#", absPath );
 			return false;
 		}
 
 		if ( engine::getResourceManager().getAssetFormatRegistry().upgradeXml( AssetKind::Scene, doc, root, AssetFormatVersions::kScene ) ==
 			 false )
 		{
-			SW_LOG_ERROR( "[SceneDescriptor] formatVersion upgrade failed: %#", absPath );
+			SW_LOG_ERROR( "formatVersion upgrade failed: %#", absPath );
 			return false;
 		}
 
@@ -188,15 +191,15 @@ namespace sw
 
 		if ( pSceneName != nullptr )
 		{
-			outDesc._name = pSceneName;
+			outDoc._name = pSceneName;
 		}
 		else
 		{
-			outDesc._name	 = FileUtil::getFileNamePart( absPath );
-			const size_t dot = outDesc._name.find_last_of( '.' );
+			outDoc._name	 = FileUtil::getFileNamePart( absPath );
+			const size_t dot = outDoc._name.find_last_of( '.' );
 			if ( dot != string::npos )
 			{
-				outDesc._name.resize( dot );
+				outDoc._name.resize( dot );
 			}
 		}
 
@@ -207,15 +210,15 @@ namespace sw
 			for ( XmlNode entityNode = entities.child( kEntity ); entityNode.isValid();
 				  entityNode		 = entityNode.next( kEntity ) )
 			{
-				SceneEntityPlaceholder placeholder{};
-				const utf8*			   pName = entityNode.attr( kName );
+				SceneEntityNode node{};
+				const utf8*		pName = entityNode.attr( kName );
 				if ( pName == nullptr )
 				{
 					pName = entityNode.childText( kName );
 				}
 				if ( pName != nullptr )
 				{
-					placeholder._name = pName;
+					node._name = pName;
 				}
 
 				const utf8* pPrefab = entityNode.attr( kPrefab );
@@ -225,7 +228,7 @@ namespace sw
 				}
 				if ( pPrefab != nullptr )
 				{
-					placeholder._prefab = pPrefab;
+					node._prefab = pPrefab;
 				}
 
 				XmlNode stateNode = entityNode.child( kGameObject );
@@ -233,35 +236,33 @@ namespace sw
 				{
 					StringBuilder<constant::kMaxBuffer8192> stateSb;
 					appendNodeXml( stateSb, stateNode );
-					placeholder._embeddedXml = stateSb.view();
+					node._embeddedXml = stateSb.view();
 				}
 
-				if ( placeholder._name.empty() )
+				if ( node._name.empty() )
 				{
-					placeholder._name = kDefaultEntity;
+					node._name = kDefaultEntity;
 				}
-				outDesc._listEntities.push_back( std::move( placeholder ) );
+				outDoc._listEntityNode.push_back( std::move( node ) );
 			}
 		}
 
-		outDesc._bValid = true;
-		SW_LOG_INFO( "[SceneDescriptor] Loaded '%#' (%# entities) from %#",
-					 outDesc._name, static_cast<uint32>( outDesc._listEntities.size() ), absPath );
+		outDoc._bValid = true;
+		SW_LOG_INFO( "Loaded '%#' (%# entities) from %#",
+					 outDoc._name, static_cast<uint32>( outDoc._listEntityNode.size() ), absPath );
 		return true;
 	}
 
-	bool saveSceneDescriptorToXml( string_view path, const SceneDescriptor& desc )
+	bool saveSceneDocumentToXml( string_view path, const SceneDocument& doc )
 	{
 		StringBuilder<constant::kMaxBuffer8192> sb;
-		sb.appendFormat( "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<%# formatVersion=\"%#\">\n\t<%#>%#</%#>\n\t<%#>\n",
+		sb.appendFormat( "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<%# formatVersion=\"%#\" name=\"%#\">\n\t<%#>\n",
 						 kRoot,
 						 static_cast<uint32>( AssetFormatVersions::kScene ),
-						 kName,
-						 xmlEscape( desc._name ),
-						 kName,
+						 xmlEscape( doc._name ),
 						 kEntities );
 
-		for ( const SceneEntityPlaceholder& entity : desc._listEntities )
+		for ( const SceneEntityNode& entity : doc._listEntityNode )
 		{
 			sb.appendFormat( "\t\t<%# name=\"%#\"", kEntity, xmlEscape( entity._name ) );
 			if ( entity._prefab.empty() == false )
@@ -283,24 +284,24 @@ namespace sw
 		const string absPath = absoluteWritePath( path );
 		if ( absPath.empty() )
 		{
-			SW_LOG_ERROR( "[SceneDescriptor] Cannot resolve save path: %#", path );
+			SW_LOG_ERROR( "Cannot resolve save path: %#", path );
 			return false;
 		}
 		FileUtil::createDirectory( absPath );
 		if ( FileUtil::writeTextFile( absPath, sb.view() ) == false )
 		{
-			SW_LOG_ERROR( "[SceneDescriptor] Failed to write: %#", absPath );
+			SW_LOG_ERROR( "Failed to write: %#", absPath );
 			return false;
 		}
-		SW_LOG_INFO( "[SceneDescriptor] Saved '%#' (%# entities) -> %#",
-					 desc._name, static_cast<uint32>( desc._listEntities.size() ), absPath );
+		SW_LOG_INFO( "Saved '%#' (%# entities) -> %#",
+					 doc._name, static_cast<uint32>( doc._listEntityNode.size() ), absPath );
 		return true;
 	}
 
-	bool loadSceneDescriptorFromBinary( string_view path, SceneDescriptor& outDesc )
+	bool loadSceneDocumentFromBinary( string_view path, SceneDocument& outDoc )
 	{
-		outDesc				= {};
-		outDesc._sourcePath = path;
+		outDoc			   = {};
+		outDoc._sourcePath = path;
 
 		string absPath = ResourceUtil::getResourcePath( path );
 		if ( absPath.empty() )
@@ -309,7 +310,7 @@ namespace sw
 		vector<uint8> listBlob;
 		if ( FileUtil::readFile( absPath, listBlob ) == false || listBlob.size() < 12 )
 		{
-			SW_LOG_ERROR( "[SceneDescriptor] Binary read failed or too small: %#", absPath );
+			SW_LOG_ERROR( "Binary read failed or too small: %#", absPath );
 			return false;
 		}
 
@@ -317,59 +318,59 @@ namespace sw
 		uint32 magic{ 0 };
 		if ( readU32Val( listBlob, offset, magic ) == false || magic != kSceneBinMagic )
 		{
-			SW_LOG_ERROR( "[SceneDescriptor] Bad binary magic: %#", absPath );
+			SW_LOG_ERROR( "Bad binary magic: %#", absPath );
 			return false;
 		}
 
 		uint32 version{ 0 };
 		if ( readU32Val( listBlob, offset, version ) == false || version > kSceneBinVersion )
 		{
-			SW_LOG_ERROR( "[SceneDescriptor] Unsupported binary version %# in %#", version, absPath );
+			SW_LOG_ERROR( "Unsupported binary version %# in %#", version, absPath );
 			return false;
 		}
 
-		if ( readStrVal( listBlob, offset, outDesc._name ) == false )
+		if ( readStrVal( listBlob, offset, outDoc._name ) == false )
 		{
-			SW_LOG_ERROR( "[SceneDescriptor] Binary name truncated: %#", absPath );
+			SW_LOG_ERROR( "Binary name truncated: %#", absPath );
 			return false;
 		}
 
 		uint32 entityCount{ 0 };
 		if ( readU32Val( listBlob, offset, entityCount ) == false )
 		{
-			SW_LOG_ERROR( "[SceneDescriptor] Binary entity count truncated: %#", absPath );
+			SW_LOG_ERROR( "Binary entity count truncated: %#", absPath );
 			return false;
 		}
 
-		outDesc._listEntities.reserve( entityCount );
+		outDoc._listEntityNode.reserve( entityCount );
 		for ( uint32 entityIndex = 0; entityIndex < entityCount; ++entityIndex )
 		{
-			SceneEntityPlaceholder placeholder{};
-			if ( readStrVal( listBlob, offset, placeholder._name ) == false ||
-				 readStrVal( listBlob, offset, placeholder._prefab ) == false ||
-				 readStrVal( listBlob, offset, placeholder._embeddedXml ) == false )
+			SceneEntityNode node{};
+			if ( readStrVal( listBlob, offset, node._name ) == false ||
+				 readStrVal( listBlob, offset, node._prefab ) == false ||
+				 readStrVal( listBlob, offset, node._embeddedXml ) == false )
 			{
-				SW_LOG_ERROR( "[SceneDescriptor] Binary entity truncated at index %#: %#", entityIndex, absPath );
+				SW_LOG_ERROR( "Binary entity truncated at index %#: %#", entityIndex, absPath );
 				return false;
 			}
-			outDesc._listEntities.push_back( std::move( placeholder ) );
+			outDoc._listEntityNode.push_back( std::move( node ) );
 		}
 
-		outDesc._bValid = true;
-		SW_LOG_INFO( "[SceneDescriptor] Loaded '%#' (%# entities) from binary %#",
-					 outDesc._name, static_cast<uint32>( outDesc._listEntities.size() ), absPath );
+		outDoc._bValid = true;
+		SW_LOG_INFO( "Loaded '%#' (%# entities) from binary %#",
+					 outDoc._name, static_cast<uint32>( outDoc._listEntityNode.size() ), absPath );
 		return true;
 	}
 
-	bool saveSceneDescriptorToBinary( string_view path, const SceneDescriptor& desc )
+	bool saveSceneDocumentToBinary( string_view path, const SceneDocument& doc )
 	{
 		vector<uint8> listBlob;
 		appendU32Val( listBlob, kSceneBinMagic );
 		appendU32Val( listBlob, kSceneBinVersion );
-		appendStrVal( listBlob, desc._name );
-		appendU32Val( listBlob, static_cast<uint32>( desc._listEntities.size() ) );
+		appendStrVal( listBlob, doc._name );
+		appendU32Val( listBlob, static_cast<uint32>( doc._listEntityNode.size() ) );
 
-		for ( const SceneEntityPlaceholder& entity : desc._listEntities )
+		for ( const SceneEntityNode& entity : doc._listEntityNode )
 		{
 			appendStrVal( listBlob, entity._name );
 			appendStrVal( listBlob, entity._prefab );
@@ -379,18 +380,18 @@ namespace sw
 		const string absPath = absoluteWritePath( path );
 		if ( absPath.empty() )
 		{
-			SW_LOG_ERROR( "[SceneDescriptor] Cannot resolve save path: %#", path );
+			SW_LOG_ERROR( "Cannot resolve save path: %#", path );
 			return false;
 		}
 		FileUtil::createDirectory( absPath );
 		const bool bOk = FileUtil::writeFile( absPath, listBlob.data(), listBlob.size() );
 		if ( bOk )
-			SW_LOG_INFO( "[SceneDescriptor] Saved binary '%#' (%# entities) -> %#",
-						 desc._name, static_cast<uint32>( desc._listEntities.size() ), absPath );
+			SW_LOG_INFO( "Saved binary '%#' (%# entities) -> %#",
+						 doc._name, static_cast<uint32>( doc._listEntityNode.size() ), absPath );
 		return bOk;
 	}
 
-	bool loadSceneDescriptor( string_view path, SceneDescriptor& outDesc )
+	bool loadSceneDocument( string_view path, SceneDocument& outDoc )
 	{
 		string	   binPath( path );
 		const bool bXml = FileUtil::hasExtension( binPath, ".xml" );
@@ -400,22 +401,22 @@ namespace sw
 			binPath += ".bin";
 
 #if defined( SW_SHIPPING )
-		if ( loadSceneDescriptorFromBinary( binPath, outDesc ) )
+		if ( loadSceneDocumentFromBinary( binPath, outDoc ) )
 			return true;
-		SW_LOG_ERROR( "[SceneDescriptor] Shipping requires cooked binary scene: %#", binPath );
+		SW_LOG_ERROR( "Shipping requires cooked binary scene: %#", binPath );
 		return false;
 #else
 		if ( FileUtil::hasExtension( path, ".bin" ) )
-			return loadSceneDescriptorFromBinary( path, outDesc );
+			return loadSceneDocumentFromBinary( path, outDoc );
 
 		string absBinPath = ResourceUtil::getResourcePath( binPath );
 		if ( absBinPath.empty() )
 			absBinPath = binPath;
 
-		if ( FileUtil::fileExists( absBinPath ) && loadSceneDescriptorFromBinary( binPath, outDesc ) )
+		if ( FileUtil::fileExists( absBinPath ) && loadSceneDocumentFromBinary( binPath, outDoc ) )
 			return true;
 
-		return loadSceneDescriptorFromXml( path, outDesc );
+		return loadSceneDocumentFromXml( path, outDoc );
 #endif
 	}
 } // namespace sw

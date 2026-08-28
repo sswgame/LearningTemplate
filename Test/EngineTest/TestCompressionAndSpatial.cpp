@@ -10,7 +10,6 @@
 #include "Engine/Physics/AABB.h"
 #include "Engine/Reflection/PropertyMetaHint.h"
 #include "Engine/Reflection/ReflectionCore.h"
-#include "Engine/Serialization/Format/CompressedBinarySerializer.h"
 #include "Engine/Spatial/BVHTree3D.h"
 #include "Engine/Spatial/SpatialHashGrid2D.h"
 #include "Engine/Spatial/SpatialOctree.h"
@@ -225,9 +224,9 @@ SW_TEST_CASE( Engine_File, ReloadFileManagerLifecycle )
 	bool	   bCallbackCalled = false;
 	const auto handle		   = manager.registerWatch( "Resource/shaders", { ".hlsl" },
 														SW_DELEGATE_LAMBDA( sw::FileWatchMatchDelegate, [&bCallbackCalled]( const sw::FileChangeEvent& )
-	{
-		bCallbackCalled = true;
-	} ) );
+			 {
+		 bCallbackCalled = true;
+	 } ) );
 
 	SW_EXPECT_TRUE( handle.isValid() );
 	manager.unregisterWatch( handle );
@@ -500,7 +499,7 @@ SW_TEST_CASE( Engine_Spatial, BVHTree3DInsertUpdateRemoveAndCount )
 	const sw::AABB b3{
 		{100.0f, 100.0f, 100.0f},
 		{110.0f, 110.0f, 110.0f}
-	};
+	   };
 
 	bvh.insert( e1, b1 );
 	bvh.insert( e2, b2 );
@@ -533,29 +532,29 @@ SW_TEST_CASE( Engine_Spatial, BVHTree3DAABBRaySphereQueries )
 
 	const sw::ObjectHandle eNear1 = sw::ObjectHandle::make( 1, 1 );
 	const sw::ObjectHandle eNear2 = sw::ObjectHandle::make( 2, 1 );
-	const sw::ObjectHandle eFar	= sw::ObjectHandle::make( 3, 1 );
+	const sw::ObjectHandle eFar	  = sw::ObjectHandle::make( 3, 1 );
 
 	const sw::AABB boxNear1{
 		{0.0f, 0.0f, 5.0f},
 		{2.0f, 2.0f, 7.0f}
-	};
+	 };
 	const sw::AABB boxNear2{
 		{3.0f, 0.0f, 10.0f},
 		{5.0f, 2.0f, 12.0f}
-	};
+	  };
 	const sw::AABB boxFar{
 		{50.0f, 50.0f, 200.0f},
 		{60.0f, 60.0f, 210.0f}
-	};
+	 };
 
 	bvh.insert( eNear1, boxNear1 );
 	bvh.insert( eNear2, boxNear2 );
 	bvh.insert( eFar, boxFar );
 
 	sw::vector<sw::ObjectHandle> listAabb;
-	const sw::AABB		   testBox{
-		{-1.0f, -1.0f,	0.0f},
-		{ 6.0f,	5.0f, 15.0f}
+	const sw::AABB				 testBox{
+					  {-1.0f, -1.0f,  0.0f},
+					  { 6.0f,  5.0f, 15.0f}
 	};
 	bvh.queryAABB( testBox, listAabb );
 	SW_EXPECT_EQUAL( 2u, static_cast<uint32>( listAabb.size() ) );

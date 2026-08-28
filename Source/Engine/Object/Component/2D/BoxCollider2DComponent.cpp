@@ -61,36 +61,6 @@ namespace sw
 		syncPhysicsBody();
 	}
 
-	int32 BoxCollider2DComponent::getColliderType() const
-	{
-		return _colliderType;
-	}
-
-	void BoxCollider2DComponent::setColliderType( int32 type )
-	{
-		_colliderType = type;
-	}
-
-	string BoxCollider2DComponent::getOffsetPos() const
-	{
-		return _offsetPos;
-	}
-
-	void BoxCollider2DComponent::setOffsetPos( const string& pos )
-	{
-		_offsetPos = pos;
-	}
-
-	string BoxCollider2DComponent::getOffsetScale() const
-	{
-		return _offsetScale;
-	}
-
-	void BoxCollider2DComponent::setOffsetScale( const string& scale )
-	{
-		_offsetScale = scale;
-	}
-
 	float2 BoxCollider2DComponent::getOffsetPosition() const
 	{
 		float2 result{ 0.0f, 0.0f };

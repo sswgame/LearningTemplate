@@ -37,7 +37,7 @@ SW_TEST_CASE( PrefabTest, XmlJsonBinaryRoundtrip )
 		SW_TEST_SKIP( "prefabs/sample.prefab.xml not found" );
 	}
 	SW_EXPECT_TRUE( src.isValid() );
-	SW_EXPECT_FALSE( src.getXmlBody().empty() );
+	SW_EXPECT_FALSE( src.getStateData().empty() );
 
 	const sw::string xmlPath  = sw::makeTempPrefabPath( "roundtrip.prefab.xml" );
 	const sw::string jsonPath = sw::makeTempPrefabPath( "roundtrip.prefab.json" );

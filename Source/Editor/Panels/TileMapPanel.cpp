@@ -14,6 +14,8 @@
 
 namespace sw::editor
 {
+	SW_LOG_CALLER( "TileMapPanel" );
+
 	TileMapPanel::TileMapPanel()
 		: IEditorPanel( false )
 		, _arrPathBuffer{}
@@ -38,7 +40,7 @@ namespace sw::editor
 		, _listEncounter{}
 		, _listPassThrough{}
 		, _listVisual{}
-		, _listWarps{}
+		, _listWarp{}
 		, _status{}
 	{
 		const EditorData& editorData = editor::getEditorData();
@@ -75,7 +77,7 @@ namespace sw::editor
 		if ( ImGui::Button( "Load" ) )
 		{
 			if ( loadXml( _arrPathBuffer ) == false )
-				SW_LOG_WARNING( "[TileMapPanel] %#", _status.c_str() );
+				SW_LOG_WARNING( "%#", _status.c_str() );
 		}
 		ImGui::SameLine();
 		if ( ImGui::Button( "Save" ) )
@@ -138,8 +140,8 @@ namespace sw::editor
 		unordered_set<uint64> uniqueWarpCells;
 		if ( _layer == PaintLayer::Warp )
 		{
-			uniqueWarpCells.reserve( _listWarps.size() );
-			for ( const EditorTileWarp& warp : _listWarps )
+			uniqueWarpCells.reserve( _listWarp.size() );
+			for ( const EditorTileWarp& warp : _listWarp )
 			{
 				uniqueWarpCells.insert( ( static_cast<uint64>( static_cast<uint32>( warp._tileY ) ) << 32 ) |
 										static_cast<uint32>( warp._tileX ) );
@@ -211,7 +213,7 @@ namespace sw::editor
 		_listEncounter.assign( count, 0 );
 		_listPassThrough.assign( count, 0 );
 		_listVisual.assign( count, EditorTileVisual{} );
-		_listWarps.clear();
+		_listWarp.clear();
 	}
 
 	bool TileMapPanel::loadXml( string_view assetRelativePath )
@@ -303,7 +305,7 @@ namespace sw::editor
 			}
 		}
 
-		_listWarps.clear();
+		_listWarp.clear();
 		XmlNode warps = root.child( "warps" );
 		if ( warps.isValid() )
 		{
@@ -328,7 +330,7 @@ namespace sw::editor
 				const utf8* pPair = wNode.attr( "pair" );
 				if ( pPair != nullptr )
 					warp._pairId = pPair;
-				_listWarps.push_back( std::move( warp ) );
+				_listWarp.push_back( std::move( warp ) );
 			}
 		}
 
@@ -370,7 +372,7 @@ namespace sw::editor
 
 		sb.appendFormat( "  </tiles>\n" );
 		sb.appendFormat( "  <warps>\n" );
-		for ( const EditorTileWarp& warp : _listWarps )
+		for ( const EditorTileWarp& warp : _listWarp )
 		{
 			sb.appendFormat( "    <warp x=\"%d\" y=\"%d\" map=\"%s\" tx=\"%d\" ty=\"%d\"",
 							 warp._tileX,
@@ -416,10 +418,10 @@ namespace sw::editor
 				break;
 			case PaintLayer::Warp:
 			{
-				_listWarps.erase( std::remove_if( _listWarps.begin(), _listWarps.end(),
-												  [x, y]( const EditorTileWarp& warp )
+				_listWarp.erase( std::remove_if( _listWarp.begin(), _listWarp.end(),
+												 [x, y]( const EditorTileWarp& warp )
 				{ return warp._tileX == x && warp._tileY == y; } ),
-								  _listWarps.end() );
+								 _listWarp.end() );
 				if ( _bErase == false && _arrWarpTarget[0] != '\0' )
 				{
 					EditorTileWarp warpItem{};
@@ -428,7 +430,7 @@ namespace sw::editor
 					warpItem._targetMap	  = _arrWarpTarget;
 					warpItem._targetTileX = _warpTx;
 					warpItem._targetTileY = _warpTy;
-					_listWarps.push_back( std::move( warpItem ) );
+					_listWarp.push_back( std::move( warpItem ) );
 					_listWalkable[tileIndex] = 1;
 				}
 				break;
@@ -445,17 +447,17 @@ namespace sw::editor
 		auto stamp = [&]( int32 tileX, int32 tileY )
 		{
 			_listWalkable[indexOf( tileX, tileY )] = 1;
-			_listWarps.erase( std::remove_if( _listWarps.begin(), _listWarps.end(),
-											  [tileX, tileY]( const EditorTileWarp& warp )
+			_listWarp.erase( std::remove_if( _listWarp.begin(), _listWarp.end(),
+											 [tileX, tileY]( const EditorTileWarp& warp )
 			{ return warp._tileX == tileX && warp._tileY == tileY; } ),
-							  _listWarps.end() );
+							 _listWarp.end() );
 			EditorTileWarp warpItem{};
 			warpItem._tileX		  = tileX;
 			warpItem._tileY		  = tileY;
 			warpItem._targetMap	  = targets[edge];
 			warpItem._targetTileX = _arrEdgeTx[edge];
 			warpItem._targetTileY = _arrEdgeTy[edge];
-			_listWarps.push_back( std::move( warpItem ) );
+			_listWarp.push_back( std::move( warpItem ) );
 		};
 
 		switch ( edge )

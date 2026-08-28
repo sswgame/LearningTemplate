@@ -7,6 +7,8 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "LiveShaderManager" );
+
 	vector<string> ShaderIncludeResolver::parseIncludes( string_view shaderSource )
 	{
 		vector<string> listIncludes;
@@ -55,7 +57,7 @@ namespace sw
 		const string shaderWatchRoot = ResourceUtil::getRootFolderPath();
 		if ( shaderWatchRoot.empty() )
 		{
-			SW_LOG_WARNING( "[LiveShaderManager] Resource root empty; shader file watch not registered." );
+			SW_LOG_WARNING( "Resource root empty; shader file watch not registered." );
 			return;
 		}
 
@@ -76,7 +78,7 @@ namespace sw
 			const string keyPath = FileUtil::normalizePath( ioPath );
 
 			std::unique_lock<std::shared_mutex> lock{ _mutex };
-			_mapWatchedShaders[keyPath].push_back( { desc, onRecompiled } );
+			_mapWatchedShader[keyPath].push_back( { desc, onRecompiled } );
 
 			vector<uint8> listFileBytes;
 			if ( FileUtil::readFile( ioPath, listFileBytes ) && listFileBytes.empty() == false )
@@ -89,7 +91,7 @@ namespace sw
 				{
 					string incPath = shaderDir.empty() ? string( inc ) : ( shaderDir + "/" + inc );
 					incPath		   = FileUtil::normalizePath( incPath );
-					_mapIncludeDependencies[incPath].push_back( keyPath );
+					_mapIncludeDependency[incPath].push_back( keyPath );
 				}
 			}
 
@@ -100,7 +102,7 @@ namespace sw
 					initialize( dirPart );
 			}
 
-			SW_LOG_INFO( "[LiveShaderManager] Registered live shader watch target: %#", ioPath.c_str() );
+			SW_LOG_INFO( "Registered live shader watch target: %#", ioPath.c_str() );
 		}
 	}
 
@@ -109,13 +111,13 @@ namespace sw
 		if ( _bInitialized == false )
 			return;
 
-		if ( _listPendingReloadPaths.empty() == false )
+		if ( _listPendingReloadPath.empty() == false )
 		{
 			vector<string> listReloadsToProcess;
 			{
 				std::unique_lock<std::shared_mutex> lock{ _mutex };
-				listReloadsToProcess = std::move( _listPendingReloadPaths );
-				_listPendingReloadPaths.clear();
+				listReloadsToProcess = std::move( _listPendingReloadPath );
+				_listPendingReloadPath.clear();
 			}
 
 			for ( const string& changedPath : listReloadsToProcess )
@@ -123,8 +125,8 @@ namespace sw
 				vector<WatchedShaderInfo> listToCompile;
 				{
 					std::shared_lock<std::shared_mutex>						   lock{ _mutex };
-					unordered_map<string, vector<WatchedShaderInfo>>::iterator it = _mapWatchedShaders.find( changedPath );
-					if ( it != _mapWatchedShaders.end() )
+					unordered_map<string, vector<WatchedShaderInfo>>::iterator it = _mapWatchedShader.find( changedPath );
+					if ( it != _mapWatchedShader.end() )
 					{
 						listToCompile = it->second;
 					}
@@ -132,14 +134,14 @@ namespace sw
 
 				for ( WatchedShaderInfo& watchedInfo : listToCompile )
 				{
-					SW_LOG_INFO( "[LiveShaderManager] Recompiling shader live: %# (Entry: %#)",
+					SW_LOG_INFO( "Recompiling shader live: %# (Entry: %#)",
 								 watchedInfo._desc._filePath.c_str(), watchedInfo._desc._entryPoint.c_str() );
 
 					ShaderCompileResult newResult = ShaderCompiler::compileHLSL( watchedInfo._desc );
 					if ( newResult._bSuccess )
 					{
 						ShaderCache::clearCache();
-						SW_LOG_INFO( "[LiveShaderManager SUCCESS] Live Shader Recompilation Succeeded for %#!",
+						SW_LOG_INFO( "Live Shader Recompilation Succeeded for %#!",
 									 watchedInfo._desc._filePath.c_str() );
 
 						if ( watchedInfo._onRecompiled.isBound() )
@@ -147,7 +149,7 @@ namespace sw
 					}
 					else
 					{
-						SW_LOG_ERROR( "[LiveShaderManager ERROR] Live Shader Recompilation Failed for %#:\n%#",
+						SW_LOG_ERROR( "Live Shader Recompilation Failed for %#:\n%#",
 									  watchedInfo._desc._filePath.c_str(), newResult._errorMessage.c_str() );
 					}
 				}
@@ -160,20 +162,20 @@ namespace sw
 		detachReloadFileManager();
 
 		std::unique_lock<std::shared_mutex> lock{ _mutex };
-		_mapWatchedShaders.clear();
-		_mapIncludeDependencies.clear();
-		_listPendingReloadPaths.clear();
+		_mapWatchedShader.clear();
+		_mapIncludeDependency.clear();
+		_listPendingReloadPath.clear();
 		_bInitialized = false;
 	}
 
 	void LiveShaderManager::triggerReloadAll()
 	{
 		std::unique_lock<std::shared_mutex> lock{ _mutex };
-		_listPendingReloadPaths.clear();
-		_listPendingReloadPaths.reserve( _mapWatchedShaders.size() );
-		for ( const std::pair<const string, vector<WatchedShaderInfo>>& pair : _mapWatchedShaders )
+		_listPendingReloadPath.clear();
+		_listPendingReloadPath.reserve( _mapWatchedShader.size() );
+		for ( const std::pair<const string, vector<WatchedShaderInfo>>& pair : _mapWatchedShader )
 		{
-			_listPendingReloadPaths.push_back( pair.first );
+			_listPendingReloadPath.push_back( pair.first );
 		}
 	}
 
@@ -188,15 +190,15 @@ namespace sw
 
 		auto enqueueUnique = [this]( const string& filePath )
 		{
-			if ( std::find( _listPendingReloadPaths.begin(), _listPendingReloadPaths.end(), filePath ) == _listPendingReloadPaths.end() )
-				_listPendingReloadPaths.push_back( filePath );
+			if ( std::find( _listPendingReloadPath.begin(), _listPendingReloadPath.end(), filePath ) == _listPendingReloadPath.end() )
+				_listPendingReloadPath.push_back( filePath );
 		};
 
-		if ( _mapWatchedShaders.find( normalized ) != _mapWatchedShaders.end() )
+		if ( _mapWatchedShader.find( normalized ) != _mapWatchedShader.end() )
 			enqueueUnique( normalized );
 
-		const unordered_map<string, vector<string>>::const_iterator includeIt = _mapIncludeDependencies.find( normalized );
-		if ( includeIt != _mapIncludeDependencies.end() )
+		const unordered_map<string, vector<string>>::const_iterator includeIt = _mapIncludeDependency.find( normalized );
+		if ( includeIt != _mapIncludeDependency.end() )
 		{
 			for ( const string& shaderPath : includeIt->second )
 			{

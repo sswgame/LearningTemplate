@@ -2,8 +2,8 @@
 
 #include "Engine/Object/Component/CameraComponent.h"
 
-#include "Core/Math/MatrixMath.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/MatrixMath.h"
 
 namespace sw
 {
@@ -21,76 +21,6 @@ namespace sw
 	void CameraComponent::onBeginPlay()
 	{
 		SceneComponent::onBeginPlay();
-	}
-
-	void CameraComponent::setRole( CameraRole role )
-	{
-		_role = role;
-	}
-
-	CameraRole CameraComponent::getRole() const
-	{
-		return _role;
-	}
-
-	void CameraComponent::setFieldOfViewY( float32 fovRadians )
-	{
-		_fovY = fovRadians;
-	}
-
-	float32 CameraComponent::getFieldOfViewY() const
-	{
-		return _fovY;
-	}
-
-	void CameraComponent::setNearPlane( float32 nearZ )
-	{
-		_nearZ = nearZ;
-	}
-
-	float32 CameraComponent::getNearPlane() const
-	{
-		return _nearZ;
-	}
-
-	void CameraComponent::setFarPlane( float32 farZ )
-	{
-		_farZ = farZ;
-	}
-
-	float32 CameraComponent::getFarPlane() const
-	{
-		return _farZ;
-	}
-
-	void CameraComponent::setOrthoHeight( float32 height )
-	{
-		_orthoHeight = height;
-	}
-
-	float32 CameraComponent::getOrthoHeight() const
-	{
-		return _orthoHeight;
-	}
-
-	void CameraComponent::setOrthographic( bool bOrtho )
-	{
-		_bOrthographic = bOrtho;
-	}
-
-	bool CameraComponent::isOrthographic() const
-	{
-		return _bOrthographic;
-	}
-
-	void CameraComponent::setPriority( int32 priority )
-	{
-		_priority = priority;
-	}
-
-	int32 CameraComponent::getPriority() const
-	{
-		return _priority;
 	}
 
 	void CameraComponent::lookAt( const float3& target, const float3& up )

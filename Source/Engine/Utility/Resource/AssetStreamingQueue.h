@@ -70,11 +70,11 @@ namespace sw
 
 	private:
 		mutable mutex											   _mutex;
-		vector<StreamingRequest>								   _listPendingRequests;
-		unordered_map<string, bool>								   _mapLoadedAssets;
-		unordered_set<string>									   _uniqueActiveRequests;
-		unordered_map<string, vector<OnStreamingCompleteDelegate>> _mapInFlightCallbacks;
-		vector<CompletedItem>									   _listCompletedItems;
+		vector<StreamingRequest>								   _listPendingRequest;
+		unordered_map<string, bool>								   _mapLoadedAsset;
+		unordered_set<string>									   _uniqueActiveRequest;
+		unordered_map<string, vector<OnStreamingCompleteDelegate>> _mapInFlightCallback;
+		vector<CompletedItem>									   _listCompletedItem;
 		bool													   _bInitialized;
 	};
 } // namespace sw

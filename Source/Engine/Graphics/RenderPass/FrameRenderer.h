@@ -239,8 +239,8 @@ namespace sw
 		RenderGraph									  _graph;
 		string										  _pipelinePath;
 		float32										  _arrClearColor[4];
-		unordered_map<string, RHITextureHandle>		  _mapTransients;
-		unordered_map<string, RHIDescriptorIndex>	  _mapTransientSrvs;
+		unordered_map<string, RHITextureHandle>		  _mapTransient;
+		unordered_map<string, RHIDescriptorIndex>	  _mapTransientSrv;
 		vector<hashed_string>						  _listClearedThisFrame;
 		Material*									  _pBoundMaterial;
 		PassConstants								  _passConstants;
@@ -248,8 +248,8 @@ namespace sw
 		RHIDescriptorIndex							  _passCbIndex;
 		RHIBufferHandle								  _gpuCullCb;
 		RHIDescriptorIndex							  _gpuCullCbIndex;
-		unordered_map<string, RHIPipelineStateHandle> _mapEnginePsos;
-		unordered_map<uint64, RHIPipelineStateHandle> _mapMaterialPassPsos;
+		unordered_map<string, RHIPipelineStateHandle> _mapEnginePso;
+		unordered_map<uint64, RHIPipelineStateHandle> _mapMaterialPassPso;
 		mutex										  _psoMutex;
 		uint32										  _transientWidth;
 		uint32										  _transientHeight;

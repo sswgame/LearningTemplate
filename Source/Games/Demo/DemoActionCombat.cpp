@@ -17,6 +17,8 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "DemoGame" );
+
 	void DemoGame::updateActionCombat( float32 deltaTime )
 	{
 		if ( _actionRoom.isActive() == false || canAcceptOverworldInput() == false )
@@ -77,13 +79,13 @@ namespace sw
 					game::getService<IAudioSystem>()->play( _data._bossDefeatSfx );
 				_hud.setDialogue( GameStrings::get( "ui.boss_defeated", "Belial defeated!" ) );
 				_save.setFlag( "story_belial_cleared", 1 );
-				SW_LOG_INFO( "[DemoGame] Boss cleared ??victory exit to town unlocked (east door)." );
+				SW_LOG_TRACE( "Boss cleared ??victory exit to town unlocked (east door)." );
 			}
 			else
 			{
 				_hud.setDialogue( GameStrings::get( "ui.room_cleared", "Room cleared! The door opened." ) );
 			}
-			SW_LOG_INFO( "[DemoGame] Action room cleared (boss=%#).", result._bBossDefeated != 0 ? 1 : 0 );
+			SW_LOG_TRACE( "Action room cleared (boss=%#).", result._bBossDefeated != 0 ? 1 : 0 );
 		}
 	}
 

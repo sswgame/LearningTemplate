@@ -2,12 +2,12 @@
 
 #include "Engine/Serialization/Core/SchemaMigrate.h"
 
+#include "Core/Concurrency/Atomic.h"
+
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Serialization/Core/SerializerInternal.h"
-
-#include "Core/Concurrency/Atomic.h"
 
 namespace sw
 {

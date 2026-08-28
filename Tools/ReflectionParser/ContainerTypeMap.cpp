@@ -6,6 +6,7 @@
 
 #include "Engine/Reflection/ReflectionEnumNames.h"
 
+SW_LOG_CALLER( "ContainerTypeMap" );
 namespace sw
 {
 	ContainerTypeMap& ContainerTypeMap::instance()
@@ -16,7 +17,7 @@ namespace sw
 
 	void ContainerTypeMap::clear()
 	{
-		_listRules.clear();
+		_listRule.clear();
 		_bLoaded = false;
 	}
 
@@ -28,7 +29,7 @@ namespace sw
 		rule._match = match;
 		rule._kind	= kind;
 		rule._type	= type;
-		_listRules.push_back( std::move( rule ) );
+		_listRule.push_back( std::move( rule ) );
 	}
 
 	void ContainerTypeMap::registerRule( const string& match, const string& kindSpelling,
@@ -36,13 +37,13 @@ namespace sw
 	{
 		ContainerKind kind = ContainerKind::Sequence;
 		if ( kindSpelling.empty() == false && tryParseContainerKind( kindSpelling, kind ) == false )
-			SW_LOG_WARNING( "[ContainerTypeMap] Unknown kind '%#', using Sequence", kindSpelling );
+			SW_LOG_WARNING( "Unknown kind '%#', using Sequence", kindSpelling );
 		registerRule( match, kind, type );
 	}
 
 	const ContainerTypeRule* ContainerTypeMap::match( const string_view clangTypeSpelling ) const
 	{
-		for ( const ContainerTypeRule& rule : _listRules )
+		for ( const ContainerTypeRule& rule : _listRule )
 		{
 			if ( clangTypeSpelling.find( rule._match ) != string_view::npos )
 				return &rule;

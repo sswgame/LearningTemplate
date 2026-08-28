@@ -7,6 +7,8 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "EngineData" );
+
 	bool EngineData::loadFromResource( string_view assetRelativePath )
 	{
 		const string path = assetRelativePath.empty() ? string( path::kEngineData ) : string( assetRelativePath );
@@ -15,14 +17,14 @@ namespace sw
 		string		absPath;
 		if ( doc.loadResource( path, &absPath ) == false )
 		{
-			SW_LOG_WARNING( "[EngineData] Using built-in defaults; failed to read %#", path );
+			SW_LOG_WARNING( "Using built-in defaults; failed to read %#", path );
 			return false;
 		}
 
 		XmlNode root = doc.root( "EngineData" );
 		if ( root.isValid() == false )
 		{
-			SW_LOG_WARNING( "[EngineData] Missing <EngineData> in %# — using defaults.", absPath );
+			SW_LOG_WARNING( "Missing <EngineData> in %# — using defaults.", absPath );
 			return false;
 		}
 
@@ -47,7 +49,7 @@ namespace sw
 		root.takeChildText( "shaderTaa", _shaderTaa );
 		root.takeChildText( "shaderTonemap", _shaderTonemap );
 
-		SW_LOG_INFO( "[EngineData] Loaded from %#", absPath );
+		SW_LOG_INFO( "Loaded from %#", absPath );
 		return true;
 	}
 } // namespace sw

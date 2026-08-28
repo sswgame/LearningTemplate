@@ -45,10 +45,10 @@ namespace sw
 		string _type = "Opaque";
 
 		PROPERTY()
-		vector<string> _listInputs;
+		vector<string> _listInput;
 
 		PROPERTY()
-		vector<string> _listOutputs;
+		vector<string> _listOutput;
 
 		/** @brief HLSL path (engine/... or common/...). Empty → FrameRenderer type default. */
 		PROPERTY()
@@ -65,7 +65,7 @@ namespace sw
 
 		/** @brief Shader macros / permutations as "NAME" or "NAME=VALUE". */
 		PROPERTY()
-		vector<string> _listPermutations;
+		vector<string> _listPermutation;
 
 		PROPERTY()
 		string _cullMode = "Back"; ///< None / Front / Back
@@ -91,7 +91,7 @@ namespace sw
 		string _name = "DefaultMainPass";
 
 		PROPERTY()
-		vector<RenderPassAttachment> _listAttachments;
+		vector<RenderPassAttachment> _listAttachment;
 	};
 
 	/// @brief RenderPass XML 에셋 (어태치먼트 템플릿)

@@ -39,7 +39,7 @@ namespace sw
 		, _typeName{}
 		, _elementTypeName{}
 		, _keyTypeName{}
-		, _listAliases{}
+		, _listAlias{}
 		, _metadata{}
 		, _cachedNameHash{ 0 }
 		, _containerKind{ ContainerKind::None }
@@ -73,7 +73,7 @@ namespace sw
 		, _typeName{ typeName }
 		, _elementTypeName{ elementTypeName }
 		, _keyTypeName{ keyTypeName }
-		, _listAliases{}
+		, _listAlias{}
 		, _metadata{}
 		, _cachedNameHash{ 0 }
 		, _containerKind{ containerKind }
@@ -81,7 +81,7 @@ namespace sw
 		, _reservedFlags{ 0 }
 	{
 		if ( alias.empty() == false )
-			_listAliases.push_back( alias );
+			_listAlias.push_back( alias );
 	}
 
 	EnumInfo::EnumInfo() noexcept
@@ -101,7 +101,7 @@ namespace sw
 		, _size{ 0 }
 		, _destroyInstance{ nullptr }
 		, _propertyList{}
-		, _listMethods{}
+		, _listMethod{}
 		, _mapNameToProperty{}
 		, _mapNameToMethod{}
 		, _propertyListWithBase{}
@@ -123,7 +123,7 @@ namespace sw
 		, _size{ other._size }
 		, _destroyInstance{ other._destroyInstance }
 		, _propertyList{ other._propertyList }
-		, _listMethods{ other._listMethods }
+		, _listMethod{ other._listMethod }
 		, _mapNameToProperty{}
 		, _mapNameToMethod{}
 		, _propertyListWithBase{}
@@ -147,7 +147,7 @@ namespace sw
 		, _size{ other._size }
 		, _destroyInstance{ other._destroyInstance }
 		, _propertyList{ std::move( other._propertyList ) }
-		, _listMethods{ std::move( other._listMethods ) }
+		, _listMethod{ std::move( other._listMethod ) }
 		, _mapNameToProperty{}
 		, _mapNameToMethod{}
 		, _propertyListWithBase{}
@@ -179,7 +179,7 @@ namespace sw
 		_size				= other._size;
 		_destroyInstance	= other._destroyInstance;
 		_propertyList		= other._propertyList;
-		_listMethods		= other._listMethods;
+		_listMethod			= other._listMethod;
 		_bAbstract			= other._bAbstract;
 		_bStatic			= other._bStatic;
 		_bPrimitive			= other._bPrimitive;
@@ -208,7 +208,7 @@ namespace sw
 		_size				= other._size;
 		_destroyInstance	= other._destroyInstance;
 		_propertyList		= std::move( other._propertyList );
-		_listMethods		= std::move( other._listMethods );
+		_listMethod			= std::move( other._listMethod );
 		_bAbstract			= other._bAbstract;
 		_bStatic			= other._bStatic;
 		_bPrimitive			= other._bPrimitive;

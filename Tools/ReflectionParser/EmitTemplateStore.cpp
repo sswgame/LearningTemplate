@@ -8,6 +8,7 @@
 #include "ReflectionParser/ParserContext.h"
 #include "ReflectionParser/ParserDefines.h"
 
+SW_LOG_CALLER( "EmitTemplateStore" );
 namespace sw
 {
 	namespace
@@ -41,7 +42,7 @@ namespace sw
 
 	void EmitTemplateStore::clear()
 	{
-		_mapTemplates.clear();
+		_mapTemplate.clear();
 		_bLoaded = false;
 	}
 
@@ -51,7 +52,7 @@ namespace sw
 
 		if ( FileUtil::directoryExists( absDir ) == false )
 		{
-			SW_LOG_WARNING( "[EmitTemplate] Not a directory: %#", absDir );
+			SW_LOG_WARNING( "Not a directory: %#", absDir );
 			return false;
 		}
 
@@ -66,36 +67,36 @@ namespace sw
 			FileUtil::readTextFile( path, text );
 			if ( text.empty() )
 			{
-				SW_LOG_WARNING( "[EmitTemplate] Empty or unreadable: %#", path );
+				SW_LOG_WARNING( "Empty or unreadable: %#", path );
 				continue;
 			}
-			_mapTemplates.insert_or_assign( stem, text );
+			_mapTemplate.insert_or_assign( stem, text );
 			++count;
 		}
 
 		if ( count == 0 )
 		{
-			SW_LOG_WARNING( "[EmitTemplate] No .tpl files in %#", absDir );
+			SW_LOG_WARNING( "No .tpl files in %#", absDir );
 			return false;
 		}
 
 		_bLoaded = true;
-		SW_LOG_INFO( "[EmitTemplate] Loaded %# templates from %#", count, absDir );
+		SW_LOG_TRACE( "Loaded %# templates from %#", count, absDir );
 		return true;
 	}
 
 	bool EmitTemplateStore::has( const string_view name ) const
 	{
-		return _mapTemplates.find( string( name ) ) != _mapTemplates.end();
+		return _mapTemplate.find( string( name ) ) != _mapTemplate.end();
 	}
 
 	string EmitTemplateStore::render( const string_view					   name,
 									  const unordered_map<string, string>& vars ) const
 	{
-		const auto it = _mapTemplates.find( string( name ) );
-		if ( it == _mapTemplates.end() )
+		const auto it = _mapTemplate.find( string( name ) );
+		if ( it == _mapTemplate.end() )
 		{
-			SW_LOG_WARNING( "[EmitTemplate] Missing template: %#", name );
+			SW_LOG_WARNING( "Missing template: %#", name );
 			return {};
 		}
 		return expand( it->second, vars );
@@ -104,10 +105,10 @@ namespace sw
 	string EmitTemplateStore::render( const string_view											 name,
 									  std::initializer_list<std::pair<string_view, string_view>> vars ) const
 	{
-		const auto it = _mapTemplates.find( string( name ) );
-		if ( it == _mapTemplates.end() )
+		const auto it = _mapTemplate.find( string( name ) );
+		if ( it == _mapTemplate.end() )
 		{
-			SW_LOG_WARNING( "[EmitTemplate] Missing template: %#", name );
+			SW_LOG_WARNING( "Missing template: %#", name );
 			return {};
 		}
 		return expand( it->second, vars );

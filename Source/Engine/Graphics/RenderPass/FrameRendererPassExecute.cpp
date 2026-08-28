@@ -9,6 +9,8 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "FrameRenderer" );
+
 	void FrameRenderer::bindPassCallbacks()
 	{
 		const vector<RenderGraphPassDesc>& passes = _pipelineResource.getGraphPasses();
@@ -18,11 +20,11 @@ namespace sw
 		{
 			vector<hashed_string> listInputs;
 			vector<hashed_string> listOutputs;
-			for ( const string& in : pass._listInputs )
+			for ( const string& in : pass._listInput )
 			{
 				listInputs.emplace_back( in.c_str() );
 			}
-			for ( const string& out : pass._listOutputs )
+			for ( const string& out : pass._listOutput )
 			{
 				listOutputs.emplace_back( out.c_str() );
 			}
@@ -34,7 +36,7 @@ namespace sw
 		}
 
 		if ( _graph.compile() == false )
-			SW_LOG_ERROR( "[FrameRenderer] Callback bind compile failed" );
+			SW_LOG_ERROR( "Callback bind compile failed" );
 		else
 			_bCallbacksBound = 1;
 	}
@@ -69,7 +71,7 @@ namespace sw
 	{
 		if ( _pCmd == nullptr )
 		{
-			SW_LOG_ERROR( "[FrameRenderer] executePass: no active IRHICommandList" );
+			SW_LOG_ERROR( "executePass: no active IRHICommandList" );
 			return;
 		}
 
@@ -138,7 +140,7 @@ namespace sw
 
 			const bool bHasNormal = findTransient( Attachment::kGBufferNormal ) != 0;
 			const bool bUseMrt	  = bHasNormal && _pDevice->supportsMultiRenderTarget() &&
-									getEnginePso( PassType::kGBuffer ) != 0;
+								 getEnginePso( PassType::kGBuffer ) != 0;
 			if ( bUseMrt )
 			{
 				float32 arrNormalClear[4] = { kNormalClear[0], kNormalClear[1], kNormalClear[2], kNormalClear[3] };
@@ -229,7 +231,7 @@ namespace sw
 		{
 			clearPassTextureIndices();
 			const string_view bloomTarget = findTransient( Attachment::kBloomColor ) != 0 ? "BloomColor" : "SceneColor";
-			const utf8*		  pSrcName	  = pickFirstExisting( _mapTransients, { "TransparentColor", "LitColor", "SceneColor", "GBufferAlbedo" } );
+			const utf8*		  pSrcName	  = pickFirstExisting( _mapTransient, { "TransparentColor", "LitColor", "SceneColor", "GBufferAlbedo" } );
 			if ( pSrcName != nullptr )
 				setPassTexture( _passConstants._texSource, pSrcName );
 			if ( tryGetAttachmentClearColor( bloomTarget, arrClearColor ) == false )
@@ -242,7 +244,7 @@ namespace sw
 		{
 			clearPassTextureIndices();
 			const string_view outlineTarget = findTransient( Attachment::kOutlineColor ) != 0 ? "OutlineColor" : "SceneColor";
-			const utf8*		  pSrcName		= pickFirstExisting( _mapTransients, { "BloomColor", "TransparentColor", "LitColor", "SceneColor" } );
+			const utf8*		  pSrcName		= pickFirstExisting( _mapTransient, { "BloomColor", "TransparentColor", "LitColor", "SceneColor" } );
 			if ( pSrcName != nullptr )
 				setPassTexture( _passConstants._texSource, pSrcName );
 			setPassTexture( _passConstants._texSourceDepth, Attachment::kSceneDepth );
@@ -254,7 +256,7 @@ namespace sw
 		{
 			clearPassTextureIndices();
 			const string_view taaTarget = findTransient( Attachment::kTaaColor ) != 0 ? "TaaColor" : "SceneColor";
-			const utf8*		  pSrcName	= pickFirstExisting( _mapTransients, { "BloomColor", "OutlineColor", "TransparentColor", "LitColor", "SceneColor" } );
+			const utf8*		  pSrcName	= pickFirstExisting( _mapTransient, { "BloomColor", "OutlineColor", "TransparentColor", "LitColor", "SceneColor" } );
 			if ( pSrcName != nullptr )
 				setPassTexture( _passConstants._texSource, pSrcName );
 			if ( _taaHistory != 0 )
@@ -295,7 +297,7 @@ namespace sw
 			clearPassTextureIndices();
 			const string_view tonemapTarget =
 				findTransient( "TonemapColor" ) != 0 ? "TonemapColor" : Attachment::kSceneColor;
-			const utf8* pSrcName = pickFirstExisting( _mapTransients, { "TaaColor", "OutlineColor", "BloomColor", "TransparentColor", "LitColor", "SceneColor" } );
+			const utf8* pSrcName = pickFirstExisting( _mapTransient, { "TaaColor", "OutlineColor", "BloomColor", "TransparentColor", "LitColor", "SceneColor" } );
 			if ( pSrcName != nullptr )
 				setPassTexture( _passConstants._texSource, pSrcName );
 			beginColorPass( tonemapTarget, "", _arrClearColor, colorLoadFor( tonemapTarget, false ), RHIRenderPassLoadOp::Load );
@@ -344,7 +346,7 @@ namespace sw
 			}
 		}
 		else
-			SW_LOG_WARNING( "[FrameRenderer] Unknown pass type '%#' in '%#'", passType, passName );
+			SW_LOG_WARNING( "Unknown pass type '%#' in '%#'", passType, passName );
 
 		_pCmd->endEventMarker();
 	}

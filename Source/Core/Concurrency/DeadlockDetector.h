@@ -64,9 +64,9 @@ namespace sw
 		{
 			std::thread::id					_threadId;
 			void*							_pWaitingLock{ nullptr };
-			vector<void*>					_listHeldLocks;
+			vector<void*>					_listHeldLock;
 			CallStack						_waitingCallStack;
-			unordered_map<void*, CallStack> _mapAcquiredCallStacks;
+			unordered_map<void*, CallStack> _mapAcquiredCallStack;
 		};
 
 		/** @brief startThreadId 가 pLockRequested 를 기다릴 때 사이클이 있는지 봅니다. */
@@ -76,8 +76,8 @@ namespace sw
 
 		std::atomic<bool>							_bInitialized;
 		std::mutex									_mutex;
-		unordered_map<std::thread::id, ThreadState> _mapThreadStates;
-		unordered_map<void*, std::thread::id>		_mapLockOwners;
+		unordered_map<std::thread::id, ThreadState> _mapThreadState;
+		unordered_map<void*, std::thread::id>		_mapLockOwner;
 	};
 
 } // namespace sw

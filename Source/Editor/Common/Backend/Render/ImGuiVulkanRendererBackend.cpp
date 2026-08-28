@@ -21,6 +21,8 @@
 
 namespace sw::editor
 {
+	SW_LOG_CALLER( "ImGuiVulkan" );
+
 	namespace
 	{
 		void ( *s_OrigVkCreateWindow )( ImGuiViewport* )		  = nullptr;
@@ -205,12 +207,12 @@ namespace sw::editor
 		if ( _pDevice != nullptr )
 			vkDeviceWaitIdle( _pDevice );
 
-		for ( std::pair<void* const, RHITextureHandle>& pair : _mapTextureIds )
+		for ( std::pair<void* const, RHITextureHandle>& pair : _mapTextureId )
 		{
 			if ( pair.first != nullptr )
 				ImGui_ImplVulkan_RemoveTexture( static_cast<VkDescriptorSet>( pair.first ) );
 		}
-		_mapTextureIds.clear();
+		_mapTextureId.clear();
 
 		if ( ImGui::GetIO().BackendRendererUserData != nullptr )
 			ImGui_ImplVulkan_Shutdown();
@@ -253,7 +255,7 @@ namespace sw::editor
 		void* pImageViewPtr{ nullptr };
 		if ( _pRHIDevice->queryVulkanTextureView( texture, pImageViewPtr ) == false || pImageViewPtr == nullptr )
 		{
-			SW_LOG_ERROR( "[ImGuiVulkan] Failed to resolve VkImageView for RHI handle %#", texture );
+			SW_LOG_ERROR( "Failed to resolve VkImageView for RHI handle %#", texture );
 			return nullptr;
 		}
 
@@ -264,8 +266,8 @@ namespace sw::editor
 		if ( set == VK_NULL_HANDLE )
 			return nullptr;
 
-		auto textureID			  = set;
-		_mapTextureIds[textureID] = texture;
+		auto textureID			 = set;
+		_mapTextureId[textureID] = texture;
 		return textureID;
 	}
 
@@ -274,11 +276,11 @@ namespace sw::editor
 		if ( pTextureID == nullptr )
 			return;
 
-		auto it = _mapTextureIds.find( pTextureID );
-		if ( it == _mapTextureIds.end() )
+		auto it = _mapTextureId.find( pTextureID );
+		if ( it == _mapTextureId.end() )
 			return;
 
 		ImGui_ImplVulkan_RemoveTexture( static_cast<VkDescriptorSet>( pTextureID ) );
-		_mapTextureIds.erase( it );
+		_mapTextureId.erase( it );
 	}
 } // namespace sw::editor

@@ -38,13 +38,13 @@ namespace sw
 	{
 		if ( this != &other )
 		{
-			_pOwner			 = std::exchange( other._pOwner, nullptr );
-			_componentId	 = other._componentId;
-			_componentName	 = std::move( other._componentName );
-			_tickGroup		 = other._tickGroup;
+			_pOwner		   = std::exchange( other._pOwner, nullptr );
+			_componentId   = other._componentId;
+			_componentName = std::move( other._componentName );
+			_tickGroup	   = other._tickGroup;
 			_bActive.store( other._bActive.load( std::memory_order_relaxed ), std::memory_order_relaxed );
-			_bCanEverTick	   = other._bCanEverTick;
-			_reservedFlags	   = other._reservedFlags;
+			_bCanEverTick  = other._bCanEverTick;
+			_reservedFlags = other._reservedFlags;
 			_bIsPendingKill.store( other._bIsPendingKill.load( std::memory_order_relaxed ), std::memory_order_relaxed );
 		}
 		return *this;

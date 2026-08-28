@@ -42,7 +42,7 @@ namespace sw
 							  std::initializer_list<std::pair<string_view, string_view>> vars );
 
 	private:
-		unordered_map<string, string> _mapTemplates;
+		unordered_map<string, string> _mapTemplate;
 		bool						  _bLoaded = false;
 	};
 } // namespace sw

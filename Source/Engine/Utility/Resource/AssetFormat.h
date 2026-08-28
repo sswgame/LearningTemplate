@@ -104,7 +104,7 @@ namespace sw
 			}
 		};
 
-		unordered_map<MigratorKey, XmlAssetMigrator, MigratorKeyHash> _mapMigrators;
+		unordered_map<MigratorKey, XmlAssetMigrator, MigratorKeyHash> _mapMigrator;
 		bool														  _bBuiltins{ false };
 	};
 } // namespace sw

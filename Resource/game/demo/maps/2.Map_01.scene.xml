@@ -1,5 +1,5 @@
 <?xml version="1.0" ?>
-<SceneDescriptor formatVersion="0" name="2.Map_01">
+<Scene formatVersion="0" name="2.Map_01">
     <entities>
         <entity name="NEXT_DOOR_RIGHT" prefab="game/demo/prefabs/2.Map_01_NEXT_DOOR_RIGHT_0.prefab.json"/>
         <entity name="NEXT_DOOR_LEFT" prefab="game/demo/prefabs/2.Map_01_NEXT_DOOR_LEFT_1.prefab.json"/>
@@ -12,4 +12,4 @@
         <entity name="SUMMON_BANSHEE" prefab="game/demo/prefabs/2.Map_01_SUMMON_BANSHEE_8.prefab.json"/>
         <entity name="MAP_ROOM" prefab="game/demo/prefabs/2.Map_01_MAP_ROOM_9.prefab.json"/>
     </entities>
-</SceneDescriptor>
+</Scene>

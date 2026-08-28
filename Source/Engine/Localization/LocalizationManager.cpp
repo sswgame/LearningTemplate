@@ -19,12 +19,14 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "LocalizationManager" );
+
 	LocalizationManager::LocalizationManager()
 		: _mutex{}
 		, _currentLanguage{}
 		, _fallbackLanguage{ "en_US" }
-		, _mapLanguageTables{}
-		, _mapCallbacks{}
+		, _mapLanguageTable{}
+		, _mapCallback{}
 		, _nextCallbackId{ 1 }
 	{
 	}
@@ -34,11 +36,11 @@ namespace sw
 	LocalizationManager::LocalizationManager( LocalizationManager&& other ) noexcept
 	{
 		std::unique_lock<std::shared_mutex> lock( other._mutex );
-		_currentLanguage   = std::move( other._currentLanguage );
-		_fallbackLanguage  = std::move( other._fallbackLanguage );
-		_mapLanguageTables = std::move( other._mapLanguageTables );
-		_mapCallbacks	   = std::move( other._mapCallbacks );
-		_nextCallbackId	   = other._nextCallbackId;
+		_currentLanguage  = std::move( other._currentLanguage );
+		_fallbackLanguage = std::move( other._fallbackLanguage );
+		_mapLanguageTable = std::move( other._mapLanguageTable );
+		_mapCallback	  = std::move( other._mapCallback );
+		_nextCallbackId	  = other._nextCallbackId;
 	}
 
 	LocalizationManager& LocalizationManager::operator=( LocalizationManager&& other ) noexcept
@@ -49,11 +51,11 @@ namespace sw
 			std::unique_lock<std::shared_mutex> lockOther( other._mutex, std::defer_lock );
 			std::lock( lockThis, lockOther );
 
-			_currentLanguage   = std::move( other._currentLanguage );
-			_fallbackLanguage  = std::move( other._fallbackLanguage );
-			_mapLanguageTables = std::move( other._mapLanguageTables );
-			_mapCallbacks	   = std::move( other._mapCallbacks );
-			_nextCallbackId	   = other._nextCallbackId;
+			_currentLanguage  = std::move( other._currentLanguage );
+			_fallbackLanguage = std::move( other._fallbackLanguage );
+			_mapLanguageTable = std::move( other._mapLanguageTable );
+			_mapCallback	  = std::move( other._mapCallback );
+			_nextCallbackId	  = other._nextCallbackId;
 		}
 		return *this;
 	}
@@ -61,8 +63,8 @@ namespace sw
 	void LocalizationManager::clear()
 	{
 		std::unique_lock<std::shared_mutex> lock( _mutex );
-		_mapLanguageTables.clear();
-		_mapCallbacks.clear();
+		_mapLanguageTable.clear();
+		_mapCallback.clear();
 		_currentLanguage.clear();
 	}
 
@@ -70,14 +72,14 @@ namespace sw
 	{
 		if ( languageCode.empty() || filePath.empty() )
 		{
-			SW_LOG_WARNING( "[LocalizationManager] Invalid languageCode or filePath." );
+			SW_LOG_WARNING( "Invalid languageCode or filePath." );
 			return false;
 		}
 
 		string text;
 		if ( FileUtil::readTextFile( filePath, text ) == false )
 		{
-			SW_LOG_WARNING( "[LocalizationManager] Failed to read language file: %#", string( filePath ).c_str() );
+			SW_LOG_WARNING( "Failed to read language file: %#", string( filePath ).c_str() );
 			return false;
 		}
 
@@ -90,7 +92,7 @@ namespace sw
 			bSuccess = loadLanguageJson( languageCode, text );
 
 		if ( bSuccess )
-			SW_LOG_INFO( "[LocalizationManager] Loaded language '%#' from file '%#'.", string( languageCode ).c_str(), string( filePath ).c_str() );
+			SW_LOG_INFO( "Loaded language '%#' from file '%#'.", string( languageCode ).c_str(), string( filePath ).c_str() );
 
 		return bSuccess;
 	}
@@ -99,7 +101,7 @@ namespace sw
 	{
 		if ( languageCode.empty() || assetRelativePath.empty() )
 		{
-			SW_LOG_WARNING( "[LocalizationManager] Invalid languageCode or assetRelativePath." );
+			SW_LOG_WARNING( "Invalid languageCode or assetRelativePath." );
 			return false;
 		}
 
@@ -107,7 +109,7 @@ namespace sw
 		string absPath;
 		if ( ResourceUtil::readTextResource( assetRelativePath, text, &absPath ) == false )
 		{
-			SW_LOG_WARNING( "[LocalizationManager] Failed to read language resource: %#", assetRelativePath );
+			SW_LOG_WARNING( "Failed to read language resource: %#", assetRelativePath );
 			return false;
 		}
 
@@ -120,7 +122,7 @@ namespace sw
 			bSuccess = loadLanguageJson( languageCode, text );
 
 		if ( bSuccess )
-			SW_LOG_INFO( "[LocalizationManager] Loaded language '%#' from resource '%#'.", string( languageCode ).c_str(), string( absPath ).c_str() );
+			SW_LOG_INFO( "Loaded language '%#' from resource '%#'.", string( languageCode ).c_str(), string( absPath ).c_str() );
 
 		return bSuccess;
 	}
@@ -186,7 +188,7 @@ namespace sw
 	{
 		if ( directoryPath.empty() || FileUtil::directoryExists( directoryPath ) == false )
 		{
-			SW_LOG_WARNING( "[LocalizationManager] Directory does not exist: %#", string( directoryPath ).c_str() );
+			SW_LOG_WARNING( "Directory does not exist: %#", string( directoryPath ).c_str() );
 			return false;
 		}
 
@@ -208,7 +210,7 @@ namespace sw
 				++loadedCount;
 		}
 
-		SW_LOG_INFO( "[LocalizationManager] Loaded %# language files from %#", loadedCount, string( directoryPath ).c_str() );
+		SW_LOG_INFO( "Loaded %# language files from %#", loadedCount, string( directoryPath ).c_str() );
 		return loadedCount > 0;
 	}
 
@@ -260,7 +262,7 @@ namespace sw
 
 		if ( bLoadedAny == false )
 		{
-			SW_LOG_WARNING( "[LocalizationManager] Failed to load any localization files from '%#'.", directoryOrResourcePath );
+			SW_LOG_WARNING( "Failed to load any localization files from '%#'.", directoryOrResourcePath );
 			return false;
 		}
 
@@ -292,7 +294,7 @@ namespace sw
 		if ( preferredLang.empty() == false && hasLanguage( preferredLang ) )
 		{
 			setCurrentLanguage( preferredLang );
-			SW_LOG_INFO( "[LocalizationManager] Localization setup complete. Active language: '%#', Fallback: '%#'.", string( preferredLang ).c_str(), string( _fallbackLanguage ).c_str() );
+			SW_LOG_INFO( "Localization setup complete. Active language: '%#', Fallback: '%#'.", string( preferredLang ).c_str(), string( _fallbackLanguage ).c_str() );
 		}
 
 		return true;
@@ -303,7 +305,7 @@ namespace sw
 		std::shared_lock<std::shared_mutex> lock( _mutex );
 
 		vector<uint8> buffer;
-		buffer.reserve( 16 + _mapLanguageTables.size() * 1024 );
+		buffer.reserve( 16 + _mapLanguageTable.size() * 1024 );
 
 		auto appendBytes = [&]( const void* pSrc, size_t numBytes )
 		{
@@ -313,13 +315,13 @@ namespace sw
 
 		const uint32 magic		   = kLocPackBinaryMagic;
 		const uint32 version	   = kLocPackBinaryVersion;
-		const uint32 languageCount = static_cast<uint32>( _mapLanguageTables.size() );
+		const uint32 languageCount = static_cast<uint32>( _mapLanguageTable.size() );
 
 		appendBytes( &magic, sizeof( magic ) );
 		appendBytes( &version, sizeof( version ) );
 		appendBytes( &languageCount, sizeof( languageCount ) );
 
-		for ( const auto& [langCode, pTable] : _mapLanguageTables )
+		for ( const auto& [langCode, pTable] : _mapLanguageTable )
 		{
 			const uint32 codeLen = static_cast<uint32>( langCode.size() );
 			appendBytes( &codeLen, sizeof( codeLen ) );
@@ -424,7 +426,7 @@ namespace sw
 			pPtr += tableSize;
 		}
 
-		SW_LOG_INFO( "[LocalizationManager] Loaded binary localization pack '%#' (%# languages).", string( filePath ).c_str(), languageCount );
+		SW_LOG_INFO( "Loaded binary localization pack '%#' (%# languages).", string( filePath ).c_str(), languageCount );
 		return true;
 	}
 
@@ -434,7 +436,7 @@ namespace sw
 			return;
 
 		std::unique_lock<std::shared_mutex> lock( _mutex );
-		_mapLanguageTables[string( languageCode )] = std::move( pStringTable );
+		_mapLanguageTable[string( languageCode )] = std::move( pStringTable );
 		if ( _currentLanguage.empty() )
 			_currentLanguage = languageCode;
 	}
@@ -442,7 +444,7 @@ namespace sw
 	void LocalizationManager::unloadLanguage( string_view languageCode )
 	{
 		std::unique_lock<std::shared_mutex> lock( _mutex );
-		_mapLanguageTables.erase( string( languageCode ) );
+		_mapLanguageTable.erase( string( languageCode ) );
 	}
 
 	bool LocalizationManager::setCurrentLanguage( string_view languageCode )
@@ -462,7 +464,7 @@ namespace sw
 
 		if ( bChanged )
 		{
-			SW_LOG_INFO( "[LocalizationManager] Language changed: '%#' -> '%#'", string( oldLanguage ).c_str(), string( languageCode ).c_str() );
+			SW_LOG_INFO( "Language changed: '%#' -> '%#'", string( oldLanguage ).c_str(), string( languageCode ).c_str() );
 			notifyLanguageChanged( oldLanguage, languageCode );
 		}
 
@@ -490,15 +492,15 @@ namespace sw
 	bool LocalizationManager::hasLanguage( string_view languageCode ) const
 	{
 		std::shared_lock<std::shared_mutex> lock( _mutex );
-		return _mapLanguageTables.find( string( languageCode ) ) != _mapLanguageTables.end();
+		return _mapLanguageTable.find( string( languageCode ) ) != _mapLanguageTable.end();
 	}
 
 	vector<string> LocalizationManager::getAvailableLanguages() const
 	{
 		std::shared_lock<std::shared_mutex> lock( _mutex );
 		vector<string>						languageList;
-		languageList.reserve( _mapLanguageTables.size() );
-		for ( const auto& pair : _mapLanguageTables )
+		languageList.reserve( _mapLanguageTable.size() );
+		for ( const auto& pair : _mapLanguageTable )
 		{
 			languageList.push_back( pair.first );
 		}
@@ -508,7 +510,7 @@ namespace sw
 	size_t LocalizationManager::getLanguageCount() const
 	{
 		std::shared_lock<std::shared_mutex> lock( _mutex );
-		return _mapLanguageTables.size();
+		return _mapLanguageTable.size();
 	}
 
 	const utf8* LocalizationManager::getString( const hashed_string& key, const utf8* pDefaultText ) const
@@ -516,8 +518,8 @@ namespace sw
 		std::shared_lock<std::shared_mutex> lock( _mutex );
 
 		// 1) 현재 활성 언어 테이블에서 검색
-		const auto currentIter = _mapLanguageTables.find( _currentLanguage );
-		if ( currentIter != _mapLanguageTables.end() && currentIter->second != nullptr )
+		const auto currentIter = _mapLanguageTable.find( _currentLanguage );
+		if ( currentIter != _mapLanguageTable.end() && currentIter->second != nullptr )
 		{
 			const utf8* pFound = currentIter->second->getString( key );
 			if ( pFound != nullptr && pFound[0] != '\0' )
@@ -527,8 +529,8 @@ namespace sw
 		// 2) 누락 시 Fallback 언어 테이블에서 검색
 		if ( _fallbackLanguage.empty() == false && _fallbackLanguage != _currentLanguage )
 		{
-			const auto fallbackIter = _mapLanguageTables.find( _fallbackLanguage );
-			if ( fallbackIter != _mapLanguageTables.end() && fallbackIter->second != nullptr )
+			const auto fallbackIter = _mapLanguageTable.find( _fallbackLanguage );
+			if ( fallbackIter != _mapLanguageTable.end() && fallbackIter->second != nullptr )
 			{
 				const utf8* pFound = fallbackIter->second->getString( key );
 				if ( pFound != nullptr && pFound[0] != '\0' )
@@ -543,8 +545,8 @@ namespace sw
 	const utf8* LocalizationManager::getStringFromLanguage( string_view languageCode, const hashed_string& key, const utf8* pDefaultText ) const
 	{
 		std::shared_lock<std::shared_mutex> lock( _mutex );
-		const auto							iter = _mapLanguageTables.find( string( languageCode ) );
-		if ( iter != _mapLanguageTables.end() && iter->second != nullptr )
+		const auto							iter = _mapLanguageTable.find( string( languageCode ) );
+		if ( iter != _mapLanguageTable.end() && iter->second != nullptr )
 		{
 			const utf8* pFound = iter->second->getString( key );
 			if ( pFound != nullptr )
@@ -557,14 +559,14 @@ namespace sw
 	{
 		std::shared_lock<std::shared_mutex> lock( _mutex );
 
-		const auto currentIter = _mapLanguageTables.find( _currentLanguage );
-		if ( currentIter != _mapLanguageTables.end() && currentIter->second != nullptr && currentIter->second->contains( key ) )
+		const auto currentIter = _mapLanguageTable.find( _currentLanguage );
+		if ( currentIter != _mapLanguageTable.end() && currentIter->second != nullptr && currentIter->second->contains( key ) )
 			return true;
 
 		if ( _fallbackLanguage.empty() == false && _fallbackLanguage != _currentLanguage )
 		{
-			const auto fallbackIter = _mapLanguageTables.find( _fallbackLanguage );
-			if ( fallbackIter != _mapLanguageTables.end() && fallbackIter->second != nullptr && fallbackIter->second->contains( key ) )
+			const auto fallbackIter = _mapLanguageTable.find( _fallbackLanguage );
+			if ( fallbackIter != _mapLanguageTable.end() && fallbackIter->second != nullptr && fallbackIter->second->contains( key ) )
 				return true;
 		}
 
@@ -574,8 +576,8 @@ namespace sw
 	bool LocalizationManager::hasStringInLanguage( string_view languageCode, const hashed_string& key ) const
 	{
 		std::shared_lock<std::shared_mutex> lock( _mutex );
-		const auto							iter = _mapLanguageTables.find( string( languageCode ) );
-		if ( iter != _mapLanguageTables.end() && iter->second != nullptr )
+		const auto							iter = _mapLanguageTable.find( string( languageCode ) );
+		if ( iter != _mapLanguageTable.end() && iter->second != nullptr )
 			return iter->second->contains( key );
 		return false;
 	}
@@ -590,8 +592,8 @@ namespace sw
 	const StringTable* LocalizationManager::getLanguageTable( string_view languageCode ) const
 	{
 		std::shared_lock<std::shared_mutex> lock( _mutex );
-		const auto							iter = _mapLanguageTables.find( string( languageCode ) );
-		if ( iter != _mapLanguageTables.end() )
+		const auto							iter = _mapLanguageTable.find( string( languageCode ) );
+		if ( iter != _mapLanguageTable.end() )
 			return iter->second.get();
 		return nullptr;
 	}
@@ -599,7 +601,7 @@ namespace sw
 	StringTable* LocalizationManager::getOrCreateLanguageTable( string_view languageCode )
 	{
 		std::unique_lock<std::shared_mutex> lock( _mutex );
-		auto&								pTable = _mapLanguageTables[string( languageCode )];
+		auto&								pTable = _mapLanguageTable[string( languageCode )];
 		if ( pTable == nullptr )
 			pTable = make_unique<StringTable>();
 		return pTable.get();
@@ -612,7 +614,7 @@ namespace sw
 
 		std::unique_lock<std::shared_mutex> lock( _mutex );
 		const uint32						callbackId = _nextCallbackId++;
-		_mapCallbacks[callbackId]					   = std::move( callback );
+		_mapCallback[callbackId]					   = std::move( callback );
 		return callbackId;
 	}
 
@@ -622,7 +624,7 @@ namespace sw
 			return;
 
 		std::unique_lock<std::shared_mutex> lock( _mutex );
-		_mapCallbacks.erase( callbackId );
+		_mapCallback.erase( callbackId );
 	}
 
 	void LocalizationManager::notifyLanguageChanged( string_view oldLanguage, string_view newLanguage )
@@ -630,8 +632,8 @@ namespace sw
 		vector<LanguageChangedCallback> callbackList;
 		{
 			std::shared_lock<std::shared_mutex> lock( _mutex );
-			callbackList.reserve( _mapCallbacks.size() );
-			for ( const auto& pair : _mapCallbacks )
+			callbackList.reserve( _mapCallback.size() );
+			for ( const auto& pair : _mapCallback )
 			{
 				if ( pair.second.isBound() )
 					callbackList.push_back( pair.second );

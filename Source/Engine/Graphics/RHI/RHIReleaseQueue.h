@@ -65,8 +65,8 @@ namespace sw
 
 		uint32							   _frameLatency;
 		uint64							   _currentFrame;
-		vector<FrameDeferredEntry>		   _listFrameEntries;
-		vector<GpuDeferredEntry>		   _listGpuEntries;
+		vector<FrameDeferredEntry>		   _listFrameEntry;
+		vector<GpuDeferredEntry>		   _listGpuEntry;
 		vector<RHIResourceReleaseDelegate> _listReadyToDestroyBuffer;
 		mutable SpinLock				   _spinLock;
 	};

@@ -137,7 +137,7 @@ namespace sw
 			string									   _originalModulePath;
 			string									   _tempModulePath;
 			vector<string>							   _listDependsOn;
-			vector<EventDispatcher::EventSubscription> _listEventSubscriptions;
+			vector<EventDispatcher::EventSubscription> _listEventSubscription;
 			void*									   _pLibraryModule;
 			uint64									   _loadedSourceMtime;
 			uint64									   _debounceMtime;

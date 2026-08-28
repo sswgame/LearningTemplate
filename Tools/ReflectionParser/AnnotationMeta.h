@@ -69,7 +69,7 @@ namespace sw
 		static uint64 hashScopeAndKey( string_view scope, string_view key ) noexcept;
 
 		unordered_map<uint64, AnnotationBinding> _mapBare; ///< (scope, alias) 해시 → 바인딩
-		unordered_map<uint64, AnnotationBinding> _mapKeys;
+		unordered_map<uint64, AnnotationBinding> _mapKey;
 		bool									 _bLoaded = false;
 	};
 } // namespace sw

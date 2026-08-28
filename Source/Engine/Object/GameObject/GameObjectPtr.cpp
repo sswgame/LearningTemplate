@@ -50,10 +50,10 @@ namespace sw
 
 	GameObjectPtr& GameObjectPtr::operator=( GameObject* pTarget )
 	{
-		_targetName		  = pTarget != nullptr ? pTarget->getName() : hashed_string{};
-		_pCachedPtr		  = pTarget;
-		_cachedObjectId	  = pTarget != nullptr ? pTarget->getObjectId() : 0;
-		_pManager		  = pTarget != nullptr ? pTarget->getManager() : nullptr;
+		_targetName		= pTarget != nullptr ? pTarget->getName() : hashed_string{};
+		_pCachedPtr		= pTarget;
+		_cachedObjectId = pTarget != nullptr ? pTarget->getObjectId() : 0;
+		_pManager		= pTarget != nullptr ? pTarget->getManager() : nullptr;
 		return *this;
 	}
 
@@ -61,10 +61,10 @@ namespace sw
 	{
 		if ( this != &other )
 		{
-			_targetName		  = other._targetName;
-			_pCachedPtr		  = other._pCachedPtr;
-			_cachedObjectId	  = other._cachedObjectId;
-			_pManager		  = other._pManager;
+			_targetName		= other._targetName;
+			_pCachedPtr		= other._pCachedPtr;
+			_cachedObjectId = other._cachedObjectId;
+			_pManager		= other._pManager;
 		}
 		return *this;
 	}
@@ -89,8 +89,8 @@ namespace sw
 	{
 		if ( _targetName.getHash() == 0 )
 		{
-			_pCachedPtr		  = nullptr;
-			_cachedObjectId	  = 0;
+			_pCachedPtr		= nullptr;
+			_cachedObjectId = 0;
 			return;
 		}
 

@@ -36,14 +36,14 @@ namespace sw
 		void onDestroy() override;
 		void onTick( float32 deltaTime ) override;
 
-		int32 getColliderType() const;
-		void  setColliderType( int32 type );
+		int32 getColliderType() const { return _colliderType; }
+		void  setColliderType( int32 type ) { _colliderType = type; }
 
-		string getOffsetPos() const;
-		void   setOffsetPos( const string& pos );
+		string getOffsetPos() const { return _offsetPos; }
+		void   setOffsetPos( const string& pos ) { _offsetPos = pos; }
 
-		string getOffsetScale() const;
-		void   setOffsetScale( const string& scale );
+		string getOffsetScale() const { return _offsetScale; }
+		void   setOffsetScale( const string& scale ) { _offsetScale = scale; }
 
 		float2 getOffsetPosition() const;
 		float2 getOffsetScaleVec() const;
@@ -62,7 +62,7 @@ namespace sw
 		PROPERTY()
 		string _offsetPos;
 		PROPERTY()
-		string _offsetScale;
+		string		 _offsetScale;
 		float2		 _cachedMin;
 		float2		 _cachedMax;
 		ObjectHandle _physicsBody;

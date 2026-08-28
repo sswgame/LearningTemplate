@@ -11,7 +11,6 @@
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-
 #include "Engine/Reflection/ReflectionCast.h"
 
 namespace sw
@@ -99,14 +98,14 @@ namespace sw
 
 	void GpuScene::clear()
 	{
-		_listInstances.clear();
-		_listOpaqueBatches.clear();
-		_listTransparentBatches.clear();
-		_listAllBatches.clear();
+		_listInstance.clear();
+		_listOpaqueBatch.clear();
+		_listTransparentBatch.clear();
+		_listAllBatch.clear();
 		_indirectCommandCount = 0;
-		_listScratchCandidates.clear();
+		_listScratchCandidate.clear();
 		_listScratchRaw.clear();
-		_listScratchOpaqueEntries.clear();
+		_listScratchOpaqueEntry.clear();
 		_listScratchTransparentIdx.clear();
 		invalidateBuildCache();
 		_materialRetire.clear();
@@ -114,7 +113,7 @@ namespace sw
 
 	void GpuScene::syncMaterialPins()
 	{
-		_materialRetire.syncFromBatches( _listOpaqueBatches, _listTransparentBatches );
+		_materialRetire.syncFromBatches( _listOpaqueBatch, _listTransparentBatch );
 	}
 
 	void GpuMaterialRetireQueue::clear()
@@ -191,8 +190,8 @@ namespace sw
 	uint64 GpuScene::hashCandidates() const
 	{
 		uint64 h = 14695981039346656037ull;
-		mixHash( h, static_cast<uint64>( _listScratchCandidates.size() ) );
-		for ( const DrawCandidate& cand : _listScratchCandidates )
+		mixHash( h, static_cast<uint64>( _listScratchCandidate.size() ) );
+		for ( const DrawCandidate& cand : _listScratchCandidate )
 		{
 			mixHash( h, reinterpret_cast<uintptr_t>( cand._pMesh ) );
 			mixHash( h, reinterpret_cast<uintptr_t>( cand._pMaterial ) );
@@ -207,27 +206,27 @@ namespace sw
 
 	void GpuScene::rebuildPartitionTables()
 	{
-		const uint32 count = static_cast<uint32>( _listScratchCandidates.size() );
-		_listScratchOpaqueEntries.clear();
-		_listScratchOpaqueEntries.reserve( count );
+		const uint32 count = static_cast<uint32>( _listScratchCandidate.size() );
+		_listScratchOpaqueEntry.clear();
+		_listScratchOpaqueEntry.reserve( count );
 		_listScratchTransparentIdx.clear();
 		_listScratchTransparentIdx.reserve( count );
 
 		for ( uint32 instanceIndex = 0; instanceIndex < count; ++instanceIndex )
 		{
-			const DrawCandidate& cand = _listScratchCandidates[instanceIndex];
+			const DrawCandidate& cand = _listScratchCandidate[instanceIndex];
 			if ( static_cast<RHIBlendMode>( cand._blendMode ) == RHIBlendMode::Transparent )
 			{
 				_listScratchTransparentIdx.push_back( instanceIndex );
 				continue;
 			}
 			SortKey key{ cand._pMesh, cand._pMaterial, cand._pInstance };
-			_listScratchOpaqueEntries.push_back( SortEntry{ key, instanceIndex } );
+			_listScratchOpaqueEntry.push_back( SortEntry{ key, instanceIndex } );
 		}
 
-		if ( _listScratchOpaqueEntries.empty() == false )
+		if ( _listScratchOpaqueEntry.empty() == false )
 		{
-			std::sort( _listScratchOpaqueEntries.begin(), _listScratchOpaqueEntries.end(), []( const SortEntry& entryA, const SortEntry& entryB )
+			std::sort( _listScratchOpaqueEntry.begin(), _listScratchOpaqueEntry.end(), []( const SortEntry& entryA, const SortEntry& entryB )
 			{
 				if ( entryA._key._pMesh != entryB._key._pMesh )
 					return entryA._key._pMesh < entryB._key._pMesh;
@@ -240,7 +239,7 @@ namespace sw
 
 	void GpuScene::fillScratchRange( uint32 start, uint32 end )
 	{
-		fillRangeVal( _listScratchCandidates, _listScratchRaw, start, end );
+		fillRangeVal( _listScratchCandidate, _listScratchRaw, start, end );
 	}
 
 	void GpuScene::buildFromScene( Scene* pScene, const float32 cameraPos[3],
@@ -261,8 +260,8 @@ namespace sw
 
 		pObjects->flushSceneTransforms();
 
-		_listScratchCandidates.clear();
-		_listScratchCandidates.reserve( 1024 );
+		_listScratchCandidate.clear();
+		_listScratchCandidate.reserve( 1024 );
 
 		const vector<GameObject*> listObjects = pObjects->getAllGameObjects();
 		for ( GameObject* pObj : listObjects )
@@ -283,17 +282,17 @@ namespace sw
 				DrawCandidate  cand{};
 				Memory::copy( cand._world, &world._11, sizeof( cand._world ) );
 				extractTranslation( world, cand._boundsCenter );
-				cand._boundsRadius = pMeshComp->getBoundsRadius();
-				cand._blendMode	   = static_cast<uint32>( pMeshComp->getBlendMode() );
-				cand._pMesh		   = mesh.get();
-				cand._pMaterial	   = pMeshComp->getMaterial();
+				cand._boundsRadius							  = pMeshComp->getBoundsRadius();
+				cand._blendMode								  = static_cast<uint32>( pMeshComp->getBlendMode() );
+				cand._pMesh									  = mesh.get();
+				cand._pMaterial								  = pMeshComp->getMaterial();
 				shared_ptr<MaterialInstance> materialInstance = pMeshComp->getMaterialInstance();
-				cand._pInstance	   = materialInstance.get();
-				_listScratchCandidates.push_back( cand );
+				cand._pInstance								  = materialInstance.get();
+				_listScratchCandidate.push_back( cand );
 			}
 		}
 
-		if ( _listScratchCandidates.empty() )
+		if ( _listScratchCandidate.empty() )
 		{
 			clear();
 			return;
@@ -306,13 +305,13 @@ namespace sw
 
 		const uint64 contentHash = hashCandidates();
 		const bool	 bContentSame =
-			_bHasBuildCache != 0 && contentHash == _lastContentHash && _listInstances.empty() == false;
+			_bHasBuildCache != 0 && contentHash == _lastContentHash && _listInstance.empty() == false;
 		const bool bCamSame = _bHasBuildCache != 0 && cameraNearlyEqual( arrCam, _lastCameraPos );
 
 		if ( bContentSame && bCamSame )
 			return;
 
-		const uint32 count = static_cast<uint32>( _listScratchCandidates.size() );
+		const uint32 count = static_cast<uint32>( _listScratchCandidate.size() );
 		_listScratchRaw.resize( count );
 
 		if ( bContentSame == false )
@@ -329,17 +328,17 @@ namespace sw
 				pTaskManager->waitStage( _snapshotStage );
 			}
 			else
-				fillRangeVal( _listScratchCandidates, _listScratchRaw, 0, count );
+				fillRangeVal( _listScratchCandidate, _listScratchRaw, 0, count );
 
 			rebuildPartitionTables();
 		}
 
 		sortTransparent( arrCam );
 
-		_listInstances.clear();
-		_listOpaqueBatches.clear();
-		_listTransparentBatches.clear();
-		_listAllBatches.clear();
+		_listInstance.clear();
+		_listOpaqueBatch.clear();
+		_listTransparentBatch.clear();
+		_listAllBatch.clear();
 		buildBatches();
 
 		_lastContentHash = contentHash;
@@ -350,31 +349,31 @@ namespace sw
 
 	bool GpuScene::upload( IRHIDevice* pDevice )
 	{
-		if ( pDevice == nullptr || _listInstances.empty() || _listAllBatches.empty() )
+		if ( pDevice == nullptr || _listInstance.empty() || _listAllBatch.empty() )
 			return false;
 
 		// RT-owned context: pack MaterialInstance overrides and upload meshes in a single pass.
-		applyInstanceCbsVal( pDevice, _listAllBatches );
-		uploadMeshesVal( pDevice, _listAllBatches );
+		applyInstanceCbsVal( pDevice, _listAllBatch );
+		uploadMeshesVal( pDevice, _listAllBatch );
 
-		const size_t opaqueCount = _listOpaqueBatches.size();
+		const size_t opaqueCount = _listOpaqueBatch.size();
 		for ( size_t batchIndex = 0; batchIndex < opaqueCount; ++batchIndex )
 		{
-			_listOpaqueBatches[batchIndex]._materialCb	 = _listAllBatches[batchIndex]._materialCb;
-			_listOpaqueBatches[batchIndex]._vertexBuffer = _listAllBatches[batchIndex]._vertexBuffer;
+			_listOpaqueBatch[batchIndex]._materialCb   = _listAllBatch[batchIndex]._materialCb;
+			_listOpaqueBatch[batchIndex]._vertexBuffer = _listAllBatch[batchIndex]._vertexBuffer;
 		}
-		for ( size_t batchIndex = 0; batchIndex < _listTransparentBatches.size(); ++batchIndex )
+		for ( size_t batchIndex = 0; batchIndex < _listTransparentBatch.size(); ++batchIndex )
 		{
-			_listTransparentBatches[batchIndex]._materialCb	  = _listAllBatches[opaqueCount + batchIndex]._materialCb;
-			_listTransparentBatches[batchIndex]._vertexBuffer = _listAllBatches[opaqueCount + batchIndex]._vertexBuffer;
+			_listTransparentBatch[batchIndex]._materialCb	= _listAllBatch[opaqueCount + batchIndex]._materialCb;
+			_listTransparentBatch[batchIndex]._vertexBuffer = _listAllBatch[opaqueCount + batchIndex]._vertexBuffer;
 		}
 
 		// CPU 스냅샷이 그대로면 인스턴스/간접 버퍼 재업로드 생략.
 		if ( _bCpuDirty == 0 && _instanceBuffer != 0 && _indirectArgsBuffer != 0 )
 			return true;
 
-		const uint32 instanceCount = static_cast<uint32>( _listInstances.size() );
-		const uint32 argsCount	   = static_cast<uint32>( _listAllBatches.size() );
+		const uint32 instanceCount = static_cast<uint32>( _listInstance.size() );
+		const uint32 argsCount	   = static_cast<uint32>( _listAllBatch.size() );
 
 		if ( _instanceBuffer == 0 || _instanceCapacity < instanceCount )
 		{
@@ -391,13 +390,13 @@ namespace sw
 			desc._elementCount = instanceCount;
 			desc._sizeBytes	   = desc._elementSize * desc._elementCount;
 			desc._usage		   = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource;
-			desc._pInitialData = _listInstances.data();
+			desc._pInitialData = _listInstance.data();
 			_instanceBuffer	   = pDevice->getResource()->createBuffer( desc );
 			if ( _instanceBuffer == 0 )
 			{
 				_instanceBuffer = pDevice->getResource()->createStructuredBuffer( desc._elementSize, desc._elementCount );
 				if ( _instanceBuffer != 0 )
-					pDevice->getResource()->updateStructuredBuffer( _instanceBuffer, _listInstances.data(), desc._sizeBytes );
+					pDevice->getResource()->updateStructuredBuffer( _instanceBuffer, _listInstance.data(), desc._sizeBytes );
 			}
 			if ( _instanceBuffer != 0 )
 			{
@@ -407,17 +406,17 @@ namespace sw
 		}
 		else
 		{
-			pDevice->getResource()->updateStructuredBuffer( _instanceBuffer, _listInstances.data(),
+			pDevice->getResource()->updateStructuredBuffer( _instanceBuffer, _listInstance.data(),
 															instanceCount * static_cast<uint32>( sizeof( GpuInstance ) ) );
 		}
 
 		vector<RHIDrawIndirectCommand> listCmds( argsCount );
 		for ( uint32 argIndex = 0; argIndex < argsCount; ++argIndex )
 		{
-			listCmds[argIndex]._vertexCount			  = _listAllBatches[argIndex]._vertexCount;
-			listCmds[argIndex]._instanceCount		  = _listAllBatches[argIndex]._instanceCount;
+			listCmds[argIndex]._vertexCount			  = _listAllBatch[argIndex]._vertexCount;
+			listCmds[argIndex]._instanceCount		  = _listAllBatch[argIndex]._instanceCount;
 			listCmds[argIndex]._startVertexLocation	  = 0;
-			listCmds[argIndex]._startInstanceLocation = _listAllBatches[argIndex]._instanceBase;
+			listCmds[argIndex]._startInstanceLocation = _listAllBatch[argIndex]._instanceBase;
 		}
 
 		if ( _indirectArgsBuffer == 0 || _argsCapacity < argsCount )
@@ -494,20 +493,20 @@ namespace sw
 
 	void GpuScene::buildBatches()
 	{
-		_listInstances.reserve( _listScratchCandidates.size() );
+		_listInstance.reserve( _listScratchCandidate.size() );
 
-		if ( _listScratchOpaqueEntries.empty() == false )
+		if ( _listScratchOpaqueEntry.empty() == false )
 		{
 			uint32 batchStart{ 0 };
-			for ( uint32 entryIndex = 1; entryIndex <= _listScratchOpaqueEntries.size(); ++entryIndex )
+			for ( uint32 entryIndex = 1; entryIndex <= _listScratchOpaqueEntry.size(); ++entryIndex )
 			{
-				if ( entryIndex == _listScratchOpaqueEntries.size() || ( _listScratchOpaqueEntries[entryIndex]._key == _listScratchOpaqueEntries[batchStart]._key ) == false )
+				if ( entryIndex == _listScratchOpaqueEntry.size() || ( _listScratchOpaqueEntry[entryIndex]._key == _listScratchOpaqueEntry[batchStart]._key ) == false )
 				{
-					const SortKey& key = _listScratchOpaqueEntries[batchStart]._key;
+					const SortKey& key = _listScratchOpaqueEntry[batchStart]._key;
 					GpuMeshBatch   batch{};
 					batch._pMesh			 = key._pMesh;
 					batch._vertexCount		 = batch._pMesh->getVertexCount();
-					batch._instanceBase		 = static_cast<uint32>( _listInstances.size() );
+					batch._instanceBase		 = static_cast<uint32>( _listInstance.size() );
 					batch._instanceCount	 = entryIndex - batchStart;
 					batch._blendMode		 = RHIBlendMode::Opaque;
 					batch._pMaterialInstance = key._pInstance;
@@ -516,16 +515,16 @@ namespace sw
 					else
 						batch._materialCb = key._pMaterial ? key._pMaterial->getDescriptorIndex() : kInvalidDescriptorIndex;
 
-					const uint32 batchIndex = static_cast<uint32>( _listAllBatches.size() );
+					const uint32 batchIndex = static_cast<uint32>( _listAllBatch.size() );
 					for ( uint32 batchEntryIndex = batchStart; batchEntryIndex < entryIndex; ++batchEntryIndex )
 					{
-						uint32		srcIdx	 = _listScratchOpaqueEntries[batchEntryIndex]._srcIdx;
+						uint32		srcIdx	 = _listScratchOpaqueEntry[batchEntryIndex]._srcIdx;
 						GpuInstance inst	 = _listScratchRaw[srcIdx];
 						inst._meshBatchIndex = batchIndex;
-						_listInstances.push_back( inst );
+						_listInstance.push_back( inst );
 					}
-					_listOpaqueBatches.push_back( batch );
-					_listAllBatches.push_back( batch );
+					_listOpaqueBatch.push_back( batch );
+					_listAllBatch.push_back( batch );
 
 					batchStart = entryIndex;
 				}
@@ -542,17 +541,17 @@ namespace sw
 				bool	   bKeyChange{ false };
 				if ( bEnd == false )
 				{
-					const DrawCandidate& a = _listScratchCandidates[_listScratchTransparentIdx[batchStart]];
-					const DrawCandidate& b = _listScratchCandidates[_listScratchTransparentIdx[entryIndex]];
+					const DrawCandidate& a = _listScratchCandidate[_listScratchTransparentIdx[batchStart]];
+					const DrawCandidate& b = _listScratchCandidate[_listScratchTransparentIdx[entryIndex]];
 					bKeyChange			   = ( a._pMesh != b._pMesh ) || ( a._pMaterial != b._pMaterial ) || ( a._pInstance != b._pInstance );
 				}
 				if ( bEnd || bKeyChange )
 				{
-					const DrawCandidate& cand = _listScratchCandidates[_listScratchTransparentIdx[batchStart]];
+					const DrawCandidate& cand = _listScratchCandidate[_listScratchTransparentIdx[batchStart]];
 					GpuMeshBatch		 batch{};
 					batch._pMesh			 = cand._pMesh;
 					batch._vertexCount		 = batch._pMesh->getVertexCount();
-					batch._instanceBase		 = static_cast<uint32>( _listInstances.size() );
+					batch._instanceBase		 = static_cast<uint32>( _listInstance.size() );
 					batch._instanceCount	 = entryIndex - batchStart;
 					batch._blendMode		 = RHIBlendMode::Transparent;
 					batch._pMaterialInstance = cand._pInstance;
@@ -561,16 +560,16 @@ namespace sw
 					else
 						batch._materialCb = cand._pMaterial ? cand._pMaterial->getDescriptorIndex() : kInvalidDescriptorIndex;
 
-					const uint32 batchIndex = static_cast<uint32>( _listAllBatches.size() );
+					const uint32 batchIndex = static_cast<uint32>( _listAllBatch.size() );
 					for ( uint32 batchEntryIndex = batchStart; batchEntryIndex < entryIndex; ++batchEntryIndex )
 					{
 						const uint32 srcIdx	 = _listScratchTransparentIdx[batchEntryIndex];
 						GpuInstance	 inst	 = _listScratchRaw[srcIdx];
 						inst._meshBatchIndex = batchIndex;
-						_listInstances.push_back( inst );
+						_listInstance.push_back( inst );
 					}
-					_listTransparentBatches.push_back( batch );
-					_listAllBatches.push_back( batch );
+					_listTransparentBatch.push_back( batch );
+					_listAllBatch.push_back( batch );
 					batchStart = entryIndex;
 				}
 			}

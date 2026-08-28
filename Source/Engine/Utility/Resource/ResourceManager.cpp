@@ -12,6 +12,8 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "ResourceManager" );
+
 	ResourceManager::ResourceManager()
 		: _assetDatabase{}
 		, _assetFormatRegistry{}
@@ -82,7 +84,7 @@ namespace sw
 		if ( relPath.empty() )
 			return;
 
-		SW_LOG_INFO( "[ResourceManager] Hot-Reloading asset: %#", relPath.c_str() );
+		SW_LOG_INFO( "Hot-Reloading asset: %#", relPath.c_str() );
 
 		const string extension{ FileUtil::getExtension( ev._filename ) };
 		if ( extension == ".mat" )

@@ -103,18 +103,18 @@ namespace sw
 		if ( this != &other )
 		{
 			Component::operator=( std::move( other ) );
-			_localPosition			  = other._localPosition;
-			_localRotation			  = other._localRotation;
-			_localScale				  = other._localScale;
-			_attachOwner			  = other._attachOwner;
-			_attachComponent		  = other._attachComponent;
-			_cachedWorldPosition	  = other._cachedWorldPosition;
-			_cachedWorldMatrix		  = other._cachedWorldMatrix;
-			_cachedWorldPositionLWC	  = other._cachedWorldPositionLWC;
-			_bIsTransformDirty		  = other._bIsTransformDirty;
-			_bHasDirtyDescendant	  = other._bHasDirtyDescendant;
-			_reservedTransform		  = other._reservedTransform;
-			_pParent				  = nullptr;
+			_localPosition			= other._localPosition;
+			_localRotation			= other._localRotation;
+			_localScale				= other._localScale;
+			_attachOwner			= other._attachOwner;
+			_attachComponent		= other._attachComponent;
+			_cachedWorldPosition	= other._cachedWorldPosition;
+			_cachedWorldMatrix		= other._cachedWorldMatrix;
+			_cachedWorldPositionLWC = other._cachedWorldPositionLWC;
+			_bIsTransformDirty		= other._bIsTransformDirty;
+			_bHasDirtyDescendant	= other._bHasDirtyDescendant;
+			_reservedTransform		= other._reservedTransform;
+			_pParent				= nullptr;
 			_listChildren.clear();
 			other._pParent = nullptr;
 			other._listChildren.clear();
@@ -486,8 +486,8 @@ namespace sw
 
 	void SceneComponent::syncAttachSerializeFields() const
 	{
-		_attachOwner	  = {};
-		_attachComponent  = {};
+		_attachOwner	 = {};
+		_attachComponent = {};
 		if ( _pParent == nullptr )
 			return;
 

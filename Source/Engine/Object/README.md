@@ -14,16 +14,15 @@
 | **GameObject** | 이름·태그·수명을 가진 “상자”. 로직은 거의 없고 컴포넌트를 붙입니다. |
 | **Component** | `onBeginPlay` / `onTick` / `onEndPlay` 로 동작하는 실제 기능. |
 | **GameObjectManager** | 한 씬 안의 GO 생성·검색·틱·지연 삭제. |
-| **Registry (ECS)** | 컴포넌트 데이터를 타입별 풀에 보관. Manager가 내부적으로 사용. |
 | **Tag** | `"Player"`, `"Bullet"` 같은 표식. 검색·필터에 사용. |
 
 ```text
 Scene
  └─ GameObjectManager
      ├─ GameObject "Player"
-     │    ├─ SceneComponent   (위치·계층)
-     │    ├─ PlayerComponent  (입력·이동)
-     │    └─ UnitStatsData    (HP 등 ECS 데이터)
+     │    ├─ SceneComponent      (위치·계층)
+     │    ├─ PlayerComponent     (입력·이동)
+     │    └─ UnitStatsComponent  (HP 등 스탯 데이터)
      └─ GameObject "Slime"
           ├─ SceneComponent
           └─ MonsterComponent
@@ -44,13 +43,11 @@ Object/
 │  ├─ Component.h
 │  ├─ SceneComponent.*  # 트랜스폼·부모/자식
 │  ├─ TagSystem.*       # TagID / TagContainer
-│  ├─ 2D/ · 3D/         # Sprite, Mesh, Collider 등
-│  └─ EcsDataUtil.h     # HP 같은 순수 데이터 구조 부착 헬퍼
+│  └─ 2D/ · 3D/         # Sprite, Mesh, Collider 등
 └─ Resource/Prefab/     # 프리팹 로드·스폰
 ```
 
-게임 코드(`Source/Games`)는 **Registry를 직접 만지지 않습니다.**  
-항상 `GameObject` / `GameObjectManager` API를 쓰세요. (`GameObjectManagerInternal.h`는 Games에서 include 금지)
+게임 코드(`Source/Games`)는 항상 **`GameObject` / `GameObjectManager` API**를 통해 컴포넌트를 부착하고 수명을 관리합니다.
 
 ---
 
@@ -67,9 +64,8 @@ flowchart TD
   E --> F[지연된 트랜스폼 적용]
   F --> G[deferPostTick 실행<br/>스폰·addComponent·데미지 등]
   G --> H[pending GO 병합]
-  H --> I[Registry CommandBuffer flush<br/>emplace / remove]
-  I --> J[필요 시 트랜스폼 재 flush]
-  J --> K[지연 삭제 처리]
+  H --> I[필요 시 트랜스폼 재 flush]
+  I --> J[지연 삭제 처리]
 ```
 
 ### 초심자가 꼭 기억할 것
@@ -81,15 +77,12 @@ flowchart TD
 ```mermaid
 flowchart LR
   subgraph during ["onTick 중 (동결)"]
-    A1["addComponent&lt;T&gt;()"] --> A2["큐에 쌓임"]
+    A1["addComponent&lt;T&gt;()"] --> A2["지연 큐에 쌓임"]
     A2 --> A3["반환값 = nullptr"]
-    B1["Registry::emplace / remove"] --> B2["CommandBuffer"]
   end
   subgraph after ["finishTick 이후"]
     C1["deferPostTick 실행"]
-    C2["CommandBuffer flush"]
     C1 --> C3["컴포넌트 실제로 생김"]
-    C2 --> C3
   end
   during --> after
 ```
@@ -258,7 +251,6 @@ mgr->destroyComponentDeferred( comp );
 | `onTick`에서 `addComponent` 후 바로 `->` | `nullptr` 역참조 | `executeOrDeferPostTick` 안에 생성+초기화 |
 | tick 중 `attachToParent` | 레이스 / 크래시 | 틱 밖 또는 지연 큐 (계층 API는 동결 중 거부) |
 | Games에서 `engine::getResourceManager` | 레이어 위반 | `game::getResourceManager()` |
-| Registry / Internal 헤더를 게임에서 include | lint 실패 | `GameObject` API만 사용 |
 | 태그 추가 직후 같은 프레임에 `findByTag` | 아직 안 보일 수 있음 | post-tick 이후, 또는 같은 deferred 블록 안에서 처리 |
 
 ---
@@ -269,20 +261,15 @@ mgr->destroyComponentDeferred( comp );
 flowchart TB
   subgraph auto ["자동 지연"]
     AC["GameObject::addComponent / ByName"]
-    EM["Registry::emplace"]
-    RM["Registry::remove"]
     TG["addTag / removeTag"]
     DM["UnitStats takeDamage / heal<br/>게임프레임워크"]
   end
   subgraph when ["동결 중이면"]
     PT["GameObjectManager::deferPostTick"]
-    CB["Registry::CommandBuffer"]
   end
   AC --> PT
   TG --> PT
   DM --> PT
-  EM --> CB
-  RM --> CB
 ```
 
 - **GO + 컴포넌트 + 초기화**가 한 세트면 → 직접 `executeOrDeferPostTick` 으로 감싸는 것이 가장 읽기 쉽습니다.  

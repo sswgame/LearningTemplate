@@ -2,6 +2,8 @@
 
 #include "Engine/Serialization/Format/BinarySerializer.h"
 
+#include "Core/Compression/CompressionStream.h"
+
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Serialization/Core/BinaryStream.h"
 #include "Engine/Serialization/Core/SchemaMigrate.h"
@@ -9,6 +11,8 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "BinarySerializer" );
+
 	namespace
 	{
 		bool deserializeUntransacted( void* pInstance, const TypeInfo& typeInfo, const uint8* pData, size_t dataSize, const SerializeContext& ctx )
@@ -19,8 +23,11 @@ namespace sw
 				return false;
 
 			const vector<PropertyInfo>& listProps = typeInfo.getPropertiesWithBase();
+			const size_t				numProps  = listProps.size();
+			uint64						seenBitmask{ 0 };
 			unordered_set<uint32>		uniqueSeenPropHashes;
-			uniqueSeenPropHashes.reserve( listProps.size() );
+			if ( numProps > 64 )
+				uniqueSeenPropHashes.reserve( numProps );
 
 			for ( uint32 propIndex = 0; propIndex < propCount; ++propIndex )
 			{
@@ -34,12 +41,14 @@ namespace sw
 				if ( payloadStart + payloadSize > dataSize )
 					return false;
 
-				const PropertyInfo* pTargetProp = nullptr;
-				for ( const PropertyInfo& prop : listProps )
+				const PropertyInfo* pTargetProp	 = nullptr;
+				size_t				matchedIndex = 0;
+				for ( size_t propSearchIdx = 0; propSearchIdx < numProps; ++propSearchIdx )
 				{
-					if ( prop.matchesNameHash( tagHash ) )
+					if ( listProps[propSearchIdx].matchesNameHash( tagHash ) )
 					{
-						pTargetProp = &prop;
+						pTargetProp	 = &listProps[propSearchIdx];
+						matchedIndex = propSearchIdx;
 						break;
 					}
 				}
@@ -48,18 +57,18 @@ namespace sw
 				{
 					if ( ctx.allowUnknownProperties() )
 					{
-						// Skip payload, no need to update stream offset if we recreate stream, but wait, we need to advance the main reader
-						BinaryStreamReader skipReader( pData, dataSize );
-						// Wait, it's easier to just recreate reader at next prop
+						reader.skip( payloadSize );
+						continue;
 					}
-					else
-					{
-						return false;
-					}
+					return false;
 				}
 
 				const PropertyInfo& prop = *pTargetProp;
-				uniqueSeenPropHashes.insert( prop.getNameHash() );
+				if ( numProps <= 64 )
+					seenBitmask |= ( 1ULL << matchedIndex );
+				else
+					uniqueSeenPropHashes.insert( prop.getNameHash() );
+
 				void* pPropPtr = prop.getValuePtr<void>( pInstance );
 
 				if ( wireTypeHash != 0 && wireTypeHash != prop._typeName.getHash() )
@@ -91,11 +100,19 @@ namespace sw
 			}
 
 			// Omitted tags: apply PROPERTY(Default) when present (Binary is tag-driven, not TypeInfo-driven).
-			for ( const PropertyInfo& prop : listProps )
+			for ( size_t propIdx = 0; propIdx < numProps; ++propIdx )
 			{
-				if ( uniqueSeenPropHashes.find( prop.getNameHash() ) != uniqueSeenPropHashes.end() )
-					continue;
-				applyPropertyDefault( prop.getValuePtr<void>( pInstance ), prop, ctx );
+				if ( numProps <= 64 )
+				{
+					if ( ( seenBitmask & ( 1ULL << propIdx ) ) != 0 )
+						continue;
+				}
+				else
+				{
+					if ( uniqueSeenPropHashes.find( listProps[propIdx].getNameHash() ) != uniqueSeenPropHashes.end() )
+						continue;
+				}
+				applyPropertyDefault( listProps[propIdx].getValuePtr<void>( pInstance ), listProps[propIdx], ctx );
 			}
 
 			return true;
@@ -201,8 +218,11 @@ namespace sw
 			return false;
 
 		const vector<PropertyInfo>& listProps = typeInfo.getPropertiesWithBase();
+		const size_t				numProps  = listProps.size();
+		uint64						seenBitmask{ 0 };
 		unordered_set<uint32>		uniqueSeenPropHashes;
-		uniqueSeenPropHashes.reserve( listProps.size() );
+		if ( numProps > 64 )
+			uniqueSeenPropHashes.reserve( numProps );
 
 		for ( uint32 propIndex = 0; propIndex < propCount; ++propIndex )
 		{
@@ -216,12 +236,14 @@ namespace sw
 			if ( payloadStart + payloadSize > dataSize )
 				return false;
 
-			const PropertyInfo* pTargetProp = nullptr;
-			for ( const PropertyInfo& prop : listProps )
+			const PropertyInfo* pTargetProp	 = nullptr;
+			size_t				matchedIndex = 0;
+			for ( size_t propSearchIdx = 0; propSearchIdx < numProps; ++propSearchIdx )
 			{
-				if ( prop.matchesNameHash( tagHash ) )
+				if ( listProps[propSearchIdx].matchesNameHash( tagHash ) )
 				{
-					pTargetProp = &prop;
+					pTargetProp	 = &listProps[propSearchIdx];
+					matchedIndex = propSearchIdx;
 					break;
 				}
 			}
@@ -234,7 +256,11 @@ namespace sw
 			}
 
 			const PropertyInfo& prop = *pTargetProp;
-			uniqueSeenPropHashes.insert( prop.getNameHash() );
+			if ( numProps <= 64 )
+				seenBitmask |= ( 1ULL << matchedIndex );
+			else
+				uniqueSeenPropHashes.insert( prop.getNameHash() );
+
 			void*  pPropPtr = prop.getValuePtr<void>( pInstance );
 			bool   applied{ false };
 			size_t local = payloadStart;
@@ -254,11 +280,19 @@ namespace sw
 			reader.skip( payloadSize );
 		}
 
-		for ( const PropertyInfo& prop : listProps )
+		for ( size_t propIdx = 0; propIdx < numProps; ++propIdx )
 		{
-			if ( uniqueSeenPropHashes.find( prop.getNameHash() ) != uniqueSeenPropHashes.end() )
-				continue;
-			applyPropertyDefault( prop.getValuePtr<void>( pInstance ), prop, ctx );
+			if ( numProps <= 64 )
+			{
+				if ( ( seenBitmask & ( 1ULL << propIdx ) ) != 0 )
+					continue;
+			}
+			else
+			{
+				if ( uniqueSeenPropHashes.find( listProps[propIdx].getNameHash() ) != uniqueSeenPropHashes.end() )
+					continue;
+			}
+			applyPropertyDefault( listProps[propIdx].getValuePtr<void>( pInstance ), listProps[propIdx], ctx );
 		}
 
 		return true;
@@ -322,7 +356,7 @@ namespace sw
 		}
 		else if ( migrate == nullptr && ( outVersion != currentVersion || listOrphans.empty() == false ) )
 		{
-			SW_LOG_WARNING( "[BinarySerializer] schema version %# -> %# with no migrate callback (%# listOrphans)",
+			SW_LOG_WARNING( "schema version %# -> %# with no migrate callback (%# listOrphans)",
 							outVersion, currentVersion, static_cast<uint32>( listOrphans.size() ) );
 			ok = false;
 		}
@@ -330,5 +364,81 @@ namespace sw
 		if ( pLegacyPtr != nullptr )
 			destroyScratchInstance( pLegacyPtr, *pLegacyTypeInfo );
 		return ok;
+	}
+
+	bool BinarySerializer::serializeCompressed( const void*				pInstance,
+												const TypeInfo&			typeInfo,
+												vector<uint8>&			listOutBuffer,
+												CompressionCodecType	codecType,
+												const SerializeContext& ctx )
+	{
+		listOutBuffer.clear();
+		if ( pInstance == nullptr )
+			return false;
+
+		vector<uint8> listRawBinary;
+		BinarySerializer::serialize( pInstance, typeInfo, listRawBinary, ctx );
+		if ( listRawBinary.empty() )
+			return false;
+
+		return CompressionStream::compressBuffer( listRawBinary.data(), listRawBinary.size(), listOutBuffer, codecType );
+	}
+
+	bool BinarySerializer::deserializeCompressed( void*					  pInstance,
+												  const TypeInfo&		  typeInfo,
+												  const uint8*			  pData,
+												  size_t				  dataSize,
+												  const SerializeContext& ctx )
+	{
+		if ( pInstance == nullptr || pData == nullptr || dataSize == 0 )
+			return false;
+
+		vector<uint8> listRawBinary;
+		const bool	  bDecompressOk = CompressionStream::decompressBuffer( pData, dataSize, listRawBinary );
+		if ( bDecompressOk == false || listRawBinary.empty() )
+			return false;
+
+		return BinarySerializer::deserialize( pInstance, typeInfo, listRawBinary.data(), listRawBinary.size(), ctx );
+	}
+
+	bool BinarySerializer::serializeVersionedCompressed( uint32					 version,
+														 const void*			 pInstance,
+														 const TypeInfo&		 typeInfo,
+														 vector<uint8>&			 listOutBuffer,
+														 CompressionCodecType	 codecType,
+														 const SerializeContext& ctx )
+	{
+		listOutBuffer.clear();
+		if ( pInstance == nullptr )
+			return false;
+
+		vector<uint8> listRawBinary;
+		BinarySerializer::serializeVersioned( version, pInstance, typeInfo, listRawBinary, ctx );
+		if ( listRawBinary.empty() )
+			return false;
+
+		return CompressionStream::compressBuffer( listRawBinary.data(), listRawBinary.size(), listOutBuffer, codecType );
+	}
+
+	bool BinarySerializer::deserializeVersionedCompressed( uint32&				   outVersion,
+														   void*				   pInstance,
+														   const TypeInfo&		   typeInfo,
+														   const uint8*			   pData,
+														   size_t				   dataSize,
+														   uint32				   currentVersion,
+														   SchemaMigrateFn		   migrate,
+														   const TypeInfo*		   pLegacyTypeInfo,
+														   const SerializeContext& ctx )
+	{
+		if ( pInstance == nullptr || pData == nullptr || dataSize == 0 )
+			return false;
+
+		vector<uint8> listRawBinary;
+		const bool	  bDecompressOk = CompressionStream::decompressBuffer( pData, dataSize, listRawBinary );
+		if ( bDecompressOk == false || listRawBinary.empty() )
+			return false;
+
+		return BinarySerializer::deserializeVersioned( outVersion, pInstance, typeInfo, listRawBinary.data(), listRawBinary.size(),
+													   currentVersion, migrate, pLegacyTypeInfo, ctx );
 	}
 } // namespace sw

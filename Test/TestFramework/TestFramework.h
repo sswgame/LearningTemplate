@@ -69,9 +69,9 @@ namespace test
 		/** @brief `*` glob 패턴과 텍스트를 비교합니다. */
 		static bool matchGlob( const sw::string& pattern, const sw::string& text );
 
-		sw::vector<TestCaseInfo> _listTests;
-		sw::vector<sw::string>	 _listIncludePatterns;
-		sw::vector<sw::string>	 _listExcludePatterns;
+		sw::vector<TestCaseInfo> _listTest;
+		sw::vector<sw::string>	 _listIncludePattern;
+		sw::vector<sw::string>	 _listExcludePattern;
 		bool					 _listOnly{ false };
 		bool					 _currentTestFailed{ false };
 		bool					 _currentTestSkipped{ false };
@@ -121,7 +121,7 @@ namespace test
 				_pWrappedSink->shutdown();
 		}
 
-		void writeLog( sw::LogLevel level, const utf8* pTag, const utf8* pMessage, const utf8* pFile, int32 line ) override
+		void writeLog( sw::LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line ) override
 		{
 			if ( _pWrappedSink == nullptr )
 				return;
@@ -130,11 +130,11 @@ namespace test
 			{
 				sw::fixed_string<sw::constant::kMaxBuffer4096> decoratedMsg{};
 				sw::formatstring( decoratedMsg.data(), decoratedMsg.capacity(), "[Expected Defensive Test] %#", pMessage != nullptr ? pMessage : "" );
-				_pWrappedSink->writeLog( level, pTag, decoratedMsg.c_str(), pFile, line );
+				_pWrappedSink->writeLog( level, pTag, pCaller, decoratedMsg.c_str(), pFile, line );
 			}
 			else
 			{
-				_pWrappedSink->writeLog( level, pTag, pMessage, pFile, line );
+				_pWrappedSink->writeLog( level, pTag, pCaller, pMessage, pFile, line );
 			}
 		}
 
@@ -174,11 +174,11 @@ namespace test
 				{
 					sw::fixed_string<sw::constant::kMaxBuffer256> notice{};
 					sw::formatstring( notice.data(), notice.capacity(), ">>> [Defensive Test] Expected Error/Warning validation: '%#' <<<", pReason );
-					_pOldSink->writeLog( sw::LogLevel::Info, "Test", notice.c_str(), __FILE__, __LINE__ );
+					_pOldSink->writeLog( sw::LogLevel::Info, "Test", nullptr, notice.c_str(), __FILE__, __LINE__ );
 				}
 				else
 				{
-					_pOldSink->writeLog( sw::LogLevel::Info, "Test", ">>> [Defensive Test] Expected Error/Warning validation scope began <<<", __FILE__, __LINE__ );
+					_pOldSink->writeLog( sw::LogLevel::Info, "Test", nullptr, ">>> [Defensive Test] Expected Error/Warning validation scope began <<<", __FILE__, __LINE__ );
 				}
 			}
 			sw::Logger::setGlobalSink( &_defensiveSink );
@@ -189,7 +189,7 @@ namespace test
 			sw::Logger::setGlobalSink( _pOldSink );
 			if ( _pOldSink != nullptr )
 			{
-				_pOldSink->writeLog( sw::LogLevel::Info, "Test", "<<< [Defensive Test] Expected Error/Warning validation scope ended <<<", __FILE__, __LINE__ );
+				_pOldSink->writeLog( sw::LogLevel::Info, "Test", nullptr, "<<< [Defensive Test] Expected Error/Warning validation scope ended <<<", __FILE__, __LINE__ );
 			}
 		}
 

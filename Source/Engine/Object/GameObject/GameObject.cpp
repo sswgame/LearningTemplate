@@ -12,6 +12,8 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "GameObject" );
+
 	GameObject::GameObject()
 		: _objectId{ _s_nextObjectId.fetch_add( 1, std::memory_order_relaxed ) }
 		, _name{ "GameObject" }
@@ -20,7 +22,7 @@ namespace sw
 		, _bActive{ true }
 		, _bIsActiveInHierarchy{ true }
 		, _bIsPendingKill{ false }
-		, _listComponents{}
+		, _listComponent{}
 	{
 	}
 
@@ -32,7 +34,7 @@ namespace sw
 		, _bActive{ true }
 		, _bIsActiveInHierarchy{ true }
 		, _bIsPendingKill{ false }
-		, _listComponents{}
+		, _listComponent{}
 	{
 	}
 
@@ -65,7 +67,7 @@ namespace sw
 	 */
 	void GameObject::beginPlay()
 	{
-		for ( Component* pComp : _listComponents )
+		for ( Component* pComp : _listComponent )
 		{
 			if ( pComp == nullptr || pComp->isPendingKill() || pComp->isActive() == false )
 				continue;
@@ -78,7 +80,7 @@ namespace sw
 	 */
 	void GameObject::endPlay()
 	{
-		for ( Component* pComp : _listComponents )
+		for ( Component* pComp : _listComponent )
 		{
 			if ( pComp == nullptr || pComp->isPendingKill() || pComp->isActive() == false )
 				continue;
@@ -128,7 +130,7 @@ namespace sw
 		_bActive.store( bActive, std::memory_order_relaxed );
 		refreshActiveInHierarchy();
 
-		for ( Component* pComp : _listComponents )
+		for ( Component* pComp : _listComponent )
 		{
 			if ( pComp == nullptr || pComp->isPendingKill() )
 				continue;
@@ -346,7 +348,7 @@ namespace sw
 	size_t GameObject::getComponentCount() const
 	{
 		size_t count = 0;
-		for ( Component* pComp : _listComponents )
+		for ( Component* pComp : _listComponent )
 		{
 			if ( pComp != nullptr && pComp->isPendingKill() == false )
 				++count;
@@ -357,7 +359,7 @@ namespace sw
 	vector<Component*> GameObject::getAllComponents() const
 	{
 		vector<Component*> listResult;
-		for ( Component* pComp : _listComponents )
+		for ( Component* pComp : _listComponent )
 		{
 			if ( pComp != nullptr && pComp->isPendingKill() == false )
 				listResult.push_back( pComp );
@@ -367,8 +369,8 @@ namespace sw
 
 	void GameObject::clearComponents()
 	{
-		vector<Component*> listOwned = _listComponents;
-		_listComponents.clear();
+		vector<Component*> listOwned = _listComponent;
+		_listComponent.clear();
 		for ( Component* pComp : listOwned )
 		{
 			if ( pComp == nullptr )
@@ -383,7 +385,7 @@ namespace sw
 
 	Component* GameObject::findComponentById( uint64 componentId, bool bIncludePendingKill ) const
 	{
-		for ( Component* pComp : _listComponents )
+		for ( Component* pComp : _listComponent )
 		{
 			if ( pComp == nullptr || pComp->getComponentId() != componentId )
 				continue;
@@ -412,18 +414,18 @@ namespace sw
 		pComp->setOwner( nullptr );
 
 		bool bRemoved = false;
-		for ( size_t compIndex = 0; compIndex < _listComponents.size(); ++compIndex )
+		for ( size_t compIndex = 0; compIndex < _listComponent.size(); ++compIndex )
 		{
-			if ( _listComponents[compIndex] == pComp )
+			if ( _listComponent[compIndex] == pComp )
 			{
-				_listComponents[compIndex] = _listComponents.back();
-				_listComponents.pop_back();
+				_listComponent[compIndex] = _listComponent.back();
+				_listComponent.pop_back();
 				bRemoved = true;
 				break;
 			}
 		}
 		if ( bRemoved == false )
-			SW_LOG_ERROR( "[GameObject] Failed to remove component '%#' from actor list.", componentName.c_str() );
+			SW_LOG_ERROR( "Failed to remove component '%#' from actor list.", componentName.c_str() );
 		else
 			sw_delete( pComp );
 		markTickOrderDirty();
@@ -488,7 +490,7 @@ namespace sw
 
 	void GameObject::prepareSerialize() const
 	{
-		for ( Component* pComp : _listComponents )
+		for ( Component* pComp : _listComponent )
 		{
 			SceneComponent* pSceneComp = castTo<SceneComponent>( pComp );
 			if ( pSceneComp != nullptr )
@@ -498,7 +500,7 @@ namespace sw
 
 	void GameObject::applyLoadedHierarchy()
 	{
-		for ( Component* pComp : _listComponents )
+		for ( Component* pComp : _listComponent )
 		{
 			SceneComponent* pSceneComp = castTo<SceneComponent>( pComp );
 			if ( pSceneComp != nullptr )

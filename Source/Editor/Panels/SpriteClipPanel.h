@@ -62,8 +62,8 @@ namespace sw::editor
 
 	private:
 		utf8				 _arrAtlasPath[256];
-		vector<Frame>		 _listFrames;
-		vector<TransformKey> _listKeys;
+		vector<Frame>		 _listFrame;
+		vector<TransformKey> _listKey;
 		int32				 _selectedFrame;
 		int32				 _selectedKey;
 		string				 _status;

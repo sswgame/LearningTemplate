@@ -55,8 +55,8 @@ namespace sw
 		const string& peekRedoLabel() const;
 
 	private:
-		vector<Command> _listCommands;
-		vector<Command> _listPendingTransactionCommands;
+		vector<Command> _listCommand;
+		vector<Command> _listPendingTransactionCommand;
 		string			_transactionLabel;
 		string			_lastCoalesceKey;
 		string			_empty;

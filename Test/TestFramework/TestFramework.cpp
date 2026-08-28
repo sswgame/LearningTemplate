@@ -31,13 +31,13 @@ namespace test
 
 	void TestRegistry::registerTest( const sw::string& suiteName, const sw::string& testName, sw::Delegate<void()> func )
 	{
-		_listTests.push_back( { suiteName, testName, func } );
+		_listTest.push_back( { suiteName, testName, func } );
 	}
 
 	void TestRegistry::setFilter( const sw::string& filter )
 	{
-		_listIncludePatterns.clear();
-		_listExcludePatterns.clear();
+		_listIncludePattern.clear();
+		_listExcludePattern.clear();
 
 		if ( filter.empty() )
 			return;
@@ -56,11 +56,11 @@ namespace test
 			{
 				if ( token.front() == '-' )
 				{
-					_listExcludePatterns.push_back( token.substr( 1 ) );
+					_listExcludePattern.push_back( token.substr( 1 ) );
 				}
 				else
 				{
-					_listIncludePatterns.push_back( token );
+					_listIncludePattern.push_back( token );
 				}
 			}
 
@@ -151,8 +151,8 @@ namespace test
 
 	bool TestRegistry::matchesFilter( const sw::string& fullName ) const
 	{
-		bool included = _listIncludePatterns.empty();
-		for ( const sw::string& pattern : _listIncludePatterns )
+		bool included = _listIncludePattern.empty();
+		for ( const sw::string& pattern : _listIncludePattern )
 		{
 			if ( matchGlob( pattern, fullName ) )
 			{
@@ -164,7 +164,7 @@ namespace test
 		if ( included == false )
 			return false;
 
-		for ( const sw::string& pattern : _listExcludePatterns )
+		for ( const sw::string& pattern : _listExcludePattern )
 		{
 			if ( matchGlob( pattern, fullName ) )
 				return false;
@@ -198,9 +198,9 @@ namespace test
 
 	void TestRegistry::listTests() const
 	{
-		std::fprintf( stdout, "Registered tests (%u):\n", static_cast<uint32>( _listTests.size() ) );
-		SW_LOG_INFO( "Registered tests (%#):", static_cast<uint32>( _listTests.size() ) );
-		for ( const TestCaseInfo& testInfo : _listTests )
+		std::fprintf( stdout, "Registered tests (%u):\n", static_cast<uint32>( _listTest.size() ) );
+		SW_LOG_INFO( "Registered tests (%#):", static_cast<uint32>( _listTest.size() ) );
+		for ( const TestCaseInfo& testInfo : _listTest )
 		{
 			std::fprintf( stdout, "  %s\n", testInfo.fullName().c_str() );
 			SW_LOG_INFO( "  %#", testInfo.fullName().c_str() );
@@ -222,16 +222,16 @@ namespace test
 		float64 totalMs{ 0.0 };
 
 		uint32 runnableCount{ 0 };
-		for ( const TestCaseInfo& testInfo : _listTests )
+		for ( const TestCaseInfo& testInfo : _listTest )
 		{
 			if ( matchesFilter( testInfo.fullName() ) )
 				++runnableCount;
 		}
 
-		const uint32 filteredOut = static_cast<uint32>( _listTests.size() ) - runnableCount;
+		const uint32 filteredOut = static_cast<uint32>( _listTest.size() ) - runnableCount;
 
 		SW_LOG_INFO( "====================================================" );
-		SW_LOG_INFO( " Running %# / %# Test Cases...", runnableCount, static_cast<uint32>( _listTests.size() ) );
+		SW_LOG_INFO( " Running %# / %# Test Cases...", runnableCount, static_cast<uint32>( _listTest.size() ) );
 		if ( filteredOut > 0 )
 		{
 			SW_LOG_INFO( " Filtered out: %#", filteredOut );
@@ -240,7 +240,7 @@ namespace test
 
 		sw::vector<sw::string> failedTestNames;
 
-		for ( const TestCaseInfo& testInfo : _listTests )
+		for ( const TestCaseInfo& testInfo : _listTest )
 		{
 			if ( matchesFilter( testInfo.fullName() ) == false )
 				continue;
@@ -249,7 +249,7 @@ namespace test
 			_currentTestSkipped = false;
 			std::fprintf( stdout, "[ RUN      ] %s\n", testInfo.fullName().c_str() );
 			std::fflush( stdout );
-			SW_LOG_INFO( "[ RUN      ] %#", testInfo.fullName().c_str() );
+			SW_LOG_INFO( "%#", testInfo.fullName().c_str() );
 
 			const std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
 
@@ -270,7 +270,7 @@ namespace test
 				++skippedCount;
 				std::fprintf( stdout, "[  SKIPPED ] %s\n", testInfo.fullName().c_str() );
 				std::fflush( stdout );
-				SW_LOG_INFO( "[  SKIPPED ] %#", testInfo.fullName().c_str() );
+				SW_LOG_INFO( "%#", testInfo.fullName().c_str() );
 			}
 			else if ( _currentTestFailed )
 			{
@@ -278,14 +278,14 @@ namespace test
 				failedTestNames.push_back( testInfo.fullName() );
 				std::fprintf( stdout, "[  FAILED  ] %s (%.2f ms)\n", testInfo.fullName().c_str(), elapsed );
 				std::fflush( stdout );
-				SW_LOG_ERROR( "[  FAILED  ] %# (%.2f ms)", testInfo.fullName().c_str(), elapsed );
+				SW_LOG_ERROR( "%# (%.2f ms)", testInfo.fullName().c_str(), elapsed );
 			}
 			else
 			{
 				++passedCount;
 				std::fprintf( stdout, "[       OK ] %s (%.2f ms)\n", testInfo.fullName().c_str(), elapsed );
 				std::fflush( stdout );
-				SW_LOG_INFO( "[       OK ] %# (%.2f ms)", testInfo.fullName().c_str(), elapsed );
+				SW_LOG_INFO( "%# (%.2f ms)", testInfo.fullName().c_str(), elapsed );
 			}
 		}
 

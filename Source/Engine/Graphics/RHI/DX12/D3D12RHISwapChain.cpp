@@ -7,6 +7,8 @@
 #if defined( SW_PLATFORM_WINDOWS )
 namespace sw
 {
+	SW_LOG_CALLER( "D3D12" );
+
 	void* D3D12RHISwapChain::getNativeSwapChain() const
 	{
 		return _pDevice->getNativeSwapChain();
@@ -33,7 +35,7 @@ namespace sw
 		const HRESULT resizeHr = _pDevice->_swapChain->ResizeBuffers( _pDevice->_bufferCount, width, height, DXGI_FORMAT_UNKNOWN, 0 );
 		if ( FAILED( resizeHr ) )
 		{
-			SW_LOG_ERROR( "[D3D12] ResizeBuffers failed hr=0x%#", static_cast<uint32>( resizeHr ) );
+			SW_LOG_ERROR( "ResizeBuffers failed hr=0x%#", static_cast<uint32>( resizeHr ) );
 			return;
 		}
 		_pDevice->createRenderTargets();
@@ -63,7 +65,7 @@ namespace sw
 		{
 			D3D12_RESOURCE_BARRIER barrier{};
 			barrier.Type				   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-			barrier.Transition.pResource   = _pDevice->_listRenderTargets[_pDevice->_frameIndex].Get();
+			barrier.Transition.pResource   = _pDevice->_listRenderTarget[_pDevice->_frameIndex].Get();
 			barrier.Transition.StateBefore = _pDevice->_swapchainState;
 			barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_RENDER_TARGET;
 			barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
@@ -97,11 +99,11 @@ namespace sw
 
 	void D3D12RHISwapChain::endFrame( bool vsync, bool bPresent )
 	{
-		if ( bPresent && _pDevice->_swapchainState != D3D12_RESOURCE_STATE_PRESENT && _pDevice->_listRenderTargets.empty() == false )
+		if ( bPresent && _pDevice->_swapchainState != D3D12_RESOURCE_STATE_PRESENT && _pDevice->_listRenderTarget.empty() == false )
 		{
 			D3D12_RESOURCE_BARRIER barrier{};
 			barrier.Type				   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-			barrier.Transition.pResource   = _pDevice->_listRenderTargets[_pDevice->_frameIndex].Get();
+			barrier.Transition.pResource   = _pDevice->_listRenderTarget[_pDevice->_frameIndex].Get();
 			barrier.Transition.StateBefore = _pDevice->_swapchainState;
 			barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_PRESENT;
 			barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
@@ -124,7 +126,7 @@ namespace sw
 			{
 				[[maybe_unused]] const HRESULT removed = _pDevice->_device->GetDeviceRemovedReason();
 				// %# 는 10진 출력 — DXGI_ERROR_DEVICE_HUNG == 0x887A0005 == 2289696773
-				SW_LOG_ERROR( "[D3D12] Present failed hr=%# (0x887A0005=DEVICE_HUNG), DeviceRemovedReason=%#",
+				SW_LOG_ERROR( "Present failed hr=%# (0x887A0005=DEVICE_HUNG), DeviceRemovedReason=%#",
 							  static_cast<uint32>( presentHr ), static_cast<uint32>( removed ) );
 				_pDevice->flushDebugMessages( "after Present" );
 			}

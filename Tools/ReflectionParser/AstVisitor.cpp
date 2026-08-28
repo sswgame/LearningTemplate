@@ -19,6 +19,7 @@
 #include "ReflectionParser/ParserUtil.h"
 #include "ReflectionParser/TypeNameMap.h"
 
+SW_LOG_CALLER( "AstVisitor" );
 namespace sw
 {
 	namespace
@@ -455,7 +456,7 @@ namespace sw
 		{
 			const vector<string> args = extractTemplateArgs( typeSpelling );
 			const int32			 numClangArgs =
-				( type.kind == CXType_Invalid ) ? 0 : clang_Type_getNumTemplateArguments( type );
+				 ( type.kind == CXType_Invalid ) ? 0 : clang_Type_getNumTemplateArguments( type );
 
 			if ( node._containerKind == ContainerKind::Map )
 			{
@@ -510,9 +511,9 @@ namespace sw
 			string		  wrapperStem;
 			if ( lookupReflectContainer( type, kind, wrapperStem ) )
 			{
-				node->_bIsContainer	 = true;
-				node->_containerKind = kind;
-				node->_containerType = wrapperStem;
+				node->_bIsContainer					 = true;
+				node->_containerKind				 = kind;
+				node->_containerType				 = wrapperStem;
 				const ContainerTypeRule* builtinRule = ContainerTypeMap::instance().match( spelling );
 				if ( builtinRule != nullptr )
 					node->_typeName = builtinRule->_match;
@@ -609,7 +610,7 @@ namespace sw
 				for ( int32 argIndex = 0; argIndex < numArgs; ++argIndex )
 				{
 					const CXCursor argCursor = clang_Cursor_getArgument( cursor, static_cast<uint32>( argIndex ) );
-					method._listParamTypeNames.push_back( normalizeTypeName(
+					method._listParamTypeName.push_back( normalizeTypeName(
 						cxStringToStd( clang_getTypeSpelling( clang_getCursorType( argCursor ) ) ) ) );
 				}
 
@@ -671,7 +672,7 @@ namespace sw
 			for ( int32 argIndex = 0; argIndex < numArgs; ++argIndex )
 			{
 				const CXCursor argCursor = clang_Cursor_getArgument( cursor, static_cast<uint32>( argIndex ) );
-				method._listParamTypeNames.push_back( normalizeTypeName(
+				method._listParamTypeName.push_back( normalizeTypeName(
 					cxStringToStd( clang_getTypeSpelling( clang_getCursorType( argCursor ) ) ) ) );
 			}
 
@@ -700,12 +701,12 @@ namespace sw
 			const CXType   baseType = clang_getCursorType( cursor );
 			const CXCursor baseDecl = clang_getTypeDeclaration( baseType );
 			const string   baseFQN =
-				( clang_Cursor_isNull( baseDecl ) == 0 ) ? AstVisitor::buildFullyQualifiedName( baseDecl ) : string{};
+				  ( clang_Cursor_isNull( baseDecl ) == 0 ) ? AstVisitor::buildFullyQualifiedName( baseDecl ) : string{};
 
 			++collector->baseCount;
 			if ( collector->baseCount > 1 )
 			{
-				SW_LOG_WARNING( "[AstVisitor] %# has multiple base classes; only '%#' is reflected, '%#' is ignored.",
+				SW_LOG_WARNING( "%# has multiple base classes; only '%#' is reflected, '%#' is ignored.",
 								collector->ownerFQN, collector->firstBaseFQN, baseFQN );
 				return CXChildVisit_Continue;
 			}
@@ -826,7 +827,7 @@ namespace sw
 
 		struct EnumeratorCollector
 		{
-			vector<ParsedEnumeratorInfo>* _listEnumerators = nullptr;
+			vector<ParsedEnumeratorInfo>* _listEnumerator = nullptr;
 		};
 
 		/** @brief enumerator 이름·값을 수집합니다. */
@@ -839,7 +840,7 @@ namespace sw
 			ParsedEnumeratorInfo enumerator;
 			enumerator._name  = cxStringToStd( clang_getCursorSpelling( cursor ) );
 			enumerator._value = clang_getEnumConstantDeclValue( cursor );
-			collector->_listEnumerators->push_back( std::move( enumerator ) );
+			collector->_listEnumerator->push_back( std::move( enumerator ) );
 			return CXChildVisit_Continue;
 		}
 
@@ -847,8 +848,8 @@ namespace sw
 
 	AstVisitor::AstVisitor( CXTranslationUnit translationUnit )
 		: _translationUnit{ translationUnit }
-		, _listTypes{}
-		, _listEnums{}
+		, _listType{}
+		, _listEnum{}
 	{
 	}
 
@@ -883,7 +884,7 @@ namespace sw
 				if ( hasAnnotateAttrPrefix( parent, annotationConstants::kReflectPrefix ) == false &&
 					 sourceHasPrimaryAnnotation( parent, annotationConstants::kReflectPrefix ) == false )
 				{
-					SW_LOG_ERROR( "[AstVisitor] ERROR: PROPERTY() is used in class/struct '%#', but it lacks REFLECT()!", buildFullyQualifiedName( parent ).c_str() );
+					SW_LOG_ERROR( "ERROR: PROPERTY() is used in class/struct '%#', but it lacks REFLECT()!", buildFullyQualifiedName( parent ).c_str() );
 					throw std::runtime_error( "PROPERTY() without REFLECT()" );
 				}
 			}
@@ -894,8 +895,8 @@ namespace sw
 		{
 			const bool bHasFunction = hasAnnotateAttrPrefix( cursor, annotationConstants::kFunctionPrefix ) ||
 									  sourceHasPrimaryAnnotation( cursor, annotationConstants::kFunctionPrefix );
-			const bool bHasBody		= hasAnnotateAttrPrefix( cursor, "REFLECT_BODY" ) ||
-									  ( cxStringToStd( clang_getCursorSpelling( cursor ) ) == annotationConstants::kReflectBodyMarkerFn );
+			const bool bHasBody = hasAnnotateAttrPrefix( cursor, "REFLECT_BODY" ) ||
+								  ( cxStringToStd( clang_getCursorSpelling( cursor ) ) == annotationConstants::kReflectBodyMarkerFn );
 			if ( bHasFunction || bHasBody )
 			{
 				CXCursor   parent		  = clang_getCursorSemanticParent( cursor );
@@ -905,10 +906,10 @@ namespace sw
 				{
 					if ( bHasFunction )
 					{
-						SW_LOG_ERROR( "[AstVisitor] ERROR: FUNCTION() is used in class/struct '%#', but it lacks REFLECT()!", buildFullyQualifiedName( parent ).c_str() );
+						SW_LOG_ERROR( "ERROR: FUNCTION() is used in class/struct '%#', but it lacks REFLECT()!", buildFullyQualifiedName( parent ).c_str() );
 						throw std::runtime_error( "FUNCTION() without REFLECT()" );
 					}
-					SW_LOG_ERROR( "[AstVisitor] ERROR: REFLECT_BODY() is used in class/struct '%#', but it lacks REFLECT()!", buildFullyQualifiedName( parent ).c_str() );
+					SW_LOG_ERROR( "ERROR: REFLECT_BODY() is used in class/struct '%#', but it lacks REFLECT()!", buildFullyQualifiedName( parent ).c_str() );
 					throw std::runtime_error( "REFLECT_BODY() without REFLECT()" );
 				}
 			}
@@ -922,7 +923,7 @@ namespace sw
 		{
 			if ( hasAnnotation( cursor, annotationConstants::kReflectPrefix ) )
 			{
-				SW_LOG_WARNING( "[AstVisitor] REFLECT on class template is not supported, skipping: %#",
+				SW_LOG_WARNING( "REFLECT on class template is not supported, skipping: %#",
 								buildFullyQualifiedName( cursor ) );
 			}
 			return CXChildVisit_Continue;
@@ -1001,19 +1002,19 @@ namespace sw
 			StructMemberCollectContext collect;
 			collect.bases.ownerFQN			   = typeInfo._fullyQualifiedName;
 			collect.methods._bSkipConstructors = typeInfo._bAbstract || typeInfo._bStatic;
-			collect.fields._pProperties		   = &typeInfo._listProperties;
-			collect.methods._pMethods		   = &typeInfo._listMethods;
+			collect.fields._pProperties		   = &typeInfo._listProperty;
+			collect.methods._pMethods		   = &typeInfo._listMethod;
 			clang_visitChildren( cursor, structMemberCollectVisitor, &collect );
 			typeInfo._parentFQN			= collect.bases.firstBaseFQN;
 			typeInfo._bReflectBody		= collect.bBodyFound ? 1 : 0;
 			typeInfo._bComponentFactory = ( collect.bFactoryFound || isDerivedFromComponent( cursor ) ) ? 1 : 0;
 		}
 
-		SW_LOG_INFO( "[AstVisitor] REFLECT class : %#  (props=%# methods=%# abstract=%# static=%# body=%# factory=%#)",
-					 typeInfo._fullyQualifiedName, typeInfo._listProperties.size(), typeInfo._listMethods.size(),
-					 typeInfo._bAbstract ? 1 : 0, typeInfo._bStatic ? 1 : 0, typeInfo._bReflectBody ? 1 : 0,
-					 typeInfo._bComponentFactory ? 1 : 0 );
-		_listTypes.push_back( std::move( typeInfo ) );
+		SW_LOG_TRACE( "REFLECT class : %#  (props=%# methods=%# abstract=%# static=%# body=%# factory=%#)",
+					  typeInfo._fullyQualifiedName, typeInfo._listProperty.size(), typeInfo._listMethod.size(),
+					  typeInfo._bAbstract ? 1 : 0, typeInfo._bStatic ? 1 : 0, typeInfo._bReflectBody ? 1 : 0,
+					  typeInfo._bComponentFactory ? 1 : 0 );
+		_listType.push_back( std::move( typeInfo ) );
 	}
 
 	/**
@@ -1033,7 +1034,7 @@ namespace sw
 		BLOCK( "Collect Enumerators" )
 		{
 			// 모든 열거자 항목(이름, 정수값) 수집
-			EnumeratorCollector enumeratorCollector{ &enumInfo._listEnumerators };
+			EnumeratorCollector enumeratorCollector{ &enumInfo._listEnumerator };
 			clang_visitChildren( cursor, enumeratorCollectorVisitor, &enumeratorCollector );
 		}
 
@@ -1058,9 +1059,9 @@ namespace sw
 			// 명시적 BitFlag 어노테이션이 없더라도, 값이 모두 1, 2, 4, 8... 비트 패턴이면 BitFlag로 자동 감지
 			if ( enumInfo._bIsBitFlag == 0 )
 			{
-				bool  allPowerOf2  = enumInfo._listEnumerators.empty() == false;
+				bool  allPowerOf2  = enumInfo._listEnumerator.empty() == false;
 				int32 nonZeroCount = 0;
-				for ( const ParsedEnumeratorInfo& e : enumInfo._listEnumerators )
+				for ( const ParsedEnumeratorInfo& e : enumInfo._listEnumerator )
 				{
 					if ( e._value != 0 )
 					{
@@ -1077,10 +1078,10 @@ namespace sw
 			}
 		}
 
-		SW_LOG_INFO( "[AstVisitor] ENUM          : %#  (%# values, _bIsBitFlag=%# aliases=%#)",
-					 enumInfo._fullyQualifiedName, enumInfo._listEnumerators.size(), enumInfo._bIsBitFlag ? "true" : "false",
-					 enumInfo._listAliases.size() );
-		_listEnums.push_back( std::move( enumInfo ) );
+		SW_LOG_INFO( "ENUM          : %#  (%# values, _bIsBitFlag=%# aliases=%#)",
+					 enumInfo._fullyQualifiedName, enumInfo._listEnumerator.size(), enumInfo._bIsBitFlag ? "true" : "false",
+					 enumInfo._listAlias.size() );
+		_listEnum.push_back( std::move( enumInfo ) );
 	}
 
 	/**

@@ -1,16 +1,14 @@
 /**
  * @file SerializerInternal.h
- * @brief Binary/JSON/XML/ObjectDiff 직렬화기 공유 헬퍼 (Engine TU 전용)
+ * @brief 직렬화기(Binary/JSON/XML/ObjectDiff) 공유 공통 헬퍼 (Engine TU 전용)
  */
 #pragma once
 #include "Engine/EngineMinimal.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Serialization/Core/SerializeContext.h"
-#include "Engine/Utility/Json/JsonDocument.h"
 
 namespace sw
 {
-
 	// ------------------------------------------------------------------------------
 	// 1) 바이너리 — 스칼라/중첩 컨테이너
 	// ------------------------------------------------------------------------------
@@ -31,47 +29,24 @@ namespace sw
 										   const SerializeContext& ctx );
 
 	// ------------------------------------------------------------------------------
-	// 2) 텍스트 파싱 · 프로퍼티 기본값
+	// 2) 텍스트 변환 및 파싱 · 프로퍼티 기본값
 	// ------------------------------------------------------------------------------
+	/** @brief 평문/중첩 문자열로 씁니다. 주변 따옴표 없음 (XML/JSON/SchemaMigrate 빌딩 블록). */
+	void valueToText( StringBuilder<constant::kMaxBuffer8192>& ss, const void* pValPtr, const hashed_string& typeName,
+					  const SerializeContext& ctx );
+
 	/** @brief 텍스트 토큰을 값으로 파싱합니다. */
 	bool parseTextValue( void* pValPtr, const hashed_string& typeName, string_view valStr,
 						 const SerializeContext& ctx );
+
 	/** @brief 프로퍼티 기본값을 적용합니다. */
 	bool applyPropertyDefault( void* pPropPtr, const PropertyInfo& prop, const SerializeContext& ctx );
 
-	// ------------------------------------------------------------------------------
-	// 3) 텍스트/JSON 출력 — XML용 평문, JSON 토큰, 중첩 컨테이너
-	// ------------------------------------------------------------------------------
-	/** @brief 평문/중첩 JSON 객체로 씁니다. 주변 따옴표 없음 (XML 및 JSON 빌딩 블록). */
-	void valueToText( StringBuilder<constant::kMaxBuffer8192>& ss, const void* pValPtr, const hashed_string& typeName,
-					  const SerializeContext& ctx );
-	/** @brief JSON 토큰으로 씁니다. 문자열/enum은 따옴표, 숫자/bool/객체는 JSON 리터럴. */
-	void valueToJson( StringBuilder<constant::kMaxBuffer8192>& ss, const void* pValPtr, const hashed_string& typeName,
-					  const SerializeContext& ctx );
-	/** @brief dst 노드에 JSON 값을 씁니다. */
-	void writeJsonValue( JsonValue dst, const void* pValPtr, const hashed_string& typeName, const SerializeContext& ctx );
-	/** @brief 컨테이너 TypeInfo 이름을 JSON/XML 태그로 씁니다 (`vector`, `map`). */
+	/** @brief 컨테이너 TypeInfo 이름을 태그로 변환합니다 (`vector`, `map`). */
 	const utf8* containerTypeTagName( hashed_string typeName );
-	/**
-	 * @brief 부모 객체에 `{ "vector": [ { "_name": "prop", "item": [...] } ] }` 형태로 컨테이너를 붙입니다.
-	 */
-	void writeTypedContainerJson( JsonValue parent, const utf8* pPropName, const void* pContainerPtr,
-								  const NestedContainerInfo& nested, const SerializeContext& ctx );
-	/** @brief `{ "_name", "item"|"entry" }` 래퍼 노드에 컨테이너를 씁니다. */
-	void writeNestedContainerJson( JsonValue dst, const void* pContainerPtr, const NestedContainerInfo& nested,
-								   const utf8* pPropName, const SerializeContext& ctx );
-
-	/** @brief 타입 태그 객체/배열에서 중첩 컨테이너를 읽습니다. */
-	bool readTypedContainerJson( void* pContainerPtr, const NestedContainerInfo& nested, const JsonValue& src,
-								 const SerializeContext& ctx );
-	/** @brief `{ "_name", "item"|"entry" }` 래퍼 노드에서 컨테이너를 읽습니다. */
-	bool readNestedContainerJson( void* pContainerPtr, const NestedContainerInfo& nested, const JsonValue& src,
-								  const SerializeContext& ctx );
-	/** @brief JsonValue를 값으로 읽습니다. */
-	bool readJsonValue( void* pValPtr, const hashed_string& typeName, const JsonValue& src, const SerializeContext& ctx );
 
 	// ------------------------------------------------------------------------------
-	// 4) 프로퍼티/키 매칭 공통 헬퍼
+	// 3) 프로퍼티/키 매칭 공통 헬퍼
 	// ------------------------------------------------------------------------------
 	/** @brief 키 문자열이 일치하는지 비교합니다 (대소문자 옵션 지원). */
 	bool keysEqual( string_view a, string_view b, bool bIgnoreCase );

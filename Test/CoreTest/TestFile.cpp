@@ -117,11 +117,11 @@ SW_TEST_CASE( Core_File, ArchiveObjectTLVSerialization )
 	info._fullyQualifiedName = sw::hashed_string( "sw::DummyStruct" );
 	info._size				 = sizeof( DummyStruct );
 	info._propertyList		 = {
-		{sw::hashed_string( "_valA" ), sw::hashed_string( "int32" ),
-		  offsetof( DummyStruct, _valA ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr},
-		{sw::hashed_string( "_valB" ), sw::hashed_string( "int32" ),
-		  offsetof( DummyStruct, _valB ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr}
-	  };
+		  {sw::hashed_string( "_valA" ), sw::hashed_string( "int32" ),
+			offsetof( DummyStruct, _valA ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr},
+		  {sw::hashed_string( "_valB" ), sw::hashed_string( "int32" ),
+			offsetof( DummyStruct, _valB ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr}
+	};
 
 	sw::Archive archWrite;
 	DummyStruct src;

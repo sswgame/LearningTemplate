@@ -51,13 +51,13 @@ namespace sw
 		bool empty() const { return _bitCount == 0; }
 
 		/** @brief 현재 용량을 반환합니다. */
-		uint32 capacity() const { return static_cast<uint32>( _listBlocks.capacity() ) * kBitsPerBlock; }
+		uint32 capacity() const { return static_cast<uint32>( _listBlock.capacity() ) * kBitsPerBlock; }
 
 		/** @brief 용량을 크기에 맞춥니다. */
-		void shrink_to_fit() { _listBlocks.shrink_to_fit(); }
+		void shrink_to_fit() { _listBlock.shrink_to_fit(); }
 
 		/** @brief 용량을 예약합니다. */
-		void reserve( const uint32 newCapacity ) { _listBlocks.reserve( calculateBlockCount( newCapacity ) ); }
+		void reserve( const uint32 newCapacity ) { _listBlock.reserve( calculateBlockCount( newCapacity ) ); }
 		/**
 		 * @brief 크기를 변경합니다
 		 */
@@ -180,6 +180,6 @@ namespace sw
 		static constexpr uint32 kBlockShift	  = 6;
 
 		uint32			  _bitCount;
-		vector<BlockType> _listBlocks;
+		vector<BlockType> _listBlock;
 	};
 } // namespace sw

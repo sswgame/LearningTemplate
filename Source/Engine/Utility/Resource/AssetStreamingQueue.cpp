@@ -12,11 +12,11 @@ namespace sw
 {
 	AssetStreamingQueue::AssetStreamingQueue()
 		: _mutex{}
-		, _listPendingRequests{}
-		, _mapLoadedAssets{}
-		, _uniqueActiveRequests{}
-		, _mapInFlightCallbacks{}
-		, _listCompletedItems{}
+		, _listPendingRequest{}
+		, _mapLoadedAsset{}
+		, _uniqueActiveRequest{}
+		, _mapInFlightCallback{}
+		, _listCompletedItem{}
 		, _bInitialized{ false }
 	{
 	}
@@ -40,10 +40,10 @@ namespace sw
 		}
 
 		std::scoped_lock<mutex> lock{ _mutex };
-		_listPendingRequests.clear();
-		_uniqueActiveRequests.clear();
-		_mapInFlightCallbacks.clear();
-		_listCompletedItems.clear();
+		_listPendingRequest.clear();
+		_uniqueActiveRequest.clear();
+		_mapInFlightCallback.clear();
+		_listCompletedItem.clear();
 		_bInitialized = false;
 	}
 
@@ -55,7 +55,7 @@ namespace sw
 		const string pathStr = string( assetPath );
 
 		std::scoped_lock<mutex> lock{ _mutex };
-		if ( _mapLoadedAssets.find( pathStr ) != _mapLoadedAssets.end() )
+		if ( _mapLoadedAsset.find( pathStr ) != _mapLoadedAsset.end() )
 		{
 			// 이미 로드됨
 			if ( onComplete.isBound() )
@@ -63,43 +63,43 @@ namespace sw
 			return true;
 		}
 
-		if ( _uniqueActiveRequests.find( pathStr ) != _uniqueActiveRequests.end() )
+		if ( _uniqueActiveRequest.find( pathStr ) != _uniqueActiveRequest.end() )
 		{
 			// 이미 처리 중인 경우 대기 콜백 목록에 추가하여 완료 시 함께 통지
 			if ( onComplete.isBound() )
-				_mapInFlightCallbacks[pathStr].push_back( onComplete );
+				_mapInFlightCallback[pathStr].push_back( onComplete );
 			return true;
 		}
 
-		_uniqueActiveRequests.insert( pathStr );
+		_uniqueActiveRequest.insert( pathStr );
 		if ( onComplete.isBound() )
-			_mapInFlightCallbacks[pathStr].push_back( onComplete );
+			_mapInFlightCallback[pathStr].push_back( onComplete );
 
 		StreamingRequest req{};
 		req._assetPath	= pathStr;
 		req._priority	= priority;
 		req._onComplete = onComplete;
-		_listPendingRequests.push_back( req );
+		_listPendingRequest.push_back( req );
 
 		if ( engine::areEngineServicesBound() )
 		{
 			TaskManager& taskManager = engine::getTaskManager();
-			TaskHandle handle = taskManager.emplaceTask(
-				"AssetStreamingTask",
-				SW_DELEGATE_METHOD( TaskArgsDelegate, &AssetStreamingQueue::processAssetTask, this ),
-				MakeTaskArgs( pathStr ),
-				TaskThreadAffinity::Any );
+			TaskHandle	 handle		 = taskManager.emplaceTask(
+				   "AssetStreamingTask",
+				   SW_DELEGATE_METHOD( TaskArgsDelegate, &AssetStreamingQueue::processAssetTask, this ),
+				   MakeTaskArgs( pathStr ),
+				   TaskThreadAffinity::Any );
 			handle.submit();
 		}
 		else
 		{
 			// 동기 즉시 폴백
-			const bool bExists		  = FileUtil::fileExists( pathStr );
-			_mapLoadedAssets[pathStr] = bExists;
-			_uniqueActiveRequests.erase( pathStr );
+			const bool bExists		 = FileUtil::fileExists( pathStr );
+			_mapLoadedAsset[pathStr] = bExists;
+			_uniqueActiveRequest.erase( pathStr );
 
-			auto itCallbacks = _mapInFlightCallbacks.find( pathStr );
-			if ( itCallbacks != _mapInFlightCallbacks.end() )
+			auto itCallbacks = _mapInFlightCallback.find( pathStr );
+			if ( itCallbacks != _mapInFlightCallback.end() )
 			{
 				for ( const auto& cb : itCallbacks->second )
 				{
@@ -107,9 +107,9 @@ namespace sw
 					item._path	   = pathStr;
 					item._bSuccess = bExists;
 					item._callback = cb;
-					_listCompletedItems.push_back( std::move( item ) );
+					_listCompletedItem.push_back( std::move( item ) );
 				}
-				_mapInFlightCallbacks.erase( itCallbacks );
+				_mapInFlightCallback.erase( itCallbacks );
 			}
 		}
 
@@ -118,15 +118,15 @@ namespace sw
 
 	void AssetStreamingQueue::processAssetTask( const TaskArgs& args )
 	{
-		const string pathStr  = args.get<string>( 0 );
+		const string pathStr = args.get<string>( 0 );
 		const bool	 bExists = FileUtil::fileExists( pathStr );
 
 		std::scoped_lock<mutex> innerLock{ _mutex };
-		_mapLoadedAssets[pathStr] = bExists;
-		_uniqueActiveRequests.erase( pathStr );
+		_mapLoadedAsset[pathStr] = bExists;
+		_uniqueActiveRequest.erase( pathStr );
 
-		auto itCallbacks = _mapInFlightCallbacks.find( pathStr );
-		if ( itCallbacks != _mapInFlightCallbacks.end() )
+		auto itCallbacks = _mapInFlightCallback.find( pathStr );
+		if ( itCallbacks != _mapInFlightCallback.end() )
 		{
 			for ( const auto& cb : itCallbacks->second )
 			{
@@ -134,9 +134,9 @@ namespace sw
 				item._path	   = pathStr;
 				item._bSuccess = bExists;
 				item._callback = cb;
-				_listCompletedItems.push_back( std::move( item ) );
+				_listCompletedItem.push_back( std::move( item ) );
 			}
-			_mapInFlightCallbacks.erase( itCallbacks );
+			_mapInFlightCallback.erase( itCallbacks );
 		}
 	}
 
@@ -144,14 +144,14 @@ namespace sw
 	{
 		const string			pathStr = string( assetPath );
 		std::scoped_lock<mutex> lock{ _mutex };
-		_uniqueActiveRequests.erase( pathStr );
-		_mapInFlightCallbacks.erase( pathStr );
+		_uniqueActiveRequest.erase( pathStr );
+		_mapInFlightCallback.erase( pathStr );
 
-		for ( auto it = _listPendingRequests.begin(); it != _listPendingRequests.end(); ++it )
+		for ( auto it = _listPendingRequest.begin(); it != _listPendingRequest.end(); ++it )
 		{
 			if ( it->_assetPath == pathStr )
 			{
-				_listPendingRequests.erase( it );
+				_listPendingRequest.erase( it );
 				break;
 			}
 		}
@@ -160,33 +160,33 @@ namespace sw
 	void AssetStreamingQueue::sweepUnusedCache()
 	{
 		std::scoped_lock<mutex> lock{ _mutex };
-		_mapLoadedAssets.clear();
+		_mapLoadedAsset.clear();
 	}
 
 	bool AssetStreamingQueue::isStreaming( string_view assetPath ) const
 	{
 		const string			pathStr = string( assetPath );
 		std::scoped_lock<mutex> lock{ _mutex };
-		return _uniqueActiveRequests.find( pathStr ) != _uniqueActiveRequests.end();
+		return _uniqueActiveRequest.find( pathStr ) != _uniqueActiveRequest.end();
 	}
 
 	bool AssetStreamingQueue::isLoaded( string_view assetPath ) const
 	{
 		const string			pathStr = string( assetPath );
 		std::scoped_lock<mutex> lock{ _mutex };
-		return _mapLoadedAssets.find( pathStr ) != _mapLoadedAssets.end();
+		return _mapLoadedAsset.find( pathStr ) != _mapLoadedAsset.end();
 	}
 
 	size_t AssetStreamingQueue::getPendingCount() const
 	{
 		std::scoped_lock<mutex> lock{ _mutex };
-		return _listPendingRequests.size();
+		return _listPendingRequest.size();
 	}
 
 	size_t AssetStreamingQueue::getCompletedCount() const
 	{
 		std::scoped_lock<mutex> lock{ _mutex };
-		return _mapLoadedAssets.size();
+		return _mapLoadedAsset.size();
 	}
 
 	void AssetStreamingQueue::update( size_t maxCompletionsPerFrame )
@@ -194,12 +194,12 @@ namespace sw
 		vector<CompletedItem> listToNotify;
 		{
 			std::scoped_lock<mutex> lock{ _mutex };
-			if ( _listCompletedItems.empty() )
+			if ( _listCompletedItem.empty() )
 				return;
 
-			const size_t count = MathUtil::min( maxCompletionsPerFrame, _listCompletedItems.size() );
-			listToNotify.assign( _listCompletedItems.begin(), _listCompletedItems.begin() + count );
-			_listCompletedItems.erase( _listCompletedItems.begin(), _listCompletedItems.begin() + count );
+			const size_t count = MathUtil::min( maxCompletionsPerFrame, _listCompletedItem.size() );
+			listToNotify.assign( _listCompletedItem.begin(), _listCompletedItem.begin() + count );
+			_listCompletedItem.erase( _listCompletedItem.begin(), _listCompletedItem.begin() + count );
 		}
 
 		for ( const CompletedItem& item : listToNotify )

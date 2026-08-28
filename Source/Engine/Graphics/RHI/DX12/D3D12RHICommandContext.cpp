@@ -120,8 +120,8 @@ namespace sw
 
 	void D3D12RHICommandContext::transitionTexture( RHITextureHandle texture, D3D12_RESOURCE_STATES newState )
 	{
-		auto it = _pDevice->_mapOffscreenTextures.find( texture );
-		if ( it == _pDevice->_mapOffscreenTextures.end() )
+		auto it = _pDevice->_mapOffscreenTexture.find( texture );
+		if ( it == _pDevice->_mapOffscreenTexture.end() )
 			return;
 		D3D12RHIDevice::OffscreenTextureRecord& record	  = it->second;
 		ID3D12Resource*							pResource = _pDevice->resolveTexture( texture );
@@ -151,8 +151,8 @@ namespace sw
 		if ( _pDevice->_commandList == nullptr )
 			return;
 
-		auto it = _pDevice->_mapOffscreenTextures.find( colorTarget );
-		if ( it == _pDevice->_mapOffscreenTextures.end() || it->second._bHasRtv == 0 )
+		auto it = _pDevice->_mapOffscreenTexture.find( colorTarget );
+		if ( it == _pDevice->_mapOffscreenTexture.end() || it->second._bHasRtv == 0 )
 			return;
 
 		D3D12RHIDevice::OffscreenTextureRecord& record = it->second;
@@ -186,8 +186,8 @@ namespace sw
 		if ( pSrcRes == nullptr )
 			return;
 
-		auto srcIt = _pDevice->_mapOffscreenTextures.find( src );
-		if ( srcIt == _pDevice->_mapOffscreenTextures.end() || srcIt->second._bHasDsv != 0 )
+		auto srcIt = _pDevice->_mapOffscreenTexture.find( src );
+		if ( srcIt == _pDevice->_mapOffscreenTexture.end() || srcIt->second._bHasDsv != 0 )
 			return;
 
 		transitionTexture( src, D3D12_RESOURCE_STATE_COPY_SOURCE );
@@ -200,9 +200,9 @@ namespace sw
 
 		if ( dst == 0 )
 		{
-			if ( _pDevice->_frameIndex >= _pDevice->_listRenderTargets.size() || _pDevice->_listRenderTargets[_pDevice->_frameIndex] == nullptr )
+			if ( _pDevice->_frameIndex >= _pDevice->_listRenderTarget.size() || _pDevice->_listRenderTarget[_pDevice->_frameIndex] == nullptr )
 				return;
-			pDstRes		   = _pDevice->_listRenderTargets[_pDevice->_frameIndex].Get();
+			pDstRes		   = _pDevice->_listRenderTarget[_pDevice->_frameIndex].Get();
 			dstStateBefore = _pDevice->_swapchainState;
 			dstStateAfter  = D3D12_RESOURCE_STATE_PRESENT;
 			bSwapchainDst  = true;
@@ -212,8 +212,8 @@ namespace sw
 			pDstRes = _pDevice->resolveTexture( dst );
 			if ( pDstRes == nullptr )
 				return;
-			auto dstIt = _pDevice->_mapOffscreenTextures.find( dst );
-			if ( dstIt == _pDevice->_mapOffscreenTextures.end() || dstIt->second._bHasDsv != 0 )
+			auto dstIt = _pDevice->_mapOffscreenTexture.find( dst );
+			if ( dstIt == _pDevice->_mapOffscreenTexture.end() || dstIt->second._bHasDsv != 0 )
 				return;
 			dstStateBefore = dstIt->second._state;
 		}
@@ -231,8 +231,8 @@ namespace sw
 				_pDevice->_swapchainState = D3D12_RESOURCE_STATE_COPY_DEST;
 			else
 			{
-				auto dstIt = _pDevice->_mapOffscreenTextures.find( dstHandle );
-				if ( dstIt != _pDevice->_mapOffscreenTextures.end() )
+				auto dstIt = _pDevice->_mapOffscreenTexture.find( dstHandle );
+				if ( dstIt != _pDevice->_mapOffscreenTexture.end() )
 					dstIt->second._state = D3D12_RESOURCE_STATE_COPY_DEST;
 			}
 		}
@@ -251,8 +251,8 @@ namespace sw
 				_pDevice->_swapchainState = dstStateAfter;
 			else
 			{
-				auto dstIt = _pDevice->_mapOffscreenTextures.find( dstHandle );
-				if ( dstIt != _pDevice->_mapOffscreenTextures.end() )
+				auto dstIt = _pDevice->_mapOffscreenTexture.find( dstHandle );
+				if ( dstIt != _pDevice->_mapOffscreenTexture.end() )
 					dstIt->second._state = dstStateAfter;
 			}
 		}
@@ -278,8 +278,8 @@ namespace sw
 		if ( _pDevice->_commandList == nullptr || texture == 0 )
 			return;
 
-		auto it = _pDevice->_mapOffscreenTextures.find( texture );
-		if ( it == _pDevice->_mapOffscreenTextures.end() )
+		auto it = _pDevice->_mapOffscreenTexture.find( texture );
+		if ( it == _pDevice->_mapOffscreenTexture.end() )
 			return;
 		if ( it->second._bHasRtv == 0 && it->second._bHasDsv == 0 )
 			return;
@@ -291,9 +291,9 @@ namespace sw
 	{
 		if ( _pDevice->_commandList == nullptr || slot >= 4 )
 			return;
-		if ( index >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredUAVs.size() ) )
+		if ( index >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredUAV.size() ) )
 			return;
-		const D3D12RHIDevice::BindlessResourceRecord& rec = _pDevice->_listRegisteredUAVs[index];
+		const D3D12RHIDevice::BindlessResourceRecord& rec = _pDevice->_listRegisteredUAV[index];
 		if ( rec._resource == nullptr )
 			return;
 
@@ -555,13 +555,13 @@ namespace sw
 
 			if ( colorHandle == 0 )
 			{
-				if ( attachmentIndex > 0 || _pDevice->_rtvHeap == nullptr || _pDevice->_frameIndex >= _pDevice->_listRenderTargets.size() )
+				if ( attachmentIndex > 0 || _pDevice->_rtvHeap == nullptr || _pDevice->_frameIndex >= _pDevice->_listRenderTarget.size() )
 					break;
 				if ( _pDevice->_swapchainState != D3D12_RESOURCE_STATE_RENDER_TARGET )
 				{
 					D3D12_RESOURCE_BARRIER barrier{};
 					barrier.Type				   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-					barrier.Transition.pResource   = _pDevice->_listRenderTargets[_pDevice->_frameIndex].Get();
+					barrier.Transition.pResource   = _pDevice->_listRenderTarget[_pDevice->_frameIndex].Get();
 					barrier.Transition.StateBefore = _pDevice->_swapchainState;
 					barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_RENDER_TARGET;
 					barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
@@ -576,8 +576,8 @@ namespace sw
 			}
 			else
 			{
-				auto it = _pDevice->_mapOffscreenTextures.find( colorHandle );
-				if ( it == _pDevice->_mapOffscreenTextures.end() || it->second._bHasRtv == 0 )
+				auto it = _pDevice->_mapOffscreenTexture.find( colorHandle );
+				if ( it == _pDevice->_mapOffscreenTexture.end() || it->second._bHasRtv == 0 )
 				{
 					if ( attachmentIndex > 0 )
 						break;
@@ -605,8 +605,8 @@ namespace sw
 		_pDevice->_activeDepthTarget = 0;
 		if ( bHasDepth )
 		{
-			auto depthIt = _pDevice->_mapOffscreenTextures.find( beginInfo._depthTarget );
-			if ( depthIt != _pDevice->_mapOffscreenTextures.end() && depthIt->second._bHasDsv != 0 )
+			auto depthIt = _pDevice->_mapOffscreenTexture.find( beginInfo._depthTarget );
+			if ( depthIt != _pDevice->_mapOffscreenTexture.end() && depthIt->second._bHasDsv != 0 )
 			{
 				transitionTexture( beginInfo._depthTarget, D3D12_RESOURCE_STATE_DEPTH_WRITE );
 				dsvHandle					 = depthIt->second._dsvHandle;
@@ -663,8 +663,8 @@ namespace sw
 		if ( pResource == nullptr )
 			return;
 
-		auto stateIt = _pDevice->_mapStructuredBufferStates.find( buffer );
-		if ( stateIt == _pDevice->_mapStructuredBufferStates.end() )
+		auto stateIt = _pDevice->_mapStructuredBufferState.find( buffer );
+		if ( stateIt == _pDevice->_mapStructuredBufferState.end() )
 			return;
 
 		const D3D12_RESOURCE_STATES stateBefore = stateIt->second;

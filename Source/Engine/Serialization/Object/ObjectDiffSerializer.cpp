@@ -7,6 +7,8 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "ObjectDiff" );
+
 	bool ObjectDiffSerializer::serializeDiff( vector<uint8>& listOutDiffBuffer, const void* pCdoInstance, const void* pModifiedInstance, const TypeInfo& typeInfo )
 	{
 		if ( pCdoInstance == nullptr || pModifiedInstance == nullptr )
@@ -98,7 +100,7 @@ namespace sw
 			}
 			else
 			{
-				SW_LOG_WARNING( "[ObjectDiff] unknown property hash %#", nameHash );
+				SW_LOG_WARNING( "unknown property hash %#", nameHash );
 				return false;
 			}
 			offset += payload;

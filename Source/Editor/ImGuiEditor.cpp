@@ -8,6 +8,7 @@
 #include "Editor/Common/Backend/IImGuiRendererBackend.h"
 #include "Editor/Common/Config/EditorConfig.h"
 #include "Editor/Common/Config/EditorData.h"
+#include "Editor/Common/EditorPlaySession.h"
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Gui/EditorMenuBar.h"
 #include "Editor/Common/Workspace/AssetEditorManager.h"
@@ -33,6 +34,8 @@
 
 namespace sw::editor
 {
+	SW_LOG_CALLER( "ImGuiEditor" );
+
 	namespace
 	{
 		void loadSplashDefaultRenderPass( const TaskArgs& args )
@@ -40,7 +43,7 @@ namespace sw::editor
 			shared_ptr<RenderPassResource> pPass = args.get<shared_ptr<RenderPassResource>>( 0 );
 			if ( pPass == nullptr )
 				return;
-			SW_LOG_INFO( "[ImGuiEditor] Splash: reading DefaultRenderPass.xml" );
+			SW_LOG_TRACE( "Splash: reading DefaultRenderPass.xml" );
 			pPass->loadFromXmlFile( editor::getService<const EngineData>()->_defaultRenderPass );
 		}
 
@@ -49,7 +52,7 @@ namespace sw::editor
 			shared_ptr<RenderPipelineResource> pPipeline = args.get<shared_ptr<RenderPipelineResource>>( 0 );
 			if ( pPipeline == nullptr )
 				return;
-			SW_LOG_INFO( "[ImGuiEditor] Splash: reading ForwardPipeline.xml" );
+			SW_LOG_TRACE( "Splash: reading ForwardPipeline.xml" );
 			pPipeline->loadFromXmlFile( editor::getService<const EngineData>()->_defaultForwardPipeline );
 		}
 	} // namespace
@@ -71,7 +74,7 @@ namespace sw::editor
 
 	bool ImGuiEditor::initialize( IWindow* pWindow, IRHIDevice* pRhiDevice )
 	{
-		SW_LOG_INFO( "ImGuiEditor::initialize Start" );
+		SW_LOG_TRACE( "ImGuiEditor::initialize Start" );
 		if ( _bInitialized != SW_FALSE )
 			return true;
 
@@ -87,12 +90,12 @@ namespace sw::editor
 
 		BLOCK( "ImGui Context / IO / Style" )
 		{
-			SW_LOG_INFO( "Checking ImGui version and creating context" );
+			SW_LOG_TRACE( "Checking ImGui version and creating context" );
 			IMGUI_CHECKVERSION();
 			ImGui::CreateContext();
 			ImPlot::CreateContext();
 
-			SW_LOG_INFO( "Configuring ImGui IO" );
+			SW_LOG_TRACE( "Configuring ImGui IO" );
 			ImGuiIO& io = ImGui::GetIO();
 			io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 			io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
@@ -114,7 +117,7 @@ namespace sw::editor
 
 		BLOCK( "Platform Backend create / init" )
 		{
-			SW_LOG_INFO( "Creating Platform Backend" );
+			SW_LOG_TRACE( "Creating Platform Backend" );
 			_platformBackend = IImGuiPlatformBackend::createPlatformBackend();
 			if ( _platformBackend == nullptr )
 			{
@@ -122,7 +125,7 @@ namespace sw::editor
 				return false;
 			}
 
-			SW_LOG_INFO( "Initializing Platform Backend" );
+			SW_LOG_TRACE( "Initializing Platform Backend" );
 			if ( _platformBackend->initialize( pWindow, pRhiDevice->getBackendType() ) == false )
 			{
 				SW_LOG_ERROR( "Platform backend initialization failed" );
@@ -132,7 +135,7 @@ namespace sw::editor
 
 		BLOCK( "Renderer Backend create / init" )
 		{
-			SW_LOG_INFO( "Creating Renderer Backend" );
+			SW_LOG_TRACE( "Creating Renderer Backend" );
 			_rendererBackend = IImGuiRendererBackend::createRendererBackend( pRhiDevice->getBackendType() );
 			if ( _rendererBackend == nullptr || _rendererBackend->initialize( pRhiDevice ) == false )
 			{
@@ -149,7 +152,7 @@ namespace sw::editor
 
 		BLOCK( "Splash / async RenderPass load then panels" )
 		{
-			SW_LOG_INFO( "[ImGuiEditor] Splash: loading DefaultRenderPass / ForwardPipeline..." );
+			SW_LOG_TRACE( "Splash: loading DefaultRenderPass / ForwardPipeline..." );
 
 			const shared_ptr<RenderPassResource>	 defaultPass	 = sw::make_shared<RenderPassResource>();
 			const shared_ptr<RenderPipelineResource> forwardPipeline = sw::make_shared<RenderPipelineResource>();
@@ -358,6 +361,16 @@ namespace sw::editor
 			*pWidth = ( pGameView != nullptr ) ? pGameView->_width : 0;
 		if ( pHeight != nullptr )
 			*pHeight = ( pGameView != nullptr ) ? pGameView->_height : 0;
+	}
+
+	bool ImGuiEditor::isPlaying() const
+	{
+		return EditorPlaySession::isPlaying();
+	}
+
+	void ImGuiEditor::stopSimulation()
+	{
+		EditorPlaySession::stop();
 	}
 
 	void ImGuiEditor::beginFrame()

@@ -71,15 +71,21 @@ def readJsonPrefabInternal(path: Path) -> tuple[str, str]:
     text = path.read_text(encoding="utf-8")
     data = json.loads(text)
     name = ""
+    body = text
     if isinstance(data, dict):
-        name = str(data.get("Name", ""))
+        if "GameObject" in data:
+            name = str(data.get("name") or data.get("Name") or "")
+            body = json.dumps(data["GameObject"])
+        else:
+            name = str(data.get("name") or data.get("Name") or data.get("_name") or "")
+            body = text
     elif isinstance(data, list) and len(data) > 0 and isinstance(data[0], dict):
-        name = str(data[0].get("Name", ""))
+        name = str(data[0].get("Name") or data[0].get("_name") or "")
 
     if not name:
         name = path.stem.split(".")[0]
 
-    return name, text
+    return name, body
 
 
 def writePfb2Internal(outPath: Path, name: str, body: str) -> bool:

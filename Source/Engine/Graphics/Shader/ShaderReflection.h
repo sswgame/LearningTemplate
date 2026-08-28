@@ -26,7 +26,7 @@ namespace sw
 		uint32					   _registerSpace{ 0 }; ///< DX12 register space / Vulkan descriptor set
 		uint32					   _bindPoint{ 0 };		///< 바인딩 슬롯 (register bN / binding=N)
 		uint32					   _totalSize{ 0 };
-		vector<ShaderVariableInfo> _listVariables;
+		vector<ShaderVariableInfo> _listVariable;
 	};
 
 	/// @brief 텍스처/샘플러/UAV 바인딩 슬롯
@@ -42,8 +42,8 @@ namespace sw
 	/// @brief 한 셰이더의 리플렉션 결과 (버퍼+바인딩)
 	struct ShaderReflectionData
 	{
-		vector<ShaderBufferInfo>	  _listConstantBuffers;
-		vector<ShaderResourceBinding> _listResources;
+		vector<ShaderBufferInfo>	  _listConstantBuffer;
+		vector<ShaderResourceBinding> _listResource;
 	};
 
 	/// @brief DXC/SPIR-V 리플렉션을 ShaderReflectionData로 채움

@@ -2,7 +2,6 @@
 
 #include "Core/Event/EventDispatcher.h"
 
-#include "Engine/Game/GameState.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Input/ActionMap.h"
 #include "Engine/Input/InputManager.h"
@@ -20,14 +19,14 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "DemoGame" );
+
 	void DemoGame::updateOverworld( float32 deltaTime )
 	{
 		InputManager& inputManager = *game::getService<InputManager>();
 
-		const bool bPlaying = ( getGameState() == GameState::Playing );
 		_player.setInputEnabled( canAcceptOverworldInput() );
-		if ( bPlaying )
-			_player.update( deltaTime, inputManager );
+		_player.update( deltaTime, inputManager );
 
 		{
 			const float32 posX = static_cast<float32>( _player.getTileX() );
@@ -38,7 +37,7 @@ namespace sw
 		updateHd2dCameraBias();
 		updateActionCombat( deltaTime );
 
-		if ( bPlaying == false || _transitions.isBusy() )
+		if ( _transitions.isBusy() )
 			return;
 
 		ActionMap&			 actions = gameActions();
@@ -82,10 +81,10 @@ namespace sw
 			int32 facingX{ 0 };
 			int32 facingY{ 0 };
 			_player.getFacingTile( facingX, facingY );
-			SW_LOG_INFO( "[DemoGame] Interact facing (%#,%#) flags=%# walk=%# pass=%#",
-						 facingX, facingY, static_cast<int32>( _tileMap.getFlags( facingX, facingY ) ),
-						 _tileMap.isWalkable( facingX, facingY ) ? 1 : 0,
-						 _tileMap.isPassThrough( facingX, facingY ) ? 1 : 0 );
+			SW_LOG_TRACE( "Interact facing (%#,%#) flags=%# walk=%# pass=%#",
+						  facingX, facingY, static_cast<int32>( _tileMap.getFlags( facingX, facingY ) ),
+						  _tileMap.isWalkable( facingX, facingY ) ? 1 : 0,
+						  _tileMap.isPassThrough( facingX, facingY ) ? 1 : 0 );
 			_hud.setDialogue( GameStrings::get( "ui.interact", "Interact..." ) );
 			// 체육관만: 상호작용 스텁이 클리어 게이트를 엽니다. 던전/보스는 RoomCleared로 해제합니다.
 			if ( _zones.getActiveRole() == ZoneRole::Gym && _zones.isClearGateLocked() )
@@ -93,13 +92,13 @@ namespace sw
 				_zones.setClearGateLocked( false );
 				_save.setFlag( "clear_gate_unlocked", 1 );
 				_hud.setDialogue( GameStrings::get( "ui.gate_unlocked", "The gate unlocked!" ) );
-				SW_LOG_INFO( "[DemoGame] Interact stub unlocked gym clear gate." );
+				SW_LOG_TRACE( "Interact stub unlocked gym clear gate." );
 			}
 		}
 
 		if ( _player.consumeMovedFlag() )
 		{
-			SW_LOG_TRACE( "[DemoGame] Player tile (%#,%#) on %# [HD-2D cam focus z=%#]",
+			SW_LOG_TRACE( "Player tile (%#,%#) on %# [HD-2D cam focus z=%#]",
 						  _player.getTileX(), _player.getTileY(), _tileMap.getName(), _cameraBias._focusWorldZ );
 			_tileMap.debugLogTileHd2d( _player.getTileX(), _player.getTileY() );
 		}
@@ -119,8 +118,6 @@ namespace sw
 
 	bool DemoGame::canAcceptOverworldInput() const
 	{
-		const bool bIsPlaying = ( getGameState() == GameState::Playing );
-		const bool bIsNotBusy = ( _transitions.isBusy() == false && _battle.isActive() == false );
-		return bIsPlaying && bIsNotBusy;
+		return _transitions.isBusy() == false && _battle.isActive() == false;
 	}
 } // namespace sw

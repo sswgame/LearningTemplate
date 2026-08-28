@@ -84,7 +84,7 @@ namespace sw
 			string			  _text;
 			string			  _condition;
 			string			  _action;
-			vector<string>	  _listChoices;
+			vector<string>	  _listChoice;
 			int32			  _nextDefaultNodeId;
 			map<int32, int32> _mapChoiceToNodeId;
 			int32			  _trueNodeId;
@@ -100,8 +100,8 @@ namespace sw
 		int32					_currentNodeId;
 		string					_currentSpeaker;
 		string					_currentText;
-		vector<string>			_listCurrentChoices;
-		map<int32, RuntimeNode> _mapNodes;
+		vector<string>			_listCurrentChoice;
+		map<int32, RuntimeNode> _mapNode;
 
 		OnDialogueLineFunc	   _onLine;
 		OnDialogueChoicesFunc  _onChoices;

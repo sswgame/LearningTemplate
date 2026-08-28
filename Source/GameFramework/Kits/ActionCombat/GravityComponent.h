@@ -28,13 +28,13 @@ namespace sw
 		void onTick( float32 deltaTime ) override;
 
 	private:
-		PROPERTY( Alias="gravity" )
+		PROPERTY( Alias = "gravity" )
 		float32 _gravity;
-		PROPERTY( Alias="velocityY" )
+		PROPERTY( Alias = "velocityY" )
 		float32 _velocityY;
-		PROPERTY( Alias="groundY" )
+		PROPERTY( Alias = "groundY" )
 		float32 _groundY;
-		PROPERTY( Alias="bIsGrounded" )
+		PROPERTY( Alias = "bIsGrounded" )
 		bool _bIsGrounded;
 	};
 } // namespace sw

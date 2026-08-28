@@ -46,10 +46,6 @@ namespace sw
 		using const_reverse_iterator = typename Container::const_reverse_iterator;
 
 	private:
-		Container _data;
-		Compare	  _comp;
-		SW_RACE_CTX_MEMBER
-
 		/** @brief 키만 비교해 정렬 위치를 찾습니다. */
 		struct KeyCompare
 		{
@@ -62,7 +58,7 @@ namespace sw
 
 			/** @brief 이질 키와 엔트리 키를 비교합니다. */
 			template <typename K>
-			bool operator()( const K& a, const value_type& b ) const { return comp( a, b.first ); }
+			bool operator()( const K& a, const value_type& b ) const { return comp( a.first, b.first ); }
 		};
 
 	public:
@@ -528,6 +524,11 @@ namespace sw
 			SW_SCOPED_RACE_READ();
 			return std::upper_bound( _data.begin(), _data.end(), key, KeyCompare{ _comp } );
 		}
+
+	private:
+		Container _data;
+		Compare	  _comp;
+		SW_RACE_CTX_MEMBER
 	};
 #endif
 } // namespace sw

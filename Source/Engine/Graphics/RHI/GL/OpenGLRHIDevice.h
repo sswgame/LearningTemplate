@@ -242,20 +242,20 @@ namespace sw
 
 		vector<BindlessResourceRecord> _listRegisteredBindlessVector;
 		vector<uint32>				   _listBindlessFree;
-		vector<BindlessResourceRecord> _listRegisteredUAVs;
+		vector<BindlessResourceRecord> _listRegisteredUAV;
 		vector<uint32>				   _listUavFree;
 
 		RHIHandleTable<OpenGLTextureRecord>							_gpuTextures;
-		unordered_map<CompositeFboKey, uint32, CompositeFboKeyHash> _mapCompositeFbos;
+		unordered_map<CompositeFboKey, uint32, CompositeFboKeyHash> _mapCompositeFbo;
 
-		vector<BindlessTextureRecord> _listRegisteredTextures;
+		vector<BindlessTextureRecord> _listRegisteredTexture;
 		vector<uint32>				  _listTextureFree;
 
 		uint32 _computeRootConstantUbo;
 		uint32 _arrComputeRootConstantShadow[kMaxComputeRootConstantDwords];
 
 		RHIHandleTable<OpenGLPipelineStateRecord> _pipelineStates;
-		vector<OpenGLRenderPassRecord>			  _listRenderPasses;
+		vector<OpenGLRenderPassRecord>			  _listRenderPass;
 
 		RHIReleaseQueue _releaseQueue;
 

@@ -10,14 +10,16 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "DialogueRunnerComponent" );
+
 	DialogueRunnerComponent::DialogueRunnerComponent()
 		: _pSaveSlot{ nullptr }
 		, _state{ DialogueRunnerState::Idle }
 		, _currentNodeId{ 0 }
 		, _currentSpeaker{}
 		, _currentText{}
-		, _listCurrentChoices{}
-		, _mapNodes{}
+		, _listCurrentChoice{}
+		, _mapNode{}
 		, _onLine{}
 		, _onChoices{}
 		, _onEvent{}
@@ -43,7 +45,7 @@ namespace sw
 		vector<uint8> listData;
 		if ( FileUtil::readFile( jsonPath, listData ) == false || listData.empty() )
 		{
-			SW_LOG_WARNING( "[DialogueRunnerComponent] Failed to read graph file: %#", jsonPath );
+			SW_LOG_WARNING( "Failed to read graph file: %#", jsonPath );
 			return false;
 		}
 
@@ -53,12 +55,12 @@ namespace sw
 
 	bool DialogueRunnerComponent::loadGraphJson( string_view jsonContent )
 	{
-		_mapNodes.clear();
+		_mapNode.clear();
 
 		JsonDocument doc;
 		if ( doc.parse( jsonContent ) == false )
 		{
-			SW_LOG_WARNING( "[DialogueRunnerComponent] Failed to parse graph JSON" );
+			SW_LOG_WARNING( "Failed to parse graph JSON" );
 			return false;
 		}
 
@@ -91,16 +93,16 @@ namespace sw
 						if ( choicesVal.isArray() )
 						{
 							const size_t choiceCount = choicesVal.size();
-							node._listChoices.reserve( choiceCount );
+							node._listChoice.reserve( choiceCount );
 							for ( size_t choiceIndex = 0; choiceIndex < choiceCount; ++choiceIndex )
 							{
-								node._listChoices.push_back( choicesVal.at( choiceIndex ).asString() );
+								node._listChoice.push_back( choicesVal.at( choiceIndex ).asString() );
 							}
 						}
 					}
 
 					if ( node._id > 0 )
-						_mapNodes[node._id] = std::move( node );
+						_mapNode[node._id] = std::move( node );
 				}
 			}
 		}
@@ -129,8 +131,8 @@ namespace sw
 						const int32 targetNodeId	= toPin / scale;
 						const int32 pinOffset		= fromPin % scale;
 
-						auto it = _mapNodes.find( sourceNodeId );
-						if ( it != _mapNodes.end() )
+						auto it = _mapNode.find( sourceNodeId );
+						if ( it != _mapNode.end() )
 						{
 							RuntimeNode& srcNode = it->second;
 							if ( bIsHundredScale )
@@ -188,15 +190,15 @@ namespace sw
 			}
 		}
 
-		SW_LOG_INFO( "[DialogueRunnerComponent] Loaded dialogue graph (%# nodes)", static_cast<uint32>( _mapNodes.size() ) );
-		return _mapNodes.empty() == false;
+		SW_LOG_INFO( "Loaded dialogue graph (%# nodes)", static_cast<uint32>( _mapNode.size() ) );
+		return _mapNode.empty() == false;
 	}
 
 	bool DialogueRunnerComponent::startDialogue( int32 startNodeId )
 	{
-		if ( _mapNodes.empty() )
+		if ( _mapNode.empty() )
 		{
-			SW_LOG_WARNING( "[DialogueRunnerComponent] Cannot start dialogue: no nodes loaded." );
+			SW_LOG_WARNING( "Cannot start dialogue: no nodes loaded." );
 			return false;
 		}
 
@@ -204,7 +206,7 @@ namespace sw
 		if ( targetId <= 0 )
 		{
 			// Find Start node
-			for ( const auto& [id, node] : _mapNodes )
+			for ( const auto& [id, node] : _mapNode )
 			{
 				if ( node._type == "Start" )
 				{
@@ -213,7 +215,7 @@ namespace sw
 				}
 			}
 			if ( targetId <= 0 )
-				targetId = _mapNodes.begin()->first;
+				targetId = _mapNode.begin()->first;
 		}
 
 		executeNode( targetId );
@@ -225,8 +227,8 @@ namespace sw
 		if ( _state != DialogueRunnerState::ShowingDialogue )
 			return false;
 
-		auto it = _mapNodes.find( _currentNodeId );
-		if ( it == _mapNodes.end() )
+		auto it = _mapNode.find( _currentNodeId );
+		if ( it == _mapNode.end() )
 		{
 			stopDialogue();
 			return false;
@@ -241,8 +243,8 @@ namespace sw
 		if ( _state != DialogueRunnerState::WaitingForChoice )
 			return false;
 
-		auto it = _mapNodes.find( _currentNodeId );
-		if ( it == _mapNodes.end() )
+		auto it = _mapNode.find( _currentNodeId );
+		if ( it == _mapNode.end() )
 		{
 			stopDialogue();
 			return false;
@@ -273,7 +275,7 @@ namespace sw
 		_currentNodeId		  = 0;
 		_currentSpeaker.clear();
 		_currentText.clear();
-		_listCurrentChoices.clear();
+		_listCurrentChoice.clear();
 
 		if ( bWasActive && _onFinished.isBound() )
 			_onFinished();
@@ -306,7 +308,7 @@ namespace sw
 
 	const vector<string>& DialogueRunnerComponent::getCurrentChoices() const
 	{
-		return _listCurrentChoices;
+		return _listCurrentChoice;
 	}
 
 	void DialogueRunnerComponent::setOnDialogueLine( OnDialogueLineFunc func )
@@ -376,7 +378,7 @@ namespace sw
 		if ( actionCmd.empty() )
 			return;
 
-		SW_LOG_INFO( "[DialogueRunnerComponent] Execute Action: %#", actionCmd );
+		SW_LOG_TRACE( "Execute Action: %#", actionCmd );
 		if ( _onEvent.isBound() )
 			_onEvent( actionCmd );
 
@@ -405,10 +407,10 @@ namespace sw
 			return;
 		}
 
-		auto it = _mapNodes.find( nodeId );
-		if ( it == _mapNodes.end() )
+		auto it = _mapNode.find( nodeId );
+		if ( it == _mapNode.end() )
 		{
-			SW_LOG_WARNING( "[DialogueRunnerComponent] Node %# not found in graph.", nodeId );
+			SW_LOG_WARNING( "Node %# not found in graph.", nodeId );
 			_state = DialogueRunnerState::Finished;
 			if ( _onFinished.isBound() )
 				_onFinished();
@@ -427,20 +429,20 @@ namespace sw
 			_state			= DialogueRunnerState::ShowingDialogue;
 			_currentSpeaker = node._speaker;
 			_currentText	= node._text;
-			_listCurrentChoices.clear();
+			_listCurrentChoice.clear();
 
 			if ( _onLine.isBound() )
 				_onLine( _currentSpeaker, _currentText );
 		}
 		else if ( node._type == "Choice" )
 		{
-			_state				= DialogueRunnerState::WaitingForChoice;
-			_currentSpeaker		= node._speaker;
-			_currentText		= node._text;
-			_listCurrentChoices = node._listChoices;
+			_state			   = DialogueRunnerState::WaitingForChoice;
+			_currentSpeaker	   = node._speaker;
+			_currentText	   = node._text;
+			_listCurrentChoice = node._listChoice;
 
 			if ( _onChoices.isBound() )
-				_onChoices( _listCurrentChoices );
+				_onChoices( _listCurrentChoice );
 		}
 		else if ( node._type == "Branch" )
 		{

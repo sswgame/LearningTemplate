@@ -44,7 +44,7 @@ namespace sw::editor
 	} // namespace
 
 	ConsolePanel::ConsolePanel()
-		: _listEntries{}
+		: _listEntry{}
 		, _listDrawSnapshot{}
 		, _listVisible{}
 		, _cachedFilter{}
@@ -105,7 +105,7 @@ namespace sw::editor
 			std::scoped_lock<mutex> lock{ _entriesMutex };
 			if ( _bHasNewLogs == SW_TRUE )
 			{
-				_listDrawSnapshot.assign( _listEntries.begin(), _listEntries.end() );
+				_listDrawSnapshot.assign( _listEntry.begin(), _listEntry.end() );
 				bNewLogs	 = true;
 				_bHasNewLogs = SW_FALSE;
 			}
@@ -114,7 +114,7 @@ namespace sw::editor
 		if ( ImGui::Button( "Clear" ) )
 		{
 			std::scoped_lock<mutex> lock{ _entriesMutex };
-			_listEntries.clear();
+			_listEntry.clear();
 			_listDrawSnapshot.clear();
 			_listVisible.clear();
 			_bHasNewLogs = SW_FALSE;
@@ -206,10 +206,10 @@ namespace sw::editor
 	void ConsolePanel::onLogWritten( const LogEntry& entry )
 	{
 		std::scoped_lock<mutex> lock{ _entriesMutex };
-		_listEntries.push_back( entry );
-		while ( _listEntries.size() > constant::kMaxBuffer2048 )
+		_listEntry.push_back( entry );
+		while ( _listEntry.size() > constant::kMaxBuffer2048 )
 		{
-			_listEntries.pop_front();
+			_listEntry.pop_front();
 		}
 		_bHasNewLogs = SW_TRUE;
 	}

@@ -19,31 +19,31 @@ namespace sw::editor
 		{
 			case SelectionMode::Replace:
 			{
-				_listSelectedObjects.clear();
+				_listSelectedObject.clear();
 				if ( pObj.isValid() )
-					_listSelectedObjects.push_back( pObj );
+					_listSelectedObject.push_back( pObj );
 				break;
 			}
 			case SelectionMode::Add:
 			{
 				if ( pObj.isValid() && hasObject( pObj ) == false )
-					_listSelectedObjects.push_back( pObj );
+					_listSelectedObject.push_back( pObj );
 				break;
 			}
 			case SelectionMode::Remove:
 			{
-				auto it = std::find( _listSelectedObjects.begin(), _listSelectedObjects.end(), pObj );
-				if ( it != _listSelectedObjects.end() )
-					_listSelectedObjects.erase( it );
+				auto it = std::find( _listSelectedObject.begin(), _listSelectedObject.end(), pObj );
+				if ( it != _listSelectedObject.end() )
+					_listSelectedObject.erase( it );
 				break;
 			}
 			case SelectionMode::Toggle:
 			{
-				auto it = std::find( _listSelectedObjects.begin(), _listSelectedObjects.end(), pObj );
-				if ( it != _listSelectedObjects.end() )
-					_listSelectedObjects.erase( it );
+				auto it = std::find( _listSelectedObject.begin(), _listSelectedObject.end(), pObj );
+				if ( it != _listSelectedObject.end() )
+					_listSelectedObject.erase( it );
 				else if ( pObj.isValid() )
-					_listSelectedObjects.push_back( pObj );
+					_listSelectedObject.push_back( pObj );
 				break;
 			}
 		}
@@ -56,7 +56,7 @@ namespace sw::editor
 		pruneInvalid();
 
 		if ( mode == SelectionMode::Replace )
-			_listSelectedObjects.clear();
+			_listSelectedObject.clear();
 
 		for ( const GameObjectPtr& pObj : listObjs )
 		{
@@ -65,13 +65,13 @@ namespace sw::editor
 
 			if ( mode == SelectionMode::Remove )
 			{
-				auto it = std::find( _listSelectedObjects.begin(), _listSelectedObjects.end(), pObj );
-				if ( it != _listSelectedObjects.end() )
-					_listSelectedObjects.erase( it );
+				auto it = std::find( _listSelectedObject.begin(), _listSelectedObject.end(), pObj );
+				if ( it != _listSelectedObject.end() )
+					_listSelectedObject.erase( it );
 			}
 			else if ( hasObject( pObj ) == false )
 			{
-				_listSelectedObjects.push_back( pObj );
+				_listSelectedObject.push_back( pObj );
 			}
 		}
 
@@ -80,22 +80,22 @@ namespace sw::editor
 
 	bool SelectionManager::hasObject( const GameObjectPtr& pObj ) const
 	{
-		return std::find( _listSelectedObjects.begin(), _listSelectedObjects.end(), pObj ) !=
-			   _listSelectedObjects.end();
+		return std::find( _listSelectedObject.begin(), _listSelectedObject.end(), pObj ) !=
+			   _listSelectedObject.end();
 	}
 
 	GameObjectPtr SelectionManager::getPrimaryObject() const
 	{
-		if ( _listSelectedObjects.empty() )
+		if ( _listSelectedObject.empty() )
 			return GameObjectPtr{};
-		return _listSelectedObjects.front();
+		return _listSelectedObject.front();
 	}
 
 	uint64 SelectionManager::getPrimaryObjectId() const
 	{
-		if ( _listSelectedObjects.empty() )
+		if ( _listSelectedObject.empty() )
 			return 0;
-		GameObject* pRaw = _listSelectedObjects.front().get();
+		GameObject* pRaw = _listSelectedObject.front().get();
 		return ( pRaw != nullptr ) ? pRaw->getObjectId() : 0;
 	}
 
@@ -105,31 +105,31 @@ namespace sw::editor
 		{
 			case SelectionMode::Replace:
 			{
-				_listSelectedAssets.clear();
+				_listSelectedAsset.clear();
 				if ( assetPath.empty() == false )
-					_listSelectedAssets.emplace_back( assetPath );
+					_listSelectedAsset.emplace_back( assetPath );
 				break;
 			}
 			case SelectionMode::Add:
 			{
 				if ( assetPath.empty() == false && hasAsset( assetPath ) == false )
-					_listSelectedAssets.emplace_back( assetPath );
+					_listSelectedAsset.emplace_back( assetPath );
 				break;
 			}
 			case SelectionMode::Remove:
 			{
-				auto it = std::find( _listSelectedAssets.begin(), _listSelectedAssets.end(), assetPath );
-				if ( it != _listSelectedAssets.end() )
-					_listSelectedAssets.erase( it );
+				auto it = std::find( _listSelectedAsset.begin(), _listSelectedAsset.end(), assetPath );
+				if ( it != _listSelectedAsset.end() )
+					_listSelectedAsset.erase( it );
 				break;
 			}
 			case SelectionMode::Toggle:
 			{
-				auto it = std::find( _listSelectedAssets.begin(), _listSelectedAssets.end(), assetPath );
-				if ( it != _listSelectedAssets.end() )
-					_listSelectedAssets.erase( it );
+				auto it = std::find( _listSelectedAsset.begin(), _listSelectedAsset.end(), assetPath );
+				if ( it != _listSelectedAsset.end() )
+					_listSelectedAsset.erase( it );
 				else if ( assetPath.empty() == false )
-					_listSelectedAssets.emplace_back( assetPath );
+					_listSelectedAsset.emplace_back( assetPath );
 				break;
 			}
 		}
@@ -140,7 +140,7 @@ namespace sw::editor
 	void SelectionManager::selectAssets( const vector<string>& listAssetPaths, SelectionMode mode )
 	{
 		if ( mode == SelectionMode::Replace )
-			_listSelectedAssets.clear();
+			_listSelectedAsset.clear();
 
 		for ( const string& path : listAssetPaths )
 		{
@@ -149,13 +149,13 @@ namespace sw::editor
 
 			if ( mode == SelectionMode::Remove )
 			{
-				auto it = std::find( _listSelectedAssets.begin(), _listSelectedAssets.end(), path );
-				if ( it != _listSelectedAssets.end() )
-					_listSelectedAssets.erase( it );
+				auto it = std::find( _listSelectedAsset.begin(), _listSelectedAsset.end(), path );
+				if ( it != _listSelectedAsset.end() )
+					_listSelectedAsset.erase( it );
 			}
 			else if ( hasAsset( path ) == false )
 			{
-				_listSelectedAssets.push_back( path );
+				_listSelectedAsset.push_back( path );
 			}
 		}
 
@@ -164,42 +164,42 @@ namespace sw::editor
 
 	bool SelectionManager::hasAsset( string_view assetPath ) const
 	{
-		return std::find( _listSelectedAssets.begin(), _listSelectedAssets.end(), assetPath ) !=
-			   _listSelectedAssets.end();
+		return std::find( _listSelectedAsset.begin(), _listSelectedAsset.end(), assetPath ) !=
+			   _listSelectedAsset.end();
 	}
 
 	string_view SelectionManager::getPrimaryAsset() const
 	{
-		if ( _listSelectedAssets.empty() )
+		if ( _listSelectedAsset.empty() )
 			return {};
-		return _listSelectedAssets.front();
+		return _listSelectedAsset.front();
 	}
 
 	void SelectionManager::clearObjectSelection()
 	{
-		if ( _listSelectedObjects.empty() == false )
+		if ( _listSelectedObject.empty() == false )
 		{
-			_listSelectedObjects.clear();
+			_listSelectedObject.clear();
 			notifyChanged();
 		}
 	}
 
 	void SelectionManager::clearAssetSelection()
 	{
-		if ( _listSelectedAssets.empty() == false )
+		if ( _listSelectedAsset.empty() == false )
 		{
-			_listSelectedAssets.clear();
+			_listSelectedAsset.clear();
 			notifyChanged();
 		}
 	}
 
 	void SelectionManager::clearAll()
 	{
-		const bool bHadObjects = _listSelectedObjects.empty() == false;
-		const bool bHadAssets  = _listSelectedAssets.empty() == false;
+		const bool bHadObjects = _listSelectedObject.empty() == false;
+		const bool bHadAssets  = _listSelectedAsset.empty() == false;
 
-		_listSelectedObjects.clear();
-		_listSelectedAssets.clear();
+		_listSelectedObject.clear();
+		_listSelectedAsset.clear();
 
 		if ( bHadObjects || bHadAssets )
 			notifyChanged();
@@ -207,14 +207,14 @@ namespace sw::editor
 
 	void SelectionManager::pruneInvalid()
 	{
-		const size_t countBefore = _listSelectedObjects.size();
-		_listSelectedObjects.erase(
-			std::remove_if( _listSelectedObjects.begin(), _listSelectedObjects.end(),
+		const size_t countBefore = _listSelectedObject.size();
+		_listSelectedObject.erase(
+			std::remove_if( _listSelectedObject.begin(), _listSelectedObject.end(),
 							[]( const GameObjectPtr& pObj )
 		{ return pObj.isValid() == false; } ),
-			_listSelectedObjects.end() );
+			_listSelectedObject.end() );
 
-		if ( _listSelectedObjects.size() != countBefore )
+		if ( _listSelectedObject.size() != countBefore )
 			notifyChanged();
 	}
 

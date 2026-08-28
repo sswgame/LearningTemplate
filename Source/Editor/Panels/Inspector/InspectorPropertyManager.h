@@ -24,6 +24,6 @@ namespace sw::editor
 		void				registerDefaults();
 
 	private:
-		map<string, unique_ptr<IInspectorProperty>> _mapProperties;
+		map<string, unique_ptr<IInspectorProperty>> _mapProperty;
 	};
 } // namespace sw::editor

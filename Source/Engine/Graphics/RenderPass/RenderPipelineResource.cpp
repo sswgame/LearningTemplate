@@ -12,6 +12,7 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "RenderPipelineResource" );
 
 	namespace
 	{
@@ -36,9 +37,9 @@ namespace sw
 				if ( pType != nullptr )
 					pass._type = pType;
 
-				parseStringList( passNode, "_inputs", pass._listInputs );
-				parseStringList( passNode, "_outputs", pass._listOutputs );
-				parseStringList( passNode, "_permutations", pass._listPermutations );
+				parseStringList( passNode, "_inputs", pass._listInput );
+				parseStringList( passNode, "_outputs", pass._listOutput );
+				parseStringList( passNode, "_permutations", pass._listPermutation );
 
 				const utf8* pShaderPath = passNode.childText( "_shaderPath" );
 				if ( pShaderPath != nullptr )
@@ -84,13 +85,13 @@ namespace sw
 				const utf8* pType = passNode.attr( "type" );
 				if ( pType != nullptr )
 					pass._type = pType;
-				parseStringList( passNode, "inputs", pass._listInputs );
-				parseStringList( passNode, "outputs", pass._listOutputs );
-				if ( pass._listInputs.empty() )
-					parseStringList( passNode, "_inputs", pass._listInputs );
-				if ( pass._listOutputs.empty() )
-					parseStringList( passNode, "_outputs", pass._listOutputs );
-				parseStringList( passNode, "_permutations", pass._listPermutations );
+				parseStringList( passNode, "inputs", pass._listInput );
+				parseStringList( passNode, "outputs", pass._listOutput );
+				if ( pass._listInput.empty() )
+					parseStringList( passNode, "_inputs", pass._listInput );
+				if ( pass._listOutput.empty() )
+					parseStringList( passNode, "_outputs", pass._listOutput );
+				parseStringList( passNode, "_permutations", pass._listPermutation );
 				outListPasses.push_back( std::move( pass ) );
 			}
 		}
@@ -147,14 +148,14 @@ namespace sw
 
 		if ( FileUtil::fileExists( absPath ) == false )
 		{
-			SW_LOG_ERROR( "[RenderPipelineResource] XML file not found: %#", absPath );
+			SW_LOG_ERROR( "XML file not found: %#", absPath );
 			return false;
 		}
 
 		vector<uint8> listFileData;
 		if ( FileUtil::readFile( absPath, listFileData ) == false || listFileData.empty() )
 		{
-			SW_LOG_ERROR( "[RenderPipelineResource] Failed to read XML: %#", absPath );
+			SW_LOG_ERROR( "Failed to read XML: %#", absPath );
 			return false;
 		}
 
@@ -162,21 +163,21 @@ namespace sw
 		XmlDocument doc;
 		if ( doc.parse( xmlStr ) == false )
 		{
-			SW_LOG_ERROR( "[RenderPipelineResource] Failed to parse XML: %#", absPath );
+			SW_LOG_ERROR( "Failed to parse XML: %#", absPath );
 			return false;
 		}
 
 		XmlNode root = doc.root( "RenderPipelineDesc" );
 		if ( root.isValid() == false )
 		{
-			SW_LOG_ERROR( "[RenderPipelineResource] Missing <RenderPipelineDesc>: %#", absPath );
+			SW_LOG_ERROR( "Missing <RenderPipelineDesc>: %#", absPath );
 			return false;
 		}
 
 		if ( engine::getResourceManager().getAssetFormatRegistry().upgradeXml( AssetKind::RenderPipeline, doc, root,
 																			   AssetFormatVersions::kRenderPipeline ) == false )
 		{
-			SW_LOG_ERROR( "[RenderPipelineResource] formatVersion upgrade failed: %#", absPath );
+			SW_LOG_ERROR( "formatVersion upgrade failed: %#", absPath );
 			return false;
 		}
 
@@ -192,19 +193,19 @@ namespace sw
 		if ( pShadingModel != nullptr )
 			_desc._shadingModel = pShadingModel;
 
-		parseAttachments( root.child( "_attachments" ), _desc._listAttachments );
+		parseAttachments( root.child( "_attachments" ), _desc._listAttachment );
 
 		XmlNode passesNode = root.child( "_passes" );
 		if ( passesNode.isValid() )
-			parsePipelineGraphPasses( passesNode, _desc._listPasses );
+			parsePipelineGraphPasses( passesNode, _desc._listPass );
 
-		parseStringList( root, "_renderPassRefs", _desc._listRenderPassRefs );
+		parseStringList( root, "_renderPassRefs", _desc._listRenderPassRef );
 
 		if ( _desc._shadingModel.empty() || _desc._shadingModel == "Forward" )
-			_desc._shadingModel = guessShadingModel( _desc._name, _desc._listPasses );
+			_desc._shadingModel = guessShadingModel( _desc._name, _desc._listPass );
 
-		SW_LOG_INFO( "[RenderPipelineResource] Loaded '%#' (model=%#, attachments=%#, passes=%#)",
-					 _desc._name, _desc._shadingModel, _desc._listAttachments.size(), _desc._listPasses.size() );
+		SW_LOG_INFO( "Loaded '%#' (model=%#, attachments=%#, passes=%#)",
+					 _desc._name, _desc._shadingModel, _desc._listAttachment.size(), _desc._listPass.size() );
 		return true;
 	}
 
@@ -224,7 +225,7 @@ namespace sw
 		shadingModelNode.setValue( _desc._shadingModel.c_str() );
 
 		XmlNode attachsNode = root.appendChild( "_attachments" );
-		for ( const RenderPassAttachment& att : _desc._listAttachments )
+		for ( const RenderPassAttachment& att : _desc._listAttachment )
 		{
 			XmlNode attNode = attachsNode.appendChild( "item" );
 
@@ -249,7 +250,7 @@ namespace sw
 		}
 
 		XmlNode passesNode = root.appendChild( "_passes" );
-		for ( const RenderGraphPassDesc& pass : _desc._listPasses )
+		for ( const RenderGraphPassDesc& pass : _desc._listPass )
 		{
 			XmlNode passNode = passesNode.appendChild( "item" );
 			XmlNode pName	 = passNode.appendChild( "_name" );
@@ -258,8 +259,8 @@ namespace sw
 			XmlNode pType = passNode.appendChild( "_type" );
 			pType.setValue( pass._type.c_str() );
 
-			appendStringList( passNode, "_inputs", pass._listInputs );
-			appendStringList( passNode, "_outputs", pass._listOutputs );
+			appendStringList( passNode, "_inputs", pass._listInput );
+			appendStringList( passNode, "_outputs", pass._listOutput );
 			if ( pass._shaderPath.empty() == false )
 			{
 				XmlNode pNode = passNode.appendChild( "_shaderPath" );
@@ -295,21 +296,21 @@ namespace sw
 			XmlNode pBlend = passNode.appendChild( "_bEnableBlend" );
 			pBlend.setValue( pass._bEnableBlend ? "1" : "0" );
 
-			if ( pass._listPermutations.empty() == false )
-				appendStringList( passNode, "_permutations", pass._listPermutations );
+			if ( pass._listPermutation.empty() == false )
+				appendStringList( passNode, "_permutations", pass._listPermutation );
 		}
 
-		if ( _desc._listRenderPassRefs.empty() == false )
-			appendStringList( root, "_renderPassRefs", _desc._listRenderPassRefs );
+		if ( _desc._listRenderPassRef.empty() == false )
+			appendStringList( root, "_renderPassRefs", _desc._listRenderPassRef );
 
 		string xmlStr = doc.saveToString();
 		if ( FileUtil::writeFile( absPath, reinterpret_cast<const uint8*>( xmlStr.data() ), xmlStr.size() ) == false )
 		{
-			SW_LOG_ERROR( "[RenderPipelineResource] Failed to write: %#", absPath );
+			SW_LOG_ERROR( "Failed to write: %#", absPath );
 			return false;
 		}
 
-		SW_LOG_INFO( "[RenderPipelineResource] Saved '%#' -> %#", _desc._name, absPath );
+		SW_LOG_INFO( "Saved '%#' -> %#", _desc._name, absPath );
 		return true;
 	}
 

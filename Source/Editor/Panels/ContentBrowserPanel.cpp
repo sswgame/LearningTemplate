@@ -55,8 +55,8 @@ namespace sw::editor
 	} // namespace
 
 	ContentBrowserPanel::ContentBrowserPanel() noexcept
-		: _listRoots{}
-		, _listEntries{}
+		: _listRoot{}
+		, _listEntry{}
 		, _selectedFolderAbs{}
 		, _breadcrumb{}
 		, _selectedAssetAbs{}
@@ -65,7 +65,7 @@ namespace sw::editor
 		, _typeFilter{ AssetTypeFilter::All }
 		, _viewMode{ ViewMode::Tiles }
 		, _pendingImportMutex{}
-		, _listPendingImportPaths{}
+		, _listPendingImportPath{}
 		, _bRootsDirty{ 1 }
 		, _bFolderDirty{ 1 }
 		, _reservedFlags{ 0 }
@@ -90,7 +90,7 @@ namespace sw::editor
 
 	void ContentBrowserPanel::refreshRoots()
 	{
-		_listRoots.clear();
+		_listRoot.clear();
 
 		const auto addRoot = [this]( const utf8* pName, string_view path )
 		{
@@ -101,7 +101,7 @@ namespace sw::editor
 			ContentRoot root;
 			root._displayName  = pName;
 			root._absolutePath = FileUtil::normalizeSeparators( path );
-			_listRoots.push_back( std::move( root ) );
+			_listRoot.push_back( std::move( root ) );
 		};
 
 		addRoot( "game", ResourceUtil::getGameFolderPath() );
@@ -109,15 +109,15 @@ namespace sw::editor
 		addRoot( "common", ResourceUtil::getCommonFolderPath() );
 		addRoot( "editor", ResourceUtil::getEditorFolderPath() );
 
-		if ( _selectedFolderAbs.empty() && _listRoots.empty() == false )
-			selectFolder( _listRoots.front()._absolutePath, _listRoots.front()._displayName );
+		if ( _selectedFolderAbs.empty() && _listRoot.empty() == false )
+			selectFolder( _listRoot.front()._absolutePath, _listRoot.front()._displayName );
 
 		_bRootsDirty = SW_FALSE;
 	}
 
 	void ContentBrowserPanel::refreshCurrentFolder()
 	{
-		_listEntries.clear();
+		_listEntry.clear();
 		if ( _selectedFolderAbs.empty() )
 		{
 			_bFolderDirty = SW_FALSE;
@@ -156,7 +156,7 @@ namespace sw::editor
 			if ( item._bIsDirectory == false && item._relativePath.empty() == false )
 				editor::getService<ResourceManager>()->getAssetDatabase().ensureMeta( item._relativePath, false );
 
-			_listEntries.push_back( std::move( item ) );
+			_listEntry.push_back( std::move( item ) );
 		};
 
 		vector<string> listFolders;
@@ -172,7 +172,7 @@ namespace sw::editor
 			addEntry( file, false );
 		}
 
-		std::sort( _listEntries.begin(), _listEntries.end(), []( const AssetEntry& entryA, const AssetEntry& entryB )
+		std::sort( _listEntry.begin(), _listEntry.end(), []( const AssetEntry& entryA, const AssetEntry& entryB )
 		{
 			if ( entryA._bIsDirectory != entryB._bIsDirectory )
 				return entryA._bIsDirectory > entryB._bIsDirectory;
@@ -257,7 +257,7 @@ namespace sw::editor
 		ImGui::SameLine();
 		if ( ImGui::Button( "Refresh" ) )
 		{
-			_listEntries.clear();
+			_listEntry.clear();
 			_selectedAssetAbs.clear();
 			refreshRoots();
 			refreshCurrentFolder();
@@ -274,12 +274,12 @@ namespace sw::editor
 		editor::beginSection( sourcesDesc );
 		editor::drawSectionHeader( "Sources" );
 
-		for ( const ContentRoot& root : _listRoots )
+		for ( const ContentRoot& root : _listRoot )
 		{
 			drawFolderTreeNode( root._absolutePath.c_str(), root._displayName, 0 );
 		}
 
-		if ( _listRoots.empty() )
+		if ( _listRoot.empty() )
 			editor::drawEmptyHint( "No resource roots found." );
 
 		editor::endSection();
@@ -313,7 +313,7 @@ namespace sw::editor
 		{
 			// 루트 이름 + 그 아래 상대 경로로 브레드크럼을 만듭니다.
 			string crumb( label );
-			for ( const ContentRoot& root : _listRoots )
+			for ( const ContentRoot& root : _listRoot )
 			{
 				const string rootNorm = FileUtil::normalizePath( root._absolutePath );
 				const string absNorm  = FileUtil::normalizePath( absPath );
@@ -359,8 +359,8 @@ namespace sw::editor
 	void ContentBrowserPanel::drawAssetView()
 	{
 		vector<AssetEntry> listVisible;
-		listVisible.reserve( _listEntries.size() );
-		for ( const AssetEntry& entry : _listEntries )
+		listVisible.reserve( _listEntry.size() );
+		for ( const AssetEntry& entry : _listEntry )
 		{
 			if ( passesTypeFilter( entry ) == false || passesSearchFilter( entry ) == false )
 				continue;
@@ -431,7 +431,7 @@ namespace sw::editor
 			if ( partIndex == 0 )
 			{
 				builtCrumb = listParts[0];
-				for ( const ContentRoot& root : _listRoots )
+				for ( const ContentRoot& root : _listRoot )
 				{
 					if ( root._displayName == listParts[0] )
 					{
@@ -626,7 +626,7 @@ namespace sw::editor
 		}
 
 		selectAsset( entry );
-		SW_LOG_INFO( "[Content Browser] Open: %#", entry._relativePath.c_str() );
+		SW_LOG_TRACE( "Open: %#", entry._relativePath.c_str() );
 
 		if ( EditorContext::get()->getAssetEditorManager().openAssetInEditor( entry._relativePath ) )
 			return;
@@ -644,7 +644,7 @@ namespace sw::editor
 	{
 		if ( _selectedFolderAbs.empty() )
 		{
-			SW_LOG_WARNING( "[Content Browser] Select a destination folder before importing." );
+			SW_LOG_WARNING( "Select a destination folder before importing." );
 			return;
 		}
 
@@ -673,7 +673,7 @@ namespace sw::editor
 	void ContentBrowserPanel::onImportDialogResult( const vector<string>& paths )
 	{
 		std::scoped_lock<mutex> lock{ _pendingImportMutex };
-		_listPendingImportPaths.insert( _listPendingImportPaths.end(), paths.begin(), paths.end() );
+		_listPendingImportPath.insert( _listPendingImportPath.end(), paths.begin(), paths.end() );
 	}
 
 	void ContentBrowserPanel::processPendingImports()
@@ -681,14 +681,14 @@ namespace sw::editor
 		vector<string> listPaths;
 		{
 			std::scoped_lock<mutex> lock{ _pendingImportMutex };
-			if ( _listPendingImportPaths.empty() )
+			if ( _listPendingImportPath.empty() )
 				return;
-			listPaths.swap( _listPendingImportPaths );
+			listPaths.swap( _listPendingImportPath );
 		}
 
 		if ( _selectedFolderAbs.empty() )
 		{
-			SW_LOG_WARNING( "[Content Browser] Import cancelled — no destination folder." );
+			SW_LOG_WARNING( "Import cancelled — no destination folder." );
 			return;
 		}
 
@@ -697,7 +697,7 @@ namespace sw::editor
 		{
 			if ( FileUtil::fileExists( sourcePath ) == false )
 			{
-				SW_LOG_WARNING( "[Content Browser] Import skipped (missing): %#", sourcePath.c_str() );
+				SW_LOG_WARNING( "Import skipped (missing): %#", sourcePath.c_str() );
 				continue;
 			}
 
@@ -707,7 +707,7 @@ namespace sw::editor
 
 			if ( FileUtil::pathsEqualNormalized( sourcePath, destPath ) )
 			{
-				SW_LOG_INFO( "[Content Browser] Already in folder: %#", fileName.c_str() );
+				SW_LOG_TRACE( "Already in folder: %#", fileName.c_str() );
 				continue;
 			}
 
@@ -718,10 +718,10 @@ namespace sw::editor
 				const string rel = AssetDatabase::toRelativePath( destPath );
 				if ( rel.empty() == false )
 					editor::getService<ResourceManager>()->getAssetDatabase().ensureMeta( rel, true );
-				SW_LOG_INFO( "[Content Browser] Imported: %# -> %#", sourcePath.c_str(), destPath.c_str() );
+				SW_LOG_TRACE( "Imported: %# -> %#", sourcePath.c_str(), destPath.c_str() );
 			}
 			else
-				SW_LOG_ERROR( "[Content Browser] Failed to import: %#", sourcePath.c_str() );
+				SW_LOG_ERROR( "Failed to import: %#", sourcePath.c_str() );
 		}
 
 		if ( copied > 0 )

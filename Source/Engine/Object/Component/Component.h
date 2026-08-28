@@ -8,7 +8,6 @@
 #include "Core/Concurrency/Atomic.h"
 
 #include "Engine/Object/Component/ComponentHandle.h"
-
 #include "Engine/Reflection/ReflectionCore.h"
 
 #include <atomic>
@@ -114,14 +113,14 @@ namespace sw
 		static std::atomic<uint64> _s_nextComponentId; ///< ID 생성 카운터
 
 	protected:
-		GameObject*		_pOwner;		  ///< 소유자 GameObject 포인터 참조
-		uint64			_componentId;	  ///< 컴포넌트 고유 시리얼 ID
-		hashed_string	_componentName;	  ///< 컴포넌트 식별 이름
+		GameObject*	  _pOwner;		  ///< 소유자 GameObject 포인터 참조
+		uint64		  _componentId;	  ///< 컴포넌트 고유 시리얼 ID
+		hashed_string _componentName; ///< 컴포넌트 식별 이름
 
-		TickGroup			  _tickGroup{ TickGroup::DuringPhysics }; ///< TickGroup 슬롯
-		AtomicBool			  _bActive{ true };						  ///< 컴포넌트 개별 활성화
-		uint8				  _bCanEverTick : 1;
-		uint8				  _reservedFlags : 7;
-		std::atomic<bool>	  _bIsPendingKill{ false };
+		TickGroup		  _tickGroup{ TickGroup::DuringPhysics }; ///< TickGroup 슬롯
+		AtomicBool		  _bActive{ true };						  ///< 컴포넌트 개별 활성화
+		uint8			  _bCanEverTick	 : 1;
+		uint8			  _reservedFlags : 7;
+		std::atomic<bool> _bIsPendingKill{ false };
 	};
 } // namespace sw

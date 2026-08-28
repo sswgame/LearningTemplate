@@ -7,6 +7,8 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "LinearAllocator" );
+
 	LinearAllocator::LinearAllocator()
 		: LinearAllocator{ 1024 * 64 }
 	{
@@ -120,7 +122,7 @@ namespace sw
 		const size_t blockCount = _blockCount.load( std::memory_order_relaxed );
 		if ( blockCount >= kMaxBlockCount )
 		{
-			SW_LOG_ERROR( "[LinearAllocator] Block table exhausted (%# blocks).", static_cast<uint32>( kMaxBlockCount ) );
+			SW_LOG_ERROR( "Block table exhausted (%# blocks).", static_cast<uint32>( kMaxBlockCount ) );
 			return false;
 		}
 
@@ -139,7 +141,7 @@ namespace sw
 		if ( pBlock->_pData == nullptr )
 		{
 			sw_delete( pBlock );
-			SW_LOG_ERROR( "[LinearAllocator] Failed to allocate a %# byte block.", static_cast<uint32>( capacity ) );
+			SW_LOG_ERROR( "Failed to allocate a %# byte block.", static_cast<uint32>( capacity ) );
 			return false;
 		}
 

@@ -44,7 +44,7 @@ SW_TEST_CASE( RenderPassTest, XmlSerializationRoundtrip )
 	colorAtt._arrClearColor[2] = 0.8f;
 	colorAtt._arrClearColor[3] = 1.0f;
 	colorAtt._bClear		   = true;
-	desc._listAttachments.push_back( colorAtt );
+	desc._listAttachment.push_back( colorAtt );
 
 	sw::string testPath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "test_renderpass_roundtrip.xml" );
 	SW_EXPECT_TRUE( passRes.saveToXmlFile( testPath ) );
@@ -52,8 +52,8 @@ SW_TEST_CASE( RenderPassTest, XmlSerializationRoundtrip )
 	sw::RenderPassResource loadedRes;
 	SW_EXPECT_TRUE( loadedRes.loadFromXmlFile( testPath ) );
 	SW_EXPECT_EQUAL( sw::string( "UnitTestRenderPass" ), loadedRes.getDesc()._name );
-	SW_EXPECT_EQUAL( size_t( 1 ), loadedRes.getDesc()._listAttachments.size() );
-	SW_EXPECT_EQUAL( sw::string( "Color0" ), loadedRes.getDesc()._listAttachments[0]._name );
+	SW_EXPECT_EQUAL( size_t( 1 ), loadedRes.getDesc()._listAttachment.size() );
+	SW_EXPECT_EQUAL( sw::string( "Color0" ), loadedRes.getDesc()._listAttachment[0]._name );
 
 	sw::FileUtil::removeFile( testPath );
 }
@@ -118,15 +118,15 @@ SW_TEST_CASE( RenderPassTest, PipelineXmlSerializationRoundtrip )
 	colorAtt._arrClearColor[2] = 0.3f;
 	colorAtt._arrClearColor[3] = 1.0f;
 	colorAtt._bClear		   = true;
-	desc._listAttachments.push_back( colorAtt );
+	desc._listAttachment.push_back( colorAtt );
 
 	sw::RenderGraphPassDesc pass{};
 	pass._name = "Present";
 	pass._type = "Present";
-	pass._listInputs.push_back( "SceneColor" );
-	pass._listOutputs.push_back( "Swapchain" );
-	desc._listPasses.push_back( pass );
-	desc._listRenderPassRefs.push_back( "renderpass/defaultrenderpass.xml" );
+	pass._listInput.push_back( "SceneColor" );
+	pass._listOutput.push_back( "Swapchain" );
+	desc._listPass.push_back( pass );
+	desc._listRenderPassRef.push_back( "renderpass/defaultrenderpass.xml" );
 
 	sw::string testPath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "test_renderpipeline_roundtrip.xml" );
 	SW_EXPECT_TRUE( pipeRes.saveToXmlFile( testPath ) );
@@ -135,10 +135,10 @@ SW_TEST_CASE( RenderPassTest, PipelineXmlSerializationRoundtrip )
 	SW_EXPECT_TRUE( loadedRes.loadFromXmlFile( testPath ) );
 	SW_EXPECT_EQUAL( sw::string( "UnitTestPipeline" ), loadedRes.getDesc()._name );
 	SW_EXPECT_EQUAL( sw::string( "Forward" ), loadedRes.getDesc()._shadingModel );
-	SW_EXPECT_EQUAL( size_t( 1 ), loadedRes.getDesc()._listAttachments.size() );
+	SW_EXPECT_EQUAL( size_t( 1 ), loadedRes.getDesc()._listAttachment.size() );
 	SW_EXPECT_EQUAL( size_t( 1 ), loadedRes.getGraphPasses().size() );
 	SW_EXPECT_EQUAL( sw::string( "Present" ), loadedRes.getGraphPasses()[0]._name );
-	SW_EXPECT_EQUAL( size_t( 1 ), loadedRes.getDesc()._listRenderPassRefs.size() );
+	SW_EXPECT_EQUAL( size_t( 1 ), loadedRes.getDesc()._listRenderPassRef.size() );
 
 	sw::FileUtil::removeFile( testPath );
 }
@@ -459,7 +459,7 @@ SW_TEST_CASE( RenderPassTest, FrameRendererInitializeAndExecuteSmoke )
 	sw::unique_ptr<sw::IWindow>	   window;
 	sw::shared_ptr<sw::IRHIDevice> device;
 	const sw::RHIBackend		   backends[] = {
-		sw::RHIBackend::DirectX11, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL, sw::RHIBackend::DirectX12 };
+		  sw::RHIBackend::DirectX11, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL, sw::RHIBackend::DirectX12 };
 	bool bOk{ false };
 	for ( sw::RHIBackend backend : backends )
 	{
@@ -566,7 +566,7 @@ SW_TEST_CASE( RenderPassTest, FrameRendererParityAllBackends )
 		if ( bOk )
 			++okCount;
 		else
-			SW_LOG_ERROR( "[FrameRendererParity] backend %# failed", static_cast<uint32>( backend ) );
+			SW_LOG_ERROR( "backend %# failed", static_cast<uint32>( backend ) );
 	}
 
 	if ( attemptedCount == 0 )

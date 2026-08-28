@@ -1,19 +1,25 @@
 #include "pch.h"
 
-#include "Engine/Game/GameState.h"
+#include "Editor/Common/EditorPlaySession.h"
 
-#include "Engine/Common/EngineServices.h"
+#include "Core/Log/Logger.h"
+
+#include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
+#include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneManager.h"
 #include "Engine/Utility/CommandStack.h"
 
-namespace sw
+#include "RuntimeAPI/Service/EditorService.h"
+
+namespace sw::editor
 {
+	SW_LOG_CALLER( "EditorPlaySession" );
 
 	namespace
 	{
-
-		GameState s_gameState = GameState::Stopped;
+		PlaySessionState s_playState = PlaySessionState::Stopped;
 
 		struct ObjectSnapshot
 		{
@@ -24,11 +30,14 @@ namespace sw
 
 		vector<ObjectSnapshot> s_listPlaySnapshots;
 		bool				   s_bHasPlaySnapshot{ false };
-		GameStartMode		   s_gameStartMode = GameStartMode::NewGame;
 
 		void beginPlayActiveScene()
 		{
-			Scene* pScene = engine::getSceneManager().getActiveScene();
+			SceneManager* pSceneManager = editor::getService<SceneManager>();
+			if ( pSceneManager == nullptr )
+				return;
+
+			Scene* pScene = pSceneManager->getActiveScene();
 			if ( pScene == nullptr )
 				return;
 
@@ -41,7 +50,11 @@ namespace sw
 
 		void endPlayActiveScene()
 		{
-			Scene* pScene = engine::getSceneManager().getActiveScene();
+			SceneManager* pSceneManager = editor::getService<SceneManager>();
+			if ( pSceneManager == nullptr )
+				return;
+
+			Scene* pScene = pSceneManager->getActiveScene();
 			if ( pScene == nullptr )
 				return;
 
@@ -57,7 +70,11 @@ namespace sw
 			s_listPlaySnapshots.clear();
 			s_bHasPlaySnapshot = false;
 
-			Scene* pScene = engine::getSceneManager().getActiveScene();
+			SceneManager* pSceneManager = editor::getService<SceneManager>();
+			if ( pSceneManager == nullptr )
+				return;
+
+			Scene* pScene = pSceneManager->getActiveScene();
 			if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
 				return;
 
@@ -78,8 +95,8 @@ namespace sw
 			}
 
 			s_bHasPlaySnapshot = true;
-			SW_LOG_INFO( "[GameState] Play snapshot captured (%# objects).",
-						 static_cast<uint32>( s_listPlaySnapshots.size() ) );
+			SW_LOG_TRACE( "Play snapshot captured (%# objects).",
+						  static_cast<uint32>( s_listPlaySnapshots.size() ) );
 		}
 
 		void restorePlaySnapshot()
@@ -87,7 +104,15 @@ namespace sw
 			if ( s_bHasPlaySnapshot == false )
 				return;
 
-			Scene* pScene = engine::getSceneManager().getActiveScene();
+			SceneManager* pSceneManager = editor::getService<SceneManager>();
+			if ( pSceneManager == nullptr )
+			{
+				s_listPlaySnapshots.clear();
+				s_bHasPlaySnapshot = false;
+				return;
+			}
+
+			Scene* pScene = pSceneManager->getActiveScene();
 			if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
 			{
 				s_listPlaySnapshots.clear();
@@ -97,7 +122,7 @@ namespace sw
 
 			GameObjectManager* pObjects = pScene->getObjectManager();
 
-			// Destroy objects spawned during play (not in snapshot).
+			// 1. 플레이 도중 생성된 오브젝트 파괴
 			{
 				unordered_set<uint64> uniqueSnapIds;
 				uniqueSnapIds.reserve( s_listPlaySnapshots.size() );
@@ -118,7 +143,7 @@ namespace sw
 				}
 			}
 
-			// Restore in-place for objects still present; re_create missing ones.
+			// 2. 기존 오브젝트 상태 복구 및 삭제된 오브젝트 재생성
 			for ( const ObjectSnapshot& snap : s_listPlaySnapshots )
 			{
 				GameObject* pObj = pObjects->findGameObjectById( snap.objectId );
@@ -127,16 +152,16 @@ namespace sw
 					pObj = pObjects->createGameObject( hashed_string( snap.name.c_str() ) );
 					if ( pObj == nullptr )
 					{
-						SW_LOG_WARNING( "[GameState] Failed to re_create '%#' from play snapshot.", snap.name.c_str() );
+						SW_LOG_WARNING( "Failed to recreate '%#' from play snapshot.", snap.name.c_str() );
 						continue;
 					}
 				}
 
 				if ( ObjectStateSerializer::loadFromXmlString( pObj, snap.xml ) == false )
-					SW_LOG_WARNING( "[GameState] Failed to restore '%#' from play snapshot.", snap.name.c_str() );
+					SW_LOG_WARNING( "Failed to restore '%#' from play snapshot.", snap.name.c_str() );
 			}
 
-			// Second pass: cross-GO SceneComponent parents + GameObject ParentGO need all GOs rebuilt first.
+			// 3. 계층 관계 리바인딩
 			for ( const ObjectSnapshot& snap : s_listPlaySnapshots )
 			{
 				GameObject* pObj = pObjects->findGameObjectByName( hashed_string( snap.name.c_str() ) );
@@ -146,11 +171,11 @@ namespace sw
 					continue;
 
 				if ( ObjectStateSerializer::rebindSceneHierarchy( pObj, snap.xml ) == false )
-					SW_LOG_WARNING( "[GameState] Failed to rebind scene hierarchy for '%#'.", snap.name.c_str() );
+					SW_LOG_WARNING( "Failed to rebind scene hierarchy for '%#'.", snap.name.c_str() );
 			}
 
-			SW_LOG_INFO( "[GameState] Play snapshot restored (%# objects).",
-						 static_cast<uint32>( s_listPlaySnapshots.size() ) );
+			SW_LOG_TRACE( "Play snapshot restored (%# objects).",
+						  static_cast<uint32>( s_listPlaySnapshots.size() ) );
 
 			s_listPlaySnapshots.clear();
 			s_bHasPlaySnapshot = false;
@@ -158,45 +183,51 @@ namespace sw
 
 	} // namespace
 
-	GameState getGameState()
+	PlaySessionState EditorPlaySession::getState()
 	{
-		return s_gameState;
+		return s_playState;
 	}
 
-	void setGameState( GameState state )
+	bool EditorPlaySession::isPlaying()
 	{
-		if ( s_gameState == state )
+		return s_playState == PlaySessionState::Playing;
+	}
+
+	bool EditorPlaySession::isPaused()
+	{
+		return s_playState == PlaySessionState::Paused;
+	}
+
+	bool EditorPlaySession::isStopped()
+	{
+		return s_playState == PlaySessionState::Stopped;
+	}
+
+	void EditorPlaySession::setState( PlaySessionState state )
+	{
+		if ( s_playState == state )
 			return;
 
-		const GameState previous = s_gameState;
-		s_gameState				 = state;
+		const PlaySessionState previous = s_playState;
+		s_playState						= state;
 
-		engine::getCommandStack().clear();
+		CommandStack* pCommandStack = editor::getService<CommandStack>();
+		if ( pCommandStack != nullptr )
+			pCommandStack->clear();
 
-		// Stopped → Playing: snapshot editor scene, then beginPlay.
-		if ( previous == GameState::Stopped && state == GameState::Playing )
+		// Stopped → Playing: 스냅샷 캡처 후 beginPlay
+		if ( previous == PlaySessionState::Stopped && state == PlaySessionState::Playing )
 		{
 			capturePlaySnapshot();
 			beginPlayActiveScene();
 		}
 
-		// Playing/Paused → Stopped: endPlay first, then restore editor scene snapshot.
-		if ( ( previous == GameState::Playing || previous == GameState::Paused ) && state == GameState::Stopped )
+		// Playing/Paused → Stopped: endPlay 호출 후 스냅샷 복구
+		if ( ( previous == PlaySessionState::Playing || previous == PlaySessionState::Paused ) && state == PlaySessionState::Stopped )
 		{
 			endPlayActiveScene();
 			restorePlaySnapshot();
 		}
 	}
 
-	void setGameStartMode( GameStartMode mode )
-	{
-		s_gameStartMode = mode;
-	}
-
-	GameStartMode consumeGameStartMode()
-	{
-		const GameStartMode mode = s_gameStartMode;
-		s_gameStartMode			 = GameStartMode::NewGame;
-		return mode;
-	}
-} // namespace sw
+} // namespace sw::editor

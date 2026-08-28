@@ -41,6 +41,8 @@ namespace sw
 		void ( *unregisterTexture )( EditorHandle editor, void* pTextureId ){ nullptr };									 /**< @brief 텍스처를 ImGui에서 해제합니다. */
 		void ( *getGameViewport )( EditorHandle editor, uint64* pRenderTarget, uint32* pWidth, uint32* pHeight ){ nullptr }; /**< @brief 이번 프레임 Game View RT 핸들과 크기를 조회합니다. */
 		void ( *bindService )( const ModuleService* pService ){ nullptr };													 /**< @brief ModuleService를 에디터 모듈에 주입하거나 nullptr로 해제합니다. */
+		bool ( *isPlaying )( EditorHandle editor ){ nullptr };																 /**< @brief 에디터 시뮬레이션(PIE)이 실행 중인지 반환합니다. */
+		void ( *stopSimulation )( EditorHandle editor ){ nullptr };															 /**< @brief 에디터 시뮬레이션(PIE)을 정지합니다 (핫리로드 등). */
 	};
 
 	/** @brief EditorModule이 export하는 API 테이블 심볼 이름: exportEditorAPI */

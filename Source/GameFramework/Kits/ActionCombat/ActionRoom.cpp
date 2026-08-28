@@ -48,8 +48,8 @@ namespace sw
 	ActionRoom::ActionRoom()
 		: _kind{ ActionRoomKind::None }
 		, _layers{}
-		, _listActors{}
-		, _listProjectiles{}
+		, _listActor{}
+		, _listProjectile{}
 		, _attackCooldown{ 0.0f }
 		, _dashCooldown{ 0.0f }
 		, _invulnTimer{ 0.0f }
@@ -68,8 +68,8 @@ namespace sw
 	void ActionRoom::clear()
 	{
 		_kind = ActionRoomKind::None;
-		_listActors.clear();
-		_listProjectiles.clear();
+		_listActor.clear();
+		_listProjectile.clear();
 		_attackCooldown = 0.0f;
 		_dashCooldown	= 0.0f;
 		_invulnTimer	= 0.0f;
@@ -115,7 +115,7 @@ namespace sw
 	{
 		if ( _kind != ActionRoomKind::Boss || _bossMaxHp <= 0.0f )
 			return 0.0f;
-		for ( const Actor& actor : _listActors )
+		for ( const Actor& actor : _listActor )
 		{
 			if ( actor._kind == ActorKind::Boss && actor._bAlive != 0 )
 				return MathUtil::saturate( actor._hp / _bossMaxHp );
@@ -126,7 +126,7 @@ namespace sw
 	int32 ActionRoom::getAliveEnemyCount() const
 	{
 		int32 count{ 0 };
-		for ( const Actor& actor : _listActors )
+		for ( const Actor& actor : _listActor )
 		{
 			if ( actor._bAlive != 0 )
 				++count;
@@ -165,7 +165,7 @@ namespace sw
 			return;
 
 		DebugDrawQueue& dbg = *game::getService<DebugDrawQueue>();
-		for ( const Actor& actor : _listActors )
+		for ( const Actor& actor : _listActor )
 		{
 			if ( actor._bAlive == 0 )
 				continue;
@@ -174,7 +174,7 @@ namespace sw
 								   : float4( 1.0f, 0.55f, 0.2f, 1.0f );
 			dbg.drawSphere( float3( actor._x, 0.5f, actor._y ), actor._radius, color );
 		}
-		for ( const Projectile& projectile : _listProjectiles )
+		for ( const Projectile& projectile : _listProjectile )
 		{
 			if ( projectile._bAlive == 0 )
 				continue;
@@ -202,7 +202,7 @@ namespace sw
 		a._hp	  = a._hpMax;
 		a._radius = 0.32f;
 		a._speed  = 1.8f;
-		_listActors.push_back( a );
+		_listActor.push_back( a );
 	}
 
 	void ActionRoom::spawnBoss( float32 x, float32 y )
@@ -217,7 +217,7 @@ namespace sw
 		a._speed	   = 0.9f;
 		a._attackTimer = 1.2f;
 		_bossMaxHp	   = a._hpMax;
-		_listActors.push_back( a );
+		_listActor.push_back( a );
 	}
 
 	void ActionRoom::tryPlayerAttack( const ActionRoomFrameInput& input )
@@ -229,7 +229,7 @@ namespace sw
 
 		_attackCooldown = 0.28f;
 		const AABB atk	= playerAttackBox( input._playerX, input._playerY, input._facing );
-		for ( Actor& actor : _listActors )
+		for ( Actor& actor : _listActor )
 		{
 			if ( actor._bAlive == 0 )
 				continue;
@@ -247,7 +247,7 @@ namespace sw
 
 	void ActionRoom::updateActors( float32 deltaTime, float32 playerX, float32 playerY )
 	{
-		for ( Actor& actor : _listActors )
+		for ( Actor& actor : _listActor )
 		{
 			if ( actor._bAlive == 0 )
 				continue;
@@ -276,20 +276,20 @@ namespace sw
 			projectile._vy	   = vy * 4.5f;
 			projectile._life   = 2.5f;
 			projectile._radius = 0.22f;
-			_listProjectiles.push_back( projectile );
+			_listProjectile.push_back( projectile );
 
 			// 패턴 아이디어: int16 방사 버스트 (두 번째 샷 오프셋)
 			Projectile projectile2 = projectile;
 			projectile2._vx		   = -vy * 3.2f;
 			projectile2._vy		   = vx * 3.2f;
 			projectile2._life	   = 1.8f;
-			_listProjectiles.push_back( projectile2 );
+			_listProjectile.push_back( projectile2 );
 		}
 	}
 
 	void ActionRoom::updateProjectiles( float32 deltaTime )
 	{
-		for ( Projectile& projectile : _listProjectiles )
+		for ( Projectile& projectile : _listProjectile )
 		{
 			if ( projectile._bAlive == 0 )
 				continue;
@@ -303,11 +303,11 @@ namespace sw
 			projectile._y += projectile._vy * deltaTime;
 		}
 
-		_listProjectiles.erase(
-			std::remove_if( _listProjectiles.begin(), _listProjectiles.end(),
+		_listProjectile.erase(
+			std::remove_if( _listProjectile.begin(), _listProjectile.end(),
 							[]( const Projectile& proj )
 		{ return proj._bAlive == 0; } ),
-			_listProjectiles.end() );
+			_listProjectile.end() );
 	}
 
 	void ActionRoom::resolvePlayerHits( float32 playerX, float32 playerY, ActionRoomFrameResult& out )
@@ -316,7 +316,7 @@ namespace sw
 			return;
 
 		const AABB hurt = playerHurtBox( playerX, playerY );
-		for ( const Actor& actor : _listActors )
+		for ( const Actor& actor : _listActor )
 		{
 			if ( actor._bAlive == 0 )
 				continue;
@@ -326,7 +326,7 @@ namespace sw
 			_invulnTimer = 0.7f;
 			return;
 		}
-		for ( Projectile& projectile : _listProjectiles )
+		for ( Projectile& projectile : _listProjectile )
 		{
 			if ( projectile._bAlive == 0 )
 				continue;

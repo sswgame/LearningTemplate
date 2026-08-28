@@ -58,8 +58,8 @@ namespace sw::editor
 			return pRaw;
 		}
 
-		const vector<EditorPanelEntry>& getPanels() const { return _listPanels; }
-		vector<EditorPanelEntry>&		getPanelsMutable() { return _listPanels; }
+		const vector<EditorPanelEntry>& getPanels() const { return _listPanel; }
+		vector<EditorPanelEntry>&		getPanelsMutable() { return _listPanel; }
 		IEditorPanel*					findPanel( string_view title ) const;
 		bool							setPanelOpen( string_view title, bool bOpen );
 		void							clear();
@@ -69,6 +69,6 @@ namespace sw::editor
 		void							shutdownAllPanels( IRHIDevice* pRhiDevice );
 
 	private:
-		vector<EditorPanelEntry> _listPanels;
+		vector<EditorPanelEntry> _listPanel;
 	};
 } // namespace sw::editor

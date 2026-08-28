@@ -153,6 +153,8 @@ static void Hook_Renderer_SwapBuffers_GLX( ImGuiViewport* pViewport, void* )
 
 namespace sw::editor
 {
+	SW_LOG_CALLER( "ImGuiOpenGL" );
+
 	bool ImGuiOpenGLRendererBackend::initialize( class IRHIDevice* pRhiDevice )
 	{
 		_pRHIDevice = ( pRhiDevice != nullptr && pRhiDevice->getBackendType() == RHIBackend::OpenGL ) ? pRhiDevice : nullptr;
@@ -229,7 +231,7 @@ namespace sw::editor
 		const uint32 glName = _pRHIDevice->getNativeTextureName( texture );
 		if ( glName == 0 )
 		{
-			SW_LOG_ERROR( "[ImGuiOpenGL] Failed to resolve GL texture for RHI handle %#", texture );
+			SW_LOG_ERROR( "Failed to resolve GL texture for RHI handle %#", texture );
 			return nullptr;
 		}
 

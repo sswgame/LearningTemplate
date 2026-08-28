@@ -94,7 +94,7 @@ _kMemberFixedArrayRe = re.compile(
 
 # [가변 크기 배열/리스트 멤버 변수 명명 검사]
 # std::vector, std::list, std::deque 등 동적 컨테이너 멤버 중 '_list' 접두어 또는 'List' 접미어가 없는 경우를 검출합니다.
-# 매칭 예시: vector<Actor*> _actors; (위반 -> _listActors 또는 _actorsList 이어야 함)
+# 매칭 예시: vector<Actor*> _actors; (위반 -> _listActor 또는 _actorsList 이어야 함)
 # 컨벤션 규칙: 가변 크기 배열 컨테이너는 '_list' 접두어나 'List' 접미어를 사용해야 합니다.
 _kMemberVectorRe = re.compile(
     r'^\s*(?:(?:sw::)?(?:vector|list|deque))\s*<[^>]+>\s+(_[a-zA-Z0-9_]+)\s*;'
@@ -554,6 +554,26 @@ def checkFileConventionsInternal(filePath: Path, rootDir: Path) -> list[Conventi
                             snippet=trimmed,
                         )
                     )
+
+            # 컨테이너 멤버 변수 단수형 명명 규칙 검사 (_list*, _map*, _unique*, _arr*)
+            for prefix in ("_list", "_map", "_unique", "_arr"):
+                if varName := None:
+                    pass
+                match = re.match(rf'^\s*(?:(?:sw::)?(?:vector|list|deque|unordered_map|map|unordered_set|set))\s*<[^>]+>\s+({prefix}[A-Z][a-zA-Z0-9_]*)\s*;', line)
+                if match:
+                    vName = match.group(1)
+                    # Non-plural exceptions
+                    if not any(vName.endswith(exc) for exc in ("Bounds", "Status", "Pass", "Address", "Axis", "Process", "Class", "Cross", "Loss", "Mass", "Press", "Canvas", "Args", "Bytes", "Bindless", "RtvIndex", "DsvIndex", "Matrix", "Vertex", "Alias")):
+                        if vName.endswith(("ies", "es", "s")):
+                            violations.append(
+                                ConventionViolation(
+                                    file_path=relPath,
+                                    line_number=lineNum,
+                                    rule_category="Naming/ContainerSingular",
+                                    message=f"컨테이너 멤버 변수 '{vName}'는 복수형 대신 단수형 명사를 사용해야 합니다.",
+                                    snippet=trimmed,
+                                )
+                            )
 
     return violations
 

@@ -43,11 +43,6 @@ namespace sw
 		using reverse_iterator		 = typename Container::reverse_iterator;
 		using const_reverse_iterator = typename Container::const_reverse_iterator;
 
-	private:
-		Container _data;
-		Compare	  _comp;
-		SW_RACE_CTX_MEMBER
-
 	public:
 		// ------------------------------------------------------------------------------
 		// 1) 생성 · 대입 — 정렬 벡터 + 비교자. 레이스 컨텍스트는 공유하지 않음
@@ -442,6 +437,11 @@ namespace sw
 			SW_SCOPED_RACE_READ();
 			return std::upper_bound( _data.begin(), _data.end(), key, _comp );
 		}
+
+	private:
+		Container _data;
+		Compare	  _comp;
+		SW_RACE_CTX_MEMBER
 	};
 #endif
 } // namespace sw

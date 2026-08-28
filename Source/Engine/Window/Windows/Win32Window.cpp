@@ -7,6 +7,8 @@
 #if defined( SW_PLATFORM_WINDOWS )
 namespace sw
 {
+	SW_LOG_CALLER( "Win32Window" );
+
 	Win32Window::Win32Window()
 		: _hWnd{ nullptr }
 		, _bRecreating{ false }
@@ -62,7 +64,7 @@ namespace sw
 		if ( _hWnd == nullptr )
 			return false;
 
-		SW_LOG_INFO( "[Win32Window] Native Win32 Window created successfully! (%#x%#)", width, height );
+		SW_LOG_INFO( "Native Win32 Window created successfully! (%#x%#)", width, height );
 		return true;
 	}
 

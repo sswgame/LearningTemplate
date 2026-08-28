@@ -45,7 +45,7 @@ namespace sw
 		string				   _id; ///< 안정적인 존 ID (맵 이름 / 경로)
 		ZoneRole			   _role;
 		ZoneBounds			   _bounds;
-		vector<string>		   _listTags;			  ///< 장르 비의존 태그 (예: "indoors", "no_encounter")
+		vector<string>		   _listTag;			  ///< 장르 비의존 태그 (예: "indoors", "no_encounter")
 		uint8				   _bClearGateLocked : 1; ///< 잠기면 워프 차단
 		[[maybe_unused]] uint8 _reserved		 : 7;
 
@@ -98,7 +98,7 @@ namespace sw
 		const ZoneBounds& getCameraBounds() const;
 
 	private:
-		vector<ZoneDef> _listZones;
+		vector<ZoneDef> _listZone;
 		int32			_activeIndex;
 	};
 

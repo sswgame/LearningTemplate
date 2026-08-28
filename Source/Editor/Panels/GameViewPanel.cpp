@@ -4,6 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Editor/Common/EditorPlaySession.h"
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Gui/EditorChrome.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -12,7 +13,6 @@
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/SelectionManager.h"
 
-#include "Engine/Game/GameState.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
@@ -114,40 +114,40 @@ namespace sw::editor
 
 	void GameViewPanel::drawTransportControls()
 	{
-		const GameState currentState = getGameState();
+		const PlaySessionState currentState = EditorPlaySession::getState();
 
-		if ( currentState == GameState::Playing )
+		if ( currentState == PlaySessionState::Playing )
 		{
 			editor::drawChip( "Playing", editor::style::kOk );
 			ImGui::SameLine();
 		}
 		else if ( ImGui::Button( "Play" ) )
-			setGameState( GameState::Playing );
+			EditorPlaySession::play();
 
 		ImGui::SameLine();
 		if ( ImGui::Button( "Simulate" ) )
-			setGameState( GameState::Playing );
+			EditorPlaySession::play();
 
 		ImGui::SameLine();
-		if ( currentState == GameState::Paused )
+		if ( currentState == PlaySessionState::Paused )
 		{
 			editor::drawChip( "Paused", editor::style::kWarn );
 			ImGui::SameLine();
 		}
 		else if ( ImGui::Button( "Pause" ) )
-			setGameState( GameState::Paused );
+			EditorPlaySession::pause();
 
 		ImGui::SameLine();
 		if ( ImGui::Button( "Step" ) )
 		{
-			if ( currentState != GameState::Playing )
-				setGameState( GameState::Playing );
+			if ( currentState != PlaySessionState::Playing )
+				EditorPlaySession::play();
 		}
 
 		ImGui::SameLine();
 		if ( ImGui::Button( "Stop" ) )
 		{
-			setGameState( GameState::Stopped );
+			EditorPlaySession::stop();
 			SceneManager* pSceneManager = editor::getService<SceneManager>();
 			if ( pSceneManager != nullptr )
 			{

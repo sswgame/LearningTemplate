@@ -30,17 +30,17 @@ namespace sw
 		void shake( float32 intensity, float32 duration );
 
 	private:
-		PROPERTY( Alias="targetPos" )
+		PROPERTY( Alias = "targetPos" )
 		float2 _targetPos;
-		PROPERTY( Alias="currentPos" )
+		PROPERTY( Alias = "currentPos" )
 		float2 _currentPos;
-		PROPERTY( Alias="followSpeed" )
+		PROPERTY( Alias = "followSpeed" )
 		float32 _followSpeed;
-		PROPERTY( Alias="shakeIntensity" )
+		PROPERTY( Alias = "shakeIntensity" )
 		float32 _shakeIntensity;
-		PROPERTY( Alias="shakeDuration" )
+		PROPERTY( Alias = "shakeDuration" )
 		float32 _shakeDuration;
-		PROPERTY( Alias="shakeFrequency" )
+		PROPERTY( Alias = "shakeFrequency" )
 		float32 _shakeFrequency;
 	};
 } // namespace sw

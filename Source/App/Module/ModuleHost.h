@@ -123,8 +123,6 @@ namespace sw
 		[[maybe_unused]] uint8 _reserved	  : 7;
 
 		// 핫리로드 시 게임 상태 보존용 재사용 버퍼
-		uint8* _pGameSavedStateBuffer{ nullptr };
-		size_t _gameSavedStateCapacity{ 0 };
-		size_t _gameSavedStateSize{ 0 };
+		vector<uint8> _listGameSavedState;
 	};
 } // namespace sw

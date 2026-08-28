@@ -66,9 +66,9 @@ namespace sw
 			{
 				const float32 angle = static_cast<float32>( summonIndex ) * angleStep;
 				const float3  spawnPos{
-					ownerWorldPos._x + MathUtil::cos( angle ) * radius,
-					ownerWorldPos._y + MathUtil::sin( angle ) * radius,
-					ownerWorldPos._z };
+					 ownerWorldPos._x + MathUtil::cos( angle ) * radius,
+					 ownerWorldPos._y + MathUtil::sin( angle ) * radius,
+					 ownerWorldPos._z };
 
 				GameObject* pMinion = nullptr;
 				if ( game::areGameServicesBound() && prefabOrId.find( '/' ) != string::npos )

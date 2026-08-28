@@ -6,6 +6,8 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "Transition" );
+
 	FadeService::FadeService()
 		: _duration{ 0.35f }
 		, _elapsed{ 0.0f }
@@ -90,7 +92,7 @@ namespace sw
 		_fade.beginFadeOut();
 		if ( _callbacks.setPlayerInputEnabled.isBound() )
 			_callbacks.setPlayerInputEnabled( false );
-		SW_LOG_INFO( "[Transition] Warp fade-out → '%#' (%#,%#)", mapPath, spawnX, spawnY );
+		SW_LOG_TRACE( "Warp fade-out → '%#' (%#,%#)", mapPath, spawnX, spawnY );
 	}
 
 	void TransitionOrchestrator::beginBattle()
@@ -99,14 +101,14 @@ namespace sw
 		_fade.beginFadeOut();
 		if ( _callbacks.setPlayerInputEnabled.isBound() )
 			_callbacks.setPlayerInputEnabled( false );
-		SW_LOG_INFO( "[Transition] Battle fade-out" );
+		SW_LOG_TRACE( "Battle fade-out" );
 	}
 
 	void TransitionOrchestrator::beginReturn()
 	{
 		_phase = Phase::ReturnFadeOut;
 		_fade.beginFadeOut();
-		SW_LOG_INFO( "[Transition] Return fade-out" );
+		SW_LOG_TRACE( "Return fade-out" );
 	}
 
 	void TransitionOrchestrator::update( float32 deltaTime )
@@ -134,7 +136,7 @@ namespace sw
 					_phase = Phase::None;
 					if ( _callbacks.setPlayerInputEnabled.isBound() )
 						_callbacks.setPlayerInputEnabled( true );
-					SW_LOG_INFO( "[Transition] Warp complete." );
+					SW_LOG_TRACE( "Warp complete." );
 				}
 				break;
 
@@ -154,7 +156,7 @@ namespace sw
 				if ( _fade.isFinished() )
 				{
 					_phase = Phase::None;
-					SW_LOG_INFO( "[Transition] Battle fade-in complete." );
+					SW_LOG_TRACE( "Battle fade-in complete." );
 				}
 				break;
 
@@ -176,7 +178,7 @@ namespace sw
 					_phase = Phase::None;
 					if ( _callbacks.setPlayerInputEnabled.isBound() )
 						_callbacks.setPlayerInputEnabled( true );
-					SW_LOG_INFO( "[Transition] Return fade-in complete." );
+					SW_LOG_TRACE( "Return fade-in complete." );
 				}
 				break;
 

@@ -9,15 +9,15 @@ namespace sw
 		, _totalAllocatedBytes{ 0 }
 		, _usedBytes{ 0 }
 		, _currentChunkIndex{ 0 }
-		, _listChunks{}
+		, _listChunk{}
 	{
-		_listChunks.reserve( 8 );
+		_listChunk.reserve( 8 );
 		allocateNewChunk( _defaultCapacity );
 	}
 
 	FrameArenaAllocator::~FrameArenaAllocator()
 	{
-		for ( Chunk& chunk : _listChunks )
+		for ( Chunk& chunk : _listChunk )
 		{
 			if ( chunk._pBuffer != nullptr )
 			{
@@ -25,7 +25,7 @@ namespace sw
 				chunk._pBuffer = nullptr;
 			}
 		}
-		_listChunks.clear();
+		_listChunk.clear();
 	}
 
 	void* FrameArenaAllocator::allocate( size_t size, size_t alignment )
@@ -36,9 +36,9 @@ namespace sw
 		if ( alignment == 0 || ( alignment & ( alignment - 1 ) ) != 0 )
 			alignment = alignof( std::max_align_t );
 
-		while ( _currentChunkIndex < _listChunks.size() )
+		while ( _currentChunkIndex < _listChunk.size() )
 		{
-			Chunk&	  chunk	  = _listChunks[_currentChunkIndex];
+			Chunk&	  chunk	  = _listChunk[_currentChunkIndex];
 			uintptr_t current = reinterpret_cast<uintptr_t>( chunk._pBuffer + chunk._offset );
 
 			uintptr_t aligned = ( current + ( alignment - 1 ) ) & ~( static_cast<uintptr_t>( alignment - 1 ) );
@@ -55,13 +55,13 @@ namespace sw
 		}
 
 		allocateNewChunk( size + alignment );
-		_currentChunkIndex = _listChunks.size() - 1;
+		_currentChunkIndex = _listChunk.size() - 1;
 		return allocate( size, alignment );
 	}
 
 	void FrameArenaAllocator::reset()
 	{
-		for ( Chunk& chunk : _listChunks )
+		for ( Chunk& chunk : _listChunk )
 		{
 			chunk._offset = 0;
 		}
@@ -73,21 +73,21 @@ namespace sw
 	{
 		Marker marker;
 		marker._chunkIndex = _currentChunkIndex;
-		marker._offset	   = _listChunks.empty() == false ? _listChunks[_currentChunkIndex]._offset : 0;
+		marker._offset	   = _listChunk.empty() == false ? _listChunk[_currentChunkIndex]._offset : 0;
 		marker._usedBytes  = _usedBytes;
 		return marker;
 	}
 
 	void FrameArenaAllocator::rollbackToMarker( const Marker& marker )
 	{
-		if ( marker._chunkIndex < _listChunks.size() )
+		if ( marker._chunkIndex < _listChunk.size() )
 		{
-			_currentChunkIndex						= marker._chunkIndex;
-			_listChunks[_currentChunkIndex]._offset = marker._offset;
+			_currentChunkIndex					   = marker._chunkIndex;
+			_listChunk[_currentChunkIndex]._offset = marker._offset;
 
-			for ( size_t chunkIndex = _currentChunkIndex + 1; chunkIndex < _listChunks.size(); ++chunkIndex )
+			for ( size_t chunkIndex = _currentChunkIndex + 1; chunkIndex < _listChunk.size(); ++chunkIndex )
 			{
-				_listChunks[chunkIndex]._offset = 0;
+				_listChunk[chunkIndex]._offset = 0;
 			}
 			_usedBytes = marker._usedBytes;
 		}
@@ -97,7 +97,7 @@ namespace sw
 	{
 		size_t chunkSize = MathUtil::max( _defaultCapacity, minSize );
 		uint8* pBuf		 = static_cast<uint8*>( Memory::allocMemory( chunkSize ) );
-		_listChunks.push_back( Chunk{ pBuf, chunkSize, 0 } );
+		_listChunk.push_back( Chunk{ pBuf, chunkSize, 0 } );
 		_totalAllocatedBytes += chunkSize;
 	}
 

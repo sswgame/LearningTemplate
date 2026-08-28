@@ -15,9 +15,9 @@ namespace sw
 		sample._clipName  = string{ clipName };
 		sample._pose	  = pose;
 
-		_listSamples.push_back( std::move( sample ) );
+		_listSample.push_back( std::move( sample ) );
 
-		std::sort( _listSamples.begin(), _listSamples.end(), []( const BlendSample1D& a, const BlendSample1D& b )
+		std::sort( _listSample.begin(), _listSample.end(), []( const BlendSample1D& a, const BlendSample1D& b )
 		{
 			return a._parameter < b._parameter;
 		} );
@@ -25,19 +25,19 @@ namespace sw
 
 	float4x4 BlendSpace1D::evaluate( float32 parameter ) const
 	{
-		if ( _listSamples.empty() )
+		if ( _listSample.empty() )
 			return float4x4::Identity;
 
-		if ( _listSamples.size() == 1 || parameter <= _listSamples.front()._parameter )
-			return _listSamples.front()._pose;
+		if ( _listSample.size() == 1 || parameter <= _listSample.front()._parameter )
+			return _listSample.front()._pose;
 
-		if ( parameter >= _listSamples.back()._parameter )
-			return _listSamples.back()._pose;
+		if ( parameter >= _listSample.back()._parameter )
+			return _listSample.back()._pose;
 
-		for ( size_t index = 0; index + 1 < _listSamples.size(); ++index )
+		for ( size_t index = 0; index + 1 < _listSample.size(); ++index )
 		{
-			const BlendSample1D& s0 = _listSamples[index];
-			const BlendSample1D& s1 = _listSamples[index + 1];
+			const BlendSample1D& s0 = _listSample[index];
+			const BlendSample1D& s1 = _listSample[index + 1];
 
 			if ( parameter >= s0._parameter && parameter <= s1._parameter )
 			{
@@ -51,7 +51,7 @@ namespace sw
 			}
 		}
 
-		return _listSamples.back()._pose;
+		return _listSample.back()._pose;
 	}
 
 	void BlendSpace1D::evaluateSkeleton( float32 parameter, Skeleton& inoutSkeleton ) const
@@ -71,46 +71,46 @@ namespace sw
 		sample._clipName  = string{ clipName };
 		sample._pose	  = pose;
 
-		_listSamples.push_back( std::move( sample ) );
+		_listSample.push_back( std::move( sample ) );
 	}
 
 	float4x4 BlendSpace2D::evaluate( float32 paramX, float32 paramY ) const
 	{
-		if ( _listSamples.empty() )
+		if ( _listSample.empty() )
 			return float4x4::Identity;
 
-		if ( _listSamples.size() == 1 )
-			return _listSamples.front()._pose;
+		if ( _listSample.size() == 1 )
+			return _listSample.front()._pose;
 
 		// Inverse Distance Weighting (IDW)
 		float32		 totalWeight = 0.0f;
 		float32		 weights[32];
-		const size_t sampleCount = MathUtil::min( _listSamples.size(), static_cast<size_t>( 32 ) );
+		const size_t sampleCount = MathUtil::min( _listSample.size(), static_cast<size_t>( 32 ) );
 
 		for ( size_t index = 0; index < sampleCount; ++index )
 		{
-			const float32 dx	 = paramX - _listSamples[index]._parameter._x;
-			const float32 dy	 = paramY - _listSamples[index]._parameter._y;
+			const float32 dx	 = paramX - _listSample[index]._parameter._x;
+			const float32 dy	 = paramY - _listSample[index]._parameter._y;
 			const float32 distSq = dx * dx + dy * dy;
 
 			if ( distSq < 1e-5f )
-				return _listSamples[index]._pose;
+				return _listSample[index]._pose;
 
 			weights[index] = 1.0f / distSq;
 			totalWeight += weights[index];
 		}
 
 		if ( totalWeight < 1e-6f )
-			return _listSamples.front()._pose;
+			return _listSample.front()._pose;
 
-		DualQuaternion accumDQ	   = DualQuaternion::fromMatrix( _listSamples[0]._pose );
+		DualQuaternion accumDQ	   = DualQuaternion::fromMatrix( _listSample[0]._pose );
 		float32		   accumWeight = weights[0] / totalWeight;
 
 		for ( size_t index = 1; index < sampleCount; ++index )
 		{
 			const float32		 normalizedWeight = weights[index] / totalWeight;
 			const float32		 blendFactor	  = normalizedWeight / ( accumWeight + normalizedWeight );
-			const DualQuaternion currentDQ		  = DualQuaternion::fromMatrix( _listSamples[index]._pose );
+			const DualQuaternion currentDQ		  = DualQuaternion::fromMatrix( _listSample[index]._pose );
 
 			accumDQ = DualQuaternion::dlb( accumDQ, currentDQ, blendFactor );
 			accumWeight += normalizedWeight;

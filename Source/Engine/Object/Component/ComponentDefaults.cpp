@@ -105,7 +105,7 @@ namespace sw
 			const utf8* pAttrVal = compNode.attr( pPropName );
 			if ( pAttrVal == nullptr )
 			{
-				for ( const hashed_string& alias : prop._listAliases )
+				for ( const hashed_string& alias : prop._listAlias )
 				{
 					const utf8* pAliasName = alias.c_str();
 					if ( pAliasName == nullptr )

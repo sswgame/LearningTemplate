@@ -30,17 +30,17 @@ namespace sw
 		void setTargetRatio( float32 ratio );
 
 	private:
-		PROPERTY( Alias="hpRatio" )
+		PROPERTY( Alias = "hpRatio" )
 		float32 _hpRatio;
-		PROPERTY( Alias="remainRatio" )
+		PROPERTY( Alias = "remainRatio" )
 		float32 _remainRatio;
-		PROPERTY( Alias="targetRatio" )
+		PROPERTY( Alias = "targetRatio" )
 		float32 _targetRatio;
-		PROPERTY( Alias="lerpSpeed" )
+		PROPERTY( Alias = "lerpSpeed" )
 		float32 _lerpSpeed;
-		PROPERTY( Alias="offsetPos" )
+		PROPERTY( Alias = "offsetPos" )
 		float2 _offsetPos;
-		PROPERTY( Alias="bVisible" )
+		PROPERTY( Alias = "bVisible" )
 		bool _bVisible;
 	};
 } // namespace sw

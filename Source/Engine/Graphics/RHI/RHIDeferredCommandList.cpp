@@ -6,22 +6,24 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "RHI" );
+
 	RHIDeferredCommandList::RHIDeferredCommandList( RHICommandListMode mode, IRHICommandContext* pContext )
 		: _mode{ mode }
 		, _pContext{ pContext }
 		, _recordingThread{}
-		, _listCmds{}
+		, _listCmd{}
 		, _bRecording{ false }
 		, _bApplied{ false }
 	{
-		_listCmds.reserve( 256 );
+		_listCmd.reserve( 256 );
 	}
 
 	void RHIDeferredCommandList::beginCommandList()
 	{
-		_listCmds.clear();
-		if ( _listCmds.capacity() < 256 )
-			_listCmds.reserve( 256 );
+		_listCmd.clear();
+		if ( _listCmd.capacity() < 256 )
+			_listCmd.reserve( 256 );
 		_bApplied		 = false;
 		_bRecording		 = true;
 		_recordingThread = std::this_thread::get_id();
@@ -33,7 +35,7 @@ namespace sw
 		if ( _mode == RHICommandListMode::Immediate && _pContext != nullptr )
 		{
 			replay( _pContext );
-			_listCmds.clear();
+			_listCmd.clear();
 			_bApplied = true;
 		}
 	}
@@ -126,8 +128,8 @@ namespace sw
 		cmd.destOffsetIn32BitValues = destOffsetIn32BitValues;
 		if ( num32BitValues > 0 && pData != nullptr )
 		{
-			cmd.listRootConstantWords.resize( num32BitValues );
-			Memory::copy( cmd.listRootConstantWords.data(), pData, static_cast<size_t>( num32BitValues ) * sizeof( uint32 ) );
+			cmd.listRootConstantWord.resize( num32BitValues );
+			Memory::copy( cmd.listRootConstantWord.data(), pData, static_cast<size_t>( num32BitValues ) * sizeof( uint32 ) );
 		}
 		push( std::move( cmd ) );
 	}
@@ -238,9 +240,9 @@ namespace sw
 		if ( pContext == nullptr )
 			return;
 
-		for ( size_t idx = 0; idx < _listCmds.size(); ++idx )
+		for ( size_t idx = 0; idx < _listCmd.size(); ++idx )
 		{
-			const Cmd& cmd = _listCmds[idx];
+			const Cmd& cmd = _listCmd[idx];
 			switch ( cmd.op )
 			{
 				case Op::SetViewport:
@@ -272,8 +274,8 @@ namespace sw
 					break;
 				case Op::SetComputeRootConstants:
 					pContext->setComputeRootConstants( cmd.rootParameterIndex,
-													   static_cast<uint32>( cmd.listRootConstantWords.size() ),
-													   cmd.listRootConstantWords.empty() ? nullptr : cmd.listRootConstantWords.data(),
+													   static_cast<uint32>( cmd.listRootConstantWord.size() ),
+													   cmd.listRootConstantWord.empty() ? nullptr : cmd.listRootConstantWord.data(),
 													   cmd.destOffsetIn32BitValues );
 					break;
 				case Op::BindComputeUAV:
@@ -319,7 +321,7 @@ namespace sw
 		if ( _bRecording == false )
 			return;
 		assertRecordingThread();
-		_listCmds.push_back( std::move( cmd ) );
+		_listCmd.push_back( std::move( cmd ) );
 	}
 
 	void RHIDeferredCommandList::assertRecordingThread() const
@@ -337,7 +339,7 @@ namespace sw
 		IRHICommandContext* pImm = pDevice->getImmediateContext();
 		if ( pImm == nullptr )
 		{
-			SW_LOG_WARNING( "[RHI] executeDeferredCommandList: Immediate Context is null (device not initialized?); not marking applied" );
+			SW_LOG_WARNING( "executeDeferredCommandList: Immediate Context is null (device not initialized?); not marking applied" );
 			return;
 		}
 		pDeferred->replay( pImm );

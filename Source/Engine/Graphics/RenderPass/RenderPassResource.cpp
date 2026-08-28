@@ -12,6 +12,7 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "RenderPassResource" );
 
 	namespace
 	{
@@ -25,20 +26,20 @@ namespace sw
 
 		if ( FileUtil::fileExists( absPath ) == false )
 		{
-			SW_LOG_ERROR( "[RenderPassResource] XML file not found: %#", absPath );
+			SW_LOG_ERROR( "XML file not found: %#", absPath );
 			return false;
 		}
 
 		vector<uint8> listFileData;
 		if ( FileUtil::readFile( absPath, listFileData ) == false )
 		{
-			SW_LOG_ERROR( "[RenderPassResource] Failed to open XML file: %#", absPath );
+			SW_LOG_ERROR( "Failed to open XML file: %#", absPath );
 			return false;
 		}
 
 		if ( listFileData.empty() )
 		{
-			SW_LOG_ERROR( "[RenderPassResource] XML file is empty: %#", absPath );
+			SW_LOG_ERROR( "XML file is empty: %#", absPath );
 			return false;
 		}
 
@@ -46,20 +47,20 @@ namespace sw
 		XmlDocument doc;
 		if ( doc.parse( xmlStr ) == false )
 		{
-			SW_LOG_ERROR( "[RenderPassResource] Failed to parse XML: %#", absPath );
+			SW_LOG_ERROR( "Failed to parse XML: %#", absPath );
 			return false;
 		}
 
 		XmlNode root = doc.root( "RenderPassDesc" );
 		if ( root.isValid() == false )
 		{
-			SW_LOG_ERROR( "[RenderPassResource] XML missing root <RenderPassDesc>: %#", absPath );
+			SW_LOG_ERROR( "XML missing root <RenderPassDesc>: %#", absPath );
 			return false;
 		}
 
 		if ( engine::getResourceManager().getAssetFormatRegistry().upgradeXml( AssetKind::RenderPass, doc, root, AssetFormatVersions::kRenderPass ) == false )
 		{
-			SW_LOG_ERROR( "[RenderPassResource] formatVersion upgrade failed: %#", absPath );
+			SW_LOG_ERROR( "formatVersion upgrade failed: %#", absPath );
 			return false;
 		}
 
@@ -71,7 +72,7 @@ namespace sw
 		if ( pName != nullptr )
 			_desc._name = pName;
 
-		_desc._listAttachments.clear();
+		_desc._listAttachment.clear();
 		XmlNode attachsNode = root.child( "_attachments" );
 		if ( attachsNode.isValid() )
 		{
@@ -95,12 +96,12 @@ namespace sw
 						std::sscanf( pAttClearColor, "%f %f %f %f", &att._arrClearColor[0], &att._arrClearColor[1], &att._arrClearColor[2], &att._arrClearColor[3] );
 				}
 
-				_desc._listAttachments.push_back( std::move( att ) );
+				_desc._listAttachment.push_back( std::move( att ) );
 			}
 		}
 
-		SW_LOG_INFO( "[RenderPassResource] Loaded '%#' (Attachments: %#)",
-					 _desc._name, _desc._listAttachments.size() );
+		SW_LOG_INFO( "Loaded '%#' (Attachments: %#)",
+					 _desc._name, _desc._listAttachment.size() );
 		return true;
 	}
 
@@ -120,7 +121,7 @@ namespace sw
 
 		XmlNode attachsNode = root.appendChild( "_attachments" );
 
-		for ( const RenderPassAttachment& att : _desc._listAttachments )
+		for ( const RenderPassAttachment& att : _desc._listAttachment )
 		{
 			XmlNode attNode = attachsNode.appendChild( "item" );
 
@@ -148,11 +149,11 @@ namespace sw
 
 		if ( FileUtil::writeFile( absPath, reinterpret_cast<const uint8*>( xmlStr.data() ), xmlStr.size() ) == false )
 		{
-			SW_LOG_ERROR( "[RenderPassResource] Failed to write XML file: %#", absPath );
+			SW_LOG_ERROR( "Failed to write XML file: %#", absPath );
 			return false;
 		}
 
-		SW_LOG_INFO( "[RenderPassResource] Saved RenderPass '%#' to: %#", _desc._name, absPath );
+		SW_LOG_INFO( "Saved RenderPass '%#' to: %#", _desc._name, absPath );
 		return true;
 	}
 

@@ -12,6 +12,8 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "Material" );
+
 	MaterialProperty::MaterialProperty() noexcept
 		: _type{ MaterialPropertyType::Unknown }
 		, _shaderType{ MaterialPropertyType::Unknown }
@@ -39,7 +41,7 @@ namespace sw
 		, _pRHIDevice{ nullptr }
 		, _blendMode{ RHIBlendMode::Opaque }
 		, _asyncLoadState{ sw::make_shared<AsyncLoadState>() }
-		, _listCachedDefines{}
+		, _listCachedDefine{}
 		, _cachedPermutationHash{ 0 }
 		, _bDefinesDirty{ 1 }
 	{
@@ -65,7 +67,7 @@ namespace sw
 		_pRHIDevice = pRhi;
 
 		if ( loadFromFile( assetRelativePath ) == false )
-			SW_LOG_WARNING( "[Material] Failed to load material file '%#'. Using fallback defaults.", assetRelativePath );
+			SW_LOG_WARNING( "Failed to load material file '%#'. Using fallback defaults.", assetRelativePath );
 
 		uint32 bufferSize = static_cast<uint32>( _data._listBuffer.size() );
 		if ( bufferSize == 0 )
@@ -83,14 +85,14 @@ namespace sw
 		_constantBuffer = pRhi->getResource()->createConstantBuffer( bufferSize );
 		if ( _constantBuffer == 0 )
 		{
-			SW_LOG_ERROR( "[Material] Failed to create Constant Buffer!" );
+			SW_LOG_ERROR( "Failed to create Constant Buffer!" );
 			return false;
 		}
 
 		pRhi->getResource()->updateConstantBuffer( _constantBuffer, _data._listBuffer.data(), bufferSize );
 		_descriptorIndex = pRhi->getResource()->registerBindlessResource( _constantBuffer );
 
-		SW_LOG_INFO( "[Material] Initialized '%#' with Bindless Descriptor Index %#", _desc._name.c_str(), _descriptorIndex );
+		SW_LOG_INFO( "Initialized '%#' with Bindless Descriptor Index %#", _desc._name.c_str(), _descriptorIndex );
 		return _descriptorIndex != kInvalidDescriptorIndex;
 	}
 
@@ -130,20 +132,20 @@ namespace sw
 		if ( _constantBuffer != 0 )
 		{
 			pRhi->getResource()->updateConstantBuffer( _constantBuffer, _data._listBuffer.data(), static_cast<uint32>( _data._listBuffer.size() ) );
-			SW_LOG_INFO( "[Material] HotRefresh '%#': Shader recompile detected, Constant Buffer re-uploaded. (Bytecode: %# bytes)",
+			SW_LOG_INFO( "HotRefresh '%#': Shader recompile detected, Constant Buffer re-uploaded. (Bytecode: %# bytes)",
 						 _desc._name.c_str(), result._listBytecode.size() );
 		}
 	}
 
 	bool Material::syncPropertiesFromReflection( const ShaderReflectionData& reflectionData )
 	{
-		if ( reflectionData._listConstantBuffers.empty() )
+		if ( reflectionData._listConstantBuffer.empty() )
 			return true;
 
 		const ShaderBufferInfo* pSchemaCb = nullptr;
-		for ( const ShaderBufferInfo& cb : reflectionData._listConstantBuffers )
+		for ( const ShaderBufferInfo& cb : reflectionData._listConstantBuffer )
 		{
-			if ( cb._listVariables.empty() == false )
+			if ( cb._listVariable.empty() == false )
 			{
 				pSchemaCb = &cb;
 				break;
@@ -152,9 +154,9 @@ namespace sw
 		if ( pSchemaCb == nullptr )
 			return true;
 
-		if ( _data._listProperties.empty() )
+		if ( _data._listProperty.empty() )
 		{
-			for ( const ShaderVariableInfo& var : pSchemaCb->_listVariables )
+			for ( const ShaderVariableInfo& var : pSchemaCb->_listVariable )
 			{
 				MaterialProperty prop{};
 				prop._name		 = var._name;
@@ -162,13 +164,13 @@ namespace sw
 				prop._size		 = var._size;
 				prop._shaderType = shaderTypeFromReflectionName( var._type, var._size );
 				prop._type		 = prop._shaderType;
-				_data._listProperties.push_back( prop );
+				_data._listProperty.push_back( prop );
 			}
 			rebuildPackedBuffer();
 			// restore reflection offsets after sequential rebuild
-			for ( MaterialProperty& prop : _data._listProperties )
+			for ( MaterialProperty& prop : _data._listProperty )
 			{
-				for ( const ShaderVariableInfo& var : pSchemaCb->_listVariables )
+				for ( const ShaderVariableInfo& var : pSchemaCb->_listVariable )
 				{
 					if ( var._name == prop._name )
 					{
@@ -180,31 +182,31 @@ namespace sw
 			}
 			_data._listBuffer.clear();
 			uint32 maxEnd = pSchemaCb->_totalSize;
-			for ( const MaterialProperty& prop : _data._listProperties )
+			for ( const MaterialProperty& prop : _data._listProperty )
 			{
 				maxEnd = (MathUtil::max)( maxEnd, prop._offset + prop._size );
 			}
 			_data._listBuffer.assign( maxEnd, 0 );
-			for ( MaterialProperty& prop : _data._listProperties )
+			for ( MaterialProperty& prop : _data._listProperty )
 			{
 				packPropertyIntoBuffer( prop, _data._listBuffer );
 			}
 			const uint32 alignedTotal = ( static_cast<uint32>( _data._listBuffer.size() ) + 255u ) & ~255u;
 			_data._listBuffer.resize( alignedTotal, 0 );
-			_desc._listProperties = _data._listProperties;
-			SW_LOG_INFO( "[Material] Filled %# properties from shader reflection.", _data._listProperties.size() );
+			_desc._listProperty = _data._listProperty;
+			SW_LOG_TRACE( "Filled %# properties from shader reflection.", _data._listProperty.size() );
 			return true;
 		}
 
 		bool ok{ true };
-		for ( MaterialProperty& prop : _data._listProperties )
+		for ( MaterialProperty& prop : _data._listProperty )
 		{
 			// Textures / keywords / UI-only fields are not MaterialCB variables.
 			if ( isNonBufferType( prop._type ) || isTextureType( prop._type ) )
 				continue;
 
 			bool found{ false };
-			for ( const ShaderVariableInfo& var : pSchemaCb->_listVariables )
+			for ( const ShaderVariableInfo& var : pSchemaCb->_listVariable )
 			{
 				if ( var._name != prop._name )
 					continue;
@@ -223,7 +225,7 @@ namespace sw
 						prop._shaderType = reflected;
 					else
 					{
-						SW_LOG_WARNING( "[Material] Reflection size mismatch for '%#' (shaderType %# bytes vs %#).",
+						SW_LOG_WARNING( "Reflection size mismatch for '%#' (shaderType %# bytes vs %#).",
 										prop._name.c_str(), packedSizeOf( prop._shaderType ), var._size );
 						ok = false;
 					}
@@ -235,25 +237,25 @@ namespace sw
 			}
 			if ( found == false )
 			{
-				SW_LOG_WARNING( "[Material] Property '%#' missing in shader reflection.", prop._name.c_str() );
+				SW_LOG_WARNING( "Property '%#' missing in shader reflection.", prop._name.c_str() );
 				ok = false;
 			}
 		}
 
 		uint32 maxEnd = pSchemaCb->_totalSize;
-		for ( const MaterialProperty& prop : _data._listProperties )
+		for ( const MaterialProperty& prop : _data._listProperty )
 		{
 			if ( isNonBufferType( prop._type ) == false )
 				maxEnd = (MathUtil::max)( maxEnd, prop._offset + prop._size );
 		}
 		_data._listBuffer.assign( maxEnd, 0 );
-		for ( MaterialProperty& prop : _data._listProperties )
+		for ( MaterialProperty& prop : _data._listProperty )
 		{
 			packPropertyIntoBuffer( prop, _data._listBuffer );
 		}
 		const uint32 alignedTotal = ( static_cast<uint32>( _data._listBuffer.size() ) + 255u ) & ~255u;
 		_data._listBuffer.resize( alignedTotal, 0 );
-		_desc._listProperties = _data._listProperties;
+		_desc._listProperty = _data._listProperty;
 		return ok;
 	}
 
@@ -262,7 +264,7 @@ namespace sw
 		uint32 currentOffset{ 0 };
 		_data._listBuffer.clear();
 
-		for ( MaterialProperty& prop : _data._listProperties )
+		for ( MaterialProperty& prop : _data._listProperty )
 		{
 			if ( isNonBufferType( prop._type ) )
 			{
@@ -288,7 +290,7 @@ namespace sw
 		}
 
 		bool anyExplicitOffset{ false };
-		for ( const MaterialProperty& prop : _data._listProperties )
+		for ( const MaterialProperty& prop : _data._listProperty )
 		{
 			if ( isNonBufferType( prop._type ) == false && prop._offset != 0 )
 			{
@@ -308,7 +310,7 @@ namespace sw
 
 		currentOffset = 0;
 		uint32 maxEnd{ 0 };
-		for ( MaterialProperty& prop : _data._listProperties )
+		for ( MaterialProperty& prop : _data._listProperty )
 		{
 			if ( isNonBufferType( prop._type ) )
 				continue;
@@ -335,7 +337,7 @@ namespace sw
 
 		_data._listBuffer.assign( maxEnd, 0 );
 		bool ok{ true };
-		for ( MaterialProperty& prop : _data._listProperties )
+		for ( MaterialProperty& prop : _data._listProperty )
 		{
 			if ( packPropertyIntoBuffer( prop, _data._listBuffer ) == false )
 				ok = false;
@@ -345,7 +347,7 @@ namespace sw
 		if ( alignedTotal > _data._listBuffer.size() )
 			_data._listBuffer.resize( alignedTotal, 0 );
 
-		_desc._listProperties = _data._listProperties;
+		_desc._listProperty = _data._listProperty;
 		return ok;
 	}
 
@@ -359,7 +361,7 @@ namespace sw
 
 	void Material::resetAllToDefaults( IRHIDevice* pRhi )
 	{
-		for ( MaterialProperty& prop : _data._listProperties )
+		for ( MaterialProperty& prop : _data._listProperty )
 		{
 			prop._value = prop._defaultValue;
 		}
@@ -431,7 +433,7 @@ namespace sw
 			return false;
 		if ( pRhi != nullptr && _constantBuffer != 0 )
 			pRhi->getResource()->updateConstantBuffer( _constantBuffer, _data._listBuffer.data(), static_cast<uint32>( _data._listBuffer.size() ) );
-		_desc._listProperties = _data._listProperties;
+		_desc._listProperty = _data._listProperty;
 
 		if ( prop->_type == MaterialPropertyType::Keyword || prop->_type == MaterialPropertyType::Bool )
 			_bDefinesDirty = 1;
@@ -441,7 +443,7 @@ namespace sw
 
 	bool Material::setTextureProperty( IRHIDevice* pRhi, hashed_string name, RHIDescriptorIndex descIdx )
 	{
-		for ( MaterialProperty& prop : _data._listProperties )
+		for ( MaterialProperty& prop : _data._listProperty )
 		{
 			if ( hashed_string( prop._name.c_str() ) != name )
 				continue;
@@ -453,7 +455,7 @@ namespace sw
 				return false;
 			if ( pRhi != nullptr && _constantBuffer != 0 )
 				pRhi->getResource()->updateConstantBuffer( _constantBuffer, _data._listBuffer.data(), static_cast<uint32>( _data._listBuffer.size() ) );
-			_desc._listProperties = _data._listProperties;
+			_desc._listProperty = _data._listProperty;
 			return true;
 		}
 		return false;
@@ -479,7 +481,7 @@ namespace sw
 
 	void Material::setStaticSwitch( hashed_string name, bool bEnabled )
 	{
-		for ( MaterialStaticSwitch& ss : _desc._permutations._listStaticSwitches )
+		for ( MaterialStaticSwitch& ss : _desc._permutations._listStaticSwitch )
 		{
 			if ( hashed_string( ss._name.c_str() ) == name || hashed_string( ss._keyword.c_str() ) == name )
 			{
@@ -495,13 +497,13 @@ namespace sw
 		entry._name		= name.c_str() ? name.c_str() : "";
 		entry._keyword	= entry._name;
 		entry._bEnabled = bEnabled;
-		_desc._permutations._listStaticSwitches.push_back( std::move( entry ) );
+		_desc._permutations._listStaticSwitch.push_back( std::move( entry ) );
 		_bDefinesDirty = 1;
 	}
 
 	void Material::setMultiCompile( hashed_string name, string_view selectedOption )
 	{
-		for ( MaterialMultiCompile& mc : _desc._permutations._listMultiCompiles )
+		for ( MaterialMultiCompile& mc : _desc._permutations._listMultiCompile )
 		{
 			if ( hashed_string( mc._name.c_str() ) == name )
 			{
@@ -517,8 +519,8 @@ namespace sw
 		mc._name	 = name.c_str() ? name.c_str() : "";
 		mc._selected = string( selectedOption );
 		if ( selectedOption.empty() == false )
-			mc._listOptions.push_back( string( selectedOption ) );
-		_desc._permutations._listMultiCompiles.push_back( std::move( mc ) );
+			mc._listOption.push_back( string( selectedOption ) );
+		_desc._permutations._listMultiCompile.push_back( std::move( mc ) );
 		_bDefinesDirty = 1;
 	}
 
@@ -530,7 +532,7 @@ namespace sw
 
 	bool Material::setParameterFloat( IRHIDevice* pRhi, hashed_string name, float32 value )
 	{
-		for ( MaterialProperty& prop : _data._listProperties )
+		for ( MaterialProperty& prop : _data._listProperty )
 		{
 			if ( hashed_string( prop._name.c_str() ) != name )
 				continue;
@@ -546,7 +548,7 @@ namespace sw
 
 	const MaterialProperty* Material::findProperty( hashed_string name ) const
 	{
-		for ( const MaterialProperty& prop : _data._listProperties )
+		for ( const MaterialProperty& prop : _data._listProperty )
 		{
 			if ( hashed_string( prop._name.c_str() ) == name )
 				return &prop;
@@ -556,7 +558,7 @@ namespace sw
 
 	MaterialProperty* Material::findProperty( hashed_string name )
 	{
-		for ( MaterialProperty& prop : _data._listProperties )
+		for ( MaterialProperty& prop : _data._listProperty )
 		{
 			if ( hashed_string( prop._name.c_str() ) == name )
 				return &prop;
@@ -566,7 +568,7 @@ namespace sw
 
 	const void* Material::getPropertyData( string_view name ) const
 	{
-		for ( const MaterialProperty& prop : _data._listProperties )
+		for ( const MaterialProperty& prop : _data._listProperty )
 		{
 			if ( prop._name == name && isNonBufferType( prop._type ) == false )
 				return _data._listBuffer.data() + prop._offset;
@@ -578,50 +580,50 @@ namespace sw
 	{
 		if ( _bDefinesDirty != 0 )
 		{
-			_listCachedDefines.clear();
+			_listCachedDefine.clear();
 			const MaterialPermutationDesc& perm = _desc._permutations;
 
-			for ( const string& defineStr : perm._listAlwaysDefines )
+			for ( const string& defineStr : perm._listAlwaysDefine )
 			{
-				appendUniqueDefine( _listCachedDefines, defineStr );
+				appendUniqueDefine( _listCachedDefine, defineStr );
 			}
 
-			appendQualityDefines( perm._quality, _listCachedDefines );
-			appendUniqueDefine( _listCachedDefines, string( "SHADER_LOD=" ) + to_string( perm._shaderLOD ) );
-			appendUsageDefines( perm._usage, _listCachedDefines );
+			appendQualityDefines( perm._quality, _listCachedDefine );
+			appendUniqueDefine( _listCachedDefine, string( "SHADER_LOD=" ) + to_string( perm._shaderLOD ) );
+			appendUsageDefines( perm._usage, _listCachedDefine );
 
-			for ( const MaterialStaticSwitch& entry : perm._listStaticSwitches )
+			for ( const MaterialStaticSwitch& entry : perm._listStaticSwitch )
 			{
 				if ( entry._bEnabled != 0 )
 				{
 					if ( entry._keyword.empty() == false )
-						appendUniqueDefine( _listCachedDefines, entry._keyword );
+						appendUniqueDefine( _listCachedDefine, entry._keyword );
 				}
 				else if ( entry._keywordOff.empty() == false )
-					appendUniqueDefine( _listCachedDefines, entry._keywordOff );
+					appendUniqueDefine( _listCachedDefine, entry._keywordOff );
 			}
 
-			for ( const MaterialMultiCompile& mc : perm._listMultiCompiles )
+			for ( const MaterialMultiCompile& mc : perm._listMultiCompile )
 			{
 				if ( mc._selected.empty() == false )
-					appendUniqueDefine( _listCachedDefines, mc._selected );
+					appendUniqueDefine( _listCachedDefine, mc._selected );
 			}
 
-			for ( const MaterialProperty& prop : _data._listProperties )
+			for ( const MaterialProperty& prop : _data._listProperty )
 			{
 				if ( prop._type != MaterialPropertyType::Keyword && prop._type != MaterialPropertyType::Bool )
 					continue;
 				if ( prop._shaderKeyword.empty() )
 					continue;
 				if ( parseBoolToken( prop._value ) )
-					appendUniqueDefine( _listCachedDefines, prop._shaderKeyword );
+					appendUniqueDefine( _listCachedDefine, prop._shaderKeyword );
 			}
 
-			std::sort( _listCachedDefines.begin(), _listCachedDefines.end() );
-			_cachedPermutationHash = hashDefines( _listCachedDefines );
+			std::sort( _listCachedDefine.begin(), _listCachedDefine.end() );
+			_cachedPermutationHash = hashDefines( _listCachedDefine );
 			_bDefinesDirty		   = 0;
 		}
-		return _listCachedDefines;
+		return _listCachedDefine;
 	}
 
 	uint64 Material::getPermutationHash() const
@@ -633,7 +635,7 @@ namespace sw
 
 	bool Material::getParameterFloat( hashed_string name, float32& outValue ) const
 	{
-		for ( const MaterialProperty& prop : _data._listProperties )
+		for ( const MaterialProperty& prop : _data._listProperty )
 		{
 			if ( hashed_string( prop._name.c_str() ) != name )
 				continue;

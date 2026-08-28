@@ -18,6 +18,8 @@
 
 namespace sw::editor
 {
+	SW_LOG_CALLER( "EditorDockLayout" );
+
 	EditorDockLayout::EditorDockLayout()
 		: _imguiIniPath{}
 		, _windowsIniPath{}
@@ -36,13 +38,13 @@ namespace sw::editor
 		const string		windowsPath = EditorUtil::resolveEditorConfigFile( cfg._windowsIniFile.c_str() );
 		if ( imguiPath.empty() || windowsPath.empty() )
 		{
-			SW_LOG_WARNING( "[EditorDockLayout] Failed to resolve Config/Editor - layout will not persist." );
+			SW_LOG_WARNING( "Failed to resolve Config/Editor - layout will not persist." );
 			return;
 		}
 
 		_imguiIniPath	= imguiPath;
 		_windowsIniPath = windowsPath;
-		SW_LOG_INFO( "[EditorDockLayout] Layout persistence dir: %#", FileUtil::getDirectoryPart( imguiPath ).c_str() );
+		SW_LOG_TRACE( "Layout persistence dir: %#", FileUtil::getDirectoryPart( imguiPath ).c_str() );
 	}
 
 	void EditorDockLayout::applyIniFilename() const
@@ -62,7 +64,7 @@ namespace sw::editor
 		KeyValueMap visibilityKv;
 		if ( KeyValueFile::loadFile( _windowsIniPath, visibilityKv ) == false )
 		{
-			SW_LOG_WARNING( "[EditorDockLayout] Failed to open windows.ini: %#", _windowsIniPath.c_str() );
+			SW_LOG_WARNING( "Failed to open windows.ini: %#", _windowsIniPath.c_str() );
 			return;
 		}
 
@@ -78,7 +80,7 @@ namespace sw::editor
 			entry._pInstance->setOpen( bOpen );
 		}
 
-		SW_LOG_INFO( "[EditorDockLayout] Restored panel visibility from %#", _windowsIniPath.c_str() );
+		SW_LOG_TRACE( "Restored panel visibility from %#", _windowsIniPath.c_str() );
 	}
 
 	void EditorDockLayout::save()
@@ -99,15 +101,15 @@ namespace sw::editor
 			}
 
 			if ( FileUtil::writeTextFile( _windowsIniPath, sb.c_str() ) )
-				SW_LOG_INFO( "[EditorDockLayout] Saved panel visibility to %#", _windowsIniPath.c_str() );
+				SW_LOG_TRACE( "Saved panel visibility to %#", _windowsIniPath.c_str() );
 			else
-				SW_LOG_WARNING( "[EditorDockLayout] Failed to write windows.ini: %#", _windowsIniPath.c_str() );
+				SW_LOG_WARNING( "Failed to write windows.ini: %#", _windowsIniPath.c_str() );
 		}
 
 		if ( _imguiIniPath.empty() == false && ImGui::GetCurrentContext() != nullptr )
 		{
 			ImGui::SaveIniSettingsToDisk( _imguiIniPath.c_str() );
-			SW_LOG_INFO( "[EditorDockLayout] Saved ImGui layout to %#", _imguiIniPath.c_str() );
+			SW_LOG_TRACE( "Saved ImGui layout to %#", _imguiIniPath.c_str() );
 		}
 	}
 

@@ -95,7 +95,7 @@ namespace sw
 		hashed_string		  _typeName;
 		hashed_string		  _elementTypeName;
 		hashed_string		  _keyTypeName;
-		vector<hashed_string> _listAliases; ///< PROPERTY(Alias=…) 복수 옛 키
+		vector<hashed_string> _listAlias; ///< PROPERTY(Alias=…) 복수 옛 키
 		PropertyMetadata	  _metadata;
 
 		mutable uint32 _cachedNameHash;
@@ -127,7 +127,7 @@ namespace sw
 		{
 			if ( getNameHash() == nameOrAliasHash )
 				return true;
-			for ( const hashed_string& alias : _listAliases )
+			for ( const hashed_string& alias : _listAlias )
 			{
 				if ( alias.empty() == false && alias.getHash() == nameOrAliasHash )
 					return true;
@@ -140,7 +140,7 @@ namespace sw
 		{
 			if ( _name == nameOrAlias )
 				return true;
-			for ( const hashed_string& alias : _listAliases )
+			for ( const hashed_string& alias : _listAlias )
 			{
 				if ( alias == nameOrAlias )
 					return true;
@@ -340,8 +340,8 @@ namespace sw
 	{
 		string										  _name;
 		hashed_string								  _hashName;
-		string										  _returnTypeName;	   ///< clang spelling (e.g. void, int32)
-		vector<string>								  _listParamTypeNames; ///< clang spellings in declaration order
+		string										  _returnTypeName;	  ///< clang spelling (e.g. void, int32)
+		vector<string>								  _listParamTypeName; ///< clang spellings in declaration order
 		FunctionMetadata							  _metadata;
 		Delegate<TaskValue( void*, const TaskArgs& )> _invoker; ///< instance + args → TaskValue
 	};
@@ -358,7 +358,7 @@ namespace sw
 		/** @brief `$ctor`로 placement-new 된 인스턴스를 파괴합니다. 없으면 nullptr. */
 		void ( *_destroyInstance )( void* ) = nullptr;
 		vector<PropertyInfo>									  _propertyList;
-		vector<FunctionInfo>									  _listMethods;
+		vector<FunctionInfo>									  _listMethod;
 		mutable unordered_map<hashed_string, const PropertyInfo*> _mapNameToProperty;
 		mutable unordered_map<hashed_string, const FunctionInfo*> _mapNameToMethod;
 		mutable vector<PropertyInfo>							  _propertyListWithBase;
@@ -407,14 +407,14 @@ namespace sw
 			for ( const PropertyInfo& prop : _propertyList )
 			{
 				_mapNameToProperty[prop._name] = &prop;
-				for ( const hashed_string& alias : prop._listAliases )
+				for ( const hashed_string& alias : prop._listAlias )
 				{
 					if ( alias.empty() == false )
 						_mapNameToProperty[alias] = &prop;
 				}
 			}
 
-			for ( const FunctionInfo& method : _listMethods )
+			for ( const FunctionInfo& method : _listMethod )
 			{
 				_mapNameToMethod[method._hashName] = &method;
 			}
@@ -443,9 +443,9 @@ namespace sw
 		/** @brief 이름 메서드를 찾습니다. */
 		const FunctionInfo* findMethod( const hashed_string& methodName ) const
 		{
-			if ( _listMethods.size() <= 4 )
+			if ( _listMethod.size() <= 4 )
 			{
-				for ( const FunctionInfo& method : _listMethods )
+				for ( const FunctionInfo& method : _listMethod )
 				{
 					if ( method._hashName == methodName )
 						return &method;

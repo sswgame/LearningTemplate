@@ -31,6 +31,6 @@ namespace sw::editor
 		}
 
 	private:
-		map<string, unique_ptr<IInspectorComponent>> _mapInspectors;
+		map<string, unique_ptr<IInspectorComponent>> _mapInspector;
 	};
 } // namespace sw::editor

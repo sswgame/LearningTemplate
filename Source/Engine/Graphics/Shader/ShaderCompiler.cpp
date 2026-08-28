@@ -9,6 +9,7 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "ShaderCompiler" );
 
 	namespace
 	{
@@ -36,7 +37,7 @@ namespace sw
 		{
 		public:
 			explicit MultiRootD3DInclude( vector<string> roots )
-				: _listRoots{ std::move( roots ) }
+				: _listRoot{ std::move( roots ) }
 			{
 			}
 
@@ -48,7 +49,7 @@ namespace sw
 				if ( pFileName == nullptr || ppData == nullptr || pBytes == nullptr )
 					return E_FAIL;
 
-				for ( const string& root : _listRoots )
+				for ( const string& root : _listRoot )
 				{
 					const string candidate = FileUtil::normalizeSeparators( root + "/" + pFileName );
 					if ( FileUtil::fileExists( candidate ) == false )
@@ -77,7 +78,7 @@ namespace sw
 			}
 
 		private:
-			vector<string> _listRoots;
+			vector<string> _listRoot;
 		};
 #endif
 
@@ -169,7 +170,7 @@ namespace sw
 			hash		= StringUtil::computeHash64( desc._entryPoint, false, hash );
 			hash		= StringUtil::computeHash64( to_string( static_cast<uint32>( desc._stage ) ), false, hash );
 			hash		= StringUtil::computeHash64( to_string( static_cast<uint32>( desc._targetFormat ) ), false, hash );
-			for ( const auto& def : desc._listDefines )
+			for ( const auto& def : desc._listDefine )
 			{
 				hash = StringUtil::computeHash64( def._name, false, hash );
 				hash = StringUtil::computeHash64( def._value, false, hash );
@@ -267,9 +268,9 @@ namespace sw
 				wstring							 wPath = StringUtil::utf8ToUtf16( absPathStr.c_str() );
 
 				vector<D3D_SHADER_MACRO> listMacros;
-				listMacros.reserve( desc._listDefines.size() + 2 );
+				listMacros.reserve( desc._listDefine.size() + 2 );
 				listMacros.push_back( { "DX11", "1" } );
-				for ( const ShaderMacroDefine& def : desc._listDefines )
+				for ( const ShaderMacroDefine& def : desc._listDefine )
 				{
 					if ( def._name.empty() )
 						continue;
@@ -298,7 +299,7 @@ namespace sw
 						result._errorMessage = static_cast<const utf8*>( errorBlob->GetBufferPointer() );
 					else
 						result._errorMessage = "Unknown DXBC compilation error.";
-					SW_LOG_ERROR( "[ShaderCompiler DXBC Error] %#", result._errorMessage.c_str() );
+					SW_LOG_ERROR( "%#", result._errorMessage.c_str() );
 					return result;
 				}
 
@@ -307,7 +308,7 @@ namespace sw
 				result._bSuccess = true;
 				saveToCacheIfEnabled( result._listBytecode );
 
-				SW_LOG_INFO( "[ShaderCompiler DXBC Success] Target: D3D11 (DXBC Row-Major), Size: %# bytes", static_cast<uint32>( result._listBytecode.size() ) );
+				SW_LOG_TRACE( "Target: D3D11 (DXBC Row-Major), Size: %# bytes", static_cast<uint32>( result._listBytecode.size() ) );
 				return result;
 			}
 		}
@@ -318,18 +319,18 @@ namespace sw
 		{
 			static auto s_getDxCompilerHandle = []() -> void*
 			{
-				string		   libName		  = FileUtil::formatSharedLibraryName( "dxcompiler" );
-				vector<string> listCandidates = {
+				string		   libName		 = FileUtil::formatSharedLibraryName( "dxcompiler" );
+				vector<string> listCandidate = {
 					FileUtil::getDirectoryPart( FileUtil::getExecutablePath() ) + "/" + libName,
 					libName };
-				for ( const string& cand : listCandidates )
+				for ( const string& cand : listCandidate )
 				{
 					if ( FileUtil::fileExists( cand ) )
 					{
 						void* pH = FileUtil::loadDynamicLibrary( cand );
 						if ( pH != nullptr )
 							return pH;
-						SW_LOG_ERROR( "[ShaderCompiler] Failed to load %#", cand.c_str() );
+						SW_LOG_ERROR( "Failed to load %#", cand.c_str() );
 					}
 				}
 				return FileUtil::loadDynamicLibrary( libName );
@@ -341,7 +342,7 @@ namespace sw
 
 			DxcCreateInstanceProc fnDxcCreateInstance = s_fnDxcCreateInstance;
 			if ( fnDxcCreateInstance == nullptr )
-				SW_LOG_ERROR( "[ShaderCompiler] DxcCreateInstance unavailable (libdxcompiler not loaded)" );
+				SW_LOG_ERROR( "DxcCreateInstance unavailable (libdxcompiler not loaded)" );
 
 			DxcComPtr<IDxcUtils>	 utils;
 			DxcComPtr<IDxcCompiler3> compiler;
@@ -352,7 +353,7 @@ namespace sw
 				if ( SUCCEEDED( hrInit ) )
 					fnDxcCreateInstance( CLSID_DxcCompiler, IID_PPV_ARGS( dxcAddressOf( compiler ) ) );
 				else
-					SW_LOG_ERROR( "[ShaderCompiler] DxcCreateInstance(CLSID_DxcUtils) failed: 0x%#", hrInit );
+					SW_LOG_ERROR( "DxcCreateInstance(CLSID_DxcUtils) failed: 0x%#", hrInit );
 			}
 
 			if ( utils != nullptr && compiler != nullptr )
@@ -371,7 +372,7 @@ namespace sw
 
 					vector<LPCWSTR> listArguments;
 					vector<wstring> listDefineArgs;
-					listDefineArgs.reserve( desc._listDefines.size() );
+					listDefineArgs.reserve( desc._listDefine.size() );
 
 					listArguments.push_back( wPath.c_str() );
 					listArguments.push_back( L"-E" );
@@ -440,7 +441,7 @@ namespace sw
 					else if ( desc._targetFormat == ShaderTargetFormat::DXBC_D3D11 )
 						listArguments.push_back( L"DX11=1" );
 
-					for ( const ShaderMacroDefine& def : desc._listDefines )
+					for ( const ShaderMacroDefine& def : desc._listDefine )
 					{
 						if ( def._name.empty() )
 							continue;
@@ -464,14 +465,14 @@ namespace sw
 
 					DxcComPtr<IDxcResult> compileResult;
 					HRESULT				  hrCompile = compiler->Compile(
-						&sourceBuffer,
-						listArguments.data(),
-						static_cast<uint32>( listArguments.size() ),
-						dxcGet( includeHandler ),
-						IID_PPV_ARGS( dxcAddressOf( compileResult ) ) );
+						  &sourceBuffer,
+						  listArguments.data(),
+						  static_cast<uint32>( listArguments.size() ),
+						  dxcGet( includeHandler ),
+						  IID_PPV_ARGS( dxcAddressOf( compileResult ) ) );
 
 					if ( FAILED( hrCompile ) )
-						SW_LOG_ERROR( "[ShaderCompiler] DXC compiler->Compile failed with HRESULT: 0x%#", hrCompile );
+						SW_LOG_ERROR( "DXC compiler->Compile failed with HRESULT: 0x%#", hrCompile );
 
 					if ( SUCCEEDED( hrCompile ) )
 					{
@@ -486,7 +487,7 @@ namespace sw
 
 						if ( FAILED( status ) )
 						{
-							SW_LOG_ERROR( "[ShaderCompiler DXC Error] %#", result._errorMessage.c_str() );
+							SW_LOG_ERROR( "%#", result._errorMessage.c_str() );
 							return result;
 						}
 
@@ -505,13 +506,13 @@ namespace sw
 													: ( desc._targetFormat == ShaderTargetFormat::SPIRV_OpenGL )
 														? "OpenGL (SPIR-V universal1.5)"
 														: "D3D12 (DXIL Row-Major)";
-							SW_LOG_INFO( "[ShaderCompiler DXC Success] Target: %#", pFormatName );
+							SW_LOG_TRACE( "Target: %#", pFormatName );
 							return result;
 						}
 					}
 				}
 				else
-					SW_LOG_ERROR( "[ShaderCompiler] DXC LoadFile failed: 0x%# (%#)", hrLoad, absPathStr.c_str() );
+					SW_LOG_ERROR( "DXC LoadFile failed: 0x%# (%#)", hrLoad, absPathStr.c_str() );
 			}
 
 	#if defined( SW_PLATFORM_WINDOWS )
@@ -524,8 +525,8 @@ namespace sw
 				wstring							 wPath( absPathStr.begin(), absPathStr.end() );
 
 				vector<D3D_SHADER_MACRO> listMacros;
-				listMacros.reserve( desc._listDefines.size() + 1 );
-				for ( const ShaderMacroDefine& def : desc._listDefines )
+				listMacros.reserve( desc._listDefine.size() + 1 );
+				for ( const ShaderMacroDefine& def : desc._listDefine )
 				{
 					if ( def._name.empty() )
 						continue;
@@ -551,7 +552,7 @@ namespace sw
 					result._bSuccess = true;
 					saveToCacheIfEnabled( result._listBytecode );
 
-					SW_LOG_INFO( "[ShaderCompiler Fallback Success] Target: D3D12/11 (Row-Major)" );
+					SW_LOG_TRACE( "Target: D3D12/11 (Row-Major)" );
 					return result;
 				}
 			}
@@ -561,7 +562,7 @@ namespace sw
 
 		if ( result._errorMessage.empty() )
 			result._errorMessage = "Failed to compile shader with DXC and D3DCompiler (hrCompile/hrLoad failed)";
-		SW_LOG_ERROR( "[ShaderCompiler Error] %# (Path: %#)", result._errorMessage.c_str(), desc._filePath.c_str() );
+		SW_LOG_ERROR( "%# (Path: %#)", result._errorMessage.c_str(), desc._filePath.c_str() );
 		return result;
 	}
 } // namespace sw

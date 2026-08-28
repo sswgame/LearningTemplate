@@ -22,7 +22,7 @@ namespace sw
 		string			   _mapPath;	  ///< 현재 맵 (비어 있으면 GameData::_startMap)
 		int32			   _playerX{ 1 }; ///< 플레이어 타일 X
 		int32			   _playerY{ 1 }; ///< 플레이어 타일 Y
-		map<string, int32> _mapFlags;	  ///< 스토리 플래그 (키 → 값)
+		map<string, int32> _mapFlag;	  ///< 스토리 플래그 (키 → 값)
 
 		/** @brief 플래그 값을 반환합니다. 없으면 defaultValue입니다. */
 		int32 getFlag( string_view key, int32 defaultValue = 0 ) const;

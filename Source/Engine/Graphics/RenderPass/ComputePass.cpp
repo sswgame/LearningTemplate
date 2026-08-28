@@ -9,16 +9,16 @@ namespace sw
 	ComputePass::ComputePass()
 		: _passName{ "UnnamedComputePass" }
 		, _computePso{ 0 }
-		, _mapUavBindings{}
-		, _mapSrvBindings{}
+		, _mapUavBinding{}
+		, _mapSrvBinding{}
 	{
 	}
 
 	ComputePass::ComputePass( string_view passName )
 		: _passName{ passName }
 		, _computePso{ 0 }
-		, _mapUavBindings{}
-		, _mapSrvBindings{}
+		, _mapUavBinding{}
+		, _mapSrvBinding{}
 	{
 	}
 
@@ -29,12 +29,12 @@ namespace sw
 
 	void ComputePass::bindUav( uint32 slot, RHIDescriptorIndex descriptorIndex )
 	{
-		_mapUavBindings[slot] = descriptorIndex;
+		_mapUavBinding[slot] = descriptorIndex;
 	}
 
 	void ComputePass::bindSrv( uint32 slot, RHIDescriptorIndex descriptorIndex )
 	{
-		_mapSrvBindings[slot] = descriptorIndex;
+		_mapSrvBinding[slot] = descriptorIndex;
 	}
 
 	void ComputePass::dispatch( IRHICommandList* pCmdList, const ComputeDispatchParams& params )
@@ -45,12 +45,12 @@ namespace sw
 		if ( _computePso != 0 )
 			pCmdList->setComputePipelineState( _computePso );
 
-		for ( const auto& [slot, descriptorIndex] : _mapUavBindings )
+		for ( const auto& [slot, descriptorIndex] : _mapUavBinding )
 		{
 			pCmdList->bindComputeUAV( descriptorIndex, slot );
 		}
 
-		for ( const auto& [slot, descriptorIndex] : _mapSrvBindings )
+		for ( const auto& [slot, descriptorIndex] : _mapSrvBinding )
 		{
 			pCmdList->bindShaderResource( descriptorIndex, slot );
 		}
@@ -61,7 +61,7 @@ namespace sw
 	void ComputePass::clearBindings()
 	{
 		_computePso = 0;
-		_mapUavBindings.clear();
-		_mapSrvBindings.clear();
+		_mapUavBinding.clear();
+		_mapSrvBinding.clear();
 	}
 } // namespace sw

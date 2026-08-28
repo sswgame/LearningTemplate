@@ -252,8 +252,8 @@ namespace sw
 			, _maxDepth{ kMaxDepth }
 			, _totalElements{ 0 }
 			, _pRoot{ nullptr }
-			, _mapElements{}
-			, _mapElementLocations{}
+			, _mapElement{}
+			, _mapElementLocation{}
 		{
 		}
 
@@ -263,8 +263,8 @@ namespace sw
 			, _maxDepth{ maxDepth }
 			, _totalElements{ 0 }
 			, _pRoot{ nullptr }
-			, _mapElements{}
-			, _mapElementLocations{}
+			, _mapElement{}
+			, _mapElementLocation{}
 		{
 			initialize( worldBounds, maxElements, maxDepth );
 		}
@@ -286,21 +286,21 @@ namespace sw
 		void clear()
 		{
 			_pRoot.reset();
-			_mapElements.clear();
-			_mapElementLocations.clear();
+			_mapElement.clear();
+			_mapElementLocation.clear();
 			_totalElements = 0;
 		}
 
 		bool insert( uint64 id, const BoundsType& bounds, void* pUserData = nullptr )
 		{
-			if ( _pRoot == nullptr || _mapElements.find( id ) != _mapElements.end() )
+			if ( _pRoot == nullptr || _mapElement.find( id ) != _mapElement.end() )
 				return false;
 
 			ElementType elem{ id, bounds, pUserData };
 			if ( _pRoot->insert( elem, _maxElementsPerNode, _maxDepth ) )
 			{
-				_mapElements[id]		 = elem;
-				_mapElementLocations[id] = bounds;
+				_mapElement[id]			= elem;
+				_mapElementLocation[id] = bounds;
 				++_totalElements;
 				return true;
 			}
@@ -312,14 +312,14 @@ namespace sw
 			if ( _pRoot == nullptr )
 				return false;
 
-			auto iter = _mapElements.find( id );
-			if ( iter == _mapElements.end() )
+			auto iter = _mapElement.find( id );
+			if ( iter == _mapElement.end() )
 				return false;
 
 			if ( _pRoot->remove( id, _maxElementsPerNode ) )
 			{
-				_mapElements.erase( iter );
-				_mapElementLocations.erase( id );
+				_mapElement.erase( iter );
+				_mapElementLocation.erase( id );
 				if ( _totalElements > 0 )
 					--_totalElements;
 				return true;
@@ -329,8 +329,8 @@ namespace sw
 
 		bool update( uint64 id, const BoundsType& newBounds )
 		{
-			auto iter = _mapElements.find( id );
-			if ( iter == _mapElements.end() )
+			auto iter = _mapElement.find( id );
+			if ( iter == _mapElement.end() )
 				return false;
 
 			void* pSavedUserData = iter->second._pUserData;
@@ -354,14 +354,14 @@ namespace sw
 		{
 			BoundsType			 _bounds{};
 			size_t				 _depth{ 0 };
-			vector<ElementType>	 _listElements{};
+			vector<ElementType>	 _listElement{};
 			sw::unique_ptr<Node> _arrChildren[Traits::kChildCount]{};
 			bool				 _bIsDivided{ false };
 
 			explicit Node( const BoundsType& bounds, size_t depth = 0 )
 				: _bounds{ bounds }
 				, _depth{ depth }
-				, _listElements{}
+				, _listElement{}
 				, _arrChildren{}
 				, _bIsDivided{ false }
 			{
@@ -380,14 +380,14 @@ namespace sw
 				_bIsDivided = true;
 
 				vector<ElementType> listRemaining;
-				for ( const ElementType& element : _listElements )
+				for ( const ElementType& element : _listElement )
 				{
 					bool bPushedToChild = false;
 					for ( size_t childIndex = 0; childIndex < Traits::kChildCount; ++childIndex )
 					{
 						if ( _arrChildren[childIndex]->_bounds.contains( element._bounds ) )
 						{
-							_arrChildren[childIndex]->_listElements.push_back( element );
+							_arrChildren[childIndex]->_listElement.push_back( element );
 							bPushedToChild = true;
 							break;
 						}
@@ -397,7 +397,7 @@ namespace sw
 						listRemaining.push_back( element );
 				}
 
-				_listElements = std::move( listRemaining );
+				_listElement = std::move( listRemaining );
 			}
 
 			bool insert( const ElementType& elem, size_t maxElements, size_t maxDepth )
@@ -414,9 +414,9 @@ namespace sw
 					}
 				}
 
-				if ( _listElements.size() < maxElements || _depth >= maxDepth )
+				if ( _listElement.size() < maxElements || _depth >= maxDepth )
 				{
-					_listElements.push_back( elem );
+					_listElement.push_back( elem );
 					return true;
 				}
 
@@ -429,17 +429,17 @@ namespace sw
 						return _arrChildren[childIndex]->insert( elem, maxElements, maxDepth );
 				}
 
-				_listElements.push_back( elem );
+				_listElement.push_back( elem );
 				return true;
 			}
 
 			bool remove( uint64 id, size_t maxElements = Traits::kMaxElements )
 			{
-				for ( auto it = _listElements.begin(); it != _listElements.end(); ++it )
+				for ( auto it = _listElement.begin(); it != _listElement.end(); ++it )
 				{
 					if ( it->_id == id )
 					{
-						_listElements.erase( it );
+						_listElement.erase( it );
 						return true;
 					}
 				}
@@ -462,17 +462,17 @@ namespace sw
 						bool   bAnyChildDivided	  = false;
 						for ( size_t childIndex = 0; childIndex < Traits::kChildCount; ++childIndex )
 						{
-							totalChildElements += _arrChildren[childIndex]->_listElements.size();
+							totalChildElements += _arrChildren[childIndex]->_listElement.size();
 							if ( _arrChildren[childIndex]->_bIsDivided )
 								bAnyChildDivided = true;
 						}
 
-						if ( bAnyChildDivided == false && ( _listElements.size() + totalChildElements ) <= maxElements )
+						if ( bAnyChildDivided == false && ( _listElement.size() + totalChildElements ) <= maxElements )
 						{
 							for ( size_t childIndex = 0; childIndex < Traits::kChildCount; ++childIndex )
 							{
-								for ( auto& element : _arrChildren[childIndex]->_listElements )
-									_listElements.push_back( std::move( element ) );
+								for ( auto& element : _arrChildren[childIndex]->_listElement )
+									_listElement.push_back( std::move( element ) );
 								_arrChildren[childIndex].reset();
 							}
 							_bIsDivided = false;
@@ -489,7 +489,7 @@ namespace sw
 				if ( _bounds.intersects( range ) == false )
 					return;
 
-				for ( const ElementType& element : _listElements )
+				for ( const ElementType& element : _listElement )
 				{
 					if ( range.intersects( element._bounds ) )
 						listOutElements.push_back( element );
@@ -510,7 +510,7 @@ namespace sw
 		size_t							   _maxDepth{ Traits::kMaxDepth };
 		size_t							   _totalElements{ 0 };
 		sw::unique_ptr<Node>			   _pRoot{ nullptr };
-		unordered_map<uint64, ElementType> _mapElements{};
-		unordered_map<uint64, BoundsType>  _mapElementLocations{};
+		unordered_map<uint64, ElementType> _mapElement{};
+		unordered_map<uint64, BoundsType>  _mapElementLocation{};
 	};
 } // namespace sw

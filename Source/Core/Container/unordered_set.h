@@ -46,7 +46,7 @@ namespace sw
 			size_t next;
 		};
 
-		vector<size_t> _listBuckets;
+		vector<size_t> _listBucket;
 		vector<Node>   _listDenseData;
 		hasher		   _hasher;
 		key_equal	   _equal;
@@ -57,8 +57,8 @@ namespace sw
 		/** @brief 검사합니다. */
 		void check_expand()
 		{
-			if ( _listBuckets.empty() || _listDenseData.size() >= _listBuckets.size() )
-				rehash_internal( _listBuckets.empty() ? 16 : _listBuckets.size() * 2 );
+			if ( _listBucket.empty() || _listDenseData.size() >= _listBucket.size() )
+				rehash_internal( _listBucket.empty() ? 16 : _listBucket.size() * 2 );
 		}
 
 	public:
@@ -104,14 +104,14 @@ namespace sw
 		// ------------------------------------------------------------------------------
 		/** @brief 빈 집합으로 둡니다. */
 		unordered_set()
-			: _listBuckets{}
+			: _listBucket{}
 			, _listDenseData{}
 			, _hasher{}
 			, _equal{} {}
 
 		/** @brief 초기화 리스트를 삽입합니다. */
 		unordered_set( std::initializer_list<value_type> init )
-			: _listBuckets{}
+			: _listBucket{}
 			, _listDenseData{}
 			, _hasher{}
 			, _equal{}
@@ -124,7 +124,7 @@ namespace sw
 
 		/** @brief 복사 생성합니다. */
 		unordered_set( const unordered_set& other )
-			: _listBuckets{ other._listBuckets }
+			: _listBucket{ other._listBucket }
 			, _listDenseData{ other._listDenseData }
 			, _hasher{ other._hasher }
 			, _equal{ other._equal }
@@ -134,7 +134,7 @@ namespace sw
 
 		/** @brief 이동 생성합니다. */
 		unordered_set( unordered_set&& other ) noexcept
-			: _listBuckets{ std::move( other._listBuckets ) }
+			: _listBucket{ std::move( other._listBucket ) }
 			, _listDenseData{ std::move( other._listDenseData ) }
 			, _hasher{ std::move( other._hasher ) }
 			, _equal{ std::move( other._equal ) }
@@ -149,7 +149,7 @@ namespace sw
 			{
 				SW_SCOPED_RACE_WRITE();
 				SW_SCOPED_RACE_READ_OTHER( other );
-				_listBuckets   = other._listBuckets;
+				_listBucket	   = other._listBucket;
 				_listDenseData = other._listDenseData;
 				_hasher		   = other._hasher;
 				_equal		   = other._equal;
@@ -164,7 +164,7 @@ namespace sw
 			{
 				SW_SCOPED_RACE_WRITE();
 				SW_SCOPED_RACE_WRITE_OTHER( other );
-				_listBuckets   = std::move( other._listBuckets );
+				_listBucket	   = std::move( other._listBucket );
 				_listDenseData = std::move( other._listDenseData );
 				_hasher		   = std::move( other._hasher );
 				_equal		   = std::move( other._equal );
@@ -223,7 +223,7 @@ namespace sw
 		{
 			SW_SCOPED_RACE_WRITE();
 			_listDenseData.clear();
-			for ( size_t& bucket : _listBuckets )
+			for ( size_t& bucket : _listBucket )
 			{
 				bucket = kEmptySlot;
 			}
@@ -233,11 +233,11 @@ namespace sw
 		iterator find( const Key& key ) const
 		{
 			SW_SCOPED_RACE_READ();
-			if ( _listBuckets.empty() )
+			if ( _listBucket.empty() )
 				return end();
 			size_t		  hash		= _hasher( key );
-			const size_t  bucketIdx = hash % _listBuckets.size();
-			const size_t* bData		= std::as_const( _listBuckets ).data();
+			const size_t  bucketIdx = hash % _listBucket.size();
+			const size_t* bData		= std::as_const( _listBucket ).data();
 			const Node*	  dData		= std::as_const( _listDenseData ).data();
 			size_t		  curr		= bData[bucketIdx];
 			while ( curr != kEmptySlot )
@@ -258,8 +258,8 @@ namespace sw
 			SW_SCOPED_RACE_WRITE();
 			check_expand();
 			size_t		 hash	   = _hasher( value );
-			const size_t bucketIdx = hash % _listBuckets.size();
-			size_t		 curr	   = _listBuckets[bucketIdx];
+			const size_t bucketIdx = hash % _listBucket.size();
+			size_t		 curr	   = _listBucket[bucketIdx];
 			while ( curr != kEmptySlot )
 			{
 				if ( _equal( _listDenseData[curr].key, value ) )
@@ -268,8 +268,8 @@ namespace sw
 			}
 
 			const size_t newIdx = _listDenseData.size();
-			_listDenseData.push_back( { value, _listBuckets[bucketIdx] } );
-			_listBuckets[bucketIdx] = newIdx;
+			_listDenseData.push_back( { value, _listBucket[bucketIdx] } );
+			_listBucket[bucketIdx] = newIdx;
 			return { iterator( this, newIdx ), true };
 		}
 
@@ -283,8 +283,8 @@ namespace sw
 			const Key& key = _listDenseData.back().key;
 
 			size_t		 hash	   = _hasher( key );
-			const size_t bucketIdx = hash % _listBuckets.size();
-			size_t		 curr	   = _listBuckets[bucketIdx];
+			const size_t bucketIdx = hash % _listBucket.size();
+			size_t		 curr	   = _listBucket[bucketIdx];
 			while ( curr != kEmptySlot )
 			{
 				if ( _equal( _listDenseData[curr].key, key ) )
@@ -296,8 +296,8 @@ namespace sw
 			}
 
 			const size_t newIdx			= _listDenseData.size() - 1;
-			_listDenseData[newIdx].next = _listBuckets[bucketIdx];
-			_listBuckets[bucketIdx]		= newIdx;
+			_listDenseData[newIdx].next = _listBucket[bucketIdx];
+			_listBucket[bucketIdx]		= newIdx;
 			return { iterator( this, newIdx ), true };
 		}
 
@@ -314,12 +314,12 @@ namespace sw
 		size_type erase( const Key& key )
 		{
 			SW_SCOPED_RACE_WRITE();
-			if ( _listBuckets.empty() )
+			if ( _listBucket.empty() )
 				return 0;
 
 			size_t		 hash	   = _hasher( key );
-			const size_t bucketIdx = hash % _listBuckets.size();
-			size_t		 curr	   = _listBuckets[bucketIdx];
+			const size_t bucketIdx = hash % _listBucket.size();
+			size_t		 curr	   = _listBucket[bucketIdx];
 			size_t		 prev	   = kEmptySlot;
 
 			while ( curr != kEmptySlot )
@@ -327,7 +327,7 @@ namespace sw
 				if ( _equal( _listDenseData[curr].key, key ) )
 				{
 					if ( prev == kEmptySlot )
-						_listBuckets[bucketIdx] = _listDenseData[curr].next;
+						_listBucket[bucketIdx] = _listDenseData[curr].next;
 					else
 						_listDenseData[prev].next = _listDenseData[curr].next;
 
@@ -337,15 +337,15 @@ namespace sw
 						_listDenseData[curr] = std::move( _listDenseData[lastIdx] );
 
 						size_t		 lastHash	   = _hasher( _listDenseData[curr].key );
-						const size_t lastBucketIdx = lastHash % _listBuckets.size();
-						size_t		 lcurr		   = _listBuckets[lastBucketIdx];
+						const size_t lastBucketIdx = lastHash % _listBucket.size();
+						size_t		 lcurr		   = _listBucket[lastBucketIdx];
 						size_t		 lprev		   = kEmptySlot;
 						while ( lcurr != kEmptySlot )
 						{
 							if ( lcurr == lastIdx )
 							{
 								if ( lprev == kEmptySlot )
-									_listBuckets[lastBucketIdx] = curr;
+									_listBucket[lastBucketIdx] = curr;
 								else
 									_listDenseData[lprev].next = curr;
 								break;
@@ -374,15 +374,15 @@ namespace sw
 		/** @brief 내부 버킷을 재해시합니다. */
 		void rehash_internal( size_type count )
 		{
-			if ( count <= _listBuckets.size() )
+			if ( count <= _listBucket.size() )
 				return;
-			_listBuckets.assign( count, kEmptySlot );
+			_listBucket.assign( count, kEmptySlot );
 			for ( size_t denseIndex = 0; denseIndex < _listDenseData.size(); ++denseIndex )
 			{
 				size_t		 hash				= _hasher( _listDenseData[denseIndex].key );
-				const size_t bucketIdx			= hash % _listBuckets.size();
-				_listDenseData[denseIndex].next = _listBuckets[bucketIdx];
-				_listBuckets[bucketIdx]			= denseIndex;
+				const size_t bucketIdx			= hash % _listBucket.size();
+				_listDenseData[denseIndex].next = _listBucket[bucketIdx];
+				_listBucket[bucketIdx]			= denseIndex;
 			}
 		}
 

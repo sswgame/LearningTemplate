@@ -52,7 +52,7 @@ namespace sw::editor
 			string			 _text;
 			string			 _condition;
 			string			 _actionCommand;
-			vector<string>	 _listChoices;
+			vector<string>	 _listChoice;
 			float32			 _x{ 40.0f };
 			float32			 _y{ 40.0f };
 		};
@@ -87,7 +87,7 @@ namespace sw::editor
 		EditorNodeGraph		 _nodeGraph;
 		bool				 _bLoaded;
 		int32				 _selectedNodeId;
-		vector<DialogueNode> _listNodes;
-		vector<DialogueLink> _listLinks;
+		vector<DialogueNode> _listNode;
+		vector<DialogueLink> _listLink;
 	};
 } // namespace sw::editor

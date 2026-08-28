@@ -13,6 +13,8 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "TileMap" );
+
 	TileMap::TileMap()
 		: _name{}
 		, _sourcePath{}
@@ -40,14 +42,14 @@ namespace sw
 		string		absPath;
 		if ( doc.loadResource( assetRelativePath, &absPath ) == false )
 		{
-			SW_LOG_ERROR( "[TileMap] Not found: %#", assetRelativePath );
+			SW_LOG_ERROR( "Not found: %#", assetRelativePath );
 			return false;
 		}
 
 		XmlNode root = doc.root( "TileMap" );
 		if ( root.isValid() == false )
 		{
-			SW_LOG_ERROR( "[TileMap] Missing <TileMap>: %#", absPath );
+			SW_LOG_ERROR( "Missing <TileMap>: %#", absPath );
 			return false;
 		}
 
@@ -167,7 +169,7 @@ namespace sw
 			}
 		}
 
-		SW_LOG_INFO( "[TileMap] Loaded '%#' (%#x%#) scene=%# role=%# encounters=%#",
+		SW_LOG_INFO( "Loaded '%#' (%#x%#) scene=%# role=%# encounters=%#",
 					 _name, _width, _height, _scenePath, _role, static_cast<uint32>( _encounterEntryList.size() ) );
 		return true;
 	}
@@ -235,7 +237,7 @@ namespace sw
 		const bool	 ok = FileUtil::writeFile( absPath, reinterpret_cast<const uint8*>( text.data() ),
 											   text.size() );
 		if ( ok )
-			SW_LOG_INFO( "[TileMap] Saved '%#' → %#", _name, absPath );
+			SW_LOG_INFO( "Saved '%#' → %#", _name, absPath );
 		return ok;
 	}
 
@@ -447,9 +449,9 @@ namespace sw
 	void TileMap::debugLogTileHd2d( int32 x, int32 y ) const
 	{
 		const TileVisual tileVisual = getTileVisual( x, y );
-		SW_LOG_INFO( "[TileMap][HD-2D] tile (%#,%#) h=%# tint=(%#,%#,%#) flags walk=%# enc=%# pt=%#",
-					 x, y, tileVisual._height, tileVisual._tintR, tileVisual._tintG, tileVisual._tintB,
-					 isWalkable( x, y ) ? 1 : 0, isEncounterTile( x, y ) ? 1 : 0, isPassThrough( x, y ) ? 1 : 0 );
+		SW_LOG_TRACE( "tile (%#,%#) h=%# tint=(%#,%#,%#) flags walk=%# enc=%# pt=%#",
+					  x, y, tileVisual._height, tileVisual._tintR, tileVisual._tintG, tileVisual._tintB,
+					  isWalkable( x, y ) ? 1 : 0, isEncounterTile( x, y ) ? 1 : 0, isPassThrough( x, y ) ? 1 : 0 );
 	}
 
 	bool TileMap::inBounds( int32 x, int32 y ) const

@@ -9,6 +9,7 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "GlobalVariableManager" );
 
 	// ============================================================================
 	// GlobalVariableInfo 구현부
@@ -284,7 +285,7 @@ namespace sw
 		std::unique_lock<std::shared_mutex> lock{ _mutex };
 		if ( _mapVariable.find( name ) != _mapVariable.end() )
 		{
-			SW_LOG_WARNING( "[GlobalVariableManager] Variable %# is already registered.", string( name ).c_str() );
+			SW_LOG_WARNING( "Variable %# is already registered.", string( name ).c_str() );
 			return false;
 		}
 

@@ -62,5 +62,12 @@
 				sw::editor::bindEditorService( *pService );                                                                                                    \
 			else                                                                                                                                               \
 				sw::editor::unbindEditorService(); };                                                                         \
+		pOutApi->isPlaying		   = []( sw::EditorHandle editorHandle ) -> bool {                                                                              \
+			EditorClass* pInstance = static_cast<EditorClass*>( editorHandle );                                                                               \
+			return pInstance != nullptr ? pInstance->isPlaying() : false; };                                                                     \
+		pOutApi->stopSimulation	   = []( sw::EditorHandle editorHandle ) {                                                                                      \
+			EditorClass* pInstance = static_cast<EditorClass*>( editorHandle );                                                                               \
+			if ( pInstance != nullptr )                                                                                                                        \
+				pInstance->stopSimulation(); };                                                                             \
 		return true;                                                                                                                                      \
 	}

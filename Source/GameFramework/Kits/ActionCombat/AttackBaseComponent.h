@@ -29,18 +29,18 @@ namespace sw
 		void onEndPlay() override;
 		void onTick( float32 deltaTime ) override;
 
-		bool  isAttackActive() const;
-		int32 getDamage() const;
+		bool  isAttackActive() const { return _bIsAttacking; }
+		int32 getDamage() const { return _damage; }
 		void  beginAttack( int32 damage, float32 duration );
 
 	private:
-		PROPERTY( Alias="damage" )
+		PROPERTY( Alias = "damage" )
 		int32 _damage;
-		PROPERTY( Alias="duration" )
+		PROPERTY( Alias = "duration" )
 		float32 _duration;
-		PROPERTY( Alias="currentDuration" )
+		PROPERTY( Alias = "currentDuration" )
 		float32 _currentDuration;
-		PROPERTY( Alias="bActive" )
-		bool _bActive;
+		PROPERTY( Alias = "bIsAttacking" )
+		bool _bIsAttacking;
 	};
 } // namespace sw

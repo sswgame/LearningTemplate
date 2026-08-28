@@ -5,6 +5,8 @@
 #if defined( SW_PLATFORM_WINDOWS )
 namespace sw::shader_reflection_detail
 {
+	SW_LOG_CALLER( "ShaderReflection" );
+
 	namespace
 	{
 
@@ -105,10 +107,10 @@ namespace sw::shader_reflection_detail
 						pTy->GetDesc( &typeDesc );
 						varInfo._type = hlslVariableTypeName( typeDesc.Class, typeDesc.Type, typeDesc.Rows, typeDesc.Columns );
 					}
-					bufInfo._listVariables.push_back( varInfo );
+					bufInfo._listVariable.push_back( varInfo );
 				}
 
-				data._listConstantBuffers.push_back( std::move( bufInfo ) );
+				data._listConstantBuffer.push_back( std::move( bufInfo ) );
 			}
 
 			for ( UINT resourceIndex = 0; resourceIndex < shaderDesc.BoundResources; ++resourceIndex )
@@ -122,7 +124,7 @@ namespace sw::shader_reflection_detail
 				resBinding._bindPoint	  = bindDesc.BindPoint;
 				resBinding._bindCount	  = bindDesc.BindCount;
 				resBinding._type		  = resourceTypeName( static_cast<uint32>( bindDesc.Type ) );
-				data._listResources.push_back( std::move( resBinding ) );
+				data._listResource.push_back( std::move( resBinding ) );
 			}
 
 			return data;
@@ -163,10 +165,10 @@ namespace sw::shader_reflection_detail
 						pTy->GetDesc( &typeDesc );
 						varInfo._type = hlslVariableTypeName( typeDesc.Class, typeDesc.Type, typeDesc.Rows, typeDesc.Columns );
 					}
-					bufInfo._listVariables.push_back( varInfo );
+					bufInfo._listVariable.push_back( varInfo );
 				}
 
-				data._listConstantBuffers.push_back( std::move( bufInfo ) );
+				data._listConstantBuffer.push_back( std::move( bufInfo ) );
 			}
 
 			for ( UINT resourceIndex = 0; resourceIndex < shaderDesc.BoundResources; ++resourceIndex )
@@ -180,11 +182,11 @@ namespace sw::shader_reflection_detail
 				resBinding._bindPoint	  = bindDesc.BindPoint;
 				resBinding._bindCount	  = bindDesc.BindCount;
 				resBinding._type		  = resourceTypeName( static_cast<uint32>( bindDesc.Type ) );
-				data._listResources.push_back( std::move( resBinding ) );
+				data._listResource.push_back( std::move( resBinding ) );
 
 				if ( bindDesc.Type == D3D_SIT_CBUFFER )
 				{
-					for ( ShaderBufferInfo& cb : data._listConstantBuffers )
+					for ( ShaderBufferInfo& cb : data._listConstantBuffer )
 					{
 						if ( cb._name == resBinding._name )
 						{
@@ -205,13 +207,13 @@ namespace sw::shader_reflection_detail
 			const HRESULT								   hr = D3DReflect( bytecode.data(), bytecode.size(), IID_PPV_ARGS( reflection.GetAddressOf() ) );
 			if ( FAILED( hr ) || reflection == nullptr )
 			{
-				SW_LOG_ERROR( "[ShaderReflection] D3DReflect failed for DXBC (hr=0x%#).", static_cast<uint32>( hr ) );
+				SW_LOG_ERROR( "D3DReflect failed for DXBC (hr=0x%#).", static_cast<uint32>( hr ) );
 				return ShaderReflectionData{};
 			}
 
 			ShaderReflectionData data = fillFromId3d11Reflection( reflection.Get() );
-			SW_LOG_INFO( "[ShaderReflection DXBC] ConstantBuffers: %# BoundResources: %#",
-						 data._listConstantBuffers.size(), data._listResources.size() );
+			SW_LOG_TRACE( "ConstantBuffers: %# BoundResources: %#",
+						  data._listConstantBuffer.size(), data._listResource.size() );
 			return data;
 		}
 
@@ -233,7 +235,7 @@ namespace sw::shader_reflection_detail
 				}
 				if ( s_fnDxcCreateInstance == nullptr )
 				{
-					SW_LOG_WARNING( "[ShaderReflection] dxcompiler.dll loaded but DxcCreateInstance not found." );
+					SW_LOG_WARNING( "dxcompiler.dll loaded but DxcCreateInstance not found." );
 				}
 			}
 			return s_fnDxcCreateInstance;
@@ -244,14 +246,14 @@ namespace sw::shader_reflection_detail
 			DxcCreateInstanceProc createInstance = loadDxcCreateInstance();
 			if ( createInstance == nullptr )
 			{
-				SW_LOG_WARNING( "[ShaderReflection] DXIL reflection unavailable: dxcompiler.dll not found or DxcCreateInstance failed." );
+				SW_LOG_WARNING( "DXIL reflection unavailable: dxcompiler.dll not found or DxcCreateInstance failed." );
 				return ShaderReflectionData{};
 			}
 
 			Microsoft::WRL::ComPtr<IDxcUtils> utils;
 			if ( FAILED( createInstance( CLSID_DxcUtils, IID_PPV_ARGS( utils.GetAddressOf() ) ) ) || utils == nullptr )
 			{
-				SW_LOG_ERROR( "[ShaderReflection] Failed to create IDxcUtils for reflection." );
+				SW_LOG_ERROR( "Failed to create IDxcUtils for reflection." );
 				return ShaderReflectionData{};
 			}
 
@@ -267,8 +269,8 @@ namespace sw::shader_reflection_detail
 			if ( SUCCEEDED( hr ) && reflection12 != nullptr )
 			{
 				data = fillFromId3d12Reflection( reflection12.Get() );
-				SW_LOG_INFO( "[ShaderReflection DXIL] ConstantBuffers: %# BoundResources: %#",
-							 data._listConstantBuffers.size(), data._listResources.size() );
+				SW_LOG_TRACE( "ConstantBuffers: %# BoundResources: %#",
+							  data._listConstantBuffer.size(), data._listResource.size() );
 			}
 			else
 			{
@@ -278,11 +280,11 @@ namespace sw::shader_reflection_detail
 				if ( SUCCEEDED( hr ) && reflection11 != nullptr )
 				{
 					data = fillFromId3d11Reflection( reflection11.Get() );
-					SW_LOG_INFO( "[ShaderReflection DXIL/D3D11iface] ConstantBuffers: %# BoundResources: %#",
-								 data._listConstantBuffers.size(), data._listResources.size() );
+					SW_LOG_TRACE( "ConstantBuffers: %# BoundResources: %#",
+								  data._listConstantBuffer.size(), data._listResource.size() );
 				}
 				else
-					SW_LOG_ERROR( "[ShaderReflection] IDxcUtils::CreateReflection failed for DXIL (hr=0x%#).", static_cast<uint32>( hr ) );
+					SW_LOG_ERROR( "IDxcUtils::CreateReflection failed for DXIL (hr=0x%#).", static_cast<uint32>( hr ) );
 			}
 
 			return data;
@@ -301,7 +303,7 @@ namespace sw::shader_reflection_detail
 			return reflectDxil( bytecode );
 	#endif
 
-		SW_LOG_ERROR( "[ShaderReflection] Unsupported DX target format %#.", static_cast<uint32>( targetFormat ) );
+		SW_LOG_ERROR( "Unsupported DX target format %#.", static_cast<uint32>( targetFormat ) );
 		return {};
 	}
 } // namespace sw::shader_reflection_detail

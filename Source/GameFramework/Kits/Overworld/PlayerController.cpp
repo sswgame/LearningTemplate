@@ -10,6 +10,8 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "PlayerController" );
+
 	PlayerController::PlayerController()
 		: _pTileMap{ nullptr }
 		, _pActionMap{ nullptr }
@@ -161,7 +163,7 @@ namespace sw
 			_pendingWarpSpawnX = pWarp->_targetTileX;
 			_pendingWarpSpawnY = pWarp->_targetTileY;
 			_bWarpPending	   = 1;
-			SW_LOG_INFO( "[PlayerController] Warp trigger → %# @ (%#,%#)", _pendingWarpMap, _pendingWarpSpawnX, _pendingWarpSpawnY );
+			SW_LOG_TRACE( "Warp trigger → %# @ (%#,%#)", _pendingWarpMap, _pendingWarpSpawnX, _pendingWarpSpawnY );
 		}
 		else if ( _pTileMap->isEncounterTile( _tileX, _tileY ) )
 		{
@@ -170,7 +172,7 @@ namespace sw
 			if ( ( ++s_encCounter % ( period < 1 ? 3u : period ) ) == 0 )
 			{
 				_bEncounterPending = 1;
-				SW_LOG_INFO( "[PlayerController] Wild encounter at (%#,%#)", _tileX, _tileY );
+				SW_LOG_TRACE( "Wild encounter at (%#,%#)", _tileX, _tileY );
 			}
 		}
 		return true;

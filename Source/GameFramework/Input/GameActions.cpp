@@ -9,6 +9,8 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "GameActionIds" );
+
 	namespace
 	{
 		static void takeId( XmlNode idsRoot, const utf8* pKey, string& dst )
@@ -32,7 +34,7 @@ namespace sw
 		string		absPath;
 		if ( doc.loadResource( assetRelativePath, &absPath ) == false )
 		{
-			SW_LOG_WARNING( "[GameActionIds] Failed to read %# — keeping built-in name fallbacks.", assetRelativePath );
+			SW_LOG_WARNING( "Failed to read %# — keeping built-in name fallbacks.", assetRelativePath );
 			return false;
 		}
 
@@ -43,7 +45,7 @@ namespace sw
 		XmlNode ids = root.child( "gameplayIds" );
 		if ( ids.isValid() == false )
 		{
-			SW_LOG_INFO( "[GameActionIds] No <gameplayIds> in %# — using default name strings.", absPath );
+			SW_LOG_INFO( "No <gameplayIds> in %# — using default name strings.", absPath );
 			return true;
 		}
 
@@ -71,7 +73,7 @@ namespace sw
 		takeId( ids, "layerCinematic", _layerCinematic );
 		takeId( ids, "layerDebug", _layerDebug );
 
-		SW_LOG_INFO( "[GameActionIds] Loaded gameplay ids from %#", absPath );
+		SW_LOG_INFO( "Loaded gameplay ids from %#", absPath );
 		return true;
 	}
 

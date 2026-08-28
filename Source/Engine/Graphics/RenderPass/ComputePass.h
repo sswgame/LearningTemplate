@@ -46,7 +46,7 @@ namespace sw
 	private:
 		string									  _passName;
 		RHIPipelineStateHandle					  _computePso;
-		unordered_map<uint32, RHIDescriptorIndex> _mapUavBindings;
-		unordered_map<uint32, RHIDescriptorIndex> _mapSrvBindings;
+		unordered_map<uint32, RHIDescriptorIndex> _mapUavBinding;
+		unordered_map<uint32, RHIDescriptorIndex> _mapSrvBinding;
 	};
 } // namespace sw

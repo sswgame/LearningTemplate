@@ -11,6 +11,8 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "MaterialCache" );
+
 	struct MaterialCache::Impl
 	{
 		struct Entry
@@ -64,7 +66,7 @@ namespace sw
 		{
 			if ( entry._material->initialize( pDevice, key ) == false )
 			{
-				SW_LOG_ERROR( "[MaterialCache] Failed to initialize Material %#", key.c_str() );
+				SW_LOG_ERROR( "Failed to initialize Material %#", key.c_str() );
 				--entry._refCount;
 				if ( entry._refCount == 0 )
 					_impl->_mapEntries.erase( key );
@@ -111,7 +113,7 @@ namespace sw
 			if ( _impl->_pDevice != nullptr )
 			{
 				if ( it->second._material->initialize( _impl->_pDevice, key ) == false )
-					SW_LOG_ERROR( "[MaterialCache] Hot-Reload failed for Material %#", key.c_str() );
+					SW_LOG_ERROR( "Hot-Reload failed for Material %#", key.c_str() );
 				else
 					it->second._bGpuInit = true;
 			}
@@ -147,7 +149,7 @@ namespace sw
 				continue;
 			if ( entry._material->initialize( pDevice, path ) == false )
 			{
-				SW_LOG_ERROR( "[MaterialCache] reinitialize failed for %#", path.c_str() );
+				SW_LOG_ERROR( "reinitialize failed for %#", path.c_str() );
 				ok = false;
 				continue;
 			}

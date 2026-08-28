@@ -82,7 +82,7 @@ namespace sw
 		{
 			_timer.updateTimer();
 			(void)_pTag;
-			SW_LOG_INFO( "[ScopeCpuTimer] '%#': %# ms", _pTag, getElapsedTimeInSeconds() * 1000.0f );
+			SW_LOG_INFO( "'%#': %# ms", _pTag, getElapsedTimeInSeconds() * 1000.0f );
 		}
 
 		/** @brief 생성 이후 경과 초입니다. 호출 시 타이머를 한 번 갱신합니다. */

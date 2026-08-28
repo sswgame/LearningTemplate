@@ -6,6 +6,7 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "SpeciesCatalog" );
 
 	namespace
 	{
@@ -42,7 +43,7 @@ namespace sw
 		string		absPath;
 		if ( doc.loadResource( assetRelativePath, &absPath ) == false )
 		{
-			SW_LOG_ERROR( "[SpeciesCatalog] Failed to read %# — using fallback table.", assetRelativePath );
+			SW_LOG_ERROR( "Failed to read %# — using fallback table.", assetRelativePath );
 			seedFallback();
 			return false;
 		}
@@ -50,7 +51,7 @@ namespace sw
 		XmlNode root = doc.root( "SpeciesCatalog" );
 		if ( root.isValid() == false )
 		{
-			SW_LOG_ERROR( "[SpeciesCatalog] Missing <SpeciesCatalog> in %# — using fallback.", absPath );
+			SW_LOG_ERROR( "Missing <SpeciesCatalog> in %# — using fallback.", absPath );
 			seedFallback();
 			return false;
 		}
@@ -99,12 +100,12 @@ namespace sw
 
 		if ( moves().empty() || species().empty() )
 		{
-			SW_LOG_ERROR( "[SpeciesCatalog] Empty table in %# — using fallback.", absPath );
+			SW_LOG_ERROR( "Empty table in %# — using fallback.", absPath );
 			seedFallback();
 			return false;
 		}
 
-		SW_LOG_INFO( "[SpeciesCatalog] Loaded %# moves, %# species from %#",
+		SW_LOG_INFO( "Loaded %# moves, %# species from %#",
 					 static_cast<uint32>( moves().size() ), static_cast<uint32>( species().size() ), absPath );
 		return true;
 	}

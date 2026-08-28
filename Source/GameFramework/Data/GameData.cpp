@@ -10,6 +10,8 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "GameData" );
+
 	namespace
 	{
 		GameData s_loaded;
@@ -26,7 +28,7 @@ namespace sw
 		if ( doc.loadResource( path, &absPath ) == false )
 		{
 			s_loaded = *this;
-			SW_LOG_WARNING( "[GameData] Using built-in defaults; failed to read %#", path );
+			SW_LOG_WARNING( "Using built-in defaults; failed to read %#", path );
 			return false;
 		}
 
@@ -34,7 +36,7 @@ namespace sw
 		if ( root.isValid() == false )
 		{
 			s_loaded = *this;
-			SW_LOG_WARNING( "[GameData] Missing <GameData> in %# — using defaults.", absPath );
+			SW_LOG_WARNING( "Missing <GameData> in %# — using defaults.", absPath );
 			return false;
 		}
 
@@ -73,7 +75,7 @@ namespace sw
 
 		s_loaded = *this;
 
-		SW_LOG_INFO( "[GameData] Loaded from %# (start=%# starter=%#)", absPath, _startMap, _starterId );
+		SW_LOG_INFO( "Loaded from %# (start=%# starter=%#)", absPath, _startMap, _starterId );
 		return true;
 	}
 

@@ -7,6 +7,7 @@
 #include "Core/String/StringUtil.h"
 #include "Core/String/string_splitter.h"
 
+SW_LOG_CALLER( "AnnotationMeta" );
 namespace sw
 {
 	AnnotationMeta& AnnotationMeta::instance()
@@ -18,7 +19,7 @@ namespace sw
 	void AnnotationMeta::clear()
 	{
 		_mapBare.clear();
-		_mapKeys.clear();
+		_mapKey.clear();
 		_bLoaded = false;
 	}
 
@@ -37,7 +38,7 @@ namespace sw
 		if ( binding._kind == AnnotationBinding::Kind::Flag || binding._kind == AnnotationBinding::Kind::NetRole )
 			_mapBare.insert_or_assign( hash, std::move( binding ) );
 		else
-			_mapKeys.insert_or_assign( hash, std::move( binding ) );
+			_mapKey.insert_or_assign( hash, std::move( binding ) );
 	}
 
 	bool AnnotationMeta::loadFile( const string_view absPath )
@@ -47,7 +48,7 @@ namespace sw
 		string text;
 		if ( FileUtil::readTextFile( absPath, text ) == false )
 		{
-			SW_LOG_WARNING( "[AnnotationMeta] Failed to read: %#", absPath );
+			SW_LOG_WARNING( "Failed to read: %#", absPath );
 			return false;
 		}
 
@@ -78,14 +79,14 @@ namespace sw
 			const size_t dot   = left.find( '.' );
 			if ( dot == string::npos || dot == 0 || dot + 1 >= left.size() )
 			{
-				SW_LOG_WARNING( "[AnnotationMeta] Expected kind.Field = aliases: %#", line );
+				SW_LOG_WARNING( "Expected kind.Field = aliases: %#", line );
 				continue;
 			}
 
 			AnnotationBinding binding;
 			if ( tryParseAnnotationKind( left.substr( 0, dot ), binding._kind ) == false )
 			{
-				SW_LOG_WARNING( "[AnnotationMeta] Unknown kind: %#", line );
+				SW_LOG_WARNING( "Unknown kind: %#", line );
 				continue;
 			}
 
@@ -102,7 +103,7 @@ namespace sw
 		}
 
 		_bLoaded = true;
-		SW_LOG_INFO( "[AnnotationMeta] %# alias bindings (%#)", bindingCount, absPath );
+		SW_LOG_TRACE( "%# alias bindings (%#)", bindingCount, absPath );
 		return true;
 	}
 
@@ -116,7 +117,7 @@ namespace sw
 	const AnnotationBinding* AnnotationMeta::findKey( const string_view scope,
 													  const string_view key ) const
 	{
-		const auto it = _mapKeys.find( hashScopeAndKey( scope, key ) );
-		return ( it != _mapKeys.end() ) ? &it->second : nullptr;
+		const auto it = _mapKey.find( hashScopeAndKey( scope, key ) );
+		return ( it != _mapKey.end() ) ? &it->second : nullptr;
 	}
 } // namespace sw

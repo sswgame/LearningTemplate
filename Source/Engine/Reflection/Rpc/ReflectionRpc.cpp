@@ -6,8 +6,6 @@
 #include "Core/Container/ObjectHandle.h"
 
 #include "Engine/Common/EngineServices.h"
-
-#include "Engine/Object/Component/ComponentHandle.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Core/SerializeContext.h"
@@ -15,6 +13,7 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "ReflectionRpc" );
 
 	namespace
 	{
@@ -77,7 +76,7 @@ namespace sw
 
 			if ( matched == false )
 			{
-				SW_LOG_WARNING( "[ReflectionRpc] Unsupported arg type for pack: %#", typeName );
+				SW_LOG_WARNING( "Unsupported arg type for pack: %#", typeName );
 				return false;
 			}
 			if ( ok == false )
@@ -141,7 +140,7 @@ namespace sw
 
 			if ( matched == false )
 			{
-				SW_LOG_WARNING( "[ReflectionRpc] Unsupported arg type for unpack: %#", typeName );
+				SW_LOG_WARNING( "Unsupported arg type for unpack: %#", typeName );
 				return false;
 			}
 
@@ -161,9 +160,9 @@ namespace sw
 		const FunctionInfo* pFunc = pTypeInfo->findMethod( methodName );
 		if ( pFunc == nullptr )
 			return false;
-		if ( args.getCount() != static_cast<uint32>( pFunc->_listParamTypeNames.size() ) )
+		if ( args.getCount() != static_cast<uint32>( pFunc->_listParamTypeName.size() ) )
 		{
-			SW_LOG_WARNING( "[ReflectionRpc] Arg count mismatch for %#::%#", typeFqn.c_str(), methodName.c_str() );
+			SW_LOG_WARNING( "Arg count mismatch for %#::%#", typeFqn.c_str(), methodName.c_str() );
 			return false;
 		}
 
@@ -177,11 +176,11 @@ namespace sw
 		const SerializeContext& ctx			= SerializeContext::getDefault();
 		const uint32			count		= args.getCount();
 		const uint8*			pCountBytes = reinterpret_cast<const uint8*>( &count );
-		out._listArgBytes.insert( out._listArgBytes.end(), pCountBytes, pCountBytes + sizeof( uint32 ) );
+		out._listArgByte.insert( out._listArgByte.end(), pCountBytes, pCountBytes + sizeof( uint32 ) );
 
 		for ( uint32 argIndex = 0; argIndex < count; ++argIndex )
 		{
-			if ( packOneArg( out._listArgBytes, pFunc->_listParamTypeNames[argIndex], args.get( argIndex ), ctx ) == false )
+			if ( packOneArg( out._listArgByte, pFunc->_listParamTypeName[argIndex], args.get( argIndex ), ctx ) == false )
 				return false;
 		}
 		return true;
@@ -204,18 +203,18 @@ namespace sw
 		TaskArgs				unpacked;
 		const SerializeContext& ctx = SerializeContext::getDefault();
 		size_t					offset{ 0 };
-		if ( envelope._listArgBytes.size() < sizeof( uint32 ) )
+		if ( envelope._listArgByte.size() < sizeof( uint32 ) )
 			return {};
 		uint32 count{ 0 };
-		Memory::copy( &count, envelope._listArgBytes.data(), sizeof( uint32 ) );
+		Memory::copy( &count, envelope._listArgByte.data(), sizeof( uint32 ) );
 		offset += sizeof( uint32 );
-		if ( count != static_cast<uint32>( pFunc->_listParamTypeNames.size() ) )
+		if ( count != static_cast<uint32>( pFunc->_listParamTypeName.size() ) )
 			return {};
 
 		for ( uint32 argIndex = 0; argIndex < count; ++argIndex )
 		{
-			if ( unpackOneArg( unpacked, pFunc->_listParamTypeNames[argIndex], envelope._listArgBytes.data(),
-							   envelope._listArgBytes.size(), offset, ctx ) == false )
+			if ( unpackOneArg( unpacked, pFunc->_listParamTypeName[argIndex], envelope._listArgByte.data(),
+							   envelope._listArgByte.size(), offset, ctx ) == false )
 				return {};
 		}
 

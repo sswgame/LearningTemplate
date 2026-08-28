@@ -11,11 +11,13 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "DemoGame" );
+
 	bool DemoGame::loadMap( string_view mapPath, int32 spawnX, int32 spawnY )
 	{
 		if ( _tileMap.loadFromXml( mapPath ) == false )
 		{
-			SW_LOG_WARNING( "[DemoGame] Map load failed: %#", mapPath );
+			SW_LOG_WARNING( "Map load failed: %#", mapPath );
 			return false;
 		}
 		_currentMapPath = mapPath;
@@ -41,11 +43,11 @@ namespace sw
 		_player.setPosition( spawnX, spawnY );
 		syncActionRoomForZone();
 		playZoneBgm();
-		SW_LOG_INFO( "[DemoGame] Overworld map ready: '%#' spawn=(%#,%#) zoneRole=%# gate=%# action=%#",
-					 _tileMap.getName(), spawnX, spawnY,
-					 static_cast<int32>( _zones.getActiveRole() ),
-					 _zones.isClearGateLocked() ? 1 : 0,
-					 _actionRoom.isActive() ? 1 : 0 );
+		SW_LOG_TRACE( "Overworld map ready: '%#' spawn=(%#,%#) zoneRole=%# gate=%# action=%#",
+					  _tileMap.getName(), spawnX, spawnY,
+					  static_cast<int32>( _zones.getActiveRole() ),
+					  _zones.isClearGateLocked() ? 1 : 0,
+					  _actionRoom.isActive() ? 1 : 0 );
 
 		requestSceneForMap( mapPath );
 		_tileMap.debugLogTileHd2d( spawnX, spawnY );

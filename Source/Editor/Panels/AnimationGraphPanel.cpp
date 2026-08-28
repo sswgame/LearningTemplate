@@ -14,6 +14,8 @@ namespace ed = ax::NodeEditor;
 
 namespace sw::editor
 {
+	SW_LOG_CALLER( "AnimationGraph" );
+
 	namespace
 	{
 		int32 pinIn( int32 nodeId )
@@ -44,8 +46,8 @@ namespace sw::editor
 		: IEditorPanel{ false }
 		, _nodeGraph{}
 		, _bLoaded{ false }
-		, _listNodes{}
-		, _listLinks{}
+		, _listNode{}
+		, _listLink{}
 	{
 	}
 
@@ -68,14 +70,14 @@ namespace sw::editor
 		if ( ImGui::Button( "Add Attack" ) )
 			addNamedNode( "Attack" );
 		ImGui::SameLine();
-		if ( ImGui::Button( "Link Selected" ) && _listNodes.size() >= 2 )
+		if ( ImGui::Button( "Link Selected" ) && _listNode.size() >= 2 )
 		{
 			// 선택돼 보이는 앞 두 노드를 연결합니다: 목록의 마지막 두 개를 간단한 작성 보조로 씁니다.
 			GraphLink l{};
 			l._id		= nextLinkId();
-			l._fromNode = _listNodes[_listNodes.size() - 2]._id;
-			l._toNode	= _listNodes[_listNodes.size() - 1]._id;
-			_listLinks.push_back( l );
+			l._fromNode = _listNode[_listNode.size() - 2]._id;
+			l._toNode	= _listNode[_listNode.size() - 1]._id;
+			_listLink.push_back( l );
 		}
 		ImGui::SameLine();
 		if ( ImGui::Button( "Load" ) )
@@ -87,7 +89,7 @@ namespace sw::editor
 		if ( ImGui::Button( "Save" ) )
 			saveGraphData();
 
-		ImGui::TextDisabled( "Nodes: %zu  Links: %zu  (%s)", _listNodes.size(), _listLinks.size(),
+		ImGui::TextDisabled( "Nodes: %zu  Links: %zu  (%s)", _listNode.size(), _listLink.size(),
 							 EditorConfig::getActive()._animationGraphDataFile.c_str() );
 
 		if ( _nodeGraph.beginCanvas( "AnimationGraphCanvas",
@@ -97,7 +99,7 @@ namespace sw::editor
 			return;
 		}
 
-		for ( GraphNode& node : _listNodes )
+		for ( GraphNode& node : _listNode )
 		{
 			const ed::NodeId nodeId = toNodeId( node._id );
 			ed::BeginNode( nodeId );
@@ -115,7 +117,7 @@ namespace sw::editor
 				ed::SetNodePosition( nodeId, ImVec2( node._x, node._y ) );
 		}
 
-		for ( const GraphLink& link : _listLinks )
+		for ( const GraphLink& link : _listLink )
 		{
 			ed::Link( toLinkId( link._id ), toPinId( pinOut( link._fromNode ) ), toPinId( pinIn( link._toNode ) ) );
 		}
@@ -145,7 +147,7 @@ namespace sw::editor
 						link._fromNode = bNode;
 						link._toNode   = aNode;
 					}
-					_listLinks.push_back( link );
+					_listLink.push_back( link );
 				}
 			}
 			ed::EndCreate();
@@ -159,10 +161,10 @@ namespace sw::editor
 				if ( ed::AcceptDeletedItem() )
 				{
 					const int32 id = static_cast<int32>( linkId.Get() );
-					_listLinks.erase( std::remove_if( _listLinks.begin(), _listLinks.end(),
-													  [id]( const GraphLink& link )
+					_listLink.erase( std::remove_if( _listLink.begin(), _listLink.end(),
+													 [id]( const GraphLink& link )
 					{ return link._id == id; } ),
-									  _listLinks.end() );
+									 _listLink.end() );
 				}
 			}
 			ed::NodeId nodeId;
@@ -171,14 +173,14 @@ namespace sw::editor
 				if ( ed::AcceptDeletedItem() )
 				{
 					const int32 id = static_cast<int32>( nodeId.Get() );
-					_listNodes.erase( std::remove_if( _listNodes.begin(), _listNodes.end(),
-													  [id]( const GraphNode& node )
+					_listNode.erase( std::remove_if( _listNode.begin(), _listNode.end(),
+													 [id]( const GraphNode& node )
 					{ return node._id == id; } ),
-									  _listNodes.end() );
-					_listLinks.erase( std::remove_if( _listLinks.begin(), _listLinks.end(),
-													  [id]( const GraphLink& link )
+									 _listNode.end() );
+					_listLink.erase( std::remove_if( _listLink.begin(), _listLink.end(),
+													 [id]( const GraphLink& link )
 					{ return link._fromNode == id || link._toNode == id; } ),
-									  _listLinks.end() );
+									 _listLink.end() );
 				}
 			}
 			ed::EndDelete();
@@ -187,7 +189,7 @@ namespace sw::editor
 		_nodeGraph.applyContentFitIfNeeded();
 
 		// 저장용 위치를 캐시합니다.
-		for ( GraphNode& node : _listNodes )
+		for ( GraphNode& node : _listNode )
 		{
 			const ImVec2 pos = ed::GetNodePosition( toNodeId( node._id ) );
 			node._x			 = pos.x;
@@ -199,11 +201,11 @@ namespace sw::editor
 
 	void AnimationGraphPanel::ensureDefaults()
 	{
-		if ( _listNodes.empty() == false )
+		if ( _listNode.empty() == false )
 			return;
-		_listNodes.push_back( GraphNode{ 1, "Idle", 40.0f, 40.0f } );
-		_listNodes.push_back( GraphNode{ 2, "Walk", 280.0f, 80.0f } );
-		_listLinks.push_back( GraphLink{ 100, 1, 2 } );
+		_listNode.push_back( GraphNode{ 1, "Idle", 40.0f, 40.0f } );
+		_listNode.push_back( GraphNode{ 2, "Walk", 280.0f, 80.0f } );
+		_listLink.push_back( GraphLink{ 100, 1, 2 } );
 	}
 
 	void AnimationGraphPanel::loadGraphData()
@@ -225,8 +227,8 @@ namespace sw::editor
 		}
 
 		const string json( listData.begin(), listData.end() );
-		_listNodes.clear();
-		_listLinks.clear();
+		_listNode.clear();
+		_listLink.clear();
 
 		size_t nodesPos = json.find( "\"nodes\"" );
 		if ( nodesPos != string::npos )
@@ -270,7 +272,7 @@ namespace sw::editor
 						n._y			   = static_cast<float32>( StringUtil::atof( json.c_str() + colon + 1 ) );
 					}
 					if ( n._id > 0 )
-						_listNodes.push_back( n );
+						_listNode.push_back( n );
 					cursor = json.find( '}', obj );
 					if ( cursor == string::npos )
 						break;
@@ -306,7 +308,7 @@ namespace sw::editor
 					parseInt( "from", l._fromNode );
 					parseInt( "to", l._toNode );
 					if ( l._id > 0 )
-						_listLinks.push_back( l );
+						_listLink.push_back( l );
 					cursor = json.find( '}', obj );
 					if ( cursor == string::npos )
 						break;
@@ -315,7 +317,7 @@ namespace sw::editor
 			}
 		}
 
-		if ( _listNodes.empty() )
+		if ( _listNode.empty() )
 			ensureDefaults();
 		_bLoaded = true;
 		_nodeGraph.requestContentFit();
@@ -330,9 +332,9 @@ namespace sw::editor
 		// 가능하면 에디터에서 라이브 노드 위치를 가져옵니다.
 		StringBuilder<2048> sb;
 		sb.append( "{\n  \"nodes\": [\n" );
-		for ( size_t nodeIndex = 0; nodeIndex < _listNodes.size(); ++nodeIndex )
+		for ( size_t nodeIndex = 0; nodeIndex < _listNode.size(); ++nodeIndex )
 		{
-			const GraphNode& n = _listNodes[nodeIndex];
+			const GraphNode& n = _listNode[nodeIndex];
 			float32			 x = n._x;
 			float32			 y = n._y;
 			if ( _nodeGraph.bind() )
@@ -343,16 +345,16 @@ namespace sw::editor
 				_nodeGraph.unbind();
 			}
 			sb.append( "    { \"id\": " ).append( n._id ).append( ", \"name\": \"" ).append( JsonSerializer::escapeString( n._name ).c_str() ).append( "\", \"x\": " ).append( x ).append( ", \"y\": " ).append( y ).append( " }" );
-			if ( nodeIndex + 1 < _listNodes.size() )
+			if ( nodeIndex + 1 < _listNode.size() )
 				sb.append( "," );
 			sb.append( "\n" );
 		}
 		sb.append( "  ],\n  \"links\": [\n" );
-		for ( size_t linkIndex = 0; linkIndex < _listLinks.size(); ++linkIndex )
+		for ( size_t linkIndex = 0; linkIndex < _listLink.size(); ++linkIndex )
 		{
-			const GraphLink& l = _listLinks[linkIndex];
+			const GraphLink& l = _listLink[linkIndex];
 			sb.append( "    { \"id\": " ).append( l._id ).append( ", \"from\": " ).append( l._fromNode ).append( ", \"to\": " ).append( l._toNode ).append( " }" );
-			if ( linkIndex + 1 < _listLinks.size() )
+			if ( linkIndex + 1 < _listLink.size() )
 				sb.append( "," );
 			sb.append( "\n" );
 		}
@@ -361,13 +363,13 @@ namespace sw::editor
 		const string text( sb.c_str() );
 		if ( FileUtil::writeFile( path, reinterpret_cast<const uint8*>( text.data() ),
 								  text.size() ) )
-			SW_LOG_INFO( "[AnimationGraph] Saved %#", path.c_str() );
+			SW_LOG_INFO( "Saved %#", path.c_str() );
 	}
 
 	int32 AnimationGraphPanel::nextNodeId() const
 	{
 		int32 maxId{ 0 };
-		for ( const GraphNode& node : _listNodes )
+		for ( const GraphNode& node : _listNode )
 		{
 			maxId = MathUtil::max( maxId, node._id );
 		}
@@ -377,7 +379,7 @@ namespace sw::editor
 	int32 AnimationGraphPanel::nextLinkId() const
 	{
 		int32 maxId{ 0 };
-		for ( const GraphLink& link : _listLinks )
+		for ( const GraphLink& link : _listLink )
 		{
 			maxId = MathUtil::max( maxId, link._id );
 		}
@@ -389,8 +391,8 @@ namespace sw::editor
 		GraphNode n{};
 		n._id	= nextNodeId();
 		n._name = ( pName != nullptr ) ? pName : "Node";
-		n._x	= 40.0f + static_cast<float32>( _listNodes.size() ) * 40.0f;
-		n._y	= 40.0f + static_cast<float32>( _listNodes.size() ) * 30.0f;
-		_listNodes.push_back( std::move( n ) );
+		n._x	= 40.0f + static_cast<float32>( _listNode.size() ) * 40.0f;
+		n._y	= 40.0f + static_cast<float32>( _listNode.size() ) * 30.0f;
+		_listNode.push_back( std::move( n ) );
 	}
 } // namespace sw::editor

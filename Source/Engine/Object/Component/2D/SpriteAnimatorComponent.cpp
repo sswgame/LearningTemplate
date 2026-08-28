@@ -11,7 +11,7 @@ namespace sw
 {
 	SpriteAnimatorComponent::SpriteAnimatorComponent()
 		: _currentAnimation{}
-		, _listAnimations{}
+		, _listAnimation{}
 		, _frameRate{ 0.0f }
 		, _frameTimer{ 0.0f }
 		, _currentFrame{ 0 }
@@ -32,15 +32,15 @@ namespace sw
 		if ( pGameObject != nullptr )
 			pGameObject->addTag( "Animator"_tag );
 
-		if ( _currentAnimation.empty() && _listAnimations.empty() == false )
-			_currentAnimation = _listAnimations[0];
+		if ( _currentAnimation.empty() && _listAnimation.empty() == false )
+			_currentAnimation = _listAnimation[0];
 
 		_bPlaying	  = ( _currentAnimation.empty() == false );
 		_bPaused	  = false;
 		_currentFrame = 0;
 		_frameTimer	  = 0.0f;
-		if ( _totalFrames <= 0 && _listAnimations.empty() == false )
-			_totalFrames = static_cast<int32>( _listAnimations.size() );
+		if ( _totalFrames <= 0 && _listAnimation.empty() == false )
+			_totalFrames = static_cast<int32>( _listAnimation.size() );
 
 		updateSpriteFrame();
 	}

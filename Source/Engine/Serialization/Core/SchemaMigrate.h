@@ -85,8 +85,8 @@ namespace sw
 
 	/** @brief Json/Xml 루트에 기록하는 스키마 버전 키. */
 	inline constexpr auto kSchemaVersionKey = "_schemaVersion";
-	/** @brief 컨테이너가 가리키는 PROPERTY 이름 (`<vector _name="_listComponents">`, JSON `"_name"`). */
-	inline constexpr auto kPropertyNameKey = "_name";
+	/** @brief 컨테이너가 가리키는 PROPERTY 이름 (`<vector _name="_listComponent">`, JSON `"_name"`). */
+	inline constexpr auto kPropertyNameKey	   = "_name";
 	inline constexpr auto kXmlPropertyNameAttr = kPropertyNameKey;
 	/** @brief JSON 시퀀스 페이로드 키 (`"item": [...]`). */
 	inline constexpr auto kJsonContainerItemKey = "item";

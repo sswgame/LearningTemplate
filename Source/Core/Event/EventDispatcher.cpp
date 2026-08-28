@@ -24,7 +24,7 @@ namespace sw
 	EventDispatcher::EventDispatcher()
 		: _busSpinLock{}
 		, _queueSpinLock{}
-		, _mapChannelDelegates{}
+		, _mapChannelDelegate{}
 		, _mapChannelDispatchTable{}
 		, _mapChannelQueue{}
 		, _arrFrameAllocators{ LinearAllocator{ 1024 * 64 }, LinearAllocator{ 1024 * 64 } }
@@ -121,9 +121,9 @@ namespace sw
 		BLOCK( "Clear Bus Handlers" )
 		{
 			std::scoped_lock<SpinLock> lock{ _busSpinLock };
-			_mapChannelDelegates.clear();
+			_mapChannelDelegate.clear();
 			_mapChannelDispatchTable.clear();
-			_mapChannelDelegates.reserve( 16 );
+			_mapChannelDelegate.reserve( 16 );
 			_mapChannelDispatchTable.reserve( 16 );
 		}
 

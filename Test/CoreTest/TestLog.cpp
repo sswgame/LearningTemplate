@@ -2,6 +2,8 @@
 
 #include "TestFramework/TestFramework.h"
 
+SW_LOG_CALLER( "TestLog" );
+
 namespace
 {
 	/** @brief 로그 매크로가 실제로 기록한 내용을 확인할 때 붙이는 메시지 접두사입니다. */
@@ -179,6 +181,28 @@ SW_TEST_CASE( Core_Log, NonUtf8FallbackSafety )
 
 	SW_ASSERT_EQUAL( 1u, capture.getCount() );
 	SW_EXPECT_TRUE( capture.getEntries()[0].message.rfind( "[TestLog] Bad:", 0 ) == 0 );
+#else
+	SW_TEST_SKIP( "SW_LOG_* is compiled out when SW_DEBUG is undefined" );
+#endif
+}
+
+/**
+ * @brief [Core_Log] Caller 지정 및 수신 검증
+ */
+SW_TEST_CASE( Core_Log, LogCallerHandling )
+{
+#if defined( SW_DEBUG )
+	LogCapture capture;
+	SW_ASSERT_TRUE( capture.isAttached() );
+
+	SW_LOG_INFO( "[TestLog] Custom caller message" );
+	SW_LOG_WARNING( "[TestLog] Warning from caller" );
+
+	SW_ASSERT_EQUAL( 2u, capture.getCount() );
+	SW_EXPECT_STREQ( "TestLog", capture.getEntries()[0].caller );
+	SW_EXPECT_STREQ( "[TestLog] Custom caller message", capture.getEntries()[0].message );
+	SW_EXPECT_STREQ( "TestLog", capture.getEntries()[1].caller );
+	SW_EXPECT_STREQ( "[TestLog] Warning from caller", capture.getEntries()[1].message );
 #else
 	SW_TEST_SKIP( "SW_LOG_* is compiled out when SW_DEBUG is undefined" );
 #endif

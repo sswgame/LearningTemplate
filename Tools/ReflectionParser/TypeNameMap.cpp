@@ -7,6 +7,7 @@
 
 #include "ReflectionParser/ParserDefines.h"
 
+SW_LOG_CALLER( "TypeNameMap" );
 namespace sw
 {
 	namespace

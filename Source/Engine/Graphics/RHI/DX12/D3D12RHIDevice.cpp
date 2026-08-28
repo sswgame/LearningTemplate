@@ -17,6 +17,7 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "D3D12" );
 
 	DXGI_FORMAT toDxgiFormatD3D12( RHIFormat format )
 	{
@@ -57,7 +58,7 @@ namespace sw
 		, _arrCommandAllocators{}
 		, _commandList{ nullptr }
 		, _frameRing{}
-		, _listRenderTargets{}
+		, _listRenderTarget{}
 		, _gpuBuffers{}
 		, _gpuTextures{}
 		, _boundMeshVb{ 0 }
@@ -66,12 +67,12 @@ namespace sw
 		, _boundIndexBuffer{ 0 }
 		, _boundIndexStride{ 4 }
 		, _boundIndexOffset{ 0 }
-		, _mapStructuredBufferStates{}
-		, _mapOffscreenTextures{}
+		, _mapStructuredBufferState{}
+		, _mapOffscreenTexture{}
 		, _nextOffscreenRtvIndex{ 0 }
 		, _nextOffscreenDsvIndex{ 0 }
-		, _listFreeOffscreenRtvIndices{}
-		, _listFreeOffscreenDsvIndices{}
+		, _listFreeOffscreenRtvIndex{}
+		, _listFreeOffscreenDsvIndex{}
 		, _mapCbAlignedSize{}
 		, _mapCbMapped{}
 		, _arrActiveColorTargets{}
@@ -83,11 +84,11 @@ namespace sw
 		, _bRecording{ 0 }
 		, _reservedPassFlags{ 0 }
 		, _pipelineStates{}
-		, _listRenderPasses{}
+		, _listRenderPass{}
 		, _activeGraphicsPso{ 0 }
 		, _listRegisteredBindless{}
 		, _listFreeBindless{}
-		, _listRegisteredUAVs{}
+		, _listRegisteredUAV{}
 		, _listFreeUav{}
 		, _rtvDescriptorSize{ 0 }
 		, _cbvDescriptorSize{ 0 }
@@ -128,7 +129,7 @@ namespace sw
 			if ( SUCCEEDED( D3D12GetDebugInterface( IID_PPV_ARGS( debugController.GetAddressOf() ) ) ) )
 			{
 				debugController->EnableDebugLayer();
-				SW_LOG_INFO( "[D3D12] Debug layer enabled." );
+				SW_LOG_INFO( "Debug layer enabled." );
 			}
 
 			Microsoft::WRL::ComPtr<ID3D12DeviceRemovedExtendedDataSettings> dredSettings;
@@ -136,7 +137,7 @@ namespace sw
 			{
 				dredSettings->SetAutoBreadcrumbsEnablement( D3D12_DRED_ENABLEMENT_FORCED_ON );
 				dredSettings->SetPageFaultEnablement( D3D12_DRED_ENABLEMENT_FORCED_ON );
-				SW_LOG_INFO( "[D3D12] DRED (Device Removed Extended Data) diagnostic enabled." );
+				SW_LOG_INFO( "DRED (Device Removed Extended Data) diagnostic enabled." );
 			}
 		}
 	#endif
@@ -153,11 +154,11 @@ namespace sw
 		{
 			if ( options.ResourceBindingTier >= D3D12_RESOURCE_BINDING_TIER_3 )
 			{
-				SW_LOG_INFO( "[D3D12] Device supports Resource Binding Tier 3 (Bindless)." );
+				SW_LOG_TRACE( "Device supports Resource Binding Tier 3 (Bindless)." );
 			}
 			else
 			{
-				SW_LOG_WARNING( "[D3D12] Device does NOT support Resource Binding Tier 3. Fallback may be required." );
+				SW_LOG_WARNING( "Device does NOT support Resource Binding Tier 3. Fallback may be required." );
 			}
 		}
 
@@ -262,14 +263,14 @@ namespace sw
 		waitForPreviousFrame();
 		_releaseQueue.flushAll();
 
-		_mapOffscreenTextures.clear();
+		_mapOffscreenTexture.clear();
 		_pipelineStates.clear();
-		_listRenderPasses.clear();
+		_listRenderPass.clear();
 		_listRegisteredBindless.clear();
 		_listFreeBindless.clear();
-		_listRegisteredUAVs.clear();
+		_listRegisteredUAV.clear();
 		_listFreeUav.clear();
-		_mapStructuredBufferStates.clear();
+		_mapStructuredBufferState.clear();
 		_gpuBuffers.clear();
 		_gpuTextures.clear();
 		_boundMeshVb			   = 0;
@@ -353,29 +354,29 @@ namespace sw
 		if ( _swapChain == nullptr || _device == nullptr || _rtvHeap == nullptr )
 			return;
 
-		_listRenderTargets.resize( _bufferCount );
+		_listRenderTarget.resize( _bufferCount );
 		D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle( _rtvHeap->GetCPUDescriptorHandleForHeapStart() );
 
 		for ( UINT bufferIndex = 0; bufferIndex < _bufferCount; ++bufferIndex )
 		{
-			const HRESULT getHr = _swapChain->GetBuffer( bufferIndex, IID_PPV_ARGS( _listRenderTargets[bufferIndex].GetAddressOf() ) );
+			const HRESULT getHr = _swapChain->GetBuffer( bufferIndex, IID_PPV_ARGS( _listRenderTarget[bufferIndex].GetAddressOf() ) );
 			if ( FAILED( getHr ) )
 			{
-				SW_LOG_ERROR( "[D3D12] GetBuffer(%#) failed hr=0x%#", bufferIndex, static_cast<uint32>( getHr ) );
+				SW_LOG_ERROR( "GetBuffer(%#) failed hr=0x%#", bufferIndex, static_cast<uint32>( getHr ) );
 				continue;
 			}
-			_device->CreateRenderTargetView( _listRenderTargets[bufferIndex].Get(), nullptr, rtvHandle );
+			_device->CreateRenderTargetView( _listRenderTarget[bufferIndex].Get(), nullptr, rtvHandle );
 			rtvHandle.ptr += _rtvDescriptorSize;
 		}
 	}
 
 	void D3D12RHIDevice::cleanupRenderTargets()
 	{
-		for ( Microsoft::WRL::ComPtr<ID3D12Resource>& rt : _listRenderTargets )
+		for ( Microsoft::WRL::ComPtr<ID3D12Resource>& rt : _listRenderTarget )
 		{
 			rt.Reset();
 		}
-		_listRenderTargets.clear();
+		_listRenderTarget.clear();
 	}
 
 	void D3D12RHIDevice::waitForPreviousFrame()
@@ -392,7 +393,7 @@ namespace sw
 
 		if ( FAILED( signalHr ) )
 		{
-			SW_LOG_ERROR( "[D3D12] Fence Signal failed hr=0x%# (DeviceRemoved=0x%#)",
+			SW_LOG_ERROR( "Fence Signal failed hr=0x%# (DeviceRemoved=0x%#)",
 						  static_cast<uint32>( signalHr ),
 						  static_cast<uint32>( _device ? _device->GetDeviceRemovedReason() : S_OK ) );
 			return;
@@ -406,7 +407,7 @@ namespace sw
 			_fence->SetEventOnCompletion( fenceToWait, _fenceEvent );
 			const DWORD waitResult = WaitForSingleObject( _fenceEvent, 2000 );
 			if ( waitResult != WAIT_OBJECT_0 )
-				SW_LOG_ERROR( "[D3D12] Fence wait timed out (result=%#, fence=%#)", static_cast<uint32>( waitResult ), static_cast<uint32>( fenceToWait ) );
+				SW_LOG_ERROR( "Fence wait timed out (result=%#, fence=%#)", static_cast<uint32>( waitResult ), static_cast<uint32>( fenceToWait ) );
 		}
 
 		if ( _swapChain != nullptr && ( _device == nullptr || SUCCEEDED( _device->GetDeviceRemovedReason() ) ) )
@@ -448,7 +449,7 @@ namespace sw
 		_fenceValue++;
 		if ( FAILED( signalHr ) )
 		{
-			SW_LOG_ERROR( "[D3D12] Fence Signal failed hr=0x%#", static_cast<uint32>( signalHr ) );
+			SW_LOG_ERROR( "Fence Signal failed hr=0x%#", static_cast<uint32>( signalHr ) );
 			return;
 		}
 		_frameRing.setFenceValue( _frameRing.currentIndex(), fenceToSignal );
@@ -566,7 +567,7 @@ namespace sw
 		rootSigDesc.NumStaticSamplers = _countof( staticSamplers );
 		rootSigDesc.pStaticSamplers	  = staticSamplers;
 		rootSigDesc.Flags			  = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
-										D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED;
+							D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED;
 
 		Microsoft::WRL::ComPtr<ID3DBlob> signatureBlob;
 		Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;
@@ -580,7 +581,7 @@ namespace sw
 			if ( FAILED( D3D12SerializeRootSignature( &rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1_0, &signatureBlob, &errorBlob ) ) )
 			{
 				if ( errorBlob )
-					SW_LOG_ERROR( "[D3D12] Root Signature Serialize Error: %s", static_cast<const utf8*>( errorBlob->GetBufferPointer() ) );
+					SW_LOG_ERROR( "Root Signature Serialize Error: %s", static_cast<const utf8*>( errorBlob->GetBufferPointer() ) );
 				return false;
 			}
 			_rootSignature.Reset();
@@ -607,7 +608,7 @@ namespace sw
 		{
 			// 정적 Caps의 native bindless는 후보; 런타임은 supportsNativeBindlessSampling()/getCapabilities().
 			_bHeapDirectlyIndexed = 0;
-			SW_LOG_INFO( "[D3D12] Native heap indexing unavailable — bind-at-draw root signature (caps._bNativeBindless=0)" );
+			SW_LOG_TRACE( "Native heap indexing unavailable — bind-at-draw root signature (caps._bNativeBindless=0)" );
 		}
 		else
 			return false;
@@ -662,14 +663,14 @@ namespace sw
 			if ( FAILED( _device->CreateCommittedResource( &heapProps, D3D12_HEAP_FLAG_NONE, &resDesc, D3D12_RESOURCE_STATE_GENERIC_READ,
 														   nullptr, IID_PPV_ARGS( _vertexBuffer.GetAddressOf() ) ) ) )
 			{
-				SW_LOG_ERROR( "[D3D12] Failed to create fullscreen vertex buffer." );
+				SW_LOG_ERROR( "Failed to create fullscreen vertex buffer." );
 				return false;
 			}
 
 			void* mapped{ nullptr };
 			if ( FAILED( _vertexBuffer->Map( 0, nullptr, &mapped ) ) || mapped == nullptr )
 			{
-				SW_LOG_ERROR( "[D3D12] Failed to map fullscreen vertex buffer." );
+				SW_LOG_ERROR( "Failed to map fullscreen vertex buffer." );
 				_vertexBuffer.Reset();
 				return false;
 			}
@@ -694,7 +695,7 @@ namespace sw
 				vector<uint8>  bytes( messageLength );
 				D3D12_MESSAGE* pMessage = reinterpret_cast<D3D12_MESSAGE*>( bytes.data() );
 				if ( SUCCEEDED( infoQueue->GetMessage( messageIndex, pMessage, &messageLength ) ) )
-					SW_LOG_ERROR( "[D3D12 InfoQueue:%#] %#", pStage, pMessage->pDescription );
+					SW_LOG_ERROR( "%#", pStage, pMessage->pDescription );
 			}
 			infoQueue->ClearStoredMessages();
 		}
@@ -713,16 +714,16 @@ namespace sw
 						const uint32 executed = ( pNode->pCommandHistory != nullptr && pNode->pLastBreadcrumbValue != nullptr )
 												  ? *pNode->pLastBreadcrumbValue
 												  : 0;
-						SW_LOG_ERROR( "[DRED Breadcrumbs] CommandList='%#', Total=%#, Executed=%#",
+						SW_LOG_ERROR( "CommandList='%#', Total=%#, Executed=%#",
 									  pNode->pCommandListDebugNameA ? pNode->pCommandListDebugNameA : "unnamed",
 									  pNode->BreadcrumbCount, executed );
 						if ( pNode->pCommandHistory != nullptr && executed > 0 && executed <= pNode->BreadcrumbCount )
 						{
-							SW_LOG_ERROR( "[DRED Breadcrumbs] Last completed Op index=%#, OpType=%#",
+							SW_LOG_ERROR( "Last completed Op index=%#, OpType=%#",
 										  executed - 1, static_cast<uint32>( pNode->pCommandHistory[executed - 1] ) );
 							if ( executed < pNode->BreadcrumbCount )
 							{
-								SW_LOG_ERROR( "[DRED Breadcrumbs] Failed/In-Flight Op index=%#, OpType=%#",
+								SW_LOG_ERROR( "Failed/In-Flight Op index=%#, OpType=%#",
 											  executed, static_cast<uint32>( pNode->pCommandHistory[executed] ) );
 							}
 						}
@@ -733,7 +734,7 @@ namespace sw
 				D3D12_DRED_PAGE_FAULT_OUTPUT pageFaultOutput{};
 				if ( SUCCEEDED( dred->GetPageFaultAllocationOutput( &pageFaultOutput ) ) )
 				{
-					SW_LOG_ERROR( "[DRED PageFault] PageFault VA=0x%016llX", static_cast<uint64>( pageFaultOutput.PageFaultVA ) );
+					SW_LOG_ERROR( "PageFault VA=0x%016llX", static_cast<uint64>( pageFaultOutput.PageFaultVA ) );
 				}
 			}
 		}

@@ -15,6 +15,8 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "FrameRenderer" );
+
 	FrameRenderer::FrameRenderer()
 		: _pDevice{ nullptr }
 		, _pCmdOwnerDevice{ nullptr }
@@ -27,8 +29,8 @@ namespace sw
 		, _graph{}
 		, _pipelinePath{}
 		, _arrClearColor{ 0.12f, 0.15f, 0.18f, 1.0f }
-		, _mapTransients{}
-		, _mapTransientSrvs{}
+		, _mapTransient{}
+		, _mapTransientSrv{}
 		, _listClearedThisFrame{}
 		, _pBoundMaterial{ nullptr }
 		, _passConstants{}
@@ -36,8 +38,8 @@ namespace sw
 		, _passCbIndex{ kInvalidDescriptorIndex }
 		, _gpuCullCb{ 0 }
 		, _gpuCullCbIndex{ kInvalidDescriptorIndex }
-		, _mapEnginePsos{}
-		, _mapMaterialPassPsos{}
+		, _mapEnginePso{}
+		, _mapMaterialPassPso{}
 		, _transientWidth{ 0 }
 		, _transientHeight{ 0 }
 		, _outputRenderTarget{ 0 }
@@ -73,7 +75,7 @@ namespace sw
 		{
 			_status		   = FrameRendererStatus::Failed;
 			_statusMessage = "null IRHIDevice";
-			SW_LOG_ERROR( "[FrameRenderer] initialize: %#", _statusMessage );
+			SW_LOG_ERROR( "initialize: %#", _statusMessage );
 			return false;
 		}
 
@@ -95,13 +97,13 @@ namespace sw
 			_status = FrameRendererStatus::Failed;
 			if ( _statusMessage.empty() )
 				_statusMessage = string( "pipeline load failed: " ) + string( resolvedPipeline );
-			SW_LOG_ERROR( "[FrameRenderer] Not ready — %#", _statusMessage );
+			SW_LOG_ERROR( "Not ready — %#", _statusMessage );
 			return false;
 		}
 
 		_status = FrameRendererStatus::Ready;
 		_statusMessage.clear();
-		SW_LOG_INFO( "[FrameRenderer] Ready with pipeline '%#'", _pipelinePath );
+		SW_LOG_INFO( "Ready with pipeline '%#'", _pipelinePath );
 		return true;
 	}
 
@@ -128,7 +130,7 @@ namespace sw
 		_statusMessage.clear();
 		_bCallbacksBound = 0;
 		_pipelinePath.clear();
-		SW_LOG_INFO( "[FrameRenderer] Shut down." );
+		SW_LOG_INFO( "Shut down." );
 	}
 
 	bool FrameRenderer::loadPipeline( string_view pipelineXmlPath )
@@ -148,7 +150,7 @@ namespace sw
 		{
 			RenderPassManager& rpm = _pDevice->getRenderPassManager();
 			rpm.loadPipeline( pipelineXmlPath );
-			for ( const string& passRef : _pipelineResource.getDesc()._listRenderPassRefs )
+			for ( const string& passRef : _pipelineResource.getDesc()._listRenderPassRef )
 			{
 				if ( passRef.empty() == false )
 					rpm.loadRenderPass( passRef );
@@ -159,7 +161,7 @@ namespace sw
 		if ( passes.empty() )
 		{
 			_statusMessage = string( "no graph passes in pipeline: " ) + string( pipelineXmlPath );
-			SW_LOG_ERROR( "[FrameRenderer] %#", _statusMessage );
+			SW_LOG_ERROR( "%#", _statusMessage );
 			return false;
 		}
 
@@ -173,7 +175,7 @@ namespace sw
 		ensureTransientResources();
 		bindPassCallbacks();
 
-		SW_LOG_INFO( "[FrameRenderer] Built graph '%#' (%# passes, callbacks bound once)",
+		SW_LOG_INFO( "Built graph '%#' (%# passes, callbacks bound once)",
 					 _pipelineResource.getDesc()._name, passes.size() );
 		return true;
 	}
@@ -198,7 +200,7 @@ namespace sw
 
 		if ( _pCmd == nullptr )
 		{
-			SW_LOG_ERROR( "[FrameRenderer] %#: createCommandList returned null", pCallerName );
+			SW_LOG_ERROR( "%#: createCommandList returned null", pCallerName );
 			return false;
 		}
 

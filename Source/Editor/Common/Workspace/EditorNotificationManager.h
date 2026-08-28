@@ -42,10 +42,10 @@ namespace sw::editor
 		void   push( string_view title, string_view message, NotificationType type = NotificationType::Info,
 					 float32 durationSec = 4.0f, float32 progress = -1.0f );
 		void   updateAndDraw( float32 deltaTime, float32 screenWidth, float32 screenHeight );
-		size_t getNotificationCount() const { return _listNotifications.size(); }
-		void   clear() { _listNotifications.clear(); }
+		size_t getNotificationCount() const { return _listNotification.size(); }
+		void   clear() { _listNotification.clear(); }
 
 	private:
-		vector<NotificationItem> _listNotifications;
+		vector<NotificationItem> _listNotification;
 	};
 } // namespace sw::editor

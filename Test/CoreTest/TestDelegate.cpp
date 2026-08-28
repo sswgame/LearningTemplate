@@ -199,7 +199,7 @@ SW_TEST_CASE( Core_Delegate, DelegateFullCoverage )
 	sw::MulticastDelegate<void( int32 )> multiDel;
 	int32								 val{ 0 };
 	sw::Delegate<void( int32 )>			 delLambda = SW_DELEGATE_LAMBDA( sw::Delegate<void( int32 )>, [&]( int32 delta )
-	{ val += delta; } );
+			 { val += delta; } );
 
 	auto handle = multiDel.add( delLambda );
 	multiDel.broadcast( 20 );

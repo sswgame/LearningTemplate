@@ -11,23 +11,23 @@ namespace sw
 
 		if ( _bInsideTransaction != 0 )
 		{
-			_listPendingTransactionCommands.push_back( std::move( cmd ) );
+			_listPendingTransactionCommand.push_back( std::move( cmd ) );
 			return;
 		}
 
 		_lastCoalesceKey.clear();
 
-		if ( _index < _listCommands.size() )
-			_listCommands.erase( _listCommands.begin() + static_cast<std::ptrdiff_t>( _index ), _listCommands.end() );
+		if ( _index < _listCommand.size() )
+			_listCommand.erase( _listCommand.begin() + static_cast<std::ptrdiff_t>( _index ), _listCommand.end() );
 
-		_listCommands.push_back( std::move( cmd ) );
+		_listCommand.push_back( std::move( cmd ) );
 		++_index;
 
 		constexpr size_t kMax = 128;
-		if ( _listCommands.size() > kMax )
+		if ( _listCommand.size() > kMax )
 		{
-			const size_t drop = _listCommands.size() - kMax;
-			_listCommands.erase( _listCommands.begin(), _listCommands.begin() + static_cast<std::ptrdiff_t>( drop ) );
+			const size_t drop = _listCommand.size() - kMax;
+			_listCommand.erase( _listCommand.begin(), _listCommand.begin() + static_cast<std::ptrdiff_t>( drop ) );
 			_index -= drop;
 		}
 	}
@@ -36,7 +36,7 @@ namespace sw
 	{
 		_bInsideTransaction = 1;
 		_transactionLabel	= label;
-		_listPendingTransactionCommands.clear();
+		_listPendingTransactionCommand.clear();
 	}
 
 	void CommandStack::endTransaction()
@@ -45,23 +45,23 @@ namespace sw
 			return;
 
 		_bInsideTransaction = 0;
-		if ( _listPendingTransactionCommands.empty() )
+		if ( _listPendingTransactionCommand.empty() )
 			return;
 
-		if ( _listPendingTransactionCommands.size() == 1 )
+		if ( _listPendingTransactionCommand.size() == 1 )
 		{
-			push( std::move( _listPendingTransactionCommands[0] ) );
-			_listPendingTransactionCommands.clear();
+			push( std::move( _listPendingTransactionCommand[0] ) );
+			_listPendingTransactionCommand.clear();
 			return;
 		}
 
 		Command compoundCmd;
 		compoundCmd._label = _transactionLabel.empty() == false
 							   ? _transactionLabel
-							   : _listPendingTransactionCommands[0]._label;
+							   : _listPendingTransactionCommand[0]._label;
 
-		auto listMergedCommands = sw::make_shared<vector<Command>>( std::move( _listPendingTransactionCommands ) );
-		_listPendingTransactionCommands.clear();
+		auto listMergedCommands = sw::make_shared<vector<Command>>( std::move( _listPendingTransactionCommand ) );
+		_listPendingTransactionCommand.clear();
 
 		compoundCmd._redo = SW_DELEGATE_LAMBDA( Delegate<void()>, [listMergedCommands]()
 		{
@@ -88,7 +88,7 @@ namespace sw
 	{
 		_bInsideTransaction = 0;
 		_transactionLabel.clear();
-		_listPendingTransactionCommands.clear();
+		_listPendingTransactionCommand.clear();
 	}
 
 	void CommandStack::pushCoalesce( string_view coalesceKey, Command cmd )
@@ -98,21 +98,21 @@ namespace sw
 
 		if ( _bInsideTransaction != 0 )
 		{
-			_listPendingTransactionCommands.push_back( std::move( cmd ) );
+			_listPendingTransactionCommand.push_back( std::move( cmd ) );
 			return;
 		}
 
 		const bool bCanCoalesce = coalesceKey.empty() == false &&
 								  _lastCoalesceKey == coalesceKey &&
 								  _index > 0 &&
-								  _index <= _listCommands.size();
+								  _index <= _listCommand.size();
 
 		if ( bCanCoalesce )
 		{
 			// 첫 실행 시점의 undo는 보존하고, 최신 redo와 레이블만 교체
-			_listCommands[_index - 1]._redo = std::move( cmd._redo );
+			_listCommand[_index - 1]._redo = std::move( cmd._redo );
 			if ( cmd._label.empty() == false )
-				_listCommands[_index - 1]._label = std::move( cmd._label );
+				_listCommand[_index - 1]._label = std::move( cmd._label );
 			return;
 		}
 
@@ -127,7 +127,7 @@ namespace sw
 
 	bool CommandStack::canRedo() const
 	{
-		return _index < _listCommands.size();
+		return _index < _listCommand.size();
 	}
 
 	void CommandStack::undo()
@@ -136,8 +136,8 @@ namespace sw
 		if ( canUndo() == false )
 			return;
 		--_index;
-		if ( _listCommands[_index]._undo.isBound() )
-			_listCommands[_index]._undo();
+		if ( _listCommand[_index]._undo.isBound() )
+			_listCommand[_index]._undo();
 	}
 
 	void CommandStack::redo()
@@ -145,15 +145,15 @@ namespace sw
 		_lastCoalesceKey.clear();
 		if ( canRedo() == false )
 			return;
-		if ( _listCommands[_index]._redo.isBound() )
-			_listCommands[_index]._redo();
+		if ( _listCommand[_index]._redo.isBound() )
+			_listCommand[_index]._redo();
 		++_index;
 	}
 
 	void CommandStack::clear()
 	{
-		_listCommands.clear();
-		_listPendingTransactionCommands.clear();
+		_listCommand.clear();
+		_listPendingTransactionCommand.clear();
 		_transactionLabel.clear();
 		_lastCoalesceKey.clear();
 		_index				= 0;
@@ -164,13 +164,13 @@ namespace sw
 	{
 		if ( canUndo() == false )
 			return _empty;
-		return _listCommands[_index - 1]._label;
+		return _listCommand[_index - 1]._label;
 	}
 
 	const string& CommandStack::peekRedoLabel() const
 	{
 		if ( canRedo() == false )
 			return _empty;
-		return _listCommands[_index]._label;
+		return _listCommand[_index]._label;
 	}
 } // namespace sw

@@ -31,15 +31,19 @@ namespace sw
 		void queryCircle( float32 centerX, float32 centerY, float32 radius, vector<ObjectHandle>& outHandles ) const;
 		void queryRay( float32 startX, float32 startY, float32 dirX, float32 dirY, float32 maxDist, vector<ObjectHandle>& outHandles ) const;
 
-		float32 getCellSize() const;
-		size_t	getHandleCount() const;
-		size_t	getActiveBucketCount() const;
+		float32 getCellSize() const { return _cellSize; }
+		size_t	getHandleCount() const { return _mapHandleBound.size(); }
+		size_t	getActiveBucketCount() const { return _mapBucket.size(); }
 
 	private:
-		uint64 getCellKey( int32 cellX, int32 cellY ) const;
+		uint64 getCellKey( int32 cellX, int32 cellY ) const
+		{
+			return ( static_cast<uint64>( static_cast<uint32>( cellX ) ) << 32 ) |
+				   ( static_cast<uint64>( static_cast<uint32>( cellY ) ) );
+		}
 
-		float32									_cellSize;
-		unordered_map<uint64, vector<ObjectHandle>> _mapBuckets;
-		unordered_map<ObjectHandle, AABB2D>			_mapHandleBounds;
+		float32										_cellSize;
+		unordered_map<uint64, vector<ObjectHandle>> _mapBucket;
+		unordered_map<ObjectHandle, AABB2D>			_mapHandleBound;
 	};
 } // namespace sw

@@ -48,14 +48,14 @@ namespace sw
 	 */
 	struct RenderGraphExecutionContext
 	{
-		vector<std::pair<hashed_string, RenderGraphResourceState>> _listResourceStates;
+		vector<std::pair<hashed_string, RenderGraphResourceState>> _listResourceState;
 		unordered_map<hashed_string, size_t>					   _mapResourceToIndex;
 		uint32													   _lastTransitionCount{ 0 };
 
 		/** @brief 다음 execute() 호출 전 상태 초기화 (capacity 재사용으로 Zero-allocation 유지) */
 		void reset()
 		{
-			_listResourceStates.clear();
+			_listResourceState.clear();
 			_mapResourceToIndex.clear();
 			_lastTransitionCount = 0;
 		}
@@ -66,7 +66,7 @@ namespace sw
 			auto it = _mapResourceToIndex.find( resource );
 			if ( it != _mapResourceToIndex.end() )
 			{
-				auto& entry = _listResourceStates[it->second];
+				auto& entry = _listResourceState[it->second];
 				if ( entry.second != desired )
 				{
 					entry.second = desired;
@@ -75,8 +75,8 @@ namespace sw
 			}
 			else
 			{
-				const size_t index = _listResourceStates.size();
-				_listResourceStates.push_back( { resource, desired } );
+				const size_t index = _listResourceState.size();
+				_listResourceState.push_back( { resource, desired } );
 				_mapResourceToIndex[resource] = index;
 				++_lastTransitionCount;
 			}
@@ -90,8 +90,8 @@ namespace sw
 	struct RenderGraphNode
 	{
 		hashed_string			 _name;				///< 렌더 패스 고유 이름 (해시)
-		vector<hashed_string>	 _listInputs;		///< 입력 종속 자원 해시 리스트
-		vector<hashed_string>	 _listOutputs;		///< 출력 생산 자원 해시 리스트
+		vector<hashed_string>	 _listInput;		///< 입력 종속 자원 해시 리스트
+		vector<hashed_string>	 _listOutput;		///< 출력 생산 자원 해시 리스트
 		RenderGraphPassExecuteFn _execute;			///< 컴파일된 순서대로 호출되는 패스 콜백 (선택)
 		bool					 _bCulled{ false }; ///< 미사용 패스 컬링 여부
 	};
@@ -179,7 +179,7 @@ namespace sw
 		const vector<hashed_string>& getExecutionOrder() const { return _listCompiledExecutionOrder; }
 
 		/** @brief 그래프 내 총 패스 노드 개수 반환 */
-		uint32 getNodeCount() const { return static_cast<uint32>( _listNodes.size() ); }
+		uint32 getNodeCount() const { return static_cast<uint32>( _listNode.size() ); }
 
 		/** @brief 특정 렌더 패스가 컬링되었는지 여부 확인 */
 		bool isPassCulled( hashed_string passName ) const;
@@ -197,7 +197,7 @@ namespace sw
 		void clear();
 
 	private:
-		vector<RenderGraphNode> _listNodes;
+		vector<RenderGraphNode> _listNode;
 		vector<hashed_string>	_listCompiledExecutionOrder;
 
 		// 핫패스 무할당용 캐시

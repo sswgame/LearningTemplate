@@ -28,10 +28,10 @@ namespace sw
 		void addDrawCommand( uint32 indexCount, uint32 instanceCount, uint32 startIndex, int32 baseVertex, uint32 startInstance );
 		void clear();
 
-		size_t getCommandCount() const { return _listCommands.size(); }
-		size_t getBufferSizeInBytes() const { return _listCommands.size() * sizeof( DrawIndexedInstancedIndirectCommand ); }
+		size_t getCommandCount() const { return _listCommand.size(); }
+		size_t getBufferSizeInBytes() const { return _listCommand.size() * sizeof( DrawIndexedInstancedIndirectCommand ); }
 
-		const vector<DrawIndexedInstancedIndirectCommand>& getCommands() const { return _listCommands; }
+		const vector<DrawIndexedInstancedIndirectCommand>& getCommands() const { return _listCommand; }
 
 		bool			uploadToBuffer( IRHIResource* pResource );
 		void			releaseGpu( IRHIResource* pResource );
@@ -40,7 +40,7 @@ namespace sw
 		void drawAllIndirect( IRHICommandList* pCmdList ) const;
 
 	private:
-		vector<DrawIndexedInstancedIndirectCommand> _listCommands;
+		vector<DrawIndexedInstancedIndirectCommand> _listCommand;
 		RHIBufferHandle								_gpuBufferHandle;
 	};
 } // namespace sw

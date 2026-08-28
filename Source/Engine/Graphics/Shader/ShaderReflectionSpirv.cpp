@@ -4,6 +4,8 @@
 
 namespace sw::shader_reflection_detail
 {
+	SW_LOG_CALLER( "ShaderReflection" );
+
 	namespace
 	{
 
@@ -116,7 +118,7 @@ namespace sw::shader_reflection_detail
 	{
 		if ( bytecode.size() < 20 || ( bytecode.size() % 4 ) != 0 )
 		{
-			SW_LOG_WARNING( "[ShaderReflection] SPIR-V bytecode size invalid." );
+			SW_LOG_WARNING( "SPIR-V bytecode size invalid." );
 			return {};
 		}
 
@@ -124,7 +126,7 @@ namespace sw::shader_reflection_detail
 		const size_t  wordCount = bytecode.size() / 4;
 		if ( pWords[0] != kSpirvMagic )
 		{
-			SW_LOG_WARNING( "[ShaderReflection] Not a SPIR-V module (bad magic)." );
+			SW_LOG_WARNING( "Not a SPIR-V module (bad magic)." );
 			return {};
 		}
 
@@ -304,7 +306,7 @@ namespace sw::shader_reflection_detail
 							varInfo._offset = ( mOffIt != memberOffsetsMap.end() ) ? mOffIt->second : 0;
 							varInfo._type	= resolveSpirvTypeName( memberTypeId, mapTypes, varInfo._size );
 
-							buf._listVariables.push_back( varInfo );
+							buf._listVariable.push_back( varInfo );
 							buf._totalSize = (MathUtil::max)( buf._totalSize, varInfo._offset + varInfo._size );
 							++memberIdx;
 						}
@@ -312,7 +314,7 @@ namespace sw::shader_reflection_detail
 					}
 				}
 
-				data._listConstantBuffers.push_back( std::move( buf ) );
+				data._listConstantBuffer.push_back( std::move( buf ) );
 			}
 
 			ShaderResourceBinding res{};
@@ -328,11 +330,11 @@ namespace sw::shader_reflection_detail
 				res._type = "TextureOrSampler";
 			else
 				res._type = "OtherResource";
-			data._listResources.push_back( std::move( res ) );
+			data._listResource.push_back( std::move( res ) );
 		}
 
-		SW_LOG_INFO( "[ShaderReflection SPIR-V] ConstantBuffers: %# BoundResources: %#",
-					 data._listConstantBuffers.size(), data._listResources.size() );
+		SW_LOG_TRACE( "ConstantBuffers: %# BoundResources: %#",
+					  data._listConstantBuffer.size(), data._listResource.size() );
 		return data;
 	}
 

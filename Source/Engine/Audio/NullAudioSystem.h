@@ -15,26 +15,26 @@ namespace sw
 
 		bool initialize() override
 		{
-			SW_LOG_INFO( "[NullAudioSystem] Initialized." );
+			SW_LOG_INFO( "Initialized." );
 			return true;
 		}
 
 		void shutdown() override
 		{
-			SW_LOG_INFO( "[NullAudioSystem] Shut down." );
+			SW_LOG_INFO( "Shut down." );
 		}
 
 		void update( float32 ) override {}
 
 		bool play( string_view path ) override
 		{
-			SW_LOG_INFO( "[NullAudioSystem] play: %#", string( path ) );
+			SW_LOG_TRACE( "play: %#", string( path ) );
 			return true;
 		}
 
 		bool playMusic( string_view path ) override
 		{
-			SW_LOG_INFO( "[NullAudioSystem] playMusic: %#", string( path ) );
+			SW_LOG_TRACE( "playMusic: %#", string( path ) );
 			return true;
 		}
 

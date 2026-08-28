@@ -11,6 +11,8 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "SaveSlot" );
+
 	namespace
 	{
 		constexpr uint32 kSaveBinMagic	 = 0x53415631u; // 'SAV1'
@@ -74,8 +76,8 @@ namespace sw
 	 */
 	int32 SaveSlot::getFlag( string_view key, int32 defaultValue ) const
 	{
-		const auto it = _mapFlags.find( string( key ) );
-		if ( it == _mapFlags.end() )
+		const auto it = _mapFlag.find( string( key ) );
+		if ( it == _mapFlag.end() )
 			return defaultValue;
 		return it->second;
 	}
@@ -85,7 +87,7 @@ namespace sw
 	 */
 	void SaveSlot::setFlag( string_view key, int32 value )
 	{
-		_mapFlags[string( key )] = value;
+		_mapFlag[string( key )] = value;
 	}
 
 	/**
@@ -102,7 +104,7 @@ namespace sw
 
 		BLOCK( "Write Flags" )
 		{
-			for ( const auto& [key, val] : _mapFlags )
+			for ( const auto& [key, val] : _mapFlag )
 			{
 				sb.append( "flag." ).append( key.c_str() ).append( '=' ).append( val ).append( '\n' );
 			}
@@ -119,7 +121,7 @@ namespace sw
 			FileUtil::createDirectory( path );
 			const bool ok = FileUtil::writeTextFile( path, sb.view() );
 			if ( ok )
-				SW_LOG_INFO( "[SaveSlot] Saved text %#", path );
+				SW_LOG_INFO( "Saved text %#", path );
 			return ok;
 		}
 	}
@@ -134,7 +136,7 @@ namespace sw
 		{
 			if ( KeyValueFile::loadFile( path, map ) == false )
 			{
-				SW_LOG_WARNING( "[SaveSlot] Failed to load %#", path );
+				SW_LOG_WARNING( "Failed to load %#", path );
 				return false;
 			}
 		}
@@ -160,7 +162,7 @@ namespace sw
 				const uint32 computedHash = StringUtil::computeHash32( verifySb.view().data(), verifySb.view().size(), false );
 				if ( expectedHash != computedHash )
 				{
-					SW_LOG_ERROR( "[SaveSlot] Checksum mismatch in %# (expected %# != computed %#) — save corrupted!", path, expectedHash, computedHash );
+					SW_LOG_ERROR( "Checksum mismatch in %# (expected %# != computed %#) — save corrupted!", path, expectedHash, computedHash );
 					return false;
 				}
 			}
@@ -177,17 +179,17 @@ namespace sw
 
 		BLOCK( "Parse Flags" )
 		{
-			_mapFlags.clear();
+			_mapFlag.clear();
 			constexpr const utf8* kFlagPrefix = "flag.";
 			const size_t		  prefixLen	  = StringUtil::strlen( kFlagPrefix );
 			for ( const auto& [key, val] : map )
 			{
 				if ( key.size() > prefixLen && key.compare( 0, prefixLen, kFlagPrefix ) == 0 )
-					_mapFlags[key.substr( prefixLen )] = StringUtil::atoi( val.c_str() );
+					_mapFlag[key.substr( prefixLen )] = StringUtil::atoi( val.c_str() );
 			}
 		}
 
-		SW_LOG_INFO( "[SaveSlot] Loaded text %# (map=%#, pos=%#,%#)", path, _mapPath, _playerX, _playerY );
+		SW_LOG_INFO( "Loaded text %# (map=%#, pos=%#,%#)", path, _mapPath, _playerX, _playerY );
 		return true;
 	}
 
@@ -200,9 +202,9 @@ namespace sw
 		appendStrVal( listPayload, _mapPath );
 		appendI32Val( listPayload, _playerX );
 		appendI32Val( listPayload, _playerY );
-		appendU32Val( listPayload, static_cast<uint32>( _mapFlags.size() ) );
+		appendU32Val( listPayload, static_cast<uint32>( _mapFlag.size() ) );
 
-		for ( const auto& [key, val] : _mapFlags )
+		for ( const auto& [key, val] : _mapFlag )
 		{
 			appendStrVal( listPayload, key );
 			appendI32Val( listPayload, val );
@@ -221,7 +223,7 @@ namespace sw
 		FileUtil::createDirectory( path );
 		const bool ok = FileUtil::writeFile( path, listBlob.data(), listBlob.size() );
 		if ( ok )
-			SW_LOG_INFO( "[SaveSlot] Saved binary (SAV1, CRC32=0x%#08X) -> %#", crc, path );
+			SW_LOG_INFO( "Saved binary (SAV1, CRC32=0x%#08X) -> %#", crc, path );
 		return ok;
 	}
 
@@ -233,7 +235,7 @@ namespace sw
 		vector<uint8> listBlob;
 		if ( FileUtil::readFile( path, listBlob ) == false || listBlob.size() < 16 )
 		{
-			SW_LOG_WARNING( "[SaveSlot] Binary save file unreadable or too small: %#", path );
+			SW_LOG_WARNING( "Binary save file unreadable or too small: %#", path );
 			return false;
 		}
 
@@ -241,14 +243,14 @@ namespace sw
 		uint32 magic{ 0 };
 		if ( readU32Val( listBlob, offset, magic ) == false || magic != kSaveBinMagic )
 		{
-			SW_LOG_WARNING( "[SaveSlot] Invalid SAV1 magic in %# (0x%#08X)", path, magic );
+			SW_LOG_WARNING( "Invalid SAV1 magic in %# (0x%#08X)", path, magic );
 			return false;
 		}
 
 		uint32 version{ 0 };
 		if ( readU32Val( listBlob, offset, version ) == false || version > kSaveBinVersion )
 		{
-			SW_LOG_WARNING( "[SaveSlot] Unsupported SAV1 version %# in %#", version, path );
+			SW_LOG_WARNING( "Unsupported SAV1 version %# in %#", version, path );
 			return false;
 		}
 
@@ -259,7 +261,7 @@ namespace sw
 		uint32 payloadSize{ 0 };
 		if ( readU32Val( listBlob, offset, payloadSize ) == false || ( offset + payloadSize ) > listBlob.size() )
 		{
-			SW_LOG_ERROR( "[SaveSlot] Truncated SAV1 payload in %#", path );
+			SW_LOG_ERROR( "Truncated SAV1 payload in %#", path );
 			return false;
 		}
 
@@ -267,7 +269,7 @@ namespace sw
 		const uint32 computedCrc = StringUtil::computeCrc32( pPayload, payloadSize );
 		if ( expectedCrc != computedCrc )
 		{
-			SW_LOG_ERROR( "[SaveSlot] SAV1 CRC32 mismatch in %# (expected 0x%#08X != computed 0x%#08X) — save corrupted!", path, expectedCrc, computedCrc );
+			SW_LOG_ERROR( "SAV1 CRC32 mismatch in %# (expected 0x%#08X != computed 0x%#08X) — save corrupted!", path, expectedCrc, computedCrc );
 			return false;
 		}
 
@@ -281,13 +283,13 @@ namespace sw
 			 readI32Val( listBlob, offset, py ) == false ||
 			 readU32Val( listBlob, offset, flagCount ) == false )
 		{
-			SW_LOG_ERROR( "[SaveSlot] Corrupted payload fields in %#", path );
+			SW_LOG_ERROR( "Corrupted payload fields in %#", path );
 			return false;
 		}
 
 		if ( offset + static_cast<size_t>( flagCount ) * 5 > listBlob.size() )
 		{
-			SW_LOG_ERROR( "[SaveSlot] Invalid flagCount %# in SAV1 payload (overflow)", flagCount );
+			SW_LOG_ERROR( "Invalid flagCount %# in SAV1 payload (overflow)", flagCount );
 			return false;
 		}
 
@@ -299,18 +301,18 @@ namespace sw
 			if ( readStrVal( listBlob, offset, key ) == false ||
 				 readI32Val( listBlob, offset, val ) == false )
 			{
-				SW_LOG_ERROR( "[SaveSlot] Corrupted flag entry at index %# in %#", flagIndex, path );
+				SW_LOG_ERROR( "Corrupted flag entry at index %# in %#", flagIndex, path );
 				return false;
 			}
 			loadedFlags[std::move( key )] = val;
 		}
 
-		_mapPath  = std::move( loadedMap );
-		_playerX  = px;
-		_playerY  = py;
-		_mapFlags = std::move( loadedFlags );
+		_mapPath = std::move( loadedMap );
+		_playerX = px;
+		_playerY = py;
+		_mapFlag = std::move( loadedFlags );
 
-		SW_LOG_INFO( "[SaveSlot] Loaded binary SAV1 %# (map=%#, pos=%#,%#, flags=%#)", path, _mapPath, _playerX, _playerY, flagCount );
+		SW_LOG_INFO( "Loaded binary SAV1 %# (map=%#, pos=%#,%#, flags=%#)", path, _mapPath, _playerX, _playerY, flagCount );
 		return true;
 	}
 

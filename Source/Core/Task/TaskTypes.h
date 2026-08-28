@@ -227,31 +227,31 @@ namespace sw
 		template <typename... Args, typename = std::enable_if_t<( sizeof...( Args ) > 0 )>>
 		explicit TaskArgs( Args&&... args )
 		{
-			_listValues.reserve( sizeof...( Args ) );
-			( _listValues.emplace_back( std::forward<Args>( args ) ), ... );
+			_listValue.reserve( sizeof...( Args ) );
+			( _listValue.emplace_back( std::forward<Args>( args ) ), ... );
 		}
 
 		TaskArgs( std::initializer_list<TaskValue> listValues )
-			: _listValues{ listValues.begin(), listValues.end() } {}
+			: _listValue{ listValues.begin(), listValues.end() } {}
 
 		template <typename T>
 		/** @brief 추가합니다. */
 		void add( T&& val )
 		{
-			_listValues.emplace_back( std::forward<T>( val ) );
+			_listValue.emplace_back( std::forward<T>( val ) );
 		}
 
 		/** @brief 크기를 반환합니다. */
-		uint32 getCount() const { return static_cast<uint32>( _listValues.size() ); }
+		uint32 getCount() const { return static_cast<uint32>( _listValue.size() ); }
 
 		/** @brief 인덱스 인자를 반환합니다. */
-		const TaskValue& get( uint32 index ) const { return _listValues[index]; }
+		const TaskValue& get( uint32 index ) const { return _listValue[index]; }
 
 		template <typename T>
 		const T* getPtr( uint32 index ) const
 		{
-			if ( index < _listValues.size() )
-				return _listValues[index].getPtr<T>();
+			if ( index < _listValue.size() )
+				return _listValue[index].getPtr<T>();
 			return nullptr;
 		}
 
@@ -266,7 +266,7 @@ namespace sw
 		}
 
 	private:
-		vector<TaskValue> _listValues;
+		vector<TaskValue> _listValue;
 	};
 
 	/** @brief 명시 타입 목록으로 TaskArgs 생성. */

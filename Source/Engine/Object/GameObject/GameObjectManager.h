@@ -14,7 +14,6 @@
 
 #include "Engine/Object/Component/ComponentHandle.h"
 #include "Engine/Object/Component/TagSystem.h"
-
 #include "Engine/Physics/PhysicsWorld.h"
 
 #include <shared_mutex>
@@ -96,7 +95,7 @@ namespace sw
 		 * @brief 계층-안전 병렬 tick
 		 * @details 1) SceneComponent 월드 캐시 flush (루트→자식, dirty subtree만)
 		 *          2) 병렬 Component tick (트랜스폼 캐시 읽기 전용, 구조 변경 지연)
-		 *          3) 지연 트랜스폼 적용 후 CommandBuffer 실행, dirty면 다시 flush
+		 *          3) 지연 트랜스폼 적용 후 지연 큐(deferPostTick) 실행 및 지연 삭제 처리, dirty면 다시 flush
 		 */
 		void tick( float32 deltaTime );
 
@@ -190,21 +189,21 @@ namespace sw
 		void registerComponentType( hashed_string typeName, hashed_string moduleName = hashed_string() )
 		{
 			static_assert( std::is_base_of_v<Component, T>, "T must derive from sw::Component" );
-			_mapFactories[typeName] = []( GameObject* pGameObject ) -> Component*
+			_mapFactory[typeName] = []( GameObject* pGameObject ) -> Component*
 			{
 				if ( pGameObject == nullptr )
 					return nullptr;
 				return pGameObject->addComponent<T>();
 			};
 
-			if ( _mapFactoryModules.find( typeName ) == _mapFactoryModules.end() )
+			if ( _mapFactoryModule.find( typeName ) == _mapFactoryModule.end() )
 			{
 				if ( moduleName.getHash() != 0 )
-					_mapFactoryModules[typeName] = moduleName;
+					_mapFactoryModule[typeName] = moduleName;
 				else if ( _activeModuleName.getHash() != 0 )
-					_mapFactoryModules[typeName] = _activeModuleName;
+					_mapFactoryModule[typeName] = _activeModuleName;
 				else
-					_mapFactoryModules[typeName] = hashed_string( "Engine" );
+					_mapFactoryModule[typeName] = hashed_string( "Engine" );
 			}
 		}
 
@@ -243,20 +242,20 @@ namespace sw
 			GameObjectChunk();
 			~GameObjectChunk();
 		};
-		vector<unique_ptr<GameObjectChunk>> _listGoChunks;
+		vector<unique_ptr<GameObjectChunk>> _listGoChunk;
 		vector<GameObject*>					_listGoFree;
 
-		vector<GameObject*>						  _listGameObjects;
+		vector<GameObject*>						  _listGameObject;
 		unordered_map<hashed_string, GameObject*> _mapNameToObject;
 		unordered_map<uint64, GameObject*>		  _mapIdToObject;
-		vector<GameObject*>						  _listPendingAdds;
-		vector<GameObject*>						  _listPendingDestroyObjects;
-		vector<Component*>						  _listPendingDestroyComponents;
+		vector<GameObject*>						  _listPendingAdd;
+		vector<GameObject*>						  _listPendingDestroyObject;
+		vector<Component*>						  _listPendingDestroyComponent;
 
-		vector<GameObject*> _listProcessingDestroyObjects;
-		vector<Component*>	_listProcessingDestroyComponents;
+		vector<GameObject*> _listProcessingDestroyObject;
+		vector<Component*>	_listProcessingDestroyComponent;
 
-		vector<SceneComponent*>	  _listRootSceneComponents;
+		vector<SceneComponent*>	  _listRootSceneComponent;
 		mutable std::shared_mutex _mutex;
 		std::atomic<uint64>		  _nextId;
 
@@ -265,16 +264,16 @@ namespace sw
 		std::atomic<bool>				_bParallelTransformReadOnly;
 		std::atomic<bool>				_bTicking;
 		std::atomic<bool>				_bIsTickWavesDirty;
-		vector<vector<ComponentHandle>> _listCachedTickWaves;
+		vector<vector<ComponentHandle>> _listCachedTickWave;
 		mutex							_deferredTransformMutex;
-		vector<TransformUpdateDelegate> _listDeferredTransformUpdates;
-		vector<TransformUpdateDelegate> _listProcessingTransforms;
+		vector<TransformUpdateDelegate> _listDeferredTransformUpdate;
+		vector<TransformUpdateDelegate> _listProcessingTransform;
 		mutex							_deferredPostTickMutex;
-		vector<PostTickDelegate>		_listDeferredPostTickUpdates;
-		vector<PostTickDelegate>		_listProcessingPostTicks;
+		vector<PostTickDelegate>		_listDeferredPostTickUpdate;
+		vector<PostTickDelegate>		_listProcessingPostTick;
 
-		unordered_map<hashed_string, ComponentFactoryDelegate> _mapFactories;
-		unordered_map<hashed_string, hashed_string>			   _mapFactoryModules;
+		unordered_map<hashed_string, ComponentFactoryDelegate> _mapFactory;
+		unordered_map<hashed_string, hashed_string>			   _mapFactoryModule;
 		hashed_string										   _activeModuleName;
 
 		std::atomic<uint64> _dirtyTransformGeneration;

@@ -5,7 +5,6 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Game/GameState.h"
 #include "Engine/Input/ActionMap.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -27,6 +26,8 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "DemoGame" );
+
 	DemoGame::DemoGame()
 		: _tileMap{}
 		, _player{}
@@ -56,7 +57,7 @@ namespace sw
 
 	bool DemoGame::onInitialize()
 	{
-		SW_LOG_INFO( "[DemoGame] Initializing Game Module..." );
+		SW_LOG_INFO( "Initializing Game Module..." );
 		registerGameFrameworkTypes();
 
 		_data = _bootstrap._data;
@@ -72,7 +73,7 @@ namespace sw
 		ActionMap& actions = gameActions();
 		if ( actions.loadFromResource( _data._inputMap ) == false )
 		{
-			SW_LOG_WARNING( "[DemoGame] InputMap load failed (%#) — using emergency fallback.", _data._inputMap );
+			SW_LOG_WARNING( "InputMap load failed (%#) — using emergency fallback.", _data._inputMap );
 			actions.bindEmergencyFallback();
 		}
 		gameActionIds().loadFromResource( _data._inputMap );
@@ -87,13 +88,13 @@ namespace sw
 		_currentMapPath = _data._startMap;
 		_hud.setVisible( true );
 		_hud.setScreenRect( 0.0f, 0.0f, 1.0f, 1.0f );
-		SW_LOG_INFO( "[DemoGame] Standby for Title handoff before overworld." );
+		SW_LOG_INFO( "Standby for Title handoff before overworld." );
 		return true;
 	}
 
 	void DemoGame::onShutdown()
 	{
-		SW_LOG_INFO( "[DemoGame] Shutting down Game Module..." );
+		SW_LOG_INFO( "Shutting down Game Module..." );
 
 		destroyDemoCube();
 		destroyModuleSampleActors();
@@ -109,7 +110,7 @@ namespace sw
 		{
 			_bTitleHandedOff = 1;
 			game::getService<SceneManager>()->requestLoadAsync( _data._titleScene );
-			SW_LOG_INFO( "[DemoGame] Title scene loaded: '%#'", _data._titleScene );
+			SW_LOG_INFO( "Title scene loaded: '%#'", _data._titleScene );
 		}
 
 		{

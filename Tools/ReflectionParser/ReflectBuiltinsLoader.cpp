@@ -15,6 +15,7 @@
 #include "ReflectionParser/ParserUtil.h"
 #include "ReflectionParser/TypeNameMap.h"
 
+SW_LOG_CALLER( "ReflectBuiltinsLoader" );
 namespace sw
 {
 	namespace
@@ -24,7 +25,7 @@ namespace sw
 		{
 			string		   _canonical;
 			string		   _cppType;
-			vector<string> _listAliases;
+			vector<string> _listAlias;
 		};
 
 		/** @brief 매크로 호출 한 줄에서 인자 목록을 추출합니다. */
@@ -93,19 +94,19 @@ namespace sw
 			{
 				StringBuilder<constant::kMaxBuffer128> qualified;
 				qualified.appendFormat( "%#::%#", args[3], args[0] );
-				row._listAliases.push_back( string( qualified.view() ) );
+				row._listAlias.push_back( string( qualified.view() ) );
 			}
 			for ( size_t argIndex = 4; argIndex < args.size(); ++argIndex )
 			{
 				if ( args[argIndex] == builtinMacroConstants::kSkipAlias )
 					continue;
-				row._listAliases.push_back( args[argIndex] );
+				row._listAlias.push_back( args[argIndex] );
 				if ( args[3] != builtinMacroConstants::kSkipNamespace && args[argIndex].find( "::" ) == string::npos &&
 					 args[argIndex].find( ' ' ) == string::npos )
 				{
 					StringBuilder<constant::kMaxBuffer128> qualified;
 					qualified.appendFormat( "%#::%#", args[3], args[argIndex] );
-					row._listAliases.push_back( string( qualified.view() ) );
+					row._listAlias.push_back( string( qualified.view() ) );
 				}
 			}
 			outRows.push_back( std::move( row ) );
@@ -117,7 +118,7 @@ namespace sw
 		string text;
 		if ( FileUtil::readTextFile( absPath, text ) == false )
 		{
-			SW_LOG_WARNING( "[ReflectBuiltins] Failed to read: %#", absPath );
+			SW_LOG_WARNING( "Failed to read: %#", absPath );
 			return false;
 		}
 
@@ -146,7 +147,7 @@ namespace sw
 
 		TypeNameMap::instance().setLoaded( true );
 		ContainerTypeMap::instance().setLoaded( true );
-		SW_LOG_INFO( "[ReflectBuiltins] types=%# containers=%# (%#)", typeCount, containerCount, absPath );
+		SW_LOG_TRACE( "types=%# containers=%# (%#)", typeCount, containerCount, absPath );
 		return typeCount > 0 || containerCount > 0;
 	}
 
@@ -155,7 +156,7 @@ namespace sw
 		string text;
 		if ( FileUtil::readTextFile( builtinsAbsPath, text ) == false )
 		{
-			SW_LOG_WARNING( "[ReflectBuiltins] Failed to read: %#", builtinsAbsPath );
+			SW_LOG_WARNING( "Failed to read: %#", builtinsAbsPath );
 			return false;
 		}
 
@@ -174,7 +175,7 @@ namespace sw
 
 		if ( rows.empty() )
 		{
-			SW_LOG_WARNING( "[ReflectBuiltins] emit: no TYPE rows in %#", builtinsAbsPath );
+			SW_LOG_WARNING( "emit: no TYPE rows in %#", builtinsAbsPath );
 			return false;
 		}
 
@@ -182,7 +183,7 @@ namespace sw
 		if ( tpls.isLoaded() == false || tpls.has( tplConstants::kBuiltinFileHeader ) == false ||
 			 tpls.has( tplConstants::kBuiltinTypeRegistrar ) == false || tpls.has( tplConstants::kBuiltinFileFooter ) == false )
 		{
-			SW_LOG_ERROR( "[ReflectBuiltins] emit requires %# "
+			SW_LOG_ERROR( "emit requires %# "
 						  "(%# / %# / %#).",
 						  cliConstants::kEmitTemplates, tplConstants::kBuiltinFileHeader, tplConstants::kBuiltinTypeRegistrar,
 						  tplConstants::kBuiltinFileFooter );
@@ -195,7 +196,7 @@ namespace sw
 		for ( const BuiltinTypeRow& row : rows )
 		{
 			StringBuilder<constant::kMaxBuffer1024> aliasRegs;
-			for ( const string& alias : row._listAliases )
+			for ( const string& alias : row._listAlias )
 			{
 				if ( alias.empty() || alias == row._canonical )
 					continue;
@@ -216,12 +217,12 @@ namespace sw
 
 		if ( FileUtil::writeTextFile( outCppAbsPath, out ) == false )
 		{
-			SW_LOG_ERROR( "[ReflectBuiltins] Failed to write %#", outCppAbsPath );
+			SW_LOG_ERROR( "Failed to write %#", outCppAbsPath );
 			return false;
 		}
 
-		SW_LOG_INFO( "[ReflectBuiltins] Emitted %# TYPE registrars → %#", static_cast<uint32>( rows.size() ),
-					 outCppAbsPath );
+		SW_LOG_TRACE( "Emitted %# TYPE registrars → %#", static_cast<uint32>( rows.size() ),
+					  outCppAbsPath );
 		return true;
 	}
 } // namespace sw

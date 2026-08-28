@@ -98,7 +98,7 @@ namespace sw
 		TagContainer( std::initializer_list<TagID> tags );
 
 		/** @brief 용량을 예약합니다. */
-		void reserve( uint32 capacity ) { _listTags.reserve( capacity ); }
+		void reserve( uint32 capacity ) { _listTag.reserve( capacity ); }
 
 		/** @brief 태그를 추가합니다. */
 		void addTag( TagID tag );
@@ -119,17 +119,17 @@ namespace sw
 		bool matchTags( const TagContainer& required, const TagContainer& forbidden ) const;
 
 		/** @brief 태그 개수를 반환합니다. */
-		uint32 getTagCount() const { return static_cast<uint32>( _listTags.size() ); }
+		uint32 getTagCount() const { return static_cast<uint32>( _listTag.size() ); }
 
 		/** @brief 태그를 모두 지웁니다. */
-		void clear() { _listTags.clear(); }
+		void clear() { _listTag.clear(); }
 
 		/** @brief 태그 목록을 반환합니다. */
-		const vector<TagID>& getTags() const { return _listTags; }
+		const vector<TagID>& getTags() const { return _listTag; }
 
 	private:
 		PROPERTY()
-		vector<TagID> _listTags;
+		vector<TagID> _listTag;
 	};
 
 	// ------------------------------------------------------------------------------
@@ -150,7 +150,7 @@ namespace sw
 	{
 		TagQueryExprType	 _type{ TagQueryExprType::Undefined };
 		TagContainer		 _tags{};
-		vector<TagQueryExpr> _listSubExprs{};
+		vector<TagQueryExpr> _listSubExpr{};
 
 		static TagQueryExpr anyTagsMatch( const TagContainer& tags )
 		{
@@ -179,16 +179,16 @@ namespace sw
 		static TagQueryExpr allExprMatch( vector<TagQueryExpr> subExprs )
 		{
 			TagQueryExpr expr;
-			expr._type		   = TagQueryExprType::AllExprMatch;
-			expr._listSubExprs = std::move( subExprs );
+			expr._type		  = TagQueryExprType::AllExprMatch;
+			expr._listSubExpr = std::move( subExprs );
 			return expr;
 		}
 
 		static TagQueryExpr anyExprMatch( vector<TagQueryExpr> subExprs )
 		{
 			TagQueryExpr expr;
-			expr._type		   = TagQueryExprType::AnyExprMatch;
-			expr._listSubExprs = std::move( subExprs );
+			expr._type		  = TagQueryExprType::AnyExprMatch;
+			expr._listSubExpr = std::move( subExprs );
 			return expr;
 		}
 
@@ -196,7 +196,7 @@ namespace sw
 		{
 			TagQueryExpr expr;
 			expr._type = TagQueryExprType::NotExprMatch;
-			expr._listSubExprs.push_back( std::move( subExpr ) );
+			expr._listSubExpr.push_back( std::move( subExpr ) );
 			return expr;
 		}
 	};

@@ -101,7 +101,7 @@ namespace sw
 
 		string					  _assetPath;
 		string					  _enumType;
-		vector<MaterialEnumEntry> _listEnumEntries;
+		vector<MaterialEnumEntry> _listEnumEntry;
 
 		string _displayName;
 		string _group;
@@ -144,7 +144,7 @@ namespace sw
 	{
 		string		   _name;
 		string		   _selected;
-		vector<string> _listOptions;
+		vector<string> _listOption;
 	};
 
 	/// @brief 스위치 + 멀티컴파일 + 품질 permutation
@@ -153,9 +153,9 @@ namespace sw
 		MaterialQualityLevel		 _quality	= MaterialQualityLevel::High;
 		uint32						 _shaderLOD = 300;
 		MaterialUsageFlags			 _usage		= MaterialUsageFlags::StaticMesh;
-		vector<string>				 _listAlwaysDefines;
-		vector<MaterialStaticSwitch> _listStaticSwitches;
-		vector<MaterialMultiCompile> _listMultiCompiles;
+		vector<string>				 _listAlwaysDefine;
+		vector<MaterialStaticSwitch> _listStaticSwitch;
+		vector<MaterialMultiCompile> _listMultiCompile;
 	};
 
 	/// @brief 머티리얼 에셋 서술 (셰이더 경로, 프로퍼티, permutation)
@@ -165,7 +165,7 @@ namespace sw
 		string					 _name;
 		string					 _shaderPath;
 		string					 _blendMode;
-		vector<MaterialProperty> _listProperties;
+		vector<MaterialProperty> _listProperty;
 		MaterialPermutationDesc	 _permutations;
 	};
 
@@ -183,7 +183,7 @@ namespace sw
 			string _assetPath; ///< Texture override path (optional)
 		};
 
-		vector<Override> _listOverrides;
+		vector<Override> _listOverride;
 
 		/// @brief 인스턴스가 덮어쓴 정적 스위치
 		struct KeywordOverride
@@ -192,7 +192,7 @@ namespace sw
 			bool   _bEnabled{ true };
 		};
 
-		vector<KeywordOverride> _listKeywords;
+		vector<KeywordOverride> _listKeyword;
 
 		/// @brief 인스턴스가 고른 멀티컴파일 옵션
 		struct MultiCompileOverride
@@ -201,7 +201,7 @@ namespace sw
 			string _selected;
 		};
 
-		vector<MultiCompileOverride> _listMultiCompiles;
+		vector<MultiCompileOverride> _listMultiCompile;
 
 		string _quality; ///< empty = inherit
 	};
@@ -209,7 +209,7 @@ namespace sw
 	/// @brief 런타임 머티리얼 데이터 (패킹 버퍼 + 디스크립터)
 	struct MaterialData
 	{
-		vector<MaterialProperty> _listProperties;
+		vector<MaterialProperty> _listProperty;
 		vector<uint8>			 _listBuffer;
 	};
 } // namespace sw

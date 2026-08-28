@@ -9,11 +9,13 @@
 
 namespace sw::editor
 {
+	SW_LOG_CALLER( "PrefabTool" );
+
 	PrefabEditorPanel::PrefabEditorPanel()
 		: _selectedPrefabPath{ "Prefabs/Characters/Orc_Warrior.prefab" }
 		, _selectedInstanceName{ "Orc_Warrior_Instance_1" }
-		, _listOverrides{}
-		, _listNestedPrefabs{}
+		, _listOverride{}
+		, _listNestedPrefab{}
 		, _bShowOnlyModified{ false }
 	{
 		scanPrefabOverrides( _selectedPrefabPath.c_str() );
@@ -21,22 +23,22 @@ namespace sw::editor
 
 	void PrefabEditorPanel::scanPrefabOverrides( const utf8* pPrefabPath )
 	{
-		_listOverrides.clear();
-		_listNestedPrefabs.clear();
+		_listOverride.clear();
+		_listNestedPrefab.clear();
 
 		_selectedPrefabPath = pPrefabPath != nullptr ? pPrefabPath : "Prefabs/Characters/Orc_Warrior.prefab";
 
 		// Sample data for prefab inspection & override tracking
-		_listNestedPrefabs.push_back( "Prefabs/Weapons/BattleAxe_Heavy.prefab" );
-		_listNestedPrefabs.push_back( "Prefabs/VFX/RageAura_Fire.prefab" );
-		_listNestedPrefabs.push_back( "Prefabs/UI/WorldHealthBar.prefab" );
+		_listNestedPrefab.push_back( "Prefabs/Weapons/BattleAxe_Heavy.prefab" );
+		_listNestedPrefab.push_back( "Prefabs/VFX/RageAura_Fire.prefab" );
+		_listNestedPrefab.push_back( "Prefabs/UI/WorldHealthBar.prefab" );
 
-		_listOverrides.push_back( PrefabOverrideItem{ "UnitStatsComponent", "maxHp", "250", "350", true } );
-		_listOverrides.push_back( PrefabOverrideItem{ "UnitStatsComponent", "attack", "35", "50", true } );
-		_listOverrides.push_back( PrefabOverrideItem{ "UnitStatsComponent", "defense", "15", "15", false } );
-		_listOverrides.push_back( PrefabOverrideItem{ "UnitStatsComponent", "moveSpeed", "4.5", "4.5", false } );
-		_listOverrides.push_back( PrefabOverrideItem{ "TransformComponent", "scale", "(1.0, 1.0, 1.0)", "(1.25, 1.25, 1.25)", true } );
-		_listOverrides.push_back( PrefabOverrideItem{ "MaterialComponent", "tintColor", "(1.0, 1.0, 1.0, 1.0)", "(1.0, 0.8, 0.8, 1.0)", true } );
+		_listOverride.push_back( PrefabOverrideItem{ "UnitStatsComponent", "maxHp", "250", "350", true } );
+		_listOverride.push_back( PrefabOverrideItem{ "UnitStatsComponent", "attack", "35", "50", true } );
+		_listOverride.push_back( PrefabOverrideItem{ "UnitStatsComponent", "defense", "15", "15", false } );
+		_listOverride.push_back( PrefabOverrideItem{ "UnitStatsComponent", "moveSpeed", "4.5", "4.5", false } );
+		_listOverride.push_back( PrefabOverrideItem{ "TransformComponent", "scale", "(1.0, 1.0, 1.0)", "(1.25, 1.25, 1.25)", true } );
+		_listOverride.push_back( PrefabOverrideItem{ "MaterialComponent", "tintColor", "(1.0, 1.0, 1.0, 1.0)", "(1.0, 0.8, 0.8, 1.0)", true } );
 	}
 
 	void PrefabEditorPanel::drawContent()
@@ -55,9 +57,9 @@ namespace sw::editor
 		// Nested Prefabs Hierarchy
 		if ( ImGui::CollapsingHeader( "Nested Prefabs & Sub-Assets", ImGuiTreeNodeFlags_DefaultOpen ) )
 		{
-			for ( size_t prefabIndex = 0; prefabIndex < _listNestedPrefabs.size(); ++prefabIndex )
+			for ( size_t prefabIndex = 0; prefabIndex < _listNestedPrefab.size(); ++prefabIndex )
 			{
-				ImGui::BulletText( "[Nested] %s", _listNestedPrefabs[prefabIndex].c_str() );
+				ImGui::BulletText( "[Nested] %s", _listNestedPrefab[prefabIndex].c_str() );
 			}
 		}
 
@@ -81,9 +83,9 @@ namespace sw::editor
 			ImGui::TableSetupColumn( "Action", ImGuiTableColumnFlags_WidthFixed, 80.0f );
 			ImGui::TableHeadersRow();
 
-			for ( size_t overrideIndex = 0; overrideIndex < _listOverrides.size(); ++overrideIndex )
+			for ( size_t overrideIndex = 0; overrideIndex < _listOverride.size(); ++overrideIndex )
 			{
-				PrefabOverrideItem& item = _listOverrides[overrideIndex];
+				PrefabOverrideItem& item = _listOverride[overrideIndex];
 				if ( _bShowOnlyModified && item._bModified == false )
 					continue;
 
@@ -120,7 +122,7 @@ namespace sw::editor
 					{
 						item._overriddenValue = item._defaultValue;
 						item._bModified		  = false;
-						SW_LOG_INFO( "[PrefabTool] Reverted %s.%s to %s", item._componentName.c_str(), item._propertyName.c_str(), item._defaultValue.c_str() );
+						SW_LOG_TRACE( "Reverted %s.%s to %s", item._componentName.c_str(), item._propertyName.c_str(), item._defaultValue.c_str() );
 					}
 					ImGui::PopID();
 				}
@@ -134,7 +136,7 @@ namespace sw::editor
 		// Action Bar
 		if ( ImGui::Button( "Apply All Overrides to Template", ImVec2( 220.0f, 0.0f ) ) )
 		{
-			for ( auto& item : _listOverrides )
+			for ( auto& item : _listOverride )
 			{
 				if ( item._bModified )
 				{
@@ -142,18 +144,18 @@ namespace sw::editor
 					item._bModified	   = false;
 				}
 			}
-			SW_LOG_INFO( "[PrefabTool] Applied all instance overrides back to template %s", _selectedPrefabPath.c_str() );
+			SW_LOG_TRACE( "Applied all instance overrides back to template %s", _selectedPrefabPath.c_str() );
 		}
 
 		ImGui::SameLine();
 		if ( ImGui::Button( "Revert All Overrides", ImVec2( 160.0f, 0.0f ) ) )
 		{
-			for ( auto& item : _listOverrides )
+			for ( auto& item : _listOverride )
 			{
 				item._overriddenValue = item._defaultValue;
 				item._bModified		  = false;
 			}
-			SW_LOG_INFO( "[PrefabTool] Reverted all overrides on %s", _selectedInstanceName.c_str() );
+			SW_LOG_TRACE( "Reverted all overrides on %s", _selectedInstanceName.c_str() );
 		}
 	}
 } // namespace sw::editor

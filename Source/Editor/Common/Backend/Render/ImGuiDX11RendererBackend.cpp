@@ -12,6 +12,8 @@
 
 namespace sw::editor
 {
+	SW_LOG_CALLER( "ImGuiDX11" );
+
 #if defined( SW_PLATFORM_WINDOWS )
 	namespace
 	{
@@ -110,7 +112,7 @@ namespace sw::editor
 #if defined( SW_PLATFORM_WINDOWS )
 		if ( ImGui::GetIO().BackendRendererUserData != nullptr )
 			ImGui_ImplDX11_Shutdown();
-		_listRegisteredSrvs.clear();
+		_listRegisteredSrv.clear();
 		_pRHIDevice = nullptr;
 #endif
 	}
@@ -160,12 +162,12 @@ namespace sw::editor
 		const HRESULT									 hr = pDevice->CreateShaderResourceView( pTex, &srvDesc, srv.GetAddressOf() );
 		if ( FAILED( hr ) || srv == nullptr )
 		{
-			SW_LOG_ERROR( "[ImGuiDX11] Failed to create SRV for registered texture. HRESULT: %#", hr );
+			SW_LOG_ERROR( "Failed to create SRV for registered texture. HRESULT: %#", hr );
 			return nullptr;
 		}
 
 		ID3D11ShaderResourceView* pSrvPtr = srv.Get();
-		_listRegisteredSrvs.push_back( std::move( srv ) );
+		_listRegisteredSrv.push_back( std::move( srv ) );
 		return pSrvPtr;
 #else
 		(void)texture;
@@ -180,11 +182,11 @@ namespace sw::editor
 			return;
 
 		ID3D11ShaderResourceView* pSrv = static_cast<ID3D11ShaderResourceView*>( pTextureID );
-		for ( auto it = _listRegisteredSrvs.begin(); it != _listRegisteredSrvs.end(); ++it )
+		for ( auto it = _listRegisteredSrv.begin(); it != _listRegisteredSrv.end(); ++it )
 		{
 			if ( it->Get() == pSrv )
 			{
-				_listRegisteredSrvs.erase( it );
+				_listRegisteredSrv.erase( it );
 				return;
 			}
 		}

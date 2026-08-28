@@ -51,7 +51,7 @@ namespace sw
 		string					  _entryPoint;										///< 진입점 함수 이름 (예: "VSMain", "CSMain")
 		ShaderStage				  _stage		= ShaderStage::Vertex;				///< 컴파일 대상 셰이더 스테이지
 		ShaderTargetFormat		  _targetFormat = ShaderTargetFormat::SPIRV_Vulkan; ///< 출력 포맷
-		vector<ShaderMacroDefine> _listDefines;										///< 추가 전처리 매크로 (-D NAME=VALUE)
+		vector<ShaderMacroDefine> _listDefine;										///< 추가 전처리 매크로 (-D NAME=VALUE)
 	};
 
 	/**

@@ -26,10 +26,10 @@ namespace sw
 				float3{center._x + radius, center._y + radius, center._z + radius}
 			 };
 
-			vector<SpatialElement3D> listCandidates;
-			queryRange( sphereBounds, listCandidates );
+			vector<SpatialElement3D> listCandidate;
+			queryRange( sphereBounds, listCandidate );
 
-			for ( const SpatialElement3D& candidate : listCandidates )
+			for ( const SpatialElement3D& candidate : listCandidate )
 			{
 				const float3  elemCenter = candidate._bounds.getCenter();
 				const float32 diffX		 = elemCenter._x - center._x;

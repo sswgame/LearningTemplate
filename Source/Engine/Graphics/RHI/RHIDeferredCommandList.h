@@ -19,7 +19,7 @@ namespace sw
 	 * @details Deferred **CommandList** Mode ≠ Deferred **Context**.
 	 *          Immediate Mode: endCommandList → Immediate Context로 flush(replay).
 	 *          Deferred Mode: executeCommandList → Immediate Context에 replay.
-	 *          replay는 네이티브 ExecuteCommandLists/FinishCommandList가 아니라 `_listCmds` 순회 재생이다.
+	 *          replay는 네이티브 ExecuteCommandLists/FinishCommandList가 아니라 `_listCmd` 순회 재생이다.
 	 */
 	class SW_API RHIDeferredCommandList final : public IRHICommandList
 	{
@@ -102,7 +102,7 @@ namespace sw
 		// ------------------------------------------------------------------------------
 		// 6) 리플레이 · 상태 — executeCommandList에서 호출
 		// ------------------------------------------------------------------------------
-		/** @brief 기록된 `_listCmds`를 Context 가상호출로 순서 재생 (네이티브 CL Execute ≠). */
+		/** @brief 기록된 `_listCmd`를 Context 가상호출로 순서 재생 (네이티브 CL Execute ≠). */
 		void replay( IRHICommandContext* pContext ) const;
 
 		/** @brief Immediate 모드 flush 대상을 설정합니다 (endCommandList가 replay 가능). */
@@ -115,7 +115,7 @@ namespace sw
 		/** @brief 현재 기록 중이면 true. */
 		bool isRecording() const { return _bRecording; }
 		/** @brief 기록된 명령 개수를 반환합니다. */
-		size_t commandCount() const { return _listCmds.size(); }
+		size_t commandCount() const { return _listCmd.size(); }
 
 		/** @brief 이미 제출된 것으로 표시합니다 (idempotent execute). */
 		void markApplied() { _bApplied = true; }
@@ -174,7 +174,7 @@ namespace sw
 			RHIBufferState		   bufferState = RHIBufferState::Common;
 			RHITextureHandle	   srcTexture{ 0 };
 			RHITextureHandle	   dstTexture{ 0 };
-			vector<uint32>		   listRootConstantWords;
+			vector<uint32>		   listRootConstantWord;
 			string				   eventName;
 		};
 
@@ -186,7 +186,7 @@ namespace sw
 		RHICommandListMode	_mode = RHICommandListMode::Deferred;
 		IRHICommandContext* _pContext{ nullptr };
 		std::thread::id		_recordingThread{};
-		vector<Cmd>			_listCmds;
+		vector<Cmd>			_listCmd;
 		bool				_bRecording{ false };
 		bool				_bApplied{ false };
 	};

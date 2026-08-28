@@ -39,14 +39,14 @@ namespace sw::editor
 		bool						 hasObject( const GameObjectPtr& pObj ) const;
 		GameObjectPtr				 getPrimaryObject() const;
 		uint64						 getPrimaryObjectId() const;
-		const vector<GameObjectPtr>& getSelectedObjects() const { return _listSelectedObjects; }
-		size_t						 getSelectedObjectCount() const { return _listSelectedObjects.size(); }
+		const vector<GameObjectPtr>& getSelectedObjects() const { return _listSelectedObject; }
+		size_t						 getSelectedObjectCount() const { return _listSelectedObject.size(); }
 
 		void				  selectAsset( string_view assetPath, SelectionMode mode = SelectionMode::Replace );
 		void				  selectAssets( const vector<string>& listAssetPaths, SelectionMode mode = SelectionMode::Replace );
 		bool				  hasAsset( string_view assetPath ) const;
 		string_view			  getPrimaryAsset() const;
-		const vector<string>& getSelectedAssets() const { return _listSelectedAssets; }
+		const vector<string>& getSelectedAssets() const { return _listSelectedAsset; }
 
 		void			  clearObjectSelection();
 		void			  clearAssetSelection();
@@ -58,8 +58,8 @@ namespace sw::editor
 		void notifyChanged();
 
 	private:
-		vector<GameObjectPtr> _listSelectedObjects;
-		vector<string>		  _listSelectedAssets;
+		vector<GameObjectPtr> _listSelectedObject;
+		vector<string>		  _listSelectedAsset;
 		Delegate<void()>	  _onSelectionChanged;
 	};
 } // namespace sw::editor

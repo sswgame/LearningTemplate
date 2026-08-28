@@ -16,10 +16,10 @@
 
 #if defined( __REFLECT_PARSER__ )
 	/** @brief 타입 리플렉션 대상. 선택 플래그: Abstract, Static */
-	#define REFLECT( ... ) __attribute__( ( annotate( "REFLECT;" #__VA_ARGS__ ) ) )
-	#define PROPERTY( ... )		  __attribute__( ( annotate( "PROPERTY;" #__VA_ARGS__ ) ) )
-	#define FUNCTION( ... )		  __attribute__( ( annotate( "FUNCTION;" #__VA_ARGS__ ) ) )
-	#define ENUM( ... )			  __attribute__( ( annotate( "ENUM;" #__VA_ARGS__ ) ) )
+	#define REFLECT( ... )	__attribute__( ( annotate( "REFLECT;" #__VA_ARGS__ ) ) )
+	#define PROPERTY( ... ) __attribute__( ( annotate( "PROPERTY;" #__VA_ARGS__ ) ) )
+	#define FUNCTION( ... ) __attribute__( ( annotate( "FUNCTION;" #__VA_ARGS__ ) ) )
+	#define ENUM( ... )		__attribute__( ( annotate( "ENUM;" #__VA_ARGS__ ) ) )
 
 	/**
 	 * @brief 컨테이너 타입 선언용. 파서가 타입 선언에서 읽어 Sequence/Map으로 인식한다.

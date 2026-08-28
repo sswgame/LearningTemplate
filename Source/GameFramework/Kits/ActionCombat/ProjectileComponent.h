@@ -34,13 +34,13 @@ namespace sw
 		void setLifeTime( float32 lifeTime );
 
 	private:
-		PROPERTY( Alias="velocity" )
+		PROPERTY( Alias = "velocity" )
 		float2 _velocity;
-		PROPERTY( Alias="damage" )
+		PROPERTY( Alias = "damage" )
 		int32 _damage;
-		PROPERTY( Alias="lifeTime" )
+		PROPERTY( Alias = "lifeTime" )
 		float32 _lifeTime;
-		PROPERTY( Alias="currentLife" )
+		PROPERTY( Alias = "currentLife" )
 		float32 _currentLife;
 	};
 } // namespace sw

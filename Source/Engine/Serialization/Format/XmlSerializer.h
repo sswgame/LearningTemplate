@@ -84,7 +84,7 @@ namespace sw
 		}
 		/**
 		 * @brief 타입 태그 + `_name` 속성으로 자식 요소를 찾아 내려갑니다.
-		 * @details 컨테이너 XML: `<vector _name="_listComponents">`.
+		 * @details 컨테이너 XML: `<vector _name="_listComponent">`.
 		 */
 		virtual bool pushNamedTypeChild( const utf8* pTypeTag, const utf8* pPropName )
 		{

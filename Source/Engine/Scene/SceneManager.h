@@ -61,7 +61,7 @@ namespace sw
 		/** @brief 진행 중인 비동기 씬 로드 작업을 즉시 취소/대기하고 큐를 비웁니다. (핫리로드/종료 펜스용) */
 		void cancelPendingAsyncLoads();
 		/** @brief 로드된 씬 모두 반환 */
-		const vector<unique_ptr<Scene>>& getLoadedScenes() const { return _listLoadedScenes; }
+		const vector<unique_ptr<Scene>>& getLoadedScenes() const { return _listLoadedScene; }
 
 	private:
 		/** @brief 씬을 언로드하고 목록에서 제거합니다. */
@@ -78,7 +78,7 @@ namespace sw
 			std::atomic<bool> _bAccepting{ true };
 		};
 
-		vector<unique_ptr<Scene>> _listLoadedScenes;
+		vector<unique_ptr<Scene>> _listLoadedScene;
 		Scene*					  _pActiveScene;
 		IRHIDevice*				  _pRHIDevice;
 		FrameRenderer*			  _pFrameRenderer;

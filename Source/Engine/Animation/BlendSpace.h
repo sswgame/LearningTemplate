@@ -48,11 +48,11 @@ namespace sw
 		float4x4 evaluate( float32 parameter ) const;
 		void	 evaluateSkeleton( float32 parameter, Skeleton& inoutSkeleton ) const;
 
-		size_t getSampleCount() const { return _listSamples.size(); }
-		void   clear() { _listSamples.clear(); }
+		size_t getSampleCount() const { return _listSample.size(); }
+		void   clear() { _listSample.clear(); }
 
 	private:
-		vector<BlendSample1D> _listSamples;
+		vector<BlendSample1D> _listSample;
 	};
 
 	/**
@@ -71,10 +71,10 @@ namespace sw
 		void	 addSample( float32 paramX, float32 paramY, string_view clipName, const float4x4& pose );
 		float4x4 evaluate( float32 paramX, float32 paramY ) const;
 
-		size_t getSampleCount() const { return _listSamples.size(); }
-		void   clear() { _listSamples.clear(); }
+		size_t getSampleCount() const { return _listSample.size(); }
+		void   clear() { _listSample.clear(); }
 
 	private:
-		vector<BlendSample2D> _listSamples;
+		vector<BlendSample2D> _listSample;
 	};
 } // namespace sw

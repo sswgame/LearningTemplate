@@ -13,6 +13,8 @@
 
 namespace sw::editor
 {
+	SW_LOG_CALLER( "EditorData" );
+
 	namespace
 	{
 
@@ -69,14 +71,14 @@ namespace sw::editor
 		XmlDocument doc;
 		if ( doc.loadFile( absPath ) == false )
 		{
-			SW_LOG_WARNING( "[EditorData] Using built-in defaults; failed to read %#", absPath );
+			SW_LOG_WARNING( "Using built-in defaults; failed to read %#", absPath );
 			return false;
 		}
 
 		XmlNode root = doc.root( "EditorData" );
 		if ( root.isValid() == false )
 		{
-			SW_LOG_WARNING( "[EditorData] Missing <EditorData> in %# — using defaults.", absPath );
+			SW_LOG_WARNING( "Missing <EditorData> in %# — using defaults.", absPath );
 			return false;
 		}
 
@@ -97,7 +99,7 @@ namespace sw::editor
 		takeFontList( root, "baseFonts", _listBaseFonts );
 		takeFontList( root, "koreanFonts", _listKoreanFonts );
 
-		SW_LOG_INFO( "[EditorData] Loaded from %#", absPath );
+		SW_LOG_INFO( "Loaded from %#", absPath );
 		return true;
 	}
 } // namespace sw::editor

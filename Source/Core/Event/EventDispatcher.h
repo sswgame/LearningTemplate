@@ -56,8 +56,8 @@ namespace sw
 		{
 			std::scoped_lock<SpinLock>			  lock{ _busSpinLock };
 			std::pair<hashed_string, EventTypeId> key( token.channel, token.eventType );
-			auto								  iter = _mapChannelDelegates.find( key );
-			if ( iter != _mapChannelDelegates.end() )
+			auto								  iter = _mapChannelDelegate.find( key );
+			if ( iter != _mapChannelDelegate.end() )
 				std::static_pointer_cast<IMulticastDelegateBase>( iter->second )->remove( token.handle );
 		}
 
@@ -208,12 +208,12 @@ namespace sw
 			std::pair<hashed_string, EventTypeId> key( channel, T::kType );
 
 			std::scoped_lock<SpinLock>																		 lock{ _busSpinLock };
-			unordered_map<std::pair<hashed_string, EventTypeId>, shared_ptr<void>, HashPair>::const_iterator iter = _mapChannelDelegates.find( key );
-			if ( iter != _mapChannelDelegates.end() )
+			unordered_map<std::pair<hashed_string, EventTypeId>, shared_ptr<void>, HashPair>::const_iterator iter = _mapChannelDelegate.find( key );
+			if ( iter != _mapChannelDelegate.end() )
 				return std::static_pointer_cast<MulticastDelegate<void( const T& )>>( iter->second );
 
 			shared_ptr<MulticastDelegate<void( const T& )>> mcast = sw::make_shared<MulticastDelegate<void( const T& )>>();
-			_mapChannelDelegates[key]							  = mcast;
+			_mapChannelDelegate[key]							  = mcast;
 			_mapChannelDispatchTable[key]						  = ChannelDispatchEntry{ &broadcastTypedChannel<T>, mcast };
 			return mcast;
 		}
@@ -221,7 +221,7 @@ namespace sw
 	private:
 		mutable SpinLock																	 _busSpinLock;
 		mutable SpinLock																	 _queueSpinLock;
-		unordered_map<std::pair<hashed_string, EventTypeId>, shared_ptr<void>, HashPair>	 _mapChannelDelegates;
+		unordered_map<std::pair<hashed_string, EventTypeId>, shared_ptr<void>, HashPair>	 _mapChannelDelegate;
 		unordered_map<std::pair<hashed_string, EventTypeId>, ChannelDispatchEntry, HashPair> _mapChannelDispatchTable;
 		unordered_map<hashed_string, unique_ptr<ChannelEventList>>							 _mapChannelQueue;
 

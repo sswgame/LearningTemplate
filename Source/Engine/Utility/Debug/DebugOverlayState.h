@@ -17,8 +17,8 @@ namespace sw
 	 */
 	struct SW_API DebugOverlayState
 	{
-		unordered_map<hashed_string, float32> _mapFloats;
-		unordered_map<hashed_string, string>  _mapStrings;
+		unordered_map<hashed_string, float32> _mapFloat;
+		unordered_map<hashed_string, string>  _mapString;
 		uint8								  _bVisible : 1;
 		[[maybe_unused]] uint8				  _reserved : 7;
 

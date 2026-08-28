@@ -12,6 +12,8 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "Material" );
+
 	bool Material::loadFromFile( string_view assetRelativePath )
 	{
 		string absPath = ResourceUtil::getResourcePath( assetRelativePath );
@@ -32,7 +34,7 @@ namespace sw
 
 		if ( trimmed[0] != '<' )
 		{
-			SW_LOG_ERROR( "[Material] Expected XML material file: %#", absPath );
+			SW_LOG_ERROR( "Expected XML material file: %#", absPath );
 			return false;
 		}
 		return loadFromXml( text );
@@ -78,7 +80,7 @@ namespace sw
 
 		XmlNode props = root.appendChild( "_properties" );
 
-		for ( const MaterialProperty& prop : _data._listProperties )
+		for ( const MaterialProperty& prop : _data._listProperty )
 		{
 			XmlNode item = props.appendChild( "item" );
 
@@ -119,10 +121,10 @@ namespace sw
 			if ( prop._bAdvanced )
 				appendBoolAttr( item, "bAdvanced", true );
 
-			if ( prop._listEnumEntries.empty() == false )
+			if ( prop._listEnumEntry.empty() == false )
 			{
 				XmlNode list = item.appendChild( "_enumEntries" );
-				for ( const MaterialEnumEntry& enumEntry : prop._listEnumEntries )
+				for ( const MaterialEnumEntry& enumEntry : prop._listEnumEntry )
 				{
 					XmlNode eItem = list.appendChild( "item" );
 					appendAttr( eItem, "name", enumEntry._name );
@@ -163,7 +165,7 @@ namespace sw
 			{
 				MaterialProperty prop = parsePropertyNode( item );
 				if ( prop._name.empty() == false )
-					_desc._listProperties.push_back( std::move( prop ) );
+					_desc._listProperty.push_back( std::move( prop ) );
 			}
 		}
 
@@ -175,18 +177,18 @@ namespace sw
 
 	void Material::applyDescToRuntime()
 	{
-		_data._listProperties = _desc._listProperties;
-		_blendMode			  = parseBlendMode( _desc._blendMode );
+		_data._listProperty = _desc._listProperty;
+		_blendMode			= parseBlendMode( _desc._blendMode );
 		rebuildPackedBuffer();
 	}
 
 	void Material::syncDescFromRuntime() const
 	{
-		auto self					= const_cast<Material*>( this );
-		self->_desc._listProperties = _data._listProperties;
-		self->_desc._blendMode		= blendModeToString( _blendMode );
-		self->_desc._name			= _desc._name;
-		self->_desc._shaderPath		= _desc._shaderPath;
+		auto self				  = const_cast<Material*>( this );
+		self->_desc._listProperty = _data._listProperty;
+		self->_desc._blendMode	  = blendModeToString( _blendMode );
+		self->_desc._name		  = _desc._name;
+		self->_desc._shaderPath	  = _desc._shaderPath;
 	}
 
 } // namespace sw

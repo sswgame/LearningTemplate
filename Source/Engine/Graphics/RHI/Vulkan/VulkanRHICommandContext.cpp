@@ -8,6 +8,7 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "Vulkan" );
 
 	static void setVkClearColor( VkClearValue& dst, const float32* pClear )
 	{
@@ -28,7 +29,7 @@ namespace sw
 			case RHIBufferState::ShaderResource:
 				access = VK_ACCESS_SHADER_READ_BIT;
 				stage  = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT |
-						 VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+						VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
 				break;
 			case RHIBufferState::IndirectArgument:
 				access = VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
@@ -41,7 +42,7 @@ namespace sw
 			case RHIBufferState::VertexOrConstant:
 				access = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT | VK_ACCESS_UNIFORM_READ_BIT;
 				stage  = VK_PIPELINE_STAGE_VERTEX_INPUT_BIT | VK_PIPELINE_STAGE_VERTEX_SHADER_BIT |
-						 VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+						VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
 				break;
 			case RHIBufferState::Index:
 				access = VK_ACCESS_INDEX_READ_BIT;
@@ -69,7 +70,7 @@ namespace sw
 		VulkanRHIDevice::VulkanTextureRecord& record = *pResolved;
 		if ( record.framebuffer == VK_NULL_HANDLE || record.renderPass == VK_NULL_HANDLE )
 		{
-			SW_LOG_ERROR( "[Vulkan] beginOffscreenPass: texture has no framebuffer." );
+			SW_LOG_ERROR( "beginOffscreenPass: texture has no framebuffer." );
 			return;
 		}
 
@@ -128,9 +129,9 @@ namespace sw
 
 		if ( dst == 0 )
 		{
-			if ( _pDevice->_imageIndex >= _pDevice->_listSwapChainImages.size() )
+			if ( _pDevice->_imageIndex >= _pDevice->_listSwapChainImage.size() )
 				return;
-			dstImage = _pDevice->_listSwapChainImages[_pDevice->_imageIndex];
+			dstImage = _pDevice->_listSwapChainImage[_pDevice->_imageIndex];
 			_pDevice->transitionImageLayout( cmd, dstImage, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
 											 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 											 VK_IMAGE_ASPECT_COLOR_BIT );
@@ -184,10 +185,10 @@ namespace sw
 			return;
 
 		VkDescriptorSet descSet = VK_NULL_HANDLE;
-		if ( index < static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredTextures.size() ) &&
-			 _pDevice->_listRegisteredTextures[index] != VK_NULL_HANDLE &&
-			 _pDevice->_listRegisteredTextures[index] != _pDevice->_bindlessTextureSet )
-			descSet = _pDevice->_listRegisteredTextures[index];
+		if ( index < static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredTexture.size() ) &&
+			 _pDevice->_listRegisteredTexture[index] != VK_NULL_HANDLE &&
+			 _pDevice->_listRegisteredTexture[index] != _pDevice->_bindlessTextureSet )
+			descSet = _pDevice->_listRegisteredTexture[index];
 
 		if ( descSet != VK_NULL_HANDLE )
 		{
@@ -298,8 +299,8 @@ namespace sw
 				vkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_COMPUTE, pRecord->pipeline );
 
 			VkDescriptorSet set0 = _pDevice->_descriptorSet;
-			if ( set0 == VK_NULL_HANDLE && _pDevice->_listRegisteredDescriptorSets.empty() == false )
-				set0 = _pDevice->_listRegisteredDescriptorSets[0];
+			if ( set0 == VK_NULL_HANDLE && _pDevice->_listRegisteredDescriptorSet.empty() == false )
+				set0 = _pDevice->_listRegisteredDescriptorSet[0];
 			if ( set0 != VK_NULL_HANDLE && _pDevice->_pipelineLayout != VK_NULL_HANDLE )
 				vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _pDevice->_pipelineLayout, 0, 1, &set0, 0, nullptr );
 		}
@@ -422,9 +423,9 @@ namespace sw
 			}
 			else
 			{
-				if ( _pDevice->_renderPass == VK_NULL_HANDLE || _pDevice->_listSwapChainFramebuffers.empty() || _pDevice->_imageIndex >= _pDevice->_listSwapChainFramebuffers.size() )
+				if ( _pDevice->_renderPass == VK_NULL_HANDLE || _pDevice->_listSwapChainFramebuffer.empty() || _pDevice->_imageIndex >= _pDevice->_listSwapChainFramebuffer.size() )
 					return;
-				framebuffer = _pDevice->_listSwapChainFramebuffers[_pDevice->_imageIndex];
+				framebuffer = _pDevice->_listSwapChainFramebuffer[_pDevice->_imageIndex];
 				extent		= { _pDevice->_swapChainExtentWidth, _pDevice->_swapChainExtentHeight };
 			}
 
@@ -525,10 +526,10 @@ namespace sw
 		}
 
 		VkDescriptorSet descSet = VK_NULL_HANDLE;
-		if ( index < static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredUAVs.size() ) && _pDevice->_listRegisteredUAVs[index] != VK_NULL_HANDLE )
-			descSet = _pDevice->_listRegisteredUAVs[index];
-		else if ( index < static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredDescriptorSets.size() ) && _pDevice->_listRegisteredDescriptorSets[index] != VK_NULL_HANDLE )
-			descSet = _pDevice->_listRegisteredDescriptorSets[index];
+		if ( index < static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredUAV.size() ) && _pDevice->_listRegisteredUAV[index] != VK_NULL_HANDLE )
+			descSet = _pDevice->_listRegisteredUAV[index];
+		else if ( index < static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredDescriptorSet.size() ) && _pDevice->_listRegisteredDescriptorSet[index] != VK_NULL_HANDLE )
+			descSet = _pDevice->_listRegisteredDescriptorSet[index];
 
 		if ( descSet != VK_NULL_HANDLE )
 		{
@@ -575,11 +576,11 @@ namespace sw
 
 		const bool bValidMaterialDescriptor =
 			( materialDescriptorIndex != kInvalidDescriptorIndex &&
-			  materialDescriptorIndex < static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredDescriptorSets.size() ) &&
-			  _pDevice->_listRegisteredDescriptorSets[materialDescriptorIndex] != VK_NULL_HANDLE );
+			  materialDescriptorIndex < static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredDescriptorSet.size() ) &&
+			  _pDevice->_listRegisteredDescriptorSet[materialDescriptorIndex] != VK_NULL_HANDLE );
 		if ( bValidMaterialDescriptor )
 		{
-			const VkDescriptorSet descSet = _pDevice->_listRegisteredDescriptorSets[materialDescriptorIndex];
+			const VkDescriptorSet descSet = _pDevice->_listRegisteredDescriptorSet[materialDescriptorIndex];
 			vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pDevice->_pipelineLayout, 0, 1, &descSet, 0, nullptr );
 		}
 		else if ( _pDevice->_descriptorSet != VK_NULL_HANDLE )
@@ -682,12 +683,12 @@ namespace sw
 
 		const bool bValidMaterialDescriptor =
 			( materialDescriptorIndex != kInvalidDescriptorIndex &&
-			  materialDescriptorIndex < static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredDescriptorSets.size() ) &&
-			  _pDevice->_listRegisteredDescriptorSets[materialDescriptorIndex] != VK_NULL_HANDLE &&
+			  materialDescriptorIndex < static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredDescriptorSet.size() ) &&
+			  _pDevice->_listRegisteredDescriptorSet[materialDescriptorIndex] != VK_NULL_HANDLE &&
 			  _pDevice->_pipelineLayout != VK_NULL_HANDLE );
 		if ( bValidMaterialDescriptor )
 		{
-			const VkDescriptorSet descSet = _pDevice->_listRegisteredDescriptorSets[materialDescriptorIndex];
+			const VkDescriptorSet descSet = _pDevice->_listRegisteredDescriptorSet[materialDescriptorIndex];
 			vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pDevice->_pipelineLayout, 0, 1, &descSet, 0, nullptr );
 			uint32						 matIndex = materialDescriptorIndex;
 			constexpr VkShaderStageFlags kPushStages =

@@ -16,7 +16,7 @@ namespace sw
 	{
 		string				   _typeFqn; ///< 리플렉션 타입 FQN
 		string				   _methodName;
-		vector<uint8>		   _listArgBytes; ///< count + 인자별 (typeNameHash + size-prefixed binary)
+		vector<uint8>		   _listArgByte; ///< count + 인자별 (typeNameHash + size-prefixed binary)
 		uint32				   _typeFqnHash{ 0 };
 		uint32				   _methodHash{ 0 };
 		uint8				   _netRole	  : 3; ///< FunctionNetRole

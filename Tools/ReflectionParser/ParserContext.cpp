@@ -13,6 +13,7 @@
 
 #include <nlohmann/json.hpp>
 
+SW_LOG_CALLER( "ParserContext" );
 namespace sw
 {
 	namespace
@@ -299,7 +300,7 @@ namespace sw
 
 		if ( baseArgList.empty() )
 		{
-			SW_LOG_ERROR( "[ParserContext] No parser_args available (config empty)." );
+			SW_LOG_ERROR( "No parser_args available (config empty)." );
 			return false;
 		}
 
@@ -360,7 +361,7 @@ namespace sw
 #endif
 
 		bLoaded = true;
-		SW_LOG_INFO( "[ParserContext] Cached clang config (%# base args).", static_cast<uint32>( baseArgList.size() ) );
+		SW_LOG_TRACE( "Cached clang config (%# base args).", static_cast<uint32>( baseArgList.size() ) );
 		return true;
 	}
 
@@ -419,7 +420,7 @@ namespace sw
 
 		if ( _index == nullptr )
 		{
-			SW_LOG_ERROR( "[ParserContext] Failed to create CXIndex." );
+			SW_LOG_ERROR( "Failed to create CXIndex." );
 			return false;
 		}
 
@@ -469,7 +470,7 @@ namespace sw
 
 		if ( _translationUnit == nullptr )
 		{
-			SW_LOG_ERROR( "[ParserContext] clang_parseTranslationUnit failed for: %#", filePath );
+			SW_LOG_ERROR( "clang_parseTranslationUnit failed for: %#", filePath );
 			return false;
 		}
 
@@ -486,7 +487,7 @@ namespace sw
 				if ( sev >= CXDiagnostic_Error )
 				{
 					CXString msg = clang_formatDiagnostic( diag, clang_defaultDiagnosticDisplayOptions() );
-					SW_LOG_ERROR( "[ParserContext] %#", clang_getCString( msg ) );
+					SW_LOG_ERROR( "%#", clang_getCString( msg ) );
 					clang_disposeString( msg );
 					bHasError = true;
 				}
@@ -497,7 +498,7 @@ namespace sw
 
 		if ( bHasError )
 		{
-			SW_LOG_ERROR( "[ParserContext] Parsing failed with errors. Check include paths with --include." );
+			SW_LOG_ERROR( "Parsing failed with errors. Check include paths with --include." );
 			return false;
 		}
 

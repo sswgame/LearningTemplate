@@ -12,6 +12,8 @@
 
 namespace sw::editor
 {
+	SW_LOG_CALLER( "Editor" );
+
 	namespace
 	{
 		EditorConfig s_activeEditorConfig{};
@@ -35,19 +37,19 @@ namespace sw::editor
 		const string	projectRoot = EditorUtil::getProjectRootPath();
 		string			configPath	= FileUtil::normalizeSeparators( config::kFileRuntimeEditorConfig );
 		const bool		bAbsolute	= ( configPath.size() >= 2 && configPath[1] == ':' ) ||
-									  ( configPath.empty() == false && ( configPath[0] == '/' || configPath[0] == '\\' ) );
+							   ( configPath.empty() == false && ( configPath[0] == '/' || configPath[0] == '\\' ) );
 		if ( projectRoot.empty() == false && bAbsolute == false )
 			configPath = FileUtil::joinPath( projectRoot, configPath );
 
 		if ( pTypeInfo != nullptr && FileUtil::readTextFile( configPath.c_str(), jsonStr ) )
 		{
 			if ( JsonSerializer::deserialize( &cfg, *pTypeInfo, jsonStr ) )
-				SW_LOG_INFO( "[Editor] EditorConfig source=file (%#)", configPath.c_str() );
+				SW_LOG_TRACE( "EditorConfig source=file (%#)", configPath.c_str() );
 			else
-				SW_LOG_WARNING( "[Editor] EditorConfig deserialize failed — cpp defaults" );
+				SW_LOG_WARNING( "EditorConfig deserialize failed — cpp defaults" );
 		}
 		else
-			SW_LOG_WARNING( "[Editor] EditorConfig missing or reflection unavailable — cpp defaults" );
+			SW_LOG_WARNING( "EditorConfig missing or reflection unavailable — cpp defaults" );
 
 		setActive( cfg );
 	}

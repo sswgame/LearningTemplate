@@ -2,12 +2,12 @@
 
 #include "Editor/Panels/Inspector/InspectorPropertyManager.h"
 
+#include "Core/Concurrency/Atomic.h"
+
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Panels/Inspector/IInspectorProperty.h"
 #include "Editor/Panels/Inspector/InspectorPropertyUndo.h"
-
-#include "Core/Concurrency/Atomic.h"
 
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionCore.h"
@@ -401,13 +401,13 @@ namespace sw::editor
 
 	void InspectorPropertyManager::registerType( string_view typeName, unique_ptr<IInspectorProperty> pProperty )
 	{
-		_mapProperties[string{ typeName }] = std::move( pProperty );
+		_mapProperty[string{ typeName }] = std::move( pProperty );
 	}
 
 	IInspectorProperty* InspectorPropertyManager::find( string_view typeName ) const
 	{
-		const auto it = _mapProperties.find( string{ typeName } );
-		if ( it != _mapProperties.end() )
+		const auto it = _mapProperty.find( string{ typeName } );
+		if ( it != _mapProperty.end() )
 			return it->second.get();
 		return nullptr;
 	}

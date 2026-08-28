@@ -9,6 +9,8 @@
 
 namespace sw
 {
+	SW_LOG_CALLER( "OpenGLRHIResource" );
+
 	static GLenum toGlInternalFormat( RHIFormat format )
 	{
 		switch ( format )
@@ -90,7 +92,7 @@ namespace sw
 
 		auto fillDefines = [&]( ShaderCompileDesc& cd )
 		{
-			for ( const string& def : desc._listShaderDefines )
+			for ( const string& def : desc._listShaderDefine )
 			{
 				ShaderMacroDefine m{};
 				const size_t	  eq = def.find( '=' );
@@ -104,7 +106,7 @@ namespace sw
 					m._name	 = def.substr( 0, eq );
 					m._value = def.substr( eq + 1 );
 				}
-				cd._listDefines.push_back( std::move( m ) );
+				cd._listDefine.push_back( std::move( m ) );
 			}
 		};
 
@@ -134,7 +136,7 @@ namespace sw
 		{
 			if ( glad_glShaderBinary == nullptr || glad_glSpecializeShader == nullptr )
 			{
-				SW_LOG_ERROR( "[OpenGL] GL_ARB_gl_spirv unavailable (glShaderBinary/glSpecializeShader null)" );
+				SW_LOG_ERROR( "GL_ARB_gl_spirv unavailable (glShaderBinary/glSpecializeShader null)" );
 				return 0;
 			}
 
@@ -172,7 +174,7 @@ namespace sw
 				{
 					GLchar infoLog[constant::kMaxBuffer1024];
 					glGetProgramInfoLog( program, sizeof( infoLog ), nullptr, infoLog );
-					SW_LOG_ERROR( "[OpenGL] Graphics program link failed (%# / %#): %#",
+					SW_LOG_ERROR( "Graphics program link failed (%# / %#): %#",
 								  desc._vertexShaderPath, desc._pixelShaderPath, infoLog );
 					glDeleteProgram( program );
 				}
@@ -183,12 +185,12 @@ namespace sw
 				if ( vsCompiled != GL_TRUE )
 				{
 					glGetShaderInfoLog( vs, sizeof( infoLog ), nullptr, infoLog );
-					SW_LOG_ERROR( "[OpenGL] VS specialize failed (%#): %#", desc._vertexShaderPath, infoLog );
+					SW_LOG_ERROR( "VS specialize failed (%#): %#", desc._vertexShaderPath, infoLog );
 				}
 				if ( bHasPixelShader && psCompiled != GL_TRUE )
 				{
 					glGetShaderInfoLog( ps, sizeof( infoLog ), nullptr, infoLog );
-					SW_LOG_ERROR( "[OpenGL] PS specialize failed (%#): %#", desc._pixelShaderPath, infoLog );
+					SW_LOG_ERROR( "PS specialize failed (%#): %#", desc._pixelShaderPath, infoLog );
 				}
 			}
 			glDeleteShader( vs );
@@ -229,7 +231,7 @@ namespace sw
 		{
 			if ( glad_glShaderBinary == nullptr || glad_glSpecializeShader == nullptr )
 			{
-				SW_LOG_ERROR( "[OpenGL] GL_ARB_gl_spirv unavailable for compute PSO" );
+				SW_LOG_ERROR( "GL_ARB_gl_spirv unavailable for compute PSO" );
 				return 0;
 			}
 
@@ -255,7 +257,7 @@ namespace sw
 				{
 					GLchar infoLog[constant::kMaxBuffer1024];
 					glGetProgramInfoLog( program, sizeof( infoLog ), nullptr, infoLog );
-					SW_LOG_ERROR( "[OpenGLRHIDevice] Compute shader program link failed: %#", infoLog );
+					SW_LOG_ERROR( "Compute shader program link failed: %#", infoLog );
 					glDeleteProgram( program );
 				}
 			}
@@ -263,7 +265,7 @@ namespace sw
 			{
 				GLchar infoLog[constant::kMaxBuffer1024];
 				glGetShaderInfoLog( cs, sizeof( infoLog ), nullptr, infoLog );
-				SW_LOG_ERROR( "[OpenGLRHIDevice] Compute shader specialize/compile failed: %#", infoLog );
+				SW_LOG_ERROR( "Compute shader specialize/compile failed: %#", infoLog );
 			}
 			glDeleteShader( cs );
 		}
@@ -312,16 +314,16 @@ namespace sw
 		record.desc		= desc;
 		record._bAlive	= 1;
 		record.reserved = 0;
-		_pDevice->_listRenderPasses.push_back( record );
-		return _pDevice->_listRenderPasses.size();
+		_pDevice->_listRenderPass.push_back( record );
+		return _pDevice->_listRenderPass.size();
 	}
 
 	void OpenGLRHIResource::destroyRenderPass( RHIRenderPassHandle pass )
 	{
-		if ( pass == 0 || pass > _pDevice->_listRenderPasses.size() )
+		if ( pass == 0 || pass > _pDevice->_listRenderPass.size() )
 			return;
-		_pDevice->_listRenderPasses[pass - 1]._bAlive = 0;
-		_pDevice->_listRenderPasses[pass - 1].desc	  = RHIRenderPassDesc{};
+		_pDevice->_listRenderPass[pass - 1]._bAlive = 0;
+		_pDevice->_listRenderPass[pass - 1].desc	= RHIRenderPassDesc{};
 	}
 
 	RHIBufferHandle OpenGLRHIResource::createConstantBuffer( uint32 size )
@@ -455,7 +457,7 @@ namespace sw
 				continue;
 			rec.buffer = 0;
 		}
-		for ( OpenGLRHIDevice::BindlessResourceRecord& rec : _pDevice->_listRegisteredUAVs )
+		for ( OpenGLRHIDevice::BindlessResourceRecord& rec : _pDevice->_listRegisteredUAV )
 		{
 			if ( rec.buffer != buffer )
 				continue;
@@ -545,7 +547,7 @@ namespace sw
 			glBindFramebuffer( GL_FRAMEBUFFER, 0 );
 			if ( status != GL_FRAMEBUFFER_COMPLETE )
 			{
-				SW_LOG_WARNING( "[OpenGL] createTexture2D FBO incomplete (status=%#) — texture kept without FBO.",
+				SW_LOG_WARNING( "createTexture2D FBO incomplete (status=%#) — texture kept without FBO.",
 								static_cast<uint32>( status ) );
 				glDeleteFramebuffers( 1, &fbo );
 			}
@@ -566,7 +568,7 @@ namespace sw
 		if ( _pDevice->_gpuTextures.take( texture, owned ) == false )
 			return;
 
-		for ( auto compIt = _pDevice->_mapCompositeFbos.begin(); compIt != _pDevice->_mapCompositeFbos.end(); )
+		for ( auto compIt = _pDevice->_mapCompositeFbo.begin(); compIt != _pDevice->_mapCompositeFbo.end(); )
 		{
 			bool bUsesTexture = ( compIt->first._depth == texture );
 			for ( uint32 colorIndex = 0; colorIndex < compIt->first._colorCount && bUsesTexture == false; ++colorIndex )
@@ -579,7 +581,7 @@ namespace sw
 				GLuint fbo = compIt->second;
 				if ( fbo != 0 )
 					glDeleteFramebuffers( 1, &fbo );
-				compIt = _pDevice->_mapCompositeFbos.erase( compIt );
+				compIt = _pDevice->_mapCompositeFbo.erase( compIt );
 			}
 			else
 				++compIt;
@@ -588,11 +590,11 @@ namespace sw
 		const GLuint fboName = owned.fbo;
 		const GLuint texName = owned.texture;
 
-		for ( size_t textureIndex = 0; textureIndex < _pDevice->_listRegisteredTextures.size(); ++textureIndex )
+		for ( size_t textureIndex = 0; textureIndex < _pDevice->_listRegisteredTexture.size(); ++textureIndex )
 		{
-			if ( _pDevice->_listRegisteredTextures[textureIndex].texture != texture )
+			if ( _pDevice->_listRegisteredTexture[textureIndex].texture != texture )
 				continue;
-			_pDevice->_listRegisteredTextures[textureIndex].texture = 0;
+			_pDevice->_listRegisteredTexture[textureIndex].texture = 0;
 			_pDevice->_listTextureFree.push_back( static_cast<uint32>( textureIndex ) );
 		}
 
@@ -628,12 +630,12 @@ namespace sw
 			_pDevice->_listTextureFree.pop_back();
 		}
 		else
-			index = static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredTextures.size() );
+			index = static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredTexture.size() );
 
-		if ( index >= _pDevice->_listRegisteredTextures.size() )
-			_pDevice->_listRegisteredTextures.resize( index + 1 );
+		if ( index >= _pDevice->_listRegisteredTexture.size() )
+			_pDevice->_listRegisteredTexture.resize( index + 1 );
 
-		_pDevice->_listRegisteredTextures[index].texture = texture;
+		_pDevice->_listRegisteredTexture[index].texture = texture;
 		return index;
 	}
 
@@ -684,19 +686,19 @@ namespace sw
 			_pDevice->_listUavFree.pop_back();
 		}
 		else
-			index = static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredUAVs.size() );
+			index = static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredUAV.size() );
 
-		if ( index >= _pDevice->_listRegisteredUAVs.size() )
-			_pDevice->_listRegisteredUAVs.resize( index + 1 );
-		_pDevice->_listRegisteredUAVs[index].buffer = buffer;
+		if ( index >= _pDevice->_listRegisteredUAV.size() )
+			_pDevice->_listRegisteredUAV.resize( index + 1 );
+		_pDevice->_listRegisteredUAV[index].buffer = buffer;
 		return index;
 	}
 
 	void OpenGLRHIResource::unregisterBindlessUAV( RHIDescriptorIndex index )
 	{
-		if ( index < _pDevice->_listRegisteredUAVs.size() )
+		if ( index < _pDevice->_listRegisteredUAV.size() )
 		{
-			_pDevice->_listRegisteredUAVs[index].buffer = 0;
+			_pDevice->_listRegisteredUAV[index].buffer = 0;
 			_pDevice->_listUavFree.push_back( index );
 		}
 	}

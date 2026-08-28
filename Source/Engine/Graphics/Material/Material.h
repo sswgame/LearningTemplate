@@ -100,7 +100,7 @@ namespace sw
 		/** @brief permutation 디스크립터를 반환합니다. */
 		MaterialPermutationDesc& getPermutations() { return _desc._permutations; }
 		/** @brief 프로퍼티 목록을 반환합니다. */
-		const vector<MaterialProperty>& getProperties() const { return _data._listProperties; }
+		const vector<MaterialProperty>& getProperties() const { return _data._listProperty; }
 		/** @brief 패킹된 상수 버퍼를 반환합니다. */
 		const vector<uint8>& getBuffer() const { return _data._listBuffer; }
 		/** @brief 이름 프로퍼티를 찾습니다. */
@@ -153,7 +153,7 @@ namespace sw
 		RHIBlendMode			   _blendMode;
 		shared_ptr<AsyncLoadState> _asyncLoadState;
 
-		mutable vector<string> _listCachedDefines;
+		mutable vector<string> _listCachedDefine;
 		mutable uint64		   _cachedPermutationHash;
 		mutable uint8		   _bDefinesDirty : 1;
 	};
@@ -251,12 +251,12 @@ namespace sw
 		Material*			 _pParentMaterial;
 		MaterialInstanceDesc _desc;
 
-		vector<std::pair<hashed_string, string>>			 _listValueOverrides;
-		vector<std::pair<hashed_string, float32>>			 _listScalarOverrides;
-		vector<std::pair<hashed_string, array<float32, 4>>>	 _listVectorOverrides;
-		vector<std::pair<hashed_string, RHIDescriptorIndex>> _listTextureOverrides;
-		vector<std::pair<hashed_string, bool>>				 _listKeywordOverrides;
-		vector<std::pair<hashed_string, string>>			 _listMultiCompileOverrides;
+		vector<std::pair<hashed_string, string>>			 _listValueOverride;
+		vector<std::pair<hashed_string, float32>>			 _listScalarOverride;
+		vector<std::pair<hashed_string, array<float32, 4>>>	 _listVectorOverride;
+		vector<std::pair<hashed_string, RHIDescriptorIndex>> _listTextureOverride;
+		vector<std::pair<hashed_string, bool>>				 _listKeywordOverride;
+		vector<std::pair<hashed_string, string>>			 _listMultiCompileOverride;
 		MaterialQualityLevel								 _qualityOverride;
 
 		vector<uint8>	   _listBuffer;
@@ -264,7 +264,7 @@ namespace sw
 		RHIDescriptorIndex _descriptorIndex;
 		IRHIDevice*		   _pRHIDevice;
 
-		mutable vector<string> _listCachedDefines;
+		mutable vector<string> _listCachedDefine;
 		mutable uint64		   _cachedPermutationHash;
 		mutable uint64		   _parentPermutationHash;
 		mutable uint8		   _bDefinesDirty : 1;

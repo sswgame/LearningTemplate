@@ -52,8 +52,8 @@ namespace sw::editor
 	// ------------------------------------------------------------------------------
 	CommandPalettePopup::CommandPalettePopup()
 		: IEditorPopup{ false }
-		, _listStaticCommands{}
-		, _listAllCommands{}
+		, _listStaticCommand{}
+		, _listAllCommand{}
 		, _selectedIndex{ 0 }
 		, _bJustOpened{ false }
 	{
@@ -101,7 +101,7 @@ namespace sw::editor
 		entry._label	= string{ label };
 		entry._detail	= string{ detail };
 		entry._action	= std::move( action );
-		_listStaticCommands.push_back( std::move( entry ) );
+		_listStaticCommand.push_back( std::move( entry ) );
 	}
 
 	void CommandPalettePopup::onOpen()
@@ -114,7 +114,7 @@ namespace sw::editor
 
 	void CommandPalettePopup::rebuildDynamicEntries()
 	{
-		_listAllCommands = _listStaticCommands;
+		_listAllCommand = _listStaticCommand;
 
 		// 1) 등록된 모든 에디터 패널 토글 커맨드
 		for ( const EditorPanelEntry& win : EditorContext::get()->getPanelManager().getPanels() )
@@ -126,7 +126,7 @@ namespace sw::editor
 			entry._detail	= "Editor Panel";
 			entry._action	= [winTitle]()
 			{ EditorContext::get()->getPanelManager().setPanelOpen( winTitle.c_str(), true ); };
-			_listAllCommands.push_back( std::move( entry ) );
+			_listAllCommand.push_back( std::move( entry ) );
 		}
 
 		// 2) 씬 내 게임오브젝트 검색 커맨드
@@ -158,7 +158,7 @@ namespace sw::editor
 								EditorContext::get()->getSelectionManager().selectObject( GameObjectPtr{ pFound }, SelectionMode::Replace );
 						}
 					};
-					_listAllCommands.push_back( std::move( entry ) );
+					_listAllCommand.push_back( std::move( entry ) );
 				}
 			}
 		}
@@ -210,7 +210,7 @@ namespace sw::editor
 			// 필터링된 커맨드 목록 수집
 			vector<const CommandPaletteEntry*> listFiltered;
 			const string_view				   pattern{ _arrSearchBuffer };
-			for ( const CommandPaletteEntry& entry : _listAllCommands )
+			for ( const CommandPaletteEntry& entry : _listAllCommand )
 			{
 				if ( fuzzyMatch( entry._label, pattern ) || fuzzyMatch( entry._category, pattern ) ||
 					 fuzzyMatch( entry._detail, pattern ) )

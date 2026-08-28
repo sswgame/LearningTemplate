@@ -30,6 +30,8 @@ typedef GLXContext ( *PFNGLXCREATECONTEXTATTRIBSARBPROC )( Display*, GLXFBConfig
 
 namespace sw
 {
+	SW_LOG_CALLER( "OpenGL" );
+
 	namespace
 	{
 
@@ -134,16 +136,16 @@ namespace sw
 		, _boundIndexOffset{ 0 }
 		, _listRegisteredBindlessVector{}
 		, _listBindlessFree{}
-		, _listRegisteredUAVs{}
+		, _listRegisteredUAV{}
 		, _listUavFree{}
 		, _gpuTextures{}
-		, _mapCompositeFbos{}
-		, _listRegisteredTextures{}
+		, _mapCompositeFbo{}
+		, _listRegisteredTexture{}
 		, _listTextureFree{}
 		, _computeRootConstantUbo{ 0 }
 		, _arrComputeRootConstantShadow{}
 		, _pipelineStates{}
-		, _listRenderPasses{}
+		, _listRenderPass{}
 		, _releaseQueue{ 3 }
 		, _boundGraphicsPso{ 0 }
 		, _lastVsync{ -1 }
@@ -206,13 +208,13 @@ namespace sw
 			pixelFormat = ChoosePixelFormat( hDC, &pfd );
 			if ( pixelFormat == 0 )
 			{
-				SW_LOG_ERROR( "[OpenGL] ChoosePixelFormat failed (err=%#)", static_cast<uint32>( GetLastError() ) );
+				SW_LOG_ERROR( "ChoosePixelFormat failed (err=%#)", static_cast<uint32>( GetLastError() ) );
 				ReleaseDC( hWnd, hDC );
 				return false;
 			}
 			if ( SetPixelFormat( hDC, pixelFormat, &pfd ) == FALSE )
 			{
-				SW_LOG_ERROR( "[OpenGL] SetPixelFormat failed (err=%#)", static_cast<uint32>( GetLastError() ) );
+				SW_LOG_ERROR( "SetPixelFormat failed (err=%#)", static_cast<uint32>( GetLastError() ) );
 				ReleaseDC( hWnd, hDC );
 				return false;
 			}
@@ -221,7 +223,7 @@ namespace sw
 		HGLRC dummyContext = wglCreateContext( hDC );
 		if ( dummyContext == nullptr || wglMakeCurrent( hDC, dummyContext ) == FALSE )
 		{
-			SW_LOG_ERROR( "[OpenGL] wglCreateContext/MakeCurrent failed (err=%#)", static_cast<uint32>( GetLastError() ) );
+			SW_LOG_ERROR( "wglCreateContext/MakeCurrent failed (err=%#)", static_cast<uint32>( GetLastError() ) );
 			if ( dummyContext )
 				wglDeleteContext( dummyContext );
 			ReleaseDC( hWnd, hDC );
@@ -249,7 +251,7 @@ namespace sw
 				hRC = wglCreateContextAttribsARB( hDC, nullptr, arrAttribs );
 				if ( hRC != nullptr )
 				{
-					SW_LOG_INFO( "[OpenGL] WGL core context %#.%# created", ver[0], ver[1] );
+					SW_LOG_TRACE( "WGL core context %#.%# created", ver[0], ver[1] );
 					break;
 				}
 			}
@@ -262,7 +264,7 @@ namespace sw
 			}
 			else
 			{
-				SW_LOG_ERROR( "[OpenGL] Failed to create WGL core context" );
+				SW_LOG_ERROR( "Failed to create WGL core context" );
 				ReleaseDC( hWnd, hDC );
 				return false;
 			}
@@ -277,7 +279,7 @@ namespace sw
 		XWindowAttributes wa{};
 		if ( XGetWindowAttributes( pDpy, win, &wa ) == 0 || wa.visual == nullptr )
 		{
-			SW_LOG_ERROR( "[OpenGL] XGetWindowAttributes failed" );
+			SW_LOG_ERROR( "XGetWindowAttributes failed" );
 			return false;
 		}
 		const VisualID windowVisualId = XVisualIDFromVisual( wa.visual );
@@ -286,7 +288,7 @@ namespace sw
 		GLXFBConfig* pFbcAll = glXGetFBConfigs( pDpy, DefaultScreen( pDpy ), &fbcount );
 		if ( pFbcAll == nullptr || fbcount <= 0 )
 		{
-			SW_LOG_ERROR( "[OpenGL] glXGetFBConfigs failed" );
+			SW_LOG_ERROR( "glXGetFBConfigs failed" );
 			return false;
 		}
 
@@ -342,7 +344,7 @@ namespace sw
 					ctx = glXCreateContextAttribsARB( pDpy, chosen, nullptr, 1, arrContextAttribs );
 					if ( ctx != nullptr && trap.failed() == false )
 					{
-						SW_LOG_INFO( "[OpenGL] GLX core context %#.%#", ver[0], ver[1] );
+						SW_LOG_TRACE( "GLX core context %#.%#", ver[0], ver[1] );
 						break;
 					}
 					if ( ctx != nullptr )
@@ -370,12 +372,12 @@ namespace sw
 
 		if ( ctx == nullptr )
 		{
-			SW_LOG_ERROR( "[OpenGL] Failed to create GLX context (WSLg often lacks GL 4.x — use -vulkan)" );
+			SW_LOG_ERROR( "Failed to create GLX context (WSLg often lacks GL 4.x — use -vulkan)" );
 			return false;
 		}
 		if ( glXMakeCurrent( pDpy, win, ctx ) == 0 )
 		{
-			SW_LOG_ERROR( "[OpenGL] glXMakeCurrent failed" );
+			SW_LOG_ERROR( "glXMakeCurrent failed" );
 			glXDestroyContext( pDpy, ctx );
 			return false;
 		}
@@ -414,7 +416,7 @@ namespace sw
 			{
 				// UPPER_LEFT + ZERO_TO_ONE = Direct3D clip/NDC (Y-up, top-left origin, Z in [0,1]).
 				glClipControl( GL_UPPER_LEFT, GL_ZERO_TO_ONE );
-				SW_LOG_INFO( "OpenGL glClipControl: GL_UPPER_LEFT, GL_ZERO_TO_ONE (match DirectX NDC / top-left UV)" );
+				SW_LOG_TRACE( "OpenGL glClipControl: GL_UPPER_LEFT, GL_ZERO_TO_ONE (match DirectX NDC / top-left UV)" );
 			}
 #endif
 		}
@@ -548,8 +550,8 @@ namespace sw
 		_boundIndexStride = 4;
 		_boundIndexOffset = 0;
 		_listRegisteredBindlessVector.clear();
-		_listRegisteredUAVs.clear();
-		_listRegisteredTextures.clear();
+		_listRegisteredUAV.clear();
+		_listRegisteredTexture.clear();
 		_listTextureFree.clear();
 		_listBindlessFree.clear();
 		_listUavFree.clear();
@@ -564,7 +566,7 @@ namespace sw
 			}
 		} );
 		_pipelineStates.clear();
-		_listRenderPasses.clear();
+		_listRenderPass.clear();
 
 		_gpuBuffers.forEach( []( uint32& glBuf )
 		{
@@ -591,7 +593,7 @@ namespace sw
 		} );
 		_gpuTextures.clear();
 
-		for ( auto& [key, fbo] : _mapCompositeFbos )
+		for ( auto& [key, fbo] : _mapCompositeFbo )
 		{
 			if ( fbo != 0 )
 			{
@@ -599,7 +601,7 @@ namespace sw
 				glDeleteFramebuffers( 1, &glFbo );
 			}
 		}
-		_mapCompositeFbos.clear();
+		_mapCompositeFbo.clear();
 
 		if ( _vao != 0 )
 		{
@@ -664,7 +666,7 @@ namespace sw
 		_width	= width;
 		_height = height;
 		glViewport( 0, 0, static_cast<GLsizei>( width ), static_cast<GLsizei>( height ) );
-		SW_LOG_INFO( "OpenGL RHI Resized to %# x %#", width, height );
+		SW_LOG_TRACE( "OpenGL RHI Resized to %# x %#", width, height );
 	}
 
 	void OpenGLRHIDevice::beginFrame( float32 arrClearColor[4] )
@@ -736,14 +738,14 @@ namespace sw
 		{
 			if ( _bInitialized == false )
 				return false;
-			SW_LOG_ERROR( "[OpenGL] bindGraphicsContext wglMakeCurrent failed (err=%#)",
+			SW_LOG_ERROR( "bindGraphicsContext wglMakeCurrent failed (err=%#)",
 						  static_cast<uint32>( GetLastError() ) );
 			return false;
 		}
 #elif defined( SW_PLATFORM_LINUX )
 		if ( glXMakeCurrent( (Display*)_pHDC, (Window)(uintptr_t)_pHWnd, (GLXContext)_pHRC ) == 0 )
 		{
-			SW_LOG_ERROR( "[OpenGL] bindGraphicsContext glXMakeCurrent failed" );
+			SW_LOG_ERROR( "bindGraphicsContext glXMakeCurrent failed" );
 			return false;
 		}
 #elif defined( SW_PLATFORM_MACOS )
@@ -904,8 +906,8 @@ namespace sw
 		}
 		key._depth = depth;
 
-		auto existing = _mapCompositeFbos.find( key );
-		if ( existing != _mapCompositeFbos.end() )
+		auto existing = _mapCompositeFbo.find( key );
+		if ( existing != _mapCompositeFbo.end() )
 			return existing->second;
 
 		GLuint colorTexs[kMaxColorAttachments]{};
@@ -961,11 +963,11 @@ namespace sw
 		glBindFramebuffer( GL_FRAMEBUFFER, 0 );
 		if ( status != GL_FRAMEBUFFER_COMPLETE )
 		{
-			SW_LOG_WARNING( "[OpenGL] Composite FBO incomplete (status=%#).", static_cast<uint32>( status ) );
+			SW_LOG_WARNING( "Composite FBO incomplete (status=%#).", static_cast<uint32>( status ) );
 			glDeleteFramebuffers( 1, &fbo );
 			return 0;
 		}
-		_mapCompositeFbos.emplace( key, fbo );
+		_mapCompositeFbo.emplace( key, fbo );
 		return fbo;
 	}
 

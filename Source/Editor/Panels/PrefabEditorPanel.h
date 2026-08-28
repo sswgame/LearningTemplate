@@ -39,8 +39,8 @@ namespace sw::editor
 
 		string					   _selectedPrefabPath;
 		string					   _selectedInstanceName;
-		vector<PrefabOverrideItem> _listOverrides;
-		vector<string>			   _listNestedPrefabs;
+		vector<PrefabOverrideItem> _listOverride;
+		vector<string>			   _listNestedPrefab;
 		bool					   _bShowOnlyModified;
 	};
 } // namespace sw::editor
