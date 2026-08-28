@@ -3,22 +3,12 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
+#include "Editor/Common/Commands/EditorToolAssetCommands.h"
 #include "Editor/Common/Gui/IEditorPanel.h"
 #include "Editor/Common/Widgets/EditorNodeGraph.h"
 
 namespace sw::editor
 {
-	/** @brief 대화 노드 타입 */
-	enum class DialogueNodeType : uint8
-	{
-		Start = 0,
-		Dialogue,
-		Choice,
-		Branch,
-		Action,
-		End
-	};
-
 	/** @brief imgui-node-editor 기반 비주얼 대화/퀘스트 노드 그래프 에디터 */
 	class DialogueGraphPanel : public IEditorPanel
 	{
@@ -40,33 +30,11 @@ namespace sw::editor
 		const utf8* getPanelTitle() const override { return "Dialogue Graph"; }
 
 	private:
-		// ------------------------------------------------------------------------------
-		// 2) 노드/링크 데이터 구조체
-		// ------------------------------------------------------------------------------
-		/** @brief 대화 그래프 노드 */
-		struct DialogueNode
-		{
-			int32			 _id{ 0 };
-			DialogueNodeType _type{ DialogueNodeType::Dialogue };
-			string			 _speaker;
-			string			 _text;
-			string			 _condition;
-			string			 _actionCommand;
-			vector<string>	 _listChoice;
-			float32			 _x{ 40.0f };
-			float32			 _y{ 40.0f };
-		};
-
-		/** @brief 핀 간의 연결 링크 */
-		struct DialogueLink
-		{
-			int32 _id{ 0 };
-			int32 _fromPin{ 0 };
-			int32 _toPin{ 0 };
-		};
+		using DialogueNode = EditorDialogueNode;
+		using DialogueLink = EditorDialogueLink;
 
 		// ------------------------------------------------------------------------------
-		// 3) 내부 처리 함수
+		// 2) 내부 처리 함수
 		// ------------------------------------------------------------------------------
 		/** @brief 기본 샘플 노드들을 구성합니다. */
 		void ensureDefaults();

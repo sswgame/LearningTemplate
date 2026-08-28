@@ -132,4 +132,63 @@ namespace sw::editor
 		uint8							 _bReady   : 1;
 		[[maybe_unused]] uint8			 _reserved : 6;
 	};
+
+	/**
+	 * @class EditorFolderListingJob
+	 * @brief Content Browser 폴더 직속 항목을 워커에서 모읍니다.
+	 */
+	class EditorFolderListingJob
+	{
+	public:
+		/** @brief 빈 잡을 만듭니다. */
+		EditorFolderListingJob();
+
+		/** @brief 워커에 폴더 목록 스캔을 요청합니다. */
+		void request( string_view folderAbs );
+		/** @brief 완료된 항목을 가져옵니다. */
+		bool take( vector<EditorFolderListingEntry>& outList );
+		/** @brief 워커가 아직 돌고 있으면 true입니다. */
+		bool isPending() const;
+
+	private:
+		static void runJob( const TaskArgs& args );
+
+	private:
+		mutable mutex					 _mutex;
+		string							 _folder;
+		vector<EditorFolderListingEntry> _listResult;
+		uint32							 _generation;
+		uint8							 _bPending : 1;
+		uint8							 _bReady   : 1;
+		[[maybe_unused]] uint8			 _reserved : 6;
+	};
+
+	/**
+	 * @class EditorResourceCatalogJob
+	 * @brief 프로파일러 리소스 카탈로그 개수를 워커에서 셉니다.
+	 */
+	class EditorResourceCatalogJob
+	{
+	public:
+		/** @brief 빈 잡을 만듭니다. */
+		EditorResourceCatalogJob();
+
+		/** @brief 워커에 카탈로그 스캔을 요청합니다. */
+		void request();
+		/** @brief 완료된 개수를 가져옵니다. */
+		bool take( EditorResourceCatalogCounts& outCounts );
+		/** @brief 워커가 아직 돌고 있으면 true입니다. */
+		bool isPending() const;
+
+	private:
+		static void runJob( const TaskArgs& args );
+
+	private:
+		mutable mutex				_mutex;
+		EditorResourceCatalogCounts _counts;
+		uint32						_generation;
+		uint8						_bPending : 1;
+		uint8						_bReady	  : 1;
+		[[maybe_unused]] uint8		_reserved : 6;
+	};
 } // namespace sw::editor

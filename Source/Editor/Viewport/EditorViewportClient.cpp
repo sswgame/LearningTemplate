@@ -8,9 +8,9 @@
 #include "Core/Memory/Memory.h"
 
 #include "Editor/Common/Commands/EditorAssetCommands.h"
+#include "Editor/Common/Commands/EditorSceneCommands.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/SelectionManager.h"
 #include "Editor/Viewport/EditorViewportToolbar.h"
@@ -762,7 +762,7 @@ namespace sw::editor
 
 		const bool bUseSnap = ( arrSnap[0] > 0.0f );
 		if ( _bGizmoTracking == SW_FALSE && ImGuizmo::IsOver() && ImGui::IsMouseClicked( ImGuiMouseButton_Left ) )
-			_gizmoUndoBeforeXml = EditorTransaction::captureSnapshot( pObj );
+			_gizmoUndoBeforeXml = EditorSceneCommands::captureSnapshot( pRaw );
 
 		if ( ImGuizmo::Manipulate( pView, pProj, op, mode, arrMatrix, nullptr, bUseSnap ? arrSnap : nullptr ) )
 		{
@@ -782,79 +782,14 @@ namespace sw::editor
 			ImGuizmo::DecomposeMatrixToComponents( arrMatrix, &translation._x, &rotationDeg._x, &scale._x );
 
 			if ( op == ImGuizmo::TRANSLATE && _toolbarSettings._bSurfaceSnap )
-			{
-				// Raycast downwards from object position to find top of ground or other colliders
-				float3 rayStart = translation;
-				rayStart._y += 1.0f;
+				EditorSceneCommands::snapTranslationToSurface( pRaw, translation, scale._y );
 
-				float32 hitY = 0.0f;
-				bool	bHit = false;
-
-				SceneManager* pSceneManager = editor::getService<SceneManager>();
-				Scene*		  pScene		= ( pSceneManager != nullptr ) ? pSceneManager->getActiveScene() : nullptr;
-				if ( pScene != nullptr && pScene->getObjectManager() != nullptr )
-				{
-					const vector<GameObject*>& listAll = pScene->getObjectManager()->getAllGameObjects();
-					for ( const GameObject* pOther : listAll )
-					{
-						if ( pOther == nullptr || pOther == pRaw )
-							continue;
-
-						BoxCollider2DComponent* pOtherBox = pOther->getComponent<BoxCollider2DComponent>();
-						if ( pOtherBox != nullptr && pOtherBox->isActive() )
-						{
-							const float3  otherPos = pOtherBox->getWorldPosition();
-							const float2  otherScl = pOtherBox->getOffsetScaleVec();
-							const float32 topY	   = otherPos._y + otherScl._y * 0.5f;
-							if ( topY <= rayStart._y && ( topY > hitY || bHit == false ) )
-							{
-								const float32 halfW = otherScl._x * 0.5f;
-								if ( otherPos._x - halfW <= translation._x && translation._x <= otherPos._x + halfW )
-								{
-									hitY = topY;
-									bHit = true;
-								}
-							}
-						}
-
-						MeshComponent* pOtherMesh = pOther->getComponent<MeshComponent>();
-						if ( pOtherMesh != nullptr && pOtherMesh->isActive() )
-						{
-							const float3  otherPos = pOtherMesh->getWorldPosition();
-							const float3  otherScl = pOtherMesh->getLocalScale();
-							const float32 topY	   = otherPos._y + otherScl._y * 0.5f;
-							if ( topY <= rayStart._y && ( topY > hitY || bHit == false ) )
-							{
-								const float32 halfW = otherScl._x * 0.5f;
-								const float32 halfD = otherScl._z * 0.5f;
-								if ( otherPos._x - halfW <= translation._x && translation._x <= otherPos._x + halfW &&
-									 otherPos._z - halfD <= translation._z && translation._z <= otherPos._z + halfD )
-								{
-									hitY = topY;
-									bHit = true;
-								}
-							}
-						}
-					}
-				}
-
-				float32					bottomOffset = 0.0f;
-				BoxCollider2DComponent* pMyBox		 = pRaw->getComponent<BoxCollider2DComponent>();
-				if ( pMyBox != nullptr )
-					bottomOffset = pMyBox->getOffsetScaleVec()._y * 0.5f;
-				MeshComponent* pMyMesh = pRaw->getComponent<MeshComponent>();
-				if ( pMyMesh != nullptr )
-					bottomOffset = scale._y * 0.5f;
-
-				translation._y = ( bHit ? hitY : 0.0f ) + bottomOffset;
-			}
-
-			pSceneComp->setLocalPosition( translation );
-			pSceneComp->setLocalRotation( float3{
-				MathUtil::toRadian( rotationDeg._x ),
-				MathUtil::toRadian( rotationDeg._y ),
-				MathUtil::toRadian( rotationDeg._z ) } );
-			pSceneComp->setLocalScale( scale );
+			EditorSceneCommands::applyLocalTransform( pRaw, translation,
+													  float3{
+														  MathUtil::toRadian( rotationDeg._x ),
+														  MathUtil::toRadian( rotationDeg._y ),
+														  MathUtil::toRadian( rotationDeg._z ) },
+													  scale );
 		}
 
 		if ( ImGuizmo::IsUsing() )
@@ -863,11 +798,7 @@ namespace sw::editor
 		}
 		else if ( _bGizmoTracking == SW_TRUE )
 		{
-			if ( _gizmoUndoBeforeXml.empty() == false )
-			{
-				const string afterXml = EditorTransaction::captureSnapshot( pObj );
-				EditorTransaction::recordModify( pObj, _gizmoUndoBeforeXml, afterXml, "Gizmo Transform" );
-			}
+			EditorSceneCommands::commitModify( pRaw, _gizmoUndoBeforeXml, "Gizmo Transform" );
 			_gizmoUndoBeforeXml.clear();
 			_bGizmoTracking = SW_FALSE;
 		}

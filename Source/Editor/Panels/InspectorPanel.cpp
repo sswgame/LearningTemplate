@@ -6,9 +6,9 @@
 #include "Core/Task/TaskTypes.h"
 
 #include "Editor/Common/Commands/EditorGlobalVariableCommands.h"
+#include "Editor/Common/Commands/EditorInspectorCommands.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/SelectionManager.h"
 #include "Editor/Panels/Inspector/IInspectorComponent.h"
@@ -21,8 +21,6 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/ObjectStateSerializer.h"
-#include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionContainers.h"
 #include "Engine/Reflection/ReflectionCore.h"
@@ -30,7 +28,6 @@
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Format/JsonSerializer.h"
 #include "Engine/Utility/CommandStack.h"
-#include "Engine/Utility/Resource/ResourceManager.h"
 
 #include "RuntimeAPI/Service/EditorService.h"
 
@@ -174,32 +171,13 @@ namespace sw::editor
 			ImGui::TextDisabled( "%s", pfbPath.c_str() );
 
 			if ( ImGui::Button( "Apply to Prefab" ) )
-			{
-				PrefabAsset asset;
-				asset.setFromGameObject( pObj );
-				if ( asset.saveToXmlFile( pfbPath ) )
-				{
-					SW_LOG_INFO( "Saved prefab changes to %#", pfbPath.c_str() );
-				}
-			}
+				EditorInspectorCommands::applyToPrefab( pObj, pfbPath );
 			ImGui::SameLine();
 			if ( ImGui::Button( "Revert to Prefab" ) )
-			{
-				PrefabAsset* pLoaded = editor::getService<ResourceManager>()->getPrefabManager().loadPrefab( pfbPath );
-				if ( pLoaded != nullptr && pLoaded->isValid() )
-				{
-					const string beforeXml = EditorTransaction::captureSnapshot( GameObjectPtr{ pObj } );
-					ObjectStateSerializer::loadFromXmlString( pObj, pLoaded->getStateData() );
-					pObj->applyLoadedHierarchy();
-					const string afterXml = EditorTransaction::captureSnapshot( GameObjectPtr{ pObj } );
-					EditorTransaction::recordModify( GameObjectPtr{ pObj }, beforeXml, afterXml, "Revert to Prefab" );
-				}
-			}
+				EditorInspectorCommands::revertToPrefab( pObj, pfbPath );
 			ImGui::SameLine();
 			if ( ImGui::Button( "Unlink" ) )
-			{
-				ws.setGameObjectPrefabPath( pObj->getObjectId(), "" );
-			}
+				EditorInspectorCommands::unlinkPrefab( pObj );
 			ImGui::Separator();
 		}
 

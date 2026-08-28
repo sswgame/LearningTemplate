@@ -2,12 +2,10 @@
 
 #include "Editor/Panels/AnimationGraphPanel.h"
 
+#include "Editor/Common/Commands/EditorToolAssetCommands.h"
 #include "Editor/Common/Config/EditorConfig.h"
-#include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Gui/EditorChrome.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-
-#include "Engine/Serialization/Format/JsonSerializer.h"
 
 #include <imgui.h>
 #include <imgui-node-editor/imgui_node_editor.h>
@@ -216,113 +214,12 @@ namespace sw::editor
 
 	void AnimationGraphPanel::loadGraphData()
 	{
-		const string path = EditorUtil::resolveEditorConfigFile( EditorConfig::getActive()._animationGraphDataFile.c_str() );
-		if ( path.empty() || FileUtil::fileExists( path ) == false )
+		EditorAnimGraphData data;
+		if ( EditorToolAssetCommands::loadAnimationGraph( data ) )
 		{
-			ensureDefaults();
-			_bLoaded = true;
-			return;
+			_listNode = std::move( data._listNode );
+			_listLink = std::move( data._listLink );
 		}
-
-		vector<uint8> listData;
-		if ( FileUtil::readFile( path, listData ) == false || listData.empty() )
-		{
-			ensureDefaults();
-			_bLoaded = true;
-			return;
-		}
-
-		const string json( listData.begin(), listData.end() );
-		_listNode.clear();
-		_listLink.clear();
-
-		size_t nodesPos = json.find( "\"nodes\"" );
-		if ( nodesPos != string::npos )
-		{
-			size_t arr = json.find( '[', nodesPos );
-			size_t end = json.find( ']', arr );
-			if ( arr != string::npos && end != string::npos )
-			{
-				size_t cursor = arr;
-				while ( true )
-				{
-					const size_t obj = json.find( '{', cursor );
-					if ( obj == string::npos || obj > end )
-						break;
-					GraphNode	 n{};
-					const size_t idPos = json.find( "\"id\"", obj );
-					if ( idPos != string::npos && idPos < end )
-					{
-						const size_t colon = json.find( ':', idPos );
-						utf8*		 pEndPtr{ nullptr };
-						n._id = static_cast<int32>( StringUtil::strtoll( json.c_str() + colon + 1, &pEndPtr, 10 ) );
-					}
-					const size_t namePos = json.find( "\"name\"", obj );
-					if ( namePos != string::npos && namePos < end )
-					{
-						const size_t q0 = json.find( '"', json.find( ':', namePos ) + 1 );
-						const size_t q1 = json.find( '"', q0 + 1 );
-						if ( q0 != string::npos && q1 != string::npos )
-							n._name.assign( json, q0 + 1, q1 - q0 - 1 );
-					}
-					const size_t xPos = json.find( "\"x\"", obj );
-					if ( xPos != string::npos && xPos < end )
-					{
-						const size_t colon = json.find( ':', xPos );
-						n._x			   = static_cast<float32>( StringUtil::atof( json.c_str() + colon + 1 ) );
-					}
-					const size_t yPos = json.find( "\"y\"", obj );
-					if ( yPos != string::npos && yPos < end )
-					{
-						const size_t colon = json.find( ':', yPos );
-						n._y			   = static_cast<float32>( StringUtil::atof( json.c_str() + colon + 1 ) );
-					}
-					if ( n._id > 0 )
-						_listNode.push_back( n );
-					cursor = json.find( '}', obj );
-					if ( cursor == string::npos )
-						break;
-					++cursor;
-				}
-			}
-		}
-
-		size_t linksPos = json.find( "\"links\"" );
-		if ( linksPos != string::npos )
-		{
-			size_t arr = json.find( '[', linksPos );
-			size_t end = json.find( ']', arr );
-			if ( arr != string::npos && end != string::npos )
-			{
-				size_t cursor = arr;
-				while ( true )
-				{
-					const size_t obj = json.find( '{', cursor );
-					if ( obj == string::npos || obj > end )
-						break;
-					GraphLink l{};
-					auto	  parseInt = [&]( const utf8* pKey, int32& out )
-					{
-						const size_t p = json.find( string( "\"" ) + pKey + "\"", obj );
-						if ( p == string::npos || p > end )
-							return;
-						const size_t colon = json.find( ':', p );
-						utf8*		 pEndPtr{ nullptr };
-						out = static_cast<int32>( StringUtil::strtoll( json.c_str() + colon + 1, &pEndPtr, 10 ) );
-					};
-					parseInt( "id", l._id );
-					parseInt( "from", l._fromNode );
-					parseInt( "to", l._toNode );
-					if ( l._id > 0 )
-						_listLink.push_back( l );
-					cursor = json.find( '}', obj );
-					if ( cursor == string::npos )
-						break;
-					++cursor;
-				}
-			}
-		}
-
 		if ( _listNode.empty() )
 			ensureDefaults();
 		_bLoaded = true;
@@ -331,45 +228,22 @@ namespace sw::editor
 
 	void AnimationGraphPanel::saveGraphData() const
 	{
-		const string path = EditorUtil::resolveEditorConfigFile( EditorConfig::getActive()._animationGraphDataFile.c_str() );
-		if ( path.empty() )
-			return;
-
-		// 가능하면 에디터에서 라이브 노드 위치를 가져옵니다.
-		StringBuilder<2048> sb;
-		sb.append( "{\n  \"nodes\": [\n" );
-		for ( size_t nodeIndex = 0; nodeIndex < _listNode.size(); ++nodeIndex )
+		EditorAnimGraphData data;
+		data._listNode.reserve( _listNode.size() );
+		data._listLink = _listLink;
+		for ( const GraphNode& node : _listNode )
 		{
-			const GraphNode& n = _listNode[nodeIndex];
-			float32			 x = n._x;
-			float32			 y = n._y;
+			GraphNode saved = node;
 			if ( _nodeGraph.bind() )
 			{
-				const ImVec2 pos = ed::GetNodePosition( toNodeId( n._id ) );
-				x				 = pos.x;
-				y				 = pos.y;
+				const ImVec2 pos = ed::GetNodePosition( toNodeId( node._id ) );
+				saved._x		 = pos.x;
+				saved._y		 = pos.y;
 				_nodeGraph.unbind();
 			}
-			sb.append( "    { \"id\": " ).append( n._id ).append( ", \"name\": \"" ).append( JsonSerializer::escapeString( n._name ).c_str() ).append( "\", \"x\": " ).append( x ).append( ", \"y\": " ).append( y ).append( " }" );
-			if ( nodeIndex + 1 < _listNode.size() )
-				sb.append( "," );
-			sb.append( "\n" );
+			data._listNode.push_back( std::move( saved ) );
 		}
-		sb.append( "  ],\n  \"links\": [\n" );
-		for ( size_t linkIndex = 0; linkIndex < _listLink.size(); ++linkIndex )
-		{
-			const GraphLink& l = _listLink[linkIndex];
-			sb.append( "    { \"id\": " ).append( l._id ).append( ", \"from\": " ).append( l._fromNode ).append( ", \"to\": " ).append( l._toNode ).append( " }" );
-			if ( linkIndex + 1 < _listLink.size() )
-				sb.append( "," );
-			sb.append( "\n" );
-		}
-		sb.append( "  ]\n}\n" );
-
-		const string text( sb.c_str() );
-		if ( FileUtil::writeFile( path, reinterpret_cast<const uint8*>( text.data() ),
-								  text.size() ) )
-			SW_LOG_INFO( "Saved %#", path.c_str() );
+		EditorToolAssetCommands::saveAnimationGraph( data );
 	}
 
 	int32 AnimationGraphPanel::nextNodeId() const

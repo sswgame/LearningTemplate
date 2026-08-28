@@ -3,6 +3,7 @@
  * @brief 메모리·시스템 프로파일링 윈도우
  */
 #pragma once
+#include "Editor/Common/Commands/EditorBackgroundIo.h"
 #include "Editor/Common/Gui/IEditorPanel.h"
 
 namespace sw::editor
@@ -33,7 +34,11 @@ namespace sw::editor
 		void drawPerformanceTab();
 
 	private:
-		float32 _arrFrameTimeHistory[120]{};
-		uint32	_historyOffset{ 0 };
+		float32						_arrFrameTimeHistory[120];
+		uint32						_historyOffset;
+		EditorResourceCatalogJob	_catalogJob;
+		EditorResourceCatalogCounts _catalogCounts;
+		uint8						_bCatalogDirty : 1;
+		[[maybe_unused]] uint8		_reserved	   : 7;
 	};
 } // namespace sw::editor

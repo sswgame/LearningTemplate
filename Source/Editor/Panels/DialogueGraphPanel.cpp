@@ -2,13 +2,10 @@
 
 #include "Editor/Panels/DialogueGraphPanel.h"
 
-#include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
-#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
-#include "Editor/Common/Config/EditorConfig.h"
-#include "Editor/Common/EditorUtil.h"
+#include "Editor/Common/Commands/EditorToolAssetCommands.h"
 #include "Editor/Common/Gui/EditorChrome.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 
@@ -67,42 +64,6 @@ namespace sw::editor
 		ed::LinkId toLinkId( int32 id )
 		{
 			return ed::LinkId( static_cast<uintptr_t>( id ) );
-		}
-
-		const utf8* getNodeTypeString( DialogueNodeType type )
-		{
-			switch ( type )
-			{
-				case DialogueNodeType::Start:
-					return "Start";
-				case DialogueNodeType::Dialogue:
-					return "Dialogue";
-				case DialogueNodeType::Choice:
-					return "Choice";
-				case DialogueNodeType::Branch:
-					return "Branch";
-				case DialogueNodeType::Action:
-					return "Action";
-				case DialogueNodeType::End:
-					return "End";
-				default:
-					return "Unknown";
-			}
-		}
-
-		DialogueNodeType parseNodeTypeString( string_view typeStr )
-		{
-			if ( typeStr == "Start" )
-				return DialogueNodeType::Start;
-			if ( typeStr == "Choice" )
-				return DialogueNodeType::Choice;
-			if ( typeStr == "Branch" )
-				return DialogueNodeType::Branch;
-			if ( typeStr == "Action" )
-				return DialogueNodeType::Action;
-			if ( typeStr == "End" )
-				return DialogueNodeType::End;
-			return DialogueNodeType::Dialogue;
 		}
 
 	} // namespace
@@ -414,7 +375,7 @@ namespace sw::editor
 
 			if ( pSelectedNode != nullptr )
 			{
-				ImGui::TextColored( ImVec4( 0.2f, 0.8f, 1.0f, 1.0f ), "Node #%d (%s)", pSelectedNode->_id, getNodeTypeString( pSelectedNode->_type ) );
+				ImGui::TextColored( ImVec4( 0.2f, 0.8f, 1.0f, 1.0f ), "Node #%d (%s)", pSelectedNode->_id, EditorToolAssetCommands::dialogueNodeTypeName( pSelectedNode->_type ) );
 				ImGui::Separator();
 
 				if ( pSelectedNode->_type == DialogueNodeType::Dialogue )
@@ -534,162 +495,12 @@ namespace sw::editor
 
 	void DialogueGraphPanel::loadGraphData()
 	{
-		const string path = "Saved/Dialogue/default_dialogue.json";
-		if ( FileUtil::fileExists( path ) == false )
+		EditorDialogueGraphData data;
+		if ( EditorToolAssetCommands::loadDialogueGraph( data ) )
 		{
-			ensureDefaults();
-			_bLoaded = true;
-			_nodeGraph.requestContentFit();
-			return;
+			_listNode = std::move( data._listNode );
+			_listLink = std::move( data._listLink );
 		}
-
-		vector<uint8> listData;
-		if ( FileUtil::readFile( path, listData ) == false || listData.empty() )
-		{
-			ensureDefaults();
-			_bLoaded = true;
-			_nodeGraph.requestContentFit();
-			return;
-		}
-
-		const string json( listData.begin(), listData.end() );
-		_listNode.clear();
-		_listLink.clear();
-
-		// Nodes parsing
-		const size_t nodesPos = json.find( "\"nodes\"" );
-		if ( nodesPos != string::npos )
-		{
-			const size_t arr = json.find( '[', nodesPos );
-			const size_t end = json.find( ']', arr );
-			if ( arr != string::npos && end != string::npos )
-			{
-				size_t cursor = arr;
-				while ( true )
-				{
-					const size_t obj = json.find( '{', cursor );
-					if ( obj == string::npos || obj > end )
-						break;
-
-					DialogueNode node{};
-					const size_t idPos = json.find( "\"id\"", obj );
-					if ( idPos != string::npos && idPos < end )
-					{
-						const size_t colon = json.find( ':', idPos );
-						utf8*		 pEndPtr{ nullptr };
-						node._id = static_cast<int32>( StringUtil::strtoll( json.c_str() + colon + 1, &pEndPtr, 10 ) );
-					}
-
-					const size_t typePos = json.find( "\"type\"", obj );
-					if ( typePos != string::npos && typePos < end )
-					{
-						const size_t q0 = json.find( '"', json.find( ':', typePos ) + 1 );
-						const size_t q1 = json.find( '"', q0 + 1 );
-						if ( q0 != string::npos && q1 != string::npos )
-							node._type = parseNodeTypeString( json.substr( q0 + 1, q1 - q0 - 1 ) );
-					}
-
-					const size_t speakerPos = json.find( "\"speaker\"", obj );
-					if ( speakerPos != string::npos && speakerPos < end )
-					{
-						const size_t q0 = json.find( '"', json.find( ':', speakerPos ) + 1 );
-						const size_t q1 = json.find( '"', q0 + 1 );
-						if ( q0 != string::npos && q1 != string::npos )
-							node._speaker.assign( json, q0 + 1, q1 - q0 - 1 );
-					}
-
-					const size_t textPos = json.find( "\"text\"", obj );
-					if ( textPos != string::npos && textPos < end )
-					{
-						const size_t q0 = json.find( '"', json.find( ':', textPos ) + 1 );
-						const size_t q1 = json.find( '"', q0 + 1 );
-						if ( q0 != string::npos && q1 != string::npos )
-							node._text.assign( json, q0 + 1, q1 - q0 - 1 );
-					}
-
-					const size_t condPos = json.find( "\"condition\"", obj );
-					if ( condPos != string::npos && condPos < end )
-					{
-						const size_t q0 = json.find( '"', json.find( ':', condPos ) + 1 );
-						const size_t q1 = json.find( '"', q0 + 1 );
-						if ( q0 != string::npos && q1 != string::npos )
-							node._condition.assign( json, q0 + 1, q1 - q0 - 1 );
-					}
-
-					const size_t actPos = json.find( "\"action\"", obj );
-					if ( actPos != string::npos && actPos < end )
-					{
-						const size_t q0 = json.find( '"', json.find( ':', actPos ) + 1 );
-						const size_t q1 = json.find( '"', q0 + 1 );
-						if ( q0 != string::npos && q1 != string::npos )
-							node._actionCommand.assign( json, q0 + 1, q1 - q0 - 1 );
-					}
-
-					const size_t xPos = json.find( "\"x\"", obj );
-					if ( xPos != string::npos && xPos < end )
-					{
-						const size_t colon = json.find( ':', xPos );
-						node._x			   = static_cast<float32>( StringUtil::atof( json.c_str() + colon + 1 ) );
-					}
-
-					const size_t yPos = json.find( "\"y\"", obj );
-					if ( yPos != string::npos && yPos < end )
-					{
-						const size_t colon = json.find( ':', yPos );
-						node._y			   = static_cast<float32>( StringUtil::atof( json.c_str() + colon + 1 ) );
-					}
-
-					if ( node._id > 0 )
-						_listNode.push_back( node );
-
-					cursor = json.find( '}', obj );
-					if ( cursor == string::npos )
-						break;
-					++cursor;
-				}
-			}
-		}
-
-		// Links parsing
-		const size_t linksPos = json.find( "\"links\"" );
-		if ( linksPos != string::npos )
-		{
-			const size_t arr = json.find( '[', linksPos );
-			const size_t end = json.find( ']', arr );
-			if ( arr != string::npos && end != string::npos )
-			{
-				size_t cursor = arr;
-				while ( true )
-				{
-					const size_t obj = json.find( '{', cursor );
-					if ( obj == string::npos || obj > end )
-						break;
-
-					DialogueLink l{};
-					auto		 parseInt = [&]( const utf8* pKey, int32& out )
-					{
-						const size_t p = json.find( string( "\"" ) + pKey + "\"", obj );
-						if ( p == string::npos || p > end )
-							return;
-						const size_t colon = json.find( ':', p );
-						utf8*		 pEndPtr{ nullptr };
-						out = static_cast<int32>( StringUtil::strtoll( json.c_str() + colon + 1, &pEndPtr, 10 ) );
-					};
-
-					parseInt( "id", l._id );
-					parseInt( "from", l._fromPin );
-					parseInt( "to", l._toPin );
-					if ( l._id > 0 )
-						_listLink.push_back( l );
-
-					cursor = json.find( '}', obj );
-					if ( cursor == string::npos )
-						break;
-					++cursor;
-				}
-			}
-		}
-
 		if ( _listNode.empty() )
 			ensureDefaults();
 
@@ -699,43 +510,10 @@ namespace sw::editor
 
 	void DialogueGraphPanel::saveGraphData() const
 	{
-		const string path = "Saved/Dialogue/default_dialogue.json";
-		FileUtil::ensureDirectoryExists( path );
-
-		StringBuilder<constant::kMaxBuffer4096> sb;
-		sb.append( "{\n  \"nodes\": [\n" );
-		for ( size_t nodeIndex = 0; nodeIndex < _listNode.size(); ++nodeIndex )
-		{
-			const DialogueNode& n = _listNode[nodeIndex];
-			sb.append( "    { \"id\": " ).append( n._id );
-			sb.append( ", \"type\": \"" ).append( getNodeTypeString( n._type ) ).append( "\"" );
-			sb.append( ", \"speaker\": \"" ).append( n._speaker.c_str() ).append( "\"" );
-			sb.append( ", \"text\": \"" ).append( n._text.c_str() ).append( "\"" );
-			sb.append( ", \"condition\": \"" ).append( n._condition.c_str() ).append( "\"" );
-			sb.append( ", \"action\": \"" ).append( n._actionCommand.c_str() ).append( "\"" );
-			sb.append( ", \"x\": " ).append( n._x );
-			sb.append( ", \"y\": " ).append( n._y );
-			sb.append( " }" );
-			if ( nodeIndex + 1 < _listNode.size() )
-				sb.append( "," );
-			sb.append( "\n" );
-		}
-		sb.append( "  ],\n  \"links\": [\n" );
-		for ( size_t linkIndex = 0; linkIndex < _listLink.size(); ++linkIndex )
-		{
-			const DialogueLink& l = _listLink[linkIndex];
-			sb.append( "    { \"id\": " ).append( l._id );
-			sb.append( ", \"from\": " ).append( l._fromPin );
-			sb.append( ", \"to\": " ).append( l._toPin );
-			sb.append( " }" );
-			if ( linkIndex + 1 < _listLink.size() )
-				sb.append( "," );
-			sb.append( "\n" );
-		}
-		sb.append( "  ]\n}\n" );
-
-		FileUtil::writeTextFile( path, sb.view() );
-		SW_LOG_INFO( "Saved %zu nodes, %zu links -> %#", _listNode.size(), _listLink.size(), path );
+		EditorDialogueGraphData data;
+		data._listNode = _listNode;
+		data._listLink = _listLink;
+		EditorToolAssetCommands::saveDialogueGraph( data );
 	}
 
 	int32 DialogueGraphPanel::nextNodeId() const

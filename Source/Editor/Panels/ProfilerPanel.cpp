@@ -2,7 +2,6 @@
 
 #include "Editor/Panels/ProfilerPanel.h"
 
-#include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/MemoryProfiler.h"
 #include "Core/Task/TaskManager.h"
@@ -41,7 +40,13 @@ namespace sw::editor
 	} // namespace
 
 	ProfilerPanel::ProfilerPanel()
-		: IEditorPanel( false ) // starts closed
+		: IEditorPanel( false )
+		, _arrFrameTimeHistory{}
+		, _historyOffset{ 0 }
+		, _catalogJob{}
+		, _catalogCounts{}
+		, _bCatalogDirty{ SW_TRUE }
+		, _reserved{ 0 }
 	{
 	}
 
@@ -187,32 +192,23 @@ namespace sw::editor
 
 		if ( ImGui::CollapsingHeader( "Resource Catalog Summary", ImGuiTreeNodeFlags_DefaultOpen ) )
 		{
-			static size_t s_sceneCount{ 0 };
-			static size_t s_prefabCount{ 0 };
-			static size_t s_textureCount{ 0 };
-			static size_t s_shaderCount{ 0 };
-			static bool	  s_bScanned{ false };
-
-			if ( s_bScanned == false || ImGui::Button( "Scan Resources" ) )
+			if ( _bCatalogDirty == SW_TRUE && _catalogJob.isPending() == false )
 			{
-				vector<string> listScenes, listPrefabs, listTextures, listShaders;
-				const string   resPath = FileUtil::joinPath( FileUtil::getCurrentPath(), "Resource" );
-				FileUtil::collectFiles( resPath, ".scene.xml", listScenes, true, false );
-				FileUtil::collectFiles( resPath, ".prefab.xml", listPrefabs, true, false );
-				FileUtil::collectFiles( resPath, ".png", listTextures, true, false );
-				FileUtil::collectFiles( resPath, ".hlsl", listShaders, true, false );
-
-				s_sceneCount   = listScenes.size();
-				s_prefabCount  = listPrefabs.size();
-				s_textureCount = listTextures.size();
-				s_shaderCount  = listShaders.size();
-				s_bScanned	   = true;
+				_catalogJob.request();
+				_bCatalogDirty = SW_FALSE;
 			}
 
-			ImGui::BulletText( "Scenes (.scene.xml): %zu", s_sceneCount );
-			ImGui::BulletText( "Prefabs (.prefab.xml): %zu", s_prefabCount );
-			ImGui::BulletText( "Textures (.png): %zu", s_textureCount );
-			ImGui::BulletText( "Shaders (.hlsl): %zu", s_shaderCount );
+			EditorResourceCatalogCounts counts{};
+			if ( _catalogJob.take( counts ) )
+				_catalogCounts = counts;
+
+			if ( ImGui::Button( "Scan Resources" ) )
+				_bCatalogDirty = SW_TRUE;
+
+			ImGui::BulletText( "Scenes (.scene.xml): %zu", _catalogCounts._sceneCount );
+			ImGui::BulletText( "Prefabs (.prefab.xml): %zu", _catalogCounts._prefabCount );
+			ImGui::BulletText( "Textures (.png): %zu", _catalogCounts._textureCount );
+			ImGui::BulletText( "Shaders (.hlsl): %zu", _catalogCounts._shaderCount );
 		}
 
 		ImGui::Separator();

@@ -313,4 +313,144 @@ namespace sw::editor
 		pJob->_bReady	  = SW_TRUE;
 		pJob->_bPending	  = SW_FALSE;
 	}
+
+	EditorFolderListingJob::EditorFolderListingJob()
+		: _mutex{}
+		, _folder{}
+		, _listResult{}
+		, _generation{ 0 }
+		, _bPending{ SW_FALSE }
+		, _bReady{ SW_FALSE }
+		, _reserved{ 0 }
+	{
+	}
+
+	void EditorFolderListingJob::request( string_view folderAbs )
+	{
+		uint32 generation = 0;
+		{
+			std::scoped_lock<mutex> lock{ _mutex };
+			++_generation;
+			_folder	  = string{ folderAbs };
+			_bPending = SW_TRUE;
+			_bReady	  = SW_FALSE;
+			_listResult.clear();
+			generation = _generation;
+		}
+
+		submitOrRun( "EditorFolderListing",
+					 SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorFolderListingJob::runJob ),
+					 MakeTaskArgs( this, generation ) );
+	}
+
+	bool EditorFolderListingJob::take( vector<EditorFolderListingEntry>& outList )
+	{
+		std::scoped_lock<mutex> lock{ _mutex };
+		if ( _bReady == SW_FALSE )
+			return false;
+		outList	  = std::move( _listResult );
+		_bReady	  = SW_FALSE;
+		_bPending = SW_FALSE;
+		return true;
+	}
+
+	bool EditorFolderListingJob::isPending() const
+	{
+		std::scoped_lock<mutex> lock{ _mutex };
+		return _bPending == SW_TRUE;
+	}
+
+	void EditorFolderListingJob::runJob( const TaskArgs& args )
+	{
+		EditorFolderListingJob* pJob = args.get<EditorFolderListingJob*>( 0 );
+		const uint32			gen	 = args.get<uint32>( 1 );
+		if ( pJob == nullptr )
+			return;
+
+		string folder;
+		{
+			std::scoped_lock<mutex> lock{ pJob->_mutex };
+			if ( gen != pJob->_generation )
+				return;
+			folder = pJob->_folder;
+		}
+
+		vector<EditorFolderListingEntry> listEntry;
+		EditorAssetCommands::collectFolderListing( folder, listEntry );
+
+		std::scoped_lock<mutex> lock{ pJob->_mutex };
+		if ( gen != pJob->_generation )
+			return;
+		pJob->_listResult = std::move( listEntry );
+		pJob->_bReady	  = SW_TRUE;
+		pJob->_bPending	  = SW_FALSE;
+	}
+
+	EditorResourceCatalogJob::EditorResourceCatalogJob()
+		: _mutex{}
+		, _counts{}
+		, _generation{ 0 }
+		, _bPending{ SW_FALSE }
+		, _bReady{ SW_FALSE }
+		, _reserved{ 0 }
+	{
+	}
+
+	void EditorResourceCatalogJob::request()
+	{
+		uint32 generation = 0;
+		{
+			std::scoped_lock<mutex> lock{ _mutex };
+			++_generation;
+			_bPending  = SW_TRUE;
+			_bReady	   = SW_FALSE;
+			_counts	   = {};
+			generation = _generation;
+		}
+
+		submitOrRun( "EditorResourceCatalog",
+					 SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorResourceCatalogJob::runJob ),
+					 MakeTaskArgs( this, generation ) );
+	}
+
+	bool EditorResourceCatalogJob::take( EditorResourceCatalogCounts& outCounts )
+	{
+		std::scoped_lock<mutex> lock{ _mutex };
+		if ( _bReady == SW_FALSE )
+			return false;
+		outCounts = _counts;
+		_bReady	  = SW_FALSE;
+		_bPending = SW_FALSE;
+		return true;
+	}
+
+	bool EditorResourceCatalogJob::isPending() const
+	{
+		std::scoped_lock<mutex> lock{ _mutex };
+		return _bPending == SW_TRUE;
+	}
+
+	void EditorResourceCatalogJob::runJob( const TaskArgs& args )
+	{
+		EditorResourceCatalogJob* pJob = args.get<EditorResourceCatalogJob*>( 0 );
+		const uint32			  gen  = args.get<uint32>( 1 );
+		if ( pJob == nullptr )
+			return;
+
+		{
+			std::scoped_lock<mutex> lock{ pJob->_mutex };
+			if ( gen != pJob->_generation )
+				return;
+		}
+
+		EditorResourceCatalogCounts counts{};
+		EditorAssetCommands::collectResourceCatalogCounts( counts );
+
+		std::scoped_lock<mutex> lock{ pJob->_mutex };
+		if ( gen != pJob->_generation )
+			return;
+		pJob->_counts	= counts;
+		pJob->_bReady	= SW_TRUE;
+		pJob->_bPending = SW_FALSE;
+	}
 } // namespace sw::editor

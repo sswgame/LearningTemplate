@@ -19,6 +19,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Utility/Resource/AssetDatabase.h"
+#include "Engine/Utility/Resource/ResourceUtil.h"
 
 #include "RuntimeAPI/Service/EditorService.h"
 
@@ -83,6 +84,32 @@ namespace sw::editor
 				return true;
 			}
 			return false;
+		}
+
+		void appendFolderListingEntry( vector<EditorFolderListingEntry>& outList, const string& path, bool bIsDirectory,
+									   const string& rootNorm )
+		{
+			EditorFolderListingEntry item;
+			item._absolutePath = FileUtil::normalizeSeparators( path );
+			item._name		   = FileUtil::getFileNamePart( item._absolutePath );
+			item._bIsDirectory = bIsDirectory;
+			if ( item._bIsDirectory == false )
+				item._extension = FileUtil::getExtension( item._name );
+
+			if ( rootNorm.empty() == false )
+			{
+				const string absNorm = FileUtil::normalizePath( item._absolutePath );
+				if ( absNorm.size() > rootNorm.size() && absNorm.compare( 0, rootNorm.size(), rootNorm ) == 0 &&
+					 absNorm[rootNorm.size()] == '/' )
+					item._relativePath = absNorm.substr( rootNorm.size() + 1 );
+			}
+			if ( item._relativePath.empty() )
+				item._relativePath = FileUtil::normalizePath( item._name );
+
+			if ( item._bIsDirectory == false && FileUtil::endsWithIgnoreCase( item._name, ".meta" ) )
+				return;
+
+			outList.push_back( std::move( item ) );
 		}
 	} // namespace
 
@@ -227,5 +254,54 @@ namespace sw::editor
 			if ( tryClassifyResourceFile( file, entry ) )
 				outList.push_back( std::move( entry ) );
 		}
+	}
+
+	void EditorAssetCommands::collectFolderListing( string_view folderAbs, vector<EditorFolderListingEntry>& outList )
+	{
+		outList.clear();
+		if ( folderAbs.empty() || FileUtil::directoryExists( folderAbs ) == false )
+			return;
+
+		vector<string> listFolders;
+		vector<string> listFiles;
+		FileUtil::collectFolders( folderAbs, listFolders, false, false );
+		FileUtil::collectFiles( folderAbs, {}, listFiles, false, false );
+
+		const string& resourceRoot = ResourceUtil::getRootFolderPath();
+		const string  rootNorm	   = resourceRoot.empty() ? string{} : FileUtil::normalizePath( resourceRoot );
+
+		for ( const string& folder : listFolders )
+			appendFolderListingEntry( outList, folder, true, rootNorm );
+		for ( const string& file : listFiles )
+			appendFolderListingEntry( outList, file, false, rootNorm );
+	}
+
+	void EditorAssetCommands::collectChildFolders( string_view folderAbs, vector<string>& outList )
+	{
+		outList.clear();
+		if ( folderAbs.empty() || FileUtil::directoryExists( folderAbs ) == false )
+			return;
+
+		FileUtil::collectFolders( folderAbs, outList, false, false );
+		for ( string& child : outList )
+			child = FileUtil::normalizeSeparators( child );
+	}
+
+	void EditorAssetCommands::collectResourceCatalogCounts( EditorResourceCatalogCounts& outCounts )
+	{
+		vector<string> listScenes;
+		vector<string> listPrefabs;
+		vector<string> listTextures;
+		vector<string> listShaders;
+		const string   resPath = FileUtil::joinPath( FileUtil::getCurrentPath(), "Resource" );
+		FileUtil::collectFiles( resPath, ".scene.xml", listScenes, true, false );
+		FileUtil::collectFiles( resPath, ".prefab.xml", listPrefabs, true, false );
+		FileUtil::collectFiles( resPath, ".png", listTextures, true, false );
+		FileUtil::collectFiles( resPath, ".hlsl", listShaders, true, false );
+
+		outCounts._sceneCount	= listScenes.size();
+		outCounts._prefabCount	= listPrefabs.size();
+		outCounts._textureCount = listTextures.size();
+		outCounts._shaderCount	= listShaders.size();
 	}
 } // namespace sw::editor

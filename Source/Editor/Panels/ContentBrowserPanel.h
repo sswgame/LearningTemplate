@@ -9,6 +9,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
+#include "Editor/Common/Commands/EditorBackgroundIo.h"
 #include "Editor/Common/Gui/IEditorPanel.h"
 
 struct ImDrawList;
@@ -63,15 +64,7 @@ namespace sw::editor
 			string _absolutePath;
 		};
 
-		/** @brief 현재 목록의 폴더 또는 파일 항목 */
-		struct AssetEntry
-		{
-			string _name;
-			string _relativePath;
-			string _absolutePath;
-			string _extension;
-			bool   _bIsDirectory{ false };
-		};
+		using AssetEntry = EditorFolderListingEntry;
 
 		// ------------------------------------------------------------------------------
 		// 3) 스캔 · 필터
@@ -80,6 +73,8 @@ namespace sw::editor
 		void refreshRoots();
 		/** @brief 선택된 폴더의 항목을 다시 스캔합니다. */
 		void refreshCurrentFolder();
+		/** @brief 워커에서 받은 폴더 목록을 적용합니다. */
+		void applyFolderListing( vector<EditorFolderListingEntry>& listEntry );
 		/** @brief 항목이 타입 필터를 통과하는지 여부를 반환합니다. */
 		bool passesTypeFilter( const AssetEntry& entry ) const;
 		/** @brief 항목이 검색 필터를 통과하는지 여부를 반환합니다. */
@@ -137,6 +132,7 @@ namespace sw::editor
 		ViewMode			   _viewMode;
 		mutex				   _pendingImportMutex;
 		vector<string>		   _listPendingImportPath;
+		EditorFolderListingJob _folderJob;
 		uint8				   _bRootsDirty	  : 1;
 		uint8				   _bFolderDirty  : 1;
 		[[maybe_unused]] uint8 _reservedFlags : 6;

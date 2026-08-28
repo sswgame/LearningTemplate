@@ -2,12 +2,12 @@
 
 #include "Editor/Panels/SpriteClipPanel.h"
 
+#include "Core/String/StringUtil.h"
+
+#include "Editor/Common/Commands/EditorToolAssetCommands.h"
 #include "Editor/Common/Config/EditorConfig.h"
 #include "Editor/Common/Config/EditorData.h"
-#include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-
-#include "Engine/Serialization/Format/JsonSerializer.h"
 
 #include "RuntimeAPI/Service/EditorService.h"
 
@@ -16,52 +16,6 @@
 namespace sw::editor
 {
 	SW_LOG_CALLER( "SpriteClip" );
-
-	namespace
-	{
-		bool parseFloatAfter( string_view src, size_t from, const utf8* pKey, float32& out )
-		{
-			const size_t klen = StringUtil::strlen( pKey );
-			if ( klen == 0 || from >= src.size() )
-				return false;
-
-			for ( size_t sliceIndex = from; sliceIndex + klen + 2 <= src.size(); ++sliceIndex )
-			{
-				if ( src[sliceIndex] == '"' && src[sliceIndex + klen + 1] == '"' &&
-					 src.substr( sliceIndex + 1, klen ) == string_view{ pKey, klen } )
-				{
-					const size_t colon = src.find( ':', sliceIndex + klen + 2 );
-					if ( colon == string_view::npos )
-						return false;
-					out = static_cast<float32>( StringUtil::atof( src.data() + colon + 1 ) );
-					return true;
-				}
-			}
-			return false;
-		}
-
-		bool parseIntAfter( string_view src, size_t from, const utf8* pKey, int32& out )
-		{
-			const size_t klen = StringUtil::strlen( pKey );
-			if ( klen == 0 || from >= src.size() )
-				return false;
-
-			for ( size_t sliceIndex = from; sliceIndex + klen + 2 <= src.size(); ++sliceIndex )
-			{
-				if ( src[sliceIndex] == '"' && src[sliceIndex + klen + 1] == '"' &&
-					 src.substr( sliceIndex + 1, klen ) == string_view{ pKey, klen } )
-				{
-					const size_t colon = src.find( ':', sliceIndex + klen + 2 );
-					if ( colon == string_view::npos )
-						return false;
-					out = StringUtil::atoi( src.data() + colon + 1 );
-					return true;
-				}
-			}
-			return false;
-		}
-
-	} // namespace
 
 	SpriteClipPanel::SpriteClipPanel()
 		: IEditorPanel( false )
@@ -168,121 +122,24 @@ namespace sw::editor
 
 	void SpriteClipPanel::loadJson()
 	{
-		const string path = EditorUtil::resolveEditorConfigFile( EditorConfig::getActive()._spriteClipFile.c_str() );
-		if ( path.empty() || FileUtil::fileExists( path ) == false )
-		{
-			_status = "No SpriteClip.json yet";
+		EditorSpriteClipData data;
+		if ( EditorToolAssetCommands::loadSpriteClip( data, _status ) == false )
 			return;
-		}
 
-		string json;
-		if ( FileUtil::readTextFile( path, json ) == false || json.empty() )
-		{
-			_status = "Failed to read SpriteClip.json";
-			return;
-		}
-
-		const string atlas = JsonSerializer::extractStringField( json, "atlas" );
-		if ( atlas.empty() == false )
-			StringUtil::strncpy( _arrAtlasPath, atlas.c_str(), sizeof( _arrAtlasPath ) - 1 );
-
-		_listFrame.clear();
-		_listKey.clear();
-
-		size_t framesPos = json.find( "\"frames\"" );
-		if ( framesPos != string::npos )
-		{
-			size_t arr = json.find( '[', framesPos );
-			size_t end = json.find( ']', arr );
-			if ( arr != string::npos && end != string::npos )
-			{
-				size_t cursor = arr;
-				while ( true )
-				{
-					const size_t obj = json.find( '{', cursor );
-					if ( obj == string::npos || obj > end )
-						break;
-					Frame f{};
-					parseFloatAfter( json, obj, "u", f._u );
-					parseFloatAfter( json, obj, "v", f._v );
-					parseFloatAfter( json, obj, "w", f._w );
-					parseFloatAfter( json, obj, "h", f._h );
-					parseIntAfter( json, obj, "durationMs", f._durationMs );
-					_listFrame.push_back( f );
-					cursor = json.find( '}', obj );
-					if ( cursor == string::npos )
-						break;
-					++cursor;
-				}
-			}
-		}
-
-		size_t keysPos = json.find( "\"transformKeys\"" );
-		if ( keysPos != string::npos )
-		{
-			size_t arr = json.find( '[', keysPos );
-			size_t end = json.find( ']', arr );
-			if ( arr != string::npos && end != string::npos )
-			{
-				size_t cursor = arr;
-				while ( true )
-				{
-					const size_t obj = json.find( '{', cursor );
-					if ( obj == string::npos || obj > end )
-						break;
-					TransformKey k{};
-					parseFloatAfter( json, obj, "time", k._time );
-					parseFloatAfter( json, obj, "x", k._x );
-					parseFloatAfter( json, obj, "y", k._y );
-					parseFloatAfter( json, obj, "angleDeg", k._angleDeg );
-					_listKey.push_back( k );
-					cursor = json.find( '}', obj );
-					if ( cursor == string::npos )
-						break;
-					++cursor;
-				}
-			}
-		}
-
+		if ( data._atlasPath.empty() == false )
+			StringUtil::strncpy( _arrAtlasPath, data._atlasPath.c_str(), sizeof( _arrAtlasPath ) - 1 );
+		_listFrame	   = std::move( data._listFrame );
+		_listKey	   = std::move( data._listKey );
 		_selectedFrame = _listFrame.empty() ? -1 : 0;
 		_selectedKey   = _listKey.empty() ? -1 : 0;
-		_status		   = "Loaded SpriteClip.json";
 	}
 
 	void SpriteClipPanel::saveJson() const
 	{
-		const string path = EditorUtil::resolveEditorConfigFile( EditorConfig::getActive()._spriteClipFile.c_str() );
-		if ( path.empty() )
-			return;
-
-		StringBuilder<2048> sb;
-		sb.append( "{\n" );
-		sb.append( "  \"atlas\": \"" ).append( JsonSerializer::escapeString( _arrAtlasPath ).c_str() ).append( "\",\n" );
-		sb.append( "  \"frames\": [\n" );
-		for ( size_t frameIndex = 0; frameIndex < _listFrame.size(); ++frameIndex )
-		{
-			const Frame& f = _listFrame[frameIndex];
-			sb.append( "    { \"u\": " ).append( f._u ).append( ", \"v\": " ).append( f._v ).append( ", \"w\": " ).append( f._w ).append( ", \"h\": " ).append( f._h ).append( ", \"durationMs\": " ).append( f._durationMs ).append( " }" );
-			if ( frameIndex + 1 < _listFrame.size() )
-				sb.append( "," );
-			sb.append( "\n" );
-		}
-		sb.append( "  ],\n" );
-		sb.append( "  \"transformKeys\": [\n" );
-		for ( size_t keyIndex = 0; keyIndex < _listKey.size(); ++keyIndex )
-		{
-			const TransformKey& k = _listKey[keyIndex];
-			sb.append( "    { \"time\": " ).append( k._time ).append( ", \"x\": " ).append( k._x ).append( ", \"y\": " ).append( k._y ).append( ", \"angleDeg\": " ).append( k._angleDeg ).append( " }" );
-			if ( keyIndex + 1 < _listKey.size() )
-				sb.append( "," );
-			sb.append( "\n" );
-		}
-		sb.append( "  ]\n" );
-		sb.append( "}\n" );
-
-		const string text( sb.c_str() );
-		if ( FileUtil::writeFile( path, reinterpret_cast<const uint8*>( text.data() ),
-								  text.size() ) )
-			SW_LOG_INFO( "Saved %#", path.c_str() );
+		EditorSpriteClipData data;
+		data._atlasPath = _arrAtlasPath;
+		data._listFrame = _listFrame;
+		data._listKey	= _listKey;
+		EditorToolAssetCommands::saveSpriteClip( data );
 	}
 } // namespace sw::editor

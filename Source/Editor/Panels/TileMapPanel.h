@@ -8,6 +8,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
+#include "Editor/Common/Commands/EditorToolAssetCommands.h"
 #include "Editor/Common/Gui/IEditorPanel.h"
 
 namespace sw::editor
@@ -41,27 +42,6 @@ namespace sw::editor
 			Encounter,
 			Warp,
 			PassThrough
-		};
-
-		/** @brief Visual 레이어 셀 (높이 / 틴트 / 아틀라스) */
-		struct EditorTileVisual
-		{
-			uint8 _height{ 0 };
-			uint8 _tintR{ 180 };
-			uint8 _tintG{ 200 };
-			uint8 _tintB{ 160 };
-			uint8 _atlasId{ 0 };
-		};
-
-		/** @brief Warp 셀 (좌표 / 대상 맵 / 페어 ID) */
-		struct EditorTileWarp
-		{
-			int32  _tileX{ 0 };
-			int32  _tileY{ 0 };
-			string _targetMap;
-			int32  _targetTileX{ 1 };
-			int32  _targetTileY{ 1 };
-			string _pairId;
 		};
 
 		// ------------------------------------------------------------------------------

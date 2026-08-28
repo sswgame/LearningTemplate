@@ -13,9 +13,11 @@
 
 #include "Engine/Utility/Resource/AssetDatabase.h"
 #include "Engine/Utility/Resource/ResourceManager.h"
+#include "Engine/Utility/Resource/ResourceUtil.h"
 
 #include "RuntimeAPI/Service/EditorService.h"
 
+#include <algorithm>
 #include <imgui.h>
 
 SW_LOG_CALLER( "ContentBrowserPanel" );
@@ -242,6 +244,7 @@ namespace sw::editor
 		, _viewMode{ ViewMode::Tiles }
 		, _pendingImportMutex{}
 		, _listPendingImportPath{}
+		, _folderJob{}
 		, _bRootsDirty{ 1 }
 		, _bFolderDirty{ 1 }
 		, _reservedFlags{ 0 }
@@ -255,6 +258,9 @@ namespace sw::editor
 		processPendingImports();
 		if ( _bFolderDirty == SW_TRUE )
 			refreshCurrentFolder();
+		vector<EditorFolderListingEntry> listNewEntry;
+		if ( _folderJob.take( listNewEntry ) )
+			applyFolderListing( listNewEntry );
 
 		drawToolbar();
 		ImGui::Separator();
@@ -293,59 +299,17 @@ namespace sw::editor
 
 	void ContentBrowserPanel::refreshCurrentFolder()
 	{
-		_listEntry.clear();
-		if ( _selectedFolderAbs.empty() )
+		_folderJob.request( _selectedFolderAbs );
+		_bFolderDirty = SW_FALSE;
+	}
+
+	void ContentBrowserPanel::applyFolderListing( vector<EditorFolderListingEntry>& listEntry )
+	{
+		_listEntry = std::move( listEntry );
+		for ( const AssetEntry& entry : _listEntry )
 		{
-			_bFolderDirty = SW_FALSE;
-			return;
-		}
-
-		if ( FileUtil::directoryExists( _selectedFolderAbs ) == false )
-		{
-			_bFolderDirty = SW_FALSE;
-			return;
-		}
-
-		auto addEntry = [this]( const string& path, bool bIsDirectory )
-		{
-			AssetEntry item;
-			item._absolutePath = FileUtil::normalizeSeparators( path );
-			item._name		   = FileUtil::getFileNamePart( item._absolutePath );
-			item._bIsDirectory = bIsDirectory;
-			if ( item._bIsDirectory == false )
-				item._extension = FileUtil::getExtension( item._name );
-
-			const string& resourceRoot = ResourceUtil::getRootFolderPath();
-			if ( resourceRoot.empty() == false )
-			{
-				const string rootNorm = FileUtil::normalizePath( resourceRoot );
-				const string absNorm  = FileUtil::normalizePath( item._absolutePath );
-				if ( absNorm.size() > rootNorm.size() && absNorm.compare( 0, rootNorm.size(), rootNorm ) == 0 && absNorm[rootNorm.size()] == '/' )
-					item._relativePath = absNorm.substr( rootNorm.size() + 1 );
-			}
-			if ( item._relativePath.empty() )
-				item._relativePath = FileUtil::normalizePath( item._name );
-
-			if ( item._bIsDirectory == false && FileUtil::endsWithIgnoreCase( item._name, ".meta" ) )
-				return;
-
-			if ( item._bIsDirectory == false && item._relativePath.empty() == false )
-				editor::getService<ResourceManager>()->getAssetDatabase().ensureMeta( item._relativePath, false );
-
-			_listEntry.push_back( std::move( item ) );
-		};
-
-		vector<string> listFolders;
-		vector<string> listFiles;
-		FileUtil::collectFolders( _selectedFolderAbs, listFolders, false, false );
-		FileUtil::collectFiles( _selectedFolderAbs, {}, listFiles, false, false );
-		for ( const string& folder : listFolders )
-		{
-			addEntry( folder, true );
-		}
-		for ( const string& file : listFiles )
-		{
-			addEntry( file, false );
+			if ( entry._bIsDirectory == false && entry._relativePath.empty() == false )
+				editor::getService<ResourceManager>()->getAssetDatabase().ensureMeta( entry._relativePath, false );
 		}
 
 		std::sort( _listEntry.begin(), _listEntry.end(), []( const AssetEntry& entryA, const AssetEntry& entryB )
@@ -354,8 +318,6 @@ namespace sw::editor
 				return entryA._bIsDirectory > entryB._bIsDirectory;
 			return entryA._name < entryB._name;
 		} );
-
-		_bFolderDirty = SW_FALSE;
 	}
 
 	bool ContentBrowserPanel::passesTypeFilter( const AssetEntry& entry ) const
@@ -519,11 +481,7 @@ namespace sw::editor
 			flags |= ImGuiTreeNodeFlags_DefaultOpen;
 
 		vector<string> listChildren;
-		FileUtil::collectFolders( absPath, listChildren, false, false );
-		for ( string& child : listChildren )
-		{
-			child = FileUtil::normalizeSeparators( child );
-		}
+		EditorAssetCommands::collectChildFolders( absPath, listChildren );
 		const bool hasChildDirs = listChildren.empty() == false;
 		if ( hasChildDirs == false )
 			flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
@@ -670,7 +628,7 @@ namespace sw::editor
 				if ( FileUtil::directoryExists( next ) == false && builtPath.empty() == false )
 				{
 					vector<string> listChildren;
-					FileUtil::collectFolders( builtPath, listChildren, false, false );
+					EditorAssetCommands::collectChildFolders( builtPath, listChildren );
 					for ( const string& child : listChildren )
 					{
 						if ( FileUtil::normalizePath( FileUtil::getFileNamePart( child ) ) == lowerChild )

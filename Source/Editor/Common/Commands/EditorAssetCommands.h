@@ -25,6 +25,25 @@ namespace sw::editor
 		string _path;
 	};
 
+	/** @brief Content Browser 폴더 한 항목 */
+	struct EditorFolderListingEntry
+	{
+		string _name;
+		string _relativePath;
+		string _absolutePath;
+		string _extension;
+		bool   _bIsDirectory{ false };
+	};
+
+	/** @brief 프로파일러 리소스 카탈로그 개수 */
+	struct EditorResourceCatalogCounts
+	{
+		size_t _sceneCount{ 0 };
+		size_t _prefabCount{ 0 };
+		size_t _textureCount{ 0 };
+		size_t _shaderCount{ 0 };
+	};
+
 	/**
 	 * @class EditorAssetCommands
 	 * @brief Content Browser, 뷰포트 드롭, 메뉴가 공유하는 애셋 도메인 동작입니다.
@@ -47,5 +66,11 @@ namespace sw::editor
 		static void dropAt( GameObjectManager* pManager, const utf8* pPath, const float3& spawnPos );
 		/** @brief Resource 트리에서 씬/프리팹/텍스처/셰이더/데이터를 분류해 채웁니다. */
 		static void collectResourceIndex( vector<EditorResourceIndexEntry>& outList );
+		/** @brief 폴더의 직속 하위 폴더/파일을 채웁니다. .meta는 제외합니다. */
+		static void collectFolderListing( string_view folderAbs, vector<EditorFolderListingEntry>& outList );
+		/** @brief 폴더의 직속 하위 폴더 절대 경로를 채웁니다. */
+		static void collectChildFolders( string_view folderAbs, vector<string>& outList );
+		/** @brief Resource 아래 씬/프리팹/텍스처/셰이더 파일 개수를 셉니다. */
+		static void collectResourceCatalogCounts( EditorResourceCatalogCounts& outCounts );
 	};
 } // namespace sw::editor

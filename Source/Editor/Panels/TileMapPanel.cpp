@@ -2,12 +2,13 @@
 
 #include "Editor/Panels/TileMapPanel.h"
 
+#include "Core/String/StringUtil.h"
+
+#include "Editor/Common/Commands/EditorToolAssetCommands.h"
 #include "Editor/Common/Config/EditorData.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
-
-#include "Engine/Utility/Xml/XmlDocument.h"
 
 #include "RuntimeAPI/Service/EditorService.h"
 
@@ -215,175 +216,34 @@ namespace sw::editor
 
 	bool TileMapPanel::loadXml( string_view assetRelativePath )
 	{
-		string absPath = ResourceUtil::getResourcePath( assetRelativePath );
-		if ( absPath.empty() )
-			absPath = assetRelativePath;
-
-		if ( FileUtil::fileExists( absPath ) == false )
-		{
-			_status = "Not found: " + absPath;
+		EditorTileMapData data;
+		if ( EditorToolAssetCommands::loadTileMap( assetRelativePath, data, _status ) == false )
 			return false;
-		}
 
-		vector<uint8> listFileData;
-		if ( FileUtil::readFile( absPath, listFileData ) == false || listFileData.empty() )
-		{
-			_status = "Failed to read file";
-			return false;
-		}
-
-		string		xmlStr( reinterpret_cast<const utf8*>( listFileData.data() ), listFileData.size() );
-		XmlDocument doc;
-		if ( doc.parse( xmlStr ) == false )
-		{
-			_status = "XML parse error";
-			return false;
-		}
-
-		XmlNode root = doc.root( "TileMap" );
-		if ( root.isValid() == false )
-		{
-			_status = "Missing <TileMap>";
-			return false;
-		}
-
-		const utf8* pName = root.childText( "name" );
-		if ( pName != nullptr )
-			StringUtil::strncpy( _arrNameBuffer, pName, sizeof( _arrNameBuffer ) - 1 );
-		int32		w		   = 8;
-		int32		h		   = 8;
-		const utf8* pWidthText = root.childText( "width" );
-		if ( pWidthText != nullptr )
-			w = StringUtil::atoi( pWidthText );
-		const utf8* pHeightText = root.childText( "height" );
-		if ( pHeightText != nullptr )
-			h = StringUtil::atoi( pHeightText );
-		if ( w <= 0 )
-			w = 8;
-		if ( h <= 0 )
-			h = 8;
-		resize( w, h );
-
-		const size_t count = static_cast<size_t>( _width * _height );
-		XmlNode		 tiles = root.child( "tiles" );
-		if ( tiles.isValid() )
-		{
-			int32 index{ 0 };
-			for ( XmlNode tileNode = tiles.child( "t" ); tileNode && index < static_cast<int32>( count );
-				  tileNode		   = tileNode.next( "t" ), ++index )
-			{
-				const utf8*	 pV			 = tileNode.text();
-				const size_t tileIndex	 = static_cast<size_t>( index );
-				_listWalkable[tileIndex] = ( pV == nullptr || pV[0] != '0' ) ? 1 : 0;
-				const utf8* pEnc		 = tileNode.attr( "enc" );
-				if ( pEnc != nullptr )
-					_listEncounter[tileIndex] = ( StringUtil::atoi( pEnc ) != 0 ) ? 1 : 0;
-				const utf8* pPt = tileNode.attr( "pt" );
-				if ( pPt != nullptr )
-					_listPassThrough[tileIndex] = ( StringUtil::atoi( pPt ) != 0 ) ? 1 : 0;
-
-				EditorTileVisual vis{};
-				const utf8*		 pHa = tileNode.attr( "h" );
-				if ( pHa != nullptr )
-					vis._height = static_cast<uint8>( StringUtil::atoi( pHa ) );
-				const utf8* pAtlas = tileNode.attr( "atlas" );
-				if ( pAtlas != nullptr )
-					vis._atlasId = static_cast<uint8>( StringUtil::atoi( pAtlas ) );
-				const utf8* pTr = tileNode.attr( "tr" );
-				if ( pTr != nullptr )
-					vis._tintR = static_cast<uint8>( StringUtil::atoi( pTr ) );
-				const utf8* pTg = tileNode.attr( "tg" );
-				if ( pTg != nullptr )
-					vis._tintG = static_cast<uint8>( StringUtil::atoi( pTg ) );
-				const utf8* pTb = tileNode.attr( "tb" );
-				if ( pTb != nullptr )
-					vis._tintB = static_cast<uint8>( StringUtil::atoi( pTb ) );
-				_listVisual[tileIndex] = vis;
-			}
-		}
-
-		_listWarp.clear();
-		XmlNode warps = root.child( "warps" );
-		if ( warps.isValid() )
-		{
-			for ( XmlNode wNode = warps.child( "warp" ); wNode; wNode = wNode.next( "warp" ) )
-			{
-				EditorTileWarp warp{};
-				const utf8*	   pX = wNode.attr( "x" );
-				if ( pX != nullptr )
-					warp._tileX = StringUtil::atoi( pX );
-				const utf8* pY = wNode.attr( "y" );
-				if ( pY != nullptr )
-					warp._tileY = StringUtil::atoi( pY );
-				const utf8* pMap = wNode.attr( "map" );
-				if ( pMap != nullptr )
-					warp._targetMap = pMap;
-				const utf8* pTx = wNode.attr( "tx" );
-				if ( pTx != nullptr )
-					warp._targetTileX = StringUtil::atoi( pTx );
-				const utf8* pTy = wNode.attr( "ty" );
-				if ( pTy != nullptr )
-					warp._targetTileY = StringUtil::atoi( pTy );
-				const utf8* pPair = wNode.attr( "pair" );
-				if ( pPair != nullptr )
-					warp._pairId = pPair;
-				_listWarp.push_back( std::move( warp ) );
-			}
-		}
-
+		StringUtil::strncpy( _arrNameBuffer, data._name.c_str(), sizeof( _arrNameBuffer ) - 1 );
+		_width			 = data._width;
+		_height			 = data._height;
+		_listWalkable	 = std::move( data._listWalkable );
+		_listEncounter	 = std::move( data._listEncounter );
+		_listPassThrough = std::move( data._listPassThrough );
+		_listVisual		 = std::move( data._listVisual );
+		_listWarp		 = std::move( data._listWarp );
 		StringUtil::strncpy( _arrPathBuffer, string( assetRelativePath ).c_str(), sizeof( _arrPathBuffer ) - 1 );
-		_status = string( "Loaded " ) + string( assetRelativePath );
 		return true;
 	}
 
 	bool TileMapPanel::saveXml( string_view assetRelativePath ) const
 	{
-		string absPath = ResourceUtil::getResourcePath( assetRelativePath );
-		if ( absPath.empty() )
-			absPath = assetRelativePath;
-
-		StringBuilder<4096> sb;
-		sb.appendFormat( "<TileMap>\n" );
-		sb.appendFormat( "  <name>%s</name>\n", _arrNameBuffer );
-		sb.appendFormat( "  <width>%d</width>\n", _width );
-		sb.appendFormat( "  <height>%d</height>\n", _height );
-		sb.appendFormat( "  <tiles>\n" );
-
-		const size_t count = static_cast<size_t>( _width * _height );
-		for ( size_t tileIndex = 0; tileIndex < count; ++tileIndex )
-		{
-			const uint8 walk = _listWalkable[tileIndex];
-			const uint8 enc	 = _listEncounter[tileIndex];
-			const uint8 pt	 = _listPassThrough[tileIndex];
-			const auto& vis	 = _listVisual[tileIndex];
-			sb.appendFormat( "    <t enc=\"%u\" pt=\"%u\" h=\"%u\" atlas=\"%u\" tr=\"%u\" tg=\"%u\" tb=\"%u\">%u</t>\n",
-							 static_cast<uint32>( enc ),
-							 static_cast<uint32>( pt ),
-							 static_cast<uint32>( vis._height ),
-							 static_cast<uint32>( vis._atlasId ),
-							 static_cast<uint32>( vis._tintR ),
-							 static_cast<uint32>( vis._tintG ),
-							 static_cast<uint32>( vis._tintB ),
-							 static_cast<uint32>( walk ) );
-		}
-
-		sb.appendFormat( "  </tiles>\n" );
-		sb.appendFormat( "  <warps>\n" );
-		for ( const EditorTileWarp& warp : _listWarp )
-		{
-			sb.appendFormat( "    <warp x=\"%d\" y=\"%d\" map=\"%s\" tx=\"%d\" ty=\"%d\"",
-							 warp._tileX,
-							 warp._tileY,
-							 warp._targetMap.c_str(),
-							 warp._targetTileX,
-							 warp._targetTileY );
-			if ( warp._pairId.empty() == false )
-				sb.appendFormat( " pair=\"%s\"", warp._pairId.c_str() );
-			sb.appendFormat( "/>\n" );
-		}
-		sb.appendFormat( "  </warps>\n" );
-		sb.appendFormat( "</TileMap>\n" );
-		return FileUtil::writeTextFile( absPath, sb.c_str() );
+		EditorTileMapData data;
+		data._name			  = _arrNameBuffer;
+		data._width			  = _width;
+		data._height		  = _height;
+		data._listWalkable	  = _listWalkable;
+		data._listEncounter	  = _listEncounter;
+		data._listPassThrough = _listPassThrough;
+		data._listVisual	  = _listVisual;
+		data._listWarp		  = _listWarp;
+		return EditorToolAssetCommands::saveTileMap( assetRelativePath, data );
 	}
 
 	void TileMapPanel::paintCell( int32 x, int32 y )

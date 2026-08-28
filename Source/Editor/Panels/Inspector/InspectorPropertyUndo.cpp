@@ -2,12 +2,11 @@
 
 #include "Editor/Panels/Inspector/InspectorPropertyUndo.h"
 
+#include "Core/Memory/Memory.h"
+
+#include "Editor/Common/Commands/EditorInspectorCommands.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
-
-#include "Engine/Utility/CommandStack.h"
-
-#include "RuntimeAPI/Service/EditorService.h"
 
 #include <imgui.h>
 
@@ -56,23 +55,11 @@ namespace sw::editor
 		void*		  pPtr		 = it->second._pPtr;
 		const size_t  sz		 = it->second._size;
 		vector<uint8> listBefore = std::move( it->second._listBefore );
-		const string  lbl		 = string( "Edit " ) + it->second._label;
+		const string  lbl		 = it->second._label;
 		s_mapPending.erase( it );
 
-		uint64				  selectedId = EditorContext::get()->getWorkspace().getSelectedObjectId();
-		CommandStack::Command cmd;
-		cmd._label = lbl;
-		cmd._undo  = [pPtr, sz, listBefore, selectedId]()
-		{
-			if ( pPtr != nullptr && ( selectedId == 0 || EditorContext::get()->getWorkspace().getSelectedObjectId() == selectedId ) )
-				Memory::copy( pPtr, listBefore.data(), sz );
-		};
-		cmd._redo = [pPtr, sz, after, selectedId]()
-		{
-			if ( pPtr != nullptr && ( selectedId == 0 || EditorContext::get()->getWorkspace().getSelectedObjectId() == selectedId ) )
-				Memory::copy( pPtr, after.data(), sz );
-		};
-		editor::getService<CommandStack>()->push( std::move( cmd ) );
+		const uint64 selectedId = EditorContext::get()->getWorkspace().getSelectedObjectId();
+		EditorInspectorCommands::pushPodEdit( pPtr, sz, std::move( listBefore ), std::move( after ), lbl, selectedId );
 	}
 
 	void InspectorPropertyUndo::trackString( string* pPtr, const utf8* pLabel )
@@ -108,22 +95,10 @@ namespace sw::editor
 		}
 		string*		 pTarget = it->second._pPtr;
 		string		 before	 = std::move( it->second._before );
-		const string lbl	 = string( "Edit " ) + it->second._label;
+		const string lbl	 = it->second._label;
 		s_mapPending.erase( it );
 
-		uint64				  selectedId = EditorContext::get()->getWorkspace().getSelectedObjectId();
-		CommandStack::Command cmd;
-		cmd._label = lbl;
-		cmd._undo  = [pTarget, before, selectedId]()
-		{
-			if ( pTarget != nullptr && ( selectedId == 0 || EditorContext::get()->getWorkspace().getSelectedObjectId() == selectedId ) )
-				*pTarget = before;
-		};
-		cmd._redo = [pTarget, after, selectedId]()
-		{
-			if ( pTarget != nullptr && ( selectedId == 0 || EditorContext::get()->getWorkspace().getSelectedObjectId() == selectedId ) )
-				*pTarget = after;
-		};
-		editor::getService<CommandStack>()->push( std::move( cmd ) );
+		const uint64 selectedId = EditorContext::get()->getWorkspace().getSelectedObjectId();
+		EditorInspectorCommands::pushStringEdit( pTarget, std::move( before ), std::move( after ), lbl, selectedId );
 	}
 } // namespace sw::editor

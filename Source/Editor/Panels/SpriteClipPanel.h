@@ -8,6 +8,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
+#include "Editor/Common/Commands/EditorToolAssetCommands.h"
 #include "Editor/Common/Gui/IEditorPanel.h"
 
 namespace sw::editor
@@ -33,24 +34,8 @@ namespace sw::editor
 		// ------------------------------------------------------------------------------
 		// 2) 프레임 · 트랜스폼 키
 		// ------------------------------------------------------------------------------
-		/** @brief 아틀라스 UV 한 프레임 */
-		struct Frame
-		{
-			float32 _u{ 0.0f };
-			float32 _v{ 0.0f };
-			float32 _w{ 1.0f };
-			float32 _h{ 1.0f };
-			int32	_durationMs{ 100 };
-		};
-
-		/** @brief 시간축 트랜스폼 키 (위치 / 각도) */
-		struct TransformKey
-		{
-			float32 _time{ 0.0f };
-			float32 _x{ 0.0f };
-			float32 _y{ 0.0f };
-			float32 _angleDeg{ 0.0f };
-		};
+		using Frame		   = EditorSpriteClipFrame;
+		using TransformKey = EditorSpriteClipKey;
 
 		// ------------------------------------------------------------------------------
 		// 3) SpriteClip.json 로드/저장

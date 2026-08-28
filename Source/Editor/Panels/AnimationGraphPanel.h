@@ -4,6 +4,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
+#include "Editor/Common/Commands/EditorToolAssetCommands.h"
 #include "Editor/Common/Gui/IEditorPanel.h"
 #include "Editor/Common/Widgets/EditorNodeGraph.h"
 
@@ -30,28 +31,11 @@ namespace sw::editor
 		const utf8* getPanelTitle() const override { return "Animation Graph"; }
 
 	private:
-		// ------------------------------------------------------------------------------
-		// 2) 그래프 데이터 — 노드 / 링크
-		// ------------------------------------------------------------------------------
-		/** @brief 그래프 노드 (id / 이름 / 캔버스 위치) */
-		struct GraphNode
-		{
-			int32	_id{ 0 };
-			string	_name;
-			float32 _x{ 40.0f };
-			float32 _y{ 40.0f };
-		};
-
-		/** @brief 노드 간 링크 */
-		struct GraphLink
-		{
-			int32 _id{ 0 };
-			int32 _fromNode{ 0 };
-			int32 _toNode{ 0 };
-		};
+		using GraphNode = EditorAnimGraphNode;
+		using GraphLink = EditorAnimGraphLink;
 
 		// ------------------------------------------------------------------------------
-		// 3) 그래프 조작 · JSON 로드/저장
+		// 2) 그래프 조작 · JSON 로드/저장
 		// ------------------------------------------------------------------------------
 		/** @brief 기본 노드가 없으면 넣습니다. */
 		void ensureDefaults();
