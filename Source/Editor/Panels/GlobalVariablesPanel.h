@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Container/unordered_set.h"
 
 #include "Editor/Common/Gui/IEditorPanel.h"
 
@@ -32,16 +33,18 @@ namespace sw::editor
 		/** @brief 전역 변수 UI를 그립니다. */
 		void drawContent() override;
 		/** @brief 기본 창 크기를 반환합니다. */
-		float2 getInitialPanelSize() const override { return float2{ 620.0f, 440.0f }; }
+		float2 getInitialPanelSize() const override { return float2{ 680.0f, 480.0f }; }
 		/** @brief 온디맨드 도구이므로 기본적으로 닫힌 채 시작합니다. */
 		bool isToolPanel() const override { return true; }
 
 	private:
 		/** @brief 단일 전역 변수의 편집 컨트롤을 그립니다. */
-		void drawVariableRow( GlobalVariableInfo& info );
+		void drawVariableRow( GlobalVariableInfo& info, bool bShowPin );
 
 	private:
+		unordered_set<string>  _uniquePinnedVar;
 		utf8				   _arrSearchFilter[128];
+		utf8				   _arrPresetNameBuf[64];
 		uint8				   _bGroupByModule : 1;
 		[[maybe_unused]] uint8 _reserved	   : 7;
 	};
