@@ -29,5 +29,11 @@ namespace sw::editor
 	private:
 		/** @brief 메모리 프로파일 탭을 그립니다. */
 		void drawMemoryTab();
+		/** @brief 실시간 FPS 및 씬 성능 진단 탭을 그립니다. */
+		void drawPerformanceTab();
+
+	private:
+		float32 _arrFrameTimeHistory[120]{};
+		uint32	_historyOffset{ 0 };
 	};
 } // namespace sw::editor

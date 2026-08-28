@@ -14,6 +14,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
@@ -104,6 +105,29 @@ namespace sw::editor
 			EditorTransaction::recordCreation( GameObjectPtr{ pCreated }, "Create GameObject" );
 			EditorContext::get()->getWorkspace().selectGameObject( GameObjectPtr{ pCreated }, SelectionMode::Replace );
 			return pCreated;
+		}
+
+		GameObject* duplicateGameObject( GameObjectManager* pManager, GameObject* pSrc )
+		{
+			if ( pManager == nullptr || pSrc == nullptr )
+				return nullptr;
+
+			const string xml = ObjectStateSerializer::saveToXmlString( pSrc );
+			utf8		 newName[constant::kMaxBuffer256];
+			formatstring( newName, sizeof( newName ), "%#_Copy", pSrc->getName().c_str() );
+
+			GameObject* pNewObj = pManager->createGameObject( hashed_string( newName ) );
+			if ( pNewObj != nullptr )
+			{
+				ObjectStateSerializer::loadFromXmlString( pNewObj, xml );
+				pNewObj->setName( hashed_string( newName ) );
+				if ( pSrc->getParent() != nullptr )
+					pNewObj->attachToParent( pSrc->getParent() );
+				ObjectStateSerializer::rebindSceneHierarchy( pNewObj, xml );
+				EditorTransaction::recordCreation( GameObjectPtr{ pNewObj }, "Duplicate GameObject" );
+				EditorContext::get()->getWorkspace().selectGameObject( GameObjectPtr{ pNewObj }, SelectionMode::Replace );
+			}
+			return pNewObj;
 		}
 
 		bool wouldCreateParentCycle( GameObject* pChild, GameObject* pNewParent )
@@ -307,6 +331,9 @@ namespace sw::editor
 			if ( ImGui::MenuItem( "Create Child GameObject" ) )
 				createGameObjectWithRoot( pManager, pObj );
 
+			if ( ImGui::MenuItem( "Duplicate GameObject", "Ctrl+D" ) )
+				duplicateGameObject( pManager, pObj );
+
 			drawAddComponentMenu( pObj );
 
 			ImGui::Separator();
@@ -362,7 +389,7 @@ namespace sw::editor
 			EditorContext::get()->getActionMenuManager().drawActionMenu( ActionMenuLocation::Hierarchy );
 
 			ImGui::Separator();
-			if ( ImGui::MenuItem( "Destroy GameObject" ) )
+			if ( ImGui::MenuItem( "Destroy GameObject", "Delete" ) )
 			{
 				EditorTransaction::recordDestruction( GameObjectPtr{ pObj }, "Destroy GameObject" );
 				if ( EditorContext::get()->getSelectionManager().hasObject( GameObjectPtr{ pObj } ) )
@@ -424,7 +451,9 @@ namespace sw::editor
 			ImGui::PopID();
 		}
 
-		void drawGameObjectNode( GameObject* pObj, GameObjectManager* pManager, const utf8* pFilter )
+		void drawGameObjectNode( GameObject* pObj, GameObjectManager* pManager, const utf8* pFilter,
+								 uint64& renamingObjectId, utf8* pRenameBuffer, size_t renameBufferSize,
+								 bool& bFocusRenameInput )
 		{
 			if ( pObj == nullptr || pManager == nullptr )
 				return;
@@ -449,8 +478,36 @@ namespace sw::editor
 			}
 			ImGui::SameLine();
 
+			string badgeStr;
+			for ( const Component* pComp : pObj->getAllComponents() )
+			{
+				if ( pComp == nullptr )
+					continue;
+				const TypeInfo* pT = pComp->getTypeInfo();
+				if ( pT == nullptr )
+					continue;
+				const hashed_string& typeName = pT->_name;
+				if ( typeName == hashed_string( "CameraComponent" ) )
+					badgeStr += " [Cam]";
+				else if ( typeName == hashed_string( "MeshComponent" ) )
+					badgeStr += " [Mesh]";
+				else if ( typeName == hashed_string( "SpriteComponent" ) )
+					badgeStr += " [Sprite]";
+				else if ( typeName == hashed_string( "SpriteAnimatorComponent" ) )
+					badgeStr += " [Anim]";
+				else if ( typeName == hashed_string( "BoxCollider2DComponent" ) )
+					badgeStr += " [Col]";
+				else if ( typeName == hashed_string( "UnitStatsComponent" ) )
+					badgeStr += " [Stats]";
+				else if ( typeName == hashed_string( "HPBarBaseComponent" ) )
+					badgeStr += " [UI]";
+			}
+
 			utf8 arrLabel[256];
-			formatstring( arrLabel, sizeof( arrLabel ), "%###go%#", pObj->getName().c_str(), objectId );
+			if ( badgeStr.empty() == false )
+				formatstring( arrLabel, sizeof( arrLabel ), "%# %#%###go%#", pObj->getName().c_str(), badgeStr.c_str(), objectId );
+			else
+				formatstring( arrLabel, sizeof( arrLabel ), "%###go%#", pObj->getName().c_str(), objectId );
 
 			const bool bHasChildGos	  = pObj->getChildren().empty() == false;
 			const bool bHasComponents = pObj->getComponentCount() > 0;
@@ -473,6 +530,45 @@ namespace sw::editor
 				EditorContext::get()->getWorkspace().selectGameObject( ptrObj, mode );
 			}
 
+			// Inline Rename Input
+			if ( renamingObjectId == objectId )
+			{
+				ImGui::SameLine();
+				ImGui::SetNextItemWidth( 160.0f );
+				if ( bFocusRenameInput )
+				{
+					ImGui::SetKeyboardFocusHere();
+					bFocusRenameInput = false;
+				}
+				if ( ImGui::InputText( "##InlineRename", pRenameBuffer, renameBufferSize,
+									   ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll ) )
+				{
+					if ( pRenameBuffer[0] != '\0' )
+					{
+						const string beforeXml = EditorTransaction::captureSnapshot( ptrObj );
+						pObj->setName( hashed_string( pRenameBuffer ) );
+						const string afterXml = EditorTransaction::captureSnapshot( ptrObj );
+						EditorTransaction::recordModify( ptrObj, beforeXml, afterXml, "Rename GameObject" );
+					}
+					renamingObjectId = 0;
+				}
+				if ( ImGui::IsItemDeactivated() && ImGui::IsKeyPressed( ImGuiKey_Escape ) == false )
+				{
+					if ( pRenameBuffer[0] != '\0' )
+					{
+						const string beforeXml = EditorTransaction::captureSnapshot( ptrObj );
+						pObj->setName( hashed_string( pRenameBuffer ) );
+						const string afterXml = EditorTransaction::captureSnapshot( ptrObj );
+						EditorTransaction::recordModify( ptrObj, beforeXml, afterXml, "Rename GameObject" );
+					}
+					renamingObjectId = 0;
+				}
+				if ( ImGui::IsKeyPressed( ImGuiKey_Escape ) )
+				{
+					renamingObjectId = 0;
+				}
+			}
+
 			drawGameObjectContextMenu( pObj, pManager );
 			drawGameObjectDragDrop( pObj, pManager );
 
@@ -480,7 +576,8 @@ namespace sw::editor
 			{
 				for ( GameObject* pChild : pObj->getChildren() )
 				{
-					drawGameObjectNode( pChild, pManager, pFilter );
+					drawGameObjectNode( pChild, pManager, pFilter, renamingObjectId, pRenameBuffer, renameBufferSize,
+										bFocusRenameInput );
 				}
 
 				const vector<Component*>& listComponents = pObj->getAllComponents();
@@ -527,6 +624,14 @@ namespace sw::editor
 
 	} // namespace
 
+	HierarchyPanel::HierarchyPanel()
+		: _renamingObjectId{ 0 }
+		, _arrFilterBuffer{}
+		, _arrRenameBuffer{}
+		, _bFocusRenameInput{ false }
+	{
+	}
+
 	void HierarchyPanel::drawContent()
 	{
 		Scene* pScene = editor::getService<SceneManager>()->getActiveScene();
@@ -557,7 +662,102 @@ namespace sw::editor
 			for ( GameObject* pObj : listObjects )
 			{
 				if ( pObj != nullptr && pObj->getParent() == nullptr )
-					drawGameObjectNode( pObj, pManager, _arrFilterBuffer );
+					drawGameObjectNode( pObj, pManager, _arrFilterBuffer, _renamingObjectId, _arrRenameBuffer,
+										sizeof( _arrRenameBuffer ), _bFocusRenameInput );
+			}
+
+			// Empty area Drag & Drop Target for SW_ASSET_PATH
+			if ( ImGui::BeginDragDropTarget() )
+			{
+				const ImGuiPayload* pGoPayload = ImGui::AcceptDragDropPayload( kHierarchyGoPayload );
+				if ( pGoPayload != nullptr && pGoPayload->DataSize == static_cast<int32>( sizeof( uint64 ) ) )
+				{
+					const uint64	  draggedId = *static_cast<const uint64*>( pGoPayload->Data );
+					GameObject* const pDragged	= pManager->findGameObjectById( draggedId );
+					if ( pDragged != nullptr && pDragged->getParent() != nullptr )
+					{
+						const string beforeXml = EditorTransaction::captureSnapshot( GameObjectPtr{ pDragged } );
+						pDragged->detachFromParent();
+						const string afterXml = EditorTransaction::captureSnapshot( GameObjectPtr{ pDragged } );
+						EditorTransaction::recordModify( GameObjectPtr{ pDragged }, beforeXml, afterXml,
+														 "Detach GameObject to Root" );
+						EditorContext::get()->getWorkspace().selectGameObject( GameObjectPtr{ pDragged },
+																			   SelectionMode::Replace );
+					}
+				}
+
+				const ImGuiPayload* pAssetPayload = ImGui::AcceptDragDropPayload( "SW_ASSET_PATH" );
+				if ( pAssetPayload != nullptr )
+				{
+					const utf8* pPath = static_cast<const utf8*>( pAssetPayload->Data );
+					if ( pPath != nullptr )
+					{
+						GameObject* pSpawned = EditorUtil::spawnPrefabFromAssetPath( pManager, pPath, nullptr );
+						if ( pSpawned != nullptr )
+						{
+							EditorTransaction::recordCreation( GameObjectPtr{ pSpawned }, "Spawn Prefab" );
+							EditorContext::get()->getWorkspace().selectGameObject( GameObjectPtr{ pSpawned },
+																				   SelectionMode::Replace );
+						}
+					}
+				}
+				ImGui::EndDragDropTarget();
+			}
+
+			// Keyboard shortcuts (Ctrl+D duplicate, F2 inline rename, Delete destroy)
+			if ( ImGui::IsWindowFocused( ImGuiFocusedFlags_ChildWindows ) && ImGui::GetIO().WantTextInput == false )
+			{
+				const ImGuiIO&				 io		 = ImGui::GetIO();
+				SelectionManager&			 selMgr	 = EditorContext::get()->getSelectionManager();
+				const vector<GameObjectPtr>& listSel = selMgr.getSelectedObjects();
+
+				if ( listSel.empty() == false )
+				{
+					if ( io.KeyCtrl && ImGui::IsKeyPressed( ImGuiKey_D, false ) )
+					{
+						vector<GameObject*> listNewCreated;
+						for ( const GameObjectPtr& pGoPtr : listSel )
+						{
+							GameObject* pSrc = pGoPtr.get();
+							if ( pSrc != nullptr )
+							{
+								GameObject* pNewGo = duplicateGameObject( pManager, pSrc );
+								if ( pNewGo != nullptr )
+									listNewCreated.push_back( pNewGo );
+							}
+						}
+						if ( listNewCreated.empty() == false )
+						{
+							selMgr.clearObjectSelection();
+							for ( GameObject* pNewGo : listNewCreated )
+								selMgr.selectObject( GameObjectPtr{ pNewGo }, SelectionMode::Add );
+						}
+					}
+					else if ( ImGui::IsKeyPressed( ImGuiKey_F2, false ) )
+					{
+						GameObject* pSelected = listSel.back().get();
+						if ( pSelected != nullptr )
+						{
+							_renamingObjectId = pSelected->getObjectId();
+							formatstring( _arrRenameBuffer, sizeof( _arrRenameBuffer ), "%#",
+										  pSelected->getName().c_str() );
+							_bFocusRenameInput = true;
+						}
+					}
+					else if ( ImGui::IsKeyPressed( ImGuiKey_Delete, false ) )
+					{
+						for ( const GameObjectPtr& pGoPtr : listSel )
+						{
+							GameObject* pGo = pGoPtr.get();
+							if ( pGo != nullptr )
+							{
+								EditorTransaction::recordDestruction( pGoPtr, "Destroy GameObject" );
+								pManager->destroyObject( pGo );
+							}
+						}
+						selMgr.clearObjectSelection();
+					}
+				}
 			}
 
 			// 빈 공간 우클릭 메뉴

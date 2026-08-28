@@ -16,6 +16,9 @@ namespace sw::editor
 	class HierarchyPanel : public IEditorPanel
 	{
 	public:
+		HierarchyPanel();
+		~HierarchyPanel() override = default;
+
 		// ------------------------------------------------------------------------------
 		// 1) IEditorPanel — 제목/그리기
 		// ------------------------------------------------------------------------------
@@ -29,6 +32,9 @@ namespace sw::editor
 		static void onSaveScenePicked( const vector<string>& paths );
 
 	private:
-		utf8 _arrFilterBuffer[constant::kMaxBuffer128]{};
+		uint64 _renamingObjectId;
+		utf8   _arrFilterBuffer[constant::kMaxBuffer128];
+		utf8   _arrRenameBuffer[constant::kMaxBuffer256];
+		bool   _bFocusRenameInput;
 	};
 } // namespace sw::editor

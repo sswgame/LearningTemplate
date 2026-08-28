@@ -24,6 +24,14 @@ namespace sw::editor
 		ViewportRenderMode _renderMode{ ViewportRenderMode::Lit };
 		float32			   _cameraSpeed{ 5.0f };
 		bool			   _bShowStats{ true };
+		bool			   _bShowColliders{ true };
+		bool			   _bShowCameras{ true };
+		bool			   _bShowGrid{ true };
+		bool			   _bShowOrientationCube{ true };
+		bool			   _bShowRuler{ false };
+		bool			   _bIs2DMode{ false };
+		bool			   _bSurfaceSnap{ false };
+		int32			   _requestedBookmarkSlot{ -1 };
 	};
 
 	/**

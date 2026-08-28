@@ -1,0 +1,387 @@
+#include "pch.h"
+
+#include "Editor/Panels/DataTablePanel.h"
+
+#include "Core/Common/Defines.h"
+#include "Core/Container/map.h"
+#include "Core/File/FileUtil.h"
+#include "Core/Log/Logger.h"
+#include "Core/String/StringUtil.h"
+
+#include "Editor/Common/Widgets/EditorWidgets.h"
+#include "Editor/Common/Workspace/EditorContext.h"
+
+#include "Engine/Localization/LocalizationManager.h"
+#include "Engine/Utility/Json/JsonDocument.h"
+#include "Engine/Utility/Xml/XmlDocument.h"
+
+#include "RuntimeAPI/Service/EditorService.h"
+
+#include <imgui.h>
+
+SW_LOG_CALLER( "DataTablePanel" );
+namespace sw::editor
+{
+	namespace
+	{
+		string getLocalizationFolderPath()
+		{
+			return FileUtil::joinPath( FileUtil::getCurrentPath(), "Resource/game/demo/data/localization" );
+		}
+
+		string getGameDataFolderPath()
+		{
+			return FileUtil::joinPath( FileUtil::getCurrentPath(), "Resource/game/demo/data" );
+		}
+	} // namespace
+
+	DataTablePanel::DataTablePanel()
+		: _activeTab{ 0 }
+		, _arrLocFilter{}
+		, _arrNewKeyBuffer{}
+		, _listLocRecord{}
+		, _listGameDataFile{}
+		, _selectedGameDataIndex{ -1 }
+		, _selectedGameDataRawText{}
+		, _bLocLoaded{ false }
+		, _bGameDataLoaded{ false }
+	{
+	}
+
+	void DataTablePanel::drawContent()
+	{
+		if ( _bLocLoaded == false )
+			reloadLocalization();
+
+		if ( _bGameDataLoaded == false )
+			reloadGameDataFiles();
+
+		if ( ImGui::BeginTabBar( "##DataTableTabs" ) )
+		{
+			if ( ImGui::BeginTabItem( "Localization Strings" ) )
+			{
+				_activeTab = 0;
+				drawLocalizationTab();
+				ImGui::EndTabItem();
+			}
+
+			if ( ImGui::BeginTabItem( "Game Data XML Tables" ) )
+			{
+				_activeTab = 1;
+				drawGameDataTab();
+				ImGui::EndTabItem();
+			}
+
+			ImGui::EndTabBar();
+		}
+	}
+
+	void DataTablePanel::drawLocalizationTab()
+	{
+		// 툴바: 검색, 새로고침, 저장, 새 키 추가
+		editor::drawSearchField( "##locFilter", _arrLocFilter, sizeof( _arrLocFilter ), "Search keys or translations...", 240.0f, false );
+		ImGui::SameLine();
+
+		if ( ImGui::Button( "Save Localization" ) )
+			saveLocalization();
+
+		ImGui::SameLine();
+		if ( ImGui::Button( "Reload" ) )
+			reloadLocalization();
+
+		ImGui::SameLine();
+		ImGui::SetNextItemWidth( 160.0f );
+		ImGui::InputTextWithHint( "##newKey", "New string key...", _arrNewKeyBuffer, sizeof( _arrNewKeyBuffer ) );
+		ImGui::SameLine();
+		if ( ImGui::Button( "Add Key" ) && _arrNewKeyBuffer[0] != '\0' )
+		{
+			const string newKey{ _arrNewKeyBuffer };
+			bool		 bExists{ false };
+			for ( const LocRecord& rec : _listLocRecord )
+			{
+				if ( rec._key == newKey )
+				{
+					bExists = true;
+					break;
+				}
+			}
+
+			if ( bExists == false )
+			{
+				LocRecord newRec{};
+				newRec._key		  = newKey;
+				newRec._bModified = true;
+				_listLocRecord.push_back( std::move( newRec ) );
+				_arrNewKeyBuffer[0] = '\0';
+			}
+		}
+
+		ImGui::Separator();
+
+		const string filter = StringUtil::toLower( _arrLocFilter );
+
+		constexpr ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable |
+										  ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingStretchProp;
+
+		if ( ImGui::BeginTable( "##locTable", 5, flags, ImGui::GetContentRegionAvail() ) )
+		{
+			ImGui::TableSetupColumn( "Key", ImGuiTableColumnFlags_WidthStretch, 0.25f );
+			ImGui::TableSetupColumn( "en_US", ImGuiTableColumnFlags_WidthStretch, 0.25f );
+			ImGui::TableSetupColumn( "ko_KR", ImGuiTableColumnFlags_WidthStretch, 0.25f );
+			ImGui::TableSetupColumn( "ja_JP", ImGuiTableColumnFlags_WidthStretch, 0.20f );
+			ImGui::TableSetupColumn( "Action", ImGuiTableColumnFlags_WidthFixed, 50.0f );
+			ImGui::TableHeadersRow();
+
+			int32 deleteIndex = -1;
+
+			for ( size_t recordIndex = 0; recordIndex < _listLocRecord.size(); ++recordIndex )
+			{
+				LocRecord& rec = _listLocRecord[recordIndex];
+
+				if ( filter.empty() == false )
+				{
+					const string lowerKey = StringUtil::toLower( rec._key.c_str() );
+					const string lowerEn  = StringUtil::toLower( rec._enUS.c_str() );
+					const string lowerKo  = StringUtil::toLower( rec._koKR.c_str() );
+					const string lowerJa  = StringUtil::toLower( rec._jaJP.c_str() );
+
+					if ( lowerKey.find( filter ) == string::npos && lowerEn.find( filter ) == string::npos &&
+						 lowerKo.find( filter ) == string::npos && lowerJa.find( filter ) == string::npos )
+					{
+						continue;
+					}
+				}
+
+				ImGui::PushID( static_cast<int32>( recordIndex ) );
+				ImGui::TableNextRow();
+
+				// Col 0: Key
+				ImGui::TableSetColumnIndex( 0 );
+				ImGui::TextUnformatted( rec._key.c_str() );
+
+				// Col 1: en_US
+				ImGui::TableSetColumnIndex( 1 );
+				utf8 arrEnBuf[constant::kMaxBuffer512];
+				formatstring( arrEnBuf, sizeof( arrEnBuf ), "%s", rec._enUS.c_str() );
+				ImGui::SetNextItemWidth( -1.0f );
+				if ( ImGui::InputText( "##en", arrEnBuf, sizeof( arrEnBuf ) ) )
+				{
+					rec._enUS	   = arrEnBuf;
+					rec._bModified = true;
+				}
+
+				// Col 2: ko_KR
+				ImGui::TableSetColumnIndex( 2 );
+				utf8 arrKoBuf[constant::kMaxBuffer512];
+				formatstring( arrKoBuf, sizeof( arrKoBuf ), "%s", rec._koKR.c_str() );
+				ImGui::SetNextItemWidth( -1.0f );
+				if ( ImGui::InputText( "##ko", arrKoBuf, sizeof( arrKoBuf ) ) )
+				{
+					rec._koKR	   = arrKoBuf;
+					rec._bModified = true;
+				}
+
+				// Col 3: ja_JP
+				ImGui::TableSetColumnIndex( 3 );
+				utf8 arrJaBuf[constant::kMaxBuffer512];
+				formatstring( arrJaBuf, sizeof( arrJaBuf ), "%s", rec._jaJP.c_str() );
+				ImGui::SetNextItemWidth( -1.0f );
+				if ( ImGui::InputText( "##ja", arrJaBuf, sizeof( arrJaBuf ) ) )
+				{
+					rec._jaJP	   = arrJaBuf;
+					rec._bModified = true;
+				}
+
+				// Col 4: Action
+				ImGui::TableSetColumnIndex( 4 );
+				if ( ImGui::SmallButton( "Del" ) )
+					deleteIndex = static_cast<int32>( recordIndex );
+
+				ImGui::PopID();
+			}
+
+			if ( deleteIndex >= 0 && static_cast<size_t>( deleteIndex ) < _listLocRecord.size() )
+				_listLocRecord.erase( _listLocRecord.begin() + deleteIndex );
+
+			ImGui::EndTable();
+		}
+	}
+
+	void DataTablePanel::drawGameDataTab()
+	{
+		ImGui::BeginGroup();
+		// Left: File list
+		ImGui::Text( "XML Data Files" );
+		ImGui::Separator();
+		if ( ImGui::Button( "Refresh Files" ) )
+			reloadGameDataFiles();
+
+		ImGui::BeginChild( "##DataFileList", ImVec2( 200.0f, 0.0f ), true );
+		for ( size_t fileIndex = 0; fileIndex < _listGameDataFile.size(); ++fileIndex )
+		{
+			const GameDataFileEntry& entry	   = _listGameDataFile[fileIndex];
+			const bool				 bSelected = ( _selectedGameDataIndex == static_cast<int32>( fileIndex ) );
+			if ( ImGui::Selectable( entry._fileName.c_str(), bSelected ) )
+			{
+				_selectedGameDataIndex = static_cast<int32>( fileIndex );
+				loadSelectedGameDataFile();
+			}
+		}
+		ImGui::EndChild();
+		ImGui::EndGroup();
+
+		ImGui::SameLine();
+
+		// Right: File Content Viewer & Editor
+		ImGui::BeginGroup();
+		if ( _selectedGameDataIndex >= 0 && static_cast<size_t>( _selectedGameDataIndex ) < _listGameDataFile.size() )
+		{
+			const GameDataFileEntry& entry = _listGameDataFile[static_cast<size_t>( _selectedGameDataIndex )];
+			ImGui::Text( "File: %s", entry._fileName.c_str() );
+			ImGui::SameLine();
+			if ( ImGui::Button( "Save File" ) )
+				saveSelectedGameDataFile();
+			ImGui::SameLine();
+			if ( ImGui::Button( "Revert" ) )
+				loadSelectedGameDataFile();
+
+			ImGui::Separator();
+
+			// Editor / Raw XML text box
+			vector<utf8> arrEditBuffer;
+			arrEditBuffer.resize( _selectedGameDataRawText.size() + 4096, 0 );
+			if ( _selectedGameDataRawText.empty() == false )
+				memcpy( arrEditBuffer.data(), _selectedGameDataRawText.c_str(), _selectedGameDataRawText.size() );
+
+			constexpr ImGuiInputTextFlags editFlags = ImGuiInputTextFlags_AllowTabInput;
+			if ( ImGui::InputTextMultiline( "##rawXmlEdit", arrEditBuffer.data(), arrEditBuffer.size(),
+											ImGui::GetContentRegionAvail(), editFlags ) )
+			{
+				_selectedGameDataRawText = arrEditBuffer.data();
+			}
+		}
+		else
+		{
+			editor::drawEmptyHint( "Select an XML data table from the list on the left." );
+		}
+		ImGui::EndGroup();
+	}
+
+	void DataTablePanel::reloadLocalization()
+	{
+		_listLocRecord.clear();
+		const string locFolder = getLocalizationFolderPath();
+
+		map<string, LocRecord> mapRecords;
+
+		auto loadJsonFile = [&]( string_view langCode, auto memberPtr )
+		{
+			const string path = FileUtil::joinPath( locFolder, string{ langCode } + ".json" );
+			string		 text;
+			if ( FileUtil::readTextFile( path, text ) == false )
+				return;
+
+			JsonDocument doc;
+			if ( doc.parse( text ) == false || doc.root().isObject() == false )
+				return;
+
+			const vector<string> listKeys = doc.root().memberNames();
+			for ( const string& key : listKeys )
+			{
+				LocRecord& rec = mapRecords[key];
+				rec._key	   = key;
+				rec.*memberPtr = doc.root().get( key ).asString();
+			}
+		};
+
+		loadJsonFile( "en_US", &LocRecord::_enUS );
+		loadJsonFile( "ko_KR", &LocRecord::_koKR );
+		loadJsonFile( "ja_JP", &LocRecord::_jaJP );
+
+		_listLocRecord.reserve( mapRecords.size() );
+		for ( auto& pair : mapRecords )
+			_listLocRecord.push_back( std::move( pair.second ) );
+
+		_bLocLoaded = true;
+	}
+
+	void DataTablePanel::saveLocalization()
+	{
+		const string locFolder = getLocalizationFolderPath();
+		FileUtil::ensureDirectoryExists( locFolder );
+
+		auto saveJsonFile = [&]( string_view langCode, auto memberPtr )
+		{
+			JsonDocument doc;
+			doc.root().setObject();
+
+			for ( const LocRecord& rec : _listLocRecord )
+			{
+				const string& val = rec.*memberPtr;
+				if ( val.empty() == false )
+					doc.root().set( rec._key ).setString( val );
+			}
+
+			const string path	= FileUtil::joinPath( locFolder, string{ langCode } + ".json" );
+			const string dumped = doc.dump( 4 );
+			FileUtil::writeTextFile( path, dumped );
+
+			LocalizationManager* pLocMgr = editor::getService<LocalizationManager>();
+			if ( pLocMgr != nullptr )
+				pLocMgr->loadLanguageJson( langCode, dumped );
+		};
+
+		saveJsonFile( "en_US", &LocRecord::_enUS );
+		saveJsonFile( "ko_KR", &LocRecord::_koKR );
+		saveJsonFile( "ja_JP", &LocRecord::_jaJP );
+
+		for ( LocRecord& rec : _listLocRecord )
+			rec._bModified = false;
+
+		SW_LOG_INFO( "Successfully saved all localization tables." );
+	}
+
+	void DataTablePanel::reloadGameDataFiles()
+	{
+		_listGameDataFile.clear();
+		const string dataFolder = getGameDataFolderPath();
+
+		vector<string> listFiles;
+		FileUtil::collectFiles( dataFolder, ".xml", listFiles, false, false );
+
+		for ( const string& file : listFiles )
+		{
+			if ( FileUtil::hasExtension( file, ".xml" ) )
+			{
+				GameDataFileEntry entry{};
+				entry._fileName		= FileUtil::getFileNamePart( file );
+				entry._absolutePath = FileUtil::normalizeSeparators( file );
+				FileUtil::makePathRelative( FileUtil::getCurrentPath(), file, entry._relativePath );
+				_listGameDataFile.push_back( std::move( entry ) );
+			}
+		}
+
+		_bGameDataLoaded = true;
+	}
+
+	void DataTablePanel::loadSelectedGameDataFile()
+	{
+		if ( _selectedGameDataIndex < 0 || static_cast<size_t>( _selectedGameDataIndex ) >= _listGameDataFile.size() )
+			return;
+
+		const GameDataFileEntry& entry = _listGameDataFile[static_cast<size_t>( _selectedGameDataIndex )];
+		FileUtil::readTextFile( entry._absolutePath, _selectedGameDataRawText );
+	}
+
+	void DataTablePanel::saveSelectedGameDataFile()
+	{
+		if ( _selectedGameDataIndex < 0 || static_cast<size_t>( _selectedGameDataIndex ) >= _listGameDataFile.size() )
+			return;
+
+		const GameDataFileEntry& entry = _listGameDataFile[static_cast<size_t>( _selectedGameDataIndex )];
+		if ( FileUtil::writeTextFile( entry._absolutePath, _selectedGameDataRawText ) )
+		{
+			SW_LOG_INFO( "Saved game data table %#", entry._fileName.c_str() );
+		}
+	}
+} // namespace sw::editor

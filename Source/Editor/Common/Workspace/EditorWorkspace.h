@@ -6,7 +6,9 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/array.h"
 #include "Core/Container/string.h"
+#include "Core/Container/unordered_map.h"
 
 #include "Editor/Common/Workspace/SelectionManager.h"
 
@@ -27,6 +29,17 @@ namespace sw::editor
 	{
 		GameObject = 0,
 		Asset
+	};
+
+	/** @brief 에디터 뷰포트 카메라 북마크 (위치, 회전, 타깃) */
+	struct CameraBookmark
+	{
+		string	_name;
+		float3	_position{ 0.0f, 0.0f, 0.0f };
+		float3	_rotation{ 0.0f, 0.0f, 0.0f };
+		float3	_orbitTarget{ 0.0f, 0.0f, 0.0f };
+		float32 _orbitDistance{ 5.0f };
+		bool	_bValid{ false };
 	};
 
 	/**
@@ -100,18 +113,71 @@ namespace sw::editor
 		bool getBoneHierarchyPopupOpen() const { return _bBoneHierarchyPopupOpen; }
 		void setBoneHierarchyPopupOpen( bool bOpen ) { _bBoneHierarchyPopupOpen = bOpen; }
 
+		// ------------------------------------------------------------------------------
+		// 7) 프리팹 애셋 매핑 (에디터 전용 메타데이터)
+		// ------------------------------------------------------------------------------
+		void		  setGameObjectPrefabPath( uint64 objectId, string_view prefabPath );
+		const string& getGameObjectPrefabPath( uint64 objectId ) const;
+		bool		  isGameObjectPrefabInstance( uint64 objectId ) const;
+
+		// ------------------------------------------------------------------------------
+		// 8) 뷰포트 카메라 북마크 (0~8 인덱스, 1~9 슬롯)
+		// ------------------------------------------------------------------------------
+		void				  setCameraBookmark( uint32 slot, const CameraBookmark& bookmark );
+		const CameraBookmark* getCameraBookmark( uint32 slot ) const;
+		bool				  hasCameraBookmark( uint32 slot ) const;
+		void				  clearCameraBookmark( uint32 slot );
+
+		// ------------------------------------------------------------------------------
+		// 9) 컴포넌트 복사/붙여넣기 & 프리셋 (에디터 클립보드)
+		// ------------------------------------------------------------------------------
+		void		  copyComponent( const Component* pComp );
+		bool		  hasCopiedComponent() const;
+		const string& getCopiedComponentXml() const { return _copiedComponentXml; }
+		const string& getCopiedComponentTypeName() const { return _copiedComponentTypeName; }
+		bool		  pasteComponentValues( Component* pTargetComp );
+		Component*	  pasteComponentAsNew( GameObject* pTargetObj );
+		bool		  saveComponentPreset( const Component* pComp, string_view presetName );
+		bool		  loadComponentPreset( Component* pComp, string_view presetFilePath );
+
+		// ------------------------------------------------------------------------------
+		// 10) 다중 오브젝트 정렬 & 지면 착지 툴
+		// ------------------------------------------------------------------------------
+		enum class AlignAxis : uint8
+		{
+			X = 0,
+			Y,
+			Z
+		};
+
+		enum class AlignType : uint8
+		{
+			Min = 0,
+			Center,
+			Max
+		};
+
+		void alignSelectedObjects( AlignAxis axis, AlignType type );
+		void distributeSelectedObjects( AlignAxis axis );
+		void snapSelectedToGround();
+
 	private:
-		uint64		_selectedComponentId;
-		string		_selectedComponentKey;
-		string		_focusedAssetPath;
-		InspectMode _inspectMode;
-		int32		_gizmoOperation;
-		string		_pendingOpenPanelTitle;
-		string		_pendingScenePath;
-		mutex		_pendingSceneMutex;
-		uint64		_scrollToComponentId;
-		uint64		_scrollToObjectId;
-		bool		_bGizmoLocalSpace;
-		bool		_bBoneHierarchyPopupOpen;
+		uint64						  _selectedComponentId;
+		string						  _selectedComponentKey;
+		string						  _focusedAssetPath;
+		InspectMode					  _inspectMode;
+		int32						  _gizmoOperation;
+		string						  _pendingOpenPanelTitle;
+		string						  _pendingScenePath;
+		mutex						  _pendingSceneMutex;
+		uint64						  _scrollToComponentId;
+		uint64						  _scrollToObjectId;
+		unordered_map<uint64, string> _mapGameObjectToPrefab;
+		string						  _emptyString;
+		array<CameraBookmark, 9>	  _arrCameraBookmark;
+		string						  _copiedComponentXml;
+		string						  _copiedComponentTypeName;
+		bool						  _bGizmoLocalSpace;
+		bool						  _bBoneHierarchyPopupOpen;
 	};
 } // namespace sw::editor

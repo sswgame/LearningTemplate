@@ -54,6 +54,15 @@ namespace sw
 		/** @brief 다시 실행할 명령의 레이블을 반환합니다. */
 		const string& peekRedoLabel() const;
 
+		/** @brief 스택에 기록된 총 명령 수를 반환합니다. */
+		size_t getCommandCount() const { return _listCommand.size(); }
+		/** @brief 현재 실행 위치 인덱스를 반환합니다 (0..getCommandCount()). */
+		size_t getCurrentIndex() const { return _index; }
+		/** @brief 특정 인덱스의 명령 정보를 반환합니다. */
+		const Command& getCommand( size_t index ) const { return _listCommand[index]; }
+		/** @brief 특정 인덱스 위치로 연속 undo/redo를 실행하여 점프합니다. */
+		void jumpTo( size_t targetIndex );
+
 	private:
 		vector<Command> _listCommand;
 		vector<Command> _listPendingTransactionCommand;

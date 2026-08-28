@@ -111,6 +111,32 @@ namespace sw::editor
 			}
 		}
 
+		size_t errorCount{ 0 };
+		size_t warnCount{ 0 };
+		size_t infoCount{ 0 };
+		size_t traceCount{ 0 };
+		for ( const LogEntry& entry : _listDrawSnapshot )
+		{
+			switch ( entry._level )
+			{
+				case LogLevel::Error:
+					++errorCount;
+					break;
+				case LogLevel::Warning:
+					++warnCount;
+					break;
+				case LogLevel::Info:
+					++infoCount;
+					break;
+				case LogLevel::Trace:
+					++traceCount;
+					break;
+				case LogLevel::Count:
+				default:
+					break;
+			}
+		}
+
 		if ( ImGui::Button( "Clear" ) )
 		{
 			std::scoped_lock<mutex> lock{ _entriesMutex };
@@ -123,14 +149,62 @@ namespace sw::editor
 		ImGui::SameLine();
 		ImGui::Checkbox( "Auto-scroll", &_bAutoScroll );
 
+		utf8 arrErrLabel[32], arrWarnLabel[32], arrInfoLabel[32], arrTraceLabel[32];
+		formatstring( arrErrLabel, sizeof( arrErrLabel ), "Error (%zu)", errorCount );
+		formatstring( arrWarnLabel, sizeof( arrWarnLabel ), "Warning (%zu)", warnCount );
+		formatstring( arrInfoLabel, sizeof( arrInfoLabel ), "Info (%zu)", infoCount );
+		formatstring( arrTraceLabel, sizeof( arrTraceLabel ), "Trace (%zu)", traceCount );
+
 		ImGui::SameLine();
-		ImGui::Checkbox( "Error", &_arrLevelEnabled[0] );
+		if ( _arrLevelEnabled[0] )
+			ImGui::PushStyleColor( ImGuiCol_Button, ImVec4{ 0.7f, 0.2f, 0.2f, 1.0f } );
+		else
+			ImGui::PushStyleColor( ImGuiCol_Button, ImVec4{ 0.2f, 0.2f, 0.2f, 0.6f } );
+		if ( ImGui::Button( arrErrLabel ) )
+			_arrLevelEnabled[0] = ( _arrLevelEnabled[0] == false );
+		ImGui::PopStyleColor();
+
 		ImGui::SameLine();
-		ImGui::Checkbox( "Warning", &_arrLevelEnabled[1] );
+		if ( _arrLevelEnabled[1] )
+			ImGui::PushStyleColor( ImGuiCol_Button, ImVec4{ 0.7f, 0.55f, 0.15f, 1.0f } );
+		else
+			ImGui::PushStyleColor( ImGuiCol_Button, ImVec4{ 0.2f, 0.2f, 0.2f, 0.6f } );
+		if ( ImGui::Button( arrWarnLabel ) )
+			_arrLevelEnabled[1] = ( _arrLevelEnabled[1] == false );
+		ImGui::PopStyleColor();
+
 		ImGui::SameLine();
-		ImGui::Checkbox( "Info", &_arrLevelEnabled[2] );
+		if ( _arrLevelEnabled[2] )
+			ImGui::PushStyleColor( ImGuiCol_Button, ImVec4{ 0.2f, 0.5f, 0.75f, 1.0f } );
+		else
+			ImGui::PushStyleColor( ImGuiCol_Button, ImVec4{ 0.2f, 0.2f, 0.2f, 0.6f } );
+		if ( ImGui::Button( arrInfoLabel ) )
+			_arrLevelEnabled[2] = ( _arrLevelEnabled[2] == false );
+		ImGui::PopStyleColor();
+
 		ImGui::SameLine();
-		ImGui::Checkbox( "Trace", &_arrLevelEnabled[3] );
+		if ( _arrLevelEnabled[3] )
+			ImGui::PushStyleColor( ImGuiCol_Button, ImVec4{ 0.4f, 0.4f, 0.45f, 1.0f } );
+		else
+			ImGui::PushStyleColor( ImGuiCol_Button, ImVec4{ 0.2f, 0.2f, 0.2f, 0.6f } );
+		if ( ImGui::Button( arrTraceLabel ) )
+			_arrLevelEnabled[3] = ( _arrLevelEnabled[3] == false );
+		ImGui::PopStyleColor();
+
+		ImGui::SameLine();
+		if ( ImGui::Button( "Copy All" ) && _listVisible.empty() == false )
+		{
+			string allLogs;
+			for ( const LogEntry* pEntry : _listVisible )
+			{
+				if ( pEntry != nullptr )
+				{
+					allLogs += "[" + pEntry->_timeStamp + "] [" + pEntry->_tag + "] [" + levelName( pEntry->_level ) +
+							   "] - " + pEntry->_message + "\n";
+				}
+			}
+			ImGui::SetClipboardText( allLogs.c_str() );
+		}
 
 		editor::drawSearchField( "##log_filter", _arrFilterBuffer, sizeof( _arrFilterBuffer ),
 								 "Filter (tag / message / file)", -1.0f, false );
@@ -185,6 +259,21 @@ namespace sw::editor
 
 				if ( ImGui::IsItemHovered() && entry._file.empty() == false )
 					ImGui::SetTooltip( "%s(%d)", entry._file.c_str(), entry._line );
+
+				if ( ImGui::BeginPopupContextItem( "LogEntryCtx" ) )
+				{
+					if ( ImGui::MenuItem( "Copy Message" ) )
+						ImGui::SetClipboardText( entry._message.c_str() );
+					if ( ImGui::MenuItem( "Copy Full Log Line" ) )
+					{
+						string full = "[" + entry._timeStamp + "] [" + entry._tag + "] [" + levelName( entry._level ) +
+									  "] - " + entry._message;
+						if ( entry._file.empty() == false )
+							full += " (" + entry._file + ":" + to_string( entry._line ) + ")";
+						ImGui::SetClipboardText( full.c_str() );
+					}
+					ImGui::EndPopup();
+				}
 
 				ImGui::PopID();
 			}

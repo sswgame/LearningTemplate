@@ -3,6 +3,7 @@
 #include "Editor/Panels/ContentBrowserPanel.h"
 
 #include "Core/Concurrency/mutex.h"
+#include "Core/File/FileUtil.h"
 
 #include "Editor/Common/Gui/EditorChrome.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -52,8 +53,182 @@ namespace sw::editor
 			t_extLabel = ext;
 			return t_extLabel.c_str();
 		}
-
 	} // namespace
+
+	void ContentBrowserPanel::drawAssetThumbnail( ImDrawList* pDrawList, const float2& minPos, const float2& maxPos,
+												  const AssetEntry& entry )
+	{
+		if ( pDrawList == nullptr )
+			return;
+
+		const ImVec2 minVec{ minPos._x, minPos._y };
+		const ImVec2 maxVec{ maxPos._x, maxPos._y };
+
+		const float32 w	 = maxPos._x - minPos._x;
+		const float32 h	 = maxPos._y - minPos._y;
+		const float32 cx = minPos._x + w * 0.5f;
+		const float32 cy = minPos._y + h * 0.5f;
+
+		// Card thumbnail background
+		pDrawList->AddRectFilled( minVec, maxVec, IM_COL32( 22, 24, 30, 255 ), 4.0f );
+
+		const string& ext = entry._extension;
+		if ( entry._bIsDirectory )
+		{
+			// Golden Folder tab and body
+			pDrawList->AddRectFilled( ImVec2( minPos._x + w * 0.15f, minPos._y + h * 0.20f ),
+									  ImVec2( minPos._x + w * 0.50f, minPos._y + h * 0.36f ),
+									  IM_COL32( 235, 175, 50, 255 ), 2.0f );
+			pDrawList->AddRectFilled( ImVec2( minPos._x + w * 0.15f, minPos._y + h * 0.30f ),
+									  ImVec2( minPos._x + w * 0.85f, minPos._y + h * 0.80f ),
+									  IM_COL32( 245, 195, 68, 255 ), 3.0f );
+		}
+		else if ( StringUtil::equalsIgnoreCase( ext, ".prefab" ) ||
+				  StringUtil::equalsIgnoreCase( ext, ".pfb" ) )
+		{
+			// 3D Isometric Blue Cube for Prefab
+			const float32 sz		= w * 0.22f;
+			ImVec2		  topPts[4] = { ImVec2( cx, cy - sz * 1.1f ), ImVec2( cx + sz * 0.9f, cy - sz * 0.55f ),
+										ImVec2( cx, cy ), ImVec2( cx - sz * 0.9f, cy - sz * 0.55f ) };
+			pDrawList->AddConvexPolyFilled( topPts, 4, IM_COL32( 90, 160, 255, 255 ) );
+
+			ImVec2 leftPts[4] = { ImVec2( cx - sz * 0.9f, cy - sz * 0.55f ), ImVec2( cx, cy ),
+								  ImVec2( cx, cy + sz * 0.9f ), ImVec2( cx - sz * 0.9f, cy + sz * 0.35f ) };
+			pDrawList->AddConvexPolyFilled( leftPts, 4, IM_COL32( 50, 120, 230, 255 ) );
+
+			ImVec2 rightPts[4] = { ImVec2( cx, cy ), ImVec2( cx + sz * 0.9f, cy - sz * 0.55f ),
+								   ImVec2( cx + sz * 0.9f, cy + sz * 0.35f ), ImVec2( cx, cy + sz * 0.9f ) };
+			pDrawList->AddConvexPolyFilled( rightPts, 4, IM_COL32( 35, 95, 195, 255 ) );
+		}
+		else if ( StringUtil::equalsIgnoreCase( ext, "._material" ) ||
+				  StringUtil::equalsIgnoreCase( ext, ".mat" ) ||
+				  StringUtil::equalsIgnoreCase( ext, ".material" ) )
+		{
+			// 3D Sphere preview with specular shading
+			const float32 r = w * 0.26f;
+			pDrawList->AddCircleFilled( ImVec2( cx, cy ), r, IM_COL32( 160, 60, 220, 255 ), 24 );
+			pDrawList->AddCircleFilled( ImVec2( cx - r * 0.32f, cy - r * 0.32f ), r * 0.35f,
+										IM_COL32( 230, 180, 255, 200 ), 16 );
+			pDrawList->AddCircleFilled( ImVec2( cx - r * 0.38f, cy - r * 0.38f ), r * 0.15f,
+										IM_COL32( 255, 255, 255, 240 ), 12 );
+		}
+		else if ( StringUtil::equalsIgnoreCase( ext, ".png" ) ||
+				  StringUtil::equalsIgnoreCase( ext, ".jpg" ) ||
+				  StringUtil::equalsIgnoreCase( ext, ".jpeg" ) ||
+				  StringUtil::equalsIgnoreCase( ext, ".dds" ) ||
+				  StringUtil::equalsIgnoreCase( ext, ".tga" ) ||
+				  StringUtil::equalsIgnoreCase( ext, ".bmp" ) )
+		{
+			// Checkerboard background
+			constexpr float32 chk = 6.0f;
+			for ( float32 y = minPos._y + 4.0f; y < maxPos._y - 4.0f; y += chk )
+			{
+				for ( float32 x = minPos._x + 4.0f; x < maxPos._x - 4.0f; x += chk )
+				{
+					const bool bDark =
+						( static_cast<int32>( ( x - minPos._x ) / chk ) +
+						  static_cast<int32>( ( y - minPos._y ) / chk ) ) %
+							2 ==
+						0;
+					pDrawList->AddRectFilled( ImVec2( x, y ), ImVec2( x + chk, y + chk ),
+											  bDark ? IM_COL32( 38, 40, 46, 255 ) : IM_COL32( 58, 62, 70, 255 ) );
+				}
+			}
+			// Picture frame
+			pDrawList->AddRect( ImVec2( minPos._x + w * 0.16f, minPos._y + h * 0.16f ),
+								ImVec2( minPos._x + w * 0.84f, minPos._y + h * 0.84f ),
+								IM_COL32( 255, 255, 255, 200 ), 2.0f );
+			pDrawList->AddCircleFilled( ImVec2( cx + w * 0.15f, cy - h * 0.12f ), w * 0.08f,
+										IM_COL32( 240, 200, 80, 230 ) );
+			ImVec2 triPts[3] = { ImVec2( cx - w * 0.22f, cy + h * 0.22f ), ImVec2( cx, cy - h * 0.05f ),
+								 ImVec2( cx + w * 0.22f, cy + h * 0.22f ) };
+			pDrawList->AddConvexPolyFilled( triPts, 3, IM_COL32( 70, 180, 120, 230 ) );
+		}
+		else if ( StringUtil::equalsIgnoreCase( ext, ".scene" ) ||
+				  ( StringUtil::equalsIgnoreCase( ext, ".xml" ) && entry._name.find( ".scene" ) != string::npos ) )
+		{
+			// 3D Scene Compass / Horizon
+			pDrawList->AddCircle( ImVec2( cx, cy ), w * 0.26f, IM_COL32( 70, 200, 140, 200 ), 18, 1.5f );
+			pDrawList->AddLine( ImVec2( cx, cy - w * 0.28f ), ImVec2( cx, cy + w * 0.28f ),
+								IM_COL32( 240, 80, 80, 220 ), 1.5f );
+			pDrawList->AddLine( ImVec2( cx - w * 0.28f, cy ), ImVec2( cx + w * 0.28f, cy ),
+								IM_COL32( 80, 160, 240, 220 ), 1.5f );
+		}
+		else if ( StringUtil::equalsIgnoreCase( ext, ".hlsl" ) ||
+				  StringUtil::equalsIgnoreCase( ext, ".glsl" ) ||
+				  StringUtil::equalsIgnoreCase( ext, ".spv" ) )
+		{
+			// Shader Diamond / Prism
+			const float32 r			= w * 0.24f;
+			ImVec2		  diaPts[4] = { ImVec2( cx, cy - r ), ImVec2( cx + r * 0.85f, cy ), ImVec2( cx, cy + r ),
+										ImVec2( cx - r * 0.85f, cy ) };
+			pDrawList->AddConvexPolyFilled( diaPts, 4, IM_COL32( 240, 120, 50, 255 ) );
+			pDrawList->AddPolyline( diaPts, 4, IM_COL32( 255, 210, 140, 255 ), ImDrawFlags_Closed, 1.5f );
+		}
+		else if ( StringUtil::equalsIgnoreCase( ext, ".wav" ) ||
+				  StringUtil::equalsIgnoreCase( ext, ".mp3" ) ||
+				  StringUtil::equalsIgnoreCase( ext, ".ogg" ) )
+		{
+			// Sound wave equalizer bars
+			constexpr int32	  numBars	 = 5;
+			constexpr float32 heights[5] = { 0.25f, 0.55f, 0.95f, 0.65f, 0.35f };
+			constexpr float32 barW		 = 3.0f;
+			constexpr float32 barGap	 = 3.0f;
+			constexpr float32 totalW	 = numBars * barW + ( numBars - 1 ) * barGap;
+			const float32	  startX	 = cx - totalW * 0.5f;
+			for ( int32 barIndex = 0; barIndex < numBars; ++barIndex )
+			{
+				const float32 bx = startX + static_cast<float32>( barIndex ) * ( barW + barGap );
+				const float32 bh = h * 0.45f * heights[barIndex];
+				pDrawList->AddRectFilled( ImVec2( bx, cy - bh * 0.5f ), ImVec2( bx + barW, cy + bh * 0.5f ),
+										  IM_COL32( 80, 210, 220, 240 ), 1.0f );
+			}
+		}
+		else
+		{
+			// Generic document / data file
+			pDrawList->AddRectFilled( ImVec2( minPos._x + w * 0.22f, minPos._y + h * 0.16f ),
+									  ImVec2( minPos._x + w * 0.78f, minPos._y + h * 0.84f ),
+									  IM_COL32( 65, 70, 82, 255 ), 3.0f );
+			const utf8*	 pLbl  = typeLabel( ext, false );
+			const ImVec2 txtSz = ImGui::CalcTextSize( pLbl );
+			pDrawList->AddText( ImVec2( cx - txtSz.x * 0.5f, cy - txtSz.y * 0.5f ),
+								IM_COL32( 220, 225, 235, 230 ), pLbl );
+		}
+
+		// Sub-border
+		pDrawList->AddRect( minVec, maxVec, IM_COL32( 50, 55, 65, 200 ), 4.0f );
+	}
+
+	void ContentBrowserPanel::drawAssetContextMenu( const AssetEntry& entry )
+	{
+		if ( ImGui::BeginPopupContextItem( "AssetCtx" ) )
+		{
+			if ( ImGui::MenuItem( "Show in Explorer" ) )
+			{
+				utf8 arrCmd[constant::kMaxBuffer512];
+				formatstring( arrCmd, sizeof( arrCmd ), "explorer.exe /select,\"%s\"", entry._absolutePath.c_str() );
+				system( arrCmd );
+			}
+
+			if ( ImGui::MenuItem( "Copy Relative Path" ) )
+			{
+				ImGui::SetClipboardText( entry._relativePath.c_str() );
+			}
+
+			if ( ImGui::MenuItem( "Copy Absolute Path" ) )
+			{
+				ImGui::SetClipboardText( entry._absolutePath.c_str() );
+			}
+
+			ImGui::Separator();
+			if ( ImGui::MenuItem( "Delete" ) )
+			{
+				FileUtil::removeFile( entry._absolutePath );
+			}
+			ImGui::EndPopup();
+		}
+	}
 
 	ContentBrowserPanel::ContentBrowserPanel() noexcept
 		: _listRoot{}
@@ -188,18 +363,29 @@ namespace sw::editor
 		if ( entry._bIsDirectory )
 			return true;
 
-		const string lower = StringUtil::toLower( entry._extension.c_str() );
+		const string lower	   = StringUtil::toLower( entry._extension.c_str() );
+		const string lowerName = StringUtil::toLower( entry._name.c_str() );
 
 		switch ( _typeFilter )
 		{
 			case AssetTypeFilter::All:
 				return true;
-			case AssetTypeFilter::Materials:
-				return lower == "._material";
+			case AssetTypeFilter::Scenes:
+				return lowerName.find( ".scene." ) != string::npos || lower == ".scene";
+			case AssetTypeFilter::Prefabs:
+				return lowerName.find( ".pfb" ) != string::npos;
+			case AssetTypeFilter::Textures:
+				return lower == ".png" || lower == ".jpg" || lower == ".jpeg" || lower == ".dds" || lower == ".tga" || lower == ".bmp";
 			case AssetTypeFilter::Shaders:
 				return lower == ".hlsl" || lower == ".glsl";
+			case AssetTypeFilter::Materials:
+				return lower == "._material";
+			case AssetTypeFilter::Audio:
+				return lower == ".wav" || lower == ".mp3" || lower == ".ogg";
+			case AssetTypeFilter::Data:
+				return lower == ".xml" || lower == ".json" || lower == ".csv" || lower == ".ini" || lower == ".kv";
 			case AssetTypeFilter::Other:
-				return lower != "._material" && lower != ".hlsl" && lower != ".glsl";
+				return lower != "._material" && lower != ".hlsl" && lower != ".glsl" && lower != ".png" && lower != ".wav" && lower != ".xml";
 			case AssetTypeFilter::Count:
 			default:
 				return true;
@@ -218,17 +404,27 @@ namespace sw::editor
 
 	void ContentBrowserPanel::drawToolbar()
 	{
-		editor::drawSearchField( "##cb_search", _arrSearchBuffer, sizeof( _arrSearchBuffer ), "Search Content", 220.0f,
+		editor::drawSearchField( "##cb_search", _arrSearchBuffer, sizeof( _arrSearchBuffer ), "Search Content", 160.0f,
 								 false );
 
 		ImGui::SameLine();
-		ImGui::SetNextItemWidth( 140.0f );
-		static const utf8* kArrFilterNames[] = { "All", "Materials", "Shaders", "Other" };
-		int32			   filterIndex		 = static_cast<int32>( _typeFilter );
-		if ( ImGui::Combo( "##cb_type", &filterIndex, kArrFilterNames, static_cast<int32>( AssetTypeFilter::Count ) ) )
-			_typeFilter = static_cast<AssetTypeFilter>( filterIndex );
+		static const utf8* kArrFilterNames[] = { "All", "Scenes", "Prefabs", "Textures",
+												 "Shaders", "Materials", "Audio", "Data" };
+		for ( int32 filterIdx = 0; filterIdx < 8; ++filterIdx )
+		{
+			const bool bActive = ( static_cast<int32>( _typeFilter ) == filterIdx );
+			if ( bActive )
+				ImGui::PushStyleColor( ImGuiCol_Button, ImVec4{ 0.22f, 0.45f, 0.75f, 1.0f } );
+			else
+				ImGui::PushStyleColor( ImGuiCol_Button, ImVec4{ 0.16f, 0.16f, 0.18f, 0.8f } );
 
-		ImGui::SameLine();
+			if ( ImGui::Button( kArrFilterNames[filterIdx] ) )
+				_typeFilter = static_cast<AssetTypeFilter>( filterIdx );
+
+			ImGui::PopStyleColor();
+			ImGui::SameLine();
+		}
+
 		if ( ImGui::RadioButton( "Tiles", _viewMode == ViewMode::Tiles ) )
 			_viewMode = ViewMode::Tiles;
 		ImGui::SameLine();
@@ -238,7 +434,7 @@ namespace sw::editor
 		if ( _viewMode == ViewMode::Tiles )
 		{
 			ImGui::SameLine();
-			ImGui::SetNextItemWidth( 120.0f );
+			ImGui::SetNextItemWidth( 80.0f );
 			ImGui::SliderFloat( "##cb_tile", &_tileSize, 64.0f, 160.0f, "%.0f" );
 		}
 
@@ -273,6 +469,34 @@ namespace sw::editor
 		sourcesDesc._childSize = float2{ 220.0f, 0.0f };
 		sourcesDesc._flags	   = editor::EditorSectionFlags::Border | editor::EditorSectionFlags::ResizeX;
 		editor::beginSection( sourcesDesc );
+
+		editor::drawSectionHeader( "Favorites" );
+		struct FavFolder
+		{
+			const utf8* _label;
+			const utf8* _relPath;
+		};
+		static const FavFolder kArrFavorites[] = {
+			{  "Scenes",		"Resource/game/demo/maps"},
+			{ "Prefabs",	 "Resource/game/demo/prefabs"},
+			{"Textures", "Resource/game/demo/textures"},
+			{ "Shaders",	 "Resource/engine/shaders"},
+			{	  "Data",	  "Resource/game/demo/data"}
+		  };
+
+		for ( uint32 favIdx = 0; favIdx < 5; ++favIdx )
+		{
+			const string fullFavPath = FileUtil::normalizeSeparators(
+				FileUtil::joinPath( FileUtil::getCurrentPath(), kArrFavorites[favIdx]._relPath ) );
+			const bool bSelected = FileUtil::pathsEqualNormalized( fullFavPath, _selectedFolderAbs );
+
+			if ( ImGui::Selectable( kArrFavorites[favIdx]._label, bSelected ) )
+			{
+				selectFolder( fullFavPath, string{ "Favorites / " } + kArrFavorites[favIdx]._label );
+			}
+		}
+
+		ImGui::Separator();
 		editor::drawSectionHeader( "Sources" );
 
 		for ( const ContentRoot& root : _listRoot )
@@ -511,6 +735,7 @@ namespace sw::editor
 					const ImVec2 cursor = ImGui::GetCursorScreenPos();
 					if ( ImGui::Button( "##tile", ImVec2( cell, cell ) ) )
 						selectAsset( entry );
+					drawAssetContextMenu( entry );
 					if ( ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked( ImGuiMouseButton_Left ) )
 						openAsset( entry );
 					if ( entry._bIsDirectory == false && ImGui::BeginDragDropSource( ImGuiDragDropFlags_SourceAllowNullID ) )
@@ -522,20 +747,9 @@ namespace sw::editor
 					}
 
 					ImDrawList*		  pDrawList = ImGui::GetWindowDrawList();
-					const ImVec4	  tint		= colorForExtension( entry._bIsDirectory ? string{} : entry._extension );
-					constexpr float32 inset		= 8.0f;
-					pDrawList->AddRectFilled(
-						ImVec2( cursor.x + inset, cursor.y + inset ),
-						ImVec2( cursor.x + cell - inset, cursor.y + cell * 0.62f ),
-						ImGui::ColorConvertFloat4ToU32( tint ),
-						4.0f );
-
-					const utf8*	 pLabel	  = typeLabel( entry._extension, entry._bIsDirectory );
-					const ImVec2 textSize = ImGui::CalcTextSize( pLabel );
-					pDrawList->AddText(
-						ImVec2( cursor.x + ( cell - textSize.x ) * 0.5f, cursor.y + cell * 0.30f ),
-						IM_COL32( 255, 255, 255, 230 ),
-						pLabel );
+					constexpr float32 inset		= 6.0f;
+					drawAssetThumbnail( pDrawList, float2{ cursor.x + inset, cursor.y + inset },
+										float2{ cursor.x + cell - inset, cursor.y + cell * 0.65f }, entry );
 
 					ImGui::PushTextWrapPos( ImGui::GetCursorPos().x + cell );
 					ImGui::TextUnformatted( entry._name.c_str() );
@@ -579,6 +793,7 @@ namespace sw::editor
 						if ( ImGui::IsMouseDoubleClicked( ImGuiMouseButton_Left ) )
 							openAsset( entry );
 					}
+					drawAssetContextMenu( entry );
 					if ( entry._bIsDirectory == false && ImGui::BeginDragDropSource() )
 					{
 						ImGui::SetDragDropPayload( "SW_ASSET_PATH", entry._relativePath.c_str(),
@@ -588,7 +803,8 @@ namespace sw::editor
 					}
 
 					ImGui::TableSetColumnIndex( 1 );
-					ImGui::TextUnformatted( typeLabel( entry._extension, entry._bIsDirectory ) );
+					ImGui::TextColored( colorForExtension( entry._bIsDirectory ? string{} : entry._extension ),
+										"%s", typeLabel( entry._extension, entry._bIsDirectory ) );
 
 					ImGui::TableSetColumnIndex( 2 );
 					ImGui::TextUnformatted( entry._relativePath.c_str() );

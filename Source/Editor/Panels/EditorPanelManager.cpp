@@ -5,10 +5,12 @@
 #include "Editor/Panels/AnimationGraphPanel.h"
 #include "Editor/Panels/ConsolePanel.h"
 #include "Editor/Panels/ContentBrowserPanel.h"
+#include "Editor/Panels/DataTablePanel.h"
 #include "Editor/Panels/DialogueGraphPanel.h"
 #include "Editor/Panels/GameViewPanel.h"
 #include "Editor/Panels/GlobalVariablesPanel.h"
 #include "Editor/Panels/HierarchyPanel.h"
+#include "Editor/Panels/HistoryPanel.h"
 #include "Editor/Panels/InspectorPanel.h"
 #include "Editor/Panels/PrefabEditorPanel.h"
 #include "Editor/Panels/ProfilerPanel.h"
@@ -73,6 +75,7 @@ namespace sw::editor
 		registerPanel( make_unique<ContentBrowserPanel>(), EditorPanelCategory::Core, "Content Browser" );
 
 		// 온디맨드 도구 (Tool)
+		registerPanel( make_unique<HistoryPanel>(), EditorPanelCategory::Tool, "History" );
 		registerPanel( make_unique<GlobalVariablesPanel>(), EditorPanelCategory::Tool, "Global Variables" );
 		registerPanel( make_unique<SequencerPanel>(), EditorPanelCategory::Tool, "Sequencer" );
 		registerPanel( make_unique<AnimationGraphPanel>(), EditorPanelCategory::Tool, "Animation Graph" );
@@ -80,6 +83,7 @@ namespace sw::editor
 		registerPanel( make_unique<PrefabEditorPanel>(), EditorPanelCategory::Tool, "Prefab Editor" );
 		registerPanel( make_unique<TileMapPanel>(), EditorPanelCategory::Tool, "Tile Map Tool" );
 		registerPanel( make_unique<SpriteClipPanel>(), EditorPanelCategory::Tool, "Sprite Clip" );
+		registerPanel( make_unique<DataTablePanel>(), EditorPanelCategory::Tool, "Data Table Editor" );
 	}
 
 	void EditorPanelManager::drawOpenPanels()

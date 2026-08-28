@@ -53,6 +53,8 @@ namespace sw::editor
 		void drawTypeMethods( void* pInstance, const TypeInfo* pTypeInfo );
 
 	private:
+		/** @brief 프로퍼티 검색 필터 버퍼 */
+		utf8 _arrPropertyFilter[64]{};
 		/** @brief FUNCTION() 인자 편집용 스크래치 버퍼 (윈도우 로컬). */
 		int32	_arrArgInt[8]{};
 		float32 _arrArgFloat[8]{};

@@ -12,6 +12,8 @@ namespace sw
 	class CameraComponent;
 } // namespace sw
 
+struct ImDrawList;
+
 namespace sw::editor
 {
 	/** @brief 에디터 카메라 제어 모드 */
@@ -54,6 +56,9 @@ namespace sw::editor
 		void setOrbitTarget( const float3& target ) { _orbitTarget = target; }
 		void setCameraMode( CameraControlMode mode ) { _cameraMode = mode; }
 
+		/** @brief 현재 선택된 GameObject로 카메라를 프레이밍(F key)합니다. */
+		void frameSelected();
+
 		const float3&			 getCameraPosition() const { return _cameraPos; }
 		const float3&			 getCameraRotation() const { return _cameraRot; }
 		CameraControlMode		 getCameraMode() const { return _cameraMode; }
@@ -65,16 +70,27 @@ namespace sw::editor
 		void processPicking( const float2& canvasPos, const float2& canvasSize, CameraComponent* pCamera );
 		void drawGizmo( GameObjectPtr pObj, const float32* pView, const float32* pProj,
 						const float2& canvasPos, const float2& canvasSize );
+		void drawStatsOverlay( ImDrawList* pDrawList, const float2& canvasPos, const float2& canvasSize );
+		void drawOrientationCube( ImDrawList* pDrawList, const float2& canvasPos, const float2& canvasSize );
+		void drawAdaptiveGrid( ImDrawList* pDrawList, const float2& canvasPos, const float2& canvasSize,
+							   const float32* pView, const float32* pProj );
+		void processRulerTool( ImDrawList* pDrawList, const float2& canvasPos, const float2& canvasSize,
+							   const float32* pView, const float32* pProj );
+		void handleViewportAssetDrop( const utf8* pAssetPath, const float2& canvasPos, const float2& canvasSize,
+									  const float32* pView, const float32* pProj );
 
 	private:
-		float3					_cameraPos{ 0.0f, 3.0f, -6.0f };
-		float3					_cameraRot{ 20.0f, 0.0f, 0.0f }; // Pitch, Yaw, Roll
-		float3					_orbitTarget{ 0.0f, 0.0f, 0.0f };
-		float32					_orbitDistance{ 8.0f };
-		float32					_fovY{ 60.0f };
-		float32					_nearZ{ 0.1f };
-		float32					_farZ{ 1000.0f };
-		CameraControlMode		_cameraMode{ CameraControlMode::Fly };
-		ViewportToolbarSettings _toolbarSettings{};
+		float3					_cameraPos;
+		float3					_cameraRot; // Pitch, Yaw, Roll
+		float3					_orbitTarget;
+		float3					_rulerStartWorld;
+		float3					_rulerEndWorld;
+		float32					_orbitDistance;
+		float32					_fovY;
+		float32					_nearZ;
+		float32					_farZ;
+		CameraControlMode		_cameraMode;
+		ViewportToolbarSettings _toolbarSettings;
+		bool					_bRulerActive;
 	};
 } // namespace sw::editor

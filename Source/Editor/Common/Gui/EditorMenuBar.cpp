@@ -11,6 +11,7 @@
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Panels/EditorPanelManager.h"
 #include "Editor/Popups/CommandPalettePopup.h"
+#include "Editor/Popups/QuickLauncherPopup.h"
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
@@ -66,7 +67,9 @@ namespace sw::editor
 				openSceneFileDialog();
 
 			ImGui::Separator();
-			if ( ImGui::MenuItem( "Command Palette...", "Ctrl+P / Ctrl+Space" ) )
+			if ( ImGui::MenuItem( "Quick Open...", "Ctrl+P" ) )
+				QuickLauncherPopup::open();
+			if ( ImGui::MenuItem( "Command Palette...", "Ctrl+Shift+P / Ctrl+Space" ) )
 				CommandPalettePopup::open();
 
 			ImGui::Separator();
@@ -277,7 +280,11 @@ namespace sw::editor
 					getService<CommandStack>()->redo();
 				if ( ImGui::IsKeyPressed( ImGuiKey_O, false ) )
 					openSceneFileDialog();
-				if ( ImGui::IsKeyPressed( ImGuiKey_P, false ) || ImGui::IsKeyPressed( ImGuiKey_Space, false ) )
+				if ( io.KeyShift && ImGui::IsKeyPressed( ImGuiKey_P, false ) )
+					CommandPalettePopup::toggle();
+				else if ( ImGui::IsKeyPressed( ImGuiKey_P, false ) )
+					QuickLauncherPopup::toggle();
+				if ( ImGui::IsKeyPressed( ImGuiKey_Space, false ) )
 					CommandPalettePopup::toggle();
 				if ( io.KeyAlt && ImGui::IsKeyPressed( ImGuiKey_F11, false ) )
 				{

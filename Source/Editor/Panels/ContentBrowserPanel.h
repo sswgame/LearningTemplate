@@ -11,6 +11,8 @@
 
 #include "Editor/Common/Gui/IEditorPanel.h"
 
+struct ImDrawList;
+
 namespace sw::editor
 {
 	/** @brief 콘텐츠 루트를 탐색하고 애셋을 선택·엽니다 */
@@ -36,8 +38,13 @@ namespace sw::editor
 		enum class AssetTypeFilter : int32
 		{
 			All = 0,
-			Materials,
+			Scenes,
+			Prefabs,
+			Textures,
 			Shaders,
+			Materials,
+			Audio,
+			Data,
 			Other,
 			Count
 		};
@@ -95,6 +102,11 @@ namespace sw::editor
 		void drawTilesView( const vector<AssetEntry>& visible );
 		/** @brief 보이는 항목의 리스트 행을 그립니다. */
 		void drawListView( const vector<AssetEntry>& visible );
+		/** @brief 애셋 항목 우클릭 컨텍스트 메뉴를 그립니다. */
+		void drawAssetContextMenu( const AssetEntry& entry );
+		/** @brief 애셋 항목 썸네일/아이콘을 그립니다. */
+		void drawAssetThumbnail( ImDrawList* pDrawList, const float2& minPos, const float2& maxPos,
+								 const AssetEntry& entry );
 
 		// ------------------------------------------------------------------------------
 		// 5) 선택 · 임포트

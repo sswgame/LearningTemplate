@@ -4,6 +4,8 @@
 
 #include "Editor/Common/Config/EditorConfig.h"
 #include "Editor/Common/Config/EditorData.h"
+#include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorWorkspace.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -280,6 +282,10 @@ namespace sw::editor
 
 		if ( pParent != nullptr )
 			pSpawned->attachToParent( pParent );
+
+		EditorContext* pContext = EditorContext::get();
+		if ( pContext != nullptr )
+			pContext->getWorkspace().setGameObjectPrefabPath( pSpawned->getObjectId(), pPath );
 
 		SW_LOG_TRACE( "Spawned prefab from %#", pPath );
 		return pSpawned;

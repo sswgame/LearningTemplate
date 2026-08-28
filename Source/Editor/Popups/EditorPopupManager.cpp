@@ -4,6 +4,7 @@
 
 #include "Editor/Popups/BoneHierarchyPopup.h"
 #include "Editor/Popups/CommandPalettePopup.h"
+#include "Editor/Popups/QuickLauncherPopup.h"
 
 namespace sw::editor
 {
@@ -94,6 +95,7 @@ namespace sw::editor
 			return;
 		_bDefaultsRegistered = true;
 
+		registerPopup( make_unique<QuickLauncherPopup>() );
 		registerPopup( make_unique<CommandPalettePopup>() );
 		registerPopup( make_unique<BoneHierarchyPopup>() );
 	}

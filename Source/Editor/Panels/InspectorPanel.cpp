@@ -2,10 +2,12 @@
 
 #include "Editor/Panels/InspectorPanel.h"
 
+#include "Core/File/FileUtil.h"
 #include "Core/Task/TaskTypes.h"
 
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/SelectionManager.h"
 #include "Editor/Panels/Inspector/IInspectorComponent.h"
@@ -18,11 +20,16 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/ObjectStateSerializer.h"
+#include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionCast.h"
+#include "Engine/Reflection/ReflectionContainers.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/Serialization/Format/JsonSerializer.h"
 #include "Engine/Utility/CommandStack.h"
+#include "Engine/Utility/Resource/ResourceManager.h"
 
 #include "RuntimeAPI/Service/EditorService.h"
 
@@ -158,6 +165,46 @@ namespace sw::editor
 
 		drawGameObjectHeader( pObj );
 
+		const string& pfbPath = ws.getGameObjectPrefabPath( pObj->getObjectId() );
+		if ( pfbPath.empty() == false )
+		{
+			editor::drawChip( "Prefab", editor::style::kAccent );
+			ImGui::SameLine();
+			ImGui::TextDisabled( "%s", pfbPath.c_str() );
+
+			if ( ImGui::Button( "Apply to Prefab" ) )
+			{
+				PrefabAsset asset;
+				asset.setFromGameObject( pObj );
+				if ( asset.saveToXmlFile( pfbPath ) )
+				{
+					SW_LOG_INFO( "Saved prefab changes to %#", pfbPath.c_str() );
+				}
+			}
+			ImGui::SameLine();
+			if ( ImGui::Button( "Revert to Prefab" ) )
+			{
+				PrefabAsset* pLoaded = editor::getService<ResourceManager>()->getPrefabManager().loadPrefab( pfbPath );
+				if ( pLoaded != nullptr && pLoaded->isValid() )
+				{
+					const string beforeXml = EditorTransaction::captureSnapshot( GameObjectPtr{ pObj } );
+					ObjectStateSerializer::loadFromXmlString( pObj, pLoaded->getStateData() );
+					pObj->applyLoadedHierarchy();
+					const string afterXml = EditorTransaction::captureSnapshot( GameObjectPtr{ pObj } );
+					EditorTransaction::recordModify( GameObjectPtr{ pObj }, beforeXml, afterXml, "Revert to Prefab" );
+				}
+			}
+			ImGui::SameLine();
+			if ( ImGui::Button( "Unlink" ) )
+			{
+				ws.setGameObjectPrefabPath( pObj->getObjectId(), "" );
+			}
+			ImGui::Separator();
+		}
+
+		editor::drawSearchField( "##propFilter", _arrPropertyFilter, sizeof( _arrPropertyFilter ), "Search properties..." );
+		ImGui::Spacing();
+
 		const TypeInfo* pTypeInfo = pObj->getTypeInfo();
 		if ( pTypeInfo != nullptr )
 		{
@@ -194,6 +241,94 @@ namespace sw::editor
 				if ( bScrollTo )
 					ImGui::SetScrollHereY( 0.25f );
 				pComp->setActive( bActive );
+
+				if ( ImGui::BeginPopupContextItem( "CompCardCtx" ) )
+				{
+					const TypeInfo* pTInfo = pComp->getTypeInfo();
+					if ( pTInfo != nullptr )
+					{
+						if ( ImGui::MenuItem( "Copy Component" ) )
+						{
+							ws.copyComponent( pComp );
+						}
+						const string compTypeName = pComp->getComponentName().empty() == false
+													  ? pComp->getComponentName().c_str()
+													  : pTInfo->_name.c_str();
+						const bool	 bCanPaste	  = ( ws.hasCopiedComponent() &&
+												  ws.getCopiedComponentTypeName() == compTypeName );
+						if ( bCanPaste )
+						{
+							if ( ImGui::MenuItem( "Paste Component Values" ) )
+							{
+								ws.pasteComponentValues( pComp );
+							}
+						}
+						else
+						{
+							ImGui::BeginDisabled();
+							ImGui::MenuItem( "Paste Component Values" );
+							ImGui::EndDisabled();
+						}
+
+						if ( ws.hasCopiedComponent() )
+						{
+							if ( ImGui::MenuItem( "Paste as New Component" ) )
+							{
+								ws.pasteComponentAsNew( pObj );
+							}
+						}
+
+						ImGui::Separator();
+						if ( ImGui::BeginMenu( "Presets" ) )
+						{
+							static utf8 s_presetNameBuf[64]{ 0 };
+							ImGui::InputTextWithHint( "##presetName", "Preset Name...", s_presetNameBuf,
+													  sizeof( s_presetNameBuf ) );
+							ImGui::SameLine();
+							if ( ImGui::Button( "Save" ) && s_presetNameBuf[0] != '\0' )
+							{
+								ws.saveComponentPreset( pComp, s_presetNameBuf );
+								s_presetNameBuf[0] = '\0';
+							}
+							ImGui::Separator();
+
+							// List saved presets
+							const string   presetDir = FileUtil::joinPath( FileUtil::getCurrentPath(),
+																		   "Resource/game/demo/data/presets" );
+							vector<string> listPresetFiles;
+							FileUtil::collectFiles( presetDir, ".preset.xml", listPresetFiles, false, false );
+							const string compPrefix = compTypeName + "_";
+							bool		 bFoundPresets{ false };
+							for ( const string& presetFile : listPresetFiles )
+							{
+								const string fname = FileUtil::getFileNamePart( presetFile );
+								if ( fname.rfind( compPrefix, 0 ) == 0 )
+								{
+									bFoundPresets		 = true;
+									string displayPreset = fname.substr( compPrefix.size() );
+									if ( displayPreset.size() > 11 &&
+										 displayPreset.substr( displayPreset.size() - 11 ) == ".preset.xml" )
+									{
+										displayPreset = displayPreset.substr( 0, displayPreset.size() - 11 );
+									}
+									if ( ImGui::MenuItem( displayPreset.c_str() ) )
+									{
+										ws.loadComponentPreset( pComp, presetFile );
+									}
+								}
+							}
+							if ( bFoundPresets == false )
+								ImGui::TextDisabled( "No saved presets." );
+
+							ImGui::EndMenu();
+						}
+					}
+					ImGui::Separator();
+					if ( ImGui::MenuItem( "Remove Component" ) )
+						bRemove = true;
+					ImGui::EndPopup();
+				}
+
 				drawComponentSection( pComp, pRhiDevice );
 				editor::endComponentCard();
 			}
@@ -290,10 +425,24 @@ namespace sw::editor
 			return;
 
 		map<string, vector<const PropertyInfo*>> grouped;
+		const bool								 bHasFilter = ( _arrPropertyFilter[0] != '\0' );
+
 		pTypeInfo->forEachProperty( [&]( const PropertyInfo& prop )
 		{
 			if ( prop._metadata._bHideInInspector == SW_TRUE )
 				return;
+
+			if ( bHasFilter )
+			{
+				const utf8* pLabelName = propLabel( prop );
+				if ( StringUtil::stristr( prop._name.c_str(), _arrPropertyFilter ) == nullptr &&
+					 StringUtil::stristr( pLabelName, _arrPropertyFilter ) == nullptr &&
+					 StringUtil::stristr( prop._metadata._category.c_str(), _arrPropertyFilter ) == nullptr )
+				{
+					return;
+				}
+			}
+
 			const string category =
 				prop._metadata._category.empty() ? "General" : string( prop._metadata._category.c_str() );
 			grouped[category].push_back( &prop );
@@ -318,6 +467,24 @@ namespace sw::editor
 					ImGui::TextUnformatted( propLabel( *prop ) );
 					if ( prop->_metadata._tooltip.empty() == false && ImGui::IsItemHovered() )
 						ImGui::SetTooltip( "%s", prop->_metadata._tooltip.c_str() );
+
+					if ( ImGui::BeginPopupContextItem( "PropCtx" ) )
+					{
+						if ( prop->_metadata._defaultValue.empty() == false )
+						{
+							utf8 resetLabel[constant::kMaxBuffer128];
+							formatstring( resetLabel, sizeof( resetLabel ), "Reset to Default (%#)", prop->_metadata._defaultValue.c_str() );
+							if ( ImGui::MenuItem( resetLabel ) )
+							{
+								utf8 jsonWrap[constant::kMaxBuffer256];
+								formatstring( jsonWrap, sizeof( jsonWrap ), "{\"%#\":%#}", prop->_name.c_str(), prop->_metadata._defaultValue.c_str() );
+								JsonSerializer::deserialize( pInstance, *pTypeInfo, jsonWrap );
+							}
+						}
+						if ( ImGui::MenuItem( "Copy Property Name" ) )
+							ImGui::SetClipboardText( prop->_name.c_str() );
+						ImGui::EndPopup();
+					}
 
 					if ( prop->_metadata._bTransient == SW_TRUE )
 					{
@@ -354,8 +521,69 @@ namespace sw::editor
 		const EnumInfo* pEnumInfo = pRegistry->findEnum( prop._typeName );
 		if ( pEnumInfo != nullptr )
 		{
-			int32*		pEnumValue = prop.getValuePtr<int32>( pInstance );
-			const utf8* pName	   = pRegistry->enumToString( prop._typeName, *pEnumValue );
+			int32* pEnumValue = prop.getValuePtr<int32>( pInstance );
+			if ( pEnumValue == nullptr )
+				return;
+
+			if ( pEnumInfo->_bIsBitFlag )
+			{
+				string previewStr;
+				for ( const auto& [val, nameHashed] : pEnumInfo->_mapValueToName )
+				{
+					const int32 val32 = static_cast<int32>( val );
+					if ( val32 != 0 && ( *pEnumValue & val32 ) == val32 )
+					{
+						if ( previewStr.empty() == false )
+							previewStr += " | ";
+						previewStr += nameHashed.c_str();
+					}
+				}
+				if ( previewStr.empty() )
+					previewStr = ( *pEnumValue == 0 ) ? "None" : "<Unknown>";
+
+				if ( bReadOnly )
+				{
+					ImGui::TextDisabled( "%s", pLabel );
+					ImGui::SameLine();
+					ImGui::TextUnformatted( previewStr.c_str() );
+					return;
+				}
+
+				if ( ImGui::BeginCombo( pLabel, previewStr.c_str() ) )
+				{
+					if ( ImGui::SmallButton( "Select All" ) )
+					{
+						for ( const auto& [val, _] : pEnumInfo->_mapValueToName )
+							*pEnumValue |= static_cast<int32>( val );
+					}
+					ImGui::SameLine();
+					if ( ImGui::SmallButton( "Clear All" ) )
+					{
+						*pEnumValue = 0;
+					}
+					ImGui::Separator();
+
+					for ( const auto& [val, nameHashed] : pEnumInfo->_mapValueToName )
+					{
+						const int32 val32 = static_cast<int32>( val );
+						if ( val32 == 0 )
+							continue;
+						bool bChecked = ( ( *pEnumValue & val32 ) == val32 );
+						if ( ImGui::Checkbox( nameHashed.c_str(), &bChecked ) )
+						{
+							if ( bChecked )
+								*pEnumValue |= val32;
+							else
+								*pEnumValue &= ~val32;
+						}
+					}
+					ImGui::EndCombo();
+				}
+				InspectorPropertyUndo::trackPod( pEnumValue, sizeof( *pEnumValue ), pLabel );
+				return;
+			}
+
+			const utf8* pName = pRegistry->enumToString( prop._typeName, *pEnumValue );
 			if ( bReadOnly )
 			{
 				ImGui::TextDisabled( "%s", pLabel );
@@ -382,6 +610,58 @@ namespace sw::editor
 			}
 			InspectorPropertyUndo::trackPod( pEnumValue, sizeof( *pEnumValue ), pLabel );
 			return;
+		}
+
+		if ( prop._bIsContainer && prop._containerWrapper != nullptr )
+		{
+			void* pContainer = prop.getRawPtr( pInstance );
+			if ( pContainer != nullptr )
+			{
+				ISequenceContainerWrapper* pSeq = prop._containerWrapper->asSequence();
+				if ( pSeq != nullptr )
+				{
+					const size_t count = pSeq->getSize( pContainer );
+					utf8		 headerBuf[constant::kMaxBuffer128];
+					formatstring( headerBuf, sizeof( headerBuf ), "[%#] (%# elements)", prop._elementTypeName.c_str(), count );
+
+					if ( ImGui::TreeNodeEx( pLabel, ImGuiTreeNodeFlags_SpanFullWidth, "%s", headerBuf ) )
+					{
+						if ( bReadOnly == false )
+						{
+							if ( ImGui::SmallButton( "+ Add" ) )
+								pSeq->addElementDefault( pContainer );
+							ImGui::SameLine();
+							if ( ImGui::SmallButton( "Clear" ) )
+								pSeq->clear( pContainer );
+							ImGui::Separator();
+						}
+
+						const size_t newCount = pSeq->getSize( pContainer );
+						for ( size_t elemIndex = 0; elemIndex < newCount; ++elemIndex )
+						{
+							void* pElem = pSeq->getElement( pContainer, elemIndex );
+							if ( pElem == nullptr )
+								continue;
+
+							ImGui::PushID( static_cast<int32>( elemIndex ) );
+							ImGui::AlignTextToFramePadding();
+							ImGui::Text( "[%zu]", elemIndex );
+							ImGui::SameLine();
+
+							PropertyInfo elemProp{};
+							elemProp._typeName = prop._elementTypeName;
+							elemProp._name	   = prop._name;
+							elemProp._metadata = prop._metadata;
+
+							ImGui::SetNextItemWidth( -FLT_MIN );
+							drawPropertyWidget( pElem, elemProp );
+							ImGui::PopID();
+						}
+						ImGui::TreePop();
+					}
+					return;
+				}
+			}
 		}
 
 		const TypeInfo* pFieldType = pRegistry->findType( prop._typeName );

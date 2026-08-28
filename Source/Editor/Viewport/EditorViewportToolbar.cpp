@@ -8,6 +8,7 @@
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
+#include "Editor/Common/Workspace/SelectionManager.h"
 
 #include <imgui.h>
 
@@ -31,22 +32,30 @@ namespace sw::editor
 
 			ImGui::SameLine();
 			ImGui::SetNextItemWidth( comboWidth );
-			int32 currentIndex = fallbackIndex;
-			for ( int32 valueIndex = 0; valueIndex < valueCount; ++valueIndex )
+
+			int32 currentIdx = fallbackIndex;
+			for ( int32 idx = 0; idx < valueCount; ++idx )
 			{
-				if ( MathUtil::abs( value - arrValues[valueIndex] ) < 1e-4f )
-					currentIndex = valueIndex;
+				if ( MathUtil::abs( value - arrValues[idx] ) < 0.001f )
+				{
+					currentIdx = idx;
+					break;
+				}
 			}
-			if ( ImGui::Combo( pComboId, &currentIndex, arrLabels, valueCount ) )
-				value = arrValues[currentIndex];
+
+			if ( ImGui::Combo( pComboId, &currentIdx, arrLabels, valueCount ) )
+			{
+				if ( 0 <= currentIdx && currentIdx < valueCount )
+					value = arrValues[currentIdx];
+			}
 		}
 	} // namespace
 
 	void EditorViewportToolbar::draw( ViewportToolbarSettings& settings, float32 viewportWidth )
 	{
-		ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, 3.0f );
-		ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2{ 4.0f, 2.0f } );
-		ImGui::PushStyleColor( ImGuiCol_Button, ImVec4{ 0.18f, 0.18f, 0.20f, 0.85f } );
+		ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, 4.0f );
+		ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2{ 6.0f, 2.0f } );
+		ImGui::PushStyleColor( ImGuiCol_Button, ImVec4{ 0.18f, 0.18f, 0.22f, 0.85f } );
 		ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImVec4{ 0.28f, 0.28f, 0.32f, 1.0f } );
 
 		{
@@ -60,16 +69,117 @@ namespace sw::editor
 		editor::drawToolbarSeparator();
 
 		{
+			const bool b2D = settings._bIs2DMode;
+			if ( b2D )
+				ImGui::PushStyleColor( ImGuiCol_Button, ImVec4{ 0.22f, 0.45f, 0.75f, 1.0f } );
+
+			if ( ImGui::Button( b2D ? "2D Mode" : "3D Mode" ) )
+				settings._bIs2DMode = ( settings._bIs2DMode == false );
+
+			if ( b2D )
+				ImGui::PopStyleColor();
+
+			if ( ImGui::IsItemHovered() )
+				ImGui::SetTooltip( "Toggle 2D (XY Plane Grid) / 3D (XZ Plane Grid) View Mode" );
+		}
+
+		editor::drawToolbarSeparator();
+
+		{
 			ImGui::TextDisabled( "Cam:" );
 			ImGui::SameLine();
 			ImGui::SetNextItemWidth( 70.0f );
 			ImGui::SliderFloat( "##CamSpeed", &settings._cameraSpeed, 0.5f, 20.0f, "%.1f" );
 		}
 
-		if ( viewportWidth > 280.0f )
+		if ( viewportWidth > 320.0f )
 		{
 			editor::drawToolbarSeparator();
 			ImGui::Checkbox( "Stats", &settings._bShowStats );
+			ImGui::SameLine();
+			ImGui::Checkbox( "Grid", &settings._bShowGrid );
+			ImGui::SameLine();
+			ImGui::Checkbox( "Cube", &settings._bShowOrientationCube );
+			ImGui::SameLine();
+			ImGui::Checkbox( "Col", &settings._bShowColliders );
+			ImGui::SameLine();
+			ImGui::Checkbox( "Cam", &settings._bShowCameras );
+			ImGui::SameLine();
+			ImGui::Checkbox( "Surf", &settings._bSurfaceSnap );
+		}
+
+		if ( viewportWidth > 420.0f )
+		{
+			editor::drawToolbarSeparator();
+			if ( ImGui::Button( "Bookmarks" ) )
+				ImGui::OpenPopup( "##ViewportBookmarksPopup" );
+
+			if ( ImGui::BeginPopup( "##ViewportBookmarksPopup" ) )
+			{
+				ImGui::Text( "Camera Bookmarks (Ctrl+1~9)" );
+				ImGui::Separator();
+				EditorContext* pContext = EditorContext::get();
+				if ( pContext != nullptr )
+				{
+					EditorWorkspace& ws = pContext->getWorkspace();
+					for ( uint32 slot = 0; slot < 9; ++slot )
+					{
+						const bool bHas = ws.hasCameraBookmark( slot );
+						utf8	   arrLabel[64];
+						formatstring( arrLabel, sizeof( arrLabel ), "Slot %u: %s", slot + 1,
+									  bHas ? ws.getCameraBookmark( slot )->_name.c_str() : "<Empty>" );
+						if ( ImGui::Selectable( arrLabel, false ) && bHas )
+						{
+							settings._requestedBookmarkSlot = static_cast<int32>( slot );
+						}
+						if ( ImGui::IsItemHovered() && bHas )
+						{
+							const CameraBookmark* pBm = ws.getCameraBookmark( slot );
+							if ( pBm != nullptr )
+								ImGui::SetTooltip( "Pos: (%.1f, %.1f, %.1f)",
+												   static_cast<float64>( pBm->_position._x ),
+												   static_cast<float64>( pBm->_position._y ),
+												   static_cast<float64>( pBm->_position._z ) );
+						}
+					}
+				}
+				ImGui::EndPopup();
+			}
+		}
+
+		if ( viewportWidth > 520.0f )
+		{
+			EditorContext* pContext = EditorContext::get();
+			if ( pContext != nullptr && pContext->getSelectionManager().getSelectedObjectCount() >= 2 )
+			{
+				editor::drawToolbarSeparator();
+				if ( ImGui::Button( "Align..." ) )
+					ImGui::OpenPopup( "##ViewportAlignPopup" );
+
+				if ( ImGui::BeginPopup( "##ViewportAlignPopup" ) )
+				{
+					ImGui::Text( "Multi-Object Alignment" );
+					ImGui::Separator();
+					EditorWorkspace& ws = pContext->getWorkspace();
+					if ( ImGui::MenuItem( "Snap to Ground (Y=0)" ) )
+						ws.snapSelectedToGround();
+					ImGui::Separator();
+					if ( ImGui::MenuItem( "Align X (Center)" ) )
+						ws.alignSelectedObjects( EditorWorkspace::AlignAxis::X, EditorWorkspace::AlignType::Center );
+					if ( ImGui::MenuItem( "Align Y (Center)" ) )
+						ws.alignSelectedObjects( EditorWorkspace::AlignAxis::Y, EditorWorkspace::AlignType::Center );
+					if ( ImGui::MenuItem( "Align Z (Center)" ) )
+						ws.alignSelectedObjects( EditorWorkspace::AlignAxis::Z, EditorWorkspace::AlignType::Center );
+					ImGui::Separator();
+					if ( ImGui::MenuItem( "Distribute X Evenly" ) )
+						ws.distributeSelectedObjects( EditorWorkspace::AlignAxis::X );
+					if ( ImGui::MenuItem( "Distribute Y Evenly" ) )
+						ws.distributeSelectedObjects( EditorWorkspace::AlignAxis::Y );
+					if ( ImGui::MenuItem( "Distribute Z Evenly" ) )
+						ws.distributeSelectedObjects( EditorWorkspace::AlignAxis::Z );
+					ImGui::EndPopup();
+				}
+			}
 		}
 
 		ImGui::PopStyleColor( 2 );

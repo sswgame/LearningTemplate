@@ -173,4 +173,16 @@ namespace sw
 			return _empty;
 		return _listCommand[_index]._label;
 	}
+
+	void CommandStack::jumpTo( size_t targetIndex )
+	{
+		_lastCoalesceKey.clear();
+		if ( targetIndex > _listCommand.size() )
+			targetIndex = _listCommand.size();
+
+		while ( _index > targetIndex && canUndo() )
+			undo();
+		while ( _index < targetIndex && canRedo() )
+			redo();
+	}
 } // namespace sw
