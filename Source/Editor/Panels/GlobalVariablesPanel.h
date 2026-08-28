@@ -6,7 +6,10 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_set.h"
+#include "Core/Container/vector.h"
 
+#include "Editor/Common/Commands/EditorBackgroundIo.h"
+#include "Editor/Common/Commands/EditorGlobalVariableCommands.h"
 #include "Editor/Common/Gui/IEditorPanel.h"
 
 namespace sw
@@ -43,9 +46,12 @@ namespace sw::editor
 
 	private:
 		unordered_set<string>  _uniquePinnedVar;
+		EditorFileCollectJob   _presetJob;
+		vector<string>		   _listPresetFile;
 		utf8				   _arrSearchFilter[128];
 		utf8				   _arrPresetNameBuf[64];
-		uint8				   _bGroupByModule : 1;
-		[[maybe_unused]] uint8 _reserved	   : 7;
+		uint8				   _bGroupByModule	 : 1;
+		uint8				   _bPresetListDirty : 1;
+		[[maybe_unused]] uint8 _reserved		 : 6;
 	};
 } // namespace sw::editor

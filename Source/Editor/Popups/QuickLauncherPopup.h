@@ -7,6 +7,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
+#include "Editor/Common/Commands/EditorBackgroundIo.h"
 #include "Editor/Common/Gui/IEditorPopup.h"
 
 namespace sw::editor
@@ -46,9 +47,11 @@ namespace sw::editor
 	private:
 		void rebuildIndex();
 		void executeItem( const QuickLauncherItem& item );
+		void pollFileIndex();
 
 	private:
 		vector<QuickLauncherItem> _listAllItem;
+		EditorResourceIndexJob	  _fileIndexJob;
 		utf8					  _arrSearchBuffer[constant::kMaxBuffer128];
 		int32					  _selectedIndex;
 		bool					  _bJustOpened;

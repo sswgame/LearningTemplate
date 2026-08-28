@@ -45,6 +45,7 @@ namespace sw::editor
 
 	QuickLauncherPopup::QuickLauncherPopup()
 		: _listAllItem{}
+		, _fileIndexJob{}
 		, _arrSearchBuffer{}
 		, _selectedIndex{ 0 }
 		, _bJustOpened{ false }
@@ -114,8 +115,15 @@ namespace sw::editor
 			}
 		}
 
+		_fileIndexJob.request();
+	}
+
+	void QuickLauncherPopup::pollFileIndex()
+	{
 		vector<EditorResourceIndexEntry> listFileEntry;
-		EditorAssetCommands::collectResourceIndex( listFileEntry );
+		if ( _fileIndexJob.take( listFileEntry ) == false )
+			return;
+
 		for ( const EditorResourceIndexEntry& entry : listFileEntry )
 		{
 			QuickLauncherItem item{};
@@ -152,6 +160,8 @@ namespace sw::editor
 
 	void QuickLauncherPopup::drawContent()
 	{
+		pollFileIndex();
+
 		editor::EditorSearchOverlayDesc overlayDesc{};
 		overlayDesc._pId		  = "##QuickLauncherOverlay";
 		overlayDesc._pOpen		  = &_bOpen;
@@ -249,7 +259,12 @@ namespace sw::editor
 			}
 
 			if ( filteredCount == 0 )
-				editor::drawEmptyHint( "No matching assets or game objects found." );
+			{
+				if ( _fileIndexJob.isPending() )
+					editor::drawEmptyHint( "Indexing assets..." );
+				else
+					editor::drawEmptyHint( "No matching assets or game objects found." );
+			}
 		}
 		editor::endSection();
 

@@ -289,16 +289,27 @@ namespace sw::editor
 							if ( ImGui::Button( "Save" ) && s_presetNameBuf[0] != '\0' )
 							{
 								ws.saveComponentPreset( pComp, s_presetNameBuf );
-								s_presetNameBuf[0] = '\0';
+								s_presetNameBuf[0]	   = '\0';
+								_bComponentPresetDirty = SW_TRUE;
 							}
 							ImGui::Separator();
 
-							// List saved presets
-							vector<string> listPresetFiles;
-							EditorGlobalVariableCommands::collectComponentPresetFiles( listPresetFiles );
+							if ( _bComponentPresetDirty == SW_TRUE && _componentPresetJob.isPending() == false )
+							{
+								_componentPresetJob.request(
+									EditorGlobalVariableCommands::getComponentPresetFolderPath(), ".preset.xml", false );
+							}
+
+							vector<string> listNewPresetFiles;
+							if ( _componentPresetJob.take( listNewPresetFiles ) )
+							{
+								_listComponentPresetFile = std::move( listNewPresetFiles );
+								_bComponentPresetDirty	 = SW_FALSE;
+							}
+
 							const string compPrefix = compTypeName + "_";
 							bool		 bFoundPresets{ false };
-							for ( const string& presetFile : listPresetFiles )
+							for ( const string& presetFile : _listComponentPresetFile )
 							{
 								const string fname = FileUtil::getFileNamePart( presetFile );
 								if ( fname.rfind( compPrefix, 0 ) == 0 )

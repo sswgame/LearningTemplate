@@ -7,6 +7,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
+#include "Editor/Common/Commands/EditorBackgroundIo.h"
 #include "Editor/Common/Commands/EditorDataTableCommands.h"
 #include "Editor/Common/Gui/IEditorPanel.h"
 
@@ -44,6 +45,7 @@ namespace sw::editor
 		void reloadGameDataFiles();
 		void loadSelectedGameDataFile();
 		void saveSelectedGameDataFile();
+		void pollBackgroundJobs();
 
 	private:
 		int32					  _activeTab;
@@ -53,6 +55,8 @@ namespace sw::editor
 		vector<GameDataFileEntry> _listGameDataFile;
 		int32					  _selectedGameDataIndex;
 		string					  _selectedGameDataRawText;
+		EditorLocalizationLoadJob _locJob;
+		EditorGameDataScanJob	  _gameDataJob;
 		bool					  _bLocLoaded;
 		bool					  _bGameDataLoaded;
 	};

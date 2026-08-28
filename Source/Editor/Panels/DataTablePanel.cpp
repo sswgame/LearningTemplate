@@ -20,18 +20,37 @@ namespace sw::editor
 		, _listGameDataFile{}
 		, _selectedGameDataIndex{ -1 }
 		, _selectedGameDataRawText{}
+		, _locJob{}
+		, _gameDataJob{}
 		, _bLocLoaded{ false }
 		, _bGameDataLoaded{ false }
 	{
 	}
 
+	void DataTablePanel::pollBackgroundJobs()
+	{
+		vector<LocRecord> listLoc;
+		if ( _locJob.take( listLoc ) )
+		{
+			_listLocRecord = std::move( listLoc );
+			_bLocLoaded	   = true;
+		}
+		else if ( _bLocLoaded == false && _locJob.isPending() == false )
+			_locJob.request();
+
+		vector<GameDataFileEntry> listGameData;
+		if ( _gameDataJob.take( listGameData ) )
+		{
+			_listGameDataFile = std::move( listGameData );
+			_bGameDataLoaded  = true;
+		}
+		else if ( _bGameDataLoaded == false && _gameDataJob.isPending() == false )
+			_gameDataJob.request();
+	}
+
 	void DataTablePanel::drawContent()
 	{
-		if ( _bLocLoaded == false )
-			reloadLocalization();
-
-		if ( _bGameDataLoaded == false )
-			reloadGameDataFiles();
+		pollBackgroundJobs();
 
 		if ( ImGui::BeginTabBar( "##DataTableTabs" ) )
 		{
@@ -97,6 +116,12 @@ namespace sw::editor
 		editor::endToolbar();
 
 		ImGui::Separator();
+
+		if ( _bLocLoaded == false )
+		{
+			editor::drawEmptyHint( "Loading localization..." );
+			return;
+		}
 
 		const string filter = StringUtil::toLower( _arrLocFilter );
 
@@ -255,8 +280,8 @@ namespace sw::editor
 
 	void DataTablePanel::reloadLocalization()
 	{
-		EditorDataTableCommands::loadLocalization( _listLocRecord );
-		_bLocLoaded = true;
+		_bLocLoaded = false;
+		_locJob.request();
 	}
 
 	void DataTablePanel::saveLocalization()
@@ -266,8 +291,8 @@ namespace sw::editor
 
 	void DataTablePanel::reloadGameDataFiles()
 	{
-		EditorDataTableCommands::collectGameDataFiles( _listGameDataFile );
-		_bGameDataLoaded = true;
+		_bGameDataLoaded = false;
+		_gameDataJob.request();
 	}
 
 	void DataTablePanel::loadSelectedGameDataFile()

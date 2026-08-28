@@ -176,9 +176,12 @@ namespace sw::editor
 	GlobalVariablesPanel::GlobalVariablesPanel()
 		: IEditorPanel( false )
 		, _uniquePinnedVar{}
+		, _presetJob{}
+		, _listPresetFile{}
 		, _arrSearchFilter{ 0 }
 		, _arrPresetNameBuf{ 0 }
 		, _bGroupByModule{ SW_TRUE }
+		, _bPresetListDirty{ SW_TRUE }
 		, _reserved{ 0 }
 	{
 	}
@@ -223,21 +226,33 @@ namespace sw::editor
 						string( _arrPresetNameBuf ) + ".gvpreset.xml" );
 					EditorGlobalVariableCommands::savePreset( presetPath, _arrPresetNameBuf );
 					_arrPresetNameBuf[0] = '\0';
+					_bPresetListDirty	 = SW_TRUE;
 				}
 
 				ImGui::Separator();
 				ImGui::TextDisabled( "Saved Presets:" );
 
-				vector<string> listPresetFiles;
-				EditorGlobalVariableCommands::collectPresetFiles( listPresetFiles );
+				if ( _bPresetListDirty == SW_TRUE && _presetJob.isPending() == false )
+					_presetJob.request( EditorGlobalVariableCommands::getPresetFolderPath(), ".gvpreset.xml", false );
 
-				if ( listPresetFiles.empty() )
+				vector<string> listNewPresetFiles;
+				if ( _presetJob.take( listNewPresetFiles ) )
+				{
+					_listPresetFile	  = std::move( listNewPresetFiles );
+					_bPresetListDirty = SW_FALSE;
+				}
+
+				if ( _presetJob.isPending() )
+				{
+					ImGui::TextDisabled( "Scanning presets..." );
+				}
+				else if ( _listPresetFile.empty() )
 				{
 					ImGui::TextDisabled( "No presets found." );
 				}
 				else
 				{
-					for ( const string& presetFile : listPresetFiles )
+					for ( const string& presetFile : _listPresetFile )
 					{
 						const string fname		 = FileUtil::getFileNamePart( presetFile );
 						string		 displayName = fname;
