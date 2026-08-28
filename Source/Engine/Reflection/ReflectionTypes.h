@@ -128,6 +128,8 @@ namespace sw
 		{
 			if ( getNameHash() == nameOrAliasHash )
 				return true;
+			if ( _listAlias.empty() )
+				return false;
 			for ( const hashed_string& alias : _listAlias )
 			{
 				if ( alias.empty() == false && alias.getHash() == nameOrAliasHash )
@@ -141,6 +143,8 @@ namespace sw
 		{
 			if ( _name == nameOrAlias )
 				return true;
+			if ( _listAlias.empty() )
+				return false;
 			for ( const hashed_string& alias : _listAlias )
 			{
 				if ( alias == nameOrAlias )
@@ -249,6 +253,7 @@ namespace sw
 
 			// _mapValueToName 만 사용 — ValueAlias 가 _mapNameToValue 에 있어도 출력에 중복되지 않음.
 			string result;
+			result.reserve( 64 );
 			for ( const auto& [bitVal, name] : _mapValueToName )
 			{
 				if ( bitVal != 0 && ( val & bitVal ) == bitVal )
@@ -272,18 +277,23 @@ namespace sw
 				return iter != _mapNameToValue.end() ? iter->second : 0;
 			}
 
-			int64			intResult{ 0 };
-			string_splitter splitter( flagsStr, { constants::reflection::kFlagSplitDelimiter } );
-			for ( string_view tokenView : splitter.getSplitList() )
+			int64  intResult{ 0 };
+			size_t startPos{ 0 };
+			while ( startPos < flagsStr.size() )
 			{
-				string_view trimmedStr = StringUtil::trim( tokenView );
-				if ( trimmedStr.empty() == false )
+				const size_t	  delimiterPos = flagsStr.find( '|', startPos );
+				const size_t	  endPos	   = ( delimiterPos != string_view::npos ) ? delimiterPos : flagsStr.size();
+				const string_view token		   = StringUtil::trim( flagsStr.substr( startPos, endPos - startPos ) );
+				if ( token.empty() == false )
 				{
-					hashed_string tokenKey{ trimmedStr };
+					hashed_string tokenKey{ token };
 					auto		  iter = _mapNameToValue.find( tokenKey );
 					if ( iter != _mapNameToValue.end() )
 						intResult |= iter->second;
 				}
+				if ( delimiterPos == string_view::npos )
+					break;
+				startPos = delimiterPos + 1;
 			}
 
 			return intResult;
@@ -406,6 +416,9 @@ namespace sw
 		{
 			if ( _bIsCacheBuilt != 0 )
 				return;
+
+			_mapNameToProperty.reserve( _propertyList.size() * 2 );
+			_mapNameToMethod.reserve( _listMethod.size() );
 
 			for ( const PropertyInfo& prop : _propertyList )
 			{

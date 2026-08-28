@@ -176,6 +176,8 @@ namespace sw
 		const SerializeContext& ctx			= SerializeContext::getDefault();
 		const uint32			count		= args.getCount();
 		const uint8*			pCountBytes = reinterpret_cast<const uint8*>( &count );
+
+		out._listArgByte.reserve( sizeof( uint32 ) + count * 32 );
 		out._listArgByte.insert( out._listArgByte.end(), pCountBytes, pCountBytes + sizeof( uint32 ) );
 
 		for ( uint32 argIndex = 0; argIndex < count; ++argIndex )

@@ -242,9 +242,9 @@ namespace sw
 
 		TypeRegistry& registry = engine::getTypeRegistry();
 
-		static constexpr PredefinedNameType kArrDynamicTypes[] = {
-			PredefinedNameType::NameType_string,
-			PredefinedNameType::NameType_hashed_string,
+		static const hashed_string kArrDynamicTypes[] = {
+			hashed_string{ PredefinedNameType::NameType_string },
+			hashed_string{ PredefinedNameType::NameType_hashed_string },
 		};
 
 		_bIsPODFastPath = SW_TRUE;
@@ -257,9 +257,9 @@ namespace sw
 			}
 
 			bool bIsDynamicType = false;
-			for ( const PredefinedNameType dynamicType : kArrDynamicTypes )
+			for ( const hashed_string& dynamicType : kArrDynamicTypes )
 			{
-				if ( registry.isType( prop._typeName, hashed_string{ dynamicType } ) )
+				if ( registry.isType( prop._typeName, dynamicType ) )
 				{
 					bIsDynamicType = true;
 					break;
@@ -603,12 +603,21 @@ namespace sw
 
 	bool TypeInfo::isDerivedFrom( const hashed_string& targetFqn ) const
 	{
-		if ( _fullyQualifiedName == targetFqn )
+		if ( _fullyQualifiedName == targetFqn || _name == targetFqn )
 			return true;
-		if ( StringUtil::isNullOrEmpty( _parentFQN.c_str() ) )
+		if ( _parentFQN.empty() )
 			return false;
 
-		const TypeInfo* pParent = engine::getTypeRegistry().findType( _parentFQN );
-		return pParent != nullptr ? pParent->isDerivedFrom( targetFqn ) : false;
+		const TypeRegistry& registry = engine::getTypeRegistry();
+		const TypeInfo*		pCurrent = this;
+		while ( pCurrent != nullptr && pCurrent->_parentFQN.empty() == false )
+		{
+			if ( pCurrent->_parentFQN == targetFqn )
+				return true;
+			pCurrent = registry.findType( pCurrent->_parentFQN );
+			if ( pCurrent != nullptr && ( pCurrent->_fullyQualifiedName == targetFqn || pCurrent->_name == targetFqn ) )
+				return true;
+		}
+		return false;
 	}
 } // namespace sw

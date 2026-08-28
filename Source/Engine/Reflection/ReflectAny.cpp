@@ -20,6 +20,8 @@ namespace sw
 			const uint32	  blobLen	 = static_cast<uint32>( any._listBytes.size() );
 			const uint8*	  pNameBytes = reinterpret_cast<const uint8*>( &nameLen );
 			const uint8*	  pBlobBytes = reinterpret_cast<const uint8*>( &blobLen );
+
+			listBuf.reserve( listBuf.size() + sizeof( uint32 ) * 2 + fqn.size() + any._listBytes.size() );
 			listBuf.insert( listBuf.end(), pNameBytes, pNameBytes + sizeof( uint32 ) );
 			listBuf.insert( listBuf.end(), reinterpret_cast<const uint8*>( fqn.data() ),
 							reinterpret_cast<const uint8*>( fqn.data() ) + fqn.size() );

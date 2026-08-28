@@ -70,6 +70,9 @@ namespace sw
 		if ( pSrc == nullptr )
 			return nullptr;
 
+		if constexpr ( std::is_same_v<To, From> )
+			return pSrc;
+
 		const TypeInfo* pToType = nullptr;
 		if constexpr ( HasStaticType_v<To> )
 			pToType = To::StaticType();
@@ -79,9 +82,18 @@ namespace sw
 			return static_cast<To*>( pSrc );
 
 		const TypeInfo* pSrcType = pSrc->getTypeInfo();
+		if ( pSrcType == pToType )
+			return static_cast<To*>( pSrc );
 		if ( pSrcType != nullptr && pToType != nullptr && pSrcType->isDerivedFrom( pToType->_fullyQualifiedName ) )
 			return static_cast<To*>( pSrc );
 		return nullptr;
+	}
+
+	template <typename To, typename From>
+	/** @brief TypeInfo 상속 체인을 보고 const To*로 캐스트. 실패 시 nullptr. */
+	const To* castTo( const From* pSrc )
+	{
+		return castTo<To>( const_cast<From*>( pSrc ) );
 	}
 
 } // namespace sw
