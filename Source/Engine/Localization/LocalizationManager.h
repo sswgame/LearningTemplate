@@ -150,8 +150,10 @@ namespace sw
 		void unregisterLanguageChangedCallback( uint32 callbackId );
 
 	private:
+		bool loadLanguageFromText( string_view languageCode, string_view pathHint, string_view text );
 		void notifyLanguageChanged( string_view oldLanguage, string_view newLanguage );
 
+	private:
 		mutable std::shared_mutex					   _mutex;
 		string										   _currentLanguage;
 		string										   _fallbackLanguage;

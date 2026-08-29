@@ -32,12 +32,9 @@ namespace sw::editor
 			{
 				if ( FileUtil::hasExtension( ext, "._material" ) )
 					return ImVec4( 0.85f, 0.35f, 0.25f, 1.0f );
-				if ( FileUtil::hasExtension( ext, ".hlsl" ) || FileUtil::hasExtension( ext, ".glsl" ) ||
-					 FileUtil::hasExtension( ext, ".vert" ) || FileUtil::hasExtension( ext, ".frag" ) )
+				if ( FileUtil::hasAnyExtension( ext, { ".hlsl", ".glsl", ".vert", ".frag" } ) )
 					return ImVec4( 0.25f, 0.65f, 0.90f, 1.0f );
-				if ( FileUtil::hasExtension( ext, ".png" ) || FileUtil::hasExtension( ext, ".jpg" ) ||
-					 FileUtil::hasExtension( ext, ".jpeg" ) || FileUtil::hasExtension( ext, ".tga" ) ||
-					 FileUtil::hasExtension( ext, ".dds" ) )
+				if ( FileUtil::hasAnyExtension( ext, { ".png", ".jpg", ".jpeg", ".tga", ".dds" } ) )
 					return ImVec4( 0.45f, 0.80f, 0.35f, 1.0f );
 				if ( ext.empty() == false )
 					return ImVec4( 0.55f, 0.55f, 0.60f, 1.0f );
@@ -50,7 +47,7 @@ namespace sw::editor
 					return "Folder";
 				if ( FileUtil::hasExtension( ext, "._material" ) )
 					return "Material";
-				if ( FileUtil::hasExtension( ext, ".hlsl" ) )
+				if ( FileUtil::hasAnyExtension( ext, { ".hlsl", ".glsl", ".vert", ".frag", ".spv" } ) )
 					return "Shader";
 				if ( ext.empty() )
 					return "File";
@@ -165,8 +162,7 @@ namespace sw::editor
 			pDrawList->AddConvexPolyFilled( diaPts, 4, IM_COL32( 240, 120, 50, 255 ) );
 			pDrawList->AddPolyline( diaPts, 4, IM_COL32( 255, 210, 140, 255 ), ImDrawFlags_Closed, 1.5f );
 		}
-		else if ( FileUtil::hasExtension( pPath, ".wav" ) || FileUtil::hasExtension( pPath, ".mp3" ) ||
-				  FileUtil::hasExtension( pPath, ".ogg" ) )
+		else if ( EditorUtil::isAudioAssetPath( pPath ) )
 		{
 			// Sound wave equalizer bars
 			constexpr int32	  numBars	 = 5;
@@ -337,17 +333,14 @@ namespace sw::editor
 			case AssetTypeFilter::Materials:
 				return EditorUtil::isMaterialAssetPath( pPath );
 			case AssetTypeFilter::Audio:
-				return FileUtil::hasExtension( pPath, ".wav" ) || FileUtil::hasExtension( pPath, ".mp3" ) ||
-					   FileUtil::hasExtension( pPath, ".ogg" );
+				return EditorUtil::isAudioAssetPath( pPath );
 			case AssetTypeFilter::Data:
-				return FileUtil::hasExtension( pPath, ".xml" ) || FileUtil::hasExtension( pPath, ".json" ) ||
-					   FileUtil::hasExtension( pPath, ".csv" ) || FileUtil::hasExtension( pPath, ".ini" ) ||
-					   FileUtil::hasExtension( pPath, ".kv" );
+				return EditorUtil::isDataAssetPath( pPath );
 			case AssetTypeFilter::Other:
 				return EditorUtil::isMaterialAssetPath( pPath ) == false &&
 					   EditorUtil::isShaderAssetPath( pPath ) == false &&
 					   EditorUtil::isTextureAssetPath( pPath ) == false &&
-					   FileUtil::hasExtension( pPath, ".wav" ) == false &&
+					   EditorUtil::isAudioAssetPath( pPath ) == false &&
 					   FileUtil::hasExtension( pPath, ".xml" ) == false;
 			case AssetTypeFilter::Count:
 			default:

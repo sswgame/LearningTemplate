@@ -250,10 +250,7 @@ namespace sw::editor
 	{
 		if ( pPath == nullptr )
 			return false;
-		return FileUtil::endsWithIgnoreCase( pPath, ".prefab.xml" ) ||
-			   FileUtil::endsWithIgnoreCase( pPath, ".prefab.json" ) ||
-			   FileUtil::endsWithIgnoreCase( pPath, ".prefab.bin" ) ||
-			   FileUtil::endsWithIgnoreCase( pPath, ".prefab" ) ||
+		return FileUtil::endsWithAnyIgnoreCase( pPath, { ".prefab.xml", ".prefab.json", ".prefab.bin", ".prefab" } ) ||
 			   FileUtil::hasExtension( pPath, ".pfb" );
 	}
 
@@ -261,18 +258,14 @@ namespace sw::editor
 	{
 		if ( pPath == nullptr )
 			return false;
-		return FileUtil::hasExtension( pPath, ".png" ) || FileUtil::hasExtension( pPath, ".jpg" ) ||
-			   FileUtil::hasExtension( pPath, ".jpeg" ) || FileUtil::hasExtension( pPath, ".tga" ) ||
-			   FileUtil::hasExtension( pPath, ".dds" ) || FileUtil::hasExtension( pPath, ".hdr" ) ||
-			   FileUtil::hasExtension( pPath, ".bmp" );
+		return FileUtil::hasAnyExtension( pPath, { ".png", ".jpg", ".jpeg", ".tga", ".dds", ".hdr", ".bmp" } );
 	}
 
 	bool EditorUtil::isMaterialAssetPath( const utf8* pPath )
 	{
 		if ( pPath == nullptr )
 			return false;
-		return FileUtil::hasExtension( pPath, "._material" ) || FileUtil::hasExtension( pPath, ".mat" ) ||
-			   FileUtil::hasExtension( pPath, ".material" );
+		return FileUtil::hasAnyExtension( pPath, { "._material", ".mat", ".material" } );
 	}
 
 	bool EditorUtil::isSceneAssetPath( const utf8* pPath )
@@ -290,9 +283,21 @@ namespace sw::editor
 	{
 		if ( pPath == nullptr )
 			return false;
-		return FileUtil::hasExtension( pPath, ".hlsl" ) || FileUtil::hasExtension( pPath, ".glsl" ) ||
-			   FileUtil::hasExtension( pPath, ".vert" ) || FileUtil::hasExtension( pPath, ".frag" ) ||
-			   FileUtil::hasExtension( pPath, ".spv" );
+		return FileUtil::hasAnyExtension( pPath, { ".hlsl", ".glsl", ".vert", ".frag", ".spv" } );
+	}
+
+	bool EditorUtil::isAudioAssetPath( const utf8* pPath )
+	{
+		if ( pPath == nullptr )
+			return false;
+		return FileUtil::hasAnyExtension( pPath, { ".wav", ".mp3", ".ogg" } );
+	}
+
+	bool EditorUtil::isDataAssetPath( const utf8* pPath )
+	{
+		if ( pPath == nullptr )
+			return false;
+		return FileUtil::hasAnyExtension( pPath, { ".xml", ".json", ".csv", ".ini", ".kv" } );
 	}
 
 	GameObject* EditorUtil::spawnPrefabFromAssetPath( GameObjectManager* pManager, const utf8* pPath, GameObject* pParent )

@@ -270,7 +270,7 @@ namespace sw
 	 */
 	bool SaveSlot::saveCommonToFile( string_view path ) const
 	{
-		if ( FileUtil::hasExtension( path, ".bin" ) || FileUtil::hasExtension( path, ".sav" ) )
+		if ( FileUtil::hasAnyExtension( path, { ".bin", ".sav" } ) )
 			return saveCommonToBinaryFile( path );
 		return saveCommonToTextFile( path );
 	}
@@ -289,7 +289,7 @@ namespace sw
 				return loadCommonFromBinaryFile( path );
 		}
 
-		if ( FileUtil::hasExtension( path, ".bin" ) || FileUtil::hasExtension( path, ".sav" ) )
+		if ( FileUtil::hasAnyExtension( path, { ".bin", ".sav" } ) )
 			return loadCommonFromBinaryFile( path );
 
 		return loadCommonFromTextFile( path );

@@ -41,14 +41,6 @@ namespace sw::editor
 					EditorContext::get()->getNotificationManager().push( "Scene", "Save failed", NotificationType::Error );
 			}
 
-			static bool isSceneAssetPath( string_view path )
-			{
-				if ( path.empty() )
-					return false;
-				const string pathStr{ path };
-				return EditorUtil::isSceneAssetPath( pathStr.c_str() );
-			}
-
 			static bool tryClassifyResourceFile( string_view absPath, EditorResourceIndexEntry& outEntry )
 			{
 				const string  file{ absPath };
@@ -82,7 +74,7 @@ namespace sw::editor
 					outEntry._category = "Shader";
 					return true;
 				}
-				if ( FileUtil::hasExtension( file, ".xml" ) || FileUtil::hasExtension( file, ".json" ) )
+				if ( FileUtil::hasAnyExtension( file, { ".xml", ".json" } ) )
 				{
 					outEntry._category = "Data";
 					return true;
@@ -132,7 +124,7 @@ namespace sw::editor
 			return true;
 
 		const string pathStr{ relativePath };
-		if ( EditorAssetCommandsInternal::isSceneAssetPath( pathStr ) )
+		if ( EditorUtil::isSceneAssetPath( pathStr.c_str() ) )
 			return loadScene( pathStr );
 
 		if ( EditorUtil::isMaterialAssetPath( pathStr.c_str() ) )
@@ -237,7 +229,7 @@ namespace sw::editor
 			return;
 		}
 
-		if ( EditorAssetCommandsInternal::isSceneAssetPath( pPath ) )
+		if ( EditorUtil::isSceneAssetPath( pPath ) )
 		{
 			loadScene( pPath );
 			return;

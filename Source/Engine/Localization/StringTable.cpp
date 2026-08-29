@@ -20,8 +20,23 @@ namespace sw
 	{
 		constexpr uint32 kStringTableBinaryMagic   = 0x31425453; // 'STB1'
 		constexpr uint32 kStringTableBinaryVersion = 1;
-	} // namespace
 
+		struct StringTableInternal
+		{
+			static bool loadTextByExtension( StringTable& table, string_view path, string_view text )
+			{
+				if ( FileUtil::hasExtension( path, ".xml" ) )
+					return table.loadFromXmlText( text );
+				if ( FileUtil::hasAnyExtension( path, { ".ini", ".kv" } ) )
+					return table.loadFromKeyValueText( text );
+				return table.loadFromJsonText( text );
+			}
+		};
+	} // namespace
+} // namespace sw
+
+namespace sw
+{
 	bool StringTable::loadFromFile( const string& filePath )
 	{
 		if ( FileUtil::hasExtension( filePath, ".bin" ) )
@@ -36,13 +51,7 @@ namespace sw
 			return false;
 		}
 
-		bool bSuccess{ false };
-		if ( FileUtil::hasExtension( filePath, ".xml" ) )
-			bSuccess = loadFromXmlText( text );
-		else if ( FileUtil::hasExtension( filePath, ".ini" ) || FileUtil::hasExtension( filePath, ".kv" ) )
-			bSuccess = loadFromKeyValueText( text );
-		else
-			bSuccess = loadFromJsonText( text );
+		bool bSuccess = StringTableInternal::loadTextByExtension( *this, filePath, text );
 
 		if ( bSuccess )
 			SW_LOG_INFO( "Loaded %# strings from %#.", _mapTable.size(), filePath.c_str() );
@@ -250,12 +259,7 @@ namespace sw
 			return false;
 		}
 
-		if ( FileUtil::hasExtension( assetRelativePath, ".xml" ) )
-			return loadFromXmlText( text );
-		if ( FileUtil::hasExtension( assetRelativePath, ".ini" ) || FileUtil::hasExtension( assetRelativePath, ".kv" ) )
-			return loadFromKeyValueText( text );
-
-		return loadFromJsonText( text );
+		return StringTableInternal::loadTextByExtension( *this, assetRelativePath, text );
 	}
 
 	const utf8* StringTable::getString( const hashed_string& key ) const

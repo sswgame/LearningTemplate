@@ -124,6 +124,16 @@ namespace sw
 		return StringUtil::strnicmp( have.data(), want.data(), static_cast<uint32>( want.size() ) ) == 0;
 	}
 
+	bool FileUtil::hasAnyExtension( string_view fileName, std::initializer_list<string_view> listExtension )
+	{
+		for ( string_view extension : listExtension )
+		{
+			if ( hasExtension( fileName, extension ) )
+				return true;
+		}
+		return false;
+	}
+
 	bool FileUtil::endsWithIgnoreCase( string_view path, string_view suffix )
 	{
 		if ( suffix.empty() || path.size() < suffix.size() )
@@ -131,6 +141,16 @@ namespace sw
 
 		string_view tail = path.substr( path.size() - suffix.size() );
 		return StringUtil::strnicmp( tail.data(), suffix.data(), static_cast<uint32>( suffix.size() ) ) == 0;
+	}
+
+	bool FileUtil::endsWithAnyIgnoreCase( string_view path, std::initializer_list<string_view> listSuffix )
+	{
+		for ( string_view suffix : listSuffix )
+		{
+			if ( endsWithIgnoreCase( path, suffix ) )
+				return true;
+		}
+		return false;
 	}
 
 	string FileUtil::replaceExtension( string_view fileName, string_view extension )

@@ -83,14 +83,7 @@ namespace sw
 			return false;
 		}
 
-		bool bSuccess{ false };
-		if ( FileUtil::hasExtension( filePath, ".xml" ) )
-			bSuccess = loadLanguageXml( languageCode, text );
-		else if ( FileUtil::hasExtension( filePath, ".ini" ) || FileUtil::hasExtension( filePath, ".kv" ) )
-			bSuccess = loadLanguageKeyValue( languageCode, text );
-		else
-			bSuccess = loadLanguageJson( languageCode, text );
-
+		bool bSuccess = loadLanguageFromText( languageCode, filePath, text );
 		if ( bSuccess )
 			SW_LOG_INFO( "Loaded language '%#' from file '%#'.", string( languageCode ).c_str(), string( filePath ).c_str() );
 
@@ -113,18 +106,20 @@ namespace sw
 			return false;
 		}
 
-		bool bSuccess{ false };
-		if ( FileUtil::hasExtension( assetRelativePath, ".xml" ) )
-			bSuccess = loadLanguageXml( languageCode, text );
-		else if ( FileUtil::hasExtension( assetRelativePath, ".ini" ) || FileUtil::hasExtension( assetRelativePath, ".kv" ) )
-			bSuccess = loadLanguageKeyValue( languageCode, text );
-		else
-			bSuccess = loadLanguageJson( languageCode, text );
-
+		bool bSuccess = loadLanguageFromText( languageCode, assetRelativePath, text );
 		if ( bSuccess )
 			SW_LOG_INFO( "Loaded language '%#' from resource '%#'.", string( languageCode ).c_str(), string( absPath ).c_str() );
 
 		return bSuccess;
+	}
+
+	bool LocalizationManager::loadLanguageFromText( string_view languageCode, string_view pathHint, string_view text )
+	{
+		if ( FileUtil::hasExtension( pathHint, ".xml" ) )
+			return loadLanguageXml( languageCode, text );
+		if ( FileUtil::hasAnyExtension( pathHint, { ".ini", ".kv" } ) )
+			return loadLanguageKeyValue( languageCode, text );
+		return loadLanguageJson( languageCode, text );
 	}
 
 	bool LocalizationManager::loadLanguageJson( string_view languageCode, string_view jsonText )
