@@ -59,3 +59,34 @@ SW_TEST_CASE( EditorAssetTypeTest, DataDoesNotStealAnimJson )
 	SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetKind::AnimationGraph, "a.anim.json" ) );
 	SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetKind::Data, "a.anim.json" ) );
 }
+
+SW_TEST_CASE( EditorAssetTypeTest, AllAssetKindsAndMatchesAny )
+{
+	// 1) Texture, Shader, Audio, DialogueGraph, SpriteClip 매칭 검증
+	SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetKind::Texture, "textures/albedo.png" ) );
+	SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetKind::Texture, "textures/normal.dds" ) );
+	SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetKind::Shader, "shaders/pbr.hlsl" ) );
+	SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetKind::Audio, "audio/bgm.wav" ) );
+	SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetKind::Audio, "audio/sfx.ogg" ) );
+	SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetKind::DialogueGraph, "dialogue/intro.dialogue.json" ) );
+	SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetKind::SpriteClip, "sprites/run.sprite.json" ) );
+
+	// 2) matchesAny 및 matchesOther 검증
+	SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matchesAny( "maps/town.scene.xml" ) );
+	SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matchesAny( "textures/hero.png" ) );
+	SW_EXPECT_FALSE( sw::editor::EditorAssetTypeRegistry::matchesAny( "notes/todo.txt" ) );
+
+	SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matchesOther( "notes/todo.txt" ) );
+	SW_EXPECT_FALSE( sw::editor::EditorAssetTypeRegistry::matchesOther( "maps/town.scene.xml" ) );
+
+	// 3) appendImportExtensions 검증
+	sw::vector<sw::string> listImportExts;
+	sw::editor::EditorAssetTypeRegistry::appendImportExtensions( listImportExts );
+	SW_EXPECT_FALSE( listImportExts.empty() );
+
+	// 4) getBrowserFilters 검증
+	uint32										filterCount = 0;
+	const sw::editor::EditorAssetBrowserFilter* pFilters	= sw::editor::EditorAssetTypeRegistry::getBrowserFilters( filterCount );
+	SW_ASSERT_NOT_NULL( pFilters );
+	SW_EXPECT_TRUE( filterCount > 0 );
+}

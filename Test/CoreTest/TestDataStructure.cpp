@@ -3,6 +3,8 @@
 #include "Core/Concurrency/ConcurrentQueue.h"
 #include "Core/Concurrency/LockFreeObjectPool.h"
 #include "Core/Concurrency/LockFreeQueue.h"
+#include "Core/Concurrency/SpinLock.h"
+#include "Core/Concurrency/WorkStealingDeque.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/DynamicBitset.h"
 #include "Core/Container/array.h"
@@ -632,4 +634,90 @@ SW_TEST_CASE( Core_DataStructure, DequeAndListOperations )
 	SW_EXPECT_EQUAL( 2u, lst.size() );
 	SW_EXPECT_EQUAL( 1, lst.front() );
 	SW_EXPECT_EQUAL( 3, lst.back() );
+}
+
+/**
+ * @brief [Core_DataStructure] SpinLock 기본 lock/unlock, try_lock, isLocked 및 멀티스레드 상호 배제 검증
+ */
+SW_TEST_CASE( Core_DataStructure, SpinLockMutualExclusion )
+{
+	sw::SpinLock spinLock;
+	SW_EXPECT_FALSE( spinLock.isLocked() );
+
+	// 1) try_lock 및 unlock
+	SW_EXPECT_TRUE( spinLock.try_lock() );
+	SW_EXPECT_TRUE( spinLock.isLocked() );
+	SW_EXPECT_FALSE( spinLock.try_lock() ); // 이미 잠김
+
+	spinLock.unlock();
+	SW_EXPECT_FALSE( spinLock.isLocked() );
+
+	// 2) lock & std::lock_guard 연동
+	{
+		std::lock_guard<sw::SpinLock> lock( spinLock );
+		SW_EXPECT_TRUE( spinLock.isLocked() );
+	}
+	SW_EXPECT_FALSE( spinLock.isLocked() );
+
+	// 3) 멀티스레드 동시 증가 상호 배제 검증
+	constexpr int32 kThreadCount  = 4;
+	constexpr int32 kIterations	  = 1000;
+	int32			sharedCounter = 0;
+
+	std::vector<std::thread> listWorkers;
+	listWorkers.reserve( kThreadCount );
+
+	for ( int32 threadIndex = 0; threadIndex < kThreadCount; ++threadIndex )
+	{
+		listWorkers.emplace_back(
+			[&]()
+		{
+			for ( int32 iterIndex = 0; iterIndex < kIterations; ++iterIndex )
+			{
+				std::lock_guard<sw::SpinLock> lock( spinLock );
+				sharedCounter++;
+			}
+		} );
+	}
+
+	for ( auto& worker : listWorkers )
+	{
+		worker.join();
+	}
+
+	SW_EXPECT_EQUAL( kThreadCount * kIterations, sharedCounter );
+}
+
+/**
+ * @brief [Core_DataStructure] WorkStealingDeque LIFO push/pop 및 FIFO steal 동작 검증
+ */
+SW_TEST_CASE( Core_DataStructure, WorkStealingDequePushPopSteal )
+{
+	sw::WorkStealingDeque<int32> deque( 16 );
+
+	// 빈 덱에서 pop / steal 실패 검증
+	int32 outVal = 0;
+	SW_EXPECT_FALSE( deque.pop( outVal ) );
+	SW_EXPECT_FALSE( deque.steal( outVal ) );
+
+	// 1) 소유자 LIFO push & pop
+	SW_EXPECT_TRUE( deque.push( 100 ) );
+	SW_EXPECT_TRUE( deque.push( 200 ) );
+	SW_EXPECT_TRUE( deque.push( 300 ) );
+
+	// LIFO pop -> 300
+	SW_EXPECT_TRUE( deque.pop( outVal ) );
+	SW_EXPECT_EQUAL( 300, outVal );
+
+	// 2) 타 스레드 FIFO steal -> 100
+	SW_EXPECT_TRUE( deque.steal( outVal ) );
+	SW_EXPECT_EQUAL( 100, outVal );
+
+	// 마지막 남은 원소 -> 200
+	SW_EXPECT_TRUE( deque.pop( outVal ) );
+	SW_EXPECT_EQUAL( 200, outVal );
+
+	// 다시 빈 상태
+	SW_EXPECT_FALSE( deque.pop( outVal ) );
+	SW_EXPECT_FALSE( deque.steal( outVal ) );
 }

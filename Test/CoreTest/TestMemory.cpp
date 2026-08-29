@@ -2,6 +2,7 @@
 
 #include "Core/Concurrency/LockFreeObjectPool.h"
 #include "Core/Memory/FrameArenaAllocator.h"
+#include "Core/Memory/PoolAllocator.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -175,4 +176,62 @@ SW_TEST_CASE( Core_Memory, LowLevelMemoryAllocAndAlignment )
 	SW_EXPECT_EQUAL( 0, sw::Memory::compare( aligned64, kSamplePattern, 32 ) );
 
 	sw::Memory::alignedFree( aligned64 );
+}
+
+/**
+ * @brief [Core_Memory] PoolAllocator 및 TypedPoolAllocator 할당, 해제, 재활용 및 클리어 검증
+ */
+SW_TEST_CASE( Core_Memory, PoolAllocatorAndTypedPool )
+{
+	// 1) PoolAllocator 기본 할당 & 해제 & 프리리스트 재활용
+	sw::PoolAllocator pool( 64, 4, true );
+
+	void* pBlock1 = pool.allocate();
+	void* pBlock2 = pool.allocate();
+	void* pBlock3 = pool.allocate();
+	SW_ASSERT_NOT_NULL( pBlock1 );
+	SW_ASSERT_NOT_NULL( pBlock2 );
+	SW_ASSERT_NOT_NULL( pBlock3 );
+
+	pool.free( pBlock2 );
+	void* pBlock2Reused = pool.allocate();
+	SW_EXPECT_EQUAL( pBlock2, pBlock2Reused );
+
+	pool.free( pBlock1 );
+	pool.free( pBlock2Reused );
+	pool.free( pBlock3 );
+
+	pool.clear();
+
+	// 2) TypedPoolAllocator 수명주기 및 생성/소멸 검증
+	struct TestPoolObject
+	{
+		int32 _val{ 0 };
+		bool* _pDestructFlag{ nullptr };
+		TestPoolObject( int32 val, bool* pFlag )
+			: _val{ val }
+			, _pDestructFlag{ pFlag }
+		{
+		}
+		~TestPoolObject()
+		{
+			if ( _pDestructFlag != nullptr )
+			{
+				*_pDestructFlag = true;
+			}
+		}
+	};
+
+	bool								   bDestroyed = false;
+	sw::TypedPoolAllocator<TestPoolObject> typedPool( 8, false );
+
+	TestPoolObject* pObj = typedPool.create( 999, &bDestroyed );
+	SW_ASSERT_NOT_NULL( pObj );
+	SW_EXPECT_EQUAL( 999, pObj->_val );
+	SW_EXPECT_FALSE( bDestroyed );
+
+	typedPool.destroy( pObj );
+	SW_EXPECT_TRUE( bDestroyed );
+
+	typedPool.clear();
 }

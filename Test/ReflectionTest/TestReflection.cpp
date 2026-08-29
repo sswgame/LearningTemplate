@@ -6,7 +6,9 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectAny.h"
+#include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/ReflectionEnumNames.h"
 #include "Engine/Reflection/Rpc/ReflectionRpc.h"
 #include "Engine/Serialization/Core/SchemaMigrate.h"
 #include "Engine/Serialization/Core/Serializer.h"
@@ -2815,4 +2817,119 @@ SW_TEST_CASE( Reflection_Bitfield, BitfieldSerializationRoundtrip )
 	SW_EXPECT_EQUAL( SW_FALSE, binTarget._bInvulnerable );
 	SW_EXPECT_EQUAL( SW_TRUE, binTarget._bCanJump );
 	SW_EXPECT_EQUAL( 777, binTarget._score );
+}
+
+/**
+ * @brief [Reflection_Cast] ReflectionCast 헬퍼 (HasStaticType, castTo, isA) 다형 상속 계층 검증
+ */
+SW_TEST_CASE( Reflection_Cast, TypeTraitsAndPolymorphicCast )
+{
+	// 1) 타입 트레이트 정적 검증
+	SW_EXPECT_TRUE( sw::HasGetTypeInfo_v<sw::TestScriptComponent> );
+	SW_EXPECT_TRUE( sw::HasOwnReflectBody_v<sw::TestScriptComponent> );
+	SW_EXPECT_TRUE( sw::HasStaticType_v<sw::TestScriptComponent> );
+	SW_EXPECT_TRUE( sw::HasStaticType_v<sw::TestDerivedScriptComponent> );
+	SW_EXPECT_TRUE( sw::HasStaticType_v<sw::TestGrandChildScriptComponent> );
+
+	// 2) castTo & isA (상속 계층 업캐스트, 동일 타입 캐스트, 무관한 타입 실패 검증)
+	sw::TestGrandChildScriptComponent grandChild;
+	grandChild._scriptSpeed		= 5.0f;
+	grandChild._grandChildSpeed = 10.0f;
+
+	// 동일 타입 캐스트
+	sw::TestGrandChildScriptComponent* pSelf = sw::castTo<sw::TestGrandChildScriptComponent>( &grandChild );
+	SW_ASSERT_NOT_NULL( pSelf );
+	SW_EXPECT_EQUAL( 10.0f, pSelf->_grandChildSpeed );
+
+	// 파생 -> 부모 상속 계층 업캐스트
+	sw::TestDerivedScriptComponent* pDerived = sw::castTo<sw::TestDerivedScriptComponent>( &grandChild );
+	SW_ASSERT_NOT_NULL( pDerived );
+	SW_EXPECT_EQUAL( 5.0f, pDerived->_scriptSpeed );
+
+	sw::TestScriptComponent* pBase = sw::castTo<sw::TestScriptComponent>( &grandChild );
+	SW_ASSERT_NOT_NULL( pBase );
+	SW_EXPECT_EQUAL( 5.0f, pBase->_scriptSpeed );
+
+	// 무관한 타입 간 캐스트 실패 검증
+	sw::SampleTestActor* pUnrelated = sw::castTo<sw::SampleTestActor>( &grandChild );
+	SW_EXPECT_NULL( pUnrelated );
+
+	// isA 검증
+	SW_EXPECT_TRUE( sw::isA<sw::TestScriptComponent>( &grandChild ) );
+	SW_EXPECT_TRUE( sw::isA<sw::TestDerivedScriptComponent>( &grandChild ) );
+	SW_EXPECT_TRUE( sw::isA<sw::TestGrandChildScriptComponent>( &grandChild ) );
+	SW_EXPECT_FALSE( sw::isA<sw::SampleTestActor>( &grandChild ) );
+
+	// nullptr 안전성
+	sw::TestGrandChildScriptComponent* pNull = nullptr;
+	SW_EXPECT_NULL( sw::castTo<sw::TestDerivedScriptComponent>( pNull ) );
+	SW_EXPECT_FALSE( sw::isA<sw::TestDerivedScriptComponent>( pNull ) );
+}
+
+/**
+ * @brief [Reflection_EnumNames] ContainerKind 및 FunctionNetRole 이름 변환 및 파싱 검증
+ */
+SW_TEST_CASE( Reflection_EnumNames, ContainerKindAndNetRoleNames )
+{
+	// 1) ContainerKind 변환 및 파싱
+	sw::ContainerKind parsedKind = sw::ContainerKind::None;
+	SW_EXPECT_TRUE( sw::tryParseContainerKind( "Sequence", parsedKind ) );
+	SW_EXPECT_EQUAL( static_cast<uint32>( sw::ContainerKind::Sequence ), static_cast<uint32>( parsedKind ) );
+
+	SW_EXPECT_TRUE( sw::tryParseContainerKind( "Map", parsedKind ) );
+	SW_EXPECT_EQUAL( static_cast<uint32>( sw::ContainerKind::Map ), static_cast<uint32>( parsedKind ) );
+
+	SW_EXPECT_FALSE( sw::tryParseContainerKind( "InvalidKind", parsedKind ) );
+
+	SW_EXPECT_STREQ( "Sequence", sw::toString( sw::ContainerKind::Sequence ) );
+	SW_EXPECT_STREQ( "Map", sw::toString( sw::ContainerKind::Map ) );
+	SW_EXPECT_STREQ( "sw::ContainerKind::Sequence", sw::toCppExpr( sw::ContainerKind::Sequence ) );
+	SW_EXPECT_STREQ( "Vector", sw::defaultContainerWrapperStem( sw::ContainerKind::Sequence ) );
+	SW_EXPECT_STREQ( "Map", sw::defaultContainerWrapperStem( sw::ContainerKind::Map ) );
+
+	// 2) FunctionNetRole 변환 및 파싱
+	sw::FunctionNetRole parsedRole = sw::FunctionNetRole::Local;
+	SW_EXPECT_TRUE( sw::tryParseFunctionNetRole( "Server", parsedRole ) );
+	SW_EXPECT_EQUAL( static_cast<uint32>( sw::FunctionNetRole::Server ), static_cast<uint32>( parsedRole ) );
+
+	SW_EXPECT_TRUE( sw::tryParseFunctionNetRole( "Client", parsedRole ) );
+	SW_EXPECT_EQUAL( static_cast<uint32>( sw::FunctionNetRole::Client ), static_cast<uint32>( parsedRole ) );
+
+	SW_EXPECT_FALSE( sw::tryParseFunctionNetRole( "InvalidRole", parsedRole ) );
+
+	SW_EXPECT_STREQ( "Server", sw::toString( sw::FunctionNetRole::Server ) );
+	SW_EXPECT_STREQ( "Client", sw::toString( sw::FunctionNetRole::Client ) );
+	SW_EXPECT_STREQ( "sw::FunctionNetRole::Server", sw::toCppExpr( sw::FunctionNetRole::Server ) );
+}
+
+/**
+ * @brief [Reflection_ReflectAny] ReflectAny 직접 생성, 비어있음 검사, 값 추출 및 타입 불일치 실패 검증
+ */
+SW_TEST_CASE( Reflection_ReflectAny, ReflectAnyDirectMakeAndExtract )
+{
+	// 1) 빈 ReflectAny
+	sw::ReflectAny emptyAny;
+	SW_EXPECT_TRUE( emptyAny.empty() );
+
+	// 2) PolyPayloadA TypeInfo 기반 ReflectAny 생성
+	const sw::TypeInfo* pTypeInfo = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::PolyPayloadA" ) );
+	SW_ASSERT_NOT_NULL( pTypeInfo );
+
+	sw::PolyPayloadA source;
+	source._a = 12345;
+
+	sw::ReflectAny anyValue = sw::ReflectAny::makeFrom( *pTypeInfo, &source );
+	SW_EXPECT_FALSE( anyValue.empty() );
+	SW_EXPECT_TRUE( anyValue._typeFqn == sw::hashed_string( "sw::PolyPayloadA" ) );
+
+	// 3) 올바른 타입으로 추출
+	sw::PolyPayloadA extracted;
+	SW_EXPECT_TRUE( anyValue.tryGetFrom( *pTypeInfo, &extracted ) );
+	SW_EXPECT_EQUAL( 12345, extracted._a );
+
+	// 4) 다른 타입으로 추출 시 실패 검증
+	const sw::TypeInfo* pWrongType = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::SampleTestActor" ) );
+	SW_ASSERT_NOT_NULL( pWrongType );
+	sw::SampleTestActor wrongTarget;
+	SW_EXPECT_FALSE( anyValue.tryGetFrom( *pWrongType, &wrongTarget ) );
 }

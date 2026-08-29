@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/File/BinaryBlob.h"
+
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Utility/File/Archive.h"
 
@@ -117,11 +119,11 @@ SW_TEST_CASE( Core_File, ArchiveObjectTLVSerialization )
 	info._fullyQualifiedName = sw::hashed_string( "sw::DummyStruct" );
 	info._size				 = sizeof( DummyStruct );
 	info._propertyList		 = {
-		  {sw::hashed_string( "_valA" ), sw::hashed_string( "int32" ),
-			SW_OFFSET_OF( DummyStruct, _valA ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr},
-		  {sw::hashed_string( "_valB" ), sw::hashed_string( "int32" ),
-			SW_OFFSET_OF( DummyStruct, _valB ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr}
-	};
+		{sw::hashed_string( "_valA" ), sw::hashed_string( "int32" ),
+		  SW_OFFSET_OF( DummyStruct, _valA ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr},
+		{sw::hashed_string( "_valB" ), sw::hashed_string( "int32" ),
+		  SW_OFFSET_OF( DummyStruct, _valB ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr}
+	  };
 
 	sw::Archive archWrite;
 	DummyStruct src;
@@ -160,4 +162,42 @@ SW_TEST_CASE( Core_File, ArchiveChecksumVerification )
 
 	writeArc.writeChecksum();
 	SW_EXPECT_TRUE( writeArc.validateChecksum() );
+}
+
+/**
+ * @brief [Core_File] BinaryBlob 리틀엔디언 u32/i32 및 문자열 blob append/read 검증
+ */
+SW_TEST_CASE( Core_File, BinaryBlobReadWritePrimitives )
+{
+	sw::vector<uint8> listBlob;
+
+	// 1) Write primitives
+	sw::BinaryBlob::appendU32( listBlob, 0x12345678u );
+	sw::BinaryBlob::appendI32( listBlob, -98765 );
+	sw::BinaryBlob::appendString( listBlob, "BinaryBlobPayload" );
+
+	SW_EXPECT_FALSE( listBlob.empty() );
+
+	// 2) Read primitives
+	size_t	   offset = 0;
+	uint32	   outU32 = 0;
+	int32	   outI32 = 0;
+	sw::string outStr;
+
+	SW_EXPECT_TRUE( sw::BinaryBlob::readU32( listBlob, offset, outU32 ) );
+	SW_EXPECT_EQUAL( 0x12345678u, outU32 );
+	SW_EXPECT_EQUAL( 4u, offset );
+
+	SW_EXPECT_TRUE( sw::BinaryBlob::readI32( listBlob, offset, outI32 ) );
+	SW_EXPECT_EQUAL( -98765, outI32 );
+	SW_EXPECT_EQUAL( 8u, offset );
+
+	SW_EXPECT_TRUE( sw::BinaryBlob::readString( listBlob, offset, outStr ) );
+	SW_EXPECT_EQUAL( sw::string( "BinaryBlobPayload" ), outStr );
+	SW_EXPECT_EQUAL( listBlob.size(), offset );
+
+	// 3) Out of range read failure
+	SW_EXPECT_FALSE( sw::BinaryBlob::readU32( listBlob, offset, outU32 ) );
+	SW_EXPECT_FALSE( sw::BinaryBlob::readI32( listBlob, offset, outI32 ) );
+	SW_EXPECT_FALSE( sw::BinaryBlob::readString( listBlob, offset, outStr ) );
 }
