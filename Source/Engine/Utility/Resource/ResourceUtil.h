@@ -68,6 +68,10 @@ namespace sw
 		static const string& getCommonFolderPath();
 		/** @brief Game 컨테이너 절대 경로 (`Resource/game`) — 표시/브라우즈용. 검색 루트는 하위 팩들. */
 		static const string& getGameFolderPath();
+		/** @brief 활성 게임 팩 폴더 절대 경로 (`Resource/game/<pack>`). GameConfig._packRoot 기준. */
+		static string getActivePackFolderPath();
+		/** @brief 활성 팩 폴더 아래 상대 경로를 이어 붙입니다. relative가 비면 팩 루트. */
+		static string joinActivePackPath( string_view relativeUnderPack );
 		/** @brief Editor 리소스 폴더 절대 경로 (`Resource/editor`). 없으면 empty. */
 		static const string& getEditorFolderPath();
 		/** @brief `Resource/` 폴더 절대 경로 (표시·감시용 최상위, 검색 루트 아님). */

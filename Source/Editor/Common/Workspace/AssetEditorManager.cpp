@@ -4,6 +4,7 @@
 
 #include "Core/File/FileUtil.h"
 
+#include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
@@ -58,25 +59,9 @@ namespace sw::editor
 	{
 		_mapExtToWindowTitle.clear();
 
-		registerAssetEditor( ".anim.json", "Animation Graph" );
-		registerAssetEditor( ".anim", "Animation Graph" );
-		registerAssetEditor( ".dialogue.json", "Dialogue Graph" );
-		registerAssetEditor( ".dialogue", "Dialogue Graph" );
-		registerAssetEditor( ".tilemap.xml", "Tile Map Tool" );
-		registerAssetEditor( ".tilemap", "Tile Map Tool" );
-		registerAssetEditor( ".prefab.xml", "Prefab Editor" );
-		registerAssetEditor( ".prefab.json", "Prefab Editor" );
-		registerAssetEditor( ".prefab.bin", "Prefab Editor" );
-		registerAssetEditor( ".prefab", "Prefab Editor" );
-		registerAssetEditor( ".pfb", "Prefab Editor" );
-		registerAssetEditor( ".sprite.json", "Sprite Clip" );
-		registerAssetEditor( ".sprite", "Sprite Clip" );
-		registerAssetEditor( ".seq.json", "Sequencer" );
-		registerAssetEditor( ".seq", "Sequencer" );
-		registerAssetEditor( ".png", "Sprite Clip" );
-		registerAssetEditor( ".jpg", "Sprite Clip" );
-		registerAssetEditor( ".jpeg", "Sprite Clip" );
-		registerAssetEditor( ".dds", "Sprite Clip" );
-		registerAssetEditor( ".tga", "Sprite Clip" );
+		uint32						   mappingCount{ 0 };
+		const EditorAssetPanelMapping* pMapping = EditorAssetTypeRegistry::getPanelMappings( mappingCount );
+		for ( uint32 index = 0; index < mappingCount; ++index )
+			registerAssetEditor( pMapping[index]._suffix, pMapping[index]._title );
 	}
 } // namespace sw::editor

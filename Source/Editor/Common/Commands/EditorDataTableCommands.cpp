@@ -6,6 +6,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
+#include "Engine/Common/EngineDefines.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Utility/Json/JsonDocument.h"
 #include "Engine/Utility/Resource/ResourceUtil.h"
@@ -99,12 +100,12 @@ namespace sw::editor
 
 	string EditorDataTableCommands::getLocalizationFolderPath()
 	{
-		return FileUtil::joinPath( ResourceUtil::getGameFolderPath(), "demo/data/localization" );
+		return ResourceUtil::joinActivePackPath( FileUtil::joinPath( path::kDataFolder, path::kLocalizationFolder ) );
 	}
 
 	string EditorDataTableCommands::getGameDataFolderPath()
 	{
-		return FileUtil::joinPath( ResourceUtil::getGameFolderPath(), "demo/data" );
+		return ResourceUtil::joinActivePackPath( path::kDataFolder );
 	}
 
 	bool EditorDataTableCommands::loadLocalization( vector<LocRecord>& outList )

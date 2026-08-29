@@ -6,8 +6,6 @@
 #include "Editor/Common/Config/EditorConfig.h"
 #include "Editor/Common/Gui/EditorChrome.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorWorkspace.h"
 
 #include <imgui.h>
 #include <imgui-node-editor/imgui_node_editor.h>
@@ -50,10 +48,8 @@ namespace sw::editor
 	SW_LOG_CALLER( "AnimationGraph" );
 
 	AnimationGraphPanel::AnimationGraphPanel()
-		: IEditorPanel{ false }
+		: EditorDocumentPanel{ EditorAssetKind::AnimationGraph, true }
 		, _nodeGraph{}
-		, _loadedAssetPath{}
-		, _bLoaded{ false }
 		, _listNode{}
 		, _listLink{}
 	{
@@ -66,18 +62,9 @@ namespace sw::editor
 
 	void AnimationGraphPanel::drawContent()
 	{
-		EditorContext* pContext = EditorContext::get();
-		if ( pContext != nullptr )
-		{
-			const string& focused = pContext->getWorkspace().getFocusedAssetPath();
-			if ( focused.empty() == false && EditorToolAssetCommands::isAnimationGraphPath( focused ) && focused != _loadedAssetPath )
-			{
-				_loadedAssetPath = focused;
-				_bLoaded		 = false;
-			}
-		}
-
-		if ( _bLoaded == false )
+		if ( hasNewFocusedDocument() )
+			acceptFocusedDocument();
+		if ( isDocumentLoaded() == false )
 			loadGraphData();
 
 		if ( EditorChrome::beginToolbar( "##AnimGraphToolbar" ) )
@@ -101,10 +88,7 @@ namespace sw::editor
 			}
 			ImGui::SameLine();
 			if ( ImGui::Button( "Load" ) )
-			{
-				_bLoaded = false;
 				loadGraphData();
-			}
 			ImGui::SameLine();
 			if ( ImGui::Button( "Save" ) )
 				saveGraphData();
@@ -234,21 +218,21 @@ namespace sw::editor
 	void AnimationGraphPanel::loadGraphData()
 	{
 		EditorAnimGraphData data;
-		if ( EditorToolAssetCommands::loadAnimationGraph( data, _loadedAssetPath ) )
+		if ( EditorToolAssetCommands::loadAnimationGraph( data, getLoadedAssetPath() ) )
 		{
 			_listNode = std::move( data._listNode );
 			_listLink = std::move( data._listLink );
 		}
 		if ( _listNode.empty() )
 			ensureDefaults();
-		_bLoaded = true;
+		markDocumentLoaded();
 		_nodeGraph.requestContentFit();
 	}
 
 	void AnimationGraphPanel::saveGraphData()
 	{
 		EditorAnimGraphData previous;
-		const bool			bHadFile   = EditorToolAssetCommands::loadAnimationGraph( previous, _loadedAssetPath );
+		const bool			bHadFile   = EditorToolAssetCommands::loadAnimationGraph( previous, getLoadedAssetPath() );
 		const string		beforeJson = bHadFile ? EditorToolAssetCommands::serializeAnimationGraph( previous ) : string{};
 
 		EditorAnimGraphData data;
@@ -266,12 +250,12 @@ namespace sw::editor
 			}
 			data._listNode.push_back( std::move( saved ) );
 		}
-		EditorToolAssetCommands::saveAnimationGraph( data, _loadedAssetPath );
+		EditorToolAssetCommands::saveAnimationGraph( data, getLoadedAssetPath() );
 		const string afterJson = EditorToolAssetCommands::serializeAnimationGraph( data );
 		if ( beforeJson == afterJson )
 			return;
 
-		const string path = _loadedAssetPath;
+		const string path = getLoadedAssetPath();
 		EditorToolAssetCommands::pushDocumentUndo(
 			SW_DELEGATE_LAMBDA( Delegate<void()>, [this, path, beforeJson]()
 		{
@@ -279,7 +263,7 @@ namespace sw::editor
 			if ( beforeJson.empty() == false )
 				EditorToolAssetCommands::parseAnimationGraph( beforeJson, restored );
 			EditorToolAssetCommands::saveAnimationGraph( restored, path );
-			if ( _loadedAssetPath != path )
+			if ( getLoadedAssetPath() != path )
 				return;
 			_listNode = std::move( restored._listNode );
 			_listLink = std::move( restored._listLink );
@@ -292,7 +276,7 @@ namespace sw::editor
 			EditorAnimGraphData restored;
 			EditorToolAssetCommands::parseAnimationGraph( afterJson, restored );
 			EditorToolAssetCommands::saveAnimationGraph( restored, path );
-			if ( _loadedAssetPath != path )
+			if ( getLoadedAssetPath() != path )
 				return;
 			_listNode = std::move( restored._listNode );
 			_listLink = std::move( restored._listLink );

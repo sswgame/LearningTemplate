@@ -9,12 +9,12 @@
 #include "Core/Container/vector.h"
 
 #include "Editor/Common/Commands/EditorToolAssetCommands.h"
-#include "Editor/Common/Gui/IEditorPanel.h"
+#include "Editor/Common/Gui/EditorDocumentPanel.h"
 
 namespace sw::editor
 {
 	/** @brief 프레임 목록과 선택적 TransformAnimation 키를 편집합니다 (AnimGraph과 별개) */
-	class SpriteClipPanel : public IEditorPanel
+	class SpriteClipPanel : public EditorDocumentPanel
 	{
 	public:
 		/** @brief 스프라이트 클립 도구를 생성합니다. */
@@ -23,8 +23,6 @@ namespace sw::editor
 		// ------------------------------------------------------------------------------
 		// 1) IEditorPanel — 제목/그리기
 		// ------------------------------------------------------------------------------
-		/** @brief 온디맨드 도구이므로 기본적으로 닫힌 채 시작합니다. */
-		bool isToolPanel() const override { return true; }
 		/** @brief 윈도우 제목을 반환합니다. */
 		const utf8* getPanelTitle() const override { return "Sprite Clip"; }
 		/** @brief 스프라이트 클립 편집 UI를 그립니다. */
@@ -47,7 +45,6 @@ namespace sw::editor
 
 	private:
 		utf8				 _arrAtlasPath[256];
-		string				 _loadedAssetPath;
 		vector<Frame>		 _listFrame;
 		vector<TransformKey> _listKey;
 		int32				 _selectedFrame;

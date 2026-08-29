@@ -11,6 +11,7 @@
 #include "Editor/Common/Commands/EditorInspectorCommands.h"
 #include "Editor/Common/Config/EditorConfig.h"
 #include "Editor/Common/EditorUtil.h"
+#include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
@@ -275,35 +276,27 @@ namespace sw::editor
 
 	bool EditorToolAssetCommands::isAnimationGraphPath( string_view path )
 	{
-		return FileUtil::endsWithAnyIgnoreCase( path, { ".anim.json", ".anim" } );
+		return EditorAssetTypeRegistry::matches( EditorAssetKind::AnimationGraph, path );
 	}
 
 	bool EditorToolAssetCommands::isDialogueGraphPath( string_view path )
 	{
-		return FileUtil::endsWithAnyIgnoreCase( path, { ".dialogue.json", ".dialogue" } );
+		return EditorAssetTypeRegistry::matches( EditorAssetKind::DialogueGraph, path );
 	}
 
 	bool EditorToolAssetCommands::isSpriteClipPath( string_view path )
 	{
-		if ( FileUtil::endsWithAnyIgnoreCase( path, { ".sprite.json", ".sprite" } ) )
-			return true;
-		return FileUtil::hasAnyExtension( path, { ".png", ".jpg", ".jpeg", ".dds", ".tga" } );
+		return EditorAssetTypeRegistry::matches( EditorAssetKind::SpriteClip, path );
 	}
 
 	bool EditorToolAssetCommands::isTileMapPath( string_view path )
 	{
-		if ( FileUtil::endsWithAnyIgnoreCase( path, { ".tilemap.xml", ".tilemap" } ) )
-			return true;
-		if ( FileUtil::endsWithIgnoreCase( path, ".xml" ) == false )
-			return false;
-		if ( FileUtil::endsWithAnyIgnoreCase( path, { ".scene.xml", ".prefab.xml", ".preset.xml" } ) )
-			return false;
-		return true;
+		return EditorAssetTypeRegistry::matches( EditorAssetKind::TileMap, path );
 	}
 
 	bool EditorToolAssetCommands::isSequencerPath( string_view path )
 	{
-		return FileUtil::endsWithAnyIgnoreCase( path, { ".seq.json", ".seq" } );
+		return EditorAssetTypeRegistry::matches( EditorAssetKind::Sequence, path );
 	}
 
 	bool EditorToolAssetCommands::loadAnimationGraph( EditorAnimGraphData& outData, string_view path )

@@ -19,7 +19,7 @@ namespace sw::editor
 	SW_LOG_CALLER( "TileMapPanel" );
 
 	TileMapPanel::TileMapPanel()
-		: IEditorPanel( false )
+		: EditorDocumentPanel{ EditorAssetKind::TileMap, false }
 		, _arrPathBuffer{}
 		, _arrNameBuffer{}
 		, _arrEdgeTargetN{}
@@ -56,14 +56,16 @@ namespace sw::editor
 
 	void TileMapPanel::drawContent()
 	{
-		const string& focused = EditorContext::get()->getWorkspace().getFocusedAssetPath();
-		if ( focused.empty() == false && EditorToolAssetCommands::isTileMapPath( focused ) && focused != _arrPathBuffer )
+		if ( hasNewFocusedDocument() )
 		{
-			StringUtil::strncpy( _arrPathBuffer, focused.c_str(), sizeof( _arrPathBuffer ) - 1 );
+			acceptFocusedDocument();
+			StringUtil::strncpy( _arrPathBuffer, getLoadedAssetPath().c_str(), sizeof( _arrPathBuffer ) - 1 );
 			_arrPathBuffer[sizeof( _arrPathBuffer ) - 1] = '\0';
 			loadXml( _arrPathBuffer );
+			markDocumentLoaded();
 		}
 
+		const string& focused = EditorContext::get()->getWorkspace().getFocusedAssetPath();
 		if ( focused.empty() == false )
 			ImGui::TextDisabled( "Focused: %s", focused.c_str() );
 

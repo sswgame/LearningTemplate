@@ -13,6 +13,7 @@
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
+#include "Engine/Common/EngineDefines.h"
 #include "Engine/Object/Component/2D/SpriteComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -280,7 +281,7 @@ namespace sw::editor
 		params._description			= "Scene";
 		params._bEnableMultiselect	= false;
 		params._filterExtensionList = { ".scene.xml", ".xml" };
-		const string mapsDir		= FileUtil::joinPath( ResourceUtil::getGameFolderPath(), "demo/maps" );
+		const string mapsDir		= ResourceUtil::joinActivePackPath( path::kMapsFolder );
 		if ( FileUtil::directoryExists( mapsDir ) )
 			params._initialDirectory = mapsDir;
 		FileUtil::openFileDialog( params, SW_DELEGATE_FUNCTION( FileDialogDelegate, EditorAssetCommandsInternal::onSaveSceneDialogResult ) );

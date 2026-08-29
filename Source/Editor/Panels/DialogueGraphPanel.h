@@ -4,13 +4,13 @@
 #include "Core/Container/vector.h"
 
 #include "Editor/Common/Commands/EditorToolAssetCommands.h"
-#include "Editor/Common/Gui/IEditorPanel.h"
+#include "Editor/Common/Gui/EditorDocumentPanel.h"
 #include "Editor/Common/Widgets/EditorNodeGraph.h"
 
 namespace sw::editor
 {
 	/** @brief imgui-node-editor 기반 비주얼 대화/퀘스트 노드 그래프 에디터 */
-	class DialogueGraphPanel : public IEditorPanel
+	class DialogueGraphPanel : public EditorDocumentPanel
 	{
 	public:
 		/** @brief 대화 그래프 도구를 생성합니다. */
@@ -22,8 +22,6 @@ namespace sw::editor
 		// 1) IEditorPanel — 수명주기 및 UI 렌더링
 		// ------------------------------------------------------------------------------
 		void shutdown( IRHIDevice* pRhiDevice ) override;
-		/** @brief 온디맨드 패널이므로 기본적으로 닫힌 채 시작합니다. */
-		bool isToolPanel() const override { return true; }
 		/** @brief 대화 노드 그래프 UI를 렌더링합니다. */
 		void drawContent() override;
 		/** @brief 윈도우 제목을 반환합니다. */
@@ -53,8 +51,6 @@ namespace sw::editor
 
 	private:
 		EditorNodeGraph		 _nodeGraph;
-		string				 _loadedAssetPath;
-		bool				 _bLoaded;
 		int32				 _selectedNodeId;
 		vector<DialogueNode> _listNode;
 		vector<DialogueLink> _listLink;

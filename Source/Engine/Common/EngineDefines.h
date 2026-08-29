@@ -26,8 +26,14 @@ namespace sw
 		inline static constexpr auto kGamePack		 = "game";
 		inline static constexpr auto kEditorPack	 = "editor";
 
-		inline static constexpr auto kShaderFolder	= "shaders";
-		inline static constexpr auto kTextureFolder = "textures";
+		inline static constexpr auto kShaderFolder		 = "shaders";
+		inline static constexpr auto kTextureFolder		 = "textures";
+		inline static constexpr auto kMapsFolder		 = "maps";
+		inline static constexpr auto kPrefabsFolder		 = "prefabs";
+		inline static constexpr auto kDataFolder		 = "data";
+		inline static constexpr auto kLocalizationFolder = "localization";
+		inline static constexpr auto kPresetsFolder		 = "presets";
+		inline static constexpr auto kGlobalVarsFolder	 = "globalvars";
 
 		/** @brief 엔진 셸 부트스트랩 XML (Resource 상대). */
 		inline static constexpr auto kEngineData = "engine/data/enginedata.xml";

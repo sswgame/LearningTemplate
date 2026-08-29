@@ -9,8 +9,6 @@
 #include "Editor/Common/Config/EditorData.h"
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorWorkspace.h"
 
 #include "RuntimeAPI/Service/EditorService.h"
 
@@ -21,9 +19,8 @@ namespace sw::editor
 	SW_LOG_CALLER( "SpriteClip" );
 
 	SpriteClipPanel::SpriteClipPanel()
-		: IEditorPanel( false )
+		: EditorDocumentPanel{ EditorAssetKind::SpriteClip, false }
 		, _arrAtlasPath{}
-		, _loadedAssetPath{}
 		, _listFrame{}
 		, _listKey{}
 		, _selectedFrame{ -1 }
@@ -38,21 +35,17 @@ namespace sw::editor
 
 	void SpriteClipPanel::drawContent()
 	{
-		EditorContext* pContext = EditorContext::get();
-		if ( pContext != nullptr )
+		if ( hasNewFocusedDocument() )
 		{
-			const string& focused = pContext->getWorkspace().getFocusedAssetPath();
-			if ( focused.empty() == false && EditorToolAssetCommands::isSpriteClipPath( focused ) && focused != _loadedAssetPath )
+			acceptFocusedDocument();
+			if ( EditorUtil::isTextureAssetPath( getLoadedAssetPath().c_str() ) )
 			{
-				_loadedAssetPath = focused;
-				if ( EditorToolAssetCommands::isSpriteClipPath( focused ) && EditorUtil::isTextureAssetPath( focused.c_str() ) )
-				{
-					StringUtil::strncpy( _arrAtlasPath, focused.c_str(), sizeof( _arrAtlasPath ) - 1 );
-					_arrAtlasPath[sizeof( _arrAtlasPath ) - 1] = '\0';
-				}
-				else
-					loadJson();
+				StringUtil::strncpy( _arrAtlasPath, getLoadedAssetPath().c_str(), sizeof( _arrAtlasPath ) - 1 );
+				_arrAtlasPath[sizeof( _arrAtlasPath ) - 1] = '\0';
 			}
+			else
+				loadJson();
+			markDocumentLoaded();
 		}
 
 		ImGui::InputText( "Atlas", _arrAtlasPath, sizeof( _arrAtlasPath ) );
@@ -144,7 +137,7 @@ namespace sw::editor
 	void SpriteClipPanel::loadJson()
 	{
 		EditorSpriteClipData data;
-		if ( EditorToolAssetCommands::loadSpriteClip( data, _status, _loadedAssetPath ) == false )
+		if ( EditorToolAssetCommands::loadSpriteClip( data, _status, getLoadedAssetPath() ) == false )
 			return;
 
 		if ( data._atlasPath.empty() == false )
@@ -159,19 +152,19 @@ namespace sw::editor
 	{
 		EditorSpriteClipData previous;
 		string				 previousStatus;
-		const bool			 bHadFile	= EditorToolAssetCommands::loadSpriteClip( previous, previousStatus, _loadedAssetPath );
+		const bool			 bHadFile	= EditorToolAssetCommands::loadSpriteClip( previous, previousStatus, getLoadedAssetPath() );
 		const string		 beforeJson = bHadFile ? EditorToolAssetCommands::serializeSpriteClip( previous ) : string{};
 
 		EditorSpriteClipData data;
 		data._atlasPath = _arrAtlasPath;
 		data._listFrame = _listFrame;
 		data._listKey	= _listKey;
-		EditorToolAssetCommands::saveSpriteClip( data, _loadedAssetPath );
+		EditorToolAssetCommands::saveSpriteClip( data, getLoadedAssetPath() );
 		const string afterJson = EditorToolAssetCommands::serializeSpriteClip( data );
 		if ( beforeJson == afterJson )
 			return;
 
-		const string path = _loadedAssetPath;
+		const string path = getLoadedAssetPath();
 		EditorToolAssetCommands::pushDocumentUndo(
 			SW_DELEGATE_LAMBDA( Delegate<void()>, [this, path, beforeJson]()
 		{
@@ -179,7 +172,7 @@ namespace sw::editor
 			if ( beforeJson.empty() == false )
 				EditorToolAssetCommands::parseSpriteClip( beforeJson, restored );
 			EditorToolAssetCommands::saveSpriteClip( restored, path );
-			if ( _loadedAssetPath != path )
+			if ( getLoadedAssetPath() != path )
 				return;
 			if ( restored._atlasPath.empty() == false )
 				StringUtil::strncpy( _arrAtlasPath, restored._atlasPath.c_str(), sizeof( _arrAtlasPath ) - 1 );
@@ -193,7 +186,7 @@ namespace sw::editor
 			EditorSpriteClipData restored;
 			EditorToolAssetCommands::parseSpriteClip( afterJson, restored );
 			EditorToolAssetCommands::saveSpriteClip( restored, path );
-			if ( _loadedAssetPath != path )
+			if ( getLoadedAssetPath() != path )
 				return;
 			if ( restored._atlasPath.empty() == false )
 				StringUtil::strncpy( _arrAtlasPath, restored._atlasPath.c_str(), sizeof( _arrAtlasPath ) - 1 );

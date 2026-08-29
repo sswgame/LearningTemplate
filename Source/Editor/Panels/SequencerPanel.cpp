@@ -6,8 +6,6 @@
 
 #include "Editor/Common/Commands/EditorToolAssetCommands.h"
 #include "Editor/Common/Gui/EditorChrome.h"
-#include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorWorkspace.h"
 
 #include "Engine/Sequencer/SequenceAsset.h"
 
@@ -107,13 +105,12 @@ namespace sw::editor
 	};
 
 	SequencerPanel::SequencerPanel()
-		: IEditorPanel{ false }
+		: EditorDocumentPanel{ EditorAssetKind::Sequence, false }
 		, _bExpanded{ true }
 		, _currentFrame{ 0 }
 		, _selected{ -1 }
 		, _firstFrame{ 0 }
 		, _arrCinematicNote{}
-		, _loadedAssetPath{}
 		, _sequence{ make_unique<ClipSequence>() }
 	{
 		StringUtil::strncpy( _arrCinematicNote, "Cinematic notes (not a clip track).", sizeof( _arrCinematicNote ) - 1 );
@@ -139,10 +136,10 @@ namespace sw::editor
 			if ( ImGui::Button( "Save" ) )
 				saveToLoadedPath();
 			ImGui::SameLine();
-			if ( _loadedAssetPath.empty() )
+			if ( getLoadedAssetPath().empty() )
 				ImGui::TextDisabled( "No .seq file focused" );
 			else
-				ImGui::TextDisabled( "%s", _loadedAssetPath.c_str() );
+				ImGui::TextDisabled( "%s", getLoadedAssetPath().c_str() );
 		}
 		EditorChrome::endToolbar();
 
@@ -172,21 +169,16 @@ namespace sw::editor
 
 	void SequencerPanel::loadFromFocusedPath()
 	{
-		EditorContext* pContext = EditorContext::get();
-		if ( pContext == nullptr || _sequence == nullptr )
+		if ( _sequence == nullptr || hasNewFocusedDocument() == false )
 			return;
 
-		const string& focused = pContext->getWorkspace().getFocusedAssetPath();
-		if ( focused.empty() || EditorToolAssetCommands::isSequencerPath( focused ) == false )
-			return;
-		if ( focused == _loadedAssetPath )
-			return;
-
-		SequenceAsset asset;
+		const string_view focused = getMatchingFocusedPath();
+		SequenceAsset	  asset;
 		if ( EditorToolAssetCommands::loadSequence( asset, focused ) == false )
 			return;
 
-		_loadedAssetPath	 = focused;
+		acceptFocusedDocument();
+		markDocumentLoaded();
 		_sequence->_frameMin = asset._frameMin;
 		_sequence->_frameMax = asset._frameMax;
 		StringUtil::strncpy( _arrCinematicNote, asset._note.c_str(), sizeof( _arrCinematicNote ) - 1 );
@@ -207,11 +199,11 @@ namespace sw::editor
 
 	void SequencerPanel::saveToLoadedPath()
 	{
-		if ( _loadedAssetPath.empty() || _sequence == nullptr )
+		if ( getLoadedAssetPath().empty() || _sequence == nullptr )
 			return;
 
 		SequenceAsset previous;
-		const bool	  bHadFile	 = EditorToolAssetCommands::loadSequence( previous, _loadedAssetPath );
+		const bool	  bHadFile	 = EditorToolAssetCommands::loadSequence( previous, getLoadedAssetPath() );
 		const string  beforeJson = bHadFile ? previous.toJson() : string{};
 
 		SequenceAsset asset;
@@ -229,14 +221,14 @@ namespace sw::editor
 			item._color		   = src._color;
 			asset._listItem.push_back( std::move( item ) );
 		}
-		if ( EditorToolAssetCommands::saveSequence( asset, _loadedAssetPath ) == false )
+		if ( EditorToolAssetCommands::saveSequence( asset, getLoadedAssetPath() ) == false )
 			return;
 
 		const string afterJson = asset.toJson();
 		if ( beforeJson == afterJson )
 			return;
 
-		const string path = _loadedAssetPath;
+		const string path = getLoadedAssetPath();
 		EditorToolAssetCommands::pushDocumentUndo(
 			SW_DELEGATE_LAMBDA( Delegate<void()>, [this, path, beforeJson]()
 		{
@@ -244,7 +236,7 @@ namespace sw::editor
 			if ( beforeJson.empty() == false )
 				restored.parseJson( beforeJson );
 			EditorToolAssetCommands::saveSequence( restored, path );
-			if ( _loadedAssetPath != path || _sequence == nullptr )
+			if ( getLoadedAssetPath() != path || _sequence == nullptr )
 				return;
 			_sequence->_frameMin = restored._frameMin;
 			_sequence->_frameMax = restored._frameMax;
@@ -267,7 +259,7 @@ namespace sw::editor
 			SequenceAsset restored;
 			restored.parseJson( afterJson );
 			EditorToolAssetCommands::saveSequence( restored, path );
-			if ( _loadedAssetPath != path || _sequence == nullptr )
+			if ( getLoadedAssetPath() != path || _sequence == nullptr )
 				return;
 			_sequence->_frameMin = restored._frameMin;
 			_sequence->_frameMax = restored._frameMax;

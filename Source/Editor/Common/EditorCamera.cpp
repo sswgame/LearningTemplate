@@ -65,7 +65,7 @@ namespace sw::editor
 			if ( pObj == nullptr || pObj->isActive() == false )
 				continue;
 			CameraComponent* pCam = pObj->getComponent<CameraComponent>();
-			if ( pCam == nullptr || pCam->isActive() == false || pCam->isPendingKill() == true )
+			if ( pCam == nullptr || pCam->isActive() == false || pCam->isPendingKill() )
 				continue;
 			if ( pCam->getRole() != CameraRole::Editor )
 				continue;

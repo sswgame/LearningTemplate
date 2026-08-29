@@ -8,8 +8,6 @@
 #include "Editor/Common/Commands/EditorToolAssetCommands.h"
 #include "Editor/Common/Gui/EditorChrome.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorWorkspace.h"
 
 #include <imgui.h>
 #include <imgui-node-editor/imgui_node_editor.h>
@@ -76,10 +74,8 @@ namespace sw::editor
 	SW_LOG_CALLER( "DialogueGraphPanel" );
 
 	DialogueGraphPanel::DialogueGraphPanel()
-		: IEditorPanel{ false }
+		: EditorDocumentPanel{ EditorAssetKind::DialogueGraph, true }
 		, _nodeGraph{}
-		, _loadedAssetPath{}
-		, _bLoaded{ false }
 		, _selectedNodeId{ 0 }
 		, _listNode{}
 		, _listLink{}
@@ -93,18 +89,9 @@ namespace sw::editor
 
 	void DialogueGraphPanel::drawContent()
 	{
-		EditorContext* pContext = EditorContext::get();
-		if ( pContext != nullptr )
-		{
-			const string& focused = pContext->getWorkspace().getFocusedAssetPath();
-			if ( focused.empty() == false && EditorToolAssetCommands::isDialogueGraphPath( focused ) && focused != _loadedAssetPath )
-			{
-				_loadedAssetPath = focused;
-				_bLoaded		 = false;
-			}
-		}
-
-		if ( _bLoaded == false )
+		if ( hasNewFocusedDocument() )
+			acceptFocusedDocument();
+		if ( isDocumentLoaded() == false )
 			loadGraphData();
 
 		BLOCK( "Toolbar" )
@@ -131,10 +118,7 @@ namespace sw::editor
 					saveGraphData();
 				ImGui::SameLine();
 				if ( ImGui::Button( "Reload" ) )
-				{
-					_bLoaded = false;
 					loadGraphData();
-				}
 				ImGui::SameLine();
 				if ( ImGui::Button( "Reset Default" ) )
 				{
@@ -515,7 +499,7 @@ namespace sw::editor
 	void DialogueGraphPanel::loadGraphData()
 	{
 		EditorDialogueGraphData data;
-		if ( EditorToolAssetCommands::loadDialogueGraph( data, _loadedAssetPath ) )
+		if ( EditorToolAssetCommands::loadDialogueGraph( data, getLoadedAssetPath() ) )
 		{
 			_listNode = std::move( data._listNode );
 			_listLink = std::move( data._listLink );
@@ -523,25 +507,25 @@ namespace sw::editor
 		if ( _listNode.empty() )
 			ensureDefaults();
 
-		_bLoaded = true;
+		markDocumentLoaded();
 		_nodeGraph.requestContentFit();
 	}
 
 	void DialogueGraphPanel::saveGraphData()
 	{
 		EditorDialogueGraphData previous;
-		const bool				bHadFile   = EditorToolAssetCommands::loadDialogueGraph( previous, _loadedAssetPath );
+		const bool				bHadFile   = EditorToolAssetCommands::loadDialogueGraph( previous, getLoadedAssetPath() );
 		const string			beforeJson = bHadFile ? EditorToolAssetCommands::serializeDialogueGraph( previous ) : string{};
 
 		EditorDialogueGraphData data;
 		data._listNode = _listNode;
 		data._listLink = _listLink;
-		EditorToolAssetCommands::saveDialogueGraph( data, _loadedAssetPath );
+		EditorToolAssetCommands::saveDialogueGraph( data, getLoadedAssetPath() );
 		const string afterJson = EditorToolAssetCommands::serializeDialogueGraph( data );
 		if ( beforeJson == afterJson )
 			return;
 
-		const string path = _loadedAssetPath;
+		const string path = getLoadedAssetPath();
 		EditorToolAssetCommands::pushDocumentUndo(
 			SW_DELEGATE_LAMBDA( Delegate<void()>, [this, path, beforeJson]()
 		{
@@ -549,7 +533,7 @@ namespace sw::editor
 			if ( beforeJson.empty() == false )
 				EditorToolAssetCommands::parseDialogueGraph( beforeJson, restored );
 			EditorToolAssetCommands::saveDialogueGraph( restored, path );
-			if ( _loadedAssetPath != path )
+			if ( getLoadedAssetPath() != path )
 				return;
 			_listNode = std::move( restored._listNode );
 			_listLink = std::move( restored._listLink );
@@ -562,7 +546,7 @@ namespace sw::editor
 			EditorDialogueGraphData restored;
 			EditorToolAssetCommands::parseDialogueGraph( afterJson, restored );
 			EditorToolAssetCommands::saveDialogueGraph( restored, path );
-			if ( _loadedAssetPath != path )
+			if ( getLoadedAssetPath() != path )
 				return;
 			_listNode = std::move( restored._listNode );
 			_listLink = std::move( restored._listLink );

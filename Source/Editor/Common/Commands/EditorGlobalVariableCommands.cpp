@@ -5,6 +5,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
+#include "Engine/Common/EngineDefines.h"
 #include "Engine/Utility/Resource/ResourceUtil.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
 
@@ -42,12 +43,13 @@ namespace sw::editor
 {
 	string EditorGlobalVariableCommands::getPresetFolderPath()
 	{
-		return FileUtil::joinPath( ResourceUtil::getGameFolderPath(), "demo/data/presets/globalvars" );
+		return ResourceUtil::joinActivePackPath(
+			FileUtil::joinPath( FileUtil::joinPath( path::kDataFolder, path::kPresetsFolder ), path::kGlobalVarsFolder ) );
 	}
 
 	string EditorGlobalVariableCommands::getComponentPresetFolderPath()
 	{
-		return FileUtil::joinPath( ResourceUtil::getGameFolderPath(), "demo/data/presets" );
+		return ResourceUtil::joinActivePackPath( FileUtil::joinPath( path::kDataFolder, path::kPresetsFolder ) );
 	}
 
 	bool EditorGlobalVariableCommands::savePreset( const string& filePath, const string& presetName )

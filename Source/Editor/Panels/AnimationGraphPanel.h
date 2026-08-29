@@ -5,13 +5,13 @@
 #include "Core/Container/vector.h"
 
 #include "Editor/Common/Commands/EditorToolAssetCommands.h"
-#include "Editor/Common/Gui/IEditorPanel.h"
+#include "Editor/Common/Gui/EditorDocumentPanel.h"
 #include "Editor/Common/Widgets/EditorNodeGraph.h"
 
 namespace sw::editor
 {
 	/** @brief imgui-node-editor 기반 애니메이션 그래프 셸 */
-	class AnimationGraphPanel : public IEditorPanel
+	class AnimationGraphPanel : public EditorDocumentPanel
 	{
 	public:
 		/** @brief 애니메이션 그래프 도구를 생성합니다. */
@@ -23,8 +23,6 @@ namespace sw::editor
 		// 1) IEditorPanel — 제목/그리기
 		// ------------------------------------------------------------------------------
 		void shutdown( IRHIDevice* pRhiDevice ) override;
-		/** @brief 온디맨드 패널이므로 기본적으로 닫힌 채 시작합니다. */
-		bool isToolPanel() const override { return true; }
 		/** @brief 애니메이션 그래프 UI를 그립니다. */
 		void drawContent() override;
 		/** @brief 윈도우 제목을 반환합니다. */
@@ -52,8 +50,6 @@ namespace sw::editor
 
 	private:
 		EditorNodeGraph	  _nodeGraph;
-		string			  _loadedAssetPath;
-		bool			  _bLoaded;
 		vector<GraphNode> _listNode;
 		vector<GraphLink> _listLink;
 	};

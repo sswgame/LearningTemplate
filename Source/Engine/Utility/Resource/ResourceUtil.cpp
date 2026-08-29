@@ -2,6 +2,8 @@
 
 #include "Engine/Utility/Resource/ResourceUtil.h"
 
+#include "Engine/Config/GameConfig.h"
+
 namespace sw
 {
 	namespace
@@ -312,6 +314,32 @@ namespace sw
 	const string& ResourceUtil::getGameFolderPath()
 	{
 		return _s_gameFolderPath;
+	}
+
+	string ResourceUtil::getActivePackFolderPath()
+	{
+		const string& packRoot = GameConfig::getActive()._packRoot;
+		if ( packRoot.empty() )
+			return {};
+
+		const string absPath = makeAbsolutePath( packRoot );
+		if ( absPath.empty() == false )
+			return FileUtil::normalizeSeparators( absPath );
+
+		const string& resourceRoot = getRootFolderPath();
+		if ( resourceRoot.empty() )
+			return {};
+		return FileUtil::normalizeSeparators( FileUtil::joinPath( resourceRoot, packRoot ) );
+	}
+
+	string ResourceUtil::joinActivePackPath( string_view relativeUnderPack )
+	{
+		const string packFolder = getActivePackFolderPath();
+		if ( packFolder.empty() )
+			return {};
+		if ( relativeUnderPack.empty() )
+			return packFolder;
+		return FileUtil::joinPath( packFolder, relativeUnderPack );
 	}
 	const string& ResourceUtil::getEditorFolderPath()
 	{

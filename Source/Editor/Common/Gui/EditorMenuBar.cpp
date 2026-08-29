@@ -14,6 +14,7 @@
 #include "Editor/Popups/CommandPalettePopup.h"
 #include "Editor/Popups/QuickLauncherPopup.h"
 
+#include "Engine/Common/EngineDefines.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
 #include "Engine/Scene/Scene.h"
@@ -52,9 +53,11 @@ namespace sw::editor
 				params._bEnableMultiselect	= false;
 				params._filterExtensionList = { ".scene.xml", ".xml" };
 
-				const string mapsDir = FileUtil::joinPath( ResourceUtil::getGameFolderPath(), "demo/maps" );
+				const string mapsDir = ResourceUtil::joinActivePackPath( path::kMapsFolder );
 				if ( FileUtil::directoryExists( mapsDir ) )
 					params._initialDirectory = mapsDir;
+				else if ( ResourceUtil::getActivePackFolderPath().empty() == false )
+					params._initialDirectory = ResourceUtil::getActivePackFolderPath();
 				else if ( ResourceUtil::getGameFolderPath().empty() == false )
 					params._initialDirectory = ResourceUtil::getGameFolderPath();
 

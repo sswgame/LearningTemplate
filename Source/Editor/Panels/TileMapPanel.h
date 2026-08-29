@@ -9,12 +9,12 @@
 #include "Core/Container/vector.h"
 
 #include "Editor/Common/Commands/EditorToolAssetCommands.h"
-#include "Editor/Common/Gui/IEditorPanel.h"
+#include "Editor/Common/Gui/EditorDocumentPanel.h"
 
 namespace sw::editor
 {
 	/** @brief Game TileMap XML의 Visual / Walkable / Encounter / Warp / PassThrough 레이어를 페인트합니다 */
-	class TileMapPanel : public IEditorPanel
+	class TileMapPanel : public EditorDocumentPanel
 	{
 	public:
 		/** @brief 타일맵 도구를 생성합니다. */
@@ -23,8 +23,6 @@ namespace sw::editor
 		// ------------------------------------------------------------------------------
 		// 1) IEditorPanel — 제목/그리기
 		// ------------------------------------------------------------------------------
-		/** @brief 온디맨드 도구이므로 기본적으로 닫힌 채 시작합니다. */
-		bool isToolPanel() const override { return true; }
 		/** @brief 윈도우 제목을 반환합니다. */
 		const utf8* getPanelTitle() const override { return "Tile Map Tool"; }
 		/** @brief 타일맵 페인트 UI를 그립니다. */

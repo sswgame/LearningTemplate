@@ -7,6 +7,7 @@
 
 #include "Editor/Common/Config/EditorConfig.h"
 #include "Editor/Common/Config/EditorData.h"
+#include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
@@ -248,56 +249,37 @@ namespace sw::editor
 
 	bool EditorUtil::isPrefabAssetPath( const utf8* pPath )
 	{
-		if ( pPath == nullptr )
-			return false;
-		return FileUtil::endsWithAnyIgnoreCase( pPath, { ".prefab.xml", ".prefab.json", ".prefab.bin", ".prefab" } ) ||
-			   FileUtil::hasExtension( pPath, ".pfb" );
+		return EditorAssetTypeRegistry::matches( EditorAssetKind::Prefab, pPath );
 	}
 
 	bool EditorUtil::isTextureAssetPath( const utf8* pPath )
 	{
-		if ( pPath == nullptr )
-			return false;
-		return FileUtil::hasAnyExtension( pPath, { ".png", ".jpg", ".jpeg", ".tga", ".dds", ".hdr", ".bmp" } );
+		return EditorAssetTypeRegistry::matches( EditorAssetKind::Texture, pPath );
 	}
 
 	bool EditorUtil::isMaterialAssetPath( const utf8* pPath )
 	{
-		if ( pPath == nullptr )
-			return false;
-		return FileUtil::hasAnyExtension( pPath, { "._material", ".mat", ".material" } );
+		return EditorAssetTypeRegistry::matches( EditorAssetKind::Material, pPath );
 	}
 
 	bool EditorUtil::isSceneAssetPath( const utf8* pPath )
 	{
-		if ( pPath == nullptr || pPath[0] == '\0' )
-			return false;
-		if ( FileUtil::hasExtension( pPath, ".scene" ) )
-			return true;
-		if ( FileUtil::hasExtension( pPath, ".xml" ) && StringUtil::stristr( pPath, ".scene" ) != nullptr )
-			return true;
-		return FileUtil::endsWithIgnoreCase( pPath, "_scene.xml" );
+		return EditorAssetTypeRegistry::matches( EditorAssetKind::Scene, pPath );
 	}
 
 	bool EditorUtil::isShaderAssetPath( const utf8* pPath )
 	{
-		if ( pPath == nullptr )
-			return false;
-		return FileUtil::hasAnyExtension( pPath, { ".hlsl", ".glsl", ".vert", ".frag", ".spv" } );
+		return EditorAssetTypeRegistry::matches( EditorAssetKind::Shader, pPath );
 	}
 
 	bool EditorUtil::isAudioAssetPath( const utf8* pPath )
 	{
-		if ( pPath == nullptr )
-			return false;
-		return FileUtil::hasAnyExtension( pPath, { ".wav", ".mp3", ".ogg" } );
+		return EditorAssetTypeRegistry::matches( EditorAssetKind::Audio, pPath );
 	}
 
 	bool EditorUtil::isDataAssetPath( const utf8* pPath )
 	{
-		if ( pPath == nullptr )
-			return false;
-		return FileUtil::hasAnyExtension( pPath, { ".xml", ".json", ".csv", ".ini", ".kv" } );
+		return EditorAssetTypeRegistry::matches( EditorAssetKind::Data, pPath );
 	}
 
 	GameObject* EditorUtil::spawnPrefabFromAssetPath( GameObjectManager* pManager, const utf8* pPath, GameObject* pParent )

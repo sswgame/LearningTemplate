@@ -13,6 +13,7 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
+#include "Engine/Common/EngineDefines.h"
 #include "Engine/Utility/Resource/AssetDatabase.h"
 #include "Engine/Utility/Resource/ResourceManager.h"
 #include "Engine/Utility/Resource/ResourceUtil.h"
@@ -361,7 +362,7 @@ namespace sw::editor
 		if ( EditorChrome::beginToolbar( "##cb_toolbar" ) )
 		{
 			EditorWidgets::drawSearchField( "##cb_search", _arrSearchBuffer, sizeof( _arrSearchBuffer ), "Search Content", 160.0f,
-									 false );
+											false );
 
 			ImGui::SameLine();
 			static const utf8* kArrFilterNames[] = { "All", "Scenes", "Prefabs", "Textures",
@@ -429,21 +430,22 @@ namespace sw::editor
 			bool		_bEngine;
 		};
 		static const FavFolder kArrFavorites[] = {
-			{  "Scenes",		"demo/maps", false},
-			{ "Prefabs",	 "demo/prefabs", false},
-			{"Textures", "demo/textures", false},
-			{ "Shaders",		 "shaders",	true},
-			{	  "Data",	  "demo/data", false}
-		   };
+			{  "Scenes",	path::kMapsFolder, false},
+			{ "Prefabs", path::kPrefabsFolder, false},
+			{"Textures", path::kTextureFolder, false},
+			{ "Shaders",	 path::kShaderFolder,  true},
+			{	  "Data",	  path::kDataFolder, false}
+		 };
 
-		for ( uint32 favIdx = 0; favIdx < 5; ++favIdx )
+		const uint32 favoriteCount = static_cast<uint32>( sizeof( kArrFavorites ) / sizeof( kArrFavorites[0] ) );
+		for ( uint32 favIdx = 0; favIdx < favoriteCount; ++favIdx )
 		{
-			const string& domainRoot  = kArrFavorites[favIdx]._bEngine == true
-										  ? ResourceUtil::getEngineFolderPath()
-										  : ResourceUtil::getGameFolderPath();
-			const string  fullFavPath = FileUtil::normalizeSeparators(
-				FileUtil::joinPath( domainRoot, kArrFavorites[favIdx]._relPath ) );
-			const bool bSelected = FileUtil::pathsEqualNormalized( fullFavPath, _selectedFolderAbs );
+			const string fullFavPath = kArrFavorites[favIdx]._bEngine
+										 ? FileUtil::normalizeSeparators(
+											   FileUtil::joinPath( ResourceUtil::getEngineFolderPath(), kArrFavorites[favIdx]._relPath ) )
+										 : FileUtil::normalizeSeparators(
+											   ResourceUtil::joinActivePackPath( kArrFavorites[favIdx]._relPath ) );
+			const bool	 bSelected	 = FileUtil::pathsEqualNormalized( fullFavPath, _selectedFolderAbs );
 
 			if ( ImGui::Selectable( kArrFavorites[favIdx]._label, bSelected ) )
 			{
