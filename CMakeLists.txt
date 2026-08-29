@@ -14,6 +14,22 @@
 cmake_minimum_required(VERSION 3.24)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
+# Ninja 빌드 시 대형 링크 작업으로 인한 메모리 스래싱 방지
+if(CMAKE_GENERATOR STREQUAL "Ninja")
+	include(ProcessorCount)
+	ProcessorCount(sw_nproc)
+	if(NOT sw_nproc EQUAL 0)
+		math(EXPR sw_link_jobs "${sw_nproc} / 4")
+		if(sw_link_jobs LESS 1)
+			set(sw_link_jobs 1)
+		elseif(sw_link_jobs GREATER 4)
+			set(sw_link_jobs 4)
+		endif()
+		set_property(GLOBAL PROPERTY JOB_POOLS link_pool=${sw_link_jobs})
+		set(CMAKE_JOB_POOL_LINK link_pool)
+	endif()
+endif()
+
 # ------------------------------------------------------------------------------
 # 1) project() 이전 — 옵션·상수·개발환경·vcpkg 연동
 # ------------------------------------------------------------------------------
