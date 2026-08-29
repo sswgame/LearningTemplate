@@ -8,10 +8,11 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Save/ISaveGame.h"
 
 namespace sw
 {
+	struct SaveSlot;
+
 	namespace generated
 	{
 		struct sw_DialogueRunnerComponent_Registrar;

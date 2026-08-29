@@ -1,11 +1,12 @@
 #pragma once
 #include "Engine/EngineMinimal.h"
-#include "Engine/Graphics/RHI/IRHICommandContext.h"
-#include "Engine/Graphics/RHI/IRHIResource.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 
 namespace sw
 {
+	class IRHICommandList;
+	class IRHIResource;
+
 	using DrawIndexedInstancedIndirectCommand = RHIDrawIndexedIndirectCommand;
 
 	/**

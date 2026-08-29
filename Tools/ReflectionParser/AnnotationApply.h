@@ -7,10 +7,13 @@
 #pragma once
 #include "Engine/EngineMinimal.h"
 
-#include "ReflectionParser/ParsedReflection.h"
-
 namespace sw
 {
+	struct ParsedTypeInfo;
+	struct ParsedEnumInfo;
+	struct ParsedPropertyInfo;
+	struct ParsedFunctionInfo;
+
 	// ------------------------------------------------------------------------------
 	// 1) AnnotationApply — 어노테이션 문자열 유틸 · 매크로별 Parsed* 채우기
 	// ------------------------------------------------------------------------------

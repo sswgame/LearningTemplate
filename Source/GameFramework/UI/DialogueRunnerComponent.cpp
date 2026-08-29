@@ -5,6 +5,8 @@
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
 
+#include "GameFramework/Save/ISaveGame.h"
+
 namespace sw
 {
 	SW_LOG_CALLER( "DialogueRunnerComponent" );

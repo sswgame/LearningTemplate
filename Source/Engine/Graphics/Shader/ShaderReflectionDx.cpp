@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Engine/Graphics/Shader/ShaderCompiler.h"
 #include "Engine/Graphics/Shader/ShaderReflectionUtil.h"
 
 #if defined( SW_PLATFORM_WINDOWS )

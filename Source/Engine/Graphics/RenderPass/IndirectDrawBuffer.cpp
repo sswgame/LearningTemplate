@@ -4,6 +4,9 @@
 
 #include "Core/Log/Logger.h"
 
+#include "Engine/Graphics/RHI/IRHICommandContext.h"
+#include "Engine/Graphics/RHI/IRHIResource.h"
+
 namespace sw
 {
 	IndirectDrawBuffer::IndirectDrawBuffer()

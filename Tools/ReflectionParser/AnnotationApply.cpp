@@ -10,6 +10,7 @@
 #include "Engine/Reflection/ReflectionEnumNames.h"
 
 #include "ReflectionParser/AnnotationMeta.h"
+#include "ReflectionParser/ParsedReflection.h"
 #include "ReflectionParser/ParserDefines.h"
 
 SW_LOG_CALLER( "AnnotationApply" );
