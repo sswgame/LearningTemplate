@@ -72,7 +72,9 @@ if(sw_flag_libraries)
 	target_link_libraries(Core_objects PRIVATE ${sw_flag_libraries})
 endif()
 
-target_compile_definitions(Core_objects PRIVATE SW_EXPORTS)
+if(NOT SW_SHIPPING_BUILD)
+	target_compile_definitions(Core_objects PRIVATE SW_EXPORTS)
+endif()
 
 if(WIN32)
 	target_link_libraries(Core_objects PUBLIC comdlg32 ole32 shell32 dbghelp)

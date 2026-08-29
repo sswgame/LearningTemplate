@@ -248,7 +248,7 @@ namespace sw
 				if ( tempStr.empty() )
 					*static_cast<TagID*>( pPtr ) = TagID{};
 				else
-					*static_cast<TagID*>( pPtr ) = requestTag( tempStr );
+					*static_cast<TagID*>( pPtr ) = TagID::request( tempStr );
 				offset = reader.getOffset();
 				return true;
 			};
@@ -311,7 +311,7 @@ namespace sw
 					*static_cast<TagID*>( pPtr ) = TagID{};
 					return true;
 				}
-				*static_cast<TagID*>( pPtr ) = requestTag( text );
+				*static_cast<TagID*>( pPtr ) = TagID::request( text );
 				return true;
 			};
 			ctx.registerTextHandler( hashed_string( PredefinedNameType::NameType_TagID ), tagIdWrite, tagIdRead );

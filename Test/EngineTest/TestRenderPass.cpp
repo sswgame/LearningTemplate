@@ -344,8 +344,8 @@ SW_TEST_CASE( RenderPassTest, GpuSceneBuildBatchesAndSortTransparent )
 	addMeshAt( "TransparentFar", 0.0f, -10.0f, sw::RHIBlendMode::Transparent );
 	addMeshAt( "TransparentNear", 0.0f, -2.0f, sw::RHIBlendMode::Transparent );
 
-	sw::GpuScene  gpuScene;
-	const float32 camPos[3] = { 0.0f, 0.0f, 0.0f };
+	sw::GpuScene	 gpuScene;
+	const sw::float3 camPos{ 0.0f, 0.0f, 0.0f };
 	gpuScene.buildFromScene( &scene, camPos, nullptr );
 
 	SW_EXPECT_TRUE( gpuScene.getOpaqueBatches().empty() == false );
@@ -369,7 +369,7 @@ SW_TEST_CASE( RenderPassTest, GpuSceneBuildBatchesAndSortTransparent )
 	SW_EXPECT_EQUAL( 1u, static_cast<uint32>( gpuScene.getTransparentBatches().size() ) );
 
 	// 카메라만 이동 → transparent 재정렬 경로
-	const float32 camMoved[3] = { 0.0f, 0.0f, 5.0f };
+	const sw::float3 camMoved{ 0.0f, 0.0f, 5.0f };
 	gpuScene.buildFromScene( &scene, camMoved, nullptr );
 	SW_EXPECT_TRUE( gpuScene.isCpuSnapshotDirty() );
 	SW_EXPECT_EQUAL( 1u, static_cast<uint32>( gpuScene.getTransparentBatches().size() ) );
@@ -410,8 +410,8 @@ SW_TEST_CASE( RenderPassTest, GpuSceneTransparentDifferentKeysStaySeparate )
 		mc->setMaterialInstance( b );
 	}
 
-	sw::GpuScene  gpuScene;
-	const float32 cam[3] = { 0.0f, 0.0f, 0.0f };
+	sw::GpuScene	 gpuScene;
+	const sw::float3 cam{ 0.0f, 0.0f, 0.0f };
 	gpuScene.buildFromScene( &scene, cam, nullptr );
 	SW_EXPECT_EQUAL( 2u, static_cast<uint32>( gpuScene.getTransparentBatches().size() ) );
 }
@@ -483,7 +483,7 @@ SW_TEST_CASE( RenderPassTest, FrameRendererInitializeAndExecuteSmoke )
 	SW_ASSERT_NOT_NULL( mesh );
 	mesh->setMesh( cube );
 
-	float32 clear[4] = { 0.02f, 0.02f, 0.05f, 1.0f };
+	sw::float4 clear = { 0.02f, 0.02f, 0.05f, 1.0f };
 	device->getSwapChain()->beginFrame( clear );
 	SW_EXPECT_TRUE( renderer.execute( device.get(), nullptr, &scene ) );
 	device->getSwapChain()->endFrame( false, false );
@@ -545,7 +545,7 @@ SW_TEST_CASE( RenderPassTest, FrameRendererParityAllBackends )
 
 		if ( bOk )
 		{
-			float32 clear[4] = { 0.02f, 0.02f, 0.05f, 1.0f };
+			const sw::float4 clear{ 0.02f, 0.02f, 0.05f, 1.0f };
 			device->getSwapChain()->beginFrame( clear );
 			bOk = renderer.execute( device.get(), nullptr, &scene );
 			device->getSwapChain()->endFrame( false, false );

@@ -94,10 +94,10 @@ namespace sw
 		}
 		_listLoadedScene.clear();
 		_pActiveScene = nullptr;
+#if !defined( SW_SHIPPING )
 		if ( engine::areEngineServicesBound() )
-		{
 			engine::getCommandStack().clear();
-		}
+#endif
 		SW_LOG_INFO( "Shut down." );
 	}
 
@@ -146,9 +146,9 @@ namespace sw
 
 		shared_ptr<AsyncLoadSlot> slot = _asyncLoad;
 		_loadHandle					   = engine::getTaskManager().emplaceTask(
-			   "SceneLoadAsync",
-			   SW_DELEGATE_FUNCTION( TaskArgsDelegate, SceneManager::loadSceneAsyncJob ),
-			   MakeTaskArgs( slot, string( path ) ) );
+			"SceneLoadAsync",
+			SW_DELEGATE_FUNCTION( TaskArgsDelegate, SceneManager::loadSceneAsyncJob ),
+			MakeTaskArgs( slot, string( path ) ) );
 
 		_loadHandle.submit();
 		return _loadHandle.isValid();
@@ -162,7 +162,7 @@ namespace sw
 			return;
 
 		SceneDocument doc{};
-		const bool	  ok = loadSceneDocument( pathStr, doc );
+		const bool	  ok = doc.load( pathStr );
 
 		sw::unique_ptr<Scene> newScene;
 		if ( ok )
@@ -236,7 +236,7 @@ namespace sw
 		pScene->serializeToDocument( doc );
 		doc._sourcePath = outPath;
 
-		if ( saveSceneDocumentToXml( outPath, doc ) == false )
+		if ( doc.saveXml( outPath ) == false )
 			return false;
 
 		pScene->setSourcePath( outPath );
@@ -301,7 +301,9 @@ namespace sw
 		_listLoadedScene.push_back( std::move( pendingScene ) );
 
 		SW_LOG_INFO( "Active scene swapped to '%#'", _pActiveScene->getName() );
+#if !defined( SW_SHIPPING )
 		engine::getCommandStack().clear();
+#endif
 
 		// 이전 활성 씬 자동 언로드
 		if ( previousActive != nullptr && previousActive != _pActiveScene )

@@ -120,6 +120,9 @@ namespace sw
 		/** @brief 이미 제출된 것으로 표시합니다 (idempotent execute). */
 		void markApplied() { _bApplied = true; }
 
+		/** @brief Deferred CommandList를 Immediate Context에 soft-replay합니다 (null이면 markApplied 금지). */
+		static void execute( IRHIDevice* pDevice, IRHICommandList* pCmdList );
+
 	private:
 		enum class Op : uint8
 		{
@@ -190,7 +193,4 @@ namespace sw
 		bool				_bRecording{ false };
 		bool				_bApplied{ false };
 	};
-
-	/** @brief Deferred CommandList를 Immediate Context에 soft-replay한다 (null이면 markApplied 금지). */
-	SW_API void executeDeferredCommandList( IRHIDevice* pDevice, IRHICommandList* pCmdList );
 } // namespace sw

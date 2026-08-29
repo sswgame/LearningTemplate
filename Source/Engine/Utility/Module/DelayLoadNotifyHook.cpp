@@ -28,7 +28,7 @@ namespace sw
 		{
 			if ( dliNotify != dliNotePreLoadLibrary || pdli == nullptr )
 				return nullptr;
-			LiveReloadManager* pMgr = getDelayLoadLiveReloadManager();
+			LiveReloadManager* pMgr = LiveReloadManager::getDelayLoadManager();
 			if ( pMgr == nullptr || pMgr->isGraphBroken() )
 				return nullptr;
 			void* pHandle = pMgr->getModuleHandle( basenameNoExt( pdli->szDll ) );

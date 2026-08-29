@@ -187,7 +187,7 @@ if ( UnitStatsComponent* p = stats.get() )
 
 ```cpp
 go->addTag( "Player"_tag );           // 리터럴 → 컴파일 타임 해시
-go->addTag( requestTag( "custom" ) ); // 런타임 문자열
+go->addTag( TagID::request( "custom" ) ); // 런타임 문자열
 bool hit = go->hasTag( "Bullet"_tag );
 ```
 

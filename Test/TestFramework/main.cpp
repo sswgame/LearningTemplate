@@ -31,7 +31,7 @@
 
 int main( int32 argc, utf8* argv[] )
 {
-	sw::initializeHashedStringPool();
+	sw::HashedStringPool::initialize();
 
 	// ------------------------------------------------------------------------------
 	// 0) 코어 매니저 — 로거·프로파일러·커맨드라인·엔진 서비스
@@ -184,7 +184,7 @@ int main( int32 argc, utf8* argv[] )
 	logger->shutdown();
 	logger.reset();
 
-	sw::shutdownHashedStringPools();
+	sw::HashedStringPool::shutdown();
 
 	return result;
 }

@@ -2,8 +2,6 @@
 #include "Core/Common/Types.h"
 #include "Core/Memory/FrameArenaAllocator.h"
 
-#include "RuntimeAPI/PluginAPI.h"
-
 namespace sw
 {
 	template <typename T>
@@ -22,7 +20,7 @@ namespace sw
 		{
 			if ( n == 0 )
 				return nullptr;
-			return static_cast<T*>( ::sw::getFrameDoubleBuffer().allocate( n * sizeof( T ), alignof( T ) ) );
+			return static_cast<T*>( FrameDoubleBuffer::get().allocate( n * sizeof( T ), alignof( T ) ) );
 		}
 
 		void deallocate( T* p, size_t n ) noexcept

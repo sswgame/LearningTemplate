@@ -5,6 +5,7 @@
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Event/EventDispatcher.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Memory/FrameArenaAllocator.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Audio/IAudioSystem.h"
@@ -139,8 +140,7 @@ namespace sw
 
 		FrameDoubleBuffer& getFrameDoubleBuffer()
 		{
-			SW_LOG_ASSERT( s_services._pFrameDoubleBuffer, "FrameDoubleBuffer is null." );
-			return *s_services._pFrameDoubleBuffer;
+			return FrameDoubleBuffer::get();
 		}
 
 		DebugDrawQueue& getDebugDrawQueue()
@@ -267,11 +267,6 @@ namespace sw
 
 namespace sw
 {
-	FrameDoubleBuffer& getFrameDoubleBuffer()
-	{
-		return engine::getFrameDoubleBuffer();
-	}
-
 	TypeRegistry& getTypeRegistry()
 	{
 		return engine::getTypeRegistry();

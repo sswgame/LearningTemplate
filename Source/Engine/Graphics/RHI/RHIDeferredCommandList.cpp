@@ -329,7 +329,7 @@ namespace sw
 		SW_ASSERT( std::this_thread::get_id() == _recordingThread );
 	}
 
-	SW_API void executeDeferredCommandList( IRHIDevice* pDevice, IRHICommandList* pCmdList )
+	void RHIDeferredCommandList::execute( IRHIDevice* pDevice, IRHICommandList* pCmdList )
 	{
 		if ( pDevice == nullptr || pCmdList == nullptr )
 			return;
@@ -339,7 +339,7 @@ namespace sw
 		IRHICommandContext* pImm = pDevice->getImmediateContext();
 		if ( pImm == nullptr )
 		{
-			SW_LOG_WARNING( "executeDeferredCommandList: Immediate Context is null (device not initialized?); not marking applied" );
+			SW_LOG_WARNING( "RHIDeferredCommandList::execute: Immediate Context is null (device not initialized?); not marking applied" );
 			return;
 		}
 		pDeferred->replay( pImm );

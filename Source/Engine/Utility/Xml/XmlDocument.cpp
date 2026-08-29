@@ -440,6 +440,39 @@ namespace sw
 		return result;
 	}
 
+	XmlNode XmlNode::appendClone( XmlNode src ) const
+	{
+		if ( isValid() == false || src.isValid() == false )
+			return {};
+
+		const utf8* pName = src.name();
+		if ( pName == nullptr || pName[0] == '\0' )
+			return {};
+
+		XmlNode dst = appendChild( pName );
+		for ( XmlAttribute attr = src.firstAttr(); attr; attr = attr.next() )
+			dst.appendAttr( attr.name(), attr.value() != nullptr ? attr.value() : "" );
+
+		bool bHasElementChild = false;
+		for ( XmlNode childNode = src.child(); childNode; childNode = childNode.next() )
+		{
+			const utf8* pChildName = childNode.name();
+			if ( pChildName != nullptr && pChildName[0] != '\0' )
+			{
+				bHasElementChild = true;
+				dst.appendClone( childNode );
+			}
+		}
+
+		if ( bHasElementChild == false )
+		{
+			const utf8* pText = src.text();
+			if ( pText != nullptr && pText[0] != '\0' )
+				dst.setValue( pText );
+		}
+		return dst;
+	}
+
 	XmlDocument::XmlDocument()
 		: _impl{ make_unique<Impl>() } {}
 

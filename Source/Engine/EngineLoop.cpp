@@ -9,6 +9,7 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Memory/FrameArenaAllocator.h"
 #include "Core/Memory/MemoryProfiler.h"
+#include "Core/String/hashed_string.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Audio/IAudioSystem.h"
@@ -97,6 +98,7 @@ namespace sw
 		, _commandStack{ nullptr }
 		, _debugOverlayState{ nullptr }
 		, _debugDrawQueue{ nullptr }
+		, _frameDoubleBuffer{ nullptr }
 		, _rhiBackendRegistry{ nullptr }
 		, _bShellActionsBound{ false }
 	{
@@ -106,7 +108,7 @@ namespace sw
 
 	bool EngineLoop::initialize( int32 argc, utf8* pArgv[] )
 	{
-		initializeHashedStringPool();
+		HashedStringPool::initialize();
 
 		BLOCK( "Logger / DeadlockDetector / MemoryProfiler / CommandLine / GVM 초기화" )
 		{
@@ -138,7 +140,9 @@ namespace sw
 			_configManager		 = make_unique<ConfigManager>();
 			_localizationManager = make_unique<LocalizationManager>();
 			_resourceManager	 = make_unique<ResourceManager>();
-			_liveReloadManager	 = make_unique<LiveReloadManager>();
+#if !defined( SW_SHIPPING )
+			_liveReloadManager = make_unique<LiveReloadManager>();
+#endif
 			_reloadFileManager	 = make_unique<ReloadFileManager>();
 			_sceneManager		 = make_unique<SceneManager>();
 			_inputManager		 = make_unique<InputManager>();
@@ -147,11 +151,14 @@ namespace sw
 			_frameRenderer		 = make_unique<FrameRenderer>();
 			_engineData			 = make_unique<EngineData>();
 			_assetStreamingQueue = make_unique<AssetStreamingQueue>();
-			_commandStack		 = make_unique<CommandStack>();
-			_debugOverlayState	 = make_unique<DebugOverlayState>();
-			_debugDrawQueue		 = make_unique<DebugDrawQueue>();
-			_frameDoubleBuffer	 = make_unique<FrameDoubleBuffer>();
-			_rhiBackendRegistry	 = make_unique<RHIBackendRegistry>();
+#if !defined( SW_SHIPPING )
+			_commandStack = make_unique<CommandStack>();
+#endif
+			_debugOverlayState	= make_unique<DebugOverlayState>();
+			_debugDrawQueue		= make_unique<DebugDrawQueue>();
+			_frameDoubleBuffer	= make_unique<FrameDoubleBuffer>();
+			_rhiBackendRegistry = make_unique<RHIBackendRegistry>();
+			FrameDoubleBuffer::bind( _frameDoubleBuffer.get() );
 
 			EngineServices services{};
 			services._pCommandLineManager	 = _commandLineManager.get();
@@ -309,10 +316,10 @@ namespace sw
 				_resourceManager->detachReloadFileManager();
 			if ( _reloadFileManager != nullptr )
 				_reloadFileManager->shutdown();
-			if ( _taskManager != nullptr )
-				_taskManager->shutdown();
 			if ( _liveReloadManager != nullptr )
 				_liveReloadManager->shutdown();
+			if ( _taskManager != nullptr )
+				_taskManager->shutdown();
 			if ( _globalVariableManager != nullptr )
 				_globalVariableManager->shutdown();
 			if ( _memoryProfiler != nullptr )
@@ -322,6 +329,7 @@ namespace sw
 			if ( _logger != nullptr )
 				_logger->shutdown();
 
+			FrameDoubleBuffer::bind( nullptr );
 			engine::unbindEngineServices();
 
 			_renderThread.reset();
@@ -358,7 +366,7 @@ namespace sw
 			_memoryProfiler.reset();
 			_deadlockDetector.reset();
 
-			shutdownHashedStringPools();
+			HashedStringPool::shutdown();
 
 			_logger.reset();
 		}
@@ -451,8 +459,8 @@ namespace sw
 		if ( _inputManager != nullptr )
 			_inputManager->endFrame();
 		engine::getDebugDrawQueue().clear();
-		getThreadLocalFrameArena().reset();
-		engine::getFrameDoubleBuffer().swapAndResetPrevious();
+		FrameArenaAllocator::getThreadLocal().reset();
+		FrameDoubleBuffer::get().swapAndResetPrevious();
 	}
 
 	bool EngineLoop::applyPendingBackendChange()

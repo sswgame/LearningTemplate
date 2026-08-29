@@ -26,7 +26,7 @@ namespace sw
 		unordered_set<string> _uniquePool;
 	};
 
-	TagID requestTag( string_view str )
+	TagID TagID::request( string_view str )
 	{
 		static TagRegistryImpl s_impl;
 		const utf8*			   pInterned = s_impl.intern( str );

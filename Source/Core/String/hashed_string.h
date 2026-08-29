@@ -195,10 +195,14 @@ namespace sw
 	// ------------------------------------------------------------------------------
 	// 2) intern 테이블 — Core.dll 단독 소유, 모든 모듈은 이 export만 사용
 	// ------------------------------------------------------------------------------
-	/** @brief intern 테이블을 초기화합니다. */
-	SW_API void initializeHashedStringPool() noexcept;
-	/** @brief intern 테이블을 비웁니다. 이후 hashed_string 사용은 UB. */
-	SW_API void shutdownHashedStringPools() noexcept;
+	/** @brief hashed_string intern 테이블 */
+	struct SW_API HashedStringPool
+	{
+		/** @brief intern 테이블을 초기화합니다. */
+		static void initialize() noexcept;
+		/** @brief intern 테이블을 비웁니다. 이후 hashed_string 사용은 UB. */
+		static void shutdown() noexcept;
+	};
 
 	template <>
 	SW_API hashed_string::AllocationInfo& hashed_string::getAllocationInfo() noexcept;

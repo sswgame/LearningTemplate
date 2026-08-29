@@ -9,6 +9,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/Scene/SceneManager.h"
 
 #include "RuntimeAPI/PluginAPI.h"
 
@@ -108,8 +109,8 @@ namespace sw
 	{
 		cleanStaleShadowArtifacts( FileUtil::getDirectoryPart( FileUtil::getExecutablePath() ) );
 
-		if ( getDelayLoadLiveReloadManager() == nullptr )
-			setDelayLoadLiveReloadManager( this );
+		if ( LiveReloadManager::getDelayLoadManager() == nullptr )
+			LiveReloadManager::setDelayLoadManager( this );
 	}
 
 	LiveReloadManager::~LiveReloadManager()
@@ -129,8 +130,8 @@ namespace sw
 		}
 
 		cleanStaleShadowArtifacts( FileUtil::getDirectoryPart( FileUtil::getExecutablePath() ) );
-		if ( getDelayLoadLiveReloadManager() == this )
-			setDelayLoadLiveReloadManager( nullptr );
+		if ( LiveReloadManager::getDelayLoadManager() == this )
+			LiveReloadManager::setDelayLoadManager( nullptr );
 
 		if ( _fileWatcher != nullptr )
 		{
@@ -419,8 +420,8 @@ namespace sw
 		BLOCK( "Swap Module Handles" )
 		{
 			// onBeforeReload 가 모듈 리소스를 만지기 전에 워커가 옛 이미지에서 빠져나와 있어야 한다.
-			if ( previousHandle != nullptr )
-				drainTasksBeforeUnload();
+			if ( previousHandle != nullptr && drainTasksBeforeUnload() == false )
+				return false;
 
 			if ( ctx._onBeforeReload.isBound() && previousHandle != nullptr )
 				ctx._onBeforeReload();
@@ -433,6 +434,7 @@ namespace sw
 				}
 				ctx._listEventSubscription.clear();
 
+				// onBefore 이후 남은 작업. 이미 모듈을 내렸으면 스왑을 계속하고, 타임아웃은 poison만 한다.
 				drainTasksBeforeUnload();
 				engine::unregisterModuleTypes( ctx._moduleName );
 			}
@@ -515,17 +517,31 @@ namespace sw
 		ctx._tempModulePath.clear();
 	}
 
-	void LiveReloadManager::drainTasksBeforeUnload()
+	bool LiveReloadManager::drainTasksBeforeUnload()
 	{
+		constexpr uint32 kDrainTimeoutMs = 5000;
+
 		// onBeforeReload must stop module-originated work. Drain in-flight tasks so
 		// callbacks cannot enter the old image. Do not clear() — that drops unrelated
 		// GpuScene / scene-load work and skips onTaskFinished bookkeeping.
-		engine::getSceneManager().cancelPendingAsyncLoads();
-		engine::getTaskManager().waitAll();
+		if ( engine::areEngineServicesBound() )
+			engine::getSceneManager().cancelPendingAsyncLoads();
 
-		// 렌더 스레드는 TaskManager 밖에서 돈다. present 훅이 모듈 코드를 실행 중일 수 있으므로 함께 배수한다.
+		// 렌더 스레드는 TaskManager 밖에서 돈다. present 훅이 모듈 코드를 실행 중일 수 있으므로 먼저 배수한다.
 		if ( _drainWorkers.isBound() )
+		{
 			_drainWorkers();
+			if ( _bReloadGraphBroken )
+				return false;
+			return true;
+		}
+
+		if ( engine::areEngineServicesBound() && engine::getTaskManager().waitAll( kDrainTimeoutMs ) == false )
+		{
+			markGraphBroken( "task drain timeout before unload" );
+			return false;
+		}
+		return _bReloadGraphBroken == false;
 	}
 
 	void LiveReloadManager::collectDependentClosure( string_view root, vector<string>& outUnique ) const
@@ -811,12 +827,12 @@ namespace sw
 		return *this;
 	}
 
-	void setDelayLoadLiveReloadManager( LiveReloadManager* pManager )
+	void LiveReloadManager::setDelayLoadManager( LiveReloadManager* pManager )
 	{
 		s_delayLoadManager = pManager;
 	}
 
-	LiveReloadManager* getDelayLoadLiveReloadManager()
+	LiveReloadManager* LiveReloadManager::getDelayLoadManager()
 	{
 		return s_delayLoadManager;
 	}

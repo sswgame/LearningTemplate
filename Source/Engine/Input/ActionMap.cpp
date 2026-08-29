@@ -216,19 +216,19 @@ namespace sw
 
 				if ( StringUtil::equalsIgnoreCase( pSource, InputMapXml::kSourceKey ) )
 				{
-					const Key key = keyFromName( pCode );
+					const Key key = KeyCodes::fromName( pCode );
 					if ( key != Key::Unknown )
 						bind( pActionName, key, trigger, bindLayer );
 				}
 				else if ( StringUtil::equalsIgnoreCase( pSource, InputMapXml::kSourceGamepad ) )
 				{
-					const GamepadButton button = gamepadButtonFromName( pCode );
+					const GamepadButton button = GamepadButtons::fromName( pCode );
 					if ( button != GamepadButton::Count )
 						bind( pActionName, button, trigger, bindLayer );
 				}
 				else if ( StringUtil::equalsIgnoreCase( pSource, InputMapXml::kSourceMouse ) )
 				{
-					const MouseButton mouse = mouseButtonFromName( pCode );
+					const MouseButton mouse = MouseButtons::fromName( pCode );
 					if ( mouse != MouseButton::Count )
 						bind( pActionName, mouse, trigger, bindLayer );
 				}

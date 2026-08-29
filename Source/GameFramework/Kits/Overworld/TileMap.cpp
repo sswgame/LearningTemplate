@@ -2,14 +2,7 @@
 
 #include "GameFramework/Kits/Overworld/TileMap.h"
 
-#include "Core/File/FileUtil.h"
-#include "Core/String/StringBuilder.h"
-#include "Core/String/StringUtil.h"
-
-#include "Engine/Utility/Resource/ResourceUtil.h"
-#include "Engine/Utility/Xml/XmlDocument.h"
-
-#include <algorithm>
+#include "Engine/Utility/Xml/TileMapXml.h"
 
 namespace sw
 {
@@ -38,207 +31,103 @@ namespace sw
 		clear();
 		_sourcePath = assetRelativePath;
 
-		XmlDocument doc;
-		string		absPath;
-		if ( doc.loadResource( assetRelativePath, &absPath ) == false )
-		{
-			SW_LOG_ERROR( "Not found: %#", assetRelativePath );
+		TileMapXmlData xmlData{};
+		if ( xmlData.load( assetRelativePath ) == false )
 			return false;
-		}
 
-		XmlNode root = doc.root( "TileMap" );
-		if ( root.isValid() == false )
+		_name			 = xmlData._name;
+		_scenePath		 = xmlData._scenePath;
+		_role			 = xmlData._role;
+		_width			 = xmlData._width;
+		_height			 = xmlData._height;
+		_spawnX			 = xmlData._spawnX;
+		_spawnY			 = xmlData._spawnY;
+		_walkableList	 = std::move( xmlData._walkableList );
+		_encounterList	 = std::move( xmlData._encounterList );
+		_passThroughList = std::move( xmlData._passThroughList );
+		_visualList.clear();
+		_visualList.reserve( xmlData._visualList.size() );
+		for ( const TileMapXmlData::Visual& src : xmlData._visualList )
 		{
-			SW_LOG_ERROR( "Missing <TileMap>: %#", absPath );
-			return false;
+			TileVisual dst{};
+			dst._height	 = src._height;
+			dst._tintR	 = src._tintR;
+			dst._tintG	 = src._tintG;
+			dst._tintB	 = src._tintB;
+			dst._atlasId = src._atlasId;
+			_visualList.push_back( dst );
 		}
-
-		root.takeChildText( "name", _name );
-		const utf8* pWidthText = root.childText( "width" );
-		if ( pWidthText != nullptr )
-			_width = StringUtil::atoi( pWidthText );
-		const utf8* pHeightText = root.childText( "height" );
-		if ( pHeightText != nullptr )
-			_height = StringUtil::atoi( pHeightText );
-		root.takeChildText( "scene", _scenePath );
-		root.takeChildText( "role", _role );
-		XmlNode spawn = root.child( "spawn" );
-		if ( spawn.isValid() )
+		_warpList.clear();
+		_warpList.reserve( xmlData._warpList.size() );
+		for ( const TileMapXmlData::Warp& src : xmlData._warpList )
 		{
-			_spawnX = spawn.attrInt( "x", _spawnX );
-			_spawnY = spawn.attrInt( "y", _spawnY );
+			TileWarp dst{};
+			dst._tileX		 = src._tileX;
+			dst._tileY		 = src._tileY;
+			dst._targetMap	 = src._targetMap;
+			dst._targetTileX = src._targetTileX;
+			dst._targetTileY = src._targetTileY;
+			dst._pairId		 = src._pairId;
+			_warpList.push_back( std::move( dst ) );
 		}
-
-		if ( _width <= 0 || _height <= 0 )
+		_encounterEntryList.clear();
+		_encounterEntryList.reserve( xmlData._encounterEntryList.size() );
+		for ( const TileMapXmlData::Encounter& src : xmlData._encounterEntryList )
 		{
-			_width	= 8;
-			_height = 8;
+			TileEncounterEntry dst{};
+			dst._speciesId = src._speciesId;
+			dst._weight	   = src._weight;
+			_encounterEntryList.push_back( std::move( dst ) );
 		}
-
-		const size_t count = static_cast<size_t>( _width * _height );
-		_walkableList.assign( count, 1 );
-		_encounterList.assign( count, 0 );
-		_passThroughList.assign( count, 0 );
-		_visualList.assign( count, TileVisual{} );
-
-		XmlNode tiles = root.child( "tiles" );
-		if ( tiles.isValid() )
-		{
-			int32 index{ 0 };
-			for ( XmlNode tileNode = tiles.child( "t" ); tileNode && index < static_cast<int32>( count ); tileNode = tileNode.next( "t" ), ++index )
-			{
-				const utf8*	 pText			   = tileNode.text();
-				const size_t elementIndex	   = static_cast<size_t>( index );
-				_walkableList[elementIndex]	   = ( pText == nullptr || pText[0] != '0' ) ? 1 : 0;
-				_encounterList[elementIndex]   = tileNode.attrInt( "enc", 0 ) != 0 ? 1 : 0;
-				_passThroughList[elementIndex] = tileNode.attrInt( "pt", 0 ) != 0 ? 1 : 0;
-
-				TileVisual tileVisual{};
-				if ( tileNode.attr( "h" ) != nullptr )
-					tileVisual._height = static_cast<uint8>( tileNode.attrInt( "h", 0 ) );
-				else
-					tileVisual._height = _encounterList[elementIndex] != 0 ? 2 : ( _walkableList[elementIndex] != 0 ? 1 : 0 );
-
-				if ( tileNode.attr( "atlas" ) != nullptr )
-					tileVisual._atlasId = static_cast<uint8>( tileNode.attrInt( "atlas", 0 ) );
-
-				const bool hasTint = tileNode.attr( "tr" ) != nullptr || tileNode.attr( "tg" ) != nullptr || tileNode.attr( "tb" ) != nullptr;
-				if ( hasTint )
-				{
-					tileVisual._tintR = static_cast<uint8>( tileNode.attrInt( "tr", 255 ) );
-					tileVisual._tintG = static_cast<uint8>( tileNode.attrInt( "tg", 255 ) );
-					tileVisual._tintB = static_cast<uint8>( tileNode.attrInt( "tb", 255 ) );
-				}
-				else
-				{
-					if ( _encounterList[elementIndex] != 0 )
-					{
-						tileVisual._tintR = 120;
-						tileVisual._tintG = 190;
-						tileVisual._tintB = 90;
-					}
-					else if ( _walkableList[elementIndex] == 0 )
-					{
-						tileVisual._tintR = 80;
-						tileVisual._tintG = 80;
-						tileVisual._tintB = 90;
-					}
-					else if ( _passThroughList[elementIndex] != 0 )
-					{
-						tileVisual._tintR = 160;
-						tileVisual._tintG = 170;
-						tileVisual._tintB = 200;
-					}
-				}
-				_visualList[elementIndex] = tileVisual;
-			}
-		}
-
-		XmlNode warps = root.child( "warps" );
-		if ( warps.isValid() )
-		{
-			for ( XmlNode warpNode = warps.child( "warp" ); warpNode; warpNode = warpNode.next( "warp" ) )
-			{
-				TileWarp warp{};
-				warp._tileX		 = warpNode.attrInt( "x", 0 );
-				warp._tileY		 = warpNode.attrInt( "y", 0 );
-				const utf8* pMap = warpNode.attr( "map" );
-				if ( pMap != nullptr )
-					warp._targetMap = pMap;
-				warp._targetTileX = warpNode.attrInt( "tx", 0 );
-				warp._targetTileY = warpNode.attrInt( "ty", 0 );
-				const utf8* pPair = warpNode.attr( "pair" );
-				if ( pPair != nullptr )
-					warp._pairId = pPair;
-				_warpList.push_back( std::move( warp ) );
-			}
-		}
-
-		XmlNode encounters = root.child( "encounters" );
-		if ( encounters.isValid() )
-		{
-			for ( XmlNode encNode = encounters.child( "e" ); encNode; encNode = encNode.next( "e" ) )
-			{
-				TileEncounterEntry entry{};
-				const utf8*		   pId = encNode.attr( "id" );
-				if ( pId != nullptr )
-					entry._speciesId = pId;
-				entry._weight = encNode.attrFloat( "weight", 0.f );
-				if ( entry._speciesId.empty() == false )
-					_encounterEntryList.push_back( std::move( entry ) );
-			}
-		}
-
-		SW_LOG_INFO( "Loaded '%#' (%#x%#) scene=%# role=%# encounters=%#",
-					 _name, _width, _height, _scenePath, _role, static_cast<uint32>( _encounterEntryList.size() ) );
 		return true;
 	}
 
 	bool TileMap::saveToXml( string_view assetRelativePath ) const
 	{
-		string absPath = ResourceUtil::getResourcePath( assetRelativePath );
-		if ( absPath.empty() )
-			absPath = assetRelativePath;
-
-		StringBuilder<constant::kMaxBuffer4096> sb;
-		sb.appendFormat( "<TileMap>\n" );
-		sb.appendFormat( "  <name>%#</name>\n", _name.empty() ? "Untitled" : _name.c_str() );
-		sb.appendFormat( "  <width>%#</width>\n", _width );
-		sb.appendFormat( "  <height>%#</height>\n", _height );
-		if ( _scenePath.empty() == false )
-			sb.appendFormat( "  <scene>%#</scene>\n", _scenePath.c_str() );
-		if ( _role.empty() == false )
-			sb.appendFormat( "  <role>%#</role>\n", _role.c_str() );
-		sb.appendFormat( "  <spawn x=\"%#\" y=\"%#\"/>\n", _spawnX, _spawnY );
-		sb.appendFormat( "  <tiles>\n" );
-		for ( int32 tileY = 0; tileY < _height; ++tileY )
+		TileMapXmlData xmlData{};
+		xmlData._name			 = _name;
+		xmlData._sourcePath		 = assetRelativePath;
+		xmlData._scenePath		 = _scenePath;
+		xmlData._role			 = _role;
+		xmlData._width			 = _width;
+		xmlData._height			 = _height;
+		xmlData._spawnX			 = _spawnX;
+		xmlData._spawnY			 = _spawnY;
+		xmlData._walkableList	 = _walkableList;
+		xmlData._encounterList	 = _encounterList;
+		xmlData._passThroughList = _passThroughList;
+		xmlData._visualList.reserve( _visualList.size() );
+		for ( const TileVisual& src : _visualList )
 		{
-			for ( int32 tileX = 0; tileX < _width; ++tileX )
-			{
-				const size_t	  elementIndex = indexOf( tileX, tileY );
-				const TileVisual& tileVisual   = _visualList[elementIndex];
-				sb.appendFormat( "    <t h=\"%#\"", static_cast<int32>( tileVisual._height ) );
-				if ( _encounterList[elementIndex] != 0 )
-					sb.appendFormat( " enc=\"1\"" );
-				if ( _passThroughList[elementIndex] != 0 )
-					sb.appendFormat( " pt=\"1\"" );
-				if ( tileVisual._atlasId != 0 )
-					sb.appendFormat( " atlas=\"%#\"", static_cast<int32>( tileVisual._atlasId ) );
-				sb.appendFormat( " tr=\"%#\" tg=\"%#\" tb=\"%#\">%#</t>\n",
-								 static_cast<int32>( tileVisual._tintR ),
-								 static_cast<int32>( tileVisual._tintG ),
-								 static_cast<int32>( tileVisual._tintB ),
-								 _walkableList[elementIndex] != 0 ? "1" : "0" );
-			}
+			TileMapXmlData::Visual dst{};
+			dst._height	 = src._height;
+			dst._tintR	 = src._tintR;
+			dst._tintG	 = src._tintG;
+			dst._tintB	 = src._tintB;
+			dst._atlasId = src._atlasId;
+			xmlData._visualList.push_back( dst );
 		}
-		sb.appendFormat( "  </tiles>\n" );
-		sb.appendFormat( "  <warps>\n" );
-		for ( const TileWarp& warp : _warpList )
+		xmlData._warpList.reserve( _warpList.size() );
+		for ( const TileWarp& src : _warpList )
 		{
-			sb.appendFormat( "    <warp x=\"%#\" y=\"%#\" map=\"%#\" tx=\"%#\" ty=\"%#\"",
-							 warp._tileX, warp._tileY, warp._targetMap.c_str(), warp._targetTileX, warp._targetTileY );
-			if ( warp._pairId.empty() == false )
-				sb.appendFormat( " pair=\"%#\"", warp._pairId.c_str() );
-			sb.appendFormat( "/>\n" );
+			TileMapXmlData::Warp dst{};
+			dst._tileX		 = src._tileX;
+			dst._tileY		 = src._tileY;
+			dst._targetMap	 = src._targetMap;
+			dst._targetTileX = src._targetTileX;
+			dst._targetTileY = src._targetTileY;
+			dst._pairId		 = src._pairId;
+			xmlData._warpList.push_back( dst );
 		}
-		sb.appendFormat( "  </warps>\n" );
-		if ( _encounterEntryList.empty() == false )
+		xmlData._encounterEntryList.reserve( _encounterEntryList.size() );
+		for ( const TileEncounterEntry& src : _encounterEntryList )
 		{
-			sb.appendFormat( "  <encounters>\n" );
-			for ( const TileEncounterEntry& entry : _encounterEntryList )
-			{
-				sb.appendFormat( "    <e id=\"%#\" weight=\"%#\"/>\n", entry._speciesId, entry._weight );
-			}
-			sb.appendFormat( "  </encounters>\n" );
+			TileMapXmlData::Encounter dst{};
+			dst._speciesId = src._speciesId;
+			dst._weight	   = src._weight;
+			xmlData._encounterEntryList.push_back( dst );
 		}
-		sb.appendFormat( "</TileMap>\n" );
-
-		const string text( sb.c_str() );
-		const bool	 ok = FileUtil::writeFile( absPath, reinterpret_cast<const uint8*>( text.data() ),
-											   text.size() );
-		if ( ok )
-			SW_LOG_INFO( "Saved '%#' → %#", _name, absPath );
-		return ok;
+		return xmlData.save( assetRelativePath );
 	}
 
 	void TileMap::clear()

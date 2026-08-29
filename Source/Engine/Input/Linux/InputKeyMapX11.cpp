@@ -8,7 +8,7 @@
 
 namespace sw
 {
-	Key mapX11KeySym( uint64 keySym )
+	Key InputKeyMap::mapX11KeySym( uint64 keySym )
 	{
 		switch ( keySym )
 		{
@@ -268,7 +268,7 @@ namespace sw
 
 namespace sw
 {
-	Key mapX11KeySym( uint64 )
+	Key InputKeyMap::mapX11KeySym( uint64 )
 	{
 		return Key::Unknown;
 	}

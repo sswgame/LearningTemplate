@@ -25,7 +25,7 @@ namespace sw
 			case KeyRelease:
 			{
 				KeySym keySym = XLookupKeysym( const_cast<XKeyEvent*>( &pXev->xkey ), 0 );
-				setKeyDown( mapX11KeySym( static_cast<uint64>( keySym ) ), pXev->type == KeyPress );
+				setKeyDown( InputKeyMap::mapX11KeySym( static_cast<uint64>( keySym ) ), pXev->type == KeyPress );
 				break;
 			}
 			case ButtonPress:

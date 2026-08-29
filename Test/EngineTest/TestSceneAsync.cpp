@@ -54,13 +54,13 @@ SW_TEST_CASE( SceneTest, AsyncRequestCompletes )
 
 	sw::SceneDocument doc{};
 	doc._name = "AsyncTown";
-	sw::SceneEntityNode entA{};
+	sw::SceneDocument::EntityNode entA{};
 	entA._name = "PlayerSpawn";
 	doc._listEntityNode.push_back( std::move( entA ) );
-	sw::SceneEntityNode entB{};
+	sw::SceneDocument::EntityNode entB{};
 	entB._name = "Npc";
 	doc._listEntityNode.push_back( std::move( entB ) );
-	SW_ASSERT_TRUE( sw::saveSceneDocumentToBinary( binPath, doc ) );
+	SW_ASSERT_TRUE( doc.saveBinary( binPath ) );
 
 	sw::SceneManager manager;
 	SW_ASSERT_TRUE( manager.initialize() );
@@ -96,13 +96,13 @@ SW_TEST_CASE( SceneTest, DocumentLoadWithoutGpu )
 
 	sw::SceneDocument docSetup{};
 	docSetup._name = "DescOnly";
-	sw::SceneEntityNode entA{};
+	sw::SceneDocument::EntityNode entA{};
 	entA._name = "A";
 	docSetup._listEntityNode.push_back( std::move( entA ) );
-	SW_ASSERT_TRUE( sw::saveSceneDocumentToBinary( binPath, docSetup ) );
+	SW_ASSERT_TRUE( docSetup.saveBinary( binPath ) );
 
 	sw::SceneDocument doc{};
-	SW_ASSERT_TRUE( sw::loadSceneDocument( xmlPath, doc ) );
+	SW_ASSERT_TRUE( doc.load( xmlPath ) );
 	SW_EXPECT_TRUE( doc._bValid );
 	SW_EXPECT_STREQ( "DescOnly", doc._name );
 	SW_EXPECT_EQUAL( size_t( 1 ), doc._listEntityNode.size() );
@@ -120,21 +120,21 @@ SW_TEST_CASE( SceneTest, DocumentBinaryRoundTrip )
 
 	sw::SceneDocument originalDoc{};
 	originalDoc._name = "BinaryTestScene";
-	sw::SceneEntityNode entA{};
+	sw::SceneDocument::EntityNode entA{};
 	entA._name		  = "Hero";
 	entA._prefab	  = "game/demo/prefabs/Hero.prefab";
 	entA._embeddedXml = "<GameObjectState><Name>Hero</Name></GameObjectState>";
 	originalDoc._listEntityNode.push_back( std::move( entA ) );
 
-	sw::SceneEntityNode entB{};
+	sw::SceneDocument::EntityNode entB{};
 	entB._name	 = "Monster";
 	entB._prefab = "game/demo/prefabs/Monster.prefab";
 	originalDoc._listEntityNode.push_back( std::move( entB ) );
 
-	SW_ASSERT_TRUE( sw::saveSceneDocumentToBinary( binPath, originalDoc ) );
+	SW_ASSERT_TRUE( originalDoc.saveBinary( binPath ) );
 
 	sw::SceneDocument loadedDoc{};
-	SW_ASSERT_TRUE( sw::loadSceneDocumentFromBinary( binPath, loadedDoc ) );
+	SW_ASSERT_TRUE( loadedDoc.loadBinary( binPath ) );
 	SW_EXPECT_TRUE( loadedDoc._bValid );
 	SW_EXPECT_STREQ( "BinaryTestScene", loadedDoc._name );
 	SW_ASSERT_EQUAL( size_t( 2 ), loadedDoc._listEntityNode.size() );
@@ -170,20 +170,20 @@ SW_TEST_CASE( SceneTest, AsyncWarpSequenceQueuesLatest )
 
 	sw::SceneDocument docA{};
 	docA._name = "TownA";
-	sw::SceneEntityNode entA{};
+	sw::SceneDocument::EntityNode entA{};
 	entA._name = "A";
 	docA._listEntityNode.push_back( std::move( entA ) );
-	SW_ASSERT_TRUE( sw::saveSceneDocumentToBinary( binA, docA ) );
+	SW_ASSERT_TRUE( docA.saveBinary( binA ) );
 
 	sw::SceneDocument docB{};
 	docB._name = "TownB";
-	sw::SceneEntityNode entB1{};
+	sw::SceneDocument::EntityNode entB1{};
 	entB1._name = "B1";
 	docB._listEntityNode.push_back( std::move( entB1 ) );
-	sw::SceneEntityNode entB2{};
+	sw::SceneDocument::EntityNode entB2{};
 	entB2._name = "B2";
 	docB._listEntityNode.push_back( std::move( entB2 ) );
-	SW_ASSERT_TRUE( sw::saveSceneDocumentToBinary( binB, docB ) );
+	SW_ASSERT_TRUE( docB.saveBinary( binB ) );
 
 	sw::SceneManager manager;
 	SW_ASSERT_TRUE( manager.initialize() );
@@ -219,10 +219,10 @@ SW_TEST_CASE( SceneTest, AsyncSwapUnloadsPreviousActive )
 
 	sw::SceneDocument doc{};
 	doc._name = "Replaced";
-	sw::SceneEntityNode ent{};
+	sw::SceneDocument::EntityNode ent{};
 	ent._name = "Only";
 	doc._listEntityNode.push_back( std::move( ent ) );
-	SW_ASSERT_TRUE( sw::saveSceneDocumentToBinary( binPath, doc ) );
+	SW_ASSERT_TRUE( doc.saveBinary( binPath ) );
 
 	sw::SceneManager manager;
 	SW_ASSERT_TRUE( manager.initialize() );

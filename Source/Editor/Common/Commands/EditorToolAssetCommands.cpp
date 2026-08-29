@@ -32,6 +32,7 @@
 #include "Engine/Utility/Json/JsonDocument.h"
 #include "Engine/Utility/Resource/ResourceManager.h"
 #include "Engine/Utility/Resource/ResourceUtil.h"
+#include "Engine/Utility/Xml/TileMapXml.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
 
 #include "RuntimeAPI/Service/EditorService.h"
@@ -43,20 +44,6 @@ namespace sw::editor
 	namespace
 	{
 		constexpr utf8 kDialogueGraphPath[] = "Saved/Dialogue/default_dialogue.json";
-
-		void resizeTileMapData( EditorTileMapData& data, int32 width, int32 height )
-		{
-			if ( width <= 0 || height <= 0 )
-				return;
-			data._width		   = width;
-			data._height	   = height;
-			const size_t count = static_cast<size_t>( width * height );
-			data._listWalkable.assign( count, 1 );
-			data._listEncounter.assign( count, 0 );
-			data._listPassThrough.assign( count, 0 );
-			data._listVisual.assign( count, EditorTileVisual{} );
-			data._listWarp.clear();
-		}
 	} // namespace
 
 	namespace
@@ -451,76 +438,56 @@ namespace sw::editor
 
 	bool EditorToolAssetCommands::loadTileMap( string_view assetRelativePath, EditorTileMapData& outData, string& outStatus )
 	{
-		string		absPath;
-		XmlDocument doc;
-		if ( doc.loadPath( assetRelativePath, &absPath ) == false )
+		TileMapXmlData xmlData{};
+		if ( xmlData.load( assetRelativePath ) == false )
 		{
 			outStatus = "Not found: " + string{ assetRelativePath };
 			return false;
 		}
 
-		XmlNode root = doc.root( "TileMap" );
-		if ( root.isValid() == false )
+		outData._name			 = xmlData._name;
+		outData._scenePath		 = xmlData._scenePath;
+		outData._role			 = xmlData._role;
+		outData._width			 = xmlData._width;
+		outData._height			 = xmlData._height;
+		outData._spawnX			 = xmlData._spawnX;
+		outData._spawnY			 = xmlData._spawnY;
+		outData._listWalkable	 = std::move( xmlData._walkableList );
+		outData._listEncounter	 = std::move( xmlData._encounterList );
+		outData._listPassThrough = std::move( xmlData._passThroughList );
+		outData._listVisual.clear();
+		outData._listVisual.reserve( xmlData._visualList.size() );
+		for ( const TileMapXmlData::Visual& src : xmlData._visualList )
 		{
-			outStatus = "Missing <TileMap>";
-			return false;
+			EditorTileVisual dst{};
+			dst._height	 = src._height;
+			dst._atlasId = src._atlasId;
+			dst._tintR	 = src._tintR;
+			dst._tintG	 = src._tintG;
+			dst._tintB	 = src._tintB;
+			outData._listVisual.push_back( dst );
 		}
-
-		const utf8* pName = root.childText( "name" );
-		if ( pName != nullptr )
-			outData._name = pName;
-
-		int32 width	 = root.childInt( "width", 8 );
-		int32 height = root.childInt( "height", 8 );
-		if ( width <= 0 )
-			width = 8;
-		if ( height <= 0 )
-			height = 8;
-		resizeTileMapData( outData, width, height );
-
-		const size_t count = static_cast<size_t>( outData._width * outData._height );
-		XmlNode		 tiles = root.child( "tiles" );
-		if ( tiles.isValid() )
-		{
-			int32 index{ 0 };
-			for ( XmlNode tileNode = tiles.child( "t" ); tileNode && index < static_cast<int32>( count );
-				  tileNode		   = tileNode.next( "t" ), ++index )
-			{
-				const utf8*	 pV						= tileNode.text();
-				const size_t tileIndex				= static_cast<size_t>( index );
-				outData._listWalkable[tileIndex]	= ( pV == nullptr || pV[0] != '0' ) ? 1 : 0;
-				outData._listEncounter[tileIndex]	= static_cast<uint8>( tileNode.attrInt( "enc" ) != 0 ? 1 : 0 );
-				outData._listPassThrough[tileIndex] = static_cast<uint8>( tileNode.attrInt( "pt" ) != 0 ? 1 : 0 );
-
-				EditorTileVisual vis{};
-				vis._height					   = static_cast<uint8>( tileNode.attrInt( "h" ) );
-				vis._atlasId				   = static_cast<uint8>( tileNode.attrInt( "atlas" ) );
-				vis._tintR					   = static_cast<uint8>( tileNode.attrInt( "tr" ) );
-				vis._tintG					   = static_cast<uint8>( tileNode.attrInt( "tg" ) );
-				vis._tintB					   = static_cast<uint8>( tileNode.attrInt( "tb" ) );
-				outData._listVisual[tileIndex] = vis;
-			}
-		}
-
 		outData._listWarp.clear();
-		XmlNode warps = root.child( "warps" );
-		if ( warps.isValid() )
+		outData._listWarp.reserve( xmlData._warpList.size() );
+		for ( const TileMapXmlData::Warp& src : xmlData._warpList )
 		{
-			for ( XmlNode warpNode = warps.child( "warp" ); warpNode; warpNode = warpNode.next( "warp" ) )
-			{
-				EditorTileWarp warp{};
-				warp._tileX		 = warpNode.attrInt( "x" );
-				warp._tileY		 = warpNode.attrInt( "y" );
-				const utf8* pMap = warpNode.attr( "map" );
-				if ( pMap != nullptr )
-					warp._targetMap = pMap;
-				warp._targetTileX = warpNode.attrInt( "tx" );
-				warp._targetTileY = warpNode.attrInt( "ty" );
-				const utf8* pPair = warpNode.attr( "pair" );
-				if ( pPair != nullptr )
-					warp._pairId = pPair;
-				outData._listWarp.push_back( std::move( warp ) );
-			}
+			EditorTileWarp dst{};
+			dst._tileX		 = src._tileX;
+			dst._tileY		 = src._tileY;
+			dst._targetMap	 = src._targetMap;
+			dst._targetTileX = src._targetTileX;
+			dst._targetTileY = src._targetTileY;
+			dst._pairId		 = src._pairId;
+			outData._listWarp.push_back( std::move( dst ) );
+		}
+		outData._listEncounterEntry.clear();
+		outData._listEncounterEntry.reserve( xmlData._encounterEntryList.size() );
+		for ( const TileMapXmlData::Encounter& src : xmlData._encounterEntryList )
+		{
+			EditorTileEncounterEntry dst{};
+			dst._speciesId = src._speciesId;
+			dst._weight	   = src._weight;
+			outData._listEncounterEntry.push_back( std::move( dst ) );
 		}
 
 		outStatus = string( "Loaded " ) + string( assetRelativePath );
@@ -529,46 +496,51 @@ namespace sw::editor
 
 	bool EditorToolAssetCommands::saveTileMap( string_view assetRelativePath, const EditorTileMapData& data )
 	{
-		string absPath = ResourceUtil::getResourcePath( assetRelativePath );
-		if ( absPath.empty() )
-			absPath = assetRelativePath;
-
-		XmlDocument doc;
-		XmlNode		root = doc.appendRoot( "TileMap" );
-		root.appendChild( "name", data._name );
-		root.appendChild( "width", data._width );
-		root.appendChild( "height", data._height );
-
-		XmlNode		 tiles = root.appendChild( "tiles" );
-		const size_t count = static_cast<size_t>( data._width * data._height );
-		for ( size_t tileIndex = 0; tileIndex < count; ++tileIndex )
+		TileMapXmlData xmlData{};
+		xmlData._name			 = data._name;
+		xmlData._sourcePath		 = assetRelativePath;
+		xmlData._scenePath		 = data._scenePath;
+		xmlData._role			 = data._role;
+		xmlData._width			 = data._width;
+		xmlData._height			 = data._height;
+		xmlData._spawnX			 = data._spawnX;
+		xmlData._spawnY			 = data._spawnY;
+		xmlData._walkableList	 = data._listWalkable;
+		xmlData._encounterList	 = data._listEncounter;
+		xmlData._passThroughList = data._listPassThrough;
+		xmlData._visualList.reserve( data._listVisual.size() );
+		for ( const EditorTileVisual& src : data._listVisual )
 		{
-			XmlNode tileNode = tiles.appendChild( "t" );
-			tileNode.appendAttr( "enc", static_cast<uint32>( data._listEncounter[tileIndex] ) );
-			tileNode.appendAttr( "pt", static_cast<uint32>( data._listPassThrough[tileIndex] ) );
-			const EditorTileVisual vis = data._listVisual[tileIndex];
-			tileNode.appendAttr( "h", static_cast<uint32>( vis._height ) );
-			tileNode.appendAttr( "atlas", static_cast<uint32>( vis._atlasId ) );
-			tileNode.appendAttr( "tr", static_cast<uint32>( vis._tintR ) );
-			tileNode.appendAttr( "tg", static_cast<uint32>( vis._tintG ) );
-			tileNode.appendAttr( "tb", static_cast<uint32>( vis._tintB ) );
-			tileNode.setValue( static_cast<uint32>( data._listWalkable[tileIndex] ) );
+			TileMapXmlData::Visual dst{};
+			dst._height	 = src._height;
+			dst._atlasId = src._atlasId;
+			dst._tintR	 = src._tintR;
+			dst._tintG	 = src._tintG;
+			dst._tintB	 = src._tintB;
+			xmlData._visualList.push_back( dst );
+		}
+		xmlData._warpList.reserve( data._listWarp.size() );
+		for ( const EditorTileWarp& src : data._listWarp )
+		{
+			TileMapXmlData::Warp dst{};
+			dst._tileX		 = src._tileX;
+			dst._tileY		 = src._tileY;
+			dst._targetMap	 = src._targetMap;
+			dst._targetTileX = src._targetTileX;
+			dst._targetTileY = src._targetTileY;
+			dst._pairId		 = src._pairId;
+			xmlData._warpList.push_back( dst );
+		}
+		xmlData._encounterEntryList.reserve( data._listEncounterEntry.size() );
+		for ( const EditorTileEncounterEntry& src : data._listEncounterEntry )
+		{
+			TileMapXmlData::Encounter dst{};
+			dst._speciesId = src._speciesId;
+			dst._weight	   = src._weight;
+			xmlData._encounterEntryList.push_back( dst );
 		}
 
-		XmlNode warps = root.appendChild( "warps" );
-		for ( const EditorTileWarp& warp : data._listWarp )
-		{
-			XmlNode warpNode = warps.appendChild( "warp" );
-			warpNode.appendAttr( "x", warp._tileX );
-			warpNode.appendAttr( "y", warp._tileY );
-			warpNode.appendAttr( "map", warp._targetMap );
-			warpNode.appendAttr( "tx", warp._targetTileX );
-			warpNode.appendAttr( "ty", warp._targetTileY );
-			if ( warp._pairId.empty() == false )
-				warpNode.appendAttr( "pair", warp._pairId );
-		}
-
-		return doc.saveFile( absPath );
+		return xmlData.save( assetRelativePath );
 	}
 
 	bool EditorToolAssetCommands::loadSpriteClip( EditorSpriteClipData& outData, string& outStatus, string_view path )

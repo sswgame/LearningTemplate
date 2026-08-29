@@ -287,7 +287,7 @@ namespace sw
 
 	void D3D11RHIDevice::executeCommandList( IRHICommandList* pCmdList )
 	{
-		executeDeferredCommandList( this, pCmdList );
+		RHIDeferredCommandList::execute( this, pCmdList );
 	}
 
 	void D3D11RHIDevice::createRenderTargetView()

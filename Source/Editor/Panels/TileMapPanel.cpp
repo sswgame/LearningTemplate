@@ -239,14 +239,19 @@ namespace sw::editor
 		const bool		  bHadFile = EditorToolAssetCommands::loadTileMap( assetRelativePath, previous, previousStatus );
 
 		EditorTileMapData data;
-		data._name			  = _arrNameBuffer;
-		data._width			  = _width;
-		data._height		  = _height;
-		data._listWalkable	  = _listWalkable;
-		data._listEncounter	  = _listEncounter;
-		data._listPassThrough = _listPassThrough;
-		data._listVisual	  = _listVisual;
-		data._listWarp		  = _listWarp;
+		data._name				 = _arrNameBuffer;
+		data._width				 = _width;
+		data._height			 = _height;
+		data._listWalkable		 = _listWalkable;
+		data._listEncounter		 = _listEncounter;
+		data._listPassThrough	 = _listPassThrough;
+		data._listVisual		 = _listVisual;
+		data._listWarp			 = _listWarp;
+		data._scenePath			 = previous._scenePath;
+		data._role				 = previous._role;
+		data._spawnX			 = previous._spawnX;
+		data._spawnY			 = previous._spawnY;
+		data._listEncounterEntry = previous._listEncounterEntry;
 		if ( EditorToolAssetCommands::saveTileMap( assetRelativePath, data ) == false )
 			return false;
 

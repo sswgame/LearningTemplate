@@ -96,6 +96,11 @@ namespace sw
 		/** @brief 리로드 시 자동 해제를 위해 EventSubscription을 등록합니다. */
 		void addEventSubscription( string_view moduleName, const EventDispatcher::EventSubscription& token );
 
+		/** @brief App이 delay-load 훅용 LiveReloadManager를 연결합니다. */
+		static void setDelayLoadManager( LiveReloadManager* pManager );
+		/** @brief delay-load 훅이 조회할 LiveReloadManager를 반환합니다. */
+		static LiveReloadManager* getDelayLoadManager();
+
 	private:
 		struct ModuleContext;
 
@@ -119,8 +124,11 @@ namespace sw
 		void abortShadowCopy( PreparedShadow& prepared );
 		/** @brief 모듈 핸들을 언로드합니다. */
 		void unloadModule( ModuleContext& ctx );
-		/** @brief 언로드 전 해당 모듈 태스크가 끝나길 기다립니다. */
-		void drainTasksBeforeUnload();
+		/**
+		 * @brief 언로드 전 워커·태스크를 배수합니다.
+		 * @return 타임아웃 없이 배수되면 true. 실패 시 그래프를 poison하고 false.
+		 */
+		bool drainTasksBeforeUnload();
 		/** @brief root와 종속 모듈 이름을 중복 없이 모읍니다. */
 		void collectDependentClosure( string_view root, vector<string>& listOutUnique ) const;
 		/** @brief 의존 순으로 위상 정렬합니다. 사이클이면 false. */
@@ -163,12 +171,4 @@ namespace sw
 		bool								 _bReloadGraphBroken;
 		bool								 _bReloadingBatch;
 	};
-
-	// ------------------------------------------------------------------------------
-	// Delay-load 훅 — App이 매니저를 연결, Windows delay-load가 섀도 핸들을 조회
-	// ------------------------------------------------------------------------------
-	/** @brief App이 LiveReloadManager를 연결합니다. */
-	SW_API void setDelayLoadLiveReloadManager( LiveReloadManager* pManager );
-	/** @brief delay-load 훅이 조회할 LiveReloadManager를 반환합니다. */
-	SW_API LiveReloadManager* getDelayLoadLiveReloadManager();
 } // namespace sw

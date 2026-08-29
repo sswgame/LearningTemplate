@@ -111,7 +111,7 @@ namespace sw
 		vector<std::pair<GameObject*, string_view>> listRebindTargets;
 		listRebindTargets.reserve( doc._listEntityNode.size() );
 
-		for ( const SceneEntityNode& ent : doc._listEntityNode )
+		for ( const SceneDocument::EntityNode& ent : doc._listEntityNode )
 		{
 			SW_LOG_TRACE( "Spawning entity '%#' prefab '%#'", ent._name, ent._prefab );
 			GameObject* pGo{ nullptr };
@@ -162,7 +162,10 @@ namespace sw
 		{
 			if ( pGo == nullptr || pGo->getParent() != nullptr )
 				continue;
-			SceneEntityNode node{};
+			CameraComponent* pCamera = pGo->getComponent<CameraComponent>();
+			if ( pCamera != nullptr && pCamera->getRole() == CameraRole::Editor )
+				continue;
+			SceneDocument::EntityNode node{};
 			node._name		  = pGo->getName().c_str();
 			node._embeddedXml = ObjectStateSerializer::saveToXmlString( pGo );
 			if ( node._embeddedXml.empty() == false )

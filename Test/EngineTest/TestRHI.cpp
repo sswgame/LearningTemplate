@@ -40,7 +40,7 @@ namespace
 		void drawIndexedIndirect( sw::RHIBufferHandle, uint32 ) override {}
 		void beginEventMarker( const utf8* ) override {}
 		void endEventMarker() override {}
-		void beginOffscreenPass( sw::RHITextureHandle, float32[4] ) override { ++_beginOffscreenCount; }
+		void beginOffscreenPass( sw::RHITextureHandle, const sw::float4& ) override { ++_beginOffscreenCount; }
 		void endOffscreenPass( sw::RHITextureHandle ) override { ++_endOffscreenCount; }
 	};
 
@@ -604,7 +604,7 @@ SW_TEST_CASE( RHITest, DeferredCommandListReplayOntoContext )
 }
 
 /**
- * @brief executeDeferredCommandList: Immediate Context null이면 markApplied 금지
+ * @brief RHIDeferredCommandList::execute: Immediate Context null이면 markApplied 금지
  */
 SW_TEST_CASE( RHITest, ExecuteDeferredDoesNotMarkAppliedWithoutImmediateContext )
 {
@@ -625,13 +625,13 @@ SW_TEST_CASE( RHITest, ExecuteDeferredDoesNotMarkAppliedWithoutImmediateContext 
 
 	if ( device->getImmediateContext() == nullptr )
 	{
-		sw::executeDeferredCommandList( device.get(), &list );
+		sw::RHIDeferredCommandList::execute( device.get(), &list );
 		SW_EXPECT_TRUE( list.isApplied() == false );
 	}
 	else
 	{
 		// 드물게 생성자에서 context를 만들면 execute가 성공할 수 있음 — 그 경우 applied OK.
-		sw::executeDeferredCommandList( device.get(), &list );
+		sw::RHIDeferredCommandList::execute( device.get(), &list );
 	}
 
 	device.reset();

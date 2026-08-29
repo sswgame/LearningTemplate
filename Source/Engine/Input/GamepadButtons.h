@@ -28,8 +28,12 @@ namespace sw
 		Count
 	};
 
-	/** @brief 대소문자 무시 열거형 이름 → GamepadButton (미인식이면 Count). */
-	SW_API GamepadButton gamepadButtonFromName( string_view name );
-	/** @brief GamepadButton → 안정 열거형 이름 (Count/범위 밖이면 nullptr). */
-	SW_API const utf8* gamepadButtonToName( GamepadButton button );
+	/** @brief GamepadButton 이름 변환 */
+	struct SW_API GamepadButtons
+	{
+		/** @brief 대소문자 무시 열거형 이름 → GamepadButton (미인식이면 Count). */
+		static GamepadButton fromName( string_view name );
+		/** @brief GamepadButton → 안정 열거형 이름 (Count/범위 밖이면 nullptr). */
+		static const utf8* toName( GamepadButton button );
+	};
 } // namespace sw

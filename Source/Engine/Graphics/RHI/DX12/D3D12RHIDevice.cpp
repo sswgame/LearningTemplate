@@ -346,7 +346,7 @@ namespace sw
 
 	void D3D12RHIDevice::executeCommandList( IRHICommandList* pCmdList )
 	{
-		executeDeferredCommandList( this, pCmdList );
+		RHIDeferredCommandList::execute( this, pCmdList );
 	}
 
 	void D3D12RHIDevice::createRenderTargets()
@@ -567,7 +567,7 @@ namespace sw
 		rootSigDesc.NumStaticSamplers = _countof( staticSamplers );
 		rootSigDesc.pStaticSamplers	  = staticSamplers;
 		rootSigDesc.Flags			  = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
-							D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED;
+										D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED;
 
 		Microsoft::WRL::ComPtr<ID3DBlob> signatureBlob;
 		Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;

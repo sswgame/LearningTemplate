@@ -15,9 +15,6 @@ namespace sw
 	// ------------------------------------------------------------------------------
 	// 1) 핸들 ID — Core.dll 이 유일 발급. 멀티캐스트 remove 키
 	// ------------------------------------------------------------------------------
-	/** @brief 다음 멀티캐스트 델리게이트 핸들 ID를 발급합니다. */
-	SW_API uint64 allocateDelegateHandleId();
-
 	/** @brief 단일 바인딩 콜백 (함수·멤버·람다). */
 	template <typename T>
 	class Delegate;
@@ -131,7 +128,7 @@ namespace sw
 			Delegate newDelegate{};
 			newDelegate._pInstance = nullptr;
 			newDelegate._stubFunc  = static_cast<stub_function>( []( const void*, Args... args ) -> R
-			 { return std::invoke( Function, std::forward<Args>( args )... ); } );
+			{ return std::invoke( Function, std::forward<Args>( args )... ); } );
 
 			return newDelegate;
 		}
@@ -142,10 +139,10 @@ namespace sw
 			Delegate newDelegate{};
 			newDelegate._pInstance = reinterpret_cast<const void*>( func );
 			newDelegate._stubFunc  = static_cast<stub_function>( []( const void* ptr, Args... args ) -> R
-			 {
-				 auto fn = reinterpret_cast<R ( * )( Args... )>( const_cast<void*>( ptr ) );
-				 return fn( std::forward<Args>( args )... );
-			 } );
+			{
+				auto fn = reinterpret_cast<R ( * )( Args... )>( const_cast<void*>( ptr ) );
+				return fn( std::forward<Args>( args )... );
+			} );
 
 			return newDelegate;
 		}
@@ -157,10 +154,10 @@ namespace sw
 			Delegate newDelegate{};
 			newDelegate._pInstance = pClassInstance;
 			newDelegate._stubFunc  = static_cast<stub_function>( []( const void* ptr, Args... args ) -> R
-			 {
-				 const Class* instance = static_cast<const Class*>( ptr );
-				 return std::invoke( MemberFunction, instance, std::forward<Args>( args )... );
-			 } );
+			{
+				const Class* instance = static_cast<const Class*>( ptr );
+				return std::invoke( MemberFunction, instance, std::forward<Args>( args )... );
+			} );
 
 			return newDelegate;
 		}
@@ -172,10 +169,10 @@ namespace sw
 			Delegate newDelegate{};
 			newDelegate._pInstance = pClassInstance;
 			newDelegate._stubFunc  = static_cast<stub_function>( []( const void* pPtr, Args... args ) -> R
-			 {
-				 Class* pInstance = const_cast<Class*>( static_cast<const Class*>( pPtr ) );
-				 return std::invoke( MemberFunction, pInstance, std::forward<Args>( args )... );
-			 } );
+			{
+				Class* pInstance = const_cast<Class*>( static_cast<const Class*>( pPtr ) );
+				return std::invoke( MemberFunction, pInstance, std::forward<Args>( args )... );
+			} );
 
 			return newDelegate;
 		}
@@ -191,10 +188,10 @@ namespace sw
 			Delegate newDelegate{};
 			newDelegate._managerFunc = &lambdaManager<Lambda>;
 			newDelegate._stubFunc	 = static_cast<stub_function>( []( const void* pPtr, Args... args ) -> R
-			   {
-				   const Lambda* pInstance = static_cast<const Lambda*>( pPtr );
-				   return ( const_cast<Lambda*>( pInstance )->operator() )( std::forward<Args>( args )... );
-			   } );
+			{
+				const Lambda* pInstance = static_cast<const Lambda*>( pPtr );
+				return ( const_cast<Lambda*>( pInstance )->operator() )( std::forward<Args>( args )... );
+			} );
 
 			constexpr bool bIsSBO = sizeof( Lambda ) <= kInlineBufferSize && alignof( Lambda ) <= alignof( std::max_align_t ) && std::is_nothrow_move_constructible_v<Lambda>;
 			if constexpr ( bIsSBO )
@@ -310,6 +307,9 @@ namespace sw
 	{
 		uint64 _id{ 0 };
 
+		/** @brief 다음 멀티캐스트 델리게이트 핸들을 발급합니다. */
+		SW_API static DelegateHandle allocate();
+
 		/** @brief 발급된 ID가 있으면 true입니다. */
 		bool isValid() const { return _id != 0; }
 		/** @brief 같은지 비교합니다. */
@@ -419,7 +419,7 @@ namespace sw
 		/** @brief 새로운 델리게이트를 등록하고 핸들을 반환합니다. */
 		DelegateHandle add( const delegate_type& newDelegate )
 		{
-			DelegateHandle handle{ allocateDelegateHandleId() };
+			DelegateHandle handle = DelegateHandle::allocate();
 			_delegateList.push_back( DelegateEntry{ handle, newDelegate } );
 			return handle;
 		}

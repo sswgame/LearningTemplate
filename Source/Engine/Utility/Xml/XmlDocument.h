@@ -150,6 +150,8 @@ namespace sw
 
 		/** @brief 이 서브트리를 XML 문자열로 직렬화합니다 (Prefab/임베드용). */
 		string toString() const;
+		/** @brief 다른 문서의 서브트리를 이 노드의 자식으로 복사합니다. */
+		XmlNode appendClone( XmlNode src ) const;
 
 	private:
 		friend class XmlDocument;

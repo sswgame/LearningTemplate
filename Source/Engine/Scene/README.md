@@ -13,11 +13,13 @@ classDiagram
     class SceneDocument {
         +string _name
         +string _sourcePath
-        +vector~SceneEntityNode~ _listEntityNode
+        +vector~EntityNode~ _listEntityNode
         +bool _bValid
+        +load(path) bool
+        +saveXml(path) bool
     }
 
-    class SceneEntityNode {
+    class EntityNode {
         +string _name
         +string _prefab
         +string _embeddedXml
@@ -43,14 +45,14 @@ classDiagram
         +tickTransitions() void
     }
 
-    SceneDocument *-- SceneEntityNode
+    SceneDocument *-- EntityNode
     Scene ..> SceneDocument : instantiates / serializes
     SceneManager o-- Scene : manages lifecycle
 ```
 
 ### 핵심 클래스 역할
-1. **`Scene`**: 단일 게임 월드 인스턴스. 고유의 `GameObjectManager`, 활성 카메라 핸들(`ActiveGameCamera`, `ActiveEditorCamera`), 머티리얼 캐시 참조를 소유합니다.
-2. **`SceneDocument`**: 씬 파일(`.scene.xml`, `.scene.bin`)의 데이터 모델. 씬 메타데이터와 엔티티 노드(`SceneEntityNode`) 목록을 담으며, XML 및 바이너리(SCN1) 포맷 직렬화/역직렬화를 담당합니다.
+1. **`Scene`**: 단일 게임 월드 인스턴스. 고유의 `GameObjectManager`, 활성 **게임** 카메라(`ActiveGameCamera`), 머티리얼 캐시 참조를 소유합니다. 에디터 뷰포트 카메라는 Editor 모듈이 소유하며 씬 직렬화에서 제외됩니다.
+2. **`SceneDocument`**: 씬 파일(`.scene.xml`, `.scene.bin`)의 데이터 모델. 씬 메타데이터와 엔티티 노드(`SceneDocument::EntityNode`) 목록을 담으며, XML 및 바이너리(SCN1) 포맷 직렬화/역직렬화를 담당합니다.
 3. **`SceneManager`**: 로드된 씬들의 수명주기, 활성 씬(`ActiveScene`) 추적 및 멀티스레드 비동기 씬 로딩/트랜지션을 제어하는 중앙 관리자입니다.
 
 ---
@@ -90,7 +92,7 @@ classDiagram
 1. `SceneManager::requestLoadAsync(path)`:
    - `TaskManager` 워커 스레드에 비동기 태스크(`SceneLoadAsync`)를 디스패치합니다.
 2. 백그라운드 워커:
-   - `loadSceneDocument(path, doc)`로 XML 또는 SCN1 바이너리를 파싱합니다.
+   - `doc.load(path)`로 XML 또는 SCN1 바이너리를 파싱합니다.
    - 새 `Scene` 객체를 생성하고 `Scene::instantiate(doc)`를 통해 엔티티와 프리팹을 스폰하고 부모-자식 계층(`rebindSceneHierarchy`)을 구성합니다.
 3. 메인 스레드 (`SceneManager::tickTransitions()`):
    - 비동기 로드가 완료되면 안전한 프레임 경계에서 기존 활성 씬을 언로드하고 새 씬으로 스왑(Swap)합니다.
@@ -116,11 +118,11 @@ sw::GameObject* pPlayer = pScene->getObjectManager()->createGameObject(sw::hashe
 // 활성 씬을 XML 씬 문서로 저장
 sw::SceneDocument doc{};
 pScene->serializeToDocument(doc);
-sw::saveSceneDocumentToXml("Resource/game/demo/maps/Level01.scene.xml", doc);
+doc.saveXml("Resource/game/demo/maps/Level01.scene.xml");
 
 // 독립 씬 문서 로드 및 인스턴스화
 sw::SceneDocument loadedDoc{};
-if (sw::loadSceneDocument("Resource/game/demo/maps/Level01.scene.xml", loadedDoc))
+if (loadedDoc.load("Resource/game/demo/maps/Level01.scene.xml"))
 {
     sw::Scene newScene("Level01");
     newScene.instantiate(loadedDoc);

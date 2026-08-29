@@ -100,7 +100,7 @@ DX11 · DX12 · OpenGL · Vulkan
 4. context null이면 no-op; `_cmds`는 호출 측이 clear/markApplied.
 
 - Immediate Mode: `endCommandList` → `replay(_context)` → clear + markApplied  
-- Deferred Mode: `executeDeferredCommandList` → `replay(getImmediateContext())` → markApplied  
+- Deferred Mode: `RHIDeferredCommandList::execute` → `replay(getImmediateContext())` → markApplied  
 
 ---
 

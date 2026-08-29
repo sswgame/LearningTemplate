@@ -148,13 +148,21 @@ namespace sw
 		Count
 	};
 
-	/** @brief 이름에서 Key를 해석합니다. */
-	SW_API Key keyFromName( string_view name );
-	/** @brief Key의 안정 이름을 반환합니다. */
-	SW_API const utf8* keyToName( Key key );
+	/** @brief Key 이름 변환 */
+	struct SW_API KeyCodes
+	{
+		/** @brief 이름에서 Key를 해석합니다. */
+		static Key fromName( string_view name );
+		/** @brief Key의 안정 이름을 반환합니다. */
+		static const utf8* toName( Key key );
+	};
 
-	/** @brief 이름에서 MouseButton을 해석합니다. */
-	SW_API MouseButton mouseButtonFromName( string_view name );
-	/** @brief MouseButton의 안정 이름을 반환합니다. */
-	SW_API const utf8* mouseButtonToName( MouseButton button );
+	/** @brief MouseButton 이름 변환 */
+	struct SW_API MouseButtons
+	{
+		/** @brief 이름에서 MouseButton을 해석합니다. */
+		static MouseButton fromName( string_view name );
+		/** @brief MouseButton의 안정 이름을 반환합니다. */
+		static const utf8* toName( MouseButton button );
+	};
 } // namespace sw

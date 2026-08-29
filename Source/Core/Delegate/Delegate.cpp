@@ -6,9 +6,11 @@
 
 namespace sw
 {
-	SW_API uint64 allocateDelegateHandleId()
+	DelegateHandle DelegateHandle::allocate()
 	{
 		static std::atomic<uint64> s_nextHandleId{ 1 };
-		return s_nextHandleId.fetch_add( 1, std::memory_order_relaxed );
+		DelegateHandle			   handle{};
+		handle._id = s_nextHandleId.fetch_add( 1, std::memory_order_relaxed );
+		return handle;
 	}
 } // namespace sw

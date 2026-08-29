@@ -61,14 +61,14 @@ namespace sw
 			}
 			return *pSource == '.';
 		}
+
+		/** @brief 런타임에 태그를 만들거나 가져옵니다 (문자열 intern). */
+		static TagID request( string_view str );
 	};
 
 	// ------------------------------------------------------------------------------
-	// 2) intern — 런타임은 requestTag, 리터럴은 ""_tag
+	// 2) intern — 런타임은 TagID::request, 리터럴은 ""_tag
 	// ------------------------------------------------------------------------------
-	/** @brief 런타임에 태그를 만들거나 가져옵니다 (문자열 intern). */
-	SW_API TagID requestTag( string_view str );
-
 	/** @brief 리터럴에서 컴파일 타임 태그를 만듭니다. */
 	constexpr TagID operator""_tag( const utf8* pStr, size_t len )
 	{

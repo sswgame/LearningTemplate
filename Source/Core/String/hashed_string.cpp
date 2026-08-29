@@ -22,7 +22,7 @@ namespace sw
 		return *s_pInstanceWide;
 	}
 
-	SW_API void initializeHashedStringPool() noexcept
+	void HashedStringPool::initialize() noexcept
 	{
 		SW_ASSERT( s_pInstance == nullptr && s_pInstanceWide == nullptr );
 		static hashed_string::AllocationInfo  s_instance;
@@ -31,7 +31,7 @@ namespace sw
 		s_pInstanceWide = &s_instanceWide;
 	}
 
-	SW_API void shutdownHashedStringPools() noexcept
+	void HashedStringPool::shutdown() noexcept
 	{
 		SW_ASSERT( s_pInstance != nullptr && s_pInstanceWide != nullptr );
 		s_pInstance->clear();

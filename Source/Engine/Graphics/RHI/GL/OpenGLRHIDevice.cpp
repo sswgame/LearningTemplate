@@ -863,7 +863,7 @@ namespace sw
 		if ( _pHDC != nullptr && _pHRC != nullptr )
 			wglMakeCurrent( static_cast<HDC>( _pHDC ), static_cast<HGLRC>( _pHRC ) );
 #endif
-		executeDeferredCommandList( this, pCmdList );
+		RHIDeferredCommandList::execute( this, pCmdList );
 	}
 
 	bool OpenGLRHIDevice::ensureComputeRootConstantUbo()

@@ -5,9 +5,8 @@
 namespace sw
 {
 	class TypeRegistry;
-	SW_API TypeRegistry&			getTypeRegistry();
-	SW_API class TaskManager&		getTaskManager();
-	SW_API class FrameDoubleBuffer& getFrameDoubleBuffer();
+	SW_API TypeRegistry&	  getTypeRegistry();
+	SW_API class TaskManager& getTaskManager();
 
 	struct TypeRegistrar;
 	struct EnumRegistrar;

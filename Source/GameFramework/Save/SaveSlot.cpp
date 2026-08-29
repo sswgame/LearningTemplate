@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/File/BinaryBlob.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
@@ -17,58 +18,6 @@ namespace sw
 	{
 		constexpr uint32 kSaveBinMagic	 = 0x53415631u; // 'SAV1'
 		constexpr uint32 kSaveBinVersion = 0;
-
-		bool readU32Val( const vector<uint8>& listBlob, size_t& offset, uint32& outValue )
-		{
-			if ( offset + 4 > listBlob.size() )
-				return false;
-			outValue = static_cast<uint32>( listBlob[offset] ) | ( static_cast<uint32>( listBlob[offset + 1] ) << 8 ) |
-					   ( static_cast<uint32>( listBlob[offset + 2] ) << 16 ) | ( static_cast<uint32>( listBlob[offset + 3] ) << 24 );
-			offset += 4;
-			return true;
-		}
-
-		bool readI32Val( const vector<uint8>& listBlob, size_t& offset, int32& outValue )
-		{
-			uint32 val{ 0 };
-			if ( readU32Val( listBlob, offset, val ) == false )
-				return false;
-			outValue = static_cast<int32>( val );
-			return true;
-		}
-
-		bool readStrVal( const vector<uint8>& listBlob, size_t& offset, string& outString )
-		{
-			uint32 len{ 0 };
-			if ( readU32Val( listBlob, offset, len ) == false || offset + len > listBlob.size() )
-				return false;
-			outString.assign( reinterpret_cast<const utf8*>( listBlob.data() + offset ), len );
-			offset += len;
-			return true;
-		}
-
-		void appendU32Val( vector<uint8>& listBlob, uint32 value )
-		{
-			listBlob.push_back( static_cast<uint8>( value & 0xFFu ) );
-			listBlob.push_back( static_cast<uint8>( ( value >> 8 ) & 0xFFu ) );
-			listBlob.push_back( static_cast<uint8>( ( value >> 16 ) & 0xFFu ) );
-			listBlob.push_back( static_cast<uint8>( ( value >> 24 ) & 0xFFu ) );
-		}
-
-		void appendI32Val( vector<uint8>& listBlob, int32 value )
-		{
-			appendU32Val( listBlob, static_cast<uint32>( value ) );
-		}
-
-		void appendStrVal( vector<uint8>& listBlob, string_view str )
-		{
-			appendU32Val( listBlob, static_cast<uint32>( str.size() ) );
-			if ( str.empty() == false )
-			{
-				const uint8* pBytes = reinterpret_cast<const uint8*>( str.data() );
-				listBlob.insert( listBlob.end(), pBytes, pBytes + str.size() );
-			}
-		}
 	} // namespace
 
 	/**
@@ -199,25 +148,25 @@ namespace sw
 	bool SaveSlot::saveCommonToBinaryFile( string_view path ) const
 	{
 		vector<uint8> listPayload;
-		appendStrVal( listPayload, _mapPath );
-		appendI32Val( listPayload, _playerX );
-		appendI32Val( listPayload, _playerY );
-		appendU32Val( listPayload, static_cast<uint32>( _mapFlag.size() ) );
+		BinaryBlob::appendString( listPayload, _mapPath );
+		BinaryBlob::appendI32( listPayload, _playerX );
+		BinaryBlob::appendI32( listPayload, _playerY );
+		BinaryBlob::appendU32( listPayload, static_cast<uint32>( _mapFlag.size() ) );
 
 		for ( const auto& [key, val] : _mapFlag )
 		{
-			appendStrVal( listPayload, key );
-			appendI32Val( listPayload, val );
+			BinaryBlob::appendString( listPayload, key );
+			BinaryBlob::appendI32( listPayload, val );
 		}
 
 		const uint32 crc = StringUtil::computeCrc32( listPayload.data(), listPayload.size() );
 
 		vector<uint8> listBlob;
 		listBlob.reserve( 16 + listPayload.size() );
-		appendU32Val( listBlob, kSaveBinMagic );
-		appendU32Val( listBlob, kSaveBinVersion );
-		appendU32Val( listBlob, crc );
-		appendU32Val( listBlob, static_cast<uint32>( listPayload.size() ) );
+		BinaryBlob::appendU32( listBlob, kSaveBinMagic );
+		BinaryBlob::appendU32( listBlob, kSaveBinVersion );
+		BinaryBlob::appendU32( listBlob, crc );
+		BinaryBlob::appendU32( listBlob, static_cast<uint32>( listPayload.size() ) );
 		listBlob.insert( listBlob.end(), listPayload.begin(), listPayload.end() );
 
 		FileUtil::createDirectory( path );
@@ -241,25 +190,25 @@ namespace sw
 
 		size_t offset{ 0 };
 		uint32 magic{ 0 };
-		if ( readU32Val( listBlob, offset, magic ) == false || magic != kSaveBinMagic )
+		if ( BinaryBlob::readU32( listBlob, offset, magic ) == false || magic != kSaveBinMagic )
 		{
 			SW_LOG_WARNING( "Invalid SAV1 magic in %# (0x%#08X)", path, magic );
 			return false;
 		}
 
 		uint32 version{ 0 };
-		if ( readU32Val( listBlob, offset, version ) == false || version > kSaveBinVersion )
+		if ( BinaryBlob::readU32( listBlob, offset, version ) == false || version > kSaveBinVersion )
 		{
 			SW_LOG_WARNING( "Unsupported SAV1 version %# in %#", version, path );
 			return false;
 		}
 
 		uint32 expectedCrc{ 0 };
-		if ( readU32Val( listBlob, offset, expectedCrc ) == false )
+		if ( BinaryBlob::readU32( listBlob, offset, expectedCrc ) == false )
 			return false;
 
 		uint32 payloadSize{ 0 };
-		if ( readU32Val( listBlob, offset, payloadSize ) == false || ( offset + payloadSize ) > listBlob.size() )
+		if ( BinaryBlob::readU32( listBlob, offset, payloadSize ) == false || ( offset + payloadSize ) > listBlob.size() )
 		{
 			SW_LOG_ERROR( "Truncated SAV1 payload in %#", path );
 			return false;
@@ -278,10 +227,10 @@ namespace sw
 		int32  py{ 0 };
 		uint32 flagCount{ 0 };
 
-		if ( readStrVal( listBlob, offset, loadedMap ) == false ||
-			 readI32Val( listBlob, offset, px ) == false ||
-			 readI32Val( listBlob, offset, py ) == false ||
-			 readU32Val( listBlob, offset, flagCount ) == false )
+		if ( BinaryBlob::readString( listBlob, offset, loadedMap ) == false ||
+			 BinaryBlob::readI32( listBlob, offset, px ) == false ||
+			 BinaryBlob::readI32( listBlob, offset, py ) == false ||
+			 BinaryBlob::readU32( listBlob, offset, flagCount ) == false )
 		{
 			SW_LOG_ERROR( "Corrupted payload fields in %#", path );
 			return false;
@@ -298,8 +247,8 @@ namespace sw
 		{
 			string key;
 			int32  val{ 0 };
-			if ( readStrVal( listBlob, offset, key ) == false ||
-				 readI32Val( listBlob, offset, val ) == false )
+			if ( BinaryBlob::readString( listBlob, offset, key ) == false ||
+				 BinaryBlob::readI32( listBlob, offset, val ) == false )
 			{
 				SW_LOG_ERROR( "Corrupted flag entry at index %# in %#", flagIndex, path );
 				return false;

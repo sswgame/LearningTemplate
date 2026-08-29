@@ -117,6 +117,11 @@ namespace sw
 
 #if !defined( SW_SHIPPING )
 		_moduleCompiler = make_unique<ModuleCompiler>( _pLiveReloadManager );
+		if ( _pLiveReloadManager != nullptr )
+		{
+			_pLiveReloadManager->setDrainWorkers(
+				SW_DELEGATE_METHOD( LiveReloadManager::DrainWorkersDelegate, &ModuleHost::drainRenderWorkers, this ) );
+		}
 #endif
 
 #if defined( SW_SHIPPING )
@@ -203,14 +208,14 @@ namespace sw
 		if ( s_pCurrentModuleHost == this )
 			s_pCurrentModuleHost = nullptr;
 
+		onBeforeEditorReload();
+		onBeforeGameReload();
+
 		if ( _pLiveReloadManager != nullptr )
 		{
 			_pLiveReloadManager->setDrainWorkers( {} );
 			_pLiveReloadManager->setOnBeforeCommitBatch( {} );
 		}
-
-		onBeforeEditorReload();
-		onBeforeGameReload();
 	}
 
 	// ======================================================================
@@ -483,7 +488,8 @@ namespace sw
 		{
 			if ( engine::getTaskManager().waitAll( 5000 ) == false )
 			{
-				SW_LOG_WARNING( "Task fencing timeout (5s) before module reload." );
+				SW_LOG_ERROR( "Task fencing timeout (5s) before module reload — poisoning LiveReload graph." );
+				poisonLiveReload( "task fencing timeout before unload" );
 			}
 		}
 	}

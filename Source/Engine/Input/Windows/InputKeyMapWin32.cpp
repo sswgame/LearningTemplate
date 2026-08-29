@@ -48,7 +48,7 @@ namespace sw
 			return Key::RightAlt;
 		}
 
-		const InputVkKeyPair kArrPollKeys[] = {
+		const InputKeyMap::VkKeyPair kArrPollKeys[] = {
 			{		  'A',			   Key::A},
 			{		  'B',			   Key::B},
 			{		  'C',			   Key::C},
@@ -163,7 +163,7 @@ namespace sw
 
 	} // namespace
 
-	Key mapWin32VirtualKey( uintptr_t vk )
+	Key InputKeyMap::mapWin32VirtualKey( uintptr_t vk )
 	{
 		if ( vk >= 'A' && vk <= 'Z' )
 			return static_cast<Key>( static_cast<uint8>( Key::A ) + static_cast<uint8>( vk - 'A' ) );
@@ -324,7 +324,7 @@ namespace sw
 		}
 	}
 
-	MouseButton mapWin32MouseButton( uint32 message, uintptr_t wParam )
+	MouseButton InputKeyMap::mapWin32MouseButton( uint32 message, uintptr_t wParam )
 	{
 		switch ( message )
 		{
@@ -349,7 +349,7 @@ namespace sw
 		}
 	}
 
-	const InputVkKeyPair* getWin32PollKeyTable( uint32& outCount )
+	const InputKeyMap::VkKeyPair* InputKeyMap::getWin32PollKeyTable( uint32& outCount )
 	{
 		outCount = static_cast<uint32>( sizeof( kArrPollKeys ) / sizeof( kArrPollKeys[0] ) );
 		return kArrPollKeys;
@@ -360,17 +360,17 @@ namespace sw
 
 namespace sw
 {
-	Key mapWin32VirtualKey( uintptr_t )
+	Key InputKeyMap::mapWin32VirtualKey( uintptr_t )
 	{
 		return Key::Unknown;
 	}
 
-	MouseButton mapWin32MouseButton( uint32, uintptr_t )
+	MouseButton InputKeyMap::mapWin32MouseButton( uint32, uintptr_t )
 	{
 		return MouseButton::Count;
 	}
 
-	const InputVkKeyPair* getWin32PollKeyTable( uint32& outCount )
+	const InputKeyMap::VkKeyPair* InputKeyMap::getWin32PollKeyTable( uint32& outCount )
 	{
 		outCount = 0;
 		return nullptr;

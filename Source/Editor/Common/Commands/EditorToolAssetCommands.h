@@ -101,17 +101,29 @@ namespace sw::editor
 		string _pairId;
 	};
 
+	/** @brief 맵 조우 테이블 행 */
+	struct EditorTileEncounterEntry
+	{
+		string	_speciesId;
+		float32 _weight{ 1.0f };
+	};
+
 	/** @brief TileMap XML 데이터 */
 	struct EditorTileMapData
 	{
-		string					 _name;
-		int32					 _width{ 8 };
-		int32					 _height{ 8 };
-		vector<uint8>			 _listWalkable;
-		vector<uint8>			 _listEncounter;
-		vector<uint8>			 _listPassThrough;
-		vector<EditorTileVisual> _listVisual;
-		vector<EditorTileWarp>	 _listWarp;
+		string							 _name;
+		string							 _scenePath;
+		string							 _role;
+		int32							 _width{ 8 };
+		int32							 _height{ 8 };
+		int32							 _spawnX{ 1 };
+		int32							 _spawnY{ 1 };
+		vector<uint8>					 _listWalkable;
+		vector<uint8>					 _listEncounter;
+		vector<uint8>					 _listPassThrough;
+		vector<EditorTileVisual>		 _listVisual;
+		vector<EditorTileWarp>			 _listWarp;
+		vector<EditorTileEncounterEntry> _listEncounterEntry;
 	};
 
 	/** @brief 스프라이트 클립 프레임 */

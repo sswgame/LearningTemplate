@@ -2,6 +2,8 @@
 
 #include "Engine/Object/Prefab/PrefabAsset.h"
 
+#include "Core/File/BinaryBlob.h"
+
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -10,6 +12,7 @@
 #include "Engine/Utility/Json/JsonDocument.h"
 #include "Engine/Utility/Resource/AssetFormat.h"
 #include "Engine/Utility/Resource/ResourceManager.h"
+#include "Engine/Utility/Resource/ResourceUtil.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
 
 namespace sw
@@ -109,40 +112,6 @@ namespace sw
 				return false;
 			xmlBody = bodyNode.toString();
 			return true;
-		}
-
-		static bool readU32Val( const vector<uint8>& listBlob, size_t& offset, uint32& outValue )
-		{
-			if ( offset + 4 > listBlob.size() )
-				return false;
-			outValue = static_cast<uint32>( listBlob[offset] ) | ( static_cast<uint32>( listBlob[offset + 1] ) << 8 ) |
-					   ( static_cast<uint32>( listBlob[offset + 2] ) << 16 ) | ( static_cast<uint32>( listBlob[offset + 3] ) << 24 );
-			offset += 4;
-			return true;
-		}
-
-		static bool readStrVal( const vector<uint8>& listBlob, size_t& offset, string& outString )
-		{
-			uint32 len{ 0 };
-			if ( readU32Val( listBlob, offset, len ) == false || offset + len > listBlob.size() )
-				return false;
-			outString.assign( reinterpret_cast<const utf8*>( listBlob.data() + offset ), len );
-			offset += len;
-			return true;
-		}
-
-		static void appendU32Val( vector<uint8>& listBlob, uint32 value )
-		{
-			listBlob.push_back( static_cast<uint8>( value & 0xFFu ) );
-			listBlob.push_back( static_cast<uint8>( ( value >> 8 ) & 0xFFu ) );
-			listBlob.push_back( static_cast<uint8>( ( value >> 16 ) & 0xFFu ) );
-			listBlob.push_back( static_cast<uint8>( ( value >> 24 ) & 0xFFu ) );
-		}
-
-		static void appendStrVal( vector<uint8>& listBlob, string_view text )
-		{
-			appendU32Val( listBlob, static_cast<uint32>( text.size() ) );
-			listBlob.insert( listBlob.end(), text.begin(), text.end() );
 		}
 
 	} // namespace
@@ -276,14 +245,14 @@ namespace sw
 		size_t offset{ 0 };
 
 		uint32 magic{ 0 };
-		if ( readU32Val( listBlob, offset, magic ) == false || magic != kPrefabBinMagic2 )
+		if ( BinaryBlob::readU32( listBlob, offset, magic ) == false || magic != kPrefabBinMagic2 )
 		{
 			SW_LOG_ERROR( "Bad binary magic: %#", absPath );
 			return false;
 		}
 		{
 			uint32 version{ 0 };
-			if ( readU32Val( listBlob, offset, version ) == false )
+			if ( BinaryBlob::readU32( listBlob, offset, version ) == false )
 			{
 				SW_LOG_ERROR( "Binary version truncated: %#", absPath );
 				return false;
@@ -294,7 +263,7 @@ namespace sw
 				return false;
 			}
 		}
-		if ( readStrVal( listBlob, offset, _name ) == false || readStrVal( listBlob, offset, _stateData ) == false )
+		if ( BinaryBlob::readString( listBlob, offset, _name ) == false || BinaryBlob::readString( listBlob, offset, _stateData ) == false )
 		{
 			SW_LOG_ERROR( "Binary payload truncated: %#", absPath );
 			return false;
@@ -328,15 +297,22 @@ namespace sw
 				xmlBody = ObjectStateSerializer::saveToXmlString( &tempObj );
 		}
 
-		string xmlStr = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n";
-		xmlStr += "<Prefab formatVersion=\"0\" name=\"";
-		xmlStr += _name;
-		xmlStr += "\">\n\t";
-		xmlStr += xmlBody;
-		xmlStr += "\n</Prefab>\n";
+		XmlDocument xmlDoc;
+		XmlNode		root = xmlDoc.appendRoot( kRoot );
+		root.appendAttr( "formatVersion", 0u );
+		root.appendAttr( kName, _name );
+		if ( xmlBody.empty() == false )
+		{
+			XmlDocument bodyDoc;
+			if ( bodyDoc.parse( xmlBody ) )
+			{
+				XmlNode bodyRoot = bodyDoc.root();
+				if ( bodyRoot.isValid() )
+					root.appendClone( bodyRoot );
+			}
+		}
 
-		const bool writeOk = FileUtil::writeFile( absPath, reinterpret_cast<const uint8*>( xmlStr.data() ),
-												  xmlStr.size() );
+		const bool writeOk = xmlDoc.saveFile( absPath );
 		if ( writeOk )
 			SW_LOG_INFO( "Saved '%#' -> %#", _name, absPath );
 		return writeOk;
@@ -385,10 +361,10 @@ namespace sw
 			absPath = assetRelativePath;
 
 		vector<uint8> listBlob;
-		appendU32Val( listBlob, kPrefabBinMagic2 );
-		appendU32Val( listBlob, kPrefabBinVersion );
-		appendStrVal( listBlob, _name );
-		appendStrVal( listBlob, _stateData );
+		BinaryBlob::appendU32( listBlob, kPrefabBinMagic2 );
+		BinaryBlob::appendU32( listBlob, kPrefabBinVersion );
+		BinaryBlob::appendString( listBlob, _name );
+		BinaryBlob::appendString( listBlob, _stateData );
 		return FileUtil::writeFile( absPath, listBlob.data(), listBlob.size() );
 	}
 

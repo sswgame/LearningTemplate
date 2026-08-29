@@ -766,7 +766,7 @@ namespace sw
 
 	void VulkanRHIDevice::executeCommandList( IRHICommandList* pCmdList )
 	{
-		executeDeferredCommandList( this, pCmdList );
+		RHIDeferredCommandList::execute( this, pCmdList );
 	}
 
 	bool VulkanRHIDevice::queryVulkanTextureView( RHITextureHandle texture, void*& outImageView ) const

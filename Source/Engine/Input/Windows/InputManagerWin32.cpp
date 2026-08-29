@@ -15,11 +15,11 @@ namespace sw
 		{
 			case WM_KEYDOWN:
 			case WM_SYSKEYDOWN:
-				setKeyDown( mapWin32VirtualKey( event._wParam ), true );
+				setKeyDown( InputKeyMap::mapWin32VirtualKey( event._wParam ), true );
 				break;
 			case WM_KEYUP:
 			case WM_SYSKEYUP:
-				setKeyDown( mapWin32VirtualKey( event._wParam ), false );
+				setKeyDown( InputKeyMap::mapWin32VirtualKey( event._wParam ), false );
 				break;
 			case WM_LBUTTONDOWN:
 			case WM_RBUTTONDOWN:
@@ -30,7 +30,7 @@ namespace sw
 			case WM_MBUTTONDBLCLK:
 			case WM_XBUTTONDBLCLK:
 			{
-				const MouseButton btn = mapWin32MouseButton( event._message, event._wParam );
+				const MouseButton btn = InputKeyMap::mapWin32MouseButton( event._message, event._wParam );
 				if ( btn < MouseButton::Count )
 					setMouseButtonDown( btn, true );
 				break;
@@ -40,7 +40,7 @@ namespace sw
 			case WM_MBUTTONUP:
 			case WM_XBUTTONUP:
 			{
-				const MouseButton btn = mapWin32MouseButton( event._message, event._wParam );
+				const MouseButton btn = InputKeyMap::mapWin32MouseButton( event._message, event._wParam );
 				if ( btn < MouseButton::Count )
 					setMouseButtonDown( btn, false );
 				break;
@@ -70,8 +70,8 @@ namespace sw
 
 	void InputManager::pollPlatform()
 	{
-		uint32				  count{ 0 };
-		const InputVkKeyPair* pTable = getWin32PollKeyTable( count );
+		uint32						  count{ 0 };
+		const InputKeyMap::VkKeyPair* pTable = InputKeyMap::getWin32PollKeyTable( count );
 		for ( uint32 eventIndex = 0; eventIndex < count; ++eventIndex )
 		{
 			setKeyDown( pTable[eventIndex]._key, ( GetAsyncKeyState( pTable[eventIndex]._vk ) & 0x8000 ) != 0 );

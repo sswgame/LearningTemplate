@@ -54,7 +54,7 @@ namespace sw
 
 				if ( text.size() >= 4 && text.substr( 0, 4 ) == "str:" )
 				{
-					outTag = requestTag( text.substr( 4 ) );
+					outTag = TagID::request( text.substr( 4 ) );
 					return outTag.isValid();
 				}
 

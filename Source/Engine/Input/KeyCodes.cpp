@@ -7,22 +7,22 @@
 
 namespace sw
 {
-	Key keyFromName( string_view name )
+	Key KeyCodes::fromName( string_view name )
 	{
 		return engine::getTypeRegistry().enumFromString<Key>( name );
 	}
 
-	const utf8* keyToName( Key key )
+	const utf8* KeyCodes::toName( Key key )
 	{
 		return engine::getTypeRegistry().enumToString( key );
 	}
 
-	MouseButton mouseButtonFromName( string_view name )
+	MouseButton MouseButtons::fromName( string_view name )
 	{
 		return engine::getTypeRegistry().enumFromString<MouseButton>( name );
 	}
 
-	const utf8* mouseButtonToName( MouseButton button )
+	const utf8* MouseButtons::toName( MouseButton button )
 	{
 		return engine::getTypeRegistry().enumToString( button );
 	}
