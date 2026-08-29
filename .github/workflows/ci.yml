@@ -34,11 +34,6 @@ jobs:
       with:
         fetch-depth: 1
 
-    - name: Setup Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-
     - name: Run Code Conventions Check
       run: |
         python3 Scripts/lint/CheckCodeConventions.py
