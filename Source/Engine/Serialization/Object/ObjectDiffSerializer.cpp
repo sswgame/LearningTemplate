@@ -3,7 +3,7 @@
 #include "Engine/Serialization/Object/ObjectDiffSerializer.h"
 
 #include "Engine/Reflection/ReflectionCore.h"
-#include "Engine/Serialization/Core/SerializerInternal.h"
+#include "Engine/Serialization/Core/SerializerUtil.h"
 
 namespace sw
 {
@@ -32,13 +32,13 @@ namespace sw
 			listModBytes.clear();
 			if ( prop._bIsContainer && prop.hasContainerWrapper() )
 			{
-				serializeNestedContainerBinary( pCdoPtr, prop.getContainerShape(), listCdoBytes, ctx );
-				serializeNestedContainerBinary( pModPtr, prop.getContainerShape(), listModBytes, ctx );
+				SerializerUtil::serializeNestedContainerBinary( pCdoPtr, prop.getContainerShape(), listCdoBytes, ctx );
+				SerializerUtil::serializeNestedContainerBinary( pModPtr, prop.getContainerShape(), listModBytes, ctx );
 			}
 			else
 			{
-				serializeValueBinary( pCdoPtr, prop._typeName, listCdoBytes, ctx );
-				serializeValueBinary( pModPtr, prop._typeName, listModBytes, ctx );
+				SerializerUtil::serializeValueBinary( pCdoPtr, prop._typeName, listCdoBytes, ctx );
+				SerializerUtil::serializeValueBinary( pModPtr, prop._typeName, listModBytes, ctx );
 			}
 			if ( listCdoBytes == listModBytes )
 				return;
@@ -93,11 +93,11 @@ namespace sw
 				{
 					if ( pProp->_bIsContainer && pProp->hasContainerWrapper() )
 					{
-						ok = deserializeNestedContainerBinary( pDest, pProp->getContainerShape(), pDiffData + offset, payload,
-															   local, ctx );
+						ok = SerializerUtil::deserializeNestedContainerBinary( pDest, pProp->getContainerShape(), pDiffData + offset, payload,
+																			   local, ctx );
 					}
 					else
-						ok = deserializeValueBinary( pDest, pProp->_typeName, pDiffData + offset, payload, local, ctx );
+						ok = SerializerUtil::deserializeValueBinary( pDest, pProp->_typeName, pDiffData + offset, payload, local, ctx );
 				}
 				if ( ok == false )
 					return false;

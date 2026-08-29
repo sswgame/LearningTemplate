@@ -50,27 +50,32 @@
 
 namespace sw
 {
+	namespace
+	{
+		struct EngineLoopInternal
+		{
+			static bool cliRequestsBackend( const CommandLineManager& cli )
+			{
+				bool bFlag{ false };
+				if ( cli.getArgument( CommandLineArgument::DIRECTX_11, bFlag ) && bFlag )
+					return true;
+				if ( cli.getArgument( CommandLineArgument::DIRECTX_12, bFlag ) && bFlag )
+					return true;
+				if ( cli.getArgument( CommandLineArgument::VULKAN, bFlag ) && bFlag )
+					return true;
+				if ( cli.getArgument( CommandLineArgument::OPENGL, bFlag ) && bFlag )
+					return true;
+				return false;
+			}
+		};
+	} // namespace
+} // namespace sw
+
+namespace sw
+{
 	SW_LOG_CALLER( "EngineLoop" );
 
 	SW_EXTERN_GLOBAL_VARIABLE_BOOL( gv_useRenderThread );
-
-	namespace
-	{
-		bool cliRequestsBackend( const CommandLineManager& cli )
-		{
-			bool bFlag{ false };
-			if ( cli.getArgument( CommandLineArgument::DIRECTX_11, bFlag ) && bFlag )
-				return true;
-			if ( cli.getArgument( CommandLineArgument::DIRECTX_12, bFlag ) && bFlag )
-				return true;
-			if ( cli.getArgument( CommandLineArgument::VULKAN, bFlag ) && bFlag )
-				return true;
-			if ( cli.getArgument( CommandLineArgument::OPENGL, bFlag ) && bFlag )
-				return true;
-			return false;
-		}
-
-	} // namespace
 
 	EngineLoop::EngineLoop()
 		: _logger{ nullptr }
@@ -221,7 +226,7 @@ namespace sw
 			else
 				_engineData->loadFromResource();
 
-			if ( cliRequestsBackend( *_commandLineManager ) == false )
+			if ( EngineLoopInternal::cliRequestsBackend( *_commandLineManager ) == false )
 				gv_rhiBackend = pEngineConfig->_window._defaultRHI;
 
 			if ( IWindow::getActiveWindow() == nullptr )

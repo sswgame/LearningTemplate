@@ -92,6 +92,36 @@ cmake --build --preset Ninja-Debug
 - Prefer Core and Engine facilities over STL or direct system facilities when
   they meet the need.
 
+## Helpers: Util vs Internal
+
+- Shared helpers used by more than one translation unit belong on a `XxxUtil`
+  static struct in a header (for example `SerializerUtil`, `MaterialUtil`). Do
+  not name those headers or types `Internal`.
+- Helpers used only inside one `.cpp` go in a **separate** `namespace sw` block
+  from the class implementation, so the two regions fold independently:
+
+```cpp
+namespace sw
+{
+	namespace
+	{
+		struct FooInternal
+		{
+			static void helper();
+		};
+	} // namespace
+} // namespace sw
+
+namespace sw
+{
+	void Foo::process() { FooInternal::helper(); }
+} // namespace sw
+```
+
+- Locator-only `s_*` state used by bind/get APIs stays in the implementation
+  block's anonymous namespace. This applies to `Source/` and
+  `Tools/ReflectionParser/`.
+
 ## C++ style
 
 - Follow `.clang-format`.

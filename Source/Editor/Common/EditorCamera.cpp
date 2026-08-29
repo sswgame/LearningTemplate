@@ -14,36 +14,42 @@ namespace sw::editor
 {
 	namespace
 	{
-		constexpr const utf8* kEditorCameraObjectName = "EditorCamera";
-
-		CameraComponent* createEditorCamera( GameObjectManager* pObjectManager )
+		struct EditorCameraInternal
 		{
-			if ( pObjectManager == nullptr )
-				return nullptr;
+			static constexpr const utf8* kEditorCameraObjectName = "EditorCamera";
 
-			const hashed_string cameraName{ kEditorCameraObjectName };
-			GameObject*			pObj = pObjectManager->findGameObjectByName( cameraName );
-			if ( pObj == nullptr )
-				pObj = pObjectManager->createGameObject( cameraName );
-			if ( pObj == nullptr )
-				return nullptr;
+			static CameraComponent* createEditorCamera( GameObjectManager* pObjectManager )
+			{
+				if ( pObjectManager == nullptr )
+					return nullptr;
 
-			CameraComponent* pCam = pObj->getComponent<CameraComponent>();
-			if ( pCam == nullptr )
-				pCam = pObj->addComponent<CameraComponent>();
-			if ( pCam == nullptr )
-				return nullptr;
+				const hashed_string cameraName{ kEditorCameraObjectName };
+				GameObject*			pObj = pObjectManager->findGameObjectByName( cameraName );
+				if ( pObj == nullptr )
+					pObj = pObjectManager->createGameObject( cameraName );
+				if ( pObj == nullptr )
+					return nullptr;
 
-			pCam->setRole( CameraRole::Editor );
-			pCam->setLocalPosition( float3( 2.15f, 1.55f, 2.65f ) );
-			pCam->lookAt( float3( 0.0f, 0.0f, 0.0f ) );
-			pCam->setFieldOfViewY( 0.70f );
-			pCam->setNearPlane( 0.1f );
-			pCam->setFarPlane( 100.0f );
-			return pCam;
-		}
+				CameraComponent* pCam = pObj->getComponent<CameraComponent>();
+				if ( pCam == nullptr )
+					pCam = pObj->addComponent<CameraComponent>();
+				if ( pCam == nullptr )
+					return nullptr;
+
+				pCam->setRole( CameraRole::Editor );
+				pCam->setLocalPosition( float3( 2.15f, 1.55f, 2.65f ) );
+				pCam->lookAt( float3( 0.0f, 0.0f, 0.0f ) );
+				pCam->setFieldOfViewY( 0.70f );
+				pCam->setNearPlane( 0.1f );
+				pCam->setFarPlane( 100.0f );
+				return pCam;
+			}
+		};
 	} // namespace
+} // namespace sw::editor
 
+namespace sw::editor
+{
 	CameraComponent* EditorCamera::find( const Scene* pScene )
 	{
 		if ( pScene == nullptr )
@@ -71,7 +77,7 @@ namespace sw::editor
 		if ( pBest != nullptr )
 			return pBest;
 
-		GameObject* pNamed = pObjectManager->findGameObjectByName( hashed_string( kEditorCameraObjectName ) );
+		GameObject* pNamed = pObjectManager->findGameObjectByName( hashed_string( EditorCameraInternal::kEditorCameraObjectName ) );
 		if ( pNamed == nullptr )
 			return nullptr;
 		CameraComponent* pNamedCam = pNamed->getComponent<CameraComponent>();
@@ -93,7 +99,7 @@ namespace sw::editor
 			return nullptr;
 
 		pObjectManager->flushSceneTransforms();
-		CameraComponent* pCreated = createEditorCamera( pObjectManager );
+		CameraComponent* pCreated = EditorCameraInternal::createEditorCamera( pObjectManager );
 		pObjectManager->flushSceneTransforms();
 		return pCreated;
 	}

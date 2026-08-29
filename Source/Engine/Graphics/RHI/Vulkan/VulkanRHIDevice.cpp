@@ -52,22 +52,26 @@ namespace
 
 namespace sw
 {
-	SW_LOG_CALLER( "Vulkan" );
-
 	namespace
 	{
-
-		bool hasExtensionVal( const vector<VkExtensionProperties>& availableExts, const utf8* pName )
+		struct VulkanRHIDeviceInternal
 		{
-			for ( const VkExtensionProperties& ext : availableExts )
+			static bool hasExtensionVal( const vector<VkExtensionProperties>& availableExts, const utf8* pName )
 			{
-				if ( StringUtil::strcmp( ext.extensionName, pName ) == 0 )
-					return true;
+				for ( const VkExtensionProperties& ext : availableExts )
+				{
+					if ( StringUtil::strcmp( ext.extensionName, pName ) == 0 )
+						return true;
+				}
+				return false;
 			}
-			return false;
-		}
-
+		};
 	} // namespace
+} // namespace sw
+
+namespace sw
+{
+	SW_LOG_CALLER( "Vulkan" );
 
 	static const vector<const utf8*> s_listValidationLayers = {
 		"VK_LAYER_KHRONOS_validation" };
@@ -833,7 +837,7 @@ namespace sw
 			vkEnumerateInstanceExtensionProperties( nullptr, &availableExtCount, availableExts.data() );
 
 #if defined( SW_PLATFORM_WINDOWS )
-		if ( hasExtensionVal( availableExts, VK_KHR_WIN32_SURFACE_EXTENSION_NAME ) == false )
+		if ( VulkanRHIDeviceInternal::hasExtensionVal( availableExts, VK_KHR_WIN32_SURFACE_EXTENSION_NAME ) == false )
 		{
 			SW_LOG_ERROR( "VK_KHR_win32_surface is not available." );
 			return false;
@@ -842,13 +846,13 @@ namespace sw
 #elif defined( SW_PLATFORM_LINUX )
 		// WSLg/gfxstream often exposes xcb but not xlib.
 		_linuxWsi = 0;
-		if ( hasExtensionVal( availableExts, VK_KHR_XLIB_SURFACE_EXTENSION_NAME ) )
+		if ( VulkanRHIDeviceInternal::hasExtensionVal( availableExts, VK_KHR_XLIB_SURFACE_EXTENSION_NAME ) )
 		{
 			listExtensions.push_back( VK_KHR_XLIB_SURFACE_EXTENSION_NAME );
 			_linuxWsi = 1;
 			SW_LOG_TRACE( "Vulkan WSI: VK_KHR_xlib_surface" );
 		}
-		else if ( hasExtensionVal( availableExts, VK_KHR_XCB_SURFACE_EXTENSION_NAME ) )
+		else if ( VulkanRHIDeviceInternal::hasExtensionVal( availableExts, VK_KHR_XCB_SURFACE_EXTENSION_NAME ) )
 		{
 			listExtensions.push_back( VK_KHR_XCB_SURFACE_EXTENSION_NAME );
 			_linuxWsi = 2;
@@ -864,14 +868,14 @@ namespace sw
 			return false;
 		}
 #elif defined( SW_PLATFORM_MACOS )
-		if ( hasExtensionVal( availableExts, VK_EXT_METAL_SURFACE_EXTENSION_NAME ) == false )
+		if ( VulkanRHIDeviceInternal::hasExtensionVal( availableExts, VK_EXT_METAL_SURFACE_EXTENSION_NAME ) == false )
 		{
 			SW_LOG_ERROR( "VK_EXT_metal_surface is not available." );
 			return false;
 		}
 		listExtensions.push_back( VK_EXT_METAL_SURFACE_EXTENSION_NAME );
 #endif
-		if ( _bEnableValidationLayers && hasExtensionVal( availableExts, VK_EXT_DEBUG_UTILS_EXTENSION_NAME ) )
+		if ( _bEnableValidationLayers && VulkanRHIDeviceInternal::hasExtensionVal( availableExts, VK_EXT_DEBUG_UTILS_EXTENSION_NAME ) )
 			listExtensions.push_back( VK_EXT_DEBUG_UTILS_EXTENSION_NAME );
 		else if ( _bEnableValidationLayers )
 			_bEnableValidationLayers = false;

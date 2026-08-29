@@ -13,26 +13,32 @@ namespace sw::editor
 {
 	namespace
 	{
-		string getTypeString( const GlobalVariableInfo& info )
+		struct EditorGlobalVariableCommandsInternal
 		{
-			switch ( info._type )
+			static string getTypeString( const GlobalVariableInfo& info )
 			{
-				case GlobalVariableType::Boolean:
-					return "Bool";
-				case GlobalVariableType::Int32:
-					return "Int32";
-				case GlobalVariableType::Float:
-					return "Float";
-				case GlobalVariableType::String:
-					return "String";
-				case GlobalVariableType::Enum:
-					return info._enumType.empty() == false ? info._enumType : "Enum";
-				default:
-					return "Unknown";
+				switch ( info._type )
+				{
+					case GlobalVariableType::Boolean:
+						return "Bool";
+					case GlobalVariableType::Int32:
+						return "Int32";
+					case GlobalVariableType::Float:
+						return "Float";
+					case GlobalVariableType::String:
+						return "String";
+					case GlobalVariableType::Enum:
+						return info._enumType.empty() == false ? info._enumType : "Enum";
+					default:
+						return "Unknown";
+				}
 			}
-		}
+		};
 	} // namespace
+} // namespace sw::editor
 
+namespace sw::editor
+{
 	string EditorGlobalVariableCommands::getPresetFolderPath()
 	{
 		return FileUtil::joinPath( FileUtil::getCurrentPath(), "Resource/game/demo/data/presets/globalvars" );
@@ -62,7 +68,7 @@ namespace sw::editor
 
 			XmlNode varNode = root.appendChild( "Var" );
 			varNode.appendAttr( "name", pInfo->_name );
-			varNode.appendAttr( "type", getTypeString( *pInfo ) );
+			varNode.appendAttr( "type", EditorGlobalVariableCommandsInternal::getTypeString( *pInfo ) );
 			varNode.appendAttr( "value", pInfo->getValueAsString() );
 		}
 

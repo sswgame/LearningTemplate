@@ -21,44 +21,71 @@
 
 namespace sw
 {
-	SW_LOG_CALLER( "Scene" );
-
 	namespace
 	{
-
-		/**
-		 * @brief 엔진 데이터 설정으로부터 기본 머티리얼 경로를 반환합니다.
-		 */
-		string resolveDefaultMaterialPath()
+		struct SceneInternal
 		{
-			return engine::getEngineData()._defaultMaterial;
-		}
-
-		/** @brief MeshComponent의 프리미티브 메시와 씬 기본 머티리얼을 채웁니다. */
-		void bindSceneMeshDefaults( Scene* pScene )
-		{
-			if ( pScene == nullptr )
-				return;
-			GameObjectManager* pObjectManager = pScene->getObjectManager();
-			if ( pObjectManager == nullptr )
-				return;
-
-			Material* pDefaultMaterial = pScene->getMaterial();
-			for ( GameObject* pObj : pObjectManager->getAllGameObjects() )
+			/**
+			 * @brief 엔진 데이터 설정으로부터 기본 머티리얼 경로를 반환합니다.
+			 */
+			static string resolveDefaultMaterialPath()
 			{
-				if ( pObj == nullptr )
-					continue;
-				MeshComponent* pMeshComp = pObj->getComponent<MeshComponent>();
-				if ( pMeshComp == nullptr )
-					continue;
-				pMeshComp->resolveRuntimeMesh();
-				if ( pMeshComp->getMaterial() == nullptr && pDefaultMaterial != nullptr )
-					pMeshComp->setMaterial( pDefaultMaterial );
+				return engine::getEngineData()._defaultMaterial;
 			}
-			pObjectManager->flushSceneTransforms();
-		}
 
+			/** @brief MeshComponent의 프리미티브 메시와 씬 기본 머티리얼을 채웁니다. */
+			static void bindSceneMeshDefaults( Scene* pScene )
+			{
+				if ( pScene == nullptr )
+					return;
+				GameObjectManager* pObjectManager = pScene->getObjectManager();
+				if ( pObjectManager == nullptr )
+					return;
+
+				Material* pDefaultMaterial = pScene->getMaterial();
+				for ( GameObject* pObj : pObjectManager->getAllGameObjects() )
+				{
+					if ( pObj == nullptr )
+						continue;
+					MeshComponent* pMeshComp = pObj->getComponent<MeshComponent>();
+					if ( pMeshComp == nullptr )
+						continue;
+					pMeshComp->resolveRuntimeMesh();
+					if ( pMeshComp->getMaterial() == nullptr && pDefaultMaterial != nullptr )
+						pMeshComp->setMaterial( pDefaultMaterial );
+				}
+				pObjectManager->flushSceneTransforms();
+			}
+
+			static CameraComponent* findOrCreateCamera( GameObjectManager* pObjectManager, hashed_string name, CameraRole role, const float3& pos, const float3& lookTarget )
+			{
+				GameObject* pObj = pObjectManager->findGameObjectByName( name );
+				if ( pObj == nullptr )
+					pObj = pObjectManager->createGameObject( name );
+				if ( pObj == nullptr )
+					return nullptr;
+
+				CameraComponent* pCam = pObj->getComponent<CameraComponent>();
+				if ( pCam == nullptr )
+					pCam = pObj->addComponent<CameraComponent>();
+				if ( pCam == nullptr )
+					return nullptr;
+
+				pCam->setRole( role );
+				pCam->setLocalPosition( pos );
+				pCam->lookAt( lookTarget );
+				pCam->setFieldOfViewY( 0.70f );
+				pCam->setNearPlane( 0.1f );
+				pCam->setFarPlane( 100.0f );
+				return pCam;
+			}
+		};
 	} // namespace
+} // namespace sw
+
+namespace sw
+{
+	SW_LOG_CALLER( "Scene" );
 
 	Scene::Scene( string_view name )
 		: _name{ name }
@@ -82,7 +109,7 @@ namespace sw
 	 */
 	bool Scene::initialize( IRHIDevice* pRhiDevice )
 	{
-		const string materialPath = resolveDefaultMaterialPath();
+		const string materialPath = SceneInternal::resolveDefaultMaterialPath();
 		if ( materialPath.empty() == false )
 		{
 			if ( _pMaterial == nullptr || _defaultMaterialPath != materialPath )
@@ -99,7 +126,7 @@ namespace sw
 			}
 		}
 		ensureDefaultCameras();
-		bindSceneMeshDefaults( this );
+		SceneInternal::bindSceneMeshDefaults( this );
 		return true;
 	}
 
@@ -220,32 +247,6 @@ namespace sw
 			SW_LOG_ERROR( "FrameRenderer execute failed." );
 	}
 
-	namespace
-	{
-		static CameraComponent* findOrCreateCamera( GameObjectManager* pObjectManager, hashed_string name, CameraRole role, const float3& pos, const float3& lookTarget )
-		{
-			GameObject* pObj = pObjectManager->findGameObjectByName( name );
-			if ( pObj == nullptr )
-				pObj = pObjectManager->createGameObject( name );
-			if ( pObj == nullptr )
-				return nullptr;
-
-			CameraComponent* pCam = pObj->getComponent<CameraComponent>();
-			if ( pCam == nullptr )
-				pCam = pObj->addComponent<CameraComponent>();
-			if ( pCam == nullptr )
-				return nullptr;
-
-			pCam->setRole( role );
-			pCam->setLocalPosition( pos );
-			pCam->lookAt( lookTarget );
-			pCam->setFieldOfViewY( 0.70f );
-			pCam->setNearPlane( 0.1f );
-			pCam->setFarPlane( 100.0f );
-			return pCam;
-		}
-	} // namespace
-
 	/**
 	 * @brief 게임 카메라가 씬에 존재하는지 검사하고 없으면 기본 위치에 자동 생성합니다.
 	 */
@@ -259,7 +260,7 @@ namespace sw
 
 		_objectManager->flushSceneTransforms();
 
-		findOrCreateCamera( _objectManager.get(), hashed_string( "GameCamera" ), CameraRole::Game, float3( 0.0f, 1.2f, 3.2f ), float3( 0.0f, 0.0f, 0.0f ) );
+		SceneInternal::findOrCreateCamera( _objectManager.get(), hashed_string( "GameCamera" ), CameraRole::Game, float3( 0.0f, 1.2f, 3.2f ), float3( 0.0f, 0.0f, 0.0f ) );
 
 		_objectManager->flushSceneTransforms();
 

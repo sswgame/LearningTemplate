@@ -22,157 +22,163 @@ namespace sw::editor
 {
 	namespace
 	{
-		string getTypeString( const GlobalVariableInfo& info )
+		struct GlobalVariablesPanelInternal
 		{
-			switch ( info._type )
+			static string getTypeString( const GlobalVariableInfo& info )
 			{
-				case GlobalVariableType::Boolean:
-					return "Bool";
-				case GlobalVariableType::Int32:
-					return "Int32";
-				case GlobalVariableType::Float:
-					return "Float";
-				case GlobalVariableType::String:
-					return "String";
-				case GlobalVariableType::Enum:
-					return info._enumType.empty() == false ? info._enumType : "Enum";
-				default:
-					return "Unknown";
-			}
-		}
-
-		bool matchFilter( const GlobalVariableInfo& info, const utf8* pFilter )
-		{
-			if ( pFilter == nullptr || pFilter[0] == '\0' )
-				return true;
-
-			const string filterLower = StringUtil::toLower( pFilter );
-			const string nameLower	 = StringUtil::toLower( info._name.c_str() );
-			const string descLower	 = StringUtil::toLower( info._description.c_str() );
-			const string modLower	 = StringUtil::toLower( info._moduleName.c_str() );
-
-			const bool bMatchName = ( nameLower.find( filterLower ) != string::npos );
-			const bool bMatchDesc = ( descLower.find( filterLower ) != string::npos );
-			const bool bMatchMod  = ( modLower.find( filterLower ) != string::npos );
-
-			return bMatchName || bMatchDesc || bMatchMod;
-		}
-
-		bool compareVariableInfo( const GlobalVariableInfo* pA, const GlobalVariableInfo* pB )
-		{
-			if ( pA->_moduleName != pB->_moduleName )
-				return pA->_moduleName < pB->_moduleName;
-			return pA->_name < pB->_name;
-		}
-
-		void drawVariableWidget( GlobalVariableInfo& info )
-		{
-			ImGui::SetNextItemWidth( -1.0f );
-			if ( info._pData == nullptr )
-			{
-				ImGui::TextDisabled( "(null data)" );
-				return;
+				switch ( info._type )
+				{
+					case GlobalVariableType::Boolean:
+						return "Bool";
+					case GlobalVariableType::Int32:
+						return "Int32";
+					case GlobalVariableType::Float:
+						return "Float";
+					case GlobalVariableType::String:
+						return "String";
+					case GlobalVariableType::Enum:
+						return info._enumType.empty() == false ? info._enumType : "Enum";
+					default:
+						return "Unknown";
+				}
 			}
 
-			switch ( info._type )
+			static bool matchFilter( const GlobalVariableInfo& info, const utf8* pFilter )
 			{
-				case GlobalVariableType::Boolean:
+				if ( pFilter == nullptr || pFilter[0] == '\0' )
+					return true;
+
+				const string filterLower = StringUtil::toLower( pFilter );
+				const string nameLower	 = StringUtil::toLower( info._name.c_str() );
+				const string descLower	 = StringUtil::toLower( info._description.c_str() );
+				const string modLower	 = StringUtil::toLower( info._moduleName.c_str() );
+
+				const bool bMatchName = ( nameLower.find( filterLower ) != string::npos );
+				const bool bMatchDesc = ( descLower.find( filterLower ) != string::npos );
+				const bool bMatchMod  = ( modLower.find( filterLower ) != string::npos );
+
+				return bMatchName || bMatchDesc || bMatchMod;
+			}
+
+			static bool compareVariableInfo( const GlobalVariableInfo* pA, const GlobalVariableInfo* pB )
+			{
+				if ( pA->_moduleName != pB->_moduleName )
+					return pA->_moduleName < pB->_moduleName;
+				return pA->_name < pB->_name;
+			}
+
+			static void drawVariableWidget( GlobalVariableInfo& info )
+			{
+				ImGui::SetNextItemWidth( -1.0f );
+				if ( info._pData == nullptr )
 				{
-					bool* pVal = static_cast<bool*>( info._pData );
-					bool  bVal = *pVal;
-					if ( ImGui::Checkbox( "##val", &bVal ) )
-					{
-						*pVal = bVal;
-						if ( info._onValueChanged.isBound() )
-							info._onValueChanged( &info );
-					}
-					break;
+					ImGui::TextDisabled( "(null data)" );
+					return;
 				}
-				case GlobalVariableType::Float:
+
+				switch ( info._type )
 				{
-					float32* pVal = static_cast<float32*>( info._pData );
-					float32	 fVal = *pVal;
-					if ( ImGui::DragFloat( "##val", &fVal, 0.1f ) )
+					case GlobalVariableType::Boolean:
 					{
-						*pVal = fVal;
-						if ( info._onValueChanged.isBound() )
-							info._onValueChanged( &info );
-					}
-					break;
-				}
-				case GlobalVariableType::Int32:
-				{
-					int32* pVal = static_cast<int32*>( info._pData );
-					int32  iVal = *pVal;
-					if ( ImGui::DragInt( "##val", &iVal ) )
-					{
-						*pVal = iVal;
-						if ( info._onValueChanged.isBound() )
-							info._onValueChanged( &info );
-					}
-					break;
-				}
-				case GlobalVariableType::Enum:
-				{
-					int32*			pVal	  = static_cast<int32*>( info._pData );
-					TypeRegistry*	pRegistry = editor::getService<TypeRegistry>();
-					const EnumInfo* pEnumInfo =
-						( pRegistry != nullptr && info._enumType.empty() == false )
-							? pRegistry->findEnum( hashed_string( info._enumType.c_str() ) )
-							: nullptr;
-					if ( pEnumInfo != nullptr && pEnumInfo->_mapValueToName.empty() == false )
-					{
-						const utf8* pName =
-							pRegistry->enumToString( hashed_string( info._enumType.c_str() ), *pVal );
-						const utf8* pPreview = ( pName != nullptr ) ? pName : "<Unknown>";
-						if ( ImGui::BeginCombo( "##val", pPreview ) )
+						bool* pVal = static_cast<bool*>( info._pData );
+						bool  bVal = *pVal;
+						if ( ImGui::Checkbox( "##val", &bVal ) )
 						{
-							for ( const auto& [val, nameHashed] : pEnumInfo->_mapValueToName )
-							{
-								const int32 val32	  = static_cast<int32>( val );
-								const utf8* name	  = nameHashed.c_str();
-								const bool	bSelected = ( val32 == *pVal );
-								if ( ImGui::Selectable( name, bSelected ) )
-								{
-									*pVal = val32;
-									if ( info._onValueChanged.isBound() )
-										info._onValueChanged( &info );
-								}
-								if ( bSelected )
-									ImGui::SetItemDefaultFocus();
-							}
-							ImGui::EndCombo();
+							*pVal = bVal;
+							if ( info._onValueChanged.isBound() )
+								info._onValueChanged( &info );
 						}
+						break;
 					}
-					else
+					case GlobalVariableType::Float:
 					{
-						int32 iVal = *pVal;
+						float32* pVal = static_cast<float32*>( info._pData );
+						float32	 fVal = *pVal;
+						if ( ImGui::DragFloat( "##val", &fVal, 0.1f ) )
+						{
+							*pVal = fVal;
+							if ( info._onValueChanged.isBound() )
+								info._onValueChanged( &info );
+						}
+						break;
+					}
+					case GlobalVariableType::Int32:
+					{
+						int32* pVal = static_cast<int32*>( info._pData );
+						int32  iVal = *pVal;
 						if ( ImGui::DragInt( "##val", &iVal ) )
 						{
 							*pVal = iVal;
 							if ( info._onValueChanged.isBound() )
 								info._onValueChanged( &info );
 						}
+						break;
 					}
-					break;
-				}
-				case GlobalVariableType::String:
-				{
-					string* pVal = static_cast<string*>( info._pData );
-					utf8	arrBuf[512];
-					StringUtil::strncpy( arrBuf, pVal->c_str(), sizeof( arrBuf ) );
-					if ( ImGui::InputText( "##val", arrBuf, sizeof( arrBuf ) ) )
+					case GlobalVariableType::Enum:
 					{
-						*pVal = arrBuf;
-						if ( info._onValueChanged.isBound() )
-							info._onValueChanged( &info );
+						int32*			pVal	  = static_cast<int32*>( info._pData );
+						TypeRegistry*	pRegistry = editor::getService<TypeRegistry>();
+						const EnumInfo* pEnumInfo =
+							( pRegistry != nullptr && info._enumType.empty() == false )
+								? pRegistry->findEnum( hashed_string( info._enumType.c_str() ) )
+								: nullptr;
+						if ( pEnumInfo != nullptr && pEnumInfo->_mapValueToName.empty() == false )
+						{
+							const utf8* pName =
+								pRegistry->enumToString( hashed_string( info._enumType.c_str() ), *pVal );
+							const utf8* pPreview = ( pName != nullptr ) ? pName : "<Unknown>";
+							if ( ImGui::BeginCombo( "##val", pPreview ) )
+							{
+								for ( const auto& [val, nameHashed] : pEnumInfo->_mapValueToName )
+								{
+									const int32 val32	  = static_cast<int32>( val );
+									const utf8* name	  = nameHashed.c_str();
+									const bool	bSelected = ( val32 == *pVal );
+									if ( ImGui::Selectable( name, bSelected ) )
+									{
+										*pVal = val32;
+										if ( info._onValueChanged.isBound() )
+											info._onValueChanged( &info );
+									}
+									if ( bSelected )
+										ImGui::SetItemDefaultFocus();
+								}
+								ImGui::EndCombo();
+							}
+						}
+						else
+						{
+							int32 iVal = *pVal;
+							if ( ImGui::DragInt( "##val", &iVal ) )
+							{
+								*pVal = iVal;
+								if ( info._onValueChanged.isBound() )
+									info._onValueChanged( &info );
+							}
+						}
+						break;
 					}
-					break;
+					case GlobalVariableType::String:
+					{
+						string* pVal = static_cast<string*>( info._pData );
+						utf8	arrBuf[512];
+						StringUtil::strncpy( arrBuf, pVal->c_str(), sizeof( arrBuf ) );
+						if ( ImGui::InputText( "##val", arrBuf, sizeof( arrBuf ) ) )
+						{
+							*pVal = arrBuf;
+							if ( info._onValueChanged.isBound() )
+								info._onValueChanged( &info );
+						}
+						break;
+					}
 				}
 			}
-		}
+		};
 	} // namespace
+} // namespace sw::editor
 
+namespace sw::editor
+{
 	GlobalVariablesPanel::GlobalVariablesPanel()
 		: IEditorPanel( false )
 		, _uniquePinnedVar{}
@@ -285,11 +291,11 @@ namespace sw::editor
 			GlobalVariableInfo* pInfo = pGvm->findVariable( varName );
 			if ( pInfo == nullptr )
 				continue;
-			if ( matchFilter( *pInfo, _arrSearchFilter ) )
+			if ( GlobalVariablesPanelInternal::matchFilter( *pInfo, _arrSearchFilter ) )
 				listFiltered.push_back( pInfo );
 		}
 
-		std::sort( listFiltered.begin(), listFiltered.end(), compareVariableInfo );
+		std::sort( listFiltered.begin(), listFiltered.end(), GlobalVariablesPanelInternal::compareVariableInfo );
 
 		editor::drawCountLabel( static_cast<uint32>( listFiltered.size() ), totalVarCount, "variables" );
 
@@ -442,11 +448,11 @@ namespace sw::editor
 
 		// Type 컬럼
 		ImGui::TableNextColumn();
-		ImGui::TextDisabled( "%s", getTypeString( info ).c_str() );
+		ImGui::TextDisabled( "%s", GlobalVariablesPanelInternal::getTypeString( info ).c_str() );
 
 		// Value / Widget 컬럼
 		ImGui::TableNextColumn();
-		drawVariableWidget( info );
+		GlobalVariablesPanelInternal::drawVariableWidget( info );
 
 		// Reset 컬럼
 		ImGui::TableNextColumn();

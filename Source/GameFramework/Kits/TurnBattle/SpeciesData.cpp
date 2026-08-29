@@ -6,34 +6,38 @@
 
 namespace sw
 {
-	SW_LOG_CALLER( "SpeciesCatalog" );
-
 	namespace
 	{
-
-		vector<MoveDef>& moves()
+		struct SpeciesDataInternal
 		{
-			static vector<MoveDef> s_listMoves;
-			return s_listMoves;
-		}
+			static vector<MoveDef>& moves()
+			{
+				static vector<MoveDef> s_listMoves;
+				return s_listMoves;
+			}
 
-		vector<SpeciesDef>& species()
-		{
-			static vector<SpeciesDef> s_listSpecies;
-			return s_listSpecies;
-		}
+			static vector<SpeciesDef>& species()
+			{
+				static vector<SpeciesDef> s_listSpecies;
+				return s_listSpecies;
+			}
 
-		void seedFallback()
-		{
-			moves().clear();
-			species().clear();
-			moves().push_back( { "tackle", "Tackle", 40, 35 } );
-			moves().push_back( { "growl", "Growl", 0, 40 } );
-			species().push_back( { "critter_a", "Wild Critter", 40, 10, 0, 1 } );
-			species().push_back( { "starter_a", "Leaf Pup", 45, 11, 0, 1 } );
-		}
-
+			static void seedFallback()
+			{
+				moves().clear();
+				species().clear();
+				moves().push_back( { "tackle", "Tackle", 40, 35 } );
+				moves().push_back( { "growl", "Growl", 0, 40 } );
+				species().push_back( { "critter_a", "Wild Critter", 40, 10, 0, 1 } );
+				species().push_back( { "starter_a", "Leaf Pup", 45, 11, 0, 1 } );
+			}
+		};
 	} // namespace
+} // namespace sw
+
+namespace sw
+{
+	SW_LOG_CALLER( "SpeciesCatalog" );
 
 	bool SpeciesCatalog::loadFromResource( string_view assetRelativePath )
 	{
@@ -44,7 +48,7 @@ namespace sw
 		if ( doc.loadResource( assetRelativePath, &absPath ) == false )
 		{
 			SW_LOG_ERROR( "Failed to read %# — using fallback table.", assetRelativePath );
-			seedFallback();
+			SpeciesDataInternal::seedFallback();
 			return false;
 		}
 
@@ -52,7 +56,7 @@ namespace sw
 		if ( root.isValid() == false )
 		{
 			SW_LOG_ERROR( "Missing <SpeciesCatalog> in %# — using fallback.", absPath );
-			seedFallback();
+			SpeciesDataInternal::seedFallback();
 			return false;
 		}
 
@@ -70,7 +74,7 @@ namespace sw
 				def._name  = pName != nullptr ? pName : pId;
 				def._power = moveNode.attrInt( "power", 0 );
 				def._ppMax = moveNode.attrInt( "ppMax", 0 );
-				moves().push_back( std::move( def ) );
+				SpeciesDataInternal::moves().push_back( std::move( def ) );
 			}
 		}
 
@@ -94,52 +98,52 @@ namespace sw
 					def._move0 = 0;
 				if ( def._move1 < 0 )
 					def._move1 = 0;
-				species().push_back( std::move( def ) );
+				SpeciesDataInternal::species().push_back( std::move( def ) );
 			}
 		}
 
-		if ( moves().empty() || species().empty() )
+		if ( SpeciesDataInternal::moves().empty() || SpeciesDataInternal::species().empty() )
 		{
 			SW_LOG_ERROR( "Empty table in %# — using fallback.", absPath );
-			seedFallback();
+			SpeciesDataInternal::seedFallback();
 			return false;
 		}
 
 		SW_LOG_INFO( "Loaded %# moves, %# species from %#",
-					 static_cast<uint32>( moves().size() ), static_cast<uint32>( species().size() ), absPath );
+					 static_cast<uint32>( SpeciesDataInternal::moves().size() ), static_cast<uint32>( SpeciesDataInternal::species().size() ), absPath );
 		return true;
 	}
 
 	const SpeciesDef* SpeciesCatalog::findSpecies( const utf8* pId )
 	{
-		if ( species().empty() )
-			seedFallback();
+		if ( SpeciesDataInternal::species().empty() )
+			SpeciesDataInternal::seedFallback();
 		if ( pId == nullptr )
-			return &species()[0];
-		for ( const SpeciesDef& speciesDef : species() )
+			return &SpeciesDataInternal::species()[0];
+		for ( const SpeciesDef& speciesDef : SpeciesDataInternal::species() )
 		{
 			if ( speciesDef._id == pId )
 				return &speciesDef;
 		}
-		return &species()[0];
+		return &SpeciesDataInternal::species()[0];
 	}
 
 	const MoveDef* SpeciesCatalog::findMove( int32 index )
 	{
-		if ( moves().empty() )
-			seedFallback();
-		if ( index < 0 || index >= static_cast<int32>( moves().size() ) )
-			return &moves()[0];
-		return &moves()[static_cast<size_t>( index )];
+		if ( SpeciesDataInternal::moves().empty() )
+			SpeciesDataInternal::seedFallback();
+		if ( index < 0 || index >= static_cast<int32>( SpeciesDataInternal::moves().size() ) )
+			return &SpeciesDataInternal::moves()[0];
+		return &SpeciesDataInternal::moves()[static_cast<size_t>( index )];
 	}
 
 	int32 SpeciesCatalog::findMoveIndex( const utf8* pId )
 	{
 		if ( pId == nullptr )
 			return -1;
-		for ( size_t moveIndex = 0; moveIndex < moves().size(); ++moveIndex )
+		for ( size_t moveIndex = 0; moveIndex < SpeciesDataInternal::moves().size(); ++moveIndex )
 		{
-			if ( moves()[moveIndex]._id == pId )
+			if ( SpeciesDataInternal::moves()[moveIndex]._id == pId )
 				return static_cast<int32>( moveIndex );
 		}
 		return -1;
@@ -168,7 +172,7 @@ namespace sw
 
 	void SpeciesCatalog::clear()
 	{
-		moves().clear();
-		species().clear();
+		SpeciesDataInternal::moves().clear();
+		SpeciesDataInternal::species().clear();
 	}
 } // namespace sw

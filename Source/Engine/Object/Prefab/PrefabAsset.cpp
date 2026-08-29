@@ -17,104 +17,108 @@
 
 namespace sw
 {
-	SW_LOG_CALLER( "PrefabAsset" );
-
 	namespace
 	{
-
-		constexpr const utf8* kRoot				= "Prefab";
-		constexpr const utf8* kName				= "name";
-		constexpr const utf8* kGameObject		= "GameObject";
-		constexpr const utf8* kDefaultInstance	= "PrefabInstance";
-		constexpr uint32	  kPrefabBinMagic2	= 0x50464232u; // 'PFB2'
-		constexpr uint32	  kPrefabBinVersion = 0;
-
-		string makePrefabCacheKey( string_view assetRelativePath )
+		struct PrefabAssetInternal
 		{
-			string key = FileUtil::normalizePath( assetRelativePath );
-			if ( FileUtil::hasExtension( key, ".bin" ) )
-				key.resize( key.size() - 4 );
-			else if ( FileUtil::hasExtension( key, ".xml" ) )
-				key.resize( key.size() - 4 );
-			else if ( FileUtil::hasExtension( key, ".json" ) )
-				key.resize( key.size() - 5 );
-			return key;
-		}
+			static constexpr const utf8* kRoot			   = "Prefab";
+			static constexpr const utf8* kName			   = "name";
+			static constexpr const utf8* kGameObject	   = "GameObject";
+			static constexpr const utf8* kDefaultInstance  = "PrefabInstance";
+			static constexpr uint32		 kPrefabBinMagic2  = 0x50464232u; // 'PFB2'
+			static constexpr uint32		 kPrefabBinVersion = 0;
 
-		void collectPrefabRefsFromText( const utf8* pText, vector<string>& outPathList )
-		{
-			if ( pText == nullptr || pText[0] == '\0' )
-				return;
-			if ( StringUtil::stristr( pText, ".prefab" ) == nullptr )
-				return;
-			outPathList.push_back( pText );
-		}
-
-		void collectPrefabRefsFromXml( XmlNode node, vector<string>& outPathList )
-		{
-			if ( node.isValid() == false )
-				return;
-			collectPrefabRefsFromText( node.text(), outPathList );
-			for ( XmlAttribute attr = node.firstAttr(); attr; attr = attr.next() )
-				collectPrefabRefsFromText( attr.value(), outPathList );
-			for ( XmlNode childNode = node.child(); childNode; childNode = childNode.next() )
-				collectPrefabRefsFromXml( childNode, outPathList );
-		}
-
-		void collectPrefabRefsFromJson( JsonValue value, vector<string>& outPathList )
-		{
-			if ( value.isValid() == false )
-				return;
-			if ( value.isString() )
+			static string makePrefabCacheKey( string_view assetRelativePath )
 			{
-				const string text = value.asString();
-				collectPrefabRefsFromText( text.c_str(), outPathList );
-				return;
+				string key = FileUtil::normalizePath( assetRelativePath );
+				if ( FileUtil::hasExtension( key, ".bin" ) )
+					key.resize( key.size() - 4 );
+				else if ( FileUtil::hasExtension( key, ".xml" ) )
+					key.resize( key.size() - 4 );
+				else if ( FileUtil::hasExtension( key, ".json" ) )
+					key.resize( key.size() - 5 );
+				return key;
 			}
-			if ( value.isObject() )
+
+			static void collectPrefabRefsFromText( const utf8* pText, vector<string>& outPathList )
 			{
-				const vector<string> listKeys = value.memberNames();
-				for ( const string& key : listKeys )
-					collectPrefabRefsFromJson( value.get( key ), outPathList );
-				return;
+				if ( pText == nullptr || pText[0] == '\0' )
+					return;
+				if ( StringUtil::stristr( pText, ".prefab" ) == nullptr )
+					return;
+				outPathList.push_back( pText );
 			}
-			if ( value.isArray() )
+
+			static void collectPrefabRefsFromXml( XmlNode node, vector<string>& outPathList )
 			{
-				const size_t count = value.size();
-				for ( size_t index = 0; index < count; ++index )
-					collectPrefabRefsFromJson( value.at( index ), outPathList );
+				if ( node.isValid() == false )
+					return;
+				collectPrefabRefsFromText( node.text(), outPathList );
+				for ( XmlAttribute attr = node.firstAttr(); attr; attr = attr.next() )
+					collectPrefabRefsFromText( attr.value(), outPathList );
+				for ( XmlNode childNode = node.child(); childNode; childNode = childNode.next() )
+					collectPrefabRefsFromXml( childNode, outPathList );
 			}
-		}
 
-		bool upgradePrefabXmlBody( string& xmlBody )
-		{
-			if ( xmlBody.empty() )
-				return false;
+			static void collectPrefabRefsFromJson( JsonValue value, vector<string>& outPathList )
+			{
+				if ( value.isValid() == false )
+					return;
+				if ( value.isString() )
+				{
+					const string text = value.asString();
+					collectPrefabRefsFromText( text.c_str(), outPathList );
+					return;
+				}
+				if ( value.isObject() )
+				{
+					const vector<string> listKeys = value.memberNames();
+					for ( const string& key : listKeys )
+						collectPrefabRefsFromJson( value.get( key ), outPathList );
+					return;
+				}
+				if ( value.isArray() )
+				{
+					const size_t count = value.size();
+					for ( size_t index = 0; index < count; ++index )
+						collectPrefabRefsFromJson( value.at( index ), outPathList );
+				}
+			}
 
-			string bodyTrimmed = StringUtil::trim( xmlBody.c_str() );
-			if ( bodyTrimmed.empty() == false && bodyTrimmed.front() == '{' )
-				return true; // JSON 본문은 XML 업그레이드 대상이 아님
+			static bool upgradePrefabXmlBody( string& xmlBody )
+			{
+				if ( xmlBody.empty() )
+					return false;
 
-			string wrapped = "<Prefab>";
-			wrapped += xmlBody;
-			wrapped += "</Prefab>";
-			XmlDocument wrapDoc;
-			if ( wrapDoc.parse( wrapped ) == false )
-				return false;
-			XmlNode wrapRoot = wrapDoc.root( kRoot );
-			if ( wrapRoot.isValid() == false )
-				return false;
-			if ( engine::getResourceManager().getAssetFormatRegistry().upgradeXml( AssetKind::Prefab, wrapDoc, wrapRoot,
-																				   AssetFormatVersions::kPrefab ) == false )
-				return false;
-			XmlNode bodyNode = wrapRoot.child( kGameObject );
-			if ( bodyNode.isValid() == false )
-				return false;
-			xmlBody = bodyNode.toString();
-			return true;
-		}
+				string bodyTrimmed = StringUtil::trim( xmlBody.c_str() );
+				if ( bodyTrimmed.empty() == false && bodyTrimmed.front() == '{' )
+					return true; // JSON 본문은 XML 업그레이드 대상이 아님
 
+				string wrapped = "<Prefab>";
+				wrapped += xmlBody;
+				wrapped += "</Prefab>";
+				XmlDocument wrapDoc;
+				if ( wrapDoc.parse( wrapped ) == false )
+					return false;
+				XmlNode wrapRoot = wrapDoc.root( kRoot );
+				if ( wrapRoot.isValid() == false )
+					return false;
+				if ( engine::getResourceManager().getAssetFormatRegistry().upgradeXml( AssetKind::Prefab, wrapDoc, wrapRoot,
+																					   AssetFormatVersions::kPrefab ) == false )
+					return false;
+				XmlNode bodyNode = wrapRoot.child( kGameObject );
+				if ( bodyNode.isValid() == false )
+					return false;
+				xmlBody = bodyNode.toString();
+				return true;
+			}
+		};
 	} // namespace
+} // namespace sw
+
+namespace sw
+{
+	SW_LOG_CALLER( "PrefabAsset" );
 
 	PrefabAsset::PrefabAsset()
 		: _name{}
@@ -133,7 +137,7 @@ namespace sw
 			return false;
 		}
 
-		XmlNode root = doc.root( kRoot );
+		XmlNode root = doc.root( PrefabAssetInternal::kRoot );
 		if ( root.isValid() )
 		{
 			if ( engine::getResourceManager().getAssetFormatRegistry().upgradeXml( AssetKind::Prefab, doc, root, AssetFormatVersions::kPrefab ) ==
@@ -143,17 +147,17 @@ namespace sw
 				return false;
 			}
 
-			const utf8* pNameAttr = root.attr( kName );
+			const utf8* pNameAttr = root.attr( PrefabAssetInternal::kName );
 			if ( pNameAttr != nullptr )
 				_name = pNameAttr;
 			else
 			{
-				const utf8* pNameNode = root.childText( kName );
+				const utf8* pNameNode = root.childText( PrefabAssetInternal::kName );
 				if ( pNameNode != nullptr )
 					_name = pNameNode;
 			}
 
-			XmlNode bodyNode = root.child( kGameObject );
+			XmlNode bodyNode = root.child( PrefabAssetInternal::kGameObject );
 			if ( bodyNode.isValid() )
 				_stateData = bodyNode.toString();
 			else
@@ -162,7 +166,7 @@ namespace sw
 		else
 		{
 			// 루트가 <GameObject> 등 직접적인 XML인 경우 지원
-			XmlNode goNode = doc.root( kGameObject );
+			XmlNode goNode = doc.root( PrefabAssetInternal::kGameObject );
 			if ( goNode.isValid() )
 			{
 				const utf8* pNameAttr = goNode.attr( "_name" );
@@ -245,7 +249,7 @@ namespace sw
 		size_t offset{ 0 };
 
 		uint32 magic{ 0 };
-		if ( BinaryBlob::readU32( listBlob, offset, magic ) == false || magic != kPrefabBinMagic2 )
+		if ( BinaryBlob::readU32( listBlob, offset, magic ) == false || magic != PrefabAssetInternal::kPrefabBinMagic2 )
 		{
 			SW_LOG_ERROR( "Bad binary magic: %#", absPath );
 			return false;
@@ -257,7 +261,7 @@ namespace sw
 				SW_LOG_ERROR( "Binary version truncated: %#", absPath );
 				return false;
 			}
-			if ( version > kPrefabBinVersion )
+			if ( version > PrefabAssetInternal::kPrefabBinVersion )
 			{
 				SW_LOG_ERROR( "Unsupported binary version %# in %#", version, absPath );
 				return false;
@@ -269,7 +273,7 @@ namespace sw
 			return false;
 		}
 
-		if ( upgradePrefabXmlBody( _stateData ) == false )
+		if ( PrefabAssetInternal::upgradePrefabXmlBody( _stateData ) == false )
 		{
 			SW_LOG_ERROR( "formatVersion upgrade failed: %#", absPath );
 			return false;
@@ -298,9 +302,9 @@ namespace sw
 		}
 
 		XmlDocument xmlDoc;
-		XmlNode		root = xmlDoc.appendRoot( kRoot );
+		XmlNode		root = xmlDoc.appendRoot( PrefabAssetInternal::kRoot );
 		root.appendAttr( "formatVersion", 0u );
-		root.appendAttr( kName, _name );
+		root.appendAttr( PrefabAssetInternal::kName, _name );
 		if ( xmlBody.empty() == false )
 		{
 			XmlDocument bodyDoc;
@@ -361,8 +365,8 @@ namespace sw
 			absPath = assetRelativePath;
 
 		vector<uint8> listBlob;
-		BinaryBlob::appendU32( listBlob, kPrefabBinMagic2 );
-		BinaryBlob::appendU32( listBlob, kPrefabBinVersion );
+		BinaryBlob::appendU32( listBlob, PrefabAssetInternal::kPrefabBinMagic2 );
+		BinaryBlob::appendU32( listBlob, PrefabAssetInternal::kPrefabBinVersion );
 		BinaryBlob::appendString( listBlob, _name );
 		BinaryBlob::appendString( listBlob, _stateData );
 		return FileUtil::writeFile( absPath, listBlob.data(), listBlob.size() );
@@ -391,18 +395,18 @@ namespace sw
 			JsonDocument doc;
 			if ( doc.parse( trimmed ) == false )
 				return;
-			collectPrefabRefsFromJson( doc.root(), outPathList );
+			PrefabAssetInternal::collectPrefabRefsFromJson( doc.root(), outPathList );
 			return;
 		}
 		XmlDocument doc;
 		if ( doc.parse( trimmed ) == false )
 			return;
-		collectPrefabRefsFromXml( doc.root(), outPathList );
+		PrefabAssetInternal::collectPrefabRefsFromXml( doc.root(), outPathList );
 	}
 
 	PrefabAsset* PrefabManager::loadPrefab( string_view assetRelativePath )
 	{
-		const string cacheKey = makePrefabCacheKey( assetRelativePath );
+		const string cacheKey = PrefabAssetInternal::makePrefabCacheKey( assetRelativePath );
 		{
 			std::shared_lock<std::shared_mutex> readLock{ _mapCacheMutex };
 			const auto							cacheIt = _mapCache.find( cacheKey );
@@ -483,7 +487,7 @@ namespace sw
 
 		const utf8* pInstanceNameUtf8 = pInstanceName != nullptr ? pInstanceName : pAsset->getName().c_str();
 		if ( pInstanceNameUtf8 == nullptr || pInstanceNameUtf8[0] == '\0' )
-			pInstanceNameUtf8 = kDefaultInstance;
+			pInstanceNameUtf8 = PrefabAssetInternal::kDefaultInstance;
 
 		GameObject* pGameObject = pGameObjectManager->createGameObject( hashed_string( pInstanceNameUtf8 ) );
 		if ( pGameObject == nullptr )

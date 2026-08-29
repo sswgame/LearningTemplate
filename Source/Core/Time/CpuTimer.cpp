@@ -8,61 +8,64 @@
 
 namespace sw
 {
-
 	namespace
 	{
-
-		/**
-		 * @brief OS 고해상도 카운터 1틱당 경과 초(Second) 계수를 반환합니다.
-		 */
-		float64 getPerformanceSecondsPerCount() noexcept
+		struct CpuTimerInternal
 		{
-			static const float64 s_secondsPerCount = []()
+			/**
+			 * @brief OS 고해상도 카운터 1틱당 경과 초(Second) 계수를 반환합니다.
+			 */
+			static float64 getPerformanceSecondsPerCount() noexcept
 			{
+				static const float64 s_secondsPerCount = []()
+				{
 #if defined( SW_PLATFORM_WINDOWS )
-				int64 countsPerSec{};
-				QueryPerformanceFrequency( reinterpret_cast<LARGE_INTEGER*>( &countsPerSec ) );
-				return 1.0 / static_cast<float64>( countsPerSec );
+					int64 countsPerSec{};
+					QueryPerformanceFrequency( reinterpret_cast<LARGE_INTEGER*>( &countsPerSec ) );
+					return 1.0 / static_cast<float64>( countsPerSec );
 #elif defined( SW_PLATFORM_LINUX )
-				// Linux CLOCK_MONOTONIC: 1ns = 1e-9s
-				return 1e-9;
+					// Linux CLOCK_MONOTONIC: 1ns = 1e-9s
+					return 1e-9;
 #elif defined( SW_PLATFORM_MACOS )
-				// macOS mach_absolute_time: 1ns = 1e-9s
-				return 1e-9;
+					// macOS mach_absolute_time: 1ns = 1e-9s
+					return 1e-9;
 #else
 	#error "Unsupported platform"
 #endif
-			}();
-			return s_secondsPerCount;
-		}
+				}();
+				return s_secondsPerCount;
+			}
 
-		/**
-		 * @brief 현재 OS 고해상도 하드웨어 카운터 값을 반환합니다.
-		 */
-		int64 getCurrentPerformanceCount() noexcept
-		{
-			int64 currTime{};
+			/**
+			 * @brief 현재 OS 고해상도 하드웨어 카운터 값을 반환합니다.
+			 */
+			static int64 getCurrentPerformanceCount() noexcept
+			{
+				int64 currTime{};
 #if defined( SW_PLATFORM_WINDOWS )
-			QueryPerformanceCounter( reinterpret_cast<LARGE_INTEGER*>( &currTime ) );
+				QueryPerformanceCounter( reinterpret_cast<LARGE_INTEGER*>( &currTime ) );
 #elif defined( SW_PLATFORM_LINUX )
-			timespec time{};
-			clock_gettime( CLOCK_MONOTONIC, &time );
-			currTime = static_cast<int64>( time.tv_sec ) * 1'000'000'000LL + static_cast<int64>( time.tv_nsec );
+				timespec time{};
+				clock_gettime( CLOCK_MONOTONIC, &time );
+				currTime = static_cast<int64>( time.tv_sec ) * 1'000'000'000LL + static_cast<int64>( time.tv_nsec );
 #elif defined( SW_PLATFORM_MACOS )
-			mach_timebase_info_data_t timebaseInfo;
-			mach_timebase_info( &timebaseInfo );
-			uint64 time = mach_absolute_time();
-			currTime	= static_cast<int64>( time * timebaseInfo.numer ) / static_cast<int64>( timebaseInfo.denom );
+				mach_timebase_info_data_t timebaseInfo;
+				mach_timebase_info( &timebaseInfo );
+				uint64 time = mach_absolute_time();
+				currTime	= static_cast<int64>( time * timebaseInfo.numer ) / static_cast<int64>( timebaseInfo.denom );
 #else
 	#error "Unsupported platform"
 #endif
-			return currTime;
-		}
-
+				return currTime;
+			}
+		};
 	} // namespace
+} // namespace sw
 
+namespace sw
+{
 	CpuTimer::CpuTimer() noexcept
-		: _secondsPerCount{ getPerformanceSecondsPerCount() }
+		: _secondsPerCount{ CpuTimerInternal::getPerformanceSecondsPerCount() }
 		, _deltaTime{ -1.0 }
 		, _baseTime{ 0 }
 		, _pausedTime{ 0 }
@@ -97,7 +100,7 @@ namespace sw
 	 */
 	void CpuTimer::resetTimer() noexcept
 	{
-		const int64 currTime = getCurrentPerformanceCount();
+		const int64 currTime = CpuTimerInternal::getCurrentPerformanceCount();
 		_baseTime			 = currTime;
 		_prevTime			 = currTime;
 		_stopTime			 = 0;
@@ -107,7 +110,7 @@ namespace sw
 
 	void CpuTimer::startTimer() noexcept
 	{
-		const int64 startTime = getCurrentPerformanceCount();
+		const int64 startTime = CpuTimerInternal::getCurrentPerformanceCount();
 		if ( _bStopped )
 		{
 			_pausedTime += ( startTime - _stopTime );
@@ -121,7 +124,7 @@ namespace sw
 	{
 		if ( _bStopped == false )
 		{
-			_stopTime = getCurrentPerformanceCount();
+			_stopTime = CpuTimerInternal::getCurrentPerformanceCount();
 			_bStopped = true;
 		}
 	}
@@ -134,7 +137,7 @@ namespace sw
 			return;
 		}
 
-		_currentTime = getCurrentPerformanceCount();
+		_currentTime = CpuTimerInternal::getCurrentPerformanceCount();
 		_deltaTime	 = static_cast<float64>( _currentTime - _prevTime ) * _secondsPerCount;
 		_prevTime	 = _currentTime;
 

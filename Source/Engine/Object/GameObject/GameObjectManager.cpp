@@ -16,100 +16,106 @@
 
 namespace sw
 {
-	SW_LOG_CALLER( "GameObjectManager" );
-
 	namespace
 	{
-		mutex& getModuleFactoryHeadsMutex()
+		struct GameObjectManagerInternal
 		{
-			static mutex s_mutex;
-			return s_mutex;
-		}
-
-		unordered_map<string, ComponentFactoryRegistrar*>& getModuleFactoryHeads()
-		{
-			static unordered_map<string, ComponentFactoryRegistrar*> s_mapFactoryHeads;
-			return s_mapFactoryHeads;
-		}
-
-		vector<vector<ComponentHandle>> splitWaveByObject( const vector<ComponentHandle>& wave )
-		{
-			vector<vector<ComponentHandle>> subwaves;
-			vector<unordered_set<uint64>>	occupied;
-			for ( const ComponentHandle& handle : wave )
+			static mutex& getModuleFactoryHeadsMutex()
 			{
-				if ( handle.isValid() == false )
-					continue;
-				const uint64 objectId = handle.objectId();
-				size_t		 slot{ 0 };
-				for ( ; slot < subwaves.size(); ++slot )
-				{
-					if ( occupied[slot].count( objectId ) == 0 )
-						break;
-				}
-				if ( slot == subwaves.size() )
-				{
-					subwaves.emplace_back();
-					occupied.emplace_back();
-				}
-				subwaves[slot].push_back( handle );
-				occupied[slot].insert( objectId );
+				static mutex s_mutex;
+				return s_mutex;
 			}
-			return subwaves;
-		}
 
-		void resolveAndTickComponent( GameObjectManager* pManager, float32 deltaTime, const ComponentHandle& handle )
-		{
-			Component* pComp = pManager->resolveComponent( handle );
-			if ( pComp == nullptr || pComp->isActive() == false || pComp->canEverTick() == false )
-				return;
-			GameObject* pOwner = pComp->getOwner();
-			if ( pOwner == nullptr || pOwner->isActiveInHierarchy() == false || pOwner->isPendingKill() )
-				return;
-			pComp->onTick( deltaTime );
-		}
-
-		struct ComponentWaveTick
-		{
-			GameObjectManager*	   _pManager{ nullptr };
-			const ComponentHandle* _pRawHandles{ nullptr };
-			float32				   _deltaTime{ 0.0f };
-			uint32				   _totalCount{ 0 };
-
-			void tickIndex( uint32 index )
+			static unordered_map<string, ComponentFactoryRegistrar*>& getModuleFactoryHeads()
 			{
-				if ( index < _totalCount )
-					resolveAndTickComponent( _pManager, _deltaTime, _pRawHandles[index] );
+				static unordered_map<string, ComponentFactoryRegistrar*> s_mapFactoryHeads;
+				return s_mapFactoryHeads;
+			}
+
+			static vector<vector<ComponentHandle>> splitWaveByObject( const vector<ComponentHandle>& wave )
+			{
+				vector<vector<ComponentHandle>> subwaves;
+				vector<unordered_set<uint64>>	occupied;
+				for ( const ComponentHandle& handle : wave )
+				{
+					if ( handle.isValid() == false )
+						continue;
+					const uint64 objectId = handle.objectId();
+					size_t		 slot{ 0 };
+					for ( ; slot < subwaves.size(); ++slot )
+					{
+						if ( occupied[slot].count( objectId ) == 0 )
+							break;
+					}
+					if ( slot == subwaves.size() )
+					{
+						subwaves.emplace_back();
+						occupied.emplace_back();
+					}
+					subwaves[slot].push_back( handle );
+					occupied[slot].insert( objectId );
+				}
+				return subwaves;
+			}
+
+			static void resolveAndTickComponent( GameObjectManager* pManager, float32 deltaTime, const ComponentHandle& handle )
+			{
+				Component* pComp = pManager->resolveComponent( handle );
+				if ( pComp == nullptr || pComp->isActive() == false || pComp->canEverTick() == false )
+					return;
+				GameObject* pOwner = pComp->getOwner();
+				if ( pOwner == nullptr || pOwner->isActiveInHierarchy() == false || pOwner->isPendingKill() )
+					return;
+				pComp->onTick( deltaTime );
+			}
+
+			struct ComponentWaveTick
+			{
+				GameObjectManager*	   _pManager{ nullptr };
+				const ComponentHandle* _pRawHandles{ nullptr };
+				float32				   _deltaTime{ 0.0f };
+				uint32				   _totalCount{ 0 };
+
+				void tickIndex( uint32 index )
+				{
+					if ( index < _totalCount )
+						resolveAndTickComponent( _pManager, _deltaTime, _pRawHandles[index] );
+				}
+			};
+
+			static void dispatchWave( GameObjectManager* pManager, float32 deltaTime, const vector<ComponentHandle>& wave )
+			{
+				if ( wave.empty() )
+					return;
+
+				constexpr uint32 kParallelThreshold = 16;
+				if ( wave.size() < kParallelThreshold || engine::areEngineServicesBound() == false )
+				{
+					for ( const ComponentHandle& handle : wave )
+						resolveAndTickComponent( pManager, deltaTime, handle );
+					return;
+				}
+
+				ComponentWaveTick waveTick{};
+				waveTick._pManager	  = pManager;
+				waveTick._deltaTime	  = deltaTime;
+				waveTick._pRawHandles = wave.data();
+				waveTick._totalCount  = static_cast<uint32>( wave.size() );
+
+				TaskStageHandle stage  = engine::getTaskManager().createAnonymousStage( "ComponentWave" );
+				TaskHandle		handle = engine::getTaskManager().emplaceParallel(
+					waveTick._totalCount, SW_DELEGATE_METHOD( ParallelTaskDelegate, &ComponentWaveTick::tickIndex, &waveTick ) );
+				stage.addTask( handle );
+				handle.submit();
+				engine::getTaskManager().waitStage( stage );
 			}
 		};
-
-		void dispatchWave( GameObjectManager* pManager, float32 deltaTime, const vector<ComponentHandle>& wave )
-		{
-			if ( wave.empty() )
-				return;
-
-			constexpr uint32 kParallelThreshold = 16;
-			if ( wave.size() < kParallelThreshold || engine::areEngineServicesBound() == false )
-			{
-				for ( const ComponentHandle& handle : wave )
-					resolveAndTickComponent( pManager, deltaTime, handle );
-				return;
-			}
-
-			ComponentWaveTick waveTick{};
-			waveTick._pManager	  = pManager;
-			waveTick._deltaTime	  = deltaTime;
-			waveTick._pRawHandles = wave.data();
-			waveTick._totalCount  = static_cast<uint32>( wave.size() );
-
-			TaskStageHandle stage  = engine::getTaskManager().createAnonymousStage( "ComponentWave" );
-			TaskHandle		handle = engine::getTaskManager().emplaceParallel(
-				 waveTick._totalCount, SW_DELEGATE_METHOD( ParallelTaskDelegate, &ComponentWaveTick::tickIndex, &waveTick ) );
-			stage.addTask( handle );
-			handle.submit();
-			engine::getTaskManager().waitStage( stage );
-		}
 	} // namespace
+} // namespace sw
+
+namespace sw
+{
+	SW_LOG_CALLER( "GameObjectManager" );
 
 	static ComponentFactoryRegistrar* _s_engineHead{ nullptr };
 	static bool						  _s_engineHeadSealed{ false };
@@ -194,8 +200,8 @@ namespace sw
 
 		vector<std::pair<string, ComponentFactoryRegistrar*>> listModuleHeads;
 		{
-			std::scoped_lock<mutex> lock{ getModuleFactoryHeadsMutex() };
-			for ( const auto& [mod, head] : getModuleFactoryHeads() )
+			std::scoped_lock<mutex> lock{ GameObjectManagerInternal::getModuleFactoryHeadsMutex() };
+			for ( const auto& [mod, head] : GameObjectManagerInternal::getModuleFactoryHeads() )
 				listModuleHeads.push_back( { mod, head } );
 		}
 		for ( const auto& [mod, head] : listModuleHeads )
@@ -739,8 +745,8 @@ namespace sw
 			return;
 
 		{
-			std::scoped_lock<mutex> lock{ getModuleFactoryHeadsMutex() };
-			getModuleFactoryHeads()[string( moduleName )] = pHead;
+			std::scoped_lock<mutex> lock{ GameObjectManagerInternal::getModuleFactoryHeadsMutex() };
+			GameObjectManagerInternal::getModuleFactoryHeads()[string( moduleName )] = pHead;
 		}
 		_activeModuleName					= hashed_string( moduleName.data(), static_cast<uint32>( moduleName.size() ) );
 		ComponentFactoryRegistrar* pCurrent = pHead;
@@ -771,17 +777,17 @@ namespace sw
 	void GameObjectManager::registerModuleFactoryHead( string_view moduleName, sw::ComponentFactoryRegistrar* pHead )
 	{
 		_s_engineHeadSealed = true;
-		std::scoped_lock<mutex> lock{ getModuleFactoryHeadsMutex() };
+		std::scoped_lock<mutex> lock{ GameObjectManagerInternal::getModuleFactoryHeadsMutex() };
 		if ( pHead == nullptr )
-			getModuleFactoryHeads().erase( string( moduleName ) );
+			GameObjectManagerInternal::getModuleFactoryHeads().erase( string( moduleName ) );
 		else
-			getModuleFactoryHeads()[string( moduleName )] = pHead;
+			GameObjectManagerInternal::getModuleFactoryHeads()[string( moduleName )] = pHead;
 	}
 
 	void GameObjectManager::unregisterModuleFactoryHead( string_view moduleName )
 	{
-		std::scoped_lock<mutex> lock{ getModuleFactoryHeadsMutex() };
-		getModuleFactoryHeads().erase( string( moduleName ) );
+		std::scoped_lock<mutex> lock{ GameObjectManagerInternal::getModuleFactoryHeadsMutex() };
+		GameObjectManagerInternal::getModuleFactoryHeads().erase( string( moduleName ) );
 	}
 
 	Component* GameObjectManager::addComponentByName( GameObject* pGameObject, hashed_string typeName, bool bLogWarning )
@@ -863,7 +869,7 @@ namespace sw
 				listTargets.reserve( wave.size() );
 				for ( Component* pComp : wave )
 					listTargets.push_back( pComp->getHandle() );
-				vector<vector<ComponentHandle>> subwaves = splitWaveByObject( listTargets );
+				vector<vector<ComponentHandle>> subwaves = GameObjectManagerInternal::splitWaveByObject( listTargets );
 				for ( vector<ComponentHandle>& subwave : subwaves )
 				{
 					if ( subwave.empty() == false )
@@ -873,7 +879,7 @@ namespace sw
 		}
 
 		for ( const vector<ComponentHandle>& wave : _listCachedTickWave )
-			dispatchWave( this, deltaTime, wave );
+			GameObjectManagerInternal::dispatchWave( this, deltaTime, wave );
 	}
 
 	void GameObjectManager::registerGameObject( GameObject* pObj )

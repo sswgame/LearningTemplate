@@ -4,19 +4,22 @@
 
 namespace sw
 {
-
 	namespace
 	{
-
-		uint64 alignUp( uint64 value, uint64 alignment )
+		struct FrameResourceRingInternal
 		{
-			if ( alignment <= 1 )
-				return value;
-			return ( value + ( alignment - 1 ) ) & ~( alignment - 1 );
-		}
-
+			static uint64 alignUp( uint64 value, uint64 alignment )
+			{
+				if ( alignment <= 1 )
+					return value;
+				return ( value + ( alignment - 1 ) ) & ~( alignment - 1 );
+			}
+		};
 	} // namespace
+} // namespace sw
 
+namespace sw
+{
 	FrameResourceRing::FrameResourceRing()
 		: FrameResourceRing( 0 )
 	{
@@ -79,7 +82,7 @@ namespace sw
 	bool FrameResourceRing::tryAllocate( uint64 sizeBytes, uint64 alignment, uint64& outOffset )
 	{
 		Slot&		 slot	= _arrSlots[_frameIndex];
-		const uint64 offset = alignUp( slot._uploadOffset, alignment == 0 ? 1 : alignment );
+		const uint64 offset = FrameResourceRingInternal::alignUp( slot._uploadOffset, alignment == 0 ? 1 : alignment );
 		if ( offset > _uploadCapacity || sizeBytes > ( _uploadCapacity - offset ) )
 			return false;
 		outOffset		   = offset;

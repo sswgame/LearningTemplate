@@ -40,30 +40,37 @@
 
 namespace sw::editor
 {
-	SW_LOG_CALLER( "ImGuiEditor" );
-
 	namespace
 	{
-		constexpr uint32 kInvalidDrawSlot	= 0xFFFFFFFFu;
-		constexpr uint32 kDrawSnapshotCount = 2;
-		void			 loadSplashDefaultRenderPass( const TaskArgs& args )
+		struct ImGuiEditorInternal
 		{
-			shared_ptr<RenderPassResource> pPass = args.get<shared_ptr<RenderPassResource>>( 0 );
-			if ( pPass == nullptr )
-				return;
-			SW_LOG_TRACE( "Splash: reading DefaultRenderPass.xml" );
-			pPass->loadFromXmlFile( editor::getService<const EngineData>()->_defaultRenderPass );
-		}
+			static constexpr uint32 kInvalidDrawSlot   = 0xFFFFFFFFu;
+			static constexpr uint32 kDrawSnapshotCount = 2;
+			static void				loadSplashDefaultRenderPass( const TaskArgs& args )
+			{
+				shared_ptr<RenderPassResource> pPass = args.get<shared_ptr<RenderPassResource>>( 0 );
+				if ( pPass == nullptr )
+					return;
+				SW_LOG_TRACE( "Splash: reading DefaultRenderPass.xml" );
+				pPass->loadFromXmlFile( editor::getService<const EngineData>()->_defaultRenderPass );
+			}
 
-		void loadSplashForwardPipeline( const TaskArgs& args )
-		{
-			shared_ptr<RenderPipelineResource> pPipeline = args.get<shared_ptr<RenderPipelineResource>>( 0 );
-			if ( pPipeline == nullptr )
-				return;
-			SW_LOG_TRACE( "Splash: reading ForwardPipeline.xml" );
-			pPipeline->loadFromXmlFile( editor::getService<const EngineData>()->_defaultForwardPipeline );
-		}
+			static void loadSplashForwardPipeline( const TaskArgs& args )
+			{
+				shared_ptr<RenderPipelineResource> pPipeline = args.get<shared_ptr<RenderPipelineResource>>( 0 );
+				if ( pPipeline == nullptr )
+					return;
+				SW_LOG_TRACE( "Splash: reading ForwardPipeline.xml" );
+				pPipeline->loadFromXmlFile( editor::getService<const EngineData>()->_defaultForwardPipeline );
+			}
+		};
 	} // namespace
+} // namespace sw::editor
+
+namespace sw::editor
+{
+	SW_LOG_CALLER( "ImGuiEditor" );
+
 	ImGuiEditor::ImGuiEditor()
 		: _platformBackend{ nullptr }
 		, _rendererBackend{ nullptr }
@@ -72,7 +79,7 @@ namespace sw::editor
 		, _dockLayout{}
 		, _arrDrawSnapshot{}
 		, _publishedDrawSlot{ 0 }
-		, _inFlightDrawSlot{ kInvalidDrawSlot }
+		, _inFlightDrawSlot{ ImGuiEditorInternal::kInvalidDrawSlot }
 		, _bInitialized{ SW_FALSE }
 		, _reservedFlags{ 0 }
 	{
@@ -171,12 +178,12 @@ namespace sw::editor
 			TaskManager* pTaskManager = editor::getService<TaskManager>();
 			TaskHandle	 hDefault	  = pTaskManager->emplaceTask(
 				"EditorSplash_DefaultRenderPass",
-				SW_DELEGATE_FUNCTION( TaskArgsDelegate, loadSplashDefaultRenderPass ),
+				SW_DELEGATE_FUNCTION( TaskArgsDelegate, ImGuiEditorInternal::loadSplashDefaultRenderPass ),
 				MakeTaskArgs( defaultPass ) );
 
 			TaskHandle hForward = pTaskManager->emplaceTask(
 				"EditorSplash_ForwardPipeline",
-				SW_DELEGATE_FUNCTION( TaskArgsDelegate, loadSplashForwardPipeline ),
+				SW_DELEGATE_FUNCTION( TaskArgsDelegate, ImGuiEditorInternal::loadSplashForwardPipeline ),
 				MakeTaskArgs( forwardPipeline ) );
 
 			TaskStageHandle stage = pTaskManager->getOrCreateStage( "EditorSplash" );
@@ -316,7 +323,7 @@ namespace sw::editor
 
 		const uint32 slot = _publishedDrawSlot.load( std::memory_order_acquire );
 		_inFlightDrawSlot.store( slot, std::memory_order_release );
-		if ( slot >= kDrawSnapshotCount )
+		if ( slot >= ImGuiEditorInternal::kDrawSnapshotCount )
 			return;
 
 		ImDrawData* pDrawData = _arrDrawSnapshot[slot].getMainDrawData();
@@ -330,12 +337,12 @@ namespace sw::editor
 	{
 		if ( _bInitialized == SW_FALSE || pRhiDevice == nullptr )
 		{
-			_inFlightDrawSlot.store( kInvalidDrawSlot, std::memory_order_release );
+			_inFlightDrawSlot.store( ImGuiEditorInternal::kInvalidDrawSlot, std::memory_order_release );
 			return;
 		}
 
 		renderPlatformWindows( pRhiDevice );
-		_inFlightDrawSlot.store( kInvalidDrawSlot, std::memory_order_release );
+		_inFlightDrawSlot.store( ImGuiEditorInternal::kInvalidDrawSlot, std::memory_order_release );
 	}
 
 	bool ImGuiEditor::processEvent( const NativeWindowEvent& event )
@@ -453,7 +460,7 @@ namespace sw::editor
 
 	void ImGuiEditor::waitForDrawSnapshotIdle()
 	{
-		while ( _inFlightDrawSlot.load( std::memory_order_acquire ) != kInvalidDrawSlot )
+		while ( _inFlightDrawSlot.load( std::memory_order_acquire ) != ImGuiEditorInternal::kInvalidDrawSlot )
 			std::this_thread::yield();
 	}
 
@@ -472,7 +479,7 @@ namespace sw::editor
 			return;
 
 		const uint32 slot = _publishedDrawSlot.load( std::memory_order_acquire );
-		if ( slot >= kDrawSnapshotCount )
+		if ( slot >= ImGuiEditorInternal::kDrawSnapshotCount )
 			return;
 
 		_arrDrawSnapshot[slot].presentExtraViewports();

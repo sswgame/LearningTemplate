@@ -7,120 +7,137 @@
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Serialization/Core/BinaryStream.h"
 #include "Engine/Serialization/Core/SchemaMigrate.h"
-#include "Engine/Serialization/Core/SerializerInternal.h"
+#include "Engine/Serialization/Core/SerializerUtil.h"
+
+namespace sw
+{
+	namespace
+	{
+		struct BinarySerializerInternal
+		{
+			static bool deserializeUntransacted( void* pInstance, const TypeInfo& typeInfo, const uint8* pData, size_t dataSize, const SerializeContext& ctx )
+			{
+				BinaryStreamReader reader( pData, dataSize );
+				uint32			   propCount{ 0 };
+				if ( reader.read( propCount ) == false )
+					return false;
+
+				const vector<PropertyInfo>& listProps = typeInfo.getPropertiesWithBase();
+				const size_t				numProps  = listProps.size();
+				uint64						seenBitmask{ 0 };
+				unordered_set<uint32>		uniqueSeenPropHashes;
+				if ( numProps > 64 )
+					uniqueSeenPropHashes.reserve( numProps );
+
+				for ( uint32 propIndex = 0; propIndex < propCount; ++propIndex )
+				{
+					uint32 tagHash{ 0 };
+					uint32 wireTypeHash{ 0 };
+					uint32 payloadSize{ 0 };
+					if ( reader.read( tagHash ) == false || reader.read( wireTypeHash ) == false || reader.read( payloadSize ) == false )
+						return false;
+
+					const size_t payloadStart = reader.getOffset();
+					if ( payloadStart + payloadSize > dataSize )
+						return false;
+
+					const PropertyInfo* pTargetProp	 = nullptr;
+					size_t				matchedIndex = 0;
+					for ( size_t propSearchIdx = 0; propSearchIdx < numProps; ++propSearchIdx )
+					{
+						if ( listProps[propSearchIdx].matchesNameHash( tagHash ) )
+						{
+							if ( listProps[propSearchIdx]._metadata._bTransient == SW_TRUE )
+								break;
+							pTargetProp	 = &listProps[propSearchIdx];
+							matchedIndex = propSearchIdx;
+							break;
+						}
+					}
+
+					if ( pTargetProp == nullptr )
+					{
+						if ( ctx.allowUnknownProperties() )
+						{
+							reader.skip( payloadSize );
+							continue;
+						}
+						return false;
+					}
+
+					const PropertyInfo& prop = *pTargetProp;
+					if ( numProps <= 64 )
+						seenBitmask |= ( 1ULL << matchedIndex );
+					else
+						uniqueSeenPropHashes.insert( prop.getNameHash() );
+
+					void* pPropPtr = prop.getRawPtr( pInstance );
+
+					if ( wireTypeHash != 0 && wireTypeHash != prop._typeName.getHash() )
+					{
+						if ( tryCoerceBinaryPayload( pPropPtr, prop._typeName, pData + payloadStart, payloadSize, ctx ) == false )
+							return false;
+						reader.skip( payloadSize );
+						continue;
+					}
+
+					if ( prop._bIsContainer && prop.hasContainerWrapper() )
+					{
+						size_t local = payloadStart;
+						if ( SerializerUtil::deserializeNestedContainerBinary( pPropPtr, prop.getContainerShape(), pData, payloadStart + payloadSize, local, ctx ) == false )
+							return false;
+						if ( local != payloadStart + payloadSize )
+							return false;
+					}
+					else
+					{
+						size_t local = payloadStart;
+						if ( SerializerUtil::deserializeValueBinary( pPropPtr, prop._typeName, pData, payloadStart + payloadSize, local, ctx ) == false )
+							return false;
+						if ( local != payloadStart + payloadSize )
+							return false;
+					}
+
+					reader.skip( payloadSize );
+				}
+
+				// Omitted tags: apply PROPERTY(Default) when present (Binary is tag-driven, not TypeInfo-driven).
+				for ( size_t propIdx = 0; propIdx < numProps; ++propIdx )
+				{
+					if ( numProps <= 64 )
+					{
+						if ( ( seenBitmask & ( 1ULL << propIdx ) ) != 0 )
+							continue;
+					}
+					else
+					{
+						if ( uniqueSeenPropHashes.find( listProps[propIdx].getNameHash() ) != uniqueSeenPropHashes.end() )
+							continue;
+					}
+					SerializerUtil::applyPropertyDefault( listProps[propIdx].getRawPtr( pInstance ), listProps[propIdx], ctx );
+				}
+
+				return true;
+			}
+
+			static void pushOrphanVal( vector<SchemaOrphanValue>* pOutOrphans, hashed_string name, uint32 nameHash, uint32 wireTypeHash, const uint8* pPayload, uint32 payloadSize )
+			{
+				if ( pOutOrphans == nullptr )
+					return;
+				SchemaOrphanValue orphan;
+				orphan._name		 = name;
+				orphan._nameHash	 = nameHash != 0 ? nameHash : name.getHash();
+				orphan._wireTypeHash = wireTypeHash;
+				orphan._listBinary.assign( pPayload, pPayload + payloadSize );
+				pOutOrphans->push_back( std::move( orphan ) );
+			}
+		};
+	} // namespace
+} // namespace sw
 
 namespace sw
 {
 	SW_LOG_CALLER( "BinarySerializer" );
-
-	namespace
-	{
-		bool deserializeUntransacted( void* pInstance, const TypeInfo& typeInfo, const uint8* pData, size_t dataSize, const SerializeContext& ctx )
-		{
-			BinaryStreamReader reader( pData, dataSize );
-			uint32			   propCount{ 0 };
-			if ( reader.read( propCount ) == false )
-				return false;
-
-			const vector<PropertyInfo>& listProps = typeInfo.getPropertiesWithBase();
-			const size_t				numProps  = listProps.size();
-			uint64						seenBitmask{ 0 };
-			unordered_set<uint32>		uniqueSeenPropHashes;
-			if ( numProps > 64 )
-				uniqueSeenPropHashes.reserve( numProps );
-
-			for ( uint32 propIndex = 0; propIndex < propCount; ++propIndex )
-			{
-				uint32 tagHash{ 0 };
-				uint32 wireTypeHash{ 0 };
-				uint32 payloadSize{ 0 };
-				if ( reader.read( tagHash ) == false || reader.read( wireTypeHash ) == false || reader.read( payloadSize ) == false )
-					return false;
-
-				const size_t payloadStart = reader.getOffset();
-				if ( payloadStart + payloadSize > dataSize )
-					return false;
-
-				const PropertyInfo* pTargetProp	 = nullptr;
-				size_t				matchedIndex = 0;
-				for ( size_t propSearchIdx = 0; propSearchIdx < numProps; ++propSearchIdx )
-				{
-					if ( listProps[propSearchIdx].matchesNameHash( tagHash ) )
-					{
-						if ( listProps[propSearchIdx]._metadata._bTransient == SW_TRUE )
-							break;
-						pTargetProp	 = &listProps[propSearchIdx];
-						matchedIndex = propSearchIdx;
-						break;
-					}
-				}
-
-				if ( pTargetProp == nullptr )
-				{
-					if ( ctx.allowUnknownProperties() )
-					{
-						reader.skip( payloadSize );
-						continue;
-					}
-					return false;
-				}
-
-				const PropertyInfo& prop = *pTargetProp;
-				if ( numProps <= 64 )
-					seenBitmask |= ( 1ULL << matchedIndex );
-				else
-					uniqueSeenPropHashes.insert( prop.getNameHash() );
-
-				void* pPropPtr = prop.getRawPtr( pInstance );
-
-				if ( wireTypeHash != 0 && wireTypeHash != prop._typeName.getHash() )
-				{
-					if ( tryCoerceBinaryPayload( pPropPtr, prop._typeName, pData + payloadStart, payloadSize, ctx ) == false )
-						return false;
-					reader.skip( payloadSize );
-					continue;
-				}
-
-				if ( prop._bIsContainer && prop.hasContainerWrapper() )
-				{
-					size_t local = payloadStart;
-					if ( deserializeNestedContainerBinary( pPropPtr, prop.getContainerShape(), pData, payloadStart + payloadSize, local, ctx ) == false )
-						return false;
-					if ( local != payloadStart + payloadSize )
-						return false;
-				}
-				else
-				{
-					size_t local = payloadStart;
-					if ( deserializeValueBinary( pPropPtr, prop._typeName, pData, payloadStart + payloadSize, local, ctx ) == false )
-						return false;
-					if ( local != payloadStart + payloadSize )
-						return false;
-				}
-
-				reader.skip( payloadSize );
-			}
-
-			// Omitted tags: apply PROPERTY(Default) when present (Binary is tag-driven, not TypeInfo-driven).
-			for ( size_t propIdx = 0; propIdx < numProps; ++propIdx )
-			{
-				if ( numProps <= 64 )
-				{
-					if ( ( seenBitmask & ( 1ULL << propIdx ) ) != 0 )
-						continue;
-				}
-				else
-				{
-					if ( uniqueSeenPropHashes.find( listProps[propIdx].getNameHash() ) != uniqueSeenPropHashes.end() )
-						continue;
-				}
-				applyPropertyDefault( listProps[propIdx].getRawPtr( pInstance ), listProps[propIdx], ctx );
-			}
-
-			return true;
-		}
-
-	} // namespace
 
 	void BinarySerializer::serialize( const void* pInstance, const TypeInfo& typeInfo, vector<uint8>& listOutBuffer,
 									  const SerializeContext& ctx )
@@ -156,9 +173,9 @@ namespace sw
 			size_t payloadStart = writer.getOffset();
 
 			if ( prop._bIsContainer && prop.hasContainerWrapper() )
-				serializeNestedContainerBinary( pPropPtr, prop.getContainerShape(), listOutBuffer, ctx );
+				SerializerUtil::serializeNestedContainerBinary( pPropPtr, prop.getContainerShape(), listOutBuffer, ctx );
 			else
-				serializeValueBinary( pPropPtr, prop._typeName, listOutBuffer, ctx );
+				SerializerUtil::serializeValueBinary( pPropPtr, prop._typeName, listOutBuffer, ctx );
 
 			uint32 payloadSize = static_cast<uint32>( writer.getOffset() - payloadStart );
 			writer.writeAt( sizeHeaderPos, payloadSize );
@@ -186,8 +203,8 @@ namespace sw
 		if ( t_listCloneBuffer.empty() )
 			return false;
 
-		return deserializeUntransacted( pDstData, typeInfo, t_listCloneBuffer.data(), t_listCloneBuffer.size(),
-										SerializeContext::getDefault() );
+		return BinarySerializerInternal::deserializeUntransacted( pDstData, typeInfo, t_listCloneBuffer.data(), t_listCloneBuffer.size(),
+																  SerializeContext::getDefault() );
 	}
 
 	bool BinarySerializer::deserialize( void* pInstance, const TypeInfo& typeInfo, const uint8* pData, size_t dataSize,
@@ -198,27 +215,13 @@ namespace sw
 
 		vector<uint8> listBackup;
 		serialize( pInstance, typeInfo, listBackup, ctx );
-		if ( deserializeUntransacted( pInstance, typeInfo, pData, dataSize, ctx ) )
+		if ( BinarySerializerInternal::deserializeUntransacted( pInstance, typeInfo, pData, dataSize, ctx ) )
 			return true;
 		if ( listBackup.empty() == false )
-			deserializeUntransacted( pInstance, typeInfo, listBackup.data(), listBackup.size(), ctx );
+			BinarySerializerInternal::deserializeUntransacted( pInstance, typeInfo, listBackup.data(), listBackup.size(), ctx );
 		return false;
 	}
 
-	namespace
-	{
-		static void pushOrphanVal( vector<SchemaOrphanValue>* pOutOrphans, hashed_string name, uint32 nameHash, uint32 wireTypeHash, const uint8* pPayload, uint32 payloadSize )
-		{
-			if ( pOutOrphans == nullptr )
-				return;
-			SchemaOrphanValue orphan;
-			orphan._name		 = name;
-			orphan._nameHash	 = nameHash != 0 ? nameHash : name.getHash();
-			orphan._wireTypeHash = wireTypeHash;
-			orphan._listBinary.assign( pPayload, pPayload + payloadSize );
-			pOutOrphans->push_back( std::move( orphan ) );
-		}
-	} // namespace
 	bool BinarySerializer::deserializeSoft( void* pInstance, const TypeInfo& typeInfo, const uint8* pData, size_t dataSize,
 											vector<SchemaOrphanValue>* pOutOrphans, const SerializeContext& ctx )
 	{
@@ -262,7 +265,7 @@ namespace sw
 
 			if ( pTargetProp == nullptr )
 			{
-				pushOrphanVal( pOutOrphans, {}, tagHash, wireTypeHash, pData + payloadStart, payloadSize );
+				BinarySerializerInternal::pushOrphanVal( pOutOrphans, {}, tagHash, wireTypeHash, pData + payloadStart, payloadSize );
 				reader.skip( payloadSize );
 				continue;
 			}
@@ -278,16 +281,16 @@ namespace sw
 			size_t local = payloadStart;
 
 			if ( prop._bIsContainer && prop.hasContainerWrapper() )
-				applied = deserializeNestedContainerBinary( pPropPtr, prop.getContainerShape(), pData, payloadStart + payloadSize, local, ctx );
+				applied = SerializerUtil::deserializeNestedContainerBinary( pPropPtr, prop.getContainerShape(), pData, payloadStart + payloadSize, local, ctx );
 			else
 			{
-				applied = deserializeValueBinary( pPropPtr, prop._typeName, pData, payloadStart + payloadSize, local, ctx );
+				applied = SerializerUtil::deserializeValueBinary( pPropPtr, prop._typeName, pData, payloadStart + payloadSize, local, ctx );
 				if ( applied == false )
 					applied = tryCoerceBinaryPayload( pPropPtr, prop._typeName, pData + payloadStart, payloadSize, ctx );
 			}
 
 			if ( applied == false )
-				pushOrphanVal( pOutOrphans, prop._name, tagHash, wireTypeHash, pData + payloadStart, payloadSize );
+				BinarySerializerInternal::pushOrphanVal( pOutOrphans, prop._name, tagHash, wireTypeHash, pData + payloadStart, payloadSize );
 
 			reader.skip( payloadSize );
 		}
@@ -304,7 +307,7 @@ namespace sw
 				if ( uniqueSeenPropHashes.find( listProps[propIdx].getNameHash() ) != uniqueSeenPropHashes.end() )
 					continue;
 			}
-			applyPropertyDefault( listProps[propIdx].getValuePtr<void>( pInstance ), listProps[propIdx], ctx );
+			SerializerUtil::applyPropertyDefault( listProps[propIdx].getValuePtr<void>( pInstance ), listProps[propIdx], ctx );
 		}
 
 		return true;

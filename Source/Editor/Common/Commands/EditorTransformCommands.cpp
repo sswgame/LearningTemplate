@@ -24,42 +24,48 @@ namespace sw::editor
 {
 	namespace
 	{
-		float32 worldAxisValue( const float3& pos, AlignAxis axis )
+		struct EditorTransformCommandsInternal
 		{
-			if ( axis == AlignAxis::X )
-				return pos._x;
-			if ( axis == AlignAxis::Y )
-				return pos._y;
-			return pos._z;
-		}
-
-		void setLocalAxisValue( float3& pos, AlignAxis axis, float32 value )
-		{
-			if ( axis == AlignAxis::X )
-				pos._x = value;
-			else if ( axis == AlignAxis::Y )
-				pos._y = value;
-			else
-				pos._z = value;
-		}
-
-		struct AlignSortLess
-		{
-			AlignAxis _axis{ AlignAxis::X };
-
-			bool operator()( const GameObjectPtr& lhs, const GameObjectPtr& rhs ) const
+			static float32 worldAxisValue( const float3& pos, AlignAxis axis )
 			{
-				if ( lhs.isValid() == false || rhs.isValid() == false )
-					return false;
-				const SceneComponent* pLeftSc  = lhs->getPrimarySceneComponent();
-				const SceneComponent* pRightSc = rhs->getPrimarySceneComponent();
-				const float3		  posA	   = pLeftSc != nullptr ? pLeftSc->getWorldPosition() : float3{};
-				const float3		  posB	   = pRightSc != nullptr ? pRightSc->getWorldPosition() : float3{};
-				return worldAxisValue( posA, _axis ) < worldAxisValue( posB, _axis );
+				if ( axis == AlignAxis::X )
+					return pos._x;
+				if ( axis == AlignAxis::Y )
+					return pos._y;
+				return pos._z;
 			}
+
+			static void setLocalAxisValue( float3& pos, AlignAxis axis, float32 value )
+			{
+				if ( axis == AlignAxis::X )
+					pos._x = value;
+				else if ( axis == AlignAxis::Y )
+					pos._y = value;
+				else
+					pos._z = value;
+			}
+
+			struct AlignSortLess
+			{
+				AlignAxis _axis{ AlignAxis::X };
+
+				bool operator()( const GameObjectPtr& lhs, const GameObjectPtr& rhs ) const
+				{
+					if ( lhs.isValid() == false || rhs.isValid() == false )
+						return false;
+					const SceneComponent* pLeftSc  = lhs->getPrimarySceneComponent();
+					const SceneComponent* pRightSc = rhs->getPrimarySceneComponent();
+					const float3		  posA	   = pLeftSc != nullptr ? pLeftSc->getWorldPosition() : float3{};
+					const float3		  posB	   = pRightSc != nullptr ? pRightSc->getWorldPosition() : float3{};
+					return worldAxisValue( posA, _axis ) < worldAxisValue( posB, _axis );
+				}
+			};
 		};
 	} // namespace
+} // namespace sw::editor
 
+namespace sw::editor
+{
 	bool EditorTransformCommands::pasteComponentValues( Component* pTargetComp, string_view xml )
 	{
 		if ( pTargetComp == nullptr || pTargetComp->getTypeInfo() == nullptr || xml.empty() )
@@ -207,7 +213,7 @@ namespace sw::editor
 			if ( pGo == nullptr || pGo->getPrimarySceneComponent() == nullptr )
 				continue;
 
-			const float32 val = worldAxisValue( pGo->getPrimarySceneComponent()->getWorldPosition(), axis );
+			const float32 val = EditorTransformCommandsInternal::worldAxisValue( pGo->getPrimarySceneComponent()->getWorldPosition(), axis );
 
 			if ( type == AlignType::Min )
 				targetVal = MathUtil::min( targetVal, val );
@@ -233,7 +239,7 @@ namespace sw::editor
 			const string	beforeXml = EditorTransaction::captureSnapshot( pGoPtr );
 			SceneComponent* pSc		  = pGo->getPrimarySceneComponent();
 			float3			pos		  = pSc->getLocalPosition();
-			setLocalAxisValue( pos, axis, targetVal );
+			EditorTransformCommandsInternal::setLocalAxisValue( pos, axis, targetVal );
 			pSc->setLocalPosition( pos );
 
 			const string afterXml = EditorTransaction::captureSnapshot( pGoPtr );
@@ -252,15 +258,15 @@ namespace sw::editor
 		if ( listSel.size() < 3 )
 			return;
 
-		AlignSortLess sortLess{};
+		EditorTransformCommandsInternal::AlignSortLess sortLess{};
 		sortLess._axis = axis;
 		std::sort( listSel.begin(), listSel.end(), sortLess );
 
 		const float3 firstPos = listSel.front()->getPrimarySceneComponent()->getWorldPosition();
 		const float3 lastPos  = listSel.back()->getPrimarySceneComponent()->getWorldPosition();
 
-		const float32 minVal = worldAxisValue( firstPos, axis );
-		const float32 maxVal = worldAxisValue( lastPos, axis );
+		const float32 minVal = EditorTransformCommandsInternal::worldAxisValue( firstPos, axis );
+		const float32 maxVal = EditorTransformCommandsInternal::worldAxisValue( lastPos, axis );
 		const float32 step	 = ( maxVal - minVal ) / static_cast<float32>( listSel.size() - 1 );
 
 		for ( size_t idx = 0; idx < listSel.size(); ++idx )
@@ -272,7 +278,7 @@ namespace sw::editor
 			const string	beforeXml = EditorTransaction::captureSnapshot( pGoPtr );
 			SceneComponent* pSc		  = pGoPtr->getPrimarySceneComponent();
 			float3			pos		  = pSc->getLocalPosition();
-			setLocalAxisValue( pos, axis, minVal + step * static_cast<float32>( idx ) );
+			EditorTransformCommandsInternal::setLocalAxisValue( pos, axis, minVal + step * static_cast<float32>( idx ) );
 			pSc->setLocalPosition( pos );
 
 			const string afterXml = EditorTransaction::captureSnapshot( pGoPtr );

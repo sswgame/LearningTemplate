@@ -11,34 +11,35 @@
 
 namespace sw
 {
+	namespace
+	{
+		struct SaveGameInternal
+		{
+			/** @brief "party{i}.{field}" 문자열을 스택에 조립하여 반환합니다. */
+			static fixed_string<constant::kMaxBuffer64> partyKey( int32 index, const utf8* pField )
+			{
+				fixed_string<constant::kMaxBuffer64> fs;
+				fs.append( "party" );
+				StringBuilder<constant::kMaxBuffer16> numSb;
+				numSb.append( index );
+				fs.append( numSb.c_str() );
+				fs.append( "." );
+				fs.append( pField );
+				return fs;
+			}
+
+			static size_t partyCap()
+			{
+				const int32 n = GameData::get()._maxPartySize;
+				return n > 0 ? static_cast<size_t>( n ) : 6u;
+			}
+		};
+	} // namespace
+} // namespace sw
+
+namespace sw
+{
 	SW_LOG_CALLER( "SaveGame" );
-
-	namespace
-	{
-
-		/** @brief "party{i}.{field}" 문자열을 스택에 조립하여 반환합니다. */
-		fixed_string<constant::kMaxBuffer64> partyKey( int32 index, const utf8* pField )
-		{
-			fixed_string<constant::kMaxBuffer64> fs;
-			fs.append( "party" );
-			StringBuilder<constant::kMaxBuffer16> numSb;
-			numSb.append( index );
-			fs.append( numSb.c_str() );
-			fs.append( "." );
-			fs.append( pField );
-			return fs;
-		}
-
-	} // namespace
-
-	namespace
-	{
-		size_t partyCap()
-		{
-			const int32 n = GameData::get()._maxPartySize;
-			return n > 0 ? static_cast<size_t>( n ) : 6u;
-		}
-	} // namespace
 
 	void SaveGame::clearParty()
 	{
@@ -48,7 +49,7 @@ namespace sw
 	void SaveGame::setPartyFrom( const vector<PartyMember>& party )
 	{
 		_listParty.clear();
-		const size_t n = party.size() < partyCap() ? party.size() : partyCap();
+		const size_t n = party.size() < SaveGameInternal::partyCap() ? party.size() : SaveGameInternal::partyCap();
 		_listParty.assign( party.begin(), party.begin() + static_cast<std::ptrdiff_t>( n ) );
 	}
 
@@ -74,7 +75,7 @@ namespace sw
 		StringBuilder<constant::kMaxBuffer2048> sb;
 		sb.append( "map=" ).append( _mapPath.c_str() ).append( "\nx=" ).append( _playerX ).append( "\ny=" ).append( _playerY ).append( "\npartyCount=" ).append( static_cast<int32>( _listParty.size() ) ).append( '\n' );
 
-		for ( size_t partyIndex = 0; partyIndex < _listParty.size() && partyIndex < partyCap(); ++partyIndex )
+		for ( size_t partyIndex = 0; partyIndex < _listParty.size() && partyIndex < SaveGameInternal::partyCap(); ++partyIndex )
 		{
 			const PartyMember& m = _listParty[partyIndex];
 			sb.append( "party" ).append( static_cast<int32>( partyIndex ) ).append( ".speciesId=" ).append( m._speciesId.c_str() ).append( '\n' ).append( "party" ).append( static_cast<int32>( partyIndex ) ).append( ".nickname=" ).append( m._nickname.c_str() ).append( '\n' ).append( "party" ).append( static_cast<int32>( partyIndex ) ).append( ".level=" ).append( m._level ).append( '\n' ).append( "party" ).append( static_cast<int32>( partyIndex ) ).append( ".hp=" ).append( m._hp ).append( '\n' ).append( "party" ).append( static_cast<int32>( partyIndex ) ).append( ".hpMax=" ).append( m._hpMax ).append( '\n' ).append( "party" ).append( static_cast<int32>( partyIndex ) ).append( ".pp0=" ).append( m._pp0 ).append( '\n' ).append( "party" ).append( static_cast<int32>( partyIndex ) ).append( ".pp1=" ).append( m._pp1 ).append( '\n' ).append( "party" ).append( static_cast<int32>( partyIndex ) ).append( ".exp=" ).append( m._exp ).append( '\n' );
@@ -120,24 +121,24 @@ namespace sw
 		int32 count = KeyValueFile::getInt( map, "partyCount", 0 );
 		if ( count < 0 )
 			count = 0;
-		if ( count > static_cast<int32>( partyCap() ) )
-			count = static_cast<int32>( partyCap() );
+		if ( count > static_cast<int32>( SaveGameInternal::partyCap() ) )
+			count = static_cast<int32>( SaveGameInternal::partyCap() );
 
 		for ( int32 itemIndex = 0; itemIndex < count; ++itemIndex )
 		{
 			PartyMember m{};
-			const utf8* pSid = KeyValueFile::get( map, partyKey( itemIndex, "speciesId" ).c_str(), nullptr );
+			const utf8* pSid = KeyValueFile::get( map, SaveGameInternal::partyKey( itemIndex, "speciesId" ).c_str(), nullptr );
 			if ( pSid != nullptr && pSid[0] != '\0' )
 				m._speciesId = pSid;
-			const utf8* pNick = KeyValueFile::get( map, partyKey( itemIndex, "nickname" ).c_str(), nullptr );
+			const utf8* pNick = KeyValueFile::get( map, SaveGameInternal::partyKey( itemIndex, "nickname" ).c_str(), nullptr );
 			if ( pNick != nullptr && pNick[0] != '\0' )
 				m._nickname = pNick;
-			m._level = KeyValueFile::getInt( map, partyKey( itemIndex, "level" ).c_str(), m._level );
-			m._hp	 = KeyValueFile::getInt( map, partyKey( itemIndex, "hp" ).c_str(), m._hp );
-			m._hpMax = KeyValueFile::getInt( map, partyKey( itemIndex, "hpMax" ).c_str(), m._hpMax );
-			m._pp0	 = KeyValueFile::getInt( map, partyKey( itemIndex, "pp0" ).c_str(), m._pp0 );
-			m._pp1	 = KeyValueFile::getInt( map, partyKey( itemIndex, "pp1" ).c_str(), m._pp1 );
-			m._exp	 = KeyValueFile::getInt( map, partyKey( itemIndex, "exp" ).c_str(), m._exp );
+			m._level = KeyValueFile::getInt( map, SaveGameInternal::partyKey( itemIndex, "level" ).c_str(), m._level );
+			m._hp	 = KeyValueFile::getInt( map, SaveGameInternal::partyKey( itemIndex, "hp" ).c_str(), m._hp );
+			m._hpMax = KeyValueFile::getInt( map, SaveGameInternal::partyKey( itemIndex, "hpMax" ).c_str(), m._hpMax );
+			m._pp0	 = KeyValueFile::getInt( map, SaveGameInternal::partyKey( itemIndex, "pp0" ).c_str(), m._pp0 );
+			m._pp1	 = KeyValueFile::getInt( map, SaveGameInternal::partyKey( itemIndex, "pp1" ).c_str(), m._pp1 );
+			m._exp	 = KeyValueFile::getInt( map, SaveGameInternal::partyKey( itemIndex, "exp" ).c_str(), m._exp );
 
 			if ( m._nickname.empty() )
 				m._nickname = SpeciesCatalog::findSpecies( m._speciesId.c_str() )->_name;

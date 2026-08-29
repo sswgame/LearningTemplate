@@ -14,35 +14,40 @@ namespace sw::editor
 {
 	namespace
 	{
-		ImVec4 colorForLevel( LogLevel level )
+		struct ConsolePanelInternal
 		{
-			switch ( level )
+			static ImVec4 colorForLevel( LogLevel level )
 			{
-				case LogLevel::Error:
-					return ImVec4( 1.0f, 0.4f, 0.4f, 1.0f );
-				case LogLevel::Warning:
-					return ImVec4( 1.0f, 0.8f, 0.4f, 1.0f );
-				case LogLevel::Info:
-					return ImVec4( 0.8f, 0.8f, 0.8f, 1.0f );
-				case LogLevel::Trace:
-					return ImVec4( 0.6f, 0.6f, 0.6f, 1.0f );
-				case LogLevel::Count:
-				default:
-					return ImVec4( 1.0f, 1.0f, 1.0f, 1.0f );
+				switch ( level )
+				{
+					case LogLevel::Error:
+						return ImVec4( 1.0f, 0.4f, 0.4f, 1.0f );
+					case LogLevel::Warning:
+						return ImVec4( 1.0f, 0.8f, 0.4f, 1.0f );
+					case LogLevel::Info:
+						return ImVec4( 0.8f, 0.8f, 0.8f, 1.0f );
+					case LogLevel::Trace:
+						return ImVec4( 0.6f, 0.6f, 0.6f, 1.0f );
+					case LogLevel::Count:
+					default:
+						return ImVec4( 1.0f, 1.0f, 1.0f, 1.0f );
+				}
 			}
-		}
 
-		const utf8* levelName( LogLevel level )
-		{
-			static constexpr const utf8* kArrNames[] = { "Error", "Warning", "Info", "Trace" };
-			const uint8					 index		 = static_cast<uint8>( level );
-			if ( index >= 4 )
-				return "Info";
-			return kArrNames[index];
-		}
-
+			static const utf8* levelName( LogLevel level )
+			{
+				static constexpr const utf8* kArrNames[] = { "Error", "Warning", "Info", "Trace" };
+				const uint8					 index		 = static_cast<uint8>( level );
+				if ( index >= 4 )
+					return "Info";
+				return kArrNames[index];
+			}
+		};
 	} // namespace
+} // namespace sw::editor
 
+namespace sw::editor
+{
 	ConsolePanel::ConsolePanel()
 		: _listEntry{}
 		, _listDrawSnapshot{}
@@ -183,7 +188,7 @@ namespace sw::editor
 				{
 					if ( pEntry != nullptr )
 					{
-						allLogs += "[" + pEntry->_timeStamp + "] [" + pEntry->_tag + "] [" + levelName( pEntry->_level ) +
+						allLogs += "[" + pEntry->_timeStamp + "] [" + pEntry->_tag + "] [" + ConsolePanelInternal::levelName( pEntry->_level ) +
 								   "] - " + pEntry->_message + "\n";
 					}
 				}
@@ -237,7 +242,7 @@ namespace sw::editor
 				ImGui::SameLine( 0.0f, 0.0f );
 				ImGui::TextColored( ImVec4( 0.45f, 0.85f, 0.95f, 1.0f ), " [%s]", entry._tag.c_str() );
 				ImGui::SameLine( 0.0f, 0.0f );
-				ImGui::TextColored( colorForLevel( entry._level ), " [%s]", levelName( entry._level ) );
+				ImGui::TextColored( ConsolePanelInternal::colorForLevel( entry._level ), " [%s]", ConsolePanelInternal::levelName( entry._level ) );
 				ImGui::SameLine( 0.0f, 0.0f );
 				ImGui::TextUnformatted( " - " );
 				ImGui::SameLine( 0.0f, 0.0f );
@@ -252,7 +257,7 @@ namespace sw::editor
 						ImGui::SetClipboardText( entry._message.c_str() );
 					if ( ImGui::MenuItem( "Copy Full Log Line" ) )
 					{
-						string full = "[" + entry._timeStamp + "] [" + entry._tag + "] [" + levelName( entry._level ) +
+						string full = "[" + entry._timeStamp + "] [" + entry._tag + "] [" + ConsolePanelInternal::levelName( entry._level ) +
 									  "] - " + entry._message;
 						if ( entry._file.empty() == false )
 							full += " (" + entry._file + ":" + to_string( entry._line ) + ")";

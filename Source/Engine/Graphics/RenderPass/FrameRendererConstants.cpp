@@ -9,22 +9,26 @@
 
 namespace sw
 {
-
 	namespace
 	{
-		void mulMat4( const float32 a[16], const float32 b[16], float32 out[16] )
+		struct FrameRendererConstantsInternal
 		{
-			for ( int32 rowIndex = 0; rowIndex < 4; ++rowIndex )
+			static void mulMat4( const float32 a[16], const float32 b[16], float32 out[16] )
 			{
-				for ( int32 colIndex = 0; colIndex < 4; ++colIndex )
+				for ( int32 rowIndex = 0; rowIndex < 4; ++rowIndex )
 				{
-					out[colIndex * 4 + rowIndex] = a[0 * 4 + rowIndex] * b[colIndex * 4 + 0] + a[1 * 4 + rowIndex] * b[colIndex * 4 + 1] + a[2 * 4 + rowIndex] * b[colIndex * 4 + 2] + a[3 * 4 + rowIndex] * b[colIndex * 4 + 3];
+					for ( int32 colIndex = 0; colIndex < 4; ++colIndex )
+					{
+						out[colIndex * 4 + rowIndex] = a[0 * 4 + rowIndex] * b[colIndex * 4 + 0] + a[1 * 4 + rowIndex] * b[colIndex * 4 + 1] + a[2 * 4 + rowIndex] * b[colIndex * 4 + 2] + a[3 * 4 + rowIndex] * b[colIndex * 4 + 3];
+					}
 				}
 			}
-		}
-
+		};
 	} // namespace
+} // namespace sw
 
+namespace sw
+{
 	void FrameRenderer::updatePassConstants()
 	{
 		buildLightViewProj( _passConstants._lightViewProj );
@@ -122,7 +126,7 @@ namespace sw
 				0, 0, 0.1f * invExt, 0,
 				0, 0, 0.5f, 1.0f };
 
-			mulMat4( arrLightView, arrOrthoCascade, outCascadeMats[cascadeIndex] );
+			FrameRendererConstantsInternal::mulMat4( arrLightView, arrOrthoCascade, outCascadeMats[cascadeIndex] );
 		}
 	}
 
@@ -173,7 +177,7 @@ namespace sw
 			sz, uz, -lz, 0,
 			0, 0, 2.0f, 1 };
 
-		mulMat4( arrView, arrOrtho, outMat );
+		FrameRendererConstantsInternal::mulMat4( arrView, arrOrtho, outMat );
 	}
 
 	void FrameRenderer::buildViewProj( float32 outMat[16] ) const
@@ -234,7 +238,7 @@ namespace sw
 			0.0f, 0.0f, q, 1.0f,
 			0.0f, 0.0f, -nearZ * q, 0.0f };
 
-		mulMat4( arrView, arrProj, outMat );
+		FrameRendererConstantsInternal::mulMat4( arrView, arrProj, outMat );
 	}
 
 	void FrameRenderer::setIdentityWorld()

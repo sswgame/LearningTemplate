@@ -6,23 +6,27 @@
 
 namespace sw
 {
-	SW_LOG_CALLER( "AssetDatabase" );
-
 	namespace
 	{
-
-		string absoluteForRelative( string_view relativePath )
+		struct AssetDatabaseInternal
 		{
-			string result = ResourceUtil::getResourcePath( relativePath );
-			if ( result.empty() )
+			static string absoluteForRelative( string_view relativePath )
 			{
-				// Write-side: invent absolute path from domain-qualified global ID only.
-				result = ResourceUtil::makeAbsolutePath( relativePath );
+				string result = ResourceUtil::getResourcePath( relativePath );
+				if ( result.empty() )
+				{
+					// Write-side: invent absolute path from domain-qualified global ID only.
+					result = ResourceUtil::makeAbsolutePath( relativePath );
+				}
+				return result;
 			}
-			return result;
-		}
-
+		};
 	} // namespace
+} // namespace sw
+
+namespace sw
+{
+	SW_LOG_CALLER( "AssetDatabase" );
 
 	string AssetDatabase::toRelativePath( string_view absolutePath )
 	{
@@ -184,7 +188,7 @@ namespace sw
 	bool AssetDatabase::writeMetaFile( string_view relativePath, const Uuid& guid, bool bImported ) const
 	{
 		const string metaRel = metaPathFor( relativePath );
-		const string absMeta = absoluteForRelative( metaRel );
+		const string absMeta = AssetDatabaseInternal::absoluteForRelative( metaRel );
 		if ( absMeta.empty() )
 		{
 			SW_LOG_WARNING( "Cannot resolve meta path for %#", relativePath );

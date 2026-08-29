@@ -16,34 +16,40 @@ namespace sw::editor
 {
 	namespace
 	{
-		void drawSnapToggleCombo( const utf8* pButtonLabel, const utf8* pComboId, bool& bEnabled, float32& value,
-								  const float32* arrValues, const utf8* const* arrLabels, int32 valueCount,
-								  float32 comboWidth, int32 fallbackIndex )
+		struct EditorViewportToolbarInternal
 		{
-			if ( editor::drawToggleButton( pButtonLabel, bEnabled ) )
-				bEnabled = ( bEnabled == false );
-
-			ImGui::SameLine();
-			ImGui::SetNextItemWidth( comboWidth );
-
-			int32 currentIdx = fallbackIndex;
-			for ( int32 idx = 0; idx < valueCount; ++idx )
+			static void drawSnapToggleCombo( const utf8* pButtonLabel, const utf8* pComboId, bool& bEnabled, float32& value,
+											 const float32* arrValues, const utf8* const* arrLabels, int32 valueCount,
+											 float32 comboWidth, int32 fallbackIndex )
 			{
-				if ( MathUtil::abs( value - arrValues[idx] ) < 0.001f )
+				if ( editor::drawToggleButton( pButtonLabel, bEnabled ) )
+					bEnabled = ( bEnabled == false );
+
+				ImGui::SameLine();
+				ImGui::SetNextItemWidth( comboWidth );
+
+				int32 currentIdx = fallbackIndex;
+				for ( int32 idx = 0; idx < valueCount; ++idx )
 				{
-					currentIdx = idx;
-					break;
+					if ( MathUtil::abs( value - arrValues[idx] ) < 0.001f )
+					{
+						currentIdx = idx;
+						break;
+					}
+				}
+
+				if ( ImGui::Combo( pComboId, &currentIdx, arrLabels, valueCount ) )
+				{
+					if ( 0 <= currentIdx && currentIdx < valueCount )
+						value = arrValues[currentIdx];
 				}
 			}
-
-			if ( ImGui::Combo( pComboId, &currentIdx, arrLabels, valueCount ) )
-			{
-				if ( 0 <= currentIdx && currentIdx < valueCount )
-					value = arrValues[currentIdx];
-			}
-		}
+		};
 	} // namespace
+} // namespace sw::editor
 
+namespace sw::editor
+{
 	void EditorViewportToolbar::draw( ViewportToolbarSettings& settings, float32 viewportWidth )
 	{
 		ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, 4.0f );
@@ -202,15 +208,15 @@ namespace sw::editor
 
 		const float32 arrSnapValues[] = { 0.1f, 0.5f, 1.0f, 5.0f, 10.0f };
 		const utf8*	  arrSnapLabels[] = { "0.1", "0.5", "1.0", "5.0", "10.0" };
-		drawSnapToggleCombo( "Grid Snap", "##GridSnapVal", settings._bGridSnap, settings._gridSnapValue, arrSnapValues,
-							 arrSnapLabels, 5, 65.0f, 2 );
+		EditorViewportToolbarInternal::drawSnapToggleCombo( "Grid Snap", "##GridSnapVal", settings._bGridSnap, settings._gridSnapValue, arrSnapValues,
+															arrSnapLabels, 5, 65.0f, 2 );
 
 		editor::drawToolbarSeparator();
 
 		const float32 arrRotValues[] = { 5.0f, 15.0f, 45.0f, 90.0f };
 		const utf8*	  arrRotLabels[] = { "5 deg", "15 deg", "45 deg", "90 deg" };
-		drawSnapToggleCombo( "Rot Snap", "##RotSnapVal", settings._bRotationSnap, settings._rotationSnapValue,
-							 arrRotValues, arrRotLabels, 4, 60.0f, 1 );
+		EditorViewportToolbarInternal::drawSnapToggleCombo( "Rot Snap", "##RotSnapVal", settings._bRotationSnap, settings._rotationSnapValue,
+															arrRotValues, arrRotLabels, 4, 60.0f, 1 );
 
 		editor::endFloatingBar();
 	}

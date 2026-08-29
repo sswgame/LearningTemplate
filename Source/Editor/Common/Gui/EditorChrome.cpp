@@ -8,54 +8,60 @@ namespace sw::editor
 {
 	namespace
 	{
-		constexpr int32 kMaxSectionDepth = 8;
-		constexpr int32 kMaxOverlayDepth = 8;
-
-		ImGuiWindowFlags toImGuiPanelFlags( EditorPanelFlags flags )
+		struct EditorChromeInternal
 		{
-			ImGuiWindowFlags imguiFlags = 0;
-			if ( ( flags & EditorPanelFlags::NoCollapse ) != EditorPanelFlags::None )
-				imguiFlags |= ImGuiWindowFlags_NoCollapse;
-			if ( ( flags & EditorPanelFlags::MenuBar ) != EditorPanelFlags::None )
-				imguiFlags |= ImGuiWindowFlags_MenuBar;
-			if ( ( flags & EditorPanelFlags::NoScrollbar ) != EditorPanelFlags::None )
-				imguiFlags |= ImGuiWindowFlags_NoScrollbar;
-			if ( ( flags & EditorPanelFlags::UnsavedDocument ) != EditorPanelFlags::None )
-				imguiFlags |= ImGuiWindowFlags_UnsavedDocument;
-			return imguiFlags;
-		}
+			static constexpr int32 kMaxSectionDepth = 8;
+			static constexpr int32 kMaxOverlayDepth = 8;
 
-		ImGuiWindowFlags toImGuiOverlayFlags( EditorOverlayFlags flags )
-		{
-			ImGuiWindowFlags imguiFlags = 0;
-			if ( ( flags & EditorOverlayFlags::NoTitleBar ) != EditorOverlayFlags::None )
-				imguiFlags |= ImGuiWindowFlags_NoTitleBar;
-			if ( ( flags & EditorOverlayFlags::NoResize ) != EditorOverlayFlags::None )
-				imguiFlags |= ImGuiWindowFlags_NoResize;
-			if ( ( flags & EditorOverlayFlags::NoMove ) != EditorOverlayFlags::None )
-				imguiFlags |= ImGuiWindowFlags_NoMove;
-			if ( ( flags & EditorOverlayFlags::NoInputs ) != EditorOverlayFlags::None )
-				imguiFlags |= ImGuiWindowFlags_NoInputs;
-			if ( ( flags & EditorOverlayFlags::NoNav ) != EditorOverlayFlags::None )
-				imguiFlags |= ImGuiWindowFlags_NoNav;
-			if ( ( flags & EditorOverlayFlags::AutoResize ) != EditorOverlayFlags::None )
-				imguiFlags |= ImGuiWindowFlags_AlwaysAutoResize;
-			if ( ( flags & EditorOverlayFlags::NoFocusOnAppearing ) != EditorOverlayFlags::None )
-				imguiFlags |= ImGuiWindowFlags_NoFocusOnAppearing;
-			if ( ( flags & EditorOverlayFlags::NoSavedSettings ) != EditorOverlayFlags::None )
-				imguiFlags |= ImGuiWindowFlags_NoSavedSettings;
-			if ( ( flags & EditorOverlayFlags::NoDecoration ) != EditorOverlayFlags::None )
-				imguiFlags |= ImGuiWindowFlags_NoDecoration;
-			return imguiFlags;
-		}
+			static ImGuiWindowFlags toImGuiPanelFlags( EditorPanelFlags flags )
+			{
+				ImGuiWindowFlags imguiFlags = 0;
+				if ( ( flags & EditorPanelFlags::NoCollapse ) != EditorPanelFlags::None )
+					imguiFlags |= ImGuiWindowFlags_NoCollapse;
+				if ( ( flags & EditorPanelFlags::MenuBar ) != EditorPanelFlags::None )
+					imguiFlags |= ImGuiWindowFlags_MenuBar;
+				if ( ( flags & EditorPanelFlags::NoScrollbar ) != EditorPanelFlags::None )
+					imguiFlags |= ImGuiWindowFlags_NoScrollbar;
+				if ( ( flags & EditorPanelFlags::UnsavedDocument ) != EditorPanelFlags::None )
+					imguiFlags |= ImGuiWindowFlags_UnsavedDocument;
+				return imguiFlags;
+			}
 
-		thread_local EditorSectionKind s_arrSectionStack[kMaxSectionDepth]{};
-		thread_local int32			   s_sectionDepth{ 0 };
-		thread_local int32			   s_floatingBarDisabledDepth{ 0 };
-		thread_local int32			   s_arrOverlayStyleVars[kMaxOverlayDepth]{};
-		thread_local int32			   s_overlayDepth{ 0 };
+			static ImGuiWindowFlags toImGuiOverlayFlags( EditorOverlayFlags flags )
+			{
+				ImGuiWindowFlags imguiFlags = 0;
+				if ( ( flags & EditorOverlayFlags::NoTitleBar ) != EditorOverlayFlags::None )
+					imguiFlags |= ImGuiWindowFlags_NoTitleBar;
+				if ( ( flags & EditorOverlayFlags::NoResize ) != EditorOverlayFlags::None )
+					imguiFlags |= ImGuiWindowFlags_NoResize;
+				if ( ( flags & EditorOverlayFlags::NoMove ) != EditorOverlayFlags::None )
+					imguiFlags |= ImGuiWindowFlags_NoMove;
+				if ( ( flags & EditorOverlayFlags::NoInputs ) != EditorOverlayFlags::None )
+					imguiFlags |= ImGuiWindowFlags_NoInputs;
+				if ( ( flags & EditorOverlayFlags::NoNav ) != EditorOverlayFlags::None )
+					imguiFlags |= ImGuiWindowFlags_NoNav;
+				if ( ( flags & EditorOverlayFlags::AutoResize ) != EditorOverlayFlags::None )
+					imguiFlags |= ImGuiWindowFlags_AlwaysAutoResize;
+				if ( ( flags & EditorOverlayFlags::NoFocusOnAppearing ) != EditorOverlayFlags::None )
+					imguiFlags |= ImGuiWindowFlags_NoFocusOnAppearing;
+				if ( ( flags & EditorOverlayFlags::NoSavedSettings ) != EditorOverlayFlags::None )
+					imguiFlags |= ImGuiWindowFlags_NoSavedSettings;
+				if ( ( flags & EditorOverlayFlags::NoDecoration ) != EditorOverlayFlags::None )
+					imguiFlags |= ImGuiWindowFlags_NoDecoration;
+				return imguiFlags;
+			}
+
+			static inline thread_local EditorSectionKind s_arrSectionStack[kMaxSectionDepth]{};
+			static inline thread_local int32			 s_sectionDepth{ 0 };
+			static inline thread_local int32			 s_floatingBarDisabledDepth{ 0 };
+			static inline thread_local int32			 s_arrOverlayStyleVars[kMaxOverlayDepth]{};
+			static inline thread_local int32			 s_overlayDepth{ 0 };
+		};
 	} // namespace
+} // namespace sw::editor
 
+namespace sw::editor
+{
 	EditorFloatingBarDesc::EditorFloatingBarDesc()
 		: _pId{ "##FloatingBar" }
 		, _anchorPos{ 0.0f, 0.0f }
@@ -75,7 +81,7 @@ namespace sw::editor
 		if ( bNoPadding )
 			ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2{ 0.0f, 0.0f } );
 
-		const bool bVisible = ImGui::Begin( pTitle, pOpen, toImGuiPanelFlags( flags ) );
+		const bool bVisible = ImGui::Begin( pTitle, pOpen, EditorChromeInternal::toImGuiPanelFlags( flags ) );
 		if ( bNoPadding )
 			ImGui::PopStyleVar();
 		return bVisible;
@@ -107,10 +113,10 @@ namespace sw::editor
 	bool EditorChrome::beginSection( const EditorSectionDesc& desc )
 	{
 		const utf8* pId = desc._pId != nullptr ? desc._pId : "##Section";
-		if ( s_sectionDepth < kMaxSectionDepth )
+		if ( EditorChromeInternal::s_sectionDepth < EditorChromeInternal::kMaxSectionDepth )
 		{
-			s_arrSectionStack[s_sectionDepth] = desc._kind;
-			++s_sectionDepth;
+			EditorChromeInternal::s_arrSectionStack[EditorChromeInternal::s_sectionDepth] = desc._kind;
+			++EditorChromeInternal::s_sectionDepth;
 		}
 
 		if ( desc._kind == EditorSectionKind::Child )
@@ -145,10 +151,10 @@ namespace sw::editor
 	void EditorChrome::endSection()
 	{
 		EditorSectionKind kind = EditorSectionKind::Toolbar;
-		if ( s_sectionDepth > 0 )
+		if ( EditorChromeInternal::s_sectionDepth > 0 )
 		{
-			--s_sectionDepth;
-			kind = s_arrSectionStack[s_sectionDepth];
+			--EditorChromeInternal::s_sectionDepth;
+			kind = EditorChromeInternal::s_arrSectionStack[EditorChromeInternal::s_sectionDepth];
 		}
 
 		if ( kind == EditorSectionKind::Child )
@@ -187,17 +193,17 @@ namespace sw::editor
 		if ( bVisible && desc._bEnabled == false )
 		{
 			ImGui::BeginDisabled();
-			++s_floatingBarDisabledDepth;
+			++EditorChromeInternal::s_floatingBarDisabledDepth;
 		}
 		return bVisible;
 	}
 
 	void EditorChrome::endFloatingBar()
 	{
-		if ( s_floatingBarDisabledDepth > 0 )
+		if ( EditorChromeInternal::s_floatingBarDisabledDepth > 0 )
 		{
 			ImGui::EndDisabled();
-			--s_floatingBarDisabledDepth;
+			--EditorChromeInternal::s_floatingBarDisabledDepth;
 		}
 		ImGui::End();
 	}
@@ -224,13 +230,13 @@ namespace sw::editor
 			ImGui::PushStyleVar( ImGuiStyleVar_WindowBorderSize, desc._borderSize );
 			++styleVarCount;
 		}
-		if ( s_overlayDepth < kMaxOverlayDepth )
+		if ( EditorChromeInternal::s_overlayDepth < EditorChromeInternal::kMaxOverlayDepth )
 		{
-			s_arrOverlayStyleVars[s_overlayDepth] = styleVarCount;
-			++s_overlayDepth;
+			EditorChromeInternal::s_arrOverlayStyleVars[EditorChromeInternal::s_overlayDepth] = styleVarCount;
+			++EditorChromeInternal::s_overlayDepth;
 		}
 
-		return ImGui::Begin( pId, desc._pOpen, toImGuiOverlayFlags( desc._flags ) );
+		return ImGui::Begin( pId, desc._pOpen, EditorChromeInternal::toImGuiOverlayFlags( desc._flags ) );
 	}
 
 	void EditorChrome::endOverlay()
@@ -238,10 +244,10 @@ namespace sw::editor
 		ImGui::End();
 
 		int32 styleVarCount = 0;
-		if ( s_overlayDepth > 0 )
+		if ( EditorChromeInternal::s_overlayDepth > 0 )
 		{
-			--s_overlayDepth;
-			styleVarCount = s_arrOverlayStyleVars[s_overlayDepth];
+			--EditorChromeInternal::s_overlayDepth;
+			styleVarCount = EditorChromeInternal::s_arrOverlayStyleVars[EditorChromeInternal::s_overlayDepth];
 		}
 		if ( styleVarCount > 0 )
 			ImGui::PopStyleVar( styleVarCount );

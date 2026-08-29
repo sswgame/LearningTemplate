@@ -15,29 +15,35 @@ namespace sw
 {
 	namespace
 	{
-		D3D12_RESOURCE_STATES toD3D12BufferState( RHIBufferState state )
+		struct D3D12RHICommandContextInternal
 		{
-			switch ( state )
+			static D3D12_RESOURCE_STATES toD3D12BufferState( RHIBufferState state )
 			{
-				case RHIBufferState::UnorderedAccess:
-					return D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
-				case RHIBufferState::ShaderResource:
-					return D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-				case RHIBufferState::IndirectArgument:
-					return D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT;
-				case RHIBufferState::CopyDest:
-					return D3D12_RESOURCE_STATE_COPY_DEST;
-				case RHIBufferState::VertexOrConstant:
-					return D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
-				case RHIBufferState::Index:
-					return D3D12_RESOURCE_STATE_INDEX_BUFFER;
-				case RHIBufferState::Common:
-				default:
-					return D3D12_RESOURCE_STATE_COMMON;
+				switch ( state )
+				{
+					case RHIBufferState::UnorderedAccess:
+						return D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+					case RHIBufferState::ShaderResource:
+						return D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+					case RHIBufferState::IndirectArgument:
+						return D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT;
+					case RHIBufferState::CopyDest:
+						return D3D12_RESOURCE_STATE_COPY_DEST;
+					case RHIBufferState::VertexOrConstant:
+						return D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
+					case RHIBufferState::Index:
+						return D3D12_RESOURCE_STATE_INDEX_BUFFER;
+					case RHIBufferState::Common:
+					default:
+						return D3D12_RESOURCE_STATE_COMMON;
+				}
 			}
-		}
+		};
 	} // namespace
+} // namespace sw
 
+namespace sw
+{
 	void D3D12RHICommandContext::ensureRecording()
 	{
 		if ( _pDevice == nullptr || _pDevice->_bRecording != 0 )
@@ -668,7 +674,7 @@ namespace sw
 			return;
 
 		const D3D12_RESOURCE_STATES stateBefore = stateIt->second;
-		const D3D12_RESOURCE_STATES stateAfter	= toD3D12BufferState( newState );
+		const D3D12_RESOURCE_STATES stateAfter	= D3D12RHICommandContextInternal::toD3D12BufferState( newState );
 		if ( stateBefore == stateAfter )
 			return;
 

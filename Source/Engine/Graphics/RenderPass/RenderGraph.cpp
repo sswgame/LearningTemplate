@@ -9,27 +9,34 @@
 
 namespace sw
 {
-	SW_LOG_CALLER( "RenderGraph" );
-
 	namespace
 	{
-		void recordRenderPassTask( const TaskArgs& args )
+		struct RenderGraphInternal
 		{
-			RenderGraphNode* pNode	  = args.get<RenderGraphNode*>( 0 );
-			IRHICommandList* pCmdList = args.get<IRHICommandList*>( 1 );
-			if ( pNode == nullptr || pCmdList == nullptr || pNode->_execute.isBound() == false )
-				return;
+			static void recordRenderPassTask( const TaskArgs& args )
+			{
+				RenderGraphNode* pNode	  = args.get<RenderGraphNode*>( 0 );
+				IRHICommandList* pCmdList = args.get<IRHICommandList*>( 1 );
+				if ( pNode == nullptr || pCmdList == nullptr || pNode->_execute.isBound() == false )
+					return;
 
-			pCmdList->beginCommandList();
-			RenderGraphPassContext ctx;
-			ctx._passName	  = pNode->_name;
-			ctx._pListInputs  = &pNode->_listInput;
-			ctx._pListOutputs = &pNode->_listOutput;
-			ctx._pCmdList	  = pCmdList;
-			pNode->_execute( ctx );
-			pCmdList->endCommandList();
-		}
+				pCmdList->beginCommandList();
+				RenderGraphPassContext ctx;
+				ctx._passName	  = pNode->_name;
+				ctx._pListInputs  = &pNode->_listInput;
+				ctx._pListOutputs = &pNode->_listOutput;
+				ctx._pCmdList	  = pCmdList;
+				pNode->_execute( ctx );
+				pCmdList->endCommandList();
+			}
+		};
 	} // namespace
+} // namespace sw
+
+namespace sw
+{
+	SW_LOG_CALLER( "RenderGraph" );
+
 	/**
 	 * @brief 모든 노드 및 실행 순서 초기화
 	 */
@@ -296,7 +303,7 @@ namespace sw
 
 			TaskHandle handle = pTaskManager->emplaceTask(
 				"RenderPassRecord",
-				SW_DELEGATE_FUNCTION( TaskArgsDelegate, recordRenderPassTask ),
+				SW_DELEGATE_FUNCTION( TaskArgsDelegate, RenderGraphInternal::recordRenderPassTask ),
 				MakeTaskArgs( pNode, pCmdList ) );
 
 			if ( handle.isValid() )

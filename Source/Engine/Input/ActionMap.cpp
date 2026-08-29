@@ -12,69 +12,74 @@
 
 namespace sw
 {
-	SW_LOG_CALLER( "ActionMap" );
-
 	namespace
 	{
-		namespace InputMapXml
+		struct ActionMapInternal
 		{
-			constexpr const utf8* kRoot				   = "InputMap";
-			constexpr const utf8* kLayers			   = "layers";
-			constexpr const utf8* kLayer			   = "layer";
-			constexpr const utf8* kAction			   = "action";
-			constexpr const utf8* kBind				   = "bind";
-			constexpr const utf8* kAttrDefaultLayer	   = "defaultLayer";
-			constexpr const utf8* kAttrDoubleClick	   = "doubleClickTime";
-			constexpr const utf8* kAttrDoubleClickDist = "doubleClickMaxDistance";
-			constexpr const utf8* kAttrHoldThreshold   = "holdThreshold";
-			constexpr const utf8* kAttrName			   = "name";
-			constexpr const utf8* kAttrPriority		   = "priority";
-			constexpr const utf8* kAttrEnabled		   = "enabled";
-			constexpr const utf8* kAttrBlockLower	   = "blockLower";
-			constexpr const utf8* kAttrAlwaysOn		   = "alwaysOn";
-			constexpr const utf8* kAttrLayer		   = "layer";
-			constexpr const utf8* kAttrTrigger		   = "trigger";
-			constexpr const utf8* kAttrSource		   = "source";
-			constexpr const utf8* kAttrCode			   = "code";
-			constexpr const utf8* kSourceKey		   = "key";
-			constexpr const utf8* kSourceGamepad	   = "gamepad";
-			constexpr const utf8* kSourceMouse		   = "mouse";
-		} // namespace InputMapXml
+			struct InputMapXml
+			{
+				static constexpr const utf8* kRoot				  = "InputMap";
+				static constexpr const utf8* kLayers			  = "layers";
+				static constexpr const utf8* kLayer				  = "layer";
+				static constexpr const utf8* kAction			  = "action";
+				static constexpr const utf8* kBind				  = "bind";
+				static constexpr const utf8* kAttrDefaultLayer	  = "defaultLayer";
+				static constexpr const utf8* kAttrDoubleClick	  = "doubleClickTime";
+				static constexpr const utf8* kAttrDoubleClickDist = "doubleClickMaxDistance";
+				static constexpr const utf8* kAttrHoldThreshold	  = "holdThreshold";
+				static constexpr const utf8* kAttrName			  = "name";
+				static constexpr const utf8* kAttrPriority		  = "priority";
+				static constexpr const utf8* kAttrEnabled		  = "enabled";
+				static constexpr const utf8* kAttrBlockLower	  = "blockLower";
+				static constexpr const utf8* kAttrAlwaysOn		  = "alwaysOn";
+				static constexpr const utf8* kAttrLayer			  = "layer";
+				static constexpr const utf8* kAttrTrigger		  = "trigger";
+				static constexpr const utf8* kAttrSource		  = "source";
+				static constexpr const utf8* kAttrCode			  = "code";
+				static constexpr const utf8* kSourceKey			  = "key";
+				static constexpr const utf8* kSourceGamepad		  = "gamepad";
+				static constexpr const utf8* kSourceMouse		  = "mouse";
+			};
 
-		bool parseBoolAttr( const utf8* pText, bool fallback )
-		{
-			if ( pText == nullptr || pText[0] == '\0' )
+			static bool parseBoolAttr( const utf8* pText, bool fallback )
+			{
+				if ( pText == nullptr || pText[0] == '\0' )
+					return fallback;
+				if ( StringUtil::equalsIgnoreCase( pText, "1" ) || StringUtil::equalsIgnoreCase( pText, "true" ) || StringUtil::equalsIgnoreCase( pText, "yes" ) )
+					return true;
+				if ( StringUtil::equalsIgnoreCase( pText, "0" ) || StringUtil::equalsIgnoreCase( pText, "false" ) || StringUtil::equalsIgnoreCase( pText, "no" ) )
+					return false;
 				return fallback;
-			if ( StringUtil::equalsIgnoreCase( pText, "1" ) || StringUtil::equalsIgnoreCase( pText, "true" ) || StringUtil::equalsIgnoreCase( pText, "yes" ) )
-				return true;
-			if ( StringUtil::equalsIgnoreCase( pText, "0" ) || StringUtil::equalsIgnoreCase( pText, "false" ) || StringUtil::equalsIgnoreCase( pText, "no" ) )
-				return false;
-			return fallback;
-		}
+			}
 
-		struct TriggerNameEntry
-		{
-			const utf8*	  _pName;
-			ActionTrigger _trigger;
+			struct TriggerNameEntry
+			{
+				const utf8*	  _pName;
+				ActionTrigger _trigger;
+			};
+
+			static constexpr TriggerNameEntry kArrTriggerNames[] = {
+				{	  "Pressed",		 ActionTrigger::Pressed},
+				{		  "Press",	   ActionTrigger::Pressed},
+				{	  "Started",		 ActionTrigger::Pressed},
+				{		  "Down",		  ActionTrigger::Down},
+				{		  "Held",		  ActionTrigger::Down},
+				{	  "Performed",		   ActionTrigger::Down},
+				{	  "Released",	  ActionTrigger::Released},
+				{	  "Release",		 ActionTrigger::Released},
+				{	  "Canceled",	  ActionTrigger::Released},
+				{"DoubleClicked", ActionTrigger::DoubleClicked},
+				{  "DoubleClick", ActionTrigger::DoubleClicked},
+				{"HoldThreshold", ActionTrigger::HoldThreshold},
+				{		  "Hold", ActionTrigger::HoldThreshold},
+			};
 		};
-
-		constexpr TriggerNameEntry kArrTriggerNames[] = {
-			{	  "Pressed",		 ActionTrigger::Pressed},
-			{		  "Press",	   ActionTrigger::Pressed},
-			{	  "Started",		 ActionTrigger::Pressed},
-			{		  "Down",		  ActionTrigger::Down},
-			{		  "Held",		  ActionTrigger::Down},
-			{	  "Performed",		   ActionTrigger::Down},
-			{	  "Released",	  ActionTrigger::Released},
-			{	  "Release",		 ActionTrigger::Released},
-			{	  "Canceled",	  ActionTrigger::Released},
-			{"DoubleClicked", ActionTrigger::DoubleClicked},
-			{  "DoubleClick", ActionTrigger::DoubleClicked},
-			{"HoldThreshold", ActionTrigger::HoldThreshold},
-			{		  "Hold", ActionTrigger::HoldThreshold},
-		};
-
 	} // namespace
+} // namespace sw
+
+namespace sw
+{
+	SW_LOG_CALLER( "ActionMap" );
 
 	ActionMap::ActionMap()
 		: _pInput{ nullptr }
@@ -119,26 +124,26 @@ namespace sw
 			return false;
 		}
 
-		XmlNode root = doc.root( InputMapXml::kRoot );
+		XmlNode root = doc.root( ActionMapInternal::InputMapXml::kRoot );
 		if ( root.isValid() == false )
 		{
 			SW_LOG_WARNING( "Missing <InputMap> in %#", absPath );
 			return false;
 		}
 
-		const utf8*	  pDoubleClickAttr = root.attr( InputMapXml::kAttrDoubleClick );
+		const utf8*	  pDoubleClickAttr = root.attr( ActionMapInternal::InputMapXml::kAttrDoubleClick );
 		const float32 dblClick		   = pDoubleClickAttr != nullptr
 										   ? static_cast<float32>( StringUtil::atof( pDoubleClickAttr ) )
 										   : ActionMapDefaults::kDoubleClickTime;
-		const utf8*	  pDblDistAttr	   = root.attr( InputMapXml::kAttrDoubleClickDist );
+		const utf8*	  pDblDistAttr	   = root.attr( ActionMapInternal::InputMapXml::kAttrDoubleClickDist );
 		const float32 dblDist		   = pDblDistAttr != nullptr
 										   ? static_cast<float32>( StringUtil::atof( pDblDistAttr ) )
 										   : ActionMapDefaults::kDoubleClickMaxDistance;
-		const utf8*	  pHoldAttr		   = root.attr( InputMapXml::kAttrHoldThreshold );
+		const utf8*	  pHoldAttr		   = root.attr( ActionMapInternal::InputMapXml::kAttrHoldThreshold );
 		const float32 holdThr		   = pHoldAttr != nullptr
 										   ? static_cast<float32>( StringUtil::atof( pHoldAttr ) )
 										   : ActionMapDefaults::kHoldThreshold;
-		const utf8*	  pDefLayer		   = root.attr( InputMapXml::kAttrDefaultLayer );
+		const utf8*	  pDefLayer		   = root.attr( ActionMapInternal::InputMapXml::kAttrDefaultLayer );
 
 		clear();
 		setDoubleClickTime( dblClick );
@@ -147,19 +152,19 @@ namespace sw
 		if ( pDefLayer != nullptr && pDefLayer[0] != '\0' )
 			_defaultLayerName = pDefLayer;
 
-		XmlNode layersNode = root.child( InputMapXml::kLayers );
+		XmlNode layersNode = root.child( ActionMapInternal::InputMapXml::kLayers );
 		if ( layersNode.isValid() )
 		{
-			for ( XmlNode layerNode = layersNode.child( InputMapXml::kLayer ); layerNode.isValid();
-				  layerNode			= layerNode.next( InputMapXml::kLayer ) )
+			for ( XmlNode layerNode = layersNode.child( ActionMapInternal::InputMapXml::kLayer ); layerNode.isValid();
+				  layerNode			= layerNode.next( ActionMapInternal::InputMapXml::kLayer ) )
 			{
-				const utf8* pLayerName = layerNode.attr( InputMapXml::kAttrName );
+				const utf8* pLayerName = layerNode.attr( ActionMapInternal::InputMapXml::kAttrName );
 				if ( pLayerName == nullptr || pLayerName[0] == '\0' )
 					continue;
-				const int32 priority   = layerNode.attrInt( InputMapXml::kAttrPriority, 0 );
-				const bool	enabled	   = parseBoolAttr( layerNode.attr( InputMapXml::kAttrEnabled ), true );
-				const bool	blockLower = parseBoolAttr( layerNode.attr( InputMapXml::kAttrBlockLower ), false );
-				const bool	alwaysOn   = parseBoolAttr( layerNode.attr( InputMapXml::kAttrAlwaysOn ), false );
+				const int32 priority   = layerNode.attrInt( ActionMapInternal::InputMapXml::kAttrPriority, 0 );
+				const bool	enabled	   = ActionMapInternal::parseBoolAttr( layerNode.attr( ActionMapInternal::InputMapXml::kAttrEnabled ), true );
+				const bool	blockLower = ActionMapInternal::parseBoolAttr( layerNode.attr( ActionMapInternal::InputMapXml::kAttrBlockLower ), false );
+				const bool	alwaysOn   = ActionMapInternal::parseBoolAttr( layerNode.attr( ActionMapInternal::InputMapXml::kAttrAlwaysOn ), false );
 				registerLayer( pLayerName, priority, enabled, blockLower, alwaysOn );
 			}
 		}
@@ -168,12 +173,12 @@ namespace sw
 
 		auto loadAction = [this]( XmlNode actionNode, string_view inheritedLayer )
 		{
-			const utf8* pActionName = actionNode.attr( InputMapXml::kAttrName );
+			const utf8* pActionName = actionNode.attr( ActionMapInternal::InputMapXml::kAttrName );
 			if ( pActionName == nullptr || pActionName[0] == '\0' )
 				return;
 
 			string		layer( inheritedLayer );
-			const utf8* pLayerAttr = actionNode.attr( InputMapXml::kAttrLayer );
+			const utf8* pLayerAttr = actionNode.attr( ActionMapInternal::InputMapXml::kAttrLayer );
 			if ( pLayerAttr != nullptr )
 				layer.assign( pLayerAttr );
 			if ( layer.empty() )
@@ -181,7 +186,7 @@ namespace sw
 			ensureLayer( layer );
 
 			auto		defaultTrigger = ActionTrigger::Pressed;
-			const utf8* pTriggerAttr   = actionNode.attr( InputMapXml::kAttrTrigger );
+			const utf8* pTriggerAttr   = actionNode.attr( ActionMapInternal::InputMapXml::kAttrTrigger );
 			if ( pTriggerAttr != nullptr )
 			{
 				const ActionTrigger parsed = actionTriggerFromName( pTriggerAttr );
@@ -189,16 +194,16 @@ namespace sw
 					defaultTrigger = parsed;
 			}
 
-			for ( XmlNode bindNode = actionNode.child( InputMapXml::kBind ); bindNode.isValid();
-				  bindNode		   = bindNode.next( InputMapXml::kBind ) )
+			for ( XmlNode bindNode = actionNode.child( ActionMapInternal::InputMapXml::kBind ); bindNode.isValid();
+				  bindNode		   = bindNode.next( ActionMapInternal::InputMapXml::kBind ) )
 			{
-				const utf8* pSource = bindNode.attr( InputMapXml::kAttrSource );
-				const utf8* pCode	= bindNode.attr( InputMapXml::kAttrCode );
+				const utf8* pSource = bindNode.attr( ActionMapInternal::InputMapXml::kAttrSource );
+				const utf8* pCode	= bindNode.attr( ActionMapInternal::InputMapXml::kAttrCode );
 				if ( pSource == nullptr || pCode == nullptr || pCode[0] == '\0' )
 					continue;
 
 				ActionTrigger trigger		   = defaultTrigger;
-				const utf8*	  pBindTriggerAttr = bindNode.attr( InputMapXml::kAttrTrigger );
+				const utf8*	  pBindTriggerAttr = bindNode.attr( ActionMapInternal::InputMapXml::kAttrTrigger );
 				if ( pBindTriggerAttr != nullptr )
 				{
 					const ActionTrigger parsed = actionTriggerFromName( pBindTriggerAttr );
@@ -207,26 +212,26 @@ namespace sw
 				}
 
 				string		bindLayer	   = layer;
-				const utf8* pBindLayerAttr = bindNode.attr( InputMapXml::kAttrLayer );
+				const utf8* pBindLayerAttr = bindNode.attr( ActionMapInternal::InputMapXml::kAttrLayer );
 				if ( pBindLayerAttr != nullptr )
 				{
 					bindLayer = pBindLayerAttr;
 					ensureLayer( bindLayer );
 				}
 
-				if ( StringUtil::equalsIgnoreCase( pSource, InputMapXml::kSourceKey ) )
+				if ( StringUtil::equalsIgnoreCase( pSource, ActionMapInternal::InputMapXml::kSourceKey ) )
 				{
 					const Key key = KeyCodes::fromName( pCode );
 					if ( key != Key::Unknown )
 						bind( pActionName, key, trigger, bindLayer );
 				}
-				else if ( StringUtil::equalsIgnoreCase( pSource, InputMapXml::kSourceGamepad ) )
+				else if ( StringUtil::equalsIgnoreCase( pSource, ActionMapInternal::InputMapXml::kSourceGamepad ) )
 				{
 					const GamepadButton button = GamepadButtons::fromName( pCode );
 					if ( button != GamepadButton::Count )
 						bind( pActionName, button, trigger, bindLayer );
 				}
-				else if ( StringUtil::equalsIgnoreCase( pSource, InputMapXml::kSourceMouse ) )
+				else if ( StringUtil::equalsIgnoreCase( pSource, ActionMapInternal::InputMapXml::kSourceMouse ) )
 				{
 					const MouseButton mouse = MouseButtons::fromName( pCode );
 					if ( mouse != MouseButton::Count )
@@ -236,29 +241,29 @@ namespace sw
 		};
 
 		// 중첩 <layer name="UI"> <action/> </layer>
-		for ( XmlNode layerNode = root.child( InputMapXml::kLayer ); layerNode.isValid(); layerNode = layerNode.next( InputMapXml::kLayer ) )
+		for ( XmlNode layerNode = root.child( ActionMapInternal::InputMapXml::kLayer ); layerNode.isValid(); layerNode = layerNode.next( ActionMapInternal::InputMapXml::kLayer ) )
 		{
-			const utf8* pLayerName = layerNode.attr( InputMapXml::kAttrName );
+			const utf8* pLayerName = layerNode.attr( ActionMapInternal::InputMapXml::kAttrName );
 			if ( pLayerName == nullptr || pLayerName[0] == '\0' )
 				continue;
 			if ( hasLayer( pLayerName ) == false )
 			{
-				const int32 priority   = layerNode.attrInt( InputMapXml::kAttrPriority, 0 );
-				const bool	enabled	   = parseBoolAttr( layerNode.attr( InputMapXml::kAttrEnabled ), true );
-				const bool	blockLower = parseBoolAttr( layerNode.attr( InputMapXml::kAttrBlockLower ), false );
-				const bool	alwaysOn   = parseBoolAttr( layerNode.attr( InputMapXml::kAttrAlwaysOn ), false );
+				const int32 priority   = layerNode.attrInt( ActionMapInternal::InputMapXml::kAttrPriority, 0 );
+				const bool	enabled	   = ActionMapInternal::parseBoolAttr( layerNode.attr( ActionMapInternal::InputMapXml::kAttrEnabled ), true );
+				const bool	blockLower = ActionMapInternal::parseBoolAttr( layerNode.attr( ActionMapInternal::InputMapXml::kAttrBlockLower ), false );
+				const bool	alwaysOn   = ActionMapInternal::parseBoolAttr( layerNode.attr( ActionMapInternal::InputMapXml::kAttrAlwaysOn ), false );
 				registerLayer( pLayerName, priority, enabled, blockLower, alwaysOn );
 			}
-			for ( XmlNode actionNode = layerNode.child( InputMapXml::kAction ); actionNode.isValid();
-				  actionNode		 = actionNode.next( InputMapXml::kAction ) )
+			for ( XmlNode actionNode = layerNode.child( ActionMapInternal::InputMapXml::kAction ); actionNode.isValid();
+				  actionNode		 = actionNode.next( ActionMapInternal::InputMapXml::kAction ) )
 			{
 				loadAction( actionNode, pLayerName );
 			}
 		}
 
 		// 최상위 액션 (layer= 속성 또는 기본 레이어)
-		for ( XmlNode actionNode = root.child( InputMapXml::kAction ); actionNode.isValid();
-			  actionNode		 = actionNode.next( InputMapXml::kAction ) )
+		for ( XmlNode actionNode = root.child( ActionMapInternal::InputMapXml::kAction ); actionNode.isValid();
+			  actionNode		 = actionNode.next( ActionMapInternal::InputMapXml::kAction ) )
 		{
 			loadAction( actionNode, {} );
 		}
@@ -662,7 +667,7 @@ namespace sw
 		if ( name.empty() )
 			return ActionTrigger::Pressed;
 		const string nameNt( name );
-		for ( const TriggerNameEntry& entry : kArrTriggerNames )
+		for ( const ActionMapInternal::TriggerNameEntry& entry : ActionMapInternal::kArrTriggerNames )
 		{
 			if ( StringUtil::equalsIgnoreCase( nameNt.c_str(), entry._pName ) )
 				return entry._trigger;
@@ -672,7 +677,7 @@ namespace sw
 
 	const utf8* ActionMap::actionTriggerToName( ActionTrigger trigger )
 	{
-		for ( const TriggerNameEntry& entry : kArrTriggerNames )
+		for ( const ActionMapInternal::TriggerNameEntry& entry : ActionMapInternal::kArrTriggerNames )
 		{
 			if ( entry._trigger == trigger )
 				return entry._pName;

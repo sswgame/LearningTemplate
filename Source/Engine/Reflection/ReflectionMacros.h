@@ -14,6 +14,11 @@
 #pragma once
 #include "Engine/EngineMinimal.h"
 
+namespace sw
+{
+	struct TypeInfo;
+} // namespace sw
+
 #if defined( __REFLECT_PARSER__ )
 	/** @brief 타입 리플렉션 대상. 선택 플래그: Abstract, Static */
 	#define REFLECT( ... )	__attribute__( ( annotate( "REFLECT;" #__VA_ARGS__ ) ) )

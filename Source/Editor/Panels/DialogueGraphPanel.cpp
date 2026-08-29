@@ -18,57 +18,62 @@ namespace ed = ax::NodeEditor;
 
 namespace sw::editor
 {
-	SW_LOG_CALLER( "DialogueGraphPanel" );
-
 	namespace
 	{
-		constexpr int32 kPinInputOffset	 = 1;
-		constexpr int32 kPinOutputOffset = 2;
-		constexpr int32 kPinTrueOffset	 = 3;
-		constexpr int32 kPinFalseOffset	 = 4;
-		constexpr int32 kPinChoiceBase	 = 10;
-
-		int32 pinIn( int32 nodeId )
+		struct DialogueGraphPanelInternal
 		{
-			return nodeId * 100 + kPinInputOffset;
-		}
+			static constexpr int32 kPinInputOffset	= 1;
+			static constexpr int32 kPinOutputOffset = 2;
+			static constexpr int32 kPinTrueOffset	= 3;
+			static constexpr int32 kPinFalseOffset	= 4;
+			static constexpr int32 kPinChoiceBase	= 10;
 
-		int32 pinOut( int32 nodeId )
-		{
-			return nodeId * 100 + kPinOutputOffset;
-		}
+			static int32 pinIn( int32 nodeId )
+			{
+				return nodeId * 100 + kPinInputOffset;
+			}
 
-		int32 pinBranchTrue( int32 nodeId )
-		{
-			return nodeId * 100 + kPinTrueOffset;
-		}
+			static int32 pinOut( int32 nodeId )
+			{
+				return nodeId * 100 + kPinOutputOffset;
+			}
 
-		int32 pinBranchFalse( int32 nodeId )
-		{
-			return nodeId * 100 + kPinFalseOffset;
-		}
+			static int32 pinBranchTrue( int32 nodeId )
+			{
+				return nodeId * 100 + kPinTrueOffset;
+			}
 
-		int32 pinChoice( int32 nodeId, int32 choiceIndex )
-		{
-			return nodeId * 100 + kPinChoiceBase + choiceIndex;
-		}
+			static int32 pinBranchFalse( int32 nodeId )
+			{
+				return nodeId * 100 + kPinFalseOffset;
+			}
 
-		ed::NodeId toNodeId( int32 id )
-		{
-			return ed::NodeId( static_cast<uintptr_t>( id ) );
-		}
+			static int32 pinChoice( int32 nodeId, int32 choiceIndex )
+			{
+				return nodeId * 100 + kPinChoiceBase + choiceIndex;
+			}
 
-		ed::PinId toPinId( int32 id )
-		{
-			return ed::PinId( static_cast<uintptr_t>( id ) );
-		}
+			static ed::NodeId toNodeId( int32 id )
+			{
+				return ed::NodeId( static_cast<uintptr_t>( id ) );
+			}
 
-		ed::LinkId toLinkId( int32 id )
-		{
-			return ed::LinkId( static_cast<uintptr_t>( id ) );
-		}
+			static ed::PinId toPinId( int32 id )
+			{
+				return ed::PinId( static_cast<uintptr_t>( id ) );
+			}
 
+			static ed::LinkId toLinkId( int32 id )
+			{
+				return ed::LinkId( static_cast<uintptr_t>( id ) );
+			}
+		};
 	} // namespace
+} // namespace sw::editor
+
+namespace sw::editor
+{
+	SW_LOG_CALLER( "DialogueGraphPanel" );
 
 	DialogueGraphPanel::DialogueGraphPanel()
 		: IEditorPanel{ false }
@@ -168,7 +173,7 @@ namespace sw::editor
 		// 노드 렌더링
 		for ( DialogueNode& node : _listNode )
 		{
-			const ed::NodeId nodeId = toNodeId( node._id );
+			const ed::NodeId nodeId = DialogueGraphPanelInternal::toNodeId( node._id );
 			ed::BeginNode( nodeId );
 
 			switch ( node._type )
@@ -176,7 +181,7 @@ namespace sw::editor
 				case DialogueNodeType::Start:
 				{
 					ImGui::TextColored( ImVec4( 0.2f, 0.9f, 0.3f, 1.0f ), "[START]" );
-					ed::BeginPin( toPinId( pinOut( node._id ) ), ed::PinKind::Output );
+					ed::BeginPin( DialogueGraphPanelInternal::toPinId( DialogueGraphPanelInternal::pinOut( node._id ) ), ed::PinKind::Output );
 					ImGui::TextUnformatted( "Next ->" );
 					ed::EndPin();
 					break;
@@ -184,11 +189,11 @@ namespace sw::editor
 				case DialogueNodeType::Dialogue:
 				{
 					ImGui::TextColored( ImVec4( 0.4f, 0.7f, 1.0f, 1.0f ), "[DIALOGUE: %s]", node._speaker.empty() ? "(No Speaker)" : node._speaker.c_str() );
-					ed::BeginPin( toPinId( pinIn( node._id ) ), ed::PinKind::Input );
+					ed::BeginPin( DialogueGraphPanelInternal::toPinId( DialogueGraphPanelInternal::pinIn( node._id ) ), ed::PinKind::Input );
 					ImGui::TextUnformatted( "-> In" );
 					ed::EndPin();
 					ImGui::SameLine();
-					ed::BeginPin( toPinId( pinOut( node._id ) ), ed::PinKind::Output );
+					ed::BeginPin( DialogueGraphPanelInternal::toPinId( DialogueGraphPanelInternal::pinOut( node._id ) ), ed::PinKind::Output );
 					ImGui::TextUnformatted( "Next ->" );
 					ed::EndPin();
 
@@ -202,13 +207,13 @@ namespace sw::editor
 				case DialogueNodeType::Choice:
 				{
 					ImGui::TextColored( ImVec4( 0.8f, 0.5f, 1.0f, 1.0f ), "[CHOICE]" );
-					ed::BeginPin( toPinId( pinIn( node._id ) ), ed::PinKind::Input );
+					ed::BeginPin( DialogueGraphPanelInternal::toPinId( DialogueGraphPanelInternal::pinIn( node._id ) ), ed::PinKind::Input );
 					ImGui::TextUnformatted( "-> In" );
 					ed::EndPin();
 
 					if ( node._listChoice.empty() )
 					{
-						ed::BeginPin( toPinId( pinOut( node._id ) ), ed::PinKind::Output );
+						ed::BeginPin( DialogueGraphPanelInternal::toPinId( DialogueGraphPanelInternal::pinOut( node._id ) ), ed::PinKind::Output );
 						ImGui::TextUnformatted( "Choice 0 ->" );
 						ed::EndPin();
 					}
@@ -216,7 +221,7 @@ namespace sw::editor
 					{
 						for ( size_t choiceIndex = 0; choiceIndex < node._listChoice.size(); ++choiceIndex )
 						{
-							ed::BeginPin( toPinId( pinChoice( node._id, static_cast<int32>( choiceIndex ) ) ), ed::PinKind::Output );
+							ed::BeginPin( DialogueGraphPanelInternal::toPinId( DialogueGraphPanelInternal::pinChoice( node._id, static_cast<int32>( choiceIndex ) ) ), ed::PinKind::Output );
 							ImGui::Text( "#%zu: %s ->", choiceIndex + 1, node._listChoice[choiceIndex].c_str() );
 							ed::EndPin();
 						}
@@ -226,16 +231,16 @@ namespace sw::editor
 				case DialogueNodeType::Branch:
 				{
 					ImGui::TextColored( ImVec4( 1.0f, 0.8f, 0.2f, 1.0f ), "[BRANCH]" );
-					ed::BeginPin( toPinId( pinIn( node._id ) ), ed::PinKind::Input );
+					ed::BeginPin( DialogueGraphPanelInternal::toPinId( DialogueGraphPanelInternal::pinIn( node._id ) ), ed::PinKind::Input );
 					ImGui::TextUnformatted( "-> In" );
 					ed::EndPin();
 					ImGui::TextDisabled( "if (%s)", node._condition.c_str() );
 
-					ed::BeginPin( toPinId( pinBranchTrue( node._id ) ), ed::PinKind::Output );
+					ed::BeginPin( DialogueGraphPanelInternal::toPinId( DialogueGraphPanelInternal::pinBranchTrue( node._id ) ), ed::PinKind::Output );
 					ImGui::TextColored( ImVec4( 0.3f, 1.0f, 0.4f, 1.0f ), "True ->" );
 					ed::EndPin();
 					ImGui::SameLine();
-					ed::BeginPin( toPinId( pinBranchFalse( node._id ) ), ed::PinKind::Output );
+					ed::BeginPin( DialogueGraphPanelInternal::toPinId( DialogueGraphPanelInternal::pinBranchFalse( node._id ) ), ed::PinKind::Output );
 					ImGui::TextColored( ImVec4( 1.0f, 0.4f, 0.4f, 1.0f ), "False ->" );
 					ed::EndPin();
 					break;
@@ -243,11 +248,11 @@ namespace sw::editor
 				case DialogueNodeType::Action:
 				{
 					ImGui::TextColored( ImVec4( 0.2f, 0.9f, 0.9f, 1.0f ), "[ACTION]" );
-					ed::BeginPin( toPinId( pinIn( node._id ) ), ed::PinKind::Input );
+					ed::BeginPin( DialogueGraphPanelInternal::toPinId( DialogueGraphPanelInternal::pinIn( node._id ) ), ed::PinKind::Input );
 					ImGui::TextUnformatted( "-> In" );
 					ed::EndPin();
 					ImGui::SameLine();
-					ed::BeginPin( toPinId( pinOut( node._id ) ), ed::PinKind::Output );
+					ed::BeginPin( DialogueGraphPanelInternal::toPinId( DialogueGraphPanelInternal::pinOut( node._id ) ), ed::PinKind::Output );
 					ImGui::TextUnformatted( "Next ->" );
 					ed::EndPin();
 					ImGui::TextDisabled( "cmd: %s", node._actionCommand.c_str() );
@@ -256,7 +261,7 @@ namespace sw::editor
 				case DialogueNodeType::End:
 				{
 					ImGui::TextColored( ImVec4( 0.9f, 0.3f, 0.3f, 1.0f ), "[END]" );
-					ed::BeginPin( toPinId( pinIn( node._id ) ), ed::PinKind::Input );
+					ed::BeginPin( DialogueGraphPanelInternal::toPinId( DialogueGraphPanelInternal::pinIn( node._id ) ), ed::PinKind::Input );
 					ImGui::TextUnformatted( "-> In" );
 					ed::EndPin();
 					break;
@@ -272,7 +277,7 @@ namespace sw::editor
 		// 링크 렌더링
 		for ( const DialogueLink& link : _listLink )
 		{
-			ed::Link( toLinkId( link._id ), toPinId( link._fromPin ), toPinId( link._toPin ) );
+			ed::Link( DialogueGraphPanelInternal::toLinkId( link._id ), DialogueGraphPanelInternal::toPinId( link._fromPin ), DialogueGraphPanelInternal::toPinId( link._toPin ) );
 		}
 
 		// 새 링크 생성 처리
@@ -290,8 +295,8 @@ namespace sw::editor
 					const int32 pinB = static_cast<int32>( b.Get() );
 
 					// 핀 종류(In vs Out) 분별: In 핀은 끝자리가 1
-					const bool bIsAInput = ( pinA % 100 ) == kPinInputOffset;
-					const bool bIsBInput = ( pinB % 100 ) == kPinInputOffset;
+					const bool bIsAInput = ( pinA % 100 ) == DialogueGraphPanelInternal::kPinInputOffset;
+					const bool bIsBInput = ( pinB % 100 ) == DialogueGraphPanelInternal::kPinInputOffset;
 
 					if ( bIsAInput != bIsBInput )
 					{
@@ -359,7 +364,7 @@ namespace sw::editor
 		// 위치 캐시
 		for ( DialogueNode& node : _listNode )
 		{
-			const ImVec2 pos = ed::GetNodePosition( toNodeId( node._id ) );
+			const ImVec2 pos = ed::GetNodePosition( DialogueGraphPanelInternal::toNodeId( node._id ) );
 			node._x			 = pos.x;
 			node._y			 = pos.y;
 		}
@@ -500,11 +505,11 @@ namespace sw::editor
 		_listNode.push_back( endNode );
 
 		// 기본 링크 연결
-		_listLink.push_back( DialogueLink{ 1, pinOut( 1 ), pinIn( 2 ) } );
-		_listLink.push_back( DialogueLink{ 2, pinOut( 2 ), pinIn( 3 ) } );
-		_listLink.push_back( DialogueLink{ 3, pinChoice( 3, 0 ), pinIn( 5 ) } );
-		_listLink.push_back( DialogueLink{ 4, pinChoice( 3, 1 ), pinIn( 4 ) } );
-		_listLink.push_back( DialogueLink{ 5, pinOut( 4 ), pinIn( 5 ) } );
+		_listLink.push_back( DialogueLink{ 1, DialogueGraphPanelInternal::pinOut( 1 ), DialogueGraphPanelInternal::pinIn( 2 ) } );
+		_listLink.push_back( DialogueLink{ 2, DialogueGraphPanelInternal::pinOut( 2 ), DialogueGraphPanelInternal::pinIn( 3 ) } );
+		_listLink.push_back( DialogueLink{ 3, DialogueGraphPanelInternal::pinChoice( 3, 0 ), DialogueGraphPanelInternal::pinIn( 5 ) } );
+		_listLink.push_back( DialogueLink{ 4, DialogueGraphPanelInternal::pinChoice( 3, 1 ), DialogueGraphPanelInternal::pinIn( 4 ) } );
+		_listLink.push_back( DialogueLink{ 5, DialogueGraphPanelInternal::pinOut( 4 ), DialogueGraphPanelInternal::pinIn( 5 ) } );
 	}
 
 	void DialogueGraphPanel::loadGraphData()

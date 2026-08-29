@@ -8,7 +8,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResource.h"
 #include "Engine/Graphics/RHI/RHIDeferredCommandList.h"
-#include "Engine/Graphics/RenderPass/FrameRendererInternal.h"
+#include "Engine/Graphics/RenderPass/FrameRendererUtil.h"
 #include "Engine/Graphics/RenderPass/RenderFramePacket.h"
 #include "Engine/Graphics/RenderPass/RenderPassManager.h"
 #include "Engine/Object/Component/CameraComponent.h"
@@ -86,7 +86,7 @@ namespace sw
 
 		const EngineData&  engineData = engine::getEngineData();
 		RenderPassManager& rpm		  = pDevice->getRenderPassManager();
-		if ( rpm.findRenderPass( hashed_string( kDefaultMainPassName ) ) == nullptr )
+		if ( rpm.findRenderPass( hashed_string( FrameRendererUtil::kDefaultMainPassName ) ) == nullptr )
 			rpm.loadRenderPass( engineData._defaultRenderPass );
 
 		const string_view resolvedPipeline =
@@ -166,7 +166,7 @@ namespace sw
 		}
 
 		float32 sceneColorClear[4];
-		if ( tryGetAttachmentClearColor( Attachment::kSceneColor, sceneColorClear ) )
+		if ( tryGetAttachmentClearColor( FrameRendererUtil::Attachment::kSceneColor, sceneColorClear ) )
 			Memory::copy( _arrClearColor, sceneColorClear, sizeof( _arrClearColor ) );
 
 		// Rebuild PSOs from pipeline pass recipes (shader / entry / blend / permutations).
@@ -275,7 +275,7 @@ namespace sw
 		_bSceneTransformsFlushed  = 0;
 		_bHasExecutedDepthPrepass = 0;
 
-		float3 cameraPos{ kDefaultCameraPos[0], kDefaultCameraPos[1], kDefaultCameraPos[2] };
+		float3 cameraPos{ FrameRendererUtil::kDefaultCameraPos[0], FrameRendererUtil::kDefaultCameraPos[1], FrameRendererUtil::kDefaultCameraPos[2] };
 		if ( pScene != nullptr )
 		{
 			pScene->ensureDefaultCameras();

@@ -30,34 +30,39 @@ namespace sw
 {
 	namespace
 	{
-#if defined( SW_HAS_CRT_LEAK_CHECK )
-		_CrtMemState s_leakBaseline{};
-		bool		 s_bHasLeakBaseline{ false };
-
-		bool heapGrewVsBaseline( const _CrtMemState& now )
+		struct MemoryProfilerInternal
 		{
-			return now.lSizes[_NORMAL_BLOCK] > s_leakBaseline.lSizes[_NORMAL_BLOCK] ||
-				   now.lCounts[_NORMAL_BLOCK] > s_leakBaseline.lCounts[_NORMAL_BLOCK] ||
-				   now.lSizes[_CLIENT_BLOCK] > s_leakBaseline.lSizes[_CLIENT_BLOCK] ||
-				   now.lCounts[_CLIENT_BLOCK] > s_leakBaseline.lCounts[_CLIENT_BLOCK];
-		}
+#if defined( SW_HAS_CRT_LEAK_CHECK )
+			static inline _CrtMemState s_leakBaseline{};
+			static inline bool		   s_bHasLeakBaseline{ false };
+
+			static bool heapGrewVsBaseline( const _CrtMemState& now )
+			{
+				return now.lSizes[_NORMAL_BLOCK] > s_leakBaseline.lSizes[_NORMAL_BLOCK] ||
+					   now.lCounts[_NORMAL_BLOCK] > s_leakBaseline.lCounts[_NORMAL_BLOCK] ||
+					   now.lSizes[_CLIENT_BLOCK] > s_leakBaseline.lSizes[_CLIENT_BLOCK] ||
+					   now.lCounts[_CLIENT_BLOCK] > s_leakBaseline.lCounts[_CLIENT_BLOCK];
+			}
 #endif
 
-		template <typename... Args>
-		void printLeakMessage( const utf8* format, Args&&... args )
-		{
-			utf8 buf[constant::kMaxBuffer1024]{};
-			formatstring( buf, static_cast<uint32>( sizeof( buf ) ), format, std::forward<Args>( args )... );
-			std::fputs( buf, stderr );
-			std::fputc( '\n', stderr );
-		}
+			template <typename... Args>
+			static void printLeakMessage( const utf8* format, Args&&... args )
+			{
+				utf8 buf[constant::kMaxBuffer1024]{};
+				formatstring( buf, static_cast<uint32>( sizeof( buf ) ), format, std::forward<Args>( args )... );
+				std::fputs( buf, stderr );
+				std::fputc( '\n', stderr );
+			}
 
-		thread_local bool			 t_bIsInsideProfiler = false;
-		std::atomic<MemoryProfiler*> s_activeProfiler{ nullptr };
-		thread_local MemoryTag		 t_currentMemoryTag = MemoryTag::Unknown;
-
+			static inline thread_local bool			   t_bIsInsideProfiler = false;
+			static inline std::atomic<MemoryProfiler*> s_activeProfiler{ nullptr };
+			static inline thread_local MemoryTag	   t_currentMemoryTag = MemoryTag::Unknown;
+		};
 	} // namespace
+} // namespace sw
 
+namespace sw
+{
 	const utf8* MemoryProfiler::getMemoryTagName( MemoryTag tag )
 	{
 		switch ( tag )
@@ -87,12 +92,12 @@ namespace sw
 
 	void MemoryProfiler::setCurrentMemoryTag( MemoryTag tag )
 	{
-		t_currentMemoryTag = tag;
+		MemoryProfilerInternal::t_currentMemoryTag = tag;
 	}
 
 	MemoryTag MemoryProfiler::getCurrentMemoryTag()
 	{
-		return t_currentMemoryTag;
+		return MemoryProfilerInternal::t_currentMemoryTag;
 	}
 
 	void MemoryProfiler::enableMemoryLeakChecks()
@@ -108,18 +113,18 @@ namespace sw
 		_CrtSetReportMode( _CRT_ERROR, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG );
 		_CrtSetReportFile( _CRT_ERROR, _CRTDBG_FILE_STDERR );
 
-		s_bHasLeakBaseline = false;
+		MemoryProfilerInternal::s_bHasLeakBaseline = false;
 #endif
 	}
 
 	void MemoryProfiler::captureMemoryLeakBaseline()
 	{
 #if defined( SW_HAS_CRT_LEAK_CHECK )
-		_CrtMemCheckpoint( &s_leakBaseline );
-		s_bHasLeakBaseline = true;
-		printLeakMessage( "[MemoryLeak] CRT baseline captured (post-init): %# normal bytes in %# blocks.",
-						  static_cast<uint64>( s_leakBaseline.lSizes[_NORMAL_BLOCK] ),
-						  static_cast<uint64>( s_leakBaseline.lCounts[_NORMAL_BLOCK] ) );
+		_CrtMemCheckpoint( &MemoryProfilerInternal::s_leakBaseline );
+		MemoryProfilerInternal::s_bHasLeakBaseline = true;
+		MemoryProfilerInternal::printLeakMessage( "[MemoryLeak] CRT baseline captured (post-init): %# normal bytes in %# blocks.",
+												  static_cast<uint64>( MemoryProfilerInternal::s_leakBaseline.lSizes[_NORMAL_BLOCK] ),
+												  static_cast<uint64>( MemoryProfilerInternal::s_leakBaseline.lCounts[_NORMAL_BLOCK] ) );
 #endif
 	}
 
@@ -128,44 +133,44 @@ namespace sw
 		const utf8* phase = ( phaseTag != nullptr && phaseTag[0] != '\0' ) ? phaseTag : "shutdown";
 
 #if defined( SW_HAS_CRT_LEAK_CHECK )
-		if ( s_bHasLeakBaseline )
+		if ( MemoryProfilerInternal::s_bHasLeakBaseline )
 		{
 			_CrtMemState now{};
 			_CrtMemCheckpoint( &now );
 
-			if ( heapGrewVsBaseline( now ) )
+			if ( MemoryProfilerInternal::heapGrewVsBaseline( now ) )
 			{
 				_CrtMemState diff{};
-				_CrtMemDifference( &diff, &s_leakBaseline, &now );
+				_CrtMemDifference( &diff, &MemoryProfilerInternal::s_leakBaseline, &now );
 
-				printLeakMessage( "[MemoryLeak] %# — heap larger than post-init baseline (%# -> %# normal bytes).",
-								  phase,
-								  static_cast<uint64>( s_leakBaseline.lSizes[_NORMAL_BLOCK] ),
-								  static_cast<uint64>( now.lSizes[_NORMAL_BLOCK] ) );
+				MemoryProfilerInternal::printLeakMessage( "[MemoryLeak] %# — heap larger than post-init baseline (%# -> %# normal bytes).",
+														  phase,
+														  static_cast<uint64>( MemoryProfilerInternal::s_leakBaseline.lSizes[_NORMAL_BLOCK] ),
+														  static_cast<uint64>( now.lSizes[_NORMAL_BLOCK] ) );
 				_CrtMemDumpStatistics( &diff );
 				_CrtDumpMemoryLeaks();
 				return 1;
 			}
 
-			printLeakMessage( "[MemoryLeak] %# — no CRT leaks (normal %# -> %# bytes).",
-							  phase,
-							  static_cast<uint64>( s_leakBaseline.lSizes[_NORMAL_BLOCK] ),
-							  static_cast<uint64>( now.lSizes[_NORMAL_BLOCK] ) );
+			MemoryProfilerInternal::printLeakMessage( "[MemoryLeak] %# — no CRT leaks (normal %# -> %# bytes).",
+													  phase,
+													  static_cast<uint64>( MemoryProfilerInternal::s_leakBaseline.lSizes[_NORMAL_BLOCK] ),
+													  static_cast<uint64>( now.lSizes[_NORMAL_BLOCK] ) );
 			return 0;
 		}
 
-		printLeakMessage( "[MemoryLeak] %# — CRT _CrtDumpMemoryLeaks() (no baseline)", phase );
+		MemoryProfilerInternal::printLeakMessage( "[MemoryLeak] %# — CRT _CrtDumpMemoryLeaks() (no baseline)", phase );
 		return _CrtDumpMemoryLeaks();
 
 #elif defined( SW_HAS_LSAN_LEAK_CHECK )
-		printLeakMessage( "[MemoryLeak] %# — __lsan_do_recoverable_leak_check()", phase );
+		MemoryProfilerInternal::printLeakMessage( "[MemoryLeak] %# — __lsan_do_recoverable_leak_check()", phase );
 		return __lsan_do_recoverable_leak_check() != 0 ? 1 : 0;
 
 #else
 	#if defined( SW_DEBUG ) && !defined( SW_SHIPPING )
-		printLeakMessage( "[MemoryLeak] %# — no in-process checker. Windows Debug CRT: rebuild Debug. "
-						  "Linux: cmake -DSW_ENABLE_SANITIZER=ON OR valgrind --leak-check=full ./App",
-						  phase );
+		MemoryProfilerInternal::printLeakMessage( "[MemoryLeak] %# — no in-process checker. Windows Debug CRT: rebuild Debug. "
+												  "Linux: cmake -DSW_ENABLE_SANITIZER=ON OR valgrind --leak-check=full ./App",
+												  phase );
 	#else
 		(void)phase;
 	#endif
@@ -193,7 +198,7 @@ namespace sw
 		CallStackCapture::initialize();
 
 		MemoryProfiler* pExpected{ nullptr };
-		s_activeProfiler.compare_exchange_strong( pExpected, this, std::memory_order_acq_rel, std::memory_order_relaxed );
+		MemoryProfilerInternal::s_activeProfiler.compare_exchange_strong( pExpected, this, std::memory_order_acq_rel, std::memory_order_relaxed );
 	}
 
 	void MemoryProfiler::shutdown()
@@ -203,7 +208,7 @@ namespace sw
 
 		// 훅이 더 이상 이 인스턴스를 보지 않게 먼저 해제합니다.
 		auto pExpected = this;
-		s_activeProfiler.compare_exchange_strong( pExpected, nullptr, std::memory_order_acq_rel, std::memory_order_relaxed );
+		MemoryProfilerInternal::s_activeProfiler.compare_exchange_strong( pExpected, nullptr, std::memory_order_acq_rel, std::memory_order_relaxed );
 
 		_bTrackingEnabled.store( false, std::memory_order_relaxed );
 		CallStackCapture::shutdown();
@@ -211,7 +216,7 @@ namespace sw
 
 	MemoryProfiler* MemoryProfiler::getActive()
 	{
-		return s_activeProfiler.load( std::memory_order_acquire );
+		return MemoryProfilerInternal::s_activeProfiler.load( std::memory_order_acquire );
 	}
 
 	void MemoryProfiler::setTrackingEnabled( bool bEnabled )
@@ -230,7 +235,7 @@ namespace sw
 		if ( _bTrackingEnabled.load( std::memory_order_relaxed ) == false )
 			return 0;
 
-		if ( t_bIsInsideProfiler )
+		if ( MemoryProfilerInternal::t_bIsInsideProfiler )
 			return 0; // 방어 로직: 프로파일러 내부에서 해시 맵 할당 시 재귀 방지
 
 		uint32 tagIdx = static_cast<uint32>( tag );
@@ -250,7 +255,7 @@ namespace sw
 			CallStackCapture::capture( stack, 2 );
 			outHash = stack._hash;
 
-			t_bIsInsideProfiler = true;
+			MemoryProfilerInternal::t_bIsInsideProfiler = true;
 			{
 				std::scoped_lock<mutex> lock{ _stackMapMutex };
 				auto&					info = _mapCallStackAllocInfo[outHash];
@@ -259,7 +264,7 @@ namespace sw
 				info._currentBytes += size;
 				info._currentCount++;
 			}
-			t_bIsInsideProfiler = false;
+			MemoryProfilerInternal::t_bIsInsideProfiler = false;
 		}
 
 		return outHash;
@@ -271,7 +276,7 @@ namespace sw
 		if ( _bTrackingEnabled.load( std::memory_order_relaxed ) == false )
 			return;
 
-		if ( t_bIsInsideProfiler )
+		if ( MemoryProfilerInternal::t_bIsInsideProfiler )
 			return; // 방어 로직: 프로파일러 내부에서 해시 맵 노드 해제 시 재귀 방지
 
 		uint32 tagIdx = static_cast<uint32>( tag );
@@ -284,7 +289,7 @@ namespace sw
 
 		if ( _bDetailedTrackingEnabled.load( std::memory_order_relaxed ) && callStackHash != 0 )
 		{
-			t_bIsInsideProfiler = true;
+			MemoryProfilerInternal::t_bIsInsideProfiler = true;
 			{
 				std::scoped_lock<mutex> lock{ _stackMapMutex };
 				auto					it = _mapCallStackAllocInfo.find( callStackHash );
@@ -299,7 +304,7 @@ namespace sw
 						it->second._currentCount--;
 				}
 			}
-			t_bIsInsideProfiler = false;
+			MemoryProfilerInternal::t_bIsInsideProfiler = false;
 		}
 	}
 
@@ -314,7 +319,7 @@ namespace sw
 	vector<CallStackAllocInfo> MemoryProfiler::getTopCallStacks() const
 	{
 		vector<CallStackAllocInfo> listResult;
-		t_bIsInsideProfiler = true;
+		MemoryProfilerInternal::t_bIsInsideProfiler = true;
 		{
 			std::scoped_lock<mutex> lock{ _stackMapMutex };
 			listResult.reserve( _mapCallStackAllocInfo.size() );
@@ -324,7 +329,7 @@ namespace sw
 					listResult.push_back( info );
 			}
 		}
-		t_bIsInsideProfiler = false;
+		MemoryProfilerInternal::t_bIsInsideProfiler = false;
 
 		std::sort( listResult.begin(), listResult.end(), []( const CallStackAllocInfo& infoA, const CallStackAllocInfo& infoB )
 		{ return infoA._currentBytes > infoB._currentBytes; } );

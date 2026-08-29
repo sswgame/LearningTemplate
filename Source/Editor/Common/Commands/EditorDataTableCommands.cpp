@@ -13,82 +13,88 @@
 
 namespace sw::editor
 {
-	SW_LOG_CALLER( "EditorDataTableCommands" );
-
 	namespace
 	{
-		enum class LocLang : uint8
+		struct EditorDataTableCommandsInternal
 		{
-			EnUS = 0,
-			KoKR,
-			JaJP
+			enum class LocLang : uint8
+			{
+				EnUS = 0,
+				KoKR,
+				JaJP
+			};
+
+			static const utf8* locLangFileStem( LocLang lang )
+			{
+				if ( lang == LocLang::EnUS )
+					return "en_US";
+				if ( lang == LocLang::KoKR )
+					return "ko_KR";
+				return "ja_JP";
+			}
+
+			static void setLocField( LocRecord& rec, LocLang lang, string_view value )
+			{
+				if ( lang == LocLang::EnUS )
+					rec._enUS = string{ value };
+				else if ( lang == LocLang::KoKR )
+					rec._koKR = string{ value };
+				else
+					rec._jaJP = string{ value };
+			}
+
+			static const string& getLocField( const LocRecord& rec, LocLang lang )
+			{
+				if ( lang == LocLang::EnUS )
+					return rec._enUS;
+				if ( lang == LocLang::KoKR )
+					return rec._koKR;
+				return rec._jaJP;
+			}
+
+			static void mergeLangJson( LocLang lang, const string& locFolder, map<string, LocRecord>& mapRecords )
+			{
+				const string path = FileUtil::joinPath( locFolder, string{ locLangFileStem( lang ) } + ".json" );
+				JsonDocument doc;
+				if ( doc.loadFile( path ) == false || doc.root().isObject() == false )
+					return;
+
+				const vector<string> listKeys = doc.root().memberNames();
+				for ( const string& key : listKeys )
+				{
+					LocRecord& rec = mapRecords[key];
+					rec._key	   = key;
+					setLocField( rec, lang, doc.root().get( key ).asString() );
+				}
+			}
+
+			static void writeLangJson( LocLang lang, const string& locFolder, const vector<LocRecord>& listRecord )
+			{
+				JsonDocument	doc;
+				const JsonValue root = doc.makeObject();
+
+				for ( const LocRecord& rec : listRecord )
+				{
+					const string& val = getLocField( rec, lang );
+					if ( val.empty() == false )
+						root.set( rec._key ).setString( val );
+				}
+
+				const string path = FileUtil::joinPath( locFolder, string{ locLangFileStem( lang ) } + ".json" );
+				if ( doc.saveFile( path, 4 ) == false )
+					return;
+
+				LocalizationManager* pLocMgr = editor::getService<LocalizationManager>();
+				if ( pLocMgr != nullptr )
+					pLocMgr->loadLanguageJson( locLangFileStem( lang ), doc.dump( 4 ) );
+			}
 		};
-
-		const utf8* locLangFileStem( LocLang lang )
-		{
-			if ( lang == LocLang::EnUS )
-				return "en_US";
-			if ( lang == LocLang::KoKR )
-				return "ko_KR";
-			return "ja_JP";
-		}
-
-		void setLocField( LocRecord& rec, LocLang lang, string_view value )
-		{
-			if ( lang == LocLang::EnUS )
-				rec._enUS = string{ value };
-			else if ( lang == LocLang::KoKR )
-				rec._koKR = string{ value };
-			else
-				rec._jaJP = string{ value };
-		}
-
-		const string& getLocField( const LocRecord& rec, LocLang lang )
-		{
-			if ( lang == LocLang::EnUS )
-				return rec._enUS;
-			if ( lang == LocLang::KoKR )
-				return rec._koKR;
-			return rec._jaJP;
-		}
-
-		void mergeLangJson( LocLang lang, const string& locFolder, map<string, LocRecord>& mapRecords )
-		{
-			const string path = FileUtil::joinPath( locFolder, string{ locLangFileStem( lang ) } + ".json" );
-			JsonDocument doc;
-			if ( doc.loadFile( path ) == false || doc.root().isObject() == false )
-				return;
-
-			const vector<string> listKeys = doc.root().memberNames();
-			for ( const string& key : listKeys )
-			{
-				LocRecord& rec = mapRecords[key];
-				rec._key	   = key;
-				setLocField( rec, lang, doc.root().get( key ).asString() );
-			}
-		}
-
-		void writeLangJson( LocLang lang, const string& locFolder, const vector<LocRecord>& listRecord )
-		{
-			JsonDocument	doc;
-			const JsonValue root = doc.makeObject();
-
-			for ( const LocRecord& rec : listRecord )
-			{
-				const string& val = getLocField( rec, lang );
-				if ( val.empty() == false )
-					root.set( rec._key ).setString( val );
-			}
-
-			const string path = FileUtil::joinPath( locFolder, string{ locLangFileStem( lang ) } + ".json" );
-			if ( doc.saveFile( path, 4 ) == false )
-				return;
-
-			LocalizationManager* pLocMgr = editor::getService<LocalizationManager>();
-			if ( pLocMgr != nullptr )
-				pLocMgr->loadLanguageJson( locLangFileStem( lang ), doc.dump( 4 ) );
-		}
 	} // namespace
+} // namespace sw::editor
+
+namespace sw::editor
+{
+	SW_LOG_CALLER( "EditorDataTableCommands" );
 
 	string EditorDataTableCommands::getLocalizationFolderPath()
 	{
@@ -106,9 +112,9 @@ namespace sw::editor
 		const string locFolder = getLocalizationFolderPath();
 
 		map<string, LocRecord> mapRecords;
-		mergeLangJson( LocLang::EnUS, locFolder, mapRecords );
-		mergeLangJson( LocLang::KoKR, locFolder, mapRecords );
-		mergeLangJson( LocLang::JaJP, locFolder, mapRecords );
+		EditorDataTableCommandsInternal::mergeLangJson( EditorDataTableCommandsInternal::LocLang::EnUS, locFolder, mapRecords );
+		EditorDataTableCommandsInternal::mergeLangJson( EditorDataTableCommandsInternal::LocLang::KoKR, locFolder, mapRecords );
+		EditorDataTableCommandsInternal::mergeLangJson( EditorDataTableCommandsInternal::LocLang::JaJP, locFolder, mapRecords );
 
 		outList.reserve( mapRecords.size() );
 		for ( auto& pair : mapRecords )
@@ -121,9 +127,9 @@ namespace sw::editor
 		const string locFolder = getLocalizationFolderPath();
 		FileUtil::ensureDirectoryExists( locFolder );
 
-		writeLangJson( LocLang::EnUS, locFolder, listRecord );
-		writeLangJson( LocLang::KoKR, locFolder, listRecord );
-		writeLangJson( LocLang::JaJP, locFolder, listRecord );
+		EditorDataTableCommandsInternal::writeLangJson( EditorDataTableCommandsInternal::LocLang::EnUS, locFolder, listRecord );
+		EditorDataTableCommandsInternal::writeLangJson( EditorDataTableCommandsInternal::LocLang::KoKR, locFolder, listRecord );
+		EditorDataTableCommandsInternal::writeLangJson( EditorDataTableCommandsInternal::LocLang::JaJP, locFolder, listRecord );
 
 		for ( LocRecord& rec : listRecord )
 			rec._bModified = false;

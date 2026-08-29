@@ -19,35 +19,54 @@ namespace sw
 {
 	namespace
 	{
-		void queueProjectileAttack( GameObjectManager* pGameObjectManager, const string& _projectilePrefab, const float3& selfPos, float32 dirX )
+		struct MonsterComponentInternal
 		{
-			if ( pGameObjectManager == nullptr || _projectilePrefab.empty() )
-				return;
-
-			const string  prefabPath = _projectilePrefab;
-			const float3  spawnPos	 = selfPos;
-			const float32 dir		 = dirX >= 0.0f ? 1.0f : -1.0f;
-
-			auto spawnProjectile = [pGameObjectManager, prefabPath, spawnPos, dir]()
+			static void queueProjectileAttack( GameObjectManager* pGameObjectManager, const string& _projectilePrefab, const float3& selfPos, float32 dirX )
 			{
-				GameObject* pProjObj = nullptr;
-				if ( game::areGameServicesBound() )
-				{
-					pProjObj = game::getService<ResourceManager>()->getPrefabManager().spawn(
-						pGameObjectManager, prefabPath, "MonsterProjectile" );
-				}
+				if ( pGameObjectManager == nullptr || _projectilePrefab.empty() )
+					return;
 
-				if ( pProjObj == nullptr )
+				const string  prefabPath = _projectilePrefab;
+				const float3  spawnPos	 = selfPos;
+				const float32 dir		 = dirX >= 0.0f ? 1.0f : -1.0f;
+
+				auto spawnProjectile = [pGameObjectManager, prefabPath, spawnPos, dir]()
 				{
-					pProjObj = pGameObjectManager->createGameObject( hashed_string( "MonsterProjectile" ) );
+					GameObject* pProjObj = nullptr;
+					if ( game::areGameServicesBound() )
+					{
+						pProjObj = game::getService<ResourceManager>()->getPrefabManager().spawn(
+							pGameObjectManager, prefabPath, "MonsterProjectile" );
+					}
+
 					if ( pProjObj == nullptr )
-						return;
+					{
+						pProjObj = pGameObjectManager->createGameObject( hashed_string( "MonsterProjectile" ) );
+						if ( pProjObj == nullptr )
+							return;
 
-					SceneComponent* pProjSceneComp = pProjObj->addComponent<SceneComponent>();
+						SceneComponent* pProjSceneComp = pProjObj->addComponent<SceneComponent>();
+						if ( pProjSceneComp != nullptr )
+							pProjSceneComp->setLocalPosition( spawnPos );
+
+						ProjectileComponent* pProjComp = pProjObj->addComponent<ProjectileComponent>();
+						if ( pProjComp != nullptr )
+						{
+							pProjComp->setVelocity( float2{ dir * 300.0f, 0.0f } );
+							pProjComp->setDamage( 10 );
+							pProjComp->setLifeTime( 3.0f );
+						}
+						pProjObj->addTag( "Bullet"_tag );
+						return;
+					}
+
+					SceneComponent* pProjSceneComp = pProjObj->getPrimarySceneComponent();
 					if ( pProjSceneComp != nullptr )
 						pProjSceneComp->setLocalPosition( spawnPos );
 
-					ProjectileComponent* pProjComp = pProjObj->addComponent<ProjectileComponent>();
+					ProjectileComponent* pProjComp = pProjObj->getComponent<ProjectileComponent>();
+					if ( pProjComp == nullptr )
+						pProjComp = pProjObj->addComponent<ProjectileComponent>();
 					if ( pProjComp != nullptr )
 					{
 						pProjComp->setVelocity( float2{ dir * 300.0f, 0.0f } );
@@ -55,29 +74,16 @@ namespace sw
 						pProjComp->setLifeTime( 3.0f );
 					}
 					pProjObj->addTag( "Bullet"_tag );
-					return;
-				}
+				};
 
-				SceneComponent* pProjSceneComp = pProjObj->getPrimarySceneComponent();
-				if ( pProjSceneComp != nullptr )
-					pProjSceneComp->setLocalPosition( spawnPos );
-
-				ProjectileComponent* pProjComp = pProjObj->getComponent<ProjectileComponent>();
-				if ( pProjComp == nullptr )
-					pProjComp = pProjObj->addComponent<ProjectileComponent>();
-				if ( pProjComp != nullptr )
-				{
-					pProjComp->setVelocity( float2{ dir * 300.0f, 0.0f } );
-					pProjComp->setDamage( 10 );
-					pProjComp->setLifeTime( 3.0f );
-				}
-				pProjObj->addTag( "Bullet"_tag );
-			};
-
-			pGameObjectManager->executeOrDeferPostTick( spawnProjectile );
-		}
+				pGameObjectManager->executeOrDeferPostTick( spawnProjectile );
+			}
+		};
 	} // namespace
+} // namespace sw
 
+namespace sw
+{
 	MonsterComponent::MonsterComponent()
 		: _archetype{ MonsterArchetype::MeleePatrol }
 		, _patrolRange{ 0.0f }
@@ -181,7 +187,7 @@ namespace sw
 					_attackTimer = 0.0f;
 					if ( _projectilePrefab.empty() == false )
 					{
-						queueProjectileAttack( pGameObjectManager, _projectilePrefab, selfPos, distX );
+						MonsterComponentInternal::queueProjectileAttack( pGameObjectManager, _projectilePrefab, selfPos, distX );
 					}
 					else
 					{

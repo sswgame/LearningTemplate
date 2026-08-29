@@ -12,102 +12,108 @@
 
 namespace sw::editor
 {
+	namespace
+	{
+		struct ImGuiDX12RendererBackendInternal
+		{
+			inline static void ( *s_OrigCreateWindow )( ImGuiViewport* )		  = nullptr;
+			inline static void ( *s_OrigSetWindowSize )( ImGuiViewport*, ImVec2 ) = nullptr;
+
+			static void ImGuiAllocSrv( ImGui_ImplDX12_InitInfo* pInfo, D3D12_CPU_DESCRIPTOR_HANDLE* pOutCpu, D3D12_GPU_DESCRIPTOR_HANDLE* pOutGpu )
+			{
+				ImGuiDX12RendererBackend* pSelf = static_cast<ImGuiDX12RendererBackend*>( pInfo->UserData );
+				if ( pSelf == nullptr || pSelf->allocSrvDescriptor( pOutCpu, pOutGpu ) == false )
+				{
+					pOutCpu->ptr = 0;
+					pOutGpu->ptr = 0;
+				}
+			}
+
+			static void ImGuiFreeSrv( ImGui_ImplDX12_InitInfo* pInfo, D3D12_CPU_DESCRIPTOR_HANDLE cpu, D3D12_GPU_DESCRIPTOR_HANDLE gpu )
+			{
+				ImGuiDX12RendererBackend* pSelf = static_cast<ImGuiDX12RendererBackend*>( pInfo->UserData );
+				if ( pSelf != nullptr )
+					pSelf->freeSrvDescriptor( cpu, gpu );
+			}
+
+			/** @brief DXGI_SCALING_NONE은 HWND 클라이언트 크기와 스왑체인 크기가 일치해야 함. */
+			static void syncViewportSizeFromHwnd( ImGuiViewport* pViewport )
+			{
+				if ( pViewport == nullptr )
+					return;
+
+				HWND hwnd = static_cast<HWND>( pViewport->PlatformHandleRaw ? pViewport->PlatformHandleRaw : pViewport->PlatformHandle );
+				if ( hwnd == nullptr )
+					return;
+
+				RECT rc{};
+				if ( GetClientRect( hwnd, &rc ) == FALSE )
+					return;
+
+				const float32 width	 = static_cast<float32>( rc.right - rc.left );
+				const float32 height = static_cast<float32>( rc.bottom - rc.top );
+				if ( width >= 1.0f && height >= 1.0f )
+				{
+					pViewport->Size.x = width;
+					pViewport->Size.y = height;
+				}
+			}
+
+			static void GuardedCreateWindow( ImGuiViewport* pViewport )
+			{
+				if ( pViewport == nullptr || s_OrigCreateWindow == nullptr )
+					return;
+
+				syncViewportSizeFromHwnd( pViewport );
+				if ( pViewport->Size.x < 1.0f )
+					pViewport->Size.x = 1.0f;
+				if ( pViewport->Size.y < 1.0f )
+					pViewport->Size.y = 1.0f;
+
+				s_OrigCreateWindow( pViewport );
+			}
+
+			static void GuardedSetWindowSize( ImGuiViewport* pViewport, ImVec2 size )
+			{
+				if ( pViewport == nullptr || s_OrigSetWindowSize == nullptr )
+					return;
+
+				// imgui_impl_dx12의 ResizeBuffers(0,w,h)는 w/h==0 이면 DXGI_ERROR_INVALID_CALL → device removed.
+				if ( size.x < 1.0f || size.y < 1.0f )
+					return;
+
+				s_OrigSetWindowSize( pViewport, size );
+			}
+
+			static void installViewportGuards()
+			{
+				ImGuiPlatformIO& platformIO = ImGui::GetPlatformIO();
+				if ( platformIO.Renderer_CreateWindow != nullptr && platformIO.Renderer_CreateWindow != &GuardedCreateWindow )
+				{
+					s_OrigCreateWindow				 = platformIO.Renderer_CreateWindow;
+					platformIO.Renderer_CreateWindow = &GuardedCreateWindow;
+				}
+				if ( platformIO.Renderer_SetWindowSize != nullptr && platformIO.Renderer_SetWindowSize != &GuardedSetWindowSize )
+				{
+					s_OrigSetWindowSize				  = platformIO.Renderer_SetWindowSize;
+					platformIO.Renderer_SetWindowSize = &GuardedSetWindowSize;
+				}
+			}
+
+			static void clearViewportGuards()
+			{
+				s_OrigCreateWindow	= nullptr;
+				s_OrigSetWindowSize = nullptr;
+			}
+		};
+	} // namespace
+} // namespace sw::editor
+
+namespace sw::editor
+{
 	SW_LOG_CALLER( "ImGuiDX12" );
 
 #if defined( SW_PLATFORM_WINDOWS )
-	namespace
-	{
-		void ( *s_OrigCreateWindow )( ImGuiViewport* )			= nullptr;
-		void ( *s_OrigSetWindowSize )( ImGuiViewport*, ImVec2 ) = nullptr;
-
-		void ImGuiAllocSrv( ImGui_ImplDX12_InitInfo* pInfo, D3D12_CPU_DESCRIPTOR_HANDLE* pOutCpu, D3D12_GPU_DESCRIPTOR_HANDLE* pOutGpu )
-		{
-			ImGuiDX12RendererBackend* pSelf = static_cast<ImGuiDX12RendererBackend*>( pInfo->UserData );
-			if ( pSelf == nullptr || pSelf->allocSrvDescriptor( pOutCpu, pOutGpu ) == false )
-			{
-				pOutCpu->ptr = 0;
-				pOutGpu->ptr = 0;
-			}
-		}
-
-		void ImGuiFreeSrv( ImGui_ImplDX12_InitInfo* pInfo, D3D12_CPU_DESCRIPTOR_HANDLE cpu, D3D12_GPU_DESCRIPTOR_HANDLE gpu )
-		{
-			ImGuiDX12RendererBackend* pSelf = static_cast<ImGuiDX12RendererBackend*>( pInfo->UserData );
-			if ( pSelf != nullptr )
-				pSelf->freeSrvDescriptor( cpu, gpu );
-		}
-
-		/** @brief DXGI_SCALING_NONE은 HWND 클라이언트 크기와 스왑체인 크기가 일치해야 함. */
-		void syncViewportSizeFromHwnd( ImGuiViewport* pViewport )
-		{
-			if ( pViewport == nullptr )
-				return;
-
-			HWND hwnd = static_cast<HWND>( pViewport->PlatformHandleRaw ? pViewport->PlatformHandleRaw : pViewport->PlatformHandle );
-			if ( hwnd == nullptr )
-				return;
-
-			RECT rc{};
-			if ( GetClientRect( hwnd, &rc ) == FALSE )
-				return;
-
-			const float32 width	 = static_cast<float32>( rc.right - rc.left );
-			const float32 height = static_cast<float32>( rc.bottom - rc.top );
-			if ( width >= 1.0f && height >= 1.0f )
-			{
-				pViewport->Size.x = width;
-				pViewport->Size.y = height;
-			}
-		}
-
-		void GuardedCreateWindow( ImGuiViewport* pViewport )
-		{
-			if ( pViewport == nullptr || s_OrigCreateWindow == nullptr )
-				return;
-
-			syncViewportSizeFromHwnd( pViewport );
-			if ( pViewport->Size.x < 1.0f )
-				pViewport->Size.x = 1.0f;
-			if ( pViewport->Size.y < 1.0f )
-				pViewport->Size.y = 1.0f;
-
-			s_OrigCreateWindow( pViewport );
-		}
-
-		void GuardedSetWindowSize( ImGuiViewport* pViewport, ImVec2 size )
-		{
-			if ( pViewport == nullptr || s_OrigSetWindowSize == nullptr )
-				return;
-
-			// imgui_impl_dx12의 ResizeBuffers(0,w,h)는 w/h==0 이면 DXGI_ERROR_INVALID_CALL → device removed.
-			if ( size.x < 1.0f || size.y < 1.0f )
-				return;
-
-			s_OrigSetWindowSize( pViewport, size );
-		}
-
-		void installViewportGuards()
-		{
-			ImGuiPlatformIO& platformIO = ImGui::GetPlatformIO();
-			if ( platformIO.Renderer_CreateWindow != nullptr && platformIO.Renderer_CreateWindow != &GuardedCreateWindow )
-			{
-				s_OrigCreateWindow				 = platformIO.Renderer_CreateWindow;
-				platformIO.Renderer_CreateWindow = &GuardedCreateWindow;
-			}
-			if ( platformIO.Renderer_SetWindowSize != nullptr && platformIO.Renderer_SetWindowSize != &GuardedSetWindowSize )
-			{
-				s_OrigSetWindowSize				  = platformIO.Renderer_SetWindowSize;
-				platformIO.Renderer_SetWindowSize = &GuardedSetWindowSize;
-			}
-		}
-
-		void clearViewportGuards()
-		{
-			s_OrigCreateWindow	= nullptr;
-			s_OrigSetWindowSize = nullptr;
-		}
-
-	} // namespace
 #endif
 
 #if defined( SW_PLATFORM_WINDOWS )
@@ -144,14 +150,14 @@ namespace sw::editor
 		initInfo.RTVFormat				 = DXGI_FORMAT_R8G8B8A8_UNORM;
 		initInfo.SrvDescriptorHeap		 = _d3d12SrvHeap.Get();
 		initInfo.UserData				 = this;
-		initInfo.SrvDescriptorAllocFn	 = &ImGuiAllocSrv;
-		initInfo.SrvDescriptorFreeFn	 = &ImGuiFreeSrv;
+		initInfo.SrvDescriptorAllocFn	 = &ImGuiDX12RendererBackendInternal::ImGuiAllocSrv;
+		initInfo.SrvDescriptorFreeFn	 = &ImGuiDX12RendererBackendInternal::ImGuiFreeSrv;
 
 		SW_LOG_TRACE( "Calling ImGui_ImplDX12_Init" );
 		const bool bRet = ImGui_ImplDX12_Init( &initInfo );
 		SW_LOG_TRACE( "ImGui_ImplDX12_Init Returned: %#", bRet );
 		if ( bRet )
-			installViewportGuards();
+			ImGuiDX12RendererBackendInternal::installViewportGuards();
 		return bRet;
 	#else
 		(void)pRhiDevice;
@@ -162,7 +168,7 @@ namespace sw::editor
 	void ImGuiDX12RendererBackend::shutdown()
 	{
 	#if defined( SW_PLATFORM_WINDOWS )
-		clearViewportGuards();
+		ImGuiDX12RendererBackendInternal::clearViewportGuards();
 		if ( ImGui::GetIO().BackendRendererUserData != nullptr )
 		{
 			ImGui_ImplDX12_Shutdown();

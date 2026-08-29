@@ -12,6 +12,59 @@
 
 namespace sw
 {
+	namespace
+	{
+		struct ReloadFileManagerInternal
+		{
+			static void considerFileVal( unordered_map<string, uint64>& mapPollMtimes, vector<FileChangeEvent>& listOutEvents, const vector<string>& listExtensions, const string& filePath )
+			{
+				if ( FileUtil::fileExists( filePath ) == false )
+					return;
+
+				const string filename		  = FileUtil::getFileNamePart( filePath );
+				bool		 extensionAllowed = listExtensions.empty();
+				if ( extensionAllowed == false )
+				{
+					for ( const string& allowed : listExtensions )
+					{
+						if ( FileUtil::hasExtension( filename, allowed ) )
+						{
+							extensionAllowed = true;
+							break;
+						}
+					}
+				}
+				if ( extensionAllowed == false )
+					return;
+
+				const uint64 mtime = FileUtil::getFileTimestamp( filePath );
+				if ( mtime == 0 )
+					return;
+
+				const string								  normalized = FileUtil::normalizePath( filePath );
+				const unordered_map<string, uint64>::iterator it		 = mapPollMtimes.find( normalized );
+				if ( it == mapPollMtimes.end() )
+				{
+					mapPollMtimes.emplace( normalized, mtime );
+					return;
+				}
+
+				if ( it->second != mtime )
+				{
+					it->second = mtime;
+					FileChangeEvent ev{};
+					ev._action	  = FileWatcherAction::Modified;
+					ev._directory = FileUtil::normalizePath( FileUtil::getDirectoryPart( filePath ) );
+					ev._filename  = filename;
+					listOutEvents.push_back( std::move( ev ) );
+				}
+			}
+		};
+	} // namespace
+} // namespace sw
+
+namespace sw
+{
 	SW_LOG_CALLER( "ReloadFileManager" );
 
 	ReloadFileManager::ReloadFileManager() = default;
@@ -173,53 +226,6 @@ namespace sw
 		}
 	}
 
-	namespace
-	{
-		static void considerFileVal( unordered_map<string, uint64>& mapPollMtimes, vector<FileChangeEvent>& listOutEvents, const vector<string>& listExtensions, const string& filePath )
-		{
-			if ( FileUtil::fileExists( filePath ) == false )
-				return;
-
-			const string filename		  = FileUtil::getFileNamePart( filePath );
-			bool		 extensionAllowed = listExtensions.empty();
-			if ( extensionAllowed == false )
-			{
-				for ( const string& allowed : listExtensions )
-				{
-					if ( FileUtil::hasExtension( filename, allowed ) )
-					{
-						extensionAllowed = true;
-						break;
-					}
-				}
-			}
-			if ( extensionAllowed == false )
-				return;
-
-			const uint64 mtime = FileUtil::getFileTimestamp( filePath );
-			if ( mtime == 0 )
-				return;
-
-			const string								  normalized = FileUtil::normalizePath( filePath );
-			const unordered_map<string, uint64>::iterator it		 = mapPollMtimes.find( normalized );
-			if ( it == mapPollMtimes.end() )
-			{
-				mapPollMtimes.emplace( normalized, mtime );
-				return;
-			}
-
-			if ( it->second != mtime )
-			{
-				it->second = mtime;
-				FileChangeEvent ev{};
-				ev._action	  = FileWatcherAction::Modified;
-				ev._directory = FileUtil::normalizePath( FileUtil::getDirectoryPart( filePath ) );
-				ev._filename  = filename;
-				listOutEvents.push_back( std::move( ev ) );
-			}
-		}
-	} // namespace
-
 	void ReloadFileManager::pollMtimeFallback( vector<FileChangeEvent>& listOutEvents )
 	{
 		for ( const WatchEntry& entry : _listWatch )
@@ -229,13 +235,13 @@ namespace sw
 				continue;
 
 			if ( FileUtil::fileExists( entry._pathPrefix ) )
-				considerFileVal( _mapPollMtime, listOutEvents, entry._listExtension, entry._pathPrefix );
+				ReloadFileManagerInternal::considerFileVal( _mapPollMtime, listOutEvents, entry._listExtension, entry._pathPrefix );
 			else
 			{
 				vector<string> listFiles;
 				FileUtil::collectFiles( entry._pathPrefix, {}, listFiles, true, false );
 				for ( const string& filePath : listFiles )
-					considerFileVal( _mapPollMtime, listOutEvents, entry._listExtension, filePath );
+					ReloadFileManagerInternal::considerFileVal( _mapPollMtime, listOutEvents, entry._listExtension, filePath );
 			}
 		}
 	}

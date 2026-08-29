@@ -10,7 +10,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResource.h"
 #include "Engine/Graphics/RenderPass/FrameRenderer.h"
-#include "Engine/Graphics/RenderPass/FrameRendererInternal.h"
+#include "Engine/Graphics/RenderPass/FrameRendererUtil.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -49,8 +49,8 @@ namespace sw
 		}
 
 		const utf8* pPassTypeForMat = bTransparentPass
-										? PassType::kTransparent
-										: PassType::kForwardOpaque;
+										? FrameRendererUtil::PassType::kTransparent
+										: FrameRendererUtil::PassType::kForwardOpaque;
 		const utf8* pDefaultShader	= engine::getEngineData()._shaderForwardLit.c_str();
 
 		uint32 drawn{ 0 };

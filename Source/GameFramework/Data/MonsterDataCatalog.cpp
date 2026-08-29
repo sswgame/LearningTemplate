@@ -8,38 +8,44 @@
 
 namespace sw
 {
-	SW_LOG_CALLER( "MonsterDataCatalog" );
-
 	namespace
 	{
-		unordered_map<hashed_string, MonsterDef>& getStorage()
+		struct MonsterDataCatalogInternal
 		{
-			static unordered_map<hashed_string, MonsterDef> s_mapMonsters;
-			return s_mapMonsters;
-		}
+			static unordered_map<hashed_string, MonsterDef>& getStorage()
+			{
+				static unordered_map<hashed_string, MonsterDef> s_mapMonsters;
+				return s_mapMonsters;
+			}
 
-		void seedFallback()
-		{
-			auto& mapMonsters = getStorage();
-			mapMonsters.clear();
+			static void seedFallback()
+			{
+				auto& mapMonsters = getStorage();
+				mapMonsters.clear();
 
-			MonsterDef defaultMonster;
-			defaultMonster._id			   = "default_monster";
-			defaultMonster._name		   = "Default Monster";
-			defaultMonster._archetype	   = MonsterArchetype::MeleePatrol;
-			defaultMonster._hp			   = 100;
-			defaultMonster._maxHp		   = 100;
-			defaultMonster._atk			   = 10;
-			defaultMonster._def			   = 0;
-			defaultMonster._speed		   = 150.0f;
-			defaultMonster._patrolRange	   = 200.0f;
-			defaultMonster._detectRange	   = 400.0f;
-			defaultMonster._attackRange	   = 50.0f;
-			defaultMonster._attackCoolTime = 1.5f;
+				MonsterDef defaultMonster;
+				defaultMonster._id			   = "default_monster";
+				defaultMonster._name		   = "Default Monster";
+				defaultMonster._archetype	   = MonsterArchetype::MeleePatrol;
+				defaultMonster._hp			   = 100;
+				defaultMonster._maxHp		   = 100;
+				defaultMonster._atk			   = 10;
+				defaultMonster._def			   = 0;
+				defaultMonster._speed		   = 150.0f;
+				defaultMonster._patrolRange	   = 200.0f;
+				defaultMonster._detectRange	   = 400.0f;
+				defaultMonster._attackRange	   = 50.0f;
+				defaultMonster._attackCoolTime = 1.5f;
 
-			mapMonsters[hashed_string( defaultMonster._id.c_str() )] = defaultMonster;
-		}
+				mapMonsters[hashed_string( defaultMonster._id.c_str() )] = defaultMonster;
+			}
+		};
 	} // namespace
+} // namespace sw
+
+namespace sw
+{
+	SW_LOG_CALLER( "MonsterDataCatalog" );
 
 	bool MonsterDataCatalog::loadFromResource( string_view assetRelativePath )
 	{
@@ -50,7 +56,7 @@ namespace sw
 		if ( doc.loadResource( assetRelativePath, &absPath ) == false )
 		{
 			SW_LOG_WARNING( "Failed to read %# — using fallback monster definitions.", assetRelativePath );
-			seedFallback();
+			MonsterDataCatalogInternal::seedFallback();
 			return false;
 		}
 
@@ -58,11 +64,11 @@ namespace sw
 		if ( root.isValid() == false )
 		{
 			SW_LOG_WARNING( "Missing <MonsterCatalog> root in %# — using fallback.", absPath );
-			seedFallback();
+			MonsterDataCatalogInternal::seedFallback();
 			return false;
 		}
 
-		auto& mapMonsters = getStorage();
+		auto& mapMonsters = MonsterDataCatalogInternal::getStorage();
 
 		for ( XmlNode node = root.child( "Monster" ); node; node = node.next( "Monster" ) )
 		{
@@ -127,7 +133,7 @@ namespace sw
 
 	const MonsterDef* MonsterDataCatalog::findMonster( const hashed_string& id )
 	{
-		const auto& mapMonsters = getStorage();
+		const auto& mapMonsters = MonsterDataCatalogInternal::getStorage();
 		auto		mapIter		= mapMonsters.find( id );
 		if ( mapIter != mapMonsters.end() )
 			return &mapIter->second;
@@ -141,12 +147,12 @@ namespace sw
 
 	const unordered_map<hashed_string, MonsterDef>& MonsterDataCatalog::getAllMonsters()
 	{
-		return getStorage();
+		return MonsterDataCatalogInternal::getStorage();
 	}
 
 	void MonsterDataCatalog::clear()
 	{
-		getStorage().clear();
+		MonsterDataCatalogInternal::getStorage().clear();
 	}
 
 	MonsterArchetype MonsterDataCatalog::parseArchetype( const utf8* pStr )

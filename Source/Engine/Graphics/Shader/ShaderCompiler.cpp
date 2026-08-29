@@ -9,198 +9,202 @@
 
 namespace sw
 {
-	SW_LOG_CALLER( "ShaderCompiler" );
-
 	namespace
 	{
-
-		/** @brief 셰이더 #include 검색 디렉터리 (engine/shaders, common/shaders, 소스 폴더). */
-		void collectShaderIncludeDirs( const string& shaderAbsPath, vector<string>& outDirs )
+		struct ShaderCompilerInternal
 		{
-			outDirs.clear();
-			const string shaderDir = FileUtil::getDirectoryPart( shaderAbsPath );
-			if ( shaderDir.empty() == false )
-				outDirs.push_back( FileUtil::normalizeSeparators( shaderDir ) );
+			/** @brief 셰이더 #include 검색 디렉터리 (engine/shaders, common/shaders, 소스 폴더). */
+			static void collectShaderIncludeDirs( const string& shaderAbsPath, vector<string>& outDirs )
+			{
+				outDirs.clear();
+				const string shaderDir = FileUtil::getDirectoryPart( shaderAbsPath );
+				if ( shaderDir.empty() == false )
+					outDirs.push_back( FileUtil::normalizeSeparators( shaderDir ) );
 
-			const string& engineRoot = ResourceUtil::getEngineFolderPath();
-			if ( engineRoot.empty() == false )
-				outDirs.push_back( FileUtil::normalizeSeparators( engineRoot + "/shaders" ) );
+				const string& engineRoot = ResourceUtil::getEngineFolderPath();
+				if ( engineRoot.empty() == false )
+					outDirs.push_back( FileUtil::normalizeSeparators( engineRoot + "/shaders" ) );
 
-			const string& commonRoot = ResourceUtil::getCommonFolderPath();
-			if ( commonRoot.empty() == false )
-				outDirs.push_back( FileUtil::normalizeSeparators( commonRoot + "/shaders" ) );
-		}
+				const string& commonRoot = ResourceUtil::getCommonFolderPath();
+				if ( commonRoot.empty() == false )
+					outDirs.push_back( FileUtil::normalizeSeparators( commonRoot + "/shaders" ) );
+			}
 
 #if defined( SW_PLATFORM_WINDOWS )
-		/** @brief 다중 루트 ID3DInclude — common/shaders → engine/shaders/bindless.hlsli 등. */
-		class MultiRootD3DInclude final : public ID3DInclude
-		{
-		public:
-			explicit MultiRootD3DInclude( vector<string> roots )
-				: _listRoot{ std::move( roots ) }
+			/** @brief 다중 루트 ID3DInclude — common/shaders → engine/shaders/bindless.hlsli 등. */
+			class MultiRootD3DInclude final : public ID3DInclude
 			{
-			}
-
-			STDMETHOD( Open )( D3D_INCLUDE_TYPE includeType, LPCSTR pFileName, LPCVOID pParentData,
-							   LPCVOID* ppData, UINT* pBytes ) override
-			{
-				(void)includeType;
-				(void)pParentData;
-				if ( pFileName == nullptr || ppData == nullptr || pBytes == nullptr )
-					return E_FAIL;
-
-				for ( const string& root : _listRoot )
+			public:
+				explicit MultiRootD3DInclude( vector<string> roots )
+					: _listRoot{ std::move( roots ) }
 				{
-					const string candidate = FileUtil::normalizeSeparators( root + "/" + pFileName );
-					if ( FileUtil::fileExists( candidate ) == false )
-						continue;
+				}
 
-					vector<uint8> listBytes;
-					if ( FileUtil::readFile( candidate, listBytes ) == false || listBytes.empty() )
-						continue;
+				STDMETHOD( Open )( D3D_INCLUDE_TYPE includeType, LPCSTR pFileName, LPCVOID pParentData,
+								   LPCVOID* ppData, UINT* pBytes ) override
+				{
+					(void)includeType;
+					(void)pParentData;
+					if ( pFileName == nullptr || ppData == nullptr || pBytes == nullptr )
+						return E_FAIL;
 
-					uint8* pHeap = static_cast<uint8*>( Memory::allocMemory( listBytes.size() ) );
-					if ( pHeap == nullptr )
-						return E_OUTOFMEMORY;
-					Memory::copy( pHeap, listBytes.data(), listBytes.size() );
-					*ppData = pHeap;
-					*pBytes = static_cast<UINT>( listBytes.size() );
+					for ( const string& root : _listRoot )
+					{
+						const string candidate = FileUtil::normalizeSeparators( root + "/" + pFileName );
+						if ( FileUtil::fileExists( candidate ) == false )
+							continue;
+
+						vector<uint8> listBytes;
+						if ( FileUtil::readFile( candidate, listBytes ) == false || listBytes.empty() )
+							continue;
+
+						uint8* pHeap = static_cast<uint8*>( Memory::allocMemory( listBytes.size() ) );
+						if ( pHeap == nullptr )
+							return E_OUTOFMEMORY;
+						Memory::copy( pHeap, listBytes.data(), listBytes.size() );
+						*ppData = pHeap;
+						*pBytes = static_cast<UINT>( listBytes.size() );
+						return S_OK;
+					}
+					return E_FAIL;
+				}
+
+				STDMETHOD( Close )( LPCVOID pData ) override
+				{
+					if ( pData != nullptr )
+						Memory::freeMemory( const_cast<void*>( pData ) );
 					return S_OK;
 				}
-				return E_FAIL;
-			}
 
-			STDMETHOD( Close )( LPCVOID pData ) override
-			{
-				if ( pData != nullptr )
-					Memory::freeMemory( const_cast<void*>( pData ) );
-				return S_OK;
-			}
-
-		private:
-			vector<string> _listRoot;
-		};
+			private:
+				vector<string> _listRoot;
+			};
 #endif
 
-		/**
-		 * @brief 셰이더 단계(Stage) 및 타깃 포맷에 해당하는 프로파일 문자열을 반환합니다.
-		 * @details DX11은 SM5.0, DX12/Vulkan/OpenGL은 Native Bindless 및 Descriptor Indexing을 위해 SM6.6을 반환합니다.
-		 */
-		const utf8* getTargetProfile( ShaderStage stage, ShaderTargetFormat targetFormat )
-		{
-			if ( targetFormat == ShaderTargetFormat::DXBC_D3D11 )
+			/**
+			 * @brief 셰이더 단계(Stage) 및 타깃 포맷에 해당하는 프로파일 문자열을 반환합니다.
+			 * @details DX11은 SM5.0, DX12/Vulkan/OpenGL은 Native Bindless 및 Descriptor Indexing을 위해 SM6.6을 반환합니다.
+			 */
+			static const utf8* getTargetProfile( ShaderStage stage, ShaderTargetFormat targetFormat )
 			{
+				if ( targetFormat == ShaderTargetFormat::DXBC_D3D11 )
+				{
+					switch ( stage )
+					{
+						case ShaderStage::Vertex:
+							return "vs_5_0";
+						case ShaderStage::Pixel:
+							return "ps_5_0";
+						case ShaderStage::Compute:
+							return "cs_5_0";
+					}
+					return "vs_5_0";
+				}
+				// DX12, Vulkan, OpenGL은 SM6.6 Native Bindless 및 힙 인덱싱 지원
 				switch ( stage )
 				{
 					case ShaderStage::Vertex:
-						return "vs_5_0";
+						return "vs_6_6";
 					case ShaderStage::Pixel:
-						return "ps_5_0";
+						return "ps_6_6";
 					case ShaderStage::Compute:
-						return "cs_5_0";
+						return "cs_6_6";
 				}
-				return "vs_5_0";
+				return "vs_6_6";
 			}
-			// DX12, Vulkan, OpenGL은 SM6.6 Native Bindless 및 힙 인덱싱 지원
-			switch ( stage )
-			{
-				case ShaderStage::Vertex:
-					return "vs_6_6";
-				case ShaderStage::Pixel:
-					return "ps_6_6";
-				case ShaderStage::Compute:
-					return "cs_6_6";
-			}
-			return "vs_6_6";
-		}
 
 #if defined( SW_HAS_DXC_API )
 	#if defined( SW_PLATFORM_WINDOWS )
-		template <typename T>
-		using DxcComPtr = Microsoft::WRL::ComPtr<T>;
+			template <typename T>
+			using DxcComPtr = Microsoft::WRL::ComPtr<T>;
 
-		template <typename T>
-		T** dxcAddressOf( DxcComPtr<T>& ptr )
-		{
-			return ptr.GetAddressOf();
-		}
+			template <typename T>
+			static T** dxcAddressOf( DxcComPtr<T>& ptr )
+			{
+				return ptr.GetAddressOf();
+			}
 
-		template <typename T>
-		T* dxcGet( const DxcComPtr<T>& ptr )
-		{
-			return ptr.Get();
-		}
+			template <typename T>
+			static T* dxcGet( const DxcComPtr<T>& ptr )
+			{
+				return ptr.Get();
+			}
 	#else
-		template <typename T>
-		using DxcComPtr = CComPtr<T>;
+			template <typename T>
+			using DxcComPtr = CComPtr<T>;
 
-		template <typename T>
-		T** dxcAddressOf( DxcComPtr<T>& ptr )
-		{
-			return &ptr;
-		}
+			template <typename T>
+			static T** dxcAddressOf( DxcComPtr<T>& ptr )
+			{
+				return &ptr;
+			}
 
-		template <typename T>
-		T* dxcGet( const DxcComPtr<T>& ptr )
-		{
-			return ptr;
-		}
+			template <typename T>
+			static T* dxcGet( const DxcComPtr<T>& ptr )
+			{
+				return ptr;
+			}
 	#endif
 #endif
 
-		static std::atomic<bool> s_bDiskCacheEnabled{ true };
+			static inline std::atomic<bool> s_bDiskCacheEnabled{ true };
 
-		string getShaderCacheDirectory()
-		{
-			const string& root	   = ResourceUtil::getRootFolderPath();
-			const string  baseRoot = root.empty() ? FileUtil::joinPath( ResourceUtil::getProjectFolderPath(), "Resource" ) : root;
-			return FileUtil::normalizeSeparators( FileUtil::joinPath( baseRoot, "cache/shaders" ) );
-		}
-
-		string computeCachePath( const ShaderCompileDesc& desc, const string& absPathStr )
-		{
-			const string cacheDir = getShaderCacheDirectory();
-			if ( cacheDir.empty() )
-				return "";
-
-			vector<uint8> sourceBytes;
-			FileUtil::readFile( absPathStr, sourceBytes );
-
-			uint64 hash = StringUtil::computeHash64( desc._filePath, false );
-			hash		= StringUtil::computeHash64( desc._entryPoint, false, hash );
-			hash		= StringUtil::computeHash64( to_string( static_cast<uint32>( desc._stage ) ), false, hash );
-			hash		= StringUtil::computeHash64( to_string( static_cast<uint32>( desc._targetFormat ) ), false, hash );
-			for ( const auto& def : desc._listDefine )
+			static string getShaderCacheDirectory()
 			{
-				hash = StringUtil::computeHash64( def._name, false, hash );
-				hash = StringUtil::computeHash64( def._value, false, hash );
-			}
-			if ( sourceBytes.empty() == false )
-			{
-				const string_view sourceStr( reinterpret_cast<const utf8*>( sourceBytes.data() ), sourceBytes.size() );
-				hash = StringUtil::computeHash64( sourceStr, false, hash );
+				const string& root	   = ResourceUtil::getRootFolderPath();
+				const string  baseRoot = root.empty() ? FileUtil::joinPath( ResourceUtil::getProjectFolderPath(), "Resource" ) : root;
+				return FileUtil::normalizeSeparators( FileUtil::joinPath( baseRoot, "cache/shaders" ) );
 			}
 
-			utf8 buf[64]{};
-			snprintf( buf, sizeof( buf ), "%016llx.bin", static_cast<uint64>( hash ) );
-			return cacheDir + "/" + buf;
-		}
+			static string computeCachePath( const ShaderCompileDesc& desc, const string& absPathStr )
+			{
+				const string cacheDir = getShaderCacheDirectory();
+				if ( cacheDir.empty() )
+					return "";
 
+				vector<uint8> sourceBytes;
+				FileUtil::readFile( absPathStr, sourceBytes );
+
+				uint64 hash = StringUtil::computeHash64( desc._filePath, false );
+				hash		= StringUtil::computeHash64( desc._entryPoint, false, hash );
+				hash		= StringUtil::computeHash64( to_string( static_cast<uint32>( desc._stage ) ), false, hash );
+				hash		= StringUtil::computeHash64( to_string( static_cast<uint32>( desc._targetFormat ) ), false, hash );
+				for ( const auto& def : desc._listDefine )
+				{
+					hash = StringUtil::computeHash64( def._name, false, hash );
+					hash = StringUtil::computeHash64( def._value, false, hash );
+				}
+				if ( sourceBytes.empty() == false )
+				{
+					const string_view sourceStr( reinterpret_cast<const utf8*>( sourceBytes.data() ), sourceBytes.size() );
+					hash = StringUtil::computeHash64( sourceStr, false, hash );
+				}
+
+				utf8 buf[64]{};
+				snprintf( buf, sizeof( buf ), "%016llx.bin", static_cast<uint64>( hash ) );
+				return cacheDir + "/" + buf;
+			}
+		};
 	} // namespace
+} // namespace sw
+
+namespace sw
+{
+	SW_LOG_CALLER( "ShaderCompiler" );
 
 	void ShaderCompiler::enableDiskCache( bool bEnable )
 	{
-		s_bDiskCacheEnabled.store( bEnable, std::memory_order_relaxed );
+		ShaderCompilerInternal::s_bDiskCacheEnabled.store( bEnable, std::memory_order_relaxed );
 	}
 
 	bool ShaderCompiler::isDiskCacheEnabled()
 	{
-		return s_bDiskCacheEnabled.load( std::memory_order_relaxed );
+		return ShaderCompilerInternal::s_bDiskCacheEnabled.load( std::memory_order_relaxed );
 	}
 
 	void ShaderCompiler::clearDiskCache()
 	{
-		const string cacheDir = getShaderCacheDirectory();
+		const string cacheDir = ShaderCompilerInternal::getShaderCacheDirectory();
 		if ( cacheDir.empty() == false && FileUtil::directoryExists( cacheDir ) )
 		{
 			vector<string> listFiles;
@@ -227,9 +231,9 @@ namespace sw
 		}
 
 		string cachePath;
-		if ( s_bDiskCacheEnabled.load( std::memory_order_relaxed ) )
+		if ( ShaderCompilerInternal::s_bDiskCacheEnabled.load( std::memory_order_relaxed ) )
 		{
-			cachePath = computeCachePath( desc, absPathStr );
+			cachePath = ShaderCompilerInternal::computeCachePath( desc, absPathStr );
 			if ( cachePath.empty() == false && FileUtil::fileExists( cachePath ) )
 			{
 				vector<uint8> cachedBytes;
@@ -244,14 +248,14 @@ namespace sw
 
 		auto saveToCacheIfEnabled = [&]( const vector<uint8>& bytecode )
 		{
-			if ( s_bDiskCacheEnabled.load( std::memory_order_relaxed ) && cachePath.empty() == false && bytecode.empty() == false )
+			if ( ShaderCompilerInternal::s_bDiskCacheEnabled.load( std::memory_order_relaxed ) && cachePath.empty() == false && bytecode.empty() == false )
 			{
 				FileUtil::ensureDirectoryExists( FileUtil::getDirectoryPart( cachePath ) );
 				FileUtil::writeFile( cachePath, bytecode.data(), bytecode.size() );
 			}
 		};
 
-		string profile = getTargetProfile( desc._stage, desc._targetFormat );
+		string profile = ShaderCompilerInternal::getTargetProfile( desc._stage, desc._targetFormat );
 
 #if defined( SW_PLATFORM_WINDOWS )
 		BLOCK( "DXBC (D3D11) Compilation Path" )
@@ -279,8 +283,8 @@ namespace sw
 				listMacros.push_back( { nullptr, nullptr } );
 
 				vector<string> listIncludeDirs;
-				collectShaderIncludeDirs( absPathStr, listIncludeDirs );
-				MultiRootD3DInclude includeHandler( std::move( listIncludeDirs ) );
+				ShaderCompilerInternal::collectShaderIncludeDirs( absPathStr, listIncludeDirs );
+				ShaderCompilerInternal::MultiRootD3DInclude includeHandler( std::move( listIncludeDirs ) );
 
 				HRESULT hr = D3DCompileFromFile(
 					wPath.c_str(),
@@ -344,26 +348,26 @@ namespace sw
 			if ( fnDxcCreateInstance == nullptr )
 				SW_LOG_ERROR( "DxcCreateInstance unavailable (libdxcompiler not loaded)" );
 
-			DxcComPtr<IDxcUtils>	 utils;
-			DxcComPtr<IDxcCompiler3> compiler;
+			ShaderCompilerInternal::DxcComPtr<IDxcUtils>	 utils;
+			ShaderCompilerInternal::DxcComPtr<IDxcCompiler3> compiler;
 
 			if ( fnDxcCreateInstance != nullptr )
 			{
-				HRESULT hrInit = fnDxcCreateInstance( CLSID_DxcUtils, IID_PPV_ARGS( dxcAddressOf( utils ) ) );
+				HRESULT hrInit = fnDxcCreateInstance( CLSID_DxcUtils, IID_PPV_ARGS( ShaderCompilerInternal::dxcAddressOf( utils ) ) );
 				if ( SUCCEEDED( hrInit ) )
-					fnDxcCreateInstance( CLSID_DxcCompiler, IID_PPV_ARGS( dxcAddressOf( compiler ) ) );
+					fnDxcCreateInstance( CLSID_DxcCompiler, IID_PPV_ARGS( ShaderCompilerInternal::dxcAddressOf( compiler ) ) );
 				else
 					SW_LOG_ERROR( "DxcCreateInstance(CLSID_DxcUtils) failed: 0x%#", hrInit );
 			}
 
 			if ( utils != nullptr && compiler != nullptr )
 			{
-				DxcComPtr<IDxcIncludeHandler> includeHandler;
-				utils->CreateDefaultIncludeHandler( dxcAddressOf( includeHandler ) );
+				ShaderCompilerInternal::DxcComPtr<IDxcIncludeHandler> includeHandler;
+				utils->CreateDefaultIncludeHandler( ShaderCompilerInternal::dxcAddressOf( includeHandler ) );
 
-				wstring						wPath = StringUtil::utf8ToUtf16( absPathStr.c_str() );
-				DxcComPtr<IDxcBlobEncoding> sourceBlob;
-				HRESULT						hrLoad = utils->LoadFile( wPath.c_str(), nullptr, dxcAddressOf( sourceBlob ) );
+				wstring												wPath = StringUtil::utf8ToUtf16( absPathStr.c_str() );
+				ShaderCompilerInternal::DxcComPtr<IDxcBlobEncoding> sourceBlob;
+				HRESULT												hrLoad = utils->LoadFile( wPath.c_str(), nullptr, ShaderCompilerInternal::dxcAddressOf( sourceBlob ) );
 
 				if ( SUCCEEDED( hrLoad ) )
 				{
@@ -383,7 +387,7 @@ namespace sw
 
 					vector<string>	listIncludeDirs;
 					vector<wstring> listIncludeDirW;
-					collectShaderIncludeDirs( absPathStr, listIncludeDirs );
+					ShaderCompilerInternal::collectShaderIncludeDirs( absPathStr, listIncludeDirs );
 					listIncludeDirW.reserve( listIncludeDirs.size() );
 					for ( const string& dir : listIncludeDirs )
 					{
@@ -463,13 +467,13 @@ namespace sw
 					sourceBuffer.Size	  = sourceBlob->GetBufferSize();
 					sourceBuffer.Encoding = DXC_CP_UTF8;
 
-					DxcComPtr<IDxcResult> compileResult;
-					HRESULT				  hrCompile = compiler->Compile(
-						  &sourceBuffer,
-						  listArguments.data(),
-						  static_cast<uint32>( listArguments.size() ),
-						  dxcGet( includeHandler ),
-						  IID_PPV_ARGS( dxcAddressOf( compileResult ) ) );
+					ShaderCompilerInternal::DxcComPtr<IDxcResult> compileResult;
+					HRESULT										  hrCompile = compiler->Compile(
+						&sourceBuffer,
+						listArguments.data(),
+						static_cast<uint32>( listArguments.size() ),
+						ShaderCompilerInternal::dxcGet( includeHandler ),
+						IID_PPV_ARGS( ShaderCompilerInternal::dxcAddressOf( compileResult ) ) );
 
 					if ( FAILED( hrCompile ) )
 						SW_LOG_ERROR( "DXC compiler->Compile failed with HRESULT: 0x%#", hrCompile );
@@ -479,8 +483,8 @@ namespace sw
 						HRESULT status = S_OK;
 						compileResult->GetStatus( &status );
 
-						DxcComPtr<IDxcBlobUtf8> errors;
-						compileResult->GetOutput( DXC_OUT_ERRORS, IID_PPV_ARGS( dxcAddressOf( errors ) ), nullptr );
+						ShaderCompilerInternal::DxcComPtr<IDxcBlobUtf8> errors;
+						compileResult->GetOutput( DXC_OUT_ERRORS, IID_PPV_ARGS( ShaderCompilerInternal::dxcAddressOf( errors ) ), nullptr );
 
 						if ( errors != nullptr && errors->GetStringLength() > 0 )
 							result._errorMessage = errors->GetStringPointer();
@@ -491,8 +495,8 @@ namespace sw
 							return result;
 						}
 
-						DxcComPtr<IDxcBlob> shaderBlob;
-						compileResult->GetOutput( DXC_OUT_OBJECT, IID_PPV_ARGS( dxcAddressOf( shaderBlob ) ), nullptr );
+						ShaderCompilerInternal::DxcComPtr<IDxcBlob> shaderBlob;
+						compileResult->GetOutput( DXC_OUT_OBJECT, IID_PPV_ARGS( ShaderCompilerInternal::dxcAddressOf( shaderBlob ) ), nullptr );
 
 						if ( shaderBlob != nullptr && shaderBlob->GetBufferSize() > 0 )
 						{

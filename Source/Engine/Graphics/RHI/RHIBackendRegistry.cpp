@@ -30,117 +30,121 @@
 
 namespace sw
 {
-	SW_LOG_CALLER( "RHIBackendRegistry" );
-
 	namespace
 	{
-
+		struct RHIBackendRegistryInternal
+		{
 #if !defined( SW_RHI_AS_MODULES )
 	#if defined( SW_SHIPPING )
 		#if defined( SW_RHI_TARGET_DX12 )
-		sw::unique_ptr<IRHIDevice> createD3D12Device()
-		{
-			return make_unique<D3D12RHIDevice>();
-		}
+			static sw::unique_ptr<IRHIDevice> createD3D12Device()
+			{
+				return make_unique<D3D12RHIDevice>();
+			}
 		#elif defined( SW_RHI_TARGET_DX11 )
-		sw::unique_ptr<IRHIDevice> createD3D11Device()
-		{
-			return make_unique<D3D11RHIDevice>();
-		}
+			static sw::unique_ptr<IRHIDevice> createD3D11Device()
+			{
+				return make_unique<D3D11RHIDevice>();
+			}
 		#elif defined( SW_RHI_TARGET_VULKAN )
-		sw::unique_ptr<IRHIDevice> createVulkanDevice()
-		{
-			return make_unique<VulkanRHIDevice>();
-		}
+			static sw::unique_ptr<IRHIDevice> createVulkanDevice()
+			{
+				return make_unique<VulkanRHIDevice>();
+			}
 		#elif defined( SW_RHI_TARGET_OPENGL )
-		sw::unique_ptr<IRHIDevice> createOpenGLDevice()
-		{
-			return make_unique<OpenGLRHIDevice>();
-		}
+			static sw::unique_ptr<IRHIDevice> createOpenGLDevice()
+			{
+				return make_unique<OpenGLRHIDevice>();
+			}
 		#endif
 	#else
 		#if defined( SW_PLATFORM_WINDOWS )
-		sw::unique_ptr<IRHIDevice> createD3D11Device()
-		{
-			return make_unique<D3D11RHIDevice>();
-		}
-		sw::unique_ptr<IRHIDevice> createD3D12Device()
-		{
-			return make_unique<D3D12RHIDevice>();
-		}
+			static sw::unique_ptr<IRHIDevice> createD3D11Device()
+			{
+				return make_unique<D3D11RHIDevice>();
+			}
+			static sw::unique_ptr<IRHIDevice> createD3D12Device()
+			{
+				return make_unique<D3D12RHIDevice>();
+			}
 		#endif
-		sw::unique_ptr<IRHIDevice> createVulkanDevice()
-		{
-			return make_unique<VulkanRHIDevice>();
-		}
-		sw::unique_ptr<IRHIDevice> createOpenGLDevice()
-		{
-			return make_unique<OpenGLRHIDevice>();
-		}
+			static sw::unique_ptr<IRHIDevice> createVulkanDevice()
+			{
+				return make_unique<VulkanRHIDevice>();
+			}
+			static sw::unique_ptr<IRHIDevice> createOpenGLDevice()
+			{
+				return make_unique<OpenGLRHIDevice>();
+			}
 	#endif
 #endif
 
 #if defined( SW_RHI_AS_MODULES )
-		bool tryLoadBackendModule( RHIBackend backend, const utf8* pModuleBaseName )
-		{
-			RHIBackendRegistry& reg		  = engine::getRHIBackendRegistry();
-			const string		dllName	  = FileUtil::formatSharedLibraryName( pModuleBaseName );
-			const string		execDir	  = FileUtil::getDirectoryPart( FileUtil::getExecutablePath() );
-			const string		besideExe = execDir.empty() ? dllName.c_str() : ( execDir + "/" + dllName );
-
-			if ( reg.tryLoadModule( backend, besideExe ) )
-				return true;
-			return reg.tryLoadModule( backend, dllName );
-		}
-
-		/** @brief Load requested RHI MODULE on-demand when needed (not all at once). */
-		bool ensureBackendModuleLoaded( RHIBackend backend )
-		{
-			RHIBackendRegistry&	   reg	  = engine::getRHIBackendRegistry();
-			const RHIBackendEntry* pEntry = reg.findBackend( backend );
-			if ( pEntry != nullptr && pEntry->_factory.isBound() )
-				return true;
-
-			switch ( backend )
+			static bool tryLoadBackendModule( RHIBackend backend, const utf8* pModuleBaseName )
 			{
-	#if defined( SW_PLATFORM_WINDOWS )
-				case RHIBackend::DirectX11:
-					return tryLoadBackendModule( RHIBackend::DirectX11, "RHI_DX11" );
-				case RHIBackend::DirectX12:
-					return tryLoadBackendModule( RHIBackend::DirectX12, "RHI_DX12" );
-	#endif
-				case RHIBackend::OpenGL:
-					return tryLoadBackendModule( RHIBackend::OpenGL, "RHI_GL" );
-				case RHIBackend::Vulkan:
-					return tryLoadBackendModule( RHIBackend::Vulkan, "RHI_Vulkan" );
-				default:
-					return false;
-			}
-		}
-#endif
+				RHIBackendRegistry& reg		  = engine::getRHIBackendRegistry();
+				const string		dllName	  = FileUtil::formatSharedLibraryName( pModuleBaseName );
+				const string		execDir	  = FileUtil::getDirectoryPart( FileUtil::getExecutablePath() );
+				const string		besideExe = execDir.empty() ? dllName.c_str() : ( execDir + "/" + dllName );
 
+				if ( reg.tryLoadModule( backend, besideExe ) )
+					return true;
+				return reg.tryLoadModule( backend, dllName );
+			}
+
+			/** @brief Load requested RHI MODULE on-demand when needed (not all at once). */
+			static bool ensureBackendModuleLoaded( RHIBackend backend )
+			{
+				RHIBackendRegistry&	   reg	  = engine::getRHIBackendRegistry();
+				const RHIBackendEntry* pEntry = reg.findBackend( backend );
+				if ( pEntry != nullptr && pEntry->_factory.isBound() )
+					return true;
+
+				switch ( backend )
+				{
+	#if defined( SW_PLATFORM_WINDOWS )
+					case RHIBackend::DirectX11:
+						return tryLoadBackendModule( RHIBackend::DirectX11, "RHI_DX11" );
+					case RHIBackend::DirectX12:
+						return tryLoadBackendModule( RHIBackend::DirectX12, "RHI_DX12" );
+	#endif
+					case RHIBackend::OpenGL:
+						return tryLoadBackendModule( RHIBackend::OpenGL, "RHI_GL" );
+					case RHIBackend::Vulkan:
+						return tryLoadBackendModule( RHIBackend::Vulkan, "RHI_Vulkan" );
+					default:
+						return false;
+				}
+			}
+#endif
+		};
 	} // namespace
+} // namespace sw
+
+namespace sw
+{
+	SW_LOG_CALLER( "RHIBackendRegistry" );
 
 	RHIBackendRegistry::RHIBackendRegistry()
 	{
 #if !defined( SW_RHI_AS_MODULES )
 	#if defined( SW_SHIPPING )
 		#if defined( SW_RHI_TARGET_DX12 )
-		registerBackend( RHIBackend::DirectX12, SW_DELEGATE_FUNCTION( RHIDeviceFactoryDelegate, createD3D12Device ), RHIAvailability::query( RHIBackend::DirectX12 ) );
+		registerBackend( RHIBackend::DirectX12, SW_DELEGATE_FUNCTION( RHIDeviceFactoryDelegate, RHIBackendRegistryInternal::createD3D12Device ), RHIAvailability::query( RHIBackend::DirectX12 ) );
 		#elif defined( SW_RHI_TARGET_DX11 )
-		registerBackend( RHIBackend::DirectX11, SW_DELEGATE_FUNCTION( RHIDeviceFactoryDelegate, createD3D11Device ), RHIAvailability::query( RHIBackend::DirectX11 ) );
+		registerBackend( RHIBackend::DirectX11, SW_DELEGATE_FUNCTION( RHIDeviceFactoryDelegate, RHIBackendRegistryInternal::createD3D11Device ), RHIAvailability::query( RHIBackend::DirectX11 ) );
 		#elif defined( SW_RHI_TARGET_VULKAN )
-		registerBackend( RHIBackend::Vulkan, SW_DELEGATE_FUNCTION( RHIDeviceFactoryDelegate, createVulkanDevice ), RHIAvailability::query( RHIBackend::Vulkan ) );
+		registerBackend( RHIBackend::Vulkan, SW_DELEGATE_FUNCTION( RHIDeviceFactoryDelegate, RHIBackendRegistryInternal::createVulkanDevice ), RHIAvailability::query( RHIBackend::Vulkan ) );
 		#elif defined( SW_RHI_TARGET_OPENGL )
-		registerBackend( RHIBackend::OpenGL, SW_DELEGATE_FUNCTION( RHIDeviceFactoryDelegate, createOpenGLDevice ), RHIAvailability::query( RHIBackend::OpenGL ) );
+		registerBackend( RHIBackend::OpenGL, SW_DELEGATE_FUNCTION( RHIDeviceFactoryDelegate, RHIBackendRegistryInternal::createOpenGLDevice ), RHIAvailability::query( RHIBackend::OpenGL ) );
 		#endif
 	#else
 		#if defined( SW_PLATFORM_WINDOWS )
-		registerBackend( RHIBackend::DirectX11, SW_DELEGATE_FUNCTION( RHIDeviceFactoryDelegate, createD3D11Device ), RHIAvailability::query( RHIBackend::DirectX11 ) );
-		registerBackend( RHIBackend::DirectX12, SW_DELEGATE_FUNCTION( RHIDeviceFactoryDelegate, createD3D12Device ), RHIAvailability::query( RHIBackend::DirectX12 ) );
+		registerBackend( RHIBackend::DirectX11, SW_DELEGATE_FUNCTION( RHIDeviceFactoryDelegate, RHIBackendRegistryInternal::createD3D11Device ), RHIAvailability::query( RHIBackend::DirectX11 ) );
+		registerBackend( RHIBackend::DirectX12, SW_DELEGATE_FUNCTION( RHIDeviceFactoryDelegate, RHIBackendRegistryInternal::createD3D12Device ), RHIAvailability::query( RHIBackend::DirectX12 ) );
 		#endif
-		registerBackend( RHIBackend::Vulkan, SW_DELEGATE_FUNCTION( RHIDeviceFactoryDelegate, createVulkanDevice ), RHIAvailability::query( RHIBackend::Vulkan ) );
-		registerBackend( RHIBackend::OpenGL, SW_DELEGATE_FUNCTION( RHIDeviceFactoryDelegate, createOpenGLDevice ), RHIAvailability::query( RHIBackend::OpenGL ) );
+		registerBackend( RHIBackend::Vulkan, SW_DELEGATE_FUNCTION( RHIDeviceFactoryDelegate, RHIBackendRegistryInternal::createVulkanDevice ), RHIAvailability::query( RHIBackend::Vulkan ) );
+		registerBackend( RHIBackend::OpenGL, SW_DELEGATE_FUNCTION( RHIDeviceFactoryDelegate, RHIBackendRegistryInternal::createOpenGLDevice ), RHIAvailability::query( RHIBackend::OpenGL ) );
 	#endif
 #endif
 	}
@@ -172,7 +176,7 @@ namespace sw
 	unique_ptr<IRHIDevice> RHIBackendRegistry::createDevice( RHIBackend backend ) const
 	{
 #if defined( SW_RHI_AS_MODULES )
-		ensureBackendModuleLoaded( backend );
+		RHIBackendRegistryInternal::ensureBackendModuleLoaded( backend );
 #endif
 
 		const RHIBackendEntry* pEntry = findBackend( backend );

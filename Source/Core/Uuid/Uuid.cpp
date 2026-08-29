@@ -4,23 +4,26 @@
 
 namespace sw
 {
-
 	namespace
 	{
-
-		int32 hexNibble( utf8 c )
+		struct UuidInternal
 		{
-			if ( c >= '0' && c <= '9' )
-				return c - '0';
-			if ( c >= 'a' && c <= 'f' )
-				return 10 + ( c - 'a' );
-			if ( c >= 'A' && c <= 'F' )
-				return 10 + ( c - 'A' );
-			return -1;
-		}
-
+			static int32 hexNibble( utf8 c )
+			{
+				if ( c >= '0' && c <= '9' )
+					return c - '0';
+				if ( c >= 'a' && c <= 'f' )
+					return 10 + ( c - 'a' );
+				if ( c >= 'A' && c <= 'F' )
+					return 10 + ( c - 'A' );
+				return -1;
+			}
+		};
 	} // namespace
+} // namespace sw
 
+namespace sw
+{
 	Uuid Uuid::generate()
 	{
 		Uuid								  uuid{};
@@ -54,8 +57,8 @@ namespace sw
 				continue;
 			if ( charIndex + 1 >= text.size() )
 				return false;
-			const int32 hi = hexNibble( text[charIndex] );
-			const int32 lo = hexNibble( text[charIndex + 1] );
+			const int32 hi = UuidInternal::hexNibble( text[charIndex] );
+			const int32 lo = UuidInternal::hexNibble( text[charIndex + 1] );
 			if ( hi < 0 || lo < 0 || byteIndex >= 16 )
 				return false;
 			uuid._arrBytes[byteIndex++] = static_cast<uint8>( ( hi << 4 ) | lo );

@@ -11,25 +11,31 @@ namespace sw::editor
 {
 	namespace
 	{
-		TaskManager* getTaskManagerOrNull()
+		struct EditorBackgroundIoInternal
 		{
-			return editor::getService<TaskManager>();
-		}
-
-		void submitOrRun( string_view name, const TaskArgsDelegate& delegate, const TaskArgs& args )
-		{
-			TaskManager* pTaskManager = getTaskManagerOrNull();
-			if ( pTaskManager == nullptr )
+			static TaskManager* getTaskManagerOrNull()
 			{
-				delegate( args );
-				return;
+				return editor::getService<TaskManager>();
 			}
 
-			TaskHandle handle = pTaskManager->emplaceTask( name, delegate, args );
-			handle.submit();
-		}
-	} // namespace
+			static void submitOrRun( string_view name, const TaskArgsDelegate& delegate, const TaskArgs& args )
+			{
+				TaskManager* pTaskManager = getTaskManagerOrNull();
+				if ( pTaskManager == nullptr )
+				{
+					delegate( args );
+					return;
+				}
 
+				TaskHandle handle = pTaskManager->emplaceTask( name, delegate, args );
+				handle.submit();
+			}
+		};
+	} // namespace
+} // namespace sw::editor
+
+namespace sw::editor
+{
 	EditorFileCollectJob::EditorFileCollectJob()
 		: _mutex{}
 		, _folder{}
@@ -58,9 +64,9 @@ namespace sw::editor
 			generation = _generation;
 		}
 
-		submitOrRun( "EditorFileCollect",
-					 SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorFileCollectJob::runJob ),
-					 MakeTaskArgs( this, generation ) );
+		EditorBackgroundIoInternal::submitOrRun( "EditorFileCollect",
+												 SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorFileCollectJob::runJob ),
+												 MakeTaskArgs( this, generation ) );
 	}
 
 	bool EditorFileCollectJob::take( vector<string>& outList )
@@ -132,9 +138,9 @@ namespace sw::editor
 			generation = _generation;
 		}
 
-		submitOrRun( "EditorLocalizationLoad",
-					 SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorLocalizationLoadJob::runJob ),
-					 MakeTaskArgs( this, generation ) );
+		EditorBackgroundIoInternal::submitOrRun( "EditorLocalizationLoad",
+												 SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorLocalizationLoadJob::runJob ),
+												 MakeTaskArgs( this, generation ) );
 	}
 
 	bool EditorLocalizationLoadJob::take( vector<LocRecord>& outList )
@@ -200,9 +206,9 @@ namespace sw::editor
 			generation = _generation;
 		}
 
-		submitOrRun( "EditorGameDataScan",
-					 SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorGameDataScanJob::runJob ),
-					 MakeTaskArgs( this, generation ) );
+		EditorBackgroundIoInternal::submitOrRun( "EditorGameDataScan",
+												 SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorGameDataScanJob::runJob ),
+												 MakeTaskArgs( this, generation ) );
 	}
 
 	bool EditorGameDataScanJob::take( vector<GameDataFileEntry>& outList )
@@ -268,9 +274,9 @@ namespace sw::editor
 			generation = _generation;
 		}
 
-		submitOrRun( "EditorResourceIndex",
-					 SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorResourceIndexJob::runJob ),
-					 MakeTaskArgs( this, generation ) );
+		EditorBackgroundIoInternal::submitOrRun( "EditorResourceIndex",
+												 SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorResourceIndexJob::runJob ),
+												 MakeTaskArgs( this, generation ) );
 	}
 
 	bool EditorResourceIndexJob::take( vector<EditorResourceIndexEntry>& outList )
@@ -338,9 +344,9 @@ namespace sw::editor
 			generation = _generation;
 		}
 
-		submitOrRun( "EditorFolderListing",
-					 SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorFolderListingJob::runJob ),
-					 MakeTaskArgs( this, generation ) );
+		EditorBackgroundIoInternal::submitOrRun( "EditorFolderListing",
+												 SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorFolderListingJob::runJob ),
+												 MakeTaskArgs( this, generation ) );
 	}
 
 	bool EditorFolderListingJob::take( vector<EditorFolderListingEntry>& outList )
@@ -408,9 +414,9 @@ namespace sw::editor
 			generation = _generation;
 		}
 
-		submitOrRun( "EditorResourceCatalog",
-					 SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorResourceCatalogJob::runJob ),
-					 MakeTaskArgs( this, generation ) );
+		EditorBackgroundIoInternal::submitOrRun( "EditorResourceCatalog",
+												 SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorResourceCatalogJob::runJob ),
+												 MakeTaskArgs( this, generation ) );
 	}
 
 	bool EditorResourceCatalogJob::take( EditorResourceCatalogCounts& outCounts )

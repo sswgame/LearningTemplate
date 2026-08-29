@@ -26,22 +26,20 @@
 
 namespace sw
 {
-	SW_LOG_CALLER( "LiveReloadManager" );
-
 	namespace
 	{
-		static LiveReloadManager* s_delayLoadManager{ nullptr };
-
-		namespace
+		struct LiveReloadManagerInternal
 		{
-			uint32 s_reloadCount{ 0 };
+			inline static LiveReloadManager* s_delayLoadManager{ nullptr };
 
-			void tryDeleteFile( string_view path )
+			inline static uint32 s_reloadCount{ 0 };
+
+			static void tryDeleteFile( string_view path )
 			{
 				FileUtil::removeFile( path );
 			}
 
-			void tryDeleteShadowArtifacts( string_view modulePath )
+			static void tryDeleteShadowArtifacts( string_view modulePath )
 			{
 				if ( modulePath.empty() )
 					return;
@@ -49,7 +47,7 @@ namespace sw
 				tryDeleteFile( FileUtil::getDebugSymbolPath( modulePath ) );
 			}
 
-			bool copyFileWithRetry( string_view source, string_view destination )
+			static bool copyFileWithRetry( string_view source, string_view destination )
 			{
 				for ( int32 retryIndex = 0; retryIndex < 10; ++retryIndex )
 				{
@@ -60,7 +58,7 @@ namespace sw
 				return false;
 			}
 
-			void copyDebugSymbolsIfPresent( string_view originalModulePath, string_view shadowModulePath )
+			static void copyDebugSymbolsIfPresent( string_view originalModulePath, string_view shadowModulePath )
 			{
 				const string originalDebugPath = FileUtil::getDebugSymbolPath( originalModulePath );
 				const string shadowDebugPath   = FileUtil::getDebugSymbolPath( shadowModulePath );
@@ -71,7 +69,7 @@ namespace sw
 					SW_LOG_WARNING( "Failed to copy debug symbols: %#", shadowDebugPath.c_str() );
 			}
 
-			void cleanStaleShadowArtifacts( string_view directoryPath )
+			static void cleanStaleShadowArtifacts( string_view directoryPath )
 			{
 				vector<string> listFiles;
 				if ( FileUtil::collectFiles( directoryPath, "", listFiles, false ) == false )
@@ -85,9 +83,13 @@ namespace sw
 					}
 				}
 			}
-
-		} // namespace
+		};
 	} // namespace
+} // namespace sw
+
+namespace sw
+{
+	SW_LOG_CALLER( "LiveReloadManager" );
 
 	LiveReloadManager::LiveReloadManager()
 		: _mapModule{}
@@ -107,7 +109,7 @@ namespace sw
 		, _bReloadGraphBroken{ false }
 		, _bReloadingBatch{ false }
 	{
-		cleanStaleShadowArtifacts( FileUtil::getDirectoryPart( FileUtil::getExecutablePath() ) );
+		LiveReloadManagerInternal::cleanStaleShadowArtifacts( FileUtil::getDirectoryPart( FileUtil::getExecutablePath() ) );
 
 		if ( LiveReloadManager::getDelayLoadManager() == nullptr )
 			LiveReloadManager::setDelayLoadManager( this );
@@ -129,7 +131,7 @@ namespace sw
 			ctx._onAfterReload	= {};
 		}
 
-		cleanStaleShadowArtifacts( FileUtil::getDirectoryPart( FileUtil::getExecutablePath() ) );
+		LiveReloadManagerInternal::cleanStaleShadowArtifacts( FileUtil::getDirectoryPart( FileUtil::getExecutablePath() ) );
 		if ( LiveReloadManager::getDelayLoadManager() == this )
 			LiveReloadManager::setDelayLoadManager( nullptr );
 
@@ -368,22 +370,22 @@ namespace sw
 
 		out._sourceMtime = FileUtil::getFileTimestamp( ctx._originalModulePath );
 
-		++s_reloadCount;
+		++LiveReloadManagerInternal::s_reloadCount;
 		const uint64 timestamp = static_cast<uint64>( std::chrono::steady_clock::now().time_since_epoch().count() );
-		const string tempName  = ctx._moduleName + "_temp_" + to_string( s_reloadCount ) + "_" + to_string( timestamp );
+		const string tempName  = ctx._moduleName + "_temp_" + to_string( LiveReloadManagerInternal::s_reloadCount ) + "_" + to_string( timestamp );
 		const string execDir   = FileUtil::getDirectoryPart( ctx._originalModulePath );
 		out._tempPath		   = FileUtil::joinPath( execDir, FileUtil::formatSharedLibraryName( tempName ) );
 
 		BLOCK( "Create Shadow Copy" )
 		{
-			if ( copyFileWithRetry( ctx._originalModulePath, out._tempPath ) == false )
+			if ( LiveReloadManagerInternal::copyFileWithRetry( ctx._originalModulePath, out._tempPath ) == false )
 			{
 				SW_LOG_ERROR( "Failed to create shadow copy (locked): %#", out._tempPath.c_str() );
 				out._tempPath.clear();
 				return false;
 			}
 
-			copyDebugSymbolsIfPresent( ctx._originalModulePath, out._tempPath );
+			LiveReloadManagerInternal::copyDebugSymbolsIfPresent( ctx._originalModulePath, out._tempPath );
 		}
 
 		BLOCK( "Load Dynamic Library" )
@@ -392,7 +394,7 @@ namespace sw
 			if ( out._pHandle == nullptr )
 			{
 				SW_LOG_ERROR( "Failed to load dynamic library (keeping old): %#", out._tempPath.c_str() );
-				tryDeleteShadowArtifacts( out._tempPath );
+				LiveReloadManagerInternal::tryDeleteShadowArtifacts( out._tempPath );
 				out._tempPath.clear();
 				return false;
 			}
@@ -460,7 +462,7 @@ namespace sw
 			if ( previousHandle != nullptr && _bReloadGraphBroken == false )
 			{
 				FileUtil::unloadDynamicLibrary( previousHandle );
-				tryDeleteShadowArtifacts( previousTempModule );
+				LiveReloadManagerInternal::tryDeleteShadowArtifacts( previousTempModule );
 			}
 		}
 
@@ -486,7 +488,7 @@ namespace sw
 			FileUtil::unloadDynamicLibrary( prepared._pHandle );
 			prepared._pHandle = nullptr;
 		}
-		tryDeleteShadowArtifacts( prepared._tempPath );
+		LiveReloadManagerInternal::tryDeleteShadowArtifacts( prepared._tempPath );
 		prepared._tempPath.clear();
 		prepared._sourceMtime = 0;
 	}
@@ -513,7 +515,7 @@ namespace sw
 			ctx._pLibraryModule = nullptr;
 		}
 
-		tryDeleteShadowArtifacts( ctx._tempModulePath );
+		LiveReloadManagerInternal::tryDeleteShadowArtifacts( ctx._tempModulePath );
 		ctx._tempModulePath.clear();
 	}
 
@@ -829,11 +831,11 @@ namespace sw
 
 	void LiveReloadManager::setDelayLoadManager( LiveReloadManager* pManager )
 	{
-		s_delayLoadManager = pManager;
+		LiveReloadManagerInternal::s_delayLoadManager = pManager;
 	}
 
 	LiveReloadManager* LiveReloadManager::getDelayLoadManager()
 	{
-		return s_delayLoadManager;
+		return LiveReloadManagerInternal::s_delayLoadManager;
 	}
 } // namespace sw

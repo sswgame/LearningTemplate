@@ -6,7 +6,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResource.h"
 #include "Engine/Graphics/RenderPass/FrameRenderer.h"
-#include "Engine/Graphics/RenderPass/FrameRendererInternal.h"
+#include "Engine/Graphics/RenderPass/FrameRendererUtil.h"
 
 namespace sw
 {
@@ -46,10 +46,10 @@ namespace sw
 		desc._pixelShaderPath  = desc._vertexShaderPath;
 		desc._vertexEntryPoint = ( pPassDesc != nullptr && pPassDesc->_vertexEntryPoint.empty() == false )
 								   ? pPassDesc->_vertexEntryPoint
-								   : Entry::kVSMain;
+								   : FrameRendererUtil::Entry::kVSMain;
 		desc._pixelEntryPoint  = ( pPassDesc != nullptr && pPassDesc->_pixelEntryPoint.empty() == false )
 								   ? pPassDesc->_pixelEntryPoint
-								   : Entry::kPSMain;
+								   : FrameRendererUtil::Entry::kPSMain;
 		desc._bEnableDepthTest =
 			pPassDesc != nullptr ? ( pPassDesc->_bEnableDepthTest != 0 ? 1 : 0 ) : ( bDepthTest ? 1 : 0 );
 		desc._bEnableDepthWrite =
@@ -111,7 +111,7 @@ namespace sw
 					if ( att._name == outName )
 					{
 						const RHIFormat fmt = parseAttachmentFormat( att._format );
-						if ( isDepthFormat( fmt ) == false )
+						if ( FrameRendererUtil::isDepthFormat( fmt ) == false )
 						{
 							desc._arrRtvFormats[colorCount++] = fmt;
 						}

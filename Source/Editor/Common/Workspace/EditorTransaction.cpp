@@ -19,28 +19,34 @@ namespace sw::editor
 {
 	namespace
 	{
-		GameObjectManager* getActiveGameObjectManager()
+		struct EditorTransactionInternal
 		{
-			SceneManager* pSceneManager = editor::getService<SceneManager>();
-			if ( pSceneManager == nullptr )
-				return nullptr;
+			static GameObjectManager* getActiveGameObjectManager()
+			{
+				SceneManager* pSceneManager = editor::getService<SceneManager>();
+				if ( pSceneManager == nullptr )
+					return nullptr;
 
-			Scene* pActiveScene = pSceneManager->getActiveScene();
-			if ( pActiveScene == nullptr )
-				return nullptr;
+				Scene* pActiveScene = pSceneManager->getActiveScene();
+				if ( pActiveScene == nullptr )
+					return nullptr;
 
-			return pActiveScene->getObjectManager();
-		}
+				return pActiveScene->getObjectManager();
+			}
 
-		void markActiveSceneDirty()
-		{
-			EditorContext* pContext = EditorContext::get();
-			if ( pContext == nullptr )
-				return;
-			pContext->getWorkspace().markSceneDirty();
-		}
+			static void markActiveSceneDirty()
+			{
+				EditorContext* pContext = EditorContext::get();
+				if ( pContext == nullptr )
+					return;
+				pContext->getWorkspace().markSceneDirty();
+			}
+		};
 	} // namespace
+} // namespace sw::editor
 
+namespace sw::editor
+{
 	void EditorTransaction::beginTransaction( string_view label )
 	{
 		editor::getService<CommandStack>()->beginTransaction( label );
@@ -79,7 +85,7 @@ namespace sw::editor
 		cmd._label = string{ label };
 		cmd._undo  = [objId, beforeStr]()
 		{
-			GameObjectManager* pManager = getActiveGameObjectManager();
+			GameObjectManager* pManager = EditorTransactionInternal::getActiveGameObjectManager();
 			if ( pManager == nullptr )
 				return;
 
@@ -93,7 +99,7 @@ namespace sw::editor
 
 		cmd._redo = [objId, afterStr]()
 		{
-			GameObjectManager* pManager = getActiveGameObjectManager();
+			GameObjectManager* pManager = EditorTransactionInternal::getActiveGameObjectManager();
 			if ( pManager == nullptr )
 				return;
 
@@ -106,7 +112,7 @@ namespace sw::editor
 		};
 
 		editor::getService<CommandStack>()->push( std::move( cmd ) );
-		markActiveSceneDirty();
+		EditorTransactionInternal::markActiveSceneDirty();
 	}
 
 	void EditorTransaction::recordCreation( GameObjectPtr pObj, string_view label )
@@ -123,7 +129,7 @@ namespace sw::editor
 		cmd._label = string{ label };
 		cmd._undo  = [objId]()
 		{
-			GameObjectManager* pManager = getActiveGameObjectManager();
+			GameObjectManager* pManager = EditorTransactionInternal::getActiveGameObjectManager();
 			if ( pManager == nullptr )
 				return;
 
@@ -138,7 +144,7 @@ namespace sw::editor
 
 		cmd._redo = [objName, stateXml]()
 		{
-			GameObjectManager* pManager = getActiveGameObjectManager();
+			GameObjectManager* pManager = EditorTransactionInternal::getActiveGameObjectManager();
 			if ( pManager == nullptr )
 				return;
 
@@ -152,7 +158,7 @@ namespace sw::editor
 		};
 
 		editor::getService<CommandStack>()->push( std::move( cmd ) );
-		markActiveSceneDirty();
+		EditorTransactionInternal::markActiveSceneDirty();
 	}
 
 	void EditorTransaction::recordDestruction( GameObjectPtr pObj, string_view label )
@@ -169,7 +175,7 @@ namespace sw::editor
 		cmd._label = string{ label };
 		cmd._undo  = [objName, stateXml]()
 		{
-			GameObjectManager* pManager = getActiveGameObjectManager();
+			GameObjectManager* pManager = EditorTransactionInternal::getActiveGameObjectManager();
 			if ( pManager == nullptr )
 				return;
 
@@ -184,7 +190,7 @@ namespace sw::editor
 
 		cmd._redo = [objId]()
 		{
-			GameObjectManager* pManager = getActiveGameObjectManager();
+			GameObjectManager* pManager = EditorTransactionInternal::getActiveGameObjectManager();
 			if ( pManager == nullptr )
 				return;
 
@@ -198,6 +204,6 @@ namespace sw::editor
 		};
 
 		editor::getService<CommandStack>()->push( std::move( cmd ) );
-		markActiveSceneDirty();
+		EditorTransactionInternal::markActiveSceneDirty();
 	}
 } // namespace sw::editor

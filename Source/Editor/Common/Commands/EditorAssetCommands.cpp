@@ -28,103 +28,109 @@
 
 namespace sw::editor
 {
-	SW_LOG_CALLER( "EditorAssetCommands" );
-
 	namespace
 	{
-		void onSaveSceneDialogResult( const vector<string>& listPaths )
+		struct EditorAssetCommandsInternal
 		{
-			if ( listPaths.empty() )
-				return;
-			if ( EditorAssetCommands::saveActiveScene( listPaths[0] ) )
-				EditorContext::get()->getNotificationManager().push( "Scene", "Saved", NotificationType::Success );
-			else
-				EditorContext::get()->getNotificationManager().push( "Scene", "Save failed", NotificationType::Error );
-		}
+			static void onSaveSceneDialogResult( const vector<string>& listPaths )
+			{
+				if ( listPaths.empty() )
+					return;
+				if ( EditorAssetCommands::saveActiveScene( listPaths[0] ) )
+					EditorContext::get()->getNotificationManager().push( "Scene", "Saved", NotificationType::Success );
+				else
+					EditorContext::get()->getNotificationManager().push( "Scene", "Save failed", NotificationType::Error );
+			}
 
-		bool isSceneAssetPath( string_view path )
-		{
-			if ( path.empty() )
+			static bool isSceneAssetPath( string_view path )
+			{
+				if ( path.empty() )
+					return false;
+
+				const string pathStr{ path };
+				const string ext = StringUtil::toLower( FileUtil::getExtension( pathStr ).c_str() );
+				if ( ext == ".scene" )
+					return true;
+				if ( ext == ".xml" && StringUtil::stristr( pathStr.c_str(), ".scene" ) != nullptr )
+					return true;
+				if ( FileUtil::endsWithIgnoreCase( pathStr, "_scene.xml" ) )
+					return true;
 				return false;
-
-			const string pathStr{ path };
-			const string ext = StringUtil::toLower( FileUtil::getExtension( pathStr ).c_str() );
-			if ( ext == ".scene" )
-				return true;
-			if ( ext == ".xml" && StringUtil::stristr( pathStr.c_str(), ".scene" ) != nullptr )
-				return true;
-			if ( FileUtil::endsWithIgnoreCase( pathStr, "_scene.xml" ) )
-				return true;
-			return false;
-		}
-
-		bool tryClassifyResourceFile( string_view absPath, EditorResourceIndexEntry& outEntry )
-		{
-			const string file{ absPath };
-			const string ext	  = FileUtil::getExtension( file );
-			const string filename = FileUtil::getFileNamePart( file );
-			string		 relPath;
-			FileUtil::makePathRelative( FileUtil::getCurrentPath(), file, relPath );
-			relPath = FileUtil::normalizeSeparators( relPath );
-
-			outEntry._path	 = relPath;
-			outEntry._title	 = filename;
-			outEntry._detail = relPath;
-
-			if ( ext == ".scene" || ( ext == ".xml" && filename.find( ".scene" ) != string::npos ) )
-			{
-				outEntry._category = "Scene";
-				return true;
 			}
-			if ( ext == ".prefab" || ext == ".pfb" )
-			{
-				outEntry._category = "Prefab";
-				return true;
-			}
-			if ( ext == ".png" || ext == ".jpg" || ext == ".dds" || ext == ".tga" || ext == ".bmp" )
-			{
-				outEntry._category = "Texture";
-				return true;
-			}
-			if ( ext == ".hlsl" || ext == ".glsl" || ext == ".spv" )
-			{
-				outEntry._category = "Shader";
-				return true;
-			}
-			if ( ext == ".xml" || ext == ".json" )
-			{
-				outEntry._category = "Data";
-				return true;
-			}
-			return false;
-		}
 
-		void appendFolderListingEntry( vector<EditorFolderListingEntry>& outList, const string& path, bool bIsDirectory,
-									   const string& rootNorm )
-		{
-			EditorFolderListingEntry item;
-			item._absolutePath = FileUtil::normalizeSeparators( path );
-			item._name		   = FileUtil::getFileNamePart( item._absolutePath );
-			item._bIsDirectory = bIsDirectory;
-			if ( item._bIsDirectory == false )
-				item._extension = FileUtil::getExtension( item._name );
-
-			if ( rootNorm.empty() == false )
+			static bool tryClassifyResourceFile( string_view absPath, EditorResourceIndexEntry& outEntry )
 			{
-				const string absNorm = FileUtil::normalizePath( item._absolutePath );
-				if ( absNorm.size() > rootNorm.size() && absNorm.compare( 0, rootNorm.size(), rootNorm ) == 0 &&
-					 absNorm[rootNorm.size()] == '/' )
-					item._relativePath = absNorm.substr( rootNorm.size() + 1 );
+				const string file{ absPath };
+				const string ext	  = FileUtil::getExtension( file );
+				const string filename = FileUtil::getFileNamePart( file );
+				string		 relPath;
+				FileUtil::makePathRelative( FileUtil::getCurrentPath(), file, relPath );
+				relPath = FileUtil::normalizeSeparators( relPath );
+
+				outEntry._path	 = relPath;
+				outEntry._title	 = filename;
+				outEntry._detail = relPath;
+
+				if ( ext == ".scene" || ( ext == ".xml" && filename.find( ".scene" ) != string::npos ) )
+				{
+					outEntry._category = "Scene";
+					return true;
+				}
+				if ( ext == ".prefab" || ext == ".pfb" )
+				{
+					outEntry._category = "Prefab";
+					return true;
+				}
+				if ( ext == ".png" || ext == ".jpg" || ext == ".dds" || ext == ".tga" || ext == ".bmp" )
+				{
+					outEntry._category = "Texture";
+					return true;
+				}
+				if ( ext == ".hlsl" || ext == ".glsl" || ext == ".spv" )
+				{
+					outEntry._category = "Shader";
+					return true;
+				}
+				if ( ext == ".xml" || ext == ".json" )
+				{
+					outEntry._category = "Data";
+					return true;
+				}
+				return false;
 			}
-			if ( item._relativePath.empty() )
-				item._relativePath = FileUtil::normalizePath( item._name );
 
-			if ( item._bIsDirectory == false && FileUtil::endsWithIgnoreCase( item._name, ".meta" ) )
-				return;
+			static void appendFolderListingEntry( vector<EditorFolderListingEntry>& outList, const string& path, bool bIsDirectory,
+												  const string& rootNorm )
+			{
+				EditorFolderListingEntry item;
+				item._absolutePath = FileUtil::normalizeSeparators( path );
+				item._name		   = FileUtil::getFileNamePart( item._absolutePath );
+				item._bIsDirectory = bIsDirectory;
+				if ( item._bIsDirectory == false )
+					item._extension = FileUtil::getExtension( item._name );
 
-			outList.push_back( std::move( item ) );
-		}
+				if ( rootNorm.empty() == false )
+				{
+					const string absNorm = FileUtil::normalizePath( item._absolutePath );
+					if ( absNorm.size() > rootNorm.size() && absNorm.compare( 0, rootNorm.size(), rootNorm ) == 0 &&
+						 absNorm[rootNorm.size()] == '/' )
+						item._relativePath = absNorm.substr( rootNorm.size() + 1 );
+				}
+				if ( item._relativePath.empty() )
+					item._relativePath = FileUtil::normalizePath( item._name );
+
+				if ( item._bIsDirectory == false && FileUtil::endsWithIgnoreCase( item._name, ".meta" ) )
+					return;
+
+				outList.push_back( std::move( item ) );
+			}
+		};
 	} // namespace
+} // namespace sw::editor
+
+namespace sw::editor
+{
+	SW_LOG_CALLER( "EditorAssetCommands" );
 
 	bool EditorAssetCommands::openPath( string_view relativePath )
 	{
@@ -136,7 +142,7 @@ namespace sw::editor
 			return true;
 
 		const string pathStr{ relativePath };
-		if ( isSceneAssetPath( pathStr ) )
+		if ( EditorAssetCommandsInternal::isSceneAssetPath( pathStr ) )
 			return loadScene( pathStr );
 
 		const string lowerExt = StringUtil::toLower( FileUtil::getExtension( pathStr ).c_str() );
@@ -242,7 +248,7 @@ namespace sw::editor
 			return;
 		}
 
-		if ( isSceneAssetPath( pPath ) )
+		if ( EditorAssetCommandsInternal::isSceneAssetPath( pPath ) )
 		{
 			loadScene( pPath );
 			return;
@@ -296,7 +302,7 @@ namespace sw::editor
 		const string mapsDir		= FileUtil::joinPath( ResourceUtil::getGameFolderPath(), "demo/maps" );
 		if ( FileUtil::directoryExists( mapsDir ) )
 			params._initialDirectory = mapsDir;
-		FileUtil::openFileDialog( params, SW_DELEGATE_FUNCTION( FileDialogDelegate, onSaveSceneDialogResult ) );
+		FileUtil::openFileDialog( params, SW_DELEGATE_FUNCTION( FileDialogDelegate, EditorAssetCommandsInternal::onSaveSceneDialogResult ) );
 	}
 
 	uint32 EditorAssetCommands::importFiles( string_view destFolderAbs, const vector<string>& listSourcePath )
@@ -369,7 +375,7 @@ namespace sw::editor
 		for ( const string& file : listAllFiles )
 		{
 			EditorResourceIndexEntry entry{};
-			if ( tryClassifyResourceFile( file, entry ) )
+			if ( EditorAssetCommandsInternal::tryClassifyResourceFile( file, entry ) )
 				outList.push_back( std::move( entry ) );
 		}
 	}
@@ -389,9 +395,9 @@ namespace sw::editor
 		const string  rootNorm	   = resourceRoot.empty() ? string{} : FileUtil::normalizePath( resourceRoot );
 
 		for ( const string& folder : listFolders )
-			appendFolderListingEntry( outList, folder, true, rootNorm );
+			EditorAssetCommandsInternal::appendFolderListingEntry( outList, folder, true, rootNorm );
 		for ( const string& file : listFiles )
-			appendFolderListingEntry( outList, file, false, rootNorm );
+			EditorAssetCommandsInternal::appendFolderListingEntry( outList, file, false, rootNorm );
 	}
 
 	void EditorAssetCommands::collectChildFolders( string_view folderAbs, vector<string>& outList )

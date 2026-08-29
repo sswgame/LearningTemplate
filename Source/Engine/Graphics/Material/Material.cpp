@@ -4,7 +4,7 @@
 
 #include "Core/Concurrency/mutex.h"
 
-#include "Engine/Graphics/Material/MaterialInternal.h"
+#include "Engine/Graphics/Material/MaterialUtil.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResource.h"
 #include "Engine/Graphics/Shader/ShaderCompiler.h"
@@ -162,7 +162,7 @@ namespace sw
 				prop._name		 = var._name;
 				prop._offset	 = var._offset;
 				prop._size		 = var._size;
-				prop._shaderType = shaderTypeFromReflectionName( var._type, var._size );
+				prop._shaderType = MaterialUtil::shaderTypeFromReflectionName( var._type, var._size );
 				prop._type		 = prop._shaderType;
 				_data._listProperty.push_back( prop );
 			}
@@ -189,7 +189,7 @@ namespace sw
 			_data._listBuffer.assign( maxEnd, 0 );
 			for ( MaterialProperty& prop : _data._listProperty )
 			{
-				packPropertyIntoBuffer( prop, _data._listBuffer );
+				MaterialUtil::packPropertyIntoBuffer( prop, _data._listBuffer );
 			}
 			const uint32 alignedTotal = ( static_cast<uint32>( _data._listBuffer.size() ) + 255u ) & ~255u;
 			_data._listBuffer.resize( alignedTotal, 0 );
@@ -202,7 +202,7 @@ namespace sw
 		for ( MaterialProperty& prop : _data._listProperty )
 		{
 			// Textures / keywords / UI-only fields are not MaterialCB variables.
-			if ( isNonBufferType( prop._type ) || isTextureType( prop._type ) )
+			if ( MaterialUtil::isNonBufferType( prop._type ) || MaterialUtil::isTextureType( prop._type ) )
 				continue;
 
 			bool found{ false };
@@ -213,20 +213,20 @@ namespace sw
 				found = true;
 
 				const MaterialPropertyType reflected =
-					shaderTypeFromReflectionName( var._type, var._size );
+					MaterialUtil::shaderTypeFromReflectionName( var._type, var._size );
 				if ( prop._shaderType == MaterialPropertyType::Unknown )
 					prop._shaderType = reflected;
-				else if ( packedSizeOf( prop._shaderType ) != 0 && packedSizeOf( prop._shaderType ) != var._size )
+				else if ( MaterialUtil::packedSizeOf( prop._shaderType ) != 0 && MaterialUtil::packedSizeOf( prop._shaderType ) != var._size )
 				{
 					// Allow conversion if sizes match reflected size after remap
-					if ( packedSizeOf( defaultShaderTypeFor( prop._type ) ) == var._size )
-						prop._shaderType = defaultShaderTypeFor( prop._type );
+					if ( MaterialUtil::packedSizeOf( MaterialUtil::defaultShaderTypeFor( prop._type ) ) == var._size )
+						prop._shaderType = MaterialUtil::defaultShaderTypeFor( prop._type );
 					else if ( reflected != MaterialPropertyType::Unknown )
 						prop._shaderType = reflected;
 					else
 					{
 						SW_LOG_WARNING( "Reflection size mismatch for '%#' (shaderType %# bytes vs %#).",
-										prop._name.c_str(), packedSizeOf( prop._shaderType ), var._size );
+										prop._name.c_str(), MaterialUtil::packedSizeOf( prop._shaderType ), var._size );
 						ok = false;
 					}
 				}
@@ -245,13 +245,13 @@ namespace sw
 		uint32 maxEnd = pSchemaCb->_totalSize;
 		for ( const MaterialProperty& prop : _data._listProperty )
 		{
-			if ( isNonBufferType( prop._type ) == false )
+			if ( MaterialUtil::isNonBufferType( prop._type ) == false )
 				maxEnd = (MathUtil::max)( maxEnd, prop._offset + prop._size );
 		}
 		_data._listBuffer.assign( maxEnd, 0 );
 		for ( MaterialProperty& prop : _data._listProperty )
 		{
-			packPropertyIntoBuffer( prop, _data._listBuffer );
+			MaterialUtil::packPropertyIntoBuffer( prop, _data._listBuffer );
 		}
 		const uint32 alignedTotal = ( static_cast<uint32>( _data._listBuffer.size() ) + 255u ) & ~255u;
 		_data._listBuffer.resize( alignedTotal, 0 );
@@ -266,7 +266,7 @@ namespace sw
 
 		for ( MaterialProperty& prop : _data._listProperty )
 		{
-			if ( isNonBufferType( prop._type ) )
+			if ( MaterialUtil::isNonBufferType( prop._type ) )
 			{
 				prop._offset = 0;
 				prop._size	 = 0;
@@ -274,11 +274,11 @@ namespace sw
 			}
 
 			if ( prop._shaderType == MaterialPropertyType::Unknown )
-				prop._shaderType = defaultShaderTypeFor( prop._type );
+				prop._shaderType = MaterialUtil::defaultShaderTypeFor( prop._type );
 
 			uint32 packSize = prop._size;
 			if ( packSize == 0 )
-				packSize = packedSizeOf( prop._shaderType );
+				packSize = MaterialUtil::packedSizeOf( prop._shaderType );
 			if ( packSize == 0 )
 				packSize = 4;
 
@@ -292,7 +292,7 @@ namespace sw
 		bool anyExplicitOffset{ false };
 		for ( const MaterialProperty& prop : _data._listProperty )
 		{
-			if ( isNonBufferType( prop._type ) == false && prop._offset != 0 )
+			if ( MaterialUtil::isNonBufferType( prop._type ) == false && prop._offset != 0 )
 			{
 				anyExplicitOffset = true;
 				break;
@@ -312,13 +312,13 @@ namespace sw
 		uint32 maxEnd{ 0 };
 		for ( MaterialProperty& prop : _data._listProperty )
 		{
-			if ( isNonBufferType( prop._type ) )
+			if ( MaterialUtil::isNonBufferType( prop._type ) )
 				continue;
 
 			if ( prop._shaderType == MaterialPropertyType::Unknown )
-				prop._shaderType = defaultShaderTypeFor( prop._type );
+				prop._shaderType = MaterialUtil::defaultShaderTypeFor( prop._type );
 
-			uint32 packSize = packedSizeOf( prop._shaderType );
+			uint32 packSize = MaterialUtil::packedSizeOf( prop._shaderType );
 			if ( prop._size != 0 )
 				packSize = prop._size;
 			if ( packSize == 0 )
@@ -327,7 +327,7 @@ namespace sw
 
 			if ( useSequential )
 			{
-				currentOffset = alignOffset( currentOffset, packSize );
+				currentOffset = MaterialUtil::alignOffset( currentOffset, packSize );
 				prop._offset  = currentOffset;
 				currentOffset += packSize;
 			}
@@ -339,7 +339,7 @@ namespace sw
 		bool ok{ true };
 		for ( MaterialProperty& prop : _data._listProperty )
 		{
-			if ( packPropertyIntoBuffer( prop, _data._listBuffer ) == false )
+			if ( MaterialUtil::packPropertyIntoBuffer( prop, _data._listBuffer ) == false )
 				ok = false;
 		}
 
@@ -377,13 +377,13 @@ namespace sw
 			return false;
 		MaterialProperty prop = *pSrc;
 		prop._value			  = value;
-		return packPropertyIntoBuffer( prop, inoutBuffer );
+		return MaterialUtil::packPropertyIntoBuffer( prop, inoutBuffer );
 	}
 
 	bool Material::packTextureIntoBuffer( hashed_string name, RHIDescriptorIndex descIdx, vector<uint8>& inoutBuffer ) const
 	{
 		const MaterialProperty* pProp = findProperty( name );
-		if ( pProp == nullptr || isNonBufferType( pProp->_type ) )
+		if ( pProp == nullptr || MaterialUtil::isNonBufferType( pProp->_type ) )
 			return false;
 
 		const uint32 packSize = pProp->_size != 0 ? pProp->_size : 4u;
@@ -401,7 +401,7 @@ namespace sw
 			return false;
 
 		const MaterialProperty* pProp = findProperty( name );
-		if ( pProp == nullptr || isNonBufferType( pProp->_type ) )
+		if ( pProp == nullptr || MaterialUtil::isNonBufferType( pProp->_type ) )
 			return false;
 
 		const uint32 copySize = (MathUtil::min)( pProp->_size != 0 ? pProp->_size : byteSize, byteSize );
@@ -429,7 +429,7 @@ namespace sw
 		if ( prop == nullptr )
 			return false;
 		prop->_value = value;
-		if ( packPropertyIntoBuffer( *prop, _data._listBuffer ) == false )
+		if ( MaterialUtil::packPropertyIntoBuffer( *prop, _data._listBuffer ) == false )
 			return false;
 		if ( pRhi != nullptr && _constantBuffer != 0 )
 			pRhi->getResource()->updateConstantBuffer( _constantBuffer, _data._listBuffer.data(), static_cast<uint32>( _data._listBuffer.size() ) );
@@ -447,11 +447,11 @@ namespace sw
 		{
 			if ( hashed_string( prop._name.c_str() ) != name )
 				continue;
-			if ( isTextureType( prop._type ) == false && prop._shaderType != MaterialPropertyType::Uint )
+			if ( MaterialUtil::isTextureType( prop._type ) == false && prop._shaderType != MaterialPropertyType::Uint )
 				return false;
 			prop._textureIndex = descIdx;
 			prop._value		   = to_string( descIdx );
-			if ( packPropertyIntoBuffer( prop, _data._listBuffer ) == false )
+			if ( MaterialUtil::packPropertyIntoBuffer( prop, _data._listBuffer ) == false )
 				return false;
 			if ( pRhi != nullptr && _constantBuffer != 0 )
 				pRhi->getResource()->updateConstantBuffer( _constantBuffer, _data._listBuffer.data(), static_cast<uint32>( _data._listBuffer.size() ) );
@@ -527,7 +527,7 @@ namespace sw
 	void Material::setBlendMode( RHIBlendMode mode )
 	{
 		_blendMode		 = mode;
-		_desc._blendMode = blendModeToString( mode );
+		_desc._blendMode = MaterialUtil::blendModeToString( mode );
 	}
 
 	bool Material::setParameterFloat( IRHIDevice* pRhi, hashed_string name, float32 value )
@@ -537,7 +537,7 @@ namespace sw
 			if ( hashed_string( prop._name.c_str() ) != name )
 				continue;
 			prop._value = to_string( value );
-			if ( packPropertyIntoBuffer( prop, _data._listBuffer ) == false )
+			if ( MaterialUtil::packPropertyIntoBuffer( prop, _data._listBuffer ) == false )
 				return false;
 			if ( pRhi != nullptr && _constantBuffer != 0 )
 				pRhi->getResource()->updateConstantBuffer( _constantBuffer, _data._listBuffer.data(), static_cast<uint32>( _data._listBuffer.size() ) );
@@ -570,7 +570,7 @@ namespace sw
 	{
 		for ( const MaterialProperty& prop : _data._listProperty )
 		{
-			if ( prop._name == name && isNonBufferType( prop._type ) == false )
+			if ( prop._name == name && MaterialUtil::isNonBufferType( prop._type ) == false )
 				return _data._listBuffer.data() + prop._offset;
 		}
 		return nullptr;
@@ -585,28 +585,28 @@ namespace sw
 
 			for ( const string& defineStr : perm._listAlwaysDefine )
 			{
-				appendUniqueDefine( _listCachedDefine, defineStr );
+				MaterialUtil::appendUniqueDefine( _listCachedDefine, defineStr );
 			}
 
-			appendQualityDefines( perm._quality, _listCachedDefine );
-			appendUniqueDefine( _listCachedDefine, string( "SHADER_LOD=" ) + to_string( perm._shaderLOD ) );
-			appendUsageDefines( perm._usage, _listCachedDefine );
+			MaterialUtil::appendQualityDefines( perm._quality, _listCachedDefine );
+			MaterialUtil::appendUniqueDefine( _listCachedDefine, string( "SHADER_LOD=" ) + to_string( perm._shaderLOD ) );
+			MaterialUtil::appendUsageDefines( perm._usage, _listCachedDefine );
 
 			for ( const MaterialStaticSwitch& entry : perm._listStaticSwitch )
 			{
 				if ( entry._bEnabled != 0 )
 				{
 					if ( entry._keyword.empty() == false )
-						appendUniqueDefine( _listCachedDefine, entry._keyword );
+						MaterialUtil::appendUniqueDefine( _listCachedDefine, entry._keyword );
 				}
 				else if ( entry._keywordOff.empty() == false )
-					appendUniqueDefine( _listCachedDefine, entry._keywordOff );
+					MaterialUtil::appendUniqueDefine( _listCachedDefine, entry._keywordOff );
 			}
 
 			for ( const MaterialMultiCompile& mc : perm._listMultiCompile )
 			{
 				if ( mc._selected.empty() == false )
-					appendUniqueDefine( _listCachedDefine, mc._selected );
+					MaterialUtil::appendUniqueDefine( _listCachedDefine, mc._selected );
 			}
 
 			for ( const MaterialProperty& prop : _data._listProperty )
@@ -615,12 +615,12 @@ namespace sw
 					continue;
 				if ( prop._shaderKeyword.empty() )
 					continue;
-				if ( parseBoolToken( prop._value ) )
-					appendUniqueDefine( _listCachedDefine, prop._shaderKeyword );
+				if ( MaterialUtil::parseBoolToken( prop._value ) )
+					MaterialUtil::appendUniqueDefine( _listCachedDefine, prop._shaderKeyword );
 			}
 
 			std::sort( _listCachedDefine.begin(), _listCachedDefine.end() );
-			_cachedPermutationHash = hashDefines( _listCachedDefine );
+			_cachedPermutationHash = MaterialUtil::hashDefines( _listCachedDefine );
 			_bDefinesDirty		   = 0;
 		}
 		return _listCachedDefine;

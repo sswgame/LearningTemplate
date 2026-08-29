@@ -9,34 +9,40 @@ namespace sw
 {
 	namespace
 	{
-		void enqueueStatsMutation( GameObject* pOwner, int32 amount, bool bHeal )
+		struct UnitStatsComponentInternal
 		{
-			if ( pOwner == nullptr )
-				return;
-
-			GameObjectManager* pManager = pOwner->getManager();
-			if ( pManager == nullptr )
-				return;
-
-			const uint64 objectId = pOwner->getObjectId();
-			pManager->deferPostTick( [pManager, objectId, amount, bHeal]()
+			static void enqueueStatsMutation( GameObject* pOwner, int32 amount, bool bHeal )
 			{
-				GameObject* pObj = pManager->findGameObjectById( objectId );
-				if ( pObj == nullptr )
+				if ( pOwner == nullptr )
 					return;
 
-				UnitStatsComponent* pStats = pObj->getComponent<UnitStatsComponent>();
-				if ( pStats == nullptr )
+				GameObjectManager* pManager = pOwner->getManager();
+				if ( pManager == nullptr )
 					return;
 
-				if ( bHeal )
-					pStats->heal( amount );
-				else
-					pStats->takeDamage( amount );
-			} );
-		}
+				const uint64 objectId = pOwner->getObjectId();
+				pManager->deferPostTick( [pManager, objectId, amount, bHeal]()
+				{
+					GameObject* pObj = pManager->findGameObjectById( objectId );
+					if ( pObj == nullptr )
+						return;
+
+					UnitStatsComponent* pStats = pObj->getComponent<UnitStatsComponent>();
+					if ( pStats == nullptr )
+						return;
+
+					if ( bHeal )
+						pStats->heal( amount );
+					else
+						pStats->takeDamage( amount );
+				} );
+			}
+		};
 	} // namespace
+} // namespace sw
 
+namespace sw
+{
 	UnitStatsComponent::UnitStatsComponent()
 		: _hp{ 0 }
 		, _maxHp{ 0 }
@@ -82,7 +88,7 @@ namespace sw
 		GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
 		if ( pManager != nullptr && pManager->isStructuralMutationFrozen() )
 		{
-			enqueueStatsMutation( pOwner, amount, false );
+			UnitStatsComponentInternal::enqueueStatsMutation( pOwner, amount, false );
 			return;
 		}
 		applyTakeDamage( amount );
@@ -94,7 +100,7 @@ namespace sw
 		GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
 		if ( pManager != nullptr && pManager->isStructuralMutationFrozen() )
 		{
-			enqueueStatsMutation( pOwner, amount, true );
+			UnitStatsComponentInternal::enqueueStatsMutation( pOwner, amount, true );
 			return;
 		}
 		applyHeal( amount );

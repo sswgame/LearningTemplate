@@ -28,39 +28,45 @@
 
 namespace sw::editor
 {
-	SW_LOG_CALLER( "Editor" );
-
 	namespace
 	{
-		void onOpenSceneDialogResult( const vector<string>& listPaths )
+		struct EditorMenuBarInternal
 		{
-			if ( listPaths.empty() == false )
-				EditorContext::get()->getWorkspace().requestLoadScene( listPaths[0] );
-		}
+			static void onOpenSceneDialogResult( const vector<string>& listPaths )
+			{
+				if ( listPaths.empty() == false )
+					EditorContext::get()->getWorkspace().requestLoadScene( listPaths[0] );
+			}
 
-		void saveSceneOrPrompt()
-		{
-			EditorAssetCommands::saveActiveSceneOrPrompt();
-		}
+			static void saveSceneOrPrompt()
+			{
+				EditorAssetCommands::saveActiveSceneOrPrompt();
+			}
 
-		void openSceneFileDialog()
-		{
-			FileDialogParams params{};
-			params._type				= FileDialogParams::Type::Open;
-			params._title				= "Open Scene";
-			params._description			= "Scene";
-			params._bEnableMultiselect	= false;
-			params._filterExtensionList = { ".scene.xml", ".xml" };
+			static void openSceneFileDialog()
+			{
+				FileDialogParams params{};
+				params._type				= FileDialogParams::Type::Open;
+				params._title				= "Open Scene";
+				params._description			= "Scene";
+				params._bEnableMultiselect	= false;
+				params._filterExtensionList = { ".scene.xml", ".xml" };
 
-			const string mapsDir = FileUtil::joinPath( ResourceUtil::getGameFolderPath(), "demo/maps" );
-			if ( FileUtil::directoryExists( mapsDir ) )
-				params._initialDirectory = mapsDir;
-			else if ( ResourceUtil::getGameFolderPath().empty() == false )
-				params._initialDirectory = ResourceUtil::getGameFolderPath();
+				const string mapsDir = FileUtil::joinPath( ResourceUtil::getGameFolderPath(), "demo/maps" );
+				if ( FileUtil::directoryExists( mapsDir ) )
+					params._initialDirectory = mapsDir;
+				else if ( ResourceUtil::getGameFolderPath().empty() == false )
+					params._initialDirectory = ResourceUtil::getGameFolderPath();
 
-			FileUtil::openFileDialog( params, SW_DELEGATE_FUNCTION( FileDialogDelegate, onOpenSceneDialogResult ) );
-		}
+				FileUtil::openFileDialog( params, SW_DELEGATE_FUNCTION( FileDialogDelegate, onOpenSceneDialogResult ) );
+			}
+		};
 	} // namespace
+} // namespace sw::editor
+
+namespace sw::editor
+{
+	SW_LOG_CALLER( "Editor" );
 
 	void EditorMenuBar::draw( EditorDockLayout& dockLayout )
 	{
@@ -70,9 +76,9 @@ namespace sw::editor
 		if ( ImGui::BeginMenu( "File" ) )
 		{
 			if ( ImGui::MenuItem( "Open Scene...", "Ctrl+O" ) )
-				openSceneFileDialog();
+				EditorMenuBarInternal::openSceneFileDialog();
 			if ( ImGui::MenuItem( "Save Scene", "Ctrl+S" ) )
-				saveSceneOrPrompt();
+				EditorMenuBarInternal::saveSceneOrPrompt();
 
 			ImGui::Separator();
 			if ( ImGui::MenuItem( "Quick Open...", "Ctrl+P" ) )
@@ -287,9 +293,9 @@ namespace sw::editor
 				if ( ImGui::IsKeyPressed( ImGuiKey_Y, false ) )
 					getService<CommandStack>()->redo();
 				if ( ImGui::IsKeyPressed( ImGuiKey_O, false ) )
-					openSceneFileDialog();
+					EditorMenuBarInternal::openSceneFileDialog();
 				if ( ImGui::IsKeyPressed( ImGuiKey_S, false ) )
-					saveSceneOrPrompt();
+					EditorMenuBarInternal::saveSceneOrPrompt();
 				if ( io.KeyShift && ImGui::IsKeyPressed( ImGuiKey_P, false ) )
 					CommandPalettePopup::toggle();
 				else if ( ImGui::IsKeyPressed( ImGuiKey_P, false ) )

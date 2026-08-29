@@ -139,7 +139,7 @@ namespace sw
 			return false;
 
 		const sw::string genHeaderPath =
-			sw::makeGeneratedPath( args._outputDir, inputFile, sw::ParserContext::getSharedConfig()._emitHeaderExtension );
+			sw::ParserUtil::makeGeneratedPath( args._outputDir, inputFile, sw::ParserContext::getSharedConfig()._emitHeaderExtension );
 		if ( sw::FileUtil::fileExists( genHeaderPath ) == false )
 			return false;
 
@@ -187,7 +187,7 @@ namespace sw
 	static void processInputFile( const sw::string& inputFile, const CommandLineArgs& args, std::atomic<int32>& errorCount )
 	{
 		const sw::string genPath =
-			sw::makeGeneratedPath( args._outputDir, inputFile, sw::ParserContext::getSharedConfig()._emitCppExtension );
+			sw::ParserUtil::makeGeneratedPath( args._outputDir, inputFile, sw::ParserContext::getSharedConfig()._emitCppExtension );
 
 		if ( isUpToDate( genPath, inputFile, args ) )
 		{
@@ -262,7 +262,7 @@ namespace sw
 		bool bAnyFlags = false;
 		for ( const string& inputFile : args._listInputFiles )
 		{
-			const string genHeader = makeGeneratedPath( args._outputDir, inputFile, cfg._emitHeaderExtension );
+			const string genHeader = ParserUtil::makeGeneratedPath( args._outputDir, inputFile, cfg._emitHeaderExtension );
 			string		 genText;
 			if ( FileUtil::fileExists( genHeader ) == false || FileUtil::readTextFile( genHeader, genText ) == false )
 				continue;
@@ -270,7 +270,7 @@ namespace sw
 				continue;
 
 			bAnyFlags			   = true;
-			const string headerInc = makeHeaderIncludePath( inputFile, args._listIncludePaths );
+			const string headerInc = ParserUtil::makeHeaderIncludePath( inputFile, args._listIncludePaths );
 			const string genInc	   = FileUtil::getFileNamePart( genHeader );
 			e.linef( "#include \"%#\"", headerInc );
 			e.linef( "#include \"%#\"", genInc );

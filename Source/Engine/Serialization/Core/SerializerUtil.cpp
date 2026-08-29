@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Serialization/Core/SerializerInternal.h"
+#include "Engine/Serialization/Core/SerializerUtil.h"
 
 #include "Core/String/StringUtil.h"
 
@@ -15,27 +15,32 @@ namespace sw
 {
 	namespace
 	{
-		/** @brief Alias/옛 이름 → SerializeContext 핸들러용 canonical (_name). */
-		hashed_string resolveHandlerTypeName( const hashed_string& typeName, const SerializeContext& ctx )
+		struct SerializerUtilInternal
 		{
-			if ( ctx.findBinaryWriter( typeName ) != nullptr || ctx.findTextWriter( typeName ) != nullptr )
-				return typeName;
-
-			TypeRegistry&	registry  = engine::getTypeRegistry();
-			const TypeInfo* pTypeInfo = registry.findType( typeName );
-			if ( pTypeInfo != nullptr )
+			/** @brief Alias/옛 이름 → SerializeContext 핸들러용 canonical (_name). */
+			static hashed_string resolveHandlerTypeName( const hashed_string& typeName, const SerializeContext& ctx )
 			{
-				if ( pTypeInfo->_name.empty() == false &&
-					 ( ctx.findBinaryWriter( pTypeInfo->_name ) != nullptr ||
-					   ctx.findTextWriter( pTypeInfo->_name ) != nullptr ) )
-					return pTypeInfo->_name;
+				if ( ctx.findBinaryWriter( typeName ) != nullptr || ctx.findTextWriter( typeName ) != nullptr )
+					return typeName;
+
+				TypeRegistry&	registry  = engine::getTypeRegistry();
+				const TypeInfo* pTypeInfo = registry.findType( typeName );
+				if ( pTypeInfo != nullptr )
+				{
+					if ( pTypeInfo->_name.empty() == false &&
+						 ( ctx.findBinaryWriter( pTypeInfo->_name ) != nullptr ||
+						   ctx.findTextWriter( pTypeInfo->_name ) != nullptr ) )
+						return pTypeInfo->_name;
+				}
+				return typeName;
 			}
-			return typeName;
-		}
-
+		};
 	} // namespace
+} // namespace sw
 
-	const utf8* containerTypeTagName( hashed_string typeName )
+namespace sw
+{
+	const utf8* SerializerUtil::containerTypeTagName( hashed_string typeName )
 	{
 		const TypeInfo* pTypeInfo = engine::getTypeRegistry().findType( typeName );
 		if ( pTypeInfo != nullptr )
@@ -50,10 +55,10 @@ namespace sw
 		return nullptr;
 	}
 
-	void serializeValueBinary( const void* pValuePtr, const hashed_string& typeName,
-							   vector<uint8>& listBuffer, const SerializeContext& ctx )
+	void SerializerUtil::serializeValueBinary( const void* pValuePtr, const hashed_string& typeName,
+											   vector<uint8>& listBuffer, const SerializeContext& ctx )
 	{
-		const hashed_string					   resolved = resolveHandlerTypeName( typeName, ctx );
+		const hashed_string					   resolved = SerializerUtilInternal::resolveHandlerTypeName( typeName, ctx );
 		const SerializeContext::BinaryWriteFn* pWriter	= ctx.findBinaryWriter( resolved );
 		if ( pWriter != nullptr )
 		{
@@ -100,11 +105,11 @@ namespace sw
 		listBuffer.push_back( 0 );
 	}
 
-	bool deserializeValueBinary( void* pValuePtr, const hashed_string& typeName,
-								 const uint8* pData, size_t dataSize, size_t& offset,
-								 const SerializeContext& ctx )
+	bool SerializerUtil::deserializeValueBinary( void* pValuePtr, const hashed_string& typeName,
+												 const uint8* pData, size_t dataSize, size_t& offset,
+												 const SerializeContext& ctx )
 	{
-		const hashed_string					  resolved = resolveHandlerTypeName( typeName, ctx );
+		const hashed_string					  resolved = SerializerUtilInternal::resolveHandlerTypeName( typeName, ctx );
 		const SerializeContext::BinaryReadFn* pReader  = ctx.findBinaryReader( resolved );
 		if ( pReader != nullptr )
 			return ( *pReader )( pValuePtr, pData, dataSize, offset );
@@ -163,8 +168,8 @@ namespace sw
 		return false;
 	}
 
-	void serializeNestedContainerBinary( const void* pContainerPtr, const NestedContainerInfo& nested,
-										 vector<uint8>& listBuffer, const SerializeContext& ctx )
+	void SerializerUtil::serializeNestedContainerBinary( const void* pContainerPtr, const NestedContainerInfo& nested,
+														 vector<uint8>& listBuffer, const SerializeContext& ctx )
 	{
 		if ( pContainerPtr == nullptr || nested._wrapper == nullptr )
 			return;
@@ -181,9 +186,9 @@ namespace sw
 			{
 				const void* pElem = pSeq->getElementConst( pContainerPtr, elemIndex );
 				if ( nested._elementNested != nullptr )
-					serializeNestedContainerBinary( pElem, *nested._elementNested, listBuffer, ctx );
+					SerializerUtil::serializeNestedContainerBinary( pElem, *nested._elementNested, listBuffer, ctx );
 				else
-					serializeValueBinary( pElem, nested._elementTypeName, listBuffer, ctx );
+					SerializerUtil::serializeValueBinary( pElem, nested._elementTypeName, listBuffer, ctx );
 			}
 			return;
 		}
@@ -198,18 +203,18 @@ namespace sw
 
 			pMapWrap->forEach( pContainerPtr, [&]( const void* pKey, const void* pVal )
 			{
-				serializeValueBinary( pKey, nested._keyTypeName, listBuffer, ctx );
+				SerializerUtil::serializeValueBinary( pKey, nested._keyTypeName, listBuffer, ctx );
 				if ( nested._elementNested != nullptr )
-					serializeNestedContainerBinary( pVal, *nested._elementNested, listBuffer, ctx );
+					SerializerUtil::serializeNestedContainerBinary( pVal, *nested._elementNested, listBuffer, ctx );
 				else
-					serializeValueBinary( pVal, nested._elementTypeName, listBuffer, ctx );
+					SerializerUtil::serializeValueBinary( pVal, nested._elementTypeName, listBuffer, ctx );
 			} );
 		}
 	}
 
-	bool deserializeNestedContainerBinary( void* pContainerPtr, const NestedContainerInfo& nested,
-										   const uint8* pData, size_t dataSize, size_t& offset,
-										   const SerializeContext& ctx )
+	bool SerializerUtil::deserializeNestedContainerBinary( void* pContainerPtr, const NestedContainerInfo& nested,
+														   const uint8* pData, size_t dataSize, size_t& offset,
+														   const SerializeContext& ctx )
 	{
 		if ( pContainerPtr == nullptr || nested._wrapper == nullptr )
 			return false;
@@ -231,10 +236,10 @@ namespace sw
 				void* pElem = pSeq->getElement( pContainerPtr, elemIndex );
 				if ( nested._elementNested != nullptr )
 				{
-					if ( deserializeNestedContainerBinary( pElem, *nested._elementNested, pData, dataSize, offset, ctx ) == false )
+					if ( SerializerUtil::deserializeNestedContainerBinary( pElem, *nested._elementNested, pData, dataSize, offset, ctx ) == false )
 						return false;
 				}
-				else if ( deserializeValueBinary( pElem, nested._elementTypeName, pData, dataSize, offset, ctx ) == false )
+				else if ( SerializerUtil::deserializeValueBinary( pElem, nested._elementTypeName, pData, dataSize, offset, ctx ) == false )
 					return false;
 			}
 			return true;
@@ -249,13 +254,13 @@ namespace sw
 			{
 				pMapWrap->defaultConstructKey( listKBuf.data() );
 				pMapWrap->defaultConstructValue( listVBuf.data() );
-				bool ok = deserializeValueBinary( listKBuf.data(), nested._keyTypeName, pData, dataSize, offset, ctx );
+				bool ok = SerializerUtil::deserializeValueBinary( listKBuf.data(), nested._keyTypeName, pData, dataSize, offset, ctx );
 				if ( ok )
 				{
 					if ( nested._elementNested != nullptr )
-						ok = deserializeNestedContainerBinary( listVBuf.data(), *nested._elementNested, pData, dataSize, offset, ctx );
+						ok = SerializerUtil::deserializeNestedContainerBinary( listVBuf.data(), *nested._elementNested, pData, dataSize, offset, ctx );
 					else
-						ok = deserializeValueBinary( listVBuf.data(), nested._elementTypeName, pData, dataSize, offset, ctx );
+						ok = SerializerUtil::deserializeValueBinary( listVBuf.data(), nested._elementTypeName, pData, dataSize, offset, ctx );
 				}
 				if ( ok )
 					pMapWrap->insertKeyValue( pContainerPtr, listKBuf.data(), listVBuf.data() );
@@ -269,10 +274,10 @@ namespace sw
 		return false;
 	}
 
-	void valueToText( StringBuilder<constant::kMaxBuffer8192>& ss, const void* pValPtr, const hashed_string& typeName,
-					  const SerializeContext& ctx )
+	void SerializerUtil::valueToText( StringBuilder<constant::kMaxBuffer8192>& ss, const void* pValPtr, const hashed_string& typeName,
+									  const SerializeContext& ctx )
 	{
-		const hashed_string					 resolved	 = resolveHandlerTypeName( typeName, ctx );
+		const hashed_string					 resolved	 = SerializerUtilInternal::resolveHandlerTypeName( typeName, ctx );
 		const SerializeContext::TextWriteFn* pTextWriter = ctx.findTextWriter( resolved );
 		if ( pTextWriter != nullptr )
 		{
@@ -304,10 +309,10 @@ namespace sw
 		ss.append( "null" );
 	}
 
-	bool parseTextValue( void* pValPtr, const hashed_string& typeName, string_view valStr,
-						 const SerializeContext& ctx )
+	bool SerializerUtil::parseTextValue( void* pValPtr, const hashed_string& typeName, string_view valStr,
+										 const SerializeContext& ctx )
 	{
-		const hashed_string					resolved	= resolveHandlerTypeName( typeName, ctx );
+		const hashed_string					resolved	= SerializerUtilInternal::resolveHandlerTypeName( typeName, ctx );
 		const SerializeContext::TextReadFn* pTextReader = ctx.findTextReader( resolved );
 		if ( pTextReader != nullptr )
 			return ( *pTextReader )( pValPtr, valStr );
@@ -341,16 +346,16 @@ namespace sw
 		return false;
 	}
 
-	bool applyPropertyDefault( void* pPropPtr, const PropertyInfo& prop, const SerializeContext& ctx )
+	bool SerializerUtil::applyPropertyDefault( void* pPropPtr, const PropertyInfo& prop, const SerializeContext& ctx )
 	{
 		if ( pPropPtr == nullptr || prop._bIsContainer != 0 )
 			return false;
 		if ( prop._metadata._defaultValue.empty() )
 			return false;
-		return parseTextValue( pPropPtr, prop._typeName, prop._metadata._defaultValue, ctx );
+		return SerializerUtil::parseTextValue( pPropPtr, prop._typeName, prop._metadata._defaultValue, ctx );
 	}
 
-	bool keysEqual( string_view a, string_view b, bool bIgnoreCase )
+	bool SerializerUtil::keysEqual( string_view a, string_view b, bool bIgnoreCase )
 	{
 		if ( a.size() != b.size() )
 			return false;
@@ -359,23 +364,23 @@ namespace sw
 		return StringUtil::strnicmp( a.data(), b.data(), static_cast<uint32>( a.size() ) ) == 0;
 	}
 
-	const PropertyInfo* matchProperty( const vector<PropertyInfo>& listProps, string_view keyRaw,
-									   bool bIgnoreCaseKeys, bool& bCaseVariant )
+	const PropertyInfo* SerializerUtil::matchProperty( const vector<PropertyInfo>& listProps, string_view keyRaw,
+													   bool bIgnoreCaseKeys, bool& bCaseVariant )
 	{
 		const PropertyInfo* pMatched = nullptr;
 		bCaseVariant				 = false;
 		for ( const PropertyInfo& prop : listProps )
 		{
-			if ( keysEqual( keyRaw, prop._name.c_str(), bIgnoreCaseKeys ) )
+			if ( SerializerUtil::keysEqual( keyRaw, prop._name.c_str(), bIgnoreCaseKeys ) )
 				return &prop;
-			bCaseVariant = bCaseVariant || keysEqual( keyRaw, prop._name.c_str(), true );
+			bCaseVariant = bCaseVariant || SerializerUtil::keysEqual( keyRaw, prop._name.c_str(), true );
 			for ( const hashed_string& alias : prop._listAlias )
 			{
 				if ( alias.empty() )
 					continue;
-				if ( keysEqual( keyRaw, alias.c_str(), bIgnoreCaseKeys ) )
+				if ( SerializerUtil::keysEqual( keyRaw, alias.c_str(), bIgnoreCaseKeys ) )
 					return &prop;
-				bCaseVariant = bCaseVariant || keysEqual( keyRaw, alias.c_str(), true );
+				bCaseVariant = bCaseVariant || SerializerUtil::keysEqual( keyRaw, alias.c_str(), true );
 			}
 		}
 		return pMatched;

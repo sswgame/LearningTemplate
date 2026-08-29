@@ -11,15 +11,21 @@ namespace sw
 {
 	namespace
 	{
-		AABB makeColliderAabb( const float2& minB, const float2& maxB )
+		struct BoxCollider2DComponentInternal
 		{
-			AABB box;
-			box._min = float3( minB._x, minB._y, 0.0f );
-			box._max = float3( maxB._x, maxB._y, 0.0f );
-			return box;
-		}
+			static AABB makeColliderAabb( const float2& minB, const float2& maxB )
+			{
+				AABB box;
+				box._min = float3( minB._x, minB._y, 0.0f );
+				box._max = float3( maxB._x, maxB._y, 0.0f );
+				return box;
+			}
+		};
 	} // namespace
+} // namespace sw
 
+namespace sw
+{
 	BoxCollider2DComponent::BoxCollider2DComponent()
 		: _colliderType{ 0 }
 		, _offsetPos{}
@@ -158,7 +164,7 @@ namespace sw
 		_cachedMin = minB;
 		_cachedMax = maxB;
 
-		const AABB	box	  = makeColliderAabb( minB, maxB );
+		const AABB	box	  = BoxCollider2DComponentInternal::makeColliderAabb( minB, maxB );
 		const uint8 layer = static_cast<uint8>( _colliderType );
 
 		if ( _physicsBody.isValid() )

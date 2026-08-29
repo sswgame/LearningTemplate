@@ -10,51 +10,57 @@ namespace sw::editor
 {
 	namespace
 	{
-		void cloneDrawData( const ImDrawData* pSrc, ImDrawData& outDrawData, vector<ImDrawList*>& outOwnedList )
+		struct EditorDrawDataSnapshotInternal
 		{
-			outDrawData.Clear();
-			for ( ImDrawList* pOwned : outOwnedList )
-				IM_DELETE( pOwned );
-			outOwnedList.clear();
-
-			if ( pSrc == nullptr || pSrc->Valid == false )
-				return;
-
-			outDrawData.Valid			 = true;
-			outDrawData.DisplayPos		 = pSrc->DisplayPos;
-			outDrawData.DisplaySize		 = pSrc->DisplaySize;
-			outDrawData.FramebufferScale = pSrc->FramebufferScale;
-			outDrawData.Textures		 = pSrc->Textures;
-			outDrawData.OwnerViewport	 = nullptr;
-			outDrawData.TotalIdxCount	 = pSrc->TotalIdxCount;
-			outDrawData.TotalVtxCount	 = pSrc->TotalVtxCount;
-
-			outOwnedList.reserve( static_cast<size_t>( pSrc->CmdLists.Size ) );
-			for ( int32 listIndex = 0; listIndex < pSrc->CmdLists.Size; ++listIndex )
+			static void cloneDrawData( const ImDrawData* pSrc, ImDrawData& outDrawData, vector<ImDrawList*>& outOwnedList )
 			{
-				ImDrawList* pSrcList = pSrc->CmdLists[listIndex];
-				if ( pSrcList == nullptr )
-					continue;
-				ImDrawList* pClone = pSrcList->CloneOutput();
-				if ( pClone == nullptr )
-					continue;
-				outOwnedList.push_back( pClone );
-				outDrawData.AddDrawList( pClone );
+				outDrawData.Clear();
+				for ( ImDrawList* pOwned : outOwnedList )
+					IM_DELETE( pOwned );
+				outOwnedList.clear();
+
+				if ( pSrc == nullptr || pSrc->Valid == false )
+					return;
+
+				outDrawData.Valid			 = true;
+				outDrawData.DisplayPos		 = pSrc->DisplayPos;
+				outDrawData.DisplaySize		 = pSrc->DisplaySize;
+				outDrawData.FramebufferScale = pSrc->FramebufferScale;
+				outDrawData.Textures		 = pSrc->Textures;
+				outDrawData.OwnerViewport	 = nullptr;
+				outDrawData.TotalIdxCount	 = pSrc->TotalIdxCount;
+				outDrawData.TotalVtxCount	 = pSrc->TotalVtxCount;
+
+				outOwnedList.reserve( static_cast<size_t>( pSrc->CmdLists.Size ) );
+				for ( int32 listIndex = 0; listIndex < pSrc->CmdLists.Size; ++listIndex )
+				{
+					ImDrawList* pSrcList = pSrc->CmdLists[listIndex];
+					if ( pSrcList == nullptr )
+						continue;
+					ImDrawList* pClone = pSrcList->CloneOutput();
+					if ( pClone == nullptr )
+						continue;
+					outOwnedList.push_back( pClone );
+					outDrawData.AddDrawList( pClone );
+				}
+
+				outDrawData.TotalIdxCount = pSrc->TotalIdxCount;
+				outDrawData.TotalVtxCount = pSrc->TotalVtxCount;
 			}
 
-			outDrawData.TotalIdxCount = pSrc->TotalIdxCount;
-			outDrawData.TotalVtxCount = pSrc->TotalVtxCount;
-		}
-
-		void destroyOwnedLists( ImDrawData& drawData, vector<ImDrawList*>& listOwned )
-		{
-			drawData.Clear();
-			for ( ImDrawList* pOwned : listOwned )
-				IM_DELETE( pOwned );
-			listOwned.clear();
-		}
+			static void destroyOwnedLists( ImDrawData& drawData, vector<ImDrawList*>& listOwned )
+			{
+				drawData.Clear();
+				for ( ImDrawList* pOwned : listOwned )
+					IM_DELETE( pOwned );
+				listOwned.clear();
+			}
+		};
 	} // namespace
+} // namespace sw::editor
 
+namespace sw::editor
+{
 	struct EditorDrawDataSnapshot::Impl
 	{
 		struct ExtraViewportClone
@@ -102,12 +108,12 @@ namespace sw::editor
 		if ( _pImpl == nullptr )
 			return;
 
-		destroyOwnedLists( _pImpl->_mainDrawData, _pImpl->_listMainOwned );
+		EditorDrawDataSnapshotInternal::destroyOwnedLists( _pImpl->_mainDrawData, _pImpl->_listMainOwned );
 		for ( unique_ptr<Impl::ExtraViewportClone>& pExtra : _pImpl->_listExtraViewport )
 		{
 			if ( pExtra == nullptr )
 				continue;
-			destroyOwnedLists( pExtra->_drawData, pExtra->_listOwned );
+			EditorDrawDataSnapshotInternal::destroyOwnedLists( pExtra->_drawData, pExtra->_listOwned );
 		}
 		_pImpl->_listExtraViewport.clear();
 		_pImpl->_pPlatformRenderWindow = nullptr;
@@ -122,7 +128,7 @@ namespace sw::editor
 		if ( ImGui::GetCurrentContext() == nullptr )
 			return;
 
-		cloneDrawData( ImGui::GetDrawData(), _pImpl->_mainDrawData, _pImpl->_listMainOwned );
+		EditorDrawDataSnapshotInternal::cloneDrawData( ImGui::GetDrawData(), _pImpl->_mainDrawData, _pImpl->_listMainOwned );
 		if ( _pImpl->_mainDrawData.Valid == false )
 			return;
 
@@ -157,7 +163,7 @@ namespace sw::editor
 			pExtra->_pPlatformUserData					= pViewport->PlatformUserData;
 			pExtra->_pPlatformHandle					= pViewport->PlatformHandle;
 			pExtra->_pPlatformHandleRaw					= pViewport->PlatformHandleRaw;
-			cloneDrawData( pViewport->DrawData, pExtra->_drawData, pExtra->_listOwned );
+			EditorDrawDataSnapshotInternal::cloneDrawData( pViewport->DrawData, pExtra->_drawData, pExtra->_listOwned );
 			_pImpl->_listExtraViewport.push_back( std::move( pExtra ) );
 		}
 	}

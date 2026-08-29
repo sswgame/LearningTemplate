@@ -21,103 +21,129 @@ namespace sw
 {
 	namespace
 	{
-		constexpr int32 kMaxNestedContainerDepth = 3;
-
-		/**
-		 * @brief 열거형 전체 FQN(예: "sw::EState::Idle")에서 말단 열거자 이름("Idle")을 추출합니다.
-		 */
-		static string_view enumeratorLeaf( string_view spec )
+		struct CodeGeneratorInternal
 		{
-			string_view	 name = StringUtil::trim( spec );
-			const size_t last = name.rfind( "::" );
-			if ( last != string_view::npos && last + 2 < name.size() )
-				name = name.substr( last + 2 );
-			return name;
-		}
+			static constexpr int32 kMaxNestedContainerDepth = 3;
 
-		static string enclosingNamespaceOf( const string& fqn )
-		{
-			const size_t pos = fqn.rfind( "::" );
-			if ( pos == string::npos )
-				return {};
-			return fqn.substr( 0, pos );
-		}
-
-		/**
-		 * @brief 컨테이너 필드에 대한 래퍼 타입 문자열(예: `sw::VectorWrapper<decltype(std::declval<MyClass>().myList)>`)을 생성합니다.
-		 */
-		static string makeWrapperType( const string& containerType, const string& fqn, const string& fieldName )
-		{
-			StringBuilder<constant::kMaxBuffer1024> b;
-			b.appendFormat( "sw::%#Wrapper<decltype(std::declval<%#>().%#)>", containerType, fqn, fieldName );
-			return string( b.view() );
-		}
-
-		/**
-		 * @brief 2중, 3중 중첩 컨테이너(예: vector<vector<int32>>)에 대한 중첩 래퍼 표기를 생성합니다.
-		 */
-		static string makeNestedWrapperType( const string& containerType, int32 depth )
-		{
-			StringBuilder<constant::kMaxBuffer128> b;
-			b.appendFormat( "sw::%#Wrapper<NestC%#>", containerType, depth );
-			return string( b.view() );
-		}
-
-		/**
-		 * @brief 생성자 검색을 위한 고유 식별자 문자열(예: `$ctor(int32,float32)`)을 구성합니다.
-		 */
-		static string makeCtorLookupName( const ParsedFunctionInfo& method )
-		{
-			StringBuilder<constant::kMaxBuffer1024> b;
-			b.append( annotationConstants::kCtorLookupName );
-			if ( method._listParamTypeName.empty() == false )
+			/**
+			 * @brief 열거형 전체 FQN(예: "sw::EState::Idle")에서 말단 열거자 이름("Idle")을 추출합니다.
+			 */
+			static string_view enumeratorLeaf( string_view spec )
 			{
-				b.append( '(' );
-				for ( size_t paramIndex = 0; paramIndex < method._listParamTypeName.size(); ++paramIndex )
+				string_view	 name = StringUtil::trim( spec );
+				const size_t last = name.rfind( "::" );
+				if ( last != string_view::npos && last + 2 < name.size() )
+					name = name.substr( last + 2 );
+				return name;
+			}
+
+			static string enclosingNamespaceOf( const string& fqn )
+			{
+				const size_t pos = fqn.rfind( "::" );
+				if ( pos == string::npos )
+					return {};
+				return fqn.substr( 0, pos );
+			}
+
+			/**
+			 * @brief 컨테이너 필드에 대한 래퍼 타입 문자열(예: `sw::VectorWrapper<decltype(std::declval<MyClass>().myList)>`)을 생성합니다.
+			 */
+			static string makeWrapperType( const string& containerType, const string& fqn, const string& fieldName )
+			{
+				StringBuilder<constant::kMaxBuffer1024> b;
+				b.appendFormat( "sw::%#Wrapper<decltype(std::declval<%#>().%#)>", containerType, fqn, fieldName );
+				return string( b.view() );
+			}
+
+			/**
+			 * @brief 2중, 3중 중첩 컨테이너(예: vector<vector<int32>>)에 대한 중첩 래퍼 표기를 생성합니다.
+			 */
+			static string makeNestedWrapperType( const string& containerType, int32 depth )
+			{
+				StringBuilder<constant::kMaxBuffer128> b;
+				b.appendFormat( "sw::%#Wrapper<NestC%#>", containerType, depth );
+				return string( b.view() );
+			}
+
+			/**
+			 * @brief 생성자 검색을 위한 고유 식별자 문자열(예: `$ctor(int32,float32)`)을 구성합니다.
+			 */
+			static string makeCtorLookupName( const ParsedFunctionInfo& method )
+			{
+				StringBuilder<constant::kMaxBuffer1024> b;
+				b.append( annotationConstants::kCtorLookupName );
+				if ( method._listParamTypeName.empty() == false )
 				{
-					if ( paramIndex > 0 )
-						b.append( ',' );
-					b.append( normalizeTypeName( method._listParamTypeName[paramIndex] ) );
+					b.append( '(' );
+					for ( size_t paramIndex = 0; paramIndex < method._listParamTypeName.size(); ++paramIndex )
+					{
+						if ( paramIndex > 0 )
+							b.append( ',' );
+						b.append( normalizeTypeName( method._listParamTypeName[paramIndex] ) );
+					}
+					b.append( ')' );
 				}
-				b.append( ')' );
+				return string( b.view() );
 			}
-			return string( b.view() );
-		}
 
-		/**
-		 * @brief 타입 이름 목록을 C++ 배열 초기화 구문 `{ "int32", "string" }` 형태로 포맷팅합니다.
-		 */
-		static string makeQuotedTypeList( const vector<string>& types )
-		{
-			StringBuilder<constant::kMaxBuffer1024> b;
-			b.append( "{ " );
-			for ( size_t typeIndex = 0; typeIndex < types.size(); ++typeIndex )
+			/**
+			 * @brief 타입 이름 목록을 C++ 배열 초기화 구문 `{ "int32", "string" }` 형태로 포맷팅합니다.
+			 */
+			static string makeQuotedTypeList( const vector<string>& types )
 			{
-				if ( typeIndex > 0 )
-					b.append( ", " );
-				b.appendFormat( "\"%#\"", normalizeTypeName( types[typeIndex] ) );
+				StringBuilder<constant::kMaxBuffer1024> b;
+				b.append( "{ " );
+				for ( size_t typeIndex = 0; typeIndex < types.size(); ++typeIndex )
+				{
+					if ( typeIndex > 0 )
+						b.append( ", " );
+					b.appendFormat( "\"%#\"", normalizeTypeName( types[typeIndex] ) );
+				}
+				b.append( " }" );
+				return string( b.view() );
 			}
-			b.append( " }" );
-			return string( b.view() );
-		}
 
-		/**
-		 * @brief 런타임 동적 함수 호출(Invoker)을 위한 인자 추출 구문 `args.get<T>(0), args.get<T>(1)...`을 생성합니다.
-		 */
-		static string makeInvokerCallArgs( const vector<string>& types )
-		{
-			StringBuilder<constant::kMaxBuffer1024> b;
-			for ( size_t typeIndex = 0; typeIndex < types.size(); ++typeIndex )
+			/**
+			 * @brief 런타임 동적 함수 호출(Invoker)을 위한 인자 추출 구문 `args.get<T>(0), args.get<T>(1)...`을 생성합니다.
+			 */
+			static string makeInvokerCallArgs( const vector<string>& types )
 			{
-				if ( typeIndex > 0 )
-					b.append( ", " );
-				b.appendFormat( "args.get<%#>( %# )", normalizeTypeName( types[typeIndex] ), static_cast<uint32>( typeIndex ) );
+				StringBuilder<constant::kMaxBuffer1024> b;
+				for ( size_t typeIndex = 0; typeIndex < types.size(); ++typeIndex )
+				{
+					if ( typeIndex > 0 )
+						b.append( ", " );
+					b.appendFormat( "args.get<%#>( %# )", normalizeTypeName( types[typeIndex] ), static_cast<uint32>( typeIndex ) );
+				}
+				return string( b.view() );
 			}
-			return string( b.view() );
-		}
 
+			/** @brief registerTypeAlias / registerEnumAlias 호출 줄을 만듭니다. */
+			static string emitAliasRegisterLines( const vector<string>& aliases, const string& canonical,
+												  const bool bEnum )
+			{
+				if ( aliases.empty() )
+					return {};
+
+				CodeEmitBuffer buf;
+				CodeEmit	   e( buf );
+				e.push( 3 );
+				const utf8* fn = bEnum ? "registry.registerEnumAlias" : "registry.registerTypeAlias";
+				for ( const string& alias : aliases )
+				{
+					if ( alias.empty() || alias == canonical )
+						continue;
+					e.linef( "%#( \"%#\", \"%#\" );", fn, CodeEmit::escapeCppString( alias ),
+							 CodeEmit::escapeCppString( canonical ) );
+				}
+				return string( buf.view() );
+			}
+		};
 	} // namespace
+} // namespace sw
 
+namespace sw
+{
 	CodeGenerator::CodeGenerator(
 		const vector<ParsedTypeInfo>& types,
 		const vector<ParsedEnumInfo>& enums,
@@ -165,8 +191,8 @@ namespace sw
 		BLOCK( "Prepare Output Path" )
 		{
 			FileUtil::createDirectory( _outputDir );
-			_outputFilePath	  = makeGeneratedPath( _outputDir, _sourceFilePath, ParserContext::getSharedConfig()._emitCppExtension );
-			_outputHeaderPath = makeGeneratedPath( _outputDir, _sourceFilePath, ParserContext::getSharedConfig()._emitHeaderExtension );
+			_outputFilePath	  = ParserUtil::makeGeneratedPath( _outputDir, _sourceFilePath, ParserContext::getSharedConfig()._emitCppExtension );
+			_outputHeaderPath = ParserUtil::makeGeneratedPath( _outputDir, _sourceFilePath, ParserContext::getSharedConfig()._emitHeaderExtension );
 		}
 
 		CodeEmitBuffer buffer;
@@ -318,7 +344,7 @@ namespace sw
 			return;
 
 		const utf8*	 outerKind	  = containerKindExpr( prop._containerKind );
-		const string outerWrapper = makeWrapperType( prop._containerType, typeInfo._fullyQualifiedName, prop._name );
+		const string outerWrapper = CodeGeneratorInternal::makeWrapperType( prop._containerType, typeInfo._fullyQualifiedName, prop._name );
 
 		e.line( "{" );
 		e.push();
@@ -336,13 +362,13 @@ namespace sw
 		if ( node != nullptr && node->_bIsContainer )
 		{
 			e.linef( "using NestC0 = decltype( std::declval<%#>().%# );", typeInfo._fullyQualifiedName, prop._name );
-			while ( node != nullptr && node->_bIsContainer && depth < kMaxNestedContainerDepth )
+			while ( node != nullptr && node->_bIsContainer && depth < CodeGeneratorInternal::kMaxNestedContainerDepth )
 			{
 				const utf8* kind = containerKindExpr( node->_containerKind );
 				const utf8* peel = peelMember( prevKind );
 				e.linef( "using NestC%# = typename NestC%#::%#;", depth, depth - 1, peel );
 
-				const string wrapperType = makeNestedWrapperType( node->_containerType, depth );
+				const string wrapperType = CodeGeneratorInternal::makeNestedWrapperType( node->_containerType, depth );
 				e.line( "{" );
 				e.push();
 				e.linef( "auto nested%# = sw::make_shared<sw::NestedContainerInfo>();", depth );
@@ -385,7 +411,7 @@ namespace sw
 		if ( prop._bIsContainer )
 		{
 			const utf8*	 kindStr	 = containerKindExpr( prop._containerKind );
-			const string wrapperType = makeWrapperType( prop._containerType, typeInfo._fullyQualifiedName, prop._name );
+			const string wrapperType = CodeGeneratorInternal::makeWrapperType( prop._containerType, typeInfo._fullyQualifiedName, prop._name );
 
 			e.line( "true," );
 			e.linef( "%#,", kindStr );
@@ -470,7 +496,7 @@ namespace sw
 		{
 			const string retType = normalizeTypeName( method._returnTypeName );
 
-			const string lookupName = ( method._bConstructor != 0 ) ? makeCtorLookupName( method ) : method._name;
+			const string lookupName = ( method._bConstructor != 0 ) ? CodeGeneratorInternal::makeCtorLookupName( method ) : method._name;
 
 			e.line( "{" );
 			e.push();
@@ -478,7 +504,7 @@ namespace sw
 			e.assign( "funcInfo._name", CodeEmit::quoted( ( method._bConstructor != 0 ) ? annotationConstants::kCtorLookupName : method._name ) );
 			e.linef( "funcInfo._hashName       = %#;", CodeEmit::hs( lookupName ) );
 			e.assign( "funcInfo._returnTypeName", CodeEmit::quoted( retType ) );
-			e.assign( "funcInfo._listParamTypeName", makeQuotedTypeList( method._listParamTypeName ) );
+			e.assign( "funcInfo._listParamTypeName", CodeGeneratorInternal::makeQuotedTypeList( method._listParamTypeName ) );
 
 			e.line( "#if !defined( SW_SHIPPING )" );
 			e.assignQuotedIf( method._category.empty() == false, "funcInfo._metadata._category", method._category );
@@ -505,38 +531,13 @@ namespace sw
 			e.flagIf( method._bStatic != 0, "funcInfo._metadata._bStatic", "SW_TRUE" );
 			e.flagIf( method._bConst != 0, "funcInfo._metadata._bConst", "SW_TRUE" );
 
-			const string callArgs = makeInvokerCallArgs( method._listParamTypeName );
+			const string callArgs = CodeGeneratorInternal::makeInvokerCallArgs( method._listParamTypeName );
 
 			emitMethodInvoker( e, typeInfo, method, retType, callArgs );
 			e.pop();
 			e.line( "}" );
 		}
 	}
-
-	namespace
-	{
-		/** @brief registerTypeAlias / registerEnumAlias 호출 줄을 만듭니다. */
-		static string emitAliasRegisterLines( const vector<string>& aliases, const string& canonical,
-											  const bool bEnum )
-		{
-			if ( aliases.empty() )
-				return {};
-
-			CodeEmitBuffer buf;
-			CodeEmit	   e( buf );
-			e.push( 3 );
-			const utf8* fn = bEnum ? "registry.registerEnumAlias" : "registry.registerTypeAlias";
-			for ( const string& alias : aliases )
-			{
-				if ( alias.empty() || alias == canonical )
-					continue;
-				e.linef( "%#( \"%#\", \"%#\" );", fn, CodeEmit::escapeCppString( alias ),
-						 CodeEmit::escapeCppString( canonical ) );
-			}
-			return string( buf.view() );
-		}
-
-	} // namespace
 
 	string CodeGenerator::getModuleName() const
 	{
@@ -609,8 +610,8 @@ namespace sw
 						{
 							{ templateKeyConstants::kId, id },
 							{ templateKeyConstants::kAliasRegs,
-							  emitAliasRegisterLines( typeInfo._listAlias, typeInfo._fullyQualifiedName, false ) }
-		   } );
+							  CodeGeneratorInternal::emitAliasRegisterLines( typeInfo._listAlias, typeInfo._fullyQualifiedName, false ) }
+		  } );
 	}
 
 	void CodeGenerator::emitEnumRegistrar( CodeEmitBuffer& out, const ParsedEnumInfo& enumInfo ) const
@@ -683,15 +684,15 @@ namespace sw
 						{
 							{ templateKeyConstants::kId, id },
 							{ templateKeyConstants::kAliasRegs,
-							  emitAliasRegisterLines( enumInfo._listAlias, enumInfo._fullyQualifiedName, true ) }
-		  } );
+							  CodeGeneratorInternal::emitAliasRegisterLines( enumInfo._listAlias, enumInfo._fullyQualifiedName, true ) }
+		 } );
 	}
 
 	const ParsedEnumeratorInfo* CodeGenerator::findEnumerator( const ParsedEnumInfo& enumInfo, string_view spec )
 	{
 		if ( spec.empty() )
 			return nullptr;
-		const string_view leaf = enumeratorLeaf( spec );
+		const string_view leaf = CodeGeneratorInternal::enumeratorLeaf( spec );
 		for ( const ParsedEnumeratorInfo& en : enumInfo._listEnumerator )
 		{
 			if ( en._name == spec || en._name == leaf )
@@ -733,7 +734,7 @@ namespace sw
 				continue;
 
 			const string& fqn = enumInfo._fullyQualifiedName;
-			const string  ns  = enclosingNamespaceOf( fqn );
+			const string  ns  = CodeGeneratorInternal::enclosingNamespaceOf( fqn );
 			if ( ns.empty() == false )
 			{
 				e.linef( "namespace %#", ns );

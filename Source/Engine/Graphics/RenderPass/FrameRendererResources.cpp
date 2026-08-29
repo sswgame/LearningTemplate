@@ -5,7 +5,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResource.h"
 #include "Engine/Graphics/RenderPass/FrameRenderer.h"
-#include "Engine/Graphics/RenderPass/FrameRendererInternal.h"
+#include "Engine/Graphics/RenderPass/FrameRendererUtil.h"
 #include "Engine/Window/IWindow.h"
 
 namespace sw
@@ -37,91 +37,91 @@ namespace sw
 		// Shader paths prefer pipeline XML pass recipes; EngineData paths are last-resort fallbacks only.
 
 		const RHIPipelineStateHandle psoShadow =
-			createPsoForPassType( PassType::kShadow, engineData._shaderShadowDepth.c_str(), true, 0, nullptr, false, true );
+			createPsoForPassType( FrameRendererUtil::PassType::kShadow, engineData._shaderShadowDepth.c_str(), true, 0, nullptr, false, true );
 		if ( psoShadow != 0 )
-			_mapEnginePso.insert_or_assign( PassType::kShadow, psoShadow );
+			_mapEnginePso.insert_or_assign( FrameRendererUtil::PassType::kShadow, psoShadow );
 
 		const RHIPipelineStateHandle psoDepthPrepass =
-			createPsoForPassType( PassType::kDepthPrepass, engineData._shaderShadowDepth.c_str(), true, 0, nullptr, false, true );
+			createPsoForPassType( FrameRendererUtil::PassType::kDepthPrepass, engineData._shaderShadowDepth.c_str(), true, 0, nullptr, false, true );
 		if ( psoDepthPrepass != 0 )
-			_mapEnginePso.insert_or_assign( PassType::kDepthPrepass, psoDepthPrepass );
+			_mapEnginePso.insert_or_assign( FrameRendererUtil::PassType::kDepthPrepass, psoDepthPrepass );
 
-		const RHIPipelineStateHandle psoForward = createPsoForPassType( PassType::kForwardOpaque, engineData._shaderForwardLit.c_str(), true );
+		const RHIPipelineStateHandle psoForward = createPsoForPassType( FrameRendererUtil::PassType::kForwardOpaque, engineData._shaderForwardLit.c_str(), true );
 		if ( psoForward != 0 )
-			_mapEnginePso.insert_or_assign( PassType::kForwardOpaque, psoForward );
+			_mapEnginePso.insert_or_assign( FrameRendererUtil::PassType::kForwardOpaque, psoForward );
 
 		const RHIPipelineStateHandle psoForwardNoDepthWrite =
-			createPsoForPassType( PassType::kForwardOpaque, engineData._shaderForwardLit.c_str(), true, 1, nullptr, false, false );
+			createPsoForPassType( FrameRendererUtil::PassType::kForwardOpaque, engineData._shaderForwardLit.c_str(), true, 1, nullptr, false, false );
 		if ( psoForwardNoDepthWrite != 0 )
 			_mapEnginePso.insert_or_assign( "ForwardOpaqueNoDepthWrite", psoForwardNoDepthWrite );
 
 		const RHIPipelineStateHandle psoTransparent =
-			createPsoForPassType( PassType::kTransparent, engineData._shaderForwardLit.c_str(), true, 1, nullptr, true, false );
+			createPsoForPassType( FrameRendererUtil::PassType::kTransparent, engineData._shaderForwardLit.c_str(), true, 1, nullptr, true, false );
 		if ( psoTransparent != 0 )
-			_mapEnginePso.insert_or_assign( PassType::kTransparent, psoTransparent );
+			_mapEnginePso.insert_or_assign( FrameRendererUtil::PassType::kTransparent, psoTransparent );
 
 		const RHIPipelineStateHandle psoGBuffer =
-			createPsoForPassType( PassType::kGBuffer, engineData._shaderGBuffer.c_str(), true, 2, arrGbufferFormats );
+			createPsoForPassType( FrameRendererUtil::PassType::kGBuffer, engineData._shaderGBuffer.c_str(), true, 2, arrGbufferFormats );
 		if ( psoGBuffer != 0 )
-			_mapEnginePso.insert_or_assign( PassType::kGBuffer, psoGBuffer );
+			_mapEnginePso.insert_or_assign( FrameRendererUtil::PassType::kGBuffer, psoGBuffer );
 
 		const RHIPipelineStateHandle psoGBufferAlbedo =
-			createPsoForPassType( PassType::kGBufferAlbedo, engineData._shaderGBufferAlbedo.c_str(), true );
+			createPsoForPassType( FrameRendererUtil::PassType::kGBufferAlbedo, engineData._shaderGBufferAlbedo.c_str(), true );
 		if ( psoGBufferAlbedo != 0 )
-			_mapEnginePso.insert_or_assign( PassType::kGBufferAlbedo, psoGBufferAlbedo );
+			_mapEnginePso.insert_or_assign( FrameRendererUtil::PassType::kGBufferAlbedo, psoGBufferAlbedo );
 
 		const RHIPipelineStateHandle psoGBufferNrm =
-			createPsoForPassType( PassType::kGBufferNormal, engineData._shaderGBufferNormal.c_str(), true );
+			createPsoForPassType( FrameRendererUtil::PassType::kGBufferNormal, engineData._shaderGBufferNormal.c_str(), true );
 		if ( psoGBufferNrm != 0 )
-			_mapEnginePso.insert_or_assign( PassType::kGBufferNormal, psoGBufferNrm );
+			_mapEnginePso.insert_or_assign( FrameRendererUtil::PassType::kGBufferNormal, psoGBufferNrm );
 
 		const RHIPipelineStateHandle psoDeferred =
-			createPsoForPassType( PassType::kLighting, engineData._shaderDeferredLighting.c_str(), false );
+			createPsoForPassType( FrameRendererUtil::PassType::kLighting, engineData._shaderDeferredLighting.c_str(), false );
 		if ( psoDeferred != 0 )
-			_mapEnginePso.insert_or_assign( PassType::kLighting, psoDeferred );
+			_mapEnginePso.insert_or_assign( FrameRendererUtil::PassType::kLighting, psoDeferred );
 
 		const RHIPipelineStateHandle psoBloom =
-			createPsoForPassType( PassType::kPostBloom, engineData._shaderPostBloom.c_str(), false );
+			createPsoForPassType( FrameRendererUtil::PassType::kPostBloom, engineData._shaderPostBloom.c_str(), false );
 		if ( psoBloom != 0 )
-			_mapEnginePso.insert_or_assign( PassType::kPostBloom, psoBloom );
+			_mapEnginePso.insert_or_assign( FrameRendererUtil::PassType::kPostBloom, psoBloom );
 
 		{
-			RHIPipelineStateHandle psoOutline = createPsoForPassType( PassType::kOutline, engineData._shaderPostOutlineCommon.c_str(), false );
+			RHIPipelineStateHandle psoOutline = createPsoForPassType( FrameRendererUtil::PassType::kOutline, engineData._shaderPostOutlineCommon.c_str(), false );
 			if ( psoOutline == 0 )
 				psoOutline = createEnginePso( engineData._shaderPostOutlineEngine.c_str(), false );
 			if ( psoOutline != 0 )
-				_mapEnginePso.insert_or_assign( PassType::kOutline, psoOutline );
+				_mapEnginePso.insert_or_assign( FrameRendererUtil::PassType::kOutline, psoOutline );
 		}
 
 		const RHIPipelineStateHandle psoBlit =
-			createPsoForPassType( PassType::kPresent, engineData._shaderFullscreenBlit.c_str(), false );
+			createPsoForPassType( FrameRendererUtil::PassType::kPresent, engineData._shaderFullscreenBlit.c_str(), false );
 		if ( psoBlit != 0 )
-			_mapEnginePso.insert_or_assign( PassType::kPresent, psoBlit );
+			_mapEnginePso.insert_or_assign( FrameRendererUtil::PassType::kPresent, psoBlit );
 
 		const RHIPipelineStateHandle psoSsao =
-			createPsoForPassType( PassType::kSsao, engineData._shaderSsao.c_str(), false );
+			createPsoForPassType( FrameRendererUtil::PassType::kSsao, engineData._shaderSsao.c_str(), false );
 		if ( psoSsao != 0 )
 		{
-			_mapEnginePso.insert_or_assign( PassType::kSsao, psoSsao );
-			_mapEnginePso.insert_or_assign( PassType::kHbao, psoSsao );
+			_mapEnginePso.insert_or_assign( FrameRendererUtil::PassType::kSsao, psoSsao );
+			_mapEnginePso.insert_or_assign( FrameRendererUtil::PassType::kHbao, psoSsao );
 		}
 
 		const RHIPipelineStateHandle psoTaa =
-			createPsoForPassType( PassType::kTaa, engineData._shaderTaa.c_str(), false );
+			createPsoForPassType( FrameRendererUtil::PassType::kTaa, engineData._shaderTaa.c_str(), false );
 		if ( psoTaa != 0 )
-			_mapEnginePso.insert_or_assign( PassType::kTaa, psoTaa );
+			_mapEnginePso.insert_or_assign( FrameRendererUtil::PassType::kTaa, psoTaa );
 
 		const RHIPipelineStateHandle psoTonemap =
-			createPsoForPassType( PassType::kTonemap, engineData._shaderTonemap.c_str(), false );
+			createPsoForPassType( FrameRendererUtil::PassType::kTonemap, engineData._shaderTonemap.c_str(), false );
 		if ( psoTonemap != 0 )
-			_mapEnginePso.insert_or_assign( PassType::kTonemap, psoTonemap );
+			_mapEnginePso.insert_or_assign( FrameRendererUtil::PassType::kTonemap, psoTonemap );
 
 		// Compute PSO: GpuCull — capabilities + 실제 PSO 생성 성공 시에만 GPU-driven.
 		const RHICapabilities caps = _pDevice->getCapabilities();
 		if ( caps._bGpuCulling != 0 )
 		{
 			const RHIPipelineStateHandle psoGpuCull =
-				_pDevice->getResource()->createComputePipelineState( engineData._shaderGpuCull.c_str(), Entry::kCSMain );
+				_pDevice->getResource()->createComputePipelineState( engineData._shaderGpuCull.c_str(), FrameRendererUtil::Entry::kCSMain );
 			if ( psoGpuCull != 0 )
 				_mapEnginePso.insert_or_assign( "GpuCull", psoGpuCull );
 		}
@@ -130,9 +130,9 @@ namespace sw
 
 		_bPassResourcesReady = 1;
 		SW_LOG_INFO( "Pass PSOs/CB ready (shadow=%# forward=%# transparent=%# deferred=%# bloom=%# outline=%# gpuDriven=%#)",
-					 getEnginePso( PassType::kShadow ), getEnginePso( PassType::kForwardOpaque ),
-					 getEnginePso( PassType::kTransparent ), getEnginePso( PassType::kLighting ),
-					 getEnginePso( PassType::kPostBloom ), getEnginePso( PassType::kOutline ), static_cast<uint32>( _bUseGpuDriven ) );
+					 getEnginePso( FrameRendererUtil::PassType::kShadow ), getEnginePso( FrameRendererUtil::PassType::kForwardOpaque ),
+					 getEnginePso( FrameRendererUtil::PassType::kTransparent ), getEnginePso( FrameRendererUtil::PassType::kLighting ),
+					 getEnginePso( FrameRendererUtil::PassType::kPostBloom ), getEnginePso( FrameRendererUtil::PassType::kOutline ), static_cast<uint32>( _bUseGpuDriven ) );
 	}
 
 	void FrameRenderer::releasePassResources()
@@ -210,8 +210,8 @@ namespace sw
 		if ( _pDevice == nullptr )
 			return;
 
-		uint32 width  = kDefaultTransientSize;
-		uint32 height = kDefaultTransientSize;
+		uint32 width  = FrameRendererUtil::kDefaultTransientSize;
+		uint32 height = FrameRendererUtil::kDefaultTransientSize;
 		if ( overrideWidth > 0 && overrideHeight > 0 )
 		{
 			width  = overrideWidth;
@@ -239,26 +239,26 @@ namespace sw
 		for ( const RenderPassAttachment& att : _pipelineResource.getDesc()._listAttachment )
 		{
 			const RHIFormat format = parseAttachmentFormat( att._format );
-			allocTransient( att._name, format, isDepthFormat( format ), att._arrClearColor );
+			allocTransient( att._name, format, FrameRendererUtil::isDepthFormat( format ), att._arrClearColor );
 		}
 
 		auto ensureNamed = [&]( string_view name )
 		{
 			const string key( name );
-			if ( _mapTransient.find( key ) != _mapTransient.end() || name == Attachment::kSwapchain )
+			if ( _mapTransient.find( key ) != _mapTransient.end() || name == FrameRendererUtil::Attachment::kSwapchain )
 				return;
 
 			float32	   clearColor[4]{};
 			const bool bHasClear = tryGetAttachmentClearColor( name, clearColor );
 
-			if ( name == Attachment::kShadowMap || name == Attachment::kSceneDepth )
-				allocTransient( name, RHIFormat::D24_UNORM_S8_UINT, true, bHasClear ? clearColor : kDepthClear );
-			else if ( name == Attachment::kGBufferNormal || name == Attachment::kLitColor || name == Attachment::kBloomColor || name == Attachment::kBloomBright )
-				allocTransient( name, RHIFormat::R16G16B16A16_FLOAT, false, bHasClear ? clearColor : kBloomClear );
-			else if ( name == Attachment::kSceneColor )
-				allocTransient( name, RHIFormat::R8G8B8A8_UNORM, false, bHasClear ? clearColor : kSceneClear );
+			if ( name == FrameRendererUtil::Attachment::kShadowMap || name == FrameRendererUtil::Attachment::kSceneDepth )
+				allocTransient( name, RHIFormat::D24_UNORM_S8_UINT, true, bHasClear ? clearColor : FrameRendererUtil::kDepthClear );
+			else if ( name == FrameRendererUtil::Attachment::kGBufferNormal || name == FrameRendererUtil::Attachment::kLitColor || name == FrameRendererUtil::Attachment::kBloomColor || name == FrameRendererUtil::Attachment::kBloomBright )
+				allocTransient( name, RHIFormat::R16G16B16A16_FLOAT, false, bHasClear ? clearColor : FrameRendererUtil::kBloomClear );
+			else if ( name == FrameRendererUtil::Attachment::kSceneColor )
+				allocTransient( name, RHIFormat::R8G8B8A8_UNORM, false, bHasClear ? clearColor : FrameRendererUtil::kSceneClear );
 			else
-				allocTransient( name, RHIFormat::R8G8B8A8_UNORM, false, bHasClear ? clearColor : kBlackClear );
+				allocTransient( name, RHIFormat::R8G8B8A8_UNORM, false, bHasClear ? clearColor : FrameRendererUtil::kBlackClear );
 		};
 
 		for ( const RenderGraphPassDesc& pass : _pipelineResource.getGraphPasses() )
@@ -366,7 +366,7 @@ namespace sw
 
 	string FrameRenderer::resolvePresentSource() const
 	{
-		const utf8* pName = pickFirstExisting(
+		const utf8* pName = FrameRendererUtil::pickFirstExisting(
 			_mapTransient,
 			{ "TonemapColor", "OutlineColor", "BloomColor", "TaaColor",
 			  "TransparentColor", "LitColor", "SceneColor", "GBufferAlbedo" } );

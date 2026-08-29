@@ -15,79 +15,83 @@
 
 namespace sw
 {
-
 	namespace
 	{
-		void extractTranslation( const float4x4& m, float32 out[3] )
+		struct GpuSceneInternal
 		{
-			out[0] = m._41;
-			out[1] = m._42;
-			out[2] = m._43;
-		}
-
-		float32 distSq( const float32 a[3], const float32 b[3] )
-		{
-			const float32 dx = a[0] - b[0];
-			const float32 dy = a[1] - b[1];
-			const float32 dz = a[2] - b[2];
-			return dx * dx + dy * dy + dz * dz;
-		}
-
-		bool cameraNearlyEqual( const float3& a, const float3& b )
-		{
-			constexpr float32 kEps = 1e-5f;
-			return MathUtil::abs( a._x - b._x ) <= kEps && MathUtil::abs( a._y - b._y ) <= kEps &&
-				   MathUtil::abs( a._z - b._z ) <= kEps;
-		}
-
-		void mixHash( uint64& h, uint64 v )
-		{
-			h ^= v + 0x9e3779b97f4a7c15ull + ( h << 6 ) + ( h >> 2 );
-		}
-
-		void mixBytes( uint64& h, const void* pData, size_t bytes )
-		{
-			const uint8* pBytes = static_cast<const uint8*>( pData );
-			for ( size_t byteIndex = 0; byteIndex < bytes; ++byteIndex )
-				mixHash( h, pBytes[byteIndex] );
-		}
-
-		template <typename TCandidate, typename TInstance>
-		static void fillRangeVal( const vector<TCandidate>& scratchCandidates, vector<TInstance>& scratchRaw, uint32 begin, uint32 end )
-		{
-			for ( uint32 entryIndex = begin; entryIndex < end; ++entryIndex )
+			static void extractTranslation( const float4x4& m, float32 out[3] )
 			{
-				const auto& cand = scratchCandidates[entryIndex];
-				auto&		inst = scratchRaw[entryIndex];
-				Memory::copy( inst._world, cand._world, sizeof( inst._world ) );
-				Memory::copy( inst._boundsCenter, cand._boundsCenter, sizeof( inst._boundsCenter ) );
-				inst._boundsRadius = cand._boundsRadius;
-				inst._blendMode	   = cand._blendMode;
+				out[0] = m._41;
+				out[1] = m._42;
+				out[2] = m._43;
 			}
-		}
 
-		static void applyInstanceCbsVal( IRHIDevice* pDevice, vector<GpuMeshBatch>& batches )
-		{
-			for ( GpuMeshBatch& batch : batches )
+			static float32 distSq( const float32 a[3], const float32 b[3] )
 			{
-				if ( batch._pMaterialInstance == nullptr )
-					continue;
-				if ( batch._pMaterialInstance->applyToGpu( pDevice ) )
-					batch._materialCb = batch._pMaterialInstance->getDescriptorIndex();
+				const float32 dx = a[0] - b[0];
+				const float32 dy = a[1] - b[1];
+				const float32 dz = a[2] - b[2];
+				return dx * dx + dy * dy + dz * dz;
 			}
-		}
 
-		static void uploadMeshesVal( IRHIDevice* pDevice, vector<GpuMeshBatch>& batches )
-		{
-			for ( GpuMeshBatch& batch : batches )
+			static bool cameraNearlyEqual( const float3& a, const float3& b )
 			{
-				if ( batch._pMesh != nullptr && batch._pMesh->upload( pDevice ) )
-					batch._vertexBuffer = batch._pMesh->getVertexBuffer();
+				constexpr float32 kEps = 1e-5f;
+				return MathUtil::abs( a._x - b._x ) <= kEps && MathUtil::abs( a._y - b._y ) <= kEps &&
+					   MathUtil::abs( a._z - b._z ) <= kEps;
 			}
-		}
 
+			static void mixHash( uint64& h, uint64 v )
+			{
+				h ^= v + 0x9e3779b97f4a7c15ull + ( h << 6 ) + ( h >> 2 );
+			}
+
+			static void mixBytes( uint64& h, const void* pData, size_t bytes )
+			{
+				const uint8* pBytes = static_cast<const uint8*>( pData );
+				for ( size_t byteIndex = 0; byteIndex < bytes; ++byteIndex )
+					mixHash( h, pBytes[byteIndex] );
+			}
+
+			template <typename TCandidate, typename TInstance>
+			static void fillRangeVal( const vector<TCandidate>& scratchCandidates, vector<TInstance>& scratchRaw, uint32 begin, uint32 end )
+			{
+				for ( uint32 entryIndex = begin; entryIndex < end; ++entryIndex )
+				{
+					const auto& cand = scratchCandidates[entryIndex];
+					auto&		inst = scratchRaw[entryIndex];
+					Memory::copy( inst._world, cand._world, sizeof( inst._world ) );
+					Memory::copy( inst._boundsCenter, cand._boundsCenter, sizeof( inst._boundsCenter ) );
+					inst._boundsRadius = cand._boundsRadius;
+					inst._blendMode	   = cand._blendMode;
+				}
+			}
+
+			static void applyInstanceCbsVal( IRHIDevice* pDevice, vector<GpuMeshBatch>& batches )
+			{
+				for ( GpuMeshBatch& batch : batches )
+				{
+					if ( batch._pMaterialInstance == nullptr )
+						continue;
+					if ( batch._pMaterialInstance->applyToGpu( pDevice ) )
+						batch._materialCb = batch._pMaterialInstance->getDescriptorIndex();
+				}
+			}
+
+			static void uploadMeshesVal( IRHIDevice* pDevice, vector<GpuMeshBatch>& batches )
+			{
+				for ( GpuMeshBatch& batch : batches )
+				{
+					if ( batch._pMesh != nullptr && batch._pMesh->upload( pDevice ) )
+						batch._vertexBuffer = batch._pMesh->getVertexBuffer();
+				}
+			}
+		};
 	} // namespace
+} // namespace sw
 
+namespace sw
+{
 	void GpuScene::invalidateBuildCache()
 	{
 		_lastContentHash = 0;
@@ -190,16 +194,16 @@ namespace sw
 	uint64 GpuScene::hashCandidates() const
 	{
 		uint64 h = 14695981039346656037ull;
-		mixHash( h, static_cast<uint64>( _listScratchCandidate.size() ) );
+		GpuSceneInternal::mixHash( h, static_cast<uint64>( _listScratchCandidate.size() ) );
 		for ( const DrawCandidate& cand : _listScratchCandidate )
 		{
-			mixHash( h, reinterpret_cast<uintptr_t>( cand._pMesh ) );
-			mixHash( h, reinterpret_cast<uintptr_t>( cand._pMaterial ) );
-			mixHash( h, reinterpret_cast<uintptr_t>( cand._pInstance ) );
-			mixHash( h, cand._blendMode );
-			mixBytes( h, cand._world, sizeof( cand._world ) );
-			mixBytes( h, cand._boundsCenter, sizeof( cand._boundsCenter ) );
-			mixBytes( h, &cand._boundsRadius, sizeof( cand._boundsRadius ) );
+			GpuSceneInternal::mixHash( h, reinterpret_cast<uintptr_t>( cand._pMesh ) );
+			GpuSceneInternal::mixHash( h, reinterpret_cast<uintptr_t>( cand._pMaterial ) );
+			GpuSceneInternal::mixHash( h, reinterpret_cast<uintptr_t>( cand._pInstance ) );
+			GpuSceneInternal::mixHash( h, cand._blendMode );
+			GpuSceneInternal::mixBytes( h, cand._world, sizeof( cand._world ) );
+			GpuSceneInternal::mixBytes( h, cand._boundsCenter, sizeof( cand._boundsCenter ) );
+			GpuSceneInternal::mixBytes( h, &cand._boundsRadius, sizeof( cand._boundsRadius ) );
 		}
 		return h;
 	}
@@ -239,7 +243,7 @@ namespace sw
 
 	void GpuScene::fillScratchRange( uint32 start, uint32 end )
 	{
-		fillRangeVal( _listScratchCandidate, _listScratchRaw, start, end );
+		GpuSceneInternal::fillRangeVal( _listScratchCandidate, _listScratchRaw, start, end );
 	}
 
 	void GpuScene::buildFromScene( Scene* pScene, const float3& cameraPos,
@@ -281,7 +285,7 @@ namespace sw
 				const float4x4 world = pMeshComp->getWorldMatrix();
 				DrawCandidate  cand{};
 				Memory::copy( cand._world, &world._11, sizeof( cand._world ) );
-				extractTranslation( world, cand._boundsCenter );
+				GpuSceneInternal::extractTranslation( world, cand._boundsCenter );
 				cand._boundsRadius							  = pMeshComp->getBoundsRadius();
 				cand._blendMode								  = static_cast<uint32>( pMeshComp->getBlendMode() );
 				cand._pMesh									  = mesh.get();
@@ -301,7 +305,7 @@ namespace sw
 		const uint64 contentHash = hashCandidates();
 		const bool	 bContentSame =
 			_bHasBuildCache != 0 && contentHash == _lastContentHash && _listInstance.empty() == false;
-		const bool bCamSame = _bHasBuildCache != 0 && cameraNearlyEqual( cameraPos, _lastCameraPos );
+		const bool bCamSame = _bHasBuildCache != 0 && GpuSceneInternal::cameraNearlyEqual( cameraPos, _lastCameraPos );
 
 		if ( bContentSame && bCamSame )
 			return;
@@ -323,7 +327,7 @@ namespace sw
 				pTaskManager->waitStage( _snapshotStage );
 			}
 			else
-				fillRangeVal( _listScratchCandidate, _listScratchRaw, 0, count );
+				GpuSceneInternal::fillRangeVal( _listScratchCandidate, _listScratchRaw, 0, count );
 
 			rebuildPartitionTables();
 		}
@@ -348,8 +352,8 @@ namespace sw
 			return false;
 
 		// RT-owned context: pack MaterialInstance overrides and upload meshes in a single pass.
-		applyInstanceCbsVal( pDevice, _listAllBatch );
-		uploadMeshesVal( pDevice, _listAllBatch );
+		GpuSceneInternal::applyInstanceCbsVal( pDevice, _listAllBatch );
+		GpuSceneInternal::uploadMeshesVal( pDevice, _listAllBatch );
 
 		const size_t opaqueCount = _listOpaqueBatch.size();
 		for ( size_t batchIndex = 0; batchIndex < opaqueCount; ++batchIndex )
@@ -483,7 +487,7 @@ namespace sw
 		if ( pCameraPos == nullptr || _listScratchTransparentIdx.size() <= 1 )
 			return;
 		std::sort( _listScratchTransparentIdx.begin(), _listScratchTransparentIdx.end(), [&]( uint32 idxA, uint32 idxB )
-		{ return distSq( _listScratchRaw[idxA]._boundsCenter, pCameraPos ) > distSq( _listScratchRaw[idxB]._boundsCenter, pCameraPos ); } );
+		{ return GpuSceneInternal::distSq( _listScratchRaw[idxA]._boundsCenter, pCameraPos ) > GpuSceneInternal::distSq( _listScratchRaw[idxB]._boundsCenter, pCameraPos ); } );
 	}
 
 	void GpuScene::buildBatches()

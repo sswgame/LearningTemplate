@@ -37,73 +37,78 @@ namespace sw::editor
 {
 	namespace
 	{
-		const utf8* propLabel( const PropertyInfo& prop )
+		struct InspectorPanelInternal
 		{
-			if ( prop._metadata._displayName.empty() == false )
-				return prop._metadata._displayName.c_str();
-			if ( prop._listAlias.empty() == false && prop._listAlias.front().empty() == false )
-				return prop._listAlias.front().c_str();
-			return prop._name.c_str();
-		}
+			static const utf8* propLabel( const PropertyInfo& prop )
+			{
+				if ( prop._metadata._displayName.empty() == false )
+					return prop._metadata._displayName.c_str();
+				if ( prop._listAlias.empty() == false && prop._listAlias.front().empty() == false )
+					return prop._listAlias.front().c_str();
+				return prop._name.c_str();
+			}
 
-		bool isSupportedMethodArgType( string_view typeName )
-		{
-			hashed_string hashedName( typeName );
-			return hashedName.isPredefinedType( PredefinedNameType::NameType_int32 ) || hashedName.isPredefinedType( PredefinedNameType::NameType_int64 ) ||
-				   hashedName.isPredefinedType( PredefinedNameType::NameType_float32 ) || hashedName.isPredefinedType( PredefinedNameType::NameType_bool ) ||
-				   hashedName.isPredefinedType( PredefinedNameType::NameType_string );
-		}
+			static bool isSupportedMethodArgType( string_view typeName )
+			{
+				hashed_string hashedName( typeName );
+				return hashedName.isPredefinedType( PredefinedNameType::NameType_int32 ) || hashedName.isPredefinedType( PredefinedNameType::NameType_int64 ) ||
+					   hashedName.isPredefinedType( PredefinedNameType::NameType_float32 ) || hashedName.isPredefinedType( PredefinedNameType::NameType_bool ) ||
+					   hashedName.isPredefinedType( PredefinedNameType::NameType_string );
+			}
 
-		bool formatTaskValue( const TaskValue& value, string_view returnType, utf8* pOutBuf, size_t outSize )
-		{
-			if ( pOutBuf == nullptr || outSize == 0 )
+			static bool formatTaskValue( const TaskValue& value, string_view returnType, utf8* pOutBuf, size_t outSize )
+			{
+				if ( pOutBuf == nullptr || outSize == 0 )
+					return false;
+				const uint32  cap	   = static_cast<uint32>( outSize );
+				TypeRegistry& registry = *editor::getService<TypeRegistry>();
+
+				if ( returnType.empty() || returnType == "void" || value.hasValue() == false )
+				{
+					formatstring( pOutBuf, cap, "(void / empty)" );
+					return true;
+				}
+				if ( registry.isType( returnType, "int32" ) )
+				{
+					formatstring( pOutBuf, cap, "%#", value.getValue<int32>() );
+					return true;
+				}
+				if ( registry.isType( returnType, "int64" ) )
+				{
+					formatstring( pOutBuf, cap, "%#", value.getValue<int64>() );
+					return true;
+				}
+				if ( registry.isType( returnType, "float32" ) )
+				{
+					formatstring( pOutBuf, cap, "%#", static_cast<float64>( value.getValue<float32>() ) );
+					return true;
+				}
+				if ( registry.isType( returnType, "float64" ) )
+				{
+					formatstring( pOutBuf, cap, "%#", value.getValue<float64>() );
+					return true;
+				}
+				if ( registry.isType( returnType, "bool" ) )
+				{
+					formatstring( pOutBuf, cap, "%#", value.getValue<bool>() ? "true" : "false" );
+					return true;
+				}
+				if ( hashed_string( returnType ).isPredefinedType( PredefinedNameType::NameType_string ) )
+				{
+					formatstring( pOutBuf, cap, "%#", value.getValue<string>().c_str() );
+					return true;
+				}
+
+				formatstring( pOutBuf, cap, "(unsupported return: %#)",
+							  string( returnType ).c_str() );
 				return false;
-			const uint32  cap	   = static_cast<uint32>( outSize );
-			TypeRegistry& registry = *editor::getService<TypeRegistry>();
-
-			if ( returnType.empty() || returnType == "void" || value.hasValue() == false )
-			{
-				formatstring( pOutBuf, cap, "(void / empty)" );
-				return true;
 			}
-			if ( registry.isType( returnType, "int32" ) )
-			{
-				formatstring( pOutBuf, cap, "%#", value.getValue<int32>() );
-				return true;
-			}
-			if ( registry.isType( returnType, "int64" ) )
-			{
-				formatstring( pOutBuf, cap, "%#", value.getValue<int64>() );
-				return true;
-			}
-			if ( registry.isType( returnType, "float32" ) )
-			{
-				formatstring( pOutBuf, cap, "%#", static_cast<float64>( value.getValue<float32>() ) );
-				return true;
-			}
-			if ( registry.isType( returnType, "float64" ) )
-			{
-				formatstring( pOutBuf, cap, "%#", value.getValue<float64>() );
-				return true;
-			}
-			if ( registry.isType( returnType, "bool" ) )
-			{
-				formatstring( pOutBuf, cap, "%#", value.getValue<bool>() ? "true" : "false" );
-				return true;
-			}
-			if ( hashed_string( returnType ).isPredefinedType( PredefinedNameType::NameType_string ) )
-			{
-				formatstring( pOutBuf, cap, "%#", value.getValue<string>().c_str() );
-				return true;
-			}
-
-			formatstring( pOutBuf, cap, "(unsupported return: %#)",
-						  string( returnType ).c_str() );
-			return false;
-		}
-
+		};
 	} // namespace
+} // namespace sw::editor
 
+namespace sw::editor
+{
 	void InspectorPanel::drawContent()
 	{
 		editor::pushInspectorStyle();
@@ -422,7 +427,7 @@ namespace sw::editor
 
 			if ( bHasFilter )
 			{
-				const utf8* pLabelName = propLabel( prop );
+				const utf8* pLabelName = InspectorPanelInternal::propLabel( prop );
 				if ( StringUtil::stristr( prop._name.c_str(), _arrPropertyFilter ) == nullptr &&
 					 StringUtil::stristr( pLabelName, _arrPropertyFilter ) == nullptr &&
 					 StringUtil::stristr( prop._metadata._category.c_str(), _arrPropertyFilter ) == nullptr )
@@ -452,7 +457,7 @@ namespace sw::editor
 					ImGui::TableNextColumn();
 
 					ImGui::AlignTextToFramePadding();
-					ImGui::TextUnformatted( propLabel( *prop ) );
+					ImGui::TextUnformatted( InspectorPanelInternal::propLabel( *prop ) );
 					if ( prop->_metadata._tooltip.empty() == false && ImGui::IsItemHovered() )
 						ImGui::SetTooltip( "%s", prop->_metadata._tooltip.c_str() );
 
@@ -669,7 +674,7 @@ namespace sw::editor
 				{
 					ImGui::PushID( nestedProp._name.c_str() );
 					ImGui::AlignTextToFramePadding();
-					ImGui::BulletText( "%s", propLabel( nestedProp ) );
+					ImGui::BulletText( "%s", InspectorPanelInternal::propLabel( nestedProp ) );
 					ImGui::SameLine();
 					ImGui::SetNextItemWidth( -FLT_MIN );
 					drawPropertyWidget( pNestedPtr, nestedProp );
@@ -720,7 +725,7 @@ namespace sw::editor
 					TaskArgs		args;
 					const TaskValue result = editor::getService<TypeRegistry>()->invokeMethod(
 						pInstance, pTypeInfo->_fullyQualifiedName, method._hashName, args );
-					formatTaskValue( result, method._returnTypeName, _arrLastInvokeResult, sizeof( _arrLastInvokeResult ) );
+					InspectorPanelInternal::formatTaskValue( result, method._returnTypeName, _arrLastInvokeResult, sizeof( _arrLastInvokeResult ) );
 				}
 				ImGui::PopStyleColor( 3 );
 				if ( method._metadata._tooltip.empty() == false && ImGui::IsItemHovered() )
@@ -742,7 +747,7 @@ namespace sw::editor
 			bool bArgsOk{ true };
 			for ( uint32 paramIndex = 0; paramIndex < paramCount; ++paramIndex )
 			{
-				if ( paramIndex >= 8 || isSupportedMethodArgType( method._listParamTypeName[paramIndex] ) == false )
+				if ( paramIndex >= 8 || InspectorPanelInternal::isSupportedMethodArgType( method._listParamTypeName[paramIndex] ) == false )
 				{
 					bArgsOk = false;
 					break;
@@ -802,7 +807,7 @@ namespace sw::editor
 
 				const TaskValue result = editor::getService<TypeRegistry>()->invokeMethod(
 					pInstance, pTypeInfo->_fullyQualifiedName, method._hashName, args );
-				formatTaskValue( result, method._returnTypeName, _arrLastInvokeResult, sizeof( _arrLastInvokeResult ) );
+				InspectorPanelInternal::formatTaskValue( result, method._returnTypeName, _arrLastInvokeResult, sizeof( _arrLastInvokeResult ) );
 			}
 
 			ImGui::PopID();

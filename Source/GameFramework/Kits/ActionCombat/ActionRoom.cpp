@@ -12,39 +12,42 @@
 
 namespace sw
 {
-
 	namespace
 	{
-
-		float32 length2( float32 x, float32 y )
+		struct ActionRoomInternal
 		{
-			return x * x + y * y;
-		}
-
-		void normalize2( float32& x, float32& y )
-		{
-			const float32 lenSq = length2( x, y );
-			if ( lenSq < 1e-6f )
+			static float32 length2( float32 x, float32 y )
 			{
-				x = 0.0f;
-				y = 0.0f;
-				return;
+				return x * x + y * y;
 			}
-			const float32 inv = MathUtil::invSqrt( lenSq );
-			x *= inv;
-			y *= inv;
-		}
 
-		AABB makeCircleAabb( float32 x, float32 y, float32 radius )
-		{
-			AABB box{};
-			box._min = float3( x - radius, 0.0f, y - radius );
-			box._max = float3( x + radius, 1.0f, y + radius );
-			return box;
-		}
+			static void normalize2( float32& x, float32& y )
+			{
+				const float32 lenSq = length2( x, y );
+				if ( lenSq < 1e-6f )
+				{
+					x = 0.0f;
+					y = 0.0f;
+					return;
+				}
+				const float32 inv = MathUtil::invSqrt( lenSq );
+				x *= inv;
+				y *= inv;
+			}
 
+			static AABB makeCircleAabb( float32 x, float32 y, float32 radius )
+			{
+				AABB box{};
+				box._min = float3( x - radius, 0.0f, y - radius );
+				box._max = float3( x + radius, 1.0f, y + radius );
+				return box;
+			}
+		};
 	} // namespace
+} // namespace sw
 
+namespace sw
+{
 	ActionRoom::ActionRoom()
 		: _kind{ ActionRoomKind::None }
 		, _layers{}
@@ -184,12 +187,12 @@ namespace sw
 
 	AABB ActionRoom::Actor::bounds() const
 	{
-		return makeCircleAabb( _x, _y, _radius );
+		return ActionRoomInternal::makeCircleAabb( _x, _y, _radius );
 	}
 
 	AABB ActionRoom::Projectile::bounds() const
 	{
-		return makeCircleAabb( _x, _y, _radius );
+		return ActionRoomInternal::makeCircleAabb( _x, _y, _radius );
 	}
 
 	void ActionRoom::spawnGrunt( float32 x, float32 y )
@@ -254,7 +257,7 @@ namespace sw
 
 			float32 dx = playerX - actor._x;
 			float32 dy = playerY - actor._y;
-			normalize2( dx, dy );
+			ActionRoomInternal::normalize2( dx, dy );
 			actor._x += dx * actor._speed * deltaTime;
 			actor._y += dy * actor._speed * deltaTime;
 
@@ -268,7 +271,7 @@ namespace sw
 
 			float32 vx = playerX - actor._x;
 			float32 vy = playerY - actor._y;
-			normalize2( vx, vy );
+			ActionRoomInternal::normalize2( vx, vy );
 			Projectile projectile{};
 			projectile._x	   = actor._x;
 			projectile._y	   = actor._y;
@@ -353,7 +356,7 @@ namespace sw
 
 	AABB ActionRoom::playerHurtBox( float32 x, float32 y ) const
 	{
-		return makeCircleAabb( x, y, 0.28f );
+		return ActionRoomInternal::makeCircleAabb( x, y, 0.28f );
 	}
 
 	AABB ActionRoom::playerAttackBox( float32 x, float32 y, FacingDir facing ) const
@@ -375,6 +378,6 @@ namespace sw
 				ox = 0.85f;
 				break;
 		}
-		return makeCircleAabb( x + ox, y + oy, 0.45f );
+		return ActionRoomInternal::makeCircleAabb( x + ox, y + oy, 0.45f );
 	}
 } // namespace sw

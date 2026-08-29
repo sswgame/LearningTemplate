@@ -25,89 +25,93 @@ namespace rapidxml
 
 namespace sw
 {
-	SW_LOG_CALLER( "XmlDocument" );
-
 	namespace
 	{
-
-		rapidxml::xml_node<>* asNode( void* pPtr )
+		struct XmlDocumentInternal
 		{
-			return static_cast<rapidxml::xml_node<>*>( pPtr );
-		}
-
-		rapidxml::xml_attribute<>* asAttr( void* pPtr )
-		{
-			return static_cast<rapidxml::xml_attribute<>*>( pPtr );
-		}
-
-		bool nameEquals( const utf8* pLhs, const utf8* pRhs, bool bIgnoreCase = true )
-		{
-			if ( pLhs == pRhs )
-				return true;
-			if ( pLhs == nullptr || pRhs == nullptr )
-				return false;
-			return bIgnoreCase ? StringUtil::equalsIgnoreCase( pLhs, pRhs ) : ( StringUtil::strcmp( pLhs, pRhs ) == 0 );
-		}
-
-		rapidxml::xml_node<>* findChild( rapidxml::xml_node<>* pParent, const utf8* pName, bool bIgnoreCase = true )
-		{
-			if ( pParent == nullptr || pName == nullptr )
-				return nullptr;
-			if ( bIgnoreCase == false )
-				return pParent->first_node( pName );
-			for ( rapidxml::xml_node<>* pChild = pParent->first_node(); pChild != nullptr; pChild = pChild->next_sibling() )
+			static rapidxml::xml_node<>* asNode( void* pPtr )
 			{
-				if ( pChild->name() != nullptr && nameEquals( pChild->name(), pName, true ) )
-					return pChild;
+				return static_cast<rapidxml::xml_node<>*>( pPtr );
 			}
-			return nullptr;
-		}
 
-		rapidxml::xml_node<>* findSibling( rapidxml::xml_node<>* pNode, const utf8* pName, bool bIgnoreCase = true )
-		{
-			if ( pNode == nullptr || pName == nullptr )
-				return nullptr;
-			for ( rapidxml::xml_node<>* pSiblingNode = pNode; pSiblingNode != nullptr; pSiblingNode = pSiblingNode->next_sibling() )
+			static rapidxml::xml_attribute<>* asAttr( void* pPtr )
 			{
-				if ( pSiblingNode->name() != nullptr && nameEquals( pSiblingNode->name(), pName, bIgnoreCase ) )
-					return pSiblingNode;
+				return static_cast<rapidxml::xml_attribute<>*>( pPtr );
 			}
-			return nullptr;
-		}
 
-		rapidxml::xml_attribute<>* findAttr( rapidxml::xml_node<>* pNode, const utf8* pName, bool bIgnoreCase = true )
-		{
-			if ( pNode == nullptr || pName == nullptr )
-				return nullptr;
-			if ( bIgnoreCase == false )
-				return pNode->first_attribute( pName );
-			for ( rapidxml::xml_attribute<>* pAttr = pNode->first_attribute(); pAttr != nullptr; pAttr = pAttr->next_attribute() )
+			static bool nameEquals( const utf8* pLhs, const utf8* pRhs, bool bIgnoreCase = true )
 			{
-				if ( pAttr->name() != nullptr && nameEquals( pAttr->name(), pName, true ) )
-					return pAttr;
+				if ( pLhs == pRhs )
+					return true;
+				if ( pLhs == nullptr || pRhs == nullptr )
+					return false;
+				return bIgnoreCase ? StringUtil::equalsIgnoreCase( pLhs, pRhs ) : ( StringUtil::strcmp( pLhs, pRhs ) == 0 );
 			}
-			return nullptr;
-		}
 
-		const utf8* allocDocString( rapidxml::xml_document<>* pDoc, string_view value )
-		{
-			if ( pDoc == nullptr )
-				return "";
-			utf8* pOut = pDoc->allocate_string( nullptr, value.size() + 1 );
-			if ( value.empty() == false )
-				Memory::copy( pOut, value.data(), value.size() );
-			pOut[value.size()] = '\0';
-			return pOut;
-		}
+			static rapidxml::xml_node<>* findChild( rapidxml::xml_node<>* pParent, const utf8* pName, bool bIgnoreCase = true )
+			{
+				if ( pParent == nullptr || pName == nullptr )
+					return nullptr;
+				if ( bIgnoreCase == false )
+					return pParent->first_node( pName );
+				for ( rapidxml::xml_node<>* pChild = pParent->first_node(); pChild != nullptr; pChild = pChild->next_sibling() )
+				{
+					if ( pChild->name() != nullptr && nameEquals( pChild->name(), pName, true ) )
+						return pChild;
+				}
+				return nullptr;
+			}
 
-		bool parseNodeBool( const utf8* pText, bool fallback )
-		{
-			if ( pText == nullptr || pText[0] == '\0' )
-				return fallback;
-			return StringUtil::parseBool( pText, fallback );
-		}
+			static rapidxml::xml_node<>* findSibling( rapidxml::xml_node<>* pNode, const utf8* pName, bool bIgnoreCase = true )
+			{
+				if ( pNode == nullptr || pName == nullptr )
+					return nullptr;
+				for ( rapidxml::xml_node<>* pSiblingNode = pNode; pSiblingNode != nullptr; pSiblingNode = pSiblingNode->next_sibling() )
+				{
+					if ( pSiblingNode->name() != nullptr && nameEquals( pSiblingNode->name(), pName, bIgnoreCase ) )
+						return pSiblingNode;
+				}
+				return nullptr;
+			}
 
+			static rapidxml::xml_attribute<>* findAttr( rapidxml::xml_node<>* pNode, const utf8* pName, bool bIgnoreCase = true )
+			{
+				if ( pNode == nullptr || pName == nullptr )
+					return nullptr;
+				if ( bIgnoreCase == false )
+					return pNode->first_attribute( pName );
+				for ( rapidxml::xml_attribute<>* pAttr = pNode->first_attribute(); pAttr != nullptr; pAttr = pAttr->next_attribute() )
+				{
+					if ( pAttr->name() != nullptr && nameEquals( pAttr->name(), pName, true ) )
+						return pAttr;
+				}
+				return nullptr;
+			}
+
+			static const utf8* allocDocString( rapidxml::xml_document<>* pDoc, string_view value )
+			{
+				if ( pDoc == nullptr )
+					return "";
+				utf8* pOut = pDoc->allocate_string( nullptr, value.size() + 1 );
+				if ( value.empty() == false )
+					Memory::copy( pOut, value.data(), value.size() );
+				pOut[value.size()] = '\0';
+				return pOut;
+			}
+
+			static bool parseNodeBool( const utf8* pText, bool fallback )
+			{
+				if ( pText == nullptr || pText[0] == '\0' )
+					return fallback;
+				return StringUtil::parseBool( pText, fallback );
+			}
+		};
 	} // namespace
+} // namespace sw
+
+namespace sw
+{
+	SW_LOG_CALLER( "XmlDocument" );
 
 	struct XmlDocument::Impl
 	{
@@ -117,19 +121,19 @@ namespace sw
 
 	const utf8* XmlAttribute::name() const
 	{
-		rapidxml::xml_attribute<>* pAttr = asAttr( _pAttr );
+		rapidxml::xml_attribute<>* pAttr = XmlDocumentInternal::asAttr( _pAttr );
 		return pAttr != nullptr && pAttr->name() != nullptr ? pAttr->name() : "";
 	}
 
 	const utf8* XmlAttribute::value() const
 	{
-		rapidxml::xml_attribute<>* pAttr = asAttr( _pAttr );
+		rapidxml::xml_attribute<>* pAttr = XmlDocumentInternal::asAttr( _pAttr );
 		return pAttr != nullptr && pAttr->value() != nullptr ? pAttr->value() : "";
 	}
 
 	XmlAttribute XmlAttribute::next() const
 	{
-		rapidxml::xml_attribute<>* pAttr = asAttr( _pAttr );
+		rapidxml::xml_attribute<>* pAttr = XmlDocumentInternal::asAttr( _pAttr );
 		if ( pAttr == nullptr )
 			return {};
 		return XmlAttribute{ pAttr->next_attribute() };
@@ -137,22 +141,22 @@ namespace sw
 
 	const utf8* XmlNode::name() const
 	{
-		rapidxml::xml_node<>* pNode = asNode( _pNode );
+		rapidxml::xml_node<>* pNode = XmlDocumentInternal::asNode( _pNode );
 		return pNode != nullptr && pNode->name() != nullptr ? pNode->name() : "";
 	}
 
 	const utf8* XmlNode::text() const
 	{
-		rapidxml::xml_node<>* pNode = asNode( _pNode );
+		rapidxml::xml_node<>* pNode = XmlDocumentInternal::asNode( _pNode );
 		return pNode != nullptr && pNode->value() != nullptr ? pNode->value() : "";
 	}
 
 	const utf8* XmlNode::attr( const utf8* pName, bool bIgnoreCaseKeys ) const
 	{
-		rapidxml::xml_node<>* pNode = asNode( _pNode );
+		rapidxml::xml_node<>* pNode = XmlDocumentInternal::asNode( _pNode );
 		if ( pNode == nullptr || pName == nullptr )
 			return nullptr;
-		rapidxml::xml_attribute<>* pAttr = findAttr( pNode, pName, bIgnoreCaseKeys );
+		rapidxml::xml_attribute<>* pAttr = XmlDocumentInternal::findAttr( pNode, pName, bIgnoreCaseKeys );
 		if ( pAttr != nullptr )
 			return pAttr->value();
 		return nullptr;
@@ -172,28 +176,28 @@ namespace sw
 
 	bool XmlNode::attrBool( const utf8* pName, bool fallback, bool bIgnoreCaseKeys ) const
 	{
-		return parseNodeBool( attr( pName, bIgnoreCaseKeys ), fallback );
+		return XmlDocumentInternal::parseNodeBool( attr( pName, bIgnoreCaseKeys ), fallback );
 	}
 
 	XmlNode XmlNode::child( const utf8* pName, bool bIgnoreCaseKeys ) const
 	{
-		rapidxml::xml_node<>* pNode = asNode( _pNode );
+		rapidxml::xml_node<>* pNode = XmlDocumentInternal::asNode( _pNode );
 		if ( pNode == nullptr )
 			return {};
 		if ( pName == nullptr )
 			return XmlNode{ pNode->first_node() };
-		return XmlNode{ findChild( pNode, pName, bIgnoreCaseKeys ) };
+		return XmlNode{ XmlDocumentInternal::findChild( pNode, pName, bIgnoreCaseKeys ) };
 	}
 
 	XmlNode XmlNode::next( const utf8* pName, bool bIgnoreCaseKeys ) const
 	{
-		rapidxml::xml_node<>* pNode = asNode( _pNode );
+		rapidxml::xml_node<>* pNode = XmlDocumentInternal::asNode( _pNode );
 		if ( pNode == nullptr )
 			return {};
 		rapidxml::xml_node<>* pSibling = pNode->next_sibling();
 		if ( pName == nullptr )
 			return XmlNode{ pSibling };
-		return XmlNode{ findSibling( pSibling, pName, bIgnoreCaseKeys ) };
+		return XmlNode{ XmlDocumentInternal::findSibling( pSibling, pName, bIgnoreCaseKeys ) };
 	}
 
 	const utf8* XmlNode::childText( const utf8* pName, bool bIgnoreCaseKeys ) const
@@ -218,7 +222,7 @@ namespace sw
 
 	bool XmlNode::childBool( const utf8* pName, bool fallback, bool bIgnoreCaseKeys ) const
 	{
-		return parseNodeBool( childText( pName, bIgnoreCaseKeys ), fallback );
+		return XmlDocumentInternal::parseNodeBool( childText( pName, bIgnoreCaseKeys ), fallback );
 	}
 
 	bool XmlNode::takeChildText( const utf8* pName, string& dst, bool bIgnoreCaseKeys ) const
@@ -232,7 +236,7 @@ namespace sw
 
 	XmlAttribute XmlNode::firstAttr() const
 	{
-		rapidxml::xml_node<>* pNode = asNode( _pNode );
+		rapidxml::xml_node<>* pNode = XmlDocumentInternal::asNode( _pNode );
 		if ( pNode == nullptr )
 			return {};
 		return XmlAttribute{ pNode->first_attribute() };
@@ -240,7 +244,7 @@ namespace sw
 
 	XmlNode XmlNode::appendChild( const utf8* pName ) const
 	{
-		rapidxml::xml_node<>* pNode = asNode( _pNode );
+		rapidxml::xml_node<>* pNode = XmlDocumentInternal::asNode( _pNode );
 		if ( pNode == nullptr || pNode->document() == nullptr )
 			return {};
 		rapidxml::xml_node<>* pChild = pNode->document()->allocate_node( rapidxml::node_element, pNode->document()->allocate_string( pName ) );
@@ -285,7 +289,7 @@ namespace sw
 
 	void XmlNode::appendAttr( const utf8* pName, const utf8* pValue ) const
 	{
-		rapidxml::xml_node<>* pNode = asNode( _pNode );
+		rapidxml::xml_node<>* pNode = XmlDocumentInternal::asNode( _pNode );
 		if ( pNode == nullptr || pNode->document() == nullptr || pName == nullptr )
 			return;
 		const utf8*				   pSafeValue = pValue != nullptr ? pValue : "";
@@ -295,11 +299,11 @@ namespace sw
 
 	void XmlNode::appendAttr( const utf8* pName, string_view value ) const
 	{
-		rapidxml::xml_node<>* pNode = asNode( _pNode );
+		rapidxml::xml_node<>* pNode = XmlDocumentInternal::asNode( _pNode );
 		if ( pNode == nullptr || pNode->document() == nullptr || pName == nullptr )
 			return;
 		rapidxml::xml_document<>* pDoc = pNode->document();
-		pNode->append_attribute( pDoc->allocate_attribute( pDoc->allocate_string( pName ), allocDocString( pDoc, value ) ) );
+		pNode->append_attribute( pDoc->allocate_attribute( pDoc->allocate_string( pName ), XmlDocumentInternal::allocDocString( pDoc, value ) ) );
 	}
 
 	void XmlNode::appendAttr( const utf8* pName, int32 value ) const
@@ -332,8 +336,8 @@ namespace sw
 	{
 		if ( _pNode == nullptr || pName == nullptr )
 			return;
-		rapidxml::xml_node<>*	   pNode	  = asNode( _pNode );
-		rapidxml::xml_attribute<>* pAttr	  = findAttr( pNode, pName, true );
+		rapidxml::xml_node<>*	   pNode	  = XmlDocumentInternal::asNode( _pNode );
+		rapidxml::xml_attribute<>* pAttr	  = XmlDocumentInternal::findAttr( pNode, pName, true );
 		const utf8*				   pSafeValue = pValue != nullptr ? pValue : "";
 		if ( pAttr != nullptr )
 			pAttr->value( pNode->document()->allocate_string( pSafeValue ) );
@@ -345,10 +349,10 @@ namespace sw
 	{
 		if ( _pNode == nullptr || pName == nullptr )
 			return;
-		rapidxml::xml_node<>*	   pNode = asNode( _pNode );
-		rapidxml::xml_attribute<>* pAttr = findAttr( pNode, pName, true );
+		rapidxml::xml_node<>*	   pNode = XmlDocumentInternal::asNode( _pNode );
+		rapidxml::xml_attribute<>* pAttr = XmlDocumentInternal::findAttr( pNode, pName, true );
 		if ( pAttr != nullptr )
-			pAttr->value( allocDocString( pNode->document(), value ) );
+			pAttr->value( XmlDocumentInternal::allocDocString( pNode->document(), value ) );
 		else
 			appendAttr( pName, value );
 	}
@@ -383,13 +387,13 @@ namespace sw
 	{
 		if ( _pNode == nullptr || pName == nullptr )
 			return;
-		rapidxml::xml_node<>* pNode = asNode( _pNode );
+		rapidxml::xml_node<>* pNode = XmlDocumentInternal::asNode( _pNode );
 		pNode->name( pNode->document()->allocate_string( pName ) );
 	}
 
 	void XmlNode::setValue( const utf8* pValue ) const
 	{
-		rapidxml::xml_node<>* pNode = asNode( _pNode );
+		rapidxml::xml_node<>* pNode = XmlDocumentInternal::asNode( _pNode );
 		if ( pNode == nullptr || pNode->document() == nullptr )
 			return;
 		const utf8* pSafeValue = pValue != nullptr ? pValue : "";
@@ -398,10 +402,10 @@ namespace sw
 
 	void XmlNode::setValue( string_view value ) const
 	{
-		rapidxml::xml_node<>* pNode = asNode( _pNode );
+		rapidxml::xml_node<>* pNode = XmlDocumentInternal::asNode( _pNode );
 		if ( pNode == nullptr || pNode->document() == nullptr )
 			return;
-		pNode->value( allocDocString( pNode->document(), value ) );
+		pNode->value( XmlDocumentInternal::allocDocString( pNode->document(), value ) );
 	}
 
 	void XmlNode::setValue( int32 value ) const
@@ -432,7 +436,7 @@ namespace sw
 
 	string XmlNode::toString() const
 	{
-		rapidxml::xml_node<>* pNode = asNode( _pNode );
+		rapidxml::xml_node<>* pNode = XmlDocumentInternal::asNode( _pNode );
 		if ( pNode == nullptr )
 			return {};
 		string result;
@@ -550,7 +554,7 @@ namespace sw
 			return {};
 		if ( pName == nullptr )
 			return XmlNode{ _impl->doc.first_node() };
-		return XmlNode{ findChild( &_impl->doc, pName, bIgnoreCaseKeys ) };
+		return XmlNode{ XmlDocumentInternal::findChild( &_impl->doc, pName, bIgnoreCaseKeys ) };
 	}
 
 	XmlNode XmlDocument::appendRoot( const utf8* pName )

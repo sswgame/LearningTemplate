@@ -20,42 +20,49 @@
 #include <algorithm>
 #include <imgui.h>
 
-SW_LOG_CALLER( "ContentBrowserPanel" );
 namespace sw::editor
 {
 	namespace
 	{
-		ImVec4 colorForExtension( string_view ext )
+		struct ContentBrowserPanelInternal
 		{
-			if ( StringUtil::equalsIgnoreCase( ext, "._material" ) )
-				return ImVec4( 0.85f, 0.35f, 0.25f, 1.0f );
-			if ( StringUtil::equalsIgnoreCase( ext, ".hlsl" ) || StringUtil::equalsIgnoreCase( ext, ".glsl" ) ||
-				 StringUtil::equalsIgnoreCase( ext, ".vert" ) || StringUtil::equalsIgnoreCase( ext, ".frag" ) )
-				return ImVec4( 0.25f, 0.65f, 0.90f, 1.0f );
-			if ( StringUtil::equalsIgnoreCase( ext, ".png" ) || StringUtil::equalsIgnoreCase( ext, ".jpg" ) ||
-				 StringUtil::equalsIgnoreCase( ext, ".jpeg" ) || StringUtil::equalsIgnoreCase( ext, ".tga" ) ||
-				 StringUtil::equalsIgnoreCase( ext, ".dds" ) )
-				return ImVec4( 0.45f, 0.80f, 0.35f, 1.0f );
-			if ( ext.empty() == false )
-				return ImVec4( 0.55f, 0.55f, 0.60f, 1.0f );
-			return ImVec4( 0.35f, 0.40f, 0.55f, 1.0f ); // folder
-		}
+			static ImVec4 colorForExtension( string_view ext )
+			{
+				if ( StringUtil::equalsIgnoreCase( ext, "._material" ) )
+					return ImVec4( 0.85f, 0.35f, 0.25f, 1.0f );
+				if ( StringUtil::equalsIgnoreCase( ext, ".hlsl" ) || StringUtil::equalsIgnoreCase( ext, ".glsl" ) ||
+					 StringUtil::equalsIgnoreCase( ext, ".vert" ) || StringUtil::equalsIgnoreCase( ext, ".frag" ) )
+					return ImVec4( 0.25f, 0.65f, 0.90f, 1.0f );
+				if ( StringUtil::equalsIgnoreCase( ext, ".png" ) || StringUtil::equalsIgnoreCase( ext, ".jpg" ) ||
+					 StringUtil::equalsIgnoreCase( ext, ".jpeg" ) || StringUtil::equalsIgnoreCase( ext, ".tga" ) ||
+					 StringUtil::equalsIgnoreCase( ext, ".dds" ) )
+					return ImVec4( 0.45f, 0.80f, 0.35f, 1.0f );
+				if ( ext.empty() == false )
+					return ImVec4( 0.55f, 0.55f, 0.60f, 1.0f );
+				return ImVec4( 0.35f, 0.40f, 0.55f, 1.0f ); // folder
+			}
 
-		const utf8* typeLabel( string_view ext, bool bIsDirectory )
-		{
-			if ( bIsDirectory )
-				return "Folder";
-			if ( StringUtil::equalsIgnoreCase( ext, "._material" ) )
-				return "Material";
-			if ( StringUtil::equalsIgnoreCase( ext, ".hlsl" ) )
-				return "Shader";
-			if ( ext.empty() )
-				return "File";
-			thread_local fixed_string<constant::kMaxBuffer64> t_extLabel;
-			t_extLabel = ext;
-			return t_extLabel.c_str();
-		}
+			static const utf8* typeLabel( string_view ext, bool bIsDirectory )
+			{
+				if ( bIsDirectory )
+					return "Folder";
+				if ( StringUtil::equalsIgnoreCase( ext, "._material" ) )
+					return "Material";
+				if ( StringUtil::equalsIgnoreCase( ext, ".hlsl" ) )
+					return "Shader";
+				if ( ext.empty() )
+					return "File";
+				thread_local fixed_string<constant::kMaxBuffer64> t_extLabel;
+				t_extLabel = ext;
+				return t_extLabel.c_str();
+			}
+		};
 	} // namespace
+} // namespace sw::editor
+
+namespace sw::editor
+{
+	SW_LOG_CALLER( "ContentBrowserPanel" );
 
 	void ContentBrowserPanel::drawAssetThumbnail( ImDrawList* pDrawList, const float2& minPos, const float2& maxPos,
 												  const AssetEntry& entry )
@@ -192,7 +199,7 @@ namespace sw::editor
 			pDrawList->AddRectFilled( ImVec2( minPos._x + w * 0.22f, minPos._y + h * 0.16f ),
 									  ImVec2( minPos._x + w * 0.78f, minPos._y + h * 0.84f ),
 									  IM_COL32( 65, 70, 82, 255 ), 3.0f );
-			const utf8*	 pLbl  = typeLabel( ext, false );
+			const utf8*	 pLbl  = ContentBrowserPanelInternal::typeLabel( ext, false );
 			const ImVec2 txtSz = ImGui::CalcTextSize( pLbl );
 			pDrawList->AddText( ImVec2( cx - txtSz.x * 0.5f, cy - txtSz.y * 0.5f ),
 								IM_COL32( 220, 225, 235, 230 ), pLbl );
@@ -746,8 +753,8 @@ namespace sw::editor
 						editor::drawAssetDragSource( entry._relativePath.c_str() );
 
 					ImGui::TableSetColumnIndex( 1 );
-					ImGui::TextColored( colorForExtension( entry._bIsDirectory ? string{} : entry._extension ),
-										"%s", typeLabel( entry._extension, entry._bIsDirectory ) );
+					ImGui::TextColored( ContentBrowserPanelInternal::colorForExtension( entry._bIsDirectory ? string{} : entry._extension ),
+										"%s", ContentBrowserPanelInternal::typeLabel( entry._extension, entry._bIsDirectory ) );
 
 					ImGui::TableSetColumnIndex( 2 );
 					ImGui::TextUnformatted( entry._relativePath.c_str() );

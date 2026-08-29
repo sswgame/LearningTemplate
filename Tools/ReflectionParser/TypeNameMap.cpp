@@ -13,37 +13,42 @@ namespace sw
 {
 	namespace
 	{
-		/** @brief clang 수식어(const/class 등)와 참조를 제거합니다. */
-		static string stripClangDecorations( string_view tView )
+		struct TypeNameMapInternal
 		{
-			tView						 = StringUtil::trim( tView );
-			const ParserClangConfig& cfg = ParserContext::getSharedConfig();
-
-			bool bStripped{ true };
-			while ( bStripped && tView.empty() == false )
+			/** @brief clang 수식어(const/class 등)와 참조를 제거합니다. */
+			static string stripClangDecorations( string_view tView )
 			{
-				bStripped = false;
-				for ( const string& prefix : cfg._listTypeStripPrefix )
+				tView						 = StringUtil::trim( tView );
+				const ParserClangConfig& cfg = ParserContext::getSharedConfig();
+
+				bool bStripped{ true };
+				while ( bStripped && tView.empty() == false )
 				{
-					if ( tView.size() >= prefix.size() && tView.substr( 0, prefix.size() ) == prefix )
+					bStripped = false;
+					for ( const string& prefix : cfg._listTypeStripPrefix )
 					{
-						tView.remove_prefix( prefix.size() );
-						tView	  = StringUtil::trim( tView );
-						bStripped = true;
+						if ( tView.size() >= prefix.size() && tView.substr( 0, prefix.size() ) == prefix )
+						{
+							tView.remove_prefix( prefix.size() );
+							tView	  = StringUtil::trim( tView );
+							bStripped = true;
+						}
 					}
 				}
-			}
 
-			while ( tView.empty() == false && tView.back() == '&' )
-			{
-				tView.remove_suffix( 1 );
-				tView = StringUtil::trim( tView );
+				while ( tView.empty() == false && tView.back() == '&' )
+				{
+					tView.remove_suffix( 1 );
+					tView = StringUtil::trim( tView );
+				}
+				return string( tView );
 			}
-			return string( tView );
-		}
-
+		};
 	} // namespace
+} // namespace sw
 
+namespace sw
+{
 	TypeNameMap& TypeNameMap::instance()
 	{
 		static TypeNameMap s_map;
@@ -91,7 +96,7 @@ namespace sw
 
 	string TypeNameMap::normalize( const string& clangSpelling ) const
 	{
-		string t = stripClangDecorations( clangSpelling );
+		string t = TypeNameMapInternal::stripClangDecorations( clangSpelling );
 		if ( t.empty() )
 			return t;
 

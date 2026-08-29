@@ -9,35 +9,47 @@ namespace sw
 {
 	namespace
 	{
-		string basenameNoExt( const utf8* pDllName )
+		struct DelayLoadNotifyHookInternal
 		{
-			string		 s	   = pDllName != nullptr ? pDllName : "";
-			const size_t slash = s.find_last_of( "/\\" );
-			if ( slash != string::npos )
-				s = s.substr( slash + 1 );
-			if ( s.size() > 4 )
+			static string basenameNoExt( const utf8* pDllName )
 			{
-				const string ext = s.substr( s.size() - 4 );
-				if ( ext == ".dll" || ext == ".DLL" )
-					s = s.substr( 0, s.size() - 4 );
+				string		 s	   = pDllName != nullptr ? pDllName : "";
+				const size_t slash = s.find_last_of( "/\\" );
+				if ( slash != string::npos )
+					s = s.substr( slash + 1 );
+				if ( s.size() > 4 )
+				{
+					const string ext = s.substr( s.size() - 4 );
+					if ( ext == ".dll" || ext == ".DLL" )
+						s = s.substr( 0, s.size() - 4 );
+				}
+				return s;
 			}
-			return s;
-		}
 
-		FARPROC WINAPI notifyHook( uint32 dliNotify, DelayLoadInfo* pdli )
-		{
-			if ( dliNotify != dliNotePreLoadLibrary || pdli == nullptr )
-				return nullptr;
-			LiveReloadManager* pMgr = LiveReloadManager::getDelayLoadManager();
-			if ( pMgr == nullptr || pMgr->isGraphBroken() )
-				return nullptr;
-			void* pHandle = pMgr->getModuleHandle( basenameNoExt( pdli->szDll ) );
-			if ( pHandle == nullptr )
-				return nullptr;
-			return reinterpret_cast<FARPROC>( pHandle );
-		}
-
+			static FARPROC WINAPI notifyHook( uint32 dliNotify, DelayLoadInfo* pdli )
+			{
+				if ( dliNotify != dliNotePreLoadLibrary || pdli == nullptr )
+					return nullptr;
+				LiveReloadManager* pMgr = LiveReloadManager::getDelayLoadManager();
+				if ( pMgr == nullptr || pMgr->isGraphBroken() )
+					return nullptr;
+				void* pHandle = pMgr->getModuleHandle( basenameNoExt( pdli->szDll ) );
+				if ( pHandle == nullptr )
+					return nullptr;
+				return reinterpret_cast<FARPROC>( pHandle );
+			}
+		};
 	} // namespace
+} // namespace sw
+
+namespace sw
+{
+	FARPROC WINAPI notifyHook( uint32 dliNotify, DelayLoadInfo* pdli );
+
+	FARPROC WINAPI notifyHook( uint32 dliNotify, DelayLoadInfo* pdli )
+	{
+		return DelayLoadNotifyHookInternal::notifyHook( dliNotify, pdli );
+	}
 } // namespace sw
 
 extern "C" const PfnDliHook __pfnDliNotifyHook2 = sw::notifyHook;

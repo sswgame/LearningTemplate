@@ -2,7 +2,7 @@
  * @file Serializer.h
  * @brief 우산 헤더: Binary / JSON / XML / ObjectDiff (+ SerializeContext)
  * @note 구현은 SerializeContext.cpp, BinarySerializer.cpp, JsonSerializer.cpp,
- *       XmlSerializer.cpp, ObjectDiffSerializer.cpp, SerializerInternal.cpp.
+ *       XmlSerializer.cpp, ObjectDiffSerializer.cpp, SerializerUtil.cpp.
  */
 #pragma once
 #include "Engine/Serialization/Core/SchemaMigrate.h"

@@ -18,62 +18,68 @@ namespace sw::editor
 {
 	namespace
 	{
-		void drawSceneComponentHierarchy( const SceneComponent* pComp )
+		struct BoneHierarchyPopupInternal
 		{
-			if ( pComp == nullptr )
-				return;
-
-			const utf8*		  pCompName = "SceneComponent";
-			const GameObject* pOwner	= pComp->getOwner();
-			if ( pOwner != nullptr )
+			static void drawSceneComponentHierarchy( const SceneComponent* pComp )
 			{
-				const utf8* pNameStr = pOwner->getName().c_str();
-				if ( pNameStr != nullptr && pNameStr[0] != '\0' )
-					pCompName = pNameStr;
-			}
-			const ImGuiID			 nodeId = static_cast<ImGuiID>( pComp->getComponentId() );
-			const ImGuiTreeNodeFlags flags	= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_SpanAvailWidth;
+				if ( pComp == nullptr )
+					return;
 
-			ImGui::TreeNodeEx( reinterpret_cast<void*>( static_cast<uintptr_t>( nodeId ) ), flags, "%s", pCompName );
-
-			const vector<SceneComponent*>& listChildren = pComp->getChildren();
-			for ( const SceneComponent* pChild : listChildren )
-			{
-				if ( pChild != nullptr )
-					drawSceneComponentHierarchy( pChild );
-			}
-		}
-
-		void drawGameObjectHierarchy( const GameObject* pObj )
-		{
-			if ( pObj == nullptr )
-				return;
-
-			const utf8* pObjName = pObj->getName().c_str();
-			if ( pObjName == nullptr || pObjName[0] == '\0' )
-				pObjName = "GameObject";
-
-			const vector<GameObject*>& listChildren = pObj->getChildren();
-			ImGuiTreeNodeFlags		   flags		= ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_DefaultOpen;
-			if ( listChildren.empty() && pObj->getPrimarySceneComponent() == nullptr )
-				flags |= ImGuiTreeNodeFlags_Leaf;
-
-			const bool bOpen = ImGui::TreeNodeEx( pObj, flags, "%s", pObjName );
-			if ( bOpen )
-			{
-				const SceneComponent* pRootComp = pObj->getPrimarySceneComponent();
-				if ( pRootComp != nullptr )
-					drawSceneComponentHierarchy( pRootComp );
-
-				for ( const GameObject* pChild : listChildren )
+				const utf8*		  pCompName = "SceneComponent";
+				const GameObject* pOwner	= pComp->getOwner();
+				if ( pOwner != nullptr )
 				{
-					drawGameObjectHierarchy( pChild );
+					const utf8* pNameStr = pOwner->getName().c_str();
+					if ( pNameStr != nullptr && pNameStr[0] != '\0' )
+						pCompName = pNameStr;
 				}
-				ImGui::TreePop();
-			}
-		}
-	} // namespace
+				const ImGuiID			 nodeId = static_cast<ImGuiID>( pComp->getComponentId() );
+				const ImGuiTreeNodeFlags flags	= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_SpanAvailWidth;
 
+				ImGui::TreeNodeEx( reinterpret_cast<void*>( static_cast<uintptr_t>( nodeId ) ), flags, "%s", pCompName );
+
+				const vector<SceneComponent*>& listChildren = pComp->getChildren();
+				for ( const SceneComponent* pChild : listChildren )
+				{
+					if ( pChild != nullptr )
+						drawSceneComponentHierarchy( pChild );
+				}
+			}
+
+			static void drawGameObjectHierarchy( const GameObject* pObj )
+			{
+				if ( pObj == nullptr )
+					return;
+
+				const utf8* pObjName = pObj->getName().c_str();
+				if ( pObjName == nullptr || pObjName[0] == '\0' )
+					pObjName = "GameObject";
+
+				const vector<GameObject*>& listChildren = pObj->getChildren();
+				ImGuiTreeNodeFlags		   flags		= ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_DefaultOpen;
+				if ( listChildren.empty() && pObj->getPrimarySceneComponent() == nullptr )
+					flags |= ImGuiTreeNodeFlags_Leaf;
+
+				const bool bOpen = ImGui::TreeNodeEx( pObj, flags, "%s", pObjName );
+				if ( bOpen )
+				{
+					const SceneComponent* pRootComp = pObj->getPrimarySceneComponent();
+					if ( pRootComp != nullptr )
+						drawSceneComponentHierarchy( pRootComp );
+
+					for ( const GameObject* pChild : listChildren )
+					{
+						drawGameObjectHierarchy( pChild );
+					}
+					ImGui::TreePop();
+				}
+			}
+		};
+	} // namespace
+} // namespace sw::editor
+
+namespace sw::editor
+{
 	// ------------------------------------------------------------------------------
 	// Constructor
 	// ------------------------------------------------------------------------------
@@ -133,7 +139,7 @@ namespace sw::editor
 		{
 			GameObject* pSelectedObj = pScene->getObjectManager()->findGameObjectById( ws.getSelectedObjectId() );
 			if ( pSelectedObj != nullptr )
-				drawGameObjectHierarchy( pSelectedObj );
+				BoneHierarchyPopupInternal::drawGameObjectHierarchy( pSelectedObj );
 			else
 				editor::drawEmptyHint( "Object not found in active scene." );
 		}

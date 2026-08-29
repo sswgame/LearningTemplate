@@ -14,12 +14,18 @@ namespace sw::editor
 {
 	namespace
 	{
-		ImVec4 toIm( const Color4& c )
+		struct EditorWidgetsInternal
 		{
-			return ImVec4( c._r, c._g, c._b, c._a );
-		}
+			static ImVec4 toIm( const Color4& c )
+			{
+				return ImVec4( c._r, c._g, c._b, c._a );
+			}
+		};
 	} // namespace
+} // namespace sw::editor
 
+namespace sw::editor
+{
 	bool EditorWidgets::drawVec3Control( const utf8* pLabel, float3& values, float32 resetValue, float32 columnWidth, float32 speed )
 	{
 		ImGui::PushID( pLabel );
@@ -39,9 +45,9 @@ namespace sw::editor
 
 		auto axis = [&]( const utf8* pAxisLabel, float32& axisValue, const Color4& col )
 		{
-			ImGui::PushStyleColor( ImGuiCol_Button, toIm( col ) );
+			ImGui::PushStyleColor( ImGuiCol_Button, EditorWidgetsInternal::toIm( col ) );
 			ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImVec4( col._r + 0.1f, col._g + 0.1f, col._b + 0.1f, 1.0f ) );
-			ImGui::PushStyleColor( ImGuiCol_ButtonActive, toIm( col ) );
+			ImGui::PushStyleColor( ImGuiCol_ButtonActive, EditorWidgetsInternal::toIm( col ) );
 			if ( ImGui::Button( pAxisLabel, buttonSize ) )
 			{
 				axisValue = resetValue;
@@ -76,13 +82,13 @@ namespace sw::editor
 		ImGui::PushID( static_cast<int32>( id ) );
 		if ( bAccent )
 		{
-			ImGui::PushStyleColor( ImGuiCol_Header, toIm( style::kAccent ) );
+			ImGui::PushStyleColor( ImGuiCol_Header, EditorWidgetsInternal::toIm( style::kAccent ) );
 			ImGui::PushStyleColor( ImGuiCol_HeaderHovered, ImVec4( 0.85f, 0.28f, 0.22f, 1.0f ) );
 			ImGui::PushStyleColor( ImGuiCol_HeaderActive, ImVec4( 0.70f, 0.18f, 0.14f, 1.0f ) );
 		}
 		else
 		{
-			ImGui::PushStyleColor( ImGuiCol_Header, toIm( style::kHeader ) );
+			ImGui::PushStyleColor( ImGuiCol_Header, EditorWidgetsInternal::toIm( style::kHeader ) );
 			ImGui::PushStyleColor( ImGuiCol_HeaderHovered, ImVec4( 0.28f, 0.42f, 0.55f, 1.0f ) );
 			ImGui::PushStyleColor( ImGuiCol_HeaderActive, ImVec4( 0.18f, 0.30f, 0.42f, 1.0f ) );
 		}
@@ -140,7 +146,7 @@ namespace sw::editor
 	bool EditorWidgets::drawToggleButton( const utf8* pLabel, bool bActive, const Color4& activeColor )
 	{
 		const Color4& color = bActive ? activeColor : style::kToggleInactive;
-		ImGui::PushStyleColor( ImGuiCol_Button, toIm( color ) );
+		ImGui::PushStyleColor( ImGuiCol_Button, EditorWidgetsInternal::toIm( color ) );
 		const bool bClicked = ImGui::Button( pLabel );
 		ImGui::PopStyleColor();
 		return bClicked;
@@ -214,9 +220,9 @@ namespace sw::editor
 
 	void EditorWidgets::drawChip( const utf8* pLabel, const Color4& color )
 	{
-		ImGui::PushStyleColor( ImGuiCol_Button, toIm( color ) );
-		ImGui::PushStyleColor( ImGuiCol_ButtonHovered, toIm( color ) );
-		ImGui::PushStyleColor( ImGuiCol_ButtonActive, toIm( color ) );
+		ImGui::PushStyleColor( ImGuiCol_Button, EditorWidgetsInternal::toIm( color ) );
+		ImGui::PushStyleColor( ImGuiCol_ButtonHovered, EditorWidgetsInternal::toIm( color ) );
+		ImGui::PushStyleColor( ImGuiCol_ButtonActive, EditorWidgetsInternal::toIm( color ) );
 		ImGui::SmallButton( pLabel );
 		ImGui::PopStyleColor( 3 );
 	}

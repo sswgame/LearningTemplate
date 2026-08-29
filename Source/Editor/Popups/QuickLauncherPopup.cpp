@@ -27,22 +27,28 @@ namespace sw::editor
 {
 	namespace
 	{
-		ImVec4 getCategoryColor( string_view cat )
+		struct QuickLauncherPopupInternal
 		{
-			if ( cat == "Scene" )
-				return ImVec4( 0.25f, 0.85f, 0.45f, 1.0f );
-			if ( cat == "Prefab" )
-				return ImVec4( 0.30f, 0.65f, 1.0f, 1.0f );
-			if ( cat == "Texture" )
-				return ImVec4( 0.95f, 0.65f, 0.25f, 1.0f );
-			if ( cat == "Shader" )
-				return ImVec4( 0.85f, 0.40f, 0.95f, 1.0f );
-			if ( cat == "GameObject" )
-				return ImVec4( 0.95f, 0.85f, 0.30f, 1.0f );
-			return ImVec4( 0.60f, 0.65f, 0.75f, 1.0f );
-		}
+			static ImVec4 getCategoryColor( string_view cat )
+			{
+				if ( cat == "Scene" )
+					return ImVec4( 0.25f, 0.85f, 0.45f, 1.0f );
+				if ( cat == "Prefab" )
+					return ImVec4( 0.30f, 0.65f, 1.0f, 1.0f );
+				if ( cat == "Texture" )
+					return ImVec4( 0.95f, 0.65f, 0.25f, 1.0f );
+				if ( cat == "Shader" )
+					return ImVec4( 0.85f, 0.40f, 0.95f, 1.0f );
+				if ( cat == "GameObject" )
+					return ImVec4( 0.95f, 0.85f, 0.30f, 1.0f );
+				return ImVec4( 0.60f, 0.65f, 0.75f, 1.0f );
+			}
+		};
 	} // namespace
+} // namespace sw::editor
 
+namespace sw::editor
+{
 	QuickLauncherPopup::QuickLauncherPopup()
 		: _listAllItem{}
 		, _fileIndexJob{}
@@ -233,7 +239,7 @@ namespace sw::editor
 										IM_COL32( 80, 140, 240, 255 ), 4.0f );
 				}
 
-				const ImVec4 catCol = getCategoryColor( pItem->_category );
+				const ImVec4 catCol = QuickLauncherPopupInternal::getCategoryColor( pItem->_category );
 				utf8		 arrBadge[32];
 				formatstring( arrBadge, sizeof( arrBadge ), "[%s]", pItem->_category.c_str() );
 

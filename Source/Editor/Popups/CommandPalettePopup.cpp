@@ -33,213 +33,219 @@ namespace sw::editor
 {
 	namespace
 	{
-		bool fuzzyMatch( string_view text, string_view pattern )
+		struct CommandPalettePopupInternal
 		{
-			if ( pattern.empty() )
-				return true;
-			if ( text.empty() )
-				return false;
-
-			size_t patternIdx = 0;
-			for ( size_t textIdx = 0; textIdx < text.size(); ++textIdx )
+			static bool fuzzyMatch( string_view text, string_view pattern )
 			{
-				const utf8 tc = static_cast<utf8>( std::tolower( static_cast<uint8>( text[textIdx] ) ) );
-				const utf8 pc = static_cast<utf8>( std::tolower( static_cast<uint8>( pattern[patternIdx] ) ) );
-				if ( tc == pc )
+				if ( pattern.empty() )
+					return true;
+				if ( text.empty() )
+					return false;
+
+				size_t patternIdx = 0;
+				for ( size_t textIdx = 0; textIdx < text.size(); ++textIdx )
 				{
-					++patternIdx;
-					if ( patternIdx == pattern.size() )
-						return true;
+					const utf8 tc = static_cast<utf8>( std::tolower( static_cast<uint8>( text[textIdx] ) ) );
+					const utf8 pc = static_cast<utf8>( std::tolower( static_cast<uint8>( pattern[patternIdx] ) ) );
+					if ( tc == pc )
+					{
+						++patternIdx;
+						if ( patternIdx == pattern.size() )
+							return true;
+					}
 				}
+				return false;
 			}
-			return false;
-		}
 
-		void palettePlay()
-		{
-			EditorContext* pContext = EditorContext::get();
-			if ( pContext != nullptr && pContext->getWorkspace().isSceneDirty() && EditorPlaySession::isStopped() )
-				pContext->getNotificationManager().push( "Play", "Scene has unsaved changes", NotificationType::Warning );
-			EditorPlaySession::play();
-		}
-
-		void paletteSaveScene()
-		{
-			EditorAssetCommands::saveActiveSceneOrPrompt();
-		}
-
-		GameObject* palettePrimaryObject()
-		{
-			EditorContext* pContext = EditorContext::get();
-			if ( pContext == nullptr )
-				return nullptr;
-			return pContext->getSelectionManager().getPrimaryObject().get();
-		}
-
-		Component* paletteSelectedComponent()
-		{
-			EditorContext* pContext = EditorContext::get();
-			GameObject*	   pObj		= palettePrimaryObject();
-			if ( pContext == nullptr || pObj == nullptr )
-				return nullptr;
-			const uint64 componentId = pContext->getWorkspace().getSelectedComponentId();
-			if ( componentId == 0 )
-				return nullptr;
-			return pObj->findComponentById( componentId );
-		}
-
-		void paletteWarn( const utf8* pTitle, const utf8* pDetail )
-		{
-			EditorContext* pContext = EditorContext::get();
-			if ( pContext != nullptr )
-				pContext->getNotificationManager().push( pTitle, pDetail, NotificationType::Warning );
-		}
-
-		void palettePasteValues()
-		{
-			EditorContext* pContext = EditorContext::get();
-			Component*	   pComp	= paletteSelectedComponent();
-			if ( pContext == nullptr || pComp == nullptr )
+			static void palettePlay()
 			{
-				paletteWarn( "Paste", "Select a component first" );
-				return;
+				EditorContext* pContext = EditorContext::get();
+				if ( pContext != nullptr && pContext->getWorkspace().isSceneDirty() && EditorPlaySession::isStopped() )
+					pContext->getNotificationManager().push( "Play", "Scene has unsaved changes", NotificationType::Warning );
+				EditorPlaySession::play();
 			}
-			if ( pContext->getWorkspace().hasCopiedComponent() == false )
+
+			static void paletteSaveScene()
 			{
-				paletteWarn( "Paste", "Clipboard is empty" );
-				return;
+				EditorAssetCommands::saveActiveSceneOrPrompt();
 			}
-			pContext->getWorkspace().pasteComponentValues( pComp );
-		}
 
-		void palettePasteAsNew()
-		{
-			EditorContext* pContext = EditorContext::get();
-			GameObject*	   pObj		= palettePrimaryObject();
-			if ( pContext == nullptr || pObj == nullptr )
+			static GameObject* palettePrimaryObject()
 			{
-				paletteWarn( "Paste", "Select an object first" );
-				return;
+				EditorContext* pContext = EditorContext::get();
+				if ( pContext == nullptr )
+					return nullptr;
+				return pContext->getSelectionManager().getPrimaryObject().get();
 			}
-			if ( pContext->getWorkspace().hasCopiedComponent() == false )
+
+			static Component* paletteSelectedComponent()
 			{
-				paletteWarn( "Paste", "Clipboard is empty" );
-				return;
+				EditorContext* pContext = EditorContext::get();
+				GameObject*	   pObj		= palettePrimaryObject();
+				if ( pContext == nullptr || pObj == nullptr )
+					return nullptr;
+				const uint64 componentId = pContext->getWorkspace().getSelectedComponentId();
+				if ( componentId == 0 )
+					return nullptr;
+				return pObj->findComponentById( componentId );
 			}
-			pContext->getWorkspace().pasteComponentAsNew( pObj );
-		}
 
-		void onLoadPresetDialogResult( const vector<string>& listPaths )
-		{
-			if ( listPaths.empty() )
-				return;
-			Component* pComp = paletteSelectedComponent();
-			if ( pComp == nullptr )
+			static void paletteWarn( const utf8* pTitle, const utf8* pDetail )
 			{
-				paletteWarn( "Preset", "Select a component first" );
-				return;
+				EditorContext* pContext = EditorContext::get();
+				if ( pContext != nullptr )
+					pContext->getNotificationManager().push( pTitle, pDetail, NotificationType::Warning );
 			}
-			EditorTransformCommands::loadComponentPreset( pComp, listPaths[0] );
-		}
 
-		void onSavePresetDialogResult( const vector<string>& listPaths )
-		{
-			if ( listPaths.empty() )
-				return;
-			Component* pComp = paletteSelectedComponent();
-			if ( pComp == nullptr )
+			static void palettePasteValues()
 			{
-				paletteWarn( "Preset", "Select a component first" );
-				return;
+				EditorContext* pContext = EditorContext::get();
+				Component*	   pComp	= paletteSelectedComponent();
+				if ( pContext == nullptr || pComp == nullptr )
+				{
+					paletteWarn( "Paste", "Select a component first" );
+					return;
+				}
+				if ( pContext->getWorkspace().hasCopiedComponent() == false )
+				{
+					paletteWarn( "Paste", "Clipboard is empty" );
+					return;
+				}
+				pContext->getWorkspace().pasteComponentValues( pComp );
 			}
-			const string fileName = FileUtil::removeExtension( FileUtil::getFileNamePart( listPaths[0] ) );
-			if ( fileName.empty() )
-				return;
-			EditorTransformCommands::saveComponentPreset( pComp, fileName );
-		}
 
-		void paletteLoadPreset()
-		{
-			if ( paletteSelectedComponent() == nullptr )
+			static void palettePasteAsNew()
 			{
-				paletteWarn( "Preset", "Select a component first" );
-				return;
+				EditorContext* pContext = EditorContext::get();
+				GameObject*	   pObj		= palettePrimaryObject();
+				if ( pContext == nullptr || pObj == nullptr )
+				{
+					paletteWarn( "Paste", "Select an object first" );
+					return;
+				}
+				if ( pContext->getWorkspace().hasCopiedComponent() == false )
+				{
+					paletteWarn( "Paste", "Clipboard is empty" );
+					return;
+				}
+				pContext->getWorkspace().pasteComponentAsNew( pObj );
 			}
-			FileDialogParams params{};
-			params._type				= FileDialogParams::Type::Open;
-			params._title				= "Load Component Preset";
-			params._description			= "Component Preset";
-			params._bEnableMultiselect	= false;
-			params._filterExtensionList = { ".preset.xml", ".xml" };
-			params._initialDirectory	= EditorGlobalVariableCommands::getComponentPresetFolderPath();
-			FileUtil::openFileDialog( params, SW_DELEGATE_FUNCTION( FileDialogDelegate, onLoadPresetDialogResult ) );
-		}
 
-		void paletteSavePreset()
-		{
-			if ( paletteSelectedComponent() == nullptr )
+			static void onLoadPresetDialogResult( const vector<string>& listPaths )
 			{
-				paletteWarn( "Preset", "Select a component first" );
-				return;
+				if ( listPaths.empty() )
+					return;
+				Component* pComp = paletteSelectedComponent();
+				if ( pComp == nullptr )
+				{
+					paletteWarn( "Preset", "Select a component first" );
+					return;
+				}
+				EditorTransformCommands::loadComponentPreset( pComp, listPaths[0] );
 			}
-			FileDialogParams params{};
-			params._type				= FileDialogParams::Type::Save;
-			params._title				= "Save Component Preset";
-			params._description			= "Component Preset";
-			params._bEnableMultiselect	= false;
-			params._filterExtensionList = { ".preset.xml" };
-			params._initialDirectory	= EditorGlobalVariableCommands::getComponentPresetFolderPath();
-			FileUtil::openFileDialog( params, SW_DELEGATE_FUNCTION( FileDialogDelegate, onSavePresetDialogResult ) );
-		}
 
-		void paletteDistributeX()
-		{
-			EditorTransformCommands::distributeSelectedObjects( AlignAxis::X );
-		}
+			static void onSavePresetDialogResult( const vector<string>& listPaths )
+			{
+				if ( listPaths.empty() )
+					return;
+				Component* pComp = paletteSelectedComponent();
+				if ( pComp == nullptr )
+				{
+					paletteWarn( "Preset", "Select a component first" );
+					return;
+				}
+				const string fileName = FileUtil::removeExtension( FileUtil::getFileNamePart( listPaths[0] ) );
+				if ( fileName.empty() )
+					return;
+				EditorTransformCommands::saveComponentPreset( pComp, fileName );
+			}
 
-		void paletteDistributeY()
-		{
-			EditorTransformCommands::distributeSelectedObjects( AlignAxis::Y );
-		}
+			static void paletteLoadPreset()
+			{
+				if ( paletteSelectedComponent() == nullptr )
+				{
+					paletteWarn( "Preset", "Select a component first" );
+					return;
+				}
+				FileDialogParams params{};
+				params._type				= FileDialogParams::Type::Open;
+				params._title				= "Load Component Preset";
+				params._description			= "Component Preset";
+				params._bEnableMultiselect	= false;
+				params._filterExtensionList = { ".preset.xml", ".xml" };
+				params._initialDirectory	= EditorGlobalVariableCommands::getComponentPresetFolderPath();
+				FileUtil::openFileDialog( params, SW_DELEGATE_FUNCTION( FileDialogDelegate, onLoadPresetDialogResult ) );
+			}
 
-		void paletteDistributeZ()
-		{
-			EditorTransformCommands::distributeSelectedObjects( AlignAxis::Z );
-		}
+			static void paletteSavePreset()
+			{
+				if ( paletteSelectedComponent() == nullptr )
+				{
+					paletteWarn( "Preset", "Select a component first" );
+					return;
+				}
+				FileDialogParams params{};
+				params._type				= FileDialogParams::Type::Save;
+				params._title				= "Save Component Preset";
+				params._description			= "Component Preset";
+				params._bEnableMultiselect	= false;
+				params._filterExtensionList = { ".preset.xml" };
+				params._initialDirectory	= EditorGlobalVariableCommands::getComponentPresetFolderPath();
+				FileUtil::openFileDialog( params, SW_DELEGATE_FUNCTION( FileDialogDelegate, onSavePresetDialogResult ) );
+			}
 
-		void paletteAlignX()
-		{
-			EditorTransformCommands::alignSelectedObjects( AlignAxis::X, AlignType::Center );
-		}
+			static void paletteDistributeX()
+			{
+				EditorTransformCommands::distributeSelectedObjects( AlignAxis::X );
+			}
 
-		void paletteAlignY()
-		{
-			EditorTransformCommands::alignSelectedObjects( AlignAxis::Y, AlignType::Center );
-		}
+			static void paletteDistributeY()
+			{
+				EditorTransformCommands::distributeSelectedObjects( AlignAxis::Y );
+			}
 
-		void paletteAlignZ()
-		{
-			EditorTransformCommands::alignSelectedObjects( AlignAxis::Z, AlignType::Center );
-		}
+			static void paletteDistributeZ()
+			{
+				EditorTransformCommands::distributeSelectedObjects( AlignAxis::Z );
+			}
 
-		void paletteSnapToGround()
-		{
-			EditorTransformCommands::snapSelectedToGround();
-		}
+			static void paletteAlignX()
+			{
+				EditorTransformCommands::alignSelectedObjects( AlignAxis::X, AlignType::Center );
+			}
 
-		void paletteApplyPrefab()
-		{
-			EditorContext* pContext = EditorContext::get();
-			if ( pContext == nullptr )
-				return;
-			GameObject* pObj = pContext->getSelectionManager().getPrimaryObject().get();
-			string		path = pContext->getWorkspace().getFocusedAssetPath();
-			if ( path.empty() && pObj != nullptr )
-				path = pContext->getWorkspace().getGameObjectPrefabPath( pObj->getObjectId() );
-			EditorToolAssetCommands::applyPrefabOverridesToTemplate( pObj, path );
-		}
+			static void paletteAlignY()
+			{
+				EditorTransformCommands::alignSelectedObjects( AlignAxis::Y, AlignType::Center );
+			}
+
+			static void paletteAlignZ()
+			{
+				EditorTransformCommands::alignSelectedObjects( AlignAxis::Z, AlignType::Center );
+			}
+
+			static void paletteSnapToGround()
+			{
+				EditorTransformCommands::snapSelectedToGround();
+			}
+
+			static void paletteApplyPrefab()
+			{
+				EditorContext* pContext = EditorContext::get();
+				if ( pContext == nullptr )
+					return;
+				GameObject* pObj = pContext->getSelectionManager().getPrimaryObject().get();
+				string		path = pContext->getWorkspace().getFocusedAssetPath();
+				if ( path.empty() && pObj != nullptr )
+					path = pContext->getWorkspace().getGameObjectPrefabPath( pObj->getObjectId() );
+				EditorToolAssetCommands::applyPrefabOverridesToTemplate( pObj, path );
+			}
+		};
 	} // namespace
+} // namespace sw::editor
 
+namespace sw::editor
+{
 	// ------------------------------------------------------------------------------
 	// Constructor
 	// ------------------------------------------------------------------------------
@@ -252,46 +258,46 @@ namespace sw::editor
 	{
 		registerCommandInstance( "Play", "Play", "Start play-in-editor",
 								 SW_DELEGATE_LAMBDA( Delegate<void()>, []()
-		{ palettePlay(); } ) );
+		{ CommandPalettePopupInternal::palettePlay(); } ) );
 		registerCommandInstance( "Scene", "Save Scene", "Write the active scene, or prompt Save As if unsaved",
 								 SW_DELEGATE_LAMBDA( Delegate<void()>, []()
-		{ paletteSaveScene(); } ) );
+		{ CommandPalettePopupInternal::paletteSaveScene(); } ) );
 		registerCommandInstance( "Clipboard", "Paste Component Values", "Overwrite the selected component from the clipboard",
 								 SW_DELEGATE_LAMBDA( Delegate<void()>, []()
-		{ palettePasteValues(); } ) );
+		{ CommandPalettePopupInternal::palettePasteValues(); } ) );
 		registerCommandInstance( "Clipboard", "Paste Component As New", "Add the copied component to the selected object",
 								 SW_DELEGATE_LAMBDA( Delegate<void()>, []()
-		{ palettePasteAsNew(); } ) );
+		{ CommandPalettePopupInternal::palettePasteAsNew(); } ) );
 		registerCommandInstance( "Preset", "Load Component Preset", "Apply a .preset.xml to the selected component",
 								 SW_DELEGATE_LAMBDA( Delegate<void()>, []()
-		{ paletteLoadPreset(); } ) );
+		{ CommandPalettePopupInternal::paletteLoadPreset(); } ) );
 		registerCommandInstance( "Preset", "Save Component Preset", "Write the selected component to a preset file",
 								 SW_DELEGATE_LAMBDA( Delegate<void()>, []()
-		{ paletteSavePreset(); } ) );
+		{ CommandPalettePopupInternal::paletteSavePreset(); } ) );
 		registerCommandInstance( "Transform", "Align X", "Align selected objects on X",
 								 SW_DELEGATE_LAMBDA( Delegate<void()>, []()
-		{ paletteAlignX(); } ) );
+		{ CommandPalettePopupInternal::paletteAlignX(); } ) );
 		registerCommandInstance( "Transform", "Align Y", "Align selected objects on Y",
 								 SW_DELEGATE_LAMBDA( Delegate<void()>, []()
-		{ paletteAlignY(); } ) );
+		{ CommandPalettePopupInternal::paletteAlignY(); } ) );
 		registerCommandInstance( "Transform", "Align Z", "Align selected objects on Z",
 								 SW_DELEGATE_LAMBDA( Delegate<void()>, []()
-		{ paletteAlignZ(); } ) );
+		{ CommandPalettePopupInternal::paletteAlignZ(); } ) );
 		registerCommandInstance( "Transform", "Distribute X", "Evenly space selected objects on X",
 								 SW_DELEGATE_LAMBDA( Delegate<void()>, []()
-		{ paletteDistributeX(); } ) );
+		{ CommandPalettePopupInternal::paletteDistributeX(); } ) );
 		registerCommandInstance( "Transform", "Distribute Y", "Evenly space selected objects on Y",
 								 SW_DELEGATE_LAMBDA( Delegate<void()>, []()
-		{ paletteDistributeY(); } ) );
+		{ CommandPalettePopupInternal::paletteDistributeY(); } ) );
 		registerCommandInstance( "Transform", "Distribute Z", "Evenly space selected objects on Z",
 								 SW_DELEGATE_LAMBDA( Delegate<void()>, []()
-		{ paletteDistributeZ(); } ) );
+		{ CommandPalettePopupInternal::paletteDistributeZ(); } ) );
 		registerCommandInstance( "Transform", "Snap to Ground", "Snap selected objects onto the ground plane",
 								 SW_DELEGATE_LAMBDA( Delegate<void()>, []()
-		{ paletteSnapToGround(); } ) );
+		{ CommandPalettePopupInternal::paletteSnapToGround(); } ) );
 		registerCommandInstance( "Prefab", "Apply Overrides", "Write instance overrides back to the prefab template",
 								 SW_DELEGATE_LAMBDA( Delegate<void()>, []()
-		{ paletteApplyPrefab(); } ) );
+		{ CommandPalettePopupInternal::paletteApplyPrefab(); } ) );
 	}
 
 	// ------------------------------------------------------------------------------
@@ -418,8 +424,8 @@ namespace sw::editor
 			const string_view				   pattern{ _arrSearchBuffer };
 			for ( const CommandPaletteEntry& entry : _listAllCommand )
 			{
-				if ( fuzzyMatch( entry._label, pattern ) || fuzzyMatch( entry._category, pattern ) ||
-					 fuzzyMatch( entry._detail, pattern ) )
+				if ( CommandPalettePopupInternal::fuzzyMatch( entry._label, pattern ) || CommandPalettePopupInternal::fuzzyMatch( entry._category, pattern ) ||
+					 CommandPalettePopupInternal::fuzzyMatch( entry._detail, pattern ) )
 				{
 					listFiltered.push_back( &entry );
 				}

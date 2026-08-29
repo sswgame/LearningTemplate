@@ -19,142 +19,148 @@ namespace sw::editor
 {
 	namespace
 	{
-		bool drawTransformInspector( SceneComponent* pSceneComp )
+		struct InspectorComponentManagerInternal
 		{
-			if ( pSceneComp == nullptr )
-				return false;
-
-			ImGui::SeparatorText( "Transform" );
-
-			int32& op = EditorContext::get()->getWorkspace().getGizmoOperationRef();
-			ImGui::RadioButton( "Translate", &op, 0 );
-			ImGui::SameLine();
-			ImGui::RadioButton( "Rotate", &op, 1 );
-			ImGui::SameLine();
-			ImGui::RadioButton( "Scale", &op, 2 );
-			bool& bLocal = EditorContext::get()->getWorkspace().getGizmoLocalSpaceRef();
-			ImGui::SameLine();
-			ImGui::Checkbox( "Local", &bLocal );
-
-			float3 pos = pSceneComp->getLocalPosition();
-			float3 rot = pSceneComp->getLocalRotation();
-			float3 scl = pSceneComp->getLocalScale();
-
-			if ( editor::drawVec3Control( "Position", pos, 0.0f, 80.0f, 0.1f ) )
-				pSceneComp->setLocalPosition( pos );
-			if ( editor::drawVec3Control( "Rotation", rot, 0.0f, 80.0f, 0.5f ) )
-				pSceneComp->setLocalRotation( rot );
-			if ( editor::drawVec3Control( "Scale", scl, 1.0f, 80.0f, 0.01f ) )
-				pSceneComp->setLocalScale( scl );
-
-			const float3 world = pSceneComp->getWorldPosition();
-			ImGui::TextDisabled( "World: %.2f, %.2f, %.2f",
-								 static_cast<float64>( world._x ),
-								 static_cast<float64>( world._y ),
-								 static_cast<float64>( world._z ) );
-			return true;
-		}
-
-		/** @brief SceneComponent 전용 트랜스폼 및 기즈모 컨트롤 */
-		class SceneComponentInspector : public IInspectorComponent
-		{
-		public:
-			bool drawBody( Component* pComponent, IRHIDevice* /*pRhiDevice*/ ) override
+			static bool drawTransformInspector( SceneComponent* pSceneComp )
 			{
-				return drawTransformInspector( static_cast<SceneComponent*>( pComponent ) );
-			}
-		};
-
-		/** @brief CameraComponent 전용 트랜스폼 및 카메라 투영 컨트롤 */
-		class CameraComponentInspector : public IInspectorComponent
-		{
-		public:
-			bool drawBody( Component* pComponent, IRHIDevice* /*pRhiDevice*/ ) override
-			{
-				auto* pCameraComp = static_cast<CameraComponent*>( pComponent );
-				if ( drawTransformInspector( pCameraComp ) == false )
+				if ( pSceneComp == nullptr )
 					return false;
 
-				ImGui::SeparatorText( "Camera" );
-				float32 fovDeg = MathUtil::toDegree( pCameraComp->getFieldOfViewY() );
-				if ( ImGui::SliderFloat( "FOV (Deg)", &fovDeg, 10.0f, 140.0f, "%.1f" ) )
-					pCameraComp->setFieldOfViewY( MathUtil::toRadian( fovDeg ) );
+				ImGui::SeparatorText( "Transform" );
 
-				float32 nearZ = pCameraComp->getNearPlane();
-				if ( ImGui::DragFloat( "Near Plane", &nearZ, 0.01f, 0.001f, 10.0f ) )
-					pCameraComp->setNearPlane( nearZ );
+				int32& op = EditorContext::get()->getWorkspace().getGizmoOperationRef();
+				ImGui::RadioButton( "Translate", &op, 0 );
+				ImGui::SameLine();
+				ImGui::RadioButton( "Rotate", &op, 1 );
+				ImGui::SameLine();
+				ImGui::RadioButton( "Scale", &op, 2 );
+				bool& bLocal = EditorContext::get()->getWorkspace().getGizmoLocalSpaceRef();
+				ImGui::SameLine();
+				ImGui::Checkbox( "Local", &bLocal );
 
-				float32 farZ = pCameraComp->getFarPlane();
-				if ( ImGui::DragFloat( "Far Plane", &farZ, 1.0f, 1.0f, 10000.0f ) )
-					pCameraComp->setFarPlane( farZ );
+				float3 pos = pSceneComp->getLocalPosition();
+				float3 rot = pSceneComp->getLocalRotation();
+				float3 scl = pSceneComp->getLocalScale();
 
-				bool bOrtho = pCameraComp->isOrthographic();
-				if ( ImGui::Checkbox( "Orthographic", &bOrtho ) )
-					pCameraComp->setOrthographic( bOrtho );
+				if ( editor::drawVec3Control( "Position", pos, 0.0f, 80.0f, 0.1f ) )
+					pSceneComp->setLocalPosition( pos );
+				if ( editor::drawVec3Control( "Rotation", rot, 0.0f, 80.0f, 0.5f ) )
+					pSceneComp->setLocalRotation( rot );
+				if ( editor::drawVec3Control( "Scale", scl, 1.0f, 80.0f, 0.01f ) )
+					pSceneComp->setLocalScale( scl );
 
-				if ( bOrtho )
-				{
-					float32 orthoH = pCameraComp->getOrthoHeight();
-					if ( ImGui::DragFloat( "Ortho Height", &orthoH, 0.1f, 0.1f, 100.0f ) )
-						pCameraComp->setOrthoHeight( orthoH );
-				}
+				const float3 world = pSceneComp->getWorldPosition();
+				ImGui::TextDisabled( "World: %.2f, %.2f, %.2f",
+									 static_cast<float64>( world._x ),
+									 static_cast<float64>( world._y ),
+									 static_cast<float64>( world._z ) );
 				return true;
 			}
-		};
 
-		/** @brief TagComponent 전용 칩 스타일 */
-		class TagComponentInspector : public IInspectorComponent
-		{
-		public:
-			void drawFooter( Component* pComponent, IRHIDevice* /*pRhiDevice*/ ) override
+			/** @brief SceneComponent 전용 트랜스폼 및 기즈모 컨트롤 */
+			class SceneComponentInspector : public IInspectorComponent
 			{
-				auto* pTagComp = static_cast<TagComponent*>( pComponent );
-				if ( pTagComp == nullptr )
-					return;
-
-				const vector<TagID>& listTags = pTagComp->getTags().getTags();
-				for ( const TagID& tag : listTags )
+			public:
+				bool drawBody( Component* pComponent, IRHIDevice* /*pRhiDevice*/ ) override
 				{
-					if ( tag._pString != nullptr && tag._pString[0] != '\0' )
+					return drawTransformInspector( static_cast<SceneComponent*>( pComponent ) );
+				}
+			};
+
+			/** @brief CameraComponent 전용 트랜스폼 및 카메라 투영 컨트롤 */
+			class CameraComponentInspector : public IInspectorComponent
+			{
+			public:
+				bool drawBody( Component* pComponent, IRHIDevice* /*pRhiDevice*/ ) override
+				{
+					auto* pCameraComp = static_cast<CameraComponent*>( pComponent );
+					if ( drawTransformInspector( pCameraComp ) == false )
+						return false;
+
+					ImGui::SeparatorText( "Camera" );
+					float32 fovDeg = MathUtil::toDegree( pCameraComp->getFieldOfViewY() );
+					if ( ImGui::SliderFloat( "FOV (Deg)", &fovDeg, 10.0f, 140.0f, "%.1f" ) )
+						pCameraComp->setFieldOfViewY( MathUtil::toRadian( fovDeg ) );
+
+					float32 nearZ = pCameraComp->getNearPlane();
+					if ( ImGui::DragFloat( "Near Plane", &nearZ, 0.01f, 0.001f, 10.0f ) )
+						pCameraComp->setNearPlane( nearZ );
+
+					float32 farZ = pCameraComp->getFarPlane();
+					if ( ImGui::DragFloat( "Far Plane", &farZ, 1.0f, 1.0f, 10000.0f ) )
+						pCameraComp->setFarPlane( farZ );
+
+					bool bOrtho = pCameraComp->isOrthographic();
+					if ( ImGui::Checkbox( "Orthographic", &bOrtho ) )
+						pCameraComp->setOrthographic( bOrtho );
+
+					if ( bOrtho )
 					{
-						ImGui::SameLine();
-						editor::drawChip( tag._pString, editor::style::kOk );
+						float32 orthoH = pCameraComp->getOrthoHeight();
+						if ( ImGui::DragFloat( "Ortho Height", &orthoH, 0.1f, 0.1f, 100.0f ) )
+							pCameraComp->setOrthoHeight( orthoH );
+					}
+					return true;
+				}
+			};
+
+			/** @brief TagComponent 전용 칩 스타일 */
+			class TagComponentInspector : public IInspectorComponent
+			{
+			public:
+				void drawFooter( Component* pComponent, IRHIDevice* /*pRhiDevice*/ ) override
+				{
+					auto* pTagComp = static_cast<TagComponent*>( pComponent );
+					if ( pTagComp == nullptr )
+						return;
+
+					const vector<TagID>& listTags = pTagComp->getTags().getTags();
+					for ( const TagID& tag : listTags )
+					{
+						if ( tag._pString != nullptr && tag._pString[0] != '\0' )
+						{
+							ImGui::SameLine();
+							editor::drawChip( tag._pString, editor::style::kOk );
+						}
 					}
 				}
-			}
-		};
+			};
 
-		/** @brief SpriteComponent 전용 프리뷰 및 애셋 슬롯 */
-		class SpriteComponentInspector : public IInspectorComponent
-		{
-		public:
-			void drawFooter( Component* /*pComponent*/, IRHIDevice* /*pRhiDevice*/ ) override
+			/** @brief SpriteComponent 전용 프리뷰 및 애셋 슬롯 */
+			class SpriteComponentInspector : public IInspectorComponent
 			{
-				if ( ImGui::SmallButton( "Open Sprite Clip Tool" ) )
+			public:
+				void drawFooter( Component* /*pComponent*/, IRHIDevice* /*pRhiDevice*/ ) override
 				{
-					EditorContext::get()->getWorkspace().requestOpenPanel( "Sprite Clip" );
+					if ( ImGui::SmallButton( "Open Sprite Clip Tool" ) )
+					{
+						EditorContext::get()->getWorkspace().requestOpenPanel( "Sprite Clip" );
+					}
 				}
-			}
-		};
+			};
 
-		/** @brief MeshComponent 전용 트랜스폼 + 가시성 */
-		class MeshComponentInspector : public IInspectorComponent
-		{
-		public:
-			bool drawBody( Component* pComponent, IRHIDevice* /*pRhiDevice*/ ) override
+			/** @brief MeshComponent 전용 트랜스폼 + 가시성 */
+			class MeshComponentInspector : public IInspectorComponent
 			{
-				MeshComponent* pMeshComp = static_cast<MeshComponent*>( pComponent );
-				if ( drawTransformInspector( pMeshComp ) == false )
-					return false;
+			public:
+				bool drawBody( Component* pComponent, IRHIDevice* /*pRhiDevice*/ ) override
+				{
+					MeshComponent* pMeshComp = static_cast<MeshComponent*>( pComponent );
+					if ( drawTransformInspector( pMeshComp ) == false )
+						return false;
 
-				bool bVisible = pMeshComp->isVisible();
-				if ( ImGui::Checkbox( "Visible", &bVisible ) )
-					pMeshComp->setVisible( bVisible );
-				return true;
-			}
+					bool bVisible = pMeshComp->isVisible();
+					if ( ImGui::Checkbox( "Visible", &bVisible ) )
+						pMeshComp->setVisible( bVisible );
+					return true;
+				}
+			};
 		};
 	} // namespace
+} // namespace sw::editor
 
+namespace sw::editor
+{
 	void InspectorComponentManager::registerType( string_view typeName, unique_ptr<IInspectorComponent> pInspector )
 	{
 		_mapInspector[string{ typeName }] = std::move( pInspector );
@@ -170,10 +176,10 @@ namespace sw::editor
 
 	void InspectorComponentManager::registerDefaults()
 	{
-		registerComponent<SceneComponent, SceneComponentInspector>();
-		registerComponent<CameraComponent, CameraComponentInspector>();
-		registerComponent<TagComponent, TagComponentInspector>();
-		registerComponent<SpriteComponent, SpriteComponentInspector>();
-		registerComponent<MeshComponent, MeshComponentInspector>();
+		registerComponent<SceneComponent, InspectorComponentManagerInternal::SceneComponentInspector>();
+		registerComponent<CameraComponent, InspectorComponentManagerInternal::CameraComponentInspector>();
+		registerComponent<TagComponent, InspectorComponentManagerInternal::TagComponentInspector>();
+		registerComponent<SpriteComponent, InspectorComponentManagerInternal::SpriteComponentInspector>();
+		registerComponent<MeshComponent, InspectorComponentManagerInternal::MeshComponentInspector>();
 	}
 } // namespace sw::editor

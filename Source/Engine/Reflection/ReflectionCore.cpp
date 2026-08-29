@@ -12,6 +12,37 @@
 
 namespace sw
 {
+	namespace
+	{
+		struct ReflectionCoreInternal
+		{
+			/**
+			 * @brief canonical FQN 의 네임스페이스를 alias 앞에 붙입니다.
+			 * @details REFLECT(Alias=Foo) 는 리프 이름만 적으므로, registerClass 가 FQN·리프를
+			 *          모두 등록하는 것과 맞추려면 별칭도 FQN 형태를 함께 등록해야 합니다.
+			 * @return 네임스페이스가 없거나 alias 가 이미 한정되어 있으면 빈 문자열.
+			 */
+			static string qualifyAliasWithNamespace( const utf8* pAliasName, const utf8* pCanonicalName )
+			{
+				const string_view alias{ pAliasName };
+				const string_view canonical{ pCanonicalName };
+				if ( alias.find( constants::reflection::kScopeDelimiter ) != string_view::npos )
+					return {};
+
+				const size_t lastScope = canonical.rfind( constants::reflection::kScopeDelimiter );
+				if ( lastScope == string_view::npos )
+					return {};
+
+				string qualified{ canonical.substr( 0, lastScope + 2 ) };
+				qualified.append( alias.data(), alias.size() );
+				return qualified;
+			}
+		};
+	} // namespace
+} // namespace sw
+
+namespace sw
+{
 	TypeMetadata::TypeMetadata() noexcept
 #if !defined( SW_SHIPPING )
 		: _category{ constants::reflection::kDefaultCategory }
@@ -433,31 +464,6 @@ namespace sw
 			_mapNameToEnum.insert_or_assign( stored._name, stored );
 	}
 
-	namespace
-	{
-		/**
-		 * @brief canonical FQN 의 네임스페이스를 alias 앞에 붙입니다.
-		 * @details REFLECT(Alias=Foo) 는 리프 이름만 적으므로, registerClass 가 FQN·리프를
-		 *          모두 등록하는 것과 맞추려면 별칭도 FQN 형태를 함께 등록해야 합니다.
-		 * @return 네임스페이스가 없거나 alias 가 이미 한정되어 있으면 빈 문자열.
-		 */
-		string qualifyAliasWithNamespace( const utf8* pAliasName, const utf8* pCanonicalName )
-		{
-			const string_view alias{ pAliasName };
-			const string_view canonical{ pCanonicalName };
-			if ( alias.find( constants::reflection::kScopeDelimiter ) != string_view::npos )
-				return {};
-
-			const size_t lastScope = canonical.rfind( constants::reflection::kScopeDelimiter );
-			if ( lastScope == string_view::npos )
-				return {};
-
-			string qualified{ canonical.substr( 0, lastScope + 2 ) };
-			qualified.append( alias.data(), alias.size() );
-			return qualified;
-		}
-	} // namespace
-
 	void TypeRegistry::registerPendingTypes( string_view moduleName, TypeRegistrar* pClassHead, EnumRegistrar* pEnumHead )
 	{
 		_activeModuleName = hashed_string( moduleName.data(), static_cast<uint32>( moduleName.size() ) );
@@ -530,7 +536,7 @@ namespace sw
 		_mapNameToClassType.insert_or_assign( aliasHash, stored );
 		_mapHashToCanonicalName.insert_or_assign( aliasHash.getHash(), canonicalName );
 
-		const string qualified = qualifyAliasWithNamespace( pAliasName, pCanonicalName );
+		const string qualified = ReflectionCoreInternal::qualifyAliasWithNamespace( pAliasName, pCanonicalName );
 		if ( qualified.empty() == false )
 		{
 			const hashed_string qualHash{ qualified.c_str() };
@@ -554,7 +560,7 @@ namespace sw
 		const EnumInfo stored = it->second;
 		_mapNameToEnum.insert_or_assign( hashed_string( pAliasName ), stored );
 
-		const string qualified = qualifyAliasWithNamespace( pAliasName, pCanonicalName );
+		const string qualified = ReflectionCoreInternal::qualifyAliasWithNamespace( pAliasName, pCanonicalName );
 		if ( qualified.empty() == false )
 			_mapNameToEnum.insert_or_assign( hashed_string( qualified.c_str() ), stored );
 	}

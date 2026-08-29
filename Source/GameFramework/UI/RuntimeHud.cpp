@@ -8,46 +8,52 @@
 
 namespace sw
 {
-	SW_LOG_CALLER( "RuntimeHud" );
-
 	namespace
 	{
-		static hashed_string keyPlayerHp()
+		struct RuntimeHudInternal
 		{
-			static const hashed_string k{ "hud.player_hp" };
-			return k;
-		}
+			static hashed_string keyPlayerHp()
+			{
+				static const hashed_string k{ "hud.player_hp" };
+				return k;
+			}
 
-		static hashed_string keyFoeHp()
-		{
-			static const hashed_string k{ "hud.foe_hp" };
-			return k;
-		}
+			static hashed_string keyFoeHp()
+			{
+				static const hashed_string k{ "hud.foe_hp" };
+				return k;
+			}
 
-		static hashed_string keyDash()
-		{
-			static const hashed_string k{ "hud.dash" };
-			return k;
-		}
+			static hashed_string keyDash()
+			{
+				static const hashed_string k{ "hud.dash" };
+				return k;
+			}
 
-		static hashed_string keyFade()
-		{
-			static const hashed_string k{ "hud.fade" };
-			return k;
-		}
+			static hashed_string keyFade()
+			{
+				static const hashed_string k{ "hud.fade" };
+				return k;
+			}
 
-		static hashed_string keyAction()
-		{
-			static const hashed_string k{ "hud.action_mode" };
-			return k;
-		}
+			static hashed_string keyAction()
+			{
+				static const hashed_string k{ "hud.action_mode" };
+				return k;
+			}
 
-		static hashed_string keyDialogue()
-		{
-			static const hashed_string k{ "hud.dialogue" };
-			return k;
-		}
+			static hashed_string keyDialogue()
+			{
+				static const hashed_string k{ "hud.dialogue" };
+				return k;
+			}
+		};
 	} // namespace
+} // namespace sw
+
+namespace sw
+{
+	SW_LOG_CALLER( "RuntimeHud" );
 
 	RuntimeHud::RuntimeHud()
 		: _bVisible{ 1 }
@@ -97,15 +103,15 @@ namespace sw
 	void RuntimeHud::publishSnapshot( bool actionMode ) const
 	{
 		game::getService<DebugOverlayState>()->_bVisible = _bVisible != 0;
-		game::getService<DebugOverlayState>()->setFloat( keyPlayerHp(), _playerHp._fill );
-		game::getService<DebugOverlayState>()->setFloat( keyFoeHp(), _foeHp._fill );
-		game::getService<DebugOverlayState>()->setFloat( keyDash(), _pp._fill );
-		game::getService<DebugOverlayState>()->setFloat( keyFade(), _fadeAlpha );
-		game::getService<DebugOverlayState>()->setFloat( keyAction(), actionMode ? 1.0f : 0.0f );
+		game::getService<DebugOverlayState>()->setFloat( RuntimeHudInternal::keyPlayerHp(), _playerHp._fill );
+		game::getService<DebugOverlayState>()->setFloat( RuntimeHudInternal::keyFoeHp(), _foeHp._fill );
+		game::getService<DebugOverlayState>()->setFloat( RuntimeHudInternal::keyDash(), _pp._fill );
+		game::getService<DebugOverlayState>()->setFloat( RuntimeHudInternal::keyFade(), _fadeAlpha );
+		game::getService<DebugOverlayState>()->setFloat( RuntimeHudInternal::keyAction(), actionMode ? 1.0f : 0.0f );
 		if ( _dialogue.empty() )
-			game::getService<DebugOverlayState>()->setString( keyDialogue(), {} );
+			game::getService<DebugOverlayState>()->setString( RuntimeHudInternal::keyDialogue(), {} );
 		else
-			game::getService<DebugOverlayState>()->setString( keyDialogue(), _dialogue );
+			game::getService<DebugOverlayState>()->setString( RuntimeHudInternal::keyDialogue(), _dialogue );
 	}
 
 	void RuntimeHud::logSnapshot() const

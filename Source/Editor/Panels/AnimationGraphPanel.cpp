@@ -16,33 +16,38 @@ namespace ed = ax::NodeEditor;
 
 namespace sw::editor
 {
-	SW_LOG_CALLER( "AnimationGraph" );
-
 	namespace
 	{
-		int32 pinIn( int32 nodeId )
+		struct AnimationGraphPanelInternal
 		{
-			return nodeId * 10 + 1;
-		}
-		int32 pinOut( int32 nodeId )
-		{
-			return nodeId * 10 + 2;
-		}
+			static int32 pinIn( int32 nodeId )
+			{
+				return nodeId * 10 + 1;
+			}
+			static int32 pinOut( int32 nodeId )
+			{
+				return nodeId * 10 + 2;
+			}
 
-		ed::NodeId toNodeId( int32 id )
-		{
-			return ed::NodeId( static_cast<uintptr_t>( id ) );
-		}
-		ed::PinId toPinId( int32 id )
-		{
-			return ed::PinId( static_cast<uintptr_t>( id ) );
-		}
-		ed::LinkId toLinkId( int32 id )
-		{
-			return ed::LinkId( static_cast<uintptr_t>( id ) );
-		}
-
+			static ed::NodeId toNodeId( int32 id )
+			{
+				return ed::NodeId( static_cast<uintptr_t>( id ) );
+			}
+			static ed::PinId toPinId( int32 id )
+			{
+				return ed::PinId( static_cast<uintptr_t>( id ) );
+			}
+			static ed::LinkId toLinkId( int32 id )
+			{
+				return ed::LinkId( static_cast<uintptr_t>( id ) );
+			}
+		};
 	} // namespace
+} // namespace sw::editor
+
+namespace sw::editor
+{
+	SW_LOG_CALLER( "AnimationGraph" );
 
 	AnimationGraphPanel::AnimationGraphPanel()
 		: IEditorPanel{ false }
@@ -119,14 +124,14 @@ namespace sw::editor
 
 		for ( GraphNode& node : _listNode )
 		{
-			const ed::NodeId nodeId = toNodeId( node._id );
+			const ed::NodeId nodeId = AnimationGraphPanelInternal::toNodeId( node._id );
 			ed::BeginNode( nodeId );
 			ImGui::TextUnformatted( node._name.c_str() );
-			ed::BeginPin( toPinId( pinIn( node._id ) ), ed::PinKind::Input );
+			ed::BeginPin( AnimationGraphPanelInternal::toPinId( AnimationGraphPanelInternal::pinIn( node._id ) ), ed::PinKind::Input );
 			ImGui::TextUnformatted( "-> In" );
 			ed::EndPin();
 			ImGui::SameLine();
-			ed::BeginPin( toPinId( pinOut( node._id ) ), ed::PinKind::Output );
+			ed::BeginPin( AnimationGraphPanelInternal::toPinId( AnimationGraphPanelInternal::pinOut( node._id ) ), ed::PinKind::Output );
 			ImGui::TextUnformatted( "Out ->" );
 			ed::EndPin();
 			ed::EndNode();
@@ -137,7 +142,7 @@ namespace sw::editor
 
 		for ( const GraphLink& link : _listLink )
 		{
-			ed::Link( toLinkId( link._id ), toPinId( pinOut( link._fromNode ) ), toPinId( pinIn( link._toNode ) ) );
+			ed::Link( AnimationGraphPanelInternal::toLinkId( link._id ), AnimationGraphPanelInternal::toPinId( AnimationGraphPanelInternal::pinOut( link._fromNode ) ), AnimationGraphPanelInternal::toPinId( AnimationGraphPanelInternal::pinIn( link._toNode ) ) );
 		}
 
 		if ( ed::BeginCreate() )
@@ -209,7 +214,7 @@ namespace sw::editor
 		// 저장용 위치를 캐시합니다.
 		for ( GraphNode& node : _listNode )
 		{
-			const ImVec2 pos = ed::GetNodePosition( toNodeId( node._id ) );
+			const ImVec2 pos = ed::GetNodePosition( AnimationGraphPanelInternal::toNodeId( node._id ) );
 			node._x			 = pos.x;
 			node._y			 = pos.y;
 		}
@@ -254,7 +259,7 @@ namespace sw::editor
 			GraphNode saved = node;
 			if ( _nodeGraph.bind() )
 			{
-				const ImVec2 pos = ed::GetNodePosition( toNodeId( node._id ) );
+				const ImVec2 pos = ed::GetNodePosition( AnimationGraphPanelInternal::toNodeId( node._id ) );
 				saved._x		 = pos.x;
 				saved._y		 = pos.y;
 				_nodeGraph.unbind();

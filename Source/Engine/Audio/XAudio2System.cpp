@@ -15,73 +15,69 @@
 
 namespace sw
 {
-	SW_LOG_CALLER( "XAudio2System" );
-
-#if defined( SW_PLATFORM_WINDOWS )
 	namespace
 	{
-		/**
-		 * @brief 디코딩된 PCM 오디오 포맷 및 바이트 버퍼를 보관하는 구조체
-		 */
-		struct PcmClip
+		struct XAudio2SystemInternal
 		{
-			WAVEFORMATEX  _format{};
-			vector<uint8> _listData;
-		};
-
-		struct VoiceBuffer
-		{
-			IXAudio2SourceVoice* _pVoice{ nullptr };
-			shared_ptr<PcmClip>	 _pClip{ nullptr };
-		};
-
-		/**
-		 * @brief 호출 스레드에서 COM 및 Media Foundation이 초기화되어 있음을 보장하는 RAII 헬퍼
-		 */
-		struct ScopedThreadComAndMf
-		{
-			uint8 _bCoInit	: 1;
-			uint8 _bMfInit	: 1;
-			uint8 _reserved : 6;
-
-			ScopedThreadComAndMf()
-				: _bCoInit{ 0 }
-				, _bMfInit{ 0 }
-				, _reserved{ 0 }
+			/**
+			 * @brief 디코딩된 PCM 오디오 포맷 및 바이트 버퍼를 보관하는 구조체
+			 */
+			struct PcmClip
 			{
-				const HRESULT hrCo = CoInitializeEx( nullptr, COINIT_MULTITHREADED );
-				if ( SUCCEEDED( hrCo ) )
-				{
-					_bCoInit = 1;
-				}
+				WAVEFORMATEX  _format{};
+				vector<uint8> _listData;
+			};
 
-				const HRESULT hrMf = MFStartup( MF_VERSION );
-				if ( SUCCEEDED( hrMf ) )
-				{
-					_bMfInit = 1;
-				}
-			}
-
-			~ScopedThreadComAndMf()
+			struct VoiceBuffer
 			{
-				if ( _bMfInit != 0 )
-				{
-					MFShutdown();
-				}
-				if ( _bCoInit != 0 )
-				{
-					CoUninitialize();
-				}
-			}
-		};
+				IXAudio2SourceVoice* _pVoice{ nullptr };
+				shared_ptr<PcmClip>	 _pClip{ nullptr };
+			};
 
-		namespace
-		{
+			/**
+			 * @brief 호출 스레드에서 COM 및 Media Foundation이 초기화되어 있음을 보장하는 RAII 헬퍼
+			 */
+			struct ScopedThreadComAndMf
+			{
+				uint8 _bCoInit	: 1;
+				uint8 _bMfInit	: 1;
+				uint8 _reserved : 6;
+
+				ScopedThreadComAndMf()
+					: _bCoInit{ 0 }
+					, _bMfInit{ 0 }
+					, _reserved{ 0 }
+				{
+					const HRESULT hrCo = CoInitializeEx( nullptr, COINIT_MULTITHREADED );
+					if ( SUCCEEDED( hrCo ) )
+					{
+						_bCoInit = 1;
+					}
+
+					const HRESULT hrMf = MFStartup( MF_VERSION );
+					if ( SUCCEEDED( hrMf ) )
+					{
+						_bMfInit = 1;
+					}
+				}
+
+				~ScopedThreadComAndMf()
+				{
+					if ( _bMfInit != 0 )
+					{
+						MFShutdown();
+					}
+					if ( _bCoInit != 0 )
+					{
+						CoUninitialize();
+					}
+				}
+			};
 
 			/**
 			 * @brief Little-Endian 16비트 정수를 비정렬 안전하게 읽습니다.
 			 */
-			inline uint16 readUint16LE( const uint8* pBytes )
+			static inline uint16 readUint16LE( const uint8* pBytes )
 			{
 				return static_cast<uint16>( pBytes[0] ) |
 					   static_cast<uint16>( static_cast<uint16>( pBytes[1] ) << 8 );
@@ -90,7 +86,7 @@ namespace sw
 			/**
 			 * @brief Little-Endian 32비트 정수를 비정렬 안전하게 읽습니다.
 			 */
-			inline uint32 readUint32LE( const uint8* pBytes )
+			static inline uint32 readUint32LE( const uint8* pBytes )
 			{
 				return static_cast<uint32>( pBytes[0] ) |
 					   ( static_cast<uint32>( pBytes[1] ) << 8 ) |
@@ -101,7 +97,7 @@ namespace sw
 			/**
 			 * @brief 메모리 버퍼로부터 표준 RIFF WAV 데이터를 파싱하여 PCM 데이터를 추출합니다.
 			 */
-			bool parseWavPcmMemory( const uint8* pBytes, size_t byteCount, PcmClip& out )
+			static bool parseWavPcmMemory( const uint8* pBytes, size_t byteCount, PcmClip& out )
 			{
 				if ( pBytes == nullptr || byteCount < 44 )
 					return false;
@@ -157,7 +153,7 @@ namespace sw
 			/**
 			 * @brief 표준 RIFF WAV 파일의 fmt 및 data 청크를 파싱하여 PCM 데이터를 추출합니다.
 			 */
-			bool loadWavPcm( string_view absPath, PcmClip& out )
+			static bool loadWavPcm( string_view absPath, PcmClip& out )
 			{
 				vector<uint8> listFile;
 				if ( FileUtil::readFile( absPath, listFile ) == false )
@@ -169,7 +165,7 @@ namespace sw
 			/**
 			 * @brief Windows Media Foundation을 사용하여 MP3/압축 오디오를 PCM 바이트 스트림으로 디코딩합니다.
 			 */
-			bool loadViaMediaFoundation( string_view absPath, PcmClip& out )
+			static bool loadViaMediaFoundation( string_view absPath, PcmClip& out )
 			{
 				ScopedThreadComAndMf threadComScope;
 
@@ -240,30 +236,36 @@ namespace sw
 				return true;
 			}
 
-			bool loadClip( string_view absPath, PcmClip& out )
+			static bool loadClip( string_view absPath, PcmClip& out )
 			{
 				if ( FileUtil::endsWithIgnoreCase( absPath, ".wav" ) )
 					return loadWavPcm( absPath, out );
 				return loadViaMediaFoundation( absPath, out );
 			}
-
-		} // namespace
+		};
 	} // namespace
+} // namespace sw
+
+namespace sw
+{
+	SW_LOG_CALLER( "XAudio2System" );
+
+#if defined( SW_PLATFORM_WINDOWS )
 #endif
 
 	struct XAudio2SystemImpl
 	{
 #if defined( SW_PLATFORM_WINDOWS )
-		IXAudio2*								   _pXAudio{ nullptr };
-		IXAudio2MasteringVoice*					   _pMasterVoice{ nullptr };
-		vector<VoiceBuffer>						   _listActiveVoices;
-		IXAudio2SourceVoice*					   _pMusicVoice{ nullptr };
-		shared_ptr<PcmClip>						   _pMusicClip{ nullptr };
-		unordered_map<string, shared_ptr<PcmClip>> _mapClipCache;
-		mutex									   _clipCacheMutex;
-		mutex									   _voiceMutex;
+		IXAudio2*														  _pXAudio{ nullptr };
+		IXAudio2MasteringVoice*											  _pMasterVoice{ nullptr };
+		vector<XAudio2SystemInternal::VoiceBuffer>						  _listActiveVoices;
+		IXAudio2SourceVoice*											  _pMusicVoice{ nullptr };
+		shared_ptr<XAudio2SystemInternal::PcmClip>						  _pMusicClip{ nullptr };
+		unordered_map<string, shared_ptr<XAudio2SystemInternal::PcmClip>> _mapClipCache;
+		mutex															  _clipCacheMutex;
+		mutex															  _voiceMutex;
 
-		shared_ptr<PcmClip> getOrLoadClip( string_view absPath )
+		shared_ptr<XAudio2SystemInternal::PcmClip> getOrLoadClip( string_view absPath )
 		{
 			const string key( absPath );
 			{
@@ -273,11 +275,11 @@ namespace sw
 					return it->second;
 			}
 
-			PcmClip clip{};
-			if ( loadClip( absPath, clip ) == false )
+			XAudio2SystemInternal::PcmClip clip{};
+			if ( XAudio2SystemInternal::loadClip( absPath, clip ) == false )
 				return nullptr;
 
-			auto pShared = std::make_shared<PcmClip>( std::move( clip ) );
+			auto pShared = std::make_shared<XAudio2SystemInternal::PcmClip>( std::move( clip ) );
 			{
 				std::scoped_lock<mutex> lock{ _clipCacheMutex };
 				_mapClipCache[key] = pShared;
@@ -377,7 +379,7 @@ namespace sw
 			return;
 		stopMusic();
 #if defined( SW_PLATFORM_WINDOWS )
-		for ( VoiceBuffer& voiceBuffer : _impl->_listActiveVoices )
+		for ( XAudio2SystemInternal::VoiceBuffer& voiceBuffer : _impl->_listActiveVoices )
 		{
 			if ( voiceBuffer._pVoice != nullptr )
 			{
@@ -426,10 +428,10 @@ namespace sw
 	#if defined( SW_PLATFORM_WINDOWS )
 		std::scoped_lock<mutex> lock{ _impl->_voiceMutex };
 	#endif
-		vector<VoiceBuffer>& voices = _impl->_listActiveVoices;
+		vector<XAudio2SystemInternal::VoiceBuffer>& voices = _impl->_listActiveVoices;
 		for ( size_t voiceIndex = 0; voiceIndex < voices.size(); )
 		{
-			VoiceBuffer& v = voices[voiceIndex];
+			XAudio2SystemInternal::VoiceBuffer& v = voices[voiceIndex];
 			if ( v._pVoice == nullptr )
 			{
 				v = std::move( voices.back() );
@@ -569,7 +571,7 @@ namespace sw
 #endif
 #if defined( SW_PLATFORM_WINDOWS )
 		const float32 effectiveVol = _impl->_bMuted != 0 ? 0.0f : _impl->_sfxVolume;
-		for ( VoiceBuffer& vb : _impl->_listActiveVoices )
+		for ( XAudio2SystemInternal::VoiceBuffer& vb : _impl->_listActiveVoices )
 		{
 			if ( vb._pVoice != nullptr )
 				vb._pVoice->SetVolume( effectiveVol );
@@ -613,7 +615,7 @@ namespace sw
 		const bool	 loop		   = args.get<bool>( 1 );
 		const string requestedPath = args.get<string>( 2 );
 
-		shared_ptr<PcmClip> pClip = _impl->getOrLoadClip( abs );
+		shared_ptr<XAudio2SystemInternal::PcmClip> pClip = _impl->getOrLoadClip( abs );
 		if ( pClip == nullptr || pClip->_listData.empty() )
 		{
 			SW_LOG_WARNING( "Failed to decode: %#", abs );
@@ -646,10 +648,10 @@ namespace sw
 		else
 		{
 			buf.Flags = XAUDIO2_END_OF_STREAM;
-			_impl->_listActiveVoices.push_back( VoiceBuffer{} );
-			VoiceBuffer& slot = _impl->_listActiveVoices.back();
-			slot._pClip		  = pClip;
-			slot._pVoice	  = pVoice;
+			_impl->_listActiveVoices.push_back( XAudio2SystemInternal::VoiceBuffer{} );
+			XAudio2SystemInternal::VoiceBuffer& slot = _impl->_listActiveVoices.back();
+			slot._pClip								 = pClip;
+			slot._pVoice							 = pVoice;
 			pVoice->SetVolume( _impl->_sfxVolume );
 		}
 

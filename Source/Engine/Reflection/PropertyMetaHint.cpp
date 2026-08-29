@@ -8,17 +8,23 @@ namespace sw
 {
 	namespace
 	{
-		static bool isColorProperty( string_view typeName, const string& category )
+		struct PropertyMetaHintInternal
 		{
-			for ( const utf8* colorType : constants::propertyHint::kArrColorTypes )
+			static bool isColorProperty( string_view typeName, const string& category )
 			{
-				if ( typeName == colorType || category == colorType )
-					return true;
+				for ( const utf8* colorType : constants::propertyHint::kArrColorTypes )
+				{
+					if ( typeName == colorType || category == colorType )
+						return true;
+				}
+				return false;
 			}
-			return false;
-		}
+		};
 	} // namespace
+} // namespace sw
 
+namespace sw
+{
 	PropertyWidgetType PropertyMetaHint::deduceWidgetType( const PropertyMetadata& meta, string_view typeName )
 	{
 		if ( meta._bHasRange == SW_TRUE )
@@ -27,7 +33,7 @@ namespace sw
 		if ( meta._bAssetPath == SW_TRUE || meta._assetType.empty() == false )
 			return PropertyWidgetType::AssetPicker;
 
-		if ( isColorProperty( typeName, meta._category ) )
+		if ( PropertyMetaHintInternal::isColorProperty( typeName, meta._category ) )
 			return PropertyWidgetType::ColorPicker;
 
 		if ( typeName == constants::propertyHint::kBool ||

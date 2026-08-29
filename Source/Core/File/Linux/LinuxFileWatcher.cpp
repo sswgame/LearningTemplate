@@ -15,31 +15,35 @@
 
 namespace sw
 {
-	SW_LOG_CALLER( "LinuxFileWatcher" );
-
 	namespace
 	{
-
-		constexpr uint32 kInotifyEventBufferSize = 64 * 1024;
-		constexpr uint32 kInotifyMask			 = IN_CREATE | IN_DELETE | IN_MODIFY | IN_MOVED_FROM | IN_MOVED_TO | IN_CLOSE_WRITE | IN_DELETE_SELF | IN_MOVE_SELF;
-
-		string makeRelativePath( string_view root, string_view absolutePath )
+		struct LinuxFileWatcherInternal
 		{
-			const string rootNorm = FileUtil::normalizeSeparators( root );
-			const string absNorm  = FileUtil::normalizeSeparators( absolutePath );
-			if ( absNorm.compare( 0, rootNorm.size(), rootNorm ) != 0 )
-				return FileUtil::getFileNamePart( absNorm );
+			static constexpr uint32 kInotifyEventBufferSize = 64 * 1024;
+			static constexpr uint32 kInotifyMask			= IN_CREATE | IN_DELETE | IN_MODIFY | IN_MOVED_FROM | IN_MOVED_TO | IN_CLOSE_WRITE | IN_DELETE_SELF | IN_MOVE_SELF;
 
-			if ( absNorm.size() == rootNorm.size() )
-				return {};
+			static string makeRelativePath( string_view root, string_view absolutePath )
+			{
+				const string rootNorm = FileUtil::normalizeSeparators( root );
+				const string absNorm  = FileUtil::normalizeSeparators( absolutePath );
+				if ( absNorm.compare( 0, rootNorm.size(), rootNorm ) != 0 )
+					return FileUtil::getFileNamePart( absNorm );
 
-			size_t offset = rootNorm.size();
-			if ( absNorm[offset] == '/' )
-				++offset;
-			return absNorm.substr( offset );
-		}
+				if ( absNorm.size() == rootNorm.size() )
+					return {};
 
+				size_t offset = rootNorm.size();
+				if ( absNorm[offset] == '/' )
+					++offset;
+				return absNorm.substr( offset );
+			}
+		};
 	} // namespace
+} // namespace sw
+
+namespace sw
+{
+	SW_LOG_CALLER( "LinuxFileWatcher" );
 
 	LinuxFileWatcher::LinuxFileWatcher() = default;
 
@@ -141,7 +145,7 @@ namespace sw
 
 	void LinuxFileWatcher::workerThreadMain()
 	{
-		alignas( inotify_event ) uint8 buffer[kInotifyEventBufferSize];
+		alignas( inotify_event ) uint8 buffer[LinuxFileWatcherInternal::kInotifyEventBufferSize];
 
 		while ( _bIsWatching )
 		{
@@ -270,7 +274,7 @@ namespace sw
 	bool LinuxFileWatcher::addWatchDirectory( string_view directoryPath )
 	{
 		const string normalized = FileUtil::normalizeSeparators( directoryPath );
-		const int32	 wd			= inotify_add_watch( _inotifyFd, normalized.c_str(), kInotifyMask );
+		const int32	 wd			= inotify_add_watch( _inotifyFd, normalized.c_str(), LinuxFileWatcherInternal::kInotifyMask );
 		if ( wd < 0 )
 		{
 			SW_LOG_ERROR( "inotify_add_watch failed (%#): %#", normalized.c_str(), strerror( errno ) );
@@ -295,7 +299,7 @@ namespace sw
 	void LinuxFileWatcher::pushEvent( FileWatcherAction action, string_view absoluteDirectory, string_view name )
 	{
 		const string absoluteFile = FileUtil::normalizeSeparators( absoluteDirectory + "/" + name );
-		const string relative	  = makeRelativePath( _directoryPath, absoluteFile );
+		const string relative	  = LinuxFileWatcherInternal::makeRelativePath( _directoryPath, absoluteFile );
 
 		FileChangeEvent eventObj{};
 		eventObj._action	= action;

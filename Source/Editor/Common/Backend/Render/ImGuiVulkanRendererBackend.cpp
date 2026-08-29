@@ -21,52 +21,58 @@
 
 namespace sw::editor
 {
-	SW_LOG_CALLER( "ImGuiVulkan" );
-
 	namespace
 	{
-		void ( *s_OrigVkCreateWindow )( ImGuiViewport* )		  = nullptr;
-		void ( *s_OrigVkSetWindowSize )( ImGuiViewport*, ImVec2 ) = nullptr;
-
-		void GuardedVkCreateWindow( ImGuiViewport* pViewport )
+		struct ImGuiVulkanRendererBackendInternal
 		{
-			if ( pViewport == nullptr || s_OrigVkCreateWindow == nullptr )
-				return;
+			inline static void ( *s_OrigVkCreateWindow )( ImGuiViewport* )			= nullptr;
+			inline static void ( *s_OrigVkSetWindowSize )( ImGuiViewport*, ImVec2 ) = nullptr;
 
-			if ( pViewport->Size.x < 1.0f )
-				pViewport->Size.x = 1.0f;
-			if ( pViewport->Size.y < 1.0f )
-				pViewport->Size.y = 1.0f;
-
-			s_OrigVkCreateWindow( pViewport );
-		}
-
-		void GuardedVkSetWindowSize( ImGuiViewport* pViewport, ImVec2 size )
-		{
-			if ( pViewport == nullptr || s_OrigVkSetWindowSize == nullptr )
-				return;
-
-			if ( size.x < 1.0f || size.y < 1.0f )
-				return;
-
-			s_OrigVkSetWindowSize( pViewport, size );
-		}
-
-		void installVulkanViewportGuards()
-		{
-			ImGuiPlatformIO& platformIO = ImGui::GetPlatformIO();
-			if ( platformIO.Renderer_CreateWindow != nullptr && platformIO.Renderer_CreateWindow != &GuardedVkCreateWindow )
+			static void GuardedVkCreateWindow( ImGuiViewport* pViewport )
 			{
-				s_OrigVkCreateWindow			 = platformIO.Renderer_CreateWindow;
-				platformIO.Renderer_CreateWindow = &GuardedVkCreateWindow;
+				if ( pViewport == nullptr || s_OrigVkCreateWindow == nullptr )
+					return;
+
+				if ( pViewport->Size.x < 1.0f )
+					pViewport->Size.x = 1.0f;
+				if ( pViewport->Size.y < 1.0f )
+					pViewport->Size.y = 1.0f;
+
+				s_OrigVkCreateWindow( pViewport );
 			}
-			if ( platformIO.Renderer_SetWindowSize != nullptr && platformIO.Renderer_SetWindowSize != &GuardedVkSetWindowSize )
+
+			static void GuardedVkSetWindowSize( ImGuiViewport* pViewport, ImVec2 size )
 			{
-				s_OrigVkSetWindowSize			  = platformIO.Renderer_SetWindowSize;
-				platformIO.Renderer_SetWindowSize = &GuardedVkSetWindowSize;
+				if ( pViewport == nullptr || s_OrigVkSetWindowSize == nullptr )
+					return;
+
+				if ( size.x < 1.0f || size.y < 1.0f )
+					return;
+
+				s_OrigVkSetWindowSize( pViewport, size );
 			}
-		}
+
+			static void installVulkanViewportGuards()
+			{
+				ImGuiPlatformIO& platformIO = ImGui::GetPlatformIO();
+				if ( platformIO.Renderer_CreateWindow != nullptr && platformIO.Renderer_CreateWindow != &GuardedVkCreateWindow )
+				{
+					s_OrigVkCreateWindow			 = platformIO.Renderer_CreateWindow;
+					platformIO.Renderer_CreateWindow = &GuardedVkCreateWindow;
+				}
+				if ( platformIO.Renderer_SetWindowSize != nullptr && platformIO.Renderer_SetWindowSize != &GuardedVkSetWindowSize )
+				{
+					s_OrigVkSetWindowSize			  = platformIO.Renderer_SetWindowSize;
+					platformIO.Renderer_SetWindowSize = &GuardedVkSetWindowSize;
+				}
+			}
+		};
 	} // namespace
+} // namespace sw::editor
+
+namespace sw::editor
+{
+	SW_LOG_CALLER( "ImGuiVulkan" );
 
 	bool ImGuiVulkanRendererBackend::initialize( class IRHIDevice* pRhiDevice )
 	{
@@ -198,7 +204,7 @@ namespace sw::editor
 		if ( ImGui_ImplVulkan_Init( &init_info ) == false )
 			return false;
 
-		installVulkanViewportGuards();
+		ImGuiVulkanRendererBackendInternal::installVulkanViewportGuards();
 		return true;
 	}
 

@@ -18,247 +18,253 @@ namespace sw
 {
 	namespace
 	{
-		static ParserClangConfig s_sharedConfig;
-		static std::once_flag	 s_configOnce;
-		static bool				 s_configOk = false;
-
-		static string findConfigFile( const string& relPath )
+		struct ParserContextInternal
 		{
-			string cur = FileUtil::getCurrentPath();
-			while ( true )
+			inline static ParserClangConfig s_sharedConfig{};
+			inline static std::once_flag	s_configOnce{};
+			inline static bool				s_configOk{ false };
+
+			static string findConfigFile( const string& relPath )
 			{
-				const string candidate = FileUtil::joinPath( cur, relPath );
-				if ( FileUtil::fileExists( candidate ) )
-					return candidate;
+				string cur = FileUtil::getCurrentPath();
+				while ( true )
+				{
+					const string candidate = FileUtil::joinPath( cur, relPath );
+					if ( FileUtil::fileExists( candidate ) )
+						return candidate;
 
-				const string parent = FileUtil::getDirectoryPart( cur );
-				if ( parent.empty() || parent == cur )
-					break;
-				cur = parent;
+					const string parent = FileUtil::getDirectoryPart( cur );
+					if ( parent.empty() || parent == cur )
+						break;
+					cur = parent;
+				}
+				return {};
 			}
-			return {};
-		}
 
-		// ------------------------------------------------------------------------------
-		// nlohmann/json 기반 헬퍼 — parseDocument / applyXxx / mergeConfigSection
-		// ------------------------------------------------------------------------------
+			// ------------------------------------------------------------------------------
+			// nlohmann/json 기반 헬퍼 — parseDocument / applyXxx / mergeConfigSection
+			// ------------------------------------------------------------------------------
 
-		/** @brief JSON 문자열을 파싱합니다. 실패 시 null 객체를 반환합니다. */
-		static nlohmann::json parseDocument( const string& text )
-		{
-			if ( text.empty() )
-				return nlohmann::json{};
-			try
+			/** @brief JSON 문자열을 파싱합니다. 실패 시 null 객체를 반환합니다. */
+			static nlohmann::json parseDocument( const string& text )
 			{
-				return nlohmann::json::parse( text );
+				if ( text.empty() )
+					return nlohmann::json{};
+				try
+				{
+					return nlohmann::json::parse( text );
+				}
+				catch ( const nlohmann::json::parse_error& )
+				{
+					return nlohmann::json{};
+				}
 			}
-			catch ( const nlohmann::json::parse_error& )
+
+			static string rewriteLegacyClangArg( const string& arg )
 			{
-				return nlohmann::json{};
+				if ( arg == "-fno-spellchecking" )
+					return "-fno-spell-checking";
+				return arg;
 			}
-		}
 
-		static string rewriteLegacyClangArg( const string& arg )
-		{
-			if ( arg == "-fno-spellchecking" )
-				return "-fno-spell-checking";
-			return arg;
-		}
-
-		static void appendUnique( vector<string>& dstList, const vector<string>& srcList )
-		{
-			for ( const string& item : srcList )
+			static void appendUnique( vector<string>& dstList, const vector<string>& srcList )
 			{
-				const string normalized = rewriteLegacyClangArg( item );
-				if ( std::find( dstList.begin(), dstList.end(), normalized ) == dstList.end() )
-					dstList.push_back( normalized );
+				for ( const string& item : srcList )
+				{
+					const string normalized = rewriteLegacyClangArg( item );
+					if ( std::find( dstList.begin(), dstList.end(), normalized ) == dstList.end() )
+						dstList.push_back( normalized );
+				}
 			}
-		}
 
-		/** @brief JSON 객체에서 key의 문자열 값을 dst에 덮어씁니다 (키 없으면 그대로). */
-		static void assignIfPresent( string& dst, const nlohmann::json& obj, const utf8* key )
-		{
-			const auto it = obj.find( key );
-			if ( it != obj.end() && it->is_string() )
-				dst = it->get_ref<const std::string&>().c_str();
-		}
+			/** @brief JSON 객체에서 key의 문자열 값을 dst에 덮어씁니다 (키 없으면 그대로). */
+			static void assignIfPresent( string& dst, const nlohmann::json& obj, const utf8* key )
+			{
+				const auto it = obj.find( key );
+				if ( it != obj.end() && it->is_string() )
+					dst = it->get_ref<const std::string&>().c_str();
+			}
 
-		/** @brief JSON 객체에서 key의 uint 값을 읽습니다 (키 없으면 defaultValue). */
-		static uint32 getUintOrDefault( const nlohmann::json& obj, const utf8* key, uint32 defaultValue )
-		{
-			const auto it = obj.find( key );
-			if ( it != obj.end() && it->is_number_unsigned() )
-				return it->get<uint32>();
-			return defaultValue;
-		}
+			/** @brief JSON 객체에서 key의 uint 값을 읽습니다 (키 없으면 defaultValue). */
+			static uint32 getUintOrDefault( const nlohmann::json& obj, const utf8* key, uint32 defaultValue )
+			{
+				const auto it = obj.find( key );
+				if ( it != obj.end() && it->is_number_unsigned() )
+					return it->get<uint32>();
+				return defaultValue;
+			}
 
-		/** @brief JSON 배열 항목들을 string 벡터로 변환합니다. */
-		static vector<string> collectStringArray( const nlohmann::json& arr )
-		{
-			vector<string> resultList;
-			if ( arr.is_array() == false )
+			/** @brief JSON 배열 항목들을 string 벡터로 변환합니다. */
+			static vector<string> collectStringArray( const nlohmann::json& arr )
+			{
+				vector<string> resultList;
+				if ( arr.is_array() == false )
+					return resultList;
+				for ( const auto& item : arr )
+				{
+					if ( item.is_string() )
+						resultList.push_back( item.get_ref<const std::string&>().c_str() );
+				}
 				return resultList;
-			for ( const auto& item : arr )
-			{
-				if ( item.is_string() )
-					resultList.push_back( item.get_ref<const std::string&>().c_str() );
 			}
-			return resultList;
-		}
 
-		struct StringBinding
-		{
-			string ParserClangConfig::* _member;
-			const utf8*					_key;
-		};
+			struct StringBinding
+			{
+				string ParserClangConfig::* _member;
+				const utf8*					_key;
+			};
 
-		static void applyBindings( ParserClangConfig& config, const nlohmann::json& obj,
-								   std::initializer_list<StringBinding> listBinding )
-		{
-			for ( const auto& [member, key] : listBinding )
-				assignIfPresent( config.*member, obj, key );
-		}
+			static void applyBindings( ParserClangConfig& config, const nlohmann::json& obj,
+									   std::initializer_list<StringBinding> listBinding )
+			{
+				for ( const auto& [member, key] : listBinding )
+					assignIfPresent( config.*member, obj, key );
+			}
 
-		static void applyPathsSection( ParserClangConfig& config, const nlohmann::json& obj )
-		{
-			applyBindings( config, obj, {
-											{	  &ParserClangConfig::_llvmClangRel,	 jsonKeyConstants::kLlvmClangRel},
-											{ &ParserClangConfig::_clangIncludeRel,	jsonKeyConstants::kClangIncludeRel},
-											{  &ParserClangConfig::_msvcIncludeRel,   jsonKeyConstants::kMsvcIncludeRel},
-											{&ParserClangConfig::_winSdkIncludeRel, jsonKeyConstants::kWinSdkIncludeRel},
-											{	  &ParserClangConfig::_winSdkUcrtRel,	  jsonKeyConstants::kWinSdkUcrtRel},
-			} );
-		}
+			static void applyPathsSection( ParserClangConfig& config, const nlohmann::json& obj )
+			{
+				applyBindings( config, obj, {
+												{	  &ParserClangConfig::_llvmClangRel,	 jsonKeyConstants::kLlvmClangRel},
+												{ &ParserClangConfig::_clangIncludeRel,	jsonKeyConstants::kClangIncludeRel},
+												{  &ParserClangConfig::_msvcIncludeRel,   jsonKeyConstants::kMsvcIncludeRel},
+												{&ParserClangConfig::_winSdkIncludeRel, jsonKeyConstants::kWinSdkIncludeRel},
+												{	  &ParserClangConfig::_winSdkUcrtRel,	  jsonKeyConstants::kWinSdkUcrtRel},
+				} );
+			}
 
-		static void applyClangFlagsSection( ParserClangConfig& config, const nlohmann::json& obj )
-		{
-			applyBindings( config, obj, {
-											{		  &ParserClangConfig::_flagIncludePrefix,	  jsonKeyConstants::kFlagIncludePrefix},
-											{				  &ParserClangConfig::_flagIsystem,			jsonKeyConstants::kFlagIsystem},
-											{			  &ParserClangConfig::_flagResourceDir,		jsonKeyConstants::kFlagResourceDir},
-											{		  &ParserClangConfig::_flagForceInclude,		 jsonKeyConstants::kFlagForceInclude},
-											{	  &ParserClangConfig::_flagFmsCompatibility,	 jsonKeyConstants::kFlagFmsCompatibility},
-											{		  &ParserClangConfig::_flagFmsExtensions,	  jsonKeyConstants::kFlagFmsExtensions},
-											{&ParserClangConfig::_flagFmsCompatVersionPrefix, jsonKeyConstants::kFlagFmsCompatVerPrefix},
-			} );
-		}
+			static void applyClangFlagsSection( ParserClangConfig& config, const nlohmann::json& obj )
+			{
+				applyBindings( config, obj, {
+												{		  &ParserClangConfig::_flagIncludePrefix,	  jsonKeyConstants::kFlagIncludePrefix},
+												{				  &ParserClangConfig::_flagIsystem,			jsonKeyConstants::kFlagIsystem},
+												{			  &ParserClangConfig::_flagResourceDir,		jsonKeyConstants::kFlagResourceDir},
+												{		  &ParserClangConfig::_flagForceInclude,		 jsonKeyConstants::kFlagForceInclude},
+												{	  &ParserClangConfig::_flagFmsCompatibility,	 jsonKeyConstants::kFlagFmsCompatibility},
+												{		  &ParserClangConfig::_flagFmsExtensions,	  jsonKeyConstants::kFlagFmsExtensions},
+												{&ParserClangConfig::_flagFmsCompatVersionPrefix, jsonKeyConstants::kFlagFmsCompatVerPrefix},
+				} );
+			}
 
-		static void applyEmitSection( ParserClangConfig& config, const nlohmann::json& obj )
-		{
-			applyBindings( config, obj, {
-											{		  &ParserClangConfig::_emitCppExtension,		 jsonKeyConstants::kEmitCppExtension},
-											{	  &ParserClangConfig::_emitHeaderExtension,		jsonKeyConstants::kEmitHeaderExtension},
-											{  &ParserClangConfig::_emitTemplateExtension,	  jsonKeyConstants::kEmitTemplateExtension},
-											{&ParserClangConfig::_emitAutoGeneratedBanner, jsonKeyConstants::kEmitAutoGeneratedBanner},
-											{  &ParserClangConfig::_emitPlaceholderMarker,	  jsonKeyConstants::kEmitPlaceholderMarker},
-											{&ParserClangConfig::_emitRegenByParserMarker,			jsonKeyConstants::kEmitRegenMarker},
-											{	  &ParserClangConfig::_emitGeneratedNsOpen,		jsonKeyConstants::kEmitGeneratedNsOpen},
-											{	  &ParserClangConfig::_emitGeneratedNsClose,	 jsonKeyConstants::kEmitGeneratedNsClose},
-											{	  &ParserClangConfig::_emitFlagOpsHeader,		  jsonKeyConstants::kEmitFlagOpsHeader},
-											{	  &ParserClangConfig::_emitFlagOpsMarker,		  jsonKeyConstants::kEmitFlagOpsMarker},
-											{ &ParserClangConfig::_emitRegisterTypeMarker,  jsonKeyConstants::kEmitRegisterTypeMarker},
-											{ &ParserClangConfig::_emitRegisterEnumMarker,  jsonKeyConstants::kEmitRegisterEnumMarker},
-			} );
-		}
+			static void applyEmitSection( ParserClangConfig& config, const nlohmann::json& obj )
+			{
+				applyBindings( config, obj, {
+												{		  &ParserClangConfig::_emitCppExtension,		 jsonKeyConstants::kEmitCppExtension},
+												{	  &ParserClangConfig::_emitHeaderExtension,		jsonKeyConstants::kEmitHeaderExtension},
+												{  &ParserClangConfig::_emitTemplateExtension,	  jsonKeyConstants::kEmitTemplateExtension},
+												{&ParserClangConfig::_emitAutoGeneratedBanner, jsonKeyConstants::kEmitAutoGeneratedBanner},
+												{  &ParserClangConfig::_emitPlaceholderMarker,	  jsonKeyConstants::kEmitPlaceholderMarker},
+												{&ParserClangConfig::_emitRegenByParserMarker,			jsonKeyConstants::kEmitRegenMarker},
+												{	  &ParserClangConfig::_emitGeneratedNsOpen,		jsonKeyConstants::kEmitGeneratedNsOpen},
+												{	  &ParserClangConfig::_emitGeneratedNsClose,	 jsonKeyConstants::kEmitGeneratedNsClose},
+												{	  &ParserClangConfig::_emitFlagOpsHeader,		  jsonKeyConstants::kEmitFlagOpsHeader},
+												{	  &ParserClangConfig::_emitFlagOpsMarker,		  jsonKeyConstants::kEmitFlagOpsMarker},
+												{ &ParserClangConfig::_emitRegisterTypeMarker,  jsonKeyConstants::kEmitRegisterTypeMarker},
+												{ &ParserClangConfig::_emitRegisterEnumMarker,  jsonKeyConstants::kEmitRegisterEnumMarker},
+				} );
+			}
 
-		static void applyParsingSection( ParserClangConfig& config, const nlohmann::json& obj )
-		{
-			const auto itComponents = obj.find( jsonKeyConstants::kParsingComponentBaseTypes );
-			if ( itComponents != obj.end() && itComponents->is_array() )
-				config._listComponentBaseType = collectStringArray( *itComponents );
+			static void applyParsingSection( ParserClangConfig& config, const nlohmann::json& obj )
+			{
+				const auto itComponents = obj.find( jsonKeyConstants::kParsingComponentBaseTypes );
+				if ( itComponents != obj.end() && itComponents->is_array() )
+					config._listComponentBaseType = collectStringArray( *itComponents );
 
-			const auto itPrefixes = obj.find( jsonKeyConstants::kParsingTypeStripPrefixes );
-			if ( itPrefixes != obj.end() && itPrefixes->is_array() )
-				config._listTypeStripPrefix = collectStringArray( *itPrefixes );
-		}
+				const auto itPrefixes = obj.find( jsonKeyConstants::kParsingTypeStripPrefixes );
+				if ( itPrefixes != obj.end() && itPrefixes->is_array() )
+					config._listTypeStripPrefix = collectStringArray( *itPrefixes );
+			}
 
-		static void applyTuningSection( ParserClangConfig& config, const nlohmann::json& obj )
-		{
-			config._sourceLookbackBytes = getUintOrDefault( obj, jsonKeyConstants::kSourceLookbackBytes, config._sourceLookbackBytes );
-		}
+			static void applyTuningSection( ParserClangConfig& config, const nlohmann::json& obj )
+			{
+				config._sourceLookbackBytes = getUintOrDefault( obj, jsonKeyConstants::kSourceLookbackBytes, config._sourceLookbackBytes );
+			}
 
-		using ApplyFn = void ( * )( ParserClangConfig&, const nlohmann::json& );
+			using ApplyFn = void ( * )( ParserClangConfig&, const nlohmann::json& );
 
-		static void mergeConfigSection( ParserClangConfig& config, const nlohmann::json& defaultsDoc,
-										const nlohmann::json& localDoc, const utf8* sectionKey, ApplyFn applyFn )
-		{
-			const auto itDefaults = defaultsDoc.find( sectionKey );
-			if ( itDefaults != defaultsDoc.end() && itDefaults->is_object() )
-				applyFn( config, *itDefaults );
-			const auto itLocal = localDoc.find( sectionKey );
-			if ( itLocal != localDoc.end() && itLocal->is_object() )
-				applyFn( config, *itLocal );
-		}
+			static void mergeConfigSection( ParserClangConfig& config, const nlohmann::json& defaultsDoc,
+											const nlohmann::json& localDoc, const utf8* sectionKey, ApplyFn applyFn )
+			{
+				const auto itDefaults = defaultsDoc.find( sectionKey );
+				if ( itDefaults != defaultsDoc.end() && itDefaults->is_object() )
+					applyFn( config, *itDefaults );
+				const auto itLocal = localDoc.find( sectionKey );
+				if ( itLocal != localDoc.end() && itLocal->is_object() )
+					applyFn( config, *itLocal );
+			}
 
-		static vector<string> loadArgsFromDocument( const nlohmann::json& doc, const utf8* platformKey )
-		{
-			vector<string> outList;
-			const auto	   itArgs = doc.find( jsonKeyConstants::kParserArgsSection );
-			if ( itArgs == doc.end() || itArgs->is_object() == false )
-				return outList;
+			static vector<string> loadArgsFromDocument( const nlohmann::json& doc, const utf8* platformKey )
+			{
+				vector<string> outList;
+				const auto	   itArgs = doc.find( jsonKeyConstants::kParserArgsSection );
+				if ( itArgs == doc.end() || itArgs->is_object() == false )
+					return outList;
 
-			const nlohmann::json& argsSection = *itArgs;
-			appendUnique( outList, collectStringArray( argsSection.value( jsonKeyConstants::kArgsDefault, nlohmann::json{} ) ) );
+				const nlohmann::json& argsSection = *itArgs;
+				appendUnique( outList, collectStringArray( argsSection.value( jsonKeyConstants::kArgsDefault, nlohmann::json{} ) ) );
 
 #if defined( SW_PLATFORM_WINDOWS ) || defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
-			{
-				const auto			  itPlatform  = argsSection.find( jsonKeyConstants::kArgsPlatform );
-				const nlohmann::json& platformSrc = ( itPlatform != argsSection.end() && itPlatform->is_object() )
-													  ? *itPlatform
-													  : argsSection;
-				appendUnique( outList, collectStringArray( platformSrc.value( platformKey, nlohmann::json{} ) ) );
-			}
+				{
+					const auto			  itPlatform  = argsSection.find( jsonKeyConstants::kArgsPlatform );
+					const nlohmann::json& platformSrc = ( itPlatform != argsSection.end() && itPlatform->is_object() )
+														  ? *itPlatform
+														  : argsSection;
+					appendUnique( outList, collectStringArray( platformSrc.value( platformKey, nlohmann::json{} ) ) );
+				}
 #else
-			(void)platformKey;
+				(void)platformKey;
 #endif
 
-			appendUnique( outList, collectStringArray( argsSection.value( jsonKeyConstants::kArgsExtra, nlohmann::json{} ) ) );
-			return outList;
-		}
+				appendUnique( outList, collectStringArray( argsSection.value( jsonKeyConstants::kArgsExtra, nlohmann::json{} ) ) );
+				return outList;
+			}
 
-		static vector<string> loadForceIncludeFromDocument( const nlohmann::json& doc )
-		{
-			const auto itArgs = doc.find( jsonKeyConstants::kParserArgsSection );
-			if ( itArgs == doc.end() || itArgs->is_object() == false )
-				return {};
-			return collectStringArray( itArgs->value( jsonKeyConstants::kArgsForceInclude, nlohmann::json{} ) );
-		}
+			static vector<string> loadForceIncludeFromDocument( const nlohmann::json& doc )
+			{
+				const auto itArgs = doc.find( jsonKeyConstants::kParserArgsSection );
+				if ( itArgs == doc.end() || itArgs->is_object() == false )
+					return {};
+				return collectStringArray( itArgs->value( jsonKeyConstants::kArgsForceInclude, nlohmann::json{} ) );
+			}
 
 #if !defined( SW_PLATFORM_WINDOWS )
-		static bool isMsvcCompatArg( const string& arg, const string& fmsCompatibility, const string& fmsExtensions,
-									 const string& fmsCompatVersionPrefix )
-		{
-			if ( arg == fmsCompatibility )
-				return true;
-			if ( arg == fmsExtensions )
-				return true;
-			if ( arg.rfind( fmsCompatVersionPrefix, 0 ) == 0 )
-				return true;
-			return false;
-		}
-
-		static void eraseMsvcCompatArgs( vector<string>& argList, const ParserClangConfig& config )
-		{
-			size_t writeIndex = 0;
-			for ( size_t readIndex = 0; readIndex < argList.size(); ++readIndex )
+			static bool isMsvcCompatArg( const string& arg, const string& fmsCompatibility, const string& fmsExtensions,
+										 const string& fmsCompatVersionPrefix )
 			{
-				if ( isMsvcCompatArg( argList[readIndex], config._flagFmsCompatibility, config._flagFmsExtensions,
-									  config._flagFmsCompatVersionPrefix ) )
-					continue;
-				if ( writeIndex != readIndex )
-					argList[writeIndex] = argList[readIndex];
-				++writeIndex;
+				if ( arg == fmsCompatibility )
+					return true;
+				if ( arg == fmsExtensions )
+					return true;
+				if ( arg.rfind( fmsCompatVersionPrefix, 0 ) == 0 )
+					return true;
+				return false;
 			}
-			argList.resize( writeIndex );
-		}
+
+			static void eraseMsvcCompatArgs( vector<string>& argList, const ParserClangConfig& config )
+			{
+				size_t writeIndex = 0;
+				for ( size_t readIndex = 0; readIndex < argList.size(); ++readIndex )
+				{
+					if ( isMsvcCompatArg( argList[readIndex], config._flagFmsCompatibility, config._flagFmsExtensions,
+										  config._flagFmsCompatVersionPrefix ) )
+						continue;
+					if ( writeIndex != readIndex )
+						argList[writeIndex] = argList[readIndex];
+					++writeIndex;
+				}
+				argList.resize( writeIndex );
+			}
 #endif
 
-		static void loadSharedConfigOnce()
-		{
-			s_configOk = s_sharedConfig.load();
-		}
+			static void loadSharedConfigOnce()
+			{
+				s_configOk = s_sharedConfig.load();
+			}
+		};
 	} // namespace
+} // namespace sw
 
+namespace sw
+{
 	bool ParserClangConfig::load()
 	{
 		_listBaseArgs.clear();
@@ -282,54 +288,54 @@ namespace sw
 
 		string		 defaultsText;
 		string		 localText;
-		const string defaultsPath = findConfigFile( pathConstants::kParserConfigDefaults );
-		const string localPath	  = findConfigFile( pathConstants::kParserConfig );
+		const string defaultsPath = ParserContextInternal::findConfigFile( pathConstants::kParserConfigDefaults );
+		const string localPath	  = ParserContextInternal::findConfigFile( pathConstants::kParserConfig );
 		if ( defaultsPath.empty() == false )
 			FileUtil::readTextFile( defaultsPath, defaultsText );
 		if ( localPath.empty() == false )
 			FileUtil::readTextFile( localPath, localText );
 
-		const nlohmann::json defaultsDoc = parseDocument( defaultsText );
-		const nlohmann::json localDoc	 = parseDocument( localText );
+		const nlohmann::json defaultsDoc = ParserContextInternal::parseDocument( defaultsText );
+		const nlohmann::json localDoc	 = ParserContextInternal::parseDocument( localText );
 
 		BLOCK( "Load Base Arguments from Config" )
 		{
-			vector<string> mergedList = loadArgsFromDocument( defaultsDoc, kPlatformParserKey );
-			appendUnique( mergedList, loadArgsFromDocument( localDoc, kPlatformParserKey ) );
+			vector<string> mergedList = ParserContextInternal::loadArgsFromDocument( defaultsDoc, kPlatformParserKey );
+			ParserContextInternal::appendUnique( mergedList, ParserContextInternal::loadArgsFromDocument( localDoc, kPlatformParserKey ) );
 			_listBaseArgs = std::move( mergedList );
 
 #if !defined( SW_PLATFORM_WINDOWS )
-			eraseMsvcCompatArgs( _listBaseArgs, *this );
+			ParserContextInternal::eraseMsvcCompatArgs( _listBaseArgs, *this );
 #endif
 		}
 
 		BLOCK( "Load paths / clang_flags / emit / parsing / tuning" )
 		{
-			mergeConfigSection( *this, defaultsDoc, localDoc, jsonKeyConstants::kPaths, applyPathsSection );
-			mergeConfigSection( *this, defaultsDoc, localDoc, jsonKeyConstants::kClangFlags, applyClangFlagsSection );
-			mergeConfigSection( *this, defaultsDoc, localDoc, jsonKeyConstants::kEmit, applyEmitSection );
-			mergeConfigSection( *this, defaultsDoc, localDoc, jsonKeyConstants::kParsing, applyParsingSection );
-			mergeConfigSection( *this, defaultsDoc, localDoc, jsonKeyConstants::kTuning, applyTuningSection );
+			ParserContextInternal::mergeConfigSection( *this, defaultsDoc, localDoc, jsonKeyConstants::kPaths, ParserContextInternal::applyPathsSection );
+			ParserContextInternal::mergeConfigSection( *this, defaultsDoc, localDoc, jsonKeyConstants::kClangFlags, ParserContextInternal::applyClangFlagsSection );
+			ParserContextInternal::mergeConfigSection( *this, defaultsDoc, localDoc, jsonKeyConstants::kEmit, ParserContextInternal::applyEmitSection );
+			ParserContextInternal::mergeConfigSection( *this, defaultsDoc, localDoc, jsonKeyConstants::kParsing, ParserContextInternal::applyParsingSection );
+			ParserContextInternal::mergeConfigSection( *this, defaultsDoc, localDoc, jsonKeyConstants::kTuning, ParserContextInternal::applyTuningSection );
 		}
 
 		BLOCK( "Load force_include" )
 		{
-			appendUnique( _listForceInclude, loadForceIncludeFromDocument( defaultsDoc ) );
-			appendUnique( _listForceInclude, loadForceIncludeFromDocument( localDoc ) );
+			ParserContextInternal::appendUnique( _listForceInclude, ParserContextInternal::loadForceIncludeFromDocument( defaultsDoc ) );
+			ParserContextInternal::appendUnique( _listForceInclude, ParserContextInternal::loadForceIncludeFromDocument( localDoc ) );
 		}
 
 		BLOCK( "Load Engine Config" )
 		{
-			const string engineCfgPath = findConfigFile( pathConstants::kToolchainConfig );
+			const string engineCfgPath = ParserContextInternal::findConfigFile( pathConstants::kToolchainConfig );
 			if ( engineCfgPath.empty() == false )
 			{
 				string engineCfgText;
 				FileUtil::readTextFile( engineCfgPath, engineCfgText );
-				const nlohmann::json engineDoc = parseDocument( engineCfgText );
-				assignIfPresent( llvmPath, engineDoc, jsonKeyConstants::kLlvmPath );
-				assignIfPresent( msvcToolsDir, engineDoc, jsonKeyConstants::kMsvcToolsDir );
-				assignIfPresent( winSdkDir, engineDoc, jsonKeyConstants::kWindowsSdkDir );
-				assignIfPresent( winSdkVer, engineDoc, jsonKeyConstants::kWindowsSdkVersion );
+				const nlohmann::json engineDoc = ParserContextInternal::parseDocument( engineCfgText );
+				ParserContextInternal::assignIfPresent( llvmPath, engineDoc, jsonKeyConstants::kLlvmPath );
+				ParserContextInternal::assignIfPresent( msvcToolsDir, engineDoc, jsonKeyConstants::kMsvcToolsDir );
+				ParserContextInternal::assignIfPresent( winSdkDir, engineDoc, jsonKeyConstants::kWindowsSdkDir );
+				ParserContextInternal::assignIfPresent( winSdkVer, engineDoc, jsonKeyConstants::kWindowsSdkVersion );
 			}
 		}
 
@@ -416,14 +422,14 @@ namespace sw
 
 	bool ParserContext::ensureSharedConfig()
 	{
-		std::call_once( s_configOnce, loadSharedConfigOnce );
-		return s_configOk;
+		std::call_once( ParserContextInternal::s_configOnce, ParserContextInternal::loadSharedConfigOnce );
+		return ParserContextInternal::s_configOk;
 	}
 
 	const ParserClangConfig& ParserContext::getSharedConfig()
 	{
 		ensureSharedConfig();
-		return s_sharedConfig;
+		return ParserContextInternal::s_sharedConfig;
 	}
 
 	ParserContext::ParserContext()

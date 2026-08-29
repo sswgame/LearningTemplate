@@ -20,20 +20,26 @@
 
 namespace sw::editor
 {
-	SW_LOG_CALLER( "EditorInspectorCommands" );
-
 	namespace
 	{
-		bool isSelectionCurrent( uint64 selectedObjectId )
+		struct EditorInspectorCommandsInternal
 		{
-			if ( selectedObjectId == 0 )
-				return true;
-			EditorContext* pContext = EditorContext::get();
-			if ( pContext == nullptr )
-				return false;
-			return pContext->getWorkspace().getSelectedObjectId() == selectedObjectId;
-		}
+			static bool isSelectionCurrent( uint64 selectedObjectId )
+			{
+				if ( selectedObjectId == 0 )
+					return true;
+				EditorContext* pContext = EditorContext::get();
+				if ( pContext == nullptr )
+					return false;
+				return pContext->getWorkspace().getSelectedObjectId() == selectedObjectId;
+			}
+		};
 	} // namespace
+} // namespace sw::editor
+
+namespace sw::editor
+{
+	SW_LOG_CALLER( "EditorInspectorCommands" );
 
 	void EditorInspectorCommands::pushPodEdit( void* pData, size_t size, vector<uint8> listBefore, vector<uint8> listAfter,
 											   string_view label, uint64 selectedObjectId )
@@ -50,12 +56,12 @@ namespace sw::editor
 		cmd._label = cmdLabel;
 		cmd._undo  = [pData, size, listBefore, selectedObjectId]()
 		{
-			if ( pData != nullptr && isSelectionCurrent( selectedObjectId ) )
+			if ( pData != nullptr && EditorInspectorCommandsInternal::isSelectionCurrent( selectedObjectId ) )
 				Memory::copy( pData, listBefore.data(), size );
 		};
 		cmd._redo = [pData, size, listAfter, selectedObjectId]()
 		{
-			if ( pData != nullptr && isSelectionCurrent( selectedObjectId ) )
+			if ( pData != nullptr && EditorInspectorCommandsInternal::isSelectionCurrent( selectedObjectId ) )
 				Memory::copy( pData, listAfter.data(), size );
 		};
 		pStack->push( std::move( cmd ) );
@@ -76,12 +82,12 @@ namespace sw::editor
 		cmd._label = cmdLabel;
 		cmd._undo  = [pPtr, before, selectedObjectId]()
 		{
-			if ( pPtr != nullptr && isSelectionCurrent( selectedObjectId ) )
+			if ( pPtr != nullptr && EditorInspectorCommandsInternal::isSelectionCurrent( selectedObjectId ) )
 				*pPtr = before;
 		};
 		cmd._redo = [pPtr, after, selectedObjectId]()
 		{
-			if ( pPtr != nullptr && isSelectionCurrent( selectedObjectId ) )
+			if ( pPtr != nullptr && EditorInspectorCommandsInternal::isSelectionCurrent( selectedObjectId ) )
 				*pPtr = after;
 		};
 		pStack->push( std::move( cmd ) );

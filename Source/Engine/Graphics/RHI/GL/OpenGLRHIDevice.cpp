@@ -27,93 +27,94 @@ using PFNWGLCREATECONTEXTATTRIBSARBPROC = HGLRC( WINAPI* )( HDC hDC, HGLRC hShar
 	#define GLX_CONTEXT_PROFILE_MASK_ARB	 0x9126
 	#define GLX_CONTEXT_CORE_PROFILE_BIT_ARB 0x00000001
 typedef GLXContext ( *PFNGLXCREATECONTEXTATTRIBSARBPROC )( Display*, GLXFBConfig, GLXContext, int32, const int32* );
+#endif
+
+namespace sw
+{
+	namespace
+	{
+		struct OpenGLRHIDeviceInternal
+		{
+#if defined( SW_PLATFORM_LINUX )
+			static inline thread_local int32 t_glxXError{ 0 };
+
+			static int32 glxXErrorHandler( Display*, XErrorEvent* )
+			{
+				t_glxXError = 1;
+				return 0;
+			}
+
+			struct GlxXErrorScope
+			{
+				Display*	  _pDpy{ nullptr };
+				XErrorHandler _prev{ nullptr };
+
+				explicit GlxXErrorScope( Display* pDpy )
+					: _pDpy{ pDpy }
+					, _prev{ XSetErrorHandler( &OpenGLRHIDeviceInternal::glxXErrorHandler ) }
+				{
+					OpenGLRHIDeviceInternal::t_glxXError = 0;
+				}
+
+				~GlxXErrorScope()
+				{
+					if ( _pDpy != nullptr )
+						XSync( _pDpy, 0 );
+					XSetErrorHandler( _prev );
+				}
+
+				bool failed()
+				{
+					if ( _pDpy != nullptr )
+						XSync( _pDpy, 0 );
+					const bool b						 = OpenGLRHIDeviceInternal::t_glxXError != 0;
+					OpenGLRHIDeviceInternal::t_glxXError = 0;
+					return b;
+				}
+			};
+#endif
+
+			static void applyVsyncInterval( void* pHdc, void* pHrc, bool vsync )
+			{
+				(void)pHdc;
+#if defined( SW_PLATFORM_WINDOWS )
+				(void)pHrc;
+				using PFNWGLSWAPINTERVALEXTPROC						  = BOOL( WINAPI* )( int32 );
+				static PFNWGLSWAPINTERVALEXTPROC s_wglSwapIntervalEXT = reinterpret_cast<PFNWGLSWAPINTERVALEXTPROC>( wglGetProcAddress( "wglSwapIntervalEXT" ) );
+				if ( s_wglSwapIntervalEXT != nullptr )
+					s_wglSwapIntervalEXT( vsync ? 1 : 0 );
+#elif defined( SW_PLATFORM_LINUX )
+				(void)pHrc;
+				using PFNGLXSWAPINTERVALEXTPROC = void ( * )( Display*, GLXDrawable, int32 );
+				static PFNGLXSWAPINTERVALEXTPROC s_glXSwapIntervalEXT =
+					reinterpret_cast<PFNGLXSWAPINTERVALEXTPROC>( glXGetProcAddressARB( (const GLubyte*)"glXSwapIntervalEXT" ) );
+				if ( s_glXSwapIntervalEXT != nullptr && pHdc != nullptr )
+				{
+					Display* pDpy = static_cast<Display*>( pHdc );
+					s_glXSwapIntervalEXT( pDpy, glXGetCurrentDrawable(), vsync ? 1 : 0 );
+				}
+#elif defined( SW_PLATFORM_MACOS )
+				(void)hDC;
+				if ( hRC )
+				{
+					id	  context  = static_cast<id>( hRC );
+					GLint interval = vsync ? 1 : 0;
+					( (void ( * )( id, SEL, GLint*, GLint ))objc_msgSend )(
+						context, sel_registerName( "setValues:forParameter:" ), &interval, 222 /* NSOpenGLCPSwapInterval */ );
+				}
+#endif
+			}
+		};
+
+#if defined( SW_PLATFORM_LINUX )
+		thread_local int32 OpenGLRHIDeviceInternal::t_glxXError{ 0 };
+#endif
+	} // namespace
+} // namespace sw
 
 namespace sw
 {
 	SW_LOG_CALLER( "OpenGL" );
-
-	namespace
-	{
-
-		thread_local int32 t_glxXError{ 0 };
-
-		int32 glxXErrorHandler( Display*, XErrorEvent* )
-		{
-			t_glxXError = 1;
-			return 0;
-		}
-
-		struct GlxXErrorScope
-		{
-			Display*	  _pDpy{ nullptr };
-			XErrorHandler _prev{ nullptr };
-
-			explicit GlxXErrorScope( Display* pDpy )
-				: _pDpy{ pDpy }
-				, _prev{ XSetErrorHandler( &glxXErrorHandler ) }
-			{
-				t_glxXError = 0;
-			}
-
-			~GlxXErrorScope()
-			{
-				if ( _pDpy != nullptr )
-					XSync( _pDpy, 0 );
-				XSetErrorHandler( _prev );
-			}
-
-			bool failed()
-			{
-				if ( _pDpy != nullptr )
-					XSync( _pDpy, 0 );
-				const bool b = t_glxXError != 0;
-				t_glxXError	 = 0;
-				return b;
-			}
-		};
-
-	} // namespace
-} // namespace sw
-#endif
-
-namespace sw
-{
-
-	namespace
-	{
-
-		void applyVsyncInterval( void* pHdc, void* pHrc, bool vsync )
-		{
-			(void)pHdc;
-#if defined( SW_PLATFORM_WINDOWS )
-			(void)pHrc;
-			using PFNWGLSWAPINTERVALEXTPROC						  = BOOL( WINAPI* )( int32 );
-			static PFNWGLSWAPINTERVALEXTPROC s_wglSwapIntervalEXT = reinterpret_cast<PFNWGLSWAPINTERVALEXTPROC>( wglGetProcAddress( "wglSwapIntervalEXT" ) );
-			if ( s_wglSwapIntervalEXT != nullptr )
-				s_wglSwapIntervalEXT( vsync ? 1 : 0 );
-#elif defined( SW_PLATFORM_LINUX )
-			(void)pHrc;
-			using PFNGLXSWAPINTERVALEXTPROC = void ( * )( Display*, GLXDrawable, int32 );
-			static PFNGLXSWAPINTERVALEXTPROC s_glXSwapIntervalEXT =
-				reinterpret_cast<PFNGLXSWAPINTERVALEXTPROC>( glXGetProcAddressARB( (const GLubyte*)"glXSwapIntervalEXT" ) );
-			if ( s_glXSwapIntervalEXT != nullptr && pHdc != nullptr )
-			{
-				Display* pDpy = static_cast<Display*>( pHdc );
-				s_glXSwapIntervalEXT( pDpy, glXGetCurrentDrawable(), vsync ? 1 : 0 );
-			}
-#elif defined( SW_PLATFORM_MACOS )
-			(void)hDC;
-			if ( hRC )
-			{
-				id	  context  = static_cast<id>( hRC );
-				GLint interval = vsync ? 1 : 0;
-				( (void ( * )( id, SEL, GLint*, GLint ))objc_msgSend )(
-					context, sel_registerName( "setValues:forParameter:" ), &interval, 222 /* NSOpenGLCPSwapInterval */ );
-			}
-#endif
-		}
-
-	} // namespace
 
 	OpenGLRHIDevice::OpenGLRHIDevice()
 		: _pHDC{ nullptr }
@@ -321,7 +322,7 @@ namespace sw
 
 		GLXContext ctx{ nullptr };
 		{
-			GlxXErrorScope trap( pDpy );
+			OpenGLRHIDeviceInternal::GlxXErrorScope trap( pDpy );
 			if ( glXCreateContextAttribsARB )
 			{
 				// Prefer 4.6, fall back for WSLg/Mesa (often ≤4.1 / 3.3).
@@ -699,7 +700,7 @@ namespace sw
 		const int8 desired = vsync ? 1 : 0;
 		if ( _lastVsync != desired )
 		{
-			applyVsyncInterval( _pHDC, _pHRC, vsync );
+			OpenGLRHIDeviceInternal::applyVsyncInterval( _pHDC, _pHRC, vsync );
 			_lastVsync = desired;
 		}
 

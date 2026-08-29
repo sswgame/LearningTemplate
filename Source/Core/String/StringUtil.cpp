@@ -4,9 +4,193 @@
 
 #include "Core/CoreMinimal.h"
 
-SW_LOG_CALLER( "StringUtil" );
 namespace sw
 {
+	namespace
+	{
+		struct StringUtilInternal
+		{
+			static constexpr uint32 kMaxUnicodeCodepoint = 0x10FFFF;
+			static constexpr uint32 kSurrogateBegin		 = 0xD800;
+			static constexpr uint32 kSurrogateEnd		 = 0xDFFF;
+			static constexpr uint32 kUtf16LowBoundary	 = 0x10000;
+
+			static SW_INLINE constexpr bool isWhitespace( utf8 c ) noexcept
+			{
+				return c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\f' || c == '\v';
+			}
+
+			static SW_INLINE constexpr bool isWhitespace( utf16 c ) noexcept
+			{
+				return c == L' ' || c == L'\t' || c == L'\n' || c == L'\r' || c == L'\f' || c == L'\v';
+			}
+
+			struct Utf8LeadInfo
+			{
+				size_t _sequenceLength;
+				uint32 _initialBits;
+				uint32 _minCodepoint;
+			};
+
+			/**
+			 * @brief UTF-8 선행 바이트로부터 멀티바이트 시퀀스 길이(1~4 바이트) 및 초기 비트를 분류합니다.
+			 */
+			static constexpr Utf8LeadInfo classifyUtf8LeadByte( const uint8 leadByte ) noexcept
+			{
+				if ( ( leadByte & 0x80 ) == 0x00 )
+					return { 1, leadByte, 0x0 };
+				if ( ( leadByte & 0xE0 ) == 0xC0 )
+					return { 2, static_cast<uint32>( leadByte & 0x1F ), 0x80 };
+				if ( ( leadByte & 0xF0 ) == 0xE0 )
+					return { 3, static_cast<uint32>( leadByte & 0x0F ), 0x800 };
+				if ( ( leadByte & 0xF8 ) == 0xF0 )
+					return { 4, static_cast<uint32>( leadByte & 0x07 ), kUtf16LowBoundary };
+
+				return { 0, 0, 0 };
+			}
+
+			/**
+			 * @brief 바이트 배열이 표준 UTF-8 인코딩 규칙을 준수하는지 검증합니다.
+			 * @details
+			 * - **64비트 SWAR (SIMD Within A Register) Fast-Scan**:
+			 *   대부분의 텍스트(로그 포맷, 태그, 영문 등)가 7비트 ASCII(0x00~0x7F)라는 점에 착안하여,
+			 *   `uint64` 8바이트씩 한 번에 읽어 최상위 비트 마스크(`0x8080808080808080ULL`)로 1클럭에 8바이트를 초고속 검사합니다.
+			 * - **멀티바이트 시퀀스 정밀 검증**:
+			 *   비-ASCII 바이트를 만났을 때만 2~4바이트 UTF-8 리드 바이트를 분류하고 후속 바이트(0x80~0xBF), Overlong, Surrogate(0xD800~0xDFFF), 최대 유니코드 범위를 철저히 검증합니다.
+			 */
+			static bool isValidUtf8( const uint8* pData, const size_t length ) noexcept
+			{
+				size_t pos{ 0 };
+
+				// 8바이트 단위 SWAR 빠른 ASCII 검사 (1클럭에 8글자 일괄 검사)
+				while ( pos + 8 <= length )
+				{
+					uint64 chunk{ 0 };
+					Memory::copy( &chunk, pData + pos, 8 );
+					if ( ( chunk & 0x8080808080808080ULL ) == 0 )
+					{
+						pos += 8;
+						continue;
+					}
+					break;
+				}
+
+				while ( pos < length )
+				{
+					const uint8 byte0 = pData[pos];
+					// 1바이트 ASCII 문자 (0x00 ~ 0x7F)
+					if ( ( byte0 & 0x80 ) == 0 )
+					{
+						++pos;
+						// 다시 8바이트 SWAR 가속 스캔 시도
+						while ( pos + 8 <= length )
+						{
+							uint64 chunk{ 0 };
+							Memory::copy( &chunk, pData + pos, 8 );
+							if ( ( chunk & 0x8080808080808080ULL ) == 0 )
+							{
+								pos += 8;
+								continue;
+							}
+							break;
+						}
+						continue;
+					}
+
+					// 2~4바이트 멀티바이트 UTF-8 시퀀스 검증
+					const Utf8LeadInfo lead = classifyUtf8LeadByte( byte0 );
+					if ( lead._sequenceLength == 0 || pos + lead._sequenceLength > length )
+						return false;
+
+					uint32 codepoint = lead._initialBits;
+					for ( size_t byteIndex = 1; byteIndex < lead._sequenceLength; ++byteIndex )
+					{
+						const uint8 continuationByte = pData[pos + byteIndex];
+						if ( ( continuationByte & 0xC0 ) != 0x80 )
+							return false;
+						codepoint = ( codepoint << 6 ) | ( continuationByte & 0x3F );
+					}
+
+					// Overlong 인코딩, UTF-16 서로게이트(Surrogate), 유니코드 최대치 초과 여부 검사
+					const bool bIsOverlong	 = codepoint < lead._minCodepoint;
+					const bool bIsSurrogate	 = ( codepoint >= kSurrogateBegin ) && ( codepoint <= kSurrogateEnd );
+					const bool bIsOutOfRange = codepoint > kMaxUnicodeCodepoint;
+					if ( bIsOverlong || bIsSurrogate || bIsOutOfRange )
+						return false;
+
+					pos += lead._sequenceLength;
+				}
+				return true;
+			}
+
+			struct DecodedCodepoint
+			{
+				uint32 _codepoint;
+				size_t _byteCount;
+			};
+
+			static DecodedCodepoint decodeUtf8Sequence( const utf8* pData, const size_t remaining ) noexcept
+			{
+				const Utf8LeadInfo lead		 = classifyUtf8LeadByte( static_cast<uint8>( pData[0] ) );
+				const size_t	   byteCount = MathUtil::min( lead._sequenceLength, remaining );
+
+				uint32 codepoint = lead._initialBits;
+				for ( size_t byteIndex = 1; byteIndex < byteCount; ++byteIndex )
+				{
+					codepoint = ( codepoint << 6 ) | ( static_cast<uint8>( pData[byteIndex] ) & 0x3F );
+				}
+
+				return { codepoint, byteCount };
+			}
+
+			static void appendWideChar( wstring& out, const uint32 codepoint )
+			{
+				if constexpr ( sizeof( utf16 ) == 2 )
+				{
+					if ( codepoint < kUtf16LowBoundary )
+						out.push_back( static_cast<utf16>( codepoint ) );
+					else
+					{
+						const uint32 value = codepoint - kUtf16LowBoundary;
+						out.push_back( static_cast<utf16>( 0xD800 + ( value >> 10 ) ) );
+						out.push_back( static_cast<utf16>( 0xDC00 + ( value & 0x3FF ) ) );
+					}
+				}
+				else
+					out.push_back( static_cast<utf16>( codepoint ) );
+			}
+
+			static void appendUtf8( string& out, const uint32 codepoint )
+			{
+				if ( codepoint <= 0x7F )
+					out.push_back( static_cast<utf8>( codepoint ) );
+				else if ( codepoint <= 0x7FF )
+				{
+					out.push_back( static_cast<utf8>( 0xC0 | ( codepoint >> 6 ) ) );
+					out.push_back( static_cast<utf8>( 0x80 | ( codepoint & 0x3F ) ) );
+				}
+				else if ( codepoint <= 0xFFFF )
+				{
+					out.push_back( static_cast<utf8>( 0xE0 | ( codepoint >> 12 ) ) );
+					out.push_back( static_cast<utf8>( 0x80 | ( ( codepoint >> 6 ) & 0x3F ) ) );
+					out.push_back( static_cast<utf8>( 0x80 | ( codepoint & 0x3F ) ) );
+				}
+				else
+				{
+					out.push_back( static_cast<utf8>( 0xF0 | ( codepoint >> 18 ) ) );
+					out.push_back( static_cast<utf8>( 0x80 | ( ( codepoint >> 12 ) & 0x3F ) ) );
+					out.push_back( static_cast<utf8>( 0x80 | ( ( codepoint >> 6 ) & 0x3F ) ) );
+					out.push_back( static_cast<utf8>( 0x80 | ( codepoint & 0x3F ) ) );
+				}
+			}
+		};
+	} // namespace
+} // namespace sw
+
+namespace sw
+{
+	SW_LOG_CALLER( "StringUtil" );
+
 	/**
 	 * @brief 32비트 부호 있는 정수를 0-Alloc 스택 버퍼를 통해 문자열로 변환합니다.
 	 */
@@ -75,185 +259,6 @@ namespace sw
 		return string{ buf };
 	}
 
-	namespace
-	{
-
-		constexpr uint32 kMaxUnicodeCodepoint = 0x10FFFF;
-		constexpr uint32 kSurrogateBegin	  = 0xD800;
-		constexpr uint32 kSurrogateEnd		  = 0xDFFF;
-		constexpr uint32 kUtf16LowBoundary	  = 0x10000;
-
-		SW_INLINE constexpr bool isWhitespace( utf8 c ) noexcept
-		{
-			return c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\f' || c == '\v';
-		}
-
-		SW_INLINE constexpr bool isWhitespace( utf16 c ) noexcept
-		{
-			return c == L' ' || c == L'\t' || c == L'\n' || c == L'\r' || c == L'\f' || c == L'\v';
-		}
-
-		struct Utf8LeadInfo
-		{
-			size_t _sequenceLength;
-			uint32 _initialBits;
-			uint32 _minCodepoint;
-		};
-
-		/**
-		 * @brief UTF-8 선행 바이트로부터 멀티바이트 시퀀스 길이(1~4 바이트) 및 초기 비트를 분류합니다.
-		 */
-		constexpr Utf8LeadInfo classifyUtf8LeadByte( const uint8 leadByte ) noexcept
-		{
-			if ( ( leadByte & 0x80 ) == 0x00 )
-				return { 1, leadByte, 0x0 };
-			if ( ( leadByte & 0xE0 ) == 0xC0 )
-				return { 2, static_cast<uint32>( leadByte & 0x1F ), 0x80 };
-			if ( ( leadByte & 0xF0 ) == 0xE0 )
-				return { 3, static_cast<uint32>( leadByte & 0x0F ), 0x800 };
-			if ( ( leadByte & 0xF8 ) == 0xF0 )
-				return { 4, static_cast<uint32>( leadByte & 0x07 ), kUtf16LowBoundary };
-
-			return { 0, 0, 0 };
-		}
-
-		/**
-		 * @brief 바이트 배열이 표준 UTF-8 인코딩 규칙을 준수하는지 검증합니다.
-		 * @details
-		 * - **64비트 SWAR (SIMD Within A Register) Fast-Scan**:
-		 *   대부분의 텍스트(로그 포맷, 태그, 영문 등)가 7비트 ASCII(0x00~0x7F)라는 점에 착안하여,
-		 *   `uint64` 8바이트씩 한 번에 읽어 최상위 비트 마스크(`0x8080808080808080ULL`)로 1클럭에 8바이트를 초고속 검사합니다.
-		 * - **멀티바이트 시퀀스 정밀 검증**:
-		 *   비-ASCII 바이트를 만났을 때만 2~4바이트 UTF-8 리드 바이트를 분류하고 후속 바이트(0x80~0xBF), Overlong, Surrogate(0xD800~0xDFFF), 최대 유니코드 범위를 철저히 검증합니다.
-		 */
-		bool isValidUtf8( const uint8* pData, const size_t length ) noexcept
-		{
-			size_t pos{ 0 };
-
-			// 8바이트 단위 SWAR 빠른 ASCII 검사 (1클럭에 8글자 일괄 검사)
-			while ( pos + 8 <= length )
-			{
-				uint64 chunk{ 0 };
-				Memory::copy( &chunk, pData + pos, 8 );
-				if ( ( chunk & 0x8080808080808080ULL ) == 0 )
-				{
-					pos += 8;
-					continue;
-				}
-				break;
-			}
-
-			while ( pos < length )
-			{
-				const uint8 byte0 = pData[pos];
-				// 1바이트 ASCII 문자 (0x00 ~ 0x7F)
-				if ( ( byte0 & 0x80 ) == 0 )
-				{
-					++pos;
-					// 다시 8바이트 SWAR 가속 스캔 시도
-					while ( pos + 8 <= length )
-					{
-						uint64 chunk{ 0 };
-						Memory::copy( &chunk, pData + pos, 8 );
-						if ( ( chunk & 0x8080808080808080ULL ) == 0 )
-						{
-							pos += 8;
-							continue;
-						}
-						break;
-					}
-					continue;
-				}
-
-				// 2~4바이트 멀티바이트 UTF-8 시퀀스 검증
-				const Utf8LeadInfo lead = classifyUtf8LeadByte( byte0 );
-				if ( lead._sequenceLength == 0 || pos + lead._sequenceLength > length )
-					return false;
-
-				uint32 codepoint = lead._initialBits;
-				for ( size_t byteIndex = 1; byteIndex < lead._sequenceLength; ++byteIndex )
-				{
-					const uint8 continuationByte = pData[pos + byteIndex];
-					if ( ( continuationByte & 0xC0 ) != 0x80 )
-						return false;
-					codepoint = ( codepoint << 6 ) | ( continuationByte & 0x3F );
-				}
-
-				// Overlong 인코딩, UTF-16 서로게이트(Surrogate), 유니코드 최대치 초과 여부 검사
-				const bool bIsOverlong	 = codepoint < lead._minCodepoint;
-				const bool bIsSurrogate	 = ( codepoint >= kSurrogateBegin ) && ( codepoint <= kSurrogateEnd );
-				const bool bIsOutOfRange = codepoint > kMaxUnicodeCodepoint;
-				if ( bIsOverlong || bIsSurrogate || bIsOutOfRange )
-					return false;
-
-				pos += lead._sequenceLength;
-			}
-			return true;
-		}
-
-		struct DecodedCodepoint
-		{
-			uint32 _codepoint;
-			size_t _byteCount;
-		};
-
-		DecodedCodepoint decodeUtf8Sequence( const utf8* pData, const size_t remaining ) noexcept
-		{
-			const Utf8LeadInfo lead		 = classifyUtf8LeadByte( static_cast<uint8>( pData[0] ) );
-			const size_t	   byteCount = MathUtil::min( lead._sequenceLength, remaining );
-
-			uint32 codepoint = lead._initialBits;
-			for ( size_t byteIndex = 1; byteIndex < byteCount; ++byteIndex )
-			{
-				codepoint = ( codepoint << 6 ) | ( static_cast<uint8>( pData[byteIndex] ) & 0x3F );
-			}
-
-			return { codepoint, byteCount };
-		}
-
-		void appendWideChar( wstring& out, const uint32 codepoint )
-		{
-			if constexpr ( sizeof( utf16 ) == 2 )
-			{
-				if ( codepoint < kUtf16LowBoundary )
-					out.push_back( static_cast<utf16>( codepoint ) );
-				else
-				{
-					const uint32 value = codepoint - kUtf16LowBoundary;
-					out.push_back( static_cast<utf16>( 0xD800 + ( value >> 10 ) ) );
-					out.push_back( static_cast<utf16>( 0xDC00 + ( value & 0x3FF ) ) );
-				}
-			}
-			else
-				out.push_back( static_cast<utf16>( codepoint ) );
-		}
-
-		void appendUtf8( string& out, const uint32 codepoint )
-		{
-			if ( codepoint <= 0x7F )
-				out.push_back( static_cast<utf8>( codepoint ) );
-			else if ( codepoint <= 0x7FF )
-			{
-				out.push_back( static_cast<utf8>( 0xC0 | ( codepoint >> 6 ) ) );
-				out.push_back( static_cast<utf8>( 0x80 | ( codepoint & 0x3F ) ) );
-			}
-			else if ( codepoint <= 0xFFFF )
-			{
-				out.push_back( static_cast<utf8>( 0xE0 | ( codepoint >> 12 ) ) );
-				out.push_back( static_cast<utf8>( 0x80 | ( ( codepoint >> 6 ) & 0x3F ) ) );
-				out.push_back( static_cast<utf8>( 0x80 | ( codepoint & 0x3F ) ) );
-			}
-			else
-			{
-				out.push_back( static_cast<utf8>( 0xF0 | ( codepoint >> 18 ) ) );
-				out.push_back( static_cast<utf8>( 0x80 | ( ( codepoint >> 12 ) & 0x3F ) ) );
-				out.push_back( static_cast<utf8>( 0x80 | ( ( codepoint >> 6 ) & 0x3F ) ) );
-				out.push_back( static_cast<utf8>( 0x80 | ( codepoint & 0x3F ) ) );
-			}
-		}
-
-	} // namespace
-
 	bool StringUtil::isNullOrEmpty( const utf8* str )
 	{
 		return ( str == nullptr || *str == '\0' );
@@ -286,8 +291,8 @@ namespace sw
 				continue;
 			}
 
-			const DecodedCodepoint decoded = decodeUtf8Sequence( input + pos, length - pos );
-			appendWideChar( result, decoded._codepoint );
+			const StringUtilInternal::DecodedCodepoint decoded = StringUtilInternal::decodeUtf8Sequence( input + pos, length - pos );
+			StringUtilInternal::appendWideChar( result, decoded._codepoint );
 			pos += MathUtil::max( decoded._byteCount, static_cast<size_t>( 1 ) );
 		}
 
@@ -324,7 +329,7 @@ namespace sw
 						const uint32 lowSurrogate = input[pos + 1];
 						if ( 0xDC00 <= lowSurrogate && lowSurrogate <= 0xDFFF )
 						{
-							codepoint = kUtf16LowBoundary + ( ( codepoint - 0xD800 ) << 10 ) + ( lowSurrogate - 0xDC00 );
+							codepoint = StringUtilInternal::kUtf16LowBoundary + ( ( codepoint - 0xD800 ) << 10 ) + ( lowSurrogate - 0xDC00 );
 							++pos;
 						}
 						else
@@ -337,7 +342,7 @@ namespace sw
 					codepoint = 0xFFFD;
 			}
 
-			appendUtf8( result, codepoint );
+			StringUtilInternal::appendUtf8( result, codepoint );
 			++pos;
 		}
 
@@ -518,7 +523,7 @@ namespace sw
 			return {};
 
 		const utf8* start = input;
-		while ( *start != '\0' && isWhitespace( *start ) )
+		while ( *start != '\0' && StringUtilInternal::isWhitespace( *start ) )
 		{
 			++start;
 		}
@@ -531,7 +536,7 @@ namespace sw
 			return {};
 
 		const utf16* start = input;
-		while ( *start != L'\0' && isWhitespace( *start ) )
+		while ( *start != L'\0' && StringUtilInternal::isWhitespace( *start ) )
 		{
 			++start;
 		}
@@ -545,7 +550,7 @@ namespace sw
 
 		const size_t length = strlen( input );
 		size_t		 end	= length;
-		while ( end > 0 && isWhitespace( input[end - 1] ) )
+		while ( end > 0 && StringUtilInternal::isWhitespace( input[end - 1] ) )
 		{
 			--end;
 		}
@@ -559,7 +564,7 @@ namespace sw
 
 		const size_t length = strlen( input );
 		size_t		 end	= length;
-		while ( end > 0 && isWhitespace( input[end - 1] ) )
+		while ( end > 0 && StringUtilInternal::isWhitespace( input[end - 1] ) )
 		{
 			--end;
 		}
@@ -572,7 +577,7 @@ namespace sw
 			return {};
 
 		const utf8* start = input;
-		while ( *start != '\0' && isWhitespace( *start ) )
+		while ( *start != '\0' && StringUtilInternal::isWhitespace( *start ) )
 		{
 			++start;
 		}
@@ -580,7 +585,7 @@ namespace sw
 			return {};
 
 		const utf8* end = start + strlen( start );
-		while ( end > start && isWhitespace( *( end - 1 ) ) )
+		while ( end > start && StringUtilInternal::isWhitespace( *( end - 1 ) ) )
 		{
 			--end;
 		}
@@ -593,7 +598,7 @@ namespace sw
 			return {};
 
 		const utf16* start = input;
-		while ( *start != L'\0' && isWhitespace( *start ) )
+		while ( *start != L'\0' && StringUtilInternal::isWhitespace( *start ) )
 		{
 			++start;
 		}
@@ -601,7 +606,7 @@ namespace sw
 			return {};
 
 		const utf16* end = start + strlen( start );
-		while ( end > start && isWhitespace( *( end - 1 ) ) )
+		while ( end > start && StringUtilInternal::isWhitespace( *( end - 1 ) ) )
 		{
 			--end;
 		}
@@ -611,7 +616,7 @@ namespace sw
 	string_view StringUtil::trimStart( string_view input )
 	{
 		size_t start{ 0 };
-		while ( start < input.size() && isWhitespace( input[start] ) )
+		while ( start < input.size() && StringUtilInternal::isWhitespace( input[start] ) )
 		{
 			++start;
 		}
@@ -621,7 +626,7 @@ namespace sw
 	wstring_view StringUtil::trimStart( wstring_view input )
 	{
 		size_t start{ 0 };
-		while ( start < input.size() && isWhitespace( input[start] ) )
+		while ( start < input.size() && StringUtilInternal::isWhitespace( input[start] ) )
 		{
 			++start;
 		}
@@ -631,7 +636,7 @@ namespace sw
 	string_view StringUtil::trimEnd( string_view input )
 	{
 		size_t end = input.size();
-		while ( end > 0 && isWhitespace( input[end - 1] ) )
+		while ( end > 0 && StringUtilInternal::isWhitespace( input[end - 1] ) )
 		{
 			--end;
 		}
@@ -641,7 +646,7 @@ namespace sw
 	wstring_view StringUtil::trimEnd( wstring_view input )
 	{
 		size_t end = input.size();
-		while ( end > 0 && isWhitespace( input[end - 1] ) )
+		while ( end > 0 && StringUtilInternal::isWhitespace( input[end - 1] ) )
 		{
 			--end;
 		}
@@ -1062,6 +1067,6 @@ namespace sw
 	{
 		if ( input == nullptr )
 			return false;
-		return isValidUtf8( reinterpret_cast<const uint8*>( input ), strlen( input ) );
+		return StringUtilInternal::isValidUtf8( reinterpret_cast<const uint8*>( input ), strlen( input ) );
 	}
 } // namespace sw

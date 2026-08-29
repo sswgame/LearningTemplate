@@ -5,7 +5,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Material/Material.h"
-#include "Engine/Graphics/Material/MaterialInternal.h"
+#include "Engine/Graphics/Material/MaterialUtil.h"
 #include "Engine/Utility/Resource/AssetFormat.h"
 #include "Engine/Utility/Resource/ResourceManager.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
@@ -56,9 +56,9 @@ namespace sw
 		XmlNode		root = doc.appendRoot( "MaterialDesc" );
 
 		engine::getResourceManager().getAssetFormatRegistry().writeXmlVersion( root, AssetFormatVersions::kMaterial );
-		appendAttr( root, "name", _desc._name );
-		appendAttr( root, "shaderPath", _desc._shaderPath );
-		appendAttr( root, "blendMode", blendModeToString( _blendMode ) );
+		MaterialUtil::appendAttr( root, "name", _desc._name );
+		MaterialUtil::appendAttr( root, "shaderPath", _desc._shaderPath );
+		MaterialUtil::appendAttr( root, "blendMode", MaterialUtil::blendModeToString( _blendMode ) );
 
 		XmlNode props = root.appendChild( "_properties" );
 
@@ -66,26 +66,26 @@ namespace sw
 		{
 			XmlNode item = props.appendChild( "item" );
 
-			appendAttr( item, "name", prop._name );
-			appendAttr( item, "type", typeToString( prop._type ) );
+			MaterialUtil::appendAttr( item, "name", prop._name );
+			MaterialUtil::appendAttr( item, "type", MaterialUtil::typeToString( prop._type ) );
 			if ( prop._shaderType != MaterialPropertyType::Unknown )
-				appendAttr( item, "shaderType", typeToString( prop._shaderType ) );
+				MaterialUtil::appendAttr( item, "shaderType", MaterialUtil::typeToString( prop._shaderType ) );
 			if ( prop._defaultValue.empty() == false )
-				appendAttr( item, "defaultValue", prop._defaultValue );
+				MaterialUtil::appendAttr( item, "defaultValue", prop._defaultValue );
 			if ( prop._value.empty() == false && prop._value != prop._defaultValue )
-				appendAttr( item, "value", prop._value );
+				MaterialUtil::appendAttr( item, "value", prop._value );
 			if ( prop._assetPath.empty() == false )
-				appendAttr( item, "assetPath", prop._assetPath );
+				MaterialUtil::appendAttr( item, "assetPath", prop._assetPath );
 			if ( prop._enumType.empty() == false )
-				appendAttr( item, "enumType", prop._enumType );
+				MaterialUtil::appendAttr( item, "enumType", prop._enumType );
 			if ( prop._displayName.empty() == false )
-				appendAttr( item, "displayName", prop._displayName );
+				MaterialUtil::appendAttr( item, "displayName", prop._displayName );
 			if ( prop._group.empty() == false )
-				appendAttr( item, "group", prop._group );
+				MaterialUtil::appendAttr( item, "group", prop._group );
 			if ( prop._tooltip.empty() == false )
-				appendAttr( item, "tooltip", prop._tooltip );
+				MaterialUtil::appendAttr( item, "tooltip", prop._tooltip );
 			if ( prop._shaderKeyword.empty() == false )
-				appendAttr( item, "shaderKeyword", prop._shaderKeyword );
+				MaterialUtil::appendAttr( item, "shaderKeyword", prop._shaderKeyword );
 			if ( prop._type == MaterialPropertyType::Range )
 			{
 				item.appendAttr( "min", prop._min );
@@ -93,15 +93,15 @@ namespace sw
 			}
 			if ( prop._type == MaterialPropertyType::Color )
 			{
-				appendBoolAttr( item, "bHdr", prop._bHdr );
-				appendBoolAttr( item, "bSrgb", prop._bSrgb );
+				MaterialUtil::appendBoolAttr( item, "bHdr", prop._bHdr );
+				MaterialUtil::appendBoolAttr( item, "bSrgb", prop._bSrgb );
 			}
-			if ( isTextureType( prop._type ) )
-				appendBoolAttr( item, "bSrgb", prop._bSrgb );
+			if ( MaterialUtil::isTextureType( prop._type ) )
+				MaterialUtil::appendBoolAttr( item, "bSrgb", prop._bSrgb );
 			if ( prop._bHidden )
-				appendBoolAttr( item, "bHidden", true );
+				MaterialUtil::appendBoolAttr( item, "bHidden", true );
 			if ( prop._bAdvanced )
-				appendBoolAttr( item, "bAdvanced", true );
+				MaterialUtil::appendBoolAttr( item, "bAdvanced", true );
 
 			if ( prop._listEnumEntry.empty() == false )
 			{
@@ -109,13 +109,13 @@ namespace sw
 				for ( const MaterialEnumEntry& enumEntry : prop._listEnumEntry )
 				{
 					XmlNode eItem = list.appendChild( "item" );
-					appendAttr( eItem, "name", enumEntry._name );
+					MaterialUtil::appendAttr( eItem, "name", enumEntry._name );
 					eItem.appendAttr( "value", enumEntry._value );
 				}
 			}
 		}
 
-		appendPermutationNode( root, _desc._permutations );
+		MaterialUtil::appendPermutationNode( root, _desc._permutations );
 
 		return doc.saveFile( absPath );
 	}
@@ -135,22 +135,22 @@ namespace sw
 			return false;
 
 		_desc			  = MaterialDesc{};
-		_desc._name		  = fieldText( root, "name" );
-		_desc._shaderPath = fieldText( root, "shaderPath" );
-		_desc._blendMode  = fieldText( root, "blendMode" );
+		_desc._name		  = MaterialUtil::fieldText( root, "name" );
+		_desc._shaderPath = MaterialUtil::fieldText( root, "shaderPath" );
+		_desc._blendMode  = MaterialUtil::fieldText( root, "blendMode" );
 
 		XmlNode props = root.child( "_properties" );
 		if ( props.isValid() )
 		{
 			for ( XmlNode item = props.child( "item" ); item; item = item.next( "item" ) )
 			{
-				MaterialProperty prop = parsePropertyNode( item );
+				MaterialProperty prop = MaterialUtil::parsePropertyNode( item );
 				if ( prop._name.empty() == false )
 					_desc._listProperty.push_back( std::move( prop ) );
 			}
 		}
 
-		parsePermutationNode( root, _desc._permutations );
+		MaterialUtil::parsePermutationNode( root, _desc._permutations );
 
 		applyDescToRuntime();
 		return true;
@@ -159,7 +159,7 @@ namespace sw
 	void Material::applyDescToRuntime()
 	{
 		_data._listProperty = _desc._listProperty;
-		_blendMode			= parseBlendMode( _desc._blendMode );
+		_blendMode			= MaterialUtil::parseBlendMode( _desc._blendMode );
 		rebuildPackedBuffer();
 	}
 
@@ -167,7 +167,7 @@ namespace sw
 	{
 		auto self				  = const_cast<Material*>( this );
 		self->_desc._listProperty = _data._listProperty;
-		self->_desc._blendMode	  = blendModeToString( _blendMode );
+		self->_desc._blendMode	  = MaterialUtil::blendModeToString( _blendMode );
 		self->_desc._name		  = _desc._name;
 		self->_desc._shaderPath	  = _desc._shaderPath;
 	}

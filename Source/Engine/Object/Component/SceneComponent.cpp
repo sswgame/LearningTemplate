@@ -8,58 +8,122 @@
 
 namespace sw
 {
-
 	namespace
 	{
-
-		/**
-		 * @brief 로컬 위치, 오일러 회전(Yaw/Pitch/Roll), 스케일 벡터로부터 TRS 로컬 변환 행렬을 생성합니다.
-		 */
-		float4x4 makeLocalTRS( const float3& position, const float3& rotation, const float3& scale )
+		struct SceneComponentInternal
 		{
-			// DirectX 행-벡터 규격: Scale * Rotation * Translation
-			return float4x4::createScale( scale ) *
-				   float4x4::createFromYawPitchRoll( rotation._y, rotation._x, rotation._z ) *
-				   float4x4::createTranslation( position );
-		}
-
-		/**
-		 * @brief 부모의 월드 행렬과 결합하여 현재 컴포넌트의 월드 행렬 및 64비트 LWC 월드 좌표를 합성합니다.
-		 */
-		void composeWorldFromParent( const float3&	 localPosition,
-									 const float3&	 localRotation,
-									 const float3&	 localScale,
-									 const float4x4* pParentWorldMatrix,
-									 const double3*	 pParentWorldLWC,
-									 float4x4&		 outWorldMatrix,
-									 double3&		 outWorldLWC,
-									 float3&		 outWorldPos )
-		{
-			const float4x4 localTRS = makeLocalTRS( localPosition, localRotation, localScale );
-
-			if ( pParentWorldMatrix != nullptr && pParentWorldLWC != nullptr )
+			/**
+			 * @brief 로컬 위치, 오일러 회전(Yaw/Pitch/Roll), 스케일 벡터로부터 TRS 로컬 변환 행렬을 생성합니다.
+			 */
+			static float4x4 makeLocalTRS( const float3& position, const float3& rotation, const float3& scale )
 			{
-				outWorldMatrix		= localTRS * ( *pParentWorldMatrix );
-				const float3 offset = float3::transformNormal( localPosition, *pParentWorldMatrix );
-				outWorldLWC			= *pParentWorldLWC + double3( static_cast<float64>( offset._x ),
-																  static_cast<float64>( offset._y ),
-																  static_cast<float64>( offset._z ) );
-			}
-			else
-			{
-				outWorldMatrix = localTRS;
-				outWorldLWC	   = double3( static_cast<float64>( localPosition._x ),
-										  static_cast<float64>( localPosition._y ),
-										  static_cast<float64>( localPosition._z ) );
+				// DirectX 행-벡터 규격: Scale * Rotation * Translation
+				return float4x4::createScale( scale ) *
+					   float4x4::createFromYawPitchRoll( rotation._y, rotation._x, rotation._z ) *
+					   float4x4::createTranslation( position );
 			}
 
-			outWorldPos = float3( static_cast<float32>( outWorldLWC._x ),
-								  static_cast<float32>( outWorldLWC._y ),
-								  static_cast<float32>( outWorldLWC._z ) );
-		}
+			/**
+			 * @brief 부모의 월드 행렬과 결합하여 현재 컴포넌트의 월드 행렬 및 64비트 LWC 월드 좌표를 합성합니다.
+			 */
+			static void composeWorldFromParent( const float3&	localPosition,
+												const float3&	localRotation,
+												const float3&	localScale,
+												const float4x4* pParentWorldMatrix,
+												const double3*	pParentWorldLWC,
+												float4x4&		outWorldMatrix,
+												double3&		outWorldLWC,
+												float3&			outWorldPos )
+			{
+				const float4x4 localTRS = makeLocalTRS( localPosition, localRotation, localScale );
 
+				if ( pParentWorldMatrix != nullptr && pParentWorldLWC != nullptr )
+				{
+					outWorldMatrix		= localTRS * ( *pParentWorldMatrix );
+					const float3 offset = float3::transformNormal( localPosition, *pParentWorldMatrix );
+					outWorldLWC			= *pParentWorldLWC + double3( static_cast<float64>( offset._x ),
+																	  static_cast<float64>( offset._y ),
+																	  static_cast<float64>( offset._z ) );
+				}
+				else
+				{
+					outWorldMatrix = localTRS;
+					outWorldLWC	   = double3( static_cast<float64>( localPosition._x ),
+											  static_cast<float64>( localPosition._y ),
+											  static_cast<float64>( localPosition._z ) );
+				}
+
+				outWorldPos = float3( static_cast<float32>( outWorldLWC._x ),
+									  static_cast<float32>( outWorldLWC._y ),
+									  static_cast<float32>( outWorldLWC._z ) );
+			}
+
+			static string sceneComponentTypeBaseName( const Component* pComp )
+			{
+				if ( pComp == nullptr )
+					return "Component";
+				if ( pComp->getComponentName().empty() == false )
+					return pComp->getComponentName().c_str();
+				const TypeInfo* pTypeInfo = pComp->getTypeInfo();
+				if ( pTypeInfo != nullptr )
+				{
+					if ( pTypeInfo->_name.empty() == false )
+						return pTypeInfo->_name.c_str();
+					if ( pTypeInfo->_fullyQualifiedName.empty() == false )
+						return pTypeInfo->_fullyQualifiedName.c_str();
+				}
+				return "Component";
+			}
+
+			static string makeStableSceneComponentKey( const Component* pComp, int32 occurrenceIndex )
+			{
+				string base = sceneComponentTypeBaseName( pComp );
+				base += '#';
+				base += to_string( occurrenceIndex );
+				return base;
+			}
+
+			static string findStableSceneComponentKey( const Component* pComp )
+			{
+				if ( pComp == nullptr || pComp->getOwner() == nullptr )
+					return {};
+
+				unordered_map<string, int32> occurrence;
+				for ( Component* pOther : pComp->getOwner()->getAllComponents() )
+				{
+					if ( pOther == nullptr )
+						continue;
+					const string base = sceneComponentTypeBaseName( pOther );
+					const int32	 occ  = occurrence[base]++;
+					if ( pOther == pComp )
+						return makeStableSceneComponentKey( pComp, occ );
+				}
+				return {};
+			}
+
+			static SceneComponent* findSceneComponentByAttachKey( GameObject* pOwner, string_view attachKey )
+			{
+				if ( pOwner == nullptr || attachKey.empty() )
+					return nullptr;
+
+				unordered_map<string, int32> occurrence;
+				for ( Component* pComp : pOwner->getAllComponents() )
+				{
+					if ( pComp == nullptr )
+						continue;
+					const string base = sceneComponentTypeBaseName( pComp );
+					const int32	 occ  = occurrence[base]++;
+					if ( makeStableSceneComponentKey( pComp, occ ) == attachKey )
+						return castTo<SceneComponent>( pComp );
+				}
+				return nullptr;
+			}
+		};
 	} // namespace
+} // namespace sw
 
+namespace sw
+{
 	SceneComponent::SceneComponent()
 		: _localPosition{ 0.0f, 0.0f, 0.0f }
 		, _localRotation{ 0.0f, 0.0f, 0.0f }
@@ -270,8 +334,8 @@ namespace sw
 			const float4x4* pParentWorld = pParent != nullptr ? &pParent->_cachedWorldMatrix : nullptr;
 			const double3*	pParentLwc	 = pParent != nullptr ? &pParent->_cachedWorldPositionLWC : nullptr;
 			SceneComponent* pMutable	 = const_cast<SceneComponent*>( this );
-			composeWorldFromParent( _localPosition, _localRotation, _localScale, pParentWorld, pParentLwc,
-									pMutable->_cachedWorldMatrix, pMutable->_cachedWorldPositionLWC, pMutable->_cachedWorldPosition );
+			SceneComponentInternal::composeWorldFromParent( _localPosition, _localRotation, _localScale, pParentWorld, pParentLwc,
+															pMutable->_cachedWorldMatrix, pMutable->_cachedWorldPositionLWC, pMutable->_cachedWorldPosition );
 			pMutable->_bIsTransformDirty = SW_FALSE;
 		}
 		return _cachedWorldMatrix;
@@ -294,8 +358,8 @@ namespace sw
 	{
 		const float4x4* pParentWorld = _pParent != nullptr ? &_pParent->_cachedWorldMatrix : nullptr;
 		const double3*	pParentLwc	 = _pParent != nullptr ? &_pParent->_cachedWorldPositionLWC : nullptr;
-		composeWorldFromParent( _localPosition, _localRotation, _localScale, pParentWorld, pParentLwc,
-								_cachedWorldMatrix, _cachedWorldPositionLWC, _cachedWorldPosition );
+		SceneComponentInternal::composeWorldFromParent( _localPosition, _localRotation, _localScale, pParentWorld, pParentLwc,
+														_cachedWorldMatrix, _cachedWorldPositionLWC, _cachedWorldPosition );
 		_bIsTransformDirty = SW_FALSE;
 	}
 
@@ -420,70 +484,6 @@ namespace sw
 		}
 	}
 
-	namespace
-	{
-		string sceneComponentTypeBaseName( const Component* pComp )
-		{
-			if ( pComp == nullptr )
-				return "Component";
-			if ( pComp->getComponentName().empty() == false )
-				return pComp->getComponentName().c_str();
-			const TypeInfo* pTypeInfo = pComp->getTypeInfo();
-			if ( pTypeInfo != nullptr )
-			{
-				if ( pTypeInfo->_name.empty() == false )
-					return pTypeInfo->_name.c_str();
-				if ( pTypeInfo->_fullyQualifiedName.empty() == false )
-					return pTypeInfo->_fullyQualifiedName.c_str();
-			}
-			return "Component";
-		}
-
-		string makeStableSceneComponentKey( const Component* pComp, int32 occurrenceIndex )
-		{
-			string base = sceneComponentTypeBaseName( pComp );
-			base += '#';
-			base += to_string( occurrenceIndex );
-			return base;
-		}
-
-		string findStableSceneComponentKey( const Component* pComp )
-		{
-			if ( pComp == nullptr || pComp->getOwner() == nullptr )
-				return {};
-
-			unordered_map<string, int32> occurrence;
-			for ( Component* pOther : pComp->getOwner()->getAllComponents() )
-			{
-				if ( pOther == nullptr )
-					continue;
-				const string base = sceneComponentTypeBaseName( pOther );
-				const int32	 occ  = occurrence[base]++;
-				if ( pOther == pComp )
-					return makeStableSceneComponentKey( pComp, occ );
-			}
-			return {};
-		}
-
-		SceneComponent* findSceneComponentByAttachKey( GameObject* pOwner, string_view attachKey )
-		{
-			if ( pOwner == nullptr || attachKey.empty() )
-				return nullptr;
-
-			unordered_map<string, int32> occurrence;
-			for ( Component* pComp : pOwner->getAllComponents() )
-			{
-				if ( pComp == nullptr )
-					continue;
-				const string base = sceneComponentTypeBaseName( pComp );
-				const int32	 occ  = occurrence[base]++;
-				if ( makeStableSceneComponentKey( pComp, occ ) == attachKey )
-					return castTo<SceneComponent>( pComp );
-			}
-			return nullptr;
-		}
-	} // namespace
-
 	void SceneComponent::syncAttachSerializeFields() const
 	{
 		_attachOwner	 = {};
@@ -495,7 +495,7 @@ namespace sw
 		if ( pParentOwner == nullptr )
 			return;
 
-		const string parentKey = findStableSceneComponentKey( _pParent );
+		const string parentKey = SceneComponentInternal::findStableSceneComponentKey( _pParent );
 		if ( parentKey.empty() )
 			return;
 		_attachOwner	 = pParentOwner->getName();
@@ -522,7 +522,7 @@ namespace sw
 				return;
 		}
 
-		SceneComponent* pParent = findSceneComponentByAttachKey( pParentOwner, _attachComponent.c_str() );
+		SceneComponent* pParent = SceneComponentInternal::findSceneComponentByAttachKey( pParentOwner, _attachComponent.c_str() );
 		if ( pParent == nullptr || pParent == this )
 			return;
 		attachToComponent( pParent );

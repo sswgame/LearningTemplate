@@ -13,27 +13,32 @@ namespace sw
 {
 	namespace
 	{
-		/** @brief 식별자 시작 문자인지 판별합니다. */
-		static bool isIdentStart( const utf8 c )
+		struct EmitTemplateStoreInternal
 		{
-			return ( 'A' <= c && c <= 'Z' ) || ( 'a' <= c && c <= 'z' ) || c == '_';
-		}
+			/** @brief 식별자 시작 문자인지 판별합니다. */
+			static bool isIdentStart( const utf8 c )
+			{
+				return ( 'A' <= c && c <= 'Z' ) || ( 'a' <= c && c <= 'z' ) || c == '_';
+			}
 
-		/** @brief 식별자 중간 문자인지 판별합니다. */
-		static bool isIdentChar( const utf8 c )
-		{
-			return isIdentStart( c ) || ( '0' <= c && c <= '9' );
-		}
+			/** @brief 식별자 중간 문자인지 판별합니다. */
+			static bool isIdentChar( const utf8 c )
+			{
+				return isIdentStart( c ) || ( '0' <= c && c <= '9' );
+			}
 
-		/** @brief 변수 맵에서 키를 조회하고 없으면 빈 문자열을 반환합니다. */
-		static string lookupVar( const unordered_map<string, string>& vars, const string& key )
-		{
-			const auto it = vars.find( key );
-			return ( it != vars.end() ) ? it->second : string{};
-		}
-
+			/** @brief 변수 맵에서 키를 조회하고 없으면 빈 문자열을 반환합니다. */
+			static string lookupVar( const unordered_map<string, string>& vars, const string& key )
+			{
+				const auto it = vars.find( key );
+				return ( it != vars.end() ) ? it->second : string{};
+			}
+		};
 	} // namespace
+} // namespace sw
 
+namespace sw
+{
 	EmitTemplateStore& EmitTemplateStore::instance()
 	{
 		static EmitTemplateStore s_store;
@@ -150,11 +155,11 @@ namespace sw
 				key	   = tpl.substr( keyEnd, close - keyEnd );
 				keyEnd = close + 1;
 			}
-			else if ( keyEnd < tpl.size() && isIdentStart( tpl[keyEnd] ) )
+			else if ( keyEnd < tpl.size() && EmitTemplateStoreInternal::isIdentStart( tpl[keyEnd] ) )
 			{
 				const size_t start = keyEnd;
 				++keyEnd;
-				while ( keyEnd < tpl.size() && isIdentChar( tpl[keyEnd] ) )
+				while ( keyEnd < tpl.size() && EmitTemplateStoreInternal::isIdentChar( tpl[keyEnd] ) )
 					++keyEnd;
 				key = tpl.substr( start, keyEnd - start );
 			}
@@ -164,7 +169,7 @@ namespace sw
 				continue;
 			}
 
-			out += lookupVar( vars, string( key ) );
+			out += EmitTemplateStoreInternal::lookupVar( vars, string( key ) );
 			charIndex = keyEnd;
 		}
 
@@ -207,11 +212,11 @@ namespace sw
 				key	   = tpl.substr( keyEnd, close - keyEnd );
 				keyEnd = close + 1;
 			}
-			else if ( keyEnd < tpl.size() && isIdentStart( tpl[keyEnd] ) )
+			else if ( keyEnd < tpl.size() && EmitTemplateStoreInternal::isIdentStart( tpl[keyEnd] ) )
 			{
 				const size_t start = keyEnd;
 				++keyEnd;
-				while ( keyEnd < tpl.size() && isIdentChar( tpl[keyEnd] ) )
+				while ( keyEnd < tpl.size() && EmitTemplateStoreInternal::isIdentChar( tpl[keyEnd] ) )
 					++keyEnd;
 				key = tpl.substr( start, keyEnd - start );
 			}

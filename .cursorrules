@@ -197,6 +197,26 @@
 ### 람다 사용 규칙
 1. 람다의 사용은 성능상의 이점이 있지 않는 한 자제한다.
 
+### 헬퍼 Util / Internal
+1. 여러 번역 단위가 쓰는 공유 헬퍼는 `XxxUtil` static struct 헤더로 둔다. 공유 헬퍼에 `Internal` 이름을 쓰지 않는다.
+2. 한 `.cpp` 안에서만 쓰는 헬퍼는 구현 `namespace sw`와 **분리된** 구획에 둔다.
+```cpp
+namespace sw
+{
+	namespace
+	{
+		struct FooInternal { static void helper(); };
+	} // namespace
+} // namespace sw
+
+namespace sw
+{
+	void Foo::process() { FooInternal::helper(); }
+} // namespace sw
+```
+3. bind/get 로케이터용 `s_*`만 있는 상태는 구현 블록 익명 네임스페이스에 둔다.
+4. 이 규칙은 `Source/` 와 `Tools/ReflectionParser/` 에 적용한다.
+
 ### const 사용 규칙
 1. 성능상 이점이 있는 경우가 아니면 const를 붙일 수 있는 곳은 다 붙인다.
 

@@ -14,7 +14,123 @@
 
 namespace sw
 {
+	namespace
+	{
+		struct SerializeContextInternal
+		{
+			template <typename T>
+			static void regBuiltinBin( SerializeContext& ctx, const utf8* pName )
+			{
+				if constexpr ( std::is_same_v<T, string> || std::is_same_v<T, hashed_string> ||
+							   std::is_same_v<T, AtomicBool> || std::is_same_v<T, TagID> )
+					return;
+				auto writeFn = []( const void* pPtr, vector<uint8>& listBuf )
+				{
+					const uint8* pB = reinterpret_cast<const uint8*>( pPtr );
+					listBuf.insert( listBuf.end(), pB, pB + sizeof( T ) );
+				};
+				auto readFn = []( void* pPtr, const uint8* pData, size_t size, size_t& offset ) -> bool
+				{
+					if ( offset + sizeof( T ) > size )
+						return false;
+					Memory::copy( pPtr, pData + offset, sizeof( T ) );
+					offset += sizeof( T );
+					return true;
+				};
+				ctx.registerBinaryHandler( hashed_string( pName ), writeFn, readFn );
+			}
 
+			template <typename T>
+			static void registerNumericTextHandler( SerializeContext& ctx, const hashed_string& typeName )
+			{
+				ctx.registerTextHandler(
+					typeName,
+					[]( const void* pPtr )
+				{ return sw::to_string( *static_cast<const T*>( pPtr ) ); },
+					[]( void* pPtr, string_view strView ) -> bool
+				{
+					const fixed_string<constant::kMaxBuffer64> tokenNt{ strView };
+					utf8*									   pEndPtr{ nullptr };
+					if constexpr ( std::is_floating_point_v<T> )
+					{
+						if constexpr ( sizeof( T ) == sizeof( float32 ) )
+							*static_cast<T*>( pPtr ) = static_cast<T>( StringUtil::strtof( tokenNt.c_str(), &pEndPtr ) );
+						else
+							*static_cast<T*>( pPtr ) = static_cast<T>( StringUtil::strtod( tokenNt.c_str(), &pEndPtr ) );
+					}
+					else if constexpr ( std::is_unsigned_v<T> )
+					{
+						*static_cast<T*>( pPtr ) = static_cast<T>( StringUtil::strtoull( tokenNt.c_str(), &pEndPtr, 10 ) );
+					}
+					else
+					{
+						*static_cast<T*>( pPtr ) = static_cast<T>( StringUtil::strtoll( tokenNt.c_str(), &pEndPtr, 10 ) );
+					}
+					if ( pEndPtr == tokenNt.c_str() && tokenNt.empty() == false )
+						return false;
+					return true;
+				} );
+			}
+
+			template <typename TVec, typename TElem, int32 kCount>
+			static void registerVectorTextHandler( SerializeContext& ctx, const hashed_string& typeName )
+			{
+				ctx.registerTextHandler(
+					typeName,
+					[]( const void* pPtr )
+				{
+					const auto*							  pElem = reinterpret_cast<const TElem*>( pPtr );
+					StringBuilder<constant::kMaxBuffer64> sb;
+					for ( int32 axisIndex = 0; axisIndex < kCount; ++axisIndex )
+					{
+						if ( axisIndex > 0 )
+							sb.append( ',' );
+						sb.append( pElem[axisIndex] );
+					}
+					return string{ sb.c_str(), sb.size() };
+				},
+					[]( void* pPtr, string_view strView )
+				{
+					auto*  pOut = reinterpret_cast<TElem*>( pPtr );
+					size_t start{ 0 };
+					for ( int32 axisIndex = 0; axisIndex < kCount; ++axisIndex )
+					{
+						const size_t	  sep	= strView.find( ',', start );
+						const string_view token = strView.substr( start, sep == string_view::npos ? string_view::npos : sep - start );
+						if ( token.empty() )
+							return false;
+						const fixed_string<constant::kMaxBuffer64> tokenNt{ token };
+						utf8*									   pEndPtr{ nullptr };
+						if constexpr ( std::is_floating_point_v<TElem> )
+							pOut[axisIndex] = static_cast<TElem>( StringUtil::strtod( tokenNt.c_str(), &pEndPtr ) );
+						else
+							pOut[axisIndex] = static_cast<TElem>( StringUtil::strtoll( tokenNt.c_str(), &pEndPtr, 10 ) );
+						if ( pEndPtr == tokenNt.c_str() && tokenNt.empty() == false )
+							return false;
+						if ( sep == string_view::npos )
+						{
+							if ( axisIndex != kCount - 1 )
+								return false;
+							break;
+						}
+						start = sep + 1;
+					}
+					return true;
+				} );
+			}
+
+			static void registerFloatVectorTextHandlers( SerializeContext& ctx )
+			{
+				registerVectorTextHandler<float2, float32, 2>( ctx, hashed_string( PredefinedNameType::NameType_float2 ) );
+				registerVectorTextHandler<float3, float32, 3>( ctx, hashed_string( PredefinedNameType::NameType_float3 ) );
+				registerVectorTextHandler<float4, float32, 4>( ctx, hashed_string( PredefinedNameType::NameType_float4 ) );
+			}
+		};
+	} // namespace
+} // namespace sw
+
+namespace sw
+{
 	void SerializeContext::registerBinaryHandler( hashed_string typeName, BinaryWriteFn writeFn, BinaryReadFn readFn )
 	{
 		_mapBinaryWriter.insert_or_assign( typeName, std::move( writeFn ) );
@@ -51,124 +167,13 @@ namespace sw
 		return it != _mapTextReader.end() ? &it->second : nullptr;
 	}
 
-	namespace
-	{
-		template <typename T>
-		static void regBuiltinBin( SerializeContext& ctx, const utf8* pName )
-		{
-			if constexpr ( std::is_same_v<T, string> || std::is_same_v<T, hashed_string> ||
-						   std::is_same_v<T, AtomicBool> || std::is_same_v<T, TagID> )
-				return;
-			auto writeFn = []( const void* pPtr, vector<uint8>& listBuf )
-			{
-				const uint8* pB = reinterpret_cast<const uint8*>( pPtr );
-				listBuf.insert( listBuf.end(), pB, pB + sizeof( T ) );
-			};
-			auto readFn = []( void* pPtr, const uint8* pData, size_t size, size_t& offset ) -> bool
-			{
-				if ( offset + sizeof( T ) > size )
-					return false;
-				Memory::copy( pPtr, pData + offset, sizeof( T ) );
-				offset += sizeof( T );
-				return true;
-			};
-			ctx.registerBinaryHandler( hashed_string( pName ), writeFn, readFn );
-		}
-
-		template <typename T>
-		void registerNumericTextHandler( SerializeContext& ctx, const hashed_string& typeName )
-		{
-			ctx.registerTextHandler(
-				typeName,
-				[]( const void* pPtr )
-			{ return sw::to_string( *static_cast<const T*>( pPtr ) ); },
-				[]( void* pPtr, string_view strView ) -> bool
-			{
-				const fixed_string<constant::kMaxBuffer64> tokenNt{ strView };
-				utf8*									   pEndPtr{ nullptr };
-				if constexpr ( std::is_floating_point_v<T> )
-				{
-					if constexpr ( sizeof( T ) == sizeof( float32 ) )
-						*static_cast<T*>( pPtr ) = static_cast<T>( StringUtil::strtof( tokenNt.c_str(), &pEndPtr ) );
-					else
-						*static_cast<T*>( pPtr ) = static_cast<T>( StringUtil::strtod( tokenNt.c_str(), &pEndPtr ) );
-				}
-				else if constexpr ( std::is_unsigned_v<T> )
-				{
-					*static_cast<T*>( pPtr ) = static_cast<T>( StringUtil::strtoull( tokenNt.c_str(), &pEndPtr, 10 ) );
-				}
-				else
-				{
-					*static_cast<T*>( pPtr ) = static_cast<T>( StringUtil::strtoll( tokenNt.c_str(), &pEndPtr, 10 ) );
-				}
-				if ( pEndPtr == tokenNt.c_str() && tokenNt.empty() == false )
-					return false;
-				return true;
-			} );
-		}
-
-		template <typename TVec, typename TElem, int32 kCount>
-		void registerVectorTextHandler( SerializeContext& ctx, const hashed_string& typeName )
-		{
-			ctx.registerTextHandler(
-				typeName,
-				[]( const void* pPtr )
-			{
-				const auto*							  pElem = reinterpret_cast<const TElem*>( pPtr );
-				StringBuilder<constant::kMaxBuffer64> sb;
-				for ( int32 axisIndex = 0; axisIndex < kCount; ++axisIndex )
-				{
-					if ( axisIndex > 0 )
-						sb.append( ',' );
-					sb.append( pElem[axisIndex] );
-				}
-				return string{ sb.c_str(), sb.size() };
-			},
-				[]( void* pPtr, string_view strView )
-			{
-				auto*  pOut = reinterpret_cast<TElem*>( pPtr );
-				size_t start{ 0 };
-				for ( int32 axisIndex = 0; axisIndex < kCount; ++axisIndex )
-				{
-					const size_t	  sep	= strView.find( ',', start );
-					const string_view token = strView.substr( start, sep == string_view::npos ? string_view::npos : sep - start );
-					if ( token.empty() )
-						return false;
-					const fixed_string<constant::kMaxBuffer64> tokenNt{ token };
-					utf8*									   pEndPtr{ nullptr };
-					if constexpr ( std::is_floating_point_v<TElem> )
-						pOut[axisIndex] = static_cast<TElem>( StringUtil::strtod( tokenNt.c_str(), &pEndPtr ) );
-					else
-						pOut[axisIndex] = static_cast<TElem>( StringUtil::strtoll( tokenNt.c_str(), &pEndPtr, 10 ) );
-					if ( pEndPtr == tokenNt.c_str() && tokenNt.empty() == false )
-						return false;
-					if ( sep == string_view::npos )
-					{
-						if ( axisIndex != kCount - 1 )
-							return false;
-						break;
-					}
-					start = sep + 1;
-				}
-				return true;
-			} );
-		}
-
-		void registerFloatVectorTextHandlers( SerializeContext& ctx )
-		{
-			registerVectorTextHandler<float2, float32, 2>( ctx, hashed_string( PredefinedNameType::NameType_float2 ) );
-			registerVectorTextHandler<float3, float32, 3>( ctx, hashed_string( PredefinedNameType::NameType_float3 ) );
-			registerVectorTextHandler<float4, float32, 4>( ctx, hashed_string( PredefinedNameType::NameType_float4 ) );
-		}
-	} // namespace
-
 	const SerializeContext& SerializeContext::getDefault()
 	{
 		static SerializeContext s_defaultCtx = []()
 		{
 			SerializeContext ctx;
 
-#define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, TextConv, Ns, ... ) regBuiltinBin<CppType>( ctx, #Canon );
+#define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, TextConv, Ns, ... ) SerializeContextInternal::regBuiltinBin<CppType>( ctx, #Canon );
 #define SW_REFLECT_BUILTIN_CONTAINER( ... )
 #include "Engine/Reflection/ReflectBuiltins.xxx"
 
@@ -255,12 +260,12 @@ namespace sw
 			ctx.registerBinaryHandler( hashed_string( PredefinedNameType::NameType_TagID ), tagIdWriteBin, tagIdReadBin );
 
 #define SW_BUILTIN_TEXT_none( Canon, CppType )
-#define SW_BUILTIN_TEXT_stoi( Canon, CppType )	 registerNumericTextHandler<CppType>( ctx, hashed_string( PredefinedNameType::NameType_##Canon ) );
-#define SW_BUILTIN_TEXT_stoll( Canon, CppType )	 registerNumericTextHandler<CppType>( ctx, hashed_string( PredefinedNameType::NameType_##Canon ) );
-#define SW_BUILTIN_TEXT_stoul( Canon, CppType )	 registerNumericTextHandler<CppType>( ctx, hashed_string( PredefinedNameType::NameType_##Canon ) );
-#define SW_BUILTIN_TEXT_stoull( Canon, CppType ) registerNumericTextHandler<CppType>( ctx, hashed_string( PredefinedNameType::NameType_##Canon ) );
-#define SW_BUILTIN_TEXT_stof( Canon, CppType )	 registerNumericTextHandler<CppType>( ctx, hashed_string( PredefinedNameType::NameType_##Canon ) );
-#define SW_BUILTIN_TEXT_stod( Canon, CppType )	 registerNumericTextHandler<CppType>( ctx, hashed_string( PredefinedNameType::NameType_##Canon ) );
+#define SW_BUILTIN_TEXT_stoi( Canon, CppType )	 SerializeContextInternal::registerNumericTextHandler<CppType>( ctx, hashed_string( PredefinedNameType::NameType_##Canon ) );
+#define SW_BUILTIN_TEXT_stoll( Canon, CppType )	 SerializeContextInternal::registerNumericTextHandler<CppType>( ctx, hashed_string( PredefinedNameType::NameType_##Canon ) );
+#define SW_BUILTIN_TEXT_stoul( Canon, CppType )	 SerializeContextInternal::registerNumericTextHandler<CppType>( ctx, hashed_string( PredefinedNameType::NameType_##Canon ) );
+#define SW_BUILTIN_TEXT_stoull( Canon, CppType ) SerializeContextInternal::registerNumericTextHandler<CppType>( ctx, hashed_string( PredefinedNameType::NameType_##Canon ) );
+#define SW_BUILTIN_TEXT_stof( Canon, CppType )	 SerializeContextInternal::registerNumericTextHandler<CppType>( ctx, hashed_string( PredefinedNameType::NameType_##Canon ) );
+#define SW_BUILTIN_TEXT_stod( Canon, CppType )	 SerializeContextInternal::registerNumericTextHandler<CppType>( ctx, hashed_string( PredefinedNameType::NameType_##Canon ) );
 
 #define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, TextConv, Ns, ... ) SW_BUILTIN_TEXT_##TextConv( Canon, CppType )
 #define SW_REFLECT_BUILTIN_CONTAINER( ... )
@@ -386,7 +391,7 @@ namespace sw
 				return true;
 			} );
 
-			registerFloatVectorTextHandlers( ctx );
+			SerializeContextInternal::registerFloatVectorTextHandlers( ctx );
 			registerReflectAnyHandlers( ctx );
 			return ctx;
 		}();

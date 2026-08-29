@@ -21,20 +21,25 @@
 
 namespace sw::editor
 {
-	SW_LOG_CALLER( "EditorUtil" );
-
 	namespace
 	{
-		/**
-		 * @brief 해당 디렉터리가 실제로 존재하는 경우에만 정규화하여 출력 목록에 추가합니다.
-		 */
-		void appendIfDirectory( vector<string>& out, const string& candidate )
+		struct EditorUtilInternal
 		{
-			if ( candidate.empty() == false && FileUtil::directoryExists( candidate ) )
-				out.push_back( FileUtil::normalizeSeparators( candidate ) );
-		}
-
+			/**
+			 * @brief 해당 디렉터리가 실제로 존재하는 경우에만 정규화하여 출력 목록에 추가합니다.
+			 */
+			static void appendIfDirectory( vector<string>& out, const string& candidate )
+			{
+				if ( candidate.empty() == false && FileUtil::directoryExists( candidate ) )
+					out.push_back( FileUtil::normalizeSeparators( candidate ) );
+			}
+		};
 	} // namespace
+} // namespace sw::editor
+
+namespace sw::editor
+{
+	SW_LOG_CALLER( "EditorUtil" );
 
 	/**
 	 * @brief 현재 운영체제의 기본 시스템 폰트 디렉터리 경로 목록을 반환합니다.
@@ -46,28 +51,28 @@ namespace sw::editor
 #if defined( SW_PLATFORM_WINDOWS )
 		utf16 windowsDir[constant::kMaxPathSize] = {};
 		if ( GetWindowsDirectoryW( windowsDir, constant::kMaxPathSize ) > 0 )
-			appendIfDirectory( listDirs, FileUtil::joinPath( StringUtil::utf16ToUtf8( windowsDir ), "Fonts" ) );
+			EditorUtilInternal::appendIfDirectory( listDirs, FileUtil::joinPath( StringUtil::utf16ToUtf8( windowsDir ), "Fonts" ) );
 
 #elif defined( SW_PLATFORM_LINUX )
-		appendIfDirectory( listDirs, "/usr/share/fonts" );
-		appendIfDirectory( listDirs, "/usr/local/share/fonts" );
+		EditorUtilInternal::appendIfDirectory( listDirs, "/usr/share/fonts" );
+		EditorUtilInternal::appendIfDirectory( listDirs, "/usr/local/share/fonts" );
 		const utf8* pHome = std::getenv( "HOME" );
 		if ( pHome != nullptr )
-			appendIfDirectory( listDirs, FileUtil::joinPath( pHome, ".local/share/fonts" ) );
+			EditorUtilInternal::appendIfDirectory( listDirs, FileUtil::joinPath( pHome, ".local/share/fonts" ) );
 
 #elif defined( SW_PLATFORM_MACOS )
-		appendIfDirectory( listDirs, "/System/Library/Fonts" );
-		appendIfDirectory( listDirs, "/Library/Fonts" );
+		EditorUtilInternal::appendIfDirectory( listDirs, "/System/Library/Fonts" );
+		EditorUtilInternal::appendIfDirectory( listDirs, "/Library/Fonts" );
 		const utf8* pHome = std::getenv( "HOME" );
 		if ( pHome != nullptr )
 		{
-			appendIfDirectory( listDirs, FileUtil::joinPath( pHome, "Library/Fonts" ) );
+			EditorUtilInternal::appendIfDirectory( listDirs, FileUtil::joinPath( pHome, "Library/Fonts" ) );
 		}
 		else
 		{
 			const passwd* pPw = getpwuid( getuid() );
 			if ( pPw != nullptr )
-				appendIfDirectory( listDirs, FileUtil::joinPath( pPw->pw_dir, "Library/Fonts" ) );
+				EditorUtilInternal::appendIfDirectory( listDirs, FileUtil::joinPath( pPw->pw_dir, "Library/Fonts" ) );
 		}
 
 #endif

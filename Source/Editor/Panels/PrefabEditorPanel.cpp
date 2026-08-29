@@ -15,18 +15,24 @@
 
 namespace sw::editor
 {
-	SW_LOG_CALLER( "PrefabTool" );
-
 	namespace
 	{
-		GameObject* getPrefabTargetInstance()
+		struct PrefabEditorPanelInternal
 		{
-			EditorContext* pContext = EditorContext::get();
-			if ( pContext == nullptr )
-				return nullptr;
-			return pContext->getSelectionManager().getPrimaryObject().get();
-		}
+			static GameObject* getPrefabTargetInstance()
+			{
+				EditorContext* pContext = EditorContext::get();
+				if ( pContext == nullptr )
+					return nullptr;
+				return pContext->getSelectionManager().getPrimaryObject().get();
+			}
+		};
 	} // namespace
+} // namespace sw::editor
+
+namespace sw::editor
+{
+	SW_LOG_CALLER( "PrefabTool" );
 
 	PrefabEditorPanel::PrefabEditorPanel()
 		: _selectedPrefabPath{}
@@ -42,7 +48,7 @@ namespace sw::editor
 	void PrefabEditorPanel::scanPrefabOverrides( const utf8* pPrefabPath )
 	{
 		const string_view path = ( pPrefabPath != nullptr ) ? string_view{ pPrefabPath } : string_view{};
-		EditorToolAssetCommands::collectPrefabOverrides( getPrefabTargetInstance(), path, _selectedPrefabPath,
+		EditorToolAssetCommands::collectPrefabOverrides( PrefabEditorPanelInternal::getPrefabTargetInstance(), path, _selectedPrefabPath,
 														 _selectedInstanceName, _listOverride, _listNestedPrefab );
 	}
 
@@ -134,7 +140,7 @@ namespace sw::editor
 					ImGui::PushID( static_cast<int32>( overrideIndex ) );
 					if ( ImGui::SmallButton( "Revert" ) )
 					{
-						EditorToolAssetCommands::revertPrefabOverride( getPrefabTargetInstance(), item, _selectedPrefabPath );
+						EditorToolAssetCommands::revertPrefabOverride( PrefabEditorPanelInternal::getPrefabTargetInstance(), item, _selectedPrefabPath );
 						SW_LOG_TRACE( "Reverted %s.%s to %s", item._componentName.c_str(), item._propertyName.c_str(), item._defaultValue.c_str() );
 					}
 					ImGui::PopID();
@@ -148,7 +154,7 @@ namespace sw::editor
 
 		if ( ImGui::Button( "Apply All Overrides to Template", ImVec2( 220.0f, 0.0f ) ) )
 		{
-			EditorToolAssetCommands::applyPrefabOverridesToTemplate( getPrefabTargetInstance(), _selectedPrefabPath );
+			EditorToolAssetCommands::applyPrefabOverridesToTemplate( PrefabEditorPanelInternal::getPrefabTargetInstance(), _selectedPrefabPath );
 			scanPrefabOverrides( _selectedPrefabPath.c_str() );
 			SW_LOG_TRACE( "Applied all instance overrides back to template %s", _selectedPrefabPath.c_str() );
 		}
@@ -156,7 +162,7 @@ namespace sw::editor
 		ImGui::SameLine();
 		if ( ImGui::Button( "Revert All Overrides", ImVec2( 160.0f, 0.0f ) ) )
 		{
-			EditorToolAssetCommands::revertAllPrefabOverrides( getPrefabTargetInstance(), _selectedPrefabPath );
+			EditorToolAssetCommands::revertAllPrefabOverrides( PrefabEditorPanelInternal::getPrefabTargetInstance(), _selectedPrefabPath );
 			scanPrefabOverrides( _selectedPrefabPath.c_str() );
 			SW_LOG_TRACE( "Reverted all overrides on %s", _selectedInstanceName.c_str() );
 		}

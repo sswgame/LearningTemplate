@@ -24,21 +24,27 @@ namespace sw::editor
 {
 	namespace
 	{
-		void formatBytes( uint64 bytes, utf8* pOut, size_t outSize )
+		struct ProfilerPanelInternal
 		{
-			const uint32 bufSize = static_cast<uint32>( outSize );
-			if ( bytes < 1024 )
-				formatstring( pOut, bufSize, "%llu B", bytes );
-			else if ( bytes < 1024 * 1024 )
-				formatstring( pOut, bufSize, "%.2f KB", static_cast<float64>( bytes ) / 1024.0 );
-			else if ( bytes < 1024 * 1024 * 1024 )
-				formatstring( pOut, bufSize, "%.2f MB", static_cast<float64>( bytes ) / ( 1024.0 * 1024.0 ) );
-			else
-				formatstring( pOut, bufSize, "%.2f GB",
-							  static_cast<float64>( bytes ) / ( 1024.0 * 1024.0 * 1024.0 ) );
-		}
+			static void formatBytes( uint64 bytes, utf8* pOut, size_t outSize )
+			{
+				const uint32 bufSize = static_cast<uint32>( outSize );
+				if ( bytes < 1024 )
+					formatstring( pOut, bufSize, "%llu B", bytes );
+				else if ( bytes < 1024 * 1024 )
+					formatstring( pOut, bufSize, "%.2f KB", static_cast<float64>( bytes ) / 1024.0 );
+				else if ( bytes < 1024 * 1024 * 1024 )
+					formatstring( pOut, bufSize, "%.2f MB", static_cast<float64>( bytes ) / ( 1024.0 * 1024.0 ) );
+				else
+					formatstring( pOut, bufSize, "%.2f GB",
+								  static_cast<float64>( bytes ) / ( 1024.0 * 1024.0 * 1024.0 ) );
+			}
+		};
 	} // namespace
+} // namespace sw::editor
 
+namespace sw::editor
+{
 	ProfilerPanel::ProfilerPanel()
 		: IEditorPanel( false )
 		, _arrFrameTimeHistory{}
@@ -267,8 +273,8 @@ namespace sw::editor
 					MemoryTag	tag	  = static_cast<MemoryTag>( tagIndex );
 					const auto& stats = profiler.getStats( tag );
 
-					formatBytes( stats._currentAllocatedBytes.load(), arrBytesBuf, sizeof( arrBytesBuf ) );
-					formatBytes( stats._totalAllocatedBytes.load(), arrTotalBuf, sizeof( arrTotalBuf ) );
+					ProfilerPanelInternal::formatBytes( stats._currentAllocatedBytes.load(), arrBytesBuf, sizeof( arrBytesBuf ) );
+					ProfilerPanelInternal::formatBytes( stats._totalAllocatedBytes.load(), arrTotalBuf, sizeof( arrTotalBuf ) );
 
 					ImGui::TableNextRow();
 					ImGui::TableNextColumn();

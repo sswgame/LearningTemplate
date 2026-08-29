@@ -19,34 +19,33 @@ namespace sw
 {
 	namespace
 	{
-
-		/** @brief Tags 배열 복원으로 이미 생긴 TagComponent는 재사용합니다. */
-		Component* addOrReuseComponentByName( GameObject* pGameObject, hashed_string typeName, bool bLogWarning )
+		struct ObjectStateSerializerInternal
 		{
-			if ( pGameObject == nullptr )
-				return nullptr;
-			if ( typeName == hashed_string( "TagComponent" ) )
+			/** @brief Tags 배열 복원으로 이미 생긴 TagComponent는 재사용합니다. */
+			static Component* addOrReuseComponentByName( GameObject* pGameObject, hashed_string typeName, bool bLogWarning )
 			{
-				TagComponent* pExisting = pGameObject->getComponent<TagComponent>();
-				if ( pExisting != nullptr )
-					return pExisting;
+				if ( pGameObject == nullptr )
+					return nullptr;
+				if ( typeName == hashed_string( "TagComponent" ) )
+				{
+					TagComponent* pExisting = pGameObject->getComponent<TagComponent>();
+					if ( pExisting != nullptr )
+						return pExisting;
+				}
+				GameObjectManager* pManager = pGameObject->getManager();
+				if ( pManager == nullptr )
+					return nullptr;
+				return pManager->addComponentByName( pGameObject, typeName, bLogWarning );
 			}
-			GameObjectManager* pManager = pGameObject->getManager();
-			if ( pManager == nullptr )
-				return nullptr;
-			return pManager->addComponentByName( pGameObject, typeName, bLogWarning );
-		}
 
-		namespace
-		{
-			string formatTagId( const TagID& tag )
+			static string formatTagId( const TagID& tag )
 			{
 				if ( tag._pString != nullptr )
 					return string( "str:" ) + tag._pString;
 				return to_string( tag._id );
 			}
 
-			bool parseTagId( string_view text, TagID& outTag )
+			static bool parseTagId( string_view text, TagID& outTag )
 			{
 				outTag = TagID{};
 				if ( text.empty() )
@@ -63,7 +62,7 @@ namespace sw
 				return outTag.isValid();
 			}
 
-			void* createOwnedComponent( void* pOuter, hashed_string typeName )
+			static void* createOwnedComponent( void* pOuter, hashed_string typeName )
 			{
 				GameObject* pGameObject = static_cast<GameObject*>( pOuter );
 				if ( pGameObject == nullptr || pGameObject->getManager() == nullptr )
@@ -71,7 +70,7 @@ namespace sw
 				return pGameObject->getManager()->addComponentByName( pGameObject, typeName, false );
 			}
 
-			const TypeInfo* getComponentRuntimeTypeInfo( const void* pInstance )
+			static const TypeInfo* getComponentRuntimeTypeInfo( const void* pInstance )
 			{
 				const Component* pComp = static_cast<const Component*>( pInstance );
 				if ( pComp == nullptr || pComp->isPendingKill() )
@@ -79,7 +78,7 @@ namespace sw
 				return pComp->getTypeInfo();
 			}
 
-			SerializeContext makeGameObjectXmlContext( GameObject* pGameObject )
+			static SerializeContext makeGameObjectXmlContext( GameObject* pGameObject )
 			{
 				SerializeContext ctx = SerializeContext::getDefault();
 				ctx.setOuterInstance( pGameObject );
@@ -87,10 +86,12 @@ namespace sw
 				ctx.setRuntimeTypeInfoFn( &getComponentRuntimeTypeInfo );
 				return ctx;
 			}
-
-		} // namespace
+		};
 	} // namespace
+} // namespace sw
 
+namespace sw
+{
 	string ObjectStateSerializer::saveToXmlString( const GameObject* pGameObject )
 	{
 		if ( pGameObject == nullptr )
@@ -102,7 +103,7 @@ namespace sw
 		if ( pTypeInfo == nullptr )
 			return {};
 
-		SerializeContext ctx = makeGameObjectXmlContext( const_cast<GameObject*>( pGameObject ) );
+		SerializeContext ctx = ObjectStateSerializerInternal::makeGameObjectXmlContext( const_cast<GameObject*>( pGameObject ) );
 		return XmlSerializer::serializeVersioned( kObjectReflectedSchemaVersion, pGameObject, *pTypeInfo, ctx );
 	}
 
@@ -117,7 +118,7 @@ namespace sw
 		if ( pTypeInfo == nullptr )
 			return {};
 
-		SerializeContext ctx = makeGameObjectXmlContext( const_cast<GameObject*>( pGameObject ) );
+		SerializeContext ctx = ObjectStateSerializerInternal::makeGameObjectXmlContext( const_cast<GameObject*>( pGameObject ) );
 		return JsonSerializer::serializeVersioned( kObjectReflectedSchemaVersion, pGameObject, *pTypeInfo, ctx );
 	}
 
@@ -145,7 +146,7 @@ namespace sw
 		writer.write( static_cast<uint32>( tags.size() ) );
 		for ( TagID tag : tags )
 		{
-			writer.writeString( formatTagId( tag ) );
+			writer.writeString( ObjectStateSerializerInternal::formatTagId( tag ) );
 		}
 
 		// 5. Components
@@ -238,7 +239,7 @@ namespace sw
 			if ( reader.readString( tagStr ) == false )
 				return 0;
 			TagID tag;
-			if ( parseTagId( tagStr, tag ) )
+			if ( ObjectStateSerializerInternal::parseTagId( tagStr, tag ) )
 				pGameObject->addTag( tag );
 		}
 
@@ -263,7 +264,7 @@ namespace sw
 				continue;
 			}
 
-			Component* pComp = addOrReuseComponentByName( pGameObject, hashed_string( typeName.c_str() ), false );
+			Component* pComp = ObjectStateSerializerInternal::addOrReuseComponentByName( pGameObject, hashed_string( typeName.c_str() ), false );
 			listLoadedComponents.push_back( pComp );
 			if ( pComp == nullptr )
 				continue;
@@ -317,7 +318,7 @@ namespace sw
 		const hashed_string oldName = pGameObject->getName();
 		pGameObject->clearComponents();
 
-		SerializeContext ctx = makeGameObjectXmlContext( pGameObject );
+		SerializeContext ctx = ObjectStateSerializerInternal::makeGameObjectXmlContext( pGameObject );
 		uint32			 ver{ 0 };
 		if ( XmlSerializer::deserializeVersioned( ver, pGameObject, *pTypeInfo, xmlString, kObjectReflectedSchemaVersion,
 												  nullptr, nullptr, ctx ) == false )
@@ -343,7 +344,7 @@ namespace sw
 		const hashed_string oldName = pGameObject->getName();
 		pGameObject->clearComponents();
 
-		SerializeContext ctx = makeGameObjectXmlContext( pGameObject );
+		SerializeContext ctx = ObjectStateSerializerInternal::makeGameObjectXmlContext( pGameObject );
 		uint32			 ver{ 0 };
 		if ( JsonSerializer::deserializeVersioned( ver, pGameObject, *pTypeInfo, jsonString, kObjectReflectedSchemaVersion,
 												   nullptr, nullptr, ctx ) == false )

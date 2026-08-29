@@ -14,55 +14,59 @@
 
 namespace sw::editor
 {
-	SW_LOG_CALLER( "EditorData" );
-
 	namespace
 	{
-
-		void takeFontList( XmlNode root, const utf8* pListName, vector<string>& listOut )
+		struct EditorDataInternal
 		{
-			XmlNode list = root.child( pListName );
-			if ( list.isValid() == false )
-				return;
-
-			vector<string> listLoaded;
-			for ( XmlNode fontNode = list.child( "font" ); fontNode; fontNode = fontNode.next( "font" ) )
+			static void takeFontList( XmlNode root, const utf8* pListName, vector<string>& listOut )
 			{
-				const utf8* pText = fontNode.text();
-				if ( pText != nullptr && pText[0] != '\0' )
-					listLoaded.push_back( pText );
-			}
-			if ( listLoaded.empty() == false )
-				listOut = std::move( listLoaded );
-		}
+				XmlNode list = root.child( pListName );
+				if ( list.isValid() == false )
+					return;
 
-		void takeClearColor( XmlNode root, float32 outColor[4] )
-		{
-			const utf8* pText = root.childText( "clearColor" );
-			if ( pText == nullptr || pText[0] == '\0' )
-				return;
-			const utf8* pCursor = pText;
-			float32		arrParsed[4]{};
-			uint32		parsedCount{ 0 };
-			while ( parsedCount < 4 )
+				vector<string> listLoaded;
+				for ( XmlNode fontNode = list.child( "font" ); fontNode; fontNode = fontNode.next( "font" ) )
+				{
+					const utf8* pText = fontNode.text();
+					if ( pText != nullptr && pText[0] != '\0' )
+						listLoaded.push_back( pText );
+				}
+				if ( listLoaded.empty() == false )
+					listOut = std::move( listLoaded );
+			}
+
+			static void takeClearColor( XmlNode root, float32 outColor[4] )
 			{
-				utf8*		pEnd	   = nullptr;
-				const utf8* pBefore	   = pCursor;
-				arrParsed[parsedCount] = StringUtil::strtof( pCursor, &pEnd );
-				if ( pEnd == nullptr || pEnd == pBefore )
-					break;
-				++parsedCount;
-				pCursor = pEnd;
+				const utf8* pText = root.childText( "clearColor" );
+				if ( pText == nullptr || pText[0] == '\0' )
+					return;
+				const utf8* pCursor = pText;
+				float32		arrParsed[4]{};
+				uint32		parsedCount{ 0 };
+				while ( parsedCount < 4 )
+				{
+					utf8*		pEnd	   = nullptr;
+					const utf8* pBefore	   = pCursor;
+					arrParsed[parsedCount] = StringUtil::strtof( pCursor, &pEnd );
+					if ( pEnd == nullptr || pEnd == pBefore )
+						break;
+					++parsedCount;
+					pCursor = pEnd;
+				}
+				if ( parsedCount != 4 )
+					return;
+				outColor[0] = arrParsed[0];
+				outColor[1] = arrParsed[1];
+				outColor[2] = arrParsed[2];
+				outColor[3] = arrParsed[3];
 			}
-			if ( parsedCount != 4 )
-				return;
-			outColor[0] = arrParsed[0];
-			outColor[1] = arrParsed[1];
-			outColor[2] = arrParsed[2];
-			outColor[3] = arrParsed[3];
-		}
-
+		};
 	} // namespace
+} // namespace sw::editor
+
+namespace sw::editor
+{
+	SW_LOG_CALLER( "EditorData" );
 
 	bool EditorData::loadFromHostPath( string_view hostRelativePath )
 	{
@@ -100,9 +104,9 @@ namespace sw::editor
 
 		_fontSize	 = root.childFloat( "fontSize", _fontSize );
 		_playerSpeed = root.childFloat( "playerSpeed", _playerSpeed );
-		takeClearColor( root, _arrClearColor );
-		takeFontList( root, "baseFonts", _listBaseFonts );
-		takeFontList( root, "koreanFonts", _listKoreanFonts );
+		EditorDataInternal::takeClearColor( root, _arrClearColor );
+		EditorDataInternal::takeFontList( root, "baseFonts", _listBaseFonts );
+		EditorDataInternal::takeFontList( root, "koreanFonts", _listKoreanFonts );
 
 		SW_LOG_INFO( "Loaded from %#", absPath );
 		return true;

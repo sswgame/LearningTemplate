@@ -13,43 +13,49 @@ namespace sw
 {
 	namespace
 	{
-		const utf8* dialogueAssetTypeName( DialogueAssetNodeType type )
+		struct DialogueGraphAssetInternal
 		{
-			switch ( type )
+			static const utf8* dialogueAssetTypeName( DialogueAssetNodeType type )
 			{
-				case DialogueAssetNodeType::Start:
-					return "Start";
-				case DialogueAssetNodeType::Dialogue:
-					return "Dialogue";
-				case DialogueAssetNodeType::Choice:
-					return "Choice";
-				case DialogueAssetNodeType::Branch:
-					return "Branch";
-				case DialogueAssetNodeType::Action:
-					return "Action";
-				case DialogueAssetNodeType::End:
-					return "End";
-				default:
-					return "Unknown";
+				switch ( type )
+				{
+					case DialogueAssetNodeType::Start:
+						return "Start";
+					case DialogueAssetNodeType::Dialogue:
+						return "Dialogue";
+					case DialogueAssetNodeType::Choice:
+						return "Choice";
+					case DialogueAssetNodeType::Branch:
+						return "Branch";
+					case DialogueAssetNodeType::Action:
+						return "Action";
+					case DialogueAssetNodeType::End:
+						return "End";
+					default:
+						return "Unknown";
+				}
 			}
-		}
 
-		DialogueAssetNodeType parseDialogueAssetType( string_view typeStr )
-		{
-			if ( typeStr == "Start" )
-				return DialogueAssetNodeType::Start;
-			if ( typeStr == "Choice" )
-				return DialogueAssetNodeType::Choice;
-			if ( typeStr == "Branch" )
-				return DialogueAssetNodeType::Branch;
-			if ( typeStr == "Action" )
-				return DialogueAssetNodeType::Action;
-			if ( typeStr == "End" )
-				return DialogueAssetNodeType::End;
-			return DialogueAssetNodeType::Dialogue;
-		}
+			static DialogueAssetNodeType parseDialogueAssetType( string_view typeStr )
+			{
+				if ( typeStr == "Start" )
+					return DialogueAssetNodeType::Start;
+				if ( typeStr == "Choice" )
+					return DialogueAssetNodeType::Choice;
+				if ( typeStr == "Branch" )
+					return DialogueAssetNodeType::Branch;
+				if ( typeStr == "Action" )
+					return DialogueAssetNodeType::Action;
+				if ( typeStr == "End" )
+					return DialogueAssetNodeType::End;
+				return DialogueAssetNodeType::Dialogue;
+			}
+		};
 	} // namespace
+} // namespace sw
 
+namespace sw
+{
 	bool DialogueGraphAsset::loadFromFile( string_view path )
 	{
 		_listNode.clear();
@@ -95,7 +101,7 @@ namespace sw
 
 				DialogueAssetNode node{};
 				node._id			= static_cast<int32>( nodeJson.get( "id" ).asInt( 0 ) );
-				node._type			= parseDialogueAssetType( nodeJson.get( "type" ).asString() );
+				node._type			= DialogueGraphAssetInternal::parseDialogueAssetType( nodeJson.get( "type" ).asString() );
 				node._speaker		= nodeJson.get( "speaker" ).asString();
 				node._text			= nodeJson.get( "text" ).asString();
 				node._condition		= nodeJson.get( "condition" ).asString();
@@ -150,7 +156,7 @@ namespace sw
 			const JsonValue nodeJson = nodesVal.pushBack();
 			nodeJson.setObject();
 			nodeJson.set( "id" ).setInt( node._id );
-			nodeJson.set( "type" ).setString( dialogueAssetTypeName( node._type ) );
+			nodeJson.set( "type" ).setString( DialogueGraphAssetInternal::dialogueAssetTypeName( node._type ) );
 			nodeJson.set( "speaker" ).setString( node._speaker );
 			nodeJson.set( "text" ).setString( node._text );
 			nodeJson.set( "condition" ).setString( node._condition );

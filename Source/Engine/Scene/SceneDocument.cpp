@@ -13,111 +13,115 @@
 
 namespace sw
 {
-	SW_LOG_CALLER( "SceneDocument" );
-
 	namespace
 	{
-
-		constexpr const utf8* kRoot			   = "Scene";
-		constexpr const utf8* kName			   = "name";
-		constexpr const utf8* kEntities		   = "entities";
-		constexpr const utf8* kEntity		   = "entity";
-		constexpr const utf8* kPrefab		   = "prefab";
-		constexpr const utf8* kGameObject	   = "GameObject";
-		constexpr const utf8* kDefaultEntity   = "Entity";
-		constexpr uint32	  kSceneBinMagic   = 0x53434E31u; // 'SCN1'
-		constexpr uint32	  kSceneBinVersion = 0;
-
-		string xmlEscape( string_view text )
+		struct SceneDocumentInternal
 		{
-			StringBuilder<constant::kMaxBuffer1024> out;
-			for ( utf8 ch : text )
+			static constexpr const utf8* kRoot			  = "Scene";
+			static constexpr const utf8* kName			  = "name";
+			static constexpr const utf8* kEntities		  = "entities";
+			static constexpr const utf8* kEntity		  = "entity";
+			static constexpr const utf8* kPrefab		  = "prefab";
+			static constexpr const utf8* kGameObject	  = "GameObject";
+			static constexpr const utf8* kDefaultEntity	  = "Entity";
+			static constexpr uint32		 kSceneBinMagic	  = 0x53434E31u; // 'SCN1'
+			static constexpr uint32		 kSceneBinVersion = 0;
+
+			static string xmlEscape( string_view text )
 			{
-				switch ( ch )
+				StringBuilder<constant::kMaxBuffer1024> out;
+				for ( utf8 ch : text )
 				{
-					case '&':
-						out.append( "&amp;" );
-						break;
-					case '<':
-						out.append( "&lt;" );
-						break;
-					case '>':
-						out.append( "&gt;" );
-						break;
-					case '"':
-						out.append( "&quot;" );
-						break;
-					case '\'':
-						out.append( "&apos;" );
-						break;
-					default:
-						out.append( ch );
-						break;
+					switch ( ch )
+					{
+						case '&':
+							out.append( "&amp;" );
+							break;
+						case '<':
+							out.append( "&lt;" );
+							break;
+						case '>':
+							out.append( "&gt;" );
+							break;
+						case '"':
+							out.append( "&quot;" );
+							break;
+						case '\'':
+							out.append( "&apos;" );
+							break;
+						default:
+							out.append( ch );
+							break;
+					}
 				}
+				return string{ out.view() };
 			}
-			return string{ out.view() };
-		}
 
-		string absoluteWritePath( string_view path )
-		{
-			string result = ResourceUtil::getResourcePath( path );
-			if ( result.empty() )
+			static string absoluteWritePath( string_view path )
 			{
-				result = ResourceUtil::makeAbsolutePath( path );
+				string result = ResourceUtil::getResourcePath( path );
 				if ( result.empty() )
-					result = path;
-			}
-			return result;
-		}
-
-		void appendNodeXml( StringBuilder<constant::kMaxBuffer8192>& out, XmlNode node )
-		{
-			if ( node.isValid() == false )
-				return;
-
-			const utf8* pNodeName = node.name();
-			if ( pNodeName == nullptr || pNodeName[0] == '\0' )
-				return;
-
-			out.append( '<' ).append( pNodeName );
-			for ( XmlAttribute attr = node.firstAttr(); attr; attr = attr.next() )
-			{
-				out.append( ' ' ).append( attr.name() ).append( "=\"" ).append( xmlEscape( attr.value() != nullptr ? attr.value() : "" ) ).append( '"' );
-			}
-
-			bool bHasElementChild = false;
-			for ( XmlNode child = node.child(); child; child = child.next() )
-			{
-				const utf8* pChildName = child.name();
-				if ( pChildName != nullptr && pChildName[0] != '\0' )
 				{
-					bHasElementChild = true;
-					break;
+					result = ResourceUtil::makeAbsolutePath( path );
+					if ( result.empty() )
+						result = path;
 				}
+				return result;
 			}
 
-			const bool bHasValue = node.text() != nullptr && node.text()[0] != '\0';
-			if ( bHasElementChild == false && bHasValue == false )
+			static void appendNodeXml( StringBuilder<constant::kMaxBuffer8192>& out, XmlNode node )
 			{
-				out.append( "/>" );
-				return;
+				if ( node.isValid() == false )
+					return;
+
+				const utf8* pNodeName = node.name();
+				if ( pNodeName == nullptr || pNodeName[0] == '\0' )
+					return;
+
+				out.append( '<' ).append( pNodeName );
+				for ( XmlAttribute attr = node.firstAttr(); attr; attr = attr.next() )
+				{
+					out.append( ' ' ).append( attr.name() ).append( "=\"" ).append( xmlEscape( attr.value() != nullptr ? attr.value() : "" ) ).append( '"' );
+				}
+
+				bool bHasElementChild = false;
+				for ( XmlNode child = node.child(); child; child = child.next() )
+				{
+					const utf8* pChildName = child.name();
+					if ( pChildName != nullptr && pChildName[0] != '\0' )
+					{
+						bHasElementChild = true;
+						break;
+					}
+				}
+
+				const bool bHasValue = node.text() != nullptr && node.text()[0] != '\0';
+				if ( bHasElementChild == false && bHasValue == false )
+				{
+					out.append( "/>" );
+					return;
+				}
+
+				out.append( '>' );
+				if ( bHasValue )
+					out.append( xmlEscape( node.text() ) );
+
+				for ( XmlNode child = node.child(); child; child = child.next() )
+				{
+					const utf8* pChildName = child.name();
+					if ( pChildName != nullptr && pChildName[0] != '\0' )
+						appendNodeXml( out, child );
+				}
+
+				out.append( "</" ).append( pNodeName ).append( '>' );
 			}
-
-			out.append( '>' );
-			if ( bHasValue )
-				out.append( xmlEscape( node.text() ) );
-
-			for ( XmlNode child = node.child(); child; child = child.next() )
-			{
-				const utf8* pChildName = child.name();
-				if ( pChildName != nullptr && pChildName[0] != '\0' )
-					appendNodeXml( out, child );
-			}
-
-			out.append( "</" ).append( pNodeName ).append( '>' );
-		}
-
+		};
 	} // namespace
+} // namespace sw
+
+namespace sw
+{
+	SW_LOG_CALLER( "SceneDocument" );
 
 	bool SceneDocument::loadXml( string_view path )
 	{
@@ -137,7 +141,7 @@ namespace sw
 			absPath = path;
 		}
 
-		XmlNode root = doc.root( kRoot );
+		XmlNode root = doc.root( SceneDocumentInternal::kRoot );
 		if ( root.isValid() == false )
 		{
 			SW_LOG_ERROR( "Missing root <Scene>: %#", absPath );
@@ -154,7 +158,7 @@ namespace sw
 		const utf8* pSceneName = root.attr( "name" );
 		if ( pSceneName == nullptr )
 		{
-			pSceneName = root.childText( kName );
+			pSceneName = root.childText( SceneDocumentInternal::kName );
 		}
 
 		if ( pSceneName != nullptr )
@@ -171,45 +175,45 @@ namespace sw
 			}
 		}
 
-		XmlNode entities = root.child( kEntities );
+		XmlNode entities = root.child( SceneDocumentInternal::kEntities );
 
 		if ( entities.isValid() )
 		{
-			for ( XmlNode entityNode = entities.child( kEntity ); entityNode.isValid();
-				  entityNode		 = entityNode.next( kEntity ) )
+			for ( XmlNode entityNode = entities.child( SceneDocumentInternal::kEntity ); entityNode.isValid();
+				  entityNode		 = entityNode.next( SceneDocumentInternal::kEntity ) )
 			{
 				EntityNode	node{};
-				const utf8* pName = entityNode.attr( kName );
+				const utf8* pName = entityNode.attr( SceneDocumentInternal::kName );
 				if ( pName == nullptr )
 				{
-					pName = entityNode.childText( kName );
+					pName = entityNode.childText( SceneDocumentInternal::kName );
 				}
 				if ( pName != nullptr )
 				{
 					node._name = pName;
 				}
 
-				const utf8* pPrefab = entityNode.attr( kPrefab );
+				const utf8* pPrefab = entityNode.attr( SceneDocumentInternal::kPrefab );
 				if ( pPrefab == nullptr )
 				{
-					pPrefab = entityNode.childText( kPrefab );
+					pPrefab = entityNode.childText( SceneDocumentInternal::kPrefab );
 				}
 				if ( pPrefab != nullptr )
 				{
 					node._prefab = pPrefab;
 				}
 
-				XmlNode stateNode = entityNode.child( kGameObject );
+				XmlNode stateNode = entityNode.child( SceneDocumentInternal::kGameObject );
 				if ( stateNode.isValid() )
 				{
 					StringBuilder<constant::kMaxBuffer8192> stateSb;
-					appendNodeXml( stateSb, stateNode );
+					SceneDocumentInternal::appendNodeXml( stateSb, stateNode );
 					node._embeddedXml = stateSb.view();
 				}
 
 				if ( node._name.empty() )
 				{
-					node._name = kDefaultEntity;
+					node._name = SceneDocumentInternal::kDefaultEntity;
 				}
 				_listEntityNode.push_back( std::move( node ) );
 			}
@@ -224,17 +228,17 @@ namespace sw
 	bool SceneDocument::saveXml( string_view path ) const
 	{
 		XmlDocument xmlDoc;
-		XmlNode		root = xmlDoc.appendRoot( kRoot );
+		XmlNode		root = xmlDoc.appendRoot( SceneDocumentInternal::kRoot );
 		root.appendAttr( "formatVersion", static_cast<uint32>( AssetFormatVersions::kScene ) );
 		root.appendAttr( "name", _name );
-		XmlNode entities = root.appendChild( kEntities );
+		XmlNode entities = root.appendChild( SceneDocumentInternal::kEntities );
 
 		for ( const EntityNode& entity : _listEntityNode )
 		{
-			XmlNode entityNode = entities.appendChild( kEntity );
-			entityNode.appendAttr( kName, entity._name );
+			XmlNode entityNode = entities.appendChild( SceneDocumentInternal::kEntity );
+			entityNode.appendAttr( SceneDocumentInternal::kName, entity._name );
 			if ( entity._prefab.empty() == false )
-				entityNode.appendAttr( kPrefab, entity._prefab );
+				entityNode.appendAttr( SceneDocumentInternal::kPrefab, entity._prefab );
 			if ( entity._embeddedXml.empty() == false )
 			{
 				XmlDocument goDoc;
@@ -247,7 +251,7 @@ namespace sw
 			}
 		}
 
-		const string absPath = absoluteWritePath( path );
+		const string absPath = SceneDocumentInternal::absoluteWritePath( path );
 		if ( absPath.empty() )
 		{
 			SW_LOG_ERROR( "Cannot resolve save path: %#", path );
@@ -282,14 +286,14 @@ namespace sw
 
 		size_t offset{ 0 };
 		uint32 magic{ 0 };
-		if ( BinaryBlob::readU32( listBlob, offset, magic ) == false || magic != kSceneBinMagic )
+		if ( BinaryBlob::readU32( listBlob, offset, magic ) == false || magic != SceneDocumentInternal::kSceneBinMagic )
 		{
 			SW_LOG_ERROR( "Bad binary magic: %#", absPath );
 			return false;
 		}
 
 		uint32 version{ 0 };
-		if ( BinaryBlob::readU32( listBlob, offset, version ) == false || version > kSceneBinVersion )
+		if ( BinaryBlob::readU32( listBlob, offset, version ) == false || version > SceneDocumentInternal::kSceneBinVersion )
 		{
 			SW_LOG_ERROR( "Unsupported binary version %# in %#", version, absPath );
 			return false;
@@ -331,8 +335,8 @@ namespace sw
 	bool SceneDocument::saveBinary( string_view path ) const
 	{
 		vector<uint8> listBlob;
-		BinaryBlob::appendU32( listBlob, kSceneBinMagic );
-		BinaryBlob::appendU32( listBlob, kSceneBinVersion );
+		BinaryBlob::appendU32( listBlob, SceneDocumentInternal::kSceneBinMagic );
+		BinaryBlob::appendU32( listBlob, SceneDocumentInternal::kSceneBinVersion );
 		BinaryBlob::appendString( listBlob, _name );
 		BinaryBlob::appendU32( listBlob, static_cast<uint32>( _listEntityNode.size() ) );
 
@@ -343,7 +347,7 @@ namespace sw
 			BinaryBlob::appendString( listBlob, entity._embeddedXml );
 		}
 
-		const string absPath = absoluteWritePath( path );
+		const string absPath = SceneDocumentInternal::absoluteWritePath( path );
 		if ( absPath.empty() )
 		{
 			SW_LOG_ERROR( "Cannot resolve save path: %#", path );

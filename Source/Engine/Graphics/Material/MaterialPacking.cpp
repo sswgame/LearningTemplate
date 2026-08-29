@@ -2,7 +2,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Material/Material.h"
-#include "Engine/Graphics/Material/MaterialInternal.h"
+#include "Engine/Graphics/Material/MaterialUtil.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
@@ -10,345 +10,350 @@ namespace sw
 {
 	namespace
 	{
-		struct PropertyTypeDesc
+		struct MaterialPackingInternal
 		{
-			const utf8*			 _pName;
-			MaterialPropertyType _type;
-			uint32				 _size; ///< Packed size when used as shader/CB type (0 = non-CB)
-		};
-
-		const PropertyTypeDesc s_PropertyTypes[] = {
-			{		  "Float",		   MaterialPropertyType::Float,	4},
-			{		  "Float2",			MaterialPropertyType::Float2,  8},
-			{		  "Float3",			MaterialPropertyType::Float3, 12},
-			{		  "Float4",			MaterialPropertyType::Float4, 16},
-			{	  "Float4x4",		  MaterialPropertyType::Float4x4, 64},
-			{		  "Uint",			  MaterialPropertyType::Uint,  4},
-			{		  "Uint2",		   MaterialPropertyType::Uint2,	8},
-			{		  "Uint3",		   MaterialPropertyType::Uint3, 12},
-			{		  "Uint4",		   MaterialPropertyType::Uint4, 16},
-			{			  "Int",			 MaterialPropertyType::Int,	4},
-			{		  "Int2",			  MaterialPropertyType::Int2,  8},
-			{		  "Int3",			  MaterialPropertyType::Int3, 12},
-			{		  "Int4",			  MaterialPropertyType::Int4, 16},
-			{		  "Bool",			  MaterialPropertyType::Bool,  4},
-			{		  "Range",		   MaterialPropertyType::Range,	4},
-			{		  "Color",		   MaterialPropertyType::Color, 16},
-			{		  "Enum",			  MaterialPropertyType::Enum,  4},
-			{		  "BitFlag",		 MaterialPropertyType::BitFlag,	4},
-			{	  "ChannelMask",	 MaterialPropertyType::ChannelMask,	4},
-			{	  "Texture2D",	   MaterialPropertyType::Texture2D,	4},
-			{	  "TextureCube",	 MaterialPropertyType::TextureCube,	4},
-			{	  "Texture3D",	   MaterialPropertyType::Texture3D,	4},
-			{"Texture2DArray", MaterialPropertyType::Texture2DArray,  4},
-			{		  "Keyword",		 MaterialPropertyType::Keyword,	0},
-			// Aliases (Unity / Unreal naming)
-			{		  "Scalar",			MaterialPropertyType::Float,	 4},
-			{		  "Vector",			MaterialPropertyType::Float4, 16},
-			{		  "Vector2",		 MaterialPropertyType::Float2,  8},
-			{		  "Vector3",		 MaterialPropertyType::Float3, 12},
-			{		  "Vector4",		 MaterialPropertyType::Float4, 16},
-			{		  "Matrix",		MaterialPropertyType::Float4x4, 64},
-			{		  "Integer",			 MaterialPropertyType::Int,	4},
-			{		  "Toggle",			MaterialPropertyType::Bool,	4},
-			{  "StaticSwitch",		  MaterialPropertyType::Keyword,	 0},
-			{		  "Cubemap",	 MaterialPropertyType::TextureCube,	4},
-			{		  "Volume",		MaterialPropertyType::Texture3D,	 4},
-		};
-
-		bool iequals( string_view a, const utf8* pB )
-		{
-			if ( pB == nullptr )
-				return false;
-			return StringUtil::equalsIgnoreCase( a, string_view( pB ) );
-		}
-
-		int64 resolveNamedValue( const MaterialProperty& prop, string_view token, bool bitFlagMode )
-		{
-			const string tokenNt( token );
-			const string name = StringUtil::trim( tokenNt.c_str() );
-			if ( name.empty() )
-				return 0;
-
-			// Numeric literal
+			struct PropertyTypeDesc
 			{
-				utf8*		end{ nullptr };
-				const int64 v = StringUtil::strtoll( name.c_str(), &end, 0 );
-				if ( end != nullptr && *end == '\0' )
-					return v;
+				const utf8*			 _pName;
+				MaterialPropertyType _type;
+				uint32				 _size; ///< Packed size when used as shader/CB type (0 = non-CB)
+			};
+
+			inline static const PropertyTypeDesc s_PropertyTypes[] = {
+				{		  "Float",		   MaterialPropertyType::Float,	4},
+				{		  "Float2",			MaterialPropertyType::Float2,  8},
+				{		  "Float3",			MaterialPropertyType::Float3, 12},
+				{		  "Float4",			MaterialPropertyType::Float4, 16},
+				{	  "Float4x4",		  MaterialPropertyType::Float4x4, 64},
+				{		  "Uint",			  MaterialPropertyType::Uint,  4},
+				{		  "Uint2",		   MaterialPropertyType::Uint2,	8},
+				{		  "Uint3",		   MaterialPropertyType::Uint3, 12},
+				{		  "Uint4",		   MaterialPropertyType::Uint4, 16},
+				{			  "Int",			 MaterialPropertyType::Int,	4},
+				{		  "Int2",			  MaterialPropertyType::Int2,  8},
+				{		  "Int3",			  MaterialPropertyType::Int3, 12},
+				{		  "Int4",			  MaterialPropertyType::Int4, 16},
+				{		  "Bool",			  MaterialPropertyType::Bool,  4},
+				{		  "Range",		   MaterialPropertyType::Range,	4},
+				{		  "Color",		   MaterialPropertyType::Color, 16},
+				{		  "Enum",			  MaterialPropertyType::Enum,  4},
+				{		  "BitFlag",		 MaterialPropertyType::BitFlag,	4},
+				{	  "ChannelMask",	 MaterialPropertyType::ChannelMask,	4},
+				{	  "Texture2D",	   MaterialPropertyType::Texture2D,	4},
+				{	  "TextureCube",	 MaterialPropertyType::TextureCube,	4},
+				{	  "Texture3D",	   MaterialPropertyType::Texture3D,	4},
+				{"Texture2DArray", MaterialPropertyType::Texture2DArray,  4},
+				{		  "Keyword",		 MaterialPropertyType::Keyword,	0},
+				// Aliases (Unity / Unreal naming)
+				{		  "Scalar",			MaterialPropertyType::Float,	 4},
+				{		  "Vector",			MaterialPropertyType::Float4, 16},
+				{		  "Vector2",		 MaterialPropertyType::Float2,  8},
+				{		  "Vector3",		 MaterialPropertyType::Float3, 12},
+				{		  "Vector4",		 MaterialPropertyType::Float4, 16},
+				{		  "Matrix",		MaterialPropertyType::Float4x4, 64},
+				{		  "Integer",			 MaterialPropertyType::Int,	4},
+				{		  "Toggle",			MaterialPropertyType::Bool,	4},
+				{  "StaticSwitch",		  MaterialPropertyType::Keyword,	 0},
+				{		  "Cubemap",	 MaterialPropertyType::TextureCube,	4},
+				{		  "Volume",		MaterialPropertyType::Texture3D,	 4},
+			};
+
+			static bool iequals( string_view a, const utf8* pB )
+			{
+				if ( pB == nullptr )
+					return false;
+				return StringUtil::equalsIgnoreCase( a, string_view( pB ) );
 			}
 
-			for ( const MaterialEnumEntry& enumEntry : prop._listEnumEntry )
+			static int64 resolveNamedValue( const MaterialProperty& prop, string_view token, bool bitFlagMode )
 			{
-				if ( iequals( enumEntry._name, name.c_str() ) )
-					return enumEntry._value;
-			}
+				const string tokenNt( token );
+				const string name = StringUtil::trim( tokenNt.c_str() );
+				if ( name.empty() )
+					return 0;
 
-			if ( prop._enumType.empty() == false )
-			{
-				const EnumInfo* pInfo = engine::getTypeRegistry().findEnum( hashed_string( prop._enumType.c_str() ) );
-				if ( pInfo != nullptr )
+				// Numeric literal
 				{
-					if ( bitFlagMode || pInfo->_bIsBitFlag )
-						return pInfo->stringFlagsToValue( name );
-					hashed_string key( name.c_str() );
-					const auto	  it = pInfo->_mapNameToValue.find( key );
-					if ( it != pInfo->_mapNameToValue.end() )
-						return it->second;
+					utf8*		end{ nullptr };
+					const int64 v = StringUtil::strtoll( name.c_str(), &end, 0 );
+					if ( end != nullptr && *end == '\0' )
+						return v;
 				}
-			}
-			return 0;
-		}
 
-		int64 parseEnumOrFlags( const MaterialProperty& prop, string_view value, bool bitFlagMode )
-		{
-			if ( bitFlagMode || prop._type == MaterialPropertyType::BitFlag )
-			{
+				for ( const MaterialEnumEntry& enumEntry : prop._listEnumEntry )
+				{
+					if ( iequals( enumEntry._name, name.c_str() ) )
+						return enumEntry._value;
+				}
+
 				if ( prop._enumType.empty() == false )
 				{
 					const EnumInfo* pInfo = engine::getTypeRegistry().findEnum( hashed_string( prop._enumType.c_str() ) );
-					if ( pInfo != nullptr && pInfo->_bIsBitFlag )
-						return pInfo->stringFlagsToValue( value );
+					if ( pInfo != nullptr )
+					{
+						if ( bitFlagMode || pInfo->_bIsBitFlag )
+							return pInfo->stringFlagsToValue( name );
+						hashed_string key( name.c_str() );
+						const auto	  it = pInfo->_mapNameToValue.find( key );
+						if ( it != pInfo->_mapNameToValue.end() )
+							return it->second;
+					}
 				}
-				int64			result{ 0 };
-				string_splitter splitter( value, { "|", "," } );
+				return 0;
+			}
+
+			static int64 parseEnumOrFlags( const MaterialProperty& prop, string_view value, bool bitFlagMode )
+			{
+				if ( bitFlagMode || prop._type == MaterialPropertyType::BitFlag )
+				{
+					if ( prop._enumType.empty() == false )
+					{
+						const EnumInfo* pInfo = engine::getTypeRegistry().findEnum( hashed_string( prop._enumType.c_str() ) );
+						if ( pInfo != nullptr && pInfo->_bIsBitFlag )
+							return pInfo->stringFlagsToValue( value );
+					}
+					int64			result{ 0 };
+					string_splitter splitter( value, { "|", "," } );
+					for ( string_view part : splitter.getSplitList() )
+					{
+						result |= resolveNamedValue( prop, string( part ), true );
+					}
+					return result;
+				}
+				return resolveNamedValue( prop, value, false );
+			}
+
+			static uint32 parseChannelMask( string_view value )
+			{
+				const string valueNt( value );
+				const string v = StringUtil::trim( valueNt.c_str() );
+				if ( v.empty() )
+					return 0xFu;
+
+				// Numeric
+				utf8*		 end{ nullptr };
+				const uint64 n = StringUtil::strtoull( v.c_str(), &end, 0 );
+				if ( end != nullptr && *end == '\0' )
+					return static_cast<uint32>( n );
+
+				uint32 mask{ 0 };
+				for ( utf8 charByte : v )
+				{
+					switch ( StringUtil::toUpperChar( charByte ) )
+					{
+						case 'R':
+						case 'X':
+							mask |= 1u << 0;
+							break;
+						case 'G':
+						case 'Y':
+							mask |= 1u << 1;
+							break;
+						case 'B':
+						case 'Z':
+							mask |= 1u << 2;
+							break;
+						case 'A':
+						case 'W':
+							mask |= 1u << 3;
+							break;
+						default:
+							break;
+					}
+				}
+				return mask;
+			}
+
+			static bool writeNumericValue( uint8* pDst, uint32 capacity, MaterialPropertyType shaderType, string_view value )
+			{
+				const uint32 need = MaterialUtil::packedSizeOf( shaderType );
+				if ( need == 0 || capacity < need || pDst == nullptr )
+					return false;
+
+				string_splitter ss( value, { " ", "	", "," } );
+				const auto&		tokens = ss.getSplitList();
+				if ( shaderType == MaterialPropertyType::Float || shaderType == MaterialPropertyType::Float2 || shaderType == MaterialPropertyType::Float3 || shaderType == MaterialPropertyType::Float4 || shaderType == MaterialPropertyType::Float4x4 || shaderType == MaterialPropertyType::Range || shaderType == MaterialPropertyType::Color )
+				{
+					float32* pPtr  = reinterpret_cast<float32*>( pDst );
+					uint32	 count = need / 4;
+					for ( uint32 propIndex = 0; propIndex < count; ++propIndex )
+					{
+						float32 f{ 0.0f };
+						if ( propIndex < tokens.size() )
+						{
+							string tokenStr( tokens[propIndex] );
+							f = static_cast<float32>( StringUtil::atof( tokenStr.c_str() ) );
+						}
+						else
+							f = ( propIndex == 3 && shaderType == MaterialPropertyType::Color ) ? 1.0f : 0.0f;
+						pPtr[propIndex] = f;
+					}
+					return true;
+				}
+				if ( shaderType == MaterialPropertyType::Uint || shaderType == MaterialPropertyType::Uint2 || shaderType == MaterialPropertyType::Uint3 || shaderType == MaterialPropertyType::Uint4 )
+				{
+					uint32* pPtr  = reinterpret_cast<uint32*>( pDst );
+					uint32	count = need / 4;
+					for ( uint32 propIndex = 0; propIndex < count; ++propIndex )
+					{
+						uint32 u{ 0 };
+						if ( propIndex < tokens.size() )
+						{
+							string tokenStr( tokens[propIndex] );
+							u = static_cast<uint32>( StringUtil::atoll( tokenStr.c_str() ) );
+						}
+						pPtr[propIndex] = u;
+					}
+					return true;
+				}
+				if ( shaderType == MaterialPropertyType::Int || shaderType == MaterialPropertyType::Int2 || shaderType == MaterialPropertyType::Int3 || shaderType == MaterialPropertyType::Int4 )
+				{
+					int32* pPtr	 = reinterpret_cast<int32*>( pDst );
+					uint32 count = need / 4;
+					for ( uint32 propIndex = 0; propIndex < count; ++propIndex )
+					{
+						int32 n{ 0 };
+						if ( propIndex < tokens.size() )
+						{
+							string tokenStr( tokens[propIndex] );
+							n = StringUtil::atoi( tokenStr.c_str() );
+						}
+						pPtr[propIndex] = n;
+					}
+					return true;
+				}
+				return false;
+			}
+
+			static string nodeText( XmlNode node )
+			{
+				if ( node.isValid() == false || node.text() == nullptr )
+					return {};
+				return StringUtil::trim( node.text() );
+			}
+
+			static void parseEnumEntries( XmlNode parent, vector<MaterialEnumEntry>& out )
+			{
+				out.clear();
+				if ( parent.isValid() == false )
+					return;
+				XmlNode list = parent.child( "_enumEntries" );
+				if ( list.isValid() == false )
+					list = parent.child( "enumEntries" );
+				if ( list.isValid() == false )
+					return;
+				for ( XmlNode item = list.child( "item" ); item; item = item.next( "item" ) )
+				{
+					MaterialEnumEntry e{};
+					e._name		   = MaterialUtil::fieldText( item, "name" );
+					const string v = MaterialUtil::fieldText( item, "value" );
+					if ( v.empty() == false )
+					{
+						utf8* end{ nullptr };
+						e._value = static_cast<uint32>( StringUtil::strtoull( v.c_str(), &end, 0 ) );
+					}
+					if ( e._name.empty() == false )
+						out.push_back( std::move( e ) );
+				}
+			}
+
+			static MaterialUsageFlags parseUsageFlags( string_view s )
+			{
+				uint32			mask{ 0 };
+				string_splitter splitter( s, { "|", ",", " " } );
 				for ( string_view part : splitter.getSplitList() )
 				{
-					result |= resolveNamedValue( prop, string( part ), true );
+					const string partNt( part );
+					const string token = StringUtil::trim( partNt.c_str() );
+					if ( token.empty() )
+						continue;
+					if ( iequals( token, "StaticMesh" ) )
+						mask |= static_cast<uint32>( MaterialUsageFlags::StaticMesh );
+					else if ( iequals( token, "SkeletalMesh" ) || iequals( token, "Skinned" ) )
+						mask |= static_cast<uint32>( MaterialUsageFlags::SkeletalMesh );
+					else if ( iequals( token, "Instanced" ) || iequals( token, "Instancing" ) )
+						mask |= static_cast<uint32>( MaterialUsageFlags::Instanced );
+					else if ( iequals( token, "Particles" ) || iequals( token, "Particle" ) )
+						mask |= static_cast<uint32>( MaterialUsageFlags::Particles );
+					else if ( iequals( token, "Decal" ) )
+						mask |= static_cast<uint32>( MaterialUsageFlags::Decal );
+					else if ( iequals( token, "UI" ) )
+						mask |= static_cast<uint32>( MaterialUsageFlags::UI );
+					else if ( iequals( token, "PostProcess" ) )
+						mask |= static_cast<uint32>( MaterialUsageFlags::PostProcess );
+					else if ( iequals( token, "LightFunction" ) )
+						mask |= static_cast<uint32>( MaterialUsageFlags::LightFunction );
+					else if ( iequals( token, "MorphTargets" ) )
+						mask |= static_cast<uint32>( MaterialUsageFlags::MorphTargets );
+					else if ( iequals( token, "SplineMesh" ) )
+						mask |= static_cast<uint32>( MaterialUsageFlags::SplineMesh );
 				}
-				return result;
+				return static_cast<MaterialUsageFlags>( mask );
 			}
-			return resolveNamedValue( prop, value, false );
-		}
 
-		uint32 parseChannelMask( string_view value )
-		{
-			const string valueNt( value );
-			const string v = StringUtil::trim( valueNt.c_str() );
-			if ( v.empty() )
-				return 0xFu;
-
-			// Numeric
-			utf8*		 end{ nullptr };
-			const uint64 n = StringUtil::strtoull( v.c_str(), &end, 0 );
-			if ( end != nullptr && *end == '\0' )
-				return static_cast<uint32>( n );
-
-			uint32 mask{ 0 };
-			for ( utf8 charByte : v )
+			static string usageFlagsToString( MaterialUsageFlags flags )
 			{
-				switch ( StringUtil::toUpperChar( charByte ) )
+				string outStr;
+				auto   append = [&]( MaterialUsageFlags flag, const utf8* pName )
 				{
-					case 'R':
-					case 'X':
-						mask |= 1u << 0;
-						break;
-					case 'G':
-					case 'Y':
-						mask |= 1u << 1;
-						break;
-					case 'B':
-					case 'Z':
-						mask |= 1u << 2;
-						break;
-					case 'A':
-					case 'W':
-						mask |= 1u << 3;
-						break;
-					default:
-						break;
-				}
+					if ( hasFlag( flags, flag ) == false )
+						return;
+					if ( outStr.empty() == false )
+						outStr += "|";
+					outStr += pName;
+				};
+				append( MaterialUsageFlags::StaticMesh, "StaticMesh" );
+				append( MaterialUsageFlags::SkeletalMesh, "SkeletalMesh" );
+				append( MaterialUsageFlags::Instanced, "Instanced" );
+				append( MaterialUsageFlags::Particles, "Particles" );
+				append( MaterialUsageFlags::Decal, "Decal" );
+				append( MaterialUsageFlags::UI, "UI" );
+				append( MaterialUsageFlags::PostProcess, "PostProcess" );
+				append( MaterialUsageFlags::LightFunction, "LightFunction" );
+				append( MaterialUsageFlags::MorphTargets, "MorphTargets" );
+				append( MaterialUsageFlags::SplineMesh, "SplineMesh" );
+				return outStr.empty() ? "None" : outStr;
 			}
-			return mask;
-		}
 
-		bool writeNumericValue( uint8* pDst, uint32 capacity, MaterialPropertyType shaderType, string_view value )
-		{
-			const uint32 need = packedSizeOf( shaderType );
-			if ( need == 0 || capacity < need || pDst == nullptr )
-				return false;
-
-			string_splitter ss( value, { " ", "	", "," } );
-			const auto&		tokens = ss.getSplitList();
-			if ( shaderType == MaterialPropertyType::Float || shaderType == MaterialPropertyType::Float2 || shaderType == MaterialPropertyType::Float3 || shaderType == MaterialPropertyType::Float4 || shaderType == MaterialPropertyType::Float4x4 || shaderType == MaterialPropertyType::Range || shaderType == MaterialPropertyType::Color )
+			static void parseStringListItems( XmlNode list, vector<string>& out )
 			{
-				float32* pPtr  = reinterpret_cast<float32*>( pDst );
-				uint32	 count = need / 4;
-				for ( uint32 propIndex = 0; propIndex < count; ++propIndex )
-				{
-					float32 f{ 0.0f };
-					if ( propIndex < tokens.size() )
-					{
-						string tokenStr( tokens[propIndex] );
-						f = static_cast<float32>( StringUtil::atof( tokenStr.c_str() ) );
-					}
-					else
-						f = ( propIndex == 3 && shaderType == MaterialPropertyType::Color ) ? 1.0f : 0.0f;
-					pPtr[propIndex] = f;
-				}
-				return true;
-			}
-			if ( shaderType == MaterialPropertyType::Uint || shaderType == MaterialPropertyType::Uint2 || shaderType == MaterialPropertyType::Uint3 || shaderType == MaterialPropertyType::Uint4 )
-			{
-				uint32* pPtr  = reinterpret_cast<uint32*>( pDst );
-				uint32	count = need / 4;
-				for ( uint32 propIndex = 0; propIndex < count; ++propIndex )
-				{
-					uint32 u{ 0 };
-					if ( propIndex < tokens.size() )
-					{
-						string tokenStr( tokens[propIndex] );
-						u = static_cast<uint32>( StringUtil::atoll( tokenStr.c_str() ) );
-					}
-					pPtr[propIndex] = u;
-				}
-				return true;
-			}
-			if ( shaderType == MaterialPropertyType::Int || shaderType == MaterialPropertyType::Int2 || shaderType == MaterialPropertyType::Int3 || shaderType == MaterialPropertyType::Int4 )
-			{
-				int32* pPtr	 = reinterpret_cast<int32*>( pDst );
-				uint32 count = need / 4;
-				for ( uint32 propIndex = 0; propIndex < count; ++propIndex )
-				{
-					int32 n{ 0 };
-					if ( propIndex < tokens.size() )
-					{
-						string tokenStr( tokens[propIndex] );
-						n = StringUtil::atoi( tokenStr.c_str() );
-					}
-					pPtr[propIndex] = n;
-				}
-				return true;
-			}
-			return false;
-		}
-
-		string nodeText( XmlNode node )
-		{
-			if ( node.isValid() == false || node.text() == nullptr )
-				return {};
-			return StringUtil::trim( node.text() );
-		}
-
-		void parseEnumEntries( XmlNode parent, vector<MaterialEnumEntry>& out )
-		{
-			out.clear();
-			if ( parent.isValid() == false )
-				return;
-			XmlNode list = parent.child( "_enumEntries" );
-			if ( list.isValid() == false )
-				list = parent.child( "enumEntries" );
-			if ( list.isValid() == false )
-				return;
-			for ( XmlNode item = list.child( "item" ); item; item = item.next( "item" ) )
-			{
-				MaterialEnumEntry e{};
-				e._name		   = fieldText( item, "name" );
-				const string v = fieldText( item, "value" );
-				if ( v.empty() == false )
-				{
-					utf8* end{ nullptr };
-					e._value = static_cast<uint32>( StringUtil::strtoull( v.c_str(), &end, 0 ) );
-				}
-				if ( e._name.empty() == false )
-					out.push_back( std::move( e ) );
-			}
-		}
-
-		MaterialUsageFlags parseUsageFlags( string_view s )
-		{
-			uint32			mask{ 0 };
-			string_splitter splitter( s, { "|", ",", " " } );
-			for ( string_view part : splitter.getSplitList() )
-			{
-				const string partNt( part );
-				const string token = StringUtil::trim( partNt.c_str() );
-				if ( token.empty() )
-					continue;
-				if ( iequals( token, "StaticMesh" ) )
-					mask |= static_cast<uint32>( MaterialUsageFlags::StaticMesh );
-				else if ( iequals( token, "SkeletalMesh" ) || iequals( token, "Skinned" ) )
-					mask |= static_cast<uint32>( MaterialUsageFlags::SkeletalMesh );
-				else if ( iequals( token, "Instanced" ) || iequals( token, "Instancing" ) )
-					mask |= static_cast<uint32>( MaterialUsageFlags::Instanced );
-				else if ( iequals( token, "Particles" ) || iequals( token, "Particle" ) )
-					mask |= static_cast<uint32>( MaterialUsageFlags::Particles );
-				else if ( iequals( token, "Decal" ) )
-					mask |= static_cast<uint32>( MaterialUsageFlags::Decal );
-				else if ( iequals( token, "UI" ) )
-					mask |= static_cast<uint32>( MaterialUsageFlags::UI );
-				else if ( iequals( token, "PostProcess" ) )
-					mask |= static_cast<uint32>( MaterialUsageFlags::PostProcess );
-				else if ( iequals( token, "LightFunction" ) )
-					mask |= static_cast<uint32>( MaterialUsageFlags::LightFunction );
-				else if ( iequals( token, "MorphTargets" ) )
-					mask |= static_cast<uint32>( MaterialUsageFlags::MorphTargets );
-				else if ( iequals( token, "SplineMesh" ) )
-					mask |= static_cast<uint32>( MaterialUsageFlags::SplineMesh );
-			}
-			return static_cast<MaterialUsageFlags>( mask );
-		}
-
-		string usageFlagsToString( MaterialUsageFlags flags )
-		{
-			string outStr;
-			auto   append = [&]( MaterialUsageFlags flag, const utf8* pName )
-			{
-				if ( hasFlag( flags, flag ) == false )
+				out.clear();
+				if ( list.isValid() == false )
 					return;
-				if ( outStr.empty() == false )
-					outStr += "|";
-				outStr += pName;
-			};
-			append( MaterialUsageFlags::StaticMesh, "StaticMesh" );
-			append( MaterialUsageFlags::SkeletalMesh, "SkeletalMesh" );
-			append( MaterialUsageFlags::Instanced, "Instanced" );
-			append( MaterialUsageFlags::Particles, "Particles" );
-			append( MaterialUsageFlags::Decal, "Decal" );
-			append( MaterialUsageFlags::UI, "UI" );
-			append( MaterialUsageFlags::PostProcess, "PostProcess" );
-			append( MaterialUsageFlags::LightFunction, "LightFunction" );
-			append( MaterialUsageFlags::MorphTargets, "MorphTargets" );
-			append( MaterialUsageFlags::SplineMesh, "SplineMesh" );
-			return outStr.empty() ? "None" : outStr;
-		}
-
-		void parseStringListItems( XmlNode list, vector<string>& out )
-		{
-			out.clear();
-			if ( list.isValid() == false )
-				return;
-			for ( XmlNode item = list.child( "item" ); item; item = item.next( "item" ) )
-			{
-				string v = nodeText( item );
-				if ( v.empty() )
-					v = fieldText( item, "value" );
-				if ( v.empty() )
-					v = fieldText( item, "name" );
-				if ( v.empty() == false )
-					out.push_back( std::move( v ) );
+				for ( XmlNode item = list.child( "item" ); item; item = item.next( "item" ) )
+				{
+					string v = nodeText( item );
+					if ( v.empty() )
+						v = MaterialUtil::fieldText( item, "value" );
+					if ( v.empty() )
+						v = MaterialUtil::fieldText( item, "name" );
+					if ( v.empty() == false )
+						out.push_back( std::move( v ) );
+				}
 			}
-		}
 
-		void appendMaterialStringList( XmlNode parent, const utf8* pTag, const vector<string>& values )
-		{
-			if ( values.empty() )
-				return;
-			XmlNode list = parent.appendChild( pTag );
-			for ( const string& valueStr : values )
+			static void appendMaterialStringList( XmlNode parent, const utf8* pTag, const vector<string>& values )
 			{
-				XmlNode item = list.appendChild( "item" );
-				item.setValue( valueStr );
+				if ( values.empty() )
+					return;
+				XmlNode list = parent.appendChild( pTag );
+				for ( const string& valueStr : values )
+				{
+					XmlNode item = list.appendChild( "item" );
+					item.setValue( valueStr );
+				}
 			}
-		}
-
+		};
 	} // namespace
+} // namespace sw
 
-	MaterialPropertyType stringToType( string_view str, uint32& outSize )
+namespace sw
+{
+	MaterialPropertyType MaterialUtil::stringToType( string_view str, uint32& outSize )
 	{
-		for ( const PropertyTypeDesc& desc : s_PropertyTypes )
+		for ( const MaterialPackingInternal::PropertyTypeDesc& desc : MaterialPackingInternal::s_PropertyTypes )
 		{
-			if ( iequals( str, desc._pName ) )
+			if ( MaterialPackingInternal::iequals( str, desc._pName ) )
 			{
 				outSize = desc._size;
 				return desc._type;
@@ -358,9 +363,9 @@ namespace sw
 		return MaterialPropertyType::Unknown;
 	}
 
-	const utf8* typeToString( MaterialPropertyType type )
+	const utf8* MaterialUtil::typeToString( MaterialPropertyType type )
 	{
-		for ( const PropertyTypeDesc& desc : s_PropertyTypes )
+		for ( const MaterialPackingInternal::PropertyTypeDesc& desc : MaterialPackingInternal::s_PropertyTypes )
 		{
 			if ( desc._type == type )
 				return desc._pName;
@@ -368,12 +373,12 @@ namespace sw
 		return "Unknown";
 	}
 
-	uint32 packedSizeOf( MaterialPropertyType type )
+	uint32 MaterialUtil::packedSizeOf( MaterialPropertyType type )
 	{
 		uint32 size{ 0 };
-		stringToType( typeToString( type ), size );
+		MaterialUtil::stringToType( MaterialUtil::typeToString( type ), size );
 		// Prefer first matching entry size for known enum values
-		for ( const PropertyTypeDesc& desc : s_PropertyTypes )
+		for ( const MaterialPackingInternal::PropertyTypeDesc& desc : MaterialPackingInternal::s_PropertyTypes )
 		{
 			if ( desc._type == type )
 				return desc._size;
@@ -381,17 +386,17 @@ namespace sw
 		return size;
 	}
 
-	bool isTextureType( MaterialPropertyType type )
+	bool MaterialUtil::isTextureType( MaterialPropertyType type )
 	{
 		return type == MaterialPropertyType::Texture2D || type == MaterialPropertyType::TextureCube || type == MaterialPropertyType::Texture3D || type == MaterialPropertyType::Texture2DArray;
 	}
 
-	bool isNonBufferType( MaterialPropertyType type )
+	bool MaterialUtil::isNonBufferType( MaterialPropertyType type )
 	{
 		return type == MaterialPropertyType::Keyword;
 	}
 
-	MaterialPropertyType defaultShaderTypeFor( MaterialPropertyType cpuType )
+	MaterialPropertyType MaterialUtil::defaultShaderTypeFor( MaterialPropertyType cpuType )
 	{
 		switch ( cpuType )
 		{
@@ -429,16 +434,16 @@ namespace sw
 		return cpuType;
 	}
 
-	MaterialPropertyType shaderTypeFromReflectionName( string_view typeName, uint32 byteSize )
+	MaterialPropertyType MaterialUtil::shaderTypeFromReflectionName( string_view typeName, uint32 byteSize )
 	{
 		if ( typeName.empty() == false )
 		{
 			uint32					   ignored{ 0 };
-			const MaterialPropertyType t = stringToType( typeName, ignored );
-			if ( t != MaterialPropertyType::Unknown && isNonBufferType( t ) == false && isTextureType( t ) == false && t != MaterialPropertyType::Enum && t != MaterialPropertyType::BitFlag && t != MaterialPropertyType::Range && t != MaterialPropertyType::Color && t != MaterialPropertyType::ChannelMask && t != MaterialPropertyType::Bool )
+			const MaterialPropertyType t = MaterialUtil::stringToType( typeName, ignored );
+			if ( t != MaterialPropertyType::Unknown && MaterialUtil::isNonBufferType( t ) == false && MaterialUtil::isTextureType( t ) == false && t != MaterialPropertyType::Enum && t != MaterialPropertyType::BitFlag && t != MaterialPropertyType::Range && t != MaterialPropertyType::Color && t != MaterialPropertyType::ChannelMask && t != MaterialPropertyType::Bool )
 				return t;
 			// Bool from HLSL often reported as Bool
-			if ( iequals( typeName, "Bool" ) )
+			if ( MaterialPackingInternal::iequals( typeName, "Bool" ) )
 				return MaterialPropertyType::Uint;
 		}
 		if ( byteSize == 4 )
@@ -454,7 +459,7 @@ namespace sw
 		return MaterialPropertyType::Unknown;
 	}
 
-	uint32 alignOffset( uint32 offset, uint32 typeSize )
+	uint32 MaterialUtil::alignOffset( uint32 offset, uint32 typeSize )
 	{
 		uint32 align = 4;
 		if ( typeSize > 4 && typeSize <= 16 )
@@ -464,14 +469,14 @@ namespace sw
 		return ( offset + align - 1 ) & ~( align - 1 );
 	}
 
-	bool parseBoolToken( string_view token )
+	bool MaterialUtil::parseBoolToken( string_view token )
 	{
 		return StringUtil::parseBool( token, false );
 	}
 
-	bool packPropertyIntoBuffer( MaterialProperty& prop, vector<uint8>& buffer )
+	bool MaterialUtil::packPropertyIntoBuffer( MaterialProperty& prop, vector<uint8>& buffer )
 	{
-		if ( isNonBufferType( prop._type ) )
+		if ( MaterialUtil::isNonBufferType( prop._type ) )
 		{
 			prop._size = 0;
 			return true;
@@ -479,10 +484,10 @@ namespace sw
 
 		MaterialPropertyType shaderType = prop._shaderType;
 		if ( shaderType == MaterialPropertyType::Unknown )
-			shaderType = defaultShaderTypeFor( prop._type );
+			shaderType = MaterialUtil::defaultShaderTypeFor( prop._type );
 		prop._shaderType = shaderType;
 
-		uint32 packSize = packedSizeOf( shaderType );
+		uint32 packSize = MaterialUtil::packedSizeOf( shaderType );
 		if ( packSize == 0 )
 			packSize = 4;
 		if ( prop._size == 0 )
@@ -499,7 +504,7 @@ namespace sw
 		{
 			case MaterialPropertyType::Bool:
 			{
-				const uint32 boolVal = parseBoolToken( prop._value ) ? 1u : 0u;
+				const uint32 boolVal = MaterialUtil::parseBoolToken( prop._value ) ? 1u : 0u;
 				if ( shaderType == MaterialPropertyType::Float || shaderType == MaterialPropertyType::Range )
 				{
 					const float32 floatVal = boolVal != 0 ? 1.0f : 0.0f;
@@ -511,7 +516,7 @@ namespace sw
 			}
 			case MaterialPropertyType::Enum:
 			{
-				const int64	 enumVal  = parseEnumOrFlags( prop, prop._value, false );
+				const int64	 enumVal  = MaterialPackingInternal::parseEnumOrFlags( prop, prop._value, false );
 				const uint32 uEnumVal = static_cast<uint32>( enumVal );
 				if ( shaderType == MaterialPropertyType::Int )
 				{
@@ -529,13 +534,13 @@ namespace sw
 			}
 			case MaterialPropertyType::BitFlag:
 			{
-				const uint32 uEnumVal = static_cast<uint32>( parseEnumOrFlags( prop, prop._value, true ) );
+				const uint32 uEnumVal = static_cast<uint32>( MaterialPackingInternal::parseEnumOrFlags( prop, prop._value, true ) );
 				Memory::copy( pDst, &uEnumVal, sizeof( uEnumVal ) );
 				return true;
 			}
 			case MaterialPropertyType::ChannelMask:
 			{
-				const uint32 mask = parseChannelMask( prop._value );
+				const uint32 mask = MaterialPackingInternal::parseChannelMask( prop._value );
 				if ( shaderType == MaterialPropertyType::Float4 )
 				{
 					float32 arrComps[4] = {
@@ -595,16 +600,16 @@ namespace sw
 			case MaterialPropertyType::Int2:
 			case MaterialPropertyType::Int3:
 			case MaterialPropertyType::Int4:
-				return writeNumericValue( pDst, packSize, shaderType, prop._value );
+				return MaterialPackingInternal::writeNumericValue( pDst, packSize, shaderType, prop._value );
 			case MaterialPropertyType::Keyword:
 			case MaterialPropertyType::Unknown:
 				return false;
 		}
-		return writeNumericValue( pDst, packSize, shaderType, prop._value );
+		return MaterialPackingInternal::writeNumericValue( pDst, packSize, shaderType, prop._value );
 	}
 
 	/** @brief Attribute first, then same-name child element. */
-	string fieldText( XmlNode node, const utf8* pName )
+	string MaterialUtil::fieldText( XmlNode node, const utf8* pName )
 	{
 		if ( node.isValid() == false || pName == nullptr )
 			return {};
@@ -618,89 +623,89 @@ namespace sw
 		return {};
 	}
 
-	bool parseBoolField( XmlNode node, const utf8* pName, bool defaultValue )
+	bool MaterialUtil::parseBoolField( XmlNode node, const utf8* pName, bool defaultValue )
 	{
-		const string text = fieldText( node, pName );
+		const string text = MaterialUtil::fieldText( node, pName );
 		if ( text.empty() )
 			return defaultValue;
-		return parseBoolToken( text );
+		return MaterialUtil::parseBoolToken( text );
 	}
 
-	MaterialProperty parsePropertyNode( XmlNode item )
+	MaterialProperty MaterialUtil::parsePropertyNode( XmlNode item )
 	{
 		MaterialProperty prop{};
-		prop._name = fieldText( item, "name" );
+		prop._name = MaterialUtil::fieldText( item, "name" );
 		uint32 size{ 0 };
-		string typeStr = fieldText( item, "type" );
+		string typeStr = MaterialUtil::fieldText( item, "type" );
 		if ( typeStr.empty() )
-			typeStr = fieldText( item, "cpuType" );
+			typeStr = MaterialUtil::fieldText( item, "cpuType" );
 		if ( typeStr.empty() == false )
-			prop._type = stringToType( typeStr, size );
-		const string shaderTypeStr = fieldText( item, "shaderType" );
+			prop._type = MaterialUtil::stringToType( typeStr, size );
+		const string shaderTypeStr = MaterialUtil::fieldText( item, "shaderType" );
 		if ( shaderTypeStr.empty() == false )
-			prop._shaderType = stringToType( shaderTypeStr, size );
-		prop._defaultValue = fieldText( item, "defaultValue" );
-		prop._value		   = fieldText( item, "value" );
+			prop._shaderType = MaterialUtil::stringToType( shaderTypeStr, size );
+		prop._defaultValue = MaterialUtil::fieldText( item, "defaultValue" );
+		prop._value		   = MaterialUtil::fieldText( item, "value" );
 		if ( prop._defaultValue.empty() && prop._value.empty() == false )
 			prop._defaultValue = prop._value;
 		if ( prop._value.empty() && prop._defaultValue.empty() == false )
 			prop._value = prop._defaultValue;
-		prop._assetPath		= fieldText( item, "assetPath" );
-		prop._enumType		= fieldText( item, "enumType" );
-		prop._displayName	= fieldText( item, "displayName" );
-		prop._group			= fieldText( item, "group" );
-		prop._tooltip		= fieldText( item, "tooltip" );
-		prop._shaderKeyword = fieldText( item, "shaderKeyword" );
-		const string minStr = fieldText( item, "min" );
-		const string maxStr = fieldText( item, "max" );
+		prop._assetPath		= MaterialUtil::fieldText( item, "assetPath" );
+		prop._enumType		= MaterialUtil::fieldText( item, "enumType" );
+		prop._displayName	= MaterialUtil::fieldText( item, "displayName" );
+		prop._group			= MaterialUtil::fieldText( item, "group" );
+		prop._tooltip		= MaterialUtil::fieldText( item, "tooltip" );
+		prop._shaderKeyword = MaterialUtil::fieldText( item, "shaderKeyword" );
+		const string minStr = MaterialUtil::fieldText( item, "min" );
+		const string maxStr = MaterialUtil::fieldText( item, "max" );
 		if ( minStr.empty() == false )
 			prop._min = static_cast<float32>( StringUtil::atof( minStr.c_str() ) );
 		if ( maxStr.empty() == false )
 			prop._max = static_cast<float32>( StringUtil::atof( maxStr.c_str() ) );
-		prop._bHdr		= parseBoolField( item, "bHdr", false );
-		prop._bSrgb		= parseBoolField( item, "bSrgb", true );
-		prop._bHidden	= parseBoolField( item, "bHidden", false );
-		prop._bAdvanced = parseBoolField( item, "bAdvanced", false );
-		parseEnumEntries( item, prop._listEnumEntry );
+		prop._bHdr		= MaterialUtil::parseBoolField( item, "bHdr", false );
+		prop._bSrgb		= MaterialUtil::parseBoolField( item, "bSrgb", true );
+		prop._bHidden	= MaterialUtil::parseBoolField( item, "bHidden", false );
+		prop._bAdvanced = MaterialUtil::parseBoolField( item, "bAdvanced", false );
+		MaterialPackingInternal::parseEnumEntries( item, prop._listEnumEntry );
 		return prop;
 	}
 
-	void appendAttr( XmlNode parent, const utf8* pName, string_view value )
+	void MaterialUtil::appendAttr( XmlNode parent, const utf8* pName, string_view value )
 	{
 		if ( parent.isValid() == false || pName == nullptr || value.empty() )
 			return;
 		parent.appendAttr( pName, value );
 	}
 
-	void appendBoolAttr( XmlNode parent, const utf8* pName, bool value )
+	void MaterialUtil::appendBoolAttr( XmlNode parent, const utf8* pName, bool value )
 	{
 		parent.appendAttr( pName, value );
 	}
 
-	RHIBlendMode parseBlendMode( string_view s )
+	RHIBlendMode MaterialUtil::parseBlendMode( string_view s )
 	{
-		if ( iequals( s, "Transparent" ) || iequals( s, "AlphaBlend" ) )
+		if ( MaterialPackingInternal::iequals( s, "Transparent" ) || MaterialPackingInternal::iequals( s, "AlphaBlend" ) )
 			return RHIBlendMode::Transparent;
 		return RHIBlendMode::Opaque;
 	}
 
-	const utf8* blendModeToString( RHIBlendMode mode )
+	const utf8* MaterialUtil::blendModeToString( RHIBlendMode mode )
 	{
 		return mode == RHIBlendMode::Transparent ? "Transparent" : "Opaque";
 	}
 
-	MaterialQualityLevel parseQuality( string_view s )
+	MaterialQualityLevel MaterialUtil::parseQuality( string_view s )
 	{
-		if ( iequals( s, "Low" ) )
+		if ( MaterialPackingInternal::iequals( s, "Low" ) )
 			return MaterialQualityLevel::Low;
-		if ( iequals( s, "Medium" ) || iequals( s, "Med" ) )
+		if ( MaterialPackingInternal::iequals( s, "Medium" ) || MaterialPackingInternal::iequals( s, "Med" ) )
 			return MaterialQualityLevel::Medium;
-		if ( iequals( s, "Epic" ) )
+		if ( MaterialPackingInternal::iequals( s, "Epic" ) )
 			return MaterialQualityLevel::Epic;
 		return MaterialQualityLevel::High;
 	}
 
-	const utf8* qualityToString( MaterialQualityLevel q )
+	const utf8* MaterialUtil::qualityToString( MaterialQualityLevel q )
 	{
 		switch ( q )
 		{
@@ -718,7 +723,7 @@ namespace sw
 		return "High";
 	}
 
-	void parsePermutationNode( XmlNode root, MaterialPermutationDesc& out )
+	void MaterialUtil::parsePermutationNode( XmlNode root, MaterialPermutationDesc& out )
 	{
 		out = MaterialPermutationDesc{};
 		if ( root.isValid() == false )
@@ -727,18 +732,18 @@ namespace sw
 		if ( perm.isValid() == false )
 			return;
 
-		const string quality = fieldText( perm, "quality" );
+		const string quality = MaterialUtil::fieldText( perm, "quality" );
 		if ( quality.empty() == false )
-			out._quality = parseQuality( quality );
-		const string lod = fieldText( perm, "shaderLOD" );
+			out._quality = MaterialUtil::parseQuality( quality );
+		const string lod = MaterialUtil::fieldText( perm, "shaderLOD" );
 		if ( lod.empty() == false )
 			out._shaderLOD = static_cast<uint32>( StringUtil::strtoull( lod.c_str(), nullptr, 10 ) );
-		const string usage = fieldText( perm, "usage" );
+		const string usage = MaterialUtil::fieldText( perm, "usage" );
 		if ( usage.empty() == false )
-			out._usage = parseUsageFlags( usage );
+			out._usage = MaterialPackingInternal::parseUsageFlags( usage );
 
 		XmlNode always = perm.child( "_alwaysDefines" );
-		parseStringListItems( always, out._listAlwaysDefine );
+		MaterialPackingInternal::parseStringListItems( always, out._listAlwaysDefine );
 
 		XmlNode switches = perm.child( "_staticSwitches" );
 		if ( switches.isValid() )
@@ -746,11 +751,11 @@ namespace sw
 			for ( XmlNode item = switches.child( "item" ); item; item = item.next( "item" ) )
 			{
 				MaterialStaticSwitch entry{};
-				entry._name			  = fieldText( item, "name" );
-				entry._keyword		  = fieldText( item, "keyword" );
-				entry._keywordOff	  = fieldText( item, "keywordOff" );
-				entry._bEnabled		  = parseBoolField( item, "bEnabled", false );
-				entry._bShaderFeature = parseBoolField( item, "bShaderFeature", true );
+				entry._name			  = MaterialUtil::fieldText( item, "name" );
+				entry._keyword		  = MaterialUtil::fieldText( item, "keyword" );
+				entry._keywordOff	  = MaterialUtil::fieldText( item, "keywordOff" );
+				entry._bEnabled		  = MaterialUtil::parseBoolField( item, "bEnabled", false );
+				entry._bShaderFeature = MaterialUtil::parseBoolField( item, "bShaderFeature", true );
 				if ( entry._name.empty() && entry._keyword.empty() == false )
 					entry._name = entry._keyword;
 				if ( entry._keyword.empty() == false || entry._name.empty() == false )
@@ -764,23 +769,23 @@ namespace sw
 			for ( XmlNode item = mcs.child( "item" ); item; item = item.next( "item" ) )
 			{
 				MaterialMultiCompile mc{};
-				mc._name	 = fieldText( item, "name" );
-				mc._selected = fieldText( item, "selected" );
+				mc._name	 = MaterialUtil::fieldText( item, "name" );
+				mc._selected = MaterialUtil::fieldText( item, "selected" );
 				XmlNode opts = item.child( "_options" );
-				parseStringListItems( opts, mc._listOption );
+				MaterialPackingInternal::parseStringListItems( opts, mc._listOption );
 				if ( mc._selected.empty() == false || mc._listOption.empty() == false )
 					out._listMultiCompile.push_back( std::move( mc ) );
 			}
 		}
 	}
 
-	void appendPermutationNode( XmlNode root, const MaterialPermutationDesc& perm )
+	void MaterialUtil::appendPermutationNode( XmlNode root, const MaterialPermutationDesc& perm )
 	{
 		XmlNode node = root.appendChild( "_permutations" );
-		appendAttr( node, "quality", qualityToString( perm._quality ) );
+		MaterialUtil::appendAttr( node, "quality", MaterialUtil::qualityToString( perm._quality ) );
 		node.appendAttr( "shaderLOD", perm._shaderLOD );
-		appendAttr( node, "usage", usageFlagsToString( perm._usage ) );
-		appendMaterialStringList( node, "_alwaysDefines", perm._listAlwaysDefine );
+		MaterialUtil::appendAttr( node, "usage", MaterialPackingInternal::usageFlagsToString( perm._usage ) );
+		MaterialPackingInternal::appendMaterialStringList( node, "_alwaysDefines", perm._listAlwaysDefine );
 
 		if ( perm._listStaticSwitch.empty() == false )
 		{
@@ -788,12 +793,12 @@ namespace sw
 			for ( const MaterialStaticSwitch& entry : perm._listStaticSwitch )
 			{
 				XmlNode item = list.appendChild( "item" );
-				appendAttr( item, "name", entry._name );
-				appendAttr( item, "keyword", entry._keyword );
+				MaterialUtil::appendAttr( item, "name", entry._name );
+				MaterialUtil::appendAttr( item, "keyword", entry._keyword );
 				if ( entry._keywordOff.empty() == false )
-					appendAttr( item, "keywordOff", entry._keywordOff );
-				appendBoolAttr( item, "bEnabled", entry._bEnabled );
-				appendBoolAttr( item, "bShaderFeature", entry._bShaderFeature );
+					MaterialUtil::appendAttr( item, "keywordOff", entry._keywordOff );
+				MaterialUtil::appendBoolAttr( item, "bEnabled", entry._bEnabled );
+				MaterialUtil::appendBoolAttr( item, "bShaderFeature", entry._bShaderFeature );
 			}
 		}
 
@@ -803,14 +808,14 @@ namespace sw
 			for ( const MaterialMultiCompile& mc : perm._listMultiCompile )
 			{
 				XmlNode item = list.appendChild( "item" );
-				appendAttr( item, "name", mc._name );
-				appendAttr( item, "selected", mc._selected );
-				appendMaterialStringList( item, "_options", mc._listOption );
+				MaterialUtil::appendAttr( item, "name", mc._name );
+				MaterialUtil::appendAttr( item, "selected", mc._selected );
+				MaterialPackingInternal::appendMaterialStringList( item, "_options", mc._listOption );
 			}
 		}
 	}
 
-	void appendUniqueDefine( vector<string>& out, string_view def )
+	void MaterialUtil::appendUniqueDefine( vector<string>& out, string_view def )
 	{
 		if ( def.empty() )
 			return;
@@ -822,54 +827,54 @@ namespace sw
 		out.push_back( string( def ) );
 	}
 
-	void appendUsageDefines( MaterialUsageFlags usage, vector<string>& out )
+	void MaterialUtil::appendUsageDefines( MaterialUsageFlags usage, vector<string>& out )
 	{
 		if ( hasFlag( usage, MaterialUsageFlags::StaticMesh ) )
-			appendUniqueDefine( out, "MATERIAL_USAGE_STATIC_MESH" );
+			MaterialUtil::appendUniqueDefine( out, "MATERIAL_USAGE_STATIC_MESH" );
 		if ( hasFlag( usage, MaterialUsageFlags::SkeletalMesh ) )
-			appendUniqueDefine( out, "MATERIAL_USAGE_SKELETAL_MESH" );
+			MaterialUtil::appendUniqueDefine( out, "MATERIAL_USAGE_SKELETAL_MESH" );
 		if ( hasFlag( usage, MaterialUsageFlags::Instanced ) )
-			appendUniqueDefine( out, "MATERIAL_USAGE_INSTANCED" );
+			MaterialUtil::appendUniqueDefine( out, "MATERIAL_USAGE_INSTANCED" );
 		if ( hasFlag( usage, MaterialUsageFlags::Particles ) )
-			appendUniqueDefine( out, "MATERIAL_USAGE_PARTICLES" );
+			MaterialUtil::appendUniqueDefine( out, "MATERIAL_USAGE_PARTICLES" );
 		if ( hasFlag( usage, MaterialUsageFlags::Decal ) )
-			appendUniqueDefine( out, "MATERIAL_USAGE_DECAL" );
+			MaterialUtil::appendUniqueDefine( out, "MATERIAL_USAGE_DECAL" );
 		if ( hasFlag( usage, MaterialUsageFlags::UI ) )
-			appendUniqueDefine( out, "MATERIAL_USAGE_UI" );
+			MaterialUtil::appendUniqueDefine( out, "MATERIAL_USAGE_UI" );
 		if ( hasFlag( usage, MaterialUsageFlags::PostProcess ) )
-			appendUniqueDefine( out, "MATERIAL_USAGE_POSTPROCESS" );
+			MaterialUtil::appendUniqueDefine( out, "MATERIAL_USAGE_POSTPROCESS" );
 		if ( hasFlag( usage, MaterialUsageFlags::LightFunction ) )
-			appendUniqueDefine( out, "MATERIAL_USAGE_LIGHTFUNCTION" );
+			MaterialUtil::appendUniqueDefine( out, "MATERIAL_USAGE_LIGHTFUNCTION" );
 		if ( hasFlag( usage, MaterialUsageFlags::MorphTargets ) )
-			appendUniqueDefine( out, "MATERIAL_USAGE_MORPHTARGETS" );
+			MaterialUtil::appendUniqueDefine( out, "MATERIAL_USAGE_MORPHTARGETS" );
 		if ( hasFlag( usage, MaterialUsageFlags::SplineMesh ) )
-			appendUniqueDefine( out, "MATERIAL_USAGE_SPLINEMESH" );
+			MaterialUtil::appendUniqueDefine( out, "MATERIAL_USAGE_SPLINEMESH" );
 	}
 
-	void appendQualityDefines( MaterialQualityLevel q, vector<string>& out )
+	void MaterialUtil::appendQualityDefines( MaterialQualityLevel q, vector<string>& out )
 	{
-		appendUniqueDefine( out, string( "MATERIAL_QUALITY=" ) + to_string( static_cast<uint32>( q ) ) );
+		MaterialUtil::appendUniqueDefine( out, string( "MATERIAL_QUALITY=" ) + to_string( static_cast<uint32>( q ) ) );
 		switch ( q )
 		{
 			case MaterialQualityLevel::Low:
-				appendUniqueDefine( out, "MATERIAL_QUALITY_LOW" );
+				MaterialUtil::appendUniqueDefine( out, "MATERIAL_QUALITY_LOW" );
 				break;
 			case MaterialQualityLevel::Medium:
-				appendUniqueDefine( out, "MATERIAL_QUALITY_MEDIUM" );
+				MaterialUtil::appendUniqueDefine( out, "MATERIAL_QUALITY_MEDIUM" );
 				break;
 			case MaterialQualityLevel::High:
-				appendUniqueDefine( out, "MATERIAL_QUALITY_HIGH" );
+				MaterialUtil::appendUniqueDefine( out, "MATERIAL_QUALITY_HIGH" );
 				break;
 			case MaterialQualityLevel::Epic:
-				appendUniqueDefine( out, "MATERIAL_QUALITY_EPIC" );
+				MaterialUtil::appendUniqueDefine( out, "MATERIAL_QUALITY_EPIC" );
 				break;
 			case MaterialQualityLevel::Count:
-				appendUniqueDefine( out, "MATERIAL_QUALITY_HIGH" );
+				MaterialUtil::appendUniqueDefine( out, "MATERIAL_QUALITY_HIGH" );
 				break;
 		}
 	}
 
-	uint64 hashDefines( const vector<string>& defs )
+	uint64 MaterialUtil::hashDefines( const vector<string>& defs )
 	{
 		uint64 h = 14695981039346656037ull;
 		for ( const string& defineStr : defs )

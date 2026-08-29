@@ -12,77 +12,84 @@
 
 namespace sw::editor
 {
+	namespace
+	{
+		struct ImGuiDX11RendererBackendInternal
+		{
+			inline static void ( *s_OrigCreateWindow )( ImGuiViewport* )		  = nullptr;
+			inline static void ( *s_OrigSetWindowSize )( ImGuiViewport*, ImVec2 ) = nullptr;
+
+			/** @brief DXGI_SCALING_NONE은 HWND 클라이언트 크기와 스왑체인 크기가 일치해야 함. */
+			static void syncViewportSizeFromHwnd( ImGuiViewport* pViewport )
+			{
+				if ( pViewport == nullptr )
+					return;
+
+				HWND hwnd = static_cast<HWND>( pViewport->PlatformHandleRaw ? pViewport->PlatformHandleRaw : pViewport->PlatformHandle );
+				if ( hwnd == nullptr )
+					return;
+
+				RECT rc{};
+				if ( GetClientRect( hwnd, &rc ) == FALSE )
+					return;
+
+				const float32 width	 = static_cast<float32>( rc.right - rc.left );
+				const float32 height = static_cast<float32>( rc.bottom - rc.top );
+				if ( width >= 1.0f && height >= 1.0f )
+				{
+					pViewport->Size.x = width;
+					pViewport->Size.y = height;
+				}
+			}
+
+			static void GuardedCreateWindow( ImGuiViewport* pViewport )
+			{
+				if ( pViewport == nullptr || s_OrigCreateWindow == nullptr )
+					return;
+
+				syncViewportSizeFromHwnd( pViewport );
+				if ( pViewport->Size.x < 1.0f )
+					pViewport->Size.x = 1.0f;
+				if ( pViewport->Size.y < 1.0f )
+					pViewport->Size.y = 1.0f;
+
+				s_OrigCreateWindow( pViewport );
+			}
+
+			static void GuardedSetWindowSize( ImGuiViewport* pViewport, ImVec2 size )
+			{
+				if ( pViewport == nullptr || s_OrigSetWindowSize == nullptr )
+					return;
+
+				if ( size.x < 1.0f || size.y < 1.0f )
+					return;
+
+				s_OrigSetWindowSize( pViewport, size );
+			}
+
+			static void installViewportGuards()
+			{
+				ImGuiPlatformIO& platformIO = ImGui::GetPlatformIO();
+				if ( platformIO.Renderer_CreateWindow != nullptr && platformIO.Renderer_CreateWindow != &GuardedCreateWindow )
+				{
+					s_OrigCreateWindow				 = platformIO.Renderer_CreateWindow;
+					platformIO.Renderer_CreateWindow = &GuardedCreateWindow;
+				}
+				if ( platformIO.Renderer_SetWindowSize != nullptr && platformIO.Renderer_SetWindowSize != &GuardedSetWindowSize )
+				{
+					s_OrigSetWindowSize				  = platformIO.Renderer_SetWindowSize;
+					platformIO.Renderer_SetWindowSize = &GuardedSetWindowSize;
+				}
+			}
+		};
+	} // namespace
+} // namespace sw::editor
+
+namespace sw::editor
+{
 	SW_LOG_CALLER( "ImGuiDX11" );
 
 #if defined( SW_PLATFORM_WINDOWS )
-	namespace
-	{
-		void ( *s_OrigCreateWindow )( ImGuiViewport* )			= nullptr;
-		void ( *s_OrigSetWindowSize )( ImGuiViewport*, ImVec2 ) = nullptr;
-
-		/** @brief DXGI_SCALING_NONE은 HWND 클라이언트 크기와 스왑체인 크기가 일치해야 함. */
-		void syncViewportSizeFromHwnd( ImGuiViewport* pViewport )
-		{
-			if ( pViewport == nullptr )
-				return;
-
-			HWND hwnd = static_cast<HWND>( pViewport->PlatformHandleRaw ? pViewport->PlatformHandleRaw : pViewport->PlatformHandle );
-			if ( hwnd == nullptr )
-				return;
-
-			RECT rc{};
-			if ( GetClientRect( hwnd, &rc ) == FALSE )
-				return;
-
-			const float32 width	 = static_cast<float32>( rc.right - rc.left );
-			const float32 height = static_cast<float32>( rc.bottom - rc.top );
-			if ( width >= 1.0f && height >= 1.0f )
-			{
-				pViewport->Size.x = width;
-				pViewport->Size.y = height;
-			}
-		}
-
-		void GuardedCreateWindow( ImGuiViewport* pViewport )
-		{
-			if ( pViewport == nullptr || s_OrigCreateWindow == nullptr )
-				return;
-
-			syncViewportSizeFromHwnd( pViewport );
-			if ( pViewport->Size.x < 1.0f )
-				pViewport->Size.x = 1.0f;
-			if ( pViewport->Size.y < 1.0f )
-				pViewport->Size.y = 1.0f;
-
-			s_OrigCreateWindow( pViewport );
-		}
-
-		void GuardedSetWindowSize( ImGuiViewport* pViewport, ImVec2 size )
-		{
-			if ( pViewport == nullptr || s_OrigSetWindowSize == nullptr )
-				return;
-
-			if ( size.x < 1.0f || size.y < 1.0f )
-				return;
-
-			s_OrigSetWindowSize( pViewport, size );
-		}
-
-		void installViewportGuards()
-		{
-			ImGuiPlatformIO& platformIO = ImGui::GetPlatformIO();
-			if ( platformIO.Renderer_CreateWindow != nullptr && platformIO.Renderer_CreateWindow != &GuardedCreateWindow )
-			{
-				s_OrigCreateWindow				 = platformIO.Renderer_CreateWindow;
-				platformIO.Renderer_CreateWindow = &GuardedCreateWindow;
-			}
-			if ( platformIO.Renderer_SetWindowSize != nullptr && platformIO.Renderer_SetWindowSize != &GuardedSetWindowSize )
-			{
-				s_OrigSetWindowSize				  = platformIO.Renderer_SetWindowSize;
-				platformIO.Renderer_SetWindowSize = &GuardedSetWindowSize;
-			}
-		}
-	} // namespace
 #endif
 
 	bool ImGuiDX11RendererBackend::initialize( class IRHIDevice* pRhiDevice )
@@ -98,7 +105,7 @@ namespace sw::editor
 		{
 			const bool bOk = ImGui_ImplDX11_Init( pDevice, pContext );
 			if ( bOk )
-				installViewportGuards();
+				ImGuiDX11RendererBackendInternal::installViewportGuards();
 			return bOk;
 		}
 #else

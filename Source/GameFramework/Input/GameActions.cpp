@@ -9,24 +9,30 @@
 
 namespace sw
 {
-	SW_LOG_CALLER( "GameActionIds" );
-
 	namespace
 	{
-		static void takeId( XmlNode idsRoot, const utf8* pKey, string& dst )
+		struct GameActionsInternal
 		{
-			for ( XmlNode actionNode = idsRoot.child( "id" ); actionNode; actionNode = actionNode.next( "id" ) )
+			static void takeId( XmlNode idsRoot, const utf8* pKey, string& dst )
 			{
-				const utf8* pKeyAttr = actionNode.attr( "key" );
-				if ( pKeyAttr == nullptr || StringUtil::strcmp( pKeyAttr, pKey ) != 0 )
-					continue;
-				const utf8* pText = actionNode.text();
-				if ( pText != nullptr && pText[0] != '\0' )
-					dst.assign( pText );
-				return;
+				for ( XmlNode actionNode = idsRoot.child( "id" ); actionNode; actionNode = actionNode.next( "id" ) )
+				{
+					const utf8* pKeyAttr = actionNode.attr( "key" );
+					if ( pKeyAttr == nullptr || StringUtil::strcmp( pKeyAttr, pKey ) != 0 )
+						continue;
+					const utf8* pText = actionNode.text();
+					if ( pText != nullptr && pText[0] != '\0' )
+						dst.assign( pText );
+					return;
+				}
 			}
-		}
+		};
 	} // namespace
+} // namespace sw
+
+namespace sw
+{
+	SW_LOG_CALLER( "GameActionIds" );
 
 	bool GameActionIds::loadFromResource( string_view assetRelativePath )
 	{
@@ -49,29 +55,29 @@ namespace sw
 			return true;
 		}
 
-		takeId( ids, "moveUp", _moveUp );
-		takeId( ids, "moveDown", _moveDown );
-		takeId( ids, "moveLeft", _moveLeft );
-		takeId( ids, "moveRight", _moveRight );
-		takeId( ids, "interact", _interact );
-		takeId( ids, "confirm", _confirm );
-		takeId( ids, "cancel", _cancel );
-		takeId( ids, "continue", _continue );
-		takeId( ids, "fightMove0", _fightMove0 );
-		takeId( ids, "fightMove1", _fightMove1 );
-		takeId( ids, "attack", _attack );
-		takeId( ids, "dash", _dash );
-		takeId( ids, "point", _point );
-		takeId( ids, "quickSave", _quickSave );
-		takeId( ids, "quickLoad", _quickLoad );
-		takeId( ids, "reloadShaders", _reloadShaders );
-		takeId( ids, "reloadEditor", _reloadEditor );
-		takeId( ids, "reloadGame", _reloadGame );
-		takeId( ids, "layerGameplay", _layerGameplay );
-		takeId( ids, "layerUI", _layerUI );
-		takeId( ids, "layerTitle", _layerTitle );
-		takeId( ids, "layerCinematic", _layerCinematic );
-		takeId( ids, "layerDebug", _layerDebug );
+		GameActionsInternal::takeId( ids, "moveUp", _moveUp );
+		GameActionsInternal::takeId( ids, "moveDown", _moveDown );
+		GameActionsInternal::takeId( ids, "moveLeft", _moveLeft );
+		GameActionsInternal::takeId( ids, "moveRight", _moveRight );
+		GameActionsInternal::takeId( ids, "interact", _interact );
+		GameActionsInternal::takeId( ids, "confirm", _confirm );
+		GameActionsInternal::takeId( ids, "cancel", _cancel );
+		GameActionsInternal::takeId( ids, "continue", _continue );
+		GameActionsInternal::takeId( ids, "fightMove0", _fightMove0 );
+		GameActionsInternal::takeId( ids, "fightMove1", _fightMove1 );
+		GameActionsInternal::takeId( ids, "attack", _attack );
+		GameActionsInternal::takeId( ids, "dash", _dash );
+		GameActionsInternal::takeId( ids, "point", _point );
+		GameActionsInternal::takeId( ids, "quickSave", _quickSave );
+		GameActionsInternal::takeId( ids, "quickLoad", _quickLoad );
+		GameActionsInternal::takeId( ids, "reloadShaders", _reloadShaders );
+		GameActionsInternal::takeId( ids, "reloadEditor", _reloadEditor );
+		GameActionsInternal::takeId( ids, "reloadGame", _reloadGame );
+		GameActionsInternal::takeId( ids, "layerGameplay", _layerGameplay );
+		GameActionsInternal::takeId( ids, "layerUI", _layerUI );
+		GameActionsInternal::takeId( ids, "layerTitle", _layerTitle );
+		GameActionsInternal::takeId( ids, "layerCinematic", _layerCinematic );
+		GameActionsInternal::takeId( ids, "layerDebug", _layerDebug );
 
 		SW_LOG_INFO( "Loaded gameplay ids from %#", absPath );
 		return true;

@@ -4,46 +4,49 @@
 
 namespace sw
 {
-
 	namespace
 	{
-
-		ZoneRole zoneRoleFromText( string_view roleText, string_view mapPath )
+		struct ZoneRuntimeInternal
 		{
-			if ( roleText.empty() )
-				return zoneRoleFromMapPath( mapPath );
-			string r( roleText );
-			for ( utf8& ch : r )
+			static ZoneRole zoneRoleFromText( string_view roleText, string_view mapPath )
 			{
-				if ( 'A' <= ch && ch <= 'Z' )
-					ch = static_cast<utf8>( ch - 'A' + 'a' );
+				if ( roleText.empty() )
+					return zoneRoleFromMapPath( mapPath );
+				string r( roleText );
+				for ( utf8& ch : r )
+				{
+					if ( 'A' <= ch && ch <= 'Z' )
+						ch = static_cast<utf8>( ch - 'A' + 'a' );
+				}
+				if ( r == "boss" )
+					return ZoneRole::Boss;
+				if ( r == "dungeon" )
+					return ZoneRole::Dungeon;
+				if ( r == "battle" )
+					return ZoneRole::Battle;
+				if ( r == "route" )
+					return ZoneRole::Route;
+				if ( r == "center" )
+					return ZoneRole::Center;
+				if ( r == "mart" )
+					return ZoneRole::Mart;
+				if ( r == "gym" )
+					return ZoneRole::Gym;
+				if ( r == "wild" )
+					return ZoneRole::Wild;
+				return ZoneRole::Town;
 			}
-			if ( r == "boss" )
-				return ZoneRole::Boss;
-			if ( r == "dungeon" )
-				return ZoneRole::Dungeon;
-			if ( r == "battle" )
-				return ZoneRole::Battle;
-			if ( r == "route" )
-				return ZoneRole::Route;
-			if ( r == "center" )
-				return ZoneRole::Center;
-			if ( r == "mart" )
-				return ZoneRole::Mart;
-			if ( r == "gym" )
-				return ZoneRole::Gym;
-			if ( r == "wild" )
-				return ZoneRole::Wild;
-			return ZoneRole::Town;
-		}
 
-		bool roleUsesClearGate( ZoneRole role )
-		{
-			return role == ZoneRole::Gym || role == ZoneRole::Dungeon || role == ZoneRole::Boss;
-		}
-
+			static bool roleUsesClearGate( ZoneRole role )
+			{
+				return role == ZoneRole::Gym || role == ZoneRole::Dungeon || role == ZoneRole::Boss;
+			}
+		};
 	} // namespace
+} // namespace sw
 
+namespace sw
+{
 	ZoneDef::ZoneDef()
 		: _id{}
 		, _role{ ZoneRole::Town }
@@ -89,12 +92,12 @@ namespace sw
 		clear();
 		ZoneDef z{};
 		z._id				= mapName.empty() ? mapPath : mapName;
-		z._role				= zoneRoleFromText( roleText, mapPath );
+		z._role				= ZoneRuntimeInternal::zoneRoleFromText( roleText, mapPath );
 		z._bounds._minX		= 0;
 		z._bounds._minY		= 0;
 		z._bounds._maxX		= width > 0 ? width - 1 : 0;
 		z._bounds._maxY		= height > 0 ? height - 1 : 0;
-		z._bClearGateLocked = roleUsesClearGate( z._role ) ? 1 : 0;
+		z._bClearGateLocked = ZoneRuntimeInternal::roleUsesClearGate( z._role ) ? 1 : 0;
 		// 역할을 태그로 미러해 장르 비의존 코드가 ZoneRole 없이 조회할 수 있게 합니다.
 		switch ( z._role )
 		{

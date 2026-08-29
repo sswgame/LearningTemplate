@@ -8,33 +8,39 @@
 #if defined( SW_PLATFORM_WINDOWS )
 namespace sw
 {
-	SW_LOG_CALLER( "D3D11" );
-
 	namespace
 	{
-		DXGI_FORMAT toDxgiFormatD3D11( RHIFormat format )
+		struct D3D11RHIResourceInternal
 		{
-			switch ( format )
+			static DXGI_FORMAT toDxgiFormatD3D11( RHIFormat format )
 			{
-				case RHIFormat::R8G8B8A8_UNORM:
-					return DXGI_FORMAT_R8G8B8A8_UNORM;
-				case RHIFormat::B8G8R8A8_UNORM:
-					return DXGI_FORMAT_B8G8R8A8_UNORM;
-				case RHIFormat::R16G16B16A16_FLOAT:
-					return DXGI_FORMAT_R16G16B16A16_FLOAT;
-				case RHIFormat::D24_UNORM_S8_UINT:
-					return DXGI_FORMAT_D24_UNORM_S8_UINT;
-				case RHIFormat::R32G32B32_FLOAT:
-					return DXGI_FORMAT_R32G32B32_FLOAT;
-				case RHIFormat::R32G32_FLOAT:
-					return DXGI_FORMAT_R32G32_FLOAT;
-				case RHIFormat::R32_FLOAT:
-					return DXGI_FORMAT_R32_FLOAT;
+				switch ( format )
+				{
+					case RHIFormat::R8G8B8A8_UNORM:
+						return DXGI_FORMAT_R8G8B8A8_UNORM;
+					case RHIFormat::B8G8R8A8_UNORM:
+						return DXGI_FORMAT_B8G8R8A8_UNORM;
+					case RHIFormat::R16G16B16A16_FLOAT:
+						return DXGI_FORMAT_R16G16B16A16_FLOAT;
+					case RHIFormat::D24_UNORM_S8_UINT:
+						return DXGI_FORMAT_D24_UNORM_S8_UINT;
+					case RHIFormat::R32G32B32_FLOAT:
+						return DXGI_FORMAT_R32G32B32_FLOAT;
+					case RHIFormat::R32G32_FLOAT:
+						return DXGI_FORMAT_R32G32_FLOAT;
+					case RHIFormat::R32_FLOAT:
+						return DXGI_FORMAT_R32_FLOAT;
+				}
+				SW_LOG_ASSERT( false, "Unsupported RHIFormat: %#", static_cast<uint32>( format ) );
+				return DXGI_FORMAT_UNKNOWN;
 			}
-			SW_LOG_ASSERT( false, "Unsupported RHIFormat: %#", static_cast<uint32>( format ) );
-			return DXGI_FORMAT_UNKNOWN;
-		}
+		};
 	} // namespace
+} // namespace sw
+
+namespace sw
+{
+	SW_LOG_CALLER( "D3D11" );
 
 	RHIPipelineStateHandle D3D11RHIResource::createPipelineState( const RHIPipelineStateDesc& desc )
 	{
@@ -318,7 +324,7 @@ namespace sw
 		texDesc.MipLevels = desc._mipLevels;
 		texDesc.ArraySize = 1;
 		// Typeless so we can create both DSV and depth SRV for shadow sampling.
-		texDesc.Format			   = bDepth ? DXGI_FORMAT_R24G8_TYPELESS : toDxgiFormatD3D11( desc._format );
+		texDesc.Format			   = bDepth ? DXGI_FORMAT_R24G8_TYPELESS : D3D11RHIResourceInternal::toDxgiFormatD3D11( desc._format );
 		texDesc.SampleDesc.Count   = 1;
 		texDesc.SampleDesc.Quality = 0;
 		texDesc.Usage			   = D3D11_USAGE_DEFAULT;
@@ -380,7 +386,7 @@ namespace sw
 			if ( bDepth )
 				srvDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
 			else
-				srvDesc.Format = toDxgiFormatD3D11( desc._format );
+				srvDesc.Format = D3D11RHIResourceInternal::toDxgiFormatD3D11( desc._format );
 
 			if ( FAILED( _pDevice->_device->CreateShaderResourceView( record._texture.Get(), bDepth ? &srvDesc : nullptr, record._srv.GetAddressOf() ) ) )
 			{

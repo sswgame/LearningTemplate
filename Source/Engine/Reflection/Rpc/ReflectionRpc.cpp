@@ -13,50 +13,49 @@
 
 namespace sw
 {
-	SW_LOG_CALLER( "ReflectionRpc" );
-
 	namespace
 	{
-
-		hashed_string resolveBuiltinHandlerKey( const hashed_string& typeHash, const SerializeContext& ctx )
+		struct ReflectionRpcInternal
 		{
-			if ( ctx.findBinaryWriter( typeHash ) != nullptr )
-				return typeHash;
-			const TypeInfo* pInfo = engine::getTypeRegistry().findType( typeHash );
-			if ( pInfo != nullptr )
+			static hashed_string resolveBuiltinHandlerKey( const hashed_string& typeHash, const SerializeContext& ctx )
 			{
-				if ( pInfo->_name.empty() == false && ctx.findBinaryWriter( pInfo->_name ) != nullptr )
-					return pInfo->_name;
-			}
-			return typeHash;
-		}
-
-		bool packOneArg( vector<uint8>& listOut, string_view typeName, const TaskValue& value,
-						 const SerializeContext& ctx )
-		{
-			const hashed_string typeHash( typeName.data(), static_cast<uint32>( typeName.size() ) );
-			const hashed_string handlerKey = resolveBuiltinHandlerKey( typeHash, ctx );
-			vector<uint8>		listPayload;
-
-			auto writePayload = [&]( const void* pPtr )
-			{
-				const SerializeContext::BinaryWriteFn* pWriter = ctx.findBinaryWriter( handlerKey );
-				if ( pWriter != nullptr )
-				{
-					( *pWriter )( pPtr, listPayload );
-					return true;
-				}
+				if ( ctx.findBinaryWriter( typeHash ) != nullptr )
+					return typeHash;
 				const TypeInfo* pInfo = engine::getTypeRegistry().findType( typeHash );
 				if ( pInfo != nullptr )
 				{
-					BinarySerializer::serialize( pPtr, *pInfo, listPayload, ctx );
-					return true;
+					if ( pInfo->_name.empty() == false && ctx.findBinaryWriter( pInfo->_name ) != nullptr )
+						return pInfo->_name;
 				}
-				return false;
-			};
+				return typeHash;
+			}
 
-			bool ok{ false };
-			bool matched{ false };
+			static bool packOneArg( vector<uint8>& listOut, string_view typeName, const TaskValue& value,
+									const SerializeContext& ctx )
+			{
+				const hashed_string typeHash( typeName.data(), static_cast<uint32>( typeName.size() ) );
+				const hashed_string handlerKey = resolveBuiltinHandlerKey( typeHash, ctx );
+				vector<uint8>		listPayload;
+
+				auto writePayload = [&]( const void* pPtr )
+				{
+					const SerializeContext::BinaryWriteFn* pWriter = ctx.findBinaryWriter( handlerKey );
+					if ( pWriter != nullptr )
+					{
+						( *pWriter )( pPtr, listPayload );
+						return true;
+					}
+					const TypeInfo* pInfo = engine::getTypeRegistry().findType( typeHash );
+					if ( pInfo != nullptr )
+					{
+						BinarySerializer::serialize( pPtr, *pInfo, listPayload, ctx );
+						return true;
+					}
+					return false;
+				};
+
+				bool ok{ false };
+				bool matched{ false };
 
 #define TRY_PACK( NameStr, CppType )                                                 \
 	if ( matched == false && engine::getTypeRegistry().isType( typeHash, NameStr ) ) \
@@ -74,51 +73,51 @@ namespace sw
 #undef SW_REFLECT_BUILTIN_CONTAINER
 #undef TRY_PACK
 
-			if ( matched == false )
-			{
-				SW_LOG_WARNING( "Unsupported arg type for pack: %#", typeName );
-				return false;
+				if ( matched == false )
+				{
+					SW_LOG_WARNING( "Unsupported arg type for pack: %#", typeName );
+					return false;
+				}
+				if ( ok == false )
+					return false;
+
+				const uint32 typeNameHash = typeHash.getHash();
+				const uint32 size		  = static_cast<uint32>( listPayload.size() );
+				const uint8* pTh		  = reinterpret_cast<const uint8*>( &typeNameHash );
+				const uint8* pSz		  = reinterpret_cast<const uint8*>( &size );
+				listOut.insert( listOut.end(), pTh, pTh + sizeof( uint32 ) );
+				listOut.insert( listOut.end(), pSz, pSz + sizeof( uint32 ) );
+				listOut.insert( listOut.end(), listPayload.begin(), listPayload.end() );
+				return true;
 			}
-			if ( ok == false )
-				return false;
 
-			const uint32 typeNameHash = typeHash.getHash();
-			const uint32 size		  = static_cast<uint32>( listPayload.size() );
-			const uint8* pTh		  = reinterpret_cast<const uint8*>( &typeNameHash );
-			const uint8* pSz		  = reinterpret_cast<const uint8*>( &size );
-			listOut.insert( listOut.end(), pTh, pTh + sizeof( uint32 ) );
-			listOut.insert( listOut.end(), pSz, pSz + sizeof( uint32 ) );
-			listOut.insert( listOut.end(), listPayload.begin(), listPayload.end() );
-			return true;
-		}
-
-		bool unpackOneArg( TaskArgs& args, string_view typeName, const uint8* pData, size_t dataSize,
-						   size_t& offset, const SerializeContext& ctx )
-		{
-			if ( offset + sizeof( uint32 ) * 2 > dataSize )
-				return false;
-			uint32 typeNameHash{ 0 };
-			uint32 size{ 0 };
-			Memory::copy( &typeNameHash, pData + offset, sizeof( uint32 ) );
-			offset += sizeof( uint32 );
-			Memory::copy( &size, pData + offset, sizeof( uint32 ) );
-			offset += sizeof( uint32 );
-			if ( offset + size > dataSize )
-				return false;
-
-			(void)typeNameHash;
-			const hashed_string typeHash( typeName.data(), static_cast<uint32>( typeName.size() ) );
-			const hashed_string handlerKey = resolveBuiltinHandlerKey( typeHash, ctx );
-			size_t				local{ 0 };
-			bool				matched{ false };
-
-			auto readInto = [&]( void* pDst ) -> bool
+			static bool unpackOneArg( TaskArgs& args, string_view typeName, const uint8* pData, size_t dataSize,
+									  size_t& offset, const SerializeContext& ctx )
 			{
-				const SerializeContext::BinaryReadFn* pReader = ctx.findBinaryReader( handlerKey );
-				if ( pReader != nullptr )
-					return ( *pReader )( pDst, pData + offset, size, local );
-				return false;
-			};
+				if ( offset + sizeof( uint32 ) * 2 > dataSize )
+					return false;
+				uint32 typeNameHash{ 0 };
+				uint32 size{ 0 };
+				Memory::copy( &typeNameHash, pData + offset, sizeof( uint32 ) );
+				offset += sizeof( uint32 );
+				Memory::copy( &size, pData + offset, sizeof( uint32 ) );
+				offset += sizeof( uint32 );
+				if ( offset + size > dataSize )
+					return false;
+
+				(void)typeNameHash;
+				const hashed_string typeHash( typeName.data(), static_cast<uint32>( typeName.size() ) );
+				const hashed_string handlerKey = resolveBuiltinHandlerKey( typeHash, ctx );
+				size_t				local{ 0 };
+				bool				matched{ false };
+
+				auto readInto = [&]( void* pDst ) -> bool
+				{
+					const SerializeContext::BinaryReadFn* pReader = ctx.findBinaryReader( handlerKey );
+					if ( pReader != nullptr )
+						return ( *pReader )( pDst, pData + offset, size, local );
+					return false;
+				};
 
 #define TRY_UNPACK( NameStr, CppType )                                               \
 	if ( matched == false && engine::getTypeRegistry().isType( typeHash, NameStr ) ) \
@@ -138,17 +137,22 @@ namespace sw
 #undef SW_REFLECT_BUILTIN_CONTAINER
 #undef TRY_UNPACK
 
-			if ( matched == false )
-			{
-				SW_LOG_WARNING( "Unsupported arg type for unpack: %#", typeName );
-				return false;
+				if ( matched == false )
+				{
+					SW_LOG_WARNING( "Unsupported arg type for unpack: %#", typeName );
+					return false;
+				}
+
+				offset += size;
+				return true;
 			}
-
-			offset += size;
-			return true;
-		}
-
+		};
 	} // namespace
+} // namespace sw
+
+namespace sw
+{
+	SW_LOG_CALLER( "ReflectionRpc" );
 
 	bool ReflectionRpc::packCall( RpcEnvelope& out, const hashed_string& typeFqn, const hashed_string& methodName,
 								  const TaskArgs& args )
@@ -182,7 +186,7 @@ namespace sw
 
 		for ( uint32 argIndex = 0; argIndex < count; ++argIndex )
 		{
-			if ( packOneArg( out._listArgByte, pFunc->_listParamTypeName[argIndex], args.get( argIndex ), ctx ) == false )
+			if ( ReflectionRpcInternal::packOneArg( out._listArgByte, pFunc->_listParamTypeName[argIndex], args.get( argIndex ), ctx ) == false )
 				return false;
 		}
 		return true;
@@ -215,8 +219,8 @@ namespace sw
 
 		for ( uint32 argIndex = 0; argIndex < count; ++argIndex )
 		{
-			if ( unpackOneArg( unpacked, pFunc->_listParamTypeName[argIndex], envelope._listArgByte.data(),
-							   envelope._listArgByte.size(), offset, ctx ) == false )
+			if ( ReflectionRpcInternal::unpackOneArg( unpacked, pFunc->_listParamTypeName[argIndex], envelope._listArgByte.data(),
+													  envelope._listArgByte.size(), offset, ctx ) == false )
 				return {};
 		}
 
