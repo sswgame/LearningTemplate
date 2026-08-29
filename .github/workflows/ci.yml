@@ -91,6 +91,8 @@ jobs:
 
     - name: Configure (CI-Debug preset)
       env:
+        CC: clang
+        CXX: clang++
         VCPKG_OVERLAY_TRIPLETS: ${{ github.workspace }}/cmake/Modules/Toolchain/Vcpkg
       run: |
         cmake --preset CI-Debug
@@ -150,6 +152,8 @@ jobs:
 
     - name: Configure (CI-Debug-ASAN preset)
       env:
+        CC: clang
+        CXX: clang++
         VCPKG_OVERLAY_TRIPLETS: ${{ github.workspace }}/cmake/Modules/Toolchain/Vcpkg
       run: |
         cmake --preset CI-Debug-ASAN
@@ -195,9 +199,10 @@ jobs:
       run: |
         cmake --build --preset CI-Shipping --target App CoreTest
 
-    - name: Test (NoGPU under Shipping)
+    # Only App + CoreTest are built under Shipping preset.
+    - name: Test (CoreTest under Shipping)
       run: |
-        ctest --test-dir build/CI-Shipping -L nogpu --output-on-failure
+        ctest --test-dir build/CI-Shipping -R CoreTest --output-on-failure
 
   build-linux-shipping:
     runs-on: ubuntu-22.04
@@ -244,6 +249,8 @@ jobs:
 
     - name: Configure (CI-Shipping preset)
       env:
+        CC: clang
+        CXX: clang++
         VCPKG_OVERLAY_TRIPLETS: ${{ github.workspace }}/cmake/Modules/Toolchain/Vcpkg
       run: |
         cmake --preset CI-Shipping
@@ -252,7 +259,8 @@ jobs:
       run: |
         cmake --build --preset CI-Shipping --target App CoreTest
 
-    - name: Test (NoGPU under Shipping)
+    # Only App + CoreTest are built under Shipping preset.
+    - name: Test (CoreTest under Shipping)
       run: |
-        ctest --test-dir build/CI-Shipping -L nogpu --output-on-failure
+        ctest --test-dir build/CI-Shipping -R CoreTest --output-on-failure
 

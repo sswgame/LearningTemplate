@@ -10,7 +10,7 @@ namespace sw
 	{
 		struct PropertyMetaHintInternal
 		{
-			static bool isColorProperty( string_view typeName, const string& category )
+			static bool isColorProperty( string_view typeName, string_view category )
 			{
 				for ( const utf8* colorType : constants::propertyHint::kArrColorTypes )
 				{
@@ -33,6 +33,7 @@ namespace sw
 		if ( meta._bAssetPath == SW_TRUE || meta._assetType.empty() == false )
 			return PropertyWidgetType::AssetPicker;
 
+#if !defined( SW_SHIPPING )
 		if ( PropertyMetaHintInternal::isColorProperty( typeName, meta._category ) )
 			return PropertyWidgetType::ColorPicker;
 
@@ -40,6 +41,13 @@ namespace sw
 			 ( typeName == constants::propertyHint::kUint8 &&
 			   meta._displayName.rfind( constants::propertyHint::kBoolPrefix, 0 ) == 0 ) )
 			return PropertyWidgetType::Checkbox;
+#else
+		if ( PropertyMetaHintInternal::isColorProperty( typeName, "" ) )
+			return PropertyWidgetType::ColorPicker;
+
+		if ( typeName == constants::propertyHint::kBool )
+			return PropertyWidgetType::Checkbox;
+#endif
 
 		return PropertyWidgetType::Default;
 	}

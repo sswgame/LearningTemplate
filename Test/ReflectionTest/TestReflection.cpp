@@ -15,6 +15,7 @@
 #include "Engine/Serialization/Core/SchemaMigrate.h"
 #include "Engine/Serialization/Core/Serializer.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
+#include "Engine/Utility/Resource/ResourceUtil.h"
 
 #include "ReflectionParser/AnnotationMeta.h"
 #include "ReflectionParser/ParserUtil.h"
@@ -506,18 +507,31 @@ SW_TEST_CASE( ReflectionParser, RpcMethodMetadataAndInvokerExecution )
  */
 SW_TEST_CASE( ReflectionParser, MultiBitBitfieldCompilationErrorDiagnosis )
 {
-	const sw::string tempHeaderPath = "build/Ninja-Debug/InvalidBitfieldSample.h";
-	const sw::string headerContent	= "#pragma once\n"
-									  "#include \"Engine/Reflection/ReflectionMacros.h\"\n"
-									  "namespace sw\n"
-									  "{\n"
-									  "\tREFLECT()\n"
-									  "\tstruct InvalidBitfieldSampleActor\n"
-									  "\t{\n"
-									  "\t\tPROPERTY()\n"
-									  "\t\tuint8 _invalidMultiBit : 2;\n"
-									  "\t};\n"
-									  "}\n";
+	const sw::string binDir	   = sw::FileUtil::getDirectoryPart( sw::FileUtil::getExecutablePath() );
+	const sw::string parserExe = sw::FileUtil::joinPath( binDir, "ReflectionParser" );
+
+	if ( sw::FileUtil::fileExists( parserExe ) == false &&
+		 sw::FileUtil::fileExists( parserExe + ".exe" ) == false )
+	{
+		SW_TEST_SKIP( "ReflectionParser executable not found in binary directory" );
+	}
+
+	const sw::string projectRoot	= sw::ResourceUtil::getProjectFolderPath();
+	const sw::string tempHeaderPath = sw::FileUtil::joinPath( binDir, "InvalidBitfieldSample.h" );
+	const sw::string outGenDir		= sw::FileUtil::joinPath( binDir, "temp_gen" );
+	sw::FileUtil::createDirectory( outGenDir );
+
+	const sw::string headerContent = "#pragma once\n"
+									 "#include \"Engine/Reflection/ReflectionMacros.h\"\n"
+									 "namespace sw\n"
+									 "{\n"
+									 "\tREFLECT()\n"
+									 "\tstruct InvalidBitfieldSampleActor\n"
+									 "\t{\n"
+									 "\t\tPROPERTY()\n"
+									 "\t\tuint8 _invalidMultiBit : 2;\n"
+									 "\t};\n"
+									 "}\n";
 
 	SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( tempHeaderPath, headerContent ) );
 
@@ -530,15 +544,16 @@ SW_TEST_CASE( ReflectionParser, MultiBitBitfieldCompilationErrorDiagnosis )
 		capturedLog.push_back( '\n' );
 	} );
 
-	const sw::string   cmd = "build/Ninja-Debug/Bin/ReflectionParser.exe "
-							 "--input build/Ninja-Debug/InvalidBitfieldSample.h "
-							 "--output build/Ninja-Debug/generated "
-							 "--include Source "
-							 "--annotation-meta Source/Core/Predefined/AnnotationMeta.txt "
-							 "--builtins Source/Engine/Reflection/ReflectBuiltins.xxx "
-							 "--emit-templates Tools/ReflectionParser/Templates";
+	const sw::string cmd = "\"" + parserExe + "\" " +
+						   "--input \"" + tempHeaderPath + "\" " +
+						   "--output \"" + outGenDir + "\" " +
+						   "--include \"" + sw::FileUtil::joinPath( projectRoot, "Source" ) + "\" " +
+						   "--annotation-meta \"" + sw::FileUtil::joinPath( projectRoot, "Source/Core/Predefined/AnnotationMeta.txt" ) + "\" " +
+						   "--builtins \"" + sw::FileUtil::joinPath( projectRoot, "Source/Engine/Reflection/ReflectBuiltins.xxx" ) + "\" " +
+						   "--emit-templates \"" + sw::FileUtil::joinPath( projectRoot, "Tools/ReflectionParser/Templates" ) + "\"";
+
 	sw::ProcessOptions options;
-	options._workingDirectory = ".";
+	options._workingDirectory = projectRoot;
 
 	const int32 exitCode = sw::Process::execute( cmd, options, outputCb );
 
