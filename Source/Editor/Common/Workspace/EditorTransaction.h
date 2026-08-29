@@ -9,6 +9,7 @@
 namespace sw::editor
 {
 	using EditorDocumentRestoreDelegate = Delegate<void( string_view )>;
+	using EditorDocumentCaptureDelegate = Delegate<string()>;
 
 	/**
 	 * @class EditorTransaction
@@ -40,8 +41,11 @@ namespace sw::editor
 		/** @brief 문서 Undo/Redo를 스택에 올립니다. */
 		static void push( Delegate<void()> undo, Delegate<void()> redo, string_view label,
 						  string_view coalesceKey = {} );
-		/** @brief 텍스트 스냅샷이 달라진 문서를 Undo/Redo에 등록합니다. */
+		/** @brief 문서 변경 구간만 Undo/Redo에 등록합니다. capture가 있으면 현재 본문에서 복원합니다. */
 		static void recordDocumentText( string_view beforeText, string_view afterText, string_view label,
 										EditorDocumentRestoreDelegate restore, string_view coalesceKey = {} );
+		static void recordDocumentText( string_view beforeText, string_view afterText, string_view label,
+										EditorDocumentRestoreDelegate restore, EditorDocumentCaptureDelegate capture,
+										string_view coalesceKey = {} );
 	};
 } // namespace sw::editor

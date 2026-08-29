@@ -134,6 +134,10 @@ namespace sw::editor
 		{
 			restoreDocumentFromUndo( snapshot );
 		} ),
+			SW_DELEGATE_LAMBDA( EditorDocumentCaptureDelegate, [this]()
+		{
+			return captureDocumentText();
+		} ),
 			coalesceKey );
 		_documentUndoBaseline = after;
 		markDocumentDirty();

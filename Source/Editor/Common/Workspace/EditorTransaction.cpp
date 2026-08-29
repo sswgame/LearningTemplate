@@ -2,6 +2,7 @@
 
 #include "Editor/Common/Workspace/EditorTransaction.h"
 
+#include "Editor/Common/EditorSessionPolicy.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/SelectionManager.h"
@@ -237,20 +238,41 @@ namespace sw::editor
 	void EditorTransaction::recordDocumentText( string_view beforeText, string_view afterText, string_view label,
 												EditorDocumentRestoreDelegate restore, string_view coalesceKey )
 	{
+		recordDocumentText( beforeText, afterText, label, restore, {}, coalesceKey );
+	}
+
+	void EditorTransaction::recordDocumentText( string_view beforeText, string_view afterText, string_view label,
+												EditorDocumentRestoreDelegate restore, EditorDocumentCaptureDelegate capture,
+												string_view coalesceKey )
+	{
 		if ( beforeText == afterText || restore.isBound() == false )
 			return;
 
+		const EditorDocumentTextSpan span = EditorSessionPolicy::makeDocumentTextSpan( beforeText, afterText );
+		if ( capture.isBound() )
+		{
+			push( SW_DELEGATE_LAMBDA( Delegate<void()>, [restore, capture, span]()
+			{
+				restore( EditorSessionPolicy::reconstructDocumentTextFromAfter( span, capture() ) );
+			} ),
+				  SW_DELEGATE_LAMBDA( Delegate<void()>, [restore, capture, span]()
+			{
+				restore( EditorSessionPolicy::reconstructDocumentTextFromBefore( span, capture() ) );
+			} ),
+				  label, coalesceKey );
+			return;
+		}
+
 		const string beforeStr{ beforeText };
 		const string afterStr{ afterText };
-		push(
-			SW_DELEGATE_LAMBDA( Delegate<void()>, [restore, beforeStr]()
+		push( SW_DELEGATE_LAMBDA( Delegate<void()>, [restore, beforeStr]()
 		{
 			restore( beforeStr );
 		} ),
-			SW_DELEGATE_LAMBDA( Delegate<void()>, [restore, afterStr]()
+			  SW_DELEGATE_LAMBDA( Delegate<void()>, [restore, afterStr]()
 		{
 			restore( afterStr );
 		} ),
-			label, coalesceKey );
+			  label, coalesceKey );
 	}
 } // namespace sw::editor
