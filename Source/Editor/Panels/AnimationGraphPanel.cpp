@@ -348,7 +348,7 @@ namespace sw::editor
 		for ( GraphNode& node : _listNode )
 		{
 			const ImVec2 pos	  = ed::GetNodePosition( AnimationGraphPanelInternal::toNodeId( node._id ) );
-			const bool	 bChanged = pos.x != node._x || pos.y != node._y;
+			const bool	 bChanged = ( MathUtil::nearEqual( pos.x, node._x ) == false ) || ( MathUtil::nearEqual( pos.y, node._y ) == false );
 			if ( EditorSessionPolicy::shouldMarkDocumentDirtyOnNodeMove( _bGraphLayoutReady == SW_TRUE, bChanged ) )
 				bMoved = true;
 			node._x = pos.x;
