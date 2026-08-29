@@ -161,17 +161,4 @@ namespace sw::editor
 		}
 		return true;
 	}
-
-	bool EditorDataTableCommands::loadGameDataFile( string_view absolutePath, string& outText )
-	{
-		return FileUtil::readTextFile( absolutePath, outText );
-	}
-
-	bool EditorDataTableCommands::saveGameDataFile( string_view absolutePath, string_view text )
-	{
-		if ( FileUtil::writeTextFile( absolutePath, text ) == false )
-			return false;
-		SW_LOG_INFO( "Saved game data table %#", FileUtil::getFileNamePart( string{ absolutePath } ).c_str() );
-		return true;
-	}
 } // namespace sw::editor

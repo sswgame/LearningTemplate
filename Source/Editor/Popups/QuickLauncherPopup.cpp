@@ -175,14 +175,14 @@ namespace sw::editor
 		overlayDesc._borderColor  = float4{ 0.25f, 0.55f, 0.85f, 1.0f };
 		overlayDesc._pFocusOnOpen = &_bJustOpened;
 
-		if ( editor::beginSearchOverlay( overlayDesc ) == false )
+		if ( EditorChrome::beginSearchOverlay( overlayDesc ) == false )
 		{
-			editor::endSearchOverlay();
+			EditorChrome::endSearchOverlay();
 			close();
 			return;
 		}
 
-		editor::drawSearchField( "##qlSearch", _arrSearchBuffer, sizeof( _arrSearchBuffer ),
+		EditorWidgets::drawSearchField( "##qlSearch", _arrSearchBuffer, sizeof( _arrSearchBuffer ),
 								 "Type to search assets, scenes, game objects (ESC to cancel)...", -1.0f, true );
 
 		vector<const QuickLauncherItem*> listFiltered;
@@ -205,14 +205,14 @@ namespace sw::editor
 		}
 
 		const int32 filteredCount = static_cast<int32>( listFiltered.size() );
-		bool		bExecute	  = editor::updateListSelection( _selectedIndex, filteredCount, false );
+		bool		bExecute	  = EditorWidgets::updateListSelection( _selectedIndex, filteredCount, false );
 
 		ImGui::Separator();
 
 		editor::EditorSectionDesc resultsDesc{};
 		resultsDesc._pId  = "##qlResults";
 		resultsDesc._kind = editor::EditorSectionKind::Child;
-		if ( editor::beginSection( resultsDesc ) )
+		if ( EditorChrome::beginSection( resultsDesc ) )
 		{
 			for ( int32 itemIndex = 0; itemIndex < filteredCount; ++itemIndex )
 			{
@@ -262,14 +262,14 @@ namespace sw::editor
 			if ( filteredCount == 0 )
 			{
 				if ( _fileIndexJob.isPending() )
-					editor::drawEmptyHint( "Indexing assets..." );
+					EditorWidgets::drawEmptyHint( "Indexing assets..." );
 				else
-					editor::drawEmptyHint( "No matching assets or game objects found." );
+					EditorWidgets::drawEmptyHint( "No matching assets or game objects found." );
 			}
 		}
-		editor::endSection();
+		EditorChrome::endSection();
 
-		editor::endSearchOverlay();
+		EditorChrome::endSearchOverlay();
 
 		if ( bExecute && filteredCount > 0 && 0 <= _selectedIndex && _selectedIndex < filteredCount )
 		{

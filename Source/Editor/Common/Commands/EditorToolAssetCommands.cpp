@@ -45,11 +45,6 @@ namespace sw::editor
 		{
 			static constexpr utf8 kDialogueGraphPath[] = "Saved/Dialogue/default_dialogue.json";
 
-			static bool pathEndsWithIgnoreCase( string_view path, string_view suffix )
-			{
-				return FileUtil::endsWithIgnoreCase( string{ path }, suffix );
-			}
-
 			static string resolveExistingOrRelativePath( string_view path )
 			{
 				if ( path.empty() )
@@ -280,47 +275,35 @@ namespace sw::editor
 
 	bool EditorToolAssetCommands::isAnimationGraphPath( string_view path )
 	{
-		return EditorToolAssetInternal::pathEndsWithIgnoreCase( path, ".anim.json" ) || EditorToolAssetInternal::pathEndsWithIgnoreCase( path, ".anim" );
+		return FileUtil::endsWithAnyIgnoreCase( path, { ".anim.json", ".anim" } );
 	}
 
 	bool EditorToolAssetCommands::isDialogueGraphPath( string_view path )
 	{
-		return EditorToolAssetInternal::pathEndsWithIgnoreCase( path, ".dialogue.json" ) || EditorToolAssetInternal::pathEndsWithIgnoreCase( path, ".dialogue" );
+		return FileUtil::endsWithAnyIgnoreCase( path, { ".dialogue.json", ".dialogue" } );
 	}
 
 	bool EditorToolAssetCommands::isSpriteClipPath( string_view path )
 	{
-		if ( EditorToolAssetInternal::pathEndsWithIgnoreCase( path, ".sprite.json" ) || EditorToolAssetInternal::pathEndsWithIgnoreCase( path, ".sprite" ) )
+		if ( FileUtil::endsWithAnyIgnoreCase( path, { ".sprite.json", ".sprite" } ) )
 			return true;
-		if ( EditorToolAssetInternal::pathEndsWithIgnoreCase( path, ".png" ) || EditorToolAssetInternal::pathEndsWithIgnoreCase( path, ".jpg" ) ||
-			 EditorToolAssetInternal::pathEndsWithIgnoreCase( path, ".jpeg" ) || EditorToolAssetInternal::pathEndsWithIgnoreCase( path, ".dds" ) ||
-			 EditorToolAssetInternal::pathEndsWithIgnoreCase( path, ".tga" ) )
-			return true;
-		return false;
+		return FileUtil::hasAnyExtension( path, { ".png", ".jpg", ".jpeg", ".dds", ".tga" } );
 	}
 
 	bool EditorToolAssetCommands::isTileMapPath( string_view path )
 	{
-		if ( EditorToolAssetInternal::pathEndsWithIgnoreCase( path, ".tilemap.xml" ) || EditorToolAssetInternal::pathEndsWithIgnoreCase( path, ".tilemap" ) )
+		if ( FileUtil::endsWithAnyIgnoreCase( path, { ".tilemap.xml", ".tilemap" } ) )
 			return true;
-		if ( EditorToolAssetInternal::pathEndsWithIgnoreCase( path, ".xml" ) == false )
+		if ( FileUtil::endsWithIgnoreCase( path, ".xml" ) == false )
 			return false;
-		if ( EditorToolAssetInternal::pathEndsWithIgnoreCase( path, ".scene.xml" ) || EditorToolAssetInternal::pathEndsWithIgnoreCase( path, ".prefab.xml" ) ||
-			 EditorToolAssetInternal::pathEndsWithIgnoreCase( path, ".preset.xml" ) )
+		if ( FileUtil::endsWithAnyIgnoreCase( path, { ".scene.xml", ".prefab.xml", ".preset.xml" } ) )
 			return false;
 		return true;
 	}
 
 	bool EditorToolAssetCommands::isSequencerPath( string_view path )
 	{
-		return EditorToolAssetInternal::pathEndsWithIgnoreCase( path, ".seq.json" ) || EditorToolAssetInternal::pathEndsWithIgnoreCase( path, ".seq" );
-	}
-
-	bool EditorToolAssetCommands::isPrefabPath( string_view path )
-	{
-		return EditorToolAssetInternal::pathEndsWithIgnoreCase( path, ".prefab.xml" ) || EditorToolAssetInternal::pathEndsWithIgnoreCase( path, ".prefab.json" ) ||
-			   EditorToolAssetInternal::pathEndsWithIgnoreCase( path, ".prefab.bin" ) || EditorToolAssetInternal::pathEndsWithIgnoreCase( path, ".prefab" ) ||
-			   EditorToolAssetInternal::pathEndsWithIgnoreCase( path, ".pfb" );
+		return FileUtil::endsWithAnyIgnoreCase( path, { ".seq.json", ".seq" } );
 	}
 
 	bool EditorToolAssetCommands::loadAnimationGraph( EditorAnimGraphData& outData, string_view path )
@@ -555,9 +538,7 @@ namespace sw::editor
 		const string resolved = EditorToolAssetInternal::resolveSpriteClipPath( path );
 		if ( resolved.empty() || FileUtil::fileExists( resolved ) == false )
 		{
-			if ( EditorToolAssetInternal::pathEndsWithIgnoreCase( path, ".png" ) || EditorToolAssetInternal::pathEndsWithIgnoreCase( path, ".jpg" ) ||
-				 EditorToolAssetInternal::pathEndsWithIgnoreCase( path, ".jpeg" ) || EditorToolAssetInternal::pathEndsWithIgnoreCase( path, ".dds" ) ||
-				 EditorToolAssetInternal::pathEndsWithIgnoreCase( path, ".tga" ) )
+			if ( FileUtil::hasAnyExtension( path, { ".png", ".jpg", ".jpeg", ".dds", ".tga" } ) )
 			{
 				outData._atlasPath = string{ path };
 				outStatus		   = "Atlas from focused texture";

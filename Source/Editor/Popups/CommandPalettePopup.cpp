@@ -413,9 +413,9 @@ namespace sw::editor
 		overlayDesc._size		  = float2{ 580.0f, 360.0f };
 		overlayDesc._pFocusOnOpen = &_bJustOpened;
 
-		if ( editor::beginSearchOverlay( overlayDesc ) )
+		if ( EditorChrome::beginSearchOverlay( overlayDesc ) )
 		{
-			editor::drawSearchField( "##PaletteSearch", _arrSearchBuffer, sizeof( _arrSearchBuffer ),
+			EditorWidgets::drawSearchField( "##PaletteSearch", _arrSearchBuffer, sizeof( _arrSearchBuffer ),
 									 "Type a command or search objects... (Esc to close)", -1.0f, false );
 
 			ImGui::Separator();
@@ -432,13 +432,13 @@ namespace sw::editor
 			}
 
 			const bool bExecuteSelected =
-				editor::updateListSelection( _selectedIndex, static_cast<int32>( listFiltered.size() ) );
+				EditorWidgets::updateListSelection( _selectedIndex, static_cast<int32>( listFiltered.size() ) );
 
 			editor::EditorSectionDesc resultsDesc{};
 			resultsDesc._pId   = "##PaletteResults";
 			resultsDesc._kind  = editor::EditorSectionKind::Child;
 			resultsDesc._flags = editor::EditorSectionFlags::Border;
-			if ( editor::beginSection( resultsDesc ) )
+			if ( EditorChrome::beginSection( resultsDesc ) )
 			{
 				for ( size_t itemIndex = 0; itemIndex < listFiltered.size(); ++itemIndex )
 				{
@@ -470,8 +470,8 @@ namespace sw::editor
 					ImGui::PopID();
 				}
 			}
-			editor::endSection();
+			EditorChrome::endSection();
 		}
-		editor::endSearchOverlay();
+		EditorChrome::endSearchOverlay();
 	}
 } // namespace sw::editor

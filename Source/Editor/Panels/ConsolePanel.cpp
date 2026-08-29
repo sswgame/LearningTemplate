@@ -142,7 +142,7 @@ namespace sw::editor
 			}
 		}
 
-		if ( editor::beginToolbar( "##ConsoleToolbar" ) )
+		if ( EditorChrome::beginToolbar( "##ConsoleToolbar" ) )
 		{
 			if ( ImGui::Button( "Clear" ) )
 			{
@@ -165,19 +165,19 @@ namespace sw::editor
 			constexpr editor::Color4 kTraceChip{ 0.40f, 0.40f, 0.45f, 1.0f };
 
 			ImGui::SameLine();
-			if ( editor::drawToggleButton( arrErrLabel, _arrLevelEnabled[0], editor::style::kError ) )
+			if ( EditorWidgets::drawToggleButton( arrErrLabel, _arrLevelEnabled[0], editor::style::kError ) )
 				_arrLevelEnabled[0] = ( _arrLevelEnabled[0] == false );
 
 			ImGui::SameLine();
-			if ( editor::drawToggleButton( arrWarnLabel, _arrLevelEnabled[1], editor::style::kWarn ) )
+			if ( EditorWidgets::drawToggleButton( arrWarnLabel, _arrLevelEnabled[1], editor::style::kWarn ) )
 				_arrLevelEnabled[1] = ( _arrLevelEnabled[1] == false );
 
 			ImGui::SameLine();
-			if ( editor::drawToggleButton( arrInfoLabel, _arrLevelEnabled[2] ) )
+			if ( EditorWidgets::drawToggleButton( arrInfoLabel, _arrLevelEnabled[2] ) )
 				_arrLevelEnabled[2] = ( _arrLevelEnabled[2] == false );
 
 			ImGui::SameLine();
-			if ( editor::drawToggleButton( arrTraceLabel, _arrLevelEnabled[3], kTraceChip ) )
+			if ( EditorWidgets::drawToggleButton( arrTraceLabel, _arrLevelEnabled[3], kTraceChip ) )
 				_arrLevelEnabled[3] = ( _arrLevelEnabled[3] == false );
 
 			ImGui::SameLine();
@@ -195,10 +195,10 @@ namespace sw::editor
 				ImGui::SetClipboardText( allLogs.c_str() );
 			}
 
-			editor::drawSearchField( "##log_filter", _arrFilterBuffer, sizeof( _arrFilterBuffer ),
+			EditorWidgets::drawSearchField( "##log_filter", _arrFilterBuffer, sizeof( _arrFilterBuffer ),
 									 "Filter (tag / message / file)", -1.0f, false );
 		}
-		editor::endToolbar();
+		EditorChrome::endToolbar();
 
 		ImGui::Separator();
 
@@ -227,7 +227,7 @@ namespace sw::editor
 		logDesc._kind  = editor::EditorSectionKind::Child;
 		logDesc._flags = editor::EditorSectionFlags::Border | editor::EditorSectionFlags::FillRemaining |
 						 editor::EditorSectionFlags::HorizontalScrollbar;
-		editor::beginSection( logDesc );
+		EditorChrome::beginSection( logDesc );
 
 		ImGuiListClipper clipper;
 		clipper.Begin( static_cast<int32>( _listVisible.size() ) );
@@ -273,9 +273,9 @@ namespace sw::editor
 		if ( _bAutoScroll && bNewLogs )
 			ImGui::SetScrollHereY( 1.0f );
 
-		editor::endSection();
+		EditorChrome::endSection();
 
-		editor::drawCountLabel( static_cast<uint32>( _listVisible.size() ), static_cast<uint32>( _listDrawSnapshot.size() ),
+		EditorWidgets::drawCountLabel( static_cast<uint32>( _listVisible.size() ), static_cast<uint32>( _listDrawSnapshot.size() ),
 								"lines" );
 	}
 

@@ -180,8 +180,6 @@ namespace sw::editor
 		static bool isTileMapPath( string_view path );
 		/** @brief 시퀀서 경로인지 여부를 반환합니다. */
 		static bool isSequencerPath( string_view path );
-		/** @brief 프리팹 경로인지 여부를 반환합니다. */
-		static bool isPrefabPath( string_view path );
 
 		/** @brief 애니메이션 그래프 JSON을 읽습니다. path가 비면 에디터 설정 기본 파일을 씁니다. */
 		static bool loadAnimationGraph( EditorAnimGraphData& outData, string_view path = {} );

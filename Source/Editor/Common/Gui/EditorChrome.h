@@ -169,25 +169,4 @@ namespace sw::editor
 		/** @brief beginSearchOverlay()와 짝을 이룹니다. */
 		static void endSearchOverlay();
 	};
-
-	// ------------------------------------------------------------------------------
-	// 편의용 네임스페이스 인라인 포워딩
-	// ------------------------------------------------------------------------------
-	inline bool beginPanel( const utf8* pTitle, bool* pOpen, EditorPanelFlags flags = EditorPanelFlags::None )
-	{
-		return EditorChrome::beginPanel( pTitle, pOpen, flags );
-	}
-	inline void endPanel() { EditorChrome::endPanel(); }
-	inline void setNextPanelSize( const float2& size ) { EditorChrome::setNextPanelSize( size ); }
-	inline bool tryGetMainViewportRect( float2& outPos, float2& outSize ) { return EditorChrome::tryGetMainViewportRect( outPos, outSize ); }
-	inline bool beginSection( const EditorSectionDesc& desc ) { return EditorChrome::beginSection( desc ); }
-	inline void endSection() { EditorChrome::endSection(); }
-	inline bool beginToolbar( const utf8* pId = "##Toolbar" ) { return EditorChrome::beginToolbar( pId ); }
-	inline void endToolbar() { EditorChrome::endToolbar(); }
-	inline bool beginFloatingBar( const EditorFloatingBarDesc& desc ) { return EditorChrome::beginFloatingBar( desc ); }
-	inline void endFloatingBar() { EditorChrome::endFloatingBar(); }
-	inline bool beginOverlay( const EditorOverlayDesc& desc ) { return EditorChrome::beginOverlay( desc ); }
-	inline void endOverlay() { EditorChrome::endOverlay(); }
-	inline bool beginSearchOverlay( const EditorSearchOverlayDesc& desc ) { return EditorChrome::beginSearchOverlay( desc ); }
-	inline void endSearchOverlay() { EditorChrome::endSearchOverlay(); }
 } // namespace sw::editor

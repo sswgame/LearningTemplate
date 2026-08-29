@@ -197,7 +197,7 @@ namespace sw::editor
 			paintCell( gx, gy );
 		}
 
-		editor::drawPanelStatus( _status.c_str() );
+		EditorWidgets::drawPanelStatus( _status.c_str() );
 	}
 
 	void TileMapPanel::resize( int32 width, int32 height )

@@ -676,7 +676,7 @@ namespace sw::editor
 			if ( ImGui::BeginDragDropTarget() )
 			{
 				string droppedAssetPath;
-				if ( editor::tryAcceptAssetPayload( droppedAssetPath ) )
+				if ( EditorWidgets::tryAcceptAssetPayload( droppedAssetPath ) )
 					handleViewportAssetDrop( droppedAssetPath.c_str(), canvasPos, canvasSize, arrView, arrProj );
 				ImGui::EndDragDropTarget();
 			}

@@ -8,16 +8,16 @@ namespace sw::editor
 {
 	void IEditorPanel::draw()
 	{
-		setNextPanelSize( getInitialPanelSize() );
+		EditorChrome::setNextPanelSize( getInitialPanelSize() );
 
-		if ( beginPanel( getPanelTitle(), getOpenPtr(), getPanelFlags() ) == false )
+		if ( EditorChrome::beginPanel( getPanelTitle(), getOpenPtr(), getPanelFlags() ) == false )
 		{
 			onPanelCollapsed();
-			endPanel();
+			EditorChrome::endPanel();
 			return;
 		}
 
 		drawContent();
-		endPanel();
+		EditorChrome::endPanel();
 	}
 } // namespace sw::editor

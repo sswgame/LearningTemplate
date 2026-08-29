@@ -123,7 +123,7 @@ namespace sw::editor
 						handleHierarchyReparentDrop( pObj, pPayload, pManager );
 
 					string droppedAssetPath;
-					if ( editor::tryAcceptAssetPayload( droppedAssetPath ) )
+					if ( EditorWidgets::tryAcceptAssetPayload( droppedAssetPath ) )
 						EditorAssetCommands::spawnPrefab( pManager, droppedAssetPath.c_str(), pObj );
 					ImGui::EndDragDropTarget();
 				}
@@ -514,7 +514,7 @@ namespace sw::editor
 		Scene* pScene = editor::getService<SceneManager>()->getActiveScene();
 		if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
 		{
-			editor::drawEmptyHint( "No active scene." );
+			EditorWidgets::drawEmptyHint( "No active scene." );
 			return;
 		}
 
@@ -522,23 +522,23 @@ namespace sw::editor
 		const vector<GameObject*>& listObjects = pManager->getAllGameObjects();
 
 		// 상단 툴바: 생성 버튼 + 검색창
-		if ( editor::beginToolbar( "##HierarchyToolbar" ) )
+		if ( EditorChrome::beginToolbar( "##HierarchyToolbar" ) )
 		{
 			if ( ImGui::Button( "+ Create" ) )
 				EditorSceneCommands::create( pManager, nullptr );
 
 			ImGui::SameLine();
-			editor::drawSearchField( "##HierarchyFilter", _arrFilterBuffer, sizeof( _arrFilterBuffer ),
+			EditorWidgets::drawSearchField( "##HierarchyFilter", _arrFilterBuffer, sizeof( _arrFilterBuffer ),
 									 "Search (t:Mesh, tag:Player)...", 0.0f, false );
 		}
-		editor::endToolbar();
+		EditorChrome::endToolbar();
 
 		ImGui::Separator();
 
 		editor::EditorSectionDesc treeDesc{};
 		treeDesc._pId  = "##HierarchyTree";
 		treeDesc._kind = editor::EditorSectionKind::Child;
-		if ( editor::beginSection( treeDesc ) )
+		if ( EditorChrome::beginSection( treeDesc ) )
 		{
 			for ( GameObject* pObj : listObjects )
 			{
@@ -560,7 +560,7 @@ namespace sw::editor
 				}
 
 				string droppedAssetPath;
-				if ( editor::tryAcceptAssetPayload( droppedAssetPath ) )
+				if ( EditorWidgets::tryAcceptAssetPayload( droppedAssetPath ) )
 					EditorAssetCommands::spawnPrefab( pManager, droppedAssetPath.c_str(), nullptr );
 				ImGui::EndDragDropTarget();
 			}
@@ -629,6 +629,6 @@ namespace sw::editor
 				ImGui::EndPopup();
 			}
 		}
-		editor::endSection();
+		EditorChrome::endSection();
 	}
 } // namespace sw::editor

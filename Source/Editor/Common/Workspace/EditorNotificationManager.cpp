@@ -48,7 +48,7 @@ namespace sw::editor
 
 		float2 viewportPos{};
 		float2 viewportSize{ screenWidth, screenHeight };
-		if ( editor::tryGetMainViewportRect( viewportPos, viewportSize ) )
+		if ( EditorChrome::tryGetMainViewportRect( viewportPos, viewportSize ) )
 		{
 			screenWidth	 = viewportSize._x;
 			screenHeight = viewportSize._y;
@@ -109,7 +109,7 @@ namespace sw::editor
 			ImGui::PushStyleColor( ImGuiCol_WindowBg, bgCol );
 			ImGui::PushStyleColor( ImGuiCol_Border, borderCol );
 
-			if ( editor::beginOverlay( toastDesc ) )
+			if ( EditorChrome::beginOverlay( toastDesc ) )
 			{
 				ImGui::PushStyleColor( ImGuiCol_Text, titleCol );
 				ImGui::TextUnformatted( item._title.c_str() );
@@ -127,7 +127,7 @@ namespace sw::editor
 					ImGui::ProgressBar( item._progress, ImVec2{ -1.0f, 4.0f }, "" );
 				}
 			}
-			editor::endOverlay();
+			EditorChrome::endOverlay();
 
 			ImGui::PopStyleColor( 2 );
 

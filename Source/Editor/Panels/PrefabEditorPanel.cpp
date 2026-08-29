@@ -5,6 +5,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Editor/Common/Commands/EditorToolAssetCommands.h"
+#include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/SelectionManager.h"
@@ -65,7 +66,7 @@ namespace sw::editor
 			scanKey				   = focused;
 			scanKey += '|';
 			scanKey += to_string( objectId );
-			if ( EditorToolAssetCommands::isPrefabPath( focused ) )
+			if ( EditorUtil::isPrefabAssetPath( focused.c_str() ) )
 				pScanPath = focused.c_str();
 		}
 		if ( scanKey != _lastScanKey )

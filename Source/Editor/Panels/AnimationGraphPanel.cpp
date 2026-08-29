@@ -80,7 +80,7 @@ namespace sw::editor
 		if ( _bLoaded == false )
 			loadGraphData();
 
-		if ( editor::beginToolbar( "##AnimGraphToolbar" ) )
+		if ( EditorChrome::beginToolbar( "##AnimGraphToolbar" ) )
 		{
 			if ( ImGui::Button( "Add Idle" ) )
 				addNamedNode( "Idle" );
@@ -113,7 +113,7 @@ namespace sw::editor
 			ImGui::TextDisabled( "Nodes: %zu  Links: %zu  (%s)", _listNode.size(), _listLink.size(),
 								 EditorConfig::getActive()._animationGraphDataFile.c_str() );
 		}
-		editor::endToolbar();
+		EditorChrome::endToolbar();
 
 		if ( _nodeGraph.beginCanvas( "AnimationGraphCanvas",
 									 EditorConfig::getActive()._animationGraphSettingsFile.c_str() ) == false )

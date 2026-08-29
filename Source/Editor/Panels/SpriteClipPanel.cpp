@@ -138,7 +138,7 @@ namespace sw::editor
 			ImGui::DragFloat( "angleDeg", &k._angleDeg, 0.5f );
 		}
 
-		editor::drawPanelStatus( _status.c_str() );
+		EditorWidgets::drawPanelStatus( _status.c_str() );
 	}
 
 	void SpriteClipPanel::loadJson()

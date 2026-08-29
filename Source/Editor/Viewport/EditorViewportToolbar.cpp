@@ -22,7 +22,7 @@ namespace sw::editor
 											 const float32* arrValues, const utf8* const* arrLabels, int32 valueCount,
 											 float32 comboWidth, int32 fallbackIndex )
 			{
-				if ( editor::drawToggleButton( pButtonLabel, bEnabled ) )
+				if ( EditorWidgets::drawToggleButton( pButtonLabel, bEnabled ) )
 					bEnabled = ( bEnabled == false );
 
 				ImGui::SameLine();
@@ -65,18 +65,18 @@ namespace sw::editor
 				settings._renderMode = static_cast<ViewportRenderMode>( modeIndex );
 		}
 
-		editor::drawToolbarSeparator();
+		EditorWidgets::drawToolbarSeparator();
 
 		{
 			const bool b2D = settings._bIs2DMode;
-			if ( editor::drawToggleButton( b2D ? "2D Mode" : "3D Mode", b2D ) )
+			if ( EditorWidgets::drawToggleButton( b2D ? "2D Mode" : "3D Mode", b2D ) )
 				settings._bIs2DMode = ( settings._bIs2DMode == false );
 
 			if ( ImGui::IsItemHovered() )
 				ImGui::SetTooltip( "Toggle 2D (XY Plane Grid) / 3D (XZ Plane Grid) View Mode" );
 		}
 
-		editor::drawToolbarSeparator();
+		EditorWidgets::drawToolbarSeparator();
 
 		{
 			ImGui::TextDisabled( "Cam:" );
@@ -87,7 +87,7 @@ namespace sw::editor
 
 		if ( viewportWidth > 320.0f )
 		{
-			editor::drawToolbarSeparator();
+			EditorWidgets::drawToolbarSeparator();
 			ImGui::Checkbox( "Stats", &settings._bShowStats );
 			ImGui::SameLine();
 			ImGui::Checkbox( "Grid", &settings._bShowGrid );
@@ -103,7 +103,7 @@ namespace sw::editor
 
 		if ( viewportWidth > 420.0f )
 		{
-			editor::drawToolbarSeparator();
+			EditorWidgets::drawToolbarSeparator();
 			if ( ImGui::Button( "Bookmarks" ) )
 				ImGui::OpenPopup( "##ViewportBookmarksPopup" );
 
@@ -145,7 +145,7 @@ namespace sw::editor
 			EditorContext* pContext = EditorContext::get();
 			if ( pContext != nullptr && pContext->getSelectionManager().getSelectedObjectCount() >= 2 )
 			{
-				editor::drawToolbarSeparator();
+				EditorWidgets::drawToolbarSeparator();
 				if ( ImGui::Button( "Align..." ) )
 					ImGui::OpenPopup( "##ViewportAlignPopup" );
 
@@ -188,9 +188,9 @@ namespace sw::editor
 		barDesc._pivot	   = float2{ 0.5f, 0.0f };
 		barDesc._bEnabled  = bEnabled;
 
-		if ( editor::beginFloatingBar( barDesc ) == false )
+		if ( EditorChrome::beginFloatingBar( barDesc ) == false )
 		{
-			editor::endFloatingBar();
+			EditorChrome::endFloatingBar();
 			return;
 		}
 
@@ -204,20 +204,20 @@ namespace sw::editor
 		bool& bLocal = EditorContext::get()->getWorkspace().getGizmoLocalSpaceRef();
 		ImGui::Checkbox( "Local", &bLocal );
 
-		editor::drawToolbarSeparator();
+		EditorWidgets::drawToolbarSeparator();
 
 		const float32 arrSnapValues[] = { 0.1f, 0.5f, 1.0f, 5.0f, 10.0f };
 		const utf8*	  arrSnapLabels[] = { "0.1", "0.5", "1.0", "5.0", "10.0" };
 		EditorViewportToolbarInternal::drawSnapToggleCombo( "Grid Snap", "##GridSnapVal", settings._bGridSnap, settings._gridSnapValue, arrSnapValues,
 															arrSnapLabels, 5, 65.0f, 2 );
 
-		editor::drawToolbarSeparator();
+		EditorWidgets::drawToolbarSeparator();
 
 		const float32 arrRotValues[] = { 5.0f, 15.0f, 45.0f, 90.0f };
 		const utf8*	  arrRotLabels[] = { "5 deg", "15 deg", "45 deg", "90 deg" };
 		EditorViewportToolbarInternal::drawSnapToggleCombo( "Rot Snap", "##RotSnapVal", settings._bRotationSnap, settings._rotationSnapValue,
 															arrRotValues, arrRotLabels, 4, 60.0f, 1 );
 
-		editor::endFloatingBar();
+		EditorChrome::endFloatingBar();
 	}
 } // namespace sw::editor

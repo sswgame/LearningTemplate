@@ -40,10 +40,6 @@ namespace sw::editor
 		static bool saveLocalization( vector<LocRecord>& listRecord );
 		/** @brief data 폴더의 XML 파일 목록을 채웁니다. */
 		static bool collectGameDataFiles( vector<GameDataFileEntry>& outList );
-		/** @brief XML 파일 원문을 읽습니다. */
-		static bool loadGameDataFile( string_view absolutePath, string& outText );
-		/** @brief XML 파일 원문을 씁니다. */
-		static bool saveGameDataFile( string_view absolutePath, string_view text );
 
 		/** @brief Resource/.../localization 폴더 절대 경로를 반환합니다. */
 		static string getLocalizationFolderPath();

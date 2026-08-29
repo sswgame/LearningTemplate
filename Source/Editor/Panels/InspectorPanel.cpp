@@ -111,7 +111,7 @@ namespace sw::editor
 {
 	void InspectorPanel::drawContent()
 	{
-		editor::pushInspectorStyle();
+		EditorWidgets::pushInspectorStyle();
 		drawSelectionSection();
 
 		if ( ImGui::IsWindowFocused( ImGuiFocusedFlags_RootAndChildWindows ) )
@@ -129,12 +129,12 @@ namespace sw::editor
 			}
 		}
 
-		editor::popInspectorStyle();
+		EditorWidgets::popInspectorStyle();
 	}
 
 	void InspectorPanel::drawSelectionSection()
 	{
-		editor::drawSectionHeader( "Selection" );
+		EditorWidgets::drawSectionHeader( "Selection" );
 
 		const size_t selCount = EditorContext::get()->getSelectionManager().getSelectedObjectCount();
 		if ( selCount > 1 )
@@ -147,14 +147,14 @@ namespace sw::editor
 		EditorWorkspace& ws = EditorContext::get()->getWorkspace();
 		if ( ws.getSelectedObjectId() == 0 )
 		{
-			editor::drawEmptyHint( "Nothing selected. Pick in Game View or use Hierarchy." );
+			EditorWidgets::drawEmptyHint( "Nothing selected. Pick in Game View or use Hierarchy." );
 			return;
 		}
 
 		Scene* pScene = editor::getService<SceneManager>()->getActiveScene();
 		if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
 		{
-			editor::drawEmptyHint( "No active scene." );
+			EditorWidgets::drawEmptyHint( "No active scene." );
 			return;
 		}
 
@@ -171,7 +171,7 @@ namespace sw::editor
 		const string& pfbPath = ws.getGameObjectPrefabPath( pObj->getObjectId() );
 		if ( pfbPath.empty() == false )
 		{
-			editor::drawChip( "Prefab", editor::style::kAccent );
+			EditorWidgets::drawChip( "Prefab", editor::style::kAccent );
 			ImGui::SameLine();
 			ImGui::TextDisabled( "%s", pfbPath.c_str() );
 
@@ -186,7 +186,7 @@ namespace sw::editor
 			ImGui::Separator();
 		}
 
-		editor::drawSearchField( "##propFilter", _arrPropertyFilter, sizeof( _arrPropertyFilter ), "Search properties..." );
+		EditorWidgets::drawSearchField( "##propFilter", _arrPropertyFilter, sizeof( _arrPropertyFilter ), "Search properties..." );
 		ImGui::Spacing();
 
 		const TypeInfo* pTypeInfo = pObj->getTypeInfo();
@@ -220,7 +220,7 @@ namespace sw::editor
 				ws.setScrollToComponentId( 0 );
 			}
 
-			if ( editor::beginComponentCard( pName, pComp->getComponentId(), &bActive, &bRemove, bAccent ) )
+			if ( EditorWidgets::beginComponentCard( pName, pComp->getComponentId(), &bActive, &bRemove, bAccent ) )
 			{
 				if ( bScrollTo )
 					ImGui::SetScrollHereY( 0.25f );
@@ -323,7 +323,7 @@ namespace sw::editor
 				}
 
 				drawComponentSection( pComp, pRhiDevice );
-				editor::endComponentCard();
+				EditorWidgets::endComponentCard();
 			}
 			else
 				pComp->setActive( bActive );
@@ -373,7 +373,7 @@ namespace sw::editor
 				if ( tag._pString != nullptr && tag._pString[0] != '\0' )
 				{
 					ImGui::SameLine();
-					editor::drawChip( tag._pString, editor::style::kOk );
+					EditorWidgets::drawChip( tag._pString, editor::style::kOk );
 				}
 			}
 		}

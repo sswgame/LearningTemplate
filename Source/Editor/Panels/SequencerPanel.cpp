@@ -131,7 +131,7 @@ namespace sw::editor
 	{
 		loadFromFocusedPath();
 
-		if ( editor::beginToolbar( "##SequencerToolbar" ) )
+		if ( EditorChrome::beginToolbar( "##SequencerToolbar" ) )
 		{
 			if ( ImGui::Button( "Load" ) )
 				loadFromFocusedPath();
@@ -144,7 +144,7 @@ namespace sw::editor
 			else
 				ImGui::TextDisabled( "%s", _loadedAssetPath.c_str() );
 		}
-		editor::endToolbar();
+		EditorChrome::endToolbar();
 
 		ImGui::SliderInt( "Scrub Frame", &_currentFrame, _sequence->_frameMin, _sequence->_frameMax );
 		ImGui::Text( "Current Frame: %d", _currentFrame );

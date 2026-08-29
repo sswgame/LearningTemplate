@@ -109,7 +109,7 @@ namespace sw::editor
 
 		BLOCK( "Toolbar" )
 		{
-			if ( editor::beginToolbar( "##DialogueToolbar" ) )
+			if ( EditorChrome::beginToolbar( "##DialogueToolbar" ) )
 			{
 				if ( ImGui::Button( "+ Dialogue" ) )
 					addNode( DialogueNodeType::Dialogue, "NPC", "Enter dialogue text..." );
@@ -126,7 +126,7 @@ namespace sw::editor
 				if ( ImGui::Button( "+ End" ) )
 					addNode( DialogueNodeType::End );
 				ImGui::SameLine();
-				editor::drawToolbarSeparator();
+				EditorWidgets::drawToolbarSeparator();
 				if ( ImGui::Button( "Save" ) )
 					saveGraphData();
 				ImGui::SameLine();
@@ -150,7 +150,7 @@ namespace sw::editor
 				ImGui::SameLine();
 				ImGui::TextDisabled( "(Nodes: %zu, Links: %zu)", _listNode.size(), _listLink.size() );
 			}
-			editor::endToolbar();
+			EditorChrome::endToolbar();
 		}
 
 		const float32 availWidth  = ImGui::GetContentRegionAvail().x;
@@ -161,12 +161,12 @@ namespace sw::editor
 		canvasDesc._kind	  = editor::EditorSectionKind::Child;
 		canvasDesc._childSize = float2{ canvasWidth, 0.0f };
 		canvasDesc._flags	  = editor::EditorSectionFlags::NoScrollbar | editor::EditorSectionFlags::NoScrollWithMouse;
-		editor::beginSection( canvasDesc );
+		EditorChrome::beginSection( canvasDesc );
 
 		if ( _nodeGraph.beginCanvas( "DialogueGraphCanvas", "DialogueGraphEditor.json" ) == false )
 		{
 			ImGui::TextUnformatted( "Failed to create Dialogue Node Editor context." );
-			editor::endSection();
+			EditorChrome::endSection();
 			return;
 		}
 
@@ -370,7 +370,7 @@ namespace sw::editor
 		}
 
 		_nodeGraph.endCanvas();
-		editor::endSection();
+		EditorChrome::endSection();
 
 		// 2) 선택된 노드 상세 인스펙터 패널
 		if ( _selectedNodeId > 0 )
@@ -380,7 +380,7 @@ namespace sw::editor
 			inspectorDesc._pId	 = "DialogueNodeInspector";
 			inspectorDesc._kind	 = editor::EditorSectionKind::Child;
 			inspectorDesc._flags = editor::EditorSectionFlags::Border;
-			editor::beginSection( inspectorDesc );
+			EditorChrome::beginSection( inspectorDesc );
 
 			DialogueNode* pSelectedNode{ nullptr };
 			for ( DialogueNode& node : _listNode )
@@ -455,7 +455,7 @@ namespace sw::editor
 				}
 			}
 
-			editor::endSection();
+			EditorChrome::endSection();
 		}
 	}
 

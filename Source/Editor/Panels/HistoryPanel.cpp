@@ -25,7 +25,7 @@ namespace sw::editor
 		CommandStack* pCmdStack = editor::getService<CommandStack>();
 		if ( pCmdStack == nullptr )
 		{
-			editor::drawEmptyHint( "CommandStack service is not available." );
+			EditorWidgets::drawEmptyHint( "CommandStack service is not available." );
 			return;
 		}
 
@@ -36,7 +36,7 @@ namespace sw::editor
 		const bool	  bCanRedo	= cmdStack.canRedo();
 
 		// 상단 툴바: 실행 취소, 다시 실행, 히스토리 지우기
-		if ( editor::beginToolbar( "##HistoryToolbar" ) )
+		if ( EditorChrome::beginToolbar( "##HistoryToolbar" ) )
 		{
 			if ( bCanUndo == false )
 				ImGui::BeginDisabled();
@@ -58,9 +58,9 @@ namespace sw::editor
 				cmdStack.clear();
 
 			ImGui::SameLine();
-			editor::drawCountLabel( static_cast<uint32>( currIndex ), static_cast<uint32>( cmdCount ) );
+			EditorWidgets::drawCountLabel( static_cast<uint32>( currIndex ), static_cast<uint32>( cmdCount ) );
 		}
-		editor::endToolbar();
+		EditorChrome::endToolbar();
 
 		ImGui::Separator();
 

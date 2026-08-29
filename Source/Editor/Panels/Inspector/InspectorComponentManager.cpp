@@ -42,11 +42,11 @@ namespace sw::editor
 				float3 rot = pSceneComp->getLocalRotation();
 				float3 scl = pSceneComp->getLocalScale();
 
-				if ( editor::drawVec3Control( "Position", pos, 0.0f, 80.0f, 0.1f ) )
+				if ( EditorWidgets::drawVec3Control( "Position", pos, 0.0f, 80.0f, 0.1f ) )
 					pSceneComp->setLocalPosition( pos );
-				if ( editor::drawVec3Control( "Rotation", rot, 0.0f, 80.0f, 0.5f ) )
+				if ( EditorWidgets::drawVec3Control( "Rotation", rot, 0.0f, 80.0f, 0.5f ) )
 					pSceneComp->setLocalRotation( rot );
-				if ( editor::drawVec3Control( "Scale", scl, 1.0f, 80.0f, 0.01f ) )
+				if ( EditorWidgets::drawVec3Control( "Scale", scl, 1.0f, 80.0f, 0.01f ) )
 					pSceneComp->setLocalScale( scl );
 
 				const float3 world = pSceneComp->getWorldPosition();
@@ -120,7 +120,7 @@ namespace sw::editor
 						if ( tag._pString != nullptr && tag._pString[0] != '\0' )
 						{
 							ImGui::SameLine();
-							editor::drawChip( tag._pString, editor::style::kOk );
+							EditorWidgets::drawChip( tag._pString, editor::style::kOk );
 						}
 					}
 				}

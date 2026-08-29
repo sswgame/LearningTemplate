@@ -50,13 +50,13 @@ namespace sw::editor
 
 		_viewportClient.update( dt, bFocused, bHovered );
 
-		if ( editor::beginToolbar( "##GameViewToolbar" ) )
+		if ( EditorChrome::beginToolbar( "##GameViewToolbar" ) )
 		{
 			drawTransportControls();
-			editor::drawToolbarSeparator();
+			EditorWidgets::drawToolbarSeparator();
 			_viewportClient.drawViewportToolbar( ImGui::GetContentRegionAvail().x );
 		}
-		editor::endToolbar();
+		EditorChrome::endToolbar();
 
 		if ( _bConfirmUnsavedPlay )
 		{
@@ -108,7 +108,7 @@ namespace sw::editor
 
 		if ( currentState == PlaySessionState::Playing )
 		{
-			editor::drawChip( "Playing", editor::style::kOk );
+			EditorWidgets::drawChip( "Playing", editor::style::kOk );
 			ImGui::SameLine();
 		}
 		else if ( ImGui::Button( "Play" ) )
@@ -131,7 +131,7 @@ namespace sw::editor
 		ImGui::SameLine();
 		if ( currentState == PlaySessionState::Paused )
 		{
-			editor::drawChip( "Paused", editor::style::kWarn );
+			EditorWidgets::drawChip( "Paused", editor::style::kWarn );
 			ImGui::SameLine();
 		}
 		else if ( ImGui::Button( "Pause" ) )

@@ -192,9 +192,9 @@ namespace sw::editor
 			return;
 
 		// 1) 상단 툴바 (검색, 모듈 그룹화, 기본값 리셋, 프리셋 메뉴)
-		if ( editor::beginToolbar( "##GvToolbar" ) )
+		if ( EditorChrome::beginToolbar( "##GvToolbar" ) )
 		{
-			editor::drawSearchField( "##GvSearch", _arrSearchFilter, sizeof( _arrSearchFilter ),
+			EditorWidgets::drawSearchField( "##GvSearch", _arrSearchFilter, sizeof( _arrSearchFilter ),
 									 "Filter variables...", 200.0f, true );
 
 			ImGui::SameLine();
@@ -268,7 +268,7 @@ namespace sw::editor
 				ImGui::EndPopup();
 			}
 		}
-		editor::endToolbar();
+		EditorChrome::endToolbar();
 
 		ImGui::Separator();
 
@@ -290,7 +290,7 @@ namespace sw::editor
 
 		std::sort( listFiltered.begin(), listFiltered.end(), GlobalVariablesPanelInternal::compareVariableInfo );
 
-		editor::drawCountLabel( static_cast<uint32>( listFiltered.size() ), totalVarCount, "variables" );
+		EditorWidgets::drawCountLabel( static_cast<uint32>( listFiltered.size() ), totalVarCount, "variables" );
 
 		constexpr ImGuiTableFlags kTableFlags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg |
 												ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollY;

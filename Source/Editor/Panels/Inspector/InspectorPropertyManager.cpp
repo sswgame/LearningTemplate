@@ -331,7 +331,7 @@ namespace sw::editor
 					if ( ImGui::BeginDragDropTarget() )
 					{
 						string droppedPath;
-						if ( editor::tryAcceptAssetPayload( droppedPath ) )
+						if ( EditorWidgets::tryAcceptAssetPayload( droppedPath ) )
 							*pPtr = droppedPath;
 						ImGui::EndDragDropTarget();
 					}
@@ -379,7 +379,7 @@ namespace sw::editor
 				if ( isColorRequested( prop ) )
 					ImGui::ColorEdit3( _pLabel, &pPtr->_x, ImGuiColorEditFlags_Float );
 				else
-					editor::drawVec3Control( _pLabel, *pPtr, 0.0f, 100.0f, 0.1f );
+					EditorWidgets::drawVec3Control( _pLabel, *pPtr, 0.0f, 100.0f, 0.1f );
 				showTooltipIfHovered( prop );
 				InspectorPropertyUndo::trackPod( pPtr, sizeof( *pPtr ), _pLabel );
 				return true;
@@ -472,7 +472,7 @@ namespace sw::editor
 					if ( ImGui::BeginDragDropTarget() )
 					{
 						string droppedPath;
-						if ( editor::tryAcceptAssetPayload( droppedPath ) )
+						if ( EditorWidgets::tryAcceptAssetPayload( droppedPath ) )
 							*pPtr = hashed_string( droppedPath.c_str() );
 						ImGui::EndDragDropTarget();
 					}

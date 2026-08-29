@@ -2,6 +2,7 @@
 
 #include "Editor/Panels/DataTablePanel.h"
 
+#include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Commands/EditorDataTableCommands.h"
@@ -76,9 +77,9 @@ namespace sw::editor
 
 	void DataTablePanel::drawLocalizationTab()
 	{
-		if ( editor::beginToolbar( "##locToolbar" ) )
+		if ( EditorChrome::beginToolbar( "##locToolbar" ) )
 		{
-			editor::drawSearchField( "##locFilter", _arrLocFilter, sizeof( _arrLocFilter ), "Search keys or translations...", 240.0f, false );
+			EditorWidgets::drawSearchField( "##locFilter", _arrLocFilter, sizeof( _arrLocFilter ), "Search keys or translations...", 240.0f, false );
 			ImGui::SameLine();
 
 			if ( ImGui::Button( "Save Localization" ) )
@@ -115,13 +116,13 @@ namespace sw::editor
 				}
 			}
 		}
-		editor::endToolbar();
+		EditorChrome::endToolbar();
 
 		ImGui::Separator();
 
 		if ( _bLocLoaded == false )
 		{
-			editor::drawEmptyHint( "Loading localization..." );
+			EditorWidgets::drawEmptyHint( "Loading localization..." );
 			return;
 		}
 
@@ -222,7 +223,7 @@ namespace sw::editor
 		listDesc._kind		= editor::EditorSectionKind::Child;
 		listDesc._childSize = float2{ 200.0f, 0.0f };
 		listDesc._flags		= editor::EditorSectionFlags::Border | editor::EditorSectionFlags::ResizeX;
-		if ( editor::beginSection( listDesc ) )
+		if ( EditorChrome::beginSection( listDesc ) )
 		{
 			for ( size_t fileIndex = 0; fileIndex < _listGameDataFile.size(); ++fileIndex )
 			{
@@ -235,7 +236,7 @@ namespace sw::editor
 				}
 			}
 		}
-		editor::endSection();
+		EditorChrome::endSection();
 		ImGui::EndGroup();
 
 		ImGui::SameLine();
@@ -270,7 +271,7 @@ namespace sw::editor
 		}
 		else
 		{
-			editor::drawEmptyHint( "Select an XML data table from the list on the left." );
+			EditorWidgets::drawEmptyHint( "Select an XML data table from the list on the left." );
 		}
 		ImGui::EndGroup();
 	}
@@ -298,7 +299,7 @@ namespace sw::editor
 			return;
 
 		const GameDataFileEntry& entry = _listGameDataFile[static_cast<size_t>( _selectedGameDataIndex )];
-		EditorDataTableCommands::loadGameDataFile( entry._absolutePath, _selectedGameDataRawText );
+		FileUtil::readTextFile( entry._absolutePath, _selectedGameDataRawText );
 	}
 
 	void DataTablePanel::saveSelectedGameDataFile()
@@ -307,6 +308,8 @@ namespace sw::editor
 			return;
 
 		const GameDataFileEntry& entry = _listGameDataFile[static_cast<size_t>( _selectedGameDataIndex )];
-		EditorDataTableCommands::saveGameDataFile( entry._absolutePath, _selectedGameDataRawText );
+		if ( FileUtil::writeTextFile( entry._absolutePath, _selectedGameDataRawText ) == false )
+			return;
+		SW_LOG_INFO( "Saved game data table %#", entry._fileName.c_str() );
 	}
 } // namespace sw::editor

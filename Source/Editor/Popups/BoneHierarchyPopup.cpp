@@ -116,9 +116,9 @@ namespace sw::editor
 	// ------------------------------------------------------------------------------
 	void BoneHierarchyPopup::drawContent()
 	{
-		if ( editor::beginPanel( getPopupTitle(), &_bOpen ) == false )
+		if ( EditorChrome::beginPanel( getPopupTitle(), &_bOpen ) == false )
 		{
-			editor::endPanel();
+			EditorChrome::endPanel();
 			return;
 		}
 
@@ -126,8 +126,8 @@ namespace sw::editor
 		const string	 name = ws.getSelectedObjectName();
 		if ( name.empty() || ws.getSelectedObjectId() == 0 )
 		{
-			editor::drawEmptyHint( "No selection. Select an object in the Hierarchy." );
-			editor::endPanel();
+			EditorWidgets::drawEmptyHint( "No selection. Select an object in the Hierarchy." );
+			EditorChrome::endPanel();
 			return;
 		}
 
@@ -141,11 +141,11 @@ namespace sw::editor
 			if ( pSelectedObj != nullptr )
 				BoneHierarchyPopupInternal::drawGameObjectHierarchy( pSelectedObj );
 			else
-				editor::drawEmptyHint( "Object not found in active scene." );
+				EditorWidgets::drawEmptyHint( "Object not found in active scene." );
 		}
 		else
-			editor::drawEmptyHint( "No active scene." );
+			EditorWidgets::drawEmptyHint( "No active scene." );
 
-		editor::endPanel();
+		EditorChrome::endPanel();
 	}
 } // namespace sw::editor

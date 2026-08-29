@@ -358,9 +358,9 @@ namespace sw::editor
 
 	void ContentBrowserPanel::drawToolbar()
 	{
-		if ( editor::beginToolbar( "##cb_toolbar" ) )
+		if ( EditorChrome::beginToolbar( "##cb_toolbar" ) )
 		{
-			editor::drawSearchField( "##cb_search", _arrSearchBuffer, sizeof( _arrSearchBuffer ), "Search Content", 160.0f,
+			EditorWidgets::drawSearchField( "##cb_search", _arrSearchBuffer, sizeof( _arrSearchBuffer ), "Search Content", 160.0f,
 									 false );
 
 			ImGui::SameLine();
@@ -369,7 +369,7 @@ namespace sw::editor
 			for ( int32 filterIdx = 0; filterIdx < 8; ++filterIdx )
 			{
 				const bool bActive = ( static_cast<int32>( _typeFilter ) == filterIdx );
-				if ( editor::drawToggleButton( kArrFilterNames[filterIdx], bActive ) )
+				if ( EditorWidgets::drawToggleButton( kArrFilterNames[filterIdx], bActive ) )
 					_typeFilter = static_cast<AssetTypeFilter>( filterIdx );
 				ImGui::SameLine();
 			}
@@ -409,7 +409,7 @@ namespace sw::editor
 				refreshCurrentFolder();
 			}
 		}
-		editor::endToolbar();
+		EditorChrome::endToolbar();
 	}
 
 	void ContentBrowserPanel::drawSourcesSection()
@@ -419,9 +419,9 @@ namespace sw::editor
 		sourcesDesc._kind	   = editor::EditorSectionKind::Child;
 		sourcesDesc._childSize = float2{ 220.0f, 0.0f };
 		sourcesDesc._flags	   = editor::EditorSectionFlags::Border | editor::EditorSectionFlags::ResizeX;
-		editor::beginSection( sourcesDesc );
+		EditorChrome::beginSection( sourcesDesc );
 
-		editor::drawSectionHeader( "Favorites" );
+		EditorWidgets::drawSectionHeader( "Favorites" );
 		struct FavFolder
 		{
 			const utf8* _label;
@@ -452,7 +452,7 @@ namespace sw::editor
 		}
 
 		ImGui::Separator();
-		editor::drawSectionHeader( "Sources" );
+		EditorWidgets::drawSectionHeader( "Sources" );
 
 		for ( const ContentRoot& root : _listRoot )
 		{
@@ -460,9 +460,9 @@ namespace sw::editor
 		}
 
 		if ( _listRoot.empty() )
-			editor::drawEmptyHint( "No resource roots found." );
+			EditorWidgets::drawEmptyHint( "No resource roots found." );
 
-		editor::endSection();
+		EditorChrome::endSection();
 	}
 
 	void ContentBrowserPanel::drawFolderTreeNode( string_view folderPath, string_view label, int32 depth )
@@ -544,7 +544,7 @@ namespace sw::editor
 		assetsDesc._pId	  = "##cb_assets";
 		assetsDesc._kind  = editor::EditorSectionKind::Child;
 		assetsDesc._flags = editor::EditorSectionFlags::Border | editor::EditorSectionFlags::FillRemaining;
-		editor::beginSection( assetsDesc );
+		EditorChrome::beginSection( assetsDesc );
 
 		drawBreadcrumbs();
 		ImGui::Separator();
@@ -554,9 +554,9 @@ namespace sw::editor
 		else
 			drawListView( listVisible );
 
-		editor::endSection();
+		EditorChrome::endSection();
 
-		editor::drawCountLabel( static_cast<uint32>( listVisible.size() ), 0, "items" );
+		EditorWidgets::drawCountLabel( static_cast<uint32>( listVisible.size() ), 0, "items" );
 		if ( _selectedAssetAbs.empty() == false )
 		{
 			ImGui::SameLine();
@@ -687,7 +687,7 @@ namespace sw::editor
 					if ( ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked( ImGuiMouseButton_Left ) )
 						openAsset( entry );
 					if ( entry._bIsDirectory == false )
-						editor::drawAssetDragSource( entry._relativePath.c_str(), true );
+						EditorWidgets::drawAssetDragSource( entry._relativePath.c_str(), true );
 
 					ImDrawList*		  pDrawList = ImGui::GetWindowDrawList();
 					constexpr float32 inset		= 6.0f;
@@ -738,7 +738,7 @@ namespace sw::editor
 					}
 					drawAssetContextMenu( entry );
 					if ( entry._bIsDirectory == false )
-						editor::drawAssetDragSource( entry._relativePath.c_str() );
+						EditorWidgets::drawAssetDragSource( entry._relativePath.c_str() );
 
 					ImGui::TableSetColumnIndex( 1 );
 					ImGui::TextColored( ContentBrowserPanelInternal::colorForExtension( entry._bIsDirectory ? string{} : entry._extension ),

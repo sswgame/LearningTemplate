@@ -13,14 +13,9 @@ namespace sw::editor
 	{
 		struct EditorBackgroundIoInternal
 		{
-			static TaskManager* getTaskManagerOrNull()
-			{
-				return editor::getService<TaskManager>();
-			}
-
 			static void submitOrRun( string_view name, const TaskArgsDelegate& delegate, const TaskArgs& args )
 			{
-				TaskManager* pTaskManager = getTaskManagerOrNull();
+				TaskManager* pTaskManager = editor::getService<TaskManager>();
 				if ( pTaskManager == nullptr )
 				{
 					delegate( args );
