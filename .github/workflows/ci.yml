@@ -3,18 +3,14 @@ name: CI
 on:
   push:
     branches: [ main, develop ]
-    paths-ignore:
+    paths-ignore: &paths-ignore
       - '**.md'
       - 'docs/**'
       - '.gitignore'
       - 'LICENSE'
   pull_request:
     branches: [ main, develop ]
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
-      - '.gitignore'
-      - 'LICENSE'
+    paths-ignore: *paths-ignore
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -30,7 +26,7 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v4
       with:
         fetch-depth: 1
 
@@ -38,88 +34,56 @@ jobs:
       run: |
         python3 Scripts/lint/CheckCodeConventions.py
 
-  build-windows:
-    name: Build Windows Debug (clang-cl)
+  build:
+    name: ${{ matrix.name }}
     needs: lint
-    runs-on: windows-2022
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Build Windows Debug (clang-cl)
+            os: windows-2022
+            preset: CI-Debug
+
+          - name: Build Linux Debug (Clang)
+            os: ubuntu-22.04
+            preset: CI-Debug
+
+          - name: Build Linux ASan (Clang)
+            os: ubuntu-22.04
+            preset: CI-Debug-ASAN
+
+          - name: Build Windows Shipping (clang-cl)
+            os: windows-2022
+            preset: CI-Shipping
+
+          - name: Build Linux Shipping (Clang)
+            os: ubuntu-22.04
+            preset: CI-Shipping
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v4
       with:
         fetch-depth: 1
 
     - name: Setup sccache
       uses: mozilla/sccache-action@v0.0.9
 
-    - name: MSVC developer environment
+    # Windows Environment Setup
+    - name: MSVC developer environment (Windows)
+      if: runner.os == 'Windows'
       uses: ilammy/msvc-dev-cmd@v1
 
-    - name: Setup LLVM (pre-installed in runner)
+    - name: Setup LLVM (Windows)
+      if: runner.os == 'Windows'
       run: |
         echo "C:\Program Files\LLVM\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
-    - name: Cache vcpkg tools and binary artifacts
-      uses: actions/cache@v4
-      with:
-        path: |
-          ${{ github.workspace }}/Tools/vcpkg
-          ${{ github.workspace }}/build/vcpkg_cache
-        key: vcpkg-${{ runner.os }}-windows-${{ hashFiles('vcpkg.json') }}-${{ hashFiles('cmake/Modules/Toolchain/Vcpkg/**') }}
-        restore-keys: |
-          vcpkg-${{ runner.os }}-windows-${{ hashFiles('vcpkg.json') }}-
-          vcpkg-${{ runner.os }}-windows-
-          vcpkg-${{ runner.os }}-
-
-    - name: Setup vcpkg
-      uses: lukka/run-vcpkg@v11
-      with:
-        vcpkgDirectory: ${{ github.workspace }}/Tools/vcpkg
-        vcpkgJsonGlob: 'vcpkg.json'
-
-    - name: Configure (CI-Debug preset, clang-cl)
-      env:
-        CC: clang-cl
-        CXX: clang-cl
-        VCPKG_OVERLAY_TRIPLETS: ${{ github.workspace }}/cmake/Modules/Toolchain/Vcpkg
-      run: |
-        cmake --preset CI-Debug
-
-    - name: Build
-      run: |
-        cmake --build --preset CI-Debug
-
-    # NoGPU only: EngineTest (Window/RHI) is omitted. EngineTest_NoGPU still runs.
-    - name: Test (NoGPU)
-      run: |
-        ctest --test-dir build/CI-Debug -L nogpu -j 4 --output-on-failure
-
-    - name: Upload test logs on failure
-      if: failure()
-      uses: actions/upload-artifact@v4
-      with:
-        name: test-logs-windows-debug
-        path: |
-          build/**/Testing/Temporary/LastTest.log
-          build/**/Bin/*.log
-        retention-days: 7
-
-
-  build-linux:
-    name: Build Linux Debug (Clang)
-    needs: lint
-    runs-on: ubuntu-22.04
-
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v5
-      with:
-        fetch-depth: 1
-
-    - name: Setup sccache
-      uses: mozilla/sccache-action@v0.0.9
-
-    - name: Install dependencies
+    # Linux Environment Setup
+    - name: Setup Linux toolchain & dependencies
+      if: runner.os == 'Linux'
       run: |
         sudo apt-get update
         sudo apt-get install -y ninja-build cmake lld \
@@ -127,38 +91,26 @@ jobs:
           xorg-dev libgl1-mesa-dev libglu1-mesa-dev \
           libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev \
           libxcb1-dev libx11-xcb-dev libvulkan-dev wayland-protocols libwayland-dev libxkbcommon-dev libtinfo5
-
-    - name: Locate LLVM for ReflectionParser
-      run: |
-        for candidate in /usr/lib/llvm-20 /usr/lib/llvm-19 /usr/lib/llvm-18 /usr/lib/llvm-17 /usr/lib/llvm-16 /usr/lib/llvm-15 /usr/lib/llvm-14; do
-          if [ -x "$candidate/bin/clang" ] && [ -f "$candidate/include/clang-c/Index.h" ]; then
+        for candidate in /usr/lib/llvm-20 /usr/lib/llvm-19 /usr/lib/llvm-18 /usr/lib/llvm-17 /usr/lib/llvm-16 /usr/lib/llvm-15 /usr/lib/llvm-14 /usr; do
+          if [ -f "$candidate/include/clang-c/Index.h" ]; then
             echo "LLVM_DIR=$candidate" >> "$GITHUB_ENV"
             echo "LLVM_ROOT=$candidate" >> "$GITHUB_ENV"
             echo "LLVM_HOME=$candidate" >> "$GITHUB_ENV"
-            echo "Using $candidate"
-            exit 0
+            break
           fi
         done
-        if [ -x /usr/bin/clang ] && [ -f /usr/include/clang-c/Index.h ]; then
-          echo "LLVM_DIR=/usr" >> "$GITHUB_ENV"
-          echo "LLVM_ROOT=/usr" >> "$GITHUB_ENV"
-          echo "LLVM_HOME=/usr" >> "$GITHUB_ENV"
-          echo "Using /usr"
-          exit 0
-        fi
-        echo "LLVM kit not found under /usr/lib/llvm-* or /usr" >&2
-        exit 1
 
+    # vcpkg Cache and Setup
     - name: Cache vcpkg tools and binary artifacts
       uses: actions/cache@v4
       with:
         path: |
           ${{ github.workspace }}/Tools/vcpkg
           ${{ github.workspace }}/build/vcpkg_cache
-        key: vcpkg-${{ runner.os }}-linux-${{ hashFiles('vcpkg.json') }}-${{ hashFiles('cmake/Modules/Toolchain/Vcpkg/**') }}
+        key: vcpkg-${{ runner.os }}-${{ matrix.preset }}-${{ hashFiles('vcpkg.json') }}-${{ hashFiles('cmake/Modules/Toolchain/Vcpkg/**') }}
         restore-keys: |
-          vcpkg-${{ runner.os }}-linux-${{ hashFiles('vcpkg.json') }}-
-          vcpkg-${{ runner.os }}-linux-
+          vcpkg-${{ runner.os }}-${{ matrix.preset }}-${{ hashFiles('vcpkg.json') }}-
+          vcpkg-${{ runner.os }}-${{ matrix.preset }}-
           vcpkg-${{ runner.os }}-
 
     - name: Setup vcpkg
@@ -167,293 +119,42 @@ jobs:
         vcpkgDirectory: ${{ github.workspace }}/Tools/vcpkg
         vcpkgJsonGlob: 'vcpkg.json'
 
-    - name: Configure (CI-Debug preset)
+    # Configure, Build, and Test
+    - name: Configure (${{ matrix.preset }})
       env:
-        CC: clang
-        CXX: clang++
+        CC: ${{ runner.os == 'Windows' && 'clang-cl' || 'clang' }}
+        CXX: ${{ runner.os == 'Windows' && 'clang-cl' || 'clang++' }}
         VCPKG_OVERLAY_TRIPLETS: ${{ github.workspace }}/cmake/Modules/Toolchain/Vcpkg
       run: |
-        cmake --preset CI-Debug
+        cmake --preset ${{ matrix.preset }}
 
     - name: Build
       run: |
-        cmake --build --preset CI-Debug
+        cmake --build --preset ${{ matrix.preset }} ${{ matrix.preset == 'CI-Shipping' && '--target App CoreTest' || '' }}
 
-    # NoGPU label only; soft-SKIP cases still report as skipped.
-    - name: Test (NoGPU)
+    - name: Test
       run: |
-        ctest --test-dir build/CI-Debug -L nogpu -j 4 --output-on-failure
+        ctest --test-dir build/${{ matrix.preset }} ${{ matrix.preset == 'CI-Shipping' && '-R CoreTest' || '-L nogpu' }} -j 4 --output-on-failure
 
+    # Diagnostics & Artifact Upload
     - name: Upload test logs on failure
       if: failure()
       uses: actions/upload-artifact@v4
       with:
-        name: test-logs-linux-debug
-        path: |
-          build/**/Testing/Temporary/LastTest.log
-          build/**/Bin/*.log
-        retention-days: 7
-
-
-  build-linux-asan:
-    name: Build Linux ASan (Clang)
-    needs: lint
-    runs-on: ubuntu-22.04
-
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v5
-      with:
-        fetch-depth: 1
-
-    - name: Setup sccache
-      uses: mozilla/sccache-action@v0.0.9
-
-    - name: Install dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y ninja-build cmake lld \
-          clang llvm-dev libclang-dev \
-          xorg-dev libgl1-mesa-dev libglu1-mesa-dev \
-          libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev \
-          libxcb1-dev libx11-xcb-dev libvulkan-dev wayland-protocols libwayland-dev libxkbcommon-dev libtinfo5
-
-    - name: Locate LLVM for ReflectionParser
-      run: |
-        for candidate in /usr/lib/llvm-20 /usr/lib/llvm-19 /usr/lib/llvm-18 /usr/lib/llvm-17 /usr/lib/llvm-16 /usr/lib/llvm-15 /usr/lib/llvm-14; do
-          if [ -x "$candidate/bin/clang" ] && [ -f "$candidate/include/clang-c/Index.h" ]; then
-            echo "LLVM_DIR=$candidate" >> "$GITHUB_ENV"
-            echo "LLVM_ROOT=$candidate" >> "$GITHUB_ENV"
-            echo "LLVM_HOME=$candidate" >> "$GITHUB_ENV"
-            echo "Using $candidate"
-            exit 0
-          fi
-        done
-        if [ -x /usr/bin/clang ] && [ -f /usr/include/clang-c/Index.h ]; then
-          echo "LLVM_DIR=/usr" >> "$GITHUB_ENV"
-          echo "LLVM_ROOT=/usr" >> "$GITHUB_ENV"
-          echo "LLVM_HOME=/usr" >> "$GITHUB_ENV"
-          echo "Using /usr"
-          exit 0
-        fi
-        echo "LLVM kit not found under /usr/lib/llvm-* or /usr" >&2
-        exit 1
-
-    - name: Cache vcpkg tools and binary artifacts
-      uses: actions/cache@v4
-      with:
-        path: |
-          ${{ github.workspace }}/Tools/vcpkg
-          ${{ github.workspace }}/build/vcpkg_cache
-        key: vcpkg-${{ runner.os }}-linux-asan-${{ hashFiles('vcpkg.json') }}-${{ hashFiles('cmake/Modules/Toolchain/Vcpkg/**') }}
-        restore-keys: |
-          vcpkg-${{ runner.os }}-linux-asan-${{ hashFiles('vcpkg.json') }}-
-          vcpkg-${{ runner.os }}-linux-asan-
-          vcpkg-${{ runner.os }}-
-
-    - name: Setup vcpkg
-      uses: lukka/run-vcpkg@v11
-      with:
-        vcpkgDirectory: ${{ github.workspace }}/Tools/vcpkg
-        vcpkgJsonGlob: 'vcpkg.json'
-
-    - name: Configure (CI-Debug-ASAN preset)
-      env:
-        CC: clang
-        CXX: clang++
-        VCPKG_OVERLAY_TRIPLETS: ${{ github.workspace }}/cmake/Modules/Toolchain/Vcpkg
-      run: |
-        cmake --preset CI-Debug-ASAN
-
-    - name: Build
-      run: |
-        cmake --build --preset CI-Debug-ASAN
-
-    - name: Test (NoGPU + ASan)
-      run: |
-        ctest --test-dir build/CI-Debug-ASAN -L nogpu -j 4 --output-on-failure
-
-    - name: Upload test logs on failure
-      if: failure()
-      uses: actions/upload-artifact@v4
-      with:
-        name: test-logs-linux-asan
-        path: |
-          build/**/Testing/Temporary/LastTest.log
-          build/**/Bin/*.log
-        retention-days: 7
-
-  build-windows-shipping:
-    name: Build Windows Shipping (clang-cl)
-    needs: lint
-    runs-on: windows-2022
-
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v5
-      with:
-        fetch-depth: 1
-
-    - name: Setup sccache
-      uses: mozilla/sccache-action@v0.0.9
-
-    - name: MSVC developer environment
-      uses: ilammy/msvc-dev-cmd@v1
-
-    - name: Setup LLVM (pre-installed in runner)
-      run: |
-        echo "C:\Program Files\LLVM\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-
-    - name: Cache vcpkg tools and binary artifacts
-      uses: actions/cache@v4
-      with:
-        path: |
-          ${{ github.workspace }}/Tools/vcpkg
-          ${{ github.workspace }}/build/vcpkg_cache
-        key: vcpkg-${{ runner.os }}-windows-shipping-${{ hashFiles('vcpkg.json') }}-${{ hashFiles('cmake/Modules/Toolchain/Vcpkg/**') }}
-        restore-keys: |
-          vcpkg-${{ runner.os }}-windows-shipping-${{ hashFiles('vcpkg.json') }}-
-          vcpkg-${{ runner.os }}-windows-shipping-
-          vcpkg-${{ runner.os }}-
-
-    - name: Setup vcpkg
-      uses: lukka/run-vcpkg@v11
-      with:
-        vcpkgDirectory: ${{ github.workspace }}/Tools/vcpkg
-        vcpkgJsonGlob: 'vcpkg.json'
-
-    - name: Configure (CI-Shipping preset, clang-cl)
-      env:
-        CC: clang-cl
-        CXX: clang-cl
-        VCPKG_OVERLAY_TRIPLETS: ${{ github.workspace }}/cmake/Modules/Toolchain/Vcpkg
-      run: |
-        cmake --preset CI-Shipping
-
-    - name: Build App + CoreTest
-      run: |
-        cmake --build --preset CI-Shipping --target App CoreTest
-
-    # Only App + CoreTest are built under Shipping preset.
-    - name: Test (CoreTest under Shipping)
-      run: |
-        ctest --test-dir build/CI-Shipping -R CoreTest -j 4 --output-on-failure
-
-    - name: Upload test logs on failure
-      if: failure()
-      uses: actions/upload-artifact@v4
-      with:
-        name: test-logs-windows-shipping
+        name: test-logs-${{ runner.os }}-${{ matrix.preset }}
         path: |
           build/**/Testing/Temporary/LastTest.log
           build/**/Bin/*.log
         retention-days: 7
 
     - name: Upload Shipping Artifacts
-      if: success() && github.ref == 'refs/heads/main'
+      if: success() && matrix.preset == 'CI-Shipping' && github.ref == 'refs/heads/main'
       uses: actions/upload-artifact@v4
       with:
-        name: game-windows-shipping
+        name: game-${{ runner.os }}-shipping
         path: |
           build/CI-Shipping/Bin/App.exe
-          build/CI-Shipping/Bin/*.dll
-        retention-days: 14
-
-  build-linux-shipping:
-    name: Build Linux Shipping (Clang)
-    needs: lint
-    runs-on: ubuntu-22.04
-
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v5
-      with:
-        fetch-depth: 1
-
-    - name: Setup sccache
-      uses: mozilla/sccache-action@v0.0.9
-
-    - name: Install dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y ninja-build cmake lld \
-          clang llvm-dev libclang-dev \
-          xorg-dev libgl1-mesa-dev libglu1-mesa-dev \
-          libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev \
-          libxcb1-dev libx11-xcb-dev libvulkan-dev wayland-protocols libwayland-dev libxkbcommon-dev libtinfo5
-
-    - name: Locate LLVM for ReflectionParser
-      run: |
-        for candidate in /usr/lib/llvm-20 /usr/lib/llvm-19 /usr/lib/llvm-18 /usr/lib/llvm-17 /usr/lib/llvm-16 /usr/lib/llvm-15 /usr/lib/llvm-14; do
-          if [ -x "$candidate/bin/clang" ] && [ -f "$candidate/include/clang-c/Index.h" ]; then
-            echo "LLVM_DIR=$candidate" >> "$GITHUB_ENV"
-            echo "LLVM_ROOT=$candidate" >> "$GITHUB_ENV"
-            echo "LLVM_HOME=$candidate" >> "$GITHUB_ENV"
-            echo "Using $candidate"
-            exit 0
-          fi
-        done
-        if [ -x /usr/bin/clang ] && [ -f /usr/include/clang-c/Index.h ]; then
-          echo "LLVM_DIR=/usr" >> "$GITHUB_ENV"
-          echo "LLVM_ROOT=/usr" >> "$GITHUB_ENV"
-          echo "LLVM_HOME=/usr" >> "$GITHUB_ENV"
-          echo "Using /usr"
-          exit 0
-        fi
-        echo "LLVM kit not found under /usr/lib/llvm-* or /usr" >&2
-        exit 1
-
-    - name: Cache vcpkg tools and binary artifacts
-      uses: actions/cache@v4
-      with:
-        path: |
-          ${{ github.workspace }}/Tools/vcpkg
-          ${{ github.workspace }}/build/vcpkg_cache
-        key: vcpkg-${{ runner.os }}-linux-shipping-${{ hashFiles('vcpkg.json') }}-${{ hashFiles('cmake/Modules/Toolchain/Vcpkg/**') }}
-        restore-keys: |
-          vcpkg-${{ runner.os }}-linux-shipping-${{ hashFiles('vcpkg.json') }}-
-          vcpkg-${{ runner.os }}-linux-shipping-
-          vcpkg-${{ runner.os }}-
-
-    - name: Setup vcpkg
-      uses: lukka/run-vcpkg@v11
-      with:
-        vcpkgDirectory: ${{ github.workspace }}/Tools/vcpkg
-        vcpkgJsonGlob: 'vcpkg.json'
-
-    - name: Configure (CI-Shipping preset)
-      env:
-        CC: clang
-        CXX: clang++
-        VCPKG_OVERLAY_TRIPLETS: ${{ github.workspace }}/cmake/Modules/Toolchain/Vcpkg
-      run: |
-        cmake --preset CI-Shipping
-
-    - name: Build App + CoreTest
-      run: |
-        cmake --build --preset CI-Shipping --target App CoreTest
-
-    # Only App + CoreTest are built under Shipping preset.
-    - name: Test (CoreTest under Shipping)
-      run: |
-        ctest --test-dir build/CI-Shipping -R CoreTest -j 4 --output-on-failure
-
-    - name: Upload test logs on failure
-      if: failure()
-      uses: actions/upload-artifact@v4
-      with:
-        name: test-logs-linux-shipping
-        path: |
-          build/**/Testing/Temporary/LastTest.log
-          build/**/Bin/*.log
-        retention-days: 7
-
-    - name: Upload Shipping Artifacts
-      if: success() && github.ref == 'refs/heads/main'
-      uses: actions/upload-artifact@v4
-      with:
-        name: game-linux-shipping
-        path: |
           build/CI-Shipping/Bin/App
+          build/CI-Shipping/Bin/*.dll
           build/CI-Shipping/Bin/*.so
         retention-days: 14
