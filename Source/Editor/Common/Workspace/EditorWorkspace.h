@@ -12,6 +12,7 @@
 #include "Core/Container/unordered_map.h"
 
 #include "Editor/Common/Commands/EditorTransformCommands.h"
+#include "Editor/Common/EditorSessionPolicy.h"
 #include "Editor/Common/Workspace/SelectionManager.h"
 
 #include "Engine/Object/Component/ComponentPtr.h"
@@ -103,6 +104,21 @@ namespace sw::editor
 		void requestLoadScene( string_view path );
 		bool consumeLoadScene( string& outPath );
 
+		/** @brief 미저장 확인 뒤에 이어서 할 씬 동작을 넣습니다. */
+		void					 setPendingSceneAction( EditorPendingSceneAction action, string_view loadPath = {} );
+		EditorPendingSceneAction getPendingSceneAction() const { return _pendingSceneAction; }
+		const string&			 getPendingSceneActionPath() const { return _pendingSceneActionPath; }
+		void					 clearPendingSceneAction();
+
+		/** @brief 마지막으로 동기화한 씬 세대입니다. */
+		uint64 getObservedSceneGeneration() const { return _observedSceneGeneration; }
+		void   setObservedSceneGeneration( uint64 generation ) { _observedSceneGeneration = generation; }
+
+		/** @brief 활성 씬 오브젝트에서 프리팹 맵을 다시 채웁니다. */
+		void rebuildGameObjectPrefabMap( GameObjectManager* pManager );
+		/** @brief 프리팹 맵과 선택을 지웁니다. */
+		void clearGameObjectPrefabMap();
+
 		/** @brief 활성 씬에 저장되지 않은 에디터 변경이 있음을 표시합니다. */
 		void markSceneDirty() { _bSceneDirty = SW_TRUE; }
 		/** @brief 씬 dirty 플래그를 지웁니다. 저장/로드 성공 시 호출합니다. */
@@ -162,6 +178,9 @@ namespace sw::editor
 		string						  _pendingOpenPanelTitle;
 		string						  _pendingScenePath;
 		mutex						  _pendingSceneMutex;
+		EditorPendingSceneAction	  _pendingSceneAction;
+		string						  _pendingSceneActionPath;
+		uint64						  _observedSceneGeneration;
 		uint64						  _scrollToComponentId;
 		uint64						  _scrollToObjectId;
 		unordered_map<uint64, string> _mapGameObjectToPrefab;

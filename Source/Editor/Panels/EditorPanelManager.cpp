@@ -113,4 +113,18 @@ namespace sw::editor
 				entry._pInstance->shutdown( pRhiDevice );
 		}
 	}
+
+	bool EditorPanelManager::saveFocusedDirtyDocument()
+	{
+		for ( const EditorPanelEntry& entry : _listPanel )
+		{
+			if ( entry._pInstance == nullptr || entry._pInstance->isOpen() == false )
+				continue;
+			if ( entry._pInstance->isWindowFocused() == false )
+				continue;
+			if ( entry._pInstance->trySaveDirtyDocument() )
+				return true;
+		}
+		return false;
+	}
 } // namespace sw::editor

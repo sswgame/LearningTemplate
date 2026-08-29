@@ -23,5 +23,7 @@ namespace sw::editor
 
 		/** @brief File 메뉴가 고른 씬 경로를 메인 스레드에서 로드합니다. */
 		static void processPendingSceneLoad();
+		/** @brief 씬 세대 동기화와 미저장 확인 모달을 처리합니다. */
+		static void processSceneSession();
 	};
 } // namespace sw::editor

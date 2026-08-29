@@ -7,6 +7,8 @@
 
 #include "Editor/Common/Config/EditorConfig.h"
 #include "Editor/Common/Config/EditorData.h"
+#include "Editor/Common/EditorPlaySession.h"
+#include "Editor/Common/EditorSessionPolicy.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
@@ -309,5 +311,10 @@ namespace sw::editor
 
 		SW_LOG_TRACE( "Spawned prefab from %#", pPath );
 		return pSpawned;
+	}
+
+	bool EditorUtil::areSceneEditsAllowed()
+	{
+		return EditorSessionPolicy::areSceneEditsAllowed( EditorPlaySession::isStopped() );
 	}
 } // namespace sw::editor

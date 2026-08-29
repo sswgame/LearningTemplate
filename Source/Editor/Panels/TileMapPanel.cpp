@@ -57,12 +57,13 @@ namespace sw::editor
 
 	void TileMapPanel::drawContent()
 	{
-		if ( hasNewFocusedDocument() )
+		updateFocusedDocument();
+		if ( isDocumentLoaded() == false )
 		{
-			acceptFocusedDocument();
 			StringUtil::strncpy( _arrPathBuffer, getLoadedAssetPath().c_str(), sizeof( _arrPathBuffer ) - 1 );
 			_arrPathBuffer[sizeof( _arrPathBuffer ) - 1] = '\0';
-			loadXml( _arrPathBuffer );
+			if ( getLoadedAssetPath().empty() == false )
+				loadXml( _arrPathBuffer );
 			markDocumentLoaded();
 		}
 
@@ -76,7 +77,10 @@ namespace sw::editor
 		ImGui::SameLine();
 		ImGui::InputInt( "Height", &_height );
 		if ( ImGui::Button( "Apply Size" ) )
+		{
 			resize( MathUtil::max( 1, _width ), MathUtil::max( 1, _height ) );
+			markDocumentDirty();
+		}
 
 		ImGui::SameLine();
 		if ( ImGui::Button( "Load" ) )
@@ -88,7 +92,10 @@ namespace sw::editor
 		if ( ImGui::Button( "Save" ) )
 		{
 			if ( saveXml( _arrPathBuffer ) )
+			{
 				_status = string( "Saved " ) + _arrPathBuffer;
+				clearDocumentDirty();
+			}
 			else
 				_status = "Save failed";
 		}
@@ -259,7 +266,10 @@ namespace sw::editor
 			return false;
 
 		if ( bHadFile == false )
+		{
+			clearDocumentDirty();
 			return true;
+		}
 
 		const string path{ assetRelativePath };
 		EditorTransaction::push(
@@ -278,6 +288,14 @@ namespace sw::editor
 			loadXml( path );
 		} ),
 			"Save Tile Map" );
+		clearDocumentDirty();
+		return true;
+	}
+
+	bool TileMapPanel::saveDocument()
+	{
+		if ( saveXml( _arrPathBuffer ) == false )
+			return false;
 		return true;
 	}
 
@@ -285,6 +303,7 @@ namespace sw::editor
 	{
 		if ( inBounds( x, y ) == false )
 			return;
+		markDocumentDirty();
 
 		const size_t tileIndex = indexOf( x, y );
 		switch ( _layer )

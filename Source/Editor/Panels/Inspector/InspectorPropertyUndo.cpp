@@ -2,11 +2,11 @@
 
 #include "Editor/Panels/Inspector/InspectorPropertyUndo.h"
 
-#include "Core/Memory/Memory.h"
-
-#include "Editor/Common/Commands/EditorInspectorCommands.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
+
+#include "Engine/Object/GameObject/GameObjectPtr.h"
 
 #include <imgui.h>
 
@@ -19,22 +19,24 @@ namespace sw::editor
 
 		struct Entry
 		{
-			vector<uint8> _listBefore;
-			void*		  _pPtr{ nullptr };
-			size_t		  _size{ 0 };
+			string		  _beforeXml;
+			GameObjectPtr _pObj;
 			string		  _label;
 		};
 		static unordered_map<ImGuiID, Entry> s_mapPending;
+
+		EditorContext* pContext = EditorContext::get();
+		if ( pContext == nullptr )
+			return;
+		GameObjectPtr pObj = pContext->getWorkspace().getSelectedObject();
 
 		const ImGuiID id = ImGui::GetItemID();
 		if ( ImGui::IsItemActivated() )
 		{
 			Entry e;
-			e._pPtr	 = pData;
-			e._size	 = size;
-			e._label = ( pLabel != nullptr ) ? pLabel : "Property";
-			e._listBefore.resize( size );
-			Memory::copy( e._listBefore.data(), pData, size );
+			e._pObj			 = pObj;
+			e._beforeXml	 = EditorTransaction::captureSnapshot( pObj );
+			e._label		 = ( pLabel != nullptr ) ? pLabel : "Property";
 			s_mapPending[id] = std::move( e );
 		}
 		if ( ImGui::IsItemDeactivatedAfterEdit() == false )
@@ -44,61 +46,49 @@ namespace sw::editor
 		if ( it == s_mapPending.end() )
 			return;
 
-		vector<uint8> after( size );
-		Memory::copy( after.data(), pData, size );
-		if ( after == it->second._listBefore )
-		{
-			s_mapPending.erase( it );
-			return;
-		}
-
-		void*		  pPtr		 = it->second._pPtr;
-		const size_t  sz		 = it->second._size;
-		vector<uint8> listBefore = std::move( it->second._listBefore );
-		const string  lbl		 = it->second._label;
+		const string afterXml = EditorTransaction::captureSnapshot( it->second._pObj );
+		const string lbl	  = string( "Edit " ) + it->second._label;
+		EditorTransaction::recordModify( it->second._pObj, it->second._beforeXml, afterXml, lbl );
 		s_mapPending.erase( it );
-
-		const uint64 selectedId = EditorContext::get()->getWorkspace().getSelectedObjectId();
-		EditorInspectorCommands::pushPodEdit( pPtr, sz, std::move( listBefore ), std::move( after ), lbl, selectedId );
 	}
 
 	void InspectorPropertyUndo::trackString( string* pPtr, const utf8* pLabel )
 	{
 		if ( pPtr == nullptr )
 			return;
+
 		struct Entry
 		{
-			string	_before;
-			string* _pPtr{ nullptr };
-			string	_label;
+			string		  _beforeXml;
+			GameObjectPtr _pObj;
+			string		  _label;
 		};
 		static unordered_map<ImGuiID, Entry> s_mapPending;
-		const ImGuiID						 id = ImGui::GetItemID();
+
+		EditorContext* pContext = EditorContext::get();
+		if ( pContext == nullptr )
+			return;
+		GameObjectPtr pObj = pContext->getWorkspace().getSelectedObject();
+
+		const ImGuiID id = ImGui::GetItemID();
 		if ( ImGui::IsItemActivated() )
 		{
 			Entry e;
-			e._pPtr			 = pPtr;
-			e._before		 = *pPtr;
+			e._pObj			 = pObj;
+			e._beforeXml	 = EditorTransaction::captureSnapshot( pObj );
 			e._label		 = ( pLabel != nullptr ) ? pLabel : "Property";
 			s_mapPending[id] = std::move( e );
 		}
 		if ( ImGui::IsItemDeactivatedAfterEdit() == false )
 			return;
+
 		const auto it = s_mapPending.find( id );
 		if ( it == s_mapPending.end() )
 			return;
-		string after = *pPtr;
-		if ( after == it->second._before )
-		{
-			s_mapPending.erase( it );
-			return;
-		}
-		string*		 pTarget = it->second._pPtr;
-		string		 before	 = std::move( it->second._before );
-		const string lbl	 = it->second._label;
-		s_mapPending.erase( it );
 
-		const uint64 selectedId = EditorContext::get()->getWorkspace().getSelectedObjectId();
-		EditorInspectorCommands::pushStringEdit( pTarget, std::move( before ), std::move( after ), lbl, selectedId );
+		const string afterXml = EditorTransaction::captureSnapshot( it->second._pObj );
+		const string lbl	  = string( "Edit " ) + it->second._label;
+		EditorTransaction::recordModify( it->second._pObj, it->second._beforeXml, afterXml, lbl );
+		s_mapPending.erase( it );
 	}
 } // namespace sw::editor

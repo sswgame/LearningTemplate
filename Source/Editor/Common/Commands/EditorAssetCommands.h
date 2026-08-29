@@ -8,6 +8,8 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/VectorMath.h"
 
+#include "Editor/Common/EditorSessionPolicy.h"
+
 namespace sw
 {
 	class GameObject;
@@ -55,6 +57,16 @@ namespace sw::editor
 		static bool openPath( string_view relativePath );
 		/** @brief 씬을 비동기 로드하고 선택을 지웁니다. */
 		static bool loadScene( string_view path );
+		/** @brief dirty면 확인을 띄우고, 아니면 로드합니다. 플레이 중이면 false입니다. */
+		static bool tryOpenScene( string_view path );
+		/** @brief dirty면 확인을 띄우고, 아니면 빈 씬으로 바꿉니다. */
+		static bool tryCreateNewScene();
+		/** @brief 포커스된 더티 도구 문서를 저장하거나 활성 씬을 저장합니다. */
+		static void saveFocusedOrScene();
+		/** @brief 미저장 모달 선택을 적용합니다. */
+		static void applyUnsavedSceneChoice( EditorUnsavedChoice choice );
+		/** @brief 활성 씬 세대가 바뀌면 dirty/프리팹 맵을 동기화합니다. */
+		static void syncAfterSceneGenerationChange();
 		/** @brief 포커스 애셋 경로만 바꿉니다. */
 		static void focusPath( string_view relativePath );
 		/** @brief 프리팹을 스폰하고 Undo/선택을 기록합니다. */

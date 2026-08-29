@@ -1,4 +1,5 @@
 #pragma once
+#include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
@@ -35,8 +36,10 @@ namespace sw
 		/** @brief 로드된 씬을 내리고 종료합니다. */
 		void shutdown();
 
-		/** @brief 새로운 씬을 생성하고 활성 씬으로 지정합니다. */
+		/** @brief 새로운 씬을 생성하고, 활성 씬이 없으면 활성으로 지정합니다. */
 		Scene* createScene( string_view name );
+		/** @brief 빈 씬을 만들어 활성으로 바꾸고 이전 활성 씬을 언로드합니다. */
+		Scene* createEmptyActiveScene( string_view name );
 		/** @brief 씬 디스크립터 XML 비동기 로드를 요청합니다 (TaskManager 워커). */
 		bool requestLoadAsync( string_view path );
 		/**
@@ -56,6 +59,8 @@ namespace sw
 
 		/** @brief 현재 활성화된(주요) 씬 반환 */
 		Scene* getActiveScene() const { return _pActiveScene; }
+		/** @brief 활성 씬이 바뀐 횟수입니다. 에디터가 로드/뉴 씬 동기화에 씁니다. */
+		uint64 getSceneGeneration() const { return _sceneGeneration; }
 		/** @brief 비동기 로드가 진행 중이거나 교체 대기면 true입니다. */
 		bool isTransitioning() const;
 		/** @brief 진행 중인 비동기 씬 로드 작업을 즉시 취소/대기하고 큐를 비웁니다. (핫리로드/종료 펜스용) */
@@ -80,6 +85,7 @@ namespace sw
 
 		vector<unique_ptr<Scene>> _listLoadedScene;
 		Scene*					  _pActiveScene;
+		uint64					  _sceneGeneration;
 		IRHIDevice*				  _pRHIDevice;
 		FrameRenderer*			  _pFrameRenderer;
 

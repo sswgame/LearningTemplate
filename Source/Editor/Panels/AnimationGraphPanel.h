@@ -25,6 +25,7 @@ namespace sw::editor
 		void shutdown( IRHIDevice* pRhiDevice ) override;
 		/** @brief 애니메이션 그래프 UI를 그립니다. */
 		void drawContent() override;
+		bool saveDocument() override;
 
 	private:
 		using GraphNode = EditorAnimGraphNode;

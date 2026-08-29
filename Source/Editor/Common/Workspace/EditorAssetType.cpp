@@ -5,9 +5,6 @@
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
 
-#include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorWorkspace.h"
-
 namespace sw::editor
 {
 	namespace
@@ -310,33 +307,5 @@ namespace sw::editor
 			outExtensions.push_back( ".json" );
 		if ( EditorAssetTypeInternal::containsSuffix( outExtensions, ".txt" ) == false )
 			outExtensions.push_back( ".txt" );
-	}
-
-	string_view EditorAssetTypeRegistry::matchingFocusedPath( EditorAssetKind kind )
-	{
-		EditorContext* pContext = EditorContext::get();
-		if ( pContext == nullptr )
-			return {};
-
-		const string& focused = pContext->getWorkspace().getFocusedAssetPath();
-		if ( matches( kind, focused ) == false )
-			return {};
-		return focused;
-	}
-
-	bool EditorAssetTypeRegistry::consumeWorkspaceFocusKey( string& ioLastKey, uint64 extraToken )
-	{
-		EditorContext* pContext = EditorContext::get();
-		string		   scanKey;
-		if ( pContext != nullptr )
-		{
-			scanKey = pContext->getWorkspace().getFocusedAssetPath();
-			scanKey += '|';
-			scanKey += to_string( extraToken );
-		}
-		if ( scanKey == ioLastKey )
-			return false;
-		ioLastKey = std::move( scanKey );
-		return true;
 	}
 } // namespace sw::editor

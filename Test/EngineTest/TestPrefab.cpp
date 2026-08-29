@@ -118,6 +118,7 @@ SW_TEST_CASE( PrefabTest, SpawnCreatesGameObject )
 	sw::GameObject*		  spawned = prefabs.spawn( &objects, "prefabs/sample.prefab.xml", "SpawnedSample" );
 	SW_ASSERT_NOT_NULL( spawned );
 	SW_EXPECT_EQUAL( sw::string( "SpawnedSample" ), sw::string( spawned->getName().c_str() ) );
+	SW_EXPECT_STREQ( "prefabs/sample.prefab.xml", spawned->getPrefabSourcePath().c_str() );
 }
 
 /**
@@ -141,6 +142,7 @@ SW_TEST_CASE( PrefabTest, InMemoryJsonPrefabCreationAndSpawn )
 	sw::GameObject* spawned = prefabs.spawn( &objects, tempPath, "BossActor" );
 	SW_ASSERT_NOT_NULL( spawned );
 	SW_EXPECT_EQUAL( sw::string( "BossActor" ), sw::string( spawned->getName().c_str() ) );
+	SW_EXPECT_FALSE( spawned->getPrefabSourcePath().empty() );
 
 	sw::FileUtil::removeFile( tempPath );
 #endif

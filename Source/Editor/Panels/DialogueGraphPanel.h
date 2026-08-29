@@ -24,6 +24,7 @@ namespace sw::editor
 		void shutdown( IRHIDevice* pRhiDevice ) override;
 		/** @brief 대화 노드 그래프 UI를 렌더링합니다. */
 		void drawContent() override;
+		bool saveDocument() override;
 
 	private:
 		using DialogueNode = EditorDialogueNode;

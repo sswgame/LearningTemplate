@@ -12,7 +12,11 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectPtr.h"
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Format/XmlSerializer.h"
+
+#include "RuntimeAPI/Service/EditorService.h"
 
 namespace sw::editor
 {
@@ -110,6 +114,9 @@ namespace sw::editor
 		, _pendingOpenPanelTitle{}
 		, _pendingScenePath{}
 		, _pendingSceneMutex{}
+		, _pendingSceneAction{ EditorPendingSceneAction::None }
+		, _pendingSceneActionPath{}
+		, _observedSceneGeneration{ 0 }
 		, _scrollToComponentId{ 0 }
 		, _scrollToObjectId{ 0 }
 		, _mapGameObjectToPrefab{}
@@ -270,6 +277,37 @@ namespace sw::editor
 		return true;
 	}
 
+	void EditorWorkspace::setPendingSceneAction( EditorPendingSceneAction action, string_view loadPath )
+	{
+		_pendingSceneAction		= action;
+		_pendingSceneActionPath = string{ loadPath };
+	}
+
+	void EditorWorkspace::clearPendingSceneAction()
+	{
+		_pendingSceneAction = EditorPendingSceneAction::None;
+		_pendingSceneActionPath.clear();
+	}
+
+	void EditorWorkspace::rebuildGameObjectPrefabMap( GameObjectManager* pManager )
+	{
+		_mapGameObjectToPrefab.clear();
+		if ( pManager == nullptr )
+			return;
+
+		for ( GameObject* pGo : pManager->getAllGameObjects() )
+		{
+			if ( pGo == nullptr || pGo->getPrefabSourcePath().empty() )
+				continue;
+			_mapGameObjectToPrefab[pGo->getObjectId()] = pGo->getPrefabSourcePath();
+		}
+	}
+
+	void EditorWorkspace::clearGameObjectPrefabMap()
+	{
+		_mapGameObjectToPrefab.clear();
+	}
+
 	void EditorWorkspace::setGameObjectPrefabPath( uint64 objectId, string_view prefabPath )
 	{
 		if ( objectId == 0 )
@@ -278,6 +316,16 @@ namespace sw::editor
 			_mapGameObjectToPrefab.erase( objectId );
 		else
 			_mapGameObjectToPrefab[objectId] = string{ prefabPath };
+
+		SceneManager* pSceneManager = editor::getService<SceneManager>();
+		if ( pSceneManager == nullptr )
+			return;
+		Scene* pScene = pSceneManager->getActiveScene();
+		if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
+			return;
+		GameObject* pGo = pScene->getObjectManager()->findGameObjectById( objectId );
+		if ( pGo != nullptr )
+			pGo->setPrefabSourcePath( prefabPath );
 	}
 
 	const string& EditorWorkspace::getGameObjectPrefabPath( uint64 objectId ) const
@@ -285,13 +333,22 @@ namespace sw::editor
 		const auto it = _mapGameObjectToPrefab.find( objectId );
 		if ( it != _mapGameObjectToPrefab.end() )
 			return it->second;
-		return _emptyString;
+
+		SceneManager* pSceneManager = editor::getService<SceneManager>();
+		if ( pSceneManager == nullptr )
+			return _emptyString;
+		Scene* pScene = pSceneManager->getActiveScene();
+		if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
+			return _emptyString;
+		GameObject* pGo = pScene->getObjectManager()->findGameObjectById( objectId );
+		if ( pGo == nullptr )
+			return _emptyString;
+		return pGo->getPrefabSourcePath();
 	}
 
 	bool EditorWorkspace::isGameObjectPrefabInstance( uint64 objectId ) const
 	{
-		const auto it = _mapGameObjectToPrefab.find( objectId );
-		return ( it != _mapGameObjectToPrefab.end() && it->second.empty() == false );
+		return getGameObjectPrefabPath( objectId ).empty() == false;
 	}
 
 	void EditorWorkspace::setCameraBookmark( uint32 slot, const CameraBookmark& bookmark )

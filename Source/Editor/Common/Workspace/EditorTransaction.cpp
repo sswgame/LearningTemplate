@@ -121,9 +121,10 @@ namespace sw::editor
 		if ( pRaw == nullptr )
 			return;
 
-		const uint64 objId	  = pRaw->getObjectId();
-		const string objName  = string{ pRaw->getName().c_str() };
-		const string stateXml = ObjectStateSerializer::saveToXmlString( pRaw );
+		const uint64 objId		= pRaw->getObjectId();
+		const string objName	= string{ pRaw->getName().c_str() };
+		const string stateXml	= ObjectStateSerializer::saveToXmlString( pRaw );
+		const string prefabPath = pRaw->getPrefabSourcePath();
 
 		CommandStack::Command cmd{};
 		cmd._label = string{ label };
@@ -142,7 +143,7 @@ namespace sw::editor
 			}
 		};
 
-		cmd._redo = [objName, stateXml]()
+		cmd._redo = [objName, stateXml, prefabPath]()
 		{
 			GameObjectManager* pManager = EditorTransactionInternal::getActiveGameObjectManager();
 			if ( pManager == nullptr )
@@ -153,6 +154,10 @@ namespace sw::editor
 			{
 				ObjectStateSerializer::loadFromXmlString( pCreated, stateXml );
 				ObjectStateSerializer::rebindSceneHierarchy( pCreated, stateXml );
+				pCreated->setPrefabSourcePath( prefabPath );
+				EditorContext* pContext = EditorContext::get();
+				if ( pContext != nullptr )
+					pContext->getWorkspace().setGameObjectPrefabPath( pCreated->getObjectId(), prefabPath );
 				EditorContext::get()->getSelectionManager().selectObject( GameObjectPtr{ pCreated }, SelectionMode::Replace );
 			}
 		};
@@ -167,13 +172,14 @@ namespace sw::editor
 		if ( pRaw == nullptr )
 			return;
 
-		const uint64 objId	  = pRaw->getObjectId();
-		const string objName  = string{ pRaw->getName().c_str() };
-		const string stateXml = ObjectStateSerializer::saveToXmlString( pRaw );
+		const uint64 objId		= pRaw->getObjectId();
+		const string objName	= string{ pRaw->getName().c_str() };
+		const string stateXml	= ObjectStateSerializer::saveToXmlString( pRaw );
+		const string prefabPath = pRaw->getPrefabSourcePath();
 
 		CommandStack::Command cmd{};
 		cmd._label = string{ label };
-		cmd._undo  = [objName, stateXml]()
+		cmd._undo  = [objName, stateXml, prefabPath]()
 		{
 			GameObjectManager* pManager = EditorTransactionInternal::getActiveGameObjectManager();
 			if ( pManager == nullptr )
@@ -184,6 +190,10 @@ namespace sw::editor
 			{
 				ObjectStateSerializer::loadFromXmlString( pCreated, stateXml );
 				ObjectStateSerializer::rebindSceneHierarchy( pCreated, stateXml );
+				pCreated->setPrefabSourcePath( prefabPath );
+				EditorContext* pContext = EditorContext::get();
+				if ( pContext != nullptr )
+					pContext->getWorkspace().setGameObjectPrefabPath( pCreated->getObjectId(), prefabPath );
 				EditorContext::get()->getSelectionManager().selectObject( GameObjectPtr{ pCreated }, SelectionMode::Replace );
 			}
 		};

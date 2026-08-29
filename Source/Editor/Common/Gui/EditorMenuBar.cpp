@@ -6,7 +6,10 @@
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Commands/EditorAssetCommands.h"
+#include "Editor/Common/EditorPlaySession.h"
+#include "Editor/Common/EditorSessionPolicy.h"
 #include "Editor/Common/Gui/EditorDockLayout.h"
+#include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorNotificationManager.h"
@@ -45,6 +48,11 @@ namespace sw::editor
 				EditorAssetCommands::saveActiveSceneOrPrompt();
 			}
 
+			static void saveFocusedOrScene()
+			{
+				EditorAssetCommands::saveFocusedOrScene();
+			}
+
 			static void openSceneFileDialog()
 			{
 				FileDialogParams params{};
@@ -79,9 +87,13 @@ namespace sw::editor
 
 		if ( ImGui::BeginMenu( "File" ) )
 		{
+			if ( ImGui::MenuItem( "New Scene" ) )
+				EditorAssetCommands::tryCreateNewScene();
 			if ( ImGui::MenuItem( "Open Scene...", "Ctrl+O" ) )
 				EditorMenuBarInternal::openSceneFileDialog();
-			if ( ImGui::MenuItem( "Save Scene", "Ctrl+S" ) )
+			if ( ImGui::MenuItem( "Save", "Ctrl+S" ) )
+				EditorMenuBarInternal::saveFocusedOrScene();
+			if ( ImGui::MenuItem( "Save Scene" ) )
 				EditorMenuBarInternal::saveSceneOrPrompt();
 
 			ImGui::Separator();
@@ -100,9 +112,9 @@ namespace sw::editor
 
 		if ( ImGui::BeginMenu( "Edit" ) )
 		{
-			if ( ImGui::MenuItem( "Undo", "Ctrl+Z" ) )
+			if ( ImGui::MenuItem( "Undo", "Ctrl+Z", false, EditorPlaySession::isStopped() ) )
 				getService<CommandStack>()->undo();
-			if ( ImGui::MenuItem( "Redo", "Ctrl+Y" ) )
+			if ( ImGui::MenuItem( "Redo", "Ctrl+Y", false, EditorPlaySession::isStopped() ) )
 				getService<CommandStack>()->redo();
 			ImGui::EndMenu();
 		}
@@ -294,14 +306,14 @@ namespace sw::editor
 
 			if ( io.KeyCtrl || io.KeySuper )
 			{
-				if ( ImGui::IsKeyPressed( ImGuiKey_Z, false ) )
+				if ( ImGui::IsKeyPressed( ImGuiKey_Z, false ) && EditorPlaySession::isStopped() )
 					getService<CommandStack>()->undo();
-				if ( ImGui::IsKeyPressed( ImGuiKey_Y, false ) )
+				if ( ImGui::IsKeyPressed( ImGuiKey_Y, false ) && EditorPlaySession::isStopped() )
 					getService<CommandStack>()->redo();
 				if ( ImGui::IsKeyPressed( ImGuiKey_O, false ) )
 					EditorMenuBarInternal::openSceneFileDialog();
 				if ( ImGui::IsKeyPressed( ImGuiKey_S, false ) )
-					EditorMenuBarInternal::saveSceneOrPrompt();
+					EditorMenuBarInternal::saveFocusedOrScene();
 				if ( io.KeyShift && ImGui::IsKeyPressed( ImGuiKey_P, false ) )
 					CommandPalettePopup::toggle();
 				else if ( ImGui::IsKeyPressed( ImGuiKey_P, false ) )
@@ -342,6 +354,31 @@ namespace sw::editor
 		if ( EditorContext::get()->getWorkspace().consumeLoadScene( scenePath ) == false )
 			return;
 
-		EditorAssetCommands::loadScene( scenePath );
+		EditorAssetCommands::tryOpenScene( scenePath );
+	}
+
+	void EditorMenuBar::processSceneSession()
+	{
+		EditorAssetCommands::syncAfterSceneGenerationChange();
+		processPendingSceneLoad();
+
+		EditorContext* pContext = EditorContext::get();
+		if ( pContext == nullptr )
+			return;
+		if ( pContext->getWorkspace().getPendingSceneAction() == EditorPendingSceneAction::None )
+			return;
+
+		if ( ImGui::IsPopupOpen( "##UnsavedSceneAction" ) == false )
+			ImGui::OpenPopup( "##UnsavedSceneAction" );
+
+		const utf8* pMessage = "Scene has unsaved changes. Continue?";
+		if ( pContext->getWorkspace().getPendingSceneAction() == EditorPendingSceneAction::New )
+			pMessage = "Scene has unsaved changes. Create a new scene anyway?";
+		else if ( pContext->getWorkspace().getPendingSceneAction() == EditorPendingSceneAction::Load )
+			pMessage = "Scene has unsaved changes. Open another scene anyway?";
+
+		const EditorUnsavedChoice choice = EditorWidgets::drawUnsavedChangesModal( "##UnsavedSceneAction", pMessage );
+		if ( choice != EditorUnsavedChoice::None )
+			EditorAssetCommands::applyUnsavedSceneChoice( choice );
 	}
 } // namespace sw::editor

@@ -2,6 +2,7 @@
 
 #include "Editor/Common/Commands/EditorSceneCommands.h"
 
+#include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
@@ -21,8 +22,24 @@
 
 namespace sw::editor
 {
+	namespace
+	{
+		struct EditorSceneCommandsInternal
+		{
+			static bool canMutateScene()
+			{
+				return EditorUtil::areSceneEditsAllowed();
+			}
+		};
+	} // namespace
+} // namespace sw::editor
+
+namespace sw::editor
+{
 	GameObject* EditorSceneCommands::create( GameObjectManager* pManager, GameObject* pParent )
 	{
+		if ( EditorSceneCommandsInternal::canMutateScene() == false )
+			return nullptr;
 		if ( pManager == nullptr )
 			return nullptr;
 
@@ -41,6 +58,8 @@ namespace sw::editor
 
 	GameObject* EditorSceneCommands::duplicate( GameObjectManager* pManager, GameObject* pSrc )
 	{
+		if ( EditorSceneCommandsInternal::canMutateScene() == false )
+			return nullptr;
 		if ( pManager == nullptr || pSrc == nullptr )
 			return nullptr;
 
@@ -57,6 +76,14 @@ namespace sw::editor
 		if ( pSrc->getParent() != nullptr )
 			pNewObj->attachToParent( pSrc->getParent() );
 		ObjectStateSerializer::rebindSceneHierarchy( pNewObj, xml );
+		const string& prefabPath = pSrc->getPrefabSourcePath();
+		if ( prefabPath.empty() == false )
+		{
+			pNewObj->setPrefabSourcePath( prefabPath );
+			EditorContext* pContext = EditorContext::get();
+			if ( pContext != nullptr )
+				pContext->getWorkspace().setGameObjectPrefabPath( pNewObj->getObjectId(), prefabPath );
+		}
 		EditorTransaction::recordCreation( GameObjectPtr{ pNewObj }, "Duplicate GameObject" );
 		select( pNewObj, SelectionMode::Replace );
 		return pNewObj;
@@ -64,6 +91,8 @@ namespace sw::editor
 
 	bool EditorSceneCommands::reparent( GameObject* pChild, GameObject* pNewParent, string_view undoLabel )
 	{
+		if ( EditorSceneCommandsInternal::canMutateScene() == false )
+			return false;
 		if ( pChild == nullptr || pNewParent == nullptr || pChild == pNewParent )
 			return false;
 		if ( wouldCreateParentCycle( pChild, pNewParent ) )
@@ -81,6 +110,8 @@ namespace sw::editor
 
 	bool EditorSceneCommands::unparent( GameObject* pObj, string_view undoLabel )
 	{
+		if ( EditorSceneCommandsInternal::canMutateScene() == false )
+			return false;
 		if ( pObj == nullptr || pObj->getParent() == nullptr )
 			return false;
 
@@ -94,6 +125,8 @@ namespace sw::editor
 
 	bool EditorSceneCommands::destroy( GameObjectManager* pManager, GameObject* pObj )
 	{
+		if ( EditorSceneCommandsInternal::canMutateScene() == false )
+			return false;
 		if ( pManager == nullptr || pObj == nullptr )
 			return false;
 
@@ -113,6 +146,8 @@ namespace sw::editor
 
 	bool EditorSceneCommands::rename( GameObject* pObj, const utf8* pNewName )
 	{
+		if ( EditorSceneCommandsInternal::canMutateScene() == false )
+			return false;
 		if ( pObj == nullptr || pNewName == nullptr || pNewName[0] == '\0' )
 			return false;
 
@@ -125,6 +160,8 @@ namespace sw::editor
 
 	bool EditorSceneCommands::destroyComponent( GameObjectManager* pManager, GameObject* pObj, Component* pComp )
 	{
+		if ( EditorSceneCommandsInternal::canMutateScene() == false )
+			return false;
 		if ( pManager == nullptr || pObj == nullptr || pComp == nullptr )
 			return false;
 
@@ -181,6 +218,8 @@ namespace sw::editor
 	void EditorSceneCommands::applyLocalTransform( GameObject* pObj, const float3& translation, const float3& rotationRad,
 												   const float3& scale )
 	{
+		if ( EditorSceneCommandsInternal::canMutateScene() == false )
+			return;
 		if ( pObj == nullptr )
 			return;
 
@@ -265,6 +304,8 @@ namespace sw::editor
 
 	void EditorSceneCommands::commitModify( GameObject* pObj, string_view beforeXml, string_view undoLabel )
 	{
+		if ( EditorSceneCommandsInternal::canMutateScene() == false )
+			return;
 		if ( pObj == nullptr || beforeXml.empty() )
 			return;
 

@@ -1,6 +1,8 @@
 #include "pch.h"
 
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneDocument.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -110,4 +112,53 @@ SW_TEST_CASE( SceneTest, SceneEntityLifecycleAndShutdownCleanup )
 	manager.shutdown();
 	SW_EXPECT_NULL( manager.getActiveScene() );
 	SW_EXPECT_EQUAL( 0u, manager.getLoadedScenes().size() );
+}
+
+/**
+ * @brief [SceneTest] serializeToDocument 가 프리팹 소스 경로를 씁니다
+ */
+SW_TEST_CASE( SceneTest, SerializeWritesPrefabSourcePath )
+{
+	sw::Scene scene{ "PrefabRoundTrip" };
+	SW_ASSERT_NOT_NULL( scene.getObjectManager() );
+
+	sw::GameObject* pHero = scene.getObjectManager()->createGameObject( sw::hashed_string( "Hero" ) );
+	SW_ASSERT_NOT_NULL( pHero );
+	pHero->setPrefabSourcePath( "prefabs/hero.prefab.xml" );
+
+	sw::SceneDocument doc{};
+	SW_ASSERT_TRUE( scene.serializeToDocument( doc ) );
+	SW_EXPECT_FALSE( doc._listEntityNode.empty() );
+
+	bool bFoundPrefab{ false };
+	for ( const sw::SceneDocument::EntityNode& node : doc._listEntityNode )
+	{
+		if ( node._name != "Hero" )
+			continue;
+		SW_EXPECT_STREQ( "prefabs/hero.prefab.xml", node._prefab.c_str() );
+		bFoundPrefab = true;
+	}
+	SW_EXPECT_TRUE( bFoundPrefab );
+}
+
+/**
+ * @brief [SceneTest] createEmptyActiveScene 이 세대를 올리고 이전 씬을 내립니다
+ */
+SW_TEST_CASE( SceneTest, CreateEmptyActiveSceneBumpsGeneration )
+{
+	sw::SceneManager manager;
+	SW_ASSERT_TRUE( manager.initialize() );
+
+	sw::Scene* pFirst = manager.createScene( "First" );
+	SW_ASSERT_NOT_NULL( pFirst );
+	const uint64 firstGeneration = manager.getSceneGeneration();
+	SW_EXPECT_TRUE( firstGeneration > 0 );
+
+	sw::Scene* pEmpty = manager.createEmptyActiveScene( "Untitled" );
+	SW_ASSERT_NOT_NULL( pEmpty );
+	SW_EXPECT_EQUAL( pEmpty, manager.getActiveScene() );
+	SW_EXPECT_TRUE( manager.getSceneGeneration() > firstGeneration );
+	SW_EXPECT_STREQ( "Untitled", pEmpty->getName() );
+
+	manager.shutdown();
 }

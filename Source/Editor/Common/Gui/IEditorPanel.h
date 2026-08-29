@@ -43,6 +43,10 @@ namespace sw::editor
 		virtual void shutdown( IRHIDevice* /*rhiDevice*/ ) {}
 		/** @brief 온디맨드 도구는 닫힌 채 시작하고, 핵심 패널은 열린 채 시작합니다. */
 		virtual bool isToolPanel() const { return false; }
+		/** @brief 포커스된 더티 문서를 저장했으면 true입니다. */
+		virtual bool trySaveDirtyDocument() { return false; }
+		/** @brief 마지막 draw에서 이 패널 윈도우가 포커스되었으면 true입니다. */
+		bool isWindowFocused() const { return _bWindowFocused; }
 
 		// ------------------------------------------------------------------------------
 		// 3) 열림 상태 — ImGui Begin의 p_open
@@ -58,6 +62,7 @@ namespace sw::editor
 		/** @brief 기본 열림 상태로 에디터 패널을 생성합니다. */
 		explicit IEditorPanel( bool bOpenByDefault = true )
 			: _bOpen{ bOpenByDefault }
+			, _bWindowFocused{ false }
 		{
 		}
 
@@ -72,5 +77,6 @@ namespace sw::editor
 
 	private:
 		bool _bOpen;
+		bool _bWindowFocused;
 	};
 } // namespace sw::editor

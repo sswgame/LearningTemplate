@@ -89,5 +89,8 @@ namespace sw::editor
 
 		/** @brief 선택적 부모 아래 프리팹을 스폰합니다. 실패 시 로그 후 nullptr을 반환합니다. */
 		static GameObject* spawnPrefabFromAssetPath( GameObjectManager* pManager, const utf8* pPath, GameObject* pParent = nullptr );
+
+		/** @brief Play가 정지 상태이면 씬 오브젝트 편집이 허용됩니다. */
+		static bool areSceneEditsAllowed();
 	};
 } // namespace sw::editor

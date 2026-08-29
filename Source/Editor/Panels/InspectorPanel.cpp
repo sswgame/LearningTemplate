@@ -7,6 +7,7 @@
 
 #include "Editor/Common/Commands/EditorGlobalVariableCommands.h"
 #include "Editor/Common/Commands/EditorInspectorCommands.h"
+#include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
@@ -165,6 +166,16 @@ namespace sw::editor
 			ws.clearSelection();
 			return;
 		}
+
+		const bool bEditsAllowed = EditorUtil::areSceneEditsAllowed();
+		if ( bEditsAllowed == false )
+		{
+			EditorWidgets::drawChip( "Play Mode", editor::style::kWarn );
+			ImGui::SameLine();
+			ImGui::TextDisabled( "Scene edits locked until Stop." );
+		}
+		if ( bEditsAllowed == false )
+			ImGui::BeginDisabled();
 
 		drawGameObjectHeader( pObj );
 
@@ -338,6 +349,9 @@ namespace sw::editor
 				break;
 			}
 		}
+
+		if ( bEditsAllowed == false )
+			ImGui::EndDisabled();
 	}
 
 	void InspectorPanel::drawGameObjectHeader( GameObject* pObj )

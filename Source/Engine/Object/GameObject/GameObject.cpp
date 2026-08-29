@@ -17,6 +17,7 @@ namespace sw
 	GameObject::GameObject()
 		: _objectId{ _s_nextObjectId.fetch_add( 1, std::memory_order_relaxed ) }
 		, _name{ "GameObject" }
+		, _prefabSourcePath{}
 		, _pOwnerManager{ nullptr }
 		, _managerIndex{ static_cast<uint32>( -1 ) }
 		, _bActive{ true }
@@ -29,6 +30,7 @@ namespace sw
 	GameObject::GameObject( hashed_string name )
 		: _objectId{ _s_nextObjectId.fetch_add( 1, std::memory_order_relaxed ) }
 		, _name{ name }
+		, _prefabSourcePath{}
 		, _pOwnerManager{ nullptr }
 		, _managerIndex{ static_cast<uint32>( -1 ) }
 		, _bActive{ true }
@@ -55,6 +57,11 @@ namespace sw
 		}
 
 		clearComponents();
+	}
+
+	void GameObject::setPrefabSourcePath( string_view prefabPath )
+	{
+		_prefabSourcePath = string{ prefabPath };
 	}
 
 	const TypeInfo* GameObject::getTypeInfo() const

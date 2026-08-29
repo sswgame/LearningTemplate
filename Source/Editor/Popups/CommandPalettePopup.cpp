@@ -61,13 +61,17 @@ namespace sw::editor
 			{
 				EditorContext* pContext = EditorContext::get();
 				if ( pContext != nullptr && pContext->getWorkspace().isSceneDirty() && EditorPlaySession::isStopped() )
-					pContext->getNotificationManager().push( "Play", "Scene has unsaved changes", NotificationType::Warning );
+				{
+					pContext->getNotificationManager().push( "Play", "Scene has unsaved changes. Use Game View Play to confirm.",
+															 NotificationType::Warning );
+					return;
+				}
 				EditorPlaySession::play();
 			}
 
 			static void paletteSaveScene()
 			{
-				EditorAssetCommands::saveActiveSceneOrPrompt();
+				EditorAssetCommands::saveFocusedOrScene();
 			}
 
 			static GameObject* palettePrimaryObject()
@@ -416,7 +420,7 @@ namespace sw::editor
 		if ( EditorChrome::beginSearchOverlay( overlayDesc ) )
 		{
 			EditorWidgets::drawSearchField( "##PaletteSearch", _arrSearchBuffer, sizeof( _arrSearchBuffer ),
-									 "Type a command or search objects... (Esc to close)", -1.0f, false );
+											"Type a command or search objects... (Esc to close)", -1.0f, false );
 
 			ImGui::Separator();
 

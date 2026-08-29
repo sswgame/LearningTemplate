@@ -6,12 +6,15 @@
 #include "Core/Log/Logger.h"
 
 #include "Editor/Common/Commands/EditorSceneCommands.h"
+#include "Editor/Common/EditorPlaySession.h"
+#include "Editor/Common/EditorSessionPolicy.h"
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Workspace/AssetEditorManager.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorNotificationManager.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
+#include "Editor/Panels/EditorPanelManager.h"
 
 #include "Engine/Common/EngineDefines.h"
 #include "Engine/Object/Component/2D/SpriteComponent.h"
@@ -37,9 +40,40 @@ namespace sw::editor
 				if ( listPaths.empty() )
 					return;
 				if ( EditorAssetCommands::saveActiveScene( listPaths[0] ) )
+				{
 					EditorContext::get()->getNotificationManager().push( "Scene", "Saved", NotificationType::Success );
+					EditorContext* pContext = EditorContext::get();
+					if ( pContext != nullptr && pContext->getWorkspace().getPendingSceneAction() != EditorPendingSceneAction::None )
+						EditorAssetCommands::applyUnsavedSceneChoice( EditorUnsavedChoice::Discard );
+				}
 				else
 					EditorContext::get()->getNotificationManager().push( "Scene", "Save failed", NotificationType::Error );
+			}
+
+			static bool isPlayStoppedForSceneSwap()
+			{
+				if ( EditorPlaySession::isStopped() )
+					return true;
+				EditorContext* pContext = EditorContext::get();
+				if ( pContext != nullptr )
+					pContext->getNotificationManager().push( "Scene", "Stop play before opening or creating a scene",
+															 NotificationType::Warning );
+				return false;
+			}
+
+			static void runPendingSceneAction()
+			{
+				EditorContext* pContext = EditorContext::get();
+				if ( pContext == nullptr )
+					return;
+				EditorWorkspace&			   ws	  = pContext->getWorkspace();
+				const EditorPendingSceneAction action = ws.getPendingSceneAction();
+				const string				   path	  = ws.getPendingSceneActionPath();
+				ws.clearPendingSceneAction();
+				if ( action == EditorPendingSceneAction::Load )
+					EditorAssetCommands::loadScene( path );
+				else if ( action == EditorPendingSceneAction::New )
+					EditorAssetCommands::tryCreateNewScene();
 			}
 
 			static bool tryClassifyResourceFile( string_view absPath, EditorResourceIndexEntry& outEntry )
@@ -126,7 +160,7 @@ namespace sw::editor
 
 		const string pathStr{ relativePath };
 		if ( EditorUtil::isSceneAssetPath( pathStr.c_str() ) )
-			return loadScene( pathStr );
+			return tryOpenScene( pathStr );
 
 		if ( EditorUtil::isMaterialAssetPath( pathStr.c_str() ) )
 		{
@@ -162,6 +196,109 @@ namespace sw::editor
 		return true;
 	}
 
+	bool EditorAssetCommands::tryOpenScene( string_view path )
+	{
+		if ( EditorAssetCommandsInternal::isPlayStoppedForSceneSwap() == false )
+			return false;
+
+		EditorContext* pContext = EditorContext::get();
+		if ( pContext != nullptr && EditorSessionPolicy::needsUnsavedPrompt( pContext->getWorkspace().isSceneDirty() ) )
+		{
+			pContext->getWorkspace().setPendingSceneAction( EditorPendingSceneAction::Load, path );
+			return true;
+		}
+		return loadScene( path );
+	}
+
+	bool EditorAssetCommands::tryCreateNewScene()
+	{
+		if ( EditorAssetCommandsInternal::isPlayStoppedForSceneSwap() == false )
+			return false;
+
+		EditorContext* pContext = EditorContext::get();
+		if ( pContext != nullptr && EditorSessionPolicy::needsUnsavedPrompt( pContext->getWorkspace().isSceneDirty() ) )
+		{
+			pContext->getWorkspace().setPendingSceneAction( EditorPendingSceneAction::New );
+			return true;
+		}
+
+		SceneManager* pSceneManager = editor::getService<SceneManager>();
+		if ( pSceneManager == nullptr )
+			return false;
+		Scene* pScene = pSceneManager->createEmptyActiveScene( "Untitled" );
+		if ( pScene == nullptr )
+			return false;
+		syncAfterSceneGenerationChange();
+		if ( pContext != nullptr )
+			pContext->getNotificationManager().push( "Scene", "New scene", NotificationType::Info );
+		return true;
+	}
+
+	void EditorAssetCommands::saveFocusedOrScene()
+	{
+		EditorContext* pContext = EditorContext::get();
+		if ( pContext != nullptr && pContext->getPanelManager().saveFocusedDirtyDocument() )
+			return;
+		saveActiveSceneOrPrompt();
+	}
+
+	void EditorAssetCommands::applyUnsavedSceneChoice( EditorUnsavedChoice choice )
+	{
+		EditorContext* pContext = EditorContext::get();
+		if ( pContext == nullptr )
+			return;
+		EditorWorkspace& ws = pContext->getWorkspace();
+		if ( ws.getPendingSceneAction() == EditorPendingSceneAction::None )
+			return;
+
+		if ( EditorSessionPolicy::shouldSaveBeforeAction( choice ) )
+		{
+			SceneManager* pSceneManager = editor::getService<SceneManager>();
+			Scene*		  pScene		= ( pSceneManager != nullptr ) ? pSceneManager->getActiveScene() : nullptr;
+			if ( pScene != nullptr && pScene->getSourcePath().empty() == false )
+			{
+				if ( saveActiveScene( {} ) == false )
+				{
+					pContext->getNotificationManager().push( "Scene", "Save failed", NotificationType::Error );
+					return;
+				}
+			}
+			else
+			{
+				saveActiveSceneOrPrompt();
+				return;
+			}
+		}
+
+		if ( EditorSessionPolicy::shouldClearDirtyWithoutSave( choice ) )
+			ws.clearSceneDirty();
+
+		if ( EditorSessionPolicy::shouldProceedWithAction( choice ) )
+			EditorAssetCommandsInternal::runPendingSceneAction();
+		else
+			ws.clearPendingSceneAction();
+	}
+
+	void EditorAssetCommands::syncAfterSceneGenerationChange()
+	{
+		EditorContext* pContext		 = EditorContext::get();
+		SceneManager*  pSceneManager = editor::getService<SceneManager>();
+		if ( pContext == nullptr || pSceneManager == nullptr )
+			return;
+
+		EditorWorkspace& ws			= pContext->getWorkspace();
+		const uint64	 generation = pSceneManager->getSceneGeneration();
+		if ( generation == ws.getObservedSceneGeneration() )
+			return;
+
+		ws.setObservedSceneGeneration( generation );
+		ws.clearSceneDirty();
+		ws.clearSelection();
+		Scene*			   pScene	= pSceneManager->getActiveScene();
+		GameObjectManager* pManager = ( pScene != nullptr ) ? pScene->getObjectManager() : nullptr;
+		ws.rebuildGameObjectPrefabMap( pManager );
+	}
+
 	void EditorAssetCommands::focusPath( string_view relativePath )
 	{
 		EditorContext* pContext = EditorContext::get();
@@ -173,6 +310,8 @@ namespace sw::editor
 	GameObject* EditorAssetCommands::spawnPrefab( GameObjectManager* pManager, const utf8* pPath, GameObject* pParent,
 												  const utf8* pUndoLabel )
 	{
+		if ( EditorUtil::areSceneEditsAllowed() == false )
+			return nullptr;
 		GameObject* pSpawned = EditorUtil::spawnPrefabFromAssetPath( pManager, pPath, pParent );
 		if ( pSpawned == nullptr )
 			return nullptr;
@@ -185,6 +324,8 @@ namespace sw::editor
 
 	GameObject* EditorAssetCommands::spawnSprite( GameObjectManager* pManager, const utf8* pPath, const float3& worldPos )
 	{
+		if ( EditorUtil::areSceneEditsAllowed() == false )
+			return nullptr;
 		if ( pManager == nullptr || pPath == nullptr || pPath[0] == '\0' )
 			return nullptr;
 
@@ -232,7 +373,7 @@ namespace sw::editor
 
 		if ( EditorUtil::isSceneAssetPath( pPath ) )
 		{
-			loadScene( pPath );
+			tryOpenScene( pPath );
 			return;
 		}
 

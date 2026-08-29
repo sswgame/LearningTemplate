@@ -90,8 +90,7 @@ namespace sw::editor
 
 	void DialogueGraphPanel::drawContent()
 	{
-		if ( hasNewFocusedDocument() )
-			acceptFocusedDocument();
+		updateFocusedDocument();
 		if ( isDocumentLoaded() == false )
 			loadGraphData();
 
@@ -127,6 +126,7 @@ namespace sw::editor
 					_listLink.clear();
 					ensureDefaults();
 					_nodeGraph.requestContentFit();
+					markDocumentDirty();
 				}
 				ImGui::SameLine();
 				if ( ImGui::Button( "Zoom Fit" ) )
@@ -296,6 +296,7 @@ namespace sw::editor
 							newLink._toPin	 = pinB;
 						}
 						_listLink.push_back( newLink );
+						markDocumentDirty();
 					}
 				}
 			}
@@ -315,6 +316,7 @@ namespace sw::editor
 													 [id]( const DialogueLink& l )
 					{ return l._id == id; } ),
 									 _listLink.end() );
+					markDocumentDirty();
 				}
 			}
 			ed::NodeId nodeId;
@@ -333,6 +335,7 @@ namespace sw::editor
 									 _listLink.end() );
 					if ( _selectedNodeId == id )
 						_selectedNodeId = 0;
+					markDocumentDirty();
 				}
 			}
 			ed::EndDelete();
@@ -540,6 +543,13 @@ namespace sw::editor
 				ensureDefaults();
 			_nodeGraph.requestContentFit();
 		} ) );
+		clearDocumentDirty();
+	}
+
+	bool DialogueGraphPanel::saveDocument()
+	{
+		saveGraphData();
+		return true;
 	}
 
 	int32 DialogueGraphPanel::nextNodeId() const
@@ -567,5 +577,6 @@ namespace sw::editor
 
 		_listNode.push_back( node );
 		_selectedNodeId = node._id;
+		markDocumentDirty();
 	}
 } // namespace sw::editor

@@ -4,6 +4,7 @@
 
 #include "Editor/Common/Commands/EditorAssetCommands.h"
 #include "Editor/Common/Commands/EditorSceneCommands.h"
+#include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Gui/EditorChrome.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorActionMenuManager.h"
@@ -137,8 +138,13 @@ namespace sw::editor
 				if ( ImGui::MenuItem( "Select Owner GameObject" ) )
 					EditorContext::get()->getWorkspace().selectGameObject( GameObjectPtr{ pObj } );
 
+				const bool bEditsAllowed = EditorUtil::areSceneEditsAllowed();
+				if ( bEditsAllowed == false )
+					ImGui::BeginDisabled();
 				if ( ImGui::MenuItem( "Remove Component" ) && pComp != nullptr && pManager != nullptr )
 					EditorSceneCommands::destroyComponent( pManager, pObj, pComp );
+				if ( bEditsAllowed == false )
+					ImGui::EndDisabled();
 
 				ImGui::EndPopup();
 			}
@@ -239,6 +245,10 @@ namespace sw::editor
 				if ( ImGui::BeginPopupContextItem( "GOCtx" ) == false )
 					return;
 
+				const bool bEditsAllowed = EditorUtil::areSceneEditsAllowed();
+				if ( bEditsAllowed == false )
+					ImGui::BeginDisabled();
+
 				if ( ImGui::MenuItem( "Create GameObject" ) )
 					EditorSceneCommands::create( pManager, nullptr );
 
@@ -283,6 +293,8 @@ namespace sw::editor
 				if ( ImGui::MenuItem( "Destroy GameObject", "Delete" ) )
 					EditorSceneCommands::destroy( pManager, pObj );
 
+				if ( bEditsAllowed == false )
+					ImGui::EndDisabled();
 				ImGui::EndPopup();
 			}
 
@@ -417,7 +429,7 @@ namespace sw::editor
 				}
 
 				// Inline Rename Input
-				if ( renamingObjectId == objectId )
+				if ( renamingObjectId == objectId && EditorUtil::areSceneEditsAllowed() )
 				{
 					ImGui::SameLine();
 					ImGui::SetNextItemWidth( 160.0f );
@@ -524,12 +536,22 @@ namespace sw::editor
 		// 상단 툴바: 생성 버튼 + 검색창
 		if ( EditorChrome::beginToolbar( "##HierarchyToolbar" ) )
 		{
+			const bool bEditsAllowed = EditorUtil::areSceneEditsAllowed();
+			if ( bEditsAllowed == false )
+			{
+				EditorWidgets::drawChip( "Play Mode", editor::style::kWarn );
+				ImGui::SameLine();
+			}
+			if ( bEditsAllowed == false )
+				ImGui::BeginDisabled();
 			if ( ImGui::Button( "+ Create" ) )
 				EditorSceneCommands::create( pManager, nullptr );
+			if ( bEditsAllowed == false )
+				ImGui::EndDisabled();
 
 			ImGui::SameLine();
 			EditorWidgets::drawSearchField( "##HierarchyFilter", _arrFilterBuffer, sizeof( _arrFilterBuffer ),
-									 "Search (t:Mesh, tag:Player)...", 0.0f, false );
+											"Search (t:Mesh, tag:Player)...", 0.0f, false );
 		}
 		EditorChrome::endToolbar();
 

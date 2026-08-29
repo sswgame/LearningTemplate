@@ -67,6 +67,8 @@ namespace sw::editor
 		void							drawOpenPanels();
 		void							preRenderOpenPanels( IRHIDevice* pRhiDevice );
 		void							shutdownAllPanels( IRHIDevice* pRhiDevice );
+		/** @brief 포커스된 도구 문서가 dirty이면 저장하고 true입니다. */
+		bool saveFocusedDirtyDocument();
 
 	private:
 		vector<EditorPanelEntry> _listPanel;

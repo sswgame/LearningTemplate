@@ -36,9 +36,9 @@ namespace sw::editor
 
 	void SpriteClipPanel::drawContent()
 	{
-		if ( hasNewFocusedDocument() )
+		updateFocusedDocument();
+		if ( isDocumentLoaded() == false )
 		{
-			acceptFocusedDocument();
 			if ( EditorUtil::isTextureAssetPath( getLoadedAssetPath().c_str() ) )
 			{
 				StringUtil::strncpy( _arrAtlasPath, getLoadedAssetPath().c_str(), sizeof( _arrAtlasPath ) - 1 );
@@ -50,6 +50,8 @@ namespace sw::editor
 		}
 
 		ImGui::InputText( "Atlas", _arrAtlasPath, sizeof( _arrAtlasPath ) );
+		if ( ImGui::IsItemDeactivatedAfterEdit() )
+			markDocumentDirty();
 		if ( ImGui::Button( "Load" ) )
 			loadJson();
 		ImGui::SameLine();
@@ -70,6 +72,7 @@ namespace sw::editor
 		{
 			_listFrame.push_back( Frame{} );
 			_selectedFrame = static_cast<int32>( _listFrame.size() ) - 1;
+			markDocumentDirty();
 		}
 		ImGui::SameLine();
 		if ( ImGui::Button( "Remove Frame" ) && _selectedFrame >= 0 &&
@@ -78,6 +81,7 @@ namespace sw::editor
 			_listFrame.erase( _listFrame.begin() + _selectedFrame );
 			if ( _selectedFrame >= static_cast<int32>( _listFrame.size() ) )
 				_selectedFrame = static_cast<int32>( _listFrame.size() ) - 1;
+			markDocumentDirty();
 		}
 
 		for ( int32 frameIndex = 0; frameIndex < static_cast<int32>( _listFrame.size() ); ++frameIndex )
@@ -94,10 +98,20 @@ namespace sw::editor
 		{
 			Frame& f = _listFrame[static_cast<size_t>( _selectedFrame )];
 			ImGui::DragFloat( "u", &f._u, 0.01f );
+			if ( ImGui::IsItemDeactivatedAfterEdit() )
+				markDocumentDirty();
 			ImGui::DragFloat( "v", &f._v, 0.01f );
+			if ( ImGui::IsItemDeactivatedAfterEdit() )
+				markDocumentDirty();
 			ImGui::DragFloat( "w", &f._w, 0.01f );
+			if ( ImGui::IsItemDeactivatedAfterEdit() )
+				markDocumentDirty();
 			ImGui::DragFloat( "h", &f._h, 0.01f );
+			if ( ImGui::IsItemDeactivatedAfterEdit() )
+				markDocumentDirty();
 			ImGui::InputInt( "durationMs", &f._durationMs );
+			if ( ImGui::IsItemDeactivatedAfterEdit() )
+				markDocumentDirty();
 		}
 
 		ImGui::Separator();
@@ -183,5 +197,12 @@ namespace sw::editor
 			_selectedFrame = _listFrame.empty() ? -1 : 0;
 			_selectedKey   = _listKey.empty() ? -1 : 0;
 		} ) );
+		clearDocumentDirty();
+	}
+
+	bool SpriteClipPanel::saveDocument()
+	{
+		saveJson();
+		return true;
 	}
 } // namespace sw::editor

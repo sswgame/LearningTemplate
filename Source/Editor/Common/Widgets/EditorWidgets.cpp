@@ -424,4 +424,27 @@ namespace sw::editor
 			return false;
 		return ImGui::IsKeyPressed( ImGuiKey_Enter, bRepeat );
 	}
+
+	EditorUnsavedChoice EditorWidgets::drawUnsavedChangesModal( const utf8* pPopupId, const utf8* pMessage )
+	{
+		if ( pPopupId == nullptr || pPopupId[0] == '\0' )
+			return EditorUnsavedChoice::None;
+		if ( ImGui::BeginPopupModal( pPopupId, nullptr, ImGuiWindowFlags_AlwaysAutoResize ) == false )
+			return EditorUnsavedChoice::None;
+
+		ImGui::TextUnformatted( pMessage != nullptr ? pMessage : "You have unsaved changes." );
+		EditorUnsavedChoice choice = EditorUnsavedChoice::None;
+		if ( ImGui::Button( "Save" ) )
+			choice = EditorUnsavedChoice::Save;
+		ImGui::SameLine();
+		if ( ImGui::Button( "Don't Save" ) )
+			choice = EditorUnsavedChoice::Discard;
+		ImGui::SameLine();
+		if ( ImGui::Button( "Cancel" ) )
+			choice = EditorUnsavedChoice::Cancel;
+		if ( choice != EditorUnsavedChoice::None )
+			ImGui::CloseCurrentPopup();
+		ImGui::EndPopup();
+		return choice;
+	}
 } // namespace sw::editor

@@ -287,7 +287,7 @@ namespace sw::editor
 
 		EditorMenuBar::processHotkeys();
 		EditorMenuBar::processOpenPanelRequests();
-		EditorMenuBar::processPendingSceneLoad();
+		EditorMenuBar::processSceneSession();
 
 		BLOCK( "Editor Panels Draw" )
 		{

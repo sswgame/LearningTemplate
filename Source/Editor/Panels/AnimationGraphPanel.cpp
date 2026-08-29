@@ -62,21 +62,29 @@ namespace sw::editor
 
 	void AnimationGraphPanel::drawContent()
 	{
-		if ( hasNewFocusedDocument() )
-			acceptFocusedDocument();
+		updateFocusedDocument();
 		if ( isDocumentLoaded() == false )
 			loadGraphData();
 
 		if ( EditorChrome::beginToolbar( "##AnimGraphToolbar" ) )
 		{
 			if ( ImGui::Button( "Add Idle" ) )
+			{
 				addNamedNode( "Idle" );
+				markDocumentDirty();
+			}
 			ImGui::SameLine();
 			if ( ImGui::Button( "Add Walk" ) )
+			{
 				addNamedNode( "Walk" );
+				markDocumentDirty();
+			}
 			ImGui::SameLine();
 			if ( ImGui::Button( "Add Attack" ) )
+			{
 				addNamedNode( "Attack" );
+				markDocumentDirty();
+			}
 			ImGui::SameLine();
 			if ( ImGui::Button( "Link Selected" ) && _listNode.size() >= 2 )
 			{
@@ -85,6 +93,7 @@ namespace sw::editor
 				l._fromNode = _listNode[_listNode.size() - 2]._id;
 				l._toNode	= _listNode[_listNode.size() - 1]._id;
 				_listLink.push_back( l );
+				markDocumentDirty();
 			}
 			ImGui::SameLine();
 			if ( ImGui::Button( "Load" ) )
@@ -155,6 +164,7 @@ namespace sw::editor
 						link._toNode   = aNode;
 					}
 					_listLink.push_back( link );
+					markDocumentDirty();
 				}
 			}
 			ed::EndCreate();
@@ -172,6 +182,7 @@ namespace sw::editor
 													 [id]( const GraphLink& link )
 					{ return link._id == id; } ),
 									 _listLink.end() );
+					markDocumentDirty();
 				}
 			}
 			ed::NodeId nodeId;
@@ -188,6 +199,7 @@ namespace sw::editor
 													 [id]( const GraphLink& link )
 					{ return link._fromNode == id || link._toNode == id; } ),
 									 _listLink.end() );
+					markDocumentDirty();
 				}
 			}
 			ed::EndDelete();
@@ -269,6 +281,13 @@ namespace sw::editor
 				ensureDefaults();
 			_nodeGraph.requestContentFit();
 		} ) );
+		clearDocumentDirty();
+	}
+
+	bool AnimationGraphPanel::saveDocument()
+	{
+		saveGraphData();
+		return true;
 	}
 
 	int32 AnimationGraphPanel::nextNodeId() const

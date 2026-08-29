@@ -5,6 +5,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Editor/Common/Commands/EditorToolAssetCommands.h"
+#include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/SelectionManager.h"
 
@@ -145,6 +146,13 @@ namespace sw::editor
 
 		ImGui::Separator();
 
+		const bool bEditsAllowed = EditorUtil::areSceneEditsAllowed();
+		if ( bEditsAllowed == false )
+		{
+			ImGui::TextDisabled( "Scene edits locked until Stop." );
+			ImGui::BeginDisabled();
+		}
+
 		if ( ImGui::Button( "Apply All Overrides to Template", ImVec2( 220.0f, 0.0f ) ) )
 		{
 			EditorToolAssetCommands::applyPrefabOverridesToTemplate( PrefabEditorPanelInternal::getPrefabTargetInstance(), _selectedPrefabPath );
@@ -159,5 +167,8 @@ namespace sw::editor
 			scanPrefabOverrides( _selectedPrefabPath.c_str() );
 			SW_LOG_TRACE( "Reverted all overrides on %s", _selectedInstanceName.c_str() );
 		}
+
+		if ( bEditsAllowed == false )
+			ImGui::EndDisabled();
 	}
 } // namespace sw::editor

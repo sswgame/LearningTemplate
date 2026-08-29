@@ -153,14 +153,20 @@ namespace sw
 				pGo = _objectManager->createGameObject( hashed_string( ent._name.c_str() ) );
 			}
 
-			if ( pGo != nullptr && ent._embeddedXml.empty() == false )
+			if ( pGo != nullptr )
 			{
-				if ( ObjectStateSerializer::loadFromXmlString( pGo, ent._embeddedXml ) == false )
-					SW_LOG_WARNING( "Embedded state apply failed for '%#'", ent._name );
+				if ( ent._prefab.empty() == false )
+					pGo->setPrefabSourcePath( ent._prefab );
 
-				const bool bHasHierarchy = ( ent._embeddedXml.find( "_attachOwner=" ) != string::npos );
-				if ( bHasHierarchy )
-					listRebindTargets.emplace_back( pGo, ent._embeddedXml );
+				if ( ent._embeddedXml.empty() == false )
+				{
+					if ( ObjectStateSerializer::loadFromXmlString( pGo, ent._embeddedXml ) == false )
+						SW_LOG_WARNING( "Embedded state apply failed for '%#'", ent._name );
+
+					const bool bHasHierarchy = ( ent._embeddedXml.find( "_attachOwner=" ) != string::npos );
+					if ( bHasHierarchy )
+						listRebindTargets.emplace_back( pGo, ent._embeddedXml );
+				}
 			}
 		}
 
@@ -194,8 +200,9 @@ namespace sw
 				continue;
 			SceneDocument::EntityNode node{};
 			node._name		  = pGo->getName().c_str();
+			node._prefab	  = pGo->getPrefabSourcePath();
 			node._embeddedXml = ObjectStateSerializer::saveToXmlString( pGo );
-			if ( node._embeddedXml.empty() == false )
+			if ( node._embeddedXml.empty() == false || node._prefab.empty() == false )
 				outDoc._listEntityNode.push_back( std::move( node ) );
 		}
 		return true;

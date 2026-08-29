@@ -493,6 +493,8 @@ namespace sw
 		if ( pGameObject == nullptr )
 			return nullptr;
 
+		pGameObject->setPrefabSourcePath( assetRelativePath );
+
 		if ( pAsset->getStateData().empty() == false )
 		{
 			bool   bLoadSuccess{ false };

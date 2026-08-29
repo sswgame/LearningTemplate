@@ -157,7 +157,7 @@ namespace sw::editor
 
 		if ( item._category == "Scene" )
 		{
-			EditorAssetCommands::loadScene( item._path );
+			EditorAssetCommands::tryOpenScene( item._path );
 			return;
 		}
 
@@ -183,7 +183,7 @@ namespace sw::editor
 		}
 
 		EditorWidgets::drawSearchField( "##qlSearch", _arrSearchBuffer, sizeof( _arrSearchBuffer ),
-								 "Type to search assets, scenes, game objects (ESC to cancel)...", -1.0f, true );
+										"Type to search assets, scenes, game objects (ESC to cancel)...", -1.0f, true );
 
 		vector<const QuickLauncherItem*> listFiltered;
 		listFiltered.reserve( _listAllItem.size() );

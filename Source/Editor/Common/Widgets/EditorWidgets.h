@@ -6,6 +6,8 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 
+#include "Editor/Common/EditorSessionPolicy.h"
+
 namespace sw
 {
 	struct float3;
@@ -161,5 +163,10 @@ namespace sw::editor
 		 * @brief 검색 결과 목록에서 Up/Down으로 선택을 움직이고 Enter면 true.
 		 */
 		static bool updateListSelection( int32& selectedIndex, int32 itemCount, bool bRepeat = true );
+
+		/**
+		 * @brief Save / Don't Save / Cancel 모달. 버튼이 눌리기 전에는 None입니다.
+		 */
+		static EditorUnsavedChoice drawUnsavedChangesModal( const utf8* pPopupId, const utf8* pMessage );
 	};
 } // namespace sw::editor

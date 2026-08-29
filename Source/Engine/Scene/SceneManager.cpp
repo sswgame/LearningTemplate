@@ -21,6 +21,7 @@ namespace sw
 	SceneManager::SceneManager()
 		: _listLoadedScene{}
 		, _pActiveScene{ nullptr }
+		, _sceneGeneration{ 0 }
 		, _pRHIDevice{ nullptr }
 		, _pFrameRenderer{ nullptr }
 		, _asyncLoad{ sw::make_shared<AsyncLoadSlot>() }
@@ -113,7 +114,39 @@ namespace sw
 		_listLoadedScene.push_back( std::move( scene ) );
 
 		if ( _pActiveScene == nullptr )
+		{
 			_pActiveScene = pScene;
+			++_sceneGeneration;
+		}
+
+		return pScene;
+	}
+
+	Scene* SceneManager::createEmptyActiveScene( string_view name )
+	{
+		unique_ptr<Scene> scene		= sw::make_unique<Scene>( name );
+		Scene*			  pScene	= scene.get();
+		Scene*			  pPrevious = _pActiveScene;
+
+		_listLoadedScene.push_back( std::move( scene ) );
+		_pActiveScene = pScene;
+		++_sceneGeneration;
+
+		if ( _pRHIDevice != nullptr )
+			pScene->initialize( _pRHIDevice );
+		if ( _pFrameRenderer != nullptr )
+			pScene->setFrameRenderer( _pFrameRenderer );
+
+#if !defined( SW_SHIPPING )
+		if ( engine::areEngineServicesBound() )
+			engine::getCommandStack().clear();
+#endif
+
+		if ( pPrevious != nullptr && pPrevious != pScene )
+			unloadScene( pPrevious );
+
+		if ( engine::areEngineServicesBound() )
+			engine::getResourceManager().garbageCollectUnusedAssets();
 
 		return pScene;
 	}
@@ -300,6 +333,7 @@ namespace sw
 		Scene* const previousActive = _pActiveScene;
 		_pActiveScene				= pendingScene.get();
 		_listLoadedScene.push_back( std::move( pendingScene ) );
+		++_sceneGeneration;
 
 		SW_LOG_INFO( "Active scene swapped to '%#'", _pActiveScene->getName() );
 #if !defined( SW_SHIPPING )

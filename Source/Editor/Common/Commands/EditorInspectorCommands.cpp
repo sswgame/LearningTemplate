@@ -5,14 +5,18 @@
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 
+#include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectPtr.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
+#include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneManager.h"
 #include "Engine/Utility/CommandStack.h"
 #include "Engine/Utility/Resource/ResourceManager.h"
 
@@ -24,14 +28,27 @@ namespace sw::editor
 	{
 		struct EditorInspectorCommandsInternal
 		{
-			static bool isSelectionCurrent( uint64 selectedObjectId )
+			static GameObject* findObjectById( uint64 objectId )
 			{
-				if ( selectedObjectId == 0 )
-					return true;
+				if ( objectId == 0 )
+					return nullptr;
+				SceneManager* pSceneManager = editor::getService<SceneManager>();
+				if ( pSceneManager == nullptr )
+					return nullptr;
+				Scene* pScene = pSceneManager->getActiveScene();
+				if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
+					return nullptr;
+				GameObject* pObj = pScene->getObjectManager()->findGameObjectById( objectId );
+				if ( pObj == nullptr || pObj->isPendingKill() )
+					return nullptr;
+				return pObj;
+			}
+
+			static void markSceneDirty()
+			{
 				EditorContext* pContext = EditorContext::get();
-				if ( pContext == nullptr )
-					return false;
-				return pContext->getWorkspace().getSelectedObjectId() == selectedObjectId;
+				if ( pContext != nullptr )
+					pContext->getWorkspace().markSceneDirty();
 			}
 		};
 	} // namespace
@@ -56,15 +73,18 @@ namespace sw::editor
 		cmd._label = cmdLabel;
 		cmd._undo  = [pData, size, listBefore, selectedObjectId]()
 		{
-			if ( pData != nullptr && EditorInspectorCommandsInternal::isSelectionCurrent( selectedObjectId ) )
-				Memory::copy( pData, listBefore.data(), size );
+			if ( selectedObjectId != 0 && EditorInspectorCommandsInternal::findObjectById( selectedObjectId ) == nullptr )
+				return;
+			Memory::copy( pData, listBefore.data(), size );
 		};
 		cmd._redo = [pData, size, listAfter, selectedObjectId]()
 		{
-			if ( pData != nullptr && EditorInspectorCommandsInternal::isSelectionCurrent( selectedObjectId ) )
-				Memory::copy( pData, listAfter.data(), size );
+			if ( selectedObjectId != 0 && EditorInspectorCommandsInternal::findObjectById( selectedObjectId ) == nullptr )
+				return;
+			Memory::copy( pData, listAfter.data(), size );
 		};
 		pStack->push( std::move( cmd ) );
+		EditorInspectorCommandsInternal::markSceneDirty();
 	}
 
 	void EditorInspectorCommands::pushStringEdit( string* pPtr, string before, string after, string_view label,
@@ -82,19 +102,24 @@ namespace sw::editor
 		cmd._label = cmdLabel;
 		cmd._undo  = [pPtr, before, selectedObjectId]()
 		{
-			if ( pPtr != nullptr && EditorInspectorCommandsInternal::isSelectionCurrent( selectedObjectId ) )
-				*pPtr = before;
+			if ( selectedObjectId != 0 && EditorInspectorCommandsInternal::findObjectById( selectedObjectId ) == nullptr )
+				return;
+			*pPtr = before;
 		};
 		cmd._redo = [pPtr, after, selectedObjectId]()
 		{
-			if ( pPtr != nullptr && EditorInspectorCommandsInternal::isSelectionCurrent( selectedObjectId ) )
-				*pPtr = after;
+			if ( selectedObjectId != 0 && EditorInspectorCommandsInternal::findObjectById( selectedObjectId ) == nullptr )
+				return;
+			*pPtr = after;
 		};
 		pStack->push( std::move( cmd ) );
+		EditorInspectorCommandsInternal::markSceneDirty();
 	}
 
 	bool EditorInspectorCommands::applyToPrefab( GameObject* pObj, string_view prefabPath )
 	{
+		if ( EditorUtil::areSceneEditsAllowed() == false )
+			return false;
 		if ( pObj == nullptr || prefabPath.empty() )
 			return false;
 
@@ -109,6 +134,8 @@ namespace sw::editor
 
 	bool EditorInspectorCommands::revertToPrefab( GameObject* pObj, string_view prefabPath )
 	{
+		if ( EditorUtil::areSceneEditsAllowed() == false )
+			return false;
 		if ( pObj == nullptr || prefabPath.empty() )
 			return false;
 
@@ -130,6 +157,8 @@ namespace sw::editor
 
 	void EditorInspectorCommands::unlinkPrefab( GameObject* pObj )
 	{
+		if ( EditorUtil::areSceneEditsAllowed() == false )
+			return;
 		if ( pObj == nullptr )
 			return;
 
@@ -138,5 +167,6 @@ namespace sw::editor
 			return;
 
 		pContext->getWorkspace().setGameObjectPrefabPath( pObj->getObjectId(), "" );
+		pContext->getWorkspace().markSceneDirty();
 	}
 } // namespace sw::editor

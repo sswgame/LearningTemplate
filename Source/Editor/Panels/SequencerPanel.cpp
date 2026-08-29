@@ -127,7 +127,9 @@ namespace sw::editor
 
 	void SequencerPanel::drawContent()
 	{
-		loadFromFocusedPath();
+		updateFocusedDocument();
+		if ( isDocumentLoaded() == false )
+			loadFromFocusedPath();
 
 		if ( EditorChrome::beginToolbar( "##SequencerToolbar" ) )
 		{
@@ -148,6 +150,8 @@ namespace sw::editor
 		ImGui::Text( "Current Frame: %d", _currentFrame );
 
 		ImGui::InputTextMultiline( "Cinematic Note", _arrCinematicNote, sizeof( _arrCinematicNote ), ImVec2( -1.0f, 60.0f ) );
+		if ( ImGui::IsItemDeactivatedAfterEdit() )
+			markDocumentDirty();
 
 		if ( _selected >= 0 && _selected < static_cast<int32>( _sequence->_listItems.size() ) )
 		{
@@ -156,29 +160,43 @@ namespace sw::editor
 			StringUtil::strncpy( arrNameBuf, item._name.c_str(), sizeof( arrNameBuf ) - 1 );
 			arrNameBuf[sizeof( arrNameBuf ) - 1] = '\0';
 			if ( ImGui::InputText( "Clip Name", arrNameBuf, sizeof( arrNameBuf ) ) )
+			{
 				item._name = arrNameBuf;
+				markDocumentDirty();
+			}
 			utf8 arrTargetBuf[constant::kMaxBuffer128];
 			StringUtil::strncpy( arrTargetBuf, item._targetObject.c_str(), sizeof( arrTargetBuf ) - 1 );
 			arrTargetBuf[sizeof( arrTargetBuf ) - 1] = '\0';
 			if ( ImGui::InputText( "Target Object", arrTargetBuf, sizeof( arrTargetBuf ) ) )
+			{
 				item._targetObject = arrTargetBuf;
+				markDocumentDirty();
+			}
 		}
 
 		ImSequencer::Sequencer( _sequence.get(), &_currentFrame, &_bExpanded, &_selected, &_firstFrame,
 								ImSequencer::SEQUENCER_EDIT_STARTEND | ImSequencer::SEQUENCER_ADD | ImSequencer::SEQUENCER_DEL | ImSequencer::SEQUENCER_CHANGE_FRAME );
+		if ( ImGui::IsItemEdited() )
+			markDocumentDirty();
 	}
 
 	void SequencerPanel::loadFromFocusedPath()
 	{
-		if ( _sequence == nullptr || hasNewFocusedDocument() == false )
+		if ( _sequence == nullptr )
 			return;
 
-		const string_view focused = getMatchingFocusedPath();
-		SequenceAsset	  asset;
-		if ( EditorToolAssetCommands::loadSequence( asset, focused ) == false )
+		string path = getLoadedAssetPath();
+		if ( path.empty() )
+			path = string{ getMatchingFocusedPath() };
+		if ( path.empty() )
 			return;
 
-		acceptFocusedDocument();
+		SequenceAsset asset;
+		if ( EditorToolAssetCommands::loadSequence( asset, path ) == false )
+			return;
+
+		if ( getLoadedAssetPath().empty() )
+			acceptFocusedDocument();
 		markDocumentLoaded();
 		_sequence->_frameMin = asset._frameMin;
 		_sequence->_frameMax = asset._frameMax;
@@ -253,5 +271,14 @@ namespace sw::editor
 				_sequence->_listItems.push_back( std::move( item ) );
 			}
 		} ) );
+		clearDocumentDirty();
+	}
+
+	bool SequencerPanel::saveDocument()
+	{
+		if ( getLoadedAssetPath().empty() )
+			return false;
+		saveToLoadedPath();
+		return isDocumentDirty() == false;
 	}
 } // namespace sw::editor

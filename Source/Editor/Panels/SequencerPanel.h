@@ -27,6 +27,7 @@ namespace sw::editor
 		// ------------------------------------------------------------------------------
 		/** @brief 시퀀서 UI를 그립니다. */
 		void drawContent() override;
+		bool saveDocument() override;
 
 	private:
 		void loadFromFocusedPath();

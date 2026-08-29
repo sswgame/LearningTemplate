@@ -10,6 +10,7 @@
 #include "Editor/Common/Commands/EditorAssetCommands.h"
 #include "Editor/Common/Commands/EditorSceneCommands.h"
 #include "Editor/Common/EditorCamera.h"
+#include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
@@ -769,6 +770,8 @@ namespace sw::editor
 		EditorContext* pContext = EditorContext::get();
 		if ( pContext == nullptr )
 			return;
+		if ( EditorUtil::areSceneEditsAllowed() == false )
+			return;
 
 		const vector<GameObjectPtr>& listSelected = pContext->getSelectionManager().getSelectedObjects();
 		vector<GameObject*>			 listGizmo;
@@ -1253,6 +1256,8 @@ namespace sw::editor
 														const float32* pProj )
 	{
 		if ( pAssetPath == nullptr || pView == nullptr || pProj == nullptr )
+			return;
+		if ( EditorUtil::areSceneEditsAllowed() == false )
 			return;
 
 		SceneManager* pSceneManager = editor::getService<SceneManager>();

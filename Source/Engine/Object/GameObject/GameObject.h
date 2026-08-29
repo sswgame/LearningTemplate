@@ -6,6 +6,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/Atomic.h"
+#include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 
@@ -76,6 +77,11 @@ namespace sw
 
 		/** @brief 고유 오브젝트 ID (UID) 반환 */
 		uint64 getObjectId() const { return _objectId; }
+
+		/** @brief 이 인스턴스가 스폰된 프리팹 애셋 경로를 설정합니다. 비우면 연결을 끊습니다. */
+		void setPrefabSourcePath( string_view prefabPath );
+		/** @brief 프리팹 인스턴스이면 애셋 경로, 아니면 빈 문자열입니다. */
+		const string& getPrefabSourcePath() const { return _prefabSourcePath; }
 
 		/** @brief 매니저 인스턴스 반환 */
 		class GameObjectManager* getManager() const { return _pOwnerManager; }
@@ -256,9 +262,10 @@ namespace sw
 	private:
 		uint64 _objectId; ///< 오브젝트 고유 시리얼 번호
 		PROPERTY()
-		hashed_string	   _name;		   ///< 오브젝트 식별 명칭
-		GameObjectManager* _pOwnerManager; ///< registerGameObject 시 설정되는 소유 매니저
-		uint32			   _managerIndex;  ///< Manager의 _gameObjects 내 인덱스
+		hashed_string	   _name;			  ///< 오브젝트 식별 명칭
+		string			   _prefabSourcePath; ///< 프리팹 인스턴스 소스 경로 (비반영, 씬 문서 _prefab)
+		GameObjectManager* _pOwnerManager;	  ///< registerGameObject 시 설정되는 소유 매니저
+		uint32			   _managerIndex;	  ///< Manager의 _gameObjects 내 인덱스
 		PROPERTY()
 		AtomicBool		  _bActive;				 ///< 자체 활성화 비트
 		std::atomic<bool> _bIsActiveInHierarchy; ///< 계층 반영 최종 활성 비트
