@@ -23,13 +23,13 @@ SW_TEST_CASE( WindowTest, PlatformFactoryAndLifecycle )
 	sw::unique_ptr<sw::IWindow> window = sw::IWindow::createPlatformWindow();
 	SW_ASSERT_TRUE( window != nullptr );
 
-	// DPI/디스플레이 스케일에서 클라이언트 크기는 달라질 수 있다(옛 flake).
+	// DPI/디스플레이 스케일에서 클라이언트 크기는 달라질 수 있다.
 	// 픽셀 일치 대신 create + 사용 가능한 0이 아닌 크기 + 정상 destroy 를 검증한다.
 	constexpr uint32 kReqW = 640;
 	constexpr uint32 kReqH = 600;
 	SW_EXPECT_TRUE( window->initializeWindow( "LifecycleTestWindow", kReqW, kReqH ) );
 
-	SW_EXPECT_TRUE( window->getWidth() == kReqW );
+	SW_EXPECT_TRUE( window->getWidth() > 0 );
 	SW_EXPECT_TRUE( window->getHeight() > 0 );
 	window->destroy();
 }

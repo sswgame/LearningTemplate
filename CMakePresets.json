@@ -142,8 +142,8 @@
 
     {
       "name": "CI-Shipping",
-      "displayName": "CI Shipping (Ninja, system compiler)",
-      "description": "CI Shipping without clang-cl env — runners use MSVC/system CXX",
+      "displayName": "CI Shipping (Ninja, clang-cl on Windows)",
+      "description": "CI Shipping. Windows job sets clang-cl like CI-Debug; Linux uses the system compiler plus distro libclang.",
       "inherits": "base-vcpkg",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",

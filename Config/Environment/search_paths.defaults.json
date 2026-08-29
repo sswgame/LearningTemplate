@@ -31,6 +31,9 @@
             "/usr/lib/llvm-19",
             "/usr/lib/llvm-18",
             "/usr/lib/llvm-17",
+            "/usr/lib/llvm-16",
+            "/usr/lib/llvm-15",
+            "/usr/lib/llvm-14",
             "/usr",
             "${sourceDir}/${llvm_tools_subdir}"
         ],

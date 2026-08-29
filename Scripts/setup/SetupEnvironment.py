@@ -189,15 +189,31 @@ class EnvironmentSetupManager:
             path = self.safeCallInternal("SetupVcpkg", setupVcpkg, allowBootstrap=allowBootstrap)
             vcpkgPath = normalizePath(str(path)) if path else ""
 
-        ninjaPath = getOrFindCached(
-            self.existing_config, kKeyNinjaPath, lambda: normalizePath(setupNinja() or "")
+        ninjaFound = self.safeCallInternal(
+            "SetupNinja",
+            getOrFindCached,
+            self.existing_config,
+            kKeyNinjaPath,
+            lambda: normalizePath(setupNinja() or ""),
         )
-        sccachePath = getOrFindCached(
-            self.existing_config, kKeySccachePath, lambda: normalizePath(setupSccache() or "")
+        ninjaPath = normalizePath(str(ninjaFound)) if ninjaFound else ""
+        sccacheFound = self.safeCallInternal(
+            "SetupSccache",
+            getOrFindCached,
+            self.existing_config,
+            kKeySccachePath,
+            lambda: normalizePath(setupSccache() or ""),
         )
-        systemIncludes = getOrFindCached(
-            self.existing_config, kKeySystemIncludeDirs, findSystemIncludeDirs
+        sccachePath = normalizePath(str(sccacheFound)) if sccacheFound else ""
+        systemIncludes = self.safeCallInternal(
+            "FindSystemIncludes",
+            getOrFindCached,
+            self.existing_config,
+            kKeySystemIncludeDirs,
+            findSystemIncludeDirs,
         )
+        if isinstance(systemIncludes, list) == False:
+            systemIncludes = []
 
         return vcpkgPath, ninjaPath, sccachePath, systemIncludes
 

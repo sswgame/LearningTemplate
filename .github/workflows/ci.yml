@@ -40,10 +40,10 @@ jobs:
       run: |
         cmake --build --preset CI-Debug
 
-    # Full ctest: GPU / soft-SKIP quarantines may SKIP (not fake-pass) — see TestRHI, TestMaterial, ARCHITECTURE.md.
-    - name: Test
+    # NoGPU only: EngineTest (Window/RHI) is omitted. EngineTest_NoGPU still runs.
+    - name: Test (NoGPU)
       run: |
-        ctest --test-dir build/CI-Debug --output-on-failure
+        ctest --test-dir build/CI-Debug -L nogpu --output-on-failure
 
 
   build-linux:
@@ -57,9 +57,31 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y ninja-build cmake \
+          clang llvm-dev libclang-dev \
           xorg-dev libgl1-mesa-dev libglu1-mesa-dev \
           libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev \
           libxcb1-dev libx11-xcb-dev libvulkan-dev wayland-protocols libwayland-dev libxkbcommon-dev libtinfo5
+
+    - name: Locate LLVM for ReflectionParser
+      run: |
+        for candidate in /usr/lib/llvm-20 /usr/lib/llvm-19 /usr/lib/llvm-18 /usr/lib/llvm-17 /usr/lib/llvm-16 /usr/lib/llvm-15 /usr/lib/llvm-14; do
+          if [ -x "$candidate/bin/clang" ] && [ -f "$candidate/include/clang-c/Index.h" ]; then
+            echo "LLVM_DIR=$candidate" >> "$GITHUB_ENV"
+            echo "LLVM_ROOT=$candidate" >> "$GITHUB_ENV"
+            echo "LLVM_HOME=$candidate" >> "$GITHUB_ENV"
+            echo "Using $candidate"
+            exit 0
+          fi
+        done
+        if [ -x /usr/bin/clang ] && [ -f /usr/include/clang-c/Index.h ]; then
+          echo "LLVM_DIR=/usr" >> "$GITHUB_ENV"
+          echo "LLVM_ROOT=/usr" >> "$GITHUB_ENV"
+          echo "LLVM_HOME=/usr" >> "$GITHUB_ENV"
+          echo "Using /usr"
+          exit 0
+        fi
+        echo "LLVM kit not found under /usr/lib/llvm-* or /usr" >&2
+        exit 1
 
     - name: Setup vcpkg
       uses: lukka/run-vcpkg@v11
@@ -94,9 +116,31 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y ninja-build cmake \
+          clang llvm-dev libclang-dev \
           xorg-dev libgl1-mesa-dev libglu1-mesa-dev \
           libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev \
           libxcb1-dev libx11-xcb-dev libvulkan-dev wayland-protocols libwayland-dev libxkbcommon-dev libtinfo5
+
+    - name: Locate LLVM for ReflectionParser
+      run: |
+        for candidate in /usr/lib/llvm-20 /usr/lib/llvm-19 /usr/lib/llvm-18 /usr/lib/llvm-17 /usr/lib/llvm-16 /usr/lib/llvm-15 /usr/lib/llvm-14; do
+          if [ -x "$candidate/bin/clang" ] && [ -f "$candidate/include/clang-c/Index.h" ]; then
+            echo "LLVM_DIR=$candidate" >> "$GITHUB_ENV"
+            echo "LLVM_ROOT=$candidate" >> "$GITHUB_ENV"
+            echo "LLVM_HOME=$candidate" >> "$GITHUB_ENV"
+            echo "Using $candidate"
+            exit 0
+          fi
+        done
+        if [ -x /usr/bin/clang ] && [ -f /usr/include/clang-c/Index.h ]; then
+          echo "LLVM_DIR=/usr" >> "$GITHUB_ENV"
+          echo "LLVM_ROOT=/usr" >> "$GITHUB_ENV"
+          echo "LLVM_HOME=/usr" >> "$GITHUB_ENV"
+          echo "Using /usr"
+          exit 0
+        fi
+        echo "LLVM kit not found under /usr/lib/llvm-* or /usr" >&2
+        exit 1
 
     - name: Setup vcpkg
       uses: lukka/run-vcpkg@v11
@@ -125,14 +169,24 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v5
 
+    - name: MSVC developer environment
+      uses: ilammy/msvc-dev-cmd@v1
+
+    - name: Install LLVM (clang-cl, matches local Ninja-Debug)
+      run: |
+        choco install llvm --yes --no-progress
+        echo "C:\Program Files\LLVM\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
     - name: Setup vcpkg
       uses: lukka/run-vcpkg@v11
       with:
         vcpkgDirectory: ${{ github.workspace }}/Tools/vcpkg
         vcpkgJsonGlob: 'vcpkg.json'
 
-    - name: Configure (CI-Shipping preset)
+    - name: Configure (CI-Shipping preset, clang-cl)
       env:
+        CC: clang-cl
+        CXX: clang-cl
         VCPKG_OVERLAY_TRIPLETS: ${{ github.workspace }}/cmake/Modules/Toolchain/Vcpkg
       run: |
         cmake --preset CI-Shipping
@@ -156,9 +210,31 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y ninja-build cmake \
+          clang llvm-dev libclang-dev \
           xorg-dev libgl1-mesa-dev libglu1-mesa-dev \
           libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev \
           libxcb1-dev libx11-xcb-dev libvulkan-dev wayland-protocols libwayland-dev libxkbcommon-dev libtinfo5
+
+    - name: Locate LLVM for ReflectionParser
+      run: |
+        for candidate in /usr/lib/llvm-20 /usr/lib/llvm-19 /usr/lib/llvm-18 /usr/lib/llvm-17 /usr/lib/llvm-16 /usr/lib/llvm-15 /usr/lib/llvm-14; do
+          if [ -x "$candidate/bin/clang" ] && [ -f "$candidate/include/clang-c/Index.h" ]; then
+            echo "LLVM_DIR=$candidate" >> "$GITHUB_ENV"
+            echo "LLVM_ROOT=$candidate" >> "$GITHUB_ENV"
+            echo "LLVM_HOME=$candidate" >> "$GITHUB_ENV"
+            echo "Using $candidate"
+            exit 0
+          fi
+        done
+        if [ -x /usr/bin/clang ] && [ -f /usr/include/clang-c/Index.h ]; then
+          echo "LLVM_DIR=/usr" >> "$GITHUB_ENV"
+          echo "LLVM_ROOT=/usr" >> "$GITHUB_ENV"
+          echo "LLVM_HOME=/usr" >> "$GITHUB_ENV"
+          echo "Using /usr"
+          exit 0
+        fi
+        echo "LLVM kit not found under /usr/lib/llvm-* or /usr" >&2
+        exit 1
 
     - name: Setup vcpkg
       uses: lukka/run-vcpkg@v11

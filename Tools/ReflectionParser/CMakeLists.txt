@@ -25,6 +25,20 @@ if(NOT DETECTED_LLVM_DIR AND EXISTS "${swEngineCfg}")
     endif()
 endif()
 
+# env/toolchain 에 없으면 distro 패키지 경로를 찾습니다 (CI Ubuntu llvm-14 등).
+if(NOT DETECTED_LLVM_DIR)
+    foreach(_swLlvmMajor 20 19 18 17 16 15 14)
+        set(_swLlvmCandidate "/usr/lib/llvm-${_swLlvmMajor}")
+        if(EXISTS "${_swLlvmCandidate}/include/clang-c/Index.h")
+            set(DETECTED_LLVM_DIR "${_swLlvmCandidate}")
+            message(STATUS "[ReflectionParser] Using distro LLVM: ${DETECTED_LLVM_DIR}")
+            break()
+        endif()
+        unset(_swLlvmCandidate)
+    endforeach()
+    unset(_swLlvmMajor)
+endif()
+
 # llvm_path 가 없으면 검색을 포기합니다.
 if(NOT DETECTED_LLVM_DIR)
     message(STATUS "[ReflectionParser] LLVM directory not detected, skipping.")
@@ -39,14 +53,16 @@ set(CLANG_SEARCH_PATHS
 )
 
 find_library(LIBCLANG_LIB
-    NAMES libclang clang
+    NAMES libclang clang clang-20 clang-19 clang-18 clang-17 clang-16 clang-15 clang-14
     PATHS ${CLANG_SEARCH_PATHS}
     NO_DEFAULT_PATH
 )
 
 find_path(LIBCLANG_INCLUDE_DIR
     NAMES clang-c/Index.h
-    PATHS "${LLVM_INSTALL_PREFIX}/include"
+    PATHS
+        "${LLVM_INSTALL_PREFIX}/include"
+        /usr/include
     NO_DEFAULT_PATH
 )
 

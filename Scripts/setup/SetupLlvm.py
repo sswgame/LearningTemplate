@@ -88,7 +88,14 @@ def findLibClangDllPath(llvmPath: str) -> str:
     searchDirs: List[Path] = []
     if llvmPath:
         root = Path(llvmPath)
-        searchDirs.extend([root / "bin", root / "lib"])
+        searchDirs.extend(
+            [
+                root / "bin",
+                root / "lib",
+                root / "lib" / "x86_64-linux-gnu",
+                root / "lib64",
+            ]
+        )
 
     found = findFirstExistingFile(searchDirs, libNames)
     if found:
@@ -101,6 +108,16 @@ def findLibClangDllPath(llvmPath: str) -> str:
         found = findFirstExistingFileRecursive([Path(llvmPath)], libNames)
         if found:
             return normalizePath(found)
+        root = Path(llvmPath)
+        globMatches: list[Path] = []
+        for folder in (root / "bin", root / "lib", root / "lib" / "x86_64-linux-gnu", root / "lib64"):
+            if folder.is_dir() is False:
+                continue
+            globMatches.extend(folder.glob("libclang.so*"))
+            globMatches.extend(folder.glob("libclang-*.so*"))
+        for match in sorted(globMatches):
+            if match.is_file():
+                return normalizePath(str(match))
     return ""
 
 def llvmResourceMajor(path: str) -> int:
