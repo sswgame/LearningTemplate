@@ -36,16 +36,14 @@ namespace sw
 			const string sourceSep = FileUtil::normalizeSeparators( sourceFilePath );
 			for ( const string& includeRoot : includePaths )
 			{
-				const string rootSep = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( includeRoot ) );
-				if ( rootSep.empty() )
+				const string rootSep  = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( includeRoot ) );
+				const string rootNorm = FileUtil::normalizePath( rootSep );
+				const string srcNorm  = FileUtil::normalizePath( sourceSep );
+				if ( rootNorm.empty() || FileUtil::startsWithPathComponent( srcNorm, rootNorm ) == false )
 					continue;
-				const string rootPrefix = rootSep + "/";
-				if ( sourceSep.size() <= rootPrefix.size() )
+				if ( srcNorm.size() == rootNorm.size() )
 					continue;
-				const string sourcePrefix = sourceSep.substr( 0, rootPrefix.size() );
-				if ( FileUtil::pathsEqualNormalized( sourcePrefix, rootPrefix ) == false )
-					continue;
-				return sourceSep.substr( rootPrefix.size() );
+				return FileUtil::suffixAfterPathComponent( sourceSep, rootSep );
 			}
 			return FileUtil::getFileNamePart( sourceFilePath );
 		}
