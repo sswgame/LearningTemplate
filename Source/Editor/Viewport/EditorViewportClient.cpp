@@ -2,6 +2,7 @@
 
 #include "Editor/Viewport/EditorViewportClient.h"
 
+#include "Core/Common/StdHeaders.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
@@ -33,7 +34,6 @@
 
 #include <imgui.h>
 #include <ImGuizmo.h>
-#include <algorithm>
 
 namespace sw::editor
 {

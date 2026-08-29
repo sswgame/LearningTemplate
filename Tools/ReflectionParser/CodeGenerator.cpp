@@ -820,7 +820,8 @@ namespace sw
 		}
 		for ( utf8& c : result )
 		{
-			if ( std::isalnum( static_cast<uint8>( c ) ) == 0 && c != '_' )
+			const bool bIsAlphaNum = ( 'a' <= c && c <= 'z' ) || ( 'A' <= c && c <= 'Z' ) || ( '0' <= c && c <= '9' );
+			if ( bIsAlphaNum == false && c != '_' )
 				c = '_';
 		}
 		return result;

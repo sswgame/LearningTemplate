@@ -3,11 +3,10 @@
  * @brief Chase-Lev Lock-Free Work-Stealing Deque
  */
 #pragma once
+#include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Memory/Memory.h"
-
-#include <memory>
 
 namespace sw
 {

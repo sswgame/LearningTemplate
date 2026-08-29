@@ -5,15 +5,13 @@
  *          bind()만 (start 없음) → submit()이 호출 스레드에서 executeInline
  */
 #pragma once
+#include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Memory/LinearAllocator.h"
 
 #include "Engine/EngineMinimal.h"
 #include "Engine/Graphics/RenderPass/RenderFramePacket.h"
-
-#include <array>
-#include <condition_variable>
 
 namespace sw
 {

@@ -3,8 +3,7 @@
 #include "Engine/Window/NativeWindowEvent.h"
 
 #if defined( SW_PLATFORM_LINUX )
-	#include <X11/Xlib.h>
-	#include "Core/Common/X11MacroUndef.h"
+	#include "Core/Common/PlatformOsHeaders.h"
 
 namespace sw
 {

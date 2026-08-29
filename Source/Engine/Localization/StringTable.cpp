@@ -2,6 +2,7 @@
 
 #include "Engine/Localization/StringTable.h"
 
+#include "Core/Common/StdHeaders.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
@@ -9,8 +10,6 @@
 #include "Engine/Utility/Json/JsonDocument.h"
 #include "Engine/Utility/Resource/ResourceUtil.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
-
-#include <shared_mutex>
 
 SW_LOG_CALLER( "StringTable" );
 namespace sw

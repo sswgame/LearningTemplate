@@ -3,7 +3,6 @@
  * @brief ImGui GPU 렌더러 백엔드 추상 인터페이스 (RHI별 구현)
  */
 #pragma once
-#include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
 #include "Core/Memory/Memory.h"
 

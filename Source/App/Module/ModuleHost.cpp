@@ -95,7 +95,7 @@ namespace sw
 		, _pRHI{ nullptr }
 		, _pWindow{ nullptr }
 		, _pRenderThread{ nullptr }
-		, _bEnableEditor{ 0 }
+		, _bEnableEditor{ SW_FALSE }
 		, _reserved{ 0 }
 		, _listGameSavedState{}
 	{

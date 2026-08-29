@@ -3,15 +3,11 @@
  * @brief 해시셋. SW_USE_DOD_HASHMAP 이면 밀집 버킷, 아니면 std::unordered_set 래퍼.
  */
 #pragma once
+#include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/DataRaceDetector.h"
-#include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
-
-#include <functional>
-#include <memory>
-#include <unordered_set>
 
 namespace sw
 {

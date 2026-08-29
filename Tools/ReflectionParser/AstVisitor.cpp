@@ -56,13 +56,22 @@ namespace sw
 			}
 
 			/**
-			 * @brief 특정 접두사(예: "REFLECT;", "PROPERTY;")와 일치하는 AnnotateAttr 커서 탐색 상태
+			 * @brief `CXCursor_AnnotateAttr` 노드에서 특정 접두사를 검색하기 위한 컨텍스트 DTO
 			 */
 			struct AnnotationSearch
 			{
-				string_view _prefix;
-				string		_spelling;
-				bool		_bFound = false;
+				string_view			   _prefix;
+				string				   _spelling;
+				uint8				   _bFound	 : 1;
+				[[maybe_unused]] uint8 _reserved : 7;
+
+				explicit AnnotationSearch( string_view prefix )
+					: _prefix{ prefix }
+					, _spelling{}
+					, _bFound{ SW_FALSE }
+					, _reserved{ 0 }
+				{
+				}
 			};
 
 			/**
@@ -77,7 +86,7 @@ namespace sw
 					const string spelling = cxStringToStd( clang_getCursorSpelling( cursor ) );
 					if ( string_view( spelling ).find( search->_prefix ) != string_view::npos )
 					{
-						search->_bFound	  = true;
+						search->_bFound	  = SW_TRUE;
 						search->_spelling = spelling;
 						return CXChildVisit_Break; // 원하는 어노테이션을 찾았으므로 순회 중단
 					}
@@ -90,12 +99,21 @@ namespace sw
 			{
 				struct Entry
 				{
-					const utf8* _pPrefix = nullptr;
-					string		_spelling;
-					bool		_bFound = false;
+					const utf8*			   _pPrefix;
+					string				   _spelling;
+					uint8				   _bFound	 : 1;
+					[[maybe_unused]] uint8 _reserved : 7;
+
+					Entry()
+						: _pPrefix{ nullptr }
+						, _spelling{}
+						, _bFound{ SW_FALSE }
+						, _reserved{ 0 }
+					{
+					}
 				};
 
-				Entry _arrEntries[4]; ///< 충분한 크기로 고정, nullptr 로 빈 슬롯 표시
+				Entry _arrEntries[4]{}; ///< 충분한 크기로 고정, nullptr 로 빈 슬롯 표시
 				int32 _count = 0;
 
 				void add( const utf8* prefix )
@@ -118,6 +136,9 @@ namespace sw
 				}
 			};
 
+			/**
+			 * @brief 여러 어노테이션 접두사를 한 번의 자식 순회로 매칭하는 콜백.
+			 */
 			static CXChildVisitResult multiAnnotationVisitor( CXCursor cursor, CXCursor, CXClientData data )
 			{
 				MultiAnnotationSearch* multi = static_cast<MultiAnnotationSearch*>( data );
@@ -129,9 +150,9 @@ namespace sw
 				for ( int32 entryIndex = 0; entryIndex < multi->_count; ++entryIndex )
 				{
 					MultiAnnotationSearch::Entry& entry = multi->_arrEntries[entryIndex];
-					if ( entry._bFound == false && spelling.find( entry._pPrefix ) != string::npos )
+					if ( entry._bFound == SW_FALSE && spelling.find( entry._pPrefix ) != string::npos )
 					{
-						entry._bFound	= true;
+						entry._bFound	= SW_TRUE;
 						entry._spelling = spelling;
 					}
 				}
@@ -362,9 +383,18 @@ namespace sw
 
 			struct MethodCollector
 			{
-				vector<ParsedFunctionInfo>*			_pMethods		   = nullptr;
-				const MultiAnnotationSearch::Entry* _pFuncEntry		   = nullptr;
-				bool								_bSkipConstructors = false; ///< Abstract / Static 타입
+				vector<ParsedFunctionInfo>*			_pMethods;
+				const MultiAnnotationSearch::Entry* _pFuncEntry;
+				uint8								_bSkipConstructors : 1; ///< Abstract / Static 타입
+				[[maybe_unused]] uint8				_reserved		   : 7;
+
+				MethodCollector()
+					: _pMethods{ nullptr }
+					, _pFuncEntry{ nullptr }
+					, _bSkipConstructors{ SW_FALSE }
+					, _reserved{ 0 }
+				{
+				}
 			};
 
 			/** @brief `T<A,B>` 에서 최외곽 템플릿 인자를 나눕니다. */
@@ -401,15 +431,15 @@ namespace sw
 				if ( clang_Cursor_isNull( decl ) )
 					return false;
 
-				AnnotationSearch search{ annotationConstants::kReflectContainerPrefix, {}, false };
+				AnnotationSearch search{ annotationConstants::kReflectContainerPrefix };
 				clang_visitChildren( decl, annotationSearchVisitor, &search );
-				if ( search._bFound == false )
+				if ( search._bFound == SW_FALSE )
 				{
 					search._spelling = sourceExtractMacroAnnotation( decl, annotationConstants::kReflectContainerMacroOpen,
 																	 annotationConstants::kReflectContainerPrefix );
-					search._bFound	 = search._spelling.empty() == false;
+					search._bFound	 = search._spelling.empty() == false ? SW_TRUE : SW_FALSE;
 				}
-				if ( search._bFound == false )
+				if ( search._bFound == SW_FALSE )
 					return false;
 
 				const size_t prefixPos = search._spelling.find( annotationConstants::kReflectContainerPrefix );
@@ -555,9 +585,9 @@ namespace sw
 				if ( clang_getCursorKind( cursor ) != CXCursor_FieldDecl )
 					return CXChildVisit_Continue;
 
-				AnnotationSearch search{ annotationConstants::kPropertyPrefix, {}, false };
+				AnnotationSearch search{ annotationConstants::kPropertyPrefix };
 				clang_visitChildren( cursor, annotationSearchVisitor, &search );
-				if ( search._bFound == false && sourceHasPrimaryAnnotation( cursor, annotationConstants::kPropertyPrefix ) == false )
+				if ( search._bFound == SW_FALSE && sourceHasPrimaryAnnotation( cursor, annotationConstants::kPropertyPrefix ) == false )
 					return CXChildVisit_Continue;
 
 				FieldCollector*	   collector = static_cast<FieldCollector*>( data );
@@ -590,7 +620,7 @@ namespace sw
 				// Abstract / Static 타입은 생성할 수 없습니다(Unreal UCLASS(Abstract) 스타일).
 				if ( kind == CXCursor_Constructor )
 				{
-					if ( collector->_bSkipConstructors )
+					if ( collector->_bSkipConstructors == SW_TRUE )
 						return CXChildVisit_Continue;
 					if ( clang_CXXConstructor_isCopyConstructor( cursor ) || clang_CXXConstructor_isMoveConstructor( cursor ) )
 						return CXChildVisit_Continue;
@@ -611,15 +641,15 @@ namespace sw
 							cxStringToStd( clang_getTypeSpelling( clang_getCursorType( argCursor ) ) ) ) );
 					}
 
-					if ( collector->_pFuncEntry != nullptr && collector->_pFuncEntry->_bFound )
+					if ( collector->_pFuncEntry != nullptr && collector->_pFuncEntry->_bFound == SW_TRUE )
 					{
 						sw::AnnotationApply::parseFunctionAnnotation( collector->_pFuncEntry->_spelling, method );
 					}
 					else
 					{
-						AnnotationSearch search{ annotationConstants::kFunctionPrefix, {}, false };
+						AnnotationSearch search{ annotationConstants::kFunctionPrefix };
 						clang_visitChildren( cursor, annotationSearchVisitor, &search );
-						if ( search._bFound )
+						if ( search._bFound == SW_TRUE )
 							sw::AnnotationApply::parseFunctionAnnotation( search._spelling, method );
 					}
 
@@ -635,16 +665,16 @@ namespace sw
 
 				bool   bHasFuncAnn = false;
 				string funcSpelling;
-				if ( collector->_pFuncEntry != nullptr && collector->_pFuncEntry->_bFound )
+				if ( collector->_pFuncEntry != nullptr && collector->_pFuncEntry->_bFound == SW_TRUE )
 				{
 					bHasFuncAnn	 = true;
 					funcSpelling = collector->_pFuncEntry->_spelling;
 				}
 				else
 				{
-					AnnotationSearch search{ annotationConstants::kFunctionPrefix, {}, false };
+					AnnotationSearch search{ annotationConstants::kFunctionPrefix };
 					clang_visitChildren( cursor, annotationSearchVisitor, &search );
-					bHasFuncAnn	 = search._bFound;
+					bHasFuncAnn	 = search._bFound == SW_TRUE;
 					funcSpelling = search._spelling;
 				}
 
@@ -662,8 +692,8 @@ namespace sw
 				method._name		   = cxStringToStd( clang_getCursorSpelling( cursor ) );
 				method._returnTypeName = normalizeTypeName(
 					cxStringToStd( clang_getTypeSpelling( clang_getCursorResultType( cursor ) ) ) );
-				method._bStatic = clang_CXXMethod_isStatic( cursor ) != 0;
-				method._bConst	= clang_CXXMethod_isConst( cursor ) != 0;
+				method._bStatic = clang_CXXMethod_isStatic( cursor ) != 0 ? SW_TRUE : SW_FALSE;
+				method._bConst	= clang_CXXMethod_isConst( cursor ) != 0 ? SW_TRUE : SW_FALSE;
 
 				const int32 numArgs = clang_Cursor_getNumArguments( cursor );
 				for ( int32 argIndex = 0; argIndex < numArgs; ++argIndex )
@@ -714,11 +744,22 @@ namespace sw
 
 			struct StructMemberCollectContext
 			{
-				BaseClassCollector _bases;
-				bool			   _bBodyFound	  = false;
-				bool			   _bFactoryFound = false;
-				FieldCollector	   _fields;
-				MethodCollector	   _methods;
+				BaseClassCollector	   _bases;
+				FieldCollector		   _fields;
+				MethodCollector		   _methods;
+				uint8				   _bBodyFound	  : 1;
+				uint8				   _bFactoryFound : 1;
+				[[maybe_unused]] uint8 _reserved	  : 6;
+
+				StructMemberCollectContext()
+					: _bases{}
+					, _fields{}
+					, _methods{}
+					, _bBodyFound{ SW_FALSE }
+					, _bFactoryFound{ SW_FALSE }
+					, _reserved{ 0 }
+				{
+				}
 			};
 
 			/** @brief REFLECT 타입 멤버를 한 번의 자식 순회로 수집합니다. */
@@ -738,12 +779,12 @@ namespace sw
 				{
 					if ( cxStringEquals( clang_getCursorSpelling( cursor ), annotationConstants::kReflectBodyMarkerFn ) )
 					{
-						ctx->_bBodyFound = true;
+						ctx->_bBodyFound = SW_TRUE;
 						return CXChildVisit_Continue;
 					}
 					if ( cxStringEquals( clang_getCursorSpelling( cursor ), annotationConstants::kComponentFactoryMarkerFn ) )
 					{
-						ctx->_bFactoryFound = true;
+						ctx->_bFactoryFound = SW_TRUE;
 						return CXChildVisit_Continue;
 					}
 
@@ -758,10 +799,10 @@ namespace sw
 					const MultiAnnotationSearch::Entry* factoryEntry = multi.get( annotationConstants::kComponentFactoryPrefix );
 					const MultiAnnotationSearch::Entry* funcEntry	 = multi.get( annotationConstants::kFunctionPrefix );
 
-					if ( bodyEntry != nullptr && bodyEntry->_bFound )
-						ctx->_bBodyFound = true;
-					if ( factoryEntry != nullptr && factoryEntry->_bFound )
-						ctx->_bFactoryFound = true;
+					if ( bodyEntry != nullptr && bodyEntry->_bFound == SW_TRUE )
+						ctx->_bBodyFound = SW_TRUE;
+					if ( factoryEntry != nullptr && factoryEntry->_bFound == SW_TRUE )
+						ctx->_bFactoryFound = SW_TRUE;
 
 					ctx->_methods._pFuncEntry = funcEntry;
 					return methodCollectorVisitor( cursor, parent, &ctx->_methods );
@@ -773,9 +814,9 @@ namespace sw
 			/** @brief AnnotateAttr 접두사만 검사합니다 (소스 폴백 없음 — 검증용 경량 경로). */
 			static bool hasAnnotateAttrPrefix( CXCursor cursor, string_view prefix )
 			{
-				AnnotationSearch search{ prefix, {}, false };
+				AnnotationSearch search{ prefix };
 				clang_visitChildren( cursor, annotationSearchVisitor, &search );
-				return search._bFound;
+				return search._bFound == SW_TRUE;
 			}
 
 			/** @brief Component / SceneComponent 파생인지 베이스 체인을 검사합니다. */
@@ -957,9 +998,9 @@ namespace sw
 		if ( clang_Location_isFromMainFile( loc ) == false )
 			return false;
 
-		AstVisitorInternal::AnnotationSearch search{ prefix, {}, false };
+		AstVisitorInternal::AnnotationSearch search{ prefix };
 		clang_visitChildren( cursor, AstVisitorInternal::annotationSearchVisitor, &search );
-		if ( search._bFound )
+		if ( search._bFound == SW_TRUE )
 			return true;
 
 		// 기본 매크로만 — "ENUM;BitFlag" 같은 세분 태그에는 폴백하지 않습니다.
@@ -984,14 +1025,14 @@ namespace sw
 
 		BLOCK( "Parse REFLECT Annotation" )
 		{
-			AstVisitorInternal::AnnotationSearch reflectSearch{ annotationConstants::kReflectPrefix, {}, false };
+			AstVisitorInternal::AnnotationSearch reflectSearch{ annotationConstants::kReflectPrefix };
 			clang_visitChildren( cursor, AstVisitorInternal::annotationSearchVisitor, &reflectSearch );
-			if ( reflectSearch._bFound == false )
+			if ( reflectSearch._bFound == SW_FALSE )
 			{
 				reflectSearch._spelling = AstVisitorInternal::sourceExtractMacroAnnotation( cursor, annotationConstants::kReflectMacroOpen, annotationConstants::kReflectPrefix );
-				reflectSearch._bFound	= reflectSearch._spelling.empty() == false;
+				reflectSearch._bFound	= reflectSearch._spelling.empty() == false ? SW_TRUE : SW_FALSE;
 			}
-			if ( reflectSearch._bFound )
+			if ( reflectSearch._bFound == SW_TRUE )
 				sw::AnnotationApply::parseReflectAnnotation( reflectSearch._spelling, typeInfo );
 			// C++ 순수 가상 함수가 포함된 추상 클래스이면 UCLASS(Abstract)처럼 플래그 설정
 			if ( clang_CXXRecord_isAbstract( cursor ) != 0 )
@@ -1000,15 +1041,15 @@ namespace sw
 
 		BLOCK( "Collect Bases / Markers / Fields / Methods" )
 		{
-			AstVisitorInternal::StructMemberCollectContext collect;
+			AstVisitorInternal::StructMemberCollectContext collect{};
 			collect._bases._ownerFQN			= typeInfo._fullyQualifiedName;
-			collect._methods._bSkipConstructors = typeInfo._bAbstract || typeInfo._bStatic;
+			collect._methods._bSkipConstructors = ( typeInfo._bAbstract == SW_TRUE || typeInfo._bStatic == SW_TRUE ) ? SW_TRUE : SW_FALSE;
 			collect._fields._pProperties		= &typeInfo._listProperty;
 			collect._methods._pMethods			= &typeInfo._listMethod;
 			clang_visitChildren( cursor, AstVisitorInternal::structMemberCollectVisitor, &collect );
 			typeInfo._parentFQN			= collect._bases._firstBaseFQN;
-			typeInfo._bReflectBody		= collect._bBodyFound ? 1 : 0;
-			typeInfo._bComponentFactory = ( collect._bFactoryFound || AstVisitorInternal::isDerivedFromComponent( cursor ) ) ? 1 : 0;
+			typeInfo._bReflectBody		= collect._bBodyFound == SW_TRUE ? SW_TRUE : SW_FALSE;
+			typeInfo._bComponentFactory = ( collect._bFactoryFound == SW_TRUE || AstVisitorInternal::isDerivedFromComponent( cursor ) ) ? SW_TRUE : SW_FALSE;
 		}
 
 		SW_LOG_TRACE( "REFLECT class : %#  (props=%# methods=%# abstract=%# static=%# body=%# factory=%#)",
@@ -1045,7 +1086,7 @@ namespace sw
 			string enumSpelling = AstVisitorInternal::sourceExtractMacroAnnotation( cursor, annotationConstants::kEnumMacroOpen, annotationConstants::kEnumPrefix );
 			if ( enumSpelling.empty() )
 			{
-				AstVisitorInternal::AnnotationSearch enumSearch{ annotationConstants::kEnumPrefix, {}, false };
+				AstVisitorInternal::AnnotationSearch enumSearch{ annotationConstants::kEnumPrefix };
 				clang_visitChildren( cursor, AstVisitorInternal::annotationSearchVisitor, &enumSearch );
 				enumSpelling = enumSearch._spelling;
 			}

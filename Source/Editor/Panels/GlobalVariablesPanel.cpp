@@ -2,6 +2,7 @@
 
 #include "Editor/Panels/GlobalVariablesPanel.h"
 
+#include "Core/Common/StdHeaders.h"
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/String/StringUtil.h"
@@ -16,7 +17,6 @@
 
 #include "RuntimeAPI/Service/EditorService.h"
 
-#include <algorithm>
 #include <imgui.h>
 
 namespace sw::editor
@@ -240,7 +240,7 @@ namespace sw::editor
 		if ( EditorChrome::beginToolbar( "##GvToolbar" ) )
 		{
 			EditorWidgets::drawSearchField( "##GvSearch", _arrSearchFilter, sizeof( _arrSearchFilter ),
-									 "Filter variables...", 200.0f, true );
+											"Filter variables...", 200.0f, true );
 
 			ImGui::SameLine();
 			bool bGroup = ( _bGroupByModule == SW_TRUE );

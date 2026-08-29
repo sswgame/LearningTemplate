@@ -3,6 +3,7 @@
  * @brief 고정 크기 기본 자료형 별칭 (int32, float32, utf8 등).
  */
 #pragma once
+#include <cstddef>
 #include <cstdint>
 #include <string_view>
 

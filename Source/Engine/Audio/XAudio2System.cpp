@@ -4,14 +4,8 @@
 
 #include "Core/Task/TaskManager.h"
 
+#include "Engine/Common/EnginePlatformHeaders.h"
 #include "Engine/Common/EngineServices.h"
-
-#if defined( SW_PLATFORM_WINDOWS )
-	#include <mfapi.h>
-	#include <mfidl.h>
-	#include <mfreadwrite.h>
-	#include <xaudio2.h>
-#endif
 
 namespace sw
 {
@@ -279,7 +273,7 @@ namespace sw
 			if ( XAudio2SystemInternal::loadClip( absPath, clip ) == false )
 				return nullptr;
 
-			auto pShared = std::make_shared<XAudio2SystemInternal::PcmClip>( std::move( clip ) );
+			auto pShared = make_shared<XAudio2SystemInternal::PcmClip>( std::move( clip ) );
 			{
 				std::scoped_lock<mutex> lock{ _clipCacheMutex };
 				_mapClipCache[key] = pShared;

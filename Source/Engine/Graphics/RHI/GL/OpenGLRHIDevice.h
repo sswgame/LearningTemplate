@@ -14,8 +14,6 @@
 #include "Engine/Graphics/RHI/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/RHIReleaseQueue.h"
 
-#include <memory>
-
 namespace sw
 {
 	class OpenGLRHICommandContext;

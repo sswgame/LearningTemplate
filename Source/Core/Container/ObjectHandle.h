@@ -1,12 +1,10 @@
-﻿/**
+/**
  * @file ObjectHandle.h
  * @brief index|generation 불투명 핸들. generation 0은 무효입니다.
  */
 #pragma once
+#include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
-
-#include <functional>
-#include <ostream>
 
 namespace sw
 {

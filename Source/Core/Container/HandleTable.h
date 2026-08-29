@@ -3,11 +3,10 @@
  * @brief ObjectHandle로 T 슬롯을 보관합니다. 핸들 기본값은 무효입니다.
  */
 #pragma once
+#include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/ObjectHandle.h"
 #include "Core/Container/vector.h"
-
-#include <memory>
 
 namespace sw
 {

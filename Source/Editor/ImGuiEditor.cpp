@@ -2,6 +2,7 @@
 
 #include "Editor/ImGuiEditor.h"
 
+#include "Core/Common/StdHeaders.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Editor/Common/Backend/EditorDrawDataSnapshot.h"
@@ -38,7 +39,6 @@
 #include <ImGuiNotify.hpp>
 #include <ImGuizmo.h>
 #include <implot.h>
-#include <thread>
 
 namespace sw::editor
 {

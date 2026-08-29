@@ -4,7 +4,6 @@
  * @details 생성 코드가 쓰는 헤더는 여기에만 추가·삭제합니다. FileHeader.tpl / BuiltinFileHeader.tpl 은 이 파일을 include 합니다.
  */
 #pragma once
-#include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/ObjectHandle.h"
 #include "Core/Task/TaskManager.h"

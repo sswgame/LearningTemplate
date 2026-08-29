@@ -1,10 +1,9 @@
 #include "pch.h"
 
+#include "Core/Common/StdHeaders.h"
 #include "Core/Container/sparse_set.h"
 
 #include "TestFramework/TestFramework.h"
-
-#include <tuple>
 
 using namespace sw;
 

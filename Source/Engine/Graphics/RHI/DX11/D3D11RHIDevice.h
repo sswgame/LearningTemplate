@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Common/Macros.h"
+#include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 
@@ -11,8 +12,6 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/RHIReleaseQueue.h"
-
-#include <memory>
 
 #if defined( SW_PLATFORM_WINDOWS )
 

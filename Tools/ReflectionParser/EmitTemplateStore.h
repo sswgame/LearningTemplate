@@ -17,6 +17,9 @@ namespace sw
 	class EmitTemplateStore
 	{
 	public:
+		EmitTemplateStore();
+		~EmitTemplateStore() = default;
+
 		/** @brief 프로세스 전역 템플릿 저장소를 반환합니다. */
 		static EmitTemplateStore& instance();
 
@@ -25,7 +28,7 @@ namespace sw
 		/** @brief 절대 경로 디렉터리에서 *.tpl 을 로드합니다. */
 		bool loadDirectory( const string_view absDir );
 		/** @brief 템플릿이 로드되었는지 반환합니다. */
-		bool isLoaded() const noexcept { return _bLoaded; }
+		bool isLoaded() const noexcept { return _bLoaded == SW_TRUE; }
 
 		/** @brief 이름에 해당하는 템플릿이 있는지 조회합니다. */
 		bool has( const string_view name ) const;
@@ -43,6 +46,7 @@ namespace sw
 
 	private:
 		unordered_map<string, string> _mapTemplate;
-		bool						  _bLoaded = false;
+		uint8						  _bLoaded	: 1;
+		[[maybe_unused]] uint8		  _reserved : 7;
 	};
 } // namespace sw

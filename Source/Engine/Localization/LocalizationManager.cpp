@@ -3,6 +3,7 @@
 #include "Engine/Localization/LocalizationManager.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
+#include "Core/Common/StdHeaders.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
@@ -12,9 +13,6 @@
 #include "Engine/Utility/Json/JsonDocument.h"
 #include "Engine/Utility/Resource/ResourceUtil.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
-
-#include <shared_mutex>
-#include <utility>
 
 namespace sw
 {

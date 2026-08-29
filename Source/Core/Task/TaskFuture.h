@@ -3,14 +3,10 @@
  * @brief C++17 호환 Fluent 비동기 TaskFuture<T> 및 TaskPromise<T> 파이프라인
  */
 #pragma once
+#include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Task/TaskTypes.h"
-
-#include <condition_variable>
-#include <functional>
-#include <memory>
-#include <type_traits>
 
 namespace sw
 {

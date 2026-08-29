@@ -12,9 +12,11 @@ namespace sw
 		: _pX11Display{ nullptr }
 		, _x11Window{ 0 }
 		, _x11WmDelete{ 0 }
-		, _bRecreating{ false }
 		, _restoreX{ 100 }
 		, _restoreY{ 100 }
+		, _bRecreating{ SW_FALSE }
+		, _reservedX11{ 0 }
+		, _padding{ 0 }
 	{
 	}
 
@@ -58,9 +60,9 @@ namespace sw
 		XFlush( pDisplay );
 
 		_pX11Display  = pDisplay;
-		_x11Window	  = static_cast<uint64>( win );
-		_x11WmDelete  = static_cast<uint64>( wmDeleteMessage );
-		_bShouldClose = false;
+		_x11Window	  = win;
+		_x11WmDelete  = wmDeleteMessage;
+		_bShouldClose = SW_FALSE;
 
 		SW_LOG_INFO( "Native X11 Window created successfully! (%#x%#)", width, height );
 		return true;
@@ -68,54 +70,48 @@ namespace sw
 
 	void X11Window::destroy()
 	{
-		if ( _pX11Display != nullptr && _x11Window != 0 )
+		if ( _pX11Display != nullptr )
 		{
 			Display* pDisplay = static_cast<Display*>( _pX11Display );
-			Window	 win	  = static_cast<Window>( _x11Window );
-			XUnmapWindow( pDisplay, win );
-			XDestroyWindow( pDisplay, win );
+			if ( _x11Window != 0 )
+			{
+				XDestroyWindow( pDisplay, _x11Window );
+				_x11Window = 0;
+			}
 			XCloseDisplay( pDisplay );
 			_pX11Display = nullptr;
-			_x11Window	 = 0;
 		}
 	}
 
 	void X11Window::showWindow( bool bShow )
 	{
-	#if defined( SW_PLATFORM_LINUX )
-		if ( _pX11Display != nullptr && _x11Window != 0 )
+		if ( _pX11Display == nullptr || _x11Window == 0 )
+			return;
+
+		Display* pDisplay = static_cast<Display*>( _pX11Display );
+		if ( bShow )
 		{
-			Display* pDisplay = static_cast<Display*>( _pX11Display );
-			Window	 win	  = static_cast<Window>( _x11Window );
-			if ( bShow )
-			{
-				XMapWindow( pDisplay, win );
-				XRaiseWindow( pDisplay, win );
-				XFlush( pDisplay );
-			}
-			else
-			{
-				XUnmapWindow( pDisplay, win );
-				XFlush( pDisplay );
-			}
+			XMapWindow( pDisplay, _x11Window );
+			XFlush( pDisplay );
 		}
-	#else
-		(void)bShow;
-	#endif
+		else
+		{
+			XUnmapWindow( pDisplay, _x11Window );
+			XFlush( pDisplay );
+		}
 	}
 
 	bool X11Window::isVisible() const
 	{
-	#if defined( SW_PLATFORM_LINUX )
-		if ( _pX11Display != nullptr && _x11Window != 0 )
+		if ( _pX11Display == nullptr || _x11Window == 0 )
+			return false;
+
+		Display*		  pDisplay = static_cast<Display*>( _pX11Display );
+		XWindowAttributes wa{};
+		if ( XGetWindowAttributes( pDisplay, _x11Window, &wa ) != 0 )
 		{
-			Display*		  pDisplay = static_cast<Display*>( _pX11Display );
-			Window			  win	   = static_cast<Window>( _x11Window );
-			XWindowAttributes attrs{};
-			if ( XGetWindowAttributes( pDisplay, win, &attrs ) != 0 )
-				return attrs.map_state == IsViewable;
+			return wa.map_state == IsViewable;
 		}
-	#endif
 		return false;
 	}
 
@@ -129,21 +125,20 @@ namespace sw
 		if ( _pX11Display != nullptr && _x11Window != 0 )
 		{
 			Display*		  pDisplay = static_cast<Display*>( _pX11Display );
-			Window			  win	   = static_cast<Window>( _x11Window );
-			XWindowAttributes attrs{};
-			if ( XGetWindowAttributes( pDisplay, win, &attrs ) != 0 )
+			XWindowAttributes wa{};
+			if ( XGetWindowAttributes( pDisplay, _x11Window, &wa ) != 0 )
 			{
-				_restoreX = attrs.x;
-				_restoreY = attrs.y;
+				_restoreX = wa.x;
+				_restoreY = wa.y;
 			}
 		}
 
 		const uint32 width	= _width;
 		const uint32 height = _height;
-		_bRecreating		= true;
+		_bRecreating		= SW_TRUE;
 		destroy();
-		_bRecreating	   = false;
-		_bShouldClose	   = false;
+		_bRecreating	   = SW_FALSE;
+		_bShouldClose	   = SW_FALSE;
 		const string title = StringUtil::utf16ToUtf8( _title.c_str() );
 		const bool	 ok	   = initializeWindow( title.c_str(), width, height );
 		if ( ok && bWasVisible )
@@ -157,7 +152,7 @@ namespace sw
 	bool X11Window::processMessages()
 	{
 		if ( _pX11Display == nullptr )
-			return _bShouldClose == false;
+			return _bShouldClose == SW_FALSE;
 
 		Display* pDisplay = static_cast<Display*>( _pX11Display );
 		while ( XPending( pDisplay ) > 0 )
@@ -181,7 +176,7 @@ namespace sw
 				if ( event.xclient.window == static_cast<Window>( _x11Window ) &&
 					 static_cast<Atom>( event.xclient.data.l[0] ) == static_cast<Atom>( _x11WmDelete ) )
 				{
-					if ( _bRecreating == false )
+					if ( _bRecreating == SW_FALSE )
 					{
 						if ( tryBeginClose() == false )
 							continue;
@@ -206,7 +201,7 @@ namespace sw
 			}
 		}
 
-		return _bShouldClose == false;
+		return _bShouldClose == SW_FALSE;
 	}
 #else
 	bool X11Window::initializeWindow( const utf8* pTitle, uint32 width, uint32 height )
@@ -228,7 +223,7 @@ namespace sw
 
 	bool X11Window::processMessages()
 	{
-		return _bShouldClose == false;
+		return _bShouldClose == SW_FALSE;
 	}
 
 	void X11Window::showWindow( bool bShow )

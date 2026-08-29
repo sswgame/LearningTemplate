@@ -3,7 +3,6 @@
  * @brief ImGui Direct3D 11 렌더러 백엔드
  */
 #pragma once
-#include "Core/Common/StdHeaders.h"
 #include "Core/Container/vector.h"
 
 #include "Editor/Common/Backend/IImGuiRendererBackend.h"

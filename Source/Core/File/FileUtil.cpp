@@ -39,7 +39,7 @@ namespace sw
 	void FileUtil::splitPath( string_view fullPath, string& outDirectoryPath, string& outFileName )
 	{
 		const size_t found = fullPath.find_last_of( "/\\" );
-		if ( found == std::string_view::npos )
+		if ( found == string_view::npos )
 		{
 			outDirectoryPath.clear();
 			outFileName = string{ fullPath };
@@ -55,7 +55,7 @@ namespace sw
 			return {};
 
 		const size_t found = fullPath.find_last_of( "/\\" );
-		if ( found == std::string_view::npos )
+		if ( found == string_view::npos )
 			return string{ fullPath };
 
 		return string{ fullPath.substr( found + 1 ) };
@@ -66,7 +66,7 @@ namespace sw
 		if ( fullPath.empty() )
 			return {};
 
-		std::string_view v = fullPath;
+		string_view v = fullPath;
 		while ( v.size() > 1 && ( v.back() == '/' || v.back() == '\\' ) )
 		{
 			v.remove_suffix( 1 );
@@ -76,7 +76,7 @@ namespace sw
 			return {};
 
 		const size_t found = v.find_last_of( "/\\" );
-		if ( found == std::string_view::npos )
+		if ( found == string_view::npos )
 			return {};
 
 		return string{ v.substr( 0, found ) };
@@ -95,9 +95,9 @@ namespace sw
 	string FileUtil::getExtension( string_view fileName )
 	{
 		const size_t slash = fileName.find_last_of( "/\\" );
-		const size_t start = ( slash == std::string_view::npos ) ? 0 : slash + 1;
+		const size_t start = ( slash == string_view::npos ) ? 0 : slash + 1;
 		const size_t dot   = fileName.find_last_of( '.' );
-		if ( dot == std::string_view::npos || dot < start )
+		if ( dot == string_view::npos || dot < start )
 			return {};
 		return string{ fileName.substr( dot ) };
 	}
@@ -107,17 +107,17 @@ namespace sw
 		if ( extension.empty() || fileName.empty() )
 			return false;
 
-		std::string_view want = extension;
+		string_view want = extension;
 		if ( want.front() == '.' )
 			want.remove_prefix( 1 );
 
 		const size_t slash = fileName.find_last_of( "/\\" );
-		const size_t start = ( slash == std::string_view::npos ) ? 0 : slash + 1;
+		const size_t start = ( slash == string_view::npos ) ? 0 : slash + 1;
 		const size_t dot   = fileName.find_last_of( '.' );
-		if ( dot == std::string_view::npos || dot < start )
+		if ( dot == string_view::npos || dot < start )
 			return false;
 
-		std::string_view have = fileName.substr( dot + 1 );
+		string_view have = fileName.substr( dot + 1 );
 		if ( have.size() != want.size() )
 			return false;
 
@@ -159,14 +159,14 @@ namespace sw
 			return string( extension );
 
 		const size_t slash = fileName.find_last_of( "/\\" );
-		const size_t start = ( slash == std::string_view::npos ) ? 0 : slash + 1;
+		const size_t start = ( slash == string_view::npos ) ? 0 : slash + 1;
 		const size_t dot   = fileName.find_last_of( '.' );
 
-		std::string_view base = fileName;
-		if ( dot != std::string_view::npos && dot >= start )
+		string_view base = fileName;
+		if ( dot != string_view::npos && dot >= start )
 			base = fileName.substr( 0, dot );
 
-		std::string_view ext = extension;
+		string_view ext = extension;
 		if ( ext.empty() )
 			return string( base );
 
@@ -184,10 +184,10 @@ namespace sw
 			return {};
 
 		const size_t slash = fileName.find_last_of( "/\\" );
-		const size_t start = ( slash == std::string_view::npos ) ? 0 : slash + 1;
+		const size_t start = ( slash == string_view::npos ) ? 0 : slash + 1;
 		const size_t dot   = fileName.find_last_of( '.' );
 
-		if ( dot != std::string_view::npos && dot >= start )
+		if ( dot != string_view::npos && dot >= start )
 			return string( fileName.substr( 0, dot ) );
 
 		return string( fileName );
@@ -259,7 +259,7 @@ namespace sw
 
 	string FileUtil::trimTrailingSlashes( string_view path )
 	{
-		std::string_view v = path;
+		string_view v = path;
 		while ( v.size() > 1 && ( v.back() == '/' || v.back() == '\\' ) )
 		{
 			v.remove_suffix( 1 );
@@ -272,7 +272,7 @@ namespace sw
 		if ( root.empty() )
 			return {};
 
-		std::string_view r = root;
+		string_view r = root;
 		while ( r.size() > 1 && ( r.back() == '/' || r.back() == '\\' ) )
 		{
 			r.remove_suffix( 1 );
@@ -281,7 +281,7 @@ namespace sw
 		if ( relative.empty() )
 			return normalizeSeparators( r );
 
-		std::string_view rel = relative;
+		string_view rel = relative;
 		while ( rel.empty() == false && ( rel.front() == '/' || rel.front() == '\\' ) )
 		{
 			rel.remove_prefix( 1 );

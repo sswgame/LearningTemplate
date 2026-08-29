@@ -1,11 +1,10 @@
 #include "pch.h"
 
 #if defined( SW_PLATFORM_WINDOWS ) && defined( _MSC_VER )
-	#include "Engine/Utility/Module/LiveReloadManager.h"
-
+	#include "Core/Common/PlatformOsHeaders.h"
 	#include "Core/File/FileUtil.h"
 
-	#include <delayimp.h>
+	#include "Engine/Utility/Module/LiveReloadManager.h"
 
 namespace sw
 {

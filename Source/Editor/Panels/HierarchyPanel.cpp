@@ -2,6 +2,8 @@
 
 #include "Editor/Panels/HierarchyPanel.h"
 
+#include "Core/Common/StdHeaders.h"
+
 #include "Editor/Common/Commands/EditorAssetCommands.h"
 #include "Editor/Common/Commands/EditorSceneCommands.h"
 #include "Editor/Common/EditorUtil.h"
@@ -21,7 +23,6 @@
 #include "RuntimeAPI/Service/EditorService.h"
 
 #include <imgui.h>
-#include <algorithm>
 
 namespace sw::editor
 {

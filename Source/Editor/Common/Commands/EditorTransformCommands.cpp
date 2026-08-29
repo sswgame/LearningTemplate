@@ -2,6 +2,7 @@
 
 #include "Editor/Common/Commands/EditorTransformCommands.h"
 
+#include "Core/Common/StdHeaders.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 
@@ -19,8 +20,6 @@
 #include "Engine/Object/GameObject/GameObjectPtr.h"
 #include "Engine/Serialization/Format/XmlSerializer.h"
 #include "Engine/Utility/Resource/ResourceUtil.h"
-
-#include <algorithm>
 
 namespace sw::editor
 {

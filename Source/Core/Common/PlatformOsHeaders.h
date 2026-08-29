@@ -18,10 +18,15 @@
 		#define WIN32_LEAN_AND_MEAN
 	#endif
 
-	#include <Unknwn.h>
 	#include <Windows.h>
+	#include <Unknwn.h>
+	#include <DbgHelp.h>
+	#include <Xinput.h>
 	#include <commdlg.h>
+	#include <crtdbg.h>
+	#include <delayimp.h>
 	#include <intrin.h>
+	#include <malloc.h>
 	#include <sdkddkver.h>
 	#include <wrl/client.h>
 
@@ -29,8 +34,10 @@
 // 2) POSIX — Linux / macOS 공통 + 플랫폼별
 // ------------------------------------------------------------------------------
 #elif defined( SW_PLATFORM_LINUX ) || defined( __linux__ ) || defined( SW_PLATFORM_MACOS ) || defined( __APPLE__ )
+	#include <cxxabi.h>
 	#include <dirent.h>
 	#include <dlfcn.h>
+	#include <execinfo.h>
 	#include <pthread.h>
 	#include <sched.h>
 	#include <sys/mman.h>
@@ -38,16 +45,20 @@
 	#include <sys/stat.h>
 	#include <sys/time.h>
 	#include <sys/types.h>
+	#include <sys/wait.h>
 	#include <unistd.h>
 
 	#if defined( SW_PLATFORM_LINUX )
+		#include <X11/Xatom.h>
 		#include <X11/Xlib.h>
 		#include <X11/Xutil.h>
+		#include <X11/keysym.h>
 		#include <sys/eventfd.h>
 		#include <sys/inotify.h>
 
 		#include "Core/Common/X11MacroUndef.h"
 	#elif defined( SW_PLATFORM_MACOS )
+		#include <CoreServices/CoreServices.h>
 		#include <mach-o/dyld.h>
 		#include <objc/message.h>
 		#include <objc/runtime.h>

@@ -9,8 +9,7 @@
 #include "Core/Log/Logger.h"
 
 #if defined( SW_PLATFORM_LINUX )
-	#include <sys/wait.h>
-	#include <unistd.h>
+	#include "Core/Common/PlatformOsHeaders.h"
 
 namespace sw
 {

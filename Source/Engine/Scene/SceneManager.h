@@ -6,8 +6,6 @@
 #include "Core/Container/vector.h"
 #include "Core/Task/TaskTypes.h"
 
-#include <memory>
-
 namespace sw
 {
 	class IRHIDevice;

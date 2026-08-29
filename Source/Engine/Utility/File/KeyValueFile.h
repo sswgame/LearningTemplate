@@ -21,15 +21,16 @@ namespace sw
 	// ------------------------------------------------------------------------------
 	struct KeyValueParseOptions
 	{
-		utf8				   _commentChar = '#';
+		utf8				   _commentChar;
 		uint8				   _bSkipSemicolonComments : 1; ///< ';'로 시작하는 줄도 스킵
 		uint8				   _bSkipBracketSections   : 1; ///< "[section]" 줄 스킵
 		[[maybe_unused]] uint8 _reserved			   : 6;
 
 		/** @brief 세미콜론 주석과 브래킷 섹션을 스킵하는 기본값. */
 		KeyValueParseOptions() noexcept
-			: _bSkipSemicolonComments{ 1 }
-			, _bSkipBracketSections{ 1 }
+			: _commentChar{ '#' }
+			, _bSkipSemicolonComments{ SW_TRUE }
+			, _bSkipBracketSections{ SW_TRUE }
 			, _reserved{ 0 } {}
 	};
 

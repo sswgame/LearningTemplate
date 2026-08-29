@@ -2,6 +2,7 @@
 
 #include "App/Module/ModuleCompiler.h"
 
+#include "Core/Common/StdHeaders.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Task/TaskManager.h"
 
@@ -21,9 +22,6 @@
 #include "RuntimeAPI/Service/GameService.h"
 
 #include "TestFramework/TestFramework.h"
-
-#include <chrono>
-#include <thread>
 
 namespace
 {

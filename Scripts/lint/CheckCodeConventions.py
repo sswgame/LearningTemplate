@@ -401,7 +401,8 @@ def checkFileConventionsInternal(filePath: Path, rootDir: Path) -> list[Conventi
 
         # 원시 기본 자료형 사용 검사 (int -> int32, float -> float32 등 Types.h 별칭 권장)
         if not trimmed.startswith("#") and "int main" not in trimmed and "Types.h" not in relPath:
-            if basicTypeMatch := _kBasicTypesRe.search(line):
+            codeWithoutStrings = re.sub(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'', '', line)
+            if basicTypeMatch := _kBasicTypesRe.search(codeWithoutStrings):
                 typeName = basicTypeMatch.group(0)
                 violations.append(
                     ConventionViolation(

@@ -1,5 +1,6 @@
 #pragma once
 #include "Core/Common/Macros.h"
+#include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/HandleTable.h"
 #include "Core/Container/unordered_map.h"
@@ -8,8 +9,6 @@
 #include "Engine/Physics/AABB.h"
 #include "Engine/Physics/CCD.h"
 #include "Engine/Physics/CollisionLayers.h"
-
-#include <shared_mutex>
 
 namespace sw
 {

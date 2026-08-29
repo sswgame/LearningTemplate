@@ -4,13 +4,12 @@
  */
 #pragma once
 #include "Core/Common/Macros.h"
+#include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/map.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Uuid/Uuid.h"
-
-#include <shared_mutex>
 
 namespace sw
 {

@@ -2,13 +2,8 @@
 
 #include "Core/Memory/Memory.h"
 
+#include "Core/Common/PlatformOsHeaders.h"
 #include "Core/Memory/MemoryProfiler.h"
-
-#if defined( SW_PLATFORM_WINDOWS )
-	#include <malloc.h>
-#else
-	#include <stdlib.h>
-#endif
 
 namespace sw
 {

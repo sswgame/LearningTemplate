@@ -73,7 +73,7 @@ namespace sw
 			if ( ppArgv[argIndex] != nullptr && ppArgv[argIndex][0] != L'\0' )
 			{
 				const string utf8 = StringUtil::utf16ToUtf8( ppArgv[argIndex] );
-				parseArgumentLine( std::string_view{ utf8 } );
+				parseArgumentLine( string_view{ utf8 } );
 			}
 		}
 	}

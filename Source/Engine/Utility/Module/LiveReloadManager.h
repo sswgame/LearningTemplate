@@ -86,10 +86,10 @@ namespace sw
 		/** @brief 혼합 DLL 그래프로 간주하고 이후 리로드를 막습니다. 프로세스 재시작이 필요합니다. */
 		void markGraphBroken( string_view reason );
 		/** @brief commit 실패·사이클·바인딩 실패로 그래프가 깨졌으면 true. */
-		bool isGraphBroken() const { return _bReloadGraphBroken; }
+		bool isGraphBroken() const { return _bReloadGraphBroken == SW_TRUE; }
 
 		/** @brief 현재 핫리로드 Batch 처리 중인지 여부를 반환합니다. */
-		bool isReloadingBatch() const { return _bReloadingBatch; }
+		bool isReloadingBatch() const { return _bReloadingBatch == SW_TRUE; }
 
 		/** @brief 로드된 모듈의 핸들을 반환합니다. */
 		void* getModuleHandle( string_view moduleName ) const;
@@ -169,7 +169,8 @@ namespace sw
 		unique_ptr<IFileWatcher>			 _fileWatcher;
 		OnBeforeCommitBatchDelegate			 _onBeforeCommitBatch;
 		DrainWorkersDelegate				 _drainWorkers;
-		bool								 _bReloadGraphBroken;
-		bool								 _bReloadingBatch;
+		uint8								 _bReloadGraphBroken : 1;
+		uint8								 _bReloadingBatch	 : 1;
+		[[maybe_unused]] uint8				 _reserved			 : 6;
 	};
 } // namespace sw

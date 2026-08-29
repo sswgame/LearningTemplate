@@ -2,12 +2,12 @@
 
 #include "Editor/Common/Workspace/SelectionManager.h"
 
+#include "Core/Common/StdHeaders.h"
+
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
-
-#include <algorithm>
 
 namespace sw::editor
 {

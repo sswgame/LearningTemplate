@@ -49,6 +49,13 @@ namespace sw
 
 namespace sw
 {
+	TypeNameMap::TypeNameMap()
+		: _mapAliasToCanonical{}
+		, _bLoaded{ SW_FALSE }
+		, _reserved{ 0 }
+	{
+	}
+
 	TypeNameMap& TypeNameMap::instance()
 	{
 		static TypeNameMap s_map;
@@ -58,7 +65,7 @@ namespace sw
 	void TypeNameMap::clear()
 	{
 		_mapAliasToCanonical.clear();
-		_bLoaded = false;
+		_bLoaded = SW_FALSE;
 	}
 
 	void TypeNameMap::addKey( const string& key, const string& canonical )

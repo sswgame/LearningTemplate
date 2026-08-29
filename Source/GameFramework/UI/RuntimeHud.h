@@ -56,10 +56,10 @@ namespace sw
 		/** @brief 페이드 오버레이 알파를 설정합니다. */
 		void setFadeOverlay( float32 alpha );
 		/** @brief HUD 표시 여부를 설정합니다. */
-		void setVisible( bool v ) { _bVisible = v ? 1 : 0; }
+		void setVisible( bool v ) { _bVisible = v ? SW_TRUE : SW_FALSE; }
 
 		/** @brief HUD 표시 여부를 반환합니다. */
-		bool isVisible() const { return _bVisible != 0; }
+		bool isVisible() const { return _bVisible == SW_TRUE; }
 		/** @brief 화면 사각형을 반환합니다. */
 		const ScreenRect& getScreenRect() const { return _screen; }
 		/** @brief 현재 대사 한 줄을 반환합니다. */
@@ -81,13 +81,13 @@ namespace sw
 		void logSnapshot() const;
 
 	private:
-		ScreenRect			   _screen{};
-		HudGauge			   _playerHp{ 1.0f, 0.05f, 0.82f, 0.30f, 0.04f }; ///< 하단 플레이어 HP
-		HudGauge			   _foeHp{ 1.0f, 0.65f, 0.08f, 0.30f, 0.04f };	  ///< 상단 적 HP
-		HudGauge			   _exp{ 0.0f, 0.05f, 0.88f, 0.30f, 0.02f };	  ///< 경험치
-		HudGauge			   _pp{ 1.0f, 0.05f, 0.78f, 0.18f, 0.03f };		  ///< PP 또는 대시
-		string				   _dialogue;									  ///< 대사 한 줄 (없으면 빈 문자열)
-		float32				   _fadeAlpha{ 0.0f };							  ///< 0=투명, 1=검정
+		ScreenRect			   _screen;
+		HudGauge			   _playerHp;  ///< 하단 플레이어 HP
+		HudGauge			   _foeHp;	   ///< 상단 적 HP
+		HudGauge			   _exp;	   ///< 경험치
+		HudGauge			   _pp;		   ///< PP 또는 대시
+		string				   _dialogue;  ///< 대사 한 줄 (없으면 빈 문자열)
+		float32				   _fadeAlpha; ///< 0=투명, 1=검정
 		uint8				   _bVisible : 1;
 		[[maybe_unused]] uint8 _reserved : 7;
 	};

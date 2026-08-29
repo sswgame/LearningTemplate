@@ -48,7 +48,7 @@ namespace sw
 		/** @brief 기본 백엔드로 디바이스를 초기화합니다. */
 		bool initialize();
 		/** @brief CLI에 --VSYNC가 없을 때 쓸 스왑체인 VSync입니다. initialize 전에 호출합니다. */
-		void setPreferredVSync( bool bVSync ) { _bPreferredVSync = bVSync; }
+		void setPreferredVSync( bool bVSync ) { _bPreferredVSync = bVSync ? SW_TRUE : SW_FALSE; }
 		/** @brief 디바이스를 종료하고 모듈을 언로드합니다. */
 		void shutdown();
 
@@ -58,7 +58,7 @@ namespace sw
 		/** @brief gv_rhiBackend 변경 시 핫스왑을 예약합니다. */
 		void schedulePendingBackendChange( RHIBackend requested );
 		/** @brief 대기 중인 백엔드 변경이 있는지 반환합니다. */
-		bool hasPendingBackendChange() const { return _bPendingBackendChange; }
+		bool hasPendingBackendChange() const { return _bPendingBackendChange == SW_TRUE; }
 		/** @brief 대기 중인 백엔드를 가져가고 플래그를 해제합니다. */
 		RHIBackend consumePendingBackendChange();
 		/** @brief 커밋된 백엔드를 설정합니다 (핵스왁 성공/실패 후 동기화용). */
@@ -100,7 +100,8 @@ namespace sw
 		unique_ptr<IRHIDevice>		  _device;
 		RHIBackend					  _pendingRHIBackend;
 		RHIBackend					  _committedRHIBackend;
-		bool						  _bPreferredVSync;
-		bool						  _bPendingBackendChange;
+		uint8						  _bPreferredVSync		 : 1;
+		uint8						  _bPendingBackendChange : 1;
+		[[maybe_unused]] uint8		  _reserved				 : 6;
 	};
 } // namespace sw

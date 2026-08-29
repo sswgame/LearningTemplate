@@ -30,11 +30,15 @@ namespace sw
 		// ------------------------------------------------------------------------------
 		/** @brief 기본 컨텍스트 (키 대소문자 무시). */
 		SerializeContext() noexcept
-			: _pOuterInstance{ nullptr }
+			: _mapBinaryWriter{}
+			, _mapBinaryReader{}
+			, _mapTextWriter{}
+			, _mapTextReader{}
+			, _pOuterInstance{ nullptr }
 			, _pOwnedPointerCreateFn{ nullptr }
 			, _pRuntimeTypeInfoFn{ nullptr }
-			, _bIgnoreCaseKeys{ 1 }
-			, _bAllowUnknownProperties{ 0 }
+			, _bIgnoreCaseKeys{ SW_TRUE }
+			, _bAllowUnknownProperties{ SW_FALSE }
 			, _reservedFlags{ 0 } {}
 
 		// ------------------------------------------------------------------------------
@@ -45,17 +49,17 @@ namespace sw
 		/** @brief 텍스트 읽기/쓰기 커스텀 핸들러를 등록합니다. */
 		void registerTextHandler( hashed_string typeName, TextWriteFn writeFn, TextReadFn readFn );
 
-		/** @brief Xml/Json 키·태그·속성 이름 조회 시 대소문자 무시 여부를 설정합니다. */
+		/** @brief 키 대소문자 무시 여부를 설정합니다 (Fluent API). */
 		SerializeContext& setIgnoreCaseKeys( bool bIgnoreCaseKeys )
 		{
-			_bIgnoreCaseKeys = bIgnoreCaseKeys ? 1 : 0;
+			_bIgnoreCaseKeys = bIgnoreCaseKeys ? SW_TRUE : SW_FALSE;
 			return *this;
 		}
 
 		/** @brief 바이너리/텍스트 역직렬화 시 스키마에 없는 알 수 없는 프로퍼티를 허용(스킵)할지 여부를 설정합니다. */
 		SerializeContext& setAllowUnknownProperties( bool bAllow )
 		{
-			_bAllowUnknownProperties = bAllow ? 1 : 0;
+			_bAllowUnknownProperties = bAllow ? SW_TRUE : SW_FALSE;
 			return *this;
 		}
 
@@ -75,9 +79,9 @@ namespace sw
 		 * @details XmlSerializer::deserialize가 이 값을 IXmlBackend에 전달합니다.
 		 *          끄려면: `SerializeContext ctx = SerializeContext::getDefault(); ctx.setIgnoreCaseKeys(false);`
 		 */
-		bool ignoreCaseKeys() const { return _bIgnoreCaseKeys != 0; }
+		bool ignoreCaseKeys() const { return _bIgnoreCaseKeys == SW_TRUE; }
 		/** @brief 알 수 없는 프로퍼티 허용(스킵) 여부. */
-		bool allowUnknownProperties() const { return _bAllowUnknownProperties != 0; }
+		bool allowUnknownProperties() const { return _bAllowUnknownProperties == SW_TRUE; }
 
 		/** @brief 소유 포인터 팩토리의 outer 인스턴스를 설정합니다. */
 		SerializeContext& setOuterInstance( void* pOuter )

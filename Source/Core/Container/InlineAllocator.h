@@ -3,12 +3,9 @@
  * @brief SBO(Small Buffer Optimization)를 위한 인라인 스택 버퍼 할당자
  */
 #pragma once
+#include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
 #include "Core/Memory/Memory.h"
-
-#include <memory>
-#include <new>
-#include <type_traits>
 
 namespace sw
 {

@@ -1,8 +1,8 @@
 #pragma once
+#include "Core/Common/StdHeaders.h"
+
 #include "Engine/EngineMinimal.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
-
-#include <shared_mutex>
 
 namespace sw
 {

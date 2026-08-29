@@ -3,16 +3,9 @@
  * @brief 정렬 맵. 기본은 벡터 이진 검색, SW_ENABLE_STL_CONTAINER 이면 std::map 래퍼.
  */
 #pragma once
+#include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/DataRaceDetector.h"
-#include "Core/Container/map.h"
 #include "Core/Container/vector.h"
-
-#include <algorithm>
-#include <initializer_list>
-#include <map>
-#include <stdexcept>
-#include <utility>
-#include <vector>
 
 // 이 매크로를 정의하면 표준 std::map 구현으로 되돌립니다.
 // #define SW_ENABLE_STL_CONTAINER

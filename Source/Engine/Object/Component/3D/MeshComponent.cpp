@@ -14,7 +14,7 @@ namespace sw
 		, _meshId{}
 		, _boundsRadius{ 0.866f }
 		, _blendMode{ RHIBlendMode::Opaque }
-		, _bVisible{ 1 }
+		, _bVisible{ SW_TRUE }
 		, _reserved{ 0 }
 	{
 	}

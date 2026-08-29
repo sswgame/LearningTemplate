@@ -2,11 +2,11 @@
 
 #include "GameFramework/Data/GameStrings.h"
 
+#include "Core/Common/StdHeaders.h"
+
 #include "Engine/Localization/LocalizationManager.h"
 
 #include "RuntimeAPI/Service/GameService.h"
-
-#include <utility>
 
 namespace sw
 {

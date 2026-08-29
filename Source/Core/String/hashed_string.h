@@ -16,8 +16,6 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringUtil.h"
 
-#include <shared_mutex>
-
 namespace sw
 {
 

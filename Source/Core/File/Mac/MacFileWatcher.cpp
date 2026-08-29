@@ -8,7 +8,7 @@
 #include "Core/Log/Logger.h"
 
 #if defined( SW_PLATFORM_MACOS )
-	#include <CoreServices/CoreServices.h>
+	#include "Core/Common/PlatformOsHeaders.h"
 
 namespace sw
 {

@@ -3,7 +3,6 @@
  * @brief Logger를 구독하고 항목을 필터링하는 Output Log 윈도우
  */
 #pragma once
-#include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/deque.h"
 #include "Core/Container/string.h"

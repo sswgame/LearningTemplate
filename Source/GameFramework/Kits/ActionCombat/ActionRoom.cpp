@@ -2,13 +2,12 @@
 
 #include "GameFramework/Kits/ActionCombat/ActionRoom.h"
 
+#include "Core/Common/StdHeaders.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 
 #include "RuntimeAPI/Service/GameService.h"
-
-#include <algorithm>
 
 namespace sw
 {

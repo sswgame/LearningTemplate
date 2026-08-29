@@ -14,8 +14,6 @@
 #include "Engine/Graphics/RHI/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/RHIReleaseQueue.h"
 
-#include <memory>
-
 #if defined( SW_PLATFORM_WINDOWS )
 
 namespace sw

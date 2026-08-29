@@ -45,8 +45,8 @@ namespace sw
 		, _returnScenePath{}
 		, _returnPlayerX{ 1 }
 		, _returnPlayerY{ 1 }
-		, _bTitleHandedOff{ 0 }
-		, _bBattleReturnPending{ 0 }
+		, _bTitleHandedOff{ SW_FALSE }
+		, _bBattleReturnPending{ SW_FALSE }
 		, _reserved{ 0 }
 	{
 	}
@@ -82,8 +82,8 @@ namespace sw
 		_player.setActionMap( &actions );
 		wireTransitionCallbacks();
 
-		_bTitleHandedOff	  = 0;
-		_bBattleReturnPending = 0;
+		_bTitleHandedOff	  = SW_FALSE;
+		_bBattleReturnPending = SW_FALSE;
 		_transitions.reset();
 		_currentMapPath = _data._startMap;
 		_hud.setVisible( true );
@@ -106,9 +106,9 @@ namespace sw
 
 	void DemoGame::onUpdate( float32 deltaTime )
 	{
-		if ( _bTitleHandedOff == 0 )
+		if ( _bTitleHandedOff == SW_FALSE )
 		{
-			_bTitleHandedOff = 1;
+			_bTitleHandedOff = SW_TRUE;
 			game::getService<SceneManager>()->requestLoadAsync( _data._titleScene );
 			SW_LOG_INFO( "Title scene loaded: '%#'", _data._titleScene );
 		}

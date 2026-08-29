@@ -9,6 +9,13 @@
 SW_LOG_CALLER( "ContainerTypeMap" );
 namespace sw
 {
+	ContainerTypeMap::ContainerTypeMap()
+		: _listRule{}
+		, _bLoaded{ SW_FALSE }
+		, _reserved{ 0 }
+	{
+	}
+
 	ContainerTypeMap& ContainerTypeMap::instance()
 	{
 		static ContainerTypeMap s_map;
@@ -18,7 +25,7 @@ namespace sw
 	void ContainerTypeMap::clear()
 	{
 		_listRule.clear();
-		_bLoaded = false;
+		_bLoaded = SW_FALSE;
 	}
 
 	void ContainerTypeMap::registerRule( const string& match, ContainerKind kind, const string& type )

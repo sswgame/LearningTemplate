@@ -99,7 +99,8 @@ namespace sw
 		WindowCloseQueryDelegate	 _closeQuery;
 		uint32						 _width;
 		uint32						 _height;
-		bool						 _bShouldClose;
+		uint8						 _bShouldClose : 1;
+		[[maybe_unused]] uint8		 _reserved	   : 7;
 		uint8						 _arrReserved[7];
 	};
 } // namespace sw

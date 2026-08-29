@@ -5,8 +5,7 @@
 #include "Engine/Input/GamepadButtons.h"
 
 #if defined( _WIN32 )
-
-	#include <Xinput.h>
+	#include "Core/Common/PlatformOsHeaders.h"
 #endif
 
 namespace sw
@@ -113,7 +112,7 @@ namespace sw
 		, _leftStickY{ 0.0f }
 		, _rightStickX{ 0.0f }
 		, _rightStickY{ 0.0f }
-		, _bConnected{ 0 }
+		, _bConnected{ SW_FALSE }
 		, _reserved{ 0 }
 	{
 	}
@@ -133,7 +132,7 @@ namespace sw
 		GamepadXInputInternal::PFN_XInputGetState pfnGetState = GamepadXInputInternal::resolveXInputGetState();
 		if ( pfnGetState == nullptr )
 		{
-			_bConnected	 = 0;
+			_bConnected	 = SW_FALSE;
 			_leftStickX	 = 0.0f;
 			_leftStickY	 = 0.0f;
 			_rightStickX = 0.0f;
@@ -146,7 +145,7 @@ namespace sw
 		const DWORD	 result = pfnGetState( userIndex, &state );
 		if ( result != ERROR_SUCCESS )
 		{
-			_bConnected	 = 0;
+			_bConnected	 = SW_FALSE;
 			_leftStickX	 = 0.0f;
 			_leftStickY	 = 0.0f;
 			_rightStickX = 0.0f;
@@ -155,7 +154,7 @@ namespace sw
 			return;
 		}
 
-		_bConnected		   = 1;
+		_bConnected		   = SW_TRUE;
 		const WORD buttons = state.Gamepad.wButtons;
 		setButtonDown( GamepadButton::A, ( buttons & XINPUT_GAMEPAD_A ) != 0 );
 		setButtonDown( GamepadButton::B, ( buttons & XINPUT_GAMEPAD_B ) != 0 );
@@ -185,7 +184,7 @@ namespace sw
 	void GamepadXInput::poll( uint32 )
 	{
 		Memory::copy( _arrPrevButtons, _arrButtons, sizeof( _arrButtons ) );
-		_bConnected	 = 0;
+		_bConnected	 = SW_FALSE;
 		_leftStickX	 = 0.0f;
 		_leftStickY	 = 0.0f;
 		_rightStickX = 0.0f;

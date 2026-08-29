@@ -3,15 +3,8 @@
  * @brief std::array 래퍼. 디버그에서 RaceDetectContext 로 동시 접근을 잡습니다.
  */
 #pragma once
+#include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/DataRaceDetector.h"
-#include "Core/Container/array.h"
-
-#include <array>
-#include <cstddef>
-#include <initializer_list>
-#include <stdexcept>
-#include <type_traits>
-#include <utility>
 
 namespace sw
 {

@@ -3,7 +3,6 @@
  * @brief ImGui 에디터 호스트 (OS/GPU 백엔드 · 프레임 루프)
  */
 #pragma once
-#include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/atomic.h"
 
 #include "Editor/Common/Backend/EditorDrawDataSnapshot.h"

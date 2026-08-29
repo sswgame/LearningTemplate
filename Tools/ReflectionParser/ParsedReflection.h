@@ -18,18 +18,26 @@ namespace sw
 	/** @brief Sequence/Map 등 중첩 컨테이너 트리 노드 */
 	struct ParsedContainerNode
 	{
-		ContainerKind						_containerKind = ContainerKind::None;
-		string								_containerType; ///< VectorWrapper stem
-		string								_typeName;		///< TypeInfo 이름 (vector, unordered_map, …)
-		string								_elementTypeName;
-		string								_keyTypeName;
-		sw::shared_ptr<ParsedContainerNode> _elementNested;
-		uint8								_bIsContainer : 1;
-		[[maybe_unused]] uint8				_reserved	  : 7;
+		string							_containerType; ///< VectorWrapper stem
+		string							_typeName;		///< TypeInfo 이름 (vector, unordered_map, …)
+		string							_elementTypeName;
+		string							_keyTypeName;
+		shared_ptr<ParsedContainerNode> _elementNested;
+		ContainerKind					_containerKind;
+		uint8							_bIsContainer : 1;
+		[[maybe_unused]] uint8			_reserved	  : 7;
+		[[maybe_unused]] uint16			_padding;
 
 		ParsedContainerNode() noexcept
-			: _bIsContainer{ 0 }
+			: _containerType{}
+			, _typeName{}
+			, _elementTypeName{}
+			, _keyTypeName{}
+			, _elementNested{ nullptr }
+			, _containerKind{ ContainerKind::None }
+			, _bIsContainer{ SW_FALSE }
 			, _reserved{ 0 }
+			, _padding{ 0 }
 		{
 		}
 	};
@@ -37,40 +45,58 @@ namespace sw
 	/** @brief PROPERTY(...) 가 붙은 멤버 필드 */
 	struct ParsedPropertyInfo
 	{
-		string								_name;
-		string								_typeName;
-		vector<string>						_listAlias;
-		string								_category;
-		string								_displayName;
-		string								_tooltip;
-		string								_defaultValue;
-		string								_assetType;
-		vector<std::pair<string, string>>	_listCustomMeta;
-		ContainerKind						_containerKind = ContainerKind::None;
-		string								_containerType;
-		string								_elementTypeName;
-		string								_keyTypeName;
-		sw::shared_ptr<ParsedContainerNode> _containerTree;
-		float32								_minRange = 0.0f;
-		float32								_maxRange = 1.0f;
-		uint8								_bReadOnly		  : 1;
-		uint8								_bXmlAttribute	  : 1;
-		uint8								_bAssetPath		  : 1;
-		uint8								_bPolymorphic	  : 1;
-		uint8								_bHasRange		  : 1;
-		uint8								_bIsContainer	  : 1;
-		uint8								_bTransient		  : 1;
-		uint8								_bHideInInspector : 1;
+		string							  _name;
+		string							  _typeName;
+		vector<string>					  _listAlias;
+		string							  _category;
+		string							  _displayName;
+		string							  _tooltip;
+		string							  _defaultValue;
+		string							  _assetType;
+		vector<std::pair<string, string>> _listCustomMeta;
+		string							  _containerType;
+		string							  _elementTypeName;
+		string							  _keyTypeName;
+		shared_ptr<ParsedContainerNode>	  _containerTree;
+		float32							  _minRange;
+		float32							  _maxRange;
+		ContainerKind					  _containerKind;
+		uint8							  _bReadOnly		: 1;
+		uint8							  _bXmlAttribute	: 1;
+		uint8							  _bAssetPath		: 1;
+		uint8							  _bPolymorphic		: 1;
+		uint8							  _bHasRange		: 1;
+		uint8							  _bIsContainer		: 1;
+		uint8							  _bTransient		: 1;
+		uint8							  _bHideInInspector : 1;
+		[[maybe_unused]] uint16			  _padding;
 
 		ParsedPropertyInfo() noexcept
-			: _bReadOnly{ 0 }
-			, _bXmlAttribute{ 0 }
-			, _bAssetPath{ 0 }
-			, _bPolymorphic{ 0 }
-			, _bHasRange{ 0 }
-			, _bIsContainer{ 0 }
-			, _bTransient{ 0 }
-			, _bHideInInspector{ 0 }
+			: _name{}
+			, _typeName{}
+			, _listAlias{}
+			, _category{}
+			, _displayName{}
+			, _tooltip{}
+			, _defaultValue{}
+			, _assetType{}
+			, _listCustomMeta{}
+			, _containerType{}
+			, _elementTypeName{}
+			, _keyTypeName{}
+			, _containerTree{ nullptr }
+			, _minRange{ 0.0f }
+			, _maxRange{ 1.0f }
+			, _containerKind{ ContainerKind::None }
+			, _bReadOnly{ SW_FALSE }
+			, _bXmlAttribute{ SW_FALSE }
+			, _bAssetPath{ SW_FALSE }
+			, _bPolymorphic{ SW_FALSE }
+			, _bHasRange{ SW_FALSE }
+			, _bIsContainer{ SW_FALSE }
+			, _bTransient{ SW_FALSE }
+			, _bHideInInspector{ SW_FALSE }
+			, _padding{ 0 }
 		{
 		}
 	};
@@ -81,11 +107,11 @@ namespace sw
 		string							  _name;
 		string							  _returnTypeName;
 		vector<string>					  _listParamTypeName;
-		string							  _category = annotationConstants::kDefaultMethodCategory;
+		string							  _category;
 		string							  _displayName;
 		string							  _tooltip;
 		vector<std::pair<string, string>> _listCustomMeta;
-		FunctionNetRole					  _netRole = FunctionNetRole::Local;
+		FunctionNetRole					  _netRole;
 		uint8							  _bReliable	 : 1;
 		uint8							  _bValidate	 : 1;
 		uint8							  _bConstructor	 : 1;
@@ -93,15 +119,25 @@ namespace sw
 		uint8							  _bConst		 : 1;
 		uint8							  _bCallInEditor : 1;
 		[[maybe_unused]] uint8			  _reserved		 : 2;
+		[[maybe_unused]] uint16			  _padding;
 
 		ParsedFunctionInfo() noexcept
-			: _bReliable{ 0 }
-			, _bValidate{ 0 }
-			, _bConstructor{ 0 }
-			, _bStatic{ 0 }
-			, _bConst{ 0 }
-			, _bCallInEditor{ 0 }
+			: _name{}
+			, _returnTypeName{}
+			, _listParamTypeName{}
+			, _category{ annotationConstants::kDefaultMethodCategory }
+			, _displayName{}
+			, _tooltip{}
+			, _listCustomMeta{}
+			, _netRole{ FunctionNetRole::Local }
+			, _bReliable{ SW_FALSE }
+			, _bValidate{ SW_FALSE }
+			, _bConstructor{ SW_FALSE }
+			, _bStatic{ SW_FALSE }
+			, _bConst{ SW_FALSE }
+			, _bCallInEditor{ SW_FALSE }
 			, _reserved{ 0 }
+			, _padding{ 0 }
 		{
 		}
 	};
@@ -127,24 +163,34 @@ namespace sw
 		[[maybe_unused]] uint8			  _reserved			 : 3;
 
 		ParsedTypeInfo() noexcept
-			: _bAbstract{ 0 }
-			, _bStatic{ 0 }
-			, _bReflectBody{ 0 }
-			, _bComponentFactory{ 0 }
-			, _bHideInMenu{ 0 }
+			: _name{}
+			, _fullyQualifiedName{}
+			, _parentFQN{}
+			, _category{}
+			, _displayName{}
+			, _tooltip{}
+			, _listAlias{}
+			, _listCustomMeta{}
+			, _listProperty{}
+			, _listMethod{}
+			, _bAbstract{ SW_FALSE }
+			, _bStatic{ SW_FALSE }
+			, _bReflectBody{ SW_FALSE }
+			, _bComponentFactory{ SW_FALSE }
+			, _bHideInMenu{ SW_FALSE }
 			, _reserved{ 0 }
 		{
 		}
 
-		bool wantsTypeApi() const noexcept { return _bReflectBody != 0; }
-		bool wantsComponentFactory() const noexcept { return _bComponentFactory != 0; }
+		bool wantsTypeApi() const noexcept { return _bReflectBody == SW_TRUE; }
+		bool wantsComponentFactory() const noexcept { return _bComponentFactory == SW_TRUE; }
 	};
 
 	/** @brief 열거형 안의 개별 enumerator */
 	struct ParsedEnumeratorInfo
 	{
 		string _name;
-		int64  _value = 0;
+		int64  _value{ 0 };
 	};
 
 	/** @brief ENUM(...) 가 붙은 열거형 */
@@ -163,8 +209,16 @@ namespace sw
 		[[maybe_unused]] uint8			  _reserved		: 6;
 
 		ParsedEnumInfo() noexcept
-			: _bIsBitFlag{ 0 }
-			, _bEmitFlagOps{ 0 }
+			: _name{}
+			, _fullyQualifiedName{}
+			, _listAlias{}
+			, _listValueAlias{}
+			, _listCustomMeta{}
+			, _listEnumerator{}
+			, _invalidEnumerator{}
+			, _countEnumerator{}
+			, _bIsBitFlag{ SW_FALSE }
+			, _bEmitFlagOps{ SW_FALSE }
 			, _reserved{ 0 }
 		{
 		}

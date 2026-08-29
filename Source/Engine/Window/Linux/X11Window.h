@@ -46,8 +46,10 @@ namespace sw
 		[[maybe_unused]] void*	_pX11Display;
 		[[maybe_unused]] uint64 _x11Window;
 		[[maybe_unused]] uint64 _x11WmDelete;
-		[[maybe_unused]] bool	_bRecreating;
 		[[maybe_unused]] int32	_restoreX;
 		[[maybe_unused]] int32	_restoreY;
+		[[maybe_unused]] uint8	_bRecreating : 1;
+		[[maybe_unused]] uint8	_reservedX11 : 7;
+		[[maybe_unused]] uint16 _padding;
 	};
 } // namespace sw

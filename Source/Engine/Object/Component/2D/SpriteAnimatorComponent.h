@@ -78,9 +78,10 @@ namespace sw
 		PROPERTY( Category = "Playback", DisplayName = "Total Frames", Tooltip = "Total frame count of active animation", ReadOnly )
 		int32 _totalFrames;
 		PROPERTY( Category = "Playback", DisplayName = "Loop", Tooltip = "Loop playback when reaching the end" )
-		bool _bRepeat;
-		bool _bPlaying;
-		bool _bPaused;
-		bool _bGraphLoaded;
+		bool				   _bRepeat;
+		uint8				   _bPlaying	 : 1;
+		uint8				   _bPaused		 : 1;
+		uint8				   _bGraphLoaded : 1;
+		[[maybe_unused]] uint8 _reserved	 : 5;
 	};
 } // namespace sw

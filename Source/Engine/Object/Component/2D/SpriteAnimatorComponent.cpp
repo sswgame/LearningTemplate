@@ -18,10 +18,11 @@ namespace sw
 		, _frameTimer{ 0.0f }
 		, _currentFrame{ 0 }
 		, _totalFrames{ 0 }
-		, _bRepeat{ false }
-		, _bPlaying{ false }
-		, _bPaused{ false }
-		, _bGraphLoaded{ false }
+		, _bRepeat{ SW_FALSE }
+		, _bPlaying{ SW_FALSE }
+		, _bPaused{ SW_FALSE }
+		, _bGraphLoaded{ SW_FALSE }
+		, _reserved{ 0 }
 	{
 		setCanEverTick( true );
 	}
@@ -37,52 +38,32 @@ namespace sw
 
 		tryLoadAnimationGraph();
 
-		if ( _currentAnimation.empty() )
-		{
-			if ( _bGraphLoaded )
-			{
-				const AnimationGraphNode* pEntry = _graph.findEntryNode();
-				if ( pEntry != nullptr )
-					_currentAnimation = pEntry->_name;
-			}
-			else if ( _listAnimation.empty() == false )
-				_currentAnimation = _listAnimation[0];
-		}
-
-		_bPlaying	  = ( _currentAnimation.empty() == false );
-		_bPaused	  = false;
-		_currentFrame = 0;
-		_frameTimer	  = 0.0f;
-		if ( _bGraphLoaded == false && _totalFrames <= 0 && _listAnimation.empty() == false )
-			_totalFrames = static_cast<int32>( _listAnimation.size() );
-
-		updateSpriteFrame();
+		if ( _listAnimation.empty() == false )
+			play( _listAnimation[0], _bRepeat );
 	}
 
 	void SpriteAnimatorComponent::onEndPlay()
 	{
-		SceneComponent::onEndPlay();
+		stop();
+		Component::onEndPlay();
 	}
 
 	void SpriteAnimatorComponent::onTick( float32 deltaTime )
 	{
-		SceneComponent::onTick( deltaTime );
-
-		if ( _bPlaying == false || _bPaused || _currentAnimation.empty() )
+		if ( _bPlaying == SW_FALSE || _bPaused == SW_TRUE || _frameRate <= 0.0f || _totalFrames <= 0 )
 			return;
 
-		const float32 frameDuration = ( _frameRate > 0.0f ) ? ( 1.0f / _frameRate ) : 0.1f;
 		_frameTimer += deltaTime;
-
+		const float32 frameDuration = 1.0f / _frameRate;
 		while ( _frameTimer >= frameDuration )
 		{
 			_frameTimer -= frameDuration;
-			_currentFrame++;
+			++_currentFrame;
 
-			if ( _totalFrames <= 0 )
+			if ( _bGraphLoaded == SW_TRUE && _graph._listNode.empty() == false && _totalFrames == 0 )
 			{
 				_currentFrame = 0;
-				_bPlaying	  = false;
+				_bPlaying	  = SW_FALSE;
 				break;
 			}
 
@@ -95,7 +76,7 @@ namespace sw
 				else
 				{
 					_currentFrame = _totalFrames > 0 ? ( _totalFrames - 1 ) : 0;
-					_bPlaying	  = false;
+					_bPlaying	  = SW_FALSE;
 					break;
 				}
 			}
@@ -107,8 +88,8 @@ namespace sw
 	{
 		_currentAnimation = animName;
 		_bRepeat		  = loop;
-		_bPlaying		  = true;
-		_bPaused		  = false;
+		_bPlaying		  = SW_TRUE;
+		_bPaused		  = SW_FALSE;
 		_currentFrame	  = 0;
 		_frameTimer		  = 0.0f;
 		updateSpriteFrame();
@@ -116,20 +97,20 @@ namespace sw
 
 	void SpriteAnimatorComponent::stop()
 	{
-		_bPlaying	  = false;
-		_bPaused	  = false;
+		_bPlaying	  = SW_FALSE;
+		_bPaused	  = SW_FALSE;
 		_currentFrame = 0;
 		_frameTimer	  = 0.0f;
 	}
 
 	void SpriteAnimatorComponent::pause()
 	{
-		_bPaused = true;
+		_bPaused = SW_TRUE;
 	}
 
 	void SpriteAnimatorComponent::resume()
 	{
-		_bPaused = false;
+		_bPaused = SW_FALSE;
 	}
 
 	void SpriteAnimatorComponent::setFrame( int32 frame )
@@ -175,29 +156,29 @@ namespace sw
 
 	bool SpriteAnimatorComponent::isPlaying() const
 	{
-		return _bPlaying;
+		return _bPlaying == SW_TRUE;
 	}
 
 	bool SpriteAnimatorComponent::isPaused() const
 	{
-		return _bPaused;
+		return _bPaused == SW_TRUE;
 	}
 
 	void SpriteAnimatorComponent::tryLoadAnimationGraph()
 	{
-		_bGraphLoaded = false;
+		_bGraphLoaded = SW_FALSE;
 		_graph		  = AnimationGraphAsset{};
 		if ( _animationGraphPath.empty() )
 			return;
 		if ( _graph.loadFromFile( _animationGraphPath ) == false )
 			return;
-		_bGraphLoaded = true;
+		_bGraphLoaded = SW_TRUE;
 		_graph.collectNodeNames( _listAnimation );
 	}
 
 	bool SpriteAnimatorComponent::tryAdvanceGraphNode()
 	{
-		if ( _bGraphLoaded == false )
+		if ( _bGraphLoaded == SW_FALSE )
 			return false;
 		const AnimationGraphNode* pNode = _graph.findNodeByName( _currentAnimation );
 		if ( pNode == nullptr )

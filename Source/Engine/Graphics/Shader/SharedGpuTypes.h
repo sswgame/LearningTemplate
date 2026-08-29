@@ -1,12 +1,10 @@
-﻿/**
+/**
  * @file SharedGpuTypes.h
  * @brief CPU-side POD mirror of common GPU constant-buffer layouts.
  * @note HLSL / GLSL shaders should keep matching field order and sizes.
  */
 #pragma once
 #include "Core/Common/Types.h"
-
-#include <cstddef>
 
 namespace sw
 {

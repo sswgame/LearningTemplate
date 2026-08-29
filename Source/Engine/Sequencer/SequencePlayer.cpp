@@ -11,9 +11,10 @@ namespace sw
 		, _framesPerSecond{ 30.0f }
 		, _playbackTime{ 0.0f }
 		, _previousFrame{ 0 }
-		, _bPlaying{ false }
-		, _bPaused{ false }
-		, _bLoop{ false }
+		, _bPlaying{ SW_FALSE }
+		, _bPaused{ SW_FALSE }
+		, _bLoop{ SW_FALSE }
+		, _reserved{ 0 }
 	{
 	}
 
@@ -33,39 +34,39 @@ namespace sw
 	{
 		_playbackTime  = 0.0f;
 		_previousFrame = _asset._frameMin;
-		_bPlaying	   = true;
-		_bPaused	   = false;
+		_bPlaying	   = SW_TRUE;
+		_bPaused	   = SW_FALSE;
 	}
 
 	void SequencePlayer::playFromFrame( int32 frame )
 	{
 		seekToFrame( frame );
-		_bPlaying = true;
-		_bPaused  = false;
+		_bPlaying = SW_TRUE;
+		_bPaused  = SW_FALSE;
 	}
 
 	void SequencePlayer::stop()
 	{
 		_playbackTime  = 0.0f;
 		_previousFrame = _asset._frameMin;
-		_bPlaying	   = false;
-		_bPaused	   = false;
+		_bPlaying	   = SW_FALSE;
+		_bPaused	   = SW_FALSE;
 	}
 
 	void SequencePlayer::pause()
 	{
-		_bPaused = true;
+		_bPaused = SW_TRUE;
 	}
 
 	void SequencePlayer::resume()
 	{
-		if ( _bPlaying )
-			_bPaused = false;
+		if ( _bPlaying == SW_TRUE )
+			_bPaused = SW_FALSE;
 	}
 
 	void SequencePlayer::update( float32 deltaSeconds )
 	{
-		if ( _bPlaying == false || _bPaused )
+		if ( _bPlaying == SW_FALSE || _bPaused == SW_TRUE )
 			return;
 		if ( deltaSeconds < 0.0f )
 			deltaSeconds = 0.0f;
@@ -82,7 +83,7 @@ namespace sw
 		if ( _playbackTime < durationSec )
 			return;
 
-		if ( _bLoop )
+		if ( _bLoop == SW_TRUE )
 		{
 			_playbackTime = MathUtil::fmod( _playbackTime, durationSec );
 			if ( _playbackTime < 0.0f )
@@ -91,18 +92,13 @@ namespace sw
 		else
 		{
 			_playbackTime = durationSec;
-			_bPlaying	  = false;
+			_bPlaying	  = SW_FALSE;
 		}
 	}
 
 	void SequencePlayer::setFramesPerSecond( float32 fps )
 	{
 		_framesPerSecond = ( fps > 0.0f ) ? fps : 30.0f;
-	}
-
-	void SequencePlayer::setLoop( bool bLoop )
-	{
-		_bLoop = bLoop;
 	}
 
 	void SequencePlayer::seekToFrame( int32 frame )

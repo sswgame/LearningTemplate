@@ -50,7 +50,7 @@ namespace sw
 		, _displayName{}
 		, _tooltip{}
 		, _mapCustomMeta{}
-		, _bHideInMenu{ 0 }
+		, _bHideInMenu{ SW_FALSE }
 		, _reservedFlags{ 0 }
 #else
 		: _reservedEmpty{ 0 }
@@ -71,14 +71,14 @@ namespace sw
 		, _assetType{}
 		, _minRange{ 0.0f }
 		, _maxRange{ 1.0f }
-		, _bHasRange{ 0 }
-		, _bReadOnly{ 0 }
-		, _bXmlAttribute{ 0 }
-		, _bAssetPath{ 0 }
-		, _bPolymorphic{ 0 }
-		, _bTransient{ 0 }
+		, _bHasRange{ SW_FALSE }
+		, _bReadOnly{ SW_FALSE }
+		, _bXmlAttribute{ SW_FALSE }
+		, _bAssetPath{ SW_FALSE }
+		, _bPolymorphic{ SW_FALSE }
+		, _bTransient{ SW_FALSE }
 #if !defined( SW_SHIPPING )
-		, _bHideInInspector{ 0 }
+		, _bHideInInspector{ SW_FALSE }
 		, _reservedFlags{ 0 }
 #else
 		, _reservedFlags{ 0 }
@@ -96,13 +96,13 @@ namespace sw
 #else
 		: _netRole{ FunctionNetRole::Local }
 #endif
-		, _bReliable{ 0 }
-		, _bValidate{ 0 }
-		, _bConstructor{ 0 }
-		, _bStatic{ 0 }
-		, _bConst{ 0 }
+		, _bReliable{ SW_FALSE }
+		, _bValidate{ SW_FALSE }
+		, _bConstructor{ SW_FALSE }
+		, _bStatic{ SW_FALSE }
+		, _bConst{ SW_FALSE }
 #if !defined( SW_SHIPPING )
-		, _bCallInEditor{ 0 }
+		, _bCallInEditor{ SW_FALSE }
 		, _reserved{ 0 }
 #else
 		, _reserved{ 0 }
@@ -123,7 +123,7 @@ namespace sw
 		, _metadata{}
 		, _cachedNameHash{ 0 }
 		, _containerKind{ ContainerKind::None }
-		, _bIsContainer{ 0 }
+		, _bIsContainer{ SW_FALSE }
 		, _reservedFlags{ 0 } {}
 
 	NestedContainerInfo PropertyInfo::getContainerShape() const
@@ -157,7 +157,7 @@ namespace sw
 		, _metadata{}
 		, _cachedNameHash{ 0 }
 		, _containerKind{ containerKind }
-		, _bIsContainer{ static_cast<uint8>( bIsContainer ? 1 : 0 ) }
+		, _bIsContainer{ static_cast<uint8>( bIsContainer ? SW_TRUE : SW_FALSE ) }
 		, _reservedFlags{ 0 }
 	{
 		if ( alias.empty() == false )
@@ -175,9 +175,9 @@ namespace sw
 		, _moduleName{}
 		, _invalidValue{ 0 }
 		, _countValue{ 0 }
-		, _bIsBitFlag{ 0 }
-		, _bHasInvalid{ 0 }
-		, _bHasCount{ 0 }
+		, _bIsBitFlag{ SW_FALSE }
+		, _bHasInvalid{ SW_FALSE }
+		, _bHasCount{ SW_FALSE }
 		, _reservedFlags{ 0 }
 	{
 	}
@@ -196,13 +196,13 @@ namespace sw
 		, _mapNameToProperty{}
 		, _mapNameToMethod{}
 		, _typeId{ 0 }
-		, _bAbstract{ 0 }
-		, _bStatic{ 0 }
-		, _bPrimitive{ 0 }
-		, _bIsCacheBuilt{ 0 }
-		, _bIsPODFastPath{ 0 }
-		, _bIsPODCalculated{ 0 }
-		, _bPropertyListWithBaseBuilt{ 0 }
+		, _bAbstract{ SW_FALSE }
+		, _bStatic{ SW_FALSE }
+		, _bPrimitive{ SW_FALSE }
+		, _bIsCacheBuilt{ SW_FALSE }
+		, _bIsPODFastPath{ SW_FALSE }
+		, _bIsPODCalculated{ SW_FALSE }
+		, _bPropertyListWithBaseBuilt{ SW_FALSE }
 		, _reservedTypeFlags{ 0 }
 		, _reservedPadding{ 0, 0, 0 } {}
 
@@ -223,10 +223,10 @@ namespace sw
 		, _bAbstract{ other._bAbstract }
 		, _bStatic{ other._bStatic }
 		, _bPrimitive{ other._bPrimitive }
-		, _bIsCacheBuilt{ 0 }
-		, _bIsPODFastPath{ 0 }
-		, _bIsPODCalculated{ 0 }
-		, _bPropertyListWithBaseBuilt{ 0 }
+		, _bIsCacheBuilt{ SW_FALSE }
+		, _bIsPODFastPath{ SW_FALSE }
+		, _bIsPODCalculated{ SW_FALSE }
+		, _bPropertyListWithBaseBuilt{ SW_FALSE }
 		, _reservedTypeFlags{ 0 }
 		, _reservedPadding{ 0, 0, 0 }
 	{
@@ -249,17 +249,17 @@ namespace sw
 		, _bAbstract{ other._bAbstract }
 		, _bStatic{ other._bStatic }
 		, _bPrimitive{ other._bPrimitive }
-		, _bIsCacheBuilt{ 0 }
-		, _bIsPODFastPath{ 0 }
-		, _bIsPODCalculated{ 0 }
-		, _bPropertyListWithBaseBuilt{ 0 }
+		, _bIsCacheBuilt{ SW_FALSE }
+		, _bIsPODFastPath{ SW_FALSE }
+		, _bIsPODCalculated{ SW_FALSE }
+		, _bPropertyListWithBaseBuilt{ SW_FALSE }
 		, _reservedTypeFlags{ 0 }
 		, _reservedPadding{ 0, 0, 0 }
 	{
 		other._typeId		   = 0;
 		other._size			   = 0;
 		other._destroyInstance = nullptr;
-		other._bIsCacheBuilt   = 0;
+		other._bIsCacheBuilt   = SW_FALSE;
 	}
 
 	TypeInfo& TypeInfo::operator=( const TypeInfo& other )
@@ -284,10 +284,10 @@ namespace sw
 		_propertyListWithBase.clear();
 		_mapNameToProperty.clear();
 		_mapNameToMethod.clear();
-		_bIsCacheBuilt				= 0;
-		_bIsPODFastPath				= 0;
-		_bIsPODCalculated			= 0;
-		_bPropertyListWithBaseBuilt = 0;
+		_bIsCacheBuilt				= SW_FALSE;
+		_bIsPODFastPath				= SW_FALSE;
+		_bIsPODCalculated			= SW_FALSE;
+		_bPropertyListWithBaseBuilt = SW_FALSE;
 
 		return *this;
 	}
@@ -314,23 +314,23 @@ namespace sw
 		_propertyListWithBase.clear();
 		_mapNameToProperty.clear();
 		_mapNameToMethod.clear();
-		_bIsCacheBuilt				= 0;
-		_bIsPODFastPath				= 0;
-		_bIsPODCalculated			= 0;
-		_bPropertyListWithBaseBuilt = 0;
+		_bIsCacheBuilt				= SW_FALSE;
+		_bIsPODFastPath				= SW_FALSE;
+		_bIsPODCalculated			= SW_FALSE;
+		_bPropertyListWithBaseBuilt = SW_FALSE;
 
 		other._typeId		   = 0;
 		other._size			   = 0;
 		other._destroyInstance = nullptr;
-		other._bIsCacheBuilt   = 0;
+		other._bIsCacheBuilt   = SW_FALSE;
 
 		return *this;
 	}
 
 	bool TypeInfo::usesPodCopyFastPath() const
 	{
-		if ( _bIsPODCalculated )
-			return _bIsPODFastPath;
+		if ( _bIsPODCalculated == SW_TRUE )
+			return _bIsPODFastPath == SW_TRUE;
 
 		TypeRegistry& registry = engine::getTypeRegistry();
 
@@ -342,7 +342,7 @@ namespace sw
 		_bIsPODFastPath = SW_TRUE;
 		for ( const PropertyInfo& prop : _propertyList )
 		{
-			if ( prop._bIsContainer != 0 || prop._containerKind != ContainerKind::None )
+			if ( prop._bIsContainer == SW_TRUE || prop._containerKind != ContainerKind::None )
 			{
 				_bIsPODFastPath = SW_FALSE;
 				break;

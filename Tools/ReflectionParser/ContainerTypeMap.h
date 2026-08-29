@@ -3,7 +3,6 @@
  * @brief clang 컨테이너 표기 → ContainerKind + wrapper stem (ReflectBuiltins에서 채움).
  */
 #pragma once
-#include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
@@ -19,18 +18,21 @@ namespace sw
 	struct ContainerTypeRule
 	{
 		string		  _match;
-		ContainerKind _kind = ContainerKind::Sequence;
 		string		  _type; ///< Vector | Map | UnorderedMap | …
+		ContainerKind _kind{ ContainerKind::Sequence };
 	};
 
 	class ContainerTypeMap
 	{
 	public:
+		ContainerTypeMap();
+		~ContainerTypeMap() = default;
+
 		/** @brief 프로세스 전역 컨테이너 맵을 반환합니다. */
 		static ContainerTypeMap& instance();
 
 		/** @brief builtins 등록이 완료되었는지 반환합니다. */
-		bool isLoaded() const noexcept { return _bLoaded; }
+		bool isLoaded() const noexcept { return _bLoaded == SW_TRUE; }
 
 		/** @brief clang 타입 표기에 맞는 규칙을 찾습니다. */
 		const ContainerTypeRule* match( const string_view clangTypeSpelling ) const;
@@ -43,10 +45,11 @@ namespace sw
 		/** @brief 등록 규칙을 비웁니다. */
 		void clear();
 		/** @brief 로드 완료 플래그를 설정합니다. */
-		void setLoaded( bool bLoaded ) { _bLoaded = bLoaded; }
+		void setLoaded( bool bLoaded ) { _bLoaded = bLoaded ? SW_TRUE : SW_FALSE; }
 
 	private:
 		vector<ContainerTypeRule> _listRule;
-		bool					  _bLoaded = false;
+		uint8					  _bLoaded	: 1;
+		[[maybe_unused]] uint8	  _reserved : 7;
 	};
 } // namespace sw

@@ -8,12 +8,18 @@
 
 #if defined( SW_PLATFORM_WINDOWS )
 	#include <d3d11.h>
+	#include <d3d11_1.h>
 	#include <d3d11shader.h>
 	#include <d3d12.h>
+	#include <d3d12sdklayers.h>
 	#include <d3d12shader.h>
 	#include <d3dcompiler.h>
 	#include <dxcapi.h>
 	#include <dxgi1_4.h>
+	#include <mfapi.h>
+	#include <mfidl.h>
+	#include <mfreadwrite.h>
+	#include <xaudio2.h>
 	#define SW_HAS_DXC_API 1
 
 #elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )

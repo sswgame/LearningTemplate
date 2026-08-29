@@ -222,8 +222,8 @@ SW_TEST_CASE( AudioSystemTest, MultithreadedAudioDecodeAndPlayback )
 	generateWav( wavA );
 	generateWav( wavB );
 
-	constexpr int32			 threadCount = 4;
-	std::vector<std::thread> workers;
+	constexpr int32			threadCount = 4;
+	sw::vector<std::thread> workers;
 	workers.reserve( threadCount );
 
 	for ( int32 workerIndex = 0; workerIndex < threadCount; ++workerIndex )

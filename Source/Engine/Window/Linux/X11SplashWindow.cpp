@@ -3,10 +3,7 @@
 #include "Engine/Window/Linux/X11SplashWindow.h"
 
 #if defined( SW_PLATFORM_LINUX )
-	#include <X11/Xlib.h>
-	#include <X11/Xutil.h>
-	#include <X11/Xatom.h>
-	#include "Core/Common/X11MacroUndef.h"
+	#include "Core/Common/PlatformOsHeaders.h"
 #endif
 
 namespace sw

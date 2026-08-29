@@ -3,6 +3,7 @@
 #include "Core/File/Linux/LinuxFileWatcher.h"
 
 #include "Core/Common/PlatformOsHeaders.h"
+#include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
@@ -11,7 +12,6 @@
 #include "Core/Log/Logger.h"
 
 #if defined( SW_PLATFORM_LINUX )
-	#include <cerrno>
 
 namespace sw
 {

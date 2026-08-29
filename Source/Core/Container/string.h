@@ -3,11 +3,10 @@
  * @brief std::basic_string 래퍼. 디버그에서 RaceDetectContext 로 동시 접근을 잡습니다.
  */
 #pragma once
+#include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/DataRaceDetector.h"
 #include "Core/Memory/Memory.h"
-
-#include <string>
 
 namespace sw
 {

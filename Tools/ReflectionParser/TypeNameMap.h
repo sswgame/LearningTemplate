@@ -3,7 +3,6 @@
  * @brief ReflectionParser용 clang 표기 → canonical 맵 (ReflectBuiltins에서 채움).
  */
 #pragma once
-#include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
@@ -17,11 +16,14 @@ namespace sw
 	class TypeNameMap
 	{
 	public:
+		TypeNameMap();
+		~TypeNameMap() = default;
+
 		/** @brief 프로세스 전역 타입명 맵을 반환합니다. */
 		static TypeNameMap& instance();
 
 		/** @brief builtins 등록이 완료되었는지 반환합니다. */
-		bool isLoaded() const { return _bLoaded; }
+		bool isLoaded() const noexcept { return _bLoaded == SW_TRUE; }
 
 		/** @brief clang 수식어를 제거한 뒤 alias → canonical 로 정규화합니다. */
 		string normalize( const string& clangSpelling ) const;
@@ -33,14 +35,15 @@ namespace sw
 		/** @brief 등록 항목을 비웁니다. */
 		void clear();
 		/** @brief 로드 완료 플래그를 설정합니다. */
-		void setLoaded( bool bLoaded ) { _bLoaded = bLoaded; }
+		void setLoaded( bool bLoaded ) { _bLoaded = bLoaded ? SW_TRUE : SW_FALSE; }
 
 	private:
 		/** @brief alias 키를 canonical 에 연결합니다. */
 		void addKey( const string& key, const string& canonical );
 
 		unordered_map<string, string> _mapAliasToCanonical;
-		bool						  _bLoaded = false;
+		uint8						  _bLoaded	: 1;
+		[[maybe_unused]] uint8		  _reserved : 7;
 	};
 
 	// ------------------------------------------------------------------------------

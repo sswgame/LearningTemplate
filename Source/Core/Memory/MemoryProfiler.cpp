@@ -2,6 +2,7 @@
 
 #include "Core/Memory/MemoryProfiler.h"
 
+#include "Core/Common/PlatformOsHeaders.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
@@ -9,8 +10,6 @@
 
 #if defined( SW_PLATFORM_WINDOWS ) && defined( SW_DEBUG ) && !defined( SW_SHIPPING )
 	#define SW_HAS_CRT_LEAK_CHECK 1
-	#include "Core/Container/vector.h"
-	#include <crtdbg.h>
 #elif ( defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS ) ) && defined( SW_DEBUG ) && !defined( SW_SHIPPING )
 	#if defined( __has_feature )
 		#if __has_feature( address_sanitizer )

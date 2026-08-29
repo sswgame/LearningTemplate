@@ -39,6 +39,13 @@ namespace sw
 
 namespace sw
 {
+	EmitTemplateStore::EmitTemplateStore()
+		: _mapTemplate{}
+		, _bLoaded{ SW_FALSE }
+		, _reserved{ 0 }
+	{
+	}
+
 	EmitTemplateStore& EmitTemplateStore::instance()
 	{
 		static EmitTemplateStore s_store;
@@ -48,7 +55,7 @@ namespace sw
 	void EmitTemplateStore::clear()
 	{
 		_mapTemplate.clear();
-		_bLoaded = false;
+		_bLoaded = SW_FALSE;
 	}
 
 	bool EmitTemplateStore::loadDirectory( const string_view absDir )
@@ -65,17 +72,17 @@ namespace sw
 		FileUtil::collectFiles( absDir, ParserContext::getSharedConfig()._emitTemplateExtension, files, false, false );
 
 		uint32 count = 0;
-		for ( const string& path : files )
+		for ( const string& filePath : files )
 		{
-			const string stem = FileUtil::removeExtension( FileUtil::getFileNamePart( path ) );
-			string		 text;
-			FileUtil::readTextFile( path, text );
-			if ( text.empty() )
-			{
-				SW_LOG_WARNING( "Empty or unreadable: %#", path );
+			string content;
+			if ( FileUtil::readTextFile( filePath, content ) == false )
 				continue;
-			}
-			_mapTemplate.insert_or_assign( stem, text );
+
+			string name = FileUtil::getFileNamePart( filePath );
+			if ( name.size() > 4 && name.rfind( ".tpl" ) == name.size() - 4 )
+				name = name.substr( 0, name.size() - 4 );
+
+			_mapTemplate[name] = content;
 			++count;
 		}
 
@@ -85,7 +92,7 @@ namespace sw
 			return false;
 		}
 
-		_bLoaded = true;
+		_bLoaded = SW_TRUE;
 		SW_LOG_TRACE( "Loaded %# templates from %#", count, absDir );
 		return true;
 	}

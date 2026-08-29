@@ -2,15 +2,11 @@
 
 #include "Core/Task/TaskManager.h"
 
+#include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
-
-#if !defined( SW_SHIPPING )
-	#include <cstring>
-#endif
-#include <variant>
 
 namespace sw
 {

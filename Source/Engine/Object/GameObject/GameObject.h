@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Common/Macros.h"
+#include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/string.h"
@@ -16,9 +17,6 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-
-#include <tuple>
-#include <utility>
 
 namespace sw
 {

@@ -28,9 +28,9 @@ namespace sw
 		, _numRenderTargets{ 1 }
 		, _arrRtvFormats{}
 		, _depthStencilFormat{ RHIFormat::D24_UNORM_S8_UINT }
-		, _bEnableDepthTest{ 0 }
-		, _bEnableDepthWrite{ 1 }
-		, _bEnableBlend{ 0 }
+		, _bEnableDepthTest{ SW_FALSE }
+		, _bEnableDepthWrite{ SW_TRUE }
+		, _bEnableBlend{ SW_FALSE }
 		, _reservedFlags{ 0 }
 	{
 		for ( uint32 attachmentIndex = 0; attachmentIndex < kMaxColorAttachments; ++attachmentIndex )
@@ -43,7 +43,7 @@ namespace sw
 		: _listColorAttachment{}
 		, _clearDepth{ 1.0f }
 		, _clearStencil{ 0 }
-		, _bHasDepthStencil{ 0 }
+		, _bHasDepthStencil{ SW_FALSE }
 		, _reservedFlags{ 0 }
 	{
 	}
@@ -57,10 +57,10 @@ namespace sw
 		, _arrClearColor{ 0.0f, 0.0f, 0.0f, 0.0f }
 		, _clearDepth{ 1.0f }
 		, _clearStencil{ 0 }
-		, _bIsRenderTarget{ 0 }
-		, _bIsDepthStencil{ 0 }
-		, _bIsShaderResource{ 1 }
-		, _bIsUnorderedAccess{ 0 }
+		, _bIsRenderTarget{ SW_FALSE }
+		, _bIsDepthStencil{ SW_FALSE }
+		, _bIsShaderResource{ SW_TRUE }
+		, _bIsUnorderedAccess{ SW_FALSE }
 		, _reservedFlags{ 0 }
 	{
 	}
@@ -79,7 +79,7 @@ namespace sw
 		, _loadOp{ RHIRenderPassLoadOp::Clear }
 		, _arrLoadOps{}
 		, _depthLoadOp{ RHIRenderPassLoadOp::Clear }
-		, _bBindColor{ 1 }
+		, _bBindColor{ SW_TRUE }
 		, _reservedFlags{ 0 }
 	{
 		for ( uint32 attachmentIndex = 0; attachmentIndex < kMaxColorAttachments; ++attachmentIndex )
@@ -97,8 +97,9 @@ namespace sw
 		, _device{ nullptr }
 		, _pendingRHIBackend{ RHIBackend::DirectX12 }
 		, _committedRHIBackend{ RHIBackend::DirectX12 }
-		, _bPreferredVSync{ false }
-		, _bPendingBackendChange{ false }
+		, _bPreferredVSync{ SW_FALSE }
+		, _bPendingBackendChange{ SW_FALSE }
+		, _reserved{ 0 }
 	{
 	}
 
@@ -158,7 +159,7 @@ namespace sw
 		IWindow* pWindow = IWindow::getActiveWindow();
 		if ( pWindow != nullptr )
 			_device->setInitWindow( pWindow );
-		_device->setPreferredVSync( _bPreferredVSync );
+		_device->setPreferredVSync( _bPreferredVSync == SW_TRUE );
 
 		if ( _device->initialize() == false )
 		{
@@ -233,7 +234,7 @@ namespace sw
 
 		if ( pWindow != nullptr )
 			_device->setInitWindow( pWindow );
-		_device->setPreferredVSync( _bPreferredVSync );
+		_device->setPreferredVSync( _bPreferredVSync == SW_TRUE );
 
 		if ( _device->initialize() == false )
 		{
@@ -263,12 +264,12 @@ namespace sw
 
 		SW_LOG_INFO( "RHI Backend change queued: %# → %#", getBackendTypeName( _committedRHIBackend ), getBackendTypeName( requested ) );
 		_pendingRHIBackend	   = requested;
-		_bPendingBackendChange = true;
+		_bPendingBackendChange = SW_TRUE;
 	}
 
 	RHIBackend RHI::consumePendingBackendChange()
 	{
-		_bPendingBackendChange = false;
+		_bPendingBackendChange = SW_FALSE;
 		return _pendingRHIBackend;
 	}
 

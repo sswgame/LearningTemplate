@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Common/Macros.h"
+#include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
@@ -16,9 +17,6 @@
 #include "Engine/Object/Component/ComponentHandle.h"
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Physics/PhysicsWorld.h"
-
-#include <shared_mutex>
-#include <type_traits>
 
 namespace sw
 {

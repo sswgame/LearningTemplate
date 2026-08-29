@@ -10,9 +10,6 @@
 
 #include "Engine/EngineMinimal.h"
 
-#include <algorithm>
-#include <memory>
-
 namespace sw
 {
 	/**

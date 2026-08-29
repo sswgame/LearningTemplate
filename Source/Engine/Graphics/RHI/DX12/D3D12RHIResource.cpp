@@ -2,10 +2,9 @@
 
 #include "Engine/Graphics/RHI/DX12/D3D12RHIResource.h"
 
+#include "Engine/Common/EnginePlatformHeaders.h"
 #include "Engine/Graphics/RHI/DX12/D3D12RHIDevice.h"
 #include "Engine/Graphics/Shader/ShaderCache.h"
-
-#include <d3d12.h>
 
 #if defined( SW_PLATFORM_WINDOWS )
 namespace sw

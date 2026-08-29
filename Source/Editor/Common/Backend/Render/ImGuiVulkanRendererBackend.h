@@ -3,7 +3,6 @@
  * @brief ImGui Vulkan 렌더러 백엔드
  */
 #pragma once
-#include "Core/Common/StdHeaders.h"
 #include "Core/Container/unordered_map.h"
 
 #include "Editor/Common/Backend/IImGuiRendererBackend.h"

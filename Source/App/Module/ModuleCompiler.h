@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Common/Macros.h"
+#include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
@@ -11,9 +12,6 @@
 #include "Core/Memory/Memory.h"
 
 #include "RuntimeAPI/Service/IModuleCompiler.h"
-
-#include <chrono>
-#include <thread>
 
 namespace sw
 {

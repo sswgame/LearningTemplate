@@ -3,12 +3,9 @@
  * @brief std::list 래퍼. 디버그에서 RaceDetectContext 로 동시 접근을 잡습니다.
  */
 #pragma once
+#include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/DataRaceDetector.h"
-#include "Core/Container/list.h"
 #include "Core/Memory/Memory.h"
-
-#include <list>
-#include <memory>
 
 namespace sw
 {

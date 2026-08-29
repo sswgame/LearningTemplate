@@ -59,9 +59,11 @@ namespace sw
 		static LRESULT CALLBACK wndProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam );
 
 	private:
-		HWND  _hWnd;
-		bool  _bRecreating;
-		int32 _restoreX;
-		int32 _restoreY;
+		HWND					_hWnd;
+		int32					_restoreX;
+		int32					_restoreY;
+		uint8					_bRecreating   : 1;
+		[[maybe_unused]] uint8	_reservedWin32 : 7;
+		[[maybe_unused]] uint16 _padding;
 	};
 } // namespace sw

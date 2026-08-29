@@ -13,7 +13,6 @@
 #pragma once
 #include <algorithm>
 #include <array>
-#include <atomic>
 #include <bitset>
 #include <cassert>
 #include <cctype>
@@ -21,6 +20,7 @@
 #include <chrono>
 #include <climits>
 #include <condition_variable>
+#include <csignal>
 #include <cstdarg>
 #include <cstdint>
 #include <cstdio>
@@ -39,7 +39,6 @@
 #include <list>
 #include <map>
 #include <memory>
-#include <mutex>
 #include <optional>
 #include <queue>
 #include <random>

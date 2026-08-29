@@ -2,6 +2,7 @@
 
 #include "Editor/Panels/ContentBrowserPanel.h"
 
+#include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
@@ -20,7 +21,6 @@
 
 #include "RuntimeAPI/Service/EditorService.h"
 
-#include <algorithm>
 #include <imgui.h>
 
 namespace sw::editor
@@ -327,7 +327,7 @@ namespace sw::editor
 			return true;
 
 		const EditorAssetBrowserFilter& filter = pFilter[_filterIndex];
-		if ( filter._bOther == true )
+		if ( filter._bOther )
 			return EditorAssetTypeRegistry::matchesOther( pPath );
 		if ( filter._kind == EditorAssetKind::Unknown )
 			return true;

@@ -10,8 +10,6 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 
-#include <memory>
-
 namespace sw
 {
 	/**
@@ -69,7 +67,7 @@ namespace sw
 		GameModeStateMachine& operator=( GameModeStateMachine&& )	   = default;
 
 		/** @brief 특정 모드에 대응하는 핸들러를 등록합니다. */
-		void registerHandler( GamePlayMode mode, std::shared_ptr<IGameModeHandler> pHandler );
+		void registerHandler( GamePlayMode mode, shared_ptr<IGameModeHandler> pHandler );
 		/** @brief 특정 모드의 핸들러를 등록 해제합니다. */
 		void unregisterHandler( GamePlayMode mode );
 
@@ -93,9 +91,9 @@ namespace sw
 		void setOnModeChanged( ModeChangedDelegate delegate ) { _onModeChanged = delegate; }
 
 	private:
-		GamePlayMode												   _currentMode;
-		GamePlayMode												   _previousMode;
-		unordered_map<GamePlayMode, std::shared_ptr<IGameModeHandler>> _mapHandler;
-		ModeChangedDelegate											   _onModeChanged;
+		GamePlayMode											  _currentMode;
+		GamePlayMode											  _previousMode;
+		unordered_map<GamePlayMode, shared_ptr<IGameModeHandler>> _mapHandler;
+		ModeChangedDelegate										  _onModeChanged;
 	};
 } // namespace sw

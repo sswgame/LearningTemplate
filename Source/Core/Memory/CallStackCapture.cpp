@@ -2,19 +2,8 @@
 
 #include "Core/Memory/CallStackCapture.h"
 
+#include "Core/Common/PlatformOsHeaders.h"
 #include "Core/Concurrency/mutex.h"
-
-#if defined( SW_PLATFORM_WINDOWS )
-	#include "Core/Common/PlatformOsHeaders.h"
-	#pragma warning( push )
-	#pragma warning( disable : 4091 )
-	#include <DbgHelp.h>
-	#pragma warning( pop )
-#elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
-	#include <cxxabi.h>
-	#include <dlfcn.h>
-	#include <execinfo.h>
-#endif
 
 namespace sw
 {

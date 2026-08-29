@@ -7,10 +7,7 @@
 #include "Engine/Graphics/RHI/DX12/D3D12RHISwapChain.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
-	#if defined( SW_DEBUG )
-		#include <d3d12sdklayers.h>
-	#endif
-
+	#include "Engine/Common/EnginePlatformHeaders.h"
 	#include "Engine/Config/EngineData.h"
 	#include "Engine/Graphics/RHI/RHIDeferredCommandList.h"
 	#include "Engine/Graphics/Shader/ShaderCache.h"

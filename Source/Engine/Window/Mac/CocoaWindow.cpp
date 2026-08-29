@@ -9,7 +9,7 @@ namespace
 {
 	sw::CocoaWindow* s_pCloseQueryWindow{ nullptr };
 
-	signed char swCocoaWindowShouldClose( id self, SEL sel, id sender )
+	int8 swCocoaWindowShouldClose( id self, SEL sel, id sender )
 	{
 		(void)self;
 		(void)sel;
@@ -99,7 +99,7 @@ namespace sw
 
 		SEL initSel	  = sel_registerName( "initWithContentRect:styleMask:backing:defer:" );
 		id	windowObj = ( (id ( * )( id, SEL, SW_CGRect, uint64, uint64, bool ))objc_msgSend )(
-			 windowAlloc, initSel, frameRect, styleMask, backing, false );
+			windowAlloc, initSel, frameRect, styleMask, backing, false );
 
 		if ( windowObj == nullptr )
 			return false;
@@ -125,10 +125,10 @@ namespace sw
 		( (void ( * )( id, SEL, id ))objc_msgSend )( contentView, sel_registerName( "setLayer:" ), metalLayer );
 		( (void ( * )( id, SEL, bool ))objc_msgSend )( contentView, sel_registerName( "setWantsLayer:" ), true );
 
-		_pCocoaWindow	  = windowObj;
-		_pCocoaApp		  = app;
-		_pCocoaMetalLayer = metalLayer;
-		_bShouldClose	  = false;
+		_pCocoaWindow		= windowObj;
+		_pCocoaApp			= app;
+		_pCocoaMetalLayer	= metalLayer;
+		_bShouldClose		= SW_FALSE;
 		s_pCloseQueryWindow = this;
 
 		SEL setReleasedSel = sel_registerName( "setReleasedWhenClosed:" );
@@ -175,7 +175,7 @@ namespace sw
 
 	bool CocoaWindow::processMessages()
 	{
-		if ( _bShouldClose || _pCocoaApp == nullptr )
+		if ( _bShouldClose == SW_TRUE || _pCocoaApp == nullptr )
 			return false;
 
 		id poolClass = (id)objc_getClass( "NSAutoreleasePool" );
@@ -204,7 +204,7 @@ namespace sw
 		SEL drainSel = sel_registerName( "drain" );
 		( (void ( * )( id, SEL ))objc_msgSend )( pool, drainSel );
 
-		return _bShouldClose == false;
+		return _bShouldClose == SW_FALSE;
 	}
 
 	void CocoaWindow::showWindow( bool bShow )
@@ -259,7 +259,7 @@ namespace sw
 
 	bool CocoaWindow::processMessages()
 	{
-		return _bShouldClose == false;
+		return _bShouldClose == SW_FALSE;
 	}
 
 	void CocoaWindow::showWindow( bool bShow )

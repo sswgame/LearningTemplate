@@ -4,7 +4,6 @@
  */
 #pragma once
 #include "Core/Common/Defines.h"
-#include "Core/Common/StdHeaders.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 

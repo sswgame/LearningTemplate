@@ -23,7 +23,9 @@ namespace sw
 		[[maybe_unused]] uint8				  _reserved : 7;
 
 		DebugOverlayState()
-			: _bVisible{ 1 }
+			: _mapFloat{}
+			, _mapString{}
+			, _bVisible{ SW_TRUE }
 			, _reserved{ 0 } {}
 
 		/** @brief float32 값을 넣습니다. */

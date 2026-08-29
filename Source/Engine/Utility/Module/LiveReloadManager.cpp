@@ -2,6 +2,7 @@
 
 #include "Engine/Utility/Module/LiveReloadManager.h"
 
+#include "Core/Common/StdHeaders.h"
 #include "Core/File/IFileWatcher.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Task/TaskManager.h"
@@ -12,9 +13,6 @@
 #include "Engine/Scene/SceneManager.h"
 
 #include "RuntimeAPI/PluginAPI.h"
-
-#include <algorithm>
-#include <chrono>
 
 #if defined( SW_PLATFORM_WINDOWS )
 	#include "Core/File/Windows/WindowsFileWatcher.h"
@@ -106,8 +104,9 @@ namespace sw
 		  }
 		, _onBeforeCommitBatch{}
 		, _drainWorkers{}
-		, _bReloadGraphBroken{ false }
-		, _bReloadingBatch{ false }
+		, _bReloadGraphBroken{ SW_FALSE }
+		, _bReloadingBatch{ SW_FALSE }
+		, _reserved{ 0 }
 	{
 		LiveReloadManagerInternal::cleanStaleShadowArtifacts( FileUtil::getDirectoryPart( FileUtil::getExecutablePath() ) );
 
@@ -141,7 +140,7 @@ namespace sw
 			_fileWatcher.reset();
 		}
 
-		if ( _bReloadGraphBroken )
+		if ( _bReloadGraphBroken == SW_TRUE )
 		{
 			for ( auto& [moduleName, moduleContext] : _mapModule )
 			{
@@ -161,42 +160,51 @@ namespace sw
 		vector<string> listOrder;
 		if ( topoSortSubgraph( listNames, listOrder ) == false )
 		{
-			SW_LOG_WARNING( "Shutdown topo sort failed (cycle?) — unloading in name order" );
-			listOrder = listNames;
-			std::sort( listOrder.begin(), listOrder.end() );
+			SW_LOG_ERROR( "Topological sort failed during shutdown — unloading in arbitrary order" );
+			for ( auto& [name, ctx] : _mapModule )
+			{
+				unloadModule( ctx );
+			}
+			_mapModule.clear();
+			return;
 		}
 
-		// Dependents first (reverse of dependency-first reload order).
+		// 역순 언로드: 종속된 모듈 먼저 언로드, 그 후 기반 모듈 언로드
 		for ( auto it = listOrder.rbegin(); it != listOrder.rend(); ++it )
 		{
-			auto found = _mapModule.find( *it );
-			if ( found != _mapModule.end() )
-				unloadModule( found->second );
+			auto mapIt = _mapModule.find( *it );
+			if ( mapIt != _mapModule.end() )
+			{
+				unloadModule( mapIt->second );
+			}
 		}
 		_mapModule.clear();
 	}
 
 	bool LiveReloadManager::registerModule( string_view moduleName, const vector<string>& listDependsOn )
 	{
-		ModuleContext& moduleContext = _mapModule[string( moduleName )];
-		moduleContext._moduleName	 = moduleName;
-		moduleContext._listDependsOn = listDependsOn;
-
-		const string execDir = FileUtil::getDirectoryPart( FileUtil::getExecutablePath() );
-
-		if ( _fileWatcher && _fileWatcher->isWatching() == false )
+		string execDir = FileUtil::getDirectoryPart( FileUtil::getExecutablePath() );
+		if ( FileUtil::directoryExists( execDir ) == false )
 		{
-			_fileWatcher->startWatching( execDir, false ); // no recursive for DLLs
-			SW_LOG_INFO( "Started FileWatcher on directory: %#", execDir.c_str() );
+			SW_LOG_ERROR( "Executable directory does not exist: %#", execDir );
+			return false;
 		}
 
+		ModuleContext& moduleContext	  = _mapModule[string( moduleName )];
+		moduleContext._moduleName		  = moduleName;
+		moduleContext._listDependsOn	  = listDependsOn;
+		moduleContext._tempModulePath	  = "";
 		moduleContext._originalModulePath = FileUtil::joinPath( execDir, FileUtil::formatSharedLibraryName( moduleName ) );
-		return loadShadowCopyModule( moduleContext );
+		if ( loadShadowCopyModule( moduleContext ) )
+			return true;
+
+		_mapModule.erase( string( moduleName ) );
+		return false;
 	}
 
 	void LiveReloadManager::triggerReload( string_view moduleName )
 	{
-		if ( _bReloadGraphBroken )
+		if ( _bReloadGraphBroken == SW_TRUE )
 		{
 			SW_LOG_ERROR( "Reload graph is broken — restart the process (ignored %#)", moduleName );
 			return;
@@ -276,7 +284,7 @@ namespace sw
 			}
 		}
 
-		if ( _bReloadGraphBroken )
+		if ( _bReloadGraphBroken == SW_TRUE )
 			return;
 
 		vector<string> listPendingRoots;
@@ -326,7 +334,7 @@ namespace sw
 
 	void LiveReloadManager::markGraphBroken( string_view reason )
 	{
-		_bReloadGraphBroken = true;
+		_bReloadGraphBroken = SW_TRUE;
 		(void)reason;
 		SW_LOG_ERROR( "Reload graph broken (%#) — restart the process; further live reloads are disabled",
 					  reason );
@@ -459,14 +467,14 @@ namespace sw
 			if ( ctx._onAfterReload.isBound() )
 				ctx._onAfterReload( ctx._pLibraryModule );
 
-			if ( previousHandle != nullptr && _bReloadGraphBroken == false )
+			if ( previousHandle != nullptr && _bReloadGraphBroken == SW_FALSE )
 			{
 				FileUtil::unloadDynamicLibrary( previousHandle );
 				LiveReloadManagerInternal::tryDeleteShadowArtifacts( previousTempModule );
 			}
 		}
 
-		if ( _bReloadGraphBroken )
+		if ( _bReloadGraphBroken == SW_TRUE )
 		{
 			SW_LOG_ERROR( "Module %# committed but onAfter poisoned the graph",
 						  ctx._moduleName );
@@ -533,7 +541,7 @@ namespace sw
 		if ( _drainWorkers.isBound() )
 		{
 			_drainWorkers();
-			if ( _bReloadGraphBroken )
+			if ( _bReloadGraphBroken == SW_TRUE )
 				return false;
 			return true;
 		}
@@ -543,7 +551,7 @@ namespace sw
 			markGraphBroken( "task drain timeout before unload" );
 			return false;
 		}
-		return _bReloadGraphBroken == false;
+		return _bReloadGraphBroken == SW_FALSE;
 	}
 
 	void LiveReloadManager::collectDependentClosure( string_view root, vector<string>& outUnique ) const
@@ -718,13 +726,13 @@ namespace sw
 		if ( _onBeforeCommitBatch.isBound() )
 			_onBeforeCommitBatch( listOrder );
 
-		_bReloadingBatch = true;
+		_bReloadingBatch = SW_TRUE;
 
 		size_t committed{ 0 };
 		for ( size_t moduleIndex = 0; moduleIndex < listPrepared.size(); ++moduleIndex )
 		{
 			PreparedEntry& entry = listPrepared[moduleIndex];
-			if ( _bReloadGraphBroken )
+			if ( _bReloadGraphBroken == SW_TRUE )
 			{
 				SW_LOG_ERROR( "Cascade abort before commit of %# — graph already broken",
 							  entry._pCtx->_moduleName );
@@ -735,7 +743,7 @@ namespace sw
 				}
 				if ( committed > 0 )
 					markGraphBroken( "partial cascade commit" );
-				_bReloadingBatch = false;
+				_bReloadingBatch = SW_FALSE;
 				return;
 			}
 
@@ -753,13 +761,13 @@ namespace sw
 				abortShadowCopy( listPrepared[otherModuleIndex]._shadow );
 			}
 
-			if ( committed > 0 || _bReloadGraphBroken == false )
+			if ( committed > 0 || _bReloadGraphBroken == SW_FALSE )
 				markGraphBroken( "partial cascade commit" );
-			_bReloadingBatch = false;
+			_bReloadingBatch = SW_FALSE;
 			return;
 		}
 
-		_bReloadingBatch = false;
+		_bReloadingBatch = SW_FALSE;
 	}
 
 	LiveReloadManager::ModuleContext::ModuleContext() noexcept

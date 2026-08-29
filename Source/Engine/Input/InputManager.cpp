@@ -21,12 +21,12 @@ namespace sw
 		, _arrPrevKeys{}
 		, _arrMouseButtons{}
 		, _arrPrevMouseButtons{}
-		, _bInitialized{ 0 }
-		, _bPollGamepad{ 0 }
-		, _bPointerInside{ 0 }
-		, _bPrevPointerInside{ 0 }
-		, _bPointerEntered{ 0 }
-		, _bPointerLeft{ 0 }
+		, _bInitialized{ SW_FALSE }
+		, _bPollGamepad{ SW_FALSE }
+		, _bPointerInside{ SW_FALSE }
+		, _bPrevPointerInside{ SW_FALSE }
+		, _bPointerEntered{ SW_FALSE }
+		, _bPointerLeft{ SW_FALSE }
 		, _reservedFlags{ 0 }
 	{
 	}
@@ -48,13 +48,13 @@ namespace sw
 		_prevMouseY			= 0;
 		_mouseWheelDelta	= 0.0f;
 		_mouseWheelAccum	= 0.0f;
-		_bPointerInside		= 0;
-		_bPrevPointerInside = 0;
-		_bPointerEntered	= 0;
-		_bPointerLeft		= 0;
+		_bPointerInside		= SW_FALSE;
+		_bPrevPointerInside = SW_FALSE;
+		_bPointerEntered	= SW_FALSE;
+		_bPointerLeft		= SW_FALSE;
 		_gamepad			= make_unique<GamepadXInput>();
-		_bPollGamepad		= 1;
-		_bInitialized		= 1;
+		_bPollGamepad		= SW_TRUE;
+		_bInitialized		= SW_TRUE;
 		SW_LOG_INFO( "Initialized." );
 		return true;
 	}
@@ -65,8 +65,8 @@ namespace sw
 	void InputManager::shutdown()
 	{
 		_gamepad.reset();
-		_bPollGamepad = 0;
-		_bInitialized = 0;
+		_bPollGamepad = SW_FALSE;
+		_bInitialized = SW_FALSE;
 		SW_LOG_INFO( "Shut down." );
 	}
 
@@ -75,17 +75,17 @@ namespace sw
 	 */
 	void InputManager::beginFrame()
 	{
-		if ( _bInitialized == 0 )
+		if ( _bInitialized == SW_FALSE )
 			return;
 
 		_mouseWheelDelta = _mouseWheelAccum;
 		_mouseWheelAccum = 0.0f;
-		_bPointerEntered = 0;
-		_bPointerLeft	 = 0;
+		_bPointerEntered = SW_FALSE;
+		_bPointerLeft	 = SW_FALSE;
 
 		pollPlatform();
 		updatePointerInside();
-		if ( _bPollGamepad != 0 && _gamepad != nullptr )
+		if ( _bPollGamepad == SW_TRUE && _gamepad != nullptr )
 			_gamepad->poll( 0 );
 	}
 
@@ -94,7 +94,7 @@ namespace sw
 	 */
 	void InputManager::endFrame()
 	{
-		if ( _bInitialized == 0 )
+		if ( _bInitialized == SW_FALSE )
 			return;
 
 		Memory::copy( _arrPrevKeys, _arrKeys, sizeof( _arrKeys ) );
@@ -110,7 +110,7 @@ namespace sw
 	 */
 	void InputManager::setGamepadPollingEnabled( bool enabled )
 	{
-		_bPollGamepad = enabled ? 1 : 0;
+		_bPollGamepad = enabled ? SW_TRUE : SW_FALSE;
 		if ( enabled && _gamepad == nullptr )
 			_gamepad = make_unique<GamepadXInput>();
 	}
@@ -231,8 +231,8 @@ namespace sw
 			const int32 height = static_cast<int32>( pWindow->getHeight() );
 			bIsMouseInside	   = ( 0 <= _mouseX && _mouseX < width && 0 <= _mouseY && _mouseY < height );
 		}
-		_bPointerInside	 = ( bIsMouseInside ) ? 1 : 0;
-		_bPointerEntered = ( bIsMouseInside && _bPrevPointerInside == 0 ) ? 1 : 0;
-		_bPointerLeft	 = ( bIsMouseInside == false && _bPrevPointerInside != 0 ) ? 1 : 0;
+		_bPointerInside	 = bIsMouseInside ? SW_TRUE : SW_FALSE;
+		_bPointerEntered = ( bIsMouseInside && _bPrevPointerInside == SW_FALSE ) ? SW_TRUE : SW_FALSE;
+		_bPointerLeft	 = ( bIsMouseInside == false && _bPrevPointerInside == SW_TRUE ) ? SW_TRUE : SW_FALSE;
 	}
 } // namespace sw

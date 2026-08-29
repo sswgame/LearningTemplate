@@ -3,7 +3,6 @@
  * @brief ReflectBuiltins.h 스캔 → TypeNameMap/ContainerTypeMap + TypeRegistrar .gen.cpp emit.
  */
 #pragma once
-#include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
 
 namespace sw

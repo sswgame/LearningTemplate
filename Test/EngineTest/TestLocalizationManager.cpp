@@ -617,8 +617,8 @@ SW_TEST_CASE( LocalizationManagerTest, GameModeStateMachineLifecycle )
 	};
 
 	sw::GameModeStateMachine fsm;
-	auto					 titleHandler  = std::make_shared<TestModeHandler>();
-	auto					 battleHandler = std::make_shared<TestModeHandler>();
+	auto					 titleHandler  = sw::make_shared<TestModeHandler>();
+	auto					 battleHandler = sw::make_shared<TestModeHandler>();
 
 	fsm.registerHandler( sw::GamePlayMode::Title, titleHandler );
 	fsm.registerHandler( sw::GamePlayMode::TurnBattle, battleHandler );

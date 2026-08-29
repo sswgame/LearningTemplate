@@ -1,14 +1,12 @@
 #include "pch.h"
 
+#include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/map.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
 #include "TestFramework/TestFramework.h"
-
-#include <chrono>
-#include <thread>
 
 using namespace std::chrono_literals;
 

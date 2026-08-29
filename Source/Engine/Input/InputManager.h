@@ -74,13 +74,13 @@ namespace sw
 		/** @brief 이번 프레임에 마우스 버튼이 떼어졌는지 반환합니다. */
 		bool wasMouseButtonReleased( MouseButton button ) const;
 		/** @brief 포인터가 클라이언트 영역 안인지 반환합니다. */
-		bool isPointerInside() const { return _bPointerInside != 0; }
+		bool isPointerInside() const { return _bPointerInside == SW_TRUE; }
 		/** @brief 이번 프레임에 포인터가 들어왔는지 반환합니다. */
-		bool wasPointerEntered() const { return _bPointerEntered != 0; }
+		bool wasPointerEntered() const { return _bPointerEntered == SW_TRUE; }
 		/** @brief 이번 프레임에 포인터가 나갔는지 반환합니다. */
-		bool wasPointerLeft() const { return _bPointerLeft != 0; }
+		bool wasPointerLeft() const { return _bPointerLeft == SW_TRUE; }
 		/** @brief 게임패드 폴링 활성 여부를 반환합니다. */
-		bool isGamepadPollingEnabled() const { return _bPollGamepad != 0; }
+		bool isGamepadPollingEnabled() const { return _bPollGamepad == SW_TRUE; }
 		/** @brief 게임패드 래퍼를 반환합니다. */
 		GamepadXInput* getGamepad() const { return _gamepad.get(); }
 

@@ -2,9 +2,8 @@
 
 #include "Engine/Graphics/RHI/BindlessTable.h"
 
+#include "Core/Common/StdHeaders.h"
 #include "Core/Log/Logger.h"
-
-#include <shared_mutex>
 
 namespace sw
 {

@@ -3,7 +3,6 @@
  * @brief AnnotationMeta.txt — REFLECT/PROPERTY/FUNCTION 토큰 → 필드 바인딩.
  */
 #pragma once
-#include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
@@ -23,8 +22,8 @@ namespace sw
 #undef REGISTER_ANNOTATION_KIND
 		};
 
-		Kind   _kind = Kind::Flag;
 		string _field; ///< 정규 필드명: ReadOnly, Category, Server, …
+		Kind   _kind{ Kind::Flag };
 	};
 
 	/** @brief 철자 토큰을 AnnotationBinding::Kind 로 파싱합니다. */
@@ -47,13 +46,16 @@ namespace sw
 	class AnnotationMeta
 	{
 	public:
+		AnnotationMeta();
+		~AnnotationMeta() = default;
+
 		/** @brief 프로세스 전역 어노테이션 메타를 반환합니다. */
 		static AnnotationMeta& instance();
 
 		/** @brief AnnotationMeta.txt 를 로드합니다. */
 		bool loadFile( const string_view absPath );
 		/** @brief 파일이 로드되었는지 반환합니다. */
-		bool isLoaded() const noexcept { return _bLoaded; }
+		bool isLoaded() const noexcept { return _bLoaded == SW_TRUE; }
 
 		/** @brief 단독 플래그/넷롤 토큰을 조회합니다 (scope: REFLECT|PROPERTY|FUNCTION). */
 		const AnnotationBinding* findBare( const string_view scope, const string_view token ) const;
@@ -71,6 +73,7 @@ namespace sw
 
 		unordered_map<uint64, AnnotationBinding> _mapBare; ///< (scope, alias) 해시 → 바인딩
 		unordered_map<uint64, AnnotationBinding> _mapKey;
-		bool									 _bLoaded = false;
+		uint8									 _bLoaded  : 1;
+		[[maybe_unused]] uint8					 _reserved : 7;
 	};
 } // namespace sw

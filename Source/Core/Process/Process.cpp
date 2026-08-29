@@ -2,9 +2,8 @@
 
 #include "Core/Process/Process.h"
 
+#include "Core/Common/StdHeaders.h"
 #include "Core/Log/Logger.h"
-
-#include <utility>
 
 namespace sw
 {

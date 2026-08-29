@@ -98,9 +98,9 @@ namespace sw
 		}
 
 		T operator++() noexcept { return fetch_add( 1 ) + 1; }
-		T operator++( int ) noexcept { return fetch_add( 1 ); }
+		T operator++( int32 ) noexcept { return fetch_add( 1 ); }
 		T operator--() noexcept { return fetch_sub( 1 ) - 1; }
-		T operator--( int ) noexcept { return fetch_sub( 1 ); }
+		T operator--( int32 ) noexcept { return fetch_sub( 1 ); }
 
 		operator T() const noexcept { return load(); }
 

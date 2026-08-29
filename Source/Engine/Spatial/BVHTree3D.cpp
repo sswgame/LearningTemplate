@@ -2,9 +2,8 @@
 
 #include "Engine/Spatial/BVHTree3D.h"
 
+#include "Core/Common/StdHeaders.h"
 #include "Core/Math/Math.h"
-
-#include <algorithm>
 
 namespace sw
 {

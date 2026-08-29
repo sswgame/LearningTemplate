@@ -2,13 +2,12 @@
 
 #include "App/Module/ModuleCompiler.h"
 
+#include "Core/Common/StdHeaders.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Process/Process.h"
 
 #include "Engine/Utility/Module/LiveReloadManager.h"
-
-#include <chrono>
 
 namespace sw
 {

@@ -10,6 +10,14 @@
 SW_LOG_CALLER( "AnnotationMeta" );
 namespace sw
 {
+	AnnotationMeta::AnnotationMeta()
+		: _mapBare{}
+		, _mapKey{}
+		, _bLoaded{ SW_FALSE }
+		, _reserved{ 0 }
+	{
+	}
+
 	AnnotationMeta& AnnotationMeta::instance()
 	{
 		static AnnotationMeta s_meta;
@@ -20,7 +28,7 @@ namespace sw
 	{
 		_mapBare.clear();
 		_mapKey.clear();
-		_bLoaded = false;
+		_bLoaded = SW_FALSE;
 	}
 
 	uint64 AnnotationMeta::hashScopeAndKey( string_view scope, string_view key ) noexcept
@@ -102,7 +110,7 @@ namespace sw
 			}
 		}
 
-		_bLoaded = true;
+		_bLoaded = SW_TRUE;
 		SW_LOG_TRACE( "%# alias bindings (%#)", bindingCount, absPath );
 		return true;
 	}

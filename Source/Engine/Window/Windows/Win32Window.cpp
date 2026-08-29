@@ -11,9 +11,11 @@ namespace sw
 
 	Win32Window::Win32Window()
 		: _hWnd{ nullptr }
-		, _bRecreating{ false }
 		, _restoreX{ CW_USEDEFAULT }
 		, _restoreY{ CW_USEDEFAULT }
+		, _bRecreating{ SW_FALSE }
+		, _reservedWin32{ 0 }
+		, _padding{ 0 }
 	{
 	}
 
@@ -125,16 +127,16 @@ namespace sw
 
 		const uint32 width	= _width;
 		const uint32 height = _height;
-		_bRecreating		= true;
+		_bRecreating		= SW_TRUE;
 		destroy();
-		_bShouldClose	   = false;
+		_bShouldClose	   = SW_FALSE;
 		const string title = StringUtil::utf16ToUtf8( _title.c_str() );
 
 		const bool ok = initializeWindow( title.c_str(), width, height );
 		if ( ok && bWasVisible )
 			showWindow( true );
 
-		_bRecreating = false;
+		_bRecreating = SW_FALSE;
 		_restoreX	 = CW_USEDEFAULT;
 		_restoreY	 = CW_USEDEFAULT;
 		return ok;
@@ -151,7 +153,7 @@ namespace sw
 			TranslateMessage( &msg );
 			DispatchMessage( &msg );
 		}
-		return _bShouldClose == false;
+		return _bShouldClose == SW_FALSE;
 	}
 
 	LRESULT CALLBACK Win32Window::wndProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam )
@@ -185,19 +187,19 @@ namespace sw
 				case WM_SIZE:
 					pThis->_width  = LOWORD( lParam );
 					pThis->_height = HIWORD( lParam );
-					if ( pThis->_bRecreating == false && pThis->_onResize.isBound() )
+					if ( pThis->_bRecreating == SW_FALSE && pThis->_onResize.isBound() )
 						pThis->_onResize( pThis->_width, pThis->_height );
 					return 0;
 
 				case WM_CLOSE:
-					if ( pThis->_bRecreating == false )
+					if ( pThis->_bRecreating == SW_FALSE )
 						pThis->tryBeginClose();
 					return 0;
 
 				case WM_DESTROY:
-					if ( pThis->_bRecreating == false )
+					if ( pThis->_bRecreating == SW_FALSE )
 					{
-						pThis->_bShouldClose = true;
+						pThis->_bShouldClose = SW_TRUE;
 						pThis->_hWnd		 = nullptr;
 					}
 					return 0;
@@ -215,9 +217,11 @@ namespace sw
 {
 	Win32Window::Win32Window()
 		: _hWnd{ nullptr }
-		, _bRecreating{ false }
 		, _restoreX{ 0 }
 		, _restoreY{ 0 }
+		, _bRecreating{ SW_FALSE }
+		, _reservedWin32{ 0 }
+		, _padding{ 0 }
 	{
 	}
 
@@ -243,7 +247,7 @@ namespace sw
 
 	bool Win32Window::processMessages()
 	{
-		return _bShouldClose == false;
+		return _bShouldClose == SW_FALSE;
 	}
 
 	LRESULT CALLBACK Win32Window::wndProc( HWND, UINT, WPARAM, LPARAM )

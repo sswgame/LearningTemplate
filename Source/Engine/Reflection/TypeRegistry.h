@@ -3,13 +3,12 @@
  * @brief TypeRegistry와 정적 Type/Enum registrar 연결
  */
 #pragma once
+#include "Core/Common/StdHeaders.h"
 #include "Core/Task/TaskTypes.h"
 
 #include "Engine/EngineMinimal.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionTypes.h"
-
-#include <shared_mutex>
 
 namespace sw
 {

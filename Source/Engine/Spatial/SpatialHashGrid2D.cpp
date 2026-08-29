@@ -2,9 +2,8 @@
 
 #include "Engine/Spatial/SpatialHashGrid2D.h"
 
+#include "Core/Common/StdHeaders.h"
 #include "Core/Math/Math.h"
-
-#include <algorithm>
 
 namespace sw
 {

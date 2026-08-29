@@ -2,12 +2,12 @@
 
 #include "Engine/Graphics/Material/MaterialCache.h"
 
+#include "Core/Common/StdHeaders.h"
+
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Utility/Resource/ResourceManager.h"
-
-#include <shared_mutex>
 
 namespace sw
 {

@@ -8,8 +8,6 @@
 #include "Engine/Graphics/RHI/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/RHIReleaseQueue.h"
 
-#include <memory>
-
 /** @brief SW_VK_DEFINE_HANDLE 매크로 정의입니다. */
 
 #define SW_VK_DEFINE_HANDLE( object ) typedef struct object##_T* object;

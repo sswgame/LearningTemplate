@@ -1,10 +1,9 @@
 #include "pch.h"
 
+#include "Core/Common/StdHeaders.h"
 #include "Core/Uuid/Uuid.h"
 
 #include "TestFramework/TestFramework.h"
-
-#include <unordered_set>
 
 using namespace sw;
 

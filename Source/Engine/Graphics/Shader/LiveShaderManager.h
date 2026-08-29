@@ -3,11 +3,11 @@
  * @brief 파일 감시로 셰이더를 다시 컴파일합니다.
  */
 #pragma once
+#include "Core/Common/StdHeaders.h"
+
 #include "Engine/EngineMinimal.h"
 #include "Engine/Graphics/Shader/ShaderCompiler.h"
 #include "Engine/Utility/File/ReloadFileManager.h"
-
-#include <shared_mutex>
 
 namespace sw
 {

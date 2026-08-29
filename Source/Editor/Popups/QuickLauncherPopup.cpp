@@ -2,6 +2,7 @@
 
 #include "Editor/Popups/QuickLauncherPopup.h"
 
+#include "Core/Common/StdHeaders.h"
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Commands/EditorAssetCommands.h"
@@ -21,7 +22,6 @@
 #include "RuntimeAPI/Service/EditorService.h"
 
 #include <imgui.h>
-#include <algorithm>
 
 namespace sw::editor
 {

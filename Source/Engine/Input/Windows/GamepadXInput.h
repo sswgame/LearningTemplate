@@ -31,7 +31,7 @@ namespace sw
 		void poll( uint32 userIndex = 0 );
 
 		/** @brief 컨트롤러 연결 여부를 반환합니다. */
-		bool isConnected() const { return _bConnected != 0; }
+		bool isConnected() const { return _bConnected == SW_TRUE; }
 		/** @brief 버튼이 눌린 상태인지 반환합니다. */
 		bool isButtonDown( GamepadButton button ) const;
 		/** @brief 이번 프레임에 버튼이 눌렸는지 반환합니다. */

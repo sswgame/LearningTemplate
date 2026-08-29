@@ -2,6 +2,7 @@
 
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
+#include "Core/Common/StdHeaders.h"
 #include "Core/Container/array.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/Task/TaskManager.h"
@@ -11,8 +12,6 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Reflection/ReflectionCore.h"
-
-#include <unordered_set>
 
 namespace sw
 {

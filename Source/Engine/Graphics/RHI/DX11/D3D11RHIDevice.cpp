@@ -8,11 +8,10 @@
 
 #if defined( SW_PLATFORM_WINDOWS )
 
+	#include "Engine/Common/EnginePlatformHeaders.h"
 	#include "Engine/Config/EngineData.h"
 	#include "Engine/Graphics/RHI/RHIDeferredCommandList.h"
 	#include "Engine/Graphics/Shader/ShaderCache.h"
-
-	#include <d3d11_1.h>
 
 namespace sw
 {

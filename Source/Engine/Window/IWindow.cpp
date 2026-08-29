@@ -22,23 +22,24 @@ namespace sw
 		, _closeQuery{}
 		, _width{ 1280 }
 		, _height{ 720 }
-		, _bShouldClose{ false }
+		, _bShouldClose{ SW_FALSE }
+		, _reserved{ 0 }
 		, _arrReserved{}
 	{
 	}
 
 	void IWindow::requestClose()
 	{
-		_bShouldClose = true;
+		_bShouldClose = SW_TRUE;
 	}
 
 	bool IWindow::tryBeginClose()
 	{
-		if ( _bShouldClose )
+		if ( _bShouldClose == SW_TRUE )
 			return true;
 		if ( _closeQuery.isBound() && _closeQuery() == false )
 			return false;
-		_bShouldClose = true;
+		_bShouldClose = SW_TRUE;
 		return true;
 	}
 
@@ -52,7 +53,7 @@ namespace sw
 		const uint32 width	= _width;
 		const uint32 height = _height;
 		destroy();
-		_bShouldClose = false;
+		_bShouldClose = SW_FALSE;
 
 		const string title = StringUtil::utf16ToUtf8( _title.c_str() );
 		return initializeWindow( title.c_str(), width, height );

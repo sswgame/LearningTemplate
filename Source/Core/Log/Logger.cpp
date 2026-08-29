@@ -3,13 +3,11 @@
 #include "Core/Log/Logger.h"
 
 #include "Core/Common/PlatformOsHeaders.h"
+#include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
-
-#include <chrono>
-#include <ctime>
 
 namespace sw
 {

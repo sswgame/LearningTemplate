@@ -16,7 +16,7 @@ namespace sw
 	{
 	}
 
-	void GameModeStateMachine::registerHandler( GamePlayMode mode, std::shared_ptr<IGameModeHandler> pHandler )
+	void GameModeStateMachine::registerHandler( GamePlayMode mode, shared_ptr<IGameModeHandler> pHandler )
 	{
 		if ( pHandler == nullptr )
 		{

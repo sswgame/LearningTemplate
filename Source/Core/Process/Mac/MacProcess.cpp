@@ -1,15 +1,11 @@
 #include "pch.h"
 
+#include "Core/Common/StdHeaders.h"
 #include "Core/Log/Logger.h"
 #include "Core/Process/Process.h"
 
 #if defined( SW_PLATFORM_MACOS )
-	#include <csignal>
-	#include <cstdio>
-	#include <cstdlib>
-	#include <sys/types.h>
-	#include <sys/wait.h>
-	#include <unistd.h>
+	#include "Core/Common/PlatformOsHeaders.h"
 
 namespace sw
 {

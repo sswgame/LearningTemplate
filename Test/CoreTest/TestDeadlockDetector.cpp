@@ -1,12 +1,10 @@
 #include "pch.h"
 
+#include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/DeadlockDetector.h"
 #include "Core/Concurrency/mutex.h"
 
 #include "TestFramework/TestFramework.h"
-
-#include <chrono>
-#include <thread>
 
 using namespace sw;
 

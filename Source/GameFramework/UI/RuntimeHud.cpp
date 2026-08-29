@@ -56,8 +56,17 @@ namespace sw
 	SW_LOG_CALLER( "RuntimeHud" );
 
 	RuntimeHud::RuntimeHud()
-		: _bVisible{ 1 }
-		, _reserved{ 0 } {}
+		: _screen{}
+		, _playerHp{ 1.0f, 0.05f, 0.82f, 0.30f, 0.04f }
+		, _foeHp{ 1.0f, 0.65f, 0.08f, 0.30f, 0.04f }
+		, _exp{ 0.0f, 0.05f, 0.88f, 0.30f, 0.02f }
+		, _pp{ 1.0f, 0.05f, 0.78f, 0.18f, 0.03f }
+		, _dialogue{}
+		, _fadeAlpha{ 0.0f }
+		, _bVisible{ SW_TRUE }
+		, _reserved{ 0 }
+	{
+	}
 
 	void RuntimeHud::setScreenRect( float32 x, float32 y, float32 w, float32 h )
 	{
@@ -102,7 +111,7 @@ namespace sw
 
 	void RuntimeHud::publishSnapshot( bool actionMode ) const
 	{
-		game::getService<DebugOverlayState>()->_bVisible = _bVisible != 0;
+		game::getService<DebugOverlayState>()->_bVisible = _bVisible;
 		game::getService<DebugOverlayState>()->setFloat( RuntimeHudInternal::keyPlayerHp(), _playerHp._fill );
 		game::getService<DebugOverlayState>()->setFloat( RuntimeHudInternal::keyFoeHp(), _foeHp._fill );
 		game::getService<DebugOverlayState>()->setFloat( RuntimeHudInternal::keyDash(), _pp._fill );
