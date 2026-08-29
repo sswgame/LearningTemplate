@@ -27,11 +27,11 @@ namespace sw
 				return isIdentStart( c ) || ( '0' <= c && c <= '9' );
 			}
 
-			/** @brief 변수 맵에서 키를 조회하고 없으면 빈 문자열을 반환합니다. */
-			static string lookupVar( const unordered_map<string, string>& vars, const string& key )
+			/** @brief 변수 맵에서 키를 조회하고 없으면 빈 문자열 뷰를 반환합니다. */
+			static string_view lookupVar( const unordered_map<string, string>& vars, const string_view key )
 			{
-				const auto it = vars.find( key );
-				return ( it != vars.end() ) ? it->second : string{};
+				const auto it = vars.find( string( key ) );
+				return ( it != vars.end() ) ? string_view( it->second ) : string_view{};
 			}
 		};
 	} // namespace
@@ -129,8 +129,12 @@ namespace sw
 	string EmitTemplateStore::expand( const string_view					   tpl,
 									  const unordered_map<string, string>& vars )
 	{
+		size_t extraEstimated = 0;
+		for ( const auto& [k, v] : vars )
+			extraEstimated += v.size();
+
 		string out;
-		out.reserve( tpl.size() + 64 );
+		out.reserve( tpl.size() + extraEstimated + 64 );
 
 		for ( size_t charIndex = 0; charIndex < tpl.size(); )
 		{
@@ -176,7 +180,9 @@ namespace sw
 				continue;
 			}
 
-			out += EmitTemplateStoreInternal::lookupVar( vars, string( key ) );
+			const string_view val = EmitTemplateStoreInternal::lookupVar( vars, key );
+			if ( val.empty() == false )
+				out.append( val.data(), val.size() );
 			charIndex = keyEnd;
 		}
 
@@ -186,8 +192,12 @@ namespace sw
 	string EmitTemplateStore::expand( const string_view										tpl,
 									  std::initializer_list<pair<string_view, string_view>> vars )
 	{
+		size_t extraEstimated = 0;
+		for ( const auto& [k, v] : vars )
+			extraEstimated += v.size();
+
 		string out;
-		out.reserve( tpl.size() + 64 );
+		out.reserve( tpl.size() + extraEstimated + 64 );
 
 		for ( size_t charIndex = 0; charIndex < tpl.size(); )
 		{

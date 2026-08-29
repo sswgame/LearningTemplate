@@ -42,7 +42,31 @@ namespace sw
 		 * @param alignment 정렬 (2의 거듭제곱)
 		 * @return 할당된 주소
 		 */
-		void* allocate( size_t size, size_t alignment = alignof( std::max_align_t ) );
+		SW_INLINE void* allocate( size_t size, size_t alignment = alignof( std::max_align_t ) )
+		{
+			if ( size == 0 )
+				return nullptr;
+
+			if ( alignment == 0 || ( alignment & ( alignment - 1 ) ) != 0 )
+				alignment = alignof( std::max_align_t );
+
+			if ( _currentChunkIndex < _listChunk.size() )
+			{
+				Chunk&	  chunk	  = _listChunk[_currentChunkIndex];
+				uintptr_t current = reinterpret_cast<uintptr_t>( chunk._pBuffer + chunk._offset );
+				uintptr_t aligned = ( current + ( alignment - 1 ) ) & ~( static_cast<uintptr_t>( alignment - 1 ) );
+				size_t	  padding = aligned - current;
+
+				if ( chunk._offset + padding + size <= chunk._capacity )
+				{
+					chunk._offset += padding + size;
+					_usedBytes += padding + size;
+					return reinterpret_cast<void*>( aligned );
+				}
+			}
+
+			return allocateSlow( size, alignment );
+		}
 
 		/**
 		 * @brief 아레나에서 객체를 배치 생성합니다 (placement new).
@@ -107,6 +131,11 @@ namespace sw
 		 * @brief minSize 이상을 담는 새 청크를 할당하고 현재 청크로 전환합니다.
 		 */
 		void allocateNewChunk( size_t minSize );
+
+		/**
+		 * @brief 청크 용량이 모자랄 때 다음 청크를 찾거나 새로 할당하는 슬로우 패스입니다.
+		 */
+		void* allocateSlow( size_t size, size_t alignment );
 
 		size_t		  _defaultCapacity;
 		size_t		  _totalAllocatedBytes;

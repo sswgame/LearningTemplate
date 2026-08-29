@@ -83,13 +83,16 @@ namespace sw
 				const CXCursorKind kind	  = clang_getCursorKind( cursor );
 				if ( kind == CXCursor_AnnotateAttr || kind == CXCursor_UnexposedAttr )
 				{
-					const string spelling = cxStringToStd( clang_getCursorSpelling( cursor ) );
-					if ( string_view( spelling ).find( search->_prefix ) != string_view::npos )
+					const CXString cxSpelling = clang_getCursorSpelling( cursor );
+					const utf8*	   cStr		  = clang_getCString( cxSpelling );
+					if ( cStr != nullptr && string_view( cStr ).find( search->_prefix ) != string_view::npos )
 					{
 						search->_bFound	  = SW_TRUE;
-						search->_spelling = spelling;
+						search->_spelling = cStr;
+						clang_disposeString( cxSpelling );
 						return CXChildVisit_Break; // 원하는 어노테이션을 찾았으므로 순회 중단
 					}
+					clang_disposeString( cxSpelling );
 				}
 				return CXChildVisit_Continue;
 			}
@@ -146,16 +149,22 @@ namespace sw
 				if ( kind != CXCursor_AnnotateAttr && kind != CXCursor_UnexposedAttr )
 					return CXChildVisit_Continue;
 
-				const string spelling = cxStringToStd( clang_getCursorSpelling( cursor ) );
-				for ( int32 entryIndex = 0; entryIndex < multi->_count; ++entryIndex )
+				const CXString cxSpelling = clang_getCursorSpelling( cursor );
+				const utf8*	   cStr		  = clang_getCString( cxSpelling );
+				if ( cStr != nullptr )
 				{
-					MultiAnnotationSearch::Entry& entry = multi->_arrEntries[entryIndex];
-					if ( entry._bFound == SW_FALSE && spelling.find( entry._pPrefix ) != string::npos )
+					const string_view spellingView( cStr );
+					for ( int32 entryIndex = 0; entryIndex < multi->_count; ++entryIndex )
 					{
-						entry._bFound	= SW_TRUE;
-						entry._spelling = spelling;
+						MultiAnnotationSearch::Entry& entry = multi->_arrEntries[entryIndex];
+						if ( entry._bFound == SW_FALSE && spellingView.find( entry._pPrefix ) != string_view::npos )
+						{
+							entry._bFound	= SW_TRUE;
+							entry._spelling = cStr;
+						}
 					}
 				}
+				clang_disposeString( cxSpelling );
 				return CXChildVisit_Continue;
 			}
 
@@ -191,7 +200,7 @@ namespace sw
 					bool bInBlockComment = false;
 					for ( size_t index = 0; index < pos; ++index )
 					{
-						if ( !bInLineComment && !bInBlockComment )
+						if ( bInLineComment == false && bInBlockComment == false )
 						{
 							if ( window[index] == '/' && index + 1 < pos )
 							{

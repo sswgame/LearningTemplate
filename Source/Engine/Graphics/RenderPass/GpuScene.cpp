@@ -48,9 +48,23 @@ namespace sw
 
 			static void mixBytes( uint64& h, const void* pData, size_t bytes )
 			{
-				const uint8* pBytes = static_cast<const uint8*>( pData );
-				for ( size_t byteIndex = 0; byteIndex < bytes; ++byteIndex )
-					mixHash( h, pBytes[byteIndex] );
+				const uint8* pBytes	   = static_cast<const uint8*>( pData );
+				const size_t wordCount = bytes / sizeof( uint64 );
+				const size_t remainder = bytes % sizeof( uint64 );
+
+				for ( size_t wordIndex = 0; wordIndex < wordCount; ++wordIndex )
+				{
+					uint64 word = 0;
+					Memory::copy( &word, pBytes + wordIndex * sizeof( uint64 ), sizeof( uint64 ) );
+					mixHash( h, word );
+				}
+
+				if ( remainder > 0 )
+				{
+					uint64 tailWord = 0;
+					Memory::copy( &tailWord, pBytes + wordCount * sizeof( uint64 ), remainder );
+					mixHash( h, tailWord );
+				}
 			}
 
 			template <typename TCandidate, typename TInstance>

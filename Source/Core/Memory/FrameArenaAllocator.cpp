@@ -29,14 +29,8 @@ namespace sw
 		_listChunk.clear();
 	}
 
-	void* FrameArenaAllocator::allocate( size_t size, size_t alignment )
+	void* FrameArenaAllocator::allocateSlow( size_t size, size_t alignment )
 	{
-		if ( size == 0 )
-			return nullptr;
-
-		if ( alignment == 0 || ( alignment & ( alignment - 1 ) ) != 0 )
-			alignment = alignof( std::max_align_t );
-
 		while ( _currentChunkIndex < _listChunk.size() )
 		{
 			Chunk&	  chunk	  = _listChunk[_currentChunkIndex];

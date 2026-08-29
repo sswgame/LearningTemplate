@@ -105,14 +105,14 @@ namespace sw
 	}
 
 	/** @brief 생성된 파일이 텅 빈 플레이스홀더(껍데기)인지 판별합니다. */
-	static bool isPlaceholder( const sw::string& existingGen )
+	static bool isPlaceholder( const string_view existingGen )
 	{
 		const sw::ParserClangConfig& cfg = sw::ParserContext::getSharedConfig();
-		return existingGen.find( cfg._emitPlaceholderMarker ) != sw::string::npos ||
-			   ( existingGen.find( cfg._emitRegenByParserMarker ) != sw::string::npos &&
-				 existingGen.find( cfg._emitRegisterTypeMarker ) == sw::string::npos &&
-				 existingGen.find( cfg._emitRegisterEnumMarker ) == sw::string::npos &&
-				 existingGen.find( cfg._emitFlagOpsMarker ) == sw::string::npos );
+		return existingGen.find( cfg._emitPlaceholderMarker ) != string_view::npos ||
+			   ( existingGen.find( cfg._emitRegenByParserMarker ) != string_view::npos &&
+				 existingGen.find( cfg._emitRegisterTypeMarker ) == string_view::npos &&
+				 existingGen.find( cfg._emitRegisterEnumMarker ) == string_view::npos &&
+				 existingGen.find( cfg._emitFlagOpsMarker ) == string_view::npos );
 	}
 
 	/** @brief .gen.cpp/.gen.h 가 입력·builtins·템플릿보다 최신이면 true. */
@@ -145,12 +145,36 @@ namespace sw
 		if ( sw::FileUtil::readFile( genHeaderPath, headerHead, 0, kPlaceholderProbeBytes ) == false )
 			return false;
 
-		const sw::string existingGen( reinterpret_cast<const utf8*>( genHead.data() ), genHead.size() );
-		const sw::string existingHeader( reinterpret_cast<const utf8*>( headerHead.data() ), headerHead.size() );
+		const string_view existingGen( reinterpret_cast<const utf8*>( genHead.data() ), genHead.size() );
+		const string_view existingHeader( reinterpret_cast<const utf8*>( headerHead.data() ), headerHead.size() );
 		if ( isPlaceholder( existingGen ) || isPlaceholder( existingHeader ) )
 			return false;
 
 		return true;
+	}
+
+	/**
+	 * @brief 소스 파일 텍스트에서 리플렉션 핵심 매크로 키워드가 존재하는지 SIMD 벡터화 스캔으로 고속 검사합니다.
+	 */
+	static bool hasReflectionKeywords( string_view source )
+	{
+		const size_t length = source.size();
+		size_t		 index	= source.find_first_of( "REPF" );
+		while ( index != string_view::npos )
+		{
+			const utf8 c = source[index];
+			if ( c == 'R' && index + 7 <= length && source.compare( index, 7, "REFLECT" ) == 0 )
+				return true;
+			if ( c == 'E' && index + 4 <= length && source.compare( index, 4, "ENUM" ) == 0 )
+				return true;
+			if ( c == 'P' && index + 8 <= length && source.compare( index, 8, "PROPERTY" ) == 0 )
+				return true;
+			if ( c == 'F' && index + 8 <= length && source.compare( index, 8, "FUNCTION" ) == 0 )
+				return true;
+
+			index = source.find_first_of( "REPF", index + 1 );
+		}
+		return false;
 	}
 
 	/**
@@ -163,10 +187,7 @@ namespace sw
 		if ( sw::FileUtil::readTextFile( path, outContent ) == false )
 			return false;
 
-		return outContent.find( "REFLECT" ) != sw::string::npos ||
-			   outContent.find( "ENUM" ) != sw::string::npos ||
-			   outContent.find( "PROPERTY" ) != sw::string::npos ||
-			   outContent.find( "FUNCTION" ) != sw::string::npos;
+		return hasReflectionKeywords( outContent );
 	}
 
 	/**
@@ -213,12 +234,8 @@ namespace sw
 
 		SW_LOG_TRACE( "── Parsing: %#", inputFile );
 
-		sw::vector<sw::string> includePaths = commandLineArgs._listIncludePaths;
-		if ( commandLineArgs._outputDir.empty() == false )
-			includePaths.insert( includePaths.begin(), commandLineArgs._outputDir );
-
 		sw::ParserContext context;
-		if ( context.parse( inputFile, includePaths, &sourceContent ) == false )
+		if ( context.parse( inputFile, commandLineArgs._listIncludePaths, &sourceContent ) == false )
 		{
 			SW_LOG_ERROR( "Parse failed: %#", inputFile );
 			++errorCount;
@@ -354,6 +371,10 @@ int32 main( int32 argc, utf8* argv[] )
 		logger->shutdown();
 		return ok ? 0 : 1;
 	}
+
+	// 3) 출력 디렉터리를 인클루드 경로 최상단에 1회 선행 배치 (스레드별 벡터 복사/삽입 제거)
+	if ( commandLineArgs._outputDir.empty() == false )
+		commandLineArgs._listIncludePaths.insert( commandLineArgs._listIncludePaths.begin(), commandLineArgs._outputDir );
 
 	// 3) 공유 테이블 로드 (builtins / AnnotationMeta / Templates)
 	if ( commandLineArgs._builtinsPath.empty() == false )

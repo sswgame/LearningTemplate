@@ -13,7 +13,6 @@ namespace sw
 {
 	namespace
 	{
-
 		/** @brief 프로세스 전역 활성 로그 싱크 포인터 */
 		atomic<ILogSink*> s_globalSink{ nullptr };
 
@@ -21,22 +20,27 @@ namespace sw
 
 	Logger::Logger()
 		: _logFolderPath{}
-		, _mutex{}
-		, _timeMutex{}
-		, _pFile{ nullptr }
 		, _currentLogFileName{}
 		, _onLogWritten{}
-		, _cachedTimeSec{ 0 }
+		, _queue{}
+		, _workerThread{}
+		, _cv{}
+		, _mutex{}
+		, _cvMutex{}
+		, _timeMutex{}
+		, _pFile{ nullptr }
 		, _pCachedConsoleHandle{ nullptr }
+		, _cachedTimeSec{ 0 }
 		, _cachedYear{ 0 }
 		, _cachedMonth{ 0 }
 		, _cachedDay{ 0 }
 		, _cachedHour{ 0 }
 		, _lastLogHour{ -1 }
 		, _defaultConsoleAttribute{ 0 }
+		, _bIsRunning{ false }
 		, _bInitialized{ false }
 		, _bHasConsole{ false }
-		, _arrCachedDateStr{}
+		, _cachedDateStr{}
 	{
 		ILogSink* pExpected{ nullptr };
 		s_globalSink.compare_exchange_strong( pExpected, this, std::memory_order_acq_rel, std::memory_order_relaxed );
@@ -49,7 +53,7 @@ namespace sw
 	}
 
 	/**
-	 * @brief 로거를 초기화하고 로그 저장 폴더 생성 및 콘솔 핸들을 캐싱합니다.
+	 * @brief 로거를 초기화하고 로그 저장 폴더 생성 및 비동기 작업 스레드를 시작합니다.
 	 */
 	void Logger::initialize()
 	{
@@ -57,13 +61,27 @@ namespace sw
 			return;
 
 		initializeInternal();
+		_bIsRunning.store( true, std::memory_order_release );
+		_workerThread = std::thread( &Logger::workerLoop, this );
+		_bInitialized = true;
 	}
 
 	/**
-	 * @brief 열려 있는 로그 파일 스트림을 플러시하고 닫습니다.
+	 * @brief 큐에 남은 로그를 플러시하고 열려 있는 로그 파일 스트림을 닫습니다.
 	 */
 	void Logger::shutdown()
 	{
+		if ( _bInitialized == false )
+			return;
+
+		_bIsRunning.store( false, std::memory_order_release );
+		_cv.notify_all();
+
+		if ( _workerThread.joinable() )
+			_workerThread.join();
+
+		flushQueue();
+
 		std::scoped_lock<mutex> lock{ _mutex };
 		if ( _pFile != nullptr )
 		{
@@ -146,15 +164,11 @@ namespace sw
 
 	void Logger::initializeInternal()
 	{
-		if ( _bInitialized )
-			return;
-
 		const string execPath = FileUtil::getExecutablePath();
 		const string baseDir  = execPath.empty() ? FileUtil::getCurrentPath() : FileUtil::getDirectoryPart( execPath );
 
 		_logFolderPath = FileUtil::joinPath( FileUtil::joinPath( baseDir, path::kSavedFolder ), path::kLogsFolder );
 		FileUtil::ensureDirectoryExists( _logFolderPath );
-		_bInitialized = true;
 
 #if defined( SW_PLATFORM_WINDOWS )
 		SetConsoleOutputCP( CP_UTF8 );
@@ -178,27 +192,54 @@ namespace sw
 #endif
 	}
 
+	void Logger::workerLoop()
+	{
+		while ( _bIsRunning.load( std::memory_order_acquire ) || _queue.empty() == false )
+		{
+			LogRecord record;
+			bool	  bProcessedAny = false;
+			while ( _queue.dequeue( record ) )
+			{
+				bProcessedAny = true;
+				std::scoped_lock<mutex> lock{ _mutex };
+				writeLogConsole( record._level, record._formatted.c_str() );
+				writeLogFile( record._level, record._year, record._month, record._day, record._hour, record._formatted.c_str() );
+			}
+
+			if ( bProcessedAny == false && _bIsRunning.load( std::memory_order_acquire ) )
+			{
+				std::unique_lock<mutex> lock{ _cvMutex };
+				_cv.wait_for( lock, std::chrono::milliseconds( 5 ), [this]
+				{
+					return _bIsRunning.load( std::memory_order_relaxed ) == false || _queue.empty() == false;
+				} );
+			}
+		}
+	}
+
+	void Logger::flushQueue()
+	{
+		LogRecord record;
+		while ( _queue.dequeue( record ) )
+		{
+			std::scoped_lock<mutex> lock{ _mutex };
+			writeLogConsole( record._level, record._formatted.c_str() );
+			writeLogFile( record._level, record._year, record._month, record._day, record._hour, record._formatted.c_str() );
+		}
+	}
+
 	void Logger::writeLogInternal( LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line )
 	{
-		const uint8 levelIndex = static_cast<uint8>( level );
-		if ( levelIndex >= static_cast<uint8>( LogLevel::Count ) )
-			return;
-
-		const auto		  now	  = std::chrono::system_clock::now();
-		const std::time_t timeSec = std::chrono::system_clock::to_time_t( now );
+		// 1단계: 타임스탬프 계산 및 포맷팅 (동일 초 내에서는 캐시된 문자열 재사용)
+		int32 year{ 0 }, month{ 0 }, day{ 0 }, hour{ 0 };
 
 		fixed_string<constant::kMaxBuffer32> dateStr{};
-		int32								 year{ 0 };
-		int32								 month{ 0 };
-		int32								 day{ 0 };
-		int32								 hour{ 0 };
-
-		// 1단계: 초(Second) 단위 타임스탬프 캐싱 (초당 수천 번의 localtime_s 시스템 콜을 1회로 단축)
 		{
-			std::scoped_lock<mutex> timeLock{ _timeMutex };
+			std::scoped_lock<mutex> lock{ _timeMutex };
+			const std::time_t		timeSec = std::time( nullptr );
 			if ( timeSec == _cachedTimeSec )
 			{
-				dateStr = _arrCachedDateStr;
+				dateStr = _cachedDateStr;
 				year	= _cachedYear;
 				month	= _cachedMonth;
 				day		= _cachedDay;
@@ -221,8 +262,8 @@ namespace sw
 				const int32 minute = localTime.tm_min;
 				const int32 second = localTime.tm_sec;
 
-				formatstring( _arrCachedDateStr, sizeof( _arrCachedDateStr ), "%#-%#-%# %#:%#:%#", year, month, day, hour, minute, second );
-				dateStr		   = _arrCachedDateStr;
+				formatstring( _cachedDateStr.data(), _cachedDateStr.capacity(), "%#-%#-%# %#:%#:%#", year, month, day, hour, minute, second );
+				dateStr		   = _cachedDateStr;
 				_cachedTimeSec = timeSec;
 				_cachedYear	   = year;
 				_cachedMonth   = month;
@@ -234,9 +275,10 @@ namespace sw
 		static constexpr const utf8* kArrHeader[] = { "Error", "Warning", "Info", "Trace" };
 		static_assert( SW_COUNT_OF( kArrHeader ) == static_cast<uint32>( LogLevel::Count ), "LogLevel과 같아야 합니다" );
 
-		const utf8* effectiveTag  = ( StringUtil::isNullOrEmpty( pTag ) ) ? constant::kDefaultLogTag : pTag;
-		const utf8* effectiveFile = ( StringUtil::isNullOrEmpty( pFile ) ) ? constant::kDefaultLogFile : pFile;
-		const utf8* effectiveMsg  = ( pMessage != nullptr ) ? pMessage : "";
+		const size_t levelIndex	   = static_cast<size_t>( level );
+		const utf8*	 effectiveTag  = ( StringUtil::isNullOrEmpty( pTag ) ) ? constant::kDefaultLogTag : pTag;
+		const utf8*	 effectiveFile = ( StringUtil::isNullOrEmpty( pFile ) ) ? constant::kDefaultLogFile : pFile;
+		const utf8*	 effectiveMsg  = ( pMessage != nullptr ) ? pMessage : "";
 
 		// 2단계: 스택 8KB fixed_string 버퍼에 1회 포맷팅 (동적 힙 메모리 할당 0건)
 		fixed_string<constant::kMaxBuffer8192> formattedBuffer{};
@@ -262,13 +304,11 @@ namespace sw
 			outFormattedBuffer = fallbackUtf8.c_str();
 		}
 
-		// 4단계: 콘솔 및 파일 출력 (에디터 리스너 복사 후 락 범위 밖에서 호출하여 락 경합 최소화)
+		// 4단계: 인메모리 리스너(에디터 콘솔 UI/테스트 캡처) 스냅샷 복사 후 락 밖에서 안전하게 전파
 		LogWrittenMulticast listenersCopy;
 		bool				bHasListeners{ false };
 		{
 			std::scoped_lock<mutex> lock{ _mutex };
-			writeLogConsole( level, outFormattedBuffer );
-			writeLogFile( level, year, month, day, hour, outFormattedBuffer );
 			if ( _onLogWritten.isBound() )
 			{
 				listenersCopy = _onLogWritten;
@@ -288,6 +328,33 @@ namespace sw
 			entry._timeStamp = dateStr.c_str();
 			listenersCopy.broadcast( entry );
 		}
+
+		// 5단계: 콘솔 및 파일 비동기 I/O 큐 인큐 (초기화 전이거나 큐 풀일 경우 동기 폴백)
+		if ( _bInitialized == false || _bIsRunning.load( std::memory_order_relaxed ) == false )
+		{
+			std::scoped_lock<mutex> lock{ _mutex };
+			writeLogConsole( level, outFormattedBuffer );
+			writeLogFile( level, year, month, day, hour, outFormattedBuffer );
+			return;
+		}
+
+		LogRecord record;
+		record._level	  = level;
+		record._formatted = outFormattedBuffer;
+		record._year	  = year;
+		record._month	  = month;
+		record._day		  = day;
+		record._hour	  = hour;
+
+		if ( _queue.enqueue( std::move( record ) ) == false )
+		{
+			std::scoped_lock<mutex> lock{ _mutex };
+			writeLogConsole( level, outFormattedBuffer );
+			writeLogFile( level, year, month, day, hour, outFormattedBuffer );
+			return;
+		}
+
+		_cv.notify_one();
 	}
 
 	void Logger::writeLogConsole( LogLevel level, const utf8* pMessage )
@@ -306,13 +373,15 @@ namespace sw
 
 			SetConsoleTextAttribute( consoleHandle, arrLevelColor[static_cast<int32>( level )] );
 			std::fputs( pMessage, stdout );
-			std::fflush( stdout );
+			if ( level == LogLevel::Error )
+				std::fflush( stdout );
 			SetConsoleTextAttribute( consoleHandle, static_cast<WORD>( _defaultConsoleAttribute ) );
 		}
 		else
 		{
 			std::fputs( pMessage, stdout );
-			std::fflush( stdout );
+			if ( level == LogLevel::Error )
+				std::fflush( stdout );
 			OutputDebugStringA( pMessage );
 		}
 #elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
@@ -337,11 +406,13 @@ namespace sw
 		{
 			std::fputs( pMessage, stdout );
 		}
-		std::fflush( stdout );
+		if ( level == LogLevel::Error )
+			std::fflush( stdout );
 #else
 		std::ignore = level;
 		std::fputs( pMessage, stdout );
-		std::fflush( stdout );
+		if ( level == LogLevel::Error )
+			std::fflush( stdout );
 #endif
 	}
 

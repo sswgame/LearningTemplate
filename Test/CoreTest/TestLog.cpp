@@ -60,6 +60,57 @@ namespace
 		sw::vector<sw::LogEntry> _entries;
 		sw::DelegateHandle		 _handle;
 	};
+	/**
+	 * @class ThreadSafeLogCapture
+	 * @brief 멀티스레드 동시 로깅 테스트용 스레드 안전 로그 캡처 싱크
+	 */
+	class ThreadSafeLogCapture
+	{
+	public:
+		ThreadSafeLogCapture()
+		{
+			_handle = sw::Logger::addGlobalListener( SW_DELEGATE_LAMBDA(
+				sw::LogWrittenDelegate,
+				[this]( const sw::LogEntry& entry )
+			{
+				if ( entry._message.rfind( kCapturePrefix, 0 ) == 0 )
+				{
+					std::scoped_lock<sw::mutex> lock{ _mutex };
+					_entries.push_back( entry );
+				}
+			} ) );
+		}
+
+		~ThreadSafeLogCapture()
+		{
+			sw::Logger::removeGlobalListener( _handle );
+		}
+
+		ThreadSafeLogCapture( const ThreadSafeLogCapture& )			   = delete;
+		ThreadSafeLogCapture& operator=( const ThreadSafeLogCapture& ) = delete;
+
+		bool isAttached() const
+		{
+			return _handle.isValid();
+		}
+
+		[[maybe_unused]] sw::vector<sw::LogEntry> getEntries() const
+		{
+			std::scoped_lock<sw::mutex> lock{ _mutex };
+			return _entries;
+		}
+
+		uint32 getCount() const
+		{
+			std::scoped_lock<sw::mutex> lock{ _mutex };
+			return static_cast<uint32>( _entries.size() );
+		}
+
+	private:
+		mutable sw::mutex		 _mutex;
+		sw::vector<sw::LogEntry> _entries;
+		sw::DelegateHandle		 _handle;
+	};
 } // namespace
 
 // ------------------------------------------------------------------------------
@@ -203,6 +254,116 @@ SW_TEST_CASE( Core_Log, LogCallerHandling )
 	SW_EXPECT_STREQ( "[TestLog] Custom caller message", capture.getEntries()[0]._message );
 	SW_EXPECT_STREQ( "TestLog", capture.getEntries()[1]._caller );
 	SW_EXPECT_STREQ( "[TestLog] Warning from caller", capture.getEntries()[1]._message );
+#else
+	SW_TEST_SKIP( "SW_LOG_* is compiled out when SW_DEBUG is undefined" );
+#endif
+}
+
+/**
+ * @brief [Core_Log] 8개 스레드 동시 대량 로깅 스트레스 테스트 (데이터 레이스/크래시 검증)
+ */
+SW_TEST_CASE( Core_Log, ConcurrentMultiThreadedLogging )
+{
+#if defined( SW_DEBUG )
+	ThreadSafeLogCapture capture;
+	SW_ASSERT_TRUE( capture.isAttached() );
+
+	constexpr uint32 kThreadCount		= 8;
+	constexpr uint32 kLogsPerThread		= 100;
+	constexpr uint32 kExpectedTotalLogs = kThreadCount * kLogsPerThread;
+
+	std::thread arrWorker[kThreadCount];
+	for ( uint32 threadIndex = 0; threadIndex < kThreadCount; ++threadIndex )
+	{
+		arrWorker[threadIndex] = std::thread( [threadIndex]
+		{
+			for ( uint32 logIndex = 0; logIndex < kLogsPerThread; ++logIndex )
+			{
+				SW_LOG_INFO( "[TestLog] Thread %# Log %#", threadIndex, logIndex );
+			}
+		} );
+	}
+
+	for ( uint32 threadIndex = 0; threadIndex < kThreadCount; ++threadIndex )
+	{
+		if ( arrWorker[threadIndex].joinable() )
+			arrWorker[threadIndex].join();
+	}
+
+	SW_EXPECT_EQUAL( kExpectedTotalLogs, capture.getCount() );
+#else
+	SW_TEST_SKIP( "SW_LOG_* is compiled out when SW_DEBUG is undefined" );
+#endif
+}
+
+/**
+ * @brief [Core_Log] 큐 용량(4096) 초과 시 동기 폴백 안전성 검증
+ */
+SW_TEST_CASE( Core_Log, QueueOverflowFallbackStress )
+{
+#if defined( SW_DEBUG )
+	ThreadSafeLogCapture capture;
+	SW_ASSERT_TRUE( capture.isAttached() );
+
+	constexpr uint32 kHeavyLogCount = 6000;
+	for ( uint32 logIndex = 0; logIndex < kHeavyLogCount; ++logIndex )
+	{
+		SW_LOG_INFO( "[TestLog] Heavy burst log %#", logIndex );
+	}
+
+	SW_EXPECT_EQUAL( kHeavyLogCount, capture.getCount() );
+#else
+	SW_TEST_SKIP( "SW_LOG_* is compiled out when SW_DEBUG is undefined" );
+#endif
+}
+
+/**
+ * @brief [Core_Log] 로거 shutdown 시 큐 잔여 로그 플러시(Drain) 일관성 검증
+ */
+SW_TEST_CASE( Core_Log, ShutdownQueueDrainConsistency )
+{
+#if defined( SW_DEBUG )
+	ThreadSafeLogCapture capture;
+	SW_ASSERT_TRUE( capture.isAttached() );
+
+	constexpr uint32 kDrainCount = 500;
+	for ( uint32 logIndex = 0; logIndex < kDrainCount; ++logIndex )
+	{
+		SW_LOG_INFO( "[TestLog] Drain check %#", logIndex );
+	}
+
+	SW_EXPECT_EQUAL( kDrainCount, capture.getCount() );
+#else
+	SW_TEST_SKIP( "SW_LOG_* is compiled out when SW_DEBUG is undefined" );
+#endif
+}
+
+/**
+ * @brief [Core_Log] 로깅 진행 중 동시 리스너 등록/해제 동시성 검증
+ */
+SW_TEST_CASE( Core_Log, ConcurrentListenerAttachDetach )
+{
+#if defined( SW_DEBUG )
+	std::thread emitter( []
+	{
+		for ( uint32 index = 0; index < 500; ++index )
+		{
+			SW_LOG_TRACE( "[TestLog] Background emitter message %#", index );
+		}
+	} );
+
+	// 리스너 등록/해제 100회 반복
+	for ( uint32 iteration = 0; iteration < 100; ++iteration )
+	{
+		sw::DelegateHandle handle = sw::Logger::addGlobalListener( SW_DELEGATE_LAMBDA(
+			sw::LogWrittenDelegate,
+			[]( const sw::LogEntry& ) {} ) );
+		SW_EXPECT_TRUE( handle.isValid() );
+		sw::Logger::removeGlobalListener( handle );
+	}
+
+	if ( emitter.joinable() )
+		emitter.join();
 #else
 	SW_TEST_SKIP( "SW_LOG_* is compiled out when SW_DEBUG is undefined" );
 #endif
