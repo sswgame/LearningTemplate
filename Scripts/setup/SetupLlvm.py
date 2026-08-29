@@ -18,7 +18,7 @@ import shutil
 import sys
 import tarfile
 from pathlib import Path
-from typing import Iterable, Sequence
+from typing import Iterable, Optional, Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -85,7 +85,7 @@ def findLibClangDllPath(llvmPath: str) -> str:
     else:
         libNames = ["libclang.so", "libclang.so.1"]
 
-    searchDirs: List[Path] = []
+    searchDirs: list[Path] = []
     if llvmPath:
         root = Path(llvmPath)
         searchDirs.extend(
