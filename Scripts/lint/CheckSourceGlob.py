@@ -31,6 +31,7 @@ from common import (
     kDirSourceEngine,
     kDirSourceGameFramework,
     kDirSourceGames,
+    startsWithPathComponent,
 )
 
 _kScanRoots = (
@@ -82,13 +83,13 @@ def main() -> int:
 
     missingSources: list[str] = []
     for sourcePath in sources:
-        relativeSourcePath = sourcePath.resolve().relative_to(repo).as_posix().replace("\\", "/")
+        relativeSourcePath = sourcePath.resolve().relative_to(repo).as_posix()
         # MODULE entries / inactive packs / other-OS sources are expected absences.
         if any(ignore in relativeSourcePath for ignore in _kIgnoreSubdirs):
             continue
-        if relativeSourcePath.startswith(f"{kDirSourceGames}/"):
+        if startsWithPathComponent(relativeSourcePath, kDirSourceGames):
             active = f"/{args.active_game}/"
-            if active not in relativeSourcePath.replace("\\", "/"):
+            if active not in relativeSourcePath:
                 continue
         if relativeSourcePath.lower() not in compiledFiles:
             missingSources.append(relativeSourcePath)

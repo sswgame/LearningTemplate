@@ -6,7 +6,6 @@ Scripts/common/Search.py
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 from typing import Any, Callable, Iterable, Iterator
 
@@ -66,7 +65,7 @@ def getOrFindCached(existing: dict[str, Any],
     if isinstance(cachedValue, list) and cachedValue:
         return cachedValue
     if cachedValue and isinstance(cachedValue, str):
-        isValidValue = validate(cachedValue) if callable(validate) else os.path.exists(cachedValue)
+        isValidValue = validate(cachedValue) if callable(validate) else Path(cachedValue).exists()
         if isValidValue:
             return cachedValue
     elif cachedValue and not isinstance(cachedValue, str):

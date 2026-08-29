@@ -6,26 +6,36 @@
 include("${CMAKE_CURRENT_LIST_DIR}/../Environment/PythonUtils.cmake")
 
 # ------------------------------------------------------------------------------
+# 0) sw_addRepoPythonTarget — 저장소 루트 기준 Python 커스텀 타겟
+# ------------------------------------------------------------------------------
+function(sw_addRepoPythonTarget TARGET_NAME SCRIPT_REL)
+	cmake_parse_arguments(SW_PT "" "COMMENT" "ARGS" ${ARGN})
+	add_custom_target(${TARGET_NAME}
+		COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/${SCRIPT_REL}" ${SW_PT_ARGS}
+		WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+		COMMENT "${SW_PT_COMMENT}"
+		VERBATIM
+	)
+	set_target_properties(${TARGET_NAME} PROPERTIES FOLDER "Engine/Scripts")
+endfunction()
+
+# ------------------------------------------------------------------------------
 # 1) Doxygen — SW_BUILD_DOCS일 때만 GenerateDocs
 # ------------------------------------------------------------------------------
 if(SW_BUILD_DOCS)
-    if(NOT Python3_Interpreter_FOUND)
-        find_package(Python3 COMPONENTS Interpreter REQUIRED)
-    endif()
-    find_program(DOXYGEN_EXECUTABLE doxygen)
-    set(doxyfile "${CMAKE_SOURCE_DIR}/Doxyfile")
-    if(DOXYGEN_EXECUTABLE AND EXISTS "${doxyfile}")
-        add_custom_target(GenerateDocs
-            COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/Scripts/generate/GenerateDocs.py"
-            WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
-            COMMENT "Generating Doxygen Documentation..."
-            VERBATIM
-        )
-        set_target_properties(GenerateDocs PROPERTIES FOLDER "Engine/Scripts")
-        message(STATUS "[Docs] Doxygen Documentation Target Enabled.")
-    else()
-        message(STATUS "[Docs] Skipping docs target (doxygen or Doxyfile missing).")
-    endif()
+	if(NOT Python3_Interpreter_FOUND)
+		find_package(Python3 COMPONENTS Interpreter REQUIRED)
+	endif()
+	find_program(DOXYGEN_EXECUTABLE doxygen)
+	set(doxyfile "${CMAKE_SOURCE_DIR}/Doxyfile")
+	if(DOXYGEN_EXECUTABLE AND EXISTS "${doxyfile}")
+		sw_addRepoPythonTarget(GenerateDocs "${SW_SCRIPT_GENERATE_DOCS}"
+			COMMENT "Generating Doxygen Documentation..."
+		)
+		message(STATUS "[Docs] Doxygen Documentation Target Enabled.")
+	else()
+		message(STATUS "[Docs] Skipping docs target (doxygen or Doxyfile missing).")
+	endif()
 endif()
 
 # ------------------------------------------------------------------------------
@@ -34,93 +44,68 @@ endif()
 #    CheckSourceGlob: GLOB 누락 힌트 (compile_commands.json 필요)
 # ------------------------------------------------------------------------------
 if(NOT Python3_Interpreter_FOUND)
-    find_package(Python3 COMPONENTS Interpreter QUIET)
+	find_package(Python3 COMPONENTS Interpreter QUIET)
 endif()
 if(Python3_Interpreter_FOUND)
-    add_custom_target(CookPrefabs
-        COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/Scripts/generate/CookPrefabs.py"
-        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
-        COMMENT "Cooking prefab XML (JSON fallback) to PFB2 binary..."
-        VERBATIM
-    )
-    set_target_properties(CookPrefabs PROPERTIES FOLDER "Engine/Scripts")
+	sw_addRepoPythonTarget(CookPrefabs "${SW_SCRIPT_GENERATE_COOK_PREFABS}"
+		COMMENT "Cooking prefab XML (JSON fallback) to PFB2 binary..."
+	)
+	sw_addRepoPythonTarget(CookScenes "${SW_SCRIPT_GENERATE_COOK_SCENES}"
+		COMMENT "Cooking scene XML to SCN1 binary..."
+	)
 
-    add_custom_target(CookScenes
-        COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/Scripts/generate/CookScenes.py"
-        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
-        COMMENT "Cooking scene XML to SCN1 binary..."
-        VERBATIM
-    )
-    set_target_properties(CookScenes PROPERTIES FOLDER "Engine/Scripts")
+	add_custom_target(CookAssets
+		DEPENDS CookPrefabs CookScenes
+		COMMENT "Cooking all scene and prefab assets to binary..."
+	)
+	set_target_properties(CookAssets PROPERTIES FOLDER "Engine/Scripts")
 
-    add_custom_target(CookAssets
-        DEPENDS CookPrefabs CookScenes
-        COMMENT "Cooking all scene and prefab assets to binary..."
-    )
-    set_target_properties(CookAssets PROPERTIES FOLDER "Engine/Scripts")
-
-    add_custom_target(CheckEngineLayers
-        COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/Scripts/lint/CheckEngineLayers.py"
-            --root "${CMAKE_SOURCE_DIR}"
-        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
-        COMMENT "Checking Engine layer include rules..."
-        VERBATIM
-    )
-    set_target_properties(CheckEngineLayers PROPERTIES FOLDER "Engine/Scripts")
-
-    add_custom_target(CheckIncludeOrder
-        COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/Scripts/lint/CheckIncludeOrder.py"
-            --root "${CMAKE_SOURCE_DIR}"
-        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
-        COMMENT "Checking Include Order rules..."
-        VERBATIM
-    )
-    set_target_properties(CheckIncludeOrder PROPERTIES FOLDER "Engine/Scripts")
-
-    add_custom_target(CheckSourceGlob
-        COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/Scripts/lint/CheckSourceGlob.py"
-            --root "${CMAKE_SOURCE_DIR}"
-            --build "${CMAKE_BINARY_DIR}"
-            --active-game "${SW_ACTIVE_GAME}"
-        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
-        COMMENT "Checking source GLOB coverage vs compile_commands..."
-        VERBATIM
-    )
-    set_target_properties(CheckSourceGlob PROPERTIES FOLDER "Engine/Scripts")
+	sw_addRepoPythonTarget(CheckEngineLayers "${SW_SCRIPT_LINT_CHECK_ENGINE_LAYERS}"
+		COMMENT "Checking Engine layer include rules..."
+		ARGS --root "${CMAKE_SOURCE_DIR}"
+	)
+	sw_addRepoPythonTarget(CheckIncludeOrder "${SW_SCRIPT_LINT_CHECK_INCLUDE_ORDER}"
+		COMMENT "Checking Include Order rules..."
+		ARGS --root "${CMAKE_SOURCE_DIR}"
+	)
+	sw_addRepoPythonTarget(CheckSourceGlob "${SW_SCRIPT_LINT_CHECK_SOURCE_GLOB}"
+		COMMENT "Checking source GLOB coverage vs compile_commands..."
+		ARGS --root "${CMAKE_SOURCE_DIR}" --build "${CMAKE_BINARY_DIR}" --active-game "${SW_ACTIVE_GAME}"
+	)
 endif()
 
 # ------------------------------------------------------------------------------
 # 3) CTest 린트 테스트 등록 헬퍼
 # ------------------------------------------------------------------------------
 function(sw_registerLintTests)
-    if(NOT Python3_Interpreter_FOUND)
-        return()
-    endif()
+	if(NOT Python3_Interpreter_FOUND)
+		return()
+	endif()
 
-    if(TARGET CheckEngineLayers)
-        add_test(
-            NAME CheckEngineLayers
-            COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/${SW_SCRIPT_LINT_CHECK_ENGINE_LAYERS}"
-                --root "${CMAKE_SOURCE_DIR}"
-        )
-        set_tests_properties(CheckEngineLayers PROPERTIES LABELS "lint" TIMEOUT 15)
-    endif()
+	if(TARGET CheckEngineLayers)
+		add_test(
+			NAME CheckEngineLayers
+			COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/${SW_SCRIPT_LINT_CHECK_ENGINE_LAYERS}"
+				--root "${CMAKE_SOURCE_DIR}"
+		)
+		set_tests_properties(CheckEngineLayers PROPERTIES LABELS "lint" TIMEOUT 15)
+	endif()
 
-    if(TARGET CheckIncludeOrder)
-        add_test(
-            NAME CheckIncludeOrder
-            COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/Scripts/lint/CheckIncludeOrder.py"
-                --root "${CMAKE_SOURCE_DIR}"
-        )
-        set_tests_properties(CheckIncludeOrder PROPERTIES LABELS "lint" TIMEOUT 15)
-    endif()
+	if(TARGET CheckIncludeOrder)
+		add_test(
+			NAME CheckIncludeOrder
+			COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/${SW_SCRIPT_LINT_CHECK_INCLUDE_ORDER}"
+				--root "${CMAKE_SOURCE_DIR}"
+		)
+		set_tests_properties(CheckIncludeOrder PROPERTIES LABELS "lint" TIMEOUT 15)
+	endif()
 
-    if(TARGET CheckSourceGlob)
-        add_test(
-            NAME CheckSourceGlob
-            COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/${SW_SCRIPT_LINT_CHECK_SOURCE_GLOB}"
-                --root "${CMAKE_SOURCE_DIR}" --build "${CMAKE_BINARY_DIR}" --active-game "${SW_ACTIVE_GAME}"
-        )
-        set_tests_properties(CheckSourceGlob PROPERTIES LABELS "lint" TIMEOUT 15)
-    endif()
+	if(TARGET CheckSourceGlob)
+		add_test(
+			NAME CheckSourceGlob
+			COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/${SW_SCRIPT_LINT_CHECK_SOURCE_GLOB}"
+				--root "${CMAKE_SOURCE_DIR}" --build "${CMAKE_BINARY_DIR}" --active-game "${SW_ACTIVE_GAME}"
+		)
+		set_tests_properties(CheckSourceGlob PROPERTIES LABELS "lint" TIMEOUT 15)
+	endif()
 endfunction()

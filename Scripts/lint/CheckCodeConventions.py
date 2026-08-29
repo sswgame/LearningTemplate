@@ -45,6 +45,7 @@ from common import (
     kCppAllExtensions,
     kCppHeaderExtensions,
     kCppSourceExtensions,
+    normalizePath,
 )
 
 # --- 1. 자료구조 정의 --------------------------------------------------------
@@ -227,7 +228,7 @@ def extractClassMembersInternal(content: str) -> dict[str, list[str]]:
 
 def checkFileConventionsInternal(filePath: Path, rootDir: Path) -> list[ConventionViolation]:
     violations: list[ConventionViolation] = []
-    relPath = str(filePath.relative_to(rootDir)).replace("\\", "/")
+    relPath = normalizePath(filePath.relative_to(rootDir))
     isHeader = filePath.suffix.lower() in kCppHeaderExtensions
     isSource = filePath.suffix.lower() in kCppSourceExtensions
 

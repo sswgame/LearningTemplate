@@ -31,14 +31,16 @@ from common import (
     kDirSourceGameFramework,
     kDirSourceGames,
     kFileEngineServices,
+    normalizePath,
+    startsWithPathComponent,
 )
 
 _kIncludeRe = re.compile(r'^\s*#\s*include\s*[<"]([^>"]+)[>"]', re.MULTILINE)
 
 
 def includeHitsBanInternal(includePath: str, bannedPattern: str) -> bool:
-    normalizedParts = includePath.replace("\\", "/").split("/")
-    bannedParts = [part for part in bannedPattern.replace("\\", "/").split("/") if part]
+    normalizedParts = normalizePath(includePath).split("/")
+    bannedParts = [part for part in normalizePath(bannedPattern).split("/") if part]
     if not bannedParts:
         return False
     for partIndex in range(len(normalizedParts) - len(bannedParts) + 1):
@@ -49,21 +51,21 @@ def includeHitsBanInternal(includePath: str, bannedPattern: str) -> bool:
 
 _kForbiddenRules: list[tuple[str, tuple[str, ...]]] = [
     (
-        f"{kDirSourceEngine}/",
+        kDirSourceEngine,
         (
             "Editor/",
             "Source/Editor/",
             "GameFramework/",
             "Games/",
-            f"{kDirSourceGames}/",
+            kDirSourceGames,
         ),
     ),
     (
-        f"{kDirSourceGames}/",
+        kDirSourceGames,
         (kFileEngineServices, "EngineServices.h"),
     ),
     (
-        f"{kDirSourceGameFramework}/",
+        kDirSourceGameFramework,
         (kFileEngineServices, "EngineServices.h"),
     ),
 ]
@@ -88,27 +90,27 @@ def processFile(filePath: Path, repositoryRoot: Path, strict: bool) -> tuple[lis
 
     fileViolations: list[str] = []
     fileStrictWarns: list[str] = []
-    prefix = f"{kDirSourceEngine}/"
 
     for rulePrefix, bannedList in _kForbiddenRules:
-        if not relativeFilePath.startswith(rulePrefix):
+        if not startsWithPathComponent(relativeFilePath, rulePrefix):
             continue
         for includePath in _kIncludeRe.findall(text):
-            normalizedInclude = includePath.replace("\\", "/")
+            normalizedInclude = normalizePath(includePath)
             for bannedPattern in bannedList:
                 if includeHitsBanInternal(normalizedInclude, bannedPattern):
                     fileViolations.append(f'{relativeFilePath}: #include "{includePath}"  (금지: {bannedPattern})')
 
     sourceLayer = ""
-    if relativeFilePath.startswith(prefix) and "/" in relativeFilePath[len(prefix) :]:
-        sourceLayer = relativeFilePath[len(prefix) :].split("/", 1)[0]
+    enginePrefixLen = len(kDirSourceEngine) + 1
+    if startsWithPathComponent(relativeFilePath, kDirSourceEngine) and "/" in relativeFilePath[enginePrefixLen:]:
+        sourceLayer = relativeFilePath[enginePrefixLen:].split("/", 1)[0]
 
     # ReflectGenerated.h는 .gen.cpp 리플렉션 생성 코드 전용 preamble이며, ResourceManager.cpp는 파사드 구현체입니다.
     if relativeFilePath.endswith("ReflectGenerated.h") or relativeFilePath.endswith("ResourceManager.cpp"):
         return fileViolations, [], None
 
     for includePath in _kIncludeRe.findall(text):
-        normalizedInclude = includePath.replace("\\", "/")
+        normalizedInclude = normalizePath(includePath)
         if "Engine/" not in normalizedInclude:
             continue
         destParts = normalizedInclude.split("Engine/", 1)[-1].split("/")

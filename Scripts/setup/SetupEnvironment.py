@@ -13,7 +13,6 @@ from __future__ import annotations
 import argparse
 import json
 import logging
-import os
 import platform
 import sys
 from dataclasses import asdict, dataclass
@@ -165,7 +164,7 @@ class EnvironmentSetupManager:
         sdkDirectory = self.existing_config.get(kKeyWindowsSdkDir, "")
         sdkVersion = self.existing_config.get(kKeyWindowsSdkVersion, "")
 
-        if platform.system() == "Windows" and (not sdkDirectory or not os.path.exists(sdkDirectory)):
+        if platform.system() == "Windows" and (not sdkDirectory or not Path(sdkDirectory).exists()):
             sdkDirectory, sdkVersion = findWindowsSdkPath()
         elif platform.system() != "Windows":
             sdkDirectory, sdkVersion = "", ""

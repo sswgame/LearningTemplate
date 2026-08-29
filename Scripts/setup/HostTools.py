@@ -127,30 +127,30 @@ def findMsvcPath() -> str:
     """
     if platform.system() != "Windows":
         return ""
-    if (envVcTools := os.environ.get("VCToolsInstallDir")) and os.path.exists(envVcTools):
+    if (envVcTools := os.environ.get("VCToolsInstallDir")) and Path(envVcTools).exists():
         return normalizePath(envVcTools)
 
     programFiles = os.environ.get("ProgramFiles(x86)") or os.environ.get("ProgramFiles")
     if not programFiles:
         return ""
-    vswhere = os.path.join(programFiles, "Microsoft Visual Studio", "Installer", "vswhere.exe")
-    if not os.path.exists(vswhere):
+    vswhere = Path(programFiles) / "Microsoft Visual Studio" / "Installer" / "vswhere.exe"
+    if not vswhere.is_file():
         return ""
 
     try:
         command = [
-            vswhere, "-latest", "-products", "*",
+            str(vswhere), "-latest", "-products", "*",
             "-requires", "Microsoft.VisualStudio.Component.VC.Tools",
             "-property", "installationPath",
         ]
         vsPath = subprocess.check_output(command, text=True, encoding="utf-8", errors="replace").strip()
         if vsPath:
-            msvcBase = os.path.join(vsPath, "VC", "Tools", "MSVC")
-            if os.path.exists(msvcBase):
-                versionList = [dirName for dirName in os.listdir(msvcBase) if os.path.isdir(os.path.join(msvcBase, dirName))]
+            msvcBase = Path(vsPath) / "VC" / "Tools" / "MSVC"
+            if msvcBase.is_dir():
+                versionList = [dirName for dirName in os.listdir(msvcBase) if (msvcBase / dirName).is_dir()]
                 if versionList:
                     versionList.sort(reverse=True)
-                    return normalizePath(os.path.join(msvcBase, versionList[0]))
+                    return normalizePath(msvcBase / versionList[0])
     except Exception:
         pass
     return ""
@@ -166,7 +166,7 @@ def findWindowsSdkPath() -> tuple[str, str]:
     """
     if platform.system() != "Windows":
         return "", ""
-    if (envSdkDir := os.environ.get("WindowsSdkDir")) and os.path.exists(envSdkDir):
+    if (envSdkDir := os.environ.get("WindowsSdkDir")) and Path(envSdkDir).exists():
         version = os.environ.get("WindowsSDKVersion", "").strip("\\")
         return normalizePath(envSdkDir), version
     try:
@@ -177,9 +177,9 @@ def findWindowsSdkPath() -> tuple[str, str]:
         )
         kitsRoot, _ = winreg.QueryValueEx(key, "KitsRoot10")
         winreg.CloseKey(key)
-        if kitsRoot and os.path.exists(kitsRoot):
-            includeDir = os.path.join(kitsRoot, "Include")
-            if os.path.exists(includeDir):
+        if kitsRoot and Path(kitsRoot).exists():
+            includeDir = Path(kitsRoot) / "Include"
+            if includeDir.is_dir():
                 versionList = [dirName for dirName in os.listdir(includeDir) if dirName.startswith("10.")]
                 if versionList:
                     versionList.sort(reverse=True)
@@ -202,9 +202,9 @@ def findSystemIncludeDirs() -> list[str]:
         return includeDirs
     try:
         sdkPath = subprocess.check_output(["xcrun", "--show-sdk-path"], text=True).strip()
-        if sdkPath and os.path.exists(sdkPath):
-            usrIncludeDir = os.path.join(sdkPath, "usr", "include")
-            if os.path.exists(usrIncludeDir):
+        if sdkPath and Path(sdkPath).exists():
+            usrIncludeDir = Path(sdkPath) / "usr" / "include"
+            if usrIncludeDir.is_dir():
                 includeDirs.append(normalizePath(usrIncludeDir))
     except Exception:
         pass

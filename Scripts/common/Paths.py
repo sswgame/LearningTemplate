@@ -14,6 +14,8 @@ import sys
 from pathlib import Path
 from typing import Dict, Optional
 
+PathLike = str | Path
+
 
 def ensureScriptsOnPath() -> Path:
     """
@@ -38,13 +40,40 @@ def getProjectRoot() -> Path:
     return startDir.parent
 
 
-def normalizePath(pathString: str) -> str:
+def normalizePath(pathString: PathLike) -> str:
     """
     경로 문자열을 정규화하여 POSIX 스타일(슬래시 사용) 문자열로 반환합니다.
     """
-    if not pathString:
+    if isinstance(pathString, str) and not pathString:
         return ""
-    return str(Path(pathString).as_posix())
+    return Path(pathString).as_posix()
+
+
+def joinPath(root: PathLike, *relativeParts: PathLike) -> str:
+    """
+    루트와 상대 구간을 POSIX `/` 로 이어 붙입니다. root가 비면 empty.
+    """
+    if isinstance(root, str) and not root:
+        return ""
+    result = Path(root)
+    for part in relativeParts:
+        if isinstance(part, str) and not part:
+            continue
+        result = result / part
+    return result.as_posix()
+
+
+def startsWithPathComponent(path: PathLike, component: PathLike) -> bool:
+    """
+    path가 component 자체이거나 `component/` 로 시작하는지 (경로 세그먼트 경계).
+    """
+    pathPosix = normalizePath(path)
+    componentPosix = normalizePath(component).rstrip("/")
+    if not componentPosix:
+        return False
+    if pathPosix == componentPosix:
+        return True
+    return pathPosix.startswith(componentPosix + "/")
 
 
 def expandPathTemplate(template: str, extras: Optional[Dict[str, str]] = None) -> str:

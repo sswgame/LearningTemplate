@@ -69,11 +69,13 @@ kDirVcpkgInstalledRelDefault = "build/vcpkg_installed"
 kScriptSetupVcpkg = "Scripts/setup/SetupVcpkg.py"
 kScriptSetupEnvironment = "Scripts/setup/SetupEnvironment.py"
 kScriptLintCheckEngineLayers = "Scripts/lint/CheckEngineLayers.py"
+kScriptLintCheckIncludeOrder = "Scripts/lint/CheckIncludeOrder.py"
 kScriptLintCheckSourceGlob = "Scripts/lint/CheckSourceGlob.py"
 kScriptLintRunClangFormat = "Scripts/lint/RunClangFormat.py"
 kScriptGenerateBakeShippingHostDefaults = "Scripts/generate/BakeShippingHostDefaults.py"
 kScriptGenerateCookPrefabs = "Scripts/generate/CookPrefabs.py"
 kScriptGenerateCookScenes = "Scripts/generate/CookScenes.py"
+kScriptGenerateDocs = "Scripts/generate/GenerateDocs.py"
 
 # =============================================================================
 # --- 5. JSON Schema Keys & Environment Variables (JSON 필드명 및 환경변수 심볼) -
