@@ -3,12 +3,47 @@
 #include "Engine/Window/Mac/CocoaWindow.h"
 
 SW_LOG_CALLER( "CocoaWindow" );
+
+#if defined( SW_PLATFORM_MACOS )
+namespace
+{
+	sw::CocoaWindow* s_pCloseQueryWindow{ nullptr };
+
+	signed char swCocoaWindowShouldClose( id self, SEL sel, id sender )
+	{
+		(void)self;
+		(void)sel;
+		(void)sender;
+		if ( s_pCloseQueryWindow != nullptr )
+			s_pCloseQueryWindow->tryBeginClose();
+		return 0;
+	}
+
+	id swMakeCloseDelegate()
+	{
+		static Class s_cls{ nullptr };
+		if ( s_cls == nullptr )
+		{
+			s_cls = objc_allocateClassPair( objc_getClass( "NSObject" ), "SWCocoaWindowCloseDelegate", 0 );
+			if ( s_cls == nullptr )
+				return nullptr;
+			class_addMethod( s_cls, sel_registerName( "windowShouldClose:" ),
+							 reinterpret_cast<IMP>( swCocoaWindowShouldClose ), "c@:@" );
+			objc_registerClassPair( s_cls );
+		}
+		id alloc = ( (id ( * )( id, SEL ))objc_msgSend )( (id)s_cls, sel_registerName( "alloc" ) );
+		return ( (id ( * )( id, SEL ))objc_msgSend )( alloc, sel_registerName( "init" ) );
+	}
+} // namespace
+#endif
+
 namespace sw
 {
 	CocoaWindow::CocoaWindow()
 		: _pCocoaWindow{ nullptr }
 		, _pCocoaApp{ nullptr }
 		, _pCocoaMetalLayer{ nullptr }
+		, _pCocoaDelegate{ nullptr }
 	{
 	}
 
@@ -94,6 +129,18 @@ namespace sw
 		_pCocoaApp		  = app;
 		_pCocoaMetalLayer = metalLayer;
 		_bShouldClose	  = false;
+		s_pCloseQueryWindow = this;
+
+		SEL setReleasedSel = sel_registerName( "setReleasedWhenClosed:" );
+		( (void ( * )( id, SEL, bool ))objc_msgSend )( windowObj, setReleasedSel, false );
+
+		id closeDelegate = swMakeCloseDelegate();
+		if ( closeDelegate != nullptr )
+		{
+			SEL setDelegateSel = sel_registerName( "setDelegate:" );
+			( (void ( * )( id, SEL, id ))objc_msgSend )( windowObj, setDelegateSel, closeDelegate );
+			_pCocoaDelegate = closeDelegate;
+		}
 
 		SW_LOG_INFO( "Native Cocoa Window created successfully! (%#x%#)", width, height );
 		return true;
@@ -103,10 +150,20 @@ namespace sw
 	{
 		if ( _pCocoaWindow != nullptr )
 		{
+			SEL setDelegateSel = sel_registerName( "setDelegate:" );
+			( (void ( * )( id, SEL, id ))objc_msgSend )( (id)_pCocoaWindow, setDelegateSel, nullptr );
 			SEL closeSel = sel_registerName( "close" );
 			( (void ( * )( id, SEL ))objc_msgSend )( (id)_pCocoaWindow, closeSel );
 			_pCocoaWindow = nullptr;
 		}
+		if ( _pCocoaDelegate != nullptr )
+		{
+			SEL releaseSel = sel_registerName( "release" );
+			( (void ( * )( id, SEL ))objc_msgSend )( (id)_pCocoaDelegate, releaseSel );
+			_pCocoaDelegate = nullptr;
+		}
+		if ( s_pCloseQueryWindow == this )
+			s_pCloseQueryWindow = nullptr;
 		_pCocoaApp		  = nullptr;
 		_pCocoaMetalLayer = nullptr;
 	}

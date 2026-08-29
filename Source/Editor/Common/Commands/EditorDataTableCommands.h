@@ -45,5 +45,7 @@ namespace sw::editor
 		static string getLocalizationFolderPath();
 		/** @brief Resource/.../data 폴더 절대 경로를 반환합니다. */
 		static string getGameDataFolderPath();
+		/** @brief 수정된 로컬라이즈 레코드가 있으면 true입니다. */
+		static bool hasModifiedLocalization( const vector<LocRecord>& listRecord );
 	};
 } // namespace sw::editor

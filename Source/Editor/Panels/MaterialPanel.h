@@ -19,6 +19,7 @@ namespace sw::editor
 		void   applyDocumentText( string_view text ) override;
 		void   loadFromFocusedPath();
 		void   syncNameBuffers();
+		void   applyLivePreview();
 
 	private:
 		Material _material;

@@ -28,5 +28,9 @@ namespace sw::editor
 		static bool collectComponentPresetFiles( vector<string>& outList );
 		/** @brief 컴포넌트 프리셋 폴더 절대 경로를 반환합니다. */
 		static string getComponentPresetFolderPath();
+		/** @brief 에디터 세션 프리셋 파일 절대 경로를 반환합니다. */
+		static string getSessionPresetPath();
+		/** @brief 현재 값을 에디터 세션 프리셋으로 저장합니다. */
+		static bool saveSessionPreset();
 	};
 } // namespace sw::editor

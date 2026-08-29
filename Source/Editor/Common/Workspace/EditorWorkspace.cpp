@@ -124,9 +124,13 @@ namespace sw::editor
 		, _arrCameraBookmark{}
 		, _copiedComponentXml{}
 		, _copiedComponentTypeName{}
+		, _prefabIsolationReturnPath{}
+		, _listPrefabIsolationPath{}
+		, _prefabIsolationRootId{ 0 }
 		, _bGizmoLocalSpace{ true }
 		, _bBoneHierarchyPopupOpen{ false }
 		, _bSceneDirty{ SW_FALSE }
+		, _bPrefabIsolation{ SW_FALSE }
 		, _reservedWorkspace{ 0 }
 	{
 	}
@@ -429,5 +433,44 @@ namespace sw::editor
 	void EditorWorkspace::distributeSelectedObjects( AlignAxis axis )
 	{
 		EditorTransformCommands::distributeSelectedObjects( axis );
+	}
+
+	const string& EditorWorkspace::getPrefabIsolationPrefabPath() const
+	{
+		if ( _listPrefabIsolationPath.empty() )
+			return _emptyString;
+		return _listPrefabIsolationPath.back();
+	}
+
+	void EditorWorkspace::pushPrefabIsolation( string_view returnScenePath, string_view prefabPath, uint64 rootObjectId )
+	{
+		if ( _bPrefabIsolation == SW_FALSE )
+			_prefabIsolationReturnPath = string{ returnScenePath };
+		_listPrefabIsolationPath.push_back( string{ prefabPath } );
+		_prefabIsolationRootId = rootObjectId;
+		_bPrefabIsolation	   = SW_TRUE;
+	}
+
+	bool EditorWorkspace::popPrefabIsolation()
+	{
+		if ( _listPrefabIsolationPath.empty() )
+			return true;
+		_listPrefabIsolationPath.pop_back();
+		if ( _listPrefabIsolationPath.empty() )
+		{
+			_bPrefabIsolation		   = SW_FALSE;
+			_prefabIsolationRootId	   = 0;
+			_prefabIsolationReturnPath.clear();
+			return true;
+		}
+		return false;
+	}
+
+	void EditorWorkspace::clearPrefabIsolation()
+	{
+		_listPrefabIsolationPath.clear();
+		_prefabIsolationReturnPath.clear();
+		_prefabIsolationRootId = 0;
+		_bPrefabIsolation	   = SW_FALSE;
 	}
 } // namespace sw::editor

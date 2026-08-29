@@ -10,6 +10,7 @@
 #include "Core/Container/array.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/Container/vector.h"
 
 #include "Editor/Common/Commands/EditorTransformCommands.h"
 #include "Editor/Common/EditorSessionPolicy.h"
@@ -169,6 +170,16 @@ namespace sw::editor
 		void distributeSelectedObjects( AlignAxis axis );
 		void snapSelectedToGround();
 
+		bool		  isPrefabIsolationActive() const { return _bPrefabIsolation == SW_TRUE; }
+		const string& getPrefabIsolationReturnPath() const { return _prefabIsolationReturnPath; }
+		const string& getPrefabIsolationPrefabPath() const;
+		uint64		  getPrefabIsolationRootId() const { return _prefabIsolationRootId; }
+		void		  setPrefabIsolationRootId( uint64 rootObjectId ) { _prefabIsolationRootId = rootObjectId; }
+		void		  pushPrefabIsolation( string_view returnScenePath, string_view prefabPath, uint64 rootObjectId );
+		/** @brief 한 단계를 나갑니다. 스택이 비면 true입니다. */
+		bool popPrefabIsolation();
+		void clearPrefabIsolation();
+
 	private:
 		uint64						  _selectedComponentId;
 		string						  _selectedComponentKey;
@@ -188,9 +199,13 @@ namespace sw::editor
 		array<CameraBookmark, 9>	  _arrCameraBookmark;
 		string						  _copiedComponentXml;
 		string						  _copiedComponentTypeName;
+		string						  _prefabIsolationReturnPath;
+		vector<string>				  _listPrefabIsolationPath;
+		uint64						  _prefabIsolationRootId;
 		bool						  _bGizmoLocalSpace;
 		bool						  _bBoneHierarchyPopupOpen;
 		uint8						  _bSceneDirty		 : 1;
-		[[maybe_unused]] uint8		  _reservedWorkspace : 7;
+		uint8						  _bPrefabIsolation	 : 1;
+		[[maybe_unused]] uint8		  _reservedWorkspace : 6;
 	};
 } // namespace sw::editor

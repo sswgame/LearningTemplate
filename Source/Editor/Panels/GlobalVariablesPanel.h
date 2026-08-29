@@ -39,10 +39,15 @@ namespace sw::editor
 		float2 getInitialPanelSize() const override { return float2{ 680.0f, 480.0f }; }
 		/** @brief 온디맨드 도구이므로 기본적으로 닫힌 채 시작합니다. */
 		bool isToolPanel() const override { return true; }
+		bool		 trySaveDirtyDocument() override;
+		bool		 isDocumentDirty() const override;
+		void		 discardDirtyDocument() override;
 
 	private:
 		/** @brief 단일 전역 변수의 편집 컨트롤을 그립니다. */
 		void drawVariableRow( GlobalVariableInfo& info, bool bShowPin );
+		void markSessionDirty();
+		EditorPanelFlags getPanelFlags() const override;
 
 	private:
 		unordered_set<string>  _uniquePinnedVar;
@@ -52,6 +57,7 @@ namespace sw::editor
 		utf8				   _arrPresetNameBuf[64];
 		uint8				   _bGroupByModule	 : 1;
 		uint8				   _bPresetListDirty : 1;
-		[[maybe_unused]] uint8 _reserved		 : 6;
+		uint8				   _bSessionDirty	 : 1;
+		[[maybe_unused]] uint8 _reserved		 : 5;
 	};
 } // namespace sw::editor

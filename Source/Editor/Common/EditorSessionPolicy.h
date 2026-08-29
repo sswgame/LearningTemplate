@@ -58,5 +58,22 @@ namespace sw::editor
 		{
 			return bLayoutReady == true && bPositionChanged == true;
 		}
+		/** @brief 로컬라이즈·게임 데이터·세션 GV 중 하나라도 dirty면 도구 세션이 dirty입니다. */
+		static bool isToolSessionDirty( bool bLocalizationDirty, bool bGameDataDirty, bool bGlobalVariableDirty )
+		{
+			return bLocalizationDirty == true || bGameDataDirty == true || bGlobalVariableDirty == true;
+		}
+		/** @brief 같은 coalesce 키만 연속 편집으로 합칩니다. 빈 키는 합치지 않습니다. */
+		static bool shouldCoalesceDocumentEdits( string_view previousKey, string_view nextKey )
+		{
+			if ( previousKey.empty() || nextKey.empty() )
+				return false;
+			return previousKey == nextKey;
+		}
+		/** @brief Undo 복원 텍스트가 마지막 저장본과 같으면 dirty를 지웁니다. */
+		static bool shouldClearDocumentDirtyOnRestore( bool bMatchesLastSaved )
+		{
+			return bMatchesLastSaved == true;
+		}
 	};
 } // namespace sw::editor

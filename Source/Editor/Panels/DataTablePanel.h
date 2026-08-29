@@ -34,6 +34,9 @@ namespace sw::editor
 		void drawContent() override;
 		/** @brief 온디맨드 도구이므로 기본적으로 닫힌 채 시작합니다. */
 		bool isToolPanel() const override { return true; }
+		bool		 trySaveDirtyDocument() override;
+		bool		 isDocumentDirty() const override;
+		void		 discardDirtyDocument() override;
 
 	private:
 		void drawLocalizationTab();
@@ -46,6 +49,9 @@ namespace sw::editor
 		void loadSelectedGameDataFile();
 		void saveSelectedGameDataFile();
 		void pollBackgroundJobs();
+		void markLocDirty();
+		void markGameDataDirty();
+		EditorPanelFlags getPanelFlags() const override;
 
 	private:
 		int32					  _activeTab;
@@ -55,9 +61,13 @@ namespace sw::editor
 		vector<GameDataFileEntry> _listGameDataFile;
 		int32					  _selectedGameDataIndex;
 		string					  _selectedGameDataRawText;
+		string					  _savedGameDataRawText;
 		EditorLocalizationLoadJob _locJob;
 		EditorGameDataScanJob	  _gameDataJob;
-		bool					  _bLocLoaded;
-		bool					  _bGameDataLoaded;
+		uint8					  _bLocLoaded	   : 1;
+		uint8					  _bGameDataLoaded : 1;
+		uint8					  _bLocDirty	   : 1;
+		uint8					  _bGameDataDirty  : 1;
+		[[maybe_unused]] uint8	  _reserved		   : 4;
 	};
 } // namespace sw::editor

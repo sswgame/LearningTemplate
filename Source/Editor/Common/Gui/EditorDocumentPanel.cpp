@@ -117,7 +117,7 @@ namespace sw::editor
 	{
 		applyDocumentText( text );
 		_documentUndoBaseline = string{ text };
-		if ( text == _lastSavedDocumentText )
+		if ( EditorSessionPolicy::shouldClearDocumentDirtyOnRestore( text == _lastSavedDocumentText ) )
 			clearDocumentDirty();
 		else
 			markDocumentDirty();

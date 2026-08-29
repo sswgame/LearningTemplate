@@ -6,6 +6,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Commands/EditorDataTableCommands.h"
+#include "Editor/Common/EditorSessionPolicy.h"
 #include "Editor/Common/Gui/EditorChrome.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 
@@ -16,18 +17,71 @@ namespace sw::editor
 {
 
 	DataTablePanel::DataTablePanel()
-		: _activeTab{ 0 }
+		: IEditorPanel{ false }
+		, _activeTab{ 0 }
 		, _arrLocFilter{}
 		, _arrNewKeyBuffer{}
 		, _listLocRecord{}
 		, _listGameDataFile{}
 		, _selectedGameDataIndex{ -1 }
 		, _selectedGameDataRawText{}
+		, _savedGameDataRawText{}
 		, _locJob{}
 		, _gameDataJob{}
-		, _bLocLoaded{ false }
-		, _bGameDataLoaded{ false }
+		, _bLocLoaded{ SW_FALSE }
+		, _bGameDataLoaded{ SW_FALSE }
+		, _bLocDirty{ SW_FALSE }
+		, _bGameDataDirty{ SW_FALSE }
+		, _reserved{ 0 }
 	{
+	}
+
+	bool DataTablePanel::isDocumentDirty() const
+	{
+		return EditorSessionPolicy::isToolSessionDirty( _bLocDirty == SW_TRUE, _bGameDataDirty == SW_TRUE, false );
+	}
+
+	bool DataTablePanel::trySaveDirtyDocument()
+	{
+		if ( isDocumentDirty() == false )
+			return false;
+		if ( _bLocDirty == SW_TRUE )
+			saveLocalization();
+		if ( _bGameDataDirty == SW_TRUE )
+			saveSelectedGameDataFile();
+		return isDocumentDirty() == false;
+	}
+
+	void DataTablePanel::discardDirtyDocument()
+	{
+		if ( _bLocDirty == SW_TRUE )
+		{
+			EditorDataTableCommands::loadLocalization( _listLocRecord );
+			_bLocLoaded = SW_TRUE;
+			_bLocDirty	= SW_FALSE;
+		}
+		if ( _bGameDataDirty == SW_TRUE )
+		{
+			_selectedGameDataRawText = _savedGameDataRawText;
+			_bGameDataDirty			 = SW_FALSE;
+		}
+	}
+
+	EditorPanelFlags DataTablePanel::getPanelFlags() const
+	{
+		if ( isDocumentDirty() )
+			return EditorPanelFlags::UnsavedDocument;
+		return EditorPanelFlags::None;
+	}
+
+	void DataTablePanel::markLocDirty()
+	{
+		_bLocDirty = SW_TRUE;
+	}
+
+	void DataTablePanel::markGameDataDirty()
+	{
+		_bGameDataDirty = SW_TRUE;
 	}
 
 	void DataTablePanel::pollBackgroundJobs()
@@ -35,19 +89,22 @@ namespace sw::editor
 		vector<LocRecord> listLoc;
 		if ( _locJob.take( listLoc ) )
 		{
-			_listLocRecord = std::move( listLoc );
-			_bLocLoaded	   = true;
+			if ( _bLocDirty == SW_FALSE )
+			{
+				_listLocRecord = std::move( listLoc );
+				_bLocLoaded	   = SW_TRUE;
+			}
 		}
-		else if ( _bLocLoaded == false && _locJob.isPending() == false )
+		else if ( _bLocLoaded == SW_FALSE && _locJob.isPending() == false )
 			_locJob.request();
 
 		vector<GameDataFileEntry> listGameData;
 		if ( _gameDataJob.take( listGameData ) )
 		{
 			_listGameDataFile = std::move( listGameData );
-			_bGameDataLoaded  = true;
+			_bGameDataLoaded  = SW_TRUE;
 		}
-		else if ( _bGameDataLoaded == false && _gameDataJob.isPending() == false )
+		else if ( _bGameDataLoaded == SW_FALSE && _gameDataJob.isPending() == false )
 			_gameDataJob.request();
 	}
 
@@ -113,6 +170,7 @@ namespace sw::editor
 					newRec._bModified = true;
 					_listLocRecord.push_back( std::move( newRec ) );
 					_arrNewKeyBuffer[0] = '\0';
+					markLocDirty();
 				}
 			}
 		}
@@ -120,7 +178,7 @@ namespace sw::editor
 
 		ImGui::Separator();
 
-		if ( _bLocLoaded == false )
+		if ( _bLocLoaded == SW_FALSE )
 		{
 			EditorWidgets::drawEmptyHint( "Loading localization..." );
 			return;
@@ -171,6 +229,7 @@ namespace sw::editor
 				{
 					rec._enUS	   = arrEnBuf;
 					rec._bModified = true;
+					markLocDirty();
 				}
 
 				// Col 2: ko_KR
@@ -182,6 +241,7 @@ namespace sw::editor
 				{
 					rec._koKR	   = arrKoBuf;
 					rec._bModified = true;
+					markLocDirty();
 				}
 
 				// Col 3: ja_JP
@@ -193,6 +253,7 @@ namespace sw::editor
 				{
 					rec._jaJP	   = arrJaBuf;
 					rec._bModified = true;
+					markLocDirty();
 				}
 
 				// Col 4: Action
@@ -204,7 +265,10 @@ namespace sw::editor
 			}
 
 			if ( deleteIndex >= 0 && static_cast<size_t>( deleteIndex ) < _listLocRecord.size() )
+			{
 				_listLocRecord.erase( _listLocRecord.begin() + deleteIndex );
+				markLocDirty();
+			}
 
 			ImGui::EndTable();
 		}
@@ -231,8 +295,11 @@ namespace sw::editor
 				const bool				 bSelected = ( _selectedGameDataIndex == static_cast<int32>( fileIndex ) );
 				if ( ImGui::Selectable( entry._fileName.c_str(), bSelected ) )
 				{
-					_selectedGameDataIndex = static_cast<int32>( fileIndex );
-					loadSelectedGameDataFile();
+					if ( _bGameDataDirty == SW_FALSE || bSelected )
+					{
+						_selectedGameDataIndex = static_cast<int32>( fileIndex );
+						loadSelectedGameDataFile();
+					}
 				}
 			}
 		}
@@ -267,6 +334,7 @@ namespace sw::editor
 											ImGui::GetContentRegionAvail(), editFlags ) )
 			{
 				_selectedGameDataRawText = arrEditBuffer.data();
+				markGameDataDirty();
 			}
 		}
 		else
@@ -278,18 +346,20 @@ namespace sw::editor
 
 	void DataTablePanel::reloadLocalization()
 	{
-		_bLocLoaded = false;
+		_bLocDirty	= SW_FALSE;
+		_bLocLoaded = SW_FALSE;
 		_locJob.request();
 	}
 
 	void DataTablePanel::saveLocalization()
 	{
 		EditorDataTableCommands::saveLocalization( _listLocRecord );
+		_bLocDirty = SW_FALSE;
 	}
 
 	void DataTablePanel::reloadGameDataFiles()
 	{
-		_bGameDataLoaded = false;
+		_bGameDataLoaded = SW_FALSE;
 		_gameDataJob.request();
 	}
 
@@ -300,6 +370,8 @@ namespace sw::editor
 
 		const GameDataFileEntry& entry = _listGameDataFile[static_cast<size_t>( _selectedGameDataIndex )];
 		FileUtil::readTextFile( entry._absolutePath, _selectedGameDataRawText );
+		_savedGameDataRawText = _selectedGameDataRawText;
+		_bGameDataDirty		  = SW_FALSE;
 	}
 
 	void DataTablePanel::saveSelectedGameDataFile()
@@ -310,6 +382,8 @@ namespace sw::editor
 		const GameDataFileEntry& entry = _listGameDataFile[static_cast<size_t>( _selectedGameDataIndex )];
 		if ( FileUtil::writeTextFile( entry._absolutePath, _selectedGameDataRawText ) == false )
 			return;
+		_savedGameDataRawText = _selectedGameDataRawText;
+		_bGameDataDirty		  = SW_FALSE;
 		SW_LOG_INFO( "Saved game data table %#", entry._fileName.c_str() );
 	}
 } // namespace sw::editor

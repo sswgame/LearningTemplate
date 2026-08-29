@@ -5,6 +5,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Commands/EditorToolAssetCommands.h"
+#include "Editor/Common/Commands/EditorViewportPreview.h"
 #include "Editor/Common/Gui/EditorChrome.h"
 
 #include "Engine/Sequencer/SequenceAsset.h"
@@ -169,6 +170,7 @@ namespace sw::editor
 		{
 			if ( _previewPlayer->isPlaying() )
 				_previewPlayer->seekToFrame( _currentFrame );
+			EditorViewportPreview::applySequenceFrame( captureAsset(), _currentFrame );
 		}
 		ImGui::Text( "Current Frame: %d", _currentFrame );
 
@@ -315,6 +317,7 @@ namespace sw::editor
 			return;
 		_previewPlayer->update( deltaSeconds );
 		_currentFrame = _previewPlayer->getCurrentFrame();
+		EditorViewportPreview::applySequenceFrame( _previewPlayer->getAsset(), _currentFrame );
 		if ( _previewPlayer->isPlaying() == false )
 			return;
 		vector<const SequenceTrackItem*> listActive;

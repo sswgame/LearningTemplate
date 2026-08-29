@@ -43,5 +43,6 @@ namespace sw
 		[[maybe_unused]] void* _pCocoaWindow;
 		[[maybe_unused]] void* _pCocoaApp;
 		[[maybe_unused]] void* _pCocoaMetalLayer;
+		[[maybe_unused]] void* _pCocoaDelegate;
 	};
 } // namespace sw

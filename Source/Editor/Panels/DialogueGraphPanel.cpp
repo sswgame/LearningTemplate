@@ -7,6 +7,7 @@
 #include "Core/String/formatString.h"
 
 #include "Editor/Common/Commands/EditorToolAssetCommands.h"
+#include "Editor/Common/Commands/EditorViewportPreview.h"
 #include "Editor/Common/EditorSessionPolicy.h"
 #include "Editor/Common/Gui/EditorChrome.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -623,6 +624,8 @@ namespace sw::editor
 			_previewNodeId					= ( pStart != nullptr ) ? pStart->_id : 0;
 			_bPreviewPlaying				= SW_TRUE;
 			_previewHoldSeconds				= 0.0f;
+			if ( pStart != nullptr )
+				EditorViewportPreview::applyDialogueLine( pStart->_speaker, pStart->_text );
 		}
 		ImGui::SameLine();
 		if ( ImGui::Button( "Advance Preview" ) )
@@ -706,6 +709,8 @@ namespace sw::editor
 		}
 		_previewNodeId				   = nextId;
 		const DialogueAssetNode* pNext = asset.findNode( nextId );
+		if ( pNext != nullptr )
+			EditorViewportPreview::applyDialogueLine( pNext->_speaker, pNext->_text );
 		if ( pNext != nullptr && pNext->_type == DialogueAssetNodeType::End )
 			_bPreviewPlaying = SW_FALSE;
 	}

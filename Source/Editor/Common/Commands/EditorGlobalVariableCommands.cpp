@@ -122,4 +122,14 @@ namespace sw::editor
 		FileUtil::collectFiles( getComponentPresetFolderPath(), ".preset.xml", outList, false, false );
 		return true;
 	}
+
+	string EditorGlobalVariableCommands::getSessionPresetPath()
+	{
+		return FileUtil::joinPath( getPresetFolderPath(), "editor_session.gvpreset.xml" );
+	}
+
+	bool EditorGlobalVariableCommands::saveSessionPreset()
+	{
+		return savePreset( getSessionPresetPath(), "editor_session" );
+	}
 } // namespace sw::editor

@@ -4,9 +4,11 @@
 
 #include "Core/Log/Logger.h"
 
+#include "Editor/Common/Commands/EditorAssetCommands.h"
 #include "Editor/Common/Commands/EditorToolAssetCommands.h"
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/SelectionManager.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
@@ -76,13 +78,34 @@ namespace sw::editor
 		ImGui::SameLine();
 		ImGui::Text( "%s", _selectedInstanceName.empty() ? "(none)" : _selectedInstanceName.c_str() );
 
+		if ( pContext != nullptr && pContext->getWorkspace().isPrefabIsolationActive() )
+		{
+			ImGui::TextColored( ImVec4( 1.0f, 0.75f, 0.2f, 1.0f ), "Isolation: %s",
+								pContext->getWorkspace().getPrefabIsolationPrefabPath().c_str() );
+			if ( ImGui::Button( "Save Prefab & Exit Isolation" ) )
+				EditorAssetCommands::exitPrefabIsolation( true );
+			ImGui::SameLine();
+			if ( ImGui::Button( "Exit Isolation" ) )
+				EditorAssetCommands::exitPrefabIsolation( false );
+		}
+		else if ( _selectedPrefabPath.empty() == false )
+		{
+			if ( ImGui::Button( "Open Prefab Isolation" ) )
+				EditorAssetCommands::enterPrefabIsolation( _selectedPrefabPath );
+		}
+
 		ImGui::Separator();
 
 		if ( ImGui::CollapsingHeader( "Nested Prefabs & Sub-Assets", ImGuiTreeNodeFlags_DefaultOpen ) )
 		{
 			for ( size_t prefabIndex = 0; prefabIndex < _listNestedPrefab.size(); ++prefabIndex )
 			{
+				ImGui::PushID( static_cast<int32>( prefabIndex ) );
 				ImGui::BulletText( "[Nested] %s", _listNestedPrefab[prefabIndex].c_str() );
+				ImGui::SameLine();
+				if ( ImGui::SmallButton( "Edit" ) )
+					EditorAssetCommands::enterPrefabIsolation( _listNestedPrefab[prefabIndex] );
+				ImGui::PopID();
 			}
 		}
 

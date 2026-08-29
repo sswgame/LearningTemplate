@@ -7,6 +7,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Commands/EditorGlobalVariableCommands.h"
+#include "Editor/Common/EditorSessionPolicy.h"
 #include "Editor/Common/Gui/EditorChrome.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 
@@ -60,15 +61,16 @@ namespace sw::editor
 				return pA->_name < pB->_name;
 			}
 
-			static void drawVariableWidget( GlobalVariableInfo& info )
+			static bool drawVariableWidget( GlobalVariableInfo& info )
 			{
 				ImGui::SetNextItemWidth( -1.0f );
 				if ( info._pData == nullptr )
 				{
 					ImGui::TextDisabled( "(null data)" );
-					return;
+					return false;
 				}
 
+				bool bChanged{ false };
 				switch ( info._type )
 				{
 					case GlobalVariableType::Boolean:
@@ -77,7 +79,8 @@ namespace sw::editor
 						bool  bVal = *pVal;
 						if ( ImGui::Checkbox( "##val", &bVal ) )
 						{
-							*pVal = bVal;
+							*pVal	 = bVal;
+							bChanged = true;
 							if ( info._onValueChanged.isBound() )
 								info._onValueChanged( &info );
 						}
@@ -89,7 +92,8 @@ namespace sw::editor
 						float32	 fVal = *pVal;
 						if ( ImGui::DragFloat( "##val", &fVal, 0.1f ) )
 						{
-							*pVal = fVal;
+							*pVal	 = fVal;
+							bChanged = true;
 							if ( info._onValueChanged.isBound() )
 								info._onValueChanged( &info );
 						}
@@ -101,7 +105,8 @@ namespace sw::editor
 						int32  iVal = *pVal;
 						if ( ImGui::DragInt( "##val", &iVal ) )
 						{
-							*pVal = iVal;
+							*pVal	 = iVal;
+							bChanged = true;
 							if ( info._onValueChanged.isBound() )
 								info._onValueChanged( &info );
 						}
@@ -129,7 +134,8 @@ namespace sw::editor
 									const bool	bSelected = ( val32 == *pVal );
 									if ( ImGui::Selectable( name, bSelected ) )
 									{
-										*pVal = val32;
+										*pVal	 = val32;
+										bChanged = true;
 										if ( info._onValueChanged.isBound() )
 											info._onValueChanged( &info );
 									}
@@ -144,7 +150,8 @@ namespace sw::editor
 							int32 iVal = *pVal;
 							if ( ImGui::DragInt( "##val", &iVal ) )
 							{
-								*pVal = iVal;
+								*pVal	 = iVal;
+								bChanged = true;
 								if ( info._onValueChanged.isBound() )
 									info._onValueChanged( &info );
 							}
@@ -158,13 +165,15 @@ namespace sw::editor
 						StringUtil::strncpy( arrBuf, pVal->c_str(), sizeof( arrBuf ) );
 						if ( ImGui::InputText( "##val", arrBuf, sizeof( arrBuf ) ) )
 						{
-							*pVal = arrBuf;
+							*pVal	 = arrBuf;
+							bChanged = true;
 							if ( info._onValueChanged.isBound() )
 								info._onValueChanged( &info );
 						}
 						break;
 					}
 				}
+				return bChanged;
 			}
 		};
 	} // namespace
@@ -181,8 +190,44 @@ namespace sw::editor
 		, _arrPresetNameBuf{ 0 }
 		, _bGroupByModule{ SW_TRUE }
 		, _bPresetListDirty{ SW_TRUE }
+		, _bSessionDirty{ SW_FALSE }
 		, _reserved{ 0 }
 	{
+	}
+
+	bool GlobalVariablesPanel::isDocumentDirty() const
+	{
+		return _bSessionDirty == SW_TRUE;
+	}
+
+	bool GlobalVariablesPanel::trySaveDirtyDocument()
+	{
+		if ( isDocumentDirty() == false )
+			return false;
+		if ( EditorGlobalVariableCommands::saveSessionPreset() == false )
+			return false;
+		_bSessionDirty = SW_FALSE;
+		return true;
+	}
+
+	void GlobalVariablesPanel::discardDirtyDocument()
+	{
+		GlobalVariableManager* pGvm = editor::getService<GlobalVariableManager>();
+		if ( pGvm != nullptr )
+			pGvm->resetAllToDefault();
+		_bSessionDirty = SW_FALSE;
+	}
+
+	EditorPanelFlags GlobalVariablesPanel::getPanelFlags() const
+	{
+		if ( isDocumentDirty() )
+			return EditorPanelFlags::UnsavedDocument;
+		return EditorPanelFlags::None;
+	}
+
+	void GlobalVariablesPanel::markSessionDirty()
+	{
+		_bSessionDirty = SW_TRUE;
 	}
 
 	void GlobalVariablesPanel::drawContent()
@@ -204,7 +249,14 @@ namespace sw::editor
 
 			ImGui::SameLine();
 			if ( ImGui::Button( "Reset All" ) )
+			{
 				pGvm->resetAllToDefault();
+				markSessionDirty();
+			}
+
+			ImGui::SameLine();
+			if ( ImGui::Button( "Save Session" ) )
+				trySaveDirtyDocument();
 
 			ImGui::SameLine();
 			if ( ImGui::Button( "Presets..." ) )
@@ -226,6 +278,7 @@ namespace sw::editor
 					EditorGlobalVariableCommands::savePreset( presetPath, _arrPresetNameBuf );
 					_arrPresetNameBuf[0] = '\0';
 					_bPresetListDirty	 = SW_TRUE;
+					_bSessionDirty		 = SW_FALSE;
 				}
 
 				ImGui::Separator();
@@ -261,7 +314,10 @@ namespace sw::editor
 						}
 
 						if ( ImGui::MenuItem( displayName.c_str() ) )
+						{
 							EditorGlobalVariableCommands::loadPreset( presetFile );
+							_bSessionDirty = SW_FALSE;
+						}
 					}
 				}
 
@@ -445,11 +501,15 @@ namespace sw::editor
 
 		// Value / Widget 컬럼
 		ImGui::TableNextColumn();
-		GlobalVariablesPanelInternal::drawVariableWidget( info );
+		if ( GlobalVariablesPanelInternal::drawVariableWidget( info ) )
+			markSessionDirty();
 
 		// Reset 컬럼
 		ImGui::TableNextColumn();
 		if ( ImGui::SmallButton( "Reset" ) )
+		{
 			info.resetToDefault();
+			markSessionDirty();
+		}
 	}
 } // namespace sw::editor

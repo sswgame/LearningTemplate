@@ -3,6 +3,7 @@
 #include "Editor/Panels/AnimationGraphPanel.h"
 
 #include "Editor/Common/Commands/EditorToolAssetCommands.h"
+#include "Editor/Common/Commands/EditorViewportPreview.h"
 #include "Editor/Common/Config/EditorConfig.h"
 #include "Editor/Common/EditorSessionPolicy.h"
 #include "Editor/Common/Gui/EditorChrome.h"
@@ -117,6 +118,7 @@ namespace sw::editor
 				_previewPlayer.play();
 				_bPreviewPlaying	= SW_TRUE;
 				_previewHoldSeconds = 0.0f;
+				EditorViewportPreview::applyAnimationNode( _previewPlayer.getCurrentNodeName() );
 			}
 			ImGui::SameLine();
 			if ( ImGui::Button( "Advance" ) )
@@ -124,6 +126,8 @@ namespace sw::editor
 				syncPreviewGraph();
 				if ( _previewPlayer.advance() == false )
 					_bPreviewPlaying = SW_FALSE;
+				else
+					EditorViewportPreview::applyAnimationNode( _previewPlayer.getCurrentNodeName() );
 			}
 			ImGui::SameLine();
 			if ( ImGui::Button( "Stop" ) )
@@ -357,6 +361,8 @@ namespace sw::editor
 		_previewHoldSeconds = 0.0f;
 		if ( _previewPlayer.advance() == false )
 			_bPreviewPlaying = SW_FALSE;
+		else
+			EditorViewportPreview::applyAnimationNode( _previewPlayer.getCurrentNodeName() );
 	}
 
 	int32 AnimationGraphPanel::nextNodeId() const

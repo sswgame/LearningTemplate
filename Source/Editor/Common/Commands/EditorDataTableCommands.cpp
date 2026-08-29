@@ -140,6 +140,16 @@ namespace sw::editor
 		return true;
 	}
 
+	bool EditorDataTableCommands::hasModifiedLocalization( const vector<LocRecord>& listRecord )
+	{
+		for ( const LocRecord& rec : listRecord )
+		{
+			if ( rec._bModified )
+				return true;
+		}
+		return false;
+	}
+
 	bool EditorDataTableCommands::collectGameDataFiles( vector<GameDataFileEntry>& outList )
 	{
 		outList.clear();
