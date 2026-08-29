@@ -69,23 +69,22 @@ namespace sw::editor
 		clear();
 
 		// 핵심 패널 (Core)
-		registerPanel( make_unique<HierarchyPanel>(), EditorPanelCategory::Core, "Hierarchy" );
-		registerPanel( make_unique<InspectorPanel>(), EditorPanelCategory::Core, "Inspector" );
-		registerPanel( make_unique<GameViewPanel>(), EditorPanelCategory::Core, "Game View" );
-		registerPanel( make_unique<ConsolePanel>(), EditorPanelCategory::Core, "Console" );
-		registerPanel( make_unique<ProfilerPanel>(), EditorPanelCategory::Core, "Profiler" );
-		registerPanel( make_unique<ContentBrowserPanel>(), EditorPanelCategory::Core, "Content Browser" );
+		registerPanel( make_unique<HierarchyPanel>(), EditorPanelCategory::Core );
+		registerPanel( make_unique<InspectorPanel>(), EditorPanelCategory::Core );
+		registerPanel( make_unique<GameViewPanel>(), EditorPanelCategory::Core );
+		registerPanel( make_unique<ConsolePanel>(), EditorPanelCategory::Core );
+		registerPanel( make_unique<ProfilerPanel>(), EditorPanelCategory::Core );
+		registerPanel( make_unique<ContentBrowserPanel>(), EditorPanelCategory::Core );
 
-		// 온디맨드 도구 (Tool)
-		registerPanel( make_unique<HistoryPanel>(), EditorPanelCategory::Tool, "History" );
-		registerPanel( make_unique<GlobalVariablesPanel>(), EditorPanelCategory::Tool, "Global Variables" );
-		registerPanel( make_unique<SequencerPanel>(), EditorPanelCategory::Tool, "Sequencer" );
-		registerPanel( make_unique<AnimationGraphPanel>(), EditorPanelCategory::Tool, "Animation Graph" );
-		registerPanel( make_unique<DialogueGraphPanel>(), EditorPanelCategory::Tool, "Dialogue Graph" );
-		registerPanel( make_unique<PrefabEditorPanel>(), EditorPanelCategory::Tool, "Prefab Editor" );
-		registerPanel( make_unique<TileMapPanel>(), EditorPanelCategory::Tool, "Tile Map Tool" );
-		registerPanel( make_unique<SpriteClipPanel>(), EditorPanelCategory::Tool, "Sprite Clip" );
-		registerPanel( make_unique<DataTablePanel>(), EditorPanelCategory::Tool, "Data Table Editor" );
+		registerPanel( make_unique<HistoryPanel>(), EditorPanelCategory::Tool );
+		registerPanel( make_unique<GlobalVariablesPanel>(), EditorPanelCategory::Tool );
+		registerPanel( make_unique<SequencerPanel>(), EditorPanelCategory::Tool );
+		registerPanel( make_unique<AnimationGraphPanel>(), EditorPanelCategory::Tool );
+		registerPanel( make_unique<DialogueGraphPanel>(), EditorPanelCategory::Tool );
+		registerPanel( make_unique<PrefabEditorPanel>(), EditorPanelCategory::Tool );
+		registerPanel( make_unique<TileMapPanel>(), EditorPanelCategory::Tool );
+		registerPanel( make_unique<SpriteClipPanel>(), EditorPanelCategory::Tool );
+		registerPanel( make_unique<DataTablePanel>(), EditorPanelCategory::Tool );
 	}
 
 	void EditorPanelManager::drawOpenPanels()

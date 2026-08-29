@@ -6,6 +6,7 @@
 
 #include "Editor/Common/Commands/EditorToolAssetCommands.h"
 #include "Editor/Common/Gui/EditorChrome.h"
+#include "Editor/Common/Workspace/EditorTransaction.h"
 
 #include "Engine/Sequencer/SequenceAsset.h"
 
@@ -225,16 +226,14 @@ namespace sw::editor
 			return;
 
 		const string afterJson = asset.toJson();
-		if ( beforeJson == afterJson )
-			return;
-
-		const string path = getLoadedAssetPath();
-		EditorToolAssetCommands::pushDocumentUndo(
-			SW_DELEGATE_LAMBDA( Delegate<void()>, [this, path, beforeJson]()
+		const string path	   = getLoadedAssetPath();
+		EditorTransaction::recordDocumentText(
+			beforeJson, afterJson, "Save Sequence",
+			SW_DELEGATE_LAMBDA( EditorDocumentRestoreDelegate, [this, path]( string_view snapshot )
 		{
 			SequenceAsset restored;
-			if ( beforeJson.empty() == false )
-				restored.parseJson( beforeJson );
+			if ( snapshot.empty() == false )
+				restored.parseJson( snapshot );
 			EditorToolAssetCommands::saveSequence( restored, path );
 			if ( getLoadedAssetPath() != path || _sequence == nullptr )
 				return;
@@ -253,30 +252,6 @@ namespace sw::editor
 				item._color		   = src._color;
 				_sequence->_listItems.push_back( std::move( item ) );
 			}
-		} ),
-			SW_DELEGATE_LAMBDA( Delegate<void()>, [this, path, afterJson]()
-		{
-			SequenceAsset restored;
-			restored.parseJson( afterJson );
-			EditorToolAssetCommands::saveSequence( restored, path );
-			if ( getLoadedAssetPath() != path || _sequence == nullptr )
-				return;
-			_sequence->_frameMin = restored._frameMin;
-			_sequence->_frameMax = restored._frameMax;
-			StringUtil::strncpy( _arrCinematicNote, restored._note.c_str(), sizeof( _arrCinematicNote ) - 1 );
-			_sequence->_listItems.clear();
-			for ( const SequenceTrackItem& src : restored._listItem )
-			{
-				Item item{};
-				item._name		   = src._name;
-				item._targetObject = src._targetObject;
-				item._start		   = src._start;
-				item._end		   = src._end;
-				item._type		   = src._type;
-				item._color		   = src._color;
-				_sequence->_listItems.push_back( std::move( item ) );
-			}
-		} ),
-			"Save Sequence" );
+		} ) );
 	}
 } // namespace sw::editor

@@ -6,6 +6,7 @@
 
 #include "Editor/Common/Commands/EditorToolAssetCommands.h"
 #include "Editor/Common/Gui/IEditorPanel.h"
+#include "Editor/Common/Workspace/EditorAssetType.h"
 
 namespace sw::editor
 {
@@ -19,9 +20,12 @@ namespace sw::editor
 		~PrefabEditorPanel() override = default;
 
 		bool		isToolPanel() const override { return true; }
-		const utf8* getPanelTitle() const override { return "Prefab Editor"; }
-		void		drawContent() override;
-		float2		getInitialPanelSize() const override { return float2{ 650.0f, 480.0f }; }
+		const utf8* getPanelTitle() const override
+		{
+			return EditorAssetTypeRegistry::getPanelTitle( EditorAssetKind::Prefab );
+		}
+		void   drawContent() override;
+		float2 getInitialPanelSize() const override { return float2{ 650.0f, 480.0f }; }
 
 	private:
 		void scanPrefabOverrides( const utf8* pPrefabPath );

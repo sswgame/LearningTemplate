@@ -2,9 +2,6 @@
 
 #include "Editor/Common/Gui/EditorDocumentPanel.h"
 
-#include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorWorkspace.h"
-
 namespace sw::editor
 {
 	EditorDocumentPanel::EditorDocumentPanel( EditorAssetKind kind, bool bLoadOnOpen )
@@ -28,16 +25,12 @@ namespace sw::editor
 
 	string_view EditorDocumentPanel::getMatchingFocusedPath() const
 	{
-		EditorContext* pContext = EditorContext::get();
-		if ( pContext == nullptr )
-			return {};
+		return EditorAssetTypeRegistry::matchingFocusedPath( _kind );
+	}
 
-		const string& focused = pContext->getWorkspace().getFocusedAssetPath();
-		if ( focused.empty() )
-			return {};
-		if ( EditorAssetTypeRegistry::matches( _kind, focused ) == false )
-			return {};
-		return focused;
+	const utf8* EditorDocumentPanel::getPanelTitle() const
+	{
+		return EditorAssetTypeRegistry::getPanelTitle( _kind );
 	}
 
 	void EditorDocumentPanel::acceptFocusedDocument()

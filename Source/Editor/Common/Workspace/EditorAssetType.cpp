@@ -5,6 +5,9 @@
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
 
+#include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorWorkspace.h"
+
 namespace sw::editor
 {
 	namespace
@@ -13,8 +16,7 @@ namespace sw::editor
 		{
 			EndsWith = 0,
 			Extension,
-			Scene,
-			TileMap
+			Scene
 		};
 
 		struct TypeRow
@@ -23,6 +25,12 @@ namespace sw::editor
 			MatchMode		   _mode;
 			const string_view* _pSuffix;
 			uint32			   _suffixCount;
+		};
+
+		struct KindTitleRow
+		{
+			EditorAssetKind _kind;
+			const utf8*		_pTitle;
 		};
 
 		constexpr string_view kArrPrefabSuffix[]	= { ".prefab.xml", ".prefab.json", ".prefab.bin", ".prefab", ".pfb" };
@@ -36,6 +44,7 @@ namespace sw::editor
 		constexpr string_view kArrSpriteDocSuffix[] = { ".sprite.json", ".sprite" };
 		constexpr string_view kArrSpriteImageExt[]	= { ".png", ".jpg", ".jpeg", ".dds", ".tga" };
 		constexpr string_view kArrSequenceSuffix[]	= { ".seq.json", ".seq" };
+		constexpr string_view kArrTileMapSuffix[]	= { ".tilemap.xml", ".tilemap" };
 
 		const TypeRow kArrType[] = {
 			{		  EditorAssetKind::Prefab,  MatchMode::EndsWith,	kArrPrefabSuffix,		  static_cast<uint32>( sizeof( kArrPrefabSuffix ) / sizeof( kArrPrefabSuffix[0] ) )},
@@ -49,31 +58,80 @@ namespace sw::editor
 			{	  EditorAssetKind::SpriteClip,  MatchMode::EndsWith, kArrSpriteDocSuffix, static_cast<uint32>( sizeof( kArrSpriteDocSuffix ) / sizeof( kArrSpriteDocSuffix[0] ) )},
 			{	  EditorAssetKind::SpriteClip, MatchMode::Extension,	 kArrSpriteImageExt,	 static_cast<uint32>( sizeof( kArrSpriteImageExt ) / sizeof( kArrSpriteImageExt[0] ) )},
 			{	  EditorAssetKind::Sequence,	 MatchMode::EndsWith,  kArrSequenceSuffix,	  static_cast<uint32>( sizeof( kArrSequenceSuffix ) / sizeof( kArrSequenceSuffix[0] ) )},
+			{		  EditorAssetKind::TileMap,	MatchMode::EndsWith,	 kArrTileMapSuffix,		static_cast<uint32>( sizeof( kArrTileMapSuffix ) / sizeof( kArrTileMapSuffix[0] ) )},
 			{		  EditorAssetKind::Scene,	  MatchMode::Scene,				nullptr,																					   0},
-			{		  EditorAssetKind::TileMap,	MatchMode::TileMap,				nullptr,																					   0},
+		};
+
+		constexpr KindTitleRow kArrKindTitle[] = {
+			{		  EditorAssetKind::Prefab,   "Prefab Editor"},
+			{EditorAssetKind::AnimationGraph, "Animation Graph"},
+			{ EditorAssetKind::DialogueGraph,  "Dialogue Graph"},
+			{	  EditorAssetKind::SpriteClip,	   "Sprite Clip"},
+			{		  EditorAssetKind::TileMap,	"Tile Map Tool"},
+			{	  EditorAssetKind::Sequence,		 "Sequencer"},
+		};
+
+		constexpr EditorAssetKind kArrToolPanelKind[] = {
+			EditorAssetKind::AnimationGraph,
+			EditorAssetKind::DialogueGraph,
+			EditorAssetKind::Prefab,
+			EditorAssetKind::SpriteClip,
+			EditorAssetKind::TileMap,
+			EditorAssetKind::Sequence,
 		};
 
 		constexpr EditorAssetPanelMapping kArrPanelMapping[] = {
-			{	  ".anim.json", "Animation Graph"},
-			{		  ".anim", "Animation Graph"},
-			{".dialogue.json",	"Dialogue Graph"},
-			{	  ".dialogue",  "Dialogue Graph"},
-			{  ".tilemap.xml",	  "Tile Map Tool"},
-			{	  ".tilemap",	  "Tile Map Tool"},
-			{	  ".prefab.xml",	 "Prefab Editor"},
-			{  ".prefab.json",	  "Prefab Editor"},
-			{	  ".prefab.bin",	 "Prefab Editor"},
-			{		  ".prefab",	 "Prefab Editor"},
-			{		  ".pfb",	  "Prefab Editor"},
-			{  ".sprite.json",	  "Sprite Clip"},
-			{		  ".sprite",	 "Sprite Clip"},
-			{	  ".seq.json",	   "Sequencer"},
-			{		  ".seq",		  "Sequencer"},
-			{		  ".png",	  "Sprite Clip"},
-			{		  ".jpg",	  "Sprite Clip"},
-			{		  ".jpeg",	   "Sprite Clip"},
-			{		  ".dds",	  "Sprite Clip"},
-			{		  ".tga",	  "Sprite Clip"},
+			{EditorAssetKind::AnimationGraph,	   ".anim.json"},
+			{EditorAssetKind::AnimationGraph,		   ".anim"},
+			{ EditorAssetKind::DialogueGraph, ".dialogue.json"},
+			{ EditorAssetKind::DialogueGraph,	  ".dialogue"},
+			{		  EditorAssetKind::TileMap,	".tilemap.xml"},
+			{		  EditorAssetKind::TileMap,		".tilemap"},
+			{		  EditorAssetKind::Prefab,	   ".prefab.xml"},
+			{		  EditorAssetKind::Prefab,   ".prefab.json"},
+			{		  EditorAssetKind::Prefab,	   ".prefab.bin"},
+			{		  EditorAssetKind::Prefab,		   ".prefab"},
+			{		  EditorAssetKind::Prefab,		   ".pfb"},
+			{	  EditorAssetKind::SpriteClip,   ".sprite.json"},
+			{	  EditorAssetKind::SpriteClip,		   ".sprite"},
+			{	  EditorAssetKind::Sequence,		 ".seq.json"},
+			{	  EditorAssetKind::Sequence,			 ".seq"},
+			{	  EditorAssetKind::SpriteClip,		   ".png"},
+			{	  EditorAssetKind::SpriteClip,		   ".jpg"},
+			{	  EditorAssetKind::SpriteClip,		   ".jpeg"},
+			{	  EditorAssetKind::SpriteClip,		   ".dds"},
+			{	  EditorAssetKind::SpriteClip,		   ".tga"},
+		};
+
+		constexpr EditorAssetBrowserFilter kArrBrowserFilter[] = {
+			{	  "All",		 EditorAssetKind::Unknown, false},
+			{	  "Scenes",			EditorAssetKind::Scene, false},
+			{  "Prefabs",		 EditorAssetKind::Prefab, false},
+			{ "Textures",		  EditorAssetKind::Texture, false},
+			{  "Shaders",		 EditorAssetKind::Shader, false},
+			{"Materials",	   EditorAssetKind::Material, false},
+			{	  "Audio",		   EditorAssetKind::Audio, false},
+			{	  "Anim", EditorAssetKind::AnimationGraph, false},
+			{ "Dialogue",  EditorAssetKind::DialogueGraph, false},
+			{	  "Sprite",		EditorAssetKind::SpriteClip, false},
+			{ "Tile Map",		  EditorAssetKind::TileMap, false},
+			{	  "Seq",		 EditorAssetKind::Sequence, false},
+			{	  "Data",			  EditorAssetKind::Data, false},
+			{	  "Other",		   EditorAssetKind::Unknown,	 true},
+		};
+
+		constexpr EditorAssetKind kArrOtherExcludeKind[] = {
+			EditorAssetKind::Scene,
+			EditorAssetKind::Prefab,
+			EditorAssetKind::Texture,
+			EditorAssetKind::Shader,
+			EditorAssetKind::Material,
+			EditorAssetKind::Audio,
+			EditorAssetKind::AnimationGraph,
+			EditorAssetKind::DialogueGraph,
+			EditorAssetKind::SpriteClip,
+			EditorAssetKind::TileMap,
+			EditorAssetKind::Sequence,
 		};
 
 		struct EditorAssetTypeInternal
@@ -115,24 +173,21 @@ namespace sw::editor
 				return FileUtil::endsWithIgnoreCase( path, "_scene.xml" );
 			}
 
-			static bool matchTileMap( string_view path )
-			{
-				if ( FileUtil::endsWithAnyIgnoreCase( path, { ".tilemap.xml", ".tilemap" } ) )
-					return true;
-				if ( FileUtil::endsWithIgnoreCase( path, ".xml" ) == false )
-					return false;
-				if ( FileUtil::endsWithAnyIgnoreCase( path, { ".scene.xml", ".prefab.xml", ".preset.xml" } ) )
-					return false;
-				return true;
-			}
-
 			static bool matchRow( const TypeRow& row, string_view path )
 			{
 				if ( row._mode == MatchMode::Scene )
 					return matchScene( path );
-				if ( row._mode == MatchMode::TileMap )
-					return matchTileMap( path );
 				return matchSuffixList( path, row._pSuffix, row._suffixCount, row._mode );
+			}
+
+			static bool containsSuffix( const vector<string>& listSuffix, string_view suffix )
+			{
+				for ( const string& existing : listSuffix )
+				{
+					if ( FileUtil::endsWithIgnoreCase( existing, suffix ) && existing.size() == suffix.size() )
+						return true;
+				}
+				return false;
 			}
 		};
 	} // namespace
@@ -162,9 +217,126 @@ namespace sw::editor
 		return matches( kind, string_view{ pPath } );
 	}
 
+	bool EditorAssetTypeRegistry::matchesAny( string_view path )
+	{
+		if ( path.empty() )
+			return false;
+		for ( const TypeRow& row : kArrType )
+		{
+			if ( EditorAssetTypeInternal::matchRow( row, path ) )
+				return true;
+		}
+		return false;
+	}
+
+	bool EditorAssetTypeRegistry::matchesOther( string_view path )
+	{
+		if ( path.empty() )
+			return false;
+		for ( const EditorAssetKind kind : kArrOtherExcludeKind )
+		{
+			if ( matches( kind, path ) )
+				return false;
+		}
+		return true;
+	}
+
+	const utf8* EditorAssetTypeRegistry::getPanelTitle( EditorAssetKind kind )
+	{
+		for ( const KindTitleRow& row : kArrKindTitle )
+		{
+			if ( row._kind == kind )
+				return row._pTitle;
+		}
+		return "";
+	}
+
+	string_view EditorAssetTypeRegistry::findPanelTitleForPath( string_view assetPath )
+	{
+		if ( assetPath.empty() )
+			return {};
+
+		size_t			bestLen{ 0 };
+		EditorAssetKind bestKind{ EditorAssetKind::Unknown };
+		for ( const EditorAssetPanelMapping& mapping : kArrPanelMapping )
+		{
+			if ( FileUtil::endsWithIgnoreCase( assetPath, mapping._suffix ) == false )
+				continue;
+			if ( mapping._suffix.size() <= bestLen )
+				continue;
+			bestLen	 = mapping._suffix.size();
+			bestKind = mapping._kind;
+		}
+		if ( bestKind == EditorAssetKind::Unknown )
+			return {};
+		return getPanelTitle( bestKind );
+	}
+
 	const EditorAssetPanelMapping* EditorAssetTypeRegistry::getPanelMappings( uint32& outCount )
 	{
 		outCount = static_cast<uint32>( sizeof( kArrPanelMapping ) / sizeof( kArrPanelMapping[0] ) );
 		return kArrPanelMapping;
+	}
+
+	const EditorAssetKind* EditorAssetTypeRegistry::getToolPanelKinds( uint32& outCount )
+	{
+		outCount = static_cast<uint32>( sizeof( kArrToolPanelKind ) / sizeof( kArrToolPanelKind[0] ) );
+		return kArrToolPanelKind;
+	}
+
+	const EditorAssetBrowserFilter* EditorAssetTypeRegistry::getBrowserFilters( uint32& outCount )
+	{
+		outCount = static_cast<uint32>( sizeof( kArrBrowserFilter ) / sizeof( kArrBrowserFilter[0] ) );
+		return kArrBrowserFilter;
+	}
+
+	void EditorAssetTypeRegistry::appendImportExtensions( vector<string>& outExtensions )
+	{
+		for ( const TypeRow& row : kArrType )
+		{
+			if ( row._kind == EditorAssetKind::Data || row._kind == EditorAssetKind::Scene )
+				continue;
+			if ( row._pSuffix == nullptr )
+				continue;
+			for ( uint32 index = 0; index < row._suffixCount; ++index )
+			{
+				const string_view suffix = row._pSuffix[index];
+				if ( EditorAssetTypeInternal::containsSuffix( outExtensions, suffix ) )
+					continue;
+				outExtensions.push_back( string{ suffix } );
+			}
+		}
+		if ( EditorAssetTypeInternal::containsSuffix( outExtensions, ".json" ) == false )
+			outExtensions.push_back( ".json" );
+		if ( EditorAssetTypeInternal::containsSuffix( outExtensions, ".txt" ) == false )
+			outExtensions.push_back( ".txt" );
+	}
+
+	string_view EditorAssetTypeRegistry::matchingFocusedPath( EditorAssetKind kind )
+	{
+		EditorContext* pContext = EditorContext::get();
+		if ( pContext == nullptr )
+			return {};
+
+		const string& focused = pContext->getWorkspace().getFocusedAssetPath();
+		if ( matches( kind, focused ) == false )
+			return {};
+		return focused;
+	}
+
+	bool EditorAssetTypeRegistry::consumeWorkspaceFocusKey( string& ioLastKey, uint64 extraToken )
+	{
+		EditorContext* pContext = EditorContext::get();
+		string		   scanKey;
+		if ( pContext != nullptr )
+		{
+			scanKey = pContext->getWorkspace().getFocusedAssetPath();
+			scanKey += '|';
+			scanKey += to_string( extraToken );
+		}
+		if ( scanKey == ioLastKey )
+			return false;
+		ioLastKey = std::move( scanKey );
+		return true;
 	}
 } // namespace sw::editor

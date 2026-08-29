@@ -206,4 +206,41 @@ namespace sw::editor
 		editor::getService<CommandStack>()->push( std::move( cmd ) );
 		EditorTransactionInternal::markActiveSceneDirty();
 	}
+
+	void EditorTransaction::push( Delegate<void()> undo, Delegate<void()> redo, string_view label,
+								  string_view coalesceKey )
+	{
+		CommandStack* pStack = editor::getService<CommandStack>();
+		if ( pStack == nullptr )
+			return;
+
+		CommandStack::Command cmd;
+		cmd._label = string{ label };
+		cmd._undo  = std::move( undo );
+		cmd._redo  = std::move( redo );
+		if ( coalesceKey.empty() == false )
+			pStack->pushCoalesce( coalesceKey, std::move( cmd ) );
+		else
+			pStack->push( std::move( cmd ) );
+	}
+
+	void EditorTransaction::recordDocumentText( string_view beforeText, string_view afterText, string_view label,
+												EditorDocumentRestoreDelegate restore )
+	{
+		if ( beforeText == afterText || restore.isBound() == false )
+			return;
+
+		const string beforeStr{ beforeText };
+		const string afterStr{ afterText };
+		push(
+			SW_DELEGATE_LAMBDA( Delegate<void()>, [restore, beforeStr]()
+		{
+			restore( beforeStr );
+		} ),
+			SW_DELEGATE_LAMBDA( Delegate<void()>, [restore, afterStr]()
+		{
+			restore( afterStr );
+		} ),
+			label );
+	}
 } // namespace sw::editor

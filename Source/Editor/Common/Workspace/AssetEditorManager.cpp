@@ -12,15 +12,15 @@ namespace sw::editor
 {
 	void AssetEditorManager::registerAssetEditor( string_view extension, string_view windowTitle )
 	{
-		_mapExtToWindowTitle[string{ extension }] = string{ windowTitle };
+		_mapOverrideExtToTitle[string{ extension }] = string{ windowTitle };
 	}
 
 	string_view AssetEditorManager::findEditorForExtension( string_view extension ) const
 	{
-		auto it = _mapExtToWindowTitle.find( string{ extension } );
-		if ( it != _mapExtToWindowTitle.end() )
+		auto it = _mapOverrideExtToTitle.find( string{ extension } );
+		if ( it != _mapOverrideExtToTitle.end() )
 			return it->second;
-		return {};
+		return EditorAssetTypeRegistry::findPanelTitleForPath( extension );
 	}
 
 	string_view AssetEditorManager::findEditorForPath( string_view assetPath ) const
@@ -28,7 +28,7 @@ namespace sw::editor
 		const string pathStr{ assetPath };
 		size_t		 bestLen{ 0 };
 		string_view	 bestTitle{};
-		for ( const map<string, string>::value_type& pair : _mapExtToWindowTitle )
+		for ( const map<string, string>::value_type& pair : _mapOverrideExtToTitle )
 		{
 			if ( FileUtil::endsWithIgnoreCase( pathStr, pair.first ) == false )
 				continue;
@@ -37,7 +37,9 @@ namespace sw::editor
 			bestLen	  = pair.first.size();
 			bestTitle = pair.second;
 		}
-		return bestTitle;
+		if ( bestTitle.empty() == false )
+			return bestTitle;
+		return EditorAssetTypeRegistry::findPanelTitleForPath( assetPath );
 	}
 
 	bool AssetEditorManager::openAssetInEditor( string_view assetPath )
@@ -57,11 +59,6 @@ namespace sw::editor
 
 	void AssetEditorManager::registerDefaultMappings()
 	{
-		_mapExtToWindowTitle.clear();
-
-		uint32						   mappingCount{ 0 };
-		const EditorAssetPanelMapping* pMapping = EditorAssetTypeRegistry::getPanelMappings( mappingCount );
-		for ( uint32 index = 0; index < mappingCount; ++index )
-			registerAssetEditor( pMapping[index]._suffix, pMapping[index]._title );
+		_mapOverrideExtToTitle.clear();
 	}
 } // namespace sw::editor

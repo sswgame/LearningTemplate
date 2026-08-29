@@ -25,8 +25,6 @@ namespace sw::editor
 		void shutdown( IRHIDevice* pRhiDevice ) override;
 		/** @brief 애니메이션 그래프 UI를 그립니다. */
 		void drawContent() override;
-		/** @brief 윈도우 제목을 반환합니다. */
-		const utf8* getPanelTitle() const override { return "Animation Graph"; }
 
 	private:
 		using GraphNode = EditorAnimGraphNode;

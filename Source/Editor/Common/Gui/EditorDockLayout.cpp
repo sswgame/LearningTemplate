@@ -6,6 +6,7 @@
 
 #include "Editor/Common/Config/EditorConfig.h"
 #include "Editor/Common/EditorUtil.h"
+#include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Panels/EditorPanelManager.h"
 
@@ -154,10 +155,15 @@ namespace sw::editor
 
 		ImGui::DockBuilderDockWindow( "Game View", dockMain );
 		ImGui::DockBuilderDockWindow( "Profiler", dockMain );
-		ImGui::DockBuilderDockWindow( "Tile Map Tool", dockMain );
-		ImGui::DockBuilderDockWindow( "Sprite Clip", dockMain );
-		ImGui::DockBuilderDockWindow( "Animation Graph", dockMain );
-		ImGui::DockBuilderDockWindow( "Sequencer", dockMain );
+		uint32				   kindCount{ 0 };
+		const EditorAssetKind* pKind = EditorAssetTypeRegistry::getToolPanelKinds( kindCount );
+		for ( uint32 index = 0; index < kindCount; ++index )
+		{
+			const utf8* pTitle = EditorAssetTypeRegistry::getPanelTitle( pKind[index] );
+			if ( pTitle == nullptr || pTitle[0] == '\0' )
+				continue;
+			ImGui::DockBuilderDockWindow( pTitle, dockMain );
+		}
 
 		ImGui::DockBuilderDockWindow( "Content Browser", dockBottom );
 		ImGui::DockBuilderDockWindow( "Output Log", dockBottom );

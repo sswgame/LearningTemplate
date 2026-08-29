@@ -8,6 +8,7 @@
 #include "Editor/Common/Config/EditorData.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
 #include "RuntimeAPI/Service/EditorService.h"
@@ -261,7 +262,7 @@ namespace sw::editor
 			return true;
 
 		const string path{ assetRelativePath };
-		EditorToolAssetCommands::pushDocumentUndo(
+		EditorTransaction::push(
 			SW_DELEGATE_LAMBDA( Delegate<void()>, [this, path, previous]()
 		{
 			EditorToolAssetCommands::saveTileMap( path, previous );

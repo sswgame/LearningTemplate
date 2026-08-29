@@ -5,9 +5,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Editor/Common/Commands/EditorToolAssetCommands.h"
-#include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/SelectionManager.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
@@ -56,24 +54,18 @@ namespace sw::editor
 	void PrefabEditorPanel::drawContent()
 	{
 		EditorContext* pContext = EditorContext::get();
-		string		   scanKey;
 		const utf8*	   pScanPath{ nullptr };
+		uint64		   objectId{ 0 };
 		if ( pContext != nullptr )
 		{
-			const string& focused  = pContext->getWorkspace().getFocusedAssetPath();
-			GameObject*	  pPrimary = pContext->getSelectionManager().getPrimaryObject().get();
-			const uint64  objectId = pPrimary != nullptr ? pPrimary->getObjectId() : 0;
-			scanKey				   = focused;
-			scanKey += '|';
-			scanKey += to_string( objectId );
-			if ( EditorUtil::isPrefabAssetPath( focused.c_str() ) )
-				pScanPath = focused.c_str();
+			GameObject* pPrimary	   = pContext->getSelectionManager().getPrimaryObject().get();
+			objectId				   = pPrimary != nullptr ? pPrimary->getObjectId() : 0;
+			const string_view matching = EditorAssetTypeRegistry::matchingFocusedPath( EditorAssetKind::Prefab );
+			if ( matching.empty() == false )
+				pScanPath = matching.data();
 		}
-		if ( scanKey != _lastScanKey )
-		{
-			_lastScanKey = scanKey;
+		if ( EditorAssetTypeRegistry::consumeWorkspaceFocusKey( _lastScanKey, objectId ) )
 			scanPrefabOverrides( pScanPath );
-		}
 
 		ImGui::TextColored( ImVec4( 0.4f, 0.8f, 1.0f, 1.0f ), "Prefab Asset:" );
 		ImGui::SameLine();

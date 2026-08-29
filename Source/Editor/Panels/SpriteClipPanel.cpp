@@ -9,6 +9,7 @@
 #include "Editor/Common/Config/EditorData.h"
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
+#include "Editor/Common/Workspace/EditorTransaction.h"
 
 #include "RuntimeAPI/Service/EditorService.h"
 
@@ -55,7 +56,10 @@ namespace sw::editor
 		if ( ImGui::Button( "Save" ) )
 		{
 			saveJson();
-			_status = "Saved SpriteClip.json";
+			if ( getLoadedAssetPath().empty() )
+				_status = string{ "Saved " } + EditorConfig::getActive()._spriteClipFile;
+			else
+				_status = string{ "Saved " } + getLoadedAssetPath();
 		}
 		ImGui::TextDisabled( "%s/%s/%s (separate from AnimGraph)", EditorConfig::getActive()._configFolder.c_str(),
 							 EditorConfig::getActive()._editorConfigFolder.c_str(), EditorConfig::getActive()._spriteClipFile.c_str() );
@@ -161,16 +165,14 @@ namespace sw::editor
 		data._listKey	= _listKey;
 		EditorToolAssetCommands::saveSpriteClip( data, getLoadedAssetPath() );
 		const string afterJson = EditorToolAssetCommands::serializeSpriteClip( data );
-		if ( beforeJson == afterJson )
-			return;
-
-		const string path = getLoadedAssetPath();
-		EditorToolAssetCommands::pushDocumentUndo(
-			SW_DELEGATE_LAMBDA( Delegate<void()>, [this, path, beforeJson]()
+		const string path	   = getLoadedAssetPath();
+		EditorTransaction::recordDocumentText(
+			beforeJson, afterJson, "Save Sprite Clip",
+			SW_DELEGATE_LAMBDA( EditorDocumentRestoreDelegate, [this, path]( string_view snapshot )
 		{
 			EditorSpriteClipData restored;
-			if ( beforeJson.empty() == false )
-				EditorToolAssetCommands::parseSpriteClip( beforeJson, restored );
+			if ( snapshot.empty() == false )
+				EditorToolAssetCommands::parseSpriteClip( snapshot, restored );
 			EditorToolAssetCommands::saveSpriteClip( restored, path );
 			if ( getLoadedAssetPath() != path )
 				return;
@@ -180,21 +182,6 @@ namespace sw::editor
 			_listKey	   = std::move( restored._listKey );
 			_selectedFrame = _listFrame.empty() ? -1 : 0;
 			_selectedKey   = _listKey.empty() ? -1 : 0;
-		} ),
-			SW_DELEGATE_LAMBDA( Delegate<void()>, [this, path, afterJson]()
-		{
-			EditorSpriteClipData restored;
-			EditorToolAssetCommands::parseSpriteClip( afterJson, restored );
-			EditorToolAssetCommands::saveSpriteClip( restored, path );
-			if ( getLoadedAssetPath() != path )
-				return;
-			if ( restored._atlasPath.empty() == false )
-				StringUtil::strncpy( _arrAtlasPath, restored._atlasPath.c_str(), sizeof( _arrAtlasPath ) - 1 );
-			_listFrame	   = std::move( restored._listFrame );
-			_listKey	   = std::move( restored._listKey );
-			_selectedFrame = _listFrame.empty() ? -1 : 0;
-			_selectedKey   = _listKey.empty() ? -1 : 0;
-		} ),
-			"Save Sprite Clip" );
+		} ) );
 	}
 } // namespace sw::editor

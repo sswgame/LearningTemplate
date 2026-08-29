@@ -5,7 +5,7 @@
 #include "Editor/Common/Commands/EditorToolAssetCommands.h"
 #include "Editor/Common/Config/EditorConfig.h"
 #include "Editor/Common/Gui/EditorChrome.h"
-#include "Editor/Common/Widgets/EditorWidgets.h"
+#include "Editor/Common/Workspace/EditorTransaction.h"
 
 #include <imgui.h>
 #include <imgui-node-editor/imgui_node_editor.h>
@@ -252,16 +252,14 @@ namespace sw::editor
 		}
 		EditorToolAssetCommands::saveAnimationGraph( data, getLoadedAssetPath() );
 		const string afterJson = EditorToolAssetCommands::serializeAnimationGraph( data );
-		if ( beforeJson == afterJson )
-			return;
-
-		const string path = getLoadedAssetPath();
-		EditorToolAssetCommands::pushDocumentUndo(
-			SW_DELEGATE_LAMBDA( Delegate<void()>, [this, path, beforeJson]()
+		const string path	   = getLoadedAssetPath();
+		EditorTransaction::recordDocumentText(
+			beforeJson, afterJson, "Save Animation Graph",
+			SW_DELEGATE_LAMBDA( EditorDocumentRestoreDelegate, [this, path]( string_view snapshot )
 		{
 			EditorAnimGraphData restored;
-			if ( beforeJson.empty() == false )
-				EditorToolAssetCommands::parseAnimationGraph( beforeJson, restored );
+			if ( snapshot.empty() == false )
+				EditorToolAssetCommands::parseAnimationGraph( snapshot, restored );
 			EditorToolAssetCommands::saveAnimationGraph( restored, path );
 			if ( getLoadedAssetPath() != path )
 				return;
@@ -270,39 +268,17 @@ namespace sw::editor
 			if ( _listNode.empty() )
 				ensureDefaults();
 			_nodeGraph.requestContentFit();
-		} ),
-			SW_DELEGATE_LAMBDA( Delegate<void()>, [this, path, afterJson]()
-		{
-			EditorAnimGraphData restored;
-			EditorToolAssetCommands::parseAnimationGraph( afterJson, restored );
-			EditorToolAssetCommands::saveAnimationGraph( restored, path );
-			if ( getLoadedAssetPath() != path )
-				return;
-			_listNode = std::move( restored._listNode );
-			_listLink = std::move( restored._listLink );
-			_nodeGraph.requestContentFit();
-		} ),
-			"Save Animation Graph" );
+		} ) );
 	}
 
 	int32 AnimationGraphPanel::nextNodeId() const
 	{
-		int32 maxId{ 0 };
-		for ( const GraphNode& node : _listNode )
-		{
-			maxId = MathUtil::max( maxId, node._id );
-		}
-		return maxId + 1;
+		return nextItemId( _listNode );
 	}
 
 	int32 AnimationGraphPanel::nextLinkId() const
 	{
-		int32 maxId{ 0 };
-		for ( const GraphLink& link : _listLink )
-		{
-			maxId = MathUtil::max( maxId, link._id );
-		}
-		return maxId + 1;
+		return nextItemId( _listLink );
 	}
 
 	void AnimationGraphPanel::addNamedNode( const utf8* pName )

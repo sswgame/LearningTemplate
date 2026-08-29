@@ -7,9 +7,9 @@
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Commands/EditorAssetCommands.h"
-#include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Gui/EditorChrome.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
+#include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
@@ -29,32 +29,34 @@ namespace sw::editor
 	{
 		struct ContentBrowserPanelInternal
 		{
-			static ImVec4 colorForExtension( string_view ext )
+			static ImVec4 colorForAsset( string_view path )
 			{
-				if ( FileUtil::hasExtension( ext, "._material" ) )
+				if ( path.empty() )
+					return ImVec4( 0.35f, 0.40f, 0.55f, 1.0f );
+				if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Material, path ) )
 					return ImVec4( 0.85f, 0.35f, 0.25f, 1.0f );
-				if ( FileUtil::hasAnyExtension( ext, { ".hlsl", ".glsl", ".vert", ".frag" } ) )
+				if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Shader, path ) )
 					return ImVec4( 0.25f, 0.65f, 0.90f, 1.0f );
-				if ( FileUtil::hasAnyExtension( ext, { ".png", ".jpg", ".jpeg", ".tga", ".dds" } ) )
+				if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Texture, path ) )
 					return ImVec4( 0.45f, 0.80f, 0.35f, 1.0f );
-				if ( ext.empty() == false )
-					return ImVec4( 0.55f, 0.55f, 0.60f, 1.0f );
-				return ImVec4( 0.35f, 0.40f, 0.55f, 1.0f ); // folder
+				return ImVec4( 0.55f, 0.55f, 0.60f, 1.0f );
 			}
 
-			static const utf8* typeLabel( string_view ext, bool bIsDirectory )
+			static const utf8* typeLabel( string_view path, bool bIsDirectory )
 			{
 				if ( bIsDirectory )
 					return "Folder";
-				if ( FileUtil::hasExtension( ext, "._material" ) )
-					return "Material";
-				if ( FileUtil::hasAnyExtension( ext, { ".hlsl", ".glsl", ".vert", ".frag", ".spv" } ) )
-					return "Shader";
-				if ( ext.empty() )
-					return "File";
-				thread_local fixed_string<constant::kMaxBuffer64> t_extLabel;
-				t_extLabel = ext;
-				return t_extLabel.c_str();
+				uint32							filterCount{ 0 };
+				const EditorAssetBrowserFilter* pFilter = EditorAssetTypeRegistry::getBrowserFilters( filterCount );
+				for ( uint32 index = 0; index < filterCount; ++index )
+				{
+					if ( pFilter[index]._kind == EditorAssetKind::Unknown )
+						continue;
+					if ( EditorAssetTypeRegistry::matches( pFilter[index]._kind, path ) == false )
+						continue;
+					return pFilter[index]._label.data();
+				}
+				return "File";
 			}
 		};
 	} // namespace
@@ -92,7 +94,7 @@ namespace sw::editor
 									  ImVec2( minPos._x + w * 0.85f, minPos._y + h * 0.80f ),
 									  IM_COL32( 245, 195, 68, 255 ), 3.0f );
 		}
-		else if ( EditorUtil::isPrefabAssetPath( pPath ) )
+		else if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Prefab, pPath ) )
 		{
 			// 3D Isometric Blue Cube for Prefab
 			const float32 sz		= w * 0.22f;
@@ -108,7 +110,7 @@ namespace sw::editor
 								   ImVec2( cx + sz * 0.9f, cy + sz * 0.35f ), ImVec2( cx, cy + sz * 0.9f ) };
 			pDrawList->AddConvexPolyFilled( rightPts, 4, IM_COL32( 35, 95, 195, 255 ) );
 		}
-		else if ( EditorUtil::isMaterialAssetPath( pPath ) )
+		else if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Material, pPath ) )
 		{
 			// 3D Sphere preview with specular shading
 			const float32 r = w * 0.26f;
@@ -118,7 +120,7 @@ namespace sw::editor
 			pDrawList->AddCircleFilled( ImVec2( cx - r * 0.38f, cy - r * 0.38f ), r * 0.15f,
 										IM_COL32( 255, 255, 255, 240 ), 12 );
 		}
-		else if ( EditorUtil::isTextureAssetPath( pPath ) )
+		else if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Texture, pPath ) )
 		{
 			// Checkerboard background
 			constexpr float32 chk = 6.0f;
@@ -145,7 +147,7 @@ namespace sw::editor
 								 ImVec2( cx + w * 0.22f, cy + h * 0.22f ) };
 			pDrawList->AddConvexPolyFilled( triPts, 3, IM_COL32( 70, 180, 120, 230 ) );
 		}
-		else if ( EditorUtil::isSceneAssetPath( pPath ) )
+		else if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Scene, pPath ) )
 		{
 			// 3D Scene Compass / Horizon
 			pDrawList->AddCircle( ImVec2( cx, cy ), w * 0.26f, IM_COL32( 70, 200, 140, 200 ), 18, 1.5f );
@@ -154,7 +156,7 @@ namespace sw::editor
 			pDrawList->AddLine( ImVec2( cx - w * 0.28f, cy ), ImVec2( cx + w * 0.28f, cy ),
 								IM_COL32( 80, 160, 240, 220 ), 1.5f );
 		}
-		else if ( EditorUtil::isShaderAssetPath( pPath ) )
+		else if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Shader, pPath ) )
 		{
 			// Shader Diamond / Prism
 			const float32 r			= w * 0.24f;
@@ -163,7 +165,7 @@ namespace sw::editor
 			pDrawList->AddConvexPolyFilled( diaPts, 4, IM_COL32( 240, 120, 50, 255 ) );
 			pDrawList->AddPolyline( diaPts, 4, IM_COL32( 255, 210, 140, 255 ), ImDrawFlags_Closed, 1.5f );
 		}
-		else if ( EditorUtil::isAudioAssetPath( pPath ) )
+		else if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Audio, pPath ) )
 		{
 			// Sound wave equalizer bars
 			constexpr int32	  numBars	 = 5;
@@ -232,7 +234,7 @@ namespace sw::editor
 		, _selectedAssetAbs{}
 		, _arrSearchBuffer{}
 		, _tileSize{ 96.0f }
-		, _typeFilter{ AssetTypeFilter::All }
+		, _filterIndex{ 0 }
 		, _viewMode{ ViewMode::Tiles }
 		, _pendingImportMutex{}
 		, _listPendingImportPath{}
@@ -317,36 +319,19 @@ namespace sw::editor
 		if ( entry._bIsDirectory )
 			return true;
 
-		const utf8* pPath = entry._absolutePath.empty() ? entry._name.c_str() : entry._absolutePath.c_str();
+		const utf8* pPath = entry._name.c_str();
 
-		switch ( _typeFilter )
-		{
-			case AssetTypeFilter::All:
-				return true;
-			case AssetTypeFilter::Scenes:
-				return EditorUtil::isSceneAssetPath( pPath );
-			case AssetTypeFilter::Prefabs:
-				return EditorUtil::isPrefabAssetPath( pPath );
-			case AssetTypeFilter::Textures:
-				return EditorUtil::isTextureAssetPath( pPath );
-			case AssetTypeFilter::Shaders:
-				return EditorUtil::isShaderAssetPath( pPath );
-			case AssetTypeFilter::Materials:
-				return EditorUtil::isMaterialAssetPath( pPath );
-			case AssetTypeFilter::Audio:
-				return EditorUtil::isAudioAssetPath( pPath );
-			case AssetTypeFilter::Data:
-				return EditorUtil::isDataAssetPath( pPath );
-			case AssetTypeFilter::Other:
-				return EditorUtil::isMaterialAssetPath( pPath ) == false &&
-					   EditorUtil::isShaderAssetPath( pPath ) == false &&
-					   EditorUtil::isTextureAssetPath( pPath ) == false &&
-					   EditorUtil::isAudioAssetPath( pPath ) == false &&
-					   FileUtil::hasExtension( pPath, ".xml" ) == false;
-			case AssetTypeFilter::Count:
-			default:
-				return true;
-		}
+		uint32							filterCount{ 0 };
+		const EditorAssetBrowserFilter* pFilter = EditorAssetTypeRegistry::getBrowserFilters( filterCount );
+		if ( _filterIndex >= filterCount )
+			return true;
+
+		const EditorAssetBrowserFilter& filter = pFilter[_filterIndex];
+		if ( filter._bOther == true )
+			return EditorAssetTypeRegistry::matchesOther( pPath );
+		if ( filter._kind == EditorAssetKind::Unknown )
+			return true;
+		return EditorAssetTypeRegistry::matches( filter._kind, pPath );
 	}
 
 	bool ContentBrowserPanel::passesSearchFilter( const AssetEntry& entry ) const
@@ -365,16 +350,26 @@ namespace sw::editor
 											false );
 
 			ImGui::SameLine();
-			static const utf8* kArrFilterNames[] = { "All", "Scenes", "Prefabs", "Textures",
-													 "Shaders", "Materials", "Audio", "Data" };
-			for ( int32 filterIdx = 0; filterIdx < 8; ++filterIdx )
+			uint32							filterCount{ 0 };
+			const EditorAssetBrowserFilter* pFilter	 = EditorAssetTypeRegistry::getBrowserFilters( filterCount );
+			const utf8*						pPreview = "All";
+			if ( _filterIndex < filterCount )
+				pPreview = pFilter[_filterIndex]._label.data();
+			ImGui::SetNextItemWidth( 110.0f );
+			if ( ImGui::BeginCombo( "##cb_type", pPreview ) )
 			{
-				const bool bActive = ( static_cast<int32>( _typeFilter ) == filterIdx );
-				if ( EditorWidgets::drawToggleButton( kArrFilterNames[filterIdx], bActive ) )
-					_typeFilter = static_cast<AssetTypeFilter>( filterIdx );
-				ImGui::SameLine();
+				for ( uint32 filterIdx = 0; filterIdx < filterCount; ++filterIdx )
+				{
+					const bool bSelected = ( _filterIndex == filterIdx );
+					if ( ImGui::Selectable( pFilter[filterIdx]._label.data(), bSelected ) )
+						_filterIndex = filterIdx;
+					if ( bSelected )
+						ImGui::SetItemDefaultFocus();
+				}
+				ImGui::EndCombo();
 			}
 
+			ImGui::SameLine();
 			if ( ImGui::RadioButton( "Tiles", _viewMode == ViewMode::Tiles ) )
 				_viewMode = ViewMode::Tiles;
 			ImGui::SameLine();
@@ -743,8 +738,8 @@ namespace sw::editor
 						EditorWidgets::drawAssetDragSource( entry._relativePath.c_str() );
 
 					ImGui::TableSetColumnIndex( 1 );
-					ImGui::TextColored( ContentBrowserPanelInternal::colorForExtension( entry._bIsDirectory ? string{} : entry._extension ),
-										"%s", ContentBrowserPanelInternal::typeLabel( entry._extension, entry._bIsDirectory ) );
+					ImGui::TextColored( ContentBrowserPanelInternal::colorForAsset( entry._bIsDirectory ? string_view{} : string_view{ entry._name } ),
+										"%s", ContentBrowserPanelInternal::typeLabel( entry._name, entry._bIsDirectory ) );
 
 					ImGui::TableSetColumnIndex( 2 );
 					ImGui::TextUnformatted( entry._relativePath.c_str() );
@@ -801,18 +796,8 @@ namespace sw::editor
 		params._description			= "Assets";
 		params._bEnableMultiselect	= true;
 		params._initialDirectory	= _selectedFolderAbs;
-		params._filterExtensionList = {
-			"._material",
-			".hlsl",
-			".glsl",
-			".png",
-			".jpg",
-			".jpeg",
-			".tga",
-			".dds",
-			".json",
-			".txt",
-		};
+		params._filterExtensionList = {};
+		EditorAssetTypeRegistry::appendImportExtensions( params._filterExtensionList );
 
 		FileUtil::openFileDialog( params, SW_DELEGATE_METHOD( FileDialogDelegate, &ContentBrowserPanel::onImportDialogResult, this ) );
 	}

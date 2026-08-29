@@ -3,6 +3,7 @@
 #include "Editor/Panels/Inspector/InspectorComponentManager.h"
 
 #include "Editor/Common/Widgets/EditorWidgets.h"
+#include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Panels/Inspector/IInspectorComponent.h"
@@ -134,7 +135,8 @@ namespace sw::editor
 				{
 					if ( ImGui::SmallButton( "Open Sprite Clip Tool" ) )
 					{
-						EditorContext::get()->getWorkspace().requestOpenPanel( "Sprite Clip" );
+						EditorContext::get()->getWorkspace().requestOpenPanel(
+							EditorAssetTypeRegistry::getPanelTitle( EditorAssetKind::SpriteClip ) );
 					}
 				}
 			};

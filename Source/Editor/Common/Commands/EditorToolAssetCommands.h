@@ -6,7 +6,6 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
-#include "Core/Delegate/Delegate.h"
 
 namespace sw
 {
@@ -170,17 +169,6 @@ namespace sw::editor
 	class EditorToolAssetCommands
 	{
 	public:
-		/** @brief 애니메이션 그래프 경로인지 여부를 반환합니다. */
-		static bool isAnimationGraphPath( string_view path );
-		/** @brief 대화 그래프 경로인지 여부를 반환합니다. */
-		static bool isDialogueGraphPath( string_view path );
-		/** @brief 스프라이트 클립/아틀라스 경로인지 여부를 반환합니다. */
-		static bool isSpriteClipPath( string_view path );
-		/** @brief 타일맵 경로인지 여부를 반환합니다. */
-		static bool isTileMapPath( string_view path );
-		/** @brief 시퀀서 경로인지 여부를 반환합니다. */
-		static bool isSequencerPath( string_view path );
-
 		/** @brief 애니메이션 그래프 JSON을 읽습니다. path가 비면 에디터 설정 기본 파일을 씁니다. */
 		static bool loadAnimationGraph( EditorAnimGraphData& outData, string_view path = {} );
 		/** @brief 애니메이션 그래프 JSON을 씁니다. */
@@ -227,8 +215,5 @@ namespace sw::editor
 		static bool applyPrefabOverridesToTemplate( sw::GameObject* pInstance, string_view prefabPath );
 		/** @brief 인스턴스를 프리팹 CDO로 되돌립니다. */
 		static bool revertAllPrefabOverrides( sw::GameObject* pInstance, string_view prefabPath );
-		/** @brief 문서 스냅샷 Undo/Redo를 올립니다. */
-		static void pushDocumentUndo( Delegate<void()> undo, Delegate<void()> redo, string_view label,
-									  string_view coalesceKey = {} );
 	};
 } // namespace sw::editor

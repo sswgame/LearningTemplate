@@ -29,7 +29,6 @@
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Sequencer/SequenceAsset.h"
 #include "Engine/Serialization/Core/SerializerUtil.h"
-#include "Engine/Utility/CommandStack.h"
 #include "Engine/Utility/Json/JsonDocument.h"
 #include "Engine/Utility/Resource/ResourceManager.h"
 #include "Engine/Utility/Resource/ResourceUtil.h"
@@ -44,8 +43,6 @@ namespace sw::editor
 	{
 		struct EditorToolAssetInternal
 		{
-			static constexpr utf8 kDialogueGraphPath[] = "Saved/Dialogue/default_dialogue.json";
-
 			static string resolveExistingOrRelativePath( string_view path )
 			{
 				if ( path.empty() )
@@ -67,10 +64,7 @@ namespace sw::editor
 			{
 				if ( path.empty() == false )
 					return resolveExistingOrRelativePath( path );
-				string absPath = ResourceUtil::getResourcePath( kDialogueGraphPath );
-				if ( absPath.empty() )
-					absPath = kDialogueGraphPath;
-				return absPath;
+				return EditorUtil::resolveEditorConfigFile( EditorConfig::getActive()._dialogueGraphDataFile.c_str() );
 			}
 
 			static string resolveSpriteClipPath( string_view path )
@@ -273,31 +267,6 @@ namespace sw::editor
 namespace sw::editor
 {
 	SW_LOG_CALLER( "EditorToolAssetCommands" );
-
-	bool EditorToolAssetCommands::isAnimationGraphPath( string_view path )
-	{
-		return EditorAssetTypeRegistry::matches( EditorAssetKind::AnimationGraph, path );
-	}
-
-	bool EditorToolAssetCommands::isDialogueGraphPath( string_view path )
-	{
-		return EditorAssetTypeRegistry::matches( EditorAssetKind::DialogueGraph, path );
-	}
-
-	bool EditorToolAssetCommands::isSpriteClipPath( string_view path )
-	{
-		return EditorAssetTypeRegistry::matches( EditorAssetKind::SpriteClip, path );
-	}
-
-	bool EditorToolAssetCommands::isTileMapPath( string_view path )
-	{
-		return EditorAssetTypeRegistry::matches( EditorAssetKind::TileMap, path );
-	}
-
-	bool EditorToolAssetCommands::isSequencerPath( string_view path )
-	{
-		return EditorAssetTypeRegistry::matches( EditorAssetKind::Sequence, path );
-	}
 
 	bool EditorToolAssetCommands::loadAnimationGraph( EditorAnimGraphData& outData, string_view path )
 	{
@@ -531,25 +500,27 @@ namespace sw::editor
 		const string resolved = EditorToolAssetInternal::resolveSpriteClipPath( path );
 		if ( resolved.empty() || FileUtil::fileExists( resolved ) == false )
 		{
-			if ( FileUtil::hasAnyExtension( path, { ".png", ".jpg", ".jpeg", ".dds", ".tga" } ) )
+			const bool bAtlasImage = EditorAssetTypeRegistry::matches( EditorAssetKind::SpriteClip, path ) &&
+									 EditorAssetTypeRegistry::matches( EditorAssetKind::Texture, path );
+			if ( bAtlasImage )
 			{
 				outData._atlasPath = string{ path };
 				outStatus		   = "Atlas from focused texture";
 				return true;
 			}
-			outStatus = "No SpriteClip.json yet";
+			outStatus = resolved.empty() ? string{ "No sprite clip file yet" } : ( "No file yet: " + resolved );
 			return false;
 		}
 
 		JsonDocument doc;
 		if ( doc.loadFile( resolved ) == false )
 		{
-			outStatus = "Failed to read SpriteClip.json";
+			outStatus = "Failed to read " + resolved;
 			return false;
 		}
 		if ( parseSpriteClip( doc.dump( -1 ), outData ) == false )
 		{
-			outStatus = "Failed to parse SpriteClip.json";
+			outStatus = "Failed to parse " + resolved;
 			return false;
 		}
 		outStatus = "Loaded " + resolved;
@@ -829,22 +800,5 @@ namespace sw::editor
 	bool EditorToolAssetCommands::revertAllPrefabOverrides( GameObject* pInstance, string_view prefabPath )
 	{
 		return EditorInspectorCommands::revertToPrefab( pInstance, prefabPath );
-	}
-
-	void EditorToolAssetCommands::pushDocumentUndo( Delegate<void()> undo, Delegate<void()> redo, string_view label,
-													string_view coalesceKey )
-	{
-		CommandStack* pStack = editor::getService<CommandStack>();
-		if ( pStack == nullptr )
-			return;
-
-		CommandStack::Command cmd;
-		cmd._label = string{ label };
-		cmd._undo  = std::move( undo );
-		cmd._redo  = std::move( redo );
-		if ( coalesceKey.empty() == false )
-			pStack->pushCoalesce( coalesceKey, std::move( cmd ) );
-		else
-			pStack->push( std::move( cmd ) );
 	}
 } // namespace sw::editor

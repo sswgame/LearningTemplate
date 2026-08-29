@@ -35,21 +35,6 @@ namespace sw::editor
 		// ------------------------------------------------------------------------------
 		// 2) 필터 · 뷰 모드 · 항목
 		// ------------------------------------------------------------------------------
-		/** @brief 현재 폴더 뷰의 애셋 타입 필터 */
-		enum class AssetTypeFilter : int32
-		{
-			All = 0,
-			Scenes,
-			Prefabs,
-			Textures,
-			Shaders,
-			Materials,
-			Audio,
-			Data,
-			Other,
-			Count
-		};
-
 		/** @brief 애셋 뷰 레이아웃 */
 		enum class ViewMode : int32
 		{
@@ -128,7 +113,7 @@ namespace sw::editor
 		string				   _selectedAssetAbs;
 		utf8				   _arrSearchBuffer[constant::kMaxBuffer128];
 		float32				   _tileSize;
-		AssetTypeFilter		   _typeFilter;
+		uint32				   _filterIndex;
 		ViewMode			   _viewMode;
 		mutex				   _pendingImportMutex;
 		vector<string>		   _listPendingImportPath;

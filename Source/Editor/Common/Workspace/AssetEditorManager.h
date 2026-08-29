@@ -1,6 +1,6 @@
 /**
  * @file AssetEditorManager.h
- * @brief 애셋 확장자별 에디터 윈도우 매핑 및 열기 관리 (EditorContext 소유)
+ * @brief 애셋 경로 → 도구 패널 오픈 디스패처 (오버라이드는 선택)
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -11,7 +11,7 @@ namespace sw::editor
 {
 	/**
 	 * @class AssetEditorManager
-	 * @brief 애셋 확장자별 에디터 윈도우 매핑 및 열기 디스패처 (EditorContext 소유)
+	 * @brief 레지스트리 매핑으로 패널을 열고, 플러그인 접미사 오버라이드만 보관합니다.
 	 */
 	class AssetEditorManager
 	{
@@ -27,6 +27,6 @@ namespace sw::editor
 		void		registerDefaultMappings();
 
 	private:
-		map<string, string> _mapExtToWindowTitle;
+		map<string, string> _mapOverrideExtToTitle;
 	};
 } // namespace sw::editor

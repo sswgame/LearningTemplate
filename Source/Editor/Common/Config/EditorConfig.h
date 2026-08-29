@@ -41,6 +41,9 @@ namespace sw::editor
 		string _animationGraphDataFile{ "AnimationGraphData.json" };
 
 		PROPERTY()
+		string _dialogueGraphDataFile{ "DialogueGraphData.json" };
+
+		PROPERTY()
 		string _spriteClipFile{ "SpriteClip.json" };
 
 		static void				   setActive( const EditorConfig& config );

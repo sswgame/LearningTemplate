@@ -5,6 +5,8 @@
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
+#include "Core/Math/MathUtil.h"
 
 #include "Editor/Common/Gui/IEditorPanel.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
@@ -18,7 +20,8 @@ namespace sw::editor
 	class EditorDocumentPanel : public IEditorPanel
 	{
 	public:
-		bool isToolPanel() const override { return true; }
+		bool		isToolPanel() const override { return true; }
+		const utf8* getPanelTitle() const override;
 
 	protected:
 		/**
@@ -37,6 +40,15 @@ namespace sw::editor
 		const string& getLoadedAssetPath() const { return _loadedAssetPath; }
 		void		  markDocumentLoaded();
 		bool		  isDocumentLoaded() const;
+
+		template <typename TItem>
+		static int32 nextItemId( const vector<TItem>& list )
+		{
+			int32 maxId{ 0 };
+			for ( const TItem& item : list )
+				maxId = MathUtil::max( maxId, item._id );
+			return maxId + 1;
+		}
 
 	private:
 		EditorAssetKind		   _kind;

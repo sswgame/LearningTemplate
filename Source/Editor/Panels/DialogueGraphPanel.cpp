@@ -8,6 +8,7 @@
 #include "Editor/Common/Commands/EditorToolAssetCommands.h"
 #include "Editor/Common/Gui/EditorChrome.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
+#include "Editor/Common/Workspace/EditorTransaction.h"
 
 #include <imgui.h>
 #include <imgui-node-editor/imgui_node_editor.h>
@@ -522,16 +523,14 @@ namespace sw::editor
 		data._listLink = _listLink;
 		EditorToolAssetCommands::saveDialogueGraph( data, getLoadedAssetPath() );
 		const string afterJson = EditorToolAssetCommands::serializeDialogueGraph( data );
-		if ( beforeJson == afterJson )
-			return;
-
-		const string path = getLoadedAssetPath();
-		EditorToolAssetCommands::pushDocumentUndo(
-			SW_DELEGATE_LAMBDA( Delegate<void()>, [this, path, beforeJson]()
+		const string path	   = getLoadedAssetPath();
+		EditorTransaction::recordDocumentText(
+			beforeJson, afterJson, "Save Dialogue Graph",
+			SW_DELEGATE_LAMBDA( EditorDocumentRestoreDelegate, [this, path]( string_view snapshot )
 		{
 			EditorDialogueGraphData restored;
-			if ( beforeJson.empty() == false )
-				EditorToolAssetCommands::parseDialogueGraph( beforeJson, restored );
+			if ( snapshot.empty() == false )
+				EditorToolAssetCommands::parseDialogueGraph( snapshot, restored );
 			EditorToolAssetCommands::saveDialogueGraph( restored, path );
 			if ( getLoadedAssetPath() != path )
 				return;
@@ -540,41 +539,17 @@ namespace sw::editor
 			if ( _listNode.empty() )
 				ensureDefaults();
 			_nodeGraph.requestContentFit();
-		} ),
-			SW_DELEGATE_LAMBDA( Delegate<void()>, [this, path, afterJson]()
-		{
-			EditorDialogueGraphData restored;
-			EditorToolAssetCommands::parseDialogueGraph( afterJson, restored );
-			EditorToolAssetCommands::saveDialogueGraph( restored, path );
-			if ( getLoadedAssetPath() != path )
-				return;
-			_listNode = std::move( restored._listNode );
-			_listLink = std::move( restored._listLink );
-			_nodeGraph.requestContentFit();
-		} ),
-			"Save Dialogue Graph" );
+		} ) );
 	}
 
 	int32 DialogueGraphPanel::nextNodeId() const
 	{
-		int32 maxId = 0;
-		for ( const DialogueNode& node : _listNode )
-		{
-			if ( node._id > maxId )
-				maxId = node._id;
-		}
-		return maxId + 1;
+		return nextItemId( _listNode );
 	}
 
 	int32 DialogueGraphPanel::nextLinkId() const
 	{
-		int32 maxId = 0;
-		for ( const DialogueLink& link : _listLink )
-		{
-			if ( link._id > maxId )
-				maxId = link._id;
-		}
-		return maxId + 1;
+		return nextItemId( _listLink );
 	}
 
 	void DialogueGraphPanel::addNode( DialogueNodeType type, const utf8* pSpeaker, const utf8* pText )

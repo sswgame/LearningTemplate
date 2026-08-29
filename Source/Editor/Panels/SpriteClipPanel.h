@@ -23,8 +23,6 @@ namespace sw::editor
 		// ------------------------------------------------------------------------------
 		// 1) IEditorPanel — 제목/그리기
 		// ------------------------------------------------------------------------------
-		/** @brief 윈도우 제목을 반환합니다. */
-		const utf8* getPanelTitle() const override { return "Sprite Clip"; }
 		/** @brief 스프라이트 클립 편집 UI를 그립니다. */
 		void drawContent() override;
 

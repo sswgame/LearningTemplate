@@ -24,8 +24,6 @@ namespace sw::editor
 		void shutdown( IRHIDevice* pRhiDevice ) override;
 		/** @brief 대화 노드 그래프 UI를 렌더링합니다. */
 		void drawContent() override;
-		/** @brief 윈도우 제목을 반환합니다. */
-		const utf8* getPanelTitle() const override { return "Dialogue Graph"; }
 
 	private:
 		using DialogueNode = EditorDialogueNode;
