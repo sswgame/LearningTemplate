@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [ main, develop ]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-windows:
     runs-on: windows-2022
@@ -54,7 +58,7 @@ jobs:
     # NoGPU only: EngineTest (Window/RHI) is omitted. EngineTest_NoGPU still runs.
     - name: Test (NoGPU)
       run: |
-        ctest --test-dir build/CI-Debug -L nogpu --output-on-failure
+        ctest --test-dir build/CI-Debug -L nogpu -j 4 --output-on-failure
 
 
   build-linux:
@@ -67,7 +71,7 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y ninja-build cmake sccache \
+        sudo apt-get install -y ninja-build cmake sccache lld \
           clang llvm-dev libclang-dev \
           xorg-dev libgl1-mesa-dev libglu1-mesa-dev \
           libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev \
@@ -127,7 +131,7 @@ jobs:
     # NoGPU label only; soft-SKIP cases still report as skipped.
     - name: Test (NoGPU)
       run: |
-        ctest --test-dir build/CI-Debug -L nogpu --output-on-failure
+        ctest --test-dir build/CI-Debug -L nogpu -j 4 --output-on-failure
 
 
   build-linux-asan:
@@ -140,7 +144,7 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y ninja-build cmake sccache \
+        sudo apt-get install -y ninja-build cmake sccache lld \
           clang llvm-dev libclang-dev \
           xorg-dev libgl1-mesa-dev libglu1-mesa-dev \
           libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev \
@@ -199,7 +203,7 @@ jobs:
 
     - name: Test (NoGPU + ASan)
       run: |
-        ctest --test-dir build/CI-Debug-ASAN -L nogpu --output-on-failure
+        ctest --test-dir build/CI-Debug-ASAN -L nogpu -j 4 --output-on-failure
 
   build-windows-shipping:
     runs-on: windows-2022
@@ -248,7 +252,7 @@ jobs:
     # Only App + CoreTest are built under Shipping preset.
     - name: Test (CoreTest under Shipping)
       run: |
-        ctest --test-dir build/CI-Shipping -R CoreTest --output-on-failure
+        ctest --test-dir build/CI-Shipping -R CoreTest -j 4 --output-on-failure
 
   build-linux-shipping:
     runs-on: ubuntu-22.04
@@ -260,7 +264,7 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y ninja-build cmake sccache \
+        sudo apt-get install -y ninja-build cmake sccache lld \
           clang llvm-dev libclang-dev \
           xorg-dev libgl1-mesa-dev libglu1-mesa-dev \
           libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev \
@@ -320,5 +324,5 @@ jobs:
     # Only App + CoreTest are built under Shipping preset.
     - name: Test (CoreTest under Shipping)
       run: |
-        ctest --test-dir build/CI-Shipping -R CoreTest --output-on-failure
+        ctest --test-dir build/CI-Shipping -R CoreTest -j 4 --output-on-failure
 

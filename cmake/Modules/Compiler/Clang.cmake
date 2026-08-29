@@ -104,6 +104,7 @@ if(SW_LLD_LINK_EXE)
 endif()
 
 target_link_options(sw_compiler_clang INTERFACE
+	$<$<NOT:$<BOOL:${MSVC}>>:-fuse-ld=lld>
 	$<$<AND:$<BOOL:${MSVC}>,$<CONFIG:Debug>>:/INCREMENTAL:NO>
 	$<$<AND:$<BOOL:${MSVC}>,$<CONFIG:Release>>:/OPT:REF>
 	$<$<AND:$<BOOL:${MSVC}>,$<CONFIG:Release>>:/OPT:ICF>
