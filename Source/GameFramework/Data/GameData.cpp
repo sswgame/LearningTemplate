@@ -86,26 +86,11 @@ namespace sw
 
 	string BootstrapConfig::resolve( string_view packRelative ) const
 	{
-		string pack = FileUtil::normalizeSeparators( _packRoot );
-		while ( pack.empty() == false && ( pack.back() == '/' || pack.back() == '\\' ) )
-		{
-			pack.pop_back();
-		}
-
-		string rel = FileUtil::normalizePath( packRelative );
-		while ( rel.empty() == false && ( rel.front() == '/' || rel.front() == '\\' ) )
-		{
-			rel.erase( rel.begin() );
-		}
-
-		string result;
+		const string pack = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( _packRoot ) );
+		const string rel  = FileUtil::normalizePath( packRelative );
 		if ( pack.empty() )
-			result = std::move( rel );
-		else if ( rel.empty() )
-			result = std::move( pack );
-		else
-			result = pack + "/" + rel;
-		return result;
+			return rel;
+		return FileUtil::joinPath( pack, rel );
 	}
 
 	bool BootstrapConfig::load( string_view gamedataFileName )

@@ -2,6 +2,7 @@
 
 #include "Engine/Graphics/RenderPass/RenderPipelineResource.h"
 
+#include "Core/String/StringUtil.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -117,8 +118,7 @@ namespace sw
 			static string guessShadingModel( string_view name, const vector<RenderGraphPassDesc>& listPasses )
 			{
 				const string nameNt( name );
-				const string lower = StringUtil::toLower( nameNt.c_str() );
-				if ( lower.find( "deferred" ) != string::npos )
+				if ( StringUtil::stristr( nameNt.c_str(), "deferred" ) != nullptr )
 					return "Deferred";
 				for ( const RenderGraphPassDesc& passDesc : listPasses )
 				{

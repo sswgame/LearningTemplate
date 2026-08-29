@@ -2,6 +2,8 @@
 
 #include "Editor/Panels/DataTablePanel.h"
 
+#include "Core/String/StringUtil.h"
+
 #include "Editor/Common/Commands/EditorDataTableCommands.h"
 #include "Editor/Common/Gui/EditorChrome.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -123,8 +125,6 @@ namespace sw::editor
 			return;
 		}
 
-		const string filter = StringUtil::toLower( _arrLocFilter );
-
 		constexpr ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable |
 										  ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingStretchProp;
 
@@ -143,15 +143,12 @@ namespace sw::editor
 			{
 				LocRecord& rec = _listLocRecord[recordIndex];
 
-				if ( filter.empty() == false )
+				if ( _arrLocFilter[0] != '\0' )
 				{
-					const string lowerKey = StringUtil::toLower( rec._key.c_str() );
-					const string lowerEn  = StringUtil::toLower( rec._enUS.c_str() );
-					const string lowerKo  = StringUtil::toLower( rec._koKR.c_str() );
-					const string lowerJa  = StringUtil::toLower( rec._jaJP.c_str() );
-
-					if ( lowerKey.find( filter ) == string::npos && lowerEn.find( filter ) == string::npos &&
-						 lowerKo.find( filter ) == string::npos && lowerJa.find( filter ) == string::npos )
+					if ( StringUtil::stristr( rec._key.c_str(), _arrLocFilter ) == nullptr &&
+						 StringUtil::stristr( rec._enUS.c_str(), _arrLocFilter ) == nullptr &&
+						 StringUtil::stristr( rec._koKR.c_str(), _arrLocFilter ) == nullptr &&
+						 StringUtil::stristr( rec._jaJP.c_str(), _arrLocFilter ) == nullptr )
 					{
 						continue;
 					}

@@ -2,21 +2,7 @@
 
 #include "Engine/Graphics/RHI/FrameResourceRing.h"
 
-namespace sw
-{
-	namespace
-	{
-		struct FrameResourceRingInternal
-		{
-			static uint64 alignUp( uint64 value, uint64 alignment )
-			{
-				if ( alignment <= 1 )
-					return value;
-				return ( value + ( alignment - 1 ) ) & ~( alignment - 1 );
-			}
-		};
-	} // namespace
-} // namespace sw
+#include "Core/Math/MathUtil.h"
 
 namespace sw
 {
@@ -82,7 +68,7 @@ namespace sw
 	bool FrameResourceRing::tryAllocate( uint64 sizeBytes, uint64 alignment, uint64& outOffset )
 	{
 		Slot&		 slot	= _arrSlots[_frameIndex];
-		const uint64 offset = FrameResourceRingInternal::alignUp( slot._uploadOffset, alignment == 0 ? 1 : alignment );
+		const uint64 offset = MathUtil::align( slot._uploadOffset, alignment == 0 ? uint64{ 1 } : alignment );
 		if ( offset > _uploadCapacity || sizeBytes > ( _uploadCapacity - offset ) )
 			return false;
 		outOffset		   = offset;

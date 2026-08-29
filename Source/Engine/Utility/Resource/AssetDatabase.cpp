@@ -35,11 +35,7 @@ namespace sw
 		if ( resourceRoot.empty() )
 			return {};
 
-		string rootNorm = FileUtil::normalizeSeparators( resourceRoot );
-		while ( rootNorm.empty() == false && ( rootNorm.back() == '/' || rootNorm.back() == '\\' ) )
-		{
-			rootNorm.pop_back();
-		}
+		string rootNorm = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot ) );
 
 		string rel;
 		if ( FileUtil::makePathRelative( rootNorm, absNorm, rel ) == false )

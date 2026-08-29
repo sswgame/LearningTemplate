@@ -3,54 +3,30 @@
 #if defined( SW_PLATFORM_WINDOWS ) && defined( _MSC_VER )
 	#include "Engine/Utility/Module/LiveReloadManager.h"
 
+	#include "Core/File/FileUtil.h"
+
 	#include <delayimp.h>
 
 namespace sw
 {
 	namespace
 	{
-		struct DelayLoadNotifyHookInternal
+		FARPROC WINAPI notifyHook( uint32 dliNotify, DelayLoadInfo* pdli )
 		{
-			static string basenameNoExt( const utf8* pDllName )
-			{
-				string		 s	   = pDllName != nullptr ? pDllName : "";
-				const size_t slash = s.find_last_of( "/\\" );
-				if ( slash != string::npos )
-					s = s.substr( slash + 1 );
-				if ( s.size() > 4 )
-				{
-					const string ext = s.substr( s.size() - 4 );
-					if ( ext == ".dll" || ext == ".DLL" )
-						s = s.substr( 0, s.size() - 4 );
-				}
-				return s;
-			}
+			if ( dliNotify != dliNotePreLoadLibrary || pdli == nullptr )
+				return nullptr;
+			LiveReloadManager* pMgr = LiveReloadManager::getDelayLoadManager();
+			if ( pMgr == nullptr || pMgr->isGraphBroken() )
+				return nullptr;
 
-			static FARPROC WINAPI notifyHook( uint32 dliNotify, DelayLoadInfo* pdli )
-			{
-				if ( dliNotify != dliNotePreLoadLibrary || pdli == nullptr )
-					return nullptr;
-				LiveReloadManager* pMgr = LiveReloadManager::getDelayLoadManager();
-				if ( pMgr == nullptr || pMgr->isGraphBroken() )
-					return nullptr;
-				void* pHandle = pMgr->getModuleHandle( basenameNoExt( pdli->szDll ) );
-				if ( pHandle == nullptr )
-					return nullptr;
-				return reinterpret_cast<FARPROC>( pHandle );
-			}
-		};
+			const string_view dllName = pdli->szDll != nullptr ? string_view{ pdli->szDll } : string_view{};
+			void*			  pHandle = pMgr->getModuleHandle( FileUtil::removeExtension( FileUtil::getFileNamePart( dllName ) ) );
+			if ( pHandle == nullptr )
+				return nullptr;
+			return reinterpret_cast<FARPROC>( pHandle );
+		}
 	} // namespace
+
+	extern "C" const PfnDliHook __pfnDliNotifyHook2 = notifyHook;
 } // namespace sw
-
-namespace sw
-{
-	FARPROC WINAPI notifyHook( uint32 dliNotify, DelayLoadInfo* pdli );
-
-	FARPROC WINAPI notifyHook( uint32 dliNotify, DelayLoadInfo* pdli )
-	{
-		return DelayLoadNotifyHookInternal::notifyHook( dliNotify, pdli );
-	}
-} // namespace sw
-
-extern "C" const PfnDliHook __pfnDliNotifyHook2 = sw::notifyHook;
 #endif

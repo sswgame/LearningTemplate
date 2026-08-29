@@ -379,7 +379,7 @@ namespace sw
 				rel.erase( rel.begin() );
 			}
 			if ( rel.empty() == false )
-				result += "/" + rel;
+				result = FileUtil::joinPath( result, rel );
 		}
 		return result;
 	}
@@ -393,7 +393,7 @@ namespace sw
 			if ( result.empty() )
 				result = lowerName;
 			else
-				result += "/" + lowerName;
+				result = FileUtil::joinPath( result, lowerName );
 		}
 		return result;
 	}

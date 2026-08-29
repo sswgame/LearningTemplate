@@ -4,8 +4,10 @@
 
 #include "Core/Concurrency/mutex.h"
 #include "Core/File/FileUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Commands/EditorAssetCommands.h"
+#include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Gui/EditorChrome.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -28,14 +30,14 @@ namespace sw::editor
 		{
 			static ImVec4 colorForExtension( string_view ext )
 			{
-				if ( StringUtil::equalsIgnoreCase( ext, "._material" ) )
+				if ( FileUtil::hasExtension( ext, "._material" ) )
 					return ImVec4( 0.85f, 0.35f, 0.25f, 1.0f );
-				if ( StringUtil::equalsIgnoreCase( ext, ".hlsl" ) || StringUtil::equalsIgnoreCase( ext, ".glsl" ) ||
-					 StringUtil::equalsIgnoreCase( ext, ".vert" ) || StringUtil::equalsIgnoreCase( ext, ".frag" ) )
+				if ( FileUtil::hasExtension( ext, ".hlsl" ) || FileUtil::hasExtension( ext, ".glsl" ) ||
+					 FileUtil::hasExtension( ext, ".vert" ) || FileUtil::hasExtension( ext, ".frag" ) )
 					return ImVec4( 0.25f, 0.65f, 0.90f, 1.0f );
-				if ( StringUtil::equalsIgnoreCase( ext, ".png" ) || StringUtil::equalsIgnoreCase( ext, ".jpg" ) ||
-					 StringUtil::equalsIgnoreCase( ext, ".jpeg" ) || StringUtil::equalsIgnoreCase( ext, ".tga" ) ||
-					 StringUtil::equalsIgnoreCase( ext, ".dds" ) )
+				if ( FileUtil::hasExtension( ext, ".png" ) || FileUtil::hasExtension( ext, ".jpg" ) ||
+					 FileUtil::hasExtension( ext, ".jpeg" ) || FileUtil::hasExtension( ext, ".tga" ) ||
+					 FileUtil::hasExtension( ext, ".dds" ) )
 					return ImVec4( 0.45f, 0.80f, 0.35f, 1.0f );
 				if ( ext.empty() == false )
 					return ImVec4( 0.55f, 0.55f, 0.60f, 1.0f );
@@ -46,9 +48,9 @@ namespace sw::editor
 			{
 				if ( bIsDirectory )
 					return "Folder";
-				if ( StringUtil::equalsIgnoreCase( ext, "._material" ) )
+				if ( FileUtil::hasExtension( ext, "._material" ) )
 					return "Material";
-				if ( StringUtil::equalsIgnoreCase( ext, ".hlsl" ) )
+				if ( FileUtil::hasExtension( ext, ".hlsl" ) )
 					return "Shader";
 				if ( ext.empty() )
 					return "File";
@@ -81,7 +83,7 @@ namespace sw::editor
 		// Card thumbnail background
 		pDrawList->AddRectFilled( minVec, maxVec, IM_COL32( 22, 24, 30, 255 ), 4.0f );
 
-		const string& ext = entry._extension;
+		const utf8* pPath = entry._absolutePath.empty() ? entry._name.c_str() : entry._absolutePath.c_str();
 		if ( entry._bIsDirectory )
 		{
 			// Golden Folder tab and body
@@ -92,8 +94,7 @@ namespace sw::editor
 									  ImVec2( minPos._x + w * 0.85f, minPos._y + h * 0.80f ),
 									  IM_COL32( 245, 195, 68, 255 ), 3.0f );
 		}
-		else if ( StringUtil::equalsIgnoreCase( ext, ".prefab" ) ||
-				  StringUtil::equalsIgnoreCase( ext, ".pfb" ) )
+		else if ( EditorUtil::isPrefabAssetPath( pPath ) )
 		{
 			// 3D Isometric Blue Cube for Prefab
 			const float32 sz		= w * 0.22f;
@@ -109,9 +110,7 @@ namespace sw::editor
 								   ImVec2( cx + sz * 0.9f, cy + sz * 0.35f ), ImVec2( cx, cy + sz * 0.9f ) };
 			pDrawList->AddConvexPolyFilled( rightPts, 4, IM_COL32( 35, 95, 195, 255 ) );
 		}
-		else if ( StringUtil::equalsIgnoreCase( ext, "._material" ) ||
-				  StringUtil::equalsIgnoreCase( ext, ".mat" ) ||
-				  StringUtil::equalsIgnoreCase( ext, ".material" ) )
+		else if ( EditorUtil::isMaterialAssetPath( pPath ) )
 		{
 			// 3D Sphere preview with specular shading
 			const float32 r = w * 0.26f;
@@ -121,12 +120,7 @@ namespace sw::editor
 			pDrawList->AddCircleFilled( ImVec2( cx - r * 0.38f, cy - r * 0.38f ), r * 0.15f,
 										IM_COL32( 255, 255, 255, 240 ), 12 );
 		}
-		else if ( StringUtil::equalsIgnoreCase( ext, ".png" ) ||
-				  StringUtil::equalsIgnoreCase( ext, ".jpg" ) ||
-				  StringUtil::equalsIgnoreCase( ext, ".jpeg" ) ||
-				  StringUtil::equalsIgnoreCase( ext, ".dds" ) ||
-				  StringUtil::equalsIgnoreCase( ext, ".tga" ) ||
-				  StringUtil::equalsIgnoreCase( ext, ".bmp" ) )
+		else if ( EditorUtil::isTextureAssetPath( pPath ) )
 		{
 			// Checkerboard background
 			constexpr float32 chk = 6.0f;
@@ -153,8 +147,7 @@ namespace sw::editor
 								 ImVec2( cx + w * 0.22f, cy + h * 0.22f ) };
 			pDrawList->AddConvexPolyFilled( triPts, 3, IM_COL32( 70, 180, 120, 230 ) );
 		}
-		else if ( StringUtil::equalsIgnoreCase( ext, ".scene" ) ||
-				  ( StringUtil::equalsIgnoreCase( ext, ".xml" ) && entry._name.find( ".scene" ) != string::npos ) )
+		else if ( EditorUtil::isSceneAssetPath( pPath ) )
 		{
 			// 3D Scene Compass / Horizon
 			pDrawList->AddCircle( ImVec2( cx, cy ), w * 0.26f, IM_COL32( 70, 200, 140, 200 ), 18, 1.5f );
@@ -163,9 +156,7 @@ namespace sw::editor
 			pDrawList->AddLine( ImVec2( cx - w * 0.28f, cy ), ImVec2( cx + w * 0.28f, cy ),
 								IM_COL32( 80, 160, 240, 220 ), 1.5f );
 		}
-		else if ( StringUtil::equalsIgnoreCase( ext, ".hlsl" ) ||
-				  StringUtil::equalsIgnoreCase( ext, ".glsl" ) ||
-				  StringUtil::equalsIgnoreCase( ext, ".spv" ) )
+		else if ( EditorUtil::isShaderAssetPath( pPath ) )
 		{
 			// Shader Diamond / Prism
 			const float32 r			= w * 0.24f;
@@ -174,9 +165,8 @@ namespace sw::editor
 			pDrawList->AddConvexPolyFilled( diaPts, 4, IM_COL32( 240, 120, 50, 255 ) );
 			pDrawList->AddPolyline( diaPts, 4, IM_COL32( 255, 210, 140, 255 ), ImDrawFlags_Closed, 1.5f );
 		}
-		else if ( StringUtil::equalsIgnoreCase( ext, ".wav" ) ||
-				  StringUtil::equalsIgnoreCase( ext, ".mp3" ) ||
-				  StringUtil::equalsIgnoreCase( ext, ".ogg" ) )
+		else if ( FileUtil::hasExtension( pPath, ".wav" ) || FileUtil::hasExtension( pPath, ".mp3" ) ||
+				  FileUtil::hasExtension( pPath, ".ogg" ) )
 		{
 			// Sound wave equalizer bars
 			constexpr int32	  numBars	 = 5;
@@ -199,7 +189,7 @@ namespace sw::editor
 			pDrawList->AddRectFilled( ImVec2( minPos._x + w * 0.22f, minPos._y + h * 0.16f ),
 									  ImVec2( minPos._x + w * 0.78f, minPos._y + h * 0.84f ),
 									  IM_COL32( 65, 70, 82, 255 ), 3.0f );
-			const utf8*	 pLbl  = ContentBrowserPanelInternal::typeLabel( ext, false );
+			const utf8*	 pLbl  = ContentBrowserPanelInternal::typeLabel( entry._extension, false );
 			const ImVec2 txtSz = ImGui::CalcTextSize( pLbl );
 			pDrawList->AddText( ImVec2( cx - txtSz.x * 0.5f, cy - txtSz.y * 0.5f ),
 								IM_COL32( 220, 225, 235, 230 ), pLbl );
@@ -330,29 +320,35 @@ namespace sw::editor
 		if ( entry._bIsDirectory )
 			return true;
 
-		const string lower	   = StringUtil::toLower( entry._extension.c_str() );
-		const string lowerName = StringUtil::toLower( entry._name.c_str() );
+		const utf8* pPath = entry._absolutePath.empty() ? entry._name.c_str() : entry._absolutePath.c_str();
 
 		switch ( _typeFilter )
 		{
 			case AssetTypeFilter::All:
 				return true;
 			case AssetTypeFilter::Scenes:
-				return lowerName.find( ".scene." ) != string::npos || lower == ".scene";
+				return EditorUtil::isSceneAssetPath( pPath );
 			case AssetTypeFilter::Prefabs:
-				return lowerName.find( ".pfb" ) != string::npos;
+				return EditorUtil::isPrefabAssetPath( pPath );
 			case AssetTypeFilter::Textures:
-				return lower == ".png" || lower == ".jpg" || lower == ".jpeg" || lower == ".dds" || lower == ".tga" || lower == ".bmp";
+				return EditorUtil::isTextureAssetPath( pPath );
 			case AssetTypeFilter::Shaders:
-				return lower == ".hlsl" || lower == ".glsl";
+				return EditorUtil::isShaderAssetPath( pPath );
 			case AssetTypeFilter::Materials:
-				return lower == "._material";
+				return EditorUtil::isMaterialAssetPath( pPath );
 			case AssetTypeFilter::Audio:
-				return lower == ".wav" || lower == ".mp3" || lower == ".ogg";
+				return FileUtil::hasExtension( pPath, ".wav" ) || FileUtil::hasExtension( pPath, ".mp3" ) ||
+					   FileUtil::hasExtension( pPath, ".ogg" );
 			case AssetTypeFilter::Data:
-				return lower == ".xml" || lower == ".json" || lower == ".csv" || lower == ".ini" || lower == ".kv";
+				return FileUtil::hasExtension( pPath, ".xml" ) || FileUtil::hasExtension( pPath, ".json" ) ||
+					   FileUtil::hasExtension( pPath, ".csv" ) || FileUtil::hasExtension( pPath, ".ini" ) ||
+					   FileUtil::hasExtension( pPath, ".kv" );
 			case AssetTypeFilter::Other:
-				return lower != "._material" && lower != ".hlsl" && lower != ".glsl" && lower != ".png" && lower != ".wav" && lower != ".xml";
+				return EditorUtil::isMaterialAssetPath( pPath ) == false &&
+					   EditorUtil::isShaderAssetPath( pPath ) == false &&
+					   EditorUtil::isTextureAssetPath( pPath ) == false &&
+					   FileUtil::hasExtension( pPath, ".wav" ) == false &&
+					   FileUtil::hasExtension( pPath, ".xml" ) == false;
 			case AssetTypeFilter::Count:
 			default:
 				return true;
@@ -364,9 +360,7 @@ namespace sw::editor
 		if ( _arrSearchBuffer[0] == '\0' )
 			return true;
 
-		const string filter = StringUtil::toLower( _arrSearchBuffer );
-		const string name	= StringUtil::toLower( entry._name.c_str() );
-		return name.find( filter ) != string::npos;
+		return StringUtil::stristr( entry._name.c_str(), _arrSearchBuffer ) != nullptr;
 	}
 
 	void ContentBrowserPanel::drawToolbar()
@@ -439,19 +433,23 @@ namespace sw::editor
 		{
 			const utf8* _label;
 			const utf8* _relPath;
+			bool		_bEngine;
 		};
 		static const FavFolder kArrFavorites[] = {
-			{  "Scenes",		"Resource/game/demo/maps"},
-			{ "Prefabs",	 "Resource/game/demo/prefabs"},
-			{"Textures", "Resource/game/demo/textures"},
-			{ "Shaders",	 "Resource/engine/shaders"},
-			{	  "Data",	  "Resource/game/demo/data"}
-		  };
+			{  "Scenes",		"demo/maps", false},
+			{ "Prefabs",	 "demo/prefabs", false},
+			{"Textures", "demo/textures", false},
+			{ "Shaders",		 "shaders",	true},
+			{	  "Data",	  "demo/data", false}
+		   };
 
 		for ( uint32 favIdx = 0; favIdx < 5; ++favIdx )
 		{
-			const string fullFavPath = FileUtil::normalizeSeparators(
-				FileUtil::joinPath( FileUtil::getCurrentPath(), kArrFavorites[favIdx]._relPath ) );
+			const string& domainRoot  = kArrFavorites[favIdx]._bEngine == true
+										  ? ResourceUtil::getEngineFolderPath()
+										  : ResourceUtil::getGameFolderPath();
+			const string  fullFavPath = FileUtil::normalizeSeparators(
+				FileUtil::joinPath( domainRoot, kArrFavorites[favIdx]._relPath ) );
 			const bool bSelected = FileUtil::pathsEqualNormalized( fullFavPath, _selectedFolderAbs );
 
 			if ( ImGui::Selectable( kArrFavorites[favIdx]._label, bSelected ) )
@@ -502,27 +500,24 @@ namespace sw::editor
 			{
 				const string rootNorm = FileUtil::normalizePath( root._absolutePath );
 				const string absNorm  = FileUtil::normalizePath( absPath );
-				if ( absNorm == rootNorm || ( absNorm.size() > rootNorm.size() && absNorm.compare( 0, rootNorm.size(), rootNorm ) == 0 && absNorm[rootNorm.size()] == '/' ) )
+				if ( FileUtil::startsWithPathComponent( absNorm, rootNorm ) )
 				{
-					crumb = root._displayName;
-					if ( absNorm.size() > rootNorm.size() )
+					crumb			 = root._displayName;
+					const string rel = FileUtil::suffixAfterPathComponent( absNorm, rootNorm );
+					string		 pretty;
+					size_t		 start{ 0 };
+					while ( start < rel.size() )
 					{
-						string rel = absNorm.substr( rootNorm.size() + 1 );
-						string pretty;
-						size_t start{ 0 };
-						while ( start < rel.size() )
-						{
-							size_t slash = rel.find( '/', start );
-							if ( slash == string::npos )
-								slash = rel.size();
-							if ( pretty.empty() == false )
-								pretty += " / ";
-							pretty += rel.substr( start, slash - start );
-							start = slash + 1;
-						}
+						size_t slash = rel.find( '/', start );
+						if ( slash == string::npos )
+							slash = rel.size();
 						if ( pretty.empty() == false )
-							crumb += " / " + pretty;
+							pretty += " / ";
+						pretty += rel.substr( start, slash - start );
+						start = slash + 1;
 					}
+					if ( pretty.empty() == false )
+						crumb += " / " + pretty;
 					break;
 				}
 			}

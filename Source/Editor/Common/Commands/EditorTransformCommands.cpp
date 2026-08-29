@@ -17,6 +17,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectPtr.h"
 #include "Engine/Serialization/Format/XmlSerializer.h"
+#include "Engine/Utility/Resource/ResourceUtil.h"
 
 #include <algorithm>
 
@@ -111,7 +112,7 @@ namespace sw::editor
 		if ( pComp == nullptr || pComp->getTypeInfo() == nullptr || presetName.empty() )
 			return false;
 
-		const string presetDir = FileUtil::joinPath( FileUtil::getCurrentPath(), "Resource/game/demo/data/presets" );
+		const string presetDir = FileUtil::joinPath( ResourceUtil::getGameFolderPath(), "demo/data/presets" );
 		FileUtil::ensureDirectoryExists( presetDir );
 
 		const string compName = pComp->getComponentName().empty() == false ? pComp->getComponentName().c_str()

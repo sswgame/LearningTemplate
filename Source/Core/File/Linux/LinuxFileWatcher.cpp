@@ -24,18 +24,11 @@ namespace sw
 
 			static string makeRelativePath( string_view root, string_view absolutePath )
 			{
-				const string rootNorm = FileUtil::normalizeSeparators( root );
+				const string rootNorm = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( root ) );
 				const string absNorm  = FileUtil::normalizeSeparators( absolutePath );
-				if ( absNorm.compare( 0, rootNorm.size(), rootNorm ) != 0 )
+				if ( FileUtil::startsWithPathComponent( absNorm, rootNorm ) == false )
 					return FileUtil::getFileNamePart( absNorm );
-
-				if ( absNorm.size() == rootNorm.size() )
-					return {};
-
-				size_t offset = rootNorm.size();
-				if ( absNorm[offset] == '/' )
-					++offset;
-				return absNorm.substr( offset );
+				return FileUtil::suffixAfterPathComponent( absNorm, rootNorm );
 			}
 		};
 	} // namespace
@@ -227,7 +220,7 @@ namespace sw
 
 					if ( ( event->mask & IN_CREATE ) && bIsDir && _bRecursive )
 					{
-						const string childDir = FileUtil::normalizeSeparators( watchedDir + "/" + name );
+						const string childDir = FileUtil::normalizeSeparators( FileUtil::joinPath( watchedDir, name ) );
 						if ( addWatchDirectory( childDir ) == false )
 						{
 							SW_LOG_WARNING( "Failed to watch new directory: %#", childDir.c_str() );
@@ -298,7 +291,7 @@ namespace sw
 
 	void LinuxFileWatcher::pushEvent( FileWatcherAction action, string_view absoluteDirectory, string_view name )
 	{
-		const string absoluteFile = FileUtil::normalizeSeparators( absoluteDirectory + "/" + name );
+		const string absoluteFile = FileUtil::normalizeSeparators( FileUtil::joinPath( absoluteDirectory, name ) );
 		const string relative	  = LinuxFileWatcherInternal::makeRelativePath( _directoryPath, absoluteFile );
 
 		FileChangeEvent eventObj{};

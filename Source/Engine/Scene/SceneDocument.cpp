@@ -167,12 +167,7 @@ namespace sw
 		}
 		else
 		{
-			_name			 = FileUtil::getFileNamePart( absPath );
-			const size_t dot = _name.find_last_of( '.' );
-			if ( dot != string::npos )
-			{
-				_name.resize( dot );
-			}
+			_name = FileUtil::removeExtension( FileUtil::getFileNamePart( absPath ) );
 		}
 
 		XmlNode entities = root.child( SceneDocumentInternal::kEntities );

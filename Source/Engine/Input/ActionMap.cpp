@@ -41,17 +41,6 @@ namespace sw
 				static constexpr const utf8* kSourceMouse		  = "mouse";
 			};
 
-			static bool parseBoolAttr( const utf8* pText, bool fallback )
-			{
-				if ( pText == nullptr || pText[0] == '\0' )
-					return fallback;
-				if ( StringUtil::equalsIgnoreCase( pText, "1" ) || StringUtil::equalsIgnoreCase( pText, "true" ) || StringUtil::equalsIgnoreCase( pText, "yes" ) )
-					return true;
-				if ( StringUtil::equalsIgnoreCase( pText, "0" ) || StringUtil::equalsIgnoreCase( pText, "false" ) || StringUtil::equalsIgnoreCase( pText, "no" ) )
-					return false;
-				return fallback;
-			}
-
 			struct TriggerNameEntry
 			{
 				const utf8*	  _pName;
@@ -162,9 +151,9 @@ namespace sw
 				if ( pLayerName == nullptr || pLayerName[0] == '\0' )
 					continue;
 				const int32 priority   = layerNode.attrInt( ActionMapInternal::InputMapXml::kAttrPriority, 0 );
-				const bool	enabled	   = ActionMapInternal::parseBoolAttr( layerNode.attr( ActionMapInternal::InputMapXml::kAttrEnabled ), true );
-				const bool	blockLower = ActionMapInternal::parseBoolAttr( layerNode.attr( ActionMapInternal::InputMapXml::kAttrBlockLower ), false );
-				const bool	alwaysOn   = ActionMapInternal::parseBoolAttr( layerNode.attr( ActionMapInternal::InputMapXml::kAttrAlwaysOn ), false );
+				const bool	enabled	   = layerNode.attrBool( ActionMapInternal::InputMapXml::kAttrEnabled, true );
+				const bool	blockLower = layerNode.attrBool( ActionMapInternal::InputMapXml::kAttrBlockLower, false );
+				const bool	alwaysOn   = layerNode.attrBool( ActionMapInternal::InputMapXml::kAttrAlwaysOn, false );
 				registerLayer( pLayerName, priority, enabled, blockLower, alwaysOn );
 			}
 		}
@@ -249,9 +238,9 @@ namespace sw
 			if ( hasLayer( pLayerName ) == false )
 			{
 				const int32 priority   = layerNode.attrInt( ActionMapInternal::InputMapXml::kAttrPriority, 0 );
-				const bool	enabled	   = ActionMapInternal::parseBoolAttr( layerNode.attr( ActionMapInternal::InputMapXml::kAttrEnabled ), true );
-				const bool	blockLower = ActionMapInternal::parseBoolAttr( layerNode.attr( ActionMapInternal::InputMapXml::kAttrBlockLower ), false );
-				const bool	alwaysOn   = ActionMapInternal::parseBoolAttr( layerNode.attr( ActionMapInternal::InputMapXml::kAttrAlwaysOn ), false );
+				const bool	enabled	   = layerNode.attrBool( ActionMapInternal::InputMapXml::kAttrEnabled, true );
+				const bool	blockLower = layerNode.attrBool( ActionMapInternal::InputMapXml::kAttrBlockLower, false );
+				const bool	alwaysOn   = layerNode.attrBool( ActionMapInternal::InputMapXml::kAttrAlwaysOn, false );
 				registerLayer( pLayerName, priority, enabled, blockLower, alwaysOn );
 			}
 			for ( XmlNode actionNode = layerNode.child( ActionMapInternal::InputMapXml::kAction ); actionNode.isValid();

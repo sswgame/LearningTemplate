@@ -4,7 +4,6 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
-#include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Commands/EditorSceneCommands.h"
 #include "Editor/Common/EditorUtil.h"
@@ -46,52 +45,44 @@ namespace sw::editor
 			{
 				if ( path.empty() )
 					return false;
-
 				const string pathStr{ path };
-				const string ext = StringUtil::toLower( FileUtil::getExtension( pathStr ).c_str() );
-				if ( ext == ".scene" )
-					return true;
-				if ( ext == ".xml" && StringUtil::stristr( pathStr.c_str(), ".scene" ) != nullptr )
-					return true;
-				if ( FileUtil::endsWithIgnoreCase( pathStr, "_scene.xml" ) )
-					return true;
-				return false;
+				return EditorUtil::isSceneAssetPath( pathStr.c_str() );
 			}
 
 			static bool tryClassifyResourceFile( string_view absPath, EditorResourceIndexEntry& outEntry )
 			{
-				const string file{ absPath };
-				const string ext	  = FileUtil::getExtension( file );
-				const string filename = FileUtil::getFileNamePart( file );
-				string		 relPath;
-				FileUtil::makePathRelative( FileUtil::getCurrentPath(), file, relPath );
+				const string  file{ absPath };
+				const string  filename = FileUtil::getFileNamePart( file );
+				string		  relPath;
+				const string& projectRoot = ResourceUtil::getProjectFolderPath();
+				FileUtil::makePathRelative( projectRoot.empty() ? FileUtil::getCurrentPath() : projectRoot, file, relPath );
 				relPath = FileUtil::normalizeSeparators( relPath );
 
 				outEntry._path	 = relPath;
 				outEntry._title	 = filename;
 				outEntry._detail = relPath;
 
-				if ( ext == ".scene" || ( ext == ".xml" && filename.find( ".scene" ) != string::npos ) )
+				if ( EditorUtil::isSceneAssetPath( file.c_str() ) )
 				{
 					outEntry._category = "Scene";
 					return true;
 				}
-				if ( ext == ".prefab" || ext == ".pfb" )
+				if ( EditorUtil::isPrefabAssetPath( file.c_str() ) )
 				{
 					outEntry._category = "Prefab";
 					return true;
 				}
-				if ( ext == ".png" || ext == ".jpg" || ext == ".dds" || ext == ".tga" || ext == ".bmp" )
+				if ( EditorUtil::isTextureAssetPath( file.c_str() ) )
 				{
 					outEntry._category = "Texture";
 					return true;
 				}
-				if ( ext == ".hlsl" || ext == ".glsl" || ext == ".spv" )
+				if ( EditorUtil::isShaderAssetPath( file.c_str() ) )
 				{
 					outEntry._category = "Shader";
 					return true;
 				}
-				if ( ext == ".xml" || ext == ".json" )
+				if ( FileUtil::hasExtension( file, ".xml" ) || FileUtil::hasExtension( file, ".json" ) )
 				{
 					outEntry._category = "Data";
 					return true;
@@ -112,9 +103,8 @@ namespace sw::editor
 				if ( rootNorm.empty() == false )
 				{
 					const string absNorm = FileUtil::normalizePath( item._absolutePath );
-					if ( absNorm.size() > rootNorm.size() && absNorm.compare( 0, rootNorm.size(), rootNorm ) == 0 &&
-						 absNorm[rootNorm.size()] == '/' )
-						item._relativePath = absNorm.substr( rootNorm.size() + 1 );
+					if ( FileUtil::startsWithPathComponent( absNorm, rootNorm ) )
+						item._relativePath = FileUtil::suffixAfterPathComponent( absNorm, rootNorm );
 				}
 				if ( item._relativePath.empty() )
 					item._relativePath = FileUtil::normalizePath( item._name );
@@ -145,8 +135,7 @@ namespace sw::editor
 		if ( EditorAssetCommandsInternal::isSceneAssetPath( pathStr ) )
 			return loadScene( pathStr );
 
-		const string lowerExt = StringUtil::toLower( FileUtil::getExtension( pathStr ).c_str() );
-		if ( lowerExt == "._material" )
+		if ( EditorUtil::isMaterialAssetPath( pathStr.c_str() ) )
 		{
 			pContext->getWorkspace().setFocusedAssetPath( pathStr.c_str() );
 			pContext->getWorkspace().setInspectMode( InspectMode::Asset );
@@ -220,8 +209,9 @@ namespace sw::editor
 		SpriteComponent* pSprite = pSpawned->addComponent<SpriteComponent>();
 		if ( pSprite != nullptr )
 		{
-			string relPath;
-			FileUtil::makePathRelative( FileUtil::getCurrentPath(), pPath, relPath );
+			string		  relPath;
+			const string& projectRoot = ResourceUtil::getProjectFolderPath();
+			FileUtil::makePathRelative( projectRoot.empty() ? FileUtil::getCurrentPath() : projectRoot, pPath, relPath );
 			relPath = FileUtil::normalizeSeparators( relPath );
 			pSprite->setTextureName( relPath );
 		}
@@ -236,8 +226,7 @@ namespace sw::editor
 		if ( pManager == nullptr || pPath == nullptr )
 			return;
 
-		const string ext = FileUtil::getExtension( pPath );
-		if ( ext == ".prefab" || ext == ".pfb" || StringUtil::stristr( pPath, ".prefab.xml" ) != nullptr )
+		if ( EditorUtil::isPrefabAssetPath( pPath ) )
 		{
 			GameObject* pSpawned = spawnPrefab( pManager, pPath, nullptr, "Spawn Prefab in Viewport" );
 			if ( pSpawned == nullptr )
@@ -254,7 +243,7 @@ namespace sw::editor
 			return;
 		}
 
-		if ( ext == ".png" || ext == ".jpg" || ext == ".dds" || ext == ".tga" || ext == ".bmp" )
+		if ( EditorUtil::isTextureAssetPath( pPath ) )
 		{
 			spawnSprite( pManager, pPath, spawnPos );
 			return;
@@ -367,7 +356,10 @@ namespace sw::editor
 	{
 		outList.clear();
 
-		const string   resourceFolder = FileUtil::joinPath( FileUtil::getCurrentPath(), "Resource" );
+		const string resourceFolder = ResourceUtil::getRootFolderPath();
+		if ( resourceFolder.empty() )
+			return;
+
 		vector<string> listAllFiles;
 		FileUtil::collectFiles( resourceFolder, "", listAllFiles, true, false );
 
@@ -413,11 +405,14 @@ namespace sw::editor
 
 	void EditorAssetCommands::collectResourceCatalogCounts( EditorResourceCatalogCounts& outCounts )
 	{
+		const string resPath = ResourceUtil::getRootFolderPath();
+		if ( resPath.empty() )
+			return;
+
 		vector<string> listScenes;
 		vector<string> listPrefabs;
 		vector<string> listTextures;
 		vector<string> listShaders;
-		const string   resPath = FileUtil::joinPath( FileUtil::getCurrentPath(), "Resource" );
 		FileUtil::collectFiles( resPath, ".scene.xml", listScenes, true, false );
 		FileUtil::collectFiles( resPath, ".prefab.xml", listPrefabs, true, false );
 		FileUtil::collectFiles( resPath, ".png", listTextures, true, false );

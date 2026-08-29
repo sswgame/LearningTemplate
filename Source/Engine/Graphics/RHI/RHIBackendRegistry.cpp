@@ -2,6 +2,8 @@
 
 #include "Engine/Graphics/RHI/RHIBackendRegistry.h"
 
+#include "Core/File/FileUtil.h"
+
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
@@ -85,7 +87,7 @@ namespace sw
 				RHIBackendRegistry& reg		  = engine::getRHIBackendRegistry();
 				const string		dllName	  = FileUtil::formatSharedLibraryName( pModuleBaseName );
 				const string		execDir	  = FileUtil::getDirectoryPart( FileUtil::getExecutablePath() );
-				const string		besideExe = execDir.empty() ? dllName.c_str() : ( execDir + "/" + dllName );
+				const string		besideExe = execDir.empty() ? dllName.c_str() : FileUtil::joinPath( execDir, dllName );
 
 				if ( reg.tryLoadModule( backend, besideExe ) )
 					return true;

@@ -2,6 +2,8 @@
 
 #include "GameFramework/Kits/Overworld/ZoneRuntime.h"
 
+#include "Core/String/StringUtil.h"
+
 namespace sw
 {
 	namespace
@@ -12,27 +14,21 @@ namespace sw
 			{
 				if ( roleText.empty() )
 					return zoneRoleFromMapPath( mapPath );
-				string r( roleText );
-				for ( utf8& ch : r )
-				{
-					if ( 'A' <= ch && ch <= 'Z' )
-						ch = static_cast<utf8>( ch - 'A' + 'a' );
-				}
-				if ( r == "boss" )
+				if ( StringUtil::equalsIgnoreCase( roleText, "boss" ) )
 					return ZoneRole::Boss;
-				if ( r == "dungeon" )
+				if ( StringUtil::equalsIgnoreCase( roleText, "dungeon" ) )
 					return ZoneRole::Dungeon;
-				if ( r == "battle" )
+				if ( StringUtil::equalsIgnoreCase( roleText, "battle" ) )
 					return ZoneRole::Battle;
-				if ( r == "route" )
+				if ( StringUtil::equalsIgnoreCase( roleText, "route" ) )
 					return ZoneRole::Route;
-				if ( r == "center" )
+				if ( StringUtil::equalsIgnoreCase( roleText, "center" ) )
 					return ZoneRole::Center;
-				if ( r == "mart" )
+				if ( StringUtil::equalsIgnoreCase( roleText, "mart" ) )
 					return ZoneRole::Mart;
-				if ( r == "gym" )
+				if ( StringUtil::equalsIgnoreCase( roleText, "gym" ) )
 					return ZoneRole::Gym;
-				if ( r == "wild" )
+				if ( StringUtil::equalsIgnoreCase( roleText, "wild" ) )
 					return ZoneRole::Wild;
 				return ZoneRole::Town;
 			}

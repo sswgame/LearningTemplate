@@ -3,6 +3,7 @@
 #include "Editor/Popups/CommandPalettePopup.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Commands/EditorAssetCommands.h"
 #include "Editor/Common/Commands/EditorGlobalVariableCommands.h"
@@ -27,7 +28,6 @@
 #include "RuntimeAPI/Service/EditorService.h"
 
 #include <imgui.h>
-#include <algorithm>
 
 namespace sw::editor
 {
@@ -45,8 +45,8 @@ namespace sw::editor
 				size_t patternIdx = 0;
 				for ( size_t textIdx = 0; textIdx < text.size(); ++textIdx )
 				{
-					const utf8 tc = static_cast<utf8>( std::tolower( static_cast<uint8>( text[textIdx] ) ) );
-					const utf8 pc = static_cast<utf8>( std::tolower( static_cast<uint8>( pattern[patternIdx] ) ) );
+					const utf8 tc = StringUtil::toLowerChar( text[textIdx] );
+					const utf8 pc = StringUtil::toLowerChar( pattern[patternIdx] );
 					if ( tc == pc )
 					{
 						++patternIdx;

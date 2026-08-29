@@ -2,6 +2,8 @@
 
 #include "Engine/Utility/File/ReloadFileManager.h"
 
+#include "Core/File/FileUtil.h"
+
 #if defined( SW_PLATFORM_WINDOWS )
 	#include "Core/File/Windows/WindowsFileWatcher.h"
 #elif defined( SW_PLATFORM_LINUX )
@@ -164,22 +166,11 @@ namespace sw
 
 	bool ReloadFileManager::matchesWatch( const WatchEntry& entry, const FileChangeEvent& ev ) const
 	{
-		const string fullPath = FileUtil::normalizePath( ev._directory + "/" + ev._filename );
+		const string fullPath = FileUtil::normalizePath( FileUtil::joinPath( ev._directory, ev._filename ) );
 		const string prefix	  = FileUtil::normalizePath( entry._pathPrefix );
 
-		if ( fullPath.size() < prefix.size() )
+		if ( FileUtil::startsWithPathComponent( fullPath, prefix ) == false )
 			return false;
-
-		const bool bPrefixMatch = ( fullPath.compare( 0, prefix.size(), prefix ) == 0 );
-		if ( bPrefixMatch == false )
-			return false;
-
-		if ( fullPath.size() > prefix.size() )
-		{
-			const utf8 next = fullPath[prefix.size()];
-			if ( next != '/' && next != '\\' )
-				return false;
-		}
 
 		return extensionAllowed( entry, ev._filename );
 	}

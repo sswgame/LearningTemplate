@@ -2,6 +2,8 @@
 
 #include "Engine/Graphics/Shader/LiveShaderManager.h"
 
+#include "Core/File/FileUtil.h"
+
 #include "Engine/Graphics/Shader/ShaderCache.h"
 #include "Engine/Utility/File/ReloadFileManager.h"
 
@@ -89,7 +91,7 @@ namespace sw
 
 				for ( const string& inc : listIncludeFiles )
 				{
-					string incPath = shaderDir.empty() ? string( inc ) : ( shaderDir + "/" + inc );
+					string incPath = shaderDir.empty() ? string( inc ) : FileUtil::joinPath( shaderDir, inc );
 					incPath		   = FileUtil::normalizePath( incPath );
 					_mapIncludeDependency[incPath].push_back( keyPath );
 				}
@@ -209,7 +211,7 @@ namespace sw
 
 	void LiveShaderManager::onWatchedFileChanged( const FileChangeEvent& ev )
 	{
-		const string fullPath = FileUtil::normalizePath( ev._directory + "/" + ev._filename );
+		const string fullPath = FileUtil::normalizePath( FileUtil::joinPath( ev._directory, ev._filename ) );
 		notifyFileChanged( fullPath );
 	}
 

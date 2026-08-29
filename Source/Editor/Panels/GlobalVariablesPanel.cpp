@@ -48,16 +48,9 @@ namespace sw::editor
 				if ( pFilter == nullptr || pFilter[0] == '\0' )
 					return true;
 
-				const string filterLower = StringUtil::toLower( pFilter );
-				const string nameLower	 = StringUtil::toLower( info._name.c_str() );
-				const string descLower	 = StringUtil::toLower( info._description.c_str() );
-				const string modLower	 = StringUtil::toLower( info._moduleName.c_str() );
-
-				const bool bMatchName = ( nameLower.find( filterLower ) != string::npos );
-				const bool bMatchDesc = ( descLower.find( filterLower ) != string::npos );
-				const bool bMatchMod  = ( modLower.find( filterLower ) != string::npos );
-
-				return bMatchName || bMatchDesc || bMatchMod;
+				return StringUtil::stristr( info._name.c_str(), pFilter ) != nullptr ||
+					   StringUtil::stristr( info._description.c_str(), pFilter ) != nullptr ||
+					   StringUtil::stristr( info._moduleName.c_str(), pFilter ) != nullptr;
 			}
 
 			static bool compareVariableInfo( const GlobalVariableInfo* pA, const GlobalVariableInfo* pB )

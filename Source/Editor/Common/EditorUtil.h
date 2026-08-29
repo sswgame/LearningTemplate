@@ -75,6 +75,12 @@ namespace sw::editor
 		/** @brief 경로가 머티리얼 애셋인지 여부를 반환합니다. */
 		static bool isMaterialAssetPath( const utf8* pPath );
 
+		/** @brief 경로가 씬 애셋인지 여부를 반환합니다. */
+		static bool isSceneAssetPath( const utf8* pPath );
+
+		/** @brief 경로가 셰이더 소스/바이너리인지 여부를 반환합니다. */
+		static bool isShaderAssetPath( const utf8* pPath );
+
 		/** @brief 선택적 부모 아래 프리팹을 스폰합니다. 실패 시 로그 후 nullptr을 반환합니다. */
 		static GameObject* spawnPrefabFromAssetPath( GameObjectManager* pManager, const utf8* pPath, GameObject* pParent = nullptr );
 	};

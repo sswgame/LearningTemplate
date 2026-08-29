@@ -3,6 +3,7 @@
 #include "Engine/Scene/SceneManager.h"
 
 #include "Core/Concurrency/mutex.h"
+#include "Core/File/FileUtil.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -265,7 +266,7 @@ namespace sw
 		{
 			const string nextPath = std::move( _queuedPath );
 			_queuedPath.clear();
-			if ( pendingScene != nullptr && StringUtil::toLower( pendingScene->getSourcePath().c_str() ) == StringUtil::toLower( nextPath.c_str() ) )
+			if ( pendingScene != nullptr && FileUtil::pathsEqualNormalized( pendingScene->getSourcePath(), nextPath ) )
 			{
 				// 이미 동일한 경로가 로드 완료됨 (대소문자 무관)
 			}

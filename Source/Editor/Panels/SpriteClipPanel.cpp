@@ -2,12 +2,12 @@
 
 #include "Editor/Panels/SpriteClipPanel.h"
 
-#include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Commands/EditorToolAssetCommands.h"
 #include "Editor/Common/Config/EditorConfig.h"
 #include "Editor/Common/Config/EditorData.h"
+#include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
@@ -45,10 +45,7 @@ namespace sw::editor
 			if ( focused.empty() == false && EditorToolAssetCommands::isSpriteClipPath( focused ) && focused != _loadedAssetPath )
 			{
 				_loadedAssetPath = focused;
-				if ( EditorToolAssetCommands::isSpriteClipPath( focused ) &&
-					 ( FileUtil::endsWithIgnoreCase( focused, ".png" ) || FileUtil::endsWithIgnoreCase( focused, ".jpg" ) ||
-					   FileUtil::endsWithIgnoreCase( focused, ".jpeg" ) || FileUtil::endsWithIgnoreCase( focused, ".dds" ) ||
-					   FileUtil::endsWithIgnoreCase( focused, ".tga" ) ) )
+				if ( EditorToolAssetCommands::isSpriteClipPath( focused ) && EditorUtil::isTextureAssetPath( focused.c_str() ) )
 				{
 					StringUtil::strncpy( _arrAtlasPath, focused.c_str(), sizeof( _arrAtlasPath ) - 1 );
 					_arrAtlasPath[sizeof( _arrAtlasPath ) - 1] = '\0';

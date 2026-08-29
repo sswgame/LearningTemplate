@@ -23,11 +23,11 @@ namespace sw
 
 				const string& engineRoot = ResourceUtil::getEngineFolderPath();
 				if ( engineRoot.empty() == false )
-					outDirs.push_back( FileUtil::normalizeSeparators( engineRoot + "/shaders" ) );
+					outDirs.push_back( FileUtil::normalizeSeparators( FileUtil::joinPath( engineRoot, "shaders" ) ) );
 
 				const string& commonRoot = ResourceUtil::getCommonFolderPath();
 				if ( commonRoot.empty() == false )
-					outDirs.push_back( FileUtil::normalizeSeparators( commonRoot + "/shaders" ) );
+					outDirs.push_back( FileUtil::normalizeSeparators( FileUtil::joinPath( commonRoot, "shaders" ) ) );
 			}
 
 #if defined( SW_PLATFORM_WINDOWS )
@@ -50,7 +50,7 @@ namespace sw
 
 					for ( const string& root : _listRoot )
 					{
-						const string candidate = FileUtil::normalizeSeparators( root + "/" + pFileName );
+						const string candidate = FileUtil::normalizeSeparators( FileUtil::joinPath( root, pFileName ) );
 						if ( FileUtil::fileExists( candidate ) == false )
 							continue;
 
@@ -182,7 +182,7 @@ namespace sw
 
 				utf8 buf[64]{};
 				snprintf( buf, sizeof( buf ), "%016llx.bin", static_cast<uint64>( hash ) );
-				return cacheDir + "/" + buf;
+				return FileUtil::joinPath( cacheDir, buf );
 			}
 		};
 	} // namespace
@@ -324,8 +324,9 @@ namespace sw
 			static auto s_getDxCompilerHandle = []() -> void*
 			{
 				string		   libName		 = FileUtil::formatSharedLibraryName( "dxcompiler" );
+				const string   execDir		 = FileUtil::getDirectoryPart( FileUtil::getExecutablePath() );
 				vector<string> listCandidate = {
-					FileUtil::getDirectoryPart( FileUtil::getExecutablePath() ) + "/" + libName,
+					execDir.empty() ? libName : FileUtil::joinPath( execDir, libName ),
 					libName };
 				for ( const string& cand : listCandidate )
 				{

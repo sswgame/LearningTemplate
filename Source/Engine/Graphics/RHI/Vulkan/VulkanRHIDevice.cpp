@@ -239,7 +239,7 @@ namespace sw
 			if ( _bEnableValidationLayers )
 			{
 				string execDir = FileUtil::getDirectoryPart( FileUtil::getExecutablePath() );
-				if ( FileUtil::fileExists( execDir + "/VkLayer_khronos_validation.json" ) )
+				if ( FileUtil::fileExists( FileUtil::joinPath( execDir, "VkLayer_khronos_validation.json" ) ) )
 				{
 					SetEnvironmentVariableA( "VK_ADD_LAYER_PATH", execDir.c_str() );
 					SetEnvironmentVariableA( "VK_LAYER_PATH", execDir.c_str() );
@@ -249,7 +249,7 @@ namespace sw
 					const utf8* pVulkanSdkEnv = std::getenv( "VULKAN_SDK" );
 					if ( pVulkanSdkEnv != nullptr && StringUtil::strlen( pVulkanSdkEnv ) > 0 )
 					{
-						string sdkBinPath = string( pVulkanSdkEnv ) + "/Bin";
+						string sdkBinPath = FileUtil::joinPath( pVulkanSdkEnv, "Bin" );
 						SetEnvironmentVariableA( "VK_ADD_LAYER_PATH", sdkBinPath.c_str() );
 					}
 				}

@@ -3,6 +3,7 @@
 #include "Engine/Utility/Json/JsonDocument.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Utility/Resource/ResourceUtil.h"
 
@@ -23,16 +24,9 @@ namespace sw
 
 			static bool nameEquals( string_view lhs, string_view rhs, bool bIgnoreCase )
 			{
-				if ( lhs.size() != rhs.size() )
-					return false;
-				if ( bIgnoreCase == false )
-					return lhs == rhs;
-				for ( size_t elementIndex = 0; elementIndex < lhs.size(); ++elementIndex )
-				{
-					if ( StringUtil::toLowerChar( lhs[elementIndex] ) != StringUtil::toLowerChar( rhs[elementIndex] ) )
-						return false;
-				}
-				return true;
+				if ( bIgnoreCase )
+					return StringUtil::equalsIgnoreCase( lhs, rhs );
+				return lhs == rhs;
 			}
 
 			static string fromStdString( const std::string& value )

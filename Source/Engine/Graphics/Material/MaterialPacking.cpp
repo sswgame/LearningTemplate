@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/Math/MathUtil.h"
+
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialUtil.h"
@@ -466,7 +468,7 @@ namespace sw
 			align = 16;
 		if ( typeSize == 64 )
 			align = 16;
-		return ( offset + align - 1 ) & ~( align - 1 );
+		return MathUtil::align( offset, align );
 	}
 
 	bool MaterialUtil::parseBoolToken( string_view token )

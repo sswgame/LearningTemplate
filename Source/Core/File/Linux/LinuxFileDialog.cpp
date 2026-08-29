@@ -72,11 +72,7 @@ namespace sw
 					if ( dir.empty() )
 						dir = ".";
 
-					string candidate = dir;
-					if ( candidate.back() != '/' )
-						candidate.push_back( '/' );
-					candidate.append( name );
-
+					const string candidate = FileUtil::joinPath( dir, name );
 					if ( isExecutableFile( candidate ) )
 						return candidate;
 

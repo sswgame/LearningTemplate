@@ -3,6 +3,8 @@
 #include "Core/File/Windows/WindowsFileDialog.h"
 
 #include "Core/Common/PlatformOsHeaders.h"
+#include "Core/File/FileUtil.h"
+#include "Core/String/StringUtil.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
 
@@ -96,7 +98,7 @@ namespace sw
 			while ( *p != L'\0' )
 			{
 				const wstring fileNameW( p );
-				outPaths.push_back( FileUtil::normalizePath( directoryPath + "/" + StringUtil::utf16ToUtf8( fileNameW.c_str() ) ) );
+				outPaths.push_back( FileUtil::normalizePath( FileUtil::joinPath( directoryPath, StringUtil::utf16ToUtf8( fileNameW.c_str() ) ) ) );
 				p += fileNameW.size() + 1;
 			}
 		}

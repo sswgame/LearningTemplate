@@ -8,6 +8,7 @@
 
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Utility/Json/JsonDocument.h"
+#include "Engine/Utility/Resource/ResourceUtil.h"
 
 #include "RuntimeAPI/Service/EditorService.h"
 
@@ -98,12 +99,12 @@ namespace sw::editor
 
 	string EditorDataTableCommands::getLocalizationFolderPath()
 	{
-		return FileUtil::joinPath( FileUtil::getCurrentPath(), "Resource/game/demo/data/localization" );
+		return FileUtil::joinPath( ResourceUtil::getGameFolderPath(), "demo/data/localization" );
 	}
 
 	string EditorDataTableCommands::getGameDataFolderPath()
 	{
-		return FileUtil::joinPath( FileUtil::getCurrentPath(), "Resource/game/demo/data" );
+		return FileUtil::joinPath( ResourceUtil::getGameFolderPath(), "demo/data" );
 	}
 
 	bool EditorDataTableCommands::loadLocalization( vector<LocRecord>& outList )
@@ -152,9 +153,10 @@ namespace sw::editor
 				continue;
 
 			GameDataFileEntry entry{};
-			entry._fileName		= FileUtil::getFileNamePart( file );
-			entry._absolutePath = FileUtil::normalizeSeparators( file );
-			FileUtil::makePathRelative( FileUtil::getCurrentPath(), file, entry._relativePath );
+			entry._fileName			  = FileUtil::getFileNamePart( file );
+			entry._absolutePath		  = FileUtil::normalizeSeparators( file );
+			const string& projectRoot = ResourceUtil::getProjectFolderPath();
+			FileUtil::makePathRelative( projectRoot.empty() ? FileUtil::getCurrentPath() : projectRoot, file, entry._relativePath );
 			outList.push_back( std::move( entry ) );
 		}
 		return true;

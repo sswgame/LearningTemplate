@@ -2,6 +2,9 @@
 
 #include "Editor/Common/EditorUtil.h"
 
+#include "Core/File/FileUtil.h"
+#include "Core/String/StringUtil.h"
+
 #include "Editor/Common/Config/EditorConfig.h"
 #include "Editor/Common/Config/EditorData.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -250,7 +253,8 @@ namespace sw::editor
 		return FileUtil::endsWithIgnoreCase( pPath, ".prefab.xml" ) ||
 			   FileUtil::endsWithIgnoreCase( pPath, ".prefab.json" ) ||
 			   FileUtil::endsWithIgnoreCase( pPath, ".prefab.bin" ) ||
-			   FileUtil::endsWithIgnoreCase( pPath, ".prefab" );
+			   FileUtil::endsWithIgnoreCase( pPath, ".prefab" ) ||
+			   FileUtil::hasExtension( pPath, ".pfb" );
 	}
 
 	bool EditorUtil::isTextureAssetPath( const utf8* pPath )
@@ -259,12 +263,36 @@ namespace sw::editor
 			return false;
 		return FileUtil::hasExtension( pPath, ".png" ) || FileUtil::hasExtension( pPath, ".jpg" ) ||
 			   FileUtil::hasExtension( pPath, ".jpeg" ) || FileUtil::hasExtension( pPath, ".tga" ) ||
-			   FileUtil::hasExtension( pPath, ".dds" ) || FileUtil::hasExtension( pPath, ".hdr" );
+			   FileUtil::hasExtension( pPath, ".dds" ) || FileUtil::hasExtension( pPath, ".hdr" ) ||
+			   FileUtil::hasExtension( pPath, ".bmp" );
 	}
 
 	bool EditorUtil::isMaterialAssetPath( const utf8* pPath )
 	{
-		return pPath != nullptr && FileUtil::hasExtension( pPath, "._material" );
+		if ( pPath == nullptr )
+			return false;
+		return FileUtil::hasExtension( pPath, "._material" ) || FileUtil::hasExtension( pPath, ".mat" ) ||
+			   FileUtil::hasExtension( pPath, ".material" );
+	}
+
+	bool EditorUtil::isSceneAssetPath( const utf8* pPath )
+	{
+		if ( pPath == nullptr || pPath[0] == '\0' )
+			return false;
+		if ( FileUtil::hasExtension( pPath, ".scene" ) )
+			return true;
+		if ( FileUtil::hasExtension( pPath, ".xml" ) && StringUtil::stristr( pPath, ".scene" ) != nullptr )
+			return true;
+		return FileUtil::endsWithIgnoreCase( pPath, "_scene.xml" );
+	}
+
+	bool EditorUtil::isShaderAssetPath( const utf8* pPath )
+	{
+		if ( pPath == nullptr )
+			return false;
+		return FileUtil::hasExtension( pPath, ".hlsl" ) || FileUtil::hasExtension( pPath, ".glsl" ) ||
+			   FileUtil::hasExtension( pPath, ".vert" ) || FileUtil::hasExtension( pPath, ".frag" ) ||
+			   FileUtil::hasExtension( pPath, ".spv" );
 	}
 
 	GameObject* EditorUtil::spawnPrefabFromAssetPath( GameObjectManager* pManager, const utf8* pPath, GameObject* pParent )

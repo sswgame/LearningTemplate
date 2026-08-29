@@ -185,25 +185,20 @@ namespace sw::editor
 		editor::drawSearchField( "##qlSearch", _arrSearchBuffer, sizeof( _arrSearchBuffer ),
 								 "Type to search assets, scenes, game objects (ESC to cancel)...", -1.0f, true );
 
-		const string filter = StringUtil::toLower( _arrSearchBuffer );
-
 		vector<const QuickLauncherItem*> listFiltered;
 		listFiltered.reserve( _listAllItem.size() );
 
 		for ( const QuickLauncherItem& item : _listAllItem )
 		{
-			if ( filter.empty() )
+			if ( _arrSearchBuffer[0] == '\0' )
 			{
 				listFiltered.push_back( &item );
 				continue;
 			}
 
-			const string lowerTitle	 = StringUtil::toLower( item._title.c_str() );
-			const string lowerDetail = StringUtil::toLower( item._detail.c_str() );
-			const string lowerCat	 = StringUtil::toLower( item._category.c_str() );
-
-			if ( lowerTitle.find( filter ) != string::npos || lowerDetail.find( filter ) != string::npos ||
-				 lowerCat.find( filter ) != string::npos )
+			if ( StringUtil::stristr( item._title.c_str(), _arrSearchBuffer ) != nullptr ||
+				 StringUtil::stristr( item._detail.c_str(), _arrSearchBuffer ) != nullptr ||
+				 StringUtil::stristr( item._category.c_str(), _arrSearchBuffer ) != nullptr )
 			{
 				listFiltered.push_back( &item );
 			}
