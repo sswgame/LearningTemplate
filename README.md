@@ -1,9 +1,23 @@
 # SW Engine (게임 및 에디터 엔진 템플릿)
 
 [![CI](https://github.com/sswgame/LearningTemplate/actions/workflows/ci.yml/badge.svg)](https://github.com/sswgame/LearningTemplate/actions/workflows/ci.yml)
+[![Windows](https://img.shields.io/badge/Windows-clang--cl%20(Debug%20%7C%20Shipping)-0078D6?logo=windows&logoColor=white)](https://github.com/sswgame/LearningTemplate/actions/workflows/ci.yml)
+[![Linux](https://img.shields.io/badge/Linux-Clang%20(Debug%20%7C%20ASan%20%7C%20Shipping)-FCC624?logo=linux&logoColor=black)](https://github.com/sswgame/LearningTemplate/actions/workflows/ci.yml)
+[![C++17](https://img.shields.io/badge/Language-C%2B%2B17-00599C?logo=cplusplus&logoColor=white)](https://isocpp.org/)
+[![License](https://img.shields.io/badge/License-MIT-brightgreen.svg)](LICENSE)
 
 **SW Engine**은 C++17 기반의 고성능 게임 및 에디터 엔진 프레임워크입니다.  
 CMake, Ninja, LLVM Clang-cl 및 sccache를 결합하여 **초고속 증분 빌드**를 제공하며, 개발(Dev) 환경에서는 코드를 수정하면 엔진 재시작 없이 즉시 DLL이 교체되는 **모듈 핫리로드 (LiveReload)**를, 최종 배포(Shipping) 환경에서는 최고 성능과 보안을 위해 단일 실행 파일로 최적화되는 **정적 링크(Static Link)**를 지원합니다.
+
+### 🛠️ 지원 플랫폼 및 CI 빌드 매트릭스
+
+| OS / 플랫폼 | 컴파일러 / 툴체인 | 빌드 프리셋 & 검증 항목 | CI 검증 |
+| :--- | :--- | :--- | :---: |
+| 🪟 **Windows** | `clang-cl` (LLVM) | `Debug` (LiveReload DLL 모듈) | ![Passing](https://img.shields.io/badge/build-passing-brightgreen?logo=windows) |
+| 🪟 **Windows** | `clang-cl` (LLVM) | `Shipping` (최적화 정적 단일 실행파일) | ![Passing](https://img.shields.io/badge/build-passing-brightgreen?logo=windows) |
+| 🐧 **Linux** | `clang++` (LLVM + LLD) | `Debug` (LiveReload Shared 모듈) | ![Passing](https://img.shields.io/badge/build-passing-brightgreen?logo=linux) |
+| 🐧 **Linux** | `clang++` (LLVM + LLD) | `Debug + ASan` (메모리 주소 살균자) | ![Passing](https://img.shields.io/badge/build-passing-brightgreen?logo=linux) |
+| 🐧 **Linux** | `clang++` (LLVM + LLD) | `Shipping` (최적화 정적 단일 실행파일) | ![Passing](https://img.shields.io/badge/build-passing-brightgreen?logo=linux) |
 
 ---
 

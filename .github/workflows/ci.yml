@@ -1,4 +1,4 @@
-name: CI
+name: CI (Windows & Linux | clang-cl & Clang)
 
 on:
   push:
