@@ -18,6 +18,9 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v5
 
+    - name: Setup sccache
+      uses: mozilla/sccache-action@v0.0.9
+
     - name: MSVC developer environment
       uses: ilammy/msvc-dev-cmd@v1
 
@@ -68,10 +71,13 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v5
 
+    - name: Setup sccache
+      uses: mozilla/sccache-action@v0.0.9
+
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y ninja-build cmake sccache lld \
+        sudo apt-get install -y ninja-build cmake lld \
           clang llvm-dev libclang-dev \
           xorg-dev libgl1-mesa-dev libglu1-mesa-dev \
           libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev \
@@ -141,10 +147,13 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v5
 
+    - name: Setup sccache
+      uses: mozilla/sccache-action@v0.0.9
+
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y ninja-build cmake sccache lld \
+        sudo apt-get install -y ninja-build cmake lld \
           clang llvm-dev libclang-dev \
           xorg-dev libgl1-mesa-dev libglu1-mesa-dev \
           libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev \
@@ -212,6 +221,9 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v5
 
+    - name: Setup sccache
+      uses: mozilla/sccache-action@v0.0.9
+
     - name: MSVC developer environment
       uses: ilammy/msvc-dev-cmd@v1
 
@@ -261,10 +273,13 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v5
 
+    - name: Setup sccache
+      uses: mozilla/sccache-action@v0.0.9
+
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y ninja-build cmake sccache lld \
+        sudo apt-get install -y ninja-build cmake lld \
           clang llvm-dev libclang-dev \
           xorg-dev libgl1-mesa-dev libglu1-mesa-dev \
           libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev \
