@@ -43,6 +43,8 @@ target_compile_options(sw_compiler_clang INTERFACE
 	$<$<BOOL:${MSVC}>:-clang:-fdelayed-template-parsing>
 	$<$<BOOL:${MSVC}>:-clang:-fmerge-all-constants>
 	$<$<BOOL:${MSVC}>:-clang:-fno-spell-checking>
+	-Xclang
+	-fno-pch-timestamp
 	$<$<AND:$<NOT:$<BOOL:${MSVC}>>,$<COMPILE_LANGUAGE:CXX>>:-fno-rtti>
 
 	# 경고 활성화
@@ -75,6 +77,7 @@ target_compile_options(sw_compiler_clang INTERFACE
 	# Debug: 디버그 심볼 & 최적화 끄기
 	$<$<CONFIG:Debug>:-g>
 	$<$<AND:$<NOT:$<BOOL:${MSVC}>>,$<CONFIG:Debug>>:-O0>
+	$<$<AND:$<NOT:$<BOOL:${MSVC}>>,$<CONFIG:Debug>>:-gz=zlib>
 	$<$<AND:$<BOOL:${MSVC}>,$<CONFIG:Debug>>:/Od>
 	$<$<AND:$<BOOL:${MSVC}>,$<CONFIG:Debug>>:/Z7>
 

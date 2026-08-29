@@ -136,6 +136,7 @@
       "inherits": "base-vcpkg",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
+        "SW_ENABLE_UNITY_BUILD": "ON",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
       }
     },
@@ -147,7 +148,8 @@
       "inherits": "base-vcpkg",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "SW_SHIPPING_BUILD": "ON"
+        "SW_SHIPPING_BUILD": "ON",
+        "SW_ENABLE_UNITY_BUILD": "ON"
       }
     },
 
@@ -159,6 +161,7 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "SW_ENABLE_SANITIZER": "ON",
+        "SW_ENABLE_UNITY_BUILD": "ON",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
       }
     }

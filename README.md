@@ -1,5 +1,7 @@
 # SW Engine (게임 및 에디터 엔진 템플릿)
 
+[![CI](https://github.com/sswgame/LearningTemplate/actions/workflows/ci.yml/badge.svg)](https://github.com/sswgame/LearningTemplate/actions/workflows/ci.yml)
+
 **SW Engine**은 C++17 기반의 고성능 게임 및 에디터 엔진 프레임워크입니다.  
 CMake, Ninja, LLVM Clang-cl 및 sccache를 결합하여 **초고속 증분 빌드**를 제공하며, 개발(Dev) 환경에서는 코드를 수정하면 엔진 재시작 없이 즉시 DLL이 교체되는 **모듈 핫리로드 (LiveReload)**를, 최종 배포(Shipping) 환경에서는 최고 성능과 보안을 위해 단일 실행 파일로 최적화되는 **정적 링크(Static Link)**를 지원합니다.
 
