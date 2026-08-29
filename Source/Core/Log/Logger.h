@@ -18,13 +18,6 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/String/FormatString.h"
 
-// ------------------------------------------------------------------------------
-// 0) SW_LOG_* & SW_LOG_ASSERT 매크로 정의
-// ------------------------------------------------------------------------------
-// fixed_string.h 등 하위 코어 컨테이너 템플릿의 경계 검사(SW_LOG_ASSERT)에서 로거 매크로를 사용하고,
-// Logger 클래스는 멤버 변수(_cachedDateStr)로 fixed_string을 사용하므로 상호 의존성이 존재합니다.
-// 템플릿 인스턴스화 시 매크로 심볼이 먼저 노출되도록 SW_LOG_* 매크로를 클래스 및 fixed_string.h보다 상단에 정의합니다.
-
 #if !defined( SW_LOG_TAG )
 	/** @brief 호출 모듈 태그. 모듈 헤드에서 재정의합니다. */
 	#define SW_LOG_TAG "Engine"
@@ -32,78 +25,6 @@
 
 namespace sw
 {
-	enum class LogLevel;
-	class Logger;
-	[[maybe_unused]] static inline constexpr const ::utf8* swGetLogCaller( ... ) { return nullptr; }
-} // namespace sw
-
-[[maybe_unused]] static inline constexpr const ::utf8* swGetLogCaller( ... ) { return nullptr; }
-
-/**
- * @brief 현재 파일 또는 네임스페이스 스코프의 로그 Caller(클래스/시스템명)를 지정합니다.
- */
-#define SW_LOG_CALLER( name ) \
-	[[maybe_unused]] static inline constexpr const ::utf8* swGetLogCaller( ::int32 = 0 ) { return name; }
-
-#if defined( SW_DEBUG )
-	/**
-	 * @brief 포맷 문자열(+인자)을 파싱한 뒤 Logger::writeLog 로 전달하는 코어 매크로
-	 * @note 메시지 문자열을 __VA_ARGS__ 첫 인자로 받아, 가변 인자 생략(C++20) 확장을 쓰지 않습니다.
-	 */
-	#define SW_LOG_INTERNAL( level, ... )                                                                          \
-		do                                                                                                         \
-		{                                                                                                          \
-			::utf8 arrBuffer[::sw::constant::kMaxBuffer8192];                                                      \
-			::sw::formatstring( arrBuffer, ::sw::constant::kMaxBuffer8192, __VA_ARGS__ );                          \
-			::sw::Logger::writeLogGlobal( level, SW_LOG_TAG, swGetLogCaller( 0 ), arrBuffer, __FILE__, __LINE__ ); \
-		} while ( false )
-
-	/** @brief Error 레벨로 포맷해 남깁니다. */
-	#define SW_LOG_ERROR( ... ) SW_LOG_INTERNAL( sw::LogLevel::Error, __VA_ARGS__ )
-	/** @brief Warning 레벨로 포맷해 남깁니다. */
-	#define SW_LOG_WARNING( ... ) SW_LOG_INTERNAL( sw::LogLevel::Warning, __VA_ARGS__ )
-	/** @brief Info 레벨로 포맷해 남깁니다. */
-	#define SW_LOG_INFO( ... ) SW_LOG_INTERNAL( sw::LogLevel::Info, __VA_ARGS__ )
-	/** @brief Trace 레벨로 포맷해 남깁니다. */
-	#define SW_LOG_TRACE( ... ) SW_LOG_INTERNAL( sw::LogLevel::Trace, __VA_ARGS__ )
-
-	/**
-	 * @brief 조건 실패 시 메시지·식·파일·함수·라인을 Error로 남기고 디버그 브레이크
-	 * @note Release에서는 no-op. 무조건 실패는 SW_LOG_ASSERT( false, ... )로 호출.
-	 */
-	#define SW_LOG_ASSERT( expr, ... )                                                           \
-		do                                                                                       \
-		{                                                                                        \
-			if ( !( expr ) )                                                                     \
-			{                                                                                    \
-				utf8 _assertMsg[sw::constant::kMaxBuffer8192];                                   \
-				sw::formatstring( _assertMsg, sw::constant::kMaxBuffer8192, __VA_ARGS__ );       \
-				SW_LOG_INTERNAL( sw::LogLevel::Error,                                            \
-								 "ASSERT failed\n"                                               \
-								 "Expression : %#\n"                                             \
-								 "Message    : %#\n"                                             \
-								 "FileName   : %#\n"                                             \
-								 "Function   : %#\n"                                             \
-								 "Line       : %#",                                              \
-								 #expr, _assertMsg, __FILE__, SW_FUNCTION_SIGNATURE, __LINE__ ); \
-				SW_DEBUG_BREAK();                                                                \
-			}                                                                                    \
-		} while ( false )
-#else
-	#define SW_LOG_ERROR( ... )
-	#define SW_LOG_WARNING( ... )
-	#define SW_LOG_INFO( ... )
-	#define SW_LOG_TRACE( ... )
-	#define SW_LOG_ASSERT( expr, ... )
-#endif
-
-// Logger의 _cachedDateStr(fixed_string<32>) 멤버 타입을 위해 포함합니다.
-// fixed_string 내부의 SW_LOG_ASSERT 사용을 위해 반드시 상단의 매크로 정의 이후에 포함되어야 합니다.
-#include "Core/String/fixed_string.h"
-
-namespace sw
-{
-
 	// ------------------------------------------------------------------------------
 	// 1) LogLevel / LogEntry / LogRecord — 심각도 + 한 줄 기록 + 비동기 큐 레코드
 	// ------------------------------------------------------------------------------
@@ -230,27 +151,93 @@ namespace sw
 		/** @brief 시각이 바뀌면 파일을 갈아 끼운 뒤 한 줄을 씁니다. */
 		void writeLogFile( LogLevel level, int32 year, int32 month, int32 day, int32 hour, const utf8* pFormattedBuffer );
 
-		string								 _logFolderPath;
-		string								 _currentLogFileName;
-		LogWrittenMulticast					 _onLogWritten;
-		ConcurrentQueue<LogRecord, 4096>	 _queue;
-		std::thread							 _workerThread;
-		std::condition_variable_any			 _cv;
-		mutex								 _mutex;	 ///< 파일 쓰기 및 리스너 호출 동기화용 메인 뮤텍스
-		mutex								 _cvMutex;	 ///< 조건 변수 대기용 뮤텍스
-		mutex								 _timeMutex; ///< 타임스탬프 계산 및 문자열 캐시 동기화용 뮤텍스
-		std::FILE*							 _pFile;
-		void*								 _pCachedConsoleHandle; ///< GetStdHandle(STD_OUTPUT_HANDLE) 캐시
-		std::time_t							 _cachedTimeSec;		///< 초 단위 캐시된 시스템 시간
-		int32								 _cachedYear;
-		int32								 _cachedMonth;
-		int32								 _cachedDay;
-		int32								 _cachedHour;
-		int32								 _lastLogHour;			   ///< 시간별 로그 파일 롤오버 감지용
-		uint16								 _defaultConsoleAttribute; ///< 초기 콘솔 텍스트 색상 속성
-		atomic<bool>						 _bIsRunning;
-		bool								 _bInitialized;
-		bool								 _bHasConsole;	 ///< 표준 출력 콘솔 유효성 여부
-		fixed_string<constant::kMaxBuffer32> _cachedDateStr; ///< 캐시된 YYYY-M-D H:M: 포맷 날짜 문자열
+		string							 _logFolderPath;
+		string							 _currentLogFileName;
+		LogWrittenMulticast				 _onLogWritten;
+		ConcurrentQueue<LogRecord, 4096> _queue;
+		std::thread						 _workerThread;
+		std::condition_variable_any		 _cv;
+		mutex							 _mutex;	 ///< 파일 쓰기 및 리스너 호출 동기화용 메인 뮤텍스
+		mutex							 _cvMutex;	 ///< 조건 변수 대기용 뮤텍스
+		mutex							 _timeMutex; ///< 타임스탬프 계산 및 문자열 캐시 동기화용 뮤텍스
+		std::FILE*						 _pFile;
+		void*							 _pCachedConsoleHandle; ///< GetStdHandle(STD_OUTPUT_HANDLE) 캐시
+		std::time_t						 _cachedTimeSec;		///< 초 단위 캐시된 시스템 시간
+		int32							 _cachedYear;
+		int32							 _cachedMonth;
+		int32							 _cachedDay;
+		int32							 _cachedHour;
+		int32							 _lastLogHour;			   ///< 시간별 로그 파일 롤오버 감지용
+		uint16							 _defaultConsoleAttribute; ///< 초기 콘솔 텍스트 색상 속성
+		atomic<bool>					 _bIsRunning;
+		bool							 _bInitialized;
+		bool							 _bHasConsole;								///< 표준 출력 콘솔 유효성 여부
+		utf8							 _arrCachedDateStr[constant::kMaxBuffer32]; ///< 캐시된 YYYY-M-D H:M: 포맷 날짜 문자열
 	};
+
+	[[maybe_unused]] static inline constexpr const ::utf8* swGetLogCaller( ... ) { return nullptr; }
 } // namespace sw
+
+[[maybe_unused]] static inline constexpr const ::utf8* swGetLogCaller( ... ) { return nullptr; }
+
+// ------------------------------------------------------------------------------
+// 4) SW_LOG_* — Debug 에서만 포맷·기록. Release 는 no-op
+// ------------------------------------------------------------------------------
+
+/**
+ * @brief 현재 파일 또는 네임스페이스 스코프의 로그 Caller(클래스/시스템명)를 지정합니다.
+ */
+#define SW_LOG_CALLER( name ) \
+	[[maybe_unused]] static inline constexpr const ::utf8* swGetLogCaller( ::int32 = 0 ) { return name; }
+
+#if defined( SW_DEBUG )
+	/**
+	 * @brief 포맷 문자열(+인자)을 파싱한 뒤 Logger::writeLog 로 전달하는 코어 매크로
+	 * @note 메시지 문자열을 __VA_ARGS__ 첫 인자로 받아, 가변 인자 생략(C++20) 확장을 쓰지 않습니다.
+	 */
+	#define SW_LOG_INTERNAL( level, ... )                                                                          \
+		do                                                                                                         \
+		{                                                                                                          \
+			::utf8 arrBuffer[::sw::constant::kMaxBuffer8192];                                                      \
+			::sw::formatstring( arrBuffer, ::sw::constant::kMaxBuffer8192, __VA_ARGS__ );                          \
+			::sw::Logger::writeLogGlobal( level, SW_LOG_TAG, swGetLogCaller( 0 ), arrBuffer, __FILE__, __LINE__ ); \
+		} while ( false )
+
+	/** @brief Error 레벨로 포맷해 남깁니다. */
+	#define SW_LOG_ERROR( ... ) SW_LOG_INTERNAL( sw::LogLevel::Error, __VA_ARGS__ )
+	/** @brief Warning 레벨로 포맷해 남깁니다. */
+	#define SW_LOG_WARNING( ... ) SW_LOG_INTERNAL( sw::LogLevel::Warning, __VA_ARGS__ )
+	/** @brief Info 레벨로 포맷해 남깁니다. */
+	#define SW_LOG_INFO( ... ) SW_LOG_INTERNAL( sw::LogLevel::Info, __VA_ARGS__ )
+	/** @brief Trace 레벨로 포맷해 남깁니다. */
+	#define SW_LOG_TRACE( ... ) SW_LOG_INTERNAL( sw::LogLevel::Trace, __VA_ARGS__ )
+
+	/**
+	 * @brief 조건 실패 시 메시지·식·파일·함수·라인을 Error로 남기고 디버그 브레이크
+	 * @note Release에서는 no-op. 무조건 실패는 SW_LOG_ASSERT( false, ... )로 호출.
+	 */
+	#define SW_LOG_ASSERT( expr, ... )                                                           \
+		do                                                                                       \
+		{                                                                                        \
+			if ( !( expr ) )                                                                     \
+			{                                                                                    \
+				utf8 _assertMsg[sw::constant::kMaxBuffer8192];                                   \
+				sw::formatstring( _assertMsg, sw::constant::kMaxBuffer8192, __VA_ARGS__ );       \
+				SW_LOG_INTERNAL( sw::LogLevel::Error,                                            \
+								 "ASSERT failed\n"                                               \
+								 "Expression : %#\n"                                             \
+								 "Message    : %#\n"                                             \
+								 "FileName   : %#\n"                                             \
+								 "Function   : %#\n"                                             \
+								 "Line       : %#",                                              \
+								 #expr, _assertMsg, __FILE__, SW_FUNCTION_SIGNATURE, __LINE__ ); \
+				SW_DEBUG_BREAK();                                                                \
+			}                                                                                    \
+		} while ( false )
+#else
+	#define SW_LOG_ERROR( ... )
+	#define SW_LOG_WARNING( ... )
+	#define SW_LOG_INFO( ... )
+	#define SW_LOG_TRACE( ... )
+	#define SW_LOG_ASSERT( expr, ... )
+#endif

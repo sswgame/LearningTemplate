@@ -8,6 +8,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
 
 namespace sw
 {
@@ -40,7 +41,7 @@ namespace sw
 		, _bIsRunning{ false }
 		, _bInitialized{ false }
 		, _bHasConsole{ false }
-		, _cachedDateStr{}
+		, _arrCachedDateStr{}
 	{
 		ILogSink* pExpected{ nullptr };
 		s_globalSink.compare_exchange_strong( pExpected, this, std::memory_order_acq_rel, std::memory_order_relaxed );
@@ -239,7 +240,7 @@ namespace sw
 			const std::time_t		timeSec = std::time( nullptr );
 			if ( timeSec == _cachedTimeSec )
 			{
-				dateStr = _cachedDateStr;
+				dateStr = _arrCachedDateStr;
 				year	= _cachedYear;
 				month	= _cachedMonth;
 				day		= _cachedDay;
@@ -262,8 +263,8 @@ namespace sw
 				const int32 minute = localTime.tm_min;
 				const int32 second = localTime.tm_sec;
 
-				formatstring( _cachedDateStr.data(), _cachedDateStr.capacity(), "%#-%#-%# %#:%#:%#", year, month, day, hour, minute, second );
-				dateStr		   = _cachedDateStr;
+				formatstring( _arrCachedDateStr, sizeof( _arrCachedDateStr ), "%#-%#-%# %#:%#:%#", year, month, day, hour, minute, second );
+				dateStr		   = _arrCachedDateStr;
 				_cachedTimeSec = timeSec;
 				_cachedYear	   = year;
 				_cachedMonth   = month;
