@@ -22,6 +22,17 @@ jobs:
         choco install llvm --yes --no-progress
         echo "C:\Program Files\LLVM\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
+    - name: Cache vcpkg tools and binary artifacts
+      uses: actions/cache@v4
+      with:
+        path: |
+          ${{ github.workspace }}/Tools/vcpkg
+          ${{ github.workspace }}/build/vcpkg_cache
+        key: vcpkg-${{ runner.os }}-windows-${{ hashFiles('vcpkg.json') }}
+        restore-keys: |
+          vcpkg-${{ runner.os }}-windows-
+          vcpkg-${{ runner.os }}-
+
     - name: Setup vcpkg
       uses: lukka/run-vcpkg@v11
       with:
@@ -82,6 +93,17 @@ jobs:
         fi
         echo "LLVM kit not found under /usr/lib/llvm-* or /usr" >&2
         exit 1
+
+    - name: Cache vcpkg tools and binary artifacts
+      uses: actions/cache@v4
+      with:
+        path: |
+          ${{ github.workspace }}/Tools/vcpkg
+          ${{ github.workspace }}/build/vcpkg_cache
+        key: vcpkg-${{ runner.os }}-linux-${{ hashFiles('vcpkg.json') }}
+        restore-keys: |
+          vcpkg-${{ runner.os }}-linux-
+          vcpkg-${{ runner.os }}-
 
     - name: Setup vcpkg
       uses: lukka/run-vcpkg@v11
@@ -144,6 +166,17 @@ jobs:
         echo "LLVM kit not found under /usr/lib/llvm-* or /usr" >&2
         exit 1
 
+    - name: Cache vcpkg tools and binary artifacts
+      uses: actions/cache@v4
+      with:
+        path: |
+          ${{ github.workspace }}/Tools/vcpkg
+          ${{ github.workspace }}/build/vcpkg_cache
+        key: vcpkg-${{ runner.os }}-linux-asan-${{ hashFiles('vcpkg.json') }}
+        restore-keys: |
+          vcpkg-${{ runner.os }}-linux-asan-
+          vcpkg-${{ runner.os }}-
+
     - name: Setup vcpkg
       uses: lukka/run-vcpkg@v11
       with:
@@ -180,6 +213,17 @@ jobs:
       run: |
         choco install llvm --yes --no-progress
         echo "C:\Program Files\LLVM\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+    - name: Cache vcpkg tools and binary artifacts
+      uses: actions/cache@v4
+      with:
+        path: |
+          ${{ github.workspace }}/Tools/vcpkg
+          ${{ github.workspace }}/build/vcpkg_cache
+        key: vcpkg-${{ runner.os }}-windows-shipping-${{ hashFiles('vcpkg.json') }}
+        restore-keys: |
+          vcpkg-${{ runner.os }}-windows-shipping-
+          vcpkg-${{ runner.os }}-
 
     - name: Setup vcpkg
       uses: lukka/run-vcpkg@v11
@@ -240,6 +284,17 @@ jobs:
         fi
         echo "LLVM kit not found under /usr/lib/llvm-* or /usr" >&2
         exit 1
+
+    - name: Cache vcpkg tools and binary artifacts
+      uses: actions/cache@v4
+      with:
+        path: |
+          ${{ github.workspace }}/Tools/vcpkg
+          ${{ github.workspace }}/build/vcpkg_cache
+        key: vcpkg-${{ runner.os }}-linux-shipping-${{ hashFiles('vcpkg.json') }}
+        restore-keys: |
+          vcpkg-${{ runner.os }}-linux-shipping-
+          vcpkg-${{ runner.os }}-
 
     - name: Setup vcpkg
       uses: lukka/run-vcpkg@v11
