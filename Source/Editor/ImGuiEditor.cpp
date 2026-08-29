@@ -369,7 +369,7 @@ namespace sw::editor
 
 		if ( event.isMouseInput() )
 		{
-			if ( event.isInputRelease() == false && io.WantCaptureMouse && bGameViewHovered == false )
+			if ( io.WantCaptureMouse && bGameViewHovered == false )
 				return true;
 			return false;
 		}

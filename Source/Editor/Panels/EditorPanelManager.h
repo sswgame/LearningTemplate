@@ -52,8 +52,8 @@ namespace sw::editor
 		TPanel* registerPanel( EditorPanelCategory category = EditorPanelCategory::Core,
 							   string_view		   menuPath = {}, TArgs&&... args )
 		{
-			auto	pPanel = make_unique<TPanel>( std::forward<TArgs>( args )... );
-			TPanel* pRaw   = pPanel.get();
+			unique_ptr<TPanel> pPanel = make_unique<TPanel>( std::forward<TArgs>( args )... );
+			TPanel*			   pRaw	  = pPanel.get();
 			registerPanel( std::move( pPanel ), category, menuPath );
 			return pRaw;
 		}

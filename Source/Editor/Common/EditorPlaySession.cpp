@@ -145,6 +145,7 @@ namespace sw::editor
 				}
 
 				// 2. 기존 오브젝트 상태 복구 및 삭제된 오브젝트 재생성
+				unordered_map<uint64, GameObject*> mapRestored;
 				for ( const ObjectSnapshot& snap : s_listPlaySnapshots )
 				{
 					GameObject* pObj = pObjects->findGameObjectById( snap._objectId );
@@ -158,6 +159,8 @@ namespace sw::editor
 						}
 					}
 
+					mapRestored[snap._objectId] = pObj;
+
 					if ( ObjectStateSerializer::loadFromXmlString( pObj, snap._xml ) == false )
 						SW_LOG_WARNING( "Failed to restore '%#' from play snapshot.", snap._name.c_str() );
 				}
@@ -165,9 +168,11 @@ namespace sw::editor
 				// 3. 계층 관계 리바인딩
 				for ( const ObjectSnapshot& snap : s_listPlaySnapshots )
 				{
-					GameObject* pObj = pObjects->findGameObjectByName( hashed_string( snap._name.c_str() ) );
-					if ( pObj == nullptr )
-						pObj = pObjects->findGameObjectById( snap._objectId );
+					GameObject* pObj = nullptr;
+					auto		it	 = mapRestored.find( snap._objectId );
+					if ( it != mapRestored.end() )
+						pObj = it->second;
+
 					if ( pObj == nullptr )
 						continue;
 
