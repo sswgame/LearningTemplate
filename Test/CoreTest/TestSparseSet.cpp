@@ -126,3 +126,57 @@ SW_TEST_CASE( SparseSet, ShrinkToFitReclaimsCapacity )
 		SW_EXPECT_FALSE( set.contains( index ) );
 	}
 }
+
+/**
+ * @brief [SparseSet] find 및 get 메서드 검증 (const 및 non-const)
+ */
+SW_TEST_CASE( SparseSet, FindAndGetMethods )
+{
+	sparse_set<int32> set;
+	set.emplace( 10, 100 );
+	set.emplace( 20, 200 );
+
+	// 1) non-const find
+	int32* pFound = set.find( 10 );
+	SW_ASSERT_NOT_NULL( pFound );
+	SW_EXPECT_EQUAL( 100, *pFound );
+	*pFound = 150;
+	SW_EXPECT_EQUAL( 150, set[10] );
+
+	SW_EXPECT_NULL( set.find( 999 ) );
+
+	// 2) const find
+	const sparse_set<int32>& constSet	   = set;
+	const int32*			 pConstFound   = constSet.find( 20 );
+	const int32*			 pConstMissing = constSet.find( 999 );
+	SW_ASSERT_NOT_NULL( pConstFound );
+	SW_EXPECT_EQUAL( 200, *pConstFound );
+	SW_EXPECT_NULL( pConstMissing );
+
+	// 3) get(key, outValue)
+	int32 outVal{ 0 };
+	SW_EXPECT_TRUE( set.get( 10, outVal ) );
+	SW_EXPECT_EQUAL( 150, outVal );
+	SW_EXPECT_FALSE( set.get( 999, outVal ) );
+}
+
+/**
+ * @brief [SparseSet] getDenseKeys 및 clear 검증
+ */
+SW_TEST_CASE( SparseSet, DenseKeysAndClear )
+{
+	sparse_set<int32> set;
+	set.emplace( 100, 1 );
+	set.emplace( 200, 2 );
+	set.emplace( 300, 3 );
+
+	const sw::vector<uint32>& keys = set.getDenseKeys();
+	SW_EXPECT_EQUAL( 3u, keys.size() );
+
+	set.clear();
+	SW_EXPECT_EQUAL( 0, set.size() );
+	SW_EXPECT_FALSE( set.contains( 100 ) );
+	SW_EXPECT_FALSE( set.contains( 200 ) );
+	SW_EXPECT_FALSE( set.contains( 300 ) );
+	SW_EXPECT_TRUE( set.getDenseKeys().empty() );
+}

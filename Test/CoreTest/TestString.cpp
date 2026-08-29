@@ -454,3 +454,247 @@ SW_TEST_CASE( Core_String, Utf8BomHandling )
 
 	sw::FileUtil::removeFile( bomFilePath );
 }
+
+/**
+ * @brief [Core_String] FixedString 다양한 생성자, 대입 및 assign 동작 검증
+ */
+SW_TEST_CASE( Core_String, FixedStringConstructorsAndAssignments )
+{
+	// 1) 기본 생성자
+	sw::fixed_string<32> defaultStr;
+	SW_EXPECT_TRUE( defaultStr.empty() );
+	SW_EXPECT_EQUAL( 0u, defaultStr.size() );
+	SW_EXPECT_EQUAL( 0u, defaultStr.length() );
+	SW_EXPECT_EQUAL( 32u, defaultStr.capacity() );
+	SW_EXPECT_EQUAL( 32u, defaultStr.max_size() );
+	SW_EXPECT_STREQ( "", defaultStr.c_str() );
+
+	// 2) nullptr 생성자 (안전하게 빈 문자열로 초기화)
+	sw::fixed_string<32> nullStr( static_cast<const utf8*>( nullptr ) );
+	SW_EXPECT_TRUE( nullStr.empty() );
+	SW_EXPECT_EQUAL( 0u, nullStr.size() );
+
+	// 3) 채우기(fill) 생성자
+	sw::fixed_string<32> fillStr( 5u, 'X' );
+	SW_EXPECT_FALSE( fillStr.empty() );
+	SW_EXPECT_EQUAL( 5u, fillStr.size() );
+	SW_EXPECT_STREQ( "XXXXX", fillStr.c_str() );
+
+	// 4) std::string 및 std::string_view 생성자
+	const std::string	   stdStrSource = "FromStdString";
+	const std::string_view svSource		= "FromView";
+	sw::fixed_string<32>   fromStd( stdStrSource );
+	sw::fixed_string<32>   fromSv( svSource );
+	SW_EXPECT_STREQ( "FromStdString", fromStd.c_str() );
+	SW_EXPECT_STREQ( "FromView", fromSv.c_str() );
+
+	// 5) 복사 생성자 및 이동 생성자
+	sw::fixed_string<32> copyStr( fromStd );
+	SW_EXPECT_STREQ( "FromStdString", copyStr.c_str() );
+	sw::fixed_string<32> moveStr( std::move( copyStr ) );
+	SW_EXPECT_STREQ( "FromStdString", moveStr.c_str() );
+
+	// 6) 대입 연산자들 (const char*, nullptr, std::string, std::string_view, fixed_string)
+	sw::fixed_string<32> assignTarget;
+	assignTarget = "AssignedCStr";
+	SW_EXPECT_STREQ( "AssignedCStr", assignTarget.c_str() );
+
+	assignTarget = static_cast<const utf8*>( nullptr );
+	SW_EXPECT_TRUE( assignTarget.empty() );
+	SW_EXPECT_STREQ( "", assignTarget.c_str() );
+
+	assignTarget = stdStrSource;
+	SW_EXPECT_STREQ( "FromStdString", assignTarget.c_str() );
+
+	assignTarget = svSource;
+	SW_EXPECT_STREQ( "FromView", assignTarget.c_str() );
+
+	assignTarget = fillStr;
+	SW_EXPECT_STREQ( "XXXXX", assignTarget.c_str() );
+
+	// 7) assign() 멤버 함수들
+	assignTarget.assign( "NewAssign" );
+	SW_EXPECT_STREQ( "NewAssign", assignTarget.c_str() );
+	assignTarget.assign( fromStd );
+	SW_EXPECT_STREQ( "FromStdString", assignTarget.c_str() );
+}
+
+/**
+ * @brief [Core_String] FixedString 비교 및 연산자 (==, !=, <, <=, >, >=, +, +=, <<, >>)
+ */
+SW_TEST_CASE( Core_String, FixedStringComparisonAndOperators )
+{
+	sw::fixed_string<32> strA( "Alpha" );
+	sw::fixed_string<32> strA2( "Alpha" );
+	sw::fixed_string<32> strB( "Beta" );
+
+	// 비교 연산자 (fixed_string vs fixed_string)
+	SW_EXPECT_TRUE( strA == strA2 );
+	SW_EXPECT_FALSE( strA != strA2 );
+	SW_EXPECT_TRUE( strA != strB );
+	SW_EXPECT_TRUE( strA < strB );
+	SW_EXPECT_TRUE( strA <= strB );
+	SW_EXPECT_TRUE( strA <= strA2 );
+	SW_EXPECT_TRUE( strB > strA );
+	SW_EXPECT_TRUE( strB >= strA );
+	SW_EXPECT_TRUE( strA2 >= strA );
+
+	// 비교 연산자 (fixed_string vs const char*)
+	SW_EXPECT_TRUE( strA == "Alpha" );
+	SW_EXPECT_FALSE( strA == "Beta" );
+	SW_EXPECT_TRUE( strA != "Beta" );
+	SW_EXPECT_FALSE( strA != "Alpha" );
+
+	// operator+ 및 operator+=
+	sw::fixed_string<64> sum1 = strA + strB;
+	SW_EXPECT_STREQ( "AlphaBeta", sum1.c_str() );
+
+	sw::fixed_string<64> sum2 = strA + "Gamma";
+	SW_EXPECT_STREQ( "AlphaGamma", sum2.c_str() );
+
+	sw::fixed_string<64> sum3 = "Prefix" + strA;
+	SW_EXPECT_STREQ( "PrefixAlpha", sum3.c_str() );
+
+	sw::fixed_string<64> mutStr( "Base" );
+	mutStr += "_";
+	mutStr += strA;
+	mutStr += '!';
+	SW_EXPECT_STREQ( "Base_Alpha!", mutStr.c_str() );
+
+	// stream << 및 >> 연산자
+	std::ostringstream outStream;
+	outStream << strA;
+	SW_EXPECT_EQUAL( std::string( "Alpha" ), outStream.str() );
+
+	std::istringstream	 inStream( "StreamedContent" );
+	sw::fixed_string<32> streamTarget;
+	inStream >> streamTarget;
+	SW_EXPECT_STREQ( "StreamedContent", streamTarget.c_str() );
+}
+
+/**
+ * @brief [Core_String] FixedString 최대 용량(N) 경계 조건 및 널 종단 무결성
+ */
+SW_TEST_CASE( Core_String, FixedStringBoundaryAndMaxCapacity )
+{
+	// 정확히 용량 16 문자를 채웠을 때 검증
+	sw::fixed_string<16> maxStr( "0123456789ABCDEF" );
+	SW_EXPECT_EQUAL( 16u, maxStr.size() );
+	SW_EXPECT_EQUAL( 16u, maxStr.capacity() );
+	SW_EXPECT_EQUAL( 16u, maxStr.max_size() );
+	SW_EXPECT_STREQ( "0123456789ABCDEF", maxStr.c_str() );
+	SW_EXPECT_EQUAL( '\0', maxStr.data()[16] ); // 16번 인덱스는 항상 널 종단
+
+	// formatstring으로 용량(16) 내 작성 시 안전한 널 종단(15자 + '\0') 보장
+	sw::fixed_string<16> fmtMax;
+	sw::formatstring( fmtMax.data(), fmtMax.capacity(), "%#", "0123456789ABCDEF" );
+	SW_EXPECT_EQUAL( 15u, fmtMax.size() );
+	SW_EXPECT_STREQ( "0123456789ABCDE", fmtMax.c_str() );
+	SW_EXPECT_EQUAL( '\0', fmtMax.data()[15] );
+}
+
+/**
+ * @brief [Core_String] FixedString data() 버퍼 직접 변경 후 컨테이너 연산(insert, erase, append 등) 통합 검증
+ */
+SW_TEST_CASE( Core_String, FixedStringDirectMutationAndContainerOps )
+{
+	sw::fixed_string<64> str;
+	// 1) data()로 직접 기록
+	sw::StringUtil::strncpy( str.data(), "Player", str.capacity() );
+	SW_EXPECT_EQUAL( 6u, str.size() );
+	SW_EXPECT_STREQ( "Player", str.c_str() );
+
+	// 2) data() 수정 후 push_back
+	str.push_back( '1' );
+	SW_EXPECT_EQUAL( 7u, str.size() );
+	SW_EXPECT_STREQ( "Player1", str.c_str() );
+
+	// 3) data() 수정 후 append
+	str.append( "_Knight" );
+	SW_EXPECT_EQUAL( 14u, str.size() );
+	SW_EXPECT_STREQ( "Player1_Knight", str.c_str() );
+
+	// 4) data() 수정 후 insert
+	str.insert( 0, "Hero_" );
+	SW_EXPECT_EQUAL( 19u, str.size() );
+	SW_EXPECT_STREQ( "Hero_Player1_Knight", str.c_str() );
+
+	// 5) data() 수정 후 erase
+	str.erase( 0, 5 ); // "Hero_" 제거
+	SW_EXPECT_EQUAL( 14u, str.size() );
+	SW_EXPECT_STREQ( "Player1_Knight", str.c_str() );
+
+	// 6) data() 수정 후 find 및 substr
+	SW_EXPECT_EQUAL( 8u, str.find( "Knight" ) );
+	sw::fixed_string<64> sub = str.substr( 8, 6 );
+	SW_EXPECT_STREQ( "Knight", sub.c_str() );
+
+	// 7) data() 수정 후 pop_back
+	str.pop_back(); // 't' 제거
+	SW_EXPECT_EQUAL( 13u, str.size() );
+	SW_EXPECT_STREQ( "Player1_Knigh", str.c_str() );
+}
+
+/**
+ * @brief [Core_String] fixed_wstring (UTF-16) 광범위 동작 검증
+ */
+SW_TEST_CASE( Core_String, FixedWStringOperations )
+{
+	sw::fixed_wstring<32> wstr( L"UnicodeString" );
+	SW_EXPECT_FALSE( wstr.empty() );
+	SW_EXPECT_EQUAL( 13u, wstr.size() );
+	SW_EXPECT_EQUAL( 32u, wstr.capacity() );
+	SW_EXPECT_TRUE( wstr.view() == std::wstring_view( L"UnicodeString" ) );
+
+	wstr.append( L"_W" );
+	SW_EXPECT_EQUAL( 15u, wstr.size() );
+
+	wstr.push_back( L'!' );
+	SW_EXPECT_EQUAL( 16u, wstr.size() );
+
+	wstr.insert( 0, L"Pre_" );
+	SW_EXPECT_EQUAL( 20u, wstr.size() );
+
+	wstr.erase( 0, 4 );
+	SW_EXPECT_EQUAL( 16u, wstr.size() );
+
+	SW_EXPECT_EQUAL( 0u, wstr.find( L"Unicode" ) );
+	sw::fixed_wstring<32> sub = wstr.substr( 0, 7 );
+	SW_EXPECT_EQUAL( 7u, sub.size() );
+	SW_EXPECT_TRUE( sub == sw::fixed_wstring<32>( L"Unicode" ) );
+
+	// std::hash 특수화 검증
+	std::hash<sw::fixed_wstring<32>> hasher;
+	size_t							 h1 = hasher( wstr );
+	size_t							 h2 = hasher( sw::fixed_wstring<32>( wstr.c_str() ) );
+	SW_EXPECT_EQUAL( h1, h2 );
+
+	wstr.clear();
+	SW_EXPECT_TRUE( wstr.empty() );
+	SW_EXPECT_EQUAL( 0u, wstr.size() );
+}
+
+/**
+ * @brief [Core_String] FixedString의 std::unordered_map 및 std::unordered_set 연동 검증
+ */
+SW_TEST_CASE( Core_String, FixedStringUnorderedContainers )
+{
+	// 1) std::unordered_set
+	std::unordered_set<sw::fixed_string<32>> uniqueSet;
+	uniqueSet.insert( sw::fixed_string<32>( "Entity_A" ) );
+	uniqueSet.insert( sw::fixed_string<32>( "Entity_B" ) );
+	uniqueSet.insert( sw::fixed_string<32>( "Entity_A" ) ); // 중복
+
+	SW_EXPECT_EQUAL( 2u, uniqueSet.size() );
+	SW_EXPECT_TRUE( uniqueSet.find( sw::fixed_string<32>( "Entity_A" ) ) != uniqueSet.end() );
+	SW_EXPECT_TRUE( uniqueSet.find( sw::fixed_string<32>( "Entity_C" ) ) == uniqueSet.end() );
+
+	// 2) std::unordered_map
+	std::unordered_map<sw::fixed_string<32>, int32> mapScore;
+	mapScore[sw::fixed_string<32>( "Player1" )] = 100;
+	mapScore[sw::fixed_string<32>( "Player2" )] = 250;
+
+	SW_EXPECT_EQUAL( 2u, mapScore.size() );
+	SW_EXPECT_EQUAL( 100, mapScore[sw::fixed_string<32>( "Player1" )] );
+	SW_EXPECT_EQUAL( 250, mapScore[sw::fixed_string<32>( "Player2" )] );
+}

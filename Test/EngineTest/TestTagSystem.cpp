@@ -214,3 +214,45 @@ SW_TEST_CASE( TagSystemTest, GameObjectAndTagComponentQueryIntegration )
 	SW_EXPECT_TRUE( pTagComp->matchesQuery( goodQuery ) );
 	SW_EXPECT_FALSE( pTagComp->matchesQuery( badQuery ) );
 }
+
+/**
+ * @brief [TagSystemTest] 다단계(4단계) 계층 매칭 및 태그 배치 추가/삭제 검증
+ */
+SW_TEST_CASE( TagSystemTest, DeepHierarchyAndBatchOperations )
+{
+	constexpr TagID root	 = "Game"_tag;
+	constexpr TagID level1	 = "Game.Unit"_tag;
+	constexpr TagID level2	 = "Game.Unit.Hero"_tag;
+	constexpr TagID level3	 = "Game.Unit.Hero.Mage"_tag;
+	constexpr TagID sibling3 = "Game.Unit.Hero.Warrior"_tag;
+
+	SW_EXPECT_TRUE( level3.isSubtagOf( level2 ) );
+	SW_EXPECT_TRUE( level3.isSubtagOf( level1 ) );
+	SW_EXPECT_TRUE( level3.isSubtagOf( root ) );
+	SW_EXPECT_FALSE( level3.isSubtagOf( sibling3 ) );
+
+	TagContainer container;
+	container.addTag( level3 );
+	SW_EXPECT_TRUE( container.hasTag( level3, true ) );
+	SW_EXPECT_TRUE( container.hasTag( level2, false ) );
+	SW_EXPECT_TRUE( container.hasTag( level1, false ) );
+	SW_EXPECT_TRUE( container.hasTag( root, false ) );
+	SW_EXPECT_FALSE( container.hasTag( sibling3, false ) );
+
+	// 런타임 TagID::request 및 동적 태그 검증
+	TagID dynamicTag = TagID::request( "Runtime.Dynamic.Effect" );
+	SW_EXPECT_TRUE( dynamicTag.isValid() );
+	SW_EXPECT_TRUE( dynamicTag.isSubtagOf( TagID::request( "Runtime.Dynamic" ) ) );
+	SW_EXPECT_TRUE( dynamicTag.isSubtagOf( TagID::request( "Runtime" ) ) );
+
+	container.addTag( dynamicTag );
+	SW_EXPECT_EQUAL( 2u, container.getTagCount() );
+	SW_EXPECT_TRUE( container.hasTag( dynamicTag, true ) );
+
+	TagContainer matchReq{ level3, dynamicTag };
+	SW_EXPECT_TRUE( container.hasAllTags( matchReq ) );
+
+	container.removeTag( dynamicTag );
+	SW_EXPECT_EQUAL( 1u, container.getTagCount() );
+	SW_EXPECT_FALSE( container.hasTag( dynamicTag, true ) );
+}

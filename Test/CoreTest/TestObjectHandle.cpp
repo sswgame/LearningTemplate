@@ -43,3 +43,99 @@ SW_TEST_CASE( HandleTable, GenerationInvalidatesStaleHandles )
 	SW_ASSERT_NOT_NULL( reused );
 	SW_EXPECT_EQUAL( 99u, *reused );
 }
+
+SW_TEST_CASE( HandleTable, MultiSlotAndFreeListRecycling )
+{
+	HandleTable<int32> table;
+	ObjectHandle	   h0 = table.insert( 100 );
+	ObjectHandle	   h1 = table.insert( 200 );
+	ObjectHandle	   h2 = table.insert( 300 );
+	ObjectHandle	   h3 = table.insert( 400 );
+
+	SW_EXPECT_EQUAL( 100, *table.get( h0 ) );
+	SW_EXPECT_EQUAL( 200, *table.get( h1 ) );
+	SW_EXPECT_EQUAL( 300, *table.get( h2 ) );
+	SW_EXPECT_EQUAL( 400, *table.get( h3 ) );
+
+	// h1(index 1)과 h3(index 3) 삭제
+	table.erase( h1 );
+	table.erase( h3 );
+
+	SW_EXPECT_TRUE( table.get( h1 ) == nullptr );
+	SW_EXPECT_TRUE( table.get( h3 ) == nullptr );
+	SW_EXPECT_TRUE( table.get( h0 ) != nullptr );
+	SW_EXPECT_TRUE( table.get( h2 ) != nullptr );
+
+	// 새로운 아이템 삽입 (프리 리스트에서 재활용)
+	ObjectHandle hRecycle1 = table.insert( 500 );
+	ObjectHandle hRecycle2 = table.insert( 600 );
+
+	// 재활용된 슬롯은 인덱스는 같으나 generation이 증가하여 고유함
+	SW_EXPECT_TRUE( hRecycle1.index() == h3.index() || hRecycle1.index() == h1.index() );
+	SW_EXPECT_TRUE( hRecycle2.index() == h3.index() || hRecycle2.index() == h1.index() );
+	SW_EXPECT_TRUE( table.get( h1 ) == nullptr );
+	SW_EXPECT_TRUE( table.get( h3 ) == nullptr );
+	SW_EXPECT_EQUAL( 500, *table.get( hRecycle1 ) );
+	SW_EXPECT_EQUAL( 600, *table.get( hRecycle2 ) );
+}
+
+SW_TEST_CASE( HandleTable, ForEachAndIteration )
+{
+	HandleTable<int32> table;
+	ObjectHandle	   h0 = table.insert( 10 );
+	ObjectHandle	   h1 = table.insert( 20 );
+	ObjectHandle	   h2 = table.insert( 30 );
+	table.erase( h1 );
+
+	// 1) forEach
+	int32 sum{ 0 };
+	table.forEach( [&sum]( int32 val )
+	{
+		sum += val;
+	} );
+	SW_EXPECT_EQUAL( 40, sum );
+
+	// 2) forEachHandle (non-const)
+	uint32 visitedCount{ 0 };
+	table.forEachHandle( [&visitedCount]( ObjectHandle handle, int32& val )
+	{
+		SW_EXPECT_TRUE( handle.isValid() );
+		val += 1;
+		++visitedCount;
+	} );
+	SW_EXPECT_EQUAL( 2u, visitedCount );
+	SW_EXPECT_EQUAL( 11, *table.get( h0 ) );
+	SW_EXPECT_EQUAL( 31, *table.get( h2 ) );
+
+	// 3) forEachHandle (const)
+	const HandleTable<int32>& constTable = table;
+	int32					  constSum{ 0 };
+	constTable.forEachHandle( [&constSum]( ObjectHandle handle, const int32& val )
+	{
+		SW_EXPECT_TRUE( handle.isValid() );
+		constSum += val;
+	} );
+	SW_EXPECT_EQUAL( 42, constSum );
+}
+
+SW_TEST_CASE( HandleTable, ClearAndInvalidHandleSafety )
+{
+	HandleTable<int32> table;
+	ObjectHandle	   h0 = table.insert( 10 );
+	ObjectHandle	   h1 = table.insert( 20 );
+
+	// 1) 무효 핸들 접근
+	ObjectHandle invalidHandle{};
+	SW_EXPECT_TRUE( table.get( invalidHandle ) == nullptr );
+	int32 takenVal{ 0 };
+	SW_EXPECT_FALSE( table.take( invalidHandle, takenVal ) );
+
+	// 2) 범위 밖의 인덱스 핸들
+	ObjectHandle outOfRange = ObjectHandle::make( 9999u, 1u );
+	SW_EXPECT_TRUE( table.get( outOfRange ) == nullptr );
+
+	// 3) clear
+	table.clear();
+	SW_EXPECT_TRUE( table.get( h0 ) == nullptr );
+	SW_EXPECT_TRUE( table.get( h1 ) == nullptr );
+}

@@ -5,7 +5,14 @@
 #include "Core/Concurrency/LockFreeQueue.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/DynamicBitset.h"
+#include "Core/Container/array.h"
+#include "Core/Container/deque.h"
+#include "Core/Container/list.h"
+#include "Core/Container/map.h"
+#include "Core/Container/set.h"
 #include "Core/Container/string.h"
+#include "Core/Container/unordered_map.h"
+#include "Core/Container/unordered_set.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -437,4 +444,192 @@ SW_TEST_CASE( Core_DataStructure, LockFreeObjectPoolConcurrent )
 	SW_EXPECT_TRUE( successfulAcquires.load() > 0 );
 	SW_EXPECT_EQUAL( 0u, pool.getActiveCount() );
 	SW_EXPECT_EQUAL( kCapacity, pool.getAvailableCount() );
+}
+
+/**
+ * @brief [Core_DataStructure] sw::array 생성, 접근, 채우기 및 이터레이터 검증
+ */
+SW_TEST_CASE( Core_DataStructure, ArrayOperations )
+{
+	// 1) 초기화 리스트 생성
+	sw::array<int32, 4> arr{ 10, 20, 30, 40 };
+	SW_EXPECT_EQUAL( 4u, arr.size() );
+	SW_EXPECT_FALSE( arr.empty() );
+	SW_EXPECT_EQUAL( 10, arr.front() );
+	SW_EXPECT_EQUAL( 40, arr.back() );
+	SW_EXPECT_EQUAL( 20, arr[1] );
+	SW_EXPECT_EQUAL( 30, arr.at( 2 ) );
+
+	// 2) 이터레이터 및 범위 기반 for
+	int32 sum{ 0 };
+	for ( const int32 val : arr )
+	{
+		sum += val;
+	}
+	SW_EXPECT_EQUAL( 100, sum );
+
+	// 3) fill
+	arr.fill( 99 );
+	SW_EXPECT_EQUAL( 99, arr[0] );
+	SW_EXPECT_EQUAL( 99, arr[1] );
+	SW_EXPECT_EQUAL( 99, arr[2] );
+	SW_EXPECT_EQUAL( 99, arr[3] );
+
+	// 4) 복사 및 비교 연산
+	sw::array<int32, 4> copyArr = arr;
+	SW_EXPECT_TRUE( copyArr == arr );
+	copyArr[0] = 100;
+	SW_EXPECT_TRUE( copyArr != arr );
+	SW_EXPECT_TRUE( arr < copyArr );
+}
+
+/**
+ * @brief [Core_DataStructure] sw::map 및 sw::set 정렬 컨테이너 연산 검증
+ */
+SW_TEST_CASE( Core_DataStructure, MapAndSetOperations )
+{
+	// 1) sw::map
+	sw::map<sw::string, int32> mapA;
+	mapA["Bravo"]	= 20;
+	mapA["Alpha"]	= 10;
+	mapA["Charlie"] = 30;
+
+	SW_EXPECT_EQUAL( 3u, mapA.size() );
+	SW_EXPECT_TRUE( mapA.contains( "Alpha" ) );
+	SW_EXPECT_TRUE( mapA.contains( "Bravo" ) );
+	SW_EXPECT_FALSE( mapA.contains( "Delta" ) );
+
+	auto itBravo = mapA.find( "Bravo" );
+	SW_EXPECT_TRUE( itBravo != mapA.end() );
+	if ( itBravo != mapA.end() )
+	{
+		SW_EXPECT_EQUAL( 20, itBravo->second );
+	}
+
+	mapA.erase( "Alpha" );
+	SW_EXPECT_EQUAL( 2u, mapA.size() );
+	SW_EXPECT_FALSE( mapA.contains( "Alpha" ) );
+
+	// 2) sw::set
+	sw::set<int32> setA;
+	setA.insert( 30 );
+	setA.insert( 10 );
+	setA.insert( 20 );
+	setA.insert( 10 ); // 중복 무시
+
+	SW_EXPECT_EQUAL( 3u, setA.size() );
+	SW_EXPECT_TRUE( setA.contains( 10 ) );
+	SW_EXPECT_TRUE( setA.contains( 20 ) );
+	SW_EXPECT_TRUE( setA.contains( 30 ) );
+	SW_EXPECT_FALSE( setA.contains( 40 ) );
+
+	// 정렬 순회 검증
+	sw::vector<int32> listSorted;
+	for ( const int32 val : setA )
+	{
+		listSorted.push_back( val );
+	}
+	SW_EXPECT_EQUAL( 3u, listSorted.size() );
+	SW_EXPECT_EQUAL( 10, listSorted[0] );
+	SW_EXPECT_EQUAL( 20, listSorted[1] );
+	SW_EXPECT_EQUAL( 30, listSorted[2] );
+
+	setA.erase( 20 );
+	SW_EXPECT_EQUAL( 2u, setA.size() );
+	SW_EXPECT_FALSE( setA.contains( 20 ) );
+}
+
+/**
+ * @brief [Core_DataStructure] sw::unordered_map 및 sw::unordered_set 해시 컨테이너 연산 검증
+ */
+SW_TEST_CASE( Core_DataStructure, UnorderedMapAndSetOperations )
+{
+	// 1) sw::unordered_map
+	sw::unordered_map<int32, sw::string> uMap;
+	uMap[100] = "OneHundred";
+	uMap[200] = "TwoHundred";
+	uMap[300] = "ThreeHundred";
+
+	SW_EXPECT_EQUAL( 3u, uMap.size() );
+	SW_EXPECT_TRUE( uMap.find( 100 ) != uMap.end() );
+	SW_EXPECT_TRUE( uMap.find( 200 ) != uMap.end() );
+	SW_EXPECT_TRUE( uMap.find( 400 ) == uMap.end() );
+
+	auto it = uMap.find( 100 );
+	SW_EXPECT_TRUE( it != uMap.end() );
+	if ( it != uMap.end() )
+	{
+		SW_EXPECT_EQUAL( sw::string( "OneHundred" ), it->second );
+	}
+
+	uMap.erase( 100 );
+	SW_EXPECT_EQUAL( 2u, uMap.size() );
+	SW_EXPECT_TRUE( uMap.find( 100 ) == uMap.end() );
+
+	// 2) sw::unordered_set
+	sw::unordered_set<int32> uSet;
+	uSet.insert( 42 );
+	uSet.insert( 84 );
+	uSet.insert( 42 ); // 중복 무시
+
+	SW_EXPECT_EQUAL( 2u, uSet.size() );
+	SW_EXPECT_TRUE( uSet.find( 42 ) != uSet.end() );
+	SW_EXPECT_TRUE( uSet.find( 84 ) != uSet.end() );
+	SW_EXPECT_TRUE( uSet.find( 99 ) == uSet.end() );
+	SW_EXPECT_EQUAL( 1u, uSet.count( 42 ) );
+	SW_EXPECT_EQUAL( 0u, uSet.count( 99 ) );
+
+	uSet.erase( 42 );
+	SW_EXPECT_EQUAL( 1u, uSet.size() );
+	SW_EXPECT_TRUE( uSet.find( 42 ) == uSet.end() );
+}
+
+/**
+ * @brief [Core_DataStructure] sw::deque 및 sw::list 양방향 컨테이너 연산 검증
+ */
+SW_TEST_CASE( Core_DataStructure, DequeAndListOperations )
+{
+	// 1) sw::deque
+	sw::deque<int32> dq;
+	dq.push_back( 20 );
+	dq.push_front( 10 );
+	dq.push_back( 30 );
+
+	SW_EXPECT_EQUAL( 3u, dq.size() );
+	SW_EXPECT_EQUAL( 10, dq.front() );
+	SW_EXPECT_EQUAL( 30, dq.back() );
+	SW_EXPECT_EQUAL( 20, dq[1] );
+
+	dq.pop_front();
+	SW_EXPECT_EQUAL( 2u, dq.size() );
+	SW_EXPECT_EQUAL( 20, dq.front() );
+
+	dq.pop_back();
+	SW_EXPECT_EQUAL( 1u, dq.size() );
+	SW_EXPECT_EQUAL( 20, dq.front() );
+
+	// 2) sw::list
+	sw::list<int32> lst;
+	lst.push_back( 2 );
+	lst.push_front( 1 );
+	lst.push_back( 3 );
+
+	SW_EXPECT_EQUAL( 3u, lst.size() );
+	SW_EXPECT_EQUAL( 1, lst.front() );
+	SW_EXPECT_EQUAL( 3, lst.back() );
+
+	sw::vector<int32> listIterated;
+	for ( const int32 val : lst )
+	{
+		listIterated.push_back( val );
+	}
+	SW_EXPECT_EQUAL( 3u, listIterated.size() );
+	SW_EXPECT_EQUAL( 1, listIterated[0] );
+	SW_EXPECT_EQUAL( 2, listIterated[1] );
+	SW_EXPECT_EQUAL( 3, listIterated[2] );
+
+	lst.remove( 2 );
+	SW_EXPECT_EQUAL( 2u, lst.size() );
+	SW_EXPECT_EQUAL( 1, lst.front() );
+	SW_EXPECT_EQUAL( 3, lst.back() );
 }

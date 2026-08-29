@@ -76,11 +76,36 @@ namespace sw
 		/** @brief 복사 생성자 */
 		basic_fixed_string( const basic_fixed_string& rhs );
 
+		/** @brief 다른 용량의 고정 문자열을 복사하여 생성합니다. */
+		template <uint32 M>
+		basic_fixed_string( const basic_fixed_string<T, M>& rhs )
+			: _arrData{}
+			, _size{ 0 }
+		{
+			const uint32 length = rhs.size();
+			SW_LOG_ASSERT( length <= N, "Source basic_fixed_string exceeds capacity" );
+			Memory::copy( _arrData, rhs.c_str(), sizeof( T ) * length );
+			_size			= length;
+			_arrData[_size] = T{ 0 };
+		}
+
 		/** @brief 이동 생성자 */
 		basic_fixed_string( basic_fixed_string&& rhs ) noexcept = default;
 
 		/** @brief 다른 고정 문자열을 복사 대입합니다. */
 		basic_fixed_string& operator=( const basic_fixed_string& rhs );
+
+		/** @brief 다른 용량의 고정 문자열을 복사 대입합니다. */
+		template <uint32 M>
+		basic_fixed_string& operator=( const basic_fixed_string<T, M>& rhs )
+		{
+			const uint32 length = rhs.size();
+			SW_LOG_ASSERT( length <= N, "Source basic_fixed_string exceeds capacity" );
+			Memory::copy( _arrData, rhs.c_str(), sizeof( T ) * length );
+			_size			= length;
+			_arrData[_size] = T{ 0 };
+			return *this;
+		}
 
 		/** @brief 널 종료 C 문자열을 복사 대입합니다. */
 		basic_fixed_string& operator=( const T* str );
@@ -160,6 +185,8 @@ namespace sw
 		/** @brief pos 위치 앞에 C 문자열을 삽입합니다. */
 		basic_fixed_string& insert( uint32 pos, const T* pStr );
 		basic_fixed_string& insert( const uint32 pos, const basic_fixed_string& str ) { return insert( pos, str.c_str() ); }
+		template <uint32 M>
+		basic_fixed_string& insert( const uint32 pos, const basic_fixed_string<T, M>& str ) { return insert( pos, str.c_str() ); }
 
 		/** @brief pos 위치부터 length개의 문자를 제거합니다. */
 		basic_fixed_string& erase( uint32 pos = 0, uint32 length = npos );
@@ -173,12 +200,16 @@ namespace sw
 		/** @brief 문자열을 새로 대입합니다. */
 		basic_fixed_string& assign( const T* pStr ) { return *this = pStr; }
 		basic_fixed_string& assign( const basic_fixed_string& str ) { return *this = str; }
+		template <uint32 M>
+		basic_fixed_string& assign( const basic_fixed_string<T, M>& str ) { return *this = str; }
 		basic_fixed_string& assign( const std::basic_string<T>& str ) { return *this = str; }
 		basic_fixed_string& assign( const std::basic_string_view<T>& str ) { return *this = str; }
 
 		/** @brief 끝에 C 문자열을 추가합니다. */
 		basic_fixed_string& append( const T* pStr );
 		basic_fixed_string& append( const basic_fixed_string& str ) { return append( str.c_str() ); }
+		template <uint32 M>
+		basic_fixed_string& append( const basic_fixed_string<T, M>& str ) { return append( str.c_str() ); }
 		basic_fixed_string& append( uint32 count, T c );
 		basic_fixed_string& append( const std::basic_string_view<T>& str );
 
@@ -186,6 +217,8 @@ namespace sw
 		uint32 find( const T* str, uint32 pos = 0 ) const;
 		uint32 find( T c, uint32 pos = 0 ) const;
 		uint32 find( const basic_fixed_string& str, uint32 pos = 0 ) const { return find( str.c_str(), pos ); }
+		template <uint32 M>
+		uint32 find( const basic_fixed_string<T, M>& str, uint32 pos = 0 ) const { return find( str.c_str(), pos ); }
 
 		/** @brief pos 위치부터 length 길이의 부분 문자열을 추출하여 반환합니다. */
 		basic_fixed_string substr( uint32 pos = 0, uint32 length = npos ) const;
@@ -195,13 +228,19 @@ namespace sw
 		// ------------------------------------------------------------------------------
 		/** @brief 사전순 비교 (같으면 0) */
 		int32 compare( const basic_fixed_string& other ) const { return StringUtil::strcmp( _arrData, other._arrData ); }
+		template <uint32 M>
+		int32 compare( const basic_fixed_string<T, M>& other ) const { return StringUtil::strcmp( _arrData, other.c_str() ); }
 		int32 compare( const T* str ) const { return ( str != nullptr ) ? StringUtil::strcmp( _arrData, str ) : 1; }
 
 		/** @brief 대소문자 무시 동등성 비교 */
 		bool equalsIgnoreCase( const basic_fixed_string& other ) const noexcept { return StringUtil::equalsIgnoreCase( _arrData, other._arrData ); }
+		template <uint32 M>
+		bool equalsIgnoreCase( const basic_fixed_string<T, M>& other ) const noexcept { return StringUtil::equalsIgnoreCase( _arrData, other.c_str() ); }
 		bool equalsIgnoreCase( const T* str ) const noexcept { return str != nullptr && StringUtil::equalsIgnoreCase( _arrData, str ); }
 
 		basic_fixed_string& operator+=( const basic_fixed_string& other ) { return append( other ); }
+		template <uint32 M>
+		basic_fixed_string& operator+=( const basic_fixed_string<T, M>& other ) { return append( other ); }
 		basic_fixed_string& operator+=( const T* str ) { return append( str ); }
 		basic_fixed_string& operator+=( T ch )
 		{
@@ -215,6 +254,20 @@ namespace sw
 		bool operator<=( const basic_fixed_string& other ) const { return compare( other ) <= 0; }
 		bool operator>( const basic_fixed_string& other ) const { return compare( other ) > 0; }
 		bool operator>=( const basic_fixed_string& other ) const { return compare( other ) >= 0; }
+
+		template <uint32 M>
+		bool operator==( const basic_fixed_string<T, M>& other ) const { return compare( other ) == 0; }
+		template <uint32 M>
+		bool operator!=( const basic_fixed_string<T, M>& other ) const { return compare( other ) != 0; }
+		template <uint32 M>
+		bool operator<( const basic_fixed_string<T, M>& other ) const { return compare( other ) < 0; }
+		template <uint32 M>
+		bool operator<=( const basic_fixed_string<T, M>& other ) const { return compare( other ) <= 0; }
+		template <uint32 M>
+		bool operator>( const basic_fixed_string<T, M>& other ) const { return compare( other ) > 0; }
+		template <uint32 M>
+		bool operator>=( const basic_fixed_string<T, M>& other ) const { return compare( other ) >= 0; }
+
 		bool operator==( const T* str ) const { return compare( str ) == 0; }
 		bool operator!=( const T* str ) const { return compare( str ) != 0; }
 
@@ -550,10 +603,10 @@ namespace sw
 		return result;
 	}
 
-	template <typename T, uint32 N>
-	basic_fixed_string<T, N> operator+( const basic_fixed_string<T, N>& lhs, const basic_fixed_string<T, N>& rhs )
+	template <typename T, uint32 N, uint32 M>
+	basic_fixed_string<T, N + M> operator+( const basic_fixed_string<T, N>& lhs, const basic_fixed_string<T, M>& rhs )
 	{
-		basic_fixed_string<T, N> result{ lhs };
+		basic_fixed_string<T, N + M> result{ lhs };
 		result += rhs;
 		return result;
 	}
