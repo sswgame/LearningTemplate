@@ -3038,6 +3038,122 @@ SW_TEST_CASE( Reflection_Bitfield, BitfieldSerializationRoundtrip )
 }
 
 /**
+ * @brief [Reflection_Bitfield] uint16, uint32, uint64 비트필드 플래그 getValue/setValue 독립성 검증
+ */
+SW_TEST_CASE( Reflection_Bitfield, WideBitfieldGetSetValue )
+{
+	const sw::TypeInfo* pType = sw::engine::getTypeRegistry().findType<sw::WideBitfieldTestActor>();
+	SW_ASSERT_NOT_NULL( pType );
+
+	const sw::PropertyInfo* pProp16A = pType->findProperty( sw::hashed_string( "_bFlag16_A" ) );
+	const sw::PropertyInfo* pProp16B = pType->findProperty( sw::hashed_string( "_bFlag16_B" ) );
+	const sw::PropertyInfo* pProp32A = pType->findProperty( sw::hashed_string( "_bFlag32_A" ) );
+	const sw::PropertyInfo* pProp32B = pType->findProperty( sw::hashed_string( "_bFlag32_B" ) );
+	const sw::PropertyInfo* pProp64A = pType->findProperty( sw::hashed_string( "_bFlag64_A" ) );
+	const sw::PropertyInfo* pProp64B = pType->findProperty( sw::hashed_string( "_bFlag64_B" ) );
+
+	SW_ASSERT_NOT_NULL( pProp16A );
+	SW_ASSERT_NOT_NULL( pProp16B );
+	SW_ASSERT_NOT_NULL( pProp32A );
+	SW_ASSERT_NOT_NULL( pProp32B );
+	SW_ASSERT_NOT_NULL( pProp64A );
+	SW_ASSERT_NOT_NULL( pProp64B );
+
+	SW_EXPECT_EQUAL( SW_TRUE, pProp16A->_bIsBitField );
+	SW_EXPECT_EQUAL( SW_TRUE, pProp16B->_bIsBitField );
+	SW_EXPECT_EQUAL( SW_TRUE, pProp32A->_bIsBitField );
+	SW_EXPECT_EQUAL( SW_TRUE, pProp32B->_bIsBitField );
+	SW_EXPECT_EQUAL( SW_TRUE, pProp64A->_bIsBitField );
+	SW_EXPECT_EQUAL( SW_TRUE, pProp64B->_bIsBitField );
+
+	sw::WideBitfieldTestActor actor;
+
+	// 1) uint16 비트필드 쓰기 및 읽기
+	pProp16A->setValue<bool>( &actor, true );
+	pProp16B->setValue<bool>( &actor, false );
+	SW_EXPECT_EQUAL( SW_TRUE, actor._bFlag16_A );
+	SW_EXPECT_EQUAL( SW_FALSE, actor._bFlag16_B );
+	SW_EXPECT_TRUE( pProp16A->getValue<bool>( &actor ) );
+	SW_EXPECT_FALSE( pProp16B->getValue<bool>( &actor ) );
+
+	// 2) uint32 비트필드 쓰기 및 읽기
+	pProp32A->setValue<bool>( &actor, false );
+	pProp32B->setValue<bool>( &actor, true );
+	SW_EXPECT_EQUAL( SW_FALSE, actor._bFlag32_A );
+	SW_EXPECT_EQUAL( SW_TRUE, actor._bFlag32_B );
+	SW_EXPECT_FALSE( pProp32A->getValue<bool>( &actor ) );
+	SW_EXPECT_TRUE( pProp32B->getValue<bool>( &actor ) );
+
+	// 3) uint64 비트필드 쓰기 및 읽기
+	pProp64A->setValue<bool>( &actor, true );
+	pProp64B->setValue<bool>( &actor, true );
+	SW_EXPECT_EQUAL( SW_TRUE, actor._bFlag64_A );
+	SW_EXPECT_EQUAL( SW_TRUE, actor._bFlag64_B );
+	SW_EXPECT_TRUE( pProp64A->getValue<bool>( &actor ) );
+	SW_EXPECT_TRUE( pProp64B->getValue<bool>( &actor ) );
+
+	// 4) 독립성 검증: uint16_B를 true로 수정해도 다른 필드 영향 없음
+	pProp16B->setValue<bool>( &actor, true );
+	SW_EXPECT_EQUAL( SW_TRUE, actor._bFlag16_A );
+	SW_EXPECT_EQUAL( SW_TRUE, actor._bFlag16_B );
+	SW_EXPECT_EQUAL( SW_FALSE, actor._bFlag32_A );
+	SW_EXPECT_EQUAL( SW_TRUE, actor._bFlag32_B );
+	SW_EXPECT_EQUAL( SW_TRUE, actor._bFlag64_A );
+	SW_EXPECT_EQUAL( SW_TRUE, actor._bFlag64_B );
+}
+
+/**
+ * @brief [Reflection_Bitfield] uint16, uint32, uint64 비트필드 플래그 JSON, XML, Binary 직렬화 라운드트립 검증
+ */
+SW_TEST_CASE( Reflection_Bitfield, WideBitfieldSerializationRoundtrip )
+{
+	const sw::TypeInfo* pType = sw::engine::getTypeRegistry().findType<sw::WideBitfieldTestActor>();
+	SW_ASSERT_NOT_NULL( pType );
+
+	sw::WideBitfieldTestActor source;
+	source._bFlag16_A = SW_TRUE;
+	source._bFlag16_B = SW_FALSE;
+	source._bFlag32_A = SW_FALSE;
+	source._bFlag32_B = SW_TRUE;
+	source._bFlag64_A = SW_TRUE;
+	source._bFlag64_B = SW_TRUE;
+
+	// 1) JSON 직렬화 & 역직렬화
+	const sw::string		  json = sw::JsonSerializer::serialize( &source, *pType );
+	sw::WideBitfieldTestActor jsonTarget;
+	SW_EXPECT_TRUE( sw::JsonSerializer::deserialize( &jsonTarget, *pType, json ) );
+	SW_EXPECT_EQUAL( SW_TRUE, jsonTarget._bFlag16_A );
+	SW_EXPECT_EQUAL( SW_FALSE, jsonTarget._bFlag16_B );
+	SW_EXPECT_EQUAL( SW_FALSE, jsonTarget._bFlag32_A );
+	SW_EXPECT_EQUAL( SW_TRUE, jsonTarget._bFlag32_B );
+	SW_EXPECT_EQUAL( SW_TRUE, jsonTarget._bFlag64_A );
+	SW_EXPECT_EQUAL( SW_TRUE, jsonTarget._bFlag64_B );
+
+	// 2) XML 직렬화 & 역직렬화
+	const sw::string		  xml = sw::XmlSerializer::serialize( &source, *pType );
+	sw::WideBitfieldTestActor xmlTarget;
+	SW_EXPECT_TRUE( sw::XmlSerializer::deserialize( &xmlTarget, *pType, xml ) );
+	SW_EXPECT_EQUAL( SW_TRUE, xmlTarget._bFlag16_A );
+	SW_EXPECT_EQUAL( SW_FALSE, xmlTarget._bFlag16_B );
+	SW_EXPECT_EQUAL( SW_FALSE, xmlTarget._bFlag32_A );
+	SW_EXPECT_EQUAL( SW_TRUE, xmlTarget._bFlag32_B );
+	SW_EXPECT_EQUAL( SW_TRUE, xmlTarget._bFlag64_A );
+	SW_EXPECT_EQUAL( SW_TRUE, xmlTarget._bFlag64_B );
+
+	// 3) Binary 직렬화 & 역직렬화
+	sw::vector<uint8> listBin;
+	sw::BinarySerializer::serialize( &source, *pType, listBin );
+	sw::WideBitfieldTestActor binTarget;
+	SW_EXPECT_TRUE( sw::BinarySerializer::deserialize( &binTarget, *pType, listBin.data(), listBin.size() ) );
+	SW_EXPECT_EQUAL( SW_TRUE, binTarget._bFlag16_A );
+	SW_EXPECT_EQUAL( SW_FALSE, binTarget._bFlag16_B );
+	SW_EXPECT_EQUAL( SW_FALSE, binTarget._bFlag32_A );
+	SW_EXPECT_EQUAL( SW_TRUE, binTarget._bFlag32_B );
+	SW_EXPECT_EQUAL( SW_TRUE, binTarget._bFlag64_A );
+	SW_EXPECT_EQUAL( SW_TRUE, binTarget._bFlag64_B );
+}
+
+/**
  * @brief [Reflection_Cast] ReflectionCast 헬퍼 (HasStaticType, castTo, isA) 다형 상속 계층 검증
  */
 SW_TEST_CASE( Reflection_Cast, TypeTraitsAndPolymorphicCast )
