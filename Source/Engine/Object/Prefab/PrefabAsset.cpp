@@ -125,12 +125,12 @@ namespace sw
 	PrefabAsset::PrefabAsset()
 		: _name{}
 		, _stateData{}
-		, _bValid{ 0 }
+		, _bValid{ SW_FALSE }
 		, _reserved{ 0 } {}
 
 	bool PrefabAsset::loadFromXmlFile( string_view assetRelativePath )
 	{
-		_bValid = 0;
+		_bValid = SW_FALSE;
 		string		absPath;
 		XmlDocument doc;
 		if ( doc.loadPath( assetRelativePath, &absPath ) == false )
@@ -186,14 +186,14 @@ namespace sw
 		if ( _name.empty() )
 			_name = FileUtil::removeExtension( FileUtil::getFileNamePart( absPath ) );
 
-		_bValid = 1;
+		_bValid = SW_TRUE;
 		SW_LOG_INFO( "Loaded '%#' from %#", _name, absPath );
 		return true;
 	}
 
 	bool PrefabAsset::loadFromJsonFile( string_view assetRelativePath )
 	{
-		_bValid = 0;
+		_bValid = SW_FALSE;
 		string		 absPath;
 		JsonDocument doc;
 		if ( doc.loadPath( assetRelativePath, &absPath ) == false )
@@ -230,13 +230,13 @@ namespace sw
 		if ( _name.empty() )
 			_name = FileUtil::removeExtension( FileUtil::getFileNamePart( absPath ) );
 
-		_bValid = 1;
+		_bValid = SW_TRUE;
 		return true;
 	}
 
 	bool PrefabAsset::loadFromBinaryFile( string_view assetRelativePath )
 	{
-		_bValid		   = 0;
+		_bValid		   = SW_FALSE;
 		string absPath = ResourceUtil::getResourcePath( assetRelativePath );
 		if ( absPath.empty() )
 			absPath = assetRelativePath;
@@ -281,7 +281,7 @@ namespace sw
 			return false;
 		}
 
-		_bValid = 1;
+		_bValid = SW_TRUE;
 		SW_LOG_INFO( "Loaded '%#' from binary %#", _name, absPath );
 		return true;
 	}
@@ -386,12 +386,12 @@ namespace sw
 	{
 		if ( pGameObject == nullptr )
 		{
-			_bValid = 0;
+			_bValid = SW_FALSE;
 			return;
 		}
 		_name	   = pGameObject->getName().c_str();
 		_stateData = ObjectStateSerializer::saveToXmlString( pGameObject );
-		_bValid	   = _stateData.empty() == false ? 1 : 0;
+		_bValid	   = _stateData.empty() == false ? SW_TRUE : SW_FALSE;
 	}
 
 	void PrefabAsset::collectReferencedPrefabPaths( vector<string>& outPathList ) const

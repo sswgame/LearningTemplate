@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file GameEvents.h
  * @brief EventDispatcher 채널 "game"의 게임플레이 이벤트
  */
@@ -69,7 +69,7 @@ namespace sw
 
 		/** @brief 패배·예약 비트를 0으로 둡니다. */
 		BattleEndedEvent() noexcept
-			: _bPlayerWon{ 0 }
+			: _bPlayerWon{ SW_FALSE }
 			, _reserved{ 0 } {}
 
 		SW_DECLARE_GAMEPLAY_EVENT( BattleEndedEvent );
@@ -104,7 +104,7 @@ namespace sw
 
 		/** @brief 보스 미처치·예약 비트를 0으로 둡니다. */
 		RoomClearedEvent() noexcept
-			: _bBossDefeated{ 0 }
+			: _bBossDefeated{ SW_FALSE }
 			, _reserved{ 0 } {}
 
 		SW_DECLARE_GAMEPLAY_EVENT( RoomClearedEvent );
@@ -125,7 +125,7 @@ namespace sw
 
 		/** @brief 잠금 해제·예약 비트를 0으로 둡니다. */
 		ClearGateChangedEvent() noexcept
-			: _bLocked{ 0 }
+			: _bLocked{ SW_FALSE }
 			, _reserved{ 0 } {}
 
 		SW_DECLARE_GAMEPLAY_EVENT( ClearGateChangedEvent );

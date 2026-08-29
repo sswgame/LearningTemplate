@@ -150,7 +150,7 @@ namespace sw
 		, _releaseQueue{ 3 }
 		, _boundGraphicsPso{ 0 }
 		, _lastVsync{ -1 }
-		, _bInitialized{ 0 }
+		, _bInitialized{ SW_FALSE }
 		, _reservedFlags{ 0 }
 		, _immContext{ nullptr }
 		, _deferredContext{ nullptr }

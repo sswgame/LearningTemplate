@@ -42,8 +42,8 @@ namespace sw
 			, _viewportWidth{ 0 }
 			, _viewportHeight{ 0 }
 			, _frameIndex{ 0 }
-			, _bHasViewProj{ 0 }
-			, _bValid{ 0 }
+			, _bHasViewProj{ SW_FALSE }
+			, _bValid{ SW_FALSE }
 			, _reserved{ 0 }
 		{
 		}

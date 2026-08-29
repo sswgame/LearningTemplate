@@ -76,9 +76,9 @@ namespace sw
 		, _activeColorTargetCount{ 0 }
 		, _activeDepthTarget{ 0 }
 		, _swapchainState{ D3D12_RESOURCE_STATE_PRESENT }
-		, _bActiveSwapchainRT{ 0 }
-		, _bHeapDirectlyIndexed{ 0 }
-		, _bRecording{ 0 }
+		, _bActiveSwapchainRT{ SW_FALSE }
+		, _bHeapDirectlyIndexed{ SW_FALSE }
+		, _bRecording{ SW_FALSE }
 		, _reservedPassFlags{ 0 }
 		, _pipelineStates{}
 		, _listRenderPass{}

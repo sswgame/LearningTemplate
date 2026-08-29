@@ -148,19 +148,20 @@ namespace sw
 		, _imageIndex{ 0 }
 		, _width{ 0 }
 		, _height{ 0 }
-		, _bFrameStarted{ 0 }
-		, _bOffscreenPassActive{ 0 }
-		, _bRenderPassActive{ 0 }
+		, _bFrameStarted{ SW_FALSE }
+		, _bOffscreenPassActive{ SW_FALSE }
+		, _bRenderPassActive{ SW_FALSE }
 #if defined( SW_DEBUG )
-		, _bEnableValidationLayers{ 1 }
+		, _bEnableValidationLayers{ SW_TRUE }
 #else
-		, _bEnableValidationLayers{ 0 }
+		, _bEnableValidationLayers{ SW_FALSE }
 #endif
-		, _bMultiDrawIndirect{ 0 }
-		, _bDrawIndirectCount{ 0 }
-		, _bSwapChainDirty{ 0 }
-		, _bDepthHasStencil{ 0 }
+		, _bMultiDrawIndirect{ SW_FALSE }
+		, _bDrawIndirectCount{ SW_FALSE }
+		, _bSwapChainDirty{ SW_FALSE }
+		, _bDepthHasStencil{ SW_FALSE }
 		, _linuxWsi{ 0 }
+		, _reservedVulkan{ 0 }
 		, _depthFormat{ 0 }
 		, _offscreenCommandBuffer{ nullptr }
 		, _offscreenFence{ nullptr }

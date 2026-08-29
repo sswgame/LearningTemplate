@@ -20,7 +20,7 @@ namespace sw
 		, _arrStatusText{}
 		, _phase{ BattlePhase::Inactive }
 		, _pendingCmd{ BattleCommand::None }
-		, _bPlayerWon{ 0 }
+		, _bPlayerWon{ SW_FALSE }
 		, _reserved{ 0 }
 	{
 	}

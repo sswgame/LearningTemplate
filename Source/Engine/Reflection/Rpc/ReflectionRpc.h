@@ -26,7 +26,7 @@ namespace sw
 		/** @brief 빈 봉투 (Reliable 꺼짐). */
 		RpcEnvelope() noexcept
 			: _netRole{ 0 }
-			, _bReliable{ 0 }
+			, _bReliable{ SW_FALSE }
 			, _reserved{ 0 } {}
 	};
 

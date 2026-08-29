@@ -157,7 +157,8 @@ namespace sw
 
 		mutable vector<string> _listCachedDefine;
 		mutable uint64		   _cachedPermutationHash;
-		mutable uint8		   _bDefinesDirty : 1;
+		mutable uint8		   _bDefinesDirty	 : 1;
+		[[maybe_unused]] uint8 _reservedMaterial : 7;
 	};
 
 	/**
@@ -271,6 +272,6 @@ namespace sw
 		mutable uint64		   _parentPermutationHash;
 		mutable uint8		   _bDefinesDirty : 1;
 		uint8				   _bGpuDirty	  : 1;
-		[[maybe_unused]] uint8 _instReserved  : 7;
+		[[maybe_unused]] uint8 _instReserved  : 6;
 	};
 } // namespace sw

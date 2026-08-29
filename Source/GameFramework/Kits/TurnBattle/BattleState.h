@@ -86,6 +86,6 @@ namespace sw
 		BattlePhase			   _phase;
 		BattleCommand		   _pendingCmd;
 		uint8				   _bPlayerWon : 1;
-		[[maybe_unused]] uint8 _reserved   : 6;
+		[[maybe_unused]] uint8 _reserved   : 7;
 	};
 } // namespace sw

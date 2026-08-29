@@ -48,7 +48,7 @@ namespace sw
 		, _role{ ZoneRole::Town }
 		, _bounds{}
 		, _listTag{}
-		, _bClearGateLocked{ 0 }
+		, _bClearGateLocked{ SW_FALSE }
 		, _reserved{ 0 }
 	{
 	}

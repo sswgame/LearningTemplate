@@ -63,8 +63,8 @@ namespace sw
 		, _listCachedDefine{}
 		, _cachedPermutationHash{ 0 }
 		, _parentPermutationHash{ 0 }
-		, _bDefinesDirty{ 1 }
-		, _bGpuDirty{ 1 }
+		, _bDefinesDirty{ SW_TRUE }
+		, _bGpuDirty{ SW_TRUE }
 		, _instReserved{ 0 } {}
 
 	MaterialInstance::MaterialInstance( Material* pParentMaterial )
@@ -84,8 +84,8 @@ namespace sw
 		, _listCachedDefine{}
 		, _cachedPermutationHash{ 0 }
 		, _parentPermutationHash{ 0 }
-		, _bDefinesDirty{ 1 }
-		, _bGpuDirty{ 1 }
+		, _bDefinesDirty{ SW_TRUE }
+		, _bGpuDirty{ SW_TRUE }
 		, _instReserved{ 0 } {}
 
 	MaterialInstance::~MaterialInstance()

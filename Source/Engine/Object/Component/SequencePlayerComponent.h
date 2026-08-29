@@ -53,7 +53,8 @@ namespace sw
 		PROPERTY( Category = "Playback", DisplayName = "Loop" )
 		uint8 _bLoop : 1;
 		PROPERTY( Category = "Playback", DisplayName = "Auto Play" )
-		uint8		   _bAutoPlay : 1;
-		SequencePlayer _player;
+		uint8				   _bAutoPlay : 1;
+		[[maybe_unused]] uint8 _reserved  : 6;
+		SequencePlayer		   _player;
 	};
 } // namespace sw

@@ -239,8 +239,8 @@ namespace sw::editor
 		, _pendingImportMutex{}
 		, _listPendingImportPath{}
 		, _folderJob{}
-		, _bRootsDirty{ 1 }
-		, _bFolderDirty{ 1 }
+		, _bRootsDirty{ SW_TRUE }
+		, _bFolderDirty{ SW_TRUE }
 		, _reservedFlags{ 0 }
 	{
 	}

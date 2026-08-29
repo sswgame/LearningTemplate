@@ -99,14 +99,14 @@ namespace sw
 		// 3) 키 정책 — 태그/속성 이름만, 값에는 영향 없음
 		// ------------------------------------------------------------------------------
 		/** @brief 태그/속성 이름 조회 시 대소문자 무시 여부 (기본 true). */
-		bool ignoreCaseKeys() const { return _bIgnoreCaseKeys != 0; }
+		bool ignoreCaseKeys() const { return _bIgnoreCaseKeys == SW_TRUE; }
 		/** @brief 태그/속성 이름 조회 시 대소문자 무시 여부를 설정합니다. */
-		void setIgnoreCaseKeys( bool bIgnoreCaseKeys ) { _bIgnoreCaseKeys = bIgnoreCaseKeys ? 1 : 0; }
+		void setIgnoreCaseKeys( bool bIgnoreCaseKeys ) { _bIgnoreCaseKeys = bIgnoreCaseKeys ? SW_TRUE : SW_FALSE; }
 
 	protected:
 		/** @brief 기본은 키 대소문자 무시. */
 		IXmlBackend() noexcept
-			: _bIgnoreCaseKeys{ 1 }
+			: _bIgnoreCaseKeys{ SW_TRUE }
 			, _reservedIgnoreCase{ 0 } {}
 
 		uint8				   _bIgnoreCaseKeys	   : 1;

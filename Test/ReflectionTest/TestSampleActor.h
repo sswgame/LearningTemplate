@@ -191,7 +191,8 @@ namespace sw
 		uint8 _bInvulnerable : 1;
 
 		PROPERTY( Category = "Flags" )
-		uint8 _bCanJump : 1;
+		uint8				   _bCanJump : 1;
+		[[maybe_unused]] uint8 _reserved : 5;
 
 		PROPERTY()
 		int32 _score;
@@ -200,6 +201,7 @@ namespace sw
 			: _bActive{ SW_FALSE }
 			, _bInvulnerable{ SW_FALSE }
 			, _bCanJump{ SW_FALSE }
+			, _reserved{ 0 }
 			, _score{ 100 }
 		{
 		}

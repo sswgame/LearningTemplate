@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file ActionRoom.h
  * @brief 던전 / 보스 룸용 실시간 클리어 게이트 전투 (던그리드 스타일 아이디어).
  */
@@ -39,8 +39,8 @@ namespace sw
 
 		/** @brief 공격·대시 비트를 0으로 둡니다. */
 		ActionRoomFrameInput()
-			: _bAttackPressed{ 0 }
-			, _bDashPressed{ 0 }
+			: _bAttackPressed{ SW_FALSE }
+			, _bDashPressed{ SW_FALSE }
 			, _reserved{ 0 } {}
 	};
 
@@ -55,9 +55,9 @@ namespace sw
 
 		/** @brief 클리어·보스·대시 비트를 0으로 둡니다. */
 		ActionRoomFrameResult()
-			: _bClearedThisFrame{ 0 }
-			, _bBossDefeated{ 0 }
-			, _bDashStarted{ 0 }
+			: _bClearedThisFrame{ SW_FALSE }
+			, _bBossDefeated{ SW_FALSE }
+			, _bDashStarted{ SW_FALSE }
 			, _reserved{ 0 } {}
 	};
 
@@ -132,7 +132,7 @@ namespace sw
 				, _radius{ 0.35f }
 				, _speed{ 1.6f }
 				, _attackTimer{ 0.0f }
-				, _bAlive{ 1 }
+				, _bAlive{ SW_TRUE }
 				, _reserved{ 0 }
 			{
 			}
@@ -161,7 +161,7 @@ namespace sw
 				, _vy{ 0.0f }
 				, _life{ 0.0f }
 				, _radius{ 0.2f }
-				, _bAlive{ 1 }
+				, _bAlive{ SW_TRUE }
 				, _reserved{ 0 }
 			{
 			}

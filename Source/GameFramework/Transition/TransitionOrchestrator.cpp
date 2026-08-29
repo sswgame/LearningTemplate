@@ -13,7 +13,7 @@ namespace sw
 		, _elapsed{ 0.0f }
 		, _alpha{ 0.0f }
 		, _phase{ FadePhase::Idle }
-		, _bFinished{ 0 }
+		, _bFinished{ SW_FALSE }
 		, _reserved{ 0 }
 	{
 	}
@@ -23,7 +23,7 @@ namespace sw
 		_phase	   = FadePhase::FadingOut;
 		_duration  = MathUtil::max( duration, 0.001f );
 		_elapsed   = 0.0f;
-		_bFinished = 0;
+		_bFinished = SW_FALSE;
 	}
 
 	void FadeService::beginFadeIn( float32 duration )
@@ -32,7 +32,7 @@ namespace sw
 		_duration  = MathUtil::max( duration, 0.001f );
 		_elapsed   = 0.0f;
 		_alpha	   = 1.0f;
-		_bFinished = 0;
+		_bFinished = SW_FALSE;
 	}
 
 	void FadeService::update( float32 deltaTime )
@@ -50,7 +50,7 @@ namespace sw
 			{
 				_phase	   = FadePhase::HoldBlack;
 				_alpha	   = 1.0f;
-				_bFinished = 1;
+				_bFinished = SW_TRUE;
 			}
 		}
 		else if ( _phase == FadePhase::FadingIn )
@@ -60,7 +60,7 @@ namespace sw
 			{
 				_phase	   = FadePhase::Idle;
 				_alpha	   = 0.0f;
-				_bFinished = 1;
+				_bFinished = SW_TRUE;
 			}
 		}
 		else if ( _phase == FadePhase::HoldBlack )
@@ -69,7 +69,7 @@ namespace sw
 
 	bool FadeService::isFinished() const
 	{
-		return _bFinished != 0;
+		return _bFinished == SW_TRUE;
 	}
 
 	TransitionOrchestrator::TransitionOrchestrator()

@@ -260,9 +260,9 @@ namespace sw
 			LayerDef()
 				: _name{}
 				, _priority{ 0 }
-				, _bEnabled{ 1 }
-				, _bBlockLower{ 0 }
-				, _bAlwaysOn{ 0 }
+				, _bEnabled{ SW_TRUE }
+				, _bBlockLower{ SW_FALSE }
+				, _bAlwaysOn{ SW_FALSE }
 				, _reserved{ 0 } {}
 		};
 
@@ -288,13 +288,13 @@ namespace sw
 				, _timeSinceLastPress{ ActionMapDefaults::kNeverPressedSentinel }
 				, _lastPressX{ 0 }
 				, _lastPressY{ 0 }
-				, _bDown{ 0 }
-				, _bPressed{ 0 }
-				, _bReleased{ 0 }
-				, _bDoubleClicked{ 0 }
-				, _bHoldThreshold{ 0 }
-				, _bWasDown{ 0 }
-				, _bTriggered{ 0 }
+				, _bDown{ SW_FALSE }
+				, _bPressed{ SW_FALSE }
+				, _bReleased{ SW_FALSE }
+				, _bDoubleClicked{ SW_FALSE }
+				, _bHoldThreshold{ SW_FALSE }
+				, _bWasDown{ SW_FALSE }
+				, _bTriggered{ SW_FALSE }
 				, _reserved{ 0 } {}
 		};
 
@@ -317,12 +317,12 @@ namespace sw
 				: _listBinding{}
 				, _listBindState{}
 				, _holdDuration{ 0.0f }
-				, _bDown{ 0 }
-				, _bPressed{ 0 }
-				, _bReleased{ 0 }
-				, _bDoubleClicked{ 0 }
-				, _bHoldThreshold{ 0 }
-				, _bTriggered{ 0 }
+				, _bDown{ SW_FALSE }
+				, _bPressed{ SW_FALSE }
+				, _bReleased{ SW_FALSE }
+				, _bDoubleClicked{ SW_FALSE }
+				, _bHoldThreshold{ SW_FALSE }
+				, _bTriggered{ SW_FALSE }
 				, _reserved{ 0 } {}
 		};
 

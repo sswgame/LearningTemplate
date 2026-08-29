@@ -56,7 +56,7 @@ namespace sw
 		, _dashCooldown{ 0.0f }
 		, _invulnTimer{ 0.0f }
 		, _bossMaxHp{ 1.0f }
-		, _bCleared{ 0 }
+		, _bCleared{ SW_FALSE }
 		, _reserved{ 0 }
 	{
 		_layers.resetDefaults();

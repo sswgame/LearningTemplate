@@ -18,9 +18,9 @@ namespace sw
 	CommandLineManager::ArgumentInfo::ArgumentInfo()
 		: _value{}
 		, _defaultValue{}
-		, _bMustHaveValue{ 0 }
-		, _bUseDefaultValue{ 0 }
-		, _bParsed{ 0 }
+		, _bMustHaveValue{ SW_FALSE }
+		, _bUseDefaultValue{ SW_FALSE }
+		, _bParsed{ SW_FALSE }
 		, _reserved{ 0 } {}
 
 	// ============================================================================

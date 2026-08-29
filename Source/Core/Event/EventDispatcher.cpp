@@ -12,13 +12,13 @@ namespace sw
 	}
 
 	WindowResizeEvent::WindowResizeEvent() noexcept
-		: _bIsResizing{ 0 }
-		, _bIsMaximized{ 0 }
-		, _bIsMinimized{ 0 }
+		: _bIsResizing{ SW_FALSE }
+		, _bIsMaximized{ SW_FALSE }
+		, _bIsMinimized{ SW_FALSE }
 		, _reservedFlags{ 0 } {}
 
 	WindowActivateEvent::WindowActivateEvent() noexcept
-		: _bIsActivate{ 1 }
+		: _bIsActivate{ SW_TRUE }
 		, _reservedFlags{ 0 } {}
 
 	EventDispatcher::EventDispatcher()

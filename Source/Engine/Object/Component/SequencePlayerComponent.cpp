@@ -18,6 +18,7 @@ namespace sw
 		, _framesPerSecond{ 30.0f }
 		, _bLoop{ SW_FALSE }
 		, _bAutoPlay{ SW_TRUE }
+		, _reserved{ 0 }
 		, _player{}
 	{
 		setCanEverTick( true );

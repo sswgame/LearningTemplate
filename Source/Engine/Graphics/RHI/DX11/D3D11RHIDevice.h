@@ -134,7 +134,7 @@ namespace sw
 			TextureRecord()
 				: _width{ 0 }
 				, _height{ 0 }
-				, _bDepth{ 0 }
+				, _bDepth{ SW_FALSE }
 				, _reserved{ 0 } {}
 		};
 

@@ -158,14 +158,16 @@ namespace sw
 	public:
 		REFLECT_BODY();
 
-		float3* _pObservedWorld;
-		float3	_tickLocalPos;
-		uint8	_bWriteLocalOnTick : 1;
+		float3*				   _pObservedWorld;
+		float3				   _tickLocalPos;
+		uint8				   _bWriteLocalOnTick : 1;
+		[[maybe_unused]] uint8 _reserved		  : 7;
 
 		MockTickSceneComponent()
 			: _pObservedWorld{ nullptr }
 			, _tickLocalPos{}
 			, _bWriteLocalOnTick{ SW_FALSE }
+			, _reserved{ 0 }
 		{
 			setCanEverTick( true );
 		}

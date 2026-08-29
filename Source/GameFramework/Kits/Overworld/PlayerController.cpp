@@ -23,11 +23,11 @@ namespace sw
 		, _pendingWarpSpawnY{ 1 }
 		, _stepCooldown{ 0.0f }
 		, _encounterRate{ 0.33f }
-		, _bMoved{ 0 }
-		, _bWarpPending{ 0 }
-		, _bEncounterPending{ 0 }
-		, _bInteractPending{ 0 }
-		, _bInputEnabled{ 1 }
+		, _bMoved{ SW_FALSE }
+		, _bWarpPending{ SW_FALSE }
+		, _bEncounterPending{ SW_FALSE }
+		, _bInteractPending{ SW_FALSE }
+		, _bInputEnabled{ SW_TRUE }
 		, _reserved{ 0 }
 	{
 	}

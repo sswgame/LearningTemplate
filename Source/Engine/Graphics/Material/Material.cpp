@@ -22,15 +22,15 @@ namespace sw
 		, _offset{ 0 }
 		, _size{ 0 }
 		, _textureIndex{ kInvalidDescriptorIndex }
-		, _bHdr{ 0 }
-		, _bSrgb{ 1 }
-		, _bHidden{ 0 }
-		, _bAdvanced{ 0 }
+		, _bHdr{ SW_FALSE }
+		, _bSrgb{ SW_TRUE }
+		, _bHidden{ SW_FALSE }
+		, _bAdvanced{ SW_FALSE }
 		, _reserved{ 0 } {}
 
 	MaterialStaticSwitch::MaterialStaticSwitch() noexcept
-		: _bEnabled{ 0 }
-		, _bShaderFeature{ 1 }
+		: _bEnabled{ SW_FALSE }
+		, _bShaderFeature{ SW_TRUE }
 		, _reserved{ 0 } {}
 
 	Material::Material()
@@ -43,7 +43,8 @@ namespace sw
 		, _asyncLoadState{ sw::make_shared<AsyncLoadState>() }
 		, _listCachedDefine{}
 		, _cachedPermutationHash{ 0 }
-		, _bDefinesDirty{ 1 }
+		, _bDefinesDirty{ SW_TRUE }
+		, _reservedMaterial{ 0 }
 	{
 		_asyncLoadState->_pMaterial = this;
 	}

@@ -33,35 +33,35 @@ namespace sw
 			 */
 			struct ScopedThreadComAndMf
 			{
-				uint8 _bCoInit	: 1;
-				uint8 _bMfInit	: 1;
-				uint8 _reserved : 6;
+				uint8				   _bCoInit	 : 1;
+				uint8				   _bMfInit	 : 1;
+				[[maybe_unused]] uint8 _reserved : 6;
 
 				ScopedThreadComAndMf()
-					: _bCoInit{ 0 }
-					, _bMfInit{ 0 }
+					: _bCoInit{ SW_FALSE }
+					, _bMfInit{ SW_FALSE }
 					, _reserved{ 0 }
 				{
 					const HRESULT hrCo = CoInitializeEx( nullptr, COINIT_MULTITHREADED );
 					if ( SUCCEEDED( hrCo ) )
 					{
-						_bCoInit = 1;
+						_bCoInit = SW_TRUE;
 					}
 
 					const HRESULT hrMf = MFStartup( MF_VERSION );
 					if ( SUCCEEDED( hrMf ) )
 					{
-						_bMfInit = 1;
+						_bMfInit = SW_TRUE;
 					}
 				}
 
 				~ScopedThreadComAndMf()
 				{
-					if ( _bMfInit != 0 )
+					if ( _bMfInit == SW_TRUE )
 					{
 						MFShutdown();
 					}
-					if ( _bCoInit != 0 )
+					if ( _bCoInit == SW_TRUE )
 					{
 						CoUninitialize();
 					}
@@ -281,24 +281,26 @@ namespace sw
 			return pShared;
 		}
 #endif
-		string	_musicPath;
-		float32 _masterVolume{ 1.0f };
-		float32 _musicVolume{ 1.0f };
-		float32 _sfxVolume{ 1.0f };
-		uint8	_bMuted			 : 1;
-		uint8	_bInitialized	 : 1;
-		uint8	_bComInitialized : 1;
-		uint8	_bMfInitialized	 : 1;
+		string				   _musicPath;
+		float32				   _masterVolume{ 1.0f };
+		float32				   _musicVolume{ 1.0f };
+		float32				   _sfxVolume{ 1.0f };
+		uint8				   _bMuted			: 1;
+		uint8				   _bInitialized	: 1;
+		uint8				   _bComInitialized : 1;
+		uint8				   _bMfInitialized	: 1;
+		[[maybe_unused]] uint8 _reservedAudio	: 4;
 
 		XAudio2SystemImpl()
 			: _musicPath{}
 			, _masterVolume{ 1.0f }
 			, _musicVolume{ 1.0f }
 			, _sfxVolume{ 1.0f }
-			, _bMuted{ 0 }
-			, _bInitialized{ 0 }
-			, _bComInitialized{ 0 }
-			, _bMfInitialized{ 0 } {}
+			, _bMuted{ SW_FALSE }
+			, _bInitialized{ SW_FALSE }
+			, _bComInitialized{ SW_FALSE }
+			, _bMfInitialized{ SW_FALSE }
+			, _reservedAudio{ 0 } {}
 	};
 
 	XAudio2System::XAudio2System()
