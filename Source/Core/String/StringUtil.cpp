@@ -1069,4 +1069,56 @@ namespace sw
 			return false;
 		return StringUtilInternal::isValidUtf8( reinterpret_cast<const uint8*>( input ), strlen( input ) );
 	}
+
+	StringChangeSpan StringUtil::makeChangeSpan( string_view before, string_view after )
+	{
+		StringChangeSpan span{};
+		const size_t	 beforeSize = before.size();
+		const size_t	 afterSize	= after.size();
+		const size_t	 minSize	= ( beforeSize < afterSize ) ? beforeSize : afterSize;
+		size_t			 prefix		= 0;
+		while ( prefix < minSize && before[prefix] == after[prefix] )
+			++prefix;
+
+		size_t suffix = 0;
+		while ( suffix < ( beforeSize - prefix ) && suffix < ( afterSize - prefix ) &&
+				before[beforeSize - 1 - suffix] == after[afterSize - 1 - suffix] )
+			++suffix;
+
+		span._prefixLength = static_cast<uint32>( prefix );
+		span._suffixLength = static_cast<uint32>( suffix );
+		span._removed	   = string{ before.substr( prefix, beforeSize - prefix - suffix ) };
+		span._added		   = string{ after.substr( prefix, afterSize - prefix - suffix ) };
+		return span;
+	}
+
+	string StringUtil::reconstructBefore( const StringChangeSpan& span, string_view afterText )
+	{
+		const size_t prefixLength = static_cast<size_t>( span._prefixLength );
+		const size_t suffixLength = static_cast<size_t>( span._suffixLength );
+		if ( afterText.size() < prefixLength + suffixLength )
+			return string{ afterText };
+		string result;
+		result.reserve( prefixLength + span._removed.size() + suffixLength );
+		result.append( afterText.data(), prefixLength );
+		result.append( span._removed );
+		if ( suffixLength > 0 )
+			result.append( afterText.data() + ( afterText.size() - suffixLength ), suffixLength );
+		return result;
+	}
+
+	string StringUtil::reconstructAfter( const StringChangeSpan& span, string_view beforeText )
+	{
+		const size_t prefixLength = static_cast<size_t>( span._prefixLength );
+		const size_t suffixLength = static_cast<size_t>( span._suffixLength );
+		if ( beforeText.size() < prefixLength + suffixLength )
+			return string{ beforeText };
+		string result;
+		result.reserve( prefixLength + span._added.size() + suffixLength );
+		result.append( beforeText.data(), prefixLength );
+		result.append( span._added );
+		if ( suffixLength > 0 )
+			result.append( beforeText.data() + ( beforeText.size() - suffixLength ), suffixLength );
+		return result;
+	}
 } // namespace sw

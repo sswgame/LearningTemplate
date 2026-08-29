@@ -925,6 +925,38 @@ SW_TEST_CASE( GameObjectHierarchyTest, ParentChildAttachAndActivePropagation )
 	SW_EXPECT_TRUE( grand.isActiveInHierarchy() );
 }
 
+/**
+ * @brief [GameObjectHierarchyTest] isDescendantOf는 자신과 조상 체인을 포함한다
+ */
+SW_TEST_CASE( GameObjectHierarchyTest, IsDescendantOfWalksParentChain )
+{
+	sw::GameObjectManager manager;
+	sw::GameObject*		  parentPtr = manager.createGameObject( sw::hashed_string( "AncestorGO" ) );
+	sw::GameObject&		  parent	= *parentPtr;
+	sw::GameObject*		  childPtr	= manager.createGameObject( sw::hashed_string( "ChildGO" ) );
+	sw::GameObject&		  child		= *childPtr;
+	sw::GameObject*		  grandPtr	= manager.createGameObject( sw::hashed_string( "GrandGO" ) );
+	sw::GameObject&		  grand		= *grandPtr;
+	sw::GameObject*		  otherPtr	= manager.createGameObject( sw::hashed_string( "OtherGO" ) );
+	sw::GameObject&		  other		= *otherPtr;
+
+	parent.addComponent<sw::SceneComponent>();
+	child.addComponent<sw::SceneComponent>();
+	grand.addComponent<sw::SceneComponent>();
+	other.addComponent<sw::SceneComponent>();
+
+	SW_ASSERT_TRUE( child.attachToParent( &parent ) );
+	SW_ASSERT_TRUE( grand.attachToParent( &child ) );
+
+	SW_EXPECT_TRUE( parent.isDescendantOf( &parent ) );
+	SW_EXPECT_TRUE( child.isDescendantOf( &parent ) );
+	SW_EXPECT_TRUE( grand.isDescendantOf( &parent ) );
+	SW_EXPECT_TRUE( grand.isDescendantOf( &child ) );
+	SW_EXPECT_FALSE( parent.isDescendantOf( &child ) );
+	SW_EXPECT_FALSE( other.isDescendantOf( &parent ) );
+	SW_EXPECT_FALSE( parent.isDescendantOf( nullptr ) );
+}
+
 // ------------------------------------------------------------------------------
 // 11) PostEditChangePropertyTest — 프로퍼티 변경 콜백
 // ------------------------------------------------------------------------------

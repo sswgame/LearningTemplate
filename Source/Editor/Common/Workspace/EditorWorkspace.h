@@ -100,9 +100,8 @@ namespace sw::editor
 		// ------------------------------------------------------------------------------
 		// 3) 기즈모 — 조작 모드 / 로컬 스페이스
 		// ------------------------------------------------------------------------------
-		int32  getGizmoOperation() const { return _gizmoOperation; }
-		int32& getGizmoOperationRef() { return _gizmoOperation; }
-		void   setGizmoOperation( int32 op ) { _gizmoOperation = op; }
+		int32 getGizmoOperation() const { return _gizmoOperation; }
+		void  setGizmoOperation( int32 op ) { _gizmoOperation = op; }
 
 		bool isGizmoLocalSpace() const { return _bGizmoLocalSpace == SW_TRUE; }
 		void setGizmoLocalSpace( bool bLocal ) { _bGizmoLocalSpace = ( bLocal ) ? SW_TRUE : SW_FALSE; }

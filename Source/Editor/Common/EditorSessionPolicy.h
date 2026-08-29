@@ -26,15 +26,6 @@ namespace sw::editor
 		Quit
 	};
 
-	/** @brief 문서 전/후 텍스트의 공통 접두·접미를 뺀 변경 구간 */
-	struct EditorDocumentTextSpan
-	{
-		uint32 prefixLength{ 0 };
-		uint32 suffixLength{ 0 };
-		string removed;
-		string added;
-	};
-
 	/**
 	 * @class EditorSessionPolicy
 	 * @brief 씬 dirty / 플레이 세션에 대한 가드 결정
@@ -86,61 +77,6 @@ namespace sw::editor
 		static bool shouldClearDocumentDirtyOnRestore( bool bMatchesLastSaved )
 		{
 			return bMatchesLastSaved == true;
-		}
-
-		/** @brief 전/후 텍스트의 공통 접두·접미를 빼고 중간만 남깁니다. */
-		static EditorDocumentTextSpan makeDocumentTextSpan( string_view before, string_view after )
-		{
-			EditorDocumentTextSpan span{};
-			const size_t		   beforeSize = before.size();
-			const size_t		   afterSize  = after.size();
-			const size_t		   minSize	  = ( beforeSize < afterSize ) ? beforeSize : afterSize;
-			size_t				   prefix	  = 0;
-			while ( prefix < minSize && before[prefix] == after[prefix] )
-				++prefix;
-
-			size_t suffix = 0;
-			while ( suffix < ( beforeSize - prefix ) && suffix < ( afterSize - prefix ) &&
-					before[beforeSize - 1 - suffix] == after[afterSize - 1 - suffix] )
-				++suffix;
-
-			span.prefixLength = static_cast<uint32>( prefix );
-			span.suffixLength = static_cast<uint32>( suffix );
-			span.removed	  = string{ before.substr( prefix, beforeSize - prefix - suffix ) };
-			span.added		  = string{ after.substr( prefix, afterSize - prefix - suffix ) };
-			return span;
-		}
-
-		/** @brief after 텍스트와 스팬으로 편집 전 본문을 만듭니다. */
-		static string reconstructDocumentTextFromAfter( const EditorDocumentTextSpan& span, string_view afterText )
-		{
-			const size_t prefixLength = static_cast<size_t>( span.prefixLength );
-			const size_t suffixLength = static_cast<size_t>( span.suffixLength );
-			if ( afterText.size() < prefixLength + suffixLength )
-				return string{ afterText };
-			string result;
-			result.reserve( prefixLength + span.removed.size() + suffixLength );
-			result.append( afterText.data(), prefixLength );
-			result.append( span.removed );
-			if ( suffixLength > 0 )
-				result.append( afterText.data() + ( afterText.size() - suffixLength ), suffixLength );
-			return result;
-		}
-
-		/** @brief before 텍스트와 스팬으로 편집 후 본문을 만듭니다. */
-		static string reconstructDocumentTextFromBefore( const EditorDocumentTextSpan& span, string_view beforeText )
-		{
-			const size_t prefixLength = static_cast<size_t>( span.prefixLength );
-			const size_t suffixLength = static_cast<size_t>( span.suffixLength );
-			if ( beforeText.size() < prefixLength + suffixLength )
-				return string{ beforeText };
-			string result;
-			result.reserve( prefixLength + span.added.size() + suffixLength );
-			result.append( beforeText.data(), prefixLength );
-			result.append( span.added );
-			if ( suffixLength > 0 )
-				result.append( beforeText.data() + ( beforeText.size() - suffixLength ), suffixLength );
-			return result;
 		}
 	};
 } // namespace sw::editor

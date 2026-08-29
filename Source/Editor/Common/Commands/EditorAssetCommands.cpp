@@ -151,18 +151,6 @@ namespace sw::editor
 				outList.push_back( std::move( item ) );
 			}
 
-			static bool isSameOrDescendant( const GameObject* pObject, const GameObject* pRoot )
-			{
-				const GameObject* pCurrent = pObject;
-				while ( pCurrent != nullptr )
-				{
-					if ( pCurrent == pRoot )
-						return true;
-					pCurrent = pCurrent->getParent();
-				}
-				return false;
-			}
-
 			static bool matchesPrefabPath( const EditorWorkspace& ws, const GameObject* pObject, string_view prefabPath )
 			{
 				if ( pObject == nullptr || prefabPath.empty() )
@@ -182,7 +170,7 @@ namespace sw::editor
 				GameObject* pPrimary = ws.getSelectedObject().get();
 				if ( pPrimary != nullptr && matchesPrefabPath( ws, pPrimary, prefabPath ) )
 				{
-					if ( pUnderRoot == nullptr || isSameOrDescendant( pPrimary, pUnderRoot ) )
+					if ( pUnderRoot == nullptr || pPrimary->isDescendantOf( pUnderRoot ) )
 						return pPrimary;
 				}
 
@@ -194,7 +182,7 @@ namespace sw::editor
 						continue;
 					if ( matchesPrefabPath( ws, pObject, prefabPath ) == false )
 						continue;
-					if ( pUnderRoot != nullptr && isSameOrDescendant( pObject, pUnderRoot ) == false )
+					if ( pUnderRoot != nullptr && pObject->isDescendantOf( pUnderRoot ) == false )
 						continue;
 					if ( pUnderRoot != nullptr )
 						return pObject;
@@ -216,9 +204,9 @@ namespace sw::editor
 				{
 					if ( pObject == nullptr || pObject->isPendingKill() )
 						continue;
-					if ( isSameOrDescendant( pObject, pRoot ) )
+					if ( pObject->isDescendantOf( pRoot ) )
 						continue;
-					if ( isSameOrDescendant( pRoot, pObject ) )
+					if ( pRoot->isDescendantOf( pObject ) )
 						continue;
 
 					PrefabIsolationHiddenObject entry{};

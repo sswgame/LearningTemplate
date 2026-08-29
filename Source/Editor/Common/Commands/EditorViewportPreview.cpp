@@ -139,7 +139,7 @@ namespace sw::editor
 		{
 			if ( speaker.empty() == false )
 			{
-				GameObject* pSpeaker = pManager->findGameObjectByName( hashed_string( string{ speaker }.c_str() ) );
+				GameObject* pSpeaker = pManager->findGameObjectByName( hashed_string{ speaker } );
 				if ( pSpeaker != nullptr )
 				{
 					EditorContext* pContext = EditorContext::get();

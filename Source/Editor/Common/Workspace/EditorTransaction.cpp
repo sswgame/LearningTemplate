@@ -2,7 +2,8 @@
 
 #include "Editor/Common/Workspace/EditorTransaction.h"
 
-#include "Editor/Common/EditorSessionPolicy.h"
+#include "Core/String/StringUtil.h"
+
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/SelectionManager.h"
@@ -248,16 +249,16 @@ namespace sw::editor
 		if ( beforeText == afterText || restore.isBound() == false )
 			return;
 
-		const EditorDocumentTextSpan span = EditorSessionPolicy::makeDocumentTextSpan( beforeText, afterText );
+		const StringChangeSpan span = StringUtil::makeChangeSpan( beforeText, afterText );
 		if ( capture.isBound() )
 		{
 			push( SW_DELEGATE_LAMBDA( Delegate<void()>, [restore, capture, span]()
 			{
-				restore( EditorSessionPolicy::reconstructDocumentTextFromAfter( span, capture() ) );
+				restore( StringUtil::reconstructBefore( span, capture() ) );
 			} ),
 				  SW_DELEGATE_LAMBDA( Delegate<void()>, [restore, capture, span]()
 			{
-				restore( EditorSessionPolicy::reconstructDocumentTextFromBefore( span, capture() ) );
+				restore( StringUtil::reconstructAfter( span, capture() ) );
 			} ),
 				  label, coalesceKey );
 			return;

@@ -72,25 +72,3 @@ SW_TEST_CASE( EditorSessionPolicyTest, PrefabIsolationDoesNotRequireCleanScene )
 {
 	SW_EXPECT_FALSE( sw::editor::EditorSessionPolicy::requiresCleanSceneForPrefabIsolation() );
 }
-
-SW_TEST_CASE( EditorSessionPolicyTest, DocumentTextSpanStoresOnlyChangedMiddle )
-{
-	const sw::string						 before = R"({"albedo":"white","roughness":0.5,"name":"Mat"})";
-	const sw::string						 after	= R"({"albedo":"white","roughness":0.8,"name":"Mat"})";
-	const sw::editor::EditorDocumentTextSpan span	= sw::editor::EditorSessionPolicy::makeDocumentTextSpan( before, after );
-	SW_EXPECT_TRUE( span.removed == "5" );
-	SW_EXPECT_TRUE( span.added == "8" );
-	SW_EXPECT_TRUE( span.prefixLength + span.suffixLength + span.removed.size() == before.size() );
-	SW_EXPECT_TRUE( sw::editor::EditorSessionPolicy::reconstructDocumentTextFromAfter( span, after ) == before );
-	SW_EXPECT_TRUE( sw::editor::EditorSessionPolicy::reconstructDocumentTextFromBefore( span, before ) == after );
-}
-
-SW_TEST_CASE( EditorSessionPolicyTest, DocumentTextSpanFirstEditReversesLaterAfter )
-{
-	const sw::string						 before0 = R"({"field":"x"})";
-	const sw::string						 after1	 = R"({"field":"xy"})";
-	const sw::string						 afterN	 = R"({"field":"xyz"})";
-	const sw::editor::EditorDocumentTextSpan firstSpan =
-		sw::editor::EditorSessionPolicy::makeDocumentTextSpan( before0, after1 );
-	SW_EXPECT_TRUE( sw::editor::EditorSessionPolicy::reconstructDocumentTextFromAfter( firstSpan, afterN ) == before0 );
-}

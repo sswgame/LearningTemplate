@@ -254,6 +254,20 @@ namespace sw
 		return listResult;
 	}
 
+	bool GameObject::isDescendantOf( const GameObject* pAncestor ) const
+	{
+		if ( pAncestor == nullptr )
+			return false;
+		const GameObject* pCurrent = this;
+		while ( pCurrent != nullptr )
+		{
+			if ( pCurrent == pAncestor )
+				return true;
+			pCurrent = pCurrent->getParent();
+		}
+		return false;
+	}
+
 	SceneComponent* GameObject::getPrimarySceneComponent() const
 	{
 		return getComponent<SceneComponent>();

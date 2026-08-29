@@ -27,6 +27,15 @@ namespace sw
 	/** @brief float64 를 십진 문자열로 바꿉니다. */
 	SW_API string to_string( float64 value );
 
+	/** @brief 두 문자열의 공통 접두·접미를 뺀 변경 구간 (텍스트 Undo/패치용) */
+	struct StringChangeSpan
+	{
+		uint32 _prefixLength{ 0 };
+		uint32 _suffixLength{ 0 };
+		string _removed;
+		string _added;
+	};
+
 	// ------------------------------------------------------------------------------
 	// 2) StringUtil — UTF 변환 · 해시 · 분할 · 트림 (전부 static)
 	// ------------------------------------------------------------------------------
@@ -78,6 +87,13 @@ namespace sw
 		static string toLower( const utf8* input );
 		/** @brief UTF-16 문자열 전체를 소문자로 변환합니다. */
 		static wstring toLower( const utf16* input );
+
+		/** @brief 전/후 텍스트의 공통 접두·접미를 빼고 중간만 남깁니다. */
+		static StringChangeSpan makeChangeSpan( string_view before, string_view after );
+		/** @brief after 텍스트와 스팬으로 편집 전 본문을 만듭니다. */
+		static string reconstructBefore( const StringChangeSpan& span, string_view afterText );
+		/** @brief before 텍스트와 스팬으로 편집 후 본문을 만듭니다. */
+		static string reconstructAfter( const StringChangeSpan& span, string_view beforeText );
 
 		/** @brief ASCII 대소문자 무시 동등 비교 (키/태그/속성 이름용). 값 비교에는 쓰지 말 것. */
 		static bool equalsIgnoreCase( const utf8* lhs, const utf8* rhs );

@@ -41,7 +41,7 @@ namespace sw
 			{
 				if ( pManager == nullptr || name.empty() )
 					return nullptr;
-				return pManager->findGameObjectByName( hashed_string( string{ name }.c_str() ) );
+				return pManager->findGameObjectByName( hashed_string{ name } );
 			}
 
 			static void applyClipTransform( GameObject* pTarget, const SequenceTrackItem& item, int32 frame )

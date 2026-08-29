@@ -42,6 +42,33 @@ SW_TEST_CASE( Core_String, StringUtilBasic )
 }
 
 /**
+ * @brief [Core_String] 공통 접두·접미를 뺀 변경 구간
+ */
+SW_TEST_CASE( Core_String, StringChangeSpanStoresOnlyChangedMiddle )
+{
+	const sw::string		   before = R"({"albedo":"white","roughness":0.5,"name":"Mat"})";
+	const sw::string		   after  = R"({"albedo":"white","roughness":0.8,"name":"Mat"})";
+	const sw::StringChangeSpan span	  = sw::StringUtil::makeChangeSpan( before, after );
+	SW_EXPECT_TRUE( span._removed == "5" );
+	SW_EXPECT_TRUE( span._added == "8" );
+	SW_EXPECT_TRUE( span._prefixLength + span._suffixLength + span._removed.size() == before.size() );
+	SW_EXPECT_TRUE( sw::StringUtil::reconstructBefore( span, after ) == before );
+	SW_EXPECT_TRUE( sw::StringUtil::reconstructAfter( span, before ) == after );
+}
+
+/**
+ * @brief [Core_String] 첫 편집 스팬이 이후 after에서도 역변환된다
+ */
+SW_TEST_CASE( Core_String, StringChangeSpanFirstEditReversesLaterAfter )
+{
+	const sw::string		   before0	 = R"({"field":"x"})";
+	const sw::string		   after1	 = R"({"field":"xy"})";
+	const sw::string		   afterN	 = R"({"field":"xyz"})";
+	const sw::StringChangeSpan firstSpan = sw::StringUtil::makeChangeSpan( before0, after1 );
+	SW_EXPECT_TRUE( sw::StringUtil::reconstructBefore( firstSpan, afterN ) == before0 );
+}
+
+/**
  * @brief [Core_String] hashed_string
  */
 SW_TEST_CASE( Core_String, HashedString )

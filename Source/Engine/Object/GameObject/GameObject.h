@@ -125,6 +125,12 @@ namespace sw
 		vector<GameObject*> getChildren() const;
 
 		/**
+		 * @brief 이 오브젝트가 pAncestor와 같거나 그 자식 계층에 있으면 true.
+		 * @details Unity Transform.IsChildOf와 같이 자기 자신도 true입니다. pAncestor가 nullptr이면 false.
+		 */
+		bool isDescendantOf( const GameObject* pAncestor ) const;
+
+		/**
 		 * @brief transform 계층의 primary SceneComponent (목록에서 첫 SceneComponent 파생).
 		 * @details 없으면 nullptr.
 		 */
