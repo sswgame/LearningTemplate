@@ -35,9 +35,10 @@ namespace sw::editor
 				ImGui::RadioButton( "Rotate", &op, 1 );
 				ImGui::SameLine();
 				ImGui::RadioButton( "Scale", &op, 2 );
-				bool& bLocal = EditorContext::get()->getWorkspace().getGizmoLocalSpaceRef();
 				ImGui::SameLine();
-				ImGui::Checkbox( "Local", &bLocal );
+				bool bLocal = EditorContext::get()->getWorkspace().isGizmoLocalSpace();
+				if ( ImGui::Checkbox( "Local", &bLocal ) )
+					EditorContext::get()->getWorkspace().setGizmoLocalSpace( bLocal );
 
 				float3 pos = pSceneComp->getLocalPosition();
 				float3 rot = pSceneComp->getLocalRotation();

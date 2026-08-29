@@ -96,9 +96,9 @@ namespace sw::editor
 		static void collectChildFolders( string_view folderAbs, vector<string>& outList );
 		/** @brief Resource 아래 씬/프리팹/텍스처/셰이더 파일 개수를 셉니다. */
 		static void collectResourceCatalogCounts( EditorResourceCatalogCounts& outCounts );
-		/** @brief 프리팹을 독립 씬으로 엽니다. 중첩이면 스택에 쌓습니다. */
+		/** @brief 현재 씬에서 해당 프리팹만 보이게 합니다. 중첩이면 스택에 쌓습니다. */
 		static bool enterPrefabIsolation( string_view prefabPath );
-		/** @brief 프리팹 독립 편집을 종료합니다. bSaveToPrefab이면 루트를 템플릿에 씁니다. */
+		/** @brief 프리팹 Isolation을 종료하고 숨겼던 오브젝트를 복원합니다. bSaveToPrefab이면 루트를 템플릿에 씁니다. */
 		static bool exitPrefabIsolation( bool bSaveToPrefab );
 	};
 } // namespace sw::editor

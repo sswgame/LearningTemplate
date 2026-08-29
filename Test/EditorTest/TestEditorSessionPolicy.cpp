@@ -67,3 +67,8 @@ SW_TEST_CASE( EditorSessionPolicyTest, RestoreClearsDirtyWhenMatchingLastSave )
 	SW_EXPECT_TRUE( sw::editor::EditorSessionPolicy::shouldClearDocumentDirtyOnRestore( true ) );
 	SW_EXPECT_FALSE( sw::editor::EditorSessionPolicy::shouldClearDocumentDirtyOnRestore( false ) );
 }
+
+SW_TEST_CASE( EditorSessionPolicyTest, PrefabIsolationDoesNotRequireCleanScene )
+{
+	SW_EXPECT_FALSE( sw::editor::EditorSessionPolicy::requiresCleanSceneForPrefabIsolation() );
+}

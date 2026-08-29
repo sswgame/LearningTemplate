@@ -124,11 +124,9 @@ namespace sw::editor
 		, _arrCameraBookmark{}
 		, _copiedComponentXml{}
 		, _copiedComponentTypeName{}
-		, _prefabIsolationReturnPath{}
-		, _listPrefabIsolationPath{}
-		, _prefabIsolationRootId{ 0 }
-		, _bGizmoLocalSpace{ true }
-		, _bBoneHierarchyPopupOpen{ false }
+		, _listPrefabIsolationFrame{}
+		, _bGizmoLocalSpace{ SW_TRUE }
+		, _bBoneHierarchyPopupOpen{ SW_FALSE }
 		, _bSceneDirty{ SW_FALSE }
 		, _bPrefabIsolation{ SW_FALSE }
 		, _reservedWorkspace{ 0 }
@@ -437,30 +435,39 @@ namespace sw::editor
 
 	const string& EditorWorkspace::getPrefabIsolationPrefabPath() const
 	{
-		if ( _listPrefabIsolationPath.empty() )
+		if ( _listPrefabIsolationFrame.empty() )
 			return _emptyString;
-		return _listPrefabIsolationPath.back();
+		return _listPrefabIsolationFrame.back()._prefabPath;
 	}
 
-	void EditorWorkspace::pushPrefabIsolation( string_view returnScenePath, string_view prefabPath, uint64 rootObjectId )
+	uint64 EditorWorkspace::getPrefabIsolationRootId() const
 	{
-		if ( _bPrefabIsolation == SW_FALSE )
-			_prefabIsolationReturnPath = string{ returnScenePath };
-		_listPrefabIsolationPath.push_back( string{ prefabPath } );
-		_prefabIsolationRootId = rootObjectId;
-		_bPrefabIsolation	   = SW_TRUE;
+		if ( _listPrefabIsolationFrame.empty() )
+			return 0;
+		return _listPrefabIsolationFrame.back()._rootObjectId;
+	}
+
+	const PrefabIsolationFrame* EditorWorkspace::getPrefabIsolationFrame() const
+	{
+		if ( _listPrefabIsolationFrame.empty() )
+			return nullptr;
+		return &_listPrefabIsolationFrame.back();
+	}
+
+	void EditorWorkspace::pushPrefabIsolation( PrefabIsolationFrame frame )
+	{
+		_listPrefabIsolationFrame.push_back( std::move( frame ) );
+		_bPrefabIsolation = SW_TRUE;
 	}
 
 	bool EditorWorkspace::popPrefabIsolation()
 	{
-		if ( _listPrefabIsolationPath.empty() )
+		if ( _listPrefabIsolationFrame.empty() )
 			return true;
-		_listPrefabIsolationPath.pop_back();
-		if ( _listPrefabIsolationPath.empty() )
+		_listPrefabIsolationFrame.pop_back();
+		if ( _listPrefabIsolationFrame.empty() )
 		{
-			_bPrefabIsolation		   = SW_FALSE;
-			_prefabIsolationRootId	   = 0;
-			_prefabIsolationReturnPath.clear();
+			_bPrefabIsolation = SW_FALSE;
 			return true;
 		}
 		return false;
@@ -468,9 +475,7 @@ namespace sw::editor
 
 	void EditorWorkspace::clearPrefabIsolation()
 	{
-		_listPrefabIsolationPath.clear();
-		_prefabIsolationReturnPath.clear();
-		_prefabIsolationRootId = 0;
-		_bPrefabIsolation	   = SW_FALSE;
+		_listPrefabIsolationFrame.clear();
+		_bPrefabIsolation = SW_FALSE;
 	}
 } // namespace sw::editor

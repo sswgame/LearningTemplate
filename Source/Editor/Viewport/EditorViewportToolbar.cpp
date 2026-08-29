@@ -201,8 +201,9 @@ namespace sw::editor
 		ImGui::SameLine();
 		ImGui::RadioButton( "Scale", &op, 2 );
 		ImGui::SameLine();
-		bool& bLocal = EditorContext::get()->getWorkspace().getGizmoLocalSpaceRef();
-		ImGui::Checkbox( "Local", &bLocal );
+		bool bLocal = EditorContext::get()->getWorkspace().isGizmoLocalSpace();
+		if ( ImGui::Checkbox( "Local", &bLocal ) )
+			EditorContext::get()->getWorkspace().setGizmoLocalSpace( bLocal );
 
 		EditorWidgets::drawToolbarSeparator();
 

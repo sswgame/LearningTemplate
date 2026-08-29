@@ -150,6 +150,97 @@ namespace sw::editor
 
 				outList.push_back( std::move( item ) );
 			}
+
+			static bool isSameOrDescendant( const GameObject* pObject, const GameObject* pRoot )
+			{
+				const GameObject* pCurrent = pObject;
+				while ( pCurrent != nullptr )
+				{
+					if ( pCurrent == pRoot )
+						return true;
+					pCurrent = pCurrent->getParent();
+				}
+				return false;
+			}
+
+			static bool matchesPrefabPath( const EditorWorkspace& ws, const GameObject* pObject, string_view prefabPath )
+			{
+				if ( pObject == nullptr || prefabPath.empty() )
+					return false;
+				const string& mapped = ws.getGameObjectPrefabPath( pObject->getObjectId() );
+				if ( mapped.empty() == false && FileUtil::pathsEqualNormalized( mapped, prefabPath ) )
+					return true;
+				return FileUtil::pathsEqualNormalized( pObject->getPrefabSourcePath(), prefabPath );
+			}
+
+			static GameObject* findPrefabInstance( GameObjectManager* pManager, EditorWorkspace& ws, string_view prefabPath,
+												   GameObject* pUnderRoot )
+			{
+				if ( pManager == nullptr )
+					return nullptr;
+
+				GameObject* pPrimary = ws.getSelectedObject().get();
+				if ( pPrimary != nullptr && matchesPrefabPath( ws, pPrimary, prefabPath ) )
+				{
+					if ( pUnderRoot == nullptr || isSameOrDescendant( pPrimary, pUnderRoot ) )
+						return pPrimary;
+				}
+
+				GameObject*				  pFallback	  = nullptr;
+				const vector<GameObject*> listObjects = pManager->getAllGameObjects();
+				for ( GameObject* pObject : listObjects )
+				{
+					if ( pObject == nullptr || pObject->isPendingKill() )
+						continue;
+					if ( matchesPrefabPath( ws, pObject, prefabPath ) == false )
+						continue;
+					if ( pUnderRoot != nullptr && isSameOrDescendant( pObject, pUnderRoot ) == false )
+						continue;
+					if ( pUnderRoot != nullptr )
+						return pObject;
+					if ( pFallback == nullptr )
+						pFallback = pObject;
+				}
+				return pFallback;
+			}
+
+			static void hideObjectsOutsideIsolation( GameObjectManager* pManager, GameObject* pRoot,
+													 vector<PrefabIsolationHiddenObject>& outHidden )
+			{
+				outHidden.clear();
+				if ( pManager == nullptr || pRoot == nullptr )
+					return;
+
+				const vector<GameObject*> listObjects = pManager->getAllGameObjects();
+				for ( GameObject* pObject : listObjects )
+				{
+					if ( pObject == nullptr || pObject->isPendingKill() )
+						continue;
+					if ( isSameOrDescendant( pObject, pRoot ) )
+						continue;
+					if ( isSameOrDescendant( pRoot, pObject ) )
+						continue;
+
+					PrefabIsolationHiddenObject entry{};
+					entry._objectId	  = pObject->getObjectId();
+					entry._bWasActive = pObject->isActive() ? SW_TRUE : SW_FALSE;
+					outHidden.push_back( entry );
+					pObject->setActive( false );
+				}
+			}
+
+			static void restoreIsolationHidden( GameObjectManager* pManager, const vector<PrefabIsolationHiddenObject>& listHidden )
+			{
+				if ( pManager == nullptr )
+					return;
+				for ( const PrefabIsolationHiddenObject& entry : listHidden )
+				{
+					GameObject* pObject = pManager->findGameObjectById( entry._objectId );
+					if ( pObject == nullptr )
+						continue;
+					pObject->setActive( entry._bWasActive == SW_TRUE );
+				}
+			}
 		};
 	} // namespace
 } // namespace sw::editor
@@ -613,7 +704,8 @@ namespace sw::editor
 		if ( pContext == nullptr )
 			return false;
 		EditorWorkspace& ws = pContext->getWorkspace();
-		if ( ws.isPrefabIsolationActive() == false && ws.isSceneDirty() )
+		if ( ws.isPrefabIsolationActive() == false && ws.isSceneDirty() &&
+			 EditorSessionPolicy::requiresCleanSceneForPrefabIsolation() )
 		{
 			pContext->getNotificationManager().push( "Prefab", "Save the scene before opening prefab isolation",
 													 NotificationType::Warning );
@@ -623,31 +715,36 @@ namespace sw::editor
 		SceneManager* pSceneManager = editor::getService<SceneManager>();
 		if ( pSceneManager == nullptr )
 			return false;
+		Scene* pScene = pSceneManager->getActiveScene();
+		if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
+			return false;
+		GameObjectManager* pManager = pScene->getObjectManager();
 
-		string returnPath = ws.getPrefabIsolationReturnPath();
-		if ( ws.isPrefabIsolationActive() == false )
+		GameObject* pUnderRoot = nullptr;
+		if ( ws.isPrefabIsolationActive() )
+			pUnderRoot = pManager->findGameObjectById( ws.getPrefabIsolationRootId() );
+
+		const string pathStr{ prefabPath };
+		GameObject*	 pRoot = EditorAssetCommandsInternal::findPrefabInstance( pManager, ws, prefabPath, pUnderRoot );
+		uint8		 bSpawnedRoot{ SW_FALSE };
+		if ( pRoot == nullptr )
 		{
-			Scene* pScene = pSceneManager->getActiveScene();
-			if ( pScene != nullptr )
-				returnPath = pScene->getSourcePath();
+			pRoot = EditorUtil::spawnPrefabFromAssetPath( pManager, pathStr.c_str(), pUnderRoot );
+			if ( pRoot == nullptr )
+				return false;
+			bSpawnedRoot = SW_TRUE;
 		}
 
-		Scene* pIsolation = pSceneManager->createEmptyActiveScene( "Prefab Isolation" );
-		if ( pIsolation == nullptr )
-			return false;
-		syncAfterSceneGenerationChange();
-		GameObjectManager* pManager = pIsolation->getObjectManager();
-		const string	   pathStr{ prefabPath };
-		GameObject*		   pSpawned = spawnPrefab( pManager, pathStr.c_str(), nullptr, "Prefab Isolation" );
-		if ( pSpawned == nullptr )
-			return false;
-
-		ws.pushPrefabIsolation( returnPath, prefabPath, pSpawned->getObjectId() );
-		ws.selectGameObject( GameObjectPtr{ pSpawned } );
-		ws.clearSceneDirty();
+		PrefabIsolationFrame frame{};
+		frame._prefabPath	= pathStr;
+		frame._rootObjectId = pRoot->getObjectId();
+		frame._bSpawnedRoot = bSpawnedRoot;
+		EditorAssetCommandsInternal::hideObjectsOutsideIsolation( pManager, pRoot, frame._listHidden );
+		ws.pushPrefabIsolation( std::move( frame ) );
+		ws.selectGameObject( GameObjectPtr{ pRoot } );
 		ws.setFocusedAssetPath( pathStr.c_str() );
 		ws.requestOpenPanel( "Prefab Editor" );
-		pContext->getNotificationManager().push( "Prefab", "Opened prefab isolation", NotificationType::Info );
+		pContext->getNotificationManager().push( "Prefab", "Isolated prefab in the current scene", NotificationType::Info );
 		return true;
 	}
 
@@ -659,43 +756,48 @@ namespace sw::editor
 		EditorWorkspace& ws = pContext->getWorkspace();
 		if ( ws.isPrefabIsolationActive() == false )
 			return false;
+		const PrefabIsolationFrame* pFrame = ws.getPrefabIsolationFrame();
+		if ( pFrame == nullptr )
+			return false;
 
-		SceneManager* pSceneManager = editor::getService<SceneManager>();
+		const PrefabIsolationFrame frame		 = *pFrame;
+		SceneManager*			   pSceneManager = editor::getService<SceneManager>();
 		if ( pSceneManager == nullptr )
 			return false;
-		Scene* pScene = pSceneManager->getActiveScene();
-		if ( pScene != nullptr && pScene->getObjectManager() != nullptr )
-		{
-			GameObject* pRoot = pScene->getObjectManager()->findGameObjectById( ws.getPrefabIsolationRootId() );
-			if ( bSaveToPrefab && pRoot != nullptr )
-				EditorInspectorCommands::applyToPrefab( pRoot, ws.getPrefabIsolationPrefabPath() );
-		}
+		Scene*			   pScene	= pSceneManager->getActiveScene();
+		GameObjectManager* pManager = ( pScene != nullptr ) ? pScene->getObjectManager() : nullptr;
+		GameObject*		   pRoot	= nullptr;
+		if ( pManager != nullptr )
+			pRoot = pManager->findGameObjectById( frame._rootObjectId );
 
-		const string returnPath = ws.getPrefabIsolationReturnPath();
-		const bool	 bFullyExit = ws.popPrefabIsolation();
-		ws.clearSceneDirty();
+		if ( bSaveToPrefab && pRoot != nullptr )
+			EditorInspectorCommands::applyToPrefab( pRoot, frame._prefabPath );
+
+		EditorAssetCommandsInternal::restoreIsolationHidden( pManager, frame._listHidden );
+
+		const bool bFullyExit = ws.popPrefabIsolation();
+		if ( frame._bSpawnedRoot == SW_TRUE && bSaveToPrefab == false && pManager != nullptr && pRoot != nullptr )
+		{
+			if ( pContext->getSelectionManager().hasObject( GameObjectPtr{ pRoot } ) )
+				pContext->getSelectionManager().selectObject( GameObjectPtr{ pRoot }, SelectionMode::Remove );
+			pManager->destroyObject( pRoot );
+			pRoot = nullptr;
+		}
+		else if ( frame._bSpawnedRoot == SW_TRUE && bSaveToPrefab )
+			ws.markSceneDirty();
+
 		if ( bFullyExit )
 		{
-			if ( returnPath.empty() == false )
-				loadScene( returnPath );
-			else
-				tryCreateNewScene();
 			pContext->getNotificationManager().push( "Prefab", "Exited prefab isolation", NotificationType::Info );
 			return true;
 		}
 
-		const string parentPath{ ws.getPrefabIsolationPrefabPath() };
-		Scene*		 pIsolation = pSceneManager->createEmptyActiveScene( "Prefab Isolation" );
-		if ( pIsolation == nullptr )
-			return false;
-		syncAfterSceneGenerationChange();
-		GameObject* pSpawned = spawnPrefab( pIsolation->getObjectManager(), parentPath.c_str(), nullptr, "Prefab Isolation" );
-		if ( pSpawned == nullptr )
-			return false;
-		ws.setPrefabIsolationRootId( pSpawned->getObjectId() );
-		ws.selectGameObject( GameObjectPtr{ pSpawned } );
-		ws.clearSceneDirty();
-		ws.setFocusedAssetPath( parentPath.c_str() );
+		GameObject* pParentRoot = nullptr;
+		if ( pManager != nullptr )
+			pParentRoot = pManager->findGameObjectById( ws.getPrefabIsolationRootId() );
+		if ( pParentRoot != nullptr )
+			ws.selectGameObject( GameObjectPtr{ pParentRoot } );
+		ws.setFocusedAssetPath( ws.getPrefabIsolationPrefabPath().c_str() );
 		return true;
 	}
 } // namespace sw::editor

@@ -46,6 +46,22 @@ namespace sw::editor
 		bool	_bValid{ false };
 	};
 
+	/** @brief Isolation에서 숨긴 오브젝트와 이전 활성 상태 */
+	struct PrefabIsolationHiddenObject
+	{
+		uint64 _objectId{ 0 };
+		uint8  _bWasActive{ SW_FALSE };
+	};
+
+	/** @brief 한 단계의 인플레이스 프리팹 Isolation */
+	struct PrefabIsolationFrame
+	{
+		string								_prefabPath;
+		vector<PrefabIsolationHiddenObject> _listHidden;
+		uint64								_rootObjectId{ 0 };
+		uint8								_bSpawnedRoot{ SW_FALSE };
+	};
+
 	/**
 	 * @class EditorWorkspace
 	 * @brief 에디터의 전역 작업 공간 상태(선택, 포커스 애셋, 기즈모, 윈도우 요청)를 총괄하는 클래스 (EditorContext 소유)
@@ -88,9 +104,8 @@ namespace sw::editor
 		int32& getGizmoOperationRef() { return _gizmoOperation; }
 		void   setGizmoOperation( int32 op ) { _gizmoOperation = op; }
 
-		bool  isGizmoLocalSpace() const { return _bGizmoLocalSpace; }
-		bool& getGizmoLocalSpaceRef() { return _bGizmoLocalSpace; }
-		void  setGizmoLocalSpace( bool bLocal ) { _bGizmoLocalSpace = bLocal; }
+		bool isGizmoLocalSpace() const { return _bGizmoLocalSpace == SW_TRUE; }
+		void setGizmoLocalSpace( bool bLocal ) { _bGizmoLocalSpace = ( bLocal ) ? SW_TRUE : SW_FALSE; }
 
 		// ------------------------------------------------------------------------------
 		// 4) 윈도우 열기 요청 — 메뉴가 쓰고 셸이 consume
@@ -170,12 +185,11 @@ namespace sw::editor
 		void distributeSelectedObjects( AlignAxis axis );
 		void snapSelectedToGround();
 
-		bool		  isPrefabIsolationActive() const { return _bPrefabIsolation == SW_TRUE; }
-		const string& getPrefabIsolationReturnPath() const { return _prefabIsolationReturnPath; }
-		const string& getPrefabIsolationPrefabPath() const;
-		uint64		  getPrefabIsolationRootId() const { return _prefabIsolationRootId; }
-		void		  setPrefabIsolationRootId( uint64 rootObjectId ) { _prefabIsolationRootId = rootObjectId; }
-		void		  pushPrefabIsolation( string_view returnScenePath, string_view prefabPath, uint64 rootObjectId );
+		bool						isPrefabIsolationActive() const { return _bPrefabIsolation == SW_TRUE; }
+		const string&				getPrefabIsolationPrefabPath() const;
+		uint64						getPrefabIsolationRootId() const;
+		const PrefabIsolationFrame* getPrefabIsolationFrame() const;
+		void						pushPrefabIsolation( PrefabIsolationFrame frame );
 		/** @brief 한 단계를 나갑니다. 스택이 비면 true입니다. */
 		bool popPrefabIsolation();
 		void clearPrefabIsolation();
@@ -199,13 +213,11 @@ namespace sw::editor
 		array<CameraBookmark, 9>	  _arrCameraBookmark;
 		string						  _copiedComponentXml;
 		string						  _copiedComponentTypeName;
-		string						  _prefabIsolationReturnPath;
-		vector<string>				  _listPrefabIsolationPath;
-		uint64						  _prefabIsolationRootId;
-		bool						  _bGizmoLocalSpace;
-		bool						  _bBoneHierarchyPopupOpen;
-		uint8						  _bSceneDirty		 : 1;
-		uint8						  _bPrefabIsolation	 : 1;
-		[[maybe_unused]] uint8		  _reservedWorkspace : 6;
+		vector<PrefabIsolationFrame>  _listPrefabIsolationFrame;
+		uint8						  _bGizmoLocalSpace		   : 1;
+		uint8						  _bBoneHierarchyPopupOpen : 1;
+		uint8						  _bSceneDirty			   : 1;
+		uint8						  _bPrefabIsolation		   : 1;
+		[[maybe_unused]] uint8		  _reservedWorkspace	   : 4;
 	};
 } // namespace sw::editor

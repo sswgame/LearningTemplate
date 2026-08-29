@@ -53,6 +53,8 @@ namespace sw::editor
 		}
 		/** @brief Stopped일 때만 씬 오브젝트 편집이 허용됩니다. */
 		static bool areSceneEditsAllowed( bool bPlayStopped ) { return bPlayStopped == true; }
+		/** @brief Isolation은 활성 씬을 유지하므로 dirty 씬에서도 들어갈 수 있습니다. */
+		static bool requiresCleanSceneForPrefabIsolation() { return false; }
 		/** @brief 레이아웃이 한 번 동기된 뒤에만 노드 이동을 dirty로 칩니다. */
 		static bool shouldMarkDocumentDirtyOnNodeMove( bool bLayoutReady, bool bPositionChanged )
 		{
