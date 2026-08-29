@@ -7,6 +7,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Commands/EditorBackgroundIo.h"
 #include "Editor/Common/Gui/IEditorPanel.h"
@@ -105,20 +106,20 @@ namespace sw::editor
 		void processPendingImports();
 
 	private:
-		vector<ContentRoot>	   _listRoot;
-		vector<AssetEntry>	   _listEntry;
-		string				   _selectedFolderAbs;
-		string				   _breadcrumb; /**< 예: "Game / Shaders" */
-		string				   _selectedAssetAbs;
-		utf8				   _arrSearchBuffer[constant::kMaxBuffer128];
-		float32				   _tileSize;
-		uint32				   _filterIndex;
-		ViewMode			   _viewMode;
-		mutex				   _pendingImportMutex;
-		vector<string>		   _listPendingImportPath;
-		EditorFolderListingJob _folderJob;
-		uint8				   _bRootsDirty	  : 1;
-		uint8				   _bFolderDirty  : 1;
-		[[maybe_unused]] uint8 _reservedFlags : 6;
+		vector<ContentRoot>					  _listRoot;
+		vector<AssetEntry>					  _listEntry;
+		string								  _selectedFolderAbs;
+		string								  _breadcrumb; /**< 예: "Game / Shaders" */
+		string								  _selectedAssetAbs;
+		fixed_string<constant::kMaxBuffer128> _searchBuffer;
+		float32								  _tileSize;
+		uint32								  _filterIndex;
+		ViewMode							  _viewMode;
+		mutex								  _pendingImportMutex;
+		vector<string>						  _listPendingImportPath;
+		EditorFolderListingJob				  _folderJob;
+		uint8								  _bRootsDirty	 : 1;
+		uint8								  _bFolderDirty	 : 1;
+		[[maybe_unused]] uint8				  _reservedFlags : 6;
 	};
 } // namespace sw::editor

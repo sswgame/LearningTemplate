@@ -1,4 +1,7 @@
 #pragma once
+#include "Core/Common/Defines.h"
+#include "Core/String/fixed_string.h"
+
 #include "Editor/Common/Gui/EditorDocumentPanel.h"
 
 #include "Engine/Graphics/Material/Material.h"
@@ -22,9 +25,9 @@ namespace sw::editor
 		void   applyLivePreview();
 
 	private:
-		Material _material;
-		utf8	 _arrName[128];
-		utf8	 _arrShaderPath[256];
-		string	 _status;
+		Material							  _material;
+		fixed_string<constant::kMaxBuffer128> _name;
+		fixed_string<constant::kMaxBuffer256> _shaderPath;
+		string								  _status;
 	};
 } // namespace sw::editor

@@ -2,8 +2,10 @@
 
 #include "Editor/Panels/ProfilerPanel.h"
 
+#include "Core/Common/Defines.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/MemoryProfiler.h"
+#include "Core/String/fixed_string.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
@@ -26,18 +28,17 @@ namespace sw::editor
 	{
 		struct ProfilerPanelInternal
 		{
-			static void formatBytes( uint64 bytes, utf8* pOut, size_t outSize )
+			template <uint32 N>
+			static void formatBytes( uint64 bytes, fixed_string<N>& out )
 			{
-				const uint32 bufSize = static_cast<uint32>( outSize );
 				if ( bytes < 1024 )
-					formatstring( pOut, bufSize, "%llu B", bytes );
+					formatstring( out.data(), out.capacity(), "%llu B", bytes );
 				else if ( bytes < 1024 * 1024 )
-					formatstring( pOut, bufSize, "%.2f KB", static_cast<float64>( bytes ) / 1024.0 );
+					formatstring( out.data(), out.capacity(), "%.2f KB", static_cast<float64>( bytes ) / 1024.0 );
 				else if ( bytes < 1024 * 1024 * 1024 )
-					formatstring( pOut, bufSize, "%.2f MB", static_cast<float64>( bytes ) / ( 1024.0 * 1024.0 ) );
+					formatstring( out.data(), out.capacity(), "%.2f MB", static_cast<float64>( bytes ) / ( 1024.0 * 1024.0 ) );
 				else
-					formatstring( pOut, bufSize, "%.2f GB",
-								  static_cast<float64>( bytes ) / ( 1024.0 * 1024.0 * 1024.0 ) );
+					formatstring( out.data(), out.capacity(), "%.2f GB", static_cast<float64>( bytes ) / ( 1024.0 * 1024.0 * 1024.0 ) );
 			}
 		};
 	} // namespace
@@ -265,26 +266,26 @@ namespace sw::editor
 				ImGui::TableSetupColumn( "Total Allocated" );
 				ImGui::TableHeadersRow();
 
-				utf8 arrBytesBuf[32];
-				utf8 arrTotalBuf[32];
+				fixed_string<constant::kMaxBuffer32> arrBytesBuf;
+				fixed_string<constant::kMaxBuffer32> arrTotalBuf;
 
 				for ( uint32 tagIndex = 0; tagIndex < static_cast<uint32>( MemoryTag::MaxTags ); ++tagIndex )
 				{
 					MemoryTag	tag	  = static_cast<MemoryTag>( tagIndex );
 					const auto& stats = profiler.getStats( tag );
 
-					ProfilerPanelInternal::formatBytes( stats._currentAllocatedBytes.load(), arrBytesBuf, sizeof( arrBytesBuf ) );
-					ProfilerPanelInternal::formatBytes( stats._totalAllocatedBytes.load(), arrTotalBuf, sizeof( arrTotalBuf ) );
+					ProfilerPanelInternal::formatBytes( stats._currentAllocatedBytes.load(), arrBytesBuf );
+					ProfilerPanelInternal::formatBytes( stats._totalAllocatedBytes.load(), arrTotalBuf );
 
 					ImGui::TableNextRow();
 					ImGui::TableNextColumn();
 					ImGui::Text( "%s", MemoryProfiler::getMemoryTagName( tag ) );
 					ImGui::TableNextColumn();
-					ImGui::Text( "%s", arrBytesBuf );
+					ImGui::Text( "%s", arrBytesBuf.c_str() );
 					ImGui::TableNextColumn();
 					ImGui::Text( "%llu", stats._currentAllocationCount.load() );
 					ImGui::TableNextColumn();
-					ImGui::Text( "%s", arrTotalBuf );
+					ImGui::Text( "%s", arrTotalBuf.c_str() );
 				}
 				ImGui::EndTable();
 			}

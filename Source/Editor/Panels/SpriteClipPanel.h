@@ -1,11 +1,9 @@
-/**
- * @file SpriteClipPanel.h
- * @brief 아틀라스 스프라이트 프레임 / 트랜스폼 키 클립 에디터 (파일명은 editordata.xml)
- */
 #pragma once
+#include "Core/Common/Defines.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Commands/EditorToolAssetCommands.h"
 #include "Editor/Common/Gui/EditorDocumentPanel.h"
@@ -47,11 +45,11 @@ namespace sw::editor
 		void saveJson();
 
 	private:
-		utf8				 _arrAtlasPath[256];
-		vector<Frame>		 _listFrame;
-		vector<TransformKey> _listKey;
-		int32				 _selectedFrame;
-		int32				 _selectedKey;
-		string				 _status;
+		fixed_string<constant::kMaxBuffer256> _atlasPath;
+		vector<Frame>						  _listFrame;
+		vector<TransformKey>				  _listKey;
+		int32								  _selectedFrame;
+		int32								  _selectedKey;
+		string								  _status;
 	};
 } // namespace sw::editor

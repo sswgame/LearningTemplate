@@ -52,7 +52,7 @@ namespace sw::editor
 	QuickLauncherPopup::QuickLauncherPopup()
 		: _listAllItem{}
 		, _fileIndexJob{}
-		, _arrSearchBuffer{}
+		, _searchBuffer{}
 		, _selectedIndex{ 0 }
 		, _bJustOpened{ false }
 	{
@@ -89,9 +89,9 @@ namespace sw::editor
 
 	void QuickLauncherPopup::onOpen()
 	{
-		_bJustOpened		= true;
-		_selectedIndex		= 0;
-		_arrSearchBuffer[0] = '\0';
+		_bJustOpened   = true;
+		_selectedIndex = 0;
+		_searchBuffer.clear();
 		rebuildIndex();
 	}
 
@@ -182,7 +182,7 @@ namespace sw::editor
 			return;
 		}
 
-		EditorWidgets::drawSearchField( "##qlSearch", _arrSearchBuffer, sizeof( _arrSearchBuffer ),
+		EditorWidgets::drawSearchField( "##qlSearch", _searchBuffer,
 										"Type to search assets, scenes, game objects (ESC to cancel)...", -1.0f, true );
 
 		vector<const QuickLauncherItem*> listFiltered;
@@ -190,15 +190,15 @@ namespace sw::editor
 
 		for ( const QuickLauncherItem& item : _listAllItem )
 		{
-			if ( _arrSearchBuffer[0] == '\0' )
+			if ( _searchBuffer.empty() )
 			{
 				listFiltered.push_back( &item );
 				continue;
 			}
 
-			if ( StringUtil::stristr( item._title.c_str(), _arrSearchBuffer ) != nullptr ||
-				 StringUtil::stristr( item._detail.c_str(), _arrSearchBuffer ) != nullptr ||
-				 StringUtil::stristr( item._category.c_str(), _arrSearchBuffer ) != nullptr )
+			if ( StringUtil::stristr( item._title.c_str(), _searchBuffer.c_str() ) != nullptr ||
+				 StringUtil::stristr( item._detail.c_str(), _searchBuffer.c_str() ) != nullptr ||
+				 StringUtil::stristr( item._category.c_str(), _searchBuffer.c_str() ) != nullptr )
 			{
 				listFiltered.push_back( &item );
 			}
@@ -234,12 +234,12 @@ namespace sw::editor
 										IM_COL32( 80, 140, 240, 255 ), 4.0f );
 				}
 
-				const ImVec4 catCol = QuickLauncherPopupInternal::getCategoryColor( pItem->_category );
-				utf8		 arrBadge[32];
-				formatstring( arrBadge, sizeof( arrBadge ), "[%s]", pItem->_category.c_str() );
+				const ImVec4						 catCol = QuickLauncherPopupInternal::getCategoryColor( pItem->_category );
+				fixed_string<constant::kMaxBuffer32> badge;
+				formatstring( badge.data(), badge.capacity(), "[%s]", pItem->_category.c_str() );
 
 				pDrawList->AddText( ImVec2( cursor.x + 8.0f, cursor.y + 8.0f ), ImGui::ColorConvertFloat4ToU32( catCol ),
-									arrBadge );
+									badge.c_str() );
 
 				pDrawList->AddText( ImVec2( cursor.x + 95.0f, cursor.y + 8.0f ), IM_COL32( 240, 240, 245, 255 ),
 									pItem->_title.c_str() );

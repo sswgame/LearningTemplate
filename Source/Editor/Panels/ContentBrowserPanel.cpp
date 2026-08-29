@@ -204,9 +204,9 @@ namespace sw::editor
 		{
 			if ( ImGui::MenuItem( "Show in Explorer" ) )
 			{
-				utf8 arrCmd[constant::kMaxBuffer512];
-				formatstring( arrCmd, sizeof( arrCmd ), "explorer.exe /select,\"%s\"", entry._absolutePath.c_str() );
-				system( arrCmd );
+				fixed_string<constant::kMaxBuffer512> arrCmd;
+				formatstring( arrCmd.data(), arrCmd.capacity(), "explorer.exe /select,\"%s\"", entry._absolutePath.c_str() );
+				system( arrCmd.c_str() );
 			}
 
 			if ( ImGui::MenuItem( "Copy Relative Path" ) )
@@ -232,7 +232,7 @@ namespace sw::editor
 		, _selectedFolderAbs{}
 		, _breadcrumb{}
 		, _selectedAssetAbs{}
-		, _arrSearchBuffer{}
+		, _searchBuffer{}
 		, _tileSize{ 96.0f }
 		, _filterIndex{ 0 }
 		, _viewMode{ ViewMode::Tiles }
@@ -336,18 +336,17 @@ namespace sw::editor
 
 	bool ContentBrowserPanel::passesSearchFilter( const AssetEntry& entry ) const
 	{
-		if ( _arrSearchBuffer[0] == '\0' )
+		if ( _searchBuffer.empty() )
 			return true;
 
-		return StringUtil::stristr( entry._name.c_str(), _arrSearchBuffer ) != nullptr;
+		return StringUtil::stristr( entry._name.c_str(), _searchBuffer.c_str() ) != nullptr;
 	}
 
 	void ContentBrowserPanel::drawToolbar()
 	{
 		if ( EditorChrome::beginToolbar( "##cb_toolbar" ) )
 		{
-			EditorWidgets::drawSearchField( "##cb_search", _arrSearchBuffer, sizeof( _arrSearchBuffer ), "Search Content", 160.0f,
-											false );
+			EditorWidgets::drawSearchField( "##cb_search", _searchBuffer, "Search Content", 160.0f, false );
 
 			ImGui::SameLine();
 			uint32							filterCount{ 0 };

@@ -3,10 +3,12 @@
  * @brief GameObject / Component 프로퍼티를 편집하는 선택 인스펙터
  */
 #pragma once
+#include "Core/Common/Defines.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Commands/EditorBackgroundIo.h"
 #include "Editor/Common/Gui/IEditorPanel.h"
@@ -26,6 +28,9 @@ namespace sw::editor
 	class InspectorPanel : public IEditorPanel
 	{
 	public:
+		InspectorPanel();
+		~InspectorPanel() override = default;
+
 		// ------------------------------------------------------------------------------
 		// 1) IEditorPanel — 제목/그리기
 		// ------------------------------------------------------------------------------
@@ -57,15 +62,16 @@ namespace sw::editor
 
 	private:
 		/** @brief 프로퍼티 검색 필터 버퍼 */
-		utf8 _arrPropertyFilter[64]{};
+		fixed_string<constant::kMaxBuffer64> _propertyFilter;
 		/** @brief FUNCTION() 인자 편집용 스크래치 버퍼 (윈도우 로컬). */
-		int32				 _arrArgInt[8]{};
-		float32				 _arrArgFloat[8]{};
-		bool				 _arrArgBool[8]{};
-		utf8				 _arrArgString[8][256]{};
-		utf8				 _arrLastInvokeResult[256]{};
-		EditorFileCollectJob _componentPresetJob{};
-		vector<string>		 _listComponentPresetFile{};
-		uint8				 _bComponentPresetDirty{ SW_TRUE };
+		int32								  _arrArgInt[8];
+		float32								  _arrArgFloat[8];
+		bool								  _arrArgBool[8];
+		fixed_string<constant::kMaxBuffer256> _arrArgString[8];
+		fixed_string<constant::kMaxBuffer256> _lastInvokeResult;
+		EditorFileCollectJob				  _componentPresetJob;
+		vector<string>						  _listComponentPresetFile;
+		uint8								  _bComponentPresetDirty : 1;
+		[[maybe_unused]] uint8				  _reserved				 : 7;
 	};
 } // namespace sw::editor

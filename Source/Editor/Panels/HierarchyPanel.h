@@ -6,6 +6,7 @@
 #include "Core/Common/Defines.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Gui/IEditorPanel.h"
 
@@ -27,9 +28,9 @@ namespace sw::editor
 		void drawContent() override;
 
 	private:
-		uint64 _renamingObjectId;
-		utf8   _arrFilterBuffer[constant::kMaxBuffer128];
-		utf8   _arrRenameBuffer[constant::kMaxBuffer256];
-		bool   _bFocusRenameInput;
+		uint64								  _renamingObjectId;
+		fixed_string<constant::kMaxBuffer128> _filterBuffer;
+		fixed_string<constant::kMaxBuffer256> _renameBuffer;
+		bool								  _bFocusRenameInput;
 	};
 } // namespace sw::editor

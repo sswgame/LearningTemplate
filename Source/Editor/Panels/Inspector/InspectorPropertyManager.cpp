@@ -81,9 +81,9 @@ namespace sw::editor
 					return true;
 				if ( bReadOnly )
 				{
-					utf8 buf[constant::kMaxBuffer64];
-					formatstring( buf, sizeof( buf ), "%#", static_cast<int32>( *pPtr ) );
-					drawReadOnlyText( prop, buf );
+					fixed_string<constant::kMaxBuffer64> buf;
+					formatstring( buf.data(), buf.capacity(), "%#", static_cast<int32>( *pPtr ) );
+					drawReadOnlyText( prop, buf.c_str() );
 					return true;
 				}
 				if ( bHasRange && isSliderRequested( prop ) )
@@ -116,9 +116,9 @@ namespace sw::editor
 					return true;
 				if ( bReadOnly )
 				{
-					utf8 buf[constant::kMaxBuffer64];
-					formatstring( buf, sizeof( buf ), "%#", static_cast<uint32>( *pPtr ) );
-					drawReadOnlyText( prop, buf );
+					fixed_string<constant::kMaxBuffer64> buf;
+					formatstring( buf.data(), buf.capacity(), "%#", static_cast<uint32>( *pPtr ) );
+					drawReadOnlyText( prop, buf.c_str() );
 					return true;
 				}
 				int32 tmp = static_cast<int32>( *pPtr );
@@ -158,9 +158,9 @@ namespace sw::editor
 					return true;
 				if ( bReadOnly )
 				{
-					utf8 buf[constant::kMaxBuffer64];
-					formatstring( buf, sizeof( buf ), "%#", static_cast<int64>( *pPtr ) );
-					drawReadOnlyText( prop, buf );
+					fixed_string<constant::kMaxBuffer64> buf;
+					formatstring( buf.data(), buf.capacity(), "%#", static_cast<int64>( *pPtr ) );
+					drawReadOnlyText( prop, buf.c_str() );
 					return true;
 				}
 				int32 tmp = static_cast<int32>( *pPtr );
@@ -198,9 +198,9 @@ namespace sw::editor
 					return true;
 				if ( bReadOnly )
 				{
-					utf8 buf[constant::kMaxBuffer64];
-					formatstring( buf, sizeof( buf ), "%#", static_cast<float64>( *pPtr ) );
-					drawReadOnlyText( prop, buf );
+					fixed_string<constant::kMaxBuffer64> buf;
+					formatstring( buf.data(), buf.capacity(), "%#", static_cast<float64>( *pPtr ) );
+					drawReadOnlyText( prop, buf.c_str() );
 					return true;
 				}
 				if ( bHasRange && isSliderRequested( prop ) )
@@ -231,9 +231,9 @@ namespace sw::editor
 					return true;
 				if ( bReadOnly )
 				{
-					utf8 buf[constant::kMaxBuffer64];
-					formatstring( buf, sizeof( buf ), "%#", static_cast<float64>( *pPtr ) );
-					drawReadOnlyText( prop, buf );
+					fixed_string<constant::kMaxBuffer64> buf;
+					formatstring( buf.data(), buf.capacity(), "%#", static_cast<float64>( *pPtr ) );
+					drawReadOnlyText( prop, buf.c_str() );
 					return true;
 				}
 				float32 tmp = static_cast<float32>( *pPtr );
@@ -283,9 +283,9 @@ namespace sw::editor
 					return true;
 				if ( bReadOnly )
 				{
-					utf8 buf[constant::kMaxBuffer64];
-					formatstring( buf, sizeof( buf ), "%#", static_cast<uint32>( *pPtr ) );
-					drawReadOnlyText( prop, buf );
+					fixed_string<constant::kMaxBuffer64> buf;
+					formatstring( buf.data(), buf.capacity(), "%#", static_cast<uint32>( *pPtr ) );
+					drawReadOnlyText( prop, buf.c_str() );
 					return true;
 				}
 				int32 tmp = static_cast<int32>( *pPtr );
@@ -381,10 +381,9 @@ namespace sw::editor
 					const float32 itemWidth	  = ImGui::CalcItemWidth();
 					ImGui::SetNextItemWidth( ( itemWidth > buttonWidth + 10.0f ) ? itemWidth - buttonWidth - 4.0f : itemWidth );
 
-					utf8 buf[constant::kMaxBuffer512];
-					formatstring( buf, sizeof( buf ), "%#", pPtr->c_str() );
-					if ( ImGui::InputText( "##assetInput", buf, sizeof( buf ) ) )
-						*pPtr = buf;
+					fixed_string<constant::kMaxBuffer512> buf{ pPtr->c_str() };
+					if ( ImGui::InputText( "##assetInput", buf.data(), buf.capacity() ) )
+						*pPtr = buf.c_str();
 
 					if ( ImGui::BeginDragDropTarget() )
 					{
@@ -406,10 +405,9 @@ namespace sw::editor
 					return true;
 				}
 
-				utf8 buf[constant::kMaxBuffer512];
-				formatstring( buf, sizeof( buf ), "%#", pPtr->c_str() );
-				if ( ImGui::InputText( _pLabel, buf, sizeof( buf ) ) )
-					*pPtr = buf;
+				fixed_string<constant::kMaxBuffer512> buf{ pPtr->c_str() };
+				if ( ImGui::InputText( _pLabel, buf.data(), buf.capacity() ) )
+					*pPtr = buf.c_str();
 				showTooltipIfHovered( prop );
 				InspectorPropertyUndo::trackString( pPtr, _pLabel );
 				return true;
@@ -428,10 +426,10 @@ namespace sw::editor
 					return true;
 				if ( bReadOnly )
 				{
-					utf8 buf[constant::kMaxBuffer128];
-					formatstring( buf, sizeof( buf ), "(%#, %#)",
+					fixed_string<constant::kMaxBuffer128> buf;
+					formatstring( buf.data(), buf.capacity(), "(%#, %#)",
 								  Fmt( pPtr->_x, Format( 2 ) ), Fmt( pPtr->_y, Format( 2 ) ), Fmt( pPtr->_z, Format( 2 ) ) );
-					drawReadOnlyText( prop, buf );
+					drawReadOnlyText( prop, buf.c_str() );
 					return true;
 				}
 				if ( isColorRequested( prop ) )
@@ -456,10 +454,10 @@ namespace sw::editor
 					return true;
 				if ( bReadOnly )
 				{
-					utf8 buf[constant::kMaxBuffer128];
-					formatstring( buf, sizeof( buf ), "(%#, %#)",
+					fixed_string<constant::kMaxBuffer128> buf;
+					formatstring( buf.data(), buf.capacity(), "(%#, %#)",
 								  Fmt( pPtr->_x, Format( 2 ) ), Fmt( pPtr->_y, Format( 2 ) ) );
-					drawReadOnlyText( prop, buf );
+					drawReadOnlyText( prop, buf.c_str() );
 					return true;
 				}
 				ImGui::DragFloat2( _pLabel, &pPtr->_x, 0.1f );
@@ -481,11 +479,11 @@ namespace sw::editor
 					return true;
 				if ( bReadOnly )
 				{
-					utf8 buf[constant::kMaxBuffer256];
-					formatstring( buf, sizeof( buf ), "(%#, %#, %#, %#)",
+					fixed_string<constant::kMaxBuffer256> buf;
+					formatstring( buf.data(), buf.capacity(), "(%#, %#, %#, %#)",
 								  Fmt( pPtr->_x, Format( 2 ) ), Fmt( pPtr->_y, Format( 2 ) ),
 								  Fmt( pPtr->_z, Format( 2 ) ), Fmt( pPtr->_w, Format( 2 ) ) );
-					drawReadOnlyText( prop, buf );
+					drawReadOnlyText( prop, buf.c_str() );
 					return true;
 				}
 				if ( isColorRequested( prop ) )
@@ -522,10 +520,9 @@ namespace sw::editor
 					const float32 itemWidth	  = ImGui::CalcItemWidth();
 					ImGui::SetNextItemWidth( ( itemWidth > buttonWidth + 10.0f ) ? itemWidth - buttonWidth - 4.0f : itemWidth );
 
-					utf8 buf[constant::kMaxBuffer256];
-					formatstring( buf, sizeof( buf ), "%#", pPtr->c_str() );
-					if ( ImGui::InputText( "##assetInput", buf, sizeof( buf ), ImGuiInputTextFlags_EnterReturnsTrue ) )
-						*pPtr = hashed_string( buf );
+					fixed_string<constant::kMaxBuffer256> buf{ pPtr->c_str() };
+					if ( ImGui::InputText( "##assetInput", buf.data(), buf.capacity(), ImGuiInputTextFlags_EnterReturnsTrue ) )
+						*pPtr = hashed_string( buf.c_str() );
 
 					if ( ImGui::BeginDragDropTarget() )
 					{
@@ -546,10 +543,9 @@ namespace sw::editor
 					return true;
 				}
 
-				utf8 buf[constant::kMaxBuffer256];
-				formatstring( buf, sizeof( buf ), "%#", pPtr->c_str() );
-				if ( ImGui::InputText( _pLabel, buf, sizeof( buf ), ImGuiInputTextFlags_EnterReturnsTrue ) )
-					*pPtr = hashed_string( buf );
+				fixed_string<constant::kMaxBuffer256> buf{ pPtr->c_str() };
+				if ( ImGui::InputText( _pLabel, buf.data(), buf.capacity(), ImGuiInputTextFlags_EnterReturnsTrue ) )
+					*pPtr = hashed_string( buf.c_str() );
 				showTooltipIfHovered( prop );
 				return true;
 			}

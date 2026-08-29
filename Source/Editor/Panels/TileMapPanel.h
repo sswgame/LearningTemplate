@@ -3,9 +3,11 @@
  * @brief 에디터 측 TileMap XML 페인터 (Engine TileMapXmlData 편집)
  */
 #pragma once
+#include "Core/Common/Defines.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Gui/EditorDocumentPanel.h"
 
@@ -66,24 +68,24 @@ namespace sw::editor
 		size_t indexOf( int32 x, int32 y ) const;
 
 	private:
-		utf8	   _arrPathBuffer[constant::kMaxBuffer256];
-		utf8	   _arrNameBuffer[constant::kMaxBuffer128];
-		utf8	   _arrEdgeTargetN[constant::kMaxBuffer128];
-		utf8	   _arrEdgeTargetE[constant::kMaxBuffer128];
-		utf8	   _arrEdgeTargetS[constant::kMaxBuffer128];
-		utf8	   _arrEdgeTargetW[constant::kMaxBuffer128];
-		int32	   _arrEdgeTx[4];
-		int32	   _arrEdgeTy[4];
-		int32	   _width;
-		int32	   _height;
-		PaintLayer _layer;
-		int32	   _paintHeight;
-		int32	   _atlasId;
-		float32	   _arrTint[3];
-		utf8	   _arrWarpTarget[constant::kMaxBuffer128];
-		int32	   _warpTx;
-		int32	   _warpTy;
-		bool	   _bErase;
+		fixed_string<constant::kMaxBuffer256> _pathBuffer;
+		fixed_string<constant::kMaxBuffer128> _nameBuffer;
+		fixed_string<constant::kMaxBuffer128> _edgeTargetN;
+		fixed_string<constant::kMaxBuffer128> _edgeTargetE;
+		fixed_string<constant::kMaxBuffer128> _edgeTargetS;
+		fixed_string<constant::kMaxBuffer128> _edgeTargetW;
+		int32								  _arrEdgeTx[4];
+		int32								  _arrEdgeTy[4];
+		int32								  _width;
+		int32								  _height;
+		PaintLayer							  _layer;
+		int32								  _paintHeight;
+		int32								  _atlasId;
+		float32								  _arrTint[3];
+		fixed_string<constant::kMaxBuffer128> _warpTarget;
+		int32								  _warpTx;
+		int32								  _warpTy;
+		bool								  _bErase;
 
 		vector<uint8>					  _listWalkable;
 		vector<uint8>					  _listEncounter;

@@ -55,7 +55,7 @@ namespace sw::editor
 		, _cachedFilter{}
 		, _entriesMutex{}
 		, _logListenerHandle{}
-		, _arrFilterBuffer{}
+		, _filterBuffer{}
 		, _arrLevelEnabled{ true, true, true, true }
 		, _arrCachedLevelEnabled{ true, true, true, true }
 		, _bAutoScroll{ true }
@@ -156,28 +156,31 @@ namespace sw::editor
 			ImGui::SameLine();
 			ImGui::Checkbox( "Auto-scroll", &_bAutoScroll );
 
-			utf8 arrErrLabel[32], arrWarnLabel[32], arrInfoLabel[32], arrTraceLabel[32];
-			formatstring( arrErrLabel, sizeof( arrErrLabel ), "Error (%zu)", errorCount );
-			formatstring( arrWarnLabel, sizeof( arrWarnLabel ), "Warning (%zu)", warnCount );
-			formatstring( arrInfoLabel, sizeof( arrInfoLabel ), "Info (%zu)", infoCount );
-			formatstring( arrTraceLabel, sizeof( arrTraceLabel ), "Trace (%zu)", traceCount );
+			fixed_string<constant::kMaxBuffer32> arrErrLabel;
+			formatstring( arrErrLabel.data(), arrErrLabel.capacity(), "Error (%zu)", errorCount );
+			fixed_string<constant::kMaxBuffer32> arrWarnLabel;
+			formatstring( arrWarnLabel.data(), arrWarnLabel.capacity(), "Warning (%zu)", warnCount );
+			fixed_string<constant::kMaxBuffer32> arrInfoLabel;
+			formatstring( arrInfoLabel.data(), arrInfoLabel.capacity(), "Info (%zu)", infoCount );
+			fixed_string<constant::kMaxBuffer32> arrTraceLabel;
+			formatstring( arrTraceLabel.data(), arrTraceLabel.capacity(), "Trace (%zu)", traceCount );
 
 			constexpr editor::Color4 kTraceChip{ 0.40f, 0.40f, 0.45f, 1.0f };
 
 			ImGui::SameLine();
-			if ( EditorWidgets::drawToggleButton( arrErrLabel, _arrLevelEnabled[0], editor::style::kError ) )
+			if ( EditorWidgets::drawToggleButton( arrErrLabel.c_str(), _arrLevelEnabled[0], editor::style::kError ) )
 				_arrLevelEnabled[0] = ( _arrLevelEnabled[0] == false );
 
 			ImGui::SameLine();
-			if ( EditorWidgets::drawToggleButton( arrWarnLabel, _arrLevelEnabled[1], editor::style::kWarn ) )
+			if ( EditorWidgets::drawToggleButton( arrWarnLabel.c_str(), _arrLevelEnabled[1], editor::style::kWarn ) )
 				_arrLevelEnabled[1] = ( _arrLevelEnabled[1] == false );
 
 			ImGui::SameLine();
-			if ( EditorWidgets::drawToggleButton( arrInfoLabel, _arrLevelEnabled[2] ) )
+			if ( EditorWidgets::drawToggleButton( arrInfoLabel.c_str(), _arrLevelEnabled[2], editor::style::kOk ) )
 				_arrLevelEnabled[2] = ( _arrLevelEnabled[2] == false );
 
 			ImGui::SameLine();
-			if ( EditorWidgets::drawToggleButton( arrTraceLabel, _arrLevelEnabled[3], kTraceChip ) )
+			if ( EditorWidgets::drawToggleButton( arrTraceLabel.c_str(), _arrLevelEnabled[3], kTraceChip ) )
 				_arrLevelEnabled[3] = ( _arrLevelEnabled[3] == false );
 
 			ImGui::SameLine();
@@ -195,14 +198,13 @@ namespace sw::editor
 				ImGui::SetClipboardText( allLogs.c_str() );
 			}
 
-			EditorWidgets::drawSearchField( "##log_filter", _arrFilterBuffer, sizeof( _arrFilterBuffer ),
-									 "Filter (tag / message / file)", -1.0f, false );
+			EditorWidgets::drawSearchField( "##log_filter", _filterBuffer, "Filter (tag / message / file)", -1.0f, false );
 		}
 		EditorChrome::endToolbar();
 
 		ImGui::Separator();
 
-		const string filterStr = StringUtil::trim( _arrFilterBuffer );
+		const string filterStr = StringUtil::trim( _filterBuffer.c_str() );
 
 		// 필터 또는 레벨 설정이 바뀌었거나 새 로그가 들어왔을 때만 재계산
 		bool bLevelChanged{ false };
@@ -276,7 +278,7 @@ namespace sw::editor
 		EditorChrome::endSection();
 
 		EditorWidgets::drawCountLabel( static_cast<uint32>( _listVisible.size() ), static_cast<uint32>( _listDrawSnapshot.size() ),
-								"lines" );
+									   "lines" );
 	}
 
 	void ConsolePanel::shutdown( IRHIDevice* /*rhiDevice*/ )

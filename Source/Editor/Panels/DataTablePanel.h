@@ -6,6 +6,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Commands/EditorBackgroundIo.h"
 #include "Editor/Common/Commands/EditorDataTableCommands.h"
@@ -34,9 +35,9 @@ namespace sw::editor
 		void drawContent() override;
 		/** @brief 온디맨드 도구이므로 기본적으로 닫힌 채 시작합니다. */
 		bool isToolPanel() const override { return true; }
-		bool		 trySaveDirtyDocument() override;
-		bool		 isDocumentDirty() const override;
-		void		 discardDirtyDocument() override;
+		bool trySaveDirtyDocument() override;
+		bool isDocumentDirty() const override;
+		void discardDirtyDocument() override;
 
 	private:
 		void drawLocalizationTab();
@@ -45,29 +46,29 @@ namespace sw::editor
 		void reloadLocalization();
 		void saveLocalization();
 
-		void reloadGameDataFiles();
-		void loadSelectedGameDataFile();
-		void saveSelectedGameDataFile();
-		void pollBackgroundJobs();
-		void markLocDirty();
-		void markGameDataDirty();
+		void			 reloadGameDataFiles();
+		void			 loadSelectedGameDataFile();
+		void			 saveSelectedGameDataFile();
+		void			 pollBackgroundJobs();
+		void			 markLocDirty();
+		void			 markGameDataDirty();
 		EditorPanelFlags getPanelFlags() const override;
 
 	private:
-		int32					  _activeTab;
-		utf8					  _arrLocFilter[constant::kMaxBuffer128];
-		utf8					  _arrNewKeyBuffer[constant::kMaxBuffer128];
-		vector<LocRecord>		  _listLocRecord;
-		vector<GameDataFileEntry> _listGameDataFile;
-		int32					  _selectedGameDataIndex;
-		string					  _selectedGameDataRawText;
-		string					  _savedGameDataRawText;
-		EditorLocalizationLoadJob _locJob;
-		EditorGameDataScanJob	  _gameDataJob;
-		uint8					  _bLocLoaded	   : 1;
-		uint8					  _bGameDataLoaded : 1;
-		uint8					  _bLocDirty	   : 1;
-		uint8					  _bGameDataDirty  : 1;
-		[[maybe_unused]] uint8	  _reserved		   : 4;
+		int32								  _activeTab;
+		fixed_string<constant::kMaxBuffer128> _locFilter;
+		fixed_string<constant::kMaxBuffer128> _newKeyBuffer;
+		vector<LocRecord>					  _listLocRecord;
+		vector<GameDataFileEntry>			  _listGameDataFile;
+		int32								  _selectedGameDataIndex;
+		string								  _selectedGameDataRawText;
+		string								  _savedGameDataRawText;
+		EditorLocalizationLoadJob			  _locJob;
+		EditorGameDataScanJob				  _gameDataJob;
+		uint8								  _bLocLoaded	   : 1;
+		uint8								  _bGameDataLoaded : 1;
+		uint8								  _bLocDirty	   : 1;
+		uint8								  _bGameDataDirty  : 1;
+		[[maybe_unused]] uint8				  _reserved		   : 4;
 	};
 } // namespace sw::editor

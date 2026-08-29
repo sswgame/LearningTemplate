@@ -2,6 +2,8 @@
 
 #include "Editor/Common/Commands/EditorSceneCommands.h"
 
+#include "Core/String/fixed_string.h"
+
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
@@ -63,16 +65,16 @@ namespace sw::editor
 		if ( pManager == nullptr || pSrc == nullptr )
 			return nullptr;
 
-		const string xml = ObjectStateSerializer::saveToXmlString( pSrc );
-		utf8		 newName[constant::kMaxBuffer256];
-		formatstring( newName, sizeof( newName ), "%#_Copy", pSrc->getName().c_str() );
+		const string						  xml = ObjectStateSerializer::saveToXmlString( pSrc );
+		fixed_string<constant::kMaxBuffer256> newName;
+		formatstring( newName.data(), newName.capacity(), "%#_Copy", pSrc->getName().c_str() );
 
-		GameObject* pNewObj = pManager->createGameObject( hashed_string( newName ) );
+		GameObject* pNewObj = pManager->createGameObject( hashed_string( newName.c_str() ) );
 		if ( pNewObj == nullptr )
 			return nullptr;
 
 		ObjectStateSerializer::loadFromXmlString( pNewObj, xml );
-		pNewObj->setName( hashed_string( newName ) );
+		pNewObj->setName( hashed_string( newName.c_str() ) );
 		if ( pSrc->getParent() != nullptr )
 			pNewObj->attachToParent( pSrc->getParent() );
 		ObjectStateSerializer::rebindSceneHierarchy( pNewObj, xml );

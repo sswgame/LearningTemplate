@@ -3,7 +3,9 @@
  * @brief 턴제 야생 / 트레이너 전투 (Fight / Run + 얇은 적 정책)
  */
 #pragma once
+#include "Core/Common/Defines.h"
 #include "Core/Common/Types.h"
+#include "Core/String/fixed_string.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/TurnBattle/SpeciesData.h"
@@ -65,7 +67,7 @@ namespace sw
 		/** @brief 적 닉네임을 반환합니다. */
 		const utf8* getFoeName() const { return _foe._nickname.c_str(); }
 		/** @brief HUD용 상태 텍스트를 반환합니다. */
-		const utf8* getStatusText() const { return _arrStatusText; }
+		const utf8* getStatusText() const { return _statusText.c_str(); }
 		/** @brief 플레이어 선두를 반환합니다. */
 		const PartyMember& player() const { return _player; }
 		/** @brief 플레이어 선두를 반환합니다. */
@@ -79,13 +81,13 @@ namespace sw
 		/** @brief 적이 쓸 기술 슬롯을 고릅니다. */
 		int32 pickFoeMoveSlot() const;
 
-		PartyMember			   _player;
-		PartyMember			   _foe;
-		float32				   _phaseTimer;			///< 현재 페이즈 남은 시간
-		utf8				   _arrStatusText[160]; ///< HUD 한 줄
-		BattlePhase			   _phase;
-		BattleCommand		   _pendingCmd;
-		uint8				   _bPlayerWon : 1;
-		[[maybe_unused]] uint8 _reserved   : 7;
+		PartyMember							  _player;
+		PartyMember							  _foe;
+		float32								  _phaseTimer; ///< 현재 페이즈 남은 시간
+		fixed_string<constant::kMaxBuffer256> _statusText; ///< HUD 한 줄
+		BattlePhase							  _phase;
+		BattleCommand						  _pendingCmd;
+		uint8								  _bPlayerWon : 1;
+		[[maybe_unused]] uint8				  _reserved	  : 7;
 	};
 } // namespace sw

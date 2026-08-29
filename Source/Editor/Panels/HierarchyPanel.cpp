@@ -165,10 +165,11 @@ namespace sw::editor
 					return;
 				}
 
-				static utf8 s_searchBuf[64]{ 0 };
+				static fixed_string<constant::kMaxBuffer64> s_searchBuf;
 				ImGui::SetNextItemWidth( 180.0f );
-				ImGui::InputTextWithHint( "##compSearch", "Search...", s_searchBuf, sizeof( s_searchBuf ) );
-				const bool bHasFilter = ( s_searchBuf[0] != '\0' );
+				ImGui::InputTextWithHint( "##compSearch", "Search...", s_searchBuf.data(),
+										  s_searchBuf.capacity() );
+				const bool bHasFilter = ( s_searchBuf.empty() == false );
 
 				auto* pRegistry = editor::getService<TypeRegistry>();
 
@@ -195,8 +196,8 @@ namespace sw::editor
 							continue;
 
 						const utf8* pDisplayName = ( pTypeInfo != nullptr ) ? pTypeInfo->getDisplayName() : typeName.c_str();
-						if ( StringUtil::stristr( pDisplayName, s_searchBuf ) != nullptr ||
-							 StringUtil::stristr( typeName.c_str(), s_searchBuf ) != nullptr )
+						if ( StringUtil::stristr( pDisplayName, s_searchBuf.c_str() ) != nullptr ||
+							 StringUtil::stristr( typeName.c_str(), s_searchBuf.c_str() ) != nullptr )
 						{
 							drawItem( typeName, pTypeInfo );
 							++matchCount;
@@ -314,8 +315,8 @@ namespace sw::editor
 										  ? pSceneComp->getComponentName().c_str()
 										  : "SceneComponent";
 
-				utf8 arrLabel[256];
-				formatstring( arrLabel, sizeof( arrLabel ), "%###sc%#", pCompName, pSceneComp->getComponentId() );
+				fixed_string<constant::kMaxBuffer256> arrLabel;
+				formatstring( arrLabel.data(), arrLabel.capacity(), "%###sc%#", pCompName, pSceneComp->getComponentId() );
 
 				bool						   hasChildOnOwner{ false };
 				const vector<SceneComponent*>& listChildren = pSceneComp->getChildren();
@@ -332,7 +333,7 @@ namespace sw::editor
 					ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanFullWidth |
 					( bSelected ? ImGuiTreeNodeFlags_Selected : 0 ) | ( hasChildOnOwner ? 0 : ImGuiTreeNodeFlags_Leaf );
 
-				const bool bOpen = ImGui::TreeNodeEx( arrLabel, flags );
+				const bool bOpen = ImGui::TreeNodeEx( arrLabel.c_str(), flags );
 				if ( ImGui::IsItemClicked() )
 					ws.selectComponent( GameObjectPtr{ pObj }, ComponentPtr{ pSceneComp } );
 				drawComponentContextMenu( pObj, pSceneComp, pManager );
@@ -351,7 +352,7 @@ namespace sw::editor
 			}
 
 			static void drawGameObjectNode( GameObject* pObj, GameObjectManager* pManager, const utf8* pFilter,
-											uint64& renamingObjectId, utf8* pRenameBuffer, size_t renameBufferSize,
+											uint64& renamingObjectId, fixed_string<constant::kMaxBuffer256>& renameBuffer,
 											bool& bFocusRenameInput )
 			{
 				if ( pObj == nullptr || pManager == nullptr )
@@ -402,18 +403,18 @@ namespace sw::editor
 						badgeStr += " [UI]";
 				}
 
-				utf8 arrLabel[256];
+				fixed_string<constant::kMaxBuffer256> arrLabel;
 				if ( badgeStr.empty() == false )
-					formatstring( arrLabel, sizeof( arrLabel ), "%# %#%###go%#", pObj->getName().c_str(), badgeStr.c_str(), objectId );
+					formatstring( arrLabel.data(), arrLabel.capacity(), "%# %#%###go%#", pObj->getName().c_str(), badgeStr.c_str(), objectId );
 				else
-					formatstring( arrLabel, sizeof( arrLabel ), "%###go%#", pObj->getName().c_str(), objectId );
+					formatstring( arrLabel.data(), arrLabel.capacity(), "%###go%#", pObj->getName().c_str(), objectId );
 
 				const bool bHasChildGos	  = pObj->getChildren().empty() == false;
 				const bool bHasComponents = pObj->getComponentCount() > 0;
 				const bool bLeaf		  = ( bHasChildGos == false && bHasComponents == false );
 
 				const bool bOpen = ImGui::TreeNodeEx(
-					arrLabel,
+					arrLabel.c_str(),
 					ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanFullWidth |
 						( bSelected ? ImGuiTreeNodeFlags_Selected : 0 ) | ( bLeaf ? ImGuiTreeNodeFlags_Leaf : 0 ) );
 
@@ -439,15 +440,15 @@ namespace sw::editor
 						ImGui::SetKeyboardFocusHere();
 						bFocusRenameInput = false;
 					}
-					if ( ImGui::InputText( "##InlineRename", pRenameBuffer, renameBufferSize,
+					if ( ImGui::InputText( "##InlineRename", renameBuffer.data(), renameBuffer.capacity(),
 										   ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll ) )
 					{
-						EditorSceneCommands::rename( pObj, pRenameBuffer );
+						EditorSceneCommands::rename( pObj, renameBuffer.c_str() );
 						renamingObjectId = 0;
 					}
 					if ( ImGui::IsItemDeactivated() && ImGui::IsKeyPressed( ImGuiKey_Escape ) == false )
 					{
-						EditorSceneCommands::rename( pObj, pRenameBuffer );
+						EditorSceneCommands::rename( pObj, renameBuffer.c_str() );
 						renamingObjectId = 0;
 					}
 					if ( ImGui::IsKeyPressed( ImGuiKey_Escape ) )
@@ -463,7 +464,7 @@ namespace sw::editor
 				{
 					for ( GameObject* pChild : pObj->getChildren() )
 					{
-						drawGameObjectNode( pChild, pManager, pFilter, renamingObjectId, pRenameBuffer, renameBufferSize,
+						drawGameObjectNode( pChild, pManager, pFilter, renamingObjectId, renameBuffer,
 											bFocusRenameInput );
 					}
 
@@ -493,11 +494,10 @@ namespace sw::editor
 												  ? pComp->getComponentName().c_str()
 												  : "Component";
 
-						utf8 arrCompLabel[256];
-						formatstring( arrCompLabel, sizeof( arrCompLabel ), "%###c%#", pCompName,
-									  pComp->getComponentId() );
+						fixed_string<constant::kMaxBuffer256> arrCompLabel;
+						formatstring( arrCompLabel.data(), arrCompLabel.capacity(), "%###c%#", pCompName, pComp->getComponentId() );
 
-						if ( ImGui::Selectable( arrCompLabel, bCompSelected ) )
+						if ( ImGui::Selectable( arrCompLabel.c_str(), bCompSelected ) )
 							ws.selectComponent( ptrObj, ComponentPtr{ pComp } );
 						drawComponentContextMenu( pObj, pComp, pManager );
 
@@ -516,8 +516,8 @@ namespace sw::editor
 {
 	HierarchyPanel::HierarchyPanel()
 		: _renamingObjectId{ 0 }
-		, _arrFilterBuffer{}
-		, _arrRenameBuffer{}
+		, _filterBuffer{}
+		, _renameBuffer{}
 		, _bFocusRenameInput{ false }
 	{
 	}
@@ -551,7 +551,7 @@ namespace sw::editor
 				ImGui::EndDisabled();
 
 			ImGui::SameLine();
-			EditorWidgets::drawSearchField( "##HierarchyFilter", _arrFilterBuffer, sizeof( _arrFilterBuffer ),
+			EditorWidgets::drawSearchField( "##HierarchyFilter", _filterBuffer,
 											"Search (t:Mesh, tag:Player)...", 0.0f, false );
 		}
 		EditorChrome::endToolbar();
@@ -566,8 +566,8 @@ namespace sw::editor
 			for ( GameObject* pObj : listObjects )
 			{
 				if ( pObj != nullptr && pObj->getParent() == nullptr )
-					HierarchyPanelInternal::drawGameObjectNode( pObj, pManager, _arrFilterBuffer, _renamingObjectId, _arrRenameBuffer,
-																sizeof( _arrRenameBuffer ), _bFocusRenameInput );
+					HierarchyPanelInternal::drawGameObjectNode( pObj, pManager, _filterBuffer.c_str(), _renamingObjectId, _renameBuffer,
+																_bFocusRenameInput );
 			}
 
 			// Empty area Drag & Drop Target for SW_ASSET_PATH
@@ -623,8 +623,7 @@ namespace sw::editor
 						if ( pSelected != nullptr )
 						{
 							_renamingObjectId = pSelected->getObjectId();
-							formatstring( _arrRenameBuffer, sizeof( _arrRenameBuffer ), "%#",
-										  pSelected->getName().c_str() );
+							formatstring( _renameBuffer.data(), _renameBuffer.capacity(), "%#", pSelected->getName().c_str() );
 							_bFocusRenameInput = true;
 						}
 					}

@@ -19,8 +19,8 @@ namespace sw::editor
 	DataTablePanel::DataTablePanel()
 		: IEditorPanel{ false }
 		, _activeTab{ 0 }
-		, _arrLocFilter{}
-		, _arrNewKeyBuffer{}
+		, _locFilter{}
+		, _newKeyBuffer{}
 		, _listLocRecord{}
 		, _listGameDataFile{}
 		, _selectedGameDataIndex{ -1 }
@@ -136,7 +136,7 @@ namespace sw::editor
 	{
 		if ( EditorChrome::beginToolbar( "##locToolbar" ) )
 		{
-			EditorWidgets::drawSearchField( "##locFilter", _arrLocFilter, sizeof( _arrLocFilter ), "Search keys or translations...", 240.0f, false );
+			EditorWidgets::drawSearchField( "##locFilter", _locFilter, "Search keys or translations...", 240.0f, false );
 			ImGui::SameLine();
 
 			if ( ImGui::Button( "Save Localization" ) )
@@ -148,11 +148,11 @@ namespace sw::editor
 
 			ImGui::SameLine();
 			ImGui::SetNextItemWidth( 160.0f );
-			ImGui::InputTextWithHint( "##newKey", "New string key...", _arrNewKeyBuffer, sizeof( _arrNewKeyBuffer ) );
+			ImGui::InputTextWithHint( "##newKey", "New string key...", _newKeyBuffer.data(), _newKeyBuffer.capacity() );
 			ImGui::SameLine();
-			if ( ImGui::Button( "Add Key" ) && _arrNewKeyBuffer[0] != '\0' )
+			if ( ImGui::Button( "Add Key" ) && _newKeyBuffer.empty() == false )
 			{
-				const string newKey{ _arrNewKeyBuffer };
+				const string newKey{ _newKeyBuffer.c_str() };
 				bool		 bExists{ false };
 				for ( const LocRecord& rec : _listLocRecord )
 				{
@@ -169,7 +169,7 @@ namespace sw::editor
 					newRec._key		  = newKey;
 					newRec._bModified = true;
 					_listLocRecord.push_back( std::move( newRec ) );
-					_arrNewKeyBuffer[0] = '\0';
+					_newKeyBuffer.clear();
 					markLocDirty();
 				}
 			}
@@ -202,12 +202,12 @@ namespace sw::editor
 			{
 				LocRecord& rec = _listLocRecord[recordIndex];
 
-				if ( _arrLocFilter[0] != '\0' )
+				if ( _locFilter.empty() == false )
 				{
-					if ( StringUtil::stristr( rec._key.c_str(), _arrLocFilter ) == nullptr &&
-						 StringUtil::stristr( rec._enUS.c_str(), _arrLocFilter ) == nullptr &&
-						 StringUtil::stristr( rec._koKR.c_str(), _arrLocFilter ) == nullptr &&
-						 StringUtil::stristr( rec._jaJP.c_str(), _arrLocFilter ) == nullptr )
+					if ( StringUtil::stristr( rec._key.c_str(), _locFilter.c_str() ) == nullptr &&
+						 StringUtil::stristr( rec._enUS.c_str(), _locFilter.c_str() ) == nullptr &&
+						 StringUtil::stristr( rec._koKR.c_str(), _locFilter.c_str() ) == nullptr &&
+						 StringUtil::stristr( rec._jaJP.c_str(), _locFilter.c_str() ) == nullptr )
 					{
 						continue;
 					}
@@ -222,36 +222,33 @@ namespace sw::editor
 
 				// Col 1: en_US
 				ImGui::TableSetColumnIndex( 1 );
-				utf8 arrEnBuf[constant::kMaxBuffer512];
-				formatstring( arrEnBuf, sizeof( arrEnBuf ), "%s", rec._enUS.c_str() );
+				fixed_string<constant::kMaxBuffer512> arrEnBuf{ rec._enUS.c_str() };
 				ImGui::SetNextItemWidth( -1.0f );
-				if ( ImGui::InputText( "##en", arrEnBuf, sizeof( arrEnBuf ) ) )
+				if ( ImGui::InputText( "##en", arrEnBuf.data(), arrEnBuf.capacity() ) )
 				{
-					rec._enUS	   = arrEnBuf;
+					rec._enUS	   = arrEnBuf.c_str();
 					rec._bModified = true;
 					markLocDirty();
 				}
 
 				// Col 2: ko_KR
 				ImGui::TableSetColumnIndex( 2 );
-				utf8 arrKoBuf[constant::kMaxBuffer512];
-				formatstring( arrKoBuf, sizeof( arrKoBuf ), "%s", rec._koKR.c_str() );
+				fixed_string<constant::kMaxBuffer512> arrKoBuf{ rec._koKR.c_str() };
 				ImGui::SetNextItemWidth( -1.0f );
-				if ( ImGui::InputText( "##ko", arrKoBuf, sizeof( arrKoBuf ) ) )
+				if ( ImGui::InputText( "##ko", arrKoBuf.data(), arrKoBuf.capacity() ) )
 				{
-					rec._koKR	   = arrKoBuf;
+					rec._koKR	   = arrKoBuf.c_str();
 					rec._bModified = true;
 					markLocDirty();
 				}
 
 				// Col 3: ja_JP
 				ImGui::TableSetColumnIndex( 3 );
-				utf8 arrJaBuf[constant::kMaxBuffer512];
-				formatstring( arrJaBuf, sizeof( arrJaBuf ), "%s", rec._jaJP.c_str() );
+				fixed_string<constant::kMaxBuffer512> arrJaBuf{ rec._jaJP.c_str() };
 				ImGui::SetNextItemWidth( -1.0f );
-				if ( ImGui::InputText( "##ja", arrJaBuf, sizeof( arrJaBuf ) ) )
+				if ( ImGui::InputText( "##ja", arrJaBuf.data(), arrJaBuf.capacity() ) )
 				{
-					rec._jaJP	   = arrJaBuf;
+					rec._jaJP	   = arrJaBuf.c_str();
 					rec._bModified = true;
 					markLocDirty();
 				}

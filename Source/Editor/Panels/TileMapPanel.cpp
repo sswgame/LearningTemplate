@@ -21,12 +21,12 @@ namespace sw::editor
 
 	TileMapPanel::TileMapPanel()
 		: EditorDocumentPanel{ EditorAssetKind::TileMap, false }
-		, _arrPathBuffer{}
-		, _arrNameBuffer{}
-		, _arrEdgeTargetN{}
-		, _arrEdgeTargetE{}
-		, _arrEdgeTargetS{}
-		, _arrEdgeTargetW{}
+		, _pathBuffer{}
+		, _nameBuffer{ "Untitled" }
+		, _edgeTargetN{}
+		, _edgeTargetE{}
+		, _edgeTargetS{}
+		, _edgeTargetW{}
 		, _arrEdgeTx{ 1, 1, 1, 1 }
 		, _arrEdgeTy{ 1, 1, 1, 1 }
 		, _width{ 8 }
@@ -35,7 +35,7 @@ namespace sw::editor
 		, _paintHeight{ 1 }
 		, _atlasId{ 0 }
 		, _arrTint{ 180.0f / 255.0f, 200.0f / 255.0f, 160.0f / 255.0f }
-		, _arrWarpTarget{}
+		, _warpTarget{}
 		, _warpTx{ 1 }
 		, _warpTy{ 1 }
 		, _bErase{ false }
@@ -53,10 +53,9 @@ namespace sw::editor
 	{
 		const EditorData& editorData = editor::getEditorData();
 		if ( editorData._defaultMap.empty() == false )
-			StringUtil::strncpy( _arrPathBuffer, editorData._defaultMap.c_str(), sizeof( _arrPathBuffer ) - 1 );
-		StringUtil::strncpy( _arrNameBuffer, "Untitled", sizeof( _arrNameBuffer ) - 1 );
+			_pathBuffer = editorData._defaultMap.c_str();
 		if ( editorData._warpMap.empty() == false )
-			StringUtil::strncpy( _arrWarpTarget, editorData._warpMap.c_str(), sizeof( _arrWarpTarget ) - 1 );
+			_warpTarget = editorData._warpMap.c_str();
 		resize( 8, 8 );
 	}
 
@@ -65,10 +64,9 @@ namespace sw::editor
 		updateFocusedDocument();
 		if ( isDocumentLoaded() == false )
 		{
-			StringUtil::strncpy( _arrPathBuffer, getLoadedAssetPath().c_str(), sizeof( _arrPathBuffer ) - 1 );
-			_arrPathBuffer[sizeof( _arrPathBuffer ) - 1] = '\0';
+			_pathBuffer = getLoadedAssetPath().c_str();
 			if ( getLoadedAssetPath().empty() == false )
-				loadXml( _arrPathBuffer );
+				loadXml( _pathBuffer.c_str() );
 			markDocumentLoaded();
 		}
 
@@ -76,8 +74,8 @@ namespace sw::editor
 		if ( focused.empty() == false )
 			ImGui::TextDisabled( "Focused: %s", focused.c_str() );
 
-		ImGui::InputText( "Path", _arrPathBuffer, sizeof( _arrPathBuffer ) );
-		ImGui::InputText( "Name", _arrNameBuffer, sizeof( _arrNameBuffer ) );
+		ImGui::InputText( "Path", _pathBuffer.data(), _pathBuffer.capacity() );
+		ImGui::InputText( "Name", _nameBuffer.data(), _nameBuffer.capacity() );
 		if ( ImGui::IsItemDeactivatedAfterEdit() )
 			notifyDocumentEdited( "Edit Tile Map Name", "tilemap-name" );
 		ImGui::InputInt( "Width", &_width );
@@ -92,15 +90,15 @@ namespace sw::editor
 		ImGui::SameLine();
 		if ( ImGui::Button( "Load" ) )
 		{
-			if ( loadXml( _arrPathBuffer ) == false )
+			if ( loadXml( _pathBuffer.c_str() ) == false )
 				SW_LOG_WARNING( "%#", _status.c_str() );
 		}
 		ImGui::SameLine();
 		if ( ImGui::Button( "Save" ) )
 		{
-			if ( saveXml( _arrPathBuffer ) )
+			if ( saveXml( _pathBuffer.c_str() ) )
 			{
-				_status = string( "Saved " ) + _arrPathBuffer;
+				_status = string( "Saved " ) + _pathBuffer.c_str();
 				clearDocumentDirty();
 			}
 			else
@@ -123,20 +121,20 @@ namespace sw::editor
 		}
 		else if ( _layer == PaintLayer::Warp )
 		{
-			ImGui::InputText( "Warp Target", _arrWarpTarget, sizeof( _arrWarpTarget ) );
+			ImGui::InputText( "Warp Target", _warpTarget.data(), _warpTarget.capacity() );
 			ImGui::InputInt( "Target TX", &_warpTx );
 			ImGui::InputInt( "Target TY", &_warpTy );
 		}
 
 		ImGui::Separator();
 		ImGui::TextUnformatted( "Edge Warp Presets" );
-		const utf8* edges[] = { "N", "E", "S", "W" };
-		utf8*		bufs[]	= { _arrEdgeTargetN, _arrEdgeTargetE, _arrEdgeTargetS, _arrEdgeTargetW };
+		const utf8*							   edges[] = { "N", "E", "S", "W" };
+		fixed_string<constant::kMaxBuffer128>* bufs[]  = { &_edgeTargetN, &_edgeTargetE, &_edgeTargetS, &_edgeTargetW };
 		for ( int32 edgeIndex = 0; edgeIndex < 4; ++edgeIndex )
 		{
 			ImGui::PushID( edgeIndex );
 			ImGui::SetNextItemWidth( 180.0f );
-			ImGui::InputText( edges[edgeIndex], bufs[edgeIndex], 128 );
+			ImGui::InputText( edges[edgeIndex], bufs[edgeIndex]->data(), bufs[edgeIndex]->capacity() );
 			ImGui::SameLine();
 			ImGui::SetNextItemWidth( 50.0f );
 			ImGui::InputInt( "##tx", &_arrEdgeTx[edgeIndex] );
@@ -237,7 +235,7 @@ namespace sw::editor
 		if ( EditorToolAssetCommands::loadTileMap( assetRelativePath, data, _status ) == false )
 			return false;
 
-		StringUtil::strncpy( _arrNameBuffer, data._name.c_str(), sizeof( _arrNameBuffer ) - 1 );
+		_nameBuffer			= data._name.c_str();
 		_width				= data._width;
 		_height				= data._height;
 		_listWalkable		= std::move( data._walkableList );
@@ -250,7 +248,7 @@ namespace sw::editor
 		_role				= data._role;
 		_spawnX				= data._spawnX;
 		_spawnY				= data._spawnY;
-		StringUtil::strncpy( _arrPathBuffer, string( assetRelativePath ).c_str(), sizeof( _arrPathBuffer ) - 1 );
+		_pathBuffer			= string( assetRelativePath ).c_str();
 		syncDocumentUndoBaseline();
 		return true;
 	}
@@ -266,7 +264,7 @@ namespace sw::editor
 
 	bool TileMapPanel::saveDocument()
 	{
-		if ( saveXml( _arrPathBuffer ) == false )
+		if ( saveXml( _pathBuffer.c_str() ) == false )
 			return false;
 		return true;
 	}
@@ -274,7 +272,7 @@ namespace sw::editor
 	TileMapXmlData TileMapPanel::captureMapData() const
 	{
 		TileMapXmlData data;
-		data._name				 = _arrNameBuffer;
+		data._name				 = _nameBuffer.c_str();
 		data._width				 = _width;
 		data._height			 = _height;
 		data._walkableList		 = _listWalkable;
@@ -292,7 +290,7 @@ namespace sw::editor
 
 	void TileMapPanel::applyMapData( const TileMapXmlData& data )
 	{
-		StringUtil::strncpy( _arrNameBuffer, data._name.c_str(), sizeof( _arrNameBuffer ) - 1 );
+		_nameBuffer			= data._name.c_str();
 		_width				= data._width;
 		_height				= data._height;
 		_listWalkable		= data._walkableList;
@@ -353,12 +351,12 @@ namespace sw::editor
 												 [x, y]( const TileMapXmlData::Warp& warp )
 				{ return warp._tileX == x && warp._tileY == y; } ),
 								 _listWarp.end() );
-				if ( _bErase == false && _arrWarpTarget[0] != '\0' )
+				if ( _bErase == false && _warpTarget.empty() == false )
 				{
 					TileMapXmlData::Warp warpItem{};
 					warpItem._tileX		  = x;
 					warpItem._tileY		  = y;
-					warpItem._targetMap	  = _arrWarpTarget;
+					warpItem._targetMap	  = _warpTarget.c_str();
 					warpItem._targetTileX = _warpTx;
 					warpItem._targetTileY = _warpTy;
 					_listWarp.push_back( std::move( warpItem ) );
@@ -372,8 +370,8 @@ namespace sw::editor
 
 	void TileMapPanel::paintEdgeWarp( int32 edge )
 	{
-		const utf8* targets[] = { _arrEdgeTargetN, _arrEdgeTargetE, _arrEdgeTargetS, _arrEdgeTargetW };
-		if ( edge < 0 || edge > 3 || targets[edge][0] == '\0' )
+		const fixed_string<constant::kMaxBuffer128>* targets[] = { &_edgeTargetN, &_edgeTargetE, &_edgeTargetS, &_edgeTargetW };
+		if ( edge < 0 || edge > 3 || targets[edge]->empty() )
 			return;
 
 		auto stamp = [&]( int32 tileX, int32 tileY )
@@ -386,7 +384,7 @@ namespace sw::editor
 			TileMapXmlData::Warp warpItem{};
 			warpItem._tileX		  = tileX;
 			warpItem._tileY		  = tileY;
-			warpItem._targetMap	  = targets[edge];
+			warpItem._targetMap	  = targets[edge]->c_str();
 			warpItem._targetTileX = _arrEdgeTx[edge];
 			warpItem._targetTileY = _arrEdgeTy[edge];
 			_listWarp.push_back( std::move( warpItem ) );

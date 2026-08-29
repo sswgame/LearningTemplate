@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/String/fixed_string.h"
 
 #include "Editor/Common/EditorSessionPolicy.h"
 
@@ -96,6 +97,16 @@ namespace sw::editor
 		 */
 		static bool drawSearchField( const utf8* pId, utf8* pBuffer, uint32 bufferBytes, const utf8* pHint = "Search...",
 									 float32 width = 0.0f, bool bShowClear = true );
+
+		/**
+		 * @brief fixed_string 검색 필드 오버로드
+		 */
+		template <uint32 N>
+		static bool drawSearchField( const utf8* pId, fixed_string<N>& str, const utf8* pHint = "Search...",
+									 float32 width = 0.0f, bool bShowClear = true )
+		{
+			return drawSearchField( pId, str.data(), str.capacity(), pHint, width, bShowClear );
+		}
 
 		/**
 		 * @brief 작은 형태의 색상이 들어간 태그(칩) 버튼을 그립니다.

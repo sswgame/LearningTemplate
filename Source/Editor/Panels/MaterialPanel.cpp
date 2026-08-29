@@ -2,8 +2,10 @@
 
 #include "Editor/Panels/MaterialPanel.h"
 
+#include "Core/Common/Defines.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 #include "Core/String/string_splitter.h"
 
@@ -44,17 +46,16 @@ namespace sw::editor
 
 			static void writeFloats( string& out, const float32* pVal, uint32 count )
 			{
-				utf8 arrBuf[128];
-				arrBuf[0] = '\0';
+				fixed_string<constant::kMaxBuffer128> buf;
 				if ( count == 1 )
-					formatstring( arrBuf, sizeof( arrBuf ), "%g", pVal[0] );
+					formatstring( buf.data(), buf.capacity(), "%g", pVal[0] );
 				else if ( count == 2 )
-					formatstring( arrBuf, sizeof( arrBuf ), "%g,%g", pVal[0], pVal[1] );
+					formatstring( buf.data(), buf.capacity(), "%g,%g", pVal[0], pVal[1] );
 				else if ( count == 3 )
-					formatstring( arrBuf, sizeof( arrBuf ), "%g,%g,%g", pVal[0], pVal[1], pVal[2] );
+					formatstring( buf.data(), buf.capacity(), "%g,%g,%g", pVal[0], pVal[1], pVal[2] );
 				else if ( count >= 4 )
-					formatstring( arrBuf, sizeof( arrBuf ), "%g,%g,%g,%g", pVal[0], pVal[1], pVal[2], pVal[3] );
-				out = arrBuf;
+					formatstring( buf.data(), buf.capacity(), "%g,%g,%g,%g", pVal[0], pVal[1], pVal[2], pVal[3] );
+				out = buf.c_str();
 			}
 
 			static bool drawTypedProperty( MaterialProperty& prop )
@@ -112,7 +113,7 @@ namespace sw::editor
 					{
 						float32 arrVal[4]{ 1.0f, 1.0f, 1.0f, 1.0f };
 						parseFloats( prop._value, arrVal, 4 );
-						Color4 color{ arrVal[0], arrVal[1], arrVal[2], arrVal[3] };
+						Color4	   color{ arrVal[0], arrVal[1], arrVal[2], arrVal[3] };
 						const bool bChanged = EditorWidgets::drawColorEdit( pLabel, color );
 						if ( bChanged )
 						{
@@ -126,7 +127,7 @@ namespace sw::editor
 					}
 					case MaterialPropertyType::Int:
 					{
-						int32 iVal = static_cast<int32>( StringUtil::atoi( prop._value.c_str() ) );
+						int32	   iVal		= static_cast<int32>( StringUtil::atoi( prop._value.c_str() ) );
 						const bool bChanged = ImGui::DragInt( pLabel, &iVal );
 						if ( bChanged )
 							prop._value = to_string( iVal );
@@ -134,7 +135,7 @@ namespace sw::editor
 					}
 					case MaterialPropertyType::Enum:
 					{
-						int32 selected = static_cast<int32>( StringUtil::atoi( prop._value.c_str() ) );
+						int32		selected = static_cast<int32>( StringUtil::atoi( prop._value.c_str() ) );
 						const utf8* pPreview = prop._value.c_str();
 						for ( const MaterialEnumEntry& entry : prop._listEnumEntry )
 						{
@@ -162,7 +163,7 @@ namespace sw::editor
 					case MaterialPropertyType::Texture3D:
 					case MaterialPropertyType::Texture2DArray:
 					{
-						string path = prop._assetPath.empty() ? prop._value : prop._assetPath;
+						string	   path		= prop._assetPath.empty() ? prop._value : prop._assetPath;
 						const bool bChanged = EditorWidgets::drawAssetSlot( pLabel, path, ".png" );
 						if ( bChanged )
 						{
@@ -185,12 +186,10 @@ namespace sw::editor
 					case MaterialPropertyType::Unknown:
 					default:
 					{
-						utf8 arrValue[256];
-						StringUtil::strncpy( arrValue, prop._value.c_str(), sizeof( arrValue ) - 1 );
-						arrValue[sizeof( arrValue ) - 1] = '\0';
-						if ( ImGui::InputText( pLabel, arrValue, sizeof( arrValue ) ) )
+						fixed_string<constant::kMaxBuffer256> arrValue{ prop._value.c_str() };
+						if ( ImGui::InputText( pLabel, arrValue.data(), arrValue.capacity() ) )
 						{
-							prop._value = arrValue;
+							prop._value = arrValue.c_str();
 							return true;
 						}
 						return false;
@@ -208,8 +207,8 @@ namespace sw::editor
 	MaterialPanel::MaterialPanel()
 		: EditorDocumentPanel{ EditorAssetKind::Material, false }
 		, _material{}
-		, _arrName{}
-		, _arrShaderPath{}
+		, _name{}
+		, _shaderPath{}
 		, _status{}
 	{
 	}
@@ -236,18 +235,18 @@ namespace sw::editor
 		if ( ImGui::Button( "Apply to Selection" ) )
 			applyLivePreview();
 
-		ImGui::InputText( "Name", _arrName, sizeof( _arrName ) );
+		ImGui::InputText( "Name", _name.data(), _name.capacity() );
 		if ( ImGui::IsItemDeactivatedAfterEdit() )
 		{
-			_material.getDesc()._name = _arrName;
+			_material.getDesc()._name = _name.c_str();
 			notifyDocumentEdited( "Edit Material Name", "material-name" );
 			applyLivePreview();
 		}
-		string shaderPath = _arrShaderPath;
+		string shaderPath = _shaderPath.c_str();
 		if ( EditorWidgets::drawAssetSlot( "Shader", shaderPath, ".hlsl" ) )
 		{
-			StringUtil::strncpy( _arrShaderPath, shaderPath.c_str(), sizeof( _arrShaderPath ) - 1 );
-			_material.getDesc()._shaderPath = _arrShaderPath;
+			_shaderPath						= shaderPath;
+			_material.getDesc()._shaderPath = _shaderPath.c_str();
 			notifyDocumentEdited( "Edit Material Shader", "material-shader" );
 		}
 
@@ -266,9 +265,9 @@ namespace sw::editor
 			const bool bChanged = MaterialPanelInternal::drawTypedProperty( *pProp );
 			if ( bChanged )
 			{
-				utf8 arrKey[128];
-				formatstring( arrKey, sizeof( arrKey ), "material-prop:%s", pProp->_name.c_str() );
-				notifyDocumentEdited( "Edit Material Property", arrKey );
+				fixed_string<constant::kMaxBuffer128> key;
+				formatstring( key.data(), key.capacity(), "material-prop:%s", pProp->_name.c_str() );
+				notifyDocumentEdited( "Edit Material Property", key.c_str() );
 				applyLivePreview();
 			}
 			ImGui::PopID();
@@ -286,8 +285,8 @@ namespace sw::editor
 	{
 		if ( getLoadedAssetPath().empty() )
 			return false;
-		_material.getDesc()._name		= _arrName;
-		_material.getDesc()._shaderPath = _arrShaderPath;
+		_material.getDesc()._name		= _name.c_str();
+		_material.getDesc()._shaderPath = _shaderPath.c_str();
 		if ( _material.saveToFile( getLoadedAssetPath() ) == false )
 		{
 			_status = "Save failed";
@@ -325,10 +324,8 @@ namespace sw::editor
 
 	void MaterialPanel::syncNameBuffers()
 	{
-		StringUtil::strncpy( _arrName, _material.getName().c_str(), sizeof( _arrName ) - 1 );
-		_arrName[sizeof( _arrName ) - 1] = '\0';
-		StringUtil::strncpy( _arrShaderPath, _material.getShaderPath().c_str(), sizeof( _arrShaderPath ) - 1 );
-		_arrShaderPath[sizeof( _arrShaderPath ) - 1] = '\0';
+		_name		= _material.getName().c_str();
+		_shaderPath = _material.getShaderPath().c_str();
 	}
 
 	string MaterialPanel::captureDocumentText() const

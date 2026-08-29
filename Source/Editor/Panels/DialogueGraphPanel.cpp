@@ -2,8 +2,10 @@
 
 #include "Editor/Panels/DialogueGraphPanel.h"
 
+#include "Core/Common/Defines.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 
 #include "Editor/Common/Commands/EditorToolAssetCommands.h"
@@ -407,26 +409,23 @@ namespace sw::editor
 
 				if ( pSelectedNode->_type == DialogueAssetNodeType::Dialogue )
 				{
-					utf8 speakerBuf[64]{};
-					StringUtil::strncpy( speakerBuf, pSelectedNode->_speaker.c_str(), sizeof( speakerBuf ) - 1 );
-					if ( ImGui::InputText( "Speaker", speakerBuf, sizeof( speakerBuf ) ) )
-						pSelectedNode->_speaker = speakerBuf;
+					fixed_string<constant::kMaxBuffer64> speakerBuf{ pSelectedNode->_speaker.c_str() };
+					if ( ImGui::InputText( "Speaker", speakerBuf.data(), speakerBuf.capacity() ) )
+						pSelectedNode->_speaker = speakerBuf.c_str();
 					if ( ImGui::IsItemDeactivatedAfterEdit() )
 						notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
 
-					utf8 textBuf[512]{};
-					StringUtil::strncpy( textBuf, pSelectedNode->_text.c_str(), sizeof( textBuf ) - 1 );
-					if ( ImGui::InputTextMultiline( "Text", textBuf, sizeof( textBuf ), ImVec2( -1, 100 ) ) )
-						pSelectedNode->_text = textBuf;
+					fixed_string<constant::kMaxBuffer512> textBuf{ pSelectedNode->_text.c_str() };
+					if ( ImGui::InputTextMultiline( "Text", textBuf.data(), textBuf.capacity(), ImVec2( -1, 100 ) ) )
+						pSelectedNode->_text = textBuf.c_str();
 					if ( ImGui::IsItemDeactivatedAfterEdit() )
 						notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
 				}
 				else if ( pSelectedNode->_type == DialogueAssetNodeType::Choice )
 				{
-					utf8 promptBuf[128]{};
-					StringUtil::strncpy( promptBuf, pSelectedNode->_text.c_str(), sizeof( promptBuf ) - 1 );
-					if ( ImGui::InputText( "Prompt", promptBuf, sizeof( promptBuf ) ) )
-						pSelectedNode->_text = promptBuf;
+					fixed_string<constant::kMaxBuffer128> promptBuf{ pSelectedNode->_text.c_str() };
+					if ( ImGui::InputText( "Prompt", promptBuf.data(), promptBuf.capacity() ) )
+						pSelectedNode->_text = promptBuf.c_str();
 					if ( ImGui::IsItemDeactivatedAfterEdit() )
 						notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
 
@@ -434,10 +433,9 @@ namespace sw::editor
 					for ( size_t choiceIndex = 0; choiceIndex < pSelectedNode->_listChoice.size(); ++choiceIndex )
 					{
 						ImGui::PushID( static_cast<int32>( choiceIndex ) );
-						utf8 choiceBuf[128]{};
-						StringUtil::strncpy( choiceBuf, pSelectedNode->_listChoice[choiceIndex].c_str(), sizeof( choiceBuf ) - 1 );
-						if ( ImGui::InputText( "##Choice", choiceBuf, sizeof( choiceBuf ) ) )
-							pSelectedNode->_listChoice[choiceIndex] = choiceBuf;
+						fixed_string<constant::kMaxBuffer128> choiceBuf{ pSelectedNode->_listChoice[choiceIndex].c_str() };
+						if ( ImGui::InputText( "##Choice", choiceBuf.data(), choiceBuf.capacity() ) )
+							pSelectedNode->_listChoice[choiceIndex] = choiceBuf.c_str();
 						if ( ImGui::IsItemDeactivatedAfterEdit() )
 							notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
 						ImGui::SameLine();
@@ -459,20 +457,18 @@ namespace sw::editor
 				}
 				else if ( pSelectedNode->_type == DialogueAssetNodeType::Branch )
 				{
-					utf8 condBuf[128]{};
-					StringUtil::strncpy( condBuf, pSelectedNode->_condition.c_str(), sizeof( condBuf ) - 1 );
-					if ( ImGui::InputText( "Condition", condBuf, sizeof( condBuf ) ) )
-						pSelectedNode->_condition = condBuf;
+					fixed_string<constant::kMaxBuffer128> condBuf{ pSelectedNode->_condition.c_str() };
+					if ( ImGui::InputText( "Condition", condBuf.data(), condBuf.capacity() ) )
+						pSelectedNode->_condition = condBuf.c_str();
 					if ( ImGui::IsItemDeactivatedAfterEdit() )
 						notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
 					ImGui::TextDisabled( "Ex: flag.boss_defeated == 1" );
 				}
 				else if ( pSelectedNode->_type == DialogueAssetNodeType::Action )
 				{
-					utf8 cmdBuf[128]{};
-					StringUtil::strncpy( cmdBuf, pSelectedNode->_actionCommand.c_str(), sizeof( cmdBuf ) - 1 );
-					if ( ImGui::InputText( "Command", cmdBuf, sizeof( cmdBuf ) ) )
-						pSelectedNode->_actionCommand = cmdBuf;
+					fixed_string<constant::kMaxBuffer128> cmdBuf{ pSelectedNode->_actionCommand.c_str() };
+					if ( ImGui::InputText( "Command", cmdBuf.data(), cmdBuf.capacity() ) )
+						pSelectedNode->_actionCommand = cmdBuf.c_str();
 					if ( ImGui::IsItemDeactivatedAfterEdit() )
 						notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
 					ImGui::TextDisabled( "Ex: give_item:potion:3" );
@@ -646,9 +642,9 @@ namespace sw::editor
 				for ( int32 choiceIndex = 0; choiceIndex < static_cast<int32>( pNode->_listChoice.size() ); ++choiceIndex )
 				{
 					ImGui::SameLine();
-					utf8 arrLabel[64];
-					formatstring( arrLabel, sizeof( arrLabel ), "Choice %#", choiceIndex );
-					if ( ImGui::SmallButton( arrLabel ) )
+					fixed_string<constant::kMaxBuffer64> label;
+					formatstring( label.data(), label.capacity(), "Choice %#", choiceIndex );
+					if ( ImGui::SmallButton( label.c_str() ) )
 						previewAdvance( DialogueGraphPanelInternal::kPinChoiceBase + choiceIndex );
 				}
 			}

@@ -4,6 +4,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Commands/EditorAssetCommands.h"
 #include "Editor/Common/EditorPlaySession.h"
@@ -216,15 +217,15 @@ namespace sw::editor
 
 				if ( state == BuildState::Success )
 				{
-					utf8 contentBuf[128];
-					snprintf( contentBuf, sizeof( contentBuf ), "%s compiled and reloaded in %.2fs", displayName.c_str(), static_cast<float64>( duration ) );
-					EditorContext::get()->getNotificationManager().push( "Live Coding Succeeded", contentBuf, NotificationType::Success, 4.0f );
+					fixed_string<constant::kMaxBuffer128> contentBuf;
+					formatstring( contentBuf.data(), contentBuf.capacity(), "%s compiled and reloaded in %.2fs", displayName.c_str(), static_cast<float64>( duration ) );
+					EditorContext::get()->getNotificationManager().push( "Live Coding Succeeded", contentBuf.c_str(), NotificationType::Success, 4.0f );
 				}
 				else if ( state == BuildState::Failed )
 				{
-					utf8 contentBuf[128];
-					snprintf( contentBuf, sizeof( contentBuf ), "%s build failed (Exit: %d). See Output Log.", displayName.c_str(), pCompiler->getLastExitCode() );
-					EditorContext::get()->getNotificationManager().push( "Live Coding Failed", contentBuf, NotificationType::Error, 6.0f );
+					fixed_string<constant::kMaxBuffer128> contentBuf;
+					formatstring( contentBuf.data(), contentBuf.capacity(), "%s build failed (Exit: %d). See Output Log.", displayName.c_str(), pCompiler->getLastExitCode() );
+					EditorContext::get()->getNotificationManager().push( "Live Coding Failed", contentBuf.c_str(), NotificationType::Error, 6.0f );
 				}
 			}
 
@@ -235,9 +236,9 @@ namespace sw::editor
 				const float32 elapsed = pCompiler->getElapsedTimeSec();
 				ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0.7f, 0.5f, 0.1f, 1.0f ) );
 				ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImVec4( 0.8f, 0.3f, 0.2f, 1.0f ) );
-				utf8 label[64];
-				snprintf( label, sizeof( label ), "Compiling (%.1fs) [Cancel]", static_cast<float64>( elapsed ) );
-				if ( ImGui::SmallButton( label ) )
+				fixed_string<constant::kMaxBuffer64> label;
+				formatstring( label.data(), label.capacity(), "Compiling (%.1fs) [Cancel]", static_cast<float64>( elapsed ) );
+				if ( ImGui::SmallButton( label.c_str() ) )
 					pCompiler->cancel();
 				ImGui::PopStyleColor( 2 );
 			}

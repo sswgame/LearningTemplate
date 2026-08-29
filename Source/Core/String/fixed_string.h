@@ -121,7 +121,7 @@ namespace sw
 		const_pointer c_str() const noexcept { return _arrData; }
 
 		/** @brief 힙 할당 없는 가벼운 string_view를 반환합니다. */
-		std::basic_string_view<T> view() const noexcept { return { _arrData, _size }; }
+		std::basic_string_view<T> view() const noexcept { return { _arrData, size() }; }
 
 		/** @brief 첫 문자 이터레이터 */
 		iterator	   begin() noexcept { return _arrData; }
@@ -129,19 +129,23 @@ namespace sw
 		const_iterator cbegin() const noexcept { return _arrData; }
 
 		/** @brief 끝 문자 이터레이터 */
-		iterator	   end() noexcept { return _arrData + _size; }
-		const_iterator end() const noexcept { return _arrData + _size; }
-		const_iterator cend() const noexcept { return _arrData + _size; }
+		iterator	   end() noexcept { return _arrData + size(); }
+		const_iterator end() const noexcept { return _arrData + size(); }
+		const_iterator cend() const noexcept { return _arrData + size(); }
 
 		// ------------------------------------------------------------------------------
 		// 4) 용량 및 상태 조회
 		// ------------------------------------------------------------------------------
-		/** @brief 문자열이 비어 있는지 여부를 반환합니다. */
-		bool empty() const noexcept { return _size == 0; }
+		/** @brief 문자열이 비어 있는지 여부를 반환합니다 (O(1)). */
+		bool empty() const noexcept { return _arrData[0] == T{ 0 }; }
 
 		/** @brief 현재 문자 수(널 제외)를 반환합니다. */
-		uint32 size() const noexcept { return _size; }
-		uint32 length() const noexcept { return _size; }
+		uint32 size() const noexcept
+		{
+			_size = static_cast<uint32>( StringUtil::strlen( _arrData ) );
+			return _size;
+		}
+		uint32 length() const noexcept { return size(); }
 
 		/** @brief 최대 수용 가능한 문자 수(N)를 반환합니다. */
 		static constexpr uint32 max_size() noexcept { return N; }
@@ -215,14 +219,14 @@ namespace sw
 		bool operator!=( const T* str ) const { return compare( str ) != 0; }
 
 		/** @brief 동적 std::basic_string으로의 명시적/암시적 변환 */
-		operator std::basic_string<T>() const { return std::basic_string<T>{ _arrData, _size }; }
+		operator std::basic_string<T>() const { return std::basic_string<T>{ _arrData, size() }; }
 
 		/** @brief 힙 할당 없는 std::basic_string_view로의 암시적 변환 */
-		operator std::basic_string_view<T>() const noexcept { return { _arrData, _size }; }
+		operator std::basic_string_view<T>() const noexcept { return { _arrData, size() }; }
 
 	private:
-		T	   _arrData[N + 1];
-		uint32 _size;
+		T			   _arrData[N + 1];
+		mutable uint32 _size;
 	};
 
 	template <uint32 N>
@@ -354,43 +358,43 @@ namespace sw
 	template <typename T, uint32 N>
 	typename basic_fixed_string<T, N>::reference basic_fixed_string<T, N>::at( uint32 pos )
 	{
-		SW_LOG_ASSERT( pos < _size, "basic_fixed_string::at - position out of range" );
+		SW_LOG_ASSERT( pos < size(), "basic_fixed_string::at - position out of range" );
 		return _arrData[pos];
 	}
 
 	template <typename T, uint32 N>
 	typename basic_fixed_string<T, N>::const_reference basic_fixed_string<T, N>::at( uint32 pos ) const
 	{
-		SW_LOG_ASSERT( pos < _size, "basic_fixed_string::at - position out of range" );
+		SW_LOG_ASSERT( pos < size(), "basic_fixed_string::at - position out of range" );
 		return _arrData[pos];
 	}
 
 	template <typename T, uint32 N>
 	typename basic_fixed_string<T, N>::reference basic_fixed_string<T, N>::front()
 	{
-		SW_LOG_ASSERT( _size > 0, "basic_fixed_string::front on empty string" );
+		SW_LOG_ASSERT( empty() == false, "basic_fixed_string::front on empty string" );
 		return _arrData[0];
 	}
 
 	template <typename T, uint32 N>
 	typename basic_fixed_string<T, N>::const_reference basic_fixed_string<T, N>::front() const
 	{
-		SW_LOG_ASSERT( _size > 0, "basic_fixed_string::front on empty string" );
+		SW_LOG_ASSERT( empty() == false, "basic_fixed_string::front on empty string" );
 		return _arrData[0];
 	}
 
 	template <typename T, uint32 N>
 	typename basic_fixed_string<T, N>::reference basic_fixed_string<T, N>::back()
 	{
-		SW_LOG_ASSERT( _size > 0, "basic_fixed_string::back on empty string" );
-		return _arrData[_size - 1];
+		SW_LOG_ASSERT( empty() == false, "basic_fixed_string::back on empty string" );
+		return _arrData[size() - 1];
 	}
 
 	template <typename T, uint32 N>
 	typename basic_fixed_string<T, N>::const_reference basic_fixed_string<T, N>::back() const
 	{
-		SW_LOG_ASSERT( _size > 0, "basic_fixed_string::back on empty string" );
-		return _arrData[_size - 1];
+		SW_LOG_ASSERT( empty() == false, "basic_fixed_string::back on empty string" );
+		return _arrData[size() - 1];
 	}
 
 	template <typename T, uint32 N>
@@ -410,12 +414,13 @@ namespace sw
 		if ( length == 0 )
 			return *this;
 
-		SW_LOG_ASSERT( pos <= _size, "Insert position out of range" );
-		SW_LOG_ASSERT( _size + length <= N, "Resulting string too int32" );
+		const uint32 currentSize = size();
+		SW_LOG_ASSERT( pos <= currentSize, "Insert position out of range" );
+		SW_LOG_ASSERT( currentSize + length <= N, "Resulting string too int32" );
 
-		Memory::move( _arrData + pos + length, _arrData + pos, sizeof( T ) * ( _size - pos + 1 ) );
+		Memory::move( _arrData + pos + length, _arrData + pos, sizeof( T ) * ( currentSize - pos + 1 ) );
 		Memory::copy( _arrData + pos, pStr, sizeof( T ) * length );
-		_size += length;
+		_size = currentSize + length;
 
 		return *this;
 	}
@@ -423,20 +428,21 @@ namespace sw
 	template <typename T, uint32 N>
 	basic_fixed_string<T, N>& basic_fixed_string<T, N>::erase( uint32 pos, uint32 length )
 	{
-		SW_LOG_ASSERT( pos <= _size, "basic_fixed_string::erase position out of range" );
+		const uint32 currentSize = size();
+		SW_LOG_ASSERT( pos <= currentSize, "basic_fixed_string::erase position out of range" );
 
-		if ( pos >= _size )
+		if ( pos >= currentSize )
 			return *this;
 
-		if ( length == npos || pos + length >= _size )
+		if ( length == npos || pos + length >= currentSize )
 		{
 			_size			= pos;
 			_arrData[_size] = T{ 0 };
 		}
 		else
 		{
-			Memory::move( _arrData + pos, _arrData + pos + length, sizeof( T ) * ( _size - pos - length + 1 ) );
-			_size -= length;
+			Memory::move( _arrData + pos, _arrData + pos + length, sizeof( T ) * ( currentSize - pos - length + 1 ) );
+			_size = currentSize - length;
 		}
 
 		return *this;
@@ -445,18 +451,20 @@ namespace sw
 	template <typename T, uint32 N>
 	void basic_fixed_string<T, N>::push_back( T ch )
 	{
-		SW_LOG_ASSERT( _size < N, "basic_fixed_string capacity exceeded" );
-		_arrData[_size] = ch;
-		++_size;
-		_arrData[_size] = T{ 0 };
+		const uint32 currentSize = size();
+		SW_LOG_ASSERT( currentSize < N, "basic_fixed_string capacity exceeded" );
+		_arrData[currentSize] = ch;
+		_size				  = currentSize + 1;
+		_arrData[_size]		  = T{ 0 };
 	}
 
 	template <typename T, uint32 N>
 	void basic_fixed_string<T, N>::pop_back()
 	{
-		if ( _size == 0 )
+		const uint32 currentSize = size();
+		if ( currentSize == 0 )
 			return;
-		--_size;
+		_size			= currentSize - 1;
 		_arrData[_size] = T{ 0 };
 	}
 
@@ -465,10 +473,11 @@ namespace sw
 	{
 		if ( pStr != nullptr )
 		{
-			const uint32 length = StringUtil::strlen( pStr );
-			SW_LOG_ASSERT( _size + length <= N, "Resulting string too int32" );
-			Memory::copy( _arrData + _size, pStr, sizeof( T ) * length );
-			_size += length;
+			const uint32 currentSize = size();
+			const uint32 length		 = StringUtil::strlen( pStr );
+			SW_LOG_ASSERT( currentSize + length <= N, "Resulting string too int32" );
+			Memory::copy( _arrData + currentSize, pStr, sizeof( T ) * length );
+			_size			= currentSize + length;
 			_arrData[_size] = T{ 0 };
 		}
 		return *this;
@@ -479,9 +488,10 @@ namespace sw
 	{
 		if ( count == 0 )
 			return *this;
-		SW_LOG_ASSERT( _size + count <= N, "basic_fixed_string::append - count exceeds capacity" );
-		std::fill_n( _arrData + _size, count, c );
-		_size += count;
+		const uint32 currentSize = size();
+		SW_LOG_ASSERT( currentSize + count <= N, "basic_fixed_string::append - count exceeds capacity" );
+		std::fill_n( _arrData + currentSize, count, c );
+		_size			= currentSize + count;
 		_arrData[_size] = T{ 0 };
 		return *this;
 	}
@@ -489,10 +499,11 @@ namespace sw
 	template <typename T, uint32 N>
 	basic_fixed_string<T, N>& basic_fixed_string<T, N>::append( const std::basic_string_view<T>& str )
 	{
-		const uint32 length = static_cast<uint32>( str.length() );
-		SW_LOG_ASSERT( _size + length <= N, "Resulting string too int32" );
-		Memory::copy( _arrData + _size, str.data(), sizeof( T ) * length );
-		_size += length;
+		const uint32 currentSize = size();
+		const uint32 length		 = static_cast<uint32>( str.length() );
+		SW_LOG_ASSERT( currentSize + length <= N, "Resulting string too int32" );
+		Memory::copy( _arrData + currentSize, str.data(), sizeof( T ) * length );
+		_size			= currentSize + length;
 		_arrData[_size] = T{ 0 };
 		return *this;
 	}
@@ -500,7 +511,8 @@ namespace sw
 	template <typename T, uint32 N>
 	uint32 basic_fixed_string<T, N>::find( const T* str, uint32 pos ) const
 	{
-		if ( str == nullptr || pos >= _size )
+		const uint32 currentSize = size();
+		if ( str == nullptr || pos >= currentSize )
 			return npos;
 		const T* result = StringUtil::strstr( _arrData + pos, str );
 		return result != nullptr ? static_cast<uint32>( result - _arrData ) : npos;
@@ -509,7 +521,8 @@ namespace sw
 	template <typename T, uint32 N>
 	uint32 basic_fixed_string<T, N>::find( T c, uint32 pos ) const
 	{
-		if ( pos >= _size )
+		const uint32 currentSize = size();
+		if ( pos >= currentSize )
 			return npos;
 		const T* result = StringUtil::strchr( _arrData + pos, c );
 		return result ? static_cast<uint32>( result - _arrData ) : npos;
@@ -518,12 +531,13 @@ namespace sw
 	template <typename T, uint32 N>
 	basic_fixed_string<T, N> basic_fixed_string<T, N>::substr( uint32 pos, uint32 length ) const
 	{
-		SW_LOG_ASSERT( pos <= _size, "basic_fixed_string::substr out of range" );
+		const uint32 currentSize = size();
+		SW_LOG_ASSERT( pos <= currentSize, "basic_fixed_string::substr out of range" );
 
-		if ( pos >= _size )
+		if ( pos >= currentSize )
 			return basic_fixed_string{};
 
-		const uint32	   actualLength = MathUtil::min( length, _size - pos );
+		const uint32	   actualLength = MathUtil::min( length, currentSize - pos );
 		basic_fixed_string result{};
 
 		if ( actualLength > 0 )

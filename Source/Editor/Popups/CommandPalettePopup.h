@@ -3,10 +3,12 @@
  * @brief 글로벌 커맨드 팔레트 팝업 (IEditorPopup 구현체)
  */
 #pragma once
+#include "Core/Common/Defines.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Gui/IEditorPopup.h"
 
@@ -61,10 +63,10 @@ namespace sw::editor
 		void rebuildDynamicEntries();
 
 	private:
-		vector<CommandPaletteEntry> _listStaticCommand;
-		vector<CommandPaletteEntry> _listAllCommand;
-		utf8						_arrSearchBuffer[128]{ 0 };
-		int32						_selectedIndex{ 0 };
-		bool						_bJustOpened{ false };
+		vector<CommandPaletteEntry>			  _listStaticCommand;
+		vector<CommandPaletteEntry>			  _listAllCommand;
+		fixed_string<constant::kMaxBuffer128> _searchBuffer;
+		int32								  _selectedIndex{ 0 };
+		bool								  _bJustOpened{ false };
 	};
 } // namespace sw::editor

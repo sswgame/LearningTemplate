@@ -3,6 +3,7 @@
 #include "Editor/Common/Workspace/EditorNotificationManager.h"
 
 #include "Core/Common/StdHeaders.h"
+#include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Gui/EditorChrome.h"
 
@@ -93,11 +94,11 @@ namespace sw::editor
 			float32 posX = viewportPos._x + screenWidth - toastWidth - toastMargin;
 			currentY -= 75.0f;
 
-			utf8 windowId[32];
-			formatstring( windowId, sizeof( windowId ), "##Toast_%#", static_cast<uint64>( notificationIndex ) );
+			fixed_string<constant::kMaxBuffer32> windowId;
+			formatstring( windowId.data(), windowId.capacity(), "##Toast_%#", static_cast<uint64>( notificationIndex ) );
 
 			editor::EditorOverlayDesc toastDesc{};
-			toastDesc._pId		  = windowId;
+			toastDesc._pId		  = windowId.c_str();
 			toastDesc._anchorPos  = float2{ posX, currentY };
 			toastDesc._size		  = float2{ toastWidth, 0.0f };
 			toastDesc._rounding	  = 6.0f;

@@ -5,6 +5,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
 
 #include "Engine/Utility/Resource/ResourceUtil.h"
 
@@ -181,9 +182,9 @@ namespace sw
 					hash = StringUtil::computeHash64( sourceStr, false, hash );
 				}
 
-				utf8 buf[64]{};
-				snprintf( buf, sizeof( buf ), "%016llx.bin", static_cast<uint64>( hash ) );
-				return FileUtil::joinPath( cacheDir, buf );
+				fixed_string<constant::kMaxBuffer64> buf;
+				formatstring( buf.data(), buf.capacity(), "%016llx.bin", static_cast<uint64>( hash ) );
+				return FileUtil::joinPath( cacheDir, buf.c_str() );
 			}
 		};
 	} // namespace

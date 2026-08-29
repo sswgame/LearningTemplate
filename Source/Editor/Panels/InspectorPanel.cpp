@@ -110,6 +110,20 @@ namespace sw::editor
 
 namespace sw::editor
 {
+	InspectorPanel::InspectorPanel()
+		: _propertyFilter{}
+		, _arrArgInt{ 0, 0, 0, 0, 0, 0, 0, 0 }
+		, _arrArgFloat{ 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f }
+		, _arrArgBool{ false, false, false, false, false, false, false, false }
+		, _arrArgString{}
+		, _lastInvokeResult{}
+		, _componentPresetJob{}
+		, _listComponentPresetFile{}
+		, _bComponentPresetDirty{ SW_TRUE }
+		, _reserved{ 0 }
+	{
+	}
+
 	void InspectorPanel::drawContent()
 	{
 		EditorWidgets::pushInspectorStyle();
@@ -179,6 +193,9 @@ namespace sw::editor
 
 		drawGameObjectHeader( pObj );
 
+		ImGui::Spacing();
+		ImGui::Separator();
+
 		const string& pfbPath = ws.getGameObjectPrefabPath( pObj->getObjectId() );
 		if ( pfbPath.empty() == false )
 		{
@@ -197,7 +214,7 @@ namespace sw::editor
 			ImGui::Separator();
 		}
 
-		EditorWidgets::drawSearchField( "##propFilter", _arrPropertyFilter, sizeof( _arrPropertyFilter ), "Search properties..." );
+		EditorWidgets::drawSearchField( "##propFilter", _propertyFilter, "Search properties..." );
 		ImGui::Spacing();
 
 		const TypeInfo* pTypeInfo = pObj->getTypeInfo();
@@ -276,14 +293,14 @@ namespace sw::editor
 						ImGui::Separator();
 						if ( ImGui::BeginMenu( "Presets" ) )
 						{
-							static utf8 s_presetNameBuf[64]{ 0 };
-							ImGui::InputTextWithHint( "##presetName", "Preset Name...", s_presetNameBuf,
-													  sizeof( s_presetNameBuf ) );
+							static fixed_string<constant::kMaxBuffer64> s_presetNameBuf;
+							ImGui::InputTextWithHint( "##presetName", "Preset Name...", s_presetNameBuf.data(),
+													  s_presetNameBuf.capacity() );
 							ImGui::SameLine();
-							if ( ImGui::Button( "Save" ) && s_presetNameBuf[0] != '\0' )
+							if ( ImGui::Button( "Save" ) && s_presetNameBuf.empty() == false )
 							{
-								ws.saveComponentPreset( pComp, s_presetNameBuf );
-								s_presetNameBuf[0]	   = '\0';
+								ws.saveComponentPreset( pComp, s_presetNameBuf.c_str() );
+								s_presetNameBuf.clear();
 								_bComponentPresetDirty = SW_TRUE;
 							}
 							ImGui::Separator();
@@ -358,10 +375,9 @@ namespace sw::editor
 	{
 		ImGui::Text( "GameObject  ID: %llu", static_cast<uint64>( pObj->getObjectId() ) );
 
-		utf8 nameBuf[constant::kMaxBuffer256];
-		formatstring( nameBuf, sizeof( nameBuf ), "%#", pObj->getName().c_str() );
-		if ( ImGui::InputText( "Name", nameBuf, sizeof( nameBuf ), ImGuiInputTextFlags_EnterReturnsTrue ) )
-			pObj->setName( hashed_string( nameBuf ) );
+		fixed_string<constant::kMaxBuffer256> nameBuf{ pObj->getName().c_str() };
+		if ( ImGui::InputText( "Name", nameBuf.data(), nameBuf.capacity(), ImGuiInputTextFlags_EnterReturnsTrue ) )
+			pObj->setName( hashed_string( nameBuf.c_str() ) );
 
 		bool bActive = pObj->isActive();
 		if ( ImGui::Checkbox( "Active", &bActive ) )
@@ -432,7 +448,7 @@ namespace sw::editor
 			return;
 
 		map<string, vector<const PropertyInfo*>> grouped;
-		const bool								 bHasFilter = ( _arrPropertyFilter[0] != '\0' );
+		const bool								 bHasFilter = ( _propertyFilter.empty() == false );
 
 		pTypeInfo->forEachProperty( [&]( const PropertyInfo& prop )
 		{
@@ -442,9 +458,9 @@ namespace sw::editor
 			if ( bHasFilter )
 			{
 				const utf8* pLabelName = InspectorPanelInternal::propLabel( prop );
-				if ( StringUtil::stristr( prop._name.c_str(), _arrPropertyFilter ) == nullptr &&
-					 StringUtil::stristr( pLabelName, _arrPropertyFilter ) == nullptr &&
-					 StringUtil::stristr( prop._metadata._category.c_str(), _arrPropertyFilter ) == nullptr )
+				if ( StringUtil::stristr( prop._name.c_str(), _propertyFilter.c_str() ) == nullptr &&
+					 StringUtil::stristr( pLabelName, _propertyFilter.c_str() ) == nullptr &&
+					 StringUtil::stristr( prop._metadata._category.c_str(), _propertyFilter.c_str() ) == nullptr )
 				{
 					return;
 				}
@@ -479,13 +495,13 @@ namespace sw::editor
 					{
 						if ( prop->_metadata._defaultValue.empty() == false )
 						{
-							utf8 resetLabel[constant::kMaxBuffer128];
-							formatstring( resetLabel, sizeof( resetLabel ), "Reset to Default (%#)", prop->_metadata._defaultValue.c_str() );
-							if ( ImGui::MenuItem( resetLabel ) )
+							fixed_string<constant::kMaxBuffer128> resetLabel;
+							formatstring( resetLabel.data(), resetLabel.capacity(), "Reset to Default (%#)", prop->_metadata._defaultValue.c_str() );
+							if ( ImGui::MenuItem( resetLabel.c_str() ) )
 							{
-								utf8 jsonWrap[constant::kMaxBuffer256];
-								formatstring( jsonWrap, sizeof( jsonWrap ), "{\"%#\":%#}", prop->_name.c_str(), prop->_metadata._defaultValue.c_str() );
-								JsonSerializer::deserialize( pInstance, *pTypeInfo, jsonWrap );
+								fixed_string<constant::kMaxBuffer256> jsonWrap;
+								formatstring( jsonWrap.data(), jsonWrap.capacity(), "{\"%#\":%#}", prop->_name.c_str(), prop->_metadata._defaultValue.c_str() );
+								JsonSerializer::deserialize( pInstance, *pTypeInfo, jsonWrap.c_str() );
 							}
 						}
 						if ( ImGui::MenuItem( "Copy Property Name" ) )
@@ -627,11 +643,11 @@ namespace sw::editor
 				ISequenceContainerWrapper* pSeq = prop._containerWrapper->asSequence();
 				if ( pSeq != nullptr )
 				{
-					const size_t count = pSeq->getSize( pContainer );
-					utf8		 headerBuf[constant::kMaxBuffer128];
-					formatstring( headerBuf, sizeof( headerBuf ), "[%#] (%# elements)", prop._elementTypeName.c_str(), count );
+					const size_t						  count = pSeq->getSize( pContainer );
+					fixed_string<constant::kMaxBuffer128> headerBuf;
+					formatstring( headerBuf.data(), headerBuf.capacity(), "[%#] (%# elements)", prop._elementTypeName.c_str(), count );
 
-					if ( ImGui::TreeNodeEx( pLabel, ImGuiTreeNodeFlags_SpanFullWidth, "%s", headerBuf ) )
+					if ( ImGui::TreeNodeEx( pLabel, ImGuiTreeNodeFlags_SpanFullWidth, "%s", headerBuf.c_str() ) )
 					{
 						if ( bReadOnly == false )
 						{
@@ -710,8 +726,8 @@ namespace sw::editor
 			return;
 		}
 
-		if ( _arrLastInvokeResult[0] != '\0' )
-			ImGui::TextDisabled( "Last result: %s", _arrLastInvokeResult );
+		if ( _lastInvokeResult.empty() == false )
+			ImGui::TextDisabled( "Last result: %s", _lastInvokeResult.c_str() );
 
 		for ( const FunctionInfo& method : pTypeInfo->_listMethod )
 		{
@@ -732,14 +748,15 @@ namespace sw::editor
 				ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImVec4{ 0.25f, 0.52f, 0.78f, 1.0f } );
 				ImGui::PushStyleColor( ImGuiCol_ButtonActive, ImVec4{ 0.12f, 0.35f, 0.55f, 1.0f } );
 
-				utf8 buttonLabel[constant::kMaxBuffer128];
-				formatstring( buttonLabel, sizeof( buttonLabel ), "Run %#", pLabelName );
-				if ( ImGui::Button( buttonLabel, ImVec2{ -FLT_MIN, 0.0f } ) )
+				fixed_string<constant::kMaxBuffer128> buttonLabel;
+				formatstring( buttonLabel.data(), buttonLabel.capacity(), "Run %#", pLabelName );
+				if ( ImGui::Button( buttonLabel.c_str(), ImVec2{ -FLT_MIN, 0.0f } ) )
 				{
 					TaskArgs		args;
 					const TaskValue result = editor::getService<TypeRegistry>()->invokeMethod(
 						pInstance, pTypeInfo->_fullyQualifiedName, method._hashName, args );
-					InspectorPanelInternal::formatTaskValue( result, method._returnTypeName, _arrLastInvokeResult, sizeof( _arrLastInvokeResult ) );
+					InspectorPanelInternal::formatTaskValue( result, method._returnTypeName, _lastInvokeResult.data(),
+															 _lastInvokeResult.capacity() );
 				}
 				ImGui::PopStyleColor( 3 );
 				if ( method._metadata._tooltip.empty() == false && ImGui::IsItemHovered() )
@@ -771,21 +788,21 @@ namespace sw::editor
 			for ( uint32 paramIndex = 0; paramIndex < paramCount && paramIndex < 8; ++paramIndex )
 			{
 				ImGui::PushID( static_cast<int32>( paramIndex ) );
-				const string& p = method._listParamTypeName[paramIndex];
-				utf8		  label[64];
-				formatstring( label, sizeof( label ), "arg%# (%#)", paramIndex, p.c_str() );
+				const string&						 p = method._listParamTypeName[paramIndex];
+				fixed_string<constant::kMaxBuffer64> label;
+				formatstring( label.data(), label.capacity(), "arg%# (%#)", paramIndex, p.c_str() );
 
 				TypeRegistry& registry = *editor::getService<TypeRegistry>();
 				if ( registry.isType( p, "int32" ) || registry.isType( p, "int64" ) )
-					ImGui::InputInt( label, &_arrArgInt[paramIndex] );
+					ImGui::InputInt( label.c_str(), &_arrArgInt[paramIndex] );
 				else if ( registry.isType( p, "float32" ) )
-					ImGui::DragFloat( label, &_arrArgFloat[paramIndex], 0.1f );
+					ImGui::DragFloat( label.c_str(), &_arrArgFloat[paramIndex], 0.1f );
 				else if ( registry.isType( p, "bool" ) )
-					ImGui::Checkbox( label, &_arrArgBool[paramIndex] );
+					ImGui::Checkbox( label.c_str(), &_arrArgBool[paramIndex] );
 				else if ( hashed_string( p ).isPredefinedType( PredefinedNameType::NameType_string ) )
-					ImGui::InputText( label, _arrArgString[paramIndex], sizeof( _arrArgString[paramIndex] ) );
+					ImGui::InputText( label.c_str(), _arrArgString[paramIndex].data(), _arrArgString[paramIndex].capacity() );
 				else
-					ImGui::TextDisabled( "%s (unsupported in UI)", label );
+					ImGui::TextDisabled( "%s (unsupported in UI)", label.c_str() );
 
 				ImGui::PopID();
 			}
@@ -816,12 +833,13 @@ namespace sw::editor
 					else if ( registry.isType( p, "bool" ) )
 						args.add( _arrArgBool[paramIndex] );
 					else if ( hashed_string( p ).isPredefinedType( PredefinedNameType::NameType_string ) )
-						args.add( string( _arrArgString[paramIndex] ) );
+						args.add( string( _arrArgString[paramIndex].c_str() ) );
 				}
 
 				const TaskValue result = editor::getService<TypeRegistry>()->invokeMethod(
 					pInstance, pTypeInfo->_fullyQualifiedName, method._hashName, args );
-				InspectorPanelInternal::formatTaskValue( result, method._returnTypeName, _arrLastInvokeResult, sizeof( _arrLastInvokeResult ) );
+				InspectorPanelInternal::formatTaskValue( result, method._returnTypeName, _lastInvokeResult.data(),
+														 _lastInvokeResult.capacity() );
 			}
 
 			ImGui::PopID();

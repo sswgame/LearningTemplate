@@ -2,11 +2,13 @@
 
 #include "Editor/Viewport/EditorViewportClient.h"
 
+#include "Core/Common/Defines.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Commands/EditorAssetCommands.h"
 #include "Editor/Common/Commands/EditorSceneCommands.h"
@@ -392,19 +394,19 @@ namespace sw::editor
 		pDrawList->AddRect( ImVec2( x0, y0 ), ImVec2( x1, y1 ), IM_COL32( 50, 60, 80, 180 ), 6.0f );
 
 		// Text lines
-		utf8 arrFps[32];
-		formatstring( arrFps, sizeof( arrFps ), "FPS: %.1f (%.2f ms)", static_cast<float64>( fps ),
+		fixed_string<constant::kMaxBuffer32> arrFps;
+		formatstring( arrFps.data(), arrFps.capacity(), "FPS: %.1f (%.2f ms)", static_cast<float64>( fps ),
 					  static_cast<float64>( frameTimeMs ) );
-		pDrawList->AddText( ImVec2( x0 + 10.0f, y0 + 8.0f ), IM_COL32( 80, 230, 120, 240 ), arrFps );
+		pDrawList->AddText( ImVec2( x0 + 10.0f, y0 + 8.0f ), IM_COL32( 80, 230, 120, 240 ), arrFps.c_str() );
 
-		utf8 arrObjs[32];
-		formatstring( arrObjs, sizeof( arrObjs ), "Objects: %u", totalObjects );
-		pDrawList->AddText( ImVec2( x0 + 10.0f, y0 + 28.0f ), IM_COL32( 210, 215, 230, 230 ), arrObjs );
+		fixed_string<constant::kMaxBuffer32> arrObjs;
+		formatstring( arrObjs.data(), arrObjs.capacity(), "Objects: %u", totalObjects );
+		pDrawList->AddText( ImVec2( x0 + 10.0f, y0 + 28.0f ), IM_COL32( 210, 215, 230, 230 ), arrObjs.c_str() );
 
-		utf8 arrRes[32];
-		formatstring( arrRes, sizeof( arrRes ), "Res: %.0fx%.0f", static_cast<float64>( canvasSize._x ),
+		fixed_string<constant::kMaxBuffer32> arrRes;
+		formatstring( arrRes.data(), arrRes.capacity(), "Res: %.0fx%.0f", static_cast<float64>( canvasSize._x ),
 					  static_cast<float64>( canvasSize._y ) );
-		pDrawList->AddText( ImVec2( x0 + 10.0f, y0 + 48.0f ), IM_COL32( 140, 160, 190, 220 ), arrRes );
+		pDrawList->AddText( ImVec2( x0 + 10.0f, y0 + 48.0f ), IM_COL32( 140, 160, 190, 220 ), arrRes.c_str() );
 	}
 
 	EditorViewportClient::EditorViewportClient()
@@ -489,9 +491,9 @@ namespace sw::editor
 								bm._rotation	  = _cameraRot;
 								bm._orbitTarget	  = _orbitTarget;
 								bm._orbitDistance = _orbitDistance;
-								utf8 arrName[32];
-								formatstring( arrName, sizeof( arrName ), "POI %d", keyIndex + 1 );
-								bm._name = arrName;
+								fixed_string<constant::kMaxBuffer32> arrName;
+								formatstring( arrName.data(), arrName.capacity(), "POI %d", keyIndex + 1 );
+								bm._name = arrName.c_str();
 								pContext->getWorkspace().setCameraBookmark( static_cast<uint32>( keyIndex ), bm );
 							}
 							else if ( io.KeyAlt == false && io.KeyShift == false )
@@ -1238,15 +1240,15 @@ namespace sw::editor
 				const float3  delta = _rulerEndWorld - _rulerStartWorld;
 				const float32 dist	= delta.getLength();
 
-				utf8 arrDistText[64];
-				formatstring( arrDistText, sizeof( arrDistText ), "%.2f m (dX: %.2f, dZ: %.2f)",
+				fixed_string<constant::kMaxBuffer64> arrDistText;
+				formatstring( arrDistText.data(), arrDistText.capacity(), "%.2f m (dX: %.2f, dZ: %.2f)",
 							  static_cast<float64>( dist ), static_cast<float64>( delta._x ),
 							  static_cast<float64>( delta._z ) );
 
 				const ImVec2 mid( ( sStart.x + sEnd.x ) * 0.5f, ( sStart.y + sEnd.y ) * 0.5f - 16.0f );
 				pDrawList->AddRectFilled( ImVec2( mid.x - 4.0f, mid.y - 2.0f ),
 										  ImVec2( mid.x + 160.0f, mid.y + 18.0f ), IM_COL32( 20, 24, 32, 220 ), 4.0f );
-				pDrawList->AddText( mid, IM_COL32( 255, 230, 80, 255 ), arrDistText );
+				pDrawList->AddText( mid, IM_COL32( 255, 230, 80, 255 ), arrDistText.c_str() );
 			}
 		}
 	}

@@ -1,11 +1,9 @@
-/**
- * @file SequencerPanel.h
- * @brief 시퀀서 타임라인 패널 (SequenceAsset JSON)
- */
 #pragma once
+#include "Core/Common/Defines.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Gui/EditorDocumentPanel.h"
 
@@ -42,12 +40,12 @@ namespace sw::editor
 		void		  tickPreview( float32 deltaSeconds );
 
 	private:
-		bool						   _bExpanded;
-		int32						   _currentFrame;
-		int32						   _selected;
-		int32						   _firstFrame;
-		utf8						   _arrCinematicNote[512];
-		unique_ptr<ClipSequence>	   _sequence;
-		unique_ptr<sw::SequencePlayer> _previewPlayer;
+		bool								  _bExpanded;
+		int32								  _currentFrame;
+		int32								  _selected;
+		int32								  _firstFrame;
+		fixed_string<constant::kMaxBuffer512> _cinematicNote;
+		unique_ptr<ClipSequence>			  _sequence;
+		unique_ptr<sw::SequencePlayer>		  _previewPlayer;
 	};
 } // namespace sw::editor

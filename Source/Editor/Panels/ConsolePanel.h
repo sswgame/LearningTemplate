@@ -8,6 +8,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Log/Logger.h"
+#include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Gui/IEditorPanel.h"
 
@@ -35,7 +36,6 @@ namespace sw::editor
 		/** @brief Logger 구독을 해제합니다. */
 		void shutdown( IRHIDevice* pRhiDevice ) override;
 
-	private:
 		// ------------------------------------------------------------------------------
 		// 3) Logger 구독 — 콜백은 드로우 스레드 밖에서 올 수 있음
 		// ------------------------------------------------------------------------------
@@ -47,17 +47,17 @@ namespace sw::editor
 		void updateFilteredEntries( const string& filterStr );
 
 	private:
-		deque<LogEntry>			_listEntry;
-		vector<LogEntry>		_listDrawSnapshot;
-		vector<const LogEntry*> _listVisible;
-		string					_cachedFilter;
-		mutex					_entriesMutex;
-		DelegateHandle			_logListenerHandle;
-		utf8					_arrFilterBuffer[constant::kMaxBuffer128];
-		bool					_arrLevelEnabled[4];
-		bool					_arrCachedLevelEnabled[4];
-		bool					_bAutoScroll;
-		uint8					_bHasNewLogs   : 1;
-		[[maybe_unused]] uint8	_reservedFlags : 7;
+		deque<LogEntry>						  _listEntry;
+		vector<LogEntry>					  _listDrawSnapshot;
+		vector<const LogEntry*>				  _listVisible;
+		string								  _cachedFilter;
+		mutex								  _entriesMutex;
+		DelegateHandle						  _logListenerHandle;
+		fixed_string<constant::kMaxBuffer128> _filterBuffer;
+		bool								  _arrLevelEnabled[4];
+		bool								  _arrCachedLevelEnabled[4];
+		bool								  _bAutoScroll;
+		uint8								  _bHasNewLogs	 : 1;
+		[[maybe_unused]] uint8				  _reservedFlags : 7;
 	};
 } // namespace sw::editor

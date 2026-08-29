@@ -2,6 +2,9 @@
 
 #include "Editor/Panels/HistoryPanel.h"
 
+#include "Core/Common/Defines.h"
+#include "Core/String/fixed_string.h"
+
 #include "Editor/Common/Gui/EditorChrome.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -110,14 +113,14 @@ namespace sw::editor
 					ImGui::TextUnformatted( "" );
 
 				ImGui::TableNextColumn();
-				utf8		labelBuf[constant::kMaxBuffer256];
-				const utf8* pCmdLabel = cmd._label.empty() == false ? cmd._label.c_str() : "Command";
-				formatstring( labelBuf, sizeof( labelBuf ), "%###step%#", pCmdLabel, stepNum );
+				fixed_string<constant::kMaxBuffer256> labelBuf;
+				const utf8*							  pCmdLabel = cmd._label.empty() == false ? cmd._label.c_str() : "Command";
+				formatstring( labelBuf.data(), labelBuf.capacity(), "%###step%#", pCmdLabel, stepNum );
 
 				if ( bIsUndone )
 					ImGui::PushStyleColor( ImGuiCol_Text, ImVec4{ 0.5f, 0.5f, 0.5f, 1.0f } );
 
-				if ( ImGui::Selectable( labelBuf, bIsActiveHead, ImGuiSelectableFlags_SpanAllColumns ) )
+				if ( ImGui::Selectable( labelBuf.c_str(), bIsActiveHead, ImGuiSelectableFlags_SpanAllColumns ) )
 				{
 					cmdStack.jumpTo( stepNum );
 				}

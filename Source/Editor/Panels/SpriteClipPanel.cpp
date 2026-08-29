@@ -21,7 +21,7 @@ namespace sw::editor
 
 	SpriteClipPanel::SpriteClipPanel()
 		: EditorDocumentPanel{ EditorAssetKind::SpriteClip, false }
-		, _arrAtlasPath{}
+		, _atlasPath{}
 		, _listFrame{}
 		, _listKey{}
 		, _selectedFrame{ -1 }
@@ -30,7 +30,7 @@ namespace sw::editor
 	{
 		const string& atlas = editor::getEditorData()._spriteAtlas;
 		if ( atlas.empty() == false )
-			StringUtil::strncpy( _arrAtlasPath, atlas.c_str(), sizeof( _arrAtlasPath ) - 1 );
+			_atlasPath = atlas.c_str();
 		_listFrame.push_back( Frame{} );
 	}
 
@@ -41,15 +41,14 @@ namespace sw::editor
 		{
 			if ( EditorUtil::isTextureAssetPath( getLoadedAssetPath().c_str() ) )
 			{
-				StringUtil::strncpy( _arrAtlasPath, getLoadedAssetPath().c_str(), sizeof( _arrAtlasPath ) - 1 );
-				_arrAtlasPath[sizeof( _arrAtlasPath ) - 1] = '\0';
+				_atlasPath = getLoadedAssetPath().c_str();
 			}
 			else
 				loadJson();
 			markDocumentLoaded();
 		}
 
-		ImGui::InputText( "Atlas", _arrAtlasPath, sizeof( _arrAtlasPath ) );
+		ImGui::InputText( "Atlas", _atlasPath.data(), _atlasPath.capacity() );
 		if ( ImGui::IsItemDeactivatedAfterEdit() )
 			notifyDocumentEdited( "Edit Sprite Clip", "sprite-clip" );
 		if ( ImGui::Button( "Load" ) )
@@ -87,9 +86,9 @@ namespace sw::editor
 		for ( int32 frameIndex = 0; frameIndex < static_cast<int32>( _listFrame.size() ); ++frameIndex )
 		{
 			ImGui::PushID( frameIndex );
-			utf8 arrLabel[32];
-			formatstring( arrLabel, sizeof( arrLabel ), "Frame %#", frameIndex );
-			if ( ImGui::Selectable( arrLabel, _selectedFrame == frameIndex ) )
+			fixed_string<constant::kMaxBuffer32> label;
+			formatstring( label.data(), label.capacity(), "Frame %#", frameIndex );
+			if ( ImGui::Selectable( label.c_str(), _selectedFrame == frameIndex ) )
 				_selectedFrame = frameIndex;
 			ImGui::PopID();
 		}
@@ -135,9 +134,9 @@ namespace sw::editor
 		for ( int32 keyIndex = 0; keyIndex < static_cast<int32>( _listKey.size() ); ++keyIndex )
 		{
 			ImGui::PushID( 1000 + keyIndex );
-			utf8 arrLabel[32];
-			formatstring( arrLabel, sizeof( arrLabel ), "Key %#", keyIndex );
-			if ( ImGui::Selectable( arrLabel, _selectedKey == keyIndex ) )
+			fixed_string<constant::kMaxBuffer32> label;
+			formatstring( label.data(), label.capacity(), "Key %#", keyIndex );
+			if ( ImGui::Selectable( label.c_str(), _selectedKey == keyIndex ) )
 				_selectedKey = keyIndex;
 			ImGui::PopID();
 		}
@@ -169,7 +168,7 @@ namespace sw::editor
 			return;
 
 		if ( data._atlasPath.empty() == false )
-			StringUtil::strncpy( _arrAtlasPath, data._atlasPath.c_str(), sizeof( _arrAtlasPath ) - 1 );
+			_atlasPath = data._atlasPath.c_str();
 		_listFrame	   = std::move( data._listFrame );
 		_listKey	   = std::move( data._listKey );
 		_selectedFrame = _listFrame.empty() ? -1 : 0;
@@ -193,7 +192,7 @@ namespace sw::editor
 	EditorSpriteClipData SpriteClipPanel::captureClipData() const
 	{
 		EditorSpriteClipData data;
-		data._atlasPath = _arrAtlasPath;
+		data._atlasPath = _atlasPath.c_str();
 		data._listFrame = _listFrame;
 		data._listKey	= _listKey;
 		return data;
@@ -210,7 +209,7 @@ namespace sw::editor
 		if ( text.empty() == false )
 			EditorToolAssetCommands::parseSpriteClip( text, restored );
 		if ( restored._atlasPath.empty() == false )
-			StringUtil::strncpy( _arrAtlasPath, restored._atlasPath.c_str(), sizeof( _arrAtlasPath ) - 1 );
+			_atlasPath = restored._atlasPath.c_str();
 		_listFrame	   = std::move( restored._listFrame );
 		_listKey	   = std::move( restored._listKey );
 		_selectedFrame = _listFrame.empty() ? -1 : 0;

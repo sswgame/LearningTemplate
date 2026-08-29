@@ -2,6 +2,8 @@
 
 #include "GameFramework/Kits/TurnBattle/BattleState.h"
 
+#include "Core/String/formatString.h"
+
 #include "Engine/Audio/IAudioSystem.h"
 
 #include "GameFramework/Data/GameData.h"
@@ -17,7 +19,7 @@ namespace sw
 		: _player{}
 		, _foe{}
 		, _phaseTimer{ 0.0f }
-		, _arrStatusText{}
+		, _statusText{}
 		, _phase{ BattlePhase::Inactive }
 		, _pendingCmd{ BattleCommand::None }
 		, _bPlayerWon{ SW_FALSE }
@@ -37,10 +39,10 @@ namespace sw
 		_phase		= BattlePhase::Intro;
 		_phaseTimer = 0.55f;
 		_pendingCmd = BattleCommand::None;
-		_bPlayerWon = 0;
-		formatstring( _arrStatusText, sizeof( _arrStatusText ), GameStrings::get( "battle.wild_appeared", "A wild %# appeared!" ),
+		_bPlayerWon = SW_FALSE;
+		formatstring( _statusText.data(), _statusText.capacity(), GameStrings::get( "battle.wild_appeared", "A wild %# appeared!" ),
 					  _foe._nickname.c_str() );
-		SW_LOG_TRACE( "%#", _arrStatusText );
+		SW_LOG_TRACE( "%#", _statusText.c_str() );
 		if ( GameData::get()._dungeonBgm.empty() == false )
 			game::getService<IAudioSystem>()->playMusic( GameData::get()._dungeonBgm );
 	}
@@ -57,21 +59,20 @@ namespace sw
 		if ( _phase == BattlePhase::Intro )
 		{
 			_phase = BattlePhase::PlayerChoice;
-			formatstring( _arrStatusText, sizeof( _arrStatusText ), "%#",
-						  GameStrings::get( "battle.prompt_fight", "Fight: 1/2 moves, Enter=Move0, Esc=Run" ) );
-			SW_LOG_TRACE( "%#", _arrStatusText );
+			formatstring( _statusText.data(), _statusText.capacity(), "%#", GameStrings::get( "battle.prompt_fight", "Fight: 1/2 moves, Enter=Move0, Esc=Run" ) );
+			SW_LOG_TRACE( "%#", _statusText.c_str() );
 		}
 		else if ( _phase == BattlePhase::ResolvePlayer )
 		{
 			if ( _foe._hp <= 0 )
 			{
-				_bPlayerWon = 1;
+				_bPlayerWon = SW_TRUE;
 				_player._exp += 10;
-				formatstring( _arrStatusText, sizeof( _arrStatusText ), GameStrings::get( "battle.foe_fainted", "%# fainted! You won!" ),
+				formatstring( _statusText.data(), _statusText.capacity(), GameStrings::get( "battle.foe_fainted", "%# fainted! You won!" ),
 							  _foe._nickname.c_str() );
 				_phase		= BattlePhase::Ended;
 				_phaseTimer = 0.4f;
-				SW_LOG_TRACE( "%#", _arrStatusText );
+				SW_LOG_TRACE( "%#", _statusText.c_str() );
 				return;
 			}
 			applyMove( _foe, _player, pickFoeMoveSlot(), false );
@@ -82,16 +83,16 @@ namespace sw
 		{
 			if ( _player._hp <= 0 )
 			{
-				_bPlayerWon = 0;
-				formatstring( _arrStatusText, sizeof( _arrStatusText ), GameStrings::get( "battle.player_fainted", "%# fainted..." ),
+				_bPlayerWon = SW_FALSE;
+				formatstring( _statusText.data(), _statusText.capacity(), GameStrings::get( "battle.player_fainted", "%# fainted..." ),
 							  _player._nickname.c_str() );
 				_phase		= BattlePhase::Ended;
 				_phaseTimer = 0.4f;
-				SW_LOG_TRACE( "%#", _arrStatusText );
+				SW_LOG_TRACE( "%#", _statusText.c_str() );
 				return;
 			}
 			_phase = BattlePhase::PlayerChoice;
-			formatstring( _arrStatusText, sizeof( _arrStatusText ), GameStrings::get( "battle.what_will", "What will %# do?" ),
+			formatstring( _statusText.data(), _statusText.capacity(), GameStrings::get( "battle.what_will", "What will %# do?" ),
 						  _player._nickname.c_str() );
 		}
 		else if ( _phase == BattlePhase::Ended )
@@ -114,18 +115,17 @@ namespace sw
 	{
 		if ( _phase != BattlePhase::PlayerChoice )
 			return;
-		formatstring( _arrStatusText, sizeof( _arrStatusText ), "%#",
-					  GameStrings::get( "battle.got_away", "Got away safely!" ) );
-		SW_LOG_TRACE( "%#", _arrStatusText );
-		_bPlayerWon = 0;
+		formatstring( _statusText.data(), _statusText.capacity(), "%#", GameStrings::get( "battle.got_away", "Got away safely!" ) );
+		SW_LOG_TRACE( "%#", _statusText.c_str() );
+		_bPlayerWon = SW_FALSE;
 		_phase		= BattlePhase::Ended;
 		_phaseTimer = 0.3f;
 	}
 
 	void BattleState::endBattle()
 	{
-		_phase			  = BattlePhase::Inactive;
-		_arrStatusText[0] = '\0';
+		_phase = BattlePhase::Inactive;
+		_statusText.clear();
 	}
 
 	void BattleState::applyMove( PartyMember& attacker, PartyMember& defender, int32 moveSlot, bool playerSide )
@@ -136,7 +136,7 @@ namespace sw
 		int32&			  pp	   = ( moveSlot == 0 ) ? attacker._pp0 : attacker._pp1;
 		if ( pp <= 0 )
 		{
-			formatstring( _arrStatusText, sizeof( _arrStatusText ), GameStrings::get( "battle.no_pp", "%# has no PP!" ),
+			formatstring( _statusText.data(), _statusText.capacity(), GameStrings::get( "battle.no_pp", "%# has no PP!" ),
 						  attacker._nickname.c_str() );
 			return;
 		}
@@ -148,16 +148,16 @@ namespace sw
 			defender._hp -= dmg;
 			if ( defender._hp < 0 )
 				defender._hp = 0;
-			formatstring( _arrStatusText, sizeof( _arrStatusText ), GameStrings::get( "battle.used_move_dmg", "%# used %#! (%# dmg)" ),
+			formatstring( _statusText.data(), _statusText.capacity(), GameStrings::get( "battle.used_move_dmg", "%# used %#! (%# dmg)" ),
 						  attacker._nickname.c_str(), pMove->_name.c_str(), dmg );
 		}
 		else
 		{
-			formatstring( _arrStatusText, sizeof( _arrStatusText ), GameStrings::get( "battle.used_move", "%# used %#!" ),
+			formatstring( _statusText.data(), _statusText.capacity(), GameStrings::get( "battle.used_move", "%# used %#!" ),
 						  attacker._nickname.c_str(), pMove->_name.c_str() );
 		}
 		(void)playerSide;
-		SW_LOG_TRACE( "%#", _arrStatusText );
+		SW_LOG_TRACE( "%#", _statusText.c_str() );
 	}
 
 	int32 BattleState::pickFoeMoveSlot() const

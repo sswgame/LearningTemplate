@@ -3,9 +3,11 @@
  * @brief 글로벌 퀵 애셋/오브젝트 검색 및 런처 팝업 (Ctrl+P)
  */
 #pragma once
+#include "Core/Common/Defines.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Commands/EditorBackgroundIo.h"
 #include "Editor/Common/Gui/IEditorPopup.h"
@@ -50,10 +52,10 @@ namespace sw::editor
 		void pollFileIndex();
 
 	private:
-		vector<QuickLauncherItem> _listAllItem;
-		EditorResourceIndexJob	  _fileIndexJob;
-		utf8					  _arrSearchBuffer[constant::kMaxBuffer128];
-		int32					  _selectedIndex;
-		bool					  _bJustOpened;
+		vector<QuickLauncherItem>			  _listAllItem;
+		EditorResourceIndexJob				  _fileIndexJob;
+		fixed_string<constant::kMaxBuffer128> _searchBuffer;
+		int32								  _selectedIndex;
+		bool								  _bJustOpened;
 	};
 } // namespace sw::editor

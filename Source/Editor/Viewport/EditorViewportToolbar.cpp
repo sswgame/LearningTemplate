@@ -3,6 +3,7 @@
 #include "Editor/Viewport/EditorViewportToolbar.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Gui/EditorChrome.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -117,11 +118,11 @@ namespace sw::editor
 					EditorWorkspace& ws = pContext->getWorkspace();
 					for ( uint32 slot = 0; slot < 9; ++slot )
 					{
-						const bool bHas = ws.hasCameraBookmark( slot );
-						utf8	   arrLabel[64];
-						formatstring( arrLabel, sizeof( arrLabel ), "Slot %u: %s", slot + 1,
+						const bool							 bHas = ws.hasCameraBookmark( slot );
+						fixed_string<constant::kMaxBuffer64> arrLabel;
+						formatstring( arrLabel.data(), arrLabel.capacity(), "Slot %u: %s", slot + 1,
 									  bHas ? ws.getCameraBookmark( slot )->_name.c_str() : "<Empty>" );
-						if ( ImGui::Selectable( arrLabel, false ) && bHas )
+						if ( ImGui::Selectable( arrLabel.c_str(), false ) && bHas )
 						{
 							settings._requestedBookmarkSlot = static_cast<int32>( slot );
 						}

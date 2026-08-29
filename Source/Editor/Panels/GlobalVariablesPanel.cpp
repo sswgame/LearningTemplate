@@ -2,10 +2,12 @@
 
 #include "Editor/Panels/GlobalVariablesPanel.h"
 
+#include "Core/Common/Defines.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Commands/EditorGlobalVariableCommands.h"
 #include "Editor/Common/EditorSessionPolicy.h"
@@ -160,18 +162,20 @@ namespace sw::editor
 					}
 					case GlobalVariableType::String:
 					{
-						string* pVal = static_cast<string*>( info._pData );
-						utf8	arrBuf[512];
-						StringUtil::strncpy( arrBuf, pVal->c_str(), sizeof( arrBuf ) );
-						if ( ImGui::InputText( "##val", arrBuf, sizeof( arrBuf ) ) )
+						string*								  pVal = static_cast<string*>( info._pData );
+						fixed_string<constant::kMaxBuffer512> arrBuf{ pVal->c_str() };
+						if ( ImGui::InputText( "##val", arrBuf.data(), arrBuf.capacity() ) )
 						{
-							*pVal	 = arrBuf;
+							*pVal	 = arrBuf.c_str();
 							bChanged = true;
 							if ( info._onValueChanged.isBound() )
 								info._onValueChanged( &info );
 						}
 						break;
 					}
+					default:
+						ImGui::TextDisabled( "(unsupported)" );
+						break;
 				}
 				return bChanged;
 			}
@@ -186,8 +190,8 @@ namespace sw::editor
 		, _uniquePinnedVar{}
 		, _presetJob{}
 		, _listPresetFile{}
-		, _arrSearchFilter{ 0 }
-		, _arrPresetNameBuf{ 0 }
+		, _searchFilter{}
+		, _presetNameBuf{}
 		, _bGroupByModule{ SW_TRUE }
 		, _bPresetListDirty{ SW_TRUE }
 		, _bSessionDirty{ SW_FALSE }
@@ -239,7 +243,7 @@ namespace sw::editor
 		// 1) 상단 툴바 (검색, 모듈 그룹화, 기본값 리셋, 프리셋 메뉴)
 		if ( EditorChrome::beginToolbar( "##GvToolbar" ) )
 		{
-			EditorWidgets::drawSearchField( "##GvSearch", _arrSearchFilter, sizeof( _arrSearchFilter ),
+			EditorWidgets::drawSearchField( "##GvSearch", _searchFilter,
 											"Filter variables...", 200.0f, true );
 
 			ImGui::SameLine();
@@ -267,18 +271,18 @@ namespace sw::editor
 				ImGui::Text( "Global Variable Presets" );
 				ImGui::Separator();
 
-				ImGui::InputTextWithHint( "##PresetNameInput", "Preset Name...", _arrPresetNameBuf,
-										  sizeof( _arrPresetNameBuf ) );
+				ImGui::InputTextWithHint( "##PresetNameInput", "Preset Name...", _presetNameBuf.data(),
+										  _presetNameBuf.capacity() );
 				ImGui::SameLine();
-				if ( ImGui::Button( "Save" ) && _arrPresetNameBuf[0] != '\0' )
+				if ( ImGui::Button( "Save" ) && _presetNameBuf.empty() == false )
 				{
 					const string presetPath = FileUtil::joinPath(
 						EditorGlobalVariableCommands::getPresetFolderPath(),
-						string( _arrPresetNameBuf ) + ".gvpreset.xml" );
-					EditorGlobalVariableCommands::savePreset( presetPath, _arrPresetNameBuf );
-					_arrPresetNameBuf[0] = '\0';
-					_bPresetListDirty	 = SW_TRUE;
-					_bSessionDirty		 = SW_FALSE;
+						string( _presetNameBuf.c_str() ) + ".gvpreset.xml" );
+					EditorGlobalVariableCommands::savePreset( presetPath, _presetNameBuf.c_str() );
+					_presetNameBuf.clear();
+					_bPresetListDirty = SW_TRUE;
+					_bSessionDirty	  = SW_FALSE;
 				}
 
 				ImGui::Separator();
@@ -340,7 +344,7 @@ namespace sw::editor
 			GlobalVariableInfo* pInfo = pGvm->findVariable( varName );
 			if ( pInfo == nullptr )
 				continue;
-			if ( GlobalVariablesPanelInternal::matchFilter( *pInfo, _arrSearchFilter ) )
+			if ( GlobalVariablesPanelInternal::matchFilter( *pInfo, _searchFilter.c_str() ) )
 				listFiltered.push_back( pInfo );
 		}
 

@@ -381,6 +381,50 @@ SW_TEST_CASE( Core_String, FixedStringExtendedOperations )
 }
 
 /**
+ * @brief [Core_String] fixed_string formatstring 및 data() 수정 후 자동 sync_size 검증
+ */
+SW_TEST_CASE( Core_String, FixedStringFormatAndAutoSync )
+{
+	// 1) formatstring 동작 및 자동 길이 동기화
+	sw::fixed_string<sw::constant::kMaxBuffer64> strFmt;
+	sw::formatstring( strFmt.data(), strFmt.capacity(), "Item #%#: %# (%#)", 42, "Potion", sw::Fmt( 12.5, sw::Format( 2 ) ) );
+	SW_EXPECT_FALSE( strFmt.empty() );
+	SW_EXPECT_STREQ( "Item #42: Potion (12.50)", strFmt.c_str() );
+	SW_EXPECT_EQUAL( static_cast<uint32>( strlen( "Item #42: Potion (12.50)" ) ), strFmt.size() );
+	SW_EXPECT_EQUAL( strFmt.size(), strFmt.length() );
+	SW_EXPECT_EQUAL( std::string_view( "Item #42: Potion (12.50)" ), strFmt.view() );
+
+	// 2) data() 버퍼에 직접 C-API 스타일로 작성했을 때 자동 sync_size 동작
+	sw::fixed_string<sw::constant::kMaxBuffer32> rawBuf;
+	SW_EXPECT_TRUE( rawBuf.empty() );
+	SW_EXPECT_EQUAL( 0u, rawBuf.size() );
+
+	// data()에 strcpy (ImGui::InputText 동작 모사)
+	sw::StringUtil::strncpy( rawBuf.data(), "HeroPlayer", rawBuf.capacity() );
+
+	// sync_size()를 명시적으로 호출하지 않아도 empty(), size(), length(), view(), basic_string 변환 자동 동기화
+	SW_EXPECT_FALSE( rawBuf.empty() );
+	SW_EXPECT_EQUAL( 10u, rawBuf.size() );
+	SW_EXPECT_EQUAL( 10u, rawBuf.length() );
+	SW_EXPECT_STREQ( "HeroPlayer", rawBuf.c_str() );
+	SW_EXPECT_EQUAL( std::string_view( "HeroPlayer" ), rawBuf.view() );
+
+	const std::string stdStr = rawBuf;
+	SW_EXPECT_EQUAL( std::string( "HeroPlayer" ), stdStr );
+	const sw::string swStr{ rawBuf.c_str() };
+	SW_EXPECT_EQUAL( sw::string( "HeroPlayer" ), swStr );
+
+	// Range-based for loop 자동 동기화
+	size_t iteratedCount = 0;
+	for ( const utf8 ch : rawBuf )
+	{
+		if ( ch != '\0' )
+			++iteratedCount;
+	}
+	SW_EXPECT_EQUAL( 10u, iteratedCount );
+}
+
+/**
  * @brief [Core_String] FileUtil::skipUtf8Bom 및 BOM 포함 텍스트 파일 읽기 검증
  */
 SW_TEST_CASE( Core_String, Utf8BomHandling )

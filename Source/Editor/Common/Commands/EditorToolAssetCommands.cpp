@@ -6,6 +6,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 
 #include "Editor/Common/Commands/EditorInspectorCommands.h"
@@ -79,28 +80,28 @@ namespace sw::editor
 				if ( pPtr == nullptr )
 					return "<null>";
 
-				const string typeName = prop._typeName.c_str();
-				utf8		 arrBuf[128];
+				const string						  typeName = prop._typeName.c_str();
+				fixed_string<constant::kMaxBuffer128> arrBuf;
 				if ( typeName == "float32" || typeName == "float" )
 				{
 					float32 value{ 0.0f };
 					Memory::copy( &value, pPtr, sizeof( float32 ) );
-					formatstring( arrBuf, sizeof( arrBuf ), "%.4f", value );
-					return arrBuf;
+					formatstring( arrBuf.data(), arrBuf.capacity(), "%.4f", value );
+					return arrBuf.c_str();
 				}
 				if ( typeName == "int32" || typeName == "int" )
 				{
 					int32 value{ 0 };
 					Memory::copy( &value, pPtr, sizeof( int32 ) );
-					formatstring( arrBuf, sizeof( arrBuf ), "%d", value );
-					return arrBuf;
+					formatstring( arrBuf.data(), arrBuf.capacity(), "%d", value );
+					return arrBuf.c_str();
 				}
 				if ( typeName == "uint32" )
 				{
 					uint32 value{ 0 };
 					Memory::copy( &value, pPtr, sizeof( uint32 ) );
-					formatstring( arrBuf, sizeof( arrBuf ), "%u", value );
-					return arrBuf;
+					formatstring( arrBuf.data(), arrBuf.capacity(), "%u", value );
+					return arrBuf.c_str();
 				}
 				if ( typeName == "bool" )
 				{
@@ -114,22 +115,22 @@ namespace sw::editor
 				{
 					float3 value{};
 					Memory::copy( &value, pPtr, sizeof( float3 ) );
-					formatstring( arrBuf, sizeof( arrBuf ), "(%.3f, %.3f, %.3f)", value._x, value._y, value._z );
-					return arrBuf;
+					formatstring( arrBuf.data(), arrBuf.capacity(), "(%.3f, %.3f, %.3f)", value._x, value._y, value._z );
+					return arrBuf.c_str();
 				}
 				if ( typeName == "float2" )
 				{
 					float2 value{};
 					Memory::copy( &value, pPtr, sizeof( float2 ) );
-					formatstring( arrBuf, sizeof( arrBuf ), "(%.3f, %.3f)", value._x, value._y );
-					return arrBuf;
+					formatstring( arrBuf.data(), arrBuf.capacity(), "(%.3f, %.3f)", value._x, value._y );
+					return arrBuf.c_str();
 				}
 				if ( typeName == "float4" )
 				{
 					float4 value{};
 					Memory::copy( &value, pPtr, sizeof( float4 ) );
-					formatstring( arrBuf, sizeof( arrBuf ), "(%.3f, %.3f, %.3f, %.3f)", value._x, value._y, value._z, value._w );
-					return arrBuf;
+					formatstring( arrBuf.data(), arrBuf.capacity(), "(%.3f, %.3f, %.3f, %.3f)", value._x, value._y, value._z, value._w );
+					return arrBuf.c_str();
 				}
 				return "<value>";
 			}

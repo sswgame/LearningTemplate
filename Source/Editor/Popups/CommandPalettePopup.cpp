@@ -359,9 +359,9 @@ namespace sw::editor
 
 	void CommandPalettePopup::onOpen()
 	{
-		_bJustOpened		= true;
-		_selectedIndex		= 0;
-		_arrSearchBuffer[0] = '\0';
+		_bJustOpened   = true;
+		_selectedIndex = 0;
+		_searchBuffer.clear();
 		rebuildDynamicEntries();
 	}
 
@@ -427,13 +427,13 @@ namespace sw::editor
 
 		if ( EditorChrome::beginSearchOverlay( overlayDesc ) )
 		{
-			EditorWidgets::drawSearchField( "##PaletteSearch", _arrSearchBuffer, sizeof( _arrSearchBuffer ),
+			EditorWidgets::drawSearchField( "##PaletteSearch", _searchBuffer,
 											"Type a command or search objects... (Esc to close)", -1.0f, false );
 
 			ImGui::Separator();
 
 			vector<const CommandPaletteEntry*> listFiltered;
-			const string_view				   pattern{ _arrSearchBuffer };
+			const string_view				   pattern{ _searchBuffer.c_str() };
 			for ( const CommandPaletteEntry& entry : _listAllCommand )
 			{
 				if ( CommandPalettePopupInternal::fuzzyMatch( entry._label, pattern ) || CommandPalettePopupInternal::fuzzyMatch( entry._category, pattern ) ||
@@ -459,11 +459,11 @@ namespace sw::editor
 
 					ImGui::PushID( static_cast<int32>( itemIndex ) );
 
-					utf8 arrLabelBuf[256];
-					formatstring( arrLabelBuf, sizeof( arrLabelBuf ), "[%#] %#", entry._category.c_str(),
+					fixed_string<constant::kMaxBuffer256> labelBuf;
+					formatstring( labelBuf.data(), labelBuf.capacity(), "[%#] %#", entry._category.c_str(),
 								  entry._label.c_str() );
 
-					if ( ImGui::Selectable( arrLabelBuf, bIsSelected ) || ( bIsSelected && bExecuteSelected ) )
+					if ( ImGui::Selectable( labelBuf.c_str(), bIsSelected ) || ( bIsSelected && bExecuteSelected ) )
 					{
 						if ( entry._action.isBound() )
 							entry._action();

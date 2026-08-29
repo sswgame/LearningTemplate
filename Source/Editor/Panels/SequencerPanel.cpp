@@ -115,11 +115,10 @@ namespace sw::editor
 		, _currentFrame{ 0 }
 		, _selected{ -1 }
 		, _firstFrame{ 0 }
-		, _arrCinematicNote{}
+		, _cinematicNote{ "Cinematic notes (not a clip track)." }
 		, _sequence{ make_unique<ClipSequence>() }
 		, _previewPlayer{ make_unique<sw::SequencePlayer>() }
 	{
-		StringUtil::strncpy( _arrCinematicNote, "Cinematic notes (not a clip track).", sizeof( _arrCinematicNote ) - 1 );
 		_sequence->Add( 0 );
 		_sequence->Add( 1 );
 		_sequence->_listItems[0]._name	= "Intro";
@@ -177,28 +176,24 @@ namespace sw::editor
 		}
 		ImGui::Text( "Current Frame: %d", _currentFrame );
 
-		ImGui::InputTextMultiline( "Cinematic Note", _arrCinematicNote, sizeof( _arrCinematicNote ), ImVec2( -1.0f, 60.0f ) );
+		ImGui::InputTextMultiline( "Cinematic Note", _cinematicNote.data(), _cinematicNote.capacity(), ImVec2( -1.0f, 60.0f ) );
 		if ( ImGui::IsItemDeactivatedAfterEdit() )
 			notifyDocumentEdited( "Edit Sequence Note", "sequence-note" );
 
 		if ( _selected >= 0 && _selected < static_cast<int32>( _sequence->_listItems.size() ) )
 		{
-			Item& item = _sequence->_listItems[static_cast<size_t>( _selected )];
-			utf8  arrNameBuf[constant::kMaxBuffer128];
-			StringUtil::strncpy( arrNameBuf, item._name.c_str(), sizeof( arrNameBuf ) - 1 );
-			arrNameBuf[sizeof( arrNameBuf ) - 1] = '\0';
-			if ( ImGui::InputText( "Clip Name", arrNameBuf, sizeof( arrNameBuf ) ) )
+			Item&								  item = _sequence->_listItems[static_cast<size_t>( _selected )];
+			fixed_string<constant::kMaxBuffer128> nameBuf{ item._name.c_str() };
+			if ( ImGui::InputText( "Clip Name", nameBuf.data(), nameBuf.capacity() ) )
 			{
-				item._name = arrNameBuf;
+				item._name = nameBuf.c_str();
 			}
 			if ( ImGui::IsItemDeactivatedAfterEdit() )
 				notifyDocumentEdited( "Edit Sequence Clip", "sequence-clip" );
-			utf8 arrTargetBuf[constant::kMaxBuffer128];
-			StringUtil::strncpy( arrTargetBuf, item._targetObject.c_str(), sizeof( arrTargetBuf ) - 1 );
-			arrTargetBuf[sizeof( arrTargetBuf ) - 1] = '\0';
-			if ( ImGui::InputText( "Target Object", arrTargetBuf, sizeof( arrTargetBuf ) ) )
+			fixed_string<constant::kMaxBuffer128> targetBuf{ item._targetObject.c_str() };
+			if ( ImGui::InputText( "Target Object", targetBuf.data(), targetBuf.capacity() ) )
 			{
-				item._targetObject = arrTargetBuf;
+				item._targetObject = targetBuf.c_str();
 			}
 			if ( ImGui::IsItemDeactivatedAfterEdit() )
 				notifyDocumentEdited( "Edit Sequence Clip", "sequence-clip" );
@@ -283,7 +278,7 @@ namespace sw::editor
 			return asset;
 		asset._frameMin = _sequence->_frameMin;
 		asset._frameMax = _sequence->_frameMax;
-		asset._note		= _arrCinematicNote;
+		asset._note		= _cinematicNote.c_str();
 		for ( const Item& src : _sequence->_listItems )
 		{
 			SequenceTrackItem item{};
@@ -307,8 +302,7 @@ namespace sw::editor
 			return;
 		_sequence->_frameMin = asset._frameMin;
 		_sequence->_frameMax = asset._frameMax;
-		StringUtil::strncpy( _arrCinematicNote, asset._note.c_str(), sizeof( _arrCinematicNote ) - 1 );
-		_arrCinematicNote[sizeof( _arrCinematicNote ) - 1] = '\0';
+		_cinematicNote		 = asset._note.c_str();
 		_sequence->_listItems.clear();
 		for ( const SequenceTrackItem& src : asset._listItem )
 		{
