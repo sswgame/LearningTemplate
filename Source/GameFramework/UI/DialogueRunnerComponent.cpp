@@ -121,6 +121,16 @@ namespace sw
 			_onFinished();
 	}
 
+	void DialogueRunnerComponent::previewLine( string speaker, string text )
+	{
+		_state			= DialogueRunnerState::ShowingDialogue;
+		_currentSpeaker = std::move( speaker );
+		_currentText	= std::move( text );
+		_listCurrentChoice.clear();
+		if ( _onLine.isBound() )
+			_onLine( _currentSpeaker, _currentText );
+	}
+
 	void DialogueRunnerComponent::setSaveSlot( SaveSlot* pSaveSlot )
 	{
 		_pSaveSlot = pSaveSlot;

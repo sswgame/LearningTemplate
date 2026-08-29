@@ -9,6 +9,36 @@
 
 namespace sw
 {
+	namespace
+	{
+		struct SequenceAssetInternal
+		{
+			static float3 readVec3( const JsonValue& parent, string_view key, const float3& fallback )
+			{
+				const JsonValue val = parent.get( key );
+				if ( val.isObject() == false )
+					return fallback;
+				float3 result = fallback;
+				result._x	  = static_cast<float32>( val.get( "x" ).asFloat( static_cast<float64>( fallback._x ) ) );
+				result._y	  = static_cast<float32>( val.get( "y" ).asFloat( static_cast<float64>( fallback._y ) ) );
+				result._z	  = static_cast<float32>( val.get( "z" ).asFloat( static_cast<float64>( fallback._z ) ) );
+				return result;
+			}
+
+			static void writeVec3( const JsonValue& parent, string_view key, const float3& value )
+			{
+				const JsonValue obj = parent.set( key );
+				obj.setObject();
+				obj.set( "x" ).setFloat( static_cast<float64>( value._x ) );
+				obj.set( "y" ).setFloat( static_cast<float64>( value._y ) );
+				obj.set( "z" ).setFloat( static_cast<float64>( value._z ) );
+			}
+		};
+	} // namespace
+} // namespace sw
+
+namespace sw
+{
 	bool SequenceAsset::loadFromFile( string_view path )
 	{
 		_listItem.clear();
@@ -66,6 +96,9 @@ namespace sw
 				item._end		   = static_cast<int32>( itemJson.get( "end" ).asInt( 10 ) );
 				item._type		   = static_cast<int32>( itemJson.get( "type" ).asInt( 0 ) );
 				item._color		   = static_cast<uint32>( itemJson.get( "color" ).asUint( 0xFFAA8080u ) );
+				item._translation  = SequenceAssetInternal::readVec3( itemJson, "translation", float3{} );
+				item._rotation	   = SequenceAssetInternal::readVec3( itemJson, "rotation", float3{} );
+				item._scale		   = SequenceAssetInternal::readVec3( itemJson, "scale", float3{ 1.0f, 1.0f, 1.0f } );
 				_listItem.push_back( std::move( item ) );
 			}
 		}
@@ -92,6 +125,9 @@ namespace sw
 			itemJson.set( "end" ).setInt( item._end );
 			itemJson.set( "type" ).setInt( item._type );
 			itemJson.set( "color" ).setUint( item._color );
+			SequenceAssetInternal::writeVec3( itemJson, "translation", item._translation );
+			SequenceAssetInternal::writeVec3( itemJson, "rotation", item._rotation );
+			SequenceAssetInternal::writeVec3( itemJson, "scale", item._scale );
 		}
 
 		return doc.dump( 2 );

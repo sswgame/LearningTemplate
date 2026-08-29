@@ -44,8 +44,9 @@ namespace sw
 		void resume();
 		void setFrame( int32 frame );
 
-		string getCurrentAnimation() const;
-		void   setCurrentAnimation( const string& anim );
+		string		  getCurrentAnimation() const;
+		void		  setCurrentAnimation( const string& anim );
+		const string& getAnimationGraphPath() const { return _animationGraphPath; }
 
 		bool isRepeating() const;
 		void setRepeat( bool bLoop );

@@ -7,6 +7,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Math/VectorMath.h"
 
 namespace sw
 {
@@ -15,6 +16,9 @@ namespace sw
 	{
 		string _name;
 		string _targetObject;
+		float3 _translation{};
+		float3 _rotation{};
+		float3 _scale{ 1.0f, 1.0f, 1.0f };
 		int32  _start{ 0 };
 		int32  _end{ 10 };
 		int32  _type{ 0 };

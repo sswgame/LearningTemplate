@@ -21,11 +21,11 @@ namespace sw::editor
 	class EditorViewportPreview
 	{
 	public:
-		/** @brief 선택 오브젝트의 스프라이트 애니메이터에 노드 이름을 재생합니다. */
-		static void applyAnimationNode( string_view nodeName );
-		/** @brief 시퀀스 프레임의 활성 클립을 이름 대상 오브젝트에 적용합니다. */
+		/** @brief 스프라이트 애니메이터와 그래프 클립에 노드 이름을 재생합니다. */
+		static void applyAnimationNode( string_view nodeName, string_view graphPath = {} );
+		/** @brief 시퀀스 프레임의 활성 클립을 대상 오브젝트 활성/트랜스폼에 적용합니다. */
 		static void applySequenceFrame( const sw::SequenceAsset& asset, int32 frame );
-		/** @brief 화자 이름의 오브젝트를 선택하고 대사를 로그합니다. */
+		/** @brief 화자 오브젝트를 선택하고 DialogueRunner에 대사를 넣습니다. */
 		static void applyDialogueLine( string_view speaker, string_view text );
 		/** @brief 선택 메시/스프라이트에 머티리얼을 붙이고 캐시를 갱신합니다. */
 		static void applyMaterial( sw::Material* pMaterial, string_view assetPath );

@@ -8,6 +8,7 @@
 #include "Editor/Common/EditorSessionPolicy.h"
 #include "Editor/Common/Gui/EditorChrome.h"
 
+#include "Engine/Animation/AnimClip.h"
 #include "Engine/Animation/AnimationGraphAsset.h"
 
 #include <imgui.h>
@@ -56,6 +57,7 @@ namespace sw::editor
 		, _listNode{}
 		, _listLink{}
 		, _previewPlayer{}
+		, _listPreviewClip{}
 		, _previewHoldSeconds{ 0.0f }
 		, _bGraphLayoutReady{ SW_FALSE }
 		, _bPreviewPlaying{ SW_FALSE }
@@ -118,7 +120,7 @@ namespace sw::editor
 				_previewPlayer.play();
 				_bPreviewPlaying	= SW_TRUE;
 				_previewHoldSeconds = 0.0f;
-				EditorViewportPreview::applyAnimationNode( _previewPlayer.getCurrentNodeName() );
+				EditorViewportPreview::applyAnimationNode( _previewPlayer.getCurrentNodeName(), getLoadedAssetPath() );
 			}
 			ImGui::SameLine();
 			if ( ImGui::Button( "Advance" ) )
@@ -127,7 +129,7 @@ namespace sw::editor
 				if ( _previewPlayer.advance() == false )
 					_bPreviewPlaying = SW_FALSE;
 				else
-					EditorViewportPreview::applyAnimationNode( _previewPlayer.getCurrentNodeName() );
+					EditorViewportPreview::applyAnimationNode( _previewPlayer.getCurrentNodeName(), getLoadedAssetPath() );
 			}
 			ImGui::SameLine();
 			if ( ImGui::Button( "Stop" ) )
@@ -332,6 +334,13 @@ namespace sw::editor
 		AnimationGraphAsset asset;
 		asset.parseJson( captureDocumentText() );
 		_previewPlayer.setGraph( asset );
+		_previewPlayer.clearClips();
+		_listPreviewClip.clear();
+		_listPreviewClip.reserve( _listNode.size() );
+		for ( const GraphNode& node : _listNode )
+			_listPreviewClip.push_back( AnimClip( node._name, 0.75f ) );
+		for ( AnimClip& clip : _listPreviewClip )
+			_previewPlayer.registerClip( clip.getName(), &clip );
 	}
 
 	void AnimationGraphPanel::cacheNodeLayout()
@@ -362,7 +371,7 @@ namespace sw::editor
 		if ( _previewPlayer.advance() == false )
 			_bPreviewPlaying = SW_FALSE;
 		else
-			EditorViewportPreview::applyAnimationNode( _previewPlayer.getCurrentNodeName() );
+			EditorViewportPreview::applyAnimationNode( _previewPlayer.getCurrentNodeName(), getLoadedAssetPath() );
 	}
 
 	int32 AnimationGraphPanel::nextNodeId() const

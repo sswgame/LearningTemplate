@@ -8,6 +8,7 @@
 #include "Editor/Common/Gui/EditorDocumentPanel.h"
 #include "Editor/Common/Widgets/EditorNodeGraph.h"
 
+#include "Engine/Animation/AnimClip.h"
 #include "Engine/Animation/AnimationGraphPlayer.h"
 
 namespace sw::editor
@@ -65,6 +66,7 @@ namespace sw::editor
 		vector<GraphNode>	   _listNode;
 		vector<GraphLink>	   _listLink;
 		AnimationGraphPlayer   _previewPlayer;
+		vector<AnimClip>	   _listPreviewClip;
 		float32				   _previewHoldSeconds;
 		uint8				   _bGraphLayoutReady : 1;
 		uint8				   _bPreviewPlaying	  : 1;

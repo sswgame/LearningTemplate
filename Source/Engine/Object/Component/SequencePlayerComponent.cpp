@@ -3,11 +3,11 @@
 #include "Engine/Object/Component/SequencePlayerComponent.h"
 
 #include "Core/Log/Logger.h"
-#include "Core/String/hashed_string.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Sequencer/SequenceAsset.h"
+#include "Engine/Sequencer/SequenceTimelineUtil.h"
 
 namespace sw
 {
@@ -85,27 +85,6 @@ namespace sw
 		const int32 prevFrame	 = _player.getPreviousFrame();
 		const int32 currentFrame = _player.getCurrentFrame();
 
-		vector<const SequenceTrackItem*> listActive;
-		_player.collectActiveItems( listActive );
-		for ( const SequenceTrackItem* pItem : listActive )
-		{
-			if ( pItem == nullptr || pItem->_targetObject.empty() )
-				continue;
-			GameObject* pTarget = pManager->findGameObjectByName( hashed_string( pItem->_targetObject.c_str() ) );
-			if ( pTarget == nullptr )
-				continue;
-			if ( pItem->_type == 0 )
-				pTarget->setActive( true );
-		}
-
-		const vector<SequenceTrackItem>& listItem = _player.getAsset()._listItem;
-		for ( const SequenceTrackItem& item : listItem )
-		{
-			if ( item._type != 1 )
-				continue;
-			if ( prevFrame >= item._start || item._start > currentFrame )
-				continue;
-			SW_LOG_INFO( "Sequence event %# on %#", item._name.c_str(), item._targetObject.c_str() );
-		}
+		SequenceTimelineUtil::applyFrame( pManager, _player.getAsset(), currentFrame, prevFrame );
 	}
 } // namespace sw

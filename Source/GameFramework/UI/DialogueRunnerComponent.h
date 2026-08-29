@@ -68,10 +68,13 @@ namespace sw
 		bool loadGraphFile( string_view jsonPath );
 		bool loadGraphJson( string_view jsonContent );
 
+		FUNCTION( Category = "Playback", DisplayName = "Start Dialogue", CallInEditor )
 		bool startDialogue( int32 startNodeId = -1 );
 		bool advance();
 		bool selectChoice( int32 choiceIndex );
 		void stopDialogue();
+		FUNCTION( Category = "Preview", DisplayName = "Preview Line" )
+		void previewLine( string speaker, string text );
 
 		void setSaveSlot( SaveSlot* pSaveSlot );
 

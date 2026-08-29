@@ -2,8 +2,10 @@
 
 #include "Editor/Common/Commands/EditorViewportPreview.h"
 
+#include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/hashed_string.h"
+#include "Core/Task/TaskTypes.h"
 
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
@@ -13,13 +15,16 @@
 #include "Engine/Object/Component/2D/SpriteAnimatorComponent.h"
 #include "Engine/Object/Component/2D/SpriteComponent.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
+#include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectPtr.h"
+#include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Sequencer/SequenceAsset.h"
-#include "Engine/Sequencer/SequencePlayer.h"
+#include "Engine/Sequencer/SequenceTimelineUtil.h"
 #include "Engine/Utility/Resource/ResourceManager.h"
 
 #include "RuntimeAPI/Service/EditorService.h"
@@ -48,6 +53,43 @@ namespace sw::editor
 					return nullptr;
 				return pScene->getObjectManager();
 			}
+
+			static bool matchesAnimationGraphPath( const SpriteAnimatorComponent* pAnimator, string_view graphPath )
+			{
+				if ( pAnimator == nullptr )
+					return false;
+				if ( graphPath.empty() )
+					return true;
+				const string& animatorPath = pAnimator->getAnimationGraphPath();
+				if ( animatorPath.empty() )
+					return true;
+				return FileUtil::pathsEqualNormalized( animatorPath, graphPath );
+			}
+
+			static bool isDialogueRunnerType( const TypeInfo* pType )
+			{
+				if ( pType == nullptr )
+					return false;
+				if ( pType->_name == hashed_string( "DialogueRunnerComponent" ) )
+					return true;
+				return pType->_fullyQualifiedName == hashed_string( "sw::DialogueRunnerComponent" );
+			}
+
+			static void invokeDialoguePreviewLine( Component* pComp, string_view speaker, string_view text )
+			{
+				if ( pComp == nullptr )
+					return;
+				const TypeInfo* pType = pComp->getTypeInfo();
+				if ( pType == nullptr )
+					return;
+				TypeRegistry* pRegistry = editor::getService<TypeRegistry>();
+				if ( pRegistry == nullptr )
+					return;
+				TaskArgs args;
+				args.add( string{ speaker } );
+				args.add( string{ text } );
+				pRegistry->invokeMethod( pComp, pType->_fullyQualifiedName, hashed_string( "previewLine" ), args );
+			}
 		};
 	} // namespace
 } // namespace sw::editor
@@ -56,49 +98,46 @@ namespace sw::editor
 {
 	SW_LOG_CALLER( "EditorViewportPreview" );
 
-	void EditorViewportPreview::applyAnimationNode( string_view nodeName )
+	void EditorViewportPreview::applyAnimationNode( string_view nodeName, string_view graphPath )
 	{
 		if ( nodeName.empty() )
 			return;
-		GameObject* pPrimary = EditorViewportPreviewInternal::getPrimaryObject();
-		if ( pPrimary == nullptr )
+
+		const string nodeNameStr{ nodeName };
+		GameObject*	 pPrimary = EditorViewportPreviewInternal::getPrimaryObject();
+		if ( pPrimary != nullptr )
+		{
+			SpriteAnimatorComponent* pPrimaryAnimator = pPrimary->getComponent<SpriteAnimatorComponent>();
+			if ( pPrimaryAnimator != nullptr )
+				pPrimaryAnimator->play( nodeNameStr, false );
+		}
+
+		GameObjectManager* pManager = EditorViewportPreviewInternal::getActiveObjectManager();
+		if ( pManager == nullptr )
 			return;
-		SpriteAnimatorComponent* pAnimator = pPrimary->getComponent<SpriteAnimatorComponent>();
-		if ( pAnimator == nullptr )
-			return;
-		pAnimator->play( string{ nodeName }, false );
+		const vector<GameObject*> listObjects = pManager->getAllGameObjects();
+		for ( GameObject* pObject : listObjects )
+		{
+			if ( pObject == nullptr || pObject == pPrimary )
+				continue;
+			SpriteAnimatorComponent* pAnimator = pObject->getComponent<SpriteAnimatorComponent>();
+			if ( EditorViewportPreviewInternal::matchesAnimationGraphPath( pAnimator, graphPath ) == false )
+				continue;
+			pAnimator->play( nodeNameStr, false );
+		}
 	}
 
 	void EditorViewportPreview::applySequenceFrame( const SequenceAsset& asset, int32 frame )
 	{
-		GameObjectManager* pManager = EditorViewportPreviewInternal::getActiveObjectManager();
-		if ( pManager == nullptr )
-			return;
-
-		SequencePlayer player;
-		player.setAsset( asset );
-		player.seekToFrame( frame );
-
-		vector<const SequenceTrackItem*> listActive;
-		player.collectActiveItems( listActive );
-		for ( const SequenceTrackItem* pItem : listActive )
-		{
-			if ( pItem == nullptr || pItem->_targetObject.empty() )
-				continue;
-			GameObject* pTarget = pManager->findGameObjectByName( hashed_string( pItem->_targetObject.c_str() ) );
-			if ( pTarget == nullptr )
-				continue;
-			if ( pItem->_type == 0 )
-				pTarget->setActive( true );
-		}
+		SequenceTimelineUtil::applyFrame( EditorViewportPreviewInternal::getActiveObjectManager(), asset, frame );
 	}
 
 	void EditorViewportPreview::applyDialogueLine( string_view speaker, string_view text )
 	{
-		if ( speaker.empty() == false )
+		GameObjectManager* pManager = EditorViewportPreviewInternal::getActiveObjectManager();
+		if ( pManager != nullptr )
 		{
-			GameObjectManager* pManager = EditorViewportPreviewInternal::getActiveObjectManager();
-			if ( pManager != nullptr )
+			if ( speaker.empty() == false )
 			{
 				GameObject* pSpeaker = pManager->findGameObjectByName( hashed_string( string{ speaker }.c_str() ) );
 				if ( pSpeaker != nullptr )
@@ -106,6 +145,22 @@ namespace sw::editor
 					EditorContext* pContext = EditorContext::get();
 					if ( pContext != nullptr )
 						pContext->getWorkspace().selectGameObject( GameObjectPtr{ pSpeaker } );
+				}
+			}
+
+			const vector<GameObject*> listObjects = pManager->getAllGameObjects();
+			for ( GameObject* pObject : listObjects )
+			{
+				if ( pObject == nullptr )
+					continue;
+				const vector<Component*> listComp = pObject->getAllComponents();
+				for ( Component* pComp : listComp )
+				{
+					if ( pComp == nullptr )
+						continue;
+					if ( EditorViewportPreviewInternal::isDialogueRunnerType( pComp->getTypeInfo() ) == false )
+						continue;
+					EditorViewportPreviewInternal::invokeDialoguePreviewLine( pComp, speaker, text );
 				}
 			}
 		}

@@ -21,6 +21,9 @@ namespace sw::editor
 	{
 		string _name;
 		string _targetObject;
+		float3 _translation{};
+		float3 _rotation{};
+		float3 _scale{ 1.0f, 1.0f, 1.0f };
 		int32  _start{ 0 };
 		int32  _end{ 10 };
 		int32  _type{ 0 };
@@ -199,6 +202,33 @@ namespace sw::editor
 			}
 			if ( ImGui::IsItemDeactivatedAfterEdit() )
 				notifyDocumentEdited( "Edit Sequence Clip", "sequence-clip" );
+			float32 arrTranslation[3] = { item._translation._x, item._translation._y, item._translation._z };
+			if ( ImGui::DragFloat3( "Translation", arrTranslation, 0.1f ) )
+			{
+				item._translation._x = arrTranslation[0];
+				item._translation._y = arrTranslation[1];
+				item._translation._z = arrTranslation[2];
+			}
+			if ( ImGui::IsItemDeactivatedAfterEdit() )
+				notifyDocumentEdited( "Edit Sequence Clip", "sequence-clip" );
+			float32 arrRotation[3] = { item._rotation._x, item._rotation._y, item._rotation._z };
+			if ( ImGui::DragFloat3( "Rotation", arrRotation, 0.5f ) )
+			{
+				item._rotation._x = arrRotation[0];
+				item._rotation._y = arrRotation[1];
+				item._rotation._z = arrRotation[2];
+			}
+			if ( ImGui::IsItemDeactivatedAfterEdit() )
+				notifyDocumentEdited( "Edit Sequence Clip", "sequence-clip" );
+			float32 arrScale[3] = { item._scale._x, item._scale._y, item._scale._z };
+			if ( ImGui::DragFloat3( "Scale", arrScale, 0.01f ) )
+			{
+				item._scale._x = arrScale[0];
+				item._scale._y = arrScale[1];
+				item._scale._z = arrScale[2];
+			}
+			if ( ImGui::IsItemDeactivatedAfterEdit() )
+				notifyDocumentEdited( "Edit Sequence Clip", "sequence-clip" );
 		}
 
 		ImSequencer::Sequencer( _sequence.get(), &_currentFrame, &_bExpanded, &_selected, &_firstFrame,
@@ -259,6 +289,9 @@ namespace sw::editor
 			SequenceTrackItem item{};
 			item._name		   = src._name;
 			item._targetObject = src._targetObject;
+			item._translation  = src._translation;
+			item._rotation	   = src._rotation;
+			item._scale		   = src._scale;
 			item._start		   = src._start;
 			item._end		   = src._end;
 			item._type		   = src._type;
@@ -282,6 +315,9 @@ namespace sw::editor
 			Item item{};
 			item._name		   = src._name;
 			item._targetObject = src._targetObject;
+			item._translation  = src._translation;
+			item._rotation	   = src._rotation;
+			item._scale		   = src._scale;
 			item._start		   = src._start;
 			item._end		   = src._end;
 			item._type		   = src._type;
