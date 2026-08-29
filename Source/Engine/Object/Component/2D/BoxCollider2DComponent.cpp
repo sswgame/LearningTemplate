@@ -27,12 +27,12 @@ namespace sw
 namespace sw
 {
 	BoxCollider2DComponent::BoxCollider2DComponent()
-		: _colliderType{ 0 }
-		, _offsetPos{}
+		: _offsetPos{}
 		, _offsetScale{}
+		, _physicsBody{}
 		, _cachedMin{ 0.0f, 0.0f }
 		, _cachedMax{ 0.0f, 0.0f }
-		, _physicsBody{}
+		, _colliderType{ 0 }
 	{
 		setCanEverTick( true );
 	}

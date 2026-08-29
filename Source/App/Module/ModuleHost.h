@@ -126,10 +126,10 @@ namespace sw
 		IWindow*		   _pWindow;			// non-owning
 		RenderThread*	   _pRenderThread;		// non-owning
 
-		uint8				   _bEnableEditor : 1;
-		[[maybe_unused]] uint8 _reserved	  : 7;
-
 		// 핫리로드 시 게임 상태 보존용 재사용 버퍼
 		vector<uint8> _listGameSavedState;
+
+		uint8				   _bEnableEditor : 1;
+		[[maybe_unused]] uint8 _reserved	  : 7;
 	};
 } // namespace sw

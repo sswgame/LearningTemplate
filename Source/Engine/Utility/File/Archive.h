@@ -173,12 +173,11 @@ namespace sw
 
 	private:
 		vector<uint8> _listBuffer;
+		string		  _sourceDirectory;
+		string		  _sourceFileName;
 		const uint8*  _pData;
 		uint64		  _dataSize;
 		uint64		  _offset;
 		bool		  _bReadMode;
-
-		string _sourceDirectory;
-		string _sourceFileName;
 	};
 } // namespace sw

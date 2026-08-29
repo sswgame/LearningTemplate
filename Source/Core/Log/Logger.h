@@ -43,13 +43,13 @@ namespace sw
 	/** @brief 싱크·리스너에 넘기는 한 줄입니다. */
 	struct LogEntry
 	{
-		LogLevel _level = LogLevel::Info;
 		string	 _tag;
 		string	 _caller;
 		string	 _message;
 		string	 _file;
-		int32	 _line{ 0 };
 		string	 _timeStamp;
+		int32	 _line{ 0 };
+		LogLevel _level = LogLevel::Info;
 	};
 
 	SW_DECLARE_MULTI_CAST_DELEGATE( void, LogWrittenMulticast, const LogEntry& );
@@ -141,19 +141,17 @@ namespace sw
 		std::FILE*			_pFile;
 		string				_currentLogFileName;
 		LogWrittenMulticast _onLogWritten;
+		std::time_t			_cachedTimeSec;		   ///< 초 단위 캐시된 시스템 시간
+		void*				_pCachedConsoleHandle; ///< GetStdHandle(STD_OUTPUT_HANDLE) 캐시
+		int32				_cachedYear;
+		int32				_cachedMonth;
+		int32				_cachedDay;
+		int32				_cachedHour;
+		int32				_lastLogHour;			  ///< 시간별 로그 파일 롤오버 감지용
+		uint16				_defaultConsoleAttribute; ///< 초기 콘솔 텍스트 색상 속성
 		bool				_bInitialized;
-
-		std::time_t _cachedTimeSec;							   ///< 초 단위 캐시된 시스템 시간
-		utf8		_arrCachedDateStr[constant::kMaxBuffer32]; ///< 캐시된 YYYY-M-D H:M: 포맷 날짜 문자열
-		int32		_cachedYear;
-		int32		_cachedMonth;
-		int32		_cachedDay;
-		int32		_cachedHour;
-		int32		_lastLogHour; ///< 시간별 로그 파일 롤오버 감지용
-
-		void*  _pCachedConsoleHandle;	 ///< GetStdHandle(STD_OUTPUT_HANDLE) 캐시
-		uint16 _defaultConsoleAttribute; ///< 초기 콘솔 텍스트 색상 속성
-		bool   _bHasConsole;			 ///< 표준 출력 콘솔 유효성 여부
+		bool				_bHasConsole;							   ///< 표준 출력 콘솔 유효성 여부
+		utf8				_arrCachedDateStr[constant::kMaxBuffer32]; ///< 캐시된 YYYY-M-D H:M: 포맷 날짜 문자열
 	};
 
 	[[maybe_unused]] static inline constexpr const ::utf8* swGetLogCaller( ... ) { return nullptr; }

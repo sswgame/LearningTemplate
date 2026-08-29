@@ -15,8 +15,6 @@ namespace sw
 		: _graphPath{}
 		, _graph{}
 		, _pSaveSlot{ nullptr }
-		, _state{ DialogueRunnerState::Idle }
-		, _currentNodeId{ 0 }
 		, _currentSpeaker{}
 		, _currentText{}
 		, _listCurrentChoice{}
@@ -24,6 +22,8 @@ namespace sw
 		, _onChoices{}
 		, _onEvent{}
 		, _onFinished{}
+		, _state{ DialogueRunnerState::Idle }
+		, _currentNodeId{ 0 }
 	{
 	}
 

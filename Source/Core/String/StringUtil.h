@@ -30,10 +30,10 @@ namespace sw
 	/** @brief 두 문자열의 공통 접두·접미를 뺀 변경 구간 (텍스트 Undo/패치용) */
 	struct StringChangeSpan
 	{
-		uint32 _prefixLength{ 0 };
-		uint32 _suffixLength{ 0 };
 		string _removed;
 		string _added;
+		uint32 _prefixLength{ 0 };
+		uint32 _suffixLength{ 0 };
 	};
 
 	// ------------------------------------------------------------------------------

@@ -22,11 +22,11 @@ namespace sw::editor
 	SpriteClipPanel::SpriteClipPanel()
 		: EditorDocumentPanel{ EditorAssetKind::SpriteClip, false }
 		, _atlasPath{}
+		, _status{}
 		, _listFrame{}
 		, _listKey{}
 		, _selectedFrame{ -1 }
 		, _selectedKey{ -1 }
-		, _status{}
 	{
 		const string& atlas = editor::getEditorData()._spriteAtlas;
 		if ( atlas.empty() == false )

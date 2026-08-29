@@ -13,11 +13,11 @@ namespace sw
 		: _pOwner{ nullptr }
 		, _componentId{ _s_nextComponentId.fetch_add( 1, std::memory_order_relaxed ) }
 		, _componentName{}
-		, _tickGroup{ TickGroup::DuringPhysics }
 		, _bActive{ true }
+		, _bIsPendingKill{ false }
+		, _tickGroup{ TickGroup::DuringPhysics }
 		, _bCanEverTick{ SW_TRUE }
 		, _reservedFlags{ 0 }
-		, _bIsPendingKill{ false }
 	{
 		initialize();
 	}
@@ -26,11 +26,11 @@ namespace sw
 		: _pOwner{ std::exchange( other._pOwner, nullptr ) }
 		, _componentId{ other._componentId }
 		, _componentName{ std::move( other._componentName ) }
-		, _tickGroup{ other._tickGroup }
 		, _bActive{ other._bActive.load( std::memory_order_relaxed ) }
+		, _bIsPendingKill{ other._bIsPendingKill.load( std::memory_order_relaxed ) }
+		, _tickGroup{ other._tickGroup }
 		, _bCanEverTick{ other._bCanEverTick }
 		, _reservedFlags{ other._reservedFlags }
-		, _bIsPendingKill{ other._bIsPendingKill.load( std::memory_order_relaxed ) }
 	{
 	}
 

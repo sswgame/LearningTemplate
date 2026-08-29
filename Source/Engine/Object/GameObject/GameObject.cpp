@@ -18,11 +18,11 @@ namespace sw
 		: _objectId{ _s_nextObjectId.fetch_add( 1, std::memory_order_relaxed ) }
 		, _name{ "GameObject" }
 		, _pOwnerManager{ nullptr }
-		, _managerIndex{ static_cast<uint32>( -1 ) }
 		, _bActive{ true }
 		, _bIsActiveInHierarchy{ true }
 		, _bIsPendingKill{ false }
 		, _listComponent{}
+		, _managerIndex{ static_cast<uint32>( -1 ) }
 	{
 	}
 
@@ -30,11 +30,11 @@ namespace sw
 		: _objectId{ _s_nextObjectId.fetch_add( 1, std::memory_order_relaxed ) }
 		, _name{ name }
 		, _pOwnerManager{ nullptr }
-		, _managerIndex{ static_cast<uint32>( -1 ) }
 		, _bActive{ true }
 		, _bIsActiveInHierarchy{ true }
 		, _bIsPendingKill{ false }
 		, _listComponent{}
+		, _managerIndex{ static_cast<uint32>( -1 ) }
 	{
 	}
 

@@ -13,8 +13,8 @@ namespace sw
 	/** @brief 애니메이션 그래프 노드 */
 	struct AnimationGraphNode
 	{
-		int32	_id{ 0 };
 		string	_name;
+		int32	_id{ 0 };
 		float32 _x{ 40.0f };
 		float32 _y{ 40.0f };
 	};

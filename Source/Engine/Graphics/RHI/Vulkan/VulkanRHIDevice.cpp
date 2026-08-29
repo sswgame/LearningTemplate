@@ -148,6 +148,7 @@ namespace sw
 		, _imageIndex{ 0 }
 		, _width{ 0 }
 		, _height{ 0 }
+		, _depthFormat{ 0 }
 		, _bFrameStarted{ SW_FALSE }
 		, _bOffscreenPassActive{ SW_FALSE }
 		, _bRenderPassActive{ SW_FALSE }
@@ -162,7 +163,6 @@ namespace sw
 		, _bDepthHasStencil{ SW_FALSE }
 		, _linuxWsi{ 0 }
 		, _reservedVulkan{ 0 }
-		, _depthFormat{ 0 }
 		, _offscreenCommandBuffer{ nullptr }
 		, _offscreenFence{ nullptr }
 		, _activeOffscreenTarget{ 0 }

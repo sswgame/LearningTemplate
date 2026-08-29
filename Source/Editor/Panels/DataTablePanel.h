@@ -55,16 +55,16 @@ namespace sw::editor
 		EditorPanelFlags getPanelFlags() const override;
 
 	private:
-		int32								  _activeTab;
 		fixed_string<constant::kMaxBuffer128> _locFilter;
 		fixed_string<constant::kMaxBuffer128> _newKeyBuffer;
 		vector<LocRecord>					  _listLocRecord;
 		vector<GameDataFileEntry>			  _listGameDataFile;
-		int32								  _selectedGameDataIndex;
 		string								  _selectedGameDataRawText;
 		string								  _savedGameDataRawText;
 		EditorLocalizationLoadJob			  _locJob;
 		EditorGameDataScanJob				  _gameDataJob;
+		int32								  _activeTab;
+		int32								  _selectedGameDataIndex;
 		uint8								  _bLocLoaded	   : 1;
 		uint8								  _bGameDataLoaded : 1;
 		uint8								  _bLocDirty	   : 1;

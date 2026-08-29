@@ -96,18 +96,17 @@ namespace sw
 		void executeAction( const string& actionCmd );
 
 		PROPERTY( Category = "Dialogue", DisplayName = "Graph", AssetPath, AssetType = "DialogueGraph", Tooltip = "Dialogue graph asset" )
-		string				_graphPath;
-		DialogueGraphAsset	_graph;
-		SaveSlot*			_pSaveSlot;
-		DialogueRunnerState _state;
-		int32				_currentNodeId;
-		string				_currentSpeaker;
-		string				_currentText;
-		vector<string>		_listCurrentChoice;
-
+		string				   _graphPath;
+		DialogueGraphAsset	   _graph;
+		SaveSlot*			   _pSaveSlot;
+		string				   _currentSpeaker;
+		string				   _currentText;
+		vector<string>		   _listCurrentChoice;
 		OnDialogueLineFunc	   _onLine;
 		OnDialogueChoicesFunc  _onChoices;
 		OnDialogueEventFunc	   _onEvent;
 		OnDialogueFinishedFunc _onFinished;
+		DialogueRunnerState	   _state;
+		int32				   _currentNodeId;
 	};
 } // namespace sw

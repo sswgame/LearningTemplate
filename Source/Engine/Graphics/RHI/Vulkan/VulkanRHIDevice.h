@@ -444,6 +444,7 @@ namespace sw
 		uint32					_imageIndex;
 		uint32					_width;
 		uint32					_height;
+		uint32					_depthFormat; ///< VkFormat — createTexture2D/RP 공통 depth
 		uint16					_bFrameStarted			 : 1;
 		uint16					_bOffscreenPassActive	 : 1;
 		uint16					_bRenderPassActive		 : 1;
@@ -454,8 +455,6 @@ namespace sw
 		uint16					_bDepthHasStencil		 : 1; ///< _depthFormat에 stencil plane 포함
 		uint16					_linuxWsi				 : 2; ///< 0=없음, 1=xlib, 2=xcb (Linux만)
 		[[maybe_unused]] uint16 _reservedVulkan			 : 6;
-
-		uint32 _depthFormat; ///< VkFormat — createTexture2D/RP 공통 depth
 
 		VkCommandBuffer		   _offscreenCommandBuffer;
 		VkFence				   _offscreenFence;

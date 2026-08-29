@@ -148,14 +148,14 @@ namespace sw
 		, _pipelineStates{}
 		, _listRenderPass{}
 		, _releaseQueue{ 3 }
-		, _boundGraphicsPso{ 0 }
-		, _lastVsync{ -1 }
-		, _bInitialized{ SW_FALSE }
-		, _reservedFlags{ 0 }
 		, _immContext{ nullptr }
 		, _deferredContext{ nullptr }
 		, _swapChainImpl{ nullptr }
 		, _resourceImpl{ nullptr }
+		, _boundGraphicsPso{ 0 }
+		, _lastVsync{ -1 }
+		, _bInitialized{ SW_FALSE }
+		, _reservedFlags{ 0 }
 	{
 		_swapChainImpl = sw::make_unique<OpenGLRHISwapChain>( this );
 		_resourceImpl  = sw::make_unique<OpenGLRHIResource>( this );

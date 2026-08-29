@@ -13,8 +13,8 @@ namespace sw
 
 	FrameResourceRing::FrameResourceRing( uint64 uploadCapacityBytes )
 		: _arrSlots{}
-		, _frameIndex{ kFrameCount - 1 }
 		, _uploadCapacity{ uploadCapacityBytes }
+		, _frameIndex{ kFrameCount - 1 }
 	{
 	}
 

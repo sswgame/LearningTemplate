@@ -8,10 +8,10 @@
 namespace sw
 {
 	BVHTree3D::BVHTree3D()
-		: _rootIndex{ -1 }
-		, _listNode{}
+		: _listNode{}
 		, _listFreeNode{}
 		, _mapHandleToNode{}
+		, _rootIndex{ -1 }
 	{
 	}
 

@@ -26,17 +26,17 @@ namespace sw
 		, _pFile{ nullptr }
 		, _currentLogFileName{}
 		, _onLogWritten{}
-		, _bInitialized{ false }
 		, _cachedTimeSec{ 0 }
-		, _arrCachedDateStr{}
+		, _pCachedConsoleHandle{ nullptr }
 		, _cachedYear{ 0 }
 		, _cachedMonth{ 0 }
 		, _cachedDay{ 0 }
 		, _cachedHour{ 0 }
 		, _lastLogHour{ -1 }
-		, _pCachedConsoleHandle{ nullptr }
 		, _defaultConsoleAttribute{ 0 }
+		, _bInitialized{ false }
 		, _bHasConsole{ false }
+		, _arrCachedDateStr{}
 	{
 		ILogSink* pExpected{ nullptr };
 		s_globalSink.compare_exchange_strong( pExpected, this, std::memory_order_acq_rel, std::memory_order_relaxed );

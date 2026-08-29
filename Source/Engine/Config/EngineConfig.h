@@ -13,6 +13,13 @@ namespace sw
 	struct SW_API WindowConfig
 	{
 		REFLECT_BODY();
+
+		PROPERTY()
+		string _title{ "SWEngine" };
+
+		PROPERTY()
+		string _clearColor{ "0.12 0.15 0.18 1.0" };
+
 		PROPERTY()
 		uint32 _width{ 1280 };
 
@@ -20,16 +27,10 @@ namespace sw
 		uint32 _height{ 720 };
 
 		PROPERTY()
-		bool _bVSync{ false };
-
-		PROPERTY()
-		string _title{ "SWEngine" };
-
-		PROPERTY()
 		RHIBackend _defaultRHI{ RHIBackend::DirectX12 };
 
 		PROPERTY()
-		string _clearColor{ "0.12 0.15 0.18 1.0" };
+		bool _bVSync{ false };
 	};
 
 	REFLECT()
@@ -38,10 +39,10 @@ namespace sw
 		REFLECT_BODY();
 
 		PROPERTY()
-		WindowConfig _window;
+		string _engineData{ "engine/data/enginedata.xml" };
 
 		PROPERTY()
-		string _engineData{ "engine/data/enginedata.xml" };
+		WindowConfig _window;
 
 		PROPERTY()
 		float32 _maxFrameDeltaTime{ 0.1f };

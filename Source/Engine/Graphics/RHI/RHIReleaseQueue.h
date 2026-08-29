@@ -63,11 +63,11 @@ namespace sw
 			uint64					   _targetFence{ 0 };
 		};
 
-		uint32							   _frameLatency;
-		uint64							   _currentFrame;
 		vector<FrameDeferredEntry>		   _listFrameEntry;
 		vector<GpuDeferredEntry>		   _listGpuEntry;
 		vector<RHIResourceReleaseDelegate> _listReadyToDestroyBuffer;
 		mutable SpinLock				   _spinLock;
+		uint64							   _currentFrame;
+		uint32							   _frameLatency;
 	};
 } // namespace sw

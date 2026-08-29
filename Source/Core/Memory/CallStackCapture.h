@@ -19,8 +19,8 @@ namespace sw
 	{
 		static constexpr uint32 kMaxFrames			   = 16;
 		void*					_arrFrames[kMaxFrames] = { nullptr };
-		uint32					_frameCount{ 0 };
 		uint64					_hash{ 0 };
+		uint32					_frameCount{ 0 };
 
 		/** @brief 해시·프레임 수·주소가 모두 같으면 true 입니다. */
 		bool operator==( const CallStack& other ) const

@@ -8,10 +8,11 @@ namespace sw
 {
 	PoolAllocator::PoolAllocator( size_t blockSize, uint32 blocksPerChunk, bool bThreadSafe )
 		: _blockSize{ blockSize }
-		, _blocksPerChunk{ blocksPerChunk }
-		, _bThreadSafe{ bThreadSafe }
 		, _pChunkList{ nullptr }
 		, _pFreeList{ nullptr }
+		, _mutex{}
+		, _blocksPerChunk{ blocksPerChunk }
+		, _bThreadSafe{ bThreadSafe }
 	{
 		if ( _blockSize < sizeof( FreeNode ) )
 			_blockSize = sizeof( FreeNode );

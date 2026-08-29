@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file PoolAllocator.h
  * @brief O(1) 고정 크기 블록 할당기 (Thread-safe 선택 가능)
  */
@@ -50,14 +50,12 @@ namespace sw
 			FreeNode* _pNext;
 		};
 
-		size_t _blockSize;
-		uint32 _blocksPerChunk;
-		bool   _bThreadSafe;
-
+		size_t	  _blockSize;
 		Chunk*	  _pChunkList;
 		FreeNode* _pFreeList;
-
 		sw::mutex _mutex;
+		uint32	  _blocksPerChunk;
+		bool	  _bThreadSafe;
 
 		void allocateChunk();
 	};

@@ -13,6 +13,9 @@ namespace sw
 		REFLECT_BODY();
 
 		PROPERTY()
+		vector<string> _listItem;
+
+		PROPERTY()
 		int32 _maxSlots{ 0 };
 
 		PROPERTY()
@@ -23,9 +26,6 @@ namespace sw
 
 		PROPERTY()
 		bool _bIsOpen{ false };
-
-		PROPERTY()
-		vector<string> _listItem;
 
 		InventoryComponent()										   = default;
 		virtual ~InventoryComponent() override						   = default;

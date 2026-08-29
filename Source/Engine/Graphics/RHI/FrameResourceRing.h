@@ -75,7 +75,7 @@ namespace sw
 		};
 
 		Slot   _arrSlots[kFrameCount]{};
-		uint32 _frameIndex{ 0 };
 		uint64 _uploadCapacity{ 0 };
+		uint32 _frameIndex{ 0 };
 	};
 } // namespace sw

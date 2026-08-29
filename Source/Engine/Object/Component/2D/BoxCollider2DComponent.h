@@ -57,14 +57,14 @@ namespace sw
 		void unregisterPhysicsBody();
 		void syncPhysicsBody();
 
-		PROPERTY( Category = "Collider", DisplayName = "Collider Type", Tooltip = "Physics collider type index" )
-		int32 _colliderType;
 		PROPERTY( Category = "Collider", DisplayName = "Offset Position", Tooltip = "2D Offset position as string format" )
 		string _offsetPos;
 		PROPERTY( Category = "Collider", DisplayName = "Offset Scale", Tooltip = "2D Offset scale as string format" )
 		string		 _offsetScale;
+		ObjectHandle _physicsBody;
 		float2		 _cachedMin;
 		float2		 _cachedMax;
-		ObjectHandle _physicsBody;
+		PROPERTY( Category = "Collider", DisplayName = "Collider Type", Tooltip = "Physics collider type index" )
+		int32 _colliderType;
 	};
 } // namespace sw

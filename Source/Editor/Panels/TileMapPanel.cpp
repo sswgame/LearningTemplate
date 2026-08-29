@@ -27,29 +27,29 @@ namespace sw::editor
 		, _edgeTargetE{}
 		, _edgeTargetS{}
 		, _edgeTargetW{}
-		, _arrEdgeTx{ 1, 1, 1, 1 }
-		, _arrEdgeTy{ 1, 1, 1, 1 }
-		, _width{ 8 }
-		, _height{ 8 }
-		, _layer{ PaintLayer::Walkable }
-		, _paintHeight{ 1 }
-		, _atlasId{ 0 }
-		, _arrTint{ 180.0f / 255.0f, 200.0f / 255.0f, 160.0f / 255.0f }
 		, _warpTarget{}
-		, _warpTx{ 1 }
-		, _warpTy{ 1 }
-		, _bErase{ false }
+		, _scenePath{}
+		, _role{}
+		, _status{}
 		, _listWalkable{}
 		, _listEncounter{}
 		, _listPassThrough{}
 		, _listVisual{}
 		, _listWarp{}
 		, _listEncounterEntry{}
-		, _scenePath{}
-		, _role{}
+		, _arrEdgeTx{ 1, 1, 1, 1 }
+		, _arrEdgeTy{ 1, 1, 1, 1 }
+		, _arrTint{ 180.0f / 255.0f, 200.0f / 255.0f, 160.0f / 255.0f }
+		, _width{ 8 }
+		, _height{ 8 }
+		, _paintHeight{ 1 }
+		, _atlasId{ 0 }
+		, _warpTx{ 1 }
+		, _warpTy{ 1 }
 		, _spawnX{ 1 }
 		, _spawnY{ 1 }
-		, _status{}
+		, _layer{ PaintLayer::Walkable }
+		, _bErase{ false }
 	{
 		const EditorData& editorData = editor::getEditorData();
 		if ( editorData._defaultMap.empty() == false )

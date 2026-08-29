@@ -268,13 +268,13 @@ namespace sw
 		PROPERTY()
 		hashed_string	   _name;		   ///< 오브젝트 식별 명칭
 		GameObjectManager* _pOwnerManager; ///< registerGameObject 시 설정되는 소유 매니저
-		uint32			   _managerIndex;  ///< Manager의 _gameObjects 내 인덱스
 		PROPERTY()
 		atomic<bool> _bActive;				///< 자체 활성화 비트
 		atomic<bool> _bIsActiveInHierarchy; ///< 계층 반영 최종 활성 비트
 		atomic<bool> _bIsPendingKill;		///< 지연 삭제 대기 묘비 플래그
 		PROPERTY()
 		vector<Component*> _listComponent; ///< 이 액터가 소유한 컴포넌트
+		uint32			   _managerIndex;  ///< Manager의 _gameObjects 내 인덱스
 	};
 
 } // namespace sw

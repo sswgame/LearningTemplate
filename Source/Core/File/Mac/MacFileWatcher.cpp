@@ -17,12 +17,12 @@ namespace sw
 	MacFileWatcher::MacFileWatcher()
 		: _pStream{ nullptr }
 		, _pRunLoop{ nullptr }
-		, _bIsWatching{ false }
-		, _bRecursive{ true }
-		, _directoryPath{}
 		, _workerThread{}
 		, _eventMutex{}
+		, _directoryPath{}
 		, _listEventQueue{}
+		, _bIsWatching{ false }
+		, _bRecursive{ true }
 	{
 	}
 

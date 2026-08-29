@@ -107,26 +107,26 @@ namespace sw::editor
 	// ------------------------------------------------------------------------------
 	EditorWorkspace::EditorWorkspace()
 		: _selectedComponentId{ 0 }
-		, _selectedComponentKey{}
-		, _focusedAssetPath{}
-		, _inspectMode{ InspectMode::GameObject }
-		, _gizmoOperation{ 0 }
-		, _pendingOpenPanelTitle{}
-		, _pendingScenePath{}
-		, _pendingSceneMutex{}
-		, _pendingSceneAction{ EditorPendingSceneAction::None }
-		, _pendingSceneActionPath{}
 		, _observedSceneGeneration{ 0 }
 		, _scrollToComponentId{ 0 }
 		, _scrollToObjectId{ 0 }
-		, _mapGameObjectToPrefab{}
+		, _selectedComponentKey{}
+		, _focusedAssetPath{}
+		, _pendingOpenPanelTitle{}
+		, _pendingScenePath{}
+		, _pendingSceneActionPath{}
 		, _emptyString{}
-		, _arrCameraBookmark{}
 		, _copiedComponentXml{}
 		, _copiedComponentTypeName{}
+		, _pendingSceneMutex{}
+		, _arrCameraBookmark{}
 		, _listPrefabIsolationFrame{}
+		, _mapGameObjectToPrefab{}
 		, _mapObjectIdToGuid{}
 		, _mapGuidToObjectId{}
+		, _inspectMode{ InspectMode::GameObject }
+		, _pendingSceneAction{ EditorPendingSceneAction::None }
+		, _gizmoOperation{ 0 }
 		, _bGizmoLocalSpace{ SW_TRUE }
 		, _bBoneHierarchyPopupOpen{ SW_FALSE }
 		, _bSceneDirty{ SW_FALSE }

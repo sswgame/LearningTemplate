@@ -72,17 +72,17 @@ namespace sw
 		, _listFreeOffscreenDsvIndex{}
 		, _mapCbAlignedSize{}
 		, _mapCbMapped{}
+		, _pipelineStates{}
+		, _listRenderPass{}
+		, _activeGraphicsPso{ 0 }
 		, _arrActiveColorTargets{}
-		, _activeColorTargetCount{ 0 }
 		, _activeDepthTarget{ 0 }
+		, _activeColorTargetCount{ 0 }
 		, _swapchainState{ D3D12_RESOURCE_STATE_PRESENT }
 		, _bActiveSwapchainRT{ SW_FALSE }
 		, _bHeapDirectlyIndexed{ SW_FALSE }
 		, _bRecording{ SW_FALSE }
 		, _reservedPassFlags{ 0 }
-		, _pipelineStates{}
-		, _listRenderPass{}
-		, _activeGraphicsPso{ 0 }
 		, _listRegisteredBindless{}
 		, _listFreeBindless{}
 		, _listRegisteredUAV{}

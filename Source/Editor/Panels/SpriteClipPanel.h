@@ -46,10 +46,10 @@ namespace sw::editor
 
 	private:
 		fixed_string<constant::kMaxBuffer256> _atlasPath;
+		string								  _status;
 		vector<Frame>						  _listFrame;
 		vector<TransformKey>				  _listKey;
 		int32								  _selectedFrame;
 		int32								  _selectedKey;
-		string								  _status;
 	};
 } // namespace sw::editor

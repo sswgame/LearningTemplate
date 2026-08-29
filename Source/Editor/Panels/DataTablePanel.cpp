@@ -18,16 +18,16 @@ namespace sw::editor
 
 	DataTablePanel::DataTablePanel()
 		: IEditorPanel{ false }
-		, _activeTab{ 0 }
 		, _locFilter{}
 		, _newKeyBuffer{}
 		, _listLocRecord{}
 		, _listGameDataFile{}
-		, _selectedGameDataIndex{ -1 }
 		, _selectedGameDataRawText{}
 		, _savedGameDataRawText{}
 		, _locJob{}
 		, _gameDataJob{}
+		, _activeTab{ 0 }
+		, _selectedGameDataIndex{ -1 }
 		, _bLocLoaded{ SW_FALSE }
 		, _bGameDataLoaded{ SW_FALSE }
 		, _bLocDirty{ SW_FALSE }

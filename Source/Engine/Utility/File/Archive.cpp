@@ -12,23 +12,23 @@ namespace sw
 {
 	Archive::Archive()
 		: _listBuffer{}
+		, _sourceDirectory{}
+		, _sourceFileName{}
 		, _pData{ nullptr }
 		, _dataSize{ 0 }
 		, _offset{ 0 }
 		, _bReadMode{ false }
-		, _sourceDirectory{}
-		, _sourceFileName{}
 	{
 	}
 
 	Archive::Archive( string_view fileName, bool bReadMode )
 		: _listBuffer{}
+		, _sourceDirectory{}
+		, _sourceFileName{}
 		, _pData{ nullptr }
 		, _dataSize{ 0 }
 		, _offset{ 0 }
 		, _bReadMode{ bReadMode }
-		, _sourceDirectory{}
-		, _sourceFileName{}
 	{
 		if ( bReadMode )
 		{
@@ -40,12 +40,12 @@ namespace sw
 
 	Archive::Archive( const uint8* pData, uint64 size )
 		: _listBuffer{}
+		, _sourceDirectory{}
+		, _sourceFileName{}
 		, _pData{ pData }
 		, _dataSize{ size }
 		, _offset{ 0 }
 		, _bReadMode{ true }
-		, _sourceDirectory{}
-		, _sourceFileName{}
 	{
 	}
 

@@ -257,15 +257,15 @@ namespace sw
 
 		RHIReleaseQueue _releaseQueue;
 
-		RHIPipelineStateHandle _boundGraphicsPso;
-		int8				   _lastVsync; ///< -1 unset, 0/1 last applied
-		uint8				   _bInitialized  : 1;
-		[[maybe_unused]] uint8 _reservedFlags : 7;
-
 		sw::unique_ptr<OpenGLRHICommandContext> _immContext;
 		sw::unique_ptr<OpenGLRHICommandContext> _deferredContext;
 		sw::unique_ptr<OpenGLRHISwapChain>		_swapChainImpl;
 		sw::unique_ptr<OpenGLRHIResource>		_resourceImpl;
+
+		RHIPipelineStateHandle _boundGraphicsPso;
+		int8				   _lastVsync; ///< -1 unset, 0/1 last applied
+		uint8				   _bInitialized  : 1;
+		[[maybe_unused]] uint8 _reservedFlags : 7;
 	};
 
 	/**

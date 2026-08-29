@@ -256,8 +256,8 @@ namespace sw::editor
 	{
 		if ( _listNode.empty() == false )
 			return;
-		_listNode.push_back( GraphNode{ 1, "Idle", 40.0f, 40.0f } );
-		_listNode.push_back( GraphNode{ 2, "Walk", 280.0f, 80.0f } );
+		_listNode.push_back( GraphNode{ "Idle", 1, 40.0f, 40.0f } );
+		_listNode.push_back( GraphNode{ "Walk", 2, 280.0f, 80.0f } );
 		_listLink.push_back( GraphLink{ 100, 1, 2 } );
 	}
 

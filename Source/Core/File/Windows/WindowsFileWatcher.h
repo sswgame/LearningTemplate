@@ -46,13 +46,13 @@ namespace sw
 		void workerThreadMain();
 
 		HANDLE					_hDirectory;
-		atomic<bool>			_bIsWatching;
-		bool					_bRecursive;
-		string					_directoryPath;
+		HANDLE					_hCompletionPort;
 		std::thread				_workerThread;
 		mutex					_eventMutex;
+		string					_directoryPath;
 		vector<FileChangeEvent> _listEventQueue;
-		HANDLE					_hCompletionPort;
+		atomic<bool>			_bIsWatching;
+		bool					_bRecursive;
 	};
 
 } // namespace sw

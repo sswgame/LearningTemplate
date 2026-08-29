@@ -40,12 +40,12 @@ namespace sw::editor
 		void		  tickPreview( float32 deltaSeconds );
 
 	private:
-		bool								  _bExpanded;
-		int32								  _currentFrame;
-		int32								  _selected;
-		int32								  _firstFrame;
 		fixed_string<constant::kMaxBuffer512> _cinematicNote;
 		unique_ptr<ClipSequence>			  _sequence;
 		unique_ptr<sw::SequencePlayer>		  _previewPlayer;
+		int32								  _currentFrame;
+		int32								  _selected;
+		int32								  _firstFrame;
+		bool								  _bExpanded;
 	};
 } // namespace sw::editor

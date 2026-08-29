@@ -84,10 +84,10 @@ namespace sw
 		float32			  _world[16]{};
 		float32			  _boundsCenter[3]{};
 		float32			  _boundsRadius{ 1.0f };
-		uint32			  _blendMode{ 0 };
 		Mesh*			  _pMesh{ nullptr };
 		Material*		  _pMaterial{ nullptr };
 		MaterialInstance* _pInstance{ nullptr };
+		uint32			  _blendMode{ 0 };
 	};
 
 	struct GpuSceneSortKey
@@ -184,10 +184,10 @@ namespace sw
 			float32			  _world[16]{};
 			float32			  _boundsCenter[3]{};
 			float32			  _boundsRadius{ 1.0f };
-			uint32			  _blendMode{ 0 };
 			Mesh*			  _pMesh{ nullptr };
 			Material*		  _pMaterial{ nullptr };
 			MaterialInstance* _pInstance{ nullptr };
+			uint32			  _blendMode{ 0 };
 		};
 
 		vector<DrawCandidate> _listScratchCandidate;
@@ -211,20 +211,18 @@ namespace sw
 		vector<SortEntry> _listScratchOpaqueEntry;
 		vector<uint32>	  _listScratchTransparentIdx;
 
-		RHIBufferHandle	   _instanceBuffer{ 0 };
-		RHIDescriptorIndex _instanceSrv = kInvalidDescriptorIndex;
-		RHIBufferHandle	   _indirectArgsBuffer{ 0 };
-		RHIDescriptorIndex _indirectArgsUav = kInvalidDescriptorIndex;
-		uint32			   _indirectCommandCount{ 0 };
-		uint32			   _instanceCapacity{ 0 };
-		uint32			   _argsCapacity{ 0 };
-
-		uint64 _lastContentHash{ 0 };
-		float3 _lastCameraPos{};
-		uint8  _bHasBuildCache{ 0 };
-		uint8  _bCpuDirty{ 1 };
-
-		TaskStageHandle		   _snapshotStage;
 		GpuMaterialRetireQueue _materialRetire;
+		TaskStageHandle		   _snapshotStage;
+		RHIBufferHandle		   _instanceBuffer{ 0 };
+		RHIBufferHandle		   _indirectArgsBuffer{ 0 };
+		uint64				   _lastContentHash{ 0 };
+		float3				   _lastCameraPos{};
+		RHIDescriptorIndex	   _instanceSrv		= kInvalidDescriptorIndex;
+		RHIDescriptorIndex	   _indirectArgsUav = kInvalidDescriptorIndex;
+		uint32				   _indirectCommandCount{ 0 };
+		uint32				   _instanceCapacity{ 0 };
+		uint32				   _argsCapacity{ 0 };
+		uint8				   _bHasBuildCache{ 0 };
+		uint8				   _bCpuDirty{ 1 };
 	};
 } // namespace sw

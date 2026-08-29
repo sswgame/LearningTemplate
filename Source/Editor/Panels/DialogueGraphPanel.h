@@ -64,9 +64,9 @@ namespace sw::editor
 
 	private:
 		EditorNodeGraph		   _nodeGraph;
-		int32				   _selectedNodeId;
 		vector<DialogueNode>   _listNode;
 		vector<DialogueLink>   _listLink;
+		int32				   _selectedNodeId;
 		int32				   _previewNodeId;
 		float32				   _previewHoldSeconds;
 		uint8				   _bGraphLayoutReady : 1;

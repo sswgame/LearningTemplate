@@ -7,16 +7,16 @@ namespace sw
 {
 
 	DynamicBitset::DynamicBitset( const uint32 size )
-		: _bitCount{ size }
-		, _listBlock{}
+		: _listBlock{}
+		, _bitCount{ size }
 	{
 		const uint32 blockCount = calculateBlockCount( size );
 		_listBlock.resize( blockCount, 0 );
 	}
 
 	DynamicBitset::DynamicBitset( string_view str )
-		: _bitCount{ static_cast<uint32>( str.length() ) }
-		, _listBlock{}
+		: _listBlock{}
+		, _bitCount{ static_cast<uint32>( str.length() ) }
 	{
 		const uint32 blockCount = calculateBlockCount( _bitCount );
 		_listBlock.resize( blockCount, 0 );
@@ -32,8 +32,8 @@ namespace sw
 	}
 
 	DynamicBitset::DynamicBitset( const uint32 size, const uint64 value )
-		: _bitCount{ size }
-		, _listBlock{}
+		: _listBlock{}
+		, _bitCount{ size }
 	{
 		const uint32 blockCount = calculateBlockCount( size );
 		_listBlock.resize( blockCount, 0 );

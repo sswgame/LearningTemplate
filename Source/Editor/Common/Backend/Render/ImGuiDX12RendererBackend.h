@@ -60,10 +60,10 @@ namespace sw::editor
 		IRHIDevice* _pRHIDevice{ nullptr };
 #if defined( SW_PLATFORM_WINDOWS )
 		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> _d3d12SrvHeap;
+		vector<uint32>								 _listFreeDescriptor;
 		UINT										 _descriptorSize{ 0 };
 		uint32										 _maxDescriptors = 128;
 		uint32										 _nextDescriptor{ 0 };
-		vector<uint32>								 _listFreeDescriptor;
 #endif
 	};
 } // namespace sw::editor

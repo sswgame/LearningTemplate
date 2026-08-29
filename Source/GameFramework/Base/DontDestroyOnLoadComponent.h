@@ -29,9 +29,9 @@ namespace sw
 		void onEndPlay() override;
 
 	private:
-		PROPERTY( Alias = "bPersistent" )
-		bool _bPersistent;
 		PROPERTY( Alias = "persistentTag" )
 		string _persistentTag;
+		PROPERTY( Alias = "bPersistent" )
+		bool _bPersistent;
 	};
 } // namespace sw

@@ -17,13 +17,13 @@ namespace sw
 {
 	WindowsFileWatcher::WindowsFileWatcher()
 		: _hDirectory{ nullptr }
-		, _bIsWatching{ false }
-		, _bRecursive{ true }
-		, _directoryPath{}
+		, _hCompletionPort{ nullptr }
 		, _workerThread{}
 		, _eventMutex{}
+		, _directoryPath{}
 		, _listEventQueue{}
-		, _hCompletionPort{ nullptr }
+		, _bIsWatching{ false }
+		, _bRecursive{ true }
 	{
 	}
 
@@ -40,13 +40,13 @@ namespace sw
 		const string dirNt( directoryPath );
 		wstring		 wDir = StringUtil::utf8ToUtf16( dirNt.c_str() );
 		_hDirectory		  = CreateFileW(
-			  wDir.c_str(),
-			  FILE_LIST_DIRECTORY,
-			  FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-			  nullptr,
-			  OPEN_EXISTING,
-			  FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED,
-			  nullptr );
+			wDir.c_str(),
+			FILE_LIST_DIRECTORY,
+			FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+			nullptr,
+			OPEN_EXISTING,
+			FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED,
+			nullptr );
 
 		if ( _hDirectory == INVALID_HANDLE_VALUE )
 		{

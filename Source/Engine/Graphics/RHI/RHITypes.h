@@ -447,8 +447,8 @@ namespace sw
 		RHIRenderPassHandle	   _renderPass;
 		RHITextureHandle	   _colorTarget; ///< RT0 별칭. 바인딩 시 0 = 스왑체인
 		RHITextureHandle	   _arrColorTargets[kMaxColorAttachments];
-		uint32				   _colorTargetCount; ///< 0 → `_bBindColor`이면 단일 `_colorTarget`
 		RHITextureHandle	   _depthTarget;	  ///< 0 = 깊이/스텐실 없음
+		uint32				   _colorTargetCount; ///< 0 → `_bBindColor`이면 단일 `_colorTarget`
 		uint32				   _width;
 		uint32				   _height;
 		float32				   _arrClearColor[4]; ///< RT0 클리어 별칭

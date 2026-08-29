@@ -15,14 +15,15 @@ namespace sw::editor
 	/** @brief 뷰포트 툴바 설정 데이터 */
 	struct ViewportToolbarSettings
 	{
-		bool			   _bGridSnap{ false };
 		float32			   _gridSnapValue{ 1.0f };
-		bool			   _bRotationSnap{ false };
 		float32			   _rotationSnapValue{ 15.0f };
-		bool			   _bScaleSnap{ false };
 		float32			   _scaleSnapValue{ 0.1f };
-		ViewportRenderMode _renderMode{ ViewportRenderMode::Lit };
 		float32			   _cameraSpeed{ 5.0f };
+		int32			   _requestedBookmarkSlot{ -1 };
+		ViewportRenderMode _renderMode{ ViewportRenderMode::Lit };
+		bool			   _bGridSnap{ false };
+		bool			   _bRotationSnap{ false };
+		bool			   _bScaleSnap{ false };
 		bool			   _bShowStats{ true };
 		bool			   _bShowColliders{ true };
 		bool			   _bShowCameras{ true };
@@ -31,7 +32,6 @@ namespace sw::editor
 		bool			   _bShowRuler{ false };
 		bool			   _bIs2DMode{ false };
 		bool			   _bSurfaceSnap{ false };
-		int32			   _requestedBookmarkSlot{ -1 };
 	};
 
 	/**

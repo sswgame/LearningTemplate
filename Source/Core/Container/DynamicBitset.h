@@ -179,7 +179,7 @@ namespace sw
 		static constexpr uint32 kBlockMask	  = kBitsPerBlock - 1;
 		static constexpr uint32 kBlockShift	  = 6;
 
-		uint32			  _bitCount;
 		vector<BlockType> _listBlock;
+		uint32			  _bitCount;
 	};
 } // namespace sw

@@ -115,10 +115,10 @@ namespace sw
 		uint64		  _componentId;	  ///< 컴포넌트 고유 시리얼 ID
 		hashed_string _componentName; ///< 컴포넌트 식별 이름
 
-		TickGroup	 _tickGroup{ TickGroup::DuringPhysics }; ///< TickGroup 슬롯
 		atomic<bool> _bActive{ true };						 ///< 컴포넌트 개별 활성화
+		atomic<bool> _bIsPendingKill{ false };				 ///< 지연 삭제 플래그
+		TickGroup	 _tickGroup{ TickGroup::DuringPhysics }; ///< TickGroup 슬롯
 		uint8		 _bCanEverTick	: 1;
 		uint8		 _reservedFlags : 7;
-		atomic<bool> _bIsPendingKill{ false };
 	};
 } // namespace sw

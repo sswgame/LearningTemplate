@@ -48,12 +48,12 @@ namespace sw
 	private:
 		void*					_pStream;  ///< FSEventStreamRef
 		void*					_pRunLoop; ///< CFRunLoopRef
-		atomic<bool>			_bIsWatching;
-		bool					_bRecursive;
-		string					_directoryPath;
 		std::thread				_workerThread;
 		mutex					_eventMutex;
+		string					_directoryPath;
 		vector<FileChangeEvent> _listEventQueue;
+		atomic<bool>			_bIsWatching;
+		bool					_bRecursive;
 	};
 } // namespace sw
 

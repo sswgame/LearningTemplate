@@ -69,8 +69,8 @@ namespace sw
 		: _renderPass{ 0 }
 		, _colorTarget{ 0 }
 		, _arrColorTargets{}
-		, _colorTargetCount{ 0 }
 		, _depthTarget{ 0 }
+		, _colorTargetCount{ 0 }
 		, _width{ 0 }
 		, _height{ 0 }
 		, _arrClearColor{ 0.1f, 0.1f, 0.1f, 1.0f }

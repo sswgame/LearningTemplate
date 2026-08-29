@@ -39,16 +39,16 @@ namespace sw
 	SW_LOG_CALLER( "LinuxFileWatcher" );
 
 	LinuxFileWatcher::LinuxFileWatcher()
-		: _inotifyFd{ -1 }
+		: _workerThread{}
+		, _eventMutex{}
+		, _watchMutex{}
+		, _directoryPath{}
+		, _listEventQueue{}
+		, _mapWatchDescriptorToPath{}
+		, _inotifyFd{ -1 }
 		, _wakeFd{ -1 }
 		, _bIsWatching{ false }
 		, _bRecursive{ true }
-		, _directoryPath{}
-		, _workerThread{}
-		, _eventMutex{}
-		, _watchMutex{}
-		, _listEventQueue{}
-		, _mapWatchDescriptorToPath{}
 	{
 	}
 

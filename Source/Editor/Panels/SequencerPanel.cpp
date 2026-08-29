@@ -111,13 +111,13 @@ namespace sw::editor
 
 	SequencerPanel::SequencerPanel()
 		: EditorDocumentPanel{ EditorAssetKind::Sequence, false }
-		, _bExpanded{ true }
-		, _currentFrame{ 0 }
-		, _selected{ -1 }
-		, _firstFrame{ 0 }
 		, _cinematicNote{ "Cinematic notes (not a clip track)." }
 		, _sequence{ make_unique<ClipSequence>() }
 		, _previewPlayer{ make_unique<sw::SequencePlayer>() }
+		, _currentFrame{ 0 }
+		, _selected{ -1 }
+		, _firstFrame{ 0 }
+		, _bExpanded{ true }
 	{
 		_sequence->Add( 0 );
 		_sequence->Add( 1 );

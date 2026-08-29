@@ -222,18 +222,18 @@ namespace sw
 		unordered_map<RHIBufferHandle, uint32>					_mapCbAlignedSize;
 		unordered_map<RHIBufferHandle, void*>					_mapCbMapped;
 
+		RHIHandleTable<D3D12PipelineStateRecord> _pipelineStates;
+		vector<D3D12RenderPassRecord>			 _listRenderPass;
+		RHIPipelineStateHandle					 _activeGraphicsPso;
+
 		RHITextureHandle	   _arrActiveColorTargets[kMaxColorAttachments];
-		uint32				   _activeColorTargetCount;
 		RHITextureHandle	   _activeDepthTarget;
+		uint32				   _activeColorTargetCount;
 		D3D12_RESOURCE_STATES  _swapchainState;
 		uint8				   _bActiveSwapchainRT	 : 1;
 		uint8				   _bHeapDirectlyIndexed : 1;
 		uint8				   _bRecording			 : 1;
 		[[maybe_unused]] uint8 _reservedPassFlags	 : 5;
-
-		RHIHandleTable<D3D12PipelineStateRecord> _pipelineStates;
-		vector<D3D12RenderPassRecord>			 _listRenderPass;
-		RHIPipelineStateHandle					 _activeGraphicsPso;
 
 		vector<BindlessResourceRecord> _listRegisteredBindless;
 		vector<uint32>				   _listFreeBindless;

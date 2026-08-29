@@ -206,26 +206,26 @@ namespace sw::editor
 
 	private:
 		uint64						  _selectedComponentId;
-		string						  _selectedComponentKey;
-		string						  _focusedAssetPath;
-		InspectMode					  _inspectMode;
-		int32						  _gizmoOperation;
-		string						  _pendingOpenPanelTitle;
-		string						  _pendingScenePath;
-		mutex						  _pendingSceneMutex;
-		EditorPendingSceneAction	  _pendingSceneAction;
-		string						  _pendingSceneActionPath;
 		uint64						  _observedSceneGeneration;
 		uint64						  _scrollToComponentId;
 		uint64						  _scrollToObjectId;
-		unordered_map<uint64, string> _mapGameObjectToPrefab;
+		string						  _selectedComponentKey;
+		string						  _focusedAssetPath;
+		string						  _pendingOpenPanelTitle;
+		string						  _pendingScenePath;
+		string						  _pendingSceneActionPath;
 		string						  _emptyString;
-		array<CameraBookmark, 9>	  _arrCameraBookmark;
 		string						  _copiedComponentXml;
 		string						  _copiedComponentTypeName;
+		mutex						  _pendingSceneMutex;
+		array<CameraBookmark, 9>	  _arrCameraBookmark;
 		vector<PrefabIsolationFrame>  _listPrefabIsolationFrame;
+		unordered_map<uint64, string> _mapGameObjectToPrefab;
 		unordered_map<uint64, Uuid>	  _mapObjectIdToGuid;
 		unordered_map<Uuid, uint64>	  _mapGuidToObjectId;
+		InspectMode					  _inspectMode;
+		EditorPendingSceneAction	  _pendingSceneAction;
+		int32						  _gizmoOperation;
 		uint8						  _bGizmoLocalSpace		   : 1;
 		uint8						  _bBoneHierarchyPopupOpen : 1;
 		uint8						  _bSceneDirty			   : 1;

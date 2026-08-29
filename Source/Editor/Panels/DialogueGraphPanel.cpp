@@ -83,9 +83,9 @@ namespace sw::editor
 	DialogueGraphPanel::DialogueGraphPanel()
 		: EditorDocumentPanel{ EditorAssetKind::DialogueGraph, true }
 		, _nodeGraph{}
-		, _selectedNodeId{ 0 }
 		, _listNode{}
 		, _listLink{}
+		, _selectedNodeId{ 0 }
 		, _previewNodeId{ 0 }
 		, _previewHoldSeconds{ 0.0f }
 		, _bGraphLayoutReady{ SW_FALSE }
