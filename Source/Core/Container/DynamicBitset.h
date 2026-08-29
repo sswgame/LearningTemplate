@@ -64,19 +64,19 @@ namespace sw
 		void resize( uint32 newSize, bool value = false );
 
 		/** @brief 지정 위치의 원소를 반환합니다. */
-		bool operator[]( uint32 pos ) const;
+		bool operator[]( uint32 bitPosition ) const;
 
 		/** @brief 비트를 검사합니다. */
-		bool test( const uint32 pos ) const { return ( *this )[pos]; }
+		bool test( const uint32 bitPosition ) const { return ( *this )[bitPosition]; }
 
 		/**
 		 * @brief 모든 비트를 켭니다.
 		 */
 		DynamicBitset& set();
 		/**
-		 * @brief pos 비트를 value 로 둡니다.
+		 * @brief bitPosition 비트를 value 로 둡니다.
 		 */
-		DynamicBitset& set( uint32 pos, bool value = true );
+		DynamicBitset& set( uint32 bitPosition, bool value = true );
 
 		/**
 		 * @brief 모든 비트를 끕니다.
@@ -84,16 +84,16 @@ namespace sw
 		DynamicBitset& reset();
 
 		/** @brief 초기 상태로 되돌립니다. */
-		DynamicBitset& reset( const uint32 pos ) { return set( pos, false ); }
+		DynamicBitset& reset( const uint32 bitPosition ) { return set( bitPosition, false ); }
 
 		/**
 		 * @brief 모든 비트를 뒤집습니다.
 		 */
 		DynamicBitset& flip();
 		/**
-		 * @brief pos 비트를 뒤집습니다.
+		 * @brief bitPosition 비트를 뒤집습니다.
 		 */
-		DynamicBitset& flip( uint32 pos );
+		DynamicBitset& flip( uint32 bitPosition );
 
 		/**
 		 * @brief 모든 비트가 켜져 있으면 true입니다.
@@ -162,13 +162,13 @@ namespace sw
 
 	private:
 		/** @brief 블록 인덱스를 반환합니다. */
-		static uint32 getBlockIndex( const uint32 pos ) { return pos >> kBlockShift; }
+		static uint32 getBlockIndex( const uint32 bitPosition ) { return bitPosition >> kBlockShift; }
 		/** @brief 블록 내 비트 인덱스를 반환합니다. */
-		static uint32 getBitIndexInBlock( const uint32 pos ) { return pos & kBlockMask; }
+		static uint32 getBitIndexInBlock( const uint32 bitPosition ) { return bitPosition & kBlockMask; }
 		/** @brief 필요한 블록 수를 계산합니다. */
 		static uint32 calculateBlockCount( const uint32 bitCount ) { return bitCount == 0 ? 0 : ( bitCount + kBitsPerBlock - 1 ) >> kBlockShift; }
 		/** @brief 해당 위치의 비트 마스크를 반환합니다. */
-		static BlockType bitMask( const uint32 pos ) { return static_cast<BlockType>( 1 ) << getBitIndexInBlock( pos ); }
+		static BlockType bitMask( const uint32 bitPosition ) { return static_cast<BlockType>( 1 ) << getBitIndexInBlock( bitPosition ); }
 
 		/**
 		 * @brief 마지막 블록의 사용하지 않는 비트를 0으로 지웁니다.

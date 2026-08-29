@@ -31,7 +31,7 @@ namespace sw
 			};
 
 			/** @brief 매크로 호출 한 줄에서 인자 목록을 추출합니다. */
-			static bool parseMacroLine( const string& line, const utf8* macroName, vector<string>& outArgs )
+			static bool parseMacroLine( const string& line, const utf8* macroName, vector<string>& outMacroArguments )
 			{
 				const size_t pos = line.find( macroName );
 				if ( pos == string::npos )
@@ -40,8 +40,8 @@ namespace sw
 				const size_t close = line.rfind( ')' );
 				if ( open == string::npos || close == string::npos || close <= open )
 					return false;
-				outArgs = ParserUtil::splitCommaRespectingAngles( line.substr( open + 1, close - open - 1 ) );
-				return outArgs.empty() == false;
+				outMacroArguments = ParserUtil::splitCommaRespectingAngles( line.substr( open + 1, close - open - 1 ) );
+				return outMacroArguments.empty() == false;
 			}
 
 			/** @brief 주석/전처리기를 건너뛰고 매크로 줄을 수집합니다. */
@@ -57,57 +57,57 @@ namespace sw
 				}
 			}
 
-			static void registerBuiltinTypeLine( const vector<string>& args, uint32& typeCount )
+			static void registerBuiltinTypeLine( const vector<string>& macroArguments, uint32& typeCount )
 			{
-				if ( args.size() < 4 )
+				if ( macroArguments.size() < 4 )
 					return;
 
 				string		   ns;
 				vector<string> aliases;
-				if ( args[3] != builtinMacroConstants::kSkipNamespace )
-					ns = args[3];
-				for ( size_t argIndex = 4; argIndex < args.size(); ++argIndex )
+				if ( macroArguments[3] != builtinMacroConstants::kSkipNamespace )
+					ns = macroArguments[3];
+				for ( size_t argIndex = 4; argIndex < macroArguments.size(); ++argIndex )
 				{
-					if ( args[argIndex] == builtinMacroConstants::kSkipAlias )
+					if ( macroArguments[argIndex] == builtinMacroConstants::kSkipAlias )
 						continue;
-					aliases.push_back( args[argIndex] );
+					aliases.push_back( macroArguments[argIndex] );
 				}
-				TypeNameMap::instance().registerEntry( args[0], ns, aliases );
+				TypeNameMap::instance().registerEntry( macroArguments[0], ns, aliases );
 				++typeCount;
 			}
 
-			static void registerBuiltinContainerLine( const vector<string>& args, uint32& containerCount )
+			static void registerBuiltinContainerLine( const vector<string>& macroArguments, uint32& containerCount )
 			{
-				if ( args.size() < 3 )
+				if ( macroArguments.size() < 3 )
 					return;
-				ContainerTypeMap::instance().registerRule( args[0], args[1], args[2] );
+				ContainerTypeMap::instance().registerRule( macroArguments[0], macroArguments[1], macroArguments[2] );
 				++containerCount;
 			}
 
-			static void appendBuiltinTypeRow( const vector<string>& args, vector<BuiltinTypeRow>& outRows )
+			static void appendBuiltinTypeRow( const vector<string>& macroArguments, vector<BuiltinTypeRow>& outRows )
 			{
-				if ( args.size() < 4 )
+				if ( macroArguments.size() < 4 )
 					return;
 
 				BuiltinTypeRow row;
-				row._canonical = args[0];
-				row._cppType   = args[1];
-				if ( args[3] != builtinMacroConstants::kSkipNamespace )
+				row._canonical = macroArguments[0];
+				row._cppType   = macroArguments[1];
+				if ( macroArguments[3] != builtinMacroConstants::kSkipNamespace )
 				{
 					StringBuilder<constant::kMaxBuffer128> qualified;
-					qualified.appendFormat( "%#::%#", args[3], args[0] );
+					qualified.appendFormat( "%#::%#", macroArguments[3], macroArguments[0] );
 					row._listAlias.push_back( string( qualified.view() ) );
 				}
-				for ( size_t argIndex = 4; argIndex < args.size(); ++argIndex )
+				for ( size_t argIndex = 4; argIndex < macroArguments.size(); ++argIndex )
 				{
-					if ( args[argIndex] == builtinMacroConstants::kSkipAlias )
+					if ( macroArguments[argIndex] == builtinMacroConstants::kSkipAlias )
 						continue;
-					row._listAlias.push_back( args[argIndex] );
-					if ( args[3] != builtinMacroConstants::kSkipNamespace && args[argIndex].find( "::" ) == string::npos &&
-						 args[argIndex].find( ' ' ) == string::npos )
+					row._listAlias.push_back( macroArguments[argIndex] );
+					if ( macroArguments[3] != builtinMacroConstants::kSkipNamespace && macroArguments[argIndex].find( "::" ) == string::npos &&
+						 macroArguments[argIndex].find( ' ' ) == string::npos )
 					{
 						StringBuilder<constant::kMaxBuffer128> qualified;
-						qualified.appendFormat( "%#::%#", args[3], args[argIndex] );
+						qualified.appendFormat( "%#::%#", macroArguments[3], macroArguments[argIndex] );
 						row._listAlias.push_back( string( qualified.view() ) );
 					}
 				}
@@ -138,16 +138,16 @@ namespace sw
 
 		for ( const string& line : lineList )
 		{
-			vector<string> args;
+			vector<string> macroArguments;
 			if ( line.rfind( builtinMacroConstants::kType, 0 ) == 0 &&
-				 ReflectBuiltinsLoaderInternal::parseMacroLine( line, builtinMacroConstants::kType, args ) )
+				 ReflectBuiltinsLoaderInternal::parseMacroLine( line, builtinMacroConstants::kType, macroArguments ) )
 			{
-				ReflectBuiltinsLoaderInternal::registerBuiltinTypeLine( args, typeCount );
+				ReflectBuiltinsLoaderInternal::registerBuiltinTypeLine( macroArguments, typeCount );
 			}
 			else if ( line.rfind( builtinMacroConstants::kContainer, 0 ) == 0 &&
-					  ReflectBuiltinsLoaderInternal::parseMacroLine( line, builtinMacroConstants::kContainer, args ) )
+					  ReflectBuiltinsLoaderInternal::parseMacroLine( line, builtinMacroConstants::kContainer, macroArguments ) )
 			{
-				ReflectBuiltinsLoaderInternal::registerBuiltinContainerLine( args, containerCount );
+				ReflectBuiltinsLoaderInternal::registerBuiltinContainerLine( macroArguments, containerCount );
 			}
 		}
 
@@ -171,11 +171,11 @@ namespace sw
 		ReflectBuiltinsLoaderInternal::collectMacroLines( text, lineList );
 		for ( const string& line : lineList )
 		{
-			vector<string> args;
+			vector<string> macroArguments;
 			if ( line.rfind( builtinMacroConstants::kType, 0 ) == 0 &&
-				 ReflectBuiltinsLoaderInternal::parseMacroLine( line, builtinMacroConstants::kType, args ) )
+				 ReflectBuiltinsLoaderInternal::parseMacroLine( line, builtinMacroConstants::kType, macroArguments ) )
 			{
-				ReflectBuiltinsLoaderInternal::appendBuiltinTypeRow( args, rows );
+				ReflectBuiltinsLoaderInternal::appendBuiltinTypeRow( macroArguments, rows );
 			}
 		}
 

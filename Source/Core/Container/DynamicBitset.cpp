@@ -61,11 +61,11 @@ namespace sw
 		sanitize();
 	}
 
-	bool DynamicBitset::operator[]( const uint32 pos ) const
+	bool DynamicBitset::operator[]( const uint32 bitPosition ) const
 	{
-		SW_LOG_ASSERT( pos < _bitCount, "Bit position out of range" );
-		const uint32 blockIndex = getBlockIndex( pos );
-		return ( _listBlock[blockIndex] & bitMask( pos ) ) != 0;
+		SW_LOG_ASSERT( bitPosition < _bitCount, "Bit position out of range" );
+		const uint32 blockIndex = getBlockIndex( bitPosition );
+		return ( _listBlock[blockIndex] & bitMask( bitPosition ) ) != 0;
 	}
 
 	DynamicBitset& DynamicBitset::set()
@@ -75,12 +75,12 @@ namespace sw
 		return *this;
 	}
 
-	DynamicBitset& DynamicBitset::set( const uint32 pos, const bool value )
+	DynamicBitset& DynamicBitset::set( const uint32 bitPosition, const bool value )
 	{
-		SW_LOG_ASSERT( pos < _bitCount, "Bit position out of range" );
+		SW_LOG_ASSERT( bitPosition < _bitCount, "Bit position out of range" );
 
-		const uint32	blockIndex = getBlockIndex( pos );
-		const BlockType mask	   = bitMask( pos );
+		const uint32	blockIndex = getBlockIndex( bitPosition );
+		const BlockType mask	   = bitMask( bitPosition );
 
 		if ( value )
 			_listBlock[blockIndex] |= mask;
@@ -106,12 +106,12 @@ namespace sw
 		return *this;
 	}
 
-	DynamicBitset& DynamicBitset::flip( const uint32 pos )
+	DynamicBitset& DynamicBitset::flip( const uint32 bitPosition )
 	{
-		SW_LOG_ASSERT( pos < _bitCount, "Bit position out of range" );
+		SW_LOG_ASSERT( bitPosition < _bitCount, "Bit position out of range" );
 
-		const uint32 blockIndex = getBlockIndex( pos );
-		_listBlock[blockIndex] ^= bitMask( pos );
+		const uint32 blockIndex = getBlockIndex( bitPosition );
+		_listBlock[blockIndex] ^= bitMask( bitPosition );
 		return *this;
 	}
 

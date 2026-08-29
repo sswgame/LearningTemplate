@@ -72,14 +72,14 @@ namespace sw
 			{
 				StringBuilder<constant::kMaxBuffer1024> b;
 				b.append( annotationConstants::kCtorLookupName );
-				if ( method._listParamTypeName.empty() == false )
+				if ( method._listParameterTypeName.empty() == false )
 				{
 					b.append( '(' );
-					for ( size_t paramIndex = 0; paramIndex < method._listParamTypeName.size(); ++paramIndex )
+					for ( size_t paramIndex = 0; paramIndex < method._listParameterTypeName.size(); ++paramIndex )
 					{
 						if ( paramIndex > 0 )
 							b.append( ',' );
-						b.append( normalizeTypeName( method._listParamTypeName[paramIndex] ) );
+						b.append( normalizeTypeName( method._listParameterTypeName[paramIndex] ) );
 					}
 					b.append( ')' );
 				}
@@ -463,7 +463,7 @@ namespace sw
 		e.line( "auto invokerCb = []( void* objPtr, const ::sw::TaskArgs& args ) -> ::sw::TaskValue" );
 		e.line( "{" );
 		e.push();
-		if ( method._listParamTypeName.empty() )
+		if ( method._listParameterTypeName.empty() )
 			e.line( "(void)args;" );
 
 		if ( method._bStatic != 0 && method._bConstructor == SW_FALSE )
@@ -517,7 +517,7 @@ namespace sw
 			e.assign( "funcInfo._name", CodeEmit::quoted( ( method._bConstructor != 0 ) ? annotationConstants::kCtorLookupName : method._name ) );
 			e.linef( "funcInfo._hashName       = %#;", CodeEmit::hs( lookupName ) );
 			e.assign( "funcInfo._returnTypeName", CodeEmit::quoted( retType ) );
-			e.assign( "funcInfo._listParamTypeName", CodeGeneratorInternal::makeQuotedTypeList( method._listParamTypeName ) );
+			e.assign( "funcInfo._listParameterTypeName", CodeGeneratorInternal::makeQuotedTypeList( method._listParameterTypeName ) );
 
 			e.line( "#if !defined( SW_SHIPPING )" );
 			e.assignQuotedIf( method._category.empty() == false, "funcInfo._metadata._category", method._category );
@@ -544,7 +544,7 @@ namespace sw
 			e.flagIf( method._bStatic != 0, "funcInfo._metadata._bStatic", "SW_TRUE" );
 			e.flagIf( method._bConst != 0, "funcInfo._metadata._bConst", "SW_TRUE" );
 
-			const string callArgs = CodeGeneratorInternal::makeInvokerCallArgs( method._listParamTypeName );
+			const string callArgs = CodeGeneratorInternal::makeInvokerCallArgs( method._listParameterTypeName );
 
 			emitMethodInvoker( e, typeInfo, method, retType, callArgs );
 			e.pop();

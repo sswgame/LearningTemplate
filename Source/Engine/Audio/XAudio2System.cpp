@@ -631,19 +631,19 @@ namespace sw
 			return;
 		}
 
-		XAUDIO2_BUFFER buf{};
-		buf.AudioBytes = static_cast<UINT32>( pClip->_listData.size() );
-		buf.pAudioData = pClip->_listData.data();
+		XAUDIO2_BUFFER audioBuffer{};
+		audioBuffer.AudioBytes = static_cast<UINT32>( pClip->_listData.size() );
+		audioBuffer.pAudioData = std::as_const( pClip->_listData ).data();
 		if ( loop )
 		{
-			buf.LoopCount		= XAUDIO2_LOOP_INFINITE;
-			_impl->_pMusicClip	= pClip;
-			_impl->_pMusicVoice = pVoice;
+			audioBuffer.LoopCount = XAUDIO2_LOOP_INFINITE;
+			_impl->_pMusicClip	  = pClip;
+			_impl->_pMusicVoice	  = pVoice;
 			pVoice->SetVolume( _impl->_musicVolume );
 		}
 		else
 		{
-			buf.Flags = XAUDIO2_END_OF_STREAM;
+			audioBuffer.Flags = XAUDIO2_END_OF_STREAM;
 			_impl->_listActiveVoices.push_back( XAudio2SystemInternal::VoiceBuffer{} );
 			XAudio2SystemInternal::VoiceBuffer& slot = _impl->_listActiveVoices.back();
 			slot._pClip								 = pClip;
@@ -651,7 +651,7 @@ namespace sw
 			pVoice->SetVolume( _impl->_sfxVolume );
 		}
 
-		hr = pVoice->SubmitSourceBuffer( &buf );
+		hr = pVoice->SubmitSourceBuffer( &audioBuffer );
 		if ( FAILED( hr ) )
 		{
 			SW_LOG_WARNING( "SubmitSourceBuffer failed (0x%#)", static_cast<uint32>( hr ) );
@@ -665,7 +665,7 @@ namespace sw
 			return;
 		}
 		pVoice->Start( 0 );
-		SW_LOG_TRACE( "Playing %# (%# loop=%#)", abs, static_cast<uint32>( buf.AudioBytes ),
+		SW_LOG_TRACE( "Playing %# (%# loop=%#)", abs, static_cast<uint32>( audioBuffer.AudioBytes ),
 					  loop ? 1 : 0 );
 #else
 		(void)args;

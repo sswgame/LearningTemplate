@@ -25,11 +25,11 @@ namespace sw
 		const size_t eq = sig.find( constants::reflection::kSignatureEq );
 		if ( eq != string_view::npos )
 		{
-			const size_t eqLen = StringUtil::strlen( constants::reflection::kSignatureEq );
-			inner			   = sig.substr( eq + eqLen );
-			const size_t semi  = inner.find( ';' );
-			const size_t br	   = inner.find( ']' );
-			size_t		 end   = inner.size();
+			const size_t eqLength = StringUtil::strlen( constants::reflection::kSignatureEq );
+			inner				  = sig.substr( eq + eqLength );
+			const size_t semi	  = inner.find( ';' );
+			const size_t br		  = inner.find( ']' );
+			size_t		 end	  = inner.size();
 			if ( semi != string_view::npos )
 				end = semi;
 			if ( br != string_view::npos && br < end )
@@ -55,10 +55,10 @@ namespace sw
 		};
 		for ( const utf8* prefix : kArrTypePrefixes )
 		{
-			const size_t prefixLen = StringUtil::strlen( prefix );
-			if ( inner.size() >= prefixLen && inner.substr( 0, prefixLen ) == prefix )
+			const size_t prefixLength = StringUtil::strlen( prefix );
+			if ( inner.size() >= prefixLength && inner.substr( 0, prefixLength ) == prefix )
 			{
-				inner.remove_prefix( prefixLen );
+				inner.remove_prefix( prefixLength );
 				break;
 			}
 		}
@@ -288,8 +288,8 @@ namespace sw
 			const size_t	  lastScope = fqnView.rfind( constants::reflection::kScopeDelimiter );
 			if ( lastScope != string_view::npos )
 			{
-				const size_t	  delimiterLen = StringUtil::strlen( constants::reflection::kScopeDelimiter );
-				const string_view leaf		   = fqnView.substr( lastScope + delimiterLen );
+				const size_t	  delimiterLength = StringUtil::strlen( constants::reflection::kScopeDelimiter );
+				const string_view leaf			  = fqnView.substr( lastScope + delimiterLength );
 				return findEnum( hashed_string( leaf.data(), static_cast<uint32>( leaf.size() ) ) );
 			}
 			return nullptr;

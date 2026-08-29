@@ -2423,11 +2423,11 @@ SW_TEST_CASE( Reflection_FunctionMacro, AnnotatedMethodInvoke )
 	} actor;
 
 	sw::FunctionInfo funcInfo;
-	funcInfo._name				= "takeDamage";
-	funcInfo._hashName			= sw::hashed_string( "takeDamage" );
-	funcInfo._returnTypeName	= "void";
-	funcInfo._listParamTypeName = { "sw::int32" };
-	funcInfo._invoker			= SW_DELEGATE_LAMBDA( sw::Delegate<sw::TaskValue( void*, const sw::TaskArgs& )>, []( void* objPtr, const sw::TaskArgs& args ) -> sw::TaskValue
+	funcInfo._name					= "takeDamage";
+	funcInfo._hashName				= sw::hashed_string( "takeDamage" );
+	funcInfo._returnTypeName		= "void";
+	funcInfo._listParameterTypeName = { "sw::int32" };
+	funcInfo._invoker				= SW_DELEGATE_LAMBDA( sw::Delegate<sw::TaskValue( void*, const sw::TaskArgs& )>, []( void* objPtr, const sw::TaskArgs& args ) -> sw::TaskValue
 	{
 		static_cast<FunctionAnnotatedActor*>( objPtr )->takeDamage( args.get<int32>( 0 ) );
 		return sw::TaskValue{};

@@ -667,7 +667,7 @@ namespace sw
 					for ( int32 argIndex = 0; argIndex < numArgs; ++argIndex )
 					{
 						const CXCursor argCursor = clang_Cursor_getArgument( cursor, static_cast<uint32>( argIndex ) );
-						method._listParamTypeName.push_back( normalizeTypeName(
+						method._listParameterTypeName.push_back( normalizeTypeName(
 							cxStringToStd( clang_getTypeSpelling( clang_getCursorType( argCursor ) ) ) ) );
 					}
 
@@ -729,7 +729,7 @@ namespace sw
 				for ( int32 argIndex = 0; argIndex < numArgs; ++argIndex )
 				{
 					const CXCursor argCursor = clang_Cursor_getArgument( cursor, static_cast<uint32>( argIndex ) );
-					method._listParamTypeName.push_back( normalizeTypeName(
+					method._listParameterTypeName.push_back( normalizeTypeName(
 						cxStringToStd( clang_getTypeSpelling( clang_getCursorType( argCursor ) ) ) ) );
 				}
 
@@ -1015,7 +1015,7 @@ namespace sw
 		if ( kind == CXCursor_StructDecl || kind == CXCursor_ClassDecl )
 		{
 			if ( hasAnnotation( cursor, annotationConstants::kReflectPrefix ) )
-				self->onStructDecl( cursor );
+				self->onStructDeclaration( cursor );
 
 			return CXChildVisit_Recurse;
 		}
@@ -1023,7 +1023,7 @@ namespace sw
 		if ( kind == CXCursor_EnumDecl )
 		{
 			if ( hasAnnotation( cursor, annotationConstants::kEnumPrefix ) )
-				self->onEnumDecl( cursor );
+				self->onEnumDeclaration( cursor );
 			return CXChildVisit_Continue;
 		}
 
@@ -1058,7 +1058,7 @@ namespace sw
 	 * 4. `REFLECT_BODY()` 및 `COMPONENT_FACTORY()` 매크로 존재 여부 확인
 	 * 5. 자식 멤버 변수(`PROPERTY`) 및 멤버 함수(`FUNCTION`) 메타데이터 재귀 수집
 	 */
-	void AstVisitor::onStructDecl( CXCursor cursor )
+	void AstVisitor::onStructDeclaration( CXCursor cursor )
 	{
 		ParsedTypeInfo typeInfo;
 		typeInfo._name				 = getCursorSpelling( cursor );
@@ -1113,7 +1113,7 @@ namespace sw
 	 * 2. `ENUM(...)` 어노테이션 속성(Alias, Count, Invalid 등) 파싱
 	 * 3. 모든 값이 2의 거듭제곱 형태인지 자동 분석하여 비트플래그(BitFlag) 여부 판정
 	 */
-	void AstVisitor::onEnumDecl( CXCursor cursor )
+	void AstVisitor::onEnumDeclaration( CXCursor cursor )
 	{
 		ParsedEnumInfo enumInfo;
 		enumInfo._name				 = getCursorSpelling( cursor );

@@ -116,7 +116,7 @@ namespace sw
 	{
 		string							  _name;
 		string							  _returnTypeName;
-		vector<string>					  _listParamTypeName;
+		vector<string>					  _listParameterTypeName;
 		string							  _category;
 		string							  _displayName;
 		string							  _tooltip;
@@ -134,7 +134,7 @@ namespace sw
 		ParsedFunctionInfo() noexcept
 			: _name{}
 			, _returnTypeName{}
-			, _listParamTypeName{}
+			, _listParameterTypeName{}
 			, _category{ annotationConstants::kDefaultMethodCategory }
 			, _displayName{}
 			, _tooltip{}

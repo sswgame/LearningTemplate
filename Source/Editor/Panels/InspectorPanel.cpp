@@ -739,7 +739,7 @@ namespace sw::editor
 			if ( method._metadata._displayName.empty() == false )
 				pLabelName = method._metadata._displayName.c_str();
 
-			const uint32 paramCount = static_cast<uint32>( method._listParamTypeName.size() );
+			const uint32 paramCount = static_cast<uint32>( method._listParameterTypeName.size() );
 
 			if ( method._metadata._bCallInEditor != 0 && paramCount == 0 )
 			{
@@ -778,7 +778,7 @@ namespace sw::editor
 			bool bArgsOk{ true };
 			for ( uint32 paramIndex = 0; paramIndex < paramCount; ++paramIndex )
 			{
-				if ( paramIndex >= 8 || InspectorPanelInternal::isSupportedMethodArgType( method._listParamTypeName[paramIndex] ) == false )
+				if ( paramIndex >= 8 || InspectorPanelInternal::isSupportedMethodArgType( method._listParameterTypeName[paramIndex] ) == false )
 				{
 					bArgsOk = false;
 					break;
@@ -788,7 +788,7 @@ namespace sw::editor
 			for ( uint32 paramIndex = 0; paramIndex < paramCount && paramIndex < 8; ++paramIndex )
 			{
 				ImGui::PushID( static_cast<int32>( paramIndex ) );
-				const string&						 p = method._listParamTypeName[paramIndex];
+				const string&						 p = method._listParameterTypeName[paramIndex];
 				fixed_string<constant::kMaxBuffer64> label;
 				formatstring( label.data(), label.capacity(), "arg%# (%#)", paramIndex, p.c_str() );
 
@@ -822,7 +822,7 @@ namespace sw::editor
 				TaskArgs args;
 				for ( uint32 paramIndex = 0; paramIndex < paramCount && paramIndex < 8; ++paramIndex )
 				{
-					const string& p		   = method._listParamTypeName[paramIndex];
+					const string& p		   = method._listParameterTypeName[paramIndex];
 					TypeRegistry& registry = *editor::getService<TypeRegistry>();
 					if ( registry.isType( p, "int32" ) )
 						args.add( int32{ _arrArgInt[paramIndex] } );

@@ -17,29 +17,29 @@ namespace sw
 	{
 		struct ReflectionRpcInternal
 		{
-			static hashed_string resolveBuiltinHandlerKey( const hashed_string& typeHash, const SerializeContext& ctx )
+			static hashed_string resolveBuiltinHandlerKey( const hashed_string& typeHash, const SerializeContext& serializeContext )
 			{
-				if ( ctx.findBinaryWriter( typeHash ) != nullptr )
+				if ( serializeContext.findBinaryWriter( typeHash ) != nullptr )
 					return typeHash;
 				const TypeInfo* pInfo = engine::getTypeRegistry().findType( typeHash );
 				if ( pInfo != nullptr )
 				{
-					if ( pInfo->_name.empty() == false && ctx.findBinaryWriter( pInfo->_name ) != nullptr )
+					if ( pInfo->_name.empty() == false && serializeContext.findBinaryWriter( pInfo->_name ) != nullptr )
 						return pInfo->_name;
 				}
 				return typeHash;
 			}
 
 			static bool packOneArg( vector<uint8>& listOut, string_view typeName, const TaskValue& value,
-									const SerializeContext& ctx )
+									const SerializeContext& serializeContext )
 			{
 				const hashed_string typeHash( typeName.data(), static_cast<uint32>( typeName.size() ) );
-				const hashed_string handlerKey = resolveBuiltinHandlerKey( typeHash, ctx );
+				const hashed_string handlerKey = resolveBuiltinHandlerKey( typeHash, serializeContext );
 				vector<uint8>		listPayload;
 
 				auto writePayload = [&]( const void* pPtr )
 				{
-					const SerializeContext::BinaryWriteFn* pWriter = ctx.findBinaryWriter( handlerKey );
+					const SerializeContext::BinaryWriteFn* pWriter = serializeContext.findBinaryWriter( handlerKey );
 					if ( pWriter != nullptr )
 					{
 						( *pWriter )( pPtr, listPayload );
@@ -48,7 +48,7 @@ namespace sw
 					const TypeInfo* pInfo = engine::getTypeRegistry().findType( typeHash );
 					if ( pInfo != nullptr )
 					{
-						BinarySerializer::serialize( pPtr, *pInfo, listPayload, ctx );
+						BinarySerializer::serialize( pPtr, *pInfo, listPayload, serializeContext );
 						return true;
 					}
 					return false;
@@ -92,7 +92,7 @@ namespace sw
 			}
 
 			static bool unpackOneArg( TaskArgs& args, string_view typeName, const uint8* pData, size_t dataSize,
-									  size_t& offset, const SerializeContext& ctx )
+									  size_t& offset, const SerializeContext& serializeContext )
 			{
 				if ( offset + sizeof( uint32 ) * 2 > dataSize )
 					return false;
@@ -107,15 +107,15 @@ namespace sw
 
 				(void)typeNameHash;
 				const hashed_string typeHash( typeName.data(), static_cast<uint32>( typeName.size() ) );
-				const hashed_string handlerKey = resolveBuiltinHandlerKey( typeHash, ctx );
+				const hashed_string handlerKey = resolveBuiltinHandlerKey( typeHash, serializeContext );
 				size_t				local{ 0 };
 				bool				matched{ false };
 
-				auto readInto = [&]( void* pDst ) -> bool
+				auto readInto = [&]( void* pDestination ) -> bool
 				{
-					const SerializeContext::BinaryReadFn* pReader = ctx.findBinaryReader( handlerKey );
+					const SerializeContext::BinaryReadFn* pReader = serializeContext.findBinaryReader( handlerKey );
 					if ( pReader != nullptr )
-						return ( *pReader )( pDst, pData + offset, size, local );
+						return ( *pReader )( pDestination, pData + offset, size, local );
 					return false;
 				};
 
@@ -164,7 +164,7 @@ namespace sw
 		const FunctionInfo* pFunc = pTypeInfo->findMethod( methodName );
 		if ( pFunc == nullptr )
 			return false;
-		if ( args.getCount() != static_cast<uint32>( pFunc->_listParamTypeName.size() ) )
+		if ( args.getCount() != static_cast<uint32>( pFunc->_listParameterTypeName.size() ) )
 		{
 			SW_LOG_WARNING( "Arg count mismatch for %#::%#", typeFqn.c_str(), methodName.c_str() );
 			return false;
@@ -177,16 +177,16 @@ namespace sw
 		out._netRole	 = static_cast<uint8>( pFunc->_metadata._netRole );
 		out._bReliable	 = pFunc->_metadata._bReliable;
 
-		const SerializeContext& ctx			= SerializeContext::getDefault();
-		const uint32			count		= args.getCount();
-		const uint8*			pCountBytes = reinterpret_cast<const uint8*>( &count );
+		const SerializeContext& serializeContext = SerializeContext::getDefault();
+		const uint32			count			 = args.getCount();
+		const uint8*			pCountBytes		 = reinterpret_cast<const uint8*>( &count );
 
-		out._listArgByte.reserve( sizeof( uint32 ) + count * 32 );
-		out._listArgByte.insert( out._listArgByte.end(), pCountBytes, pCountBytes + sizeof( uint32 ) );
+		out._listArgumentBytes.reserve( sizeof( uint32 ) + count * 32 );
+		out._listArgumentBytes.insert( out._listArgumentBytes.end(), pCountBytes, pCountBytes + sizeof( uint32 ) );
 
 		for ( uint32 argIndex = 0; argIndex < count; ++argIndex )
 		{
-			if ( ReflectionRpcInternal::packOneArg( out._listArgByte, pFunc->_listParamTypeName[argIndex], args.get( argIndex ), ctx ) == false )
+			if ( ReflectionRpcInternal::packOneArg( out._listArgumentBytes, pFunc->_listParameterTypeName[argIndex], args.get( argIndex ), serializeContext ) == false )
 				return false;
 		}
 		return true;
@@ -207,20 +207,20 @@ namespace sw
 			return {};
 
 		TaskArgs				unpacked;
-		const SerializeContext& ctx = SerializeContext::getDefault();
+		const SerializeContext& serializeContext = SerializeContext::getDefault();
 		size_t					offset{ 0 };
-		if ( envelope._listArgByte.size() < sizeof( uint32 ) )
+		if ( envelope._listArgumentBytes.size() < sizeof( uint32 ) )
 			return {};
 		uint32 count{ 0 };
-		Memory::copy( &count, envelope._listArgByte.data(), sizeof( uint32 ) );
+		Memory::copy( &count, envelope._listArgumentBytes.data(), sizeof( uint32 ) );
 		offset += sizeof( uint32 );
-		if ( count != static_cast<uint32>( pFunc->_listParamTypeName.size() ) )
+		if ( count != static_cast<uint32>( pFunc->_listParameterTypeName.size() ) )
 			return {};
 
 		for ( uint32 argIndex = 0; argIndex < count; ++argIndex )
 		{
-			if ( ReflectionRpcInternal::unpackOneArg( unpacked, pFunc->_listParamTypeName[argIndex], envelope._listArgByte.data(),
-													  envelope._listArgByte.size(), offset, ctx ) == false )
+			if ( ReflectionRpcInternal::unpackOneArg( unpacked, pFunc->_listParameterTypeName[argIndex], envelope._listArgumentBytes.data(),
+													  envelope._listArgumentBytes.size(), offset, serializeContext ) == false )
 				return {};
 		}
 

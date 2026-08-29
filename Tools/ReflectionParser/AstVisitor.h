@@ -36,8 +36,8 @@ namespace sw
 
 	private:
 		static CXChildVisitResult visitCursor( CXCursor cursor, CXCursor parent, CXClientData clientData );
-		void					  onStructDecl( CXCursor cursor );
-		void					  onEnumDecl( CXCursor cursor );
+		void					  onStructDeclaration( CXCursor cursor );
+		void					  onEnumDeclaration( CXCursor cursor );
 		static bool				  hasAnnotation( CXCursor cursor, string_view prefix );
 		static string			  getCursorSpelling( CXCursor cursor );
 

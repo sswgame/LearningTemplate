@@ -489,13 +489,13 @@ namespace sw
 				}
 			}
 
-			for ( const auto& [nameKey, val] : _mapNameToValue )
+			for ( const auto& [nameKey, enumValue] : _mapNameToValue )
 			{
 				if ( StringUtil::equalsIgnoreCase( name, nameKey.view() ) )
 				{
-					if ( isValidValue( val ) == false )
+					if ( isValidValue( enumValue ) == false )
 						return false;
-					outValue = val;
+					outValue = enumValue;
 					return true;
 				}
 			}
@@ -514,8 +514,8 @@ namespace sw
 	{
 		string										  _name;
 		hashed_string								  _hashName;
-		string										  _returnTypeName;	  ///< clang spelling (e.g. void, int32)
-		vector<string>								  _listParamTypeName; ///< clang spellings in declaration order
+		string										  _returnTypeName;		  ///< clang spelling (e.g. void, int32)
+		vector<string>								  _listParameterTypeName; ///< clang spellings in declaration order
 		FunctionMetadata							  _metadata;
 		Delegate<TaskValue( void*, const TaskArgs& )> _invoker; ///< instance + args → TaskValue
 
@@ -638,13 +638,13 @@ namespace sw
 			_mapNameToProperty.reserve( _propertyList.size() * 2 );
 			_mapNameToMethod.reserve( _listMethod.size() );
 
-			for ( const PropertyInfo& prop : _propertyList )
+			for ( const PropertyInfo& propertyInfo : _propertyList )
 			{
-				_mapNameToProperty[prop._name] = &prop;
-				for ( const hashed_string& alias : prop._listAlias )
+				_mapNameToProperty[propertyInfo._name] = &propertyInfo;
+				for ( const hashed_string& alias : propertyInfo._listAlias )
 				{
 					if ( alias.empty() == false )
-						_mapNameToProperty[alias] = &prop;
+						_mapNameToProperty[alias] = &propertyInfo;
 				}
 			}
 
@@ -657,20 +657,20 @@ namespace sw
 		}
 
 		/** @brief 이름 또는 alias로 프로퍼티를 찾습니다. */
-		const PropertyInfo* findProperty( const hashed_string& propNameOrAlias ) const
+		const PropertyInfo* findProperty( const hashed_string& propertyNameOrAlias ) const
 		{
 			if ( _propertyList.size() <= constants::reflection::kLinearSearchThreshold )
 			{
-				for ( const PropertyInfo& prop : _propertyList )
+				for ( const PropertyInfo& propertyInfo : _propertyList )
 				{
-					if ( prop.matchesName( propNameOrAlias ) )
-						return &prop;
+					if ( propertyInfo.matchesName( propertyNameOrAlias ) )
+						return &propertyInfo;
 				}
 				return nullptr;
 			}
 
 			buildLookupCache();
-			auto it = _mapNameToProperty.find( propNameOrAlias );
+			auto it = _mapNameToProperty.find( propertyNameOrAlias );
 			return it != _mapNameToProperty.end() ? it->second : nullptr;
 		}
 
@@ -693,7 +693,7 @@ namespace sw
 		}
 
 		/** @brief 현재 클래스 및 부모 상속 체인에서 프로퍼티를 검색합니다 (평탄화 캐시 미사용 제로 할당 검색). */
-		const PropertyInfo* findPropertyInHierarchy( const hashed_string& propNameOrAlias ) const;
+		const PropertyInfo* findPropertyInHierarchy( const hashed_string& propertyNameOrAlias ) const;
 
 		template <typename Func>
 		/** @brief 프로퍼티를 순회합니다. bIncludeBase가 true이면 상속 체인 포함. */
@@ -701,16 +701,16 @@ namespace sw
 		{
 			if ( bIncludeBase == false )
 			{
-				for ( const PropertyInfo& prop : _propertyList )
+				for ( const PropertyInfo& propertyInfo : _propertyList )
 				{
-					func( prop );
+					func( propertyInfo );
 				}
 			}
 			else
 			{
-				for ( const PropertyInfo& prop : getPropertiesWithBase() )
+				for ( const PropertyInfo& propertyInfo : getPropertiesWithBase() )
 				{
-					func( prop );
+					func( propertyInfo );
 				}
 			}
 		}
