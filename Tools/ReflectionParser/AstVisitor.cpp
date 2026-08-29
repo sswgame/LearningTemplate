@@ -379,6 +379,15 @@ namespace sw
 			struct FieldCollector
 			{
 				vector<ParsedPropertyInfo>* _pProperties = nullptr;
+				uint8						_bHasError : 1;
+				[[maybe_unused]] uint8		_reserved  : 7;
+
+				FieldCollector()
+					: _pProperties{ nullptr }
+					, _bHasError{ SW_FALSE }
+					, _reserved{ 0 }
+				{
+				}
 			};
 
 			struct MethodCollector
@@ -598,6 +607,16 @@ namespace sw
 					normalizeTypeName( cxStringToStd( clang_getTypeSpelling( fieldType ) ) );
 				if ( clang_Cursor_isBitField( cursor ) != 0 )
 				{
+					const int32 bitWidth = clang_getFieldDeclBitWidth( cursor );
+					if ( bitWidth != 1 )
+					{
+						CXCursor parent = clang_getCursorSemanticParent( cursor );
+						SW_LOG_ERROR( "ERROR: PROPERTY() bitfield '%#' in '%#' has bit width %#. Only 1-bit bitfield boolean flags (e.g. uint8 _flag : 1;) are supported in reflection!",
+									  prop._name.c_str(), AstVisitor::buildFullyQualifiedName( parent ).c_str(), bitWidth );
+						collector->_bHasError = SW_TRUE;
+						return CXChildVisit_Break;
+					}
+
 					prop._bIsBitField	  = SW_TRUE;
 					const int64 bitOffset = clang_Cursor_getOffsetOfField( cursor );
 					if ( bitOffset >= 0 )
@@ -783,7 +802,12 @@ namespace sw
 					return baseClassVisitor( cursor, parent, &ctx->_bases );
 
 				if ( kind == CXCursor_FieldDecl )
-					return fieldCollectorVisitor( cursor, parent, &ctx->_fields );
+				{
+					const CXChildVisitResult res = fieldCollectorVisitor( cursor, parent, &ctx->_fields );
+					if ( ctx->_fields._bHasError == SW_TRUE )
+						return CXChildVisit_Break;
+					return res;
+				}
 
 				if ( kind == CXCursor_CXXMethod || kind == CXCursor_Constructor || kind == CXCursor_FunctionTemplate ||
 					 kind == CXCursor_FunctionDecl || kind == CXCursor_Destructor )
@@ -903,16 +927,19 @@ namespace sw
 		: _translationUnit{ translationUnit }
 		, _listType{}
 		, _listEnum{}
+		, _bHasError{ SW_FALSE }
+		, _reserved{ 0 }
 	{
 	}
 
 	// ------------------------------------------------------------------------------
 	// D) AstVisitor — visit / onStructDecl / onEnumDecl
 	// ------------------------------------------------------------------------------
-	void AstVisitor::visit()
+	bool AstVisitor::visit()
 	{
 		CXCursor rootCursor = clang_getTranslationUnitCursor( _translationUnit );
 		clang_visitChildren( rootCursor, visitCursor, this );
+		return _bHasError == SW_FALSE;
 	}
 
 	CXChildVisitResult AstVisitor::visitCursor( CXCursor cursor, CXCursor, CXClientData clientData )
@@ -938,7 +965,8 @@ namespace sw
 					 AstVisitorInternal::sourceHasPrimaryAnnotation( parent, annotationConstants::kReflectPrefix ) == false )
 				{
 					SW_LOG_ERROR( "ERROR: PROPERTY() is used in class/struct '%#', but it lacks REFLECT()!", buildFullyQualifiedName( parent ).c_str() );
-					throw std::runtime_error( "PROPERTY() without REFLECT()" );
+					self->_bHasError = SW_TRUE;
+					return CXChildVisit_Break;
 				}
 			}
 			return CXChildVisit_Continue;
@@ -960,10 +988,12 @@ namespace sw
 					if ( bHasFunction )
 					{
 						SW_LOG_ERROR( "ERROR: FUNCTION() is used in class/struct '%#', but it lacks REFLECT()!", buildFullyQualifiedName( parent ).c_str() );
-						throw std::runtime_error( "FUNCTION() without REFLECT()" );
+						self->_bHasError = SW_TRUE;
+						return CXChildVisit_Break;
 					}
 					SW_LOG_ERROR( "ERROR: REFLECT_BODY() is used in class/struct '%#', but it lacks REFLECT()!", buildFullyQualifiedName( parent ).c_str() );
-					throw std::runtime_error( "REFLECT_BODY() without REFLECT()" );
+					self->_bHasError = SW_TRUE;
+					return CXChildVisit_Break;
 				}
 			}
 			return CXChildVisit_Continue;
@@ -1058,6 +1088,11 @@ namespace sw
 			collect._fields._pProperties		= &typeInfo._listProperty;
 			collect._methods._pMethods			= &typeInfo._listMethod;
 			clang_visitChildren( cursor, AstVisitorInternal::structMemberCollectVisitor, &collect );
+			if ( collect._fields._bHasError == SW_TRUE )
+			{
+				_bHasError = SW_TRUE;
+				return;
+			}
 			typeInfo._parentFQN			= collect._bases._firstBaseFQN;
 			typeInfo._bReflectBody		= collect._bBodyFound == SW_TRUE ? SW_TRUE : SW_FALSE;
 			typeInfo._bComponentFactory = ( collect._bFactoryFound == SW_TRUE || AstVisitorInternal::isDerivedFromComponent( cursor ) ) ? SW_TRUE : SW_FALSE;

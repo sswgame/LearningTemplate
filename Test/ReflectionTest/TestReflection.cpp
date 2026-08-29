@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/File/FileUtil.h"
+#include "Core/Process/Process.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -497,6 +499,59 @@ SW_TEST_CASE( ReflectionParser, RpcMethodMetadataAndInvokerExecution )
 	args.add( int32{ 35 } );
 	pMethod->_invoker( &actor, args );
 	SW_EXPECT_EQUAL( 65, actor._hp );
+}
+
+/**
+ * @brief [ReflectionParser] :2 이상 다중 비트 비트필드에 PROPERTY() 선언 시 빌드타임 컴파일 에러 진단 검증
+ */
+SW_TEST_CASE( ReflectionParser, MultiBitBitfieldCompilationErrorDiagnosis )
+{
+	const sw::string tempHeaderPath = "build/Ninja-Debug/InvalidBitfieldSample.h";
+	const sw::string headerContent	= "#pragma once\n"
+									  "#include \"Engine/Reflection/ReflectionMacros.h\"\n"
+									  "namespace sw\n"
+									  "{\n"
+									  "\tREFLECT()\n"
+									  "\tstruct InvalidBitfieldSampleActor\n"
+									  "\t{\n"
+									  "\t\tPROPERTY()\n"
+									  "\t\tuint8 _invalidMultiBit : 2;\n"
+									  "\t};\n"
+									  "}\n";
+
+	SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( tempHeaderPath, headerContent ) );
+
+	sw::string				  capturedLog;
+	sw::ProcessOutputDelegate outputCb = SW_DELEGATE_LAMBDA(
+		sw::ProcessOutputDelegate,
+		[&capturedLog]( string_view line, bool /*bIsStdErr*/ )
+	{
+		capturedLog.append( line.data(), line.size() );
+		capturedLog.push_back( '\n' );
+	} );
+
+	const sw::string   cmd = "build/Ninja-Debug/Bin/ReflectionParser.exe "
+							 "--input build/Ninja-Debug/InvalidBitfieldSample.h "
+							 "--output build/Ninja-Debug/generated "
+							 "--include Source "
+							 "--annotation-meta Source/Core/Predefined/AnnotationMeta.txt "
+							 "--builtins Source/Engine/Reflection/ReflectBuiltins.xxx "
+							 "--emit-templates Tools/ReflectionParser/Templates";
+	sw::ProcessOptions options;
+	options._workingDirectory = ".";
+
+	const int32 exitCode = sw::Process::execute( cmd, options, outputCb );
+
+	// 에러 코드로 종료되어야 함 (exitCode != 0)
+	SW_EXPECT_TRUE( exitCode != 0 );
+
+	// 1비트 불리언 플래그만 지원한다는 정확한 진단 메시지 출력 확인
+	const bool bFoundErrorDiagnosis = ( capturedLog.find( "bit width 2" ) != sw::string::npos ||
+										capturedLog.find( "Only 1-bit bitfield boolean flags" ) != sw::string::npos );
+	SW_EXPECT_TRUE( bFoundErrorDiagnosis );
+
+	// 임시 파일 정리
+	sw::FileUtil::removeFile( tempHeaderPath );
 }
 
 /**

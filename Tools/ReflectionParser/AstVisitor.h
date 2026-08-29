@@ -23,8 +23,10 @@ namespace sw
 	public:
 		explicit AstVisitor( CXTranslationUnit translationUnit );
 
-		/** @brief AST 트리를 방문하며 리플렉션 정보를 수집합니다. */
-		void visit();
+		/** @brief AST 트리를 방문하며 리플렉션 정보를 수집합니다. 에러가 없으면 true를 반환합니다. */
+		bool visit();
+
+		bool hasError() const noexcept { return _bHasError == SW_TRUE; }
 
 		const vector<ParsedTypeInfo>& getCollectedTypes() const { return _listType; }
 		const vector<ParsedEnumInfo>& getCollectedEnums() const { return _listEnum; }
@@ -43,5 +45,7 @@ namespace sw
 		CXTranslationUnit	   _translationUnit;
 		vector<ParsedTypeInfo> _listType;
 		vector<ParsedEnumInfo> _listEnum;
+		uint8				   _bHasError : 1;
+		[[maybe_unused]] uint8 _reserved  : 7;
 	};
 } // namespace sw

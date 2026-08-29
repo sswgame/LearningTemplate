@@ -228,7 +228,12 @@ namespace sw
 		}
 
 		sw::AstVisitor visitor( context.getTranslationUnit() );
-		visitor.visit();
+		if ( visitor.visit() == false || visitor.hasError() )
+		{
+			SW_LOG_ERROR( "AST analysis failed: %#", inputFile );
+			++errorCount;
+			return;
+		}
 
 		sw::CodeGenerator generator(
 			visitor.getCollectedTypes(),
