@@ -4,7 +4,7 @@
  */
 #pragma once
 #include "Core/Delegate/Delegate.h"
-#include "Core/Memory/memory.h"
+#include "Core/Memory/Memory.h"
 
 #include "Engine/Common/Common.h"
 #include "Engine/Graphics/RenderPass/RenderFramePacket.h"

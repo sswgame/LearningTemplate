@@ -16,7 +16,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Delegate/Delegate.h"
-#include "Core/String/FormatString.h"
+#include "Core/String/formatString.h"
 
 #if !defined( SW_LOG_TAG )
 	/** @brief 호출 모듈 태그. 모듈 헤드에서 재정의합니다. */

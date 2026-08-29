@@ -31,9 +31,11 @@ def buildHeaderLookupMap(repositoryRoot: Path) -> tuple[dict[str, str], dict[str
         rel = headerPath.relative_to(repositoryRoot / "Source").as_posix()
         sourceCounts[headerPath.name] = sourceCounts.get(headerPath.name, 0) + 1
         sourceMap[headerPath.name] = rel
+        sourceMap[rel.lower()] = rel
+        sourceMap[headerPath.name.lower()] = rel
 
     # Remove ambiguous duplicates (like pch.h)
-    sourceMap = {k: v for k, v in sourceMap.items() if sourceCounts[k] == 1}
+    sourceMap = {k: v for k, v in sourceMap.items() if not (k in sourceCounts and sourceCounts[k] > 1)}
 
     testMap: dict[str, str] = {}
     testCounts: dict[str, int] = {}
@@ -41,7 +43,9 @@ def buildHeaderLookupMap(repositoryRoot: Path) -> tuple[dict[str, str], dict[str
         rel = headerPath.relative_to(repositoryRoot / "Test").as_posix()
         testCounts[headerPath.name] = testCounts.get(headerPath.name, 0) + 1
         testMap[headerPath.name] = rel
-    testMap = {k: v for k, v in testMap.items() if testCounts[k] == 1}
+        testMap[rel.lower()] = rel
+        testMap[headerPath.name.lower()] = rel
+    testMap = {k: v for k, v in testMap.items() if not (k in testCounts and testCounts[k] > 1)}
 
     toolsMap: dict[str, str] = {}
     toolsCounts: dict[str, int] = {}
@@ -49,7 +53,9 @@ def buildHeaderLookupMap(repositoryRoot: Path) -> tuple[dict[str, str], dict[str
         rel = headerPath.relative_to(repositoryRoot / "Tools").as_posix()
         toolsCounts[headerPath.name] = toolsCounts.get(headerPath.name, 0) + 1
         toolsMap[headerPath.name] = rel
-    toolsMap = {k: v for k, v in toolsMap.items() if toolsCounts[k] == 1}
+        toolsMap[rel.lower()] = rel
+        toolsMap[headerPath.name.lower()] = rel
+    toolsMap = {k: v for k, v in toolsMap.items() if not (k in toolsCounts and toolsCounts[k] > 1)}
 
     return sourceMap, testMap, toolsMap
 
@@ -129,18 +135,19 @@ def processFile(filePath: Path, repositoryRoot: Path,
             includeType = '"'
             line = f'#include "{includeName}"'
 
-        # 상대 경로 정규화: "/" 가 없고 pch.h / .xxx 가 아닌 경우 Source/, Test/, Tools/ 상대 경로로 복원
-        if includeType == '"' and "/" not in includeName and not includeName.endswith(".xxx") and includeName != "pch.h":
-            if sourceHeaderMap and includeName in sourceHeaderMap:
-                normalizedPath = sourceHeaderMap[includeName]
+        # 상대 경로 및 대소문자 정규화: Source/, Test/, Tools/ 상대 경로 복원 및 대소문자 교정
+        if includeType == '"' and not includeName.endswith(".xxx") and includeName != "pch.h":
+            includeLower = includeName.lower()
+            if sourceHeaderMap and includeLower in sourceHeaderMap:
+                normalizedPath = sourceHeaderMap[includeLower]
                 line = f'#include "{normalizedPath}"'
                 includeName = normalizedPath
-            elif testHeaderMap and "Test" in relativeFilePath and includeName in testHeaderMap:
-                normalizedPath = testHeaderMap[includeName]
+            elif testHeaderMap and "Test" in relativeFilePath and includeLower in testHeaderMap:
+                normalizedPath = testHeaderMap[includeLower]
                 line = f'#include "{normalizedPath}"'
                 includeName = normalizedPath
-            elif toolsHeaderMap and "Tools" in relativeFilePath and includeName in toolsHeaderMap:
-                normalizedPath = toolsHeaderMap[includeName]
+            elif toolsHeaderMap and "Tools" in relativeFilePath and includeLower in toolsHeaderMap:
+                normalizedPath = toolsHeaderMap[includeLower]
                 line = f'#include "{normalizedPath}"'
                 includeName = normalizedPath
 

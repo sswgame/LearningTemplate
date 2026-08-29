@@ -77,6 +77,34 @@ _kLoopIndexRe = re.compile(
 # 컨벤션 규칙: 모든 번역 단위(.cpp)의 최상단에는 반드시 pch.h가 가장 먼저 인클루드되어야 합니다.
 _kPchIncludeRe = re.compile(r'^\s*#\s*include\s*["<]pch\.h[">]')
 
+# [일반 인클루드 경로 검사]
+_kIncludePathRe = re.compile(r'^\s*#\s*include\s*([<"])([^>"]+)[>"]')
+
+_s_exactPathMap: dict[str, str] = {}
+
+
+def getExactPathMapInternal(projectRoot: Path) -> dict[str, str]:
+    """저장소 내 모든 소스/헤더 파일의 실제 대소문자 경로 맵을 생성합니다."""
+    global _s_exactPathMap
+    if not _s_exactPathMap:
+        newMap = {}
+        for searchDir in ["Source", "Test", "Tools"]:
+            baseDir = projectRoot / searchDir
+            if not baseDir.is_dir():
+                continue
+            for root, dirs, files in os.walk(baseDir):
+                for f in files:
+                    ext = os.path.splitext(f)[1].lower()
+                    if ext in kCppAllExtensions or ext == ".inl":
+                        fullPath = Path(root) / f
+                        rel = fullPath.relative_to(baseDir).as_posix()
+                        relRoot = fullPath.relative_to(projectRoot).as_posix()
+                        newMap[rel.lower()] = rel
+                        newMap[relRoot.lower()] = relRoot
+        _s_exactPathMap = newMap
+    return _s_exactPathMap
+
+
 # [원시 포인터 멤버 변수 명명 검사]
 # 클래스/구조체 헤더에서 '_p' 접두어가 붙지 않은 원시 포인터(*) 멤버 변수 선언을 검출합니다.
 # 매칭 예시: GameObject* _target;, IRHIDevice* _device; (위반 -> _pTarget, _pDevice 이어야 함)
@@ -300,6 +328,27 @@ def checkFileConventionsInternal(filePath: Path, rootDir: Path) -> list[Conventi
             continue
         if trimmed.startswith("//") or not trimmed:
             continue
+
+        # 인클루드 경로 파일명 및 대소문자 일치 검사 (#include "Core/String/FormatString.h" vs "Core/String/formatString.h")
+        if includeMatch := _kIncludePathRe.match(trimmed):
+            includeType = includeMatch.group(1)
+            includePath = includeMatch.group(2).replace("\\", "/")
+            if includeType == '"' and includePath != "pch.h":
+                exactMap = getExactPathMapInternal(rootDir)
+                includeLower = includePath.lower()
+                if includeLower in exactMap:
+                    exactPath = exactMap[includeLower]
+                    if includePath != exactPath:
+                        violations.append(
+                            ConventionViolation(
+                                file_path=relPath,
+                                line_number=lineNum,
+                                rule_category="Include/PathCasing",
+                                message=f"인클루드 경로 '{includePath}'의 대소문자가 실제 파일 시스템 경로 '{exactPath}'와 일치하지 않습니다.",
+                                snippet=trimmed,
+                                suggested_fix=f'#include "{exactPath}"',
+                            )
+                        )
 
         # 헤더 내 현재 클래스 스코프 추적
         if isHeader:
@@ -588,6 +637,7 @@ def runConventionsCheck(rootDir: Path | None = None,
     지정된 소스 파일 또는 전체 소스 디렉터리를 순회하며 코딩 컨벤션 위반 항목을 검사합니다.
     """
     projectRoot = rootDir or Path(getProjectRoot())
+    getExactPathMapInternal(projectRoot)
     allViolations: list[ConventionViolation] = []
 
     if specificFiles:

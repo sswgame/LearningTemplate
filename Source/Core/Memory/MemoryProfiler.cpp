@@ -6,7 +6,7 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
-#include "Core/String/FormatString.h"
+#include "Core/String/formatString.h"
 
 #if defined( SW_PLATFORM_WINDOWS ) && defined( SW_DEBUG ) && !defined( SW_SHIPPING )
 	#define SW_HAS_CRT_LEAK_CHECK 1

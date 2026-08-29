@@ -8,7 +8,6 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
-#include "Core/String/fixed_string.h"
 
 namespace sw
 {
