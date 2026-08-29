@@ -33,11 +33,14 @@ namespace sw
 		void bindEngineServices( const EngineServices& services )
 		{
 			s_services = services;
+			if ( services._pFrameDoubleBuffer != nullptr )
+				FrameDoubleBuffer::bind( services._pFrameDoubleBuffer );
 		}
 
 		void unbindEngineServices()
 		{
 			s_services = {};
+			FrameDoubleBuffer::bind( nullptr );
 		}
 
 		bool areEngineServicesBound()

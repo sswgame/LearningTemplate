@@ -158,7 +158,7 @@ namespace sw::editor
 				const string& mapped = ws.getGameObjectPrefabPath( pObject->getObjectId() );
 				if ( mapped.empty() == false && FileUtil::pathsEqualNormalized( mapped, prefabPath ) )
 					return true;
-				return FileUtil::pathsEqualNormalized( pObject->getPrefabSourcePath(), prefabPath );
+				return false;
 			}
 
 			static GameObject* findPrefabInstance( GameObjectManager* pManager, EditorWorkspace& ws, string_view prefabPath,

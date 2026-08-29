@@ -76,13 +76,11 @@ namespace sw::editor
 		if ( pSrc->getParent() != nullptr )
 			pNewObj->attachToParent( pSrc->getParent() );
 		ObjectStateSerializer::rebindSceneHierarchy( pNewObj, xml );
-		const string& prefabPath = pSrc->getPrefabSourcePath();
-		if ( prefabPath.empty() == false )
+		EditorContext* pContext	  = EditorContext::get();
+		const string   prefabPath = ( pContext != nullptr ) ? pContext->getWorkspace().getGameObjectPrefabPath( pSrc->getObjectId() ) : string{};
+		if ( prefabPath.empty() == false && pContext != nullptr )
 		{
-			pNewObj->setPrefabSourcePath( prefabPath );
-			EditorContext* pContext = EditorContext::get();
-			if ( pContext != nullptr )
-				pContext->getWorkspace().setGameObjectPrefabPath( pNewObj->getObjectId(), prefabPath );
+			pContext->getWorkspace().setGameObjectPrefabPath( pNewObj->getObjectId(), prefabPath );
 		}
 		EditorTransaction::recordCreation( GameObjectPtr{ pNewObj }, "Duplicate GameObject" );
 		select( pNewObj, SelectionMode::Replace );
@@ -229,60 +227,6 @@ namespace sw::editor
 		if ( pObj == nullptr )
 			return;
 
-		float3 rayStart = translation;
-		rayStart._y += 1.0f;
-
-		float32 hitY = 0.0f;
-		bool	bHit = false;
-
-		SceneManager* pSceneManager = editor::getService<SceneManager>();
-		Scene*		  pScene		= ( pSceneManager != nullptr ) ? pSceneManager->getActiveScene() : nullptr;
-		if ( pScene != nullptr && pScene->getObjectManager() != nullptr )
-		{
-			const vector<GameObject*>& listAll = pScene->getObjectManager()->getAllGameObjects();
-			for ( const GameObject* pOther : listAll )
-			{
-				if ( pOther == nullptr || pOther == pObj )
-					continue;
-
-				BoxCollider2DComponent* pOtherBox = pOther->getComponent<BoxCollider2DComponent>();
-				if ( pOtherBox != nullptr && pOtherBox->isActive() )
-				{
-					const float3  otherPos = pOtherBox->getWorldPosition();
-					const float2  otherScl = pOtherBox->getOffsetScaleVec();
-					const float32 topY	   = otherPos._y + otherScl._y * 0.5f;
-					if ( topY <= rayStart._y && ( topY > hitY || bHit == false ) )
-					{
-						const float32 halfW = otherScl._x * 0.5f;
-						if ( otherPos._x - halfW <= translation._x && translation._x <= otherPos._x + halfW )
-						{
-							hitY = topY;
-							bHit = true;
-						}
-					}
-				}
-
-				MeshComponent* pOtherMesh = pOther->getComponent<MeshComponent>();
-				if ( pOtherMesh != nullptr && pOtherMesh->isActive() )
-				{
-					const float3  otherPos = pOtherMesh->getWorldPosition();
-					const float3  otherScl = pOtherMesh->getLocalScale();
-					const float32 topY	   = otherPos._y + otherScl._y * 0.5f;
-					if ( topY <= rayStart._y && ( topY > hitY || bHit == false ) )
-					{
-						const float32 halfW = otherScl._x * 0.5f;
-						const float32 halfD = otherScl._z * 0.5f;
-						if ( otherPos._x - halfW <= translation._x && translation._x <= otherPos._x + halfW &&
-							 otherPos._z - halfD <= translation._z && translation._z <= otherPos._z + halfD )
-						{
-							hitY = topY;
-							bHit = true;
-						}
-					}
-				}
-			}
-		}
-
 		float32					bottomOffset = 0.0f;
 		BoxCollider2DComponent* pMyBox		 = pObj->getComponent<BoxCollider2DComponent>();
 		if ( pMyBox != nullptr )
@@ -290,6 +234,63 @@ namespace sw::editor
 		MeshComponent* pMyMesh = pObj->getComponent<MeshComponent>();
 		if ( pMyMesh != nullptr )
 			bottomOffset = scaleY * 0.5f;
+
+		SceneManager* pSceneManager = editor::getService<SceneManager>();
+		Scene*		  pScene		= ( pSceneManager != nullptr ) ? pSceneManager->getActiveScene() : nullptr;
+		if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
+		{
+			translation._y = bottomOffset;
+			return;
+		}
+
+		GameObjectManager* pManager = pScene->getObjectManager();
+		float32			   hitY		= 0.0f;
+		bool			   bHit		= false;
+
+		const float32 halfExtentX = ( pMyBox != nullptr ) ? pMyBox->getOffsetScaleVec()._x * 0.5f : 0.5f;
+		const float32 halfExtentZ = 0.5f;
+		const float32 startY	  = translation._y + 10.0f;
+		const AABB	  movingBox{
+			float3{translation._x - halfExtentX, startY - bottomOffset, translation._z - halfExtentZ},
+			float3{translation._x + halfExtentX, startY + bottomOffset, translation._z + halfExtentZ}
+		};
+		const float3 displacement{ 0.0f, -2000.0f, 0.0f };
+
+		SweepHit sweepHit{};
+		if ( pManager->getPhysicsWorld().sweepTest( movingBox, displacement, 0, sweepHit ) )
+		{
+			if ( sweepHit._hitObjectId != pObj->getObjectId() )
+			{
+				hitY = movingBox._min._y + displacement._y * sweepHit._time;
+				bHit = true;
+			}
+		}
+
+		const vector<GameObject*>& listAll = pManager->getAllGameObjects();
+		for ( const GameObject* pOther : listAll )
+		{
+			if ( pOther == nullptr || pOther == pObj )
+				continue;
+
+			MeshComponent* pOtherMesh = pOther->getComponent<MeshComponent>();
+			if ( pOtherMesh != nullptr && pOtherMesh->isActive() )
+			{
+				const float3  otherPos = pOtherMesh->getWorldPosition();
+				const float3  otherScl = pOtherMesh->getLocalScale();
+				const float32 topY	   = otherPos._y + otherScl._y * 0.5f;
+				if ( topY <= translation._y + 10.0f && ( topY > hitY || bHit == false ) )
+				{
+					const float32 halfW = otherScl._x * 0.5f;
+					const float32 halfD = otherScl._z * 0.5f;
+					if ( otherPos._x - halfW <= translation._x && translation._x <= otherPos._x + halfW &&
+						 otherPos._z - halfD <= translation._z && translation._z <= otherPos._z + halfD )
+					{
+						hitY = topY;
+						bHit = true;
+					}
+				}
+			}
+		}
 
 		translation._y = ( bHit ? hitY : 0.0f ) + bottomOffset;
 	}

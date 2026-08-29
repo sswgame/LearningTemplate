@@ -11,6 +11,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Uuid/Uuid.h"
 
 #include "Editor/Common/Commands/EditorTransformCommands.h"
 #include "Editor/Common/EditorSessionPolicy.h"
@@ -193,6 +194,17 @@ namespace sw::editor
 		bool popPrefabIsolation();
 		void clearPrefabIsolation();
 
+		// ------------------------------------------------------------------------------
+		// 10) 에디터 전용 GameObject UUID 매핑
+		// ------------------------------------------------------------------------------
+		Uuid		getOrAssignGuid( uint64 objectId );
+		Uuid		getGuid( uint64 objectId ) const;
+		void		setGuid( uint64 objectId, const Uuid& guid );
+		uint64		findObjectIdByGuid( const Uuid& guid ) const;
+		GameObject* findGameObjectByGuid( const Uuid& guid ) const;
+		void		removeGuid( uint64 objectId );
+		void		clearGuidMap();
+
 	private:
 		uint64						  _selectedComponentId;
 		string						  _selectedComponentKey;
@@ -213,6 +225,8 @@ namespace sw::editor
 		string						  _copiedComponentXml;
 		string						  _copiedComponentTypeName;
 		vector<PrefabIsolationFrame>  _listPrefabIsolationFrame;
+		unordered_map<uint64, Uuid>	  _mapObjectIdToGuid;
+		unordered_map<Uuid, uint64>	  _mapGuidToObjectId;
 		uint8						  _bGizmoLocalSpace		   : 1;
 		uint8						  _bBoneHierarchyPopupOpen : 1;
 		uint8						  _bSceneDirty			   : 1;

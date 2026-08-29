@@ -108,10 +108,10 @@ namespace sw
 					continue;
 
 				DialogueAssetLink link{};
-				link._id	  = static_cast<int32>( linkJson.get( "id" ).asInt( 0 ) );
+				link._id	  = static_cast<int32>( linkJson.get( "id" ).asInt( static_cast<int32>( linkIndex + 1 ) ) );
 				link._fromPin = static_cast<int32>( linkJson.get( "from" ).asInt( 0 ) );
 				link._toPin	  = static_cast<int32>( linkJson.get( "to" ).asInt( 0 ) );
-				if ( link._id > 0 )
+				if ( link._fromPin > 0 && link._toPin > 0 )
 					_listLink.push_back( link );
 			}
 		}

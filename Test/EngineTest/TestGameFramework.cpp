@@ -137,7 +137,7 @@ SW_TEST_CASE( GameFrameworkTest, TransitionOrchestratorBattleAndReturnFlow )
 
 	TransitionCallbacks callbacks{};
 	callbacks.startBattle		 = Delegate<void()>::create( [&]()
-	   { bBattleStarted = true; } );
+	{ bBattleStarted = true; } );
 	callbacks.finishBattleReturn = Delegate<void()>::create( [&]()
 	{ bBattleReturned = true; } );
 	orchestrator.setCallbacks( std::move( callbacks ) );
@@ -352,8 +352,8 @@ SW_TEST_CASE( GameFrameworkTest, DialogueRunnerComponentBasicFlow )
 			{ "id": 3, "type": "End" }
 		],
 		"links": [
-			{ "from": 11, "to": 20 },
-			{ "from": 21, "to": 30 }
+			{ "from": 102, "to": 201 },
+			{ "from": 202, "to": 301 }
 		]
 	})";
 
@@ -403,12 +403,12 @@ SW_TEST_CASE( GameFrameworkTest, DialogueRunnerComponentChoiceBranchAndAction )
 			{ "id": 6, "type": "End" }
 		],
 		"links": [
-			{ "from": 11, "to": 20 },
-			{ "from": 22, "to": 30 },
-			{ "from": 23, "to": 50 },
-			{ "from": 31, "to": 40 },
-			{ "from": 41, "to": 60 },
-			{ "from": 51, "to": 60 }
+			{ "from": 102, "to": 201 },
+			{ "from": 210, "to": 301 },
+			{ "from": 211, "to": 501 },
+			{ "from": 302, "to": 401 },
+			{ "from": 402, "to": 601 },
+			{ "from": 502, "to": 601 }
 		]
 	})";
 

@@ -155,6 +155,10 @@ namespace sw::editor
 
 		SelectionManager&			 selMgr	 = pContext->getSelectionManager();
 		const vector<GameObjectPtr>& listSel = selMgr.getSelectedObjects();
+		if ( listSel.empty() )
+			return;
+
+		EditorTransaction::beginTransaction( "Snap to Ground" );
 
 		for ( const GameObjectPtr& pGoPtr : listSel )
 		{
@@ -187,6 +191,8 @@ namespace sw::editor
 			const string afterXml = EditorTransaction::captureSnapshot( pGoPtr );
 			EditorTransaction::recordModify( pGoPtr, beforeXml, afterXml, "Snap to Ground" );
 		}
+
+		EditorTransaction::endTransaction();
 	}
 
 	void EditorTransformCommands::alignSelectedObjects( AlignAxis axis, AlignType type )
@@ -232,6 +238,8 @@ namespace sw::editor
 		if ( type == AlignType::Center )
 			targetVal = sumVal / static_cast<float32>( validCount );
 
+		EditorTransaction::beginTransaction( "Align Objects" );
+
 		for ( const GameObjectPtr& pGoPtr : listSel )
 		{
 			GameObject* pGo = pGoPtr.get();
@@ -247,6 +255,8 @@ namespace sw::editor
 			const string afterXml = EditorTransaction::captureSnapshot( pGoPtr );
 			EditorTransaction::recordModify( pGoPtr, beforeXml, afterXml, "Align Objects" );
 		}
+
+		EditorTransaction::endTransaction();
 	}
 
 	void EditorTransformCommands::distributeSelectedObjects( AlignAxis axis )
@@ -271,6 +281,8 @@ namespace sw::editor
 		const float32 maxVal = EditorTransformCommandsInternal::worldAxisValue( lastPos, axis );
 		const float32 step	 = ( maxVal - minVal ) / static_cast<float32>( listSel.size() - 1 );
 
+		EditorTransaction::beginTransaction( "Distribute Objects" );
+
 		for ( size_t idx = 0; idx < listSel.size(); ++idx )
 		{
 			const GameObjectPtr& pGoPtr = listSel[idx];
@@ -286,5 +298,7 @@ namespace sw::editor
 			const string afterXml = EditorTransaction::captureSnapshot( pGoPtr );
 			EditorTransaction::recordModify( pGoPtr, beforeXml, afterXml, "Distribute Objects" );
 		}
+
+		EditorTransaction::endTransaction();
 	}
 } // namespace sw::editor

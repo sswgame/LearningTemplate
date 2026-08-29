@@ -17,6 +17,7 @@
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Scene/SceneDocument.h"
+#include "Engine/Utility/Resource/AssetDatabase.h"
 #include "Engine/Utility/Resource/ResourceManager.h"
 
 namespace sw
@@ -156,7 +157,7 @@ namespace sw
 			if ( pGo != nullptr )
 			{
 				if ( ent._prefab.empty() == false )
-					pGo->setPrefabSourcePath( ent._prefab );
+					_mapPrefabSource[pGo->getObjectId()] = ent._prefab;
 
 				if ( ent._embeddedXml.empty() == false )
 				{
@@ -199,8 +200,18 @@ namespace sw
 			if ( pCamera != nullptr && pCamera->getRole() == CameraRole::Editor )
 				continue;
 			SceneDocument::EntityNode node{};
-			node._name		  = pGo->getName().c_str();
-			node._prefab	  = pGo->getPrefabSourcePath();
+			node._name = pGo->getName().c_str();
+
+			const auto prefabIt = _mapPrefabSource.find( pGo->getObjectId() );
+			if ( prefabIt != _mapPrefabSource.end() )
+				node._prefab = prefabIt->second;
+
+			if ( node._prefab.empty() == false && engine::areEngineServicesBound() )
+			{
+				const Uuid guid = engine::getResourceManager().getAssetDatabase().ensureMeta( node._prefab );
+				if ( guid.isNull() == false )
+					node._prefabGuid = guid.toString();
+			}
 			node._embeddedXml = ObjectStateSerializer::saveToXmlString( pGo );
 			if ( node._embeddedXml.empty() == false || node._prefab.empty() == false )
 				outDoc._listEntityNode.push_back( std::move( node ) );
@@ -214,6 +225,7 @@ namespace sw
 	void Scene::shutdown()
 	{
 		releaseDefaultMaterial();
+		_mapPrefabSource.clear();
 		if ( _objectManager != nullptr )
 		{
 			for ( GameObject* pObj : _objectManager->getAllGameObjects() )
@@ -342,5 +354,24 @@ namespace sw
 	void Scene::storeCameraHandle( CameraComponent* pCamera, sw::ComponentHandle& handle )
 	{
 		handle = pCamera != nullptr ? pCamera->getHandle() : sw::ComponentHandle{};
+	}
+
+	void Scene::setEntityPrefabPath( uint64 objectId, string_view prefabPath )
+	{
+		if ( objectId == 0 )
+			return;
+		if ( prefabPath.empty() )
+			_mapPrefabSource.erase( objectId );
+		else
+			_mapPrefabSource[objectId] = string{ prefabPath };
+	}
+
+	const string& Scene::getEntityPrefabPath( uint64 objectId ) const
+	{
+		static const string s_emptyString{};
+		const auto			it = _mapPrefabSource.find( objectId );
+		if ( it != _mapPrefabSource.end() )
+			return it->second;
+		return s_emptyString;
 	}
 } // namespace sw

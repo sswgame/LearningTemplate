@@ -43,6 +43,28 @@ namespace sw::editor
 					return;
 				pContext->getWorkspace().markSceneDirty();
 			}
+
+			static GameObject* findTargetGameObject( GameObjectManager* pManager, const Uuid& guid, uint64 objId, string_view objName )
+			{
+				if ( pManager == nullptr )
+					return nullptr;
+
+				if ( guid.isNull() == false )
+				{
+					EditorContext* pContext = EditorContext::get();
+					if ( pContext != nullptr )
+					{
+						GameObject* pByGuid = pContext->getWorkspace().findGameObjectByGuid( guid );
+						if ( pByGuid != nullptr && pByGuid->isPendingKill() == false )
+							return pByGuid;
+					}
+				}
+
+				GameObject* pTarget = pManager->findGameObjectById( objId );
+				if ( pTarget == nullptr && objName.empty() == false )
+					pTarget = pManager->findGameObjectByName( hashed_string( objName.data(), static_cast<uint32>( objName.size() ) ) );
+				return pTarget;
+			}
 		};
 	} // namespace
 } // namespace sw::editor
@@ -79,19 +101,22 @@ namespace sw::editor
 		if ( pRaw == nullptr || beforeXml == afterXml )
 			return;
 
-		const uint64 objId	   = pRaw->getObjectId();
-		const string beforeStr = string{ beforeXml };
-		const string afterStr  = string{ afterXml };
+		EditorContext* pContext	 = EditorContext::get();
+		const uint64   objId	 = pRaw->getObjectId();
+		const Uuid	   guid		 = ( pContext != nullptr ) ? pContext->getWorkspace().getOrAssignGuid( objId ) : Uuid{};
+		const string   objName	 = string{ pRaw->getName().c_str() };
+		const string   beforeStr = string{ beforeXml };
+		const string   afterStr	 = string{ afterXml };
 
 		CommandStack::Command cmd{};
 		cmd._label = string{ label };
-		cmd._undo  = [objId, beforeStr]()
+		cmd._undo  = [guid, objId, objName, beforeStr]()
 		{
 			GameObjectManager* pManager = EditorTransactionInternal::getActiveGameObjectManager();
 			if ( pManager == nullptr )
 				return;
 
-			GameObject* pTarget = pManager->findGameObjectById( objId );
+			GameObject* pTarget = EditorTransactionInternal::findTargetGameObject( pManager, guid, objId, objName );
 			if ( pTarget != nullptr )
 			{
 				ObjectStateSerializer::loadFromXmlString( pTarget, beforeStr );
@@ -99,13 +124,13 @@ namespace sw::editor
 			}
 		};
 
-		cmd._redo = [objId, afterStr]()
+		cmd._redo = [guid, objId, objName, afterStr]()
 		{
 			GameObjectManager* pManager = EditorTransactionInternal::getActiveGameObjectManager();
 			if ( pManager == nullptr )
 				return;
 
-			GameObject* pTarget = pManager->findGameObjectById( objId );
+			GameObject* pTarget = EditorTransactionInternal::findTargetGameObject( pManager, guid, objId, objName );
 			if ( pTarget != nullptr )
 			{
 				ObjectStateSerializer::loadFromXmlString( pTarget, afterStr );
@@ -123,20 +148,22 @@ namespace sw::editor
 		if ( pRaw == nullptr )
 			return;
 
-		const uint64 objId		= pRaw->getObjectId();
-		const string objName	= string{ pRaw->getName().c_str() };
-		const string stateXml	= ObjectStateSerializer::saveToXmlString( pRaw );
-		const string prefabPath = pRaw->getPrefabSourcePath();
+		EditorContext* pContext	  = EditorContext::get();
+		const uint64   objId	  = pRaw->getObjectId();
+		const Uuid	   guid		  = ( pContext != nullptr ) ? pContext->getWorkspace().getOrAssignGuid( objId ) : Uuid{};
+		const string   objName	  = string{ pRaw->getName().c_str() };
+		const string   stateXml	  = ObjectStateSerializer::saveToXmlString( pRaw );
+		const string   prefabPath = ( pContext != nullptr ) ? pContext->getWorkspace().getGameObjectPrefabPath( objId ) : string{};
 
 		CommandStack::Command cmd{};
 		cmd._label = string{ label };
-		cmd._undo  = [objId]()
+		cmd._undo  = [guid, objId, objName]()
 		{
 			GameObjectManager* pManager = EditorTransactionInternal::getActiveGameObjectManager();
 			if ( pManager == nullptr )
 				return;
 
-			GameObject* pTarget = pManager->findGameObjectById( objId );
+			GameObject* pTarget = EditorTransactionInternal::findTargetGameObject( pManager, guid, objId, objName );
 			if ( pTarget != nullptr )
 			{
 				if ( EditorContext::get()->getSelectionManager().hasObject( GameObjectPtr{ pTarget } ) )
@@ -145,7 +172,7 @@ namespace sw::editor
 			}
 		};
 
-		cmd._redo = [objName, stateXml, prefabPath]()
+		cmd._redo = [guid, objName, stateXml, prefabPath]()
 		{
 			GameObjectManager* pManager = EditorTransactionInternal::getActiveGameObjectManager();
 			if ( pManager == nullptr )
@@ -154,12 +181,15 @@ namespace sw::editor
 			GameObject* pCreated = pManager->createGameObject( hashed_string( objName.c_str() ) );
 			if ( pCreated != nullptr )
 			{
+				EditorContext* pCurrentContext = EditorContext::get();
+				if ( pCurrentContext != nullptr && guid.isNull() == false )
+				{
+					pCurrentContext->getWorkspace().setGuid( pCreated->getObjectId(), guid );
+				}
 				ObjectStateSerializer::loadFromXmlString( pCreated, stateXml );
 				ObjectStateSerializer::rebindSceneHierarchy( pCreated, stateXml );
-				pCreated->setPrefabSourcePath( prefabPath );
-				EditorContext* pContext = EditorContext::get();
-				if ( pContext != nullptr )
-					pContext->getWorkspace().setGameObjectPrefabPath( pCreated->getObjectId(), prefabPath );
+				if ( pCurrentContext != nullptr )
+					pCurrentContext->getWorkspace().setGameObjectPrefabPath( pCreated->getObjectId(), prefabPath );
 				EditorContext::get()->getSelectionManager().selectObject( GameObjectPtr{ pCreated }, SelectionMode::Replace );
 			}
 		};
@@ -174,14 +204,16 @@ namespace sw::editor
 		if ( pRaw == nullptr )
 			return;
 
-		const uint64 objId		= pRaw->getObjectId();
-		const string objName	= string{ pRaw->getName().c_str() };
-		const string stateXml	= ObjectStateSerializer::saveToXmlString( pRaw );
-		const string prefabPath = pRaw->getPrefabSourcePath();
+		EditorContext* pContext	  = EditorContext::get();
+		const uint64   objId	  = pRaw->getObjectId();
+		const Uuid	   guid		  = ( pContext != nullptr ) ? pContext->getWorkspace().getOrAssignGuid( objId ) : Uuid{};
+		const string   objName	  = string{ pRaw->getName().c_str() };
+		const string   stateXml	  = ObjectStateSerializer::saveToXmlString( pRaw );
+		const string   prefabPath = ( pContext != nullptr ) ? pContext->getWorkspace().getGameObjectPrefabPath( objId ) : string{};
 
 		CommandStack::Command cmd{};
 		cmd._label = string{ label };
-		cmd._undo  = [objName, stateXml, prefabPath]()
+		cmd._undo  = [guid, objName, stateXml, prefabPath]()
 		{
 			GameObjectManager* pManager = EditorTransactionInternal::getActiveGameObjectManager();
 			if ( pManager == nullptr )
@@ -190,23 +222,26 @@ namespace sw::editor
 			GameObject* pCreated = pManager->createGameObject( hashed_string( objName.c_str() ) );
 			if ( pCreated != nullptr )
 			{
+				EditorContext* pCurrentContext = EditorContext::get();
+				if ( pCurrentContext != nullptr && guid.isNull() == false )
+				{
+					pCurrentContext->getWorkspace().setGuid( pCreated->getObjectId(), guid );
+				}
 				ObjectStateSerializer::loadFromXmlString( pCreated, stateXml );
 				ObjectStateSerializer::rebindSceneHierarchy( pCreated, stateXml );
-				pCreated->setPrefabSourcePath( prefabPath );
-				EditorContext* pContext = EditorContext::get();
-				if ( pContext != nullptr )
-					pContext->getWorkspace().setGameObjectPrefabPath( pCreated->getObjectId(), prefabPath );
+				if ( pCurrentContext != nullptr )
+					pCurrentContext->getWorkspace().setGameObjectPrefabPath( pCreated->getObjectId(), prefabPath );
 				EditorContext::get()->getSelectionManager().selectObject( GameObjectPtr{ pCreated }, SelectionMode::Replace );
 			}
 		};
 
-		cmd._redo = [objId]()
+		cmd._redo = [guid, objId, objName]()
 		{
 			GameObjectManager* pManager = EditorTransactionInternal::getActiveGameObjectManager();
 			if ( pManager == nullptr )
 				return;
 
-			GameObject* pTarget = pManager->findGameObjectById( objId );
+			GameObject* pTarget = EditorTransactionInternal::findTargetGameObject( pManager, guid, objId, objName );
 			if ( pTarget != nullptr )
 			{
 				if ( EditorContext::get()->getSelectionManager().hasObject( GameObjectPtr{ pTarget } ) )

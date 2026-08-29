@@ -20,6 +20,7 @@ namespace sw
 		{
 			string _name;
 			string _prefab;
+			string _prefabGuid;
 			string _embeddedXml;
 		};
 

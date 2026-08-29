@@ -1,8 +1,12 @@
 #include "pch.h"
 
+#include "Core/Uuid/Uuid.h"
+
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
+#include "Engine/Utility/Resource/ResourceManager.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -124,7 +128,7 @@ SW_TEST_CASE( SceneTest, SerializeWritesPrefabSourcePath )
 
 	sw::GameObject* pHero = scene.getObjectManager()->createGameObject( sw::hashed_string( "Hero" ) );
 	SW_ASSERT_NOT_NULL( pHero );
-	pHero->setPrefabSourcePath( "prefabs/hero.prefab.xml" );
+	scene.setEntityPrefabPath( pHero->getObjectId(), "prefabs/hero.prefab.xml" );
 
 	sw::SceneDocument doc{};
 	SW_ASSERT_TRUE( scene.serializeToDocument( doc ) );
@@ -161,4 +165,40 @@ SW_TEST_CASE( SceneTest, CreateEmptyActiveSceneBumpsGeneration )
 	SW_EXPECT_STREQ( "Untitled", pEmpty->getName() );
 
 	manager.shutdown();
+}
+
+/**
+ * @brief [SceneTest] SceneDocument가 prefabGuid를 정상 직렬화하고 AssetDatabase를 통해 새 경로로 자동 복원합니다
+ */
+SW_TEST_CASE( SceneTest, PrefabGuidRoundtripAndResolve )
+{
+	sw::SceneDocument doc{};
+	doc._name = "GuidTestScene";
+
+	sw::SceneDocument::EntityNode node{};
+	node._name				= "HeroInstance";
+	node._prefab			= "prefabs/old_hero.prefab.xml";
+	const sw::Uuid heroGuid = sw::Uuid::generate();
+	node._prefabGuid		= heroGuid.toString();
+	doc._listEntityNode.push_back( node );
+
+	const sw::string tempSceneXml = sw::FileUtil::joinPath( sw::FileUtil::getDirectoryPart( sw::FileUtil::getExecutablePath() ), "temp_guid_scene.scene.xml" );
+	SW_ASSERT_TRUE( doc.saveXml( tempSceneXml ) );
+
+	if ( sw::engine::areEngineServicesBound() )
+	{
+		sw::engine::getResourceManager().getAssetDatabase()._mapGuidToPath[heroGuid] = "prefabs/new_hero.prefab.xml";
+	}
+
+	sw::SceneDocument loadedDoc{};
+	SW_ASSERT_TRUE( loadedDoc.loadXml( tempSceneXml ) );
+	SW_ASSERT_TRUE( loadedDoc._listEntityNode.empty() == false );
+	SW_EXPECT_STREQ( "HeroInstance", loadedDoc._listEntityNode[0]._name.c_str() );
+	SW_EXPECT_STREQ( heroGuid.toString().c_str(), loadedDoc._listEntityNode[0]._prefabGuid.c_str() );
+	if ( sw::engine::areEngineServicesBound() )
+	{
+		SW_EXPECT_STREQ( "prefabs/new_hero.prefab.xml", loadedDoc._listEntityNode[0]._prefab.c_str() );
+	}
+
+	sw::FileUtil::removeFile( tempSceneXml );
 }

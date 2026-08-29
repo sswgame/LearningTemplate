@@ -2,6 +2,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Container/unordered_map.h"
 
 #include "Engine/Object/Component/ComponentHandle.h"
 
@@ -57,6 +58,8 @@ namespace sw
 		void setSourcePath( string_view path ) { _sourcePath = path; }
 		/** @brief 활성 게임 카메라를 설정합니다. */
 		void setActiveGameCamera( CameraComponent* pCamera );
+		/** @brief 엔티티가 스폰된 프리팹 애셋 경로를 설정합니다. 비우면 연결을 끊습니다. */
+		void setEntityPrefabPath( uint64 objectId, string_view prefabPath );
 
 		/** @brief 연결된 FrameRenderer를 반환합니다. */
 		FrameRenderer* getFrameRenderer() const { return _pFrameRenderer; }
@@ -72,6 +75,8 @@ namespace sw
 		Material* getMaterial() const { return _pMaterial; }
 		/** @brief 활성 게임 카메라를 반환합니다. */
 		CameraComponent* getActiveGameCamera() const;
+		/** @brief 엔티티가 스폰된 프리팹 애셋 경로를 반환합니다 (없으면 빈 문자열). */
+		const string& getEntityPrefabPath( uint64 objectId ) const;
 
 	private:
 		/** @brief 기본 머티리얼 참조를 해제합니다. */
@@ -88,6 +93,7 @@ namespace sw
 		unique_ptr<GameObjectManager> _objectManager;
 		Material*					  _pMaterial;
 		FrameRenderer*				  _pFrameRenderer;
+		unordered_map<uint64, string> _mapPrefabSource;
 		sw::ComponentHandle			  _activeGameCamera;
 		bool						  _bCamerasEnsured;
 	};

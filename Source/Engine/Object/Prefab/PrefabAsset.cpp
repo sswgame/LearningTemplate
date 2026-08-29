@@ -3,6 +3,7 @@
 #include "Engine/Object/Prefab/PrefabAsset.h"
 
 #include "Core/File/BinaryBlob.h"
+#include "Core/Uuid/Uuid.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -10,6 +11,7 @@
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Serialization/Object/ObjectDiffSerializer.h"
 #include "Engine/Utility/Json/JsonDocument.h"
+#include "Engine/Utility/Resource/AssetDatabase.h"
 #include "Engine/Utility/Resource/AssetFormat.h"
 #include "Engine/Utility/Resource/ResourceManager.h"
 #include "Engine/Utility/Resource/ResourceUtil.h"
@@ -318,7 +320,11 @@ namespace sw
 
 		const bool writeOk = xmlDoc.saveFile( absPath );
 		if ( writeOk )
+		{
+			if ( engine::areEngineServicesBound() )
+				engine::getResourceManager().getAssetDatabase().ensureMeta( assetRelativePath );
 			SW_LOG_INFO( "Saved '%#' -> %#", _name, absPath );
+		}
 		return writeOk;
 	}
 
@@ -354,7 +360,11 @@ namespace sw
 		const bool writeOk = FileUtil::writeFile( absPath, reinterpret_cast<const uint8*>( jsonStr.data() ),
 												  jsonStr.size() );
 		if ( writeOk )
+		{
+			if ( engine::areEngineServicesBound() )
+				engine::getResourceManager().getAssetDatabase().ensureMeta( assetRelativePath );
 			SW_LOG_INFO( "Saved '%#' JSON %#", _name, absPath );
+		}
 		return writeOk;
 	}
 
@@ -406,7 +416,19 @@ namespace sw
 
 	PrefabAsset* PrefabManager::loadPrefab( string_view assetRelativePath )
 	{
-		const string cacheKey = PrefabAssetInternal::makePrefabCacheKey( assetRelativePath );
+		string resolvedPath{ assetRelativePath };
+		if ( engine::areEngineServicesBound() )
+		{
+			Uuid guid{};
+			if ( Uuid::tryParse( assetRelativePath, guid ) && guid.isNull() == false )
+			{
+				const string* pPath = engine::getResourceManager().getAssetDatabase().getPath( guid );
+				if ( pPath != nullptr && pPath->empty() == false )
+					resolvedPath = *pPath;
+			}
+		}
+
+		const string cacheKey = PrefabAssetInternal::makePrefabCacheKey( resolvedPath );
 		{
 			std::shared_lock<std::shared_mutex> readLock{ _mapCacheMutex };
 			const auto							cacheIt = _mapCache.find( cacheKey );
@@ -416,7 +438,7 @@ namespace sw
 
 		unique_ptr<PrefabAsset> asset = make_unique<PrefabAsset>();
 
-		string	   binPath( assetRelativePath );
+		string	   binPath( resolvedPath );
 		const bool bJson = FileUtil::hasExtension( binPath, ".json" );
 		const bool bXml	 = FileUtil::hasExtension( binPath, ".xml" );
 		if ( bXml )
@@ -435,12 +457,12 @@ namespace sw
 #else
 		if ( bJson )
 		{
-			if ( asset->loadFromJsonFile( assetRelativePath ) == false && asset->loadFromBinaryFile( binPath ) == false )
+			if ( asset->loadFromJsonFile( resolvedPath ) == false && asset->loadFromBinaryFile( binPath ) == false )
 				return nullptr;
 		}
 		else
 		{
-			if ( asset->loadFromXmlFile( assetRelativePath ) == false && asset->loadFromBinaryFile( binPath ) == false )
+			if ( asset->loadFromXmlFile( resolvedPath ) == false && asset->loadFromBinaryFile( binPath ) == false )
 				return nullptr;
 		}
 #endif
@@ -492,8 +514,6 @@ namespace sw
 		GameObject* pGameObject = pGameObjectManager->createGameObject( hashed_string( pInstanceNameUtf8 ) );
 		if ( pGameObject == nullptr )
 			return nullptr;
-
-		pGameObject->setPrefabSourcePath( assetRelativePath );
 
 		if ( pAsset->getStateData().empty() == false )
 		{

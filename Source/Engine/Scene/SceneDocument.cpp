@@ -5,8 +5,10 @@
 #include "Core/File/BinaryBlob.h"
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/Uuid/Uuid.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Utility/Resource/AssetDatabase.h"
 #include "Engine/Utility/Resource/AssetFormat.h"
 #include "Engine/Utility/Resource/ResourceManager.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
@@ -188,6 +190,16 @@ namespace sw
 					node._name = pName;
 				}
 
+				const utf8* pPrefabGuid = entityNode.attr( "prefabGuid" );
+				if ( pPrefabGuid == nullptr )
+				{
+					pPrefabGuid = entityNode.childText( "prefabGuid" );
+				}
+				if ( pPrefabGuid != nullptr )
+				{
+					node._prefabGuid = pPrefabGuid;
+				}
+
 				const utf8* pPrefab = entityNode.attr( SceneDocumentInternal::kPrefab );
 				if ( pPrefab == nullptr )
 				{
@@ -196,6 +208,18 @@ namespace sw
 				if ( pPrefab != nullptr )
 				{
 					node._prefab = pPrefab;
+				}
+
+				// GUID 기반 경로 해석 (파일 이동/이름 변경에 대한 자동 복구)
+				if ( node._prefabGuid.empty() == false && engine::areEngineServicesBound() )
+				{
+					Uuid guid{};
+					if ( Uuid::tryParse( node._prefabGuid, guid ) && guid.isNull() == false )
+					{
+						const string* pResolved = engine::getResourceManager().getAssetDatabase().getPath( guid );
+						if ( pResolved != nullptr && pResolved->empty() == false )
+							node._prefab = *pResolved;
+					}
 				}
 
 				XmlNode stateNode = entityNode.child( SceneDocumentInternal::kGameObject );
@@ -234,6 +258,16 @@ namespace sw
 			entityNode.appendAttr( SceneDocumentInternal::kName, entity._name );
 			if ( entity._prefab.empty() == false )
 				entityNode.appendAttr( SceneDocumentInternal::kPrefab, entity._prefab );
+			if ( entity._prefabGuid.empty() == false )
+			{
+				entityNode.appendAttr( "prefabGuid", entity._prefabGuid );
+			}
+			else if ( entity._prefab.empty() == false && engine::areEngineServicesBound() )
+			{
+				const Uuid* pGuid = engine::getResourceManager().getAssetDatabase().getGuid( entity._prefab );
+				if ( pGuid != nullptr && pGuid->isNull() == false )
+					entityNode.appendAttr( "prefabGuid", pGuid->toString() );
+			}
 			if ( entity._embeddedXml.empty() == false )
 			{
 				XmlDocument goDoc;
@@ -313,11 +347,24 @@ namespace sw
 			EntityNode node{};
 			if ( BinaryBlob::readString( listBlob, offset, node._name ) == false ||
 				 BinaryBlob::readString( listBlob, offset, node._prefab ) == false ||
+				 BinaryBlob::readString( listBlob, offset, node._prefabGuid ) == false ||
 				 BinaryBlob::readString( listBlob, offset, node._embeddedXml ) == false )
 			{
 				SW_LOG_ERROR( "Binary entity truncated at index %#: %#", entityIndex, absPath );
 				return false;
 			}
+
+			if ( node._prefabGuid.empty() == false && engine::areEngineServicesBound() )
+			{
+				Uuid guid{};
+				if ( Uuid::tryParse( node._prefabGuid, guid ) && guid.isNull() == false )
+				{
+					const string* pResolved = engine::getResourceManager().getAssetDatabase().getPath( guid );
+					if ( pResolved != nullptr && pResolved->empty() == false )
+						node._prefab = *pResolved;
+				}
+			}
+
 			_listEntityNode.push_back( std::move( node ) );
 		}
 
@@ -337,8 +384,17 @@ namespace sw
 
 		for ( const EntityNode& entity : _listEntityNode )
 		{
+			string prefabGuid = entity._prefabGuid;
+			if ( prefabGuid.empty() && entity._prefab.empty() == false && engine::areEngineServicesBound() )
+			{
+				const Uuid* pGuid = engine::getResourceManager().getAssetDatabase().getGuid( entity._prefab );
+				if ( pGuid != nullptr && pGuid->isNull() == false )
+					prefabGuid = pGuid->toString();
+			}
+
 			BinaryBlob::appendString( listBlob, entity._name );
 			BinaryBlob::appendString( listBlob, entity._prefab );
+			BinaryBlob::appendString( listBlob, prefabGuid );
 			BinaryBlob::appendString( listBlob, entity._embeddedXml );
 		}
 

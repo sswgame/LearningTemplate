@@ -3,6 +3,10 @@
 #include "Editor/Common/EditorPlaySession.h"
 
 #include "Core/Log/Logger.h"
+#include "Core/Uuid/Uuid.h"
+
+#include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorWorkspace.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -24,6 +28,7 @@ namespace sw::editor
 
 			struct ObjectSnapshot
 			{
+				Uuid   _guid{};
 				uint64 _objectId{ 0 };
 				string _name;
 				string _xml;
@@ -80,6 +85,7 @@ namespace sw::editor
 					return;
 
 				GameObjectManager* pObjects = pScene->getObjectManager();
+				EditorContext*	   pContext = EditorContext::get();
 				s_listPlaySnapshots.reserve( pObjects->getAllGameObjects().size() );
 
 				for ( GameObject* pObj : pObjects->getAllGameObjects() )
@@ -90,7 +96,9 @@ namespace sw::editor
 					ObjectSnapshot entry;
 					entry._objectId = pObj->getObjectId();
 					entry._name		= pObj->getName().c_str();
-					entry._xml		= ObjectStateSerializer::saveToXmlString( pObj );
+					if ( pContext != nullptr )
+						entry._guid = pContext->getWorkspace().getOrAssignGuid( entry._objectId );
+					entry._xml = ObjectStateSerializer::saveToXmlString( pObj );
 					if ( entry._xml.empty() == false )
 						s_listPlaySnapshots.push_back( std::move( entry ) );
 				}
@@ -122,6 +130,7 @@ namespace sw::editor
 				}
 
 				GameObjectManager* pObjects = pScene->getObjectManager();
+				EditorContext*	   pContext = EditorContext::get();
 
 				// 1. 플레이 도중 생성된 오브젝트 파괴
 				{
@@ -149,6 +158,9 @@ namespace sw::editor
 				for ( const ObjectSnapshot& snap : s_listPlaySnapshots )
 				{
 					GameObject* pObj = pObjects->findGameObjectById( snap._objectId );
+					if ( pObj == nullptr && snap._guid.isNull() == false && pContext != nullptr )
+						pObj = pContext->getWorkspace().findGameObjectByGuid( snap._guid );
+
 					if ( pObj == nullptr )
 					{
 						pObj = pObjects->createGameObject( hashed_string( snap._name.c_str() ) );
@@ -158,6 +170,9 @@ namespace sw::editor
 							continue;
 						}
 					}
+
+					if ( snap._guid.isNull() == false && pContext != nullptr )
+						pContext->getWorkspace().setGuid( pObj->getObjectId(), snap._guid );
 
 					mapRestored[snap._objectId] = pObj;
 

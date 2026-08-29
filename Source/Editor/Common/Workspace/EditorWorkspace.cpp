@@ -125,6 +125,8 @@ namespace sw::editor
 		, _copiedComponentXml{}
 		, _copiedComponentTypeName{}
 		, _listPrefabIsolationFrame{}
+		, _mapObjectIdToGuid{}
+		, _mapGuidToObjectId{}
 		, _bGizmoLocalSpace{ SW_TRUE }
 		, _bBoneHierarchyPopupOpen{ SW_FALSE }
 		, _bSceneDirty{ SW_FALSE }
@@ -297,11 +299,20 @@ namespace sw::editor
 		if ( pManager == nullptr )
 			return;
 
+		SceneManager* pSceneManager = editor::getService<SceneManager>();
+		if ( pSceneManager == nullptr )
+			return;
+		Scene* pScene = pSceneManager->getActiveScene();
+		if ( pScene == nullptr )
+			return;
+
 		for ( GameObject* pGo : pManager->getAllGameObjects() )
 		{
-			if ( pGo == nullptr || pGo->getPrefabSourcePath().empty() )
+			if ( pGo == nullptr )
 				continue;
-			_mapGameObjectToPrefab[pGo->getObjectId()] = pGo->getPrefabSourcePath();
+			const string& path = pScene->getEntityPrefabPath( pGo->getObjectId() );
+			if ( path.empty() == false )
+				_mapGameObjectToPrefab[pGo->getObjectId()] = path;
 		}
 	}
 
@@ -323,11 +334,9 @@ namespace sw::editor
 		if ( pSceneManager == nullptr )
 			return;
 		Scene* pScene = pSceneManager->getActiveScene();
-		if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
+		if ( pScene == nullptr )
 			return;
-		GameObject* pGo = pScene->getObjectManager()->findGameObjectById( objectId );
-		if ( pGo != nullptr )
-			pGo->setPrefabSourcePath( prefabPath );
+		pScene->setEntityPrefabPath( objectId, prefabPath );
 	}
 
 	const string& EditorWorkspace::getGameObjectPrefabPath( uint64 objectId ) const
@@ -340,12 +349,9 @@ namespace sw::editor
 		if ( pSceneManager == nullptr )
 			return _emptyString;
 		Scene* pScene = pSceneManager->getActiveScene();
-		if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
+		if ( pScene == nullptr )
 			return _emptyString;
-		GameObject* pGo = pScene->getObjectManager()->findGameObjectById( objectId );
-		if ( pGo == nullptr )
-			return _emptyString;
-		return pGo->getPrefabSourcePath();
+		return pScene->getEntityPrefabPath( objectId );
 	}
 
 	bool EditorWorkspace::isGameObjectPrefabInstance( uint64 objectId ) const
@@ -477,5 +483,87 @@ namespace sw::editor
 	{
 		_listPrefabIsolationFrame.clear();
 		_bPrefabIsolation = SW_FALSE;
+	}
+
+	Uuid EditorWorkspace::getOrAssignGuid( uint64 objectId )
+	{
+		if ( objectId == 0 )
+			return Uuid{};
+
+		const auto it = _mapObjectIdToGuid.find( objectId );
+		if ( it != _mapObjectIdToGuid.end() )
+			return it->second;
+
+		const Uuid newGuid			 = Uuid::generate();
+		_mapObjectIdToGuid[objectId] = newGuid;
+		_mapGuidToObjectId[newGuid]	 = objectId;
+		return newGuid;
+	}
+
+	Uuid EditorWorkspace::getGuid( uint64 objectId ) const
+	{
+		if ( objectId == 0 )
+			return Uuid{};
+
+		const auto it = _mapObjectIdToGuid.find( objectId );
+		if ( it != _mapObjectIdToGuid.end() )
+			return it->second;
+		return Uuid{};
+	}
+
+	void EditorWorkspace::setGuid( uint64 objectId, const Uuid& guid )
+	{
+		if ( objectId == 0 || guid.isNull() )
+			return;
+
+		const auto itOld = _mapObjectIdToGuid.find( objectId );
+		if ( itOld != _mapObjectIdToGuid.end() )
+			_mapGuidToObjectId.erase( itOld->second );
+
+		_mapObjectIdToGuid[objectId] = guid;
+		_mapGuidToObjectId[guid]	 = objectId;
+	}
+
+	uint64 EditorWorkspace::findObjectIdByGuid( const Uuid& guid ) const
+	{
+		if ( guid.isNull() )
+			return 0;
+
+		const auto it = _mapGuidToObjectId.find( guid );
+		if ( it != _mapGuidToObjectId.end() )
+			return it->second;
+		return 0;
+	}
+
+	GameObject* EditorWorkspace::findGameObjectByGuid( const Uuid& guid ) const
+	{
+		const uint64 objectId = findObjectIdByGuid( guid );
+		if ( objectId == 0 )
+			return nullptr;
+
+		SceneManager* pSceneManager = editor::getService<SceneManager>();
+		if ( pSceneManager == nullptr )
+			return nullptr;
+		Scene* pScene = pSceneManager->getActiveScene();
+		if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
+			return nullptr;
+
+		return pScene->getObjectManager()->findGameObjectById( objectId );
+	}
+
+	void EditorWorkspace::removeGuid( uint64 objectId )
+	{
+		const auto it = _mapObjectIdToGuid.find( objectId );
+		if ( it != _mapObjectIdToGuid.end() )
+		{
+			_mapGuidToObjectId.erase( it->second );
+			_mapObjectIdToGuid.erase( it );
+		}
+	}
+
+	void EditorWorkspace::clearGuidMap()
+	{
+		_mapObjectIdToGuid.clear();
+		_mapGuidToObjectId.clear();
 	}
 } // namespace sw::editor
