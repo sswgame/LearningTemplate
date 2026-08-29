@@ -1,9 +1,10 @@
-﻿/**
+/**
  * @file EventType.h
  * @brief 엔진 이벤트 타입 ID (게임플레이 이벤트는 GameFramework 해시 ID)
  */
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/atomic.h"
 #include "Core/String/StringUtil.h"
 
 namespace sw
@@ -73,7 +74,7 @@ private:                                                        \
 		/** @brief 등록된 이벤트 타입 ID입니다. */
 		virtual EventTypeId getEventType() const = 0;
 
-		mutable std::atomic<IEvent*> _next;
+		mutable atomic<IEvent*> _next;
 	};
 
 	// ------------------------------------------------------------------------------

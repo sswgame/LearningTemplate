@@ -6,6 +6,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 
 namespace sw
@@ -61,9 +62,9 @@ namespace sw
 		/** @brief 한 블록의 버퍼·용량·원자 오프셋입니다. */
 		struct Block
 		{
-			uint8*				_pData{ nullptr };
-			size_t				_capacity{ 0 };
-			std::atomic<size_t> _offset{ 0 };
+			uint8*		   _pData{ nullptr };
+			size_t		   _capacity{ 0 };
+			atomic<size_t> _offset{ 0 };
 		};
 
 		/**
@@ -74,10 +75,10 @@ namespace sw
 		static constexpr size_t kMaxBlockCount = 64;
 
 	private:
-		size_t				_defaultCapacity;
-		std::atomic<size_t> _blockCount;
-		std::atomic<size_t> _currentBlockIndex;
-		std::atomic<Block*> _arrBlocks[kMaxBlockCount];
-		mutex				_mutex;
+		size_t		   _defaultCapacity;
+		atomic<size_t> _blockCount;
+		atomic<size_t> _currentBlockIndex;
+		atomic<Block*> _arrBlocks[kMaxBlockCount];
+		mutex		   _mutex;
 	};
 } // namespace sw

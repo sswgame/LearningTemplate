@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Concurrency/atomic.h"
 #include "Core/Memory/FrameArenaAllocator.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Task/TaskManager.h"
@@ -288,8 +289,8 @@ SW_TEST_CASE( RenderPassTest, RenderGraphExecuteParallel )
 	sw::TaskManager taskManager;
 	SW_ASSERT_TRUE( taskManager.initialize( 2 ) );
 
-	sw::RenderGraph		graph;
-	std::atomic<uint32> executeCount{ 0 };
+	sw::RenderGraph	   graph;
+	sw::atomic<uint32> executeCount{ 0 };
 
 	auto makeParallelCb = [&executeCount]( const utf8* expectedName ) -> sw::RenderGraphPassExecuteFn
 	{

@@ -5,14 +5,14 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/atomic.h"
+#include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Memory/Memory.h"
 
 #include "RuntimeAPI/Service/IModuleCompiler.h"
 
-#include <atomic>
 #include <chrono>
-#include <mutex>
 #include <thread>
 
 namespace sw
@@ -79,11 +79,11 @@ namespace sw
 		std::thread							  _workerThread;
 		std::chrono::steady_clock::time_point _buildStartTime;
 		string								  _targetName;
-		mutable std::mutex					  _mutex;
-		std::atomic<BuildState>				  _buildState;
-		std::atomic<int32>					  _lastExitCode;
-		std::atomic<float32>				  _lastDurationSec;
-		std::atomic<bool>					  _bIsCompiling;
-		std::atomic<bool>					  _bCancelRequested;
+		mutable mutex						  _mutex;
+		atomic<BuildState>					  _buildState;
+		atomic<int32>						  _lastExitCode;
+		atomic<float32>						  _lastDurationSec;
+		atomic<bool>						  _bIsCompiling;
+		atomic<bool>						  _bCancelRequested;
 	};
 } // namespace sw

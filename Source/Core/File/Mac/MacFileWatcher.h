@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Common/StdHeaders.h"
+#include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
@@ -45,11 +46,11 @@ namespace sw
 									const uint32* pEventFlags, const uint64* pEventIds );
 
 	private:
-		void*			  _pStream{ nullptr };	///< FSEventStreamRef
-		void*			  _pRunLoop{ nullptr }; ///< CFRunLoopRef
-		std::atomic<bool> _bIsWatching{ false };
-		bool			  _bRecursive{ true };
-		string			  _directoryPath;
+		void*		 _pStream{ nullptr };  ///< FSEventStreamRef
+		void*		 _pRunLoop{ nullptr }; ///< CFRunLoopRef
+		atomic<bool> _bIsWatching{ false };
+		bool		 _bRecursive{ true };
+		string		 _directoryPath;
 
 		std::thread				_workerThread;
 		mutex					_eventMutex;

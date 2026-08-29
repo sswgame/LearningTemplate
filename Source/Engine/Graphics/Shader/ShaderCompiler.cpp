@@ -2,6 +2,7 @@
 
 #include "Engine/Graphics/Shader/ShaderCompiler.h"
 
+#include "Core/Concurrency/atomic.h"
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
 
@@ -147,7 +148,7 @@ namespace sw
 	#endif
 #endif
 
-			static inline std::atomic<bool> s_bDiskCacheEnabled{ true };
+			static inline atomic<bool> s_bDiskCacheEnabled{ true };
 
 			static string getShaderCacheDirectory()
 			{

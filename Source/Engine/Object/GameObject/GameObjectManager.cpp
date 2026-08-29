@@ -965,7 +965,7 @@ namespace sw
 			}
 		}
 
-		static std::atomic<uint32> s_fallback{ 0 };
+		static atomic<uint32> s_fallback{ 0 };
 		for ( uint32 fallbackIndex = 0; fallbackIndex < 1024; ++fallbackIndex )
 		{
 			sb.clear();

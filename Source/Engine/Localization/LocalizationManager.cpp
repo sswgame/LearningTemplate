@@ -13,7 +13,6 @@
 #include "Engine/Utility/Resource/ResourceUtil.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
 
-#include <mutex>
 #include <shared_mutex>
 #include <utility>
 

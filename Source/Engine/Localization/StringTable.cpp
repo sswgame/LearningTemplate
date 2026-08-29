@@ -10,7 +10,6 @@
 #include "Engine/Utility/Resource/ResourceUtil.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
 
-#include <mutex>
 #include <shared_mutex>
 
 SW_LOG_CALLER( "StringTable" );

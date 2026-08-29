@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Common/StdHeaders.h"
+#include "Core/Concurrency/atomic.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
@@ -184,7 +185,7 @@ namespace sw
 	}
 
 	/** @brief 헤더 하나를 파싱·코드젠합니다. 최신이면 건너뛰고, 어노테이션이 없으면 비웁니다. */
-	static void processInputFile( const sw::string& inputFile, const CommandLineArgs& args, std::atomic<int32>& errorCount )
+	static void processInputFile( const sw::string& inputFile, const CommandLineArgs& args, sw::atomic<int32>& errorCount )
 	{
 		const sw::string genPath =
 			sw::ParserUtil::makeGeneratedPath( args._outputDir, inputFile, sw::ParserContext::getSharedConfig()._emitCppExtension );
@@ -424,7 +425,7 @@ int32 main( int32 argc, utf8* argv[] )
 		}
 	}
 
-	std::atomic<int32> errorCount{ 0 };
+	sw::atomic<int32> errorCount{ 0 };
 
 	uint32 workerCount = std::thread::hardware_concurrency();
 	if ( workerCount == 0 )

@@ -3,6 +3,7 @@
 #include "Core/Concurrency/ConcurrentQueue.h"
 #include "Core/Concurrency/LockFreeObjectPool.h"
 #include "Core/Concurrency/LockFreeQueue.h"
+#include "Core/Concurrency/atomic.h"
 #include "Core/Container/DynamicBitset.h"
 #include "Core/Container/string.h"
 
@@ -238,10 +239,10 @@ SW_TEST_CASE( Core_DataStructure, ConcurrentQueueMultiThread )
 	SW_EXPECT_TRUE( queue.empty() );
 	SW_EXPECT_EQUAL( 0u, queue.size() );
 
-	constexpr int32	   kItemsPerThread = 500;
-	constexpr int32	   kNumProducers   = 4;
-	constexpr int32	   kNumConsumers   = 4;
-	std::atomic<int32> totalSumReceived{ 0 };
+	constexpr int32	  kItemsPerThread = 500;
+	constexpr int32	  kNumProducers	  = 4;
+	constexpr int32	  kNumConsumers	  = 4;
+	sw::atomic<int32> totalSumReceived{ 0 };
 
 	sw::vector<std::thread> producers;
 	for ( int32 producerIndex = 0; producerIndex < kNumProducers; ++producerIndex )
@@ -402,7 +403,7 @@ SW_TEST_CASE( Core_DataStructure, LockFreeObjectPoolConcurrent )
 	constexpr int32	 kNumThreads = 4;
 
 	sw::LockFreeObjectPool<int32, kCapacity> pool;
-	std::atomic<int32>						 successfulAcquires{ 0 };
+	sw::atomic<int32>						 successfulAcquires{ 0 };
 
 	sw::vector<std::thread> workers;
 	for ( int32 threadIndex = 0; threadIndex < kNumThreads; ++threadIndex )

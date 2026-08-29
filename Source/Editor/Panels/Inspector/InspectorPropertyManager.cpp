@@ -2,7 +2,7 @@
 
 #include "Editor/Panels/Inspector/InspectorPropertyManager.h"
 
-#include "Core/Concurrency/Atomic.h"
+#include "Core/Concurrency/atomic.h"
 
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
@@ -282,7 +282,7 @@ namespace sw::editor
 		public:
 			bool draw( void* pInstance, const PropertyInfo& prop ) override
 			{
-				AtomicBool* pPtr = prop.getValuePtr<AtomicBool>( pInstance );
+				atomic<bool>* pPtr = prop.getValuePtr<atomic<bool>>( pInstance );
 				if ( pPtr == nullptr )
 					return true;
 
@@ -519,7 +519,7 @@ namespace sw::editor
 		registerType( "float32", make_unique<Float32Property>() );
 		registerType( "float64", make_unique<Float64Property>() );
 		registerType( "bool", make_unique<BoolProperty>() );
-		registerType( "AtomicBool", make_unique<AtomicBoolProperty>() );
+		registerType( "atomic_bool", make_unique<AtomicBoolProperty>() );
 		registerType( "string", make_unique<StringProperty>() );
 		registerType( "float3", make_unique<Float3Property>() );
 		registerType( "float2", make_unique<Float2Property>() );

@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Concurrency/atomic.h"
 #include "Core/Task/TaskFuture.h"
 #include "Core/Task/TaskManager.h"
 
@@ -11,10 +12,10 @@ namespace sw
 {
 	namespace
 	{
-		static std::atomic<int32> s_taskExecOrder{ 0 };
-		static int32			  s_orderA{ 0 };
-		static int32			  s_orderB{ 0 };
-		static int32			  s_orderC{ 0 };
+		static atomic<int32> s_taskExecOrder{ 0 };
+		static int32		 s_orderA{ 0 };
+		static int32		 s_orderB{ 0 };
+		static int32		 s_orderC{ 0 };
 
 		/** @brief 태스크 A 실행 순서를 기록합니다. */
 		void taskFuncA()
@@ -160,14 +161,14 @@ SW_TEST_CASE( Engine_Task, ParallelTask )
 	sw::TaskManager& taskMgr = sw::engine::getTaskManager();
 	taskMgr.initialize();
 
-	constexpr uint32					   kElementCount = 100;
-	static sw::vector<std::atomic<uint32>> s_results( kElementCount );
+	constexpr uint32					  kElementCount = 100;
+	static sw::vector<sw::atomic<uint32>> s_results( kElementCount );
 	for ( uint32 elementIndex = 0; elementIndex < kElementCount; ++elementIndex )
 	{
 		s_results[elementIndex] = 0;
 	}
 
-	static std::atomic<uint32>* s_resultsPtr = s_results.data();
+	static sw::atomic<uint32>* s_resultsPtr = s_results.data();
 
 	struct ParallelContext
 	{
@@ -198,7 +199,7 @@ SW_TEST_CASE( Engine_Task, StagedTask )
 	sw::TaskManager& taskMgr = sw::engine::getTaskManager();
 	taskMgr.initialize();
 
-	static std::atomic<uint32> s_stageProgress{ 0 };
+	static sw::atomic<uint32> s_stageProgress{ 0 };
 	s_stageProgress = 0;
 
 	struct StageContext
@@ -299,8 +300,8 @@ SW_TEST_CASE( Engine_Task, WorkStealingParallelTask )
 	sw::TaskManager& taskMgr = sw::engine::getTaskManager();
 	taskMgr.initialize();
 
-	constexpr uint32	count = 50;
-	std::atomic<uint32> totalSum{ 0 };
+	constexpr uint32   count = 50;
+	sw::atomic<uint32> totalSum{ 0 };
 
 	for ( uint32 taskIndex = 0; taskIndex < count; ++taskIndex )
 	{
@@ -327,8 +328,8 @@ SW_TEST_CASE( Engine_Task, TaskCombinatorWhenAll )
 	sw::TaskManager& taskMgr = sw::engine::getTaskManager();
 	taskMgr.initialize();
 
-	std::atomic<int32> completedCount{ 0 };
-	bool			   whenAllExecuted{ false };
+	sw::atomic<int32> completedCount{ 0 };
+	bool			  whenAllExecuted{ false };
 
 	sw::TaskHandle t1 = taskMgr.emplaceTask( SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&completedCount]()
 	{ completedCount.fetch_add( 1 ); } ) );
@@ -438,7 +439,7 @@ SW_TEST_CASE( Engine_Task, WaitAllWithTimeout )
 	sw::TaskManager& taskMgr = sw::engine::getTaskManager();
 	taskMgr.initialize();
 
-	std::atomic<bool> bCompleted{ false };
+	sw::atomic<bool> bCompleted{ false };
 
 	sw::TaskHandle handle = taskMgr.emplaceTask( SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&bCompleted]()
 	{

@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Common/StdHeaders.h"
+#include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
@@ -45,7 +46,7 @@ namespace sw
 		void workerThreadMain();
 
 		HANDLE					_hDirectory;
-		std::atomic<bool>		_bIsWatching;
+		atomic<bool>			_bIsWatching;
 		bool					_bRecursive;
 		string					_directoryPath;
 		std::thread				_workerThread;

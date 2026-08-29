@@ -3,10 +3,10 @@
  * @brief C++17 호환 Fluent 비동기 TaskFuture<T> 및 TaskPromise<T> 파이프라인
  */
 #pragma once
+#include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Task/TaskTypes.h"
 
-#include <atomic>
 #include <condition_variable>
 #include <functional>
 #include <memory>
@@ -27,8 +27,8 @@ namespace sw
 		{
 			mutable mutex									  _mutex;
 			mutable std::condition_variable_any				  _cv;
-			std::atomic<bool>								  _bReady{ false };
-			std::atomic<bool>								  _bHasValue{ false };
+			atomic<bool>									  _bReady{ false };
+			atomic<bool>									  _bHasValue{ false };
 			std::aligned_storage_t<sizeof( T ), alignof( T )> _storage;
 			Delegate<void( const T& )>						  _continuation;
 
@@ -143,7 +143,7 @@ namespace sw
 		{
 			mutable mutex						_mutex;
 			mutable std::condition_variable_any _cv;
-			std::atomic<bool>					_bReady{ false };
+			atomic<bool>						_bReady{ false };
 			Delegate<void()>					_continuation;
 
 			SharedFutureState()
@@ -483,8 +483,8 @@ namespace sw
 
 		struct WhenAnyContext
 		{
-			std::atomic<bool> _bTriggered{ false };
-			TaskPromise<T>	  _promise{};
+			atomic<bool>   _bTriggered{ false };
+			TaskPromise<T> _promise{};
 		};
 
 		auto pCtx = sw::make_shared<WhenAnyContext>();

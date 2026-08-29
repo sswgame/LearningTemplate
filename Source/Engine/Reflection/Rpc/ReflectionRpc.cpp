@@ -2,7 +2,7 @@
 
 #include "Engine/Reflection/Rpc/ReflectionRpc.h"
 
-#include "Core/Concurrency/Atomic.h"
+#include "Core/Concurrency/atomic.h"
 #include "Core/Container/ObjectHandle.h"
 
 #include "Engine/Common/EngineServices.h"

@@ -3,6 +3,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Core/Common/PlatformOsHeaders.h"
+#include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
@@ -16,7 +17,7 @@ namespace sw
 	{
 
 		/** @brief 프로세스 전역 활성 로그 싱크 포인터 */
-		std::atomic<ILogSink*> s_globalSink{ nullptr };
+		atomic<ILogSink*> s_globalSink{ nullptr };
 
 	} // namespace
 

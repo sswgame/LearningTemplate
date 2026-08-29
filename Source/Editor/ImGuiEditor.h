@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Common/StdHeaders.h"
+#include "Core/Concurrency/atomic.h"
 
 #include "Editor/Common/Backend/EditorDrawDataSnapshot.h"
 #include "Editor/Common/Gui/EditorDockLayout.h"
@@ -85,8 +86,8 @@ namespace sw::editor
 		unique_ptr<EditorContext>		  _editorContext;
 		EditorDockLayout				  _dockLayout;
 		EditorDrawDataSnapshot			  _arrDrawSnapshot[2];
-		std::atomic<uint32>				  _publishedDrawSlot;
-		std::atomic<uint32>				  _inFlightDrawSlot;
+		atomic<uint32>					  _publishedDrawSlot;
+		atomic<uint32>					  _inFlightDrawSlot;
 
 		uint8				   _bInitialized  : 1;
 		[[maybe_unused]] uint8 _reservedFlags : 7;

@@ -13,10 +13,9 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/atomic.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
-
-#include <atomic>
 
 namespace sw
 {
@@ -102,13 +101,13 @@ namespace sw
 		static string makeSavePath( string_view absoluteFolder, string_view fileName );
 
 	private:
-		static std::atomic<bool> _s_bInitialize;			///< initialize() 완료 여부
-		static string			 _s_projectFolderPath;		///< 프로젝트 루트
-		static string			 _s_resourceRootFolderPath; ///< Resource/ (표시용)
-		static string			 _s_engineFolderPath;		///< Resource/engine
-		static string			 _s_commonFolderPath;		///< Resource/common
-		static string			 _s_gameFolderPath;			///< Resource/game
-		static string			 _s_editorFolderPath;		///< Resource/editor
-		static vector<string>	 _s_resourceFolderList;		///< getResourcePath 검색 루트들
+		static atomic<bool>	  _s_bInitialize;			 ///< initialize() 완료 여부
+		static string		  _s_projectFolderPath;		 ///< 프로젝트 루트
+		static string		  _s_resourceRootFolderPath; ///< Resource/ (표시용)
+		static string		  _s_engineFolderPath;		 ///< Resource/engine
+		static string		  _s_commonFolderPath;		 ///< Resource/common
+		static string		  _s_gameFolderPath;		 ///< Resource/game
+		static string		  _s_editorFolderPath;		 ///< Resource/editor
+		static vector<string> _s_resourceFolderList;	 ///< getResourcePath 검색 루트들
 	};
 } // namespace sw

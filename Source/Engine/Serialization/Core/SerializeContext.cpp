@@ -2,7 +2,7 @@
 
 #include "Engine/Serialization/Core/SerializeContext.h"
 
-#include "Core/Concurrency/Atomic.h"
+#include "Core/Concurrency/atomic.h"
 #include "Core/Container/ObjectHandle.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/StringBuilder.h"
@@ -22,7 +22,7 @@ namespace sw
 			static void regBuiltinBin( SerializeContext& ctx, const utf8* pName )
 			{
 				if constexpr ( std::is_same_v<T, string> || std::is_same_v<T, hashed_string> ||
-							   std::is_same_v<T, AtomicBool> || std::is_same_v<T, TagID> )
+							   std::is_same_v<T, atomic<bool>> || std::is_same_v<T, TagID> )
 					return;
 				auto writeFn = []( const void* pPtr, vector<uint8>& listBuf )
 				{
@@ -222,18 +222,18 @@ namespace sw
 
 			BinaryWriteFn atomicBoolWriteBin = []( const void* pPtr, vector<uint8>& listBuf )
 			{
-				const uint8 flag = static_cast<const AtomicBool*>( pPtr )->load() ? 1 : 0;
+				const uint8 flag = static_cast<const atomic<bool>*>( pPtr )->load() ? 1 : 0;
 				listBuf.push_back( flag );
 			};
 			BinaryReadFn atomicBoolReadBin = []( void* pPtr, const uint8* pData, size_t size, size_t& offset ) -> bool
 			{
 				if ( offset + sizeof( uint8 ) > size )
 					return false;
-				static_cast<AtomicBool*>( pPtr )->store( pData[offset] != 0 );
+				static_cast<atomic<bool>*>( pPtr )->store( pData[offset] != 0 );
 				offset += sizeof( uint8 );
 				return true;
 			};
-			ctx.registerBinaryHandler( hashed_string( PredefinedNameType::NameType_AtomicBool ), atomicBoolWriteBin, atomicBoolReadBin );
+			ctx.registerBinaryHandler( hashed_string( PredefinedNameType::NameType_atomic_bool ), atomicBoolWriteBin, atomicBoolReadBin );
 
 			BinaryWriteFn tagIdWriteBin = []( const void* pPtr, vector<uint8>& listBuf )
 			{
@@ -291,13 +291,13 @@ namespace sw
 			ctx.registerTextHandler( hashed_string( PredefinedNameType::NameType_bool ), boolWrite, boolRead );
 
 			auto atomicBoolWrite = []( const void* pPtr )
-			{ return static_cast<const AtomicBool*>( pPtr )->load() ? "true" : "false"; };
+			{ return static_cast<const atomic<bool>*>( pPtr )->load() ? "true" : "false"; };
 			auto atomicBoolRead = []( void* pPtr, string_view strView )
 			{
-				static_cast<AtomicBool*>( pPtr )->store( strView == "true" || strView == "1" );
+				static_cast<atomic<bool>*>( pPtr )->store( strView == "true" || strView == "1" );
 				return true;
 			};
-			ctx.registerTextHandler( hashed_string( PredefinedNameType::NameType_AtomicBool ), atomicBoolWrite, atomicBoolRead );
+			ctx.registerTextHandler( hashed_string( PredefinedNameType::NameType_atomic_bool ), atomicBoolWrite, atomicBoolRead );
 
 			auto tagIdWrite = []( const void* pPtr ) -> string
 			{

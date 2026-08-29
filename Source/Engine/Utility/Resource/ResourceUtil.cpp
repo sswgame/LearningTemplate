@@ -426,7 +426,7 @@ namespace sw
 		return result;
 	}
 
-	std::atomic<bool> ResourceUtil::_s_bInitialize{ false };
+	atomic<bool> ResourceUtil::_s_bInitialize{ false };
 
 	string ResourceUtil::_s_projectFolderPath;
 

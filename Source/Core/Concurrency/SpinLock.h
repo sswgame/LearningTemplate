@@ -5,9 +5,8 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
-
-#include <atomic>
 
 namespace sw
 {
@@ -64,7 +63,7 @@ namespace sw
 		}
 
 	private:
-		std::atomic<bool> _locked{ false };
+		atomic<bool> _locked{ false };
 	};
 
 } // namespace sw

@@ -5,7 +5,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
-#include "Core/Concurrency/Atomic.h"
+#include "Core/Concurrency/atomic.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
@@ -17,7 +17,6 @@
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include <atomic>
 #include <tuple>
 #include <utility>
 
@@ -264,7 +263,7 @@ namespace sw
 		/** @brief 컴포넌트가 SceneComponent 루트일 경우 매니저에서 해제합니다. */
 		void unregisterComponentIfSceneRoot( Component* pComp );
 
-		static std::atomic<uint64> _s_nextObjectId; ///< 다음 발급할 고유 ID 카운터
+		static atomic<uint64> _s_nextObjectId; ///< 다음 발급할 고유 ID 카운터
 
 	private:
 		uint64 _objectId; ///< 오브젝트 고유 시리얼 번호
@@ -273,9 +272,9 @@ namespace sw
 		GameObjectManager* _pOwnerManager; ///< registerGameObject 시 설정되는 소유 매니저
 		uint32			   _managerIndex;  ///< Manager의 _gameObjects 내 인덱스
 		PROPERTY()
-		AtomicBool		  _bActive;				 ///< 자체 활성화 비트
-		std::atomic<bool> _bIsActiveInHierarchy; ///< 계층 반영 최종 활성 비트
-		std::atomic<bool> _bIsPendingKill;		 ///< 지연 삭제 대기 묘비 플래그
+		atomic<bool> _bActive;				///< 자체 활성화 비트
+		atomic<bool> _bIsActiveInHierarchy; ///< 계층 반영 최종 활성 비트
+		atomic<bool> _bIsPendingKill;		///< 지연 삭제 대기 묘비 플래그
 		PROPERTY()
 		vector<Component*> _listComponent; ///< 이 액터가 소유한 컴포넌트
 	};

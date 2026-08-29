@@ -4,10 +4,7 @@
  */
 #pragma once
 #include "Core/Common/Macros.h"
-
-#if SW_DEBUG
-	#include <atomic>
-#endif
+#include "Core/Concurrency/atomic.h"
 
 namespace sw
 {
@@ -82,7 +79,7 @@ namespace sw
 
 		// 하위 16비트: Reader Count (최대 65535)
 		// 상위 16비트: Writer Count (최대 65535)
-		std::atomic<uint32> _state{ 0 };
+		atomic<uint32> _state{ 0 };
 #endif
 	};
 

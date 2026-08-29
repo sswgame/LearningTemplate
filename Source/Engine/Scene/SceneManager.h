@@ -1,11 +1,11 @@
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Task/TaskTypes.h"
 
-#include <atomic>
 #include <memory>
 
 namespace sw
@@ -79,8 +79,8 @@ namespace sw
 		{
 			mutex			  _mutex;
 			unique_ptr<Scene> _scene;
-			std::atomic<bool> _bReady{ false };
-			std::atomic<bool> _bAccepting{ true };
+			atomic<bool>	  _bReady{ false };
+			atomic<bool>	  _bAccepting{ true };
 		};
 
 		vector<unique_ptr<Scene>> _listLoadedScene;
@@ -91,7 +91,7 @@ namespace sw
 
 		shared_ptr<AsyncLoadSlot> _asyncLoad;
 		string					  _queuedPath;
-		std::atomic<bool>		  _bLoadInFlight;
+		atomic<bool>			  _bLoadInFlight;
 		TaskHandle				  _loadHandle;
 		bool					  _bInitialized;
 	};

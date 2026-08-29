@@ -539,5 +539,5 @@ namespace sw
 		}
 	}
 
-	std::atomic<uint64> GameObject::_s_nextObjectId{ 1 };
+	atomic<uint64> GameObject::_s_nextObjectId{ 1 };
 } // namespace sw

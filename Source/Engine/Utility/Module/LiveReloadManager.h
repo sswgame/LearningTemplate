@@ -3,6 +3,7 @@
  * @brief 모듈 공유 라이브러리 섀도 복사 기반 핫 리로드 (+ 의존 캐스케이드)
  */
 #pragma once
+#include "Core/Concurrency/atomic.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
@@ -150,9 +151,9 @@ namespace sw
 			uint64									   _loadedSourceMtime;
 			uint64									   _debounceMtime;
 			std::chrono::steady_clock::time_point	   _debounceSince;
-			std::atomic<bool>						   _bPendingReload;
-			std::atomic<bool>						   _bMtimeDebouncing;
-			std::atomic<bool>						   _bForceReload;
+			atomic<bool>							   _bPendingReload;
+			atomic<bool>							   _bMtimeDebouncing;
+			atomic<bool>							   _bForceReload;
 
 			/** @brief 원자 플래그 끈 기본값. */
 			ModuleContext() noexcept;

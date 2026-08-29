@@ -10,9 +10,8 @@ namespace sw
 {
 	namespace
 	{
-
 		/** @brief 프로세스 전역 활성 데드락 감지기 인스턴스 포인터 */
-		std::atomic<DeadlockDetector*> s_activeDetector{ nullptr };
+		atomic<DeadlockDetector*> s_activeDetector{ nullptr };
 
 	} // namespace
 
@@ -74,7 +73,7 @@ namespace sw
 		CallStack		currentStack;
 		CallStackCapture::capture( currentStack, 2 );
 
-		std::scoped_lock<std::mutex> lock{ _mutex };
+		std::scoped_lock<mutex> lock{ _mutex };
 
 		ThreadState& state		= _mapThreadState[tid];
 		state._threadId			= tid;
@@ -98,9 +97,9 @@ namespace sw
 
 		std::thread::id tid = std::this_thread::get_id();
 
-		std::scoped_lock<std::mutex> lock{ _mutex };
-		ThreadState&				 state = _mapThreadState[tid];
-		state._pWaitingLock				   = nullptr;
+		std::scoped_lock<sw::mutex> lock{ _mutex };
+		ThreadState&				state = _mapThreadState[tid];
+		state._pWaitingLock				  = nullptr;
 		state._listHeldLock.push_back( pLock );
 		state._mapAcquiredCallStack[pLock] = state._waitingCallStack; // 획득 시점 스택은 대기 시작 시점의 스택과 동일
 
@@ -117,8 +116,8 @@ namespace sw
 
 		std::thread::id tid = std::this_thread::get_id();
 
-		std::scoped_lock<std::mutex> lock{ _mutex };
-		ThreadState&				 state = _mapThreadState[tid];
+		std::scoped_lock<mutex> lock{ _mutex };
+		ThreadState&			state = _mapThreadState[tid];
 
 		auto it = std::find( state._listHeldLock.begin(), state._listHeldLock.end(), pLock );
 		if ( it != state._listHeldLock.end() )

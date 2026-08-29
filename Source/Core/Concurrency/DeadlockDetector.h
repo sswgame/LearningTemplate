@@ -5,12 +5,11 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/atomic.h"
+#include "Core/Concurrency/mutex.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/CallStackCapture.h"
-
-#include <mutex>
-#include <thread>
 
 namespace sw
 {
@@ -74,8 +73,8 @@ namespace sw
 		/** @brief 사이클에 참여한 스레드의 대기/보유 락을 로그로 남깁니다. */
 		void dumpDeadlock( const vector<std::thread::id>& cycle );
 
-		std::atomic<bool>							_bInitialized;
-		std::mutex									_mutex;
+		atomic<bool>								_bInitialized;
+		mutex										_mutex;
 		unordered_map<std::thread::id, ThreadState> _mapThreadState;
 		unordered_map<void*, std::thread::id>		_mapLockOwner;
 	};

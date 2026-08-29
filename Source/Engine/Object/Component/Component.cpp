@@ -11,7 +11,7 @@ namespace sw
 {
 	Component::Component()
 		: _pOwner{ nullptr }
-		, _componentId{ _s_nextComponentId++ }
+		, _componentId{ _s_nextComponentId.fetch_add( 1, std::memory_order_relaxed ) }
 		, _componentName{}
 		, _tickGroup{ TickGroup::DuringPhysics }
 		, _bActive{ true }
@@ -145,6 +145,6 @@ namespace sw
 			ComponentDefaults::applyDefaults( this, *pTypeInfo );
 	}
 
-	std::atomic<uint64> Component::_s_nextComponentId = 1;
+	atomic<uint64> Component::_s_nextComponentId = 1;
 
 } // namespace sw

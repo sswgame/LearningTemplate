@@ -4,9 +4,9 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/atomic.h"
 #include "Core/Memory/Memory.h"
 
-#include <atomic>
 #include <memory>
 
 namespace sw
@@ -28,7 +28,7 @@ namespace sw
 				capacity = 8;
 
 			_capacityMask = capacity - 1;
-			_pBuffer	  = sw_new std::atomic<T>[capacity];
+			_pBuffer	  = sw_new atomic<T>[capacity];
 			_top.store( 0, std::memory_order_relaxed );
 			_bottom.store( 0, std::memory_order_relaxed );
 		}
@@ -115,9 +115,9 @@ namespace sw
 		}
 
 	private:
-		std::atomic<uint64> _top;
-		std::atomic<uint64> _bottom;
-		std::atomic<T>*		_pBuffer;
-		uint64				_capacityMask;
+		atomic<uint64> _top;
+		atomic<uint64> _bottom;
+		atomic<T>*	   _pBuffer;
+		uint64		   _capacityMask;
 	};
 } // namespace sw

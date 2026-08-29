@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
@@ -257,13 +258,13 @@ namespace sw
 
 		vector<SceneComponent*>	  _listRootSceneComponent;
 		mutable std::shared_mutex _mutex;
-		std::atomic<uint64>		  _nextId;
+		atomic<uint64>			  _nextId;
 
 		PhysicsWorld _physicsWorld;
 
-		std::atomic<bool>				_bParallelTransformReadOnly;
-		std::atomic<bool>				_bTicking;
-		std::atomic<bool>				_bIsTickWavesDirty;
+		atomic<bool>					_bParallelTransformReadOnly;
+		atomic<bool>					_bTicking;
+		atomic<bool>					_bIsTickWavesDirty;
 		vector<vector<ComponentHandle>> _listCachedTickWave;
 		mutex							_deferredTransformMutex;
 		vector<TransformUpdateDelegate> _listDeferredTransformUpdate;
@@ -276,7 +277,7 @@ namespace sw
 		unordered_map<hashed_string, hashed_string>			   _mapFactoryModule;
 		hashed_string										   _activeModuleName;
 
-		std::atomic<uint64> _dirtyTransformGeneration;
-		uint64				_lastFlushedTransformGeneration;
+		atomic<uint64> _dirtyTransformGeneration;
+		uint64		   _lastFlushedTransformGeneration;
 	};
 } // namespace sw

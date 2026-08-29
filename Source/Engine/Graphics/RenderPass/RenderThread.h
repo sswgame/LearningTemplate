@@ -5,6 +5,7 @@
  *          bind()만 (start 없음) → submit()이 호출 스레드에서 executeInline
  */
 #pragma once
+#include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Memory/LinearAllocator.h"
 
@@ -86,16 +87,16 @@ namespace sw
 		PresentHookDelegate _presentHook;
 		PresentHookDelegate _postPresentHook;
 		std::thread			_thread;
-		std::atomic<bool>	_bRunning;
-		std::atomic<bool>	_bStop;
-		std::atomic<bool>	_bContextBound; ///< bindGraphicsContext succeeded on current executor
+		atomic<bool>		_bRunning;
+		atomic<bool>		_bStop;
+		atomic<bool>		_bContextBound; ///< bindGraphicsContext succeeded on current executor
 
 		static constexpr uint32 _s_kRingCapacity{ 3 }; // Triple buffering
 		// sw::array 대신 std::array 사용 (Game Thread와 Render Thread 간의 동시 접근 시 DataRaceDetector 오탐 방지)
 		std::array<RenderFramePacket, _s_kRingCapacity> _arrRingBuffer;
 		LinearAllocator									_arrFrameAllocators[_s_kRingCapacity];
-		std::atomic<uint32>								_head; ///< 생산자(GT)가 씀
-		std::atomic<uint32>								_tail; ///< Written by consumer (RT)
+		atomic<uint32>									_head; ///< 생산자(GT)가 씀
+		atomic<uint32>									_tail; ///< Written by consumer (RT)
 
 		mutex						_mutex;
 		std::condition_variable_any _cvProduce;

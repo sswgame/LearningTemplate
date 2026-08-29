@@ -54,9 +54,9 @@ namespace sw
 				std::fputc( '\n', stderr );
 			}
 
-			static inline thread_local bool			   t_bIsInsideProfiler = false;
-			static inline std::atomic<MemoryProfiler*> s_activeProfiler{ nullptr };
-			static inline thread_local MemoryTag	   t_currentMemoryTag = MemoryTag::Unknown;
+			static inline thread_local bool		  t_bIsInsideProfiler = false;
+			static inline atomic<MemoryProfiler*> s_activeProfiler{ nullptr };
+			static inline thread_local MemoryTag  t_currentMemoryTag = MemoryTag::Unknown;
 		};
 	} // namespace
 } // namespace sw

@@ -36,7 +36,7 @@ SW_REFLECT_BUILTIN_TYPE( float4x4, sw::float4x4, none, sw, _ )
 SW_REFLECT_BUILTIN_TYPE( quaternion, sw::quaternion, none, sw, _ )
 SW_REFLECT_BUILTIN_TYPE( ObjectHandle, sw::ObjectHandle, none, sw, _ )
 SW_REFLECT_BUILTIN_TYPE( ComponentHandle, sw::ComponentHandle, none, sw, sw::ComponentHandle )
-SW_REFLECT_BUILTIN_TYPE( AtomicBool, sw::AtomicBool, none, sw, Atomic<bool> )
+SW_REFLECT_BUILTIN_TYPE( atomic_bool, sw::atomic<bool>, none, sw, atomic<bool>, sw::atomic<bool> )
 SW_REFLECT_BUILTIN_TYPE( TagID, sw::TagID, none, sw, _ )
 
 // -----------------------------------------------------------------------------

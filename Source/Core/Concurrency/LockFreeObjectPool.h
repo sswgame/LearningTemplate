@@ -117,6 +117,6 @@ namespace sw
 	private:
 		alignas( alignof( T ) ) std::array<uint8, Capacity * sizeof( T )> _arrStorage;
 		ConcurrentQueue<T*, Capacity> _freeQueue; ///< 다중 생산자·다중 소비자 — acquire/release 스레드 안전
-		std::atomic<uint32>			  _activeCount{ 0 };
+		atomic<uint32>				  _activeCount{ 0 };
 	};
 } // namespace sw

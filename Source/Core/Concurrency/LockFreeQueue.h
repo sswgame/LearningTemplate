@@ -5,9 +5,7 @@
 #pragma once
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
-#include "Core/Container/array.h"
-
-#include <array>
+#include "Core/Concurrency/atomic.h"
 
 namespace sw
 {
@@ -103,7 +101,7 @@ namespace sw
 		// SPSC 환경에서 push(생산자)와 pop(소비자)이 서로 다른 스레드에서 _buffer에 동시 접근할 때
 		// sw::array의 DataRaceDetector 오탐(Data Race Error)을 방지하기 위해 std::array를 사용합니다.
 		std::array<T, Capacity> _buffer{};
-		alignas( 64 ) std::atomic<uint32> _head{ 0 };
-		alignas( 64 ) std::atomic<uint32> _tail{ 0 };
+		alignas( 64 ) atomic<uint32> _head{ 0 };
+		alignas( 64 ) atomic<uint32> _tail{ 0 };
 	};
 } // namespace sw

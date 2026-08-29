@@ -173,7 +173,7 @@ namespace sw
 		/** @brief 한 채널의 lock-free 이벤트 연결 리스트 헤드입니다. */
 		struct ChannelEventList
 		{
-			std::atomic<IEvent*> _pHead{ nullptr };
+			atomic<IEvent*> _pHead{ nullptr };
 		};
 
 		/** @brief 타입 소거된 채널 방송. 람다 없이 함수 포인터 + 멀티캐스트입니다. */
@@ -225,8 +225,8 @@ namespace sw
 		unordered_map<std::pair<hashed_string, EventTypeId>, ChannelDispatchEntry, HashPair> _mapChannelDispatchTable;
 		unordered_map<hashed_string, unique_ptr<ChannelEventList>>							 _mapChannelQueue;
 
-		LinearAllocator	   _arrFrameAllocators[2];
-		vector<void*>	   _listOverflowAllocations[2];
-		std::atomic<int32> _activeAllocatorIndex;
+		LinearAllocator _arrFrameAllocators[2];
+		vector<void*>	_listOverflowAllocations[2];
+		atomic<int32>	_activeAllocatorIndex;
 	};
 } // namespace sw

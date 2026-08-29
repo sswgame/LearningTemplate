@@ -2,6 +2,7 @@
 
 #include "Engine/Reflection/ReflectionCore.h"
 
+#include "Core/Concurrency/atomic.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 
@@ -417,7 +418,7 @@ namespace sw
 	}
 	TypeRegistry::~TypeRegistry() = default;
 
-	static std::atomic<uint32> _s_typeIdCounter{ 0 }; // Local Runtime Index (Not Serialized, 100% Cross-Platform Safe)
+	static atomic<uint32> _s_typeIdCounter{ 0 }; // Local Runtime Index (Not Serialized, 100% Cross-Platform Safe)
 
 	void TypeRegistry::registerClass( const TypeInfo& info )
 	{

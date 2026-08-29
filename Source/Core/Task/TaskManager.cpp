@@ -2,6 +2,7 @@
 
 #include "Core/Task/TaskManager.h"
 
+#include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
@@ -68,8 +69,8 @@ namespace sw
 
 	struct SharedTaskCallable
 	{
-		TaskCallable	   _callable;
-		std::atomic<int32> _refCount{ 0 };
+		TaskCallable  _callable;
+		atomic<int32> _refCount{ 0 };
 
 		static SharedTaskCallable* create( TaskCallable callable, int32 refCount )
 		{
@@ -178,19 +179,19 @@ namespace sw
 		SharedTaskCallable* _pSharedCallable{ nullptr };
 		weak_ptr<StageNode> _parentStage;
 
-		uint32			   _rangeStart{ 0 };
-		uint32			   _rangeEnd{ 0 };
-		std::atomic<int32> _unresolvedDependencies{ 1 }; // 1 = Builder Dependency
+		uint32		  _rangeStart{ 0 };
+		uint32		  _rangeEnd{ 0 };
+		atomic<int32> _unresolvedDependencies{ 1 }; // 1 = Builder Dependency
 
-		TaskThreadAffinity	   _affinity = TaskThreadAffinity::Any;
-		TaskPriority		   _priority{ TaskPriority::Normal };
-		std::atomic<TaskState> _state{ TaskState::Pending };
-		std::atomic<bool>	   _bCancelled{ false };
+		TaskThreadAffinity _affinity = TaskThreadAffinity::Any;
+		TaskPriority	   _priority{ TaskPriority::Normal };
+		atomic<TaskState>  _state{ TaskState::Pending };
+		atomic<bool>	   _bCancelled{ false };
 
-		TaskManager*	   _pOwner{ nullptr };
-		TaskNode*		   _pParent{ nullptr };
-		std::atomic<int32> _activeChildren{ 0 };
-		std::atomic<int32> _refCount{ 1 };
+		TaskManager*  _pOwner{ nullptr };
+		TaskNode*	  _pParent{ nullptr };
+		atomic<int32> _activeChildren{ 0 };
+		atomic<int32> _refCount{ 1 };
 	};
 
 	static void setTaskName( TaskNode* pNode, string_view name )
@@ -365,7 +366,7 @@ namespace sw
 
 		string						_name;
 		vector<TaskNode*>			_listTasks;
-		std::atomic<uint32>			_remainingTasks{ 0 };
+		atomic<uint32>				_remainingTasks{ 0 };
 		mutex						_mutex;
 		std::condition_variable_any _cv;
 	};
@@ -973,8 +974,8 @@ namespace sw
 		if ( tasks.empty() )
 			return emplaceTask( "WhenAnyContinuation", continuation, affinity );
 
-		shared_ptr<std::atomic<bool>> firedFlag = sw::make_shared<std::atomic<bool>>( false );
-		TaskHandle					  nextTask	= emplaceTask( "WhenAnyContinuation", continuation, affinity );
+		shared_ptr<atomic<bool>> firedFlag = sw::make_shared<atomic<bool>>( false );
+		TaskHandle				 nextTask  = emplaceTask( "WhenAnyContinuation", continuation, affinity );
 
 		// 1 for user submit(), 1 for trigger completion
 		nextTask.getNode()->_unresolvedDependencies.store( 2, std::memory_order_relaxed );

@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/atomic.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/String/StringUtil.h"
@@ -413,10 +414,10 @@ namespace sw
 	 */
 	struct SW_API CancellationToken
 	{
-		shared_ptr<std::atomic<bool>> _pCancelled;
+		shared_ptr<atomic<bool>> _pCancelled;
 
 		CancellationToken()
-			: _pCancelled{ sw::make_shared<std::atomic<bool>>( false ) } {}
+			: _pCancelled{ sw::make_shared<atomic<bool>>( false ) } {}
 
 		void cancel()
 		{

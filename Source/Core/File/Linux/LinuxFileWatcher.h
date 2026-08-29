@@ -1,10 +1,11 @@
-﻿/**
+/**
  * @file LinuxFileWatcher.h
  * @brief inotify + eventfd 워커로 디렉터리 변경을 모읍니다.
  */
 #pragma once
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
@@ -52,11 +53,11 @@ namespace sw
 		void pushEvent( FileWatcherAction action, string_view absoluteDirectory, string_view name );
 
 	private:
-		int32			  _inotifyFd = -1;
-		int32			  _wakeFd	 = -1;
-		std::atomic<bool> _bIsWatching{ false };
-		bool			  _bRecursive{ true };
-		string			  _directoryPath;
+		int32		 _inotifyFd = -1;
+		int32		 _wakeFd	= -1;
+		atomic<bool> _bIsWatching{ false };
+		bool		 _bRecursive{ true };
+		string		 _directoryPath;
 
 		std::thread					 _workerThread;
 		mutex						 _eventMutex;

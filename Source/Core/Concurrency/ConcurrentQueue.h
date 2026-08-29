@@ -6,9 +6,8 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/atomic.h"
 #include "Core/Container/array.h"
-
-#include <array>
 
 namespace sw
 {
@@ -30,8 +29,8 @@ namespace sw
 		/** @brief 캐시라인 정렬된 슬롯. 시퀀스로 소유권을 넘깁니다. */
 		struct alignas( 64 ) Cell
 		{
-			std::atomic<uint32> _sequence{ 0 };
-			T					_data{};
+			atomic<uint32> _sequence{ 0 };
+			T			   _data{};
 		};
 
 	public:
@@ -154,7 +153,7 @@ namespace sw
 		// sw::array는 단일 스레드 컨테이너로 DataRaceDetector가 내장되어 있어 멀티스레드 동시 접근 시 오탐(Data Race Error)을 유발합니다.
 		// ConcurrentQueue는 각 슬롯(Cell)의 원자적 sequence 변수로 락-프리 동기화를 수행하므로 레이스 탐지기가 없는 std::array를 사용합니다.
 		std::array<Cell, Capacity> _arrBuffer{};
-		alignas( 64 ) std::atomic<uint32> _enqueuePos{ 0 };
-		alignas( 64 ) std::atomic<uint32> _dequeuePos{ 0 };
+		alignas( 64 ) atomic<uint32> _enqueuePos{ 0 };
+		alignas( 64 ) atomic<uint32> _dequeuePos{ 0 };
 	};
 } // namespace sw

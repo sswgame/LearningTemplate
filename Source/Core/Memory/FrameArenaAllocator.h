@@ -6,6 +6,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/atomic.h"
 #include "Core/Container/vector.h"
 
 namespace sw
@@ -160,6 +161,6 @@ namespace sw
 
 	private:
 		FrameArenaAllocator _arrArenas[2];
-		std::atomic<uint32> _activeBufferIndex;
+		atomic<uint32>		_activeBufferIndex;
 	};
 } // namespace sw

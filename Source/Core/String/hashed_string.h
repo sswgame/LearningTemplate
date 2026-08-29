@@ -10,12 +10,12 @@
 #pragma once
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/atomic.h"
+#include "Core/Concurrency/mutex.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringUtil.h"
 
-#include <atomic>
-#include <mutex>
 #include <shared_mutex>
 
 namespace sw
@@ -249,7 +249,7 @@ namespace sw
 	 * @brief 문자열 인턴(Intern) 풀의 핵심 저장소 및 고속 검색 엔진입니다.
 	 * @details
 	 * - **Paged Chunk Table (`_chunks`)**:
-	 *   1024개 단위의 Entry 청크 배열(`std::atomic<Entry*> _chunks[64]`)을 관리합니다.
+	 *   1024개 단위의 Entry 청크 배열(`atomic<Entry*> _chunks[64]`)을 관리합니다.
 	 *   인덱스 번호만으로 `chunkIndex = id / 1024`, `offset = id % 1024`로 분해하여
 	 *   어떤 동기화 락(Mutex)도 없이 **0-Lock O(1) 포인터 역참조**로 문자열 포인터, 길이, 해시를 즉시 반환합니다.
 	 * - **String Arena (`_listArenaBlock`)**:
@@ -279,9 +279,9 @@ namespace sw
 			unordered_map<StringKey, uint32, typename StringKey::HashFunc> _mapKeyToIndex; ///< 문자열 키 -> 청크 인덱스 매핑 해시맵
 		};
 
-		std::atomic<Entry*> _arrChunks[kMaxChunks]{}; /**< 1024단위 엔트리 청크 원자적 포인터 배열 (0-Lock O(1) 조회) */
-		std::atomic<uint32> _entryCount{ 0 };		  /**< 현재까지 등록된 총 문자열 개수 (단조 증가 인덱스) */
-		std::mutex			_globalAppendMutex;		  /**< 신규 청크 생성 및 64KB 아레나 블록 추가 시 사용하는 동기화 뮤텍스 */
+		atomic<Entry*> _arrChunks[kMaxChunks]{}; /**< 1024단위 엔트리 청크 원자적 포인터 배열 (0-Lock O(1) 조회) */
+		atomic<uint32> _entryCount{ 0 };		 /**< 현재까지 등록된 총 문자열 개수 (단조 증가 인덱스) */
+		mutex		   _globalAppendMutex;		 /**< 신규 청크 생성 및 64KB 아레나 블록 추가 시 사용하는 동기화 뮤텍스 */
 
 		vector<value_type*> _listArenaBlock;				/**< 64KB 단위 연속 문자열 아레나 블록 목록 */
 		value_type*			_pCurrentArenaBlock{ nullptr }; ///< 현재 문자열을 채워넣고 있는 활성 아레나 블록
@@ -305,7 +305,7 @@ namespace sw
 		/** @brief 모든 메모리 블록, 청크, 맵을 일괄 해제합니다. */
 		void clear() noexcept
 		{
-			std::scoped_lock<std::mutex> globalLock{ _globalAppendMutex };
+			std::scoped_lock<mutex> globalLock{ _globalAppendMutex };
 
 			for ( uint32 shardIndex = 0; shardIndex < kNumShards; ++shardIndex )
 			{
@@ -474,7 +474,7 @@ namespace sw
 		if ( iter != shard._mapKeyToIndex.end() )
 			return iter->second;
 
-		std::scoped_lock<std::mutex> allocLock{ info._globalAppendMutex };
+		std::scoped_lock<mutex> allocLock{ info._globalAppendMutex };
 
 		const uint32 newIndex = info._entryCount.load( std::memory_order_relaxed );
 		if ( newIndex >= kMaxChunks * kChunkSize )

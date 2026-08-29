@@ -68,7 +68,7 @@ namespace sw
 												  resolved.isPredefinedType( PredefinedNameType::NameType_hashed_string ) ||
 												  resolved.isPredefinedType( PredefinedNameType::NameType_TagID ) );
 				const bool			bIsBool	  = ( resolved.isPredefinedType( PredefinedNameType::NameType_bool ) ||
-												  resolved.isPredefinedType( PredefinedNameType::NameType_AtomicBool ) );
+												  resolved.isPredefinedType( PredefinedNameType::NameType_atomic_bool ) );
 				const bool			bIsEnum	  = ( engine::getTypeRegistry().findEnum( typeName ) != nullptr );
 
 				if ( bIsString || bIsEnum )

@@ -5,13 +5,12 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/CallStackCapture.h"
-
-#include <atomic>
 
 namespace sw
 {
@@ -35,10 +34,10 @@ namespace sw
 	/** @brief 태그별 할당·해제 누적 통계입니다. */
 	struct MemoryProfileStats
 	{
-		std::atomic<uint64> _totalAllocatedBytes{ 0 };
-		std::atomic<uint64> _totalFreedBytes{ 0 };
-		std::atomic<uint64> _currentAllocatedBytes{ 0 };
-		std::atomic<uint64> _currentAllocationCount{ 0 };
+		atomic<uint64> _totalAllocatedBytes{ 0 };
+		atomic<uint64> _totalFreedBytes{ 0 };
+		atomic<uint64> _currentAllocatedBytes{ 0 };
+		atomic<uint64> _currentAllocationCount{ 0 };
 	};
 
 	/** @brief 콜스택별 현재 할당량입니다. */
@@ -123,9 +122,9 @@ namespace sw
 		vector<CallStackAllocInfo> getTopCallStacks() const;
 
 	private:
-		std::atomic<bool> _bInitialized;
-		std::atomic<bool> _bTrackingEnabled;
-		std::atomic<bool> _bDetailedTrackingEnabled;
+		atomic<bool> _bInitialized;
+		atomic<bool> _bTrackingEnabled;
+		atomic<bool> _bDetailedTrackingEnabled;
 
 		MemoryProfileStats _arrStats[static_cast<uint32>( MemoryTag::MaxTags )];
 
