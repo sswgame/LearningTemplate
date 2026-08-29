@@ -309,6 +309,14 @@ namespace sw
 				{
 					if ( prop._metadata._bTransient == SW_TRUE )
 						return;
+
+					if ( prop._bIsBitField == SW_TRUE )
+					{
+						const bool bVal = prop.getValue<bool>( pInstance );
+						backend.writeAttribute( prop._name.c_str(), bVal ? "true" : "false" );
+						return;
+					}
+
 					const void* pPropPtr = prop.getRawPtr( pInstance );
 
 					if ( prop._bIsContainer && prop.hasContainerWrapper() )
@@ -443,7 +451,12 @@ namespace sw
 						if ( readOk )
 						{
 							uniqueSeen.insert( prop.getNameHash() );
-							if ( parseTextValueCoerced( pPropPtr, prop._typeName, strValue, ctx ) == false )
+							if ( prop._bIsBitField == SW_TRUE )
+							{
+								const bool bVal = ( strValue == "true" || strValue == "1" || strValue == "True" || strValue == "TRUE" );
+								prop.setValue<bool>( pInstance, bVal );
+							}
+							else if ( parseTextValueCoerced( pPropPtr, prop._typeName, strValue, ctx ) == false )
 								noteCoerceFailVal( pOutOrphans, bFieldError, prop, strValue );
 						}
 						else

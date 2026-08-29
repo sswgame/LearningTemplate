@@ -255,12 +255,70 @@ namespace sw::editor
 			}
 		};
 
+		class Uint8Property : public BuiltinPropertyBase
+		{
+		public:
+			bool draw( void* pInstance, const PropertyInfo& prop ) override
+			{
+				const bool bReadOnly = prop._metadata._bReadOnly != 0;
+
+				if ( prop._bIsBitField == SW_TRUE )
+				{
+					bool bVal = prop.getValue<bool>( pInstance );
+					if ( bReadOnly )
+					{
+						drawReadOnlyText( prop, bVal ? "true" : "false" );
+						return true;
+					}
+					if ( ImGui::Checkbox( _pLabel, &bVal ) )
+					{
+						prop.setValue<bool>( pInstance, bVal );
+					}
+					showTooltipIfHovered( prop );
+					return true;
+				}
+
+				uint8* pPtr = prop.getValuePtr<uint8>( pInstance );
+				if ( pPtr == nullptr )
+					return true;
+				if ( bReadOnly )
+				{
+					utf8 buf[constant::kMaxBuffer64];
+					formatstring( buf, sizeof( buf ), "%#", static_cast<uint32>( *pPtr ) );
+					drawReadOnlyText( prop, buf );
+					return true;
+				}
+				int32 tmp = static_cast<int32>( *pPtr );
+				if ( ImGui::DragInt( _pLabel, &tmp, 1.0f, 0, 255, "%u" ) )
+					*pPtr = static_cast<uint8>( tmp );
+				showTooltipIfHovered( prop );
+				InspectorPropertyUndo::trackPod( pPtr, sizeof( *pPtr ), _pLabel );
+				return true;
+			}
+		};
+
 		class BoolProperty : public BuiltinPropertyBase
 		{
 		public:
 			bool draw( void* pInstance, const PropertyInfo& prop ) override
 			{
 				const bool bReadOnly = prop._metadata._bReadOnly != 0;
+
+				if ( prop._bIsBitField == SW_TRUE )
+				{
+					bool bVal = prop.getValue<bool>( pInstance );
+					if ( bReadOnly )
+					{
+						drawReadOnlyText( prop, bVal ? "true" : "false" );
+						return true;
+					}
+					if ( ImGui::Checkbox( _pLabel, &bVal ) )
+					{
+						prop.setValue<bool>( pInstance, bVal );
+					}
+					showTooltipIfHovered( prop );
+					return true;
+				}
 
 				bool* pPtr = prop.getValuePtr<bool>( pInstance );
 				if ( pPtr == nullptr )
@@ -515,6 +573,7 @@ namespace sw::editor
 	{
 		registerType( "int32", make_unique<Int32Property>() );
 		registerType( "uint32", make_unique<Uint32Property>() );
+		registerType( "uint8", make_unique<Uint8Property>() );
 		registerType( "int64", make_unique<Int64Property>() );
 		registerType( "float32", make_unique<Float32Property>() );
 		registerType( "float64", make_unique<Float64Property>() );

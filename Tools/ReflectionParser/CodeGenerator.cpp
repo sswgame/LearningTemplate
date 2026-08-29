@@ -406,7 +406,14 @@ namespace sw
 		e.push();
 		e.linef( "%#,", CodeEmit::hs( prop._name ) );
 		e.linef( "%#,", CodeEmit::hs( normalizeTypeName( prop._typeName ) ) );
-		e.linef( "offsetof(%#, %#),", typeInfo._fullyQualifiedName, prop._name );
+		if ( prop._bIsBitField == SW_TRUE )
+		{
+			e.linef( "%#u,", prop._byteOffset );
+		}
+		else
+		{
+			e.linef( "offsetof(%#, %#),", typeInfo._fullyQualifiedName, prop._name );
+		}
 
 		if ( prop._bIsContainer )
 		{
@@ -428,6 +435,12 @@ namespace sw
 		}
 
 		e.pop(); // 생성자 인자 들여쓰기
+		if ( prop._bIsBitField == SW_TRUE )
+		{
+			e.line( "p._bIsBitField = SW_TRUE;" );
+			e.linef( "p._bitOffset = %#;", prop._bitOffset );
+			e.linef( "p._bitMask = %#;", prop._bitMask );
+		}
 		if ( prop._listAlias.empty() == false )
 		{
 			e.line( "p._listAlias = {" );

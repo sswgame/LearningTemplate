@@ -2694,3 +2694,125 @@ SW_TEST_CASE( Reflection_Metadata, TransientPropertySerialization )
 	SW_EXPECT_EQUAL( 77, binTarget._armor );
 	SW_EXPECT_EQUAL( 30, binTarget._health );
 }
+
+// ------------------------------------------------------------------------------
+// 22) Reflection_Bitfield — 비트필드(uint8 : 1) 리플렉션, 읽기/쓰기, 직렬화
+// ------------------------------------------------------------------------------
+/**
+ * @brief [Reflection_Bitfield] 비트필드 프로퍼티 메타데이터 및 오프셋/마스크 검증
+ */
+SW_TEST_CASE( Reflection_Bitfield, BitfieldPropertyMetadata )
+{
+	const sw::TypeInfo* pType = sw::engine::getTypeRegistry().findType<sw::BitfieldTestActor>();
+	SW_ASSERT_NOT_NULL( pType );
+
+	const sw::PropertyInfo* pPropActive = pType->findProperty( sw::hashed_string( "_bActive" ) );
+	SW_ASSERT_NOT_NULL( pPropActive );
+	SW_EXPECT_EQUAL( SW_TRUE, pPropActive->_bIsBitField );
+	SW_EXPECT_EQUAL( 0x01, pPropActive->_bitMask );
+
+	const sw::PropertyInfo* pPropInvuln = pType->findProperty( sw::hashed_string( "_bInvulnerable" ) );
+	SW_ASSERT_NOT_NULL( pPropInvuln );
+	SW_EXPECT_EQUAL( SW_TRUE, pPropInvuln->_bIsBitField );
+	SW_EXPECT_EQUAL( 0x02, pPropInvuln->_bitMask );
+
+	const sw::PropertyInfo* pPropCanJump = pType->findProperty( sw::hashed_string( "_bCanJump" ) );
+	SW_ASSERT_NOT_NULL( pPropCanJump );
+	SW_EXPECT_EQUAL( SW_TRUE, pPropCanJump->_bIsBitField );
+	SW_EXPECT_EQUAL( 0x04, pPropCanJump->_bitMask );
+
+	const sw::PropertyInfo* pPropScore = pType->findProperty( sw::hashed_string( "_score" ) );
+	SW_ASSERT_NOT_NULL( pPropScore );
+	SW_EXPECT_EQUAL( SW_FALSE, pPropScore->_bIsBitField );
+	SW_EXPECT_EQUAL( 0xFF, pPropScore->_bitMask );
+}
+
+/**
+ * @brief [Reflection_Bitfield] 비트필드 getValue/setValue 독립성 검증
+ */
+SW_TEST_CASE( Reflection_Bitfield, BitfieldGetSetValue )
+{
+	const sw::TypeInfo* pType = sw::engine::getTypeRegistry().findType<sw::BitfieldTestActor>();
+	SW_ASSERT_NOT_NULL( pType );
+
+	const sw::PropertyInfo* pPropActive	 = pType->findProperty( sw::hashed_string( "_bActive" ) );
+	const sw::PropertyInfo* pPropInvuln	 = pType->findProperty( sw::hashed_string( "_bInvulnerable" ) );
+	const sw::PropertyInfo* pPropCanJump = pType->findProperty( sw::hashed_string( "_bCanJump" ) );
+	SW_ASSERT_NOT_NULL( pPropActive );
+	SW_ASSERT_NOT_NULL( pPropInvuln );
+	SW_ASSERT_NOT_NULL( pPropCanJump );
+
+	sw::BitfieldTestActor actor;
+	SW_EXPECT_EQUAL( SW_FALSE, actor._bActive );
+	SW_EXPECT_EQUAL( SW_FALSE, actor._bInvulnerable );
+	SW_EXPECT_EQUAL( SW_FALSE, actor._bCanJump );
+
+	// 1) _bActive = true
+	pPropActive->setValue<bool>( &actor, true );
+	SW_EXPECT_EQUAL( SW_TRUE, actor._bActive );
+	SW_EXPECT_EQUAL( SW_FALSE, actor._bInvulnerable );
+	SW_EXPECT_EQUAL( SW_FALSE, actor._bCanJump );
+	SW_EXPECT_TRUE( pPropActive->getValue<bool>( &actor ) );
+	SW_EXPECT_FALSE( pPropInvuln->getValue<bool>( &actor ) );
+
+	// 2) _bCanJump = true (인접 비트 _bActive 유지 검증)
+	pPropCanJump->setValue<bool>( &actor, true );
+	SW_EXPECT_EQUAL( SW_TRUE, actor._bActive );
+	SW_EXPECT_EQUAL( SW_FALSE, actor._bInvulnerable );
+	SW_EXPECT_EQUAL( SW_TRUE, actor._bCanJump );
+	SW_EXPECT_TRUE( pPropCanJump->getValue<bool>( &actor ) );
+
+	// 3) _bActive = false
+	pPropActive->setValue<bool>( &actor, false );
+	SW_EXPECT_EQUAL( SW_FALSE, actor._bActive );
+	SW_EXPECT_EQUAL( SW_FALSE, actor._bInvulnerable );
+	SW_EXPECT_EQUAL( SW_TRUE, actor._bCanJump );
+	SW_EXPECT_FALSE( pPropActive->getValue<bool>( &actor ) );
+	SW_EXPECT_TRUE( pPropCanJump->getValue<bool>( &actor ) );
+}
+
+/**
+ * @brief [Reflection_Bitfield] 비트필드 JSON, XML, Binary 직렬화 라운드트립 검증
+ */
+SW_TEST_CASE( Reflection_Bitfield, BitfieldSerializationRoundtrip )
+{
+	const sw::TypeInfo* pType = sw::engine::getTypeRegistry().findType<sw::BitfieldTestActor>();
+	SW_ASSERT_NOT_NULL( pType );
+
+	sw::BitfieldTestActor source;
+	source._bActive		  = SW_TRUE;
+	source._bInvulnerable = SW_FALSE;
+	source._bCanJump	  = SW_TRUE;
+	source._score		  = 777;
+
+	// 1) JSON 직렬화 & 역직렬화
+	const sw::string json = sw::JsonSerializer::serialize( &source, *pType );
+	SW_EXPECT_TRUE( json.find( "_bActive" ) != sw::string::npos );
+	SW_EXPECT_TRUE( json.find( "_bCanJump" ) != sw::string::npos );
+
+	sw::BitfieldTestActor jsonTarget;
+	SW_EXPECT_TRUE( sw::JsonSerializer::deserialize( &jsonTarget, *pType, json ) );
+	SW_EXPECT_EQUAL( SW_TRUE, jsonTarget._bActive );
+	SW_EXPECT_EQUAL( SW_FALSE, jsonTarget._bInvulnerable );
+	SW_EXPECT_EQUAL( SW_TRUE, jsonTarget._bCanJump );
+	SW_EXPECT_EQUAL( 777, jsonTarget._score );
+
+	// 2) XML 직렬화 & 역직렬화
+	const sw::string	  xml = sw::XmlSerializer::serialize( &source, *pType );
+	sw::BitfieldTestActor xmlTarget;
+	SW_EXPECT_TRUE( sw::XmlSerializer::deserialize( &xmlTarget, *pType, xml ) );
+	SW_EXPECT_EQUAL( SW_TRUE, xmlTarget._bActive );
+	SW_EXPECT_EQUAL( SW_FALSE, xmlTarget._bInvulnerable );
+	SW_EXPECT_EQUAL( SW_TRUE, xmlTarget._bCanJump );
+	SW_EXPECT_EQUAL( 777, xmlTarget._score );
+
+	// 3) Binary 직렬화 & 역직렬화
+	sw::vector<uint8> listBin;
+	sw::BinarySerializer::serialize( &source, *pType, listBin );
+	sw::BitfieldTestActor binTarget;
+	SW_EXPECT_TRUE( sw::BinarySerializer::deserialize( &binTarget, *pType, listBin.data(), listBin.size() ) );
+	SW_EXPECT_EQUAL( SW_TRUE, binTarget._bActive );
+	SW_EXPECT_EQUAL( SW_FALSE, binTarget._bInvulnerable );
+	SW_EXPECT_EQUAL( SW_TRUE, binTarget._bCanJump );
+	SW_EXPECT_EQUAL( 777, binTarget._score );
+}

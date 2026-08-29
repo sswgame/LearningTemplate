@@ -122,8 +122,11 @@ namespace sw
 		, _listAlias{}
 		, _metadata{}
 		, _cachedNameHash{ 0 }
+		, _bitOffset{ 0 }
 		, _containerKind{ ContainerKind::None }
+		, _bitMask{ 0xFF }
 		, _bIsContainer{ SW_FALSE }
+		, _bIsBitField{ SW_FALSE }
 		, _reservedFlags{ 0 } {}
 
 	NestedContainerInfo PropertyInfo::getContainerShape() const
@@ -156,8 +159,11 @@ namespace sw
 		, _listAlias{}
 		, _metadata{}
 		, _cachedNameHash{ 0 }
+		, _bitOffset{ 0 }
 		, _containerKind{ containerKind }
+		, _bitMask{ 0xFF }
 		, _bIsContainer{ static_cast<uint8>( bIsContainer ? SW_TRUE : SW_FALSE ) }
+		, _bIsBitField{ SW_FALSE }
 		, _reservedFlags{ 0 }
 	{
 		if ( alias.empty() == false )

@@ -596,6 +596,17 @@ namespace sw
 				prop._name					 = cxStringToStd( clang_getCursorSpelling( cursor ) );
 				prop._typeName =
 					normalizeTypeName( cxStringToStd( clang_getTypeSpelling( fieldType ) ) );
+				if ( clang_Cursor_isBitField( cursor ) != 0 )
+				{
+					prop._bIsBitField	  = SW_TRUE;
+					const int64 bitOffset = clang_Cursor_getOffsetOfField( cursor );
+					if ( bitOffset >= 0 )
+					{
+						prop._bitOffset	 = static_cast<uint32>( bitOffset );
+						prop._byteOffset = static_cast<uint32>( bitOffset / 8 );
+						prop._bitMask	 = static_cast<uint8>( 1u << ( bitOffset % 8 ) );
+					}
+				}
 				sw::AnnotationApply::parsePropertyAnnotation( search._spelling, prop );
 				parseContainerDetails( prop, fieldType );
 				collector->_pProperties->push_back( std::move( prop ) );

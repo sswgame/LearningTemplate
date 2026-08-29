@@ -173,9 +173,12 @@ namespace sw
 
 		mutable uint32 _cachedNameHash;
 
+		uint32				   _bitOffset;
 		ContainerKind		   _containerKind;
+		uint8				   _bitMask;
 		uint8				   _bIsContainer  : 1;
-		[[maybe_unused]] uint8 _reservedFlags : 7;
+		uint8				   _bIsBitField	  : 1;
+		[[maybe_unused]] uint8 _reservedFlags : 6;
 
 		/** @brief 오프셋 0, 컨테이너 아님. */
 		PropertyInfo() noexcept;
@@ -238,9 +241,60 @@ namespace sw
 		void bindOnChanged( PropertyBindingDelegate delegate ) const { _onPropertyBoundChanged = std::move( delegate ); }
 
 		template <typename T, typename ObjectType>
-		/** @brief 인스턴스 프로퍼티 값을 쓰고 옵저버/바인딩을 알립니다. */
+		/** @brief 인스턴스 프로퍼티 값을 읽습니다. (비트필드 지원) */
+		T getValue( const ObjectType* pInstance ) const
+		{
+			if ( _bIsBitField == SW_TRUE )
+			{
+				const uint8* pByte = reinterpret_cast<const uint8*>( pInstance ) + _offset;
+				const bool	 bVal  = ( ( *pByte & _bitMask ) != 0 );
+				if constexpr ( std::is_same_v<T, bool> )
+				{
+					return bVal;
+				}
+				else
+				{
+					return static_cast<T>( bVal ? 1 : 0 );
+				}
+			}
+
+			const T* pPtr = reinterpret_cast<const T*>( reinterpret_cast<const utf8*>( pInstance ) + _offset );
+			return *pPtr;
+		}
+
+		template <typename T, typename ObjectType>
+		/** @brief 인스턴스 프로퍼티 값을 쓰고 옵저버/바인딩을 알립니다. (비트필드 지원) */
 		void setValue( ObjectType* pInstance, const T& newValue ) const
 		{
+			if ( _bIsBitField == SW_TRUE )
+			{
+				uint8* pByte = reinterpret_cast<uint8*>( pInstance ) + _offset;
+				bool   bVal	 = false;
+				if constexpr ( std::is_same_v<T, bool> )
+					bVal = newValue;
+				else if constexpr ( std::is_same_v<T, float32> )
+					bVal = ( MathUtil::nearEqual( newValue, 0.0f ) == false );
+				else if constexpr ( std::is_same_v<T, float64> )
+					bVal = ( MathUtil::nearEqual( newValue, 0.0 ) == false );
+				else
+					bVal = ( newValue != static_cast<T>( 0 ) );
+
+				if ( bVal )
+					*pByte |= _bitMask;
+				else
+					*pByte &= static_cast<uint8>( ~_bitMask );
+
+				if constexpr ( std::is_base_of_v<IPropertyObserver, ObjectType> )
+				{
+					IPropertyObserver* pObserver = static_cast<IPropertyObserver*>( pInstance );
+					pObserver->onPropertyChanged( _name );
+				}
+
+				if ( _onPropertyBoundChanged.isBound() )
+					_onPropertyBoundChanged( *this, pInstance );
+				return;
+			}
+
 			T* pPtr = reinterpret_cast<T*>( reinterpret_cast<utf8*>( pInstance ) + _offset );
 			if constexpr ( std::is_same_v<T, float32> || std::is_same_v<T, float64> )
 			{
@@ -262,16 +316,20 @@ namespace sw
 		}
 
 		template <typename T>
-		/** @brief 인스턴스 + 오프셋의 값 포인터. */
+		/** @brief 인스턴스 + 오프셋의 값 포인터. (비트필드는 nullptr 반환) */
 		T* getValuePtr( void* pInstance ) const
 		{
+			if ( _bIsBitField == SW_TRUE )
+				return nullptr;
 			return reinterpret_cast<T*>( reinterpret_cast<utf8*>( pInstance ) + _offset );
 		}
 
 		template <typename T>
-		/** @brief 인스턴스 + 오프셋의 값 포인터. */
+		/** @brief 인스턴스 + 오프셋의 값 포인터. (비트필드는 nullptr 반환) */
 		const T* getValuePtr( const void* pInstance ) const
 		{
+			if ( _bIsBitField == SW_TRUE )
+				return nullptr;
 			return reinterpret_cast<const T*>( reinterpret_cast<const utf8*>( pInstance ) + _offset );
 		}
 

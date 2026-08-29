@@ -180,6 +180,31 @@ namespace sw
 		int32 _hp = 10;
 	};
 
+	/** @brief 비트필드(uint8 : 1) 리플렉션 테스트 액터 */
+	REFLECT()
+	struct BitfieldTestActor
+	{
+		PROPERTY( Category = "Flags" )
+		uint8 _bActive : 1;
+
+		PROPERTY( Category = "Flags" )
+		uint8 _bInvulnerable : 1;
+
+		PROPERTY( Category = "Flags" )
+		uint8 _bCanJump : 1;
+
+		PROPERTY()
+		int32 _score;
+
+		BitfieldTestActor()
+			: _bActive{ SW_FALSE }
+			, _bInvulnerable{ SW_FALSE }
+			, _bCanJump{ SW_FALSE }
+			, _score{ 100 }
+		{
+		}
+	};
+
 	// ------------------------------------------------------------------------------
 	// 3) ENUM — 별칭·Flags·중첩 네임스페이스
 	// ------------------------------------------------------------------------------

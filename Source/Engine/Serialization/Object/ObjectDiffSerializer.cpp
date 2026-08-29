@@ -25,12 +25,19 @@ namespace sw
 				return;
 			const void* pCdoPtr = prop.getRawPtr( pCdoInstance );
 			const void* pModPtr = prop.getRawPtr( pModifiedInstance );
-			if ( pCdoPtr == nullptr || pModPtr == nullptr )
+			if ( prop._bIsBitField == SW_FALSE && ( pCdoPtr == nullptr || pModPtr == nullptr ) )
 				return;
 
 			listCdoBytes.clear();
 			listModBytes.clear();
-			if ( prop._bIsContainer && prop.hasContainerWrapper() )
+			if ( prop._bIsBitField == SW_TRUE )
+			{
+				const bool bCdo = prop.getValue<bool>( pCdoInstance );
+				const bool bMod = prop.getValue<bool>( pModifiedInstance );
+				SerializerUtil::serializeValueBinary( &bCdo, hashed_string( "bool" ), listCdoBytes, ctx );
+				SerializerUtil::serializeValueBinary( &bMod, hashed_string( "bool" ), listModBytes, ctx );
+			}
+			else if ( prop._bIsContainer && prop.hasContainerWrapper() )
 			{
 				SerializerUtil::serializeNestedContainerBinary( pCdoPtr, prop.getContainerShape(), listCdoBytes, ctx );
 				SerializerUtil::serializeNestedContainerBinary( pModPtr, prop.getContainerShape(), listModBytes, ctx );
@@ -89,7 +96,14 @@ namespace sw
 				void*  pDest = pProp->getRawPtr( pTargetInstance );
 				size_t local{ 0 };
 				bool   ok{ true };
-				if ( pDest != nullptr )
+				if ( pProp->_bIsBitField == SW_TRUE )
+				{
+					bool bVal = false;
+					ok		  = SerializerUtil::deserializeValueBinary( &bVal, hashed_string( "bool" ), pDiffData + offset, payload, local, ctx );
+					if ( ok )
+						pProp->setValue<bool>( pTargetInstance, bVal );
+				}
+				else if ( pDest != nullptr )
 				{
 					if ( pProp->_bIsContainer && pProp->hasContainerWrapper() )
 					{

@@ -81,7 +81,15 @@ namespace sw
 						continue;
 					}
 
-					if ( prop._bIsContainer && prop.hasContainerWrapper() )
+					if ( prop._bIsBitField == SW_TRUE )
+					{
+						bool   bVal	 = false;
+						size_t local = payloadStart;
+						if ( SerializerUtil::deserializeValueBinary( &bVal, hashed_string( "bool" ), pData, payloadStart + payloadSize, local, ctx ) == false )
+							return false;
+						prop.setValue<bool>( pInstance, bVal );
+					}
+					else if ( prop._bIsContainer && prop.hasContainerWrapper() )
 					{
 						size_t local = payloadStart;
 						if ( SerializerUtil::deserializeNestedContainerBinary( pPropPtr, prop.getContainerShape(), pData, payloadStart + payloadSize, local, ctx ) == false )
@@ -101,22 +109,19 @@ namespace sw
 					reader.skip( payloadSize );
 				}
 
-				// Omitted tags: apply PROPERTY(Default) when present (Binary is tag-driven, not TypeInfo-driven).
 				for ( size_t propIdx = 0; propIdx < numProps; ++propIdx )
 				{
 					if ( numProps <= 64 )
 					{
-						if ( ( seenBitmask & ( 1ULL << propIdx ) ) != 0 )
-							continue;
+						if ( ( seenBitmask & ( 1ULL << propIdx ) ) == 0 )
+							SerializerUtil::applyPropertyDefault( listProps[propIdx].getRawPtr( pInstance ), listProps[propIdx], ctx );
 					}
 					else
 					{
-						if ( uniqueSeenPropHashes.find( listProps[propIdx].getNameHash() ) != uniqueSeenPropHashes.end() )
-							continue;
+						if ( uniqueSeenPropHashes.find( listProps[propIdx].getNameHash() ) == uniqueSeenPropHashes.end() )
+							SerializerUtil::applyPropertyDefault( listProps[propIdx].getRawPtr( pInstance ), listProps[propIdx], ctx );
 					}
-					SerializerUtil::applyPropertyDefault( listProps[propIdx].getRawPtr( pInstance ), listProps[propIdx], ctx );
 				}
-
 				return true;
 			}
 
@@ -172,7 +177,12 @@ namespace sw
 
 			size_t payloadStart = writer.getOffset();
 
-			if ( prop._bIsContainer && prop.hasContainerWrapper() )
+			if ( prop._bIsBitField == SW_TRUE )
+			{
+				const bool bVal = prop.getValue<bool>( pInstance );
+				SerializerUtil::serializeValueBinary( &bVal, hashed_string( "bool" ), listOutBuffer, ctx );
+			}
+			else if ( prop._bIsContainer && prop.hasContainerWrapper() )
 				SerializerUtil::serializeNestedContainerBinary( pPropPtr, prop.getContainerShape(), listOutBuffer, ctx );
 			else
 				SerializerUtil::serializeValueBinary( pPropPtr, prop._typeName, listOutBuffer, ctx );
@@ -199,32 +209,23 @@ namespace sw
 		if ( t_listCloneBuffer.capacity() < targetCapacity )
 			t_listCloneBuffer.reserve( targetCapacity );
 
-		serialize( pSrcData, typeInfo, t_listCloneBuffer );
-		if ( t_listCloneBuffer.empty() )
-			return false;
-
-		return BinarySerializerInternal::deserializeUntransacted( pDstData, typeInfo, t_listCloneBuffer.data(), t_listCloneBuffer.size(),
-																  SerializeContext::getDefault() );
+		SerializeContext ctx;
+		serialize( pSrcData, typeInfo, t_listCloneBuffer, ctx );
+		return deserialize( pDstData, typeInfo, t_listCloneBuffer.data(), t_listCloneBuffer.size(), ctx );
 	}
 
 	bool BinarySerializer::deserialize( void* pInstance, const TypeInfo& typeInfo, const uint8* pData, size_t dataSize,
 										const SerializeContext& ctx )
 	{
-		if ( pInstance == nullptr || pData == nullptr )
-			return false;
-
-		vector<uint8> listBackup;
-		serialize( pInstance, typeInfo, listBackup, ctx );
-		if ( BinarySerializerInternal::deserializeUntransacted( pInstance, typeInfo, pData, dataSize, ctx ) )
-			return true;
-		if ( listBackup.empty() == false )
-			BinarySerializerInternal::deserializeUntransacted( pInstance, typeInfo, listBackup.data(), listBackup.size(), ctx );
-		return false;
+		return BinarySerializerInternal::deserializeUntransacted( pInstance, typeInfo, pData, dataSize, ctx );
 	}
 
 	bool BinarySerializer::deserializeSoft( void* pInstance, const TypeInfo& typeInfo, const uint8* pData, size_t dataSize,
 											vector<SchemaOrphanValue>* pOutOrphans, const SerializeContext& ctx )
 	{
+		if ( pInstance == nullptr || pData == nullptr || dataSize == 0 )
+			return false;
+
 		BinaryStreamReader reader( pData, dataSize );
 		uint32			   propCount{ 0 };
 		if ( reader.read( propCount ) == false )
@@ -276,11 +277,18 @@ namespace sw
 			else
 				uniqueSeenPropHashes.insert( prop.getNameHash() );
 
-			void*  pPropPtr = prop.getValuePtr<void>( pInstance );
+			void*  pPropPtr = prop.getRawPtr( pInstance );
 			bool   applied{ false };
 			size_t local = payloadStart;
 
-			if ( prop._bIsContainer && prop.hasContainerWrapper() )
+			if ( prop._bIsBitField == SW_TRUE )
+			{
+				bool bVal = false;
+				applied	  = SerializerUtil::deserializeValueBinary( &bVal, hashed_string( "bool" ), pData, payloadStart + payloadSize, local, ctx );
+				if ( applied )
+					prop.setValue<bool>( pInstance, bVal );
+			}
+			else if ( prop._bIsContainer && prop.hasContainerWrapper() )
 				applied = SerializerUtil::deserializeNestedContainerBinary( pPropPtr, prop.getContainerShape(), pData, payloadStart + payloadSize, local, ctx );
 			else
 			{

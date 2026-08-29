@@ -408,6 +408,12 @@ namespace sw
 			}
 			static void writeProperty( JsonValue parent, const PropertyInfo& prop, const void* pInstance, const SerializeContext& ctx )
 			{
+				if ( prop._bIsBitField == SW_TRUE )
+				{
+					const bool bVal = prop.getValue<bool>( pInstance );
+					parent.set( prop._name.c_str(), false ).setBool( bVal );
+					return;
+				}
 				const void* pPropPtr = prop.getRawPtr( pInstance );
 				if ( prop._bIsContainer && prop.hasContainerWrapper() )
 				{
@@ -502,6 +508,21 @@ namespace sw
 
 			static bool readProperty( const JsonValue& field, const PropertyInfo& prop, void* pInstance, const SerializeContext& ctx )
 			{
+				if ( prop._bIsBitField == SW_TRUE )
+				{
+					bool bVal = false;
+					if ( field.isBool() )
+						bVal = field.asBool();
+					else if ( field.isNumber() )
+						bVal = ( field.asInt() != 0 );
+					else if ( field.isString() )
+					{
+						const string_view s = field.asString();
+						bVal				= ( s == "true" || s == "1" || s == "True" || s == "TRUE" );
+					}
+					prop.setValue<bool>( pInstance, bVal );
+					return true;
+				}
 				void* pPropPtr = prop.getRawPtr( pInstance );
 				if ( prop._bIsContainer && prop.hasContainerWrapper() )
 					return readTypedContainerJson( pPropPtr, prop.getContainerShape(), field, ctx );
