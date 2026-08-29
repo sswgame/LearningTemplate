@@ -562,23 +562,23 @@ namespace sw
 	}
 
 	template <typename T, uint32 N>
-	uint32 basic_fixed_string<T, N>::find( const T* str, uint32 pos ) const
+	uint32 basic_fixed_string<T, N>::find( const T* pStr, uint32 pos ) const
 	{
 		const uint32 currentSize = size();
-		if ( str == nullptr || pos >= currentSize )
+		if ( pStr == nullptr || currentSize <= pos )
 			return npos;
-		const T* result = StringUtil::strstr( _arrData + pos, str );
-		return result != nullptr ? static_cast<uint32>( result - _arrData ) : npos;
+		const T* pResult = StringUtil::strstr( _arrData + pos, pStr );
+		return pResult != nullptr ? static_cast<uint32>( pResult - _arrData ) : npos;
 	}
 
 	template <typename T, uint32 N>
 	uint32 basic_fixed_string<T, N>::find( T c, uint32 pos ) const
 	{
 		const uint32 currentSize = size();
-		if ( pos >= currentSize )
+		if ( currentSize <= pos )
 			return npos;
-		const T* result = StringUtil::strchr( _arrData + pos, c );
-		return result ? static_cast<uint32>( result - _arrData ) : npos;
+		const T* pResult = StringUtil::strchr( _arrData + pos, c );
+		return pResult != nullptr ? static_cast<uint32>( pResult - _arrData ) : npos;
 	}
 
 	template <typename T, uint32 N>

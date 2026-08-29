@@ -38,7 +38,19 @@ namespace sw
 {
 	SW_LOG_CALLER( "LinuxFileWatcher" );
 
-	LinuxFileWatcher::LinuxFileWatcher() = default;
+	LinuxFileWatcher::LinuxFileWatcher()
+		: _inotifyFd{ -1 }
+		, _wakeFd{ -1 }
+		, _bIsWatching{ false }
+		, _bRecursive{ true }
+		, _directoryPath{}
+		, _workerThread{}
+		, _eventMutex{}
+		, _watchMutex{}
+		, _listEventQueue{}
+		, _mapWatchDescriptorToPath{}
+	{
+	}
 
 	LinuxFileWatcher::~LinuxFileWatcher()
 	{
@@ -47,7 +59,7 @@ namespace sw
 
 	bool LinuxFileWatcher::startWatching( string_view directoryPath, bool bRecursive )
 	{
-		if ( _bIsWatching )
+		if ( _bIsWatching.load( std::memory_order_relaxed ) == true )
 			return false;
 
 		if ( FileUtil::directoryExists( directoryPath ) == false )

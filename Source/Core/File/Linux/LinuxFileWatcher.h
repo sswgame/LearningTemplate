@@ -53,17 +53,16 @@ namespace sw
 		void pushEvent( FileWatcherAction action, string_view absoluteDirectory, string_view name );
 
 	private:
-		int32		 _inotifyFd = -1;
-		int32		 _wakeFd	= -1;
-		atomic<bool> _bIsWatching{ false };
-		bool		 _bRecursive{ true };
-		string		 _directoryPath;
-
-		std::thread					 _workerThread;
-		mutex						 _eventMutex;
-		mutex						 _watchMutex;
-		vector<FileChangeEvent>		 _listEventQueue;
-		unordered_map<int32, string> _mapWatchDescriptorToPath;
+		int32					_inotifyFd;
+		int32					_wakeFd;
+		atomic<bool>			_bIsWatching;
+		bool					_bRecursive;
+		string					_directoryPath;
+		std::thread				_workerThread;
+		mutex					_eventMutex;
+		mutex					_watchMutex;
+		vector<FileChangeEvent> _listEventQueue;
+		map<int32, string>		_mapWatchDescriptorToPath;
 	};
 } // namespace sw
 

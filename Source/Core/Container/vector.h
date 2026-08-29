@@ -213,20 +213,20 @@ namespace sw
 	{
 		if ( new_cap <= _capacity )
 			return;
-		T* new_data = do_allocate( new_cap );
+		T* pNewData = do_allocate( new_cap );
 		for ( size_t index = 0; index < _size; ++index )
 		{
 			if constexpr ( std::is_nothrow_move_constructible_v<T> )
-				sw_placement_new( ( new_data + ( index ) ) ) T( std::move( _pData[index] ) );
+				sw_placement_new( ( pNewData + ( index ) ) ) T( std::move( _pData[index] ) );
 			else if constexpr ( std::is_copy_constructible_v<T> )
-				sw_placement_new( ( new_data + ( index ) ) ) T( _pData[index] );
+				sw_placement_new( ( pNewData + ( index ) ) ) T( _pData[index] );
 			else if constexpr ( std::is_move_constructible_v<T> )
-				sw_placement_new( ( new_data + ( index ) ) ) T( std::move( _pData[index] ) );
+				sw_placement_new( ( pNewData + ( index ) ) ) T( std::move( _pData[index] ) );
 			_pData[index].~T();
 		}
 		if ( is_inline( _pData ) == false )
 			do_deallocate( _pData, _capacity );
-		_pData	  = new_data;
+		_pData	  = pNewData;
 		_capacity = new_cap;
 	}
 
@@ -690,42 +690,42 @@ namespace sw
 	inline void vector<T, Allocator>::shrink_to_fit()
 	{
 		SW_SCOPED_RACE_WRITE();
-		if ( _capacity > _size && !is_inline( _pData ) )
+		if ( _capacity > _size && is_inline( _pData ) == false )
 		{
 			if ( has_inline_buffer() && _size <= get_inline_cap() )
 			{
-				T* new_data = get_inline_ptr();
+				T* pNewData = get_inline_ptr();
 				for ( size_t index = 0; index < _size; ++index )
 				{
 					if constexpr ( std::is_nothrow_move_constructible_v<T> )
-						sw_placement_new( ( new_data + ( index ) ) ) T( std::move( _pData[index] ) );
+						sw_placement_new( ( pNewData + ( index ) ) ) T( std::move( _pData[index] ) );
 					else if constexpr ( std::is_copy_constructible_v<T> )
-						sw_placement_new( ( new_data + ( index ) ) ) T( _pData[index] );
+						sw_placement_new( ( pNewData + ( index ) ) ) T( _pData[index] );
 					else if constexpr ( std::is_move_constructible_v<T> )
-						sw_placement_new( ( new_data + ( index ) ) ) T( std::move( _pData[index] ) );
+						sw_placement_new( ( pNewData + ( index ) ) ) T( std::move( _pData[index] ) );
 					_pData[index].~T();
 				}
 				do_deallocate( _pData, _capacity );
-				_pData	  = new_data;
+				_pData	  = pNewData;
 				_capacity = get_inline_cap();
 			}
 			else
 			{
 				if ( _size == 0 )
 					return;
-				T* new_data = do_allocate( _size );
+				T* pNewData = do_allocate( _size );
 				for ( size_t index = 0; index < _size; ++index )
 				{
 					if constexpr ( std::is_nothrow_move_constructible_v<T> )
-						sw_placement_new( ( new_data + ( index ) ) ) T( std::move( _pData[index] ) );
+						sw_placement_new( ( pNewData + ( index ) ) ) T( std::move( _pData[index] ) );
 					else if constexpr ( std::is_copy_constructible_v<T> )
-						sw_placement_new( ( new_data + ( index ) ) ) T( _pData[index] );
+						sw_placement_new( ( pNewData + ( index ) ) ) T( _pData[index] );
 					else if constexpr ( std::is_move_constructible_v<T> )
-						sw_placement_new( ( new_data + ( index ) ) ) T( std::move( _pData[index] ) );
+						sw_placement_new( ( pNewData + ( index ) ) ) T( std::move( _pData[index] ) );
 					_pData[index].~T();
 				}
 				do_deallocate( _pData, _capacity );
-				_pData	  = new_data;
+				_pData	  = pNewData;
 				_capacity = _size;
 			}
 		}

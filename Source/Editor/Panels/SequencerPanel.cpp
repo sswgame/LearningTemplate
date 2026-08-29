@@ -59,7 +59,7 @@ namespace sw::editor
 		}
 		const utf8* GetItemLabel( int32 itemIndex ) const override
 		{
-			if ( itemIndex >= 0 && itemIndex < static_cast<int32>( _listItems.size() ) && _listItems[static_cast<size_t>( itemIndex )]._name.empty() == false )
+			if ( 0 <= itemIndex && itemIndex < static_cast<int32>( _listItems.size() ) && _listItems[static_cast<size_t>( itemIndex )]._name.empty() == false )
 				return _listItems[static_cast<size_t>( itemIndex )]._name.c_str();
 			_labelScratch = "Item ";
 			_labelScratch += to_string( itemIndex );
@@ -94,13 +94,13 @@ namespace sw::editor
 
 		void Del( int32 itemIndex ) override
 		{
-			if ( itemIndex >= 0 && itemIndex < static_cast<int32>( _listItems.size() ) )
+			if ( 0 <= itemIndex && itemIndex < static_cast<int32>( _listItems.size() ) )
 				_listItems.erase( _listItems.begin() + itemIndex );
 		}
 
 		void Duplicate( int32 itemIndex ) override
 		{
-			if ( itemIndex >= 0 && itemIndex < static_cast<int32>( _listItems.size() ) )
+			if ( 0 <= itemIndex && itemIndex < static_cast<int32>( _listItems.size() ) )
 			{
 				Item copy = _listItems[static_cast<size_t>( itemIndex )];
 				copy._name += " Copy";
@@ -180,7 +180,7 @@ namespace sw::editor
 		if ( ImGui::IsItemDeactivatedAfterEdit() )
 			notifyDocumentEdited( "Edit Sequence Note", "sequence-note" );
 
-		if ( _selected >= 0 && _selected < static_cast<int32>( _sequence->_listItems.size() ) )
+		if ( 0 <= _selected && _selected < static_cast<int32>( _sequence->_listItems.size() ) )
 		{
 			Item&								  item = _sequence->_listItems[static_cast<size_t>( _selected )];
 			fixed_string<constant::kMaxBuffer128> nameBuf{ item._name.c_str() };

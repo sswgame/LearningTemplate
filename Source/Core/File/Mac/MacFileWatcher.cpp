@@ -14,7 +14,17 @@ namespace sw
 {
 	SW_LOG_CALLER( "MacFileWatcher" );
 
-	MacFileWatcher::MacFileWatcher() = default;
+	MacFileWatcher::MacFileWatcher()
+		: _pStream{ nullptr }
+		, _pRunLoop{ nullptr }
+		, _bIsWatching{ false }
+		, _bRecursive{ true }
+		, _directoryPath{}
+		, _workerThread{}
+		, _eventMutex{}
+		, _listEventQueue{}
+	{
+	}
 
 	MacFileWatcher::~MacFileWatcher()
 	{

@@ -292,10 +292,10 @@ namespace sw
 		AllocationInfo()
 		{
 			// 0번 청크를 미리 할당하여 사전 정의 이름 적재
-			constexpr size_t chunkSize	= sizeof( Entry ) * kChunkSize;
-			Entry*			 firstChunk = static_cast<Entry*>( Memory::allocMemory( chunkSize ) );
-			Memory::set( firstChunk, 0, chunkSize );
-			_arrChunks[0].store( firstChunk, std::memory_order_release );
+			constexpr size_t chunkSize	 = sizeof( Entry ) * kChunkSize;
+			Entry*			 pFirstChunk = static_cast<Entry*>( Memory::allocMemory( chunkSize ) );
+			Memory::set( pFirstChunk, 0, chunkSize );
+			_arrChunks[0].store( pFirstChunk, std::memory_order_release );
 
 			createPredefinedNameTypes();
 		}
@@ -313,16 +313,16 @@ namespace sw
 
 			for ( uint32 chunkIndex = 0; chunkIndex < kMaxChunks; ++chunkIndex )
 			{
-				Entry* chunk = _arrChunks[chunkIndex].exchange( nullptr, std::memory_order_acq_rel );
-				if ( chunk != nullptr )
+				Entry* pChunk = _arrChunks[chunkIndex].exchange( nullptr, std::memory_order_acq_rel );
+				if ( pChunk != nullptr )
 				{
-					Memory::freeMemory( chunk );
+					Memory::freeMemory( pChunk );
 				}
 			}
 
-			for ( value_type* block : _listArenaBlock )
+			for ( value_type* pBlock : _listArenaBlock )
 			{
-				Memory::freeMemory( block );
+				Memory::freeMemory( pBlock );
 			}
 			_listArenaBlock.clear();
 			_pCurrentArenaBlock = nullptr;

@@ -93,7 +93,7 @@ namespace sw::editor
 			ImGui::PopID();
 		}
 
-		if ( _selectedFrame >= 0 && _selectedFrame < static_cast<int32>( _listFrame.size() ) )
+		if ( 0 <= _selectedFrame && _selectedFrame < static_cast<int32>( _listFrame.size() ) )
 		{
 			Frame& f = _listFrame[static_cast<size_t>( _selectedFrame )];
 			ImGui::DragFloat( "u", &f._u, 0.01f );
@@ -122,7 +122,7 @@ namespace sw::editor
 			notifyDocumentEdited( "Add Sprite Key" );
 		}
 		ImGui::SameLine();
-		if ( ImGui::Button( "Remove Key" ) && _selectedKey >= 0 &&
+		if ( ImGui::Button( "Remove Key" ) && 0 <= _selectedKey &&
 			 _selectedKey < static_cast<int32>( _listKey.size() ) )
 		{
 			_listKey.erase( _listKey.begin() + _selectedKey );
@@ -141,7 +141,7 @@ namespace sw::editor
 			ImGui::PopID();
 		}
 
-		if ( _selectedKey >= 0 && _selectedKey < static_cast<int32>( _listKey.size() ) )
+		if ( 0 <= _selectedKey && _selectedKey < static_cast<int32>( _listKey.size() ) )
 		{
 			TransformKey& k = _listKey[static_cast<size_t>( _selectedKey )];
 			ImGui::DragFloat( "time", &k._time, 0.01f );

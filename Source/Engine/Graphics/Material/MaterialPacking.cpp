@@ -464,7 +464,7 @@ namespace sw
 	uint32 MaterialUtil::alignOffset( uint32 offset, uint32 typeSize )
 	{
 		uint32 align = 4;
-		if ( typeSize > 4 && typeSize <= 16 )
+		if ( 4 < typeSize && typeSize <= 16 )
 			align = 16;
 		if ( typeSize == 64 )
 			align = 16;

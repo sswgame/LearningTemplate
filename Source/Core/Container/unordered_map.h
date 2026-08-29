@@ -297,16 +297,16 @@ namespace sw
 			SW_SCOPED_RACE_READ();
 			if ( _listBucket.empty() )
 				return end();
-			size_t		  hash		= _hasher( key );
-			const size_t  bucketIdx = hash % _listBucket.size();
-			const size_t* bData		= std::as_const( _listBucket ).data();
-			const Node*	  dData		= std::as_const( _listDenseData ).data();
-			size_t		  curr		= bData[bucketIdx];
+			size_t		  hash		  = _hasher( key );
+			const size_t  bucketIdx	  = hash % _listBucket.size();
+			const size_t* pBucketData = std::as_const( _listBucket ).data();
+			const Node*	  pDenseData  = std::as_const( _listDenseData ).data();
+			size_t		  curr		  = pBucketData[bucketIdx];
 			while ( curr != kEmptySlot )
 			{
-				if ( _equal( dData[curr]._kv.first, key ) )
+				if ( _equal( pDenseData[curr]._kv.first, key ) )
 					return iterator( this, curr );
-				curr = dData[curr]._next;
+				curr = pDenseData[curr]._next;
 			}
 			return end();
 		}
@@ -317,16 +317,16 @@ namespace sw
 			SW_SCOPED_RACE_READ();
 			if ( _listBucket.empty() )
 				return end();
-			size_t		  hash		= _hasher( key );
-			const size_t  bucketIdx = hash % _listBucket.size();
-			const size_t* bData		= std::as_const( _listBucket ).data();
-			const Node*	  dData		= std::as_const( _listDenseData ).data();
-			size_t		  curr		= bData[bucketIdx];
+			size_t		  hash		  = _hasher( key );
+			const size_t  bucketIdx	  = hash % _listBucket.size();
+			const size_t* pBucketData = std::as_const( _listBucket ).data();
+			const Node*	  pDenseData  = std::as_const( _listDenseData ).data();
+			size_t		  curr		  = pBucketData[bucketIdx];
 			while ( curr != kEmptySlot )
 			{
-				if ( _equal( dData[curr]._kv.first, key ) )
+				if ( _equal( pDenseData[curr]._kv.first, key ) )
 					return const_iterator( this, curr );
-				curr = dData[curr]._next;
+				curr = pDenseData[curr]._next;
 			}
 			return end();
 		}
@@ -338,24 +338,24 @@ namespace sw
 			SW_SCOPED_RACE_READ();
 			if ( _listBucket.empty() )
 				return end();
-			size_t		  hash		= _hasher( key );
-			const size_t  bucketIdx = hash % _listBucket.size();
-			const size_t* bData		= std::as_const( _listBucket ).data();
-			const Node*	  dData		= std::as_const( _listDenseData ).data();
-			size_t		  curr		= bData[bucketIdx];
+			size_t		  hash		  = _hasher( key );
+			const size_t  bucketIdx	  = hash % _listBucket.size();
+			const size_t* pBucketData = std::as_const( _listBucket ).data();
+			const Node*	  pDenseData  = std::as_const( _listDenseData ).data();
+			size_t		  curr		  = pBucketData[bucketIdx];
 			while ( curr != kEmptySlot )
 			{
 				if constexpr ( std::is_invocable_v<KeyEqual, const Key&, const K&> )
 				{
-					if ( _equal( dData[curr]._kv.first, key ) )
+					if ( _equal( pDenseData[curr]._kv.first, key ) )
 						return iterator( this, curr );
 				}
 				else
 				{
-					if ( dData[curr]._kv.first == key )
+					if ( pDenseData[curr]._kv.first == key )
 						return iterator( this, curr );
 				}
-				curr = dData[curr]._next;
+				curr = pDenseData[curr]._next;
 			}
 			return end();
 		}
@@ -367,24 +367,24 @@ namespace sw
 			SW_SCOPED_RACE_READ();
 			if ( _listBucket.empty() )
 				return end();
-			size_t		  hash		= _hasher( key );
-			const size_t  bucketIdx = hash % _listBucket.size();
-			const size_t* bData		= std::as_const( _listBucket ).data();
-			const Node*	  dData		= std::as_const( _listDenseData ).data();
-			size_t		  curr		= bData[bucketIdx];
+			size_t		  hash		  = _hasher( key );
+			const size_t  bucketIdx	  = hash % _listBucket.size();
+			const size_t* pBucketData = std::as_const( _listBucket ).data();
+			const Node*	  pDenseData  = std::as_const( _listDenseData ).data();
+			size_t		  curr		  = pBucketData[bucketIdx];
 			while ( curr != kEmptySlot )
 			{
 				if constexpr ( std::is_invocable_v<KeyEqual, const Key&, const K&> )
 				{
-					if ( _equal( dData[curr]._kv.first, key ) )
+					if ( _equal( pDenseData[curr]._kv.first, key ) )
 						return const_iterator( this, curr );
 				}
 				else
 				{
-					if ( dData[curr]._kv.first == key )
+					if ( pDenseData[curr]._kv.first == key )
 						return const_iterator( this, curr );
 				}
-				curr = dData[curr]._next;
+				curr = pDenseData[curr]._next;
 			}
 			return end();
 		}

@@ -231,16 +231,16 @@ namespace sw
 			SW_SCOPED_RACE_READ();
 			if ( _listBucket.empty() )
 				return end();
-			size_t		  hash		= _hasher( key );
-			const size_t  bucketIdx = hash % _listBucket.size();
-			const size_t* bData		= std::as_const( _listBucket ).data();
-			const Node*	  dData		= std::as_const( _listDenseData ).data();
-			size_t		  curr		= bData[bucketIdx];
+			size_t		  hash		  = _hasher( key );
+			const size_t  bucketIdx	  = hash % _listBucket.size();
+			const size_t* pBucketData = std::as_const( _listBucket ).data();
+			const Node*	  pDenseData  = std::as_const( _listDenseData ).data();
+			size_t		  curr		  = pBucketData[bucketIdx];
 			while ( curr != kEmptySlot )
 			{
-				if ( _equal( dData[curr]._key, key ) )
+				if ( _equal( pDenseData[curr]._key, key ) )
 					return iterator( this, curr );
-				curr = dData[curr]._next;
+				curr = pDenseData[curr]._next;
 			}
 			return end();
 		}

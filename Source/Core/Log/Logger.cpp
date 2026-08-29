@@ -327,7 +327,7 @@ namespace sw
 		static constexpr const utf8* kAnsiReset = "\033[0m";
 
 		const int32 idx = static_cast<int32>( level );
-		if ( idx >= 0 && idx < static_cast<int32>( LogLevel::Count ) )
+		if ( 0 <= idx && idx < static_cast<int32>( LogLevel::Count ) )
 		{
 			std::fputs( arrAnsiColors[idx], stdout );
 			std::fputs( pMessage, stdout );

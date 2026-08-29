@@ -46,12 +46,11 @@ namespace sw
 									const uint32* pEventFlags, const uint64* pEventIds );
 
 	private:
-		void*		 _pStream{ nullptr };  ///< FSEventStreamRef
-		void*		 _pRunLoop{ nullptr }; ///< CFRunLoopRef
-		atomic<bool> _bIsWatching{ false };
-		bool		 _bRecursive{ true };
-		string		 _directoryPath;
-
+		void*					_pStream;  ///< FSEventStreamRef
+		void*					_pRunLoop; ///< CFRunLoopRef
+		atomic<bool>			_bIsWatching;
+		bool					_bRecursive;
+		string					_directoryPath;
 		std::thread				_workerThread;
 		mutex					_eventMutex;
 		vector<FileChangeEvent> _listEventQueue;

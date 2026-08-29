@@ -153,10 +153,10 @@ namespace sw
 		{
 			Delegate newDelegate{};
 			newDelegate._pInstance = pClassInstance;
-			newDelegate._stubFunc  = static_cast<stub_function>( []( const void* ptr, Args... args ) -> R
+			newDelegate._stubFunc  = static_cast<stub_function>( []( const void* pPtr, Args... args ) -> R
 			{
-				const Class* instance = static_cast<const Class*>( ptr );
-				return std::invoke( MemberFunction, instance, std::forward<Args>( args )... );
+				const Class* pInstance = static_cast<const Class*>( pPtr );
+				return std::invoke( MemberFunction, pInstance, std::forward<Args>( args )... );
 			} );
 
 			return newDelegate;
