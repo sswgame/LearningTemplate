@@ -97,7 +97,7 @@ namespace sw::editor
 
 		const string beforeXml = EditorTransaction::captureSnapshot( GameObjectPtr{ pTargetObj } );
 
-		Component* pNewComp = pManager->addComponentByName( pTargetObj, hashed_string( string{ typeName }.c_str() ) );
+		Component* pNewComp = pManager->addComponentByName( pTargetObj, hashed_string{ typeName } );
 		if ( pNewComp != nullptr && pNewComp->getTypeInfo() != nullptr )
 		{
 			XmlSerializer::deserialize( pNewComp, *pNewComp->getTypeInfo(), string{ xml } );
