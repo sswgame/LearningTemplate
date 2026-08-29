@@ -213,7 +213,7 @@ namespace sw::editor
 		if ( _pDevice != nullptr )
 			vkDeviceWaitIdle( _pDevice );
 
-		for ( std::pair<void* const, RHITextureHandle>& pair : _mapTextureId )
+		for ( pair<void* const, RHITextureHandle>& pair : _mapTextureId )
 		{
 			if ( pair.first != nullptr )
 				ImGui_ImplVulkan_RemoveTexture( static_cast<VkDescriptorSet>( pair.first ) );

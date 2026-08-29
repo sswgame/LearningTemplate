@@ -6,6 +6,7 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/DataRaceDetector.h"
+#include "Core/Container/pair.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 
@@ -42,10 +43,12 @@ namespace sw
 			size_t _next;
 		};
 
-		vector<size_t> _listBucket;
-		vector<Node>   _listDenseData;
-		hasher		   _hasher;
-		key_equal	   _equal;
+		vector<size_t>			_listBucket;
+		vector<Node>			_listDenseData;
+		pair<hasher, key_equal> _traits;
+
+		const hasher&	 get_hasher() const noexcept { return _traits.first(); }
+		const key_equal& get_equal() const noexcept { return _traits.second(); }
 
 		/** @brief 빈 버킷 슬롯 표시 (전비트 1). */
 		static constexpr size_t kEmptySlot = static_cast<size_t>( -1 );
@@ -102,15 +105,13 @@ namespace sw
 		unordered_set()
 			: _listBucket{}
 			, _listDenseData{}
-			, _hasher{}
-			, _equal{} {}
+			, _traits{} {}
 
 		/** @brief 초기화 리스트를 삽입합니다. */
 		unordered_set( std::initializer_list<value_type> init )
 			: _listBucket{}
 			, _listDenseData{}
-			, _hasher{}
-			, _equal{}
+			, _traits{}
 		{
 			for ( const auto& value : init )
 			{
@@ -122,8 +123,7 @@ namespace sw
 		unordered_set( const unordered_set& other )
 			: _listBucket{ other._listBucket }
 			, _listDenseData{ other._listDenseData }
-			, _hasher{ other._hasher }
-			, _equal{ other._equal }
+			, _traits{ other._traits }
 		{
 			SW_SCOPED_RACE_READ_OTHER( other );
 		}
@@ -132,8 +132,7 @@ namespace sw
 		unordered_set( unordered_set&& other ) noexcept
 			: _listBucket{ std::move( other._listBucket ) }
 			, _listDenseData{ std::move( other._listDenseData ) }
-			, _hasher{ std::move( other._hasher ) }
-			, _equal{ std::move( other._equal ) }
+			, _traits{ std::move( other._traits ) }
 		{
 			SW_SCOPED_RACE_WRITE_OTHER( other );
 		}
@@ -147,8 +146,7 @@ namespace sw
 				SW_SCOPED_RACE_READ_OTHER( other );
 				_listBucket	   = other._listBucket;
 				_listDenseData = other._listDenseData;
-				_hasher		   = other._hasher;
-				_equal		   = other._equal;
+				_traits		   = other._traits;
 			}
 			return *this;
 		}
@@ -162,8 +160,7 @@ namespace sw
 				SW_SCOPED_RACE_WRITE_OTHER( other );
 				_listBucket	   = std::move( other._listBucket );
 				_listDenseData = std::move( other._listDenseData );
-				_hasher		   = std::move( other._hasher );
-				_equal		   = std::move( other._equal );
+				_traits		   = std::move( other._traits );
 			}
 			return *this;
 		}
@@ -231,14 +228,14 @@ namespace sw
 			SW_SCOPED_RACE_READ();
 			if ( _listBucket.empty() )
 				return end();
-			size_t		  hash		   = _hasher( key );
+			size_t		  hash		   = get_hasher()( key );
 			const size_t  bucketIndex  = hash % _listBucket.size();
 			const size_t* pBucketData  = std::as_const( _listBucket ).data();
 			const Node*	  pDenseData   = std::as_const( _listDenseData ).data();
 			size_t		  currentIndex = pBucketData[bucketIndex];
 			while ( currentIndex != kEmptySlot )
 			{
-				if ( _equal( pDenseData[currentIndex]._key, key ) )
+				if ( get_equal()( pDenseData[currentIndex]._key, key ) )
 					return iterator( this, currentIndex );
 				currentIndex = pDenseData[currentIndex]._next;
 			}
@@ -249,16 +246,16 @@ namespace sw
 		size_type count( const Key& key ) const { return find( key ) != end() ? 1 : 0; }
 
 		/** @brief 원소를 삽입합니다. */
-		std::pair<iterator, bool> insert( const value_type& value )
+		pair<iterator, bool> insert( const value_type& value )
 		{
 			SW_SCOPED_RACE_WRITE();
 			check_expand();
-			size_t		 hash		  = _hasher( value );
+			size_t		 hash		  = get_hasher()( value );
 			const size_t bucketIndex  = hash % _listBucket.size();
 			size_t		 currentIndex = _listBucket[bucketIndex];
 			while ( currentIndex != kEmptySlot )
 			{
-				if ( _equal( _listDenseData[currentIndex]._key, value ) )
+				if ( get_equal()( _listDenseData[currentIndex]._key, value ) )
 					return { iterator( this, currentIndex ), false };
 				currentIndex = _listDenseData[currentIndex]._next;
 			}
@@ -271,19 +268,19 @@ namespace sw
 
 		/** @brief 원소를 제자리 생성합니다. */
 		template <typename... Args>
-		std::pair<iterator, bool> emplace( Args&&... args )
+		pair<iterator, bool> emplace( Args&&... args )
 		{
 			SW_SCOPED_RACE_WRITE();
 			check_expand();
 			_listDenseData.push_back( { Key( std::forward<Args>( args )... ), kEmptySlot } );
 			const Key& key = _listDenseData.back()._key;
 
-			size_t		 hash		  = _hasher( key );
+			size_t		 hash		  = get_hasher()( key );
 			const size_t bucketIndex  = hash % _listBucket.size();
 			size_t		 currentIndex = _listBucket[bucketIndex];
 			while ( currentIndex != kEmptySlot )
 			{
-				if ( _equal( _listDenseData[currentIndex]._key, key ) )
+				if ( get_equal()( _listDenseData[currentIndex]._key, key ) )
 				{
 					_listDenseData.pop_back();
 					return { iterator( this, currentIndex ), false };
@@ -313,14 +310,14 @@ namespace sw
 			if ( _listBucket.empty() )
 				return 0;
 
-			size_t		 hash		   = _hasher( key );
+			size_t		 hash		   = get_hasher()( key );
 			const size_t bucketIndex   = hash % _listBucket.size();
 			size_t		 currentIndex  = _listBucket[bucketIndex];
 			size_t		 previousIndex = kEmptySlot;
 
 			while ( currentIndex != kEmptySlot )
 			{
-				if ( _equal( _listDenseData[currentIndex]._key, key ) )
+				if ( get_equal()( _listDenseData[currentIndex]._key, key ) )
 				{
 					if ( previousIndex == kEmptySlot )
 						_listBucket[bucketIndex] = _listDenseData[currentIndex]._next;
@@ -332,7 +329,7 @@ namespace sw
 					{
 						_listDenseData[currentIndex] = std::move( _listDenseData[lastIndex] );
 
-						size_t		 lastHash		   = _hasher( _listDenseData[currentIndex]._key );
+						size_t		 lastHash		   = get_hasher()( _listDenseData[currentIndex]._key );
 						const size_t lastBucketIndex   = lastHash % _listBucket.size();
 						size_t		 lastCurrentIndex  = _listBucket[lastBucketIndex];
 						size_t		 lastPreviousIndex = kEmptySlot;
@@ -375,7 +372,7 @@ namespace sw
 			_listBucket.assign( count, kEmptySlot );
 			for ( size_t denseIndex = 0; denseIndex < _listDenseData.size(); ++denseIndex )
 			{
-				size_t		 hash				 = _hasher( _listDenseData[denseIndex]._key );
+				size_t		 hash				 = get_hasher()( _listDenseData[denseIndex]._key );
 				const size_t bucketIndex		 = hash % _listBucket.size();
 				_listDenseData[denseIndex]._next = _listBucket[bucketIndex];
 				_listBucket[bucketIndex]		 = denseIndex;

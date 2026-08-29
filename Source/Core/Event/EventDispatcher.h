@@ -54,9 +54,9 @@ namespace sw
 		/** @brief 이벤트 구독을 해제합니다. */
 		void unsubscribe( const EventSubscription& token )
 		{
-			std::scoped_lock<SpinLock>			  lock{ _busSpinLock };
-			std::pair<hashed_string, EventTypeId> key( token._channel, token._eventType );
-			auto								  iter = _mapChannelDelegate.find( key );
+			std::scoped_lock<SpinLock>		 lock{ _busSpinLock };
+			pair<hashed_string, EventTypeId> key( token._channel, token._eventType );
+			auto							 iter = _mapChannelDelegate.find( key );
 			if ( iter != _mapChannelDelegate.end() )
 				std::static_pointer_cast<IMulticastDelegateBase>( iter->second )->remove( token._handle );
 		}
@@ -162,7 +162,7 @@ namespace sw
 		struct HashPair
 		{
 			/** @brief 채널 해시와 타입 ID를 섞습니다. */
-			size_t operator()( const std::pair<hashed_string, EventTypeId>& pair ) const
+			size_t operator()( const pair<hashed_string, EventTypeId>& pair ) const
 			{
 				size_t h1 = std::hash<hashed_string>{}( pair.first );
 				size_t h2 = std::hash<uint32>{}( pair.second );
@@ -205,10 +205,10 @@ namespace sw
 		template <typename T>
 		shared_ptr<MulticastDelegate<void( const T& )>> getOrCreateChannelDelegate( hashed_string channel )
 		{
-			std::pair<hashed_string, EventTypeId> key( channel, T::kType );
+			pair<hashed_string, EventTypeId> key( channel, T::kType );
 
-			std::scoped_lock<SpinLock>																		 lock{ _busSpinLock };
-			unordered_map<std::pair<hashed_string, EventTypeId>, shared_ptr<void>, HashPair>::const_iterator iter = _mapChannelDelegate.find( key );
+			std::scoped_lock<SpinLock>																	lock{ _busSpinLock };
+			unordered_map<pair<hashed_string, EventTypeId>, shared_ptr<void>, HashPair>::const_iterator iter = _mapChannelDelegate.find( key );
 			if ( iter != _mapChannelDelegate.end() )
 				return std::static_pointer_cast<MulticastDelegate<void( const T& )>>( iter->second );
 
@@ -219,11 +219,11 @@ namespace sw
 		}
 
 	private:
-		mutable SpinLock																	 _busSpinLock;
-		mutable SpinLock																	 _queueSpinLock;
-		unordered_map<std::pair<hashed_string, EventTypeId>, shared_ptr<void>, HashPair>	 _mapChannelDelegate;
-		unordered_map<std::pair<hashed_string, EventTypeId>, ChannelDispatchEntry, HashPair> _mapChannelDispatchTable;
-		unordered_map<hashed_string, unique_ptr<ChannelEventList>>							 _mapChannelQueue;
+		mutable SpinLock																_busSpinLock;
+		mutable SpinLock																_queueSpinLock;
+		unordered_map<pair<hashed_string, EventTypeId>, shared_ptr<void>, HashPair>		_mapChannelDelegate;
+		unordered_map<pair<hashed_string, EventTypeId>, ChannelDispatchEntry, HashPair> _mapChannelDispatchTable;
+		unordered_map<hashed_string, unique_ptr<ChannelEventList>>						_mapChannelQueue;
 
 		LinearAllocator _arrFrameAllocators[2];
 		vector<void*>	_listOverflowAllocations[2];

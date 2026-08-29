@@ -98,7 +98,7 @@ namespace sw
 			}
 
 			/** @brief `Key=Value, Key2=Value2` 목록을 커스텀 메타데이터 페어로 파싱합니다. */
-			static void parseCustomMetaPairs( string_view raw, vector<std::pair<string, string>>& outList )
+			static void parseCustomMetaPairs( string_view raw, vector<pair<string, string>>& outList )
 			{
 				const string_splitter parts( raw, { ",", ";" } );
 				for ( const string_view tokenView : parts.getSplitList() )

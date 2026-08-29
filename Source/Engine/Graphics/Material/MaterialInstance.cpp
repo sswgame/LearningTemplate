@@ -17,7 +17,7 @@ namespace sw
 		struct MaterialInstanceInternal
 		{
 			template <typename T>
-			static void insertOrAssign( vector<std::pair<hashed_string, T>>& listPairs, hashed_string key, const T& val )
+			static void insertOrAssign( vector<pair<hashed_string, T>>& listPairs, hashed_string key, const T& val )
 			{
 				for ( auto& pair : listPairs )
 				{
@@ -31,7 +31,7 @@ namespace sw
 			}
 
 			template <typename T>
-			static const T* findValue( const vector<std::pair<hashed_string, T>>& listPairs, hashed_string key )
+			static const T* findValue( const vector<pair<hashed_string, T>>& listPairs, hashed_string key )
 			{
 				for ( const auto& pair : listPairs )
 				{

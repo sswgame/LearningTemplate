@@ -45,36 +45,36 @@ namespace sw
 	/** @brief PROPERTY(...) 가 붙은 멤버 필드 */
 	struct ParsedPropertyInfo
 	{
-		string							  _name;
-		string							  _typeName;
-		vector<string>					  _listAlias;
-		string							  _category;
-		string							  _displayName;
-		string							  _tooltip;
-		string							  _defaultValue;
-		string							  _assetType;
-		vector<std::pair<string, string>> _listCustomMeta;
-		string							  _containerType;
-		string							  _elementTypeName;
-		string							  _keyTypeName;
-		shared_ptr<ParsedContainerNode>	  _containerTree;
-		float32							  _minRange;
-		float32							  _maxRange;
-		uint32							  _bitOffset;
-		uint32							  _byteOffset;
-		ContainerKind					  _containerKind;
-		uint8							  _bitMask;
-		uint8							  _bIsBitField		: 1;
-		uint8							  _bReadOnly		: 1;
-		uint8							  _bXmlAttribute	: 1;
-		uint8							  _bAssetPath		: 1;
-		uint8							  _bPolymorphic		: 1;
-		uint8							  _bHasRange		: 1;
-		uint8							  _bIsContainer		: 1;
-		uint8							  _bTransient		: 1;
-		uint8							  _bHideInInspector : 1;
-		[[maybe_unused]] uint8			  _reserved			: 7;
-		[[maybe_unused]] uint16			  _padding;
+		string							_name;
+		string							_typeName;
+		vector<string>					_listAlias;
+		string							_category;
+		string							_displayName;
+		string							_tooltip;
+		string							_defaultValue;
+		string							_assetType;
+		vector<pair<string, string>>	_listCustomMeta;
+		string							_containerType;
+		string							_elementTypeName;
+		string							_keyTypeName;
+		shared_ptr<ParsedContainerNode> _containerTree;
+		float32							_minRange;
+		float32							_maxRange;
+		uint32							_bitOffset;
+		uint32							_byteOffset;
+		ContainerKind					_containerKind;
+		uint8							_bitMask;
+		uint8							_bIsBitField	  : 1;
+		uint8							_bReadOnly		  : 1;
+		uint8							_bXmlAttribute	  : 1;
+		uint8							_bAssetPath		  : 1;
+		uint8							_bPolymorphic	  : 1;
+		uint8							_bHasRange		  : 1;
+		uint8							_bIsContainer	  : 1;
+		uint8							_bTransient		  : 1;
+		uint8							_bHideInInspector : 1;
+		[[maybe_unused]] uint8			_reserved		  : 7;
+		[[maybe_unused]] uint16			_padding;
 
 		ParsedPropertyInfo() noexcept
 			: _name{}
@@ -114,22 +114,22 @@ namespace sw
 	/** @brief FUNCTION(...) 가 붙은 메서드(또는 자동 등록 생성자) */
 	struct ParsedFunctionInfo
 	{
-		string							  _name;
-		string							  _returnTypeName;
-		vector<string>					  _listParameterTypeName;
-		string							  _category;
-		string							  _displayName;
-		string							  _tooltip;
-		vector<std::pair<string, string>> _listCustomMeta;
-		FunctionNetRole					  _netRole;
-		uint8							  _bReliable	 : 1;
-		uint8							  _bValidate	 : 1;
-		uint8							  _bConstructor	 : 1;
-		uint8							  _bStatic		 : 1;
-		uint8							  _bConst		 : 1;
-		uint8							  _bCallInEditor : 1;
-		[[maybe_unused]] uint8			  _reserved		 : 2;
-		[[maybe_unused]] uint16			  _padding;
+		string						 _name;
+		string						 _returnTypeName;
+		vector<string>				 _listParameterTypeName;
+		string						 _category;
+		string						 _displayName;
+		string						 _tooltip;
+		vector<pair<string, string>> _listCustomMeta;
+		FunctionNetRole				 _netRole;
+		uint8						 _bReliable		: 1;
+		uint8						 _bValidate		: 1;
+		uint8						 _bConstructor	: 1;
+		uint8						 _bStatic		: 1;
+		uint8						 _bConst		: 1;
+		uint8						 _bCallInEditor : 1;
+		[[maybe_unused]] uint8		 _reserved		: 2;
+		[[maybe_unused]] uint16		 _padding;
 
 		ParsedFunctionInfo() noexcept
 			: _name{}
@@ -155,22 +155,22 @@ namespace sw
 	/** @brief REFLECT 가 붙은 클래스·구조체 */
 	struct ParsedTypeInfo
 	{
-		string							  _name;
-		string							  _fullyQualifiedName;
-		string							  _parentFQN;
-		string							  _category;
-		string							  _displayName;
-		string							  _tooltip;
-		vector<string>					  _listAlias;
-		vector<std::pair<string, string>> _listCustomMeta;
-		vector<ParsedPropertyInfo>		  _listProperty;
-		vector<ParsedFunctionInfo>		  _listMethod;
-		uint8							  _bAbstract		 : 1;
-		uint8							  _bStatic			 : 1;
-		uint8							  _bReflectBody		 : 1;
-		uint8							  _bComponentFactory : 1;
-		uint8							  _bHideInMenu		 : 1;
-		[[maybe_unused]] uint8			  _reserved			 : 3;
+		string						 _name;
+		string						 _fullyQualifiedName;
+		string						 _parentFQN;
+		string						 _category;
+		string						 _displayName;
+		string						 _tooltip;
+		vector<string>				 _listAlias;
+		vector<pair<string, string>> _listCustomMeta;
+		vector<ParsedPropertyInfo>	 _listProperty;
+		vector<ParsedFunctionInfo>	 _listMethod;
+		uint8						 _bAbstract			: 1;
+		uint8						 _bStatic			: 1;
+		uint8						 _bReflectBody		: 1;
+		uint8						 _bComponentFactory : 1;
+		uint8						 _bHideInMenu		: 1;
+		[[maybe_unused]] uint8		 _reserved			: 3;
 
 		ParsedTypeInfo() noexcept
 			: _name{}
@@ -206,17 +206,17 @@ namespace sw
 	/** @brief ENUM(...) 가 붙은 열거형 */
 	struct ParsedEnumInfo
 	{
-		string							  _name;
-		string							  _fullyQualifiedName;
-		vector<string>					  _listAlias;
-		vector<std::pair<string, string>> _listValueAlias;
-		vector<std::pair<string, string>> _listCustomMeta;
-		vector<ParsedEnumeratorInfo>	  _listEnumerator;
-		string							  _invalidEnumerator;
-		string							  _countEnumerator;
-		uint8							  _bIsBitFlag	: 1;
-		uint8							  _bEmitFlagOps : 1;
-		[[maybe_unused]] uint8			  _reserved		: 6;
+		string						 _name;
+		string						 _fullyQualifiedName;
+		vector<string>				 _listAlias;
+		vector<pair<string, string>> _listValueAlias;
+		vector<pair<string, string>> _listCustomMeta;
+		vector<ParsedEnumeratorInfo> _listEnumerator;
+		string						 _invalidEnumerator;
+		string						 _countEnumerator;
+		uint8						 _bIsBitFlag   : 1;
+		uint8						 _bEmitFlagOps : 1;
+		[[maybe_unused]] uint8		 _reserved	   : 6;
 
 		ParsedEnumInfo() noexcept
 			: _name{}

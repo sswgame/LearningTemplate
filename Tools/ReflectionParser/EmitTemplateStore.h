@@ -35,14 +35,14 @@ namespace sw
 		/** @brief 템플릿을 확장합니다. 모르는 변수는 빈 문자열, 없으면 빈 결과를 반환합니다. */
 		string render( const string_view					name,
 					   const unordered_map<string, string>& vars ) const;
-		string render( const string_view										  name,
-					   std::initializer_list<std::pair<string_view, string_view>> vars ) const;
+		string render( const string_view									 name,
+					   std::initializer_list<pair<string_view, string_view>> vars ) const;
 
 		/** @brief 메모리 속 골격을 확장합니다(테스트·폴백용). */
 		static string expand( const string_view					   tpl,
 							  const unordered_map<string, string>& vars );
-		static string expand( const string_view											 tpl,
-							  std::initializer_list<std::pair<string_view, string_view>> vars );
+		static string expand( const string_view										tpl,
+							  std::initializer_list<pair<string_view, string_view>> vars );
 
 	private:
 		unordered_map<string, string> _mapTemplate;

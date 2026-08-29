@@ -136,7 +136,7 @@ namespace sw
 		if ( _objectManager == nullptr )
 			return false;
 
-		vector<std::pair<GameObject*, string_view>> listRebindTargets;
+		vector<pair<GameObject*, string_view>> listRebindTargets;
 		listRebindTargets.reserve( doc._listEntityNode.size() );
 
 		for ( const SceneDocument::EntityNode& ent : doc._listEntityNode )

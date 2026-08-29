@@ -131,7 +131,7 @@ namespace sw
 
 		{
 			std::scoped_lock<mutex> lock{ _watchMutex };
-			for ( const std::pair<int32, string>& pair : _mapWatchDescriptorToPath )
+			for ( const pair<int32, string>& pair : _mapWatchDescriptorToPath )
 				inotify_rm_watch( _inotifyFd, pair.first );
 			_mapWatchDescriptorToPath.clear();
 		}

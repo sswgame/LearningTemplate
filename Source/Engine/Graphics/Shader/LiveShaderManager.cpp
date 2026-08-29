@@ -175,7 +175,7 @@ namespace sw
 		std::unique_lock<std::shared_mutex> lock{ _mutex };
 		_listPendingReloadPath.clear();
 		_listPendingReloadPath.reserve( _mapWatchedShader.size() );
-		for ( const std::pair<const string, vector<WatchedShaderInfo>>& pair : _mapWatchedShader )
+		for ( const pair<const string, vector<WatchedShaderInfo>>& pair : _mapWatchedShader )
 		{
 			_listPendingReloadPath.push_back( pair.first );
 		}

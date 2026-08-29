@@ -11,6 +11,7 @@
 #include "Core/Container/deque.h"
 #include "Core/Container/list.h"
 #include "Core/Container/map.h"
+#include "Core/Container/pair.h"
 #include "Core/Container/set.h"
 #include "Core/Container/sparse_set.h"
 #include "Core/Container/string.h"

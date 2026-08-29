@@ -254,13 +254,13 @@ namespace sw
 		Material*			 _pParentMaterial;
 		MaterialInstanceDesc _desc;
 
-		vector<std::pair<hashed_string, string>>			 _listValueOverride;
-		vector<std::pair<hashed_string, float32>>			 _listScalarOverride;
-		vector<std::pair<hashed_string, array<float32, 4>>>	 _listVectorOverride;
-		vector<std::pair<hashed_string, RHIDescriptorIndex>> _listTextureOverride;
-		vector<std::pair<hashed_string, bool>>				 _listKeywordOverride;
-		vector<std::pair<hashed_string, string>>			 _listMultiCompileOverride;
-		MaterialQualityLevel								 _qualityOverride;
+		vector<pair<hashed_string, string>>				_listValueOverride;
+		vector<pair<hashed_string, float32>>			_listScalarOverride;
+		vector<pair<hashed_string, array<float32, 4>>>	_listVectorOverride;
+		vector<pair<hashed_string, RHIDescriptorIndex>> _listTextureOverride;
+		vector<pair<hashed_string, bool>>				_listKeywordOverride;
+		vector<pair<hashed_string, string>>				_listMultiCompileOverride;
+		MaterialQualityLevel							_qualityOverride;
 
 		vector<uint8>	   _listBuffer;
 		RHIBufferHandle	   _constantBuffer;

@@ -197,7 +197,7 @@ namespace sw
 			pEngineHead = _s_engineHead;
 		registerPendingFactories( "Engine", pEngineHead );
 
-		vector<std::pair<string, ComponentFactoryRegistrar*>> listModuleHeads;
+		vector<pair<string, ComponentFactoryRegistrar*>> listModuleHeads;
 		{
 			std::scoped_lock<mutex> lock{ GameObjectManagerInternal::getModuleFactoryHeadsMutex() };
 			for ( const auto& [mod, head] : GameObjectManagerInternal::getModuleFactoryHeads() )
@@ -909,7 +909,7 @@ namespace sw
 
 		// Iterative DFS using an explicit stack to avoid stack overflow on deep hierarchies.
 		// Each entry: (node, parentChanged)
-		vector<std::pair<SceneComponent*, bool>> stack;
+		vector<pair<SceneComponent*, bool>> stack;
 		stack.reserve( 32 );
 		stack.emplace_back( pRoot, bParentChanged );
 

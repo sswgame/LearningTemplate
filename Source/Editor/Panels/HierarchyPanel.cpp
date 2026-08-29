@@ -208,7 +208,7 @@ namespace sw::editor
 				}
 				else
 				{
-					map<string, vector<std::pair<hashed_string, const TypeInfo*>>> mapCategorized;
+					map<string, vector<pair<hashed_string, const TypeInfo*>>> mapCategorized;
 					for ( const hashed_string& typeName : listTypes )
 					{
 						const TypeInfo* pTypeInfo = ( pRegistry != nullptr ) ? pRegistry->findType( typeName ) : nullptr;

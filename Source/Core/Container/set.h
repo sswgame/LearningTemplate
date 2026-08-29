@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/DataRaceDetector.h"
+#include "Core/Container/pair.h"
 #include "Core/Container/vector.h"
 
 // 이 매크로를 정의하면 표준 std::set 구현으로 되돌립니다.
@@ -245,7 +246,7 @@ namespace sw
 		}
 
 		/** @brief 원소를 삽입합니다. */
-		std::pair<iterator, bool> insert( const value_type& value )
+		pair<iterator, bool> insert( const value_type& value )
 		{
 			SW_SCOPED_RACE_WRITE();
 			auto it = std::lower_bound( _data.begin(), _data.end(), value, _comp );
@@ -256,7 +257,7 @@ namespace sw
 		}
 
 		/** @brief 원소를 삽입합니다. */
-		std::pair<iterator, bool> insert( value_type&& value )
+		pair<iterator, bool> insert( value_type&& value )
 		{
 			SW_SCOPED_RACE_WRITE();
 			auto it = std::lower_bound( _data.begin(), _data.end(), value, _comp );
@@ -290,7 +291,7 @@ namespace sw
 
 		/** @brief 원소를 제자리 생성합니다. */
 		template <class... Args>
-		std::pair<iterator, bool> emplace( Args&&... args )
+		pair<iterator, bool> emplace( Args&&... args )
 		{
 			value_type val( std::forward<Args>( args )... );
 			return insert( std::move( val ) );
@@ -379,7 +380,7 @@ namespace sw
 
 		/** @brief 동등 범위를 반환합니다. */
 		template <typename K>
-		std::pair<iterator, iterator> equal_range( const K& key )
+		pair<iterator, iterator> equal_range( const K& key )
 		{
 			SW_SCOPED_RACE_READ();
 			auto first = std::lower_bound( _data.begin(), _data.end(), key, _comp );
@@ -391,7 +392,7 @@ namespace sw
 
 		/** @brief 동등 범위를 반환합니다. */
 		template <typename K>
-		std::pair<const_iterator, const_iterator> equal_range( const K& key ) const
+		pair<const_iterator, const_iterator> equal_range( const K& key ) const
 		{
 			SW_SCOPED_RACE_READ();
 			auto first = std::lower_bound( _data.begin(), _data.end(), key, _comp );

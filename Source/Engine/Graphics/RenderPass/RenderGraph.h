@@ -48,9 +48,9 @@ namespace sw
 	 */
 	struct RenderGraphExecutionContext
 	{
-		vector<std::pair<hashed_string, RenderGraphResourceState>> _listResourceState;
-		unordered_map<hashed_string, size_t>					   _mapResourceToIndex;
-		uint32													   _lastTransitionCount{ 0 };
+		vector<pair<hashed_string, RenderGraphResourceState>> _listResourceState;
+		unordered_map<hashed_string, size_t>				  _mapResourceToIndex;
+		uint32												  _lastTransitionCount{ 0 };
 
 		/** @brief 다음 execute() 호출 전 상태 초기화 (capacity 재사용으로 Zero-allocation 유지) */
 		void reset()

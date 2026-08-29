@@ -39,8 +39,8 @@ namespace sw
 
 	void EventDispatcher::processEvents()
 	{
-		int32									  currentAllocIdx{ 0 };
-		vector<std::pair<hashed_string, IEvent*>> activeChannels;
+		int32								 currentAllocIdx{ 0 };
+		vector<pair<hashed_string, IEvent*>> activeChannels;
 		BLOCK( "Swap Event Queues" )
 		{
 			std::scoped_lock<SpinLock> lock{ _queueSpinLock };
@@ -87,9 +87,9 @@ namespace sw
 				{
 					ChannelDispatchEntry callback;
 					{
-						std::scoped_lock<SpinLock>			  lock{ _busSpinLock };
-						std::pair<hashed_string, EventTypeId> key( channel, pEvent->getEventType() );
-						auto								  iter = _mapChannelDispatchTable.find( key );
+						std::scoped_lock<SpinLock>		 lock{ _busSpinLock };
+						pair<hashed_string, EventTypeId> key( channel, pEvent->getEventType() );
+						auto							 iter = _mapChannelDispatchTable.find( key );
 						if ( iter != _mapChannelDispatchTable.end() )
 							callback = iter->second;
 					}

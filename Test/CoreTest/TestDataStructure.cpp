@@ -11,6 +11,7 @@
 #include "Core/Container/deque.h"
 #include "Core/Container/list.h"
 #include "Core/Container/map.h"
+#include "Core/Container/pair.h"
 #include "Core/Container/set.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
@@ -799,4 +800,59 @@ SW_TEST_CASE( Core_DataStructure, WorkStealingDequeMultiThreadStress )
 
 	SW_EXPECT_EQUAL( kTotalItems, totalProcessedCount );
 	SW_EXPECT_EQUAL( expectedSum, totalProcessedSum );
+}
+
+/**
+ * @brief [Core_DataStructure] pair 기본 및 구조화 바인딩
+ */
+SW_TEST_CASE( Core_DataStructure, PairBasicAndStructuredBinding )
+{
+	sw::pair<int32, sw::string> p1{ 42, "hello" };
+	SW_EXPECT_EQUAL( 42, p1.first );
+	SW_EXPECT_EQUAL( sw::string( "hello" ), p1.second );
+
+	const auto [num, str] = p1;
+	SW_EXPECT_EQUAL( 42, num );
+	SW_EXPECT_EQUAL( sw::string( "hello" ), str );
+
+	auto p2 = sw::make_pair( 100, 200 );
+	SW_EXPECT_EQUAL( 100, p2.first );
+	SW_EXPECT_EQUAL( 200, p2.second );
+}
+
+struct EmptyTestHasher
+{
+	size_t operator()( int32 val ) const noexcept { return static_cast<size_t>( static_cast<uint32>( val ) * 2654435761u ); }
+};
+
+struct EmptyTestEqual
+{
+	bool operator()( int32 a, int32 b ) const noexcept { return a == b; }
+};
+
+/**
+ * @brief [Core_DataStructure] pair EBO (Empty Base Optimization) 압축 검증
+ */
+SW_TEST_CASE( Core_DataStructure, PairEmptyBaseOptimization )
+{
+#if !defined( SW_ENABLE_STL_CONTAINER )
+	// 1) 일반 타입 쌍: 8 바이트
+	static_assert( sizeof( sw::pair<int32, int32> ) == 8, "pair<int, int> must be 8 bytes" );
+	// 2) 빈 클래스 1개 + 포인터: EBO 압축으로 8 바이트
+	static_assert( sizeof( sw::pair<EmptyTestHasher, int32*> ) == sizeof( int32* ), "Empty + pointer must be pointer size (EBO)" );
+	// 3) 빈 클래스 2개: EBO 압축으로 최소 크기 1 바이트
+	static_assert( sizeof( sw::pair<EmptyTestHasher, EmptyTestEqual> ) == 1, "Empty + Empty must be 1 byte (EBO)" );
+#endif
+
+	sw::pair<EmptyTestHasher, int32> pEmptyFirst{ EmptyTestHasher{}, 1234 };
+	SW_EXPECT_EQUAL( 1234, pEmptyFirst.second );
+	SW_EXPECT_EQUAL( static_cast<size_t>( 10 * 2654435761u ), pEmptyFirst.first()( 10 ) );
+
+	sw::pair<int32, EmptyTestEqual> pEmptySecond{ 5678, EmptyTestEqual{} };
+	SW_EXPECT_EQUAL( 5678, pEmptySecond.first );
+	SW_EXPECT_TRUE( pEmptySecond.second()( 10, 10 ) );
+	SW_EXPECT_FALSE( pEmptySecond.second()( 10, 20 ) );
+
+	sw::pair<EmptyTestHasher, EmptyTestEqual> pBothEmpty{};
+	SW_EXPECT_TRUE( pBothEmpty.second()( 5, 5 ) );
 }

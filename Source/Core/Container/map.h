@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/DataRaceDetector.h"
+#include "Core/Container/pair.h"
 #include "Core/Container/vector.h"
 
 // 이 매크로를 정의하면 표준 std::map 구현으로 되돌립니다.
@@ -13,17 +14,17 @@
 namespace sw
 {
 #if defined( SW_ENABLE_STL_CONTAINER )
-	template <typename Key, typename T, typename Compare = std::less<Key>, typename Allocator = std::allocator<std::pair<const Key, T>>>
+	template <typename Key, typename T, typename Compare = std::less<Key>, typename Allocator = std::allocator<pair<const Key, T>>>
 	using map = std::map<Key, T, Compare, Allocator>;
 #else
 	/** @brief 정렬된 벡터 맵. 조회는 이진 검색, 삽입은 정렬 유지. */
-	template <typename Key, typename T, typename Compare = std::less<void>, typename Allocator = Allocator<std::pair<Key, T>>>
+	template <typename Key, typename T, typename Compare = std::less<void>, typename Allocator = Allocator<pair<Key, T>>>
 	class map
 	{
 	public:
 		using key_type				 = Key;
 		using mapped_type			 = T;
-		using value_type			 = std::pair<Key, T>;
+		using value_type			 = pair<Key, T>;
 		using size_type				 = size_t;
 		using difference_type		 = std::ptrdiff_t;
 		using key_compare			 = Compare;
@@ -305,7 +306,7 @@ namespace sw
 		}
 
 		/** @brief 원소를 삽입합니다. */
-		std::pair<iterator, bool> insert( const value_type& value )
+		pair<iterator, bool> insert( const value_type& value )
 		{
 			SW_SCOPED_RACE_WRITE();
 			auto it = std::lower_bound( _data.begin(), _data.end(), value.first, KeyCompare{ _comp } );
@@ -316,7 +317,7 @@ namespace sw
 		}
 
 		/** @brief 원소를 삽입합니다. */
-		std::pair<iterator, bool> insert( value_type&& value )
+		pair<iterator, bool> insert( value_type&& value )
 		{
 			SW_SCOPED_RACE_WRITE();
 			auto it = std::lower_bound( _data.begin(), _data.end(), value.first, KeyCompare{ _comp } );
@@ -350,7 +351,7 @@ namespace sw
 
 		/** @brief 원소를 제자리 생성합니다. */
 		template <class... Args>
-		std::pair<iterator, bool> emplace( Args&&... args )
+		pair<iterator, bool> emplace( Args&&... args )
 		{
 			value_type val( std::forward<Args>( args )... );
 			return insert( std::move( val ) );
@@ -363,7 +364,7 @@ namespace sw
 		// try_emplace
 		/** @brief 키가 없을 때만 제자리 생성합니다. */
 		template <class... Args>
-		std::pair<iterator, bool> try_emplace( const Key& k, Args&&... args )
+		pair<iterator, bool> try_emplace( const Key& k, Args&&... args )
 		{
 			SW_SCOPED_RACE_WRITE();
 			auto it = std::lower_bound( _data.begin(), _data.end(), k, KeyCompare{ _comp } );
@@ -375,7 +376,7 @@ namespace sw
 
 		/** @brief 키가 없을 때만 제자리 생성합니다. */
 		template <class... Args>
-		std::pair<iterator, bool> try_emplace( Key&& k, Args&&... args )
+		pair<iterator, bool> try_emplace( Key&& k, Args&&... args )
 		{
 			SW_SCOPED_RACE_WRITE();
 			auto it = std::lower_bound( _data.begin(), _data.end(), k, KeyCompare{ _comp } );
@@ -464,7 +465,7 @@ namespace sw
 
 		/** @brief 동등 범위를 반환합니다. */
 		template <typename K>
-		std::pair<iterator, iterator> equal_range( const K& key )
+		pair<iterator, iterator> equal_range( const K& key )
 		{
 			SW_SCOPED_RACE_READ();
 			auto first = std::lower_bound( _data.begin(), _data.end(), key, KeyCompare{ _comp } );
@@ -476,7 +477,7 @@ namespace sw
 
 		/** @brief 동등 범위를 반환합니다. */
 		template <typename K>
-		std::pair<const_iterator, const_iterator> equal_range( const K& key ) const
+		pair<const_iterator, const_iterator> equal_range( const K& key ) const
 		{
 			SW_SCOPED_RACE_READ();
 			auto first = std::lower_bound( _data.begin(), _data.end(), key, KeyCompare{ _comp } );

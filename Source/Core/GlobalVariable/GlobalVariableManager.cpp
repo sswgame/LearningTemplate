@@ -372,7 +372,7 @@ namespace sw
 	void GlobalVariableManager::resetAllToDefault()
 	{
 		// Step 1: unique_lock 안에서 값만 직접 리셋, 콜백 목록을 추출
-		vector<std::pair<GlobalVariableChangedDelegate, GlobalVariableInfo*>> listPendingCallbacks;
+		vector<pair<GlobalVariableChangedDelegate, GlobalVariableInfo*>> listPendingCallbacks;
 		{
 			std::unique_lock<std::shared_mutex> lock{ _mutex };
 			for ( auto& [name, info] : _mapVariable )

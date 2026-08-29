@@ -114,8 +114,8 @@ namespace sw
 		return expand( it->second, vars );
 	}
 
-	string EmitTemplateStore::render( const string_view											 name,
-									  std::initializer_list<std::pair<string_view, string_view>> vars ) const
+	string EmitTemplateStore::render( const string_view										name,
+									  std::initializer_list<pair<string_view, string_view>> vars ) const
 	{
 		const auto it = _mapTemplate.find( string( name ) );
 		if ( it == _mapTemplate.end() )
@@ -183,8 +183,8 @@ namespace sw
 		return out;
 	}
 
-	string EmitTemplateStore::expand( const string_view											 tpl,
-									  std::initializer_list<std::pair<string_view, string_view>> vars )
+	string EmitTemplateStore::expand( const string_view										tpl,
+									  std::initializer_list<pair<string_view, string_view>> vars )
 	{
 		string out;
 		out.reserve( tpl.size() + 64 );

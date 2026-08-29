@@ -165,7 +165,7 @@ namespace sw
 	}
 
 	void CodeGenerator::appendTemplate( CodeEmitBuffer& out, const string_view name,
-										std::initializer_list<std::pair<string_view, string_view>> vars )
+										std::initializer_list<pair<string_view, string_view>> vars )
 	{
 		out.append( EmitTemplateStore::instance().render( name, vars ) );
 	}

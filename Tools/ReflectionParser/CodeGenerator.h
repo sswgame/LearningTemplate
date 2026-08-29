@@ -79,7 +79,7 @@ namespace sw
 		static void appendTemplate( CodeEmitBuffer& out, const string_view name,
 									const unordered_map<string, string>& vars );
 		static void appendTemplate( CodeEmitBuffer& out, const string_view name,
-									std::initializer_list<std::pair<string_view, string_view>> vars );
+									std::initializer_list<pair<string_view, string_view>> vars );
 
 	private:
 		const vector<ParsedTypeInfo>& _listType;
