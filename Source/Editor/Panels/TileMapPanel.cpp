@@ -160,7 +160,7 @@ namespace sw::editor
 		if ( _layer == PaintLayer::Warp )
 		{
 			uniqueWarpCells.reserve( _listWarp.size() );
-			for ( const EditorTileWarp& warp : _listWarp )
+			for ( const TileMapXmlData::Warp& warp : _listWarp )
 			{
 				uniqueWarpCells.insert( ( static_cast<uint64>( static_cast<uint32>( warp._tileY ) ) << 32 ) |
 										static_cast<uint32>( warp._tileX ) );
@@ -227,25 +227,25 @@ namespace sw::editor
 		_listWalkable.assign( count, 1 );
 		_listEncounter.assign( count, 0 );
 		_listPassThrough.assign( count, 0 );
-		_listVisual.assign( count, EditorTileVisual{} );
+		_listVisual.assign( count, TileMapXmlData::Visual{} );
 		_listWarp.clear();
 	}
 
 	bool TileMapPanel::loadXml( string_view assetRelativePath )
 	{
-		EditorTileMapData data;
+		TileMapXmlData data;
 		if ( EditorToolAssetCommands::loadTileMap( assetRelativePath, data, _status ) == false )
 			return false;
 
 		StringUtil::strncpy( _arrNameBuffer, data._name.c_str(), sizeof( _arrNameBuffer ) - 1 );
 		_width				= data._width;
 		_height				= data._height;
-		_listWalkable		= std::move( data._listWalkable );
-		_listEncounter		= std::move( data._listEncounter );
-		_listPassThrough	= std::move( data._listPassThrough );
-		_listVisual			= std::move( data._listVisual );
-		_listWarp			= std::move( data._listWarp );
-		_listEncounterEntry = std::move( data._listEncounterEntry );
+		_listWalkable		= std::move( data._walkableList );
+		_listEncounter		= std::move( data._encounterList );
+		_listPassThrough	= std::move( data._passThroughList );
+		_listVisual			= std::move( data._visualList );
+		_listWarp			= std::move( data._warpList );
+		_listEncounterEntry = std::move( data._encounterEntryList );
 		_scenePath			= data._scenePath;
 		_role				= data._role;
 		_spawnX				= data._spawnX;
@@ -271,36 +271,36 @@ namespace sw::editor
 		return true;
 	}
 
-	EditorTileMapData TileMapPanel::captureMapData() const
+	TileMapXmlData TileMapPanel::captureMapData() const
 	{
-		EditorTileMapData data;
+		TileMapXmlData data;
 		data._name				 = _arrNameBuffer;
 		data._width				 = _width;
 		data._height			 = _height;
-		data._listWalkable		 = _listWalkable;
-		data._listEncounter		 = _listEncounter;
-		data._listPassThrough	 = _listPassThrough;
-		data._listVisual		 = _listVisual;
-		data._listWarp			 = _listWarp;
+		data._walkableList		 = _listWalkable;
+		data._encounterList		 = _listEncounter;
+		data._passThroughList	 = _listPassThrough;
+		data._visualList		 = _listVisual;
+		data._warpList			 = _listWarp;
 		data._scenePath			 = _scenePath;
 		data._role				 = _role;
 		data._spawnX			 = _spawnX;
 		data._spawnY			 = _spawnY;
-		data._listEncounterEntry = _listEncounterEntry;
+		data._encounterEntryList = _listEncounterEntry;
 		return data;
 	}
 
-	void TileMapPanel::applyMapData( const EditorTileMapData& data )
+	void TileMapPanel::applyMapData( const TileMapXmlData& data )
 	{
 		StringUtil::strncpy( _arrNameBuffer, data._name.c_str(), sizeof( _arrNameBuffer ) - 1 );
 		_width				= data._width;
 		_height				= data._height;
-		_listWalkable		= data._listWalkable;
-		_listEncounter		= data._listEncounter;
-		_listPassThrough	= data._listPassThrough;
-		_listVisual			= data._listVisual;
-		_listWarp			= data._listWarp;
-		_listEncounterEntry = data._listEncounterEntry;
+		_listWalkable		= data._walkableList;
+		_listEncounter		= data._encounterList;
+		_listPassThrough	= data._passThroughList;
+		_listVisual			= data._visualList;
+		_listWarp			= data._warpList;
+		_listEncounterEntry = data._encounterEntryList;
 		_scenePath			= data._scenePath;
 		_role				= data._role;
 		_spawnX				= data._spawnX;
@@ -309,14 +309,14 @@ namespace sw::editor
 
 	string TileMapPanel::captureDocumentText() const
 	{
-		return EditorToolAssetCommands::serializeTileMap( captureMapData() );
+		return captureMapData().toXml();
 	}
 
 	void TileMapPanel::applyDocumentText( string_view text )
 	{
-		EditorTileMapData restored;
+		TileMapXmlData restored;
 		if ( text.empty() == false )
-			EditorToolAssetCommands::parseTileMap( text, restored );
+			restored.loadFromXml( text );
 		applyMapData( restored );
 	}
 
@@ -350,12 +350,12 @@ namespace sw::editor
 			case PaintLayer::Warp:
 			{
 				_listWarp.erase( std::remove_if( _listWarp.begin(), _listWarp.end(),
-												 [x, y]( const EditorTileWarp& warp )
+												 [x, y]( const TileMapXmlData::Warp& warp )
 				{ return warp._tileX == x && warp._tileY == y; } ),
 								 _listWarp.end() );
 				if ( _bErase == false && _arrWarpTarget[0] != '\0' )
 				{
-					EditorTileWarp warpItem{};
+					TileMapXmlData::Warp warpItem{};
 					warpItem._tileX		  = x;
 					warpItem._tileY		  = y;
 					warpItem._targetMap	  = _arrWarpTarget;
@@ -380,10 +380,10 @@ namespace sw::editor
 		{
 			_listWalkable[indexOf( tileX, tileY )] = 1;
 			_listWarp.erase( std::remove_if( _listWarp.begin(), _listWarp.end(),
-											 [tileX, tileY]( const EditorTileWarp& warp )
+											 [tileX, tileY]( const TileMapXmlData::Warp& warp )
 			{ return warp._tileX == tileX && warp._tileY == tileY; } ),
 							 _listWarp.end() );
-			EditorTileWarp warpItem{};
+			TileMapXmlData::Warp warpItem{};
 			warpItem._tileX		  = tileX;
 			warpItem._tileY		  = tileY;
 			warpItem._targetMap	  = targets[edge];

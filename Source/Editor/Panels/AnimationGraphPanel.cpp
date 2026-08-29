@@ -263,7 +263,7 @@ namespace sw::editor
 
 	void AnimationGraphPanel::loadGraphData()
 	{
-		EditorAnimGraphData data;
+		AnimationGraphAsset data;
 		if ( EditorToolAssetCommands::loadAnimationGraph( data, getLoadedAssetPath() ) )
 		{
 			_listNode = std::move( data._listNode );
@@ -280,7 +280,7 @@ namespace sw::editor
 
 	void AnimationGraphPanel::saveGraphData()
 	{
-		EditorAnimGraphData data = captureGraphData();
+		AnimationGraphAsset data = captureGraphData();
 		if ( _nodeGraph.bind() )
 		{
 			for ( GraphNode& node : data._listNode )
@@ -305,14 +305,14 @@ namespace sw::editor
 
 	string AnimationGraphPanel::captureDocumentText() const
 	{
-		return EditorToolAssetCommands::serializeAnimationGraph( captureGraphData() );
+		return captureGraphData().toJson();
 	}
 
 	void AnimationGraphPanel::applyDocumentText( string_view text )
 	{
-		EditorAnimGraphData restored;
+		AnimationGraphAsset restored;
 		if ( text.empty() == false )
-			EditorToolAssetCommands::parseAnimationGraph( text, restored );
+			restored.parseJson( text );
 		_listNode = std::move( restored._listNode );
 		_listLink = std::move( restored._listLink );
 		if ( _listNode.empty() )
@@ -321,9 +321,9 @@ namespace sw::editor
 		_nodeGraph.requestContentFit();
 	}
 
-	EditorAnimGraphData AnimationGraphPanel::captureGraphData() const
+	AnimationGraphAsset AnimationGraphPanel::captureGraphData() const
 	{
-		EditorAnimGraphData data;
+		AnimationGraphAsset data;
 		data._listNode = _listNode;
 		data._listLink = _listLink;
 		return data;
@@ -331,8 +331,7 @@ namespace sw::editor
 
 	void AnimationGraphPanel::syncPreviewGraph()
 	{
-		AnimationGraphAsset asset;
-		asset.parseJson( captureDocumentText() );
+		AnimationGraphAsset asset = captureGraphData();
 		_previewPlayer.setGraph( asset );
 		_previewPlayer.clearClips();
 		_listPreviewClip.clear();

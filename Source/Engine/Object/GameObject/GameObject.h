@@ -238,6 +238,12 @@ namespace sw
 			return nullptr;
 		}
 
+		/**
+		 * @brief TypeInfo 이름 또는 컴포넌트 이름으로 첫 컴포넌트를 찾습니다.
+		 * @return 없거나 pending-kill이면 nullptr.
+		 */
+		Component* findComponentByTypeName( hashed_string typeName ) const;
+
 		/** @brief 특정 컴포넌트 인스턴스 제거 */
 		bool removeComponent( Component* pComp );
 

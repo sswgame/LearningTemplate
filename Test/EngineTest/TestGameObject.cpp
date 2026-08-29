@@ -295,6 +295,9 @@ SW_TEST_CASE( GameObjectTest, EditorDynamicComponentAttachment )
 
 		SW_EXPECT_EQUAL( &actor, comp1->getOwner() );
 		SW_EXPECT_EQUAL( &actor, comp2->getOwner() );
+		SW_EXPECT_EQUAL( comp1, actor.findComponentByTypeName( sw::hashed_string( "MockMeshComponent" ) ) );
+		SW_EXPECT_EQUAL( comp2, actor.findComponentByTypeName( sw::hashed_string( "MockAudioComponent" ) ) );
+		SW_EXPECT_NULL( actor.findComponentByTypeName( sw::hashed_string( "MissingComponent" ) ) );
 	}
 
 	// getComponentManager().shutdown() 호출 제거

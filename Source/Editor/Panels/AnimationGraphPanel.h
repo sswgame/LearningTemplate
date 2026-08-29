@@ -4,11 +4,11 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
-#include "Editor/Common/Commands/EditorToolAssetCommands.h"
 #include "Editor/Common/Gui/EditorDocumentPanel.h"
 #include "Editor/Common/Widgets/EditorNodeGraph.h"
 
 #include "Engine/Animation/AnimClip.h"
+#include "Engine/Animation/AnimationGraphAsset.h"
 #include "Engine/Animation/AnimationGraphPlayer.h"
 
 namespace sw::editor
@@ -31,8 +31,8 @@ namespace sw::editor
 		bool saveDocument() override;
 
 	private:
-		using GraphNode = EditorAnimGraphNode;
-		using GraphLink = EditorAnimGraphLink;
+		using GraphNode = AnimationGraphNode;
+		using GraphLink = AnimationGraphLink;
 
 		string captureDocumentText() const override;
 		void   applyDocumentText( string_view text ) override;
@@ -53,7 +53,7 @@ namespace sw::editor
 		/** @brief 지정 이름의 노드를 추가합니다. */
 		void addNamedNode( const utf8* pName );
 		/** @brief 현재 목록을 파일 데이터로 만듭니다. */
-		EditorAnimGraphData captureGraphData() const;
+		AnimationGraphAsset captureGraphData() const;
 		/** @brief 미리보기 플레이어에 현재 그래프를 넣습니다. */
 		void syncPreviewGraph();
 		/** @brief 노드 위치를 캐시하고 이동이면 dirty로 표시합니다. */

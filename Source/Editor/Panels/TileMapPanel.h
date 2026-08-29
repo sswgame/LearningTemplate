@@ -1,6 +1,6 @@
 /**
  * @file TileMapPanel.h
- * @brief 에디터 측 TileMap XML 페인터 (SWGame 링크 없음, Game TileMap 포맷을 미러)
+ * @brief 에디터 측 TileMap XML 페인터 (Engine TileMapXmlData 편집)
  */
 #pragma once
 #include "Core/Common/StdHeaders.h"
@@ -8,8 +8,9 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
-#include "Editor/Common/Commands/EditorToolAssetCommands.h"
 #include "Editor/Common/Gui/EditorDocumentPanel.h"
+
+#include "Engine/Utility/Xml/TileMapXml.h"
 
 namespace sw::editor
 {
@@ -28,10 +29,10 @@ namespace sw::editor
 		bool saveDocument() override;
 
 	private:
-		string			  captureDocumentText() const override;
-		void			  applyDocumentText( string_view text ) override;
-		EditorTileMapData captureMapData() const;
-		void			  applyMapData( const EditorTileMapData& data );
+		string		   captureDocumentText() const override;
+		void		   applyDocumentText( string_view text ) override;
+		TileMapXmlData captureMapData() const;
+		void		   applyMapData( const TileMapXmlData& data );
 
 	private:
 		// ------------------------------------------------------------------------------
@@ -85,16 +86,16 @@ namespace sw::editor
 		int32	   _warpTy;
 		bool	   _bErase;
 
-		vector<uint8>					 _listWalkable;
-		vector<uint8>					 _listEncounter;
-		vector<uint8>					 _listPassThrough;
-		vector<EditorTileVisual>		 _listVisual;
-		vector<EditorTileWarp>			 _listWarp;
-		vector<EditorTileEncounterEntry> _listEncounterEntry;
-		string							 _scenePath;
-		string							 _role;
-		int32							 _spawnX;
-		int32							 _spawnY;
-		string							 _status;
+		vector<uint8>					  _listWalkable;
+		vector<uint8>					  _listEncounter;
+		vector<uint8>					  _listPassThrough;
+		vector<TileMapXmlData::Visual>	  _listVisual;
+		vector<TileMapXmlData::Warp>	  _listWarp;
+		vector<TileMapXmlData::Encounter> _listEncounterEntry;
+		string							  _scenePath;
+		string							  _role;
+		int32							  _spawnX;
+		int32							  _spawnY;
+		string							  _status;
 	};
 } // namespace sw::editor

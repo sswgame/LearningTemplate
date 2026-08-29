@@ -33,7 +33,6 @@
 #include "Engine/Utility/Resource/ResourceManager.h"
 #include "Engine/Utility/Resource/ResourceUtil.h"
 #include "Engine/Utility/Xml/TileMapXml.h"
-#include "Engine/Utility/Xml/XmlDocument.h"
 
 #include "RuntimeAPI/Service/EditorService.h"
 
@@ -72,116 +71,6 @@ namespace sw::editor
 				if ( path.empty() == false )
 					return resolveExistingOrRelativePath( path );
 				return EditorUtil::resolveEditorConfigFile( EditorConfig::getActive()._spriteClipFile.c_str() );
-			}
-
-			static void editorFromEngine( const AnimationGraphAsset& src, EditorAnimGraphData& dst )
-			{
-				dst._listNode.clear();
-				dst._listLink.clear();
-				dst._listNode.reserve( src._listNode.size() );
-				dst._listLink.reserve( src._listLink.size() );
-				for ( const AnimationGraphNode& node : src._listNode )
-				{
-					EditorAnimGraphNode editorNode{};
-					editorNode._id	 = node._id;
-					editorNode._name = node._name;
-					editorNode._x	 = node._x;
-					editorNode._y	 = node._y;
-					dst._listNode.push_back( std::move( editorNode ) );
-				}
-				for ( const AnimationGraphLink& link : src._listLink )
-				{
-					EditorAnimGraphLink editorLink{};
-					editorLink._id		 = link._id;
-					editorLink._fromNode = link._fromNode;
-					editorLink._toNode	 = link._toNode;
-					dst._listLink.push_back( editorLink );
-				}
-			}
-
-			static void engineFromEditor( const EditorAnimGraphData& src, AnimationGraphAsset& dst )
-			{
-				dst._listNode.clear();
-				dst._listLink.clear();
-				dst._listNode.reserve( src._listNode.size() );
-				dst._listLink.reserve( src._listLink.size() );
-				for ( const EditorAnimGraphNode& node : src._listNode )
-				{
-					AnimationGraphNode engineNode{};
-					engineNode._id	 = node._id;
-					engineNode._name = node._name;
-					engineNode._x	 = node._x;
-					engineNode._y	 = node._y;
-					dst._listNode.push_back( std::move( engineNode ) );
-				}
-				for ( const EditorAnimGraphLink& link : src._listLink )
-				{
-					AnimationGraphLink engineLink{};
-					engineLink._id		 = link._id;
-					engineLink._fromNode = link._fromNode;
-					engineLink._toNode	 = link._toNode;
-					dst._listLink.push_back( engineLink );
-				}
-			}
-
-			static void editorFromEngineDialogue( const DialogueGraphAsset& src, EditorDialogueGraphData& dst )
-			{
-				dst._listNode.clear();
-				dst._listLink.clear();
-				dst._listNode.reserve( src._listNode.size() );
-				dst._listLink.reserve( src._listLink.size() );
-				for ( const DialogueAssetNode& node : src._listNode )
-				{
-					EditorDialogueNode editorNode{};
-					editorNode._id			  = node._id;
-					editorNode._type		  = static_cast<DialogueNodeType>( node._type );
-					editorNode._speaker		  = node._speaker;
-					editorNode._text		  = node._text;
-					editorNode._condition	  = node._condition;
-					editorNode._actionCommand = node._actionCommand;
-					editorNode._listChoice	  = node._listChoice;
-					editorNode._x			  = node._x;
-					editorNode._y			  = node._y;
-					dst._listNode.push_back( std::move( editorNode ) );
-				}
-				for ( const DialogueAssetLink& link : src._listLink )
-				{
-					EditorDialogueLink editorLink{};
-					editorLink._id		= link._id;
-					editorLink._fromPin = link._fromPin;
-					editorLink._toPin	= link._toPin;
-					dst._listLink.push_back( editorLink );
-				}
-			}
-
-			static void engineFromEditorDialogue( const EditorDialogueGraphData& src, DialogueGraphAsset& dst )
-			{
-				dst._listNode.clear();
-				dst._listLink.clear();
-				dst._listNode.reserve( src._listNode.size() );
-				dst._listLink.reserve( src._listLink.size() );
-				for ( const EditorDialogueNode& node : src._listNode )
-				{
-					DialogueAssetNode engineNode{};
-					engineNode._id			  = node._id;
-					engineNode._type		  = static_cast<DialogueAssetNodeType>( node._type );
-					engineNode._speaker		  = node._speaker;
-					engineNode._text		  = node._text;
-					engineNode._condition	  = node._condition;
-					engineNode._actionCommand = node._actionCommand;
-					engineNode._listChoice	  = node._listChoice;
-					engineNode._x			  = node._x;
-					engineNode._y			  = node._y;
-					dst._listNode.push_back( std::move( engineNode ) );
-				}
-				for ( const EditorDialogueLink& link : src._listLink )
-				{
-					DialogueAssetLink engineLink{};
-					engineLink._id		= link._id;
-					engineLink._fromPin = link._fromPin;
-					engineLink._toPin	= link._toPin;
-					dst._listLink.push_back( engineLink );
-				}
 			}
 
 			static string formatPropertyValue( const PropertyInfo& prop, const void* pInstance )
@@ -244,22 +133,6 @@ namespace sw::editor
 				}
 				return "<value>";
 			}
-
-			static Component* findComponentByTypeName( GameObject* pObj, string_view typeName )
-			{
-				if ( pObj == nullptr )
-					return nullptr;
-				for ( Component* pComp : pObj->getAllComponents() )
-				{
-					if ( pComp == nullptr || pComp->getTypeInfo() == nullptr )
-						continue;
-					if ( string{ pComp->getTypeInfo()->_name.c_str() } == string{ typeName } )
-						return pComp;
-					if ( string{ pComp->getComponentName().c_str() } == string{ typeName } )
-						return pComp;
-				}
-				return nullptr;
-			}
 		};
 	} // namespace
 } // namespace sw::editor
@@ -268,326 +141,50 @@ namespace sw::editor
 {
 	SW_LOG_CALLER( "EditorToolAssetCommands" );
 
-	bool EditorToolAssetCommands::loadAnimationGraph( EditorAnimGraphData& outData, string_view path )
+	bool EditorToolAssetCommands::loadAnimationGraph( AnimationGraphAsset& outData, string_view path )
 	{
-		outData._listNode.clear();
-		outData._listLink.clear();
-
-		const string		resolved = EditorToolAssetInternal::resolveAnimGraphPath( path );
-		AnimationGraphAsset asset;
-		if ( asset.loadFromFile( resolved ) == false )
-			return false;
-		EditorToolAssetInternal::editorFromEngine( asset, outData );
-		return true;
+		const string resolved = EditorToolAssetInternal::resolveAnimGraphPath( path );
+		return outData.loadFromFile( resolved );
 	}
 
-	bool EditorToolAssetCommands::saveAnimationGraph( const EditorAnimGraphData& data, string_view path )
+	bool EditorToolAssetCommands::saveAnimationGraph( const AnimationGraphAsset& data, string_view path )
 	{
-		const string		resolved = EditorToolAssetInternal::resolveAnimGraphPath( path );
-		AnimationGraphAsset asset;
-		EditorToolAssetInternal::engineFromEditor( data, asset );
-		if ( asset.saveToFile( resolved ) == false )
+		const string resolved = EditorToolAssetInternal::resolveAnimGraphPath( path );
+		if ( data.saveToFile( resolved ) == false )
 			return false;
 		SW_LOG_INFO( "Saved %#", resolved.c_str() );
 		return true;
 	}
 
-	string EditorToolAssetCommands::serializeAnimationGraph( const EditorAnimGraphData& data )
+	bool EditorToolAssetCommands::loadDialogueGraph( DialogueGraphAsset& outData, string_view path )
 	{
-		AnimationGraphAsset asset;
-		EditorToolAssetInternal::engineFromEditor( data, asset );
-		return asset.toJson();
+		const string resolved = EditorToolAssetInternal::resolveDialogueGraphPath( path );
+		return outData.loadFromFile( resolved );
 	}
 
-	bool EditorToolAssetCommands::parseAnimationGraph( string_view json, EditorAnimGraphData& outData )
+	bool EditorToolAssetCommands::saveDialogueGraph( const DialogueGraphAsset& data, string_view path )
 	{
-		AnimationGraphAsset asset;
-		if ( asset.parseJson( json ) == false )
-			return false;
-		EditorToolAssetInternal::editorFromEngine( asset, outData );
-		return true;
-	}
-
-	const utf8* EditorToolAssetCommands::dialogueNodeTypeName( DialogueNodeType type )
-	{
-		switch ( type )
-		{
-			case DialogueNodeType::Start:
-				return "Start";
-			case DialogueNodeType::Dialogue:
-				return "Dialogue";
-			case DialogueNodeType::Choice:
-				return "Choice";
-			case DialogueNodeType::Branch:
-				return "Branch";
-			case DialogueNodeType::Action:
-				return "Action";
-			case DialogueNodeType::End:
-				return "End";
-			default:
-				return "Unknown";
-		}
-	}
-
-	DialogueNodeType EditorToolAssetCommands::parseDialogueNodeType( string_view typeStr )
-	{
-		if ( typeStr == "Start" )
-			return DialogueNodeType::Start;
-		if ( typeStr == "Choice" )
-			return DialogueNodeType::Choice;
-		if ( typeStr == "Branch" )
-			return DialogueNodeType::Branch;
-		if ( typeStr == "Action" )
-			return DialogueNodeType::Action;
-		if ( typeStr == "End" )
-			return DialogueNodeType::End;
-		return DialogueNodeType::Dialogue;
-	}
-
-	bool EditorToolAssetCommands::loadDialogueGraph( EditorDialogueGraphData& outData, string_view path )
-	{
-		outData._listNode.clear();
-		outData._listLink.clear();
-
-		const string	   resolved = EditorToolAssetInternal::resolveDialogueGraphPath( path );
-		DialogueGraphAsset asset;
-		if ( asset.loadFromFile( resolved ) == false )
-			return false;
-		EditorToolAssetInternal::editorFromEngineDialogue( asset, outData );
-		return true;
-	}
-
-	bool EditorToolAssetCommands::saveDialogueGraph( const EditorDialogueGraphData& data, string_view path )
-	{
-		const string	   resolved = EditorToolAssetInternal::resolveDialogueGraphPath( path );
-		DialogueGraphAsset asset;
-		EditorToolAssetInternal::engineFromEditorDialogue( data, asset );
-		if ( asset.saveToFile( resolved ) == false )
+		const string resolved = EditorToolAssetInternal::resolveDialogueGraphPath( path );
+		if ( data.saveToFile( resolved ) == false )
 			return false;
 		SW_LOG_INFO( "Saved %zu nodes, %zu links -> %#", data._listNode.size(), data._listLink.size(), resolved.c_str() );
 		return true;
 	}
 
-	string EditorToolAssetCommands::serializeDialogueGraph( const EditorDialogueGraphData& data )
+	bool EditorToolAssetCommands::loadTileMap( string_view assetRelativePath, TileMapXmlData& outData, string& outStatus )
 	{
-		DialogueGraphAsset asset;
-		EditorToolAssetInternal::engineFromEditorDialogue( data, asset );
-		return asset.toJson();
-	}
-
-	bool EditorToolAssetCommands::parseDialogueGraph( string_view json, EditorDialogueGraphData& outData )
-	{
-		DialogueGraphAsset asset;
-		if ( asset.parseJson( json ) == false )
-			return false;
-		EditorToolAssetInternal::editorFromEngineDialogue( asset, outData );
-		return true;
-	}
-
-	bool EditorToolAssetCommands::loadTileMap( string_view assetRelativePath, EditorTileMapData& outData, string& outStatus )
-	{
-		TileMapXmlData xmlData{};
-		if ( xmlData.load( assetRelativePath ) == false )
+		if ( outData.load( assetRelativePath ) == false )
 		{
 			outStatus = "Not found: " + string{ assetRelativePath };
 			return false;
 		}
-
-		outData._name			 = xmlData._name;
-		outData._scenePath		 = xmlData._scenePath;
-		outData._role			 = xmlData._role;
-		outData._width			 = xmlData._width;
-		outData._height			 = xmlData._height;
-		outData._spawnX			 = xmlData._spawnX;
-		outData._spawnY			 = xmlData._spawnY;
-		outData._listWalkable	 = std::move( xmlData._walkableList );
-		outData._listEncounter	 = std::move( xmlData._encounterList );
-		outData._listPassThrough = std::move( xmlData._passThroughList );
-		outData._listVisual.clear();
-		outData._listVisual.reserve( xmlData._visualList.size() );
-		for ( const TileMapXmlData::Visual& src : xmlData._visualList )
-		{
-			EditorTileVisual dst{};
-			dst._height	 = src._height;
-			dst._atlasId = src._atlasId;
-			dst._tintR	 = src._tintR;
-			dst._tintG	 = src._tintG;
-			dst._tintB	 = src._tintB;
-			outData._listVisual.push_back( dst );
-		}
-		outData._listWarp.clear();
-		outData._listWarp.reserve( xmlData._warpList.size() );
-		for ( const TileMapXmlData::Warp& src : xmlData._warpList )
-		{
-			EditorTileWarp dst{};
-			dst._tileX		 = src._tileX;
-			dst._tileY		 = src._tileY;
-			dst._targetMap	 = src._targetMap;
-			dst._targetTileX = src._targetTileX;
-			dst._targetTileY = src._targetTileY;
-			dst._pairId		 = src._pairId;
-			outData._listWarp.push_back( std::move( dst ) );
-		}
-		outData._listEncounterEntry.clear();
-		outData._listEncounterEntry.reserve( xmlData._encounterEntryList.size() );
-		for ( const TileMapXmlData::Encounter& src : xmlData._encounterEntryList )
-		{
-			EditorTileEncounterEntry dst{};
-			dst._speciesId = src._speciesId;
-			dst._weight	   = src._weight;
-			outData._listEncounterEntry.push_back( std::move( dst ) );
-		}
-
 		outStatus = string( "Loaded " ) + string( assetRelativePath );
 		return true;
 	}
 
-	bool EditorToolAssetCommands::saveTileMap( string_view assetRelativePath, const EditorTileMapData& data )
+	bool EditorToolAssetCommands::saveTileMap( string_view assetRelativePath, const TileMapXmlData& data )
 	{
-		TileMapXmlData xmlData{};
-		xmlData._name			 = data._name;
-		xmlData._sourcePath		 = assetRelativePath;
-		xmlData._scenePath		 = data._scenePath;
-		xmlData._role			 = data._role;
-		xmlData._width			 = data._width;
-		xmlData._height			 = data._height;
-		xmlData._spawnX			 = data._spawnX;
-		xmlData._spawnY			 = data._spawnY;
-		xmlData._walkableList	 = data._listWalkable;
-		xmlData._encounterList	 = data._listEncounter;
-		xmlData._passThroughList = data._listPassThrough;
-		xmlData._visualList.reserve( data._listVisual.size() );
-		for ( const EditorTileVisual& src : data._listVisual )
-		{
-			TileMapXmlData::Visual dst{};
-			dst._height	 = src._height;
-			dst._atlasId = src._atlasId;
-			dst._tintR	 = src._tintR;
-			dst._tintG	 = src._tintG;
-			dst._tintB	 = src._tintB;
-			xmlData._visualList.push_back( dst );
-		}
-		xmlData._warpList.reserve( data._listWarp.size() );
-		for ( const EditorTileWarp& src : data._listWarp )
-		{
-			TileMapXmlData::Warp dst{};
-			dst._tileX		 = src._tileX;
-			dst._tileY		 = src._tileY;
-			dst._targetMap	 = src._targetMap;
-			dst._targetTileX = src._targetTileX;
-			dst._targetTileY = src._targetTileY;
-			dst._pairId		 = src._pairId;
-			xmlData._warpList.push_back( dst );
-		}
-		xmlData._encounterEntryList.reserve( data._listEncounterEntry.size() );
-		for ( const EditorTileEncounterEntry& src : data._listEncounterEntry )
-		{
-			TileMapXmlData::Encounter dst{};
-			dst._speciesId = src._speciesId;
-			dst._weight	   = src._weight;
-			xmlData._encounterEntryList.push_back( dst );
-		}
-
-		return xmlData.save( assetRelativePath );
-	}
-
-	string EditorToolAssetCommands::serializeTileMap( const EditorTileMapData& data )
-	{
-		TileMapXmlData xmlData{};
-		xmlData._name			 = data._name;
-		xmlData._scenePath		 = data._scenePath;
-		xmlData._role			 = data._role;
-		xmlData._width			 = data._width;
-		xmlData._height			 = data._height;
-		xmlData._spawnX			 = data._spawnX;
-		xmlData._spawnY			 = data._spawnY;
-		xmlData._walkableList	 = data._listWalkable;
-		xmlData._encounterList	 = data._listEncounter;
-		xmlData._passThroughList = data._listPassThrough;
-		xmlData._visualList.reserve( data._listVisual.size() );
-		for ( const EditorTileVisual& src : data._listVisual )
-		{
-			TileMapXmlData::Visual dst{};
-			dst._height	 = src._height;
-			dst._atlasId = src._atlasId;
-			dst._tintR	 = src._tintR;
-			dst._tintG	 = src._tintG;
-			dst._tintB	 = src._tintB;
-			xmlData._visualList.push_back( dst );
-		}
-		xmlData._warpList.reserve( data._listWarp.size() );
-		for ( const EditorTileWarp& src : data._listWarp )
-		{
-			TileMapXmlData::Warp dst{};
-			dst._tileX		 = src._tileX;
-			dst._tileY		 = src._tileY;
-			dst._targetMap	 = src._targetMap;
-			dst._targetTileX = src._targetTileX;
-			dst._targetTileY = src._targetTileY;
-			dst._pairId		 = src._pairId;
-			xmlData._warpList.push_back( dst );
-		}
-		xmlData._encounterEntryList.reserve( data._listEncounterEntry.size() );
-		for ( const EditorTileEncounterEntry& src : data._listEncounterEntry )
-		{
-			TileMapXmlData::Encounter dst{};
-			dst._speciesId = src._speciesId;
-			dst._weight	   = src._weight;
-			xmlData._encounterEntryList.push_back( dst );
-		}
-		return xmlData.toXml();
-	}
-
-	bool EditorToolAssetCommands::parseTileMap( string_view xml, EditorTileMapData& outData )
-	{
-		TileMapXmlData xmlData{};
-		if ( xmlData.loadFromXml( xml ) == false )
-			return false;
-		outData._name			 = xmlData._name;
-		outData._scenePath		 = xmlData._scenePath;
-		outData._role			 = xmlData._role;
-		outData._width			 = xmlData._width;
-		outData._height			 = xmlData._height;
-		outData._spawnX			 = xmlData._spawnX;
-		outData._spawnY			 = xmlData._spawnY;
-		outData._listWalkable	 = std::move( xmlData._walkableList );
-		outData._listEncounter	 = std::move( xmlData._encounterList );
-		outData._listPassThrough = std::move( xmlData._passThroughList );
-		outData._listVisual.clear();
-		outData._listVisual.reserve( xmlData._visualList.size() );
-		for ( const TileMapXmlData::Visual& src : xmlData._visualList )
-		{
-			EditorTileVisual dst{};
-			dst._height	 = src._height;
-			dst._atlasId = src._atlasId;
-			dst._tintR	 = src._tintR;
-			dst._tintG	 = src._tintG;
-			dst._tintB	 = src._tintB;
-			outData._listVisual.push_back( dst );
-		}
-		outData._listWarp.clear();
-		outData._listWarp.reserve( xmlData._warpList.size() );
-		for ( const TileMapXmlData::Warp& src : xmlData._warpList )
-		{
-			EditorTileWarp dst{};
-			dst._tileX		 = src._tileX;
-			dst._tileY		 = src._tileY;
-			dst._targetMap	 = src._targetMap;
-			dst._targetTileX = src._targetTileX;
-			dst._targetTileY = src._targetTileY;
-			dst._pairId		 = src._pairId;
-			outData._listWarp.push_back( std::move( dst ) );
-		}
-		outData._listEncounterEntry.clear();
-		outData._listEncounterEntry.reserve( xmlData._encounterEntryList.size() );
-		for ( const TileMapXmlData::Encounter& src : xmlData._encounterEntryList )
-		{
-			EditorTileEncounterEntry dst{};
-			dst._speciesId = src._speciesId;
-			dst._weight	   = src._weight;
-			outData._listEncounterEntry.push_back( std::move( dst ) );
-		}
-		return true;
+		return data.save( assetRelativePath );
 	}
 
 	bool EditorToolAssetCommands::loadSpriteClip( EditorSpriteClipData& outData, string& outStatus, string_view path )
@@ -793,7 +390,7 @@ namespace sw::editor
 			if ( pInstComp == nullptr || pInstComp->getTypeInfo() == nullptr )
 				continue;
 			const TypeInfo* pTypeInfo = pInstComp->getTypeInfo();
-			Component*		pCdoComp  = EditorToolAssetInternal::findComponentByTypeName( pCdo, pTypeInfo->_name.c_str() );
+			Component*		pCdoComp  = pCdo->findComponentByTypeName( pTypeInfo->_name );
 			if ( pCdoComp == nullptr )
 				continue;
 
@@ -864,8 +461,8 @@ namespace sw::editor
 			return;
 		ObjectStateSerializer::loadFromXmlString( pCdo, pLoaded->getStateData() );
 
-		Component* pInstComp = EditorToolAssetInternal::findComponentByTypeName( pInstance, item._componentName );
-		Component* pCdoComp	 = EditorToolAssetInternal::findComponentByTypeName( pCdo, item._componentName );
+		Component* pInstComp = pInstance->findComponentByTypeName( hashed_string{ item._componentName } );
+		Component* pCdoComp	 = pCdo->findComponentByTypeName( hashed_string{ item._componentName } );
 		if ( pInstComp != nullptr && pCdoComp != nullptr && pInstComp->getTypeInfo() != nullptr )
 		{
 			const PropertyInfo* pProp = pInstComp->getTypeInfo()->findPropertyInHierarchy( hashed_string( item._propertyName.c_str() ) );

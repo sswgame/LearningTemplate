@@ -17,38 +17,12 @@ namespace sw
 		{
 			static const utf8* dialogueAssetTypeName( DialogueAssetNodeType type )
 			{
-				switch ( type )
-				{
-					case DialogueAssetNodeType::Start:
-						return "Start";
-					case DialogueAssetNodeType::Dialogue:
-						return "Dialogue";
-					case DialogueAssetNodeType::Choice:
-						return "Choice";
-					case DialogueAssetNodeType::Branch:
-						return "Branch";
-					case DialogueAssetNodeType::Action:
-						return "Action";
-					case DialogueAssetNodeType::End:
-						return "End";
-					default:
-						return "Unknown";
-				}
+				return DialogueGraphAsset::nodeTypeName( type );
 			}
 
 			static DialogueAssetNodeType parseDialogueAssetType( string_view typeStr )
 			{
-				if ( typeStr == "Start" )
-					return DialogueAssetNodeType::Start;
-				if ( typeStr == "Choice" )
-					return DialogueAssetNodeType::Choice;
-				if ( typeStr == "Branch" )
-					return DialogueAssetNodeType::Branch;
-				if ( typeStr == "Action" )
-					return DialogueAssetNodeType::Action;
-				if ( typeStr == "End" )
-					return DialogueAssetNodeType::End;
-				return DialogueAssetNodeType::Dialogue;
+				return DialogueGraphAsset::parseNodeType( typeStr );
 			}
 		};
 	} // namespace
@@ -256,6 +230,42 @@ namespace sw
 		constexpr int32 kPinTrue  = 3;
 		constexpr int32 kPinFalse = 4;
 		return findLinkedNodeId( fromNodeId, bTrue ? kPinTrue : kPinFalse );
+	}
+
+	const utf8* DialogueGraphAsset::nodeTypeName( DialogueAssetNodeType type )
+	{
+		switch ( type )
+		{
+			case DialogueAssetNodeType::Start:
+				return "Start";
+			case DialogueAssetNodeType::Dialogue:
+				return "Dialogue";
+			case DialogueAssetNodeType::Choice:
+				return "Choice";
+			case DialogueAssetNodeType::Branch:
+				return "Branch";
+			case DialogueAssetNodeType::Action:
+				return "Action";
+			case DialogueAssetNodeType::End:
+				return "End";
+			default:
+				return "Unknown";
+		}
+	}
+
+	DialogueAssetNodeType DialogueGraphAsset::parseNodeType( string_view typeStr )
+	{
+		if ( typeStr == "Start" )
+			return DialogueAssetNodeType::Start;
+		if ( typeStr == "Choice" )
+			return DialogueAssetNodeType::Choice;
+		if ( typeStr == "Branch" )
+			return DialogueAssetNodeType::Branch;
+		if ( typeStr == "Action" )
+			return DialogueAssetNodeType::Action;
+		if ( typeStr == "End" )
+			return DialogueAssetNodeType::End;
+		return DialogueAssetNodeType::Dialogue;
 	}
 
 	string DialogueGraphAsset::resolveLocalizedText( string_view textOrKey )

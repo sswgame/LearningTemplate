@@ -195,17 +195,9 @@ namespace sw::editor
 
 	bool EditorSceneCommands::wouldCreateParentCycle( GameObject* pChild, GameObject* pNewParent )
 	{
-		if ( pChild == nullptr || pNewParent == nullptr || pChild == pNewParent )
+		if ( pChild == nullptr || pNewParent == nullptr )
 			return true;
-
-		GameObject* pAncestor = pNewParent;
-		while ( pAncestor != nullptr )
-		{
-			if ( pAncestor == pChild )
-				return true;
-			pAncestor = pAncestor->getParent();
-		}
-		return false;
+		return pNewParent->isDescendantOf( pChild );
 	}
 
 	string EditorSceneCommands::captureSnapshot( GameObject* pObj )

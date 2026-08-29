@@ -61,6 +61,10 @@ namespace sw
 		bool parseJson( string_view json );
 		/** @brief JSON 본문을 만듭니다. */
 		string toJson() const;
+		/** @brief 노드 타입 이름을 반환합니다. */
+		static const utf8* nodeTypeName( DialogueAssetNodeType type );
+		/** @brief 노드 타입 문자열을 파싱합니다. */
+		static DialogueAssetNodeType parseNodeType( string_view typeStr );
 		/** @brief Start 노드를 반환합니다. 없으면 nullptr입니다. */
 		const DialogueAssetNode* findStartNode() const;
 		/** @brief id로 노드를 찾습니다. */

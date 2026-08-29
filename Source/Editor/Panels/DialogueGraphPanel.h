@@ -3,9 +3,10 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
-#include "Editor/Common/Commands/EditorToolAssetCommands.h"
 #include "Editor/Common/Gui/EditorDocumentPanel.h"
 #include "Editor/Common/Widgets/EditorNodeGraph.h"
+
+#include "Engine/Dialogue/DialogueGraphAsset.h"
 
 namespace sw::editor
 {
@@ -27,8 +28,8 @@ namespace sw::editor
 		bool saveDocument() override;
 
 	private:
-		using DialogueNode = EditorDialogueNode;
-		using DialogueLink = EditorDialogueLink;
+		using DialogueNode = DialogueAssetNode;
+		using DialogueLink = DialogueAssetLink;
 
 		string captureDocumentText() const override;
 		void   applyDocumentText( string_view text ) override;
@@ -49,9 +50,9 @@ namespace sw::editor
 		int32 nextLinkId() const;
 
 		/** @brief 지정한 타입의 노드를 추가합니다. */
-		void addNode( DialogueNodeType type, const utf8* pSpeaker = "", const utf8* pText = "" );
+		void addNode( DialogueAssetNodeType type, const utf8* pSpeaker = "", const utf8* pText = "" );
 		/** @brief 현재 목록을 파일 데이터로 만듭니다. */
-		EditorDialogueGraphData captureGraphData() const;
+		DialogueGraphAsset captureGraphData() const;
 		/** @brief 노드 위치를 캐시하고 이동이면 dirty로 표시합니다. */
 		void cacheNodeLayout();
 		/** @brief 미리보기 재생을 한 틱 진행합니다. */

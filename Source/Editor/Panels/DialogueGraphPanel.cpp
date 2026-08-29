@@ -111,31 +111,31 @@ namespace sw::editor
 			{
 				if ( ImGui::Button( "+ Dialogue" ) )
 				{
-					addNode( DialogueNodeType::Dialogue, "NPC", "Enter dialogue text..." );
+					addNode( DialogueAssetNodeType::Dialogue, "NPC", "Enter dialogue text..." );
 					notifyDocumentEdited( "Add Dialogue Node" );
 				}
 				ImGui::SameLine();
 				if ( ImGui::Button( "+ Choice" ) )
 				{
-					addNode( DialogueNodeType::Choice, "", "Player options" );
+					addNode( DialogueAssetNodeType::Choice, "", "Player options" );
 					notifyDocumentEdited( "Add Dialogue Node" );
 				}
 				ImGui::SameLine();
 				if ( ImGui::Button( "+ Branch" ) )
 				{
-					addNode( DialogueNodeType::Branch, "", "flag.visited == 1" );
+					addNode( DialogueAssetNodeType::Branch, "", "flag.visited == 1" );
 					notifyDocumentEdited( "Add Dialogue Node" );
 				}
 				ImGui::SameLine();
 				if ( ImGui::Button( "+ Action" ) )
 				{
-					addNode( DialogueNodeType::Action, "", "give_item:potion:1" );
+					addNode( DialogueAssetNodeType::Action, "", "give_item:potion:1" );
 					notifyDocumentEdited( "Add Dialogue Node" );
 				}
 				ImGui::SameLine();
 				if ( ImGui::Button( "+ End" ) )
 				{
-					addNode( DialogueNodeType::End );
+					addNode( DialogueAssetNodeType::End );
 					notifyDocumentEdited( "Add Dialogue Node" );
 				}
 				ImGui::SameLine();
@@ -190,7 +190,7 @@ namespace sw::editor
 
 			switch ( node._type )
 			{
-				case DialogueNodeType::Start:
+				case DialogueAssetNodeType::Start:
 				{
 					ImGui::TextColored( ImVec4( 0.2f, 0.9f, 0.3f, 1.0f ), "[START]" );
 					ed::BeginPin( DialogueGraphPanelInternal::toPinId( DialogueGraphPanelInternal::pinOut( node._id ) ), ed::PinKind::Output );
@@ -198,7 +198,7 @@ namespace sw::editor
 					ed::EndPin();
 					break;
 				}
-				case DialogueNodeType::Dialogue:
+				case DialogueAssetNodeType::Dialogue:
 				{
 					ImGui::TextColored( ImVec4( 0.4f, 0.7f, 1.0f, 1.0f ), "[DIALOGUE: %s]", node._speaker.empty() ? "(No Speaker)" : node._speaker.c_str() );
 					ed::BeginPin( DialogueGraphPanelInternal::toPinId( DialogueGraphPanelInternal::pinIn( node._id ) ), ed::PinKind::Input );
@@ -216,7 +216,7 @@ namespace sw::editor
 					}
 					break;
 				}
-				case DialogueNodeType::Choice:
+				case DialogueAssetNodeType::Choice:
 				{
 					ImGui::TextColored( ImVec4( 0.8f, 0.5f, 1.0f, 1.0f ), "[CHOICE]" );
 					ed::BeginPin( DialogueGraphPanelInternal::toPinId( DialogueGraphPanelInternal::pinIn( node._id ) ), ed::PinKind::Input );
@@ -240,7 +240,7 @@ namespace sw::editor
 					}
 					break;
 				}
-				case DialogueNodeType::Branch:
+				case DialogueAssetNodeType::Branch:
 				{
 					ImGui::TextColored( ImVec4( 1.0f, 0.8f, 0.2f, 1.0f ), "[BRANCH]" );
 					ed::BeginPin( DialogueGraphPanelInternal::toPinId( DialogueGraphPanelInternal::pinIn( node._id ) ), ed::PinKind::Input );
@@ -257,7 +257,7 @@ namespace sw::editor
 					ed::EndPin();
 					break;
 				}
-				case DialogueNodeType::Action:
+				case DialogueAssetNodeType::Action:
 				{
 					ImGui::TextColored( ImVec4( 0.2f, 0.9f, 0.9f, 1.0f ), "[ACTION]" );
 					ed::BeginPin( DialogueGraphPanelInternal::toPinId( DialogueGraphPanelInternal::pinIn( node._id ) ), ed::PinKind::Input );
@@ -270,7 +270,7 @@ namespace sw::editor
 					ImGui::TextDisabled( "cmd: %s", node._actionCommand.c_str() );
 					break;
 				}
-				case DialogueNodeType::End:
+				case DialogueAssetNodeType::End:
 				{
 					ImGui::TextColored( ImVec4( 0.9f, 0.3f, 0.3f, 1.0f ), "[END]" );
 					ed::BeginPin( DialogueGraphPanelInternal::toPinId( DialogueGraphPanelInternal::pinIn( node._id ) ), ed::PinKind::Input );
@@ -402,10 +402,10 @@ namespace sw::editor
 
 			if ( pSelectedNode != nullptr )
 			{
-				ImGui::TextColored( ImVec4( 0.2f, 0.8f, 1.0f, 1.0f ), "Node #%d (%s)", pSelectedNode->_id, EditorToolAssetCommands::dialogueNodeTypeName( pSelectedNode->_type ) );
+				ImGui::TextColored( ImVec4( 0.2f, 0.8f, 1.0f, 1.0f ), "Node #%d (%s)", pSelectedNode->_id, DialogueGraphAsset::nodeTypeName( pSelectedNode->_type ) );
 				ImGui::Separator();
 
-				if ( pSelectedNode->_type == DialogueNodeType::Dialogue )
+				if ( pSelectedNode->_type == DialogueAssetNodeType::Dialogue )
 				{
 					utf8 speakerBuf[64]{};
 					StringUtil::strncpy( speakerBuf, pSelectedNode->_speaker.c_str(), sizeof( speakerBuf ) - 1 );
@@ -421,7 +421,7 @@ namespace sw::editor
 					if ( ImGui::IsItemDeactivatedAfterEdit() )
 						notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
 				}
-				else if ( pSelectedNode->_type == DialogueNodeType::Choice )
+				else if ( pSelectedNode->_type == DialogueAssetNodeType::Choice )
 				{
 					utf8 promptBuf[128]{};
 					StringUtil::strncpy( promptBuf, pSelectedNode->_text.c_str(), sizeof( promptBuf ) - 1 );
@@ -457,7 +457,7 @@ namespace sw::editor
 						notifyDocumentEdited( "Edit Dialogue Node" );
 					}
 				}
-				else if ( pSelectedNode->_type == DialogueNodeType::Branch )
+				else if ( pSelectedNode->_type == DialogueAssetNodeType::Branch )
 				{
 					utf8 condBuf[128]{};
 					StringUtil::strncpy( condBuf, pSelectedNode->_condition.c_str(), sizeof( condBuf ) - 1 );
@@ -467,7 +467,7 @@ namespace sw::editor
 						notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
 					ImGui::TextDisabled( "Ex: flag.boss_defeated == 1" );
 				}
-				else if ( pSelectedNode->_type == DialogueNodeType::Action )
+				else if ( pSelectedNode->_type == DialogueAssetNodeType::Action )
 				{
 					utf8 cmdBuf[128]{};
 					StringUtil::strncpy( cmdBuf, pSelectedNode->_actionCommand.c_str(), sizeof( cmdBuf ) - 1 );
@@ -490,14 +490,14 @@ namespace sw::editor
 
 		DialogueNode startNode{};
 		startNode._id	= 1;
-		startNode._type = DialogueNodeType::Start;
+		startNode._type = DialogueAssetNodeType::Start;
 		startNode._x	= 50.0f;
 		startNode._y	= 100.0f;
 		_listNode.push_back( startNode );
 
 		DialogueNode diagNode{};
 		diagNode._id	  = 2;
-		diagNode._type	  = DialogueNodeType::Dialogue;
+		diagNode._type	  = DialogueAssetNodeType::Dialogue;
 		diagNode._speaker = "Elder";
 		diagNode._text	  = "Greetings adventurer! The ancient ruins ahead are full of peril.";
 		diagNode._x		  = 250.0f;
@@ -506,7 +506,7 @@ namespace sw::editor
 
 		DialogueNode choiceNode{};
 		choiceNode._id		   = 3;
-		choiceNode._type	   = DialogueNodeType::Choice;
+		choiceNode._type	   = DialogueAssetNodeType::Choice;
 		choiceNode._text	   = "How do you respond?";
 		choiceNode._listChoice = { "I am ready for any challenge!", "Could you give me some supplies first?" };
 		choiceNode._x		   = 650.0f;
@@ -515,7 +515,7 @@ namespace sw::editor
 
 		DialogueNode actionNode{};
 		actionNode._id			  = 4;
-		actionNode._type		  = DialogueNodeType::Action;
+		actionNode._type		  = DialogueAssetNodeType::Action;
 		actionNode._actionCommand = "give_item:healing_potion:3";
 		actionNode._x			  = 1050.0f;
 		actionNode._y			  = 220.0f;
@@ -523,7 +523,7 @@ namespace sw::editor
 
 		DialogueNode endNode{};
 		endNode._id	  = 5;
-		endNode._type = DialogueNodeType::End;
+		endNode._type = DialogueAssetNodeType::End;
 		endNode._x	  = 1350.0f;
 		endNode._y	  = 120.0f;
 		_listNode.push_back( endNode );
@@ -538,7 +538,7 @@ namespace sw::editor
 
 	void DialogueGraphPanel::loadGraphData()
 	{
-		EditorDialogueGraphData data;
+		DialogueGraphAsset data;
 		if ( EditorToolAssetCommands::loadDialogueGraph( data, getLoadedAssetPath() ) )
 		{
 			_listNode = std::move( data._listNode );
@@ -556,7 +556,7 @@ namespace sw::editor
 
 	void DialogueGraphPanel::saveGraphData()
 	{
-		EditorDialogueGraphData data = captureGraphData();
+		DialogueGraphAsset data = captureGraphData();
 		EditorToolAssetCommands::saveDialogueGraph( data, getLoadedAssetPath() );
 		clearDocumentDirty();
 		syncDocumentUndoBaseline();
@@ -570,14 +570,14 @@ namespace sw::editor
 
 	string DialogueGraphPanel::captureDocumentText() const
 	{
-		return EditorToolAssetCommands::serializeDialogueGraph( captureGraphData() );
+		return captureGraphData().toJson();
 	}
 
 	void DialogueGraphPanel::applyDocumentText( string_view text )
 	{
-		EditorDialogueGraphData restored;
+		DialogueGraphAsset restored;
 		if ( text.empty() == false )
-			EditorToolAssetCommands::parseDialogueGraph( text, restored );
+			restored.parseJson( text );
 		_listNode = std::move( restored._listNode );
 		_listLink = std::move( restored._listLink );
 		if ( _listNode.empty() )
@@ -586,9 +586,9 @@ namespace sw::editor
 		_nodeGraph.requestContentFit();
 	}
 
-	EditorDialogueGraphData DialogueGraphPanel::captureGraphData() const
+	DialogueGraphAsset DialogueGraphPanel::captureGraphData() const
 	{
-		EditorDialogueGraphData data;
+		DialogueGraphAsset data;
 		data._listNode = _listNode;
 		data._listLink = _listLink;
 		return data;
@@ -618,8 +618,7 @@ namespace sw::editor
 		ImGui::SameLine();
 		if ( ImGui::Button( "Play Preview" ) )
 		{
-			DialogueGraphAsset asset;
-			asset.parseJson( captureDocumentText() );
+			DialogueGraphAsset		 asset	= captureGraphData();
 			const DialogueAssetNode* pStart = asset.findStartNode();
 			_previewNodeId					= ( pStart != nullptr ) ? pStart->_id : 0;
 			_bPreviewPlaying				= SW_TRUE;
@@ -640,8 +639,7 @@ namespace sw::editor
 		{
 			ImGui::SameLine();
 			ImGui::TextDisabled( "Preview node #%d", _previewNodeId );
-			DialogueGraphAsset asset;
-			asset.parseJson( captureDocumentText() );
+			DialogueGraphAsset		 asset = captureGraphData();
 			const DialogueAssetNode* pNode = asset.findNode( _previewNodeId );
 			if ( pNode != nullptr && pNode->_type == DialogueAssetNodeType::Choice )
 			{
@@ -670,8 +668,7 @@ namespace sw::editor
 	{
 		if ( _bPreviewPlaying == SW_FALSE || _previewNodeId <= 0 )
 			return;
-		DialogueGraphAsset asset;
-		asset.parseJson( captureDocumentText() );
+		DialogueGraphAsset		 asset = captureGraphData();
 		const DialogueAssetNode* pNode = asset.findNode( _previewNodeId );
 		if ( pNode == nullptr )
 		{
@@ -689,8 +686,7 @@ namespace sw::editor
 
 	void DialogueGraphPanel::previewAdvance( int32 pinOffset )
 	{
-		DialogueGraphAsset asset;
-		asset.parseJson( captureDocumentText() );
+		DialogueGraphAsset asset = captureGraphData();
 		if ( _previewNodeId <= 0 )
 		{
 			const DialogueAssetNode* pStart = asset.findStartNode();
@@ -725,7 +721,7 @@ namespace sw::editor
 		return nextItemId( _listLink );
 	}
 
-	void DialogueGraphPanel::addNode( DialogueNodeType type, const utf8* pSpeaker, const utf8* pText )
+	void DialogueGraphPanel::addNode( DialogueAssetNodeType type, const utf8* pSpeaker, const utf8* pText )
 	{
 		DialogueNode node{};
 		node._id	  = nextNodeId();
@@ -735,7 +731,7 @@ namespace sw::editor
 		node._x		  = 200.0f + static_cast<float32>( ( node._id % 5 ) * 80 );
 		node._y		  = 150.0f + static_cast<float32>( ( node._id % 5 ) * 60 );
 
-		if ( type == DialogueNodeType::Choice )
+		if ( type == DialogueAssetNodeType::Choice )
 			node._listChoice = { "Option 1", "Option 2" };
 
 		_listNode.push_back( node );

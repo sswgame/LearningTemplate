@@ -388,6 +388,23 @@ namespace sw
 		return listResult;
 	}
 
+	Component* GameObject::findComponentByTypeName( hashed_string typeName ) const
+	{
+		if ( typeName.empty() )
+			return nullptr;
+		for ( Component* pComp : _listComponent )
+		{
+			if ( pComp == nullptr || pComp->isPendingKill() )
+				continue;
+			if ( pComp->getComponentName() == typeName )
+				return pComp;
+			const TypeInfo* pTypeInfo = pComp->getTypeInfo();
+			if ( pTypeInfo != nullptr && pTypeInfo->_name == typeName )
+				return pComp;
+		}
+		return nullptr;
+	}
+
 	void GameObject::clearComponents()
 	{
 		vector<Component*> listOwned = _listComponent;
