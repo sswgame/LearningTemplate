@@ -11,7 +11,7 @@ namespace sw
 
 	SW_DECLARE_DELEGATE( bool, WindowMessageHandlerDelegate, const NativeWindowEvent& event );
 	SW_DECLARE_DELEGATE( void, WindowResizeDelegate, uint32 width, uint32 height );
-	SW_DECLARE_DELEGATE( bool, WindowCloseQueryDelegate );
+	SW_DECLARE_DELEGATE( bool, WindowCloseQueryDelegate, void );
 
 	/**
 	 * @class IWindow
