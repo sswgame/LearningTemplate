@@ -1,18 +1,20 @@
 #pragma once
+#include "Core/Common/Macros.h"
+#include "Core/Common/Types.h"
 #include "Core/Compression/ICompressionCodec.h"
+#include "Core/Concurrency/mutex.h"
+#include "Core/Container/unordered_map.h"
 
 namespace sw
 {
 	/**
 	 * @class CompressionCodecRegistry
-	 * @brief 압축 코덱 관리 및 팩토리 싱글톤
-	 * @details 런타임에 다양한 압축 알고리즘을 등록, 조회, 교체할 수 있는 중앙 레지스트리입니다.
+	 * @brief 압축 코덱 관리 및 팩토리 레지스트리 (EngineServices / ModuleService 관리 대상)
+	 * @details 런타임에 다양한 압축 알고리즘을 등록, 조회, 교체할 수 있는 서비스 레지스트리입니다.
 	 */
 	class SW_API CompressionCodecRegistry
 	{
 	public:
-		static CompressionCodecRegistry& get();
-
 		CompressionCodecRegistry();
 		~CompressionCodecRegistry() = default;
 

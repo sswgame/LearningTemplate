@@ -3,9 +3,12 @@
 #include "GameFramework/Input/GameActions.h"
 
 #include "Engine/Input/ActionMap.h"
+#include "Engine/Input/InputManager.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
 
 #include "GameFramework/Data/GameData.h"
+
+#include "RuntimeAPI/Service/GameService.h"
 
 namespace sw
 {
@@ -27,6 +30,10 @@ namespace sw
 				}
 			}
 		};
+
+		GameActionIds s_ids;
+		ActionMap	  s_actions;
+		bool		  s_bound{ false };
 	} // namespace
 } // namespace sw
 
@@ -85,14 +92,37 @@ namespace sw
 
 	GameActionIds& gameActionIds()
 	{
-		static GameActionIds s_ids;
+		if ( s_bound == false )
+		{
+			BootstrapConfig bootstrap;
+			bootstrap.load();
+			s_ids.loadFromResource( bootstrap._data._inputMap );
+			s_bound = true;
+		}
 		return s_ids;
 	}
 
 	ActionMap& gameActions()
 	{
-		static ActionMap s_actions;
-		static bool		 s_bound{ false };
+		if ( game::areGameServicesBound() )
+		{
+			auto* pInput = game::getService<InputManager>();
+			if ( pInput != nullptr )
+			{
+				ActionMap& actions = pInput->getActionMap();
+				if ( s_bound == false )
+				{
+					BootstrapConfig bootstrap;
+					bootstrap.load();
+					if ( actions.loadFromResource( bootstrap._data._inputMap ) == false )
+						actions.bindEmergencyFallback();
+					gameActionIds().loadFromResource( bootstrap._data._inputMap );
+					s_bound = true;
+				}
+				return actions;
+			}
+		}
+
 		if ( s_bound == false )
 		{
 			BootstrapConfig bootstrap;

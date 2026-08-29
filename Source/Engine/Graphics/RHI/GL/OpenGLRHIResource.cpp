@@ -2,6 +2,7 @@
 
 #include "Engine/Graphics/RHI/GL/OpenGLRHIResource.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHIDevice.h"
 #include "Engine/Graphics/Shader/ShaderCache.h"
 
@@ -9,6 +10,16 @@
 
 namespace sw
 {
+	namespace
+	{
+		ShaderCompileResult compileShader( const ShaderCompileDesc& desc )
+		{
+			if ( engine::areEngineServicesBound() )
+				return engine::getShaderCache().getOrCompile( desc );
+			return ShaderCompiler::compileHLSL( desc );
+		}
+	} // namespace
+
 	SW_LOG_CALLER( "OpenGLRHIResource" );
 
 	static GLenum toGlInternalFormat( RHIFormat format )
@@ -116,7 +127,7 @@ namespace sw
 		vsDesc._stage		 = ShaderStage::Vertex;
 		vsDesc._targetFormat = ShaderTargetFormat::SPIRV_OpenGL;
 		fillDefines( vsDesc );
-		ShaderCompileResult vsResult = ShaderCache::getOrCompile( vsDesc );
+		ShaderCompileResult vsResult = compileShader( vsDesc );
 
 		const bool			bDepthOnly		= ( desc._numRenderTargets == 0 && desc._bEnableDepthTest != 0 );
 		const bool			bHasPixelShader = desc._pixelShaderPath.empty() == false && bDepthOnly == false;
@@ -129,7 +140,7 @@ namespace sw
 			psDesc._stage		 = ShaderStage::Pixel;
 			psDesc._targetFormat = ShaderTargetFormat::SPIRV_OpenGL;
 			fillDefines( psDesc );
-			psResult = ShaderCache::getOrCompile( psDesc );
+			psResult = compileShader( psDesc );
 		}
 
 		if ( vsResult._bSuccess && ( bHasPixelShader == false || psResult._bSuccess ) )
@@ -225,7 +236,7 @@ namespace sw
 		csDesc._entryPoint			 = entryPoint;
 		csDesc._stage				 = ShaderStage::Compute;
 		csDesc._targetFormat		 = ShaderTargetFormat::SPIRV_OpenGL;
-		ShaderCompileResult csResult = ShaderCache::getOrCompile( csDesc );
+		ShaderCompileResult csResult = compileShader( csDesc );
 
 		if ( csResult._bSuccess )
 		{

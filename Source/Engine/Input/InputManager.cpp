@@ -2,6 +2,7 @@
 
 #include "Engine/Input/InputManager.h"
 
+#include "Engine/Input/ActionMap.h"
 #include "Engine/Input/Windows/GamepadXInput.h"
 #include "Engine/Window/IWindow.h"
 
@@ -11,6 +12,7 @@ namespace sw
 
 	InputManager::InputManager()
 		: _gamepad{ nullptr }
+		, _actionMap{ make_unique<ActionMap>() }
 		, _mouseX{ 0 }
 		, _mouseY{ 0 }
 		, _prevMouseX{ 0 }
@@ -32,6 +34,16 @@ namespace sw
 	}
 
 	InputManager::~InputManager() = default;
+
+	ActionMap& InputManager::getActionMap()
+	{
+		return *_actionMap;
+	}
+
+	const ActionMap& InputManager::getActionMap() const
+	{
+		return *_actionMap;
+	}
 
 	/**
 	 * @brief 입력 매니저를 초기화하고 모든 키/마우스 버퍼를 0으로 리셋합니다.

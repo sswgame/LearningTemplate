@@ -17,6 +17,12 @@ namespace sw
 	class ResourceManager;
 	class DebugDrawQueue;
 	struct DebugOverlayState;
+	class CompressionCodecRegistry;
+	class ShaderCache;
+	struct GameData;
+	class MonsterDataCatalog;
+	class SpeciesCatalog;
+	class ComponentDefaults;
 
 	enum class ModuleServiceId : uint32
 	{
@@ -30,6 +36,12 @@ namespace sw
 		ResourceManager,
 		DebugDrawQueue,
 		DebugOverlayState,
+		CompressionCodecRegistry,
+		ShaderCache,
+		GameData,
+		MonsterDataCatalog,
+		SpeciesCatalog,
+		ComponentDefaults,
 		Count
 	};
 
@@ -67,4 +79,10 @@ namespace sw
 	SW_DECLARE_MODULE_SERVICE( ResourceManager, ModuleServiceId::ResourceManager );
 	SW_DECLARE_MODULE_SERVICE( DebugDrawQueue, ModuleServiceId::DebugDrawQueue );
 	SW_DECLARE_MODULE_SERVICE( DebugOverlayState, ModuleServiceId::DebugOverlayState );
+	SW_DECLARE_MODULE_SERVICE( CompressionCodecRegistry, ModuleServiceId::CompressionCodecRegistry );
+	SW_DECLARE_MODULE_SERVICE( ShaderCache, ModuleServiceId::ShaderCache );
+	SW_DECLARE_MODULE_SERVICE( GameData, ModuleServiceId::GameData );
+	SW_DECLARE_MODULE_SERVICE( MonsterDataCatalog, ModuleServiceId::MonsterDataCatalog );
+	SW_DECLARE_MODULE_SERVICE( SpeciesCatalog, ModuleServiceId::SpeciesCatalog );
+	SW_DECLARE_MODULE_SERVICE( ComponentDefaults, ModuleServiceId::ComponentDefaults );
 } // namespace sw

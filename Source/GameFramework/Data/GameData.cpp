@@ -12,11 +12,6 @@ namespace sw
 {
 	SW_LOG_CALLER( "GameData" );
 
-	namespace
-	{
-		GameData s_loaded;
-	} // namespace
-
 	bool GameData::loadFromResource( string_view assetRelativePath )
 	{
 		const string path = assetRelativePath.empty()
@@ -27,7 +22,6 @@ namespace sw
 		string		absPath;
 		if ( doc.loadResource( path, &absPath ) == false )
 		{
-			s_loaded = *this;
 			SW_LOG_WARNING( "Using built-in defaults; failed to read %#", path );
 			return false;
 		}
@@ -35,7 +29,6 @@ namespace sw
 		XmlNode root = doc.root( "GameData" );
 		if ( root.isValid() == false )
 		{
-			s_loaded = *this;
 			SW_LOG_WARNING( "Missing <GameData> in %# — using defaults.", absPath );
 			return false;
 		}
@@ -73,15 +66,8 @@ namespace sw
 		if ( pMaxPartySizeText != nullptr )
 			_maxPartySize = StringUtil::atoi( pMaxPartySizeText );
 
-		s_loaded = *this;
-
 		SW_LOG_INFO( "Loaded from %# (start=%# starter=%#)", absPath, _startMap, _starterId );
 		return true;
-	}
-
-	const GameData& GameData::get()
-	{
-		return s_loaded;
 	}
 
 	string BootstrapConfig::resolve( string_view packRelative ) const

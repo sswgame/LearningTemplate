@@ -3,8 +3,30 @@
 #include "Core/Compression/CompressionStream.h"
 
 #include "Core/Compression/CompressionCodecRegistry.h"
+#include "Core/Compression/NullCompressionCodec.h"
+#include "Core/Compression/RleCompressionCodec.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
+
+namespace sw
+{
+	namespace
+	{
+		ICompressionCodec* resolveCodec( CompressionCodecType type, const CompressionCodecRegistry* pRegistry )
+		{
+			if ( pRegistry != nullptr )
+			{
+				return pRegistry->getCodec( type );
+			}
+
+			static NullCompressionCodec s_nullCodec;
+			static RleCompressionCodec	s_rleCodec;
+			if ( type == CompressionCodecType::RLE )
+				return &s_rleCodec;
+			return &s_nullCodec;
+		}
+	} // namespace
+} // namespace sw
 
 namespace sw
 {
@@ -43,21 +65,22 @@ namespace sw
 		return true;
 	}
 
-	bool CompressionStream::compressBuffer( const void*			 pSrc,
-											size_t				 srcSize,
-											vector<uint8>&		 listOutBuffer,
-											CompressionCodecType codecType,
-											int32				 compressionLevel )
+	bool CompressionStream::compressBuffer( const void*						pSrc,
+											size_t							srcSize,
+											vector<uint8>&					listOutBuffer,
+											CompressionCodecType			codecType,
+											int32							compressionLevel,
+											const CompressionCodecRegistry* pRegistry )
 	{
 		listOutBuffer.clear();
 		if ( pSrc == nullptr || srcSize == 0 )
 			return true;
 
-		ICompressionCodec* pCodec = CompressionCodecRegistry::get().getCodec( codecType );
+		ICompressionCodec* pCodec = resolveCodec( codecType, pRegistry );
 		if ( pCodec == nullptr )
 		{
 			SW_LOG_WARNING( "Requested codec %# not found, falling back to Null codec", static_cast<uint8>( codecType ) );
-			pCodec = CompressionCodecRegistry::get().getCodec( CompressionCodecType::None );
+			pCodec = resolveCodec( CompressionCodecType::None, pRegistry );
 			if ( pCodec == nullptr )
 				return false;
 			codecType = CompressionCodecType::None;
@@ -89,9 +112,10 @@ namespace sw
 		return true;
 	}
 
-	bool CompressionStream::decompressBuffer( const void*	 pSrc,
-											  size_t		 srcSize,
-											  vector<uint8>& listOutBuffer )
+	bool CompressionStream::decompressBuffer( const void*					  pSrc,
+											  size_t						  srcSize,
+											  vector<uint8>&				  listOutBuffer,
+											  const CompressionCodecRegistry* pRegistry )
 	{
 		listOutBuffer.clear();
 		if ( pSrc == nullptr || srcSize == 0 )
@@ -110,7 +134,7 @@ namespace sw
 		listOutBuffer.resize( static_cast<size_t>( header._uncompressedSize ) );
 
 		size_t	   outUncompressedSize = 0;
-		const bool bSuccess			   = decompressBuffer( pSrc, srcSize, listOutBuffer.data(), listOutBuffer.size(), outUncompressedSize );
+		const bool bSuccess			   = decompressBuffer( pSrc, srcSize, listOutBuffer.data(), listOutBuffer.size(), outUncompressedSize, pRegistry );
 		if ( bSuccess == false || outUncompressedSize != static_cast<size_t>( header._uncompressedSize ) )
 		{
 			listOutBuffer.clear();
@@ -120,11 +144,12 @@ namespace sw
 		return true;
 	}
 
-	bool CompressionStream::decompressBuffer( const void* pSrc,
-											  size_t	  srcSize,
-											  void*		  pDst,
-											  size_t	  dstCapacity,
-											  size_t&	  outUncompressedSize )
+	bool CompressionStream::decompressBuffer( const void*					  pSrc,
+											  size_t						  srcSize,
+											  void*							  pDst,
+											  size_t						  dstCapacity,
+											  size_t&						  outUncompressedSize,
+											  const CompressionCodecRegistry* pRegistry )
 	{
 		outUncompressedSize = 0;
 		if ( pSrc == nullptr || srcSize == 0 )
@@ -141,7 +166,7 @@ namespace sw
 			return false;
 
 		const auto		   codecType = static_cast<CompressionCodecType>( header._codecType );
-		ICompressionCodec* pCodec	 = CompressionCodecRegistry::get().getCodec( codecType );
+		ICompressionCodec* pCodec	 = resolveCodec( codecType, pRegistry );
 		if ( pCodec == nullptr )
 		{
 			SW_LOG_ERROR( "Unsupported codec type in stream: %#", header._codecType );

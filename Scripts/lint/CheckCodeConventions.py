@@ -206,7 +206,7 @@ _kClassDeclRe = re.compile(
     r'^\s*(?:template\s*<[^>]*>\s*)?(?:class|struct)\s+(?:(?:SW_\w*API|alignas\([^)]*\))\s+)*([A-Za-z0-9_]+)(?:\s*final|\s*:\s*[^{;]+)?\s*\{?'
 )
 _kClassMemberRe = re.compile(
-    r'^\s*(?:\[\[[^\]]*\]\]\s*)?(?:(?:mutable|static|inline|const|volatile|constexpr)\s+)*(?:[A-Za-z0-9_:]+(?:<[^;]+>)?\s*[\*&]?\s+)(_[a-zA-Z0-9_]+)\s*(?::\s*\d+)?\s*(?:\[[^\]]*\])?\s*(?:\{[^}]*\}|\([^)]*\))?\s*(?:=\s*[^;]+)?\s*;'
+    r'^\s*(?:\[\[[^\]]*\]\]\s*)?(?:(?:alignas\([^)]*\)|mutable|static|inline|const|volatile|constexpr)\s+)*(?:[A-Za-z0-9_:]+(?:<[^;]+>)?\s*[\*&]?\s+)(_[a-zA-Z0-9_]+)\s*(?::\s*\d+)?\s*(?:\[[^\]]*\])?\s*(?:\{[^}]*\}|\([^)]*\))?\s*(?:=\s*[^;]+)?\s*;'
 )
 _kClassMemberFnPtrRe = re.compile(
     r'^\s*(?:\[\[[^\]]*\]\]\s*)?(?:[A-Za-z0-9_:]+\s+)?\(\s*\*\s*(_[a-zA-Z0-9_]+)\s*\)\s*\([^)]*\)\s*;'

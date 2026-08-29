@@ -17,6 +17,7 @@ namespace sw
 {
 	struct NativeWindowEvent;
 	class GamepadXInput;
+	class ActionMap;
 
 	/**
 	 * @class InputManager
@@ -83,6 +84,9 @@ namespace sw
 		bool isGamepadPollingEnabled() const { return _bPollGamepad == SW_TRUE; }
 		/** @brief 게임패드 래퍼를 반환합니다. */
 		GamepadXInput* getGamepad() const { return _gamepad.get(); }
+		/** @brief 중앙 액션 맵을 반환합니다. */
+		ActionMap&		 getActionMap();
+		const ActionMap& getActionMap() const;
 
 	private:
 		/** @brief 키 눌림 상태를 설정합니다. */
@@ -96,6 +100,7 @@ namespace sw
 
 	private:
 		unique_ptr<GamepadXInput> _gamepad;
+		unique_ptr<ActionMap>	  _actionMap;
 		int32					  _mouseX;
 		int32					  _mouseY;
 		int32					  _prevMouseX;

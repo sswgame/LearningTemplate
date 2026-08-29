@@ -8,6 +8,9 @@
 #include "Engine/Utility/File/KeyValueFile.h"
 
 #include "GameFramework/Data/GameData.h"
+#include "GameFramework/Kits/TurnBattle/SpeciesData.h"
+
+#include "RuntimeAPI/Service/GameService.h"
 
 namespace sw
 {
@@ -30,7 +33,8 @@ namespace sw
 
 			static size_t partyCap()
 			{
-				const int32 n = GameData::get()._maxPartySize;
+				const GameData* pData = game::getService<GameData>();
+				const int32		n	  = pData != nullptr ? pData->_maxPartySize : 6;
 				return n > 0 ? static_cast<size_t>( n ) : 6u;
 			}
 		};
@@ -56,7 +60,13 @@ namespace sw
 	void SaveGame::ensureStarterParty()
 	{
 		if ( _listParty.empty() )
-			_listParty.push_back( SpeciesCatalog::makeStarter() );
+		{
+			const SpeciesCatalog* pCatalog = game::getService<SpeciesCatalog>();
+			if ( pCatalog != nullptr )
+				_listParty.push_back( pCatalog->makeStarter() );
+			else
+				_listParty.push_back( PartyMember{} );
+		}
 	}
 
 	int32 SaveGame::getFlag( string_view key, int32 defaultValue ) const
@@ -141,7 +151,11 @@ namespace sw
 			m._exp	 = KeyValueFile::getInt( map, SaveGameInternal::partyKey( itemIndex, "exp" ).c_str(), m._exp );
 
 			if ( m._nickname.empty() )
-				m._nickname = SpeciesCatalog::findSpecies( m._speciesId.c_str() )->_name;
+			{
+				const SpeciesCatalog* pCatalog = game::getService<SpeciesCatalog>();
+				const SpeciesDef*	  pDef	   = pCatalog != nullptr ? pCatalog->findSpecies( m._speciesId.c_str() ) : nullptr;
+				m._nickname					   = pDef != nullptr ? pDef->_name : m._speciesId;
+			}
 			m._expNext = 40 + m._level * 10;
 			_listParty.push_back( std::move( m ) );
 		}

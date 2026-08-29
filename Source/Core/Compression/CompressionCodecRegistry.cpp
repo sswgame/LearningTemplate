@@ -10,12 +10,6 @@ namespace sw
 {
 	SW_LOG_CALLER( "Compression" );
 
-	CompressionCodecRegistry& CompressionCodecRegistry::get()
-	{
-		static CompressionCodecRegistry s_instance;
-		return s_instance;
-	}
-
 	CompressionCodecRegistry::CompressionCodecRegistry()
 		: _mutex{}
 		, _mapCodec{}
@@ -28,7 +22,9 @@ namespace sw
 	{
 		std::scoped_lock<mutex> lock{ _mutex };
 		if ( _mapCodec.empty() )
+		{
 			registerBuiltinCodecs();
+		}
 	}
 
 	void CompressionCodecRegistry::shutdown()

@@ -6,6 +6,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -50,28 +51,41 @@ namespace sw
 	};
 
 	// ------------------------------------------------------------------------------
-	// 2) SpeciesCatalog — 프로세스 전역 테이블
+	// 2) SpeciesCatalog — 종족 / 기술 카탈로그 인스턴스
 	//    로드 실패 시 최소 폴백을 심어 전투가 비지 않게
 	// ------------------------------------------------------------------------------
-	/** @brief species.xml 종족·기술 테이블 */
-	struct SW_GF_API SpeciesCatalog
+	/** @brief species.xml 종족·기술 테이블 서비스 */
+	class SW_GF_API SpeciesCatalog
 	{
+	public:
+		SpeciesCatalog();
+		~SpeciesCatalog();
+
+		SpeciesCatalog( const SpeciesCatalog& )			   = delete;
+		SpeciesCatalog& operator=( const SpeciesCatalog& ) = delete;
+
 		/** @brief 리소스 경로에서 기술/종족을 로드합니다. 실패 시 최소 폴백을 심습니다. */
-		static bool loadFromResource( string_view assetRelativePath );
+		bool loadFromResource( string_view assetRelativePath );
 
 		/** @brief ID로 종족 정의를 찾습니다. */
-		static const SpeciesDef* findSpecies( const utf8* pId );
+		const SpeciesDef* findSpecies( const utf8* pId ) const;
 		/** @brief 인덱스로 기술 정의를 찾습니다. */
-		static const MoveDef* findMove( int32 index );
+		const MoveDef* findMove( int32 index ) const;
 		/** @brief ID로 기술 인덱스를 찾습니다. */
-		static int32 findMoveIndex( const utf8* pId );
+		int32 findMoveIndex( const utf8* pId ) const;
 
 		/** @brief 야생 조우용 파티 멤버를 만듭니다. */
-		static PartyMember makeWild( const utf8* pSpeciesId, int32 level = 5 );
+		PartyMember makeWild( const utf8* pSpeciesId, int32 level = 5 ) const;
 		/** @brief 스타터 파티 멤버를 만듭니다. */
-		static PartyMember makeStarter( const utf8* pSpeciesId = "starter_a", int32 level = 5 );
+		PartyMember makeStarter( const utf8* pSpeciesId = "starter_a", int32 level = 5 ) const;
 
 		/** @brief 로드된 카탈로그를 비웁니다. */
-		static void clear();
+		void clear();
+
+	private:
+		void seedFallback();
+
+		vector<MoveDef>	   _moveList;
+		vector<SpeciesDef> _speciesList;
 	};
 } // namespace sw

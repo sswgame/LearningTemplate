@@ -38,6 +38,9 @@ namespace sw
 	class DebugDrawQueue;
 	class FrameDoubleBuffer;
 	class RHIBackendRegistry;
+	class CompressionCodecRegistry;
+	class ShaderCache;
+	class ComponentDefaults;
 
 	class IRHIDevice;
 	class CameraComponent;
@@ -91,41 +94,47 @@ namespace sw
 		// ----------------------------------------------------------------------
 		// Getter (App이 ModuleHost 등과 연동하기 위해 필요)
 		// ----------------------------------------------------------------------
-		LiveReloadManager*	 getLiveReloadManager() const { return _liveReloadManager.get(); }
-		ConfigManager*		 getConfigManager() const { return _configManager.get(); }
-		CommandLineManager*	 getCommandLineManager() const { return _commandLineManager.get(); }
-		LocalizationManager* getLocalizationManager() const { return _localizationManager.get(); }
-		RHI*				 getRHI() const { return _rhi.get(); }
-		RenderThread*		 getRenderThread() const { return _renderThread.get(); }
+		LiveReloadManager*		  getLiveReloadManager() const { return _liveReloadManager.get(); }
+		ConfigManager*			  getConfigManager() const { return _configManager.get(); }
+		CommandLineManager*		  getCommandLineManager() const { return _commandLineManager.get(); }
+		LocalizationManager*	  getLocalizationManager() const { return _localizationManager.get(); }
+		RHI*					  getRHI() const { return _rhi.get(); }
+		RenderThread*			  getRenderThread() const { return _renderThread.get(); }
+		CompressionCodecRegistry* getCompressionCodecRegistry() const { return _compressionCodecRegistry.get(); }
+		ShaderCache*			  getShaderCache() const { return _shaderCache.get(); }
+		ComponentDefaults*		  getComponentDefaults() const { return _componentDefaults.get(); }
 
 	private:
-		unique_ptr<Logger>				  _logger;
-		unique_ptr<DeadlockDetector>	  _deadlockDetector;
-		unique_ptr<MemoryProfiler>		  _memoryProfiler;
-		unique_ptr<CommandLineManager>	  _commandLineManager;
-		unique_ptr<TaskManager>			  _taskManager;
-		unique_ptr<GlobalVariableManager> _globalVariableManager;
-		unique_ptr<TypeRegistry>		  _typeRegistry;
-		unique_ptr<ConfigManager>		  _configManager;
-		unique_ptr<LocalizationManager>	  _localizationManager;
-		unique_ptr<ResourceManager>		  _resourceManager;
-		unique_ptr<RHI>					  _rhi;
-		unique_ptr<LiveReloadManager>	  _liveReloadManager;
-		unique_ptr<ReloadFileManager>	  _reloadFileManager;
-		unique_ptr<SceneManager>		  _sceneManager;
-		unique_ptr<InputManager>		  _inputManager;
-		unique_ptr<ActionMap>			  _mapDebugAction;
-		unique_ptr<IAudioSystem>		  _audioSystem;
-		unique_ptr<EventDispatcher>		  _eventDispatcher;
-		unique_ptr<FrameRenderer>		  _frameRenderer;
-		unique_ptr<RenderThread>		  _renderThread;
-		unique_ptr<EngineData>			  _engineData;
-		unique_ptr<AssetStreamingQueue>	  _assetStreamingQueue;
-		unique_ptr<CommandStack>		  _commandStack;
-		unique_ptr<DebugOverlayState>	  _debugOverlayState;
-		unique_ptr<DebugDrawQueue>		  _debugDrawQueue;
-		unique_ptr<FrameDoubleBuffer>	  _frameDoubleBuffer;
-		unique_ptr<RHIBackendRegistry>	  _rhiBackendRegistry;
+		unique_ptr<Logger>					 _logger;
+		unique_ptr<DeadlockDetector>		 _deadlockDetector;
+		unique_ptr<MemoryProfiler>			 _memoryProfiler;
+		unique_ptr<CommandLineManager>		 _commandLineManager;
+		unique_ptr<TaskManager>				 _taskManager;
+		unique_ptr<GlobalVariableManager>	 _globalVariableManager;
+		unique_ptr<TypeRegistry>			 _typeRegistry;
+		unique_ptr<ConfigManager>			 _configManager;
+		unique_ptr<LocalizationManager>		 _localizationManager;
+		unique_ptr<ResourceManager>			 _resourceManager;
+		unique_ptr<RHI>						 _rhi;
+		unique_ptr<LiveReloadManager>		 _liveReloadManager;
+		unique_ptr<ReloadFileManager>		 _reloadFileManager;
+		unique_ptr<SceneManager>			 _sceneManager;
+		unique_ptr<InputManager>			 _inputManager;
+		unique_ptr<ActionMap>				 _mapDebugAction;
+		unique_ptr<IAudioSystem>			 _audioSystem;
+		unique_ptr<EventDispatcher>			 _eventDispatcher;
+		unique_ptr<FrameRenderer>			 _frameRenderer;
+		unique_ptr<RenderThread>			 _renderThread;
+		unique_ptr<EngineData>				 _engineData;
+		unique_ptr<AssetStreamingQueue>		 _assetStreamingQueue;
+		unique_ptr<CommandStack>			 _commandStack;
+		unique_ptr<DebugOverlayState>		 _debugOverlayState;
+		unique_ptr<DebugDrawQueue>			 _debugDrawQueue;
+		unique_ptr<FrameDoubleBuffer>		 _frameDoubleBuffer;
+		unique_ptr<RHIBackendRegistry>		 _rhiBackendRegistry;
+		unique_ptr<CompressionCodecRegistry> _compressionCodecRegistry;
+		unique_ptr<ShaderCache>				 _shaderCache;
+		unique_ptr<ComponentDefaults>		 _componentDefaults;
 
 		bool _bShellActionsBound;
 	};

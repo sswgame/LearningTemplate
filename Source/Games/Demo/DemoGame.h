@@ -8,6 +8,7 @@
 
 #include "GameFramework/Base/GameInstanceBase.h"
 #include "GameFramework/Data/GameData.h"
+#include "GameFramework/Data/MonsterDataCatalog.h"
 #include "GameFramework/Kits/ActionCombat/ActionRoom.h"
 #include "GameFramework/Kits/Overworld/PlayerController.h"
 #include "GameFramework/Kits/Overworld/TileMap.h"
@@ -120,6 +121,8 @@ namespace sw
 		BattleState			   _battle;
 		ActionRoom			   _actionRoom;
 		GameData			   _data;
+		MonsterDataCatalog	   _monsterCatalog;
+		SpeciesCatalog		   _speciesCatalog;
 		SaveGame			   _save;
 		TransitionOrchestrator _transitions;
 		RuntimeHud			   _hud;

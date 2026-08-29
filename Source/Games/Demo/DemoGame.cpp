@@ -35,6 +35,8 @@ namespace sw
 		, _battle{}
 		, _actionRoom{}
 		, _data{}
+		, _monsterCatalog{}
+		, _speciesCatalog{}
 		, _save{}
 		, _transitions{}
 		, _hud{}
@@ -61,11 +63,15 @@ namespace sw
 		registerGameFrameworkTypes();
 
 		_data = _bootstrap._data;
-		SpeciesCatalog::loadFromResource( _data._speciesData );
+		game::bindLocalService( &_data );
+		game::bindLocalService( &_monsterCatalog );
+		game::bindLocalService( &_speciesCatalog );
+
+		_speciesCatalog.loadFromResource( _data._speciesData );
 		GameStrings::setupLocalization( _data._localizationDirectory, _data._defaultLanguage, _data._fallbackLanguage );
 		if ( GameStrings::getAvailableLanguages().empty() )
 			GameStrings::setupLocalization( _data._stringsData, _data._defaultLanguage, _data._fallbackLanguage );
-		MonsterDataCatalog::loadFromResource( _data._monstersData );
+		_monsterCatalog.loadFromResource( _data._monstersData );
 
 		spawnSampleActorIfMissing();
 		spawnDemoCubeIfMissing();
@@ -95,6 +101,10 @@ namespace sw
 	void DemoGame::onShutdown()
 	{
 		SW_LOG_INFO( "Shutting down Game Module..." );
+
+		game::unbindLocalService<SpeciesCatalog>();
+		game::unbindLocalService<MonsterDataCatalog>();
+		game::unbindLocalService<GameData>();
 
 		destroyDemoCube();
 		destroyModuleSampleActors();

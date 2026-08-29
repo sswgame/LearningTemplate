@@ -31,6 +31,10 @@ namespace sw
 	class DebugDrawQueue;
 	class FrameDoubleBuffer;
 	class RHIBackendRegistry;
+	class CompressionCodecRegistry;
+	class ShaderCache;
+	class ComponentDefaults;
+	struct GameData;
 	// ------------------------------------------------------------------------------
 	// 1) EngineServices — App이 소유한 매니저 포인터 묶음
 	//    Engine.dll은 이 테이블만 들고, 생성/파괴는 App
@@ -49,13 +53,17 @@ namespace sw
 		ResourceManager*	   _pResourceManager{ nullptr };
 		MemoryProfiler*		   _pMemoryProfiler{ nullptr };
 
-		EngineData*			 _pEngineData{ nullptr };
-		AssetStreamingQueue* _pAssetStreamingQueue{ nullptr };
-		CommandStack*		 _pCommandStack{ nullptr };
-		DebugOverlayState*	 _pDebugOverlayState{ nullptr };
-		DebugDrawQueue*		 _pDebugDrawQueue{ nullptr };
-		FrameDoubleBuffer*	 _pFrameDoubleBuffer{ nullptr };
-		RHIBackendRegistry*	 _pRHIBackendRegistry{ nullptr };
+		EngineData*				  _pEngineData{ nullptr };
+		AssetStreamingQueue*	  _pAssetStreamingQueue{ nullptr };
+		CommandStack*			  _pCommandStack{ nullptr };
+		DebugOverlayState*		  _pDebugOverlayState{ nullptr };
+		DebugDrawQueue*			  _pDebugDrawQueue{ nullptr };
+		FrameDoubleBuffer*		  _pFrameDoubleBuffer{ nullptr };
+		RHIBackendRegistry*		  _pRHIBackendRegistry{ nullptr };
+		CompressionCodecRegistry* _pCompressionCodecRegistry{ nullptr };
+		ShaderCache*			  _pShaderCache{ nullptr };
+		ComponentDefaults*		  _pComponentDefaults{ nullptr };
+		GameData*				  _pGameData{ nullptr };
 	};
 
 	namespace engine
@@ -94,21 +102,23 @@ namespace sw
 		SW_API EventDispatcher& getEventDispatcher();
 
 		// ------------------------------------------------------------------------------
-		// 4) 팩 에셋 · 프로파일러
+		// 4) 팩 에셋 · 프로파일러 · 유틸리티
 		// ------------------------------------------------------------------------------
 		/** @brief 바인딩된 ResourceManager를 반환합니다 (GUID · 스키마 · Material · Prefab). */
 		SW_API ResourceManager& getResourceManager();
 		/** @brief 바인딩된 MemoryProfiler를 반환합니다. 없으면 nullptr. */
 		SW_API MemoryProfiler* getMemoryProfiler();
 
-		SW_API const EngineData&	getEngineData();
-		SW_API AssetStreamingQueue& getAssetStreamingQueue();
-		SW_API CommandStack&		getCommandStack();
-		SW_API DebugOverlayState&	getDebugOverlayState();
-		SW_API DebugDrawQueue&		getDebugDrawQueue();
-		SW_API FrameDoubleBuffer&	getFrameDoubleBuffer();
-		SW_API RHIBackendRegistry&	getRHIBackendRegistry();
-
-		// ------------------------------------------------------------------------------
+		SW_API const EngineData&		 getEngineData();
+		SW_API AssetStreamingQueue&		 getAssetStreamingQueue();
+		SW_API CommandStack&			 getCommandStack();
+		SW_API DebugOverlayState&		 getDebugOverlayState();
+		SW_API DebugDrawQueue&			 getDebugDrawQueue();
+		SW_API FrameDoubleBuffer&		 getFrameDoubleBuffer();
+		SW_API RHIBackendRegistry&		 getRHIBackendRegistry();
+		SW_API CompressionCodecRegistry& getCompressionCodecRegistry();
+		SW_API ShaderCache&				 getShaderCache();
+		SW_API ComponentDefaults&		 getComponentDefaults();
+		SW_API const GameData&			 getGameData();
 	} // namespace engine
 } // namespace sw

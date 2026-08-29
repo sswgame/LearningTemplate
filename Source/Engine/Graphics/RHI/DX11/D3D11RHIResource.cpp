@@ -2,6 +2,7 @@
 
 #include "Engine/Graphics/RHI/DX11/D3D11RHIResource.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/DX11/D3D11RHIDevice.h"
 #include "Engine/Graphics/Shader/ShaderCache.h"
 
@@ -10,6 +11,13 @@ namespace sw
 {
 	namespace
 	{
+		ShaderCompileResult compileShader( const ShaderCompileDesc& desc )
+		{
+			if ( engine::areEngineServicesBound() )
+				return engine::getShaderCache().getOrCompile( desc );
+			return ShaderCompiler::compileHLSL( desc );
+		}
+
 		struct D3D11RHIResourceInternal
 		{
 			static DXGI_FORMAT toDxgiFormatD3D11( RHIFormat format )
@@ -73,7 +81,7 @@ namespace sw
 			vsDesc._stage		 = ShaderStage::Vertex;
 			vsDesc._targetFormat = ShaderTargetFormat::DXBC_D3D11;
 			fillDefines( vsDesc );
-			ShaderCompileResult res = ShaderCache::getOrCompile( vsDesc );
+			ShaderCompileResult res = compileShader( vsDesc );
 			if ( res._bSuccess )
 			{
 				_pDevice->_device->CreateVertexShader( res._listBytecode.data(), res._listBytecode.size(), nullptr, pso._vs.GetAddressOf() );
@@ -92,7 +100,7 @@ namespace sw
 			psDesc._stage		 = ShaderStage::Pixel;
 			psDesc._targetFormat = ShaderTargetFormat::DXBC_D3D11;
 			fillDefines( psDesc );
-			ShaderCompileResult res = ShaderCache::getOrCompile( psDesc );
+			ShaderCompileResult res = compileShader( psDesc );
 			if ( res._bSuccess )
 				_pDevice->_device->CreatePixelShader( res._listBytecode.data(), res._listBytecode.size(), nullptr, pso._ps.GetAddressOf() );
 		}
@@ -104,7 +112,7 @@ namespace sw
 			csDesc._stage		 = ShaderStage::Compute;
 			csDesc._targetFormat = ShaderTargetFormat::DXBC_D3D11;
 			fillDefines( csDesc );
-			ShaderCompileResult res = ShaderCache::getOrCompile( csDesc );
+			ShaderCompileResult res = compileShader( csDesc );
 			if ( res._bSuccess )
 				_pDevice->_device->CreateComputeShader( res._listBytecode.data(), res._listBytecode.size(), nullptr, pso._cs.GetAddressOf() );
 		}
@@ -152,7 +160,7 @@ namespace sw
 			csDesc._entryPoint		= entryPoint;
 			csDesc._stage			= ShaderStage::Compute;
 			csDesc._targetFormat	= ShaderTargetFormat::DXBC_D3D11;
-			ShaderCompileResult res = ShaderCache::getOrCompile( csDesc );
+			ShaderCompileResult res = compileShader( csDesc );
 			if ( res._bSuccess == false || FAILED( _pDevice->_device->CreateComputeShader( res._listBytecode.data(), res._listBytecode.size(), nullptr, pso._cs.GetAddressOf() ) ) )
 				return 0;
 		}

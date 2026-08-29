@@ -3,10 +3,24 @@
 #include "Engine/Graphics/RHI/DX12/D3D12RHIResource.h"
 
 #include "Engine/Common/EnginePlatformHeaders.h"
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/DX12/D3D12RHIDevice.h"
 #include "Engine/Graphics/Shader/ShaderCache.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
+namespace sw
+{
+	namespace
+	{
+		ShaderCompileResult compileShader( const ShaderCompileDesc& desc )
+		{
+			if ( engine::areEngineServicesBound() )
+				return engine::getShaderCache().getOrCompile( desc );
+			return ShaderCompiler::compileHLSL( desc );
+		}
+	} // namespace
+} // namespace sw
+
 namespace sw
 {
 	SW_LOG_CALLER( "D3D12RHIResource" );
@@ -40,7 +54,7 @@ namespace sw
 		vsDesc._stage		 = ShaderStage::Vertex;
 		vsDesc._targetFormat = ShaderTargetFormat::DXIL_D3D12;
 		fillDefines( vsDesc );
-		ShaderCompileResult vsResult = ShaderCache::getOrCompile( vsDesc );
+		ShaderCompileResult vsResult = compileShader( vsDesc );
 
 		ShaderCompileDesc psDesc{};
 		psDesc._filePath	 = desc._pixelShaderPath;
@@ -48,7 +62,7 @@ namespace sw
 		psDesc._stage		 = ShaderStage::Pixel;
 		psDesc._targetFormat = ShaderTargetFormat::DXIL_D3D12;
 		fillDefines( psDesc );
-		ShaderCompileResult psResult = ShaderCache::getOrCompile( psDesc );
+		ShaderCompileResult psResult = compileShader( psDesc );
 
 		if ( vsResult._bSuccess && psResult._bSuccess )
 		{
@@ -120,7 +134,7 @@ namespace sw
 			csDesc._entryPoint		= entryPoint;
 			csDesc._stage			= ShaderStage::Compute;
 			csDesc._targetFormat	= ShaderTargetFormat::DXIL_D3D12;
-			ShaderCompileResult res = ShaderCache::getOrCompile( csDesc );
+			ShaderCompileResult res = compileShader( csDesc );
 			if ( res._bSuccess )
 			{
 				D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc{};

@@ -8,44 +8,38 @@
 
 namespace sw
 {
-	namespace
-	{
-		struct MonsterDataCatalogInternal
-		{
-			static unordered_map<hashed_string, MonsterDef>& getStorage()
-			{
-				static unordered_map<hashed_string, MonsterDef> s_mapMonsters;
-				return s_mapMonsters;
-			}
-
-			static void seedFallback()
-			{
-				auto& mapMonsters = getStorage();
-				mapMonsters.clear();
-
-				MonsterDef defaultMonster;
-				defaultMonster._id			   = "default_monster";
-				defaultMonster._name		   = "Default Monster";
-				defaultMonster._archetype	   = MonsterArchetype::MeleePatrol;
-				defaultMonster._hp			   = 100;
-				defaultMonster._maxHp		   = 100;
-				defaultMonster._atk			   = 10;
-				defaultMonster._def			   = 0;
-				defaultMonster._speed		   = 150.0f;
-				defaultMonster._patrolRange	   = 200.0f;
-				defaultMonster._detectRange	   = 400.0f;
-				defaultMonster._attackRange	   = 50.0f;
-				defaultMonster._attackCoolTime = 1.5f;
-
-				mapMonsters[hashed_string( defaultMonster._id.c_str() )] = defaultMonster;
-			}
-		};
-	} // namespace
-} // namespace sw
-
-namespace sw
-{
 	SW_LOG_CALLER( "MonsterDataCatalog" );
+
+	MonsterDataCatalog::MonsterDataCatalog()
+		: _mapMonster{}
+	{
+	}
+
+	MonsterDataCatalog::~MonsterDataCatalog()
+	{
+		clear();
+	}
+
+	void MonsterDataCatalog::seedFallback()
+	{
+		_mapMonster.clear();
+
+		MonsterDef defaultMonster;
+		defaultMonster._id			   = "default_monster";
+		defaultMonster._name		   = "Default Monster";
+		defaultMonster._archetype	   = MonsterArchetype::MeleePatrol;
+		defaultMonster._hp			   = 100;
+		defaultMonster._maxHp		   = 100;
+		defaultMonster._atk			   = 10;
+		defaultMonster._def			   = 0;
+		defaultMonster._speed		   = 150.0f;
+		defaultMonster._patrolRange	   = 200.0f;
+		defaultMonster._detectRange	   = 400.0f;
+		defaultMonster._attackRange	   = 50.0f;
+		defaultMonster._attackCoolTime = 1.5f;
+
+		_mapMonster[hashed_string( defaultMonster._id.c_str() )] = defaultMonster;
+	}
 
 	bool MonsterDataCatalog::loadFromResource( string_view assetRelativePath )
 	{
@@ -56,7 +50,7 @@ namespace sw
 		if ( doc.loadResource( assetRelativePath, &absPath ) == false )
 		{
 			SW_LOG_WARNING( "Failed to read %# — using fallback monster definitions.", assetRelativePath );
-			MonsterDataCatalogInternal::seedFallback();
+			seedFallback();
 			return false;
 		}
 
@@ -64,11 +58,9 @@ namespace sw
 		if ( root.isValid() == false )
 		{
 			SW_LOG_WARNING( "Missing <MonsterCatalog> root in %# — using fallback.", absPath );
-			MonsterDataCatalogInternal::seedFallback();
+			seedFallback();
 			return false;
 		}
-
-		auto& mapMonsters = MonsterDataCatalogInternal::getStorage();
 
 		for ( XmlNode node = root.child( "Monster" ); node; node = node.next( "Monster" ) )
 		{
@@ -124,35 +116,34 @@ namespace sw
 				monsterDef._dropGold = dropNode.attrInt( "gold", monsterDef._dropGold );
 			}
 
-			mapMonsters[hashed_string( monsterDef._id.c_str() )] = monsterDef;
+			_mapMonster[hashed_string( monsterDef._id.c_str() )] = monsterDef;
 		}
 
-		SW_LOG_INFO( "Loaded %# monster definitions from %#", static_cast<int32>( mapMonsters.size() ), absPath );
+		SW_LOG_INFO( "Loaded %# monster definitions from %#", static_cast<int32>( _mapMonster.size() ), absPath );
 		return true;
 	}
 
-	const MonsterDef* MonsterDataCatalog::findMonster( const hashed_string& id )
+	const MonsterDef* MonsterDataCatalog::findMonster( const hashed_string& id ) const
 	{
-		const auto& mapMonsters = MonsterDataCatalogInternal::getStorage();
-		auto		mapIter		= mapMonsters.find( id );
-		if ( mapIter != mapMonsters.end() )
+		auto mapIter = _mapMonster.find( id );
+		if ( mapIter != _mapMonster.end() )
 			return &mapIter->second;
 		return nullptr;
 	}
 
-	const MonsterDef* MonsterDataCatalog::findMonster( const string& id )
+	const MonsterDef* MonsterDataCatalog::findMonster( const string& id ) const
 	{
 		return findMonster( hashed_string( id.c_str() ) );
 	}
 
-	const unordered_map<hashed_string, MonsterDef>& MonsterDataCatalog::getAllMonsters()
+	const unordered_map<hashed_string, MonsterDef>& MonsterDataCatalog::getAllMonsters() const
 	{
-		return MonsterDataCatalogInternal::getStorage();
+		return _mapMonster;
 	}
 
 	void MonsterDataCatalog::clear()
 	{
-		MonsterDataCatalogInternal::getStorage().clear();
+		_mapMonster.clear();
 	}
 
 	MonsterArchetype MonsterDataCatalog::parseArchetype( const utf8* pStr )

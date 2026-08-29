@@ -12,6 +12,14 @@
 
 namespace sw
 {
+	namespace
+	{
+		const TagContainer s_emptyTags{};
+	} // namespace
+} // namespace sw
+
+namespace sw
+{
 	SW_LOG_CALLER( "GameObject" );
 
 	GameObject::GameObject()
@@ -330,7 +338,6 @@ namespace sw
 		const TagComponent* pTagComp = getComponent<TagComponent>();
 		if ( pTagComp == nullptr )
 		{
-			static const TagContainer s_emptyTags;
 			return query.matches( s_emptyTags );
 		}
 		return pTagComp->matchesQuery( query );
@@ -341,7 +348,6 @@ namespace sw
 		const TagComponent* pTagComp = getComponent<TagComponent>();
 		if ( pTagComp == nullptr )
 		{
-			static const TagContainer s_emptyTags;
 			return s_emptyTags;
 		}
 		return pTagComp->getTags();
@@ -355,8 +361,7 @@ namespace sw
 		if ( pTagComp != nullptr )
 			return pTagComp->getTags();
 
-		static TagContainer s_emptyTags;
-		return s_emptyTags;
+		return const_cast<TagContainer&>( s_emptyTags );
 	}
 
 	size_t GameObject::getComponentCount() const

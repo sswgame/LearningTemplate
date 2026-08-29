@@ -151,6 +151,7 @@ function(sw_addRhiBackendModule BACKEND_NAME GRAPHICS_LIB)
 		PRIVATE
 			"SW_LOG_TAG=\"RHI\""
 			SW_MODULE_EXPORTS
+			SW_ENGINE_INTERNAL
 	)
 	target_precompile_headers(${BACKEND_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
 	sw_setModuleBinOutput(${BACKEND_NAME})

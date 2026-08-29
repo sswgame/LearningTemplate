@@ -4,6 +4,7 @@
 
 #include "Core/File/FileUtil.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Shader/ShaderCache.h"
 #include "Engine/Utility/File/ReloadFileManager.h"
 
@@ -142,7 +143,7 @@ namespace sw
 					ShaderCompileResult newResult = ShaderCompiler::compileHLSL( watchedInfo._desc );
 					if ( newResult._bSuccess )
 					{
-						ShaderCache::clearCache();
+						engine::getShaderCache().clearCache();
 						SW_LOG_INFO( "Live Shader Recompilation Succeeded for %#!",
 									 watchedInfo._desc._filePath.c_str() );
 

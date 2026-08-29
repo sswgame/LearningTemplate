@@ -39,7 +39,7 @@ namespace sw
 	void DemoGame::initNewGameParty()
 	{
 		_partyList.clear();
-		_partyList.push_back( SpeciesCatalog::makeStarter( _data._starterId.c_str(), _data._starterLevel ) );
+		_partyList.push_back( _speciesCatalog.makeStarter( _data._starterId.c_str(), _data._starterLevel ) );
 		_save.clearParty();
 		_save.setPartyFrom( _partyList );
 		_save.setFlag( "story_intro", 0 );

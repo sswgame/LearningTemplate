@@ -52,6 +52,16 @@ namespace
 				return &sw::engine::getDebugDrawQueue();
 			case sw::ModuleServiceId::DebugOverlayState:
 				return &sw::engine::getDebugOverlayState();
+			case sw::ModuleServiceId::CompressionCodecRegistry:
+				return &sw::engine::getCompressionCodecRegistry();
+			case sw::ModuleServiceId::ShaderCache:
+				return &sw::engine::getShaderCache();
+			case sw::ModuleServiceId::GameData:
+				return const_cast<sw::GameData*>( &sw::engine::getGameData() );
+			case sw::ModuleServiceId::ComponentDefaults:
+				return &sw::engine::getComponentDefaults();
+			case sw::ModuleServiceId::MonsterDataCatalog:
+			case sw::ModuleServiceId::SpeciesCatalog:
 			case sw::ModuleServiceId::Count:
 				break;
 		}

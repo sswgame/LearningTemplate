@@ -4,6 +4,7 @@
 
 #include "Core/Concurrency/mutex.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Serialization/Core/SchemaMigrate.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
@@ -14,26 +15,6 @@ namespace sw
 	{
 		struct ComponentDefaultsInternal
 		{
-			static inline XmlDocument s_defaultsDoc;
-			static inline bool		  s_defaultsLoaded{ false };
-			static inline string	  s_customDefaultsPath;
-			static inline mutex		  s_defaultsMutex;
-
-			static void ensureDefaultsLoaded()
-			{
-				if ( s_defaultsLoaded )
-					return;
-				std::scoped_lock<mutex> lock{ s_defaultsMutex };
-				if ( s_defaultsLoaded )
-					return;
-				if ( s_customDefaultsPath.empty() )
-					return;
-
-				string absPath;
-				if ( s_defaultsDoc.loadResource( s_customDefaultsPath.c_str(), &absPath ) )
-					s_defaultsLoaded = true;
-			}
-
 			static void pushLookupName( vector<string>& listNames, const string& name )
 			{
 				if ( name.empty() )
@@ -77,16 +58,43 @@ namespace sw
 
 namespace sw
 {
-	void ComponentDefaults::applyDefaults( void* pInstance, const TypeInfo& typeInfo, const TypeInfo* pAliasTypeInfo )
+	ComponentDefaults::ComponentDefaults()
+		: _defaultsDoc{}
+		, _customDefaultsPath{}
+		, _defaultsMutex{}
+		, _bDefaultsLoaded{ false }
+	{
+	}
+
+	ComponentDefaults::~ComponentDefaults()
+	{
+	}
+
+	void ComponentDefaults::ensureDefaultsLoaded()
+	{
+		if ( _bDefaultsLoaded )
+			return;
+		std::scoped_lock<mutex> lock{ _defaultsMutex };
+		if ( _bDefaultsLoaded )
+			return;
+		if ( _customDefaultsPath.empty() )
+			return;
+
+		string absPath;
+		if ( _defaultsDoc.loadResource( _customDefaultsPath.c_str(), &absPath ) )
+			_bDefaultsLoaded = true;
+	}
+
+	void ComponentDefaults::apply( void* pInstance, const TypeInfo& typeInfo, const TypeInfo* pAliasTypeInfo )
 	{
 		if ( pInstance == nullptr )
 			return;
 
-		ComponentDefaultsInternal::ensureDefaultsLoaded();
-		if ( ComponentDefaultsInternal::s_defaultsLoaded == false )
+		ensureDefaultsLoaded();
+		if ( _bDefaultsLoaded == false )
 			return;
 
-		XmlNode root = ComponentDefaultsInternal::s_defaultsDoc.root( "GameData" );
+		XmlNode root = _defaultsDoc.root( "GameData" );
 		if ( root.isValid() == false )
 			return;
 
@@ -129,27 +137,58 @@ namespace sw
 		} );
 	}
 
-	void ComponentDefaults::applyDefaults( Component* pComp, const TypeInfo& typeInfo )
+	void ComponentDefaults::apply( Component* pComp, const TypeInfo& typeInfo )
 	{
-		applyDefaults( pComp, typeInfo, nullptr );
+		apply( pComp, typeInfo, nullptr );
 	}
 
-	void ComponentDefaults::setDefaultsPath( string_view path )
+	void ComponentDefaults::setPath( string_view path )
 	{
-		std::scoped_lock<mutex> lock{ ComponentDefaultsInternal::s_defaultsMutex };
-		ComponentDefaultsInternal::s_customDefaultsPath = path;
-		ComponentDefaultsInternal::s_defaultsLoaded		= false;
+		std::scoped_lock<mutex> lock{ _defaultsMutex };
+		_customDefaultsPath = path;
+		_bDefaultsLoaded	= false;
 	}
 
-	string_view ComponentDefaults::getDefaultsPath()
+	string_view ComponentDefaults::getPath() const
 	{
-		std::scoped_lock<mutex> lock{ ComponentDefaultsInternal::s_defaultsMutex };
-		return ComponentDefaultsInternal::s_customDefaultsPath;
+		std::scoped_lock<mutex> lock{ _defaultsMutex };
+		return _customDefaultsPath;
 	}
 
 	void ComponentDefaults::reload()
 	{
-		std::scoped_lock<mutex> lock{ ComponentDefaultsInternal::s_defaultsMutex };
-		ComponentDefaultsInternal::s_defaultsLoaded = false;
+		std::scoped_lock<mutex> lock{ _defaultsMutex };
+		_bDefaultsLoaded = false;
+	}
+
+	void ComponentDefaults::applyDefaults( void* pInstance, const TypeInfo& typeInfo, const TypeInfo* pAliasTypeInfo )
+	{
+		if ( engine::areEngineServicesBound() )
+			engine::getComponentDefaults().apply( pInstance, typeInfo, pAliasTypeInfo );
+	}
+
+	void ComponentDefaults::applyDefaults( Component* pComp, const TypeInfo& typeInfo )
+	{
+		if ( engine::areEngineServicesBound() )
+			engine::getComponentDefaults().apply( pComp, typeInfo );
+	}
+
+	void ComponentDefaults::setDefaultsPath( string_view path )
+	{
+		if ( engine::areEngineServicesBound() )
+			engine::getComponentDefaults().setPath( path );
+	}
+
+	string_view ComponentDefaults::getDefaultsPath()
+	{
+		if ( engine::areEngineServicesBound() )
+			return engine::getComponentDefaults().getPath();
+		return {};
+	}
+
+	void ComponentDefaults::reloadDefaults()
+	{
+		if ( engine::areEngineServicesBound() )
+			engine::getComponentDefaults().reload();
 	}
 } // namespace sw

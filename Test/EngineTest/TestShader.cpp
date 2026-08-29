@@ -46,7 +46,8 @@ SW_TEST_CASE( ShaderCompilerTest, BasicCompileAndReflection )
 	desc._stage		   = sw::ShaderStage::Vertex;
 	desc._targetFormat = sw::ShaderTargetFormat::DXBC_D3D11;
 
-	sw::ShaderCompileResult cacheResult = sw::ShaderCache::getOrCompile( desc );
+	sw::ShaderCache			shaderCache;
+	sw::ShaderCompileResult cacheResult = shaderCache.getOrCompile( desc );
 	if ( sw::isShaderCompilerUnavailable( cacheResult ) )
 	{
 		SW_TEST_SKIP( "Shader compiler unavailable in this environment" );
@@ -115,7 +116,8 @@ SW_TEST_CASE( ShaderCompilerTest, MultiTargetCrossCompilation )
  */
 SW_TEST_CASE( ShaderCompilerTest, ClearCacheAndNonExistentCompile )
 {
-	sw::ShaderCache::clearCache();
+	sw::ShaderCache shaderCache;
+	shaderCache.clearCache();
 
 	sw::ShaderCompileDesc desc{};
 	desc._filePath	   = "NonExistentShaderFile.hlsl";
@@ -201,7 +203,8 @@ SW_TEST_CASE( ShaderCompilerTest, DiskCacheHitAndClear )
 SW_TEST_CASE( ShaderCompilerTest, MultiBackendShaderCacheIsolation )
 {
 	sw::ResourceUtil::initialize();
-	sw::ShaderCache::clearCache();
+	sw::ShaderCache shaderCache;
+	shaderCache.clearCache();
 
 	sw::ShaderCompileDesc dx11Desc{};
 	dx11Desc._filePath	   = "engine/shaders/fullscreentriangle.hlsl";
@@ -216,7 +219,7 @@ SW_TEST_CASE( ShaderCompilerTest, MultiBackendShaderCacheIsolation )
 	vkDesc._targetFormat		 = sw::ShaderTargetFormat::SPIRV_Vulkan;
 
 	// 1) DX11 컴파일 및 캐시 등록
-	sw::ShaderCompileResult dx11Res1 = sw::ShaderCache::getOrCompile( dx11Desc );
+	sw::ShaderCompileResult dx11Res1 = shaderCache.getOrCompile( dx11Desc );
 	if ( sw::isShaderCompilerUnavailable( dx11Res1 ) )
 	{
 		SW_TEST_SKIP( "Shader compiler unavailable in this environment" );
@@ -224,26 +227,26 @@ SW_TEST_CASE( ShaderCompilerTest, MultiBackendShaderCacheIsolation )
 	SW_EXPECT_TRUE( dx11Res1._bSuccess );
 
 	// 2) DX12 컴파일 및 캐시 등록 (DX11 캐시와 독립적으로 보관되어야 함)
-	sw::ShaderCompileResult dx12Res1 = sw::ShaderCache::getOrCompile( dx12Desc );
+	sw::ShaderCompileResult dx12Res1 = shaderCache.getOrCompile( dx12Desc );
 	SW_EXPECT_TRUE( dx12Res1._bSuccess );
 
 	// DXBC와 DXIL은 바이트코드 헤더 및 크기 구성이 다름
 	SW_EXPECT_FALSE( dx11Res1._listBytecode == dx12Res1._listBytecode );
 
 	// 3) 다시 DX11 및 DX12 요청 시 각 백엔드 전용 캐시 히트 검증
-	sw::ShaderCompileResult dx11Res2 = sw::ShaderCache::getOrCompile( dx11Desc );
-	sw::ShaderCompileResult dx12Res2 = sw::ShaderCache::getOrCompile( dx12Desc );
+	sw::ShaderCompileResult dx11Res2 = shaderCache.getOrCompile( dx11Desc );
+	sw::ShaderCompileResult dx12Res2 = shaderCache.getOrCompile( dx12Desc );
 	SW_EXPECT_TRUE( dx11Res1._listBytecode == dx11Res2._listBytecode );
 	SW_EXPECT_TRUE( dx12Res1._listBytecode == dx12Res2._listBytecode );
 
 	// 4) Vulkan SPIR-V 컴파일 및 캐시 격리 검증 (DXC SPIR-V 지원 시)
-	sw::ShaderCompileResult vkRes1 = sw::ShaderCache::getOrCompile( vkDesc );
+	sw::ShaderCompileResult vkRes1 = shaderCache.getOrCompile( vkDesc );
 	if ( vkRes1._bSuccess )
 	{
 		SW_EXPECT_FALSE( vkRes1._listBytecode == dx11Res1._listBytecode );
 		SW_EXPECT_FALSE( vkRes1._listBytecode == dx12Res1._listBytecode );
 
-		sw::ShaderCompileResult vkRes2 = sw::ShaderCache::getOrCompile( vkDesc );
+		sw::ShaderCompileResult vkRes2 = shaderCache.getOrCompile( vkDesc );
 		SW_EXPECT_TRUE( vkRes1._listBytecode == vkRes2._listBytecode );
 	}
 }

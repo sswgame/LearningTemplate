@@ -2,34 +2,13 @@
 
 #include "Engine/Object/Component/TagSystem.h"
 
+#include "Core/String/hashed_string.h"
+
 namespace sw
 {
-	class TagRegistryImpl
-	{
-	public:
-		const utf8* intern( string_view str )
-		{
-			string								strKey( str );
-			std::shared_lock<std::shared_mutex> readLock{ _mutex };
-			auto								it = _uniquePool.find( strKey );
-			if ( it != _uniquePool.end() )
-				return it->data();
-
-			readLock.unlock();
-			std::unique_lock<std::shared_mutex> writeLock{ _mutex };
-			auto [insertedIt, success] = _uniquePool.emplace( std::move( strKey ) );
-			return insertedIt->data();
-		}
-
-	private:
-		std::shared_mutex	  _mutex;
-		unordered_set<string> _uniquePool;
-	};
-
 	TagID TagID::request( string_view str )
 	{
-		static TagRegistryImpl s_impl;
-		const utf8*			   pInterned = s_impl.intern( str );
+		hashed_string hs{ str };
 
 		uint64 hashValue = StringUtil::kOffset64;
 		for ( size_t charIndex = 0; charIndex < str.length(); ++charIndex )
@@ -37,7 +16,7 @@ namespace sw
 			hashValue = ( hashValue ^ static_cast<uint64>( str[charIndex] ) ) * StringUtil::kPrime64;
 		}
 
-		return TagID{ hashValue, pInterned };
+		return TagID{ hashValue, hs.c_str() };
 	}
 
 	TagContainer::TagContainer( std::initializer_list<TagID> tags )

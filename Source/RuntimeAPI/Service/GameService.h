@@ -28,6 +28,19 @@ namespace sw
 		SW_GAMESERVICE_API bool areGameServicesBound();
 
 		SW_GAMESERVICE_API void* getRawService( ModuleServiceId id );
+		SW_GAMESERVICE_API void	 bindLocalService( ModuleServiceId id, void* pService );
+
+		template <typename T>
+		void bindLocalService( T* pService )
+		{
+			bindLocalService( ModuleServiceTraits<T>::id, static_cast<void*>( pService ) );
+		}
+
+		template <typename T>
+		void unbindLocalService()
+		{
+			bindLocalService( ModuleServiceTraits<T>::id, nullptr );
+		}
 
 		template <typename T>
 		T* getService()

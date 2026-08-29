@@ -20,6 +20,7 @@ namespace sw
 	namespace
 	{
 		ModuleService s_gameService{};
+		void*		  s_arrLocalServices[kModuleServiceCount]{ nullptr };
 	} // namespace
 
 	namespace game
@@ -29,17 +30,34 @@ namespace sw
 			s_gameService = service;
 		}
 
-		SW_GAMESERVICE_API void unbindGameService() { s_gameService = {}; }
+		SW_GAMESERVICE_API void unbindGameService()
+		{
+			s_gameService = {};
+			for ( uint32 index = 0; index < kModuleServiceCount; ++index )
+				s_arrLocalServices[index] = nullptr;
+		}
 
 		SW_GAMESERVICE_API bool areGameServicesBound()
 		{
 			return s_gameService.getService != nullptr;
 		}
 
+		SW_GAMESERVICE_API void bindLocalService( ModuleServiceId id, void* pService )
+		{
+			const uint32 rawId = toRawServiceId( id );
+			if ( rawId < kModuleServiceCount )
+				s_arrLocalServices[rawId] = pService;
+		}
+
 		SW_GAMESERVICE_API void* getRawService( ModuleServiceId id )
 		{
-			SW_LOG_ASSERT( s_gameService.getService != nullptr, "GameService is not bound" );
 			const uint32 rawId = toRawServiceId( id );
+			if ( rawId < kModuleServiceCount && s_arrLocalServices[rawId] != nullptr )
+				return s_arrLocalServices[rawId];
+
+			if ( s_gameService.getService == nullptr )
+				return nullptr;
+
 			if ( rawId >= kModuleServiceCount )
 				return nullptr;
 			return s_gameService.getService( rawId );

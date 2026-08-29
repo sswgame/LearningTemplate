@@ -47,11 +47,7 @@ namespace sw
 		int32	_maxPartySize{ 6 };															  ///< 파티 상한
 
 		/** @brief 리소스 경로(XML)에서 부트스트랩 테이블을 로드합니다. 빈 경로는 데모 팩 기본 파일입니다. */
-
 		bool loadFromResource( string_view assetRelativePath = {} );
-
-		/** @brief 마지막으로 로드된(또는 C++ 폴백) 부트스트랩 테이블입니다. */
-		static const GameData& get();
 	};
 
 	// ------------------------------------------------------------------------------

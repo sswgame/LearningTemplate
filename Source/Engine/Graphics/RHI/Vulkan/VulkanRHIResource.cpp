@@ -2,6 +2,7 @@
 
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIResource.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/FrameResourceRing.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
 #include "Engine/Graphics/Shader/ShaderCache.h"
@@ -10,6 +11,13 @@
 
 namespace
 {
+	sw::ShaderCompileResult compileShader( const sw::ShaderCompileDesc& desc )
+	{
+		if ( sw::engine::areEngineServicesBound() )
+			return sw::engine::getShaderCache().getOrCompile( desc );
+		return sw::ShaderCompiler::compileHLSL( desc );
+	}
+
 	inline VkFormat toVulkanTextureFormat( sw::RHIFormat format )
 	{
 		switch ( format )
@@ -44,7 +52,7 @@ namespace sw
 		vsDesc._entryPoint			 = desc._vertexEntryPoint;
 		vsDesc._stage				 = ShaderStage::Vertex;
 		vsDesc._targetFormat		 = ShaderTargetFormat::SPIRV_Vulkan;
-		ShaderCompileResult vsResult = ShaderCache::getOrCompile( vsDesc );
+		ShaderCompileResult vsResult = compileShader( vsDesc );
 
 		const bool			bDepthOnly		= ( desc._numRenderTargets == 0 && desc._bEnableDepthTest != 0 );
 		const bool			bHasPixelShader = desc._pixelShaderPath.empty() == false && bDepthOnly == false;
@@ -56,7 +64,7 @@ namespace sw
 			psDesc._entryPoint	 = desc._pixelEntryPoint;
 			psDesc._stage		 = ShaderStage::Pixel;
 			psDesc._targetFormat = ShaderTargetFormat::SPIRV_Vulkan;
-			psResult			 = ShaderCache::getOrCompile( psDesc );
+			psResult			 = compileShader( psDesc );
 		}
 
 		if ( vsResult._bSuccess == false || ( bHasPixelShader && psResult._bSuccess == false ) )
@@ -159,8 +167,8 @@ namespace sw
 		VkPipelineColorBlendAttachmentState arrColorBlendAttachments[kMaxColorAttachments]{};
 		for ( uint32 blendIndex = 0; blendIndex < blendCount; ++blendIndex )
 		{
-			arrColorBlendAttachments[blendIndex].colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
-																  VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+			arrColorBlendAttachments[blendIndex].colorWriteMask		 = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
+																	   VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 			arrColorBlendAttachments[blendIndex].blendEnable		 = desc._bEnableBlend ? VK_TRUE : VK_FALSE;
 			arrColorBlendAttachments[blendIndex].srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
 			arrColorBlendAttachments[blendIndex].dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
@@ -231,7 +239,7 @@ namespace sw
 		csDesc._entryPoint			 = entryPoint;
 		csDesc._stage				 = ShaderStage::Compute;
 		csDesc._targetFormat		 = ShaderTargetFormat::SPIRV_Vulkan;
-		ShaderCompileResult csResult = ShaderCache::getOrCompile( csDesc );
+		ShaderCompileResult csResult = compileShader( csDesc );
 
 		if ( csResult._bSuccess == false )
 		{
@@ -324,9 +332,9 @@ namespace sw
 		VkAttachmentDescription attachments[kMaxColorAttachments + 1]{};
 		VkAttachmentReference	colorRefs[kMaxColorAttachments]{};
 		const uint32			colorCount =
-			   desc._listColorAttachment.size() > kMaxColorAttachments
-						   ? kMaxColorAttachments
-						   : static_cast<uint32>( desc._listColorAttachment.size() );
+			desc._listColorAttachment.size() > kMaxColorAttachments
+				? kMaxColorAttachments
+				: static_cast<uint32>( desc._listColorAttachment.size() );
 
 		for ( uint32 colorIndex = 0; colorIndex < colorCount; ++colorIndex )
 		{

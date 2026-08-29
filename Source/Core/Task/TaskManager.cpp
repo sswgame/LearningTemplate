@@ -213,11 +213,7 @@ namespace sw
 		static constexpr uint32 kSlabSize = 64;
 
 	public:
-		static TaskNodePool& get()
-		{
-			static TaskNodePool s_pool;
-			return s_pool;
-		}
+		TaskNodePool() = default;
 
 		~TaskNodePool()
 		{
@@ -349,7 +345,10 @@ namespace sw
 	{
 		if ( _refCount.fetch_sub( 1, std::memory_order_acq_rel ) == 1 )
 		{
-			TaskNodePool::get().deallocate( this );
+			if ( _pOwner != nullptr )
+			{
+				_pOwner->deallocateNode( this );
+			}
 		}
 	}
 
@@ -495,9 +494,40 @@ namespace sw
 		return *this;
 	}
 
+	TaskManager::TaskManager()
+		: _bInitialized{ false }
+		, _mainThreadId{}
+		, _bStop{ false }
+		, _listWorker{}
+		, _listWorkerQueue{}
+		, _nextWorkerQueueIndex{ 0 }
+		, _sleepingWorkerCount{ 0 }
+		, _globalWorkerQueue{}
+		, _queueMainThread{}
+		, _workerMutex{}
+		, _cvWorker{}
+		, _waitAllMutex{}
+		, _cvWaitAll{}
+		, _listAllStage{}
+		, _stageMutex{}
+		, _activeTaskCount{ 0 }
+		, _nodePool{ sw::make_unique<TaskNodePool>() }
+	{
+	}
+
 	TaskManager::~TaskManager()
 	{
 		shutdown();
+	}
+
+	TaskNode* TaskManager::allocateNode()
+	{
+		return _nodePool->allocate();
+	}
+
+	void TaskManager::deallocateNode( TaskNode* pNode )
+	{
+		_nodePool->deallocate( pNode );
 	}
 
 	bool TaskManager::initialize( uint32 threadCount )
@@ -617,7 +647,7 @@ namespace sw
 			return TaskHandle{};
 		}
 
-		TaskNode* pNode = TaskNodePool::get().allocate();
+		TaskNode* pNode = allocateNode();
 		pNode->_pOwner	= this;
 		setTaskName( pNode, name );
 		pNode->_affinity = affinity;
@@ -647,7 +677,7 @@ namespace sw
 			return TaskHandle{};
 		}
 
-		TaskNode* pNode = TaskNodePool::get().allocate();
+		TaskNode* pNode = allocateNode();
 		pNode->_pOwner	= this;
 		setTaskName( pNode, name );
 		pNode->_affinity = affinity;
@@ -692,7 +722,7 @@ namespace sw
 		for ( uint32 start = 0; start < count; start += chunkSize )
 		{
 			uint32	  end	   = MathUtil::min( start + chunkSize, count );
-			TaskNode* pSubTask = TaskNodePool::get().allocate();
+			TaskNode* pSubTask = allocateNode();
 
 			pSubTask->_pOwner		   = this;
 			pSubTask->_pSharedCallable = pSharedCallable;
@@ -736,7 +766,7 @@ namespace sw
 		{
 			uint32	  chunkStart = start + offset;
 			uint32	  chunkEnd	 = MathUtil::min( chunkStart + chunkSize, end );
-			TaskNode* pSubTask	 = TaskNodePool::get().allocate();
+			TaskNode* pSubTask	 = allocateNode();
 
 			pSubTask->_pOwner		   = this;
 			pSubTask->_pSharedCallable = pSharedCallable;

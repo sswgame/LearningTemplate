@@ -7,9 +7,31 @@
 
 namespace sw
 {
+	ShaderCache::ShaderCache()
+		: _mapCache{}
+		, _mutexCache{}
+	{
+	}
+
+	ShaderCache::~ShaderCache()
+	{
+		shutdown();
+	}
+
+	bool ShaderCache::initialize()
+	{
+		clearCache();
+		return true;
+	}
+
+	void ShaderCache::shutdown()
+	{
+		clearCache();
+	}
+
 	ShaderCompileResult ShaderCache::getOrCompile( const ShaderCompileDesc& desc )
 	{
-		std::scoped_lock<mutex> lock{ _s_mutexCache };
+		std::scoped_lock<mutex> lock{ _mutexCache };
 
 		string absPath;
 		string cacheKey;
@@ -28,8 +50,8 @@ namespace sw
 		if ( absPath.empty() == false )
 			currentTimestamp = FileUtil::getFileTimestamp( absPath );
 
-		auto iter = _s_mapCache.find( cacheKey );
-		if ( iter != _s_mapCache.end() )
+		auto iter = _mapCache.find( cacheKey );
+		if ( iter != _mapCache.end() )
 		{
 			if ( iter->second._lastTimestamp == currentTimestamp && currentTimestamp != 0 )
 				return iter->second._result;
@@ -42,18 +64,15 @@ namespace sw
 			ShaderCacheEntry entry{};
 			entry._lastTimestamp = currentTimestamp;
 			entry._result		 = compiledResult;
-			_s_mapCache.insert_or_assign( std::move( cacheKey ), std::move( entry ) );
+			_mapCache.insert_or_assign( std::move( cacheKey ), std::move( entry ) );
 		}
 
 		return compiledResult;
 	}
+
 	void ShaderCache::clearCache()
 	{
-		std::scoped_lock<mutex> lock{ _s_mutexCache };
-		_s_mapCache.clear();
+		std::scoped_lock<mutex> lock{ _mutexCache };
+		_mapCache.clear();
 	}
-
-	unordered_map<string, ShaderCacheEntry> ShaderCache::_s_mapCache;
-
-	mutex ShaderCache::_s_mutexCache;
 } // namespace sw

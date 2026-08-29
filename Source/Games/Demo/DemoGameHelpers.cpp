@@ -125,9 +125,10 @@ namespace sw
 					if ( pScene->getMaterial() != nullptr )
 					{
 						pGlassMesh->setMaterial( pScene->getMaterial() );
-						// MIC: 부모 기본값 + XML의 유리 색/러프니스/포그 오버라이드.
-						s_glassMaterialInstance = sw::make_shared<MaterialInstance>( pScene->getMaterial() );
-						if ( s_glassMaterialInstance->loadFromFile( GameData::get()._glassMaterialInstance ) == false )
+						s_glassMaterialInstance	  = sw::make_shared<MaterialInstance>( pScene->getMaterial() );
+						const GameData* pGameData = game::getService<GameData>();
+						const string	micPath	  = pGameData != nullptr ? pGameData->_glassMaterialInstance : "game/demo/materials/glassorange.materialinstance";
+						if ( s_glassMaterialInstance->loadFromFile( micPath ) == false )
 						{
 							constexpr float32 arrGlassColor[4] = { 1.0f, 0.4f, 0.0f, 0.5f };
 							s_glassMaterialInstance->setVectorParameter( hashed_string( "color" ), arrGlassColor );

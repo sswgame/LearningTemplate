@@ -76,18 +76,18 @@ SW_TEST_CASE( Core_Compression, RleCodecRepetitionAndLiterals )
 // ------------------------------------------------------------------------------
 SW_TEST_CASE( Core_Compression, CodecRegistryAndDynamicLookup )
 {
-	sw::CompressionCodecRegistry& reg = sw::CompressionCodecRegistry::get();
-	reg.initialize();
+	sw::CompressionCodecRegistry registry;
+	registry.initialize();
 
-	sw::ICompressionCodec* pRle = reg.getCodec( sw::CompressionCodecType::RLE );
+	sw::ICompressionCodec* pRle = registry.getCodec( sw::CompressionCodecType::RLE );
 	SW_EXPECT_TRUE( pRle != nullptr );
 	SW_EXPECT_EQUAL( sw::string( "RLE" ), sw::string( pRle->getCodecName() ) );
 
-	sw::ICompressionCodec* pNull = reg.getCodec( "Null" );
+	sw::ICompressionCodec* pNull = registry.getCodec( "Null" );
 	SW_EXPECT_TRUE( pNull != nullptr );
 	SW_EXPECT_EQUAL( static_cast<uint32>( sw::CompressionCodecType::None ), static_cast<uint32>( pNull->getCodecType() ) );
 
-	SW_EXPECT_TRUE( reg.getDefaultCodec() != nullptr );
+	SW_EXPECT_TRUE( registry.getDefaultCodec() != nullptr );
 }
 
 // ------------------------------------------------------------------------------

@@ -15,18 +15,12 @@ namespace sw
 
 	Mesh::~Mesh()
 	{
-		// createUnitCube/createRectMesh static 캐시는 프로세스 종료 시 RHI 디바이스보다 늦게
-		// 파괴될 수 있다. 디바이스 경유 destroy는 하지 않고 핸들만 비운다.
 		_vertexBuffer  = 0;
 		_pUploadDevice = nullptr;
 	}
 
 	shared_ptr<Mesh> Mesh::createUnitCube()
 	{
-		static shared_ptr<Mesh> s_cube;
-		if ( s_cube != nullptr )
-			return s_cube;
-
 		auto			  mesh		= sw::make_shared<Mesh>();
 		vector<RHIVertex> listVerts = {
 			// +Z
@@ -73,8 +67,7 @@ namespace sw
 			{ { -0.5f, -0.5f, 0.5f }, { 0.45f, 0.45f, 0.50f, 1.0f }},
 		};
 		mesh->setVertices( std::move( listVerts ) );
-		s_cube = std::move( mesh );
-		return s_cube;
+		return mesh;
 	}
 
 	shared_ptr<Mesh> Mesh::createPrimitive( string_view meshId )
@@ -88,10 +81,6 @@ namespace sw
 
 	shared_ptr<Mesh> Mesh::createRectMesh()
 	{
-		static shared_ptr<Mesh> s_rect;
-		if ( s_rect != nullptr )
-			return s_rect;
-
 		auto			  mesh		= sw::make_shared<Mesh>();
 		vector<RHIVertex> listVerts = {
 			{{ -0.5f, -0.5f, 0.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }},
@@ -102,8 +91,7 @@ namespace sw
 			{ { -0.5f, 0.5f, 0.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }},
 		};
 		mesh->setVertices( std::move( listVerts ) );
-		s_rect = std::move( mesh );
-		return s_rect;
+		return mesh;
 	}
 
 	void Mesh::setVertices( const vector<RHIVertex>& vertices )

@@ -3,6 +3,7 @@
 #include "Engine/EngineLoop.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
+#include "Core/Compression/CompressionCodecRegistry.h"
 #include "Core/Concurrency/DeadlockDetector.h"
 #include "Core/Event/EventDispatcher.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
@@ -35,6 +36,7 @@
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Localization/StringTable.h"
 #include "Engine/Object/Component/CameraComponent.h"
+#include "Engine/Object/Component/ComponentDefaults.h"
 #include "Engine/Utility/CommandStack.h"
 #include "Engine/Utility/Debug/DebugOverlayState.h"
 #include "Engine/Utility/File/ReloadFileManager.h"
@@ -159,31 +161,38 @@ namespace sw
 #if !defined( SW_SHIPPING )
 			_commandStack = make_unique<CommandStack>();
 #endif
-			_debugOverlayState	= make_unique<DebugOverlayState>();
-			_debugDrawQueue		= make_unique<DebugDrawQueue>();
-			_frameDoubleBuffer	= make_unique<FrameDoubleBuffer>();
-			_rhiBackendRegistry = make_unique<RHIBackendRegistry>();
+			_debugOverlayState		  = make_unique<DebugOverlayState>();
+			_frameDoubleBuffer		  = make_unique<FrameDoubleBuffer>();
+			_rhiBackendRegistry		  = make_unique<RHIBackendRegistry>();
+			_compressionCodecRegistry = make_unique<CompressionCodecRegistry>();
+			_compressionCodecRegistry->initialize();
+			_shaderCache = make_unique<ShaderCache>();
+			_shaderCache->initialize();
+			_componentDefaults = make_unique<ComponentDefaults>();
 			FrameDoubleBuffer::bind( _frameDoubleBuffer.get() );
 
 			EngineServices services{};
-			services._pCommandLineManager	 = _commandLineManager.get();
-			services._pGlobalVariableManager = _globalVariableManager.get();
-			services._pLocalizationManager	 = _localizationManager.get();
-			services._pTaskManager			 = _taskManager.get();
-			services._pTypeRegistry			 = _typeRegistry.get();
-			services._pSceneManager			 = _sceneManager.get();
-			services._pInputManager			 = _inputManager.get();
-			services._pAudioSystem			 = _audioSystem.get();
-			services._pEventDispatcher		 = _eventDispatcher.get();
-			services._pResourceManager		 = _resourceManager.get();
-			services._pMemoryProfiler		 = _memoryProfiler.get();
-			services._pEngineData			 = _engineData.get();
-			services._pAssetStreamingQueue	 = _assetStreamingQueue.get();
-			services._pCommandStack			 = _commandStack.get();
-			services._pDebugOverlayState	 = _debugOverlayState.get();
-			services._pDebugDrawQueue		 = _debugDrawQueue.get();
-			services._pFrameDoubleBuffer	 = _frameDoubleBuffer.get();
-			services._pRHIBackendRegistry	 = _rhiBackendRegistry.get();
+			services._pCommandLineManager		= _commandLineManager.get();
+			services._pGlobalVariableManager	= _globalVariableManager.get();
+			services._pLocalizationManager		= _localizationManager.get();
+			services._pTaskManager				= _taskManager.get();
+			services._pTypeRegistry				= _typeRegistry.get();
+			services._pSceneManager				= _sceneManager.get();
+			services._pInputManager				= _inputManager.get();
+			services._pAudioSystem				= _audioSystem.get();
+			services._pEventDispatcher			= _eventDispatcher.get();
+			services._pResourceManager			= _resourceManager.get();
+			services._pMemoryProfiler			= _memoryProfiler.get();
+			services._pEngineData				= _engineData.get();
+			services._pAssetStreamingQueue		= _assetStreamingQueue.get();
+			services._pCommandStack				= _commandStack.get();
+			services._pDebugOverlayState		= _debugOverlayState.get();
+			services._pDebugDrawQueue			= _debugDrawQueue.get();
+			services._pFrameDoubleBuffer		= _frameDoubleBuffer.get();
+			services._pRHIBackendRegistry		= _rhiBackendRegistry.get();
+			services._pCompressionCodecRegistry = _compressionCodecRegistry.get();
+			services._pShaderCache				= _shaderCache.get();
+			services._pComponentDefaults		= _componentDefaults.get();
 
 			engine::bindEngineServices( services );
 			engine::registerModuleTypes( "Engine" );
@@ -329,8 +338,10 @@ namespace sw
 				_globalVariableManager->shutdown();
 			if ( _memoryProfiler != nullptr )
 				_memoryProfiler->shutdown();
-			if ( _deadlockDetector != nullptr )
-				_deadlockDetector->shutdown();
+			if ( _shaderCache != nullptr )
+				_shaderCache->shutdown();
+			if ( _compressionCodecRegistry != nullptr )
+				_compressionCodecRegistry->shutdown();
 			if ( _logger != nullptr )
 				_logger->shutdown();
 
@@ -352,6 +363,9 @@ namespace sw
 			_debugDrawQueue.reset();
 			_frameDoubleBuffer.reset();
 			_rhiBackendRegistry.reset();
+			_compressionCodecRegistry.reset();
+			_shaderCache.reset();
+			_componentDefaults.reset();
 
 			// [Note] ResourceManager는 가장 밑바탕이 되는 시스템입니다.
 			// 다른 매니저들의 reset() 시 소멸자가 호출되며 들고 있던 리소스들을 해제하는데,
@@ -376,7 +390,6 @@ namespace sw
 			_logger.reset();
 		}
 
-		ShaderCache::clearCache();
 		MemoryProfiler::reportMemoryLeaks( "EngineLoop::shutdown" );
 	}
 
@@ -497,7 +510,8 @@ namespace sw
 			engine::getResourceManager().getMaterialManager().shutdownAllGpu( &_rhi->getDevice() );
 
 			_rhi->getDevice().waitIdle();
-			ShaderCache::clearCache();
+			if ( _shaderCache != nullptr )
+				_shaderCache->clearCache();
 		}
 
 		if ( _rhi->recreateDevice( requested ) == false )

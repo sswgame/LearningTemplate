@@ -142,7 +142,7 @@ SW Engine은 세이브 파일, 네트워크 패킷, 바이너리 씬 데이터�
                                │ (ICompressionCodec 포인터 디스패칭)
                                ▼
 ┌─────────────────────────────────────────────────────────────┐
-│             CompressionCodecRegistry (싱글톤 매니저)           │
+│          CompressionCodecRegistry (엔진 서비스 레지스트리)        │
 │   ┌─────────────────────┬───────────────────┬────────────┐  │
 │   │ NullCompressionCodec│RleCompressionCodec│LZ4 / Zstd  │  │
 │   │   (Pass-through)    │  (내장 고속 RLE)   │ (확장 슬롯)│  │
@@ -225,8 +225,8 @@ namespace sw
 // 런타임 초기화 시 레지스트리에 등록
 void registerCustomCodecs()
 {
-    sw::CompressionCodecRegistry::get().registerCodec( sw::make_unique<sw::Lz4CompressionCodec>() );
-    sw::CompressionCodecRegistry::get().setDefaultCodecType( sw::CompressionCodecType::LZ4 );
+    sw::engine::getCompressionCodecRegistry().registerCodec( sw::make_unique<sw::Lz4CompressionCodec>() );
+    sw::engine::getCompressionCodecRegistry().setDefaultCodecType( sw::CompressionCodecType::LZ4 );
 }
 ```
 

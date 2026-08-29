@@ -3,6 +3,8 @@
 
 namespace sw
 {
+	class CompressionCodecRegistry;
+
 	/**
 	 * @struct CompressionHeader
 	 * @brief 압축 바이너리 컨테이너 헤더 (28 바이트)
@@ -33,27 +35,30 @@ namespace sw
 		/**
 		 * @brief 메모리 버퍼를 압축하여 헤더가 포함된 압축 바이너리 스트림으로 생성합니다.
 		 */
-		static bool compressBuffer( const void*			 pSrc,
-									size_t				 srcSize,
-									vector<uint8>&		 listOutBuffer,
-									CompressionCodecType codecType		  = CompressionCodecType::RLE,
-									int32				 compressionLevel = 0 );
+		static bool compressBuffer( const void*						pSrc,
+									size_t							srcSize,
+									vector<uint8>&					listOutBuffer,
+									CompressionCodecType			codecType		 = CompressionCodecType::RLE,
+									int32							compressionLevel = 0,
+									const CompressionCodecRegistry* pRegistry		 = nullptr );
 
 		/**
 		 * @brief 압축 바이너리 스트림을 역압축하여 원본 바이트 버퍼를 복원합니다.
 		 */
-		static bool decompressBuffer( const void*	 pSrc,
-									  size_t		 srcSize,
-									  vector<uint8>& listOutBuffer );
+		static bool decompressBuffer( const void*					  pSrc,
+									  size_t						  srcSize,
+									  vector<uint8>&				  listOutBuffer,
+									  const CompressionCodecRegistry* pRegistry = nullptr );
 
 		/**
 		 * @brief 고정 크기 출력 버퍼에 압축 데이터를 복원합니다.
 		 */
-		static bool decompressBuffer( const void* pSrc,
-									  size_t	  srcSize,
-									  void*		  pDst,
-									  size_t	  dstCapacity,
-									  size_t&	  outUncompressedSize );
+		static bool decompressBuffer( const void*					  pSrc,
+									  size_t						  srcSize,
+									  void*							  pDst,
+									  size_t						  dstCapacity,
+									  size_t&						  outUncompressedSize,
+									  const CompressionCodecRegistry* pRegistry = nullptr );
 
 		/**
 		 * @brief 압축 스트림 헤더를 검증하고 메타데이터를 파싱합니다.

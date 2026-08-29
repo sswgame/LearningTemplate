@@ -29,22 +29,26 @@ namespace sw
 
 	void BattleState::startWildEncounter( const utf8* pSpeciesId )
 	{
-		startWithPartyLead( SpeciesCatalog::makeStarter(), pSpeciesId );
+		const SpeciesCatalog* pCatalog = game::getService<SpeciesCatalog>();
+		const PartyMember	  lead	   = pCatalog != nullptr ? pCatalog->makeStarter() : PartyMember{};
+		startWithPartyLead( lead, pSpeciesId );
 	}
 
 	void BattleState::startWithPartyLead( const PartyMember& playerLead, const utf8* pFoeSpeciesId )
 	{
-		_player		= playerLead;
-		_foe		= SpeciesCatalog::makeWild( pFoeSpeciesId, playerLead._level );
-		_phase		= BattlePhase::Intro;
-		_phaseTimer = 0.55f;
-		_pendingCmd = BattleCommand::None;
-		_bPlayerWon = SW_FALSE;
+		_player						   = playerLead;
+		const SpeciesCatalog* pCatalog = game::getService<SpeciesCatalog>();
+		_foe						   = pCatalog != nullptr ? pCatalog->makeWild( pFoeSpeciesId, playerLead._level ) : PartyMember{};
+		_phase						   = BattlePhase::Intro;
+		_phaseTimer					   = 0.55f;
+		_pendingCmd					   = BattleCommand::None;
+		_bPlayerWon					   = SW_FALSE;
 		formatstring( _statusText.data(), _statusText.capacity(), GameStrings::get( "battle.wild_appeared", "A wild %# appeared!" ),
 					  _foe._nickname.c_str() );
 		SW_LOG_TRACE( "%#", _statusText.c_str() );
-		if ( GameData::get()._dungeonBgm.empty() == false )
-			game::getService<IAudioSystem>()->playMusic( GameData::get()._dungeonBgm );
+		const GameData* pGameData = game::getService<GameData>();
+		if ( pGameData != nullptr && pGameData->_dungeonBgm.empty() == false )
+			game::getService<IAudioSystem>()->playMusic( pGameData->_dungeonBgm );
 	}
 
 	void BattleState::update( float32 deltaTime )
@@ -130,10 +134,11 @@ namespace sw
 
 	void BattleState::applyMove( PartyMember& attacker, PartyMember& defender, int32 moveSlot, bool playerSide )
 	{
-		const SpeciesDef* pSpecies = SpeciesCatalog::findSpecies( attacker._speciesId.c_str() );
-		const int32		  mid	   = ( moveSlot == 0 ) ? pSpecies->_move0 : pSpecies->_move1;
-		const MoveDef*	  pMove	   = SpeciesCatalog::findMove( mid );
-		int32&			  pp	   = ( moveSlot == 0 ) ? attacker._pp0 : attacker._pp1;
+		const SpeciesCatalog* pCatalog = game::getService<SpeciesCatalog>();
+		const SpeciesDef*	  pSpecies = pCatalog != nullptr ? pCatalog->findSpecies( attacker._speciesId.c_str() ) : nullptr;
+		const int32			  mid	   = ( pSpecies != nullptr ) ? ( ( moveSlot == 0 ) ? pSpecies->_move0 : pSpecies->_move1 ) : 0;
+		const MoveDef*		  pMove	   = pCatalog != nullptr ? pCatalog->findMove( mid ) : nullptr;
+		int32&				  pp	   = ( moveSlot == 0 ) ? attacker._pp0 : attacker._pp1;
 		if ( pp <= 0 )
 		{
 			formatstring( _statusText.data(), _statusText.capacity(), GameStrings::get( "battle.no_pp", "%# has no PP!" ),
@@ -142,7 +147,7 @@ namespace sw
 		}
 		--pp;
 
-		const int32 dmg = pMove->_power > 0 ? ( pMove->_power / 4 + attacker._level / 2 ) : 0;
+		const int32 dmg = ( pMove != nullptr && pMove->_power > 0 ) ? ( pMove->_power / 4 + attacker._level / 2 ) : 0;
 		if ( dmg > 0 )
 		{
 			defender._hp -= dmg;

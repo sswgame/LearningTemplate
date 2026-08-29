@@ -55,7 +55,11 @@ namespace sw
 		{
 			string scene = _nextSceneName;
 			if ( scene.empty() )
-				scene = GameData::get()._entranceScene;
+			{
+				const GameData* pGameData = game::getService<GameData>();
+				if ( pGameData != nullptr )
+					scene = pGameData->_entranceScene;
+			}
 			if ( scene.empty() )
 				return;
 			SW_LOG_INFO( "Loading next scene: '%#'", scene.c_str() );

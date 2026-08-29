@@ -6,38 +6,28 @@
 
 namespace sw
 {
-	namespace
-	{
-		struct SpeciesDataInternal
-		{
-			static vector<MoveDef>& moves()
-			{
-				static vector<MoveDef> s_listMoves;
-				return s_listMoves;
-			}
-
-			static vector<SpeciesDef>& species()
-			{
-				static vector<SpeciesDef> s_listSpecies;
-				return s_listSpecies;
-			}
-
-			static void seedFallback()
-			{
-				moves().clear();
-				species().clear();
-				moves().push_back( { "tackle", "Tackle", 40, 35 } );
-				moves().push_back( { "growl", "Growl", 0, 40 } );
-				species().push_back( { "critter_a", "Wild Critter", 40, 10, 0, 1 } );
-				species().push_back( { "starter_a", "Leaf Pup", 45, 11, 0, 1 } );
-			}
-		};
-	} // namespace
-} // namespace sw
-
-namespace sw
-{
 	SW_LOG_CALLER( "SpeciesCatalog" );
+
+	SpeciesCatalog::SpeciesCatalog()
+		: _moveList{}
+		, _speciesList{}
+	{
+	}
+
+	SpeciesCatalog::~SpeciesCatalog()
+	{
+		clear();
+	}
+
+	void SpeciesCatalog::seedFallback()
+	{
+		_moveList.clear();
+		_speciesList.clear();
+		_moveList.push_back( { "tackle", "Tackle", 40, 35 } );
+		_moveList.push_back( { "growl", "Growl", 0, 40 } );
+		_speciesList.push_back( { "critter_a", "Wild Critter", 40, 10, 0, 1 } );
+		_speciesList.push_back( { "starter_a", "Leaf Pup", 45, 11, 0, 1 } );
+	}
 
 	bool SpeciesCatalog::loadFromResource( string_view assetRelativePath )
 	{
@@ -48,7 +38,7 @@ namespace sw
 		if ( doc.loadResource( assetRelativePath, &absPath ) == false )
 		{
 			SW_LOG_ERROR( "Failed to read %# — using fallback table.", assetRelativePath );
-			SpeciesDataInternal::seedFallback();
+			seedFallback();
 			return false;
 		}
 
@@ -56,7 +46,7 @@ namespace sw
 		if ( root.isValid() == false )
 		{
 			SW_LOG_ERROR( "Missing <SpeciesCatalog> in %# — using fallback.", absPath );
-			SpeciesDataInternal::seedFallback();
+			seedFallback();
 			return false;
 		}
 
@@ -74,7 +64,7 @@ namespace sw
 				def._name  = pName != nullptr ? pName : pId;
 				def._power = moveNode.attrInt( "power", 0 );
 				def._ppMax = moveNode.attrInt( "ppMax", 0 );
-				SpeciesDataInternal::moves().push_back( std::move( def ) );
+				_moveList.push_back( std::move( def ) );
 			}
 		}
 
@@ -98,58 +88,58 @@ namespace sw
 					def._move0 = 0;
 				if ( def._move1 < 0 )
 					def._move1 = 0;
-				SpeciesDataInternal::species().push_back( std::move( def ) );
+				_speciesList.push_back( std::move( def ) );
 			}
 		}
 
-		if ( SpeciesDataInternal::moves().empty() || SpeciesDataInternal::species().empty() )
+		if ( _moveList.empty() || _speciesList.empty() )
 		{
 			SW_LOG_ERROR( "Empty table in %# — using fallback.", absPath );
-			SpeciesDataInternal::seedFallback();
+			seedFallback();
 			return false;
 		}
 
 		SW_LOG_INFO( "Loaded %# moves, %# species from %#",
-					 static_cast<uint32>( SpeciesDataInternal::moves().size() ), static_cast<uint32>( SpeciesDataInternal::species().size() ), absPath );
+					 static_cast<uint32>( _moveList.size() ), static_cast<uint32>( _speciesList.size() ), absPath );
 		return true;
 	}
 
-	const SpeciesDef* SpeciesCatalog::findSpecies( const utf8* pId )
+	const SpeciesDef* SpeciesCatalog::findSpecies( const utf8* pId ) const
 	{
-		if ( SpeciesDataInternal::species().empty() )
-			SpeciesDataInternal::seedFallback();
+		if ( _speciesList.empty() )
+			const_cast<SpeciesCatalog*>( this )->seedFallback();
 		if ( pId == nullptr )
-			return &SpeciesDataInternal::species()[0];
-		for ( const SpeciesDef& speciesDef : SpeciesDataInternal::species() )
+			return &_speciesList[0];
+		for ( const SpeciesDef& speciesDef : _speciesList )
 		{
 			if ( speciesDef._id == pId )
 				return &speciesDef;
 		}
-		return &SpeciesDataInternal::species()[0];
+		return &_speciesList[0];
 	}
 
-	const MoveDef* SpeciesCatalog::findMove( int32 index )
+	const MoveDef* SpeciesCatalog::findMove( int32 index ) const
 	{
-		if ( SpeciesDataInternal::moves().empty() )
-			SpeciesDataInternal::seedFallback();
-		if ( index < 0 || index >= static_cast<int32>( SpeciesDataInternal::moves().size() ) )
-			return &SpeciesDataInternal::moves()[0];
-		return &SpeciesDataInternal::moves()[static_cast<size_t>( index )];
+		if ( _moveList.empty() )
+			const_cast<SpeciesCatalog*>( this )->seedFallback();
+		if ( index < 0 || index >= static_cast<int32>( _moveList.size() ) )
+			return &_moveList[0];
+		return &_moveList[static_cast<size_t>( index )];
 	}
 
-	int32 SpeciesCatalog::findMoveIndex( const utf8* pId )
+	int32 SpeciesCatalog::findMoveIndex( const utf8* pId ) const
 	{
 		if ( pId == nullptr )
 			return -1;
-		for ( size_t moveIndex = 0; moveIndex < SpeciesDataInternal::moves().size(); ++moveIndex )
+		for ( size_t moveIndex = 0; moveIndex < _moveList.size(); ++moveIndex )
 		{
-			if ( SpeciesDataInternal::moves()[moveIndex]._id == pId )
+			if ( _moveList[moveIndex]._id == pId )
 				return static_cast<int32>( moveIndex );
 		}
 		return -1;
 	}
 
-	PartyMember SpeciesCatalog::makeWild( const utf8* pSpeciesId, int32 level )
+	PartyMember SpeciesCatalog::makeWild( const utf8* pSpeciesId, int32 level ) const
 	{
 		const SpeciesDef* pSpecies = findSpecies( pSpeciesId );
 		PartyMember		  m{};
@@ -165,14 +155,14 @@ namespace sw
 		return m;
 	}
 
-	PartyMember SpeciesCatalog::makeStarter( const utf8* pSpeciesId, int32 level )
+	PartyMember SpeciesCatalog::makeStarter( const utf8* pSpeciesId, int32 level ) const
 	{
 		return makeWild( pSpeciesId, level );
 	}
 
 	void SpeciesCatalog::clear()
 	{
-		SpeciesDataInternal::moves().clear();
-		SpeciesDataInternal::species().clear();
+		_moveList.clear();
+		_speciesList.clear();
 	}
 } // namespace sw

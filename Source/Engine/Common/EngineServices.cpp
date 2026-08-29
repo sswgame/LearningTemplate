@@ -3,14 +3,17 @@
 #include "Engine/Common/EngineServices.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
+#include "Core/Compression/CompressionCodecRegistry.h"
 #include "Core/Event/EventDispatcher.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Memory/FrameArenaAllocator.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Audio/IAudioSystem.h"
+#include "Engine/Graphics/Shader/ShaderCache.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Localization/LocalizationManager.h"
+#include "Engine/Object/Component/ComponentDefaults.h"
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionCore.h"
@@ -156,6 +159,30 @@ namespace sw
 		{
 			SW_LOG_ASSERT( s_services._pRHIBackendRegistry != nullptr, "RHIBackendRegistry is not bound" );
 			return *s_services._pRHIBackendRegistry;
+		}
+
+		CompressionCodecRegistry& getCompressionCodecRegistry()
+		{
+			SW_LOG_ASSERT( s_services._pCompressionCodecRegistry != nullptr, "CompressionCodecRegistry is not bound" );
+			return *s_services._pCompressionCodecRegistry;
+		}
+
+		ShaderCache& getShaderCache()
+		{
+			SW_LOG_ASSERT( s_services._pShaderCache != nullptr, "ShaderCache is not bound" );
+			return *s_services._pShaderCache;
+		}
+
+		ComponentDefaults& getComponentDefaults()
+		{
+			SW_LOG_ASSERT( s_services._pComponentDefaults != nullptr, "ComponentDefaults is not bound" );
+			return *s_services._pComponentDefaults;
+		}
+
+		const GameData& getGameData()
+		{
+			SW_LOG_ASSERT( s_services._pGameData != nullptr, "GameData is not bound" );
+			return *s_services._pGameData;
 		}
 
 		struct ModuleHeadRecord

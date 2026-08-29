@@ -113,7 +113,8 @@ namespace sw
 
 		if ( _monsterId.empty() == false )
 		{
-			const MonsterDef* pDef = MonsterDataCatalog::findMonster( _monsterId );
+			const MonsterDataCatalog* pCatalog = game::getService<MonsterDataCatalog>();
+			const MonsterDef*		  pDef	   = pCatalog != nullptr ? pCatalog->findMonster( _monsterId ) : nullptr;
 			if ( pDef != nullptr )
 			{
 				_archetype		  = pDef->_archetype;

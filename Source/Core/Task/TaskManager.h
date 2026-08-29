@@ -15,6 +15,7 @@ namespace sw
 {
 	struct TaskNode;
 	struct StageNode;
+	class TaskNodePool;
 
 	/**
 	 * @class TaskManager
@@ -27,8 +28,10 @@ namespace sw
 	 */
 	class SW_API TaskManager
 	{
+		friend struct TaskNode;
+
 	public:
-		TaskManager() = default;
+		TaskManager();
 		~TaskManager();
 
 		/**
@@ -196,6 +199,9 @@ namespace sw
 		bool tryHelpAndExecute();
 		/** @brief 다른 워커의 큐에서 작업을 훔쳐와(Work Stealing) 즉시 실행합니다. */
 		bool tryStealAndExecute( uint32 excludedWorkerId );
+		/** @brief 내부 노드 할당 및 해제 (TaskNode 내부용) */
+		TaskNode* allocateNode();
+		void	  deallocateNode( TaskNode* pNode );
 
 	private:
 		/** @brief 각 워커 스레드 전용 고정 크기 락-프리 큐 래퍼 */
@@ -222,5 +228,6 @@ namespace sw
 		vector<weak_ptr<StageNode>> _listAllStage;			///< 등록된 전체 스테이지 목록 (약한 참조)
 		mutable mutex				_stageMutex;			///< 스테이지 목록 동기화 뮤텍스
 		alignas( 64 ) atomic<uint32> _activeTaskCount{ 0 }; ///< 현재 시스템에서 실행/대기 중인 활성 태스크 총 개수
+		unique_ptr<TaskNodePool> _nodePool;					///< 태스크 노드 슬랩 풀 매니저
 	};
 } // namespace sw
