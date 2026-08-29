@@ -235,3 +235,86 @@ SW_TEST_CASE( Core_Memory, PoolAllocatorAndTypedPool )
 
 	typedPool.clear();
 }
+
+/**
+ * @brief [Core_Memory] PoolAllocator 다중 청크 확장, 징검다리 해제, 재할당 및 클리어 스트레스 검증
+ */
+SW_TEST_CASE( Core_Memory, PoolAllocatorMultiChunkStress )
+{
+	constexpr size_t kBlockSize		 = 32;
+	constexpr uint32 kBlocksPerChunk = 8;
+	constexpr size_t kAllocCount	 = 64; // 8개 청크 생성
+
+	sw::PoolAllocator pool( kBlockSize, kBlocksPerChunk, true );
+	sw::vector<void*> listBlocks;
+	listBlocks.reserve( kAllocCount );
+
+	// 1) 64개 블록 할당
+	for ( size_t index = 0; index < kAllocCount; ++index )
+	{
+		void* pBlock = pool.allocate();
+		SW_ASSERT_NOT_NULL( pBlock );
+		sw::Memory::set( pBlock, static_cast<uint8>( index ), kBlockSize );
+		listBlocks.push_back( pBlock );
+	}
+
+	// 2) 짝수 인덱스 32개 블록 해제
+	for ( size_t index = 0; index < kAllocCount; index += 2 )
+	{
+		pool.free( listBlocks[index] );
+	}
+
+	// 3) 32개 재할당
+	sw::vector<void*> listReused;
+	listReused.reserve( kAllocCount / 2 );
+	for ( size_t index = 0; index < kAllocCount / 2; ++index )
+	{
+		void* pReused = pool.allocate();
+		SW_ASSERT_NOT_NULL( pReused );
+		listReused.push_back( pReused );
+	}
+
+	// 4) 전체 해제 및 클리어
+	for ( size_t index = 1; index < kAllocCount; index += 2 )
+	{
+		pool.free( listBlocks[index] );
+	}
+	for ( void* pBlock : listReused )
+	{
+		pool.free( pBlock );
+	}
+
+	pool.clear();
+}
+
+/**
+ * @brief [Core_Memory] FrameArenaAllocator 3단계 중첩 Marker 및 순차/역순 롤백 검증
+ */
+SW_TEST_CASE( Core_Memory, FrameArenaNestedMarkers )
+{
+	sw::FrameArenaAllocator arena( 1024 );
+
+	int32* pLevel0 = arena.construct<int32>( 10 );
+	SW_ASSERT_NOT_NULL( pLevel0 );
+
+	auto   marker1 = arena.createMarker();
+	int32* pLevel1 = arena.construct<int32>( 20 );
+	SW_ASSERT_NOT_NULL( pLevel1 );
+
+	auto   marker2 = arena.createMarker();
+	int32* pLevel2 = arena.construct<int32>( 30 );
+	SW_ASSERT_NOT_NULL( pLevel2 );
+
+	// level 2 롤백
+	arena.rollbackToMarker( marker2 );
+	int32* pReallocated2 = arena.construct<int32>( 300 );
+	SW_EXPECT_EQUAL( pLevel2, pReallocated2 );
+	SW_EXPECT_EQUAL( 300, *pReallocated2 );
+
+	// level 1 롤백
+	arena.rollbackToMarker( marker1 );
+	int32* pReallocated1 = arena.construct<int32>( 200 );
+	SW_EXPECT_EQUAL( pLevel1, pReallocated1 );
+	SW_EXPECT_EQUAL( 200, *pReallocated1 );
+	SW_EXPECT_EQUAL( 10, *pLevel0 );
+}

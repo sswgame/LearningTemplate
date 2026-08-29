@@ -139,3 +139,54 @@ SW_TEST_CASE( HandleTable, ClearAndInvalidHandleSafety )
 	SW_EXPECT_TRUE( table.get( h0 ) == nullptr );
 	SW_EXPECT_TRUE( table.get( h1 ) == nullptr );
 }
+
+SW_TEST_CASE( HandleTable, StressGenerationRolloverAndRandomChurn )
+{
+	HandleTable<int32>	 table;
+	constexpr size_t	 kCount = 500;
+	vector<ObjectHandle> listHandles;
+	listHandles.reserve( kCount );
+
+	// 1) 500개 연속 할당
+	for ( size_t index = 0; index < kCount; ++index )
+	{
+		listHandles.push_back( table.insert( static_cast<int32>( index * 10 ) ) );
+	}
+
+	// 2) 짝수 인덱스 250개 해제 (징검다리 해제)
+	for ( size_t index = 0; index < kCount; index += 2 )
+	{
+		table.erase( listHandles[index] );
+		SW_EXPECT_TRUE( table.get( listHandles[index] ) == nullptr );
+	}
+
+	// 홀수 인덱스는 여전히 유효해야 함
+	for ( size_t index = 1; index < kCount; index += 2 )
+	{
+		int32* pVal = table.get( listHandles[index] );
+		SW_ASSERT_NOT_NULL( pVal );
+		SW_EXPECT_EQUAL( static_cast<int32>( index * 10 ), *pVal );
+	}
+
+	// 3) 250개 신규 재할당 (프리리스트 재사용 및 Generation 증가 검증)
+	vector<ObjectHandle> listReusedHandles;
+	listReusedHandles.reserve( kCount / 2 );
+	for ( size_t index = 0; index < kCount / 2; ++index )
+	{
+		listReusedHandles.push_back( table.insert( static_cast<int32>( 10000 + index ) ) );
+	}
+
+	// 이전 짝수 핸들은 여전히 nullptr이어야 함 (stale handle 무효화)
+	for ( size_t index = 0; index < kCount; index += 2 )
+	{
+		SW_EXPECT_TRUE( table.get( listHandles[index] ) == nullptr );
+	}
+
+	// 신규 할당된 핸들은 정상 조회되어야 함
+	for ( size_t index = 0; index < kCount / 2; ++index )
+	{
+		int32* pVal = table.get( listReusedHandles[index] );
+		SW_ASSERT_NOT_NULL( pVal );
+		SW_EXPECT_EQUAL( static_cast<int32>( 10000 + index ), *pVal );
+	}
+}

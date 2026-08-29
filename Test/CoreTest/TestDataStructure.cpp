@@ -721,3 +721,82 @@ SW_TEST_CASE( Core_DataStructure, WorkStealingDequePushPopSteal )
 	SW_EXPECT_FALSE( deque.pop( outVal ) );
 	SW_EXPECT_FALSE( deque.steal( outVal ) );
 }
+
+/**
+ * @brief [Core_DataStructure] WorkStealingDeque 멀티스레드 동시 Push/Pop 및 다중 Steal 무결성 스트레스 검증
+ */
+SW_TEST_CASE( Core_DataStructure, WorkStealingDequeMultiThreadStress )
+{
+	constexpr int32				 kTotalItems = 1000;
+	constexpr int32				 kStealCount = 3;
+	sw::WorkStealingDeque<int32> deque( 2048 );
+
+	std::atomic<bool>  bProducerDone{ false };
+	std::atomic<int64> totalSumPopped{ 0 };
+	std::atomic<int32> totalCountPopped{ 0 };
+	std::atomic<int64> totalSumStolen{ 0 };
+	std::atomic<int32> totalCountStolen{ 0 };
+
+	// 1) 3개 Stealer 스레드
+	std::vector<std::thread> listStealers;
+	listStealers.reserve( kStealCount );
+	for ( int32 stealerIndex = 0; stealerIndex < kStealCount; ++stealerIndex )
+	{
+		listStealers.emplace_back(
+			[&]()
+		{
+			int32 item = 0;
+			while ( bProducerDone.load( std::memory_order_acquire ) == false || deque.steal( item ) )
+			{
+				if ( deque.steal( item ) )
+				{
+					totalSumStolen.fetch_add( item, std::memory_order_relaxed );
+					totalCountStolen.fetch_add( 1, std::memory_order_relaxed );
+				}
+				else
+				{
+					std::this_thread::yield();
+				}
+			}
+		} );
+	}
+
+	// 2) Producer (Owner) 스레드: push 하면서 간헐적 pop
+	int64 expectedSum = 0;
+	for ( int32 index = 1; index <= kTotalItems; ++index )
+	{
+		expectedSum += index;
+		deque.push( index );
+		if ( ( index % 3 ) == 0 )
+		{
+			int32 popped = 0;
+			if ( deque.pop( popped ) )
+			{
+				totalSumPopped.fetch_add( popped, std::memory_order_relaxed );
+				totalCountPopped.fetch_add( 1, std::memory_order_relaxed );
+			}
+		}
+	}
+
+	// 남은 항목 owner가 pop
+	int32 remaining = 0;
+	while ( deque.pop( remaining ) )
+	{
+		totalSumPopped.fetch_add( remaining, std::memory_order_relaxed );
+		totalCountPopped.fetch_add( 1, std::memory_order_relaxed );
+	}
+
+	bProducerDone.store( true, std::memory_order_release );
+
+	for ( auto& stealer : listStealers )
+	{
+		stealer.join();
+	}
+
+	// 최종 합산 및 개수 일치 검증 (유실 또는 중복 0건)
+	const int32 totalProcessedCount = totalCountPopped.load() + totalCountStolen.load();
+	const int64 totalProcessedSum	= totalSumPopped.load() + totalSumStolen.load();
+
+	SW_EXPECT_EQUAL( kTotalItems, totalProcessedCount );
+	SW_EXPECT_EQUAL( expectedSum, totalProcessedSum );
+}

@@ -260,3 +260,38 @@ SW_TEST_CASE( Physics, CCD_PhysicsWorldSweepTest )
 	// near obstacle에 먼저 닿음 (Z near ~ 30.0 -> t ~ 0.29)
 	SW_EXPECT_NEAR_EQUAL( 0.29f, hit._time, 0.02f );
 }
+
+/**
+ * @brief [Physics] CCD 모서리 스침(Corner Grazing) 및 평행 궤적 빗나감(Parallel Miss) 정밀 판별 검증
+ */
+SW_TEST_CASE( Physics, CCD_CornerGrazingAndParallelMiss )
+{
+	AABB targetBox{
+		float3{10.0f, 10.0f, 10.0f},
+		float3{20.0f, 20.0f, 20.0f}
+	  };
+
+	// 1) 평행하게 완전히 빗겨나가는 궤적 (X in [0, 5], target X in [10, 20])
+	AABB missBox{
+		float3{0.0f, 0.0f, 0.0f},
+		float3{2.0f, 2.0f, 2.0f}
+	   };
+	float3	 missDisp{ 0.0f, 0.0f, 50.0f };
+	SweepHit missHit{};
+	bool	 bMiss = CCD::sweepAABB( missBox, missDisp, targetBox, missHit );
+	SW_EXPECT_FALSE( bMiss );
+	SW_EXPECT_FALSE( missHit._bHit );
+
+	// 2) 대각선 코너를 관통하는 궤적
+	AABB diagBox{
+		float3{0.0f, 0.0f, 0.0f},
+		float3{1.0f, 1.0f, 1.0f}
+	   };
+	float3	 diagDisp{ 30.0f, 30.0f, 30.0f };
+	SweepHit diagHit{};
+	bool	 bDiagHit = CCD::sweepAABB( diagBox, diagDisp, targetBox, diagHit );
+	SW_EXPECT_TRUE( bDiagHit );
+	SW_EXPECT_TRUE( diagHit._bHit );
+	// min corner (10, 10, 10)에 max (1, 1, 1)이 닿는 시각: (10 - 1) / 30 = 9 / 30 = 0.3
+	SW_EXPECT_NEAR_EQUAL( 0.3f, diagHit._time, 0.01f );
+}
