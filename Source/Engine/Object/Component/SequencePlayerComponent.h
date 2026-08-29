@@ -51,9 +51,9 @@ namespace sw
 		PROPERTY( Category = "Playback", DisplayName = "Frames Per Second", Min = 1.0, Max = 120.0 )
 		float32 _framesPerSecond;
 		PROPERTY( Category = "Playback", DisplayName = "Loop" )
-		bool _bLoop;
+		uint8 _bLoop : 1;
 		PROPERTY( Category = "Playback", DisplayName = "Auto Play" )
-		bool		   _bAutoPlay;
+		uint8		   _bAutoPlay : 1;
 		SequencePlayer _player;
 	};
 } // namespace sw

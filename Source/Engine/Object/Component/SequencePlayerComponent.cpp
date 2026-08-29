@@ -16,8 +16,8 @@ namespace sw
 	SequencePlayerComponent::SequencePlayerComponent()
 		: _sequencePath{}
 		, _framesPerSecond{ 30.0f }
-		, _bLoop{ false }
-		, _bAutoPlay{ true }
+		, _bLoop{ SW_FALSE }
+		, _bAutoPlay{ SW_TRUE }
 		, _player{}
 	{
 		setCanEverTick( true );
@@ -28,10 +28,10 @@ namespace sw
 		Component::onBeginPlay();
 		setTickGroup( TickGroup::PostUpdate );
 		_player.setFramesPerSecond( _framesPerSecond );
-		_player.setLoop( _bLoop );
+		_player.setLoop( _bLoop == SW_TRUE );
 		if ( _sequencePath.empty() == false )
 			_player.loadFromFile( _sequencePath );
-		if ( _bAutoPlay )
+		if ( _bAutoPlay == SW_TRUE )
 			play();
 	}
 
@@ -53,7 +53,7 @@ namespace sw
 	void SequencePlayerComponent::play()
 	{
 		_player.setFramesPerSecond( _framesPerSecond );
-		_player.setLoop( _bLoop );
+		_player.setLoop( _bLoop == SW_TRUE );
 		_player.play();
 		applyTimeline();
 	}

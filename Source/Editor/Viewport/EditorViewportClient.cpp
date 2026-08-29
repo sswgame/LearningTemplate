@@ -424,7 +424,7 @@ namespace sw::editor
 		, _listGizmoUndoXml{}
 		, _listGizmoRelativeWorld{}
 		, _arrGizmoGroupMatrix{}
-		, _bRulerActive{ false }
+		, _bRulerActive{ SW_FALSE }
 		, _bGizmoTracking{ SW_FALSE }
 		, _reservedGizmo{ 0 }
 	{
@@ -1179,7 +1179,7 @@ namespace sw::editor
 
 		if ( ImGui::IsKeyDown( ImGuiKey_M ) == false && _toolbarSettings._bShowRuler == false )
 		{
-			_bRulerActive = false;
+			_bRulerActive = SW_FALSE;
 			return;
 		}
 
@@ -1214,9 +1214,9 @@ namespace sw::editor
 					{
 						_rulerStartWorld = groundPt;
 						_rulerEndWorld	 = groundPt;
-						_bRulerActive	 = true;
+						_bRulerActive	 = SW_TRUE;
 					}
-					else if ( ImGui::IsMouseDown( 0 ) && _bRulerActive )
+					else if ( ImGui::IsMouseDown( 0 ) && _bRulerActive == SW_TRUE )
 					{
 						_rulerEndWorld = groundPt;
 					}
@@ -1224,7 +1224,7 @@ namespace sw::editor
 			}
 		}
 
-		if ( _bRulerActive )
+		if ( _bRulerActive == SW_TRUE )
 		{
 			ImVec2 sStart, sEnd;
 			if ( EditorViewportClientInternal::projectPointToScreen( viewProj, _rulerStartWorld, canvasPos, canvasSize, sStart ) &&

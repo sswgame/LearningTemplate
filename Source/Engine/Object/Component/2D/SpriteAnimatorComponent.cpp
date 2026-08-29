@@ -39,7 +39,7 @@ namespace sw
 		tryLoadAnimationGraph();
 
 		if ( _listAnimation.empty() == false )
-			play( _listAnimation[0], _bRepeat );
+			play( _listAnimation[0], _bRepeat == SW_TRUE );
 	}
 
 	void SpriteAnimatorComponent::onEndPlay()
@@ -58,24 +58,17 @@ namespace sw
 		while ( _frameTimer >= frameDuration )
 		{
 			_frameTimer -= frameDuration;
-			++_currentFrame;
-
-			if ( _bGraphLoaded == SW_TRUE && _graph._listNode.empty() == false && _totalFrames == 0 )
-			{
-				_currentFrame = 0;
-				_bPlaying	  = SW_FALSE;
-				break;
-			}
+			_currentFrame++;
 
 			if ( _currentFrame >= _totalFrames )
 			{
-				if ( _bRepeat )
+				if ( _bRepeat == SW_TRUE )
 					_currentFrame = 0;
 				else if ( tryAdvanceGraphNode() )
 					break;
 				else
 				{
-					_currentFrame = _totalFrames > 0 ? ( _totalFrames - 1 ) : 0;
+					_currentFrame = _totalFrames - 1;
 					_bPlaying	  = SW_FALSE;
 					break;
 				}
@@ -87,7 +80,7 @@ namespace sw
 	void SpriteAnimatorComponent::play( const string& animName, bool loop )
 	{
 		_currentAnimation = animName;
-		_bRepeat		  = loop;
+		_bRepeat		  = loop ? SW_TRUE : SW_FALSE;
 		_bPlaying		  = SW_TRUE;
 		_bPaused		  = SW_FALSE;
 		_currentFrame	  = 0;
@@ -131,12 +124,12 @@ namespace sw
 
 	bool SpriteAnimatorComponent::isRepeating() const
 	{
-		return _bRepeat;
+		return _bRepeat == SW_TRUE;
 	}
 
 	void SpriteAnimatorComponent::setRepeat( bool bLoop )
 	{
-		_bRepeat = bLoop;
+		_bRepeat = bLoop ? SW_TRUE : SW_FALSE;
 	}
 
 	float32 SpriteAnimatorComponent::getFrameRate() const

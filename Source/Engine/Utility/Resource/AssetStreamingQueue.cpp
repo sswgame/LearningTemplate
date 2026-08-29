@@ -85,10 +85,10 @@ namespace sw
 		{
 			TaskManager& taskManager = engine::getTaskManager();
 			TaskHandle	 handle		 = taskManager.emplaceTask(
-				   "AssetStreamingTask",
-				   SW_DELEGATE_METHOD( TaskArgsDelegate, &AssetStreamingQueue::processAssetTask, this ),
-				   MakeTaskArgs( pathStr ),
-				   TaskThreadAffinity::Any );
+				"AssetStreamingTask",
+				SW_DELEGATE_METHOD( TaskArgsDelegate, &AssetStreamingQueue::processAssetTask, this ),
+				MakeTaskArgs( pathStr ),
+				TaskThreadAffinity::Any );
 			handle.submit();
 		}
 		else
@@ -105,8 +105,8 @@ namespace sw
 				{
 					CompletedItem item{};
 					item._path	   = pathStr;
-					item._bSuccess = bExists;
 					item._callback = cb;
+					item._bSuccess = bExists;
 					_listCompletedItem.push_back( std::move( item ) );
 				}
 				_mapInFlightCallback.erase( itCallbacks );
@@ -132,8 +132,8 @@ namespace sw
 			{
 				CompletedItem item{};
 				item._path	   = pathStr;
-				item._bSuccess = bExists;
 				item._callback = cb;
+				item._bSuccess = bExists;
 				_listCompletedItem.push_back( std::move( item ) );
 			}
 			_mapInFlightCallback.erase( itCallbacks );

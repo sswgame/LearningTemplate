@@ -98,8 +98,8 @@ namespace sw::editor
 		vector<string>			_listGizmoUndoXml;
 		vector<float4x4>		_listGizmoRelativeWorld;
 		float32					_arrGizmoGroupMatrix[16];
-		bool					_bRulerActive;
+		uint8					_bRulerActive	: 1;
 		uint8					_bGizmoTracking : 1;
-		[[maybe_unused]] uint8	_reservedGizmo	: 7;
+		[[maybe_unused]] uint8	_reservedGizmo	: 6;
 	};
 } // namespace sw::editor

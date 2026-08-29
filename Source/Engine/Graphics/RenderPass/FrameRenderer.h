@@ -262,8 +262,8 @@ namespace sw
 		uint8										  _bPassResourcesReady		: 1;
 		uint8										  _bSceneTransformsFlushed	: 1; ///< CPU 드로우 경로: execute당 한 번 flush
 		uint8										  _bHasExecutedDepthPrepass : 1;
-		[[maybe_unused]] uint8						  _reservedFlags			: 4;
-		bool										  _bUseGpuDriven;
+		uint8										  _bUseGpuDriven			: 1;
+		[[maybe_unused]] uint8						  _reservedFlags			: 3;
 		RenderGraphExecutionContext					  _graphContext;
 	};
 } // namespace sw

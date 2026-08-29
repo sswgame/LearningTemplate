@@ -47,12 +47,12 @@ namespace sw
 		, _taaHistorySrv{ kInvalidDescriptorIndex }
 		, _status{ FrameRendererStatus::Uninitialized }
 		, _statusMessage{}
-		, _bCallbacksBound{ 0 }
-		, _bPassResourcesReady{ 0 }
-		, _bSceneTransformsFlushed{ 0 }
-		, _bHasExecutedDepthPrepass{ 0 }
+		, _bCallbacksBound{ SW_FALSE }
+		, _bPassResourcesReady{ SW_FALSE }
+		, _bSceneTransformsFlushed{ SW_FALSE }
+		, _bHasExecutedDepthPrepass{ SW_FALSE }
+		, _bUseGpuDriven{ SW_FALSE }
 		, _reservedFlags{ 0 }
-		, _bUseGpuDriven{ false }
 		, _graphContext{}
 	{
 	}
@@ -219,7 +219,7 @@ namespace sw
 	{
 		_pCmd->beginCommandList();
 
-		if ( _bUseGpuDriven != 0 && _gpuScene.isUploaded() )
+		if ( _bUseGpuDriven == SW_TRUE && _gpuScene.isUploaded() )
 		{
 			const RHIPipelineStateHandle cullPso = getEnginePso( "GpuCull" );
 			if ( cullPso != 0 && _gpuCullCb != 0 &&
