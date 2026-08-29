@@ -16,12 +16,13 @@ namespace sw::editor
 		Cancel
 	};
 
-	/** @brief 미저장 확인 뒤에 이어서 할 씬 동작 */
+	/** @brief 미저장 확인 뒤에 이어서 할 씬·세션 동작 */
 	enum class EditorPendingSceneAction : uint8
 	{
 		None = 0,
 		Load,
-		New
+		New,
+		Quit
 	};
 
 	/**
@@ -33,6 +34,11 @@ namespace sw::editor
 	public:
 		/** @brief 저장하지 않은 변경이 있으면 확인이 필요합니다. */
 		static bool needsUnsavedPrompt( bool bDirty ) { return bDirty == true; }
+		/** @brief 씬 또는 도구 문서가 dirty면 종료 확인이 필요합니다. */
+		static bool needsQuitPrompt( bool bSceneDirty, uint32 dirtyDocumentCount )
+		{
+			return bSceneDirty == true || dirtyDocumentCount > 0;
+		}
 		/** @brief Save를 고르면 동작을 실행하기 전에 저장합니다. */
 		static bool shouldSaveBeforeAction( EditorUnsavedChoice choice ) { return choice == EditorUnsavedChoice::Save; }
 		/** @brief Cancel이 아니면 대기 중인 씬 동작을 실행합니다. */
@@ -47,5 +53,10 @@ namespace sw::editor
 		}
 		/** @brief Stopped일 때만 씬 오브젝트 편집이 허용됩니다. */
 		static bool areSceneEditsAllowed( bool bPlayStopped ) { return bPlayStopped == true; }
+		/** @brief 레이아웃이 한 번 동기된 뒤에만 노드 이동을 dirty로 칩니다. */
+		static bool shouldMarkDocumentDirtyOnNodeMove( bool bLayoutReady, bool bPositionChanged )
+		{
+			return bLayoutReady == true && bPositionChanged == true;
+		}
 	};
 } // namespace sw::editor

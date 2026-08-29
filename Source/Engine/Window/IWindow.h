@@ -11,6 +11,7 @@ namespace sw
 
 	SW_DECLARE_DELEGATE( bool, WindowMessageHandlerDelegate, const NativeWindowEvent& event );
 	SW_DECLARE_DELEGATE( void, WindowResizeDelegate, uint32 width, uint32 height );
+	SW_DECLARE_DELEGATE( bool, WindowCloseQueryDelegate );
 
 	/**
 	 * @class IWindow
@@ -76,6 +77,13 @@ namespace sw
 		/** @brief 윈도우 크기 변경 시 호출될 콜백을 설정합니다. */
 		void setResizeCallback( WindowResizeDelegate cb ) { _onResize = cb; }
 
+		/** @brief 닫기 전에 호출됩니다. false면 닫기를 보류합니다. */
+		void setCloseQueryHandler( WindowCloseQueryDelegate handler ) { _closeQuery = handler; }
+		/** @brief 확인 없이 종료 플래그를 켭니다. */
+		void requestClose();
+		/** @brief 닫기 쿼리를 거쳐 종료를 시도합니다. 허용되면 true입니다. */
+		bool tryBeginClose();
+
 		/** @brief 현재 플랫폼 환경에 맞는 IWindow 인스턴스를 동적 할당하여 반환합니다. */
 		static unique_ptr<IWindow> createPlatformWindow();
 
@@ -88,6 +96,7 @@ namespace sw
 		wstring						 _title;
 		WindowMessageHandlerDelegate _customHandler;
 		WindowResizeDelegate		 _onResize;
+		WindowCloseQueryDelegate	 _closeQuery;
 		uint32						 _width;
 		uint32						 _height;
 		bool						 _bShouldClose;

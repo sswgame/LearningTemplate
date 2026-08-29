@@ -37,6 +37,13 @@ namespace sw
 		_bPaused	   = false;
 	}
 
+	void SequencePlayer::playFromFrame( int32 frame )
+	{
+		seekToFrame( frame );
+		_bPlaying = true;
+		_bPaused  = false;
+	}
+
 	void SequencePlayer::stop()
 	{
 		_playbackTime  = 0.0f;
@@ -96,6 +103,18 @@ namespace sw
 	void SequencePlayer::setLoop( bool bLoop )
 	{
 		_bLoop = bLoop;
+	}
+
+	void SequencePlayer::seekToFrame( int32 frame )
+	{
+		int32 clamped = frame;
+		if ( clamped < _asset._frameMin )
+			clamped = _asset._frameMin;
+		if ( clamped > _asset._frameMax )
+			clamped = _asset._frameMax;
+		const float32 fps = ( _framesPerSecond > 0.0f ) ? _framesPerSecond : 30.0f;
+		_playbackTime	  = static_cast<float32>( clamped - _asset._frameMin ) / fps;
+		_previousFrame	  = clamped;
 	}
 
 	int32 SequencePlayer::getCurrentFrame() const

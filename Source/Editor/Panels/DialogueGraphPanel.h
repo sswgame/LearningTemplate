@@ -30,6 +30,9 @@ namespace sw::editor
 		using DialogueNode = EditorDialogueNode;
 		using DialogueLink = EditorDialogueLink;
 
+		string captureDocumentText() const override;
+		void   applyDocumentText( string_view text ) override;
+
 		// ------------------------------------------------------------------------------
 		// 2) 내부 처리 함수
 		// ------------------------------------------------------------------------------
@@ -47,11 +50,26 @@ namespace sw::editor
 
 		/** @brief 지정한 타입의 노드를 추가합니다. */
 		void addNode( DialogueNodeType type, const utf8* pSpeaker = "", const utf8* pText = "" );
+		/** @brief 현재 목록을 파일 데이터로 만듭니다. */
+		EditorDialogueGraphData captureGraphData() const;
+		/** @brief 노드 위치를 캐시하고 이동이면 dirty로 표시합니다. */
+		void cacheNodeLayout();
+		/** @brief 미리보기 재생을 한 틱 진행합니다. */
+		void tickPreview( float32 deltaSeconds );
+		/** @brief 미리보기를 다음 노드로 보냅니다. */
+		void previewAdvance( int32 pinOffset = 2 );
+		/** @brief 미리보기 툴바를 그립니다. */
+		void drawPreviewToolbar();
 
 	private:
-		EditorNodeGraph		 _nodeGraph;
-		int32				 _selectedNodeId;
-		vector<DialogueNode> _listNode;
-		vector<DialogueLink> _listLink;
+		EditorNodeGraph		   _nodeGraph;
+		int32				   _selectedNodeId;
+		vector<DialogueNode>   _listNode;
+		vector<DialogueLink>   _listLink;
+		int32				   _previewNodeId;
+		float32				   _previewHoldSeconds;
+		uint8				   _bGraphLayoutReady : 1;
+		uint8				   _bPreviewPlaying	  : 1;
+		[[maybe_unused]] uint8 _reservedGraph	  : 6;
 	};
 } // namespace sw::editor

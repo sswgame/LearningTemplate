@@ -12,6 +12,7 @@
 #include "Editor/Panels/HierarchyPanel.h"
 #include "Editor/Panels/HistoryPanel.h"
 #include "Editor/Panels/InspectorPanel.h"
+#include "Editor/Panels/MaterialPanel.h"
 #include "Editor/Panels/PrefabEditorPanel.h"
 #include "Editor/Panels/ProfilerPanel.h"
 #include "Editor/Panels/SequencerPanel.h"
@@ -81,6 +82,7 @@ namespace sw::editor
 		registerPanel( make_unique<SequencerPanel>(), EditorPanelCategory::Tool );
 		registerPanel( make_unique<AnimationGraphPanel>(), EditorPanelCategory::Tool );
 		registerPanel( make_unique<DialogueGraphPanel>(), EditorPanelCategory::Tool );
+		registerPanel( make_unique<MaterialPanel>(), EditorPanelCategory::Tool );
 		registerPanel( make_unique<PrefabEditorPanel>(), EditorPanelCategory::Tool );
 		registerPanel( make_unique<TileMapPanel>(), EditorPanelCategory::Tool );
 		registerPanel( make_unique<SpriteClipPanel>(), EditorPanelCategory::Tool );
@@ -126,5 +128,43 @@ namespace sw::editor
 				return true;
 		}
 		return false;
+	}
+
+	bool EditorPanelManager::saveAllDirtyDocuments()
+	{
+		bool bAllOk{ true };
+		for ( const EditorPanelEntry& entry : _listPanel )
+		{
+			if ( entry._pInstance == nullptr )
+				continue;
+			if ( entry._pInstance->isDocumentDirty() == false )
+				continue;
+			if ( entry._pInstance->trySaveDirtyDocument() == false )
+				bAllOk = false;
+		}
+		return bAllOk;
+	}
+
+	uint32 EditorPanelManager::countDirtyDocuments() const
+	{
+		uint32 count{ 0 };
+		for ( const EditorPanelEntry& entry : _listPanel )
+		{
+			if ( entry._pInstance == nullptr )
+				continue;
+			if ( entry._pInstance->isDocumentDirty() )
+				++count;
+		}
+		return count;
+	}
+
+	void EditorPanelManager::discardAllDirtyDocuments()
+	{
+		for ( const EditorPanelEntry& entry : _listPanel )
+		{
+			if ( entry._pInstance == nullptr )
+				continue;
+			entry._pInstance->discardDirtyDocument();
+		}
 	}
 } // namespace sw::editor

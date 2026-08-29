@@ -2,13 +2,13 @@
 
 #include "Editor/Panels/TileMapPanel.h"
 
+#include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Commands/EditorToolAssetCommands.h"
 #include "Editor/Common/Config/EditorData.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
 #include "RuntimeAPI/Service/EditorService.h"
@@ -44,6 +44,11 @@ namespace sw::editor
 		, _listPassThrough{}
 		, _listVisual{}
 		, _listWarp{}
+		, _listEncounterEntry{}
+		, _scenePath{}
+		, _role{}
+		, _spawnX{ 1 }
+		, _spawnY{ 1 }
 		, _status{}
 	{
 		const EditorData& editorData = editor::getEditorData();
@@ -73,13 +78,15 @@ namespace sw::editor
 
 		ImGui::InputText( "Path", _arrPathBuffer, sizeof( _arrPathBuffer ) );
 		ImGui::InputText( "Name", _arrNameBuffer, sizeof( _arrNameBuffer ) );
+		if ( ImGui::IsItemDeactivatedAfterEdit() )
+			notifyDocumentEdited( "Edit Tile Map Name", "tilemap-name" );
 		ImGui::InputInt( "Width", &_width );
 		ImGui::SameLine();
 		ImGui::InputInt( "Height", &_height );
 		if ( ImGui::Button( "Apply Size" ) )
 		{
 			resize( MathUtil::max( 1, _width ), MathUtil::max( 1, _height ) );
-			markDocumentDirty();
+			notifyDocumentEdited( "Resize Tile Map" );
 		}
 
 		ImGui::SameLine();
@@ -231,64 +238,29 @@ namespace sw::editor
 			return false;
 
 		StringUtil::strncpy( _arrNameBuffer, data._name.c_str(), sizeof( _arrNameBuffer ) - 1 );
-		_width			 = data._width;
-		_height			 = data._height;
-		_listWalkable	 = std::move( data._listWalkable );
-		_listEncounter	 = std::move( data._listEncounter );
-		_listPassThrough = std::move( data._listPassThrough );
-		_listVisual		 = std::move( data._listVisual );
-		_listWarp		 = std::move( data._listWarp );
+		_width				= data._width;
+		_height				= data._height;
+		_listWalkable		= std::move( data._listWalkable );
+		_listEncounter		= std::move( data._listEncounter );
+		_listPassThrough	= std::move( data._listPassThrough );
+		_listVisual			= std::move( data._listVisual );
+		_listWarp			= std::move( data._listWarp );
+		_listEncounterEntry = std::move( data._listEncounterEntry );
+		_scenePath			= data._scenePath;
+		_role				= data._role;
+		_spawnX				= data._spawnX;
+		_spawnY				= data._spawnY;
 		StringUtil::strncpy( _arrPathBuffer, string( assetRelativePath ).c_str(), sizeof( _arrPathBuffer ) - 1 );
+		syncDocumentUndoBaseline();
 		return true;
 	}
 
 	bool TileMapPanel::saveXml( string_view assetRelativePath )
 	{
-		EditorTileMapData previous;
-		string			  previousStatus;
-		const bool		  bHadFile = EditorToolAssetCommands::loadTileMap( assetRelativePath, previous, previousStatus );
-
-		EditorTileMapData data;
-		data._name				 = _arrNameBuffer;
-		data._width				 = _width;
-		data._height			 = _height;
-		data._listWalkable		 = _listWalkable;
-		data._listEncounter		 = _listEncounter;
-		data._listPassThrough	 = _listPassThrough;
-		data._listVisual		 = _listVisual;
-		data._listWarp			 = _listWarp;
-		data._scenePath			 = previous._scenePath;
-		data._role				 = previous._role;
-		data._spawnX			 = previous._spawnX;
-		data._spawnY			 = previous._spawnY;
-		data._listEncounterEntry = previous._listEncounterEntry;
-		if ( EditorToolAssetCommands::saveTileMap( assetRelativePath, data ) == false )
+		if ( EditorToolAssetCommands::saveTileMap( assetRelativePath, captureMapData() ) == false )
 			return false;
-
-		if ( bHadFile == false )
-		{
-			clearDocumentDirty();
-			return true;
-		}
-
-		const string path{ assetRelativePath };
-		EditorTransaction::push(
-			SW_DELEGATE_LAMBDA( Delegate<void()>, [this, path, previous]()
-		{
-			EditorToolAssetCommands::saveTileMap( path, previous );
-			if ( string_view{ _arrPathBuffer } != path )
-				return;
-			loadXml( path );
-		} ),
-			SW_DELEGATE_LAMBDA( Delegate<void()>, [this, path, data]()
-		{
-			EditorToolAssetCommands::saveTileMap( path, data );
-			if ( string_view{ _arrPathBuffer } != path )
-				return;
-			loadXml( path );
-		} ),
-			"Save Tile Map" );
 		clearDocumentDirty();
+		syncDocumentUndoBaseline();
 		return true;
 	}
 
@@ -299,11 +271,59 @@ namespace sw::editor
 		return true;
 	}
 
+	EditorTileMapData TileMapPanel::captureMapData() const
+	{
+		EditorTileMapData data;
+		data._name				 = _arrNameBuffer;
+		data._width				 = _width;
+		data._height			 = _height;
+		data._listWalkable		 = _listWalkable;
+		data._listEncounter		 = _listEncounter;
+		data._listPassThrough	 = _listPassThrough;
+		data._listVisual		 = _listVisual;
+		data._listWarp			 = _listWarp;
+		data._scenePath			 = _scenePath;
+		data._role				 = _role;
+		data._spawnX			 = _spawnX;
+		data._spawnY			 = _spawnY;
+		data._listEncounterEntry = _listEncounterEntry;
+		return data;
+	}
+
+	void TileMapPanel::applyMapData( const EditorTileMapData& data )
+	{
+		StringUtil::strncpy( _arrNameBuffer, data._name.c_str(), sizeof( _arrNameBuffer ) - 1 );
+		_width				= data._width;
+		_height				= data._height;
+		_listWalkable		= data._listWalkable;
+		_listEncounter		= data._listEncounter;
+		_listPassThrough	= data._listPassThrough;
+		_listVisual			= data._listVisual;
+		_listWarp			= data._listWarp;
+		_listEncounterEntry = data._listEncounterEntry;
+		_scenePath			= data._scenePath;
+		_role				= data._role;
+		_spawnX				= data._spawnX;
+		_spawnY				= data._spawnY;
+	}
+
+	string TileMapPanel::captureDocumentText() const
+	{
+		return EditorToolAssetCommands::serializeTileMap( captureMapData() );
+	}
+
+	void TileMapPanel::applyDocumentText( string_view text )
+	{
+		EditorTileMapData restored;
+		if ( text.empty() == false )
+			EditorToolAssetCommands::parseTileMap( text, restored );
+		applyMapData( restored );
+	}
+
 	void TileMapPanel::paintCell( int32 x, int32 y )
 	{
 		if ( inBounds( x, y ) == false )
 			return;
-		markDocumentDirty();
 
 		const size_t tileIndex = indexOf( x, y );
 		switch ( _layer )
@@ -347,6 +367,7 @@ namespace sw::editor
 				break;
 			}
 		}
+		notifyDocumentEdited( "Paint Tile Map", "tilemap-paint" );
 	}
 
 	void TileMapPanel::paintEdgeWarp( int32 edge )
@@ -400,6 +421,7 @@ namespace sw::editor
 			default:
 				break;
 		}
+		notifyDocumentEdited( "Paint Tile Map Edge", "tilemap-edge" );
 	}
 
 	bool TileMapPanel::inBounds( int32 x, int32 y ) const

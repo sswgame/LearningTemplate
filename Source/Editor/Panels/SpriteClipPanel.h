@@ -28,6 +28,11 @@ namespace sw::editor
 		bool saveDocument() override;
 
 	private:
+		string				 captureDocumentText() const override;
+		void				 applyDocumentText( string_view text ) override;
+		EditorSpriteClipData captureClipData() const;
+
+	private:
 		// ------------------------------------------------------------------------------
 		// 2) 프레임 · 트랜스폼 키
 		// ------------------------------------------------------------------------------

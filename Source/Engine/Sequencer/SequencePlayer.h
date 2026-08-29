@@ -26,6 +26,7 @@ namespace sw
 		void setAsset( const SequenceAsset& asset );
 
 		void play();
+		void playFromFrame( int32 frame );
 		void stop();
 		void pause();
 		void resume();
@@ -33,6 +34,7 @@ namespace sw
 
 		void  setFramesPerSecond( float32 fps );
 		void  setLoop( bool bLoop );
+		void  seekToFrame( int32 frame );
 		int32 getCurrentFrame() const;
 		int32 getPreviousFrame() const { return _previousFrame; }
 		bool  isPlaying() const { return _bPlaying; }

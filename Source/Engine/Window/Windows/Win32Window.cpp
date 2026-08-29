@@ -191,7 +191,7 @@ namespace sw
 
 				case WM_CLOSE:
 					if ( pThis->_bRecreating == false )
-						pThis->_bShouldClose = true;
+						pThis->tryBeginClose();
 					return 0;
 
 				case WM_DESTROY:

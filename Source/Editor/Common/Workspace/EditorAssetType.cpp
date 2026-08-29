@@ -66,6 +66,7 @@ namespace sw::editor
 			{	  EditorAssetKind::SpriteClip,	   "Sprite Clip"},
 			{		  EditorAssetKind::TileMap,	"Tile Map Tool"},
 			{	  EditorAssetKind::Sequence,		 "Sequencer"},
+			{	  EditorAssetKind::Material,		 "Material"},
 		};
 
 		constexpr EditorAssetKind kArrToolPanelKind[] = {
@@ -75,6 +76,7 @@ namespace sw::editor
 			EditorAssetKind::SpriteClip,
 			EditorAssetKind::TileMap,
 			EditorAssetKind::Sequence,
+			EditorAssetKind::Material,
 		};
 
 		constexpr EditorAssetPanelMapping kArrPanelMapping[] = {
@@ -93,6 +95,9 @@ namespace sw::editor
 			{	  EditorAssetKind::SpriteClip,		   ".sprite"},
 			{	  EditorAssetKind::Sequence,		 ".seq.json"},
 			{	  EditorAssetKind::Sequence,			 ".seq"},
+			{	  EditorAssetKind::Material,	 "._material"},
+			{	  EditorAssetKind::Material,			 ".mat"},
+			{	  EditorAssetKind::Material,		 ".material"},
 			{	  EditorAssetKind::SpriteClip,		   ".png"},
 			{	  EditorAssetKind::SpriteClip,		   ".jpg"},
 			{	  EditorAssetKind::SpriteClip,		   ".jpeg"},

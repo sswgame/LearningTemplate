@@ -7,6 +7,7 @@
 #include "Editor/Common/Backend/EditorDrawDataSnapshot.h"
 #include "Editor/Common/Backend/IImGuiPlatformBackend.h"
 #include "Editor/Common/Backend/IImGuiRendererBackend.h"
+#include "Editor/Common/Commands/EditorAssetCommands.h"
 #include "Editor/Common/Config/EditorConfig.h"
 #include "Editor/Common/Config/EditorData.h"
 #include "Editor/Common/EditorCamera.h"
@@ -27,6 +28,7 @@
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/Window/IWindow.h"
 #include "Engine/Window/NativeWindowEvent.h"
 
 #include "RuntimeAPI/Export/EditorModuleExports.h"
@@ -206,6 +208,9 @@ namespace sw::editor
 			_dockLayout.loadPanelVisibility();
 		}
 
+		if ( pWindow != nullptr )
+			pWindow->setCloseQueryHandler( SW_DELEGATE_METHOD( WindowCloseQueryDelegate, &ImGuiEditor::onWindowCloseQuery, this ) );
+
 		_bInitialized = SW_TRUE;
 		return true;
 	}
@@ -214,6 +219,10 @@ namespace sw::editor
 	{
 		if ( _bInitialized == SW_FALSE )
 			return;
+
+		IWindow* pActiveWindow = IWindow::getActiveWindow();
+		if ( pActiveWindow != nullptr )
+			pActiveWindow->setCloseQueryHandler( {} );
 
 		waitForDrawSnapshotIdle();
 		_arrDrawSnapshot[0].clear();
@@ -424,6 +433,11 @@ namespace sw::editor
 	void ImGuiEditor::onHostFrameEnd()
 	{
 		EditorPlaySession::consumePendingStep();
+	}
+
+	bool ImGuiEditor::onWindowCloseQuery()
+	{
+		return EditorAssetCommands::tryBeginQuit();
 	}
 
 	void ImGuiEditor::beginFrame()

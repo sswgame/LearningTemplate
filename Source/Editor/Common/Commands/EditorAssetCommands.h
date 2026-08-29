@@ -65,6 +65,10 @@ namespace sw::editor
 		static void saveFocusedOrScene();
 		/** @brief 미저장 모달 선택을 적용합니다. */
 		static void applyUnsavedSceneChoice( EditorUnsavedChoice choice );
+		/** @brief dirty면 확인을 띄우고, 아니면 종료를 허용합니다. */
+		static bool tryBeginQuit();
+		/** @brief 창 닫기를 시도합니다. dirty면 확인 모달이 뜹니다. */
+		static void requestExit();
 		/** @brief 활성 씬 세대가 바뀌면 dirty/프리팹 맵을 동기화합니다. */
 		static void syncAfterSceneGenerationChange();
 		/** @brief 포커스 애셋 경로만 바꿉니다. */

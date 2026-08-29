@@ -4,8 +4,10 @@
 
 #include "Editor/Common/Commands/EditorToolAssetCommands.h"
 #include "Editor/Common/Config/EditorConfig.h"
+#include "Editor/Common/EditorSessionPolicy.h"
 #include "Editor/Common/Gui/EditorChrome.h"
-#include "Editor/Common/Workspace/EditorTransaction.h"
+
+#include "Engine/Animation/AnimationGraphAsset.h"
 
 #include <imgui.h>
 #include <imgui-node-editor/imgui_node_editor.h>
@@ -52,6 +54,11 @@ namespace sw::editor
 		, _nodeGraph{}
 		, _listNode{}
 		, _listLink{}
+		, _previewPlayer{}
+		, _previewHoldSeconds{ 0.0f }
+		, _bGraphLayoutReady{ SW_FALSE }
+		, _bPreviewPlaying{ SW_FALSE }
+		, _reservedGraph{ 0 }
 	{
 	}
 
@@ -66,24 +73,26 @@ namespace sw::editor
 		if ( isDocumentLoaded() == false )
 			loadGraphData();
 
+		tickPreview( ImGui::GetIO().DeltaTime );
+
 		if ( EditorChrome::beginToolbar( "##AnimGraphToolbar" ) )
 		{
 			if ( ImGui::Button( "Add Idle" ) )
 			{
 				addNamedNode( "Idle" );
-				markDocumentDirty();
+				notifyDocumentEdited( "Add Animation Graph Node" );
 			}
 			ImGui::SameLine();
 			if ( ImGui::Button( "Add Walk" ) )
 			{
 				addNamedNode( "Walk" );
-				markDocumentDirty();
+				notifyDocumentEdited( "Add Animation Graph Node" );
 			}
 			ImGui::SameLine();
 			if ( ImGui::Button( "Add Attack" ) )
 			{
 				addNamedNode( "Attack" );
-				markDocumentDirty();
+				notifyDocumentEdited( "Add Animation Graph Node" );
 			}
 			ImGui::SameLine();
 			if ( ImGui::Button( "Link Selected" ) && _listNode.size() >= 2 )
@@ -93,7 +102,7 @@ namespace sw::editor
 				l._fromNode = _listNode[_listNode.size() - 2]._id;
 				l._toNode	= _listNode[_listNode.size() - 1]._id;
 				_listLink.push_back( l );
-				markDocumentDirty();
+				notifyDocumentEdited( "Link Animation Graph Nodes" );
 			}
 			ImGui::SameLine();
 			if ( ImGui::Button( "Load" ) )
@@ -101,10 +110,35 @@ namespace sw::editor
 			ImGui::SameLine();
 			if ( ImGui::Button( "Save" ) )
 				saveGraphData();
+			ImGui::SameLine();
+			if ( ImGui::Button( "Play" ) )
+			{
+				syncPreviewGraph();
+				_previewPlayer.play();
+				_bPreviewPlaying	= SW_TRUE;
+				_previewHoldSeconds = 0.0f;
+			}
+			ImGui::SameLine();
+			if ( ImGui::Button( "Advance" ) )
+			{
+				syncPreviewGraph();
+				if ( _previewPlayer.advance() == false )
+					_bPreviewPlaying = SW_FALSE;
+			}
+			ImGui::SameLine();
+			if ( ImGui::Button( "Stop" ) )
+			{
+				_previewPlayer.stop();
+				_bPreviewPlaying = SW_FALSE;
+			}
 
 			ImGui::SameLine();
-			ImGui::TextDisabled( "Nodes: %zu  Links: %zu  (%s)", _listNode.size(), _listLink.size(),
-								 EditorConfig::getActive()._animationGraphDataFile.c_str() );
+			if ( _previewPlayer.getCurrentNodeName().empty() == false )
+				ImGui::TextDisabled( "Preview: %s  Nodes: %zu  Links: %zu", _previewPlayer.getCurrentNodeName().c_str(),
+									 _listNode.size(), _listLink.size() );
+			else
+				ImGui::TextDisabled( "Nodes: %zu  Links: %zu  (%s)", _listNode.size(), _listLink.size(),
+									 EditorConfig::getActive()._animationGraphDataFile.c_str() );
 		}
 		EditorChrome::endToolbar();
 
@@ -119,7 +153,10 @@ namespace sw::editor
 		{
 			const ed::NodeId nodeId = AnimationGraphPanelInternal::toNodeId( node._id );
 			ed::BeginNode( nodeId );
-			ImGui::TextUnformatted( node._name.c_str() );
+			if ( _previewPlayer.getCurrentNodeName() == node._name && _previewPlayer.getCurrentNodeName().empty() == false )
+				ImGui::TextColored( ImVec4( 0.4f, 0.9f, 0.5f, 1.0f ), "%s", node._name.c_str() );
+			else
+				ImGui::TextUnformatted( node._name.c_str() );
 			ed::BeginPin( AnimationGraphPanelInternal::toPinId( AnimationGraphPanelInternal::pinIn( node._id ) ), ed::PinKind::Input );
 			ImGui::TextUnformatted( "-> In" );
 			ed::EndPin();
@@ -147,10 +184,9 @@ namespace sw::editor
 				if ( a.Get() != 0 && b.Get() != 0 && ed::AcceptNewItem() )
 				{
 					GraphLink link{};
-					link._id	   = nextLinkId();
-					const int32 ap = static_cast<int32>( a.Get() );
-					const int32 bp = static_cast<int32>( b.Get() );
-					// 핀 ID에서 노드 ID를 해석합니다.
+					link._id		  = nextLinkId();
+					const int32 ap	  = static_cast<int32>( a.Get() );
+					const int32 bp	  = static_cast<int32>( b.Get() );
 					const int32 aNode = ap / 10;
 					const int32 bNode = bp / 10;
 					if ( ( ap % 10 ) == 2 )
@@ -164,7 +200,7 @@ namespace sw::editor
 						link._toNode   = aNode;
 					}
 					_listLink.push_back( link );
-					markDocumentDirty();
+					notifyDocumentEdited( "Link Animation Graph Nodes" );
 				}
 			}
 			ed::EndCreate();
@@ -182,7 +218,7 @@ namespace sw::editor
 													 [id]( const GraphLink& link )
 					{ return link._id == id; } ),
 									 _listLink.end() );
-					markDocumentDirty();
+					notifyDocumentEdited( "Delete Animation Graph Link" );
 				}
 			}
 			ed::NodeId nodeId;
@@ -199,22 +235,14 @@ namespace sw::editor
 													 [id]( const GraphLink& link )
 					{ return link._fromNode == id || link._toNode == id; } ),
 									 _listLink.end() );
-					markDocumentDirty();
+					notifyDocumentEdited( "Delete Animation Graph Node" );
 				}
 			}
 			ed::EndDelete();
 		}
 
 		_nodeGraph.applyContentFitIfNeeded();
-
-		// 저장용 위치를 캐시합니다.
-		for ( GraphNode& node : _listNode )
-		{
-			const ImVec2 pos = ed::GetNodePosition( AnimationGraphPanelInternal::toNodeId( node._id ) );
-			node._x			 = pos.x;
-			node._y			 = pos.y;
-		}
-
+		cacheNodeLayout();
 		_nodeGraph.endCanvas();
 	}
 
@@ -237,57 +265,98 @@ namespace sw::editor
 		}
 		if ( _listNode.empty() )
 			ensureDefaults();
+		_bGraphLayoutReady = SW_FALSE;
+		_previewPlayer.stop();
+		_bPreviewPlaying = SW_FALSE;
 		markDocumentLoaded();
 		_nodeGraph.requestContentFit();
 	}
 
 	void AnimationGraphPanel::saveGraphData()
 	{
-		EditorAnimGraphData previous;
-		const bool			bHadFile   = EditorToolAssetCommands::loadAnimationGraph( previous, getLoadedAssetPath() );
-		const string		beforeJson = bHadFile ? EditorToolAssetCommands::serializeAnimationGraph( previous ) : string{};
-
-		EditorAnimGraphData data;
-		data._listNode.reserve( _listNode.size() );
-		data._listLink = _listLink;
-		for ( const GraphNode& node : _listNode )
+		EditorAnimGraphData data = captureGraphData();
+		if ( _nodeGraph.bind() )
 		{
-			GraphNode saved = node;
-			if ( _nodeGraph.bind() )
+			for ( GraphNode& node : data._listNode )
 			{
 				const ImVec2 pos = ed::GetNodePosition( AnimationGraphPanelInternal::toNodeId( node._id ) );
-				saved._x		 = pos.x;
-				saved._y		 = pos.y;
-				_nodeGraph.unbind();
+				node._x			 = pos.x;
+				node._y			 = pos.y;
 			}
-			data._listNode.push_back( std::move( saved ) );
+			_nodeGraph.unbind();
+			_listNode = data._listNode;
 		}
 		EditorToolAssetCommands::saveAnimationGraph( data, getLoadedAssetPath() );
-		const string afterJson = EditorToolAssetCommands::serializeAnimationGraph( data );
-		const string path	   = getLoadedAssetPath();
-		EditorTransaction::recordDocumentText(
-			beforeJson, afterJson, "Save Animation Graph",
-			SW_DELEGATE_LAMBDA( EditorDocumentRestoreDelegate, [this, path]( string_view snapshot )
-		{
-			EditorAnimGraphData restored;
-			if ( snapshot.empty() == false )
-				EditorToolAssetCommands::parseAnimationGraph( snapshot, restored );
-			EditorToolAssetCommands::saveAnimationGraph( restored, path );
-			if ( getLoadedAssetPath() != path )
-				return;
-			_listNode = std::move( restored._listNode );
-			_listLink = std::move( restored._listLink );
-			if ( _listNode.empty() )
-				ensureDefaults();
-			_nodeGraph.requestContentFit();
-		} ) );
 		clearDocumentDirty();
+		syncDocumentUndoBaseline();
 	}
 
 	bool AnimationGraphPanel::saveDocument()
 	{
 		saveGraphData();
 		return true;
+	}
+
+	string AnimationGraphPanel::captureDocumentText() const
+	{
+		return EditorToolAssetCommands::serializeAnimationGraph( captureGraphData() );
+	}
+
+	void AnimationGraphPanel::applyDocumentText( string_view text )
+	{
+		EditorAnimGraphData restored;
+		if ( text.empty() == false )
+			EditorToolAssetCommands::parseAnimationGraph( text, restored );
+		_listNode = std::move( restored._listNode );
+		_listLink = std::move( restored._listLink );
+		if ( _listNode.empty() )
+			ensureDefaults();
+		_bGraphLayoutReady = SW_FALSE;
+		_nodeGraph.requestContentFit();
+	}
+
+	EditorAnimGraphData AnimationGraphPanel::captureGraphData() const
+	{
+		EditorAnimGraphData data;
+		data._listNode = _listNode;
+		data._listLink = _listLink;
+		return data;
+	}
+
+	void AnimationGraphPanel::syncPreviewGraph()
+	{
+		AnimationGraphAsset asset;
+		asset.parseJson( captureDocumentText() );
+		_previewPlayer.setGraph( asset );
+	}
+
+	void AnimationGraphPanel::cacheNodeLayout()
+	{
+		bool bMoved{ false };
+		for ( GraphNode& node : _listNode )
+		{
+			const ImVec2 pos	  = ed::GetNodePosition( AnimationGraphPanelInternal::toNodeId( node._id ) );
+			const bool	 bChanged = pos.x != node._x || pos.y != node._y;
+			if ( EditorSessionPolicy::shouldMarkDocumentDirtyOnNodeMove( _bGraphLayoutReady == SW_TRUE, bChanged ) )
+				bMoved = true;
+			node._x = pos.x;
+			node._y = pos.y;
+		}
+		if ( bMoved )
+			notifyDocumentEdited( "Move Animation Graph Nodes", "anim-graph-layout" );
+		_bGraphLayoutReady = SW_TRUE;
+	}
+
+	void AnimationGraphPanel::tickPreview( float32 deltaSeconds )
+	{
+		if ( _bPreviewPlaying == SW_FALSE )
+			return;
+		_previewHoldSeconds += deltaSeconds;
+		if ( _previewHoldSeconds < 0.75f )
+			return;
+		_previewHoldSeconds = 0.0f;
+		if ( _previewPlayer.advance() == false )
+			_bPreviewPlaying = SW_FALSE;
 	}
 
 	int32 AnimationGraphPanel::nextNodeId() const

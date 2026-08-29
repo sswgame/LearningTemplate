@@ -11,9 +11,6 @@ namespace sw
 
 	bool TileMapXmlData::load( string_view path )
 	{
-		*this		= {};
-		_sourcePath = path;
-
 		XmlDocument doc;
 		string		absPath;
 		if ( doc.loadPath( path, &absPath ) == false )
@@ -21,11 +18,24 @@ namespace sw
 			SW_LOG_ERROR( "Not found: %#", path );
 			return false;
 		}
+		if ( loadFromXml( doc.saveToString() ) == false )
+			return false;
+		_sourcePath = path;
+		return true;
+	}
+
+	bool TileMapXmlData::loadFromXml( string_view xml )
+	{
+		*this = {};
+
+		XmlDocument doc;
+		if ( doc.parse( xml ) == false )
+			return false;
 
 		XmlNode root = doc.root( "TileMap" );
 		if ( root.isValid() == false )
 		{
-			SW_LOG_ERROR( "Missing <TileMap>: %#", absPath );
+			SW_LOG_ERROR( "Missing <TileMap>" );
 			return false;
 		}
 
@@ -152,6 +162,17 @@ namespace sw
 			absPath = path;
 
 		XmlDocument doc;
+		if ( doc.parse( toXml() ) == false )
+			return false;
+		const bool bOk = doc.saveFile( absPath );
+		if ( bOk )
+			SW_LOG_INFO( "Saved '%#' -> %#", _name, absPath );
+		return bOk;
+	}
+
+	string TileMapXmlData::toXml() const
+	{
+		XmlDocument doc;
 		XmlNode		root = doc.appendRoot( "TileMap" );
 		root.appendChild( "name", _name.empty() ? string_view{ "Untitled" } : string_view{ _name } );
 		root.appendChild( "width", _width );
@@ -208,9 +229,6 @@ namespace sw
 			}
 		}
 
-		const bool bOk = doc.saveFile( absPath );
-		if ( bOk )
-			SW_LOG_INFO( "Saved '%#' -> %#", _name, absPath );
-		return bOk;
+		return doc.saveToString();
 	}
 } // namespace sw

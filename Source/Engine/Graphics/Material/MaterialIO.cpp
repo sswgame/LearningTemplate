@@ -50,6 +50,14 @@ namespace sw
 		if ( absPath.empty() )
 			absPath = assetRelativePath;
 
+		XmlDocument doc;
+		if ( doc.parse( saveToString() ) == false )
+			return false;
+		return doc.saveFile( absPath );
+	}
+
+	string Material::saveToString() const
+	{
 		this->syncDescFromRuntime();
 
 		XmlDocument doc;
@@ -117,7 +125,7 @@ namespace sw
 
 		MaterialUtil::appendPermutationNode( root, _desc._permutations );
 
-		return doc.saveFile( absPath );
+		return doc.saveToString();
 	}
 
 	bool Material::loadFromXml( string_view xmlText )

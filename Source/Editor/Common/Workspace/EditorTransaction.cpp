@@ -235,7 +235,7 @@ namespace sw::editor
 	}
 
 	void EditorTransaction::recordDocumentText( string_view beforeText, string_view afterText, string_view label,
-												EditorDocumentRestoreDelegate restore )
+												EditorDocumentRestoreDelegate restore, string_view coalesceKey )
 	{
 		if ( beforeText == afterText || restore.isBound() == false )
 			return;
@@ -251,6 +251,6 @@ namespace sw::editor
 		{
 			restore( afterStr );
 		} ),
-			label );
+			label, coalesceKey );
 	}
 } // namespace sw::editor

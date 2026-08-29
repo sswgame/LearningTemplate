@@ -74,6 +74,11 @@ namespace sw::editor
 				EditorAssetCommands::saveFocusedOrScene();
 			}
 
+			static void paletteExit()
+			{
+				EditorAssetCommands::requestExit();
+			}
+
 			static GameObject* palettePrimaryObject()
 			{
 				EditorContext* pContext = EditorContext::get();
@@ -266,6 +271,9 @@ namespace sw::editor
 		registerCommandInstance( "Scene", "Save Scene", "Write the active scene, or prompt Save As if unsaved",
 								 SW_DELEGATE_LAMBDA( Delegate<void()>, []()
 		{ CommandPalettePopupInternal::paletteSaveScene(); } ) );
+		registerCommandInstance( "File", "Exit", "Close the editor after unsaved-change confirmation",
+								 SW_DELEGATE_LAMBDA( Delegate<void()>, []()
+		{ CommandPalettePopupInternal::paletteExit(); } ) );
 		registerCommandInstance( "Clipboard", "Paste Component Values", "Overwrite the selected component from the clipboard",
 								 SW_DELEGATE_LAMBDA( Delegate<void()>, []()
 		{ CommandPalettePopupInternal::palettePasteValues(); } ) );

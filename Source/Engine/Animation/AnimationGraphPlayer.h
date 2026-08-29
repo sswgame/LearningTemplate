@@ -45,6 +45,10 @@ namespace sw
 		void setCrossfadeSeconds( float32 seconds );
 		/** @brief 현재 노드 이름을 반환합니다. */
 		const string& getCurrentNodeName() const { return _currentNodeName; }
+		/** @brief 현재 노드 id입니다. 재생 중이 아니면 0입니다. */
+		int32 getCurrentNodeId() const { return _currentNodeId; }
+		/** @brief 나가는 첫 링크로 넘어갑니다. 더 없으면 false입니다. */
+		bool advance();
 		/** @brief 내부 AnimPlayer입니다. */
 		AnimPlayer&		  getAnimPlayer() { return _player; }
 		const AnimPlayer& getAnimPlayer() const { return _player; }

@@ -23,6 +23,8 @@ namespace sw::editor
 		bool		isToolPanel() const override { return true; }
 		const utf8* getPanelTitle() const override;
 		bool		trySaveDirtyDocument() override;
+		bool		isDocumentDirty() const override { return _bDocumentDirty == SW_TRUE; }
+		void		discardDirtyDocument() override;
 
 	protected:
 		/**
@@ -45,10 +47,17 @@ namespace sw::editor
 		bool		  isDocumentLoaded() const;
 		void		  markDocumentDirty();
 		void		  clearDocumentDirty();
-		bool		  isDocumentDirty() const { return _bDocumentDirty == SW_TRUE; }
 
 		/** @brief 현재 문서를 디스크에 저장합니다. 성공하면 true입니다. */
 		virtual bool saveDocument() = 0;
+		/** @brief 편집 단위 Undo를 남기고 dirty로 표시합니다. */
+		void notifyDocumentEdited( string_view label, string_view coalesceKey = {} );
+		/** @brief 로드/저장 직후 Undo 기준 텍스트를 맞춥니다. */
+		void syncDocumentUndoBaseline();
+		/** @brief 현재 문서를 텍스트로 직렬화합니다. */
+		virtual string captureDocumentText() const { return {}; }
+		/** @brief 텍스트 스냅샷을 문서에 적용합니다. */
+		virtual void applyDocumentText( string_view /*text*/ ) {}
 
 		template <typename TItem>
 		static int32 nextItemId( const vector<TItem>& list )
@@ -63,10 +72,13 @@ namespace sw::editor
 
 	private:
 		void drawUnsavedDocumentPopup();
+		void restoreDocumentFromUndo( string_view text );
 
 		EditorAssetKind		   _kind;
 		string				   _loadedAssetPath;
 		string				   _pendingFocusPath;
+		string				   _documentUndoBaseline;
+		string				   _lastSavedDocumentText;
 		uint8				   _bLoaded		   : 1;
 		uint8				   _bDocumentDirty : 1;
 		uint8				   _bConfirmSwitch : 1;

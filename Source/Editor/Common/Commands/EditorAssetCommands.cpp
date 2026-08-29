@@ -26,6 +26,7 @@
 #include "Engine/Utility/Resource/AssetDatabase.h"
 #include "Engine/Utility/Resource/ResourceManager.h"
 #include "Engine/Utility/Resource/ResourceUtil.h"
+#include "Engine/Window/IWindow.h"
 
 #include "RuntimeAPI/Service/EditorService.h"
 
@@ -74,6 +75,12 @@ namespace sw::editor
 					EditorAssetCommands::loadScene( path );
 				else if ( action == EditorPendingSceneAction::New )
 					EditorAssetCommands::tryCreateNewScene();
+				else if ( action == EditorPendingSceneAction::Quit )
+				{
+					IWindow* pWindow = IWindow::getActiveWindow();
+					if ( pWindow != nullptr )
+						pWindow->requestClose();
+				}
 			}
 
 			static bool tryClassifyResourceFile( string_view absPath, EditorResourceIndexEntry& outEntry )
@@ -253,25 +260,36 @@ namespace sw::editor
 
 		if ( EditorSessionPolicy::shouldSaveBeforeAction( choice ) )
 		{
-			SceneManager* pSceneManager = editor::getService<SceneManager>();
-			Scene*		  pScene		= ( pSceneManager != nullptr ) ? pSceneManager->getActiveScene() : nullptr;
-			if ( pScene != nullptr && pScene->getSourcePath().empty() == false )
+			if ( pContext->getPanelManager().saveAllDirtyDocuments() == false )
 			{
-				if ( saveActiveScene( {} ) == false )
+				pContext->getNotificationManager().push( "Editor", "Document save failed", NotificationType::Error );
+				return;
+			}
+			if ( ws.isSceneDirty() )
+			{
+				SceneManager* pSceneManager = editor::getService<SceneManager>();
+				Scene*		  pScene		= ( pSceneManager != nullptr ) ? pSceneManager->getActiveScene() : nullptr;
+				if ( pScene != nullptr && pScene->getSourcePath().empty() == false )
 				{
-					pContext->getNotificationManager().push( "Scene", "Save failed", NotificationType::Error );
+					if ( saveActiveScene( {} ) == false )
+					{
+						pContext->getNotificationManager().push( "Scene", "Save failed", NotificationType::Error );
+						return;
+					}
+				}
+				else
+				{
+					saveActiveSceneOrPrompt();
 					return;
 				}
-			}
-			else
-			{
-				saveActiveSceneOrPrompt();
-				return;
 			}
 		}
 
 		if ( EditorSessionPolicy::shouldClearDirtyWithoutSave( choice ) )
+		{
 			ws.clearSceneDirty();
+			pContext->getPanelManager().discardAllDirtyDocuments();
+		}
 
 		if ( EditorSessionPolicy::shouldProceedWithAction( choice ) )
 			EditorAssetCommandsInternal::runPendingSceneAction();
@@ -297,6 +315,30 @@ namespace sw::editor
 		Scene*			   pScene	= pSceneManager->getActiveScene();
 		GameObjectManager* pManager = ( pScene != nullptr ) ? pScene->getObjectManager() : nullptr;
 		ws.rebuildGameObjectPrefabMap( pManager );
+	}
+
+	bool EditorAssetCommands::tryBeginQuit()
+	{
+		EditorContext* pContext = EditorContext::get();
+		if ( pContext == nullptr )
+			return true;
+		if ( pContext->getWorkspace().getPendingSceneAction() != EditorPendingSceneAction::None )
+			return false;
+
+		const bool	 bSceneDirty = pContext->getWorkspace().isSceneDirty();
+		const uint32 dirtyDocs	 = pContext->getPanelManager().countDirtyDocuments();
+		if ( EditorSessionPolicy::needsQuitPrompt( bSceneDirty, dirtyDocs ) == false )
+			return true;
+
+		pContext->getWorkspace().setPendingSceneAction( EditorPendingSceneAction::Quit );
+		return false;
+	}
+
+	void EditorAssetCommands::requestExit()
+	{
+		IWindow* pWindow = IWindow::getActiveWindow();
+		if ( pWindow != nullptr )
+			pWindow->tryBeginClose();
 	}
 
 	void EditorAssetCommands::focusPath( string_view relativePath )

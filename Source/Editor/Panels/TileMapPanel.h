@@ -28,6 +28,12 @@ namespace sw::editor
 		bool saveDocument() override;
 
 	private:
+		string			  captureDocumentText() const override;
+		void			  applyDocumentText( string_view text ) override;
+		EditorTileMapData captureMapData() const;
+		void			  applyMapData( const EditorTileMapData& data );
+
+	private:
 		// ------------------------------------------------------------------------------
 		// 2) 페인트 레이어 · 타일 데이터
 		// ------------------------------------------------------------------------------
@@ -79,11 +85,16 @@ namespace sw::editor
 		int32	   _warpTy;
 		bool	   _bErase;
 
-		vector<uint8>			 _listWalkable;
-		vector<uint8>			 _listEncounter;
-		vector<uint8>			 _listPassThrough;
-		vector<EditorTileVisual> _listVisual;
-		vector<EditorTileWarp>	 _listWarp;
-		string					 _status;
+		vector<uint8>					 _listWalkable;
+		vector<uint8>					 _listEncounter;
+		vector<uint8>					 _listPassThrough;
+		vector<EditorTileVisual>		 _listVisual;
+		vector<EditorTileWarp>			 _listWarp;
+		vector<EditorTileEncounterEntry> _listEncounterEntry;
+		string							 _scenePath;
+		string							 _role;
+		int32							 _spawnX;
+		int32							 _spawnY;
+		string							 _status;
 	};
 } // namespace sw::editor

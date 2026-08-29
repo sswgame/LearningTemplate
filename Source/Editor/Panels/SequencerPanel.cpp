@@ -6,9 +6,9 @@
 
 #include "Editor/Common/Commands/EditorToolAssetCommands.h"
 #include "Editor/Common/Gui/EditorChrome.h"
-#include "Editor/Common/Workspace/EditorTransaction.h"
 
 #include "Engine/Sequencer/SequenceAsset.h"
+#include "Engine/Sequencer/SequencePlayer.h"
 
 #include <imgui.h>
 #include <ImGuizmo.h>
@@ -113,6 +113,7 @@ namespace sw::editor
 		, _firstFrame{ 0 }
 		, _arrCinematicNote{}
 		, _sequence{ make_unique<ClipSequence>() }
+		, _previewPlayer{ make_unique<sw::SequencePlayer>() }
 	{
 		StringUtil::strncpy( _arrCinematicNote, "Cinematic notes (not a clip track).", sizeof( _arrCinematicNote ) - 1 );
 		_sequence->Add( 0 );
@@ -139,6 +140,21 @@ namespace sw::editor
 			if ( ImGui::Button( "Save" ) )
 				saveToLoadedPath();
 			ImGui::SameLine();
+			if ( ImGui::Button( "Play" ) )
+			{
+				syncPreviewPlayer();
+				_previewPlayer->playFromFrame( _currentFrame );
+			}
+			ImGui::SameLine();
+			if ( ImGui::Button( "Pause" ) )
+				_previewPlayer->pause();
+			ImGui::SameLine();
+			if ( ImGui::Button( "Stop" ) )
+			{
+				_previewPlayer->stop();
+				_currentFrame = _sequence != nullptr ? _sequence->_frameMin : 0;
+			}
+			ImGui::SameLine();
 			if ( getLoadedAssetPath().empty() )
 				ImGui::TextDisabled( "No .seq file focused" );
 			else
@@ -146,12 +162,19 @@ namespace sw::editor
 		}
 		EditorChrome::endToolbar();
 
+		tickPreview( ImGui::GetIO().DeltaTime );
+
 		ImGui::SliderInt( "Scrub Frame", &_currentFrame, _sequence->_frameMin, _sequence->_frameMax );
+		if ( ImGui::IsItemDeactivatedAfterEdit() )
+		{
+			if ( _previewPlayer->isPlaying() )
+				_previewPlayer->seekToFrame( _currentFrame );
+		}
 		ImGui::Text( "Current Frame: %d", _currentFrame );
 
 		ImGui::InputTextMultiline( "Cinematic Note", _arrCinematicNote, sizeof( _arrCinematicNote ), ImVec2( -1.0f, 60.0f ) );
 		if ( ImGui::IsItemDeactivatedAfterEdit() )
-			markDocumentDirty();
+			notifyDocumentEdited( "Edit Sequence Note", "sequence-note" );
 
 		if ( _selected >= 0 && _selected < static_cast<int32>( _sequence->_listItems.size() ) )
 		{
@@ -162,22 +185,24 @@ namespace sw::editor
 			if ( ImGui::InputText( "Clip Name", arrNameBuf, sizeof( arrNameBuf ) ) )
 			{
 				item._name = arrNameBuf;
-				markDocumentDirty();
 			}
+			if ( ImGui::IsItemDeactivatedAfterEdit() )
+				notifyDocumentEdited( "Edit Sequence Clip", "sequence-clip" );
 			utf8 arrTargetBuf[constant::kMaxBuffer128];
 			StringUtil::strncpy( arrTargetBuf, item._targetObject.c_str(), sizeof( arrTargetBuf ) - 1 );
 			arrTargetBuf[sizeof( arrTargetBuf ) - 1] = '\0';
 			if ( ImGui::InputText( "Target Object", arrTargetBuf, sizeof( arrTargetBuf ) ) )
 			{
 				item._targetObject = arrTargetBuf;
-				markDocumentDirty();
 			}
+			if ( ImGui::IsItemDeactivatedAfterEdit() )
+				notifyDocumentEdited( "Edit Sequence Clip", "sequence-clip" );
 		}
 
 		ImSequencer::Sequencer( _sequence.get(), &_currentFrame, &_bExpanded, &_selected, &_firstFrame,
 								ImSequencer::SEQUENCER_EDIT_STARTEND | ImSequencer::SEQUENCER_ADD | ImSequencer::SEQUENCER_DEL | ImSequencer::SEQUENCER_CHANGE_FRAME );
 		if ( ImGui::IsItemEdited() )
-			markDocumentDirty();
+			notifyDocumentEdited( "Edit Sequence Timeline", "sequence-timeline" );
 	}
 
 	void SequencerPanel::loadFromFocusedPath()
@@ -197,7 +222,54 @@ namespace sw::editor
 
 		if ( getLoadedAssetPath().empty() )
 			acceptFocusedDocument();
+		applyAsset( asset );
 		markDocumentLoaded();
+	}
+
+	void SequencerPanel::saveToLoadedPath()
+	{
+		if ( getLoadedAssetPath().empty() || _sequence == nullptr )
+			return;
+		if ( EditorToolAssetCommands::saveSequence( captureAsset(), getLoadedAssetPath() ) == false )
+			return;
+		clearDocumentDirty();
+		syncDocumentUndoBaseline();
+	}
+
+	bool SequencerPanel::saveDocument()
+	{
+		if ( getLoadedAssetPath().empty() )
+			return false;
+		saveToLoadedPath();
+		return isDocumentDirty() == false;
+	}
+
+	SequenceAsset SequencerPanel::captureAsset() const
+	{
+		SequenceAsset asset;
+		if ( _sequence == nullptr )
+			return asset;
+		asset._frameMin = _sequence->_frameMin;
+		asset._frameMax = _sequence->_frameMax;
+		asset._note		= _arrCinematicNote;
+		for ( const Item& src : _sequence->_listItems )
+		{
+			SequenceTrackItem item{};
+			item._name		   = src._name;
+			item._targetObject = src._targetObject;
+			item._start		   = src._start;
+			item._end		   = src._end;
+			item._type		   = src._type;
+			item._color		   = src._color;
+			asset._listItem.push_back( std::move( item ) );
+		}
+		return asset;
+	}
+
+	void SequencerPanel::applyAsset( const SequenceAsset& asset )
+	{
+		if ( _sequence == nullptr )
+			return;
 		_sequence->_frameMin = asset._frameMin;
 		_sequence->_frameMax = asset._frameMax;
 		StringUtil::strncpy( _arrCinematicNote, asset._note.c_str(), sizeof( _arrCinematicNote ) - 1 );
@@ -216,69 +288,37 @@ namespace sw::editor
 		}
 	}
 
-	void SequencerPanel::saveToLoadedPath()
+	string SequencerPanel::captureDocumentText() const
 	{
-		if ( getLoadedAssetPath().empty() || _sequence == nullptr )
-			return;
-
-		SequenceAsset previous;
-		const bool	  bHadFile	 = EditorToolAssetCommands::loadSequence( previous, getLoadedAssetPath() );
-		const string  beforeJson = bHadFile ? previous.toJson() : string{};
-
-		SequenceAsset asset;
-		asset._frameMin = _sequence->_frameMin;
-		asset._frameMax = _sequence->_frameMax;
-		asset._note		= _arrCinematicNote;
-		for ( const Item& src : _sequence->_listItems )
-		{
-			SequenceTrackItem item{};
-			item._name		   = src._name;
-			item._targetObject = src._targetObject;
-			item._start		   = src._start;
-			item._end		   = src._end;
-			item._type		   = src._type;
-			item._color		   = src._color;
-			asset._listItem.push_back( std::move( item ) );
-		}
-		if ( EditorToolAssetCommands::saveSequence( asset, getLoadedAssetPath() ) == false )
-			return;
-
-		const string afterJson = asset.toJson();
-		const string path	   = getLoadedAssetPath();
-		EditorTransaction::recordDocumentText(
-			beforeJson, afterJson, "Save Sequence",
-			SW_DELEGATE_LAMBDA( EditorDocumentRestoreDelegate, [this, path]( string_view snapshot )
-		{
-			SequenceAsset restored;
-			if ( snapshot.empty() == false )
-				restored.parseJson( snapshot );
-			EditorToolAssetCommands::saveSequence( restored, path );
-			if ( getLoadedAssetPath() != path || _sequence == nullptr )
-				return;
-			_sequence->_frameMin = restored._frameMin;
-			_sequence->_frameMax = restored._frameMax;
-			StringUtil::strncpy( _arrCinematicNote, restored._note.c_str(), sizeof( _arrCinematicNote ) - 1 );
-			_sequence->_listItems.clear();
-			for ( const SequenceTrackItem& src : restored._listItem )
-			{
-				Item item{};
-				item._name		   = src._name;
-				item._targetObject = src._targetObject;
-				item._start		   = src._start;
-				item._end		   = src._end;
-				item._type		   = src._type;
-				item._color		   = src._color;
-				_sequence->_listItems.push_back( std::move( item ) );
-			}
-		} ) );
-		clearDocumentDirty();
+		return captureAsset().toJson();
 	}
 
-	bool SequencerPanel::saveDocument()
+	void SequencerPanel::applyDocumentText( string_view text )
 	{
-		if ( getLoadedAssetPath().empty() )
-			return false;
-		saveToLoadedPath();
-		return isDocumentDirty() == false;
+		SequenceAsset restored;
+		if ( text.empty() == false )
+			restored.parseJson( text );
+		applyAsset( restored );
+	}
+
+	void SequencerPanel::syncPreviewPlayer()
+	{
+		if ( _previewPlayer == nullptr )
+			return;
+		_previewPlayer->setAsset( captureAsset() );
+		_previewPlayer->setLoop( true );
+	}
+
+	void SequencerPanel::tickPreview( float32 deltaSeconds )
+	{
+		if ( _previewPlayer == nullptr || _previewPlayer->isPlaying() == false )
+			return;
+		_previewPlayer->update( deltaSeconds );
+		_currentFrame = _previewPlayer->getCurrentFrame();
+		if ( _previewPlayer->isPlaying() == false )
+			return;
+		vector<const SequenceTrackItem*> listActive;
+		_previewPlayer->collectActiveItems( listActive );
+		(void)listActive;
 	}
 } // namespace sw::editor

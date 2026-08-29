@@ -4,11 +4,14 @@
 
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/formatString.h"
 
 #include "Editor/Common/Commands/EditorToolAssetCommands.h"
+#include "Editor/Common/EditorSessionPolicy.h"
 #include "Editor/Common/Gui/EditorChrome.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Common/Workspace/EditorTransaction.h"
+
+#include "Engine/Dialogue/DialogueGraphAsset.h"
 
 #include <imgui.h>
 #include <imgui-node-editor/imgui_node_editor.h>
@@ -80,6 +83,11 @@ namespace sw::editor
 		, _selectedNodeId{ 0 }
 		, _listNode{}
 		, _listLink{}
+		, _previewNodeId{ 0 }
+		, _previewHoldSeconds{ 0.0f }
+		, _bGraphLayoutReady{ SW_FALSE }
+		, _bPreviewPlaying{ SW_FALSE }
+		, _reservedGraph{ 0 }
 	{
 	}
 
@@ -94,24 +102,41 @@ namespace sw::editor
 		if ( isDocumentLoaded() == false )
 			loadGraphData();
 
+		tickPreview( ImGui::GetIO().DeltaTime );
+
 		BLOCK( "Toolbar" )
 		{
 			if ( EditorChrome::beginToolbar( "##DialogueToolbar" ) )
 			{
 				if ( ImGui::Button( "+ Dialogue" ) )
+				{
 					addNode( DialogueNodeType::Dialogue, "NPC", "Enter dialogue text..." );
+					notifyDocumentEdited( "Add Dialogue Node" );
+				}
 				ImGui::SameLine();
 				if ( ImGui::Button( "+ Choice" ) )
+				{
 					addNode( DialogueNodeType::Choice, "", "Player options" );
+					notifyDocumentEdited( "Add Dialogue Node" );
+				}
 				ImGui::SameLine();
 				if ( ImGui::Button( "+ Branch" ) )
+				{
 					addNode( DialogueNodeType::Branch, "", "flag.visited == 1" );
+					notifyDocumentEdited( "Add Dialogue Node" );
+				}
 				ImGui::SameLine();
 				if ( ImGui::Button( "+ Action" ) )
+				{
 					addNode( DialogueNodeType::Action, "", "give_item:potion:1" );
+					notifyDocumentEdited( "Add Dialogue Node" );
+				}
 				ImGui::SameLine();
 				if ( ImGui::Button( "+ End" ) )
+				{
 					addNode( DialogueNodeType::End );
+					notifyDocumentEdited( "Add Dialogue Node" );
+				}
 				ImGui::SameLine();
 				EditorWidgets::drawToolbarSeparator();
 				if ( ImGui::Button( "Save" ) )
@@ -126,11 +151,12 @@ namespace sw::editor
 					_listLink.clear();
 					ensureDefaults();
 					_nodeGraph.requestContentFit();
-					markDocumentDirty();
+					notifyDocumentEdited( "Reset Dialogue Graph" );
 				}
 				ImGui::SameLine();
 				if ( ImGui::Button( "Zoom Fit" ) )
 					_nodeGraph.requestContentFit();
+				drawPreviewToolbar();
 
 				ImGui::SameLine();
 				ImGui::TextDisabled( "(Nodes: %zu, Links: %zu)", _listNode.size(), _listLink.size() );
@@ -296,7 +322,7 @@ namespace sw::editor
 							newLink._toPin	 = pinB;
 						}
 						_listLink.push_back( newLink );
-						markDocumentDirty();
+						notifyDocumentEdited( "Link Dialogue Nodes" );
 					}
 				}
 			}
@@ -316,7 +342,7 @@ namespace sw::editor
 													 [id]( const DialogueLink& l )
 					{ return l._id == id; } ),
 									 _listLink.end() );
-					markDocumentDirty();
+					notifyDocumentEdited( "Delete Dialogue Link" );
 				}
 			}
 			ed::NodeId nodeId;
@@ -335,7 +361,7 @@ namespace sw::editor
 									 _listLink.end() );
 					if ( _selectedNodeId == id )
 						_selectedNodeId = 0;
-					markDocumentDirty();
+					notifyDocumentEdited( "Delete Dialogue Node" );
 				}
 			}
 			ed::EndDelete();
@@ -348,14 +374,7 @@ namespace sw::editor
 			_selectedNodeId = static_cast<int32>( selectedNodes[0].Get() );
 
 		_nodeGraph.applyContentFitIfNeeded();
-
-		// 위치 캐시
-		for ( DialogueNode& node : _listNode )
-		{
-			const ImVec2 pos = ed::GetNodePosition( DialogueGraphPanelInternal::toNodeId( node._id ) );
-			node._x			 = pos.x;
-			node._y			 = pos.y;
-		}
+		cacheNodeLayout();
 
 		_nodeGraph.endCanvas();
 		EditorChrome::endSection();
@@ -391,11 +410,15 @@ namespace sw::editor
 					StringUtil::strncpy( speakerBuf, pSelectedNode->_speaker.c_str(), sizeof( speakerBuf ) - 1 );
 					if ( ImGui::InputText( "Speaker", speakerBuf, sizeof( speakerBuf ) ) )
 						pSelectedNode->_speaker = speakerBuf;
+					if ( ImGui::IsItemDeactivatedAfterEdit() )
+						notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
 
 					utf8 textBuf[512]{};
 					StringUtil::strncpy( textBuf, pSelectedNode->_text.c_str(), sizeof( textBuf ) - 1 );
 					if ( ImGui::InputTextMultiline( "Text", textBuf, sizeof( textBuf ), ImVec2( -1, 100 ) ) )
 						pSelectedNode->_text = textBuf;
+					if ( ImGui::IsItemDeactivatedAfterEdit() )
+						notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
 				}
 				else if ( pSelectedNode->_type == DialogueNodeType::Choice )
 				{
@@ -403,6 +426,8 @@ namespace sw::editor
 					StringUtil::strncpy( promptBuf, pSelectedNode->_text.c_str(), sizeof( promptBuf ) - 1 );
 					if ( ImGui::InputText( "Prompt", promptBuf, sizeof( promptBuf ) ) )
 						pSelectedNode->_text = promptBuf;
+					if ( ImGui::IsItemDeactivatedAfterEdit() )
+						notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
 
 					ImGui::Text( "Choices (%zu):", pSelectedNode->_listChoice.size() );
 					for ( size_t choiceIndex = 0; choiceIndex < pSelectedNode->_listChoice.size(); ++choiceIndex )
@@ -412,10 +437,13 @@ namespace sw::editor
 						StringUtil::strncpy( choiceBuf, pSelectedNode->_listChoice[choiceIndex].c_str(), sizeof( choiceBuf ) - 1 );
 						if ( ImGui::InputText( "##Choice", choiceBuf, sizeof( choiceBuf ) ) )
 							pSelectedNode->_listChoice[choiceIndex] = choiceBuf;
+						if ( ImGui::IsItemDeactivatedAfterEdit() )
+							notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
 						ImGui::SameLine();
 						if ( ImGui::Button( "X" ) )
 						{
 							pSelectedNode->_listChoice.erase( pSelectedNode->_listChoice.begin() + choiceIndex );
+							notifyDocumentEdited( "Edit Dialogue Node" );
 							ImGui::PopID();
 							break;
 						}
@@ -423,7 +451,10 @@ namespace sw::editor
 					}
 
 					if ( ImGui::Button( "+ Add Choice Option" ) )
+					{
 						pSelectedNode->_listChoice.push_back( "New choice option" );
+						notifyDocumentEdited( "Edit Dialogue Node" );
+					}
 				}
 				else if ( pSelectedNode->_type == DialogueNodeType::Branch )
 				{
@@ -431,6 +462,8 @@ namespace sw::editor
 					StringUtil::strncpy( condBuf, pSelectedNode->_condition.c_str(), sizeof( condBuf ) - 1 );
 					if ( ImGui::InputText( "Condition", condBuf, sizeof( condBuf ) ) )
 						pSelectedNode->_condition = condBuf;
+					if ( ImGui::IsItemDeactivatedAfterEdit() )
+						notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
 					ImGui::TextDisabled( "Ex: flag.boss_defeated == 1" );
 				}
 				else if ( pSelectedNode->_type == DialogueNodeType::Action )
@@ -439,6 +472,8 @@ namespace sw::editor
 					StringUtil::strncpy( cmdBuf, pSelectedNode->_actionCommand.c_str(), sizeof( cmdBuf ) - 1 );
 					if ( ImGui::InputText( "Command", cmdBuf, sizeof( cmdBuf ) ) )
 						pSelectedNode->_actionCommand = cmdBuf;
+					if ( ImGui::IsItemDeactivatedAfterEdit() )
+						notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
 					ImGui::TextDisabled( "Ex: give_item:potion:3" );
 				}
 			}
@@ -511,45 +546,168 @@ namespace sw::editor
 		if ( _listNode.empty() )
 			ensureDefaults();
 
+		_bGraphLayoutReady = SW_FALSE;
+		_previewNodeId	   = 0;
+		_bPreviewPlaying   = SW_FALSE;
 		markDocumentLoaded();
 		_nodeGraph.requestContentFit();
 	}
 
 	void DialogueGraphPanel::saveGraphData()
 	{
-		EditorDialogueGraphData previous;
-		const bool				bHadFile   = EditorToolAssetCommands::loadDialogueGraph( previous, getLoadedAssetPath() );
-		const string			beforeJson = bHadFile ? EditorToolAssetCommands::serializeDialogueGraph( previous ) : string{};
-
-		EditorDialogueGraphData data;
-		data._listNode = _listNode;
-		data._listLink = _listLink;
+		EditorDialogueGraphData data = captureGraphData();
 		EditorToolAssetCommands::saveDialogueGraph( data, getLoadedAssetPath() );
-		const string afterJson = EditorToolAssetCommands::serializeDialogueGraph( data );
-		const string path	   = getLoadedAssetPath();
-		EditorTransaction::recordDocumentText(
-			beforeJson, afterJson, "Save Dialogue Graph",
-			SW_DELEGATE_LAMBDA( EditorDocumentRestoreDelegate, [this, path]( string_view snapshot )
-		{
-			EditorDialogueGraphData restored;
-			if ( snapshot.empty() == false )
-				EditorToolAssetCommands::parseDialogueGraph( snapshot, restored );
-			EditorToolAssetCommands::saveDialogueGraph( restored, path );
-			if ( getLoadedAssetPath() != path )
-				return;
-			_listNode = std::move( restored._listNode );
-			_listLink = std::move( restored._listLink );
-			if ( _listNode.empty() )
-				ensureDefaults();
-			_nodeGraph.requestContentFit();
-		} ) );
 		clearDocumentDirty();
+		syncDocumentUndoBaseline();
 	}
 
 	bool DialogueGraphPanel::saveDocument()
 	{
 		saveGraphData();
 		return true;
+	}
+
+	string DialogueGraphPanel::captureDocumentText() const
+	{
+		return EditorToolAssetCommands::serializeDialogueGraph( captureGraphData() );
+	}
+
+	void DialogueGraphPanel::applyDocumentText( string_view text )
+	{
+		EditorDialogueGraphData restored;
+		if ( text.empty() == false )
+			EditorToolAssetCommands::parseDialogueGraph( text, restored );
+		_listNode = std::move( restored._listNode );
+		_listLink = std::move( restored._listLink );
+		if ( _listNode.empty() )
+			ensureDefaults();
+		_bGraphLayoutReady = SW_FALSE;
+		_nodeGraph.requestContentFit();
+	}
+
+	EditorDialogueGraphData DialogueGraphPanel::captureGraphData() const
+	{
+		EditorDialogueGraphData data;
+		data._listNode = _listNode;
+		data._listLink = _listLink;
+		return data;
+	}
+
+	void DialogueGraphPanel::cacheNodeLayout()
+	{
+		bool bMoved{ false };
+		for ( DialogueNode& node : _listNode )
+		{
+			const ImVec2 pos	  = ed::GetNodePosition( DialogueGraphPanelInternal::toNodeId( node._id ) );
+			const bool	 bChanged = pos.x != node._x || pos.y != node._y;
+			if ( EditorSessionPolicy::shouldMarkDocumentDirtyOnNodeMove( _bGraphLayoutReady == SW_TRUE, bChanged ) )
+				bMoved = true;
+			node._x = pos.x;
+			node._y = pos.y;
+		}
+		if ( bMoved )
+			notifyDocumentEdited( "Move Dialogue Nodes", "dialogue-graph-layout" );
+		_bGraphLayoutReady = SW_TRUE;
+	}
+
+	void DialogueGraphPanel::drawPreviewToolbar()
+	{
+		ImGui::SameLine();
+		EditorWidgets::drawToolbarSeparator();
+		ImGui::SameLine();
+		if ( ImGui::Button( "Play Preview" ) )
+		{
+			DialogueGraphAsset asset;
+			asset.parseJson( captureDocumentText() );
+			const DialogueAssetNode* pStart = asset.findStartNode();
+			_previewNodeId					= ( pStart != nullptr ) ? pStart->_id : 0;
+			_bPreviewPlaying				= SW_TRUE;
+			_previewHoldSeconds				= 0.0f;
+		}
+		ImGui::SameLine();
+		if ( ImGui::Button( "Advance Preview" ) )
+			previewAdvance();
+		ImGui::SameLine();
+		if ( ImGui::Button( "Stop Preview" ) )
+		{
+			_bPreviewPlaying = SW_FALSE;
+			_previewNodeId	 = 0;
+		}
+		if ( _previewNodeId > 0 )
+		{
+			ImGui::SameLine();
+			ImGui::TextDisabled( "Preview node #%d", _previewNodeId );
+			DialogueGraphAsset asset;
+			asset.parseJson( captureDocumentText() );
+			const DialogueAssetNode* pNode = asset.findNode( _previewNodeId );
+			if ( pNode != nullptr && pNode->_type == DialogueAssetNodeType::Choice )
+			{
+				for ( int32 choiceIndex = 0; choiceIndex < static_cast<int32>( pNode->_listChoice.size() ); ++choiceIndex )
+				{
+					ImGui::SameLine();
+					utf8 arrLabel[64];
+					formatstring( arrLabel, sizeof( arrLabel ), "Choice %#", choiceIndex );
+					if ( ImGui::SmallButton( arrLabel ) )
+						previewAdvance( DialogueGraphPanelInternal::kPinChoiceBase + choiceIndex );
+				}
+			}
+			if ( pNode != nullptr && pNode->_type == DialogueAssetNodeType::Branch )
+			{
+				ImGui::SameLine();
+				if ( ImGui::SmallButton( "True" ) )
+					previewAdvance( DialogueGraphPanelInternal::kPinTrueOffset );
+				ImGui::SameLine();
+				if ( ImGui::SmallButton( "False" ) )
+					previewAdvance( DialogueGraphPanelInternal::kPinFalseOffset );
+			}
+		}
+	}
+
+	void DialogueGraphPanel::tickPreview( float32 deltaSeconds )
+	{
+		if ( _bPreviewPlaying == SW_FALSE || _previewNodeId <= 0 )
+			return;
+		DialogueGraphAsset asset;
+		asset.parseJson( captureDocumentText() );
+		const DialogueAssetNode* pNode = asset.findNode( _previewNodeId );
+		if ( pNode == nullptr )
+		{
+			_bPreviewPlaying = SW_FALSE;
+			return;
+		}
+		if ( pNode->_type == DialogueAssetNodeType::Choice || pNode->_type == DialogueAssetNodeType::Branch )
+			return;
+		_previewHoldSeconds += deltaSeconds;
+		if ( _previewHoldSeconds < 0.9f )
+			return;
+		_previewHoldSeconds = 0.0f;
+		previewAdvance();
+	}
+
+	void DialogueGraphPanel::previewAdvance( int32 pinOffset )
+	{
+		DialogueGraphAsset asset;
+		asset.parseJson( captureDocumentText() );
+		if ( _previewNodeId <= 0 )
+		{
+			const DialogueAssetNode* pStart = asset.findStartNode();
+			_previewNodeId					= ( pStart != nullptr ) ? pStart->_id : 0;
+			return;
+		}
+		int32 nextId{ 0 };
+		if ( pinOffset == DialogueGraphPanelInternal::kPinOutputOffset )
+			nextId = asset.findDefaultNextNodeId( _previewNodeId );
+		else
+			nextId = asset.findLinkedNodeId( _previewNodeId, pinOffset );
+		if ( nextId <= 0 )
+		{
+			_bPreviewPlaying = SW_FALSE;
+			return;
+		}
+		_previewNodeId				   = nextId;
+		const DialogueAssetNode* pNext = asset.findNode( nextId );
+		if ( pNext != nullptr && pNext->_type == DialogueAssetNodeType::End )
+			_bPreviewPlaying = SW_FALSE;
 	}
 
 	int32 DialogueGraphPanel::nextNodeId() const
@@ -577,6 +735,5 @@ namespace sw::editor
 
 		_listNode.push_back( node );
 		_selectedNodeId = node._id;
-		markDocumentDirty();
 	}
 } // namespace sw::editor

@@ -69,6 +69,16 @@ namespace sw
 		_currentNodeName.clear();
 	}
 
+	bool AnimationGraphPlayer::advance()
+	{
+		if ( _currentNodeId <= 0 )
+			return play( {}, false );
+		const int32 nextId = _graph.findFirstOutgoingNodeId( _currentNodeId );
+		if ( nextId <= 0 )
+			return false;
+		return playNode( nextId, false, true );
+	}
+
 	void AnimationGraphPlayer::update( float32 deltaSeconds )
 	{
 		_player.update( deltaSeconds );

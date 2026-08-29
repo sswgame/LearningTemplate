@@ -104,9 +104,7 @@ namespace sw::editor
 
 			ImGui::Separator();
 			if ( ImGui::MenuItem( "Exit", "Alt+F4" ) )
-			{
-				// App 종료 요청 등
-			}
+				EditorAssetCommands::requestExit();
 			ImGui::EndMenu();
 		}
 
@@ -371,11 +369,13 @@ namespace sw::editor
 		if ( ImGui::IsPopupOpen( "##UnsavedSceneAction" ) == false )
 			ImGui::OpenPopup( "##UnsavedSceneAction" );
 
-		const utf8* pMessage = "Scene has unsaved changes. Continue?";
+		const utf8* pMessage = "You have unsaved changes. Continue?";
 		if ( pContext->getWorkspace().getPendingSceneAction() == EditorPendingSceneAction::New )
 			pMessage = "Scene has unsaved changes. Create a new scene anyway?";
 		else if ( pContext->getWorkspace().getPendingSceneAction() == EditorPendingSceneAction::Load )
 			pMessage = "Scene has unsaved changes. Open another scene anyway?";
+		else if ( pContext->getWorkspace().getPendingSceneAction() == EditorPendingSceneAction::Quit )
+			pMessage = "You have unsaved changes. Exit anyway?";
 
 		const EditorUnsavedChoice choice = EditorWidgets::drawUnsavedChangesModal( "##UnsavedSceneAction", pMessage );
 		if ( choice != EditorUnsavedChoice::None )

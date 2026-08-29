@@ -58,7 +58,11 @@ namespace sw
 
 		/** @brief Resource 상대 또는 절대 경로에서 타일맵 XML을 읽습니다. */
 		SW_API bool load( string_view path );
+		/** @brief XML 본문에서 타일맵을 읽습니다. */
+		SW_API bool loadFromXml( string_view xml );
 		/** @brief Resource 상대 또는 절대 경로로 타일맵 XML을 씁니다. */
 		SW_API bool save( string_view path ) const;
+		/** @brief 타일맵 XML 본문을 만듭니다. */
+		SW_API string toXml() const;
 	};
 } // namespace sw

@@ -491,6 +491,105 @@ namespace sw::editor
 		return xmlData.save( assetRelativePath );
 	}
 
+	string EditorToolAssetCommands::serializeTileMap( const EditorTileMapData& data )
+	{
+		TileMapXmlData xmlData{};
+		xmlData._name			 = data._name;
+		xmlData._scenePath		 = data._scenePath;
+		xmlData._role			 = data._role;
+		xmlData._width			 = data._width;
+		xmlData._height			 = data._height;
+		xmlData._spawnX			 = data._spawnX;
+		xmlData._spawnY			 = data._spawnY;
+		xmlData._walkableList	 = data._listWalkable;
+		xmlData._encounterList	 = data._listEncounter;
+		xmlData._passThroughList = data._listPassThrough;
+		xmlData._visualList.reserve( data._listVisual.size() );
+		for ( const EditorTileVisual& src : data._listVisual )
+		{
+			TileMapXmlData::Visual dst{};
+			dst._height	 = src._height;
+			dst._atlasId = src._atlasId;
+			dst._tintR	 = src._tintR;
+			dst._tintG	 = src._tintG;
+			dst._tintB	 = src._tintB;
+			xmlData._visualList.push_back( dst );
+		}
+		xmlData._warpList.reserve( data._listWarp.size() );
+		for ( const EditorTileWarp& src : data._listWarp )
+		{
+			TileMapXmlData::Warp dst{};
+			dst._tileX		 = src._tileX;
+			dst._tileY		 = src._tileY;
+			dst._targetMap	 = src._targetMap;
+			dst._targetTileX = src._targetTileX;
+			dst._targetTileY = src._targetTileY;
+			dst._pairId		 = src._pairId;
+			xmlData._warpList.push_back( dst );
+		}
+		xmlData._encounterEntryList.reserve( data._listEncounterEntry.size() );
+		for ( const EditorTileEncounterEntry& src : data._listEncounterEntry )
+		{
+			TileMapXmlData::Encounter dst{};
+			dst._speciesId = src._speciesId;
+			dst._weight	   = src._weight;
+			xmlData._encounterEntryList.push_back( dst );
+		}
+		return xmlData.toXml();
+	}
+
+	bool EditorToolAssetCommands::parseTileMap( string_view xml, EditorTileMapData& outData )
+	{
+		TileMapXmlData xmlData{};
+		if ( xmlData.loadFromXml( xml ) == false )
+			return false;
+		outData._name			 = xmlData._name;
+		outData._scenePath		 = xmlData._scenePath;
+		outData._role			 = xmlData._role;
+		outData._width			 = xmlData._width;
+		outData._height			 = xmlData._height;
+		outData._spawnX			 = xmlData._spawnX;
+		outData._spawnY			 = xmlData._spawnY;
+		outData._listWalkable	 = std::move( xmlData._walkableList );
+		outData._listEncounter	 = std::move( xmlData._encounterList );
+		outData._listPassThrough = std::move( xmlData._passThroughList );
+		outData._listVisual.clear();
+		outData._listVisual.reserve( xmlData._visualList.size() );
+		for ( const TileMapXmlData::Visual& src : xmlData._visualList )
+		{
+			EditorTileVisual dst{};
+			dst._height	 = src._height;
+			dst._atlasId = src._atlasId;
+			dst._tintR	 = src._tintR;
+			dst._tintG	 = src._tintG;
+			dst._tintB	 = src._tintB;
+			outData._listVisual.push_back( dst );
+		}
+		outData._listWarp.clear();
+		outData._listWarp.reserve( xmlData._warpList.size() );
+		for ( const TileMapXmlData::Warp& src : xmlData._warpList )
+		{
+			EditorTileWarp dst{};
+			dst._tileX		 = src._tileX;
+			dst._tileY		 = src._tileY;
+			dst._targetMap	 = src._targetMap;
+			dst._targetTileX = src._targetTileX;
+			dst._targetTileY = src._targetTileY;
+			dst._pairId		 = src._pairId;
+			outData._listWarp.push_back( std::move( dst ) );
+		}
+		outData._listEncounterEntry.clear();
+		outData._listEncounterEntry.reserve( xmlData._encounterEntryList.size() );
+		for ( const TileMapXmlData::Encounter& src : xmlData._encounterEntryList )
+		{
+			EditorTileEncounterEntry dst{};
+			dst._speciesId = src._speciesId;
+			dst._weight	   = src._weight;
+			outData._listEncounterEntry.push_back( std::move( dst ) );
+		}
+		return true;
+	}
+
 	bool EditorToolAssetCommands::loadSpriteClip( EditorSpriteClipData& outData, string& outStatus, string_view path )
 	{
 		outData._listFrame.clear();

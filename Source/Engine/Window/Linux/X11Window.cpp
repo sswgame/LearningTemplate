@@ -183,7 +183,8 @@ namespace sw
 				{
 					if ( _bRecreating == false )
 					{
-						_bShouldClose = true;
+						if ( tryBeginClose() == false )
+							continue;
 						return false;
 					}
 				}

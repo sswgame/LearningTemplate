@@ -40,8 +40,8 @@ namespace sw::editor
 		/** @brief 문서 Undo/Redo를 스택에 올립니다. */
 		static void push( Delegate<void()> undo, Delegate<void()> redo, string_view label,
 						  string_view coalesceKey = {} );
-		/** @brief 텍스트 스냅샷이 달라진 문서 저장을 Undo/Redo에 등록합니다. */
+		/** @brief 텍스트 스냅샷이 달라진 문서를 Undo/Redo에 등록합니다. */
 		static void recordDocumentText( string_view beforeText, string_view afterText, string_view label,
-										EditorDocumentRestoreDelegate restore );
+										EditorDocumentRestoreDelegate restore, string_view coalesceKey = {} );
 	};
 } // namespace sw::editor

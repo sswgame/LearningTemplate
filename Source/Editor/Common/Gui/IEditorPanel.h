@@ -45,6 +45,10 @@ namespace sw::editor
 		virtual bool isToolPanel() const { return false; }
 		/** @brief 포커스된 더티 문서를 저장했으면 true입니다. */
 		virtual bool trySaveDirtyDocument() { return false; }
+		/** @brief 도구 문서가 저장되지 않았으면 true입니다. */
+		virtual bool isDocumentDirty() const { return false; }
+		/** @brief 저장하지 않고 dirty를 지웁니다. */
+		virtual void discardDirtyDocument() {}
 		/** @brief 마지막 draw에서 이 패널 윈도우가 포커스되었으면 true입니다. */
 		bool isWindowFocused() const { return _bWindowFocused; }
 

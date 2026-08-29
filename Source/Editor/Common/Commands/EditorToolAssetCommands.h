@@ -193,6 +193,10 @@ namespace sw::editor
 		static bool loadTileMap( string_view assetRelativePath, EditorTileMapData& outData, string& outStatus );
 		/** @brief Resource 상대 경로로 TileMap XML을 씁니다. */
 		static bool saveTileMap( string_view assetRelativePath, const EditorTileMapData& data );
+		/** @brief TileMap을 XML 문자열로 직렬화합니다. */
+		static string serializeTileMap( const EditorTileMapData& data );
+		/** @brief XML 문자열을 TileMap으로 파싱합니다. */
+		static bool parseTileMap( string_view xml, EditorTileMapData& outData );
 		/** @brief SpriteClip JSON을 읽습니다. path가 비면 에디터 설정 기본 파일을 씁니다. */
 		static bool loadSpriteClip( EditorSpriteClipData& outData, string& outStatus, string_view path = {} );
 		/** @brief SpriteClip JSON을 씁니다. */

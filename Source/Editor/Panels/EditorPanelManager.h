@@ -69,6 +69,12 @@ namespace sw::editor
 		void							shutdownAllPanels( IRHIDevice* pRhiDevice );
 		/** @brief 포커스된 도구 문서가 dirty이면 저장하고 true입니다. */
 		bool saveFocusedDirtyDocument();
+		/** @brief 모든 더티 도구 문서를 저장합니다. 하나라도 실패하면 false입니다. */
+		bool saveAllDirtyDocuments();
+		/** @brief 열린/닫힌 패널을 포함해 더티 문서 개수입니다. */
+		uint32 countDirtyDocuments() const;
+		/** @brief 모든 더티 도구 문서를 저장하지 않고 버립니다. */
+		void discardAllDirtyDocuments();
 
 	private:
 		vector<EditorPanelEntry> _listPanel;

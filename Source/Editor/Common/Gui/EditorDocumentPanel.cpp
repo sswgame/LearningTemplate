@@ -5,6 +5,7 @@
 #include "Editor/Common/EditorSessionPolicy.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
 #include <imgui.h>
@@ -16,6 +17,8 @@ namespace sw::editor
 		, _kind{ kind }
 		, _loadedAssetPath{}
 		, _pendingFocusPath{}
+		, _documentUndoBaseline{}
+		, _lastSavedDocumentText{}
 		, _bLoaded{ SW_FALSE }
 		, _bDocumentDirty{ SW_FALSE }
 		, _bConfirmSwitch{ SW_FALSE }
@@ -81,6 +84,7 @@ namespace sw::editor
 	{
 		_bLoaded		= SW_TRUE;
 		_bDocumentDirty = SW_FALSE;
+		syncDocumentUndoBaseline();
 	}
 
 	bool EditorDocumentPanel::isDocumentLoaded() const
@@ -96,6 +100,43 @@ namespace sw::editor
 	void EditorDocumentPanel::clearDocumentDirty()
 	{
 		_bDocumentDirty = SW_FALSE;
+	}
+
+	void EditorDocumentPanel::discardDirtyDocument()
+	{
+		clearDocumentDirty();
+	}
+
+	void EditorDocumentPanel::syncDocumentUndoBaseline()
+	{
+		_documentUndoBaseline  = captureDocumentText();
+		_lastSavedDocumentText = _documentUndoBaseline;
+	}
+
+	void EditorDocumentPanel::restoreDocumentFromUndo( string_view text )
+	{
+		applyDocumentText( text );
+		_documentUndoBaseline = string{ text };
+		if ( text == _lastSavedDocumentText )
+			clearDocumentDirty();
+		else
+			markDocumentDirty();
+	}
+
+	void EditorDocumentPanel::notifyDocumentEdited( string_view label, string_view coalesceKey )
+	{
+		const string after = captureDocumentText();
+		if ( after == _documentUndoBaseline )
+			return;
+		EditorTransaction::recordDocumentText(
+			_documentUndoBaseline, after, label,
+			SW_DELEGATE_LAMBDA( EditorDocumentRestoreDelegate, [this]( string_view snapshot )
+		{
+			restoreDocumentFromUndo( snapshot );
+		} ),
+			coalesceKey );
+		_documentUndoBaseline = after;
+		markDocumentDirty();
 	}
 
 	bool EditorDocumentPanel::trySaveDirtyDocument()

@@ -3,13 +3,13 @@
 #include "Editor/Panels/SpriteClipPanel.h"
 
 #include "Core/String/StringUtil.h"
+#include "Core/String/formatString.h"
 
 #include "Editor/Common/Commands/EditorToolAssetCommands.h"
 #include "Editor/Common/Config/EditorConfig.h"
 #include "Editor/Common/Config/EditorData.h"
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Common/Workspace/EditorTransaction.h"
 
 #include "RuntimeAPI/Service/EditorService.h"
 
@@ -51,7 +51,7 @@ namespace sw::editor
 
 		ImGui::InputText( "Atlas", _arrAtlasPath, sizeof( _arrAtlasPath ) );
 		if ( ImGui::IsItemDeactivatedAfterEdit() )
-			markDocumentDirty();
+			notifyDocumentEdited( "Edit Sprite Clip", "sprite-clip" );
 		if ( ImGui::Button( "Load" ) )
 			loadJson();
 		ImGui::SameLine();
@@ -72,7 +72,7 @@ namespace sw::editor
 		{
 			_listFrame.push_back( Frame{} );
 			_selectedFrame = static_cast<int32>( _listFrame.size() ) - 1;
-			markDocumentDirty();
+			notifyDocumentEdited( "Add Sprite Frame" );
 		}
 		ImGui::SameLine();
 		if ( ImGui::Button( "Remove Frame" ) && _selectedFrame >= 0 &&
@@ -81,7 +81,7 @@ namespace sw::editor
 			_listFrame.erase( _listFrame.begin() + _selectedFrame );
 			if ( _selectedFrame >= static_cast<int32>( _listFrame.size() ) )
 				_selectedFrame = static_cast<int32>( _listFrame.size() ) - 1;
-			markDocumentDirty();
+			notifyDocumentEdited( "Remove Sprite Frame" );
 		}
 
 		for ( int32 frameIndex = 0; frameIndex < static_cast<int32>( _listFrame.size() ); ++frameIndex )
@@ -99,19 +99,19 @@ namespace sw::editor
 			Frame& f = _listFrame[static_cast<size_t>( _selectedFrame )];
 			ImGui::DragFloat( "u", &f._u, 0.01f );
 			if ( ImGui::IsItemDeactivatedAfterEdit() )
-				markDocumentDirty();
+				notifyDocumentEdited( "Edit Sprite Frame", "sprite-clip-frame" );
 			ImGui::DragFloat( "v", &f._v, 0.01f );
 			if ( ImGui::IsItemDeactivatedAfterEdit() )
-				markDocumentDirty();
+				notifyDocumentEdited( "Edit Sprite Frame", "sprite-clip-frame" );
 			ImGui::DragFloat( "w", &f._w, 0.01f );
 			if ( ImGui::IsItemDeactivatedAfterEdit() )
-				markDocumentDirty();
+				notifyDocumentEdited( "Edit Sprite Frame", "sprite-clip-frame" );
 			ImGui::DragFloat( "h", &f._h, 0.01f );
 			if ( ImGui::IsItemDeactivatedAfterEdit() )
-				markDocumentDirty();
+				notifyDocumentEdited( "Edit Sprite Frame", "sprite-clip-frame" );
 			ImGui::InputInt( "durationMs", &f._durationMs );
 			if ( ImGui::IsItemDeactivatedAfterEdit() )
-				markDocumentDirty();
+				notifyDocumentEdited( "Edit Sprite Frame", "sprite-clip-frame" );
 		}
 
 		ImGui::Separator();
@@ -120,6 +120,7 @@ namespace sw::editor
 		{
 			_listKey.push_back( TransformKey{} );
 			_selectedKey = static_cast<int32>( _listKey.size() ) - 1;
+			notifyDocumentEdited( "Add Sprite Key" );
 		}
 		ImGui::SameLine();
 		if ( ImGui::Button( "Remove Key" ) && _selectedKey >= 0 &&
@@ -128,6 +129,7 @@ namespace sw::editor
 			_listKey.erase( _listKey.begin() + _selectedKey );
 			if ( _selectedKey >= static_cast<int32>( _listKey.size() ) )
 				_selectedKey = static_cast<int32>( _listKey.size() ) - 1;
+			notifyDocumentEdited( "Remove Sprite Key" );
 		}
 
 		for ( int32 keyIndex = 0; keyIndex < static_cast<int32>( _listKey.size() ); ++keyIndex )
@@ -144,9 +146,17 @@ namespace sw::editor
 		{
 			TransformKey& k = _listKey[static_cast<size_t>( _selectedKey )];
 			ImGui::DragFloat( "time", &k._time, 0.01f );
+			if ( ImGui::IsItemDeactivatedAfterEdit() )
+				notifyDocumentEdited( "Edit Sprite Key", "sprite-clip-key" );
 			ImGui::DragFloat( "x", &k._x, 0.1f );
+			if ( ImGui::IsItemDeactivatedAfterEdit() )
+				notifyDocumentEdited( "Edit Sprite Key", "sprite-clip-key" );
 			ImGui::DragFloat( "y", &k._y, 0.1f );
+			if ( ImGui::IsItemDeactivatedAfterEdit() )
+				notifyDocumentEdited( "Edit Sprite Key", "sprite-clip-key" );
 			ImGui::DragFloat( "angleDeg", &k._angleDeg, 0.5f );
+			if ( ImGui::IsItemDeactivatedAfterEdit() )
+				notifyDocumentEdited( "Edit Sprite Key", "sprite-clip-key" );
 		}
 
 		EditorWidgets::drawPanelStatus( _status.c_str() );
@@ -164,45 +174,46 @@ namespace sw::editor
 		_listKey	   = std::move( data._listKey );
 		_selectedFrame = _listFrame.empty() ? -1 : 0;
 		_selectedKey   = _listKey.empty() ? -1 : 0;
+		syncDocumentUndoBaseline();
 	}
 
 	void SpriteClipPanel::saveJson()
 	{
-		EditorSpriteClipData previous;
-		string				 previousStatus;
-		const bool			 bHadFile	= EditorToolAssetCommands::loadSpriteClip( previous, previousStatus, getLoadedAssetPath() );
-		const string		 beforeJson = bHadFile ? EditorToolAssetCommands::serializeSpriteClip( previous ) : string{};
-
-		EditorSpriteClipData data;
-		data._atlasPath = _arrAtlasPath;
-		data._listFrame = _listFrame;
-		data._listKey	= _listKey;
-		EditorToolAssetCommands::saveSpriteClip( data, getLoadedAssetPath() );
-		const string afterJson = EditorToolAssetCommands::serializeSpriteClip( data );
-		const string path	   = getLoadedAssetPath();
-		EditorTransaction::recordDocumentText(
-			beforeJson, afterJson, "Save Sprite Clip",
-			SW_DELEGATE_LAMBDA( EditorDocumentRestoreDelegate, [this, path]( string_view snapshot )
-		{
-			EditorSpriteClipData restored;
-			if ( snapshot.empty() == false )
-				EditorToolAssetCommands::parseSpriteClip( snapshot, restored );
-			EditorToolAssetCommands::saveSpriteClip( restored, path );
-			if ( getLoadedAssetPath() != path )
-				return;
-			if ( restored._atlasPath.empty() == false )
-				StringUtil::strncpy( _arrAtlasPath, restored._atlasPath.c_str(), sizeof( _arrAtlasPath ) - 1 );
-			_listFrame	   = std::move( restored._listFrame );
-			_listKey	   = std::move( restored._listKey );
-			_selectedFrame = _listFrame.empty() ? -1 : 0;
-			_selectedKey   = _listKey.empty() ? -1 : 0;
-		} ) );
+		EditorToolAssetCommands::saveSpriteClip( captureClipData(), getLoadedAssetPath() );
 		clearDocumentDirty();
+		syncDocumentUndoBaseline();
 	}
 
 	bool SpriteClipPanel::saveDocument()
 	{
 		saveJson();
 		return true;
+	}
+
+	EditorSpriteClipData SpriteClipPanel::captureClipData() const
+	{
+		EditorSpriteClipData data;
+		data._atlasPath = _arrAtlasPath;
+		data._listFrame = _listFrame;
+		data._listKey	= _listKey;
+		return data;
+	}
+
+	string SpriteClipPanel::captureDocumentText() const
+	{
+		return EditorToolAssetCommands::serializeSpriteClip( captureClipData() );
+	}
+
+	void SpriteClipPanel::applyDocumentText( string_view text )
+	{
+		EditorSpriteClipData restored;
+		if ( text.empty() == false )
+			EditorToolAssetCommands::parseSpriteClip( text, restored );
+		if ( restored._atlasPath.empty() == false )
+			StringUtil::strncpy( _arrAtlasPath, restored._atlasPath.c_str(), sizeof( _arrAtlasPath ) - 1 );
+		_listFrame	   = std::move( restored._listFrame );
+		_listKey	   = std::move( restored._listKey );
+		_selectedFrame = _listFrame.empty() ? -1 : 0;
+		_selectedKey   = _listKey.empty() ? -1 : 0;
 	}
 } // namespace sw::editor

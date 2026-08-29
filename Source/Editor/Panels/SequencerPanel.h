@@ -10,6 +10,13 @@
 
 #include "Editor/Common/Gui/EditorDocumentPanel.h"
 
+#include "Engine/Sequencer/SequenceAsset.h"
+
+namespace sw
+{
+	class SequencePlayer;
+} // namespace sw
+
 namespace sw::editor
 {
 	struct ClipSequence;
@@ -22,23 +29,26 @@ namespace sw::editor
 		SequencerPanel();
 		~SequencerPanel() override;
 
-		// ------------------------------------------------------------------------------
-		// 1) IEditorPanel — 제목/그리기
-		// ------------------------------------------------------------------------------
-		/** @brief 시퀀서 UI를 그립니다. */
 		void drawContent() override;
 		bool saveDocument() override;
 
 	private:
-		void loadFromFocusedPath();
-		void saveToLoadedPath();
+		string		  captureDocumentText() const override;
+		void		  applyDocumentText( string_view text ) override;
+		void		  loadFromFocusedPath();
+		void		  saveToLoadedPath();
+		void		  applyAsset( const SequenceAsset& asset );
+		SequenceAsset captureAsset() const;
+		void		  syncPreviewPlayer();
+		void		  tickPreview( float32 deltaSeconds );
 
 	private:
-		bool					 _bExpanded;
-		int32					 _currentFrame;
-		int32					 _selected;
-		int32					 _firstFrame;
-		utf8					 _arrCinematicNote[512];
-		unique_ptr<ClipSequence> _sequence;
+		bool						   _bExpanded;
+		int32						   _currentFrame;
+		int32						   _selected;
+		int32						   _firstFrame;
+		utf8						   _arrCinematicNote[512];
+		unique_ptr<ClipSequence>	   _sequence;
+		unique_ptr<sw::SequencePlayer> _previewPlayer;
 	};
 } // namespace sw::editor

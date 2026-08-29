@@ -46,6 +46,10 @@ namespace sw
 		TaskHandle loadFromFileAsync( string_view assetRelativePath );
 		/** @brief 파일로 저장합니다. */
 		bool saveToFile( string_view assetRelativePath ) const;
+		/** @brief 현재 디스크립터를 XML 문자열로 만듭니다. */
+		string saveToString() const;
+		/** @brief XML 텍스트에서 머티리얼을 로드합니다. */
+		bool loadFromXml( string_view xmlText );
 		/** @brief 컴파일 결과로 셰이더/리플렉션을 다시 붙입니다. */
 		void reloadShader( IRHIDevice* pRhi, const ShaderCompileResult& result );
 		/** @brief 셰이더 리플렉션에 맞춰 프로퍼티 목록을 맞춥니다. */
@@ -136,8 +140,6 @@ namespace sw
 			Material* _pMaterial{ nullptr };
 		};
 
-		/** @brief XML 텍스트에서 머티리얼을 로드합니다. */
-		bool loadFromXml( string_view xmlText );
 		/** @brief Desc를 런타임 상태에 적용합니다. */
 		void applyDescToRuntime();
 		/** @brief 런타임 프로퍼티를 Desc에 다시 씁니다 (저장용). */

@@ -19,11 +19,27 @@ namespace sw
 		: _title{}
 		, _customHandler{}
 		, _onResize{}
+		, _closeQuery{}
 		, _width{ 1280 }
 		, _height{ 720 }
 		, _bShouldClose{ false }
 		, _arrReserved{}
 	{
+	}
+
+	void IWindow::requestClose()
+	{
+		_bShouldClose = true;
+	}
+
+	bool IWindow::tryBeginClose()
+	{
+		if ( _bShouldClose )
+			return true;
+		if ( _closeQuery.isBound() && _closeQuery() == false )
+			return false;
+		_bShouldClose = true;
+		return true;
 	}
 
 	IWindow::~IWindow() = default;
