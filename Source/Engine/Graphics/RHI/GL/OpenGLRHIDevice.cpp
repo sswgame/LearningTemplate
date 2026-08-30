@@ -94,13 +94,14 @@ namespace sw
 					s_glXSwapIntervalEXT( pDpy, glXGetCurrentDrawable(), vsync ? 1 : 0 );
 				}
 #elif defined( SW_PLATFORM_MACOS )
-				(void)hDC;
-				if ( hRC )
+				(void)pHdc;
+				if ( pHrc != nullptr )
 				{
-					id	  context  = static_cast<id>( hRC );
-					GLint interval = vsync ? 1 : 0;
+					id				context								  = static_cast<id>( pHrc );
+					GLint			interval							  = vsync ? 1 : 0;
+					constexpr GLint kNsOpenGlContextParameterSwapInterval = 222;
 					( (void ( * )( id, SEL, GLint*, GLint ))objc_msgSend )(
-						context, sel_registerName( "setValues:forParameter:" ), &interval, 222 /* NSOpenGLCPSwapInterval */ );
+						context, sel_registerName( "setValues:forParameter:" ), &interval, kNsOpenGlContextParameterSwapInterval );
 				}
 #endif
 			}
