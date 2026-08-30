@@ -18,7 +18,7 @@ namespace sw
 {
 	SW_LOG_CALLER( "RHI" );
 
-	SW_GLOBAL_VARIABLE_ENUM( gv_rhiBackend, RHIBackend, RHIBackend::Vulkan, "Current RHI Backend" );
+	SW_GLOBAL_VARIABLE_ENUM( gv_rhiBackend, RHIBackend, RHIBackend::DirectX11, "Current RHI Backend" );
 	SW_GLOBAL_VARIABLE_ENUM( gv_rhiCommandListMode, RHICommandListMode, RHICommandListMode::Deferred, "RHI 커맨드 리스트 모드: 0=Deferred, 1=Immediate" );
 
 	RHIPipelineStateDesc::RHIPipelineStateDesc() noexcept

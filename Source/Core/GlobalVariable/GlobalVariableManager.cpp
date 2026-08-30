@@ -125,6 +125,68 @@ namespace sw
 	}
 
 	/**
+	 * @brief 전역 변수의 원시 메모리(*_pData)에 Boolean 값을 설정합니다.
+	 */
+	bool GlobalVariableInfo::setValueAsBool( bool val )
+	{
+		if ( _pData == nullptr || _type != GlobalVariableType::Boolean )
+			return false;
+
+		*static_cast<bool*>( _pData ) = val;
+		if ( _onValueChanged.isBound() )
+			_onValueChanged( this );
+		return true;
+	}
+
+	/**
+	 * @brief 전역 변수의 원시 메모리(*_pData)에 Int32 또는 Enum 값을 설정합니다.
+	 */
+	bool GlobalVariableInfo::setValueAsInt( int32 val )
+	{
+		if ( _pData == nullptr )
+			return false;
+
+		if ( _type == GlobalVariableType::Int32 )
+			*static_cast<int32*>( _pData ) = val;
+		else if ( _type == GlobalVariableType::Enum )
+			GlobalVariableInternal::writeEnumValue( _pData, _typeSize, val );
+		else
+			return false;
+
+		if ( _onValueChanged.isBound() )
+			_onValueChanged( this );
+		return true;
+	}
+
+	/**
+	 * @brief 전역 변수의 원시 메모리(*_pData)에 Float 값을 설정합니다.
+	 */
+	bool GlobalVariableInfo::setValueAsFloat( float32 val )
+	{
+		if ( _pData == nullptr || _type != GlobalVariableType::Float )
+			return false;
+
+		*static_cast<float32*>( _pData ) = val;
+		if ( _onValueChanged.isBound() )
+			_onValueChanged( this );
+		return true;
+	}
+
+	/**
+	 * @brief 전역 변수의 원시 메모리(*_pData)에 String 값을 설정합니다.
+	 */
+	bool GlobalVariableInfo::setValueAsString( string_view val )
+	{
+		if ( _pData == nullptr || _type != GlobalVariableType::String )
+			return false;
+
+		*static_cast<string*>( _pData ) = string{ val };
+		if ( _onValueChanged.isBound() )
+			_onValueChanged( this );
+		return true;
+	}
+
+	/**
 	 * @brief 문자열 입력을 파싱하여 전역 변수의 원시 메모리(*_pData)에 값을 설정합니다.
 	 *
 	 * 값이 성공적으로 변경되면 등록된 변경 감지 콜백(_onValueChanged)을 호출합니다.
@@ -140,47 +202,26 @@ namespace sw
 			case GlobalVariableType::Boolean:
 			{
 				const bool bVal = StringUtil::parseBool( strValue, false );
-
-				*static_cast<bool*>( _pData ) = bVal;
-				if ( _onValueChanged.isBound() )
-					_onValueChanged( this );
-				return true;
+				return setValueAsBool( bVal );
 			}
 			case GlobalVariableType::Int32:
 			case GlobalVariableType::Enum:
 			{
 				int32 val{ 0 };
 				if ( StringUtil::parseInt( strValue, val ) )
-				{
-					if ( _type == GlobalVariableType::Enum )
-						GlobalVariableInternal::writeEnumValue( _pData, _typeSize, val );
-					else
-						*static_cast<int32*>( _pData ) = val;
-
-					if ( _onValueChanged.isBound() )
-						_onValueChanged( this );
-					return true;
-				}
+					return setValueAsInt( val );
 				return false;
 			}
 			case GlobalVariableType::Float:
 			{
 				float32 val{ 0.0f };
 				if ( StringUtil::parseFloat( strValue, val ) )
-				{
-					*static_cast<float32*>( _pData ) = val;
-					if ( _onValueChanged.isBound() )
-						_onValueChanged( this );
-					return true;
-				}
+					return setValueAsFloat( val );
 				return false;
 			}
 			case GlobalVariableType::String:
 			{
-				*static_cast<string*>( _pData ) = string{ strValue };
-				if ( _onValueChanged.isBound() )
-					_onValueChanged( this );
-				return true;
+				return setValueAsString( strValue );
 			}
 			default:
 				break;

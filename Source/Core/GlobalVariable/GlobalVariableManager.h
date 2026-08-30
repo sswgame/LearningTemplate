@@ -55,6 +55,15 @@ namespace sw
 		/** @brief 타입에 맞게 문자열로 바꿉니다. */
 		string getValueAsString() const;
 
+		/** @brief *_pData 에 Boolean 값을 설정하고 콜백을 호출합니다. */
+		bool setValueAsBool( bool val );
+		/** @brief *_pData 에 Int32 또는 Enum 값을 설정하고 콜백을 호출합니다. */
+		bool setValueAsInt( int32 val );
+		/** @brief *_pData 에 Float 값을 설정하고 콜백을 호출합니다. */
+		bool setValueAsFloat( float32 val );
+		/** @brief *_pData 에 String 값을 설정하고 콜백을 호출합니다. */
+		bool setValueAsString( string_view val );
+
 		/** @brief 문자열을 파싱해 *_pData 에 쓰고 콜백을 호출합니다. */
 		bool setValueFromString( string_view strValue );
 		/** @brief *_pData 를 _defaultValue 로 되돌립니다. */

@@ -80,6 +80,40 @@ SW_TEST_CASE( Engine_GlobalVariable, ModificationAndReset )
 }
 
 /**
+ * @brief [Engine_GlobalVariable] 직접 타입별 값 수정 및 리셋
+ */
+SW_TEST_CASE( Engine_GlobalVariable, DirectValueModificationAndReset )
+{
+	sw::GlobalVariableInfo* pBoolInfo = sw::engine::getGlobalVariableManager().findVariable( "gv_testBool" );
+	SW_ASSERT_NOT_NULL( pBoolInfo );
+	SW_EXPECT_TRUE( pBoolInfo->setValueAsBool( false ) );
+	SW_EXPECT_FALSE( gv_testBool );
+	pBoolInfo->resetToDefault();
+	SW_EXPECT_TRUE( gv_testBool );
+
+	sw::GlobalVariableInfo* pIntInfo = sw::engine::getGlobalVariableManager().findVariable( "gv_testInt" );
+	SW_ASSERT_NOT_NULL( pIntInfo );
+	SW_EXPECT_TRUE( pIntInfo->setValueAsInt( 999 ) );
+	SW_EXPECT_EQUAL( 999, gv_testInt );
+	pIntInfo->resetToDefault();
+	SW_EXPECT_EQUAL( 60, gv_testInt );
+
+	sw::GlobalVariableInfo* pFloatInfo = sw::engine::getGlobalVariableManager().findVariable( "gv_testFloat" );
+	SW_ASSERT_NOT_NULL( pFloatInfo );
+	SW_EXPECT_TRUE( pFloatInfo->setValueAsFloat( 123.5f ) );
+	SW_EXPECT_NEAR_EQUAL( 123.5f, gv_testFloat, 1e-4f );
+	pFloatInfo->resetToDefault();
+	SW_EXPECT_NEAR_EQUAL( 45.0f, gv_testFloat, 1e-4f );
+
+	sw::GlobalVariableInfo* pStrInfo = sw::engine::getGlobalVariableManager().findVariable( "gv_testString" );
+	SW_ASSERT_NOT_NULL( pStrInfo );
+	SW_EXPECT_TRUE( pStrInfo->setValueAsString( "ModifiedStr" ) );
+	SW_EXPECT_EQUAL( sw::string( "ModifiedStr" ), gv_testString );
+	pStrInfo->resetToDefault();
+	SW_EXPECT_EQUAL( sw::string( "InitialValue" ), gv_testString );
+}
+
+/**
  * @brief [Engine_GlobalVariable] 커맨드라인 연동
  */
 SW_TEST_CASE( Engine_GlobalVariable, CommandLineIntegration )

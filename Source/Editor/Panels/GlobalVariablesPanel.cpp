@@ -77,47 +77,38 @@ namespace sw::editor
 				{
 					case GlobalVariableType::Boolean:
 					{
-						bool* pVal = static_cast<bool*>( info._pData );
-						bool  bVal = *pVal;
+						bool bVal = info.getValueAsBool();
 						if ( ImGui::Checkbox( "##val", &bVal ) )
 						{
-							*pVal	 = bVal;
+							info.setValueAsBool( bVal );
 							bChanged = true;
-							if ( info._onValueChanged.isBound() )
-								info._onValueChanged( &info );
 						}
 						break;
 					}
 					case GlobalVariableType::Float:
 					{
-						float32* pVal = static_cast<float32*>( info._pData );
-						float32	 fVal = *pVal;
+						float32 fVal = info.getValueAsFloat();
 						if ( ImGui::DragFloat( "##val", &fVal, 0.1f ) )
 						{
-							*pVal	 = fVal;
+							info.setValueAsFloat( fVal );
 							bChanged = true;
-							if ( info._onValueChanged.isBound() )
-								info._onValueChanged( &info );
 						}
 						break;
 					}
 					case GlobalVariableType::Int32:
 					{
-						int32* pVal = static_cast<int32*>( info._pData );
-						int32  iVal = *pVal;
+						int32 iVal = info.getValueAsInt();
 						if ( ImGui::DragInt( "##val", &iVal ) )
 						{
-							*pVal	 = iVal;
+							info.setValueAsInt( iVal );
 							bChanged = true;
-							if ( info._onValueChanged.isBound() )
-								info._onValueChanged( &info );
 						}
 						break;
 					}
 					case GlobalVariableType::Enum:
 					{
-						int32*			pVal	  = static_cast<int32*>( info._pData );
-						TypeRegistry*	pRegistry = editor::getService<TypeRegistry>();
+						const int32		currentVal = info.getValueAsInt();
+						TypeRegistry*	pRegistry  = editor::getService<TypeRegistry>();
 						const EnumInfo* pEnumInfo =
 							( pRegistry != nullptr && info._enumType.empty() == false )
 								? pRegistry->findEnum( hashed_string( info._enumType.c_str() ) )
@@ -125,7 +116,7 @@ namespace sw::editor
 						if ( pEnumInfo != nullptr && pEnumInfo->_mapValueToName.empty() == false )
 						{
 							const utf8* pName =
-								pRegistry->enumToString( hashed_string( info._enumType.c_str() ), *pVal );
+								pRegistry->enumToString( hashed_string( info._enumType.c_str() ), currentVal );
 							const utf8* pPreview = ( pName != nullptr ) ? pName : "<Unknown>";
 							if ( ImGui::BeginCombo( "##val", pPreview ) )
 							{
@@ -133,13 +124,11 @@ namespace sw::editor
 								{
 									const int32 val32	  = static_cast<int32>( val );
 									const utf8* name	  = nameHashed.c_str();
-									const bool	bSelected = ( val32 == *pVal );
+									const bool	bSelected = ( val32 == currentVal );
 									if ( ImGui::Selectable( name, bSelected ) )
 									{
-										*pVal	 = val32;
+										info.setValueAsInt( val32 );
 										bChanged = true;
-										if ( info._onValueChanged.isBound() )
-											info._onValueChanged( &info );
 									}
 									if ( bSelected )
 										ImGui::SetItemDefaultFocus();
@@ -149,27 +138,23 @@ namespace sw::editor
 						}
 						else
 						{
-							int32 iVal = *pVal;
+							int32 iVal = currentVal;
 							if ( ImGui::DragInt( "##val", &iVal ) )
 							{
-								*pVal	 = iVal;
+								info.setValueAsInt( iVal );
 								bChanged = true;
-								if ( info._onValueChanged.isBound() )
-									info._onValueChanged( &info );
 							}
 						}
 						break;
 					}
 					case GlobalVariableType::String:
 					{
-						string*								  pVal = static_cast<string*>( info._pData );
-						fixed_string<constant::kMaxBuffer512> arrBuf{ pVal->c_str() };
+						const string						  strVal = info.getValueAsString();
+						fixed_string<constant::kMaxBuffer512> arrBuf{ strVal.c_str() };
 						if ( ImGui::InputText( "##val", arrBuf.data(), arrBuf.capacity() ) )
 						{
-							*pVal	 = arrBuf.c_str();
+							info.setValueAsString( arrBuf.c_str() );
 							bChanged = true;
-							if ( info._onValueChanged.isBound() )
-								info._onValueChanged( &info );
 						}
 						break;
 					}
