@@ -21,7 +21,7 @@ namespace sw
 	 * @brief Deferred 커맨드 리스트 replay 전용 디바이스 측 수신 인터페이스
 	 *        IRHIDevice만 상속하며, 직접 인스턴스화하지 않습니다.
 	 */
-	class ICommandReplayTarget
+	class SW_API ICommandReplayTarget
 	{
 	public:
 		/** @brief 가상 소멸. */

@@ -5,6 +5,8 @@
 #pragma once
 #include "Core/Common/Types.h"
 
+#include "GameFramework/GameFrameworkExports.h"
+
 namespace sw
 {
 	class IRHIDevice;
@@ -15,7 +17,7 @@ namespace sw
 	//    App이 GameAPI로 생성하고 initialize / update / shutdown을 호출
 	// ------------------------------------------------------------------------------
 	/** @brief SWGame 모듈이 구현하는 게임 로직 인터페이스 */
-	class IGame
+	class SW_GF_API IGame
 	{
 	public:
 		/** @brief 상태는 파생 클래스가 가집니다. */

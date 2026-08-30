@@ -19,7 +19,7 @@ namespace sw
 	 * @class IXmlBackend
 	 * @brief XML 직렬화/역직렬화 백엔드
 	 */
-	class IXmlBackend
+	class SW_API IXmlBackend
 	{
 	public:
 		/** @brief 가상 소멸. */

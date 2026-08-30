@@ -25,7 +25,7 @@ namespace sw
 	//    실제 타일 좌표는 PlayerController가 소유
 	// ------------------------------------------------------------------------------
 	/** @brief 타일 스텝 이동 FSM */
-	class PlayerLocomotion
+	class SW_GF_API PlayerLocomotion
 	{
 	public:
 		PlayerLocomotion();
