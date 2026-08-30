@@ -372,9 +372,18 @@ namespace sw
 		/** @brief PredefinedNameType.xxx 이름을 intern 합니다. */
 		void createPredefinedNameTypes()
 		{
-#define REGISTER_NAME( index, name ) basic_hashed_string<T, N> predefined_##name{ *this, reinterpret_cast<const T*>( #name ) };
+			if constexpr ( std::is_same_v<T, wchar_t> )
+			{
+#define REGISTER_NAME( index, name ) basic_hashed_string<T, N> predefined_##name{ *this, L#name };
 #include "Core/Predefined/PredefinedNameType.xxx"
 #undef REGISTER_NAME
+			}
+			else
+			{
+#define REGISTER_NAME( index, name ) basic_hashed_string<T, N> predefined_##name{ *this, #name };
+#include "Core/Predefined/PredefinedNameType.xxx"
+#undef REGISTER_NAME
+			}
 		}
 	};
 

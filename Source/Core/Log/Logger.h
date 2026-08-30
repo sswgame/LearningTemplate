@@ -122,7 +122,13 @@ namespace sw
 		DelegateHandle addLogWrittenListener( const LogWrittenDelegate& listener ) override;
 		/** @brief 핸들로 리스너를 뗍니다. */
 		void removeLogWrittenListener( const DelegateHandle& handle ) override;
+		/** @brief 소스 파일 경로별 Caller 이름을 등록합니다. */
+		static void registerCaller( string_view filePath, string_view callerName );
+		/** @brief 소스 파일 경로에 매핑된 Caller 이름을 반환합니다. */
+		static const utf8* getCaller( const utf8* pFile );
 
+		/** @brief 로그 파일이 있는 폴더 경로입니다. */
+		const string& getLogFolderPath() override;
 		/** @brief 매크로가 쓸 전역 싱크를 바꿉니다. */
 		static void setGlobalSink( ILogSink* pSink );
 		/** @brief 전역 싱크로 한 줄을 남깁니다. 싱크가 없으면 무시합니다. */
@@ -131,9 +137,6 @@ namespace sw
 		static DelegateHandle addGlobalListener( const LogWrittenDelegate& listener );
 		/** @brief 전역 싱크에서 리스너를 뗍니다. */
 		static void removeGlobalListener( const DelegateHandle& handle );
-
-		/** @brief 로그 파일이 있는 폴더 경로입니다. */
-		const string& getLogFolderPath() override;
 		/** @brief 현재 전역 싱크입니다. 없으면 nullptr. */
 		static ILogSink* getGlobalSink();
 
@@ -174,11 +177,7 @@ namespace sw
 		bool							 _bHasConsole;								///< 표준 출력 콘솔 유효성 여부
 		utf8							 _arrCachedDateStr[constant::kMaxBuffer32]; ///< 캐시된 YYYY-M-D H:M: 포맷 날짜 문자열
 	};
-
-	[[maybe_unused]] static inline constexpr const ::utf8* swGetLogCaller( ... ) { return nullptr; }
 } // namespace sw
-
-[[maybe_unused]] static inline constexpr const ::utf8* swGetLogCaller( ... ) { return nullptr; }
 
 // ------------------------------------------------------------------------------
 // 4) SW_LOG_* — Debug 에서만 포맷·기록. Release 는 no-op
@@ -187,20 +186,25 @@ namespace sw
 /**
  * @brief 현재 파일 또는 네임스페이스 스코프의 로그 Caller(클래스/시스템명)를 지정합니다.
  */
-#define SW_LOG_CALLER( name ) \
-	[[maybe_unused]] static inline constexpr const ::utf8* swGetLogCaller( ::int32 = 0 ) { return name; }
+#define SW_LOG_CALLER( name )                                                                       \
+	namespace                                                                                       \
+	{                                                                                               \
+		[[maybe_unused]] static const bool SW_CONCAT( _s_logCallerReg_, __COUNTER__ ) = []() {    \
+			::sw::Logger::registerCaller( __FILE__, name );                                       \
+			return true; }(); \
+	}
 
 #if defined( SW_DEBUG )
 	/**
 	 * @brief 포맷 문자열(+인자)을 파싱한 뒤 Logger::writeLog 로 전달하는 코어 매크로
 	 * @note 메시지 문자열을 __VA_ARGS__ 첫 인자로 받아, 가변 인자 생략(C++20) 확장을 쓰지 않습니다.
 	 */
-	#define SW_LOG_INTERNAL( level, ... )                                                                          \
-		do                                                                                                         \
-		{                                                                                                          \
-			::utf8 arrBuffer[::sw::constant::kMaxBuffer8192];                                                      \
-			::sw::formatstring( arrBuffer, ::sw::constant::kMaxBuffer8192, __VA_ARGS__ );                          \
-			::sw::Logger::writeLogGlobal( level, SW_LOG_TAG, swGetLogCaller( 0 ), arrBuffer, __FILE__, __LINE__ ); \
+	#define SW_LOG_INTERNAL( level, ... )                                                              \
+		do                                                                                             \
+		{                                                                                              \
+			::utf8 arrBuffer[::sw::constant::kMaxBuffer8192];                                          \
+			::sw::formatstring( arrBuffer, ::sw::constant::kMaxBuffer8192, __VA_ARGS__ );              \
+			::sw::Logger::writeLogGlobal( level, SW_LOG_TAG, nullptr, arrBuffer, __FILE__, __LINE__ ); \
 		} while ( false )
 
 	/** @brief Error 레벨로 포맷해 남깁니다. */

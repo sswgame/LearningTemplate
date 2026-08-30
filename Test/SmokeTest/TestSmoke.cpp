@@ -68,7 +68,7 @@ namespace
 		return nullptr;
 	}
 
-	void fillGameService( sw::ModuleService& gameService )
+	[[maybe_unused]] void fillGameService( sw::ModuleService& gameService )
 	{
 		gameService.getService = getGameService;
 	}

@@ -381,8 +381,10 @@ SW_TEST_CASE( ReflectionParser, CodegenStaticLibraryAndCtorMetadata )
 	const sw::FunctionInfo* pFunc = pStaticType->findMethod( sw::hashed_string( "doubleInt" ) );
 	SW_ASSERT_NOT_NULL( pFunc );
 	SW_EXPECT_TRUE( pFunc->_metadata._bStatic == SW_TRUE );
+#if !defined( SW_SHIPPING )
 	SW_EXPECT_EQUAL( sw::string( "Math" ), pFunc->_metadata._category );
 	SW_EXPECT_EQUAL( sw::string( "Double Int" ), pFunc->_metadata._displayName );
+#endif
 
 	// 2) 명시적 생성자 코드젠 ($ctor, $ctor(int32)) 검증
 	const sw::TypeInfo* pCtorType = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::CtorDemoActor" ) );
@@ -489,9 +491,11 @@ SW_TEST_CASE( ReflectionParser, RpcMethodMetadataAndInvokerExecution )
 
 	SW_EXPECT_TRUE( pMethod->_metadata._netRole == sw::FunctionNetRole::Server );
 	SW_EXPECT_TRUE( pMethod->_metadata._bReliable == SW_TRUE );
+#if !defined( SW_SHIPPING )
 	SW_EXPECT_EQUAL( sw::string( "Combat" ), pMethod->_metadata._category );
 	SW_EXPECT_EQUAL( sw::string( "Apply Damage" ), pMethod->_metadata._displayName );
 	SW_EXPECT_EQUAL( sw::string( "Subtracts amount from HP" ), pMethod->_metadata._tooltip );
+#endif
 
 	// Invoker 실행 검증
 	sw::RpcDemoActor actor;
@@ -507,6 +511,7 @@ SW_TEST_CASE( ReflectionParser, RpcMethodMetadataAndInvokerExecution )
  */
 SW_TEST_CASE( ReflectionParser, MultiBitBitfieldCompilationErrorDiagnosis )
 {
+#if defined( SW_DEBUG )
 	const sw::string binDir	   = sw::FileUtil::getDirectoryPart( sw::FileUtil::getExecutablePath() );
 	const sw::string parserExe = sw::FileUtil::joinPath( binDir, "ReflectionParser" );
 
@@ -567,6 +572,9 @@ SW_TEST_CASE( ReflectionParser, MultiBitBitfieldCompilationErrorDiagnosis )
 
 	// 임시 파일 정리
 	sw::FileUtil::removeFile( tempHeaderPath );
+#else
+	SW_TEST_SKIP( "ReflectionParser diagnostic logging is compiled out in Shipping builds" );
+#endif
 }
 
 /**
@@ -575,17 +583,21 @@ SW_TEST_CASE( ReflectionParser, MultiBitBitfieldCompilationErrorDiagnosis )
 SW_TEST_CASE( Reflection_TypeInfo, PropertyMetadataSupport )
 {
 	sw::PropertyInfo prop;
+#if !defined( SW_SHIPPING )
 	prop._metadata._category	= "Rendering";
 	prop._metadata._displayName = "Light Intensity";
 	prop._metadata._tooltip		= "Controls light intensity";
-	prop._metadata._minRange	= 0.0f;
-	prop._metadata._maxRange	= 100.0f;
-	prop._metadata._bHasRange	= SW_TRUE;
-	prop._metadata._bReadOnly	= SW_TRUE;
+#endif
+	prop._metadata._minRange  = 0.0f;
+	prop._metadata._maxRange  = 100.0f;
+	prop._metadata._bHasRange = SW_TRUE;
+	prop._metadata._bReadOnly = SW_TRUE;
 
+#if !defined( SW_SHIPPING )
 	SW_EXPECT_EQUAL( sw::string( "Rendering" ), prop._metadata._category );
 	SW_EXPECT_EQUAL( sw::string( "Light Intensity" ), prop._metadata._displayName );
 	SW_EXPECT_EQUAL( sw::string( "Controls light intensity" ), prop._metadata._tooltip );
+#endif
 	SW_EXPECT_NEAR_EQUAL( 0.0f, prop._metadata._minRange, 1e-4f );
 	SW_EXPECT_NEAR_EQUAL( 100.0f, prop._metadata._maxRange, 1e-4f );
 	SW_EXPECT_TRUE( prop._metadata._bHasRange );
@@ -2530,9 +2542,11 @@ SW_TEST_CASE( Reflection_Serialization, ReflectionRpcPackInvoke )
 	SW_ASSERT_TRUE( fn != nullptr );
 	SW_EXPECT_TRUE( fn->_metadata._netRole == sw::FunctionNetRole::Server );
 	SW_EXPECT_EQUAL( 1, static_cast<int32>( fn->_metadata._bReliable ) );
+#if !defined( SW_SHIPPING )
 	SW_EXPECT_EQUAL( sw::string( "Apply Damage" ), fn->_metadata._displayName );
 	SW_EXPECT_EQUAL( sw::string( "Subtracts amount from HP" ), fn->_metadata._tooltip );
 	SW_EXPECT_EQUAL( sw::string( "Combat" ), fn->_metadata._category );
+#endif
 
 	sw::RpcDemoActor actor;
 	actor._hp = 100;
@@ -2565,9 +2579,11 @@ SW_TEST_CASE( Reflection_Serialization, ReflectAbstractAndStatic )
 	const sw::FunctionInfo* doubleFn = staticInfo->findMethod( sw::hashed_string( "doubleInt" ) );
 	SW_ASSERT_TRUE( doubleFn != nullptr );
 	SW_EXPECT_EQUAL( 1, static_cast<int32>( doubleFn->_metadata._bStatic ) );
+#if !defined( SW_SHIPPING )
 	SW_EXPECT_EQUAL( sw::string( "Double Int" ), doubleFn->_metadata._displayName );
 	SW_EXPECT_EQUAL( sw::string( "Returns value * 2" ), doubleFn->_metadata._tooltip );
 	SW_EXPECT_EQUAL( sw::string( "Math" ), doubleFn->_metadata._category );
+#endif
 
 	sw::TaskArgs args;
 	args.add( int32{ 21 } );
@@ -2620,9 +2636,11 @@ SW_TEST_CASE( Reflection_TypeInfo, PropertyAnnotationMetadataCodegen )
 	SW_ASSERT_TRUE( typeInfo != nullptr );
 	const sw::PropertyInfo* hp = typeInfo->findProperty( sw::hashed_string( "_hp" ) );
 	SW_ASSERT_TRUE( hp != nullptr );
+#if !defined( SW_SHIPPING )
 	SW_EXPECT_EQUAL( sw::string( "Stats" ), hp->_metadata._category );
 	SW_EXPECT_EQUAL( sw::string( "Hit Points" ), hp->_metadata._displayName );
 	SW_EXPECT_EQUAL( sw::string( "Current HP" ), hp->_metadata._tooltip );
+#endif
 	SW_EXPECT_TRUE( hp->_metadata._bReadOnly );
 }
 
@@ -2862,6 +2880,7 @@ SW_TEST_CASE( Reflection_GenericQuery, HierarchyPropertyLookupAndRawPtr )
  */
 SW_TEST_CASE( Reflection_Metadata, TypeMetadataQuery )
 {
+#if !defined( SW_SHIPPING )
 	const sw::TypeInfo* pType = sw::engine::getTypeRegistry().findType<sw::MetaTestActor>();
 	SW_ASSERT_NOT_NULL( pType );
 
@@ -2877,6 +2896,9 @@ SW_TEST_CASE( Reflection_Metadata, TypeMetadataQuery )
 	const sw::string* pPriority = pType->findCustomMeta( sw::hashed_string( "Priority" ) );
 	SW_ASSERT_NOT_NULL( pPriority );
 	SW_EXPECT_TRUE( *pPriority == "10" );
+#else
+	SW_TEST_SKIP( "Metadata is omitted in shipping builds" );
+#endif
 }
 
 /**
@@ -2884,6 +2906,7 @@ SW_TEST_CASE( Reflection_Metadata, TypeMetadataQuery )
  */
 SW_TEST_CASE( Reflection_Metadata, PropertyMetadataQuery )
 {
+#if !defined( SW_SHIPPING )
 	const sw::TypeInfo* pType = sw::engine::getTypeRegistry().findType<sw::MetaTestActor>();
 	SW_ASSERT_NOT_NULL( pType );
 
@@ -2908,6 +2931,9 @@ SW_TEST_CASE( Reflection_Metadata, PropertyMetadataQuery )
 	SW_ASSERT_NOT_NULL( pArmor );
 	SW_EXPECT_TRUE( pArmor->_metadata._bTransient == SW_FALSE );
 	SW_EXPECT_TRUE( pArmor->_metadata._bHideInInspector == SW_FALSE );
+#else
+	SW_TEST_SKIP( "Metadata is omitted in shipping builds" );
+#endif
 }
 
 /**
@@ -2915,6 +2941,7 @@ SW_TEST_CASE( Reflection_Metadata, PropertyMetadataQuery )
  */
 SW_TEST_CASE( Reflection_Metadata, FunctionMetadataQuery )
 {
+#if !defined( SW_SHIPPING )
 	const sw::TypeInfo* pType = sw::engine::getTypeRegistry().findType<sw::MetaTestActor>();
 	SW_ASSERT_NOT_NULL( pType );
 
@@ -2929,6 +2956,9 @@ SW_TEST_CASE( Reflection_Metadata, FunctionMetadataQuery )
 	const sw::string* pActionType = pMethod->findCustomMeta( sw::hashed_string( "ActionType" ) );
 	SW_ASSERT_NOT_NULL( pActionType );
 	SW_EXPECT_TRUE( *pActionType == "Reset" );
+#else
+	SW_TEST_SKIP( "Metadata is omitted in shipping builds" );
+#endif
 }
 
 /**
@@ -2936,6 +2966,7 @@ SW_TEST_CASE( Reflection_Metadata, FunctionMetadataQuery )
  */
 SW_TEST_CASE( Reflection_Metadata, EnumMetadataQuery )
 {
+#if !defined( SW_SHIPPING )
 	const sw::EnumInfo* pEnumInfo = sw::engine::getTypeRegistry().findEnum( sw::hashed_string( "TestMetaEnum" ) );
 	SW_ASSERT_NOT_NULL( pEnumInfo );
 
@@ -2946,6 +2977,9 @@ SW_TEST_CASE( Reflection_Metadata, EnumMetadataQuery )
 	const sw::string* pVersion = pEnumInfo->findCustomMeta( sw::hashed_string( "Version" ) );
 	SW_ASSERT_NOT_NULL( pVersion );
 	SW_EXPECT_TRUE( *pVersion == "2" );
+#else
+	SW_TEST_SKIP( "Metadata is omitted in shipping builds" );
+#endif
 }
 
 /**

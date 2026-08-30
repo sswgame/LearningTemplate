@@ -54,15 +54,19 @@ target_compile_options(sw_compiler_clang INTERFACE
 	# 경고 비활성화 (알파벳 정렬)
 	-Wno-c++98-compat
 	-Wno-c++98-compat-pedantic
+	-Wno-c2y-extensions
 	-Wno-cast-function-type-strict
 	-Wno-covered-switch-default
+	-Wno-ctad-maybe-unsupported
 	-Wno-exit-time-destructors
 	-Wno-format-nonliteral
 	-Wno-global-constructors
 	-Wno-invalid-offsetof
+	-Wno-ms-bitfield-padding
 	-Wno-nonportable-include-path
 	-Wno-padded
 	-Wno-pre-c++17-compat
+	-Wno-shadow-header
 	-Wno-switch-default
 	-Wno-unsafe-buffer-usage
 	-Wno-unused-command-line-argument

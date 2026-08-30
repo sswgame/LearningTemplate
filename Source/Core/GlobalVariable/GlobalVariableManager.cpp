@@ -9,6 +9,29 @@
 
 namespace sw
 {
+	namespace
+	{
+		struct GlobalVariableInternal
+		{
+			static void writeEnumValue( void* pData, uint32 typeSize, int32 val )
+			{
+				if ( pData == nullptr )
+					return;
+				if ( typeSize == 1 )
+					*static_cast<uint8*>( pData ) = static_cast<uint8>( val );
+				else if ( typeSize == 2 )
+					*static_cast<uint16*>( pData ) = static_cast<uint16>( val );
+				else if ( typeSize == 8 )
+					*static_cast<int64*>( pData ) = static_cast<int64>( val );
+				else
+					*static_cast<int32*>( pData ) = val;
+			}
+		};
+	} // namespace
+} // namespace sw
+
+namespace sw
+{
 	SW_LOG_CALLER( "GlobalVariableManager" );
 
 	// ============================================================================
@@ -32,8 +55,22 @@ namespace sw
 	 */
 	int32 GlobalVariableInfo::getValueAsInt() const
 	{
-		if ( _pData != nullptr && ( _type == GlobalVariableType::Int32 || _type == GlobalVariableType::Enum ) )
-			return *static_cast<int32*>( _pData );
+		if ( _pData == nullptr )
+			return 0;
+
+		if ( _type == GlobalVariableType::Int32 )
+			return *static_cast<const int32*>( _pData );
+
+		if ( _type == GlobalVariableType::Enum )
+		{
+			if ( _typeSize == 1 )
+				return *static_cast<const uint8*>( _pData );
+			if ( _typeSize == 2 )
+				return *static_cast<const uint16*>( _pData );
+			if ( _typeSize == 8 )
+				return static_cast<int32>( *static_cast<const int64*>( _pData ) );
+			return *static_cast<const int32*>( _pData );
+		}
 		return 0;
 	}
 
@@ -69,7 +106,7 @@ namespace sw
 			{
 				// 스택 버퍼를 활용한 정수 문자열 직결 변환
 				StringBuilder<constant::kMaxBuffer32> sb;
-				sb.append( *static_cast<int32*>( _pData ) );
+				sb.append( getValueAsInt() );
 				return string( sb.view() );
 			}
 			case GlobalVariableType::Float:
@@ -119,7 +156,11 @@ namespace sw
 				auto [ptr, ec] = std::from_chars( strValue.data(), strValue.data() + strValue.size(), val );
 				if ( ec == std::errc{} )
 				{
-					*static_cast<int32*>( _pData ) = val;
+					if ( _type == GlobalVariableType::Enum )
+						GlobalVariableInternal::writeEnumValue( _pData, _typeSize, val );
+					else
+						*static_cast<int32*>( _pData ) = val;
+
 					if ( _onValueChanged.isBound() )
 						_onValueChanged( this );
 					return true;
@@ -168,7 +209,13 @@ namespace sw
 			case GlobalVariableType::Int32:
 			case GlobalVariableType::Enum:
 				if ( std::holds_alternative<int32>( _defaultValue ) )
-					*static_cast<int32*>( _pData ) = std::get<int32>( _defaultValue );
+				{
+					const int32 val = std::get<int32>( _defaultValue );
+					if ( _type == GlobalVariableType::Enum )
+						GlobalVariableInternal::writeEnumValue( _pData, _typeSize, val );
+					else
+						*static_cast<int32*>( _pData ) = val;
+				}
 				break;
 			case GlobalVariableType::Float:
 				if ( std::holds_alternative<float32>( _defaultValue ) )
@@ -233,7 +280,11 @@ namespace sw
 				int32 val{ 0 };
 				if ( pCmdLineManager->getArgument( name, val ) )
 				{
-					*static_cast<int32*>( info._pData ) = val;
+					if ( info._type == GlobalVariableType::Enum )
+						GlobalVariableInternal::writeEnumValue( info._pData, info._typeSize, val );
+					else
+						*static_cast<int32*>( info._pData ) = val;
+
 					if ( info._onValueChanged.isBound() )
 						info._onValueChanged( &info );
 				}
@@ -277,7 +328,7 @@ namespace sw
 	 * [스레드 안전성]: std::unique_lock을 획득하여 동시 등록 레이스 컨디션을 방지합니다.
 	 * [0-Alloc 검색]: std::string_view를 통해 불필요한 string 생성 없이 사전 존재 여부를 검사합니다.
 	 */
-	bool GlobalVariableManager::registerVariable( string_view name, GlobalVariableType type, void* pData, const std::variant<bool, int32, float32, string>& defaultValue, string_view description, string_view enumType, string_view moduleName )
+	bool GlobalVariableManager::registerVariable( string_view name, GlobalVariableType type, void* pData, const std::variant<bool, int32, float32, string>& defaultValue, string_view description, string_view enumType, string_view moduleName, uint32 typeSize )
 	{
 		if ( name.empty() || pData == nullptr )
 			return false;
@@ -299,6 +350,7 @@ namespace sw
 		info._description  = string{ description };
 		info._enumType	   = string{ enumType };
 		info._moduleName   = string{ moduleName };
+		info._typeSize	   = typeSize;
 
 		_mapVariable.emplace( strName, std::move( info ) );
 		return true;
@@ -318,7 +370,8 @@ namespace sw
 							  pCurrent->_defaultValue,
 							  pCurrent->_description,
 							  pCurrent->_enumType,
-							  moduleName );
+							  moduleName,
+							  pCurrent->_typeSize );
 			pCurrent = pCurrent->_pNext;
 		}
 	}
@@ -389,7 +442,13 @@ namespace sw
 					case GlobalVariableType::Int32:
 					case GlobalVariableType::Enum:
 						if ( std::holds_alternative<int32>( info._defaultValue ) )
-							*static_cast<int32*>( info._pData ) = std::get<int32>( info._defaultValue );
+						{
+							const int32 val = std::get<int32>( info._defaultValue );
+							if ( info._type == GlobalVariableType::Enum )
+								GlobalVariableInternal::writeEnumValue( info._pData, info._typeSize, val );
+							else
+								*static_cast<int32*>( info._pData ) = val;
+						}
 						break;
 					case GlobalVariableType::Float:
 						if ( std::holds_alternative<float32>( info._defaultValue ) )
@@ -458,7 +517,7 @@ namespace sw
 	/**
 	 * @brief Core 모듈 내부 번역 단위 전용 정적 등록자 생성자 (Core::getHead()에 연결)
 	 */
-	GlobalVariableRegistrar::GlobalVariableRegistrar( const utf8* name, GlobalVariableType type, void* pData, const std::variant<bool, int32, float32, string>& defaultValue, const utf8* description, const utf8* enumType, const utf8* moduleName )
+	GlobalVariableRegistrar::GlobalVariableRegistrar( const utf8* name, GlobalVariableType type, void* pData, const std::variant<bool, int32, float32, string>& defaultValue, const utf8* description, const utf8* enumType, const utf8* moduleName, uint32 typeSize )
 		: _name{ name }
 		, _type{ type }
 		, _pData{ pData }
@@ -466,12 +525,13 @@ namespace sw
 		, _description{ description }
 		, _enumType{ enumType }
 		, _moduleName{ moduleName }
+		, _typeSize{ typeSize }
 		, _pNext{ nullptr } { linkTo( getHead() ); }
 
 	/**
 	 * @brief DLL 동적 모듈 전용 정적 등록자 생성자 (모듈별 로컬 체인 헤드에 연결)
 	 */
-	GlobalVariableRegistrar::GlobalVariableRegistrar( GlobalVariableRegistrar*& moduleHead, const utf8* name, GlobalVariableType type, void* pData, const std::variant<bool, int32, float32, string>& defaultValue, const utf8* description, const utf8* enumType, const utf8* moduleName )
+	GlobalVariableRegistrar::GlobalVariableRegistrar( GlobalVariableRegistrar*& moduleHead, const utf8* name, GlobalVariableType type, void* pData, const std::variant<bool, int32, float32, string>& defaultValue, const utf8* description, const utf8* enumType, const utf8* moduleName, uint32 typeSize )
 		: _name{ name }
 		, _type{ type }
 		, _pData{ pData }
@@ -479,6 +539,7 @@ namespace sw
 		, _description{ description }
 		, _enumType{ enumType }
 		, _moduleName{ moduleName }
+		, _typeSize{ typeSize }
 		, _pNext{ nullptr } { linkTo( moduleHead ); }
 
 	GlobalVariableRegistrar*& GlobalVariableRegistrar::getHead()

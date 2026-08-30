@@ -249,7 +249,9 @@ SW_TEST_CASE( SceneTest, SceneAsyncLoadCancellationAndRecovery )
 {
 	const sw::string tempDir	= sw::FileUtil::getTempDirectory();
 	const sw::string scenePath1 = sw::FileUtil::joinPath( tempDir, "test_rapid_1.scene.xml" );
+	const sw::string binPath1	= sw::FileUtil::joinPath( tempDir, "test_rapid_1.scene.bin" );
 	const sw::string scenePath2 = sw::FileUtil::joinPath( tempDir, "test_rapid_2.scene.xml" );
+	const sw::string binPath2	= sw::FileUtil::joinPath( tempDir, "test_rapid_2.scene.bin" );
 
 	const sw::string xmlStr1 =
 		"<Scene formatVersion=\"0\" name=\"SceneFirst\"><entities><entity name=\"E1\"/></entities></Scene>";
@@ -258,6 +260,20 @@ SW_TEST_CASE( SceneTest, SceneAsyncLoadCancellationAndRecovery )
 
 	SW_ASSERT_TRUE( sw::FileUtil::writeFile( scenePath1, reinterpret_cast<const uint8*>( xmlStr1.data() ), xmlStr1.size() ) );
 	SW_ASSERT_TRUE( sw::FileUtil::writeFile( scenePath2, reinterpret_cast<const uint8*>( xmlStr2.data() ), xmlStr2.size() ) );
+
+	sw::SceneDocument doc1{};
+	doc1._name = "SceneFirst";
+	sw::SceneDocument::EntityNode ent1{};
+	ent1._name = "E1";
+	doc1._listEntityNode.push_back( std::move( ent1 ) );
+	SW_ASSERT_TRUE( doc1.saveBinary( binPath1 ) );
+
+	sw::SceneDocument doc2{};
+	doc2._name = "SceneSecond";
+	sw::SceneDocument::EntityNode ent2{};
+	ent2._name = "E2";
+	doc2._listEntityNode.push_back( std::move( ent2 ) );
+	SW_ASSERT_TRUE( doc2.saveBinary( binPath2 ) );
 
 	sw::SceneManager manager;
 	SW_ASSERT_TRUE( manager.initialize() );
@@ -274,5 +290,7 @@ SW_TEST_CASE( SceneTest, SceneAsyncLoadCancellationAndRecovery )
 
 	manager.shutdown();
 	sw::FileUtil::removeFile( scenePath1 );
+	sw::FileUtil::removeFile( binPath1 );
 	sw::FileUtil::removeFile( scenePath2 );
+	sw::FileUtil::removeFile( binPath2 );
 }

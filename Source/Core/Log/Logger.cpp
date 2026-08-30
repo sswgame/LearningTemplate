@@ -15,7 +15,9 @@ namespace sw
 	{
 		/** @brief 프로세스 전역 활성 로그 싱크 포인터 */
 		atomic<ILogSink*> s_globalSink{ nullptr };
-
+		/** @brief 파일명 해시별 로그 Caller 이름 캐시 */
+		unordered_map<uint64, string> s_mapFileToCaller{};
+		mutex						  s_callerMutex{};
 	} // namespace
 
 	Logger::Logger()
@@ -118,6 +120,29 @@ namespace sw
 	{
 		std::scoped_lock<mutex> lock{ _mutex };
 		_onLogWritten.remove( handle );
+	}
+
+	void Logger::registerCaller( string_view filePath, string_view callerName )
+	{
+		string_view fileName;
+		FileUtil::getFileNamePart( filePath, fileName );
+		const uint64			fileHash = StringUtil::computeHash64( fileName );
+		std::scoped_lock<mutex> lock{ s_callerMutex };
+		s_mapFileToCaller[fileHash] = string{ callerName };
+	}
+
+	const utf8* Logger::getCaller( const utf8* pFile )
+	{
+		if ( pFile == nullptr || pFile[0] == '\0' )
+			return nullptr;
+		string_view fileName;
+		FileUtil::getFileNamePart( string_view{ pFile }, fileName );
+		const uint64			fileHash = StringUtil::computeHash64( fileName );
+		std::scoped_lock<mutex> lock{ s_callerMutex };
+		auto					it = s_mapFileToCaller.find( fileHash );
+		if ( it != s_mapFileToCaller.end() )
+			return it->second.c_str();
+		return nullptr;
 	}
 
 	const string& Logger::getLogFolderPath()
@@ -275,18 +300,23 @@ namespace sw
 		static constexpr const utf8* kArrHeader[] = { "Error", "Warning", "Info", "Trace" };
 		static_assert( SW_COUNT_OF( kArrHeader ) == static_cast<uint32>( LogLevel::Count ), "LogLevel과 같아야 합니다" );
 
-		const size_t levelIndex	   = static_cast<size_t>( level );
-		const utf8*	 effectiveTag  = ( StringUtil::isNullOrEmpty( pTag ) ) ? constant::kDefaultLogTag : pTag;
-		const utf8*	 effectiveFile = ( StringUtil::isNullOrEmpty( pFile ) ) ? constant::kDefaultLogFile : pFile;
-		const utf8*	 effectiveMsg  = ( pMessage != nullptr ) ? pMessage : "";
+		const size_t levelIndex		 = static_cast<size_t>( level );
+		const utf8*	 effectiveTag	 = ( StringUtil::isNullOrEmpty( pTag ) ) ? constant::kDefaultLogTag : pTag;
+		const utf8*	 effectiveFile	 = ( StringUtil::isNullOrEmpty( pFile ) ) ? constant::kDefaultLogFile : pFile;
+		const utf8*	 effectiveMsg	 = ( pMessage != nullptr ) ? pMessage : "";
+		const utf8*	 effectiveCaller = pCaller;
+		if ( StringUtil::isNullOrEmpty( effectiveCaller ) && pFile != nullptr )
+		{
+			effectiveCaller = getCaller( pFile );
+		}
 
 		// 2단계: 스택 8KB fixed_string 버퍼에 1회 포맷팅 (동적 힙 메모리 할당 0건)
 		fixed_string<constant::kMaxBuffer8192> formattedBuffer{};
-		if ( StringUtil::isNullOrEmpty( pCaller ) == false )
+		if ( StringUtil::isNullOrEmpty( effectiveCaller ) == false )
 		{
 			formatstring( formattedBuffer.data(), formattedBuffer.capacity(),
 						  "[%#] [%#] [%#] [%#] - %#\n -> %#:%#\n",
-						  dateStr.c_str(), effectiveTag, pCaller, kArrHeader[levelIndex], effectiveMsg, effectiveFile, line );
+						  dateStr.c_str(), effectiveTag, effectiveCaller, kArrHeader[levelIndex], effectiveMsg, effectiveFile, line );
 		}
 		else
 		{
@@ -321,7 +351,7 @@ namespace sw
 			LogEntry entry;
 			entry._level	 = level;
 			entry._tag		 = effectiveTag;
-			entry._caller	 = ( pCaller != nullptr ) ? pCaller : "";
+			entry._caller	 = ( effectiveCaller != nullptr ) ? effectiveCaller : "";
 			entry._message	 = effectiveMsg;
 			entry._file		 = effectiveFile;
 			entry._line		 = line;

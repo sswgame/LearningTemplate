@@ -73,7 +73,8 @@
       "inherits": "base-windows",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "SW_ENABLE_SANITIZER": "ON"
+        "SW_ENABLE_SANITIZER": "ON",
+        "CMAKE_MSVC_RUNTIME_LIBRARY": "MultiThreadedDLL"
       }
     },
 

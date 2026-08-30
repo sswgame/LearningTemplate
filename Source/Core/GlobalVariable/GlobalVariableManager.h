@@ -42,6 +42,7 @@ namespace sw
 		string									   _description;
 		string									   _enumType;
 		string									   _moduleName;
+		uint32									   _typeSize{ 4 };
 
 		GlobalVariableChangedDelegate _onValueChanged;
 
@@ -86,7 +87,7 @@ namespace sw
 		void updateFromCommandLine( const CommandLineManager* pCmdLineManager );
 
 		/** @brief 새로운 전역 변수를 등록합니다. */
-		bool registerVariable( string_view name, GlobalVariableType type, void* pData, const std::variant<bool, int32, float32, string>& defaultValue, string_view description, string_view enumType = "", string_view moduleName = "" );
+		bool registerVariable( string_view name, GlobalVariableType type, void* pData, const std::variant<bool, int32, float32, string>& defaultValue, string_view description, string_view enumType = "", string_view moduleName = "", uint32 typeSize = 4 );
 
 		/** @brief pHead로 시작하는 연결 리스트(특정 모듈의 변수들)를 등록합니다. */
 		void registerPendingVariables( string_view moduleName, const struct GlobalVariableRegistrar* pHead );
@@ -131,17 +132,18 @@ namespace sw
 		string									   _description;
 		string									   _enumType;
 		string									   _moduleName;
+		uint32									   _typeSize{ 4 };
 		GlobalVariableRegistrar*				   _pNext;
 
 		/**
 		 * @brief Core::getHead() 리스트에 연결합니다. Core 번역 단위 전용입니다.
 		 */
-		GlobalVariableRegistrar( const utf8* name, GlobalVariableType type, void* pData, const std::variant<bool, int32, float32, string>& defaultValue, const utf8* description, const utf8* enumType = "", const utf8* moduleName = "" );
+		GlobalVariableRegistrar( const utf8* name, GlobalVariableType type, void* pData, const std::variant<bool, int32, float32, string>& defaultValue, const utf8* description, const utf8* enumType = "", const utf8* moduleName = "", uint32 typeSize = 4 );
 
 		/**
 		 * @brief 모듈 로컬 리스트 헤드에 연결합니다. 핫 리로드에 안전합니다.
 		 */
-		GlobalVariableRegistrar( GlobalVariableRegistrar*& moduleHead, const utf8* name, GlobalVariableType type, void* pData, const std::variant<bool, int32, float32, string>& defaultValue, const utf8* description, const utf8* enumType = "", const utf8* moduleName = "" );
+		GlobalVariableRegistrar( GlobalVariableRegistrar*& moduleHead, const utf8* name, GlobalVariableType type, void* pData, const std::variant<bool, int32, float32, string>& defaultValue, const utf8* description, const utf8* enumType = "", const utf8* moduleName = "", uint32 typeSize = 4 );
 
 		/** @brief Core.dll 전용 등록 리스트 헤드입니다. 다른 모듈은 자체 헤드를 써야 합니다. */
 		static GlobalVariableRegistrar*& getHead();
@@ -187,7 +189,7 @@ namespace sw
 #define SW_GLOBAL_VARIABLE_ENUM( name, enumType, defaultVal, desc ) \
 	extern enumType						 name;                      \
 	enumType							 name = defaultVal;         \
-	static ::sw::GlobalVariableRegistrar sw_reg_##name( SW_GVM_MODULE_HEAD(), #name, ::sw::GlobalVariableType::Enum, &name, int32( defaultVal ), desc, #enumType )
+	static ::sw::GlobalVariableRegistrar sw_reg_##name( SW_GVM_MODULE_HEAD(), #name, ::sw::GlobalVariableType::Enum, &name, int32( defaultVal ), desc, #enumType, "", static_cast<uint32>( sizeof( enumType ) ) )
 
 /** @brief 다른 TU 에서 bool 전역 변수를 참조합니다. */
 #define SW_EXTERN_GLOBAL_VARIABLE_BOOL( name ) extern bool name
