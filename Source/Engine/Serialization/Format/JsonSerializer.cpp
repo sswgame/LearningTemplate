@@ -211,6 +211,76 @@ namespace sw
 				writeNestedContainerJson( group.pushBack(), pContainerPtr, nested, pPropName, ctx );
 			}
 
+			// items(JSON 배열)의 각 원소를 시퀀스 컨테이너에 채운다. 호출자가 미리 wrapper->clear() 를 한다.
+			static bool readSequenceItemsJson( void* pContainerPtr, const NestedContainerInfo& nested, const JsonValue& items,
+											   bool bOwnedPtr, const SerializeContext& ctx )
+			{
+				ISequenceContainerWrapper* pSeq = nested._wrapper != nullptr ? nested._wrapper->asSequence() : nullptr;
+				if ( pSeq == nullptr || items.isArray() == false )
+					return false;
+
+				if ( bOwnedPtr )
+				{
+					bool bOk{ true };
+					for ( size_t elementIndex = 0; elementIndex < items.size(); ++elementIndex )
+					{
+						const JsonValue elem = items.at( elementIndex );
+						if ( elem.isObject() == false )
+							continue;
+						const vector<string> listKey = elem.memberNames();
+						if ( listKey.size() != 1 )
+							continue;
+						const hashed_string typeName( listKey[0].c_str() );
+						void*				pObj = ctx.createOwnedPointer( typeName );
+						if ( pObj == nullptr )
+							continue;
+						const TypeInfo* pType = engine::getTypeRegistry().findType( typeName );
+						if ( pType == nullptr )
+							continue;
+						if ( JsonSerializer::readObject( elem.get( listKey[0], false ), pObj, *pType, nullptr, nullptr, ctx ) == false )
+							bOk = false;
+					}
+					return bOk;
+				}
+
+				pSeq->reserve( pContainerPtr, items.size() );
+				bool bOk{ true };
+				for ( size_t elementIndex = 0; elementIndex < items.size(); ++elementIndex )
+				{
+					pSeq->addElementDefault( pContainerPtr );
+					void*			pElemPtr = pSeq->getElement( pContainerPtr, elementIndex );
+					const JsonValue elem	 = items.at( elementIndex );
+					if ( nested._elementNested != nullptr )
+					{
+						if ( readTypedContainerJson( pElemPtr, *nested._elementNested, elem, ctx ) == false )
+							bOk = false;
+					}
+					else
+					{
+						const TypeInfo* pElemType = findNestedJsonObjectType( nested._elementTypeName, ctx );
+						if ( pElemType != nullptr )
+						{
+							if ( elem.isObject() == false )
+							{
+								bOk = false;
+								continue;
+							}
+							// 래핑 형식 { "TypeName": {body} } 이면 그 안을 읽고, 아니면 elem 자체를 body 로 본다.
+							const vector<string> listMember = elem.memberNames();
+							const bool			 bWrapped =
+								( listMember.size() == 1 &&
+								  engine::getTypeRegistry().findType( hashed_string( listMember[0].c_str() ) ) != nullptr );
+							const JsonValue body = bWrapped ? elem.get( listMember[0], false ) : elem;
+							if ( JsonSerializer::readObject( body, pElemPtr, *pElemType, nullptr, nullptr, ctx ) == false )
+								bOk = false;
+						}
+						else if ( readJsonValue( pElemPtr, nested._elementTypeName, elem, ctx ) == false )
+							bOk = false;
+					}
+				}
+				return bOk;
+			}
+
 			static bool readNestedContainerJson( void* pContainerPtr, const NestedContainerInfo& nested, const JsonValue& src,
 												 const SerializeContext& ctx )
 			{
@@ -230,63 +300,7 @@ namespace sw
 						return true;
 					if ( items.isArray() == false )
 						return false;
-
-					if ( bOwnedPtr )
-					{
-						bool bOk{ true };
-						for ( size_t elementIndex = 0; elementIndex < items.size(); ++elementIndex )
-						{
-							const JsonValue elem = items.at( elementIndex );
-							if ( elem.isObject() == false )
-								continue;
-							const vector<string> listKey = elem.memberNames();
-							if ( listKey.size() != 1 )
-								continue;
-							const hashed_string typeName( listKey[0].c_str() );
-							void*				pObj = ctx.createOwnedPointer( typeName );
-							if ( pObj == nullptr )
-								continue;
-							const TypeInfo* pType = engine::getTypeRegistry().findType( typeName );
-							if ( pType == nullptr )
-								continue;
-							if ( JsonSerializer::readObject( elem.get( listKey[0], false ), pObj, *pType, nullptr, nullptr, ctx ) == false )
-								bOk = false;
-						}
-						return bOk;
-					}
-
-					pSeq->reserve( pContainerPtr, items.size() );
-					bool bOk{ true };
-					for ( size_t elementIndex = 0; elementIndex < items.size(); ++elementIndex )
-					{
-						pSeq->addElementDefault( pContainerPtr );
-						void*			pElemPtr = pSeq->getElement( pContainerPtr, elementIndex );
-						const JsonValue elem	 = items.at( elementIndex );
-						if ( nested._elementNested != nullptr )
-						{
-							if ( readTypedContainerJson( pElemPtr, *nested._elementNested, elem, ctx ) == false )
-								bOk = false;
-						}
-						else
-						{
-							const TypeInfo* pElemType = findNestedJsonObjectType( nested._elementTypeName, ctx );
-							if ( pElemType != nullptr )
-							{
-								if ( elem.isObject() == false || elem.memberNames().size() != 1 )
-								{
-									bOk = false;
-									continue;
-								}
-								const string	typeKey = elem.memberNames()[0];
-								const JsonValue body	= elem.get( typeKey, false );
-								if ( JsonSerializer::readObject( body, pElemPtr, *pElemType, nullptr, nullptr, ctx ) == false )
-									bOk = false;
-							}
-							else if ( readJsonValue( pElemPtr, nested._elementTypeName, elem, ctx ) == false )
-								bOk = false;
-						}
-					}
-					return bOk;
+					return readSequenceItemsJson( pContainerPtr, nested, items, bOwnedPtr, ctx );
 				}
 
 				IMapContainerWrapper* pMapWrap = nested._wrapper->asMap();
@@ -339,6 +353,16 @@ namespace sw
 			static bool readTypedContainerJson( void* pContainerPtr, const NestedContainerInfo& nested, const JsonValue& src,
 												const SerializeContext& ctx )
 			{
+				// 시퀀스 컨테이너는 평범한 JSON 배열도 받는다(손으로 쓴 Config JSON 등 자연스러운 표현).
+				if ( src.isArray() && pContainerPtr != nullptr && nested._wrapper != nullptr &&
+					 nested._wrapper->asSequence() != nullptr )
+				{
+					const bool bOwnedPtr = isOwnedPointerElementType( nested._elementTypeName );
+					if ( bOwnedPtr == false )
+						nested._wrapper->clear( pContainerPtr );
+					return readSequenceItemsJson( pContainerPtr, nested, src, bOwnedPtr, ctx );
+				}
+
 				if ( src.isObject() == false )
 					return false;
 

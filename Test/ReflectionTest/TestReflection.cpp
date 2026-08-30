@@ -1390,6 +1390,33 @@ SW_TEST_CASE( Reflection_Serialization, XmlJsonKeysIgnoreCaseValuesPreserveCase 
 };
 
 /**
+ * @brief [Reflection_Serialization] JSON 시퀀스 컨테이너를 평범한 배열 표현으로도 읽는다(손으로 쓴 Config 등).
+ */
+SW_TEST_CASE( Reflection_Serialization, JsonSequenceAcceptsPlainArray )
+{
+	const sw::TypeInfo* typeInfo =
+		sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::ComplexData" ) );
+	SW_ASSERT_TRUE( typeInfo != nullptr );
+
+	// 자연스러운 형식: "_listScore": [10, 20, 30] (직렬화기가 쓰는 {"vector":[{...}]} 래핑이 아님)
+	sw::ComplexData plain;
+	SW_EXPECT_TRUE( sw::JsonSerializer::deserialize( &plain, *typeInfo, R"({"_id":9,"_listScore":[10,20,30]})" ) );
+	SW_EXPECT_EQUAL( 9, plain._id );
+	SW_EXPECT_EQUAL( 3u, static_cast<uint32>( plain._listScore.size() ) );
+	SW_EXPECT_EQUAL( 10, plain._listScore[0] );
+	SW_EXPECT_EQUAL( 30, plain._listScore[2] );
+
+	// 빈 배열도 유효하다.
+	sw::ComplexData empty;
+	SW_EXPECT_TRUE( sw::JsonSerializer::deserialize( &empty, *typeInfo, R"({"_listScore":[]})" ) );
+	SW_EXPECT_EQUAL( 0u, static_cast<uint32>( empty._listScore.size() ) );
+
+	// 잘못된 원소 타입은 여전히 실패한다.
+	sw::ComplexData bad;
+	SW_EXPECT_FALSE( sw::JsonSerializer::deserialize( &bad, *typeInfo, R"({"_listScore":[1,"nope"]})" ) );
+};
+
+/**
  * @brief [Reflection_Serialization] JSON/XML 엄격 역직렬화가 잘못된 컨테이너·필드 coerce 에서 실패
  */
 SW_TEST_CASE( Reflection_Serialization, StrictDeserializeFailsOnBadContainerAndField )
