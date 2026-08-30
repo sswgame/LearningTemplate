@@ -104,6 +104,12 @@ SW_TEST_CASE( Engine_Resource, MakeSavePathLowercasesRelativeFolders )
 	SW_EXPECT_TRUE_MSG( saveKey.find( "shaders/nested/foobar.hlsl" ) != sw::string::npos, savePath.c_str() );
 	SW_EXPECT_TRUE( sw::FileUtil::pathsEqualNormalized( sw::ResourceUtil::makeSaveFolderPath( gameRoot ), gameRoot ) );
 	SW_EXPECT_TRUE_MSG( sw::FileUtil::normalizePath( saveFolder ).find( "shaders/nested" ) != sw::string::npos, saveFolder.c_str() );
+
+	// 대문자 저장 대상 폴더 및 대문자 파일명 전달 시 소문자 변환 검증 (리눅스 에셋 표준)
+	const sw::string saveUpperFolder = sw::ResourceUtil::makeSaveFolderPath( gameRoot + "/PREFABS/SUB_DIR" );
+	const sw::string saveUpperPath	 = sw::ResourceUtil::makeSavePath( gameRoot + "/PREFABS/SUB_DIR", "NEW_HERO.PREFAB.JSON" );
+	SW_EXPECT_TRUE( sw::FileUtil::endsWithIgnoreCase( saveUpperFolder, "prefabs/sub_dir" ) );
+	SW_EXPECT_TRUE( sw::FileUtil::endsWithIgnoreCase( saveUpperPath, "prefabs/sub_dir/new_hero.prefab.json" ) );
 }
 
 /**
