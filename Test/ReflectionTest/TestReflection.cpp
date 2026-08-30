@@ -301,11 +301,11 @@ SW_TEST_CASE( ReflectionParser, ParserUtilPathAndIncludeGeneration )
 
 	// 2) makeHeaderIncludePath 검증
 	sw::vector<sw::string> listIncludeRoots;
-	listIncludeRoots.push_back( "D:/Projects/Personal/LearningTemplate/Source" );
-	listIncludeRoots.push_back( "D:/Projects/Personal/LearningTemplate/Test" );
+	listIncludeRoots.push_back( "Source" );
+	listIncludeRoots.push_back( "Test" );
 
 	const sw::string includePath = sw::ParserUtil::makeHeaderIncludePath(
-		"D:/Projects/Personal/LearningTemplate/Source/Engine/Object/GameObject.h",
+		"Source/Engine/Object/GameObject.h",
 		listIncludeRoots );
 	SW_EXPECT_EQUAL( sw::string( "Engine/Object/GameObject.h" ), includePath );
 }
@@ -473,8 +473,8 @@ SW_TEST_CASE( ReflectionParser, ParserUtilExtremeEdgeCases )
 
 	// 3) makeHeaderIncludePath 루트 불일치 시 파일명 fallback
 	sw::vector<sw::string> listRoots;
-	listRoots.push_back( "D:/OtherProject/Source" );
-	const sw::string fallback = sw::ParserUtil::makeHeaderIncludePath( "D:/Projects/Source/Engine/Foo.h", listRoots );
+	listRoots.push_back( "OtherProject/Source" );
+	const sw::string fallback = sw::ParserUtil::makeHeaderIncludePath( "Projects/Source/Engine/Foo.h", listRoots );
 	SW_EXPECT_EQUAL( sw::string( "Foo.h" ), fallback );
 }
 
