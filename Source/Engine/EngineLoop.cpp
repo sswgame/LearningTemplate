@@ -162,6 +162,7 @@ namespace sw
 			_commandStack = make_unique<CommandStack>();
 #endif
 			_debugOverlayState		  = make_unique<DebugOverlayState>();
+			_debugDrawQueue			  = make_unique<DebugDrawQueue>();
 			_frameDoubleBuffer		  = make_unique<FrameDoubleBuffer>();
 			_rhiBackendRegistry		  = make_unique<RHIBackendRegistry>();
 			_compressionCodecRegistry = make_unique<CompressionCodecRegistry>();
