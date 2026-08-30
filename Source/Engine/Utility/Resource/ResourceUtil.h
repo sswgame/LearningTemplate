@@ -17,11 +17,13 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
+#include "Engine/Utility/Resource/ResourcePackManager.h"
+
 namespace sw
 {
 	/**
 	 * @class ResourceUtil
-	 * @brief 리소스 도메인 루트·검색 루트를 해석하고, 논리 경로 ↔ 절대 경로를 변환합니다.
+	 * @brief 리소스 도메인 루트·검색 루트를 해석하고, 논리 경로 ↔ 절대 경로를 변환하며, VFS .pack 아카이브를 마운트 관리합니다.
 	 * @note 경로 I/O만 담당합니다. 에셋 소유권은 ResourceManager입니다.
 	 */
 	class SW_API ResourceUtil
@@ -52,14 +54,40 @@ namespace sw
 		static string makeAbsolutePath( string_view relativePath );
 
 		/**
-		 * @brief 상대 리소스 경로를 해석한 뒤 텍스트로 읽습니다.
+		 * @brief 상대 리소스 경로를 해석한 뒤 텍스트로 읽습니다 (VFS 팩 우선 조회).
 		 * @param relativePath 팩 상대 키 또는 전역 ID (해석 실패 시 인자 그대로 open 시도)
 		 * @param outText 읽은 UTF-8 본문
-		 * @param outAbsPath 실제 사용한 절대 경로 (nullable)
+		 * @param pOutAbsPath 실제 사용한 절대 경로 (nullable)
 		 * @return 파일 읽기 성공 여부
 		 */
 		static bool readTextResource( string_view relativePath, string& outText,
-									  string* outAbsPath = nullptr );
+									  string* pOutAbsPath = nullptr );
+
+		/**
+		 * @brief 상대 리소스 경로의 바이너리 데이터를 로드합니다 (VFS 팩 우선 조회).
+		 * @param relativePath 팩 상대 키 또는 전역 ID
+		 * @param outBytes 읽은 바이너리 데이터
+		 * @return 파일 읽기 성공 여부
+		 */
+		static bool readBinaryResource( string_view relativePath, vector<uint8>& outBytes );
+
+		/** @brief .pack 바이너리 파일을 VFS에 마운트합니다. */
+		static bool mountPack( string_view packFilePath, int32 priority = 0 );
+
+		/** @brief 마운트된 .pack 파일을 언마운트합니다. */
+		static bool unmountPack( string_view packFilePath );
+
+		/** @brief 모든 마운트된 팩을 언마운트합니다. */
+		static void unmountAllPacks();
+
+		/** @brief 낱개 파일(Loose File) 우선 로드 허용 여부 설정 */
+		static void setAllowLooseFiles( bool bAllow );
+
+		/** @brief 낱개 파일 우선 로드 허용 여부 */
+		static bool isAllowLooseFiles();
+
+		/** @brief VFS 팩 매니저 인스턴스 참조 반환 */
+		static ResourcePackManager& getPackManager();
 
 		/** @brief Engine 리소스 폴더 절대 경로 (`Resource/engine`). 없으면 empty. */
 		static const string& getEngineFolderPath();
@@ -121,11 +149,12 @@ namespace sw
 		static atomic<bool>	  _s_bInitialize;			 ///< initialize() 완료 여부
 		static string		  _s_projectFolderPath;		 ///< 프로젝트 루트
 		static string		  _s_resourceRootFolderPath; ///< Resource/ (표시용)
-		static string		  _s_engineFolderPath;		 ///< Resource/engine
-		static string		  _s_commonFolderPath;		 ///< Resource/common
-		static string		  _s_gameFolderPath;		 ///< Resource/game
-		static string		  _s_editorFolderPath;		 ///< Resource/editor
-		static vector<string> _s_listSearchPriority;	 ///< 검색 우선순위 토큰 목록
-		static vector<string> _s_resourceFolderList;	 ///< getResourcePath 검색 루트들
+		static string			   _s_engineFolderPath;		 ///< Resource/engine
+		static string			   _s_commonFolderPath;		 ///< Resource/common
+		static string			   _s_gameFolderPath;		 ///< Resource/game
+		static string			   _s_editorFolderPath;		 ///< Resource/editor
+		static vector<string>	   _s_listSearchPriority;	 ///< 검색 우선순위 토큰 목록
+		static vector<string>	   _s_listResourceFolder;	 ///< getResourcePath 검색 루트들
+		static ResourcePackManager _s_packManager;			 ///< VFS 팩 마운트 매니저
 	};
 } // namespace sw

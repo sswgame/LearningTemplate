@@ -65,6 +65,7 @@ set(SW_SCRIPT_LINT_RUN_CLANG_FORMAT "{ConfigConstants.kScriptLintRunClangFormat}
 set(SW_SCRIPT_GENERATE_BAKE_SHIPPING_HOST_DEFAULTS "{ConfigConstants.kScriptGenerateBakeShippingHostDefaults}")
 set(SW_SCRIPT_GENERATE_COOK_PREFABS "{ConfigConstants.kScriptGenerateCookPrefabs}")
 set(SW_SCRIPT_GENERATE_COOK_SCENES "{ConfigConstants.kScriptGenerateCookScenes}")
+set(SW_SCRIPT_COOK_RESOURCE_PACKS "{ConfigConstants.kScriptCookResourcePacks}")
 set(SW_SCRIPT_GENERATE_DOCS "{ConfigConstants.kScriptGenerateDocs}")
 
 set(SW_KEY_LLVM_PATH "{ConfigConstants.kKeyLlvmPath}")

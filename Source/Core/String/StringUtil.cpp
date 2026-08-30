@@ -457,6 +457,46 @@ namespace sw
 		return result;
 	}
 
+	void StringUtil::replaceChar( string& inoutStr, const utf8 fromChar, const utf8 toChar )
+	{
+		for ( utf8& ch : inoutStr )
+		{
+			if ( ch == fromChar )
+				ch = toChar;
+		}
+	}
+
+	void StringUtil::replaceChar( wstring& inoutStr, const utf16 fromChar, const utf16 toChar )
+	{
+		for ( utf16& ch : inoutStr )
+		{
+			if ( ch == fromChar )
+				ch = toChar;
+		}
+	}
+
+	string StringUtil::replace( string_view input, string_view from, string_view to )
+	{
+		if ( input.empty() || from.empty() )
+			return string{ input.data(), input.size() };
+
+		string result;
+		result.reserve( input.size() );
+		size_t startPos = 0;
+		size_t findPos	= input.find( from, startPos );
+		while ( findPos != string_view::npos )
+		{
+			const string_view prefix = input.substr( startPos, findPos - startPos );
+			result.append( prefix.data(), prefix.size() );
+			result.append( to.data(), to.size() );
+			startPos = findPos + from.size();
+			findPos	 = input.find( from, startPos );
+		}
+		const string_view suffix = input.substr( startPos );
+		result.append( suffix.data(), suffix.size() );
+		return result;
+	}
+
 	bool StringUtil::equalsIgnoreCase( const utf8* lhs, const utf8* rhs )
 	{
 		if ( lhs == rhs )
@@ -515,6 +555,28 @@ namespace sw
 				return false;
 		}
 		return true;
+	}
+
+	bool StringUtil::startsWithIgnoreCase( string_view str, string_view prefix )
+	{
+		if ( prefix.empty() )
+			return true;
+		if ( str.size() < prefix.size() )
+			return false;
+
+		const string_view head = str.substr( 0, prefix.size() );
+		return equalsIgnoreCase( head, prefix );
+	}
+
+	bool StringUtil::endsWithIgnoreCase( string_view str, string_view suffix )
+	{
+		if ( suffix.empty() )
+			return true;
+		if ( str.size() < suffix.size() )
+			return false;
+
+		const string_view tail = str.substr( str.size() - suffix.size() );
+		return equalsIgnoreCase( tail, suffix );
 	}
 
 	string StringUtil::trimStart( const utf8* input )

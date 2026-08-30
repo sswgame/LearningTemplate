@@ -49,14 +49,28 @@ namespace sw
 
 		/** @brief 전체 경로를 디렉터리와 파일명으로 나눕니다. */
 		static void splitPath( string_view fullPath, string& outDirectoryPath, string& outFileName );
+		/** @brief 전체 경로를 디렉터리와 파일명 뷰로 나눕니다 (Zero Allocation). */
+		static void splitPath( string_view fullPath, string_view& outDirectoryPath, string_view& outFileName );
 		/** @brief 경로에서 파일명만 반환합니다. */
 		static string getFileNamePart( string_view fullPath );
+		/** @brief 경로에서 파일명 부분의 뷰를 출력 매개변수로 반환합니다 (Zero Allocation). */
+		static void getFileNamePart( string_view fullPath, string_view& outFileName );
+		/** @brief 경로에서 파일명 문자열을 출력 매개변수로 반환합니다. */
+		static void getFileNamePart( string_view fullPath, string& outFileName );
 		/** @brief 경로에서 디렉터리만 반환합니다. */
 		static string getDirectoryPart( string_view fullPath );
+		/** @brief 경로에서 디렉터리 부분의 뷰를 출력 매개변수로 반환합니다 (Zero Allocation). */
+		static void getDirectoryPart( string_view fullPath, string_view& outDirectoryPath );
+		/** @brief 경로에서 디렉터리 문자열을 출력 매개변수로 반환합니다. */
+		static void getDirectoryPart( string_view fullPath, string& outDirectoryPath );
 		/** @brief 파일명의 확장자 토큰을 수집합니다. */
 		static void getExtensionPart( string_view fileName, vector<string>& outListPart );
 		/** @brief 파일 경로의 마지막 확장자(예: ".hlsl")를 포함하여 반환합니다. 없을 경우 빈 문자열입니다. */
 		static string getExtension( string_view fileName );
+		/** @brief 파일 경로의 마지막 확장자 뷰를 출력 매개변수로 반환합니다 (Zero Allocation). */
+		static void getExtension( string_view fileName, string_view& outExtension );
+		/** @brief 파일 경로의 마지막 확장자 문자열을 출력 매개변수로 반환합니다. */
+		static void getExtension( string_view fileName, string& outExtension );
 		/** @brief 경로가 지정된 확장자로 끝나는지 대소문자 구분 없이 확인합니다. (앞에 '.' 생략 가능) */
 		static bool hasExtension( string_view fileName, string_view extension );
 		/** @brief 지정된 확장자 중 하나와 대소문자 무시로 일치하는지 확인합니다. */
@@ -69,6 +83,10 @@ namespace sw
 		static string replaceExtension( string_view fileName, string_view extension );
 		/** @brief 확장자를 제거합니다. */
 		static string removeExtension( string_view fileName );
+		/** @brief 확장자를 제거한 본문 뷰를 출력 매개변수로 반환합니다 (Zero Allocation). */
+		static void removeExtension( string_view fileName, string_view& outFileName );
+		/** @brief 확장자를 제거한 본문 문자열을 출력 매개변수로 반환합니다. */
+		static void removeExtension( string_view fileName, string& outFileName );
 
 		/** @brief rootDir 기준 상대 경로로 만듭니다. */
 		static bool makePathRelative( string_view rootDir, string_view path, string& outResult );
@@ -81,6 +99,8 @@ namespace sw
 		static string normalizePath( string_view path );
 		/** @brief I/O용 구분자만 정규화 (`\`→`/`). 대소문자는 유지한다. */
 		static string normalizeSeparators( string_view path );
+		/** @brief OS 네이티브 경로 구분자로 변환합니다 (Windows: `\`, POSIX: `/`). */
+		static string toNativeSeparators( string_view path );
 		/** @brief normalizePath 기준 경로 동등 비교 */
 		static bool pathsEqualNormalized( string_view lhs, string_view rhs );
 		/**

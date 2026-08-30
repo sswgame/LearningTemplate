@@ -5,6 +5,7 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Serialization/Core/Serializer.h"
 
@@ -98,23 +99,12 @@ namespace sw
 		return true;
 	}
 
-	uint32 Archive::calculateCRC32() const
+	uint32 Archive::calculateChecksum() const
 	{
 		if ( _pData == nullptr || _dataSize == 0 )
 			return 0;
 
-		uint32 crc = 0xFFFFFFFFu;
-		for ( uint64 byteIndex = 0; byteIndex < _dataSize; ++byteIndex )
-		{
-			uint8 byteVal = _pData[byteIndex];
-			crc			  = ( crc >> 8 ) ^ ( ( crc ^ byteVal ) & 0xFF );
-		}
-		return ~crc;
-	}
-
-	uint32 Archive::calculateChecksum() const
-	{
-		return calculateCRC32();
+		return StringUtil::computeCrc32( _pData, _dataSize );
 	}
 
 	void Archive::writeChecksum()

@@ -235,6 +235,21 @@ namespace sw
 			if ( pEngineConfig->_listResourcePriority.empty() == false )
 				ResourceUtil::setSearchPriority( pEngineConfig->_listResourcePriority );
 
+			const string exeDir		 = FileUtil::getDirectoryPart( FileUtil::getExecutablePath() );
+			const string exePacksDir = FileUtil::joinPath( exeDir, "Packs" );
+			if ( FileUtil::directoryExists( exePacksDir ) )
+			{
+				ResourceUtil::getPackManager().scanAndMountPacks( exePacksDir, pEngineConfig->_listResourcePriority );
+			}
+			else
+			{
+				const string projectPacksDir = FileUtil::joinPath( ResourceUtil::getProjectFolderPath(), "Packs" );
+				if ( FileUtil::directoryExists( projectPacksDir ) )
+				{
+					ResourceUtil::getPackManager().scanAndMountPacks( projectPacksDir, pEngineConfig->_listResourcePriority );
+				}
+			}
+
 			if ( pEngineConfig->_engineData.empty() == false )
 				_engineData->loadFromResource( pEngineConfig->_engineData );
 			else

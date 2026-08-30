@@ -87,9 +87,7 @@ namespace sw
 		/** @brief 지정된 크기만큼 바이트를 읽어옵니다. */
 		bool readBytes( void* pOutBuffer, uint64 byteSize );
 
-		/** @brief 버퍼 데이터에 대한 CRC32 체크섬을 계산합니다. */
-		uint32 calculateCRC32() const;
-		/** @brief 현재 버퍼 데이터의 체크섬을 계산합니다. */
+		/** @brief 현재 버퍼 데이터의 CRC32 체크섬을 계산합니다. */
 		uint32 calculateChecksum() const;
 		/** @brief 계산된 체크섬을 아카이브에 기록합니다. */
 		void writeChecksum();

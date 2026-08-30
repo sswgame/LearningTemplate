@@ -36,6 +36,25 @@ namespace sw
 		uint32 _suffixLength{ 0 };
 	};
 
+	/** @brief IEEE 802.3 CRC32 테이블 룩업용 상수 테이블 */
+	struct Crc32LookupTable
+	{
+		uint32 _arrTable[256]{};
+
+		constexpr Crc32LookupTable() noexcept
+		{
+			for ( uint32 index = 0; index < 256; ++index )
+			{
+				uint32 crc = index;
+				for ( uint32 bitIndex = 0; bitIndex < 8; ++bitIndex )
+				{
+					crc = ( crc & 1u ) != 0 ? ( ( crc >> 1 ) ^ 0xEDB88320u ) : ( crc >> 1 );
+				}
+				_arrTable[index] = crc;
+			}
+		}
+	};
+
 	// ------------------------------------------------------------------------------
 	// 2) StringUtil — UTF 변환 · 해시 · 분할 · 트림 (전부 static)
 	// ------------------------------------------------------------------------------
@@ -68,16 +87,16 @@ namespace sw
 		static string utf8ToLocale( const utf8* input );
 
 		/** @brief 단일 UTF-8 문자를 소문자로 변환합니다. */
-		static constexpr utf8 toLowerChar( const utf8 c ) { return ( c >= 'A' && c <= 'Z' ) ? static_cast<utf8>( c + ( 'a' - 'A' ) ) : c; }
+		static constexpr utf8 toLowerChar( const utf8 c ) { return ( 'A' <= c && c <= 'Z' ) ? static_cast<utf8>( c + ( 'a' - 'A' ) ) : c; }
 
 		/** @brief 단일 UTF-16 문자를 소문자로 변환합니다. */
-		static constexpr utf16 toLowerChar( const utf16 c ) { return ( c >= L'A' && c <= L'Z' ) ? static_cast<utf16>( c + ( L'a' - L'A' ) ) : c; }
+		static constexpr utf16 toLowerChar( const utf16 c ) { return ( L'A' <= c && c <= L'Z' ) ? static_cast<utf16>( c + ( L'a' - L'A' ) ) : c; }
 
 		/** @brief 단일 UTF-8 문자를 대문자로 변환합니다. */
-		static constexpr utf8 toUpperChar( const utf8 c ) { return ( c >= 'a' && c <= 'z' ) ? static_cast<utf8>( c - ( 'a' - 'A' ) ) : c; }
+		static constexpr utf8 toUpperChar( const utf8 c ) { return ( 'a' <= c && c <= 'z' ) ? static_cast<utf8>( c - ( 'a' - 'A' ) ) : c; }
 
 		/** @brief 단일 UTF-16 문자를 대문자로 변환합니다. */
-		static constexpr utf16 toUpperChar( const utf16 c ) { return ( c >= L'a' && c <= L'z' ) ? static_cast<utf16>( c - ( L'a' - L'A' ) ) : c; }
+		static constexpr utf16 toUpperChar( const utf16 c ) { return ( L'a' <= c && c <= L'z' ) ? static_cast<utf16>( c - ( L'a' - L'A' ) ) : c; }
 
 		/** @brief UTF-8 문자열 전체를 대문자로 변환합니다. */
 		static string toUpper( const utf8* input );
@@ -95,6 +114,13 @@ namespace sw
 		/** @brief before 텍스트와 스팬으로 편집 후 본문을 만듭니다. */
 		static string reconstructAfter( const StringChangeSpan& span, string_view beforeText );
 
+		/** @brief 문자열 내의 특정 문자를 다른 문자로 치환합니다. */
+		static void replaceChar( string& inoutStr, utf8 fromChar, utf8 toChar );
+		/** @brief 문자열 내의 특정 문자를 다른 문자로 치환합니다 (UTF-16). */
+		static void replaceChar( wstring& inoutStr, utf16 fromChar, utf16 toChar );
+		/** @brief 특정 부분 문자열을 다른 문자열로 치환한 새 문자열을 반환합니다. */
+		static string replace( string_view input, string_view from, string_view to );
+
 		/** @brief ASCII 대소문자 무시 동등 비교 (키/태그/속성 이름용). 값 비교에는 쓰지 말 것. */
 		static bool equalsIgnoreCase( const utf8* lhs, const utf8* rhs );
 		/** @brief 대소문자 무시 동등 비교를 합니다. */
@@ -103,6 +129,11 @@ namespace sw
 		static bool equalsIgnoreCase( string_view lhs, string_view rhs );
 		/** @brief wstring_view 대소문자 무시 동등 비교 */
 		static bool equalsIgnoreCase( wstring_view lhs, wstring_view rhs );
+
+		/** @brief 문자열이 지정된 접두사(prefix)로 시작하는지 대소문자 무시로 확인합니다 (Zero Allocation). */
+		static bool startsWithIgnoreCase( string_view str, string_view prefix );
+		/** @brief 문자열이 지정된 접미사(suffix)로 끝나는지 대소문자 무시로 확인합니다 (Zero Allocation). */
+		static bool endsWithIgnoreCase( string_view str, string_view suffix );
 
 		/** @brief 문자열 앞(시작 부분)의 공백(Whitespace) 문자를 모두 제거합니다. */
 		static string trimStart( const utf8* input );
@@ -260,7 +291,9 @@ namespace sw
 			return computeHash32( str.data(), str.size(), bIgnoreCase, seed );
 		}
 
-		/** @brief 임의의 바이너리 버퍼에 대해 IEEE 802.3 CRC32 체크섬을 계산합니다. */
+		static constexpr Crc32LookupTable kCrc32Table{};
+
+		/** @brief 임의의 바이너리 버퍼에 대해 IEEE 802.3 CRC32 체크섬을 테이블 룩업으로 고속 계산합니다. */
 		static constexpr uint32 computeCrc32( const void* pData, const size_t length ) noexcept
 		{
 			if ( pData == nullptr || length == 0 )
@@ -270,12 +303,7 @@ namespace sw
 			uint32		 crc	= 0xFFFFFFFFu;
 			for ( size_t byteIndex = 0; byteIndex < length; ++byteIndex )
 			{
-				crc ^= static_cast<uint32>( pBytes[byteIndex] );
-				for ( uint32 bitIndex = 0; bitIndex < 8; ++bitIndex )
-				{
-					const uint32 mask = static_cast<uint32>( -( static_cast<int32>( crc & 1u ) ) );
-					crc				  = ( crc >> 1 ) ^ ( 0xEDB88320u & mask );
-				}
+				crc = ( crc >> 8 ) ^ kCrc32Table._arrTable[( crc ^ pBytes[byteIndex] ) & 0xFFu];
 			}
 			return ~crc;
 		}

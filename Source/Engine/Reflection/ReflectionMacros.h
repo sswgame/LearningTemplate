@@ -12,7 +12,7 @@
  *   - 엔진 컴포넌트: REFLECT_BODY() (Component 상속 시 자동 팩토리 등록)
  */
 #pragma once
-#include "Engine/EngineMinimal.h"
+#include "Core/String/hashed_string.h"
 
 namespace sw
 {

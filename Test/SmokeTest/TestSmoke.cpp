@@ -878,6 +878,8 @@ SW_TEST_CASE( ModuleAPI, FullGameSceneAndComponentLifecycle )
 			pActive->tick( 0.016f );
 	}
 
+	SW_LOG_INFO( "[SmokeTest] Step 11: Shutting down..." );
+
 	sw::engine::getTaskManager().waitAll();
 	sw::engine::getSceneManager().tickTransitions();
 

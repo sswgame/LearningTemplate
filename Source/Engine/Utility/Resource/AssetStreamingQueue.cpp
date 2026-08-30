@@ -7,6 +7,7 @@
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Utility/Resource/ResourceUtil.h"
 
 namespace sw
 {
@@ -119,7 +120,12 @@ namespace sw
 	void AssetStreamingQueue::processAssetTask( const TaskArgs& args )
 	{
 		const string pathStr = args.get<string>( 0 );
-		const bool	 bExists = FileUtil::fileExists( pathStr );
+		bool		 bExists = ResourceUtil::getPackManager().hasFile( pathStr );
+		if ( bExists == false )
+		{
+			const string absPath = ResourceUtil::getResourcePath( pathStr );
+			bExists = ( absPath.empty() == false ) ? FileUtil::fileExists( absPath ) : FileUtil::fileExists( pathStr );
+		}
 
 		std::scoped_lock<mutex> innerLock{ _mutex };
 		_mapLoadedAsset[pathStr] = bExists;

@@ -53,10 +53,14 @@ if(Python3_Interpreter_FOUND)
 	sw_addRepoPythonTarget(CookScenes "${SW_SCRIPT_GENERATE_COOK_SCENES}"
 		COMMENT "Cooking scene XML to SCN1 binary..."
 	)
+	sw_addRepoPythonTarget(CookPacks "${SW_SCRIPT_COOK_RESOURCE_PACKS}"
+		COMMENT "Cooking Resource folders into binary .pack (SWPK) archives..."
+		ARGS --all --output "${SW_BIN_DIR}/Packs"
+	)
 
 	add_custom_target(CookAssets
-		DEPENDS CookPrefabs CookScenes
-		COMMENT "Cooking all scene and prefab assets to binary..."
+		DEPENDS CookPrefabs CookScenes CookPacks
+		COMMENT "Cooking all scene, prefab and pack assets to binary..."
 	)
 	set_target_properties(CookAssets PROPERTIES FOLDER "Engine/Scripts")
 

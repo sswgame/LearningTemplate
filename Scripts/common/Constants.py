@@ -77,6 +77,7 @@ kScriptLintRunClangFormat = "Scripts/lint/RunClangFormat.py"
 kScriptGenerateBakeShippingHostDefaults = "Scripts/generate/BakeShippingHostDefaults.py"
 kScriptGenerateCookPrefabs = "Scripts/generate/CookPrefabs.py"
 kScriptGenerateCookScenes = "Scripts/generate/CookScenes.py"
+kScriptCookResourcePacks = "Scripts/cook/CookResourcePacks.py"
 kScriptGenerateDocs = "Scripts/generate/GenerateDocs.py"
 
 # =============================================================================

@@ -5,14 +5,19 @@
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/GameConfig.h"
 
+#include "Core/Concurrency/mutex.h"
+#include "Core/File/FileUtil.h"
+#include "Core/Log/Logger.h"
+#include "Core/String/StringUtil.h"
+
 namespace sw
 {
 	namespace
 	{
 		struct ResourceUtilInternal
 		{
-			inline static std::shared_mutex				_s_pathCacheMutex{};
-			inline static unordered_map<string, string> _s_mapResolvedPaths{};
+			inline static mutex							_s_pathCacheMutex{};
+			inline static unordered_map<uint64, string> _s_mapResolvedPath{};
 
 			/**
 			 * @brief 전역 ID(`engine/`·`common/`·`editor/`·`game/<pack>/`)를 도메인 루트로 매핑합니다.
@@ -28,14 +33,14 @@ namespace sw
 
 				struct StaticDomainRoute
 				{
-					string_view _prefix;
+					string_view	  _prefix;
 					const string& ( *_pGetFolderFunc )();
 				};
 
 				static constexpr StaticDomainRoute kStaticDomainRoutes[] = {
-					{path::kEnginePack, &ResourceUtil::getEngineFolderPath},
-					{path::kCommonPack, &ResourceUtil::getCommonFolderPath},
-					{path::kEditorPack, &ResourceUtil::getEditorFolderPath},
+					{ path::kEnginePack, &ResourceUtil::getEngineFolderPath },
+					{ path::kCommonPack, &ResourceUtil::getCommonFolderPath },
+					{ path::kEditorPack, &ResourceUtil::getEditorFolderPath },
 				};
 
 				for ( const auto& route : kStaticDomainRoutes )
@@ -89,44 +94,39 @@ namespace sw
 
 			/**
 			 * @brief 검색 루트 목록을 순회하며 tryUnderRoot 합니다.
-			 * @param roots getResourcePath 검색 루트들
+			 * @param listRoot getResourcePath 검색 루트들
 			 * @param relFile 상대 파일 키
 			 * @param relFolder 선택적 하위 폴더
 			 * @return 첫 번째로 찾은 절대 경로. 없으면 empty.
 			 */
-			static string tryResolveAmong( const vector<string>& roots, string_view relFile,
-										   string_view relFolder )
+			static string tryResolveAmong( const vector<string>& listRoot, string_view relFile, string_view relFolder )
 			{
-				for ( const string& resourceFolder : roots )
+				for ( const string& root : listRoot )
 				{
-					string found = tryUnderRoot( resourceFolder, relFile, relFolder );
-					if ( found.empty() == false )
-						return found;
+					const string hit = tryUnderRoot( root, relFile, relFolder );
+					if ( hit.empty() == false )
+						return hit;
 				}
 				return {};
 			}
 
 			/**
-			 * @brief folderNorm가 후보 루트에 속하면, 더 구체적인 루트로 ioPhysicalRoot/ioRootNorm를 갱신합니다.
-			 * @param folderNorm normalizePath 된 대상 폴더(절대)
-			 * @param rootPhysicalCandidate 후보 물리 루트
-			 * @param ioPhysicalRoot 현재까지 고른 FS 대소문자 유지 루트
-			 * @param ioRootNorm 현재까지 고른 normalizePath 루트
+			 * @brief 저장 대상 폴더가 지정한 루트 아래인지 판정하고, 더 긴(구체적인) 일치를 유지합니다.
 			 */
-			static void considerSaveRoot( string_view folderNorm, string_view rootPhysicalCandidate,
-										  string& ioPhysicalRoot, string& ioRootNorm )
+			static void considerSaveRoot( string_view folderNorm, string_view candidateRoot, string& outPhysicalRoot, string& outRootNorm )
 			{
-				if ( rootPhysicalCandidate.empty() )
+				if ( candidateRoot.empty() )
 					return;
-				string rootPhysical	 = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( rootPhysicalCandidate ) );
-				string candidateNorm = FileUtil::trimTrailingSlashes( FileUtil::normalizePath( rootPhysical ) );
-				if ( candidateNorm.empty() || FileUtil::startsWithPathComponent( folderNorm, candidateNorm ) == false )
+				const string norm = FileUtil::trimTrailingSlashes( FileUtil::normalizePath( candidateRoot ) );
+				if ( norm.empty() )
 					return;
-
-				if ( ioRootNorm.empty() || candidateNorm.size() > ioRootNorm.size() )
+				if ( folderNorm == norm || ( folderNorm.size() > norm.size() && folderNorm.rfind( norm + "/", 0 ) == 0 ) )
 				{
-					ioPhysicalRoot = std::move( rootPhysical );
-					ioRootNorm	   = std::move( candidateNorm );
+					if ( norm.size() > outRootNorm.size() )
+					{
+						outRootNorm		= norm;
+						outPhysicalRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( string{ candidateRoot } ) );
+					}
 				}
 			}
 		};
@@ -144,8 +144,8 @@ namespace sw
 		_s_bInitialize.store( true, std::memory_order_release );
 
 		{
-			std::unique_lock<std::shared_mutex> lock( ResourceUtilInternal::_s_pathCacheMutex );
-			ResourceUtilInternal::_s_mapResolvedPaths.clear();
+			std::lock_guard<mutex> lock( ResourceUtilInternal::_s_pathCacheMutex );
+			ResourceUtilInternal::_s_mapResolvedPath.clear();
 		}
 
 		string currentPath = FileUtil::getCurrentPath();
@@ -201,23 +201,16 @@ namespace sw
 		if ( filePath.empty() )
 			return {};
 
-		string cacheKey;
-		if ( folderName.empty() )
+		uint64 cacheKeyHash = StringUtil::computeHash64( filePath );
+		if ( folderName.empty() == false )
 		{
-			cacheKey = string( filePath );
-		}
-		else
-		{
-			cacheKey.reserve( folderName.size() + 1 + filePath.size() );
-			cacheKey.append( folderName.data(), folderName.size() );
-			cacheKey.push_back( '|' );
-			cacheKey.append( filePath.data(), filePath.size() );
+			cacheKeyHash = StringUtil::computeHash64( folderName, true, cacheKeyHash );
 		}
 
 		{
-			std::shared_lock<std::shared_mutex> lock( ResourceUtilInternal::_s_pathCacheMutex );
-			auto								it = ResourceUtilInternal::_s_mapResolvedPaths.find( cacheKey );
-			if ( it != ResourceUtilInternal::_s_mapResolvedPaths.end() )
+			std::lock_guard<mutex> lock( ResourceUtilInternal::_s_pathCacheMutex );
+			auto				   it = ResourceUtilInternal::_s_mapResolvedPath.find( cacheKeyHash );
+			if ( it != ResourceUtilInternal::_s_mapResolvedPath.end() )
 				return it->second;
 		}
 
@@ -245,21 +238,22 @@ namespace sw
 		}
 		else
 		{
-			found = ResourceUtilInternal::tryResolveAmong( _s_resourceFolderList, lowerFile, lowerFolder );
+			found = ResourceUtilInternal::tryResolveAmong( _s_listResourceFolder, lowerFile, lowerFolder );
 #if defined( SW_PLATFORM_LINUX )
 			if ( found.empty() && ( lowerFile != filePath || ( folderName.empty() == false && lowerFolder != folderName ) ) )
-				found = ResourceUtilInternal::tryResolveAmong( _s_resourceFolderList, filePath, folderName );
+				found = ResourceUtilInternal::tryResolveAmong( _s_listResourceFolder, filePath, folderName );
 #endif
 		}
 
 		if ( found.empty() == false )
 		{
-			std::unique_lock<std::shared_mutex> lock( ResourceUtilInternal::_s_pathCacheMutex );
-			ResourceUtilInternal::_s_mapResolvedPaths.insert_or_assign( std::move( cacheKey ), found );
+			std::lock_guard<mutex> lock( ResourceUtilInternal::_s_pathCacheMutex );
+			ResourceUtilInternal::_s_mapResolvedPath.insert_or_assign( cacheKeyHash, found );
 		}
 
 		return found;
 	}
+
 	string ResourceUtil::makeAbsolutePath( string_view relativePath )
 	{
 		if ( relativePath.empty() )
@@ -276,24 +270,118 @@ namespace sw
 		}
 		return result;
 	}
+
 	bool ResourceUtil::readTextResource( string_view relativePath, string& outText,
-										 string* outAbsPath )
+										 string* pOutAbsPath )
 	{
+		if ( relativePath.empty() )
+			return false;
+
+		const string normalizedKey = FileUtil::normalizePath( relativePath );
+
+		// 1. 낱개 파일 우선 로드가 켜져 있는 경우, 디스크 파일 먼저 확인
+		if ( _s_packManager.isAllowLooseFiles() )
+		{
+			const string absPath = getResourcePath( relativePath );
+			if ( absPath.empty() == false && FileUtil::fileExists( absPath ) )
+			{
+				if ( pOutAbsPath != nullptr )
+					*pOutAbsPath = absPath;
+				return FileUtil::readTextFile( absPath, outText );
+			}
+		}
+
+		// 2. VFS 마운트된 팩들에서 O(1) 해시 룩업 및 압축 해제 읽기
+		string mountedPackPath;
+		if ( _s_packManager.readTextFile( normalizedKey, outText, &mountedPackPath ) )
+		{
+			if ( pOutAbsPath != nullptr )
+				*pOutAbsPath = "[" + FileUtil::getFileNamePart( mountedPackPath ) + "]:" + normalizedKey;
+			return true;
+		}
+
+		// 3. 디스크 fallback 읽기
 		string absPath = getResourcePath( relativePath );
 		if ( absPath.empty() )
 			absPath = string( relativePath );
-		if ( outAbsPath != nullptr )
-			*outAbsPath = absPath;
+		if ( pOutAbsPath != nullptr )
+			*pOutAbsPath = absPath;
 		return FileUtil::readTextFile( absPath, outText );
 	}
+
+	bool ResourceUtil::readBinaryResource( string_view relativePath, vector<uint8>& outBytes )
+	{
+		if ( relativePath.empty() )
+			return false;
+
+		const string normalizedKey = FileUtil::normalizePath( relativePath );
+
+		if ( _s_packManager.isAllowLooseFiles() )
+		{
+			const string absPath = getResourcePath( relativePath );
+			if ( absPath.empty() == false && FileUtil::fileExists( absPath ) )
+			{
+				return FileUtil::readFile( absPath, outBytes );
+			}
+		}
+
+		if ( _s_packManager.readFile( normalizedKey, outBytes ) )
+		{
+			return true;
+		}
+
+		const string absPath = getResourcePath( relativePath );
+		if ( absPath.empty() == false )
+		{
+			return FileUtil::readFile( absPath, outBytes );
+		}
+		return FileUtil::readFile( relativePath, outBytes );
+	}
+
+	bool ResourceUtil::mountPack( string_view packFilePath, int32 priority )
+	{
+		clearPathCache();
+		return _s_packManager.mountPack( packFilePath, priority );
+	}
+
+	bool ResourceUtil::unmountPack( string_view packFilePath )
+	{
+		clearPathCache();
+		return _s_packManager.unmountPack( packFilePath );
+	}
+
+	void ResourceUtil::unmountAllPacks()
+	{
+		clearPathCache();
+		_s_packManager.unmountAll();
+	}
+
+	void ResourceUtil::setAllowLooseFiles( bool bAllow )
+	{
+		clearPathCache();
+		_s_packManager.setAllowLooseFiles( bAllow );
+	}
+
+	bool ResourceUtil::isAllowLooseFiles()
+	{
+		return _s_packManager.isAllowLooseFiles();
+	}
+
+	ResourcePackManager& ResourceUtil::getPackManager()
+	{
+		return _s_packManager;
+	}
+
 	const string& ResourceUtil::getEngineFolderPath()
 	{
 		return _s_engineFolderPath;
 	}
+
 	const string& ResourceUtil::getCommonFolderPath()
 	{
 		return _s_commonFolderPath;
 	}
+
 	const string& ResourceUtil::getGameFolderPath()
 	{
 		return _s_gameFolderPath;
@@ -324,6 +412,7 @@ namespace sw
 			return packFolder;
 		return FileUtil::joinPath( packFolder, relativeUnderPack );
 	}
+
 	const string& ResourceUtil::getEditorFolderPath()
 	{
 		return _s_editorFolderPath;
@@ -341,25 +430,25 @@ namespace sw
 
 	vector<string> ResourceUtil::getResourceFolders( string_view folderName )
 	{
-		vector<string> listFolders;
+		vector<string> listFolder;
 		const string   lowerName = FileUtil::normalizePath( folderName );
 
-		for ( const string& resourceFolder : _s_resourceFolderList )
+		for ( const string& resourceFolder : _s_listResourceFolder )
 		{
 			const string folderPath = FileUtil::joinPath( resourceFolder, lowerName );
 			if ( FileUtil::directoryExists( folderPath ) )
-				listFolders.push_back( FileUtil::normalizeSeparators( folderPath ) );
+				listFolder.push_back( FileUtil::normalizeSeparators( folderPath ) );
 
 #if defined( SW_PLATFORM_LINUX )
 			if ( lowerName != folderName )
 			{
 				const string rawPath = FileUtil::joinPath( resourceFolder, folderName );
 				if ( FileUtil::directoryExists( rawPath ) )
-					listFolders.push_back( FileUtil::normalizeSeparators( rawPath ) );
+					listFolder.push_back( FileUtil::normalizeSeparators( rawPath ) );
 			}
 #endif
 		}
-		return listFolders;
+		return listFolder;
 	}
 
 	bool ResourceUtil::setSearchPriority( const vector<string>& listPriority )
@@ -372,8 +461,8 @@ namespace sw
 		if ( _s_resourceRootFolderPath.empty() )
 			return true;
 
-		_s_resourceFolderList.clear();
-		_s_resourceFolderList.reserve( 16 );
+		_s_listResourceFolder.clear();
+		_s_listResourceFolder.reserve( 16 );
 
 		const string& resourceRoot = _s_resourceRootFolderPath;
 
@@ -386,22 +475,14 @@ namespace sw
 				if ( activePack.empty() == false && FileUtil::directoryExists( activePack ) )
 				{
 					const string normPack = FileUtil::normalizeSeparators( activePack );
-					if ( std::find( _s_resourceFolderList.begin(), _s_resourceFolderList.end(), normPack ) == _s_resourceFolderList.end() )
-						_s_resourceFolderList.push_back( normPack );
+					if ( std::find( _s_listResourceFolder.begin(), _s_listResourceFolder.end(), normPack ) == _s_listResourceFolder.end() )
+						_s_listResourceFolder.push_back( normPack );
 				}
-
-				if ( _s_gameFolderPath.empty() == false && FileUtil::directoryExists( _s_gameFolderPath ) )
+				else if ( _s_gameFolderPath.empty() == false && FileUtil::directoryExists( _s_gameFolderPath ) )
 				{
-					vector<string> listPackFolders;
-					FileUtil::collectFolders( _s_gameFolderPath, listPackFolders, false, false );
-					for ( const string& packFolder : listPackFolders )
-					{
-						const string normPack = FileUtil::normalizeSeparators( packFolder );
-						if ( std::find( _s_resourceFolderList.begin(), _s_resourceFolderList.end(), normPack ) == _s_resourceFolderList.end() )
-						{
-							_s_resourceFolderList.push_back( normPack );
-						}
-					}
+					const string norm = FileUtil::normalizeSeparators( _s_gameFolderPath );
+					if ( std::find( _s_listResourceFolder.begin(), _s_listResourceFolder.end(), norm ) == _s_listResourceFolder.end() )
+						_s_listResourceFolder.push_back( norm );
 				}
 			}
 			else if ( token == "common" )
@@ -409,8 +490,8 @@ namespace sw
 				if ( _s_commonFolderPath.empty() == false && FileUtil::directoryExists( _s_commonFolderPath ) )
 				{
 					const string norm = FileUtil::normalizeSeparators( _s_commonFolderPath );
-					if ( std::find( _s_resourceFolderList.begin(), _s_resourceFolderList.end(), norm ) == _s_resourceFolderList.end() )
-						_s_resourceFolderList.push_back( norm );
+					if ( std::find( _s_listResourceFolder.begin(), _s_listResourceFolder.end(), norm ) == _s_listResourceFolder.end() )
+						_s_listResourceFolder.push_back( norm );
 				}
 			}
 			else if ( token == "engine" )
@@ -418,8 +499,8 @@ namespace sw
 				if ( _s_engineFolderPath.empty() == false && FileUtil::directoryExists( _s_engineFolderPath ) )
 				{
 					const string norm = FileUtil::normalizeSeparators( _s_engineFolderPath );
-					if ( std::find( _s_resourceFolderList.begin(), _s_resourceFolderList.end(), norm ) == _s_resourceFolderList.end() )
-						_s_resourceFolderList.push_back( norm );
+					if ( std::find( _s_listResourceFolder.begin(), _s_listResourceFolder.end(), norm ) == _s_listResourceFolder.end() )
+						_s_listResourceFolder.push_back( norm );
 				}
 			}
 			else if ( token == "editor" )
@@ -427,8 +508,8 @@ namespace sw
 				if ( _s_editorFolderPath.empty() == false && FileUtil::directoryExists( _s_editorFolderPath ) )
 				{
 					const string norm = FileUtil::normalizeSeparators( _s_editorFolderPath );
-					if ( std::find( _s_resourceFolderList.begin(), _s_resourceFolderList.end(), norm ) == _s_resourceFolderList.end() )
-						_s_resourceFolderList.push_back( norm );
+					if ( std::find( _s_listResourceFolder.begin(), _s_listResourceFolder.end(), norm ) == _s_listResourceFolder.end() )
+						_s_listResourceFolder.push_back( norm );
 				}
 			}
 			else
@@ -438,8 +519,8 @@ namespace sw
 				if ( FileUtil::directoryExists( customPath ) )
 				{
 					const string norm = FileUtil::normalizeSeparators( customPath );
-					if ( std::find( _s_resourceFolderList.begin(), _s_resourceFolderList.end(), norm ) == _s_resourceFolderList.end() )
-						_s_resourceFolderList.push_back( norm );
+					if ( std::find( _s_listResourceFolder.begin(), _s_listResourceFolder.end(), norm ) == _s_listResourceFolder.end() )
+						_s_listResourceFolder.push_back( norm );
 				}
 			}
 		}
@@ -461,8 +542,8 @@ namespace sw
 
 	void ResourceUtil::clearPathCache()
 	{
-		std::unique_lock<std::shared_mutex> lock( ResourceUtilInternal::_s_pathCacheMutex );
-		ResourceUtilInternal::_s_mapResolvedPaths.clear();
+		std::lock_guard<mutex> lock( ResourceUtilInternal::_s_pathCacheMutex );
+		ResourceUtilInternal::_s_mapResolvedPath.clear();
 	}
 
 	string ResourceUtil::makeSaveFolderPath( string_view absoluteFolder )
@@ -472,7 +553,7 @@ namespace sw
 		string physicalRoot;
 		string rootNorm;
 
-		for ( const string& root : _s_resourceFolderList )
+		for ( const string& root : _s_listResourceFolder )
 		{
 			ResourceUtilInternal::considerSaveRoot( folderNorm, root, physicalRoot, rootNorm );
 		}
@@ -528,6 +609,8 @@ namespace sw
 
 	vector<string> ResourceUtil::_s_listSearchPriority;
 
-	vector<string> ResourceUtil::_s_resourceFolderList;
+	vector<string> ResourceUtil::_s_listResourceFolder;
+
+	ResourcePackManager ResourceUtil::_s_packManager;
 
 } // namespace sw

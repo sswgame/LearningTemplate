@@ -36,35 +36,67 @@ namespace sw
 		return string{ arrBuffer };
 	}
 
-	void FileUtil::splitPath( string_view fullPath, string& outDirectoryPath, string& outFileName )
+	void FileUtil::splitPath( string_view fullPath, string_view& outDirectoryPath, string_view& outFileName )
 	{
 		const size_t found = fullPath.find_last_of( "/\\" );
 		if ( found == string_view::npos )
 		{
-			outDirectoryPath.clear();
-			outFileName = string{ fullPath };
+			outDirectoryPath = {};
+			outFileName		 = fullPath;
 			return;
 		}
-		outDirectoryPath = string{ fullPath.substr( 0, found + 1 ) };
-		outFileName		 = string{ fullPath.substr( found + 1 ) };
+		outDirectoryPath = fullPath.substr( 0, found + 1 );
+		outFileName		 = fullPath.substr( found + 1 );
+	}
+
+	void FileUtil::splitPath( string_view fullPath, string& outDirectoryPath, string& outFileName )
+	{
+		string_view dirView;
+		string_view fileView;
+		splitPath( fullPath, dirView, fileView );
+		outDirectoryPath = string{ dirView };
+		outFileName		 = string{ fileView };
+	}
+
+	void FileUtil::getFileNamePart( string_view fullPath, string_view& outFileName )
+	{
+		if ( fullPath.empty() )
+		{
+			outFileName = {};
+			return;
+		}
+
+		const size_t found = fullPath.find_last_of( "/\\" );
+		if ( found == string_view::npos )
+		{
+			outFileName = fullPath;
+			return;
+		}
+
+		outFileName = fullPath.substr( found + 1 );
+	}
+
+	void FileUtil::getFileNamePart( string_view fullPath, string& outFileName )
+	{
+		string_view fileView;
+		getFileNamePart( fullPath, fileView );
+		outFileName = string{ fileView };
 	}
 
 	string FileUtil::getFileNamePart( string_view fullPath )
 	{
-		if ( fullPath.empty() )
-			return {};
-
-		const size_t found = fullPath.find_last_of( "/\\" );
-		if ( found == string_view::npos )
-			return string{ fullPath };
-
-		return string{ fullPath.substr( found + 1 ) };
+		string_view fileView;
+		getFileNamePart( fullPath, fileView );
+		return string{ fileView };
 	}
 
-	string FileUtil::getDirectoryPart( string_view fullPath )
+	void FileUtil::getDirectoryPart( string_view fullPath, string_view& outDirectoryPath )
 	{
 		if ( fullPath.empty() )
-			return {};
+		{
+			outDirectoryPath = {};
+			return;
+		}
 
 		string_view v = fullPath;
 		while ( v.size() > 1 && ( v.back() == '/' || v.back() == '\\' ) )
@@ -73,13 +105,33 @@ namespace sw
 		}
 
 		if ( v.empty() )
-			return {};
+		{
+			outDirectoryPath = {};
+			return;
+		}
 
 		const size_t found = v.find_last_of( "/\\" );
 		if ( found == string_view::npos )
-			return {};
+		{
+			outDirectoryPath = {};
+			return;
+		}
 
-		return string{ v.substr( 0, found ) };
+		outDirectoryPath = v.substr( 0, found );
+	}
+
+	void FileUtil::getDirectoryPart( string_view fullPath, string& outDirectoryPath )
+	{
+		string_view dirView;
+		getDirectoryPart( fullPath, dirView );
+		outDirectoryPath = string{ dirView };
+	}
+
+	string FileUtil::getDirectoryPart( string_view fullPath )
+	{
+		string_view dirView;
+		getDirectoryPart( fullPath, dirView );
+		return string{ dirView };
 	}
 
 	void FileUtil::getExtensionPart( string_view fileName, vector<string>& outListPart )
@@ -92,14 +144,31 @@ namespace sw
 		}
 	}
 
-	string FileUtil::getExtension( string_view fileName )
+	void FileUtil::getExtension( string_view fileName, string_view& outExtension )
 	{
 		const size_t slash = fileName.find_last_of( "/\\" );
 		const size_t start = ( slash == string_view::npos ) ? 0 : slash + 1;
 		const size_t dot   = fileName.find_last_of( '.' );
 		if ( dot == string_view::npos || dot < start )
-			return {};
-		return string{ fileName.substr( dot ) };
+		{
+			outExtension = {};
+			return;
+		}
+		outExtension = fileName.substr( dot );
+	}
+
+	void FileUtil::getExtension( string_view fileName, string& outExtension )
+	{
+		string_view extView;
+		getExtension( fileName, extView );
+		outExtension = string{ extView };
+	}
+
+	string FileUtil::getExtension( string_view fileName )
+	{
+		string_view extView;
+		getExtension( fileName, extView );
+		return string{ extView };
 	}
 
 	bool FileUtil::hasExtension( string_view fileName, string_view extension )
@@ -117,11 +186,8 @@ namespace sw
 		if ( dot == string_view::npos || dot < start )
 			return false;
 
-		string_view have = fileName.substr( dot + 1 );
-		if ( have.size() != want.size() )
-			return false;
-
-		return StringUtil::strnicmp( have.data(), want.data(), static_cast<uint32>( want.size() ) ) == 0;
+		const string_view have = fileName.substr( dot + 1 );
+		return StringUtil::equalsIgnoreCase( have, want );
 	}
 
 	bool FileUtil::hasAnyExtension( string_view fileName, std::initializer_list<string_view> listExtension )
@@ -136,11 +202,7 @@ namespace sw
 
 	bool FileUtil::endsWithIgnoreCase( string_view path, string_view suffix )
 	{
-		if ( suffix.empty() || path.size() < suffix.size() )
-			return false;
-
-		string_view tail = path.substr( path.size() - suffix.size() );
-		return StringUtil::strnicmp( tail.data(), suffix.data(), static_cast<uint32>( suffix.size() ) ) == 0;
+		return StringUtil::endsWithIgnoreCase( path, suffix );
 	}
 
 	bool FileUtil::endsWithAnyIgnoreCase( string_view path, std::initializer_list<string_view> listSuffix )
@@ -178,19 +240,39 @@ namespace sw
 		return string( sb.view() );
 	}
 
-	string FileUtil::removeExtension( string_view fileName )
+	void FileUtil::removeExtension( string_view fileName, string_view& outFileName )
 	{
 		if ( fileName.empty() )
-			return {};
+		{
+			outFileName = {};
+			return;
+		}
 
 		const size_t slash = fileName.find_last_of( "/\\" );
 		const size_t start = ( slash == string_view::npos ) ? 0 : slash + 1;
 		const size_t dot   = fileName.find_last_of( '.' );
 
 		if ( dot != string_view::npos && dot >= start )
-			return string( fileName.substr( 0, dot ) );
+		{
+			outFileName = fileName.substr( 0, dot );
+			return;
+		}
 
-		return string( fileName );
+		outFileName = fileName;
+	}
+
+	void FileUtil::removeExtension( string_view fileName, string& outFileName )
+	{
+		string_view stemView;
+		removeExtension( fileName, stemView );
+		outFileName = string{ stemView };
+	}
+
+	string FileUtil::removeExtension( string_view fileName )
+	{
+		string_view stemView;
+		removeExtension( fileName, stemView );
+		return string{ stemView };
 	}
 
 	bool FileUtil::makePathRelative( string_view rootDir, string_view path, string& outResult )
@@ -242,11 +324,18 @@ namespace sw
 	string FileUtil::normalizeSeparators( string_view path )
 	{
 		string outResult{ path };
-		for ( utf8& ch : outResult )
-		{
-			if ( ch == '\\' )
-				ch = '/';
-		}
+		StringUtil::replaceChar( outResult, '\\', '/' );
+		return outResult;
+	}
+
+	string FileUtil::toNativeSeparators( string_view path )
+	{
+		string outResult{ path };
+#if defined( SW_PLATFORM_WINDOWS )
+		StringUtil::replaceChar( outResult, '/', '\\' );
+#else
+		StringUtil::replaceChar( outResult, '\\', '/' );
+#endif
 		return outResult;
 	}
 
@@ -864,20 +953,31 @@ namespace sw
 			return nullptr;
 
 #if defined( SW_PLATFORM_WINDOWS )
-		string normalized = normalizePath( libraryName );
 		string absPath;
-		if ( makePathAbsolute( normalized, absPath ) && fileExists( absPath ) )
+		if ( makePathAbsolute( libraryName, absPath ) && fileExists( absPath ) )
 		{
-			HMODULE hMod = LoadLibraryExA( absPath.c_str(), nullptr, LOAD_WITH_ALTERED_SEARCH_PATH );
+			// Windows 커널 로더(LOAD_WITH_ALTERED_SEARCH_PATH)는 '\'(백슬래시)를 기준으로 디렉터리를 분리하여
+			// DLL 검색 경로 1순위로 추가합니다. '/' 슬래시 경로 전달 시 디렉터리 파싱 실패로 종속 DLL(Engine.dll 등)을
+			// 찾지 못하는 ERROR_MOD_NOT_FOUND(126) 오류가 발생하므로 네이티브 구분자('\')로 변환합니다.
+			const string nativePath = toNativeSeparators( absPath );
+
+			const string dir = getDirectoryPart( nativePath );
+			if ( dir.empty() == false )
+				SetDllDirectoryA( dir.c_str() );
+
+			// 1) LOAD_WITH_ALTERED_SEARCH_PATH로 대상 DLL 위치를 최우선 검색하여 로드
+			HMODULE hMod = LoadLibraryExA( nativePath.c_str(), nullptr, LOAD_WITH_ALTERED_SEARCH_PATH );
+			// 2) LOAD_WITH_ALTERED_SEARCH_PATH 사용 시 SetDllDirectory가 무시되는 Win32 제약에 대비하여 LoadLibraryA 폴백 수행
+			if ( hMod == nullptr )
+				hMod = LoadLibraryA( nativePath.c_str() );
 			if ( hMod != nullptr )
 				return hMod;
 		}
-		const string libraryNameNt( libraryName );
-		return LoadLibraryA( libraryNameNt.c_str() );
+		const string nativeName = toNativeSeparators( libraryName );
+		return LoadLibraryA( nativeName.c_str() );
 #else
-		string normalized = normalizePath( libraryName );
 		string absPath;
-		if ( makePathAbsolute( normalized, absPath ) && fileExists( absPath ) )
+		if ( makePathAbsolute( libraryName, absPath ) && fileExists( absPath ) )
 		{
 			void* pHandle = dlopen( absPath.c_str(), RTLD_NOW | RTLD_LOCAL );
 			if ( pHandle != nullptr )

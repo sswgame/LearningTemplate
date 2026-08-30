@@ -46,12 +46,12 @@ def addDefenderExclusions() -> None:
     print(f"\n[*] 프로젝트 경로: {projectDir}")
 
     # 1. 제외 경로 등록
-    print("[*] 1/3. 디렉터리 실시간 감시 제외 등록 중...")
-    cmdPath = f'Add-MpPreference -ExclusionPath "{projectDir}"'
+    print("[*] 1/4. 프로젝트 및 빌드 출력 디렉터리 실시간 감시 제외 등록 중...")
+    cmdPath = f'Add-MpPreference -ExclusionPath @("{projectDir}", "{projectDir}\\build", "{projectDir}\\build\\Ninja-Debug\\Bin", "{projectDir}\\build\\Ninja-Release\\Bin")'
     subprocess.run(["powershell", "-NoProfile", "-Command", cmdPath], check=False)
 
     # 2. 프로세스 제외 등록
-    print("[*] 2/3. 빌드 및 엔진 도구 프로세스 제외 등록 중...")
+    print("[*] 2/4. 빌드 및 엔진 도구 프로세스 제외 등록 중...")
     processes = [
         "ninja.exe",
         "clang-cl.exe",
@@ -68,8 +68,13 @@ def addDefenderExclusions() -> None:
     cmdProc = f"Add-MpPreference -ExclusionProcess {procListStr}"
     subprocess.run(["powershell", "-NoProfile", "-Command", cmdProc], check=False)
 
-    # 3. 다운로드 파일 잠금 해제
-    print("[*] 3/3. 프로젝트 내부 파일 잠금 해제 (Unblock-File) 중...")
+    # 3. DLL 및 바이너리 확장자 제외 등록 (RHI 모듈 / 엔진 DLL 등)
+    print("[*] 3/4. RHI 백엔드 및 엔진 DLL / 아카이브 확장자 제외 등록 중...")
+    cmdExt = 'Add-MpPreference -ExclusionExtension @("dll", "pdb", "pack", "pak", "rhi")'
+    subprocess.run(["powershell", "-NoProfile", "-Command", cmdExt], check=False)
+
+    # 4. 다운로드 및 빌드된 바이너리 잠금 해제
+    print("[*] 4/4. 프로젝트 내부 파일 및 DLL 잠금 해제 (Unblock-File) 중...")
     cmdUnblock = f'Get-ChildItem -Path "{projectDir}" -Recurse -ErrorAction SilentlyContinue | Unblock-File'
     subprocess.run(["powershell", "-NoProfile", "-Command", cmdUnblock], check=False)
 
