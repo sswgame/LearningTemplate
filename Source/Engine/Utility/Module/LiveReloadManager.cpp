@@ -398,6 +398,10 @@ namespace sw
 
 		BLOCK( "Load Dynamic Library" )
 		{
+			// 불변식: engine::registerModuleTypes 가 매 로드 후 전역 헤드를 nullptr 로 drain 하므로,
+			// 여기 진입 시 세 헤드는 항상 nullptr 이다(캐스케이드 2번째 모듈 이후도 마찬가지).
+			// abort 는 이 스냅샷을 복원한다 → 정상 상태에서 nullptr 복원 = 올바른 결과.
+			// (검증: SmokeTest Architecture.LiveReloadRegistrarContentLifecycle)
 			out._pPreviousTypeHead	  = TypeRegistrar::getHead();
 			out._pPreviousEnumHead	  = EnumRegistrar::getHead();
 			out._pPreviousFactoryHead = sw::ComponentFactoryRegistrar::getHead();
