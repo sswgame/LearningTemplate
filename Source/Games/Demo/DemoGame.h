@@ -48,6 +48,9 @@ namespace sw
 		/** @brief 소유한 키트 상태를 파괴합니다. */
 		virtual ~DemoGame() override;
 
+		bool serializeState( void* pOutBuffer, uint32* pInOutSize ) override;
+		bool deserializeState( const void* pInBuffer, uint32 size ) override;
+
 	protected:
 		/** @brief 팩·맵·입력을 초기화합니다. */
 		bool onInitialize() override;

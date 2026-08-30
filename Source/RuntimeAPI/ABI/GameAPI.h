@@ -32,7 +32,7 @@ namespace sw
 		void ( *update )( GameHandle game, float32 deltaTime ){ nullptr };									/**< @brief 프레임 업데이트를 수행합니다. */
 		void ( *fixedUpdate )( GameHandle game, float32 fixedDeltaTime ){ nullptr };						/**< @brief 고정 프레임 업데이트를 수행합니다. */
 		void ( *bindService )( const ModuleService* pService ){ nullptr };									/**< @brief ModuleService를 게임 모듈에 주입하거나 nullptr로 해제합니다. */
-		bool ( *serializeState )( GameHandle game, void* pOutBuffer, uint32* pInOutSize ){ nullptr };		/**< @brief 게임 상태를 버퍼에 직렬화하거나 크기를 반환합니다. */
+		bool ( *serializeState )( GameHandle game, void* pOutBuffer, uint32* pInOutSize ){ nullptr };		/**< @brief 게임 상태를 버퍼에 직렬화하거나 크기를 반환합니다. 구현이 지원하는 범위만 복원됩니다. */
 		bool ( *deserializeState )( GameHandle game, const void* pInBuffer, uint32 size ){ nullptr };		/**< @brief 버퍼에서 게임 상태를 복원합니다. */
 	};
 

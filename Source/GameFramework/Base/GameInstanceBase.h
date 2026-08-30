@@ -29,10 +29,10 @@ namespace sw
 		/** @brief onUpdate로 한 프레임을 넘깁니다. */
 		void update( float32 deltaTime ) final;
 
-		/** @brief 엔진의 활성 씬(Scene) 전체를 바이너리로 자동 직렬화합니다 (핫리로드). */
+		/** @brief 활성 씬의 GameObject만 바이너리로 직렬화합니다. 게임플레이 상태는 파생 클래스가 덧붙입니다. */
 		bool serializeState( void* pOutBuffer, uint32* pInOutSize ) override;
 
-		/** @brief 바이너리 버퍼로부터 씬(Scene)의 모든 엔티티 상태를 자동 복원합니다. */
+		/** @brief 버퍼에서 씬 GameObject를 복원합니다. */
 		bool deserializeState( const void* pInBuffer, uint32 size ) override;
 
 	protected:
