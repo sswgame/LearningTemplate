@@ -110,8 +110,14 @@ namespace sw
 		/** @brief 에디터·게임 모듈이 필수 리소스를 로드한 후 Splash를 내립니다. */
 		void notifyModulesReady();
 
-		/** @brief RHI 핫스왑 후 에디터/게임을 재초기화합니다. */
+		/** @brief RHI 핫스왑 후 에디터/게임을 재초기화합니다. 실패하면 false. */
 		bool reinitializeAfterRhiSwap( void* pEditorModule, void* pGameModule );
+
+	private:
+		void captureGameState();
+		void restoreGameState();
+		bool recreateEditorInstance( void* pEditorModule );
+		bool recreateGameInstance( void* pGameModule );
 
 	private:
 		unique_ptr<ModuleCompiler> _moduleCompiler;

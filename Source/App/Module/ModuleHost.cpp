@@ -22,6 +22,7 @@
 
 #include "RuntimeAPI/PluginAPI.h"
 #include "RuntimeAPI/Service/EditorService.h"
+#include "RuntimeAPI/Service/ModuleService.h"
 
 #include "sw/config/ConfigConstants.h"
 
@@ -371,17 +372,7 @@ namespace sw
 		if ( _game == nullptr )
 			return;
 
-		// 상태 보존 직렬화 시도
-		if ( _gameApi.serializeState != nullptr )
-		{
-			uint32 size{ 0 };
-			if ( _gameApi.serializeState( _game, nullptr, &size ) && size > 0 )
-			{
-				_listGameSavedState.resize( size );
-				if ( _gameApi.serializeState( _game, _listGameSavedState.data(), &size ) == false )
-					_listGameSavedState.clear();
-			}
-		}
+		captureGameState();
 
 		if ( _gameApi.shutdown != nullptr )
 			_gameApi.shutdown( _game );
@@ -435,16 +426,7 @@ namespace sw
 			return;
 		}
 
-		// 상태 복원 역직렬화
-		if ( _gameApi.deserializeState != nullptr && _listGameSavedState.empty() == false )
-		{
-			if ( _gameApi.deserializeState( _game, _listGameSavedState.data(), static_cast<uint32>( _listGameSavedState.size() ) ) )
-				SW_LOG_INFO( "Game state successfully restored from %zu bytes.", _listGameSavedState.size() );
-			else
-				SW_LOG_ERROR( "Failed to restore game state." );
-
-			_listGameSavedState.clear();
-		}
+		restoreGameState();
 
 		SW_LOG_INFO( "SWGame initialized successfully via GameAPI." );
 	}
@@ -593,43 +575,106 @@ namespace sw
 	void ModuleHost::onBeforeRhiSwap()
 	{
 		drainRenderWorkers();
+		captureGameState();
 
 		if ( _editor != nullptr && _editorApi.shutdown != nullptr )
 			_editorApi.shutdown( _editor );
 		if ( _editor != nullptr && _editorApi.destroy != nullptr )
 			_editorApi.destroy( _editor );
+		if ( _editorApi.bindService != nullptr )
+			_editorApi.bindService( nullptr );
 		_editor = nullptr;
 
 		if ( _game != nullptr && _gameApi.shutdown != nullptr )
 			_gameApi.shutdown( _game );
 		if ( _game != nullptr && _gameApi.destroy != nullptr )
 			_gameApi.destroy( _game );
+		if ( _gameApi.bindService != nullptr )
+			_gameApi.bindService( nullptr );
 		_game = nullptr;
 	}
 
 	bool ModuleHost::reinitializeAfterRhiSwap( void* pEditorModule, void* pGameModule )
 	{
-		if ( _bEnableEditor )
+		if ( _pRHI == nullptr || _pRHI->hasDevice() == false )
+			return false;
+
+		bool bOk = true;
+		if ( recreateEditorInstance( pEditorModule ) == false )
+			bOk = false;
+		if ( recreateGameInstance( pGameModule ) == false )
+			bOk = false;
+		return bOk;
+	}
+
+	void ModuleHost::captureGameState()
+	{
+		_listGameSavedState.clear();
+		if ( _game == nullptr || _gameApi.serializeState == nullptr )
+			return;
+
+		uint32 size{ 0 };
+		if ( _gameApi.serializeState( _game, nullptr, &size ) == false || size == 0 )
+			return;
+
+		_listGameSavedState.resize( size );
+		if ( _gameApi.serializeState( _game, _listGameSavedState.data(), &size ) == false )
+			_listGameSavedState.clear();
+	}
+
+	void ModuleHost::restoreGameState()
+	{
+		if ( _game == nullptr || _gameApi.deserializeState == nullptr || _listGameSavedState.empty() )
+			return;
+
+		if ( _gameApi.deserializeState( _game, _listGameSavedState.data(), static_cast<uint32>( _listGameSavedState.size() ) ) )
+			SW_LOG_INFO( "Scene object state restored from %zu bytes.", _listGameSavedState.size() );
+		else
+			SW_LOG_ERROR( "Failed to restore game state." );
+
+		_listGameSavedState.clear();
+	}
+
+	bool ModuleHost::recreateEditorInstance( void* pEditorModule )
+	{
+		if ( _bEnableEditor == SW_FALSE )
+			return true;
+
+		if ( _editorApi.create == nullptr || _editorApi.initialize == nullptr )
 		{
-			if ( _editorApi.create != nullptr && _editorApi.initialize != nullptr )
-			{
-				_editor = _editorApi.create();
-				if ( _editor != nullptr )
-					_editorApi.initialize( _editor, _pWindow, &_pRHI->getDevice() );
-			}
-			else
-			{
-				onAfterEditorReload( pEditorModule );
-			}
+			onAfterEditorReload( pEditorModule );
+			return _editor != nullptr;
 		}
 
-		if ( _gameApi.create != nullptr && _gameApi.initialize != nullptr )
+		if ( _editorApi.bindService != nullptr )
 		{
-			_game = _gameApi.create();
-			if ( _game != nullptr )
-				_gameApi.initialize( _game, _pWindow, &_pRHI->getDevice() );
+			ModuleService editorService{};
+			editorService.getService = getModuleService;
+			_editorApi.bindService( &editorService );
 		}
-		else
+
+		_editor = _editorApi.create();
+		if ( _editor == nullptr )
+		{
+			SW_LOG_ERROR( "Failed to create Editor instance after RHI swap" );
+			return false;
+		}
+
+		if ( _editorApi.initialize( _editor, _pWindow, &_pRHI->getDevice() ) == false )
+		{
+			SW_LOG_ERROR( "Failed to initialize Editor instance after RHI swap" );
+			if ( _editorApi.destroy != nullptr )
+				_editorApi.destroy( _editor );
+			_editor = nullptr;
+			return false;
+		}
+
+		return true;
+	}
+
+	bool ModuleHost::recreateGameInstance( void* pGameModule )
+	{
+		if ( _gameApi.create == nullptr || _gameApi.initialize == nullptr )
 		{
 #if defined( SW_SHIPPING )
 			(void)pGameModule;
@@ -637,8 +682,33 @@ namespace sw
 #else
 			onAfterGameReload( pGameModule );
 #endif
+			return _game != nullptr;
 		}
 
+		if ( _gameApi.bindService != nullptr )
+		{
+			ModuleService gameService{};
+			gameService.getService = getModuleService;
+			_gameApi.bindService( &gameService );
+		}
+
+		_game = _gameApi.create();
+		if ( _game == nullptr )
+		{
+			SW_LOG_ERROR( "Failed to create Game instance after RHI swap" );
+			return false;
+		}
+
+		if ( _gameApi.initialize( _game, _pWindow, &_pRHI->getDevice() ) == false )
+		{
+			SW_LOG_ERROR( "Failed to initialize Game instance after RHI swap" );
+			if ( _gameApi.destroy != nullptr )
+				_gameApi.destroy( _game );
+			_game = nullptr;
+			return false;
+		}
+
+		restoreGameState();
 		return true;
 	}
 } // namespace sw

@@ -105,6 +105,10 @@ namespace sw
 		ComponentDefaults*		  getComponentDefaults() const { return _componentDefaults.get(); }
 
 	private:
+		/** @brief 디바이스 재생성 후 FrameRenderer·RenderThread·Scene을 다시 붙입니다. */
+		void rebindSceneAfterDeviceRecreate();
+
+	private:
 		unique_ptr<Logger>					 _logger;
 		unique_ptr<DeadlockDetector>		 _deadlockDetector;
 		unique_ptr<MemoryProfiler>			 _memoryProfiler;

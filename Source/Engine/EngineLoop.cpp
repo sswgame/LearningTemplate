@@ -536,41 +536,51 @@ namespace sw
 
 		if ( _rhi->recreateDevice( requested ) == false )
 		{
-			SW_LOG_ERROR( "recreateDevice failed; reverting gv_rhiBackend to %#",
+			SW_LOG_ERROR( "recreateDevice failed; restoring previous backend %#",
 						  RHI::getBackendTypeName( previous ) );
 			gv_rhiBackend = previous;
+			if ( _rhi->recreateDevice( previous ) == false )
+			{
+				SW_LOG_ERROR( "Failed to restore previous RHI backend — device is gone." );
+				return false;
+			}
+			rebindSceneAfterDeviceRecreate();
 			return false;
 		}
 
-		BLOCK( "Scene 재초기화" )
-		{
-			if ( engine::getResourceManager().getMaterialManager().reinitializeAll( &_rhi->getDevice() ) == false )
-				SW_LOG_ERROR( "MaterialCache reinitializeAll failed after backend change." );
-
-			if ( _frameRenderer != nullptr )
-				_frameRenderer->initialize( &_rhi->getDevice(), _taskManager.get() );
-
-			if ( _renderThread != nullptr )
-			{
-				if ( gv_useRenderThread )
-					_renderThread->start( &_rhi->getDevice(), _frameRenderer.get() );
-				else
-					_renderThread->bind( &_rhi->getDevice(), _frameRenderer.get() );
-			}
-
-			if ( _sceneManager != nullptr )
-			{
-				_sceneManager->setRhiDevice( &_rhi->getDevice() );
-				_sceneManager->setFrameRenderer( _frameRenderer.get() );
-			}
-
-			Scene* pScene = _sceneManager != nullptr ? _sceneManager->getActiveScene() : nullptr;
-			if ( pScene != nullptr )
-				pScene->ensureDefaultCameras();
-		}
-
+		rebindSceneAfterDeviceRecreate();
 		SW_LOG_INFO( "Active backend is now %#", RHI::getBackendTypeName( _rhi->getCommittedBackend() ) );
 		return true;
+	}
+
+	void EngineLoop::rebindSceneAfterDeviceRecreate()
+	{
+		if ( _rhi == nullptr || _rhi->hasDevice() == false )
+			return;
+
+		if ( engine::getResourceManager().getMaterialManager().reinitializeAll( &_rhi->getDevice() ) == false )
+			SW_LOG_ERROR( "MaterialCache reinitializeAll failed after backend change." );
+
+		if ( _frameRenderer != nullptr )
+			_frameRenderer->initialize( &_rhi->getDevice(), _taskManager.get() );
+
+		if ( _renderThread != nullptr )
+		{
+			if ( gv_useRenderThread )
+				_renderThread->start( &_rhi->getDevice(), _frameRenderer.get() );
+			else
+				_renderThread->bind( &_rhi->getDevice(), _frameRenderer.get() );
+		}
+
+		if ( _sceneManager != nullptr )
+		{
+			_sceneManager->setRhiDevice( &_rhi->getDevice() );
+			_sceneManager->setFrameRenderer( _frameRenderer.get() );
+		}
+
+		Scene* pScene = _sceneManager != nullptr ? _sceneManager->getActiveScene() : nullptr;
+		if ( pScene != nullptr )
+			pScene->ensureDefaultCameras();
 	}
 
 	void EngineLoop::setPresentHook( PresentHookDelegate presentHook )
