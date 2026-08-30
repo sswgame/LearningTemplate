@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/Math/VectorMath.h"
+
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialUtil.h"
@@ -233,9 +235,9 @@ namespace sw
 		_bGpuDirty	   = 1;
 	}
 
-	void MaterialInstance::setParent( Material* parentMaterial )
+	void MaterialInstance::setParent( Material* pParentMaterial )
 	{
-		_pParentMaterial = parentMaterial;
+		_pParentMaterial = pParentMaterial;
 		_bDefinesDirty	 = 1;
 		_bGpuDirty		 = 1;
 	}
@@ -253,14 +255,12 @@ namespace sw
 		_bGpuDirty = 1;
 	}
 
-	void MaterialInstance::setVectorParameter( hashed_string name, const float32 color[4] )
+	void MaterialInstance::setVectorParameter( hashed_string name, const float4& value )
 	{
-		if ( color == nullptr )
-			return;
-		array<float32, 4> val = { color[0], color[1], color[2], color[3] };
+		const array<float32, 4> val = { value._x, value._y, value._z, value._w };
 		MaterialInstanceInternal::insertOrAssign( _listVectorOverride, name, val );
 		StringBuilder<64> sb;
-		sb.append( color[0] ).append( ' ' ).append( color[1] ).append( ' ' ).append( color[2] ).append( ' ' ).append( color[3] );
+		sb.appendFormat( "%# %# %# %#", value._x, value._y, value._z, value._w );
 		MaterialInstanceInternal::insertOrAssign( _listValueOverride, name, string{ sb.c_str(), sb.size() } );
 		_bGpuDirty = 1;
 	}

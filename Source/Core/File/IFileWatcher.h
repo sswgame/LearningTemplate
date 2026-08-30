@@ -63,10 +63,10 @@ namespace sw
 
 		/**
 		 * @brief 파일 변경 이벤트를 처리하기 위해 큐를 폴링합니다. (메인 스레드의 업데이트 루프에서 호출 권장)
-		 * @param outEvents 발생한 파일 변경 이벤트 목록
+		 * @param outListEvent 발생한 파일 변경 이벤트 목록
 		 * @return 발생한 이벤트 개수
 		 */
-		virtual uint32 pollEvents( vector<FileChangeEvent>& outEvents ) = 0;
+		virtual uint32 pollEvents( vector<FileChangeEvent>& outListEvent ) = 0;
 
 		/**
 		 * @brief 모니터링을 종료하고 리소스를 해제합니다.

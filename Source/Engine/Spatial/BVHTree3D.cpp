@@ -387,13 +387,13 @@ namespace sw
 		if ( _rootIndex == -1 )
 			return;
 
-		int32 stack[256];
-		int32 stackCount	= 0;
-		stack[stackCount++] = _rootIndex;
+		int32 arrStack[256];
+		int32 stackCount	   = 0;
+		arrStack[stackCount++] = _rootIndex;
 
 		while ( stackCount > 0 )
 		{
-			const int32		 nodeIndex = stack[--stackCount];
+			const int32		 nodeIndex = arrStack[--stackCount];
 			const BVHNode3D& node	   = _listNode[static_cast<size_t>( nodeIndex )];
 
 			if ( node._bounds.intersects( queryBox ) )
@@ -405,9 +405,9 @@ namespace sw
 				else
 				{
 					if ( node._leftChild != -1 && stackCount < 255 )
-						stack[stackCount++] = node._leftChild;
+						arrStack[stackCount++] = node._leftChild;
 					if ( node._rightChild != -1 && stackCount < 255 )
-						stack[stackCount++] = node._rightChild;
+						arrStack[stackCount++] = node._rightChild;
 				}
 			}
 		}
@@ -443,13 +443,13 @@ namespace sw
 			return tMax >= MathUtil::max( 0.0f, tMin ) && tMin <= maxDist;
 		};
 
-		int32 stack[256];
-		int32 stackCount	= 0;
-		stack[stackCount++] = _rootIndex;
+		int32 arrStack[256];
+		int32 stackCount	   = 0;
+		arrStack[stackCount++] = _rootIndex;
 
 		while ( stackCount > 0 )
 		{
-			const int32		 nodeIndex = stack[--stackCount];
+			const int32		 nodeIndex = arrStack[--stackCount];
 			const BVHNode3D& node	   = _listNode[static_cast<size_t>( nodeIndex )];
 
 			if ( rayIntersects( node._bounds ) )
@@ -461,9 +461,9 @@ namespace sw
 				else
 				{
 					if ( node._leftChild != -1 && stackCount < 255 )
-						stack[stackCount++] = node._leftChild;
+						arrStack[stackCount++] = node._leftChild;
 					if ( node._rightChild != -1 && stackCount < 255 )
-						stack[stackCount++] = node._rightChild;
+						arrStack[stackCount++] = node._rightChild;
 				}
 			}
 		}
@@ -486,13 +486,13 @@ namespace sw
 			return ( dx * dx + dy * dy + dz * dz ) <= r2;
 		};
 
-		int32 stack[256];
-		int32 stackCount	= 0;
-		stack[stackCount++] = _rootIndex;
+		int32 arrStack[256];
+		int32 stackCount	   = 0;
+		arrStack[stackCount++] = _rootIndex;
 
 		while ( stackCount > 0 )
 		{
-			const int32		 nodeIndex = stack[--stackCount];
+			const int32		 nodeIndex = arrStack[--stackCount];
 			const BVHNode3D& node	   = _listNode[static_cast<size_t>( nodeIndex )];
 
 			if ( sphereIntersects( node._bounds ) )
@@ -504,39 +504,39 @@ namespace sw
 				else
 				{
 					if ( node._leftChild != -1 && stackCount < 255 )
-						stack[stackCount++] = node._leftChild;
+						arrStack[stackCount++] = node._leftChild;
 					if ( node._rightChild != -1 && stackCount < 255 )
-						stack[stackCount++] = node._rightChild;
+						arrStack[stackCount++] = node._rightChild;
 				}
 			}
 		}
 	}
 
-	void BVHTree3D::queryFrustum( const float32 viewProj[16], vector<ObjectHandle>& outListHandle ) const
+	void BVHTree3D::queryFrustum( const float32 arrViewProj[16], vector<ObjectHandle>& outListHandle ) const
 	{
 		// Extract 6 frustum planes from column-major viewProj matrix
 		// Left, Right, Bottom, Top, Near, Far
-		float32 planes[6][4] = {
-			{viewProj[3] + viewProj[0], viewProj[7] + viewProj[4],	viewProj[11] + viewProj[8], viewProj[15] + viewProj[12]},
-			{viewProj[3] - viewProj[0], viewProj[7] - viewProj[4],	viewProj[11] - viewProj[8], viewProj[15] - viewProj[12]},
-			{viewProj[3] + viewProj[1], viewProj[7] + viewProj[5],	viewProj[11] + viewProj[9], viewProj[15] + viewProj[13]},
-			{viewProj[3] - viewProj[1], viewProj[7] - viewProj[5],	viewProj[11] - viewProj[9], viewProj[15] - viewProj[13]},
-			{			  viewProj[2],			   viewProj[6],				viewProj[10],				  viewProj[14]},
-			{viewProj[3] - viewProj[2], viewProj[7] - viewProj[6], viewProj[11] - viewProj[10], viewProj[15] - viewProj[14]}
+		float32 arrPlane[6][4] = {
+			{arrViewProj[3] + arrViewProj[0], arrViewProj[7] + arrViewProj[4],	arrViewProj[11] + arrViewProj[8], arrViewProj[15] + arrViewProj[12]},
+			{arrViewProj[3] - arrViewProj[0], arrViewProj[7] - arrViewProj[4],	arrViewProj[11] - arrViewProj[8], arrViewProj[15] - arrViewProj[12]},
+			{arrViewProj[3] + arrViewProj[1], arrViewProj[7] + arrViewProj[5],	arrViewProj[11] + arrViewProj[9], arrViewProj[15] + arrViewProj[13]},
+			{arrViewProj[3] - arrViewProj[1], arrViewProj[7] - arrViewProj[5],	arrViewProj[11] - arrViewProj[9], arrViewProj[15] - arrViewProj[13]},
+			{				 arrViewProj[2],				  arrViewProj[6],					  arrViewProj[10],				   arrViewProj[14]},
+			{arrViewProj[3] - arrViewProj[2], arrViewProj[7] - arrViewProj[6], arrViewProj[11] - arrViewProj[10], arrViewProj[15] - arrViewProj[14]}
 		   };
 
 		for ( int32 planeIndex = 0; planeIndex < 6; ++planeIndex )
 		{
 			const float32 length = MathUtil::sqrt(
-				planes[planeIndex][0] * planes[planeIndex][0] +
-				planes[planeIndex][1] * planes[planeIndex][1] +
-				planes[planeIndex][2] * planes[planeIndex][2] );
+				arrPlane[planeIndex][0] * arrPlane[planeIndex][0] +
+				arrPlane[planeIndex][1] * arrPlane[planeIndex][1] +
+				arrPlane[planeIndex][2] * arrPlane[planeIndex][2] );
 			if ( length > 1e-5f )
 			{
-				planes[planeIndex][0] /= length;
-				planes[planeIndex][1] /= length;
-				planes[planeIndex][2] /= length;
-				planes[planeIndex][3] /= length;
+				arrPlane[planeIndex][0] /= length;
+				arrPlane[planeIndex][1] /= length;
+				arrPlane[planeIndex][2] /= length;
+				arrPlane[planeIndex][3] /= length;
 			}
 		}
 
@@ -544,11 +544,11 @@ namespace sw
 		{
 			for ( int32 planeIndex = 0; planeIndex < 6; ++planeIndex )
 			{
-				const float32 px = planes[planeIndex][0] > 0.0f ? box._max._x : box._min._x;
-				const float32 py = planes[planeIndex][1] > 0.0f ? box._max._y : box._min._y;
-				const float32 pz = planes[planeIndex][2] > 0.0f ? box._max._z : box._min._z;
+				const float32 px = arrPlane[planeIndex][0] > 0.0f ? box._max._x : box._min._x;
+				const float32 py = arrPlane[planeIndex][1] > 0.0f ? box._max._y : box._min._y;
+				const float32 pz = arrPlane[planeIndex][2] > 0.0f ? box._max._z : box._min._z;
 
-				if ( ( planes[planeIndex][0] * px + planes[planeIndex][1] * py + planes[planeIndex][2] * pz + planes[planeIndex][3] ) < 0.0f )
+				if ( ( arrPlane[planeIndex][0] * px + arrPlane[planeIndex][1] * py + arrPlane[planeIndex][2] * pz + arrPlane[planeIndex][3] ) < 0.0f )
 					return false;
 			}
 			return true;
@@ -557,13 +557,13 @@ namespace sw
 		if ( _rootIndex == -1 )
 			return;
 
-		int32 stack[256];
-		int32 stackCount	= 0;
-		stack[stackCount++] = _rootIndex;
+		int32 arrStack[256];
+		int32 stackCount	   = 0;
+		arrStack[stackCount++] = _rootIndex;
 
 		while ( stackCount > 0 )
 		{
-			const int32		 nodeIndex = stack[--stackCount];
+			const int32		 nodeIndex = arrStack[--stackCount];
 			const BVHNode3D& node	   = _listNode[static_cast<size_t>( nodeIndex )];
 
 			if ( frustumIntersects( node._bounds ) )
@@ -575,9 +575,9 @@ namespace sw
 				else
 				{
 					if ( node._leftChild != -1 && stackCount < 255 )
-						stack[stackCount++] = node._leftChild;
+						arrStack[stackCount++] = node._leftChild;
 					if ( node._rightChild != -1 && stackCount < 255 )
-						stack[stackCount++] = node._rightChild;
+						arrStack[stackCount++] = node._rightChild;
 				}
 			}
 		}

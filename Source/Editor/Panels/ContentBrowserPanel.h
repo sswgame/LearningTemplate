@@ -79,9 +79,9 @@ namespace sw::editor
 		/** @brief 현재 폴더의 브레드크럼 경로를 그립니다. */
 		void drawBreadcrumbs();
 		/** @brief 보이는 항목의 타일 그리드를 그립니다. */
-		void drawTilesView( const vector<AssetEntry>& visible );
+		void drawTilesView( const vector<AssetEntry>& listVisible );
 		/** @brief 보이는 항목의 리스트 행을 그립니다. */
-		void drawListView( const vector<AssetEntry>& visible );
+		void drawListView( const vector<AssetEntry>& listVisible );
 		/** @brief 애셋 항목 우클릭 컨텍스트 메뉴를 그립니다. */
 		void drawAssetContextMenu( const AssetEntry& entry );
 		/** @brief 애셋 항목 썸네일/아이콘을 그립니다. */
@@ -101,7 +101,7 @@ namespace sw::editor
 		/** @brief 대화상자로 현재 폴더에 파일을 임포트합니다. */
 		void importFilesFromDialog();
 		/** @brief 파일 대화상자가 고른 경로를 임포트 큐에 넣습니다. */
-		void onImportDialogResult( const vector<string>& paths );
+		void onImportDialogResult( const vector<string>& listPath );
 		/** @brief 백그라운드 임포트 경로를 메인 스레드에서 처리합니다. */
 		void processPendingImports();
 

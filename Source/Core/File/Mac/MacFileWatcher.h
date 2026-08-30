@@ -28,8 +28,8 @@ namespace sw
 
 		/** @brief FSEventStream을 열고 런루프 워커를 띄웁니다. */
 		bool startWatching( string_view directoryPath, bool bRecursive = true ) override;
-		/** @brief 워커 큐에서 이벤트를 꺼내 outEvents 에 담습니다. */
-		uint32 pollEvents( vector<FileChangeEvent>& outEvents ) override;
+		/** @brief 워커 큐에서 이벤트를 꺼내 outListEvent 에 담습니다. */
+		uint32 pollEvents( vector<FileChangeEvent>& outListEvent ) override;
 		/** @brief 런루프를 멈추고 스트림을 해제합니다. */
 		void stopWatching() override;
 		/** @brief 워커가 돌고 있으면 true입니다. */

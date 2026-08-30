@@ -31,17 +31,17 @@ namespace sw
 			};
 
 			/** @brief 매크로 호출 한 줄에서 인자 목록을 추출합니다. */
-			static bool parseMacroLine( const string& line, const utf8* macroName, vector<string>& outMacroArguments )
+			static bool parseMacroLine( const string& line, const utf8* pMacroName, vector<string>& outListMacroArgument )
 			{
-				const size_t pos = line.find( macroName );
+				const size_t pos = line.find( pMacroName );
 				if ( pos == string::npos )
 					return false;
 				const size_t open  = line.find( '(', pos );
 				const size_t close = line.rfind( ')' );
 				if ( open == string::npos || close == string::npos || close <= open )
 					return false;
-				outMacroArguments = ParserUtil::splitCommaRespectingAngles( line.substr( open + 1, close - open - 1 ) );
-				return outMacroArguments.empty() == false;
+				outListMacroArgument = ParserUtil::splitCommaRespectingAngles( line.substr( open + 1, close - open - 1 ) );
+				return outListMacroArgument.empty() == false;
 			}
 
 			/** @brief 주석/전처리기를 건너뛰고 매크로 줄을 수집합니다. */

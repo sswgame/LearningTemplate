@@ -70,7 +70,7 @@ namespace sw
 		/** @brief 의도적 수명 할당 이후 힙 스냅샷을 저장합니다. */
 		static void captureMemoryLeakBaseline();
 		/** @brief 종료 후 플랫폼 누수를 보고합니다. 힙이 늘면 0이 아닙니다. */
-		static int32 reportMemoryLeaks( const utf8* phaseTag = "shutdown" );
+		static int32 reportMemoryLeaks( const utf8* pPhaseTag = "shutdown" );
 
 	public:
 		/** @brief 추적 플래그와 태그 통계를 0으로 둡니다. */
@@ -108,12 +108,12 @@ namespace sw
 		 * @brief 메모리 할당을 기록합니다.
 		 * @return 콜 스택 해시 반환
 		 */
-		uint64 recordAllocation( void* ptr, size_t size, MemoryTag tag );
+		uint64 recordAllocation( void* pPtr, size_t size, MemoryTag tag );
 
 		/**
 		 * @brief 메모리 해제를 기록합니다.
 		 */
-		void recordFree( void* ptr, size_t size, MemoryTag tag, uint64 callStackHash = 0 );
+		void recordFree( void* pPtr, size_t size, MemoryTag tag, uint64 callStackHash = 0 );
 
 		/** @brief 태그별 할당 통계를 반환합니다. */
 		const MemoryProfileStats& getStats( MemoryTag tag ) const;

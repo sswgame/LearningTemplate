@@ -239,7 +239,7 @@ namespace sw
 		for ( const RenderPassAttachment& att : _pipelineResource.getDesc()._listAttachment )
 		{
 			const RHIFormat format = parseAttachmentFormat( att._format );
-			allocTransient( att._name, format, FrameRendererUtil::isDepthFormat( format ), att._arrClearColor );
+			allocTransient( att._name, format, FrameRendererUtil::isDepthFormat( format ), att._clearColor );
 		}
 
 		auto ensureNamed = [&]( string_view name )
@@ -248,7 +248,7 @@ namespace sw
 			if ( _mapTransient.find( key ) != _mapTransient.end() || name == FrameRendererUtil::Attachment::kSwapchain )
 				return;
 
-			float32	   clearColor[4]{};
+			float4	   clearColor{};
 			const bool bHasClear = tryGetAttachmentClearColor( name, clearColor );
 
 			if ( name == FrameRendererUtil::Attachment::kShadowMap || name == FrameRendererUtil::Attachment::kSceneDepth )
@@ -300,20 +300,20 @@ namespace sw
 		_transientHeight = 0;
 	}
 
-	void FrameRenderer::allocTransient( string_view name, RHIFormat format, bool bDepth, const float32 clearColor[4] )
+	void FrameRenderer::allocTransient( string_view name, RHIFormat format, bool bDepth, const float4& clearColor )
 	{
 		if ( _mapTransient.find( string( name ) ) != _mapTransient.end() || _pDevice == nullptr )
 			return;
 
 		RHITextureDesc desc{};
-		desc._width				= _transientWidth;
-		desc._height			= _transientHeight;
-		desc._format			= format;
-		desc._bIsRenderTarget	= bDepth ? 0 : 1;
-		desc._bIsDepthStencil	= bDepth ? 1 : 0;
-		desc._bIsShaderResource = 1;
-		desc._clearDepth		= clearColor[0];
-		Memory::copy( desc._arrClearColor, clearColor, sizeof( desc._arrClearColor ) );
+		desc._width					  = _transientWidth;
+		desc._height				  = _transientHeight;
+		desc._format				  = format;
+		desc._bIsRenderTarget		  = bDepth ? 0 : 1;
+		desc._bIsDepthStencil		  = bDepth ? 1 : 0;
+		desc._bIsShaderResource		  = 1;
+		desc._clearDepth			  = clearColor._x;
+		desc._clearColor			  = clearColor;
 		const RHITextureHandle handle = _pDevice->getResource()->createTexture2D( desc );
 		if ( handle == 0 )
 		{
@@ -326,13 +326,13 @@ namespace sw
 			_mapTransientSrv.emplace( name, srv );
 	}
 
-	bool FrameRenderer::tryGetAttachmentClearColor( string_view attachmentName, float32 outClearColor[4] ) const
+	bool FrameRenderer::tryGetAttachmentClearColor( string_view attachmentName, float4& outClearColor ) const
 	{
 		for ( const RenderPassAttachment& att : _pipelineResource.getDesc()._listAttachment )
 		{
 			if ( att._name == attachmentName )
 			{
-				Memory::copy( outClearColor, att._arrClearColor, sizeof( att._arrClearColor ) );
+				outClearColor = att._clearColor;
 				return att._bClear;
 			}
 		}

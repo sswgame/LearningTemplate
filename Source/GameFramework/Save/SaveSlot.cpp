@@ -248,7 +248,7 @@ namespace sw
 			return false;
 		}
 
-		map<string, int32> loadedFlags;
+		map<string, int32> mapLoadedFlag;
 		for ( uint32 flagIndex = 0; flagIndex < flagCount; ++flagIndex )
 		{
 			string key;
@@ -259,13 +259,13 @@ namespace sw
 				SW_LOG_ERROR( "Corrupted flag entry at index %# in %#", flagIndex, path );
 				return false;
 			}
-			loadedFlags[std::move( key )] = val;
+			mapLoadedFlag[std::move( key )] = val;
 		}
 
 		_mapPath = std::move( loadedMap );
 		_playerX = px;
 		_playerY = py;
-		_mapFlag = std::move( loadedFlags );
+		_mapFlag = std::move( mapLoadedFlag );
 
 		SW_LOG_INFO( "Loaded binary SAV1 %# (map=%#, pos=%#,%#, flags=%#)", path, _mapPath, _playerX, _playerY, flagCount );
 		return true;

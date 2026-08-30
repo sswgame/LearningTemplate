@@ -77,18 +77,18 @@ namespace sw
 				}
 			}
 
-			/** @brief JSON 객체에서 key의 문자열 값을 dst에 덮어씁니다 (키 없으면 그대로). */
-			static void assignIfPresent( string& dst, const nlohmann::json& obj, const utf8* key )
+			/** @brief JSON 객체에서 pKey의 문자열 값을 dst에 덮어씁니다 (키 없으면 그대로). */
+			static void assignIfPresent( string& dst, const nlohmann::json& obj, const utf8* pKey )
 			{
-				const auto it = obj.find( key );
+				const auto it = obj.find( pKey );
 				if ( it != obj.end() && it->is_string() )
 					dst = it->get_ref<const std::string&>().c_str();
 			}
 
-			/** @brief JSON 객체에서 key의 uint 값을 읽습니다 (키 없으면 defaultValue). */
-			static uint32 getUintOrDefault( const nlohmann::json& obj, const utf8* key, uint32 defaultValue )
+			/** @brief JSON 객체에서 pKey의 uint 값을 읽습니다 (키 없으면 defaultValue). */
+			static uint32 getUintOrDefault( const nlohmann::json& obj, const utf8* pKey, uint32 defaultValue )
 			{
-				const auto it = obj.find( key );
+				const auto it = obj.find( pKey );
 				if ( it != obj.end() && it->is_number_unsigned() )
 					return it->get<uint32>();
 				return defaultValue;
@@ -192,7 +192,7 @@ namespace sw
 					applyFn( config, *itLocal );
 			}
 
-			static vector<string> loadArgsFromDocument( const nlohmann::json& doc, const utf8* platformKey )
+			static vector<string> loadArgsFromDocument( const nlohmann::json& doc, const utf8* pPlatformKey )
 			{
 				vector<string> outList;
 				const auto	   itArgs = doc.find( jsonKeyConstants::kParserArgsSection );
@@ -208,10 +208,10 @@ namespace sw
 					const nlohmann::json& platformSrc = ( itPlatform != argsSection.end() && itPlatform->is_object() )
 														  ? *itPlatform
 														  : argsSection;
-					appendUnique( outList, collectStringArray( platformSrc.value( platformKey, nlohmann::json{} ) ) );
+					appendUnique( outList, collectStringArray( platformSrc.value( pPlatformKey, nlohmann::json{} ) ) );
 				}
 #else
-				(void)platformKey;
+				(void)pPlatformKey;
 #endif
 
 				appendUnique( outList, collectStringArray( argsSection.value( jsonKeyConstants::kArgsExtra, nlohmann::json{} ) ) );

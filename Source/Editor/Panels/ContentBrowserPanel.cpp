@@ -638,7 +638,7 @@ namespace sw::editor
 		}
 	}
 
-	void ContentBrowserPanel::drawTilesView( const vector<AssetEntry>& visible )
+	void ContentBrowserPanel::drawTilesView( const vector<AssetEntry>& listVisible )
 	{
 		const float32 cell		 = _tileSize;
 		const float32 paddingX	 = ImGui::GetStyle().ItemSpacing.x;
@@ -648,7 +648,7 @@ namespace sw::editor
 		if ( columns < 1 )
 			columns = 1;
 
-		const int32 itemCount = static_cast<int32>( visible.size() );
+		const int32 itemCount = static_cast<int32>( listVisible.size() );
 		const int32 rowCount  = ( itemCount + columns - 1 ) / columns;
 		// 버튼 + 줄바꿈된 이름 라인 (셀 + 텍스트 라인)
 		const float32 rowHeight = cell + ImGui::GetTextLineHeightWithSpacing() + paddingY;
@@ -665,7 +665,7 @@ namespace sw::editor
 					if ( index >= itemCount )
 						break;
 
-					const AssetEntry& entry = visible[static_cast<size_t>( index )];
+					const AssetEntry& entry = listVisible[static_cast<size_t>( index )];
 					ImGui::PushID( entry._absolutePath.c_str() );
 
 					if ( col > 0 )
@@ -702,7 +702,7 @@ namespace sw::editor
 		}
 	}
 
-	void ContentBrowserPanel::drawListView( const vector<AssetEntry>& visible )
+	void ContentBrowserPanel::drawListView( const vector<AssetEntry>& listVisible )
 	{
 		constexpr ImGuiTableFlags flags =
 			ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingStretchProp;
@@ -715,12 +715,12 @@ namespace sw::editor
 			ImGui::TableHeadersRow();
 
 			ImGuiListClipper clipper;
-			clipper.Begin( static_cast<int32>( visible.size() ) );
+			clipper.Begin( static_cast<int32>( listVisible.size() ) );
 			while ( clipper.Step() )
 			{
 				for ( int32 itemIndex = clipper.DisplayStart; itemIndex < clipper.DisplayEnd; ++itemIndex )
 				{
-					const AssetEntry& entry = visible[static_cast<size_t>( itemIndex )];
+					const AssetEntry& entry = listVisible[static_cast<size_t>( itemIndex )];
 					ImGui::PushID( entry._absolutePath.c_str() );
 					ImGui::TableNextRow();
 
@@ -801,10 +801,10 @@ namespace sw::editor
 		FileUtil::openFileDialog( params, SW_DELEGATE_METHOD( FileDialogDelegate, &ContentBrowserPanel::onImportDialogResult, this ) );
 	}
 
-	void ContentBrowserPanel::onImportDialogResult( const vector<string>& paths )
+	void ContentBrowserPanel::onImportDialogResult( const vector<string>& listPath )
 	{
 		std::scoped_lock<mutex> lock{ _pendingImportMutex };
-		_listPendingImportPath.insert( _listPendingImportPath.end(), paths.begin(), paths.end() );
+		_listPendingImportPath.insert( _listPendingImportPath.end(), listPath.begin(), listPath.end() );
 	}
 
 	void ContentBrowserPanel::processPendingImports()

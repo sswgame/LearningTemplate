@@ -10,7 +10,7 @@
 
 namespace sw
 {
-	bool WindowsFileDialog::open( const FileDialogParams& params, vector<string>& outPaths )
+	bool WindowsFileDialog::open( const FileDialogParams& params, vector<string>& outListPath )
 	{
 		fixed_wstring<constant::kMaxBuffer8192> szFile;
 
@@ -48,15 +48,14 @@ namespace sw
 		}
 		else
 		{
-			for ( size_t filterIndex = 0; filterIndex < params._listFilterExtension.size(); ++filterIndex )
+			for ( const string& ext : params._listFilterExtension )
 			{
-				const string_view filterExtension = params._listFilterExtension[filterIndex];
-				if ( filterIndex > 0 )
-					filter.push_back( ';' );
-				filter.push_back( '*' );
-				if ( filterExtension.empty() == false && filterExtension[0] != '.' )
-					filter.push_back( '.' );
-				filter.append( filterExtension );
+				if ( ext.empty() )
+					continue;
+				if ( ext[0] == '.' )
+					filter.append( "*" );
+				filter.append( ext );
+				filter.append( ";" );
 			}
 			filter.push_back( 0 );
 		}
@@ -64,19 +63,18 @@ namespace sw
 
 		const wstring filterW = StringUtil::utf8ToUtf16( filter.c_str() );
 		ofn.lpstrFilter		  = filterW.c_str();
+		ofn.Flags			  = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR;
+		if ( params._bEnableMultiselect && params._type == FileDialogParams::Type::Open )
+			ofn.Flags |= OFN_ALLOWMULTISELECT;
 
 		BOOL result = FALSE;
 		switch ( params._type )
 		{
 			case FileDialogParams::Type::Open:
-				ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_EXPLORER | OFN_NOCHANGEDIR;
-				if ( params._bEnableMultiselect )
-					ofn.Flags |= OFN_ALLOWMULTISELECT;
 				result = GetOpenFileNameW( &ofn );
 				break;
 			case FileDialogParams::Type::Save:
-				ofn.Flags = OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT | OFN_EXPLORER | OFN_NOCHANGEDIR;
-				result	  = GetSaveFileNameW( &ofn );
+				result = GetSaveFileNameW( &ofn );
 				break;
 			default:
 				break;
@@ -85,23 +83,23 @@ namespace sw
 		if ( result == FALSE )
 			return false;
 
-		const utf16* p = szFile.data();
-		if ( p == nullptr || *p == L'\0' )
+		const utf16* pCurrent = szFile.data();
+		if ( pCurrent == nullptr || *pCurrent == L'\0' )
 			return false;
 
 		// Multi-select: "dir\0file1\0file2\0\0" / Single: "full\path\file\0"
-		const wstring first( p );
-		p += first.size() + 1;
-		if ( *p == L'\0' )
-			outPaths.push_back( FileUtil::normalizePath( StringUtil::utf16ToUtf8( first.c_str() ) ) );
+		const wstring first( pCurrent );
+		pCurrent += first.size() + 1;
+		if ( *pCurrent == L'\0' )
+			outListPath.push_back( FileUtil::normalizePath( StringUtil::utf16ToUtf8( first.c_str() ) ) );
 		else
 		{
 			const string directoryPath = FileUtil::normalizePath( StringUtil::utf16ToUtf8( first.c_str() ) );
-			while ( *p != L'\0' )
+			while ( *pCurrent != L'\0' )
 			{
-				const wstring fileNameW( p );
-				outPaths.push_back( FileUtil::normalizePath( FileUtil::joinPath( directoryPath, StringUtil::utf16ToUtf8( fileNameW.c_str() ) ) ) );
-				p += fileNameW.size() + 1;
+				const wstring fileNameW( pCurrent );
+				outListPath.push_back( FileUtil::normalizePath( FileUtil::joinPath( directoryPath, StringUtil::utf16ToUtf8( fileNameW.c_str() ) ) ) );
+				pCurrent += fileNameW.size() + 1;
 			}
 		}
 

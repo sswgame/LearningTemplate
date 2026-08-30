@@ -330,8 +330,8 @@ namespace sw
 		if ( _pFrameRenderer != nullptr )
 			pendingScene->setFrameRenderer( _pFrameRenderer );
 
-		Scene* const previousActive = _pActiveScene;
-		_pActiveScene				= pendingScene.get();
+		Scene* const pPreviousActive = _pActiveScene;
+		_pActiveScene				 = pendingScene.get();
 		_listLoadedScene.push_back( std::move( pendingScene ) );
 		++_sceneGeneration;
 
@@ -341,8 +341,8 @@ namespace sw
 #endif
 
 		// 이전 활성 씬 자동 언로드
-		if ( previousActive != nullptr && previousActive != _pActiveScene )
-			unloadScene( previousActive );
+		if ( pPreviousActive != nullptr && pPreviousActive != _pActiveScene )
+			unloadScene( pPreviousActive );
 
 		// 씬 스왑 직후 더 이상 참조되지 않는 이전 씬의 에셋들을 정리합니다.
 		if ( engine::areEngineServicesBound() )

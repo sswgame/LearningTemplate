@@ -72,8 +72,8 @@ namespace sw
 			using reference			= const value_type&;
 
 			/** @brief 생성합니다. */
-			iterator( const unordered_set* set, size_t index )
-				: _pSet{ set }
+			iterator( const unordered_set* pSet, size_t index )
+				: _pSet{ pSet }
 				, _index{ index } {}
 
 			/** @brief 증가시킵니다. */

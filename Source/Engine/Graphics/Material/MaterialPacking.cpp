@@ -217,9 +217,9 @@ namespace sw
 				return StringUtil::trim( node.text() );
 			}
 
-			static void parseEnumEntries( XmlNode parent, vector<MaterialEnumEntry>& out )
+			static void parseEnumEntries( XmlNode parent, vector<MaterialEnumEntry>& outListEntry )
 			{
-				out.clear();
+				outListEntry.clear();
 				if ( parent.isValid() == false )
 					return;
 				XmlNode list = parent.child( "_enumEntries" );
@@ -239,7 +239,7 @@ namespace sw
 						e._value = static_cast<uint32>( val );
 					}
 					if ( e._name.empty() == false )
-						out.push_back( std::move( e ) );
+						outListEntry.push_back( std::move( e ) );
 				}
 			}
 
@@ -301,9 +301,9 @@ namespace sw
 				return outStr.empty() ? "None" : outStr;
 			}
 
-			static void parseStringListItems( XmlNode list, vector<string>& out )
+			static void parseStringListItems( XmlNode list, vector<string>& outListItem )
 			{
-				out.clear();
+				outListItem.clear();
 				if ( list.isValid() == false )
 					return;
 				for ( XmlNode item = list.child( "item" ); item; item = item.next( "item" ) )
@@ -314,16 +314,16 @@ namespace sw
 					if ( v.empty() )
 						v = MaterialUtil::fieldText( item, "name" );
 					if ( v.empty() == false )
-						out.push_back( std::move( v ) );
+						outListItem.push_back( std::move( v ) );
 				}
 			}
 
-			static void appendMaterialStringList( XmlNode parent, const utf8* pTag, const vector<string>& values )
+			static void appendMaterialStringList( XmlNode parent, const utf8* pTag, const vector<string>& listValue )
 			{
-				if ( values.empty() )
+				if ( listValue.empty() )
 					return;
 				XmlNode list = parent.appendChild( pTag );
-				for ( const string& valueStr : values )
+				for ( const string& valueStr : listValue )
 				{
 					XmlNode item = list.appendChild( "item" );
 					item.setValue( valueStr );
@@ -531,13 +531,13 @@ namespace sw
 				const uint32 mask = MaterialPackingInternal::parseChannelMask( prop._value );
 				if ( shaderType == MaterialPropertyType::Float4 )
 				{
-					float32 arrComps[4] = {
+					float32 arrComp[4] = {
 						( mask & 1 ) != 0 ? 1.0f : 0.0f,
 						( mask & 2 ) != 0 ? 1.0f : 0.0f,
 						( mask & 4 ) != 0 ? 1.0f : 0.0f,
 						( mask & 8 ) != 0 ? 1.0f : 0.0f,
 					};
-					Memory::copy( pDst, arrComps, sizeof( arrComps ) );
+					Memory::copy( pDst, arrComp, sizeof( arrComp ) );
 				}
 				else
 					Memory::copy( pDst, &mask, sizeof( mask ) );
@@ -811,71 +811,71 @@ namespace sw
 		}
 	}
 
-	void MaterialUtil::appendUniqueDefine( vector<string>& out, string_view def )
+	void MaterialUtil::appendUniqueDefine( vector<string>& outListDefine, string_view def )
 	{
 		if ( def.empty() )
 			return;
-		for ( const string& existing : out )
+		for ( const string& existing : outListDefine )
 		{
 			if ( existing == def )
 				return;
 		}
-		out.push_back( string( def ) );
+		outListDefine.push_back( string( def ) );
 	}
 
-	void MaterialUtil::appendUsageDefines( MaterialUsageFlags usage, vector<string>& out )
+	void MaterialUtil::appendUsageDefines( MaterialUsageFlags usage, vector<string>& outListDefine )
 	{
 		if ( hasFlag( usage, MaterialUsageFlags::StaticMesh ) )
-			MaterialUtil::appendUniqueDefine( out, "MATERIAL_USAGE_STATIC_MESH" );
+			MaterialUtil::appendUniqueDefine( outListDefine, "MATERIAL_USAGE_STATIC_MESH" );
 		if ( hasFlag( usage, MaterialUsageFlags::SkeletalMesh ) )
-			MaterialUtil::appendUniqueDefine( out, "MATERIAL_USAGE_SKELETAL_MESH" );
+			MaterialUtil::appendUniqueDefine( outListDefine, "MATERIAL_USAGE_SKELETAL_MESH" );
 		if ( hasFlag( usage, MaterialUsageFlags::Instanced ) )
-			MaterialUtil::appendUniqueDefine( out, "MATERIAL_USAGE_INSTANCED" );
+			MaterialUtil::appendUniqueDefine( outListDefine, "MATERIAL_USAGE_INSTANCED" );
 		if ( hasFlag( usage, MaterialUsageFlags::Particles ) )
-			MaterialUtil::appendUniqueDefine( out, "MATERIAL_USAGE_PARTICLES" );
+			MaterialUtil::appendUniqueDefine( outListDefine, "MATERIAL_USAGE_PARTICLES" );
 		if ( hasFlag( usage, MaterialUsageFlags::Decal ) )
-			MaterialUtil::appendUniqueDefine( out, "MATERIAL_USAGE_DECAL" );
+			MaterialUtil::appendUniqueDefine( outListDefine, "MATERIAL_USAGE_DECAL" );
 		if ( hasFlag( usage, MaterialUsageFlags::UI ) )
-			MaterialUtil::appendUniqueDefine( out, "MATERIAL_USAGE_UI" );
+			MaterialUtil::appendUniqueDefine( outListDefine, "MATERIAL_USAGE_UI" );
 		if ( hasFlag( usage, MaterialUsageFlags::PostProcess ) )
-			MaterialUtil::appendUniqueDefine( out, "MATERIAL_USAGE_POSTPROCESS" );
+			MaterialUtil::appendUniqueDefine( outListDefine, "MATERIAL_USAGE_POSTPROCESS" );
 		if ( hasFlag( usage, MaterialUsageFlags::LightFunction ) )
-			MaterialUtil::appendUniqueDefine( out, "MATERIAL_USAGE_LIGHTFUNCTION" );
+			MaterialUtil::appendUniqueDefine( outListDefine, "MATERIAL_USAGE_LIGHTFUNCTION" );
 		if ( hasFlag( usage, MaterialUsageFlags::MorphTargets ) )
-			MaterialUtil::appendUniqueDefine( out, "MATERIAL_USAGE_MORPHTARGETS" );
+			MaterialUtil::appendUniqueDefine( outListDefine, "MATERIAL_USAGE_MORPHTARGETS" );
 		if ( hasFlag( usage, MaterialUsageFlags::SplineMesh ) )
-			MaterialUtil::appendUniqueDefine( out, "MATERIAL_USAGE_SPLINEMESH" );
+			MaterialUtil::appendUniqueDefine( outListDefine, "MATERIAL_USAGE_SPLINEMESH" );
 	}
 
-	void MaterialUtil::appendQualityDefines( MaterialQualityLevel q, vector<string>& out )
+	void MaterialUtil::appendQualityDefines( MaterialQualityLevel q, vector<string>& outListDefine )
 	{
-		MaterialUtil::appendUniqueDefine( out, string( "MATERIAL_QUALITY=" ) + to_string( static_cast<uint32>( q ) ) );
+		MaterialUtil::appendUniqueDefine( outListDefine, string( "MATERIAL_QUALITY=" ) + to_string( static_cast<uint32>( q ) ) );
 		switch ( q )
 		{
 			case MaterialQualityLevel::Low:
-				MaterialUtil::appendUniqueDefine( out, "MATERIAL_QUALITY_LOW" );
+				MaterialUtil::appendUniqueDefine( outListDefine, "MATERIAL_QUALITY_LOW" );
 				break;
 			case MaterialQualityLevel::Medium:
-				MaterialUtil::appendUniqueDefine( out, "MATERIAL_QUALITY_MEDIUM" );
+				MaterialUtil::appendUniqueDefine( outListDefine, "MATERIAL_QUALITY_MEDIUM" );
 				break;
 			case MaterialQualityLevel::High:
-				MaterialUtil::appendUniqueDefine( out, "MATERIAL_QUALITY_HIGH" );
+				MaterialUtil::appendUniqueDefine( outListDefine, "MATERIAL_QUALITY_HIGH" );
 				break;
 			case MaterialQualityLevel::Epic:
-				MaterialUtil::appendUniqueDefine( out, "MATERIAL_QUALITY_EPIC" );
+				MaterialUtil::appendUniqueDefine( outListDefine, "MATERIAL_QUALITY_EPIC" );
 				break;
 			case MaterialQualityLevel::Count:
-				MaterialUtil::appendUniqueDefine( out, "MATERIAL_QUALITY_HIGH" );
+				MaterialUtil::appendUniqueDefine( outListDefine, "MATERIAL_QUALITY_HIGH" );
 				break;
 			default:
 				break;
 		}
 	}
 
-	uint64 MaterialUtil::hashDefines( const vector<string>& defs )
+	uint64 MaterialUtil::hashDefines( const vector<string>& listDefine )
 	{
 		uint64 h = 14695981039346656037ull;
-		for ( const string& defineStr : defs )
+		for ( const string& defineStr : listDefine )
 		{
 			for ( const utf8 ch : defineStr )
 			{

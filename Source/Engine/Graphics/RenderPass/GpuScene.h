@@ -58,7 +58,7 @@ namespace sw
 		static constexpr uint32 kRetireFrameDelay = 2;
 
 		/** @brief 현재 배치에 실린 인스턴스를 pin하고, 빠진 것은 retire 큐로 옮깁니다. */
-		void syncFromBatches( const vector<GpuMeshBatch>& opaque, const vector<GpuMeshBatch>& transparent );
+		void syncFromBatches( const vector<GpuMeshBatch>& listOpaque, const vector<GpuMeshBatch>& listTransparent );
 		/** @brief RT 프레임 종료 시 호출 — retire 카운트를 줄입니다 (waitIdle 없음). */
 		void advanceFrame();
 		/** @brief device.waitIdle() 후 pin/retire를 모두 비웁니다. */
@@ -165,7 +165,7 @@ namespace sw
 		/** @brief 수집된 인스턴스를 배치로 묶습니다. */
 		void buildBatches();
 		/** @brief 투명 인덱스를 카메라 거리순(먼→가까운)으로 정렬합니다. */
-		void sortTransparent( const float32 cameraPos[3] );
+		void sortTransparent( const float32* pCameraPos );
 		/** @brief opaque/transparent 인덱스 테이블을 후보에서 다시 만듭니다. */
 		void rebuildPartitionTables();
 		/** @brief 후보 내용 핑거프린트. */

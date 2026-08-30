@@ -61,10 +61,10 @@ SW_TEST_CASE( MaterialTest, MaterialPermutationDefines )
 	sw::Material material;
 	SW_EXPECT_TRUE( material.loadFromFile( "engine/materials/defaultmaterial.material" ) );
 
-	sw::vector<sw::string> defs = material.collectShaderKeywords();
-	auto				   has	= [&]( const utf8* d )
+	sw::vector<sw::string> listDef = material.collectShaderKeywords();
+	auto				   has	   = [&]( const utf8* pDefine )
 	{
-		return std::find( defs.begin(), defs.end(), d ) != defs.end();
+		return std::find( listDef.begin(), listDef.end(), pDefine ) != listDef.end();
 	};
 
 	SW_EXPECT_TRUE( has( "MATERIAL_DOMAIN_SURFACE" ) );
@@ -75,13 +75,13 @@ SW_TEST_CASE( MaterialTest, MaterialPermutationDefines )
 	SW_EXPECT_TRUE( has( "MATERIAL_NORMALMAP" ) == false );
 
 	material.setStaticSwitch( sw::hashed_string( "UseNormalMap" ), true );
-	defs = material.collectShaderKeywords();
-	SW_EXPECT_TRUE( std::find( defs.begin(), defs.end(), "MATERIAL_NORMALMAP" ) != defs.end() );
+	listDef = material.collectShaderKeywords();
+	SW_EXPECT_TRUE( std::find( listDef.begin(), listDef.end(), "MATERIAL_NORMALMAP" ) != listDef.end() );
 
 	material.setMultiCompile( sw::hashed_string( "FogMode" ), "FOG_LINEAR" );
-	defs = material.collectShaderKeywords();
-	SW_EXPECT_TRUE( std::find( defs.begin(), defs.end(), "FOG_LINEAR" ) != defs.end() );
-	SW_EXPECT_TRUE( std::find( defs.begin(), defs.end(), "FOG_OFF" ) == defs.end() );
+	listDef = material.collectShaderKeywords();
+	SW_EXPECT_TRUE( std::find( listDef.begin(), listDef.end(), "FOG_LINEAR" ) != listDef.end() );
+	SW_EXPECT_TRUE( std::find( listDef.begin(), listDef.end(), "FOG_OFF" ) == listDef.end() );
 
 	const uint64 hashA = material.getPermutationHash();
 	material.setQualityLevel( sw::MaterialQualityLevel::Low );
@@ -90,8 +90,8 @@ SW_TEST_CASE( MaterialTest, MaterialPermutationDefines )
 
 	sw::MaterialInstance instance( &material );
 	instance.enableKeyword( sw::hashed_string( "CUSTOM_KEYWORD" ) );
-	sw::vector<sw::string> instDefs = instance.collectShaderKeywords();
-	SW_EXPECT_TRUE( std::find( instDefs.begin(), instDefs.end(), "CUSTOM_KEYWORD" ) != instDefs.end() );
+	sw::vector<sw::string> listInstDef = instance.collectShaderKeywords();
+	SW_EXPECT_TRUE( std::find( listInstDef.begin(), listInstDef.end(), "CUSTOM_KEYWORD" ) != listInstDef.end() );
 	SW_EXPECT_TRUE( instance.getPermutationHash() != material.getPermutationHash() );
 }
 
@@ -250,7 +250,7 @@ SW_TEST_CASE( MaterialTest, MaterialReflectionSchemaSync )
 	SW_EXPECT_TRUE( material.syncPropertiesFromReflection( reflection ) );
 
 	sw::MaterialInstance instance( &material );
-	float32				 colorOverride[4] = { 0.1f, 0.2f, 0.3f, 1.0f };
+	sw::float4			 colorOverride{ 0.1f, 0.2f, 0.3f, 1.0f };
 	instance.setVectorParameter( sw::hashed_string( "color" ), colorOverride );
 	SW_EXPECT_TRUE( instance.validateParametersWithReflection( reflection ) );
 	SW_EXPECT_TRUE( instance.isParameterOverridden( sw::hashed_string( "color" ) ) );
@@ -270,7 +270,7 @@ SW_TEST_CASE( MaterialTest, MaterialInstanceOverride )
 	SW_EXPECT_TRUE( material.loadFromFile( "engine/materials/defaultmaterial.material" ) );
 
 	sw::MaterialInstance instance( &material );
-	float32				 overrideColor[4] = { 0.1f, 0.2f, 0.3f, 0.4f };
+	sw::float4			 overrideColor{ 0.1f, 0.2f, 0.3f, 0.4f };
 	instance.setVectorParameter( sw::hashed_string( "color" ), overrideColor );
 	SW_EXPECT_TRUE( instance.isParameterOverridden( sw::hashed_string( "color" ) ) );
 

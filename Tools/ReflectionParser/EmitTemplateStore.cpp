@@ -28,10 +28,10 @@ namespace sw
 			}
 
 			/** @brief 변수 맵에서 키를 조회하고 없으면 빈 문자열 뷰를 반환합니다. */
-			static string_view lookupVar( const unordered_map<string, string>& vars, const string_view key )
+			static string_view lookupVar( const unordered_map<string, string>& mapVar, const string_view key )
 			{
-				const auto it = vars.find( string( key ) );
-				return ( it != vars.end() ) ? string_view( it->second ) : string_view{};
+				const auto it = mapVar.find( string( key ) );
+				return ( it != mapVar.end() ) ? string_view( it->second ) : string_view{};
 			}
 		};
 	} // namespace
@@ -68,11 +68,11 @@ namespace sw
 			return false;
 		}
 
-		vector<string> files;
-		FileUtil::collectFiles( absDir, ParserContext::getSharedConfig()._emitTemplateExtension, files, false, false );
+		vector<string> listFile;
+		FileUtil::collectFiles( absDir, ParserContext::getSharedConfig()._emitTemplateExtension, listFile, false, false );
 
 		uint32 count = 0;
-		for ( const string& filePath : files )
+		for ( const string& filePath : listFile )
 		{
 			string content;
 			if ( FileUtil::readTextFile( filePath, content ) == false )

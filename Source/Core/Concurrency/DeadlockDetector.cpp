@@ -171,17 +171,17 @@ namespace sw
 	/**
 	 * @brief 교착상태에 연루된 모든 스레드와 락의 호출 스택을 상세히 출력하고 디버거를 중단합니다.
 	 */
-	void DeadlockDetector::dumpDeadlock( const vector<std::thread::id>& cycle )
+	void DeadlockDetector::dumpDeadlock( const vector<std::thread::id>& listCycle )
 	{
 		StringBuilder<constant::kMaxBuffer8192> builder;
 		builder.append( "\n=======================================================\n" );
 		builder.append( "[FATAL ERROR] DEADLOCK DETECTED!\n" );
 		builder.append( "=======================================================\n" );
-		builder.appendFormat( "Cycle size: %# threads involved.\n\n", static_cast<int32>( cycle.size() ) );
+		builder.appendFormat( "Cycle size: %# threads involved.\n\n", static_cast<int32>( listCycle.size() ) );
 
-		for ( size_t cycleIndex = 0; cycleIndex < cycle.size(); ++cycleIndex )
+		for ( size_t cycleIndex = 0; cycleIndex < listCycle.size(); ++cycleIndex )
 		{
-			std::thread::id tid	  = cycle[cycleIndex];
+			std::thread::id tid	  = listCycle[cycleIndex];
 			ThreadState&	state = _mapThreadState[tid];
 
 			uint32 tidHash = static_cast<uint32>( std::hash<std::thread::id>{}( tid ) );

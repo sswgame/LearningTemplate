@@ -131,7 +131,7 @@ namespace sw
 		{
 			TaskNode*		  arrInlineCopy[kInlineCapacity]{};
 			uint32			  inlineCopyCount{ 0 };
-			vector<TaskNode*> overflowCopy;
+			vector<TaskNode*> listOverflowCopy;
 
 			lock();
 			inlineCopyCount = _count < kInlineCapacity ? _count : kInlineCapacity;
@@ -141,7 +141,7 @@ namespace sw
 			}
 			if ( _pOverflow != nullptr )
 			{
-				overflowCopy = *_pOverflow;
+				listOverflowCopy = *_pOverflow;
 			}
 			unlock();
 
@@ -149,7 +149,7 @@ namespace sw
 			{
 				func( arrInlineCopy[index] );
 			}
-			for ( TaskNode* pNode : overflowCopy )
+			for ( TaskNode* pNode : listOverflowCopy )
 			{
 				func( pNode );
 			}
@@ -976,14 +976,14 @@ namespace sw
 		}
 	}
 
-	TaskHandle TaskManager::whenAll( const vector<TaskHandle>& tasks, const TaskDelegate& continuation, TaskThreadAffinity affinity )
+	TaskHandle TaskManager::whenAll( const vector<TaskHandle>& listTask, const TaskDelegate& continuation, TaskThreadAffinity affinity )
 	{
-		if ( tasks.empty() )
+		if ( listTask.empty() )
 			return emplaceTask( "WhenAllContinuation", continuation, affinity );
 
 		TaskHandle nextTask = emplaceTask( "WhenAllContinuation", continuation, affinity );
 
-		for ( const TaskHandle& task : tasks )
+		for ( const TaskHandle& task : listTask )
 		{
 			if ( task.isValid() )
 			{
@@ -995,9 +995,9 @@ namespace sw
 		return nextTask;
 	}
 
-	TaskHandle TaskManager::whenAny( const vector<TaskHandle>& tasks, const TaskDelegate& continuation, TaskThreadAffinity affinity )
+	TaskHandle TaskManager::whenAny( const vector<TaskHandle>& listTask, const TaskDelegate& continuation, TaskThreadAffinity affinity )
 	{
-		if ( tasks.empty() )
+		if ( listTask.empty() )
 			return emplaceTask( "WhenAnyContinuation", continuation, affinity );
 
 		shared_ptr<atomic<bool>> firedFlag = sw::make_shared<atomic<bool>>( false );
@@ -1006,7 +1006,7 @@ namespace sw
 		// 1 for user submit(), 1 for trigger completion
 		nextTask.getNode()->_unresolvedDependencies.store( 2, std::memory_order_relaxed );
 
-		for ( const TaskHandle& task : tasks )
+		for ( const TaskHandle& task : listTask )
 		{
 			if ( task.isValid() )
 			{

@@ -178,24 +178,21 @@ _kMemberVectorRe = re.compile(
 #   r'listOut[A-Za-z0-9_]*|mapOut[A-Za-z0-9_]*|uniqueOut[A-Za-z0-9_]*|arrOut[A-Za-z0-9_]*|'
 #   r'listInOut[A-Za-z0-9_]*|mapInOut[A-Za-z0-9_]*|out_[a-zA-Z0-9_]+|out[A-Z][a-zA-Z0-9_]*List|'
 #   r'outList[A-Za-z0-9_]*Bytes?|outListByte[A-Za-z0-9_]*)\b'
-#
-#   - outP(?!ath)...  : outPApi 등 포인터 접두어가 out 뒤에 잘못 위치한 경우 (pOutApi 권장)
-#   - outPP...        : outPPBuffer 등 이중 포인터가 out 뒤에 잘못 위치한 경우 (ppOutBuffer 권장)
-#   - inoutP...       : inoutPSize 등 포인터 입출력이 inout 뒤에 잘못 위치한 경우 (pInOutSize 권장)
-#   - inoutPP...      : inoutPPNode 등 이중 포인터 입출력이 inout 뒤에 잘못 위치한 경우 (ppInOutNode 권장)
-#   - listOut...      : listOutBuffer -> outListBuffer 로 수정 제안
-#   - mapOut...       : mapOutData -> outMapData 로 수정 제안
-#   - uniqueOut...    : uniqueOutIds -> outUniqueIds 로 수정 제안
-#   - arrOut...       : arrOutBuffer -> outArrBuffer 로 수정 제안
-#   - out...List      : outActorList -> outListActor 로 수정 제안
-#   - outListBytes... : outListBytes -> outBytes 로 수정 제안 (바이트 벡터는 list 생략)
-#   - out_...         : out_buffer -> outBuffer 로 수정 제안 (camelCase 강제)
 _kOutParamNamingRe = re.compile(
     r'\b(?:(?:const\s+)?(?:[A-Za-z0-9_:]+(?:<[^>]+>)?)\s*[\*&]+\s+|\b)'
     r'(outP[A-Z][A-Za-z0-9_]*|outPP[A-Z][A-Za-z0-9_]*|inoutP[A-Z][A-Za-z0-9_]*|inoutPP[A-Z][A-Za-z0-9_]*|'
     r'listOut(?!puts?\b)[A-Za-z0-9_]*|mapOut[A-Za-z0-9_]*|uniqueOut[A-Za-z0-9_]*|arrOut[A-Za-z0-9_]*|'
     r'listInOut[A-Za-z0-9_]*|mapInOut[A-Za-z0-9_]*|(?<!::)\bout_(?!of_range\b)[a-zA-Z0-9_]+|out[A-Z][a-zA-Z0-9_]*List|'
     r'outList[A-Za-z0-9_]*Bytes?|outListByte[A-Za-z0-9_]*)\b'
+)
+
+# [비복수형 예외 단어 목록]
+kNonPluralExceptions = (
+    "Bounds", "Status", "Pass", "Address", "Axis", "Process", "Class", "Cross",
+    "Loss", "Mass", "Press", "Canvas", "Args", "Bytes", "Bindless", "RtvIndex",
+    "DsvIndex", "Matrix", "Vertex", "Alias", "Species", "Series", "Focus", "Radius",
+    "Bias", "Lens", "Basis", "Crisis", "Analysis", "Mesh", "This", "Index", "Context",
+    "Params", "Settings", "Coordinates", "Options", "Details", "Stats"
 )
 
 
@@ -208,6 +205,61 @@ def makeSingularInternal(word: str) -> str:
     if word.endswith("s") and not word.endswith("ss"):
         return word[:-1]
     return word
+
+
+def isPluralWordInternal(word: str) -> bool:
+    """단어가 복수형 어미를 가지는지 판정합니다 (예외 목록 제외)."""
+    if any(word.endswith(exc) for exc in kNonPluralExceptions):
+        return False
+    if word.endswith(("ies", "es", "s")) and not word.endswith("ss"):
+        return True
+    return False
+
+
+def splitParametersInternal(signatureParams: str) -> list[str]:
+    """
+    함수 매개변수 시그니처 문자열을 템플릿(< >) 및 괄호 깊이를 보존하며 쉼표로 분리합니다.
+    """
+    params: list[str] = []
+    current: list[str] = []
+    templateDepth = 0
+    parenDepth = 0
+    braceDepth = 0
+
+    for ch in signatureParams:
+        if ch == '<':
+            templateDepth += 1
+            current.append(ch)
+        elif ch == '>':
+            if templateDepth > 0:
+                templateDepth -= 1
+            current.append(ch)
+        elif ch == '(':
+            parenDepth += 1
+            current.append(ch)
+        elif ch == ')':
+            if parenDepth > 0:
+                parenDepth -= 1
+            current.append(ch)
+        elif ch == '{':
+            braceDepth += 1
+            current.append(ch)
+        elif ch == '}':
+            if braceDepth > 0:
+                braceDepth -= 1
+            current.append(ch)
+        elif ch == ',' and templateDepth == 0 and parenDepth == 0 and braceDepth == 0:
+            pStr = "".join(current).strip()
+            if pStr:
+                params.append(pStr)
+            current = []
+        else:
+            current.append(ch)
+
+    pStr = "".join(current).strip()
+    if pStr:
+        params.append(pStr)
+    return params
 
 
 def getSuggestedOutParamFixInternal(name: str) -> tuple[str, str] | None:
@@ -303,18 +355,513 @@ def getSuggestedOutParamFixInternal(name: str) -> tuple[str, str] | None:
 
     # 14. 컨테이너 복수형 검사 (outList, outMap, outArr - unique 및 bytes 제외)
     if name.startswith(("outList", "outMap", "outArr")):
-        kNonPluralExceptions = (
-            "Bounds", "Status", "Pass", "Address", "Axis", "Process", "Class", "Cross",
-            "Loss", "Mass", "Press", "Canvas", "Args", "Bytes", "Bindless", "RtvIndex",
-            "DsvIndex", "Matrix", "Vertex", "Alias", "Species", "Series", "Focus", "Radius",
-            "Bias", "Lens", "Basis", "Crisis", "Analysis", "Mesh"
-        )
-        if not any(name.endswith(exc) for exc in kNonPluralExceptions):
-            if name.endswith(("ies", "es", "s")) and not name.endswith("ss"):
-                singularFix = makeSingularInternal(name)
-                return singularFix, f"출력 컨테이너 매개변수 '{name}'는 복수형 대신 단수형 명사('{singularFix}')를 사용해야 합니다."
+        if isPluralWordInternal(name):
+            singularFix = makeSingularInternal(name)
+            return singularFix, f"출력 컨테이너 매개변수 '{name}'는 복수형 대신 단수형 명사('{singularFix}')를 사용해야 합니다."
 
     return None
+
+
+def checkParameterItemInternal(paramStr: str, relPath: str, lineNum: int, snippet: str) -> list[ConventionViolation]:
+    """
+    함수 매개변수 1개의 타입/변수명을 검사하여 규칙 위반 항목을 반환합니다.
+    """
+    violations: list[ConventionViolation] = []
+
+    # 기본값 분리 (e.g. const Vector3& pos = Vector3::kZero)
+    if "=" in paramStr:
+        eqIdx = paramStr.find("=")
+        paramDecl = paramStr[:eqIdx].strip()
+    else:
+        paramDecl = paramStr.strip()
+
+    if not paramDecl or paramDecl == "void" or paramDecl == "...":
+        return violations
+
+    # 표현식(객체 생성 인자, 연산식 등) 오탐 필터링
+    # 매개변수 선언이 아닌 식 (e.g. other._mutex, a + b, obj.x)
+    if any(op in paramDecl for op in (".", "->", " + ", " - ", " * ", " / ", "%")):
+        return violations
+
+    # 고정 배열 파싱 (e.g. uint8 arrBuffer[256])
+    arrayMatch = re.search(r'\[[^\]]*\]$', paramDecl)
+    isArray = bool(arrayMatch)
+    if isArray and arrayMatch:
+        paramDecl = paramDecl[:arrayMatch.start()].strip()
+
+    # 식별자(변수명) 분리
+    match = re.search(r'([A-Za-z0-9_]+)$', paramDecl)
+    if not match:
+        return violations
+
+    paramName = match.group(1)
+    typePart = paramDecl[:match.start()].strip()
+
+    # 타입만 명시되고 변수명이 생략된 선언 또는 네임스페이스 한정 식 (e.g. Scope::_s_var)
+    if not typePart or typePart.endswith("::"):
+        return violations
+
+    # typePart가 유효한 C++ 타입 패턴인지 검증 (표현식 제외)
+    if not re.match(r'^(?:(?:const|volatile|register)\s+)?(?:[A-Za-z0-9_:]+(?:<[^>]+>)?(?:\s*[*&]+)?\s*)+$', typePart):
+        return violations
+
+    # 1. '_' 접두어 검사 (매개변수/지역변수에는 '_' 사용 금지)
+    if paramName.startswith("_"):
+        fix = paramName.lstrip("_")
+        violations.append(
+            ConventionViolation(
+                file_path=relPath,
+                line_number=lineNum,
+                rule_category="Naming/ParameterNoUnderscore",
+                message=f"매개변수 '{paramName}'는 '_' 접두어를 사용할 수 없습니다 ('{fix}' 권장).",
+                snippet=snippet,
+                suggested_fix=fix,
+            )
+        )
+        paramName = fix
+
+    # 2. 원시 포인터 매개변수 검사 (템플릿 인자 <...> 내부의 *는 제외)
+    typeWithoutTemplate = re.sub(r'<[^>]*>', '', typePart)
+    numPtr = typeWithoutTemplate.count("*")
+    if numPtr >= 1:
+        if paramName in ("argv", "argc", "env", "this"):
+            return violations
+
+        if numPtr == 1:
+            # 단일 포인터: p, pOut, pInOut로 시작해야 함
+            if not paramName.startswith(("pOut", "pInOut")):
+                if not paramName.startswith("p") or (len(paramName) > 1 and not paramName[1].isupper()):
+                    fix = "p" + paramName[0].upper() + paramName[1:] if paramName else "pPtr"
+                    violations.append(
+                        ConventionViolation(
+                            file_path=relPath,
+                            line_number=lineNum,
+                            rule_category="Naming/ParameterPointer",
+                            message=f"원시 포인터 매개변수 '{paramName}'는 'p' 접두어로 시작해야 합니다 ('{fix}' 권장).",
+                            snippet=snippet,
+                            suggested_fix=fix,
+                        )
+                    )
+        elif numPtr == 2:
+            # 이중 포인터: pp, ppOut, ppInOut로 시작해야 함
+            if not paramName.startswith(("ppOut", "ppInOut")):
+                if not paramName.startswith("pp") or (len(paramName) > 2 and not paramName[2].isupper()):
+                    fix = "pp" + paramName[0].upper() + paramName[1:] if paramName else "ppPtr"
+                    violations.append(
+                        ConventionViolation(
+                            file_path=relPath,
+                            line_number=lineNum,
+                            rule_category="Naming/ParameterPointer",
+                            message=f"이중 포인터 매개변수 '{paramName}'는 'pp' 접두어로 시작해야 합니다 ('{fix}' 권장).",
+                            snippet=snippet,
+                            suggested_fix=fix,
+                        )
+                    )
+
+    # 3. 컨테이너 매개변수 검사
+    # vector / list / deque
+    elif re.search(r'\b(?:(?:sw::)?(?:vector|list|deque))\s*<([^>]+)>', typePart):
+        innerTypeMatch = re.search(r'\b(?:(?:sw::)?(?:vector|list|deque))\s*<([^>]+)>', typePart)
+        innerType = innerTypeMatch.group(1).strip() if innerTypeMatch else ""
+        isByteVec = bool(re.search(r'\b(?:uint8|int8|utf8|char|byte)\b', innerType, re.IGNORECASE))
+        hasByteWord = any(w in paramName.lower() for w in ("byte", "bytes", "buffer"))
+
+        if isByteVec and hasByteWord:
+            if paramName.startswith("list"):
+                fix = paramName[4].lower() + paramName[5:] if len(paramName) > 4 else "bytes"
+                violations.append(
+                    ConventionViolation(
+                        file_path=relPath,
+                        line_number=lineNum,
+                        rule_category="Naming/ParameterContainer",
+                        message=f"바이트 벡터 매개변수 '{paramName}'는 'byte/buffer' 단어가 포함된 경우 'list' 접두어를 생략해야 합니다 ('{fix}' 권장).",
+                        snippet=snippet,
+                        suggested_fix=fix,
+                    )
+                )
+        else:
+            if not paramName.startswith(("list", "outList", "inoutList")):
+                if paramName in ("out", "_out"):
+                    candidate = "outList"
+                elif paramName.startswith("out") and len(paramName) > 3:
+                    candidate = "outList" + paramName[3:]
+                elif paramName.startswith("inout") and len(paramName) > 5:
+                    candidate = "inoutList" + paramName[5:]
+                else:
+                    candidate = "list" + paramName[0].upper() + paramName[1:] if paramName else "list"
+                if isPluralWordInternal(candidate):
+                    candidate = makeSingularInternal(candidate)
+                fix = candidate
+                violations.append(
+                    ConventionViolation(
+                        file_path=relPath,
+                        line_number=lineNum,
+                        rule_category="Naming/ParameterContainer",
+                        message=f"동적 배열/리스트 매개변수 '{paramName}'는 'list' (출력은 'outList') 접두어로 시작해야 합니다 ('{fix}' 권장).",
+                        snippet=snippet,
+                        suggested_fix=fix,
+                    )
+                )
+            # List 접미어 검사 (e.g. actorList -> listActor, outActorList -> outListActor)
+            if paramName.endswith("List") and paramName not in ("list", "outList", "inoutList", "pOutList", "ppOutList"):
+                if paramName.startswith("out") and len(paramName) > 7:
+                    candidate = "outList" + paramName[3:-4]
+                elif paramName.startswith("inout") and len(paramName) > 9:
+                    candidate = "inoutList" + paramName[5:-4]
+                else:
+                    candidate = "list" + paramName[:-4]
+                if isPluralWordInternal(candidate):
+                    candidate = makeSingularInternal(candidate)
+                fix = candidate
+                violations.append(
+                    ConventionViolation(
+                        file_path=relPath,
+                        line_number=lineNum,
+                        rule_category="Naming/ParameterContainer",
+                        message=f"매개변수 '{paramName}'는 'List' 접미어 대신 '{fix}' 형태를 사용해야 합니다.",
+                        snippet=snippet,
+                        suggested_fix=fix,
+                    )
+                )
+            if paramName.startswith(("list", "outList", "inoutList")) and isPluralWordInternal(paramName):
+                singularFix = makeSingularInternal(paramName)
+                violations.append(
+                    ConventionViolation(
+                        file_path=relPath,
+                        line_number=lineNum,
+                        rule_category="Naming/ContainerSingular",
+                        message=f"컨테이너 매개변수 '{paramName}'는 복수형 대신 단수형 명사를 사용해야 합니다 ('{singularFix}' 권장).",
+                        snippet=snippet,
+                        suggested_fix=singularFix,
+                    )
+                )
+
+    # map / unordered_map
+    elif re.search(r'\b(?:(?:sw::)?(?:unordered_map|map))\s*<', typePart):
+        if not paramName.startswith(("map", "outMap", "inoutMap")):
+            candidate = "map" + paramName[0].upper() + paramName[1:] if paramName else "map"
+            if isPluralWordInternal(candidate):
+                candidate = makeSingularInternal(candidate)
+            fix = candidate
+            violations.append(
+                ConventionViolation(
+                    file_path=relPath,
+                    line_number=lineNum,
+                    rule_category="Naming/ParameterContainer",
+                    message=f"연관 컨테이너 매개변수 '{paramName}'는 'map' 접두어로 시작해야 합니다 ('{fix}' 권장).",
+                    snippet=snippet,
+                    suggested_fix=fix,
+                )
+            )
+        if paramName.startswith(("map", "outMap", "inoutMap")) and isPluralWordInternal(paramName):
+            singularFix = makeSingularInternal(paramName)
+            violations.append(
+                ConventionViolation(
+                    file_path=relPath,
+                    line_number=lineNum,
+                    rule_category="Naming/ContainerSingular",
+                    message=f"맵 매개변수 '{paramName}'는 복수형 대신 단수형 명사를 사용해야 합니다 ('{singularFix}' 권장).",
+                    snippet=snippet,
+                    suggested_fix=singularFix,
+                )
+            )
+
+    # set / unordered_set
+    elif re.search(r'\b(?:(?:sw::)?(?:unordered_set|set))\s*<', typePart):
+        if not paramName.startswith(("unique", "outUnique", "inoutUnique")):
+            fix = "unique" + paramName[0].upper() + paramName[1:] if paramName else "unique"
+            violations.append(
+                ConventionViolation(
+                    file_path=relPath,
+                    line_number=lineNum,
+                    rule_category="Naming/ParameterContainer",
+                    message=f"고유 집합 매개변수 '{paramName}'는 'unique' 접두어로 시작해야 합니다 ('{fix}' 권장).",
+                    snippet=snippet,
+                    suggested_fix=fix,
+                )
+            )
+
+    # 고정 배열
+    elif isArray:
+        if not paramName.startswith(("arr", "outArr", "inoutArr")):
+            candidate = "arr" + paramName[0].upper() + paramName[1:] if paramName else "arr"
+            if isPluralWordInternal(candidate):
+                candidate = makeSingularInternal(candidate)
+            fix = candidate
+            violations.append(
+                ConventionViolation(
+                    file_path=relPath,
+                    line_number=lineNum,
+                    rule_category="Naming/ParameterContainer",
+                    message=f"고정 배열 매개변수 '{paramName}'는 'arr' 접두어로 시작해야 합니다 ('{fix}' 권장).",
+                    snippet=snippet,
+                    suggested_fix=fix,
+                )
+            )
+        if isPluralWordInternal(paramName):
+            singularFix = makeSingularInternal(paramName)
+            violations.append(
+                ConventionViolation(
+                    file_path=relPath,
+                    line_number=lineNum,
+                    rule_category="Naming/ContainerSingular",
+                    message=f"배열 매개변수 '{paramName}'는 복수형 대신 단수형 명사를 사용해야 합니다 ('{singularFix}' 권장).",
+                    snippet=snippet,
+                    suggested_fix=singularFix,
+                )
+            )
+
+    return violations
+
+
+def checkLocalVariableItemInternal(line: str, relPath: str, lineNum: int) -> list[ConventionViolation]:
+    """
+    함수 내부의 지역 변수 선언문을 검사하여 규칙 위반 항목을 반환합니다.
+    """
+    violations: list[ConventionViolation] = []
+    trimmed = line.strip()
+    if trimmed.startswith(("#", "//", "/*", "*", "return", "if", "while", "for", "switch", "case", "using", "typedef", "friend", "struct", "class", "enum", "union")):
+        return violations
+    if "SW_ASSERT" in trimmed or "SW_LOG" in trimmed or "SW_STATIC_ASSERT" in trimmed or "catch" in trimmed:
+        return violations
+    if trimmed.startswith(("delete ", "delete[] ", "throw ", "goto ", "break;", "continue;")):
+        return violations
+
+    codeClean = re.sub(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'', '', line)
+
+    # 함수 선언/정의 시그니처인 경우 변수 선언이 아님
+    if re.search(r'\([a-zA-Z0-9_,\s*&:<>=./"-]*\)\s*(?:const|override|final|noexcept|SW_\w*API)*\s*[{;=]', trimmed):
+        return violations
+
+    # 1. 지역 변수 '_' 접두어 검사 (예: int32 _val = 0;, auto _pPtr = ...)
+    localUnderscoreMatch = re.search(r'^\s*(?:const\s+|static\s+|constexpr\s+|auto\s+)?(?:[A-Za-z0-9_:]+(?:<[^;]+>)?\s*[*&]*\s+)(_[a-zA-Z0-9]+)\s*(?:=|;|,|\{|\()', codeClean)
+    if localUnderscoreMatch:
+        varName = localUnderscoreMatch.group(1)
+        if not varName.startswith(("_s_", "__")):
+            fix = varName.lstrip("_")
+            violations.append(
+                ConventionViolation(
+                    file_path=relPath,
+                    line_number=lineNum,
+                    rule_category="Naming/LocalNoUnderscore",
+                    message=f"지역 변수 '{varName}'는 '_' 접두어를 사용할 수 없습니다 ('{fix}' 권장).",
+                    snippet=trimmed,
+                    suggested_fix=fix,
+                )
+            )
+
+    # 2. 로컬 원시 포인터 변수 명명 검사
+    # 함수 정의/선언 (뒤에 괄호 ( 가 오는 함수 이름)는 변수가 아니므로 제외
+    if not re.search(r'\b[A-Za-z0-9_:]+\s*\(', codeClean):
+        ptrDeclMatch = re.search(r'^\s*(?:const\s+|static\s+|constexpr\s+)?([A-Za-z0-9_:]+)\s*(\*{1,2})\s*(?:const\s+)?([a-zA-Z0-9_]+)\s*(?:=|;|,|\{)', codeClean)
+        if ptrDeclMatch:
+            typeName = ptrDeclMatch.group(1)
+            stars = ptrDeclMatch.group(2)
+            varName = ptrDeclMatch.group(3)
+            if typeName not in ("delete", "return", "sizeof", "static_cast", "reinterpret_cast", "dynamic_cast", "const_cast", "case", "default") and varName not in ("argv", "this"):
+                isStatic = "static" in codeClean
+                if len(stars) == 1:
+                    # 단일 포인터: p로 시작하거나 static인 경우 s_p / _s_p 허용
+                    isValidPointerName = (
+                        (varName.startswith("p") and len(varName) > 1 and varName[1].isupper()) or
+                        (varName.startswith("s_p") and len(varName) > 3 and varName[3].isupper()) or
+                        (varName.startswith("_s_p") and len(varName) > 4 and varName[4].isupper()) or
+                        varName.startswith("pOut")
+                    )
+                    if not isValidPointerName:
+                        fix = "p" + varName.lstrip("_")[0].upper() + varName.lstrip("_")[1:] if varName.lstrip("_") else "pPtr"
+                        violations.append(
+                            ConventionViolation(
+                                file_path=relPath,
+                                line_number=lineNum,
+                                rule_category="Naming/LocalPointer",
+                                message=f"원시 포인터 지역 변수 '{varName}'는 'p' (정적 변수는 's_p') 접두어로 시작해야 합니다 ('{fix}' 권장).",
+                                snippet=trimmed,
+                                suggested_fix=fix,
+                            )
+                        )
+                elif len(stars) == 2:
+                    # 이중 포인터: pp로 시작하거나 static인 경우 s_pp / _s_pp 허용
+                    isValidPointerName = (
+                        (varName.startswith("pp") and len(varName) > 2 and varName[2].isupper()) or
+                        (varName.startswith("s_pp") and len(varName) > 4 and varName[4].isupper()) or
+                        (varName.startswith("_s_pp") and len(varName) > 5 and varName[5].isupper()) or
+                        varName.startswith("ppOut")
+                    )
+                    if not isValidPointerName:
+                        fix = "pp" + varName.lstrip("_")[0].upper() + varName.lstrip("_")[1:] if varName.lstrip("_") else "ppPtr"
+                        violations.append(
+                            ConventionViolation(
+                                file_path=relPath,
+                                line_number=lineNum,
+                                rule_category="Naming/LocalPointer",
+                                message=f"이중 포인터 지역 변수 '{varName}'는 'pp' (정적 변수는 's_pp') 접두어로 시작해야 합니다 ('{fix}' 권장).",
+                                snippet=trimmed,
+                                suggested_fix=fix,
+                            )
+                        )
+
+    # 3. 로컬 가변 컨테이너 (vector, list, deque) 변수 명명 검사
+    vecMatch = re.search(r'^\s*(?:(?:sw::)?(?:vector|list|deque))\s*<([^>]+)>\s+([a-zA-Z0-9_]+)\s*(?:=|;|\{|\()', codeClean)
+    if vecMatch:
+        innerType = vecMatch.group(1).strip()
+        varName = vecMatch.group(2)
+        isByteVec = bool(re.search(r'\b(?:uint8|int8|utf8|char|byte)\b', innerType, re.IGNORECASE))
+        hasByteWord = any(w in varName.lower() for w in ("byte", "bytes", "buffer"))
+        if isByteVec and hasByteWord:
+            if varName.startswith("list") or varName.startswith("_list"):
+                cleanName = varName.lstrip("_")
+                fix = cleanName[4].lower() + cleanName[5:] if len(cleanName) > 4 else "bytes"
+                violations.append(
+                    ConventionViolation(
+                        file_path=relPath,
+                        line_number=lineNum,
+                        rule_category="Naming/LocalContainer",
+                        message=f"바이트 벡터 지역 변수 '{varName}'는 'byte/buffer' 단어가 포함된 경우 'list' 접두어를 생략해야 합니다 ('{fix}' 권장).",
+                        snippet=trimmed,
+                        suggested_fix=fix,
+                    )
+                )
+        else:
+            if not varName.startswith("list") and not varName.startswith("outList") and not varName.startswith("inoutList"):
+                if varName in ("out", "_out"):
+                    candidate = "outList"
+                elif varName.lstrip("_").startswith("out") and len(varName.lstrip("_")) > 3:
+                    candidate = "outList" + varName.lstrip("_")[3:]
+                elif varName.lstrip("_").startswith("inout") and len(varName.lstrip("_")) > 5:
+                    candidate = "inoutList" + varName.lstrip("_")[5:]
+                else:
+                    candidate = "list" + varName.lstrip("_")[0].upper() + varName.lstrip("_")[1:] if varName.lstrip("_") else "list"
+                if isPluralWordInternal(candidate):
+                    candidate = makeSingularInternal(candidate)
+                fix = candidate
+                violations.append(
+                    ConventionViolation(
+                        file_path=relPath,
+                        line_number=lineNum,
+                        rule_category="Naming/LocalContainer",
+                        message=f"동적 배열/리스트 지역 변수 '{varName}'는 'list' (출력은 'outList') 접두어로 시작해야 합니다 ('{fix}' 권장).",
+                        snippet=trimmed,
+                        suggested_fix=fix,
+                    )
+                )
+            # List 접미어 검사 (e.g. actorList -> listActor, outActorList -> outListActor)
+            if varName.endswith("List") and varName not in ("list", "outList", "inoutList", "pOutList", "ppOutList"):
+                if varName.startswith("out") and len(varName) > 7:
+                    candidate = "outList" + varName[3:-4]
+                elif varName.startswith("inout") and len(varName) > 9:
+                    candidate = "inoutList" + varName[5:-4]
+                else:
+                    candidate = "list" + varName[:-4]
+                if isPluralWordInternal(candidate):
+                    candidate = makeSingularInternal(candidate)
+                fix = candidate
+                violations.append(
+                    ConventionViolation(
+                        file_path=relPath,
+                        line_number=lineNum,
+                        rule_category="Naming/LocalContainer",
+                        message=f"지역 변수 '{varName}'는 'List' 접미어 대신 '{fix}' 형태를 사용해야 합니다.",
+                        snippet=trimmed,
+                        suggested_fix=fix,
+                    )
+                )
+            if (varName.startswith("list") or varName.startswith("outList")) and isPluralWordInternal(varName):
+                singularFix = makeSingularInternal(varName)
+                violations.append(
+                    ConventionViolation(
+                        file_path=relPath,
+                        line_number=lineNum,
+                        rule_category="Naming/ContainerSingular",
+                        message=f"컨테이너 지역 변수 '{varName}'는 복수형 대신 단수형 명사를 사용해야 합니다 ('{singularFix}' 권장).",
+                        snippet=trimmed,
+                        suggested_fix=singularFix,
+                    )
+                )
+
+    # 4. 로컬 연관 컨테이너 (map, unordered_map) 변수 명명 검사
+    mapMatch = re.search(r'^\s*(?:(?:sw::)?(?:unordered_map|map))\s*<[^>]+>\s+([a-zA-Z0-9_]+)\s*(?:=|;|\{|\()', codeClean)
+    if mapMatch:
+        varName = mapMatch.group(1)
+        if not varName.startswith("map") and not varName.startswith("outMap") and not varName.startswith("inoutMap"):
+            candidate = "map" + varName.lstrip("_")[0].upper() + varName.lstrip("_")[1:] if varName.lstrip("_") else "map"
+            if isPluralWordInternal(candidate):
+                candidate = makeSingularInternal(candidate)
+            fix = candidate
+            violations.append(
+                ConventionViolation(
+                    file_path=relPath,
+                    line_number=lineNum,
+                    rule_category="Naming/LocalContainer",
+                    message=f"연관 컨테이너 지역 변수 '{varName}'는 'map' 접두어로 시작해야 합니다 ('{fix}' 권장).",
+                    snippet=trimmed,
+                    suggested_fix=fix,
+                )
+            )
+        if (varName.startswith("map") or varName.startswith("outMap")) and isPluralWordInternal(varName):
+            singularFix = makeSingularInternal(varName)
+            violations.append(
+                ConventionViolation(
+                    file_path=relPath,
+                    line_number=lineNum,
+                    rule_category="Naming/ContainerSingular",
+                    message=f"맵 지역 변수 '{varName}'는 복수형 대신 단수형 명사를 사용해야 합니다 ('{singularFix}' 권장).",
+                    snippet=trimmed,
+                    suggested_fix=singularFix,
+                )
+            )
+
+    # 5. 로컬 고유 집합 (set, unordered_set) 변수 명명 검사
+    setMatch = re.search(r'^\s*(?:(?:sw::)?(?:unordered_set|set))\s*<[^>]+>\s+([a-zA-Z0-9_]+)\s*(?:=|;|\{|\()', codeClean)
+    if setMatch:
+        varName = setMatch.group(1)
+        if not varName.startswith("unique") and not varName.startswith("outUnique") and not varName.startswith("inoutUnique"):
+            fix = "unique" + varName.lstrip("_")[0].upper() + varName.lstrip("_")[1:] if varName.lstrip("_") else "unique"
+            violations.append(
+                ConventionViolation(
+                    file_path=relPath,
+                    line_number=lineNum,
+                    rule_category="Naming/LocalContainer",
+                    message=f"고유 집합 지역 변수 '{varName}'는 'unique' 접두어로 시작해야 합니다 ('{fix}' 권장).",
+                    snippet=trimmed,
+                    suggested_fix=fix,
+                )
+            )
+
+    # 6. 로컬 고정 배열 변수 명명 검사
+    arrMatch = re.search(r'^\s*(?:float32|float64|int32|int64|uint8|uint16|uint32|uint64|char|utf8|bool)\s+([a-zA-Z0-9_]+)\s*\[[^\]]+\]\s*(?:=|;|\{)', codeClean)
+    if arrMatch:
+        varName = arrMatch.group(1)
+        if not varName.startswith("arr") and not varName.startswith("outArr") and not varName.startswith("inoutArr"):
+            candidate = "arr" + varName.lstrip("_")[0].upper() + varName.lstrip("_")[1:] if varName.lstrip("_") else "arr"
+            if isPluralWordInternal(candidate):
+                candidate = makeSingularInternal(candidate)
+            fix = candidate
+            violations.append(
+                ConventionViolation(
+                    file_path=relPath,
+                    line_number=lineNum,
+                    rule_category="Naming/LocalContainer",
+                    message=f"고정 배열 지역 변수 '{varName}'는 'arr' 접두어로 시작해야 합니다 ('{fix}' 권장).",
+                    snippet=trimmed,
+                    suggested_fix=fix,
+                )
+            )
+        if isPluralWordInternal(varName):
+            singularFix = makeSingularInternal(varName)
+            violations.append(
+                ConventionViolation(
+                    file_path=relPath,
+                    line_number=lineNum,
+                    rule_category="Naming/ContainerSingular",
+                    message=f"배열 지역 변수 '{varName}'는 복수형 대신 단수형 명사를 사용해야 합니다 ('{singularFix}' 권장).",
+                    snippet=trimmed,
+                    suggested_fix=singularFix,
+                )
+            )
+
+    return violations
+
 
 
 # [연관 컨테이너(맵) 멤버 변수 명명 검사]
@@ -540,8 +1087,12 @@ def checkFileConventionsInternal(filePath: Path, rootDir: Path) -> list[Conventi
     ctorInitMembers: list[str] = []
     ctorInitStartLine: int = 0
     inCtorInitList = False
-    headerClassStack: list[tuple[str, int]] = []
-    headerBraceDepth = 0
+
+    classStack: list[tuple[str, int]] = []  # (className, entryBraceDepth)
+    funcStack: list[int] = []               # entryBraceDepth
+    braceDepth = 0
+    pendingClass: str | None = None
+    pendingFunc = False
 
     for lineNum, line in enumerate(lines, start=1):
         trimmed = line.strip()
@@ -557,7 +1108,9 @@ def checkFileConventionsInternal(filePath: Path, rootDir: Path) -> list[Conventi
         if trimmed.startswith("//") or not trimmed:
             continue
 
-        # 인클루드 경로 파일명 및 대소문자 일치 검사 (#include "Core/String/FormatString.h" vs "Core/String/formatString.h")
+        codeWithoutStrings = re.sub(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'', '', line)
+
+        # 인클루드 경로 파일명 및 대소문자 일치 검사
         if includeMatch := _kIncludePathRe.match(trimmed):
             includeType = includeMatch.group(1)
             includePath = includeMatch.group(2).replace("\\", "/")
@@ -578,14 +1131,39 @@ def checkFileConventionsInternal(filePath: Path, rootDir: Path) -> list[Conventi
                             )
                         )
 
-        # 헤더 내 현재 클래스 스코프 추적
-        if isHeader:
-            if classMatch := _kClassDeclRe.search(trimmed):
-                if not trimmed.endswith(";"):
-                    headerClassStack.append((classMatch.group(1), headerBraceDepth))
-            headerBraceDepth += trimmed.count("{") - trimmed.count("}")
-            while headerClassStack and headerBraceDepth <= headerClassStack[-1][1] and "}" in trimmed:
-                headerClassStack.pop()
+        # class / struct 선언 감지
+        if classMatch := _kClassDeclRe.search(trimmed):
+            if not trimmed.endswith(";"):
+                pendingClass = classMatch.group(1)
+
+        # 함수 선언 / 정의 감지
+        isFnSig = False
+        sigParamStr = None
+        if not trimmed.startswith(("#", "//", "/*", "*", "return", "if", "while", "for", "switch", "catch")) and \
+           not any(k in trimmed for k in ("SW_ASSERT", "SW_LOG", "SW_STATIC_ASSERT", "SW_EXPECT")):
+            if lambdaMatch := re.search(r'\[[^\]]*\]\s*\(([^)]*)\)', codeWithoutStrings):
+                sigParamStr = lambdaMatch.group(1)
+                isFnSig = True
+            elif fnMatch := re.search(r'^\s*(?:(?:inline|static|virtual|explicit|constexpr|friend|SW_\w*API)\s+)*(?:(?:const\s+)?[A-Za-z0-9_:]+(?:<[^;]+>)?(?:\s*[*&]+)?\s+)+([A-Za-z0-9_:]+)\s*\(([^)]*)\)', codeWithoutStrings):
+                fnName = fnMatch.group(1)
+                if fnName not in ("if", "while", "for", "switch", "catch", "sizeof", "decltype", "alignas", "return"):
+                    sigParamStr = fnMatch.group(2)
+                    isFnSig = True
+            elif ctorSigMatch := re.search(r'^\s*(?:explicit\s+)?([A-Za-z0-9_]+)(?:::([A-Za-z0-9_]+))?\s*\(([^)]*)\)', codeWithoutStrings):
+                c1 = ctorSigMatch.group(1)
+                c2 = ctorSigMatch.group(2)
+                if (c2 is None and classStack and c1 == classStack[-1][0]) or (c2 is not None and c1 == c2):
+                    sigParamStr = ctorSigMatch.group(3)
+                    isFnSig = True
+
+        if isFnSig and not trimmed.endswith(";"):
+            pendingFunc = True
+
+        # 함수 매개변수 명명 검사
+        if sigParamStr is not None and sigParamStr.strip():
+            paramList = splitParametersInternal(sigParamStr)
+            for p in paramList:
+                violations.extend(checkParameterItemInternal(p, relPath, lineNum, trimmed))
 
         # 단일 문자 루프 카운터(i, j, k) 검사
         if loopMatch := _kLoopIndexRe.search(line):
@@ -623,19 +1201,15 @@ def checkFileConventionsInternal(filePath: Path, rootDir: Path) -> list[Conventi
                 )
             )
 
-        # 부정(!expr) 조건문 검사 (피연산자 유형별 명시적 비교 안내)
+        # 부정(!expr) 조건문 검사
         if negatedMatch := _kNegatedConditionRe.search(line):
             expr = negatedMatch.group(1).strip()
-            # 1) 포인터 변수 (_p..., p...)
             if re.match(r'^_?p[A-Z]', expr) or "->" in expr:
                 msg = f"포인터 부정 조건 'if ( !{expr} )' 대신 명시적 'if ( {expr} == nullptr )' 비교를 사용하세요."
-            # 2) 상태 메서드 (.empty(), .contains() 등)
             elif expr.endswith(".empty()") or expr.endswith(".contains()"):
                 msg = f"상태 부정 조건 'if ( !{expr} )' 대신 명시적 'if ( {expr} == false )' 비교를 사용하세요."
-            # 3) 불리언 변수 (_b..., b..., is..., has..., can...)
             elif re.match(r'^_?b[A-Z]', expr) or expr.startswith(("is", "has", "can")):
                 msg = f"불리언 부정 조건 'if ( !{expr} )' 대신 명시적 'if ( {expr} == false )' 비교를 사용하세요."
-            # 4) 일반 기타 표현식
             else:
                 msg = f"부정 연산자 'if ( !{expr} )' 대신 명시적 비교('== false' 또는 '== nullptr')를 사용하세요."
 
@@ -649,7 +1223,7 @@ def checkFileConventionsInternal(filePath: Path, rootDir: Path) -> list[Conventi
                 )
             )
 
-        # 암시적 포인터 널 검사 (e.g. if ( getOwner() ))
+        # 암시적 포인터 널 검사
         if ptrMatch := _kImplicitPointerNullRe.search(line):
             violations.append(
                 ConventionViolation(
@@ -661,7 +1235,7 @@ def checkFileConventionsInternal(filePath: Path, rootDir: Path) -> list[Conventi
                 )
             )
 
-        # 상수 네이밍 검사 (static constexpr Mask -> kMask)
+        # 상수 네이밍 검사
         if constMatch := _kConstantNamingRe.search(line):
             varName = constMatch.group(1)
             if "Math" not in relPath:
@@ -676,9 +1250,8 @@ def checkFileConventionsInternal(filePath: Path, rootDir: Path) -> list[Conventi
                         )
                     )
 
-        # 원시 기본 자료형 사용 검사 (int -> int32, float -> float32 등 Types.h 별칭 권장)
+        # 원시 기본 자료형 사용 검사
         if not trimmed.startswith("#") and "int main" not in trimmed and "Types.h" not in relPath:
-            codeWithoutStrings = re.sub(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'', '', line)
             if basicTypeMatch := _kBasicTypesRe.search(codeWithoutStrings):
                 typeName = basicTypeMatch.group(0)
                 violations.append(
@@ -693,7 +1266,6 @@ def checkFileConventionsInternal(filePath: Path, rootDir: Path) -> list[Conventi
 
         # 삼중 포인터 이상(ppp, ***) 검사
         if not trimmed.startswith("#") and "Types.h" not in relPath:
-            codeWithoutStrings = re.sub(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'', '', line)
             if tripleMatch := _kTriplePointerRe.search(codeWithoutStrings):
                 matchedStr = tripleMatch.group(0)
                 violations.append(
@@ -706,9 +1278,8 @@ def checkFileConventionsInternal(filePath: Path, rootDir: Path) -> list[Conventi
                     )
                 )
 
-        # 출력 매개변수 명명 규칙 검사 (pOut..., ppOut..., outList..., outMap..., outUnique..., outArr...)
+        # 출력 매개변수 명명 규칙 검사
         if not trimmed.startswith("#") and "Types.h" not in relPath:
-            codeWithoutStrings = re.sub(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'', '', line)
             for outMatch in _kOutParamNamingRe.finditer(codeWithoutStrings):
                 paramCandidate = outMatch.group(1)
                 fixResult = getSuggestedOutParamFixInternal(paramCandidate)
@@ -726,7 +1297,6 @@ def checkFileConventionsInternal(filePath: Path, rootDir: Path) -> list[Conventi
                     )
 
         # --- 생성자 초기화 리스트 검사 (포맷, 중괄호, 선언 순서) ---
-        # 생성자 정의 헤더 감지
         if isSource:
             if ctorMatch := re.search(r'\b([A-Za-z0-9_]+)::\1\s*\([^)]*\)', trimmed):
                 currentCtorClass = ctorMatch.group(1)
@@ -734,16 +1304,15 @@ def checkFileConventionsInternal(filePath: Path, rootDir: Path) -> list[Conventi
                 ctorInitStartLine = lineNum
                 inCtorInitList = False
         else:
-            if headerClassStack and (ctorMatch := re.search(rf'\b{headerClassStack[-1][0]}\s*\([^)]*\)', trimmed)):
+            if classStack and (ctorMatch := re.search(rf'\b{classStack[-1][0]}\s*\([^)]*\)', trimmed)):
                 if not trimmed.endswith(";"):
-                    currentCtorClass = headerClassStack[-1][0]
+                    currentCtorClass = classStack[-1][0]
                     ctorInitMembers = []
                     ctorInitStartLine = lineNum
                     inCtorInitList = False
 
         if trimmed.startswith(":") or (inCtorInitList and trimmed.startswith(",")):
             inCtorInitList = True
-            # 1. 소괄호 () 대신 중괄호 {} 사용 검사
             if initMatch := _kConstructorInitRe.search(trimmed):
                 initVar = initMatch.group(1)
                 initVal = initMatch.group(2)
@@ -761,7 +1330,6 @@ def checkFileConventionsInternal(filePath: Path, rootDir: Path) -> list[Conventi
                 if initVar.startswith("_"):
                     ctorInitMembers.append(initVar)
 
-            # 2. 한 줄에 2개 이상의 멤버 초기화 금지 (: _a{0}, _b{0})
             if (trimmed.startswith(":") or trimmed.startswith(",")) and ("," in trimmed[1:]):
                 if re.search(r'[\}\)]\s*,\s*_[a-zA-Z0-9_]+', trimmed):
                     violations.append(
@@ -774,12 +1342,10 @@ def checkFileConventionsInternal(filePath: Path, rootDir: Path) -> list[Conventi
                         )
                     )
 
-        # 생성자 본문 시작 { 도달 시 선언 순서 검증
         if inCtorInitList and "{" in trimmed and not trimmed.startswith(":") and not trimmed.startswith(","):
             inCtorInitList = False
             if currentCtorClass and currentCtorClass in classMemberMap:
                 declaredOrder = classMemberMap[currentCtorClass]
-                # #if / #else 조건부 분기로 인한 중복 초기화 제거 (순서 보존)
                 dedupedInitMembers = list(dict.fromkeys(ctorInitMembers))
                 expectedOrder = [m for m in declaredOrder if m in dedupedInitMembers]
                 if dedupedInitMembers != expectedOrder:
@@ -792,15 +1358,33 @@ def checkFileConventionsInternal(filePath: Path, rootDir: Path) -> list[Conventi
                                     rule_category="Style/ConstructorOrder",
                                     message=f"생성자 '{currentCtorClass}'의 멤버 초기화 순서가 클래스 선언 순서와 다릅니다 ('{actual}' 항목이 '{expected}'보다 먼저 나열됨).",
                                     snippet=lines[ctorInitStartLine - 1].strip(),
+                                    suggested_fix=expected,
                                 )
                             )
                             break
             currentCtorClass = None
             ctorInitMembers = []
 
-        # 헤더 멤버 변수 명명 규칙 검사
-        if isHeader:
-            # 원시 포인터 멤버 접두어(_p) 검사
+        # 중괄호 열림 { 처리
+        if "{" in trimmed:
+            openCount = trimmed.count("{")
+            if pendingClass:
+                classStack.append((pendingClass, braceDepth))
+                pendingClass = None
+            if pendingFunc:
+                funcStack.append(braceDepth)
+                pendingFunc = False
+
+        # 현재 스코프 판정
+        isInsideClass = bool(classStack and (not funcStack or classStack[-1][1] >= funcStack[-1]) and braceDepth == classStack[-1][1] + 1)
+        isInsideFunction = bool(funcStack and not isInsideClass)
+
+        # 1) 함수 내부 -> 지역 변수 검사
+        if isInsideFunction and not isInsideClass and not trimmed.startswith((": ", ", ")):
+            violations.extend(checkLocalVariableItemInternal(line, relPath, lineNum))
+
+        # 2) 클래스 본문 직속 -> 멤버 변수 검사
+        if isInsideClass:
             if ptrMemberMatch := _kMemberRawPointerRe.match(line):
                 varName = ptrMemberMatch.group(1)
                 violations.append(
@@ -813,7 +1397,6 @@ def checkFileConventionsInternal(filePath: Path, rootDir: Path) -> list[Conventi
                     )
                 )
 
-            # 고정 배열 멤버 접두어(_arr) 검사
             if arrMatch := _kMemberFixedArrayRe.match(line):
                 varName = arrMatch.group(1)
                 violations.append(
@@ -826,7 +1409,6 @@ def checkFileConventionsInternal(filePath: Path, rootDir: Path) -> list[Conventi
                     )
                 )
 
-            # 가변 배열/리스트 멤버 접두어(_list) 검사 ('List' 접미어 금지 및 byte 벡터 처리)
             if vecMatch := _kMemberVectorRe.match(line):
                 innerType = vecMatch.group(1).strip()
                 varName = vecMatch.group(2)
@@ -858,7 +1440,6 @@ def checkFileConventionsInternal(filePath: Path, rootDir: Path) -> list[Conventi
                             )
                         )
 
-            # 맵 컨테이너 멤버 접두어(_map) 검사
             if mapMatch := _kMemberMapRe.match(line):
                 varName = mapMatch.group(1)
                 if not varName.startswith("_map") and not varName.startswith("_s_map"):
@@ -872,7 +1453,6 @@ def checkFileConventionsInternal(filePath: Path, rootDir: Path) -> list[Conventi
                         )
                     )
 
-            # 집합 컨테이너 멤버 접두어(_unique) 검사
             if setMatch := _kMemberSetRe.match(line):
                 varName = setMatch.group(1)
                 if not varName.startswith("_unique") and not varName.startswith("_s_unique"):
@@ -886,8 +1466,6 @@ def checkFileConventionsInternal(filePath: Path, rootDir: Path) -> list[Conventi
                         )
                     )
 
-            # 컨테이너 멤버 변수 단수형 명명 규칙 검사 (_list*, _map*, _arr*)
-            # (unique 접두어 및 byte 버퍼를 제외하곤 복수형 금지)
             for prefix in ("_list", "_map", "_arr"):
                 match = re.match(
                     rf'^\s*(?:(?:sw::)?(?:vector|list|deque|unordered_map|map))\s*<[^>]+>\s+({prefix}[A-Z][a-zA-Z0-9_]*)\s*;',
@@ -895,25 +1473,29 @@ def checkFileConventionsInternal(filePath: Path, rootDir: Path) -> list[Conventi
                 )
                 if match:
                     vName = match.group(1)
-                    kNonPluralExceptions = (
-                        "Bounds", "Status", "Pass", "Address", "Axis", "Process", "Class", "Cross",
-                        "Loss", "Mass", "Press", "Canvas", "Args", "Bytes", "Bindless", "RtvIndex",
-                        "DsvIndex", "Matrix", "Vertex", "Alias", "Species", "Series", "Focus", "Radius",
-                        "Bias", "Lens", "Basis", "Crisis", "Analysis", "Mesh",
-                    )
-                    if not any(vName.endswith(exc) for exc in kNonPluralExceptions):
-                        if vName.endswith(("ies", "es", "s")) and not vName.endswith("ss"):
-                            singularFix = makeSingularInternal(vName)
-                            violations.append(
-                                ConventionViolation(
-                                    file_path=relPath,
-                                    line_number=lineNum,
-                                    rule_category="Naming/ContainerSingular",
-                                    message=f"컨테이너 멤버 변수 '{vName}'는 복수형 대신 단수형 명사를 사용해야 합니다 ('{singularFix}' 권장).",
-                                    snippet=trimmed,
-                                    suggested_fix=singularFix,
-                                )
+                    if isPluralWordInternal(vName):
+                        singularFix = makeSingularInternal(vName)
+                        violations.append(
+                            ConventionViolation(
+                                file_path=relPath,
+                                line_number=lineNum,
+                                rule_category="Naming/ContainerSingular",
+                                message=f"컨테이너 멤버 변수 '{vName}'는 복수형 대신 단수형 명사를 사용해야 합니다 ('{singularFix}' 권장).",
+                                snippet=trimmed,
+                                suggested_fix=singularFix,
                             )
+                        )
+
+        # 중괄호 증감 및 스택 정리
+        openBraces = trimmed.count("{")
+        closeBraces = trimmed.count("}")
+        braceDepth += openBraces - closeBraces
+
+        while funcStack and braceDepth <= funcStack[-1] and "}" in trimmed:
+            funcStack.pop()
+
+        while classStack and braceDepth <= classStack[-1][1] and "}" in trimmed:
+            classStack.pop()
 
     return violations
 

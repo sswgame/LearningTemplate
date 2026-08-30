@@ -41,9 +41,9 @@ namespace sw
 		static void parsePermutationNode( XmlNode root, MaterialPermutationDesc& out );
 		static void appendPermutationNode( XmlNode root, const MaterialPermutationDesc& perm );
 
-		static void	  appendUniqueDefine( vector<string>& out, string_view def );
-		static void	  appendUsageDefines( MaterialUsageFlags usage, vector<string>& out );
-		static void	  appendQualityDefines( MaterialQualityLevel q, vector<string>& out );
-		static uint64 hashDefines( const vector<string>& defs );
+		static void	  appendUniqueDefine( vector<string>& outListDefine, string_view def );
+		static void	  appendUsageDefines( MaterialUsageFlags usage, vector<string>& outListDefine );
+		static void	  appendQualityDefines( MaterialQualityLevel q, vector<string>& outListDefine );
+		static uint64 hashDefines( const vector<string>& listDefine );
 	};
 } // namespace sw

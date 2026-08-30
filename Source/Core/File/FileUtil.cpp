@@ -451,15 +451,15 @@ namespace sw
 		GetModuleFileNameW( nullptr, path.data(), path.capacity() );
 		return StringUtil::utf16ToUtf8( path.c_str() );
 #elif defined( SW_PLATFORM_MACOS )
-		utf8   pathBuf[constant::kMaxBuffer1024];
-		uint32 bufSize = sizeof( pathBuf );
-		if ( _NSGetExecutablePath( pathBuf, &bufSize ) == 0 )
+		utf8   arrPathBuf[constant::kMaxBuffer1024];
+		uint32 bufSize = sizeof( arrPathBuf );
+		if ( _NSGetExecutablePath( arrPathBuf, &bufSize ) == 0 )
 		{
 			std::error_code ec;
-			auto			pathObj = std::filesystem::canonical( pathBuf, ec );
+			auto			pathObj = std::filesystem::canonical( arrPathBuf, ec );
 			if ( ec.value() == 0 )
 				return string{ pathObj.generic_string().c_str() };
-			return string{ pathBuf };
+			return string{ arrPathBuf };
 		}
 		return string{};
 #else
@@ -568,7 +568,7 @@ namespace sw
 		return written == static_cast<size_t>( size );
 	}
 
-	bool FileUtil::readFile( string_view fileName, vector<uint8>& outData, const uint32 offset, const uint32 maxReadCount )
+	bool FileUtil::readFile( string_view fileName, vector<uint8>& outBytes, const uint32 offset, const uint32 maxReadCount )
 	{
 		const string filePath = normalizeSeparators( fileName );
 		FILE*		 pFile{ nullptr };
@@ -611,12 +611,12 @@ namespace sw
 #else
 		fseeko( pFile, static_cast<off_t>( offset ), SEEK_SET );
 #endif
-		outData.resize( dataSize );
+		outBytes.resize( dataSize );
 		if ( dataSize > 0 )
 		{
-			const size_t readBytes = std::fread( outData.data(), 1, static_cast<size_t>( dataSize ), pFile );
+			const size_t readBytes = std::fread( outBytes.data(), 1, static_cast<size_t>( dataSize ), pFile );
 			if ( readBytes != static_cast<size_t>( dataSize ) )
-				outData.resize( readBytes );
+				outBytes.resize( readBytes );
 		}
 		std::fclose( pFile );
 		return true;
@@ -846,11 +846,11 @@ namespace sw
 		FILE* pipe = popen( "pbpaste", "r" );
 		if ( pipe == nullptr )
 			return string{};
-		utf8   buf[constant::kMaxBuffer512];
+		utf8   arrBuf[constant::kMaxBuffer512];
 		string result;
-		while ( fgets( buf, sizeof( buf ), pipe ) != nullptr )
+		while ( fgets( arrBuf, sizeof( arrBuf ), pipe ) != nullptr )
 		{
-			result += buf;
+			result += arrBuf;
 		}
 		pclose( pipe );
 		return result;
@@ -858,11 +858,11 @@ namespace sw
 		FILE* pipe = popen( "xclip -selection clipboard -o 2>/dev/null", "r" );
 		if ( pipe == nullptr )
 			return string{};
-		utf8   buf[constant::kMaxBuffer512];
+		utf8   arrBuf[constant::kMaxBuffer512];
 		string result;
-		while ( fgets( buf, sizeof( buf ), pipe ) != nullptr )
+		while ( fgets( arrBuf, sizeof( arrBuf ), pipe ) != nullptr )
 		{
-			result += buf;
+			result += arrBuf;
 		}
 		pclose( pipe );
 		return result;

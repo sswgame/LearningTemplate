@@ -24,14 +24,14 @@ namespace sw
 	inline constexpr EventTypeId kEventMouse		  = 5;
 
 	/** @brief 컴파일타임 FNV-1a 32-bit (게임플레이 이벤트 ID용) — StringUtil과 동일 상수/알고리즘 */
-	constexpr EventTypeId eventTypeIdFromString( const utf8* str ) noexcept
+	constexpr EventTypeId eventTypeIdFromString( const utf8* pStr ) noexcept
 	{
 		size_t len{ 0 };
-		for ( const utf8* p = str; p != nullptr && *p != '\0'; ++p )
+		for ( const utf8* pCurrent = pStr; pCurrent != nullptr && *pCurrent != '\0'; ++pCurrent )
 		{
 			++len;
 		}
-		uint32 hash = StringUtil::computeHash32( str, len, false );
+		uint32 hash = StringUtil::computeHash32( pStr, len, false );
 		// 엔진 예약 ID 구간(0..255)과 겹치지 않게 합니다.
 		if ( hash < 256u )
 			hash += 256u;

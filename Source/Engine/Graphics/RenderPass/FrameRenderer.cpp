@@ -28,7 +28,7 @@ namespace sw
 		, _pipelineResource{}
 		, _graph{}
 		, _pipelinePath{}
-		, _arrClearColor{ 0.12f, 0.15f, 0.18f, 1.0f }
+		, _clearColor{ 0.12f, 0.15f, 0.18f, 1.0f }
 		, _mapTransient{}
 		, _mapTransientSrv{}
 		, _listClearedThisFrame{}
@@ -165,9 +165,9 @@ namespace sw
 			return false;
 		}
 
-		float32 sceneColorClear[4];
+		float4 sceneColorClear;
 		if ( tryGetAttachmentClearColor( FrameRendererUtil::Attachment::kSceneColor, sceneColorClear ) )
-			Memory::copy( _arrClearColor, sceneColorClear, sizeof( _arrClearColor ) );
+			_clearColor = sceneColorClear;
 
 		// Rebuild PSOs from pipeline pass recipes (shader / entry / blend / permutations).
 		releasePassResources();

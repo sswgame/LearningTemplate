@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Math/VectorMath.h"
 #include "Core/Task/TaskTypes.h"
 
 #include "Engine/Common/Common.h"
@@ -24,7 +25,7 @@ namespace sw
 		string _format = "R8G8B8A8_UNORM";
 
 		PROPERTY()
-		float32 _arrClearColor[4] = { 0.1f, 0.2f, 0.3f, 1.0f };
+		float4 _clearColor = { 0.1f, 0.2f, 0.3f, 1.0f };
 
 		PROPERTY()
 		bool _bClear{ true };

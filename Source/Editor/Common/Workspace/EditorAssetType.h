@@ -69,8 +69,8 @@ namespace sw::editor
 		static const EditorAssetKind* getToolPanelKinds( uint32& outCount );
 		/** @brief 콘텐츠 브라우저 타입 필터 목록입니다. */
 		static const EditorAssetBrowserFilter* getBrowserFilters( uint32& outCount );
-		/** @brief 임포트 대화상자용 접미사를 outExtensions에 추가합니다. */
-		static void appendImportExtensions( vector<string>& outExtensions );
+		/** @brief 임포트 대화상자용 접미사를 outListExtension에 추가합니다. */
+		static void appendImportExtensions( vector<string>& outListExtension );
 
 		/** @brief 워크스페이스 포커스가 지정 종류이면 그 경로, 아니면 empty입니다. */
 		static string_view matchingFocusedPath( EditorAssetKind kind );

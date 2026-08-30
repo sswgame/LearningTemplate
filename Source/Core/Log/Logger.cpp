@@ -300,29 +300,29 @@ namespace sw
 		static constexpr const utf8* kArrHeader[] = { "Error", "Warning", "Info", "Trace" };
 		static_assert( SW_COUNT_OF( kArrHeader ) == static_cast<uint32>( LogLevel::Count ), "LogLevel과 같아야 합니다" );
 
-		const size_t levelIndex		 = static_cast<size_t>( level );
-		const utf8*	 effectiveTag	 = ( StringUtil::isNullOrEmpty( pTag ) ) ? constant::kDefaultLogTag : pTag;
-		const utf8*	 effectiveFile	 = ( StringUtil::isNullOrEmpty( pFile ) ) ? constant::kDefaultLogFile : pFile;
-		const utf8*	 effectiveMsg	 = ( pMessage != nullptr ) ? pMessage : "";
-		const utf8*	 effectiveCaller = pCaller;
-		if ( StringUtil::isNullOrEmpty( effectiveCaller ) && pFile != nullptr )
+		const size_t levelIndex		  = static_cast<size_t>( level );
+		const utf8*	 pEffectiveTag	  = ( StringUtil::isNullOrEmpty( pTag ) ) ? constant::kDefaultLogTag : pTag;
+		const utf8*	 pEffectiveFile	  = ( StringUtil::isNullOrEmpty( pFile ) ) ? constant::kDefaultLogFile : pFile;
+		const utf8*	 pEffectiveMsg	  = ( pMessage != nullptr ) ? pMessage : "";
+		const utf8*	 pEffectiveCaller = pCaller;
+		if ( StringUtil::isNullOrEmpty( pEffectiveCaller ) && pFile != nullptr )
 		{
-			effectiveCaller = getCaller( pFile );
+			pEffectiveCaller = getCaller( pFile );
 		}
 
 		// 2단계: 스택 8KB fixed_string 버퍼에 1회 포맷팅 (동적 힙 메모리 할당 0건)
 		fixed_string<constant::kMaxBuffer8192> formattedBuffer{};
-		if ( StringUtil::isNullOrEmpty( effectiveCaller ) == false )
+		if ( StringUtil::isNullOrEmpty( pEffectiveCaller ) == false )
 		{
 			formatstring( formattedBuffer.data(), formattedBuffer.capacity(),
 						  "[%#] [%#] [%#] [%#] - %#\n -> %#:%#\n",
-						  dateStr.c_str(), effectiveTag, effectiveCaller, kArrHeader[levelIndex], effectiveMsg, effectiveFile, line );
+						  dateStr.c_str(), pEffectiveTag, pEffectiveCaller, kArrHeader[levelIndex], pEffectiveMsg, pEffectiveFile, line );
 		}
 		else
 		{
 			formatstring( formattedBuffer.data(), formattedBuffer.capacity(),
 						  "[%#] [%#] [%#] - %#\n -> %#:%#\n",
-						  dateStr.c_str(), effectiveTag, kArrHeader[levelIndex], effectiveMsg, effectiveFile, line );
+						  dateStr.c_str(), pEffectiveTag, kArrHeader[levelIndex], pEffectiveMsg, pEffectiveFile, line );
 		}
 
 		// 3단계: 64비트 SWAR 기반 고속 UTF-8 검증 및 Non-UTF8(ANSI/CP949) 한글 안전 자동 변환
@@ -350,10 +350,10 @@ namespace sw
 		{
 			LogEntry entry;
 			entry._level	 = level;
-			entry._tag		 = effectiveTag;
-			entry._caller	 = ( effectiveCaller != nullptr ) ? effectiveCaller : "";
-			entry._message	 = effectiveMsg;
-			entry._file		 = effectiveFile;
+			entry._tag		 = pEffectiveTag;
+			entry._caller	 = ( pEffectiveCaller != nullptr ) ? pEffectiveCaller : "";
+			entry._message	 = pEffectiveMsg;
+			entry._file		 = pEffectiveFile;
 			entry._line		 = line;
 			entry._timeStamp = dateStr.c_str();
 			listenersCopy.broadcast( entry );

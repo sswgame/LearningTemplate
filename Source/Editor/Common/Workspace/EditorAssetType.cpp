@@ -292,7 +292,7 @@ namespace sw::editor
 		return kArrBrowserFilter;
 	}
 
-	void EditorAssetTypeRegistry::appendImportExtensions( vector<string>& outExtensions )
+	void EditorAssetTypeRegistry::appendImportExtensions( vector<string>& outListExtension )
 	{
 		for ( const TypeRow& row : kArrType )
 		{
@@ -303,14 +303,14 @@ namespace sw::editor
 			for ( uint32 index = 0; index < row._suffixCount; ++index )
 			{
 				const string_view suffix = row._pSuffix[index];
-				if ( EditorAssetTypeInternal::containsSuffix( outExtensions, suffix ) )
+				if ( EditorAssetTypeInternal::containsSuffix( outListExtension, suffix ) )
 					continue;
-				outExtensions.push_back( string{ suffix } );
+				outListExtension.push_back( string{ suffix } );
 			}
 		}
-		if ( EditorAssetTypeInternal::containsSuffix( outExtensions, ".json" ) == false )
-			outExtensions.push_back( ".json" );
-		if ( EditorAssetTypeInternal::containsSuffix( outExtensions, ".txt" ) == false )
-			outExtensions.push_back( ".txt" );
+		if ( EditorAssetTypeInternal::containsSuffix( outListExtension, ".json" ) == false )
+			outListExtension.push_back( ".json" );
+		if ( EditorAssetTypeInternal::containsSuffix( outListExtension, ".txt" ) == false )
+			outListExtension.push_back( ".txt" );
 	}
 } // namespace sw::editor

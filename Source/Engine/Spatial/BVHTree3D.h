@@ -45,7 +45,7 @@ namespace sw
 		void queryAABB( const AABB& queryBox, vector<ObjectHandle>& outListHandle ) const;
 		void queryRay( const float3& origin, const float3& direction, float32 maxDist, vector<ObjectHandle>& outListHandle ) const;
 		void querySphere( const float3& center, float32 radius, vector<ObjectHandle>& outListHandle ) const;
-		void queryFrustum( const float32 viewProj[16], vector<ObjectHandle>& outListHandle ) const;
+		void queryFrustum( const float32 arrViewProj[16], vector<ObjectHandle>& outListHandle ) const;
 
 		size_t getHandleCount() const;
 		size_t getNodeCount() const;

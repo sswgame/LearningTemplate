@@ -36,7 +36,7 @@ namespace sw::editor
 		 * @brief 여러 파일명 후보를 순서대로 탐색합니다 (시스템 폰트 트리는 재귀 검색).
 		 * @return 첫 번째 존재하는 절대 경로, 없으면 빈 문자열
 		 */
-		static string resolveFontFile( const vector<string>& fileNames );
+		static string resolveFontFile( const vector<string>& listFileName );
 		/** @brief EditorData 후보로 ImGui 본문·한글·아이콘 폰트를 구성합니다. */
 		static void setupFonts();
 

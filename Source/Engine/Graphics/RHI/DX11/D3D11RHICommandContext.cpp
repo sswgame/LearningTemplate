@@ -120,12 +120,10 @@ namespace sw
 		uint32					rtCount{ 0 };
 		if ( beginInfo._bBindColor != 0 )
 		{
-			const uint32 wantCount = beginInfo._colorTargetCount > 0 ? beginInfo._colorTargetCount : 1;
+			const uint32 wantCount = beginInfo._colorTargetCount > 0 ? beginInfo._colorTargetCount : 1u;
 			for ( uint32 attachmentIndex = 0; attachmentIndex < wantCount && attachmentIndex < kMaxColorAttachments; ++attachmentIndex )
 			{
-				const RHITextureHandle	colorHandle = ( beginInfo._colorTargetCount > 0 )
-														? beginInfo._arrColorTarget[attachmentIndex]
-														: beginInfo._colorTarget;
+				const RHITextureHandle	colorHandle = beginInfo._arrColorTarget[attachmentIndex];
 				ID3D11RenderTargetView* pRtv{ nullptr };
 				if ( colorHandle == 0 )
 					pRtv = ( attachmentIndex == 0 ) ? _pDevice->_renderTargetView.Get() : nullptr;
@@ -139,8 +137,8 @@ namespace sw
 					break;
 				arrRtv[rtCount++] = pRtv;
 
-				const RHIRenderPassLoadOp loadOp = ( beginInfo._colorTargetCount > 0 ) ? beginInfo._arrLoadOp[attachmentIndex] : beginInfo._loadOp;
-				const float32*			  pClear = ( beginInfo._colorTargetCount > 0 ) ? beginInfo._arrTargetClearColor[attachmentIndex] : beginInfo._arrClearColor;
+				const RHIRenderPassLoadOp loadOp = beginInfo._arrLoadOp[attachmentIndex];
+				const float32*			  pClear = &beginInfo._arrClearColor[attachmentIndex]._x;
 				if ( loadOp == RHIRenderPassLoadOp::Clear && pRtv != nullptr )
 					_pDevice->_deviceContext->ClearRenderTargetView( pRtv, pClear );
 			}

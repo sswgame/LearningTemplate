@@ -7,6 +7,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Math/VectorMath.h"
 
 namespace sw::editor
 {
@@ -25,7 +26,7 @@ namespace sw::editor
 
 		float32 _fontSize{ 16.0f };
 		float32 _playerSpeed{ 5.0f };
-		float32 _arrClearColor[4]{ 0.12f, 0.15f, 0.18f, 1.0f };
+		float4	_clearColor{ 0.12f, 0.15f, 0.18f, 1.0f };
 
 		string _editorFolder{ "editor" };
 		string _fontsFolder{ "fonts" };

@@ -88,13 +88,13 @@ namespace sw
 
 		// Adjacency: producer → consumers; in-degree over active nodes
 		unordered_map<size_t, vector<size_t>> adjacency;
-		unordered_map<size_t, uint32>		  inDegree;
+		unordered_map<size_t, uint32>		  mapInDegree;
 		adjacency.reserve( listActiveIndex.size() );
-		inDegree.reserve( listActiveIndex.size() );
+		mapInDegree.reserve( listActiveIndex.size() );
 
 		for ( size_t nodeIndex : listActiveIndex )
 		{
-			inDegree[nodeIndex] = 0;
+			mapInDegree[nodeIndex] = 0;
 		}
 
 		auto addEdge = [&]( size_t from, size_t to )
@@ -105,7 +105,7 @@ namespace sw
 			if ( std::find( listAdj.begin(), listAdj.end(), to ) == listAdj.end() )
 			{
 				listAdj.push_back( to );
-				++inDegree[to];
+				++mapInDegree[to];
 			}
 		};
 
@@ -143,7 +143,7 @@ namespace sw
 		std::queue<size_t> queueReady;
 		for ( size_t nodeIndex : listActiveIndex )
 		{
-			if ( inDegree[nodeIndex] == 0 )
+			if ( mapInDegree[nodeIndex] == 0 )
 				queueReady.push( nodeIndex );
 		}
 
@@ -160,7 +160,7 @@ namespace sw
 
 			for ( size_t consumerIndex : adjIt->second )
 			{
-				uint32& degree = inDegree[consumerIndex];
+				uint32& degree = mapInDegree[consumerIndex];
 				if ( degree > 0 )
 					--degree;
 				if ( degree == 0 )
@@ -334,11 +334,11 @@ namespace sw
 		cullUnreferencedPasses( { targetResourceName } );
 	}
 
-	void RenderGraph::cullUnreferencedPasses( const vector<hashed_string>& listRootOutputs, vector<hashed_string>* pOutCulledPasses )
+	void RenderGraph::cullUnreferencedPasses( const vector<hashed_string>& listRootOutput, vector<hashed_string>* pOutListCulledPass )
 	{
 		unordered_set<hashed_string> uniqueRequiredResources;
 		uniqueRequiredResources.reserve( _listNode.size() * 2 );
-		for ( const hashed_string& rootOut : listRootOutputs )
+		for ( const hashed_string& rootOut : listRootOutput )
 		{
 			uniqueRequiredResources.insert( rootOut );
 		}
@@ -367,8 +367,8 @@ namespace sw
 			else
 			{
 				node._bCulled = true;
-				if ( pOutCulledPasses != nullptr )
-					pOutCulledPasses->push_back( node._name );
+				if ( pOutListCulledPass != nullptr )
+					pOutListCulledPass->push_back( node._name );
 			}
 		}
 

@@ -52,9 +52,9 @@ namespace sw
 			header._fileCount = static_cast<uint32>( listFileContent.size() );
 
 			// 페이로드 임시 버퍼 준비
-			vector<uint8>				listDataStream;
-			vector<PackFileEntryOnDisk> listDiskEntries;
-			vector<utf8>				stringPool;
+			vector<uint8>				dataStreamBytes;
+			vector<PackFileEntryOnDisk> listDiskEntry;
+			vector<utf8>				stringPoolBytes;
 
 			uint64 curOffset = kPackSectorAlignment; // 헤더 이후 첫 데이터 블록은 4096에서 시작
 
@@ -64,32 +64,32 @@ namespace sw
 				const uint32 uncompSize = static_cast<uint32>( content.size() );
 				const uint32 crc		= StringUtil::computeCrc32( content.data(), uncompSize );
 
-				vector<uint8> compressedPayload;
+				vector<uint8> compressedPayloadBytes;
 				if ( compression == PackCompressionType::RLE && uncompSize > 0 )
 				{
 					RleCompressionCodec codec;
 					const size_t		bound = codec.compressBound( uncompSize );
-					compressedPayload.resize( bound );
+					compressedPayloadBytes.resize( bound );
 					size_t compSize = 0;
-					codec.compress( content.data(), uncompSize, compressedPayload.data(), bound, compSize );
-					compressedPayload.resize( compSize );
+					codec.compress( content.data(), uncompSize, compressedPayloadBytes.data(), bound, compSize );
+					compressedPayloadBytes.resize( compSize );
 				}
 				else
 				{
-					compressedPayload.assign( content.begin(), content.end() );
+					compressedPayloadBytes.assign( content.begin(), content.end() );
 				}
 
-				const uint32 compSize	   = static_cast<uint32>( compressedPayload.size() );
+				const uint32 compSize	   = static_cast<uint32>( compressedPayloadBytes.size() );
 				const uint64 alignedOffset = MathUtil::align( curOffset, static_cast<uint64>( kPackSectorAlignment ) );
 
 				// 패딩 추가
 				const size_t padding = static_cast<size_t>( alignedOffset - curOffset );
 				if ( padding > 0 )
 				{
-					listDataStream.insert( listDataStream.end(), padding, 0 );
+					dataStreamBytes.insert( dataStreamBytes.end(), padding, 0 );
 				}
 
-				listDataStream.insert( listDataStream.end(), compressedPayload.begin(), compressedPayload.end() );
+				dataStreamBytes.insert( dataStreamBytes.end(), compressedPayloadBytes.begin(), compressedPayloadBytes.end() );
 				curOffset = alignedOffset + compSize;
 
 				PackFileEntryOnDisk diskEntry{};
@@ -101,19 +101,19 @@ namespace sw
 
 				if ( bIncludeDebugStringPool )
 				{
-					diskEntry._stringPoolOffset = static_cast<uint32>( stringPool.size() );
-					stringPool.insert( stringPool.end(), relPath.begin(), relPath.end() );
-					stringPool.push_back( '\0' );
+					diskEntry._stringPoolOffset = static_cast<uint32>( stringPoolBytes.size() );
+					stringPoolBytes.insert( stringPoolBytes.end(), relPath.begin(), relPath.end() );
+					stringPoolBytes.push_back( '\0' );
 				}
 
-				listDiskEntries.push_back( diskEntry );
+				listDiskEntry.push_back( diskEntry );
 			}
 
-			header._totalDataSize	 = listDataStream.size();
+			header._totalDataSize	 = dataStreamBytes.size();
 			header._indexOffset		 = MathUtil::align( static_cast<uint64>( kPackSectorAlignment ) + header._totalDataSize, 64ULL );
-			header._indexSize		 = listDiskEntries.size() * sizeof( PackFileEntryOnDisk );
+			header._indexSize		 = listDiskEntry.size() * sizeof( PackFileEntryOnDisk );
 			header._stringPoolOffset = header._indexOffset + header._indexSize;
-			header._stringPoolSize	 = stringPool.size();
+			header._stringPoolSize	 = stringPoolBytes.size();
 
 			// 1. 헤더(64B) 기록
 			std::fwrite( &header, 1, sizeof( PackHeader ), pFile );
@@ -124,9 +124,9 @@ namespace sw
 			std::fwrite( zeroBuf.data(), 1, headerPadding, pFile );
 
 			// 3. 페이로드 기록
-			if ( listDataStream.empty() == false )
+			if ( dataStreamBytes.empty() == false )
 			{
-				std::fwrite( listDataStream.data(), 1, listDataStream.size(), pFile );
+				std::fwrite( dataStreamBytes.data(), 1, dataStreamBytes.size(), pFile );
 			}
 
 			// 4. FAT 인덱스까지 패딩
@@ -138,15 +138,15 @@ namespace sw
 			}
 
 			// 5. FAT 인덱스 테이블 기록
-			if ( listDiskEntries.empty() == false )
+			if ( listDiskEntry.empty() == false )
 			{
-				std::fwrite( listDiskEntries.data(), 1, listDiskEntries.size() * sizeof( PackFileEntryOnDisk ), pFile );
+				std::fwrite( listDiskEntry.data(), 1, listDiskEntry.size() * sizeof( PackFileEntryOnDisk ), pFile );
 			}
 
 			// 6. 스트링 풀 기록
-			if ( bIncludeDebugStringPool && stringPool.empty() == false )
+			if ( bIncludeDebugStringPool && stringPoolBytes.empty() == false )
 			{
-				std::fwrite( stringPool.data(), 1, stringPool.size(), pFile );
+				std::fwrite( stringPoolBytes.data(), 1, stringPoolBytes.size(), pFile );
 			}
 
 			std::fclose( pFile );
@@ -162,13 +162,13 @@ SW_TEST_CASE( Engine_ResourcePack, SinglePackMountAndHashLookup )
 {
 	const sw::string testPackPath = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "test_temp_pack_01.pack" );
 
-	const sw::vector<std::pair<sw::string, sw::string>> listFiles = {
+	const sw::vector<std::pair<sw::string, sw::string>> listFile = {
 		{"maps/title.scene.xml",		  "<Scene name=\"Title\" version=\"1.0\"/>"},
 		{	  "shaders/pbr.hlsl",			  "// PBR Forward Lighting Shader Code"},
 		{	  "data/items.json", "{\"sword\": {\"atk\": 50, \"durability\": 100}}"}
 	 };
 
-	SW_ASSERT_TRUE( sw::createTestPackFile( testPackPath, 0, sw::PackCompressionType::RLE, listFiles, false ) );
+	SW_ASSERT_TRUE( sw::createTestPackFile( testPackPath, 0, sw::PackCompressionType::RLE, listFile, false ) );
 
 	sw::ResourcePackReader reader;
 	SW_ASSERT_TRUE( reader.open( testPackPath ) );

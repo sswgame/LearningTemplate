@@ -37,10 +37,10 @@ namespace sw
 		// ------------------------------------------------------------------------------
 		// 1) 생성자 및 대입
 		// ------------------------------------------------------------------------------
-		array() = default;
+		constexpr array() = default;
 
 		template <typename... Args, typename = std::enable_if_t<( sizeof...( Args ) > 0 && sizeof...( Args ) <= N && ( std::is_convertible_v<Args, T> && ... ) )>>
-		array( Args&&... args )
+		constexpr array( Args&&... args )
 			: _elems{ static_cast<T>( std::forward<Args>( args ) )... } {}
 
 		array( std::initializer_list<T> list )
@@ -53,51 +53,10 @@ namespace sw
 			}
 		}
 
-		array( const array& other )
-		{
-			SW_SCOPED_RACE_READ_OTHER( other );
-			for ( size_type index = 0; index < N; ++index )
-			{
-				_elems[index] = other._elems[index];
-			}
-		}
-
-		array& operator=( const array& other )
-		{
-			if ( this != &other )
-			{
-				SW_SCOPED_RACE_WRITE();
-				SW_SCOPED_RACE_READ_OTHER( other );
-				for ( size_type index = 0; index < N; ++index )
-				{
-					_elems[index] = other._elems[index];
-				}
-			}
-			return *this;
-		}
-
-		array( array&& other ) noexcept
-		{
-			SW_SCOPED_RACE_WRITE_OTHER( other );
-			for ( size_type index = 0; index < N; ++index )
-			{
-				_elems[index] = std::move( other._elems[index] );
-			}
-		}
-
-		array& operator=( array&& other ) noexcept
-		{
-			if ( this != &other )
-			{
-				SW_SCOPED_RACE_WRITE();
-				SW_SCOPED_RACE_WRITE_OTHER( other );
-				for ( size_type index = 0; index < N; ++index )
-				{
-					_elems[index] = std::move( other._elems[index] );
-				}
-			}
-			return *this;
-		}
+		constexpr array( const array& other )				 = default;
+		constexpr array& operator=( const array& other )	 = default;
+		constexpr array( array&& other ) noexcept			 = default;
+		constexpr array& operator=( array&& other ) noexcept = default;
 
 		// ------------------------------------------------------------------------------
 		// 2) 원소 접근
@@ -118,90 +77,76 @@ namespace sw
 			return _elems[pos];
 		}
 
-		[[nodiscard]] reference operator[]( size_type pos ) noexcept
+		[[nodiscard]] constexpr reference operator[]( size_type pos ) noexcept
 		{
-			SW_SCOPED_RACE_WRITE();
 			return _elems[pos];
 		}
 
-		[[nodiscard]] const_reference operator[]( size_type pos ) const noexcept
+		[[nodiscard]] constexpr const_reference operator[]( size_type pos ) const noexcept
 		{
-			SW_SCOPED_RACE_READ();
 			return _elems[pos];
 		}
 
-		[[nodiscard]] reference front() noexcept
+		[[nodiscard]] constexpr reference front() noexcept
 		{
-			SW_SCOPED_RACE_WRITE();
 			return _elems[0];
 		}
 
-		[[nodiscard]] const_reference front() const noexcept
+		[[nodiscard]] constexpr const_reference front() const noexcept
 		{
-			SW_SCOPED_RACE_READ();
 			return _elems[0];
 		}
 
-		[[nodiscard]] reference back() noexcept
+		[[nodiscard]] constexpr reference back() noexcept
 		{
-			SW_SCOPED_RACE_WRITE();
 			return _elems[N > 0 ? N - 1 : 0];
 		}
 
-		[[nodiscard]] const_reference back() const noexcept
+		[[nodiscard]] constexpr const_reference back() const noexcept
 		{
-			SW_SCOPED_RACE_READ();
 			return _elems[N > 0 ? N - 1 : 0];
 		}
 
-		[[nodiscard]] pointer data() noexcept
+		[[nodiscard]] constexpr pointer data() noexcept
 		{
-			SW_SCOPED_RACE_WRITE();
 			return _elems;
 		}
 
-		[[nodiscard]] const_pointer data() const noexcept
+		[[nodiscard]] constexpr const_pointer data() const noexcept
 		{
-			SW_SCOPED_RACE_READ();
 			return _elems;
 		}
 
 		// ------------------------------------------------------------------------------
 		// 3) 반복자
 		// ------------------------------------------------------------------------------
-		[[nodiscard]] iterator begin() noexcept
+		[[nodiscard]] constexpr iterator begin() noexcept
 		{
-			SW_SCOPED_RACE_WRITE();
 			return _elems;
 		}
 
-		[[nodiscard]] const_iterator begin() const noexcept
+		[[nodiscard]] constexpr const_iterator begin() const noexcept
 		{
-			SW_SCOPED_RACE_READ();
 			return _elems;
 		}
 
-		[[nodiscard]] const_iterator cbegin() const noexcept
+		[[nodiscard]] constexpr const_iterator cbegin() const noexcept
 		{
-			SW_SCOPED_RACE_READ();
 			return _elems;
 		}
 
-		[[nodiscard]] iterator end() noexcept
+		[[nodiscard]] constexpr iterator end() noexcept
 		{
-			SW_SCOPED_RACE_WRITE();
 			return _elems + N;
 		}
 
-		[[nodiscard]] const_iterator end() const noexcept
+		[[nodiscard]] constexpr const_iterator end() const noexcept
 		{
-			SW_SCOPED_RACE_READ();
 			return _elems + N;
 		}
 
-		[[nodiscard]] const_iterator cend() const noexcept
+		[[nodiscard]] constexpr const_iterator cend() const noexcept
 		{
-			SW_SCOPED_RACE_READ();
 			return _elems + N;
 		}
 

@@ -238,7 +238,7 @@ namespace test
 		}
 		SW_LOG_INFO( "====================================================" );
 
-		sw::vector<sw::string> failedTestNames;
+		sw::vector<sw::string> listFailedTestName;
 
 		for ( const TestCaseInfo& testInfo : _listTest )
 		{
@@ -275,7 +275,7 @@ namespace test
 			else if ( _currentTestFailed )
 			{
 				++failedCount;
-				failedTestNames.push_back( testInfo.fullName() );
+				listFailedTestName.push_back( testInfo.fullName() );
 				std::fprintf( stdout, "[  FAILED  ] %s (%.2f ms)\n", testInfo.fullName().c_str(), elapsed );
 				std::fflush( stdout );
 				SW_LOG_ERROR( "%# (%.2f ms)", testInfo.fullName().c_str(), elapsed );
@@ -302,7 +302,7 @@ namespace test
 		if ( failedCount > 0 )
 		{
 			std::fprintf( stdout, " Tests failed (%d):\n", failedCount );
-			for ( const auto& name : failedTestNames )
+			for ( const auto& name : listFailedTestName )
 			{
 				std::fprintf( stdout, "   - %s\n", name.c_str() );
 			}

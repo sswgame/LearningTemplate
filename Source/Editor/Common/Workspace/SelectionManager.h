@@ -35,7 +35,7 @@ namespace sw::editor
 		// 멤버 메서드
 		// ------------------------------------------------------------------------------
 		void						 selectObject( GameObjectPtr pObj, SelectionMode mode = SelectionMode::Replace );
-		void						 selectObjects( const vector<GameObjectPtr>& listObjs, SelectionMode mode = SelectionMode::Replace );
+		void						 selectObjects( const vector<GameObjectPtr>& listObj, SelectionMode mode = SelectionMode::Replace );
 		bool						 hasObject( const GameObjectPtr& pObj ) const;
 		GameObjectPtr				 getPrimaryObject() const;
 		uint64						 getPrimaryObjectId() const;
@@ -43,7 +43,7 @@ namespace sw::editor
 		size_t						 getSelectedObjectCount() const { return _listSelectedObject.size(); }
 
 		void				  selectAsset( string_view assetPath, SelectionMode mode = SelectionMode::Replace );
-		void				  selectAssets( const vector<string>& listAssetPaths, SelectionMode mode = SelectionMode::Replace );
+		void				  selectAssets( const vector<string>& listAssetPath, SelectionMode mode = SelectionMode::Replace );
 		bool				  hasAsset( string_view assetPath ) const;
 		string_view			  getPrimaryAsset() const;
 		const vector<string>& getSelectedAssets() const { return _listSelectedAsset; }

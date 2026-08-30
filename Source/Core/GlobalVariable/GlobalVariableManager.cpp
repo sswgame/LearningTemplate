@@ -517,40 +517,40 @@ namespace sw
 	/**
 	 * @brief Core 모듈 내부 번역 단위 전용 정적 등록자 생성자 (Core::getHead()에 연결)
 	 */
-	GlobalVariableRegistrar::GlobalVariableRegistrar( const utf8* name, GlobalVariableType type, void* pData, const std::variant<bool, int32, float32, string>& defaultValue, const utf8* description, const utf8* enumType, const utf8* moduleName, uint32 typeSize )
-		: _name{ name }
+	GlobalVariableRegistrar::GlobalVariableRegistrar( const utf8* pName, GlobalVariableType type, void* pData, const std::variant<bool, int32, float32, string>& defaultValue, const utf8* pDescription, const utf8* pEnumType, const utf8* pModuleName, uint32 typeSize )
+		: _name{ pName }
 		, _type{ type }
 		, _pData{ pData }
 		, _defaultValue{ defaultValue }
-		, _description{ description }
-		, _enumType{ enumType }
-		, _moduleName{ moduleName }
+		, _description{ pDescription }
+		, _enumType{ pEnumType }
+		, _moduleName{ pModuleName }
 		, _typeSize{ typeSize }
 		, _pNext{ nullptr } { linkTo( getHead() ); }
 
 	/**
 	 * @brief DLL 동적 모듈 전용 정적 등록자 생성자 (모듈별 로컬 체인 헤드에 연결)
 	 */
-	GlobalVariableRegistrar::GlobalVariableRegistrar( GlobalVariableRegistrar*& moduleHead, const utf8* name, GlobalVariableType type, void* pData, const std::variant<bool, int32, float32, string>& defaultValue, const utf8* description, const utf8* enumType, const utf8* moduleName, uint32 typeSize )
-		: _name{ name }
+	GlobalVariableRegistrar::GlobalVariableRegistrar( GlobalVariableRegistrar*& pModuleHead, const utf8* pName, GlobalVariableType type, void* pData, const std::variant<bool, int32, float32, string>& defaultValue, const utf8* pDescription, const utf8* pEnumType, const utf8* pModuleName, uint32 typeSize )
+		: _name{ pName }
 		, _type{ type }
 		, _pData{ pData }
 		, _defaultValue{ defaultValue }
-		, _description{ description }
-		, _enumType{ enumType }
-		, _moduleName{ moduleName }
+		, _description{ pDescription }
+		, _enumType{ pEnumType }
+		, _moduleName{ pModuleName }
 		, _typeSize{ typeSize }
-		, _pNext{ nullptr } { linkTo( moduleHead ); }
+		, _pNext{ nullptr } { linkTo( pModuleHead ); }
 
 	GlobalVariableRegistrar*& GlobalVariableRegistrar::getHead()
 	{
-		static GlobalVariableRegistrar* s_head{ nullptr };
-		return s_head;
+		static GlobalVariableRegistrar* s_pHead{ nullptr };
+		return s_pHead;
 	}
 
-	void GlobalVariableRegistrar::linkTo( GlobalVariableRegistrar*& moduleHead )
+	void GlobalVariableRegistrar::linkTo( GlobalVariableRegistrar*& pModuleHead )
 	{
-		_pNext	   = moduleHead;
-		moduleHead = this;
+		_pNext		= pModuleHead;
+		pModuleHead = this;
 	}
 } // namespace sw

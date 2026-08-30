@@ -76,11 +76,11 @@ namespace sw
 		{
 			static_assert( std::is_trivially_destructible_v<T>,
 						   "FrameArenaAllocator only supports Trivially Destructible types (destructors are not invoked on reset)!" );
-			void* mem = allocate( sizeof( T ), alignof( T ) );
+			void* pMem = allocate( sizeof( T ), alignof( T ) );
 			if constexpr ( std::is_aggregate_v<T> )
-				return new ( mem ) T{ std::forward<Args>( args )... };
+				return new ( pMem ) T{ std::forward<Args>( args )... };
 			else
-				return new ( mem ) T( std::forward<Args>( args )... );
+				return new ( pMem ) T( std::forward<Args>( args )... );
 		}
 
 		/**

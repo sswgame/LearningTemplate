@@ -33,8 +33,8 @@ namespace sw
 
 		/** @brief inotify/eventfd 를 열고 워커를 띄웁니다. */
 		bool startWatching( string_view directoryPath, bool bRecursive = true ) override;
-		/** @brief 워커 큐에서 이벤트를 꺼내 outEvents 에 담습니다. */
-		uint32 pollEvents( vector<FileChangeEvent>& outEvents ) override;
+		/** @brief 워커 큐에서 이벤트를 꺼내 outListEvent 에 담습니다. */
+		uint32 pollEvents( vector<FileChangeEvent>& outListEvent ) override;
 		/** @brief eventfd 로 워커를 깨운 뒤 watch 를 모두 뗍니다. */
 		void stopWatching() override;
 		/** @brief 워커가 돌고 있으면 true입니다. */

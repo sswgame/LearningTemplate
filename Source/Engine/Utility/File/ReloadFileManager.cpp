@@ -139,17 +139,17 @@ namespace sw
 		dispatchEvents( listEvent );
 	}
 
-	FileWatchHandle ReloadFileManager::registerWatch( string_view pathPrefix, const vector<string>& extensions, const FileWatchMatchDelegate& onMatch )
+	FileWatchHandle ReloadFileManager::registerWatch( string_view pathPrefix, const vector<string>& listExtension, const FileWatchMatchDelegate& onMatch )
 	{
 		WatchEntry entry{};
 		entry._handle = FileWatchHandle{ _nextWatchId++ };
 		// Keep real FS path for mtime poll / native watchers; matching uses normalizePath.
 		entry._pathPrefix	 = FileUtil::normalizeSeparators( pathPrefix );
-		entry._listExtension = extensions;
+		entry._listExtension = listExtension;
 		entry._onMatch		 = onMatch;
 		_listWatch.push_back( entry );
 
-		SW_LOG_TRACE( "Registered watch %# (ext count %#)", entry._pathPrefix, static_cast<uint32>( extensions.size() ) );
+		SW_LOG_TRACE( "Registered watch %# (ext count %#)", entry._pathPrefix, static_cast<uint32>( listExtension.size() ) );
 		return entry._handle;
 	}
 

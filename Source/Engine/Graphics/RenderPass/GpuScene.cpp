@@ -19,18 +19,18 @@ namespace sw
 	{
 		struct GpuSceneInternal
 		{
-			static void extractTranslation( const float4x4& m, float32 out[3] )
+			static void extractTranslation( const float4x4& m, float32 outArrTranslation[3] )
 			{
-				out[0] = m._41;
-				out[1] = m._42;
-				out[2] = m._43;
+				outArrTranslation[0] = m._41;
+				outArrTranslation[1] = m._42;
+				outArrTranslation[2] = m._43;
 			}
 
-			static float32 distSq( const float32 a[3], const float32 b[3] )
+			static float32 distSq( const float32 arrA[3], const float32 arrB[3] )
 			{
-				const float32 dx = a[0] - b[0];
-				const float32 dy = a[1] - b[1];
-				const float32 dz = a[2] - b[2];
+				const float32 dx = arrA[0] - arrB[0];
+				const float32 dy = arrA[1] - arrB[1];
+				const float32 dz = arrA[2] - arrB[2];
 				return dx * dx + dy * dy + dz * dz;
 			}
 
@@ -68,12 +68,12 @@ namespace sw
 			}
 
 			template <typename TCandidate, typename TInstance>
-			static void fillRangeVal( const vector<TCandidate>& scratchCandidates, vector<TInstance>& scratchRaw, uint32 begin, uint32 end )
+			static void fillRangeVal( const vector<TCandidate>& listScratchCandidate, vector<TInstance>& listScratchRaw, uint32 begin, uint32 end )
 			{
 				for ( uint32 entryIndex = begin; entryIndex < end; ++entryIndex )
 				{
-					const auto& cand = scratchCandidates[entryIndex];
-					auto&		inst = scratchRaw[entryIndex];
+					const auto& cand = listScratchCandidate[entryIndex];
+					auto&		inst = listScratchRaw[entryIndex];
 					Memory::copy( inst._world, cand._world, sizeof( inst._world ) );
 					Memory::copy( inst._boundsCenter, cand._boundsCenter, sizeof( inst._boundsCenter ) );
 					inst._boundsRadius = cand._boundsRadius;
@@ -81,9 +81,9 @@ namespace sw
 				}
 			}
 
-			static void applyInstanceCbsVal( IRHIDevice* pDevice, vector<GpuMeshBatch>& batches )
+			static void applyInstanceCbsVal( IRHIDevice* pDevice, vector<GpuMeshBatch>& listBatch )
 			{
-				for ( GpuMeshBatch& batch : batches )
+				for ( GpuMeshBatch& batch : listBatch )
 				{
 					if ( batch._pMaterialInstance == nullptr )
 						continue;
@@ -92,9 +92,9 @@ namespace sw
 				}
 			}
 
-			static void uploadMeshesVal( IRHIDevice* pDevice, vector<GpuMeshBatch>& batches )
+			static void uploadMeshesVal( IRHIDevice* pDevice, vector<GpuMeshBatch>& listBatch )
 			{
-				for ( GpuMeshBatch& batch : batches )
+				for ( GpuMeshBatch& batch : listBatch )
 				{
 					if ( batch._pMesh != nullptr && batch._pMesh->upload( pDevice ) )
 						batch._vertexBuffer = batch._pMesh->getVertexBuffer();
@@ -154,19 +154,19 @@ namespace sw
 		return false;
 	}
 
-	void GpuMaterialRetireQueue::syncFromBatches( const vector<GpuMeshBatch>& opaque, const vector<GpuMeshBatch>& transparent )
+	void GpuMaterialRetireQueue::syncFromBatches( const vector<GpuMeshBatch>& listOpaque, const vector<GpuMeshBatch>& listTransparent )
 	{
 		unordered_set<MaterialInstance*> uniqueLive;
-		auto							 collect = [&]( const vector<GpuMeshBatch>& batches )
+		auto							 collect = [&]( const vector<GpuMeshBatch>& listBatch )
 		{
-			for ( const GpuMeshBatch& batch : batches )
+			for ( const GpuMeshBatch& batch : listBatch )
 			{
 				if ( batch._pMaterialInstance != nullptr )
 					uniqueLive.insert( batch._pMaterialInstance );
 			}
 		};
-		collect( opaque );
-		collect( transparent );
+		collect( listOpaque );
+		collect( listTransparent );
 
 		for ( MaterialInstance* pInst : _uniquePinned )
 		{

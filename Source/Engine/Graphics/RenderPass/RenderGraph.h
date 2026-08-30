@@ -170,10 +170,10 @@ namespace sw
 
 		/**
 		 * @brief 여러 최종 목표 출력 타깃들에 도달하지 않는 불필요한 미사용 패스 일괄 컬링(Culling)
-		 * @param listRootOutputs 최종 루트 타깃 리소스 해시 리스트
-		 * @param pOutCulledPasses (선택) 컬링된 패스 이름들을 반환받을 출력 파라미터
+		 * @param listRootOutput 최종 루트 타깃 리소스 해시 리스트
+		 * @param pOutListCulledPass (선택) 컬링된 패스 이름들을 반환받을 출력 파라미터
 		 */
-		void cullUnreferencedPasses( const vector<hashed_string>& listRootOutputs, vector<hashed_string>* pOutCulledPasses = nullptr );
+		void cullUnreferencedPasses( const vector<hashed_string>& listRootOutput, vector<hashed_string>* pOutListCulledPass = nullptr );
 
 		/** @brief 컴파일 완료된 위상 정렬 패스 실행 순서 반환 */
 		const vector<hashed_string>& getExecutionOrder() const { return _listCompiledExecutionOrder; }

@@ -54,17 +54,17 @@ namespace sw::editor
 				return rec._jaJP;
 			}
 
-			static void mergeLangJson( LocLang lang, const string& locFolder, map<string, LocRecord>& mapRecords )
+			static void mergeLangJson( LocLang lang, const string& locFolder, map<string, LocRecord>& mapRecord )
 			{
 				const string path = FileUtil::joinPath( locFolder, string{ locLangFileStem( lang ) } + ".json" );
 				JsonDocument doc;
 				if ( doc.loadFile( path ) == false || doc.root().isObject() == false )
 					return;
 
-				const vector<string> listKeys = doc.root().memberNames();
-				for ( const string& key : listKeys )
+				const vector<string> listKey = doc.root().memberNames();
+				for ( const string& key : listKey )
 				{
-					LocRecord& rec = mapRecords[key];
+					LocRecord& rec = mapRecord[key];
 					rec._key	   = key;
 					setLocField( rec, lang, doc.root().get( key ).asString() );
 				}
@@ -113,13 +113,13 @@ namespace sw::editor
 		outList.clear();
 		const string locFolder = getLocalizationFolderPath();
 
-		map<string, LocRecord> mapRecords;
-		EditorDataTableCommandsInternal::mergeLangJson( EditorDataTableCommandsInternal::LocLang::EnUS, locFolder, mapRecords );
-		EditorDataTableCommandsInternal::mergeLangJson( EditorDataTableCommandsInternal::LocLang::KoKR, locFolder, mapRecords );
-		EditorDataTableCommandsInternal::mergeLangJson( EditorDataTableCommandsInternal::LocLang::JaJP, locFolder, mapRecords );
+		map<string, LocRecord> mapRecord;
+		EditorDataTableCommandsInternal::mergeLangJson( EditorDataTableCommandsInternal::LocLang::EnUS, locFolder, mapRecord );
+		EditorDataTableCommandsInternal::mergeLangJson( EditorDataTableCommandsInternal::LocLang::KoKR, locFolder, mapRecord );
+		EditorDataTableCommandsInternal::mergeLangJson( EditorDataTableCommandsInternal::LocLang::JaJP, locFolder, mapRecord );
 
-		outList.reserve( mapRecords.size() );
-		for ( auto& pair : mapRecords )
+		outList.reserve( mapRecord.size() );
+		for ( auto& pair : mapRecord )
 			outList.push_back( std::move( pair.second ) );
 		return true;
 	}
@@ -155,10 +155,10 @@ namespace sw::editor
 		outList.clear();
 		const string dataFolder = getGameDataFolderPath();
 
-		vector<string> listFiles;
-		FileUtil::collectFiles( dataFolder, ".xml", listFiles, false, false );
+		vector<string> listFile;
+		FileUtil::collectFiles( dataFolder, ".xml", listFile, false, false );
 
-		for ( const string& file : listFiles )
+		for ( const string& file : listFile )
 		{
 			if ( FileUtil::hasExtension( file, ".xml" ) == false )
 				continue;

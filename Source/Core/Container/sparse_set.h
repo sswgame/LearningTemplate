@@ -85,8 +85,8 @@ namespace sw
 		class Iterator
 		{
 		public:
-			Iterator( sparse_set* set, size_t index )
-				: _pSet{ set }
+			Iterator( sparse_set* pSet, size_t index )
+				: _pSet{ pSet }
 				, _index{ index } {}
 
 			Iterator& operator++()
@@ -107,8 +107,8 @@ namespace sw
 		class ConstIterator
 		{
 		public:
-			ConstIterator( const sparse_set* set, size_t index )
-				: _pSet{ set }
+			ConstIterator( const sparse_set* pSet, size_t index )
+				: _pSet{ pSet }
 				, _index{ index } {}
 
 			ConstIterator& operator++()

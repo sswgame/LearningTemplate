@@ -425,18 +425,18 @@ namespace sw
 			return false;
 
 		const string previousTempModule = ctx._tempModulePath;
-		void*		 previousHandle		= ctx._pLibraryModule;
+		void*		 pPreviousHandle	= ctx._pLibraryModule;
 
 		BLOCK( "Swap Module Handles" )
 		{
 			// onBeforeReload 가 모듈 리소스를 만지기 전에 워커가 옛 이미지에서 빠져나와 있어야 한다.
-			if ( previousHandle != nullptr && drainTasksBeforeUnload() == false )
+			if ( pPreviousHandle != nullptr && drainTasksBeforeUnload() == false )
 				return false;
 
-			if ( ctx._onBeforeReload.isBound() && previousHandle != nullptr )
+			if ( ctx._onBeforeReload.isBound() && pPreviousHandle != nullptr )
 				ctx._onBeforeReload();
 
-			if ( previousHandle != nullptr )
+			if ( pPreviousHandle != nullptr )
 			{
 				for ( const EventDispatcher::EventSubscription& token : ctx._listEventSubscription )
 				{
@@ -467,9 +467,9 @@ namespace sw
 			if ( ctx._onAfterReload.isBound() )
 				ctx._onAfterReload( ctx._pLibraryModule );
 
-			if ( previousHandle != nullptr && _bReloadGraphBroken == SW_FALSE )
+			if ( pPreviousHandle != nullptr && _bReloadGraphBroken == SW_FALSE )
 			{
-				FileUtil::unloadDynamicLibrary( previousHandle );
+				FileUtil::unloadDynamicLibrary( pPreviousHandle );
 				LiveReloadManagerInternal::tryDeleteShadowArtifacts( previousTempModule );
 			}
 		}
@@ -554,10 +554,10 @@ namespace sw
 		return _bReloadGraphBroken == SW_FALSE;
 	}
 
-	void LiveReloadManager::collectDependentClosure( string_view root, vector<string>& outUnique ) const
+	void LiveReloadManager::collectDependentClosure( string_view root, vector<string>& outListUnique ) const
 	{
 		unordered_set<string> uniqueVisited;
-		for ( const string& existing : outUnique )
+		for ( const string& existing : outListUnique )
 		{
 			uniqueVisited.insert( existing );
 		}
@@ -572,7 +572,7 @@ namespace sw
 				continue;
 			if ( _mapModule.find( cur ) == _mapModule.end() )
 				continue;
-			outUnique.push_back( cur );
+			outListUnique.push_back( cur );
 			for ( const auto& [modName, ctx] : _mapModule )
 			{
 				for ( const string& dep : ctx._listDependsOn )
@@ -597,10 +597,10 @@ namespace sw
 		if ( uniqueSubgraph.empty() )
 			return true;
 
-		unordered_map<string, uint32> indegree;
+		unordered_map<string, uint32> mapIndegree;
 		for ( const string& name : uniqueSubgraph )
 		{
-			indegree[name] = 0;
+			mapIndegree[name] = 0;
 		}
 
 		for ( const string& name : uniqueSubgraph )
@@ -609,14 +609,14 @@ namespace sw
 			for ( const string& dep : found->second._listDependsOn )
 			{
 				if ( uniqueSubgraph.find( dep ) != uniqueSubgraph.end() )
-					indegree[name] += 1;
+					mapIndegree[name] += 1;
 			}
 		}
 
 		vector<string> listReady;
 		for ( const string& name : uniqueSubgraph )
 		{
-			if ( indegree[name] == 0 )
+			if ( mapIndegree[name] == 0 )
 				listReady.push_back( name );
 		}
 		std::sort( listReady.begin(), listReady.end() );
@@ -640,7 +640,7 @@ namespace sw
 						if ( dep != n )
 							continue;
 
-						uint32& deg = indegree[name];
+						uint32& deg = mapIndegree[name];
 						if ( deg == 0 )
 							continue;
 						deg -= 1;

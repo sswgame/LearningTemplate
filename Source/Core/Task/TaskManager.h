@@ -142,21 +142,21 @@ namespace sw
 
 		/**
 		 * @brief 전달된 모든 tasks가 완료되었을 때 실행될 통합 후속(Continuation) 태스크를 생성합니다.
-		 * @param tasks 선행 완료되어야 하는 태스크 핸들 목록
+		 * @param listTask 선행 완료되어야 하는 태스크 핸들 목록
 		 * @param continuation 모두 완료 시 실행될 델리게이트
 		 * @param affinity 실행할 스레드 선호도
 		 * @return 생성된 후속 태스크 핸들
 		 */
-		TaskHandle whenAll( const vector<TaskHandle>& tasks, const TaskDelegate& continuation, TaskThreadAffinity affinity = TaskThreadAffinity::Any );
+		TaskHandle whenAll( const vector<TaskHandle>& listTask, const TaskDelegate& continuation, TaskThreadAffinity affinity = TaskThreadAffinity::Any );
 
 		/**
 		 * @brief 전달된 tasks 중 '어느 하나라도' 먼저 완료되면 즉시 실행되는 후속 태스크를 생성합니다.
-		 * @param tasks 감시 대상 태스크 핸들 목록
+		 * @param listTask 감시 대상 태스크 핸들 목록
 		 * @param continuation 최초 완료 시 실행될 델리게이트
 		 * @param affinity 실행할 스레드 선호도
 		 * @return 생성된 후속 태스크 핸들
 		 */
-		TaskHandle whenAny( const vector<TaskHandle>& tasks, const TaskDelegate& continuation, TaskThreadAffinity affinity = TaskThreadAffinity::Any );
+		TaskHandle whenAny( const vector<TaskHandle>& listTask, const TaskDelegate& continuation, TaskThreadAffinity affinity = TaskThreadAffinity::Any );
 
 		/**
 		 * @brief 메인 스레드 친화도(`MainThread`)로 등록된 태스크들을 일괄 실행합니다.

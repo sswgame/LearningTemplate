@@ -456,10 +456,10 @@ namespace sw
 			slotSize = slotIt->second;
 		const uint32 offset = ( _pDevice->_currentFrame % FrameResourceRing::kFrameCount ) * slotSize;
 
-		void* mapped{ nullptr };
-		if ( vkMapMemory( _pDevice->_device, pRecord->_memory, offset, size, 0, &mapped ) == VK_SUCCESS )
+		void* pMapped{ nullptr };
+		if ( vkMapMemory( _pDevice->_device, pRecord->_memory, offset, size, 0, &pMapped ) == VK_SUCCESS )
 		{
-			Memory::copy( mapped, pData, size );
+			Memory::copy( pMapped, pData, size );
 			vkUnmapMemory( _pDevice->_device, pRecord->_memory );
 		}
 
@@ -544,10 +544,10 @@ namespace sw
 
 		vkBindBufferMemory( _pDevice->_device, buffer, memory, 0 );
 
-		void* mapped{ nullptr };
-		if ( vkMapMemory( _pDevice->_device, memory, 0, sizeBytes, 0, &mapped ) == VK_SUCCESS && mapped != nullptr )
+		void* pMapped{ nullptr };
+		if ( vkMapMemory( _pDevice->_device, memory, 0, sizeBytes, 0, &pMapped ) == VK_SUCCESS && pMapped != nullptr )
 		{
-			Memory::copy( mapped, pData, sizeBytes );
+			Memory::copy( pMapped, pData, sizeBytes );
 			vkUnmapMemory( _pDevice->_device, memory );
 		}
 

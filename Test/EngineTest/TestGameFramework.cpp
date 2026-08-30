@@ -414,17 +414,17 @@ SW_TEST_CASE( GameFrameworkTest, DialogueRunnerComponentChoiceBranchAndAction )
 
 	SW_EXPECT_TRUE( runner.loadGraphJson( testJson ) );
 
-	vector<string> currentChoices;
-	runner.setOnDialogueChoices( [&]( const vector<string>& listChoices )
+	vector<string> listCurrentChoice;
+	runner.setOnDialogueChoices( [&]( const vector<string>& listChoice )
 	{
-		currentChoices = listChoices;
+		listCurrentChoice = listChoice;
 	} );
 
 	SW_EXPECT_TRUE( runner.startDialogue() );
 	SW_EXPECT_EQUAL( static_cast<uint8>( DialogueRunnerState::WaitingForChoice ), static_cast<uint8>( runner.getState() ) );
-	SW_EXPECT_EQUAL( 2u, static_cast<uint32>( currentChoices.size() ) );
-	SW_EXPECT_EQUAL( "Accept", currentChoices[0] );
-	SW_EXPECT_EQUAL( "Decline", currentChoices[1] );
+	SW_EXPECT_EQUAL( 2u, static_cast<uint32>( listCurrentChoice.size() ) );
+	SW_EXPECT_EQUAL( "Accept", listCurrentChoice[0] );
+	SW_EXPECT_EQUAL( "Decline", listCurrentChoice[1] );
 
 	// 0번 선택지 (Accept) 선택 -> Action 노드 실행 -> 플래그 설정 -> Dialogue(4)
 	SW_EXPECT_TRUE( runner.selectChoice( 0 ) );

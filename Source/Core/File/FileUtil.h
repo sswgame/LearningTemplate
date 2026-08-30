@@ -153,8 +153,8 @@ namespace sw
 		static string getTempDirectory();
 		/** @brief 바이너리 데이터를 파일에 씁니다. */
 		static bool writeFile( string_view fileName, const uint8* pData, uint64 size );
-		/** @brief 파일을 읽어 outData에 담습니다. */
-		static bool readFile( string_view fileName, vector<uint8>& outData, uint32 offset = 0, uint32 maxReadCount = invalid_index::kUint32 );
+		/** @brief 파일을 읽어 outBytes에 담습니다. */
+		static bool readFile( string_view fileName, vector<uint8>& outBytes, uint32 offset = 0, uint32 maxReadCount = invalid_index::kUint32 );
 		/** @brief 파일 전체를 텍스트(UTF-8)로 읽어 반환합니다 (UTF-8 BOM 자동 제거). */
 		static bool readTextFile( string_view fileName, string& outText );
 		/** @brief 텍스트(UTF-8) 데이터를 파일로 씁니다. */

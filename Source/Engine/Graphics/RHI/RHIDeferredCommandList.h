@@ -55,11 +55,11 @@ namespace sw
 		/** @brief 렌더 패스 종료를 기록합니다. */
 		void endRenderPass() override;
 		/** @brief 버텍스 버퍼 바인드를 기록합니다. */
-		void setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 _offset = 0 ) override;
+		void setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset = 0 ) override;
 		/** @brief 삼각형 리스트 드로우를 기록합니다. */
-		void draw( uint32 vertexCount, uint32 _startVertex = 0, RHIDescriptorIndex materialDescriptorIndex = kInvalidDescriptorIndex ) override;
+		void draw( uint32 vertexCount, uint32 startVertex = 0, RHIDescriptorIndex materialDescriptorIndex = kInvalidDescriptorIndex ) override;
 		/** @brief 인덱스 버퍼 바인드를 기록합니다. */
-		void setIndexBuffer( RHIBufferHandle buffer, uint32 _indexStride = 4, uint32 _offset = 0 ) override;
+		void setIndexBuffer( RHIBufferHandle buffer, uint32 indexStride = 4, uint32 offset = 0 ) override;
 
 		// ------------------------------------------------------------------------------
 		// 4) 기록 — 컴퓨트 · UAV · SRV
@@ -69,7 +69,7 @@ namespace sw
 		/** @brief 컴퓨트 디스패치를 기록합니다. */
 		void dispatchCompute( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ ) override;
 		/** @brief 컴퓨트 루트 상수 푸시를 기록합니다. */
-		void setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 _destOffsetIn32BitValues = 0 ) override;
+		void setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) override;
 		/** @brief 컴퓨트 UAV 바인드를 기록합니다. */
 		void bindComputeUAV( RHIDescriptorIndex index, uint32 slot ) override;
 		/** @brief 셰이더 텍스처 슬롯 바인드를 기록합니다. */

@@ -184,16 +184,16 @@ namespace sw
 				}
 			}
 
-			static string utf16ToLocaleInternal( const utf16* input )
+			static string utf16ToLocaleInternal( const utf16* pInput )
 			{
-				if ( input == nullptr || *input == L'\0' )
+				if ( pInput == nullptr || *pInput == L'\0' )
 					return {};
 
 				size_t requiredSize{ 0 };
 #if defined( SW_PLATFORM_WINDOWS )
-				wcstombs_s( &requiredSize, nullptr, 0, input, 0 );
+				wcstombs_s( &requiredSize, nullptr, 0, pInput, 0 );
 #elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
-				requiredSize = wcstombs( nullptr, input, 0 );
+				requiredSize = wcstombs( nullptr, pInput, 0 );
 				if ( requiredSize != static_cast<size_t>( -1 ) )
 					++requiredSize;
 #else
@@ -204,9 +204,9 @@ namespace sw
 
 				string buffer( requiredSize - 1, '\0' );
 #if defined( SW_PLATFORM_WINDOWS )
-				wcstombs_s( nullptr, buffer.data(), requiredSize, input, requiredSize );
+				wcstombs_s( nullptr, buffer.data(), requiredSize, pInput, requiredSize );
 #elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
-				wcstombs( buffer.data(), input, requiredSize );
+				wcstombs( buffer.data(), pInput, requiredSize );
 #else
 	#error "Unsupported platform"
 #endif
@@ -214,16 +214,16 @@ namespace sw
 				return buffer;
 			}
 
-			static wstring localeToUtf16Internal( const utf8* input )
+			static wstring localeToUtf16Internal( const utf8* pInput )
 			{
-				if ( input == nullptr || *input == '\0' )
+				if ( pInput == nullptr || *pInput == '\0' )
 					return {};
 
 				size_t requiredSize{ 0 };
 #if defined( SW_PLATFORM_WINDOWS )
-				mbstowcs_s( &requiredSize, nullptr, 0, input, 0 );
+				mbstowcs_s( &requiredSize, nullptr, 0, pInput, 0 );
 #elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
-				requiredSize = mbstowcs( nullptr, input, 0 );
+				requiredSize = mbstowcs( nullptr, pInput, 0 );
 				if ( requiredSize != static_cast<size_t>( -1 ) )
 					++requiredSize;
 #else
@@ -234,9 +234,9 @@ namespace sw
 
 				wstring buffer( requiredSize - 1, L'\0' );
 #if defined( SW_PLATFORM_WINDOWS )
-				mbstowcs_s( nullptr, buffer.data(), requiredSize, input, requiredSize );
+				mbstowcs_s( nullptr, buffer.data(), requiredSize, pInput, requiredSize );
 #elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
-				mbstowcs( buffer.data(), input, requiredSize );
+				mbstowcs( buffer.data(), pInput, requiredSize );
 #else
 	#error "Unsupported platform"
 #endif
@@ -247,21 +247,21 @@ namespace sw
 			template <typename T>
 			static string integerToString( T value )
 			{
-				utf8 buf[constant::kMaxBuffer32];
-				auto [ptr, ec] = std::to_chars( buf, buf + sizeof( buf ), value );
-				return string( buf, static_cast<size_t>( ptr - buf ) );
+				utf8 arrBuf[constant::kMaxBuffer32];
+				auto [ptr, ec] = std::to_chars( arrBuf, arrBuf + sizeof( arrBuf ), value );
+				return string( arrBuf, static_cast<size_t>( ptr - arrBuf ) );
 			}
 
 			template <typename T>
 			static string floatToString( T value )
 			{
-				utf8 buf[constant::kMaxBuffer64];
-				auto [ptr, ec] = std::to_chars( buf, buf + sizeof( buf ), value );
+				utf8 arrBuf[constant::kMaxBuffer64];
+				auto [ptr, ec] = std::to_chars( arrBuf, arrBuf + sizeof( arrBuf ), value );
 				if ( ec == std::errc() )
-					return string( buf, static_cast<size_t>( ptr - buf ) );
+					return string( arrBuf, static_cast<size_t>( ptr - arrBuf ) );
 
-				formatstring( buf, sizeof( buf ), "%#", value );
-				return string{ buf };
+				formatstring( arrBuf, sizeof( arrBuf ), "%#", value );
+				return string{ arrBuf };
 			}
 		};
 	} // namespace
@@ -319,31 +319,31 @@ namespace sw
 		return StringUtilInternal::floatToString( value );
 	}
 
-	bool StringUtil::isNullOrEmpty( const utf8* str )
+	bool StringUtil::isNullOrEmpty( const utf8* pStr )
 	{
-		return ( str == nullptr || *str == '\0' );
+		return ( pStr == nullptr || *pStr == '\0' );
 	}
 
-	bool StringUtil::isNullOrEmpty( const utf16* str )
+	bool StringUtil::isNullOrEmpty( const utf16* pStr )
 	{
-		return ( str == nullptr || *str == L'\0' );
+		return ( pStr == nullptr || *pStr == L'\0' );
 	}
 
-	wstring StringUtil::utf8ToUtf16( const utf8* input )
+	wstring StringUtil::utf8ToUtf16( const utf8* pInput )
 	{
-		if ( isNullOrEmpty( input ) )
+		if ( isNullOrEmpty( pInput ) )
 			return {};
 
-		SW_LOG_ASSERT( isValidUTF8( input ), "UTF8 문자열이 아닙니다" );
+		SW_LOG_ASSERT( isValidUTF8( pInput ), "UTF8 문자열이 아닙니다" );
 
-		const size_t length = strlen( input );
+		const size_t length = strlen( pInput );
 		wstring		 result{};
 		result.reserve( length );
 
 		size_t pos{ 0 };
 		while ( pos < length )
 		{
-			const uint8 byte0 = static_cast<uint8>( input[pos] );
+			const uint8 byte0 = static_cast<uint8>( pInput[pos] );
 			if ( byte0 <= 0x7F )
 			{
 				result.push_back( static_cast<utf16>( byte0 ) );
@@ -351,7 +351,7 @@ namespace sw
 				continue;
 			}
 
-			const StringUtilInternal::DecodedCodepoint decoded = StringUtilInternal::decodeUtf8Sequence( input + pos, length - pos );
+			const StringUtilInternal::DecodedCodepoint decoded = StringUtilInternal::decodeUtf8Sequence( pInput + pos, length - pos );
 			StringUtilInternal::appendWideChar( result, decoded._codepoint );
 			pos += MathUtil::max( decoded._byteCount, static_cast<size_t>( 1 ) );
 		}
@@ -359,19 +359,19 @@ namespace sw
 		return result;
 	}
 
-	string StringUtil::utf16ToUtf8( const utf16* input )
+	string StringUtil::utf16ToUtf8( const utf16* pInput )
 	{
-		if ( isNullOrEmpty( input ) )
+		if ( isNullOrEmpty( pInput ) )
 			return {};
 
-		const size_t length = strlen( input );
+		const size_t length = strlen( pInput );
 		string		 result{};
 		result.reserve( length );
 
 		size_t pos{ 0 };
 		while ( pos < length )
 		{
-			uint32 codepoint = input[pos];
+			uint32 codepoint = pInput[pos];
 			if ( codepoint <= 0x7F )
 			{
 				result.push_back( static_cast<utf8>( codepoint ) );
@@ -386,7 +386,7 @@ namespace sw
 				{
 					if ( pos + 1 < length )
 					{
-						const uint32 lowSurrogate = input[pos + 1];
+						const uint32 lowSurrogate = pInput[pos + 1];
 						if ( 0xDC00 <= lowSurrogate && lowSurrogate <= 0xDFFF )
 						{
 							codepoint = StringUtilInternal::kUtf16LowBoundary + ( ( codepoint - 0xD800 ) << 10 ) + ( lowSurrogate - 0xDC00 );
@@ -410,107 +410,107 @@ namespace sw
 		return result;
 	}
 
-	string StringUtil::utf16ToLocale( const utf16* input )
+	string StringUtil::utf16ToLocale( const utf16* pInput )
 	{
-		return StringUtilInternal::utf16ToLocaleInternal( input );
+		return StringUtilInternal::utf16ToLocaleInternal( pInput );
 	}
 
-	wstring StringUtil::localeToUtf16( const utf8* input )
+	wstring StringUtil::localeToUtf16( const utf8* pInput )
 	{
-		if ( isNullOrEmpty( input ) )
+		if ( isNullOrEmpty( pInput ) )
 			return {};
-		if ( isValidUTF8( input ) )
-			return utf8ToUtf16( input );
+		if ( isValidUTF8( pInput ) )
+			return utf8ToUtf16( pInput );
 
-		return StringUtilInternal::localeToUtf16Internal( input );
+		return StringUtilInternal::localeToUtf16Internal( pInput );
 	}
 
-	string StringUtil::localeToUtf8( const utf8* input )
+	string StringUtil::localeToUtf8( const utf8* pInput )
 	{
-		if ( isNullOrEmpty( input ) )
+		if ( isNullOrEmpty( pInput ) )
 			return {};
-		if ( isValidUTF8( input ) )
-			return string{ input };
+		if ( isValidUTF8( pInput ) )
+			return string{ pInput };
 
-		const wstring wideStr = StringUtilInternal::localeToUtf16Internal( input );
+		const wstring wideStr = StringUtilInternal::localeToUtf16Internal( pInput );
 		return utf16ToUtf8( wideStr.c_str() );
 	}
 
-	string StringUtil::utf8ToLocale( const utf8* input )
+	string StringUtil::utf8ToLocale( const utf8* pInput )
 	{
-		if ( isNullOrEmpty( input ) )
+		if ( isNullOrEmpty( pInput ) )
 			return {};
 
-		const wstring wideStr = utf8ToUtf16( input );
+		const wstring wideStr = utf8ToUtf16( pInput );
 		return StringUtilInternal::utf16ToLocaleInternal( wideStr.c_str() );
 	}
 
-	string StringUtil::toUpper( const utf8* input )
+	string StringUtil::toUpper( const utf8* pInput )
 	{
-		if ( isNullOrEmpty( input ) )
+		if ( isNullOrEmpty( pInput ) )
 			return {};
 
-		const size_t length = strlen( input );
+		const size_t length = strlen( pInput );
 		string		 result;
 		result.resize( length );
 
 		for ( size_t charIndex = 0; charIndex < length; ++charIndex )
 		{
-			const uint8 uCh	  = static_cast<uint8>( input[charIndex] );
-			result[charIndex] = ( uCh >= 'a' && uCh <= 'z' ) ? static_cast<utf8>( uCh - 32 ) : input[charIndex];
+			const uint8 uCh	  = static_cast<uint8>( pInput[charIndex] );
+			result[charIndex] = ( uCh >= 'a' && uCh <= 'z' ) ? static_cast<utf8>( uCh - 32 ) : pInput[charIndex];
 		}
 
 		return result;
 	}
 
-	wstring StringUtil::toUpper( const utf16* input )
+	wstring StringUtil::toUpper( const utf16* pInput )
 	{
-		if ( isNullOrEmpty( input ) )
+		if ( isNullOrEmpty( pInput ) )
 			return {};
 
-		const size_t length = strlen( input );
+		const size_t length = strlen( pInput );
 		wstring		 result;
 		result.resize( length );
 
 		for ( size_t charIndex = 0; charIndex < length; ++charIndex )
 		{
-			const utf16 ch	  = input[charIndex];
+			const utf16 ch	  = pInput[charIndex];
 			result[charIndex] = ( ch >= L'a' && ch <= L'z' ) ? static_cast<utf16>( ch - 32 ) : static_cast<utf16>( std::towupper( static_cast<wint_t>( ch ) ) );
 		}
 
 		return result;
 	}
 
-	string StringUtil::toLower( const utf8* input )
+	string StringUtil::toLower( const utf8* pInput )
 	{
-		if ( isNullOrEmpty( input ) )
+		if ( isNullOrEmpty( pInput ) )
 			return {};
 
-		const size_t length = strlen( input );
+		const size_t length = strlen( pInput );
 		string		 result;
 		result.resize( length );
 
 		for ( size_t charIndex = 0; charIndex < length; ++charIndex )
 		{
-			const uint8 uCh	  = static_cast<uint8>( input[charIndex] );
-			result[charIndex] = ( uCh >= 'A' && uCh <= 'Z' ) ? static_cast<utf8>( uCh + 32 ) : input[charIndex];
+			const uint8 uCh	  = static_cast<uint8>( pInput[charIndex] );
+			result[charIndex] = ( uCh >= 'A' && uCh <= 'Z' ) ? static_cast<utf8>( uCh + 32 ) : pInput[charIndex];
 		}
 
 		return result;
 	}
 
-	wstring StringUtil::toLower( const utf16* input )
+	wstring StringUtil::toLower( const utf16* pInput )
 	{
-		if ( isNullOrEmpty( input ) )
+		if ( isNullOrEmpty( pInput ) )
 			return {};
 
-		const size_t length = strlen( input );
+		const size_t length = strlen( pInput );
 		wstring		 result;
 		result.resize( length );
 
 		for ( size_t charIndex = 0; charIndex < length; ++charIndex )
 		{
-			const utf16 ch	  = input[charIndex];
+			const utf16 ch	  = pInput[charIndex];
 			result[charIndex] = ( ch >= L'A' && ch <= L'Z' ) ? static_cast<utf16>( ch + 32 ) : static_cast<utf16>( std::towlower( static_cast<wint_t>( ch ) ) );
 		}
 
@@ -589,44 +589,44 @@ namespace sw
 		return lhs == rhs;
 	}
 
-	bool StringUtil::equals( const utf8* lhs, const utf8* rhs, bool bIgnoreCase ) noexcept
+	bool StringUtil::equals( const utf8* pLhs, const utf8* pRhs, bool bIgnoreCase ) noexcept
 	{
-		if ( lhs == rhs )
+		if ( pLhs == pRhs )
 			return true;
-		if ( lhs == nullptr || rhs == nullptr )
+		if ( pLhs == nullptr || pRhs == nullptr )
 			return false;
 		if ( bIgnoreCase )
 		{
-			while ( *lhs != '\0' && *rhs != '\0' )
+			while ( *pLhs != '\0' && *pRhs != '\0' )
 			{
-				if ( *lhs != *rhs && toLowerChar( *lhs ) != toLowerChar( *rhs ) )
+				if ( *pLhs != *pRhs && toLowerChar( *pLhs ) != toLowerChar( *pRhs ) )
 					return false;
-				++lhs;
-				++rhs;
+				++pLhs;
+				++pRhs;
 			}
-			return *lhs == *rhs;
+			return *pLhs == *pRhs;
 		}
-		return std::strcmp( lhs, rhs ) == 0;
+		return std::strcmp( pLhs, pRhs ) == 0;
 	}
 
-	bool StringUtil::equals( const utf16* lhs, const utf16* rhs, bool bIgnoreCase ) noexcept
+	bool StringUtil::equals( const utf16* pLhs, const utf16* pRhs, bool bIgnoreCase ) noexcept
 	{
-		if ( lhs == rhs )
+		if ( pLhs == pRhs )
 			return true;
-		if ( lhs == nullptr || rhs == nullptr )
+		if ( pLhs == nullptr || pRhs == nullptr )
 			return false;
 		if ( bIgnoreCase )
 		{
-			while ( *lhs != L'\0' && *rhs != L'\0' )
+			while ( *pLhs != L'\0' && *pRhs != L'\0' )
 			{
-				if ( *lhs != *rhs && toLowerChar( *lhs ) != toLowerChar( *rhs ) )
+				if ( *pLhs != *pRhs && toLowerChar( *pLhs ) != toLowerChar( *pRhs ) )
 					return false;
-				++lhs;
-				++rhs;
+				++pLhs;
+				++pRhs;
 			}
-			return *lhs == *rhs;
+			return *pLhs == *pRhs;
 		}
-		return std::wcscmp( lhs, rhs ) == 0;
+		return std::wcscmp( pLhs, pRhs ) == 0;
 	}
 
 	int32 StringUtil::compare( string_view lhs, string_view rhs, bool bIgnoreCase ) noexcept
@@ -689,52 +689,52 @@ namespace sw
 		return 0;
 	}
 
-	int32 StringUtil::compare( const utf8* lhs, const utf8* rhs, bool bIgnoreCase ) noexcept
+	int32 StringUtil::compare( const utf8* pLhs, const utf8* pRhs, bool bIgnoreCase ) noexcept
 	{
-		if ( lhs == rhs )
+		if ( pLhs == pRhs )
 			return 0;
-		if ( lhs == nullptr )
+		if ( pLhs == nullptr )
 			return -1;
-		if ( rhs == nullptr )
+		if ( pRhs == nullptr )
 			return 1;
 		if ( bIgnoreCase )
 		{
-			while ( *lhs != '\0' && *rhs != '\0' )
+			while ( *pLhs != '\0' && *pRhs != '\0' )
 			{
-				const int32 c1 = static_cast<int32>( toLowerChar( *lhs ) );
-				const int32 c2 = static_cast<int32>( toLowerChar( *rhs ) );
+				const int32 c1 = static_cast<int32>( toLowerChar( *pLhs ) );
+				const int32 c2 = static_cast<int32>( toLowerChar( *pRhs ) );
 				if ( c1 != c2 )
 					return c1 - c2;
-				++lhs;
-				++rhs;
+				++pLhs;
+				++pRhs;
 			}
-			return static_cast<int32>( static_cast<uint8>( *lhs ) ) - static_cast<int32>( static_cast<uint8>( *rhs ) );
+			return static_cast<int32>( static_cast<uint8>( *pLhs ) ) - static_cast<int32>( static_cast<uint8>( *pRhs ) );
 		}
-		return std::strcmp( lhs, rhs );
+		return std::strcmp( pLhs, pRhs );
 	}
 
-	int32 StringUtil::compare( const utf16* lhs, const utf16* rhs, bool bIgnoreCase ) noexcept
+	int32 StringUtil::compare( const utf16* pLhs, const utf16* pRhs, bool bIgnoreCase ) noexcept
 	{
-		if ( lhs == rhs )
+		if ( pLhs == pRhs )
 			return 0;
-		if ( lhs == nullptr )
+		if ( pLhs == nullptr )
 			return -1;
-		if ( rhs == nullptr )
+		if ( pRhs == nullptr )
 			return 1;
 		if ( bIgnoreCase )
 		{
-			while ( *lhs != L'\0' && *rhs != L'\0' )
+			while ( *pLhs != L'\0' && *pRhs != L'\0' )
 			{
-				const int32 c1 = static_cast<int32>( toLowerChar( *lhs ) );
-				const int32 c2 = static_cast<int32>( toLowerChar( *rhs ) );
+				const int32 c1 = static_cast<int32>( toLowerChar( *pLhs ) );
+				const int32 c2 = static_cast<int32>( toLowerChar( *pRhs ) );
 				if ( c1 != c2 )
 					return c1 - c2;
-				++lhs;
-				++rhs;
+				++pLhs;
+				++pRhs;
 			}
-			return static_cast<int32>( *lhs ) - static_cast<int32>( *rhs );
+			return static_cast<int32>( *pLhs ) - static_cast<int32>( *pRhs );
 		}
-		return std::wcscmp( lhs, rhs );
+		return std::wcscmp( pLhs, pRhs );
 	}
 
 	bool StringUtil::startsWith( string_view str, string_view prefix, bool bIgnoreCase ) noexcept
@@ -765,100 +765,100 @@ namespace sw
 		return str.compare( str.size() - suffix.size(), suffix.size(), suffix ) == 0;
 	}
 
-	string StringUtil::trimStart( const utf8* input )
+	string StringUtil::trimStart( const utf8* pInput )
 	{
-		if ( isNullOrEmpty( input ) )
+		if ( isNullOrEmpty( pInput ) )
 			return {};
 
-		const utf8* start = input;
-		while ( *start != '\0' && StringUtilInternal::isWhitespace( *start ) )
+		const utf8* pStart = pInput;
+		while ( *pStart != '\0' && StringUtilInternal::isWhitespace( *pStart ) )
 		{
-			++start;
+			++pStart;
 		}
-		return string{ start };
+		return string{ pStart };
 	}
 
-	wstring StringUtil::trimStart( const utf16* input )
+	wstring StringUtil::trimStart( const utf16* pInput )
 	{
-		if ( isNullOrEmpty( input ) )
+		if ( isNullOrEmpty( pInput ) )
 			return {};
 
-		const utf16* start = input;
-		while ( *start != L'\0' && StringUtilInternal::isWhitespace( *start ) )
+		const utf16* pStart = pInput;
+		while ( *pStart != L'\0' && StringUtilInternal::isWhitespace( *pStart ) )
 		{
-			++start;
+			++pStart;
 		}
-		return wstring{ start };
+		return wstring{ pStart };
 	}
 
-	string StringUtil::trimEnd( const utf8* input )
+	string StringUtil::trimEnd( const utf8* pInput )
 	{
-		if ( isNullOrEmpty( input ) )
+		if ( isNullOrEmpty( pInput ) )
 			return {};
 
-		const size_t length = strlen( input );
+		const size_t length = strlen( pInput );
 		size_t		 end	= length;
-		while ( end > 0 && StringUtilInternal::isWhitespace( input[end - 1] ) )
+		while ( end > 0 && StringUtilInternal::isWhitespace( pInput[end - 1] ) )
 		{
 			--end;
 		}
-		return string{ input, end };
+		return string{ pInput, end };
 	}
 
-	wstring StringUtil::trimEnd( const utf16* input )
+	wstring StringUtil::trimEnd( const utf16* pInput )
 	{
-		if ( isNullOrEmpty( input ) )
+		if ( isNullOrEmpty( pInput ) )
 			return {};
 
-		const size_t length = strlen( input );
+		const size_t length = strlen( pInput );
 		size_t		 end	= length;
-		while ( end > 0 && StringUtilInternal::isWhitespace( input[end - 1] ) )
+		while ( end > 0 && StringUtilInternal::isWhitespace( pInput[end - 1] ) )
 		{
 			--end;
 		}
-		return wstring{ input, end };
+		return wstring{ pInput, end };
 	}
 
-	string StringUtil::trim( const utf8* input )
+	string StringUtil::trim( const utf8* pInput )
 	{
-		if ( isNullOrEmpty( input ) )
+		if ( isNullOrEmpty( pInput ) )
 			return {};
 
-		const utf8* start = input;
-		while ( *start != '\0' && StringUtilInternal::isWhitespace( *start ) )
+		const utf8* pStart = pInput;
+		while ( *pStart != '\0' && StringUtilInternal::isWhitespace( *pStart ) )
 		{
-			++start;
+			++pStart;
 		}
-		if ( *start == '\0' )
+		if ( *pStart == '\0' )
 			return {};
 
-		const utf8* end = start + strlen( start );
-		while ( end > start && StringUtilInternal::isWhitespace( *( end - 1 ) ) )
+		const utf8* end = pStart + strlen( pStart );
+		while ( end > pStart && StringUtilInternal::isWhitespace( *( end - 1 ) ) )
 		{
 			--end;
 		}
-		return string{ start, static_cast<size_t>( end - start ) };
+		return string{ pStart, static_cast<size_t>( end - pStart ) };
 	}
 
-	wstring StringUtil::trim( const utf16* input )
+	wstring StringUtil::trim( const utf16* pInput )
 	{
-		if ( isNullOrEmpty( input ) )
+		if ( isNullOrEmpty( pInput ) )
 			return {};
 
-		const utf16* start = input;
-		while ( *start != L'\0' && StringUtilInternal::isWhitespace( *start ) )
+		const utf16* pStart = pInput;
+		while ( *pStart != L'\0' && StringUtilInternal::isWhitespace( *pStart ) )
 		{
-			++start;
+			++pStart;
 		}
-		if ( *start == L'\0' )
+		if ( *pStart == L'\0' )
 			return {};
 
-		const utf16* end = start + strlen( start );
-		while ( end > start && StringUtilInternal::isWhitespace( *( end - 1 ) ) )
+		const utf16* end = pStart + strlen( pStart );
+		while ( end > pStart && StringUtilInternal::isWhitespace( *( end - 1 ) ) )
 		{
 			--end;
 		}
-		return wstring{ start, static_cast<size_t>( end - start ) };
+		return wstring{ pStart, static_cast<size_t>( end - pStart ) };
 	}
 
 	string_view StringUtil::trimStart( string_view input )
@@ -911,112 +911,112 @@ namespace sw
 		return trimEnd( trimStart( input ) );
 	}
 
-	uint32 StringUtil::strlen( const utf8* str )
+	uint32 StringUtil::strlen( const utf8* pStr )
 	{
-		if ( isNullOrEmpty( str ) )
+		if ( isNullOrEmpty( pStr ) )
 			return 0;
-		return static_cast<uint32>( std::char_traits<utf8>::length( str ) );
+		return static_cast<uint32>( std::char_traits<utf8>::length( pStr ) );
 	}
 
-	uint32 StringUtil::strlen( const utf16* str )
+	uint32 StringUtil::strlen( const utf16* pStr )
 	{
-		if ( isNullOrEmpty( str ) )
+		if ( isNullOrEmpty( pStr ) )
 			return 0;
-		return static_cast<uint32>( std::char_traits<utf16>::length( str ) );
+		return static_cast<uint32>( std::char_traits<utf16>::length( pStr ) );
 	}
 
-	void StringUtil::strncpy( utf8* pDestination, const utf8* pSource, const uint32 length )
+	void StringUtil::strncpy( utf8* pOutDest, const utf8* pSource, const uint32 length )
 	{
 #if defined( SW_PLATFORM_WINDOWS )
-		strncpy_s( pDestination, length, pSource, length );
+		strncpy_s( pOutDest, length, pSource, length );
 #elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
-		::strncpy( pDestination, pSource, length );
+		::strncpy( pOutDest, pSource, length );
 #else
 	#error "Unsupported platform"
 #endif
 	}
 
-	void StringUtil::strncpy( utf16* pDestination, const utf16* pSource, const uint32 length )
+	void StringUtil::strncpy( utf16* pOutDest, const utf16* pSource, const uint32 length )
 	{
 #if defined( SW_PLATFORM_WINDOWS )
-		wcsncpy_s( pDestination, length, pSource, length );
+		wcsncpy_s( pOutDest, length, pSource, length );
 #elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
-		::wcsncpy( pDestination, pSource, length );
+		::wcsncpy( pOutDest, pSource, length );
 #else
 	#error "Unsupported platform"
 #endif
 	}
 
-	const utf8* StringUtil::strstr( const utf8* str, const utf8* substr )
+	const utf8* StringUtil::strstr( const utf8* pStr, const utf8* pSubstr )
 	{
-		if ( isNullOrEmpty( str ) || isNullOrEmpty( substr ) )
+		if ( isNullOrEmpty( pStr ) || isNullOrEmpty( pSubstr ) )
 			return nullptr;
-		return ::strstr( str, substr );
+		return ::strstr( pStr, pSubstr );
 	}
 
-	const utf16* StringUtil::strstr( const utf16* str, const utf16* substr )
+	const utf16* StringUtil::strstr( const utf16* pStr, const utf16* pSubstr )
 	{
-		if ( isNullOrEmpty( str ) || isNullOrEmpty( substr ) )
+		if ( isNullOrEmpty( pStr ) || isNullOrEmpty( pSubstr ) )
 			return nullptr;
-		return wcsstr( str, substr );
+		return wcsstr( pStr, pSubstr );
 	}
 
-	const utf8* StringUtil::stristr( const utf8* str, const utf8* substr )
+	const utf8* StringUtil::stristr( const utf8* pStr, const utf8* pSubstr )
 	{
-		if ( isNullOrEmpty( str ) || isNullOrEmpty( substr ) )
+		if ( isNullOrEmpty( pStr ) || isNullOrEmpty( pSubstr ) )
 			return nullptr;
 
-		const size_t subLen = strlen( substr );
-		while ( *str != '\0' )
+		const size_t subLen = strlen( pSubstr );
+		while ( *pStr != '\0' )
 		{
-			if ( equals( string_view( str, subLen ), string_view( substr, subLen ), true ) )
-				return str;
-			++str;
+			if ( equals( string_view( pStr, subLen ), string_view( pSubstr, subLen ), true ) )
+				return pStr;
+			++pStr;
 		}
 		return nullptr;
 	}
 
-	const utf16* StringUtil::stristr( const utf16* str, const utf16* substr )
+	const utf16* StringUtil::stristr( const utf16* pStr, const utf16* pSubstr )
 	{
-		if ( isNullOrEmpty( str ) || isNullOrEmpty( substr ) )
+		if ( isNullOrEmpty( pStr ) || isNullOrEmpty( pSubstr ) )
 			return nullptr;
 
-		const size_t subLen = strlen( substr );
-		while ( *str != L'\0' )
+		const size_t subLen = strlen( pSubstr );
+		while ( *pStr != L'\0' )
 		{
-			if ( equals( wstring_view( str, subLen ), wstring_view( substr, subLen ), true ) )
-				return str;
-			++str;
+			if ( equals( wstring_view( pStr, subLen ), wstring_view( pSubstr, subLen ), true ) )
+				return pStr;
+			++pStr;
 		}
 		return nullptr;
 	}
 
-	const utf8* StringUtil::strchr( const utf8* str, const utf8 c )
+	const utf8* StringUtil::strchr( const utf8* pStr, const utf8 ch )
 	{
-		if ( str == nullptr )
+		if ( pStr == nullptr )
 			return nullptr;
-		return ::strchr( str, c );
+		return ::strchr( pStr, ch );
 	}
 
-	const utf16* StringUtil::strchr( const utf16* str, const utf16 c )
+	const utf16* StringUtil::strchr( const utf16* pStr, const utf16 ch )
 	{
-		if ( str == nullptr )
+		if ( pStr == nullptr )
 			return nullptr;
-		return wcschr( str, c );
+		return wcschr( pStr, ch );
 	}
 
-	bool StringUtil::parseBool( string_view token, bool fallback )
+	bool StringUtil::parseBool( string_view token, bool bFallback )
 	{
 		const string_view trimmed = trim( token );
 		if ( trimmed.empty() )
-			return fallback;
+			return bFallback;
 		if ( trimmed == "1" || equals( trimmed, "true", true ) || equals( trimmed, "yes", true ) ||
 			 equals( trimmed, "on", true ) )
 			return true;
 		if ( trimmed == "0" || equals( trimmed, "false", true ) || equals( trimmed, "no", true ) ||
 			 equals( trimmed, "off", true ) )
 			return false;
-		return fallback;
+		return bFallback;
 	}
 
 	bool StringUtil::parseFloat( string_view token, float32& outValue )
@@ -1236,11 +1236,11 @@ namespace sw
 		return false;
 	}
 
-	bool StringUtil::isValidUTF8( const utf8* input )
+	bool StringUtil::isValidUTF8( const utf8* pInput )
 	{
-		if ( input == nullptr )
+		if ( pInput == nullptr )
 			return false;
-		return StringUtilInternal::isValidUtf8( reinterpret_cast<const uint8*>( input ), strlen( input ) );
+		return StringUtilInternal::isValidUtf8( reinterpret_cast<const uint8*>( pInput ), strlen( pInput ) );
 	}
 
 	StringChangeSpan StringUtil::makeChangeSpan( string_view before, string_view after )

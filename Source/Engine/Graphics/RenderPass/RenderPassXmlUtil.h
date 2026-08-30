@@ -72,11 +72,13 @@ namespace sw
 				{
 					string_splitter tokens( pAttClearColor, { ",", " " } );
 					const auto&		listToken = tokens.getSplitList();
+					float32			arrVal[4] = { att._clearColor._x, att._clearColor._y, att._clearColor._z, att._clearColor._w };
 					for ( size_t index = 0; index < listToken.size() && index < 4; ++index )
 					{
 						if ( listToken[index].empty() == false )
-							StringUtil::parseFloat( listToken[index], att._arrClearColor[index] );
+							StringUtil::parseFloat( listToken[index], arrVal[index] );
 					}
+					att._clearColor = float4( arrVal[0], arrVal[1], arrVal[2], arrVal[3] );
 				}
 
 				outListAttachment.push_back( std::move( att ) );
@@ -97,10 +99,10 @@ namespace sw
 				StringBuilder<constant::kMaxBuffer128> colorSS;
 				constexpr Format					   colorFmt( 4 );
 				colorSS.appendFormat( "%#,%#,%#,%#",
-									  Fmt( att._arrClearColor[0], colorFmt ),
-									  Fmt( att._arrClearColor[1], colorFmt ),
-									  Fmt( att._arrClearColor[2], colorFmt ),
-									  Fmt( att._arrClearColor[3], colorFmt ) );
+									  Fmt( att._clearColor._x, colorFmt ),
+									  Fmt( att._clearColor._y, colorFmt ),
+									  Fmt( att._clearColor._z, colorFmt ),
+									  Fmt( att._clearColor._w, colorFmt ) );
 				attNode.appendChild( "_clearColor", colorSS.view() );
 			}
 		}

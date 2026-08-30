@@ -62,7 +62,7 @@ namespace sw
 		~basic_fixed_string() = default;
 
 		/** @brief 널 종료 C 문자열을 복사하여 생성합니다. */
-		basic_fixed_string( const T* str );
+		basic_fixed_string( const T* pStr );
 
 		/** @brief std::basic_string 내용을 복사하여 생성합니다. */
 		basic_fixed_string( const std::basic_string<T>& str );
@@ -108,7 +108,7 @@ namespace sw
 		}
 
 		/** @brief 널 종료 C 문자열을 복사 대입합니다. */
-		basic_fixed_string& operator=( const T* str );
+		basic_fixed_string& operator=( const T* pStr );
 
 		/** @brief std::basic_string을 복사 대입합니다. */
 		basic_fixed_string& operator=( const std::basic_string<T>& str );
@@ -214,7 +214,7 @@ namespace sw
 		basic_fixed_string& append( const std::basic_string_view<T>& str );
 
 		/** @brief pos 위치부터 C 부분 문자열을 검색합니다. */
-		uint32 find( const T* str, uint32 pos = 0 ) const;
+		uint32 find( const T* pStr, uint32 pos = 0 ) const;
 		uint32 find( T c, uint32 pos = 0 ) const;
 		uint32 find( const basic_fixed_string& str, uint32 pos = 0 ) const { return find( str.c_str(), pos ); }
 		template <uint32 M>
@@ -230,18 +230,18 @@ namespace sw
 		int32 compare( const basic_fixed_string& other, bool bIgnoreCase = false ) const { return StringUtil::compare( _arrData, other._arrData, bIgnoreCase ); }
 		template <uint32 M>
 		int32 compare( const basic_fixed_string<T, M>& other, bool bIgnoreCase = false ) const { return StringUtil::compare( _arrData, other.c_str(), bIgnoreCase ); }
-		int32 compare( const T* str, bool bIgnoreCase = false ) const { return ( str != nullptr ) ? StringUtil::compare( _arrData, str, bIgnoreCase ) : 1; }
+		int32 compare( const T* pStr, bool bIgnoreCase = false ) const { return ( pStr != nullptr ) ? StringUtil::compare( _arrData, pStr, bIgnoreCase ) : 1; }
 
 		/** @brief 동등성 비교 (대소문자 무시 옵션) */
 		bool equals( const basic_fixed_string& other, bool bIgnoreCase = false ) const noexcept { return StringUtil::equals( _arrData, other._arrData, bIgnoreCase ); }
 		template <uint32 M>
 		bool equals( const basic_fixed_string<T, M>& other, bool bIgnoreCase = false ) const noexcept { return StringUtil::equals( _arrData, other.c_str(), bIgnoreCase ); }
-		bool equals( const T* str, bool bIgnoreCase = false ) const noexcept { return str != nullptr && StringUtil::equals( _arrData, str, bIgnoreCase ); }
+		bool equals( const T* pStr, bool bIgnoreCase = false ) const noexcept { return pStr != nullptr && StringUtil::equals( _arrData, pStr, bIgnoreCase ); }
 
 		basic_fixed_string& operator+=( const basic_fixed_string& other ) { return append( other ); }
 		template <uint32 M>
 		basic_fixed_string& operator+=( const basic_fixed_string<T, M>& other ) { return append( other ); }
-		basic_fixed_string& operator+=( const T* str ) { return append( str ); }
+		basic_fixed_string& operator+=( const T* pStr ) { return append( pStr ); }
 		basic_fixed_string& operator+=( T ch )
 		{
 			push_back( ch );
@@ -268,8 +268,8 @@ namespace sw
 		template <uint32 M>
 		bool operator>=( const basic_fixed_string<T, M>& other ) const { return compare( other ) >= 0; }
 
-		bool operator==( const T* str ) const { return compare( str ) == 0; }
-		bool operator!=( const T* str ) const { return compare( str ) != 0; }
+		bool operator==( const T* pStr ) const { return compare( pStr ) == 0; }
+		bool operator!=( const T* pStr ) const { return compare( pStr ) != 0; }
 
 		/** @brief 동적 std::basic_string으로의 명시적/암시적 변환 */
 		operator std::basic_string<T>() const { return std::basic_string<T>{ _arrData, size() }; }
@@ -291,15 +291,15 @@ namespace sw
 #pragma region IMPLEMENTATION
 
 	template <typename T, uint32 N>
-	basic_fixed_string<T, N>::basic_fixed_string( const T* str )
+	basic_fixed_string<T, N>::basic_fixed_string( const T* pStr )
 		: _arrData{}
 		, _size{ 0 }
 	{
-		if ( str != nullptr )
+		if ( pStr != nullptr )
 		{
-			const uint32 length = StringUtil::strlen( str );
+			const uint32 length = StringUtil::strlen( pStr );
 			SW_LOG_ASSERT( length <= N, "String too int32 for basic_fixed_string capacity" );
-			Memory::copy( _arrData, str, sizeof( T ) * length );
+			Memory::copy( _arrData, pStr, sizeof( T ) * length );
 			_size = length;
 		}
 		_arrData[_size] = T{ 0 };
@@ -357,13 +357,13 @@ namespace sw
 	}
 
 	template <typename T, uint32 N>
-	basic_fixed_string<T, N>& basic_fixed_string<T, N>::operator=( const T* str )
+	basic_fixed_string<T, N>& basic_fixed_string<T, N>::operator=( const T* pStr )
 	{
-		if ( str != nullptr )
+		if ( pStr != nullptr )
 		{
-			const uint32 length = StringUtil::strlen( str );
+			const uint32 length = StringUtil::strlen( pStr );
 			SW_LOG_ASSERT( length <= N, "String too int32 for basic_fixed_string capacity" );
-			Memory::copy( _arrData, str, sizeof( T ) * length );
+			Memory::copy( _arrData, pStr, sizeof( T ) * length );
 			_size = length;
 		}
 		else

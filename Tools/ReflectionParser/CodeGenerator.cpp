@@ -82,15 +82,15 @@ namespace sw
 			/**
 			 * @brief 타입 이름 목록을 C++ 배열 초기화 구문 `{ "int32", "string" }` 형태로 포맷팅합니다.
 			 */
-			static string makeQuotedTypeList( const vector<string>& types )
+			static string makeQuotedTypeList( const vector<string>& listType )
 			{
 				StringBuilder<constant::kMaxBuffer1024> b;
 				b.append( "{ " );
-				for ( size_t typeIndex = 0; typeIndex < types.size(); ++typeIndex )
+				for ( size_t typeIndex = 0; typeIndex < listType.size(); ++typeIndex )
 				{
 					if ( typeIndex > 0 )
 						b.append( ", " );
-					b.appendFormat( "\"%#\"", normalizeTypeName( types[typeIndex] ) );
+					b.appendFormat( "\"%#\"", normalizeTypeName( listType[typeIndex] ) );
 				}
 				b.append( " }" );
 				return string( b.view() );
@@ -99,14 +99,14 @@ namespace sw
 			/**
 			 * @brief 런타임 동적 함수 호출(Invoker)을 위한 인자 추출 구문 `args.get<T>(0), args.get<T>(1)...`을 생성합니다.
 			 */
-			static string makeInvokerCallArgs( const vector<string>& types )
+			static string makeInvokerCallArgs( const vector<string>& listType )
 			{
 				StringBuilder<constant::kMaxBuffer1024> b;
-				for ( size_t typeIndex = 0; typeIndex < types.size(); ++typeIndex )
+				for ( size_t typeIndex = 0; typeIndex < listType.size(); ++typeIndex )
 				{
 					if ( typeIndex > 0 )
 						b.append( ", " );
-					b.appendFormat( "args.get<%#>( %# )", normalizeTypeName( types[typeIndex] ), static_cast<uint32>( typeIndex ) );
+					b.appendFormat( "args.get<%#>( %# )", normalizeTypeName( listType[typeIndex] ), static_cast<uint32>( typeIndex ) );
 				}
 				return string( b.view() );
 			}

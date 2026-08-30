@@ -95,7 +95,7 @@ namespace sw
 
 		// Default clear pass (FrameRenderer may restart passes on this same buffer).
 		RHIRenderPassBeginInfo rpBegin{};
-		Memory::copy( rpBegin._arrClearColor, &clearColor._x, sizeof( rpBegin._arrClearColor ) );
+		rpBegin.setColorTarget( colorTarget, clearColor, RHIRenderPassLoadOp::Clear );
 		rpBegin._width	= record._width;
 		rpBegin._height = record._height;
 		beginRenderPass( rpBegin );
@@ -323,7 +323,7 @@ namespace sw
 		RHITextureHandle colorHandles[kMaxColorAttachments]{};
 		for ( uint32 attachmentIndex = 0; attachmentIndex < colorCount && attachmentIndex < kMaxColorAttachments; ++attachmentIndex )
 		{
-			colorHandles[attachmentIndex] = ( beginInfo._colorTargetCount > 0 ) ? beginInfo._arrColorTarget[attachmentIndex] : beginInfo._colorTarget;
+			colorHandles[attachmentIndex] = beginInfo._arrColorTarget[attachmentIndex];
 		}
 
 		if ( colorCount == 1 && colorHandles[0] == 0 && _pDevice->_activeOffscreenTarget != 0 )
@@ -345,9 +345,8 @@ namespace sw
 			key._colorCount = ( colorCount > kMaxColorAttachments ) ? kMaxColorAttachments : colorCount;
 			for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
 			{
-				key._arrColor[colorIndex] = colorHandles[colorIndex];
-				key._arrColorLoadOp[colorIndex] =
-					static_cast<uint8>( ( beginInfo._colorTargetCount > 0 ) ? beginInfo._arrLoadOp[colorIndex] : beginInfo._loadOp );
+				key._arrColor[colorIndex]		= colorHandles[colorIndex];
+				key._arrColorLoadOp[colorIndex] = static_cast<uint8>( beginInfo._arrLoadOp[colorIndex] );
 			}
 			key._depth		 = beginInfo._depthTarget;
 			key._depthLoadOp = static_cast<uint8>( beginInfo._depthLoadOp );
@@ -392,7 +391,7 @@ namespace sw
 
 			for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
 			{
-				const float32* pClear = ( beginInfo._colorTargetCount > 0 ) ? beginInfo._arrTargetClearColor[colorIndex] : beginInfo._arrClearColor;
+				const float32* pClear = &beginInfo._arrClearColor[colorIndex]._x;
 				setVkClearColor( clearValues[clearCount++], pClear );
 			}
 			if ( key._depth != 0 )
@@ -435,7 +434,7 @@ namespace sw
 				_pDevice->_bRenderPassActive = false;
 			}
 
-			const float32* pClear = ( beginInfo._colorTargetCount > 0 ) ? beginInfo._arrTargetClearColor[0] : beginInfo._arrClearColor;
+			const float32* pClear = &beginInfo._arrClearColor[0]._x;
 			setVkClearColor( clearValues[0], pClear );
 			clearCount = 1;
 		}

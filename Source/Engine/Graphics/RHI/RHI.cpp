@@ -22,7 +22,14 @@ namespace sw
 	SW_GLOBAL_VARIABLE_ENUM( gv_rhiCommandListMode, RHICommandListMode, RHICommandListMode::Deferred, "RHI 커맨드 리스트 모드: 0=Deferred, 1=Immediate" );
 
 	RHIPipelineStateDesc::RHIPipelineStateDesc() noexcept
-		: _topology{ RHIPrimitiveTopology::TriangleList }
+		: _vertexShaderPath{}
+		, _vertexEntryPoint{}
+		, _pixelShaderPath{}
+		, _pixelEntryPoint{}
+		, _computeShaderPath{}
+		, _computeEntryPoint{}
+		, _listShaderDefine{}
+		, _topology{ RHIPrimitiveTopology::TriangleList }
 		, _fillMode{ RHIFillMode::Solid }
 		, _cullMode{ RHICullMode::None }
 		, _numRenderTargets{ 1 }
@@ -45,16 +52,17 @@ namespace sw
 		, _clearStencil{ 0 }
 		, _bHasDepthStencil{ SW_FALSE }
 		, _reservedFlags{ 0 }
+		, _arrReserved{ 0, 0 }
 	{
 	}
 
 	RHITextureDesc::RHITextureDesc() noexcept
-		: _width{ 1 }
+		: _clearColor{ 0.0f, 0.0f, 0.0f, 0.0f }
+		, _width{ 1 }
 		, _height{ 1 }
 		, _depth{ 1 }
 		, _mipLevels{ 1 }
 		, _format{ RHIFormat::R8G8B8A8_UNORM }
-		, _arrClearColor{ 0.0f, 0.0f, 0.0f, 0.0f }
 		, _clearDepth{ 1.0f }
 		, _clearStencil{ 0 }
 		, _bIsRenderTarget{ SW_FALSE }
@@ -62,34 +70,38 @@ namespace sw
 		, _bIsShaderResource{ SW_TRUE }
 		, _bIsUnorderedAccess{ SW_FALSE }
 		, _reservedFlags{ 0 }
+		, _arrReserved{ 0, 0 }
 	{
 	}
 
 	RHIRenderPassBeginInfo::RHIRenderPassBeginInfo() noexcept
 		: _renderPass{ 0 }
-		, _colorTarget{ 0 }
 		, _arrColorTarget{}
 		, _depthTarget{ 0 }
+		, _arrClearColor{}
 		, _colorTargetCount{ 0 }
 		, _width{ 0 }
 		, _height{ 0 }
-		, _arrClearColor{ 0.1f, 0.1f, 0.1f, 1.0f }
-		, _arrTargetClearColor{}
 		, _clearDepth{ 1.0f }
-		, _loadOp{ RHIRenderPassLoadOp::Clear }
 		, _arrLoadOp{}
 		, _depthLoadOp{ RHIRenderPassLoadOp::Clear }
 		, _bBindColor{ SW_TRUE }
 		, _reservedFlags{ 0 }
+		, _arrReserved{ 0, 0, 0 }
 	{
 		for ( uint32 attachmentIndex = 0; attachmentIndex < kMaxColorAttachments; ++attachmentIndex )
 		{
-			_arrTargetClearColor[attachmentIndex][0] = 0.1f;
-			_arrTargetClearColor[attachmentIndex][1] = 0.1f;
-			_arrTargetClearColor[attachmentIndex][2] = 0.1f;
-			_arrTargetClearColor[attachmentIndex][3] = 1.0f;
-			_arrLoadOp[attachmentIndex]				 = RHIRenderPassLoadOp::Clear;
+			_arrClearColor[attachmentIndex] = float4{ 0.1f, 0.1f, 0.1f, 1.0f };
+			_arrLoadOp[attachmentIndex]		= RHIRenderPassLoadOp::Clear;
 		}
+	}
+
+	void RHIRenderPassBeginInfo::setColorTarget( RHITextureHandle target, const float4& clearColor, RHIRenderPassLoadOp loadOp )
+	{
+		_arrColorTarget[0] = target;
+		_arrClearColor[0]  = clearColor;
+		_arrLoadOp[0]	   = loadOp;
+		_colorTargetCount  = 1;
 	}
 
 	RHI::RHI()

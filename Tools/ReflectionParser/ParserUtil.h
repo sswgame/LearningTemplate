@@ -31,10 +31,10 @@ namespace sw
 		/**
 		 * @brief 소스 헤더를 clang --include 루트 기준 include 문자열로 바꿉니다.
 		 */
-		static string makeHeaderIncludePath( const string& sourceFilePath, const vector<string>& includePaths )
+		static string makeHeaderIncludePath( const string& sourceFilePath, const vector<string>& listIncludePath )
 		{
 			const string sourceSep = FileUtil::normalizeSeparators( sourceFilePath );
-			for ( const string& includeRoot : includePaths )
+			for ( const string& includeRoot : listIncludePath )
 			{
 				const string rootSep  = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( includeRoot ) );
 				const string rootNorm = FileUtil::normalizePath( rootSep );
@@ -51,7 +51,7 @@ namespace sw
 		/** @brief `<>` 밖의 `,` 만 분할하고 각 토큰을 trim 합니다. */
 		static vector<string> splitCommaRespectingAngles( string_view inner )
 		{
-			vector<string> out;
+			vector<string> listResult;
 			int32		   depth	  = 0;
 			size_t		   tokenStart = 0;
 
@@ -69,7 +69,7 @@ namespace sw
 					{
 						string_view token = StringUtil::trim( inner.substr( tokenStart, index - tokenStart ) );
 						if ( token.empty() == false )
-							out.emplace_back( token );
+							listResult.emplace_back( token );
 					}
 					tokenStart = index + 1;
 				}
@@ -78,9 +78,9 @@ namespace sw
 			{
 				string_view token = StringUtil::trim( inner.substr( tokenStart ) );
 				if ( token.empty() == false )
-					out.emplace_back( token );
+					listResult.emplace_back( token );
 			}
-			return out;
+			return listResult;
 		}
 
 		/** @brief FQN(예: "sw::EState::Idle")에서 말단 식별자 이름("Idle")을 추출합니다. */

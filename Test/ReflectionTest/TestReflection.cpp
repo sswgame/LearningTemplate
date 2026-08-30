@@ -60,8 +60,8 @@ namespace sw
 		int32			   _id	  = 101;
 		string			   _title = "HeroData";
 		int64			   _flags = static_cast<int64>( DummyBitFlag::OptionA ) | static_cast<int64>( DummyBitFlag::OptionC );
-		vector<int32>	   _scores;
-		map<string, int32> _stats;
+		vector<int32>	   _listScore;
+		map<string, int32> _mapStat;
 	};
 } // namespace sw
 
@@ -109,11 +109,11 @@ static void RegisterTypes( sw::TypeRegistry& registry )
 				  SW_OFFSET_OF( sw::ComplexData, _title ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr },
 				{ sw::hashed_string( "_flags" ), sw::hashed_string( "sw::DummyBitFlag" ),
 				  SW_OFFSET_OF( sw::ComplexData, _flags ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr },
-				{ sw::hashed_string( "_scores" ), sw::hashed_string( "vector" ),
-				  SW_OFFSET_OF( sw::ComplexData, _scores ), true, sw::ContainerKind::Sequence, sw::hashed_string( "int32" ), sw::hashed_string(),
+				{ sw::hashed_string( "_listScore" ), sw::hashed_string( "vector" ),
+				  SW_OFFSET_OF( sw::ComplexData, _listScore ), true, sw::ContainerKind::Sequence, sw::hashed_string( "int32" ), sw::hashed_string(),
 				  sw::make_shared<sw::VectorWrapper<sw::vector<int32>>>() },
-				{ sw::hashed_string( "_stats" ), sw::hashed_string( "map" ),
-				  SW_OFFSET_OF( sw::ComplexData, _stats ), true, sw::ContainerKind::Map, sw::hashed_string( "int32" ), sw::hashed_string( "string" ),
+				{ sw::hashed_string( "_mapStat" ), sw::hashed_string( "map" ),
+				  SW_OFFSET_OF( sw::ComplexData, _mapStat ), true, sw::ContainerKind::Map, sw::hashed_string( "int32" ), sw::hashed_string( "string" ),
 				  sw::make_shared<sw::MapWrapper<sw::map<sw::string, int32>>>() },
 		};
 		registry.registerClass( info );
@@ -909,11 +909,11 @@ SW_TEST_CASE( Reflection_Containers, MapWrapper )
 	SW_EXPECT_EQUAL( 2u, wrapper.getSize( &mp ) );
 
 	int32 elementCount{ 0 };
-	wrapper.forEach( &mp, [&]( const void* kPtr, const void* vPtr )
+	wrapper.forEach( &mp, [&]( const void* pKPtr, const void* pVPtr )
 	{
 		elementCount++;
-		const sw::string* key = static_cast<const sw::string*>( kPtr );
-		const int32*	  val = static_cast<const int32*>( vPtr );
+		const sw::string* key = static_cast<const sw::string*>( pKPtr );
+		const int32*	  val = static_cast<const int32*>( pVPtr );
 		if ( *key == "Atk" )
 		{
 			SW_EXPECT_EQUAL( 50, *val );
@@ -1013,10 +1013,10 @@ SW_TEST_CASE( Reflection_Serialization, BinaryRoundtrip )
 		return;
 
 	sw::ComplexData src;
-	src._id		= 999;
-	src._title	= "BinaryTest";
-	src._flags	= static_cast<int64>( sw::DummyBitFlag::OptionB );
-	src._scores = { 100, 200, 300 };
+	src._id		   = 999;
+	src._title	   = "BinaryTest";
+	src._flags	   = static_cast<int64>( sw::DummyBitFlag::OptionB );
+	src._listScore = { 100, 200, 300 };
 
 	sw::vector<uint8> buffer;
 	sw::BinarySerializer::serialize( &src, *typeInfo, buffer );
@@ -1029,11 +1029,11 @@ SW_TEST_CASE( Reflection_Serialization, BinaryRoundtrip )
 	SW_EXPECT_EQUAL( 999, dst._id );
 	SW_EXPECT_EQUAL( sw::string( "BinaryTest" ), dst._title );
 	SW_EXPECT_EQUAL( static_cast<int64>( sw::DummyBitFlag::OptionB ), dst._flags );
-	SW_EXPECT_EQUAL( 3u, static_cast<uint32>( dst._scores.size() ) );
-	if ( dst._scores.size() == 3 )
+	SW_EXPECT_EQUAL( 3u, static_cast<uint32>( dst._listScore.size() ) );
+	if ( dst._listScore.size() == 3 )
 	{
-		SW_EXPECT_EQUAL( 100, dst._scores[0] );
-		SW_EXPECT_EQUAL( 300, dst._scores[2] );
+		SW_EXPECT_EQUAL( 100, dst._listScore[0] );
+		SW_EXPECT_EQUAL( 300, dst._listScore[2] );
 	}
 }
 
@@ -1049,10 +1049,10 @@ SW_TEST_CASE( Reflection_Serialization, CompressedBinaryRoundtrip )
 		return;
 
 	sw::ComplexData src;
-	src._id		= 888;
-	src._title	= "CompressedBinaryTest";
-	src._flags	= static_cast<int64>( sw::DummyBitFlag::OptionA ) | static_cast<int64>( sw::DummyBitFlag::OptionC );
-	src._scores = { 10, 20, 30, 40, 50 };
+	src._id		   = 888;
+	src._title	   = "CompressedBinaryTest";
+	src._flags	   = static_cast<int64>( sw::DummyBitFlag::OptionA ) | static_cast<int64>( sw::DummyBitFlag::OptionC );
+	src._listScore = { 10, 20, 30, 40, 50 };
 
 	// 1) RLE 압축 직렬화
 	sw::vector<uint8> compBuffer;
@@ -1067,11 +1067,11 @@ SW_TEST_CASE( Reflection_Serialization, CompressedBinaryRoundtrip )
 	SW_EXPECT_EQUAL( 888, dst._id );
 	SW_EXPECT_EQUAL( sw::string( "CompressedBinaryTest" ), dst._title );
 	SW_EXPECT_EQUAL( src._flags, dst._flags );
-	SW_EXPECT_EQUAL( 5u, static_cast<uint32>( dst._scores.size() ) );
-	if ( dst._scores.size() == 5 )
+	SW_EXPECT_EQUAL( 5u, static_cast<uint32>( dst._listScore.size() ) );
+	if ( dst._listScore.size() == 5 )
 	{
-		SW_EXPECT_EQUAL( 10, dst._scores[0] );
-		SW_EXPECT_EQUAL( 50, dst._scores[4] );
+		SW_EXPECT_EQUAL( 10, dst._listScore[0] );
+		SW_EXPECT_EQUAL( 50, dst._listScore[4] );
 	}
 }
 
@@ -1087,9 +1087,9 @@ SW_TEST_CASE( Reflection_Serialization, JsonRoundtrip )
 		return;
 
 	sw::ComplexData src;
-	src._id		= 777;
-	src._title	= "JsonTest";
-	src._scores = { 5, 10, 15 };
+	src._id		   = 777;
+	src._title	   = "JsonTest";
+	src._listScore = { 5, 10, 15 };
 
 	sw::string json = sw::JsonSerializer::serialize( &src, *typeInfo );
 	SW_EXPECT_TRUE( json.empty() == false );
@@ -1100,7 +1100,7 @@ SW_TEST_CASE( Reflection_Serialization, JsonRoundtrip )
 	SW_EXPECT_TRUE( success );
 	SW_EXPECT_EQUAL( 777, dst._id );
 	SW_EXPECT_EQUAL( sw::string( "JsonTest" ), dst._title );
-	SW_EXPECT_EQUAL( 3u, static_cast<uint32>( dst._scores.size() ) );
+	SW_EXPECT_EQUAL( 3u, static_cast<uint32>( dst._listScore.size() ) );
 }
 
 /**
@@ -1115,9 +1115,9 @@ SW_TEST_CASE( Reflection_Serialization, XmlRapidXmlRoundtrip )
 		return;
 
 	sw::ComplexData src;
-	src._id		= 888;
-	src._title	= "XmlTest";
-	src._scores = { 1, 2, 3, 4 };
+	src._id		   = 888;
+	src._title	   = "XmlTest";
+	src._listScore = { 1, 2, 3, 4 };
 
 	sw::string xml = sw::XmlSerializer::serialize( &src, *typeInfo );
 	SW_EXPECT_TRUE( xml.empty() == false );
@@ -1128,14 +1128,14 @@ SW_TEST_CASE( Reflection_Serialization, XmlRapidXmlRoundtrip )
 	SW_EXPECT_TRUE( success );
 	SW_EXPECT_EQUAL( 888, dst._id );
 	SW_EXPECT_EQUAL( sw::string( "XmlTest" ), dst._title );
-	SW_EXPECT_EQUAL( 4u, static_cast<uint32>( dst._scores.size() ) );
+	SW_EXPECT_EQUAL( 4u, static_cast<uint32>( dst._listScore.size() ) );
 }
 
 struct SimpleXmlBackend : public sw::IXmlBackend
 {
 	sw::string								  _result;
 	sw::string								  _rootTagName;
-	sw::vector<sw::string>					  _listOpenTags;
+	sw::vector<sw::string>					  _listOpenTag;
 	sw::unordered_map<sw::string, sw::string> _mapKv;
 	bool									  _bOpenTagPending{ false };
 
@@ -1153,65 +1153,65 @@ struct SimpleXmlBackend : public sw::IXmlBackend
 		sw::string tag( pTag != nullptr ? pTag : "" );
 		_result += "<" + tag;
 		_bOpenTagPending = true;
-		_listOpenTags.push_back( tag );
+		_listOpenTag.push_back( tag );
 	}
 
 	void endNamedElement()
 	{
 		closeOpenTag();
-		if ( _listOpenTags.empty() )
+		if ( _listOpenTag.empty() )
 			return;
-		_result += "</" + _listOpenTags.back() + ">";
-		_listOpenTags.pop_back();
+		_result += "</" + _listOpenTag.back() + ">";
+		_listOpenTag.pop_back();
 	}
 
-	void initXmlSerialization( const utf8* rootTag ) override
+	void initXmlSerialization( const utf8* pRootTag ) override
 	{
-		_rootTagName	 = rootTag != nullptr ? rootTag : "";
+		_rootTagName	 = pRootTag != nullptr ? pRootTag : "";
 		_result			 = "<" + _rootTagName;
 		_bOpenTagPending = true;
 	}
-	void writeValue( const utf8* tag, const utf8* value ) override
+	void writeValue( const utf8* pTag, const utf8* pValue ) override
 	{
 		closeOpenTag();
-		_result += "<" + sw::string( tag ) + ">" + sw::string( value ) + "</" + sw::string( tag ) + ">";
-		_mapKv[sw::string( tag )] = value != nullptr ? value : "";
+		_result += "<" + sw::string( pTag ) + ">" + sw::string( pValue ) + "</" + sw::string( pTag ) + ">";
+		_mapKv[sw::string( pTag )] = pValue != nullptr ? pValue : "";
 	}
-	void writeAttribute( const utf8* attr, const utf8* value ) override
+	void writeAttribute( const utf8* pAttr, const utf8* pValue ) override
 	{
-		_result += " " + sw::string( attr ) + "=\"" + sw::string( value ) + "\"";
-		_mapKv[sw::string( attr )] = value != nullptr ? value : "";
+		_result += " " + sw::string( pAttr ) + "=\"" + sw::string( pValue ) + "\"";
+		_mapKv[sw::string( pAttr )] = pValue != nullptr ? pValue : "";
 	}
-	void beginArray( const utf8* tag ) override
+	void beginArray( const utf8* pTag ) override
 	{
-		beginNamedElement( tag );
+		beginNamedElement( pTag );
 	}
-	void writeArrayItem( const utf8* value ) override
+	void writeArrayItem( const utf8* pValue ) override
 	{
 		closeOpenTag();
-		_result += "<item>" + sw::string( value ) + "</item>";
+		_result += "<item>" + sw::string( pValue ) + "</item>";
 	}
 	void endArray() override
 	{
 		endNamedElement();
 	}
-	void beginMap( const utf8* tag ) override
+	void beginMap( const utf8* pTag ) override
 	{
-		beginNamedElement( tag );
+		beginNamedElement( pTag );
 	}
 	void beginMapEntry() override
 	{
 		beginNamedElement( "entry" );
 	}
-	void writeMapKey( const utf8* key ) override
+	void writeMapKey( const utf8* pKey ) override
 	{
 		closeOpenTag();
-		_result += "<key>" + sw::string( key ) + "</key>";
+		_result += "<key>" + sw::string( pKey ) + "</key>";
 	}
-	void writeMapValue( const utf8* value ) override
+	void writeMapValue( const utf8* pValue ) override
 	{
 		closeOpenTag();
-		_result += "<value>" + sw::string( value ) + "</value>";
+		_result += "<value>" + sw::string( pValue ) + "</value>";
 	}
 	void endMapEntry() override
 	{
@@ -1229,10 +1229,10 @@ struct SimpleXmlBackend : public sw::IXmlBackend
 		return _result;
 	}
 
-	bool initXmlDeserialization( const utf8* xmlStr, const utf8* rootTag ) override
+	bool initXmlDeserialization( const utf8* pXmlStr, const utf8* pRootTag ) override
 	{
-		(void)rootTag;
-		sw::string str( xmlStr );
+		(void)pRootTag;
+		sw::string str( pXmlStr );
 		size_t	   pos{ 0 };
 		while ( ( pos = str.find( '<', pos ) ) != sw::string::npos )
 		{
@@ -1287,9 +1287,9 @@ struct SimpleXmlBackend : public sw::IXmlBackend
 		}
 		return true;
 	}
-	bool readValue( const utf8* tag, sw::string& outValue ) override
+	bool readValue( const utf8* pTag, sw::string& outValue ) override
 	{
-		auto it = _mapKv.find( sw::string( tag ) );
+		auto it = _mapKv.find( sw::string( pTag ) );
 		if ( it != _mapKv.end() )
 		{
 			outValue = it->second;
@@ -1297,9 +1297,9 @@ struct SimpleXmlBackend : public sw::IXmlBackend
 		}
 		return false;
 	}
-	bool readAttribute( const utf8* attr, sw::string& outValue ) override
+	bool readAttribute( const utf8* pAttr, sw::string& outValue ) override
 	{
-		return readValue( attr, outValue );
+		return readValue( pAttr, outValue );
 	}
 	bool iterateArray( const utf8*, const sw::XmlArrayItemDelegate& ) override
 	{
@@ -1351,22 +1351,22 @@ SW_TEST_CASE( Reflection_Serialization, XmlJsonKeysIgnoreCaseValuesPreserveCase 
 
 	// 프로퍼티 키/태그는 대소문자가 달라도 되고, 문자열 값은 대소문자를 유지해야 한다.
 	const utf8* json =
-		R"({"_ID":77,"_TITLE":"CaseSensitiveValue","vector":[{"_name":"_scores","item":[1,2]}]})";
+		R"({"_ID":77,"_TITLE":"CaseSensitiveValue","vector":[{"_name":"_listScore","item":[1,2]}]})";
 	sw::ComplexData fromJson;
 	SW_EXPECT_TRUE( sw::JsonSerializer::deserialize( &fromJson, *typeInfo, json ) );
 	SW_EXPECT_EQUAL( 77, fromJson._id );
 	SW_EXPECT_EQUAL( sw::string( "CaseSensitiveValue" ), fromJson._title );
-	SW_EXPECT_EQUAL( 2u, static_cast<uint32>( fromJson._scores.size() ) );
+	SW_EXPECT_EQUAL( 2u, static_cast<uint32>( fromJson._listScore.size() ) );
 
 	const utf8* xml =
-		R"(<sw__ComplexData _ID="88" _TITLE="XmlCaseValue"><vector _name="_scores"><item>3</item><ITEM>4</ITEM></vector></sw__ComplexData>)";
+		R"(<sw__ComplexData _ID="88" _TITLE="XmlCaseValue"><vector _name="_listScore"><item>3</item><ITEM>4</ITEM></vector></sw__ComplexData>)";
 	sw::ComplexData fromXml;
 	SW_EXPECT_TRUE( sw::XmlSerializer::deserialize( &fromXml, *typeInfo, xml ) );
 	SW_EXPECT_EQUAL( 88, fromXml._id );
 	SW_EXPECT_EQUAL( sw::string( "XmlCaseValue" ), fromXml._title );
-	SW_EXPECT_EQUAL( 2u, static_cast<uint32>( fromXml._scores.size() ) );
-	SW_EXPECT_EQUAL( 3, fromXml._scores[0] );
-	SW_EXPECT_EQUAL( 4, fromXml._scores[1] );
+	SW_EXPECT_EQUAL( 2u, static_cast<uint32>( fromXml._listScore.size() ) );
+	SW_EXPECT_EQUAL( 3, fromXml._listScore[0] );
+	SW_EXPECT_EQUAL( 4, fromXml._listScore[1] );
 
 	SW_EXPECT_EQUAL( sw::string( "CaseSensitiveValue" ),
 					 sw::JsonSerializer::extractStringField( json, "_title" ) );
@@ -1385,8 +1385,8 @@ SW_TEST_CASE( Reflection_Serialization, XmlJsonKeysIgnoreCaseValuesPreserveCase 
 	SW_EXPECT_TRUE( sw::XmlSerializer::deserialize( &strictXml, *typeInfo, xml, strictCtx ) );
 	SW_EXPECT_EQUAL( 101, strictXml._id );
 	SW_EXPECT_EQUAL( sw::string( "HeroData" ), strictXml._title );
-	SW_EXPECT_EQUAL( 1u, static_cast<uint32>( strictXml._scores.size() ) ); // 정확 일치 "item"만, "ITEM" 제외
-	SW_EXPECT_EQUAL( 3, strictXml._scores[0] );
+	SW_EXPECT_EQUAL( 1u, static_cast<uint32>( strictXml._listScore.size() ) ); // 정확 일치 "item"만, "ITEM" 제외
+	SW_EXPECT_EQUAL( 3, strictXml._listScore[0] );
 };
 
 /**
@@ -1400,7 +1400,7 @@ SW_TEST_CASE( Reflection_Serialization, StrictDeserializeFailsOnBadContainerAndF
 	SW_ASSERT_TRUE( typeInfo != nullptr );
 
 	sw::ComplexData jsonContainer;
-	SW_EXPECT_FALSE( sw::JsonSerializer::deserialize( &jsonContainer, *typeInfo, R"({"vector":[{"_name":"_scores","item":[1,"not_an_int"]}]})" ) );
+	SW_EXPECT_FALSE( sw::JsonSerializer::deserialize( &jsonContainer, *typeInfo, R"({"vector":[{"_name":"_listScore","item":[1,"not_an_int"]}]})" ) );
 
 	sw::ComplexData jsonField;
 	SW_EXPECT_FALSE( sw::JsonSerializer::deserialize( &jsonField, *typeInfo, R"({"_id":"not_an_int"})" ) );
@@ -1412,12 +1412,12 @@ SW_TEST_CASE( Reflection_Serialization, StrictDeserializeFailsOnBadContainerAndF
 	sw::ComplexData xmlContainer;
 	SW_EXPECT_FALSE( sw::XmlSerializer::deserialize(
 		&xmlContainer, *typeInfo,
-		R"(<sw__ComplexData><vector _name="_scores"><item>1</item><item>not_an_int</item></vector></sw__ComplexData>)" ) );
+		R"(<sw__ComplexData><vector _name="_listScore"><item>1</item><item>not_an_int</item></vector></sw__ComplexData>)" ) );
 
 	sw::ComplexData jsonOk;
-	SW_EXPECT_TRUE( sw::JsonSerializer::deserialize( &jsonOk, *typeInfo, R"({"_id":7,"vector":[{"_name":"_scores","item":[1,2]}]})" ) );
+	SW_EXPECT_TRUE( sw::JsonSerializer::deserialize( &jsonOk, *typeInfo, R"({"_id":7,"vector":[{"_name":"_listScore","item":[1,2]}]})" ) );
 	SW_EXPECT_EQUAL( 7, jsonOk._id );
-	SW_EXPECT_EQUAL( 2u, static_cast<uint32>( jsonOk._scores.size() ) );
+	SW_EXPECT_EQUAL( 2u, static_cast<uint32>( jsonOk._listScore.size() ) );
 
 	sw::ComplexData jsonMalformed;
 	SW_EXPECT_FALSE( sw::JsonSerializer::deserialize( &jsonMalformed, *typeInfo, R"({"not_a_pair","_id":1})" ) );
@@ -1498,13 +1498,13 @@ SW_TEST_CASE( Reflection_Serialization, CustomSerializeContext )
 
 	customCtx.registerTextHandler(
 		sw::hashed_string( "int32" ),
-		[]( const void* ptr )
-	{ return sw::to_string( ( *static_cast<const int32*>( ptr ) ) * 10 ); },
-		[]( void* ptr, std::string_view s )
+		[]( const void* pPtr )
+	{ return sw::to_string( ( *static_cast<const int32*>( pPtr ) ) * 10 ); },
+		[]( void* pPtr, std::string_view s )
 	{
 		int32 val{ 0 };
 		sw::StringUtil::parseInt( s, val );
-		*static_cast<int32*>( ptr ) = val / 10;
+		*static_cast<int32*>( pPtr ) = val / 10;
 		return true;
 	} );
 
@@ -2067,10 +2067,10 @@ SW_TEST_CASE( Reflection_Binding, BiDirectionalPropertyBinding )
 	sw::PropertyInfo prop( sw::hashed_string( "score" ), sw::hashed_string( "uint32" ), SW_OFFSET_OF( TestBindingActor, _score ) );
 
 	bool bCalled{ false };
-	prop.bindOnChanged( SW_DELEGATE_LAMBDA( sw::PropertyInfo::PropertyBindingDelegate, [&bCalled]( const sw::PropertyInfo& p, const void* inst )
+	prop.bindOnChanged( SW_DELEGATE_LAMBDA( sw::PropertyInfo::PropertyBindingDelegate, [&bCalled]( const sw::PropertyInfo& p, const void* pInst )
 	{
 		(void)p;
-		(void)inst;
+		(void)pInst;
 		bCalled = true;
 	} ) );
 
@@ -2347,9 +2347,9 @@ SW_TEST_CASE( Reflection_TypeInfo, DynamicMethodInvoke )
 	sw::FunctionInfo funcInfo;
 	funcInfo._name	   = "addScore";
 	funcInfo._hashName = sw::hashed_string( "addScore" );
-	funcInfo._invoker  = SW_DELEGATE_LAMBDA( sw::Delegate<sw::TaskValue( void*, const sw::TaskArgs& )>, []( void* objPtr, const sw::TaskArgs& args ) -> sw::TaskValue
+	funcInfo._invoker  = SW_DELEGATE_LAMBDA( sw::Delegate<sw::TaskValue( void*, const sw::TaskArgs& )>, []( void* pObjPtr, const sw::TaskArgs& args ) -> sw::TaskValue
 	{
-		static_cast<InvokableTestActor*>( objPtr )->addScore( args.get<int32>( 0 ) );
+		static_cast<InvokableTestActor*>( pObjPtr )->addScore( args.get<int32>( 0 ) );
 		return sw::TaskValue{};
 	} );
 
@@ -2444,9 +2444,9 @@ SW_TEST_CASE( Reflection_FunctionMacro, AnnotatedMethodInvoke )
 	funcInfo._hashName				= sw::hashed_string( "takeDamage" );
 	funcInfo._returnTypeName		= "void";
 	funcInfo._listParameterTypeName = { "sw::int32" };
-	funcInfo._invoker				= SW_DELEGATE_LAMBDA( sw::Delegate<sw::TaskValue( void*, const sw::TaskArgs& )>, []( void* objPtr, const sw::TaskArgs& args ) -> sw::TaskValue
+	funcInfo._invoker				= SW_DELEGATE_LAMBDA( sw::Delegate<sw::TaskValue( void*, const sw::TaskArgs& )>, []( void* pObjPtr, const sw::TaskArgs& args ) -> sw::TaskValue
 	{
-		static_cast<FunctionAnnotatedActor*>( objPtr )->takeDamage( args.get<int32>( 0 ) );
+		static_cast<FunctionAnnotatedActor*>( pObjPtr )->takeDamage( args.get<int32>( 0 ) );
 		return sw::TaskValue{};
 	} );
 

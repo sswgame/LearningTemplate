@@ -83,7 +83,7 @@ namespace sw
 
 		// Inverse Distance Weighting (IDW)
 		float32		 totalWeight = 0.0f;
-		float32		 weights[32];
+		float32		 arrWeight[32];
 		const size_t sampleCount = MathUtil::min( _listSample.size(), static_cast<size_t>( 32 ) );
 
 		for ( size_t index = 0; index < sampleCount; ++index )
@@ -95,19 +95,19 @@ namespace sw
 			if ( distSq < 1e-5f )
 				return _listSample[index]._pose;
 
-			weights[index] = 1.0f / distSq;
-			totalWeight += weights[index];
+			arrWeight[index] = 1.0f / distSq;
+			totalWeight += arrWeight[index];
 		}
 
 		if ( totalWeight < 1e-6f )
 			return _listSample.front()._pose;
 
 		DualQuaternion accumDQ	   = DualQuaternion::fromMatrix( _listSample[0]._pose );
-		float32		   accumWeight = weights[0] / totalWeight;
+		float32		   accumWeight = arrWeight[0] / totalWeight;
 
 		for ( size_t index = 1; index < sampleCount; ++index )
 		{
-			const float32		 normalizedWeight = weights[index] / totalWeight;
+			const float32		 normalizedWeight = arrWeight[index] / totalWeight;
 			const float32		 blendFactor	  = normalizedWeight / ( accumWeight + normalizedWeight );
 			const DualQuaternion currentDQ		  = DualQuaternion::fromMatrix( _listSample[index]._pose );
 

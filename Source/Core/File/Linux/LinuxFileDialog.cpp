@@ -50,13 +50,13 @@ namespace sw
 			}
 
 			/** @brief PATH 환경변수를 탐색하여 주어진 이름의 실행 파일 경로를 찾습니다. */
-			static string findExecutable( const utf8* name )
+			static string findExecutable( const utf8* pName )
 			{
-				if ( name == nullptr || name[0] == '\0' )
+				if ( pName == nullptr || pName[0] == '\0' )
 					return {};
 
-				if ( std::strchr( name, '/' ) != nullptr )
-					return isExecutableFile( name ) ? string{ name } : string{};
+				if ( std::strchr( pName, '/' ) != nullptr )
+					return isExecutableFile( pName ) ? string{ pName } : string{};
 
 				const utf8* pathEnv = std::getenv( "PATH" );
 				if ( pathEnv == nullptr || pathEnv[0] == '\0' )
@@ -124,13 +124,13 @@ namespace sw
 			}
 
 			/** @brief 여러 확장자에 대한 조합된 Glob 리스트 문자열을 생성합니다. */
-			static string makeCombinedGlobList( const vector<string>& extensions )
+			static string makeCombinedGlobList( const vector<string>& listExtension )
 			{
-				if ( extensions.empty() )
+				if ( listExtension.empty() )
 					return "*";
 
 				string combined;
-				for ( const string& ext : extensions )
+				for ( const string& ext : listExtension )
 				{
 					if ( combined.empty() == false )
 						combined.push_back( ' ' );
@@ -154,16 +154,16 @@ namespace sw
 			{
 				outExitCode = -1;
 				const string commandNt( command );
-				FILE*		 pipe = popen( commandNt.c_str(), "r" );
-				if ( pipe == nullptr )
+				FILE*		 pPipe = popen( commandNt.c_str(), "r" );
+				if ( pPipe == nullptr )
 					return {};
 
 				utf8   arrBuffer[constant::kMaxBuffer4096];
 				string output;
-				while ( fgets( arrBuffer, sizeof( arrBuffer ), pipe ) != nullptr )
+				while ( fgets( arrBuffer, sizeof( arrBuffer ), pPipe ) != nullptr )
 					output += arrBuffer;
 
-				const int32 status = pclose( pipe );
+				const int32 status = pclose( pPipe );
 				if ( status == -1 )
 					outExitCode = -1;
 				else if ( WIFEXITED( status ) )
@@ -177,7 +177,7 @@ namespace sw
 			}
 
 			/** @brief 다중 파일 선택 결과를 구분자(separator) 기준으로 분리하여 배열에 담습니다. */
-			static void splitPaths( string_view output, utf8 separator, vector<string>& outPaths )
+			static void splitPaths( string_view output, utf8 separator, vector<string>& outListPath )
 			{
 				size_t start{ 0 };
 				while ( start < output.size() )
@@ -188,7 +188,7 @@ namespace sw
 					while ( part.empty() == false && ( part.back() == '\n' || part.back() == '\r' ) )
 						part.pop_back();
 					if ( part.empty() == false )
-						outPaths.push_back( FileUtil::normalizeSeparators( part ) );
+						outListPath.push_back( FileUtil::normalizeSeparators( part ) );
 					if ( sep == string::npos )
 						break;
 					start = sep + 1;

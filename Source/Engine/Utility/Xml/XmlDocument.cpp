@@ -16,10 +16,10 @@
 // RAPIDXML_NO_EXCEPTIONS 정의 시 RapidXML 내부에서 파싱 실패 시 호출하는 콜백 함수입니다.
 namespace rapidxml
 {
-	void parse_error_handler( const utf8* what, void* where )
+	void parse_error_handler( const utf8* pWhat, void* pWhere )
 	{
-		(void)where;
-		SW_LOG_ERROR( "RapidXML Parse Error: %#", what != nullptr ? what : "unknown" );
+		(void)pWhere;
+		SW_LOG_ERROR( "RapidXML Parse Error: %#", pWhat != nullptr ? pWhat : "unknown" );
 	}
 } // namespace rapidxml
 

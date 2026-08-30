@@ -666,14 +666,14 @@ namespace sw
 				return false;
 			}
 
-			void* mapped{ nullptr };
-			if ( FAILED( _vertexBuffer->Map( 0, nullptr, &mapped ) ) || mapped == nullptr )
+			void* pMapped{ nullptr };
+			if ( FAILED( _vertexBuffer->Map( 0, nullptr, &pMapped ) ) || pMapped == nullptr )
 			{
 				SW_LOG_ERROR( "Failed to map fullscreen vertex buffer." );
 				_vertexBuffer.Reset();
 				return false;
 			}
-			Memory::copy( mapped, arrFullscreenVerts, sizeof( arrFullscreenVerts ) );
+			Memory::copy( pMapped, arrFullscreenVerts, sizeof( arrFullscreenVerts ) );
 			_vertexBuffer->Unmap( 0, nullptr );
 		}
 

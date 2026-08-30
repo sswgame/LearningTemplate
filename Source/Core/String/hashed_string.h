@@ -74,8 +74,8 @@ namespace sw
 			: _stringKeyIndex{ static_cast<uint32>( type ) } {}
 
 		/** @brief 길이만큼 intern 하고 인덱스를 붙입니다. */
-		basic_hashed_string( const value_type* str, const size_type length ) noexcept
-			: _stringKeyIndex{ helper( str, length ) } {}
+		basic_hashed_string( const value_type* pStr, const size_type length ) noexcept
+			: _stringKeyIndex{ helper( pStr, length ) } {}
 
 		/** @brief string_view를 intern 하고 인덱스를 붙입니다. */
 		explicit basic_hashed_string( const std::basic_string_view<value_type> sv ) noexcept
@@ -92,8 +92,8 @@ namespace sw
 			: _stringKeyIndex{ helper( str ) } {}
 
 		/** @brief 널 종료 문자열을 intern 하고 인덱스를 붙입니다. */
-		explicit basic_hashed_string( const T* str ) noexcept
-			: _stringKeyIndex{ helper( str ) } {}
+		explicit basic_hashed_string( const T* pStr ) noexcept
+			: _stringKeyIndex{ helper( pStr ) } {}
 
 		/**
 		 * @brief intern 된 문자 수입니다 (널 제외). Lock-Free O(1)로 조회합니다.
@@ -137,10 +137,10 @@ namespace sw
 
 	private:
 		/** @brief 해시 인턴 인덱스를 구합니다. */
-		static uint32 helper( const T* str ) noexcept { return helper( str, StringUtil::strlen( str ) ); }
+		static uint32 helper( const T* pStr ) noexcept { return helper( pStr, StringUtil::strlen( pStr ) ); }
 
 		/** @brief 전역 intern 테이블에서 인덱스를 찾거나 넣습니다. */
-		static uint32 helper( const T* str, size_type length ) noexcept;
+		static uint32 helper( const T* pStr, size_type length ) noexcept;
 
 	public:
 		/** @brief intern 맵·Paged Chunk 테이블·아레나 저장소입니다. */
@@ -151,11 +151,11 @@ namespace sw
 		struct StringKey;
 
 		/** @brief 지정 intern 테이블에 넣고 인덱스를 붙입니다 (사전 정의 이름용). */
-		basic_hashed_string( AllocationInfo& info, const T* str ) noexcept
-			: _stringKeyIndex{ helper_internal( info, str, StringUtil::strlen( str ) ) } {}
+		basic_hashed_string( AllocationInfo& info, const T* pStr ) noexcept
+			: _stringKeyIndex{ helper_internal( info, pStr, StringUtil::strlen( pStr ) ) } {}
 
 		/** @brief info 테이블에서 찾거나 복사본을 넣어 인덱스를 줍니다. */
-		static uint32 helper_internal( AllocationInfo& info, const T* str, size_type length ) noexcept;
+		static uint32 helper_internal( AllocationInfo& info, const T* pStr, size_type length ) noexcept;
 
 		/** @brief utf8/utf16 전역 intern 테이블입니다. */
 		static AllocationInfo& getAllocationInfo() noexcept;
@@ -338,7 +338,7 @@ namespace sw
 		}
 
 		/** @brief 문자열 아레나에서 연속 공간을 할당받아 문자열을 복사합니다. */
-		const value_type* allocateString( const value_type* str, const size_type length )
+		const value_type* allocateString( const value_type* pStr, const size_type length )
 		{
 			const size_t requiredChars = static_cast<size_t>( length ) + 1;
 			const size_t requiredBytes = requiredChars * sizeof( value_type );
@@ -346,11 +346,11 @@ namespace sw
 			// 64KB를 초과하는 대형 문자열은 개별 할당
 			if ( requiredBytes > kArenaBlockSize )
 			{
-				value_type* largeBuf = static_cast<value_type*>( Memory::allocMemory( requiredBytes ) );
-				std::char_traits<value_type>::copy( largeBuf, str, length );
-				largeBuf[length] = static_cast<value_type>( 0 );
-				_listLargeAllocation.push_back( largeBuf );
-				return largeBuf;
+				value_type* pLargeBuf = static_cast<value_type*>( Memory::allocMemory( requiredBytes ) );
+				std::char_traits<value_type>::copy( pLargeBuf, pStr, length );
+				pLargeBuf[length] = static_cast<value_type>( 0 );
+				_listLargeAllocation.push_back( pLargeBuf );
+				return pLargeBuf;
 			}
 
 			// 현재 블록 공간이 부족하면 새 64KB 블록 할당
@@ -361,11 +361,11 @@ namespace sw
 				_arenaOffset = 0;
 			}
 
-			value_type* dest = _pCurrentArenaBlock + _arenaOffset;
-			std::char_traits<value_type>::copy( dest, str, length );
-			dest[length] = static_cast<value_type>( 0 );
+			value_type* pDest = _pCurrentArenaBlock + _arenaOffset;
+			std::char_traits<value_type>::copy( pDest, pStr, length );
+			pDest[length] = static_cast<value_type>( 0 );
 			_arenaOffset += requiredChars;
-			return dest;
+			return pDest;
 		}
 
 	private:

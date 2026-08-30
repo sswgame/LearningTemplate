@@ -133,13 +133,13 @@ namespace sw
 		FSEventStreamInvalidate( stream );
 	}
 
-	uint32 MacFileWatcher::pollEvents( vector<FileChangeEvent>& outEvents )
+	uint32 MacFileWatcher::pollEvents( vector<FileChangeEvent>& outListEvent )
 	{
 		std::scoped_lock<mutex> lock{ _eventMutex };
 		const uint32			count = static_cast<uint32>( _listEventQueue.size() );
 		if ( count > 0 )
 		{
-			outEvents.insert( outEvents.end(), _listEventQueue.begin(), _listEventQueue.end() );
+			outListEvent.insert( outListEvent.end(), _listEventQueue.begin(), _listEventQueue.end() );
 			_listEventQueue.clear();
 		}
 		return count;

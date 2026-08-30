@@ -38,10 +38,10 @@ namespace sw::editor
 	{
 		struct EditorMenuBarInternal
 		{
-			static void onOpenSceneDialogResult( const vector<string>& listPaths )
+			static void onOpenSceneDialogResult( const vector<string>& listPath )
 			{
-				if ( listPaths.empty() == false )
-					EditorContext::get()->getWorkspace().requestLoadScene( listPaths[0] );
+				if ( listPath.empty() == false )
+					EditorContext::get()->getWorkspace().requestLoadScene( listPath[0] );
 			}
 
 			static void saveSceneOrPrompt()

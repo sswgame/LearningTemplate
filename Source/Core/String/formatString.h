@@ -286,17 +286,17 @@ namespace sw
 	public:
 		/** @brief 포맷 문자열을 버퍼에 씁니다. */
 		template <typename... Args>
-		static void formatstring( utf8* SW_RESTRICT buffer, uint32 capacity, string_view format, Args&&... args ) noexcept
+		static void formatstring( utf8* SW_RESTRICT pBuffer, uint32 capacity, string_view format, Args&&... args ) noexcept
 		{
-			SW_ASSERT( buffer != nullptr && capacity > 0 );
+			SW_ASSERT( pBuffer != nullptr && capacity > 0 );
 
 			uint32 pos{ 0 };
 			if constexpr ( sizeof...( args ) > 0 )
-				pos = formatInternal( buffer, 0, capacity, format, std::forward<Args>( args )... );
+				pos = formatInternal( pBuffer, 0, capacity, format, std::forward<Args>( args )... );
 			else
-				pos = write( buffer, 0, capacity, format );
+				pos = write( pBuffer, 0, capacity, format );
 
-			buffer[MathUtil::min( pos, capacity - 1 )] = '\0';
+			pBuffer[MathUtil::min( pos, capacity - 1 )] = '\0';
 		}
 
 	private:
@@ -482,17 +482,17 @@ namespace sw
 		template <typename T>
 		static uint32 addValue( utf8* SW_RESTRICT pBuffer, const uint32 pos, const uint32 capacity, T&& value ) noexcept
 		{
-			utf8 pTemp[kTempBufferSize];
+			utf8 arrTemp[kTempBufferSize];
 
 			if constexpr ( is_formatted_value_v<T> )
 			{
-				const uint32 valueLength = valueToString( pTemp, value.getValue(), value.getFormat() );
-				return addPadding( pBuffer, pos, capacity, string_view{ pTemp, valueLength }, value.getFormat() );
+				const uint32 valueLength = valueToString( arrTemp, value.getValue(), value.getFormat() );
+				return addPadding( pBuffer, pos, capacity, string_view{ arrTemp, valueLength }, value.getFormat() );
 			}
 			else
 			{
-				const uint32 valueLength = valueToString( pTemp, std::forward<T>( value ), Format{} );
-				return write( pBuffer, pos, capacity, string_view{ pTemp, valueLength } );
+				const uint32 valueLength = valueToString( arrTemp, std::forward<T>( value ), Format{} );
+				return write( pBuffer, pos, capacity, string_view{ arrTemp, valueLength } );
 			}
 		}
 
@@ -500,9 +500,9 @@ namespace sw
 		template <typename T>
 		static uint32 addValueWithFormat( utf8* SW_RESTRICT pBuffer, const uint32 pos, const uint32 capacity, T&& value, const Format& format ) noexcept
 		{
-			utf8		 pTemp[kTempBufferSize];
-			const uint32 valueLength = valueToString( pTemp, std::forward<T>( value ), format );
-			return write( pBuffer, pos, capacity, string_view{ pTemp, valueLength } );
+			utf8		 arrTemp[kTempBufferSize];
+			const uint32 valueLength = valueToString( arrTemp, std::forward<T>( value ), format );
+			return write( pBuffer, pos, capacity, string_view{ arrTemp, valueLength } );
 		}
 
 		/** @brief 값을 문자열로 변환합니다. */
@@ -696,59 +696,59 @@ namespace sw
 				return 4;
 			}
 
-			utf8* p = pBuf;
+			utf8* pCurrent = pBuf;
 			if ( value < 0 )
 			{
-				*p++  = '-';
-				value = -value;
+				*pCurrent++ = '-';
+				value		= -value;
 			}
 			else if ( format.isShowSign() )
-				*p++ = '+';
+				*pCurrent++ = '+';
 
 			const int32 precision = format.hasPrecision() ? format.getPrecision() : 6;
-			auto [pPtr, ec]		  = std::to_chars( p, pBuf + kFloatBufferSize, value, std::chars_format::fixed, precision );
+			auto [pPtr, ec]		  = std::to_chars( pCurrent, pBuf + kFloatBufferSize, value, std::chars_format::fixed, precision );
 
 			if ( static_cast<int32>( ec ) == 0 )
 			{
 				*pPtr = '\0';
 				return static_cast<size_t>( pPtr - pBuf );
 			}
-			return static_cast<size_t>( p - pBuf ) + fallbackFloatToString( p, value, precision );
+			return static_cast<size_t>( pCurrent - pBuf ) + fallbackFloatToString( pCurrent, value, precision );
 		}
 
 		/** @brief 실수를 문자열로 변환합니다(폴백). */
 		static size_t fallbackFloatToString( utf8* pBuf, const float64 value, const int32 precision ) noexcept
 		{
-			utf8*  p		= pBuf;
+			utf8*  pCurrent = pBuf;
 			uint64 int_part = static_cast<uint64>( value );
 
 			if ( int_part == 0 )
-				*p++ = '0';
+				*pCurrent++ = '0';
 			else
 			{
-				utf8*  pIntStart = p;
+				utf8*  pIntStart = pCurrent;
 				uint64 temp		 = int_part;
 				while ( temp > 0 )
 				{
-					*p++ = '0' + ( temp % 10 );
+					*pCurrent++ = '0' + ( temp % 10 );
 					temp /= 10;
 				}
-				std::reverse( pIntStart, p );
+				std::reverse( pIntStart, pCurrent );
 			}
 
 			if ( precision > 0 )
 			{
-				*p++		 = '.';
+				*pCurrent++	 = '.';
 				float64 frac = value - static_cast<float64>( int_part );
 				for ( int32 precisionIndex = 0; precisionIndex < precision; ++precisionIndex )
 				{
 					frac *= 10.0;
 					const int32 digit = static_cast<int32>( frac ) % 10;
-					*p++			  = static_cast<utf8>( '0' + digit );
+					*pCurrent++		  = static_cast<utf8>( '0' + digit );
 					frac -= digit;
 				}
 			}
-			return static_cast<size_t>( p - pBuf );
+			return static_cast<size_t>( pCurrent - pBuf );
 		}
 
 		/** @brief 추가합니다. */

@@ -53,14 +53,14 @@ namespace sw::editor
 		notifyChanged();
 	}
 
-	void SelectionManager::selectObjects( const vector<GameObjectPtr>& listObjs, SelectionMode mode )
+	void SelectionManager::selectObjects( const vector<GameObjectPtr>& listObj, SelectionMode mode )
 	{
 		pruneInvalid();
 
 		if ( mode == SelectionMode::Replace )
 			_listSelectedObject.clear();
 
-		for ( const GameObjectPtr& pObj : listObjs )
+		for ( const GameObjectPtr& pObj : listObj )
 		{
 			if ( pObj.isValid() == false )
 				continue;
@@ -141,12 +141,12 @@ namespace sw::editor
 		notifyChanged();
 	}
 
-	void SelectionManager::selectAssets( const vector<string>& listAssetPaths, SelectionMode mode )
+	void SelectionManager::selectAssets( const vector<string>& listAssetPath, SelectionMode mode )
 	{
 		if ( mode == SelectionMode::Replace )
 			_listSelectedAsset.clear();
 
-		for ( const string& path : listAssetPaths )
+		for ( const string& path : listAssetPath )
 		{
 			if ( path.empty() )
 				continue;

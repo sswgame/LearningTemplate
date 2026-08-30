@@ -62,7 +62,7 @@ namespace sw
 	/**
 	 * @brief 레이스 컨디션 감지 시 콜스택을 캡처하고 디버거를 중단합니다.
 	 */
-	void RaceDetectContext::triggerDataRace( const utf8* message )
+	void RaceDetectContext::triggerDataRace( const utf8* pMessage )
 	{
 		uint32	  state	  = _state.load( std::memory_order_relaxed );
 		uint32	  readers = state & 0xFFFF;
@@ -71,7 +71,7 @@ namespace sw
 		CallStackCapture::capture( callStack, 1 );
 		string stackTrace = CallStackCapture::symbolize( callStack );
 
-		SW_LOG_ERROR( "%s (ctx: %p, readers: %u, writers: %u)", message, this, readers, writers );
+		SW_LOG_ERROR( "%s (ctx: %p, readers: %u, writers: %u)", pMessage, this, readers, writers );
 
 		size_t start{ 0 };
 		while ( start < stackTrace.size() )

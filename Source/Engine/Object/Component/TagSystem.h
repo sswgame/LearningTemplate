@@ -176,19 +176,19 @@ namespace sw
 			return expr;
 		}
 
-		static TagQueryExpr allExprMatch( vector<TagQueryExpr> subExprs )
+		static TagQueryExpr allExprMatch( vector<TagQueryExpr> listSubExpr )
 		{
 			TagQueryExpr expr;
 			expr._type		  = TagQueryExprType::AllExprMatch;
-			expr._listSubExpr = std::move( subExprs );
+			expr._listSubExpr = std::move( listSubExpr );
 			return expr;
 		}
 
-		static TagQueryExpr anyExprMatch( vector<TagQueryExpr> subExprs )
+		static TagQueryExpr anyExprMatch( vector<TagQueryExpr> listSubExpr )
 		{
 			TagQueryExpr expr;
 			expr._type		  = TagQueryExprType::AnyExprMatch;
-			expr._listSubExpr = std::move( subExprs );
+			expr._listSubExpr = std::move( listSubExpr );
 			return expr;
 		}
 

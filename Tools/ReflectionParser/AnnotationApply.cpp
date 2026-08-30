@@ -86,14 +86,14 @@ namespace sw
 			};
 
 			/** @brief 쉼표/세미콜론으로 나눈 타입 별칭을 붙입니다. */
-			static void appendTypeAliases( vector<string>& outAliases, const string& raw )
+			static void appendTypeAliases( vector<string>& outListAlias, const string& raw )
 			{
 				const string_splitter parts( raw, { ",", ";" } );
 				for ( const string_view token : parts.getSplitList() )
 				{
 					const string trimmed = StringUtil::trim( string( token ).c_str() );
 					if ( trimmed.empty() == false )
-						outAliases.push_back( trimmed );
+						outListAlias.push_back( trimmed );
 				}
 			}
 
@@ -385,7 +385,7 @@ namespace sw
 		while ( args.empty() == false && ( args.front() == '(' || args.front() == ';' ) )
 			args.remove_prefix( 1 );
 
-		vector<string> tokens;
+		vector<string> listToken;
 		bool		   bInQuote	  = false;
 		size_t		   tokenStart = 0;
 
@@ -403,7 +403,7 @@ namespace sw
 				{
 					string_view token = StringUtil::trim( args.substr( tokenStart, charIndex - tokenStart ) );
 					if ( token.empty() == false )
-						tokens.emplace_back( token );
+						listToken.emplace_back( token );
 				}
 				tokenStart = charIndex + 1;
 			}
@@ -412,9 +412,9 @@ namespace sw
 		{
 			string_view token = StringUtil::trim( args.substr( tokenStart ) );
 			if ( token.empty() == false )
-				tokens.emplace_back( token );
+				listToken.emplace_back( token );
 		}
-		return tokens;
+		return listToken;
 	}
 
 	/** @brief REFLECT(...) 토큰을 ParsedTypeInfo 플래그·별칭에 적용합니다. */

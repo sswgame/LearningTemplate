@@ -407,12 +407,12 @@ namespace sw
 		params._listFilterExtension = { "xml" };
 		params._bEnableMultiselect	= false;
 
-		FileDialogDelegate del = SW_DELEGATE_LAMBDA( FileDialogDelegate, [pGameObject, onSaveDone]( const vector<string>& fileNames )
+		FileDialogDelegate del = SW_DELEGATE_LAMBDA( FileDialogDelegate, [pGameObject, onSaveDone]( const vector<string>& listFileName )
 		{
-			if ( fileNames.empty() == false && pGameObject != nullptr )
-				saveToXmlFile( pGameObject, fileNames.front() );
+			if ( listFileName.empty() == false && pGameObject != nullptr )
+				saveToXmlFile( pGameObject, listFileName.front() );
 			if ( onSaveDone.isBound() )
-				onSaveDone( fileNames );
+				onSaveDone( listFileName );
 		} );
 		FileUtil::openFileDialog( params, del );
 	}
@@ -425,12 +425,12 @@ namespace sw
 		params._listFilterExtension = { "xml" };
 		params._bEnableMultiselect	= false;
 
-		FileDialogDelegate del = SW_DELEGATE_LAMBDA( FileDialogDelegate, [pGameObject, onLoadDone]( const vector<string>& fileNames )
+		FileDialogDelegate del = SW_DELEGATE_LAMBDA( FileDialogDelegate, [pGameObject, onLoadDone]( const vector<string>& listFileName )
 		{
-			if ( fileNames.empty() == false && pGameObject != nullptr )
-				loadFromXmlFile( pGameObject, fileNames.front() );
+			if ( listFileName.empty() == false && pGameObject != nullptr )
+				loadFromXmlFile( pGameObject, listFileName.front() );
 			if ( onLoadDone.isBound() )
-				onLoadDone( fileNames );
+				onLoadDone( listFileName );
 		} );
 		FileUtil::openFileDialog( params, del );
 	}

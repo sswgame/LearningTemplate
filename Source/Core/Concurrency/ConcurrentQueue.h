@@ -51,13 +51,13 @@ namespace sw
 		/** @brief 복사로 요소를 넣습니다. 가득 차면 false. */
 		SW_INLINE bool enqueue( const T& item )
 		{
-			Cell*  cell;
+			Cell*  pCell{ nullptr };
 			uint32 pos = _enqueuePos.load( std::memory_order_relaxed );
 
 			for ( ;; )
 			{
-				cell		  = &_arrBuffer[pos & kMask];
-				uint32	 seq  = cell->_sequence.load( std::memory_order_acquire );
+				pCell		  = &_arrBuffer[pos & kMask];
+				uint32	 seq  = pCell->_sequence.load( std::memory_order_acquire );
 				intptr_t diff = static_cast<intptr_t>( seq ) - static_cast<intptr_t>( pos );
 
 				if ( diff == 0 )
@@ -71,21 +71,21 @@ namespace sw
 					pos = _enqueuePos.load( std::memory_order_relaxed );
 			}
 
-			cell->_data = item;
-			cell->_sequence.store( pos + 1, std::memory_order_release );
+			pCell->_data = item;
+			pCell->_sequence.store( pos + 1, std::memory_order_release );
 			return true;
 		}
 
 		/** @brief 이동으로 요소를 넣습니다. 가득 차면 false. */
 		SW_INLINE bool enqueue( T&& item )
 		{
-			Cell*  cell;
+			Cell*  pCell{ nullptr };
 			uint32 pos = _enqueuePos.load( std::memory_order_relaxed );
 
 			for ( ;; )
 			{
-				cell		  = &_arrBuffer[pos & kMask];
-				uint32	 seq  = cell->_sequence.load( std::memory_order_acquire );
+				pCell		  = &_arrBuffer[pos & kMask];
+				uint32	 seq  = pCell->_sequence.load( std::memory_order_acquire );
 				intptr_t diff = static_cast<intptr_t>( seq ) - static_cast<intptr_t>( pos );
 
 				if ( diff == 0 )
@@ -99,21 +99,21 @@ namespace sw
 					pos = _enqueuePos.load( std::memory_order_relaxed );
 			}
 
-			cell->_data = std::move( item );
-			cell->_sequence.store( pos + 1, std::memory_order_release );
+			pCell->_data = std::move( item );
+			pCell->_sequence.store( pos + 1, std::memory_order_release );
 			return true;
 		}
 
 		/** @brief 앞에서 요소를 꺼냅니다. 비어 있으면 false. */
 		SW_INLINE bool dequeue( T& outItem )
 		{
-			Cell*  cell;
+			Cell*  pCell{ nullptr };
 			uint32 pos = _dequeuePos.load( std::memory_order_relaxed );
 
 			for ( ;; )
 			{
-				cell		  = &_arrBuffer[pos & kMask];
-				uint32	 seq  = cell->_sequence.load( std::memory_order_acquire );
+				pCell		  = &_arrBuffer[pos & kMask];
+				uint32	 seq  = pCell->_sequence.load( std::memory_order_acquire );
 				intptr_t diff = static_cast<intptr_t>( seq ) - static_cast<intptr_t>( pos + 1 );
 
 				if ( diff == 0 )
@@ -127,8 +127,8 @@ namespace sw
 					pos = _dequeuePos.load( std::memory_order_relaxed );
 			}
 
-			outItem = std::move( cell->_data );
-			cell->_sequence.store( pos + kMask + 1, std::memory_order_release );
+			outItem = std::move( pCell->_data );
+			pCell->_sequence.store( pos + kMask + 1, std::memory_order_release );
 			return true;
 		}
 

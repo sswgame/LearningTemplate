@@ -130,8 +130,8 @@ namespace sw
 						const string	micPath	  = pGameData != nullptr ? pGameData->_glassMaterialInstance : "game/demo/materials/glassorange.materialinstance";
 						if ( s_glassMaterialInstance->loadFromFile( micPath ) == false )
 						{
-							constexpr float32 arrGlassColor[4] = { 1.0f, 0.4f, 0.0f, 0.5f };
-							s_glassMaterialInstance->setVectorParameter( hashed_string( "color" ), arrGlassColor );
+							constexpr float4 glassColor{ 1.0f, 0.4f, 0.0f, 0.5f };
+							s_glassMaterialInstance->setVectorParameter( hashed_string( "color" ), glassColor );
 							s_glassMaterialInstance->setScalarParameter( hashed_string( "roughness" ), 0.05f );
 						}
 						pGlassMesh->setMaterialInstance( s_glassMaterialInstance );

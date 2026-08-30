@@ -40,13 +40,10 @@ SW_TEST_CASE( RenderPassTest, XmlSerializationRoundtrip )
 	desc._name					= "UnitTestRenderPass";
 
 	sw::RenderPassAttachment colorAtt{};
-	colorAtt._name			   = "Color0";
-	colorAtt._format		   = "R8G8B8A8_UNORM";
-	colorAtt._arrClearColor[0] = 0.5f;
-	colorAtt._arrClearColor[1] = 0.2f;
-	colorAtt._arrClearColor[2] = 0.8f;
-	colorAtt._arrClearColor[3] = 1.0f;
-	colorAtt._bClear		   = true;
+	colorAtt._name		 = "Color0";
+	colorAtt._format	 = "R8G8B8A8_UNORM";
+	colorAtt._clearColor = sw::float4{ 0.5f, 0.2f, 0.8f, 1.0f };
+	colorAtt._bClear	 = true;
 	desc._listAttachment.push_back( colorAtt );
 
 	sw::string testPath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "test_renderpass_roundtrip.xml" );
@@ -109,13 +106,10 @@ SW_TEST_CASE( RenderPassTest, PipelineXmlSerializationRoundtrip )
 	desc._shadingModel				= "Forward";
 
 	sw::RenderPassAttachment colorAtt{};
-	colorAtt._name			   = "SceneColor";
-	colorAtt._format		   = "R8G8B8A8_UNORM";
-	colorAtt._arrClearColor[0] = 0.1f;
-	colorAtt._arrClearColor[1] = 0.2f;
-	colorAtt._arrClearColor[2] = 0.3f;
-	colorAtt._arrClearColor[3] = 1.0f;
-	colorAtt._bClear		   = true;
+	colorAtt._name		 = "SceneColor";
+	colorAtt._format	 = "R8G8B8A8_UNORM";
+	colorAtt._clearColor = sw::float4{ 0.1f, 0.2f, 0.3f, 1.0f };
+	colorAtt._bClear	 = true;
 	desc._listAttachment.push_back( colorAtt );
 
 	sw::RenderGraphPassDesc pass{};
@@ -259,13 +253,13 @@ SW_TEST_CASE( RenderPassTest, RenderGraphExecuteCallbacks )
 	sw::RenderGraph		   graph;
 	sw::vector<sw::string> executed;
 
-	auto makeCb = [&executed]( const utf8* name ) -> sw::RenderGraphPassExecuteFn
+	auto makeCb = [&executed]( const utf8* pName ) -> sw::RenderGraphPassExecuteFn
 	{
 		return sw::RenderGraphPassExecuteFn(
-			SW_DELEGATE_LAMBDA( sw::RenderGraphPassExecuteFn, [&executed, name]( const sw::RenderGraphPassContext& ctx )
+			SW_DELEGATE_LAMBDA( sw::RenderGraphPassExecuteFn, [&executed, pName]( const sw::RenderGraphPassContext& ctx )
 		{
-			SW_EXPECT_STREQ( name, ctx._passName.c_str() );
-			executed.push_back( name );
+			SW_EXPECT_STREQ( pName, ctx._passName.c_str() );
+			executed.push_back( pName );
 		} ) );
 	};
 
@@ -292,12 +286,12 @@ SW_TEST_CASE( RenderPassTest, RenderGraphExecuteParallel )
 	sw::RenderGraph	   graph;
 	sw::atomic<uint32> executeCount{ 0 };
 
-	auto makeParallelCb = [&executeCount]( const utf8* expectedName ) -> sw::RenderGraphPassExecuteFn
+	auto makeParallelCb = [&executeCount]( const utf8* pExpectedName ) -> sw::RenderGraphPassExecuteFn
 	{
 		return sw::RenderGraphPassExecuteFn(
-			SW_DELEGATE_LAMBDA( sw::RenderGraphPassExecuteFn, [&executeCount, expectedName]( const sw::RenderGraphPassContext& ctx )
+			SW_DELEGATE_LAMBDA( sw::RenderGraphPassExecuteFn, [&executeCount, pExpectedName]( const sw::RenderGraphPassContext& ctx )
 		{
-			SW_EXPECT_STREQ( expectedName, ctx._passName.c_str() );
+			SW_EXPECT_STREQ( pExpectedName, ctx._passName.c_str() );
 			executeCount.fetch_add( 1, std::memory_order_relaxed );
 		} ) );
 	};
@@ -328,9 +322,9 @@ SW_TEST_CASE( RenderPassTest, GpuSceneBuildBatchesAndSortTransparent )
 	sw::shared_ptr<sw::Mesh> cube = sw::Mesh::createUnitCube();
 	SW_ASSERT_NOT_NULL( cube.get() );
 
-	auto addMeshAt = [&]( const utf8* name, float32 x, float32 z, sw::RHIBlendMode blend )
+	auto addMeshAt = [&]( const utf8* pName, float32 x, float32 z, sw::RHIBlendMode blend )
 	{
-		sw::GameObject* go = objects->createGameObject( sw::hashed_string( name ) );
+		sw::GameObject* go = objects->createGameObject( sw::hashed_string( pName ) );
 		SW_ASSERT_NOT_NULL( go );
 		sw::MeshComponent* mesh = go->addComponent<sw::MeshComponent>();
 		SW_ASSERT_NOT_NULL( mesh );

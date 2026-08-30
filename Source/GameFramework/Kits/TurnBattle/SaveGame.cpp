@@ -50,11 +50,11 @@ namespace sw
 		_listParty.clear();
 	}
 
-	void SaveGame::setPartyFrom( const vector<PartyMember>& party )
+	void SaveGame::setPartyFrom( const vector<PartyMember>& listParty )
 	{
 		_listParty.clear();
-		const size_t n = party.size() < SaveGameInternal::partyCap() ? party.size() : SaveGameInternal::partyCap();
-		_listParty.assign( party.begin(), party.begin() + static_cast<std::ptrdiff_t>( n ) );
+		const size_t n = listParty.size() < SaveGameInternal::partyCap() ? listParty.size() : SaveGameInternal::partyCap();
+		_listParty.assign( listParty.begin(), listParty.begin() + static_cast<std::ptrdiff_t>( n ) );
 	}
 
 	void SaveGame::ensureStarterParty()

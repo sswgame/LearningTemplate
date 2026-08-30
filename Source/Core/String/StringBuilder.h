@@ -137,13 +137,13 @@ namespace sw
 				newCapacity *= 2;
 			}
 
-			utf8* newBuffer = static_cast<utf8*>( Memory::allocMemory( newCapacity * sizeof( utf8 ) ) );
-			Memory::copy( newBuffer, _pBuffer, _length + 1 );
+			utf8* pNewBuffer = static_cast<utf8*>( Memory::allocMemory( newCapacity * sizeof( utf8 ) ) );
+			Memory::copy( pNewBuffer, _pBuffer, _length + 1 );
 
 			if ( _pDynamicBuffer != nullptr )
 				Memory::freeMemory( _pDynamicBuffer );
 
-			_pDynamicBuffer = newBuffer;
+			_pDynamicBuffer = pNewBuffer;
 			_pBuffer		= _pDynamicBuffer;
 			_capacity		= newCapacity;
 		}
@@ -163,23 +163,23 @@ namespace sw
 		}
 
 		/** @brief 널 종료 C 문자열을 뒤에 이어 붙입니다. */
-		SW_INLINE StringBuilder& append( const utf8* str )
+		SW_INLINE StringBuilder& append( const utf8* pStr )
 		{
-			if ( str == nullptr )
+			if ( pStr == nullptr )
 				return *this;
 
-			const uint32 strLen = StringUtil::strlen( str );
-			return append( str, strLen );
+			const uint32 strLen = StringUtil::strlen( pStr );
+			return append( pStr, strLen );
 		}
 
 		/** @brief 길이 지정 C 문자열을 뒤에 이어 붙입니다 (strlen 오버헤드 생략). */
-		SW_INLINE StringBuilder& append( const utf8* str, const uint32 strLen )
+		SW_INLINE StringBuilder& append( const utf8* pStr, const uint32 strLen )
 		{
-			if ( str == nullptr || strLen == 0 )
+			if ( pStr == nullptr || strLen == 0 )
 				return *this;
 
 			ensureCapacity( strLen );
-			Memory::copy( _pBuffer + _length, str, strLen );
+			Memory::copy( _pBuffer + _length, pStr, strLen );
 			_length += strLen;
 			_pBuffer[_length] = '\0';
 			return *this;
@@ -195,89 +195,58 @@ namespace sw
 		}
 
 		/**
-		 * @brief 32비트 정수를 `std::to_chars`로 내부 버퍼에 직접 고속 포맷팅하여 이어 붙입니다.
-		 * @details 포맷 파서(`formatstring`)와 임시 중간 버퍼를 거치지 않아 오버헤드가 없습니다.
+		 * @brief 32비트 정수를 내부 버퍼에 0-Alloc으로 고속 포맷팅하여 이어 붙입니다.
 		 */
 		SW_INLINE StringBuilder& append( const int32 val )
 		{
 			ensureCapacity( constant::kMaxBuffer16 );
-			auto [ptr, ec]	  = std::to_chars( _pBuffer + _length, _pBuffer + _capacity, val );
-			_length			  = static_cast<uint32>( ptr - _pBuffer );
-			_pBuffer[_length] = '\0';
+			_length += StringUtil::formatNumber( _pBuffer + _length, _capacity - _length, val );
 			return *this;
 		}
 
 		/**
-		 * @brief 32비트 부호없는 정수를 `std::to_chars`로 내부 버퍼에 직접 고속 포맷팅하여 이어 붙입니다.
+		 * @brief 32비트 부호없는 정수를 내부 버퍼에 0-Alloc으로 고속 포맷팅하여 이어 붙입니다.
 		 */
 		SW_INLINE StringBuilder& append( const uint32 val )
 		{
 			ensureCapacity( constant::kMaxBuffer16 );
-			auto [ptr, ec]	  = std::to_chars( _pBuffer + _length, _pBuffer + _capacity, val );
-			_length			  = static_cast<uint32>( ptr - _pBuffer );
-			_pBuffer[_length] = '\0';
+			_length += StringUtil::formatNumber( _pBuffer + _length, _capacity - _length, val );
 			return *this;
 		}
 
 		/**
-		 * @brief 64비트 정수를 `std::to_chars`로 내부 버퍼에 직접 고속 포맷팅하여 이어 붙입니다.
+		 * @brief 64비트 정수를 내부 버퍼에 0-Alloc으로 고속 포맷팅하여 이어 붙입니다.
 		 */
 		SW_INLINE StringBuilder& append( const int64 val )
 		{
 			ensureCapacity( constant::kMaxBuffer32 );
-			auto [ptr, ec]	  = std::to_chars( _pBuffer + _length, _pBuffer + _capacity, val );
-			_length			  = static_cast<uint32>( ptr - _pBuffer );
-			_pBuffer[_length] = '\0';
+			_length += StringUtil::formatNumber( _pBuffer + _length, _capacity - _length, val );
 			return *this;
 		}
 
 		/**
-		 * @brief 64비트 부호없는 정수를 `std::to_chars`로 내부 버퍼에 직접 고속 포맷팅하여 이어 붙입니다.
+		 * @brief 64비트 부호없는 정수를 내부 버퍼에 0-Alloc으로 고속 포맷팅하여 이어 붙입니다.
 		 */
 		SW_INLINE StringBuilder& append( const uint64 val )
 		{
 			ensureCapacity( constant::kMaxBuffer32 );
-			auto [ptr, ec]	  = std::to_chars( _pBuffer + _length, _pBuffer + _capacity, val );
-			_length			  = static_cast<uint32>( ptr - _pBuffer );
-			_pBuffer[_length] = '\0';
+			_length += StringUtil::formatNumber( _pBuffer + _length, _capacity - _length, val );
 			return *this;
 		}
 
-		/** @brief 32비트 실수를 고속 포맷팅하여 이어 붙입니다. */
+		/** @brief 32비트 실수를 내부 버퍼에 0-Alloc으로 고속 포맷팅하여 이어 붙입니다. */
 		SW_INLINE StringBuilder& append( const float32 val )
 		{
 			ensureCapacity( constant::kMaxBuffer32 );
-			auto [ptr, ec] = std::to_chars( _pBuffer + _length, _pBuffer + _capacity, val );
-			if ( ec == std::errc{} )
-			{
-				_length			  = static_cast<uint32>( ptr - _pBuffer );
-				_pBuffer[_length] = '\0';
-			}
-			else
-			{
-				utf8 tmp[constant::kMaxBuffer32];
-				formatstring( tmp, sizeof( tmp ), "%#", Fmt( val, Format( 4 ) ) );
-				append( tmp );
-			}
+			_length += StringUtil::formatNumber( _pBuffer + _length, _capacity - _length, val );
 			return *this;
 		}
 
-		/** @brief 64비트 실수를 고속 포맷팅하여 이어 붙입니다. */
+		/** @brief 64비트 실수를 내부 버퍼에 0-Alloc으로 고속 포맷팅하여 이어 붙입니다. */
 		SW_INLINE StringBuilder& append( const float64 val )
 		{
 			ensureCapacity( constant::kMaxBuffer64 );
-			auto [ptr, ec] = std::to_chars( _pBuffer + _length, _pBuffer + _capacity, val );
-			if ( ec == std::errc{} )
-			{
-				_length			  = static_cast<uint32>( ptr - _pBuffer );
-				_pBuffer[_length] = '\0';
-			}
-			else
-			{
-				utf8 tmp[constant::kMaxBuffer64];
-				formatstring( tmp, sizeof( tmp ), "%#", Fmt( val, Format( 6 ) ) );
-				append( tmp );
-			}
+			_length += StringUtil::formatNumber( _pBuffer + _length, _capacity - _length, val );
 			return *this;
 		}
 

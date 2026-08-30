@@ -140,9 +140,9 @@ namespace sw::editor
 				pContext->getWorkspace().pasteComponentAsNew( pObj );
 			}
 
-			static void onLoadPresetDialogResult( const vector<string>& listPaths )
+			static void onLoadPresetDialogResult( const vector<string>& listPath )
 			{
-				if ( listPaths.empty() )
+				if ( listPath.empty() )
 					return;
 				Component* pComp = paletteSelectedComponent();
 				if ( pComp == nullptr )
@@ -150,12 +150,12 @@ namespace sw::editor
 					paletteWarn( "Preset", "Select a component first" );
 					return;
 				}
-				EditorTransformCommands::loadComponentPreset( pComp, listPaths[0] );
+				EditorTransformCommands::loadComponentPreset( pComp, listPath[0] );
 			}
 
-			static void onSavePresetDialogResult( const vector<string>& listPaths )
+			static void onSavePresetDialogResult( const vector<string>& listPath )
 			{
-				if ( listPaths.empty() )
+				if ( listPath.empty() )
 					return;
 				Component* pComp = paletteSelectedComponent();
 				if ( pComp == nullptr )
@@ -163,7 +163,7 @@ namespace sw::editor
 					paletteWarn( "Preset", "Select a component first" );
 					return;
 				}
-				const string fileName = FileUtil::removeExtension( FileUtil::getFileNamePart( listPaths[0] ) );
+				const string fileName = FileUtil::removeExtension( FileUtil::getFileNamePart( listPath[0] ) );
 				if ( fileName.empty() )
 					return;
 				EditorTransformCommands::saveComponentPreset( pComp, fileName );

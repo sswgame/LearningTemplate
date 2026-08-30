@@ -62,12 +62,12 @@ namespace sw
 			: Base( static_cast<const Base&>( other ), pos, count, alloc ) {}
 
 		/** @brief C 문자열 count 문자를 복사합니다. */
-		basic_string( const CharT* s, size_type count, const Allocator& alloc = Allocator() )
-			: Base( s, count, alloc ) {}
+		basic_string( const CharT* pS, size_type count, const Allocator& alloc = Allocator() )
+			: Base( pS, count, alloc ) {}
 
 		/** @brief 널 종료 C 문자열을 복사합니다. */
-		basic_string( const CharT* s, const Allocator& alloc = Allocator() )
-			: Base( s, alloc ) {}
+		basic_string( const CharT* pS, const Allocator& alloc = Allocator() )
+			: Base( pS, alloc ) {}
 
 		/** @brief [first, last) 를 복사해 채웁니다. */
 		template <class InputIt>
@@ -420,18 +420,18 @@ namespace sw
 		}
 
 		/** @brief 원소를 삽입합니다. */
-		basic_string& insert( size_type index, const CharT* s )
+		basic_string& insert( size_type index, const CharT* pS )
 		{
 			SW_SCOPED_RACE_WRITE();
-			Base::insert( index, s );
+			Base::insert( index, pS );
 			return *this;
 		}
 
 		/** @brief 원소를 삽입합니다. */
-		basic_string& insert( size_type index, const CharT* s, size_type count )
+		basic_string& insert( size_type index, const CharT* pS, size_type count )
 		{
 			SW_SCOPED_RACE_WRITE();
-			Base::insert( index, s, count );
+			Base::insert( index, pS, count );
 			return *this;
 		}
 
@@ -541,18 +541,18 @@ namespace sw
 		}
 
 		/** @brief 뒤에 이어 붙입니다. */
-		basic_string& append( const CharT* s, size_type count )
+		basic_string& append( const CharT* pS, size_type count )
 		{
 			SW_SCOPED_RACE_WRITE();
-			Base::append( s, count );
+			Base::append( pS, count );
 			return *this;
 		}
 
 		/** @brief 뒤에 이어 붙입니다. */
-		basic_string& append( const CharT* s )
+		basic_string& append( const CharT* pS )
 		{
 			SW_SCOPED_RACE_WRITE();
-			Base::append( s );
+			Base::append( pS );
 			return *this;
 		}
 
@@ -595,7 +595,7 @@ namespace sw
 		}
 
 		/** @brief 더한 뒤 대입합니다. */
-		basic_string& operator+=( const CharT* s ) { return append( s ); }
+		basic_string& operator+=( const CharT* pS ) { return append( pS ); }
 		/** @brief 더한 뒤 대입합니다. */
 		basic_string& operator+=( std::initializer_list<CharT> ilist ) { return append( ilist ); }
 		/** @brief 더한 뒤 대입합니다. */
@@ -631,24 +631,24 @@ namespace sw
 		}
 
 		/** @brief 사전순으로 비교합니다. */
-		int32 compare( const CharT* s ) const
+		int32 compare( const CharT* pS ) const
 		{
 			SW_SCOPED_RACE_READ();
-			return Base::compare( s );
+			return Base::compare( pS );
 		}
 
 		/** @brief 사전순으로 비교합니다. */
-		int32 compare( size_type pos1, size_type count1, const CharT* s ) const
+		int32 compare( size_type pos1, size_type count1, const CharT* pS ) const
 		{
 			SW_SCOPED_RACE_READ();
-			return Base::compare( pos1, count1, s );
+			return Base::compare( pos1, count1, pS );
 		}
 
 		/** @brief 사전순으로 비교합니다. */
-		int32 compare( size_type pos1, size_type count1, const CharT* s, size_type count2 ) const
+		int32 compare( size_type pos1, size_type count1, const CharT* pS, size_type count2 ) const
 		{
 			SW_SCOPED_RACE_READ();
-			return Base::compare( pos1, count1, s, count2 );
+			return Base::compare( pos1, count1, pS, count2 );
 		}
 
 		/** @brief 같은지 비교합니다. */
@@ -665,17 +665,17 @@ namespace sw
 		bool operator>=( const basic_string& rhs ) const noexcept { return compare( rhs ) >= 0; }
 
 		/** @brief 같은지 비교합니다. */
-		bool operator==( const CharT* rhs ) const noexcept { return compare( rhs ) == 0; }
+		bool operator==( const CharT* pRhs ) const noexcept { return compare( pRhs ) == 0; }
 		/** @brief 다른지 비교합니다. */
-		bool operator!=( const CharT* rhs ) const noexcept { return compare( rhs ) != 0; }
+		bool operator!=( const CharT* pRhs ) const noexcept { return compare( pRhs ) != 0; }
 		/** @brief 사전순으로 작은지 비교합니다. */
-		bool operator<( const CharT* rhs ) const noexcept { return compare( rhs ) < 0; }
+		bool operator<( const CharT* pRhs ) const noexcept { return compare( pRhs ) < 0; }
 		/** @brief 작거나 같은지 비교합니다. */
-		bool operator<=( const CharT* rhs ) const noexcept { return compare( rhs ) <= 0; }
+		bool operator<=( const CharT* pRhs ) const noexcept { return compare( pRhs ) <= 0; }
 		/** @brief 사전순으로 큰지 비교합니다. */
-		bool operator>( const CharT* rhs ) const noexcept { return compare( rhs ) > 0; }
+		bool operator>( const CharT* pRhs ) const noexcept { return compare( pRhs ) > 0; }
 		/** @brief 크거나 같은지 비교합니다. */
-		bool operator>=( const CharT* rhs ) const noexcept { return compare( rhs ) >= 0; }
+		bool operator>=( const CharT* pRhs ) const noexcept { return compare( pRhs ) >= 0; }
 
 		// Search
 		/** @brief 키를 찾습니다. */
@@ -687,17 +687,17 @@ namespace sw
 		}
 
 		/** @brief 키를 찾습니다. */
-		size_type find( const CharT* s, size_type pos, size_type count ) const
+		size_type find( const CharT* pS, size_type pos, size_type count ) const
 		{
 			SW_SCOPED_RACE_READ();
-			return Base::find( s, pos, count );
+			return Base::find( pS, pos, count );
 		}
 
 		/** @brief 키를 찾습니다. */
-		size_type find( const CharT* s, size_type pos = 0 ) const
+		size_type find( const CharT* pS, size_type pos = 0 ) const
 		{
 			SW_SCOPED_RACE_READ();
-			return Base::find( s, pos );
+			return Base::find( pS, pos );
 		}
 
 		/** @brief 키를 찾습니다. */

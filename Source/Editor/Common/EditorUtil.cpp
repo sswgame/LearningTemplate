@@ -34,10 +34,10 @@ namespace sw::editor
 			/**
 			 * @brief 해당 디렉터리가 실제로 존재하는 경우에만 정규화하여 출력 목록에 추가합니다.
 			 */
-			static void appendIfDirectory( vector<string>& out, const string& candidate )
+			static void appendIfDirectory( vector<string>& outList, const string& candidate )
 			{
 				if ( candidate.empty() == false && FileUtil::directoryExists( candidate ) )
-					out.push_back( FileUtil::normalizeSeparators( candidate ) );
+					outList.push_back( FileUtil::normalizeSeparators( candidate ) );
 			}
 		};
 	} // namespace
@@ -130,9 +130,9 @@ namespace sw::editor
 	/**
 	 * @brief 우선순위 순서로 나열된 폰트 파일명 목록 중 가장 먼저 존재하는 폰트의 절대 경로를 반환합니다.
 	 */
-	string EditorUtil::resolveFontFile( const vector<string>& fileNames )
+	string EditorUtil::resolveFontFile( const vector<string>& listFileName )
 	{
-		for ( const string& name : fileNames )
+		for ( const string& name : listFileName )
 		{
 			if ( name.empty() )
 				continue;

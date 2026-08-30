@@ -101,13 +101,13 @@ namespace sw
 		return true;
 	}
 
-	uint32 LinuxFileWatcher::pollEvents( vector<FileChangeEvent>& outEvents )
+	uint32 LinuxFileWatcher::pollEvents( vector<FileChangeEvent>& outListEvent )
 	{
 		std::scoped_lock<mutex> lock{ _eventMutex };
 		const uint32			count = static_cast<uint32>( _listEventQueue.size() );
 		if ( count > 0 )
 		{
-			outEvents.insert( outEvents.end(), _listEventQueue.begin(), _listEventQueue.end() );
+			outListEvent.insert( outListEvent.end(), _listEventQueue.begin(), _listEventQueue.end() );
 			_listEventQueue.clear();
 		}
 		return count;
@@ -199,10 +199,10 @@ namespace sw
 				ssize_t offset{ 0 };
 				while ( offset < bytesRead )
 				{
-					const inotify_event* event = reinterpret_cast<const inotify_event*>( buffer + offset );
-					offset += static_cast<ssize_t>( sizeof( inotify_event ) + event->len );
+					const inotify_event* pEvent = reinterpret_cast<const inotify_event*>( buffer + offset );
+					offset += static_cast<ssize_t>( sizeof( inotify_event ) + pEvent->len );
 
-					if ( event->mask & IN_Q_OVERFLOW )
+					if ( pEvent->mask & IN_Q_OVERFLOW )
 					{
 						SW_LOG_WARNING( "inotify queue overflow — emitting synthetic rescan event." );
 						pushEvent( FileWatcherAction::Modified, _directoryPath, {} );
@@ -212,25 +212,25 @@ namespace sw
 					string watchedDir;
 					{
 						std::scoped_lock<mutex> lock{ _watchMutex };
-						auto					it = _mapWatchDescriptorToPath.find( event->wd );
+						auto					it = _mapWatchDescriptorToPath.find( pEvent->wd );
 						if ( it == _mapWatchDescriptorToPath.end() )
 							continue;
 						watchedDir = it->second;
 					}
 
-					if ( event->mask & ( IN_DELETE_SELF | IN_MOVE_SELF | IN_IGNORED ) )
+					if ( pEvent->mask & ( IN_DELETE_SELF | IN_MOVE_SELF | IN_IGNORED ) )
 					{
-						removeWatch( event->wd );
+						removeWatch( pEvent->wd );
 						continue;
 					}
 
-					if ( event->len == 0 || event->name[0] == '\0' )
+					if ( pEvent->len == 0 || pEvent->name[0] == '\0' )
 						continue;
 
-					const string name( event->name );
-					const bool	 bIsDir = ( event->mask & IN_ISDIR ) != 0;
+					const string name( pEvent->name );
+					const bool	 bIsDir = ( pEvent->mask & IN_ISDIR ) != 0;
 
-					if ( ( event->mask & IN_CREATE ) && bIsDir && _bRecursive )
+					if ( ( pEvent->mask & IN_CREATE ) && bIsDir && _bRecursive )
 					{
 						const string childDir = FileUtil::normalizeSeparators( FileUtil::joinPath( watchedDir, name ) );
 						if ( addWatchDirectory( childDir ) == false )
@@ -241,15 +241,15 @@ namespace sw
 						continue;
 					}
 
-					if ( event->mask & IN_CREATE )
+					if ( pEvent->mask & IN_CREATE )
 						pushEvent( FileWatcherAction::Added, watchedDir, name );
-					else if ( event->mask & IN_DELETE )
+					else if ( pEvent->mask & IN_DELETE )
 						pushEvent( FileWatcherAction::Removed, watchedDir, name );
-					else if ( event->mask & IN_MOVED_FROM )
+					else if ( pEvent->mask & IN_MOVED_FROM )
 						pushEvent( FileWatcherAction::RenamedOldName, watchedDir, name );
-					else if ( event->mask & IN_MOVED_TO )
+					else if ( pEvent->mask & IN_MOVED_TO )
 						pushEvent( FileWatcherAction::RenamedNewName, watchedDir, name );
-					else if ( event->mask & ( IN_MODIFY | IN_CLOSE_WRITE ) )
+					else if ( pEvent->mask & ( IN_MODIFY | IN_CLOSE_WRITE ) )
 						pushEvent( FileWatcherAction::Modified, watchedDir, name );
 				}
 			}

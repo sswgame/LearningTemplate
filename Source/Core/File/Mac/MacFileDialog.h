@@ -23,8 +23,8 @@ namespace sw
 	public:
 		/** @brief 인스턴스를 두지 않습니다. open 만 호출하세요. */
 		MacFileDialog() = delete;
-		/** @brief 네이티브 다이얼로그를 열고 선택 경로를 outPaths 에 담습니다. */
-		static bool open( const FileDialogParams& params, vector<string>& outPaths );
+		/** @brief 네이티브 다이얼로그를 열고 선택 경로를 outListPath 에 담습니다. */
+		static bool open( const FileDialogParams& params, vector<string>& outListPath );
 	};
 } // namespace sw
 

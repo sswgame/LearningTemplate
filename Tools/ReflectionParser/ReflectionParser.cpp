@@ -138,15 +138,15 @@ namespace sw
 
 		// 타임스탬프가 최신인 경우에만 플레이스홀더 검사 (헤더 수 KB만 읽어 I/O 축소)
 		constexpr uint32  kPlaceholderProbeBytes = 4096;
-		sw::vector<uint8> genHead;
-		sw::vector<uint8> headerHead;
-		if ( sw::FileUtil::readFile( genPath, genHead, 0, kPlaceholderProbeBytes ) == false )
+		sw::vector<uint8> genHeadBytes;
+		sw::vector<uint8> headerHeadBytes;
+		if ( sw::FileUtil::readFile( genPath, genHeadBytes, 0, kPlaceholderProbeBytes ) == false )
 			return false;
-		if ( sw::FileUtil::readFile( genHeaderPath, headerHead, 0, kPlaceholderProbeBytes ) == false )
+		if ( sw::FileUtil::readFile( genHeaderPath, headerHeadBytes, 0, kPlaceholderProbeBytes ) == false )
 			return false;
 
-		const string_view existingGen( reinterpret_cast<const utf8*>( genHead.data() ), genHead.size() );
-		const string_view existingHeader( reinterpret_cast<const utf8*>( headerHead.data() ), headerHead.size() );
+		const string_view existingGen( reinterpret_cast<const utf8*>( genHeadBytes.data() ), genHeadBytes.size() );
+		const string_view existingHeader( reinterpret_cast<const utf8*>( headerHeadBytes.data() ), headerHeadBytes.size() );
 		if ( isPlaceholder( existingGen ) || isPlaceholder( existingHeader ) )
 			return false;
 

@@ -77,8 +77,8 @@ namespace sw
 
 		_pCmd->beginEventMarker( string( passName ).c_str() );
 
-		float32 arrClearColor[4];
-		auto	colorLoadFor = [this]( string_view name, bool bForceLoad ) -> RHIRenderPassLoadOp
+		float4 clearColor	= _clearColor;
+		auto   colorLoadFor = [this]( string_view name, bool bForceLoad ) -> RHIRenderPassLoadOp
 		{
 			const hashed_string key( name.data(), static_cast<uint32>( name.length() ) );
 			if ( bForceLoad || std::find( _listClearedThisFrame.begin(), _listClearedThisFrame.end(), key ) != _listClearedThisFrame.end() )
@@ -95,7 +95,7 @@ namespace sw
 		if ( passType == FrameRendererUtil::PassType::kShadow )
 		{
 			clearPassTextureIndices();
-			const float32 depthClear = tryGetAttachmentClearColor( FrameRendererUtil::Attachment::kShadowMap, arrClearColor ) ? arrClearColor[0] : 1.0f;
+			const float32 depthClear = tryGetAttachmentClearColor( FrameRendererUtil::Attachment::kShadowMap, clearColor ) ? clearColor._x : 1.0f;
 			beginDepthOnlyPass( FrameRendererUtil::Attachment::kShadowMap, depthClear, colorLoadFor( FrameRendererUtil::Attachment::kShadowMap, false ) );
 			drawSceneMeshes( getEnginePso( FrameRendererUtil::PassType::kShadow ), passCb, false );
 			_pCmd->endRenderPass();
@@ -103,7 +103,7 @@ namespace sw
 		else if ( passType == FrameRendererUtil::PassType::kDepthPrepass || passType == "DepthPrepass" || passType == "Depth" || passType == "PrePass" )
 		{
 			clearPassTextureIndices();
-			const float32 depthClear = tryGetAttachmentClearColor( FrameRendererUtil::Attachment::kSceneDepth, arrClearColor ) ? arrClearColor[0] : 1.0f;
+			const float32 depthClear = tryGetAttachmentClearColor( FrameRendererUtil::Attachment::kSceneDepth, clearColor ) ? clearColor._x : 1.0f;
 			beginDepthOnlyPass( FrameRendererUtil::Attachment::kSceneDepth, depthClear, colorLoadFor( FrameRendererUtil::Attachment::kSceneDepth, false ) );
 			drawSceneMeshes( getEnginePso( FrameRendererUtil::PassType::kDepthPrepass ) != 0
 								 ? getEnginePso( FrameRendererUtil::PassType::kDepthPrepass )
@@ -116,9 +116,9 @@ namespace sw
 		{
 			clearPassTextureIndices();
 			setPassTexture( _passConstants._texShadow, FrameRendererUtil::Attachment::kShadowMap );
-			if ( tryGetAttachmentClearColor( FrameRendererUtil::Attachment::kSceneColor, arrClearColor ) == false )
-				Memory::copy( arrClearColor, _arrClearColor, sizeof( arrClearColor ) );
-			beginColorPass( FrameRendererUtil::Attachment::kSceneColor, FrameRendererUtil::Attachment::kSceneDepth, arrClearColor,
+			if ( tryGetAttachmentClearColor( FrameRendererUtil::Attachment::kSceneColor, clearColor ) == false )
+				clearColor = _clearColor;
+			beginColorPass( FrameRendererUtil::Attachment::kSceneColor, FrameRendererUtil::Attachment::kSceneDepth, clearColor,
 							colorLoadFor( FrameRendererUtil::Attachment::kSceneColor, false ), colorLoadFor( FrameRendererUtil::Attachment::kSceneDepth, false ) );
 
 			const RHIPipelineStateHandle psoForward = ( _bHasExecutedDepthPrepass != 0 && getEnginePso( "ForwardOpaqueNoDepthWrite" ) != 0 )
@@ -130,27 +130,19 @@ namespace sw
 		else if ( passType == FrameRendererUtil::PassType::kGBuffer )
 		{
 			clearPassTextureIndices();
-			if ( tryGetAttachmentClearColor( FrameRendererUtil::Attachment::kGBufferAlbedo, arrClearColor ) == false )
-			{
-				arrClearColor[0] = 0.0f;
-				arrClearColor[1] = 0.0f;
-				arrClearColor[2] = 0.0f;
-				arrClearColor[3] = 1.0f;
-			}
+			if ( tryGetAttachmentClearColor( FrameRendererUtil::Attachment::kGBufferAlbedo, clearColor ) == false )
+				clearColor = float4( 0.0f, 0.0f, 0.0f, 1.0f );
 
 			const bool bHasNormal = findTransient( FrameRendererUtil::Attachment::kGBufferNormal ) != 0;
 			const bool bUseMrt	  = bHasNormal && _pDevice->supportsMultiRenderTarget() &&
 									getEnginePso( FrameRendererUtil::PassType::kGBuffer ) != 0;
 			if ( bUseMrt )
 			{
-				float32 arrNormalClear[4] = { FrameRendererUtil::kNormalClear[0], FrameRendererUtil::kNormalClear[1], FrameRendererUtil::kNormalClear[2], FrameRendererUtil::kNormalClear[3] };
-				tryGetAttachmentClearColor( FrameRendererUtil::Attachment::kGBufferNormal, arrNormalClear );
-				const string  arrNames[]	  = { FrameRendererUtil::Attachment::kGBufferAlbedo, FrameRendererUtil::Attachment::kGBufferNormal };
-				const float32 arrClears[2][4] = {
-					{ arrClearColor[0],	arrClearColor[1],  arrClearColor[2],	arrClearColor[3]},
-					{arrNormalClear[0], arrNormalClear[1], arrNormalClear[2], arrNormalClear[3]}
-				   };
-				const RHIRenderPassLoadOp arrLoads[] = { colorLoadFor( FrameRendererUtil::Attachment::kGBufferAlbedo, false ), colorLoadFor( FrameRendererUtil::Attachment::kGBufferNormal, false ) };
+				float4 normalClear = FrameRendererUtil::kNormalClear;
+				tryGetAttachmentClearColor( FrameRendererUtil::Attachment::kGBufferNormal, normalClear );
+				const string			  arrNames[]   = { FrameRendererUtil::Attachment::kGBufferAlbedo, FrameRendererUtil::Attachment::kGBufferNormal };
+				const float4			  arrClears[2] = { clearColor, normalClear };
+				const RHIRenderPassLoadOp arrLoads[]   = { colorLoadFor( FrameRendererUtil::Attachment::kGBufferAlbedo, false ), colorLoadFor( FrameRendererUtil::Attachment::kGBufferNormal, false ) };
 				beginColorPassMRT( arrNames, arrClears, arrLoads, 2, FrameRendererUtil::Attachment::kSceneDepth, colorLoadFor( FrameRendererUtil::Attachment::kSceneDepth, false ) );
 				drawSceneMeshes( getEnginePso( FrameRendererUtil::PassType::kGBuffer ), passCb, false );
 				_pCmd->endRenderPass();
@@ -161,16 +153,16 @@ namespace sw
 					getEnginePso( FrameRendererUtil::PassType::kGBufferAlbedo ) != 0
 						? getEnginePso( FrameRendererUtil::PassType::kGBufferAlbedo )
 						: getEnginePso( FrameRendererUtil::PassType::kGBuffer );
-				beginColorPass( FrameRendererUtil::Attachment::kGBufferAlbedo, FrameRendererUtil::Attachment::kSceneDepth, arrClearColor,
+				beginColorPass( FrameRendererUtil::Attachment::kGBufferAlbedo, FrameRendererUtil::Attachment::kSceneDepth, clearColor,
 								colorLoadFor( FrameRendererUtil::Attachment::kGBufferAlbedo, false ), colorLoadFor( FrameRendererUtil::Attachment::kSceneDepth, false ) );
 				drawSceneMeshes( albedoPso != 0 ? albedoPso : 0, albedoPso != 0 ? passCb : matCb, false );
 				_pCmd->endRenderPass();
 
 				if ( bHasNormal )
 				{
-					float32 arrNormalClear[4] = { FrameRendererUtil::kNormalClear[0], FrameRendererUtil::kNormalClear[1], FrameRendererUtil::kNormalClear[2], FrameRendererUtil::kNormalClear[3] };
-					tryGetAttachmentClearColor( FrameRendererUtil::Attachment::kGBufferNormal, arrNormalClear );
-					beginColorPass( FrameRendererUtil::Attachment::kGBufferNormal, FrameRendererUtil::Attachment::kSceneDepth, arrNormalClear,
+					float4 normalClear = FrameRendererUtil::kNormalClear;
+					tryGetAttachmentClearColor( FrameRendererUtil::Attachment::kGBufferNormal, normalClear );
+					beginColorPass( FrameRendererUtil::Attachment::kGBufferNormal, FrameRendererUtil::Attachment::kSceneDepth, normalClear,
 									colorLoadFor( FrameRendererUtil::Attachment::kGBufferNormal, false ), RHIRenderPassLoadOp::Load );
 					drawSceneMeshes( getEnginePso( FrameRendererUtil::PassType::kGBufferNormal ), passCb, false );
 					_pCmd->endRenderPass();
@@ -185,9 +177,9 @@ namespace sw
 			setPassTexture( _passConstants._texDepth, FrameRendererUtil::Attachment::kSceneDepth );
 			setPassTexture( _passConstants._texShadow, FrameRendererUtil::Attachment::kShadowMap );
 			const string_view litTarget = findTransient( FrameRendererUtil::Attachment::kLitColor ) != 0 ? "LitColor" : "SceneColor";
-			if ( tryGetAttachmentClearColor( litTarget, arrClearColor ) == false )
-				Memory::copy( arrClearColor, _arrClearColor, sizeof( arrClearColor ) );
-			beginColorPass( litTarget, "", arrClearColor, colorLoadFor( litTarget, false ), RHIRenderPassLoadOp::Load );
+			if ( tryGetAttachmentClearColor( litTarget, clearColor ) == false )
+				clearColor = _clearColor;
+			beginColorPass( litTarget, "", clearColor, colorLoadFor( litTarget, false ), RHIRenderPassLoadOp::Load );
 			drawFullscreen( getEnginePso( FrameRendererUtil::PassType::kLighting ), passCb );
 			_pCmd->endRenderPass();
 		}
@@ -206,7 +198,7 @@ namespace sw
 				_listClearedThisFrame.push_back( hashed_string( colorTarget ) );
 			}
 
-			beginColorPass( colorTarget, depthTarget, _arrClearColor, RHIRenderPassLoadOp::Load, RHIRenderPassLoadOp::Load );
+			beginColorPass( colorTarget, depthTarget, _clearColor, RHIRenderPassLoadOp::Load, RHIRenderPassLoadOp::Load );
 			const RHIPipelineStateHandle transparentPso =
 				getEnginePso( FrameRendererUtil::PassType::kTransparent ) != 0
 					? getEnginePso( FrameRendererUtil::PassType::kTransparent )
@@ -217,11 +209,11 @@ namespace sw
 		else if ( passType == "SSAO" || passType == "HBAO" )
 		{
 			clearPassTextureIndices();
-			const string_view aoTarget		= findTransient( "AOColor" ) != 0 ? "AOColor" : FrameRendererUtil::Attachment::kSceneColor;
-			float32			  arrAoClear[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+			const string_view aoTarget = findTransient( "AOColor" ) != 0 ? "AOColor" : FrameRendererUtil::Attachment::kSceneColor;
+			constexpr float4  aoClear{ 1.0f, 1.0f, 1.0f, 1.0f };
 			setPassTexture( _passConstants._texDepth, FrameRendererUtil::Attachment::kSceneDepth );
 			setPassTexture( _passConstants._texNormal, FrameRendererUtil::Attachment::kGBufferNormal );
-			beginColorPass( aoTarget, "", arrAoClear, colorLoadFor( aoTarget, false ), RHIRenderPassLoadOp::Load );
+			beginColorPass( aoTarget, "", aoClear, colorLoadFor( aoTarget, false ), RHIRenderPassLoadOp::Load );
 			const RHIPipelineStateHandle aoPso =
 				getEnginePso( FrameRendererUtil::PassType::kSsao ) != 0 ? getEnginePso( FrameRendererUtil::PassType::kSsao ) : getEnginePso( FrameRendererUtil::PassType::kHbao );
 			drawFullscreen( aoPso, passCb );
@@ -234,9 +226,9 @@ namespace sw
 			const utf8*		  pSrcName	  = FrameRendererUtil::pickFirstExisting( _mapTransient, { "TransparentColor", "LitColor", "SceneColor", "GBufferAlbedo" } );
 			if ( pSrcName != nullptr )
 				setPassTexture( _passConstants._texSource, pSrcName );
-			if ( tryGetAttachmentClearColor( bloomTarget, arrClearColor ) == false )
-				Memory::copy( arrClearColor, _arrClearColor, sizeof( arrClearColor ) );
-			beginColorPass( bloomTarget, "", arrClearColor, colorLoadFor( bloomTarget, false ), RHIRenderPassLoadOp::Load );
+			if ( tryGetAttachmentClearColor( bloomTarget, clearColor ) == false )
+				clearColor = _clearColor;
+			beginColorPass( bloomTarget, "", clearColor, colorLoadFor( bloomTarget, false ), RHIRenderPassLoadOp::Load );
 			drawFullscreen( getEnginePso( FrameRendererUtil::PassType::kPostBloom ), passCb );
 			_pCmd->endRenderPass();
 		}
@@ -248,7 +240,7 @@ namespace sw
 			if ( pSrcName != nullptr )
 				setPassTexture( _passConstants._texSource, pSrcName );
 			setPassTexture( _passConstants._texSourceDepth, FrameRendererUtil::Attachment::kSceneDepth );
-			beginColorPass( outlineTarget, "", _arrClearColor, colorLoadFor( outlineTarget, false ), RHIRenderPassLoadOp::Load );
+			beginColorPass( outlineTarget, "", _clearColor, colorLoadFor( outlineTarget, false ), RHIRenderPassLoadOp::Load );
 			drawFullscreen( getEnginePso( FrameRendererUtil::PassType::kOutline ), passCb );
 			_pCmd->endRenderPass();
 		}
@@ -265,7 +257,7 @@ namespace sw
 					_taaHistorySrv = _pDevice->getResource()->registerBindlessTexture( _taaHistory );
 				_passConstants._texAlbedo = _taaHistorySrv;
 			}
-			beginColorPass( taaTarget, "", _arrClearColor, colorLoadFor( taaTarget, false ), RHIRenderPassLoadOp::Load );
+			beginColorPass( taaTarget, "", _clearColor, colorLoadFor( taaTarget, false ), RHIRenderPassLoadOp::Load );
 			const RHIPipelineStateHandle taaPso = getEnginePso( FrameRendererUtil::PassType::kTaa );
 			if ( taaPso != 0 )
 				drawFullscreen( taaPso, passCb );
@@ -300,7 +292,7 @@ namespace sw
 			const utf8* pSrcName = FrameRendererUtil::pickFirstExisting( _mapTransient, { "TaaColor", "OutlineColor", "BloomColor", "TransparentColor", "LitColor", "SceneColor" } );
 			if ( pSrcName != nullptr )
 				setPassTexture( _passConstants._texSource, pSrcName );
-			beginColorPass( tonemapTarget, "", _arrClearColor, colorLoadFor( tonemapTarget, false ), RHIRenderPassLoadOp::Load );
+			beginColorPass( tonemapTarget, "", _clearColor, colorLoadFor( tonemapTarget, false ), RHIRenderPassLoadOp::Load );
 			const RHIPipelineStateHandle tonemapPso =
 				getEnginePso( FrameRendererUtil::PassType::kTonemap ) != 0 ? getEnginePso( FrameRendererUtil::PassType::kTonemap ) : getEnginePso( FrameRendererUtil::PassType::kPresent );
 			drawFullscreen( tonemapPso, passCb );
@@ -318,10 +310,8 @@ namespace sw
 				setPassTexture( _passConstants._texSource, srcName );
 				RHIRenderPassBeginInfo beginInfo{};
 				beginInfo._bBindColor		 = 1;
-				beginInfo._colorTarget		 = dstTarget;
 				beginInfo._arrColorTarget[0] = dstTarget;
 				beginInfo._colorTargetCount	 = 1;
-				beginInfo._loadOp			 = RHIRenderPassLoadOp::DontCare;
 				beginInfo._arrLoadOp[0]		 = RHIRenderPassLoadOp::DontCare;
 				beginInfo._width			 = _transientWidth;
 				beginInfo._height			 = _transientHeight;
@@ -334,12 +324,8 @@ namespace sw
 			else
 			{
 				RHIRenderPassBeginInfo beginInfo{};
-				Memory::copy( beginInfo._arrClearColor, _arrClearColor, sizeof( beginInfo._arrClearColor ) );
-				beginInfo._loadOp			 = RHIRenderPassLoadOp::Load;
-				beginInfo._bBindColor		 = 1;
-				beginInfo._colorTarget		 = dstTarget;
-				beginInfo._arrColorTarget[0] = dstTarget;
-				beginInfo._colorTargetCount	 = 1;
+				beginInfo.setColorTarget( dstTarget, _clearColor, RHIRenderPassLoadOp::Load );
+				beginInfo._bBindColor = 1;
 				_pCmd->beginRenderPass( beginInfo );
 				drawFullscreen( 0, matCb );
 				_pCmd->endRenderPass();
@@ -351,18 +337,16 @@ namespace sw
 		_pCmd->endEventMarker();
 	}
 
-	void FrameRenderer::beginColorPass( string_view colorName, string_view depthName, const float32 arrClearColor[4],
+	void FrameRenderer::beginColorPass( string_view colorName, string_view depthName, const float4& clearColor,
 										RHIRenderPassLoadOp colorLoad, RHIRenderPassLoadOp depthLoad )
 	{
-		const string  arrName[]		 = { string( colorName ) };
-		const float32 arrClear[1][4] = {
-			{ arrClearColor[0], arrClearColor[1], arrClearColor[2], arrClearColor[3] }
-		   };
-		const RHIRenderPassLoadOp arrLoad[] = { colorLoad };
+		const string			  arrName[]	 = { string( colorName ) };
+		const float4			  arrClear[] = { clearColor };
+		const RHIRenderPassLoadOp arrLoad[]	 = { colorLoad };
 		beginColorPassMRT( arrName, arrClear, arrLoad, 1, depthName, depthLoad );
 	}
 
-	void FrameRenderer::beginColorPassMRT( const string* pColorNames, const float32 arrTargetClearColor[][4], const RHIRenderPassLoadOp* pColorLoad,
+	void FrameRenderer::beginColorPassMRT( const string* pColorNames, const float4* pTargetClearColor, const RHIRenderPassLoadOp* pColorLoad,
 										   uint32 colorCount, string_view depthName, RHIRenderPassLoadOp depthLoad )
 	{
 		if ( _pDevice == nullptr || _pCmd == nullptr || pColorNames == nullptr || colorCount == 0 )
@@ -380,12 +364,9 @@ namespace sw
 		{
 			beginInfo._arrColorTarget[colorTargetIndex] = findTransient( pColorNames[colorTargetIndex] );
 			beginInfo._arrLoadOp[colorTargetIndex]		= pColorLoad != nullptr ? pColorLoad[colorTargetIndex] : RHIRenderPassLoadOp::Clear;
-			if ( arrTargetClearColor != nullptr )
-				Memory::copy( beginInfo._arrTargetClearColor[colorTargetIndex], arrTargetClearColor[colorTargetIndex], sizeof( beginInfo._arrTargetClearColor[colorTargetIndex] ) );
+			if ( pTargetClearColor != nullptr )
+				beginInfo._arrClearColor[colorTargetIndex] = pTargetClearColor[colorTargetIndex];
 		}
-		beginInfo._colorTarget = beginInfo._arrColorTarget[0];
-		beginInfo._loadOp	   = beginInfo._arrLoadOp[0];
-		Memory::copy( beginInfo._arrClearColor, beginInfo._arrTargetClearColor[0], sizeof( beginInfo._arrClearColor ) );
 		_pCmd->beginRenderPass( beginInfo );
 	}
 
@@ -394,13 +375,13 @@ namespace sw
 		if ( _pCmd == nullptr )
 			return;
 		RHIRenderPassBeginInfo beginInfo{};
-		beginInfo._bBindColor  = 0;
-		beginInfo._colorTarget = 0;
-		beginInfo._depthTarget = findTransient( depthName );
-		beginInfo._depthLoadOp = depthLoad;
-		beginInfo._clearDepth  = clearDepth;
-		beginInfo._width	   = _transientWidth;
-		beginInfo._height	   = _transientHeight;
+		beginInfo._bBindColor		= 0;
+		beginInfo._colorTargetCount = 0;
+		beginInfo._depthTarget		= findTransient( depthName );
+		beginInfo._depthLoadOp		= depthLoad;
+		beginInfo._clearDepth		= clearDepth;
+		beginInfo._width			= _transientWidth;
+		beginInfo._height			= _transientHeight;
 		_pCmd->beginRenderPass( beginInfo );
 	}
 

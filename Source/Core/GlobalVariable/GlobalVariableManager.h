@@ -138,19 +138,19 @@ namespace sw
 		/**
 		 * @brief Core::getHead() 리스트에 연결합니다. Core 번역 단위 전용입니다.
 		 */
-		GlobalVariableRegistrar( const utf8* name, GlobalVariableType type, void* pData, const std::variant<bool, int32, float32, string>& defaultValue, const utf8* description, const utf8* enumType = "", const utf8* moduleName = "", uint32 typeSize = 4 );
+		GlobalVariableRegistrar( const utf8* pName, GlobalVariableType type, void* pData, const std::variant<bool, int32, float32, string>& defaultValue, const utf8* pDescription, const utf8* pEnumType = "", const utf8* pModuleName = "", uint32 typeSize = 4 );
 
 		/**
 		 * @brief 모듈 로컬 리스트 헤드에 연결합니다. 핫 리로드에 안전합니다.
 		 */
-		GlobalVariableRegistrar( GlobalVariableRegistrar*& moduleHead, const utf8* name, GlobalVariableType type, void* pData, const std::variant<bool, int32, float32, string>& defaultValue, const utf8* description, const utf8* enumType = "", const utf8* moduleName = "", uint32 typeSize = 4 );
+		GlobalVariableRegistrar( GlobalVariableRegistrar*& pModuleHead, const utf8* pName, GlobalVariableType type, void* pData, const std::variant<bool, int32, float32, string>& defaultValue, const utf8* pDescription, const utf8* pEnumType = "", const utf8* pModuleName = "", uint32 typeSize = 4 );
 
 		/** @brief Core.dll 전용 등록 리스트 헤드입니다. 다른 모듈은 자체 헤드를 써야 합니다. */
 		static GlobalVariableRegistrar*& getHead();
 
 	private:
 		/** @brief 모듈 로컬 리스트에 연결합니다. */
-		void linkTo( GlobalVariableRegistrar*& moduleHead );
+		void linkTo( GlobalVariableRegistrar*& pModuleHead );
 	};
 
 	/** @brief Core.dll GVM 심볼을 모듈 이름 "Engine"으로 등록합니다. */

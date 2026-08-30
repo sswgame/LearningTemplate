@@ -81,8 +81,8 @@ namespace sw
 		/** @brief 태그를 가진 첫 GameObject를 반환합니다. 없으면 nullptr. */
 		GameObject* findGameObjectByTag( TagID tag ) const;
 
-		/** @brief 태그를 가진 GameObject를 out에 넣습니다. */
-		void findGameObjectsByTag( TagID tag, vector<GameObject*>& out ) const;
+		/** @brief 태그를 가진 GameObject를 outListGameObject에 넣습니다. */
+		void findGameObjectsByTag( TagID tag, vector<GameObject*>& outListGameObject ) const;
 
 		/** @brief 등록된 GameObject의 beginPlay를 호출합니다. */
 		void beginPlay();

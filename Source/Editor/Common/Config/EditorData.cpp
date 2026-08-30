@@ -36,7 +36,7 @@ namespace sw::editor
 					outList = std::move( listLoaded );
 			}
 
-			static void takeClearColor( XmlNode root, float32 outColor[4] )
+			static void takeClearColor( XmlNode root, float4& outColor )
 			{
 				const utf8* pText = root.childText( "clearColor" );
 				if ( pText == nullptr || pText[0] == '\0' )
@@ -45,8 +45,10 @@ namespace sw::editor
 				const auto&		listToken = tokens.getSplitList();
 				if ( listToken.size() < 4 )
 					return;
+				float32 arrVal[4] = { outColor._x, outColor._y, outColor._z, outColor._w };
 				for ( size_t index = 0; index < 4; ++index )
-					StringUtil::parseFloat( listToken[index], outColor[index] );
+					StringUtil::parseFloat( listToken[index], arrVal[index] );
+				outColor = float4( arrVal[0], arrVal[1], arrVal[2], arrVal[3] );
 			}
 		};
 	} // namespace
@@ -92,7 +94,7 @@ namespace sw::editor
 
 		_fontSize	 = root.childFloat( "fontSize", _fontSize );
 		_playerSpeed = root.childFloat( "playerSpeed", _playerSpeed );
-		EditorDataInternal::takeClearColor( root, _arrClearColor );
+		EditorDataInternal::takeClearColor( root, _clearColor );
 		EditorDataInternal::takeFontList( root, "baseFonts", _listBaseFont );
 		EditorDataInternal::takeFontList( root, "koreanFonts", _listKoreanFont );
 

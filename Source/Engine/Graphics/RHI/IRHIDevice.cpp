@@ -52,10 +52,7 @@ namespace sw
 		desc._format			= RHIFormat::R8G8B8A8_UNORM;
 		desc._bIsRenderTarget	= 1;
 		desc._bIsShaderResource = 1;
-		desc._arrClearColor[0]	= 0.05f;
-		desc._arrClearColor[1]	= 0.05f;
-		desc._arrClearColor[2]	= 0.08f;
-		desc._arrClearColor[3]	= 1.0f;
+		desc._clearColor		= float4{ 0.05f, 0.05f, 0.08f, 1.0f };
 
 		const RHITextureHandle rt = pResource->createTexture2D( desc );
 		if ( rt == 0 )
@@ -76,12 +73,10 @@ namespace sw
 		else
 		{
 			RHIRenderPassBeginInfo beginInfo{};
-			beginInfo._colorTarget = rt;
-			beginInfo._bBindColor  = 1;
-			beginInfo._width	   = width;
-			beginInfo._height	   = height;
-			beginInfo._loadOp	   = RHIRenderPassLoadOp::Clear;
-			Memory::copy( beginInfo._arrClearColor, desc._arrClearColor, sizeof( beginInfo._arrClearColor ) );
+			beginInfo.setColorTarget( rt, desc._clearColor, RHIRenderPassLoadOp::Clear );
+			beginInfo._bBindColor = 1;
+			beginInfo._width	  = width;
+			beginInfo._height	  = height;
 
 			RHIViewport viewport{};
 			viewport._width	 = static_cast<float32>( width );

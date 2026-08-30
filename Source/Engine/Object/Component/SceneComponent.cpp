@@ -88,13 +88,13 @@ namespace sw
 				if ( pComp == nullptr || pComp->getOwner() == nullptr )
 					return {};
 
-				unordered_map<string, int32> occurrence;
+				unordered_map<string, int32> mapOccurrence;
 				for ( Component* pOther : pComp->getOwner()->getAllComponents() )
 				{
 					if ( pOther == nullptr )
 						continue;
 					const string base = sceneComponentTypeBaseName( pOther );
-					const int32	 occ  = occurrence[base]++;
+					const int32	 occ  = mapOccurrence[base]++;
 					if ( pOther == pComp )
 						return makeStableSceneComponentKey( pComp, occ );
 				}
@@ -106,13 +106,13 @@ namespace sw
 				if ( pOwner == nullptr || attachKey.empty() )
 					return nullptr;
 
-				unordered_map<string, int32> occurrence;
+				unordered_map<string, int32> mapOccurrence;
 				for ( Component* pComp : pOwner->getAllComponents() )
 				{
 					if ( pComp == nullptr )
 						continue;
 					const string base = sceneComponentTypeBaseName( pComp );
-					const int32	 occ  = occurrence[base]++;
+					const int32	 occ  = mapOccurrence[base]++;
 					if ( makeStableSceneComponentKey( pComp, occ ) == attachKey )
 						return castTo<SceneComponent>( pComp );
 				}

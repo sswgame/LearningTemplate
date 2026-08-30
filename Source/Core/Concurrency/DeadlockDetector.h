@@ -71,7 +71,7 @@ namespace sw
 		/** @brief startThreadId 가 pLockRequested 를 기다릴 때 사이클이 있는지 봅니다. */
 		bool checkForCycle( std::thread::id startThreadId, void* pLockRequested );
 		/** @brief 사이클에 참여한 스레드의 대기/보유 락을 로그로 남깁니다. */
-		void dumpDeadlock( const vector<std::thread::id>& cycle );
+		void dumpDeadlock( const vector<std::thread::id>& listCycle );
 
 		atomic<bool>								_bInitialized;
 		mutex										_mutex;

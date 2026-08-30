@@ -157,7 +157,7 @@ namespace sw
 		RHITextureHandle colorHandles[kMaxColorAttachments]{};
 		for ( uint32 attachmentIndex = 0; attachmentIndex < colorCount && attachmentIndex < kMaxColorAttachments; ++attachmentIndex )
 		{
-			colorHandles[attachmentIndex] = ( beginInfo._colorTargetCount > 0 ) ? beginInfo._arrColorTarget[attachmentIndex] : beginInfo._colorTarget;
+			colorHandles[attachmentIndex] = beginInfo._arrColorTarget[attachmentIndex];
 		}
 
 		bool bDepthOnly = ( bBindColor == false );
@@ -234,8 +234,8 @@ namespace sw
 
 			for ( uint32 attachmentIndex = 0; attachmentIndex < colorCount; ++attachmentIndex )
 			{
-				const RHIRenderPassLoadOp loadOp = ( beginInfo._colorTargetCount > 0 ) ? beginInfo._arrLoadOp[attachmentIndex] : beginInfo._loadOp;
-				const float32*			  pClear = ( beginInfo._colorTargetCount > 0 ) ? beginInfo._arrTargetClearColor[attachmentIndex] : beginInfo._arrClearColor;
+				const RHIRenderPassLoadOp loadOp = beginInfo._arrLoadOp[attachmentIndex];
+				const float32*			  pClear = &beginInfo._arrClearColor[attachmentIndex]._x;
 				if ( loadOp != RHIRenderPassLoadOp::Clear )
 					continue;
 

@@ -44,8 +44,8 @@ namespace sw
 		{
 			for ( uint32 poolIndex = 0; poolIndex < Capacity; ++poolIndex )
 			{
-				T* ptr = reinterpret_cast<T*>( &_arrStorage[poolIndex * sizeof( T )] );
-				_freeQueue.enqueue( ptr );
+				T* pPtr = reinterpret_cast<T*>( &_arrStorage[poolIndex * sizeof( T )] );
+				_freeQueue.enqueue( pPtr );
 			}
 		}
 
@@ -87,18 +87,18 @@ namespace sw
 
 		/**
 		 * @brief 객체 소멸자를 호출하고 풀에 메모리를 반납합니다. 포인터를 nullptr로 초기화합니다.
-		 * @param ptr 반납할 객체 포인터 (참조로 받아 반납 후 nullptr로 만듦)
-		 * @note release 후 ptr은 반드시 nullptr이 됩니다. 소멸 후 사용을 방지합니다.
+		 * @param pPtr 반납할 객체 포인터 (참조로 받아 반납 후 nullptr로 만듦)
+		 * @note release 후 pPtr은 반드시 nullptr이 됩니다. 소멸 후 사용을 방지합니다.
 		 */
-		SW_INLINE void release( T*& ptr )
+		SW_INLINE void release( T*& pPtr )
 		{
-			if ( ptr == nullptr )
+			if ( pPtr == nullptr )
 				return;
 
-			ptr->~T();
-			_freeQueue.enqueue( ptr );
+			pPtr->~T();
+			_freeQueue.enqueue( pPtr );
 			_activeCount.fetch_sub( 1, std::memory_order_relaxed );
-			ptr = nullptr; // 호출자가 실수로 사용하지 못하도록 즉시 무효화
+			pPtr = nullptr; // 호출자가 실수로 사용하지 못하도록 즉시 무효화
 		}
 
 		/** @brief 현재 acquire된 객체 수를 반환합니다. */

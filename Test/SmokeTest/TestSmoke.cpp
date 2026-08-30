@@ -82,20 +82,20 @@ namespace sw
 	namespace
 	{
 		/** @brief 테스트 모듈 DLL 경로를 만듭니다. */
-		sw::string modulePath( const utf8* baseName )
+		sw::string modulePath( const utf8* pBaseName )
 		{
 	#if defined( SW_TEST_MODULE_DIR )
 			const sw::string dir = SW_TEST_MODULE_DIR;
 	#else
 			const sw::string dir = sw::FileUtil::getDirectoryPart( sw::FileUtil::getExecutablePath() );
 	#endif
-			return dir + "/" + sw::FileUtil::formatSharedLibraryName( baseName );
+			return dir + "/" + sw::FileUtil::formatSharedLibraryName( pBaseName );
 		}
 
 		/** @brief 테스트 모듈을 동적 로드합니다. */
-		void* loadModule( const utf8* name )
+		void* loadModule( const utf8* pName )
 		{
-			const sw::string path = modulePath( name );
+			const sw::string path = modulePath( pName );
 			return sw::FileUtil::loadDynamicLibrary( path );
 		}
 
@@ -262,10 +262,10 @@ SW_TEST_CASE( Architecture, LiveReloadSuccessfulShadowReload )
 
 	manager.setOnAfterReload(
 		"SWGame",
-		SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&onAfterCalled, &newHandleInCb]( void* h )
+		SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&onAfterCalled, &newHandleInCb]( void* pH )
 	{
 		onAfterCalled = true;
-		newHandleInCb = h;
+		newHandleInCb = pH;
 	} ) );
 
 	// 리로드 트리거
@@ -385,10 +385,10 @@ SW_TEST_CASE( Architecture, LiveReloadEditorModule )
 
 	manager.setOnAfterReload(
 		"EditorModule",
-		SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&onAfterCalled, &newHandle]( void* h )
+		SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&onAfterCalled, &newHandle]( void* pH )
 	{
 		onAfterCalled = true;
-		newHandle	  = h;
+		newHandle	  = pH;
 	} ) );
 
 	manager.triggerReload( "EditorModule" );
@@ -441,10 +441,10 @@ SW_TEST_CASE( Architecture, LiveReloadGenreKitsIndividuallyAndCascaded )
 
 		manager.setOnAfterReload(
 			kitName,
-			SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&reloaded, &newH]( void* h )
+			SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&reloaded, &newH]( void* pH )
 		{
 			reloaded = true;
-			newH	 = h;
+			newH	 = pH;
 		} ) );
 
 		manager.triggerReload( kitName );
@@ -572,10 +572,10 @@ SW_TEST_CASE( Architecture, ModuleCompilerAndLiveReloadE2E )
 
 	manager.setOnAfterReload(
 		"EditorModule",
-		SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&onAfterCalled, &newHandle]( void* h )
+		SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&onAfterCalled, &newHandle]( void* pH )
 	{
 		onAfterCalled = true;
-		newHandle	  = h;
+		newHandle	  = pH;
 	} ) );
 
 	sw::ModuleCompiler compiler{ &manager };
@@ -811,14 +811,14 @@ SW_TEST_CASE( ModuleAPI, FullGameSceneAndComponentLifecycle )
 		api.update( game, 0.016f );
 	}
 
-	auto waitForSceneLoad = [&]( const utf8* path ) -> sw::Scene*
+	auto waitForSceneLoad = [&]( const utf8* pPath ) -> sw::Scene*
 	{
-		auto pathMatches = []( const sw::string& a, const utf8* b ) -> bool
+		auto pathMatches = []( const sw::string& a, const utf8* pB ) -> bool
 		{
-			if ( b == nullptr || a.empty() )
+			if ( pB == nullptr || a.empty() )
 				return false;
 			const sw::string lowerA = sw::StringUtil::toLower( a.c_str() );
-			const sw::string lowerB = sw::StringUtil::toLower( b );
+			const sw::string lowerB = sw::StringUtil::toLower( pB );
 			return lowerA.find( lowerB ) != sw::string::npos || lowerB.find( lowerA ) != sw::string::npos;
 		};
 
@@ -827,9 +827,9 @@ SW_TEST_CASE( ModuleAPI, FullGameSceneAndComponentLifecycle )
 		sw::engine::getSceneManager().tickTransitions();
 
 		sw::Scene* current = sw::engine::getSceneManager().getActiveScene();
-		if ( current == nullptr || pathMatches( current->getSourcePath(), path ) == false )
+		if ( current == nullptr || pathMatches( current->getSourcePath(), pPath ) == false )
 		{
-			sw::engine::getSceneManager().requestLoadAsync( path );
+			sw::engine::getSceneManager().requestLoadAsync( pPath );
 		}
 
 		for ( int32 iter = 0; iter < 100; ++iter )
@@ -841,7 +841,7 @@ SW_TEST_CASE( ModuleAPI, FullGameSceneAndComponentLifecycle )
 			sw::Scene* sc = sw::engine::getSceneManager().getActiveScene();
 			if ( sc != nullptr && sc->getObjectManager() && sc->getObjectManager()->getAllGameObjects().size() > 0 )
 			{
-				if ( pathMatches( sc->getSourcePath(), path ) )
+				if ( pathMatches( sc->getSourcePath(), pPath ) )
 				{
 					return sc;
 				}

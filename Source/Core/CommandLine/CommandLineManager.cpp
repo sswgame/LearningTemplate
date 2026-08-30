@@ -45,16 +45,16 @@ namespace sw
 	// 인자들을 불필요하게 단일 거대 문자열로 합쳤다가 다시 분할하지 않고,
 	// 각 argv 요소를 즉시 std::string_view로 슬라이싱하여 파싱함으로써 0-Alloc 파싱을 수행합니다.
 	// ============================================================================
-	void CommandLineManager::parse( const int32 argc, utf8* ppArgv[] )
+	void CommandLineManager::parse( const int32 argc, utf8* pPpArgv[] )
 	{
-		if ( argc < 2 || ppArgv == nullptr )
+		if ( argc < 2 || pPpArgv == nullptr )
 			return;
 
 		for ( int32 argIndex = 1; argIndex < argc; ++argIndex )
 		{
-			if ( ppArgv[argIndex] != nullptr && ppArgv[argIndex][0] != '\0' )
+			if ( pPpArgv[argIndex] != nullptr && pPpArgv[argIndex][0] != '\0' )
 			{
-				parseArgumentLine( string_view{ ppArgv[argIndex] } );
+				parseArgumentLine( string_view{ pPpArgv[argIndex] } );
 			}
 		}
 	}
@@ -63,16 +63,16 @@ namespace sw
 	// @function parse (UTF-16 Windows 버전)
 	// @brief Windows OS WinMain/wmain 환경의 UTF-16 argv를 UTF-8로 변환한 뒤 파싱합니다.
 	// ============================================================================
-	void CommandLineManager::parse( const int32 argc, utf16* ppArgv[] )
+	void CommandLineManager::parse( const int32 argc, utf16* pPpArgv[] )
 	{
-		if ( argc < 2 || ppArgv == nullptr )
+		if ( argc < 2 || pPpArgv == nullptr )
 			return;
 
 		for ( int32 argIndex = 1; argIndex < argc; ++argIndex )
 		{
-			if ( ppArgv[argIndex] != nullptr && ppArgv[argIndex][0] != L'\0' )
+			if ( pPpArgv[argIndex] != nullptr && pPpArgv[argIndex][0] != L'\0' )
 			{
-				const string utf8 = StringUtil::utf16ToUtf8( ppArgv[argIndex] );
+				const string utf8 = StringUtil::utf16ToUtf8( pPpArgv[argIndex] );
 				parseArgumentLine( string_view{ utf8 } );
 			}
 		}

@@ -58,9 +58,9 @@ namespace sw
 	{
 		struct VulkanRHIDeviceInternal
 		{
-			static bool hasExtensionVal( const vector<VkExtensionProperties>& availableExts, const utf8* pName )
+			static bool hasExtensionVal( const vector<VkExtensionProperties>& listAvailableExt, const utf8* pName )
 			{
-				for ( const VkExtensionProperties& ext : availableExts )
+				for ( const VkExtensionProperties& ext : listAvailableExt )
 				{
 					if ( StringUtil::equals( ext.extensionName, pName ) )
 						return true;
@@ -2044,8 +2044,8 @@ namespace sw
 			return outRecord._framebuffer != VK_NULL_HANDLE && outRecord._renderPass != VK_NULL_HANDLE;
 		}
 
-		VkImageView colorViews[kMaxColorAttachments]{};
-		uint32		colorFormats[kMaxColorAttachments]{};
+		VkImageView arrColorView[kMaxColorAttachments]{};
+		uint32		arrColorFormat[kMaxColorAttachments]{};
 		uint32		width{ 0 };
 		uint32		height{ 0 };
 		for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
@@ -2053,10 +2053,10 @@ namespace sw
 			VulkanTextureRecord* pTex = resolveTexture( key._arrColor[colorIndex] );
 			if ( pTex == nullptr || pTex->_imageView == VK_NULL_HANDLE || pTex->_bDepthStencil != 0 )
 				return false;
-			colorViews[colorIndex]	 = pTex->_imageView;
-			colorFormats[colorIndex] = pTex->_format;
-			width					 = pTex->_width;
-			height					 = pTex->_height;
+			arrColorView[colorIndex]   = pTex->_imageView;
+			arrColorFormat[colorIndex] = pTex->_format;
+			width					   = pTex->_width;
+			height					   = pTex->_height;
 		}
 
 		VkImageView depthView = VK_NULL_HANDLE;
@@ -2077,23 +2077,23 @@ namespace sw
 		if ( key._colorCount == 0 && depthView == VK_NULL_HANDLE )
 			return false;
 
-		VkAttachmentDescription attachments[kMaxColorAttachments + 1]{};
-		VkAttachmentReference	colorRefs[kMaxColorAttachments]{};
-		VkImageView				fbAttachments[kMaxColorAttachments + 1]{};
+		VkAttachmentDescription arrAttachment[kMaxColorAttachments + 1]{};
+		VkAttachmentReference	arrColorRef[kMaxColorAttachments]{};
+		VkImageView				arrFbAttachment[kMaxColorAttachments + 1]{};
 		for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
 		{
-			attachments[colorIndex].format		   = static_cast<VkFormat>( colorFormats[colorIndex] );
-			attachments[colorIndex].samples		   = VK_SAMPLE_COUNT_1_BIT;
-			attachments[colorIndex].loadOp		   = toVkLoadOp( static_cast<RHIRenderPassLoadOp>( key._arrColorLoadOp[colorIndex] ) );
-			attachments[colorIndex].storeOp		   = VK_ATTACHMENT_STORE_OP_STORE;
-			attachments[colorIndex].stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-			attachments[colorIndex].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+			arrAttachment[colorIndex].format		 = static_cast<VkFormat>( arrColorFormat[colorIndex] );
+			arrAttachment[colorIndex].samples		 = VK_SAMPLE_COUNT_1_BIT;
+			arrAttachment[colorIndex].loadOp		 = toVkLoadOp( static_cast<RHIRenderPassLoadOp>( key._arrColorLoadOp[colorIndex] ) );
+			arrAttachment[colorIndex].storeOp		 = VK_ATTACHMENT_STORE_OP_STORE;
+			arrAttachment[colorIndex].stencilLoadOp	 = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+			arrAttachment[colorIndex].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 			// Match pre-begin transitionImageLayout to COLOR_ATTACHMENT_OPTIMAL.
-			attachments[colorIndex].initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-			attachments[colorIndex].finalLayout	  = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-			colorRefs[colorIndex].attachment	  = colorIndex;
-			colorRefs[colorIndex].layout		  = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-			fbAttachments[colorIndex]			  = colorViews[colorIndex];
+			arrAttachment[colorIndex].initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+			arrAttachment[colorIndex].finalLayout	= VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+			arrColorRef[colorIndex].attachment		= colorIndex;
+			arrColorRef[colorIndex].layout			= VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+			arrFbAttachment[colorIndex]				= arrColorView[colorIndex];
 		}
 
 		VkAttachmentReference depthRef{};
@@ -2101,24 +2101,24 @@ namespace sw
 		const bool			  bHasDepth	  = depthView != VK_NULL_HANDLE;
 		if ( bHasDepth )
 		{
-			attachments[attachCount].format			= static_cast<VkFormat>( depthFormat );
-			attachments[attachCount].samples		= VK_SAMPLE_COUNT_1_BIT;
-			attachments[attachCount].loadOp			= toVkLoadOp( static_cast<RHIRenderPassLoadOp>( key._depthLoadOp ) );
-			attachments[attachCount].storeOp		= VK_ATTACHMENT_STORE_OP_STORE;
-			attachments[attachCount].stencilLoadOp	= VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-			attachments[attachCount].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-			attachments[attachCount].initialLayout	= VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-			attachments[attachCount].finalLayout	= VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-			depthRef.attachment						= attachCount;
-			depthRef.layout							= VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-			fbAttachments[attachCount]				= depthView;
+			arrAttachment[attachCount].format		  = static_cast<VkFormat>( depthFormat );
+			arrAttachment[attachCount].samples		  = VK_SAMPLE_COUNT_1_BIT;
+			arrAttachment[attachCount].loadOp		  = toVkLoadOp( static_cast<RHIRenderPassLoadOp>( key._depthLoadOp ) );
+			arrAttachment[attachCount].storeOp		  = VK_ATTACHMENT_STORE_OP_STORE;
+			arrAttachment[attachCount].stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+			arrAttachment[attachCount].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+			arrAttachment[attachCount].initialLayout  = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+			arrAttachment[attachCount].finalLayout	  = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+			depthRef.attachment						  = attachCount;
+			depthRef.layout							  = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+			arrFbAttachment[attachCount]			  = depthView;
 			++attachCount;
 		}
 
 		VkSubpassDescription subpass{};
 		subpass.pipelineBindPoint		= VK_PIPELINE_BIND_POINT_GRAPHICS;
 		subpass.colorAttachmentCount	= key._colorCount;
-		subpass.pColorAttachments		= key._colorCount > 0 ? colorRefs : nullptr;
+		subpass.pColorAttachments		= key._colorCount > 0 ? arrColorRef : nullptr;
 		subpass.pDepthStencilAttachment = bHasDepth ? &depthRef : nullptr;
 
 		VkSubpassDependency dependency{};
@@ -2132,7 +2132,7 @@ namespace sw
 		VkRenderPassCreateInfo rpInfo{};
 		rpInfo.sType		   = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
 		rpInfo.attachmentCount = attachCount;
-		rpInfo.pAttachments	   = attachments;
+		rpInfo.pAttachments	   = arrAttachment;
 		rpInfo.subpassCount	   = 1;
 		rpInfo.pSubpasses	   = &subpass;
 		rpInfo.dependencyCount = 1;
@@ -2146,7 +2146,7 @@ namespace sw
 		fbInfo.sType		   = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 		fbInfo.renderPass	   = record._renderPass;
 		fbInfo.attachmentCount = attachCount;
-		fbInfo.pAttachments	   = fbAttachments;
+		fbInfo.pAttachments	   = arrFbAttachment;
 		fbInfo.width		   = width;
 		fbInfo.height		   = height;
 		fbInfo.layers		   = 1;

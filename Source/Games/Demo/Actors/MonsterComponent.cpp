@@ -21,12 +21,12 @@ namespace sw
 	{
 		struct MonsterComponentInternal
 		{
-			static void queueProjectileAttack( GameObjectManager* pGameObjectManager, const string& _projectilePrefab, const float3& selfPos, float32 dirX )
+			static void queueProjectileAttack( GameObjectManager* pGameObjectManager, const string& projectilePrefab, const float3& selfPos, float32 dirX )
 			{
-				if ( pGameObjectManager == nullptr || _projectilePrefab.empty() )
+				if ( pGameObjectManager == nullptr || projectilePrefab.empty() )
 					return;
 
-				const string  prefabPath = _projectilePrefab;
+				const string  prefabPath = projectilePrefab;
 				const float3  spawnPos	 = selfPos;
 				const float32 dir		 = dirX >= 0.0f ? 1.0f : -1.0f;
 

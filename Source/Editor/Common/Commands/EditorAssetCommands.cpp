@@ -38,11 +38,11 @@ namespace sw::editor
 	{
 		struct EditorAssetCommandsInternal
 		{
-			static void onSaveSceneDialogResult( const vector<string>& listPaths )
+			static void onSaveSceneDialogResult( const vector<string>& listPath )
 			{
-				if ( listPaths.empty() )
+				if ( listPath.empty() )
 					return;
-				if ( EditorAssetCommands::saveActiveScene( listPaths[0] ) )
+				if ( EditorAssetCommands::saveActiveScene( listPath[0] ) )
 				{
 					EditorContext::get()->getNotificationManager().push( "Scene", "Saved", NotificationType::Success );
 					EditorContext* pContext = EditorContext::get();
@@ -617,11 +617,11 @@ namespace sw::editor
 		if ( resourceFolder.empty() )
 			return;
 
-		vector<string> listAllFiles;
-		FileUtil::collectFiles( resourceFolder, "", listAllFiles, true, false );
+		vector<string> listAllFile;
+		FileUtil::collectFiles( resourceFolder, "", listAllFile, true, false );
 
-		outList.reserve( listAllFiles.size() );
-		for ( const string& file : listAllFiles )
+		outList.reserve( listAllFile.size() );
+		for ( const string& file : listAllFile )
 		{
 			EditorResourceIndexEntry entry{};
 			if ( EditorAssetCommandsInternal::tryClassifyResourceFile( file, entry ) )
@@ -635,17 +635,17 @@ namespace sw::editor
 		if ( folderAbs.empty() || FileUtil::directoryExists( folderAbs ) == false )
 			return;
 
-		vector<string> listFolders;
-		vector<string> listFiles;
-		FileUtil::collectFolders( folderAbs, listFolders, false, false );
-		FileUtil::collectFiles( folderAbs, {}, listFiles, false, false );
+		vector<string> listFolder;
+		vector<string> listFile;
+		FileUtil::collectFolders( folderAbs, listFolder, false, false );
+		FileUtil::collectFiles( folderAbs, {}, listFile, false, false );
 
 		const string& resourceRoot = ResourceUtil::getRootFolderPath();
 		const string  rootNorm	   = resourceRoot.empty() ? string{} : FileUtil::normalizePath( resourceRoot );
 
-		for ( const string& folder : listFolders )
+		for ( const string& folder : listFolder )
 			EditorAssetCommandsInternal::appendFolderListingEntry( outList, folder, true, rootNorm );
-		for ( const string& file : listFiles )
+		for ( const string& file : listFile )
 			EditorAssetCommandsInternal::appendFolderListingEntry( outList, file, false, rootNorm );
 	}
 
@@ -666,19 +666,19 @@ namespace sw::editor
 		if ( resPath.empty() )
 			return;
 
-		vector<string> listScenes;
-		vector<string> listPrefabs;
-		vector<string> listTextures;
-		vector<string> listShaders;
-		FileUtil::collectFiles( resPath, ".scene.xml", listScenes, true, false );
-		FileUtil::collectFiles( resPath, ".prefab.xml", listPrefabs, true, false );
-		FileUtil::collectFiles( resPath, ".png", listTextures, true, false );
-		FileUtil::collectFiles( resPath, ".hlsl", listShaders, true, false );
+		vector<string> listScene;
+		vector<string> listPrefab;
+		vector<string> listTexture;
+		vector<string> listShader;
+		FileUtil::collectFiles( resPath, ".scene.xml", listScene, true, false );
+		FileUtil::collectFiles( resPath, ".prefab.xml", listPrefab, true, false );
+		FileUtil::collectFiles( resPath, ".png", listTexture, true, false );
+		FileUtil::collectFiles( resPath, ".hlsl", listShader, true, false );
 
-		outCounts._sceneCount	= listScenes.size();
-		outCounts._prefabCount	= listPrefabs.size();
-		outCounts._textureCount = listTextures.size();
-		outCounts._shaderCount	= listShaders.size();
+		outCounts._sceneCount	= listScene.size();
+		outCounts._prefabCount	= listPrefab.size();
+		outCounts._textureCount = listTexture.size();
+		outCounts._shaderCount	= listShader.size();
 	}
 
 	bool EditorAssetCommands::enterPrefabIsolation( string_view prefabPath )

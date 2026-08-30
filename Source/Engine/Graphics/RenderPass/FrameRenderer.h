@@ -137,11 +137,11 @@ namespace sw
 		/** @brief 카메라에서 뷰/투영을 적용합니다. */
 		void applyViewFromCamera( CameraComponent* pCamera );
 		/** @brief 키라이트 뷰-투영 행렬을 만듭니다. */
-		void buildLightViewProj( float32 outMat[16] ) const;
+		void buildLightViewProj( float32 outArrMat[16] ) const;
 		/** @brief 캐스케이드 섀도우 맵 뷰-투영 행렬 및 분할 거리를 계산합니다. */
-		void buildCascadeShadowMatrices( float32 outCascadeMats[4][16], float32 outSplits[4] ) const;
+		void buildCascadeShadowMatrices( float32 outArrCascadeMat[4][16], float32 outArrSplit[4] ) const;
 		/** @brief 카메라 뷰-투영 행렬을 만듭니다. */
-		void buildViewProj( float32 outMat[16] ) const;
+		void buildViewProj( float32 outArrMat[16] ) const;
 		/** @brief 월드 행렬을 항등으로 둡니다. */
 		void setIdentityWorld();
 		/** @brief 씬 메시를 직접 그립니다. */
@@ -153,12 +153,12 @@ namespace sw
 		/** @brief 풀스크린 삼각형을 그립니다. */
 		void drawFullscreen( RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex );
 		/** @brief 일시 텍스처를 할당합니다. */
-		void allocTransient( string_view name, RHIFormat format, bool bDepth, const float32 arrClearColor[4] );
+		void allocTransient( string_view name, RHIFormat format, bool bDepth, const float4& clearColor );
 		/** @brief 컬러(+깊이) 패스를 시작합니다. */
-		void beginColorPass( string_view colorName, string_view depthName, const float32 arrClearColor[4],
+		void beginColorPass( string_view colorName, string_view depthName, const float4& clearColor,
 							 RHIRenderPassLoadOp colorLoad, RHIRenderPassLoadOp depthLoad );
 		/** @brief MRT 컬러 패스를 시작합니다. */
-		void beginColorPassMRT( const string* pColorNames, const float32 arrTargetClearColor[][4],
+		void beginColorPassMRT( const string* pColorNames, const float4* pTargetClearColor,
 								const RHIRenderPassLoadOp* pColorLoad, uint32 colorCount, string_view depthName,
 								RHIRenderPassLoadOp depthLoad );
 		/** @brief 깊이 전용 패스를 시작합니다. */
@@ -190,7 +190,7 @@ namespace sw
 		// 6) 어태치먼트 · PSO
 		// ------------------------------------------------------------------------------
 		/** @brief 어태치먼트 클리어 색을 찾습니다. */
-		bool tryGetAttachmentClearColor( string_view attachmentName, float32 outClearColor[4] ) const;
+		bool tryGetAttachmentClearColor( string_view attachmentName, float4& outClearColor ) const;
 		/** @brief 일시 텍스처 핸들을 찾습니다. */
 		RHITextureHandle findTransient( string_view name ) const;
 		/** @brief 일시 텍스처 SRV를 찾습니다. */
@@ -238,7 +238,7 @@ namespace sw
 		RenderPipelineResource						  _pipelineResource;
 		RenderGraph									  _graph;
 		string										  _pipelinePath;
-		float32										  _arrClearColor[4];
+		float4										  _clearColor;
 		unordered_map<string, RHITextureHandle>		  _mapTransient;
 		unordered_map<string, RHIDescriptorIndex>	  _mapTransientSrv;
 		vector<hashed_string>						  _listClearedThisFrame;

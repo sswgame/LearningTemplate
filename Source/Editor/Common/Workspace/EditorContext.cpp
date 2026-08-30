@@ -106,7 +106,7 @@ namespace sw::editor
 
 		destroyGameView();
 
-		constexpr float32 kGameViewClearColor[4] = { 0.12f, 0.15f, 0.18f, 1.0f };
+		constexpr float4 kGameViewClearColor{ 0.12f, 0.15f, 0.18f, 1.0f };
 
 		RHITextureDesc rtDesc{};
 		rtDesc._width			  = width;
@@ -115,10 +115,7 @@ namespace sw::editor
 		rtDesc._bIsRenderTarget	  = SW_TRUE;
 		rtDesc._bIsShaderResource = SW_TRUE;
 		rtDesc._mipLevels		  = 1;
-		rtDesc._arrClearColor[0]  = kGameViewClearColor[0];
-		rtDesc._arrClearColor[1]  = kGameViewClearColor[1];
-		rtDesc._arrClearColor[2]  = kGameViewClearColor[2];
-		rtDesc._arrClearColor[3]  = kGameViewClearColor[3];
+		rtDesc._clearColor		  = kGameViewClearColor;
 
 		_gameView._renderTarget = _pRhiDevice->getResource()->createTexture2D( rtDesc );
 		if ( _gameView._renderTarget == 0 )

@@ -31,30 +31,30 @@ namespace sw
 				return s_mapFactoryHeads;
 			}
 
-			static vector<vector<ComponentHandle>> splitWaveByObject( const vector<ComponentHandle>& wave )
+			static vector<vector<ComponentHandle>> splitWaveByObject( const vector<ComponentHandle>& listWave )
 			{
-				vector<vector<ComponentHandle>> subwaves;
-				vector<unordered_set<uint64>>	occupied;
-				for ( const ComponentHandle& handle : wave )
+				vector<vector<ComponentHandle>> listSubwave;
+				vector<unordered_set<uint64>>	listOccupied;
+				for ( const ComponentHandle& handle : listWave )
 				{
 					if ( handle.isValid() == false )
 						continue;
 					const uint64 objectId = handle.objectId();
 					size_t		 slot{ 0 };
-					for ( ; slot < subwaves.size(); ++slot )
+					for ( ; slot < listSubwave.size(); ++slot )
 					{
-						if ( occupied[slot].count( objectId ) == 0 )
+						if ( listOccupied[slot].count( objectId ) == 0 )
 							break;
 					}
-					if ( slot == subwaves.size() )
+					if ( slot == listSubwave.size() )
 					{
-						subwaves.emplace_back();
-						occupied.emplace_back();
+						listSubwave.emplace_back();
+						listOccupied.emplace_back();
 					}
-					subwaves[slot].push_back( handle );
-					occupied[slot].insert( objectId );
+					listSubwave[slot].push_back( handle );
+					listOccupied[slot].insert( objectId );
 				}
-				return subwaves;
+				return listSubwave;
 			}
 
 			static void resolveAndTickComponent( GameObjectManager* pManager, float32 deltaTime, const ComponentHandle& handle )
@@ -82,15 +82,15 @@ namespace sw
 				}
 			};
 
-			static void dispatchWave( GameObjectManager* pManager, float32 deltaTime, const vector<ComponentHandle>& wave )
+			static void dispatchWave( GameObjectManager* pManager, float32 deltaTime, const vector<ComponentHandle>& listWave )
 			{
-				if ( wave.empty() )
+				if ( listWave.empty() )
 					return;
 
 				constexpr uint32 kParallelThreshold = 16;
-				if ( wave.size() < kParallelThreshold || engine::areEngineServicesBound() == false )
+				if ( listWave.size() < kParallelThreshold || engine::areEngineServicesBound() == false )
 				{
-					for ( const ComponentHandle& handle : wave )
+					for ( const ComponentHandle& handle : listWave )
 						resolveAndTickComponent( pManager, deltaTime, handle );
 					return;
 				}
@@ -98,8 +98,8 @@ namespace sw
 				ComponentWaveTick waveTick{};
 				waveTick._pManager	  = pManager;
 				waveTick._deltaTime	  = deltaTime;
-				waveTick._pRawHandles = wave.data();
-				waveTick._totalCount  = static_cast<uint32>( wave.size() );
+				waveTick._pRawHandles = listWave.data();
+				waveTick._totalCount  = static_cast<uint32>( listWave.size() );
 
 				TaskStageHandle stage  = engine::getTaskManager().createAnonymousStage( "ComponentWave" );
 				TaskHandle		handle = engine::getTaskManager().emplaceParallel(
@@ -329,19 +329,19 @@ namespace sw
 		return nullptr;
 	}
 
-	void GameObjectManager::findGameObjectsByTag( TagID tag, vector<GameObject*>& out ) const
+	void GameObjectManager::findGameObjectsByTag( TagID tag, vector<GameObject*>& outListGameObject ) const
 	{
-		out.clear();
+		outListGameObject.clear();
 		std::shared_lock<std::shared_mutex> lock{ _mutex };
 		for ( GameObject* pObj : _listGameObject )
 		{
 			if ( pObj != nullptr && pObj->isPendingKill() == false && pObj->hasTag( tag ) )
-				out.push_back( pObj );
+				outListGameObject.push_back( pObj );
 		}
 		for ( GameObject* pObj : _listPendingAdd )
 		{
 			if ( pObj != nullptr && pObj->isPendingKill() == false && pObj->hasTag( tag ) )
-				out.push_back( pObj );
+				outListGameObject.push_back( pObj );
 		}
 	}
 

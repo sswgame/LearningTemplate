@@ -13,22 +13,22 @@ namespace sw
 	class BinaryStreamWriter
 	{
 	public:
-		explicit BinaryStreamWriter( vector<uint8>& listBuffer )
-			: _listBuffer{ listBuffer }
+		explicit BinaryStreamWriter( vector<uint8>& buffer )
+			: _buffer{ buffer }
 		{
 		}
 
 		size_t getOffset() const
 		{
-			return _listBuffer.size();
+			return _buffer.size();
 		}
 
 		template <typename T>
 		void writeAt( size_t offset, const T& value )
 		{
-			if ( offset + sizeof( T ) <= _listBuffer.size() )
+			if ( offset + sizeof( T ) <= _buffer.size() )
 			{
-				Memory::copy( _listBuffer.data() + offset, &value, sizeof( T ) );
+				Memory::copy( _buffer.data() + offset, &value, sizeof( T ) );
 			}
 		}
 
@@ -39,7 +39,7 @@ namespace sw
 			if ( size > 0 )
 			{
 				const uint8* pSrc = reinterpret_cast<const uint8*>( str.data() );
-				_listBuffer.insert( _listBuffer.end(), pSrc, pSrc + size );
+				_buffer.insert( _buffer.end(), pSrc, pSrc + size );
 			}
 		}
 
@@ -47,7 +47,7 @@ namespace sw
 		void write( const T& value )
 		{
 			const uint8* pSrc = reinterpret_cast<const uint8*>( &value );
-			_listBuffer.insert( _listBuffer.end(), pSrc, pSrc + sizeof( T ) );
+			_buffer.insert( _buffer.end(), pSrc, pSrc + sizeof( T ) );
 		}
 
 		void writeBytes( const vector<uint8>& bytes )
@@ -55,17 +55,17 @@ namespace sw
 			write( static_cast<uint32>( bytes.size() ) );
 			if ( bytes.empty() == false )
 			{
-				_listBuffer.insert( _listBuffer.end(), bytes.begin(), bytes.end() );
+				_buffer.insert( _buffer.end(), bytes.begin(), bytes.end() );
 			}
 		}
 
 		void reserve( size_t additionalCapacity )
 		{
-			_listBuffer.reserve( _listBuffer.size() + additionalCapacity );
+			_buffer.reserve( _buffer.size() + additionalCapacity );
 		}
 
 	private:
-		vector<uint8>& _listBuffer;
+		vector<uint8>& _buffer;
 	};
 
 	/**

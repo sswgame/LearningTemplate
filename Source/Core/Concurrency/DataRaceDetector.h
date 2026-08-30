@@ -20,14 +20,14 @@ namespace sw
 	{
 	public:
 		/** @brief 카운터를 0으로 둡니다. */
-		RaceDetectContext() = default;
+		constexpr RaceDetectContext() noexcept = default;
 		/** @brief 카운터만 버리며 락은 없습니다. */
 		~RaceDetectContext() = default;
 
 #if SW_DEBUG
 		// 복사 및 이동 허용 (컨테이너 복사 시 컨텍스트 자체는 초기 상태 0으로 복사)
 		/** @brief 카운터를 공유하지 않고 0으로 초기화된 컨텍스트로 복사합니다. */
-		RaceDetectContext( const RaceDetectContext& )
+		constexpr RaceDetectContext( const RaceDetectContext& ) noexcept
 			: _state{ 0 } {}
 		/** @brief 카운터를 공유하지 않고 0으로 리셋합니다. */
 		RaceDetectContext& operator=( const RaceDetectContext& )
@@ -36,7 +36,7 @@ namespace sw
 			return *this;
 		}
 		/** @brief 카운터를 가져오지 않고 0으로 초기화된 컨텍스트로 이동합니다. */
-		RaceDetectContext( RaceDetectContext&& ) noexcept
+		constexpr RaceDetectContext( RaceDetectContext&& ) noexcept
 			: _state{ 0 } {}
 		/** @brief 카운터를 가져오지 않고 0으로 리셋합니다. */
 		RaceDetectContext& operator=( RaceDetectContext&& ) noexcept
@@ -75,7 +75,7 @@ namespace sw
 	private:
 #if SW_DEBUG
 		/** @brief 레이스 메시지와 콜스택을 Fatal 로 남깁니다. */
-		void triggerDataRace( const utf8* message );
+		void triggerDataRace( const utf8* pMessage );
 
 		// 하위 16비트: Reader Count (최대 65535)
 		// 상위 16비트: Writer Count (최대 65535)

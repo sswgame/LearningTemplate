@@ -206,13 +206,13 @@ namespace sw
 		if ( FAILED( _pDevice->_device->CreateCommittedResource( &heapProps, D3D12_HEAP_FLAG_NONE, &resDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS( buffer.GetAddressOf() ) ) ) )
 			return 0;
 
-		void* mapped{ nullptr };
-		if ( FAILED( buffer->Map( 0, nullptr, &mapped ) ) || mapped == nullptr )
+		void* pMapped{ nullptr };
+		if ( FAILED( buffer->Map( 0, nullptr, &pMapped ) ) || pMapped == nullptr )
 			return 0;
 
 		const RHIBufferHandle handle		= _pDevice->storeBuffer( buffer );
 		_pDevice->_mapCbAlignedSize[handle] = alignedSize;
-		_pDevice->_mapCbMapped[handle]		= mapped;
+		_pDevice->_mapCbMapped[handle]		= pMapped;
 		return handle;
 	}
 
@@ -303,13 +303,13 @@ namespace sw
 			return;
 		}
 
-		void* mapped{ nullptr };
-		if ( FAILED( upload->Map( 0, nullptr, &mapped ) ) || mapped == nullptr )
+		void* pMapped{ nullptr };
+		if ( FAILED( upload->Map( 0, nullptr, &pMapped ) ) || pMapped == nullptr )
 		{
 			SW_LOG_ERROR( "updateStructuredBuffer: Map failed on staging buffer" );
 			return;
 		}
-		Memory::copy( mapped, pData, size );
+		Memory::copy( pMapped, pData, size );
 		upload->Unmap( 0, nullptr );
 
 		Microsoft::WRL::ComPtr<ID3D12CommandAllocator>	  stagingAllocator;
@@ -377,10 +377,10 @@ namespace sw
 		if ( FAILED( _pDevice->_device->CreateCommittedResource( &heapProps, D3D12_HEAP_FLAG_NONE, &resDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS( buffer.GetAddressOf() ) ) ) )
 			return 0;
 
-		void* mapped{ nullptr };
-		if ( FAILED( buffer->Map( 0, nullptr, &mapped ) ) || mapped == nullptr )
+		void* pMapped{ nullptr };
+		if ( FAILED( buffer->Map( 0, nullptr, &pMapped ) ) || pMapped == nullptr )
 			return 0;
-		Memory::copy( mapped, pData, sizeBytes );
+		Memory::copy( pMapped, pData, sizeBytes );
 		buffer->Unmap( 0, nullptr );
 
 		return _pDevice->storeBuffer( buffer );
@@ -465,10 +465,10 @@ namespace sw
 		if ( desc._bIsRenderTarget )
 		{
 			clearValue.Format	= colorFmt;
-			clearValue.Color[0] = desc._arrClearColor[0];
-			clearValue.Color[1] = desc._arrClearColor[1];
-			clearValue.Color[2] = desc._arrClearColor[2];
-			clearValue.Color[3] = desc._arrClearColor[3];
+			clearValue.Color[0] = desc._clearColor._x;
+			clearValue.Color[1] = desc._clearColor._y;
+			clearValue.Color[2] = desc._clearColor._z;
+			clearValue.Color[3] = desc._clearColor._w;
 			pClearValue			= &clearValue;
 		}
 		else if ( bDepth )

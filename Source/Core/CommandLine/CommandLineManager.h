@@ -97,16 +97,16 @@ namespace sw
 		/**
 		 * @brief 메인 함수로부터 전달받은 UTF-8 인자 목록을 파싱 (Linux/Mac 또는 표준 C++)
 		 * @param argc 인자 개수
-		 * @param ppArgv 문자열 포인터 배열 (UTF-8)
+		 * @param pPpArgv 문자열 포인터 배열 (UTF-8)
 		 */
-		void parse( int32 argc, utf8* ppArgv[] );
+		void parse( int32 argc, utf8* pPpArgv[] );
 
 		/**
 		 * @brief 메인 함수로부터 전달받은 UTF-16 와이드 문자열 인자 목록을 파싱 (Windows API 환경)
 		 * @param argc 인자 개수
-		 * @param ppArgv 와이드 문자열 포인터 배열 (UTF-16)
+		 * @param pPpArgv 와이드 문자열 포인터 배열 (UTF-16)
 		 */
-		void parse( int32 argc, utf16* ppArgv[] );
+		void parse( int32 argc, utf16* pPpArgv[] );
 
 		/**
 		 * @brief 문자열 키(Key)를 이용해 파싱된 인자 값을 조회합니다.

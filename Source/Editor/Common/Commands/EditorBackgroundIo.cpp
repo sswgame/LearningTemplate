@@ -100,13 +100,13 @@ namespace sw::editor
 			bRecursive = ( pJob->_bRecursive == SW_TRUE );
 		}
 
-		vector<string> listFiles;
-		FileUtil::collectFiles( folder, extension, listFiles, bRecursive, false );
+		vector<string> listFile;
+		FileUtil::collectFiles( folder, extension, listFile, bRecursive, false );
 
 		std::scoped_lock<mutex> lock{ pJob->_mutex };
 		if ( gen != pJob->_generation )
 			return;
-		pJob->_listResult = std::move( listFiles );
+		pJob->_listResult = std::move( listFile );
 		pJob->_bReady	  = SW_TRUE;
 		pJob->_bPending	  = SW_FALSE;
 	}

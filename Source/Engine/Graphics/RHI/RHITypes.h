@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Math/VectorMath.h"
 
 #include "Engine/Common/Common.h"
 #include "Engine/Reflection/ReflectionCore.h"
@@ -388,10 +389,10 @@ namespace sw
 	 */
 	struct RHIRenderPassAttachment
 	{
-		RHIFormat			 _format		   = RHIFormat::R8G8B8A8_UNORM;	  ///< 어태치먼트 포맷
-		RHIRenderPassLoadOp	 _loadOp		   = RHIRenderPassLoadOp::Clear;  ///< 로드 동작
-		RHIRenderPassStoreOp _storeOp		   = RHIRenderPassStoreOp::Store; ///< 저장 동작
-		float32				 _arrClearColor[4] = { 0.1f, 0.1f, 0.1f, 1.0f };  ///< 초기화 색상 (RGBA)
+		float4				 _clearColor = { 0.1f, 0.1f, 0.1f, 1.0f };	///< 초기화 색상 (RGBA)
+		RHIFormat			 _format	 = RHIFormat::R8G8B8A8_UNORM;	///< 어태치먼트 포맷
+		RHIRenderPassLoadOp	 _loadOp	 = RHIRenderPassLoadOp::Clear;	///< 로드 동작
+		RHIRenderPassStoreOp _storeOp	 = RHIRenderPassStoreOp::Store; ///< 저장 동작
 	};
 
 	/**
@@ -400,11 +401,12 @@ namespace sw
 	 */
 	struct SW_API RHIRenderPassDesc
 	{
-		vector<RHIRenderPassAttachment> _listColorAttachment;  ///< 색상 어태치먼트 목록
-		float32							_clearDepth;		   ///< 깊이 초기화 값
-		uint8							_clearStencil;		   ///< 스텐실 초기화 값
-		uint8							_bHasDepthStencil : 1; ///< 깊이/스텐실 어태치먼트 포함
+		vector<RHIRenderPassAttachment> _listColorAttachment;  ///< 색상 어태치먼트 목록 (24 bytes)
+		float32							_clearDepth;		   ///< 깊이 초기화 값 (4 bytes)
+		uint8							_clearStencil;		   ///< 스텐실 초기화 값 (1 byte)
+		uint8							_bHasDepthStencil : 1; ///< 깊이/스텐실 어태치먼트 포함 (1 byte)
 		[[maybe_unused]] uint8			_reservedFlags	  : 7;
+		uint8							_arrReserved[2]; ///< 8바이트 정렬 패딩 (2 bytes)
 
 		/** @brief 깊이 클리어 기본값. */
 		RHIRenderPassDesc() noexcept;
@@ -416,21 +418,20 @@ namespace sw
 	 */
 	struct SW_API RHITextureDesc
 	{
-		uint32	  _width;
-		uint32	  _height;
-		uint32	  _depth;
-		uint32	  _mipLevels;
-		RHIFormat _format;
-
-		float32 _arrClearColor[4];
-		float32 _clearDepth;
-		uint8	_clearStencil;
-
-		uint8				   _bIsRenderTarget	   : 1;
-		uint8				   _bIsDepthStencil	   : 1;
-		uint8				   _bIsShaderResource  : 1;
-		uint8				   _bIsUnorderedAccess : 1;
+		float4				   _clearColor;				///< 초기화 색상 (16 bytes)
+		uint32				   _width;					///< 너비 (4 bytes)
+		uint32				   _height;					///< 높이 (4 bytes)
+		uint32				   _depth;					///< 깊이 (4 bytes)
+		uint32				   _mipLevels;				///< 밉 레벨 수 (4 bytes)
+		RHIFormat			   _format;					///< 텍스처 포맷 (4 bytes)
+		float32				   _clearDepth;				///< 초기화 깊이 (4 bytes)
+		uint8				   _clearStencil;			///< 초기화 스텐실 (1 byte)
+		uint8				   _bIsRenderTarget	   : 1; ///< 렌더 타깃 지원 여부 (1 byte)
+		uint8				   _bIsDepthStencil	   : 1; ///< 깊이/스텐실 지원 여부
+		uint8				   _bIsShaderResource  : 1; ///< 셰이더 리소스 지원 여부
+		uint8				   _bIsUnorderedAccess : 1; ///< UAV 지원 여부
 		[[maybe_unused]] uint8 _reservedFlags	   : 4;
+		uint8				   _arrReserved[2]; ///< 4바이트 정렬 패딩 (2 bytes)
 
 		/** @brief 기본 크기/포맷/클리어. */
 		RHITextureDesc() noexcept;
@@ -439,29 +440,28 @@ namespace sw
 	/**
 	 * @struct RHIRenderPassBeginInfo
 	 * @brief 렌더 패스 바인딩 및 시작 인자
-	 * @note MRT는 `_arrColorTarget` + `_colorTargetCount`를 우선합니다. `_colorTarget` / `_arrClearColor` /
-	 *       `_loadOp`는 `_colorTargetCount == 0`일 때 RT0 별칭입니다.
 	 */
 	struct SW_API RHIRenderPassBeginInfo
 	{
-		RHIRenderPassHandle	   _renderPass;
-		RHITextureHandle	   _colorTarget; ///< RT0 별칭. 바인딩 시 0 = 스왑체인
-		RHITextureHandle	   _arrColorTarget[kMaxColorAttachments];
-		RHITextureHandle	   _depthTarget;	  ///< 0 = 깊이/스텐실 없음
-		uint32				   _colorTargetCount; ///< 0 → `_bBindColor`이면 단일 `_colorTarget`
-		uint32				   _width;
-		uint32				   _height;
-		float32				   _arrClearColor[4]; ///< RT0 클리어 별칭
-		float32				   _arrTargetClearColor[kMaxColorAttachments][4];
-		float32				   _clearDepth;
-		RHIRenderPassLoadOp	   _loadOp; ///< RT0 로드 별칭
-		RHIRenderPassLoadOp	   _arrLoadOp[kMaxColorAttachments];
-		RHIRenderPassLoadOp	   _depthLoadOp;
-		uint8				   _bBindColor	  : 1; ///< 0 = 깊이만 (ShadowMap 등)
+		RHIRenderPassHandle	   _renderPass;							  ///< 렌더 패스 핸들 (8 bytes)
+		RHITextureHandle	   _arrColorTarget[kMaxColorAttachments]; ///< RT별 핸들 (32 bytes)
+		RHITextureHandle	   _depthTarget;						  ///< 깊이/스텐실 핸들 (8 bytes)
+		float4				   _arrClearColor[kMaxColorAttachments];  ///< RT별 클리어 색상 (64 bytes)
+		uint32				   _colorTargetCount;					  ///< 컬러 RT 개수 (4 bytes)
+		uint32				   _width;								  ///< 렌더 영역 너비 (4 bytes)
+		uint32				   _height;								  ///< 렌더 영역 높이 (4 bytes)
+		float32				   _clearDepth;							  ///< 깊이 클리어 값 (4 bytes)
+		RHIRenderPassLoadOp	   _arrLoadOp[kMaxColorAttachments];	  ///< RT별 로드 동작 (16 bytes)
+		RHIRenderPassLoadOp	   _depthLoadOp;						  ///< 깊이 로드 동작 (4 bytes)
+		uint8				   _bBindColor	  : 1;					  ///< 컬러 바인딩 여부 (1 byte)
 		[[maybe_unused]] uint8 _reservedFlags : 7;
+		uint8				   _arrReserved[3]; ///< 8바이트 정렬 패딩 (3 bytes)
 
 		/** @brief 스왑체인 RT0, Load 클리어 기본값. */
 		RHIRenderPassBeginInfo() noexcept;
+
+		/** @brief 단일 RT 설정 헬퍼 */
+		void setColorTarget( RHITextureHandle target, const float4& clearColor = { 0.1f, 0.1f, 0.1f, 1.0f }, RHIRenderPassLoadOp loadOp = RHIRenderPassLoadOp::Clear );
 	};
 
 	// ------------------------------------------------------------------------------

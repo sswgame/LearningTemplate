@@ -10,14 +10,14 @@ namespace sw
 {
 	namespace
 	{
-		FARPROC WINAPI notifyHook( uint32 dliNotify, DelayLoadInfo* pdli )
+		FARPROC WINAPI notifyHook( uint32 dliNotify, DelayLoadInfo* pPdli )
 		{
-			if ( pdli == nullptr || pdli->szDll == nullptr )
+			if ( pPdli == nullptr || pPdli->szDll == nullptr )
 				return nullptr;
 
 			if ( dliNotify == dliNotePreLoadLibrary || dliNotify == dliFailLoadLib )
 			{
-				const string_view  dllName{ pdli->szDll };
+				const string_view  dllName{ pPdli->szDll };
 				LiveReloadManager* pMgr = LiveReloadManager::getDelayLoadManager();
 				if ( pMgr != nullptr && pMgr->isGraphBroken() == false )
 				{
@@ -43,13 +43,13 @@ namespace sw
 			}
 			else if ( dliNotify == dliFailGetProc )
 			{
-				if ( pdli->dlp.fImportByName )
+				if ( pPdli->dlp.fImportByName )
 				{
-					SW_LOG_ERROR( "DelayLoad failed to find procedure '%#' in '%#'", pdli->dlp.szProcName, pdli->szDll );
+					SW_LOG_ERROR( "DelayLoad failed to find procedure '%#' in '%#'", pPdli->dlp.szProcName, pPdli->szDll );
 				}
 				else
 				{
-					SW_LOG_ERROR( "DelayLoad failed to find procedure ordinal %# in '%#'", pdli->dlp.dwOrdinal, pdli->szDll );
+					SW_LOG_ERROR( "DelayLoad failed to find procedure ordinal %# in '%#'", pPdli->dlp.dwOrdinal, pPdli->szDll );
 				}
 			}
 			return nullptr;

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file SaveGame.h
  * @brief 영속 세이브 블롭 (맵 + 파티 + 스토리 플래그). 일시적 전투 상태는 제외합니다.
  */
@@ -31,7 +31,7 @@ namespace sw
 		/** @brief 파티를 비웁니다. */
 		void clearParty();
 		/** @brief 외부 파티로 교체합니다. */
-		void setPartyFrom( const vector<PartyMember>& party );
+		void setPartyFrom( const vector<PartyMember>& listParty );
 		/** @brief 스타터 파티가 없으면 채웁니다. */
 		void ensureStarterParty();
 

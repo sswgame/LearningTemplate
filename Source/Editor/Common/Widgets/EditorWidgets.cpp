@@ -242,11 +242,11 @@ namespace sw::editor
 
 	bool EditorWidgets::drawSearchFilter( const utf8* pId, string& filterText, float32 width )
 	{
-		utf8 buffer[256]{};
-		StringUtil::strncpy( buffer, filterText.c_str(), sizeof( buffer ) - 1 );
-		const bool bChanged = drawSearchField( pId, buffer, sizeof( buffer ), "Search...", width, true );
+		utf8 arrBuffer[256]{};
+		StringUtil::strncpy( arrBuffer, filterText.c_str(), sizeof( arrBuffer ) - 1 );
+		const bool bChanged = drawSearchField( pId, arrBuffer, sizeof( arrBuffer ), "Search...", width, true );
 		if ( bChanged )
-			filterText = buffer;
+			filterText = arrBuffer;
 		return bChanged;
 	}
 

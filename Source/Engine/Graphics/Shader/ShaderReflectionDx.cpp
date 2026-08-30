@@ -220,15 +220,15 @@ namespace sw
 	#if defined( SW_HAS_DXC_API )
 			static DxcCreateInstanceProc loadDxcCreateInstance()
 			{
-				static void*				 s_hDxCompiler{ nullptr };
+				static void*				 s_pDxCompiler{ nullptr };
 				static DxcCreateInstanceProc s_fnDxcCreateInstance{ nullptr };
 				static bool					 s_bTried{ false };
 				if ( s_bTried == false )
 				{
 					s_bTried	  = true;
 					HMODULE hDll  = LoadLibraryA( "dxcompiler.dll" );
-					s_hDxCompiler = static_cast<void*>( hDll );
-					if ( s_hDxCompiler != nullptr )
+					s_pDxCompiler = static_cast<void*>( hDll );
+					if ( s_pDxCompiler != nullptr )
 					{
 						s_fnDxcCreateInstance = reinterpret_cast<DxcCreateInstanceProc>(
 							GetProcAddress( hDll, "DxcCreateInstance" ) );

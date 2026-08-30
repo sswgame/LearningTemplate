@@ -134,14 +134,14 @@ namespace sw
 		}
 
 		/** @brief 런타임 함수 포인터로 델리게이트를 생성합니다. */
-		static Delegate create( R ( *func )( Args... ) )
+		static Delegate create( R ( *pFunc )( Args... ) )
 		{
 			Delegate newDelegate{};
-			newDelegate._pInstance = reinterpret_cast<const void*>( func );
-			newDelegate._stubFunc  = static_cast<stub_function>( []( const void* ptr, Args... args ) -> R
+			newDelegate._pInstance = reinterpret_cast<const void*>( pFunc );
+			newDelegate._stubFunc  = static_cast<stub_function>( []( const void* pPtr, Args... args ) -> R
 			{
-				auto fn = reinterpret_cast<R ( * )( Args... )>( const_cast<void*>( ptr ) );
-				return fn( std::forward<Args>( args )... );
+				auto pFn = reinterpret_cast<R ( * )( Args... )>( const_cast<void*>( pPtr ) );
+				return pFn( std::forward<Args>( args )... );
 			} );
 
 			return newDelegate;

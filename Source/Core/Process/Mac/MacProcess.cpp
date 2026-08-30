@@ -54,10 +54,10 @@ namespace sw
 		if ( _pStdOutRead == nullptr )
 			return false;
 
-		utf8 lineBuffer[4096];
-		if ( fgets( lineBuffer, sizeof( lineBuffer ), static_cast<FILE*>( _pStdOutRead ) ) != nullptr )
+		utf8 arrLineBuffer[constant::kMaxBuffer4096];
+		if ( fgets( arrLineBuffer, sizeof( arrLineBuffer ), static_cast<FILE*>( _pStdOutRead ) ) != nullptr )
 		{
-			outLine = lineBuffer;
+			outLine = arrLineBuffer;
 			while ( outLine.empty() == false && ( outLine.back() == '\n' || outLine.back() == '\r' ) )
 				outLine.pop_back();
 			return true;

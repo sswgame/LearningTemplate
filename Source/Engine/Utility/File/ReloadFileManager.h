@@ -51,9 +51,9 @@ namespace sw
 		/**
 		 * @brief pathPrefix 하위 + extensions 매칭 시에만 onMatch 호출.
 		 * @param pathPrefix 감시/필터 경로 (정규화됨)
-		 * @param extensions 예: { ".hlsl", ".hlsli" } (점 포함, 대소문자 무시)
+		 * @param listExtension 예: { ".hlsl", ".hlsli" } (점 포함, 대소문자 무시)
 		 */
-		FileWatchHandle registerWatch( string_view pathPrefix, const vector<string>& extensions, const FileWatchMatchDelegate& onMatch );
+		FileWatchHandle registerWatch( string_view pathPrefix, const vector<string>& listExtension, const FileWatchMatchDelegate& onMatch );
 		/** @brief 워치 등록을 해제합니다. */
 		void unregisterWatch( FileWatchHandle handle );
 

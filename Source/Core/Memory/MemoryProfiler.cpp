@@ -45,11 +45,11 @@ namespace sw
 #endif
 
 			template <typename... Args>
-			static void printLeakMessage( const utf8* format, Args&&... args )
+			static void printLeakMessage( const utf8* pFormat, Args&&... args )
 			{
-				utf8 buf[constant::kMaxBuffer1024]{};
-				formatstring( buf, static_cast<uint32>( sizeof( buf ) ), format, std::forward<Args>( args )... );
-				std::fputs( buf, stderr );
+				utf8 arrBuf[constant::kMaxBuffer1024]{};
+				formatstring( arrBuf, static_cast<uint32>( sizeof( arrBuf ) ), pFormat, std::forward<Args>( args )... );
+				std::fputs( arrBuf, stderr );
 				std::fputc( '\n', stderr );
 			}
 
@@ -127,9 +127,9 @@ namespace sw
 #endif
 	}
 
-	int32 MemoryProfiler::reportMemoryLeaks( const utf8* phaseTag )
+	int32 MemoryProfiler::reportMemoryLeaks( const utf8* pPhaseTag )
 	{
-		const utf8* phase = ( phaseTag != nullptr && phaseTag[0] != '\0' ) ? phaseTag : "shutdown";
+		const utf8* pPhase = ( pPhaseTag != nullptr && pPhaseTag[0] != '\0' ) ? pPhaseTag : "shutdown";
 
 #if defined( SW_HAS_CRT_LEAK_CHECK )
 		if ( MemoryProfilerInternal::s_bHasLeakBaseline )
@@ -143,7 +143,7 @@ namespace sw
 				_CrtMemDifference( &diff, &MemoryProfilerInternal::s_leakBaseline, &now );
 
 				MemoryProfilerInternal::printLeakMessage( "[MemoryLeak] %# — heap larger than post-init baseline (%# -> %# normal bytes).",
-														  phase,
+														  pPhase,
 														  static_cast<uint64>( MemoryProfilerInternal::s_leakBaseline.lSizes[_NORMAL_BLOCK] ),
 														  static_cast<uint64>( now.lSizes[_NORMAL_BLOCK] ) );
 				_CrtMemDumpStatistics( &diff );
@@ -152,26 +152,26 @@ namespace sw
 			}
 
 			MemoryProfilerInternal::printLeakMessage( "[MemoryLeak] %# — no CRT leaks (normal %# -> %# bytes).",
-													  phase,
+													  pPhase,
 													  static_cast<uint64>( MemoryProfilerInternal::s_leakBaseline.lSizes[_NORMAL_BLOCK] ),
 													  static_cast<uint64>( now.lSizes[_NORMAL_BLOCK] ) );
 			return 0;
 		}
 
-		MemoryProfilerInternal::printLeakMessage( "[MemoryLeak] %# — CRT _CrtDumpMemoryLeaks() (no baseline)", phase );
+		MemoryProfilerInternal::printLeakMessage( "[MemoryLeak] %# — CRT _CrtDumpMemoryLeaks() (no baseline)", pPhase );
 		return _CrtDumpMemoryLeaks();
 
 #elif defined( SW_HAS_LSAN_LEAK_CHECK )
-		MemoryProfilerInternal::printLeakMessage( "[MemoryLeak] %# — __lsan_do_recoverable_leak_check()", phase );
+		MemoryProfilerInternal::printLeakMessage( "[MemoryLeak] %# — __lsan_do_recoverable_leak_check()", pPhase );
 		return __lsan_do_recoverable_leak_check() != 0 ? 1 : 0;
 
 #else
 	#if defined( SW_DEBUG ) && !defined( SW_SHIPPING )
 		MemoryProfilerInternal::printLeakMessage( "[MemoryLeak] %# — no in-process checker. Windows Debug CRT: rebuild Debug. "
 												  "Linux: cmake -DSW_ENABLE_SANITIZER=ON OR valgrind --leak-check=full ./App",
-												  phase );
+												  pPhase );
 	#else
-		(void)phase;
+		(void)pPhase;
 	#endif
 		return 0;
 #endif
@@ -228,9 +228,9 @@ namespace sw
 		_bDetailedTrackingEnabled.store( bEnabled, std::memory_order_relaxed );
 	}
 
-	uint64 MemoryProfiler::recordAllocation( void* ptr, size_t size, MemoryTag tag )
+	uint64 MemoryProfiler::recordAllocation( void* pPtr, size_t size, MemoryTag tag )
 	{
-		(void)ptr;
+		(void)pPtr;
 		if ( _bTrackingEnabled.load( std::memory_order_relaxed ) == false )
 			return 0;
 
@@ -269,9 +269,9 @@ namespace sw
 		return outHash;
 	}
 
-	void MemoryProfiler::recordFree( void* ptr, size_t size, MemoryTag tag, uint64 callStackHash )
+	void MemoryProfiler::recordFree( void* pPtr, size_t size, MemoryTag tag, uint64 callStackHash )
 	{
-		(void)ptr;
+		(void)pPtr;
 		if ( _bTrackingEnabled.load( std::memory_order_relaxed ) == false )
 			return;
 

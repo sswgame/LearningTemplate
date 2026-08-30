@@ -16,20 +16,20 @@ namespace sw
 		struct ShaderCompilerInternal
 		{
 			/** @brief 셰이더 #include 검색 디렉터리 (engine/shaders, common/shaders, 소스 폴더). */
-			static void collectShaderIncludeDirs( const string& shaderAbsPath, vector<string>& outDirs )
+			static void collectShaderIncludeDirs( const string& shaderAbsPath, vector<string>& outListDir )
 			{
-				outDirs.clear();
+				outListDir.clear();
 				const string shaderDir = FileUtil::getDirectoryPart( shaderAbsPath );
 				if ( shaderDir.empty() == false )
-					outDirs.push_back( FileUtil::normalizeSeparators( shaderDir ) );
+					outListDir.push_back( FileUtil::normalizeSeparators( shaderDir ) );
 
 				const string& engineRoot = ResourceUtil::getEngineFolderPath();
 				if ( engineRoot.empty() == false )
-					outDirs.push_back( FileUtil::normalizeSeparators( FileUtil::joinPath( engineRoot, "shaders" ) ) );
+					outListDir.push_back( FileUtil::normalizeSeparators( FileUtil::joinPath( engineRoot, "shaders" ) ) );
 
 				const string& commonRoot = ResourceUtil::getCommonFolderPath();
 				if ( commonRoot.empty() == false )
-					outDirs.push_back( FileUtil::normalizeSeparators( FileUtil::joinPath( commonRoot, "shaders" ) ) );
+					outListDir.push_back( FileUtil::normalizeSeparators( FileUtil::joinPath( commonRoot, "shaders" ) ) );
 			}
 
 #if defined( SW_PLATFORM_WINDOWS )
@@ -37,8 +37,8 @@ namespace sw
 			class MultiRootD3DInclude final : public ID3DInclude
 			{
 			public:
-				explicit MultiRootD3DInclude( vector<string> roots )
-					: _listRoot{ std::move( roots ) }
+				explicit MultiRootD3DInclude( vector<string> listRoot )
+					: _listRoot{ std::move( listRoot ) }
 				{
 				}
 

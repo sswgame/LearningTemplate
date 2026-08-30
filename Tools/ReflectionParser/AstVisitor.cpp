@@ -119,20 +119,20 @@ namespace sw
 				Entry _arrEntry[4]{}; ///< 충분한 크기로 고정, nullptr 로 빈 슬롯 표시
 				int32 _count = 0;
 
-				void add( const utf8* prefix )
+				void add( const utf8* pPrefix )
 				{
 					if ( _count < 4 )
 					{
-						_arrEntry[_count]._pPrefix = prefix;
+						_arrEntry[_count]._pPrefix = pPrefix;
 						++_count;
 					}
 				}
 
-				Entry* get( const utf8* prefix )
+				Entry* get( const utf8* pPrefix )
 				{
 					for ( int32 entryIndex = 0; entryIndex < _count; ++entryIndex )
 					{
-						if ( _arrEntry[entryIndex]._pPrefix == prefix )
+						if ( _arrEntry[entryIndex]._pPrefix == pPrefix )
 							return &_arrEntry[entryIndex];
 					}
 					return nullptr;
@@ -251,17 +251,17 @@ namespace sw
 			{
 				// kReflectAnnotations[] 테이블에서 prefix가 일치하는 항목의 macroOpen을 찾습니다.
 				// 새 어노테이션이 PredefinedReflectAnnotation.xxx에 추가되면 자동으로 반영됩니다.
-				const utf8* macroOpen = nullptr;
+				const utf8* pMacroOpen = nullptr;
 				for ( const ReflectAnnotationDesc& desc : kReflectAnnotations )
 				{
 					if ( prefix == desc._prefix )
 					{
-						macroOpen = desc._macroOpen;
+						pMacroOpen = desc._macroOpen;
 						break;
 					}
 				}
 
-				if ( macroOpen == nullptr )
+				if ( pMacroOpen == nullptr )
 					return false;
 
 				CXFile file	  = nullptr;
@@ -281,7 +281,7 @@ namespace sw
 				const size_t	  windowStart = ( offset > lookback ) ? ( offset - lookback ) : 0;
 				const string_view window( content.data() + windowStart, offset - windowStart );
 
-				const size_t macroPos = rfindOutsideComments( window, macroOpen );
+				const size_t macroPos = rfindOutsideComments( window, pMacroOpen );
 				if ( macroPos != string_view::npos )
 				{
 					const string_view afterMacro = window.substr( macroPos );
@@ -1191,7 +1191,7 @@ namespace sw
 
 	string AstVisitor::buildFullyQualifiedName( CXCursor cursor )
 	{
-		vector<string> parts;
+		vector<string> listPart;
 		CXCursor	   current = cursor;
 		while ( true )
 		{
@@ -1201,13 +1201,13 @@ namespace sw
 
 			const string spelling = AstVisitorInternal::cxStringToStd( clang_getCursorSpelling( current ) );
 			if ( spelling.empty() == false )
-				parts.push_back( spelling );
+				listPart.push_back( spelling );
 
 			current = clang_getCursorSemanticParent( current );
 		}
 
 		StringBuilder<constant::kMaxBuffer1024> fqn;
-		for ( auto it = parts.rbegin(); it != parts.rend(); ++it )
+		for ( auto it = listPart.rbegin(); it != listPart.rend(); ++it )
 		{
 			if ( fqn.size() > 0 )
 				fqn.append( "::" );

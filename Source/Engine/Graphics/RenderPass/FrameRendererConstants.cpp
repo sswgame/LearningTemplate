@@ -13,13 +13,13 @@ namespace sw
 	{
 		struct FrameRendererConstantsInternal
 		{
-			static void mulMat4( const float32 a[16], const float32 b[16], float32 out[16] )
+			static void mulMat4( const float32 arrA[16], const float32 arrB[16], float32 outArr[16] )
 			{
 				for ( int32 rowIndex = 0; rowIndex < 4; ++rowIndex )
 				{
 					for ( int32 colIndex = 0; colIndex < 4; ++colIndex )
 					{
-						out[colIndex * 4 + rowIndex] = a[0 * 4 + rowIndex] * b[colIndex * 4 + 0] + a[1 * 4 + rowIndex] * b[colIndex * 4 + 1] + a[2 * 4 + rowIndex] * b[colIndex * 4 + 2] + a[3 * 4 + rowIndex] * b[colIndex * 4 + 3];
+						outArr[colIndex * 4 + rowIndex] = arrA[0 * 4 + rowIndex] * arrB[colIndex * 4 + 0] + arrA[1 * 4 + rowIndex] * arrB[colIndex * 4 + 1] + arrA[2 * 4 + rowIndex] * arrB[colIndex * 4 + 2] + arrA[3 * 4 + rowIndex] * arrB[colIndex * 4 + 3];
 					}
 				}
 			}
@@ -61,7 +61,7 @@ namespace sw
 		Memory::copy( _passConstants._viewProj, &vp._11, sizeof( _passConstants._viewProj ) );
 	}
 
-	void FrameRenderer::buildCascadeShadowMatrices( float32 outCascadeMats[4][16], float32 outSplits[4] ) const
+	void FrameRenderer::buildCascadeShadowMatrices( float32 outArrCascadeMat[4][16], float32 outArrSplit[4] ) const
 	{
 		constexpr float32 kLambda	= 0.75f;
 		constexpr float32 kNear		= 0.1f;
@@ -71,10 +71,10 @@ namespace sw
 		// Practical split scheme: Ci = lambda * (n * (f/n)^(i/m)) + (1-lambda) * (n + (i/m)*(f-n))
 		for ( int32 cascadeIndex = 0; cascadeIndex < kCascades; ++cascadeIndex )
 		{
-			const float32 p			= static_cast<float32>( cascadeIndex + 1 ) / static_cast<float32>( kCascades );
-			const float32 logSplit	= kNear * MathUtil::pow( kFar / kNear, p );
-			const float32 uniSplit	= kNear + ( kFar - kNear ) * p;
-			outSplits[cascadeIndex] = kLambda * logSplit + ( 1.0f - kLambda ) * uniSplit;
+			const float32 p			  = static_cast<float32>( cascadeIndex + 1 ) / static_cast<float32>( kCascades );
+			const float32 logSplit	  = kNear * MathUtil::pow( kFar / kNear, p );
+			const float32 uniSplit	  = kNear + ( kFar - kNear ) * p;
+			outArrSplit[cascadeIndex] = kLambda * logSplit + ( 1.0f - kLambda ) * uniSplit;
 		}
 
 		float32		  lx  = _passConstants._keyLightDirIntensity[0];
@@ -117,7 +117,7 @@ namespace sw
 
 		for ( int32 cascadeIndex = 0; cascadeIndex < kCascades; ++cascadeIndex )
 		{
-			const float32 extent = outSplits[cascadeIndex] * 0.6f + 2.0f;
+			const float32 extent = outArrSplit[cascadeIndex] * 0.6f + 2.0f;
 			const float32 invExt = 1.0f / extent;
 
 			const float32 arrOrthoCascade[16] = {
@@ -126,11 +126,11 @@ namespace sw
 				0, 0, 0.1f * invExt, 0,
 				0, 0, 0.5f, 1.0f };
 
-			FrameRendererConstantsInternal::mulMat4( arrLightView, arrOrthoCascade, outCascadeMats[cascadeIndex] );
+			FrameRendererConstantsInternal::mulMat4( arrLightView, arrOrthoCascade, outArrCascadeMat[cascadeIndex] );
 		}
 	}
 
-	void FrameRenderer::buildLightViewProj( float32 outMat[16] ) const
+	void FrameRenderer::buildLightViewProj( float32 outArrMat[16] ) const
 	{
 		// Orthographic projection looking along key light (column-major).
 		constexpr float32 arrOrtho[16] = {
@@ -177,10 +177,10 @@ namespace sw
 			sz, uz, -lz, 0,
 			0, 0, 2.0f, 1 };
 
-		FrameRendererConstantsInternal::mulMat4( arrView, arrOrtho, outMat );
+		FrameRendererConstantsInternal::mulMat4( arrView, arrOrtho, outArrMat );
 	}
 
-	void FrameRenderer::buildViewProj( float32 outMat[16] ) const
+	void FrameRenderer::buildViewProj( float32 outArrMat[16] ) const
 	{
 		// Fallback orbit camera (used when no CameraComponent is active).
 		constexpr float32 eyeX = 2.15f;
@@ -238,7 +238,7 @@ namespace sw
 			0.0f, 0.0f, q, 1.0f,
 			0.0f, 0.0f, -nearZ * q, 0.0f };
 
-		FrameRendererConstantsInternal::mulMat4( arrView, arrProj, outMat );
+		FrameRendererConstantsInternal::mulMat4( arrView, arrProj, outArrMat );
 	}
 
 	void FrameRenderer::setIdentityWorld()

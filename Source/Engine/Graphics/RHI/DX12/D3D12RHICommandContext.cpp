@@ -550,12 +550,10 @@ namespace sw
 		_pDevice->_activeColorTargetCount = 0;
 		_pDevice->_bActiveSwapchainRT	  = 0;
 
-		const uint32 wantCount = ( beginInfo._colorTargetCount > 0 ) ? beginInfo._colorTargetCount : ( bBindColor ? 1 : 0 );
-		for ( uint32 attachmentIndex = 0; attachmentIndex < wantCount; ++attachmentIndex )
+		const uint32 wantCount = ( beginInfo._colorTargetCount > 0 ) ? beginInfo._colorTargetCount : ( bBindColor ? 1u : 0u );
+		for ( uint32 attachmentIndex = 0; attachmentIndex < wantCount && attachmentIndex < kMaxColorAttachments; ++attachmentIndex )
 		{
-			const RHITextureHandle		colorHandle = ( beginInfo._colorTargetCount > 0 )
-														? beginInfo._arrColorTarget[attachmentIndex]
-														: beginInfo._colorTarget;
+			const RHITextureHandle		colorHandle = beginInfo._arrColorTarget[attachmentIndex];
 			D3D12_CPU_DESCRIPTOR_HANDLE rtv{};
 			bool						bValid = false;
 
@@ -598,8 +596,8 @@ namespace sw
 			if ( bValid == false )
 				break;
 
-			const RHIRenderPassLoadOp loadOp = ( beginInfo._colorTargetCount > 0 ) ? beginInfo._arrLoadOp[attachmentIndex] : beginInfo._loadOp;
-			const float32*			  pClear = ( beginInfo._colorTargetCount > 0 ) ? beginInfo._arrTargetClearColor[attachmentIndex] : beginInfo._arrClearColor;
+			const RHIRenderPassLoadOp loadOp = beginInfo._arrLoadOp[attachmentIndex];
+			const float32*			  pClear = &beginInfo._arrClearColor[attachmentIndex]._x;
 			if ( loadOp == RHIRenderPassLoadOp::Clear )
 				_pDevice->_commandList->ClearRenderTargetView( rtv, pClear, 0, nullptr );
 

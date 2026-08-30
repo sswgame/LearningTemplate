@@ -16,6 +16,7 @@ namespace sw
 	class IRHIDevice;
 	struct ShaderCompileResult;
 	struct ShaderReflectionData;
+	struct float4;
 
 	/// @brief 셰이더 permutation과 패킹 CB를 가진 머티리얼 에셋
 	class SW_API Material
@@ -208,7 +209,7 @@ namespace sw
 		/** @brief 스칼라 파라미터를 설정합니다. */
 		void setScalarParameter( hashed_string name, float32 value );
 		/** @brief 벡터 파라미터를 설정합니다. */
-		void setVectorParameter( hashed_string name, const float32 color[4] );
+		void setVectorParameter( hashed_string name, const float4& value );
 		/** @brief 텍스처 파라미터를 설정합니다. */
 		void setTextureParameter( hashed_string name, RHIDescriptorIndex descIdx );
 		/** @brief 품질 레벨을 설정합니다. */

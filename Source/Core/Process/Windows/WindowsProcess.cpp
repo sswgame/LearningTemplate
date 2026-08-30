@@ -118,13 +118,13 @@ namespace sw
 		}
 
 		// 2) 파이프에서 추가 데이터 읽기
-		utf8  readBuffer[constant::kMaxBuffer4096];
+		utf8  arrReadBuffer[constant::kMaxBuffer4096];
 		DWORD bytesRead = 0;
 
-		while ( ReadFile( static_cast<HANDLE>( _pStdOutRead ), readBuffer, sizeof( readBuffer ) - 1, &bytesRead, nullptr ) != FALSE && bytesRead > 0 )
+		while ( ReadFile( static_cast<HANDLE>( _pStdOutRead ), arrReadBuffer, sizeof( arrReadBuffer ) - 1, &bytesRead, nullptr ) != FALSE && bytesRead > 0 )
 		{
-			readBuffer[bytesRead] = '\0';
-			_bufferedOutput.append( readBuffer, bytesRead );
+			arrReadBuffer[bytesRead] = '\0';
+			_bufferedOutput.append( arrReadBuffer, bytesRead );
 
 			newlinePos = _bufferedOutput.find_first_of( "\r\n" );
 			if ( newlinePos != string::npos )

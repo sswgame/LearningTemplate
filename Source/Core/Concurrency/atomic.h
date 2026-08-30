@@ -18,12 +18,12 @@ namespace sw
 	class atomic
 	{
 	public:
-		atomic() noexcept
+		constexpr atomic() noexcept
 			: _value{ T{} }
 		{
 		}
 
-		atomic( T desired ) noexcept
+		constexpr atomic( T desired ) noexcept
 			: _value{ desired }
 		{
 		}
