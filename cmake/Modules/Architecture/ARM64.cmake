@@ -10,6 +10,6 @@ if(
     return()
 endif()
 
-add_library(swarchitecture_arm64 INTERFACE)
-target_compile_definitions(swarchitecture_arm64 INTERFACE SW_ARM64)
-list(APPEND sw_flag_libraries swarchitecture_arm64)
+add_library(sw_architecture_arm64 INTERFACE)
+target_compile_definitions(sw_architecture_arm64 INTERFACE SW_ARM64)
+list(APPEND sw_flag_libraries sw_architecture_arm64)

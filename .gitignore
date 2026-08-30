@@ -100,3 +100,6 @@ Resource/Cache/
 **/ShaderCache/
 **/shader_cache/
 *.shadercache
+
+# Claude Code (로컬 에이전트 설정)
+.claude/
