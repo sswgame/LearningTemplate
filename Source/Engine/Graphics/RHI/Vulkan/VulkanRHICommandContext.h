@@ -39,6 +39,13 @@ namespace sw
 		void endOffscreenPass( RHITextureHandle colorTarget ) override;
 
 	private:
+		/**
+		 * @brief 그래픽스 draw 직전 set 0(머티리얼/Pass UBO)·set 1(bindless 텍스처)을 바인딩합니다.
+		 * @details 셰이더가 set 0 을 정적으로 참조하므로 모든 draw 경로(인다이렉트 포함)에서 필요합니다.
+		 *          유효한 머티리얼 디스크립터가 없으면 디바이스의 기본 셋(_descriptorSet)으로 폴백합니다.
+		 */
+		void bindGraphicsMaterialSets( RHIDescriptorIndex materialDescriptorIndex );
+
 		VulkanRHIDevice* _pDevice;
 	};
 } // namespace sw

@@ -551,6 +551,30 @@ namespace sw
 		_pDevice->_boundIndexOffset = offset;
 	}
 
+	void VulkanRHICommandContext::bindGraphicsMaterialSets( RHIDescriptorIndex materialDescriptorIndex )
+	{
+		VkCommandBuffer cmd = _pDevice->currentCommandBuffer();
+		if ( cmd == VK_NULL_HANDLE || _pDevice->_pipelineLayout == VK_NULL_HANDLE )
+			return;
+
+		const bool bValidMaterialDescriptor =
+			( materialDescriptorIndex != kInvalidDescriptorIndex &&
+			  materialDescriptorIndex < static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredDescriptorSet.size() ) &&
+			  _pDevice->_listRegisteredDescriptorSet[materialDescriptorIndex] != VK_NULL_HANDLE );
+
+		// set 0: 유효한 머티리얼 UBO, 없으면 디바이스 기본 셋으로 폴백한다.
+		// 셰이더가 set 0 을 정적으로 참조하므로 어느 쪽도 없으면 draw 를 건너뛴다(검증 오류 방지).
+		const VkDescriptorSet set0 = bValidMaterialDescriptor
+									   ? _pDevice->_listRegisteredDescriptorSet[materialDescriptorIndex]
+									   : _pDevice->_descriptorSet;
+		if ( set0 != VK_NULL_HANDLE )
+			vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pDevice->_pipelineLayout, 0, 1, &set0, 0, nullptr );
+
+		// set 1: bindless 텍스처 배열.
+		if ( _pDevice->_bindlessTextureSet != VK_NULL_HANDLE )
+			vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pDevice->_pipelineLayout, 1, 1, &_pDevice->_bindlessTextureSet, 0, nullptr );
+	}
+
 	void VulkanRHICommandContext::draw( uint32 vertexCount, uint32 startVertex, RHIDescriptorIndex materialDescriptorIndex )
 	{
 		VkCommandBuffer cmd = _pDevice->currentCommandBuffer();
@@ -573,22 +597,7 @@ namespace sw
 
 		vkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline );
 
-		const bool bValidMaterialDescriptor =
-			( materialDescriptorIndex != kInvalidDescriptorIndex &&
-			  materialDescriptorIndex < static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredDescriptorSet.size() ) &&
-			  _pDevice->_listRegisteredDescriptorSet[materialDescriptorIndex] != VK_NULL_HANDLE );
-		if ( bValidMaterialDescriptor )
-		{
-			const VkDescriptorSet descSet = _pDevice->_listRegisteredDescriptorSet[materialDescriptorIndex];
-			vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pDevice->_pipelineLayout, 0, 1, &descSet, 0, nullptr );
-		}
-		else if ( _pDevice->_descriptorSet != VK_NULL_HANDLE )
-		{
-			vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pDevice->_pipelineLayout, 0, 1, &_pDevice->_descriptorSet, 0, nullptr );
-		}
-
-		if ( _pDevice->_bindlessTextureSet != VK_NULL_HANDLE )
-			vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pDevice->_pipelineLayout, 1, 1, &_pDevice->_bindlessTextureSet, 0, nullptr );
+		bindGraphicsMaterialSets( materialDescriptorIndex );
 
 		if ( materialDescriptorIndex != kInvalidDescriptorIndex )
 		{
@@ -680,23 +689,15 @@ namespace sw
 		if ( cmd == VK_NULL_HANDLE || pRecord == nullptr )
 			return;
 
-		const bool bValidMaterialDescriptor =
-			( materialDescriptorIndex != kInvalidDescriptorIndex &&
-			  materialDescriptorIndex < static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredDescriptorSet.size() ) &&
-			  _pDevice->_listRegisteredDescriptorSet[materialDescriptorIndex] != VK_NULL_HANDLE &&
-			  _pDevice->_pipelineLayout != VK_NULL_HANDLE );
-		if ( bValidMaterialDescriptor )
+		bindGraphicsMaterialSets( materialDescriptorIndex );
+
+		if ( materialDescriptorIndex != kInvalidDescriptorIndex && _pDevice->_pipelineLayout != VK_NULL_HANDLE )
 		{
-			const VkDescriptorSet descSet = _pDevice->_listRegisteredDescriptorSet[materialDescriptorIndex];
-			vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pDevice->_pipelineLayout, 0, 1, &descSet, 0, nullptr );
 			uint32						 matIndex = materialDescriptorIndex;
 			constexpr VkShaderStageFlags kPushStages =
 				VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT;
 			vkCmdPushConstants( cmd, _pDevice->_pipelineLayout, kPushStages, 0, sizeof( uint32 ), &matIndex );
 		}
-
-		if ( _pDevice->_bindlessTextureSet != VK_NULL_HANDLE )
-			vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pDevice->_pipelineLayout, 1, 1, &_pDevice->_bindlessTextureSet, 0, nullptr );
 
 		if ( pRecord->_buffer != VK_NULL_HANDLE )
 		{
@@ -726,6 +727,9 @@ namespace sw
 			( cmd != VK_NULL_HANDLE && pArgs != nullptr && pIb != nullptr && pArgs->_buffer != VK_NULL_HANDLE && pIb->_buffer != VK_NULL_HANDLE );
 		if ( bValidArgs == false )
 			return;
+
+		// 셰이더가 set 0 을 정적으로 참조하므로 인다이렉트 드로우에서도 바인딩해야 한다(머티리얼 인덱스는 인스턴스 버퍼에서 온다).
+		bindGraphicsMaterialSets( kInvalidDescriptorIndex );
 
 		const VulkanRHIDevice::VulkanBufferRecord* pVb = _pDevice->resolveAllocatedBuffer( _pDevice->_boundMeshVb );
 		if ( pVb != nullptr )
@@ -760,6 +764,9 @@ namespace sw
 			( cmd != VK_NULL_HANDLE && pArgs != nullptr && pArgs->_buffer != VK_NULL_HANDLE && maxCommandCount > 0 );
 		if ( bValidMultiArgs == false )
 			return;
+
+		// 셰이더의 set 0 정적 참조를 만족시킨다(머티리얼은 GPU 인스턴스 데이터에서 인덱싱).
+		bindGraphicsMaterialSets( kInvalidDescriptorIndex );
 
 		constexpr uint32 stride = sizeof( RHIDrawIndirectCommand );
 

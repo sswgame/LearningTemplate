@@ -389,6 +389,8 @@ namespace sw
 
 		/** @brief bindless 텍스처 배열을 확보합니다. */
 		bool ensureBindlessTextureArray();
+		/** @brief set 0(Pass/Material UBO) 폴백용 기본 디스크립터 셋(_descriptorSet)을 확보합니다. */
+		bool ensureDefaultDescriptorSet();
 		/** @brief 디스크립터 풀·셋 레이아웃·파이프라인 레이아웃을 생성합니다. */
 		bool createDescriptorResources();
 		/** @brief bindless 텍스처 슬롯을 갱신합니다. */

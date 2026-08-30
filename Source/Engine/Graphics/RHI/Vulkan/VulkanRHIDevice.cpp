@@ -325,6 +325,7 @@ namespace sw
 				return false;
 			}
 			(void)ensureBindlessTextureArray();
+			(void)ensureDefaultDescriptorSet();
 		}
 
 		BLOCK( "Fullscreen Triangle" )
@@ -1713,6 +1714,85 @@ namespace sw
 		}
 		vkUpdateDescriptorSets( _device, kBindlessTextureCount, writes.data(), 0, nullptr );
 		SW_LOG_INFO( "Bindless texture array ready (%# slots).", kBindlessTextureCount );
+		return true;
+	}
+
+	bool VulkanRHIDevice::ensureDefaultDescriptorSet()
+	{
+		if ( _descriptorSet != VK_NULL_HANDLE )
+			return true;
+		if ( _device == VK_NULL_HANDLE || _descriptorPool == VK_NULL_HANDLE || _descriptorSetLayout == VK_NULL_HANDLE )
+			return false;
+
+		// set 0(Pass/Material UBO)에 바인딩할 게 없을 때 쓰는 기본 세트.
+		// 그래픽스 셰이더는 set 0 을 정적으로 참조하므로 Vulkan 검증상 모든 draw 에서
+		// set 0 이 바인딩돼 있어야 한다(머티리얼 CBV 가 없는 드로우·인다이렉트 드로우 포함).
+		constexpr VkDeviceSize kDummyUboSize = 256;
+
+		VkBufferCreateInfo bufferInfo{};
+		bufferInfo.sType	   = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+		bufferInfo.size		   = kDummyUboSize;
+		bufferInfo.usage	   = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+		bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+		if ( vkCreateBuffer( _device, &bufferInfo, nullptr, &_dummyUBO ) != VK_SUCCESS )
+			return false;
+
+		VkMemoryRequirements memReq{};
+		vkGetBufferMemoryRequirements( _device, _dummyUBO, &memReq );
+		uint32 memoryTypeIndex{ 0 };
+		if ( findMemoryType( memReq.memoryTypeBits,
+							 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+							 memoryTypeIndex ) == false )
+		{
+			vkDestroyBuffer( _device, _dummyUBO, nullptr );
+			_dummyUBO = VK_NULL_HANDLE;
+			return false;
+		}
+
+		VkMemoryAllocateInfo allocMem{};
+		allocMem.sType			 = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+		allocMem.allocationSize	 = memReq.size;
+		allocMem.memoryTypeIndex = memoryTypeIndex;
+		if ( vkAllocateMemory( _device, &allocMem, nullptr, &_dummyUBOMemory ) != VK_SUCCESS )
+		{
+			vkDestroyBuffer( _device, _dummyUBO, nullptr );
+			_dummyUBO = VK_NULL_HANDLE;
+			return false;
+		}
+		vkBindBufferMemory( _device, _dummyUBO, _dummyUBOMemory, 0 );
+
+		void* pMapped{ nullptr };
+		if ( vkMapMemory( _device, _dummyUBOMemory, 0, kDummyUboSize, 0, &pMapped ) == VK_SUCCESS && pMapped != nullptr )
+		{
+			Memory::set( pMapped, 0, static_cast<size_t>( kDummyUboSize ) );
+			vkUnmapMemory( _device, _dummyUBOMemory );
+		}
+
+		VkDescriptorSetAllocateInfo allocInfo{};
+		allocInfo.sType				 = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+		allocInfo.descriptorPool	 = _descriptorPool;
+		allocInfo.descriptorSetCount = 1;
+		allocInfo.pSetLayouts		 = &_descriptorSetLayout;
+		if ( vkAllocateDescriptorSets( _device, &allocInfo, &_descriptorSet ) != VK_SUCCESS )
+		{
+			_descriptorSet = VK_NULL_HANDLE;
+			return false;
+		}
+
+		VkDescriptorBufferInfo dbInfo{};
+		dbInfo.buffer = _dummyUBO;
+		dbInfo.offset = 0;
+		dbInfo.range  = kDummyUboSize;
+
+		VkWriteDescriptorSet write{};
+		write.sType			  = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		write.dstSet		  = _descriptorSet;
+		write.dstBinding	  = 0;
+		write.dstArrayElement = 0;
+		write.descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		write.descriptorCount = 1;
+		write.pBufferInfo	  = &dbInfo;
+		vkUpdateDescriptorSets( _device, 1, &write, 0, nullptr );
 		return true;
 	}
 
