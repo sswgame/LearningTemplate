@@ -124,7 +124,7 @@ namespace sw
 		if ( bExists == false )
 		{
 			const string absPath = ResourceUtil::getResourcePath( pathStr );
-			bExists = ( absPath.empty() == false ) ? FileUtil::fileExists( absPath ) : FileUtil::fileExists( pathStr );
+			bExists				 = ( absPath.empty() == false ) ? FileUtil::fileExists( absPath ) : FileUtil::fileExists( pathStr );
 		}
 
 		std::scoped_lock<mutex> innerLock{ _mutex };

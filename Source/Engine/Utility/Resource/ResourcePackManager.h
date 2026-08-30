@@ -24,7 +24,7 @@ namespace sw
 	 */
 	struct MountedPack
 	{
-		int32						  _priority{ 0 }; ///< 높을수록 우선 탐색
+		int32						   _priority{ 0 }; ///< 높을수록 우선 탐색
 		unique_ptr<ResourcePackReader> _pReader;
 	};
 
@@ -108,8 +108,8 @@ namespace sw
 		bool scanAndMountPacks( string_view packsDirectory, const vector<string>& listPriority );
 
 	private:
-		mutable mutex			_vfsMutex;
-		vector<MountedPack>		_listMountedPack;
+		mutable mutex		   _vfsMutex;
+		vector<MountedPack>	   _listMountedPack;
 		DlcEntitlementDelegate _dlcValidator;
 		bool				   _bAllowLooseFiles;
 	};

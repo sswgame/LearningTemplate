@@ -1,14 +1,14 @@
 #include "pch.h"
 
 #include "Engine/Utility/Resource/ResourcePackManager.h"
-#include "Engine/Utility/Resource/ResourceUtil.h"
 
+#include "Core/Common/StdHeaders.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringUtil.h"
 
-#include "Core/Common/StdHeaders.h"
+#include "Engine/Utility/Resource/ResourceUtil.h"
 
 namespace sw
 {
@@ -55,7 +55,7 @@ namespace sw
 					return 0;
 
 				const vector<string>& listPriorityEffective = listPriority.empty() ? ResourceUtil::getDefaultSearchPriority() : listPriority;
-				const size_t		  priorityCount			 = listPriorityEffective.size();
+				const size_t		  priorityCount			= listPriorityEffective.size();
 
 				// 1. listPriorityEffective 순서에 맞춰 일치하는 토큰 검색 (앞쪽 인덱스일수록 높은 우선순위)
 				for ( size_t index = 0; index < priorityCount; ++index )
@@ -105,7 +105,7 @@ namespace sw
 		unmountAll();
 	}
 
-	ResourcePackManager::ResourcePackManager( ResourcePackManager&& other) noexcept
+	ResourcePackManager::ResourcePackManager( ResourcePackManager&& other ) noexcept
 	{
 		std::lock_guard<mutex> lock( other._vfsMutex );
 		_listMountedPack  = std::move( other._listMountedPack );

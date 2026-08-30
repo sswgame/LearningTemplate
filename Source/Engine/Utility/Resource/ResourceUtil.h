@@ -146,15 +146,15 @@ namespace sw
 		static string makeSavePath( string_view absoluteFolder, string_view fileName );
 
 	private:
-		static atomic<bool>	  _s_bInitialize;			 ///< initialize() 완료 여부
-		static string		  _s_projectFolderPath;		 ///< 프로젝트 루트
-		static string		  _s_resourceRootFolderPath; ///< Resource/ (표시용)
-		static string			   _s_engineFolderPath;		 ///< Resource/engine
-		static string			   _s_commonFolderPath;		 ///< Resource/common
-		static string			   _s_gameFolderPath;		 ///< Resource/game
-		static string			   _s_editorFolderPath;		 ///< Resource/editor
-		static vector<string>	   _s_listSearchPriority;	 ///< 검색 우선순위 토큰 목록
-		static vector<string>	   _s_listResourceFolder;	 ///< getResourcePath 검색 루트들
-		static ResourcePackManager _s_packManager;			 ///< VFS 팩 마운트 매니저
+		static atomic<bool>		   _s_bInitialize;			  ///< initialize() 완료 여부
+		static string			   _s_projectFolderPath;	  ///< 프로젝트 루트
+		static string			   _s_resourceRootFolderPath; ///< Resource/ (표시용)
+		static string			   _s_engineFolderPath;		  ///< Resource/engine
+		static string			   _s_commonFolderPath;		  ///< Resource/common
+		static string			   _s_gameFolderPath;		  ///< Resource/game
+		static string			   _s_editorFolderPath;		  ///< Resource/editor
+		static vector<string>	   _s_listSearchPriority;	  ///< 검색 우선순위 토큰 목록
+		static vector<string>	   _s_listResourceFolder;	  ///< getResourcePath 검색 루트들
+		static ResourcePackManager _s_packManager;			  ///< VFS 팩 마운트 매니저
 	};
 } // namespace sw

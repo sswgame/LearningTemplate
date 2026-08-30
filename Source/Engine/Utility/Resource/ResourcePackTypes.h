@@ -64,20 +64,20 @@ namespace sw
 	 */
 	struct PackHeader
 	{
-		uint32 _magic{ kPackMagic };												  ///< 'SWPK' 매직 (4B)
-		uint32 _formatVersion{ kPackFormatVersion };								  ///< 포맷 버전 (4B)
-		uint32 _dlcAppId{ 0 };														  ///< DLC 식별자 (0: 본편/공용, >0: 유료 DLC AppID) (4B)
+		uint32 _magic{ kPackMagic };												///< 'SWPK' 매직 (4B)
+		uint32 _formatVersion{ kPackFormatVersion };								///< 포맷 버전 (4B)
+		uint32 _dlcAppId{ 0 };														///< DLC 식별자 (0: 본편/공용, >0: 유료 DLC AppID) (4B)
 		uint8  _compressionType{ static_cast<uint8>( PackCompressionType::None ) }; ///< 압축 방식 (1B)
-		uint8  _encryptionType{ static_cast<uint8>( PackEncryptionType::None ) };	  ///< 암호화 방식 (1B)
-		uint16 _sectorAlignment{ kPackSectorAlignment };							  ///< 섹터 정렬 경계 (기본 4096) (2B)
-		uint16 _flags{ static_cast<uint16>( PackFlag::HasCrc32 ) };					  ///< 팩 플래그 비트마스크 (2B)
-		uint32 _fileCount{ 0 };														  ///< 팩에 포함된 파일 총 개수 (4B)
-		uint64 _indexOffset{ 0 };													  ///< FAT 인덱스 테이블 파일 시작 오프셋 (8B)
-		uint64 _indexSize{ 0 };														  ///< FAT 인덱스 테이블 바이트 크기 (8B)
-		uint64 _stringPoolOffset{ 0 };												  ///< 디버그용 원본 경로 스트링 풀 시작 오프셋 (8B)
-		uint64 _stringPoolSize{ 0 };												  ///< 스트링 풀 바이트 크기 (8B)
-		uint64 _totalDataSize{ 0 };													  ///< 정렬 패딩을 포함한 페이로드 총 크기 (8B)
-		uint8  _reserved[2]{ 0 };													  ///< 예약 패딩 (총 64바이트 정렬) (2B)
+		uint8  _encryptionType{ static_cast<uint8>( PackEncryptionType::None ) };	///< 암호화 방식 (1B)
+		uint16 _sectorAlignment{ kPackSectorAlignment };							///< 섹터 정렬 경계 (기본 4096) (2B)
+		uint16 _flags{ static_cast<uint16>( PackFlag::HasCrc32 ) };					///< 팩 플래그 비트마스크 (2B)
+		uint32 _fileCount{ 0 };														///< 팩에 포함된 파일 총 개수 (4B)
+		uint64 _indexOffset{ 0 };													///< FAT 인덱스 테이블 파일 시작 오프셋 (8B)
+		uint64 _indexSize{ 0 };														///< FAT 인덱스 테이블 바이트 크기 (8B)
+		uint64 _stringPoolOffset{ 0 };												///< 디버그용 원본 경로 스트링 풀 시작 오프셋 (8B)
+		uint64 _stringPoolSize{ 0 };												///< 스트링 풀 바이트 크기 (8B)
+		uint64 _totalDataSize{ 0 };													///< 정렬 패딩을 포함한 페이로드 총 크기 (8B)
+		uint8  _reserved[2]{ 0 };													///< 예약 패딩 (총 64바이트 정렬) (2B)
 	};
 	static_assert( sizeof( PackHeader ) == 64, "PackHeader must be exactly 64 bytes" );
 

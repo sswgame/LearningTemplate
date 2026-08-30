@@ -2,13 +2,13 @@
 
 #include "Engine/Utility/Resource/ResourceUtil.h"
 
-#include "Engine/Config/EngineConfig.h"
-#include "Engine/Config/GameConfig.h"
-
 #include "Core/Concurrency/mutex.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
+
+#include "Engine/Config/EngineConfig.h"
+#include "Engine/Config/GameConfig.h"
 
 namespace sw
 {
@@ -33,14 +33,14 @@ namespace sw
 
 				struct StaticDomainRoute
 				{
-					string_view	  _prefix;
+					string_view _prefix;
 					const string& ( *_pGetFolderFunc )();
 				};
 
 				static constexpr StaticDomainRoute kStaticDomainRoutes[] = {
-					{ path::kEnginePack, &ResourceUtil::getEngineFolderPath },
-					{ path::kCommonPack, &ResourceUtil::getCommonFolderPath },
-					{ path::kEditorPack, &ResourceUtil::getEditorFolderPath },
+					{path::kEnginePack, &ResourceUtil::getEngineFolderPath},
+					{path::kCommonPack, &ResourceUtil::getCommonFolderPath},
+					{path::kEditorPack, &ResourceUtil::getEditorFolderPath},
 				};
 
 				for ( const auto& route : kStaticDomainRoutes )

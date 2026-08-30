@@ -1,17 +1,17 @@
 #include "pch.h"
 
+#include "Core/Compression/RleCompressionCodec.h"
+#include "Core/File/FileUtil.h"
+#include "Core/Math/MathUtil.h"
+#include "Core/Memory/Memory.h"
+#include "Core/String/StringUtil.h"
+
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Utility/Resource/AssetStreamingQueue.h"
 #include "Engine/Utility/Resource/ResourcePackManager.h"
 #include "Engine/Utility/Resource/ResourcePackReader.h"
 #include "Engine/Utility/Resource/ResourcePackTypes.h"
 #include "Engine/Utility/Resource/ResourceUtil.h"
-
-#include "Core/Compression/RleCompressionCodec.h"
-#include "Core/File/FileUtil.h"
-#include "Core/Math/MathUtil.h"
-#include "Core/Memory/Memory.h"
-#include "Core/String/StringUtil.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -40,13 +40,13 @@ namespace sw
 				return false;
 
 			PackHeader header{};
-			header._magic		   = kPackMagic;
-			header._formatVersion  = kPackFormatVersion;
-			header._dlcAppId	   = dlcAppId;
+			header._magic			= kPackMagic;
+			header._formatVersion	= kPackFormatVersion;
+			header._dlcAppId		= dlcAppId;
 			header._compressionType = static_cast<uint8>( compression );
-			header._encryptionType  = static_cast<uint8>( PackEncryptionType::None );
+			header._encryptionType	= static_cast<uint8>( PackEncryptionType::None );
 			header._sectorAlignment = kPackSectorAlignment;
-			header._flags = static_cast<uint16>( PackFlag::HasCrc32 );
+			header._flags			= static_cast<uint16>( PackFlag::HasCrc32 );
 			if ( bIncludeDebugStringPool )
 				header._flags |= static_cast<uint16>( PackFlag::HasStringPool );
 			header._fileCount = static_cast<uint32>( listFileContent.size() );
@@ -163,10 +163,10 @@ SW_TEST_CASE( Engine_ResourcePack, SinglePackMountAndHashLookup )
 	const sw::string testPackPath = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "test_temp_pack_01.pack" );
 
 	const sw::vector<std::pair<sw::string, sw::string>> listFiles = {
-		{ "maps/title.scene.xml", "<Scene name=\"Title\" version=\"1.0\"/>" },
-		{ "shaders/pbr.hlsl", "// PBR Forward Lighting Shader Code" },
-		{ "data/items.json", "{\"sword\": {\"atk\": 50, \"durability\": 100}}" }
-	};
+		{"maps/title.scene.xml",		  "<Scene name=\"Title\" version=\"1.0\"/>"},
+		{	  "shaders/pbr.hlsl",			  "// PBR Forward Lighting Shader Code"},
+		{	  "data/items.json", "{\"sword\": {\"atk\": 50, \"durability\": 100}}"}
+	 };
 
 	SW_ASSERT_TRUE( sw::createTestPackFile( testPackPath, 0, sw::PackCompressionType::RLE, listFiles, false ) );
 
@@ -201,15 +201,23 @@ SW_TEST_CASE( Engine_ResourcePack, SinglePackMountAndHashLookup )
 SW_TEST_CASE( Engine_ResourcePack, VFSPriorityStackAndOverrides )
 {
 	const sw::string enginePack = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "test_vfs_engine.pack" );
-	const sw::string gamePack   = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "test_vfs_game_demo.pack" );
-	const sw::string dlcPack    = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "test_vfs_dlc_exp1.pack" );
-	const sw::string patchPack  = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "test_vfs_patch.pack" );
+	const sw::string gamePack	= sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "test_vfs_game_demo.pack" );
+	const sw::string dlcPack	= sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "test_vfs_dlc_exp1.pack" );
+	const sw::string patchPack	= sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "test_vfs_patch.pack" );
 
 	// 1. 각 팩에 동일한 키의 파일 생성
-	sw::createTestPackFile( enginePack, 0, sw::PackCompressionType::None, { { "config/gameplay.xml", "VERSION_ENGINE" } } );
-	sw::createTestPackFile( gamePack, 0, sw::PackCompressionType::None, { { "config/gameplay.xml", "VERSION_GAME" } } );
-	sw::createTestPackFile( dlcPack, 0, sw::PackCompressionType::None, { { "config/gameplay.xml", "VERSION_DLC" } } );
-	sw::createTestPackFile( patchPack, 0, sw::PackCompressionType::None, { { "config/gameplay.xml", "VERSION_PATCH_HOTFIX" } } );
+	sw::createTestPackFile( enginePack, 0, sw::PackCompressionType::None, {
+																			  { "config/gameplay.xml", "VERSION_ENGINE" }
+	  } );
+	sw::createTestPackFile( gamePack, 0, sw::PackCompressionType::None, {
+																			{ "config/gameplay.xml", "VERSION_GAME" }
+	  } );
+	sw::createTestPackFile( dlcPack, 0, sw::PackCompressionType::None, {
+																		   { "config/gameplay.xml", "VERSION_DLC" }
+	} );
+	sw::createTestPackFile( patchPack, 0, sw::PackCompressionType::None, {
+																			 { "config/gameplay.xml", "VERSION_PATCH_HOTFIX" }
+	   } );
 
 	sw::ResourceUtil::initialize();
 	sw::ResourceUtil::unmountAllPacks();
@@ -252,7 +260,9 @@ SW_TEST_CASE( Engine_ResourcePack, DlcEntitlementProtection )
 	const sw::string dlcPackPath = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "test_secure_dlc.pack" );
 	constexpr uint32 kDlcAppId	 = 5001;
 
-	SW_ASSERT_TRUE( sw::createTestPackFile( dlcPackPath, kDlcAppId, sw::PackCompressionType::None, { { "dlc/secret_weapon.xml", "<Weapon name=\"Excalibur\"/>" } } ) );
+	SW_ASSERT_TRUE( sw::createTestPackFile( dlcPackPath, kDlcAppId, sw::PackCompressionType::None, {
+																									   { "dlc/secret_weapon.xml", "<Weapon name=\"Excalibur\"/>" }
+	   } ) );
 
 	sw::ResourcePackManager packManager;
 
@@ -292,7 +302,9 @@ SW_TEST_CASE( Engine_ResourcePack, LooseFileOverrideOption )
 	const sw::string packPath  = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "test_loose_opt.pack" );
 	const sw::string loosePath = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "test_loose_file.xml" );
 
-	sw::createTestPackFile( packPath, 0, sw::PackCompressionType::None, { { "test_loose_file.xml", "CONTENT_IN_PACK" } } );
+	sw::createTestPackFile( packPath, 0, sw::PackCompressionType::None, {
+																			{ "test_loose_file.xml", "CONTENT_IN_PACK" }
+	 } );
 	sw::FileUtil::writeTextFile( loosePath, "CONTENT_ON_DISK" );
 
 	sw::ResourceUtil::initialize();
@@ -321,17 +333,27 @@ SW_TEST_CASE( Engine_ResourcePack, LooseFileOverrideOption )
 // ------------------------------------------------------------------------------
 SW_TEST_CASE( Engine_ResourcePack, DynamicPriorityAutoCalculation )
 {
-	const sw::string enginePack	= sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "engine_autotest.pack" );
-	const sw::string commonPack	= sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "common_autotest.pack" );
+	const sw::string enginePack = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "engine_autotest.pack" );
+	const sw::string commonPack = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "common_autotest.pack" );
 	const sw::string gamePack	= sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "game_demo_autotest.pack" );
 	const sw::string patchGame	= sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "patch_game_demo_autotest.pack" );
 	const sw::string hotfixPack = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "patch_hotfix_autotest.pack" );
 
-	sw::createTestPackFile( enginePack, 0, sw::PackCompressionType::None, { { "core/version.txt", "ENGINE_1.0" } } );
-	sw::createTestPackFile( commonPack, 0, sw::PackCompressionType::None, { { "core/version.txt", "COMMON_1.0" } } );
-	sw::createTestPackFile( gamePack, 0, sw::PackCompressionType::None, { { "core/version.txt", "GAME_1.0" } } );
-	sw::createTestPackFile( patchGame, 0, sw::PackCompressionType::None, { { "core/version.txt", "PATCH_GAME_1.1" } } );
-	sw::createTestPackFile( hotfixPack, 0, sw::PackCompressionType::None, { { "core/version.txt", "HOTFIX_GLOBAL_1.2" } } );
+	sw::createTestPackFile( enginePack, 0, sw::PackCompressionType::None, {
+																			  { "core/version.txt", "ENGINE_1.0" }
+	   } );
+	sw::createTestPackFile( commonPack, 0, sw::PackCompressionType::None, {
+																			  { "core/version.txt", "COMMON_1.0" }
+	   } );
+	sw::createTestPackFile( gamePack, 0, sw::PackCompressionType::None, {
+																			{ "core/version.txt", "GAME_1.0" }
+	   } );
+	sw::createTestPackFile( patchGame, 0, sw::PackCompressionType::None, {
+																			 { "core/version.txt", "PATCH_GAME_1.1" }
+	  } );
+	sw::createTestPackFile( hotfixPack, 0, sw::PackCompressionType::None, {
+																			  { "core/version.txt", "HOTFIX_GLOBAL_1.2" }
+	  } );
 
 	sw::ResourceUtil::initialize();
 	sw::ResourceUtil::unmountAllPacks();
@@ -391,7 +413,9 @@ SW_TEST_CASE( Engine_ResourcePack, ZeroCopyAndCrc32CorruptionDetection )
 	const sw::string packPath = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "test_crc_tamper.pack" );
 
 	const sw::string originalData = "INTEGRITY_CHECK_SAMPLE_PAYLOAD_DATA_1234567890";
-	SW_ASSERT_TRUE( sw::createTestPackFile( packPath, 0, sw::PackCompressionType::None, { { "secure/token.bin", originalData } } ) );
+	SW_ASSERT_TRUE( sw::createTestPackFile( packPath, 0, sw::PackCompressionType::None, {
+																							{ "secure/token.bin", originalData }
+	 } ) );
 
 	// 1. 정상 상태에서 무복사 바이너리 읽기 및 CRC32 통과
 	{
@@ -401,7 +425,7 @@ SW_TEST_CASE( Engine_ResourcePack, ZeroCopyAndCrc32CorruptionDetection )
 		sw::vector<uint8> buffer;
 		SW_ASSERT_TRUE( reader.readFile( "secure/token.bin", buffer ) );
 		SW_EXPECT_EQUAL( buffer.size(), originalData.size() );
-		const sw::string readString{ reinterpret_cast<const char*>( buffer.data() ), buffer.size() };
+		const sw::string readString{ reinterpret_cast<const utf8*>( buffer.data() ), buffer.size() };
 		SW_EXPECT_EQUAL( readString, originalData );
 		reader.close();
 	}
@@ -457,7 +481,7 @@ SW_TEST_CASE( Engine_ResourcePack, ConcurrentMultiThreadedVfsRead )
 	SW_ASSERT_TRUE( manager.mountPack( packPath, 5000 ) );
 
 	std::atomic<uint32> successCount{ 0 };
-	constexpr uint32	kThreadCount = 8;
+	constexpr uint32	kThreadCount	= 8;
 	constexpr uint32	kReadsPerThread = 40;
 
 	sw::vector<std::thread> listThread;
@@ -469,9 +493,9 @@ SW_TEST_CASE( Engine_ResourcePack, ConcurrentMultiThreadedVfsRead )
 		{
 			for ( uint32 iteration = 0; iteration < kReadsPerThread; ++iteration )
 			{
-				const uint32 targetFileIndex = ( iteration % 16 );
-				const sw::string fileName = "data/file_" + sw::to_string( targetFileIndex ) + ".txt";
-				const sw::string expected = "CONTENT_PAYLOAD_OF_FILE_" + sw::to_string( targetFileIndex );
+				const uint32	 targetFileIndex = ( iteration % 16 );
+				const sw::string fileName		 = "data/file_" + sw::to_string( targetFileIndex ) + ".txt";
+				const sw::string expected		 = "CONTENT_PAYLOAD_OF_FILE_" + sw::to_string( targetFileIndex );
 
 				sw::string text;
 				if ( manager.readTextFile( fileName, text ) && text == expected )
@@ -522,4 +546,3 @@ SW_TEST_CASE( Engine_ResourcePack, PathCacheZeroAllocationAndInvalidation )
 	// 3. 캐시 초기화 후 재동작 확인
 	sw::ResourceUtil::clearPathCache();
 }
-

@@ -2,10 +2,8 @@
 
 #include "Engine/Utility/Resource/ResourcePackReader.h"
 
-#include "Engine/Common/EngineServices.h"
-#include "Engine/Reflection/TypeRegistry.h"
-
 #include "Core/Common/Defines.h"
+#include "Core/Common/StdHeaders.h"
 #include "Core/Compression/RleCompressionCodec.h"
 #include "Core/Container/array.h"
 #include "Core/File/FileUtil.h"
@@ -13,7 +11,8 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringUtil.h"
 
-#include "Core/Common/StdHeaders.h"
+#include "Engine/Common/EngineServices.h"
+#include "Engine/Reflection/TypeRegistry.h"
 
 namespace sw
 {
@@ -69,7 +68,7 @@ namespace sw
 					uint16								  code = 0;
 					for ( uint32 bitCount = 1; bitCount <= 15; ++bitCount )
 					{
-						code				 = static_cast<uint16>( ( code + arrCount[bitCount - 1] ) << 1 );
+						code				  = static_cast<uint16>( ( code + arrCount[bitCount - 1] ) << 1 );
 						arrNextCode[bitCount] = code;
 					}
 
@@ -153,19 +152,19 @@ namespace sw
 					if ( bType == 0 )
 					{
 						// Uncompressed block
-						bs._bitsLeft   = 0; // Align to byte boundary
-						bs._bitBuffer  = 0;
+						bs._bitsLeft  = 0; // Align to byte boundary
+						bs._bitBuffer = 0;
 						if ( bs._bytePos + 4 > bs._size )
 							return false;
 
-						const uint16 len  = static_cast<uint16>( bs._pData[bs._bytePos] | ( bs._pData[bs._bytePos + 1] << 8 ) );
-						bs._bytePos		 += 4; // Skip LEN and NLEN
+						const uint16 len = static_cast<uint16>( bs._pData[bs._bytePos] | ( bs._pData[bs._bytePos + 1] << 8 ) );
+						bs._bytePos += 4; // Skip LEN and NLEN
 						if ( bs._bytePos + len > bs._size || outPos + len > dstSize )
 							return false;
 
 						std::memcpy( pDst + outPos, bs._pData + bs._bytePos, len );
-						outPos		 += len;
-						bs._bytePos	 += len;
+						outPos += len;
+						bs._bytePos += len;
 					}
 					else if ( bType == 1 )
 					{
@@ -197,11 +196,9 @@ namespace sw
 							{
 								// Match length & distance
 								static constexpr uint16 kArrLenBase[29] = {
-									3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15, 17, 19, 23, 27, 31, 35, 43, 51, 59, 67, 83, 99, 115, 131, 163, 195, 227, 258
-								};
+									3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15, 17, 19, 23, 27, 31, 35, 43, 51, 59, 67, 83, 99, 115, 131, 163, 195, 227, 258 };
 								static constexpr uint8 kArrLenExtra[29] = {
-									0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 0
-								};
+									0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 0 };
 								const uint32 lenIndex = static_cast<uint32>( symbol - 257 );
 								if ( lenIndex >= 29 )
 									return false;
@@ -209,11 +206,9 @@ namespace sw
 
 								// Distance (fixed 5-bit)
 								static constexpr uint16 kArrDistBase[30] = {
-									1, 2, 3, 4, 5, 7, 9, 13, 17, 25, 33, 49, 65, 97, 129, 193, 257, 385, 513, 769, 1025, 1537, 2049, 3073, 4097, 6145, 8193, 12289, 16385, 24577
-								};
+									1, 2, 3, 4, 5, 7, 9, 13, 17, 25, 33, 49, 65, 97, 129, 193, 257, 385, 513, 769, 1025, 1537, 2049, 3073, 4097, 6145, 8193, 12289, 16385, 24577 };
 								static constexpr uint8 kArrDistExtra[30] = {
-									0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13
-								};
+									0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13 };
 								const uint32 distCode = bs.getBits( 5 );
 								if ( distCode >= 30 )
 									return false;
@@ -263,14 +258,14 @@ namespace sw
 		close();
 	}
 
-	ResourcePackReader::ResourcePackReader( ResourcePackReader&& other) noexcept
+	ResourcePackReader::ResourcePackReader( ResourcePackReader&& other ) noexcept
 	{
 		std::lock_guard<mutex> lock( other._fileMutex );
-		_pFileHandle	  = other._pFileHandle;
-		_packFilePath	  = std::move( other._packFilePath );
-		_header			  = other._header;
-		_mapEntry		  = std::move( other._mapEntry );
-		_stringPoolBytes  = std::move( other._stringPoolBytes );
+		_pFileHandle	   = other._pFileHandle;
+		_packFilePath	   = std::move( other._packFilePath );
+		_header			   = other._header;
+		_mapEntry		   = std::move( other._mapEntry );
+		_stringPoolBytes   = std::move( other._stringPoolBytes );
 		other._pFileHandle = nullptr;
 	}
 
@@ -280,11 +275,11 @@ namespace sw
 		{
 			std::scoped_lock<mutex, mutex> lock( _fileMutex, other._fileMutex );
 			close();
-			_pFileHandle	  = other._pFileHandle;
-			_packFilePath	  = std::move( other._packFilePath );
-			_header			  = other._header;
-			_mapEntry		  = std::move( other._mapEntry );
-			_stringPoolBytes  = std::move( other._stringPoolBytes );
+			_pFileHandle	   = other._pFileHandle;
+			_packFilePath	   = std::move( other._packFilePath );
+			_header			   = other._header;
+			_mapEntry		   = std::move( other._mapEntry );
+			_stringPoolBytes   = std::move( other._stringPoolBytes );
 			other._pFileHandle = nullptr;
 		}
 		return *this;
@@ -354,10 +349,10 @@ namespace sw
 			const utf8* pEncryptionName	 = engine::getTypeRegistry().enumToString( encryption );
 
 			SW_LOG_INFO( "Opened pack %# (Files: %# | Compression: %# | Encryption: %#)",
-				packFilePath,
-				_header._fileCount,
-				pCompressionName != nullptr ? pCompressionName : "Raw",
-				pEncryptionName != nullptr ? pEncryptionName : "None" );
+						 packFilePath,
+						 _header._fileCount,
+						 pCompressionName != nullptr ? pCompressionName : "Raw",
+						 pEncryptionName != nullptr ? pEncryptionName : "None" );
 		}
 
 		return true;
@@ -396,7 +391,7 @@ namespace sw
 	bool ResourcePackReader::getFileEntry( uint64 pathHash, PackFileEntry& outEntry ) const
 	{
 		std::lock_guard<mutex> lock( _fileMutex );
-		auto						it = _mapEntry.find( pathHash );
+		auto				   it = _mapEntry.find( pathHash );
 		if ( it == _mapEntry.end() )
 			return false;
 
@@ -564,8 +559,8 @@ namespace sw
 
 		// 스트링 풀 로드 (포함된 경우)
 		const bool bHasStringPool = engine::areEngineServicesBound()
-			? engine::getTypeRegistry().hasFlag( static_cast<PackFlag>( _header._flags ), PackFlag::HasStringPool )
-			: ( ( _header._flags & static_cast<uint16>( PackFlag::HasStringPool ) ) != 0 );
+									  ? engine::getTypeRegistry().hasFlag( static_cast<PackFlag>( _header._flags ), PackFlag::HasStringPool )
+									  : ( ( _header._flags & static_cast<uint16>( PackFlag::HasStringPool ) ) != 0 );
 
 		if ( bHasStringPool && _header._stringPoolSize > 0 )
 		{
@@ -605,12 +600,12 @@ namespace sw
 		for ( const auto& diskEntry : listDiskEntries )
 		{
 			PackFileEntry memEntry{};
-			memEntry._pathHash			= diskEntry._pathHash;
-			memEntry._dataOffset		= diskEntry._dataOffset;
-			memEntry._compressedSize	= diskEntry._compressedSize;
-			memEntry._uncompressedSize	= diskEntry._uncompressedSize;
-			memEntry._crc32				= diskEntry._crc32;
-			memEntry._stringPoolOffset	= diskEntry._stringPoolOffset;
+			memEntry._pathHash		   = diskEntry._pathHash;
+			memEntry._dataOffset	   = diskEntry._dataOffset;
+			memEntry._compressedSize   = diskEntry._compressedSize;
+			memEntry._uncompressedSize = diskEntry._uncompressedSize;
+			memEntry._crc32			   = diskEntry._crc32;
+			memEntry._stringPoolOffset = diskEntry._stringPoolOffset;
 
 			if ( _stringPoolBytes.empty() == false && diskEntry._stringPoolOffset < _stringPoolBytes.size() )
 			{
