@@ -36,6 +36,12 @@ namespace sw::editor
 		virtual void newFrame() = 0;
 		/** @brief 지정 DrawData를 RHI로 그립니다. nullptr이면 그리지 않습니다. */
 		virtual void render( IRHIDevice* pRhiDevice, ImDrawData* pDrawData ) = 0;
+		/**
+		 * @brief 대기 중인 ImGui 텍스처 생성/갱신(폰트 아틀라스 재빌드 등)을 즉시 처리합니다.
+		 * @details ImGui 1.92 동적 아틀라스에서 draw-data 스냅샷을 다른 스레드로 넘길 때, 텍스처 갱신은
+		 *          렌더 스레드가 아니라 UI 스레드에서 이 호출로 끝내야 합니다(공유 리스트 레이스 방지).
+		 */
+		virtual void processTextureUpdates() {}
 
 		// ------------------------------------------------------------------------------
 		// 2) ImGui 텍스처 — Game View RT 등

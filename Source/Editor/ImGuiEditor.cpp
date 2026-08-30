@@ -312,9 +312,21 @@ namespace sw::editor
 		{
 			endFrame();
 
+			// ImGui 1.92 동적 아틀라스: 폰트/텍스처 생성·갱신을 UI 스레드에서 마친다.
+			// (메인 스냅샷은 Textures==nullptr 로 넘겨 렌더 스레드가 텍스처 작업을 하지 않는다)
+			if ( _rendererBackend != nullptr )
+				_rendererBackend->processTextureUpdates();
+
 			ImGuiIO& io = ImGui::GetIO();
 			if ( io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable )
+			{
+				// 보조(플로팅) 뷰포트는 여기 UI 스레드에서 동기로 렌더·present 한다.
+				// imgui 1.92 의 뷰포트 프레임/펜스 관리가 단일 스레드 호출을 전제하므로,
+				// 렌더 스레드에서 가짜 ImGuiViewport 로 present 하던 방식은 무한 대기를 유발했다.
+				// 메인 뷰포트는 RenderPlatformWindowsDefault 가 건너뛰고, 앱이 스냅샷으로 렌더한다.
 				ImGui::UpdatePlatformWindows();
+				ImGui::RenderPlatformWindowsDefault();
+			}
 
 			const uint32 writeSlot = 1u - _publishedDrawSlot.load( std::memory_order_acquire );
 			while ( _inFlightDrawSlot.load( std::memory_order_acquire ) == writeSlot )
@@ -344,13 +356,9 @@ namespace sw::editor
 
 	void ImGuiEditor::postPresent( IRHIDevice* pRhiDevice )
 	{
-		if ( _bInitialized == SW_FALSE || pRhiDevice == nullptr )
-		{
-			_inFlightDrawSlot.store( ImGuiEditorInternal::kInvalidDrawSlot, std::memory_order_release );
-			return;
-		}
-
-		renderPlatformWindows( pRhiDevice );
+		std::ignore = pRhiDevice;
+		// 메인 스냅샷 렌더가 끝났으니 UI 스레드가 다음 슬롯을 쓰도록 해제한다.
+		// 보조 뷰포트는 updateUI 에서 UI 스레드가 이미 렌더·present 했다.
 		_inFlightDrawSlot.store( ImGuiEditorInternal::kInvalidDrawSlot, std::memory_order_release );
 	}
 
@@ -485,21 +493,6 @@ namespace sw::editor
 
 		if ( _rendererBackend != nullptr )
 			_rendererBackend->render( pRhiDevice, pDrawData );
-	}
-
-	void ImGuiEditor::renderPlatformWindows( IRHIDevice* pRhiDevice )
-	{
-		if ( _bInitialized == SW_FALSE || pRhiDevice == nullptr )
-			return;
-
-		const uint32 slot = _publishedDrawSlot.load( std::memory_order_acquire );
-		if ( slot >= ImGuiEditorInternal::kDrawSnapshotCount )
-			return;
-
-		_arrDrawSnapshot[slot].presentExtraViewports();
-
-		if ( pRhiDevice->getBackendType() == RHIBackend::OpenGL )
-			pRhiDevice->bindGraphicsContext();
 	}
 } // namespace sw::editor
 

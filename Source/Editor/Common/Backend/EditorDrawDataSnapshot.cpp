@@ -26,10 +26,16 @@ namespace sw::editor
 				outDrawData.DisplayPos		 = pSrc->DisplayPos;
 				outDrawData.DisplaySize		 = pSrc->DisplaySize;
 				outDrawData.FramebufferScale = pSrc->FramebufferScale;
-				outDrawData.Textures		 = pSrc->Textures;
-				outDrawData.OwnerViewport	 = nullptr;
-				outDrawData.TotalIdxCount	 = pSrc->TotalIdxCount;
-				outDrawData.TotalVtxCount	 = pSrc->TotalVtxCount;
+				// Textures 는 라이브 컨텍스트의 per-frame 리스트(&GetPlatformIO().Textures)를 가리킨다.
+				// 스냅샷을 렌더 스레드로 넘기면 다음 프레임의 resize 와 레이스가 나므로 공유하지 않는다.
+				// 텍스처 갱신은 UI 스레드의 IImGuiRendererBackend::processTextureUpdates() 가 이미 끝냈다.
+				outDrawData.Textures = nullptr;
+				// ImGui 1.92 백엔드(imgui_impl_dx12 등)는 RenderDrawData 안에서
+				// OwnerViewport->RendererUserData(뷰포트별 프레임 버퍼)를 참조한다. 메인 뷰포트는
+				// 컨텍스트 수명 동안 유지되는 영속 객체이므로 포인터를 그대로 넘겨도 안전하다.
+				outDrawData.OwnerViewport = pSrc->OwnerViewport;
+				outDrawData.TotalIdxCount = pSrc->TotalIdxCount;
+				outDrawData.TotalVtxCount = pSrc->TotalVtxCount;
 
 				outListOwned.reserve( static_cast<size_t>( pSrc->CmdLists.Size ) );
 				for ( int32 listIndex = 0; listIndex < pSrc->CmdLists.Size; ++listIndex )
@@ -40,6 +46,14 @@ namespace sw::editor
 					ImDrawList* pClone = pSrcList->CloneOutput();
 					if ( pClone == nullptr )
 						continue;
+
+					// ImGui 1.92+ 의 ImDrawData::AddDrawList() 는 PrimReserve↔write 정합성을 assert 한다.
+					// CloneOutput() 은 버퍼만 복사하고 내부 write 커서를 안 맞추므로(초기값 NULL),
+					// "다 쓴 상태" 로 직접 고정해 준다. (렌더러는 CmdBuffer/버퍼만 읽으므로 이걸로 충분)
+					pClone->_VtxWritePtr   = pClone->VtxBuffer.Data + pClone->VtxBuffer.Size;
+					pClone->_IdxWritePtr   = pClone->IdxBuffer.Data + pClone->IdxBuffer.Size;
+					pClone->_VtxCurrentIdx = static_cast<uint32>( pClone->VtxBuffer.Size );
+
 					outListOwned.push_back( pClone );
 					outDrawData.AddDrawList( pClone );
 				}
@@ -63,27 +77,8 @@ namespace sw::editor
 {
 	struct EditorDrawDataSnapshot::Impl
 	{
-		struct ExtraViewportClone
-		{
-			ImDrawData			_drawData;
-			vector<ImDrawList*> _listOwned;
-			ImGuiID				_id;
-			ImGuiViewportFlags	_flags;
-			ImVec2				_pos;
-			ImVec2				_size;
-			ImVec2				_framebufferScale;
-			void*				_pRendererUserData;
-			void*				_pPlatformUserData;
-			void*				_pPlatformHandle;
-			void*				_pPlatformHandleRaw;
-		};
-
-		ImDrawData							   _mainDrawData;
-		vector<ImDrawList*>					   _listMainOwned;
-		vector<unique_ptr<ExtraViewportClone>> _listExtraViewport;
-		void ( *_pPlatformRenderWindow )( ImGuiViewport*, void* );
-		void ( *_pRendererRenderWindow )( ImGuiViewport*, void* );
-		void ( *_pPlatformSwapBuffers )( ImGuiViewport*, void* );
+		ImDrawData			   _mainDrawData;
+		vector<ImDrawList*>	   _listMainOwned;
 		uint8				   _bValid	 : 1;
 		[[maybe_unused]] uint8 _reserved : 7;
 	};
@@ -91,11 +86,8 @@ namespace sw::editor
 	EditorDrawDataSnapshot::EditorDrawDataSnapshot()
 		: _pImpl{ make_unique<Impl>() }
 	{
-		_pImpl->_pPlatformRenderWindow = nullptr;
-		_pImpl->_pRendererRenderWindow = nullptr;
-		_pImpl->_pPlatformSwapBuffers  = nullptr;
-		_pImpl->_bValid				   = SW_FALSE;
-		_pImpl->_reserved			   = 0;
+		_pImpl->_bValid	  = SW_FALSE;
+		_pImpl->_reserved = 0;
 	}
 
 	EditorDrawDataSnapshot::~EditorDrawDataSnapshot()
@@ -109,17 +101,7 @@ namespace sw::editor
 			return;
 
 		EditorDrawDataSnapshotInternal::destroyOwnedLists( _pImpl->_mainDrawData, _pImpl->_listMainOwned );
-		for ( unique_ptr<Impl::ExtraViewportClone>& pExtra : _pImpl->_listExtraViewport )
-		{
-			if ( pExtra == nullptr )
-				continue;
-			EditorDrawDataSnapshotInternal::destroyOwnedLists( pExtra->_drawData, pExtra->_listOwned );
-		}
-		_pImpl->_listExtraViewport.clear();
-		_pImpl->_pPlatformRenderWindow = nullptr;
-		_pImpl->_pRendererRenderWindow = nullptr;
-		_pImpl->_pPlatformSwapBuffers  = nullptr;
-		_pImpl->_bValid				   = SW_FALSE;
+		_pImpl->_bValid = SW_FALSE;
 	}
 
 	void EditorDrawDataSnapshot::capture()
@@ -129,43 +111,7 @@ namespace sw::editor
 			return;
 
 		EditorDrawDataSnapshotInternal::cloneDrawData( ImGui::GetDrawData(), _pImpl->_mainDrawData, _pImpl->_listMainOwned );
-		if ( _pImpl->_mainDrawData.Valid == false )
-			return;
-
-		_pImpl->_bValid = SW_TRUE;
-
-		ImGuiIO& io = ImGui::GetIO();
-		if ( ( io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable ) == 0 )
-			return;
-
-		ImGuiPlatformIO& platformIo	   = ImGui::GetPlatformIO();
-		_pImpl->_pPlatformRenderWindow = platformIo.Platform_RenderWindow;
-		_pImpl->_pRendererRenderWindow = platformIo.Renderer_RenderWindow;
-		_pImpl->_pPlatformSwapBuffers  = platformIo.Platform_SwapBuffers;
-
-		for ( int32 viewportIndex = 1; viewportIndex < platformIo.Viewports.Size; ++viewportIndex )
-		{
-			ImGuiViewport* pViewport = platformIo.Viewports[viewportIndex];
-			if ( pViewport == nullptr )
-				continue;
-			if ( ( pViewport->Flags & ImGuiViewportFlags_IsMinimized ) != 0 )
-				continue;
-			if ( pViewport->DrawData == nullptr || pViewport->DrawData->Valid == false )
-				continue;
-
-			unique_ptr<Impl::ExtraViewportClone> pExtra = make_unique<Impl::ExtraViewportClone>();
-			pExtra->_id									= pViewport->ID;
-			pExtra->_flags								= pViewport->Flags;
-			pExtra->_pos								= pViewport->Pos;
-			pExtra->_size								= pViewport->Size;
-			pExtra->_framebufferScale					= pViewport->FramebufferScale;
-			pExtra->_pRendererUserData					= pViewport->RendererUserData;
-			pExtra->_pPlatformUserData					= pViewport->PlatformUserData;
-			pExtra->_pPlatformHandle					= pViewport->PlatformHandle;
-			pExtra->_pPlatformHandleRaw					= pViewport->PlatformHandleRaw;
-			EditorDrawDataSnapshotInternal::cloneDrawData( pViewport->DrawData, pExtra->_drawData, pExtra->_listOwned );
-			_pImpl->_listExtraViewport.push_back( std::move( pExtra ) );
-		}
+		_pImpl->_bValid = ( _pImpl->_mainDrawData.Valid ) ? SW_TRUE : SW_FALSE;
 	}
 
 	bool EditorDrawDataSnapshot::isValid() const
@@ -178,43 +124,5 @@ namespace sw::editor
 		if ( isValid() == false )
 			return nullptr;
 		return &_pImpl->_mainDrawData;
-	}
-
-	void EditorDrawDataSnapshot::presentExtraViewports()
-	{
-		if ( isValid() == false )
-			return;
-
-		for ( unique_ptr<Impl::ExtraViewportClone>& pExtra : _pImpl->_listExtraViewport )
-		{
-			if ( pExtra == nullptr || pExtra->_drawData.Valid == false )
-				continue;
-
-			Impl::ExtraViewportClone& extra = *pExtra;
-
-			ImGuiViewport viewport{};
-			viewport.ID				   = extra._id;
-			viewport.Flags			   = extra._flags;
-			viewport.Pos			   = extra._pos;
-			viewport.Size			   = extra._size;
-			viewport.FramebufferScale  = extra._framebufferScale;
-			viewport.DrawData		   = &extra._drawData;
-			viewport.RendererUserData  = extra._pRendererUserData;
-			viewport.PlatformUserData  = extra._pPlatformUserData;
-			viewport.PlatformHandle	   = extra._pPlatformHandle;
-			viewport.PlatformHandleRaw = extra._pPlatformHandleRaw;
-
-			if ( _pImpl->_pPlatformRenderWindow != nullptr )
-				_pImpl->_pPlatformRenderWindow( &viewport, nullptr );
-			if ( _pImpl->_pRendererRenderWindow != nullptr )
-				_pImpl->_pRendererRenderWindow( &viewport, nullptr );
-			if ( _pImpl->_pPlatformSwapBuffers != nullptr )
-				_pImpl->_pPlatformSwapBuffers( &viewport, nullptr );
-
-			viewport.RendererUserData  = nullptr;
-			viewport.PlatformUserData  = nullptr;
-			viewport.PlatformHandle	   = nullptr;
-			viewport.PlatformHandleRaw = nullptr;
-		}
 	}
 } // namespace sw::editor

@@ -73,8 +73,6 @@ namespace sw::editor
 		void endFrame();
 		/** @brief ImGui 렌더러 백엔드로 지정 DrawData를 그립니다. */
 		void renderBackend( IRHIDevice* pRhiDevice, ImDrawData* pDrawData );
-		/** @brief 스냅샷의 보조 뷰포트를 렌더합니다. */
-		void renderPlatformWindows( IRHIDevice* pRhiDevice );
 		/** @brief 렌더 스레드가 이전 스냅샷을 쓰는 동안 NewFrame을 미룹니다. */
 		void waitForDrawSnapshotIdle();
 

@@ -1,6 +1,6 @@
 /**
  * @file EditorDrawDataSnapshot.h
- * @brief ImGui DrawData와 멀티 뷰포트 그리기 명령을 클론해 렌더 스레드가 쓰게 합니다.
+ * @brief ImGui 메인 뷰포트 DrawData를 클론해 렌더 스레드가 안전하게 그리게 합니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -12,7 +12,8 @@ namespace sw::editor
 {
 	/**
 	 * @class EditorDrawDataSnapshot
-	 * @brief EndFrame 이후 DrawData를 복사합니다. 원본은 다음 NewFrame에서 무효가 됩니다.
+	 * @brief EndFrame 이후 메인 DrawData를 복사합니다. 원본은 다음 NewFrame에서 무효가 됩니다.
+	 * @details 보조(플로팅) 뷰포트는 UI 스레드가 RenderPlatformWindowsDefault 로 직접 처리합니다.
 	 */
 	class EditorDrawDataSnapshot
 	{
@@ -25,7 +26,7 @@ namespace sw::editor
 		EditorDrawDataSnapshot( const EditorDrawDataSnapshot& )			   = delete;
 		EditorDrawDataSnapshot& operator=( const EditorDrawDataSnapshot& ) = delete;
 
-		/** @brief 현재 ImGui 컨텍스트의 메인/보조 뷰포트 DrawData를 복사합니다. */
+		/** @brief 현재 ImGui 컨텍스트의 메인 뷰포트 DrawData를 복사합니다. */
 		void capture();
 		/** @brief 소유한 클론을 모두 지웁니다. */
 		void clear();
@@ -33,8 +34,6 @@ namespace sw::editor
 		bool isValid() const;
 		/** @brief 렌더 스레드가 그릴 메인 DrawData입니다. 없으면 nullptr입니다. */
 		ImDrawData* getMainDrawData();
-		/** @brief 캡처 시점의 플랫폼 콜백으로 보조 뷰포트를 그립니다. */
-		void presentExtraViewports();
 
 	private:
 		struct Impl;

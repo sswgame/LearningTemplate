@@ -39,6 +39,8 @@ namespace sw::editor
 		// ------------------------------------------------------------------------------
 		/** @brief ImGui D3D12 프레임을 시작합니다. */
 		void newFrame() override;
+		/** @brief 대기 중인 폰트 아틀라스/텍스처 갱신을 UI 스레드에서 처리합니다. */
+		void processTextureUpdates() override;
 		/** @brief ImGui draw data를 D3D12로 그립니다. */
 		void render( IRHIDevice* pRhiDevice, ImDrawData* pDrawData ) override;
 		/** @brief RHI 텍스처를 ImGui용 SRV로 등록합니다. */
