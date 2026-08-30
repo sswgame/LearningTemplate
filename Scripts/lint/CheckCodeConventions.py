@@ -192,9 +192,9 @@ _kMemberVectorRe = re.compile(
 #   - out_...         : out_buffer -> outBuffer 로 수정 제안 (camelCase 강제)
 _kOutParamNamingRe = re.compile(
     r'\b(?:(?:const\s+)?(?:[A-Za-z0-9_:]+(?:<[^>]+>)?)\s*[\*&]+\s+|\b)'
-    r'(outP(?!ath)[A-Za-z0-9_]*|outPP[A-Za-z0-9_]*|inoutP[A-Za-z0-9_]*|inoutPP[A-Za-z0-9_]*|'
+    r'(outP[A-Z][A-Za-z0-9_]*|outPP[A-Z][A-Za-z0-9_]*|inoutP[A-Z][A-Za-z0-9_]*|inoutPP[A-Z][A-Za-z0-9_]*|'
     r'listOut[A-Za-z0-9_]*|mapOut[A-Za-z0-9_]*|uniqueOut[A-Za-z0-9_]*|arrOut[A-Za-z0-9_]*|'
-    r'listInOut[A-Za-z0-9_]*|mapInOut[A-Za-z0-9_]*|out_[a-zA-Z0-9_]+|out[A-Z][a-zA-Z0-9_]*List|'
+    r'listInOut[A-Za-z0-9_]*|mapInOut[A-Za-z0-9_]*|(?<!::)\bout_(?!of_range\b)[a-zA-Z0-9_]+|out[A-Z][a-zA-Z0-9_]*List|'
     r'outList[A-Za-z0-9_]*Bytes?|outListByte[A-Za-z0-9_]*)\b'
 )
 
