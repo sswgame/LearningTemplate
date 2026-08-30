@@ -268,6 +268,8 @@ namespace sw
 				unique_ptr<IWindow> defaultWindow = IWindow::createPlatformWindow();
 				if ( defaultWindow != nullptr && defaultWindow->initializeWindow( pEngineConfig->_window._title.c_str(), windowWidth, windowHeight ) )
 				{
+					// 소유권은 App::initialize 가 IWindow::getActiveWindow() 로 입양합니다.
+					// (App 이 없는 임베드 시나리오라면 호출자가 getActiveWindow() 를 직접 소유해야 합니다.)
 					IWindow::setActiveWindow( defaultWindow.release() );
 				}
 			}

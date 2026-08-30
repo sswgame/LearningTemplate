@@ -86,6 +86,8 @@ namespace sw
 		pCommandLineManager->getArgument( CommandLineArgument::HEIGHT, height );
 
 		// 2. 윈도우 소유권 획득 (초기화 중에는 숨김 상태로 시작)
+		//    EngineLoop::initialize 가 플랫폼 윈도우를 만들어 IWindow::setActiveWindow 로 넘겨두면
+		//    여기서 App 의 unique_ptr 이 그 소유권을 입양합니다. (전역 포인터는 관찰용으로만 유지)
 		_window.reset( IWindow::getActiveWindow() );
 		if ( _window == nullptr )
 		{
@@ -170,6 +172,9 @@ namespace sw
 
 		if ( _window != nullptr )
 		{
+			// App이 소유권을 가진 활성 윈도우를 파괴하기 전에 전역 포인터를 먼저 끊습니다(댕글링 방지).
+			if ( IWindow::getActiveWindow() == _window.get() )
+				IWindow::setActiveWindow( nullptr );
 			_window->destroy();
 			_window.reset();
 		}
