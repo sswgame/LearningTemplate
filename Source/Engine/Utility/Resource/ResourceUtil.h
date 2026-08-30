@@ -79,6 +79,23 @@ namespace sw
 		static const string& getProjectFolderPath();
 
 		/**
+		 * @brief 리소스 검색 루트 우선순위를 동적으로 설정합니다 (예: EngineConfig._listResourcePriority).
+		 * @param listPriority 우선순위 토큰 목록 (예: "game", "common", "engine", "editor", "dlc/expansion1")
+		 * @return 우선순위 재구성 성공 여부
+		 * @note 기존 경로 해석 캐시는 자동으로 클리어됩니다.
+		 */
+		static bool setSearchPriority( const vector<string>& listPriority );
+
+		/** @brief 현재 활성화된 검색 우선순위 토큰 목록을 반환합니다. */
+		static const vector<string>& getSearchPriority();
+
+		/** @brief EngineConfig 리플렉션 기본값에 정의된 기본 검색 우선순위 목록을 반환합니다. */
+		static const vector<string>& getDefaultSearchPriority();
+
+		/** @brief 현재 캐싱된 리소스 경로 해석 결과를 모두 비웁니다. */
+		static void clearPathCache();
+
+		/**
 		 * @brief 검색 루트들 아래에서 `folderName` 디렉터리가 존재하는 절대 경로 목록을 반환합니다.
 		 * @param folderName 예: `shaders`, `textures` (소문자 우선, 원본 표기 재시도)
 		 */
@@ -108,6 +125,7 @@ namespace sw
 		static string		  _s_commonFolderPath;		 ///< Resource/common
 		static string		  _s_gameFolderPath;		 ///< Resource/game
 		static string		  _s_editorFolderPath;		 ///< Resource/editor
+		static vector<string> _s_listSearchPriority;	 ///< 검색 우선순위 토큰 목록
 		static vector<string> _s_resourceFolderList;	 ///< getResourcePath 검색 루트들
 	};
 } // namespace sw

@@ -1,6 +1,7 @@
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 
 #include "Engine/Config/IConfig.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
@@ -46,5 +47,8 @@ namespace sw
 
 		PROPERTY()
 		float32 _maxFrameDeltaTime{ 0.1f };
+
+		PROPERTY()
+		vector<string> _listResourcePriority{ "game", "common", "engine", "editor" };
 	};
 } // namespace sw

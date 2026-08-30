@@ -43,6 +43,7 @@
 #include "Engine/Utility/Module/LiveReloadManager.h"
 #include "Engine/Utility/Resource/AssetStreamingQueue.h"
 #include "Engine/Utility/Resource/ResourceManager.h"
+#include "Engine/Utility/Resource/ResourceUtil.h"
 #include "Engine/Window/IWindow.h"
 
 #include "RuntimeAPI/PluginAPI.h"
@@ -230,6 +231,9 @@ namespace sw
 				kGameConfigHash, config::kFileRuntimeGameConfig, shipping_host::kGameConfigJson );
 			if ( pGameConfig != nullptr )
 				GameConfig::setActive( *pGameConfig );
+
+			if ( pEngineConfig->_listResourcePriority.empty() == false )
+				ResourceUtil::setSearchPriority( pEngineConfig->_listResourcePriority );
 
 			if ( pEngineConfig->_engineData.empty() == false )
 				_engineData->loadFromResource( pEngineConfig->_engineData );

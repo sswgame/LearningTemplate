@@ -2,6 +2,7 @@
 
 #include "Engine/Utility/Resource/ResourceUtil.h"
 
+#include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/GameConfig.h"
 
 namespace sw
@@ -188,28 +189,10 @@ namespace sw
 		_s_gameFolderPath =
 			FileUtil::directoryExists( resourceGames ) ? FileUtil::normalizeSeparators( resourceGames ) : "";
 
-		_s_resourceFolderList.reserve( 16 );
+		if ( _s_listSearchPriority.empty() )
+			_s_listSearchPriority = getDefaultSearchPriority();
 
-		// Search roots: game/<pack>/, common/, engine/, editor/ (never Resource/ or game/ container).
-		if ( FileUtil::directoryExists( resourceGames ) )
-		{
-			vector<string> listPackFolders;
-			FileUtil::collectFolders( resourceGames, listPackFolders, false, false );
-			for ( const string& packFolder : listPackFolders )
-			{
-				_s_resourceFolderList.push_back( FileUtil::normalizeSeparators( packFolder ) );
-			}
-		}
-
-		if ( _s_commonFolderPath.empty() == false )
-			_s_resourceFolderList.push_back( _s_commonFolderPath );
-
-		if ( _s_engineFolderPath.empty() == false )
-			_s_resourceFolderList.push_back( _s_engineFolderPath );
-
-		if ( _s_editorFolderPath.empty() == false )
-			_s_resourceFolderList.push_back( _s_editorFolderPath );
-
+		setSearchPriority( _s_listSearchPriority );
 		return true;
 	}
 
@@ -379,6 +362,109 @@ namespace sw
 		return listFolders;
 	}
 
+	bool ResourceUtil::setSearchPriority( const vector<string>& listPriority )
+	{
+		if ( listPriority.empty() )
+			return false;
+
+		_s_listSearchPriority = listPriority;
+
+		if ( _s_resourceRootFolderPath.empty() )
+			return true;
+
+		_s_resourceFolderList.clear();
+		_s_resourceFolderList.reserve( 16 );
+
+		const string& resourceRoot = _s_resourceRootFolderPath;
+
+		for ( const string& tokenRaw : listPriority )
+		{
+			const string token = FileUtil::normalizePath( tokenRaw );
+			if ( token == "game" )
+			{
+				const string activePack = getActivePackFolderPath();
+				if ( activePack.empty() == false && FileUtil::directoryExists( activePack ) )
+				{
+					const string normPack = FileUtil::normalizeSeparators( activePack );
+					if ( std::find( _s_resourceFolderList.begin(), _s_resourceFolderList.end(), normPack ) == _s_resourceFolderList.end() )
+						_s_resourceFolderList.push_back( normPack );
+				}
+
+				if ( _s_gameFolderPath.empty() == false && FileUtil::directoryExists( _s_gameFolderPath ) )
+				{
+					vector<string> listPackFolders;
+					FileUtil::collectFolders( _s_gameFolderPath, listPackFolders, false, false );
+					for ( const string& packFolder : listPackFolders )
+					{
+						const string normPack = FileUtil::normalizeSeparators( packFolder );
+						if ( std::find( _s_resourceFolderList.begin(), _s_resourceFolderList.end(), normPack ) == _s_resourceFolderList.end() )
+						{
+							_s_resourceFolderList.push_back( normPack );
+						}
+					}
+				}
+			}
+			else if ( token == "common" )
+			{
+				if ( _s_commonFolderPath.empty() == false && FileUtil::directoryExists( _s_commonFolderPath ) )
+				{
+					const string norm = FileUtil::normalizeSeparators( _s_commonFolderPath );
+					if ( std::find( _s_resourceFolderList.begin(), _s_resourceFolderList.end(), norm ) == _s_resourceFolderList.end() )
+						_s_resourceFolderList.push_back( norm );
+				}
+			}
+			else if ( token == "engine" )
+			{
+				if ( _s_engineFolderPath.empty() == false && FileUtil::directoryExists( _s_engineFolderPath ) )
+				{
+					const string norm = FileUtil::normalizeSeparators( _s_engineFolderPath );
+					if ( std::find( _s_resourceFolderList.begin(), _s_resourceFolderList.end(), norm ) == _s_resourceFolderList.end() )
+						_s_resourceFolderList.push_back( norm );
+				}
+			}
+			else if ( token == "editor" )
+			{
+				if ( _s_editorFolderPath.empty() == false && FileUtil::directoryExists( _s_editorFolderPath ) )
+				{
+					const string norm = FileUtil::normalizeSeparators( _s_editorFolderPath );
+					if ( std::find( _s_resourceFolderList.begin(), _s_resourceFolderList.end(), norm ) == _s_resourceFolderList.end() )
+						_s_resourceFolderList.push_back( norm );
+				}
+			}
+			else
+			{
+				// 커스텀 팩 / DLC / 모드 경로 (예: "dlc/expansion1", "mods/pack1")
+				const string customPath = FileUtil::joinPath( resourceRoot, token );
+				if ( FileUtil::directoryExists( customPath ) )
+				{
+					const string norm = FileUtil::normalizeSeparators( customPath );
+					if ( std::find( _s_resourceFolderList.begin(), _s_resourceFolderList.end(), norm ) == _s_resourceFolderList.end() )
+						_s_resourceFolderList.push_back( norm );
+				}
+			}
+		}
+
+		clearPathCache();
+		return true;
+	}
+
+	const vector<string>& ResourceUtil::getSearchPriority()
+	{
+		return _s_listSearchPriority;
+	}
+
+	const vector<string>& ResourceUtil::getDefaultSearchPriority()
+	{
+		static const vector<string> s_listDefaultPriority = EngineConfig{}._listResourcePriority;
+		return s_listDefaultPriority;
+	}
+
+	void ResourceUtil::clearPathCache()
+	{
+		std::unique_lock<std::shared_mutex> lock( ResourceUtilInternal::_s_pathCacheMutex );
+		ResourceUtilInternal::_s_mapResolvedPaths.clear();
+	}
+
 	string ResourceUtil::makeSaveFolderPath( string_view absoluteFolder )
 	{
 		const string folderNorm = FileUtil::trimTrailingSlashes( FileUtil::normalizePath( absoluteFolder ) );
@@ -439,6 +525,8 @@ namespace sw
 	string ResourceUtil::_s_gameFolderPath;
 
 	string ResourceUtil::_s_editorFolderPath;
+
+	vector<string> ResourceUtil::_s_listSearchPriority;
 
 	vector<string> ResourceUtil::_s_resourceFolderList;
 

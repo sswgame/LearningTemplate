@@ -265,3 +265,49 @@ SW_TEST_CASE( Engine_Resource, ResourcePathCaseInsensitiveLookupAndLowerCaseNorm
 	SW_EXPECT_FALSE( textContent.empty() );
 	SW_EXPECT_TRUE( textContent.find( "<GameData>" ) != sw::string::npos );
 }
+
+/**
+ * @brief [Engine_Resource] EngineConfig 기반 검색 우선순위 동적 변경 및 DLC/모드 경로 지원 검증
+ */
+SW_TEST_CASE( Engine_Resource, ConfigurableResourcePriorityAndDlcSupport )
+{
+	SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+
+	// 1. 기본 검색 우선순위 확인
+	const sw::vector<sw::string>& defaultPriority = sw::ResourceUtil::getSearchPriority();
+	SW_EXPECT_FALSE( defaultPriority.empty() );
+	SW_EXPECT_STREQ( "game", defaultPriority[0].c_str() );
+
+	// 2. 임시 DLC 디렉터리 및 에셋 생성하여 DLC 최우선 탐색 검증
+	const sw::string dlcDir	 = sw::FileUtil::joinPath( sw::ResourceUtil::getRootFolderPath(), "dlc/test_dlc/maps" );
+	const sw::string dlcFile = sw::FileUtil::joinPath( dlcDir, "0.title.scene.xml" );
+	sw::FileUtil::ensureDirectoryExists( dlcDir );
+
+	const utf8* kDlcSceneContent = "<Scene name=\"DLC_Title\" />";
+	SW_EXPECT_TRUE( sw::FileUtil::writeFile( dlcFile, reinterpret_cast<const uint8*>( kDlcSceneContent ),
+											 static_cast<uint64>( sw::StringUtil::strlen( kDlcSceneContent ) ) ) );
+
+	// 3. DLC가 1순위인 우선순위 목록 적용
+	const sw::vector<sw::string> listDlcFirstPriority = { "dlc/test_dlc", "game", "common", "engine", "editor" };
+	SW_EXPECT_TRUE( sw::ResourceUtil::setSearchPriority( listDlcFirstPriority ) );
+
+	// 4. 팩 상대 키 "maps/0.title.scene.xml" 조회 시 게임 팩이 아닌 DLC 폴더의 파일로 매핑되는지 검증
+	const sw::string resolvedDlcPath = sw::ResourceUtil::getResourcePath( "maps/0.title.scene.xml" );
+	SW_EXPECT_FALSE( resolvedDlcPath.empty() );
+	SW_EXPECT_TRUE( sw::FileUtil::pathsEqualNormalized( resolvedDlcPath, dlcFile ) );
+
+	// 5. EngineConfig 리플렉션 기본값(getDefaultSearchPriority)으로 우선순위 복구 시 기존 game 팩 파일 매핑 검증
+	const sw::vector<sw::string>& listRestoredPriority = sw::ResourceUtil::getDefaultSearchPriority();
+	SW_EXPECT_TRUE( sw::ResourceUtil::setSearchPriority( listRestoredPriority ) );
+
+	const sw::string resolvedGamePath = sw::ResourceUtil::getResourcePath( "maps/0.title.scene.xml" );
+	SW_EXPECT_FALSE( resolvedGamePath.empty() );
+	SW_EXPECT_FALSE( sw::FileUtil::pathsEqualNormalized( resolvedGamePath, dlcFile ) );
+	SW_EXPECT_TRUE( sw::FileUtil::normalizePath( resolvedGamePath ).find( "game/demo" ) != sw::string::npos );
+
+	// 6. 임시 DLC 파일 및 디렉터리 정리
+	sw::FileUtil::removeFile( dlcFile );
+	sw::FileUtil::removeFile( dlcDir );
+	sw::FileUtil::removeFile( sw::FileUtil::joinPath( sw::ResourceUtil::getRootFolderPath(), "dlc/test_dlc" ) );
+	sw::FileUtil::removeFile( sw::FileUtil::joinPath( sw::ResourceUtil::getRootFolderPath(), "dlc" ) );
+}
