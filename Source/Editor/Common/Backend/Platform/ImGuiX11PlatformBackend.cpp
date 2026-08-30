@@ -183,6 +183,8 @@ namespace sw::editor
 					io.AddMouseButtonEvent( button, bIsDown );
 					return io.WantCaptureMouse;
 				}
+				default:
+					break;
 			}
 			return false;
 		}

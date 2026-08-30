@@ -39,13 +39,13 @@ namespace sw
 			return;
 
 		const hashed_string sampleName( "SampleActor" );
-		vector<GameObject*> toDestroyList;
+		vector<GameObject*> listToDestroy;
 		for ( GameObject* pObj : pGameObjectManager->getAllGameObjects() )
 		{
 			if ( pObj != nullptr && pObj->getName() == sampleName )
-				toDestroyList.push_back( pObj );
+				listToDestroy.push_back( pObj );
 		}
-		for ( GameObject* pObj : toDestroyList )
+		for ( GameObject* pObj : listToDestroy )
 		{
 			pGameObjectManager->destroyObject( pObj );
 		}
@@ -152,13 +152,13 @@ namespace sw
 			return;
 
 		const hashed_string cubeName( "DemoCube" );
-		vector<GameObject*> toDestroyList;
+		vector<GameObject*> listToDestroy;
 		for ( GameObject* pObj : pGameObjectManager->getAllGameObjects() )
 		{
 			if ( pObj != nullptr && pObj->getName() == cubeName )
-				toDestroyList.push_back( pObj );
+				listToDestroy.push_back( pObj );
 		}
-		for ( GameObject* pObj : toDestroyList )
+		for ( GameObject* pObj : listToDestroy )
 		{
 			pGameObjectManager->destroyObject( pObj );
 		}

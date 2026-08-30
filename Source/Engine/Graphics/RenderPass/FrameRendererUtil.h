@@ -68,12 +68,12 @@ namespace sw
 
 		static bool isDepthFormat( RHIFormat format ) { return format == RHIFormat::D24_UNORM_S8_UINT; }
 
-		static const utf8* pickFirstExisting( const unordered_map<string, RHITextureHandle>& mapAttachments,
-											  std::initializer_list<const utf8*>			 listNames )
+		static const utf8* pickFirstExisting( const unordered_map<string, RHITextureHandle>& mapAttachment,
+											  std::initializer_list<const utf8*>			 listName )
 		{
-			for ( const utf8* pName : listNames )
+			for ( const utf8* pName : listName )
 			{
-				if ( mapAttachments.find( pName ) != mapAttachments.end() )
+				if ( mapAttachment.find( pName ) != mapAttachment.end() )
 					return pName;
 			}
 			return nullptr;

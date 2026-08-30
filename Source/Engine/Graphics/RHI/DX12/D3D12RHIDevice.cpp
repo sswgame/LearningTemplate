@@ -77,7 +77,7 @@ namespace sw
 		, _pipelineStates{}
 		, _listRenderPass{}
 		, _activeGraphicsPso{ 0 }
-		, _arrActiveColorTargets{}
+		, _arrActiveColorTarget{}
 		, _activeDepthTarget{ 0 }
 		, _activeColorTargetCount{ 0 }
 		, _swapchainState{ D3D12_RESOURCE_STATE_PRESENT }

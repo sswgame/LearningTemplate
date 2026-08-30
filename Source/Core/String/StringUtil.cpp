@@ -184,6 +184,66 @@ namespace sw
 				}
 			}
 
+			static string utf16ToLocaleInternal( const utf16* input )
+			{
+				if ( input == nullptr || *input == L'\0' )
+					return {};
+
+				size_t requiredSize{ 0 };
+#if defined( SW_PLATFORM_WINDOWS )
+				wcstombs_s( &requiredSize, nullptr, 0, input, 0 );
+#elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
+				requiredSize = wcstombs( nullptr, input, 0 );
+				if ( requiredSize != static_cast<size_t>( -1 ) )
+					++requiredSize;
+#else
+	#error "Unsupported platform"
+#endif
+				if ( requiredSize == 0 || requiredSize == static_cast<size_t>( -1 ) )
+					return {};
+
+				string buffer( requiredSize - 1, '\0' );
+#if defined( SW_PLATFORM_WINDOWS )
+				wcstombs_s( nullptr, buffer.data(), requiredSize, input, requiredSize );
+#elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
+				wcstombs( buffer.data(), input, requiredSize );
+#else
+	#error "Unsupported platform"
+#endif
+
+				return buffer;
+			}
+
+			static wstring localeToUtf16Internal( const utf8* input )
+			{
+				if ( input == nullptr || *input == '\0' )
+					return {};
+
+				size_t requiredSize{ 0 };
+#if defined( SW_PLATFORM_WINDOWS )
+				mbstowcs_s( &requiredSize, nullptr, 0, input, 0 );
+#elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
+				requiredSize = mbstowcs( nullptr, input, 0 );
+				if ( requiredSize != static_cast<size_t>( -1 ) )
+					++requiredSize;
+#else
+	#error "Unsupported platform"
+#endif
+				if ( requiredSize == 0 || requiredSize == static_cast<size_t>( -1 ) )
+					return {};
+
+				wstring buffer( requiredSize - 1, L'\0' );
+#if defined( SW_PLATFORM_WINDOWS )
+				mbstowcs_s( nullptr, buffer.data(), requiredSize, input, requiredSize );
+#elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
+				mbstowcs( buffer.data(), input, requiredSize );
+#else
+	#error "Unsupported platform"
+#endif
+
+				return buffer;
+			}
+
 			template <typename T>
 			static string integerToString( T value )
 			{
@@ -352,7 +412,7 @@ namespace sw
 
 	string StringUtil::utf16ToLocale( const utf16* input )
 	{
-		return toString( input );
+		return StringUtilInternal::utf16ToLocaleInternal( input );
 	}
 
 	wstring StringUtil::localeToUtf16( const utf8* input )
@@ -362,7 +422,7 @@ namespace sw
 		if ( isValidUTF8( input ) )
 			return utf8ToUtf16( input );
 
-		return toWString( input );
+		return StringUtilInternal::localeToUtf16Internal( input );
 	}
 
 	string StringUtil::localeToUtf8( const utf8* input )
@@ -372,7 +432,7 @@ namespace sw
 		if ( isValidUTF8( input ) )
 			return string{ input };
 
-		const wstring wideStr = toWString( input );
+		const wstring wideStr = StringUtilInternal::localeToUtf16Internal( input );
 		return utf16ToUtf8( wideStr.c_str() );
 	}
 
@@ -382,7 +442,7 @@ namespace sw
 			return {};
 
 		const wstring wideStr = utf8ToUtf16( input );
-		return toString( wideStr.c_str() );
+		return StringUtilInternal::utf16ToLocaleInternal( wideStr.c_str() );
 	}
 
 	string StringUtil::toUpper( const utf8* input )
@@ -1174,66 +1234,6 @@ namespace sw
 			return true;
 		}
 		return false;
-	}
-
-	string StringUtil::toString( const utf16* input )
-	{
-		if ( isNullOrEmpty( input ) )
-			return {};
-
-		size_t requiredSize{ 0 };
-#if defined( SW_PLATFORM_WINDOWS )
-		wcstombs_s( &requiredSize, nullptr, 0, input, 0 );
-#elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
-		requiredSize = wcstombs( nullptr, input, 0 );
-		if ( requiredSize != static_cast<size_t>( -1 ) )
-			++requiredSize; // include null terminator like wcstombs_s
-#else
-	#error "Unsupported platform"
-#endif
-		if ( requiredSize == 0 || requiredSize == static_cast<size_t>( -1 ) )
-			return {};
-
-		string buffer( requiredSize - 1, '\0' );
-#if defined( SW_PLATFORM_WINDOWS )
-		wcstombs_s( nullptr, buffer.data(), requiredSize, input, requiredSize );
-#elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
-		wcstombs( buffer.data(), input, requiredSize );
-#else
-	#error "Unsupported platform"
-#endif
-
-		return buffer;
-	}
-
-	wstring StringUtil::toWString( const utf8* input )
-	{
-		if ( isNullOrEmpty( input ) )
-			return {};
-
-		size_t requiredSize{ 0 };
-#if defined( SW_PLATFORM_WINDOWS )
-		mbstowcs_s( &requiredSize, nullptr, 0, input, 0 );
-#elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
-		requiredSize = mbstowcs( nullptr, input, 0 );
-		if ( requiredSize != static_cast<size_t>( -1 ) )
-			++requiredSize;
-#else
-	#error "Unsupported platform"
-#endif
-		if ( requiredSize == 0 || requiredSize == static_cast<size_t>( -1 ) )
-			return {};
-
-		wstring buffer( requiredSize - 1, L'\0' );
-#if defined( SW_PLATFORM_WINDOWS )
-		mbstowcs_s( nullptr, buffer.data(), requiredSize, input, requiredSize );
-#elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
-		mbstowcs( buffer.data(), input, requiredSize );
-#else
-	#error "Unsupported platform"
-#endif
-
-		return buffer;
 	}
 
 	bool StringUtil::isValidUTF8( const utf8* input )

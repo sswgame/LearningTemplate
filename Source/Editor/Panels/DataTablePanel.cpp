@@ -261,7 +261,7 @@ namespace sw::editor
 				ImGui::PopID();
 			}
 
-			if ( deleteIndex >= 0 && static_cast<size_t>( deleteIndex ) < _listLocRecord.size() )
+			if ( 0 <= deleteIndex && static_cast<size_t>( deleteIndex ) < _listLocRecord.size() )
 			{
 				_listLocRecord.erase( _listLocRecord.begin() + deleteIndex );
 				markLocDirty();
@@ -307,7 +307,7 @@ namespace sw::editor
 
 		// Right: File Content Viewer & Editor
 		ImGui::BeginGroup();
-		if ( _selectedGameDataIndex >= 0 && static_cast<size_t>( _selectedGameDataIndex ) < _listGameDataFile.size() )
+		if ( 0 <= _selectedGameDataIndex && static_cast<size_t>( _selectedGameDataIndex ) < _listGameDataFile.size() )
 		{
 			const GameDataFileEntry& entry = _listGameDataFile[static_cast<size_t>( _selectedGameDataIndex )];
 			ImGui::Text( "File: %s", entry._fileName.c_str() );

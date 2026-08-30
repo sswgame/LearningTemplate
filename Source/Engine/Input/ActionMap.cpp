@@ -639,7 +639,7 @@ namespace sw
 		int32 mx{ 0 };
 		int32 my{ 0 };
 		_pInput->getMousePosition( mx, my );
-		return mx >= x && my >= y && mx < ( x + w ) && my < ( y + h );
+		return x <= mx && mx < ( x + w ) && y <= my && my < ( y + h );
 	}
 
 	ActionTrigger ActionMap::actionTriggerFromName( string_view name )

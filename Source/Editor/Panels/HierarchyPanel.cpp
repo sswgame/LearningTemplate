@@ -153,10 +153,10 @@ namespace sw::editor
 				if ( ImGui::BeginMenu( "Add Component" ) == false )
 					return;
 
-				vector<hashed_string> listTypes;
+				vector<hashed_string> listType;
 				if ( pObj != nullptr && pObj->getManager() != nullptr )
-					listTypes = pObj->getManager()->getRegisteredComponentTypeNames();
-				if ( listTypes.empty() )
+					listType = pObj->getManager()->getRegisteredComponentTypeNames();
+				if ( listType.empty() )
 				{
 					ImGui::TextDisabled( "No registered component types." );
 					ImGui::EndMenu();
@@ -187,7 +187,7 @@ namespace sw::editor
 				{
 					ImGui::Separator();
 					uint32 matchCount{ 0 };
-					for ( const hashed_string& typeName : listTypes )
+					for ( const hashed_string& typeName : listType )
 					{
 						const TypeInfo* pTypeInfo = ( pRegistry != nullptr ) ? pRegistry->findType( typeName ) : nullptr;
 						if ( pTypeInfo != nullptr && pTypeInfo->isHiddenInMenu() )
@@ -207,7 +207,7 @@ namespace sw::editor
 				else
 				{
 					map<string, vector<pair<hashed_string, const TypeInfo*>>> mapCategorized;
-					for ( const hashed_string& typeName : listTypes )
+					for ( const hashed_string& typeName : listType )
 					{
 						const TypeInfo* pTypeInfo = ( pRegistry != nullptr ) ? pRegistry->findType( typeName ) : nullptr;
 						if ( pTypeInfo != nullptr && pTypeInfo->isHiddenInMenu() )
@@ -317,8 +317,8 @@ namespace sw::editor
 				formatstring( arrLabel.data(), arrLabel.capacity(), "%###sc%#", pCompName, pSceneComp->getComponentId() );
 
 				bool						   hasChildOnOwner{ false };
-				const vector<SceneComponent*>& listChildren = pSceneComp->getChildren();
-				for ( SceneComponent* pChild : listChildren )
+				const vector<SceneComponent*>& listChild = pSceneComp->getChildren();
+				for ( SceneComponent* pChild : listChild )
 				{
 					if ( pChild != nullptr && pChild->getOwner() == pObj )
 					{
@@ -338,7 +338,7 @@ namespace sw::editor
 
 				if ( bOpen )
 				{
-					for ( SceneComponent* pChild : listChildren )
+					for ( SceneComponent* pChild : listChild )
 					{
 						if ( pChild != nullptr && pChild->getOwner() == pObj )
 							drawSceneComponentNode( pObj, pChild, pManager );
@@ -466,8 +466,8 @@ namespace sw::editor
 											bFocusRenameInput );
 					}
 
-					const vector<Component*>& listComponents = pObj->getAllComponents();
-					for ( Component* pComp : listComponents )
+					const vector<Component*>& listComponent = pObj->getAllComponents();
+					for ( Component* pComp : listComponent )
 					{
 						if ( pComp == nullptr )
 							continue;
@@ -529,8 +529,8 @@ namespace sw::editor
 			return;
 		}
 
-		GameObjectManager*		   pManager	   = pScene->getObjectManager();
-		const vector<GameObject*>& listObjects = pManager->getAllGameObjects();
+		GameObjectManager*		   pManager	  = pScene->getObjectManager();
+		const vector<GameObject*>& listObject = pManager->getAllGameObjects();
 
 		// 상단 툴바: 생성 버튼 + 검색창
 		if ( EditorChrome::beginToolbar( "##HierarchyToolbar" ) )
@@ -561,7 +561,7 @@ namespace sw::editor
 		treeDesc._kind = editor::EditorSectionKind::Child;
 		if ( EditorChrome::beginSection( treeDesc ) )
 		{
-			for ( GameObject* pObj : listObjects )
+			for ( GameObject* pObj : listObject )
 			{
 				if ( pObj != nullptr && pObj->getParent() == nullptr )
 					HierarchyPanelInternal::drawGameObjectNode( pObj, pManager, _filterBuffer.c_str(), _renamingObjectId, _renameBuffer,

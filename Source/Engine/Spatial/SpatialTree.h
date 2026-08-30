@@ -352,26 +352,26 @@ namespace sw
 			BoundsType			 _bounds{};
 			size_t				 _depth{ 0 };
 			vector<ElementType>	 _listElement{};
-			sw::unique_ptr<Node> _arrChildren[Traits::kChildCount]{};
+			sw::unique_ptr<Node> _arrChild[Traits::kChildCount]{};
 			bool				 _bIsDivided{ false };
 
 			explicit Node( const BoundsType& bounds, size_t depth = 0 )
 				: _bounds{ bounds }
 				, _depth{ depth }
 				, _listElement{}
-				, _arrChildren{}
+				, _arrChild{}
 				, _bIsDivided{ false }
 			{
 			}
 
 			void subdivide()
 			{
-				BoundsType arrChildBounds[Traits::kChildCount]{};
-				Traits::subdivide( _bounds, arrChildBounds );
+				BoundsType arrChildBound[Traits::kChildCount]{};
+				Traits::subdivide( _bounds, arrChildBound );
 
 				for ( size_t childIndex = 0; childIndex < Traits::kChildCount; ++childIndex )
 				{
-					_arrChildren[childIndex] = sw::make_unique<Node>( arrChildBounds[childIndex], _depth + 1 );
+					_arrChild[childIndex] = sw::make_unique<Node>( arrChildBound[childIndex], _depth + 1 );
 				}
 
 				_bIsDivided = true;
@@ -382,9 +382,9 @@ namespace sw
 					bool bPushedToChild = false;
 					for ( size_t childIndex = 0; childIndex < Traits::kChildCount; ++childIndex )
 					{
-						if ( _arrChildren[childIndex]->_bounds.contains( element._bounds ) )
+						if ( _arrChild[childIndex]->_bounds.contains( element._bounds ) )
 						{
-							_arrChildren[childIndex]->_listElement.push_back( element );
+							_arrChild[childIndex]->_listElement.push_back( element );
 							bPushedToChild = true;
 							break;
 						}
@@ -406,8 +406,8 @@ namespace sw
 				{
 					for ( size_t childIndex = 0; childIndex < Traits::kChildCount; ++childIndex )
 					{
-						if ( _arrChildren[childIndex]->_bounds.contains( elem._bounds ) )
-							return _arrChildren[childIndex]->insert( elem, maxElements, maxDepth );
+						if ( _arrChild[childIndex]->_bounds.contains( elem._bounds ) )
+							return _arrChild[childIndex]->insert( elem, maxElements, maxDepth );
 					}
 				}
 
@@ -422,8 +422,8 @@ namespace sw
 
 				for ( size_t childIndex = 0; childIndex < Traits::kChildCount; ++childIndex )
 				{
-					if ( _arrChildren[childIndex]->_bounds.contains( elem._bounds ) )
-						return _arrChildren[childIndex]->insert( elem, maxElements, maxDepth );
+					if ( _arrChild[childIndex]->_bounds.contains( elem._bounds ) )
+						return _arrChild[childIndex]->insert( elem, maxElements, maxDepth );
 				}
 
 				_listElement.push_back( elem );
@@ -446,7 +446,7 @@ namespace sw
 					bool bRemoved = false;
 					for ( size_t childIndex = 0; childIndex < Traits::kChildCount; ++childIndex )
 					{
-						if ( _arrChildren[childIndex]->remove( id, maxElements ) )
+						if ( _arrChild[childIndex]->remove( id, maxElements ) )
 						{
 							bRemoved = true;
 							break;
@@ -459,8 +459,8 @@ namespace sw
 						bool   bAnyChildDivided	  = false;
 						for ( size_t childIndex = 0; childIndex < Traits::kChildCount; ++childIndex )
 						{
-							totalChildElements += _arrChildren[childIndex]->_listElement.size();
-							if ( _arrChildren[childIndex]->_bIsDivided )
+							totalChildElements += _arrChild[childIndex]->_listElement.size();
+							if ( _arrChild[childIndex]->_bIsDivided )
 								bAnyChildDivided = true;
 						}
 
@@ -468,9 +468,9 @@ namespace sw
 						{
 							for ( size_t childIndex = 0; childIndex < Traits::kChildCount; ++childIndex )
 							{
-								for ( auto& element : _arrChildren[childIndex]->_listElement )
+								for ( auto& element : _arrChild[childIndex]->_listElement )
 									_listElement.push_back( std::move( element ) );
-								_arrChildren[childIndex].reset();
+								_arrChild[childIndex].reset();
 							}
 							_bIsDivided = false;
 						}
@@ -496,7 +496,7 @@ namespace sw
 				{
 					for ( size_t childIndex = 0; childIndex < Traits::kChildCount; ++childIndex )
 					{
-						_arrChildren[childIndex]->query( range, outListElement );
+						_arrChild[childIndex]->query( range, outListElement );
 					}
 				}
 			}

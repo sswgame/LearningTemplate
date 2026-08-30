@@ -116,8 +116,8 @@ namespace sw::editor
 			Scene*		  pScene		= ( pSceneManager != nullptr ) ? pSceneManager->getActiveScene() : nullptr;
 			if ( pScene != nullptr && pScene->getObjectManager() != nullptr )
 			{
-				GameObjectManager*		   pManager	   = pScene->getObjectManager();
-				const vector<GameObject*>& listObjects = pManager->getAllGameObjects();
+				GameObjectManager*		   pManager	  = pScene->getObjectManager();
+				const vector<GameObject*>& listObject = pManager->getAllGameObjects();
 
 				size_t rootCount{ 0 };
 				size_t totalComponents{ 0 };
@@ -127,7 +127,7 @@ namespace sw::editor
 				size_t box2dCompCount{ 0 };
 				size_t cameraCompCount{ 0 };
 
-				for ( const GameObject* pObj : listObjects )
+				for ( const GameObject* pObj : listObject )
 				{
 					if ( pObj == nullptr )
 						continue;
@@ -147,7 +147,7 @@ namespace sw::editor
 						++cameraCompCount;
 				}
 
-				ImGui::BulletText( "Total GameObjects: %zu (Roots: %zu)", listObjects.size(), rootCount );
+				ImGui::BulletText( "Total GameObjects: %zu (Roots: %zu)", listObject.size(), rootCount );
 				ImGui::BulletText( "Total Attached Components: %zu", totalComponents );
 
 				if ( ImGui::BeginTable( "CompDistributionTable", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg ) )
@@ -295,9 +295,9 @@ namespace sw::editor
 
 		if ( bDetailed && ImGui::CollapsingHeader( "Top Memory Allocations By Call Stack", ImGuiTreeNodeFlags_DefaultOpen ) )
 		{
-			vector<CallStackAllocInfo> listTopStacks = profiler.getTopCallStacks();
+			vector<CallStackAllocInfo> listTopStack = profiler.getTopCallStacks();
 
-			if ( listTopStacks.empty() )
+			if ( listTopStack.empty() )
 				ImGui::Text( "No detailed call stack data available or all freed." );
 			else
 			{
@@ -308,7 +308,7 @@ namespace sw::editor
 					ImGui::TableHeadersRow();
 
 					int32 displayCount{ 0 };
-					for ( const auto& info : listTopStacks )
+					for ( const auto& info : listTopStack )
 					{
 						if ( displayCount++ > 100 )
 							break; // 최대 100개만 표시

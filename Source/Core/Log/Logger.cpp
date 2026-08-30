@@ -327,11 +327,11 @@ namespace sw
 
 		// 3단계: 64비트 SWAR 기반 고속 UTF-8 검증 및 Non-UTF8(ANSI/CP949) 한글 안전 자동 변환
 		string		fallbackUtf8;
-		const utf8* outFormattedBuffer = formattedBuffer.c_str();
-		if ( StringUtil::isValidUTF8( outFormattedBuffer ) == false )
+		const utf8* pFormattedBuffer = formattedBuffer.c_str();
+		if ( StringUtil::isValidUTF8( pFormattedBuffer ) == false )
 		{
-			fallbackUtf8	   = StringUtil::localeToUtf8( outFormattedBuffer );
-			outFormattedBuffer = fallbackUtf8.c_str();
+			fallbackUtf8	 = StringUtil::localeToUtf8( pFormattedBuffer );
+			pFormattedBuffer = fallbackUtf8.c_str();
 		}
 
 		// 4단계: 인메모리 리스너(에디터 콘솔 UI/테스트 캡처) 스냅샷 복사 후 락 밖에서 안전하게 전파
@@ -363,14 +363,14 @@ namespace sw
 		if ( _bInitialized == false || _bIsRunning.load( std::memory_order_relaxed ) == false )
 		{
 			std::scoped_lock<mutex> lock{ _mutex };
-			writeLogConsole( level, outFormattedBuffer );
-			writeLogFile( level, year, month, day, hour, outFormattedBuffer );
+			writeLogConsole( level, pFormattedBuffer );
+			writeLogFile( level, year, month, day, hour, pFormattedBuffer );
 			return;
 		}
 
 		LogRecord record;
 		record._level	  = level;
-		record._formatted = outFormattedBuffer;
+		record._formatted = pFormattedBuffer;
 		record._year	  = year;
 		record._month	  = month;
 		record._day		  = day;
@@ -379,8 +379,8 @@ namespace sw
 		if ( _queue.enqueue( std::move( record ) ) == false )
 		{
 			std::scoped_lock<mutex> lock{ _mutex };
-			writeLogConsole( level, outFormattedBuffer );
-			writeLogFile( level, year, month, day, hour, outFormattedBuffer );
+			writeLogConsole( level, pFormattedBuffer );
+			writeLogFile( level, year, month, day, hour, pFormattedBuffer );
 			return;
 		}
 
@@ -416,7 +416,7 @@ namespace sw
 		}
 #elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
 		// Linux/POSIX ANSI Escape Sequences: Bold Red (Error), Bold Yellow (Warning), Bold Green (Info), Gray (Trace)
-		static constexpr const utf8* arrAnsiColors[] =
+		static constexpr const utf8* arrAnsiColor[] =
 			{
 				"\033[1;31m", // Error: Bold Red
 				"\033[1;33m", // Warning: Bold Yellow
@@ -425,10 +425,10 @@ namespace sw
 			};
 		static constexpr const utf8* kAnsiReset = "\033[0m";
 
-		const int32 idx = static_cast<int32>( level );
-		if ( 0 <= idx && idx < static_cast<int32>( LogLevel::Count ) )
+		const int32 index = static_cast<int32>( level );
+		if ( 0 <= index && index < static_cast<int32>( LogLevel::Count ) )
 		{
-			std::fputs( arrAnsiColors[idx], stdout );
+			std::fputs( arrAnsiColor[index], stdout );
 			std::fputs( pMessage, stdout );
 			std::fputs( kAnsiReset, stdout );
 		}

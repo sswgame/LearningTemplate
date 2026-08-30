@@ -299,7 +299,7 @@ namespace sw::editor
 		if ( ImGui::IsKeyPressed( ImGuiKey_Escape ) && desc._pOpen != nullptr )
 			*desc._pOpen = false;
 
-		if ( desc._pFocusOnOpen != nullptr && *desc._pFocusOnOpen )
+		if ( desc._pFocusOnOpen != nullptr && *desc._pFocusOnOpen == true )
 		{
 			ImGui::SetKeyboardFocusHere();
 			*desc._pFocusOnOpen = false;

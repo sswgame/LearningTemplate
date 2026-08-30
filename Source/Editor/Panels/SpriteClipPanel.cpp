@@ -74,7 +74,7 @@ namespace sw::editor
 			notifyDocumentEdited( "Add Sprite Frame" );
 		}
 		ImGui::SameLine();
-		if ( ImGui::Button( "Remove Frame" ) && _selectedFrame >= 0 &&
+		if ( ImGui::Button( "Remove Frame" ) && 0 <= _selectedFrame &&
 			 _selectedFrame < static_cast<int32>( _listFrame.size() ) )
 		{
 			_listFrame.erase( _listFrame.begin() + _selectedFrame );

@@ -88,14 +88,14 @@ namespace sw
 					auto it = _mapGrid.find( CellCoord{ gridX, gridY, gridZ } );
 					if ( it != _mapGrid.end() )
 					{
-						vector<BodyHandle>& handleList = it->second;
-						auto				handleIt   = std::find( handleList.begin(), handleList.end(), handle );
-						if ( handleIt != handleList.end() )
+						vector<BodyHandle>& listHandle = it->second;
+						auto				handleIt   = std::find( listHandle.begin(), listHandle.end(), handle );
+						if ( handleIt != listHandle.end() )
 						{
-							*handleIt = handleList.back();
-							handleList.pop_back();
+							*handleIt = listHandle.back();
+							listHandle.pop_back();
 						}
-						if ( handleList.empty() )
+						if ( listHandle.empty() )
 						{
 							_mapGrid.erase( it );
 						}
@@ -191,10 +191,10 @@ namespace sw
 	 * 1. 박스가 걸치는 공간 그리드 셀들을 순회하며 중복 없는 후보 바디 목록을 수집.
 	 * 2. 후보 바디들에 대해 레이어 마스크 및 정밀 AABB 교차 검사를 수행하여 outHandles에 저장.
 	 */
-	void PhysicsWorld::queryAabb( const AABB& box, uint8 layer, vector<BodyHandle>& outHandles ) const
+	void PhysicsWorld::queryAabb( const AABB& box, uint8 layer, vector<BodyHandle>& outListHandle ) const
 	{
 		std::shared_lock<std::shared_mutex> lock{ _mutex };
-		outHandles.clear();
+		outListHandle.clear();
 
 		if ( box.isValid() == false )
 			return;
@@ -206,8 +206,8 @@ namespace sw
 		const int32 minZ = PhysicsWorldInternal::toCellCoord( box._min._z, kCellSize );
 		const int32 maxZ = PhysicsWorldInternal::toCellCoord( box._max._z, kCellSize );
 
-		thread_local vector<BodyHandle> t_listCandidateHandles;
-		t_listCandidateHandles.clear();
+		thread_local vector<BodyHandle> t_listCandidateHandle;
+		t_listCandidateHandle.clear();
 		for ( int32 gridZ = minZ; gridZ <= maxZ; ++gridZ )
 		{
 			for ( int32 gridY = minY; gridY <= maxY; ++gridY )
@@ -217,27 +217,27 @@ namespace sw
 					auto it = _mapGrid.find( CellCoord{ gridX, gridY, gridZ } );
 					if ( it != _mapGrid.end() )
 					{
-						t_listCandidateHandles.insert( t_listCandidateHandles.end(), it->second.begin(), it->second.end() );
+						t_listCandidateHandle.insert( t_listCandidateHandle.end(), it->second.begin(), it->second.end() );
 					}
 				}
 			}
 		}
 
-		std::sort( t_listCandidateHandles.begin(), t_listCandidateHandles.end() );
-		t_listCandidateHandles.erase( std::unique( t_listCandidateHandles.begin(), t_listCandidateHandles.end() ), t_listCandidateHandles.end() );
+		std::sort( t_listCandidateHandle.begin(), t_listCandidateHandle.end() );
+		t_listCandidateHandle.erase( std::unique( t_listCandidateHandle.begin(), t_listCandidateHandle.end() ), t_listCandidateHandle.end() );
 
-		for ( BodyHandle handle : t_listCandidateHandles )
+		for ( BodyHandle handle : t_listCandidateHandle )
 		{
 			const PhysicsBody* pBody = _bodies.get( handle );
 			if ( pBody != nullptr )
 			{
 				if ( queryOverlaps( box, layer, pBody->_aabb, pBody->_layer, _layers ) )
-					outHandles.push_back( handle );
+					outListHandle.push_back( handle );
 			}
 		}
 
-		if ( t_listCandidateHandles.capacity() > 2048 )
-			t_listCandidateHandles.shrink_to_fit();
+		if ( t_listCandidateHandle.capacity() > 2048 )
+			t_listCandidateHandle.shrink_to_fit();
 	}
 
 	bool PhysicsWorld::sweepTest( const AABB& movingBox, const float3& displacement, uint8 layer, SweepHit& outHit ) const

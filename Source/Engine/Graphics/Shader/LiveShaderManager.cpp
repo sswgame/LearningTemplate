@@ -14,8 +14,8 @@ namespace sw
 
 	vector<string> ShaderIncludeResolver::parseIncludes( string_view shaderSource )
 	{
-		vector<string> listIncludes;
-		listIncludes.reserve( 8 );
+		vector<string> listInclude;
+		listInclude.reserve( 8 );
 		const string_view view( shaderSource );
 
 		string_view::size_type pos{ 0 };
@@ -31,11 +31,11 @@ namespace sw
 				break;
 
 			string includeFile( view.substr( quoteStart + 1, quoteEnd - quoteStart - 1 ) );
-			listIncludes.push_back( includeFile );
+			listInclude.push_back( includeFile );
 			pos = quoteEnd + 1;
 		}
 
-		return listIncludes;
+		return listInclude;
 	}
 
 	LiveShaderManager::LiveShaderManager() = default;
@@ -83,14 +83,14 @@ namespace sw
 			std::unique_lock<std::shared_mutex> lock{ _mutex };
 			_mapWatchedShader[keyPath].push_back( { desc, onRecompiled } );
 
-			vector<uint8> listFileBytes;
-			if ( FileUtil::readFile( ioPath, listFileBytes ) && listFileBytes.empty() == false )
+			vector<uint8> fileBytes;
+			if ( FileUtil::readFile( ioPath, fileBytes ) && fileBytes.empty() == false )
 			{
-				string		   sourceText( reinterpret_cast<const utf8*>( listFileBytes.data() ), listFileBytes.size() );
-				vector<string> listIncludeFiles = ShaderIncludeResolver::parseIncludes( sourceText );
-				string		   shaderDir		= FileUtil::getDirectoryPart( desc._filePath );
+				string		   sourceText( reinterpret_cast<const utf8*>( fileBytes.data() ), fileBytes.size() );
+				vector<string> listIncludeFile = ShaderIncludeResolver::parseIncludes( sourceText );
+				string		   shaderDir	   = FileUtil::getDirectoryPart( desc._filePath );
 
-				for ( const string& inc : listIncludeFiles )
+				for ( const string& inc : listIncludeFile )
 				{
 					string incPath = shaderDir.empty() ? string( inc ) : FileUtil::joinPath( shaderDir, inc );
 					incPath		   = FileUtil::normalizePath( incPath );
@@ -116,14 +116,14 @@ namespace sw
 
 		if ( _listPendingReloadPath.empty() == false )
 		{
-			vector<string> listReloadsToProcess;
+			vector<string> listReloadToProcess;
 			{
 				std::unique_lock<std::shared_mutex> lock{ _mutex };
-				listReloadsToProcess = std::move( _listPendingReloadPath );
+				listReloadToProcess = std::move( _listPendingReloadPath );
 				_listPendingReloadPath.clear();
 			}
 
-			for ( const string& changedPath : listReloadsToProcess )
+			for ( const string& changedPath : listReloadToProcess )
 			{
 				vector<WatchedShaderInfo> listToCompile;
 				{

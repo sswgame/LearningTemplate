@@ -15,7 +15,7 @@ namespace sw
 	/** @brief parser/engine config에서 로드한 clang·경로·emit·tuning (프로세스당 1회 캐시) */
 	struct ParserClangConfig
 	{
-		vector<string>			_listBaseArgs;
+		vector<string>			_listBaseArg;
 		vector<string>			_listForceInclude;
 		string					_llvmClangRel;
 		string					_clangIncludeRel;
@@ -58,10 +58,10 @@ namespace sw
 
 		/**
 		 * @brief 기본 인자에 포함 경로를 붙여 최종 clang 인자를 만듭니다.
-		 * @param includePathList 추가 include 경로 목록
+		 * @param listIncludePath 추가 include 경로 목록
 		 * @return 생성된 최종 인자 목록
 		 */
-		vector<string> buildArgs( const vector<string>& includePathList ) const;
+		vector<string> buildArgs( const vector<string>& listIncludePath ) const;
 	};
 
 	// ------------------------------------------------------------------------------
@@ -85,12 +85,12 @@ namespace sw
 		/**
 		 * @brief 지정 헤더를 파싱해 AST(CXTranslationUnit)를 만듭니다.
 		 * @param filePath 파싱할 소스(헤더) 경로
-		 * @param includePathList 추가 include 경로 목록
-		 * @param unsavedContents 있으면 CXUnsavedFile로 전달(키워드 스캔과 이중 I/O 방지)
+		 * @param listIncludePath 추가 include 경로 목록
+		 * @param pUnsavedContents 있으면 CXUnsavedFile로 전달(키워드 스캔과 이중 I/O 방지)
 		 * @return 파싱 성공 여부
 		 */
-		bool parse( const string& filePath, const vector<string>& includePathList,
-					const string* unsavedContents = nullptr );
+		bool parse( const string& filePath, const vector<string>& listIncludePath,
+					const string* pUnsavedContents = nullptr );
 
 		/** @brief 생성된 clang TranslationUnit을 반환합니다. */
 		CXTranslationUnit getTranslationUnit() const { return _translationUnit; }

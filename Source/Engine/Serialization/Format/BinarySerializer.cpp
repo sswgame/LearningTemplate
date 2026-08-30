@@ -22,8 +22,8 @@ namespace sw
 				if ( reader.read( propCount ) == false )
 					return false;
 
-				const vector<PropertyInfo>& listProps = typeInfo.getPropertiesWithBase();
-				const size_t				numProps  = listProps.size();
+				const vector<PropertyInfo>& listProp = typeInfo.getPropertiesWithBase();
+				const size_t				numProps = listProp.size();
 				uint64						seenBitmask{ 0 };
 				unordered_set<uint32>		uniqueSeenPropHashes;
 				if ( numProps > 64 )
@@ -45,11 +45,11 @@ namespace sw
 					size_t				matchedIndex = 0;
 					for ( size_t propSearchIdx = 0; propSearchIdx < numProps; ++propSearchIdx )
 					{
-						if ( listProps[propSearchIdx].matchesNameHash( tagHash ) )
+						if ( listProp[propSearchIdx].matchesNameHash( tagHash ) )
 						{
-							if ( listProps[propSearchIdx]._metadata._bTransient == SW_TRUE )
+							if ( listProp[propSearchIdx]._metadata._bTransient == SW_TRUE )
 								break;
-							pTargetProp	 = &listProps[propSearchIdx];
+							pTargetProp	 = &listProp[propSearchIdx];
 							matchedIndex = propSearchIdx;
 							break;
 						}
@@ -114,27 +114,27 @@ namespace sw
 					if ( numProps <= 64 )
 					{
 						if ( ( seenBitmask & ( 1ULL << propIdx ) ) == 0 )
-							SerializerUtil::applyPropertyDefault( listProps[propIdx].getRawPtr( pInstance ), listProps[propIdx], ctx );
+							SerializerUtil::applyPropertyDefault( listProp[propIdx].getRawPtr( pInstance ), listProp[propIdx], ctx );
 					}
 					else
 					{
-						if ( uniqueSeenPropHashes.find( listProps[propIdx].getNameHash() ) == uniqueSeenPropHashes.end() )
-							SerializerUtil::applyPropertyDefault( listProps[propIdx].getRawPtr( pInstance ), listProps[propIdx], ctx );
+						if ( uniqueSeenPropHashes.find( listProp[propIdx].getNameHash() ) == uniqueSeenPropHashes.end() )
+							SerializerUtil::applyPropertyDefault( listProp[propIdx].getRawPtr( pInstance ), listProp[propIdx], ctx );
 					}
 				}
 				return true;
 			}
 
-			static void pushOrphanVal( vector<SchemaOrphanValue>* pOutOrphans, hashed_string name, uint32 nameHash, uint32 wireTypeHash, const uint8* pPayload, uint32 payloadSize )
+			static void pushOrphanVal( vector<SchemaOrphanValue>* pOutListOrphan, hashed_string name, uint32 nameHash, uint32 wireTypeHash, const uint8* pPayload, uint32 payloadSize )
 			{
-				if ( pOutOrphans == nullptr )
+				if ( pOutListOrphan == nullptr )
 					return;
 				SchemaOrphanValue orphan;
 				orphan._name		 = name;
 				orphan._nameHash	 = nameHash != 0 ? nameHash : name.getHash();
 				orphan._wireTypeHash = wireTypeHash;
 				orphan._listBinary.assign( pPayload, pPayload + payloadSize );
-				pOutOrphans->push_back( std::move( orphan ) );
+				pOutListOrphan->push_back( std::move( orphan ) );
 			}
 		};
 	} // namespace
@@ -148,9 +148,9 @@ namespace sw
 									  const SerializeContext& ctx )
 	{
 		BinaryStreamWriter			writer( outListBuffer );
-		const vector<PropertyInfo>& listProps = typeInfo.getPropertiesWithBase();
+		const vector<PropertyInfo>& listProp = typeInfo.getPropertiesWithBase();
 		uint32						propCount{ 0 };
-		for ( const PropertyInfo& prop : listProps )
+		for ( const PropertyInfo& prop : listProp )
 		{
 			if ( prop._metadata._bTransient == SW_TRUE )
 				continue;
@@ -159,7 +159,7 @@ namespace sw
 		outListBuffer.reserve( outListBuffer.size() + sizeof( uint32 ) + propCount * 32 );
 		writer.write( propCount );
 
-		for ( const PropertyInfo& prop : listProps )
+		for ( const PropertyInfo& prop : listProp )
 		{
 			if ( prop._metadata._bTransient == SW_TRUE )
 				continue;
@@ -231,8 +231,8 @@ namespace sw
 		if ( reader.read( propCount ) == false )
 			return false;
 
-		const vector<PropertyInfo>& listProps = typeInfo.getPropertiesWithBase();
-		const size_t				numProps  = listProps.size();
+		const vector<PropertyInfo>& listProp = typeInfo.getPropertiesWithBase();
+		const size_t				numProps = listProp.size();
 		uint64						seenBitmask{ 0 };
 		unordered_set<uint32>		uniqueSeenPropHashes;
 		if ( numProps > 64 )
@@ -254,11 +254,11 @@ namespace sw
 			size_t				matchedIndex = 0;
 			for ( size_t propSearchIdx = 0; propSearchIdx < numProps; ++propSearchIdx )
 			{
-				if ( listProps[propSearchIdx].matchesNameHash( tagHash ) )
+				if ( listProp[propSearchIdx].matchesNameHash( tagHash ) )
 				{
-					if ( listProps[propSearchIdx]._metadata._bTransient == SW_TRUE )
+					if ( listProp[propSearchIdx]._metadata._bTransient == SW_TRUE )
 						break;
-					pTargetProp	 = &listProps[propSearchIdx];
+					pTargetProp	 = &listProp[propSearchIdx];
 					matchedIndex = propSearchIdx;
 					break;
 				}
@@ -312,10 +312,10 @@ namespace sw
 			}
 			else
 			{
-				if ( uniqueSeenPropHashes.find( listProps[propIdx].getNameHash() ) != uniqueSeenPropHashes.end() )
+				if ( uniqueSeenPropHashes.find( listProp[propIdx].getNameHash() ) != uniqueSeenPropHashes.end() )
 					continue;
 			}
-			SerializerUtil::applyPropertyDefault( listProps[propIdx].getValuePtr<void>( pInstance ), listProps[propIdx], ctx );
+			SerializerUtil::applyPropertyDefault( listProp[propIdx].getValuePtr<void>( pInstance ), listProp[propIdx], ctx );
 		}
 
 		return true;
@@ -340,7 +340,7 @@ namespace sw
 		const uint8* pBody	  = pData + reader.getOffset();
 		const size_t bodySize = dataSize - reader.getOffset();
 
-		vector<SchemaOrphanValue> listOrphans;
+		vector<SchemaOrphanValue> listOrphan;
 		vector<uint8>			  listLegacyStorage;
 		void*					  pLegacyPtr{ nullptr };
 
@@ -348,21 +348,21 @@ namespace sw
 		{
 			pLegacyPtr = createScratchInstance( *pLegacyTypeInfo, listLegacyStorage );
 			if ( pLegacyPtr == nullptr ||
-				 deserializeSoft( pLegacyPtr, *pLegacyTypeInfo, pBody, bodySize, &listOrphans, ctx ) == false )
+				 deserializeSoft( pLegacyPtr, *pLegacyTypeInfo, pBody, bodySize, &listOrphan, ctx ) == false )
 			{
 				destroyScratchInstance( pLegacyPtr, *pLegacyTypeInfo );
 				return false;
 			}
 		}
 
-		if ( deserializeSoft( pInstance, typeInfo, pBody, bodySize, &listOrphans, ctx ) == false )
+		if ( deserializeSoft( pInstance, typeInfo, pBody, bodySize, &listOrphan, ctx ) == false )
 		{
 			if ( pLegacyPtr != nullptr )
 				destroyScratchInstance( pLegacyPtr, *pLegacyTypeInfo );
 			return false;
 		}
 
-		const bool needsMigrate = migrate != nullptr && ( outVersion != currentVersion || listOrphans.empty() == false || pLegacyPtr != nullptr );
+		const bool needsMigrate = migrate != nullptr && ( outVersion != currentVersion || listOrphan.empty() == false || pLegacyPtr != nullptr );
 		bool	   ok{ true };
 		if ( needsMigrate )
 		{
@@ -373,14 +373,14 @@ namespace sw
 			mctx._pTypeInfo		  = &typeInfo;
 			mctx._pLegacyInstance = pLegacyPtr;
 			mctx._pLegacyTypeInfo = pLegacyTypeInfo;
-			mctx._pOrphans		  = &listOrphans;
+			mctx._pOrphans		  = &listOrphan;
 			mctx._pSerializeCtx	  = &ctx;
 			ok					  = migrate( mctx );
 		}
-		else if ( migrate == nullptr && ( outVersion != currentVersion || listOrphans.empty() == false ) )
+		else if ( migrate == nullptr && ( outVersion != currentVersion || listOrphan.empty() == false ) )
 		{
 			SW_LOG_WARNING( "schema version %# -> %# with no migrate callback (%# listOrphans)",
-							outVersion, currentVersion, static_cast<uint32>( listOrphans.size() ) );
+							outVersion, currentVersion, static_cast<uint32>( listOrphan.size() ) );
 			ok = false;
 		}
 

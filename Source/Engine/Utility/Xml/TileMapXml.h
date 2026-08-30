@@ -49,12 +49,12 @@ namespace sw
 		int32			  _height{ 0 };
 		int32			  _spawnX{ 1 };
 		int32			  _spawnY{ 1 };
-		vector<uint8>	  _walkableList{};
-		vector<uint8>	  _encounterList{};
-		vector<uint8>	  _passThroughList{};
-		vector<Visual>	  _visualList{};
-		vector<Warp>	  _warpList{};
-		vector<Encounter> _encounterEntryList{};
+		vector<uint8>	  _listWalkable{};
+		vector<uint8>	  _listEncounter{};
+		vector<uint8>	  _listPassThrough{};
+		vector<Visual>	  _listVisual{};
+		vector<Warp>	  _listWarp{};
+		vector<Encounter> _listEncounterEntry{};
 
 		/** @brief Resource 상대 또는 절대 경로에서 타일맵 XML을 읽습니다. */
 		SW_API bool load( string_view path );

@@ -723,22 +723,22 @@ namespace sw
 			if ( delegateCallback.isBound() == false )
 				return;
 
-			vector<string> listResults;
+			vector<string> listResult;
 			bool		   bSuccess{ false };
 
 #if defined( SW_PLATFORM_WINDOWS )
-			bSuccess = WindowsFileDialog::open( params, listResults );
+			bSuccess = WindowsFileDialog::open( params, listResult );
 #elif defined( SW_PLATFORM_LINUX )
-			bSuccess = LinuxFileDialog::open( params, listResults );
+			bSuccess = LinuxFileDialog::open( params, listResult );
 #elif defined( SW_PLATFORM_MACOS )
-			bSuccess = MacFileDialog::open( params, listResults );
+			bSuccess = MacFileDialog::open( params, listResult );
 #else
 			(void)params;
 			SW_LOG_WARNING( "openFileDialog is not supported on this platform." );
 #endif
 
-			if ( bSuccess && listResults.empty() == false )
-				delegateCallback( listResults );
+			if ( bSuccess && listResult.empty() == false )
+				delegateCallback( listResult );
 		} )
 			.detach();
 	}

@@ -17,12 +17,12 @@ namespace sw
 		const ShaderTargetFormat targetFmt = ( _targetFormat == ShaderTargetFormat::Count ) ? RHI::getShaderTargetFormat( gv_rhiBackend ) : _targetFormat;
 		combined += to_string( static_cast<uint32>( targetFmt ) );
 
-		vector<ShaderMacroDefine> listSortedDefines = _listDefine;
-		std::sort( listSortedDefines.begin(), listSortedDefines.end(),
+		vector<ShaderMacroDefine> listSortedDefine = _listDefine;
+		std::sort( listSortedDefine.begin(), listSortedDefine.end(),
 				   []( const ShaderMacroDefine& defA, const ShaderMacroDefine& defB )
 		{ return defA._name < defB._name; } );
 
-		for ( const ShaderMacroDefine& def : listSortedDefines )
+		for ( const ShaderMacroDefine& def : listSortedDefine )
 		{
 			combined += ";";
 			combined += def._name;

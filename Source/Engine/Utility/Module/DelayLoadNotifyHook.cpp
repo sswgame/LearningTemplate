@@ -39,6 +39,18 @@ namespace sw
 					if ( pHandle != nullptr )
 						return reinterpret_cast<FARPROC>( pHandle );
 				}
+				SW_LOG_ERROR( "DelayLoad failed to find/load DLL: '%#' (fullPath: '%#')", dllName, fullPath );
+			}
+			else if ( dliNotify == dliFailGetProc )
+			{
+				if ( pdli->dlp.fImportByName )
+				{
+					SW_LOG_ERROR( "DelayLoad failed to find procedure '%#' in '%#'", pdli->dlp.szProcName, pdli->szDll );
+				}
+				else
+				{
+					SW_LOG_ERROR( "DelayLoad failed to find procedure ordinal %# in '%#'", pdli->dlp.dwOrdinal, pdli->szDll );
+				}
 			}
 			return nullptr;
 		}

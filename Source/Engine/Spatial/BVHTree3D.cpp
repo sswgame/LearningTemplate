@@ -53,7 +53,7 @@ namespace sw
 
 	void BVHTree3D::freeNode( int32 nodeIndex )
 	{
-		if ( nodeIndex >= 0 && static_cast<size_t>( nodeIndex ) < _listNode.size() )
+		if ( 0 <= nodeIndex && static_cast<size_t>( nodeIndex ) < _listNode.size() )
 		{
 			_listNode[static_cast<size_t>( nodeIndex )]._parent		= -1;
 			_listNode[static_cast<size_t>( nodeIndex )]._leftChild	= -1;
@@ -382,7 +382,7 @@ namespace sw
 		return nodeIndex;
 	}
 
-	void BVHTree3D::queryAABB( const AABB& queryBox, vector<ObjectHandle>& outHandles ) const
+	void BVHTree3D::queryAABB( const AABB& queryBox, vector<ObjectHandle>& outListHandle ) const
 	{
 		if ( _rootIndex == -1 )
 			return;
@@ -400,7 +400,7 @@ namespace sw
 			{
 				if ( node.isLeaf() )
 				{
-					outHandles.push_back( node._handle );
+					outListHandle.push_back( node._handle );
 				}
 				else
 				{
@@ -413,7 +413,7 @@ namespace sw
 		}
 	}
 
-	void BVHTree3D::queryRay( const float3& origin, const float3& direction, float32 maxDist, vector<ObjectHandle>& outHandles ) const
+	void BVHTree3D::queryRay( const float3& origin, const float3& direction, float32 maxDist, vector<ObjectHandle>& outListHandle ) const
 	{
 		if ( _rootIndex == -1 || maxDist <= 0.0f )
 			return;
@@ -456,7 +456,7 @@ namespace sw
 			{
 				if ( node.isLeaf() )
 				{
-					outHandles.push_back( node._handle );
+					outListHandle.push_back( node._handle );
 				}
 				else
 				{
@@ -469,7 +469,7 @@ namespace sw
 		}
 	}
 
-	void BVHTree3D::querySphere( const float3& center, float32 radius, vector<ObjectHandle>& outHandles ) const
+	void BVHTree3D::querySphere( const float3& center, float32 radius, vector<ObjectHandle>& outListHandle ) const
 	{
 		if ( _rootIndex == -1 || radius <= 0.0f )
 			return;
@@ -499,7 +499,7 @@ namespace sw
 			{
 				if ( node.isLeaf() )
 				{
-					outHandles.push_back( node._handle );
+					outListHandle.push_back( node._handle );
 				}
 				else
 				{
@@ -512,7 +512,7 @@ namespace sw
 		}
 	}
 
-	void BVHTree3D::queryFrustum( const float32 viewProj[16], vector<ObjectHandle>& outHandles ) const
+	void BVHTree3D::queryFrustum( const float32 viewProj[16], vector<ObjectHandle>& outListHandle ) const
 	{
 		// Extract 6 frustum planes from column-major viewProj matrix
 		// Left, Right, Bottom, Top, Near, Far
@@ -570,7 +570,7 @@ namespace sw
 			{
 				if ( node.isLeaf() )
 				{
-					outHandles.push_back( node._handle );
+					outListHandle.push_back( node._handle );
 				}
 				else
 				{

@@ -27,9 +27,9 @@ namespace sw
 		void remove( ObjectHandle handle );
 		void clear();
 
-		void queryAABB( float32 minX, float32 minY, float32 maxX, float32 maxY, vector<ObjectHandle>& outHandles ) const;
-		void queryCircle( float32 centerX, float32 centerY, float32 radius, vector<ObjectHandle>& outHandles ) const;
-		void queryRay( float32 startX, float32 startY, float32 dirX, float32 dirY, float32 maxDist, vector<ObjectHandle>& outHandles ) const;
+		void queryAABB( float32 minX, float32 minY, float32 maxX, float32 maxY, vector<ObjectHandle>& outListHandle ) const;
+		void queryCircle( float32 centerX, float32 centerY, float32 radius, vector<ObjectHandle>& outListHandle ) const;
+		void queryRay( float32 startX, float32 startY, float32 dirX, float32 dirY, float32 maxDist, vector<ObjectHandle>& outListHandle ) const;
 
 		float32 getCellSize() const { return _cellSize; }
 		size_t	getHandleCount() const { return _mapHandleBound.size(); }

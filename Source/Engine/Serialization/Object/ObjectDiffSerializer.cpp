@@ -9,15 +9,16 @@ namespace sw
 {
 	SW_LOG_CALLER( "ObjectDiff" );
 
-	bool ObjectDiffSerializer::serializeDiff( vector<uint8>& outListDiffBuffer, const void* pCdoInstance, const void* pModifiedInstance, const TypeInfo& typeInfo )
+	bool ObjectDiffSerializer::serializeDiff( vector<uint8>& outDiffBytes, const void* pCdoInstance, const void* pModifiedInstance,
+											  const TypeInfo& typeInfo )
 	{
 		if ( pCdoInstance == nullptr || pModifiedInstance == nullptr )
 			return false;
 
-		outListDiffBuffer.clear();
+		outDiffBytes.clear();
 		const SerializeContext& ctx = SerializeContext::getDefault();
-		vector<uint8>			listCdoBytes;
-		vector<uint8>			listModBytes;
+		vector<uint8>			cdoBytes;
+		vector<uint8>			modBytes;
 
 		typeInfo.forEachProperty( [&]( const PropertyInfo& prop )
 		{
@@ -28,35 +29,35 @@ namespace sw
 			if ( prop._bIsBitField == SW_FALSE && ( pCdoPtr == nullptr || pModPtr == nullptr ) )
 				return;
 
-			listCdoBytes.clear();
-			listModBytes.clear();
+			cdoBytes.clear();
+			modBytes.clear();
 			if ( prop._bIsBitField == SW_TRUE )
 			{
 				const bool bCdo = prop.getValue<bool>( pCdoInstance );
 				const bool bMod = prop.getValue<bool>( pModifiedInstance );
-				SerializerUtil::serializeValueBinary( &bCdo, hashed_string( "bool" ), listCdoBytes, ctx );
-				SerializerUtil::serializeValueBinary( &bMod, hashed_string( "bool" ), listModBytes, ctx );
+				SerializerUtil::serializeValueBinary( &bCdo, hashed_string( "bool" ), cdoBytes, ctx );
+				SerializerUtil::serializeValueBinary( &bMod, hashed_string( "bool" ), modBytes, ctx );
 			}
 			else if ( prop._bIsContainer && prop.hasContainerWrapper() )
 			{
-				SerializerUtil::serializeNestedContainerBinary( pCdoPtr, prop.getContainerShape(), listCdoBytes, ctx );
-				SerializerUtil::serializeNestedContainerBinary( pModPtr, prop.getContainerShape(), listModBytes, ctx );
+				SerializerUtil::serializeNestedContainerBinary( pCdoPtr, prop.getContainerShape(), cdoBytes, ctx );
+				SerializerUtil::serializeNestedContainerBinary( pModPtr, prop.getContainerShape(), modBytes, ctx );
 			}
 			else
 			{
-				SerializerUtil::serializeValueBinary( pCdoPtr, prop._typeName, listCdoBytes, ctx );
-				SerializerUtil::serializeValueBinary( pModPtr, prop._typeName, listModBytes, ctx );
+				SerializerUtil::serializeValueBinary( pCdoPtr, prop._typeName, cdoBytes, ctx );
+				SerializerUtil::serializeValueBinary( pModPtr, prop._typeName, modBytes, ctx );
 			}
-			if ( listCdoBytes == listModBytes )
+			if ( cdoBytes == modBytes )
 				return;
 
 			const uint32 nameHash	= prop.getNameHash();
-			const uint32 size		= static_cast<uint32>( listModBytes.size() );
+			const uint32 size		= static_cast<uint32>( modBytes.size() );
 			const uint8* pHashBytes = reinterpret_cast<const uint8*>( &nameHash );
 			const uint8* pSizeBytes = reinterpret_cast<const uint8*>( &size );
-			outListDiffBuffer.insert( outListDiffBuffer.end(), pHashBytes, pHashBytes + sizeof( uint32 ) );
-			outListDiffBuffer.insert( outListDiffBuffer.end(), pSizeBytes, pSizeBytes + sizeof( uint32 ) );
-			outListDiffBuffer.insert( outListDiffBuffer.end(), listModBytes.begin(), listModBytes.end() );
+			outDiffBytes.insert( outDiffBytes.end(), pHashBytes, pHashBytes + sizeof( uint32 ) );
+			outDiffBytes.insert( outDiffBytes.end(), pSizeBytes, pSizeBytes + sizeof( uint32 ) );
+			outDiffBytes.insert( outDiffBytes.end(), modBytes.begin(), modBytes.end() );
 		} );
 
 		return true;

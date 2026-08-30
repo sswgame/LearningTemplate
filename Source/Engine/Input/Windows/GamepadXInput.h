@@ -48,8 +48,8 @@ namespace sw
 		/** @brief 버튼 눌림 상태를 설정합니다. */
 		void setButtonDown( GamepadButton button, bool bDown );
 
-		bool				   _arrButtons[static_cast<size_t>( GamepadButton::Count )];
-		bool				   _arrPrevButtons[static_cast<size_t>( GamepadButton::Count )];
+		bool				   _arrButton[static_cast<size_t>( GamepadButton::Count )];
+		bool				   _arrPrevButton[static_cast<size_t>( GamepadButton::Count )];
 		float32				   _leftStickX;
 		float32				   _leftStickY;
 		float32				   _rightStickX;

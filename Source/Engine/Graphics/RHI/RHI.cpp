@@ -26,7 +26,7 @@ namespace sw
 		, _fillMode{ RHIFillMode::Solid }
 		, _cullMode{ RHICullMode::None }
 		, _numRenderTargets{ 1 }
-		, _arrRtvFormats{}
+		, _arrRtvFormat{}
 		, _depthStencilFormat{ RHIFormat::D24_UNORM_S8_UINT }
 		, _bEnableDepthTest{ SW_FALSE }
 		, _bEnableDepthWrite{ SW_TRUE }
@@ -35,7 +35,7 @@ namespace sw
 	{
 		for ( uint32 attachmentIndex = 0; attachmentIndex < kMaxColorAttachments; ++attachmentIndex )
 		{
-			_arrRtvFormats[attachmentIndex] = RHIFormat::R8G8B8A8_UNORM;
+			_arrRtvFormat[attachmentIndex] = RHIFormat::R8G8B8A8_UNORM;
 		}
 	}
 
@@ -68,27 +68,27 @@ namespace sw
 	RHIRenderPassBeginInfo::RHIRenderPassBeginInfo() noexcept
 		: _renderPass{ 0 }
 		, _colorTarget{ 0 }
-		, _arrColorTargets{}
+		, _arrColorTarget{}
 		, _depthTarget{ 0 }
 		, _colorTargetCount{ 0 }
 		, _width{ 0 }
 		, _height{ 0 }
 		, _arrClearColor{ 0.1f, 0.1f, 0.1f, 1.0f }
-		, _arrClearColors{}
+		, _arrTargetClearColor{}
 		, _clearDepth{ 1.0f }
 		, _loadOp{ RHIRenderPassLoadOp::Clear }
-		, _arrLoadOps{}
+		, _arrLoadOp{}
 		, _depthLoadOp{ RHIRenderPassLoadOp::Clear }
 		, _bBindColor{ SW_TRUE }
 		, _reservedFlags{ 0 }
 	{
 		for ( uint32 attachmentIndex = 0; attachmentIndex < kMaxColorAttachments; ++attachmentIndex )
 		{
-			_arrClearColors[attachmentIndex][0] = 0.1f;
-			_arrClearColors[attachmentIndex][1] = 0.1f;
-			_arrClearColors[attachmentIndex][2] = 0.1f;
-			_arrClearColors[attachmentIndex][3] = 1.0f;
-			_arrLoadOps[attachmentIndex]		= RHIRenderPassLoadOp::Clear;
+			_arrTargetClearColor[attachmentIndex][0] = 0.1f;
+			_arrTargetClearColor[attachmentIndex][1] = 0.1f;
+			_arrTargetClearColor[attachmentIndex][2] = 0.1f;
+			_arrTargetClearColor[attachmentIndex][3] = 1.0f;
+			_arrLoadOp[attachmentIndex]				 = RHIRenderPassLoadOp::Clear;
 		}
 	}
 

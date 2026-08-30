@@ -100,13 +100,13 @@ namespace sw
 			std::scoped_lock<SpinLock> lock{ _queueSpinLock };
 			const int32				   allocIdx = _activeAllocatorIndex.load( std::memory_order_relaxed );
 
-			void* pMem = _arrFrameAllocators[allocIdx].allocate( sizeof( T ), alignof( T ) );
+			void* pMem = _arrFrameAllocator[allocIdx].allocate( sizeof( T ), alignof( T ) );
 			if ( pMem == nullptr )
 			{
 				pMem = Memory::allocMemory( sizeof( T ) );
 				if ( pMem == nullptr )
 					return;
-				_listOverflowAllocations[allocIdx].push_back( pMem );
+				_arrListOverflowAllocation[allocIdx].push_back( pMem );
 			}
 
 			T* pQueuedEvent = new ( pMem ) T( event );
@@ -225,8 +225,8 @@ namespace sw
 		unordered_map<pair<hashed_string, EventTypeId>, ChannelDispatchEntry, HashPair> _mapChannelDispatchTable;
 		unordered_map<hashed_string, unique_ptr<ChannelEventList>>						_mapChannelQueue;
 
-		LinearAllocator _arrFrameAllocators[2];
-		vector<void*>	_listOverflowAllocations[2];
+		LinearAllocator _arrFrameAllocator[2];
+		vector<void*>	_arrListOverflowAllocation[2];
 		atomic<int32>	_activeAllocatorIndex;
 	};
 } // namespace sw

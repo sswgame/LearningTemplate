@@ -13,10 +13,10 @@ namespace sw
 
 	void FrameRenderer::bindPassCallbacks()
 	{
-		const vector<RenderGraphPassDesc>& passes = _pipelineResource.getGraphPasses();
+		const vector<RenderGraphPassDesc>& listPass = _pipelineResource.getGraphPass();
 		_graph.clear();
 
-		for ( const RenderGraphPassDesc& pass : passes )
+		for ( const RenderGraphPassDesc& pass : listPass )
 		{
 			vector<hashed_string> listInput;
 			vector<hashed_string> listOutput;
@@ -52,7 +52,7 @@ namespace sw
 
 		const utf8* pPassType = "";
 		const utf8* pPassName = ctx._passName.c_str() != nullptr ? ctx._passName.c_str() : "";
-		for ( const RenderGraphPassDesc& pass : _pipelineResource.getGraphPasses() )
+		for ( const RenderGraphPassDesc& pass : _pipelineResource.getGraphPass() )
 		{
 			if ( hashed_string( pass._name.c_str() ) == ctx._passName )
 			{
@@ -317,14 +317,14 @@ namespace sw
 			{
 				setPassTexture( _passConstants._texSource, srcName );
 				RHIRenderPassBeginInfo beginInfo{};
-				beginInfo._bBindColor		  = 1;
-				beginInfo._colorTarget		  = dstTarget;
-				beginInfo._arrColorTargets[0] = dstTarget;
-				beginInfo._colorTargetCount	  = 1;
-				beginInfo._loadOp			  = RHIRenderPassLoadOp::DontCare;
-				beginInfo._arrLoadOps[0]	  = RHIRenderPassLoadOp::DontCare;
-				beginInfo._width			  = _transientWidth;
-				beginInfo._height			  = _transientHeight;
+				beginInfo._bBindColor		 = 1;
+				beginInfo._colorTarget		 = dstTarget;
+				beginInfo._arrColorTarget[0] = dstTarget;
+				beginInfo._colorTargetCount	 = 1;
+				beginInfo._loadOp			 = RHIRenderPassLoadOp::DontCare;
+				beginInfo._arrLoadOp[0]		 = RHIRenderPassLoadOp::DontCare;
+				beginInfo._width			 = _transientWidth;
+				beginInfo._height			 = _transientHeight;
 				_pCmd->beginRenderPass( beginInfo );
 				drawFullscreen( psoBlit, passCb );
 				_pCmd->endRenderPass();
@@ -335,11 +335,11 @@ namespace sw
 			{
 				RHIRenderPassBeginInfo beginInfo{};
 				Memory::copy( beginInfo._arrClearColor, _arrClearColor, sizeof( beginInfo._arrClearColor ) );
-				beginInfo._loadOp			  = RHIRenderPassLoadOp::Load;
-				beginInfo._bBindColor		  = 1;
-				beginInfo._colorTarget		  = dstTarget;
-				beginInfo._arrColorTargets[0] = dstTarget;
-				beginInfo._colorTargetCount	  = 1;
+				beginInfo._loadOp			 = RHIRenderPassLoadOp::Load;
+				beginInfo._bBindColor		 = 1;
+				beginInfo._colorTarget		 = dstTarget;
+				beginInfo._arrColorTarget[0] = dstTarget;
+				beginInfo._colorTargetCount	 = 1;
 				_pCmd->beginRenderPass( beginInfo );
 				drawFullscreen( 0, matCb );
 				_pCmd->endRenderPass();
@@ -354,15 +354,15 @@ namespace sw
 	void FrameRenderer::beginColorPass( string_view colorName, string_view depthName, const float32 arrClearColor[4],
 										RHIRenderPassLoadOp colorLoad, RHIRenderPassLoadOp depthLoad )
 	{
-		const string  arrNames[]	  = { string( colorName ) };
-		const float32 arrClears[1][4] = {
+		const string  arrName[]		 = { string( colorName ) };
+		const float32 arrClear[1][4] = {
 			{ arrClearColor[0], arrClearColor[1], arrClearColor[2], arrClearColor[3] }
 		   };
-		const RHIRenderPassLoadOp arrLoads[] = { colorLoad };
-		beginColorPassMRT( arrNames, arrClears, arrLoads, 1, depthName, depthLoad );
+		const RHIRenderPassLoadOp arrLoad[] = { colorLoad };
+		beginColorPassMRT( arrName, arrClear, arrLoad, 1, depthName, depthLoad );
 	}
 
-	void FrameRenderer::beginColorPassMRT( const string* pColorNames, const float32 arrClearColors[][4], const RHIRenderPassLoadOp* pColorLoads,
+	void FrameRenderer::beginColorPassMRT( const string* pColorNames, const float32 arrTargetClearColor[][4], const RHIRenderPassLoadOp* pColorLoad,
 										   uint32 colorCount, string_view depthName, RHIRenderPassLoadOp depthLoad )
 	{
 		if ( _pDevice == nullptr || _pCmd == nullptr || pColorNames == nullptr || colorCount == 0 )
@@ -378,14 +378,14 @@ namespace sw
 		beginInfo._colorTargetCount = colorCount > kMaxColorAttachments ? kMaxColorAttachments : colorCount;
 		for ( uint32 colorTargetIndex = 0; colorTargetIndex < beginInfo._colorTargetCount; ++colorTargetIndex )
 		{
-			beginInfo._arrColorTargets[colorTargetIndex] = findTransient( pColorNames[colorTargetIndex] );
-			beginInfo._arrLoadOps[colorTargetIndex]		 = pColorLoads != nullptr ? pColorLoads[colorTargetIndex] : RHIRenderPassLoadOp::Clear;
-			if ( arrClearColors != nullptr )
-				Memory::copy( beginInfo._arrClearColors[colorTargetIndex], arrClearColors[colorTargetIndex], sizeof( beginInfo._arrClearColors[colorTargetIndex] ) );
+			beginInfo._arrColorTarget[colorTargetIndex] = findTransient( pColorNames[colorTargetIndex] );
+			beginInfo._arrLoadOp[colorTargetIndex]		= pColorLoad != nullptr ? pColorLoad[colorTargetIndex] : RHIRenderPassLoadOp::Clear;
+			if ( arrTargetClearColor != nullptr )
+				Memory::copy( beginInfo._arrTargetClearColor[colorTargetIndex], arrTargetClearColor[colorTargetIndex], sizeof( beginInfo._arrTargetClearColor[colorTargetIndex] ) );
 		}
-		beginInfo._colorTarget = beginInfo._arrColorTargets[0];
-		beginInfo._loadOp	   = beginInfo._arrLoadOps[0];
-		Memory::copy( beginInfo._arrClearColor, beginInfo._arrClearColors[0], sizeof( beginInfo._arrClearColor ) );
+		beginInfo._colorTarget = beginInfo._arrColorTarget[0];
+		beginInfo._loadOp	   = beginInfo._arrLoadOp[0];
+		Memory::copy( beginInfo._arrClearColor, beginInfo._arrTargetClearColor[0], sizeof( beginInfo._arrClearColor ) );
 		_pCmd->beginRenderPass( beginInfo );
 	}
 
@@ -458,7 +458,7 @@ namespace sw
 
 	const RenderGraphPassDesc* FrameRenderer::findPassDescByType( string_view passType ) const
 	{
-		for ( const RenderGraphPassDesc& pass : _pipelineResource.getGraphPasses() )
+		for ( const RenderGraphPassDesc& pass : _pipelineResource.getGraphPass() )
 		{
 			if ( pass._type == passType )
 				return &pass;

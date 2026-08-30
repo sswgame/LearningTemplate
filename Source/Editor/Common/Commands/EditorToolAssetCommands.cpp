@@ -395,8 +395,8 @@ namespace sw::editor
 			if ( pCdoComp == nullptr )
 				continue;
 
-			vector<uint8> listCdoBytes;
-			vector<uint8> listInstBytes;
+			vector<uint8> cdoBytes;
+			vector<uint8> instBytes;
 			pTypeInfo->forEachProperty(
 				[&]( const PropertyInfo& prop )
 			{
@@ -407,17 +407,17 @@ namespace sw::editor
 				if ( pCdoPtr == nullptr || pInstPtr == nullptr )
 					return;
 
-				listCdoBytes.clear();
-				listInstBytes.clear();
+				cdoBytes.clear();
+				instBytes.clear();
 				if ( prop._bIsContainer == SW_TRUE && prop.hasContainerWrapper() )
 				{
-					SerializerUtil::serializeNestedContainerBinary( pCdoPtr, prop.getContainerShape(), listCdoBytes, ctx );
-					SerializerUtil::serializeNestedContainerBinary( pInstPtr, prop.getContainerShape(), listInstBytes, ctx );
+					SerializerUtil::serializeNestedContainerBinary( pCdoPtr, prop.getContainerShape(), cdoBytes, ctx );
+					SerializerUtil::serializeNestedContainerBinary( pInstPtr, prop.getContainerShape(), instBytes, ctx );
 				}
 				else
 				{
-					SerializerUtil::serializeValueBinary( pCdoPtr, prop._typeName, listCdoBytes, ctx );
-					SerializerUtil::serializeValueBinary( pInstPtr, prop._typeName, listInstBytes, ctx );
+					SerializerUtil::serializeValueBinary( pCdoPtr, prop._typeName, cdoBytes, ctx );
+					SerializerUtil::serializeValueBinary( pInstPtr, prop._typeName, instBytes, ctx );
 				}
 
 				PrefabOverrideItem item{};
@@ -425,7 +425,7 @@ namespace sw::editor
 				item._propertyName	  = prop._name.c_str();
 				item._defaultValue	  = EditorToolAssetInternal::formatPropertyValue( prop, pCdoComp );
 				item._overriddenValue = EditorToolAssetInternal::formatPropertyValue( prop, pInstComp );
-				item._bModified		  = ( listCdoBytes != listInstBytes );
+				item._bModified		  = ( cdoBytes != instBytes );
 				outOverride.push_back( std::move( item ) );
 			},
 				true );
@@ -475,10 +475,10 @@ namespace sw::editor
 				const SerializeContext& ctx		  = SerializeContext::getDefault();
 				if ( pDest != nullptr && pSrc != nullptr )
 				{
-					vector<uint8> listBytes;
-					SerializerUtil::serializeValueBinary( pSrc, pProp->_typeName, listBytes, ctx );
+					vector<uint8> bytes;
+					SerializerUtil::serializeValueBinary( pSrc, pProp->_typeName, bytes, ctx );
 					size_t local{ 0 };
-					SerializerUtil::deserializeValueBinary( pDest, pProp->_typeName, listBytes.data(), listBytes.size(), local, ctx );
+					SerializerUtil::deserializeValueBinary( pDest, pProp->_typeName, bytes.data(), bytes.size(), local, ctx );
 				}
 				const string afterXml = EditorTransaction::captureSnapshot( GameObjectPtr{ pInstance } );
 				EditorTransaction::recordModify( GameObjectPtr{ pInstance }, beforeXml, afterXml, "Revert Prefab Override" );

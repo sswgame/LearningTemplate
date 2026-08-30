@@ -66,9 +66,9 @@ namespace sw
 				float4x4			   _world;
 			};
 
-			vector<SceneMeshDrawItem> listDrawItems;
-			const vector<GameObject*> listObjects = pObjects->getAllGameObjects();
-			for ( GameObject* pObj : listObjects )
+			vector<SceneMeshDrawItem> listDrawItem;
+			const vector<GameObject*> listObject = pObjects->getAllGameObjects();
+			for ( GameObject* pObj : listObject )
 			{
 				if ( pObj == nullptr || pObj->isPendingKill() || pObj->isActiveInHierarchy() == false )
 					continue;
@@ -117,20 +117,20 @@ namespace sw
 					item._pso				= drawPso;
 					item._cbIndex			= drawCb;
 					item._world				= pMeshComp->getWorldMatrix();
-					listDrawItems.push_back( std::move( item ) );
+					listDrawItem.push_back( std::move( item ) );
 				}
 			}
 
-			if ( listDrawItems.empty() == false )
+			if ( listDrawItem.empty() == false )
 			{
-				std::sort( listDrawItems.begin(), listDrawItems.end(),
+				std::sort( listDrawItem.begin(), listDrawItem.end(),
 						   []( const SceneMeshDrawItem& lhs, const SceneMeshDrawItem& rhs )
 				{ return lhs._sortKey < rhs._sortKey; } );
 
 				RHIPipelineStateHandle lastPso = 0;
 				RHIBufferHandle		   lastVb  = 0;
 
-				for ( const auto& item : listDrawItems )
+				for ( const auto& item : listDrawItem )
 				{
 					if ( item._pso != lastPso )
 					{

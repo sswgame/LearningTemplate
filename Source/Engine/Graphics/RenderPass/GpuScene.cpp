@@ -281,8 +281,8 @@ namespace sw
 		_listScratchCandidate.clear();
 		_listScratchCandidate.reserve( 1024 );
 
-		const vector<GameObject*> listObjects = pObjects->getAllGameObjects();
-		for ( GameObject* pObj : listObjects )
+		const vector<GameObject*> listObject = pObjects->getAllGameObjects();
+		for ( GameObject* pObj : listObject )
 		{
 			if ( pObj == nullptr || pObj->isPendingKill() || pObj->isActiveInHierarchy() == false )
 				continue;

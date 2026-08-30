@@ -60,24 +60,24 @@ namespace sw
 							   ? _transactionLabel
 							   : _listPendingTransactionCommand[0]._label;
 
-		auto listMergedCommands = sw::make_shared<vector<Command>>( std::move( _listPendingTransactionCommand ) );
+		auto listMergedCommand = sw::make_shared<vector<Command>>( std::move( _listPendingTransactionCommand ) );
 		_listPendingTransactionCommand.clear();
 
-		compoundCmd._redo = SW_DELEGATE_LAMBDA( Delegate<void()>, [listMergedCommands]()
+		compoundCmd._redo = SW_DELEGATE_LAMBDA( Delegate<void()>, [listMergedCommand]()
 		{
-			for ( size_t cmdIndex = 0; cmdIndex < listMergedCommands->size(); ++cmdIndex )
+			for ( size_t cmdIndex = 0; cmdIndex < listMergedCommand->size(); ++cmdIndex )
 			{
-				if ( ( *listMergedCommands )[cmdIndex]._redo.isBound() )
-					( *listMergedCommands )[cmdIndex]._redo();
+				if ( ( *listMergedCommand )[cmdIndex]._redo.isBound() )
+					( *listMergedCommand )[cmdIndex]._redo();
 			}
 		} );
 
-		compoundCmd._undo = SW_DELEGATE_LAMBDA( Delegate<void()>, [listMergedCommands]()
+		compoundCmd._undo = SW_DELEGATE_LAMBDA( Delegate<void()>, [listMergedCommand]()
 		{
-			for ( size_t cmdIndex = listMergedCommands->size(); cmdIndex > 0; --cmdIndex )
+			for ( size_t cmdIndex = listMergedCommand->size(); cmdIndex > 0; --cmdIndex )
 			{
-				if ( ( *listMergedCommands )[cmdIndex - 1]._undo.isBound() )
-					( *listMergedCommands )[cmdIndex - 1]._undo();
+				if ( ( *listMergedCommand )[cmdIndex - 1]._undo.isBound() )
+					( *listMergedCommand )[cmdIndex - 1]._undo();
 			}
 		} );
 

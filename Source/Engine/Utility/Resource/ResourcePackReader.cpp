@@ -578,8 +578,8 @@ namespace sw
 		}
 
 		// FAT 인덱스 테이블(32B x FileCount) 로드
-		vector<PackFileEntryOnDisk> listDiskEntries;
-		listDiskEntries.resize( _header._fileCount );
+		vector<PackFileEntryOnDisk> listDiskEntry;
+		listDiskEntry.resize( _header._fileCount );
 
 #if defined( SW_PLATFORM_WINDOWS )
 		_fseeki64( pFile, static_cast<int64>( _header._indexOffset ), SEEK_SET );
@@ -588,7 +588,7 @@ namespace sw
 #endif
 
 		const size_t expectedBytes = _header._fileCount * sizeof( PackFileEntryOnDisk );
-		if ( std::fread( listDiskEntries.data(), 1, expectedBytes, pFile ) != expectedBytes )
+		if ( std::fread( listDiskEntry.data(), 1, expectedBytes, pFile ) != expectedBytes )
 		{
 			SW_LOG_ERROR( "Failed to read FAT index table from pack: %#", _packFilePath );
 			return false;
@@ -597,7 +597,7 @@ namespace sw
 		_mapEntry.clear();
 		_mapEntry.reserve( _header._fileCount );
 
-		for ( const auto& diskEntry : listDiskEntries )
+		for ( const auto& diskEntry : listDiskEntry )
 		{
 			PackFileEntry memEntry{};
 			memEntry._pathHash		   = diskEntry._pathHash;

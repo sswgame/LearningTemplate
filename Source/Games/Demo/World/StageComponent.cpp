@@ -32,9 +32,9 @@ namespace sw
 			GameObjectManager* pGameObjectManager = pScene->getObjectManager();
 			if ( pGameObjectManager != nullptr )
 			{
-				vector<GameObject*> monsterList;
-				pGameObjectManager->findGameObjectsByTag( "Monster"_tag, monsterList );
-				count = static_cast<int32>( monsterList.size() );
+				vector<GameObject*> listMonster;
+				pGameObjectManager->findGameObjectsByTag( "Monster"_tag, listMonster );
+				count = static_cast<int32>( listMonster.size() );
 			}
 		}
 
@@ -58,9 +58,9 @@ namespace sw
 			GameObjectManager* pGameObjectManager = pScene->getObjectManager();
 			if ( pGameObjectManager != nullptr )
 			{
-				vector<GameObject*> monsterList;
-				pGameObjectManager->findGameObjectsByTag( "Monster"_tag, monsterList );
-				for ( GameObject* pObj : monsterList )
+				vector<GameObject*> listMonster;
+				pGameObjectManager->findGameObjectsByTag( "Monster"_tag, listMonster );
+				for ( GameObject* pObj : listMonster )
 				{
 					if ( pObj != nullptr )
 					{

@@ -252,7 +252,7 @@ namespace sw
 #if defined( SW_PLATFORM_WINDOWS )
 		IXAudio2*														  _pXAudio{ nullptr };
 		IXAudio2MasteringVoice*											  _pMasterVoice{ nullptr };
-		vector<XAudio2SystemInternal::VoiceBuffer>						  _listActiveVoices;
+		vector<XAudio2SystemInternal::VoiceBuffer>						  _listActiveVoice;
 		IXAudio2SourceVoice*											  _pMusicVoice{ nullptr };
 		shared_ptr<XAudio2SystemInternal::PcmClip>						  _pMusicClip{ nullptr };
 		unordered_map<string, shared_ptr<XAudio2SystemInternal::PcmClip>> _mapClipCache;
@@ -375,7 +375,7 @@ namespace sw
 			return;
 		stopMusic();
 #if defined( SW_PLATFORM_WINDOWS )
-		for ( XAudio2SystemInternal::VoiceBuffer& voiceBuffer : _impl->_listActiveVoices )
+		for ( XAudio2SystemInternal::VoiceBuffer& voiceBuffer : _impl->_listActiveVoice )
 		{
 			if ( voiceBuffer._pVoice != nullptr )
 			{
@@ -383,7 +383,7 @@ namespace sw
 				voiceBuffer._pVoice->DestroyVoice();
 			}
 		}
-		_impl->_listActiveVoices.clear();
+		_impl->_listActiveVoice.clear();
 		if ( _impl->_pMasterVoice != nullptr )
 		{
 			_impl->_pMasterVoice->DestroyVoice();
@@ -424,7 +424,7 @@ namespace sw
 	#if defined( SW_PLATFORM_WINDOWS )
 		std::scoped_lock<mutex> lock{ _impl->_voiceMutex };
 	#endif
-		vector<XAudio2SystemInternal::VoiceBuffer>& voices = _impl->_listActiveVoices;
+		vector<XAudio2SystemInternal::VoiceBuffer>& voices = _impl->_listActiveVoice;
 		for ( size_t voiceIndex = 0; voiceIndex < voices.size(); )
 		{
 			XAudio2SystemInternal::VoiceBuffer& v = voices[voiceIndex];
@@ -567,7 +567,7 @@ namespace sw
 #endif
 #if defined( SW_PLATFORM_WINDOWS )
 		const float32 effectiveVol = _impl->_bMuted != 0 ? 0.0f : _impl->_sfxVolume;
-		for ( XAudio2SystemInternal::VoiceBuffer& vb : _impl->_listActiveVoices )
+		for ( XAudio2SystemInternal::VoiceBuffer& vb : _impl->_listActiveVoice )
 		{
 			if ( vb._pVoice != nullptr )
 				vb._pVoice->SetVolume( effectiveVol );
@@ -644,8 +644,8 @@ namespace sw
 		else
 		{
 			audioBuffer.Flags = XAUDIO2_END_OF_STREAM;
-			_impl->_listActiveVoices.push_back( XAudio2SystemInternal::VoiceBuffer{} );
-			XAudio2SystemInternal::VoiceBuffer& slot = _impl->_listActiveVoices.back();
+			_impl->_listActiveVoice.push_back( XAudio2SystemInternal::VoiceBuffer{} );
+			XAudio2SystemInternal::VoiceBuffer& slot = _impl->_listActiveVoice.back();
 			slot._pClip								 = pClip;
 			slot._pVoice							 = pVoice;
 			pVoice->SetVolume( _impl->_sfxVolume );

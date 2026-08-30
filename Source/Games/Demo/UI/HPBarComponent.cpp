@@ -50,10 +50,10 @@ namespace sw
 			}
 			case HPBarTargetKind::Boss:
 			{
-				vector<GameObject*> bossList;
-				pGameObjectManager->findGameObjectsByTag( "Boss"_tag, bossList );
+				vector<GameObject*> listBoss;
+				pGameObjectManager->findGameObjectsByTag( "Boss"_tag, listBoss );
 				const hashed_string targetBossName( _bossName.c_str() );
-				for ( GameObject* pObj : bossList )
+				for ( GameObject* pObj : listBoss )
 				{
 					if ( _bossName.empty() || ( pObj != nullptr && pObj->getName() == targetBossName ) )
 					{

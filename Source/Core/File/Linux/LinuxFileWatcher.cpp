@@ -264,7 +264,7 @@ namespace sw
 		namespace fs = std::filesystem;
 		std::error_code ec;
 		for ( fs::recursive_directory_iterator it( directoryPath, fs::directory_options::skip_permission_denied, ec ), end;
-			  it != end && !ec; it.increment( ec ) )
+			  it != end && ec == std::error_code{}; it.increment( ec ) )
 		{
 			if ( it->is_directory( ec ) == false )
 				continue;

@@ -119,7 +119,7 @@ namespace sw
 		shutdown();
 	}
 
-	bool ModuleHost::initialize( LiveReloadManager* pLiveReloadManager, RHI* pRHI, IWindow* pWindow, RenderThread* pRenderThread, bool bEnableEditor, const vector<GameKitConfig>& gameKitModuleList )
+	bool ModuleHost::initialize( LiveReloadManager* pLiveReloadManager, RHI* pRHI, IWindow* pWindow, RenderThread* pRenderThread, bool bEnableEditor, const vector<GameKitConfig>& listGameKitModule )
 	{
 		s_pCurrentModuleHost = this;
 		_pLiveReloadManager	 = pLiveReloadManager;
@@ -138,7 +138,7 @@ namespace sw
 #endif
 
 #if defined( SW_SHIPPING )
-		(void)gameKitModuleList;
+		(void)listGameKitModule;
 		onAfterGameReload( nullptr );
 #else
 		if ( _bEnableEditor == SW_TRUE && _pLiveReloadManager != nullptr )
@@ -168,28 +168,28 @@ namespace sw
 			BLOCK( "게임플레이 키트 및 SWGame 모듈 등록" )
 			{
 				const string   gameFrameWorkModule = "GameFramework";
-				vector<string> gameModuleList{ gameFrameWorkModule };
+				vector<string> listGameModule{ gameFrameWorkModule };
 
-				for ( const GameKitConfig& kitConfig : gameKitModuleList )
+				for ( const GameKitConfig& kitConfig : listGameKitModule )
 				{
-					vector<string> listDeps = kitConfig._listDependencyModule;
-					if ( listDeps.empty() )
-						listDeps.push_back( gameFrameWorkModule );
+					vector<string> listDep = kitConfig._listDependencyModule;
+					if ( listDep.empty() )
+						listDep.push_back( gameFrameWorkModule );
 
-					if ( _pLiveReloadManager->registerModule( kitConfig._name, listDeps ) == false )
+					if ( _pLiveReloadManager->registerModule( kitConfig._name, listDep ) == false )
 					{
 						SW_LOG_ERROR( "Kit module register failed (%#)", kitConfig._name );
 						return false;
 					}
 					_pLiveReloadManager->setOnBeforeReload( kitConfig._name, SW_DELEGATE_METHOD( LiveReloadManager::OnBeforeReloadDelegate, &ModuleHost::onBeforeGameplayDllReload, this ) );
 					_pLiveReloadManager->setOnAfterReload( kitConfig._name, SW_DELEGATE_METHOD( LiveReloadManager::OnAfterReloadDelegate, &ModuleHost::onAfterGameplayDllReload, this ) );
-					gameModuleList.push_back( kitConfig._name );
+					listGameModule.push_back( kitConfig._name );
 				}
 
 				_pLiveReloadManager->setOnBeforeReload( sw::config::kTargetGameModule, SW_DELEGATE_METHOD( LiveReloadManager::OnBeforeReloadDelegate, &ModuleHost::onBeforeGameReload, this ) );
 				_pLiveReloadManager->setOnAfterReload( sw::config::kTargetGameModule, SW_DELEGATE_METHOD( LiveReloadManager::OnAfterReloadDelegate, &ModuleHost::onAfterGameReload, this ) );
 
-				if ( _pLiveReloadManager->registerModule( sw::config::kTargetGameModule, gameModuleList ) == false )
+				if ( _pLiveReloadManager->registerModule( sw::config::kTargetGameModule, listGameModule ) == false )
 				{
 					SW_LOG_ERROR( "SWGame module register failed" );
 					return false;
@@ -469,10 +469,10 @@ namespace sw
 		}
 	}
 
-	void ModuleHost::onBeforeCommitBatch( const vector<string>& moduleNames )
+	void ModuleHost::onBeforeCommitBatch( const vector<string>& listModuleName )
 	{
 #if !defined( SW_SHIPPING )
-		for ( const string& name : moduleNames )
+		for ( const string& name : listModuleName )
 		{
 			if ( name != sw::config::kTargetEditorModule )
 			{
@@ -481,7 +481,7 @@ namespace sw
 			}
 		}
 #else
-		(void)moduleNames;
+		(void)listModuleName;
 #endif
 	}
 

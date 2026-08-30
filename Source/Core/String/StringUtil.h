@@ -293,11 +293,5 @@ namespace sw
 			}
 			return ~crc;
 		}
-
-	private:
-		/** @brief 내부 UTF-16 변환 헬퍼입니다. */
-		static string toString( const utf16* input );
-		/** @brief 내부 UTF-8 변환 헬퍼입니다. */
-		static wstring toWString( const utf8* input );
 	};
 } // namespace sw

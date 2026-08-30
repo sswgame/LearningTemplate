@@ -52,37 +52,41 @@ namespace sw::editor
 	 */
 	vector<string> EditorUtil::getSystemFontsDirectories()
 	{
-		vector<string> listDirs;
+		vector<string> listDir;
 
 #if defined( SW_PLATFORM_WINDOWS )
-		utf16 windowsDir[constant::kMaxPathSize] = {};
-		if ( GetWindowsDirectoryW( windowsDir, constant::kMaxPathSize ) > 0 )
-			EditorUtilInternal::appendIfDirectory( listDirs, FileUtil::joinPath( StringUtil::utf16ToUtf8( windowsDir ), "Fonts" ) );
+		utf16 windowsDir[constant::kMaxPathSize];
+		if ( GetWindowsDirectoryW( reinterpret_cast<LPWSTR>( windowsDir ), constant::kMaxPathSize ) != 0 )
+		{
+			EditorUtilInternal::appendIfDirectory( listDir, FileUtil::joinPath( StringUtil::utf16ToUtf8( windowsDir ), "Fonts" ) );
+		}
 
 #elif defined( SW_PLATFORM_LINUX )
-		EditorUtilInternal::appendIfDirectory( listDirs, "/usr/share/fonts" );
-		EditorUtilInternal::appendIfDirectory( listDirs, "/usr/local/share/fonts" );
-		const utf8* pHome = std::getenv( "HOME" );
-		if ( pHome != nullptr )
-			EditorUtilInternal::appendIfDirectory( listDirs, FileUtil::joinPath( pHome, ".local/share/fonts" ) );
+		EditorUtilInternal::appendIfDirectory( listDir, "/usr/share/fonts" );
+		EditorUtilInternal::appendIfDirectory( listDir, "/usr/local/share/fonts" );
+		if ( const utf8* pHome = std::getenv( "HOME" ) )
+		{
+			EditorUtilInternal::appendIfDirectory( listDir, FileUtil::joinPath( pHome, ".local/share/fonts" ) );
+		}
 
 #elif defined( SW_PLATFORM_MACOS )
-		EditorUtilInternal::appendIfDirectory( listDirs, "/System/Library/Fonts" );
-		EditorUtilInternal::appendIfDirectory( listDirs, "/Library/Fonts" );
-		const utf8* pHome = std::getenv( "HOME" );
-		if ( pHome != nullptr )
+		EditorUtilInternal::appendIfDirectory( listDir, "/System/Library/Fonts" );
+		EditorUtilInternal::appendIfDirectory( listDir, "/Library/Fonts" );
+		if ( const utf8* pHome = std::getenv( "HOME" ) )
 		{
-			EditorUtilInternal::appendIfDirectory( listDirs, FileUtil::joinPath( pHome, "Library/Fonts" ) );
+			EditorUtilInternal::appendIfDirectory( listDir, FileUtil::joinPath( pHome, "Library/Fonts" ) );
 		}
 		else
 		{
-			const passwd* pPw = getpwuid( getuid() );
-			if ( pPw != nullptr )
-				EditorUtilInternal::appendIfDirectory( listDirs, FileUtil::joinPath( pPw->pw_dir, "Library/Fonts" ) );
+			struct passwd* pPw = getpwuid( getuid() );
+			if ( pPw != nullptr && pPw->pw_dir != nullptr )
+			{
+				EditorUtilInternal::appendIfDirectory( listDir, FileUtil::joinPath( pPw->pw_dir, "Library/Fonts" ) );
+			}
 		}
 
 #endif
-		return listDirs;
+		return listDir;
 	}
 
 	/**
@@ -149,8 +153,8 @@ namespace sw::editor
 		io.Fonts->FontLoaderFlags = ImGuiFreeTypeLoaderFlags_LightHinting;
 
 		const EditorData& data		 = editor::getEditorData();
-		const string	  basePath	 = resolveFontFile( data._listBaseFonts );
-		const string	  koreanPath = resolveFontFile( data._listKoreanFonts );
+		const string	  basePath	 = resolveFontFile( data._listBaseFont );
+		const string	  koreanPath = resolveFontFile( data._listKoreanFont );
 
 		ImFont* pBaseFont{ nullptr };
 		BLOCK( "Base Font" )

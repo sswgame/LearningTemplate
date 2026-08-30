@@ -58,10 +58,10 @@ namespace sw::editor
 {
 	SW_LOG_CALLER( "EditorInspectorCommands" );
 
-	void EditorInspectorCommands::pushPodEdit( void* pData, size_t size, vector<uint8> listBefore, vector<uint8> listAfter,
+	void EditorInspectorCommands::pushPodEdit( void* pData, size_t size, vector<uint8> beforeBytes, vector<uint8> afterBytes,
 											   string_view label, uint64 selectedObjectId )
 	{
-		if ( pData == nullptr || size == 0 || listBefore.size() != size || listAfter.size() != size )
+		if ( pData == nullptr || size == 0 || beforeBytes.size() != size || afterBytes.size() != size )
 			return;
 
 		CommandStack* pStack = editor::getService<CommandStack>();
@@ -71,17 +71,17 @@ namespace sw::editor
 		const string		  cmdLabel = string( "Edit " ) + string{ label };
 		CommandStack::Command cmd;
 		cmd._label = cmdLabel;
-		cmd._undo  = [pData, size, listBefore, selectedObjectId]()
+		cmd._undo  = [pData, size, beforeBytes, selectedObjectId]()
 		{
 			if ( selectedObjectId != 0 && EditorInspectorCommandsInternal::findObjectById( selectedObjectId ) == nullptr )
 				return;
-			Memory::copy( pData, listBefore.data(), size );
+			Memory::copy( pData, beforeBytes.data(), size );
 		};
-		cmd._redo = [pData, size, listAfter, selectedObjectId]()
+		cmd._redo = [pData, size, afterBytes, selectedObjectId]()
 		{
 			if ( selectedObjectId != 0 && EditorInspectorCommandsInternal::findObjectById( selectedObjectId ) == nullptr )
 				return;
-			Memory::copy( pData, listAfter.data(), size );
+			Memory::copy( pData, afterBytes.data(), size );
 		};
 		pStack->push( std::move( cmd ) );
 		EditorInspectorCommandsInternal::markSceneDirty();

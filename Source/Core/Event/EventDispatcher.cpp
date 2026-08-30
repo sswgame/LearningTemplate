@@ -27,8 +27,8 @@ namespace sw
 		, _mapChannelDelegate{}
 		, _mapChannelDispatchTable{}
 		, _mapChannelQueue{}
-		, _arrFrameAllocators{ LinearAllocator{ 1024 * 64 }, LinearAllocator{ 1024 * 64 } }
-		, _listOverflowAllocations{}
+		, _arrFrameAllocator{ LinearAllocator{ 1024 * 64 }, LinearAllocator{ 1024 * 64 } }
+		, _arrListOverflowAllocation{}
 		, _activeAllocatorIndex{ 0 }
 	{
 	}
@@ -58,13 +58,13 @@ namespace sw
 
 		if ( activeChannels.empty() )
 		{
-			for ( void* pOverflowMem : _listOverflowAllocations[currentAllocIdx] )
+			for ( void* pOverflowMem : _arrListOverflowAllocation[currentAllocIdx] )
 			{
 				if ( pOverflowMem != nullptr )
 					Memory::freeMemory( pOverflowMem );
 			}
-			_listOverflowAllocations[currentAllocIdx].clear();
-			_arrFrameAllocators[currentAllocIdx].reset();
+			_arrListOverflowAllocation[currentAllocIdx].clear();
+			_arrFrameAllocator[currentAllocIdx].reset();
 			return;
 		}
 
@@ -106,13 +106,13 @@ namespace sw
 
 		BLOCK( "Cleanup Frame Allocator" )
 		{
-			for ( void* pOverflowMem : _listOverflowAllocations[currentAllocIdx] )
+			for ( void* pOverflowMem : _arrListOverflowAllocation[currentAllocIdx] )
 			{
 				if ( pOverflowMem != nullptr )
 					Memory::freeMemory( pOverflowMem );
 			}
-			_listOverflowAllocations[currentAllocIdx].clear();
-			_arrFrameAllocators[currentAllocIdx].reset();
+			_arrListOverflowAllocation[currentAllocIdx].clear();
+			_arrFrameAllocator[currentAllocIdx].reset();
 		}
 	}
 
@@ -133,15 +133,15 @@ namespace sw
 			_mapChannelQueue.clear();
 			for ( uint32 allocIndex = 0; allocIndex < 2; ++allocIndex )
 			{
-				for ( void* pOverflowMem : _listOverflowAllocations[allocIndex] )
+				for ( void* pOverflowMem : _arrListOverflowAllocation[allocIndex] )
 				{
 					if ( pOverflowMem != nullptr )
 						Memory::freeMemory( pOverflowMem );
 				}
-				_listOverflowAllocations[allocIndex].clear();
+				_arrListOverflowAllocation[allocIndex].clear();
 			}
-			_arrFrameAllocators[0].clear();
-			_arrFrameAllocators[1].clear();
+			_arrFrameAllocator[0].clear();
+			_arrFrameAllocator[1].clear();
 		}
 	}
 } // namespace sw

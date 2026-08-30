@@ -114,7 +114,7 @@ namespace sw
 			fragShaderStageInfo.pName  = "PSMain";
 		}
 
-		VkPipelineShaderStageCreateInfo arrShaderStages[] = { vertShaderStageInfo, fragShaderStageInfo };
+		VkPipelineShaderStageCreateInfo arrShaderStage[] = { vertShaderStageInfo, fragShaderStageInfo };
 
 		VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
 		vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -124,20 +124,20 @@ namespace sw
 		bindingDescription.stride	 = static_cast<uint32>( sizeof( RHIVertex ) );
 		bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
-		VkVertexInputAttributeDescription arrAttributeDescriptions[2]{};
-		arrAttributeDescriptions[0].binding	 = 0;
-		arrAttributeDescriptions[0].location = 0;
-		arrAttributeDescriptions[0].format	 = VK_FORMAT_R32G32B32_SFLOAT;
-		arrAttributeDescriptions[0].offset	 = SW_OFFSET_OF( RHIVertex, _arrPosition );
-		arrAttributeDescriptions[1].binding	 = 0;
-		arrAttributeDescriptions[1].location = 1;
-		arrAttributeDescriptions[1].format	 = VK_FORMAT_R32G32B32A32_SFLOAT;
-		arrAttributeDescriptions[1].offset	 = SW_OFFSET_OF( RHIVertex, _arrColor );
+		VkVertexInputAttributeDescription arrAttributeDescription[2]{};
+		arrAttributeDescription[0].binding	= 0;
+		arrAttributeDescription[0].location = 0;
+		arrAttributeDescription[0].format	= VK_FORMAT_R32G32B32_SFLOAT;
+		arrAttributeDescription[0].offset	= SW_OFFSET_OF( RHIVertex, _arrPosition );
+		arrAttributeDescription[1].binding	= 0;
+		arrAttributeDescription[1].location = 1;
+		arrAttributeDescription[1].format	= VK_FORMAT_R32G32B32A32_SFLOAT;
+		arrAttributeDescription[1].offset	= SW_OFFSET_OF( RHIVertex, _arrColor );
 
 		vertexInputInfo.vertexBindingDescriptionCount	= 1;
 		vertexInputInfo.pVertexBindingDescriptions		= &bindingDescription;
 		vertexInputInfo.vertexAttributeDescriptionCount = 2;
-		vertexInputInfo.pVertexAttributeDescriptions	= arrAttributeDescriptions;
+		vertexInputInfo.pVertexAttributeDescriptions	= arrAttributeDescription;
 
 		VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
 		inputAssembly.sType					 = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -166,25 +166,25 @@ namespace sw
 		const uint32 numRT		= bDepthOnly ? 0u : ( ( desc._numRenderTargets > 0 ) ? desc._numRenderTargets : 1u );
 		const uint32 blendCount = ( numRT > kMaxColorAttachments ) ? kMaxColorAttachments : numRT;
 
-		VkPipelineColorBlendAttachmentState arrColorBlendAttachments[kMaxColorAttachments]{};
+		VkPipelineColorBlendAttachmentState arrColorBlendAttachment[kMaxColorAttachments]{};
 		for ( uint32 blendIndex = 0; blendIndex < blendCount; ++blendIndex )
 		{
-			arrColorBlendAttachments[blendIndex].colorWriteMask		 = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
-																	   VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-			arrColorBlendAttachments[blendIndex].blendEnable		 = desc._bEnableBlend ? VK_TRUE : VK_FALSE;
-			arrColorBlendAttachments[blendIndex].srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-			arrColorBlendAttachments[blendIndex].dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-			arrColorBlendAttachments[blendIndex].colorBlendOp		 = VK_BLEND_OP_ADD;
-			arrColorBlendAttachments[blendIndex].srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-			arrColorBlendAttachments[blendIndex].dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-			arrColorBlendAttachments[blendIndex].alphaBlendOp		 = VK_BLEND_OP_ADD;
+			arrColorBlendAttachment[blendIndex].colorWriteMask		= VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
+																	  VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+			arrColorBlendAttachment[blendIndex].blendEnable			= desc._bEnableBlend ? VK_TRUE : VK_FALSE;
+			arrColorBlendAttachment[blendIndex].srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+			arrColorBlendAttachment[blendIndex].dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+			arrColorBlendAttachment[blendIndex].colorBlendOp		= VK_BLEND_OP_ADD;
+			arrColorBlendAttachment[blendIndex].srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+			arrColorBlendAttachment[blendIndex].dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+			arrColorBlendAttachment[blendIndex].alphaBlendOp		= VK_BLEND_OP_ADD;
 		}
 
 		VkPipelineColorBlendStateCreateInfo colorBlending{};
 		colorBlending.sType			  = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
 		colorBlending.logicOpEnable	  = VK_FALSE;
 		colorBlending.attachmentCount = blendCount;
-		colorBlending.pAttachments	  = blendCount > 0 ? arrColorBlendAttachments : nullptr;
+		colorBlending.pAttachments	  = blendCount > 0 ? arrColorBlendAttachment : nullptr;
 
 		VkRenderPass pipelineRp = _pDevice->ensurePipelineRenderPass( desc );
 		if ( pipelineRp == VK_NULL_HANDLE )
@@ -198,16 +198,16 @@ namespace sw
 		depthStencil.depthBoundsTestEnable = VK_FALSE;
 		depthStencil.stencilTestEnable	   = VK_FALSE;
 
-		vector<VkDynamicState>			 listDynamicStates = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+		vector<VkDynamicState>			 listDynamicState = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
 		VkPipelineDynamicStateCreateInfo dynamicState{};
 		dynamicState.sType			   = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-		dynamicState.dynamicStateCount = static_cast<uint32>( listDynamicStates.size() );
-		dynamicState.pDynamicStates	   = listDynamicStates.data();
+		dynamicState.dynamicStateCount = static_cast<uint32>( listDynamicState.size() );
+		dynamicState.pDynamicStates	   = listDynamicState.data();
 
 		VkGraphicsPipelineCreateInfo pipelineInfo{};
 		pipelineInfo.sType				 = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 		pipelineInfo.stageCount			 = bHasPixelShader ? 2 : 1;
-		pipelineInfo.pStages			 = arrShaderStages;
+		pipelineInfo.pStages			 = arrShaderStage;
 		pipelineInfo.pVertexInputState	 = &vertexInputInfo;
 		pipelineInfo.pInputAssemblyState = &inputAssembly;
 		pipelineInfo.pViewportState		 = &viewportState;

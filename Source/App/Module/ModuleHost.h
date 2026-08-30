@@ -55,7 +55,7 @@ namespace sw
 		 * @param pRenderThread 렌더 스레드 (drainWorkers 용)
 		 * @param bEnableEditor 에디터 모드 여부
 		 */
-		bool initialize( LiveReloadManager* pLiveReloadManager, RHI* pRHI, IWindow* pWindow, RenderThread* pRenderThread, bool bEnableEditor, const vector<GameKitConfig>& gameKitModuleList );
+		bool initialize( LiveReloadManager* pLiveReloadManager, RHI* pRHI, IWindow* pWindow, RenderThread* pRenderThread, bool bEnableEditor, const vector<GameKitConfig>& listGameKitModule );
 		void shutdown();
 
 		// 3) 프레임 단위 처리
@@ -97,7 +97,7 @@ namespace sw
 		void onAfterGameReload( void* pLibraryModule );
 		void onBeforeGameplayDllReload();
 		void onAfterGameplayDllReload( void* pLibraryModule );
-		void onBeforeCommitBatch( const vector<string>& moduleNames );
+		void onBeforeCommitBatch( const vector<string>& listModuleName );
 		/** @brief RHI 백엔드 핫스왑 전 기존 에디터 및 게임 런타임 인스턴스를 안전하게 정리합니다. */
 		void onBeforeRhiSwap();
 		void drainRenderWorkers();

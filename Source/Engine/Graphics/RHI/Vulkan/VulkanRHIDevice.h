@@ -166,7 +166,7 @@ namespace sw
 		}
 
 		/** @brief 텍스처의 VkImageView를 조회합니다. */
-		bool queryVulkanTextureView( RHITextureHandle texture, void*& outImageView ) const override;
+		bool queryVulkanTextureView( RHITextureHandle texture, void*& pOutImageView ) const override;
 
 		/** @brief 네이티브 텍스처 포인터 반환 (VkImageView) */
 		void* getNativeTexturePointer( RHITextureHandle texture ) const override;
@@ -292,10 +292,10 @@ namespace sw
 		/// @brief MRT 프레임버퍼 캐시 키 (컬러+깊이 핸들)
 		struct CompositeFbKey
 		{
-			RHITextureHandle _arrColors[kMaxColorAttachments]{};
+			RHITextureHandle _arrColor[kMaxColorAttachments]{};
 			uint32			 _colorCount{ 0 };
 			RHITextureHandle _depth{ 0 };
-			uint8			 _arrColorLoadOps[kMaxColorAttachments]{};
+			uint8			 _arrColorLoadOp[kMaxColorAttachments]{};
 			uint8			 _depthLoadOp{ 0 };
 			/** @brief 같으면 true를 반환합니다. */
 			bool operator==( const CompositeFbKey& other ) const
@@ -304,7 +304,7 @@ namespace sw
 					return false;
 				for ( uint32 colorIndex = 0; colorIndex < _colorCount; ++colorIndex )
 				{
-					if ( _arrColors[colorIndex] != other._arrColors[colorIndex] || _arrColorLoadOps[colorIndex] != other._arrColorLoadOps[colorIndex] )
+					if ( _arrColor[colorIndex] != other._arrColor[colorIndex] || _arrColorLoadOp[colorIndex] != other._arrColorLoadOp[colorIndex] )
 						return false;
 				}
 				return true;
@@ -322,8 +322,8 @@ namespace sw
 				h ^= static_cast<size_t>( key._depthLoadOp ) + 0x9e3779b9u;
 				for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
 				{
-					h ^= static_cast<size_t>( key._arrColors[colorIndex] ) + 0x9e3779b9u + ( h << 6 ) + ( h >> 2 );
-					h ^= static_cast<size_t>( key._arrColorLoadOps[colorIndex] ) + 0x9e3779b9u;
+					h ^= static_cast<size_t>( key._arrColor[colorIndex] ) + 0x9e3779b9u + ( h << 6 ) + ( h >> 2 );
+					h ^= static_cast<size_t>( key._arrColorLoadOp[colorIndex] ) + 0x9e3779b9u;
 				}
 				return h;
 			}

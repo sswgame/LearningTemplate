@@ -67,13 +67,13 @@ namespace sw
 				return arg;
 			}
 
-			static void appendUnique( vector<string>& dstList, const vector<string>& srcList )
+			static void appendUnique( vector<string>& inoutListDst, const vector<string>& listSrc )
 			{
-				for ( const string& item : srcList )
+				for ( const string& item : listSrc )
 				{
 					const string normalized = rewriteLegacyClangArg( item );
-					if ( std::find( dstList.begin(), dstList.end(), normalized ) == dstList.end() )
-						dstList.push_back( normalized );
+					if ( std::find( inoutListDst.begin(), inoutListDst.end(), normalized ) == inoutListDst.end() )
+						inoutListDst.push_back( normalized );
 				}
 			}
 
@@ -97,15 +97,15 @@ namespace sw
 			/** @brief JSON 배열 항목들을 string 벡터로 변환합니다. */
 			static vector<string> collectStringArray( const nlohmann::json& arr )
 			{
-				vector<string> resultList;
+				vector<string> listResult;
 				if ( arr.is_array() == false )
-					return resultList;
+					return listResult;
 				for ( const auto& item : arr )
 				{
 					if ( item.is_string() )
-						resultList.push_back( item.get_ref<const std::string&>().c_str() );
+						listResult.push_back( item.get_ref<const std::string&>().c_str() );
 				}
-				return resultList;
+				return listResult;
 			}
 
 			struct StringBinding
@@ -239,19 +239,19 @@ namespace sw
 				return false;
 			}
 
-			static void eraseMsvcCompatArgs( vector<string>& argList, const ParserClangConfig& config )
+			static void eraseMsvcCompatArgs( vector<string>& inoutListArg, const ParserClangConfig& config )
 			{
 				size_t writeIndex = 0;
-				for ( size_t readIndex = 0; readIndex < argList.size(); ++readIndex )
+				for ( size_t readIndex = 0; readIndex < inoutListArg.size(); ++readIndex )
 				{
-					if ( isMsvcCompatArg( argList[readIndex], config._flagFmsCompatibility, config._flagFmsExtensions,
+					if ( isMsvcCompatArg( inoutListArg[readIndex], config._flagFmsCompatibility, config._flagFmsExtensions,
 										  config._flagFmsCompatVersionPrefix ) )
 						continue;
 					if ( writeIndex != readIndex )
-						argList[writeIndex] = argList[readIndex];
+						inoutListArg[writeIndex] = inoutListArg[readIndex];
 					++writeIndex;
 				}
-				argList.resize( writeIndex );
+				inoutListArg.resize( writeIndex );
 			}
 #endif
 
@@ -266,7 +266,7 @@ namespace sw
 namespace sw
 {
 	ParserClangConfig::ParserClangConfig() noexcept
-		: _listBaseArgs{}
+		: _listBaseArg{}
 		, _listForceInclude{}
 		, _llvmClangRel{ "lib/clang" }
 		, _clangIncludeRel{ "include" }
@@ -303,7 +303,7 @@ namespace sw
 
 	bool ParserClangConfig::load()
 	{
-		_listBaseArgs.clear();
+		_listBaseArg.clear();
 		_listForceInclude.clear();
 		_bLoaded = SW_FALSE;
 
@@ -336,12 +336,12 @@ namespace sw
 
 		BLOCK( "Load Base Arguments from Config" )
 		{
-			vector<string> mergedList = ParserContextInternal::loadArgsFromDocument( defaultsDoc, kPlatformParserKey );
-			ParserContextInternal::appendUnique( mergedList, ParserContextInternal::loadArgsFromDocument( localDoc, kPlatformParserKey ) );
-			_listBaseArgs = std::move( mergedList );
+			vector<string> listMerged = ParserContextInternal::loadArgsFromDocument( defaultsDoc, kPlatformParserKey );
+			ParserContextInternal::appendUnique( listMerged, ParserContextInternal::loadArgsFromDocument( localDoc, kPlatformParserKey ) );
+			_listBaseArg = std::move( listMerged );
 
 #if !defined( SW_PLATFORM_WINDOWS )
-			ParserContextInternal::eraseMsvcCompatArgs( _listBaseArgs, *this );
+			ParserContextInternal::eraseMsvcCompatArgs( _listBaseArg, *this );
 #endif
 		}
 
@@ -375,7 +375,7 @@ namespace sw
 			}
 		}
 
-		if ( _listBaseArgs.empty() )
+		if ( _listBaseArg.empty() )
 		{
 			SW_LOG_ERROR( "No parser_args available (config empty)." );
 			return false;
@@ -395,19 +395,19 @@ namespace sw
 			const string llvmClangDir = FileUtil::joinPath( llvmPath, _llvmClangRel );
 			if ( FileUtil::directoryExists( llvmClangDir ) )
 			{
-				vector<string> clangSubFolderList;
-				FileUtil::collectFolders( llvmClangDir, clangSubFolderList, false, false );
-				for ( const string& folder : clangSubFolderList )
+				vector<string> listClangSubFolder;
+				FileUtil::collectFolders( llvmClangDir, listClangSubFolder, false, false );
+				for ( const string& folder : listClangSubFolder )
 				{
 					const string resourceDir = FileUtil::normalizeSeparators( folder );
 					const string clangInc	 = FileUtil::joinPath( folder, _clangIncludeRel );
 					if ( FileUtil::directoryExists( clangInc ) == false )
 						continue;
 
-					_listBaseArgs.emplace_back( _flagResourceDir );
-					_listBaseArgs.emplace_back( resourceDir );
-					_listBaseArgs.emplace_back( _flagIsystem );
-					_listBaseArgs.emplace_back( clangInc );
+					_listBaseArg.emplace_back( _flagResourceDir );
+					_listBaseArg.emplace_back( resourceDir );
+					_listBaseArg.emplace_back( _flagIsystem );
+					_listBaseArg.emplace_back( clangInc );
 					break;
 				}
 			}
@@ -419,8 +419,8 @@ namespace sw
 			const string msvcInc = FileUtil::joinPath( msvcToolsDir, _msvcIncludeRel );
 			if ( msvcToolsDir.empty() == false && FileUtil::directoryExists( msvcInc ) )
 			{
-				_listBaseArgs.emplace_back( _flagIsystem );
-				_listBaseArgs.emplace_back( msvcInc );
+				_listBaseArg.emplace_back( _flagIsystem );
+				_listBaseArg.emplace_back( msvcInc );
 			}
 
 			if ( winSdkDir.empty() == false && winSdkVer.empty() == false )
@@ -430,30 +430,30 @@ namespace sw
 					_winSdkUcrtRel );
 				if ( FileUtil::directoryExists( ucrtPath ) )
 				{
-					_listBaseArgs.emplace_back( _flagIsystem );
-					_listBaseArgs.emplace_back( ucrtPath );
+					_listBaseArg.emplace_back( _flagIsystem );
+					_listBaseArg.emplace_back( ucrtPath );
 				}
 			}
 		}
 #endif
 
 		_bLoaded = SW_TRUE;
-		SW_LOG_TRACE( "Cached clang config (%# base args).", static_cast<uint32>( _listBaseArgs.size() ) );
+		SW_LOG_TRACE( "Cached clang config (%# base args).", static_cast<uint32>( _listBaseArg.size() ) );
 		return true;
 	}
 
-	vector<string> ParserClangConfig::buildArgs( const vector<string>& includePathList ) const
+	vector<string> ParserClangConfig::buildArgs( const vector<string>& listIncludePath ) const
 	{
-		vector<string> argList = _listBaseArgs;
-		argList.reserve( argList.size() + includePathList.size() + _listForceInclude.size() * 2 );
-		for ( const string& includePath : includePathList )
-			argList.push_back( _flagIncludePrefix + includePath );
+		vector<string> listArg = _listBaseArg;
+		listArg.reserve( listArg.size() + listIncludePath.size() + _listForceInclude.size() * 2 );
+		for ( const string& includePath : listIncludePath )
+			listArg.push_back( _flagIncludePrefix + includePath );
 		for ( const string& forceInclude : _listForceInclude )
 		{
-			argList.push_back( _flagForceInclude );
-			argList.push_back( forceInclude );
+			listArg.push_back( _flagForceInclude );
+			listArg.push_back( forceInclude );
 		}
-		return argList;
+		return listArg;
 	}
 
 	bool ParserContext::ensureSharedConfig()
@@ -489,8 +489,8 @@ namespace sw
 		}
 	}
 
-	bool ParserContext::parse( const string& filePath, const vector<string>& includePathList,
-							   const string* unsavedContents )
+	bool ParserContext::parse( const string& filePath, const vector<string>& listIncludePath,
+							   const string* pUnsavedContents )
 	{
 		if ( ensureSharedConfig() == false )
 			return false;
@@ -507,14 +507,14 @@ namespace sw
 			_translationUnit = nullptr;
 		}
 
-		const vector<string> argStringList = getSharedConfig().buildArgs( includePathList );
-		vector<const utf8*>	 argPtrList;
+		const vector<string> listArgString = getSharedConfig().buildArgs( listIncludePath );
+		vector<const utf8*>	 listArgPtr;
 
 		BLOCK( "Build Arguments" )
 		{
-			argPtrList.reserve( argStringList.size() );
-			for ( const string& arg : argStringList )
-				argPtrList.push_back( arg.c_str() );
+			listArgPtr.reserve( listArgString.size() );
+			for ( const string& arg : listArgString )
+				listArgPtr.push_back( arg.c_str() );
 		}
 
 		BLOCK( "Parse Translation Unit" )
@@ -525,23 +525,23 @@ namespace sw
 				CXTranslationUnit_Incomplete;
 
 			CXUnsavedFile  unsaved{};
-			CXUnsavedFile* unsavedPtr	= nullptr;
+			CXUnsavedFile* pUnsavedFile = nullptr;
 			uint32		   unsavedCount = 0;
-			if ( unsavedContents != nullptr && unsavedContents->empty() == false )
+			if ( pUnsavedContents != nullptr && pUnsavedContents->empty() == false )
 			{
 				unsaved.Filename = filePath.c_str();
-				unsaved.Contents = unsavedContents->c_str();
-				unsaved.Length	 = static_cast<uint32>( unsavedContents->size() );
-				unsavedPtr		 = &unsaved;
+				unsaved.Contents = pUnsavedContents->c_str();
+				unsaved.Length	 = static_cast<uint32>( pUnsavedContents->size() );
+				pUnsavedFile	 = &unsaved;
 				unsavedCount	 = 1;
 			}
 
 			_translationUnit = clang_parseTranslationUnit(
 				_index,
 				filePath.c_str(),
-				argPtrList.data(),
-				static_cast<int32>( argPtrList.size() ),
-				unsavedPtr, unsavedCount,
+				listArgPtr.data(),
+				static_cast<int32>( listArgPtr.size() ),
+				pUnsavedFile, unsavedCount,
 				kParseFlags );
 		}
 

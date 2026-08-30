@@ -240,12 +240,12 @@ namespace sw::editor
 		_nameBuffer			= data._name.c_str();
 		_width				= data._width;
 		_height				= data._height;
-		_listWalkable		= std::move( data._walkableList );
-		_listEncounter		= std::move( data._encounterList );
-		_listPassThrough	= std::move( data._passThroughList );
-		_listVisual			= std::move( data._visualList );
-		_listWarp			= std::move( data._warpList );
-		_listEncounterEntry = std::move( data._encounterEntryList );
+		_listWalkable		= std::move( data._listWalkable );
+		_listEncounter		= std::move( data._listEncounter );
+		_listPassThrough	= std::move( data._listPassThrough );
+		_listVisual			= std::move( data._listVisual );
+		_listWarp			= std::move( data._listWarp );
+		_listEncounterEntry = std::move( data._listEncounterEntry );
 		_scenePath			= data._scenePath;
 		_role				= data._role;
 		_spawnX				= data._spawnX;
@@ -277,16 +277,16 @@ namespace sw::editor
 		data._name				 = _nameBuffer.c_str();
 		data._width				 = _width;
 		data._height			 = _height;
-		data._walkableList		 = _listWalkable;
-		data._encounterList		 = _listEncounter;
-		data._passThroughList	 = _listPassThrough;
-		data._visualList		 = _listVisual;
-		data._warpList			 = _listWarp;
+		data._listWalkable		 = _listWalkable;
+		data._listEncounter		 = _listEncounter;
+		data._listPassThrough	 = _listPassThrough;
+		data._listVisual		 = _listVisual;
+		data._listWarp			 = _listWarp;
 		data._scenePath			 = _scenePath;
 		data._role				 = _role;
 		data._spawnX			 = _spawnX;
 		data._spawnY			 = _spawnY;
-		data._encounterEntryList = _listEncounterEntry;
+		data._listEncounterEntry = _listEncounterEntry;
 		return data;
 	}
 
@@ -295,12 +295,12 @@ namespace sw::editor
 		_nameBuffer			= data._name.c_str();
 		_width				= data._width;
 		_height				= data._height;
-		_listWalkable		= data._walkableList;
-		_listEncounter		= data._encounterList;
-		_listPassThrough	= data._passThroughList;
-		_listVisual			= data._visualList;
-		_listWarp			= data._warpList;
-		_listEncounterEntry = data._encounterEntryList;
+		_listWalkable		= data._listWalkable;
+		_listEncounter		= data._listEncounter;
+		_listPassThrough	= data._listPassThrough;
+		_listVisual			= data._listVisual;
+		_listWarp			= data._listWarp;
+		_listEncounterEntry = data._listEncounterEntry;
 		_scenePath			= data._scenePath;
 		_role				= data._role;
 		_spawnX				= data._spawnX;
@@ -428,7 +428,7 @@ namespace sw::editor
 
 	bool TileMapPanel::inBounds( int32 x, int32 y ) const
 	{
-		return x >= 0 && y >= 0 && x < _width && y < _height;
+		return 0 <= x && x < _width && 0 <= y && y < _height;
 	}
 
 	size_t TileMapPanel::indexOf( int32 x, int32 y ) const

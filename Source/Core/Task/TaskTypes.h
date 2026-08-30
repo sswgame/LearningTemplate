@@ -232,8 +232,8 @@ namespace sw
 			( _listValue.emplace_back( std::forward<Args>( args ) ), ... );
 		}
 
-		TaskArgs( std::initializer_list<TaskValue> listValues )
-			: _listValue{ listValues.begin(), listValues.end() } {}
+		TaskArgs( std::initializer_list<TaskValue> listValue )
+			: _listValue{ listValue.begin(), listValue.end() } {}
 
 		template <typename T>
 		/** @brief 추가합니다. */

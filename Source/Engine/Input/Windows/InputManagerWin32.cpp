@@ -53,14 +53,14 @@ namespace sw
 				_mouseWheelAccum += static_cast<float32>( GET_WHEEL_DELTA_WPARAM( event._wParam ) ) / 120.0f;
 				break;
 			case WM_KILLFOCUS:
-				Memory::set( _arrKeys, 0, sizeof( _arrKeys ) );
-				Memory::set( _arrMouseButtons, 0, sizeof( _arrMouseButtons ) );
+				Memory::set( _arrKey, 0, sizeof( _arrKey ) );
+				Memory::set( _arrMouseButton, 0, sizeof( _arrMouseButton ) );
 				break;
 			case WM_ACTIVATE:
 				if ( LOWORD( event._wParam ) == WA_INACTIVE )
 				{
-					Memory::set( _arrKeys, 0, sizeof( _arrKeys ) );
-					Memory::set( _arrMouseButtons, 0, sizeof( _arrMouseButtons ) );
+					Memory::set( _arrKey, 0, sizeof( _arrKey ) );
+					Memory::set( _arrMouseButton, 0, sizeof( _arrMouseButton ) );
 				}
 				break;
 			default:

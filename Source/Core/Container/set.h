@@ -250,7 +250,7 @@ namespace sw
 		{
 			SW_SCOPED_RACE_WRITE();
 			auto it = std::lower_bound( _data.begin(), _data.end(), value, _comp );
-			if ( it != _data.end() && !_comp( value, *it ) )
+			if ( it != _data.end() && _comp( value, *it ) == false )
 				return { it, false };
 			it = _data.insert( it, value );
 			return { it, true };
@@ -261,7 +261,7 @@ namespace sw
 		{
 			SW_SCOPED_RACE_WRITE();
 			auto it = std::lower_bound( _data.begin(), _data.end(), value, _comp );
-			if ( it != _data.end() && !_comp( value, *it ) )
+			if ( it != _data.end() && _comp( value, *it ) == false )
 				return { it, false };
 			it = _data.insert( it, std::move( value ) );
 			return { it, true };
@@ -328,7 +328,7 @@ namespace sw
 		{
 			SW_SCOPED_RACE_WRITE();
 			auto it = std::lower_bound( _data.begin(), _data.end(), key, _comp );
-			if ( it != _data.end() && !_comp( key, *it ) )
+			if ( it != _data.end() && _comp( key, *it ) == false )
 			{
 				_data.erase( it );
 				return 1;
@@ -351,7 +351,7 @@ namespace sw
 		{
 			SW_SCOPED_RACE_READ();
 			auto it = std::lower_bound( _data.begin(), _data.end(), key, _comp );
-			if ( it != _data.end() && !_comp( key, *it ) )
+			if ( it != _data.end() && _comp( key, *it ) == false )
 				return 1;
 			return 0;
 		}
@@ -362,7 +362,7 @@ namespace sw
 		{
 			SW_SCOPED_RACE_READ();
 			auto it = std::lower_bound( _data.begin(), _data.end(), key, _comp );
-			return ( it != _data.end() && !_comp( key, *it ) ) ? it : _data.end();
+			return ( it != _data.end() && _comp( key, *it ) == false ) ? it : _data.end();
 		}
 
 		/** @brief 키를 찾습니다. */
@@ -371,7 +371,7 @@ namespace sw
 		{
 			SW_SCOPED_RACE_READ();
 			auto it = std::lower_bound( _data.begin(), _data.end(), key, _comp );
-			return ( it != _data.end() && !_comp( key, *it ) ) ? it : _data.end();
+			return ( it != _data.end() && _comp( key, *it ) == false ) ? it : _data.end();
 		}
 
 		/** @brief 키 포함 여부를 반환합니다. */
@@ -385,7 +385,7 @@ namespace sw
 			SW_SCOPED_RACE_READ();
 			auto first = std::lower_bound( _data.begin(), _data.end(), key, _comp );
 			auto last  = first;
-			if ( first != _data.end() && !_comp( key, *first ) )
+			if ( first != _data.end() && _comp( key, *first ) == false )
 				++last;
 			return { first, last };
 		}
@@ -397,7 +397,7 @@ namespace sw
 			SW_SCOPED_RACE_READ();
 			auto first = std::lower_bound( _data.begin(), _data.end(), key, _comp );
 			auto last  = first;
-			if ( first != _data.end() && !_comp( key, *first ) )
+			if ( first != _data.end() && _comp( key, *first ) == false )
 				++last;
 			return { first, last };
 		}

@@ -65,34 +65,34 @@ namespace sw
 		const size_t nodeCount = _listNode.size();
 
 		// Active (non-culled) node indices
-		vector<size_t> listActiveIndices;
-		listActiveIndices.reserve( nodeCount );
+		vector<size_t> listActiveIndex;
+		listActiveIndex.reserve( nodeCount );
 		for ( size_t nodeIndex = 0; nodeIndex < nodeCount; ++nodeIndex )
 		{
 			if ( _listNode[nodeIndex]._bCulled == false )
-				listActiveIndices.push_back( nodeIndex );
+				listActiveIndex.push_back( nodeIndex );
 		}
 
-		if ( listActiveIndices.empty() )
+		if ( listActiveIndex.empty() )
 			return false;
 
 		// 1. Collect all writer passes for each resource in active registration order
-		unordered_map<hashed_string, vector<size_t>> mapResourceWriters;
-		for ( size_t nodeIndex : listActiveIndices )
+		unordered_map<hashed_string, vector<size_t>> mapResourceWriter;
+		for ( size_t nodeIndex : listActiveIndex )
 		{
 			for ( const hashed_string& output : _listNode[nodeIndex]._listOutput )
 			{
-				mapResourceWriters[output].push_back( nodeIndex );
+				mapResourceWriter[output].push_back( nodeIndex );
 			}
 		}
 
 		// Adjacency: producer → consumers; in-degree over active nodes
 		unordered_map<size_t, vector<size_t>> adjacency;
 		unordered_map<size_t, uint32>		  inDegree;
-		adjacency.reserve( listActiveIndices.size() );
-		inDegree.reserve( listActiveIndices.size() );
+		adjacency.reserve( listActiveIndex.size() );
+		inDegree.reserve( listActiveIndex.size() );
 
-		for ( size_t nodeIndex : listActiveIndices )
+		for ( size_t nodeIndex : listActiveIndex )
 		{
 			inDegree[nodeIndex] = 0;
 		}
@@ -101,36 +101,36 @@ namespace sw
 		{
 			if ( from == to )
 				return;
-			auto& adjList = adjacency[from];
-			if ( std::find( adjList.begin(), adjList.end(), to ) == adjList.end() )
+			auto& listAdj = adjacency[from];
+			if ( std::find( listAdj.begin(), listAdj.end(), to ) == listAdj.end() )
 			{
-				adjList.push_back( to );
+				listAdj.push_back( to );
 				++inDegree[to];
 			}
 		};
 
 		// 2. Chain consecutive writers of the same resource (Write-after-Write order)
-		for ( const auto& [resource, listWriters] : mapResourceWriters )
+		for ( const auto& [resource, listWriter] : mapResourceWriter )
 		{
-			for ( size_t writerIndex = 0; writerIndex + 1 < listWriters.size(); ++writerIndex )
+			for ( size_t writerIndex = 0; writerIndex + 1 < listWriter.size(); ++writerIndex )
 			{
-				addEdge( listWriters[writerIndex], listWriters[writerIndex + 1] );
+				addEdge( listWriter[writerIndex], listWriter[writerIndex + 1] );
 			}
 		}
 
 		// 3. For each consumer reading an input, find the matching producer
-		for ( size_t consumerIndex : listActiveIndices )
+		for ( size_t consumerIndex : listActiveIndex )
 		{
 			for ( const hashed_string& input : _listNode[consumerIndex]._listInput )
 			{
-				auto it = mapResourceWriters.find( input );
-				if ( it == mapResourceWriters.end() || it->second.empty() )
+				auto it = mapResourceWriter.find( input );
+				if ( it == mapResourceWriter.end() || it->second.empty() )
 					continue;
 
-				const auto& listWriters	  = it->second;
-				size_t		producerIndex = listWriters.front();
+				const auto& listWriter	  = it->second;
+				size_t		producerIndex = listWriter.front();
 
-				for ( size_t writerIndex : listWriters )
+				for ( size_t writerIndex : listWriter )
 				{
 					if ( writerIndex < consumerIndex )
 						producerIndex = writerIndex;
@@ -141,13 +141,13 @@ namespace sw
 		}
 
 		std::queue<size_t> queueReady;
-		for ( size_t nodeIndex : listActiveIndices )
+		for ( size_t nodeIndex : listActiveIndex )
 		{
 			if ( inDegree[nodeIndex] == 0 )
 				queueReady.push( nodeIndex );
 		}
 
-		_listCompiledExecutionOrder.reserve( listActiveIndices.size() );
+		_listCompiledExecutionOrder.reserve( listActiveIndex.size() );
 		while ( queueReady.empty() == false )
 		{
 			const size_t nodeIndex = queueReady.front();
@@ -168,11 +168,11 @@ namespace sw
 			}
 		}
 
-		if ( _listCompiledExecutionOrder.size() != listActiveIndices.size() )
+		if ( _listCompiledExecutionOrder.size() != listActiveIndex.size() )
 		{
 			SW_LOG_WARNING( "Cycle detected during compile — %#/%# active passes scheduled.",
 							static_cast<uint32>( _listCompiledExecutionOrder.size() ),
-							static_cast<uint32>( listActiveIndices.size() ) );
+							static_cast<uint32>( listActiveIndex.size() ) );
 			_listCompiledExecutionOrder.clear();
 			return false;
 		}
@@ -251,11 +251,11 @@ namespace sw
 		struct ParallelPassEntry
 		{
 			RenderGraphNode*			_pNode{ nullptr };
-			unique_ptr<IRHICommandList> _passCmdList{ nullptr };
+			unique_ptr<IRHICommandList> _pPassCmdList{ nullptr };
 		};
 
-		vector<ParallelPassEntry> listPassEntries;
-		listPassEntries.reserve( _listCompiledExecutionOrder.size() );
+		vector<ParallelPassEntry> listPassEntry;
+		listPassEntry.reserve( _listCompiledExecutionOrder.size() );
 
 		for ( const hashed_string& passName : _listCompiledExecutionOrder )
 		{
@@ -287,19 +287,19 @@ namespace sw
 					SW_LOG_WARNING( "Deferred command list unsupported by RHI — falling back to serial execute" );
 					return execute( context );
 				}
-				listPassEntries.push_back( ParallelPassEntry{ &node, std::move( passCmd ) } );
+				listPassEntry.push_back( ParallelPassEntry{ &node, std::move( passCmd ) } );
 			}
 		}
 
-		if ( listPassEntries.empty() )
+		if ( listPassEntry.empty() )
 			return true;
 
 		TaskStageHandle stage = pTaskManager->createAnonymousStage( "RenderPassStage" );
 
-		for ( ParallelPassEntry& entry : listPassEntries )
+		for ( ParallelPassEntry& entry : listPassEntry )
 		{
 			RenderGraphNode* pNode	  = entry._pNode;
-			IRHICommandList* pCmdList = entry._passCmdList.get();
+			IRHICommandList* pCmdList = entry._pPassCmdList.get();
 
 			TaskHandle handle = pTaskManager->emplaceTask(
 				"RenderPassRecord",
@@ -315,11 +315,11 @@ namespace sw
 
 		pTaskManager->waitStage( stage );
 
-		for ( ParallelPassEntry& entry : listPassEntries )
+		for ( ParallelPassEntry& entry : listPassEntry )
 		{
-			if ( entry._passCmdList != nullptr )
+			if ( entry._pPassCmdList != nullptr )
 			{
-				pDevice->executeCommandList( entry._passCmdList.get() );
+				pDevice->executeCommandList( entry._pPassCmdList.get() );
 			}
 		}
 
@@ -444,7 +444,7 @@ namespace sw
 	 */
 	vector<RenderGraphResourceLifetime> RenderGraph::computeResourceLifetimes() const
 	{
-		unordered_map<hashed_string, RenderGraphResourceLifetime> mapLifetimes;
+		unordered_map<hashed_string, RenderGraphResourceLifetime> mapLifetime;
 
 		for ( size_t passIndex = 0; passIndex < _listCompiledExecutionOrder.size(); ++passIndex )
 		{
@@ -456,15 +456,15 @@ namespace sw
 			const RenderGraphNode& node = _listNode[it->second];
 			for ( const hashed_string& input : node._listInput )
 			{
-				auto lifeIt = mapLifetimes.find( input );
-				if ( lifeIt == mapLifetimes.end() )
+				auto lifeIt = mapLifetime.find( input );
+				if ( lifeIt == mapLifetime.end() )
 				{
 					RenderGraphResourceLifetime life{};
 					life._name			 = input;
 					life._firstPassIndex = passIndex;
 					life._lastPassIndex	 = passIndex;
 					life._bRead			 = true;
-					mapLifetimes[input]	 = life;
+					mapLifetime[input]	 = life;
 				}
 				else
 				{
@@ -475,15 +475,15 @@ namespace sw
 
 			for ( const hashed_string& output : node._listOutput )
 			{
-				auto lifeIt = mapLifetimes.find( output );
-				if ( lifeIt == mapLifetimes.end() )
+				auto lifeIt = mapLifetime.find( output );
+				if ( lifeIt == mapLifetime.end() )
 				{
 					RenderGraphResourceLifetime life{};
 					life._name			 = output;
 					life._firstPassIndex = passIndex;
 					life._lastPassIndex	 = passIndex;
 					life._bWritten		 = true;
-					mapLifetimes[output] = life;
+					mapLifetime[output]	 = life;
 				}
 				else
 				{
@@ -494,8 +494,8 @@ namespace sw
 		}
 
 		vector<RenderGraphResourceLifetime> listResult;
-		listResult.reserve( mapLifetimes.size() );
-		for ( auto& [name, life] : mapLifetimes )
+		listResult.reserve( mapLifetime.size() );
+		for ( auto& [name, life] : mapLifetime )
 		{
 			listResult.push_back( std::move( life ) );
 		}

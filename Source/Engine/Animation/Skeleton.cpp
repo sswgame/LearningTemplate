@@ -31,7 +31,7 @@ namespace sw
 
 	void Skeleton::setBoneSpaceTransform( int32 boneIndex, const float4x4& boneSpaceTransform )
 	{
-		if ( boneIndex >= 0 && static_cast<size_t>( boneIndex ) < _listBone.size() )
+		if ( 0 <= boneIndex && static_cast<size_t>( boneIndex ) < _listBone.size() )
 			_listBone[static_cast<size_t>( boneIndex )]._boneSpaceTransform = boneSpaceTransform;
 	}
 
@@ -40,7 +40,7 @@ namespace sw
 		for ( size_t index = 0; index < _listBone.size(); ++index )
 		{
 			Bone& bone = _listBone[index];
-			if ( bone._parentIndex >= 0 && static_cast<size_t>( bone._parentIndex ) < index )
+			if ( 0 <= bone._parentIndex && static_cast<size_t>( bone._parentIndex ) < index )
 			{
 				bone._characterSpaceTransform = _listBone[static_cast<size_t>( bone._parentIndex )]._characterSpaceTransform * bone._boneSpaceTransform;
 			}

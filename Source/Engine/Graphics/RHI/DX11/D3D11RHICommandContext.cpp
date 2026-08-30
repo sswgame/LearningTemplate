@@ -116,7 +116,7 @@ namespace sw
 
 		_lastBoundMaterialDescriptor = kInvalidDescriptorIndex;
 
-		ID3D11RenderTargetView* arrRtvs[kMaxColorAttachments]{};
+		ID3D11RenderTargetView* arrRtv[kMaxColorAttachments]{};
 		uint32					rtCount{ 0 };
 		if ( beginInfo._bBindColor != 0 )
 		{
@@ -124,7 +124,7 @@ namespace sw
 			for ( uint32 attachmentIndex = 0; attachmentIndex < wantCount && attachmentIndex < kMaxColorAttachments; ++attachmentIndex )
 			{
 				const RHITextureHandle	colorHandle = ( beginInfo._colorTargetCount > 0 )
-														? beginInfo._arrColorTargets[attachmentIndex]
+														? beginInfo._arrColorTarget[attachmentIndex]
 														: beginInfo._colorTarget;
 				ID3D11RenderTargetView* pRtv{ nullptr };
 				if ( colorHandle == 0 )
@@ -137,10 +137,10 @@ namespace sw
 				}
 				if ( pRtv == nullptr && attachmentIndex > 0 )
 					break;
-				arrRtvs[rtCount++] = pRtv;
+				arrRtv[rtCount++] = pRtv;
 
-				const RHIRenderPassLoadOp loadOp = ( beginInfo._colorTargetCount > 0 ) ? beginInfo._arrLoadOps[attachmentIndex] : beginInfo._loadOp;
-				const float32*			  pClear = ( beginInfo._colorTargetCount > 0 ) ? beginInfo._arrClearColors[attachmentIndex] : beginInfo._arrClearColor;
+				const RHIRenderPassLoadOp loadOp = ( beginInfo._colorTargetCount > 0 ) ? beginInfo._arrLoadOp[attachmentIndex] : beginInfo._loadOp;
+				const float32*			  pClear = ( beginInfo._colorTargetCount > 0 ) ? beginInfo._arrTargetClearColor[attachmentIndex] : beginInfo._arrClearColor;
 				if ( loadOp == RHIRenderPassLoadOp::Clear && pRtv != nullptr )
 					_pDevice->_deviceContext->ClearRenderTargetView( pRtv, pClear );
 			}
@@ -158,7 +158,7 @@ namespace sw
 			_pDevice->_deviceContext->ClearDepthStencilView( pDsv, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, beginInfo._clearDepth, 0 );
 
 		if ( rtCount > 0 )
-			_pDevice->_deviceContext->OMSetRenderTargets( rtCount, arrRtvs, pDsv );
+			_pDevice->_deviceContext->OMSetRenderTargets( rtCount, arrRtv, pDsv );
 		else
 			_pDevice->_deviceContext->OMSetRenderTargets( 0, nullptr, pDsv );
 
@@ -264,9 +264,9 @@ namespace sw
 		if ( pVs == nullptr || pPs == nullptr )
 			return;
 
-		if ( materialDescriptorIndex != kInvalidDescriptorIndex && materialDescriptorIndex < static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindlessVector.size() ) )
+		if ( materialDescriptorIndex != kInvalidDescriptorIndex && materialDescriptorIndex < static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindless.size() ) )
 		{
-			ID3D11Buffer* pCb = _pDevice->resolveBuffer( _pDevice->_listRegisteredBindlessVector[materialDescriptorIndex] );
+			ID3D11Buffer* pCb = _pDevice->resolveBuffer( _pDevice->_listRegisteredBindless[materialDescriptorIndex] );
 			if ( pCb != nullptr )
 			{
 				_pDevice->_deviceContext->PSSetConstantBuffers( 0, 1, &pCb );
@@ -335,14 +335,14 @@ namespace sw
 	void D3D11RHICommandContext::drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset,
 											   RHIDescriptorIndex materialDescriptorIndex )
 	{
-		if ( _pDevice->_deviceContext == nullptr || argumentBuffer == 0 )
+		if ( _pDevice == nullptr || _pDevice->_deviceContext == nullptr || argumentBuffer == 0 )
 			return;
 
 		if ( materialDescriptorIndex != kInvalidDescriptorIndex &&
 			 materialDescriptorIndex != _lastBoundMaterialDescriptor &&
-			 materialDescriptorIndex < static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindlessVector.size() ) )
+			 materialDescriptorIndex < static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindless.size() ) )
 		{
-			ID3D11Buffer* pCb = _pDevice->resolveBuffer( _pDevice->_listRegisteredBindlessVector[materialDescriptorIndex] );
+			ID3D11Buffer* pCb = _pDevice->resolveBuffer( _pDevice->_listRegisteredBindless[materialDescriptorIndex] );
 			if ( pCb != nullptr )
 			{
 				_pDevice->_deviceContext->PSSetConstantBuffers( 0, 1, &pCb );

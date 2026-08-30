@@ -7,6 +7,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Memory/FrameArenaAllocator.h"
 #include "Core/Memory/MemoryProfiler.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Audio/IAudioSystem.h"
@@ -78,9 +79,9 @@ int main( int32 argc, utf8* argv[] )
 	// 프레임워크 전용 플래그를 먼저 소비해 CommandLineManager 가 미지 인자를 경고하지 않게 한다.
 	test::TestRegistry::getInstance().configureFromArgs( argc, argv );
 
-	sw::vector<utf8*> coreArgs;
-	coreArgs.reserve( static_cast<size_t>( argc ) );
-	coreArgs.push_back( argv[0] );
+	sw::vector<utf8*> listCoreArg;
+	listCoreArg.reserve( static_cast<size_t>( argc ) );
+	listCoreArg.push_back( argv[0] );
 	for ( int32 argIndex = 1; argIndex < argc; ++argIndex )
 	{
 		const std::string_view arg = argv[argIndex] != nullptr ? argv[argIndex] : "";
@@ -92,11 +93,11 @@ int main( int32 argc, utf8* argv[] )
 				++argIndex;
 			continue;
 		}
-		if ( arg.rfind( "--test_filter=", 0 ) == 0 || arg.rfind( "--gtest_filter=", 0 ) == 0 )
+		if ( sw::StringUtil::startsWith( arg, "--test_filter=" ) || sw::StringUtil::startsWith( arg, "--gtest_filter=" ) )
 			continue;
-		coreArgs.push_back( argv[argIndex] );
+		listCoreArg.push_back( argv[argIndex] );
 	}
-	commandLineManager->parse( static_cast<int32>( coreArgs.size() ), coreArgs.data() );
+	commandLineManager->parse( static_cast<int32>( listCoreArg.size() ), listCoreArg.data() );
 	globalVarManager->updateFromCommandLine( commandLineManager.get() );
 
 	sw::EngineServices services{};

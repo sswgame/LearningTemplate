@@ -328,13 +328,13 @@ namespace sw
 
 		BLOCK( "Fullscreen Triangle" )
 		{
-			const RHIVertex arrFullscreenVerts[3] = {
+			const RHIVertex arrFullscreenVert[3] = {
 				{{ -1.0f, -1.0f, 0.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }},
 				{ { 3.0f, -1.0f, 0.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }},
 				{ { -1.0f, 3.0f, 0.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }},
 			};
 			const RHIBufferHandle vbHandle =
-				createVulkanBuffer( static_cast<uint32>( sizeof( arrFullscreenVerts ) ), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, arrFullscreenVerts );
+				createVulkanBuffer( static_cast<uint32>( sizeof( arrFullscreenVert ) ), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, arrFullscreenVert );
 			if ( vbHandle != 0 )
 			{
 				const VulkanBufferRecord* pRec = resolveAllocatedBuffer( vbHandle );
@@ -700,18 +700,18 @@ namespace sw
 		VkSubmitInfo submitInfo{};
 		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-		VkSemaphore			 arrWaitSemaphores[] = { _listImageAvailableSemaphore[_currentFrame] };
-		VkPipelineStageFlags arrWaitStages[]	 = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-		submitInfo.waitSemaphoreCount			 = 1;
-		submitInfo.pWaitSemaphores				 = arrWaitSemaphores;
-		submitInfo.pWaitDstStageMask			 = arrWaitStages;
+		VkSemaphore			 arrWaitSemaphore[] = { _listImageAvailableSemaphore[_currentFrame] };
+		VkPipelineStageFlags arrWaitStage[]		= { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+		submitInfo.waitSemaphoreCount			= 1;
+		submitInfo.pWaitSemaphores				= arrWaitSemaphore;
+		submitInfo.pWaitDstStageMask			= arrWaitStage;
 
 		submitInfo.commandBufferCount = 1;
 		submitInfo.pCommandBuffers	  = &_listCommandBuffer[_currentFrame];
 
-		VkSemaphore arrSignalSemaphores[] = { _listRenderFinishedSemaphore[_imageIndex] };
-		submitInfo.signalSemaphoreCount	  = 1;
-		submitInfo.pSignalSemaphores	  = arrSignalSemaphores;
+		VkSemaphore arrSignalSemaphore[] = { _listRenderFinishedSemaphore[_imageIndex] };
+		submitInfo.signalSemaphoreCount	 = 1;
+		submitInfo.pSignalSemaphores	 = arrSignalSemaphore;
 
 		vkQueueSubmit( _graphicsQueue, 1, &submitInfo, _listInFlightFence[_currentFrame] );
 
@@ -720,12 +720,12 @@ namespace sw
 			VkPresentInfoKHR presentInfo{};
 			presentInfo.sType			   = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 			presentInfo.waitSemaphoreCount = 1;
-			presentInfo.pWaitSemaphores	   = arrSignalSemaphores;
+			presentInfo.pWaitSemaphores	   = arrSignalSemaphore;
 
-			VkSwapchainKHR arrSwapChains[] = { _swapChain };
-			presentInfo.swapchainCount	   = 1;
-			presentInfo.pSwapchains		   = arrSwapChains;
-			presentInfo.pImageIndices	   = &_imageIndex;
+			VkSwapchainKHR arrSwapChain[] = { _swapChain };
+			presentInfo.swapchainCount	  = 1;
+			presentInfo.pSwapchains		  = arrSwapChain;
+			presentInfo.pImageIndices	  = &_imageIndex;
 
 			const VkResult presentResult = vkQueuePresentKHR( _graphicsQueue, &presentInfo );
 			if ( presentResult == VK_ERROR_OUT_OF_DATE_KHR || presentResult == VK_SUBOPTIMAL_KHR )
@@ -776,13 +776,13 @@ namespace sw
 		RHIDeferredCommandList::execute( this, pCmdList );
 	}
 
-	bool VulkanRHIDevice::queryVulkanTextureView( RHITextureHandle texture, void*& outImageView ) const
+	bool VulkanRHIDevice::queryVulkanTextureView( RHITextureHandle texture, void*& pOutImageView ) const
 	{
-		outImageView					= nullptr;
+		pOutImageView					= nullptr;
 		const VulkanTextureRecord* pTex = resolveTexture( texture );
 		if ( pTex == nullptr || pTex->_imageView == VK_NULL_HANDLE )
 			return false;
-		outImageView = reinterpret_cast<void*>( pTex->_imageView );
+		pOutImageView = reinterpret_cast<void*>( pTex->_imageView );
 		return true;
 	}
 
@@ -830,34 +830,34 @@ namespace sw
 		createInfo.sType			= VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 		createInfo.pApplicationInfo = &appInfo;
 
-		vector<const utf8*> listExtensions;
-		listExtensions.push_back( VK_KHR_SURFACE_EXTENSION_NAME );
+		vector<const utf8*> listExtension;
+		listExtension.push_back( VK_KHR_SURFACE_EXTENSION_NAME );
 
 		uint32 availableExtCount{ 0 };
 		vkEnumerateInstanceExtensionProperties( nullptr, &availableExtCount, nullptr );
-		vector<VkExtensionProperties> availableExts( availableExtCount );
+		vector<VkExtensionProperties> listAvailableExt( availableExtCount );
 		if ( availableExtCount > 0 )
-			vkEnumerateInstanceExtensionProperties( nullptr, &availableExtCount, availableExts.data() );
+			vkEnumerateInstanceExtensionProperties( nullptr, &availableExtCount, listAvailableExt.data() );
 
 #if defined( SW_PLATFORM_WINDOWS )
-		if ( VulkanRHIDeviceInternal::hasExtensionVal( availableExts, VK_KHR_WIN32_SURFACE_EXTENSION_NAME ) == false )
+		if ( VulkanRHIDeviceInternal::hasExtensionVal( listAvailableExt, VK_KHR_WIN32_SURFACE_EXTENSION_NAME ) == false )
 		{
 			SW_LOG_ERROR( "VK_KHR_win32_surface is not available." );
 			return false;
 		}
-		listExtensions.push_back( VK_KHR_WIN32_SURFACE_EXTENSION_NAME );
+		listExtension.push_back( VK_KHR_WIN32_SURFACE_EXTENSION_NAME );
 #elif defined( SW_PLATFORM_LINUX )
 		// WSLg/gfxstream often exposes xcb but not xlib.
 		_linuxWsi = 0;
-		if ( VulkanRHIDeviceInternal::hasExtensionVal( availableExts, VK_KHR_XLIB_SURFACE_EXTENSION_NAME ) )
+		if ( VulkanRHIDeviceInternal::hasExtensionVal( listAvailableExt, VK_KHR_XLIB_SURFACE_EXTENSION_NAME ) )
 		{
-			listExtensions.push_back( VK_KHR_XLIB_SURFACE_EXTENSION_NAME );
+			listExtension.push_back( VK_KHR_XLIB_SURFACE_EXTENSION_NAME );
 			_linuxWsi = 1;
 			SW_LOG_TRACE( "Vulkan WSI: VK_KHR_xlib_surface" );
 		}
-		else if ( VulkanRHIDeviceInternal::hasExtensionVal( availableExts, VK_KHR_XCB_SURFACE_EXTENSION_NAME ) )
+		else if ( VulkanRHIDeviceInternal::hasExtensionVal( listAvailableExt, VK_KHR_XCB_SURFACE_EXTENSION_NAME ) )
 		{
-			listExtensions.push_back( VK_KHR_XCB_SURFACE_EXTENSION_NAME );
+			listExtension.push_back( VK_KHR_XCB_SURFACE_EXTENSION_NAME );
 			_linuxWsi = 2;
 			SW_LOG_TRACE( "Vulkan WSI: VK_KHR_xcb_surface (xlib unavailable)" );
 		}
@@ -865,26 +865,26 @@ namespace sw
 		{
 			SW_LOG_ERROR( "No Vulkan X11 WSI extension (VK_KHR_xlib_surface / VK_KHR_xcb_surface). Enumerated %# instance extensions.",
 						  availableExtCount );
-			for ( const VkExtensionProperties& ext : availableExts )
+			for ( const VkExtensionProperties& ext : listAvailableExt )
 				SW_LOG_TRACE( "  instance ext: %#", ext.extensionName );
 			SW_LOG_ERROR( "Install libxcb1-dev / libx11-xcb-dev, and rebuild vcpkg vulkan-loader with [xcb,xlib]." );
 			return false;
 		}
 #elif defined( SW_PLATFORM_MACOS )
-		if ( VulkanRHIDeviceInternal::hasExtensionVal( availableExts, VK_EXT_METAL_SURFACE_EXTENSION_NAME ) == false )
+		if ( VulkanRHIDeviceInternal::hasExtensionVal( listAvailableExt, VK_EXT_METAL_SURFACE_EXTENSION_NAME ) == false )
 		{
 			SW_LOG_ERROR( "VK_EXT_metal_surface is not available." );
 			return false;
 		}
-		listExtensions.push_back( VK_EXT_METAL_SURFACE_EXTENSION_NAME );
+		listExtension.push_back( VK_EXT_METAL_SURFACE_EXTENSION_NAME );
 #endif
-		if ( _bEnableValidationLayers && VulkanRHIDeviceInternal::hasExtensionVal( availableExts, VK_EXT_DEBUG_UTILS_EXTENSION_NAME ) )
-			listExtensions.push_back( VK_EXT_DEBUG_UTILS_EXTENSION_NAME );
+		if ( _bEnableValidationLayers && VulkanRHIDeviceInternal::hasExtensionVal( listAvailableExt, VK_EXT_DEBUG_UTILS_EXTENSION_NAME ) )
+			listExtension.push_back( VK_EXT_DEBUG_UTILS_EXTENSION_NAME );
 		else if ( _bEnableValidationLayers )
 			_bEnableValidationLayers = false;
 
-		createInfo.enabledExtensionCount   = static_cast<uint32>( listExtensions.size() );
-		createInfo.ppEnabledExtensionNames = listExtensions.data();
+		createInfo.enabledExtensionCount   = static_cast<uint32>( listExtension.size() );
+		createInfo.ppEnabledExtensionNames = listExtension.data();
 
 		if ( _bEnableValidationLayers )
 		{
@@ -1053,12 +1053,12 @@ namespace sw
 		if ( _physicalDevice == nullptr )
 			return false;
 
-		const VkFormat arrCandidates[] = {
+		const VkFormat arrCandidate[] = {
 			VK_FORMAT_D24_UNORM_S8_UINT,
 			VK_FORMAT_D32_SFLOAT_S8_UINT,
 			VK_FORMAT_D32_SFLOAT,
 		};
-		for ( VkFormat format : arrCandidates )
+		for ( VkFormat format : arrCandidate )
 		{
 			VkFormatProperties props{};
 			vkGetPhysicalDeviceFormatProperties( _physicalDevice, format, &props );
@@ -1249,12 +1249,12 @@ namespace sw
 		_listSwapChainFramebuffer.resize( _listSwapChainImageView.size() );
 		for ( size_t imageIndex = 0; imageIndex < _listSwapChainImageView.size(); imageIndex++ )
 		{
-			VkImageView				arrAttachments[] = { _listSwapChainImageView[imageIndex] };
+			VkImageView				arrAttachment[] = { _listSwapChainImageView[imageIndex] };
 			VkFramebufferCreateInfo framebufferInfo{};
 			framebufferInfo.sType			= VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 			framebufferInfo.renderPass		= _renderPass;
 			framebufferInfo.attachmentCount = 1;
-			framebufferInfo.pAttachments	= arrAttachments;
+			framebufferInfo.pAttachments	= arrAttachment;
 			framebufferInfo.width			= _swapChainExtentWidth;
 			framebufferInfo.height			= _swapChainExtentHeight;
 			framebufferInfo.layers			= 1;
@@ -1590,7 +1590,7 @@ namespace sw
 		//   1: Bindless texture array (native sampling)
 		//   2..5: Explicit single-texture SRV slots 0..3 (DX11-style emulation)
 		//   6..9: Compute UAV / SSBO slots 0..3
-		VkDescriptorSetLayout arrSetLayouts[10] = {
+		VkDescriptorSetLayout arrSetLayout[10] = {
 			_descriptorSetLayout,
 			_bindlessTextureArrayLayout,
 			_textureDescriptorSetLayout,
@@ -1611,13 +1611,13 @@ namespace sw
 		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
 		pipelineLayoutInfo.sType				  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 		pipelineLayoutInfo.setLayoutCount		  = 10;
-		pipelineLayoutInfo.pSetLayouts			  = arrSetLayouts;
+		pipelineLayoutInfo.pSetLayouts			  = arrSetLayout;
 		pipelineLayoutInfo.pushConstantRangeCount = 1;
 		pipelineLayoutInfo.pPushConstantRanges	  = &pushRange;
 		if ( vkCreatePipelineLayout( _device, &pipelineLayoutInfo, nullptr, &_pipelineLayout ) != VK_SUCCESS )
 			return false;
 
-		VkDescriptorPoolSize arrPoolSizes[] = {
+		VkDescriptorPoolSize arrPoolSize[] = {
 			{		  VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 16384},
 			{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 32768},
 			{		  VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 16384},
@@ -1626,8 +1626,8 @@ namespace sw
 		poolInfo.sType		   = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 		poolInfo.flags		   = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT | VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
 		poolInfo.maxSets	   = 32768;
-		poolInfo.poolSizeCount = static_cast<uint32>( sizeof( arrPoolSizes ) / sizeof( arrPoolSizes[0] ) );
-		poolInfo.pPoolSizes	   = arrPoolSizes;
+		poolInfo.poolSizeCount = static_cast<uint32>( sizeof( arrPoolSize ) / sizeof( arrPoolSize[0] ) );
+		poolInfo.pPoolSizes	   = arrPoolSize;
 		if ( vkCreateDescriptorPool( _device, &poolInfo, nullptr, &_descriptorPool ) != VK_SUCCESS )
 			return false;
 
@@ -1945,7 +1945,7 @@ namespace sw
 			key._colorCount = kMaxColorAttachments;
 		for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
 		{
-			VkFormat colorFmt = toVulkanTextureFormat( desc._arrRtvFormats[colorIndex] );
+			VkFormat colorFmt = toVulkanTextureFormat( desc._arrRtvFormat[colorIndex] );
 			if ( colorFmt == VK_FORMAT_UNDEFINED )
 				colorFmt = VK_FORMAT_R8G8B8A8_UNORM;
 			key._arrColorFormats[colorIndex] = static_cast<uint32>( colorFmt );
@@ -2050,7 +2050,7 @@ namespace sw
 		uint32		height{ 0 };
 		for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
 		{
-			VulkanTextureRecord* pTex = resolveTexture( key._arrColors[colorIndex] );
+			VulkanTextureRecord* pTex = resolveTexture( key._arrColor[colorIndex] );
 			if ( pTex == nullptr || pTex->_imageView == VK_NULL_HANDLE || pTex->_bDepthStencil != 0 )
 				return false;
 			colorViews[colorIndex]	 = pTex->_imageView;
@@ -2084,7 +2084,7 @@ namespace sw
 		{
 			attachments[colorIndex].format		   = static_cast<VkFormat>( colorFormats[colorIndex] );
 			attachments[colorIndex].samples		   = VK_SAMPLE_COUNT_1_BIT;
-			attachments[colorIndex].loadOp		   = toVkLoadOp( static_cast<RHIRenderPassLoadOp>( key._arrColorLoadOps[colorIndex] ) );
+			attachments[colorIndex].loadOp		   = toVkLoadOp( static_cast<RHIRenderPassLoadOp>( key._arrColorLoadOp[colorIndex] ) );
 			attachments[colorIndex].storeOp		   = VK_ATTACHMENT_STORE_OP_STORE;
 			attachments[colorIndex].stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 			attachments[colorIndex].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -2172,7 +2172,7 @@ namespace sw
 			bool bUses = ( it->first._depth == texture );
 			for ( uint32 colorIndex = 0; colorIndex < it->first._colorCount && bUses == false; ++colorIndex )
 			{
-				bUses = ( it->first._arrColors[colorIndex] == texture );
+				bUses = ( it->first._arrColor[colorIndex] == texture );
 			}
 			if ( bUses )
 			{

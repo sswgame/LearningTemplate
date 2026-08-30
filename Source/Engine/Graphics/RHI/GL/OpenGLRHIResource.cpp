@@ -95,7 +95,7 @@ namespace sw
 
 	RHIPipelineStateHandle OpenGLRHIResource::createPipelineState( const RHIPipelineStateDesc& desc )
 	{
-		if ( _pDevice->_bInitialized == false )
+		if ( _pDevice->_bInitialized == SW_FALSE )
 			return 0;
 
 		ScopedOpenGLContext						   ctxScope( _pDevice );
@@ -225,7 +225,7 @@ namespace sw
 
 	RHIPipelineStateHandle OpenGLRHIResource::createComputePipelineState( string_view shaderPath, string_view entryPoint )
 	{
-		if ( _pDevice->_bInitialized == false )
+		if ( _pDevice->_bInitialized == SW_FALSE )
 			return 0;
 
 		ScopedOpenGLContext						   ctxScope( _pDevice );
@@ -363,7 +363,7 @@ namespace sw
 
 	RHIBufferHandle OpenGLRHIResource::createStructuredBuffer( uint32 elementSize, uint32 elementCount )
 	{
-		if ( _pDevice->_bInitialized == false || elementSize == 0 || elementCount == 0 )
+		if ( _pDevice->_bInitialized == SW_FALSE || elementSize == 0 || elementCount == 0 )
 			return 0;
 
 		RHIBufferDesc desc{};
@@ -376,7 +376,7 @@ namespace sw
 
 	void OpenGLRHIResource::updateStructuredBuffer( RHIBufferHandle buffer, const void* pData, uint32 size )
 	{
-		if ( _pDevice->_bInitialized == false || buffer == 0 || pData == nullptr || size == 0 )
+		if ( _pDevice->_bInitialized == SW_FALSE || buffer == 0 || pData == nullptr || size == 0 )
 			return;
 
 		GLuint ssbo = _pDevice->resolveGlBuffer( buffer );
@@ -389,7 +389,7 @@ namespace sw
 
 	RHIBufferHandle OpenGLRHIResource::createBuffer( const RHIBufferDesc& desc )
 	{
-		if ( _pDevice->_bInitialized == false )
+		if ( _pDevice->_bInitialized == SW_FALSE )
 			return 0;
 
 		ScopedOpenGLContext ctxScope( _pDevice );
@@ -434,7 +434,7 @@ namespace sw
 
 	RHIBufferHandle OpenGLRHIResource::createVertexBuffer( const void* pData, uint32 sizeBytes )
 	{
-		if ( _pDevice->_bInitialized == false || pData == nullptr || sizeBytes == 0 )
+		if ( _pDevice->_bInitialized == SW_FALSE || pData == nullptr || sizeBytes == 0 )
 			return 0;
 
 		ScopedOpenGLContext ctxScope( _pDevice );
@@ -462,7 +462,7 @@ namespace sw
 		if ( _pDevice->_gpuBuffers.take( buffer, glName ) == false )
 			return;
 
-		for ( OpenGLRHIDevice::BindlessResourceRecord& rec : _pDevice->_listRegisteredBindlessVector )
+		for ( OpenGLRHIDevice::BindlessResourceRecord& rec : _pDevice->_listRegisteredBindless )
 		{
 			if ( rec._buffer != buffer )
 				continue;
@@ -485,7 +485,7 @@ namespace sw
 
 	RHITextureHandle OpenGLRHIResource::createTexture2D( const RHITextureDesc& desc )
 	{
-		if ( _pDevice->_bInitialized == false || desc._width == 0 || desc._height == 0 )
+		if ( _pDevice->_bInitialized == SW_FALSE || desc._width == 0 || desc._height == 0 )
 			return 0;
 
 		ScopedOpenGLContext ctxScope( _pDevice );
@@ -584,7 +584,7 @@ namespace sw
 			bool bUsesTexture = ( compIt->first._depth == texture );
 			for ( uint32 colorIndex = 0; colorIndex < compIt->first._colorCount && bUsesTexture == false; ++colorIndex )
 			{
-				bUsesTexture = ( compIt->first._arrColors[colorIndex] == texture );
+				bUsesTexture = ( compIt->first._arrColor[colorIndex] == texture );
 			}
 
 			if ( bUsesTexture )
@@ -665,19 +665,19 @@ namespace sw
 			_pDevice->_listBindlessFree.pop_back();
 		}
 		else
-			index = static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindlessVector.size() );
+			index = static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindless.size() );
 
-		if ( index >= _pDevice->_listRegisteredBindlessVector.size() )
-			_pDevice->_listRegisteredBindlessVector.resize( index + 1 );
-		_pDevice->_listRegisteredBindlessVector[index]._buffer = buffer;
+		if ( index >= _pDevice->_listRegisteredBindless.size() )
+			_pDevice->_listRegisteredBindless.resize( index + 1 );
+		_pDevice->_listRegisteredBindless[index]._buffer = buffer;
 		return index;
 	}
 
 	void OpenGLRHIResource::unregisterBindlessResource( RHIDescriptorIndex index )
 	{
-		if ( index < _pDevice->_listRegisteredBindlessVector.size() )
+		if ( index < _pDevice->_listRegisteredBindless.size() )
 		{
-			_pDevice->_listRegisteredBindlessVector[index]._buffer = 0;
+			_pDevice->_listRegisteredBindless[index]._buffer = 0;
 			_pDevice->_listBindlessFree.push_back( index );
 		}
 	}

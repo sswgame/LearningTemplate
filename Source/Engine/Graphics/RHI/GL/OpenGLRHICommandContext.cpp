@@ -31,7 +31,7 @@ namespace sw
 			return;
 		}
 
-		if ( _pDevice->_bInitialized == false )
+		if ( _pDevice->_bInitialized == SW_FALSE )
 			return;
 
 		const OpenGLRHIDevice::OpenGLTextureRecord* pRecord = _pDevice->resolveTexture( colorTarget );
@@ -46,7 +46,7 @@ namespace sw
 
 	void OpenGLRHICommandContext::endOffscreenPass( RHITextureHandle colorTarget )
 	{
-		if ( colorTarget == 0 || _pDevice->_bInitialized == false )
+		if ( colorTarget == 0 || _pDevice->_bInitialized == SW_FALSE )
 			return;
 
 		glBindFramebuffer( GL_FRAMEBUFFER, 0 );
@@ -56,7 +56,7 @@ namespace sw
 
 	void OpenGLRHICommandContext::blitTexture( RHITextureHandle src, RHITextureHandle dst )
 	{
-		if ( _pDevice->_bInitialized == false || src == 0 )
+		if ( _pDevice->_bInitialized == SW_FALSE || src == 0 )
 			return;
 
 		const OpenGLRHIDevice::OpenGLTextureRecord* pSrcRec = _pDevice->resolveTexture( src );
@@ -145,7 +145,7 @@ namespace sw
 
 	void OpenGLRHICommandContext::beginRenderPass( const RHIRenderPassBeginInfo& beginInfo )
 	{
-		if ( _pDevice->_bInitialized == false )
+		if ( _pDevice->_bInitialized == SW_FALSE )
 			return;
 
 		uint32 w = beginInfo._width > 0 ? beginInfo._width : _pDevice->_width;
@@ -157,7 +157,7 @@ namespace sw
 		RHITextureHandle colorHandles[kMaxColorAttachments]{};
 		for ( uint32 attachmentIndex = 0; attachmentIndex < colorCount && attachmentIndex < kMaxColorAttachments; ++attachmentIndex )
 		{
-			colorHandles[attachmentIndex] = ( beginInfo._colorTargetCount > 0 ) ? beginInfo._arrColorTargets[attachmentIndex] : beginInfo._colorTarget;
+			colorHandles[attachmentIndex] = ( beginInfo._colorTargetCount > 0 ) ? beginInfo._arrColorTarget[attachmentIndex] : beginInfo._colorTarget;
 		}
 
 		bool bDepthOnly = ( bBindColor == false );
@@ -234,8 +234,8 @@ namespace sw
 
 			for ( uint32 attachmentIndex = 0; attachmentIndex < colorCount; ++attachmentIndex )
 			{
-				const RHIRenderPassLoadOp loadOp = ( beginInfo._colorTargetCount > 0 ) ? beginInfo._arrLoadOps[attachmentIndex] : beginInfo._loadOp;
-				const float32*			  pClear = ( beginInfo._colorTargetCount > 0 ) ? beginInfo._arrClearColors[attachmentIndex] : beginInfo._arrClearColor;
+				const RHIRenderPassLoadOp loadOp = ( beginInfo._colorTargetCount > 0 ) ? beginInfo._arrLoadOp[attachmentIndex] : beginInfo._loadOp;
+				const float32*			  pClear = ( beginInfo._colorTargetCount > 0 ) ? beginInfo._arrTargetClearColor[attachmentIndex] : beginInfo._arrClearColor;
 				if ( loadOp != RHIRenderPassLoadOp::Clear )
 					continue;
 
@@ -262,7 +262,7 @@ namespace sw
 
 	void OpenGLRHICommandContext::endRenderPass()
 	{
-		if ( _pDevice->_bInitialized == false )
+		if ( _pDevice->_bInitialized == SW_FALSE )
 			return;
 		glBindFramebuffer( GL_FRAMEBUFFER, 0 );
 	}
@@ -270,7 +270,7 @@ namespace sw
 	void OpenGLRHICommandContext::transitionBuffer( RHIBufferHandle buffer, RHIBufferState newState )
 	{
 		(void)buffer;
-		if ( _pDevice->_bInitialized == false )
+		if ( _pDevice->_bInitialized == SW_FALSE )
 			return;
 
 		switch ( newState )
@@ -297,7 +297,7 @@ namespace sw
 
 	void OpenGLRHICommandContext::bindComputeUAV( RHIDescriptorIndex index, uint32 slot )
 	{
-		if ( _pDevice->_bInitialized == false || index == kInvalidDescriptorIndex )
+		if ( _pDevice->_bInitialized == SW_FALSE || index == kInvalidDescriptorIndex )
 			return;
 
 		if ( index < static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredUAV.size() ) &&
@@ -311,10 +311,10 @@ namespace sw
 			}
 		}
 
-		if ( index < static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindlessVector.size() ) &&
-			 _pDevice->_listRegisteredBindlessVector[index]._buffer != 0 )
+		if ( index < static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindless.size() ) &&
+			 _pDevice->_listRegisteredBindless[index]._buffer != 0 )
 		{
-			GLuint ssbo = _pDevice->resolveGlBuffer( _pDevice->_listRegisteredBindlessVector[index]._buffer );
+			GLuint ssbo = _pDevice->resolveGlBuffer( _pDevice->_listRegisteredBindless[index]._buffer );
 			if ( ssbo != 0 )
 			{
 				glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 48 + slot, ssbo );
@@ -325,7 +325,7 @@ namespace sw
 
 	void OpenGLRHICommandContext::bindShaderResource( RHIDescriptorIndex index, uint32 slot )
 	{
-		if ( _pDevice->_bInitialized == false || index == kInvalidDescriptorIndex )
+		if ( _pDevice->_bInitialized == SW_FALSE || index == kInvalidDescriptorIndex )
 			return;
 
 		if ( index < static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredTexture.size() ) &&
@@ -340,10 +340,10 @@ namespace sw
 			}
 		}
 
-		if ( index < static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindlessVector.size() ) &&
-			 _pDevice->_listRegisteredBindlessVector[index]._buffer != 0 )
+		if ( index < static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindless.size() ) &&
+			 _pDevice->_listRegisteredBindless[index]._buffer != 0 )
 		{
-			GLuint ssbo = _pDevice->resolveGlBuffer( _pDevice->_listRegisteredBindlessVector[index]._buffer );
+			GLuint ssbo = _pDevice->resolveGlBuffer( _pDevice->_listRegisteredBindless[index]._buffer );
 			if ( ssbo != 0 )
 			{
 				glBindBufferBase( GL_SHADER_STORAGE_BUFFER, slot, ssbo );
@@ -369,7 +369,7 @@ namespace sw
 
 	void OpenGLRHICommandContext::draw( uint32 vertexCount, uint32 startVertex, RHIDescriptorIndex materialDescriptorIndex )
 	{
-		if ( _pDevice->_bInitialized == false || vertexCount == 0 )
+		if ( _pDevice->_bInitialized == SW_FALSE || vertexCount == 0 )
 			return;
 
 		GLuint program = _pDevice->_shaderProgram;
@@ -390,9 +390,9 @@ namespace sw
 
 		glUseProgram( program );
 
-		if ( materialDescriptorIndex != kInvalidDescriptorIndex && materialDescriptorIndex < static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindlessVector.size() ) )
+		if ( materialDescriptorIndex != kInvalidDescriptorIndex && materialDescriptorIndex < static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindless.size() ) )
 		{
-			GLuint ubo = _pDevice->resolveGlBuffer( _pDevice->_listRegisteredBindlessVector[materialDescriptorIndex]._buffer );
+			GLuint ubo = _pDevice->resolveGlBuffer( _pDevice->_listRegisteredBindless[materialDescriptorIndex]._buffer );
 			if ( ubo != 0 )
 				glBindBufferBase( GL_UNIFORM_BUFFER, 16, ubo );
 		}
@@ -426,7 +426,7 @@ namespace sw
 
 	void OpenGLRHICommandContext::dispatchCompute( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ )
 	{
-		if ( _pDevice->_bInitialized == false )
+		if ( _pDevice->_bInitialized == SW_FALSE )
 			return;
 
 		GLuint											  program = _pDevice->_shaderProgram;
@@ -442,7 +442,7 @@ namespace sw
 
 	void OpenGLRHICommandContext::setViewport( const RHIViewport& viewport )
 	{
-		if ( _pDevice->_bInitialized == false )
+		if ( _pDevice->_bInitialized == SW_FALSE )
 			return;
 		glViewport( static_cast<GLint>( viewport._x ),
 					static_cast<GLint>( viewport._y ),
@@ -452,7 +452,7 @@ namespace sw
 
 	void OpenGLRHICommandContext::setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues )
 	{
-		if ( _pDevice->_bInitialized == false || num32BitValues == 0 || pData == nullptr )
+		if ( _pDevice->_bInitialized == SW_FALSE || num32BitValues == 0 || pData == nullptr )
 			return;
 		if ( destOffsetIn32BitValues >= OpenGLRHIDevice::kMaxComputeRootConstantDwords )
 			return;
@@ -479,7 +479,7 @@ namespace sw
 	void OpenGLRHICommandContext::drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset,
 												RHIDescriptorIndex materialDescriptorIndex )
 	{
-		if ( _pDevice->_bInitialized == false || argumentBuffer == 0 )
+		if ( _pDevice->_bInitialized == SW_FALSE || argumentBuffer == 0 )
 			return;
 
 		GLuint program = _pDevice->_shaderProgram;
@@ -501,9 +501,9 @@ namespace sw
 		glUseProgram( program );
 
 		if ( materialDescriptorIndex != kInvalidDescriptorIndex &&
-			 materialDescriptorIndex < static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindlessVector.size() ) )
+			 materialDescriptorIndex < static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindless.size() ) )
 		{
-			GLuint ubo = _pDevice->resolveGlBuffer( _pDevice->_listRegisteredBindlessVector[materialDescriptorIndex]._buffer );
+			GLuint ubo = _pDevice->resolveGlBuffer( _pDevice->_listRegisteredBindless[materialDescriptorIndex]._buffer );
 			if ( ubo != 0 )
 				glBindBufferBase( GL_UNIFORM_BUFFER, 16, ubo );
 		}
@@ -533,7 +533,7 @@ namespace sw
 
 	void OpenGLRHICommandContext::drawIndexedIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset )
 	{
-		if ( _pDevice->_bInitialized == false || argumentBuffer == 0 )
+		if ( _pDevice->_bInitialized == SW_FALSE || argumentBuffer == 0 )
 			return;
 
 		GLuint program = _pDevice->_shaderProgram;
@@ -592,7 +592,7 @@ namespace sw
 
 	void OpenGLRHICommandContext::dispatchIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset )
 	{
-		if ( _pDevice->_bInitialized == false || argumentBuffer == 0 )
+		if ( _pDevice->_bInitialized == SW_FALSE || argumentBuffer == 0 )
 			return;
 
 		GLuint buf = _pDevice->resolveGlBuffer( argumentBuffer );
@@ -613,7 +613,7 @@ namespace sw
 													 uint32 maxCommandCount, RHIBufferHandle countBuffer,
 													 uint32 countBufferOffset )
 	{
-		if ( _pDevice->_bInitialized == false || argumentBuffer == 0 || maxCommandCount == 0 )
+		if ( _pDevice->_bInitialized == SW_FALSE || argumentBuffer == 0 || maxCommandCount == 0 )
 			return;
 
 		const GLuint vbo = _pDevice->resolveGlBuffer( _pDevice->_boundMeshVb );
@@ -670,7 +670,7 @@ namespace sw
 
 	void OpenGLRHICommandContext::beginEventMarker( const utf8* pName )
 	{
-		if ( _pDevice->_bInitialized == false || pName == nullptr )
+		if ( _pDevice->_bInitialized == SW_FALSE || pName == nullptr )
 			return;
 		// OpenGL 4.3+ / 4.6 Core: KHR_debug
 		glPushDebugGroup( GL_DEBUG_SOURCE_APPLICATION, 0, -1, pName );
@@ -678,7 +678,7 @@ namespace sw
 
 	void OpenGLRHICommandContext::endEventMarker()
 	{
-		if ( _pDevice->_bInitialized == false )
+		if ( _pDevice->_bInitialized == SW_FALSE )
 			return;
 		glPopDebugGroup();
 	}

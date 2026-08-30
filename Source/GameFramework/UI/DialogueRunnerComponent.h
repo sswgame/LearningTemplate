@@ -40,7 +40,7 @@ namespace sw
 	};
 
 	SW_DECLARE_DELEGATE( void, OnDialogueLineDelegate, const string& speaker, const string& text );
-	SW_DECLARE_DELEGATE( void, OnDialogueChoicesDelegate, const vector<string>& listChoices );
+	SW_DECLARE_DELEGATE( void, OnDialogueChoicesDelegate, const vector<string>& listChoice );
 	SW_DECLARE_DELEGATE( void, OnDialogueEventDelegate, const string& command );
 	using OnDialogueFinishedDelegate = Delegate<void()>;
 

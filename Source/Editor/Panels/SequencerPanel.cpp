@@ -34,7 +34,7 @@ namespace sw::editor
 	{
 		int32		   _frameMin{ 0 };
 		int32		   _frameMax{ 100 };
-		vector<Item>   _listItems;
+		vector<Item>   _listItem;
 		mutable string _labelScratch;
 
 		int32 GetFrameMin() const override
@@ -47,7 +47,7 @@ namespace sw::editor
 		}
 		int32 GetItemCount() const override
 		{
-			return static_cast<int32>( _listItems.size() );
+			return static_cast<int32>( _listItem.size() );
 		}
 		int32 GetItemTypeCount() const override
 		{
@@ -59,8 +59,8 @@ namespace sw::editor
 		}
 		const utf8* GetItemLabel( int32 itemIndex ) const override
 		{
-			if ( 0 <= itemIndex && itemIndex < static_cast<int32>( _listItems.size() ) && _listItems[static_cast<size_t>( itemIndex )]._name.empty() == false )
-				return _listItems[static_cast<size_t>( itemIndex )]._name.c_str();
+			if ( 0 <= itemIndex && itemIndex < static_cast<int32>( _listItem.size() ) && _listItem[static_cast<size_t>( itemIndex )]._name.empty() == false )
+				return _listItem[static_cast<size_t>( itemIndex )]._name.c_str();
 			_labelScratch = "Item ";
 			_labelScratch += to_string( itemIndex );
 			return _labelScratch.c_str();
@@ -68,7 +68,7 @@ namespace sw::editor
 
 		void Get( int32 itemIndex, int32** ppStart, int32** ppEnd, int32* pType, uint32* pColor ) override
 		{
-			Item& item = _listItems[static_cast<size_t>( itemIndex )];
+			Item& item = _listItem[static_cast<size_t>( itemIndex )];
 			if ( ppStart != nullptr )
 				*ppStart = &item._start;
 			if ( ppEnd != nullptr )
@@ -87,24 +87,24 @@ namespace sw::editor
 			item._end	= _frameMin + 10;
 			item._color = type == 0 ? 0xFF80AA80u : 0xFF8080AAu;
 			item._name	= type == 0
-							? ( "Clip " + to_string( _listItems.size() ) )
-							: ( "Event " + to_string( _listItems.size() ) );
-			_listItems.push_back( item );
+							? ( "Clip " + to_string( _listItem.size() ) )
+							: ( "Event " + to_string( _listItem.size() ) );
+			_listItem.push_back( item );
 		}
 
 		void Del( int32 itemIndex ) override
 		{
-			if ( 0 <= itemIndex && itemIndex < static_cast<int32>( _listItems.size() ) )
-				_listItems.erase( _listItems.begin() + itemIndex );
+			if ( 0 <= itemIndex && itemIndex < static_cast<int32>( _listItem.size() ) )
+				_listItem.erase( _listItem.begin() + itemIndex );
 		}
 
 		void Duplicate( int32 itemIndex ) override
 		{
-			if ( 0 <= itemIndex && itemIndex < static_cast<int32>( _listItems.size() ) )
+			if ( 0 <= itemIndex && itemIndex < static_cast<int32>( _listItem.size() ) )
 			{
-				Item copy = _listItems[static_cast<size_t>( itemIndex )];
+				Item copy = _listItem[static_cast<size_t>( itemIndex )];
 				copy._name += " Copy";
-				_listItems.push_back( std::move( copy ) );
+				_listItem.push_back( std::move( copy ) );
 			}
 		}
 	};
@@ -121,10 +121,10 @@ namespace sw::editor
 	{
 		_sequence->Add( 0 );
 		_sequence->Add( 1 );
-		_sequence->_listItems[0]._name	= "Intro";
-		_sequence->_listItems[1]._name	= "Cut";
-		_sequence->_listItems[1]._start = 20;
-		_sequence->_listItems[1]._end	= 40;
+		_sequence->_listItem[0]._name  = "Intro";
+		_sequence->_listItem[1]._name  = "Cut";
+		_sequence->_listItem[1]._start = 20;
+		_sequence->_listItem[1]._end   = 40;
 	}
 
 	SequencerPanel::~SequencerPanel() = default;
@@ -180,9 +180,9 @@ namespace sw::editor
 		if ( ImGui::IsItemDeactivatedAfterEdit() )
 			notifyDocumentEdited( "Edit Sequence Note", "sequence-note" );
 
-		if ( 0 <= _selected && _selected < static_cast<int32>( _sequence->_listItems.size() ) )
+		if ( 0 <= _selected && _selected < static_cast<int32>( _sequence->_listItem.size() ) )
 		{
-			Item&								  item = _sequence->_listItems[static_cast<size_t>( _selected )];
+			Item&								  item = _sequence->_listItem[static_cast<size_t>( _selected )];
 			fixed_string<constant::kMaxBuffer128> nameBuf{ item._name.c_str() };
 			if ( ImGui::InputText( "Clip Name", nameBuf.data(), nameBuf.capacity() ) )
 			{
@@ -279,7 +279,7 @@ namespace sw::editor
 		asset._frameMin = _sequence->_frameMin;
 		asset._frameMax = _sequence->_frameMax;
 		asset._note		= _cinematicNote.c_str();
-		for ( const Item& src : _sequence->_listItems )
+		for ( const Item& src : _sequence->_listItem )
 		{
 			SequenceTrackItem item{};
 			item._name		   = src._name;
@@ -303,7 +303,7 @@ namespace sw::editor
 		_sequence->_frameMin = asset._frameMin;
 		_sequence->_frameMax = asset._frameMax;
 		_cinematicNote		 = asset._note.c_str();
-		_sequence->_listItems.clear();
+		_sequence->_listItem.clear();
 		for ( const SequenceTrackItem& src : asset._listItem )
 		{
 			Item item{};
@@ -316,7 +316,7 @@ namespace sw::editor
 			item._end		   = src._end;
 			item._type		   = src._type;
 			item._color		   = src._color;
-			_sequence->_listItems.push_back( std::move( item ) );
+			_sequence->_listItem.push_back( std::move( item ) );
 		}
 	}
 

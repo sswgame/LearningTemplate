@@ -367,11 +367,11 @@ namespace sw
 
 		vector<string> _listShaderDefine; ///< 컴파일 매크로 ("NAME" 또는 "NAME=VALUE") — 셰이더 permutation
 
-		RHIPrimitiveTopology   _topology;							 ///< 프리미티브 위상
-		RHIFillMode			   _fillMode;							 ///< 채우기 모드
-		RHICullMode			   _cullMode;							 ///< 컬링 모드
-		uint32				   _numRenderTargets;					 ///< 컬러 RT 개수 (MRT)
-		RHIFormat			   _arrRtvFormats[kMaxColorAttachments]; ///< RT별 포맷
+		RHIPrimitiveTopology   _topology;							///< 프리미티브 위상
+		RHIFillMode			   _fillMode;							///< 채우기 모드
+		RHICullMode			   _cullMode;							///< 컬링 모드
+		uint32				   _numRenderTargets;					///< 컬러 RT 개수 (MRT)
+		RHIFormat			   _arrRtvFormat[kMaxColorAttachments]; ///< RT별 포맷
 		RHIFormat			   _depthStencilFormat;
 		uint8				   _bEnableDepthTest  : 1; ///< 깊이 테스트
 		uint8				   _bEnableDepthWrite : 1; ///< 깊이 쓰기 (Transparent=0)
@@ -439,23 +439,23 @@ namespace sw
 	/**
 	 * @struct RHIRenderPassBeginInfo
 	 * @brief 렌더 패스 바인딩 및 시작 인자
-	 * @note MRT는 `_arrColorTargets` + `_colorTargetCount`를 우선합니다. `_colorTarget` / `_arrClearColor` /
+	 * @note MRT는 `_arrColorTarget` + `_colorTargetCount`를 우선합니다. `_colorTarget` / `_arrClearColor` /
 	 *       `_loadOp`는 `_colorTargetCount == 0`일 때 RT0 별칭입니다.
 	 */
 	struct SW_API RHIRenderPassBeginInfo
 	{
 		RHIRenderPassHandle	   _renderPass;
 		RHITextureHandle	   _colorTarget; ///< RT0 별칭. 바인딩 시 0 = 스왑체인
-		RHITextureHandle	   _arrColorTargets[kMaxColorAttachments];
+		RHITextureHandle	   _arrColorTarget[kMaxColorAttachments];
 		RHITextureHandle	   _depthTarget;	  ///< 0 = 깊이/스텐실 없음
 		uint32				   _colorTargetCount; ///< 0 → `_bBindColor`이면 단일 `_colorTarget`
 		uint32				   _width;
 		uint32				   _height;
 		float32				   _arrClearColor[4]; ///< RT0 클리어 별칭
-		float32				   _arrClearColors[kMaxColorAttachments][4];
+		float32				   _arrTargetClearColor[kMaxColorAttachments][4];
 		float32				   _clearDepth;
 		RHIRenderPassLoadOp	   _loadOp; ///< RT0 로드 별칭
-		RHIRenderPassLoadOp	   _arrLoadOps[kMaxColorAttachments];
+		RHIRenderPassLoadOp	   _arrLoadOp[kMaxColorAttachments];
 		RHIRenderPassLoadOp	   _depthLoadOp;
 		uint8				   _bBindColor	  : 1; ///< 0 = 깊이만 (ShadowMap 등)
 		[[maybe_unused]] uint8 _reservedFlags : 7;

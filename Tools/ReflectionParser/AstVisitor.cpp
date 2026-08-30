@@ -116,14 +116,14 @@ namespace sw
 					}
 				};
 
-				Entry _arrEntries[4]{}; ///< 충분한 크기로 고정, nullptr 로 빈 슬롯 표시
+				Entry _arrEntry[4]{}; ///< 충분한 크기로 고정, nullptr 로 빈 슬롯 표시
 				int32 _count = 0;
 
 				void add( const utf8* prefix )
 				{
 					if ( _count < 4 )
 					{
-						_arrEntries[_count]._pPrefix = prefix;
+						_arrEntry[_count]._pPrefix = prefix;
 						++_count;
 					}
 				}
@@ -132,8 +132,8 @@ namespace sw
 				{
 					for ( int32 entryIndex = 0; entryIndex < _count; ++entryIndex )
 					{
-						if ( _arrEntries[entryIndex]._pPrefix == prefix )
-							return &_arrEntries[entryIndex];
+						if ( _arrEntry[entryIndex]._pPrefix == prefix )
+							return &_arrEntry[entryIndex];
 					}
 					return nullptr;
 				}
@@ -156,7 +156,7 @@ namespace sw
 					const string_view spellingView( cStr );
 					for ( int32 entryIndex = 0; entryIndex < multi->_count; ++entryIndex )
 					{
-						MultiAnnotationSearch::Entry& entry = multi->_arrEntries[entryIndex];
+						MultiAnnotationSearch::Entry& entry = multi->_arrEntry[entryIndex];
 						if ( entry._bFound == SW_FALSE && spellingView.find( entry._pPrefix ) != string_view::npos )
 						{
 							entry._bFound	= SW_TRUE;
@@ -484,7 +484,7 @@ namespace sw
 																			   const string& spellingFallback )
 			{
 				sw::shared_ptr<ParsedContainerNode> nested;
-				if ( index >= 0 && index < numClangArgs )
+				if ( 0 <= index && index < numClangArgs )
 				{
 					const CXType argType = clang_Type_getTemplateArgumentAsType( type, static_cast<uint32>( index ) );
 					if ( argType.kind != CXType_Invalid )

@@ -105,17 +105,17 @@ namespace sw
 
 			static vector<string> splitPath( const utf8* pDottedPath )
 			{
-				vector<string> listParts;
+				vector<string> listPart;
 				if ( pDottedPath == nullptr || pDottedPath[0] == '\0' )
-					return listParts;
+					return listPart;
 				string_splitter splitter( pDottedPath, { "." } );
 				for ( string_view token : splitter.getSplitList() )
 				{
 					string_view t = StringUtil::trim( token );
 					if ( t.empty() == false )
-						listParts.push_back( string{ t } );
+						listPart.push_back( string{ t } );
 				}
-				return listParts;
+				return listPart;
 			}
 		};
 	} // namespace
@@ -261,12 +261,12 @@ namespace sw
 	{
 		if ( pDottedPath == nullptr )
 			return false;
-		const vector<string> listParts = SchemaMigrateInternal::splitPath( pDottedPath );
-		if ( listParts.empty() )
+		const vector<string> listPart = SchemaMigrateInternal::splitPath( pDottedPath );
+		if ( listPart.empty() )
 			return false;
 
 		// orphan 이름은 보통 leaf 또는 full old key
-		const hashed_string		 leaf( listParts.back().c_str() );
+		const hashed_string		 leaf( listPart.back().c_str() );
 		const SchemaOrphanValue* pOrphan = findOrphan( leaf );
 		if ( pOrphan == nullptr )
 			pOrphan = findOrphan( hashed_string( pDottedPath ) );
@@ -428,23 +428,23 @@ namespace sw
 		if ( pRoot == nullptr || pDottedPath == nullptr )
 			return false;
 
-		const vector<string> listParts = SchemaMigrateInternal::splitPath( pDottedPath );
-		if ( listParts.empty() )
+		const vector<string> listPart = SchemaMigrateInternal::splitPath( pDottedPath );
+		if ( listPart.empty() )
 			return false;
 
 		void*				pCur	  = pRoot;
 		const TypeInfo*		pCurType  = &typeInfo;
 		const PropertyInfo* pLastProp = nullptr;
 
-		for ( size_t partIndex = 0; partIndex < listParts.size(); ++partIndex )
+		for ( size_t partIndex = 0; partIndex < listPart.size(); ++partIndex )
 		{
-			const hashed_string name( listParts[partIndex].c_str() );
+			const hashed_string name( listPart[partIndex].c_str() );
 			const PropertyInfo* pProp = pCurType->findPropertyInHierarchy( name );
 			if ( pProp == nullptr )
 				return false;
 
 			void* pPropPtr = pProp->getRawPtr( pCur );
-			if ( partIndex + 1 == listParts.size() )
+			if ( partIndex + 1 == listPart.size() )
 			{
 				pOutPtr	 = pPropPtr;
 				pOutProp = pProp;

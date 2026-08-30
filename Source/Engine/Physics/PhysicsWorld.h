@@ -46,7 +46,7 @@ namespace sw
 		/** @brief 두 바디가 레이어와 AABB 모두에서 겹치면 true. */
 		bool overlaps( BodyHandle a, BodyHandle b ) const;
 		/** @brief box와 겹치는 바디 핸들을 out에 넣습니다. */
-		void queryAabb( const AABB& box, uint8 layer, vector<BodyHandle>& outHandles ) const;
+		void queryAabb( const AABB& box, uint8 layer, vector<BodyHandle>& outListHandle ) const;
 		/** @brief movingBox가 displacement만큼 이동할 때 layer의 대상들과 연속 충돌(CCD) 검사를 수행합니다. */
 		bool sweepTest( const AABB& movingBox, const float3& displacement, uint8 layer, SweepHit& outHit ) const;
 

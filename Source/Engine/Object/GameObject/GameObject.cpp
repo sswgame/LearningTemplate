@@ -55,8 +55,8 @@ namespace sw
 		// 컴포넌트 파괴 전 부모-자식 계층 링크 분리 (자식 오브젝트들은 루트로 승격되어 생존)
 		detachFromParent();
 
-		vector<GameObject*> listChildrenObjs = getChildren();
-		for ( GameObject* pChildPtr : listChildrenObjs )
+		vector<GameObject*> listChildObject = getChildren();
+		for ( GameObject* pChildPtr : listChildObject )
 		{
 			if ( pChildPtr != nullptr )
 				pChildPtr->detachFromParent();
@@ -241,9 +241,9 @@ namespace sw
 		if ( pSceneComp == nullptr )
 			return listResult;
 
-		const vector<SceneComponent*>& listChildComps = pSceneComp->getChildren();
-		listResult.reserve( listChildComps.size() );
-		for ( SceneComponent* pChildComp : listChildComps )
+		const vector<SceneComponent*>& listChildComp = pSceneComp->getChildren();
+		listResult.reserve( listChildComp.size() );
+		for ( SceneComponent* pChildComp : listChildComp )
 		{
 			if ( pChildComp == nullptr )
 				continue;

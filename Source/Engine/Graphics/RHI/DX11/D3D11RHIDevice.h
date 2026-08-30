@@ -187,7 +187,7 @@ namespace sw
 		uint32												 _boundMeshStride; ///< 바인딩된 VB stride
 		uint32												 _boundMeshOffset;
 
-		vector<RHIBufferHandle> _listRegisteredBindlessVector;
+		vector<RHIBufferHandle> _listRegisteredBindless;
 		vector<uint32>			_listBindlessFree;
 
 		vector<RHITextureHandle> _listRegisteredTexture;

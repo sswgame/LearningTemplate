@@ -93,8 +93,8 @@ namespace sw::editor
 		_fontSize	 = root.childFloat( "fontSize", _fontSize );
 		_playerSpeed = root.childFloat( "playerSpeed", _playerSpeed );
 		EditorDataInternal::takeClearColor( root, _arrClearColor );
-		EditorDataInternal::takeFontList( root, "baseFonts", _listBaseFonts );
-		EditorDataInternal::takeFontList( root, "koreanFonts", _listKoreanFonts );
+		EditorDataInternal::takeFontList( root, "baseFonts", _listBaseFont );
+		EditorDataInternal::takeFontList( root, "koreanFonts", _listKoreanFont );
 
 		SW_LOG_INFO( "Loaded from %#", absPath );
 		return true;

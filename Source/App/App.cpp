@@ -112,13 +112,13 @@ namespace sw
 		splash.updateStatus( "Loading Modules & Compiling Shaders..." );
 
 		// 3. ModuleHost (에디터/게임 라이프사이클) 바인딩
-		vector<GameKitConfig> gameKitModuleList{};
+		vector<GameKitConfig> listGameKitModule{};
 #if !defined( SW_SHIPPING )
 		const hashed_string kAppConfigHash = hashed_string{ "AppConfig" };
 		const AppConfig*	pAppConfig	   = _engineLoop.getConfigManager()->ensureConfig<AppConfig>(
 			kAppConfigHash, config::kFileRuntimeAppConfig, nullptr );
 		if ( pAppConfig != nullptr )
-			gameKitModuleList = pAppConfig->_listGameKitModule;
+			listGameKitModule = pAppConfig->_listGameKitModule;
 #endif
 
 		_moduleHost		   = make_unique<ModuleHost>();
@@ -127,7 +127,7 @@ namespace sw
 													  _window.get(),
 													  _engineLoop.getRenderThread(),
 													  _bEnableEditor,
-													  gameKitModuleList );
+													  listGameKitModule );
 		if ( bResult == false )
 		{
 			SW_LOG_ERROR( "ModuleHost initialization failed." );

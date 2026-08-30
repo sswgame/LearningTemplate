@@ -56,16 +56,16 @@ namespace sw
 						if ( FileUtil::fileExists( candidate ) == false )
 							continue;
 
-						vector<uint8> listBytes;
-						if ( FileUtil::readFile( candidate, listBytes ) == false || listBytes.empty() )
+						vector<uint8> bytes;
+						if ( FileUtil::readFile( candidate, bytes ) == false || bytes.empty() )
 							continue;
 
-						uint8* pHeap = static_cast<uint8*>( Memory::allocMemory( listBytes.size() ) );
+						uint8* pHeap = static_cast<uint8*>( Memory::allocMemory( bytes.size() ) );
 						if ( pHeap == nullptr )
 							return E_OUTOFMEMORY;
-						Memory::copy( pHeap, listBytes.data(), listBytes.size() );
+						Memory::copy( pHeap, bytes.data(), bytes.size() );
 						*ppData = pHeap;
-						*pBytes = static_cast<UINT>( listBytes.size() );
+						*pBytes = static_cast<UINT>( bytes.size() );
 						return S_OK;
 					}
 					return E_FAIL;
@@ -213,9 +213,9 @@ namespace sw
 		const string cacheDir = ShaderCompilerInternal::getShaderCacheDirectory();
 		if ( cacheDir.empty() == false && FileUtil::directoryExists( cacheDir ) )
 		{
-			vector<string> listFiles;
-			FileUtil::collectFiles( cacheDir, "", listFiles, false );
-			for ( const string& file : listFiles )
+			vector<string> listFile;
+			FileUtil::collectFiles( cacheDir, "", listFile, false );
+			for ( const string& file : listFile )
 			{
 				FileUtil::removeFile( file );
 			}
@@ -277,24 +277,24 @@ namespace sw
 				Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;
 				wstring							 wPath = StringUtil::utf8ToUtf16( absPathStr.c_str() );
 
-				vector<D3D_SHADER_MACRO> listMacros;
-				listMacros.reserve( desc._listDefine.size() + 2 );
-				listMacros.push_back( { "DX11", "1" } );
+				vector<D3D_SHADER_MACRO> listMacro;
+				listMacro.reserve( desc._listDefine.size() + 2 );
+				listMacro.push_back( { "DX11", "1" } );
 				for ( const ShaderMacroDefine& def : desc._listDefine )
 				{
 					if ( def._name.empty() )
 						continue;
-					listMacros.push_back( { def._name.c_str(), def._value.c_str() } );
+					listMacro.push_back( { def._name.c_str(), def._value.c_str() } );
 				}
-				listMacros.push_back( { nullptr, nullptr } );
+				listMacro.push_back( { nullptr, nullptr } );
 
-				vector<string> listIncludeDirs;
-				ShaderCompilerInternal::collectShaderIncludeDirs( absPathStr, listIncludeDirs );
-				ShaderCompilerInternal::MultiRootD3DInclude includeHandler( std::move( listIncludeDirs ) );
+				vector<string> listIncludeDir;
+				ShaderCompilerInternal::collectShaderIncludeDirs( absPathStr, listIncludeDir );
+				ShaderCompilerInternal::MultiRootD3DInclude includeHandler( std::move( listIncludeDir ) );
 
 				HRESULT hr = D3DCompileFromFile(
 					wPath.c_str(),
-					listMacros.data(),
+					listMacro.data(),
 					&includeHandler,
 					desc._entryPoint.c_str(),
 					profile.c_str(),
@@ -381,76 +381,76 @@ namespace sw
 					wstring wEntryPoint = StringUtil::utf8ToUtf16( desc._entryPoint.c_str() );
 					wstring wProfile	= StringUtil::utf8ToUtf16( profile.c_str() );
 
-					vector<LPCWSTR> listArguments;
-					vector<wstring> listDefineArgs;
-					listDefineArgs.reserve( desc._listDefine.size() );
+					vector<LPCWSTR> listArgument;
+					vector<wstring> listDefineArg;
+					listDefineArg.reserve( desc._listDefine.size() );
 
-					listArguments.push_back( wPath.c_str() );
-					listArguments.push_back( L"-E" );
-					listArguments.push_back( wEntryPoint.c_str() );
-					listArguments.push_back( L"-T" );
-					listArguments.push_back( wProfile.c_str() );
-					listArguments.push_back( L"-Zpr" );
+					listArgument.push_back( wPath.c_str() );
+					listArgument.push_back( L"-E" );
+					listArgument.push_back( wEntryPoint.c_str() );
+					listArgument.push_back( L"-T" );
+					listArgument.push_back( wProfile.c_str() );
+					listArgument.push_back( L"-Zpr" );
 
-					vector<string>	listIncludeDirs;
+					vector<string>	listIncludeDir;
 					vector<wstring> listIncludeDirW;
-					ShaderCompilerInternal::collectShaderIncludeDirs( absPathStr, listIncludeDirs );
-					listIncludeDirW.reserve( listIncludeDirs.size() );
-					for ( const string& dir : listIncludeDirs )
+					ShaderCompilerInternal::collectShaderIncludeDirs( absPathStr, listIncludeDir );
+					listIncludeDirW.reserve( listIncludeDir.size() );
+					for ( const string& dir : listIncludeDir )
 					{
 						listIncludeDirW.push_back( StringUtil::utf8ToUtf16( dir.c_str() ) );
-						listArguments.push_back( L"-I" );
-						listArguments.push_back( listIncludeDirW.back().c_str() );
+						listArgument.push_back( L"-I" );
+						listArgument.push_back( listIncludeDirW.back().c_str() );
 					}
 
 					if ( desc._targetFormat == ShaderTargetFormat::SPIRV_Vulkan )
 					{
-						listArguments.push_back( L"-spirv" );
-						listArguments.push_back( L"-fspv-target-env=vulkan1.2" );
-						listArguments.push_back( L"-fvk-use-dx-position-w" );
+						listArgument.push_back( L"-spirv" );
+						listArgument.push_back( L"-fspv-target-env=vulkan1.2" );
+						listArgument.push_back( L"-fvk-use-dx-position-w" );
 					}
 					else if ( desc._targetFormat == ShaderTargetFormat::SPIRV_OpenGL )
 					{
-						listArguments.push_back( L"-spirv" );
-						listArguments.push_back( L"-fspv-target-env=vulkan1.1" );
-						listArguments.push_back( L"-fvk-use-dx-position-w" );
-						listArguments.push_back( L"-fvk-b-shift" );
-						listArguments.push_back( L"16" );
-						listArguments.push_back( L"0" );
-						listArguments.push_back( L"-fvk-u-shift" );
-						listArguments.push_back( L"48" );
-						listArguments.push_back( L"0" );
+						listArgument.push_back( L"-spirv" );
+						listArgument.push_back( L"-fspv-target-env=vulkan1.1" );
+						listArgument.push_back( L"-fvk-use-dx-position-w" );
+						listArgument.push_back( L"-fvk-b-shift" );
+						listArgument.push_back( L"16" );
+						listArgument.push_back( L"0" );
+						listArgument.push_back( L"-fvk-u-shift" );
+						listArgument.push_back( L"48" );
+						listArgument.push_back( L"0" );
 					}
 
-					listArguments.push_back( L"-D" );
+					listArgument.push_back( L"-D" );
 					if ( desc._targetFormat == ShaderTargetFormat::DXIL_D3D12 )
 					{
-						listArguments.push_back( L"DX12=1" );
+						listArgument.push_back( L"DX12=1" );
 						// Graphics: fully-bindless heap sampling + optional bindless UAV array.
 						// Compute RS (SampleIndirect) uses explicit u0/u1 — skip BINDLESS_UAV on CS.
 						if ( desc._stage != ShaderStage::Compute )
 						{
-							listArguments.push_back( L"-D" );
-							listArguments.push_back( L"SW_BINDLESS=1" );
-							listArguments.push_back( L"-D" );
-							listArguments.push_back( L"BINDLESS_UAV=1" );
+							listArgument.push_back( L"-D" );
+							listArgument.push_back( L"SW_BINDLESS=1" );
+							listArgument.push_back( L"-D" );
+							listArgument.push_back( L"BINDLESS_UAV=1" );
 						}
 					}
 					else if ( desc._targetFormat == ShaderTargetFormat::SPIRV_Vulkan )
 					{
-						listArguments.push_back( L"VULKAN=1" );
+						listArgument.push_back( L"VULKAN=1" );
 						if ( desc._stage != ShaderStage::Compute )
 						{
-							listArguments.push_back( L"-D" );
-							listArguments.push_back( L"SW_BINDLESS=1" );
-							listArguments.push_back( L"-D" );
-							listArguments.push_back( L"BINDLESS_UAV=1" );
+							listArgument.push_back( L"-D" );
+							listArgument.push_back( L"SW_BINDLESS=1" );
+							listArgument.push_back( L"-D" );
+							listArgument.push_back( L"BINDLESS_UAV=1" );
 						}
 					}
 					else if ( desc._targetFormat == ShaderTargetFormat::SPIRV_OpenGL )
-						listArguments.push_back( L"OPENGL=1" );
+						listArgument.push_back( L"OPENGL=1" );
 					else if ( desc._targetFormat == ShaderTargetFormat::DXBC_D3D11 )
-						listArguments.push_back( L"DX11=1" );
+						listArgument.push_back( L"DX11=1" );
 
 					for ( const ShaderMacroDefine& def : desc._listDefine )
 					{
@@ -459,14 +459,14 @@ namespace sw
 						string defineStr = def._name;
 						defineStr += "=";
 						defineStr += def._value;
-						listDefineArgs.push_back( StringUtil::utf8ToUtf16( defineStr.c_str() ) );
-						listArguments.push_back( L"-D" );
-						listArguments.push_back( listDefineArgs.back().c_str() );
+						listDefineArg.push_back( StringUtil::utf8ToUtf16( defineStr.c_str() ) );
+						listArgument.push_back( L"-D" );
+						listArgument.push_back( listDefineArg.back().c_str() );
 					}
 
 	#if defined( SW_DEBUG )
-					listArguments.push_back( L"-Zi" );
-					listArguments.push_back( L"-Od" );
+					listArgument.push_back( L"-Zi" );
+					listArgument.push_back( L"-Od" );
 	#endif
 
 					DxcBuffer sourceBuffer{};
@@ -477,8 +477,8 @@ namespace sw
 					ShaderCompilerInternal::DxcComPtr<IDxcResult> compileResult;
 					HRESULT										  hrCompile = compiler->Compile(
 						&sourceBuffer,
-						listArguments.data(),
-						static_cast<uint32>( listArguments.size() ),
+						listArgument.data(),
+						static_cast<uint32>( listArgument.size() ),
 						ShaderCompilerInternal::dxcGet( includeHandler ),
 						IID_PPV_ARGS( ShaderCompilerInternal::dxcAddressOf( compileResult ) ) );
 
@@ -535,19 +535,19 @@ namespace sw
 				Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;
 				wstring							 wPath( absPathStr.begin(), absPathStr.end() );
 
-				vector<D3D_SHADER_MACRO> listMacros;
-				listMacros.reserve( desc._listDefine.size() + 1 );
+				vector<D3D_SHADER_MACRO> listMacro;
+				listMacro.reserve( desc._listDefine.size() + 1 );
 				for ( const ShaderMacroDefine& def : desc._listDefine )
 				{
 					if ( def._name.empty() )
 						continue;
-					listMacros.push_back( { def._name.c_str(), def._value.c_str() } );
+					listMacro.push_back( { def._name.c_str(), def._value.c_str() } );
 				}
-				listMacros.push_back( { nullptr, nullptr } );
+				listMacro.push_back( { nullptr, nullptr } );
 
 				HRESULT hrFallback = D3DCompileFromFile(
 					wPath.c_str(),
-					listMacros.data(),
+					listMacro.data(),
 					D3D_COMPILE_STANDARD_FILE_INCLUDE,
 					desc._entryPoint.c_str(),
 					profile.c_str(),

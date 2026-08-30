@@ -46,7 +46,7 @@ namespace sw
 		static bool keysEqual( string_view a, string_view b, bool bIgnoreCase );
 
 		/** @brief 프로퍼티 목록에서 키에 일치하는 프로퍼티 메타데이터를 검색합니다. */
-		static const PropertyInfo* matchProperty( const vector<PropertyInfo>& listProps, string_view keyRaw,
+		static const PropertyInfo* matchProperty( const vector<PropertyInfo>& listProp, string_view keyRaw,
 												  bool bIgnoreCaseKeys, bool& bCaseVariant );
 	};
 } // namespace sw

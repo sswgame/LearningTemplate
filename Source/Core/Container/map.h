@@ -146,7 +146,7 @@ namespace sw
 		{
 			SW_SCOPED_RACE_WRITE();
 			auto it = lower_bound( key );
-			if ( it != end() && !_comp( key, it->first ) )
+			if ( it != end() && _comp( key, it->first ) == false )
 				return it->second;
 			throw std::out_of_range( "map::at" );
 		}
@@ -157,7 +157,7 @@ namespace sw
 		{
 			SW_SCOPED_RACE_READ();
 			auto it = lower_bound( key );
-			if ( it != end() && !_comp( key, it->first ) )
+			if ( it != end() && _comp( key, it->first ) == false )
 				return it->second;
 			throw std::out_of_range( "map::at" );
 		}
@@ -167,7 +167,7 @@ namespace sw
 		{
 			SW_SCOPED_RACE_WRITE();
 			auto it = std::lower_bound( _data.begin(), _data.end(), key, KeyCompare{ _comp } );
-			if ( it != _data.end() && !_comp( key, it->first ) )
+			if ( it != _data.end() && _comp( key, it->first ) == false )
 				return it->second;
 			it = _data.insert( it, value_type( key, T() ) );
 			return it->second;
@@ -178,7 +178,7 @@ namespace sw
 		{
 			SW_SCOPED_RACE_WRITE();
 			auto it = std::lower_bound( _data.begin(), _data.end(), key, KeyCompare{ _comp } );
-			if ( it != _data.end() && !_comp( key, it->first ) )
+			if ( it != _data.end() && _comp( key, it->first ) == false )
 				return it->second;
 			it = _data.insert( it, value_type( std::move( key ), T() ) );
 			return it->second;
@@ -310,7 +310,7 @@ namespace sw
 		{
 			SW_SCOPED_RACE_WRITE();
 			auto it = std::lower_bound( _data.begin(), _data.end(), value.first, KeyCompare{ _comp } );
-			if ( it != _data.end() && !_comp( value.first, it->first ) )
+			if ( it != _data.end() && _comp( value.first, it->first ) == false )
 				return { it, false };
 			it = _data.insert( it, value );
 			return { it, true };
@@ -321,7 +321,7 @@ namespace sw
 		{
 			SW_SCOPED_RACE_WRITE();
 			auto it = std::lower_bound( _data.begin(), _data.end(), value.first, KeyCompare{ _comp } );
-			if ( it != _data.end() && !_comp( value.first, it->first ) )
+			if ( it != _data.end() && _comp( value.first, it->first ) == false )
 				return { it, false };
 			it = _data.insert( it, std::move( value ) );
 			return { it, true };
@@ -368,7 +368,7 @@ namespace sw
 		{
 			SW_SCOPED_RACE_WRITE();
 			auto it = std::lower_bound( _data.begin(), _data.end(), k, KeyCompare{ _comp } );
-			if ( it != _data.end() && !_comp( k, it->first ) )
+			if ( it != _data.end() && _comp( k, it->first ) == false )
 				return { it, false };
 			it = _data.emplace( it, std::piecewise_construct, std::forward_as_tuple( k ), std::forward_as_tuple( std::forward<Args>( args )... ) );
 			return { it, true };
@@ -380,7 +380,7 @@ namespace sw
 		{
 			SW_SCOPED_RACE_WRITE();
 			auto it = std::lower_bound( _data.begin(), _data.end(), k, KeyCompare{ _comp } );
-			if ( it != _data.end() && !_comp( k, it->first ) )
+			if ( it != _data.end() && _comp( k, it->first ) == false )
 				return { it, false };
 			it = _data.emplace( it, std::piecewise_construct, std::forward_as_tuple( std::move( k ) ), std::forward_as_tuple( std::forward<Args>( args )... ) );
 			return { it, true };
@@ -413,7 +413,7 @@ namespace sw
 		{
 			SW_SCOPED_RACE_WRITE();
 			auto it = std::lower_bound( _data.begin(), _data.end(), key, KeyCompare{ _comp } );
-			if ( it != _data.end() && !_comp( key, it->first ) )
+			if ( it != _data.end() && _comp( key, it->first ) == false )
 			{
 				_data.erase( it );
 				return 1;
@@ -436,7 +436,7 @@ namespace sw
 		{
 			SW_SCOPED_RACE_READ();
 			auto it = std::lower_bound( _data.begin(), _data.end(), key, KeyCompare{ _comp } );
-			if ( it != _data.end() && !_comp( key, it->first ) )
+			if ( it != _data.end() && _comp( key, it->first ) == false )
 				return 1;
 			return 0;
 		}
@@ -447,7 +447,7 @@ namespace sw
 		{
 			SW_SCOPED_RACE_READ();
 			auto it = std::lower_bound( _data.begin(), _data.end(), key, KeyCompare{ _comp } );
-			return ( it != _data.end() && !_comp( key, it->first ) ) ? it : _data.end();
+			return ( it != _data.end() && _comp( key, it->first ) == false ) ? it : _data.end();
 		}
 
 		/** @brief 키를 찾습니다. */
@@ -456,7 +456,7 @@ namespace sw
 		{
 			SW_SCOPED_RACE_READ();
 			auto it = std::lower_bound( _data.begin(), _data.end(), key, KeyCompare{ _comp } );
-			return ( it != _data.end() && !_comp( key, it->first ) ) ? it : _data.end();
+			return ( it != _data.end() && _comp( key, it->first ) == false ) ? it : _data.end();
 		}
 
 		/** @brief 키 포함 여부를 반환합니다. */
@@ -470,7 +470,7 @@ namespace sw
 			SW_SCOPED_RACE_READ();
 			auto first = std::lower_bound( _data.begin(), _data.end(), key, KeyCompare{ _comp } );
 			auto last  = first;
-			if ( first != _data.end() && !_comp( key, first->first ) )
+			if ( first != _data.end() && _comp( key, first->first ) == false )
 				++last;
 			return { first, last };
 		}
@@ -482,7 +482,7 @@ namespace sw
 			SW_SCOPED_RACE_READ();
 			auto first = std::lower_bound( _data.begin(), _data.end(), key, KeyCompare{ _comp } );
 			auto last  = first;
-			if ( first != _data.end() && !_comp( key, first->first ) )
+			if ( first != _data.end() && _comp( key, first->first ) == false )
 				++last;
 			return { first, last };
 		}

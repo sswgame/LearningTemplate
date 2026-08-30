@@ -646,7 +646,7 @@ namespace sw::editor
 		const float32 u		= ( mouse.x - canvasPos._x ) / canvasSize._x;
 		const float32 v		= ( mouse.y - canvasPos._y ) / canvasSize._y;
 		const bool	  bInside =
-			( u >= 0.0f && u <= 1.0f && v >= 0.0f && v <= 1.0f );
+			( 0.0f <= u && u <= 1.0f && 0.0f <= v && v <= 1.0f );
 		if ( bInside == false )
 			return;
 

@@ -37,7 +37,7 @@ namespace sw
 		, _boundMeshVb{ 0 }
 		, _boundMeshStride{ sizeof( RHIVertex ) }
 		, _boundMeshOffset{ 0 }
-		, _listRegisteredBindlessVector{}
+		, _listRegisteredBindless{}
 		, _listBindlessFree{}
 		, _listRegisteredTexture{}
 		, _listTextureFree{}
@@ -104,7 +104,7 @@ namespace sw
 	#endif
 
 		D3D_FEATURE_LEVEL			featureLevel;
-		constexpr D3D_FEATURE_LEVEL arrFeatureLevels[2] = {
+		constexpr D3D_FEATURE_LEVEL arrFeatureLevel[2] = {
 			D3D_FEATURE_LEVEL_11_0,
 			D3D_FEATURE_LEVEL_10_0,
 		};
@@ -113,8 +113,8 @@ namespace sw
 													D3D_DRIVER_TYPE_HARDWARE,
 													nullptr,
 													createDeviceFlags,
-													arrFeatureLevels,
-													SW_COUNT_OF( arrFeatureLevels ),
+													arrFeatureLevel,
+													SW_COUNT_OF( arrFeatureLevel ),
 													D3D11_SDK_VERSION,
 													&swapChainDesc,
 													_swapChain.GetAddressOf(),
@@ -170,7 +170,7 @@ namespace sw
 		_depthDisabledState.Reset();
 		_linearSampler.Reset();
 		_activeGraphicsPso = 0;
-		_listRegisteredBindlessVector.clear();
+		_listRegisteredBindless.clear();
 		_listBindlessFree.clear();
 		_listRegisteredTexture.clear();
 		_listTextureFree.clear();

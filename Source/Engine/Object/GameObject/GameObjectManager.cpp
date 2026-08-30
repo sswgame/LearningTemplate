@@ -197,13 +197,13 @@ namespace sw
 			pEngineHead = _s_engineHead;
 		registerPendingFactories( "Engine", pEngineHead );
 
-		vector<pair<string, ComponentFactoryRegistrar*>> listModuleHeads;
+		vector<pair<string, ComponentFactoryRegistrar*>> listModuleHead;
 		{
 			std::scoped_lock<mutex> lock{ GameObjectManagerInternal::getModuleFactoryHeadsMutex() };
 			for ( const auto& [mod, head] : GameObjectManagerInternal::getModuleFactoryHeads() )
-				listModuleHeads.push_back( { mod, head } );
+				listModuleHead.push_back( { mod, head } );
 		}
-		for ( const auto& [mod, head] : listModuleHeads )
+		for ( const auto& [mod, head] : listModuleHead )
 		{
 			if ( head == nullptr )
 				continue;
@@ -348,8 +348,8 @@ namespace sw
 	void GameObjectManager::beginPlay()
 	{
 		mergePendingAdds();
-		const vector<GameObject*> listObjects = getAllGameObjects();
-		for ( GameObject* pObj : listObjects )
+		const vector<GameObject*> listObject = getAllGameObjects();
+		for ( GameObject* pObj : listObject )
 		{
 			if ( pObj != nullptr && pObj->isActiveInHierarchy() )
 				pObj->beginPlay();
@@ -358,8 +358,8 @@ namespace sw
 
 	void GameObjectManager::endPlay()
 	{
-		const vector<GameObject*> listObjects = getAllGameObjects();
-		for ( GameObject* pObj : listObjects )
+		const vector<GameObject*> listObject = getAllGameObjects();
+		for ( GameObject* pObj : listObject )
 		{
 			if ( pObj != nullptr && pObj->isActiveInHierarchy() )
 				pObj->endPlay();
@@ -687,8 +687,8 @@ namespace sw
 	void GameObjectManager::rebindAllCachedTypeInfo()
 	{
 		TypeRegistry&			  typeRegistry = engine::getTypeRegistry();
-		const vector<GameObject*> listObjects  = getAllGameObjects();
-		for ( GameObject* pObj : listObjects )
+		const vector<GameObject*> listObject   = getAllGameObjects();
+		for ( GameObject* pObj : listObject )
 		{
 			if ( pObj == nullptr )
 				continue;
@@ -829,47 +829,47 @@ namespace sw
 
 	vector<hashed_string> GameObjectManager::getRegisteredComponentTypeNames() const
 	{
-		vector<hashed_string> listNames;
-		listNames.reserve( _mapFactory.size() );
+		vector<hashed_string> listName;
+		listName.reserve( _mapFactory.size() );
 		for ( const auto& [name, factory] : _mapFactory )
 		{
 			(void)factory;
-			listNames.push_back( name );
+			listName.push_back( name );
 		}
-		return listNames;
+		return listName;
 	}
 
 	void GameObjectManager::tickComponents( float32 deltaTime )
 	{
 		if ( _bIsTickWavesDirty.exchange( false, std::memory_order_acq_rel ) )
 		{
-			array<vector<Component*>, 4> groupList;
-			const vector<GameObject*>	 listObjects = getAllGameObjects();
-			for ( GameObject* pObj : listObjects )
+			array<vector<Component*>, 4> arrListGroup;
+			const vector<GameObject*>	 listObject = getAllGameObjects();
+			for ( GameObject* pObj : listObject )
 			{
-				if ( pObj == nullptr || pObj->isPendingKill() )
+				if ( pObj == nullptr || pObj->isPendingKill() == true )
 					continue;
 				for ( Component* pComp : pObj->getAllComponents() )
 				{
 					if ( pComp == nullptr || pComp->canEverTick() == false )
 						continue;
 					const uint8 groupIndex = static_cast<uint8>( pComp->getTickGroup() );
-					if ( groupIndex < groupList.size() )
-						groupList[groupIndex].push_back( pComp );
+					if ( groupIndex < arrListGroup.size() )
+						arrListGroup[groupIndex].push_back( pComp );
 				}
 			}
 
 			_listCachedTickWave.clear();
-			for ( const vector<Component*>& wave : groupList )
+			for ( const vector<Component*>& wave : arrListGroup )
 			{
 				if ( wave.empty() )
 					continue;
-				vector<ComponentHandle> listTargets;
-				listTargets.reserve( wave.size() );
+				vector<ComponentHandle> listTarget;
+				listTarget.reserve( wave.size() );
 				for ( Component* pComp : wave )
-					listTargets.push_back( pComp->getHandle() );
-				vector<vector<ComponentHandle>> subwaves = GameObjectManagerInternal::splitWaveByObject( listTargets );
-				for ( vector<ComponentHandle>& subwave : subwaves )
+					listTarget.push_back( pComp->getHandle() );
+				vector<vector<ComponentHandle>> listSubwave = GameObjectManagerInternal::splitWaveByObject( listTarget );
+				for ( vector<ComponentHandle>& subwave : listSubwave )
 				{
 					if ( subwave.empty() == false )
 						_listCachedTickWave.push_back( std::move( subwave ) );

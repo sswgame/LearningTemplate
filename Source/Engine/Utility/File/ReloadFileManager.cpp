@@ -124,19 +124,19 @@ namespace sw
 
 	void ReloadFileManager::update()
 	{
-		vector<FileChangeEvent> listEvents;
+		vector<FileChangeEvent> listEvent;
 
 		if ( _fileWatcher )
-			_fileWatcher->pollEvents( listEvents );
+			_fileWatcher->pollEvents( listEvent );
 		else if ( _bUseMtimePoll )
-			pollMtimeFallback( listEvents );
+			pollMtimeFallback( listEvent );
 		else
 			return;
 
-		if ( listEvents.empty() )
+		if ( listEvent.empty() )
 			return;
 
-		dispatchEvents( listEvents );
+		dispatchEvents( listEvent );
 	}
 
 	FileWatchHandle ReloadFileManager::registerWatch( string_view pathPrefix, const vector<string>& extensions, const FileWatchMatchDelegate& onMatch )
@@ -175,9 +175,9 @@ namespace sw
 		return extensionAllowed( entry, ev._filename );
 	}
 
-	void ReloadFileManager::dispatchEvents( const vector<FileChangeEvent>& listEvents )
+	void ReloadFileManager::dispatchEvents( const vector<FileChangeEvent>& listEvent )
 	{
-		for ( const FileChangeEvent& ev : listEvents )
+		for ( const FileChangeEvent& ev : listEvent )
 		{
 			bool bAnyMatch{ false };
 			for ( const WatchEntry& entry : _listWatch )
@@ -231,9 +231,9 @@ namespace sw
 				ReloadFileManagerInternal::considerFileVal( _mapPollMtime, outListEvent, entry._listExtension, entry._pathPrefix );
 			else
 			{
-				vector<string> listFiles;
-				FileUtil::collectFiles( entry._pathPrefix, {}, listFiles, true, false );
-				for ( const string& filePath : listFiles )
+				vector<string> listFile;
+				FileUtil::collectFiles( entry._pathPrefix, {}, listFile, true, false );
+				for ( const string& filePath : listFile )
 					ReloadFileManagerInternal::considerFileVal( _mapPollMtime, outListEvent, entry._listExtension, filePath );
 			}
 		}

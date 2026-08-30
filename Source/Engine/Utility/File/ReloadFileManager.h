@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file ReloadFileManager.h
  * @brief 런타임에 에셋 파일(텍스처, 셰이더 등)의 변경을 감지하고 등록된 구독자에게만 전달합니다.
  */
@@ -73,9 +73,9 @@ namespace sw
 		/** @brief 이벤트가 이 watch의 prefix/확장자와 맞으면 true. */
 		bool matchesWatch( const WatchEntry& entry, const FileChangeEvent& ev ) const;
 		/** @brief 파일 변경 이벤트를 워치 콜백으로 보냅니다. */
-		void dispatchEvents( const vector<FileChangeEvent>& events );
+		void dispatchEvents( const vector<FileChangeEvent>& listEvent );
 		/** @brief mtime 폴백으로 변경을 모읍니다. */
-		void pollMtimeFallback( vector<FileChangeEvent>& outEvents );
+		void pollMtimeFallback( vector<FileChangeEvent>& outListEvent );
 		/** @brief 파일 확장자가 watch 허용 목록에 있으면 true. */
 		bool extensionAllowed( const WatchEntry& entry, string_view filename ) const;
 

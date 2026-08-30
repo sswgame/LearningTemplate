@@ -30,7 +30,7 @@ namespace sw::editor
 		string _editorFolder{ "editor" };
 		string _fontsFolder{ "fonts" };
 
-		vector<string> _listBaseFonts{
+		vector<string> _listBaseFont{
 
 			"consola.ttf",
 			"Consolas.ttf",
@@ -41,7 +41,7 @@ namespace sw::editor
 			"UbuntuMono-R.ttf",
 			"FreeMono.ttf",
 		};
-		vector<string> _listKoreanFonts{
+		vector<string> _listKoreanFont{
 			"malgun.ttf",
 			"malgunsl.ttf",
 			"NanumGothic.ttf",

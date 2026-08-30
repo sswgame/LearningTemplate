@@ -58,10 +58,10 @@ namespace sw
 		}
 
 		const size_t count = static_cast<size_t>( _width * _height );
-		_walkableList.assign( count, 1 );
-		_encounterList.assign( count, 0 );
-		_passThroughList.assign( count, 0 );
-		_visualList.assign( count, Visual{} );
+		_listWalkable.assign( count, 1 );
+		_listEncounter.assign( count, 0 );
+		_listPassThrough.assign( count, 0 );
+		_listVisual.assign( count, Visual{} );
 
 		XmlNode tiles = root.child( "tiles" );
 		if ( tiles.isValid() )
@@ -72,15 +72,15 @@ namespace sw
 			{
 				const utf8*	 pText			   = tileNode.text();
 				const size_t elementIndex	   = static_cast<size_t>( index );
-				_walkableList[elementIndex]	   = ( pText == nullptr || pText[0] != '0' ) ? 1 : 0;
-				_encounterList[elementIndex]   = tileNode.attrInt( "enc", 0 ) != 0 ? 1 : 0;
-				_passThroughList[elementIndex] = tileNode.attrInt( "pt", 0 ) != 0 ? 1 : 0;
+				_listWalkable[elementIndex]	   = ( pText == nullptr || pText[0] != '0' ) ? 1 : 0;
+				_listEncounter[elementIndex]   = tileNode.attrInt( "enc", 0 ) != 0 ? 1 : 0;
+				_listPassThrough[elementIndex] = tileNode.attrInt( "pt", 0 ) != 0 ? 1 : 0;
 
 				Visual tileVisual{};
 				if ( tileNode.attr( "h" ) != nullptr )
 					tileVisual._height = static_cast<uint8>( tileNode.attrInt( "h", 0 ) );
 				else
-					tileVisual._height = _encounterList[elementIndex] != 0 ? 2 : ( _walkableList[elementIndex] != 0 ? 1 : 0 );
+					tileVisual._height = _listEncounter[elementIndex] != 0 ? 2 : ( _listWalkable[elementIndex] != 0 ? 1 : 0 );
 
 				if ( tileNode.attr( "atlas" ) != nullptr )
 					tileVisual._atlasId = static_cast<uint8>( tileNode.attrInt( "atlas", 0 ) );
@@ -92,25 +92,25 @@ namespace sw
 					tileVisual._tintG = static_cast<uint8>( tileNode.attrInt( "tg", 255 ) );
 					tileVisual._tintB = static_cast<uint8>( tileNode.attrInt( "tb", 255 ) );
 				}
-				else if ( _encounterList[elementIndex] != 0 )
+				else if ( _listEncounter[elementIndex] != 0 )
 				{
 					tileVisual._tintR = 120;
 					tileVisual._tintG = 190;
 					tileVisual._tintB = 90;
 				}
-				else if ( _walkableList[elementIndex] == 0 )
+				else if ( _listWalkable[elementIndex] == 0 )
 				{
 					tileVisual._tintR = 80;
 					tileVisual._tintG = 80;
 					tileVisual._tintB = 90;
 				}
-				else if ( _passThroughList[elementIndex] != 0 )
+				else if ( _listPassThrough[elementIndex] != 0 )
 				{
 					tileVisual._tintR = 160;
 					tileVisual._tintG = 170;
 					tileVisual._tintB = 200;
 				}
-				_visualList[elementIndex] = tileVisual;
+				_listVisual[elementIndex] = tileVisual;
 			}
 		}
 
@@ -130,7 +130,7 @@ namespace sw
 				const utf8* pPair = warpNode.attr( "pair" );
 				if ( pPair != nullptr )
 					warp._pairId = pPair;
-				_warpList.push_back( std::move( warp ) );
+				_listWarp.push_back( std::move( warp ) );
 			}
 		}
 
@@ -145,13 +145,13 @@ namespace sw
 					entry._speciesId = pId;
 				entry._weight = encNode.attrFloat( "weight", 0.f );
 				if ( entry._speciesId.empty() == false )
-					_encounterEntryList.push_back( std::move( entry ) );
+					_listEncounterEntry.push_back( std::move( entry ) );
 			}
 		}
 
 		SW_LOG_INFO( "Loaded '%#' (%#x%#) scene=%# role=%# encounters=%#",
 					 _name, _width, _height, _scenePath, _role,
-					 static_cast<uint32>( _encounterEntryList.size() ) );
+					 static_cast<uint32>( _listEncounterEntry.size() ) );
 		return true;
 	}
 
@@ -191,22 +191,22 @@ namespace sw
 		for ( size_t tileIndex = 0; tileIndex < count; ++tileIndex )
 		{
 			XmlNode		  tileNode	 = tiles.appendChild( "t" );
-			const Visual& tileVisual = _visualList[tileIndex];
+			const Visual& tileVisual = _listVisual[tileIndex];
 			tileNode.appendAttr( "h", static_cast<int32>( tileVisual._height ) );
-			if ( _encounterList[tileIndex] != 0 )
+			if ( _listEncounter[tileIndex] != 0 )
 				tileNode.appendAttr( "enc", 1 );
-			if ( _passThroughList[tileIndex] != 0 )
+			if ( _listPassThrough[tileIndex] != 0 )
 				tileNode.appendAttr( "pt", 1 );
 			if ( tileVisual._atlasId != 0 )
 				tileNode.appendAttr( "atlas", static_cast<int32>( tileVisual._atlasId ) );
 			tileNode.appendAttr( "tr", static_cast<int32>( tileVisual._tintR ) );
 			tileNode.appendAttr( "tg", static_cast<int32>( tileVisual._tintG ) );
 			tileNode.appendAttr( "tb", static_cast<int32>( tileVisual._tintB ) );
-			tileNode.setValue( _walkableList[tileIndex] != 0 ? "1" : "0" );
+			tileNode.setValue( _listWalkable[tileIndex] != 0 ? "1" : "0" );
 		}
 
 		XmlNode warps = root.appendChild( "warps" );
-		for ( const Warp& warp : _warpList )
+		for ( const Warp& warp : _listWarp )
 		{
 			XmlNode warpNode = warps.appendChild( "warp" );
 			warpNode.appendAttr( "x", warp._tileX );
@@ -218,10 +218,10 @@ namespace sw
 				warpNode.appendAttr( "pair", warp._pairId );
 		}
 
-		if ( _encounterEntryList.empty() == false )
+		if ( _listEncounterEntry.empty() == false )
 		{
 			XmlNode encounters = root.appendChild( "encounters" );
-			for ( const Encounter& entry : _encounterEntryList )
+			for ( const Encounter& entry : _listEncounterEntry )
 			{
 				XmlNode encNode = encounters.appendChild( "e" );
 				encNode.appendAttr( "id", entry._speciesId );

@@ -127,7 +127,7 @@ namespace sw
 		}
 
 		/** @brief 맵 조우 테이블을 반환합니다. */
-		const vector<TileEncounterEntry>& getEncounters() const { return _encounterEntryList; }
+		const vector<TileEncounterEntry>& getEncounters() const { return _listEncounterEntry; }
 		/** @brief 맵 조우 테이블에서 가중치 추첨합니다. 없으면 빈 문자열. */
 		string pickEncounterSpeciesId() const;
 
@@ -178,12 +178,12 @@ namespace sw
 		int32					   _height{ 0 };
 		int32					   _spawnX{ 1 };
 		int32					   _spawnY{ 1 };
-		vector<uint8>			   _walkableList{};
-		vector<uint8>			   _encounterList{};
-		vector<uint8>			   _passThroughList{};
-		vector<TileVisual>		   _visualList{};
-		vector<TileWarp>		   _warpList{};
-		vector<TileEncounterEntry> _encounterEntryList{};
+		vector<uint8>			   _listWalkable{};
+		vector<uint8>			   _listEncounter{};
+		vector<uint8>			   _listPassThrough{};
+		vector<TileVisual>		   _listVisual{};
+		vector<TileWarp>		   _listWarp{};
+		vector<TileEncounterEntry> _listEncounterEntry{};
 	};
 
 } // namespace sw

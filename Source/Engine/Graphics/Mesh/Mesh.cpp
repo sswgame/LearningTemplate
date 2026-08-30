@@ -21,8 +21,8 @@ namespace sw
 
 	shared_ptr<Mesh> Mesh::createUnitCube()
 	{
-		auto			  mesh		= sw::make_shared<Mesh>();
-		vector<RHIVertex> listVerts = {
+		auto			  mesh	   = sw::make_shared<Mesh>();
+		vector<RHIVertex> listVert = {
 			// +Z
 			{ { -0.5f, -0.5f, 0.5f }, { 0.92f, 0.35f, 0.28f, 1.0f }},
 			{  { 0.5f, -0.5f, 0.5f }, { 0.92f, 0.35f, 0.28f, 1.0f }},
@@ -66,7 +66,7 @@ namespace sw
 			{  { 0.5f, -0.5f, 0.5f }, { 0.45f, 0.45f, 0.50f, 1.0f }},
 			{ { -0.5f, -0.5f, 0.5f }, { 0.45f, 0.45f, 0.50f, 1.0f }},
 		};
-		mesh->setVertices( std::move( listVerts ) );
+		mesh->setVertices( std::move( listVert ) );
 		return mesh;
 	}
 
@@ -81,8 +81,8 @@ namespace sw
 
 	shared_ptr<Mesh> Mesh::createRectMesh()
 	{
-		auto			  mesh		= sw::make_shared<Mesh>();
-		vector<RHIVertex> listVerts = {
+		auto			  mesh	   = sw::make_shared<Mesh>();
+		vector<RHIVertex> listVert = {
 			{{ -0.5f, -0.5f, 0.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }},
 			{ { 0.5f, -0.5f, 0.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }},
 			{  { 0.5f, 0.5f, 0.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }},
@@ -90,20 +90,20 @@ namespace sw
 			{  { 0.5f, 0.5f, 0.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }},
 			{ { -0.5f, 0.5f, 0.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }},
 		};
-		mesh->setVertices( std::move( listVerts ) );
+		mesh->setVertices( std::move( listVert ) );
 		return mesh;
 	}
 
-	void Mesh::setVertices( const vector<RHIVertex>& vertices )
+	void Mesh::setVertices( const vector<RHIVertex>& listVertex )
 	{
 		releaseGpu();
-		_listVertex = vertices;
+		_listVertex = listVertex;
 	}
 
-	void Mesh::setVertices( vector<RHIVertex>&& vertices )
+	void Mesh::setVertices( vector<RHIVertex>&& listVertex )
 	{
 		releaseGpu();
-		_listVertex = std::move( vertices );
+		_listVertex = std::move( listVertex );
 	}
 
 	bool Mesh::upload( IRHIDevice* pDevice )

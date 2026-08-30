@@ -22,7 +22,7 @@ namespace sw::editor
 	{
 	public:
 		/** @brief POD 프로퍼티 전/후 바이트를 Undo에 올립니다. */
-		static void pushPodEdit( void* pData, size_t size, vector<uint8> listBefore, vector<uint8> listAfter,
+		static void pushPodEdit( void* pData, size_t size, vector<uint8> beforeBytes, vector<uint8> afterBytes,
 								 string_view label, uint64 selectedObjectId );
 		/** @brief 문자열 프로퍼티 전/후 값을 Undo에 올립니다. */
 		static void pushStringEdit( string* pPtr, string before, string after, string_view label, uint64 selectedObjectId );

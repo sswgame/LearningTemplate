@@ -229,8 +229,8 @@ namespace sw::editor
 		ImGui::SeparatorText( "Components" );
 		EditorContext*			  pSelEditorContext = EditorContext::get();
 		IRHIDevice*				  pRhiDevice		= ( pSelEditorContext != nullptr ) ? pSelEditorContext->getRhiDevice() : nullptr;
-		const vector<Component*>& listComponents	= pObj->getAllComponents();
-		for ( Component* pComp : listComponents )
+		const vector<Component*>& listComponent		= pObj->getAllComponents();
+		for ( Component* pComp : listComponent )
 		{
 			if ( pComp == nullptr )
 				continue;
@@ -311,10 +311,10 @@ namespace sw::editor
 									EditorGlobalVariableCommands::getComponentPresetFolderPath(), ".preset.xml", false );
 							}
 
-							vector<string> listNewPresetFiles;
-							if ( _componentPresetJob.take( listNewPresetFiles ) )
+							vector<string> listNewPresetFile;
+							if ( _componentPresetJob.take( listNewPresetFile ) )
 							{
-								_listComponentPresetFile = std::move( listNewPresetFiles );
+								_listComponentPresetFile = std::move( listNewPresetFile );
 								_bComponentPresetDirty	 = SW_FALSE;
 							}
 
@@ -393,11 +393,11 @@ namespace sw::editor
 		else
 			ImGui::TextDisabled( "Parent: (root)" );
 
-		const vector<TagID>& listTags = pObj->getTags().getTags();
-		if ( listTags.empty() == false )
+		const vector<TagID>& listTag = pObj->getTags().getTags();
+		if ( listTag.empty() == false )
 		{
 			ImGui::TextUnformatted( "Tags:" );
-			for ( const TagID& tag : listTags )
+			for ( const TagID& tag : listTag )
 			{
 				if ( tag._pString != nullptr && tag._pString[0] != '\0' )
 				{

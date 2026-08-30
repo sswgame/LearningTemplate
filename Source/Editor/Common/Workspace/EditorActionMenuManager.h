@@ -43,6 +43,6 @@ namespace sw::editor
 		void drawActionMenu( ActionMenuLocation location );
 
 	private:
-		vector<ActionMenuItem> _arrItems[4];
+		vector<ActionMenuItem> _arrItem[4];
 	};
 } // namespace sw::editor

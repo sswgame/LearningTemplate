@@ -122,7 +122,7 @@ namespace sw
 		/** @brief 합성 FBO를 확보합니다. */
 		uint32 ensureCompositeFbo( RHITextureHandle color, RHITextureHandle depth );
 		/** @brief MRT 합성 FBO를 확보합니다. */
-		uint32 ensureCompositeFboMRT( const RHITextureHandle* pColors, uint32 colorCount, RHITextureHandle depth );
+		uint32 ensureCompositeFboMRT( const RHITextureHandle* pColor, uint32 colorCount, RHITextureHandle depth );
 		/** @brief 불투명 핸들을 GLuint 이름으로 풉니다. */
 		uint32 resolveGlBuffer( RHIBufferHandle handle ) const;
 		/** @brief GL 버퍼 이름을 테이블에 넣고 핸들을 반환합니다. */
@@ -157,7 +157,7 @@ namespace sw
 		/// @brief MRT FBO 캐시 키
 		struct CompositeFboKey
 		{
-			RHITextureHandle _arrColors[kMaxColorAttachments]{};
+			RHITextureHandle _arrColor[kMaxColorAttachments]{};
 			uint32			 _colorCount{ 0 };
 			RHITextureHandle _depth{ 0 };
 			/** @brief 같으면 true를 반환합니다. */
@@ -167,7 +167,7 @@ namespace sw
 					return false;
 				for ( uint32 colorIndex = 0; colorIndex < _colorCount; ++colorIndex )
 				{
-					if ( _arrColors[colorIndex] != other._arrColors[colorIndex] )
+					if ( _arrColor[colorIndex] != other._arrColor[colorIndex] )
 						return false;
 				}
 				return true;
@@ -184,7 +184,7 @@ namespace sw
 				h ^= static_cast<size_t>( key._colorCount ) + 0x9e3779b9u;
 				for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
 				{
-					h ^= static_cast<size_t>( key._arrColors[colorIndex] ) + 0x9e3779b9u + ( h << 6 ) + ( h >> 2 );
+					h ^= static_cast<size_t>( key._arrColor[colorIndex] ) + 0x9e3779b9u + ( h << 6 ) + ( h >> 2 );
 				}
 				return h;
 			}
@@ -238,7 +238,7 @@ namespace sw
 		uint32				   _boundIndexStride;
 		uint32				   _boundIndexOffset;
 
-		vector<BindlessResourceRecord> _listRegisteredBindlessVector;
+		vector<BindlessResourceRecord> _listRegisteredBindless;
 		vector<uint32>				   _listBindlessFree;
 		vector<BindlessResourceRecord> _listRegisteredUAV;
 		vector<uint32>				   _listUavFree;

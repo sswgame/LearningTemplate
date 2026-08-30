@@ -101,7 +101,7 @@ namespace sw
 		SceneComponent* getParent() const { return _pParent; }
 
 		/** @brief 자식 SceneComponent 포인터 목록 반환 */
-		const vector<SceneComponent*>& getChildren() const { return _listChildren; }
+		const vector<SceneComponent*>& getChildren() const { return _listChild; }
 
 		/** @brief 트랜스폼 변경 시 행렬 캐시 재계산 더티 마킹 */
 		void markTransformDirty();
@@ -133,7 +133,7 @@ namespace sw
 		float4x4				_cachedWorldMatrix;
 		double3					_cachedWorldPositionLWC;
 		SceneComponent*			_pParent;
-		vector<SceneComponent*> _listChildren;
+		vector<SceneComponent*> _listChild;
 		uint8					_bIsTransformDirty	 : 1;
 		uint8					_bHasDirtyDescendant : 1;
 		uint8					_reservedTransform	 : 6;

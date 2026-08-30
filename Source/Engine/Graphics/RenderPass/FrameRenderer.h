@@ -158,8 +158,8 @@ namespace sw
 		void beginColorPass( string_view colorName, string_view depthName, const float32 arrClearColor[4],
 							 RHIRenderPassLoadOp colorLoad, RHIRenderPassLoadOp depthLoad );
 		/** @brief MRT 컬러 패스를 시작합니다. */
-		void beginColorPassMRT( const string* pColorNames, const float32 arrClearColors[][4],
-								const RHIRenderPassLoadOp* pColorLoads, uint32 colorCount, string_view depthName,
+		void beginColorPassMRT( const string* pColorNames, const float32 arrTargetClearColor[][4],
+								const RHIRenderPassLoadOp* pColorLoad, uint32 colorCount, string_view depthName,
 								RHIRenderPassLoadOp depthLoad );
 		/** @brief 깊이 전용 패스를 시작합니다. */
 		void beginDepthOnlyPass( string_view depthName, float32 clearDepth, RHIRenderPassLoadOp depthLoad );

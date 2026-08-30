@@ -72,17 +72,17 @@ namespace sw
 				auto		 bucketIt = _mapBucket.find( key );
 				if ( bucketIt != _mapBucket.end() )
 				{
-					auto& listHandles = bucketIt->second;
-					for ( size_t handleIndex = 0; handleIndex < listHandles.size(); ++handleIndex )
+					auto& listHandle = bucketIt->second;
+					for ( size_t handleIndex = 0; handleIndex < listHandle.size(); ++handleIndex )
 					{
-						if ( listHandles[handleIndex] == handle )
+						if ( listHandle[handleIndex] == handle )
 						{
-							listHandles[handleIndex] = listHandles.back();
-							listHandles.pop_back();
+							listHandle[handleIndex] = listHandle.back();
+							listHandle.pop_back();
 							break;
 						}
 					}
-					if ( listHandles.empty() )
+					if ( listHandle.empty() )
 						_mapBucket.erase( bucketIt );
 				}
 			}
@@ -95,7 +95,7 @@ namespace sw
 		_mapHandleBound.clear();
 	}
 
-	void SpatialHashGrid2D::queryAABB( float32 minX, float32 minY, float32 maxX, float32 maxY, vector<ObjectHandle>& outHandles ) const
+	void SpatialHashGrid2D::queryAABB( float32 minX, float32 minY, float32 maxX, float32 maxY, vector<ObjectHandle>& outListHandle ) const
 	{
 		const float32 normMinX = MathUtil::min( minX, maxX );
 		const float32 normMaxX = MathUtil::max( minX, maxX );
@@ -123,8 +123,8 @@ namespace sw
 						{
 							if ( queryBounds.intersects( boundIt->second ) )
 							{
-								if ( std::find( outHandles.begin(), outHandles.end(), handle ) == outHandles.end() )
-									outHandles.push_back( handle );
+								if ( std::find( outListHandle.begin(), outListHandle.end(), handle ) == outListHandle.end() )
+									outListHandle.push_back( handle );
 							}
 						}
 					}
@@ -133,7 +133,7 @@ namespace sw
 		}
 	}
 
-	void SpatialHashGrid2D::queryCircle( float32 centerX, float32 centerY, float32 radius, vector<ObjectHandle>& outHandles ) const
+	void SpatialHashGrid2D::queryCircle( float32 centerX, float32 centerY, float32 radius, vector<ObjectHandle>& outListHandle ) const
 	{
 		const float32 radiusSq = radius * radius;
 		const float32 minX	   = centerX - radius;
@@ -166,8 +166,8 @@ namespace sw
 							const float32 dy	 = centerY - closeY;
 							if ( ( dx * dx + dy * dy ) <= radiusSq )
 							{
-								if ( std::find( outHandles.begin(), outHandles.end(), handle ) == outHandles.end() )
-									outHandles.push_back( handle );
+								if ( std::find( outListHandle.begin(), outListHandle.end(), handle ) == outListHandle.end() )
+									outListHandle.push_back( handle );
 							}
 						}
 					}
@@ -176,7 +176,7 @@ namespace sw
 		}
 	}
 
-	void SpatialHashGrid2D::queryRay( float32 startX, float32 startY, float32 dirX, float32 dirY, float32 maxDist, vector<ObjectHandle>& outHandles ) const
+	void SpatialHashGrid2D::queryRay( float32 startX, float32 startY, float32 dirX, float32 dirY, float32 maxDist, vector<ObjectHandle>& outListHandle ) const
 	{
 		const float32 len = MathUtil::sqrt( dirX * dirX + dirY * dirY );
 		if ( len <= 0.0001f || maxDist <= 0.0f )
@@ -214,8 +214,8 @@ namespace sw
 					auto boundIt = _mapHandleBound.find( handle );
 					if ( boundIt != _mapHandleBound.end() )
 					{
-						if ( std::find( outHandles.begin(), outHandles.end(), handle ) == outHandles.end() )
-							outHandles.push_back( handle );
+						if ( std::find( outListHandle.begin(), outListHandle.end(), handle ) == outListHandle.end() )
+							outListHandle.push_back( handle );
 					}
 				}
 			}

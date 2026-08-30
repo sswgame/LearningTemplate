@@ -212,7 +212,7 @@ namespace sw
 		// ------------------------------------------------------------------------------
 		/** @brief Soft 역직렬화 — coerce 실패 필드를 orphan으로 수집. */
 		static bool deserializeSoft( void* pInstance, const TypeInfo& typeInfo, string_view xmlStr,
-									 vector<SchemaOrphanValue>* pOutOrphans = nullptr, uint32* pOutVersion = nullptr,
+									 vector<SchemaOrphanValue>* pOutListOrphan = nullptr, uint32* pOutVersion = nullptr,
 									 const SerializeContext& ctx = SerializeContext::getDefault() );
 
 		/** @brief 루트 attribute `_schemaVersion`을 포함한 XML 직렬화. */

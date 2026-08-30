@@ -47,8 +47,8 @@ namespace sw
 		static shared_ptr<Mesh> createPrimitive( string_view meshId );
 
 		/** @brief CPU 정점 배열을 설정합니다. */
-		void setVertices( const vector<RHIVertex>& vertices );
-		void setVertices( vector<RHIVertex>&& vertices );
+		void setVertices( const vector<RHIVertex>& listVertex );
+		void setVertices( vector<RHIVertex>&& listVertex );
 		/** @brief CPU 정점 배열을 반환합니다. */
 		const vector<RHIVertex>& getVertices() const { return _listVertex; }
 		/** @brief 정점 개수를 반환합니다. */

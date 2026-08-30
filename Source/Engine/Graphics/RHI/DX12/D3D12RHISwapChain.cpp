@@ -24,9 +24,9 @@ namespace sw
 		if ( _pDevice->_bRecording != 0 && _pDevice->_commandList != nullptr )
 		{
 			_pDevice->_commandList->Close();
-			ID3D12CommandList* arrCommandLists[] = { _pDevice->_commandList.Get() };
+			ID3D12CommandList* arrCommandList[] = { _pDevice->_commandList.Get() };
 			if ( _pDevice->_commandQueue != nullptr )
-				_pDevice->_commandQueue->ExecuteCommandLists( 1, arrCommandLists );
+				_pDevice->_commandQueue->ExecuteCommandLists( 1, arrCommandList );
 			_pDevice->_bRecording = 0;
 		}
 

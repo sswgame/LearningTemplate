@@ -20,7 +20,7 @@ namespace sw::editor
 		struct EditorViewportToolbarInternal
 		{
 			static void drawSnapToggleCombo( const utf8* pButtonLabel, const utf8* pComboId, bool& bEnabled, float32& value,
-											 const float32* arrValues, const utf8* const* arrLabels, int32 valueCount,
+											 const float32* arrValue, const utf8* const* arrLabel, int32 valueCount,
 											 float32 comboWidth, int32 fallbackIndex )
 			{
 				if ( EditorWidgets::drawToggleButton( pButtonLabel, bEnabled ) )
@@ -32,17 +32,17 @@ namespace sw::editor
 				int32 currentIdx = fallbackIndex;
 				for ( int32 idx = 0; idx < valueCount; ++idx )
 				{
-					if ( MathUtil::abs( value - arrValues[idx] ) < 0.001f )
+					if ( MathUtil::abs( value - arrValue[idx] ) < 0.001f )
 					{
 						currentIdx = idx;
 						break;
 					}
 				}
 
-				if ( ImGui::Combo( pComboId, &currentIdx, arrLabels, valueCount ) )
+				if ( ImGui::Combo( pComboId, &currentIdx, arrLabel, valueCount ) )
 				{
 					if ( 0 <= currentIdx && currentIdx < valueCount )
-						value = arrValues[currentIdx];
+						value = arrValue[currentIdx];
 				}
 			}
 		};
@@ -60,9 +60,9 @@ namespace sw::editor
 
 		{
 			ImGui::SetNextItemWidth( 85.0f );
-			const utf8* arrModeLabels[] = { "Lit", "Unlit", "Wireframe" };
-			int32		modeIndex		= static_cast<int32>( settings._renderMode );
-			if ( ImGui::Combo( "##ViewMode", &modeIndex, arrModeLabels, 3 ) )
+			const utf8* arrModeLabel[] = { "Lit", "Unlit", "Wireframe" };
+			int32		modeIndex	   = static_cast<int32>( settings._renderMode );
+			if ( ImGui::Combo( "##ViewMode", &modeIndex, arrModeLabel, 3 ) )
 				settings._renderMode = static_cast<ViewportRenderMode>( modeIndex );
 		}
 
@@ -210,17 +210,17 @@ namespace sw::editor
 
 		EditorWidgets::drawToolbarSeparator();
 
-		const float32 arrSnapValues[] = { 0.1f, 0.5f, 1.0f, 5.0f, 10.0f };
-		const utf8*	  arrSnapLabels[] = { "0.1", "0.5", "1.0", "5.0", "10.0" };
-		EditorViewportToolbarInternal::drawSnapToggleCombo( "Grid Snap", "##GridSnapVal", settings._bGridSnap, settings._gridSnapValue, arrSnapValues,
-															arrSnapLabels, 5, 65.0f, 2 );
+		const float32 arrSnapValue[] = { 0.1f, 0.5f, 1.0f, 5.0f, 10.0f };
+		const utf8*	  arrSnapLabel[] = { "0.1", "0.5", "1.0", "5.0", "10.0" };
+		EditorViewportToolbarInternal::drawSnapToggleCombo( "Grid Snap", "##GridSnapVal", settings._bGridSnap, settings._gridSnapValue, arrSnapValue,
+															arrSnapLabel, 5, 65.0f, 2 );
 
 		EditorWidgets::drawToolbarSeparator();
 
-		const float32 arrRotValues[] = { 5.0f, 15.0f, 45.0f, 90.0f };
-		const utf8*	  arrRotLabels[] = { "5 deg", "15 deg", "45 deg", "90 deg" };
+		const float32 arrRotValue[] = { 5.0f, 15.0f, 45.0f, 90.0f };
+		const utf8*	  arrRotLabel[] = { "5 deg", "15 deg", "45 deg", "90 deg" };
 		EditorViewportToolbarInternal::drawSnapToggleCombo( "Rot Snap", "##RotSnapVal", settings._bRotationSnap, settings._rotationSnapValue,
-															arrRotValues, arrRotLabels, 4, 60.0f, 1 );
+															arrRotValue, arrRotLabel, 4, 60.0f, 1 );
 
 		EditorChrome::endFloatingBar();
 	}

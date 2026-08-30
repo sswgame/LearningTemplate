@@ -480,9 +480,9 @@ namespace sw
 				}
 				if ( _s_gameFolderPath.empty() == false && FileUtil::directoryExists( _s_gameFolderPath ) )
 				{
-					vector<string> listPackFolders;
-					FileUtil::collectFolders( _s_gameFolderPath, listPackFolders, false, false );
-					for ( const string& packFolder : listPackFolders )
+					vector<string> listPackFolder;
+					FileUtil::collectFolders( _s_gameFolderPath, listPackFolder, false, false );
+					for ( const string& packFolder : listPackFolder )
 					{
 						const string normPack = FileUtil::normalizeSeparators( packFolder );
 						if ( std::find( _s_listResourceFolder.begin(), _s_listResourceFolder.end(), normPack ) == _s_listResourceFolder.end() )

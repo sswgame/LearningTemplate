@@ -105,8 +105,8 @@ namespace sw
 	}
 
 	GamepadXInput::GamepadXInput()
-		: _arrButtons{}
-		, _arrPrevButtons{}
+		: _arrButton{}
+		, _arrPrevButton{}
 		, _leftStickX{ 0.0f }
 		, _leftStickY{ 0.0f }
 		, _rightStickX{ 0.0f }
@@ -120,13 +120,13 @@ namespace sw
 	{
 		if ( button >= GamepadButton::Count )
 			return;
-		_arrButtons[static_cast<size_t>( button )] = bDown;
+		_arrButton[static_cast<size_t>( button )] = bDown;
 	}
 
 #if defined( _WIN32 )
 	void GamepadXInput::poll( uint32 userIndex )
 	{
-		Memory::copy( _arrPrevButtons, _arrButtons, sizeof( _arrButtons ) );
+		Memory::copy( _arrPrevButton, _arrButton, sizeof( _arrButton ) );
 
 		GamepadXInputInternal::PFN_XInputGetState pfnGetState = GamepadXInputInternal::resolveXInputGetState();
 		if ( pfnGetState == nullptr )
@@ -136,7 +136,7 @@ namespace sw
 			_leftStickY	 = 0.0f;
 			_rightStickX = 0.0f;
 			_rightStickY = 0.0f;
-			Memory::set( _arrButtons, 0, sizeof( _arrButtons ) );
+			Memory::set( _arrButton, 0, sizeof( _arrButton ) );
 			return;
 		}
 
@@ -149,7 +149,7 @@ namespace sw
 			_leftStickY	 = 0.0f;
 			_rightStickX = 0.0f;
 			_rightStickY = 0.0f;
-			Memory::set( _arrButtons, 0, sizeof( _arrButtons ) );
+			Memory::set( _arrButton, 0, sizeof( _arrButton ) );
 			return;
 		}
 
@@ -182,13 +182,13 @@ namespace sw
 #else
 	void GamepadXInput::poll( uint32 )
 	{
-		Memory::copy( _arrPrevButtons, _arrButtons, sizeof( _arrButtons ) );
+		Memory::copy( _arrPrevButton, _arrButton, sizeof( _arrButton ) );
 		_bConnected	 = SW_FALSE;
 		_leftStickX	 = 0.0f;
 		_leftStickY	 = 0.0f;
 		_rightStickX = 0.0f;
 		_rightStickY = 0.0f;
-		Memory::set( _arrButtons, 0, sizeof( _arrButtons ) );
+		Memory::set( _arrButton, 0, sizeof( _arrButton ) );
 	}
 #endif
 
@@ -196,7 +196,7 @@ namespace sw
 	{
 		if ( button >= GamepadButton::Count )
 			return false;
-		return _arrButtons[static_cast<size_t>( button )];
+		return _arrButton[static_cast<size_t>( button )];
 	}
 
 	bool GamepadXInput::wasButtonPressed( GamepadButton button ) const
@@ -204,7 +204,7 @@ namespace sw
 		if ( button >= GamepadButton::Count )
 			return false;
 		const size_t buttonIndex = static_cast<size_t>( button );
-		return _arrButtons[buttonIndex] && ( _arrPrevButtons[buttonIndex] == false );
+		return ( _arrButton[buttonIndex] == true ) && ( _arrPrevButton[buttonIndex] == false );
 	}
 
 	bool GamepadXInput::wasButtonReleased( GamepadButton button ) const
@@ -212,7 +212,7 @@ namespace sw
 		if ( button >= GamepadButton::Count )
 			return false;
 		const size_t buttonIndex = static_cast<size_t>( button );
-		return ( _arrButtons[buttonIndex] == false ) && _arrPrevButtons[buttonIndex];
+		return ( _arrButton[buttonIndex] == false ) && ( _arrPrevButton[buttonIndex] == true );
 	}
 
 	void GamepadXInput::getLeftStick( float32& outX, float32& outY ) const

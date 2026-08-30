@@ -50,12 +50,12 @@ namespace sw
 			_listBuffer.insert( _listBuffer.end(), pSrc, pSrc + sizeof( T ) );
 		}
 
-		void writeBytes( const vector<uint8>& listByte )
+		void writeBytes( const vector<uint8>& bytes )
 		{
-			write( static_cast<uint32>( listByte.size() ) );
-			if ( listByte.empty() == false )
+			write( static_cast<uint32>( bytes.size() ) );
+			if ( bytes.empty() == false )
 			{
-				_listBuffer.insert( _listBuffer.end(), listByte.begin(), listByte.end() );
+				_listBuffer.insert( _listBuffer.end(), bytes.begin(), bytes.end() );
 			}
 		}
 

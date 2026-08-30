@@ -291,10 +291,10 @@ namespace sw::editor
 				if ( _bPresetListDirty == SW_TRUE && _presetJob.isPending() == false )
 					_presetJob.request( EditorGlobalVariableCommands::getPresetFolderPath(), ".gvpreset.xml", false );
 
-				vector<string> listNewPresetFiles;
-				if ( _presetJob.take( listNewPresetFiles ) )
+				vector<string> listNewPresetFile;
+				if ( _presetJob.take( listNewPresetFile ) )
 				{
-					_listPresetFile	  = std::move( listNewPresetFiles );
+					_listPresetFile	  = std::move( listNewPresetFile );
 					_bPresetListDirty = SW_FALSE;
 				}
 
@@ -333,13 +333,13 @@ namespace sw::editor
 		ImGui::Separator();
 
 		// 2) 변수 목록 수집
-		const vector<string> listAllNames  = pGvm->collectVariableNames();
+		const vector<string> listAllName   = pGvm->collectVariableNames();
 		const uint32		 totalVarCount = pGvm->getVariableCount();
 
 		vector<GlobalVariableInfo*> listFiltered;
-		listFiltered.reserve( listAllNames.size() );
+		listFiltered.reserve( listAllName.size() );
 
-		for ( const string& varName : listAllNames )
+		for ( const string& varName : listAllName )
 		{
 			GlobalVariableInfo* pInfo = pGvm->findVariable( varName );
 			if ( pInfo == nullptr )

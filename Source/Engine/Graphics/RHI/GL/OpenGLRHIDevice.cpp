@@ -135,7 +135,7 @@ namespace sw
 		, _boundIndexBuffer{ 0 }
 		, _boundIndexStride{ 4 }
 		, _boundIndexOffset{ 0 }
-		, _listRegisteredBindlessVector{}
+		, _listRegisteredBindless{}
 		, _listBindlessFree{}
 		, _listRegisteredUAV{}
 		, _listUavFree{}
@@ -173,7 +173,7 @@ namespace sw
 
 	bool OpenGLRHIDevice::initializeInternal( const RHISwapChainDesc& desc )
 	{
-		if ( _bInitialized )
+		if ( _bInitialized == SW_TRUE )
 			return true;
 
 		_width	= desc._width;
@@ -244,12 +244,12 @@ namespace sw
 			 };
 			for ( const int32( &ver )[2] : kArrVersions )
 			{
-				int32 arrAttribs[] = {
+				int32 arrAttrib[] = {
 					WGL_CONTEXT_MAJOR_VERSION_ARB, ver[0],
 					WGL_CONTEXT_MINOR_VERSION_ARB, ver[1],
 					WGL_CONTEXT_PROFILE_MASK_ARB, WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
 					0 };
-				hRC = wglCreateContextAttribsARB( hDC, nullptr, arrAttribs );
+				hRC = wglCreateContextAttribsARB( hDC, nullptr, arrAttrib );
 				if ( hRC != nullptr )
 				{
 					SW_LOG_TRACE( "WGL core context %#.%# created", ver[0], ver[1] );
@@ -337,12 +337,12 @@ namespace sw
 				 };
 				for ( const int32( &ver )[2] : kArrVersions )
 				{
-					int32 arrContextAttribs[] = {
+					int32 arrContextAttrib[] = {
 						GLX_CONTEXT_MAJOR_VERSION_ARB, ver[0],
 						GLX_CONTEXT_MINOR_VERSION_ARB, ver[1],
 						GLX_CONTEXT_PROFILE_MASK_ARB, GLX_CONTEXT_CORE_PROFILE_BIT_ARB,
 						0 };
-					ctx = glXCreateContextAttribsARB( pDpy, chosen, nullptr, 1, arrContextAttribs );
+					ctx = glXCreateContextAttribsARB( pDpy, chosen, nullptr, 1, arrContextAttrib );
 					if ( ctx != nullptr && trap.failed() == false )
 					{
 						SW_LOG_TRACE( "GLX core context %#.%#", ver[0], ver[1] );
@@ -389,14 +389,14 @@ namespace sw
 		id windowObj   = (id)desc._pWindowHandle;
 		id contentView = ( (id ( * )( id, SEL ))objc_msgSend )( windowObj, sel_registerName( "contentView" ) );
 
-		uint32 arrAttrs[] = {
+		uint32 arrAttr[] = {
 			73,
 			0x4100,
 			8, 24,
 			5,
 			0 };
 		id pixelFormatClass = (id)objc_getClass( "NSOpenGLPixelFormat" );
-		id pixelFormat		= ( (id ( * )( id, SEL, const uint32* ))objc_msgSend )( ( (id ( * )( id, SEL ))objc_msgSend )( pixelFormatClass, sel_registerName( "alloc" ) ), sel_registerName( "initWithAttributes:" ), arrAttrs );
+		id pixelFormat		= ( (id ( * )( id, SEL, const uint32* ))objc_msgSend )( ( (id ( * )( id, SEL ))objc_msgSend )( pixelFormatClass, sel_registerName( "alloc" ) ), sel_registerName( "initWithAttributes:" ), arrAttr );
 
 		id contextClass = (id)objc_getClass( "NSOpenGLContext" );
 		id context		= ( (id ( * )( id, SEL, id, id ))objc_msgSend )( ( (id ( * )( id, SEL ))objc_msgSend )( contextClass, sel_registerName( "alloc" ) ), sel_registerName( "initWithFormat:shareContext:" ), pixelFormat, nullptr );
@@ -427,7 +427,7 @@ namespace sw
 			return false;
 		}
 
-		_bInitialized = true;
+		_bInitialized = SW_TRUE;
 
 		{
 			const RHIVertex arrFullscreenVerts[3] = {
@@ -550,7 +550,7 @@ namespace sw
 		_boundIndexBuffer = 0;
 		_boundIndexStride = 4;
 		_boundIndexOffset = 0;
-		_listRegisteredBindlessVector.clear();
+		_listRegisteredBindless.clear();
 		_listRegisteredUAV.clear();
 		_listRegisteredTexture.clear();
 		_listTextureFree.clear();
@@ -658,7 +658,7 @@ namespace sw
 		_pHRC = nullptr;
 #endif
 
-		_bInitialized = false;
+		_bInitialized = SW_FALSE;
 		SW_LOG_INFO( "OpenGL RHI Device Shutdown cleanly." );
 	}
 
@@ -672,7 +672,7 @@ namespace sw
 
 	void OpenGLRHIDevice::beginFrame( const float4& clearColor )
 	{
-		if ( _bInitialized == false )
+		if ( _bInitialized == SW_FALSE )
 			return;
 
 #if defined( SW_PLATFORM_WINDOWS )
@@ -688,7 +688,7 @@ namespace sw
 
 	void OpenGLRHIDevice::endFrame( bool vsync, bool bPresent )
 	{
-		if ( _bInitialized == false )
+		if ( _bInitialized == SW_FALSE )
 			return;
 
 		if ( bPresent == false )
@@ -720,7 +720,7 @@ namespace sw
 
 	void OpenGLRHIDevice::waitIdle()
 	{
-		if ( _bInitialized == false )
+		if ( _bInitialized == SW_FALSE )
 			return;
 
 		ScopedOpenGLContext ctxScope( this );
@@ -730,14 +730,14 @@ namespace sw
 
 	bool OpenGLRHIDevice::bindGraphicsContext()
 	{
-		if ( _bInitialized == false || _pHRC == nullptr )
+		if ( _bInitialized == SW_FALSE || _pHRC == nullptr )
 			return false;
 #if defined( SW_PLATFORM_WINDOWS )
 		if ( _pHDC == nullptr )
 			return false;
 		if ( wglMakeCurrent( static_cast<HDC>( _pHDC ), static_cast<HGLRC>( _pHRC ) ) == FALSE )
 		{
-			if ( _bInitialized == false )
+			if ( _bInitialized == SW_FALSE )
 				return false;
 			SW_LOG_ERROR( "bindGraphicsContext wglMakeCurrent failed (err=%#)",
 						  static_cast<uint32>( GetLastError() ) );
@@ -758,7 +758,7 @@ namespace sw
 
 	void OpenGLRHIDevice::unbindGraphicsContext()
 	{
-		if ( _bInitialized == false )
+		if ( _bInitialized == SW_FALSE )
 			return;
 #if defined( SW_PLATFORM_WINDOWS )
 		wglMakeCurrent( nullptr, nullptr );
@@ -779,7 +779,7 @@ namespace sw
 	RHIBufferHandle OpenGLRHIDevice::createIndexBuffer( const void* pData, uint32 sizeBytes, uint32 indexStride )
 	{
 		(void)indexStride;
-		if ( _bInitialized == false || sizeBytes == 0 )
+		if ( _bInitialized == SW_FALSE || sizeBytes == 0 )
 			return 0;
 
 		GLuint ibo{ 0 };
@@ -794,13 +794,13 @@ namespace sw
 	void OpenGLRHIDevice::drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset,
 										RHIDescriptorIndex materialDescriptorIndex )
 	{
-		if ( _bInitialized == false || argumentBuffer == 0 )
+		if ( _bInitialized == SW_FALSE || argumentBuffer == 0 )
 			return;
 
 		if ( materialDescriptorIndex != kInvalidDescriptorIndex &&
-			 materialDescriptorIndex < static_cast<RHIDescriptorIndex>( _listRegisteredBindlessVector.size() ) )
+			 materialDescriptorIndex < static_cast<RHIDescriptorIndex>( _listRegisteredBindless.size() ) )
 		{
-			GLuint ubo = resolveGlBuffer( _listRegisteredBindlessVector[materialDescriptorIndex]._buffer );
+			GLuint ubo = resolveGlBuffer( _listRegisteredBindless[materialDescriptorIndex]._buffer );
 			if ( ubo != 0 )
 				glBindBufferBase( GL_UNIFORM_BUFFER, 0, ubo );
 		}
@@ -818,7 +818,7 @@ namespace sw
 	void OpenGLRHIDevice::multiDrawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset, uint32 maxCommandCount,
 											 RHIBufferHandle countBuffer, uint32 countBufferOffset )
 	{
-		if ( _bInitialized == false || argumentBuffer == 0 || maxCommandCount == 0 )
+		if ( _bInitialized == SW_FALSE || argumentBuffer == 0 || maxCommandCount == 0 )
 			return;
 
 		GLuint buf = resolveGlBuffer( argumentBuffer );
@@ -871,7 +871,7 @@ namespace sw
 	{
 		if ( _computeRootConstantUbo != 0 )
 			return true;
-		if ( _bInitialized == false )
+		if ( _bInitialized == SW_FALSE )
 			return false;
 
 		GLuint ubo{ 0 };
@@ -893,17 +893,17 @@ namespace sw
 
 	uint32 OpenGLRHIDevice::ensureCompositeFbo( RHITextureHandle color, RHITextureHandle depth )
 	{
-		RHITextureHandle arrColors[1] = { color };
-		return ensureCompositeFboMRT( arrColors, color != 0 ? 1u : 0u, depth );
+		RHITextureHandle arrColor[1] = { color };
+		return ensureCompositeFboMRT( arrColor, color != 0 ? 1u : 0u, depth );
 	}
 
-	uint32 OpenGLRHIDevice::ensureCompositeFboMRT( const RHITextureHandle* pColors, uint32 colorCount, RHITextureHandle depth )
+	uint32 OpenGLRHIDevice::ensureCompositeFboMRT( const RHITextureHandle* pColor, uint32 colorCount, RHITextureHandle depth )
 	{
 		CompositeFboKey key{};
 		key._colorCount = colorCount > kMaxColorAttachments ? kMaxColorAttachments : colorCount;
 		for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
 		{
-			key._arrColors[colorIndex] = pColors[colorIndex];
+			key._arrColor[colorIndex] = pColor[colorIndex];
 		}
 		key._depth = depth;
 
@@ -911,16 +911,16 @@ namespace sw
 		if ( existing != _mapCompositeFbo.end() )
 			return existing->second;
 
-		GLuint colorTexs[kMaxColorAttachments]{};
+		GLuint arrColorTex[kMaxColorAttachments]{};
 		uint32 attachedColors{ 0 };
 		for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
 		{
-			if ( key._arrColors[colorIndex] == 0 )
+			if ( key._arrColor[colorIndex] == 0 )
 				continue;
-			const OpenGLTextureRecord* pRec = resolveTexture( key._arrColors[colorIndex] );
+			const OpenGLTextureRecord* pRec = resolveTexture( key._arrColor[colorIndex] );
 			if ( pRec == nullptr || pRec->_bDepthStencil != 0 )
 				return 0;
-			colorTexs[attachedColors++] = pRec->_texture;
+			arrColorTex[attachedColors++] = pRec->_texture;
 		}
 
 		GLuint depthTex{ 0 };
@@ -937,11 +937,11 @@ namespace sw
 		GLuint fbo{ 0 };
 		glGenFramebuffers( 1, &fbo );
 		glBindFramebuffer( GL_FRAMEBUFFER, fbo );
-		GLenum drawBuffers[kMaxColorAttachments]{};
+		GLenum arrDrawBuffer[kMaxColorAttachments]{};
 		for ( uint32 colorIndex = 0; colorIndex < attachedColors; ++colorIndex )
 		{
-			glFramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + colorIndex, GL_TEXTURE_2D, colorTexs[colorIndex], 0 );
-			drawBuffers[colorIndex] = GL_COLOR_ATTACHMENT0 + colorIndex;
+			glFramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + colorIndex, GL_TEXTURE_2D, arrColorTex[colorIndex], 0 );
+			arrDrawBuffer[colorIndex] = GL_COLOR_ATTACHMENT0 + colorIndex;
 		}
 		if ( attachedColors == 0 )
 		{
@@ -949,7 +949,7 @@ namespace sw
 			glReadBuffer( GL_NONE );
 		}
 		else
-			glDrawBuffers( static_cast<GLsizei>( attachedColors ), drawBuffers );
+			glDrawBuffers( static_cast<GLsizei>( attachedColors ), arrDrawBuffer );
 
 		if ( depthTex != 0 )
 		{

@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/String/StringUtil.h"
+
 #include "TestFramework/TestFramework.h"
 
 SW_LOG_CALLER( "TestLog" );
@@ -24,8 +26,8 @@ namespace
 				sw::LogWrittenDelegate,
 				[this]( const sw::LogEntry& entry )
 			{
-				if ( entry._message.rfind( kCapturePrefix, 0 ) == 0 )
-					_entries.push_back( entry );
+				if ( sw::StringUtil::startsWith( entry._message, kCapturePrefix ) )
+					_listEntry.push_back( entry );
 			} ) );
 		}
 
@@ -47,17 +49,17 @@ namespace
 		/** @brief 수집된 로그 목록입니다. */
 		const sw::vector<sw::LogEntry>& getEntries() const
 		{
-			return _entries;
+			return _listEntry;
 		}
 
 		/** @brief 수집된 로그 개수입니다. */
 		uint32 getCount() const
 		{
-			return static_cast<uint32>( _entries.size() );
+			return static_cast<uint32>( _listEntry.size() );
 		}
 
 	private:
-		sw::vector<sw::LogEntry> _entries;
+		sw::vector<sw::LogEntry> _listEntry;
 		sw::DelegateHandle		 _handle;
 	};
 	/**
@@ -73,10 +75,10 @@ namespace
 				sw::LogWrittenDelegate,
 				[this]( const sw::LogEntry& entry )
 			{
-				if ( entry._message.rfind( kCapturePrefix, 0 ) == 0 )
+				if ( sw::StringUtil::startsWith( entry._message, kCapturePrefix ) )
 				{
 					std::scoped_lock<sw::mutex> lock{ _mutex };
-					_entries.push_back( entry );
+					_listEntry.push_back( entry );
 				}
 			} ) );
 		}
@@ -97,18 +99,18 @@ namespace
 		[[maybe_unused]] sw::vector<sw::LogEntry> getEntries() const
 		{
 			std::scoped_lock<sw::mutex> lock{ _mutex };
-			return _entries;
+			return _listEntry;
 		}
 
 		uint32 getCount() const
 		{
 			std::scoped_lock<sw::mutex> lock{ _mutex };
-			return static_cast<uint32>( _entries.size() );
+			return static_cast<uint32>( _listEntry.size() );
 		}
 
 	private:
 		mutable sw::mutex		 _mutex;
-		sw::vector<sw::LogEntry> _entries;
+		sw::vector<sw::LogEntry> _listEntry;
 		sw::DelegateHandle		 _handle;
 	};
 } // namespace

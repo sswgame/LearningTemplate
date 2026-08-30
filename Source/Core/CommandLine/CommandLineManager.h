@@ -132,7 +132,7 @@ namespace sw
 		 * @brief 인자를 추가합니다
 		 */
 		template <typename T>
-		void addArgument( const std::initializer_list<string_view>& synonymList, bool bMustHaveValue, T defaultValue, bool bUseDefaultValue );
+		void addArgument( const std::initializer_list<string_view>& listSynonym, bool bMustHaveValue, T defaultValue, bool bUseDefaultValue );
 
 	private:
 		/** @brief 단일 인자 라인(예: "--width=1280" 또는 "-fullscreen")을 파싱하여 사전에 적용 */
@@ -239,10 +239,10 @@ namespace sw
 	}
 
 	template <typename T>
-	void CommandLineManager::addArgument( const std::initializer_list<string_view>& synonymList, const bool bMustHaveValue, T defaultValue, const bool bUseDefaultValue )
+	void CommandLineManager::addArgument( const std::initializer_list<string_view>& listSynonym, const bool bMustHaveValue, T defaultValue, const bool bUseDefaultValue )
 	{
 		const uint32 newArgumentIndex = static_cast<uint32>( _listArgument.size() );
-		for ( string_view synonym : synonymList )
+		for ( string_view synonym : listSynonym )
 		{
 			const auto iter = _mapArgument.find( synonym );
 			if ( iter != _mapArgument.end() )

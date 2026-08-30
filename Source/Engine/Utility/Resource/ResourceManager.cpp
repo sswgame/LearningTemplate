@@ -57,9 +57,9 @@ namespace sw
 		detachReloadFileManager();
 		_pReloadFileManager = &reloadFileManager;
 
-		vector<string>		   extensionList{ ".mat", ".prefab", ".json", ".xml", ".glTF", ".gltf", ".obj" };
+		vector<string>		   listExtension{ ".mat", ".prefab", ".json", ".xml", ".glTF", ".gltf", ".obj" };
 		FileWatchMatchDelegate fileWatchDelegate{ SW_DELEGATE_METHOD( FileWatchMatchDelegate, &ResourceManager::onResourceFileChanged, this ) };
-		_resourceWatchHandle = _pReloadFileManager->registerWatch( "Resource/", extensionList, fileWatchDelegate );
+		_resourceWatchHandle = _pReloadFileManager->registerWatch( "Resource/", listExtension, fileWatchDelegate );
 	}
 
 	void ResourceManager::detachReloadFileManager()

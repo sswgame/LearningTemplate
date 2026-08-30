@@ -38,7 +38,7 @@ namespace sw
 			const BlendSample1D& s0 = _listSample[index];
 			const BlendSample1D& s1 = _listSample[index + 1];
 
-			if ( parameter >= s0._parameter && parameter <= s1._parameter )
+			if ( s0._parameter <= parameter && parameter <= s1._parameter )
 			{
 				const float32 span = s1._parameter - s0._parameter;
 				const float32 t	   = span > 1e-5f ? ( ( parameter - s0._parameter ) / span ) : 0.0f;

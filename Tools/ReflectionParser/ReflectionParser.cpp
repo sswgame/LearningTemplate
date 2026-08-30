@@ -26,8 +26,8 @@ namespace sw
 {
 	struct CommandLineArgs
 	{
-		sw::vector<sw::string> _listInputFiles;
-		sw::vector<sw::string> _listIncludePaths;
+		sw::vector<sw::string> _listInputFile;
+		sw::vector<sw::string> _listIncludePath;
 		sw::string			   _outputDir;
 		sw::string			   _builtinsPath;
 		sw::string			   _annotationMetaPath;
@@ -47,7 +47,7 @@ namespace sw
 
 			if ( commandLineArg == sw::cliConstants::kInput && argIndex + 1 < argc )
 			{
-				outCommandLineArgs._listInputFiles.emplace_back( argv[++argIndex] );
+				outCommandLineArgs._listInputFile.emplace_back( argv[++argIndex] );
 			}
 			else if ( commandLineArg == sw::cliConstants::kOutput && argIndex + 1 < argc )
 			{
@@ -55,7 +55,7 @@ namespace sw
 			}
 			else if ( commandLineArg == sw::cliConstants::kInclude && argIndex + 1 < argc )
 			{
-				outCommandLineArgs._listIncludePaths.emplace_back( argv[++argIndex] );
+				outCommandLineArgs._listIncludePath.emplace_back( argv[++argIndex] );
 			}
 			else if ( commandLineArg == sw::cliConstants::kBuiltins && argIndex + 1 < argc )
 			{
@@ -90,7 +90,7 @@ namespace sw
 			return true;
 		}
 
-		if ( outCommandLineArgs._listInputFiles.empty() )
+		if ( outCommandLineArgs._listInputFile.empty() )
 		{
 			SW_LOG_ERROR( "No --input files specified." );
 			return false;
@@ -235,7 +235,7 @@ namespace sw
 		SW_LOG_TRACE( "── Parsing: %#", inputFile );
 
 		sw::ParserContext context;
-		if ( context.parse( inputFile, commandLineArgs._listIncludePaths, &sourceContent ) == false )
+		if ( context.parse( inputFile, commandLineArgs._listIncludePath, &sourceContent ) == false )
 		{
 			SW_LOG_ERROR( "Parse failed: %#", inputFile );
 			++errorCount;
@@ -281,7 +281,7 @@ namespace sw
 		e.line( emitDirectiveConstants::kIfndefParser );
 
 		bool bAnyFlags = false;
-		for ( const string& inputFile : commandLineArgs._listInputFiles )
+		for ( const string& inputFile : commandLineArgs._listInputFile )
 		{
 			const string genHeader = ParserUtil::makeGeneratedPath( commandLineArgs._outputDir, inputFile, cfg._emitHeaderExtension );
 			string		 genText;
@@ -291,7 +291,7 @@ namespace sw
 				continue;
 
 			bAnyFlags			   = true;
-			const string headerInc = ParserUtil::makeHeaderIncludePath( inputFile, commandLineArgs._listIncludePaths );
+			const string headerInc = ParserUtil::makeHeaderIncludePath( inputFile, commandLineArgs._listIncludePath );
 			const string genInc	   = FileUtil::getFileNamePart( genHeader );
 			e.linef( "#include \"%#\"", headerInc );
 			e.linef( "#include \"%#\"", genInc );
@@ -374,7 +374,7 @@ int32 main( int32 argc, utf8* argv[] )
 
 	// 3) 출력 디렉터리를 인클루드 경로 최상단에 1회 선행 배치 (스레드별 벡터 복사/삽입 제거)
 	if ( commandLineArgs._outputDir.empty() == false )
-		commandLineArgs._listIncludePaths.insert( commandLineArgs._listIncludePaths.begin(), commandLineArgs._outputDir );
+		commandLineArgs._listIncludePath.insert( commandLineArgs._listIncludePath.begin(), commandLineArgs._outputDir );
 
 	// 3) 공유 테이블 로드 (builtins / AnnotationMeta / Templates)
 	if ( commandLineArgs._builtinsPath.empty() == false )
@@ -437,10 +437,10 @@ int32 main( int32 argc, utf8* argv[] )
 
 	if ( commandLineArgs._emitTemplatesDir.empty() == false )
 	{
-		sw::vector<sw::string> templates;
-		if ( sw::FileUtil::collectFiles( commandLineArgs._emitTemplatesDir, sw::ParserContext::getSharedConfig()._emitTemplateExtension, templates, false, false ) )
+		sw::vector<sw::string> listTemplate;
+		if ( sw::FileUtil::collectFiles( commandLineArgs._emitTemplatesDir, sw::ParserContext::getSharedConfig()._emitTemplateExtension, listTemplate, false, false ) )
 		{
-			for ( const sw::string& tplPath : templates )
+			for ( const sw::string& tplPath : listTemplate )
 			{
 				const uint64 tplTime = sw::FileUtil::getFileTimestamp( tplPath );
 				if ( tplTime > commandLineArgs._maxTemplateTimestamp )
@@ -454,13 +454,13 @@ int32 main( int32 argc, utf8* argv[] )
 	uint32 workerCount = std::thread::hardware_concurrency();
 	if ( workerCount == 0 )
 		workerCount = 1;
-	SW_LOG_INFO( "Parsing %# input(s) with %# worker(s).", commandLineArgs._listInputFiles.size(), workerCount );
+	SW_LOG_INFO( "Parsing %# input(s) with %# worker(s).", commandLineArgs._listInputFile.size(), workerCount );
 
 	sw::CpuTimer parseTimer;
 	parseTimer.resetTimer();
 	parseTimer.startTimer();
 
-	if ( commandLineArgs._listInputFiles.empty() == false )
+	if ( commandLineArgs._listInputFile.empty() == false )
 	{
 		sw::TaskManager taskManager;
 		if ( taskManager.initialize( workerCount ) == false )
@@ -470,7 +470,7 @@ int32 main( int32 argc, utf8* argv[] )
 			return 1;
 		}
 
-		for ( const sw::string& inputFile : commandLineArgs._listInputFiles )
+		for ( const sw::string& inputFile : commandLineArgs._listInputFile )
 		{
 			sw::TaskHandle handle = taskManager.emplaceTask(
 				"ParseHeader",

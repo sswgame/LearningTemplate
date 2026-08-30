@@ -67,9 +67,9 @@ namespace sw
 		const bool	bPlayerAttacking = pOwner->hasTag( "Player"_tag );
 		const TagID targetTag		 = bPlayerAttacking ? "Monster"_tag : "Player"_tag;
 
-		vector<GameObject*> targetList;
-		pGameObjectManager->findGameObjectsByTag( targetTag, targetList );
-		for ( GameObject* pTargetObj : targetList )
+		vector<GameObject*> listTarget;
+		pGameObjectManager->findGameObjectsByTag( targetTag, listTarget );
+		for ( GameObject* pTargetObj : listTarget )
 		{
 			if ( pTargetObj == nullptr || pTargetObj == pOwner )
 				continue;

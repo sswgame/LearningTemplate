@@ -17,12 +17,12 @@ namespace sw
 		, _height{ 0 }
 		, _spawnX{ 1 }
 		, _spawnY{ 1 }
-		, _walkableList{}
-		, _encounterList{}
-		, _passThroughList{}
-		, _visualList{}
-		, _warpList{}
-		, _encounterEntryList{}
+		, _listWalkable{}
+		, _listEncounter{}
+		, _listPassThrough{}
+		, _listVisual{}
+		, _listWarp{}
+		, _listEncounterEntry{}
 	{
 	}
 
@@ -42,12 +42,12 @@ namespace sw
 		_height			 = xmlData._height;
 		_spawnX			 = xmlData._spawnX;
 		_spawnY			 = xmlData._spawnY;
-		_walkableList	 = std::move( xmlData._walkableList );
-		_encounterList	 = std::move( xmlData._encounterList );
-		_passThroughList = std::move( xmlData._passThroughList );
-		_visualList.clear();
-		_visualList.reserve( xmlData._visualList.size() );
-		for ( const TileMapXmlData::Visual& src : xmlData._visualList )
+		_listWalkable	 = std::move( xmlData._listWalkable );
+		_listEncounter	 = std::move( xmlData._listEncounter );
+		_listPassThrough = std::move( xmlData._listPassThrough );
+		_listVisual.clear();
+		_listVisual.reserve( xmlData._listVisual.size() );
+		for ( const TileMapXmlData::Visual& src : xmlData._listVisual )
 		{
 			TileVisual dst{};
 			dst._height	 = src._height;
@@ -55,11 +55,11 @@ namespace sw
 			dst._tintG	 = src._tintG;
 			dst._tintB	 = src._tintB;
 			dst._atlasId = src._atlasId;
-			_visualList.push_back( dst );
+			_listVisual.push_back( dst );
 		}
-		_warpList.clear();
-		_warpList.reserve( xmlData._warpList.size() );
-		for ( const TileMapXmlData::Warp& src : xmlData._warpList )
+		_listWarp.clear();
+		_listWarp.reserve( xmlData._listWarp.size() );
+		for ( const TileMapXmlData::Warp& src : xmlData._listWarp )
 		{
 			TileWarp dst{};
 			dst._tileX		 = src._tileX;
@@ -68,16 +68,16 @@ namespace sw
 			dst._targetTileX = src._targetTileX;
 			dst._targetTileY = src._targetTileY;
 			dst._pairId		 = src._pairId;
-			_warpList.push_back( std::move( dst ) );
+			_listWarp.push_back( std::move( dst ) );
 		}
-		_encounterEntryList.clear();
-		_encounterEntryList.reserve( xmlData._encounterEntryList.size() );
-		for ( const TileMapXmlData::Encounter& src : xmlData._encounterEntryList )
+		_listEncounterEntry.clear();
+		_listEncounterEntry.reserve( xmlData._listEncounterEntry.size() );
+		for ( const TileMapXmlData::Encounter& src : xmlData._listEncounterEntry )
 		{
 			TileEncounterEntry dst{};
 			dst._speciesId = src._speciesId;
 			dst._weight	   = src._weight;
-			_encounterEntryList.push_back( std::move( dst ) );
+			_listEncounterEntry.push_back( std::move( dst ) );
 		}
 		return true;
 	}
@@ -93,11 +93,11 @@ namespace sw
 		xmlData._height			 = _height;
 		xmlData._spawnX			 = _spawnX;
 		xmlData._spawnY			 = _spawnY;
-		xmlData._walkableList	 = _walkableList;
-		xmlData._encounterList	 = _encounterList;
-		xmlData._passThroughList = _passThroughList;
-		xmlData._visualList.reserve( _visualList.size() );
-		for ( const TileVisual& src : _visualList )
+		xmlData._listWalkable	 = _listWalkable;
+		xmlData._listEncounter	 = _listEncounter;
+		xmlData._listPassThrough = _listPassThrough;
+		xmlData._listVisual.reserve( _listVisual.size() );
+		for ( const TileVisual& src : _listVisual )
 		{
 			TileMapXmlData::Visual dst{};
 			dst._height	 = src._height;
@@ -105,10 +105,10 @@ namespace sw
 			dst._tintG	 = src._tintG;
 			dst._tintB	 = src._tintB;
 			dst._atlasId = src._atlasId;
-			xmlData._visualList.push_back( dst );
+			xmlData._listVisual.push_back( dst );
 		}
-		xmlData._warpList.reserve( _warpList.size() );
-		for ( const TileWarp& src : _warpList )
+		xmlData._listWarp.reserve( _listWarp.size() );
+		for ( const TileWarp& src : _listWarp )
 		{
 			TileMapXmlData::Warp dst{};
 			dst._tileX		 = src._tileX;
@@ -117,15 +117,15 @@ namespace sw
 			dst._targetTileX = src._targetTileX;
 			dst._targetTileY = src._targetTileY;
 			dst._pairId		 = src._pairId;
-			xmlData._warpList.push_back( dst );
+			xmlData._listWarp.push_back( dst );
 		}
-		xmlData._encounterEntryList.reserve( _encounterEntryList.size() );
-		for ( const TileEncounterEntry& src : _encounterEntryList )
+		xmlData._listEncounterEntry.reserve( _listEncounterEntry.size() );
+		for ( const TileEncounterEntry& src : _listEncounterEntry )
 		{
 			TileMapXmlData::Encounter dst{};
 			dst._speciesId = src._speciesId;
 			dst._weight	   = src._weight;
-			xmlData._encounterEntryList.push_back( dst );
+			xmlData._listEncounterEntry.push_back( dst );
 		}
 		return xmlData.save( assetRelativePath );
 	}
@@ -140,12 +140,12 @@ namespace sw
 		_height = 0;
 		_spawnX = 1;
 		_spawnY = 1;
-		_walkableList.clear();
-		_encounterList.clear();
-		_passThroughList.clear();
-		_visualList.clear();
-		_warpList.clear();
-		_encounterEntryList.clear();
+		_listWalkable.clear();
+		_listEncounter.clear();
+		_listPassThrough.clear();
+		_listVisual.clear();
+		_listWarp.clear();
+		_listEncounterEntry.clear();
 	}
 
 	void TileMap::resize( int32 width, int32 height )
@@ -155,51 +155,51 @@ namespace sw
 		_width			   = width;
 		_height			   = height;
 		const size_t count = static_cast<size_t>( _width * _height );
-		_walkableList.assign( count, 1 );
-		_encounterList.assign( count, 0 );
-		_passThroughList.assign( count, 0 );
-		_visualList.assign( count, TileVisual{} );
-		_warpList.clear();
-		_encounterEntryList.clear();
+		_listWalkable.assign( count, 1 );
+		_listEncounter.assign( count, 0 );
+		_listPassThrough.assign( count, 0 );
+		_listVisual.assign( count, TileVisual{} );
+		_listWarp.clear();
+		_listEncounterEntry.clear();
 	}
 
 	string TileMap::pickEncounterSpeciesId() const
 	{
-		if ( _encounterEntryList.empty() )
+		if ( _listEncounterEntry.empty() )
 			return {};
 
 		float32 total{ 0.0f };
-		for ( const TileEncounterEntry& entry : _encounterEntryList )
+		for ( const TileEncounterEntry& entry : _listEncounterEntry )
 		{
 			total += entry._weight > 0.0f ? entry._weight : 0.0f;
 		}
 		if ( total <= 0.0f )
-			return _encounterEntryList[0]._speciesId;
+			return _listEncounterEntry[0]._speciesId;
 
 		static size_t s_pick{ 0 };
-		const size_t  idx = s_pick++ % _encounterEntryList.size();
-		return _encounterEntryList[idx]._speciesId;
+		const size_t  idx = s_pick++ % _listEncounterEntry.size();
+		return _listEncounterEntry[idx]._speciesId;
 	}
 
 	bool TileMap::isWalkable( int32 x, int32 y ) const
 	{
 		if ( inBounds( x, y ) == false )
 			return false;
-		return _walkableList[indexOf( x, y )] != 0;
+		return _listWalkable[indexOf( x, y )] != 0;
 	}
 
 	bool TileMap::isEncounterTile( int32 x, int32 y ) const
 	{
 		if ( inBounds( x, y ) == false )
 			return false;
-		return _encounterList[indexOf( x, y )] != 0;
+		return _listEncounter[indexOf( x, y )] != 0;
 	}
 
 	bool TileMap::isPassThrough( int32 x, int32 y ) const
 	{
 		if ( inBounds( x, y ) == false )
 			return false;
-		return _passThroughList[indexOf( x, y )] != 0;
+		return _listPassThrough[indexOf( x, y )] != 0;
 	}
 
 	bool TileMap::isSolid( int32 x, int32 y ) const
@@ -212,13 +212,13 @@ namespace sw
 		TileFlags f = TileFlags::None;
 		if ( inBounds( x, y ) == false )
 			return TileFlags::Solid;
-		if ( _walkableList[indexOf( x, y )] != 0 )
+		if ( _listWalkable[indexOf( x, y )] != 0 )
 			f = f | TileFlags::Walkable;
 		else
 			f = f | TileFlags::Solid;
-		if ( _encounterList[indexOf( x, y )] != 0 )
+		if ( _listEncounter[indexOf( x, y )] != 0 )
 			f = f | TileFlags::Encounter;
-		if ( _passThroughList[indexOf( x, y )] != 0 )
+		if ( _listPassThrough[indexOf( x, y )] != 0 )
 			f = f | TileFlags::PassThrough;
 		if ( findWarp( x, y ) != nullptr )
 			f = f | TileFlags::Warp;
@@ -227,7 +227,7 @@ namespace sw
 
 	const TileWarp* TileMap::findWarp( int32 x, int32 y ) const
 	{
-		for ( const TileWarp& warp : _warpList )
+		for ( const TileWarp& warp : _listWarp )
 		{
 			if ( warp._tileX == x && warp._tileY == y )
 				return &warp;
@@ -239,36 +239,36 @@ namespace sw
 	{
 		if ( inBounds( x, y ) == false )
 			return {};
-		return _visualList[indexOf( x, y )];
+		return _listVisual[indexOf( x, y )];
 	}
 
 	void TileMap::setWalkable( int32 x, int32 y, bool bWalkable )
 	{
 		if ( inBounds( x, y ) )
-			_walkableList[indexOf( x, y )] = bWalkable ? 1 : 0;
+			_listWalkable[indexOf( x, y )] = bWalkable ? 1 : 0;
 	}
 
 	void TileMap::setEncounter( int32 x, int32 y, bool bEncounter )
 	{
 		if ( inBounds( x, y ) )
-			_encounterList[indexOf( x, y )] = bEncounter ? 1 : 0;
+			_listEncounter[indexOf( x, y )] = bEncounter ? 1 : 0;
 	}
 
 	void TileMap::setPassThrough( int32 x, int32 y, bool bPassThrough )
 	{
 		if ( inBounds( x, y ) )
-			_passThroughList[indexOf( x, y )] = bPassThrough ? 1 : 0;
+			_listPassThrough[indexOf( x, y )] = bPassThrough ? 1 : 0;
 	}
 
 	void TileMap::setTileVisual( int32 x, int32 y, const TileVisual& visual )
 	{
 		if ( inBounds( x, y ) )
-			_visualList[indexOf( x, y )] = visual;
+			_listVisual[indexOf( x, y )] = visual;
 	}
 
 	void TileMap::setOrUpdateWarp( const TileWarp& warp )
 	{
-		for ( TileWarp& existingWarp : _warpList )
+		for ( TileWarp& existingWarp : _listWarp )
 		{
 			if ( existingWarp._tileX == warp._tileX && existingWarp._tileY == warp._tileY )
 			{
@@ -276,15 +276,15 @@ namespace sw
 				return;
 			}
 		}
-		_warpList.push_back( warp );
+		_listWarp.push_back( warp );
 	}
 
 	void TileMap::removeWarp( int32 x, int32 y )
 	{
-		_warpList.erase( std::remove_if( _warpList.begin(), _warpList.end(),
+		_listWarp.erase( std::remove_if( _listWarp.begin(), _listWarp.end(),
 										 [x, y]( const TileWarp& warp )
 		{ return warp._tileX == x && warp._tileY == y; } ),
-						 _warpList.end() );
+						 _listWarp.end() );
 	}
 
 	void TileMap::paintEdgeWarpPreset( int32 edge, string_view targetMap, int32 tx, int32 ty )
@@ -345,6 +345,6 @@ namespace sw
 
 	bool TileMap::inBounds( int32 x, int32 y ) const
 	{
-		return x >= 0 && y >= 0 && x < _width && y < _height;
+		return 0 <= x && x < _width && 0 <= y && y < _height;
 	}
 } // namespace sw

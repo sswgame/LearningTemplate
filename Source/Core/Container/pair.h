@@ -30,7 +30,7 @@ namespace sw
 #else
 	namespace internal
 	{
-		template <typename Type, size_t Index, bool = std::is_empty_v<Type> && !std::is_final_v<Type>>
+		template <typename Type, size_t Index, bool = std::is_empty_v<Type> && std::is_final_v<Type> == false>
 		struct EmptyElementTag;
 
 		template <typename Type, size_t Index>
@@ -72,8 +72,8 @@ namespace sw
 	// 1) Case 1: T1, T2 모두 일반 타입 (비어있지 않음) -> first, second 직접 멤버
 	// ------------------------------------------------------------------------------
 	template <typename T1, typename T2,
-			  bool T1Empty = (std::is_empty_v<T1> && !std::is_final_v<T1>),
-			  bool T2Empty = ( std::is_empty_v<T2> && !std::is_final_v<T2> )>
+			  bool T1Empty = ( std::is_empty_v<T1> && std::is_final_v<T1> == false ),
+			  bool T2Empty = ( std::is_empty_v<T2> && std::is_final_v<T2> == false )>
 	struct pair
 	{
 		using first_type  = T1;
@@ -342,7 +342,7 @@ namespace sw
 	template <typename T1, typename T2>
 	constexpr bool operator<( const pair<T1, T2>& lhs, const pair<T1, T2>& rhs )
 	{
-		if constexpr ( !std::is_empty_v<T1> && !std::is_empty_v<T2> )
+		if constexpr ( std::is_empty_v<T1> == false && std::is_empty_v<T2> == false )
 		{
 			if ( lhs.first < rhs.first )
 				return true;
@@ -350,11 +350,11 @@ namespace sw
 				return false;
 			return lhs.second < rhs.second;
 		}
-		else if constexpr ( !std::is_empty_v<T1> )
+		else if constexpr ( std::is_empty_v<T1> == false )
 		{
 			return lhs.first < rhs.first;
 		}
-		else if constexpr ( !std::is_empty_v<T2> )
+		else if constexpr ( std::is_empty_v<T2> == false )
 		{
 			return lhs.second < rhs.second;
 		}
@@ -367,7 +367,7 @@ namespace sw
 	template <typename T1, typename T2>
 	constexpr bool operator<=( const pair<T1, T2>& lhs, const pair<T1, T2>& rhs )
 	{
-		return !( rhs < lhs );
+		return ( rhs < lhs ) == false;
 	}
 
 	template <typename T1, typename T2>
@@ -381,14 +381,14 @@ namespace sw
 	{
 		if constexpr ( Index == 0 )
 		{
-			if constexpr ( std::is_empty_v<T1> && !std::is_final_v<T1> )
+			if constexpr ( std::is_empty_v<T1> && std::is_final_v<T1> == false )
 				return p.first();
 			else
 				return ( p.first );
 		}
 		else
 		{
-			if constexpr ( std::is_empty_v<T2> && !std::is_final_v<T2> )
+			if constexpr ( std::is_empty_v<T2> && std::is_final_v<T2> == false )
 				return p.second();
 			else
 				return ( p.second );
@@ -400,14 +400,14 @@ namespace sw
 	{
 		if constexpr ( Index == 0 )
 		{
-			if constexpr ( std::is_empty_v<T1> && !std::is_final_v<T1> )
+			if constexpr ( std::is_empty_v<T1> && std::is_final_v<T1> == false )
 				return p.first();
 			else
 				return ( p.first );
 		}
 		else
 		{
-			if constexpr ( std::is_empty_v<T2> && !std::is_final_v<T2> )
+			if constexpr ( std::is_empty_v<T2> && std::is_final_v<T2> == false )
 				return p.second();
 			else
 				return ( p.second );
@@ -419,14 +419,14 @@ namespace sw
 	{
 		if constexpr ( Index == 0 )
 		{
-			if constexpr ( std::is_empty_v<T1> && !std::is_final_v<T1> )
+			if constexpr ( std::is_empty_v<T1> && std::is_final_v<T1> == false )
 				return std::move( p.first() );
 			else
 				return std::move( p.first );
 		}
 		else
 		{
-			if constexpr ( std::is_empty_v<T2> && !std::is_final_v<T2> )
+			if constexpr ( std::is_empty_v<T2> && std::is_final_v<T2> == false )
 				return std::move( p.second() );
 			else
 				return std::move( p.second );

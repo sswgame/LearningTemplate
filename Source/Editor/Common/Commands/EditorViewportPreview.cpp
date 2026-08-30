@@ -115,8 +115,8 @@ namespace sw::editor
 		GameObjectManager* pManager = EditorViewportPreviewInternal::getActiveObjectManager();
 		if ( pManager == nullptr )
 			return;
-		const vector<GameObject*> listObjects = pManager->getAllGameObjects();
-		for ( GameObject* pObject : listObjects )
+		const vector<GameObject*> listObject = pManager->getAllGameObjects();
+		for ( GameObject* pObject : listObject )
 		{
 			if ( pObject == nullptr || pObject == pPrimary )
 				continue;
@@ -148,8 +148,8 @@ namespace sw::editor
 				}
 			}
 
-			const vector<GameObject*> listObjects = pManager->getAllGameObjects();
-			for ( GameObject* pObject : listObjects )
+			const vector<GameObject*> listObject = pManager->getAllGameObjects();
+			for ( GameObject* pObject : listObject )
 			{
 				if ( pObject == nullptr )
 					continue;

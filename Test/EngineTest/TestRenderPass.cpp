@@ -134,8 +134,8 @@ SW_TEST_CASE( RenderPassTest, PipelineXmlSerializationRoundtrip )
 	SW_EXPECT_EQUAL( sw::string( "UnitTestPipeline" ), loadedRes.getDesc()._name );
 	SW_EXPECT_EQUAL( sw::string( "Forward" ), loadedRes.getDesc()._shadingModel );
 	SW_EXPECT_EQUAL( size_t( 1 ), loadedRes.getDesc()._listAttachment.size() );
-	SW_EXPECT_EQUAL( size_t( 1 ), loadedRes.getGraphPasses().size() );
-	SW_EXPECT_EQUAL( sw::string( "Present" ), loadedRes.getGraphPasses()[0]._name );
+	SW_EXPECT_EQUAL( size_t( 1 ), loadedRes.getGraphPass().size() );
+	SW_EXPECT_EQUAL( sw::string( "Present" ), loadedRes.getGraphPass()[0]._name );
 	SW_EXPECT_EQUAL( size_t( 1 ), loadedRes.getDesc()._listRenderPassRef.size() );
 
 	sw::FileUtil::removeFile( testPath );

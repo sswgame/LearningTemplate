@@ -72,7 +72,7 @@ namespace sw
 		const RenderPipelineDesc& getDesc() const { return _desc; }
 		RenderPipelineDesc&		  getDesc() { return _desc; }
 
-		const vector<RenderGraphPassDesc>&	getGraphPasses() const { return _desc._listPass; }
+		const vector<RenderGraphPassDesc>&	getGraphPass() const { return _desc._listPass; }
 		const vector<RenderPassAttachment>& getAttachments() const { return _desc._listAttachment; }
 
 	private:

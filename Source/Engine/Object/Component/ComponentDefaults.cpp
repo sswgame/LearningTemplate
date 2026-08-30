@@ -15,34 +15,34 @@ namespace sw
 	{
 		struct ComponentDefaultsInternal
 		{
-			static void pushLookupName( vector<string>& listNames, const string& name )
+			static void pushLookupName( vector<string>& inoutListName, const string& name )
 			{
 				if ( name.empty() )
 					return;
-				for ( const string& existing : listNames )
+				for ( const string& existing : inoutListName )
 				{
 					if ( existing == name )
 						return;
 				}
-				listNames.push_back( name );
+				inoutListName.push_back( name );
 			}
 
-			static void collectLookupNames( const TypeInfo& typeInfo, vector<string>& listNames )
+			static void collectLookupNames( const TypeInfo& typeInfo, vector<string>& inoutListName )
 			{
 				string typeNameStr = typeInfo._name.c_str() ? typeInfo._name.c_str() : "";
-				pushLookupName( listNames, typeNameStr );
+				pushLookupName( inoutListName, typeNameStr );
 
 				string stripped = typeNameStr;
-				if ( stripped.size() > 9 && stripped.rfind( "Component" ) == stripped.size() - 9 )
+				if ( StringUtil::endsWith( stripped, "Component" ) )
 					stripped = stripped.substr( 0, stripped.size() - 9 );
-				else if ( stripped.size() > 4 && stripped.rfind( "Data" ) == stripped.size() - 4 )
+				else if ( StringUtil::endsWith( stripped, "Data" ) )
 					stripped = stripped.substr( 0, stripped.size() - 4 );
-				pushLookupName( listNames, stripped );
+				pushLookupName( inoutListName, stripped );
 			}
 
-			static XmlNode findDefaultsNode( XmlNode defaultsNode, const vector<string>& listNames )
+			static XmlNode findDefaultsNode( XmlNode defaultsNode, const vector<string>& listName )
 			{
-				for ( const string& name : listNames )
+				for ( const string& name : listName )
 				{
 					if ( name.empty() )
 						continue;
@@ -102,12 +102,12 @@ namespace sw
 		if ( defaultsNode.isValid() == false )
 			return;
 
-		vector<string> listNames;
-		ComponentDefaultsInternal::collectLookupNames( typeInfo, listNames );
+		vector<string> listName;
+		ComponentDefaultsInternal::collectLookupNames( typeInfo, listName );
 		if ( pAliasTypeInfo != nullptr )
-			ComponentDefaultsInternal::collectLookupNames( *pAliasTypeInfo, listNames );
+			ComponentDefaultsInternal::collectLookupNames( *pAliasTypeInfo, listName );
 
-		XmlNode compNode = ComponentDefaultsInternal::findDefaultsNode( defaultsNode, listNames );
+		XmlNode compNode = ComponentDefaultsInternal::findDefaultsNode( defaultsNode, listName );
 		if ( compNode.isValid() == false )
 			return;
 

@@ -62,12 +62,12 @@ namespace sw
 				if ( pathEnv == nullptr || pathEnv[0] == '\0' )
 					return {};
 
-				const string pathList{ pathEnv };
+				const string pathEnvStr{ pathEnv };
 				size_t		 start{ 0 };
-				while ( start <= pathList.size() )
+				while ( start <= pathEnvStr.size() )
 				{
-					size_t end = pathList.find( ':', start );
-					string dir = pathList.substr( start, ( end == string::npos ) ? string::npos : end - start );
+					size_t end = pathEnvStr.find( ':', start );
+					string dir = pathEnvStr.substr( start, ( end == string::npos ) ? string::npos : end - start );
 					if ( dir.empty() )
 						dir = ".";
 

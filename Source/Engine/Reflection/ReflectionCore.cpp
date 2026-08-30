@@ -197,7 +197,7 @@ namespace sw
 		, _listProperty{}
 		, _listMethod{}
 		, _metadata{}
-		, _propertyListWithBase{}
+		, _listPropertyWithBase{}
 		, _mapNameToProperty{}
 		, _mapNameToMethod{}
 		, _typeId{ 0 }
@@ -207,7 +207,7 @@ namespace sw
 		, _bIsCacheBuilt{ SW_FALSE }
 		, _bIsPODFastPath{ SW_FALSE }
 		, _bIsPODCalculated{ SW_FALSE }
-		, _bPropertyListWithBaseBuilt{ SW_FALSE }
+		, _bListPropertyWithBaseBuilt{ SW_FALSE }
 		, _reservedTypeFlags{ 0 }
 		, _reservedPadding{ 0, 0, 0 } {}
 
@@ -221,7 +221,7 @@ namespace sw
 		, _listProperty{ other._listProperty }
 		, _listMethod{ other._listMethod }
 		, _metadata{ other._metadata }
-		, _propertyListWithBase{}
+		, _listPropertyWithBase{}
 		, _mapNameToProperty{}
 		, _mapNameToMethod{}
 		, _typeId{ other._typeId }
@@ -231,7 +231,7 @@ namespace sw
 		, _bIsCacheBuilt{ SW_FALSE }
 		, _bIsPODFastPath{ SW_FALSE }
 		, _bIsPODCalculated{ SW_FALSE }
-		, _bPropertyListWithBaseBuilt{ SW_FALSE }
+		, _bListPropertyWithBaseBuilt{ SW_FALSE }
 		, _reservedTypeFlags{ 0 }
 		, _reservedPadding{ 0, 0, 0 }
 	{
@@ -247,7 +247,7 @@ namespace sw
 		, _listProperty{ std::move( other._listProperty ) }
 		, _listMethod{ std::move( other._listMethod ) }
 		, _metadata{ std::move( other._metadata ) }
-		, _propertyListWithBase{}
+		, _listPropertyWithBase{}
 		, _mapNameToProperty{}
 		, _mapNameToMethod{}
 		, _typeId{ other._typeId }
@@ -257,7 +257,7 @@ namespace sw
 		, _bIsCacheBuilt{ SW_FALSE }
 		, _bIsPODFastPath{ SW_FALSE }
 		, _bIsPODCalculated{ SW_FALSE }
-		, _bPropertyListWithBaseBuilt{ SW_FALSE }
+		, _bListPropertyWithBaseBuilt{ SW_FALSE }
 		, _reservedTypeFlags{ 0 }
 		, _reservedPadding{ 0, 0, 0 }
 	{
@@ -286,13 +286,13 @@ namespace sw
 		_bStatic			= other._bStatic;
 		_bPrimitive			= other._bPrimitive;
 
-		_propertyListWithBase.clear();
+		_listPropertyWithBase.clear();
 		_mapNameToProperty.clear();
 		_mapNameToMethod.clear();
 		_bIsCacheBuilt				= SW_FALSE;
 		_bIsPODFastPath				= SW_FALSE;
 		_bIsPODCalculated			= SW_FALSE;
-		_bPropertyListWithBaseBuilt = SW_FALSE;
+		_bListPropertyWithBaseBuilt = SW_FALSE;
 
 		return *this;
 	}
@@ -316,13 +316,13 @@ namespace sw
 		_bStatic			= other._bStatic;
 		_bPrimitive			= other._bPrimitive;
 
-		_propertyListWithBase.clear();
+		_listPropertyWithBase.clear();
 		_mapNameToProperty.clear();
 		_mapNameToMethod.clear();
 		_bIsCacheBuilt				= SW_FALSE;
 		_bIsPODFastPath				= SW_FALSE;
 		_bIsPODCalculated			= SW_FALSE;
-		_bPropertyListWithBaseBuilt = SW_FALSE;
+		_bListPropertyWithBaseBuilt = SW_FALSE;
 
 		other._typeId		   = 0;
 		other._size			   = 0;
@@ -378,24 +378,24 @@ namespace sw
 		if ( _parentFQN.empty() )
 			return _listProperty;
 
-		if ( _bPropertyListWithBaseBuilt != 0 )
-			return _propertyListWithBase;
+		if ( _bListPropertyWithBaseBuilt == SW_TRUE )
+			return _listPropertyWithBase;
 
 		const TypeInfo*				pParent		 = engine::getTypeRegistry().findType( _parentFQN );
 		const vector<PropertyInfo>* pParentProps = ( pParent != nullptr ) ? &pParent->getPropertiesWithBase() : nullptr;
 		const size_t				totalCount	 = ( pParentProps != nullptr ? pParentProps->size() : 0 ) + _listProperty.size();
 
-		_propertyListWithBase.clear();
-		_propertyListWithBase.reserve( totalCount );
+		_listPropertyWithBase.clear();
+		_listPropertyWithBase.reserve( totalCount );
 		if ( pParentProps != nullptr )
 		{
-			_propertyListWithBase = *pParentProps;
+			_listPropertyWithBase = *pParentProps;
 		}
 
 		for ( const PropertyInfo& prop : _listProperty )
 		{
 			bool replaced{ false };
-			for ( PropertyInfo& existing : _propertyListWithBase )
+			for ( PropertyInfo& existing : _listPropertyWithBase )
 			{
 				if ( existing._name == prop._name )
 				{
@@ -405,11 +405,11 @@ namespace sw
 				}
 			}
 			if ( replaced == false )
-				_propertyListWithBase.push_back( prop );
+				_listPropertyWithBase.push_back( prop );
 		}
 
-		_bPropertyListWithBaseBuilt = SW_TRUE;
-		return _propertyListWithBase;
+		_bListPropertyWithBaseBuilt = SW_TRUE;
+		return _listPropertyWithBase;
 	}
 
 	namespace generated

@@ -360,12 +360,12 @@ namespace sw
 		return StringUtil::equals( a, b, bIgnoreCase );
 	}
 
-	const PropertyInfo* SerializerUtil::matchProperty( const vector<PropertyInfo>& listProps, string_view keyRaw,
+	const PropertyInfo* SerializerUtil::matchProperty( const vector<PropertyInfo>& listProp, string_view keyRaw,
 													   bool bIgnoreCaseKeys, bool& bCaseVariant )
 	{
 		const PropertyInfo* pMatched = nullptr;
 		bCaseVariant				 = false;
-		for ( const PropertyInfo& prop : listProps )
+		for ( const PropertyInfo& prop : listProp )
 		{
 			if ( SerializerUtil::keysEqual( keyRaw, prop._name.c_str(), bIgnoreCaseKeys ) )
 				return &prop;

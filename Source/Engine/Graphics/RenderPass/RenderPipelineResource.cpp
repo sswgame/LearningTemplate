@@ -17,9 +17,9 @@ namespace sw
 	{
 		struct RenderPipelineResourceInternal
 		{
-			static void parsePipelineGraphPasses( XmlNode passesNode, vector<RenderGraphPassDesc>& outListPasses )
+			static void parsePipelineGraphPasses( XmlNode passesNode, vector<RenderGraphPassDesc>& outListPass )
 			{
-				outListPasses.clear();
+				outListPass.clear();
 				if ( passesNode.isValid() == false )
 					return;
 
@@ -66,7 +66,7 @@ namespace sw
 					pass._bEnableDepthWrite = passNode.childBool( "_bEnableDepthWrite", pass._bEnableDepthWrite );
 					pass._bEnableBlend		= passNode.childBool( "_bEnableBlend", pass._bEnableBlend );
 
-					outListPasses.push_back( std::move( pass ) );
+					outListPass.push_back( std::move( pass ) );
 				}
 
 				for ( XmlNode passNode = passesNode.child( "Pass" ); passNode.isValid(); passNode = passNode.next( "Pass" ) )
@@ -85,16 +85,16 @@ namespace sw
 					if ( pass._listOutput.empty() )
 						RenderPassXmlUtil::parseStringList( passNode, "_outputs", pass._listOutput );
 					RenderPassXmlUtil::parseStringList( passNode, "_permutations", pass._listPermutation );
-					outListPasses.push_back( std::move( pass ) );
+					outListPass.push_back( std::move( pass ) );
 				}
 			}
 
-			static string guessShadingModel( string_view name, const vector<RenderGraphPassDesc>& listPasses )
+			static string guessShadingModel( string_view name, const vector<RenderGraphPassDesc>& listPass )
 			{
 				const string nameNt( name );
 				if ( StringUtil::stristr( nameNt.c_str(), "deferred" ) != nullptr )
 					return "Deferred";
-				for ( const RenderGraphPassDesc& passDesc : listPasses )
+				for ( const RenderGraphPassDesc& passDesc : listPass )
 				{
 					if ( passDesc._type == "GBuffer" || passDesc._type == "Shading" || passDesc._type == "Lighting" )
 						return "Deferred";

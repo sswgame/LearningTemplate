@@ -184,14 +184,14 @@ namespace sw
 			return false;
 		}
 
-		vector<string> filePathList;
-		if ( FileUtil::collectFiles( directoryPath, filterExtension, filePathList, bRecursive, false ) == false || filePathList.empty() )
+		vector<string> listFilePath;
+		if ( FileUtil::collectFiles( directoryPath, filterExtension, listFilePath, bRecursive, false ) == false || listFilePath.empty() )
 		{
 			return false;
 		}
 
 		uint32 loadedCount{ 0 };
-		for ( const string& filePath : filePathList )
+		for ( const string& filePath : listFilePath )
 		{
 			const string fileName = FileUtil::getFileNamePart( filePath );
 			const string langCode = FileUtil::removeExtension( fileName );
@@ -277,9 +277,9 @@ namespace sw
 				preferredLang = fallbackLanguage;
 			else
 			{
-				vector<string> listLangs = getAvailableLanguages();
-				if ( listLangs.empty() == false )
-					preferredLang = listLangs[0];
+				vector<string> listLang = getAvailableLanguages();
+				if ( listLang.empty() == false )
+					preferredLang = listLang[0];
 			}
 		}
 
@@ -490,13 +490,13 @@ namespace sw
 	vector<string> LocalizationManager::getAvailableLanguages() const
 	{
 		std::shared_lock<std::shared_mutex> lock( _mutex );
-		vector<string>						languageList;
-		languageList.reserve( _mapLanguageTable.size() );
+		vector<string>						listLanguage;
+		listLanguage.reserve( _mapLanguageTable.size() );
 		for ( const auto& pair : _mapLanguageTable )
 		{
-			languageList.push_back( pair.first );
+			listLanguage.push_back( pair.first );
 		}
-		return languageList;
+		return listLanguage;
 	}
 
 	size_t LocalizationManager::getLanguageCount() const
@@ -621,18 +621,18 @@ namespace sw
 
 	void LocalizationManager::notifyLanguageChanged( string_view oldLanguage, string_view newLanguage )
 	{
-		vector<LanguageChangedCallback> callbackList;
+		vector<LanguageChangedCallback> listCallback;
 		{
 			std::shared_lock<std::shared_mutex> lock( _mutex );
-			callbackList.reserve( _mapCallback.size() );
+			listCallback.reserve( _mapCallback.size() );
 			for ( const auto& pair : _mapCallback )
 			{
 				if ( pair.second.isBound() )
-					callbackList.push_back( pair.second );
+					listCallback.push_back( pair.second );
 			}
 		}
 
-		for ( const auto& callback : callbackList )
+		for ( const auto& callback : listCallback )
 		{
 			callback( oldLanguage, newLanguage );
 		}

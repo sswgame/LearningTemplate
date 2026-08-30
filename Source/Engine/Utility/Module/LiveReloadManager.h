@@ -34,7 +34,7 @@ namespace sw
 	public:
 		using OnBeforeReloadDelegate	  = Delegate<void()>;
 		using OnAfterReloadDelegate		  = Delegate<void( void* pLibraryModule )>;
-		using OnBeforeCommitBatchDelegate = Delegate<void( const vector<string>& listModuleNames )>;
+		using OnBeforeCommitBatchDelegate = Delegate<void( const vector<string>& listModuleName )>;
 		using DrainWorkersDelegate		  = Delegate<void()>;
 
 		/** @brief 모듈 맵과 워처를 비운 채 시작합니다. */
@@ -133,9 +133,9 @@ namespace sw
 		/** @brief root와 종속 모듈 이름을 중복 없이 모읍니다. */
 		void collectDependentClosure( string_view root, vector<string>& outListUnique ) const;
 		/** @brief 의존 순으로 위상 정렬합니다. 사이클이면 false. */
-		bool topoSortSubgraph( const vector<string>& listNames, vector<string>& outListOrdered ) const;
+		bool topoSortSubgraph( const vector<string>& listName, vector<string>& outListOrdered ) const;
 		/** @brief 부분 그래프를 prepare 전부 성공한 뒤에만 commit합니다. */
-		void reloadCascade( const vector<string>& listSubgraphNames );
+		void reloadCascade( const vector<string>& listSubgraphName );
 
 		/// @brief 등록된 모듈: 경로, 핸들, 의존, 리로드 예약
 		struct ModuleContext

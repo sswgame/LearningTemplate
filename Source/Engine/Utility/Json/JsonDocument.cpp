@@ -154,15 +154,15 @@ namespace sw
 
 	vector<string> JsonValue::memberNames() const
 	{
-		vector<string>	listNames;
+		vector<string>	listName;
 		const JsonImpl* pValue = JsonDocumentInternal::asJson( _pValue );
 		if ( pValue == nullptr || pValue->is_object() == false )
-			return listNames;
+			return listName;
 		for ( auto it = pValue->begin(); it != pValue->end(); ++it )
 		{
-			listNames.push_back( JsonDocumentInternal::fromStdString( it.key() ) );
+			listName.push_back( JsonDocumentInternal::fromStdString( it.key() ) );
 		}
-		return listNames;
+		return listName;
 	}
 
 	JsonValue JsonValue::get( string_view key, bool bIgnoreCaseKeys ) const

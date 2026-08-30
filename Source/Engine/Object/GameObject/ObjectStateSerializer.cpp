@@ -152,10 +152,10 @@ namespace sw
 		}
 
 		// 5. Components
-		auto listComponents = pGameObject->getAllComponents();
-		writer.write( static_cast<uint32>( listComponents.size() ) );
-		vector<uint8> compDataList; // Hoisted for performance
-		for ( Component* pComp : listComponents )
+		const vector<Component*> listComponent = pGameObject->getAllComponents();
+		writer.write( static_cast<uint32>( listComponent.size() ) );
+		vector<uint8> compBytes; // Hoisted for performance
+		for ( Component* pComp : listComponent )
 		{
 			if ( pComp == nullptr )
 			{
@@ -171,11 +171,11 @@ namespace sw
 			}
 			writer.writeString( typeName );
 
-			compDataList.clear();
+			compBytes.clear();
 			const TypeInfo* pTypeInfo = pComp->getTypeInfo();
 			if ( pTypeInfo != nullptr )
-				BinarySerializer::serializeVersioned( kObjectReflectedSchemaVersion, pComp, *pTypeInfo, compDataList );
-			writer.writeBytes( compDataList );
+				BinarySerializer::serializeVersioned( kObjectReflectedSchemaVersion, pComp, *pTypeInfo, compBytes );
+			writer.writeBytes( compBytes );
 		}
 
 		// 6. SceneComponent Attach Hierarchy (intra-GameObject)
@@ -184,23 +184,23 @@ namespace sw
 			uint32 _childIdx;
 			uint32 _parentIdx;
 		};
-		vector<AttachRecord> listAttaches;
-		for ( uint32 componentIndex = 0; componentIndex < listComponents.size(); ++componentIndex )
+		vector<AttachRecord> listAttach;
+		for ( uint32 componentIndex = 0; componentIndex < listComponent.size(); ++componentIndex )
 		{
-			SceneComponent* pSc = castTo<SceneComponent>( listComponents[componentIndex] );
+			SceneComponent* pSc = castTo<SceneComponent>( listComponent[componentIndex] );
 			if ( pSc != nullptr )
 			{
 				SceneComponent* pParentSc = pSc->getParent();
 				if ( pParentSc != nullptr )
 				{
-					auto it = std::find( listComponents.begin(), listComponents.end(), pParentSc );
-					if ( it != listComponents.end() )
-						listAttaches.push_back( { componentIndex, static_cast<uint32>( std::distance( listComponents.begin(), it ) ) } );
+					auto it = std::find( listComponent.begin(), listComponent.end(), pParentSc );
+					if ( it != listComponent.end() )
+						listAttach.push_back( { componentIndex, static_cast<uint32>( std::distance( listComponent.begin(), it ) ) } );
 				}
 			}
 		}
-		writer.write( static_cast<uint32>( listAttaches.size() ) );
-		for ( const auto& att : listAttaches )
+		writer.write( static_cast<uint32>( listAttach.size() ) );
+		for ( const auto& att : listAttach )
 		{
 			writer.write( att._childIdx );
 			writer.write( att._parentIdx );
@@ -248,36 +248,36 @@ namespace sw
 		uint32 numComps = 0;
 		if ( reader.read( numComps ) == false )
 			return 0;
-		vector<Component*> listLoadedComponents;
-		listLoadedComponents.reserve( numComps );
+		vector<Component*> listLoadedComponent;
+		listLoadedComponent.reserve( numComps );
 
 		for ( uint32 compIndex = 0; compIndex < numComps; ++compIndex )
 		{
 			string typeName;
 			if ( reader.readString( typeName ) == false )
 				return 0;
-			vector<uint8> listCompData;
-			if ( reader.readBytes( listCompData ) == false )
+			vector<uint8> compDataBytes;
+			if ( reader.readBytes( compDataBytes ) == false )
 				return 0;
 
 			if ( typeName.empty() )
 			{
-				listLoadedComponents.push_back( nullptr );
+				listLoadedComponent.push_back( nullptr );
 				continue;
 			}
 
 			Component* pComp = ObjectStateSerializerInternal::addOrReuseComponentByName( pGameObject, hashed_string( typeName.c_str() ), false );
-			listLoadedComponents.push_back( pComp );
+			listLoadedComponent.push_back( pComp );
 			if ( pComp == nullptr )
 				continue;
 
-			if ( listCompData.empty() == false )
+			if ( compDataBytes.empty() == false )
 			{
 				uint32			ver{ 0 };
 				const TypeInfo* pTypeInfo = pComp->getTypeInfo();
 				if ( pTypeInfo != nullptr )
 				{
-					BinarySerializer::deserializeVersioned( ver, pComp, *pTypeInfo, listCompData.data(), listCompData.size(), kObjectReflectedSchemaVersion );
+					BinarySerializer::deserializeVersioned( ver, pComp, *pTypeInfo, compDataBytes.data(), compDataBytes.size(), kObjectReflectedSchemaVersion );
 				}
 				SceneComponent* pSceneComp = castTo<SceneComponent>( pComp );
 				if ( pSceneComp != nullptr )
@@ -294,10 +294,10 @@ namespace sw
 				uint32 childIdx = 0, parentIdx = 0;
 				if ( reader.read( childIdx ) && reader.read( parentIdx ) )
 				{
-					if ( childIdx < listLoadedComponents.size() && parentIdx < listLoadedComponents.size() )
+					if ( childIdx < listLoadedComponent.size() && parentIdx < listLoadedComponent.size() )
 					{
-						SceneComponent* pChildSc  = castTo<SceneComponent>( listLoadedComponents[childIdx] );
-						SceneComponent* pParentSc = castTo<SceneComponent>( listLoadedComponents[parentIdx] );
+						SceneComponent* pChildSc  = castTo<SceneComponent>( listLoadedComponent[childIdx] );
+						SceneComponent* pParentSc = castTo<SceneComponent>( listLoadedComponent[parentIdx] );
 						if ( pChildSc != nullptr && pParentSc != nullptr )
 							pChildSc->attachToComponent( pParentSc );
 					}

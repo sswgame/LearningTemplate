@@ -136,17 +136,17 @@ namespace sw
 				backend.endMap();
 			}
 
-			static void noteCoerceFailVal( vector<SchemaOrphanValue>* pOutOrphans, bool& bFieldError, const PropertyInfo& prop, string_view strValue )
+			static void noteCoerceFailVal( vector<SchemaOrphanValue>* pOutListOrphan, bool& bFieldError, const PropertyInfo& prop, string_view strValue )
 			{
 				bFieldError = true;
-				if ( pOutOrphans != nullptr )
+				if ( pOutListOrphan != nullptr )
 				{
 					SchemaOrphanValue orphan;
 					orphan._name		 = prop._name;
 					orphan._nameHash	 = prop.getNameHash();
 					orphan._wireTypeHash = 0;
 					orphan._text		 = string( strValue );
-					pOutOrphans->push_back( std::move( orphan ) );
+					pOutListOrphan->push_back( std::move( orphan ) );
 				}
 			}
 
@@ -156,7 +156,7 @@ namespace sw
 				ISequenceContainerWrapper* _pSeq{ nullptr };
 				const NestedContainerInfo* _pNested{ nullptr };
 				const SerializeContext*	   _pCtx{ nullptr };
-				vector<SchemaOrphanValue>* _pOutOrphans{ nullptr };
+				vector<SchemaOrphanValue>* _pOutListOrphan{ nullptr };
 				const PropertyInfo*		   _pPropForOrphan{ nullptr };
 				size_t*					   _pElemIndex{ nullptr };
 				bool*					   _pAny{ nullptr };
@@ -170,7 +170,7 @@ namespace sw
 					if ( _pNested->_elementNested != nullptr )
 						return;
 					if ( parseTextValueCoerced( pElemPtr, _pNested->_elementTypeName, itemStr, *_pCtx ) == false )
-						noteCoerceFailVal( _pOutOrphans, *_pFieldError, *_pPropForOrphan, itemStr );
+						noteCoerceFailVal( _pOutListOrphan, *_pFieldError, *_pPropForOrphan, itemStr );
 				}
 			};
 
@@ -180,7 +180,7 @@ namespace sw
 				IMapContainerWrapper*	   _pMapWrap{ nullptr };
 				const NestedContainerInfo* _pNested{ nullptr };
 				const SerializeContext*	   _pCtx{ nullptr };
-				vector<SchemaOrphanValue>* _pOutOrphans{ nullptr };
+				vector<SchemaOrphanValue>* _pOutListOrphan{ nullptr };
 				const PropertyInfo*		   _pPropForOrphan{ nullptr };
 				vector<uint8>*			   _pListKBuf{ nullptr };
 				vector<uint8>*			   _pListVBuf{ nullptr };
@@ -199,7 +199,7 @@ namespace sw
 					if ( kOk && vOk )
 						_pMapWrap->insertKeyValue( _pContainerPtr, _pListKBuf->data(), _pListVBuf->data() );
 					else
-						noteCoerceFailVal( _pOutOrphans, *_pFieldError, *_pPropForOrphan, vStr );
+						noteCoerceFailVal( _pOutListOrphan, *_pFieldError, *_pPropForOrphan, vStr );
 					_pMapWrap->destroyKey( _pListKBuf->data() );
 					_pMapWrap->destroyValue( _pListVBuf->data() );
 				}
@@ -242,7 +242,7 @@ namespace sw
 				}
 			};
 
-			static bool readNestedContainerXml( void* pContainerPtr, const NestedContainerInfo& nested, IXmlBackend& backend, const SerializeContext& ctx, bool& bOutFieldError, vector<SchemaOrphanValue>* pOutOrphans, const PropertyInfo& propForOrphan )
+			static bool readNestedContainerXml( void* pContainerPtr, const NestedContainerInfo& nested, IXmlBackend& backend, const SerializeContext& ctx, bool& bOutFieldError, vector<SchemaOrphanValue>* pOutListOrphan, const PropertyInfo& propForOrphan )
 			{
 				if ( pContainerPtr == nullptr || nested._wrapper == nullptr )
 					return false;
@@ -272,7 +272,7 @@ namespace sw
 					arrayCb._pSeq			= pSeq;
 					arrayCb._pNested		= &nested;
 					arrayCb._pCtx			= &ctx;
-					arrayCb._pOutOrphans	= pOutOrphans;
+					arrayCb._pOutListOrphan = pOutListOrphan;
 					arrayCb._pPropForOrphan = &propForOrphan;
 					arrayCb._pElemIndex		= &elemIndex;
 					arrayCb._pAny			= &any;
@@ -290,7 +290,7 @@ namespace sw
 					mapCb._pMapWrap		  = pMapWrap;
 					mapCb._pNested		  = &nested;
 					mapCb._pCtx			  = &ctx;
-					mapCb._pOutOrphans	  = pOutOrphans;
+					mapCb._pOutListOrphan = pOutListOrphan;
 					mapCb._pPropForOrphan = &propForOrphan;
 					mapCb._pListKBuf	  = &listKBuf;
 					mapCb._pListVBuf	  = &listVBuf;
@@ -361,7 +361,7 @@ namespace sw
 			}
 
 			static bool readXmlIntoInstance( void* pInstance, const TypeInfo& typeInfo, IXmlBackend& backend, const SerializeContext& ctx,
-											 vector<SchemaOrphanValue>* pOutOrphans )
+											 vector<SchemaOrphanValue>* pOutListOrphan )
 			{
 				unordered_set<uint32> uniqueSeen;
 				bool				  bFieldError{ false };
@@ -398,7 +398,7 @@ namespace sw
 						if ( entered )
 						{
 							uniqueSeen.insert( prop.getNameHash() );
-							if ( readNestedContainerXml( pPropPtr, shape, backend, ctx, bFieldError, pOutOrphans, prop ) == false )
+							if ( readNestedContainerXml( pPropPtr, shape, backend, ctx, bFieldError, pOutListOrphan, prop ) == false )
 								bFieldError = true;
 							backend.popChild();
 						}
@@ -425,7 +425,7 @@ namespace sw
 							if ( entered )
 							{
 								uniqueSeen.insert( prop.getNameHash() );
-								if ( readXmlIntoInstance( pPropPtr, *pNestedType, backend, ctx, pOutOrphans ) == false )
+								if ( readXmlIntoInstance( pPropPtr, *pNestedType, backend, ctx, pOutListOrphan ) == false )
 									bFieldError = true;
 								backend.popChild();
 							}
@@ -457,7 +457,7 @@ namespace sw
 								prop.setValue<bool>( pInstance, bVal );
 							}
 							else if ( parseTextValueCoerced( pPropPtr, prop._typeName, strValue, ctx ) == false )
-								noteCoerceFailVal( pOutOrphans, bFieldError, prop, strValue );
+								noteCoerceFailVal( pOutListOrphan, bFieldError, prop, strValue );
 						}
 						else
 							SerializerUtil::applyPropertyDefault( pPropPtr, prop, ctx );
@@ -465,15 +465,15 @@ namespace sw
 				} );
 
 				(void)uniqueSeen;
-				if ( pOutOrphans != nullptr )
+				if ( pOutListOrphan != nullptr )
 					return true;
 				return bFieldError == false;
 			}
 
 			static void appendUnknownXmlChildOrphans( XmlNode root, const TypeInfo& typeInfo, bool bIgnore,
-													  vector<SchemaOrphanValue>* pOutOrphans )
+													  vector<SchemaOrphanValue>* pOutListOrphan )
 			{
-				if ( pOutOrphans == nullptr || root.isValid() == false )
+				if ( pOutListOrphan == nullptr || root.isValid() == false )
 					return;
 
 				unordered_set<string> uniqueKnownNames;
@@ -507,7 +507,7 @@ namespace sw
 					orphan._name	 = nameHs;
 					orphan._nameHash = nameHs.getHash();
 					orphan._text	 = child.text() != nullptr ? child.text() : "";
-					pOutOrphans->push_back( std::move( orphan ) );
+					pOutListOrphan->push_back( std::move( orphan ) );
 				}
 
 				for ( XmlAttribute attr = root.firstAttr(); attr.isValid(); attr = attr.next() )
@@ -525,14 +525,14 @@ namespace sw
 					orphan._name	 = nameHs;
 					orphan._nameHash = nameHs.getHash();
 					orphan._text	 = attr.value() != nullptr ? attr.value() : "";
-					pOutOrphans->push_back( std::move( orphan ) );
+					pOutListOrphan->push_back( std::move( orphan ) );
 				}
 			}
 
 			static bool tryAppendUnknownXmlChildOrphans( string_view xmlStr, const TypeInfo& typeInfo,
-														 const SerializeContext& ctx, vector<SchemaOrphanValue>* pOutOrphans )
+														 const SerializeContext& ctx, vector<SchemaOrphanValue>* pOutListOrphan )
 			{
-				if ( xmlStr.empty() || pOutOrphans == nullptr )
+				if ( xmlStr.empty() || pOutListOrphan == nullptr )
 					return false;
 
 				XmlDocument doc;
@@ -546,7 +546,7 @@ namespace sw
 				if ( root.isValid() == false )
 					return false;
 
-				appendUnknownXmlChildOrphans( root, typeInfo, bIgnore, pOutOrphans );
+				appendUnknownXmlChildOrphans( root, typeInfo, bIgnore, pOutListOrphan );
 				return true;
 			}
 		};
@@ -848,8 +848,8 @@ namespace sw
 		if ( XmlSerializerInternal::readXmlIntoInstance( pInstance, typeInfo, backend, ctx, nullptr ) == false )
 			return false;
 
-		vector<SchemaOrphanValue> listOrphans;
-		if ( XmlSerializerInternal::tryAppendUnknownXmlChildOrphans( xmlStr, typeInfo, ctx, &listOrphans ) && listOrphans.empty() == false )
+		vector<SchemaOrphanValue> listOrphan;
+		if ( XmlSerializerInternal::tryAppendUnknownXmlChildOrphans( xmlStr, typeInfo, ctx, &listOrphan ) && listOrphan.empty() == false )
 			return false;
 		return true;
 	}
@@ -864,10 +864,10 @@ namespace sw
 	{
 		if ( xmlStr.empty() )
 			return false;
-		vector<SchemaOrphanValue> listOrphans;
-		if ( deserializeSoft( pInstance, typeInfo, xmlStr, &listOrphans, nullptr, ctx ) == false )
+		vector<SchemaOrphanValue> listOrphan;
+		if ( deserializeSoft( pInstance, typeInfo, xmlStr, &listOrphan, nullptr, ctx ) == false )
 			return false;
-		return listOrphans.empty();
+		return listOrphan.empty();
 	}
 
 	bool XmlSerializer::saveFile( string_view absPath, const void* pInstance, const TypeInfo& typeInfo,
@@ -887,7 +887,7 @@ namespace sw
 	}
 
 	bool XmlSerializer::deserializeSoft( void* pInstance, const TypeInfo& typeInfo, string_view xmlStr,
-										 vector<SchemaOrphanValue>* pOutOrphans, uint32* pOutVersion,
+										 vector<SchemaOrphanValue>* pOutListOrphan, uint32* pOutVersion,
 										 const SerializeContext& ctx )
 	{
 		if ( xmlStr.empty() )
@@ -920,11 +920,11 @@ namespace sw
 		backend.setIgnoreCaseKeys( bIgnore );
 		if ( backend.initXmlDeserialization( xmlStr.data(), typeInfo._name.c_str() ) == false )
 			return false;
-		if ( XmlSerializerInternal::readXmlIntoInstance( pInstance, typeInfo, backend, ctx, pOutOrphans ) == false )
+		if ( XmlSerializerInternal::readXmlIntoInstance( pInstance, typeInfo, backend, ctx, pOutListOrphan ) == false )
 			return false;
 
-		if ( pOutOrphans != nullptr )
-			XmlSerializerInternal::appendUnknownXmlChildOrphans( root, typeInfo, bIgnore, pOutOrphans );
+		if ( pOutListOrphan != nullptr )
+			XmlSerializerInternal::appendUnknownXmlChildOrphans( root, typeInfo, bIgnore, pOutListOrphan );
 
 		return true;
 	}
@@ -950,7 +950,7 @@ namespace sw
 											  string_view xmlStr, uint32 currentVersion, SchemaMigrateFn migrate,
 											  const TypeInfo* pLegacyTypeInfo, const SerializeContext& ctx )
 	{
-		vector<SchemaOrphanValue> listOrphans;
+		vector<SchemaOrphanValue> listOrphan;
 		vector<uint8>			  listLegacyStorage;
 		void*					  pLegacyPtr{ nullptr };
 		outVersion = 0;
@@ -960,7 +960,7 @@ namespace sw
 			pLegacyPtr = createScratchInstance( *pLegacyTypeInfo, listLegacyStorage );
 			uint32 legacyVer{ 0 };
 			if ( pLegacyPtr == nullptr ||
-				 deserializeSoft( pLegacyPtr, *pLegacyTypeInfo, xmlStr, &listOrphans, &legacyVer, ctx ) == false )
+				 deserializeSoft( pLegacyPtr, *pLegacyTypeInfo, xmlStr, &listOrphan, &legacyVer, ctx ) == false )
 			{
 				destroyScratchInstance( pLegacyPtr, *pLegacyTypeInfo );
 				return false;
@@ -969,7 +969,7 @@ namespace sw
 		}
 
 		uint32 softVer{ 0 };
-		if ( deserializeSoft( pInstance, typeInfo, xmlStr, &listOrphans, &softVer, ctx ) == false )
+		if ( deserializeSoft( pInstance, typeInfo, xmlStr, &listOrphan, &softVer, ctx ) == false )
 		{
 			if ( pLegacyPtr != nullptr )
 				destroyScratchInstance( pLegacyPtr, *pLegacyTypeInfo );
@@ -980,7 +980,7 @@ namespace sw
 		else if ( softVer != 0 )
 			outVersion = softVer;
 
-		const bool needsMigrate = migrate != nullptr && ( outVersion != currentVersion || listOrphans.empty() == false || pLegacyPtr != nullptr );
+		const bool needsMigrate = migrate != nullptr && ( outVersion != currentVersion || listOrphan.empty() == false || pLegacyPtr != nullptr );
 		bool	   ok{ true };
 		if ( needsMigrate )
 		{
@@ -991,20 +991,20 @@ namespace sw
 			mctx._pTypeInfo		  = &typeInfo;
 			mctx._pLegacyInstance = pLegacyPtr;
 			mctx._pLegacyTypeInfo = pLegacyTypeInfo;
-			mctx._pOrphans		  = &listOrphans;
+			mctx._pOrphans		  = &listOrphan;
 			mctx._pSerializeCtx	  = &ctx;
 			ok					  = migrate( mctx );
 		}
 		else if ( migrate == nullptr && outVersion != currentVersion )
 		{
 			SW_LOG_WARNING( "schema version %# -> %# with no migrate callback (%# listOrphans)",
-							outVersion, currentVersion, static_cast<uint32>( listOrphans.size() ) );
+							outVersion, currentVersion, static_cast<uint32>( listOrphan.size() ) );
 			ok = false;
 		}
-		else if ( migrate == nullptr && listOrphans.empty() == false && ctx.allowUnknownProperties() == false )
+		else if ( migrate == nullptr && listOrphan.empty() == false && ctx.allowUnknownProperties() == false )
 		{
 			SW_LOG_WARNING( "schema version %# -> %# with no migrate callback (%# listOrphans)",
-							outVersion, currentVersion, static_cast<uint32>( listOrphans.size() ) );
+							outVersion, currentVersion, static_cast<uint32>( listOrphan.size() ) );
 			ok = false;
 		}
 		if ( pLegacyPtr != nullptr )

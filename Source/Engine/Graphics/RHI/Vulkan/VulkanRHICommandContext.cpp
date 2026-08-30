@@ -323,7 +323,7 @@ namespace sw
 		RHITextureHandle colorHandles[kMaxColorAttachments]{};
 		for ( uint32 attachmentIndex = 0; attachmentIndex < colorCount && attachmentIndex < kMaxColorAttachments; ++attachmentIndex )
 		{
-			colorHandles[attachmentIndex] = ( beginInfo._colorTargetCount > 0 ) ? beginInfo._arrColorTargets[attachmentIndex] : beginInfo._colorTarget;
+			colorHandles[attachmentIndex] = ( beginInfo._colorTargetCount > 0 ) ? beginInfo._arrColorTarget[attachmentIndex] : beginInfo._colorTarget;
 		}
 
 		if ( colorCount == 1 && colorHandles[0] == 0 && _pDevice->_activeOffscreenTarget != 0 )
@@ -345,9 +345,9 @@ namespace sw
 			key._colorCount = ( colorCount > kMaxColorAttachments ) ? kMaxColorAttachments : colorCount;
 			for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
 			{
-				key._arrColors[colorIndex] = colorHandles[colorIndex];
-				key._arrColorLoadOps[colorIndex] =
-					static_cast<uint8>( ( beginInfo._colorTargetCount > 0 ) ? beginInfo._arrLoadOps[colorIndex] : beginInfo._loadOp );
+				key._arrColor[colorIndex] = colorHandles[colorIndex];
+				key._arrColorLoadOp[colorIndex] =
+					static_cast<uint8>( ( beginInfo._colorTargetCount > 0 ) ? beginInfo._arrLoadOp[colorIndex] : beginInfo._loadOp );
 			}
 			key._depth		 = beginInfo._depthTarget;
 			key._depthLoadOp = static_cast<uint8>( beginInfo._depthLoadOp );
@@ -360,7 +360,7 @@ namespace sw
 
 			for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
 			{
-				VulkanRHIDevice::VulkanTextureRecord* pTex = _pDevice->resolveTexture( key._arrColors[colorIndex] );
+				VulkanRHIDevice::VulkanTextureRecord* pTex = _pDevice->resolveTexture( key._arrColor[colorIndex] );
 				if ( pTex == nullptr )
 					return;
 				constexpr uint32 aspect = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -388,11 +388,11 @@ namespace sw
 			extent		= { composite._width, composite._height };
 			// Track RT only — do NOT set _bOffscreenPassActive (that routes to a separate CB).
 			if ( key._colorCount > 0 )
-				_pDevice->_activeOffscreenTarget = key._arrColors[0];
+				_pDevice->_activeOffscreenTarget = key._arrColor[0];
 
 			for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
 			{
-				const float32* pClear = ( beginInfo._colorTargetCount > 0 ) ? beginInfo._arrClearColors[colorIndex] : beginInfo._arrClearColor;
+				const float32* pClear = ( beginInfo._colorTargetCount > 0 ) ? beginInfo._arrTargetClearColor[colorIndex] : beginInfo._arrClearColor;
 				setVkClearColor( clearValues[clearCount++], pClear );
 			}
 			if ( key._depth != 0 )
@@ -435,7 +435,7 @@ namespace sw
 				_pDevice->_bRenderPassActive = false;
 			}
 
-			const float32* pClear = ( beginInfo._colorTargetCount > 0 ) ? beginInfo._arrClearColors[0] : beginInfo._arrClearColor;
+			const float32* pClear = ( beginInfo._colorTargetCount > 0 ) ? beginInfo._arrTargetClearColor[0] : beginInfo._arrClearColor;
 			setVkClearColor( clearValues[0], pClear );
 			clearCount = 1;
 		}
@@ -604,16 +604,16 @@ namespace sw
 			const VulkanRHIDevice::VulkanBufferRecord* pVb = _pDevice->resolveAllocatedBuffer( _pDevice->_boundMeshVb );
 			if ( pVb != nullptr && pVb->_buffer != VK_NULL_HANDLE )
 			{
-				VkBuffer	 arrVertexBuffers[] = { pVb->_buffer };
-				VkDeviceSize arrOffsets[]		= { static_cast<VkDeviceSize>( _pDevice->_boundMeshOffset ) };
-				vkCmdBindVertexBuffers( cmd, 0, 1, arrVertexBuffers, arrOffsets );
+				VkBuffer	 arrVertexBuffer[] = { pVb->_buffer };
+				VkDeviceSize arrOffset[]	   = { static_cast<VkDeviceSize>( _pDevice->_boundMeshOffset ) };
+				vkCmdBindVertexBuffers( cmd, 0, 1, arrVertexBuffer, arrOffset );
 			}
 		}
 		else if ( _pDevice->_vertexBuffer != VK_NULL_HANDLE )
 		{
-			VkBuffer	 arrVertexBuffers[] = { _pDevice->_vertexBuffer };
-			VkDeviceSize arrOffsets[]		= { 0 };
-			vkCmdBindVertexBuffers( cmd, 0, 1, arrVertexBuffers, arrOffsets );
+			VkBuffer	 arrVertexBuffer[] = { _pDevice->_vertexBuffer };
+			VkDeviceSize arrOffset[]	   = { 0 };
+			vkCmdBindVertexBuffers( cmd, 0, 1, arrVertexBuffer, arrOffset );
 		}
 
 		vkCmdDraw( cmd, vertexCount, 1, startVertex, 0 );
@@ -704,15 +704,15 @@ namespace sw
 			const VulkanRHIDevice::VulkanBufferRecord* pVb = _pDevice->resolveAllocatedBuffer( _pDevice->_boundMeshVb );
 			if ( pVb != nullptr && pVb->_buffer != VK_NULL_HANDLE )
 			{
-				VkBuffer	 arrVertexBuffers[] = { pVb->_buffer };
-				VkDeviceSize arrOffsets[]		= { static_cast<VkDeviceSize>( _pDevice->_boundMeshOffset ) };
-				vkCmdBindVertexBuffers( cmd, 0, 1, arrVertexBuffers, arrOffsets );
+				VkBuffer	 arrVertexBuffer[] = { pVb->_buffer };
+				VkDeviceSize arrOffset[]	   = { static_cast<VkDeviceSize>( _pDevice->_boundMeshOffset ) };
+				vkCmdBindVertexBuffers( cmd, 0, 1, arrVertexBuffer, arrOffset );
 			}
 			else if ( _pDevice->_vertexBuffer != VK_NULL_HANDLE )
 			{
-				VkBuffer	 arrVertexBuffers[] = { _pDevice->_vertexBuffer };
-				VkDeviceSize arrOffsets[]		= { 0 };
-				vkCmdBindVertexBuffers( cmd, 0, 1, arrVertexBuffers, arrOffsets );
+				VkBuffer	 arrVertexBuffer[] = { _pDevice->_vertexBuffer };
+				VkDeviceSize arrOffset[]	   = { 0 };
+				vkCmdBindVertexBuffers( cmd, 0, 1, arrVertexBuffer, arrOffset );
 			}
 			vkCmdDrawIndirect( cmd, pRecord->_buffer, argumentBufferOffset, 1, sizeof( VkDrawIndirectCommand ) );
 		}
@@ -731,9 +731,9 @@ namespace sw
 		const VulkanRHIDevice::VulkanBufferRecord* pVb = _pDevice->resolveAllocatedBuffer( _pDevice->_boundMeshVb );
 		if ( pVb != nullptr )
 		{
-			VkBuffer	 arrVertexBuffers[] = { pVb->_buffer };
-			VkDeviceSize arrOffsets[]		= { static_cast<VkDeviceSize>( _pDevice->_boundMeshOffset ) };
-			vkCmdBindVertexBuffers( cmd, 0, 1, arrVertexBuffers, arrOffsets );
+			VkBuffer	 arrVertexBuffer[] = { pVb->_buffer };
+			VkDeviceSize arrOffset[]	   = { static_cast<VkDeviceSize>( _pDevice->_boundMeshOffset ) };
+			vkCmdBindVertexBuffers( cmd, 0, 1, arrVertexBuffer, arrOffset );
 		}
 
 		const VkIndexType indexType = ( _pDevice->_boundIndexStride == 2 ) ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32;

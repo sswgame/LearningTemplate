@@ -423,7 +423,7 @@ namespace sw
 	void GlobalVariableManager::resetAllToDefault()
 	{
 		// Step 1: unique_lock 안에서 값만 직접 리셋, 콜백 목록을 추출
-		vector<pair<GlobalVariableChangedDelegate, GlobalVariableInfo*>> listPendingCallbacks;
+		vector<pair<GlobalVariableChangedDelegate, GlobalVariableInfo*>> listPendingCallback;
 		{
 			std::unique_lock<std::shared_mutex> lock{ _mutex };
 			for ( auto& [name, info] : _mapVariable )
@@ -461,12 +461,12 @@ namespace sw
 				}
 
 				if ( info._onValueChanged.isBound() )
-					listPendingCallbacks.push_back( { info._onValueChanged, &info } );
+					listPendingCallback.push_back( { info._onValueChanged, &info } );
 			}
 		} // unique_lock 해제
 
 		// Step 2: 락 밖에서 콜백 호출 (재진입 안전)
-		for ( auto& [delegate, pInfo] : listPendingCallbacks )
+		for ( auto& [delegate, pInfo] : listPendingCallback )
 			delegate( pInfo );
 	}
 
@@ -494,11 +494,11 @@ namespace sw
 	vector<string> GlobalVariableManager::collectVariableNames() const
 	{
 		std::shared_lock<std::shared_mutex> lock{ _mutex };
-		vector<string>						listNames;
-		listNames.reserve( static_cast<uint32>( _mapVariable.size() ) );
+		vector<string>						listName;
+		listName.reserve( static_cast<uint32>( _mapVariable.size() ) );
 		for ( const auto& [name, info] : _mapVariable )
-			listNames.push_back( name );
-		return listNames;
+			listName.push_back( name );
+		return listName;
 	}
 
 	/**

@@ -239,17 +239,17 @@ namespace sw
 							const JsonValue elem = items.at( elementIndex );
 							if ( elem.isObject() == false )
 								continue;
-							const vector<string> listKeys = elem.memberNames();
-							if ( listKeys.size() != 1 )
+							const vector<string> listKey = elem.memberNames();
+							if ( listKey.size() != 1 )
 								continue;
-							const hashed_string typeName( listKeys[0].c_str() );
+							const hashed_string typeName( listKey[0].c_str() );
 							void*				pObj = ctx.createOwnedPointer( typeName );
 							if ( pObj == nullptr )
 								continue;
 							const TypeInfo* pType = engine::getTypeRegistry().findType( typeName );
 							if ( pType == nullptr )
 								continue;
-							if ( JsonSerializer::readObject( elem.get( listKeys[0], false ), pObj, *pType, nullptr, nullptr, ctx ) == false )
+							if ( JsonSerializer::readObject( elem.get( listKey[0], false ), pObj, *pType, nullptr, nullptr, ctx ) == false )
 								bOk = false;
 						}
 						return bOk;
@@ -426,9 +426,9 @@ namespace sw
 				writeJsonValue( parent.set( prop._name.c_str(), false ), pPropPtr, prop._typeName, ctx );
 			}
 
-			static bool isContainerTypeKey( const vector<PropertyInfo>& listProps, string_view keyRaw, bool bIgnoreCaseKeys )
+			static bool isContainerTypeKey( const vector<PropertyInfo>& listProp, string_view keyRaw, bool bIgnoreCaseKeys )
 			{
-				for ( const PropertyInfo& prop : listProps )
+				for ( const PropertyInfo& prop : listProp )
 				{
 					if ( prop._bIsContainer == SW_FALSE || prop.hasContainerWrapper() == false )
 						continue;
@@ -442,8 +442,8 @@ namespace sw
 				return false;
 			}
 
-			static bool readContainerTypeGroup( const JsonValue& group, const vector<PropertyInfo>& listProps, void* pInstance,
-												unordered_set<uint32>& uniqueSeen, bool& bFieldError, vector<SchemaOrphanValue>* pOutOrphans,
+			static bool readContainerTypeGroup( const JsonValue& group, const vector<PropertyInfo>& listProp, void* pInstance,
+												unordered_set<uint32>& uniqueSeen, bool& bFieldError, vector<SchemaOrphanValue>* pOutListOrphan,
 												const SerializeContext& ctx )
 			{
 				if ( group.isArray() == false )
@@ -462,20 +462,20 @@ namespace sw
 
 					const string		nameStr = node.get( kPropertyNameKey, bIgnore ).asString();
 					bool				bCaseVariant{ false };
-					const PropertyInfo* pMatched = SerializerUtil::matchProperty( listProps, nameStr, bIgnore, bCaseVariant );
+					const PropertyInfo* pMatched = SerializerUtil::matchProperty( listProp, nameStr, bIgnore, bCaseVariant );
 					if ( pMatched == nullptr && bCaseVariant )
 						continue;
 
 					if ( pMatched == nullptr || pMatched->_bIsContainer == SW_FALSE || pMatched->hasContainerWrapper() == false )
 					{
-						if ( pOutOrphans != nullptr )
+						if ( pOutListOrphan != nullptr )
 						{
 							SchemaOrphanValue	orphan;
 							const hashed_string nameHs( nameStr.c_str() );
 							orphan._name	 = nameHs;
 							orphan._nameHash = nameHs.getHash();
 							orphan._text	 = node.dump();
-							pOutOrphans->push_back( std::move( orphan ) );
+							pOutListOrphan->push_back( std::move( orphan ) );
 						}
 						else
 							bFieldError = true;
@@ -490,13 +490,13 @@ namespace sw
 						shape._typeName = pMatched->_typeName;
 					if ( readNestedContainerJson( pPropPtr, shape, node, ctx ) == false )
 					{
-						if ( pOutOrphans != nullptr )
+						if ( pOutListOrphan != nullptr )
 						{
 							SchemaOrphanValue orphan;
 							orphan._name	 = pMatched->_name;
 							orphan._nameHash = pMatched->getNameHash();
 							orphan._text	 = node.dump();
-							pOutOrphans->push_back( std::move( orphan ) );
+							pOutListOrphan->push_back( std::move( orphan ) );
 						}
 						else
 							bFieldError = true;
@@ -605,14 +605,14 @@ namespace sw
 	}
 
 	bool JsonSerializer::readObject( JsonValue src, void* pInstance, const TypeInfo& typeInfo,
-									 vector<SchemaOrphanValue>* pOutOrphans, uint32* pOutVersion,
+									 vector<SchemaOrphanValue>* pOutListOrphan, uint32* pOutVersion,
 									 const SerializeContext& ctx )
 	{
 		if ( pInstance == nullptr || src.isObject() == false )
 			return false;
 
 		const bool					bIgnoreCaseKeys = ctx.ignoreCaseKeys();
-		const vector<PropertyInfo>& listProps		= typeInfo.getPropertiesWithBase();
+		const vector<PropertyInfo>& listProp		= typeInfo.getPropertiesWithBase();
 		unordered_set<uint32>		uniqueSeen;
 		bool						bFieldError{ false };
 
@@ -629,29 +629,29 @@ namespace sw
 				continue;
 			}
 
-			if ( JsonSerializerInternal::isContainerTypeKey( listProps, keyRaw, bIgnoreCaseKeys ) )
+			if ( JsonSerializerInternal::isContainerTypeKey( listProp, keyRaw, bIgnoreCaseKeys ) )
 			{
-				if ( JsonSerializerInternal::readContainerTypeGroup( field, listProps, pInstance, uniqueSeen, bFieldError, pOutOrphans, ctx ) == false &&
-					 pOutOrphans == nullptr )
+				if ( JsonSerializerInternal::readContainerTypeGroup( field, listProp, pInstance, uniqueSeen, bFieldError, pOutListOrphan, ctx ) == false &&
+					 pOutListOrphan == nullptr )
 					bFieldError = true;
 				continue;
 			}
 
 			bool				bCaseVariant{ false };
-			const PropertyInfo* pMatched = SerializerUtil::matchProperty( listProps, keyRaw, bIgnoreCaseKeys, bCaseVariant );
+			const PropertyInfo* pMatched = SerializerUtil::matchProperty( listProp, keyRaw, bIgnoreCaseKeys, bCaseVariant );
 			if ( pMatched == nullptr && bCaseVariant )
 				continue;
 
 			if ( pMatched == nullptr || pMatched->_metadata._bTransient == SW_TRUE )
 			{
-				if ( pOutOrphans != nullptr )
+				if ( pOutListOrphan != nullptr )
 				{
 					SchemaOrphanValue	orphan;
 					const hashed_string keyHs( keyRaw.c_str() );
 					orphan._name	 = keyHs;
 					orphan._nameHash = keyHs.getHash();
 					orphan._text	 = field.dump();
-					pOutOrphans->push_back( std::move( orphan ) );
+					pOutListOrphan->push_back( std::move( orphan ) );
 				}
 				else
 					bFieldError = true;
@@ -661,39 +661,39 @@ namespace sw
 			uniqueSeen.insert( pMatched->getNameHash() );
 			if ( JsonSerializerInternal::readProperty( field, *pMatched, pInstance, ctx ) == false )
 			{
-				if ( pOutOrphans != nullptr )
+				if ( pOutListOrphan != nullptr )
 				{
 					SchemaOrphanValue orphan;
 					orphan._name	 = pMatched->_name;
 					orphan._nameHash = pMatched->getNameHash();
 					orphan._text	 = field.dump();
-					pOutOrphans->push_back( std::move( orphan ) );
+					pOutListOrphan->push_back( std::move( orphan ) );
 				}
 				else
 					bFieldError = true;
 			}
 		}
 
-		for ( const PropertyInfo& prop : listProps )
+		for ( const PropertyInfo& prop : listProp )
 		{
 			if ( uniqueSeen.find( prop.getNameHash() ) != uniqueSeen.end() )
 				continue;
 			SerializerUtil::applyPropertyDefault( prop.getRawPtr( pInstance ), prop, ctx );
 		}
 
-		if ( pOutOrphans != nullptr )
+		if ( pOutListOrphan != nullptr )
 			return true;
 		return bFieldError == false;
 	}
 
 	bool JsonSerializer::deserializeSoft( void* pInstance, const TypeInfo& typeInfo, string_view jsonStr,
-										  vector<SchemaOrphanValue>* pOutOrphans, uint32* pOutVersion,
+										  vector<SchemaOrphanValue>* pOutListOrphan, uint32* pOutVersion,
 										  const SerializeContext& ctx )
 	{
 		JsonDocument doc;
 		if ( doc.parse( jsonStr ) == false )
 			return false;
-		return readObject( doc.root(), pInstance, typeInfo, pOutOrphans, pOutVersion, ctx );
+		return readObject( doc.root(), pInstance, typeInfo, pOutListOrphan, pOutVersion, ctx );
 	}
 
 	string JsonSerializer::serializeVersioned( uint32 version, const void* pInstance, const TypeInfo& typeInfo,
@@ -715,7 +715,7 @@ namespace sw
 											   string_view jsonStr, uint32 currentVersion, SchemaMigrateFn migrate,
 											   const TypeInfo* pLegacyTypeInfo, const SerializeContext& ctx )
 	{
-		vector<SchemaOrphanValue> listOrphans;
+		vector<SchemaOrphanValue> listOrphan;
 		vector<uint8>			  listLegacyStorage;
 		void*					  pLegacyPtr{ nullptr };
 		outVersion = 0;
@@ -725,7 +725,7 @@ namespace sw
 			pLegacyPtr = createScratchInstance( *pLegacyTypeInfo, listLegacyStorage );
 			uint32 legacyVer{ 0 };
 			if ( pLegacyPtr == nullptr ||
-				 deserializeSoft( pLegacyPtr, *pLegacyTypeInfo, jsonStr, &listOrphans, &legacyVer, ctx ) == false )
+				 deserializeSoft( pLegacyPtr, *pLegacyTypeInfo, jsonStr, &listOrphan, &legacyVer, ctx ) == false )
 			{
 				destroyScratchInstance( pLegacyPtr, *pLegacyTypeInfo );
 				return false;
@@ -734,7 +734,7 @@ namespace sw
 		}
 
 		uint32 softVer{ 0 };
-		if ( deserializeSoft( pInstance, typeInfo, jsonStr, &listOrphans, &softVer, ctx ) == false )
+		if ( deserializeSoft( pInstance, typeInfo, jsonStr, &listOrphan, &softVer, ctx ) == false )
 		{
 			if ( pLegacyPtr != nullptr )
 				destroyScratchInstance( pLegacyPtr, *pLegacyTypeInfo );
@@ -745,7 +745,7 @@ namespace sw
 		else if ( softVer != 0 )
 			outVersion = softVer;
 
-		const bool needsMigrate = migrate != nullptr && ( outVersion != currentVersion || listOrphans.empty() == false || pLegacyPtr != nullptr );
+		const bool needsMigrate = migrate != nullptr && ( outVersion != currentVersion || listOrphan.empty() == false || pLegacyPtr != nullptr );
 		bool	   ok{ true };
 		if ( needsMigrate )
 		{
@@ -756,15 +756,15 @@ namespace sw
 			mctx._pTypeInfo		  = &typeInfo;
 			mctx._pLegacyInstance = pLegacyPtr;
 			mctx._pLegacyTypeInfo = pLegacyTypeInfo;
-			mctx._pOrphans		  = &listOrphans;
+			mctx._pOrphans		  = &listOrphan;
 			mctx._pSerializeCtx	  = &ctx;
 			ok					  = migrate( mctx );
 		}
 		else if ( migrate == nullptr && outVersion != currentVersion )
 		{
 			SW_LOG_WARNING( "(%#) schema version %# -> %# with no migrate callback (%# _orphans: %#)",
-							typeInfo._name.c_str(), outVersion, currentVersion, static_cast<uint32>( listOrphans.size() ),
-							listOrphans.empty() ? "" : listOrphans[0]._name.c_str() );
+							typeInfo._name.c_str(), outVersion, currentVersion, static_cast<uint32>( listOrphan.size() ),
+							listOrphan.empty() ? "" : listOrphan[0]._name.c_str() );
 			ok = false;
 		}
 		if ( pLegacyPtr != nullptr )

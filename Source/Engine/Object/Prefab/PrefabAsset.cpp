@@ -74,8 +74,8 @@ namespace sw
 				}
 				if ( value.isObject() )
 				{
-					const vector<string> listKeys = value.memberNames();
-					for ( const string& key : listKeys )
+					const vector<string> listKey = value.memberNames();
+					for ( const string& key : listKey )
 						collectPrefabRefsFromJson( value.get( key ), outListPath );
 					return;
 				}

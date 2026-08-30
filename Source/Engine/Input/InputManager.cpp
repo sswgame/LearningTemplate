@@ -19,10 +19,10 @@ namespace sw
 		, _prevMouseY{ 0 }
 		, _mouseWheelDelta{ 0.0f }
 		, _mouseWheelAccum{ 0.0f }
-		, _arrKeys{}
-		, _arrPrevKeys{}
-		, _arrMouseButtons{}
-		, _arrPrevMouseButtons{}
+		, _arrKey{}
+		, _arrPrevKey{}
+		, _arrMouseButton{}
+		, _arrPrevMouseButton{}
 		, _bInitialized{ SW_FALSE }
 		, _bPollGamepad{ SW_FALSE }
 		, _bPointerInside{ SW_FALSE }
@@ -50,10 +50,10 @@ namespace sw
 	 */
 	bool InputManager::initialize()
 	{
-		Memory::set( _arrKeys, 0, sizeof( _arrKeys ) );
-		Memory::set( _arrPrevKeys, 0, sizeof( _arrPrevKeys ) );
-		Memory::set( _arrMouseButtons, 0, sizeof( _arrMouseButtons ) );
-		Memory::set( _arrPrevMouseButtons, 0, sizeof( _arrPrevMouseButtons ) );
+		Memory::set( _arrKey, 0, sizeof( _arrKey ) );
+		Memory::set( _arrPrevKey, 0, sizeof( _arrPrevKey ) );
+		Memory::set( _arrMouseButton, 0, sizeof( _arrMouseButton ) );
+		Memory::set( _arrPrevMouseButton, 0, sizeof( _arrPrevMouseButton ) );
 		_mouseX				= 0;
 		_mouseY				= 0;
 		_prevMouseX			= 0;
@@ -109,8 +109,8 @@ namespace sw
 		if ( _bInitialized == SW_FALSE )
 			return;
 
-		Memory::copy( _arrPrevKeys, _arrKeys, sizeof( _arrKeys ) );
-		Memory::copy( _arrPrevMouseButtons, _arrMouseButtons, sizeof( _arrMouseButtons ) );
+		Memory::copy( _arrPrevKey, _arrKey, sizeof( _arrKey ) );
+		Memory::copy( _arrPrevMouseButton, _arrMouseButton, sizeof( _arrMouseButton ) );
 		_prevMouseX			= _mouseX;
 		_prevMouseY			= _mouseY;
 		_bPrevPointerInside = _bPointerInside;
@@ -134,7 +134,7 @@ namespace sw
 	{
 		if ( key == Key::Unknown || key >= Key::Count )
 			return false;
-		return _arrKeys[static_cast<size_t>( key )];
+		return _arrKey[static_cast<size_t>( key )];
 	}
 
 	/**
@@ -145,7 +145,7 @@ namespace sw
 		if ( key == Key::Unknown || key >= Key::Count )
 			return false;
 		const size_t keyIndex = static_cast<size_t>( key );
-		return ( _arrKeys[keyIndex] ) && ( _arrPrevKeys[keyIndex] == false );
+		return ( _arrKey[keyIndex] == true ) && ( _arrPrevKey[keyIndex] == false );
 	}
 
 	/**
@@ -156,7 +156,7 @@ namespace sw
 		if ( key == Key::Unknown || key >= Key::Count )
 			return false;
 		const size_t keyIndex = static_cast<size_t>( key );
-		return ( _arrKeys[keyIndex] == false ) && ( _arrPrevKeys[keyIndex] );
+		return ( _arrKey[keyIndex] == false ) && ( _arrPrevKey[keyIndex] == true );
 	}
 
 	/**
@@ -184,7 +184,7 @@ namespace sw
 	{
 		if ( button >= MouseButton::Count )
 			return false;
-		return _arrMouseButtons[static_cast<size_t>( button )];
+		return _arrMouseButton[static_cast<size_t>( button )];
 	}
 
 	/**
@@ -195,7 +195,7 @@ namespace sw
 		if ( button >= MouseButton::Count )
 			return false;
 		const size_t buttonIndex = static_cast<size_t>( button );
-		return ( _arrMouseButtons[buttonIndex] ) && ( _arrPrevMouseButtons[buttonIndex] == false );
+		return ( _arrMouseButton[buttonIndex] == true ) && ( _arrPrevMouseButton[buttonIndex] == false );
 	}
 
 	/**
@@ -206,21 +206,21 @@ namespace sw
 		if ( button >= MouseButton::Count )
 			return false;
 		const size_t buttonIndex = static_cast<size_t>( button );
-		return ( _arrMouseButtons[buttonIndex] == false ) && ( _arrPrevMouseButtons[buttonIndex] );
+		return ( _arrMouseButton[buttonIndex] == false ) && ( _arrPrevMouseButton[buttonIndex] == true );
 	}
 
 	void InputManager::setKeyDown( Key key, bool bDown )
 	{
 		if ( key == Key::Unknown || key >= Key::Count )
 			return;
-		_arrKeys[static_cast<size_t>( key )] = bDown;
+		_arrKey[static_cast<size_t>( key )] = bDown;
 	}
 
 	void InputManager::setMouseButtonDown( MouseButton button, bool bDown )
 	{
 		if ( button >= MouseButton::Count )
 			return;
-		_arrMouseButtons[static_cast<size_t>( button )] = bDown;
+		_arrMouseButton[static_cast<size_t>( button )] = bDown;
 	}
 
 #if !defined( SW_PLATFORM_WINDOWS ) && !defined( SW_PLATFORM_LINUX )

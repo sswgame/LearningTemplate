@@ -112,8 +112,8 @@ namespace sw::editor
 		rtDesc._width			  = width;
 		rtDesc._height			  = height;
 		rtDesc._format			  = RHIFormat::R8G8B8A8_UNORM;
-		rtDesc._bIsRenderTarget	  = true;
-		rtDesc._bIsShaderResource = true;
+		rtDesc._bIsRenderTarget	  = SW_TRUE;
+		rtDesc._bIsShaderResource = SW_TRUE;
 		rtDesc._mipLevels		  = 1;
 		rtDesc._arrClearColor[0]  = kGameViewClearColor[0];
 		rtDesc._arrClearColor[1]  = kGameViewClearColor[1];

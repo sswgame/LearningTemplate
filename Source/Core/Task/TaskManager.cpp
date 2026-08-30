@@ -218,7 +218,7 @@ namespace sw
 		~TaskNodePool()
 		{
 			std::scoped_lock<mutex> lock{ _slabMutex };
-			for ( TaskNode* pSlab : _listSlabs )
+			for ( TaskNode* pSlab : _listSlab )
 			{
 				if ( pSlab == nullptr )
 					continue;
@@ -228,7 +228,7 @@ namespace sw
 				}
 				Memory::freeMemory( pSlab );
 			}
-			_listSlabs.clear();
+			_listSlab.clear();
 		}
 
 		TaskNode* allocate()
@@ -253,7 +253,7 @@ namespace sw
 					}
 					{
 						std::scoped_lock<mutex> lock{ _slabMutex };
-						_listSlabs.push_back( pSlab );
+						_listSlab.push_back( pSlab );
 					}
 					for ( uint32 index = 1; index < kSlabSize; ++index )
 					{
@@ -312,7 +312,7 @@ namespace sw
 	private:
 		ConcurrentQueue<TaskNode*, 4096> _freeQueue;
 		vector<TaskNode*>				 _listOverflowFree;
-		vector<TaskNode*>				 _listSlabs;
+		vector<TaskNode*>				 _listSlab;
 		mutex							 _slabMutex;
 	};
 
@@ -356,11 +356,11 @@ namespace sw
 	{
 		StageNode()
 		{
-			_listTasks.reserve( 16 );
+			_listTask.reserve( 16 );
 		}
 
 		string						_name;
-		vector<TaskNode*>			_listTasks;
+		vector<TaskNode*>			_listTask;
 		atomic<uint32>				_remainingTasks{ 0 };
 		mutex						_mutex;
 		std::condition_variable_any _cv;
@@ -487,7 +487,7 @@ namespace sw
 		{
 			std::scoped_lock<mutex> lock{ _node->_mutex };
 			pTaskNode->retain();
-			_node->_listTasks.push_back( pTaskNode );
+			_node->_listTask.push_back( pTaskNode );
 			pTaskNode->_parentStage = _node;
 			_node->_remainingTasks.fetch_add( 1, std::memory_order_relaxed );
 		}
@@ -864,13 +864,13 @@ namespace sw
 
 		{
 			std::scoped_lock<mutex> doneLock{ stage._node->_mutex };
-			for ( TaskNode* pTask : stage._node->_listTasks )
+			for ( TaskNode* pTask : stage._node->_listTask )
 			{
 				if ( pTask == nullptr )
 					continue;
 				pTask->release();
 			}
-			stage._node->_listTasks.clear();
+			stage._node->_listTask.clear();
 		}
 	}
 

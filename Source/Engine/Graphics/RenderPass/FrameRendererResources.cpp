@@ -32,8 +32,8 @@ namespace sw
 		if ( _gpuCullCb != 0 )
 			_gpuCullCbIndex = _pDevice->getResource()->registerBindlessResource( _gpuCullCb );
 
-		constexpr RHIFormat arrGbufferFormats[] = { RHIFormat::R8G8B8A8_UNORM, RHIFormat::R16G16B16A16_FLOAT };
-		const EngineData&	engineData			= engine::getEngineData();
+		constexpr RHIFormat arrGbufferFormat[] = { RHIFormat::R8G8B8A8_UNORM, RHIFormat::R16G16B16A16_FLOAT };
+		const EngineData&	engineData		   = engine::getEngineData();
 		// Shader paths prefer pipeline XML pass recipes; EngineData paths are last-resort fallbacks only.
 
 		const RHIPipelineStateHandle psoShadow =
@@ -61,7 +61,7 @@ namespace sw
 			_mapEnginePso.insert_or_assign( FrameRendererUtil::PassType::kTransparent, psoTransparent );
 
 		const RHIPipelineStateHandle psoGBuffer =
-			createPsoForPassType( FrameRendererUtil::PassType::kGBuffer, engineData._shaderGBuffer.c_str(), true, 2, arrGbufferFormats );
+			createPsoForPassType( FrameRendererUtil::PassType::kGBuffer, engineData._shaderGBuffer.c_str(), true, 2, arrGbufferFormat );
 		if ( psoGBuffer != 0 )
 			_mapEnginePso.insert_or_assign( FrameRendererUtil::PassType::kGBuffer, psoGBuffer );
 
@@ -261,7 +261,7 @@ namespace sw
 				allocTransient( name, RHIFormat::R8G8B8A8_UNORM, false, bHasClear ? clearColor : FrameRendererUtil::kBlackClear );
 		};
 
-		for ( const RenderGraphPassDesc& pass : _pipelineResource.getGraphPasses() )
+		for ( const RenderGraphPassDesc& pass : _pipelineResource.getGraphPass() )
 		{
 			for ( const string& in : pass._listInput )
 			{

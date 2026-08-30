@@ -64,7 +64,7 @@ namespace sw
 								 const SerializeContext& ctx = SerializeContext::getDefault() );
 		/** @brief JsonValue 객체에서 리플렉션 필드를 읽습니다. */
 		static bool readObject( JsonValue src, void* pInstance, const TypeInfo& typeInfo,
-								vector<SchemaOrphanValue>* pOutOrphans = nullptr, uint32* pOutVersion = nullptr,
+								vector<SchemaOrphanValue>* pOutListOrphan = nullptr, uint32* pOutVersion = nullptr,
 								const SerializeContext& ctx = SerializeContext::getDefault() );
 
 		// ------------------------------------------------------------------------------
@@ -75,7 +75,7 @@ namespace sw
 		 * @param pOutVersion null이 아니면 kSchemaVersionKey 값을 기록 (없으면 0).
 		 */
 		static bool deserializeSoft( void* pInstance, const TypeInfo& typeInfo, string_view jsonStr,
-									 vector<SchemaOrphanValue>* pOutOrphans = nullptr, uint32* pOutVersion = nullptr,
+									 vector<SchemaOrphanValue>* pOutListOrphan = nullptr, uint32* pOutVersion = nullptr,
 									 const SerializeContext& ctx = SerializeContext::getDefault() );
 
 		/** @brief 루트에 `_schemaVersion`을 포함한 JSON 직렬화. */

@@ -370,14 +370,14 @@ namespace sw::editor
 
 	const CameraBookmark* EditorWorkspace::getCameraBookmark( uint32 slot ) const
 	{
-		if ( slot < _arrCameraBookmark.size() && _arrCameraBookmark[slot]._bValid )
+		if ( slot < _arrCameraBookmark.size() && _arrCameraBookmark[slot]._bValid == true )
 			return &_arrCameraBookmark[slot];
 		return nullptr;
 	}
 
 	bool EditorWorkspace::hasCameraBookmark( uint32 slot ) const
 	{
-		return slot < _arrCameraBookmark.size() && _arrCameraBookmark[slot]._bValid;
+		return slot < _arrCameraBookmark.size() && _arrCameraBookmark[slot]._bValid == true;
 	}
 
 	void EditorWorkspace::clearCameraBookmark( uint32 slot )

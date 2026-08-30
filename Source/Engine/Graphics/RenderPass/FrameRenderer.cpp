@@ -157,8 +157,8 @@ namespace sw
 			}
 		}
 
-		const vector<RenderGraphPassDesc>& passes = _pipelineResource.getGraphPasses();
-		if ( passes.empty() )
+		const vector<RenderGraphPassDesc>& listPass = _pipelineResource.getGraphPass();
+		if ( listPass.empty() )
 		{
 			_statusMessage = string( "no graph passes in pipeline: " ) + string( pipelineXmlPath );
 			SW_LOG_ERROR( "%#", _statusMessage );
@@ -176,7 +176,7 @@ namespace sw
 		bindPassCallbacks();
 
 		SW_LOG_INFO( "Built graph '%#' (%# passes, callbacks bound once)",
-					 _pipelineResource.getDesc()._name, passes.size() );
+					 _pipelineResource.getDesc()._name, listPass.size() );
 		return true;
 	}
 

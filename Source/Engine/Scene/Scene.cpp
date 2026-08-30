@@ -136,8 +136,8 @@ namespace sw
 		if ( _objectManager == nullptr )
 			return false;
 
-		vector<pair<GameObject*, string_view>> listRebindTargets;
-		listRebindTargets.reserve( doc._listEntityNode.size() );
+		vector<pair<GameObject*, string_view>> listRebindTarget;
+		listRebindTarget.reserve( doc._listEntityNode.size() );
 
 		for ( const SceneDocument::EntityNode& ent : doc._listEntityNode )
 		{
@@ -166,12 +166,12 @@ namespace sw
 
 					const bool bHasHierarchy = ( ent._embeddedXml.find( "_attachOwner=" ) != string::npos );
 					if ( bHasHierarchy )
-						listRebindTargets.emplace_back( pGo, ent._embeddedXml );
+						listRebindTarget.emplace_back( pGo, ent._embeddedXml );
 				}
 			}
 		}
 
-		for ( const auto& [pTargetGo, xmlView] : listRebindTargets )
+		for ( const auto& [pTargetGo, xmlView] : listRebindTarget )
 		{
 			if ( pTargetGo != nullptr )
 				ObjectStateSerializer::rebindSceneHierarchy( pTargetGo, xmlView );

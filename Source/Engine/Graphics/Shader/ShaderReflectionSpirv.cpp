@@ -56,13 +56,13 @@ namespace sw
 				uint32		   _count{ 0 };
 				uint32		   _subTypeId{ 0 };
 				uint32		   _storageClass{ 0 };
-				vector<uint32> _listMemberTypeIds;
+				vector<uint32> _listMemberTypeId;
 			};
 
-			static string resolveSpirvTypeName( uint32 typeId, const unordered_map<uint32, SpirvType>& mapTypes, uint32& outSize )
+			static string resolveSpirvTypeName( uint32 typeId, const unordered_map<uint32, SpirvType>& mapType, uint32& outSize )
 			{
-				auto it = mapTypes.find( typeId );
-				if ( it == mapTypes.end() )
+				auto it = mapType.find( typeId );
+				if ( it == mapType.end() )
 				{
 					outSize = 4;
 					return "Float";
@@ -86,14 +86,14 @@ namespace sw
 					case SpirvType::Kind::Vector:
 					{
 						uint32 subSize = 4;
-						string subName = resolveSpirvTypeName( t._subTypeId, mapTypes, subSize );
+						string subName = resolveSpirvTypeName( t._subTypeId, mapType, subSize );
 						outSize		   = subSize * t._count;
 						return subName + to_string( t._count );
 					}
 					case SpirvType::Kind::Matrix:
 					{
 						uint32 colSize = 16;
-						resolveSpirvTypeName( t._subTypeId, mapTypes, colSize );
+						resolveSpirvTypeName( t._subTypeId, mapType, colSize );
 						outSize = colSize * t._count;
 						if ( t._count == 4 )
 							return "Float4x4";
@@ -136,19 +136,19 @@ namespace sw
 
 		ShaderReflectionData data{};
 
-		unordered_map<uint32, string>									mapNames;
-		unordered_map<uint32, unordered_map<uint32, string>>			mapMemberNames;
-		unordered_map<uint32, uint32>									mapBindings;
-		unordered_map<uint32, uint32>									mapDescriptorSets;
-		unordered_map<uint32, unordered_map<uint32, uint32>>			mapMemberOffsets;
-		unordered_map<uint32, ShaderReflectionSpirvInternal::SpirvType> mapTypes;
+		unordered_map<uint32, string>									mapName;
+		unordered_map<uint32, unordered_map<uint32, string>>			mapMemberName;
+		unordered_map<uint32, uint32>									mapBinding;
+		unordered_map<uint32, uint32>									mapDescriptorSet;
+		unordered_map<uint32, unordered_map<uint32, uint32>>			mapMemberOffset;
+		unordered_map<uint32, ShaderReflectionSpirvInternal::SpirvType> mapType;
 
 		struct VariableInfo
 		{
 			uint32 _storageClass{ 0 };
 			uint32 _typeId{ 0 };
 		};
-		unordered_map<uint32, VariableInfo> mapVariables;
+		unordered_map<uint32, VariableInfo> mapVariable;
 
 		size_t offset = 5;
 		while ( offset < wordCount )
@@ -164,24 +164,24 @@ namespace sw
 				const uint32 target = pWords[offset + 1];
 				const utf8*	 pStr	= reinterpret_cast<const utf8*>( &pWords[offset + 2] );
 				const size_t maxLen = ( instrWords - 2 ) * 4;
-				mapNames[target]	= string( pStr, strnlen( pStr, maxLen ) );
+				mapName[target]		= string( pStr, strnlen( pStr, maxLen ) );
 			}
 			else if ( opcode == ShaderReflectionSpirvInternal::kOpMemberName && instrWords >= 4 )
 			{
-				const uint32 target					= pWords[offset + 1];
-				const uint32 memberIndex			= pWords[offset + 2];
-				const utf8*	 pStr					= reinterpret_cast<const utf8*>( &pWords[offset + 3] );
-				const size_t maxLen					= ( instrWords - 3 ) * 4;
-				mapMemberNames[target][memberIndex] = string( pStr, strnlen( pStr, maxLen ) );
+				const uint32 target				   = pWords[offset + 1];
+				const uint32 memberIndex		   = pWords[offset + 2];
+				const utf8*	 pStr				   = reinterpret_cast<const utf8*>( &pWords[offset + 3] );
+				const size_t maxLen				   = ( instrWords - 3 ) * 4;
+				mapMemberName[target][memberIndex] = string( pStr, strnlen( pStr, maxLen ) );
 			}
 			else if ( opcode == ShaderReflectionSpirvInternal::kOpDecorate && instrWords >= 3 )
 			{
 				const uint32 target		= pWords[offset + 1];
 				const uint32 decoration = pWords[offset + 2];
 				if ( decoration == ShaderReflectionSpirvInternal::kDecorationBinding && instrWords >= 4 )
-					mapBindings[target] = pWords[offset + 3];
+					mapBinding[target] = pWords[offset + 3];
 				else if ( decoration == ShaderReflectionSpirvInternal::kDecorationDescriptorSet && instrWords >= 4 )
-					mapDescriptorSets[target] = pWords[offset + 3];
+					mapDescriptorSet[target] = pWords[offset + 3];
 			}
 			else if ( opcode == ShaderReflectionSpirvInternal::kOpMemberDecorate && instrWords >= 5 )
 			{
@@ -189,92 +189,92 @@ namespace sw
 				const uint32 memberIndex = pWords[offset + 2];
 				const uint32 decoration	 = pWords[offset + 3];
 				if ( decoration == ShaderReflectionSpirvInternal::kDecorationOffset )
-					mapMemberOffsets[target][memberIndex] = pWords[offset + 4];
+					mapMemberOffset[target][memberIndex] = pWords[offset + 4];
 			}
 			else if ( opcode == ShaderReflectionSpirvInternal::kOpTypeBool && instrWords >= 2 )
 			{
-				mapTypes[pWords[offset + 1]] = ShaderReflectionSpirvInternal::SpirvType{ ShaderReflectionSpirvInternal::SpirvType::Kind::Bool, 32, 1, 0, 0, {} };
+				mapType[pWords[offset + 1]] = ShaderReflectionSpirvInternal::SpirvType{ ShaderReflectionSpirvInternal::SpirvType::Kind::Bool, 32, 1, 0, 0, {} };
 			}
 			else if ( opcode == ShaderReflectionSpirvInternal::kOpTypeInt && instrWords >= 4 )
 			{
 				const uint32 id			= pWords[offset + 1];
 				const uint32 width		= pWords[offset + 2];
 				const uint32 signedness = pWords[offset + 3];
-				mapTypes[id]			= ShaderReflectionSpirvInternal::SpirvType{ signedness ? ShaderReflectionSpirvInternal::SpirvType::Kind::Int : ShaderReflectionSpirvInternal::SpirvType::Kind::Uint, width, 1, 0, 0, {} };
+				mapType[id]				= ShaderReflectionSpirvInternal::SpirvType{ signedness ? ShaderReflectionSpirvInternal::SpirvType::Kind::Int : ShaderReflectionSpirvInternal::SpirvType::Kind::Uint, width, 1, 0, 0, {} };
 			}
 			else if ( opcode == ShaderReflectionSpirvInternal::kOpTypeFloat && instrWords >= 3 )
 			{
 				const uint32 id	   = pWords[offset + 1];
 				const uint32 width = pWords[offset + 2];
-				mapTypes[id]	   = ShaderReflectionSpirvInternal::SpirvType{ ShaderReflectionSpirvInternal::SpirvType::Kind::Float, width, 1, 0, 0, {} };
+				mapType[id]		   = ShaderReflectionSpirvInternal::SpirvType{ ShaderReflectionSpirvInternal::SpirvType::Kind::Float, width, 1, 0, 0, {} };
 			}
 			else if ( opcode == ShaderReflectionSpirvInternal::kOpTypeVector && instrWords >= 4 )
 			{
 				const uint32 id		  = pWords[offset + 1];
 				const uint32 compType = pWords[offset + 2];
 				const uint32 count	  = pWords[offset + 3];
-				mapTypes[id]		  = ShaderReflectionSpirvInternal::SpirvType{ ShaderReflectionSpirvInternal::SpirvType::Kind::Vector, 32, count, compType, 0, {} };
+				mapType[id]			  = ShaderReflectionSpirvInternal::SpirvType{ ShaderReflectionSpirvInternal::SpirvType::Kind::Vector, 32, count, compType, 0, {} };
 			}
 			else if ( opcode == ShaderReflectionSpirvInternal::kOpTypeMatrix && instrWords >= 4 )
 			{
 				const uint32 id		 = pWords[offset + 1];
 				const uint32 colType = pWords[offset + 2];
 				const uint32 count	 = pWords[offset + 3];
-				mapTypes[id]		 = ShaderReflectionSpirvInternal::SpirvType{ ShaderReflectionSpirvInternal::SpirvType::Kind::Matrix, 32, count, colType, 0, {} };
+				mapType[id]			 = ShaderReflectionSpirvInternal::SpirvType{ ShaderReflectionSpirvInternal::SpirvType::Kind::Matrix, 32, count, colType, 0, {} };
 			}
 			else if ( opcode == ShaderReflectionSpirvInternal::kOpTypeImage && instrWords >= 2 )
 			{
-				mapTypes[pWords[offset + 1]] = ShaderReflectionSpirvInternal::SpirvType{ ShaderReflectionSpirvInternal::SpirvType::Kind::Image, 0, 0, 0, 0, {} };
+				mapType[pWords[offset + 1]] = ShaderReflectionSpirvInternal::SpirvType{ ShaderReflectionSpirvInternal::SpirvType::Kind::Image, 0, 0, 0, 0, {} };
 			}
 			else if ( opcode == ShaderReflectionSpirvInternal::kOpTypeSampler && instrWords >= 2 )
 			{
-				mapTypes[pWords[offset + 1]] = ShaderReflectionSpirvInternal::SpirvType{ ShaderReflectionSpirvInternal::SpirvType::Kind::Sampler, 0, 0, 0, 0, {} };
+				mapType[pWords[offset + 1]] = ShaderReflectionSpirvInternal::SpirvType{ ShaderReflectionSpirvInternal::SpirvType::Kind::Sampler, 0, 0, 0, 0, {} };
 			}
 			else if ( opcode == ShaderReflectionSpirvInternal::kOpTypeSampledImage && instrWords >= 2 )
 			{
-				mapTypes[pWords[offset + 1]] = ShaderReflectionSpirvInternal::SpirvType{ ShaderReflectionSpirvInternal::SpirvType::Kind::SampledImage, 0, 0, 0, 0, {} };
+				mapType[pWords[offset + 1]] = ShaderReflectionSpirvInternal::SpirvType{ ShaderReflectionSpirvInternal::SpirvType::Kind::SampledImage, 0, 0, 0, 0, {} };
 			}
 			else if ( opcode == ShaderReflectionSpirvInternal::kOpTypeStruct && instrWords >= 2 )
 			{
 				const uint32							 id = pWords[offset + 1];
 				ShaderReflectionSpirvInternal::SpirvType st{ ShaderReflectionSpirvInternal::SpirvType::Kind::Struct, 0, 0, 0, 0, {} };
 				for ( uint32 wordIndex = 2; wordIndex < instrWords; ++wordIndex )
-					st._listMemberTypeIds.push_back( pWords[offset + wordIndex] );
-				mapTypes[id] = std::move( st );
+					st._listMemberTypeId.push_back( pWords[offset + wordIndex] );
+				mapType[id] = std::move( st );
 			}
 			else if ( opcode == ShaderReflectionSpirvInternal::kOpTypePointer && instrWords >= 4 )
 			{
 				const uint32 id			  = pWords[offset + 1];
 				const uint32 storageClass = pWords[offset + 2];
 				const uint32 subType	  = pWords[offset + 3];
-				mapTypes[id]			  = ShaderReflectionSpirvInternal::SpirvType{ ShaderReflectionSpirvInternal::SpirvType::Kind::Pointer, 0, 0, subType, storageClass, {} };
+				mapType[id]				  = ShaderReflectionSpirvInternal::SpirvType{ ShaderReflectionSpirvInternal::SpirvType::Kind::Pointer, 0, 0, subType, storageClass, {} };
 			}
 			else if ( opcode == ShaderReflectionSpirvInternal::kOpVariable && instrWords >= 4 )
 			{
 				const uint32 typeId		  = pWords[offset + 1];
 				const uint32 resultId	  = pWords[offset + 2];
 				const uint32 storageClass = pWords[offset + 3];
-				mapVariables[resultId]	  = VariableInfo{ storageClass, typeId };
+				mapVariable[resultId]	  = VariableInfo{ storageClass, typeId };
 			}
 
 			offset += instrWords;
 		}
 
-		for ( const auto& [id, var] : mapVariables )
+		for ( const auto& [id, var] : mapVariable )
 		{
-			const auto nameIt	 = mapNames.find( id );
-			const auto bindingIt = mapBindings.find( id );
-			const auto setIt	 = mapDescriptorSets.find( id );
-			if ( bindingIt == mapBindings.end() )
+			const auto nameIt	 = mapName.find( id );
+			const auto bindingIt = mapBinding.find( id );
+			const auto setIt	 = mapDescriptorSet.find( id );
+			if ( bindingIt == mapBinding.end() )
 				continue;
 
 			string name;
-			if ( nameIt != mapNames.end() )
+			if ( nameIt != mapName.end() )
 				name = nameIt->second;
 			else
 				name = string( "Resource_" ) + to_string( id );
 
-			const uint32 space	   = ( setIt != mapDescriptorSets.end() ) ? setIt->second : 0;
+			const uint32 space	   = ( setIt != mapDescriptorSet.end() ) ? setIt->second : 0;
 			const uint32 bindPoint = bindingIt->second;
 
 			if ( var._storageClass == ShaderReflectionSpirvInternal::kStorageClassUniform || var._storageClass == ShaderReflectionSpirvInternal::kStorageClassStorageBuffer )
@@ -286,29 +286,29 @@ namespace sw
 				buf._totalSize	   = 0;
 
 				// Pointer -> Struct 타입 분석 및 내부 멤버 변수 추출
-				auto ptrTypeIt = mapTypes.find( var._typeId );
-				if ( ptrTypeIt != mapTypes.end() && ptrTypeIt->second._kind == ShaderReflectionSpirvInternal::SpirvType::Kind::Pointer )
+				auto ptrTypeIt = mapType.find( var._typeId );
+				if ( ptrTypeIt != mapType.end() && ptrTypeIt->second._kind == ShaderReflectionSpirvInternal::SpirvType::Kind::Pointer )
 				{
 					const uint32 structTypeId = ptrTypeIt->second._subTypeId;
-					auto		 structTypeIt = mapTypes.find( structTypeId );
-					if ( structTypeIt != mapTypes.end() && structTypeIt->second._kind == ShaderReflectionSpirvInternal::SpirvType::Kind::Struct )
+					auto		 structTypeIt = mapType.find( structTypeId );
+					if ( structTypeIt != mapType.end() && structTypeIt->second._kind == ShaderReflectionSpirvInternal::SpirvType::Kind::Struct )
 					{
-						const auto& memberNamesMap	 = mapMemberNames[structTypeId];
-						const auto& memberOffsetsMap = mapMemberOffsets[structTypeId];
+						const auto& memberNameMap	= mapMemberName[structTypeId];
+						const auto& memberOffsetMap = mapMemberOffset[structTypeId];
 
 						uint32 memberIdx{ 0 };
-						for ( uint32 memberTypeId : structTypeIt->second._listMemberTypeIds )
+						for ( uint32 memberTypeId : structTypeIt->second._listMemberTypeId )
 						{
 							ShaderVariableInfo varInfo{};
-							auto			   mNameIt = memberNamesMap.find( memberIdx );
-							if ( mNameIt != memberNamesMap.end() )
+							auto			   mNameIt = memberNameMap.find( memberIdx );
+							if ( mNameIt != memberNameMap.end() )
 								varInfo._name = mNameIt->second;
 							else
 								varInfo._name = string( "member_" ) + to_string( memberIdx );
 
-							auto mOffIt		= memberOffsetsMap.find( memberIdx );
-							varInfo._offset = ( mOffIt != memberOffsetsMap.end() ) ? mOffIt->second : 0;
-							varInfo._type	= ShaderReflectionSpirvInternal::resolveSpirvTypeName( memberTypeId, mapTypes, varInfo._size );
+							auto mOffIt		= memberOffsetMap.find( memberIdx );
+							varInfo._offset = ( mOffIt != memberOffsetMap.end() ) ? mOffIt->second : 0;
+							varInfo._type	= ShaderReflectionSpirvInternal::resolveSpirvTypeName( memberTypeId, mapType, varInfo._size );
 
 							buf._listVariable.push_back( varInfo );
 							buf._totalSize = (MathUtil::max)( buf._totalSize, varInfo._offset + varInfo._size );

@@ -213,7 +213,7 @@ SW_TEST_CASE( RHITest, UnifiedPipelineStateAndRenderPassAllBackends )
 		psoDesc._vertexEntryPoint	   = "VSMain";
 		psoDesc._pixelEntryPoint	   = "PSMain";
 		psoDesc._numRenderTargets	   = 1;
-		psoDesc._arrRtvFormats[0]	   = sw::RHIFormat::R8G8B8A8_UNORM;
+		psoDesc._arrRtvFormat[0]	   = sw::RHIFormat::R8G8B8A8_UNORM;
 		sw::RHIPipelineStateHandle pso = device->getResource()->createPipelineState( psoDesc );
 		if ( pso != 0 )
 		{
@@ -291,7 +291,7 @@ SW_TEST_CASE( RHITest, BindlessResourceLifecycle )
 		psoDesc._vertexEntryPoint			 = "VSMain";
 		psoDesc._pixelEntryPoint			 = "PSMain";
 		psoDesc._numRenderTargets			 = 1;
-		psoDesc._arrRtvFormats[0]			 = sw::RHIFormat::R8G8B8A8_UNORM;
+		psoDesc._arrRtvFormat[0]			 = sw::RHIFormat::R8G8B8A8_UNORM;
 		const sw::RHIPipelineStateHandle pso = rhiDevice->getResource()->createPipelineState( psoDesc );
 		if ( pso != 0 )
 		{

@@ -69,11 +69,11 @@ namespace sw
 
 			static void cleanStaleShadowArtifacts( string_view directoryPath )
 			{
-				vector<string> listFiles;
-				if ( FileUtil::collectFiles( directoryPath, "", listFiles, false ) == false )
+				vector<string> listFile;
+				if ( FileUtil::collectFiles( directoryPath, "", listFile, false ) == false )
 					return;
 
-				for ( const string& filePath : listFiles )
+				for ( const string& filePath : listFile )
 				{
 					if ( filePath.find( "_temp_" ) != string::npos )
 					{
@@ -150,15 +150,15 @@ namespace sw
 			return;
 		}
 
-		vector<string> listNames;
-		listNames.reserve( _mapModule.size() );
+		vector<string> listName;
+		listName.reserve( _mapModule.size() );
 		for ( const auto& [name, ctx] : _mapModule )
 		{
-			listNames.push_back( name );
+			listName.push_back( name );
 		}
 
 		vector<string> listOrder;
-		if ( topoSortSubgraph( listNames, listOrder ) == false )
+		if ( topoSortSubgraph( listName, listOrder ) == false )
 		{
 			SW_LOG_ERROR( "Topological sort failed during shutdown — unloading in arbitrary order" );
 			for ( auto& [name, ctx] : _mapModule )
@@ -225,17 +225,17 @@ namespace sw
 
 	void LiveReloadManager::update()
 	{
-		vector<FileChangeEvent> listEvents;
+		vector<FileChangeEvent> listEvent;
 
 		BLOCK( "Poll File Events" )
 		{
 			if ( _fileWatcher != nullptr )
-				_fileWatcher->pollEvents( listEvents );
+				_fileWatcher->pollEvents( listEvent );
 		}
 
 		const auto now = std::chrono::steady_clock::now();
 
-		for ( const FileChangeEvent& ev : listEvents )
+		for ( const FileChangeEvent& ev : listEvent )
 		{
 			if ( ev._action == FileWatcherAction::Modified )
 			{
@@ -287,7 +287,7 @@ namespace sw
 		if ( _bReloadGraphBroken == SW_TRUE )
 			return;
 
-		vector<string> listPendingRoots;
+		vector<string> listPendingRoot;
 		BLOCK( "Collect Pending Reloads" )
 		{
 			for ( auto& [name, ctx] : _mapModule )
@@ -295,7 +295,7 @@ namespace sw
 				if ( ctx._bPendingReload )
 				{
 					ctx._bPendingReload = false;
-					listPendingRoots.push_back( ctx._moduleName );
+					listPendingRoot.push_back( ctx._moduleName );
 				}
 			}
 		}
@@ -303,7 +303,7 @@ namespace sw
 		BLOCK( "Reload Cascade" )
 		{
 			vector<string> listSubgraph;
-			for ( const string& root : listPendingRoots )
+			for ( const string& root : listPendingRoot )
 			{
 				collectDependentClosure( root, listSubgraph );
 			}
@@ -584,12 +584,12 @@ namespace sw
 		}
 	}
 
-	bool LiveReloadManager::topoSortSubgraph( const vector<string>& listNames, vector<string>& outOrdered ) const
+	bool LiveReloadManager::topoSortSubgraph( const vector<string>& listName, vector<string>& outListOrdered ) const
 	{
-		outOrdered.clear();
+		outListOrdered.clear();
 		unordered_set<string> uniqueSubgraph;
-		uniqueSubgraph.reserve( listNames.size() );
-		for ( const string& name : listNames )
+		uniqueSubgraph.reserve( listName.size() );
+		for ( const string& name : listName )
 		{
 			if ( _mapModule.find( name ) != _mapModule.end() )
 				uniqueSubgraph.insert( name );
@@ -671,14 +671,14 @@ namespace sw
 			return false;
 		}
 
-		outOrdered = std::move( listOrder );
+		outListOrdered = std::move( listOrder );
 		return true;
 	}
 
-	void LiveReloadManager::reloadCascade( const vector<string>& subgraphNames )
+	void LiveReloadManager::reloadCascade( const vector<string>& listSubgraphName )
 	{
 		vector<string> listOrder;
-		if ( topoSortSubgraph( subgraphNames, listOrder ) == false )
+		if ( topoSortSubgraph( listSubgraphName, listOrder ) == false )
 		{
 			markGraphBroken( "dependency cycle" );
 			return;

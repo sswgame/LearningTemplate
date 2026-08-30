@@ -539,7 +539,7 @@ namespace sw
 		vector<PropertyInfo>									  _listProperty;
 		vector<FunctionInfo>									  _listMethod;
 		TypeMetadata											  _metadata;
-		mutable vector<PropertyInfo>							  _propertyListWithBase;
+		mutable vector<PropertyInfo>							  _listPropertyWithBase;
 		mutable unordered_map<hashed_string, const PropertyInfo*> _mapNameToProperty;
 		mutable unordered_map<hashed_string, const FunctionInfo*> _mapNameToMethod;
 		uint32													  _typeId;
@@ -552,7 +552,7 @@ namespace sw
 		mutable uint8		   _bIsCacheBuilt			   : 1;
 		mutable uint8		   _bIsPODFastPath			   : 1;
 		mutable uint8		   _bIsPODCalculated		   : 1;
-		mutable uint8		   _bPropertyListWithBaseBuilt : 1;
+		mutable uint8		   _bListPropertyWithBaseBuilt : 1;
 		[[maybe_unused]] uint8 _reservedTypeFlags		   : 1;
 		[[maybe_unused]] uint8 _reservedPadding[3];
 

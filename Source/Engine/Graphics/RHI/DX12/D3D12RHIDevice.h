@@ -226,7 +226,7 @@ namespace sw
 		vector<D3D12RenderPassRecord>			 _listRenderPass;
 		RHIPipelineStateHandle					 _activeGraphicsPso;
 
-		RHITextureHandle	   _arrActiveColorTargets[kMaxColorAttachments];
+		RHITextureHandle	   _arrActiveColorTarget[kMaxColorAttachments];
 		RHITextureHandle	   _activeDepthTarget;
 		uint32				   _activeColorTargetCount;
 		D3D12_RESOURCE_STATES  _swapchainState;

@@ -472,9 +472,9 @@ namespace sw::editor
 		if ( depth == 0 )
 			flags |= ImGuiTreeNodeFlags_DefaultOpen;
 
-		vector<string> listChildren;
-		EditorAssetCommands::collectChildFolders( absPath, listChildren );
-		const bool hasChildDirs = listChildren.empty() == false;
+		vector<string> listChild;
+		EditorAssetCommands::collectChildFolders( absPath, listChild );
+		const bool hasChildDirs = listChild.empty() == false;
 		if ( hasChildDirs == false )
 			flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
 
@@ -515,8 +515,8 @@ namespace sw::editor
 
 		if ( opened && hasChildDirs )
 		{
-			std::sort( listChildren.begin(), listChildren.end() );
-			for ( const string& child : listChildren )
+			std::sort( listChild.begin(), listChild.end() );
+			for ( const string& child : listChild )
 			{
 				drawFolderTreeNode( child, FileUtil::getFileNamePart( child ), depth + 1 );
 			}
@@ -569,7 +569,7 @@ namespace sw::editor
 		}
 
 		// "Game / Shaders"를 클릭 가능한 세그먼트로 파싱합니다.
-		vector<string> listParts;
+		vector<string> listPart;
 		{
 			string remaining = _breadcrumb;
 			size_t pos{ 0 };
@@ -578,17 +578,17 @@ namespace sw::editor
 				size_t sep = remaining.find( " / ", pos );
 				if ( sep == string::npos )
 				{
-					listParts.push_back( remaining.substr( pos ) );
+					listPart.push_back( remaining.substr( pos ) );
 					break;
 				}
-				listParts.push_back( remaining.substr( pos, sep - pos ) );
+				listPart.push_back( remaining.substr( pos, sep - pos ) );
 				pos = sep + 3;
 			}
 		}
 
 		string builtCrumb;
 		string builtPath;
-		for ( size_t partIndex = 0; partIndex < listParts.size(); ++partIndex )
+		for ( size_t partIndex = 0; partIndex < listPart.size(); ++partIndex )
 		{
 			if ( partIndex > 0 )
 			{
@@ -599,10 +599,10 @@ namespace sw::editor
 
 			if ( partIndex == 0 )
 			{
-				builtCrumb = listParts[0];
+				builtCrumb = listPart[0];
 				for ( const ContentRoot& root : _listRoot )
 				{
-					if ( root._displayName == listParts[0] )
+					if ( root._displayName == listPart[0] )
 					{
 						builtPath = root._absolutePath;
 						break;
@@ -611,14 +611,14 @@ namespace sw::editor
 			}
 			else
 			{
-				builtCrumb += " / " + listParts[partIndex];
-				const string lowerChild = FileUtil::normalizePath( listParts[partIndex] );
-				string		 next		= FileUtil::joinPath( builtPath, listParts[partIndex] );
+				builtCrumb += " / " + listPart[partIndex];
+				const string lowerChild = FileUtil::normalizePath( listPart[partIndex] );
+				string		 next		= FileUtil::joinPath( builtPath, listPart[partIndex] );
 				if ( FileUtil::directoryExists( next ) == false && builtPath.empty() == false )
 				{
-					vector<string> listChildren;
-					EditorAssetCommands::collectChildFolders( builtPath, listChildren );
-					for ( const string& child : listChildren )
+					vector<string> listChild;
+					EditorAssetCommands::collectChildFolders( builtPath, listChild );
+					for ( const string& child : listChild )
 					{
 						if ( FileUtil::normalizePath( FileUtil::getFileNamePart( child ) ) == lowerChild )
 						{
@@ -630,10 +630,10 @@ namespace sw::editor
 				builtPath = std::move( next );
 			}
 
-			const bool bIsLast = ( partIndex + 1 == listParts.size() );
+			const bool bIsLast = ( partIndex + 1 == listPart.size() );
 			if ( bIsLast )
-				ImGui::TextColored( ImVec4( 1.0f, 0.85f, 0.35f, 1.0f ), "%s", listParts[partIndex].c_str() );
-			else if ( ImGui::SmallButton( listParts[partIndex].c_str() ) )
+				ImGui::TextColored( ImVec4( 1.0f, 0.85f, 0.35f, 1.0f ), "%s", listPart[partIndex].c_str() );
+			else if ( ImGui::SmallButton( listPart[partIndex].c_str() ) )
 				selectFolder( builtPath, builtCrumb );
 		}
 	}
@@ -757,7 +757,7 @@ namespace sw::editor
 		_selectedFolderAbs = FileUtil::normalizeSeparators( absolutePath );
 		_breadcrumb		   = breadcrumb;
 		_selectedAssetAbs.clear();
-		_bFolderDirty = true;
+		_bFolderDirty = SW_TRUE;
 	}
 
 	void ContentBrowserPanel::selectAsset( const AssetEntry& entry )
@@ -809,12 +809,12 @@ namespace sw::editor
 
 	void ContentBrowserPanel::processPendingImports()
 	{
-		vector<string> listPaths;
+		vector<string> listPath;
 		{
 			std::scoped_lock<mutex> lock{ _pendingImportMutex };
 			if ( _listPendingImportPath.empty() )
 				return;
-			listPaths.swap( _listPendingImportPath );
+			listPath.swap( _listPendingImportPath );
 		}
 
 		if ( _selectedFolderAbs.empty() )
@@ -823,7 +823,7 @@ namespace sw::editor
 			return;
 		}
 
-		if ( EditorAssetCommands::importFiles( _selectedFolderAbs, listPaths ) > 0 )
-			_bFolderDirty = true;
+		if ( EditorAssetCommands::importFiles( _selectedFolderAbs, listPath ) > 0 )
+			_bFolderDirty = SW_TRUE;
 	}
 } // namespace sw::editor

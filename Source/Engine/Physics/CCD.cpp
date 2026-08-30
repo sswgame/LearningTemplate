@@ -129,7 +129,7 @@ namespace sw
 				return false;
 		}
 
-		if ( tNear >= 0.0f && tNear <= 1.0f )
+		if ( 0.0f <= tNear && tNear <= 1.0f )
 		{
 			outHit._bHit	 = true;
 			outHit._time	 = tNear;
@@ -307,9 +307,9 @@ namespace sw
 		const float32 proj		  = dotVal / dispLenSq;
 		const float32 clampedProj = MathUtil::clamp( proj, 0.0f, 1.0f );
 		const float3  closestPointOnRay{
-			 startCenter._x + displacement._x * clampedProj,
-			 startCenter._y + displacement._y * clampedProj,
-			 startCenter._z + displacement._z * clampedProj };
+			startCenter._x + displacement._x * clampedProj,
+			startCenter._y + displacement._y * clampedProj,
+			startCenter._z + displacement._z * clampedProj };
 
 		const float3  diff{ closestPointOnRay._x - closestOnBox._x, closestPointOnRay._y - closestOnBox._y, closestPointOnRay._z - closestOnBox._z };
 		const float32 edgeDistSq = diff._x * diff._x + diff._y * diff._y + diff._z * diff._z;

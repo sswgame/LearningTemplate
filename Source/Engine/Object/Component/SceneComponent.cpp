@@ -134,7 +134,7 @@ namespace sw
 		, _cachedWorldMatrix{ float4x4::Identity }
 		, _cachedWorldPositionLWC{ 0.0, 0.0, 0.0 }
 		, _pParent{ nullptr }
-		, _listChildren{}
+		, _listChild{}
 		, _bIsTransformDirty{ SW_TRUE }
 		, _bHasDirtyDescendant{ SW_FALSE }
 		, _reservedTransform{ 0 }
@@ -152,14 +152,14 @@ namespace sw
 		, _cachedWorldPosition{ other._cachedWorldPosition }
 		, _cachedWorldMatrix{ other._cachedWorldMatrix }
 		, _cachedWorldPositionLWC{ other._cachedWorldPositionLWC }
-		, _pParent{ nullptr }
-		, _listChildren{}
+		, _pParent{ other._pParent }
+		, _listChild{ std::move( other._listChild ) }
 		, _bIsTransformDirty{ other._bIsTransformDirty }
 		, _bHasDirtyDescendant{ other._bHasDirtyDescendant }
 		, _reservedTransform{ other._reservedTransform }
 	{
 		other._pParent = nullptr;
-		other._listChildren.clear();
+		other._listChild.clear();
 	}
 
 	SceneComponent& SceneComponent::operator=( SceneComponent&& other ) noexcept
@@ -175,31 +175,30 @@ namespace sw
 			_cachedWorldPosition	= other._cachedWorldPosition;
 			_cachedWorldMatrix		= other._cachedWorldMatrix;
 			_cachedWorldPositionLWC = other._cachedWorldPositionLWC;
+			_pParent				= other._pParent;
+			_listChild				= std::move( other._listChild );
 			_bIsTransformDirty		= other._bIsTransformDirty;
 			_bHasDirtyDescendant	= other._bHasDirtyDescendant;
 			_reservedTransform		= other._reservedTransform;
-			_pParent				= nullptr;
-			_listChildren.clear();
+
 			other._pParent = nullptr;
-			other._listChildren.clear();
+			_listChild.clear();
+			other._listChild.clear();
 		}
 		return *this;
 	}
 
 	SceneComponent::~SceneComponent()
 	{
-		detachFromComponent();
-		vector<SceneComponent*> listChildrenCopy = _listChildren;
-		for ( SceneComponent* pChild : listChildrenCopy )
+		// 소멸 시 자식 컴포넌트들을 부모로부터 분리
+		vector<SceneComponent*> listChildCopy = _listChild;
+		for ( SceneComponent* pChild : listChildCopy )
 		{
 			if ( pChild != nullptr )
 				pChild->detachFromComponent();
 		}
-		_listChildren.clear();
-
-		GameObject* pOwner = getOwner();
-		if ( pOwner != nullptr && pOwner->getManager() != nullptr )
-			pOwner->getManager()->unregisterRootSceneComponent( this );
+		detachFromComponent();
+		_listChild.clear();
 	}
 
 	void SceneComponent::onBeginPlay()
@@ -370,24 +369,22 @@ namespace sw
 		{
 			GameObjectManager*		  pMgr		   = pOwner->getManager();
 			const sw::ComponentHandle selfHandle   = getHandle();
-			const sw::ComponentHandle parentHandle = pParent != nullptr ? pParent->getHandle() : sw::ComponentHandle{};
+			const sw::ComponentHandle parentHandle = ( pParent != nullptr ) ? pParent->getHandle() : sw::ComponentHandle{};
 			pMgr->deferTransformUpdate( [pMgr, selfHandle, parentHandle]()
 			{
-				SceneComponent* pSelfComp = static_cast<SceneComponent*>( pMgr->resolveComponent( selfHandle ) );
-				if ( pSelfComp == nullptr )
-					return;
-				SceneComponent* pParentComp{ nullptr };
-				if ( parentHandle.isValid() )
-					pParentComp = static_cast<SceneComponent*>( pMgr->resolveComponent( parentHandle ) );
-				pSelfComp->attachToComponent( pParentComp );
+				SceneComponent* pSelf			= static_cast<SceneComponent*>( pMgr->resolveComponent( selfHandle ) );
+				SceneComponent* pResolvedParent = parentHandle.isValid() ? static_cast<SceneComponent*>( pMgr->resolveComponent( parentHandle ) ) : nullptr;
+				if ( pSelf != nullptr )
+					pSelf->attachToComponent( pResolvedParent );
 			} );
 			return true;
 		}
 
 		if ( pParent == this )
 			return false;
-		if ( pParent == _pParent )
-			return pParent != nullptr;
+
+		if ( _pParent == pParent )
+			return true;
 
 		if ( pParent == nullptr )
 			return false;
@@ -403,10 +400,11 @@ namespace sw
 		detachFromComponent();
 
 		_pParent = pParent;
-		pParent->_listChildren.push_back( this );
+		pParent->_listChild.push_back( this );
 
 		if ( pOwner != nullptr && pOwner->getManager() != nullptr )
 			pOwner->getManager()->unregisterRootSceneComponent( this );
+
 		markTransformDirty();
 		return true;
 	}
@@ -430,13 +428,13 @@ namespace sw
 		if ( _pParent == nullptr )
 			return;
 
-		vector<SceneComponent*>& listSiblings = _pParent->_listChildren;
-		for ( size_t childIndex = 0; childIndex < listSiblings.size(); ++childIndex )
+		vector<SceneComponent*>& listSibling = _pParent->_listChild;
+		for ( size_t childIndex = 0; childIndex < listSibling.size(); ++childIndex )
 		{
-			if ( listSiblings[childIndex] == this )
+			if ( listSibling[childIndex] == this )
 			{
-				listSiblings[childIndex] = listSiblings.back();
-				listSiblings.pop_back();
+				listSibling[childIndex] = listSibling.back();
+				listSibling.pop_back();
 				break;
 			}
 		}
@@ -444,6 +442,7 @@ namespace sw
 
 		if ( pOwner != nullptr && pOwner->getManager() != nullptr )
 			pOwner->getManager()->registerRootSceneComponent( this );
+
 		markTransformDirty();
 	}
 
@@ -477,7 +476,7 @@ namespace sw
 			pParentComp						  = pParentComp->_pParent;
 		}
 
-		for ( SceneComponent* pChild : _listChildren )
+		for ( SceneComponent* pChild : _listChild )
 		{
 			if ( pChild != nullptr && pChild->_bIsTransformDirty == SW_FALSE )
 				pChild->markTransformDirty();

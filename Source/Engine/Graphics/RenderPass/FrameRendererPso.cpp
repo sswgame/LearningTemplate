@@ -27,7 +27,7 @@ namespace sw
 			desc._numRenderTargets = kMaxColorAttachments;
 		for ( uint32 rtIndex = 0; rtIndex < desc._numRenderTargets; ++rtIndex )
 		{
-			desc._arrRtvFormats[rtIndex] = ( pRtvFormats != nullptr ) ? pRtvFormats[rtIndex] : RHIFormat::R8G8B8A8_UNORM;
+			desc._arrRtvFormat[rtIndex] = ( pRtvFormats != nullptr ) ? pRtvFormats[rtIndex] : RHIFormat::R8G8B8A8_UNORM;
 		}
 		return _pDevice->getResource()->createPipelineState( desc );
 	}
@@ -95,7 +95,7 @@ namespace sw
 		{
 			for ( uint32 rtIndex = 0; rtIndex < desc._numRenderTargets; ++rtIndex )
 			{
-				desc._arrRtvFormats[rtIndex] = pRtvFormats[rtIndex];
+				desc._arrRtvFormat[rtIndex] = pRtvFormats[rtIndex];
 			}
 		}
 		else if ( pPassDesc != nullptr && pPassDesc->_listOutput.empty() == false )
@@ -113,7 +113,7 @@ namespace sw
 						const RHIFormat fmt = parseAttachmentFormat( att._format );
 						if ( FrameRendererUtil::isDepthFormat( fmt ) == false )
 						{
-							desc._arrRtvFormats[colorCount++] = fmt;
+							desc._arrRtvFormat[colorCount++] = fmt;
 						}
 						else
 						{
@@ -125,13 +125,13 @@ namespace sw
 			}
 			desc._numRenderTargets = ( colorCount > 0 ) ? colorCount : ( bHasDepthOutput ? 0 : 1 );
 			if ( desc._numRenderTargets == 1 && colorCount == 0 )
-				desc._arrRtvFormats[0] = RHIFormat::R8G8B8A8_UNORM;
+				desc._arrRtvFormat[0] = RHIFormat::R8G8B8A8_UNORM;
 		}
 		else
 		{
 			for ( uint32 rtIndex = 0; rtIndex < desc._numRenderTargets; ++rtIndex )
 			{
-				desc._arrRtvFormats[rtIndex] = RHIFormat::R8G8B8A8_UNORM;
+				desc._arrRtvFormat[rtIndex] = RHIFormat::R8G8B8A8_UNORM;
 			}
 		}
 		return _pDevice->getResource()->createPipelineState( desc );

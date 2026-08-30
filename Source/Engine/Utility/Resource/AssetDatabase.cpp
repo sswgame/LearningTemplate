@@ -142,9 +142,9 @@ namespace sw
 		if ( FileUtil::directoryExists( absoluteFolder ) == false )
 			return 0;
 
-		vector<string> listFiles;
-		FileUtil::collectFiles( absoluteFolder, {}, listFiles, false, false );
-		for ( const string& filePath : listFiles )
+		vector<string> listFile;
+		FileUtil::collectFiles( absoluteFolder, {}, listFile, false, false );
+		for ( const string& filePath : listFile )
 		{
 			string rel;
 			BLOCK( "Filter and Normalize Path" )

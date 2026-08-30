@@ -20,16 +20,16 @@ namespace sw::editor
 		item._action		   = std::move( action );
 		item._enabledPredicate = std::move( enabledPredicate );
 
-		_arrItems[locIdx].push_back( std::move( item ) );
+		_arrItem[locIdx].push_back( std::move( item ) );
 	}
 
 	void EditorActionMenuManager::drawActionMenu( ActionMenuLocation location )
 	{
 		const size_t locIdx = static_cast<size_t>( location );
-		if ( locIdx >= 4 || _arrItems[locIdx].empty() )
+		if ( locIdx >= 4 || _arrItem[locIdx].empty() )
 			return;
 
-		for ( const ActionMenuItem& item : _arrItems[locIdx] )
+		for ( const ActionMenuItem& item : _arrItem[locIdx] )
 		{
 			bool bEnabled = true;
 			if ( item._enabledPredicate.isBound() )

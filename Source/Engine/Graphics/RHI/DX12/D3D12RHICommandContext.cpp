@@ -167,10 +167,10 @@ namespace sw
 		_pDevice->_commandList->OMSetRenderTargets( 1, &record._rtvHandle, FALSE, nullptr );
 		_pDevice->_commandList->ClearRenderTargetView( record._rtvHandle, &clearColor._x, 0, nullptr );
 
-		_pDevice->_arrActiveColorTargets[0] = colorTarget;
-		_pDevice->_activeColorTargetCount	= 1;
-		_pDevice->_activeDepthTarget		= 0;
-		_pDevice->_bActiveSwapchainRT		= 0;
+		_pDevice->_arrActiveColorTarget[0] = colorTarget;
+		_pDevice->_activeColorTargetCount  = 1;
+		_pDevice->_activeDepthTarget	   = 0;
+		_pDevice->_bActiveSwapchainRT	   = 0;
 
 		D3D12_VIEWPORT vp{};
 		vp.Width	= static_cast<float32>( record._width );
@@ -554,7 +554,7 @@ namespace sw
 		for ( uint32 attachmentIndex = 0; attachmentIndex < wantCount; ++attachmentIndex )
 		{
 			const RHITextureHandle		colorHandle = ( beginInfo._colorTargetCount > 0 )
-														? beginInfo._arrColorTargets[attachmentIndex]
+														? beginInfo._arrColorTarget[attachmentIndex]
 														: beginInfo._colorTarget;
 			D3D12_CPU_DESCRIPTOR_HANDLE rtv{};
 			bool						bValid = false;
@@ -576,9 +576,9 @@ namespace sw
 				}
 				rtv = _pDevice->_rtvHeap->GetCPUDescriptorHandleForHeapStart();
 				rtv.ptr += _pDevice->_frameIndex * _pDevice->_rtvDescriptorSize;
-				bValid									  = true;
-				_pDevice->_bActiveSwapchainRT			  = 1;
-				_pDevice->_arrActiveColorTargets[rtCount] = 0;
+				bValid									 = true;
+				_pDevice->_bActiveSwapchainRT			 = 1;
+				_pDevice->_arrActiveColorTarget[rtCount] = 0;
 			}
 			else
 			{
@@ -590,16 +590,16 @@ namespace sw
 					return;
 				}
 				transitionTexture( colorHandle, D3D12_RESOURCE_STATE_RENDER_TARGET );
-				rtv										  = it->second._rtvHandle;
-				bValid									  = true;
-				_pDevice->_arrActiveColorTargets[rtCount] = colorHandle;
+				rtv										 = it->second._rtvHandle;
+				bValid									 = true;
+				_pDevice->_arrActiveColorTarget[rtCount] = colorHandle;
 			}
 
 			if ( bValid == false )
 				break;
 
-			const RHIRenderPassLoadOp loadOp = ( beginInfo._colorTargetCount > 0 ) ? beginInfo._arrLoadOps[attachmentIndex] : beginInfo._loadOp;
-			const float32*			  pClear = ( beginInfo._colorTargetCount > 0 ) ? beginInfo._arrClearColors[attachmentIndex] : beginInfo._arrClearColor;
+			const RHIRenderPassLoadOp loadOp = ( beginInfo._colorTargetCount > 0 ) ? beginInfo._arrLoadOp[attachmentIndex] : beginInfo._loadOp;
+			const float32*			  pClear = ( beginInfo._colorTargetCount > 0 ) ? beginInfo._arrTargetClearColor[attachmentIndex] : beginInfo._arrClearColor;
 			if ( loadOp == RHIRenderPassLoadOp::Clear )
 				_pDevice->_commandList->ClearRenderTargetView( rtv, pClear, 0, nullptr );
 

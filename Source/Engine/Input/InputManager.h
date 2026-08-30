@@ -107,10 +107,10 @@ namespace sw
 		int32					  _prevMouseY;
 		float32					  _mouseWheelDelta;
 		float32					  _mouseWheelAccum;
-		bool					  _arrKeys[static_cast<size_t>( Key::Count )];
-		bool					  _arrPrevKeys[static_cast<size_t>( Key::Count )];
-		bool					  _arrMouseButtons[static_cast<size_t>( MouseButton::Count )];
-		bool					  _arrPrevMouseButtons[static_cast<size_t>( MouseButton::Count )];
+		bool					  _arrKey[static_cast<size_t>( Key::Count )];
+		bool					  _arrPrevKey[static_cast<size_t>( Key::Count )];
+		bool					  _arrMouseButton[static_cast<size_t>( MouseButton::Count )];
+		bool					  _arrPrevMouseButton[static_cast<size_t>( MouseButton::Count )];
 		uint8					  _bInitialized		  : 1;
 		uint8					  _bPollGamepad		  : 1;
 		uint8					  _bPointerInside	  : 1;

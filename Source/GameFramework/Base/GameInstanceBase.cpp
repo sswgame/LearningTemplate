@@ -57,40 +57,40 @@ namespace sw
 		if ( pActiveScene == nullptr || pActiveScene->getObjectManager() == nullptr )
 			return false;
 
-		vector<GameObject*> gameObjectList = pActiveScene->getObjectManager()->getAllGameObjects();
+		vector<GameObject*> listGameObject = pActiveScene->getObjectManager()->getAllGameObjects();
 
-		vector<GameObject*> validObjectList;
-		validObjectList.reserve( gameObjectList.size() );
-		for ( GameObject* pObj : gameObjectList )
+		vector<GameObject*> listValidObject;
+		listValidObject.reserve( listGameObject.size() );
+		for ( GameObject* pObj : listGameObject )
 		{
-			if ( pObj == nullptr || pObj->isPendingKill() )
+			if ( pObj == nullptr || pObj->isPendingKill() == true )
 				continue;
 
-			validObjectList.push_back( pObj );
+			listValidObject.push_back( pObj );
 		}
 
-		vector<uint8> bufferList;
+		vector<uint8> bytes;
 
 		// 게임오브젝트 갯수를 맨 앞에 기록
-		uint32 count   = static_cast<uint32>( validObjectList.size() );
-		size_t oldSize = bufferList.size();
-		bufferList.resize( oldSize + sizeof( uint32 ) );
-		Memory::copy( bufferList.data() + oldSize, &count, sizeof( uint32 ) );
+		uint32 count   = static_cast<uint32>( listValidObject.size() );
+		size_t oldSize = bytes.size();
+		bytes.resize( oldSize + sizeof( uint32 ) );
+		Memory::copy( bytes.data() + oldSize, &count, sizeof( uint32 ) );
 
-		for ( GameObject* pObj : validObjectList )
+		for ( GameObject* pObj : listValidObject )
 		{
-			ObjectStateSerializer::saveToBinaryBuffer( pObj, bufferList );
+			ObjectStateSerializer::saveToBinaryBuffer( pObj, bytes );
 		}
 
 		if ( pOutBuffer == nullptr )
 		{
-			*pInOutSize = static_cast<uint32>( bufferList.size() );
+			*pInOutSize = static_cast<uint32>( bytes.size() );
 			return true;
 		}
-		else if ( *pInOutSize >= bufferList.size() )
+		else if ( *pInOutSize >= bytes.size() )
 		{
-			Memory::copy( pOutBuffer, bufferList.data(), bufferList.size() );
-			*pInOutSize = static_cast<uint32>( bufferList.size() );
+			Memory::copy( pOutBuffer, bytes.data(), bytes.size() );
+			*pInOutSize = static_cast<uint32>( bytes.size() );
 			return true;
 		}
 

@@ -300,11 +300,11 @@ namespace sw
 		if ( _pDevice->_gpuBuffers.take( buffer, owned ) == false )
 			return;
 
-		for ( size_t bindlessIndex = 0; bindlessIndex < _pDevice->_listRegisteredBindlessVector.size(); ++bindlessIndex )
+		for ( size_t bindlessIndex = 0; bindlessIndex < _pDevice->_listRegisteredBindless.size(); ++bindlessIndex )
 		{
-			if ( _pDevice->_listRegisteredBindlessVector[bindlessIndex] != buffer )
+			if ( _pDevice->_listRegisteredBindless[bindlessIndex] != buffer )
 				continue;
-			_pDevice->_listRegisteredBindlessVector[bindlessIndex] = 0;
+			_pDevice->_listRegisteredBindless[bindlessIndex] = 0;
 			_pDevice->_listBindlessFree.push_back( static_cast<uint32>( bindlessIndex ) );
 		}
 		for ( size_t bufferIndex = 0; bufferIndex < _pDevice->_listUavSourceBuffer.size(); ++bufferIndex )
@@ -471,21 +471,21 @@ namespace sw
 		{
 			index = _pDevice->_listBindlessFree.back();
 			_pDevice->_listBindlessFree.pop_back();
-			_pDevice->_listRegisteredBindlessVector[index] = buffer;
+			_pDevice->_listRegisteredBindless[index] = buffer;
 		}
 		else
 		{
-			index = static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindlessVector.size() );
-			_pDevice->_listRegisteredBindlessVector.push_back( buffer );
+			index = static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindless.size() );
+			_pDevice->_listRegisteredBindless.push_back( buffer );
 		}
 		return index;
 	}
 
 	void D3D11RHIResource::unregisterBindlessResource( RHIDescriptorIndex index )
 	{
-		if ( index < _pDevice->_listRegisteredBindlessVector.size() )
+		if ( index < _pDevice->_listRegisteredBindless.size() )
 		{
-			_pDevice->_listRegisteredBindlessVector[index] = 0;
+			_pDevice->_listRegisteredBindless[index] = 0;
 			_pDevice->_listBindlessFree.push_back( index );
 		}
 	}
