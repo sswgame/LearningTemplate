@@ -14,10 +14,9 @@
 namespace sw
 {
 	struct ComponentFactoryRegistrar;
+	struct TypeRegistrar;
+	struct EnumRegistrar;
 } // namespace sw
-
-struct TypeRegistrar;
-struct EnumRegistrar;
 
 namespace sw
 {
