@@ -14,7 +14,7 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
 4. `Graphics` (RHI, Material, RenderPass) — Reflection/Object 참조는 허용, **상위 gameplay·Editor 금지**. 상세 [Graphics/README.md](Graphics/README.md)
 5. `Input` / `Window` / `Audio` / `Physics` / `Animation` — Object/Graphics에만 기대게
 
-금지 include 자동화: `python Scripts/lint/check_engine_layers.py`
+금지 include 자동화: `py -3 Scripts/lint/CheckEngineLayers.py`
 (현재: Engine → `Editor/` / `GameFramework/` / `Games/` 금지)
 
 후속(별 PR): `EngineRHI` / `EngineReflection` 물리 분할 — 이 저장소 로드맵에서는 설계만.

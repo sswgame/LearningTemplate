@@ -72,6 +72,7 @@
 | 전역 변수 | `gv_` + `camelCase` | `gv_rhiBackend`, `gv_enableVSync` |
 | 정적(static) 변수 | `s_` / private은 `_s_` | `s_activeWindow`, `_s_nextObjectId` |
 | 매크로 | `SW_SCREAMING` | `SW_API`, `SW_LOG_INFO` |
+| 출력 매개변수 (Out Param) | `out` + PascalCase / 포인터는 `pOut`, 이중 포인터는 `ppOut` | `outConfig`, `pOutBuffer`, `ppOutObject`, `outListItem` |
 
 #### C++ 헤더 선언 순서
 헤더 파일 작성 시 아래 순서를 엄격히 준수합니다:
@@ -187,20 +188,51 @@
 1. raw 포인터 접근인 경우 접두어로 p를 붙인다.
    - 멤버 변수인 경우 _pMember 형식이 된다.
    - 로컬 변수인 경우 pMember 형식이 된다.
-   - 이중 포인터인 경우 pp가 된다.
-   - 삼중 포인터 이상은 없어야한다. (있다면 구조를 의심해야한다)
-2. 연관 컨테이너인 경우, map 접두어를 붙인다.
-3. 고정 크기 배열인 경우([],array 등인 경우) arr 접두어를 붙인다.
-4. 가변 크기 배열 또는 리스트(vector, list, deque 등)인 경우 list 접미어를 붙인다.
-5. 키 또는 값이 유일함이 보장되는 컨테이너(set/unordered_set 등)은 unique 접두어를 붙인다.
-6. loop문에서 i,j,k 등을 의미를 알 수 없는 인덱싱 변수 명칭은 금한다. (최소 index)
-7. 변수명은 의미가 명확하게 기술한다. 예) EditorTable* et 같이 쓰면 안된다. EditorTable* editorTable로 기술한다.
+   - 이중 포인터인 경우 pp가 된다 (멤버: _ppMember, 로컬: ppMember).
+   - 삼중 포인터 이상(ppp, _ppp, ***)은 구조적 결함이므로 엄격히 금지한다.
+2. 연관 컨테이너인 경우, map 접두어를 붙인다 (`map`, `_map`).
+3. 고정 크기 배열인 경우([],array 등인 경우) arr 접두어를 붙인다 (`arr`, `_arr`).
+4. 가변 크기 배열 또는 리스트(vector, list, deque 등)인 경우 list 접두어를 붙인다 (`list`, `_list`). `List` 접미어는 사용하지 않는다.
+   - 단, `byte`라는 단어가 들어간 바이트 버퍼형 컨테이너(`vector<uint8>`, `vector<int8>`, `vector<utf8>` 등)의 경우 `list` 접두어를 생략한다 (예: `_bytes`, `_rawBytes`, `bytes`, `outBytes`, `pOutBytes`, `pOutBuffer`).
+5. 키 또는 값이 유일함이 보장되는 컨테이너(set/unordered_set 등)은 unique 접두어를 붙인다 (`unique`, `_unique`, 예: `_uniqueIds`, `_uniqueTags`). 유일하게 복수형 사용이 허용된다.
+6. **단수형 명명 규칙 (unique 제외 복수형 금지)**: `unique` 접두어를 제외한 모든 컨테이너(`list`, `map`, `arr` 등) 및 매개변수는 **복수형(`...s`)이 엄격히 금지되며 단수형(Singular)만 사용**해야 한다 (예: `_listActor`, `_listItem`, `_mapIdToName`, `outListItem`, `outListHandle`. 단, `unique` 접두어(`_uniqueIds`, `outUniqueIds`) 및 원시 바이트 데이터(`_bytes`, `bytes`, `outBytes`)는 예외).
+7. loop문에서 i,j,k 등을 의미를 알 수 없는 인덱싱 변수 명칭은 금한다. (최소 index)
+8. 변수명은 의미가 명확하게 기술한다. 예) EditorTable* et 같이 쓰면 안된다. EditorTable* editorTable로 기술한다.
+9. 출력 매개변수(Out-Parameter, non-const reference 또는 out pointer)는 기본적으로 `out` 접두어로 시작하며, 컨테이너인 경우 `out` 뒤에 해당 접두어가 위치한다. 단, 포인터(`p`/`pp`)의 경우에만 예외적으로 `pOut`/`ppOut`과 같이 `out` 앞에 `p`/`pp` 접두어가 위치한다.
+   - 일반 출력 변수: `out` + PascalCase (예: `outConfig`, `outResult`, `outX`, `outSpawnX`)
+   - 단일 포인터 출력 (예외적 p 선행): `pOut` (예: `pOutApi`, `pOutBuffer`, `pOutMatrix`, `pOutResult`), 입출력 포인터는 `pInOut` (예: `pInOutSize`)
+   - 이중 포인터 출력 (예외적 pp 선행): `ppOut` (예: `ppOutBuffer`, `ppOutObject`, `ppOutInstance`), 입출력 이중 포인터는 `ppInOut`
+   - 가변 컨테이너 출력: `outList` (예: `outListItem`, `outListBuffer`, `outListHandle`) — `listOut`, `out...List` 및 복수형(`outListItems`) 사용 금지 (`byte` 단어가 포함된 바이트 벡터는 `outBytes`, `outRawBytes`와 같이 `list` 생략)
+   - 맵 컨테이너 출력: `outMap` (예: `outMapData`, `outMapLookup`) — `mapOut` 사용 금지
+   - 고유 셋 출력: `outUnique` (예: `outUniqueIds`, `outUniqueTags`) — `uniqueOut` 사용 금지 (`unique`는 복수형 허용)
+   - 고정 배열 출력: `outArr` (예: `outArrBuffer`) — `arrOut` 사용 금지
+   - 입출력 겸용(In/Out): `inout` / `pInOut` / `ppInOut` 접두어 사용 (예: `inoutSkeleton`, `pInOutSize`)
 
 ### 코드 스타일 규칙
 1. 코드 스타일은 .clang-format을 준수한다.
 
 ### 람다 사용 규칙
 1. 람다의 사용은 성능상의 이점이 있지 않는 한 자제한다.
+
+### 헬퍼 Util / Internal
+1. 여러 번역 단위가 쓰는 공유 헬퍼는 `XxxUtil` static struct 헤더로 둔다. 공유 헬퍼에 `Internal` 이름을 쓰지 않는다.
+2. 한 `.cpp` 안에서만 쓰는 헬퍼는 구현 `namespace sw`와 **분리된** 구획에 둔다.
+```cpp
+namespace sw
+{
+	namespace
+	{
+		struct FooInternal { static void helper(); };
+	} // namespace
+} // namespace sw
+
+namespace sw
+{
+	void Foo::process() { FooInternal::helper(); }
+} // namespace sw
+```
+3. bind/get 로케이터용 `s_*`만 있는 상태는 구현 블록 익명 네임스페이스에 둔다.
+4. 이 규칙은 `Source/` 와 `Tools/ReflectionParser/` 에 적용한다.
 
 ### const 사용 규칙
 1. 성능상 이점이 있는 경우가 아니면 const를 붙일 수 있는 곳은 다 붙인다.

@@ -687,7 +687,8 @@ SW Engine 소스코드를 작성할 때는 [AGENTS.md](AGENTS.md) 및 [GEMINI.md
 | 분류 | 규칙 | 예시 |
 | :--- | :--- | :--- |
 | **포인터 접두어** | Raw 포인터는 반드시 `p` (멤버: `_p`, 이중: `pp`) | `GameObject* pObject;`, `Transform* _pTransform;` |
-| **컨테이너 접두어/접미어** | 고정 배열: `arr` / 연관 맵: `map` / 리스트: `list` / 고유 셋: `unique` | `vector<int32> _listValue;`, `unordered_map<int32, string> _mapIdToName;` |
+| **컨테이너 접두어** | 고정 배열: `arr` / 연관 맵: `map` / 리스트: `list` / 고유 셋: `unique` (`List` 접미어 금지, `unique` 제외 단수형 강제) | `vector<int32> _listValue;`, `unordered_map<int32, string> _mapIdToName;`, `set<uint32> _uniqueIds;`, `vector<uint8> _bytes;` |
+| **출력 매개변수 (Out)** | `out` 접두어 필수 (`outList...`, `outMap...`, `outUnique...`, `outArr...`), 포인터는 예외적으로 `pOut...`, `ppOut...` | `bool find( int32 id, Actor*& pOutActor, Node** ppOutNode, vector<int32>& outListId, set<uint32>& outUniqueIds, vector<uint8>& outBytes );` |
 | **스마트 포인터** | `std::unique_ptr` 등은 `p` 접두어를 붙이지 않음 | `unique_ptr<Node> _rootNode;`, `shared_ptr<Material> _material;` |
 | **불리언 비교** | `!` 부정 연산자 금지, 반드시 명시적 비교 작성 | `if (_bValid == false)`, `if (pPtr == nullptr)` |
 | **범위(Range) 비교** | 변수를 안쪽(중간)에 배치하여 수학적 범위($min \le val \le max$)로 표기 | `if (kMin <= value && value <= kMax)` |

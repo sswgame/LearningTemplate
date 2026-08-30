@@ -3,24 +3,28 @@
 """
 Scripts/lint/CheckCodeConventions.py
 
-SW Engine C++ 코딩 컨벤션 및 정적 규칙 자동 검사 스크립트.
+# SW Engine C++ 코딩 컨벤션 및 정적 규칙 자동 검사 스크립트.
 
 검사 항목:
   1) Explicit Comparison: bool, pointer, container 상태(empty, contains) 암시적 평가 및 ! 부정문 검출
   2) Loop Counter Naming: for 루프 내 단일 문자 카운터(i, j, k) 검출
   3) Member Variable Naming:
      - 고정 배열: _arr 접두어 누락 검출
-     - 가변 배열(vector, list, deque): _list 접두어 또는 List 접미어 누락 검출
+     - 가변 배열(vector, list, deque): _list 접두어 누락 및 List 접미어 검출 (단, byte 단어가 포함된 바이트 벡터는 list 생략)
      - 연관 컨테이너(map, unordered_map): _map 접두어 누락 검출
      - 고유 집합(set, unordered_set): _unique 접두어 누락 검출
-     - 원시 포인터 멤버: _p 접두어 누락 검출
+     - 원시 포인터 멤버: _p (단일), _pp (이중) 접두어 누락 검출
+     - 삼중 포인터 이상(ppp, _ppp, ***) 금지 검출
      - 전역 정적 변수: s_, _s_ 및 포인터 s_p, _s_p 누락 검출
-  4) Constructor Initialization Rules:
+  4) Out-Parameter Naming:
+     - 출력 매개변수 out 접두어(outList, outMap, outUnique, outArr, inout) 누락 검출
+     - 포인터 출력 매개변수는 예외적으로 pOut, ppOut, pInOut, ppInOut 사용 강제 (outP, outPP 등 검출)
+  5) Constructor Initialization Rules:
      - 중괄호 균일 초기화 ({}) 사용 여부 검출
      - 한 줄에 1개 변수 초기화 및 다음 줄 ',' 시작 포맷 검출
      - 생성자 멤버 초기화 순서가 클래스 멤버 선언 순서와 일치하는지 검출
-  5) auto 사용 제한: 리터럴/원시 타입 직접 대입에 auto 사용 검출
-  6) Include 규칙: .cpp 파일 첫 줄 #include "pch.h" 여부
+  6) auto 사용 제한: 리터럴/원시 타입 직접 대입에 auto 사용 검출
+  7) Include 규칙: .cpp 파일 첫 줄 #include "pch.h" 여부
 
 사용법:
   py -3 Scripts/lint/CheckCodeConventions.py [--root <repo>] [--json] [--files <files...>]
@@ -63,21 +67,34 @@ class ConventionViolation:
 # --- 2. 정규표현식 패턴 ------------------------------------------------------
 
 # [루프 인덱스 변수 명명 검사]
-# for 루프에서 'i', 'j', 'k' 와 같이 의미를 알 수 없는 단일 문자 카운터 변수 선언을 검출합니다.
-# 매칭 예시: for (int i = 0; ...), for (size_t j = 0; ...), for (auto k = 0; ...)
-# 컨벤션 규칙: 최소 'index', 'partIndex', 'childIndex' 등의 의미 있는 이름을 사용해야 합니다.
+# 정규식 패턴: r'\bfor\s*\(\s*(?:auto|int\w*|uint\w*|size_t)\s+([ijk])\s*='
+#   - \bfor\s*\(                      : for 루프의 시작 괄호 매칭
+#   - (?:auto|int\w*|uint\w*|size_t)   : 카운터 타입 (auto, int, int32, uint32, size_t 등)
+#   - ([ijk])                         : 금지 대상 단일 문자 변수명 (i, j, k) 캡처
+#   - \s*=                            : 초기화 대입 연산자 매칭
+# 매칭 예시 (위반): for (int i = 0; ...), for (size_t j = 0; ...), for (auto k = 0; ...)
+# 올바른 예시: for (int32 index = 0; ...), for (size_t childIndex = 0; ...)
+# 컨벤션 규칙: 의미를 알 수 없는 단일 문자 카운터는 금지되며, 최소 'index' 이상의 구체적 이름을 부여해야 합니다.
 _kLoopIndexRe = re.compile(
     r'\bfor\s*\(\s*(?:auto|int\w*|uint\w*|size_t)\s+([ijk])\s*=',
     re.MULTILINE,
 )
 
 # [PCH 인클루드 검사]
-# .cpp 소스 파일의 첫 번째 유효한 코드 줄이 #include "pch.h" 인지 확인합니다.
-# 매칭 예시: #include "pch.h", #include <pch.h>
-# 컨벤션 규칙: 모든 번역 단위(.cpp)의 최상단에는 반드시 pch.h가 가장 먼저 인클루드되어야 합니다.
+# 정규식 패턴: r'^\s*#\s*include\s*["<]pch\.h[">]'
+#   - ^\s*#\s*include\s*              : 줄 시작 부분의 #include 지시문 매칭
+#   - ["<]pch\.h[">]                  : "pch.h" 또는 <pch.h> 인클루드 경로 매칭
+# 매칭 예시 (정상): #include "pch.h", #include <pch.h>
+# 올바른 구조: .cpp 번역 단위의 가장 첫 번째 유효 코드는 반드시 pch.h 여야 합니다.
+# 컨벤션 규칙: 빠른 컴파일을 위해 모든 cpp 소스는 pch.h를 첫 번째로 인클루드해야 합니다.
 _kPchIncludeRe = re.compile(r'^\s*#\s*include\s*["<]pch\.h[">]')
 
 # [일반 인클루드 경로 검사]
+# 정규식 패턴: r'^\s*#\s*include\s*([<"])([^>"]+)[>"]'
+#   - ([<"])                          : 인클루드 경로 시작 기호 (< 또는 ") 캡처 (그룹 1)
+#   - ([^>"]+)                        : 인클루드 상대/절대 파일 경로 캡처 (그룹 2)
+#   - [>"]                            : 인클루드 경로 종료 기호 (> 또는 ") 매칭
+# 용도: 실제 파일 시스템 상의 대소문자(Exact Path Case)와 일치하는지 대조 검증
 _kIncludePathRe = re.compile(r'^\s*#\s*include\s*([<"])([^>"]+)[>"]')
 
 _s_exactPathMap: dict[str, str] = {}
@@ -106,108 +123,318 @@ def getExactPathMapInternal(projectRoot: Path) -> dict[str, str]:
 
 
 # [원시 포인터 멤버 변수 명명 검사]
-# 클래스/구조체 헤더에서 '_p' 접두어가 붙지 않은 원시 포인터(*) 멤버 변수 선언을 검출합니다.
-# 매칭 예시: GameObject* _target;, IRHIDevice* _device; (위반 -> _pTarget, _pDevice 이어야 함)
-# 컨벤션 규칙: 멤버 포인터 변수는 '_p' 접두어로 시작해야 합니다.
+# 정규식 패턴: r'^\s*(?:[A-Za-z0-9_:]+\s*\*)\s+(_[^pP\s][a-zA-Z0-9_]*)\s*;'
+#   - ^\s*(?:[A-Za-z0-9_:]+\s*\*)     : 포인터 타입 선언 (예: Type*, Namespace::Type*) 매칭
+#   - \s+(_[^pP\s][a-zA-Z0-9_]*)      : 멤버 변수명 중 '_'로 시작하지만 두 번째 글자가 'p'/'P'가 아닌 이름 캡처 (그룹 1)
+#   - \s*;                            : 세미콜론 종료 매칭
+# 매칭 예시 (위반): GameObject* _target;, IRHIDevice* _device;
+# 올바른 예시: GameObject* _pTarget;, IRHIDevice* _pDevice;, Node** _ppNode;
+# 컨벤션 규칙: 멤버 원시 포인터는 단일 포인터 '_p', 이중 포인터는 '_pp' 접두어를 필수 사용해야 합니다.
 _kMemberRawPointerRe = re.compile(
     r'^\s*(?:[A-Za-z0-9_:]+\s*\*)\s+(_[^pP\s][a-zA-Z0-9_]*)\s*;'
 )
 
+# [삼중 포인터 이상 금지 검사]
+# 정규식 패턴: r'\b_?(?:s_)?p{3,}[A-Za-z0-9_]*\b|\*\s*\*\s*\*'
+#   - \b_?(?:s_)?p{3,}[A-Za-z0-9_]*\b : 'p'가 3개 이상 연속되는 식별자 (pppVar, _pppVar, s_pppGlobal, _s_pppGlobal, pppOut) 매칭
+#   - |\*\s*\*\s*\*                   : 포인터 역참조 기호가 3개 연속(***)되는 타입 선언 매칭
+# 매칭 예시 (위반): int*** pppPtr;, void* _pppHandle;, s_pppGlobal, Node*** pOutNode
+# 올바른 예시: Actor* pActor, Node** ppNode, void* pBuffer
+# 컨벤션 규칙: 삼중 포인터 이상(ppp, ***)은 구조적 설계 결함으로 간주하여 전면 금지합니다.
+_kTriplePointerRe = re.compile(
+    r'\b_?(?:s_)?p{3,}[A-Za-z0-9_]*\b|\*\s*\*\s*\*'
+)
+
 # [고정 크기 배열 멤버 변수 명명 검사]
-# 원시 타입의 고정 크기 배열([]) 멤버 변수 중 '_arr' 접두어가 누락된 경우를 검출합니다.
-# 매칭 예시: float32 _matrix[16];, uint32 _buffer[256]; (위반 -> _arrMatrix, _arrBuffer 이어야 함)
-# 컨벤션 규칙: 고정 크기 배열은 '_arr' 접두어로 시작해야 합니다.
+# 정규식 패턴: r'^\s*(?:float32|float64|int32|int64|uint8|uint16|uint32|uint64|char|utf8|bool)\s+(_[^a\s][a-zA-Z0-9_]*)\s*\[[^\]]+\]\s*;'
+#   - ^\s*(?:float32|...|bool)        : 원시 기본 자료형 매칭
+#   - \s+(_[^a\s][a-zA-Z0-9_]*)       : 멤버 변수명 중 '_'로 시작하지만 'a'로 시작하지 않는(_arr가 아닌) 이름 캡처
+#   - \s*\[[^\]]+\]\s*;               : 고정 배열 대괄호 및 세미콜론 매칭
+# 매칭 예시 (위반): float32 _matrix[16];, uint32 _buffer[256];
+# 올바른 예시: float32 _arrMatrix[16];, uint32 _arrBuffer[256];
+# 컨벤션 규칙: 고정 크기 배열 멤버 변수는 반드시 '_arr' 접두어로 시작해야 합니다.
 _kMemberFixedArrayRe = re.compile(
     r'^\s*(?:float32|float64|int32|int64|uint8|uint16|uint32|uint64|char|utf8|bool)\s+(_[^a\s][a-zA-Z0-9_]*)\s*\[[^\]]+\]\s*;'
 )
 
 # [가변 크기 배열/리스트 멤버 변수 명명 검사]
-# std::vector, std::list, std::deque 등 동적 컨테이너 멤버 중 '_list' 접두어 또는 'List' 접미어가 없는 경우를 검출합니다.
-# 매칭 예시: vector<Actor*> _actors; (위반 -> _listActor 또는 _actorsList 이어야 함)
-# 컨벤션 규칙: 가변 크기 배열 컨테이너는 '_list' 접두어나 'List' 접미어를 사용해야 합니다.
+# 정규식 패턴: r'^\s*(?:(?:sw::)?(?:vector|list|deque))\s*<([^>]+)>\s+(_[a-zA-Z0-9_]+)\s*;'
+#   - ^\s*(?:(?:sw::)?(?:vector|list|deque)) : 가변 컨테이너 타입(vector, list, deque) 매칭
+#   - <([^>]+)>                              : 내부 요소 템플릿 인자 타입 캡처 (그룹 1: byte 계열 타입 판정용)
+#   - \s+(_[a-zA-Z0-9_]+)\s*;                : 멤버 변수명 캡처 (그룹 2)
+# 매칭 예시 (위반): vector<Actor*> _actors;, vector<Actor*> _actorList;, vector<uint8> _listBytes;
+# 올바른 예시: vector<Actor*> _listActor;, vector<uint8> _bytes;, vector<uint8> _rawBytes;
+# 컨벤션 규칙:
+#   1. 가변 컨테이너는 반드시 '_list' 접두어를 사용하며 단수형 명사를 씁니다 ('List' 접미어 금지).
+#   2. 단, uint8/int8/utf8 등 원시 바이트 컨테이너 중 이름에 'byte'/'bytes'가 포함된 경우 '_list' 접두어를 생략합니다.
 _kMemberVectorRe = re.compile(
-    r'^\s*(?:(?:sw::)?(?:vector|list|deque))\s*<[^>]+>\s+(_[a-zA-Z0-9_]+)\s*;'
+    r'^\s*(?:(?:sw::)?(?:vector|list|deque))\s*<([^>]+)>\s+(_[a-zA-Z0-9_]+)\s*;'
 )
 
+# [출력 매개변수 명명 검사]
+# 정규식 패턴:
+#   r'\b(?:(?:const\s+)?(?:[A-Za-z0-9_:]+(?:<[^>]+>)?)\s*[\*&]+\s+|\b)'
+#   r'(outP(?!ath)[A-Za-z0-9_]*|outPP[A-Za-z0-9_]*|inoutP[A-Za-z0-9_]*|inoutPP[A-Za-z0-9_]*|'
+#   r'listOut[A-Za-z0-9_]*|mapOut[A-Za-z0-9_]*|uniqueOut[A-Za-z0-9_]*|arrOut[A-Za-z0-9_]*|'
+#   r'listInOut[A-Za-z0-9_]*|mapInOut[A-Za-z0-9_]*|out_[a-zA-Z0-9_]+|out[A-Z][a-zA-Z0-9_]*List|'
+#   r'outList[A-Za-z0-9_]*Bytes?|outListByte[A-Za-z0-9_]*)\b'
+#
+#   - outP(?!ath)...  : outPApi 등 포인터 접두어가 out 뒤에 잘못 위치한 경우 (pOutApi 권장)
+#   - outPP...        : outPPBuffer 등 이중 포인터가 out 뒤에 잘못 위치한 경우 (ppOutBuffer 권장)
+#   - inoutP...       : inoutPSize 등 포인터 입출력이 inout 뒤에 잘못 위치한 경우 (pInOutSize 권장)
+#   - inoutPP...      : inoutPPNode 등 이중 포인터 입출력이 inout 뒤에 잘못 위치한 경우 (ppInOutNode 권장)
+#   - listOut...      : listOutBuffer -> outListBuffer 로 수정 제안
+#   - mapOut...       : mapOutData -> outMapData 로 수정 제안
+#   - uniqueOut...    : uniqueOutIds -> outUniqueIds 로 수정 제안
+#   - arrOut...       : arrOutBuffer -> outArrBuffer 로 수정 제안
+#   - out...List      : outActorList -> outListActor 로 수정 제안
+#   - outListBytes... : outListBytes -> outBytes 로 수정 제안 (바이트 벡터는 list 생략)
+#   - out_...         : out_buffer -> outBuffer 로 수정 제안 (camelCase 강제)
+_kOutParamNamingRe = re.compile(
+    r'\b(?:(?:const\s+)?(?:[A-Za-z0-9_:]+(?:<[^>]+>)?)\s*[\*&]+\s+|\b)'
+    r'(outP(?!ath)[A-Za-z0-9_]*|outPP[A-Za-z0-9_]*|inoutP[A-Za-z0-9_]*|inoutPP[A-Za-z0-9_]*|'
+    r'listOut[A-Za-z0-9_]*|mapOut[A-Za-z0-9_]*|uniqueOut[A-Za-z0-9_]*|arrOut[A-Za-z0-9_]*|'
+    r'listInOut[A-Za-z0-9_]*|mapInOut[A-Za-z0-9_]*|out_[a-zA-Z0-9_]+|out[A-Z][a-zA-Z0-9_]*List|'
+    r'outList[A-Za-z0-9_]*Bytes?|outListByte[A-Za-z0-9_]*)\b'
+)
+
+
+def makeSingularInternal(word: str) -> str:
+    """단어 끝의 복수형 어미를 단수형으로 변환합니다."""
+    if word.endswith("ies"):
+        return word[:-3] + "y"
+    if any(word.endswith(end) for end in ("sses", "shes", "ches", "xes", "zes")):
+        return word[:-2]
+    if word.endswith("s") and not word.endswith("ss"):
+        return word[:-1]
+    return word
+
+
+def getSuggestedOutParamFixInternal(name: str) -> tuple[str, str] | None:
+    """
+    잘못된 출력 매개변수 이름을 정규 컨벤션 이름과 설명 메시지로 변환합니다.
+    """
+    # 1. 이중 포인터 출력 (outPP... -> ppOut...)
+    if name.startswith("outPP"):
+        rest = name[5:]
+        fix = "ppOut" + rest if rest else "ppOut"
+        return fix, f"이중 포인터 출력 매개변수 '{name}'는 예외적으로 'ppOut' 접두어로 시작해야 합니다."
+
+    # 2. 단일 포인터 출력 (outP... -> pOut...)
+    if name.startswith("outP") and not name.startswith("outPath"):
+        rest = name[4:]
+        fix = "pOut" + rest if rest else "pOut"
+        return fix, f"원시 포인터 출력 매개변수 '{name}'는 예외적으로 'pOut' 접두어로 시작해야 합니다."
+
+    # 3. 이중 포인터 입출력 (inoutPP... -> ppInOut...)
+    if name.startswith("inoutPP"):
+        rest = name[7:]
+        fix = "ppInOut" + rest if rest else "ppInOut"
+        return fix, f"이중 포인터 입출력 매개변수 '{name}'는 'ppInOut' 접두어로 시작해야 합니다."
+
+    # 4. 단일 포인터 입출력 (inoutP... -> pInOut...)
+    if name.startswith("inoutP"):
+        rest = name[6:]
+        fix = "pInOut" + rest if rest else "pInOut"
+        return fix, f"포인터 입출력 매개변수 '{name}'는 'pInOut' 접두어로 시작해야 합니다."
+
+    # 5. 리스트 출력 (listOut... -> outList... / byte 예외)
+    if name.startswith("listOut"):
+        rest = name[7:]
+        if "byte" in rest.lower():
+            fix = "out" + rest
+            return fix, f"바이트 벡터 출력 매개변수 '{name}'는 'out' 접두어로 시작하고 'list'를 생략해야 합니다."
+        fix = "outList" + rest if rest else "outList"
+        return fix, f"출력 리스트 매개변수 '{name}'는 'outList' 접두어로 시작해야 합니다."
+
+    # 6. 리스트 입출력 (listInOut... -> inoutList...)
+    if name.startswith("listInOut"):
+        rest = name[9:]
+        fix = "inoutList" + rest if rest else "inoutList"
+        return fix, f"입출력 리스트 매개변수 '{name}'는 'inoutList' 접두어로 시작해야 합니다."
+
+    # 7. 맵 출력 (mapOut... -> outMap...)
+    if name.startswith("mapOut"):
+        rest = name[6:]
+        fix = "outMap" + rest if rest else "outMap"
+        return fix, f"출력 맵 매개변수 '{name}'는 'outMap' 접두어로 시작해야 합니다."
+
+    # 8. 맵 입출력 (mapInOut... -> inoutMap...)
+    if name.startswith("mapInOut"):
+        rest = name[8:]
+        fix = "inoutMap" + rest if rest else "inoutMap"
+        return fix, f"입출력 맵 매개변수 '{name}'는 'inoutMap' 접두어로 시작해야 합니다."
+
+    # 9. 집합 출력 (uniqueOut... -> outUnique...)
+    if name.startswith("uniqueOut"):
+        rest = name[9:]
+        fix = "outUnique" + rest if rest else "outUnique"
+        return fix, f"출력 셋 매개변수 '{name}'는 'outUnique' 접두어로 시작해야 합니다."
+
+    # 10. 고정 배열 출력 (arrOut... -> outArr...)
+    if name.startswith("arrOut"):
+        rest = name[6:]
+        fix = "outArr" + rest if rest else "outArr"
+        return fix, f"출력 배열 매개변수 '{name}'는 'outArr' 접두어로 시작해야 합니다."
+
+    # 11. 바이트 벡터 접두어/접미어 중복 정리 (outListBytes / outBytesList -> outBytes)
+    if (name.startswith("outList") or name.startswith("out")) and "byte" in name.lower() and name.endswith("List"):
+        middle = name[3:-4]
+        if middle.startswith("List"):
+            middle = middle[4:]
+        fix = "out" + middle
+        return fix, f"바이트 벡터 출력 매개변수 '{name}'는 'List' 접미어를 사용하지 않고 '{fix}' 형태를 사용해야 합니다."
+    if name.startswith("outList") and "byte" in name.lower():
+        rest = name[7:]
+        fix = "out" + rest
+        return fix, f"바이트 벡터 출력 매개변수 '{name}'는 'list' 접두어를 생략해야 합니다."
+
+    # 12. List 접미어 -> outList 접두어 변환 (outActorList -> outListActor)
+    if name.startswith("out") and name.endswith("List") and len(name) > 7:
+        middle = name[3:-4]
+        fix = "outList" + middle
+        return fix, f"출력 컨테이너 매개변수 '{name}'는 'List' 접미어 대신 'outList' 접두어를 사용해야 합니다."
+
+    # 13. snake_case 출력 변수 -> camelCase 변환 (out_buffer -> outBuffer)
+    if name.startswith("out_"):
+        parts = name.split("_")
+        fix = "out" + "".join(p.capitalize() for p in parts[1:])
+        return fix, f"출력 매개변수 '{name}'는 camelCase 형태('{fix}')를 사용해야 합니다."
+
+    # 14. 컨테이너 복수형 검사 (outList, outMap, outArr - unique 및 bytes 제외)
+    if name.startswith(("outList", "outMap", "outArr")):
+        kNonPluralExceptions = (
+            "Bounds", "Status", "Pass", "Address", "Axis", "Process", "Class", "Cross",
+            "Loss", "Mass", "Press", "Canvas", "Args", "Bytes", "Bindless", "RtvIndex",
+            "DsvIndex", "Matrix", "Vertex", "Alias"
+        )
+        if not any(name.endswith(exc) for exc in kNonPluralExceptions):
+            if name.endswith(("ies", "es", "s")) and not name.endswith("ss"):
+                singularFix = makeSingularInternal(name)
+                return singularFix, f"출력 컨테이너 매개변수 '{name}'는 복수형 대신 단수형 명사('{singularFix}')를 사용해야 합니다."
+
+    return None
+
+
 # [연관 컨테이너(맵) 멤버 변수 명명 검사]
-# std::map, std::unordered_map 등 키-값 연관 컨테이너 멤버 중 '_map' 접두어가 누락된 경우를 검출합니다.
-# 매칭 예시: unordered_map<string, int32> _table; (위반 -> _mapTable 이어야 함)
+# 정규식 패턴: r'^\s*(?:(?:sw::)?(?:unordered_map|map))\s*<[^>]+>\s+(_[a-zA-Z0-9_]+)\s*;'
+#   - ^\s*(?:(?:sw::)?(?:unordered_map|map)) : map 또는 unordered_map 매칭
+#   - <[^>]+>                                : 템플릿 인자 (<Key, Value>) 매칭
+#   - \s+(_[a-zA-Z0-9_]+)\s*;                : 멤버 변수명 캡처
+# 매칭 예시 (위반): unordered_map<string, int32> _table; (위반 -> _mapTable 이어야 함)
+# 올바른 예시: unordered_map<string, int32> _mapTable;, map<int32, Actor*> _mapIdToActor;
 # 컨벤션 규칙: 연관 컨테이너 멤버는 '_map' 접두어로 시작해야 합니다.
 _kMemberMapRe = re.compile(
     r'^\s*(?:(?:sw::)?(?:unordered_map|map))\s*<[^>]+>\s+(_[a-zA-Z0-9_]+)\s*;'
 )
 
 # [고유 집합(세트) 컨테이너 멤버 변수 명명 검사]
-# std::set, std::unordered_set 등 고유 키 집합 컨테이너 멤버 중 '_unique' 접두어가 누락된 경우를 검출합니다.
-# 매칭 예시: set<uint32> _objectIds; (위반 -> _uniqueObjectIds 이어야 함)
-# 컨벤션 규칙: 유일성이 보장되는 집합 컨테이너 멤버는 '_unique' 접두어로 시작해야 합니다.
+# 정규식 패턴: r'^\s*(?:(?:sw::)?(?:unordered_set|set))\s*<[^>]+>\s+(_[a-zA-Z0-9_]+)\s*;'
+#   - ^\s*(?:(?:sw::)?(?:unordered_set|set)) : set 또는 unordered_set 매칭
+#   - <[^>]+>                                : 템플릿 인자 (<Key>) 매칭
+#   - \s+(_[a-zA-Z0-9_]+)\s*;                : 멤버 변수명 캡처
+# 매칭 예시 (위반): set<uint32> _ids; (위반 -> _uniqueIds 이어야 함)
+# 올바른 예시: set<uint32> _uniqueIds;, unordered_set<string> _uniqueTags;
+# 컨벤션 규칙: 고유 집합 멤버는 '_unique' 접두어로 시작하며, 컨테이너 중 유일하게 복수형 명사(_uniqueIds)가 허용됩니다.
 _kMemberSetRe = re.compile(
     r'^\s*(?:(?:sw::)?(?:unordered_set|set))\s*<[^>]+>\s+(_[a-zA-Z0-9_]+)\s*;'
 )
 
 # [리터럴/원시 타입 auto 남용 검사]
-# 문자열, 불리언(true/false), nullptr 등 타입이 명확한 리터럴에 불필요하게 auto를 사용한 경우를 검출합니다.
-# 매칭 예시: auto name = "Player";, auto bReady = true;, auto pObj = nullptr;
+# 정규식 패턴: r'^\s*auto\s+([a-zA-Z0-9_]+)\s*=\s*(?:"[^"]*"|\'[^\']*\'|\btrue\b|\bfalse\b|\bnullptr\b)\s*;'
+#   - ^\s*auto\s+([a-zA-Z0-9_]+)              : auto 변수 선언 및 변수명 캡처
+#   - \s*=\s*                                 : 대입 연산자 매칭
+#   - (?:"[^"]*"|\'[^\']*\'|\btrue\b|\bfalse\b|\bnullptr\b) : 명확한 리터럴 값 (문자열, 불리언, nullptr) 매칭
+# 매칭 예시 (위반): auto name = "Player";, auto bReady = true;, auto pObj = nullptr;
+# 올바른 예시: const char* name = "Player";, bool bReady = true;, Actor* pObj = nullptr;
 # 컨벤션 규칙: auto는 복잡한 반복자(iterator)나 구조화된 바인딩(structured binding)에만 제한적으로 사용해야 합니다.
 _kLiteralAutoRe = re.compile(
     r'^\s*auto\s+([a-zA-Z0-9_]+)\s*=\s*(?:"[^"]*"|\'[^\']*\'|\btrue\b|\bfalse\b|\bnullptr\b)\s*;'
 )
 
 # [불필요한 '== true' 명시 비교 검사]
-# 조건문(if) 안에서 불리언 표현식을 장황하게 '== true' 또는 'true ==' 와 비교하는 구문을 검출합니다.
-# 매칭 예시: if (bValid == true), if (true == isReady)
-# 컨벤션 규칙: 참 비교는 'if (bValid)' 와 같이 간결하게 평가해야 합니다.
+# 정규식 패턴: r'\bif\s*\(\s*([a-zA-Z0-9_>.-]+\s*==\s*true|true\s*==\s*[a-zA-Z0-9_>.-]+)\s*\)'
+#   - \bif\s*\(                               : if 조건문 시작 매칭
+#   - (expr\s*==\s*true | true\s*==\s*expr)   : 불리언 식과 true 리터럴 간의 명시적 동등 비교 구문 캡처
+# 매칭 예시 (위반): if (bValid == true), if (true == isReady)
+# 올바른 예시: if (bValid), if (isReady)
+# 컨벤션 규칙: 불리언 참 비교는 'if (bValid)' 와 같이 명시적 리터럴 없이 간결하게 평가합니다.
 _kExplicitTrueRe = re.compile(
     r'\bif\s*\(\s*([a-zA-Z0-9_>.-]+\s*==\s*true|true\s*==\s*[a-zA-Z0-9_>.-]+)\s*\)'
 )
 
 # [암시적 부정(!expr) 조건문 통합 검사]
-# 조건문(if) 안에서 부정 연산자(!)를 이용해 암시적으로 거짓/널을 평가하는 구문을 포괄 검출합니다.
-# 매칭 예시: if (!_bValid), if (!pActor), if (!list.empty())
-# 컨벤션 규칙: 피연산자의 성격에 따라 명시적 비교('== false', '== nullptr')를 사용해야 합니다.
+# 정규식 패턴: r'\bif\s*\(\s*!\s*([a-zA-Z0-9_>.:()]+(?:\.[a-zA-Z0-9_]+(?:\([^)]*\))?)?)\s*\)'
+#   - \bif\s*\(\s*!\s*                        : if 문 시작 직후의 논리 부정 연산자(!) 매칭
+#   - ([a-zA-Z0-9_>.:()]+...)                 : 부정되는 대상 표현식 캡처
+# 매칭 예시 (위반): if (!_bValid), if (!pActor), if (!list.empty())
+# 올바른 예시: if (_bValid == false), if (pActor == nullptr), if (list.empty() == false)
+# 컨벤션 규칙: 암시적 '!' 부정은 엄격히 금지되며, 명시적 비교('== false', '== nullptr')를 작성해야 합니다.
 _kNegatedConditionRe = re.compile(
     r'\bif\s*\(\s*!\s*([a-zA-Z0-9_>.:()]+(?:\.[a-zA-Z0-9_]+(?:\([^)]*\))?)?)\s*\)'
 )
 
 # [암시적 포인터 널 체크 검사]
-# 게터 함수 반환값 등의 포인터에 대해 '!= nullptr' 없이 암시적으로 null을 검사하는 구문을 검출합니다.
-# 매칭 예시: if ( getOwner() ), if ( getScene() && getPlayer() )
-# 컨벤션 규칙: 포인터 검사는 'if ( getOwner() != nullptr )' 와 같이 명시적 nullptr 비교를 사용해야 합니다.
+# 정규식 패턴: r'\bif\s*\(\s*(get[A-Z][a-zA-Z0-9_]*\(\)(?:\s*&&\s*get[A-Z][a-zA-Z0-9_]*\(\))*)\s*\)'
+#   - \bif\s*\(\s*(get[A-Z]...\(\))           : if 문 안에서 getOwner() 등 포인터 반환 게터를 직접 불리언처럼 평가하는 구문 매칭
+# 매칭 예시 (위반): if ( getOwner() ), if ( getScene() && getPlayer() )
+# 올바른 예시: if ( getOwner() != nullptr ), if ( getScene() != nullptr && getPlayer() != nullptr )
+# 컨벤션 규칙: 포인터의 유효성 검사는 반드시 '!= nullptr' 또는 '== nullptr'를 명시해야 합니다.
 _kImplicitPointerNullRe = re.compile(
     r'\bif\s*\(\s*(get[A-Z][a-zA-Z0-9_]*\(\)(?:\s*&&\s*get[A-Z][a-zA-Z0-9_]*\(\))*)\s*\)'
 )
 
 # [상수 명명 규칙 검사]
-# static constexpr 상수가 'k' 접두어 + PascalCase 규칙을 준수하지 않은 경우를 검출합니다.
-# 매칭 예시: static constexpr uint32 MAX_SIZE = 100; (위반 -> kMaxSize 이어야 함)
-# 컨벤션 규칙: 상수는 'kPascalCase' 명명 규칙을 준수해야 합니다.
+# 정규식 패턴: r'^\s*static\s+constexpr\s+(?:\w+)\s+([A-Z][a-zA-Z0-9_]*)\s*='
+#   - ^\s*static\s+constexpr\s+(?:\w+)\s+     : static constexpr 상수 타입 선언 매칭
+#   - ([A-Z][a-zA-Z0-9_]*)                    : 대문자로 시작하지만 'k' 접두어가 누락된 상수명 캡처
+#   - \s*=                                    : 대입 연산자 매칭
+# 매칭 예시 (위반): static constexpr uint32 MAX_SIZE = 100;, static constexpr float32 DefaultSpeed = 5.0f;
+# 올바른 예시: static constexpr uint32 kMaxSize = 100;, static constexpr float32 kDefaultSpeed = 5.0f;
+# 컨벤션 규칙: 모든 정적 상수는 'kPascalCase' 접두어 규칙을 준수해야 합니다.
 _kConstantNamingRe = re.compile(
     r'^\s*static\s+constexpr\s+(?:\w+)\s+([A-Z][a-zA-Z0-9_]*)\s*='
 )
 
 # [원시 기본 자료형 사용 검사]
-# C++ 표준 원시 타입(int, float, unsigned int 등)을 직접 선언한 경우를 검출합니다.
-# 매칭 예시: int count;, unsigned long size;, double weight;
-# 컨벤션 규칙: 플랫폼 독립적 크기 보장을 위해 Types.h에 정의된 별칭(int32, uint32, float32, float64 등)을 사용해야 합니다.
+# 정규식 패턴: r'\b(?:unsigned\s+int|unsigned\s+short|unsigned\s+long\s+long|unsigned\s+char|long\s+long|unsigned\s+long|long|int|float|double|short|char|wchar_t)\b'
+#   - 표준 C++ 원시 타입 키워드들을 단어 경계(\b)로 감지
+# 매칭 예시 (위반): int count;, unsigned int size;, float weight;, double delta;
+# 올바른 예시: int32 count;, uint32 size;, float32 weight;, float64 delta;, utf8 ch;
+# 컨벤션 규칙: 플랫폼 독립적 크기 보장 및 일관성을 위해 Types.h에 정의된 별칭을 사용해야 합니다.
 _kBasicTypesRe = re.compile(
     r'\b(?:unsigned\s+int|unsigned\s+short|unsigned\s+long\s+long|unsigned\s+char|long\s+long|unsigned\s+long|long|int|float|double|short|char|wchar_t)\b'
 )
 
 # [생성자 멤버 초기화 리스트 괄호 검사]
-# 생성자 초기화 리스트에서 소괄호 '()' 또는 중괄호 '{}'로 멤버 변수를 초기화하는 구문을 캡처합니다.
-# 매칭 예시: : _member(0), , _pOwner{nullptr}
-# 컨벤션 규칙: 생성자 초기화 시 균일 초기화 중괄호 '{}'를 사용해야 합니다.
+# 정규식 패턴: r'^[,\:]\s*([a-zA-Z0-9_]+)\s*(\([^\)]*\)|\{[^\}]*\})'
+#   - ^[,\:]\s*                               : 줄 시작의 콜론(:) 또는 쉼표(,) 매칭
+#   - ([a-zA-Z0-9_]+)                         : 초기화 대상 멤버 변수명 캡처 (그룹 1)
+#   - (\([^\)]*\)|\{[^\}]*\})                 : 소괄호 (val) 또는 중괄호 {val} 초기화 구문 캡처 (그룹 2)
+# 매칭 예시 (위반): : _member(0), , _pOwner(nullptr)
+# 올바른 예시: : _member{0}, , _pOwner{nullptr}
+# 컨벤션 규칙: 생성자 초기화 리스트에서는 균일 초기화 중괄호 '{}'를 사용해야 합니다.
 _kConstructorInitRe = re.compile(
     r'^[,\:]\s*([a-zA-Z0-9_]+)\s*(\([^\)]*\)|\{[^\}]*\})'
 )
 
-
+# [클래스 / 구조체 선언 검사]
+# 정규식 패턴: r'^\s*(?:template\s*<[^>]*>\s*)?(?:class|struct)\s+(?:(?:SW_\w*API|alignas\([^)]*\))\s+)*([A-Za-z0-9_]+)(?:\s*final|\s*:\s*[^{;]+)?\s*\{?'
+#   - 클래스 또는 구조체의 정의부와 클래스명을 추출하여 멤버 선언 순서 및 생성자 순서 검증에 활용합니다.
 _kClassDeclRe = re.compile(
     r'^\s*(?:template\s*<[^>]*>\s*)?(?:class|struct)\s+(?:(?:SW_\w*API|alignas\([^)]*\))\s+)*([A-Za-z0-9_]+)(?:\s*final|\s*:\s*[^{;]+)?\s*\{?'
 )
+
+# [클래스 멤버 변수 선언 검사]
+# 정규식 패턴: r'^\s*(?:\[\[[^\]]*\]\]\s*)?(?:(?:alignas\([^)]*\)|mutable|static|inline|const|volatile|constexpr)\s+)*(?:[A-Za-z0-9_:]+(?:<[^;]+>)?\s*[\*&]?\s+)(_[a-zA-Z0-9_]+)\s*(?::\s*\d+)?\s*(?:\[[^\]]*\])?\s*(?:\{[^}]*\}|\([^)]*\))?\s*(?:=\s*[^;]+)?\s*;'
+#   - 클래스 내부에서 '_'로 시작하는 모든 멤버 변수 선언의 순서를 순차 추출합니다.
 _kClassMemberRe = re.compile(
     r'^\s*(?:\[\[[^\]]*\]\]\s*)?(?:(?:alignas\([^)]*\)|mutable|static|inline|const|volatile|constexpr)\s+)*(?:[A-Za-z0-9_:]+(?:<[^;]+>)?\s*[\*&]?\s+)(_[a-zA-Z0-9_]+)\s*(?::\s*\d+)?\s*(?:\[[^\]]*\])?\s*(?:\{[^}]*\}|\([^)]*\))?\s*(?:=\s*[^;]+)?\s*;'
 )
+
+# [함수 포인터 멤버 변수 선언 검사]
+# 정규식 패턴: r'^\s*(?:\[\[[^\]]*\]\]\s*)?(?:[A-Za-z0-9_:]+\s+)?\(\s*\*\s*(_[a-zA-Z0-9_]+)\s*\)\s*\([^)]*\)\s*;'
+#   - 반환타입 (*_pFn)(인자타입) 형태의 함수 포인터 멤버 변수를 추출합니다.
 _kClassMemberFnPtrRe = re.compile(
     r'^\s*(?:\[\[[^\]]*\]\]\s*)?(?:[A-Za-z0-9_:]+\s+)?\(\s*\*\s*(_[a-zA-Z0-9_]+)\s*\)\s*\([^)]*\)\s*;'
 )
@@ -463,6 +690,40 @@ def checkFileConventionsInternal(filePath: Path, rootDir: Path) -> list[Conventi
                     )
                 )
 
+        # 삼중 포인터 이상(ppp, ***) 검사
+        if not trimmed.startswith("#") and "Types.h" not in relPath:
+            codeWithoutStrings = re.sub(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'', '', line)
+            if tripleMatch := _kTriplePointerRe.search(codeWithoutStrings):
+                matchedStr = tripleMatch.group(0)
+                violations.append(
+                    ConventionViolation(
+                        file_path=relPath,
+                        line_number=lineNum,
+                        rule_category="Naming/TriplePointer",
+                        message=f"삼중 포인터 이상('{matchedStr}') 사용이 검출되었습니다. 구조적 결함이므로 데이터 구조를 재설계하세요.",
+                        snippet=trimmed,
+                    )
+                )
+
+        # 출력 매개변수 명명 규칙 검사 (pOut..., ppOut..., outList..., outMap..., outUnique..., outArr...)
+        if not trimmed.startswith("#") and "Types.h" not in relPath:
+            codeWithoutStrings = re.sub(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'', '', line)
+            for outMatch in _kOutParamNamingRe.finditer(codeWithoutStrings):
+                paramCandidate = outMatch.group(1)
+                fixResult = getSuggestedOutParamFixInternal(paramCandidate)
+                if fixResult is not None:
+                    suggestedFix, fixMsg = fixResult
+                    violations.append(
+                        ConventionViolation(
+                            file_path=relPath,
+                            line_number=lineNum,
+                            rule_category="Naming/OutParameter",
+                            message=f"{fixMsg} ('{suggestedFix}' 권장)",
+                            snippet=trimmed,
+                            suggested_fix=suggestedFix,
+                        )
+                    )
+
         # --- 생성자 초기화 리스트 검사 (포맷, 중괄호, 선언 순서) ---
         # 생성자 정의 헤더 감지
         if isSource:
@@ -564,19 +825,37 @@ def checkFileConventionsInternal(filePath: Path, rootDir: Path) -> list[Conventi
                     )
                 )
 
-            # 가변 배열/리스트 멤버 접두어(_list) 또는 접미어(List) 검사
+            # 가변 배열/리스트 멤버 접두어(_list) 검사 ('List' 접미어 금지 및 byte 벡터 처리)
             if vecMatch := _kMemberVectorRe.match(line):
-                varName = vecMatch.group(1)
-                if not varName.startswith("_list") and not varName.endswith("List") and not varName.startswith("_s_list"):
-                    violations.append(
-                        ConventionViolation(
-                            file_path=relPath,
-                            line_number=lineNum,
-                            rule_category="Naming/DynamicContainer",
-                            message=f"동적 배열/벡터 멤버 변수 '{varName}'는 '_list' 접두어로 시작하거나 'List' 접미어로 끝나야 합니다.",
-                            snippet=trimmed,
+                innerType = vecMatch.group(1).strip()
+                varName = vecMatch.group(2)
+                isByteVec = bool(re.search(r'\b(?:uint8|int8|utf8|char|byte)\b', innerType, re.IGNORECASE))
+                hasByteWord = "byte" in varName.lower()
+
+                if isByteVec and hasByteWord:
+                    if varName.startswith("_list"):
+                        suggested = "_" + varName[5].lower() + varName[6:]
+                        violations.append(
+                            ConventionViolation(
+                                file_path=relPath,
+                                line_number=lineNum,
+                                rule_category="Naming/DynamicContainer",
+                                message=f"바이트 벡터({innerType}) 멤버 변수 '{varName}'는 'byte' 단어가 포함된 경우 '_list' 접두어를 생략해야 합니다 ('{suggested}' 권장).",
+                                snippet=trimmed,
+                                suggested_fix=suggested,
+                            )
                         )
-                    )
+                else:
+                    if not varName.startswith("_list") and not varName.startswith("_s_list"):
+                        violations.append(
+                            ConventionViolation(
+                                file_path=relPath,
+                                line_number=lineNum,
+                                rule_category="Naming/DynamicContainer",
+                                message=f"동적 배열/벡터 멤버 변수 '{varName}'는 '_list' 접두어로 시작해야 합니다 ('List' 접미어 사용 불가).",
+                                snippet=trimmed,
+                            )
+                        )
 
             # 맵 컨테이너 멤버 접두어(_map) 검사
             if mapMatch := _kMemberMapRe.match(line):
@@ -606,23 +885,31 @@ def checkFileConventionsInternal(filePath: Path, rootDir: Path) -> list[Conventi
                         )
                     )
 
-            # 컨테이너 멤버 변수 단수형 명명 규칙 검사 (_list*, _map*, _unique*, _arr*)
-            for prefix in ("_list", "_map", "_unique", "_arr"):
-                if varName := None:
-                    pass
-                match = re.match(rf'^\s*(?:(?:sw::)?(?:vector|list|deque|unordered_map|map|unordered_set|set))\s*<[^>]+>\s+({prefix}[A-Z][a-zA-Z0-9_]*)\s*;', line)
+            # 컨테이너 멤버 변수 단수형 명명 규칙 검사 (_list*, _map*, _arr*)
+            # (unique 접두어 및 byte 버퍼를 제외하곤 복수형 금지)
+            for prefix in ("_list", "_map", "_arr"):
+                match = re.match(
+                    rf'^\s*(?:(?:sw::)?(?:vector|list|deque|unordered_map|map))\s*<[^>]+>\s+({prefix}[A-Z][a-zA-Z0-9_]*)\s*;',
+                    line,
+                )
                 if match:
                     vName = match.group(1)
-                    # Non-plural exceptions
-                    if not any(vName.endswith(exc) for exc in ("Bounds", "Status", "Pass", "Address", "Axis", "Process", "Class", "Cross", "Loss", "Mass", "Press", "Canvas", "Args", "Bytes", "Bindless", "RtvIndex", "DsvIndex", "Matrix", "Vertex", "Alias")):
-                        if vName.endswith(("ies", "es", "s")):
+                    kNonPluralExceptions = (
+                        "Bounds", "Status", "Pass", "Address", "Axis", "Process", "Class", "Cross",
+                        "Loss", "Mass", "Press", "Canvas", "Args", "Bytes", "Bindless", "RtvIndex",
+                        "DsvIndex", "Matrix", "Vertex", "Alias",
+                    )
+                    if not any(vName.endswith(exc) for exc in kNonPluralExceptions):
+                        if vName.endswith(("ies", "es", "s")) and not vName.endswith("ss"):
+                            singularFix = makeSingularInternal(vName)
                             violations.append(
                                 ConventionViolation(
                                     file_path=relPath,
                                     line_number=lineNum,
                                     rule_category="Naming/ContainerSingular",
-                                    message=f"컨테이너 멤버 변수 '{vName}'는 복수형 대신 단수형 명사를 사용해야 합니다.",
+                                    message=f"컨테이너 멤버 변수 '{vName}'는 복수형 대신 단수형 명사를 사용해야 합니다 ('{singularFix}' 권장).",
                                     snippet=trimmed,
+                                    suggested_fix=singularFix,
                                 )
                             )
 
@@ -675,6 +962,12 @@ def runConventionsCheck(rootDir: Path | None = None,
 
 
 def main() -> int:
+    if hasattr(sys.stdout, "reconfigure"):
+        try:
+            sys.stdout.reconfigure(encoding="utf-8")
+        except Exception:
+            pass
+
     parser = argparse.ArgumentParser(description="SW Engine C++ 코딩 컨벤션 검사기")
     parser.add_argument("--root", type=Path, default=None, help="저장소 루트 디렉터리 경로")
     parser.add_argument("--category", type=str, default=None, help="특정 규칙 카테고리 필터링")
