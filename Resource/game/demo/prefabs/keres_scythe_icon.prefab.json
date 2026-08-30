@@ -1,0 +1,22 @@
+{
+    "Name": "KERES_SCYTHE_ICON",
+    "IsActive": true,
+    "ParentGO": "",
+    "Tags": [],
+    "Components": {
+        "SceneComponent#0": {
+            "_bActive": true
+        },
+        "SpriteComponent#0": {
+            "_bActive": true,
+            "Mesh": "RectMesh",
+            "Material": "materials/std2dmtrl.material",
+            "Texture": "textures/weapon.png",
+            "SpriteName": "KeresScytheIcon"
+        }
+    },
+    "SceneTransforms": {
+        "SceneComponent#0": "0,0,-70;0,0,0;200,200,1;",
+        "SpriteComponent#0": "0,0,0;0,0,0;1,1,1;SceneComponent#0"
+    }
+}

@@ -1,0 +1,11 @@
+<?xml version="1.0" ?>
+<Scene formatVersion="0" name="4.Map_03">
+    <entities>
+        <entity name="NEXT_DOOR_TOP" prefab="game/demo/prefabs/4.map_03_next_door_top_0.prefab.json"/>
+        <entity name="NEXT_DOOR_RIGHT" prefab="game/demo/prefabs/4.map_03_next_door_right_1.prefab.json"/>
+        <entity name="SUMMON_MINOTAURS" prefab="game/demo/prefabs/4.map_03_summon_minotaurs_2.prefab.json"/>
+        <entity name="SUMMON_SKEL" prefab="game/demo/prefabs/4.map_03_summon_skel_3.prefab.json"/>
+        <entity name="SUMMON_DOG" prefab="game/demo/prefabs/4.map_03_summon_dog_4.prefab.json"/>
+        <entity name="MAP_ROOM" prefab="game/demo/prefabs/4.map_03_map_room_5.prefab.json"/>
+    </entities>
+</Scene>

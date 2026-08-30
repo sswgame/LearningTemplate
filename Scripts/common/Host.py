@@ -80,6 +80,22 @@ def runGit(args: Sequence[str],
     )
 
 
+def getAllStagedFiles(root: Path | None = None) -> list[Path]:
+    """
+    Git Staged(인덱스) 상태인 모든 파일 목록을 반환합니다.
+    """
+    projectRoot = root or getProjectRoot()
+    fileSet: set[Path] = set()
+    gitResult = runGit(["diff", "--cached", "--name-only", "--diff-filter=ACM"], cwd=projectRoot)
+    if gitResult.returncode == 0:
+        for rawLine in gitResult.stdout.splitlines():
+            if line := rawLine.strip():
+                resolvedPath = (projectRoot / line).resolve()
+                if resolvedPath.is_file():
+                    fileSet.add(resolvedPath)
+    return sorted(fileSet)
+
+
 def getStagedCppFiles(root: Path | None = None,
                       extensions: set[str] | None = None) -> list[Path]:
     """

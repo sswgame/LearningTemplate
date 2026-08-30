@@ -123,6 +123,7 @@ from .Constants import (
 )
 from .Host import (
     ensureGitOnPath,
+    getAllStagedFiles,
     getModifiedCppFiles,
     getStagedCppFiles,
     resolveClangFormat,
@@ -282,6 +283,7 @@ __all__ = [
     "resolveGitExecutable",
     "ensureGitOnPath",
     "runGit",
+    "getAllStagedFiles",
     "getStagedCppFiles",
     "getModifiedCppFiles",
     "resolveClangFormat",

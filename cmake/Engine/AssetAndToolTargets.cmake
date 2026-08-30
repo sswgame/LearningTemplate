@@ -68,6 +68,14 @@ if(Python3_Interpreter_FOUND)
 		COMMENT "Checking Include Order rules..."
 		ARGS --root "${CMAKE_SOURCE_DIR}"
 	)
+	sw_addRepoPythonTarget(CheckResourceCasing "${SW_SCRIPT_LINT_CHECK_RESOURCE_CASING}"
+		COMMENT "Checking Resource lowercase casing rules..."
+		ARGS --root "${CMAKE_SOURCE_DIR}"
+	)
+	sw_addRepoPythonTarget(CheckCodeConventions "${SW_SCRIPT_LINT_CHECK_CODE_CONVENTIONS}"
+		COMMENT "Checking C++ code conventions..."
+		ARGS --root "${CMAKE_SOURCE_DIR}"
+	)
 	sw_addRepoPythonTarget(CheckSourceGlob "${SW_SCRIPT_LINT_CHECK_SOURCE_GLOB}"
 		COMMENT "Checking source GLOB coverage vs compile_commands..."
 		ARGS --root "${CMAKE_SOURCE_DIR}" --build "${CMAKE_BINARY_DIR}" --active-game "${SW_ACTIVE_GAME}"
@@ -98,6 +106,24 @@ function(sw_registerLintTests)
 				--root "${CMAKE_SOURCE_DIR}"
 		)
 		set_tests_properties(CheckIncludeOrder PROPERTIES LABELS "lint" TIMEOUT 15)
+	endif()
+
+	if(TARGET CheckResourceCasing)
+		add_test(
+			NAME CheckResourceCasing
+			COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/${SW_SCRIPT_LINT_CHECK_RESOURCE_CASING}"
+				--root "${CMAKE_SOURCE_DIR}"
+		)
+		set_tests_properties(CheckResourceCasing PROPERTIES LABELS "lint" TIMEOUT 15)
+	endif()
+
+	if(TARGET CheckCodeConventions)
+		add_test(
+			NAME CheckCodeConventions
+			COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/${SW_SCRIPT_LINT_CHECK_CODE_CONVENTIONS}"
+				--root "${CMAKE_SOURCE_DIR}"
+		)
+		set_tests_properties(CheckCodeConventions PROPERTIES LABELS "lint" TIMEOUT 15)
 	endif()
 
 	if(TARGET CheckSourceGlob)

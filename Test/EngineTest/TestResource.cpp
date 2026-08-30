@@ -218,3 +218,44 @@ SW_TEST_CASE( Engine_Resource, AssetStreamingQueueLifecycleAndThrottling )
 
 	queue.shutdown();
 }
+
+/**
+ * @brief [Engine_Resource] 리소스 경로 조회 시 소문자 자동 정규화 및 대소문자 무관 탐색 검증
+ */
+SW_TEST_CASE( Engine_Resource, ResourcePathCaseInsensitiveLookupAndLowerCaseNormalization )
+{
+	SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+
+	// 1. FileUtil::normalizePath 기본 동작 검증 (역슬래시 -> 슬래시, 소문자화)
+	const sw::string rawPath	= "Resource\\Game\\Demo\\Maps\\Town01.xml";
+	const sw::string normalized = sw::FileUtil::normalizePath( rawPath );
+	SW_EXPECT_STREQ( "resource/game/demo/maps/town01.xml", normalized.c_str() );
+
+	// 2. 대문자/혼합 대소문자 전역 ID로 조회 시 소문자 물리 파일 매핑 검증
+	const sw::string pathUpperGlobal = sw::ResourceUtil::getResourcePath( "GAME/DEMO/DATA/GAMEDATA.XML" );
+	SW_EXPECT_FALSE( pathUpperGlobal.empty() );
+	SW_EXPECT_TRUE( sw::FileUtil::fileExists( pathUpperGlobal ) );
+	SW_EXPECT_TRUE( sw::FileUtil::endsWithIgnoreCase( pathUpperGlobal, "gamedata.xml" ) );
+
+	// 3. 엔진 파이프라인 대문자 조회 검증
+	const sw::string pathEnginePipeline = sw::ResourceUtil::getResourcePath( "ENGINE/PIPELINE/FORWARDPIPELINE.XML" );
+	SW_EXPECT_FALSE( pathEnginePipeline.empty() );
+	SW_EXPECT_TRUE( sw::FileUtil::fileExists( pathEnginePipeline ) );
+
+	// 4. 팩 상대 키(Mixed case) 조회 검증
+	const sw::string pathMixedPack = sw::ResourceUtil::getResourcePath( "Maps/Town01.xml" );
+	SW_EXPECT_FALSE( pathMixedPack.empty() );
+	SW_EXPECT_TRUE( sw::FileUtil::fileExists( pathMixedPack ) );
+
+	// 5. 프리팹 대문자 키 조회 검증
+	const sw::string pathUpperPrefab = sw::ResourceUtil::getResourcePath( "game/demo/prefabs/GHOST.PREFAB.JSON" );
+	SW_EXPECT_FALSE( pathUpperPrefab.empty() );
+	SW_EXPECT_TRUE( sw::FileUtil::fileExists( pathUpperPrefab ) );
+
+	// 6. 텍스트 리소스 읽기 시 대문자 키 전달 검증
+	sw::string textContent;
+	const bool bReadOk = sw::ResourceUtil::readTextResource( "GAME/DEMO/DATA/GAMEDATA.XML", textContent );
+	SW_EXPECT_TRUE( bReadOk );
+	SW_EXPECT_FALSE( textContent.empty() );
+	SW_EXPECT_TRUE( textContent.find( "<GameData>" ) != sw::string::npos );
+}

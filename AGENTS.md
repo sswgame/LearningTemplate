@@ -73,6 +73,10 @@ cmake --build --preset Ninja-Debug
 - Module/file names use `PascalCase.py`.
 - JSON configuration keys use `snake_case`.
 
+### Resource Assets
+
+- All files and directories under `Resource/` MUST use strictly lowercase names (`[a-z0-9_.-]+`, e.g. `inventory.anim`, `0.title.scene.xml`, `ghost.prefab.json`). Uppercase characters are strictly prohibited (except documentation `README.md`). Enforced automatically by `CheckResourceCasing.py` and Git pre-commit hooks.
+
 ## C++ structure and includes
 
 - In headers, prefer forward declarations. Include only when a forward

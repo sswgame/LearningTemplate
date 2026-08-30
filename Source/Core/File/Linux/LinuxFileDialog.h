@@ -29,7 +29,7 @@ namespace sw
 		 * @brief 파일 다이얼로그를 동기적으로 엽니다.
 		 * @return 사용자가 선택하면 true (outPaths 채움). 취소/실패면 false.
 		 */
-		static bool open( const FileDialogParams& params, vector<string>& outPaths );
+		static bool open( const FileDialogParams& params, vector<string>& outListPath );
 	};
 } // namespace sw
 

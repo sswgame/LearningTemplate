@@ -2,8 +2,8 @@
 <!-- Game-owned bootstrap and component defaults (loaded by GameData / ComponentDefaults). -->
 <GameData>
 	<startMap>game/demo/maps/town01.xml</startMap>
-	<titleScene>game/demo/maps/TestScene.scene.xml</titleScene>
-	<entranceScene>game/demo/maps/1.Entrance.scene.xml</entranceScene>
+	<titleScene>game/demo/maps/testscene.scene.xml</titleScene>
+	<entranceScene>game/demo/maps/1.entrance.scene.xml</entranceScene>
 	<battleMap>game/demo/maps/battle01.xml</battleMap>
 	<battleScene>game/demo/maps/battle01_scene.xml</battleScene>
 	<defaultSavePath>game/demo/save/default_slot.sav</defaultSavePath>
@@ -33,7 +33,7 @@
 		<HPBar lerpSpeed="5.0" />
 		<DamageUI lifeTime="0.8" floatSpeed="60.0" />
 		<EffectBase duration="1.0" />
-		<Title nextSceneName="game/demo/maps/1.Entrance.scene.xml" frontCloudSpeed="100" startFrontPosX="-1280" maxFrontPosX="1280" backCloudSpeed="60" startBackCloudPosX="-1280" maxBackCloudPosX="1280" />
+		<Title nextSceneName="game/demo/maps/1.entrance.scene.xml" frontCloudSpeed="100" startFrontPosX="-1280" maxFrontPosX="1280" backCloudSpeed="60" startBackCloudPosX="-1280" maxBackCloudPosX="1280" />
 		<Player speed="400" jumpPower="600" dashSpeed="1200" dashTime="0.2" dashCoolTime="1.5" maxDashCount="2" />
 		<Portal triggerRadius="50" />
 		<Monster patrolRange="200" detectRange="400" attackRange="50" moveSpeed="150" attackCoolTime="1.5" />

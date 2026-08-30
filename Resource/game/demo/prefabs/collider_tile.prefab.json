@@ -1,0 +1,34 @@
+{
+    "Name": "COLLIDER_TILE",
+    "IsActive": true,
+    "ParentGO": "",
+    "Tags": [],
+    "Components": {
+        "SceneComponent#0": {
+            "_bActive": true
+        },
+        "BoxCollider2DComponent#0": {
+            "_bActive": true,
+            "colliderType": 0,
+            "offsetPos": "0,0",
+            "offsetScale": "1,1"
+        },
+        "SpriteComponent#0": {
+            "_bActive": true,
+            "Mesh": "RectMesh_LineStrip",
+            "Material": "materials/collider2dmtrl.material",
+            "Texture": "",
+            "SpriteName": ""
+        },
+        "ColliderTileComponent#0": {
+            "_bActive": true,
+            "tileType": 0,
+            "collisionSide": 2
+        }
+    },
+    "SceneTransforms": {
+        "SceneComponent#0": "0,0,0;0,0,0;1,1,1;",
+        "BoxCollider2DComponent#0": "0,0,0;0,0,0;1,1,1;SceneComponent#0",
+        "SpriteComponent#0": "0,0,0;0,0,0;1,1,1;SceneComponent#0"
+    }
+}

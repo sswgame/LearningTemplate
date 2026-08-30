@@ -90,6 +90,15 @@
 | 모듈 / 파일명 | `PascalCase.py` | `SetupEnvironment.py` |
 | JSON config 키 | `snake_case` | `"dxc_dll_path"`, `"vcpkg_root"` |
 
+### 3.4 Resource 에셋 명명 규칙 (엄격한 소문자 강제)
+| 대상 | 규칙 | 예시 |
+| :--- | :--- | :--- |
+| 리소스 디렉터리 | 완전 소문자 (`lowercase`) | `Resource/game/demo/animation/`, `Resource/engine/shaders/` |
+| 리소스 파일명 | 완전 소문자 (`lowercase`) | `inventory.anim`, `0.title.scene.xml`, `ghost.prefab.json` |
+| 예외 | 문서 마크다운 | `Resource/README.md` |
+
+> **주의**: `Resource/` 하위의 모든 파일 및 디렉터리는 리눅스(ext4) 대소문자 구분 파일시스템 호환성을 위해 **반드시 소문자만 사용**해야 합니다. 대문자가 포함된 경우 `CheckResourceCasing.py` 및 Git `pre-commit` 훅에 의해 커밋이 차단됩니다.
+
 ### C++ include 규칙
 1. Header(.h)에서는 forward declaration을 기본적으로하고, 불가능한 경우 인클루드한다.
 2. Header(.h)에서는 ThirdParty의 헤더를 직접 인클루드하지 않는다.

@@ -1,0 +1,250 @@
+{
+    "Name": "MAP_BOSS_ROOM",
+    "IsActive": true,
+    "ParentGO": "",
+    "Tags": [],
+    "Components": {
+        "SceneComponent#0": {
+            "_bActive": true
+        }
+    },
+    "SceneTransforms": {
+        "SceneComponent#0": "0,0,0;0,0,0;1600,900,1;"
+    },
+    "Children": [
+        {
+            "Name": "MAP_BOSS_ROOM_WALL",
+            "IsActive": true,
+            "ParentGO": "MAP_BOSS_ROOM",
+            "Tags": [],
+            "Components": {
+                "SceneComponent#0": {
+                    "_bActive": true
+                }
+            },
+            "SceneTransforms": {
+                "SceneComponent#0": "0,0,0;0,0,0;1,1,1;"
+            }
+        },
+        {
+            "Name": "COLLIDER_GROUP",
+            "IsActive": true,
+            "ParentGO": "MAP_BOSS_ROOM",
+            "Tags": [],
+            "Components": {
+                "SceneComponent#0": {
+                    "_bActive": true
+                }
+            },
+            "SceneTransforms": {
+                "SceneComponent#0": "0,0,0;0,0,0;1,1,1;"
+            },
+            "Children": [
+                {
+                    "Name": "COLLIDER_TILE_01",
+                    "IsActive": true,
+                    "ParentGO": "COLLIDER_GROUP",
+                    "Tags": [],
+                    "Components": {
+                        "SceneComponent#0": {
+                            "_bActive": true
+                        },
+                        "BoxCollider2DComponent#0": {
+                            "_bActive": true,
+                            "colliderType": 0,
+                            "offsetPos": "0,0",
+                            "offsetScale": "1400,50"
+                        },
+                        "SpriteComponent#0": {
+                            "_bActive": true,
+                            "Mesh": "RectMesh_LineStrip",
+                            "Material": "materials/collider2dmtrl.material",
+                            "Texture": "",
+                            "SpriteName": ""
+                        },
+                        "ColliderTileComponent#0": {
+                            "_bActive": true,
+                            "tileType": 0,
+                            "collisionSide": 2
+                        }
+                    },
+                    "SceneTransforms": {
+                        "SceneComponent#0": "0,400,0;0,0,0;1,1,1;",
+                        "BoxCollider2DComponent#0": "0,0,0;0,0,0;1,1,1;SceneComponent#0",
+                        "SpriteComponent#0": "0,0,0;0,0,0;1,1,1;SceneComponent#0"
+                    }
+                },
+                {
+                    "Name": "COLLIDER_TILE_02",
+                    "IsActive": true,
+                    "ParentGO": "COLLIDER_GROUP",
+                    "Tags": [],
+                    "Components": {
+                        "SceneComponent#0": {
+                            "_bActive": true
+                        },
+                        "BoxCollider2DComponent#0": {
+                            "_bActive": true,
+                            "colliderType": 0,
+                            "offsetPos": "0,0",
+                            "offsetScale": "50,700"
+                        },
+                        "SpriteComponent#0": {
+                            "_bActive": true,
+                            "Mesh": "RectMesh_LineStrip",
+                            "Material": "materials/collider2dmtrl.material",
+                            "Texture": "",
+                            "SpriteName": ""
+                        },
+                        "ColliderTileComponent#0": {
+                            "_bActive": true,
+                            "tileType": 0,
+                            "collisionSide": 2
+                        }
+                    },
+                    "SceneTransforms": {
+                        "SceneComponent#0": "-630,180,0;0,0,0;1,1,1;",
+                        "BoxCollider2DComponent#0": "0,0,0;0,0,0;1,1,1;SceneComponent#0",
+                        "SpriteComponent#0": "0,0,0;0,0,0;1,1,1;SceneComponent#0"
+                    }
+                },
+                {
+                    "Name": "COLLIDER_TILE_2",
+                    "IsActive": true,
+                    "ParentGO": "COLLIDER_GROUP",
+                    "Tags": [],
+                    "Components": {
+                        "SceneComponent#0": {
+                            "_bActive": true
+                        },
+                        "BoxCollider2DComponent#0": {
+                            "_bActive": true,
+                            "colliderType": 0,
+                            "offsetPos": "0,0",
+                            "offsetScale": "50,700"
+                        },
+                        "SpriteComponent#0": {
+                            "_bActive": true,
+                            "Mesh": "RectMesh_LineStrip",
+                            "Material": "materials/collider2dmtrl.material",
+                            "Texture": "",
+                            "SpriteName": ""
+                        },
+                        "ColliderTileComponent#0": {
+                            "_bActive": true,
+                            "tileType": 0,
+                            "collisionSide": 2
+                        }
+                    },
+                    "SceneTransforms": {
+                        "SceneComponent#0": "630,180,0;0,0,0;1,1,1;",
+                        "BoxCollider2DComponent#0": "0,0,0;0,0,0;1,1,1;SceneComponent#0",
+                        "SpriteComponent#0": "0,0,0;0,0,0;1,1,1;SceneComponent#0"
+                    }
+                },
+                {
+                    "Name": "COLLIDER_TILE_3",
+                    "IsActive": true,
+                    "ParentGO": "COLLIDER_GROUP",
+                    "Tags": [],
+                    "Components": {
+                        "SceneComponent#0": {
+                            "_bActive": true
+                        },
+                        "BoxCollider2DComponent#0": {
+                            "_bActive": true,
+                            "colliderType": 0,
+                            "offsetPos": "0,0",
+                            "offsetScale": "1600,50"
+                        },
+                        "SpriteComponent#0": {
+                            "_bActive": true,
+                            "Mesh": "RectMesh_LineStrip",
+                            "Material": "materials/collider2dmtrl.material",
+                            "Texture": "",
+                            "SpriteName": ""
+                        },
+                        "ColliderTileComponent#0": {
+                            "_bActive": true,
+                            "tileType": 0,
+                            "collisionSide": 2
+                        }
+                    },
+                    "SceneTransforms": {
+                        "SceneComponent#0": "0,-330,0;0,0,0;1,1,1;",
+                        "BoxCollider2DComponent#0": "0,0,0;0,0,0;1,1,1;SceneComponent#0",
+                        "SpriteComponent#0": "0,0,0;0,0,0;1,1,1;SceneComponent#0"
+                    }
+                },
+                {
+                    "Name": "COLLIDER_TILE_5",
+                    "IsActive": true,
+                    "ParentGO": "COLLIDER_GROUP",
+                    "Tags": [],
+                    "Components": {
+                        "SceneComponent#0": {
+                            "_bActive": true
+                        },
+                        "BoxCollider2DComponent#0": {
+                            "_bActive": true,
+                            "colliderType": 0,
+                            "offsetPos": "0,0",
+                            "offsetScale": "300,50"
+                        },
+                        "SpriteComponent#0": {
+                            "_bActive": true,
+                            "Mesh": "RectMesh_LineStrip",
+                            "Material": "materials/collider2dmtrl.material",
+                            "Texture": "",
+                            "SpriteName": ""
+                        },
+                        "ColliderTileComponent#0": {
+                            "_bActive": true,
+                            "tileType": 0,
+                            "collisionSide": 2
+                        }
+                    },
+                    "SceneTransforms": {
+                        "SceneComponent#0": "750,-150,0;0,0,0;1,1,1;",
+                        "BoxCollider2DComponent#0": "0,0,0;0,0,0;1,1,1;SceneComponent#0",
+                        "SpriteComponent#0": "0,0,0;0,0,0;1,1,1;SceneComponent#0"
+                    }
+                },
+                {
+                    "Name": "COLLIDER_TILE_4",
+                    "IsActive": true,
+                    "ParentGO": "COLLIDER_GROUP",
+                    "Tags": [],
+                    "Components": {
+                        "SceneComponent#0": {
+                            "_bActive": true
+                        },
+                        "BoxCollider2DComponent#0": {
+                            "_bActive": true,
+                            "colliderType": 0,
+                            "offsetPos": "0,0",
+                            "offsetScale": "300,50"
+                        },
+                        "SpriteComponent#0": {
+                            "_bActive": true,
+                            "Mesh": "RectMesh_LineStrip",
+                            "Material": "materials/collider2dmtrl.material",
+                            "Texture": "",
+                            "SpriteName": ""
+                        },
+                        "ColliderTileComponent#0": {
+                            "_bActive": true,
+                            "tileType": 0,
+                            "collisionSide": 2
+                        }
+                    },
+                    "SceneTransforms": {
+                        "SceneComponent#0": "-750,-150,0;0,0,0;1,1,1;",
+                        "BoxCollider2DComponent#0": "0,0,0;0,0,0;1,1,1;SceneComponent#0",
+                        "SpriteComponent#0": "0,0,0;0,0,0;1,1,1;SceneComponent#0"
+                    }
+                }
+            ]
+        }
+    ]
+}

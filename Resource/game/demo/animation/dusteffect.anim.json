@@ -1,0 +1,94 @@
+{
+  "name": "dusteffect.anim",
+  "animationCount": 1,
+  "animations": {
+    "DustEffect": {
+      "frameCount": 5,
+      "frames": [
+        {
+          "leftTop": [
+            0.0,
+            0.0
+          ],
+          "slice": [
+            14.0,
+            13.0
+          ],
+          "offset": [
+            -7.0,
+            6.5
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            14.0,
+            0.0
+          ],
+          "slice": [
+            14.0,
+            13.0
+          ],
+          "offset": [
+            -7.0,
+            6.5
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            28.0,
+            0.0
+          ],
+          "slice": [
+            14.0,
+            13.0
+          ],
+          "offset": [
+            -7.0,
+            6.5
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            42.0,
+            0.0
+          ],
+          "slice": [
+            14.0,
+            13.0
+          ],
+          "offset": [
+            -7.0,
+            6.5
+          ],
+          "duration": 0.1
+        },
+        {
+          "leftTop": [
+            0.0,
+            13.0
+          ],
+          "slice": [
+            14.0,
+            13.0
+          ],
+          "offset": [
+            -7.0,
+            6.5
+          ],
+          "duration": 0.1
+        }
+      ],
+      "backgroundSize": [
+        32.0,
+        32.0
+      ],
+      "textureKey": "textures/dusteffect.png",
+      "texturePath": "textures/dusteffect.png"
+    }
+  },
+  "currentAnimation": "",
+  "repeat": false
+}

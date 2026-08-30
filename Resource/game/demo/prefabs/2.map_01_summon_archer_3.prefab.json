@@ -1,0 +1,94 @@
+{
+    "Name": "SUMMON_ARCHER",
+    "IsActive": true,
+    "ParentGO": "",
+    "Tags": [],
+    "Components": {
+        "SceneComponent#0": {
+            "_bActive": true
+        },
+        "BoxCollider2DComponent#0": {
+            "_bActive": true,
+            "colliderType": 0,
+            "offsetPos": "0,0",
+            "offsetScale": "100,100"
+        },
+        "SpriteAnimatorComponent#0": {
+            "_bActive": true,
+            "currentAnimation": "CREATE",
+            "repeat": true,
+            "animations": [
+                "ATTACK",
+                "CREATE",
+                "DESTROY",
+                "IDLE",
+                "IceBullet",
+                "IceBullet_FX-0",
+                "bat_giant_normal_attack-0",
+                "bat_giant_normal_idle-0",
+                "bat_giant_red_attack-0",
+                "bat_giant_red_idle-0",
+                "bat_ice_attack-0",
+                "bat_ice_move-0",
+                "bat_normal_move-0",
+                "bat_red_attack-0",
+                "bat_red_move-0",
+                "bomb_bat_attack_begin-0",
+                "bomb_bat_explosion-0",
+                "bomb_bat_move-0",
+                "ghost_attack-0",
+                "ghost_move-0",
+                "giantBullet-0",
+                "giantBullet_FX-0",
+                "lilith_attack",
+                "lilith_idle-0",
+                "lilith_move-0",
+                "minotaurs_attack-0",
+                "minotaurs_effect-0",
+                "minotaurs_idle-0",
+                "minotaurs_skill-0",
+                "note-0",
+                "note_FX-0",
+                "obivous_attack-0",
+                "obivous_idle-0",
+                "skel_big_ice_attack-0",
+                "skel_big_ice_idle-0",
+                "skel_big_ice_move-0",
+                "skel_big_ice_skill-0",
+                "skel_big_normal_attack-0",
+                "skel_big_normal_idle-0",
+                "skel_big_normal_move-0",
+                "skel_dog_idle-0",
+                "skel_dog_move-0",
+                "skel_magician_ice_attack-0",
+                "skel_magician_ice_ice_crystal-0",
+                "skel_magician_ice_idle-0",
+                "skel_small_bow-0",
+                "skel_small_dagger-0",
+                "skel_small_gSword-0",
+                "skel_small_hand",
+                "skel_small_idle",
+                "skel_small_move-0",
+                "smallBullet-0",
+                "smallBullet_FX-0"
+            ]
+        },
+        "SpriteComponent#0": {
+            "_bActive": true,
+            "Mesh": "RectMesh",
+            "Material": "materials/std2dmtrl.material",
+            "Texture": "",
+            "SpriteName": ""
+        },
+        "MonsterSummonComponent#0": {
+            "_bActive": true,
+            "keyPrefab": "prefab/SKEL_ARCHER.pref"
+        }
+    },
+    "SceneTransforms": {
+        "SceneComponent#0": "550,400,0;0,0,0;500,500,1;",
+        "BoxCollider2DComponent#0": "0,0,0;0,0,0;1,1,1;SceneComponent#0",
+        "SpriteAnimatorComponent#0": "0,0,0;0,0,0;1,1,1;SceneComponent#0",
+        "SpriteComponent#0": "0,0,0;0,0,0;1,1,1;SceneComponent#0"
+    }
+}

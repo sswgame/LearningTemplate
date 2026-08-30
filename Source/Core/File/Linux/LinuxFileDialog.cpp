@@ -196,7 +196,7 @@ namespace sw
 			}
 
 			/** @brief Zenity (또는 호환) 도구를 사용하여 다이얼로그를 엽니다. */
-			static bool openWithZenity( string_view toolPath, const FileDialogParams& params, vector<string>& outPaths )
+			static bool openWithZenity( string_view toolPath, const FileDialogParams& params, vector<string>& outListPath )
 			{
 				string cmd = shellQuote( toolPath );
 				cmd += " --file-selection";
@@ -236,14 +236,14 @@ namespace sw
 					return false;
 
 				if ( bMulti )
-					splitPaths( output, '|', outPaths );
+					splitPaths( output, '|', outListPath );
 				else
-					outPaths.push_back( FileUtil::normalizeSeparators( output ) );
-				return outPaths.empty() == false;
+					outListPath.push_back( FileUtil::normalizeSeparators( output ) );
+				return outListPath.empty() == false;
 			}
 
 			/** @brief KDialog 도구를 사용하여 다이얼로그를 엽니다. */
-			static bool openWithKDialog( string_view toolPath, const FileDialogParams& params, vector<string>& outPaths )
+			static bool openWithKDialog( string_view toolPath, const FileDialogParams& params, vector<string>& outListPath )
 			{
 				string cmd = shellQuote( toolPath );
 				if ( params._type == FileDialogParams::Type::Save )
@@ -279,14 +279,14 @@ namespace sw
 					return false;
 
 				if ( bMulti )
-					splitPaths( output, '\n', outPaths );
+					splitPaths( output, '\n', outListPath );
 				else
-					outPaths.push_back( FileUtil::normalizeSeparators( output ) );
-				return outPaths.empty() == false;
+					outListPath.push_back( FileUtil::normalizeSeparators( output ) );
+				return outListPath.empty() == false;
 			}
 
 			/** @brief Yad 도구를 사용하여 다이얼로그를 엽니다. */
-			static bool openWithYad( string_view toolPath, const FileDialogParams& params, vector<string>& outPaths )
+			static bool openWithYad( string_view toolPath, const FileDialogParams& params, vector<string>& outListPath )
 			{
 				string cmd = shellQuote( toolPath );
 				cmd += " --file";
@@ -324,10 +324,10 @@ namespace sw
 					return false;
 
 				if ( bMulti )
-					splitPaths( output, '|', outPaths );
+					splitPaths( output, '|', outListPath );
 				else
-					outPaths.push_back( FileUtil::normalizeSeparators( output ) );
-				return outPaths.empty() == false;
+					outListPath.push_back( FileUtil::normalizeSeparators( output ) );
+				return outListPath.empty() == false;
 			}
 		};
 	} // namespace
@@ -337,9 +337,9 @@ namespace sw
 {
 	SW_LOG_CALLER( "LinuxFileDialog" );
 
-	bool LinuxFileDialog::open( const FileDialogParams& params, vector<string>& outPaths )
+	bool LinuxFileDialog::open( const FileDialogParams& params, vector<string>& outListPath )
 	{
-		outPaths.clear();
+		outListPath.clear();
 
 		LinuxFileDialogInternal::DialogBackend backend = LinuxFileDialogInternal::DialogBackend::None;
 		string								   toolPath;
@@ -360,13 +360,13 @@ namespace sw
 			switch ( backend )
 			{
 				case LinuxFileDialogInternal::DialogBackend::Zenity:
-					ok = LinuxFileDialogInternal::openWithZenity( toolPath, params, outPaths );
+					ok = LinuxFileDialogInternal::openWithZenity( toolPath, params, outListPath );
 					break;
 				case LinuxFileDialogInternal::DialogBackend::KDialog:
-					ok = LinuxFileDialogInternal::openWithKDialog( toolPath, params, outPaths );
+					ok = LinuxFileDialogInternal::openWithKDialog( toolPath, params, outListPath );
 					break;
 				case LinuxFileDialogInternal::DialogBackend::Yad:
-					ok = LinuxFileDialogInternal::openWithYad( toolPath, params, outPaths );
+					ok = LinuxFileDialogInternal::openWithYad( toolPath, params, outListPath );
 					break;
 				default:
 					break;

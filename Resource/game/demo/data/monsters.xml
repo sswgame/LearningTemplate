@@ -17,14 +17,14 @@
     <Monster id="ghost" name="Ghost" archetype="FlyingPursuer">
         <Stats hp="100" maxHp="100" atk="18" def="5" speed="140.0" invincibility="0.3" />
         <AI patrolRange="200.0" detectRange="500.0" attackRange="70.0" coolTime="1.5" />
-        <Prefab path="game/demo/prefabs/Ghost.prefab.json" />
+        <Prefab path="game/demo/prefabs/ghost.prefab.json" />
         <Drop exp="45" gold="20" />
     </Monster>
 
     <Monster id="banshee" name="Banshee" archetype="RangedShooter">
         <Stats hp="90" maxHp="90" atk="22" def="3" speed="120.0" invincibility="0.25" />
         <AI patrolRange="150.0" detectRange="600.0" attackRange="400.0" coolTime="2.0" projectilePrefab="game/demo/prefabs/BansheeBullet.prefab.json" />
-        <Prefab path="game/demo/prefabs/Banshee.prefab.json" />
+        <Prefab path="game/demo/prefabs/banshee.prefab.json" />
         <Drop exp="60" gold="25" />
     </Monster>
 
@@ -38,7 +38,7 @@
     <Monster id="skel" name="Skeleton" archetype="MeleePatrol">
         <Stats hp="70" maxHp="70" atk="12" def="1" speed="150.0" invincibility="0.2" />
         <AI patrolRange="200.0" detectRange="350.0" attackRange="50.0" coolTime="1.5" />
-        <Prefab path="game/demo/prefabs/Skel.prefab.json" />
+        <Prefab path="game/demo/prefabs/skel.prefab.json" />
         <Drop exp="30" gold="10" />
     </Monster>
 
@@ -58,8 +58,8 @@
 
     <Monster id="minotaurs" name="Minotaurs" archetype="ChargerRush">
         <Stats hp="300" maxHp="300" atk="35" def="10" speed="250.0" invincibility="0.4" />
-        <AI patrolRange="150.0" detectRange="500.0" attackRange="80.0" coolTime="2.0" />
-        <Prefab path="game/demo/prefabs/Minotaurs.prefab.json" />
-        <Drop exp="120" gold="50" />
+        <AI patrolRange="250.0" detectRange="450.0" attackRange="80.0" coolTime="2.5" />
+        <Prefab path="game/demo/prefabs/minotaurs.prefab.json" />
+        <Drop exp="100" gold="50" />
     </Monster>
 </MonsterCatalog>

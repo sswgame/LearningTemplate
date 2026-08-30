@@ -1,0 +1,39 @@
+{
+    "Name": "BOSS_HEAD",
+    "IsActive": true,
+    "ParentGO": "",
+    "Tags": [],
+    "Components": {
+        "SceneComponent#0": {
+            "_bActive": true
+        },
+        "BoxCollider2DComponent#0": {
+            "_bActive": true,
+            "colliderType": 0,
+            "offsetPos": "25,-30",
+            "offsetScale": "250,300"
+        },
+        "SpriteAnimatorComponent#0": {
+            "_bActive": true,
+            "currentAnimation": "belial_idle-0",
+            "repeat": true,
+            "animations": [
+                "belial_attack-0",
+                "belial_idle-0"
+            ]
+        },
+        "SpriteComponent#0": {
+            "_bActive": true,
+            "Mesh": "RectMesh",
+            "Material": "materials/std2dmtrl.material",
+            "Texture": "",
+            "SpriteName": ""
+        }
+    },
+    "SceneTransforms": {
+        "SceneComponent#0": "0,0,0;0,0,0;500,500,1;",
+        "BoxCollider2DComponent#0": "0,0,0;0,0,0;1,1,1;SceneComponent#0",
+        "SpriteAnimatorComponent#0": "0,0,0;0,0,0;1,1,1;SceneComponent#0",
+        "SpriteComponent#0": "0,0,0;0,0,0;1,1,1;SceneComponent#0"
+    }
+}

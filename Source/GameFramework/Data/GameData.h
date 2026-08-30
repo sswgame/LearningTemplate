@@ -21,16 +21,16 @@ namespace sw
 	struct SW_GF_API GameData
 	{
 		string	_startMap{ "game/demo/maps/town01.xml" };									  ///< 시작 맵
-		string	_titleScene{ "game/demo/maps/TestScene.scene.xml" };						  ///< 타이틀 씬
-		string	_entranceScene{ "game/demo/maps/1.Entrance.scene.xml" };					  ///< 타이틀 다음 씬
+		string	_titleScene{ "game/demo/maps/testscene.scene.xml" };						  ///< 타이틀 씬
+		string	_entranceScene{ "game/demo/maps/1.entrance.scene.xml" };					  ///< 타이틀 다음 씬
 		string	_battleMap{ "game/demo/maps/battle01.xml" };								  ///< 전투 맵
 		string	_battleScene{ "game/demo/maps/battle01_scene.xml" };						  ///< 전투 씬
 		string	_defaultSavePath{ "game/demo/save/default_slot.sav" };						  ///< 기본 세이브 슬롯
 		string	_speciesData{ "game/demo/data/species.xml" };								  ///< 종족 테이블
 		string	_stringsData{ "game/demo/data/strings.xml" };								  ///< 문자열 테이블 (단일 파일 폴백)
 		string	_localizationDirectory{ "game/demo/data/localization" };					  ///< 다국어 팩 디렉터리
-		string	_defaultLanguage{ "ko_KR" };												  ///< 기본 활성 언어
-		string	_fallbackLanguage{ "en_US" };												  ///< 대체(Fallback) 언어
+		string	_defaultLanguage{ "ko_kr" };												  ///< 기본 활성 언어
+		string	_fallbackLanguage{ "en_us" };												  ///< 대체(Fallback) 언어
 		string	_monstersData{ "game/demo/data/monsters.xml" };								  ///< 몬스터 테이블
 		string	_starterId{ "starter_a" };													  ///< 초기 파티 종족 ID
 		string	_defaultEncounterId{ "critter_a" };											  ///< 폴백 조우 종족 ID

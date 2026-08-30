@@ -1,0 +1,38 @@
+{
+    "Name": "BIRD",
+    "IsActive": true,
+    "ParentGO": "",
+    "Tags": [],
+    "Components": {
+        "SceneComponent#0": {
+            "_bActive": true
+        },
+        "SpriteAnimatorComponent#0": {
+            "_bActive": true,
+            "currentAnimation": "bird-0",
+            "repeat": true,
+            "animations": [
+                "BackCloud",
+                "Copyright",
+                "Exit_On_Off",
+                "FrontCloud",
+                "MainLogo",
+                "Option_On_Off",
+                "Play_On_Off",
+                "bird-0"
+            ]
+        },
+        "SpriteComponent#0": {
+            "_bActive": true,
+            "Mesh": "RectMesh",
+            "Material": "materials/std2dmtrl.material",
+            "Texture": "",
+            "SpriteName": ""
+        }
+    },
+    "SceneTransforms": {
+        "SceneComponent#0": "0,0,0;0,0,0;1,1,1;",
+        "SpriteAnimatorComponent#0": "0,0,0;0,0,0;1,1,1;SceneComponent#0",
+        "SpriteComponent#0": "0,0,0;0,0,0;1,1,1;SceneComponent#0"
+    }
+}

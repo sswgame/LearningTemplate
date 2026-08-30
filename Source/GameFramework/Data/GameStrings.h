@@ -40,7 +40,7 @@ namespace sw
 		/** @brief 파일 시스템 경로에서 특정 언어 코드의 언어 파일을 로드합니다. */
 		static bool loadLanguageFile( string_view languageCode, string_view filePath );
 
-		/** @brief 특정 디렉터리 내의 모든 언어 파일(예: ko_KR.json, en_US.json 등)을 파일명을 언어 코드로 하여 일괄 로드합니다. */
+		/** @brief 특정 디렉터리 내의 모든 언어 파일(예: ko_kr.json, en_us.json 등)을 파일명을 언어 코드로 하여 일괄 로드합니다. */
 		static bool loadLanguageDirectory( string_view directoryPath, string_view filterExtension = ".json", bool bRecursive = false );
 
 		/** @brief 현재 활성 언어를 설정합니다 (언어 변경 시 등록된 UI 콜백들에 알림이 전달됩니다). */

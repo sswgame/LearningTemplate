@@ -58,7 +58,7 @@ namespace sw
 		bool loadLanguageKeyValue( string_view languageCode, string_view kvText );
 
 		/**
-		 * @brief 지정 디렉터리 내의 모든 언어 파일(예: ko_KR.json, en_US.json 등)을 파일명을 언어 코드로 하여 일괄 로드합니다.
+		 * @brief 지정 디렉터리 내의 모든 언어 파일(예: ko_kr.json, en_us.json 등)을 파일명을 언어 코드로 하여 일괄 로드합니다.
 		 * @param directoryPath 탐색할 디렉터리 경로
 		 * @param filterExtension 탐색할 확장자 (기본: ".json", "" 전달 시 모든 파일)
 		 * @param bRecursive 하위 폴더 포함 여부
