@@ -561,19 +561,6 @@ namespace sw
 		return _gameApi.create != nullptr && _gameApi.destroy != nullptr;
 	}
 
-	// ======================================================================
-	// notifyModulesReady
-	// ======================================================================
-
-	void ModuleHost::notifyModulesReady()
-	{
-		// Splash 해제 로직이 필요하면 여기에 구현합니다.
-	}
-
-	// ======================================================================
-	// RHI 핫스왑 전/후 처리
-	// ======================================================================
-
 	void ModuleHost::onBeforeRhiSwap()
 	{
 		drainRenderWorkers();
