@@ -277,16 +277,16 @@ namespace sw
 			unordered_map<StringKey, uint32, typename StringKey::HashFunc> _mapKeyToIndex; ///< 문자열 키 -> 청크 인덱스 매핑 해시맵
 		};
 
-		atomic<Entry*> _arrChunks[kMaxChunks]{}; /**< 1024단위 엔트리 청크 원자적 포인터 배열 (0-Lock O(1) 조회) */
-		atomic<uint32> _entryCount{ 0 };		 /**< 현재까지 등록된 총 문자열 개수 (단조 증가 인덱스) */
-		mutex		   _globalAppendMutex;		 /**< 신규 청크 생성 및 64KB 아레나 블록 추가 시 사용하는 동기화 뮤텍스 */
+		atomic<Entry*> _arrChunk[kMaxChunks]{}; /**< 1024단위 엔트리 청크 원자적 포인터 배열 (0-Lock O(1) 조회) */
+		atomic<uint32> _entryCount{ 0 };		/**< 현재까지 등록된 총 문자열 개수 (단조 증가 인덱스) */
+		mutex		   _globalAppendMutex;		/**< 신규 청크 생성 및 64KB 아레나 블록 추가 시 사용하는 동기화 뮤텍스 */
 
 		vector<value_type*> _listArenaBlock;				/**< 64KB 단위 연속 문자열 아레나 블록 목록 */
 		value_type*			_pCurrentArenaBlock{ nullptr }; ///< 현재 문자열을 채워넣고 있는 활성 아레나 블록
 		size_t				_arenaOffset{ 0 };				///< 현재 아레나 블록 내의 다음 기록 위치 오프셋
 		vector<value_type*> _listLargeAllocation;			/**< 64KB를 초과하는 대형 문자열 전용 개별 힙 블록 목록 */
 
-		Shard _arrShards[kNumShards]; /**< 32-Way 샤드 해시맵 배열 */
+		Shard _arrShard[kNumShards]; /**< 32-Way 샤드 해시맵 배열 */
 
 		/** @brief 인턴 테이블 생성자 (0번 청크 및 사전 정의 이름 사전 로드) */
 		AllocationInfo()
@@ -295,7 +295,7 @@ namespace sw
 			constexpr size_t chunkSize	 = sizeof( Entry ) * kChunkSize;
 			Entry*			 pFirstChunk = static_cast<Entry*>( Memory::allocMemory( chunkSize ) );
 			Memory::set( pFirstChunk, 0, chunkSize );
-			_arrChunks[0].store( pFirstChunk, std::memory_order_release );
+			_arrChunk[0].store( pFirstChunk, std::memory_order_release );
 
 			createPredefinedNameTypes();
 		}
@@ -307,13 +307,13 @@ namespace sw
 
 			for ( uint32 shardIndex = 0; shardIndex < kNumShards; ++shardIndex )
 			{
-				std::unique_lock<std::shared_mutex> shardLock{ _arrShards[shardIndex]._mutex };
-				_arrShards[shardIndex]._mapKeyToIndex.clear();
+				std::unique_lock<std::shared_mutex> shardLock{ _arrShard[shardIndex]._mutex };
+				_arrShard[shardIndex]._mapKeyToIndex.clear();
 			}
 
 			for ( uint32 chunkIndex = 0; chunkIndex < kMaxChunks; ++chunkIndex )
 			{
-				Entry* pChunk = _arrChunks[chunkIndex].exchange( nullptr, std::memory_order_acq_rel );
+				Entry* pChunk = _arrChunk[chunkIndex].exchange( nullptr, std::memory_order_acq_rel );
 				if ( pChunk != nullptr )
 				{
 					Memory::freeMemory( pChunk );
@@ -397,7 +397,7 @@ namespace sw
 
 		if ( chunkIndex < kMaxChunks )
 		{
-			const auto* chunk = info._arrChunks[chunkIndex].load( std::memory_order_acquire );
+			const auto* chunk = info._arrChunk[chunkIndex].load( std::memory_order_acquire );
 			if ( chunk != nullptr )
 				return chunk[offset]._stringLength;
 		}
@@ -414,7 +414,7 @@ namespace sw
 
 		if ( chunkIndex < kMaxChunks )
 		{
-			const auto* chunk = info._arrChunks[chunkIndex].load( std::memory_order_acquire );
+			const auto* chunk = info._arrChunk[chunkIndex].load( std::memory_order_acquire );
 			if ( chunk != nullptr )
 				return chunk[offset]._pStr;
 		}
@@ -431,7 +431,7 @@ namespace sw
 
 		if ( chunkIndex < kMaxChunks )
 		{
-			const auto* chunk = info._arrChunks[chunkIndex].load( std::memory_order_acquire );
+			const auto* chunk = info._arrChunk[chunkIndex].load( std::memory_order_acquire );
 			if ( chunk != nullptr )
 				return chunk[offset]._hash;
 		}
@@ -462,7 +462,7 @@ namespace sw
 			hash = StringUtil::computeHash64( str, length );
 
 		const uint32 shardIndex = ( hash ^ ( hash >> 16 ) ) % kNumShards;
-		auto&		 shard		= info._arrShards[shardIndex];
+		auto&		 shard		= info._arrShard[shardIndex];
 		StringKey	 lookupKey{ hash, str, length };
 
 		// 1단계: 샤드 공유 락(Shared Lock)으로 빠른 조회 (기존 등록 문자열의 99% 패스트 패스)
@@ -493,13 +493,13 @@ namespace sw
 		const uint32 chunkIndex = newIndex >> kChunkShift;
 		const uint32 offset		= newIndex & kChunkMask;
 
-		auto* chunk = info._arrChunks[chunkIndex].load( std::memory_order_relaxed );
+		auto* chunk = info._arrChunk[chunkIndex].load( std::memory_order_relaxed );
 		if ( chunk == nullptr )
 		{
 			constexpr size_t chunkSize = sizeof( typename AllocationInfo::Entry ) * kChunkSize;
 			chunk					   = static_cast<typename AllocationInfo::Entry*>( Memory::allocMemory( chunkSize ) );
 			Memory::set( chunk, 0, chunkSize );
-			info._arrChunks[chunkIndex].store( chunk, std::memory_order_release );
+			info._arrChunk[chunkIndex].store( chunk, std::memory_order_release );
 		}
 
 		const value_type* internedStr = info.allocateString( str, length );

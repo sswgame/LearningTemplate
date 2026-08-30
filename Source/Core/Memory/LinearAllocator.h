@@ -78,7 +78,7 @@ namespace sw
 		size_t		   _defaultCapacity;
 		atomic<size_t> _blockCount;
 		atomic<size_t> _currentBlockIndex;
-		atomic<Block*> _arrBlocks[kMaxBlockCount];
+		atomic<Block*> _arrBlock[kMaxBlockCount];
 		mutex		   _mutex;
 	};
 } // namespace sw

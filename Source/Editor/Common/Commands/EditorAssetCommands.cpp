@@ -174,9 +174,9 @@ namespace sw::editor
 						return pPrimary;
 				}
 
-				GameObject*				  pFallback	  = nullptr;
-				const vector<GameObject*> listObjects = pManager->getAllGameObjects();
-				for ( GameObject* pObject : listObjects )
+				GameObject*				  pFallback	 = nullptr;
+				const vector<GameObject*> listObject = pManager->getAllGameObjects();
+				for ( GameObject* pObject : listObject )
 				{
 					if ( pObject == nullptr || pObject->isPendingKill() )
 						continue;
@@ -199,8 +199,8 @@ namespace sw::editor
 				if ( pManager == nullptr || pRoot == nullptr )
 					return;
 
-				const vector<GameObject*> listObjects = pManager->getAllGameObjects();
-				for ( GameObject* pObject : listObjects )
+				const vector<GameObject*> listObject = pManager->getAllGameObjects();
+				for ( GameObject* pObject : listObject )
 				{
 					if ( pObject == nullptr || pObject->isPendingKill() )
 						continue;

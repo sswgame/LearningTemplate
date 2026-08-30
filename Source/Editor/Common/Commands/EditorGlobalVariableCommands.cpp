@@ -62,8 +62,8 @@ namespace sw::editor
 		XmlNode		root = doc.appendRoot( "GlobalVariablesPreset" );
 		root.appendAttr( "name", presetName );
 
-		const vector<string> listAllNames = pGvm->collectVariableNames();
-		for ( const string& varName : listAllNames )
+		const vector<string> listAllName = pGvm->collectVariableNames();
+		for ( const string& varName : listAllName )
 		{
 			const GlobalVariableInfo* pInfo = pGvm->findVariable( varName );
 			if ( pInfo == nullptr || pInfo->_pData == nullptr )

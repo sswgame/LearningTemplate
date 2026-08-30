@@ -1949,7 +1949,7 @@ namespace sw
 			VkFormat colorFmt = toVulkanTextureFormat( desc._arrRtvFormat[colorIndex] );
 			if ( colorFmt == VK_FORMAT_UNDEFINED )
 				colorFmt = VK_FORMAT_R8G8B8A8_UNORM;
-			key._arrColorFormats[colorIndex] = static_cast<uint32>( colorFmt );
+			key._arrColorFormat[colorIndex] = static_cast<uint32>( colorFmt );
 		}
 		if ( desc._bEnableDepthTest != 0 )
 		{
@@ -1969,7 +1969,7 @@ namespace sw
 		VkAttachmentReference	colorRefs[kMaxColorAttachments]{};
 		for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
 		{
-			attachments[colorIndex].format		   = static_cast<VkFormat>( key._arrColorFormats[colorIndex] );
+			attachments[colorIndex].format		   = static_cast<VkFormat>( key._arrColorFormat[colorIndex] );
 			attachments[colorIndex].samples		   = VK_SAMPLE_COUNT_1_BIT;
 			attachments[colorIndex].loadOp		   = VK_ATTACHMENT_LOAD_OP_CLEAR;
 			attachments[colorIndex].storeOp		   = VK_ATTACHMENT_STORE_OP_STORE;

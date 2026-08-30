@@ -23,12 +23,12 @@ namespace sw
 			bool				 _bGpuInit{ false };
 		};
 
-		map<string, Entry, std::less<>> _mapEntries;
+		map<string, Entry, std::less<>> _mapEntry;
 		IRHIDevice*						_pDevice;
 		std::shared_mutex				_mutex;
 
 		Impl()
-			: _mapEntries{}
+			: _mapEntry{}
 			, _pDevice{ nullptr }
 			, _mutex{}
 		{
@@ -54,7 +54,7 @@ namespace sw
 		engine::getResourceManager().getAssetDatabase().ensureMeta( key );
 
 		std::unique_lock<std::shared_mutex> lock{ _impl->_mutex };
-		Impl::Entry&						entry = _impl->_mapEntries[key];
+		Impl::Entry&						entry = _impl->_mapEntry[key];
 		if ( entry._material == nullptr )
 		{
 			entry._material = make_unique<Material>();
@@ -69,7 +69,7 @@ namespace sw
 				SW_LOG_ERROR( "Failed to initialize Material %#", key.c_str() );
 				--entry._refCount;
 				if ( entry._refCount == 0 )
-					_impl->_mapEntries.erase( key );
+					_impl->_mapEntry.erase( key );
 				return nullptr;
 			}
 			entry._bGpuInit = true;
@@ -86,12 +86,12 @@ namespace sw
 		const string key = FileUtil::normalizePath( relativePath );
 
 		std::unique_lock<std::shared_mutex> lock{ _impl->_mutex };
-		auto								it = _impl->_mapEntries.find( key );
-		if ( it != _impl->_mapEntries.end() )
+		auto								it = _impl->_mapEntry.find( key );
+		if ( it != _impl->_mapEntry.end() )
 		{
 			--it->second._refCount;
 			if ( it->second._refCount == 0 )
-				_impl->_mapEntries.erase( it );
+				_impl->_mapEntry.erase( it );
 		}
 	}
 
@@ -103,8 +103,8 @@ namespace sw
 		const string key{ FileUtil::normalizePath( relativePath ) };
 
 		std::unique_lock<std::shared_mutex> lock{ _impl->_mutex };
-		auto								it{ _impl->_mapEntries.find( key ) };
-		if ( it != _impl->_mapEntries.end() )
+		auto								it{ _impl->_mapEntry.find( key ) };
+		if ( it != _impl->_mapEntry.end() )
 		{
 			if ( it->second._bGpuInit && _impl->_pDevice != nullptr )
 				it->second._material->shutdown( _impl->_pDevice );
@@ -126,7 +126,7 @@ namespace sw
 			return;
 
 		std::unique_lock<std::shared_mutex> lock{ _impl->_mutex };
-		for ( auto& [path, entry] : _impl->_mapEntries )
+		for ( auto& [path, entry] : _impl->_mapEntry )
 		{
 			(void)path;
 			if ( entry._material != nullptr && entry._bGpuInit )
@@ -143,7 +143,7 @@ namespace sw
 			return false;
 		bool								ok{ true };
 		std::unique_lock<std::shared_mutex> lock{ _impl->_mutex };
-		for ( auto& [path, entry] : _impl->_mapEntries )
+		for ( auto& [path, entry] : _impl->_mapEntry )
 		{
 			if ( entry._material == nullptr || path.empty() )
 				continue;
@@ -163,7 +163,7 @@ namespace sw
 		if ( _impl != nullptr )
 		{
 			std::unique_lock<std::shared_mutex> lock{ _impl->_mutex };
-			_impl->_mapEntries.clear();
+			_impl->_mapEntry.clear();
 		}
 	}
 } // namespace sw

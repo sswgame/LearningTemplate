@@ -252,8 +252,8 @@ namespace sw
 		const int32 minZ = PhysicsWorldInternal::toCellCoord( sweptBounds._min._z, kCellSize );
 		const int32 maxZ = PhysicsWorldInternal::toCellCoord( sweptBounds._max._z, kCellSize );
 
-		thread_local vector<BodyHandle> t_listCandidateHandles;
-		t_listCandidateHandles.clear();
+		thread_local vector<BodyHandle> t_listCandidateHandle;
+		t_listCandidateHandle.clear();
 		for ( int32 gridZ = minZ; gridZ <= maxZ; ++gridZ )
 		{
 			for ( int32 gridY = minY; gridY <= maxY; ++gridY )
@@ -263,20 +263,20 @@ namespace sw
 					auto it = _mapGrid.find( CellCoord{ gridX, gridY, gridZ } );
 					if ( it != _mapGrid.end() )
 					{
-						t_listCandidateHandles.insert( t_listCandidateHandles.end(), it->second.begin(), it->second.end() );
+						t_listCandidateHandle.insert( t_listCandidateHandle.end(), it->second.begin(), it->second.end() );
 					}
 				}
 			}
 		}
 
-		std::sort( t_listCandidateHandles.begin(), t_listCandidateHandles.end() );
-		t_listCandidateHandles.erase( std::unique( t_listCandidateHandles.begin(), t_listCandidateHandles.end() ), t_listCandidateHandles.end() );
+		std::sort( t_listCandidateHandle.begin(), t_listCandidateHandle.end() );
+		t_listCandidateHandle.erase( std::unique( t_listCandidateHandle.begin(), t_listCandidateHandle.end() ), t_listCandidateHandle.end() );
 
 		bool	 bFoundHit = false;
 		SweepHit nearestHit{};
 		nearestHit._time = 1.0f;
 
-		for ( BodyHandle handle : t_listCandidateHandles )
+		for ( BodyHandle handle : t_listCandidateHandle )
 		{
 			const PhysicsBody* pBody = _bodies.get( handle );
 			if ( pBody != nullptr && _layers.shouldCollide( layer, pBody->_layer ) )
@@ -295,8 +295,8 @@ namespace sw
 			}
 		}
 
-		if ( t_listCandidateHandles.capacity() > 2048 )
-			t_listCandidateHandles.shrink_to_fit();
+		if ( t_listCandidateHandle.capacity() > 2048 )
+			t_listCandidateHandle.shrink_to_fit();
 
 		if ( bFoundHit )
 		{

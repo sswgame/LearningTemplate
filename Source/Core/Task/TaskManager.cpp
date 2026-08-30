@@ -94,7 +94,7 @@ namespace sw
 		static constexpr uint32 kInlineCapacity = 4;
 
 		uint32						  _count{ 0 };
-		TaskNode*					  _arrInlineNodes[kInlineCapacity]{};
+		TaskNode*					  _arrInlineNode[kInlineCapacity]{};
 		unique_ptr<vector<TaskNode*>> _pOverflow;
 		mutable std::atomic_flag	  _lock = ATOMIC_FLAG_INIT;
 
@@ -114,7 +114,7 @@ namespace sw
 			lock();
 			if ( _count < kInlineCapacity )
 			{
-				_arrInlineNodes[_count++] = pNode;
+				_arrInlineNode[_count++] = pNode;
 			}
 			else
 			{
@@ -137,7 +137,7 @@ namespace sw
 			inlineCopyCount = _count < kInlineCapacity ? _count : kInlineCapacity;
 			for ( uint32 index = 0; index < inlineCopyCount; ++index )
 			{
-				arrInlineCopy[index] = _arrInlineNodes[index];
+				arrInlineCopy[index] = _arrInlineNode[index];
 			}
 			if ( _pOverflow != nullptr )
 			{
@@ -322,10 +322,10 @@ namespace sw
 		const uint32 inlineCount = _count < kInlineCapacity ? _count : kInlineCapacity;
 		for ( uint32 index = 0; index < inlineCount; ++index )
 		{
-			if ( _arrInlineNodes[index] != nullptr )
+			if ( _arrInlineNode[index] != nullptr )
 			{
-				_arrInlineNodes[index]->release();
-				_arrInlineNodes[index] = nullptr;
+				_arrInlineNode[index]->release();
+				_arrInlineNode[index] = nullptr;
 			}
 		}
 		if ( _pOverflow != nullptr )

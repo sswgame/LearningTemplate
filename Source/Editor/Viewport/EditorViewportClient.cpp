@@ -218,13 +218,13 @@ namespace sw::editor
 				if ( pManager == nullptr )
 					return;
 
-				const vector<GameObject*>& listObjects = pManager->getAllGameObjects();
+				const vector<GameObject*>& listObject = pManager->getAllGameObjects();
 
 				// 1) BoxCollider2D 와이어프레임 렌더링
 				if ( settings._bShowColliders )
 				{
 					constexpr ImU32 colWire = IM_COL32( 60, 230, 80, 220 );
-					for ( GameObject* pObj : listObjects )
+					for ( GameObject* pObj : listObject )
 					{
 						if ( pObj == nullptr || pObj->isActive() == false )
 							continue;
@@ -261,7 +261,7 @@ namespace sw::editor
 				if ( settings._bShowCameras )
 				{
 					constexpr ImU32 colCamWire = IM_COL32( 60, 200, 255, 200 );
-					for ( GameObject* pObj : listObjects )
+					for ( GameObject* pObj : listObject )
 					{
 						if ( pObj == nullptr || pObj->isActive() == false )
 							continue;
@@ -339,9 +339,9 @@ namespace sw::editor
 					  static_cast<float64>( frameTimeMs ) );
 		pDrawList->AddText( ImVec2( x0 + 10.0f, y0 + 8.0f ), IM_COL32( 80, 230, 120, 240 ), arrFps.c_str() );
 
-		fixed_string<constant::kMaxBuffer32> arrObjs;
-		formatstring( arrObjs.data(), arrObjs.capacity(), "Objects: %u", totalObjects );
-		pDrawList->AddText( ImVec2( x0 + 10.0f, y0 + 28.0f ), IM_COL32( 210, 215, 230, 230 ), arrObjs.c_str() );
+		fixed_string<constant::kMaxBuffer32> arrObj;
+		formatstring( arrObj.data(), arrObj.capacity(), "Objects: %u", totalObjects );
+		pDrawList->AddText( ImVec2( x0 + 10.0f, y0 + 28.0f ), IM_COL32( 210, 215, 230, 230 ), arrObj.c_str() );
 
 		fixed_string<constant::kMaxBuffer32> arrRes;
 		formatstring( arrRes.data(), arrRes.capacity(), "Res: %.0fx%.0f", static_cast<float64>( canvasSize._x ),
@@ -667,9 +667,9 @@ namespace sw::editor
 		Component*	pBestComp{ nullptr };
 		float32		bestT{ MathUtil::MaxFloat };
 
-		const vector<GameObject*> listObjects = pManager->getAllGameObjects();
-		const bool				  b2DMode	  = _toolbarSettings._bIs2DMode;
-		for ( GameObject* pObj : listObjects )
+		const vector<GameObject*> listObject = pManager->getAllGameObjects();
+		const bool				  b2DMode	 = _toolbarSettings._bIs2DMode;
+		for ( GameObject* pObj : listObject )
 		{
 			if ( pObj == nullptr || pObj->isActive() == false )
 				continue;
@@ -936,7 +936,7 @@ namespace sw::editor
 			float3		_targetRot;
 		};
 
-		AxisItem arrAxes[6] = {
+		AxisItem arrAxis[6] = {
 			{ float3{ 1.0f, 0.0f, 0.0f }, IM_COL32( 235,	 65,	 65, 255 ),	"X", 0.0f, float2{},
 			  float3{ 0.0f, -90.0f, 0.0f }},
 			{float3{ -1.0f, 0.0f, 0.0f }, IM_COL32( 130,  60,  60, 200 ), "-X", 0.0f, float2{},
@@ -953,7 +953,7 @@ namespace sw::editor
 
 		for ( uint32 axisIndex = 0; axisIndex < 6; ++axisIndex )
 		{
-			AxisItem&	  ax   = arrAxes[axisIndex];
+			AxisItem&	  ax   = arrAxis[axisIndex];
 			const float32 dotR = ax._dir._x * right._x + ax._dir._y * right._y + ax._dir._z * right._z;
 			const float32 dotU = ax._dir._x * up._x + ax._dir._y * up._y + ax._dir._z * up._z;
 			const float32 dotF = ax._dir._x * forward._x + ax._dir._y * forward._y + ax._dir._z * forward._z;
@@ -963,7 +963,7 @@ namespace sw::editor
 		}
 
 		// Sort by depth ascending so further items are drawn first
-		std::sort( std::begin( arrAxes ), std::end( arrAxes ),
+		std::sort( std::begin( arrAxis ), std::end( arrAxis ),
 				   []( const AxisItem& a, const AxisItem& b )
 		{ return a._depth < b._depth; } );
 
@@ -971,7 +971,7 @@ namespace sw::editor
 
 		for ( uint32 axisIndex = 0; axisIndex < 6; ++axisIndex )
 		{
-			const AxisItem& ax = arrAxes[axisIndex];
+			const AxisItem& ax = arrAxis[axisIndex];
 			const ImVec2	pt( cubeCenterX + ax._screenOffset._x, cubeCenterY + ax._screenOffset._y );
 
 			// Axis line from center

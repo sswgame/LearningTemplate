@@ -342,8 +342,8 @@ namespace sw
 		struct PipelineRpKey
 		{
 			uint32 _colorCount{ 1 };
-			uint32 _arrColorFormats[kMaxColorAttachments]{}; ///< VkFormat
-			uint32 _depthFormat{ 0 };						 ///< VkFormat; 0 = no depth
+			uint32 _arrColorFormat[kMaxColorAttachments]{}; ///< VkFormat
+			uint32 _depthFormat{ 0 };						///< VkFormat; 0 = no depth
 			/** @brief 같으면 true를 반환합니다. */
 			bool operator==( const PipelineRpKey& other ) const
 			{
@@ -351,7 +351,7 @@ namespace sw
 					return false;
 				for ( uint32 colorIndex = 0; colorIndex < _colorCount; ++colorIndex )
 				{
-					if ( _arrColorFormats[colorIndex] != other._arrColorFormats[colorIndex] )
+					if ( _arrColorFormat[colorIndex] != other._arrColorFormat[colorIndex] )
 						return false;
 				}
 				return true;
@@ -368,7 +368,7 @@ namespace sw
 				h ^= static_cast<size_t>( key._colorCount ) + 0x9e3779b9u;
 				for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
 				{
-					h ^= static_cast<size_t>( key._arrColorFormats[colorIndex] ) + 0x9e3779b9u + ( h << 6 ) + ( h >> 2 );
+					h ^= static_cast<size_t>( key._arrColorFormat[colorIndex] ) + 0x9e3779b9u + ( h << 6 ) + ( h >> 2 );
 				}
 				return h;
 			}

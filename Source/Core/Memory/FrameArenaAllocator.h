@@ -154,7 +154,7 @@ namespace sw
 	public:
 		/** @brief 양쪽 아레나를 같은 용량으로 준비합니다. */
 		explicit FrameDoubleBuffer( size_t arenaCapacity = 1024 * 1024 )
-			: _arrArenas{ FrameArenaAllocator{ arenaCapacity }, FrameArenaAllocator{ arenaCapacity } }
+			: _arrArena{ FrameArenaAllocator{ arenaCapacity }, FrameArenaAllocator{ arenaCapacity } }
 			, _activeBufferIndex{ 0 } {}
 
 		/** @brief 양쪽 아레나 청크를 해제합니다. */
@@ -164,14 +164,14 @@ namespace sw
 		SW_INLINE void* allocate( size_t size, size_t alignment = alignof( std::max_align_t ) )
 		{
 			const uint32 activeIdx = _activeBufferIndex.load( std::memory_order_relaxed );
-			return _arrArenas[activeIdx].allocate( size, alignment );
+			return _arrArena[activeIdx].allocate( size, alignment );
 		}
 
 		/** @brief 활성 인덱스를 뒤집고, 새로 활성인 쪽을 reset 합니다. */
 		SW_INLINE void swapAndResetPrevious()
 		{
 			const uint32 newIdx = 1 - _activeBufferIndex.load( std::memory_order_relaxed );
-			_arrArenas[newIdx].reset();
+			_arrArena[newIdx].reset();
 			_activeBufferIndex.store( newIdx, std::memory_order_release );
 		}
 
@@ -181,7 +181,7 @@ namespace sw
 		SW_INLINE size_t getCurrentUsedBytes() const
 		{
 			const uint32 activeIdx = _activeBufferIndex.load( std::memory_order_relaxed );
-			return _arrArenas[activeIdx].getUsedBytes();
+			return _arrArena[activeIdx].getUsedBytes();
 		}
 
 		/** @brief EngineLoop가 소유한 프레임 더블 버퍼를 연결하거나 해제합니다. */
@@ -190,7 +190,7 @@ namespace sw
 		SW_API static FrameDoubleBuffer& get();
 
 	private:
-		FrameArenaAllocator _arrArenas[2];
+		FrameArenaAllocator _arrArena[2];
 		atomic<uint32>		_activeBufferIndex;
 	};
 } // namespace sw

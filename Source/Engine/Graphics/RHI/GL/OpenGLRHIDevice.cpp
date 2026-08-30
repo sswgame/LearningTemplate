@@ -431,7 +431,7 @@ namespace sw
 		_bInitialized = SW_TRUE;
 
 		{
-			const RHIVertex arrFullscreenVerts[3] = {
+			const RHIVertex arrFullscreenVert[3] = {
 				{{ -1.0f, -1.0f, 0.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }},
 				{ { 3.0f, -1.0f, 0.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }},
 				{ { -1.0f, 3.0f, 0.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }},
@@ -440,7 +440,7 @@ namespace sw
 			glGenBuffers( 1, &_vbo );
 			glBindVertexArray( _vao );
 			glBindBuffer( GL_ARRAY_BUFFER, _vbo );
-			glBufferData( GL_ARRAY_BUFFER, static_cast<GLsizeiptr>( sizeof( arrFullscreenVerts ) ), arrFullscreenVerts, GL_STATIC_DRAW );
+			glBufferData( GL_ARRAY_BUFFER, static_cast<GLsizeiptr>( sizeof( arrFullscreenVert ) ), arrFullscreenVert, GL_STATIC_DRAW );
 			glEnableVertexAttribArray( 0 );
 			glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, static_cast<GLsizei>( sizeof( RHIVertex ) ), reinterpret_cast<void*>( 0 ) );
 			glEnableVertexAttribArray( 1 );

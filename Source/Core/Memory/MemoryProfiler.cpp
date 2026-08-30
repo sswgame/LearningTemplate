@@ -241,9 +241,9 @@ namespace sw
 		if ( tagIdx >= static_cast<uint32>( MemoryTag::MaxTags ) )
 			tagIdx = 0;
 
-		_arrStats[tagIdx]._totalAllocatedBytes.fetch_add( size, std::memory_order_relaxed );
-		_arrStats[tagIdx]._currentAllocatedBytes.fetch_add( size, std::memory_order_relaxed );
-		_arrStats[tagIdx]._currentAllocationCount.fetch_add( 1, std::memory_order_relaxed );
+		_arrStat[tagIdx]._totalAllocatedBytes.fetch_add( size, std::memory_order_relaxed );
+		_arrStat[tagIdx]._currentAllocatedBytes.fetch_add( size, std::memory_order_relaxed );
+		_arrStat[tagIdx]._currentAllocationCount.fetch_add( 1, std::memory_order_relaxed );
 
 		uint64 outHash{ 0 };
 
@@ -282,9 +282,9 @@ namespace sw
 		if ( tagIdx >= static_cast<uint32>( MemoryTag::MaxTags ) )
 			tagIdx = 0;
 
-		_arrStats[tagIdx]._totalFreedBytes.fetch_add( size, std::memory_order_relaxed );
-		_arrStats[tagIdx]._currentAllocatedBytes.fetch_sub( size, std::memory_order_relaxed );
-		_arrStats[tagIdx]._currentAllocationCount.fetch_sub( 1, std::memory_order_relaxed );
+		_arrStat[tagIdx]._totalFreedBytes.fetch_add( size, std::memory_order_relaxed );
+		_arrStat[tagIdx]._currentAllocatedBytes.fetch_sub( size, std::memory_order_relaxed );
+		_arrStat[tagIdx]._currentAllocationCount.fetch_sub( 1, std::memory_order_relaxed );
 
 		if ( _bDetailedTrackingEnabled.load( std::memory_order_relaxed ) && callStackHash != 0 )
 		{
@@ -312,7 +312,7 @@ namespace sw
 		uint32 tagIdx = static_cast<uint32>( tag );
 		if ( tagIdx >= static_cast<uint32>( MemoryTag::MaxTags ) )
 			tagIdx = 0;
-		return _arrStats[tagIdx];
+		return _arrStat[tagIdx];
 	}
 
 	vector<CallStackAllocInfo> MemoryProfiler::getTopCallStacks() const

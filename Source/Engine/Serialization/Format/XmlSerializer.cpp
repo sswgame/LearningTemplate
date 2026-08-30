@@ -997,13 +997,13 @@ namespace sw
 		}
 		else if ( migrate == nullptr && outVersion != currentVersion )
 		{
-			SW_LOG_WARNING( "schema version %# -> %# with no migrate callback (%# listOrphans)",
+			SW_LOG_WARNING( "schema version %# -> %# with no migrate callback (%# listOrphan)",
 							outVersion, currentVersion, static_cast<uint32>( listOrphan.size() ) );
 			ok = false;
 		}
 		else if ( migrate == nullptr && listOrphan.empty() == false && ctx.allowUnknownProperties() == false )
 		{
-			SW_LOG_WARNING( "schema version %# -> %# with no migrate callback (%# listOrphans)",
+			SW_LOG_WARNING( "schema version %# -> %# with no migrate callback (%# listOrphan)",
 							outVersion, currentVersion, static_cast<uint32>( listOrphan.size() ) );
 			ok = false;
 		}

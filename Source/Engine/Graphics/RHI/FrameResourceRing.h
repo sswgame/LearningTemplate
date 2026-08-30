@@ -56,7 +56,7 @@ namespace sw
 		/** @brief 업로드 영역 용량을 반환합니다. */
 		uint64 getUploadCapacity() const { return _uploadCapacity; }
 		/** @brief 현재 슬롯의 업로드 bump 오프셋을 반환합니다. */
-		uint64 getUploadOffset() const { return _arrSlots[_frameIndex]._uploadOffset; }
+		uint64 getUploadOffset() const { return _arrSlot[_frameIndex]._uploadOffset; }
 
 		/**
 		 * @brief 현재 슬롯 업로드 영역에서 bump 할당합니다.
@@ -74,7 +74,7 @@ namespace sw
 			uint64 _uploadOffset{ 0 };
 		};
 
-		Slot   _arrSlots[kFrameCount]{};
+		Slot   _arrSlot[kFrameCount]{};
 		uint64 _uploadCapacity{ 0 };
 		uint32 _frameIndex{ 0 };
 	};

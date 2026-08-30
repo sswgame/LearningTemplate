@@ -17,8 +17,8 @@ namespace sw
 	 */
 	struct SW_API CallStack
 	{
-		static constexpr uint32 kMaxFrames			   = 16;
-		void*					_arrFrames[kMaxFrames] = { nullptr };
+		static constexpr uint32 kMaxFrames			  = 16;
+		void*					_arrFrame[kMaxFrames] = { nullptr };
 		uint64					_hash{ 0 };
 		uint32					_frameCount{ 0 };
 
@@ -29,7 +29,7 @@ namespace sw
 				return false;
 			for ( uint32 frameIndex = 0; frameIndex < _frameCount; ++frameIndex )
 			{
-				if ( _arrFrames[frameIndex] != other._arrFrames[frameIndex] )
+				if ( _arrFrame[frameIndex] != other._arrFrame[frameIndex] )
 					return false;
 			}
 			return true;

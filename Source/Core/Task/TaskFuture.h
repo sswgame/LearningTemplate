@@ -424,9 +424,9 @@ namespace sw
 	 * @brief 여러 TaskFuture가 모두 완료될 때까지 비동기 대기하여 결과 벡터를 모아 반환합니다 (Promise.all / WhenAll).
 	 */
 	template <typename T>
-	inline TaskFuture<vector<T>> whenAllFutures( const vector<TaskFuture<T>>& listFutures )
+	inline TaskFuture<vector<T>> whenAllFutures( const vector<TaskFuture<T>>& listFuture )
 	{
-		if ( listFutures.empty() )
+		if ( listFuture.empty() )
 		{
 			TaskPromise<vector<T>> promise;
 			promise.setValue( vector<T>{} );
@@ -442,12 +442,12 @@ namespace sw
 		};
 
 		auto pCtx = sw::make_shared<WhenAllContext>();
-		pCtx->_listResult.resize( listFutures.size() );
-		pCtx->_remaining = listFutures.size();
+		pCtx->_listResult.resize( listFuture.size() );
+		pCtx->_remaining = listFuture.size();
 
-		for ( size_t futureIndex = 0; futureIndex < listFutures.size(); ++futureIndex )
+		for ( size_t futureIndex = 0; futureIndex < listFuture.size(); ++futureIndex )
 		{
-			listFutures[futureIndex].then( [pCtx, futureIndex]( const T& val )
+			listFuture[futureIndex].then( [pCtx, futureIndex]( const T& val )
 			{
 				bool bDone = false;
 				{
@@ -469,9 +469,9 @@ namespace sw
 	 * @brief 여러 TaskFuture 중 가장 먼저 완료된 Future의 결과를 즉시 반환합니다 (Promise.race / WhenAny).
 	 */
 	template <typename T>
-	inline TaskFuture<T> whenAnyFuture( const vector<TaskFuture<T>>& listFutures )
+	inline TaskFuture<T> whenAnyFuture( const vector<TaskFuture<T>>& listFuture )
 	{
-		if ( listFutures.empty() )
+		if ( listFuture.empty() )
 		{
 			TaskPromise<T> promise;
 			return promise.getFuture();
@@ -485,9 +485,9 @@ namespace sw
 
 		auto pCtx = sw::make_shared<WhenAnyContext>();
 
-		for ( size_t futureIndex = 0; futureIndex < listFutures.size(); ++futureIndex )
+		for ( size_t futureIndex = 0; futureIndex < listFuture.size(); ++futureIndex )
 		{
-			listFutures[futureIndex].then( [pCtx]( const T& val )
+			listFuture[futureIndex].then( [pCtx]( const T& val )
 			{
 				bool expected = false;
 				if ( pCtx->_bTriggered.compare_exchange_strong( expected, true ) )

@@ -379,7 +379,7 @@ namespace sw
 		}
 		else if ( migrate == nullptr && ( outVersion != currentVersion || listOrphan.empty() == false ) )
 		{
-			SW_LOG_WARNING( "schema version %# -> %# with no migrate callback (%# listOrphans)",
+			SW_LOG_WARNING( "schema version %# -> %# with no migrate callback (%# listOrphan)",
 							outVersion, currentVersion, static_cast<uint32>( listOrphan.size() ) );
 			ok = false;
 		}

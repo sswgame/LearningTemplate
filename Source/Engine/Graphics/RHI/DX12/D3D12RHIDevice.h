@@ -199,7 +199,7 @@ namespace sw
 		Microsoft::WRL::ComPtr<ID3D12CommandSignature>	  _drawCommandSignature;
 		Microsoft::WRL::ComPtr<ID3D12CommandSignature>	  _drawIndexedCommandSignature;
 		Microsoft::WRL::ComPtr<ID3D12CommandSignature>	  _dispatchCommandSignature;
-		Microsoft::WRL::ComPtr<ID3D12CommandAllocator>	  _arrCommandAllocators[FrameResourceRing::kFrameCount];
+		Microsoft::WRL::ComPtr<ID3D12CommandAllocator>	  _arrCommandAllocator[FrameResourceRing::kFrameCount];
 		Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> _commandList;
 		FrameResourceRing								  _frameRing;
 

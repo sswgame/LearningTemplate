@@ -54,7 +54,7 @@ namespace sw
 		, _drawCommandSignature{ nullptr }
 		, _drawIndexedCommandSignature{ nullptr }
 		, _dispatchCommandSignature{ nullptr }
-		, _arrCommandAllocators{}
+		, _arrCommandAllocator{}
 		, _commandList{ nullptr }
 		, _frameRing{}
 		, _listRenderTarget{}
@@ -230,11 +230,11 @@ namespace sw
 
 		for ( uint32 frameIndex = 0; frameIndex < FrameResourceRing::kFrameCount; ++frameIndex )
 		{
-			if ( FAILED( _device->CreateCommandAllocator( D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS( _arrCommandAllocators[frameIndex].GetAddressOf() ) ) ) )
+			if ( FAILED( _device->CreateCommandAllocator( D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS( _arrCommandAllocator[frameIndex].GetAddressOf() ) ) ) )
 				return false;
 		}
 
-		if ( FAILED( _device->CreateCommandList( 0, D3D12_COMMAND_LIST_TYPE_DIRECT, _arrCommandAllocators[0].Get(), nullptr, IID_PPV_ARGS( _commandList.GetAddressOf() ) ) ) )
+		if ( FAILED( _device->CreateCommandList( 0, D3D12_COMMAND_LIST_TYPE_DIRECT, _arrCommandAllocator[0].Get(), nullptr, IID_PPV_ARGS( _commandList.GetAddressOf() ) ) ) )
 			return false;
 
 		_commandList->Close();
@@ -293,7 +293,7 @@ namespace sw
 		_rtvHeap.Reset();
 		_nextOffscreenDsvIndex = 0;
 		_commandList.Reset();
-		for ( Microsoft::WRL::ComPtr<ID3D12CommandAllocator>& allocator : _arrCommandAllocators )
+		for ( Microsoft::WRL::ComPtr<ID3D12CommandAllocator>& allocator : _arrCommandAllocator )
 		{
 			allocator.Reset();
 		}
@@ -457,7 +457,7 @@ namespace sw
 
 	ID3D12CommandAllocator* D3D12RHIDevice::currentAllocator()
 	{
-		return _arrCommandAllocators[_frameRing.currentIndex()].Get();
+		return _arrCommandAllocator[_frameRing.currentIndex()].Get();
 	}
 
 	ID3D12Resource* D3D12RHIDevice::resolveBuffer( RHIBufferHandle handle ) const
@@ -640,7 +640,7 @@ namespace sw
 		_device->CreateCommandSignature( &dispatchCmdSigDesc, nullptr, IID_PPV_ARGS( _dispatchCommandSignature.GetAddressOf() ) );
 
 		{
-			const RHIVertex arrFullscreenVerts[3] = {
+			const RHIVertex arrFullscreenVert[3] = {
 				{{ -1.0f, -1.0f, 0.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }},
 				{ { 3.0f, -1.0f, 0.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }},
 				{ { -1.0f, 3.0f, 0.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }},
@@ -651,7 +651,7 @@ namespace sw
 
 			D3D12_RESOURCE_DESC resDesc{};
 			resDesc.Dimension		 = D3D12_RESOURCE_DIMENSION_BUFFER;
-			resDesc.Width			 = sizeof( arrFullscreenVerts );
+			resDesc.Width			 = sizeof( arrFullscreenVert );
 			resDesc.Height			 = 1;
 			resDesc.DepthOrArraySize = 1;
 			resDesc.MipLevels		 = 1;
@@ -673,7 +673,7 @@ namespace sw
 				_vertexBuffer.Reset();
 				return false;
 			}
-			Memory::copy( pMapped, arrFullscreenVerts, sizeof( arrFullscreenVerts ) );
+			Memory::copy( pMapped, arrFullscreenVert, sizeof( arrFullscreenVert ) );
 			_vertexBuffer->Unmap( 0, nullptr );
 		}
 

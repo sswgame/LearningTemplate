@@ -126,7 +126,7 @@ namespace sw
 		atomic<bool> _bTrackingEnabled;
 		atomic<bool> _bDetailedTrackingEnabled;
 
-		MemoryProfileStats _arrStats[static_cast<uint32>( MemoryTag::MaxTags )];
+		MemoryProfileStats _arrStat[static_cast<uint32>( MemoryTag::MaxTags )];
 
 		// 콜스택 세부 추적용 (_bDetailedTrackingEnabled가 true일 때만 사용)
 		mutable mutex							  _stackMapMutex;

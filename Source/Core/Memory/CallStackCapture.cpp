@@ -43,7 +43,7 @@ namespace sw
 
 #if defined( SW_PLATFORM_WINDOWS )
 		// 이 capture 함수 자신을 건너뛰기 위해 +1
-		outStack._frameCount = CaptureStackBackTrace( skipFrames + 1, CallStack::kMaxFrames, outStack._arrFrames, nullptr );
+		outStack._frameCount = CaptureStackBackTrace( skipFrames + 1, CallStack::kMaxFrames, outStack._arrFrame, nullptr );
 #elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
 		void* tempFrames[CallStack::kMaxFrames + 16];
 		int32 count		 = backtrace( tempFrames, CallStack::kMaxFrames + skipFrames + 1 );
@@ -53,7 +53,7 @@ namespace sw
 			outStack._frameCount = MathUtil::min<uint32>( static_cast<uint32>( validCount ), CallStack::kMaxFrames );
 			for ( uint32 frameIndex = 0; frameIndex < outStack._frameCount; ++frameIndex )
 			{
-				outStack._arrFrames[frameIndex] = tempFrames[frameIndex + skipFrames + 1];
+				outStack._arrFrame[frameIndex] = tempFrames[frameIndex + skipFrames + 1];
 			}
 		}
 #endif
@@ -62,7 +62,7 @@ namespace sw
 		uint64 hash{ 0 };
 		for ( uint32 frameIndex = 0; frameIndex < outStack._frameCount; ++frameIndex )
 		{
-			hash ^= reinterpret_cast<uint64>( outStack._arrFrames[frameIndex] ) + 0x9e3779b9 + ( hash << 6 ) + ( hash >> 2 );
+			hash ^= reinterpret_cast<uint64>( outStack._arrFrame[frameIndex] ) + 0x9e3779b9 + ( hash << 6 ) + ( hash >> 2 );
 		}
 		outStack._hash = hash;
 	}
@@ -84,7 +84,7 @@ namespace sw
 
 		for ( uint32 frameIndex = 0; frameIndex < stack._frameCount; ++frameIndex )
 		{
-			DWORD64 address = reinterpret_cast<DWORD64>( stack._arrFrames[frameIndex] );
+			DWORD64 address = reinterpret_cast<DWORD64>( stack._arrFrame[frameIndex] );
 			if ( address == 0 )
 				continue;
 
@@ -110,7 +110,7 @@ namespace sw
 			}
 		}
 #elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
-		utf8** symbols = backtrace_symbols( stack._arrFrames, stack._frameCount );
+		utf8** symbols = backtrace_symbols( stack._arrFrame, stack._frameCount );
 		if ( symbols != nullptr )
 		{
 			for ( uint32 frameIndex = 0; frameIndex < stack._frameCount; ++frameIndex )
@@ -119,7 +119,7 @@ namespace sw
 
 				// dladdr 로 더 정확한 심볼 정보 시도
 				Dl_info info;
-				if ( dladdr( stack._arrFrames[frameIndex], &info ) && info.dli_sname )
+				if ( dladdr( stack._arrFrame[frameIndex], &info ) && info.dli_sname )
 				{
 					int32 status	 = 0;
 					utf8* pDemangled = abi::__cxa_demangle( info.dli_sname, nullptr, nullptr, &status );
@@ -128,9 +128,9 @@ namespace sw
 				}
 
 				sb.appendFormat( "  [%#] %#\n", frameIndex, symbolName.c_str() );
-				if ( dladdr( stack._arrFrames[frameIndex], &info ) && info.dli_sname )
+				if ( dladdr( stack._arrFrame[frameIndex], &info ) && info.dli_sname )
 				{
-					sb.appendFormat( " + 0x%#", Fmt( reinterpret_cast<uint64>( (utf8*)stack._arrFrames[frameIndex] - (utf8*)info.dli_saddr ), Format().hex() ) );
+					sb.appendFormat( " + 0x%#", Fmt( reinterpret_cast<uint64>( (utf8*)stack._arrFrame[frameIndex] - (utf8*)info.dli_saddr ), Format().hex() ) );
 				}
 			}
 			free( symbols );

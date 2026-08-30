@@ -119,8 +119,8 @@ namespace sw::editor
 					if ( pTagComp == nullptr )
 						return;
 
-					const vector<TagID>& listTags = pTagComp->getTags().getTags();
-					for ( const TagID& tag : listTags )
+					const vector<TagID>& listTag = pTagComp->getTags().getTags();
+					for ( const TagID& tag : listTag )
 					{
 						if ( tag._pString != nullptr && tag._pString[0] != '\0' )
 						{
