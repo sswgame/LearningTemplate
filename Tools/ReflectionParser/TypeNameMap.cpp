@@ -7,6 +7,7 @@
 
 #include "ReflectionParser/ParserContext.h"
 #include "ReflectionParser/ParserDefines.h"
+#include "ReflectionParser/ParserUtil.h"
 
 SW_LOG_CALLER( "TypeNameMap" );
 namespace sw
@@ -27,7 +28,7 @@ namespace sw
 					bStripped = false;
 					for ( const string& prefix : cfg._listTypeStripPrefix )
 					{
-						if ( tView.size() >= prefix.size() && tView.substr( 0, prefix.size() ) == prefix )
+						if ( StringUtil::startsWith( tView, prefix ) )
 						{
 							tView.remove_prefix( prefix.size() );
 							tView	  = StringUtil::trim( tView );
@@ -112,11 +113,10 @@ namespace sw
 			t = it->second;
 		else
 		{
-			const size_t sep = t.rfind( "::" );
-			if ( sep != string::npos && sep + 2 < t.size() )
+			const string_view bare = ParserUtil::scopeLeaf( t );
+			if ( bare != t )
 			{
-				const string bare	= t.substr( sep + 2 );
-				const auto	 itBare = _mapAliasToCanonical.find( bare );
+				const auto itBare = _mapAliasToCanonical.find( string{ bare } );
 				if ( itBare != _mapAliasToCanonical.end() )
 					t = itBare->second;
 			}

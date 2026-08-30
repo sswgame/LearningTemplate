@@ -102,7 +102,7 @@ namespace sw
 				verifySb.append( "map=" ).append( pMap ).append( "\nx=" ).append( px ).append( "\ny=" ).append( py ).append( '\n' );
 				for ( const auto& [key, val] : map )
 				{
-					if ( key.rfind( "flag.", 0 ) == 0 )
+					if ( StringUtil::startsWith( key, "flag." ) )
 					{
 						verifySb.append( key.c_str() ).append( '=' ).append( val.c_str() ).append( '\n' );
 					}

@@ -120,7 +120,7 @@ namespace sw
 				const string norm = FileUtil::trimTrailingSlashes( FileUtil::normalizePath( candidateRoot ) );
 				if ( norm.empty() )
 					return;
-				if ( folderNorm == norm || ( folderNorm.size() > norm.size() && folderNorm.rfind( norm + "/", 0 ) == 0 ) )
+				if ( FileUtil::startsWithPathComponent( folderNorm, norm ) )
 				{
 					if ( norm.size() > outRootNorm.size() )
 					{
@@ -478,8 +478,18 @@ namespace sw
 					if ( std::find( _s_listResourceFolder.begin(), _s_listResourceFolder.end(), normPack ) == _s_listResourceFolder.end() )
 						_s_listResourceFolder.push_back( normPack );
 				}
-				else if ( _s_gameFolderPath.empty() == false && FileUtil::directoryExists( _s_gameFolderPath ) )
+				if ( _s_gameFolderPath.empty() == false && FileUtil::directoryExists( _s_gameFolderPath ) )
 				{
+					vector<string> listPackFolders;
+					FileUtil::collectFolders( _s_gameFolderPath, listPackFolders, false, false );
+					for ( const string& packFolder : listPackFolders )
+					{
+						const string normPack = FileUtil::normalizeSeparators( packFolder );
+						if ( std::find( _s_listResourceFolder.begin(), _s_listResourceFolder.end(), normPack ) == _s_listResourceFolder.end() )
+						{
+							_s_listResourceFolder.push_back( normPack );
+						}
+					}
 					const string norm = FileUtil::normalizeSeparators( _s_gameFolderPath );
 					if ( std::find( _s_listResourceFolder.begin(), _s_listResourceFolder.end(), norm ) == _s_listResourceFolder.end() )
 						_s_listResourceFolder.push_back( norm );

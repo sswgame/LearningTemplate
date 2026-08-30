@@ -147,6 +147,8 @@ namespace sw
 		static bool copyFile( string_view source, string_view destination );
 		/** @brief 파일을 삭제합니다. 없거나 삭제되면 true. */
 		static bool removeFile( string_view path );
+		/** @brief 디렉터리를 재귀적으로 삭제합니다. 없거나 삭제되면 true. */
+		static bool removeDirectory( string_view path );
 		/** @brief 시스템 임시 디렉터리 경로를 반환합니다. */
 		static string getTempDirectory();
 		/** @brief 바이너리 데이터를 파일에 씁니다. */

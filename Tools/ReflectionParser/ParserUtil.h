@@ -82,5 +82,24 @@ namespace sw
 			}
 			return out;
 		}
+
+		/** @brief FQN(예: "sw::EState::Idle")에서 말단 식별자 이름("Idle")을 추출합니다. */
+		static string_view scopeLeaf( string_view fqn )
+		{
+			string_view	 name = StringUtil::trim( fqn );
+			const size_t last = name.rfind( "::" );
+			if ( last != string_view::npos && last + 2 < name.size() )
+				name = name.substr( last + 2 );
+			return name;
+		}
+
+		/** @brief FQN(예: "sw::EState::Idle")에서 상위 네임스페이스/스코프를 추출합니다. */
+		static string_view enclosingNamespaceOf( string_view fqn )
+		{
+			const size_t pos = fqn.rfind( "::" );
+			if ( pos == string_view::npos )
+				return {};
+			return fqn.substr( 0, pos );
+		}
 	};
 } // namespace sw

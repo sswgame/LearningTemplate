@@ -130,6 +130,10 @@ namespace sw
 		/** @brief wstring_view 대소문자 무시 동등 비교 */
 		static bool equalsIgnoreCase( wstring_view lhs, wstring_view rhs );
 
+		/** @brief 문자열이 지정된 접두사(prefix)로 시작하는지 확인합니다 (Zero Allocation). */
+		static bool startsWith( string_view str, string_view prefix ) noexcept;
+		/** @brief 문자열이 지정된 접미사(suffix)로 끝나는지 확인합니다 (Zero Allocation). */
+		static bool endsWith( string_view str, string_view suffix ) noexcept;
 		/** @brief 문자열이 지정된 접두사(prefix)로 시작하는지 대소문자 무시로 확인합니다 (Zero Allocation). */
 		static bool startsWithIgnoreCase( string_view str, string_view prefix );
 		/** @brief 문자열이 지정된 접미사(suffix)로 끝나는지 대소문자 무시로 확인합니다 (Zero Allocation). */

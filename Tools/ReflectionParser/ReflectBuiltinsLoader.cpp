@@ -50,10 +50,10 @@ namespace sw
 				const string_splitter lines( text, { "\r\n", "\n" } );
 				for ( const string_view rawLine : lines.getSplitList() )
 				{
-					const string line = StringUtil::trim( string( rawLine ).c_str() );
+					const string_view line = StringUtil::trim( rawLine );
 					if ( line.empty() || line.front() == '#' || line.front() == '/' )
 						continue;
-					outListLine.push_back( line );
+					outListLine.emplace_back( line );
 				}
 			}
 
@@ -124,7 +124,7 @@ namespace sw
 		string text;
 		if ( FileUtil::readTextFile( absPath, text ) == false )
 		{
-			SW_LOG_WARNING( "Failed to read: %#", absPath );
+			SW_LOG_WARNING( "Failed to read builtins: %#", absPath );
 			return false;
 		}
 
@@ -139,12 +139,12 @@ namespace sw
 		for ( const string& line : lineList )
 		{
 			vector<string> macroArguments;
-			if ( line.rfind( builtinMacroConstants::kType, 0 ) == 0 &&
+			if ( StringUtil::startsWith( line, builtinMacroConstants::kType ) &&
 				 ReflectBuiltinsLoaderInternal::parseMacroLine( line, builtinMacroConstants::kType, macroArguments ) )
 			{
 				ReflectBuiltinsLoaderInternal::registerBuiltinTypeLine( macroArguments, typeCount );
 			}
-			else if ( line.rfind( builtinMacroConstants::kContainer, 0 ) == 0 &&
+			else if ( StringUtil::startsWith( line, builtinMacroConstants::kContainer ) &&
 					  ReflectBuiltinsLoaderInternal::parseMacroLine( line, builtinMacroConstants::kContainer, macroArguments ) )
 			{
 				ReflectBuiltinsLoaderInternal::registerBuiltinContainerLine( macroArguments, containerCount );
@@ -172,7 +172,7 @@ namespace sw
 		for ( const string& line : lineList )
 		{
 			vector<string> macroArguments;
-			if ( line.rfind( builtinMacroConstants::kType, 0 ) == 0 &&
+			if ( StringUtil::startsWith( line, builtinMacroConstants::kType ) &&
 				 ReflectBuiltinsLoaderInternal::parseMacroLine( line, builtinMacroConstants::kType, macroArguments ) )
 			{
 				ReflectBuiltinsLoaderInternal::appendBuiltinTypeRow( macroArguments, rows );

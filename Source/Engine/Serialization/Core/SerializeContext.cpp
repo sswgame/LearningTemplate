@@ -309,7 +309,7 @@ namespace sw
 			auto tagIdRead = []( void* pPtr, string_view strView ) -> bool
 			{
 				string_view text = strView;
-				if ( text.size() >= 4 && text.substr( 0, 4 ) == "str:" )
+				if ( StringUtil::startsWith( text, "str:" ) )
 					text.remove_prefix( 4 );
 				if ( text.empty() )
 				{

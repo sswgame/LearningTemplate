@@ -30,19 +30,12 @@ namespace sw
 			 */
 			static string_view enumeratorLeaf( string_view spec )
 			{
-				string_view	 name = StringUtil::trim( spec );
-				const size_t last = name.rfind( "::" );
-				if ( last != string_view::npos && last + 2 < name.size() )
-					name = name.substr( last + 2 );
-				return name;
+				return ParserUtil::scopeLeaf( spec );
 			}
 
 			static string enclosingNamespaceOf( const string& fqn )
 			{
-				const size_t pos = fqn.rfind( "::" );
-				if ( pos == string::npos )
-					return {};
-				return fqn.substr( 0, pos );
+				return string{ ParserUtil::enclosingNamespaceOf( fqn ) };
 			}
 
 			/**

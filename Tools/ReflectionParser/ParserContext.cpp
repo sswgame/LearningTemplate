@@ -234,7 +234,7 @@ namespace sw
 					return true;
 				if ( arg == fmsExtensions )
 					return true;
-				if ( arg.rfind( fmsCompatVersionPrefix, 0 ) == 0 )
+				if ( StringUtil::startsWith( arg, fmsCompatVersionPrefix ) )
 					return true;
 				return false;
 			}

@@ -39,7 +39,7 @@ namespace sw
 
 		if ( typeName == constants::propertyHint::kBool ||
 			 ( typeName == constants::propertyHint::kUint8 &&
-			   meta._displayName.rfind( constants::propertyHint::kBoolPrefix, 0 ) == 0 ) )
+			   StringUtil::startsWith( meta._displayName, constants::propertyHint::kBoolPrefix ) ) )
 			return PropertyWidgetType::Checkbox;
 #else
 		if ( PropertyMetaHintInternal::isColorProperty( typeName, "" ) )

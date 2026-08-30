@@ -51,7 +51,7 @@ namespace sw
 				if ( text.empty() )
 					return false;
 
-				if ( text.size() >= 4 && text.substr( 0, 4 ) == "str:" )
+				if ( StringUtil::startsWith( text, "str:" ) )
 				{
 					outTag = TagID::request( text.substr( 4 ) );
 					return outTag.isValid();

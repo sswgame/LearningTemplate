@@ -307,7 +307,7 @@ SW_TEST_CASE( Engine_Resource, ConfigurableResourcePriorityAndDlcSupport )
 
 	// 6. 임시 DLC 파일 및 디렉터리 정리
 	sw::FileUtil::removeFile( dlcFile );
-	sw::FileUtil::removeFile( dlcDir );
-	sw::FileUtil::removeFile( sw::FileUtil::joinPath( sw::ResourceUtil::getRootFolderPath(), "dlc/test_dlc" ) );
-	sw::FileUtil::removeFile( sw::FileUtil::joinPath( sw::ResourceUtil::getRootFolderPath(), "dlc" ) );
+	sw::FileUtil::removeDirectory( dlcDir );
+	sw::FileUtil::removeDirectory( sw::FileUtil::joinPath( sw::ResourceUtil::getRootFolderPath(), "dlc/test_dlc" ) );
+	sw::FileUtil::removeDirectory( sw::FileUtil::joinPath( sw::ResourceUtil::getRootFolderPath(), "dlc" ) );
 }

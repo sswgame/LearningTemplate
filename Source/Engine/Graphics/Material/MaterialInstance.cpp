@@ -389,7 +389,7 @@ namespace sw
 			{
 				_listCachedDefine.erase( std::remove_if( _listCachedDefine.begin(), _listCachedDefine.end(),
 														 []( string_view defineStr )
-				{ return defineStr.rfind( "MATERIAL_QUALITY", 0 ) == 0; } ),
+				{ return StringUtil::startsWith( defineStr, "MATERIAL_QUALITY" ); } ),
 										 _listCachedDefine.end() );
 				MaterialUtil::appendQualityDefines( _qualityOverride, _listCachedDefine );
 			}

@@ -323,12 +323,11 @@ namespace sw::editor
 							for ( const string& presetFile : _listComponentPresetFile )
 							{
 								const string fname = FileUtil::getFileNamePart( presetFile );
-								if ( fname.rfind( compPrefix, 0 ) == 0 )
+								if ( StringUtil::startsWith( fname, compPrefix ) )
 								{
 									bFoundPresets		 = true;
 									string displayPreset = fname.substr( compPrefix.size() );
-									if ( displayPreset.size() > 11 &&
-										 displayPreset.substr( displayPreset.size() - 11 ) == ".preset.xml" )
+									if ( StringUtil::endsWith( displayPreset, ".preset.xml" ) )
 									{
 										displayPreset = displayPreset.substr( 0, displayPreset.size() - 11 );
 									}

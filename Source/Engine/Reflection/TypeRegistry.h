@@ -55,10 +55,9 @@ namespace sw
 		};
 		for ( const utf8* prefix : kArrTypePrefixes )
 		{
-			const size_t prefixLength = StringUtil::strlen( prefix );
-			if ( inner.size() >= prefixLength && inner.substr( 0, prefixLength ) == prefix )
+			if ( StringUtil::startsWith( inner, prefix ) )
 			{
-				inner.remove_prefix( prefixLength );
+				inner.remove_prefix( StringUtil::strlen( prefix ) );
 				break;
 			}
 		}

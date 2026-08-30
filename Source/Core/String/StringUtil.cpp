@@ -557,6 +557,24 @@ namespace sw
 		return true;
 	}
 
+	bool StringUtil::startsWith( string_view str, string_view prefix ) noexcept
+	{
+		if ( prefix.empty() )
+			return true;
+		if ( str.size() < prefix.size() )
+			return false;
+		return str.compare( 0, prefix.size(), prefix ) == 0;
+	}
+
+	bool StringUtil::endsWith( string_view str, string_view suffix ) noexcept
+	{
+		if ( suffix.empty() )
+			return true;
+		if ( str.size() < suffix.size() )
+			return false;
+		return str.compare( str.size() - suffix.size(), suffix.size(), suffix ) == 0;
+	}
+
 	bool StringUtil::startsWithIgnoreCase( string_view str, string_view prefix )
 	{
 		if ( prefix.empty() )

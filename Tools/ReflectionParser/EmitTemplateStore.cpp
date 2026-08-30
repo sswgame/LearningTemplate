@@ -78,9 +78,7 @@ namespace sw
 			if ( FileUtil::readTextFile( filePath, content ) == false )
 				continue;
 
-			string name = FileUtil::getFileNamePart( filePath );
-			if ( name.size() > 4 && name.rfind( ".tpl" ) == name.size() - 4 )
-				name = name.substr( 0, name.size() - 4 );
+			string name = FileUtil::removeExtension( FileUtil::getFileNamePart( filePath ) );
 
 			_mapTemplate[name] = content;
 			++count;

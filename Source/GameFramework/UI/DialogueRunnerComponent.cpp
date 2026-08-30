@@ -211,14 +211,11 @@ namespace sw
 			}
 		}
 
-		while ( flagKey.empty() == false && ( flagKey.front() == ' ' || flagKey.front() == '\t' ) )
-			flagKey.erase( flagKey.begin() );
-		while ( flagKey.empty() == false && ( flagKey.back() == ' ' || flagKey.back() == '\t' ) )
-			flagKey.pop_back();
+		flagKey = StringUtil::trim( flagKey );
 
-		constexpr const utf8* kPrefix = "flag.";
-		if ( flagKey.rfind( kPrefix, 0 ) == 0 )
-			flagKey = flagKey.substr( StringUtil::strlen( kPrefix ) );
+		constexpr string_view kPrefix = "flag.";
+		if ( StringUtil::startsWith( flagKey, kPrefix ) )
+			flagKey = flagKey.substr( kPrefix.size() );
 
 		const int32 currentVal = ( _pSaveSlot != nullptr ) ? _pSaveSlot->getFlag( flagKey ) : 0;
 		return ( bEqualsComparison ) ? ( currentVal == expectedVal ) : ( currentVal != expectedVal );
@@ -235,10 +232,10 @@ namespace sw
 
 		if ( _pSaveSlot != nullptr )
 		{
-			constexpr const utf8* kSetFlag = "set_flag:";
-			if ( actionCmd.rfind( kSetFlag, 0 ) == 0 )
+			constexpr string_view kSetFlag = "set_flag:";
+			if ( StringUtil::startsWith( actionCmd, kSetFlag ) )
 			{
-				const string rest  = actionCmd.substr( StringUtil::strlen( kSetFlag ) );
+				const string rest  = actionCmd.substr( kSetFlag.size() );
 				const size_t colon = rest.find( ':' );
 				const string key   = ( colon != string::npos ) ? rest.substr( 0, colon ) : string{ rest };
 				const int32	 val   = ( colon != string::npos ) ? StringUtil::atoi( rest.c_str() + colon + 1 ) : 1;

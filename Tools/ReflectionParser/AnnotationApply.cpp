@@ -54,7 +54,7 @@ namespace sw
 			/** @brief 빈 값·true·1·True 를 참으로 봅니다. */
 			static bool parseAnnotationBool( string_view val )
 			{
-				return val.empty() || val == "true" || val == "1" || val == "True";
+				return StringUtil::parseBool( val, true );
 			}
 
 			/** @brief 필드 이름에 맞는 테이블 항목을 찾습니다. */

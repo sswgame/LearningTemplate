@@ -529,6 +529,16 @@ namespace sw
 		return fileExists( normalized ) == false;
 	}
 
+	bool FileUtil::removeDirectory( string_view path )
+	{
+		if ( path.empty() )
+			return true;
+		const string	normalized = normalizeSeparators( path );
+		std::error_code ec;
+		std::filesystem::remove_all( normalized.c_str(), ec );
+		return directoryExists( normalized ) == false;
+	}
+
 	string FileUtil::getTempDirectory()
 	{
 		std::error_code				ec;
