@@ -36,7 +36,7 @@ target_compile_definitions(GameFramework
 		"SW_LOG_TAG=\"GameFramework\""
 		SW_GAME_INTERNAL
 )
-target_precompile_headers(GameFramework PRIVATE "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
+sw_configurePch(GameFramework "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
 
 sw_configureGfExports(GameFramework ${gfLibType})
 if(gfLibType STREQUAL "SHARED")

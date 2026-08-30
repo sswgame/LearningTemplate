@@ -19,5 +19,5 @@ if(sw_flag_libraries)
 endif()
 
 target_compile_definitions(TestFramework PRIVATE "SW_LOG_TAG=\"Test\"")
-target_precompile_headers(TestFramework PRIVATE "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
+sw_configurePch(TestFramework "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
 set_target_properties(TestFramework PROPERTIES FOLDER "Test")

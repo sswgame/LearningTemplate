@@ -153,7 +153,7 @@ function(sw_addRhiBackendModule BACKEND_NAME GRAPHICS_LIB)
 			SW_MODULE_EXPORTS
 			SW_ENGINE_INTERNAL
 	)
-	target_precompile_headers(${BACKEND_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
+	sw_configurePch(${BACKEND_NAME} "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
 	sw_setModuleBinOutput(${BACKEND_NAME})
 	set_target_properties(${BACKEND_NAME} PROPERTIES FOLDER "Source/Engine/Graphics/RHI/Modules")
 endfunction()
@@ -183,7 +183,7 @@ function(sw_addGameFrameworkKit KIT_NAME)
 	endif()
 
 	target_compile_definitions(${KIT_NAME} PRIVATE "SW_LOG_TAG=\"${KIT_NAME}\"")
-	target_precompile_headers(${KIT_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
+	sw_configurePch(${KIT_NAME} "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
 
 	sw_configureGfExports(${KIT_NAME} ${kitType})
 	if(kitType STREQUAL "SHARED")
@@ -242,7 +242,7 @@ function(sw_addGameModule TARGET_NAME)
 		sw_setModuleBinOutput(${TARGET_NAME})
 	endif()
 
-	target_precompile_headers(${TARGET_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
+	sw_configurePch(${TARGET_NAME} "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
 
 	if(COMMAND sw_setUnityBuild)
 		sw_setUnityBuild(${TARGET_NAME} BATCH_SIZE 8)
@@ -294,7 +294,7 @@ function(sw_addTestExecutable TARGET_NAME)
 			"SW_LOG_TAG=\"Test\""
 			${ARG_DEFINITIONS}
 	)
-	target_precompile_headers(${TARGET_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
+	sw_configurePch(${TARGET_NAME} "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
 
 	if(BUILD_TESTING)
 		add_test(NAME ${TARGET_NAME} COMMAND ${TARGET_NAME})

@@ -20,7 +20,7 @@ if(sw_flag_libraries)
 endif()
 
 target_compile_definitions(App PRIVATE "SW_LOG_TAG=\"Engine\"" SW_APP_INTERNAL)
-target_precompile_headers(App PRIVATE "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
+sw_configurePch(App "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
 
 sw_addReflectionStep(App
     INCLUDES "${CMAKE_SOURCE_DIR}/Source"

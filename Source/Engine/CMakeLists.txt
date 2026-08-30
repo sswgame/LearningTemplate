@@ -58,7 +58,7 @@ if(sw_flag_libraries)
 endif()
 
 target_compile_definitions(Engine PRIVATE "SW_LOG_TAG=\"Engine\"" SW_ENGINE_INTERNAL)
-target_precompile_headers(Engine PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/pch.h")
+sw_configurePch(Engine "${CMAKE_CURRENT_SOURCE_DIR}/pch.h")
 
 target_sources(Engine PRIVATE
 	"${CMAKE_CURRENT_SOURCE_DIR}/../sw.natvis"

@@ -36,7 +36,7 @@ if(NOT SW_SHIPPING_BUILD)
 			SW_MODULE_EXPORTS
 			SW_EDITOR_INTERNAL
 	)
-	target_precompile_headers(EditorModule PRIVATE "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
+	sw_configurePch(EditorModule "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
 
 	sw_setModuleBinOutput(EditorModule)
 	set_target_properties(EditorModule PROPERTIES

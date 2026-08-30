@@ -3,7 +3,7 @@
 # @brief SW Engine 전역 기능 빌드 옵션(SW_*) 및 워크스페이스 메타데이터 정의
 #
 # [CMake 네이밍 및 개발 규칙]:
-# - sw_camelCase      : CMake function() / macro() 헬퍼 함수 (예: sw_addLibrary)
+# - sw_camelCase      : CMake function() / macro() 헬퍼 함수 (예: sw_configurePch, sw_addGameModule)
 # - sw_snake_case     : 프로젝트 내부 변수 및 INTERFACE 타겟명 (예: sw_flag_libraries)
 # - SW_UPPER_SNAKE    : option() / CACHE 빌드 옵션 및 C++ 컴파일 매크로 (예: SW_ENABLE_PCH, SW_SHIPPING_BUILD)
 # - camelCase         : 함수/매크로 내부 로컬 변수
@@ -29,6 +29,12 @@ option(SW_BUILD_DOCS "Doxygen 코드 문서화 생성 타겟 추가" OFF)
 option(SW_BUILD_GAME "GameFramework 및 게임 모듈(SWGame DLL/정적 링크) 빌드" ON)
 option(SW_BUILD_GAMEFRAMEWORK "Source/GameFramework 및 게임 장르별 키트 라이브러리 빌드" ON)
 option(SW_ENABLE_PCH "빌드 속도 단축을 위한 프리컴파일드 헤더(PCH) 사용" ON)
+
+function(sw_configurePch targetName headerPath)
+	if(SW_ENABLE_PCH)
+		target_precompile_headers(${targetName} PRIVATE "${headerPath}")
+	endif()
+endfunction()
 option(SW_ENABLE_SANITIZER "Address/UB Sanitizer 컴파일러 플래그 모듈 활성화" OFF)
 option(SW_ENABLE_TESTING "단위/통합 테스트 프로젝트 빌드 및 CTest 등록" ON)
 option(SW_ENABLE_UNITY_BUILD "대형 라이브러리 타겟에 CMake UNITY_BUILD(소스 묶음 컴파일) 사용" OFF)

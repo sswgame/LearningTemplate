@@ -83,7 +83,7 @@ elseif(APPLE)
 endif()
 
 target_compile_definitions(Core_objects PRIVATE "SW_LOG_TAG=\"Engine\"")
-target_precompile_headers(Core_objects PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/pch.h")
+sw_configurePch(Core_objects "${CMAKE_CURRENT_SOURCE_DIR}/pch.h")
 target_link_libraries(Core_objects PRIVATE sw_global_options)
 
 # ------------------------------------------------------------------------------

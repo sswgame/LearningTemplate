@@ -1,7 +1,7 @@
 /**
  * @file pch.h
  * @brief 엔진 공통 Precompiled Header (CoreMinimal + EngineMinimal + Object/Scene/RHI)
- * @details CMake `sw_configure_pch`가 타겟별로 이 헤더를 강제 포함합니다.
+ * @details CMake `sw_configurePch`가 `SW_ENABLE_PCH=ON`일 때 타겟별로 이 헤더를 강제 포함합니다.
  */
 #pragma once
 #include "Core/CoreMinimal.h"

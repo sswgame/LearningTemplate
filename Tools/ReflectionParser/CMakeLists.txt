@@ -107,7 +107,7 @@ if(sw_flag_libraries)
 endif()
 
 target_compile_definitions(ReflectionParser PRIVATE "SW_LOG_TAG=\"Tool\"")
-target_precompile_headers(ReflectionParser PRIVATE "${CMAKE_SOURCE_DIR}/Source/Core/pch.h")
+sw_configurePch(ReflectionParser "${CMAKE_SOURCE_DIR}/Source/Core/pch.h")
 
 set_property(TARGET ReflectionParser PROPERTY INTERPROCEDURAL_OPTIMIZATION FALSE)
 if(COMMAND sw_setUnityBuild)
