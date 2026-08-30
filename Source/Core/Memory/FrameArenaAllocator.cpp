@@ -33,11 +33,11 @@ namespace sw
 	{
 		while ( _currentChunkIndex < _listChunk.size() )
 		{
-			Chunk&	  chunk	  = _listChunk[_currentChunkIndex];
-			uintptr_t current = reinterpret_cast<uintptr_t>( chunk._pBuffer + chunk._offset );
+			Chunk&			chunk	= _listChunk[_currentChunkIndex];
+			const uintptr_t current = reinterpret_cast<uintptr_t>( chunk._pBuffer + chunk._offset );
 
-			uintptr_t aligned = ( current + ( alignment - 1 ) ) & ~( static_cast<uintptr_t>( alignment - 1 ) );
-			size_t	  padding = aligned - current;
+			const uintptr_t aligned = MathUtil::align( current, static_cast<uintptr_t>( alignment ) );
+			const size_t	padding = static_cast<size_t>( aligned - current );
 
 			if ( chunk._offset + padding + size <= chunk._capacity )
 			{

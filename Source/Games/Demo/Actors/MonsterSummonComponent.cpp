@@ -61,14 +61,11 @@ namespace sw
 
 		auto spawnAll = [pGameObjectManager, ownerWorldPos, count, radius, prefabOrId]()
 		{
-			const float32 angleStep = 6.2831853f / static_cast<float32>( count );
+			const float32 angleStep = ( MathUtil::Pi * 2.0f ) / static_cast<float32>( count );
 			for ( int32 summonIndex = 0; summonIndex < count; ++summonIndex )
 			{
-				const float32 angle = static_cast<float32>( summonIndex ) * angleStep;
-				const float3  spawnPos{
-					 ownerWorldPos._x + MathUtil::cos( angle ) * radius,
-					 ownerWorldPos._y + MathUtil::sin( angle ) * radius,
-					 ownerWorldPos._z };
+				const float32 angle	   = static_cast<float32>( summonIndex ) * angleStep;
+				const float3  spawnPos = ownerWorldPos + float3{ MathUtil::cos( angle ) * radius, MathUtil::sin( angle ) * radius, 0.0f };
 
 				GameObject* pMinion = nullptr;
 				if ( game::areGameServicesBound() && prefabOrId.find( '/' ) != string::npos )

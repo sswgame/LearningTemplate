@@ -9,30 +9,10 @@
 
 namespace sw
 {
-	namespace
-	{
-		struct FrameRendererConstantsInternal
-		{
-			static void mulMat4( const float32 arrA[16], const float32 arrB[16], float32 outArr[16] )
-			{
-				for ( int32 rowIndex = 0; rowIndex < 4; ++rowIndex )
-				{
-					for ( int32 colIndex = 0; colIndex < 4; ++colIndex )
-					{
-						outArr[colIndex * 4 + rowIndex] = arrA[0 * 4 + rowIndex] * arrB[colIndex * 4 + 0] + arrA[1 * 4 + rowIndex] * arrB[colIndex * 4 + 1] + arrA[2 * 4 + rowIndex] * arrB[colIndex * 4 + 2] + arrA[3 * 4 + rowIndex] * arrB[colIndex * 4 + 3];
-					}
-				}
-			}
-		};
-	} // namespace
-} // namespace sw
-
-namespace sw
-{
 	void FrameRenderer::updatePassConstants()
 	{
 		buildLightViewProj( _passConstants._lightViewProj );
-		buildCascadeShadowMatrices( _passConstants._cascadeViewProj, _passConstants._cascadeSplits );
+		buildCascadeShadowMatrices( _passConstants._arrCascadeViewProj, _passConstants._cascadeSplits );
 
 		if ( _pScene != nullptr )
 		{
@@ -43,8 +23,8 @@ namespace sw
 				buildViewProj( _passConstants._viewProj );
 		}
 
-		_passConstants._outlineParams[1] = _transientWidth > 0 ? ( 1.0f / static_cast<float32>( _transientWidth ) ) : 0.001f;
-		_passConstants._outlineParams[2] = _transientHeight > 0 ? ( 1.0f / static_cast<float32>( _transientHeight ) ) : 0.001f;
+		_passConstants._outlineParams._y = _transientWidth > 0 ? ( 1.0f / static_cast<float32>( _transientWidth ) ) : 0.001f;
+		_passConstants._outlineParams._z = _transientHeight > 0 ? ( 1.0f / static_cast<float32>( _transientHeight ) ) : 0.001f;
 		_passConstants._flags			 = ( _pDevice != nullptr && _pDevice->supportsNativeBindlessSampling() ) ? 1u : 0u;
 		if ( _pDevice != nullptr && _passCb != 0 )
 			_pDevice->getResource()->updateConstantBuffer( _passCb, &_passConstants, sizeof( PassConstants ) );
@@ -54,14 +34,13 @@ namespace sw
 	{
 		if ( pCamera == nullptr )
 			return;
-		const float32  aspect = ( _transientHeight > 0 )
-								  ? ( static_cast<float32>( _transientWidth ) / static_cast<float32>( _transientHeight ) )
-								  : ( 16.0f / 9.0f );
-		const float4x4 vp	  = pCamera->getViewProjectionMatrix( aspect );
-		Memory::copy( _passConstants._viewProj, &vp._11, sizeof( _passConstants._viewProj ) );
+		const float32 aspect	 = ( _transientHeight > 0 )
+									 ? ( static_cast<float32>( _transientWidth ) / static_cast<float32>( _transientHeight ) )
+									 : ( 16.0f / 9.0f );
+		_passConstants._viewProj = pCamera->getViewProjectionMatrix( aspect );
 	}
 
-	void FrameRenderer::buildCascadeShadowMatrices( float32 outArrCascadeMat[4][16], float32 outArrSplit[4] ) const
+	void FrameRenderer::buildCascadeShadowMatrices( float4x4 outArrCascadeMat[4], float4& outSplit ) const
 	{
 		constexpr float32 kLambda	= 0.75f;
 		constexpr float32 kNear		= 0.1f;
@@ -69,157 +48,84 @@ namespace sw
 		constexpr int32	  kCascades = 4;
 
 		// Practical split scheme: Ci = lambda * (n * (f/n)^(i/m)) + (1-lambda) * (n + (i/m)*(f-n))
+		float32 arrSplit[4]{};
 		for ( int32 cascadeIndex = 0; cascadeIndex < kCascades; ++cascadeIndex )
 		{
-			const float32 p			  = static_cast<float32>( cascadeIndex + 1 ) / static_cast<float32>( kCascades );
-			const float32 logSplit	  = kNear * MathUtil::pow( kFar / kNear, p );
-			const float32 uniSplit	  = kNear + ( kFar - kNear ) * p;
-			outArrSplit[cascadeIndex] = kLambda * logSplit + ( 1.0f - kLambda ) * uniSplit;
+			const float32 p		   = static_cast<float32>( cascadeIndex + 1 ) / static_cast<float32>( kCascades );
+			const float32 logSplit = kNear * MathUtil::pow( kFar / kNear, p );
+			const float32 uniSplit = kNear + ( kFar - kNear ) * p;
+			arrSplit[cascadeIndex] = kLambda * logSplit + ( 1.0f - kLambda ) * uniSplit;
 		}
+		outSplit = float4{ arrSplit[0], arrSplit[1], arrSplit[2], arrSplit[3] };
 
-		float32		  lx  = _passConstants._keyLightDirIntensity[0];
-		float32		  ly  = _passConstants._keyLightDirIntensity[1];
-		float32		  lz  = _passConstants._keyLightDirIntensity[2];
-		const float32 len = MathUtil::sqrt( lx * lx + ly * ly + lz * lz );
-		if ( len > 1e-4f )
-		{
-			lx /= len;
-			ly /= len;
-			lz /= len;
-		}
+		const float3 lightDir = float3{ _passConstants._keyLightDirIntensity._x, _passConstants._keyLightDirIntensity._y, _passConstants._keyLightDirIntensity._z }.normalize();
 
-		float32 upX = 0.0f, upY = 1.0f, upZ = 0.0f;
-		if ( MathUtil::abs( ly ) > 0.95f )
-		{
-			upX = 0.0f;
-			upY = 0.0f;
-			upZ = 1.0f;
-		}
-		float32 sx = upY * lz - upZ * ly;
-		float32 sy = upZ * lx - upX * lz;
-		float32 sz = upX * ly - upY * lx;
-		float32 sl = MathUtil::sqrt( sx * sx + sy * sy + sz * sz );
-		if ( sl > 1e-4f )
-		{
-			sx /= sl;
-			sy /= sl;
-			sz /= sl;
-		}
-		const float32 ux = ly * sz - lz * sy;
-		const float32 uy = lz * sx - lx * sz;
-		const float32 uz = lx * sy - ly * sx;
+		const float3 up		= MathUtil::abs( lightDir._y ) > 0.95f ? float3{ 0.0f, 0.0f, 1.0f } : float3{ 0.0f, 1.0f, 0.0f };
+		const float3 side	= up.cross( lightDir ).normalize();
+		const float3 realUp = lightDir.cross( side );
 
-		const float32 arrLightView[16] = {
-			sx, ux, -lx, 0,
-			sy, uy, -ly, 0,
-			sz, uz, -lz, 0,
-			0, 0, 2.0f, 1 };
+		const float4x4 lightView{
+			side._x, realUp._x, -lightDir._x, 0.0f,
+			side._y, realUp._y, -lightDir._y, 0.0f,
+			side._z, realUp._z, -lightDir._z, 0.0f,
+			0.0f, 0.0f, 2.0f, 1.0f };
 
 		for ( int32 cascadeIndex = 0; cascadeIndex < kCascades; ++cascadeIndex )
 		{
-			const float32 extent = outArrSplit[cascadeIndex] * 0.6f + 2.0f;
+			const float32 extent = arrSplit[cascadeIndex] * 0.6f + 2.0f;
 			const float32 invExt = 1.0f / extent;
 
-			const float32 arrOrthoCascade[16] = {
-				invExt, 0, 0, 0,
-				0, invExt, 0, 0,
-				0, 0, 0.1f * invExt, 0,
-				0, 0, 0.5f, 1.0f };
+			const float4x4 orthoCascade{
+				invExt, 0.0f, 0.0f, 0.0f,
+				0.0f, invExt, 0.0f, 0.0f,
+				0.0f, 0.0f, 0.1f * invExt, 0.0f,
+				0.0f, 0.0f, 0.5f, 1.0f };
 
-			FrameRendererConstantsInternal::mulMat4( arrLightView, arrOrthoCascade, outArrCascadeMat[cascadeIndex] );
+			outArrCascadeMat[cascadeIndex] = lightView * orthoCascade;
 		}
 	}
 
-	void FrameRenderer::buildLightViewProj( float32 outArrMat[16] ) const
+	void FrameRenderer::buildLightViewProj( float4x4& outMat ) const
 	{
 		// Orthographic projection looking along key light (column-major).
-		constexpr float32 arrOrtho[16] = {
-			0.9f, 0, 0, 0,
-			0, 0.9f, 0, 0,
-			0, 0, 0.25f, 0,
-			0, 0, 0.5f, 1.0f };
+		constexpr float4x4 ortho{
+			0.9f, 0.0f, 0.0f, 0.0f,
+			0.0f, 0.9f, 0.0f, 0.0f,
+			0.0f, 0.0f, 0.25f, 0.0f,
+			0.0f, 0.0f, 0.5f, 1.0f };
 
-		float32		  lx  = _passConstants._keyLightDirIntensity[0];
-		float32		  ly  = _passConstants._keyLightDirIntensity[1];
-		float32		  lz  = _passConstants._keyLightDirIntensity[2];
-		const float32 len = MathUtil::sqrt( lx * lx + ly * ly + lz * lz );
-		if ( len > 1e-4f )
-		{
-			lx /= len;
-			ly /= len;
-			lz /= len;
-		}
+		const float3 lightDir = float3{ _passConstants._keyLightDirIntensity._x, _passConstants._keyLightDirIntensity._y, _passConstants._keyLightDirIntensity._z }.normalize();
 
 		// Simple view: align -Z with light direction.
-		float32 upX = 0.0f, upY = 1.0f, upZ = 0.0f;
-		if ( MathUtil::abs( ly ) > 0.99f )
-		{
-			upY = 0.0f;
-			upZ = 1.0f;
-		}
-		float32		  sx = upY * lz - upZ * ly;
-		float32		  sy = upZ * lx - upX * lz;
-		float32		  sz = upX * ly - upY * lx;
-		const float32 sl = MathUtil::sqrt( sx * sx + sy * sy + sz * sz );
-		if ( sl > 1e-4f )
-		{
-			sx /= sl;
-			sy /= sl;
-			sz /= sl;
-		}
-		const float32 ux = ly * sz - lz * sy;
-		const float32 uy = lz * sx - lx * sz;
-		const float32 uz = lx * sy - ly * sx;
+		const float3 up		= MathUtil::abs( lightDir._y ) > 0.99f ? float3{ 0.0f, 0.0f, 1.0f } : float3{ 0.0f, 1.0f, 0.0f };
+		const float3 side	= up.cross( lightDir ).normalize();
+		const float3 realUp = lightDir.cross( side );
 
-		const float32 arrView[16] = {
-			sx, ux, -lx, 0,
-			sy, uy, -ly, 0,
-			sz, uz, -lz, 0,
-			0, 0, 2.0f, 1 };
+		const float4x4 view{
+			side._x, realUp._x, -lightDir._x, 0.0f,
+			side._y, realUp._y, -lightDir._y, 0.0f,
+			side._z, realUp._z, -lightDir._z, 0.0f,
+			0.0f, 0.0f, 2.0f, 1.0f };
 
-		FrameRendererConstantsInternal::mulMat4( arrView, arrOrtho, outArrMat );
+		outMat = view * ortho;
 	}
 
-	void FrameRenderer::buildViewProj( float32 outArrMat[16] ) const
+	void FrameRenderer::buildViewProj( float4x4& outMat ) const
 	{
 		// Fallback orbit camera (used when no CameraComponent is active).
-		constexpr float32 eyeX = 2.15f;
-		constexpr float32 eyeY = 1.55f;
-		constexpr float32 eyeZ = 2.65f;
+		constexpr float3 eye{ 2.15f, 1.55f, 2.65f };
+		const float3	 zAxis = eye.normalize();
+		constexpr float3 up{ 0.0f, 1.0f, 0.0f };
+		const float3	 xAxis = up.cross( zAxis ).normalize();
+		const float3	 yAxis = zAxis.cross( xAxis );
 
-		float32 zx = eyeX;
-		float32 zy = eyeY;
-		float32 zz = eyeZ;
-		float32 zl = MathUtil::sqrt( zx * zx + zy * zy + zz * zz );
-		if ( zl > 1e-4f )
-		{
-			zx /= zl;
-			zy /= zl;
-			zz /= zl;
-		}
-
-		float32 upX = 0.0f, upY = 1.0f, upZ = 0.0f;
-		float32 xx = upY * zz - upZ * zy;
-		float32 xy = upZ * zx - upX * zz;
-		float32 xz = upX * zy - upY * zx;
-		float32 xl = MathUtil::sqrt( xx * xx + xy * xy + xz * xz );
-		if ( xl > 1e-4f )
-		{
-			xx /= xl;
-			xy /= xl;
-			xz /= xl;
-		}
-		const float32 yx = zy * xz - zz * xy;
-		const float32 yy = zz * xx - zx * xz;
-		const float32 yz = zx * xy - zy * xx;
-
-		const float32 arrView[16] = {
-			xx, yx, zx, 0.0f,
-			xy, yy, zy, 0.0f,
-			xz, yz, zz, 0.0f,
-			-( xx * eyeX + xy * eyeY + xz * eyeZ ),
-			-( yx * eyeX + yy * eyeY + yz * eyeZ ),
-			-( zx * eyeX + zy * eyeY + zz * eyeZ ),
+		const float4x4 view{
+			xAxis._x, yAxis._x, zAxis._x, 0.0f,
+			xAxis._y, yAxis._y, zAxis._y, 0.0f,
+			xAxis._z, yAxis._z, zAxis._z, 0.0f,
+			-xAxis.dot( eye ),
+			-yAxis.dot( eye ),
+			-zAxis.dot( eye ),
 			1.0f };
 
 		const float32	  aspect = ( _transientHeight > 0 )
@@ -228,21 +134,14 @@ namespace sw
 		constexpr float32 fovY	 = 0.70f; // ~40 deg
 		constexpr float32 nearZ	 = 0.1f;
 		constexpr float32 farZ	 = 100.0f;
-		const float32	  yScale = 1.0f / MathUtil::tan( fovY * 0.5f );
-		const float32	  xScale = yScale / aspect;
-		constexpr float32 q		 = farZ / ( farZ - nearZ );
 
-		const float32 arrProj[16] = {
-			xScale, 0.0f, 0.0f, 0.0f,
-			0.0f, yScale, 0.0f, 0.0f,
-			0.0f, 0.0f, q, 1.0f,
-			0.0f, 0.0f, -nearZ * q, 0.0f };
+		const float4x4 proj = float4x4::createPerspectiveFieldOfView( fovY, aspect, nearZ, farZ );
 
-		FrameRendererConstantsInternal::mulMat4( arrView, arrProj, outArrMat );
+		outMat = view * proj;
 	}
 
 	void FrameRenderer::setIdentityWorld()
 	{
-		Memory::copy( _passConstants._world, &float4x4::Identity._11, sizeof( _passConstants._world ) );
+		_passConstants._world = float4x4::Identity;
 	}
 } // namespace sw

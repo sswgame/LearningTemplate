@@ -12,21 +12,21 @@ namespace sw
 	quaternion quaternion::createFromAxisAngle( const float3& axis, float32 angle ) noexcept
 	{
 		const float3 normalizedAxis = axis.normalize();
-		const float3 halfAngle		= normalizedAxis * sinf( angle * 0.5f );
-		return quaternion{ halfAngle._x, halfAngle._y, halfAngle._z, cosf( angle * 0.5f ) };
+		const float3 halfAngle		= normalizedAxis * MathUtil::sin( angle * 0.5f );
+		return quaternion{ halfAngle._x, halfAngle._y, halfAngle._z, MathUtil::cos( angle * 0.5f ) };
 	}
 
 	quaternion quaternion::createFromYawPitchRoll( float32 yaw, float32 pitch, float32 roll ) noexcept
 	{
 		const float32 halfYaw	= yaw * 0.5f;
-		const float32 sinYaw	= sinf( halfYaw );
-		const float32 cosYaw	= cosf( halfYaw );
+		const float32 sinYaw	= MathUtil::sin( halfYaw );
+		const float32 cosYaw	= MathUtil::cos( halfYaw );
 		const float32 halfPitch = pitch * 0.5f;
-		const float32 sinPitch	= sinf( halfPitch );
-		const float32 cosPitch	= cosf( halfPitch );
+		const float32 sinPitch	= MathUtil::sin( halfPitch );
+		const float32 cosPitch	= MathUtil::cos( halfPitch );
 		const float32 halfRoll	= roll * 0.5f;
-		const float32 sinRoll	= sinf( halfRoll );
-		const float32 cosRoll	= cosf( halfRoll );
+		const float32 sinRoll	= MathUtil::sin( halfRoll );
+		const float32 cosRoll	= MathUtil::cos( halfRoll );
 
 		return quaternion{
 			( cosYaw * sinPitch * cosRoll ) + ( sinYaw * cosPitch * sinRoll ),
@@ -45,7 +45,7 @@ namespace sw
 		const float32 trace = matrix._11 + matrix._22 + matrix._33;
 		if ( trace > 0.f )
 		{
-			const float32 s = sqrtf( trace + 1.0f ) * 2.f;
+			const float32 s = MathUtil::sqrt( trace + 1.0f ) * 2.f;
 			return quaternion{
 				( matrix._23 - matrix._32 ) / s,
 				( matrix._31 - matrix._13 ) / s,
@@ -54,7 +54,7 @@ namespace sw
 		}
 		if ( matrix._11 >= matrix._22 && matrix._11 >= matrix._33 )
 		{
-			const float32 s = sqrtf( 1.0f + matrix._11 - matrix._22 - matrix._33 ) * 2.f;
+			const float32 s = MathUtil::sqrt( 1.0f + matrix._11 - matrix._22 - matrix._33 ) * 2.f;
 			return quaternion{
 				0.25f * s,
 				( matrix._12 + matrix._21 ) / s,
@@ -63,14 +63,14 @@ namespace sw
 		}
 		if ( matrix._22 >= matrix._33 )
 		{
-			const float32 s = sqrtf( 1.0f + matrix._22 - matrix._11 - matrix._33 ) * 2.f;
+			const float32 s = MathUtil::sqrt( 1.0f + matrix._22 - matrix._11 - matrix._33 ) * 2.f;
 			return quaternion{
 				( matrix._12 + matrix._21 ) / s,
 				0.25f * s,
 				( matrix._23 + matrix._32 ) / s,
 				( matrix._31 - matrix._13 ) / s };
 		}
-		const float32 s = sqrtf( 1.0f + matrix._33 - matrix._11 - matrix._22 ) * 2.f;
+		const float32 s = MathUtil::sqrt( 1.0f + matrix._33 - matrix._11 - matrix._22 ) * 2.f;
 		return quaternion{
 			( matrix._13 + matrix._31 ) / s,
 			( matrix._23 + matrix._32 ) / s,
@@ -111,10 +111,10 @@ namespace sw
 		if ( dotVal > 0.9995f )
 			return lerp( from, q2, t );
 
-		const float32 theta	   = acosf( dotVal );
-		const float32 sinTheta = sinf( theta );
-		const float32 scale1   = sinf( ( 1.f - t ) * theta ) / sinTheta;
-		const float32 scale2   = sinf( t * theta ) / sinTheta;
+		const float32 theta	   = MathUtil::acos( dotVal );
+		const float32 sinTheta = MathUtil::sin( theta );
+		const float32 scale1   = MathUtil::sin( ( 1.f - t ) * theta ) / sinTheta;
+		const float32 scale2   = MathUtil::sin( t * theta ) / sinTheta;
 
 		return ( scale1 * from ) + ( scale2 * q2 );
 	}
@@ -157,12 +157,12 @@ namespace sw
 	float32 quaternion::getAngleBetween( const quaternion& lhs, const quaternion& rhs ) noexcept
 	{
 		const float32 dotVal = MathUtil::abs( lhs.dot( rhs ) );
-		return ( dotVal > 1.f ) ? 0.f : acosf( dotVal ) * 2.f;
+		return ( dotVal > 1.f ) ? 0.f : MathUtil::acos( dotVal ) * 2.f;
 	}
 
 	float32 quaternion::norm() const noexcept
 	{
-		return sqrtf( normSquared() );
+		return MathUtil::sqrt( normSquared() );
 	}
 
 	float32 quaternion::normSquared() const noexcept
@@ -229,17 +229,17 @@ namespace sw
 		const float32 sinp = 2.f * ( _w * _x - _y * _z );
 		float32		  pitch{};
 		if ( MathUtil::abs( sinp ) >= 1.f )
-			pitch = std::copysign( MathUtil::HalfPi, sinp );
+			pitch = ( sinp >= 0.f ) ? MathUtil::HalfPi : -MathUtil::HalfPi;
 		else
-			pitch = std::asin( sinp );
+			pitch = MathUtil::asin( sinp );
 
 		const float32 siny_cosp = 2.f * ( _w * _y + _z * _x );
 		const float32 cosy_cosp = 1.f - 2.f * ( _x * _x + _y * _y );
-		const float32 yaw		= std::atan2( siny_cosp, cosy_cosp );
+		const float32 yaw		= MathUtil::atan2( siny_cosp, cosy_cosp );
 
 		const float32 sinr_cosp = 2.f * ( _w * _z + _x * _y );
 		const float32 cosr_cosp = 1.f - 2.f * ( _x * _x + _z * _z );
-		const float32 roll		= std::atan2( sinr_cosp, cosr_cosp );
+		const float32 roll		= MathUtil::atan2( sinr_cosp, cosr_cosp );
 
 		return float3{ pitch, yaw, roll };
 	}
@@ -350,22 +350,22 @@ namespace sw
 
 	float4x4 float4x4::createRotationX( float32 radians ) noexcept
 	{
-		const float32 s = sinf( radians );
-		const float32 c = cosf( radians );
+		const float32 s = MathUtil::sin( radians );
+		const float32 c = MathUtil::cos( radians );
 		return float4x4{ 1.f, 0.f, 0.f, 0.f, 0.f, c, s, 0.f, 0.f, -s, c, 0.f, 0.f, 0.f, 0.f, 1.f };
 	}
 
 	float4x4 float4x4::createRotationY( float32 radians ) noexcept
 	{
-		const float32 s = sinf( radians );
-		const float32 c = cosf( radians );
+		const float32 s = MathUtil::sin( radians );
+		const float32 c = MathUtil::cos( radians );
 		return float4x4{ c, 0.f, -s, 0.f, 0.f, 1.f, 0.f, 0.f, s, 0.f, c, 0.f, 0.f, 0.f, 0.f, 1.f };
 	}
 
 	float4x4 float4x4::createRotationZ( float32 radians ) noexcept
 	{
-		const float32 s = sinf( radians );
-		const float32 c = cosf( radians );
+		const float32 s = MathUtil::sin( radians );
+		const float32 c = MathUtil::cos( radians );
 		return float4x4{ c, s, 0.f, 0.f, -s, c, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 1.f };
 	}
 
@@ -377,7 +377,7 @@ namespace sw
 
 	float4x4 float4x4::createPerspectiveFieldOfView( float32 fov, float32 aspectRatio, float32 nearPlane, float32 farPlane ) noexcept
 	{
-		const float32 yScale = 1.0f / tanf( fov * 0.5f );
+		const float32 yScale = 1.0f / MathUtil::tan( fov * 0.5f );
 		const float32 xScale = yScale / aspectRatio;
 		return float4x4{ xScale, 0.f, 0.f, 0.f, 0.f, yScale, 0.f, 0.f, 0.f, 0.f, farPlane / ( farPlane - nearPlane ), 1.f, 0.f, 0.f, -nearPlane * farPlane / ( farPlane - nearPlane ), 0.f };
 	}

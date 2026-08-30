@@ -94,25 +94,25 @@ namespace sw
 		/** @brief GPU 상수 버퍼 레이아웃. 필드 순서가 와이어 포맷이므로 함부로 바꾸지 마세요. */
 		struct PassConstants
 		{
-			float32 _lightViewProj[16]{};
-			float32 _viewProj[16]{};
-			float32 _world[16]{};
-			float32 _cascadeViewProj[4][16]{};
-			float32 _cascadeSplits[4]{ 10.0f, 25.0f, 60.0f, 150.0f };
-			float32 _keyLightDirIntensity[4]{ -0.35f, -0.85f, -0.25f, 1.35f };
-			float32 _keyLightColor[4]{ 1.0f, 0.82f, 0.62f, 0.28f };
-			float32 _shadowParams[4]{ 0.02f, 0.45f, 0.0f, 0.0f };
-			float32 _bloomParams[4]{ 0.55f, 0.65f, 0.25f, 0.0f };
-			float32 _outlineColor[4]{ 0.08f, 0.05f, 0.12f, 0.85f };
-			float32 _outlineParams[4]{ 0.02f, 0.001f, 0.001f, 0.0f };
-			uint32	_cascadeCount{ 4 };
-			uint32	_texShadow		= 0xFFFFFFFFu;
-			uint32	_texAlbedo		= 0xFFFFFFFFu;
-			uint32	_texNormal		= 0xFFFFFFFFu;
-			uint32	_texDepth		= 0xFFFFFFFFu;
-			uint32	_texSource		= 0xFFFFFFFFu;
-			uint32	_texSourceDepth = 0xFFFFFFFFu;
-			uint32	_flags{ 0 };
+			float4x4 _lightViewProj{};
+			float4x4 _viewProj{};
+			float4x4 _world{};
+			float4x4 _arrCascadeViewProj[4]{};
+			float4	 _cascadeSplits{ 10.0f, 25.0f, 60.0f, 150.0f };
+			float4	 _keyLightDirIntensity{ -0.35f, -0.85f, -0.25f, 1.35f };
+			float4	 _keyLightColor{ 1.0f, 0.82f, 0.62f, 0.28f };
+			float4	 _shadowParams{ 0.02f, 0.45f, 0.0f, 0.0f };
+			float4	 _bloomParams{ 0.55f, 0.65f, 0.25f, 0.0f };
+			float4	 _outlineColor{ 0.08f, 0.05f, 0.12f, 0.85f };
+			float4	 _outlineParams{ 0.02f, 0.001f, 0.001f, 0.0f };
+			uint32	 _cascadeCount{ 4 };
+			uint32	 _texShadow		 = kInvalidDescriptorIndex;
+			uint32	 _texAlbedo		 = kInvalidDescriptorIndex;
+			uint32	 _texNormal		 = kInvalidDescriptorIndex;
+			uint32	 _texDepth		 = kInvalidDescriptorIndex;
+			uint32	 _texSource		 = kInvalidDescriptorIndex;
+			uint32	 _texSourceDepth = kInvalidDescriptorIndex;
+			uint32	 _flags{ 0 };
 		};
 
 		// ------------------------------------------------------------------------------
@@ -137,11 +137,11 @@ namespace sw
 		/** @brief 카메라에서 뷰/투영을 적용합니다. */
 		void applyViewFromCamera( CameraComponent* pCamera );
 		/** @brief 키라이트 뷰-투영 행렬을 만듭니다. */
-		void buildLightViewProj( float32 outArrMat[16] ) const;
+		void buildLightViewProj( float4x4& outMat ) const;
 		/** @brief 캐스케이드 섀도우 맵 뷰-투영 행렬 및 분할 거리를 계산합니다. */
-		void buildCascadeShadowMatrices( float32 outArrCascadeMat[4][16], float32 outArrSplit[4] ) const;
+		void buildCascadeShadowMatrices( float4x4 outArrCascadeMat[4], float4& outSplit ) const;
 		/** @brief 카메라 뷰-투영 행렬을 만듭니다. */
-		void buildViewProj( float32 outArrMat[16] ) const;
+		void buildViewProj( float4x4& outMat ) const;
 		/** @brief 월드 행렬을 항등으로 둡니다. */
 		void setIdentityWorld();
 		/** @brief 씬 메시를 직접 그립니다. */
@@ -191,6 +191,8 @@ namespace sw
 		// ------------------------------------------------------------------------------
 		/** @brief 어태치먼트 클리어 색을 찾습니다. */
 		bool tryGetAttachmentClearColor( string_view attachmentName, float4& outClearColor ) const;
+		/** @brief 어태치먼트 클리어 색을 반환하거나, 없으면 기본값을 반환합니다. */
+		float4 getAttachmentClearColorOrDefault( string_view attachmentName, const float4& fallback ) const;
 		/** @brief 일시 텍스처 핸들을 찾습니다. */
 		RHITextureHandle findTransient( string_view name ) const;
 		/** @brief 일시 텍스처 SRV를 찾습니다. */

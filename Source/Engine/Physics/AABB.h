@@ -45,13 +45,23 @@ namespace sw
 		bool isValid() const noexcept { return _min._x <= _max._x && _min._y <= _max._y && _min._z <= _max._z; }
 
 		/** @brief 점이 AABB 안에 있는지 반환합니다. */
-		bool contains( const float3& point ) const noexcept { return point._x >= _min._x && point._x <= _max._x && point._y >= _min._y && point._y <= _max._y && point._z >= _min._z && point._z <= _max._z; }
+		bool contains( const float3& point ) const noexcept
+		{
+			return _min._x <= point._x && point._x <= _max._x &&
+				   _min._y <= point._y && point._y <= _max._y &&
+				   _min._z <= point._z && point._z <= _max._z;
+		}
 
 		/** @brief 다른 AABB와 겹치는지 반환합니다. */
-		bool intersects( const AABB& other ) const noexcept { return _min._x <= other._max._x && _max._x >= other._min._x && _min._y <= other._max._y && _max._y >= other._min._y && _min._z <= other._max._z && _max._z >= other._min._z; }
+		bool intersects( const AABB& other ) const noexcept
+		{
+			return _min._x <= other._max._x && other._min._x <= _max._x &&
+				   _min._y <= other._max._y && other._min._y <= _max._y &&
+				   _min._z <= other._max._z && other._min._z <= _max._z;
+		}
 
-		float3 getCenter() const noexcept { return float3{ ( _min._x + _max._x ) * 0.5f, ( _min._y + _max._y ) * 0.5f, ( _min._z + _max._z ) * 0.5f }; }
-		float3 getExtents() const noexcept { return float3{ ( _max._x - _min._x ) * 0.5f, ( _max._y - _min._y ) * 0.5f, ( _max._z - _min._z ) * 0.5f }; }
+		float3 getCenter() const noexcept { return ( _min + _max ) * 0.5f; }
+		float3 getExtents() const noexcept { return ( _max - _min ) * 0.5f; }
 	};
 
 	/** @brief AABB가 겹치고 CollisionLayers가 쌍을 허용하면 true입니다. */

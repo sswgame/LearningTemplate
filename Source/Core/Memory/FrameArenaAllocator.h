@@ -8,6 +8,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/vector.h"
+#include "Core/Math/MathUtil.h"
 
 namespace sw
 {
@@ -47,15 +48,15 @@ namespace sw
 			if ( size == 0 )
 				return nullptr;
 
-			if ( alignment == 0 || ( alignment & ( alignment - 1 ) ) != 0 )
+			if ( alignment == 0 || MathUtil::isPowerOfTwo( alignment ) == false )
 				alignment = alignof( std::max_align_t );
 
 			if ( _currentChunkIndex < _listChunk.size() )
 			{
-				Chunk&	  chunk	  = _listChunk[_currentChunkIndex];
-				uintptr_t current = reinterpret_cast<uintptr_t>( chunk._pBuffer + chunk._offset );
-				uintptr_t aligned = ( current + ( alignment - 1 ) ) & ~( static_cast<uintptr_t>( alignment - 1 ) );
-				size_t	  padding = aligned - current;
+				Chunk&			chunk	= _listChunk[_currentChunkIndex];
+				const uintptr_t current = reinterpret_cast<uintptr_t>( chunk._pBuffer + chunk._offset );
+				const uintptr_t aligned = MathUtil::align( current, static_cast<uintptr_t>( alignment ) );
+				const size_t	padding = static_cast<size_t>( aligned - current );
 
 				if ( chunk._offset + padding + size <= chunk._capacity )
 				{

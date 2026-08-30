@@ -2,6 +2,8 @@
 
 #include "Engine/Graphics/RHI/DX11/D3D11RHIResource.h"
 
+#include "Core/Math/MathUtil.h"
+
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/DX11/D3D11RHIDevice.h"
 #include "Engine/Graphics/Shader/ShaderCache.h"
@@ -202,9 +204,7 @@ namespace sw
 			return 0;
 		}
 
-		UINT alignedSize = ( size + 15u ) & ~15u;
-		if ( alignedSize == 0 )
-			alignedSize = 16u;
+		const UINT alignedSize = MathUtil::max( MathUtil::align( size, 16u ), 16u );
 
 		D3D11_BUFFER_DESC bd{};
 		bd.Usage		  = D3D11_USAGE_DYNAMIC;

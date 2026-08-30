@@ -125,7 +125,7 @@ SW_TEST_CASE( Engine_Task, ArbitraryArgsTask )
 	taskMgr.waitAll();
 
 	SW_EXPECT_EQUAL( 100, sw::s_recInt );
-	SW_EXPECT_TRUE( sw::MathUtil::abs( sw::s_recDouble - 3.14159 ) < 0.0001 );
+	SW_EXPECT_TRUE( sw::MathUtil::nearEqual( sw::s_recDouble, 3.14159, 0.0001 ) );
 	SW_EXPECT_EQUAL( sw::string( "HelloTask" ), sw::s_recStr );
 	SW_EXPECT_EQUAL( static_cast<void*>( &dummyVar ), sw::s_recPtr );
 

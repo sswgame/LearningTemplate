@@ -2811,12 +2811,12 @@ SW_TEST_CASE( Reflection_Component, ComponentPropertySerialization )
 	SW_EXPECT_TRUE( pSpeedProp->_typeName == sw::hashed_string( "float32" ) );
 
 	sw::TestScriptComponent comp;
-	SW_EXPECT_TRUE( sw::MathUtil::abs( comp._scriptSpeed - 1.5f ) < 0.0001f );
+	SW_EXPECT_TRUE( sw::MathUtil::nearEqual( comp._scriptSpeed, 1.5f, 0.0001f ) );
 
 	comp._scriptSpeed = 3.14f;
 
 	pSpeedProp->setValue<float32>( &comp, 2.718f );
-	SW_EXPECT_TRUE( sw::MathUtil::abs( comp._scriptSpeed - 2.718f ) < 0.0001f );
+	SW_EXPECT_TRUE( sw::MathUtil::nearEqual( comp._scriptSpeed, 2.718f, 0.0001f ) );
 }
 
 /**
@@ -2874,7 +2874,7 @@ SW_TEST_CASE( Reflection_GenericQuery, HierarchyPropertyLookupAndRawPtr )
 	const void* pRaw = pInheritedProp->getRawPtr( &comp );
 	SW_ASSERT_NOT_NULL( pRaw );
 	const float32 val = *reinterpret_cast<const float32*>( pRaw );
-	SW_EXPECT_TRUE( sw::MathUtil::abs( val - 42.0f ) < 0.0001f );
+	SW_EXPECT_TRUE( sw::MathUtil::nearEqual( val, 42.0f, 0.0001f ) );
 }
 
 // ------------------------------------------------------------------------------

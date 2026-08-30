@@ -2,6 +2,8 @@
 
 #include "Core/Uuid/Uuid.h"
 
+#include "Core/Math/MathUtil.h"
+
 namespace sw
 {
 	namespace
@@ -26,13 +28,10 @@ namespace sw
 {
 	Uuid Uuid::generate()
 	{
-		Uuid								  uuid{};
-		thread_local std::mt19937_64		  t_rng{ std::random_device{}() };
-		std::uniform_int_distribution<uint32> dist( 0, 255 );
-
+		Uuid uuid{};
 		for ( uint8& byteVal : uuid._arrBytes )
 		{
-			byteVal = static_cast<uint8>( dist( t_rng ) );
+			byteVal = static_cast<uint8>( MathUtil::getRandomRange<uint32>( 0, 255 ) );
 		}
 
 		// 버전 4

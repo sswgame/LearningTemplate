@@ -78,7 +78,7 @@ namespace sw
 		}
 		else
 		{
-			uint32 alignedSize = ( bufferSize + 255 ) & ~255u;
+			const uint32 alignedSize = MathUtil::align( bufferSize, 256u );
 			_data._listBuffer.resize( alignedSize, 0 );
 			bufferSize = alignedSize;
 		}
@@ -185,14 +185,14 @@ namespace sw
 			uint32 maxEnd = pSchemaCb->_totalSize;
 			for ( const MaterialProperty& prop : _data._listProperty )
 			{
-				maxEnd = (MathUtil::max)( maxEnd, prop._offset + prop._size );
+				maxEnd = MathUtil::max( maxEnd, prop._offset + prop._size );
 			}
 			_data._listBuffer.assign( maxEnd, 0 );
 			for ( MaterialProperty& prop : _data._listProperty )
 			{
 				MaterialUtil::packPropertyIntoBuffer( prop, _data._listBuffer );
 			}
-			const uint32 alignedTotal = ( static_cast<uint32>( _data._listBuffer.size() ) + 255u ) & ~255u;
+			const uint32 alignedTotal = MathUtil::align( static_cast<uint32>( _data._listBuffer.size() ), 256u );
 			_data._listBuffer.resize( alignedTotal, 0 );
 			_desc._listProperty = _data._listProperty;
 			SW_LOG_TRACE( "Filled %# properties from shader reflection.", _data._listProperty.size() );
@@ -247,14 +247,14 @@ namespace sw
 		for ( const MaterialProperty& prop : _data._listProperty )
 		{
 			if ( MaterialUtil::isNonBufferType( prop._type ) == false )
-				maxEnd = (MathUtil::max)( maxEnd, prop._offset + prop._size );
+				maxEnd = MathUtil::max( maxEnd, prop._offset + prop._size );
 		}
 		_data._listBuffer.assign( maxEnd, 0 );
 		for ( MaterialProperty& prop : _data._listProperty )
 		{
 			MaterialUtil::packPropertyIntoBuffer( prop, _data._listBuffer );
 		}
-		const uint32 alignedTotal = ( static_cast<uint32>( _data._listBuffer.size() ) + 255u ) & ~255u;
+		const uint32 alignedTotal = MathUtil::align( static_cast<uint32>( _data._listBuffer.size() ), 256u );
 		_data._listBuffer.resize( alignedTotal, 0 );
 		_desc._listProperty = _data._listProperty;
 		return ok;
@@ -333,7 +333,7 @@ namespace sw
 				currentOffset += packSize;
 			}
 
-			maxEnd = (MathUtil::max)( maxEnd, prop._offset + prop._size );
+			maxEnd = MathUtil::max( maxEnd, prop._offset + prop._size );
 		}
 
 		_data._listBuffer.assign( maxEnd, 0 );
@@ -344,7 +344,7 @@ namespace sw
 				ok = false;
 		}
 
-		const uint32 alignedTotal = ( static_cast<uint32>( _data._listBuffer.size() ) + 255u ) & ~255u;
+		const uint32 alignedTotal = MathUtil::align( static_cast<uint32>( _data._listBuffer.size() ), 256u );
 		if ( alignedTotal > _data._listBuffer.size() )
 			_data._listBuffer.resize( alignedTotal, 0 );
 
@@ -405,7 +405,7 @@ namespace sw
 		if ( pProp == nullptr || MaterialUtil::isNonBufferType( pProp->_type ) )
 			return false;
 
-		const uint32 copySize = (MathUtil::min)( pProp->_size != 0 ? pProp->_size : byteSize, byteSize );
+		const uint32 copySize = MathUtil::min( pProp->_size != 0 ? pProp->_size : byteSize, byteSize );
 		if ( inoutBuffer.size() < pProp->_offset + copySize )
 			inoutBuffer.resize( pProp->_offset + copySize, 0 );
 

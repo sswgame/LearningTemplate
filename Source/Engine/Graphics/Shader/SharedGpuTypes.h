@@ -27,10 +27,10 @@ namespace sw
 	 */
 	struct ViewConstants
 	{
-		float32 _viewProj[16]{};
-		float32 _cameraPos[4]{};
-		float32 _screenSize[2]{};
-		float32 _pad[2]{};
+		float4x4 _viewProj{};
+		float4	 _cameraPos{};
+		float2	 _screenSize{};
+		float2	 _pad{};
 	};
 #pragma pack( pop )
 

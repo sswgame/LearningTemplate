@@ -3,6 +3,7 @@
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/Math/MathUtil.h"
 
 #include "Engine/Config/EngineData.h"
 #include "Engine/Graphics/RHI/FrameResourceRing.h"
@@ -2192,7 +2193,7 @@ namespace sw
 		if ( _device == nullptr || sizeBytes == 0 )
 			return 0;
 
-		const uint32 alignedSize = ( sizeBytes + 255u ) & ~255u;
+		const uint32 alignedSize = MathUtil::align( sizeBytes, 256u );
 
 		VkBufferCreateInfo bufferInfo{};
 		bufferInfo.sType	   = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;

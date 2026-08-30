@@ -316,11 +316,11 @@ namespace sw
 		setIdentityWorld();
 		buildLightViewProj( _passConstants._lightViewProj );
 		if ( packet._bHasViewProj != 0 )
-			Memory::copy( _passConstants._viewProj, &packet._viewProj._11, sizeof( _passConstants._viewProj ) );
+			_passConstants._viewProj = packet._viewProj;
 		else
 			buildViewProj( _passConstants._viewProj );
-		_passConstants._outlineParams[1] = _transientWidth > 0 ? ( 1.0f / static_cast<float32>( _transientWidth ) ) : 0.001f;
-		_passConstants._outlineParams[2] = _transientHeight > 0 ? ( 1.0f / static_cast<float32>( _transientHeight ) ) : 0.001f;
+		_passConstants._outlineParams._y = _transientWidth > 0 ? ( 1.0f / static_cast<float32>( _transientWidth ) ) : 0.001f;
+		_passConstants._outlineParams._z = _transientHeight > 0 ? ( 1.0f / static_cast<float32>( _transientHeight ) ) : 0.001f;
 		_passConstants._flags			 = ( _pDevice != nullptr && _pDevice->supportsNativeBindlessSampling() ) ? 1u : 0u;
 		if ( _pDevice != nullptr && _passCb != 0 )
 			_pDevice->getResource()->updateConstantBuffer( _passCb, &_passConstants, sizeof( PassConstants ) );

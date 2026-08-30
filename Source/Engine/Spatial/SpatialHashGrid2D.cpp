@@ -159,12 +159,10 @@ namespace sw
 						auto boundIt = _mapHandleBound.find( handle );
 						if ( boundIt != _mapHandleBound.end() )
 						{
-							const AABB2D& b		 = boundIt->second;
-							const float32 closeX = MathUtil::clamp( centerX, b._minX, b._maxX );
-							const float32 closeY = MathUtil::clamp( centerY, b._minY, b._maxY );
-							const float32 dx	 = centerX - closeX;
-							const float32 dy	 = centerY - closeY;
-							if ( ( dx * dx + dy * dy ) <= radiusSq )
+							const AABB2D& b = boundIt->second;
+							const float2  center{ centerX, centerY };
+							const float2  closePoint = center.clamped( float2{ b._minX, b._minY }, float2{ b._maxX, b._maxY } );
+							if ( float2::getDistanceSquared( center, closePoint ) <= radiusSq )
 							{
 								if ( std::find( outListHandle.begin(), outListHandle.end(), handle ) == outListHandle.end() )
 									outListHandle.push_back( handle );
@@ -178,12 +176,13 @@ namespace sw
 
 	void SpatialHashGrid2D::queryRay( float32 startX, float32 startY, float32 dirX, float32 dirY, float32 maxDist, vector<ObjectHandle>& outListHandle ) const
 	{
-		const float32 len = MathUtil::sqrt( dirX * dirX + dirY * dirY );
-		if ( len <= 0.0001f || maxDist <= 0.0f )
+		float2 dir{ dirX, dirY };
+		if ( dir.getLengthSquared() <= MathUtil::Epsilon || maxDist <= 0.0f )
 			return;
 
-		const float32 ndx = dirX / len;
-		const float32 ndy = dirY / len;
+		dir.normalize();
+		const float32 ndx = dir._x;
+		const float32 ndy = dir._y;
 
 		int32 cellX = static_cast<int32>( MathUtil::floor( startX / _cellSize ) );
 		int32 cellY = static_cast<int32>( MathUtil::floor( startY / _cellSize ) );
@@ -194,11 +193,11 @@ namespace sw
 		const float32 nextBoundaryX = ( stepX > 0 ) ? static_cast<float32>( cellX + 1 ) * _cellSize : static_cast<float32>( cellX ) * _cellSize;
 		const float32 nextBoundaryY = ( stepY > 0 ) ? static_cast<float32>( cellY + 1 ) * _cellSize : static_cast<float32>( cellY ) * _cellSize;
 
-		float32 tMaxX = ( stepX != 0 ) ? ( nextBoundaryX - startX ) / ndx : 1e30f;
-		float32 tMaxY = ( stepY != 0 ) ? ( nextBoundaryY - startY ) / ndy : 1e30f;
+		float32 tMaxX = ( stepX != 0 ) ? ( nextBoundaryX - startX ) / ndx : MathUtil::MaxFloat;
+		float32 tMaxY = ( stepY != 0 ) ? ( nextBoundaryY - startY ) / ndy : MathUtil::MaxFloat;
 
-		const float32 tDeltaX = ( stepX != 0 ) ? ( _cellSize * static_cast<float32>( stepX ) ) / ndx : 1e30f;
-		const float32 tDeltaY = ( stepY != 0 ) ? ( _cellSize * static_cast<float32>( stepY ) ) / ndy : 1e30f;
+		const float32 tDeltaX = ( stepX != 0 ) ? ( _cellSize * static_cast<float32>( stepX ) ) / ndx : MathUtil::MaxFloat;
+		const float32 tDeltaY = ( stepY != 0 ) ? ( _cellSize * static_cast<float32>( stepY ) ) / ndy : MathUtil::MaxFloat;
 
 		float32 currentT = 0.0f;
 

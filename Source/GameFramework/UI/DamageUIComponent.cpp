@@ -42,7 +42,7 @@ namespace sw
 		_currentLife += deltaTime;
 		if ( _lifeTime > 0.0f )
 		{
-			_alpha			   = MathUtil::clamp( 1.0f - ( _currentLife / _lifeTime ), 0.0f, 1.0f );
+			_alpha			   = MathUtil::saturate( 1.0f - ( _currentLife / _lifeTime ) );
 			GameObject* pOwner = getOwner();
 			if ( pOwner == nullptr )
 				return;

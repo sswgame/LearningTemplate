@@ -2,6 +2,8 @@
 
 #include "Engine/Graphics/RHI/GL/OpenGLRHIResource.h"
 
+#include "Core/Math/MathUtil.h"
+
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHIDevice.h"
 #include "Engine/Graphics/Shader/ShaderCache.h"
@@ -339,8 +341,8 @@ namespace sw
 
 	RHIBufferHandle OpenGLRHIResource::createConstantBuffer( uint32 size )
 	{
-		uint32 alignedSize = ( size + 255u ) & ~255u;
-		GLuint ubo;
+		const uint32 alignedSize = MathUtil::align( size, 256u );
+		GLuint		 ubo;
 		glGenBuffers( 1, &ubo );
 		glBindBuffer( GL_UNIFORM_BUFFER, ubo );
 		glBufferData( GL_UNIFORM_BUFFER, static_cast<GLsizeiptr>( alignedSize ), nullptr, GL_DYNAMIC_DRAW );
@@ -414,7 +416,7 @@ namespace sw
 		if ( sizeBytes == 0 )
 			return 0;
 
-		const uint32 alignedSize = ( sizeBytes + 255u ) & ~255u;
+		const uint32 alignedSize = MathUtil::align( sizeBytes, 256u );
 
 		// SSBO allocation; same name can bind as GL_DRAW_INDIRECT_BUFFER / DISPATCH_INDIRECT_BUFFER.
 		GLuint ssbo{ 0 };

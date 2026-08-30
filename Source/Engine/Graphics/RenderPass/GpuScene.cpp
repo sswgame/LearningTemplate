@@ -19,28 +19,6 @@ namespace sw
 	{
 		struct GpuSceneInternal
 		{
-			static void extractTranslation( const float4x4& m, float32 outArrTranslation[3] )
-			{
-				outArrTranslation[0] = m._41;
-				outArrTranslation[1] = m._42;
-				outArrTranslation[2] = m._43;
-			}
-
-			static float32 distSq( const float32 arrA[3], const float32 arrB[3] )
-			{
-				const float32 dx = arrA[0] - arrB[0];
-				const float32 dy = arrA[1] - arrB[1];
-				const float32 dz = arrA[2] - arrB[2];
-				return dx * dx + dy * dy + dz * dz;
-			}
-
-			static bool cameraNearlyEqual( const float3& a, const float3& b )
-			{
-				constexpr float32 kEps = 1e-5f;
-				return MathUtil::abs( a._x - b._x ) <= kEps && MathUtil::abs( a._y - b._y ) <= kEps &&
-					   MathUtil::abs( a._z - b._z ) <= kEps;
-			}
-
 			static void mixHash( uint64& h, uint64 v )
 			{
 				h ^= v + 0x9e3779b97f4a7c15ull + ( h << 6 ) + ( h >> 2 );
@@ -72,10 +50,10 @@ namespace sw
 			{
 				for ( uint32 entryIndex = begin; entryIndex < end; ++entryIndex )
 				{
-					const auto& cand = listScratchCandidate[entryIndex];
-					auto&		inst = listScratchRaw[entryIndex];
-					Memory::copy( inst._world, cand._world, sizeof( inst._world ) );
-					Memory::copy( inst._boundsCenter, cand._boundsCenter, sizeof( inst._boundsCenter ) );
+					const auto& cand   = listScratchCandidate[entryIndex];
+					auto&		inst   = listScratchRaw[entryIndex];
+					inst._world		   = cand._world;
+					inst._boundsCenter = cand._boundsCenter;
 					inst._boundsRadius = cand._boundsRadius;
 					inst._blendMode	   = cand._blendMode;
 				}
@@ -215,8 +193,8 @@ namespace sw
 			GpuSceneInternal::mixHash( h, reinterpret_cast<uintptr_t>( cand._pMaterial ) );
 			GpuSceneInternal::mixHash( h, reinterpret_cast<uintptr_t>( cand._pInstance ) );
 			GpuSceneInternal::mixHash( h, cand._blendMode );
-			GpuSceneInternal::mixBytes( h, cand._world, sizeof( cand._world ) );
-			GpuSceneInternal::mixBytes( h, cand._boundsCenter, sizeof( cand._boundsCenter ) );
+			GpuSceneInternal::mixBytes( h, &cand._world, sizeof( cand._world ) );
+			GpuSceneInternal::mixBytes( h, &cand._boundsCenter, sizeof( cand._boundsCenter ) );
 			GpuSceneInternal::mixBytes( h, &cand._boundsRadius, sizeof( cand._boundsRadius ) );
 		}
 		return h;
@@ -298,8 +276,8 @@ namespace sw
 
 				const float4x4 world = pMeshComp->getWorldMatrix();
 				DrawCandidate  cand{};
-				Memory::copy( cand._world, &world._11, sizeof( cand._world ) );
-				GpuSceneInternal::extractTranslation( world, cand._boundsCenter );
+				cand._world									  = world;
+				cand._boundsCenter							  = world.getTranslation();
 				cand._boundsRadius							  = pMeshComp->getBoundsRadius();
 				cand._blendMode								  = static_cast<uint32>( pMeshComp->getBlendMode() );
 				cand._pMesh									  = mesh.get();
@@ -319,7 +297,7 @@ namespace sw
 		const uint64 contentHash = hashCandidates();
 		const bool	 bContentSame =
 			_bHasBuildCache != 0 && contentHash == _lastContentHash && _listInstance.empty() == false;
-		const bool bCamSame = _bHasBuildCache != 0 && GpuSceneInternal::cameraNearlyEqual( cameraPos, _lastCameraPos );
+		const bool bCamSame = _bHasBuildCache != 0 && ( float3::getDistanceSquared( cameraPos, _lastCameraPos ) <= MathUtil::Epsilon );
 
 		if ( bContentSame && bCamSame )
 			return;
@@ -500,8 +478,9 @@ namespace sw
 	{
 		if ( pCameraPos == nullptr || _listScratchTransparentIdx.size() <= 1 )
 			return;
+		const float3 camPos{ pCameraPos[0], pCameraPos[1], pCameraPos[2] };
 		std::sort( _listScratchTransparentIdx.begin(), _listScratchTransparentIdx.end(), [&]( uint32 idxA, uint32 idxB )
-		{ return GpuSceneInternal::distSq( _listScratchRaw[idxA]._boundsCenter, pCameraPos ) > GpuSceneInternal::distSq( _listScratchRaw[idxB]._boundsCenter, pCameraPos ); } );
+		{ return float3::getDistanceSquared( _listScratchRaw[idxA]._boundsCenter, camPos ) > float3::getDistanceSquared( _listScratchRaw[idxB]._boundsCenter, camPos ); } );
 	}
 
 	void GpuScene::buildBatches()

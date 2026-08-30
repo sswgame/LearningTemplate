@@ -31,15 +31,12 @@ namespace sw
 	{
 		Component::onTick( deltaTime );
 
-		_currentPos._x = MathUtil::lerp( _currentPos._x, _targetPos._x, MathUtil::clamp( _followSpeed * deltaTime, 0.0f, 1.0f ) );
-		_currentPos._y = MathUtil::lerp( _currentPos._y, _targetPos._y, MathUtil::clamp( _followSpeed * deltaTime, 0.0f, 1.0f ) );
+		_currentPos = float2::lerp( _currentPos, _targetPos, MathUtil::saturate( _followSpeed * deltaTime ) );
 
 		float2 shakeOffset{ 0.0f, 0.0f };
 		if ( _shakeDuration > 0.0f )
 		{
-			_shakeDuration -= deltaTime;
-			if ( _shakeDuration < 0.0f )
-				_shakeDuration = 0.0f;
+			_shakeDuration	   = MathUtil::max( _shakeDuration - deltaTime, 0.0f );
 			const float32 freq = _shakeFrequency;
 			shakeOffset._x	   = MathUtil::sin( _shakeDuration * freq ) * _shakeIntensity;
 			shakeOffset._y	   = MathUtil::cos( _shakeDuration * ( freq * 1.3f ) ) * ( _shakeIntensity * 0.75f );
@@ -53,10 +50,8 @@ namespace sw
 		if ( pSceneComp == nullptr )
 			return;
 
-		float3 pos = pSceneComp->getLocalPosition();
-		pos._x	   = _currentPos._x + shakeOffset._x;
-		pos._y	   = _currentPos._y + shakeOffset._y;
-		pSceneComp->setLocalPosition( pos );
+		const float3 pos = pSceneComp->getLocalPosition();
+		pSceneComp->setLocalPosition( float3{ _currentPos + shakeOffset, pos._z } );
 	}
 
 	void CameraControllerComponent::shake( float32 intensity, float32 duration )

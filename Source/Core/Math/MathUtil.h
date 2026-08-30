@@ -54,6 +54,14 @@ namespace sw
 		/** @brief 거의 같은지 비교합니다. */
 		[[nodiscard]] static bool nearEqual( const float64 a, const float64 b, const float64 epsilon = Epsilon64 ) noexcept { return abs( a - b ) < epsilon; }
 
+		/** @brief 무한대(Infinity)인지 확인합니다. */
+		[[nodiscard]] static bool isInfinite( const float32 value ) noexcept { return std::isinf( value ); }
+		[[nodiscard]] static bool isInfinite( const float64 value ) noexcept { return std::isinf( value ); }
+
+		/** @brief NaN(Not a Number)인지 확인합니다. */
+		[[nodiscard]] static bool isNan( const float32 value ) noexcept { return std::isnan( value ); }
+		[[nodiscard]] static bool isNan( const float64 value ) noexcept { return std::isnan( value ); }
+
 		/** @brief 역제곱근(1 / sqrt(x))을 계산합니다. */
 		[[nodiscard]] static float32 invSqrt( const float32 x ) noexcept
 		{
@@ -130,12 +138,27 @@ namespace sw
 			return ( value < minValue ) ? minValue : ( ( value > maxValue ) ? maxValue : value );
 		}
 
+		/** @brief 2의 거듭제곱인지 확인합니다. */
+		template <typename T>
+		[[nodiscard]] static constexpr bool isPowerOfTwo( T value ) noexcept
+		{
+			static_assert( std::is_integral_v<T>, "T should be integral" );
+			return value > T( 0 ) && ( value & ( value - T( 1 ) ) ) == 0;
+		}
+
 		/** @brief 값의 제곱(x^2)을 계산합니다. */
 		template <typename T>
-		static constexpr T sqaure( T x ) noexcept
+		static constexpr T square( T x ) noexcept
 		{
 			static_assert( std::is_arithmetic_v<T>, "T should be arithmetic" );
 			return x * x;
+		}
+
+		/** @brief 값의 제곱(x^2)을 계산합니다 (오타 호환성 유지용). */
+		template <typename T>
+		static constexpr T sqaure( T x ) noexcept
+		{
+			return square( x );
 		}
 
 		/** @brief 값의 4제곱(x^4)을 계산합니다. */

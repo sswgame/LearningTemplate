@@ -28,9 +28,9 @@ namespace sw
 		const float3  eye	  = getWorldPosition();
 		float3		  forward = ( target - eye );
 		const float32 lenSq	  = forward.getLengthSquared();
-		if ( lenSq < 1e-10f )
+		if ( lenSq <= MathUtil::Epsilon )
 			return;
-		forward = forward.normalize();
+		forward.normalize();
 
 		const float32 yaw	= MathUtil::atan2( forward._x, forward._z );
 		const float32 pitch = -MathUtil::asin( MathUtil::clamp( forward._y, -1.0f, 1.0f ) );

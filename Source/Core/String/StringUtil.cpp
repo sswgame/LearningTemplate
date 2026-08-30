@@ -1106,17 +1106,17 @@ namespace sw
 		{
 			if ( bNegative )
 			{
-				constexpr uint32 kMaxAbsInt32 = static_cast<uint32>( ( std::numeric_limits<int32>::max )() ) + 1u;
+				constexpr uint32 kMaxAbsInt32 = static_cast<uint32>( MathUtil::MaxInt32 ) + 1u;
 				if ( uval > kMaxAbsInt32 )
 					return false;
 				if ( uval == kMaxAbsInt32 )
-					outValue = ( std::numeric_limits<int32>::min )();
+					outValue = MathUtil::MinInt32;
 				else
 					outValue = -static_cast<int32>( uval );
 			}
 			else
 			{
-				if ( uval > static_cast<uint32>( ( std::numeric_limits<int32>::max )() ) )
+				if ( uval > static_cast<uint32>( MathUtil::MaxInt32 ) )
 					return false;
 				outValue = static_cast<int32>( uval );
 			}
@@ -1172,17 +1172,17 @@ namespace sw
 		{
 			if ( bNegative )
 			{
-				constexpr uint64 kMaxAbsInt64 = static_cast<uint64>( ( std::numeric_limits<int64>::max )() ) + 1ull;
+				constexpr uint64 kMaxAbsInt64 = static_cast<uint64>( MathUtil::MaxInt64 ) + 1ull;
 				if ( uval > kMaxAbsInt64 )
 					return false;
 				if ( uval == kMaxAbsInt64 )
-					outValue = ( std::numeric_limits<int64>::min )();
+					outValue = MathUtil::MinInt64;
 				else
 					outValue = -static_cast<int64>( uval );
 			}
 			else
 			{
-				if ( uval > static_cast<uint64>( ( std::numeric_limits<int64>::max )() ) )
+				if ( uval > static_cast<uint64>( MathUtil::MaxInt64 ) )
 					return false;
 				outValue = static_cast<int64>( uval );
 			}

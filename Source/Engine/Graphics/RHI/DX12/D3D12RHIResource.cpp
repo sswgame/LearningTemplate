@@ -2,6 +2,8 @@
 
 #include "Engine/Graphics/RHI/DX12/D3D12RHIResource.h"
 
+#include "Core/Math/MathUtil.h"
+
 #include "Engine/Common/EnginePlatformHeaders.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/DX12/D3D12RHIDevice.h"
@@ -188,7 +190,7 @@ namespace sw
 
 	RHIBufferHandle D3D12RHIResource::createConstantBuffer( uint32 size )
 	{
-		UINT				  alignedSize = ( size + 255u ) & ~255u;
+		const UINT			  alignedSize = MathUtil::align( size, 256u );
 		D3D12_HEAP_PROPERTIES heapProps{};
 		heapProps.Type = D3D12_HEAP_TYPE_UPLOAD;
 
@@ -222,7 +224,7 @@ namespace sw
 			return;
 
 		// CBV SizeInBytes must be a multiple of 256 (D3D12 requirement).
-		uint32	   alignedSize = ( size + 255u ) & ~255u;
+		uint32	   alignedSize = MathUtil::align( size, 256u );
 		const auto sizeIt	   = _pDevice->_mapCbAlignedSize.find( buffer );
 		if ( sizeIt != _pDevice->_mapCbAlignedSize.end() )
 			alignedSize = sizeIt->second;
@@ -674,7 +676,7 @@ namespace sw
 		{
 			// Non-ring buffers: CBV size must be 256-byte aligned and <= resource width.
 			const UINT width	= static_cast<UINT>( pRes->GetDesc().Width );
-			const UINT aligned	= ( width + 255u ) & ~255u;
+			const UINT aligned	= MathUtil::align( width, 256u );
 			cbvDesc.SizeInBytes = ( aligned <= width ) ? aligned : ( width & ~255u );
 			if ( cbvDesc.SizeInBytes == 0 )
 				return kInvalidDescriptorIndex;

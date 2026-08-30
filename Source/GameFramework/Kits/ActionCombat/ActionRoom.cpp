@@ -11,42 +11,6 @@
 
 namespace sw
 {
-	namespace
-	{
-		struct ActionRoomInternal
-		{
-			static float32 length2( float32 x, float32 y )
-			{
-				return x * x + y * y;
-			}
-
-			static void normalize2( float32& x, float32& y )
-			{
-				const float32 lenSq = length2( x, y );
-				if ( lenSq < 1e-6f )
-				{
-					x = 0.0f;
-					y = 0.0f;
-					return;
-				}
-				const float32 inv = MathUtil::invSqrt( lenSq );
-				x *= inv;
-				y *= inv;
-			}
-
-			static AABB makeCircleAabb( float32 x, float32 y, float32 radius )
-			{
-				AABB box{};
-				box._min = float3( x - radius, 0.0f, y - radius );
-				box._max = float3( x + radius, 1.0f, y + radius );
-				return box;
-			}
-		};
-	} // namespace
-} // namespace sw
-
-namespace sw
-{
 	ActionRoom::ActionRoom()
 		: _kind{ ActionRoomKind::None }
 		, _layers{}
@@ -76,7 +40,7 @@ namespace sw
 		_dashCooldown	= 0.0f;
 		_invulnTimer	= 0.0f;
 		_bossMaxHp		= 1.0f;
-		_bCleared		= 0;
+		_bCleared		= SW_FALSE;
 	}
 
 	void ActionRoom::beginEntrance()
@@ -100,9 +64,7 @@ namespace sw
 	{
 		clear();
 		_kind = ActionRoomKind::Boss;
-		spawnBoss( 9.0f, 5.0f );
-		spawnGrunt( 6.0f, 3.0f );
-		spawnGrunt( 11.0f, 7.0f );
+		spawnBoss( 7.0f, 4.0f );
 	}
 
 	float32 ActionRoom::getDashFill() const
@@ -119,7 +81,7 @@ namespace sw
 			return 0.0f;
 		for ( const Actor& actor : _listActor )
 		{
-			if ( actor._kind == ActorKind::Boss && actor._bAlive != 0 )
+			if ( actor._kind == ActorKind::Boss && actor._bAlive == SW_TRUE )
 				return MathUtil::saturate( actor._hp / _bossMaxHp );
 		}
 		return 0.0f;
@@ -127,10 +89,10 @@ namespace sw
 
 	int32 ActionRoom::getAliveEnemyCount() const
 	{
-		int32 count{ 0 };
+		int32 count = 0;
 		for ( const Actor& actor : _listActor )
 		{
-			if ( actor._bAlive != 0 )
+			if ( actor._bAlive == SW_TRUE )
 				++count;
 		}
 		return count;
@@ -142,15 +104,15 @@ namespace sw
 		if ( _kind == ActionRoomKind::None )
 			return result;
 
-		_attackCooldown = ( _attackCooldown > deltaTime ) ? ( _attackCooldown - deltaTime ) : 0.0f;
-		_dashCooldown	= ( _dashCooldown > deltaTime ) ? ( _dashCooldown - deltaTime ) : 0.0f;
-		_invulnTimer	= ( _invulnTimer > deltaTime ) ? ( _invulnTimer - deltaTime ) : 0.0f;
+		_attackCooldown = MathUtil::max( 0.0f, _attackCooldown - deltaTime );
+		_dashCooldown	= MathUtil::max( 0.0f, _dashCooldown - deltaTime );
+		_invulnTimer	= MathUtil::max( 0.0f, _invulnTimer - deltaTime );
 
-		if ( input._bDashPressed != 0 && _dashCooldown <= 0.0f )
+		if ( input._bDashPressed == SW_TRUE && _dashCooldown <= 0.0f )
 		{
 			_dashCooldown		 = 0.85f;
-			_invulnTimer		 = 0.35f;
-			result._bDashStarted = 1;
+			_invulnTimer		 = 0.22f;
+			result._bDashStarted = SW_TRUE;
 		}
 
 		tryPlayerAttack( input );
@@ -169,7 +131,7 @@ namespace sw
 		DebugDrawQueue& dbg = *game::getService<DebugDrawQueue>();
 		for ( const Actor& actor : _listActor )
 		{
-			if ( actor._bAlive == 0 )
+			if ( actor._bAlive == SW_FALSE )
 				continue;
 			const float4 color = ( actor._kind == ActorKind::Boss )
 								   ? float4( 1.0f, 0.25f, 0.2f, 1.0f )
@@ -178,7 +140,7 @@ namespace sw
 		}
 		for ( const Projectile& projectile : _listProjectile )
 		{
-			if ( projectile._bAlive == 0 )
+			if ( projectile._bAlive == SW_FALSE )
 				continue;
 			dbg.drawSphere( float3( projectile._x, 0.4f, projectile._y ), projectile._radius, float4( 1.0f, 0.9f, 0.2f, 1.0f ) );
 		}
@@ -186,12 +148,18 @@ namespace sw
 
 	AABB ActionRoom::Actor::bounds() const
 	{
-		return ActionRoomInternal::makeCircleAabb( _x, _y, _radius );
+		return AABB{
+			float3{_x - _radius, 0.0f, _y - _radius},
+			float3{_x + _radius, 1.0f, _y + _radius}
+		   };
 	}
 
 	AABB ActionRoom::Projectile::bounds() const
 	{
-		return ActionRoomInternal::makeCircleAabb( _x, _y, _radius );
+		return AABB{
+			float3{_x - _radius, 0.0f, _y - _radius},
+			float3{_x + _radius, 1.0f, _y + _radius}
+		   };
 	}
 
 	void ActionRoom::spawnGrunt( float32 x, float32 y )
@@ -204,6 +172,7 @@ namespace sw
 		a._hp	  = a._hpMax;
 		a._radius = 0.32f;
 		a._speed  = 1.8f;
+		a._bAlive = SW_TRUE;
 		_listActor.push_back( a );
 	}
 
@@ -218,6 +187,7 @@ namespace sw
 		a._radius	   = 0.7f;
 		a._speed	   = 0.9f;
 		a._attackTimer = 1.2f;
+		a._bAlive	   = SW_TRUE;
 		_bossMaxHp	   = a._hpMax;
 		_listActor.push_back( a );
 	}
@@ -233,7 +203,7 @@ namespace sw
 		const AABB atk	= playerAttackBox( input._playerX, input._playerY, input._facing );
 		for ( Actor& actor : _listActor )
 		{
-			if ( actor._bAlive == 0 )
+			if ( actor._bAlive == SW_FALSE )
 				continue;
 			if ( queryOverlaps( atk, kLayerPlayerAtk, actor.bounds(), kLayerEnemy, _layers ) == false )
 				continue;
@@ -242,7 +212,7 @@ namespace sw
 			if ( actor._hp <= 0.0f )
 			{
 				actor._hp	  = 0.0f;
-				actor._bAlive = 0;
+				actor._bAlive = SW_FALSE;
 			}
 		}
 	}
@@ -251,14 +221,12 @@ namespace sw
 	{
 		for ( Actor& actor : _listActor )
 		{
-			if ( actor._bAlive == 0 )
+			if ( actor._bAlive == SW_FALSE )
 				continue;
 
-			float32 dx = playerX - actor._x;
-			float32 dy = playerY - actor._y;
-			ActionRoomInternal::normalize2( dx, dy );
-			actor._x += dx * actor._speed * deltaTime;
-			actor._y += dy * actor._speed * deltaTime;
+			const float2 toPlayer = float2{ playerX - actor._x, playerY - actor._y }.normalize();
+			actor._x += toPlayer._x * actor._speed * deltaTime;
+			actor._y += toPlayer._y * actor._speed * deltaTime;
 
 			if ( actor._kind != ActorKind::Boss )
 				continue;
@@ -268,22 +236,21 @@ namespace sw
 				continue;
 			actor._attackTimer = 1.6f;
 
-			float32 vx = playerX - actor._x;
-			float32 vy = playerY - actor._y;
-			ActionRoomInternal::normalize2( vx, vy );
+			const float2 projDir = float2{ playerX - actor._x, playerY - actor._y }.normalize();
+
 			Projectile projectile{};
 			projectile._x	   = actor._x;
 			projectile._y	   = actor._y;
-			projectile._vx	   = vx * 4.5f;
-			projectile._vy	   = vy * 4.5f;
+			projectile._vx	   = projDir._x * 4.5f;
+			projectile._vy	   = projDir._y * 4.5f;
 			projectile._life   = 2.5f;
 			projectile._radius = 0.22f;
+			projectile._bAlive = SW_TRUE;
 			_listProjectile.push_back( projectile );
 
-			// 패턴 아이디어: int16 방사 버스트 (두 번째 샷 오프셋)
 			Projectile projectile2 = projectile;
-			projectile2._vx		   = -vy * 3.2f;
-			projectile2._vy		   = vx * 3.2f;
+			projectile2._vx		   = -projDir._y * 3.2f;
+			projectile2._vy		   = projDir._x * 3.2f;
 			projectile2._life	   = 1.8f;
 			_listProjectile.push_back( projectile2 );
 		}
@@ -293,22 +260,19 @@ namespace sw
 	{
 		for ( Projectile& projectile : _listProjectile )
 		{
-			if ( projectile._bAlive == 0 )
+			if ( projectile._bAlive == SW_FALSE )
 				continue;
-			projectile._life -= deltaTime;
-			if ( projectile._life <= 0.0f )
-			{
-				projectile._bAlive = 0;
-				continue;
-			}
 			projectile._x += projectile._vx * deltaTime;
 			projectile._y += projectile._vy * deltaTime;
+			projectile._life -= deltaTime;
+			if ( projectile._life <= 0.0f )
+				projectile._bAlive = SW_FALSE;
 		}
 
 		_listProjectile.erase(
 			std::remove_if( _listProjectile.begin(), _listProjectile.end(),
 							[]( const Projectile& proj )
-		{ return proj._bAlive == 0; } ),
+		{ return proj._bAlive == SW_FALSE; } ),
 			_listProjectile.end() );
 	}
 
@@ -320,7 +284,7 @@ namespace sw
 		const AABB hurt = playerHurtBox( playerX, playerY );
 		for ( const Actor& actor : _listActor )
 		{
-			if ( actor._bAlive == 0 )
+			if ( actor._bAlive == SW_FALSE )
 				continue;
 			if ( queryOverlaps( hurt, kLayerPlayer, actor.bounds(), kLayerEnemy, _layers ) == false )
 				continue;
@@ -330,12 +294,12 @@ namespace sw
 		}
 		for ( Projectile& projectile : _listProjectile )
 		{
-			if ( projectile._bAlive == 0 )
+			if ( projectile._bAlive == SW_FALSE )
 				continue;
 			if ( queryOverlaps( hurt, kLayerPlayer, projectile.bounds(), kLayerProjectile, _layers ) == false )
 				continue;
 			out._damageToPlayer += 10;
-			projectile._bAlive = 0;
+			projectile._bAlive = SW_FALSE;
 			_invulnTimer	   = 0.7f;
 			return;
 		}
@@ -343,19 +307,23 @@ namespace sw
 
 	void ActionRoom::refreshCleared( ActionRoomFrameResult& out )
 	{
-		if ( _bCleared != 0 )
+		if ( _bCleared == SW_TRUE )
 			return;
 		if ( getAliveEnemyCount() > 0 )
 			return;
-		_bCleared			   = 1;
-		out._bClearedThisFrame = 1;
+		_bCleared			   = SW_TRUE;
+		out._bClearedThisFrame = SW_TRUE;
 		if ( _kind == ActionRoomKind::Boss )
-			out._bBossDefeated = 1;
+			out._bBossDefeated = SW_TRUE;
 	}
 
 	AABB ActionRoom::playerHurtBox( float32 x, float32 y ) const
 	{
-		return ActionRoomInternal::makeCircleAabb( x, y, 0.28f );
+		constexpr float32 radius = 0.28f;
+		return AABB{
+			float3{x - radius, 0.0f, y - radius},
+			float3{x + radius, 1.0f, y + radius}
+		   };
 	}
 
 	AABB ActionRoom::playerAttackBox( float32 x, float32 y, FacingDir facing ) const
@@ -379,6 +347,12 @@ namespace sw
 			default:
 				break;
 		}
-		return ActionRoomInternal::makeCircleAabb( x + ox, y + oy, 0.45f );
+		constexpr float32 radius  = 0.45f;
+		const float32	  centerX = x + ox;
+		const float32	  centerY = y + oy;
+		return AABB{
+			float3{centerX - radius, 0.0f, centerY - radius},
+			float3{centerX + radius, 1.0f, centerY + radius}
+		   };
 	}
 } // namespace sw

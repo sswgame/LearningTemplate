@@ -29,20 +29,20 @@ namespace sw::editor
 				ImGui::SameLine();
 				ImGui::SetNextItemWidth( comboWidth );
 
-				int32 currentIdx = fallbackIndex;
-				for ( int32 idx = 0; idx < valueCount; ++idx )
+				int32 currentIndex = fallbackIndex;
+				for ( int32 index = 0; index < valueCount; ++index )
 				{
-					if ( MathUtil::abs( value - arrValue[idx] ) < 0.001f )
+					if ( MathUtil::nearEqual( value, arrValue[index], 0.001f ) )
 					{
-						currentIdx = idx;
+						currentIndex = index;
 						break;
 					}
 				}
 
-				if ( ImGui::Combo( pComboId, &currentIdx, arrLabel, valueCount ) )
+				if ( ImGui::Combo( pComboId, &currentIndex, arrLabel, valueCount ) )
 				{
-					if ( 0 <= currentIdx && currentIdx < valueCount )
-						value = arrValue[currentIdx];
+					if ( 0 <= currentIndex && currentIndex < valueCount )
+						value = arrValue[currentIndex];
 				}
 			}
 		};

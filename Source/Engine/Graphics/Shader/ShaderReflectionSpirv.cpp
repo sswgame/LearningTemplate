@@ -311,10 +311,10 @@ namespace sw
 							varInfo._type	= ShaderReflectionSpirvInternal::resolveSpirvTypeName( memberTypeId, mapType, varInfo._size );
 
 							buf._listVariable.push_back( varInfo );
-							buf._totalSize = (MathUtil::max)( buf._totalSize, varInfo._offset + varInfo._size );
+							buf._totalSize = MathUtil::max( buf._totalSize, varInfo._offset + varInfo._size );
 							++memberIdx;
 						}
-						buf._totalSize = ( buf._totalSize + 255u ) & ~255u;
+						buf._totalSize = MathUtil::align( buf._totalSize, 256u );
 					}
 				}
 

@@ -139,9 +139,9 @@ namespace sw
 						lastPso = item._pso;
 					}
 
-					if ( Memory::compare( _passConstants._world, &item._world._11, sizeof( _passConstants._world ) ) != 0 )
+					if ( _passConstants._world != item._world )
 					{
-						Memory::copy( _passConstants._world, &item._world._11, sizeof( _passConstants._world ) );
+						_passConstants._world = item._world;
 						commitBindlessTextureBindings();
 					}
 
@@ -207,9 +207,9 @@ namespace sw
 				if ( globalIndex >= listInstances.size() )
 					break;
 				const GpuInstance& inst = listInstances[globalIndex];
-				if ( Memory::compare( _passConstants._world, inst._world, sizeof( _passConstants._world ) ) != 0 )
+				if ( _passConstants._world != inst._world )
 				{
-					Memory::copy( _passConstants._world, inst._world, sizeof( _passConstants._world ) );
+					_passConstants._world = inst._world;
 					commitBindlessTextureBindings();
 				}
 				_pCmd->draw( pMesh->getVertexCount(), 0, drawCb );

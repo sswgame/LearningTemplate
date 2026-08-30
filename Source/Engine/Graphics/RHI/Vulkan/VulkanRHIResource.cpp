@@ -2,6 +2,8 @@
 
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIResource.h"
 
+#include "Core/Math/MathUtil.h"
+
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/FrameResourceRing.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
@@ -433,7 +435,7 @@ namespace sw
 
 	RHIBufferHandle VulkanRHIResource::createConstantBuffer( uint32 size )
 	{
-		const uint32		  aligned = ( size + 255u ) & ~255u;
+		const uint32		  aligned = MathUtil::align( size, 256u );
 		const uint32		  total	  = aligned * FrameResourceRing::kFrameCount;
 		const RHIBufferHandle handle  = _pDevice->createVulkanBuffer( total, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, nullptr );
 		if ( handle != 0 )

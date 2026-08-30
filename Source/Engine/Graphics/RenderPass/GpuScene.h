@@ -22,13 +22,13 @@ namespace sw
 	/// @brief GPU 인스턴스 (월드 행렬 + 메시/머티리얼 인덱스)
 	struct GpuInstance
 	{
-		float32 _world[16]{};
-		float32 _boundsCenter[3]{};
-		float32 _boundsRadius{ 1.0f };
-		uint32	_meshBatchIndex{ 0 };
-		uint32	_materialIndex{ 0 };
-		uint32	_blendMode{ 0 }; ///< RHIBlendMode
-		uint32	_pad{ 0 };
+		float4x4 _world{};
+		float3	 _boundsCenter{};
+		float32	 _boundsRadius{ 1.0f };
+		uint32	 _meshBatchIndex{ 0 };
+		uint32	 _materialIndex{ 0 };
+		uint32	 _blendMode{ 0 }; ///< RHIBlendMode
+		uint32	 _pad{ 0 };
 	};
 
 	/// @brief 같은 메시/머티리얼의 인스턴스 배치
@@ -81,8 +81,8 @@ namespace sw
 
 	struct GpuSceneDrawCandidate
 	{
-		float32			  _world[16]{};
-		float32			  _boundsCenter[3]{};
+		float4x4		  _world{};
+		float3			  _boundsCenter{};
 		float32			  _boundsRadius{ 1.0f };
 		Mesh*			  _pMesh{ nullptr };
 		Material*		  _pMaterial{ nullptr };
@@ -112,6 +112,15 @@ namespace sw
 	class SW_API GpuScene
 	{
 	public:
+		GpuScene() noexcept = default;
+		~GpuScene()			= default;
+
+		GpuScene( GpuScene&& other ) noexcept			 = default;
+		GpuScene& operator=( GpuScene&& other ) noexcept = default;
+
+		GpuScene( const GpuScene& )			   = delete;
+		GpuScene& operator=( const GpuScene& ) = delete;
+
 		/** @brief CPU/GPU 스냅샷을 비웁니다. */
 		void clear();
 		/**
@@ -181,8 +190,8 @@ namespace sw
 		/// buildFromScene에서 재사용해 프레임당 힙 할당을 줄입니다.
 		struct DrawCandidate
 		{
-			float32			  _world[16]{};
-			float32			  _boundsCenter[3]{};
+			float4x4		  _world{};
+			float3			  _boundsCenter{};
 			float32			  _boundsRadius{ 1.0f };
 			Mesh*			  _pMesh{ nullptr };
 			Material*		  _pMaterial{ nullptr };

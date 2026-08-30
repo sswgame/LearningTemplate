@@ -40,7 +40,7 @@ namespace sw
 	{
 		Component::onTick( deltaTime );
 
-		_remainRatio = MathUtil::lerp( _remainRatio, _targetRatio, MathUtil::clamp( _lerpSpeed * deltaTime, 0.0f, 1.0f ) );
+		_remainRatio = MathUtil::lerp( _remainRatio, _targetRatio, MathUtil::saturate( _lerpSpeed * deltaTime ) );
 	}
 
 	void HPBarBaseComponent::setTargetRatio( float32 ratio )

@@ -30,11 +30,7 @@ namespace sw
 	void SkelBowComponent::onTick( float32 deltaTime )
 	{
 		if ( _bAiming )
-		{
-			_chargeAmount += deltaTime * _chargeSpeed;
-			if ( _chargeAmount > 1.0f )
-				_chargeAmount = 1.0f;
-		}
+			_chargeAmount = MathUtil::saturate( _chargeAmount + deltaTime * _chargeSpeed );
 	}
 
 	void SkelBowComponent::startAiming()

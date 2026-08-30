@@ -90,12 +90,12 @@ namespace sw
 
 	bool float2::inBounds( const float2& bound ) const noexcept
 	{
-		return ( _x <= bound._x && _x >= -bound._x ) && ( _y <= bound._y && _y >= -bound._y );
+		return ( -bound._x <= _x && _x <= bound._x ) && ( -bound._y <= _y && _y <= bound._y );
 	}
 
 	bool float2::isInfinite() const noexcept
 	{
-		return std::isinf( _x ) || std::isinf( _y );
+		return MathUtil::isInfinite( _x ) || MathUtil::isInfinite( _y );
 	}
 
 	float32 float2::dot( const float2& other ) const noexcept
@@ -321,7 +321,7 @@ namespace sw
 
 	bool float3::isInfinite() const noexcept
 	{
-		return std::isinf( _x ) || std::isinf( _y ) || std::isinf( _z );
+		return MathUtil::isInfinite( _x ) || MathUtil::isInfinite( _y ) || MathUtil::isInfinite( _z );
 	}
 
 	void float3::clamp( const float3& minValue, const float3& maxValue ) noexcept
@@ -359,10 +359,10 @@ namespace sw
 		const float32 dotProduct   = dot( other );
 		const bool	  isUnitLength = MathUtil::nearEqual( lengthSquaredA, 1.f ) && MathUtil::nearEqual( lengthSquaredB, 1.f );
 		if ( isUnitLength )
-			return acosf( dotProduct );
+			return MathUtil::acos( dotProduct );
 
 		const float32 length = MathUtil::sqrt( lengthSquaredA ) * MathUtil::sqrt( lengthSquaredB );
-		return acosf( dotProduct / length );
+		return MathUtil::acos( dotProduct / length );
 	}
 
 	bool float3::operator==( const float3& other ) const noexcept { return MathUtil::nearEqual( _x, other._x ) && MathUtil::nearEqual( _y, other._y ) && MathUtil::nearEqual( _z, other._z ); }
@@ -630,7 +630,7 @@ namespace sw
 
 	bool double3::isInfinite() const noexcept
 	{
-		return std::isinf( _x ) || std::isinf( _y ) || std::isinf( _z );
+		return MathUtil::isInfinite( _x ) || MathUtil::isInfinite( _y ) || MathUtil::isInfinite( _z );
 	}
 
 	float64 double3::dot( const double3& other ) const noexcept

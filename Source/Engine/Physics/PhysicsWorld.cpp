@@ -31,19 +31,15 @@ namespace sw
 		if ( aabb.isValid() == false )
 			return;
 
-		const float32 normMinX = MathUtil::min( aabb._min._x, aabb._max._x );
-		const float32 normMaxX = MathUtil::max( aabb._min._x, aabb._max._x );
-		const float32 normMinY = MathUtil::min( aabb._min._y, aabb._max._y );
-		const float32 normMaxY = MathUtil::max( aabb._min._y, aabb._max._y );
-		const float32 normMinZ = MathUtil::min( aabb._min._z, aabb._max._z );
-		const float32 normMaxZ = MathUtil::max( aabb._min._z, aabb._max._z );
+		const float3 normMin = float3::min( aabb._min, aabb._max );
+		const float3 normMax = float3::max( aabb._min, aabb._max );
 
-		const int32 minX = PhysicsWorldInternal::toCellCoord( normMinX, kCellSize );
-		const int32 maxX = PhysicsWorldInternal::toCellCoord( normMaxX, kCellSize );
-		const int32 minY = PhysicsWorldInternal::toCellCoord( normMinY, kCellSize );
-		const int32 maxY = PhysicsWorldInternal::toCellCoord( normMaxY, kCellSize );
-		const int32 minZ = PhysicsWorldInternal::toCellCoord( normMinZ, kCellSize );
-		const int32 maxZ = PhysicsWorldInternal::toCellCoord( normMaxZ, kCellSize );
+		const int32 minX = PhysicsWorldInternal::toCellCoord( normMin._x, kCellSize );
+		const int32 maxX = PhysicsWorldInternal::toCellCoord( normMax._x, kCellSize );
+		const int32 minY = PhysicsWorldInternal::toCellCoord( normMin._y, kCellSize );
+		const int32 maxY = PhysicsWorldInternal::toCellCoord( normMax._y, kCellSize );
+		const int32 minZ = PhysicsWorldInternal::toCellCoord( normMin._z, kCellSize );
+		const int32 maxZ = PhysicsWorldInternal::toCellCoord( normMax._z, kCellSize );
 
 		for ( int32 gridZ = minZ; gridZ <= maxZ; ++gridZ )
 		{
@@ -65,19 +61,15 @@ namespace sw
 		if ( aabb.isValid() == false )
 			return;
 
-		const float32 normMinX = MathUtil::min( aabb._min._x, aabb._max._x );
-		const float32 normMaxX = MathUtil::max( aabb._min._x, aabb._max._x );
-		const float32 normMinY = MathUtil::min( aabb._min._y, aabb._max._y );
-		const float32 normMaxY = MathUtil::max( aabb._min._y, aabb._max._y );
-		const float32 normMinZ = MathUtil::min( aabb._min._z, aabb._max._z );
-		const float32 normMaxZ = MathUtil::max( aabb._min._z, aabb._max._z );
+		const float3 normMin = float3::min( aabb._min, aabb._max );
+		const float3 normMax = float3::max( aabb._min, aabb._max );
 
-		const int32 minX = PhysicsWorldInternal::toCellCoord( normMinX, kCellSize );
-		const int32 maxX = PhysicsWorldInternal::toCellCoord( normMaxX, kCellSize );
-		const int32 minY = PhysicsWorldInternal::toCellCoord( normMinY, kCellSize );
-		const int32 maxY = PhysicsWorldInternal::toCellCoord( normMaxY, kCellSize );
-		const int32 minZ = PhysicsWorldInternal::toCellCoord( normMinZ, kCellSize );
-		const int32 maxZ = PhysicsWorldInternal::toCellCoord( normMaxZ, kCellSize );
+		const int32 minX = PhysicsWorldInternal::toCellCoord( normMin._x, kCellSize );
+		const int32 maxX = PhysicsWorldInternal::toCellCoord( normMax._x, kCellSize );
+		const int32 minY = PhysicsWorldInternal::toCellCoord( normMin._y, kCellSize );
+		const int32 maxY = PhysicsWorldInternal::toCellCoord( normMax._y, kCellSize );
+		const int32 minZ = PhysicsWorldInternal::toCellCoord( normMin._z, kCellSize );
+		const int32 maxZ = PhysicsWorldInternal::toCellCoord( normMax._z, kCellSize );
 
 		for ( int32 gridZ = minZ; gridZ <= maxZ; ++gridZ )
 		{
@@ -250,15 +242,8 @@ namespace sw
 			return false;
 
 		const AABB sweptBounds{
-			float3{
-				   MathUtil::min( movingBox._min._x, movingBox._min._x + displacement._x ),
-				   MathUtil::min( movingBox._min._y, movingBox._min._y + displacement._y ),
-				   MathUtil::min( movingBox._min._z, movingBox._min._z + displacement._z )},
-			float3{
-				   MathUtil::max( movingBox._max._x, movingBox._max._x + displacement._x ),
-				   MathUtil::max( movingBox._max._y, movingBox._max._y + displacement._y ),
-				   MathUtil::max( movingBox._max._z, movingBox._max._z + displacement._z )}
-		  };
+			float3::min( movingBox._min, movingBox._min + displacement ),
+			float3::max( movingBox._max, movingBox._max + displacement ) };
 
 		const int32 minX = PhysicsWorldInternal::toCellCoord( sweptBounds._min._x, kCellSize );
 		const int32 maxX = PhysicsWorldInternal::toCellCoord( sweptBounds._max._x, kCellSize );

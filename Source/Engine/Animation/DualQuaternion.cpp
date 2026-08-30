@@ -36,19 +36,12 @@ namespace sw
 
 	void DualQuaternion::normalize()
 	{
-		const float32 mag = MathUtil::sqrt( _real._x * _real._x + _real._y * _real._y + _real._z * _real._z + _real._w * _real._w );
-		if ( mag > 1e-6f )
+		const float32 mag = _real.norm();
+		if ( mag > MathUtil::Epsilon )
 		{
 			const float32 invMag = 1.0f / mag;
-			_real._x *= invMag;
-			_real._y *= invMag;
-			_real._z *= invMag;
-			_real._w *= invMag;
-
-			_dual._x *= invMag;
-			_dual._y *= invMag;
-			_dual._z *= invMag;
-			_dual._w *= invMag;
+			_real *= invMag;
+			_dual *= invMag;
 		}
 	}
 
@@ -84,20 +77,13 @@ namespace sw
 
 	DualQuaternion DualQuaternion::dlb( const DualQuaternion& a, const DualQuaternion& b, float32 t )
 	{
-		float32		  dot	 = a._real._x * b._real._x + a._real._y * b._real._y + a._real._z * b._real._z + a._real._w * b._real._w;
+		const float32 dot	 = a._real.dot( b._real );
 		const float32 scaleB = ( dot < 0.0f ) ? -t : t;
 		const float32 scaleA = 1.0f - t;
 
 		DualQuaternion result{};
-		result._real._x = a._real._x * scaleA + b._real._x * scaleB;
-		result._real._y = a._real._y * scaleA + b._real._y * scaleB;
-		result._real._z = a._real._z * scaleA + b._real._z * scaleB;
-		result._real._w = a._real._w * scaleA + b._real._w * scaleB;
-
-		result._dual._x = a._dual._x * scaleA + b._dual._x * scaleB;
-		result._dual._y = a._dual._y * scaleA + b._dual._y * scaleB;
-		result._dual._z = a._dual._z * scaleA + b._dual._z * scaleB;
-		result._dual._w = a._dual._w * scaleA + b._dual._w * scaleB;
+		result._real = a._real * scaleA + b._real * scaleB;
+		result._dual = a._dual * scaleA + b._dual * scaleB;
 
 		result.normalize();
 		return result;

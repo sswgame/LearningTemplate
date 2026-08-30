@@ -3,6 +3,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Core/Common/PlatformOsHeaders.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Memory/MemoryProfiler.h"
 
 namespace sw
@@ -32,9 +33,7 @@ namespace sw
 	 */
 	void* Memory::alignedAlloc( size_t size, size_t alignment )
 	{
-		size_t align = alignment;
-		if ( align < sizeof( void* ) )
-			align = sizeof( void* );
+		const size_t align = MathUtil::max( alignment, sizeof( void* ) );
 
 #if defined( SW_SHIPPING )
 	#if defined( SW_PLATFORM_WINDOWS )
@@ -60,14 +59,14 @@ namespace sw
 		if ( pRawPtr == nullptr )
 			return nullptr;
 
-		uintptr_t	 rawAddr  = reinterpret_cast<uintptr_t>( pRawPtr );
-		uintptr_t	 userAddr = ( rawAddr + sizeof( AllocHeader ) + ( align - 1 ) ) & ~( align - 1 );
-		AllocHeader* pHeader  = reinterpret_cast<AllocHeader*>( userAddr - sizeof( AllocHeader ) );
-		pHeader->_size		  = size;
-		pHeader->_tag		  = MemoryProfiler::getCurrentMemoryTag();
-		pHeader->_magic		  = kAllocMagic;
-		pHeader->_hash		  = 0;
-		pHeader->_pRawPtr	  = pRawPtr;
+		const uintptr_t rawAddr	 = reinterpret_cast<uintptr_t>( pRawPtr );
+		const uintptr_t userAddr = MathUtil::align( rawAddr + sizeof( AllocHeader ), static_cast<uintptr_t>( align ) );
+		AllocHeader*	pHeader	 = reinterpret_cast<AllocHeader*>( userAddr - sizeof( AllocHeader ) );
+		pHeader->_size			 = size;
+		pHeader->_tag			 = MemoryProfiler::getCurrentMemoryTag();
+		pHeader->_magic			 = kAllocMagic;
+		pHeader->_hash			 = 0;
+		pHeader->_pRawPtr		 = pRawPtr;
 
 		void*			userPtr	  = reinterpret_cast<void*>( userAddr );
 		MemoryProfiler* pProfiler = MemoryProfiler::getActive();

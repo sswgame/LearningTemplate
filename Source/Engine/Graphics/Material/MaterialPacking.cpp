@@ -569,7 +569,7 @@ namespace sw
 				float32 floatVal{ 0.0f };
 				StringUtil::parseFloat( prop._value, floatVal );
 				if ( prop._min < prop._max )
-					floatVal = (MathUtil::max)( prop._min, (MathUtil::min)( prop._max, floatVal ) );
+					floatVal = MathUtil::clamp( floatVal, prop._min, prop._max );
 				if ( shaderType == MaterialPropertyType::Float || packSize >= 4 )
 					Memory::copy( pDst, &floatVal, sizeof( floatVal ) );
 				return true;

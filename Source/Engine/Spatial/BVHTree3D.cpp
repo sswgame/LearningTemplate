@@ -17,23 +17,15 @@ namespace sw
 
 	AABB BVHTree3D::combineAABB( const AABB& a, const AABB& b )
 	{
-		AABB result{};
-		result._min._x = MathUtil::min( a._min._x, b._min._x );
-		result._min._y = MathUtil::min( a._min._y, b._min._y );
-		result._min._z = MathUtil::min( a._min._z, b._min._z );
-
-		result._max._x = MathUtil::max( a._max._x, b._max._x );
-		result._max._y = MathUtil::max( a._max._y, b._max._y );
-		result._max._z = MathUtil::max( a._max._z, b._max._z );
-		return result;
+		return AABB{
+			float3::min( a._min, b._min ),
+			float3::max( a._max, b._max ) };
 	}
 
 	float32 BVHTree3D::getSurfaceArea( const AABB& box )
 	{
-		const float32 dx = box._max._x - box._min._x;
-		const float32 dy = box._max._y - box._min._y;
-		const float32 dz = box._max._z - box._min._z;
-		return 2.0f * ( dx * dy + dy * dz + dz * dx );
+		const float3 extents = box._max - box._min;
+		return 2.0f * ( extents._x * extents._y + extents._y * extents._z + extents._z * extents._x );
 	}
 
 	int32 BVHTree3D::allocateNode()
@@ -419,9 +411,9 @@ namespace sw
 			return;
 
 		const float3 invDir{
-			MathUtil::abs( direction._x ) > 1e-6f ? ( 1.0f / direction._x ) : 1e6f,
-			MathUtil::abs( direction._y ) > 1e-6f ? ( 1.0f / direction._y ) : 1e6f,
-			MathUtil::abs( direction._z ) > 1e-6f ? ( 1.0f / direction._z ) : 1e6f };
+			MathUtil::abs( direction._x ) > MathUtil::Epsilon ? ( 1.0f / direction._x ) : ( 1.0f / MathUtil::Epsilon ),
+			MathUtil::abs( direction._y ) > MathUtil::Epsilon ? ( 1.0f / direction._y ) : ( 1.0f / MathUtil::Epsilon ),
+			MathUtil::abs( direction._z ) > MathUtil::Epsilon ? ( 1.0f / direction._z ) : ( 1.0f / MathUtil::Epsilon ) };
 
 		auto rayIntersects = [&]( const AABB& box ) -> bool
 		{
@@ -477,13 +469,8 @@ namespace sw
 		const float32 r2			   = radius * radius;
 		auto		  sphereIntersects = [&]( const AABB& box ) -> bool
 		{
-			const float32 cx = MathUtil::clamp( center._x, box._min._x, box._max._x );
-			const float32 cy = MathUtil::clamp( center._y, box._min._y, box._max._y );
-			const float32 cz = MathUtil::clamp( center._z, box._min._z, box._max._z );
-			const float32 dx = center._x - cx;
-			const float32 dy = center._y - cy;
-			const float32 dz = center._z - cz;
-			return ( dx * dx + dy * dy + dz * dz ) <= r2;
+			const float3 closestPoint = center.clamped( box._min, box._max );
+			return float3::getDistanceSquared( center, closestPoint ) <= r2;
 		};
 
 		int32 arrStack[256];
@@ -512,31 +499,31 @@ namespace sw
 		}
 	}
 
-	void BVHTree3D::queryFrustum( const float32 arrViewProj[16], vector<ObjectHandle>& outListHandle ) const
+	void BVHTree3D::queryFrustum( const float4x4& viewProj, vector<ObjectHandle>& outListHandle ) const
 	{
+		const float32* pArr = &viewProj._11;
 		// Extract 6 frustum planes from column-major viewProj matrix
 		// Left, Right, Bottom, Top, Near, Far
-		float32 arrPlane[6][4] = {
-			{arrViewProj[3] + arrViewProj[0], arrViewProj[7] + arrViewProj[4],	arrViewProj[11] + arrViewProj[8], arrViewProj[15] + arrViewProj[12]},
-			{arrViewProj[3] - arrViewProj[0], arrViewProj[7] - arrViewProj[4],	arrViewProj[11] - arrViewProj[8], arrViewProj[15] - arrViewProj[12]},
-			{arrViewProj[3] + arrViewProj[1], arrViewProj[7] + arrViewProj[5],	arrViewProj[11] + arrViewProj[9], arrViewProj[15] + arrViewProj[13]},
-			{arrViewProj[3] - arrViewProj[1], arrViewProj[7] - arrViewProj[5],	arrViewProj[11] - arrViewProj[9], arrViewProj[15] - arrViewProj[13]},
-			{				 arrViewProj[2],				  arrViewProj[6],					  arrViewProj[10],				   arrViewProj[14]},
-			{arrViewProj[3] - arrViewProj[2], arrViewProj[7] - arrViewProj[6], arrViewProj[11] - arrViewProj[10], arrViewProj[15] - arrViewProj[14]}
-		   };
+		float4 arrPlane[6] = {
+			float4{pArr[3] + pArr[0], pArr[7] + pArr[4],  pArr[11] + pArr[8], pArr[15] + pArr[12]},
+			float4{pArr[3] - pArr[0], pArr[7] - pArr[4],  pArr[11] - pArr[8], pArr[15] - pArr[12]},
+			float4{pArr[3] + pArr[1], pArr[7] + pArr[5],  pArr[11] + pArr[9], pArr[15] + pArr[13]},
+			float4{pArr[3] - pArr[1], pArr[7] - pArr[5],  pArr[11] - pArr[9], pArr[15] - pArr[13]},
+			float4{			pArr[2],			 pArr[6],			  pArr[10],			pArr[14]},
+			float4{pArr[3] - pArr[2], pArr[7] - pArr[6], pArr[11] - pArr[10], pArr[15] - pArr[14]}
+		 };
 
 		for ( int32 planeIndex = 0; planeIndex < 6; ++planeIndex )
 		{
-			const float32 length = MathUtil::sqrt(
-				arrPlane[planeIndex][0] * arrPlane[planeIndex][0] +
-				arrPlane[planeIndex][1] * arrPlane[planeIndex][1] +
-				arrPlane[planeIndex][2] * arrPlane[planeIndex][2] );
-			if ( length > 1e-5f )
+			const float3  normal{ arrPlane[planeIndex]._x, arrPlane[planeIndex]._y, arrPlane[planeIndex]._z };
+			const float32 length = normal.getLength();
+			if ( length > MathUtil::Epsilon )
 			{
-				arrPlane[planeIndex][0] /= length;
-				arrPlane[planeIndex][1] /= length;
-				arrPlane[planeIndex][2] /= length;
-				arrPlane[planeIndex][3] /= length;
+				const float32 invLength = 1.0f / length;
+				arrPlane[planeIndex]._x *= invLength;
+				arrPlane[planeIndex]._y *= invLength;
+				arrPlane[planeIndex]._z *= invLength;
+				arrPlane[planeIndex]._w *= invLength;
 			}
 		}
 
@@ -544,11 +531,13 @@ namespace sw
 		{
 			for ( int32 planeIndex = 0; planeIndex < 6; ++planeIndex )
 			{
-				const float32 px = arrPlane[planeIndex][0] > 0.0f ? box._max._x : box._min._x;
-				const float32 py = arrPlane[planeIndex][1] > 0.0f ? box._max._y : box._min._y;
-				const float32 pz = arrPlane[planeIndex][2] > 0.0f ? box._max._z : box._min._z;
+				const float4& plane = arrPlane[planeIndex];
+				const float3  p{
+					plane._x > 0.0f ? box._max._x : box._min._x,
+					plane._y > 0.0f ? box._max._y : box._min._y,
+					plane._z > 0.0f ? box._max._z : box._min._z };
 
-				if ( ( arrPlane[planeIndex][0] * px + arrPlane[planeIndex][1] * py + arrPlane[planeIndex][2] * pz + arrPlane[planeIndex][3] ) < 0.0f )
+				if ( ( float3{ plane._x, plane._y, plane._z }.dot( p ) + plane._w ) < 0.0f )
 					return false;
 			}
 			return true;

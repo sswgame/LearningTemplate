@@ -209,6 +209,12 @@ namespace sw
 			, _y{ pArray[1] }
 			, _z{ pArray[2] } {}
 
+		/** @brief 2D 벡터와 Z 성분으로 생성합니다. */
+		constexpr float3( const float2& xy, const float32 z ) noexcept
+			: _x{ xy._x }
+			, _y{ xy._y }
+			, _z{ z } {}
+
 		/** @brief 두 3D 벡터 간의 거리를 반환합니다. */
 		static float32 getDistance( const float3& from, const float3& to ) noexcept;
 
@@ -377,6 +383,20 @@ namespace sw
 			, _y{ pArray[1] }
 			, _z{ pArray[2] }
 			, _w{ pArray[3] } {}
+
+		/** @brief 3D 벡터와 W 성분으로 생성합니다. */
+		constexpr float4( const float3& xyz, const float32 w ) noexcept
+			: _x{ xyz._x }
+			, _y{ xyz._y }
+			, _z{ xyz._z }
+			, _w{ w } {}
+
+		/** @brief 두 2D 벡터로 생성합니다. */
+		constexpr float4( const float2& xy, const float2& zw ) noexcept
+			: _x{ xy._x }
+			, _y{ xy._y }
+			, _z{ zw._x }
+			, _w{ zw._y } {}
 
 		/**
 		 * @brief 거리를 계산합니다

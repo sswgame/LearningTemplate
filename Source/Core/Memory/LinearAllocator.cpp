@@ -40,7 +40,7 @@ namespace sw
 		if ( size == 0 )
 			return nullptr;
 
-		if ( alignment == 0 || ( alignment & ( alignment - 1 ) ) != 0 )
+		if ( alignment == 0 || MathUtil::isPowerOfTwo( alignment ) == false )
 			alignment = alignof( std::max_align_t );
 
 		while ( true )
@@ -64,7 +64,7 @@ namespace sw
 			while ( true )
 			{
 				const uintptr_t basePtr		  = reinterpret_cast<uintptr_t>( pCurrentBlock->_pData ) + oldOffset;
-				const uintptr_t alignedPtr	  = ( basePtr + alignment - 1 ) & ~( static_cast<uintptr_t>( alignment - 1 ) );
+				const uintptr_t alignedPtr	  = MathUtil::align( basePtr, static_cast<uintptr_t>( alignment ) );
 				const size_t	alignedOffset = static_cast<size_t>( alignedPtr - reinterpret_cast<uintptr_t>( pCurrentBlock->_pData ) );
 				const size_t	newOffset	  = alignedOffset + size;
 				if ( newOffset > pCurrentBlock->_capacity )

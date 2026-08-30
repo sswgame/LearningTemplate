@@ -50,11 +50,8 @@ namespace sw
 
 		bool intersects( const AABB2D& other ) const noexcept
 		{
-			if ( _maxX < other._minX || _minX > other._maxX )
-				return false;
-			if ( _maxY < other._minY || _minY > other._maxY )
-				return false;
-			return true;
+			return _minX <= other._maxX && other._minX <= _maxX &&
+				   _minY <= other._maxY && other._minY <= _maxY;
 		}
 
 		bool contains( const AABB2D& other ) const noexcept
@@ -119,37 +116,33 @@ namespace sw
 
 		bool contains( const float3& point ) const noexcept
 		{
-			return point._x >= _min._x && point._x <= _max._x &&
-				   point._y >= _min._y && point._y <= _max._y &&
-				   point._z >= _min._z && point._z <= _max._z;
+			return _min._x <= point._x && point._x <= _max._x &&
+				   _min._y <= point._y && point._y <= _max._y &&
+				   _min._z <= point._z && point._z <= _max._z;
 		}
 
 		bool intersects( const AABB3D& other ) const noexcept
 		{
-			if ( _max._x < other._min._x || _min._x > other._max._x )
-				return false;
-			if ( _max._y < other._min._y || _min._y > other._max._y )
-				return false;
-			if ( _max._z < other._min._z || _min._z > other._max._z )
-				return false;
-			return true;
+			return _min._x <= other._max._x && other._min._x <= _max._x &&
+				   _min._y <= other._max._y && other._min._y <= _max._y &&
+				   _min._z <= other._max._z && other._min._z <= _max._z;
 		}
 
 		bool contains( const AABB3D& other ) const noexcept
 		{
-			return other._min._x >= _min._x && other._max._x <= _max._x &&
-				   other._min._y >= _min._y && other._max._y <= _max._y &&
-				   other._min._z >= _min._z && other._max._z <= _max._z;
+			return _min._x <= other._min._x && other._max._x <= _max._x &&
+				   _min._y <= other._min._y && other._max._y <= _max._y &&
+				   _min._z <= other._min._z && other._max._z <= _max._z;
 		}
 
 		float3 getCenter() const noexcept
 		{
-			return float3{ ( _min._x + _max._x ) * 0.5f, ( _min._y + _max._y ) * 0.5f, ( _min._z + _max._z ) * 0.5f };
+			return ( _min + _max ) * 0.5f;
 		}
 
 		float3 getExtents() const noexcept
 		{
-			return float3{ ( _max._x - _min._x ) * 0.5f, ( _max._y - _min._y ) * 0.5f, ( _max._z - _min._z ) * 0.5f };
+			return ( _max - _min ) * 0.5f;
 		}
 	};
 

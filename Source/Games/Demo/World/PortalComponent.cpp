@@ -53,10 +53,10 @@ namespace sw
 		SceneComponent* pPlayerSceneComp = pPlayerObj->getPrimarySceneComponent();
 		if ( pPlayerSceneComp != nullptr )
 		{
-			const float3  playerWorldPos  = pPlayerSceneComp->getWorldPosition();
-			const float32 deltaX		  = playerWorldPos._x - ownerWorldPos._x;
-			const float32 deltaY		  = playerWorldPos._y - ownerWorldPos._y;
-			const float32 distSq		  = deltaX * deltaX + deltaY * deltaY;
+			const float3  playerWorldPos = pPlayerSceneComp->getWorldPosition();
+			const float2  playerPos2D{ playerWorldPos._x, playerWorldPos._y };
+			const float2  ownerPos2D{ ownerWorldPos._x, ownerWorldPos._y };
+			const float32 distSq		  = float2::getDistanceSquared( playerPos2D, ownerPos2D );
 			const float32 triggerRadiusSq = _triggerRadius * _triggerRadius;
 
 			if ( _triggerRadius > 0.0f && distSq <= triggerRadiusSq )

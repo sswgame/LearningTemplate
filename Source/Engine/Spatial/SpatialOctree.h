@@ -21,10 +21,7 @@ namespace sw
 		/** @brief 구체 영역에 교차하는 요소를 검색합니다. */
 		void querySphere( const float3& center, float32 radius, vector<SpatialElement3D>& outListElement ) const
 		{
-			const AABB3D sphereBounds{
-				float3{center._x - radius, center._y - radius, center._z - radius},
-				float3{center._x + radius, center._y + radius, center._z + radius}
-			 };
+			const AABB3D sphereBounds{ center - float3{ radius }, center + float3{ radius } };
 
 			vector<SpatialElement3D> listCandidate;
 			queryRange( sphereBounds, listCandidate );
@@ -32,15 +29,13 @@ namespace sw
 			for ( const SpatialElement3D& candidate : listCandidate )
 			{
 				const float3  elemCenter = candidate._bounds.getCenter();
-				const float32 diffX		 = elemCenter._x - center._x;
-				const float32 diffY		 = elemCenter._y - center._y;
-				const float32 diffZ		 = elemCenter._z - center._z;
-				const float32 distSq	 = diffX * diffX + diffY * diffY + diffZ * diffZ;
+				const float32 distSq	 = float3::getDistanceSquared( elemCenter, center );
 
 				const float3  extents	= candidate._bounds.getExtents();
 				const float32 maxExtent = MathUtil::max( extents._x, MathUtil::max( extents._y, extents._z ) );
+				const float32 maxRadius = radius + maxExtent;
 
-				if ( distSq <= ( radius + maxExtent ) * ( radius + maxExtent ) )
+				if ( distSq <= maxRadius * maxRadius )
 					outListElement.push_back( candidate );
 			}
 		}

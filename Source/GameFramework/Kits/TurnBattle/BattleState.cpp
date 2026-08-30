@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/TurnBattle/BattleState.h"
 
+#include "Core/Math/MathUtil.h"
 #include "Core/String/formatString.h"
 
 #include "Engine/Audio/IAudioSystem.h"
@@ -150,9 +151,7 @@ namespace sw
 		const int32 dmg = ( pMove != nullptr && pMove->_power > 0 ) ? ( pMove->_power / 4 + attacker._level / 2 ) : 0;
 		if ( dmg > 0 )
 		{
-			defender._hp -= dmg;
-			if ( defender._hp < 0 )
-				defender._hp = 0;
+			defender._hp = MathUtil::max( defender._hp - dmg, 0 );
 			formatstring( _statusText.data(), _statusText.capacity(), GameStrings::get( "battle.used_move_dmg", "%# used %#! (%# dmg)" ),
 						  attacker._nickname.c_str(), pMove->_name.c_str(), dmg );
 		}

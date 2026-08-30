@@ -41,7 +41,7 @@ namespace sw
 			if ( s0._parameter <= parameter && parameter <= s1._parameter )
 			{
 				const float32 span = s1._parameter - s0._parameter;
-				const float32 t	   = span > 1e-5f ? ( ( parameter - s0._parameter ) / span ) : 0.0f;
+				const float32 t	   = span > MathUtil::Epsilon ? ( ( parameter - s0._parameter ) / span ) : 0.0f;
 
 				const DualQuaternion dq0 = DualQuaternion::fromMatrix( s0._pose );
 				const DualQuaternion dq1 = DualQuaternion::fromMatrix( s1._pose );
@@ -85,21 +85,20 @@ namespace sw
 		float32		 totalWeight = 0.0f;
 		float32		 arrWeight[32];
 		const size_t sampleCount = MathUtil::min( _listSample.size(), static_cast<size_t>( 32 ) );
+		const float2 targetParam{ paramX, paramY };
 
 		for ( size_t index = 0; index < sampleCount; ++index )
 		{
-			const float32 dx	 = paramX - _listSample[index]._parameter._x;
-			const float32 dy	 = paramY - _listSample[index]._parameter._y;
-			const float32 distSq = dx * dx + dy * dy;
+			const float32 distSq = float2::getDistanceSquared( targetParam, _listSample[index]._parameter );
 
-			if ( distSq < 1e-5f )
+			if ( distSq < MathUtil::Epsilon )
 				return _listSample[index]._pose;
 
 			arrWeight[index] = 1.0f / distSq;
 			totalWeight += arrWeight[index];
 		}
 
-		if ( totalWeight < 1e-6f )
+		if ( totalWeight < MathUtil::Epsilon )
 			return _listSample.front()._pose;
 
 		DualQuaternion accumDQ	   = DualQuaternion::fromMatrix( _listSample[0]._pose );

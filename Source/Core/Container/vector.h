@@ -7,6 +7,7 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/DataRaceDetector.h"
 #include "Core/Container/InlineAllocator.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 
 namespace sw
@@ -777,7 +778,7 @@ namespace sw
 		size_t offset = static_cast<size_t>( pos - _pData );
 		SW_ASSERT( offset <= _size );
 		if ( _size + count > _capacity )
-			reserveInternal( std::max( _capacity * 2, _size + count ) );
+			reserveInternal( MathUtil::max( _capacity * 2, _size + count ) );
 
 		if ( offset < _size )
 		{
@@ -792,7 +793,7 @@ namespace sw
 			{
 				_pData[itemIndex] = std::move( _pData[itemIndex - count] );
 			}
-			for ( size_t itemIndex = offset; itemIndex < std::min( _size, offset + count ); ++itemIndex )
+			for ( size_t itemIndex = offset; itemIndex < MathUtil::min( _size, offset + count ); ++itemIndex )
 			{
 				_pData[itemIndex] = value;
 			}

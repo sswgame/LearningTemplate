@@ -60,7 +60,7 @@ namespace sw::editor
 			{
 				const float4 clip{ ndcX, ndcY, ndcZ, 1.0f };
 				const float4 world = float4::transform( clip, invViewProj );
-				if ( MathUtil::abs( world._w ) < 1e-8f )
+				if ( MathUtil::abs( world._w ) < MathUtil::Epsilon )
 					return false;
 				outWorld = float3{ world._x / world._w, world._y / world._w, world._z / world._w };
 				return true;
@@ -192,12 +192,12 @@ namespace sw::editor
 			static bool projectPointToScreen( const float4x4& viewProj, const float3& worldPt, const float2& canvasPos,
 											  const float2& canvasSize, ImVec2& outScreenPt )
 			{
-				const float32 w = worldPt._x * viewProj._14 + worldPt._y * viewProj._24 + worldPt._z * viewProj._34 + viewProj._44;
-				if ( w <= 0.001f )
+				const float4 clip = float4::transform( float4{ worldPt, 1.0f }, viewProj );
+				if ( clip._w <= 0.001f )
 					return false;
-				const float32 invW = 1.0f / w;
-				const float32 x	   = ( worldPt._x * viewProj._11 + worldPt._y * viewProj._21 + worldPt._z * viewProj._31 + viewProj._41 ) * invW;
-				const float32 y	   = ( worldPt._x * viewProj._12 + worldPt._y * viewProj._22 + worldPt._z * viewProj._32 + viewProj._42 ) * invW;
+				const float32 invW = 1.0f / clip._w;
+				const float32 x	   = clip._x * invW;
+				const float32 y	   = clip._y * invW;
 
 				outScreenPt.x = canvasPos._x + ( x * 0.5f + 0.5f ) * canvasSize._x;
 				outScreenPt.y = canvasPos._y + ( 1.0f - ( y * 0.5f + 0.5f ) ) * canvasSize._y;
@@ -377,12 +377,9 @@ namespace sw::editor
 		const float32 pitchRad = MathUtil::toRadian( _cameraRot._x );
 		const float32 yawRad   = MathUtil::toRadian( _cameraRot._y );
 
-		const float32 forwardX = MathUtil::sin( yawRad ) * MathUtil::cos( pitchRad );
-		const float32 forwardY = -MathUtil::sin( pitchRad );
-		const float32 forwardZ = MathUtil::cos( yawRad ) * MathUtil::cos( pitchRad );
-
-		const float3   target  = float3{ _cameraPos._x + forwardX, _cameraPos._y + forwardY, _cameraPos._z + forwardZ };
-		const float4x4 viewMat = float4x4::createLookAt( _cameraPos, target, float3::Up );
+		const float3   forward{ MathUtil::sin( yawRad ) * MathUtil::cos( pitchRad ), -MathUtil::sin( pitchRad ),
+								MathUtil::cos( yawRad ) * MathUtil::cos( pitchRad ) };
+		const float4x4 viewMat = float4x4::createLookAt( _cameraPos, _cameraPos + forward, float3::Up );
 		EditorViewportClientInternal::storeColumnMajor( pOutMatrix, viewMat );
 	}
 
@@ -481,8 +478,7 @@ namespace sw::editor
 			const float32 yawRad   = MathUtil::toRadian( _cameraRot._y );
 			const float3  forward{ MathUtil::sin( yawRad ) * MathUtil::cos( pitchRad ), -MathUtil::sin( pitchRad ),
 								   MathUtil::cos( yawRad ) * MathUtil::cos( pitchRad ) };
-			const float3  target{ _cameraPos._x + forward._x, _cameraPos._y + forward._y, _cameraPos._z + forward._z };
-			pCam->lookAt( target );
+			pCam->lookAt( _cameraPos + forward );
 		}
 	}
 
@@ -506,21 +502,20 @@ namespace sw::editor
 
 		float3 moveDir{ 0.0f, 0.0f, 0.0f };
 		if ( ImGui::IsKeyDown( ImGuiKey_W ) )
-			moveDir = float3{ moveDir._x + forward._x, moveDir._y + forward._y, moveDir._z + forward._z };
+			moveDir += forward;
 		if ( ImGui::IsKeyDown( ImGuiKey_S ) )
-			moveDir = float3{ moveDir._x - forward._x, moveDir._y - forward._y, moveDir._z - forward._z };
+			moveDir -= forward;
 		if ( ImGui::IsKeyDown( ImGuiKey_D ) )
-			moveDir = float3{ moveDir._x + right._x, moveDir._y + right._y, moveDir._z + right._z };
+			moveDir += right;
 		if ( ImGui::IsKeyDown( ImGuiKey_A ) )
-			moveDir = float3{ moveDir._x - right._x, moveDir._y - right._y, moveDir._z - right._z };
+			moveDir -= right;
 		if ( ImGui::IsKeyDown( ImGuiKey_E ) )
-			moveDir = float3{ moveDir._x + up._x, moveDir._y + up._y, moveDir._z + up._z };
+			moveDir += up;
 		if ( ImGui::IsKeyDown( ImGuiKey_Q ) )
-			moveDir = float3{ moveDir._x - up._x, moveDir._y - up._y, moveDir._z - up._z };
+			moveDir -= up;
 
 		const float32 speed = _toolbarSettings._cameraSpeed * ( io.KeyShift ? 3.0f : 1.0f ) * deltaTime;
-		_cameraPos			= float3{ _cameraPos._x + moveDir._x * speed, _cameraPos._y + moveDir._y * speed,
-									  _cameraPos._z + moveDir._z * speed };
+		_cameraPos += moveDir * speed;
 	}
 
 	void EditorViewportClient::processOrbitInput()
@@ -537,18 +532,10 @@ namespace sw::editor
 
 		// Alt + RMB 또는 휠: Orbit Zoom
 		if ( io.MouseDown[1] )
-		{
-			_orbitDistance += ( io.MouseDelta.x - io.MouseDelta.y ) * 0.05f;
-			if ( _orbitDistance < 0.5f )
-				_orbitDistance = 0.5f;
-		}
+			_orbitDistance = MathUtil::max( _orbitDistance + ( io.MouseDelta.x - io.MouseDelta.y ) * 0.05f, 0.5f );
 
 		if ( MathUtil::abs( io.MouseWheel ) > 0.01f )
-		{
-			_orbitDistance -= io.MouseWheel * 1.0f;
-			if ( _orbitDistance < 0.5f )
-				_orbitDistance = 0.5f;
-		}
+			_orbitDistance = MathUtil::max( _orbitDistance - io.MouseWheel * 1.0f, 0.5f );
 
 		const float32 pitchRad = MathUtil::toRadian( _cameraRot._x );
 		const float32 yawRad   = MathUtil::toRadian( _cameraRot._y );
@@ -556,8 +543,7 @@ namespace sw::editor
 		const float3 forward = float3{ MathUtil::sin( yawRad ) * MathUtil::cos( pitchRad ), -MathUtil::sin( pitchRad ),
 									   MathUtil::cos( yawRad ) * MathUtil::cos( pitchRad ) };
 
-		_cameraPos = float3{ _orbitTarget._x - forward._x * _orbitDistance, _orbitTarget._y - forward._y * _orbitDistance,
-							 _orbitTarget._z - forward._z * _orbitDistance };
+		_cameraPos = _orbitTarget - forward * _orbitDistance;
 	}
 
 	void EditorViewportClient::drawViewportToolbar( float32 viewportWidth )
@@ -912,9 +898,7 @@ namespace sw::editor
 		const float3  forward{ MathUtil::sin( yawRad ) * MathUtil::cos( pitchRad ), -MathUtil::sin( pitchRad ),
 							   MathUtil::cos( yawRad ) * MathUtil::cos( pitchRad ) };
 
-		_cameraPos = float3{ _orbitTarget._x - forward._x * _orbitDistance,
-							 _orbitTarget._y - forward._y * _orbitDistance,
-							 _orbitTarget._z - forward._z * _orbitDistance };
+		_cameraPos = _orbitTarget - forward * _orbitDistance;
 	}
 
 	void EditorViewportClient::drawOrientationCube( ImDrawList* pDrawList, const float2& canvasPos,
@@ -995,8 +979,7 @@ namespace sw::editor
 
 			// Disc handle
 			const float32 handleRadius = ( ax._depth > 0.0f ) ? 6.5f : 4.5f;
-			const float32 distToMouse  = MathUtil::sqrt( ( mousePos.x - pt.x ) * ( mousePos.x - pt.x ) +
-														 ( mousePos.y - pt.y ) * ( mousePos.y - pt.y ) );
+			const float32 distToMouse  = float2::getDistance( float2{ mousePos.x, mousePos.y }, float2{ pt.x, pt.y } );
 			const bool	  bHovered	   = ( distToMouse <= handleRadius + 2.0f );
 
 			pDrawList->AddCircleFilled( pt, handleRadius, bHovered ? IM_COL32( 255, 255, 255, 255 ) : ax._col );
@@ -1014,9 +997,7 @@ namespace sw::editor
 				const float3  newForward{ MathUtil::sin( newYawRad ) * MathUtil::cos( newPitchRad ),
 										  -MathUtil::sin( newPitchRad ),
 										  MathUtil::cos( newYawRad ) * MathUtil::cos( newPitchRad ) };
-				_cameraPos = float3{ _orbitTarget._x - newForward._x * _orbitDistance,
-									 _orbitTarget._y - newForward._y * _orbitDistance,
-									 _orbitTarget._z - newForward._z * _orbitDistance };
+				_cameraPos = _orbitTarget - newForward * _orbitDistance;
 			}
 		}
 	}

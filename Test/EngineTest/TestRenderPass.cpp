@@ -351,8 +351,8 @@ SW_TEST_CASE( RenderPassTest, GpuSceneBuildBatchesAndSortTransparent )
 
 	const sw::vector<sw::GpuInstance>& instances = gpuScene.getInstances();
 	const sw::GpuMeshBatch&			   trBatch	 = gpuScene.getTransparentBatches()[0];
-	const float32					   z0		 = instances[trBatch._instanceBase]._boundsCenter[2];
-	const float32					   z1		 = instances[trBatch._instanceBase + 1]._boundsCenter[2];
+	const float32					   z0		 = instances[trBatch._instanceBase]._boundsCenter._z;
+	const float32					   z1		 = instances[trBatch._instanceBase + 1]._boundsCenter._z;
 	const float32					   d0		 = z0 * z0;
 	const float32					   d1		 = z1 * z1;
 	SW_EXPECT_TRUE( d0 >= d1 ); // far then near within merged batch

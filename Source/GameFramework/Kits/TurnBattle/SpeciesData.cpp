@@ -2,6 +2,8 @@
 
 #include "GameFramework/Kits/TurnBattle/SpeciesData.h"
 
+#include "Core/Math/MathUtil.h"
+
 #include "Engine/Utility/Xml/XmlDocument.h"
 
 namespace sw
@@ -84,10 +86,8 @@ namespace sw
 				def._baseAtk = entryNode.attrInt( "baseAtk", 1 );
 				def._move0	 = findMoveIndex( entryNode.attr( "move0" ) );
 				def._move1	 = findMoveIndex( entryNode.attr( "move1" ) );
-				if ( def._move0 < 0 )
-					def._move0 = 0;
-				if ( def._move1 < 0 )
-					def._move1 = 0;
+				def._move0	 = MathUtil::max( def._move0, 0 );
+				def._move1	 = MathUtil::max( def._move1, 0 );
 				_listSpecies.push_back( std::move( def ) );
 			}
 		}

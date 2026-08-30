@@ -236,9 +236,7 @@ namespace sw
 			} );
 			return;
 		}
-		if ( MathUtil::abs( _localPosition._x - pos._x ) <= 1e-6f &&
-			 MathUtil::abs( _localPosition._y - pos._y ) <= 1e-6f &&
-			 MathUtil::abs( _localPosition._z - pos._z ) <= 1e-6f )
+		if ( float3::getDistanceSquared( _localPosition, pos ) <= MathUtil::Epsilon )
 			return;
 		_localPosition = pos;
 		markTransformDirty();
@@ -264,9 +262,7 @@ namespace sw
 			} );
 			return;
 		}
-		if ( MathUtil::abs( _localRotation._x - rot._x ) <= 1e-6f &&
-			 MathUtil::abs( _localRotation._y - rot._y ) <= 1e-6f &&
-			 MathUtil::abs( _localRotation._z - rot._z ) <= 1e-6f )
+		if ( float3::getDistanceSquared( _localRotation, rot ) <= MathUtil::Epsilon )
 			return;
 		_localRotation = rot;
 		markTransformDirty();
@@ -292,9 +288,7 @@ namespace sw
 			} );
 			return;
 		}
-		if ( MathUtil::abs( _localScale._x - scale._x ) <= 1e-6f &&
-			 MathUtil::abs( _localScale._y - scale._y ) <= 1e-6f &&
-			 MathUtil::abs( _localScale._z - scale._z ) <= 1e-6f )
+		if ( float3::getDistanceSquared( _localScale, scale ) <= MathUtil::Epsilon )
 			return;
 		_localScale = scale;
 		markTransformDirty();

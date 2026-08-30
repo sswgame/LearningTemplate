@@ -324,10 +324,10 @@ namespace sw
 				// 하드웨어 에지는 항상 추적해 레이어를 다시 켜도 스티키 트리거가 나지 않게 합니다.
 				if ( down && state._bWasDown == 0 )
 				{
-					state._bPressed			= 1;
-					const float32 deltaX	= static_cast<float32>( mouseX - state._lastPressX );
-					const float32 deltaY	= static_cast<float32>( mouseY - state._lastPressY );
-					const float32 distSq	= deltaX * deltaX + deltaY * deltaY;
+					state._bPressed = 1;
+					const float2  currentPos{ static_cast<float32>( mouseX ), static_cast<float32>( mouseY ) };
+					const float2  lastPos{ static_cast<float32>( state._lastPressX ), static_cast<float32>( state._lastPressY ) };
+					const float32 distSq	= float2::getDistanceSquared( currentPos, lastPos );
 					const float32 maxDistSq = _doubleClickMaxDistance * _doubleClickMaxDistance;
 					if ( state._timeSinceLastPress <= _doubleClickTime && distSq <= maxDistSq )
 						state._bDoubleClicked = 1;
@@ -840,26 +840,22 @@ namespace sw
 						continue;
 				}
 
-				float32 sx = 0.0f;
-				float32 sy = 0.0f;
+				float2 stickVal{ 0.0f, 0.0f };
 				if ( binding._stick == GamepadStick::Left )
-					pPad->getLeftStick( sx, sy );
+					pPad->getLeftStick( stickVal._x, stickVal._y );
 				else
-					pPad->getRightStick( sx, sy );
+					pPad->getRightStick( stickVal._x, stickVal._y );
 
-				const float32 lengthSq = sx * sx + sy * sy;
-				if ( lengthSq > 1e-6f )
+				const float32 lengthSq = stickVal.getLengthSquared();
+				if ( lengthSq > MathUtil::Epsilon )
 				{
-					const float32 length = MathUtil::sqrt( lengthSq );
+					const float32 length = stickVal.getLength();
 					if ( binding._deadzone > 0.0f && length < binding._deadzone )
 						continue;
 
 					if ( length > 1.0f )
-					{
-						sx /= length;
-						sy /= length;
-					}
-					return float2{ sx, sy };
+						stickVal.normalize();
+					return stickVal;
 				}
 			}
 		}
@@ -877,33 +873,29 @@ namespace sw
 				return float2{ 0.0f, 0.0f };
 		}
 
-		float32 x = 0.0f;
-		float32 y = 0.0f;
+		float2 dir{ 0.0f, 0.0f };
 
 		if ( binding._right != Key::Unknown && _pInput->isKeyDown( binding._right ) )
-			x += 1.0f;
+			dir._x += 1.0f;
 		if ( binding._left != Key::Unknown && _pInput->isKeyDown( binding._left ) )
-			x -= 1.0f;
+			dir._x -= 1.0f;
 		if ( binding._up != Key::Unknown && _pInput->isKeyDown( binding._up ) )
-			y += 1.0f;
+			dir._y += 1.0f;
 		if ( binding._down != Key::Unknown && _pInput->isKeyDown( binding._down ) )
-			y -= 1.0f;
+			dir._y -= 1.0f;
 
-		const float32 lengthSq = x * x + y * y;
-		if ( lengthSq < 1e-6f )
+		const float32 lengthSq = dir.getLengthSquared();
+		if ( lengthSq <= MathUtil::Epsilon )
 			return float2{ 0.0f, 0.0f };
 
-		const float32 length = MathUtil::sqrt( lengthSq );
+		const float32 length = dir.getLength();
 		if ( binding._deadzone > 0.0f && length < binding._deadzone )
 			return float2{ 0.0f, 0.0f };
 
 		if ( length > 1.0f )
-		{
-			x /= length;
-			y /= length;
-		}
+			dir.normalize();
 
-		return float2{ x, y };
+		return dir;
 	}
 
 	float2 ActionMap::getVector2D( const hashed_string& action ) const

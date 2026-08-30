@@ -6,6 +6,7 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 
 namespace sw
@@ -23,8 +24,7 @@ namespace sw
 			// capacity must be power of 2
 			while ( capacity & ( capacity - 1 ) )
 				capacity &= capacity - 1;
-			if ( capacity < 8 )
-				capacity = 8;
+			capacity = MathUtil::max( capacity, static_cast<size_t>( 8 ) );
 
 			_capacityMask = capacity - 1;
 			_pBuffer	  = sw_new atomic<T>[capacity];

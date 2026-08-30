@@ -60,6 +60,6 @@ namespace sw
 
 	void WeaponUIComponent::setCoolTime( float32 ratio )
 	{
-		_coolTimeRatio = MathUtil::clamp( ratio, 0.0f, 1.0f );
+		_coolTimeRatio = MathUtil::saturate( ratio );
 	}
 } // namespace sw
