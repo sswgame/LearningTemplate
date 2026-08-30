@@ -114,14 +114,14 @@ namespace sw
 		return doc.dump( 2 );
 	}
 
-	void AnimationGraphAsset::collectNodeNames( vector<string>& outNameList ) const
+	void AnimationGraphAsset::collectNodeNames( vector<string>& outListName ) const
 	{
-		outNameList.clear();
-		outNameList.reserve( _listNode.size() );
+		outListName.clear();
+		outListName.reserve( _listNode.size() );
 		for ( const AnimationGraphNode& node : _listNode )
 		{
 			if ( node._name.empty() == false )
-				outNameList.push_back( node._name );
+				outListName.push_back( node._name );
 		}
 	}
 

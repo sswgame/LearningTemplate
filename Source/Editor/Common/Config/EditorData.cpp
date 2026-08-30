@@ -18,7 +18,7 @@ namespace sw::editor
 	{
 		struct EditorDataInternal
 		{
-			static void takeFontList( XmlNode root, const utf8* pListName, vector<string>& listOut )
+			static void takeFontList( XmlNode root, const utf8* pListName, vector<string>& outList )
 			{
 				XmlNode list = root.child( pListName );
 				if ( list.isValid() == false )
@@ -32,7 +32,7 @@ namespace sw::editor
 						listLoaded.push_back( pText );
 				}
 				if ( listLoaded.empty() == false )
-					listOut = std::move( listLoaded );
+					outList = std::move( listLoaded );
 			}
 
 			static void takeClearColor( XmlNode root, float32 outColor[4] )

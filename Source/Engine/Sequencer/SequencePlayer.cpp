@@ -118,9 +118,9 @@ namespace sw
 		return computeFrame( _playbackTime );
 	}
 
-	void SequencePlayer::collectActiveItems( vector<const SequenceTrackItem*>& outItemList ) const
+	void SequencePlayer::collectActiveItems( vector<const SequenceTrackItem*>& outListItem ) const
 	{
-		_asset.collectActiveItems( getCurrentFrame(), outItemList );
+		_asset.collectActiveItems( getCurrentFrame(), outListItem );
 	}
 
 	int32 SequencePlayer::computeFrame( float32 timeSeconds ) const

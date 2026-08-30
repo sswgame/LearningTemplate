@@ -150,7 +150,7 @@ namespace sw
 		static string_view argumentEnumToString( CommandLineArgument argument );
 
 		static constexpr auto								   kLineDelim = ";";
-		vector<ArgumentInfo>								   _argumentList;
+		vector<ArgumentInfo>								   _listArgument;
 		unordered_map<string, uint32, StringHash, StringEqual> _mapArgument;
 	};
 
@@ -166,7 +166,7 @@ namespace sw
 		}
 
 		const uint32		argumentIndex = iter->second;
-		const ArgumentInfo& argument	  = _argumentList[argumentIndex];
+		const ArgumentInfo& argument	  = _listArgument[argumentIndex];
 
 		const ArgumentInfo::Value* pTargetValue{ nullptr };
 		if ( argument._bParsed != 0 )
@@ -241,7 +241,7 @@ namespace sw
 	template <typename T>
 	void CommandLineManager::addArgument( const std::initializer_list<string_view>& synonymList, const bool bMustHaveValue, T defaultValue, const bool bUseDefaultValue )
 	{
-		const uint32 newArgumentIndex = static_cast<uint32>( _argumentList.size() );
+		const uint32 newArgumentIndex = static_cast<uint32>( _listArgument.size() );
 		for ( string_view synonym : synonymList )
 		{
 			const auto iter = _mapArgument.find( synonym );
@@ -257,6 +257,6 @@ namespace sw
 		argument._bMustHaveValue   = bMustHaveValue;
 		argument._bUseDefaultValue = bUseDefaultValue;
 		argument._defaultValue	   = std::move( defaultValue );
-		_argumentList.push_back( argument );
+		_listArgument.push_back( argument );
 	}
 } // namespace sw

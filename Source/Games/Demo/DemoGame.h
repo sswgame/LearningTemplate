@@ -127,7 +127,7 @@ namespace sw
 		TransitionOrchestrator _transitions;
 		RuntimeHud			   _hud;
 		OverworldCameraBias	   _cameraBias;
-		vector<PartyMember>	   _partyList;
+		vector<PartyMember>	   _listParty;
 		string				   _currentMapPath;
 		string				   _returnMapPath; ///< 전투 직전 오버월드 맵
 		string				   _returnScenePath;

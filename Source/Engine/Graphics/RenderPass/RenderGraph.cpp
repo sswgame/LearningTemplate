@@ -40,13 +40,13 @@ namespace sw
 	/**
 	 * @brief 모든 노드 및 실행 순서 초기화
 	 */
-	void RenderGraph::addPass( hashed_string passName, vector<hashed_string> listInputs, vector<hashed_string> listOutputs,
+	void RenderGraph::addPass( hashed_string passName, vector<hashed_string> listInput, vector<hashed_string> listOutput,
 							   RenderGraphPassExecuteFn execute )
 	{
 		RenderGraphNode node;
 		node._name		 = passName;
-		node._listInput	 = std::move( listInputs );
-		node._listOutput = std::move( listOutputs );
+		node._listInput	 = std::move( listInput );
+		node._listOutput = std::move( listOutput );
 		node._execute	 = std::move( execute );
 		node._bCulled	 = false;
 		_listNode.push_back( std::move( node ) );

@@ -188,14 +188,14 @@ namespace sw
 		uint32												 _boundMeshOffset;
 
 		vector<RHIBufferHandle> _listRegisteredBindlessVector;
-		vector<uint32>			_bindlessFreeList;
+		vector<uint32>			_listBindlessFree;
 
 		vector<RHITextureHandle> _listRegisteredTexture;
-		vector<uint32>			 _textureFreeList;
+		vector<uint32>			 _listTextureFree;
 
 		vector<Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView>> _listRegisteredUAV;
 		vector<RHIBufferHandle>									  _listUavSourceBuffer;
-		vector<uint32>											  _uavFreeList;
+		vector<uint32>											  _listUavFree;
 
 		Microsoft::WRL::ComPtr<ID3D11Buffer> _computeRootConstantCB;
 		uint32								 _arrComputeRootConstantShadow[kMaxComputeRootConstantDwords];

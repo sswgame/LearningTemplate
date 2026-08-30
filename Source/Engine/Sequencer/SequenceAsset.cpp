@@ -133,13 +133,13 @@ namespace sw
 		return doc.dump( 2 );
 	}
 
-	void SequenceAsset::collectActiveItems( int32 frame, vector<const SequenceTrackItem*>& outItemList ) const
+	void SequenceAsset::collectActiveItems( int32 frame, vector<const SequenceTrackItem*>& outListItem ) const
 	{
-		outItemList.clear();
+		outListItem.clear();
 		for ( const SequenceTrackItem& item : _listItem )
 		{
 			if ( item._start <= frame && frame <= item._end )
-				outItemList.push_back( &item );
+				outListItem.push_back( &item );
 		}
 	}
 } // namespace sw

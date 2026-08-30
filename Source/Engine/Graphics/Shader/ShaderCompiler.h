@@ -60,7 +60,7 @@ namespace sw
 	 */
 	struct ShaderCompileResult
 	{
-		vector<uint8> _listBytecode;		   ///< 컴파일된 이진 바이트코드 데이터
+		vector<uint8> _bytecode;			   ///< 컴파일된 이진 바이트코드 데이터
 		string		  _errorMessage;		   ///< 실패 시 오류 컴파일러 메세지
 		string		  _normalizedRelativePath; ///< 정규화된 자원 상대 경로
 		bool		  _bSuccess{ false };	   ///< 컴파일 성공 여부

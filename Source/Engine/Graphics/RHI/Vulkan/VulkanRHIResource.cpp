@@ -82,8 +82,8 @@ namespace sw
 
 		VkShaderModuleCreateInfo vsInfo{};
 		vsInfo.sType	= VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-		vsInfo.codeSize = vsResult._listBytecode.size();
-		vsInfo.pCode	= reinterpret_cast<const uint32*>( vsResult._listBytecode.data() );
+		vsInfo.codeSize = vsResult._bytecode.size();
+		vsInfo.pCode	= reinterpret_cast<const uint32*>( vsResult._bytecode.data() );
 		VkShaderModule vertShaderModule{ VK_NULL_HANDLE };
 		vkCreateShaderModule( _pDevice->_device, &vsInfo, nullptr, &vertShaderModule );
 
@@ -92,8 +92,8 @@ namespace sw
 		{
 			VkShaderModuleCreateInfo psInfo{};
 			psInfo.sType	= VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-			psInfo.codeSize = psResult._listBytecode.size();
-			psInfo.pCode	= reinterpret_cast<const uint32*>( psResult._listBytecode.data() );
+			psInfo.codeSize = psResult._bytecode.size();
+			psInfo.pCode	= reinterpret_cast<const uint32*>( psResult._bytecode.data() );
 			vkCreateShaderModule( _pDevice->_device, &psInfo, nullptr, &fragShaderModule );
 		}
 
@@ -249,8 +249,8 @@ namespace sw
 
 		VkShaderModuleCreateInfo csInfo{};
 		csInfo.sType	= VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-		csInfo.codeSize = csResult._listBytecode.size();
-		csInfo.pCode	= reinterpret_cast<const uint32*>( csResult._listBytecode.data() );
+		csInfo.codeSize = csResult._bytecode.size();
+		csInfo.pCode	= reinterpret_cast<const uint32*>( csResult._bytecode.data() );
 		VkShaderModule compShaderModule;
 		vkCreateShaderModule( _pDevice->_device, &csInfo, nullptr, &compShaderModule );
 
@@ -582,7 +582,7 @@ namespace sw
 				_pDevice->_listRegisteredDescriptorSet[bufferIndex] = VK_NULL_HANDLE;
 			}
 			_pDevice->_listBindlessSourceBuffer[bufferIndex] = 0;
-			_pDevice->_bindlessFreeList.push_back( static_cast<uint32>( bufferIndex ) );
+			_pDevice->_listBindlessFree.push_back( static_cast<uint32>( bufferIndex ) );
 		}
 		for ( size_t bufferIndex = 0; bufferIndex < _pDevice->_listUavSourceBuffer.size(); ++bufferIndex )
 		{
@@ -600,7 +600,7 @@ namespace sw
 				_pDevice->_listRegisteredUAV[bufferIndex] = VK_NULL_HANDLE;
 			}
 			_pDevice->_listUavSourceBuffer[bufferIndex] = 0;
-			_pDevice->_uavFreeList.push_back( static_cast<uint32>( bufferIndex ) );
+			_pDevice->_listUavFree.push_back( static_cast<uint32>( bufferIndex ) );
 		}
 
 		VkBuffer	   buf = owned._buffer;
@@ -743,7 +743,7 @@ namespace sw
 			{
 				_pDevice->writeBindlessTextureSlot( index, _pDevice->_bindlessDummyView );
 				_pDevice->_listRegisteredTexture[index] = VK_NULL_HANDLE;
-				_pDevice->_textureFreeList.push_back( index );
+				_pDevice->_listTextureFree.push_back( index );
 			}
 			else if ( index < _pDevice->_listRegisteredTexture.size() && _pDevice->_listRegisteredTexture[index] != VK_NULL_HANDLE )
 			{
@@ -755,7 +755,7 @@ namespace sw
 					vkFreeDescriptorSets( dev, pool, 1, &set );
 				} ) );
 				_pDevice->_listRegisteredTexture[index] = VK_NULL_HANDLE;
-				_pDevice->_textureFreeList.push_back( index );
+				_pDevice->_listTextureFree.push_back( index );
 			}
 			pSlot->_bindlessIndex = kInvalidDescriptorIndex;
 		}
@@ -797,10 +797,10 @@ namespace sw
 			return record._bindlessIndex;
 
 		RHIDescriptorIndex descriptorIndex;
-		if ( _pDevice->_textureFreeList.empty() == false )
+		if ( _pDevice->_listTextureFree.empty() == false )
 		{
-			descriptorIndex = _pDevice->_textureFreeList.back();
-			_pDevice->_textureFreeList.pop_back();
+			descriptorIndex = _pDevice->_listTextureFree.back();
+			_pDevice->_listTextureFree.pop_back();
 		}
 		else
 			descriptorIndex = static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredTexture.size() );
@@ -895,10 +895,10 @@ namespace sw
 		vkUpdateDescriptorSets( _pDevice->_device, 1, &descriptorWrite, 0, nullptr );
 
 		RHIDescriptorIndex descriptorIndex;
-		if ( _pDevice->_bindlessFreeList.empty() == false )
+		if ( _pDevice->_listBindlessFree.empty() == false )
 		{
-			descriptorIndex = _pDevice->_bindlessFreeList.back();
-			_pDevice->_bindlessFreeList.pop_back();
+			descriptorIndex = _pDevice->_listBindlessFree.back();
+			_pDevice->_listBindlessFree.pop_back();
 		}
 		else
 			descriptorIndex = static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredDescriptorSet.size() );
@@ -930,7 +930,7 @@ namespace sw
 			}
 			if ( index < _pDevice->_listBindlessSourceBuffer.size() )
 				_pDevice->_listBindlessSourceBuffer[index] = 0;
-			_pDevice->_bindlessFreeList.push_back( index );
+			_pDevice->_listBindlessFree.push_back( index );
 		}
 	}
 
@@ -970,10 +970,10 @@ namespace sw
 		vkUpdateDescriptorSets( _pDevice->_device, 1, &descriptorWrite, 0, nullptr );
 
 		RHIDescriptorIndex descriptorIndex;
-		if ( _pDevice->_uavFreeList.empty() == false )
+		if ( _pDevice->_listUavFree.empty() == false )
 		{
-			descriptorIndex = _pDevice->_uavFreeList.back();
-			_pDevice->_uavFreeList.pop_back();
+			descriptorIndex = _pDevice->_listUavFree.back();
+			_pDevice->_listUavFree.pop_back();
 		}
 		else
 			descriptorIndex = static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredUAV.size() );
@@ -1005,7 +1005,7 @@ namespace sw
 			}
 			if ( index < _pDevice->_listUavSourceBuffer.size() )
 				_pDevice->_listUavSourceBuffer[index] = 0;
-			_pDevice->_uavFreeList.push_back( index );
+			_pDevice->_listUavFree.push_back( index );
 		}
 	}
 } // namespace sw

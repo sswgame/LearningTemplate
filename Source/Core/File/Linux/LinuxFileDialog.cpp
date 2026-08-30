@@ -220,10 +220,10 @@ namespace sw
 					cmd += shellQuote( initial );
 				}
 
-				if ( params._filterExtensionList.empty() == false )
+				if ( params._listFilterExtension.empty() == false )
 				{
 					const string label = params._description.empty() ? "Files" : params._description;
-					const string globs = makeCombinedGlobList( params._filterExtensionList );
+					const string globs = makeCombinedGlobList( params._listFilterExtension );
 					cmd += " --file-filter=";
 					cmd += shellQuote( label + " | " + globs );
 					cmd += " --file-filter=";
@@ -264,10 +264,10 @@ namespace sw
 				cmd.push_back( ' ' );
 				cmd += shellQuote( startDir );
 
-				if ( params._filterExtensionList.empty() == false )
+				if ( params._listFilterExtension.empty() == false )
 				{
 					const string label = params._description.empty() ? "Files" : params._description;
-					const string globs = makeCombinedGlobList( params._filterExtensionList );
+					const string globs = makeCombinedGlobList( params._listFilterExtension );
 					// kdialog filter: "Description (*.ext *.ext2)"
 					cmd.push_back( ' ' );
 					cmd += shellQuote( label + " (" + globs + ")" );
@@ -310,10 +310,10 @@ namespace sw
 					cmd += shellQuote( initial );
 				}
 
-				if ( params._filterExtensionList.empty() == false )
+				if ( params._listFilterExtension.empty() == false )
 				{
 					const string label = params._description.empty() ? "Files" : params._description;
-					const string globs = makeCombinedGlobList( params._filterExtensionList );
+					const string globs = makeCombinedGlobList( params._listFilterExtension );
 					cmd += " --file-filter=";
 					cmd += shellQuote( label + " | " + globs );
 				}

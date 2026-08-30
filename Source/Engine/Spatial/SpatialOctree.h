@@ -13,13 +13,13 @@ namespace sw
 		using SpatialTree<OctreeTraits>::SpatialTree;
 
 		/** @brief 3D 점 좌표를 포함하는 요소를 검색합니다. */
-		void queryPoint( const float3& point, vector<SpatialElement3D>& listOutElements ) const
+		void queryPoint( const float3& point, vector<SpatialElement3D>& outListElement ) const
 		{
-			queryRange( AABB3D{ point, point }, listOutElements );
+			queryRange( AABB3D{ point, point }, outListElement );
 		}
 
 		/** @brief 구체 영역에 교차하는 요소를 검색합니다. */
-		void querySphere( const float3& center, float32 radius, vector<SpatialElement3D>& listOutElements ) const
+		void querySphere( const float3& center, float32 radius, vector<SpatialElement3D>& outListElement ) const
 		{
 			const AABB3D sphereBounds{
 				float3{center._x - radius, center._y - radius, center._z - radius},
@@ -41,7 +41,7 @@ namespace sw
 				const float32 maxExtent = MathUtil::max( extents._x, MathUtil::max( extents._y, extents._z ) );
 
 				if ( distSq <= ( radius + maxExtent ) * ( radius + maxExtent ) )
-					listOutElements.push_back( candidate );
+					outListElement.push_back( candidate );
 			}
 		}
 	};

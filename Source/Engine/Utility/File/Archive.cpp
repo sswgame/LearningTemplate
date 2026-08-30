@@ -51,9 +51,9 @@ namespace sw
 
 	Archive::~Archive() = default;
 
-	void Archive::writeData( vector<uint8>& listOutDestination ) const
+	void Archive::writeData( vector<uint8>& outListDestination ) const
 	{
-		listOutDestination.assign( _listBuffer.begin(), _listBuffer.end() );
+		outListDestination.assign( _listBuffer.begin(), _listBuffer.end() );
 	}
 
 	void Archive::setOffset( uint64 offset )

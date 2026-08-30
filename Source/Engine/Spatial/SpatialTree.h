@@ -177,19 +177,19 @@ namespace sw
 		static constexpr size_t kMaxElements = 16;
 		static constexpr size_t kMaxDepth	 = 8;
 
-		static void subdivide( const AABB2D& parent, AABB2D arrOutChildren[4] )
+		static void subdivide( const AABB2D& parent, AABB2D outArrChildren[4] )
 		{
 			const float32 midX = parent.getCenterX();
 			const float32 midY = parent.getCenterY();
 
 			// 0: Top-Left (NW)
-			arrOutChildren[0] = AABB2D{ parent._minX, midY, midX, parent._maxY };
+			outArrChildren[0] = AABB2D{ parent._minX, midY, midX, parent._maxY };
 			// 1: Top-Right (NE)
-			arrOutChildren[1] = AABB2D{ midX, midY, parent._maxX, parent._maxY };
+			outArrChildren[1] = AABB2D{ midX, midY, parent._maxX, parent._maxY };
 			// 2: Bottom-Left (SW)
-			arrOutChildren[2] = AABB2D{ parent._minX, parent._minY, midX, midY };
+			outArrChildren[2] = AABB2D{ parent._minX, parent._minY, midX, midY };
 			// 3: Bottom-Right (SE)
-			arrOutChildren[3] = AABB2D{ midX, parent._minY, parent._maxX, midY };
+			outArrChildren[3] = AABB2D{ midX, parent._minY, parent._maxX, midY };
 		}
 	};
 
@@ -206,7 +206,7 @@ namespace sw
 		static constexpr size_t kMaxElements = 16;
 		static constexpr size_t kMaxDepth	 = 6;
 
-		static void subdivide( const AABB3D& parent, AABB3D arrOutChildren[8] )
+		static void subdivide( const AABB3D& parent, AABB3D outArrChildren[8] )
 		{
 			const float3 mid = parent.getCenter();
 
@@ -221,7 +221,7 @@ namespace sw
 				const float32 minZ = ( ( octantIndex & 4 ) != 0 ) ? mid._z : parent._min._z;
 				const float32 maxZ = ( ( octantIndex & 4 ) != 0 ) ? parent._max._z : mid._z;
 
-				arrOutChildren[octantIndex] = AABB3D{
+				outArrChildren[octantIndex] = AABB3D{
 					float3{minX, minY, minZ},
 					float3{maxX, maxY, maxZ}
 				   };
@@ -337,10 +337,10 @@ namespace sw
 			return insert( id, newBounds, pSavedUserData );
 		}
 
-		void queryRange( const BoundsType& range, vector<ElementType>& listOutElements ) const
+		void queryRange( const BoundsType& range, vector<ElementType>& outListElement ) const
 		{
 			if ( _pRoot != nullptr )
-				_pRoot->query( range, listOutElements );
+				_pRoot->query( range, outListElement );
 		}
 
 		size_t			  getTotalElements() const { return _totalElements; }
@@ -481,7 +481,7 @@ namespace sw
 				return false;
 			}
 
-			void query( const BoundsType& range, vector<ElementType>& listOutElements ) const
+			void query( const BoundsType& range, vector<ElementType>& outListElement ) const
 			{
 				if ( _bounds.intersects( range ) == false )
 					return;
@@ -489,14 +489,14 @@ namespace sw
 				for ( const ElementType& element : _listElement )
 				{
 					if ( range.intersects( element._bounds ) )
-						listOutElements.push_back( element );
+						outListElement.push_back( element );
 				}
 
 				if ( _bIsDivided )
 				{
 					for ( size_t childIndex = 0; childIndex < Traits::kChildCount; ++childIndex )
 					{
-						_arrChildren[childIndex]->query( range, listOutElements );
+						_arrChildren[childIndex]->query( range, outListElement );
 					}
 				}
 			}

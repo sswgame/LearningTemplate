@@ -46,7 +46,7 @@ namespace sw
 		/** @brief JSON 본문을 만듭니다. */
 		string toJson() const;
 		/** @brief 노드 이름 목록을 채웁니다. */
-		void collectNodeNames( vector<string>& outNameList ) const;
+		void collectNodeNames( vector<string>& outListName ) const;
 		/** @brief id로 노드를 찾습니다. */
 		const AnimationGraphNode* findNode( int32 nodeId ) const;
 		/** @brief 이름으로 노드를 찾습니다. */

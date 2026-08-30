@@ -22,7 +22,7 @@ namespace sw
 		// 1) Diff — CDO 대비 변경분만, 와이어는 nameHash+size+payload
 		// ------------------------------------------------------------------------------
 		/** @brief CDO와 변경된 객체를 비교해 델타 바이너리를 추출합니다. */
-		static bool serializeDiff( vector<uint8>& listOutDiffBuffer, const void* pCdoInstance, const void* pModifiedInstance,
+		static bool serializeDiff( vector<uint8>& outListDiffBuffer, const void* pCdoInstance, const void* pModifiedInstance,
 								   const TypeInfo& typeInfo );
 
 		/**

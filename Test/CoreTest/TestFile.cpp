@@ -118,7 +118,7 @@ SW_TEST_CASE( Core_File, ArchiveObjectTLVSerialization )
 	info._name				 = sw::hashed_string( "DummyStruct" );
 	info._fullyQualifiedName = sw::hashed_string( "sw::DummyStruct" );
 	info._size				 = sizeof( DummyStruct );
-	info._propertyList		 = {
+	info._listProperty		 = {
 		{sw::hashed_string( "_valA" ), sw::hashed_string( "int32" ),
 		  SW_OFFSET_OF( DummyStruct, _valA ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr},
 		{sw::hashed_string( "_valB" ), sw::hashed_string( "int32" ),
@@ -137,7 +137,7 @@ SW_TEST_CASE( Core_File, ArchiveObjectTLVSerialization )
 	archRead.setReadModeAndResetPos( true );
 
 	sw::TypeInfo infoReordered = info;
-	std::swap( infoReordered._propertyList[0], infoReordered._propertyList[1] );
+	std::swap( infoReordered._listProperty[0], infoReordered._listProperty[1] );
 
 	DummyStruct dst;
 	dst._valA	= 0;

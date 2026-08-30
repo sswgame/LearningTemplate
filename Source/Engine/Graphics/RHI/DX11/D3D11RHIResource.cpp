@@ -84,12 +84,12 @@ namespace sw
 			ShaderCompileResult res = compileShader( vsDesc );
 			if ( res._bSuccess )
 			{
-				_pDevice->_device->CreateVertexShader( res._listBytecode.data(), res._listBytecode.size(), nullptr, pso._vs.GetAddressOf() );
+				_pDevice->_device->CreateVertexShader( res._bytecode.data(), res._bytecode.size(), nullptr, pso._vs.GetAddressOf() );
 				D3D11_INPUT_ELEMENT_DESC inputElementDescs[] = {
 					{"POSITION", 0,	 DXGI_FORMAT_R32G32B32_FLOAT, 0,	 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
 					{	  "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0}
 				  };
-				_pDevice->_device->CreateInputLayout( inputElementDescs, _countof( inputElementDescs ), res._listBytecode.data(), res._listBytecode.size(), pso._inputLayout.GetAddressOf() );
+				_pDevice->_device->CreateInputLayout( inputElementDescs, _countof( inputElementDescs ), res._bytecode.data(), res._bytecode.size(), pso._inputLayout.GetAddressOf() );
 			}
 		}
 		if ( desc._pixelShaderPath.empty() == false )
@@ -102,7 +102,7 @@ namespace sw
 			fillDefines( psDesc );
 			ShaderCompileResult res = compileShader( psDesc );
 			if ( res._bSuccess )
-				_pDevice->_device->CreatePixelShader( res._listBytecode.data(), res._listBytecode.size(), nullptr, pso._ps.GetAddressOf() );
+				_pDevice->_device->CreatePixelShader( res._bytecode.data(), res._bytecode.size(), nullptr, pso._ps.GetAddressOf() );
 		}
 		if ( desc._computeShaderPath.empty() == false )
 		{
@@ -114,7 +114,7 @@ namespace sw
 			fillDefines( csDesc );
 			ShaderCompileResult res = compileShader( csDesc );
 			if ( res._bSuccess )
-				_pDevice->_device->CreateComputeShader( res._listBytecode.data(), res._listBytecode.size(), nullptr, pso._cs.GetAddressOf() );
+				_pDevice->_device->CreateComputeShader( res._bytecode.data(), res._bytecode.size(), nullptr, pso._cs.GetAddressOf() );
 		}
 
 		D3D11_RASTERIZER_DESC rd{};
@@ -161,7 +161,7 @@ namespace sw
 			csDesc._stage			= ShaderStage::Compute;
 			csDesc._targetFormat	= ShaderTargetFormat::DXBC_D3D11;
 			ShaderCompileResult res = compileShader( csDesc );
-			if ( res._bSuccess == false || FAILED( _pDevice->_device->CreateComputeShader( res._listBytecode.data(), res._listBytecode.size(), nullptr, pso._cs.GetAddressOf() ) ) )
+			if ( res._bSuccess == false || FAILED( _pDevice->_device->CreateComputeShader( res._bytecode.data(), res._bytecode.size(), nullptr, pso._cs.GetAddressOf() ) ) )
 				return 0;
 		}
 		return _pDevice->_pipelineStates.insert( std::move( pso ) );
@@ -303,7 +303,7 @@ namespace sw
 			if ( _pDevice->_listRegisteredBindlessVector[bindlessIndex] != buffer )
 				continue;
 			_pDevice->_listRegisteredBindlessVector[bindlessIndex] = 0;
-			_pDevice->_bindlessFreeList.push_back( static_cast<uint32>( bindlessIndex ) );
+			_pDevice->_listBindlessFree.push_back( static_cast<uint32>( bindlessIndex ) );
 		}
 		for ( size_t bufferIndex = 0; bufferIndex < _pDevice->_listUavSourceBuffer.size(); ++bufferIndex )
 		{
@@ -311,7 +311,7 @@ namespace sw
 				continue;
 			_pDevice->_listRegisteredUAV[bufferIndex].Reset();
 			_pDevice->_listUavSourceBuffer[bufferIndex] = 0;
-			_pDevice->_uavFreeList.push_back( static_cast<uint32>( bufferIndex ) );
+			_pDevice->_listUavFree.push_back( static_cast<uint32>( bufferIndex ) );
 		}
 
 		auto releaseCb = [owned]()
@@ -420,7 +420,7 @@ namespace sw
 			if ( _pDevice->_listRegisteredTexture[textureIndex] != texture )
 				continue;
 			_pDevice->_listRegisteredTexture[textureIndex] = 0;
-			_pDevice->_textureFreeList.push_back( static_cast<uint32>( textureIndex ) );
+			_pDevice->_listTextureFree.push_back( static_cast<uint32>( textureIndex ) );
 		}
 
 		D3D11RHIDevice::TextureRecord owned;
@@ -442,10 +442,10 @@ namespace sw
 			return kInvalidDescriptorIndex;
 
 		RHIDescriptorIndex index;
-		if ( _pDevice->_textureFreeList.empty() == false )
+		if ( _pDevice->_listTextureFree.empty() == false )
 		{
-			index = _pDevice->_textureFreeList.back();
-			_pDevice->_textureFreeList.pop_back();
+			index = _pDevice->_listTextureFree.back();
+			_pDevice->_listTextureFree.pop_back();
 			_pDevice->_listRegisteredTexture[index] = texture;
 		}
 		else
@@ -465,10 +465,10 @@ namespace sw
 		if ( pRes == nullptr )
 			return kInvalidDescriptorIndex;
 		RHIDescriptorIndex index;
-		if ( _pDevice->_bindlessFreeList.empty() == false )
+		if ( _pDevice->_listBindlessFree.empty() == false )
 		{
-			index = _pDevice->_bindlessFreeList.back();
-			_pDevice->_bindlessFreeList.pop_back();
+			index = _pDevice->_listBindlessFree.back();
+			_pDevice->_listBindlessFree.pop_back();
 			_pDevice->_listRegisteredBindlessVector[index] = buffer;
 		}
 		else
@@ -484,7 +484,7 @@ namespace sw
 		if ( index < _pDevice->_listRegisteredBindlessVector.size() )
 		{
 			_pDevice->_listRegisteredBindlessVector[index] = 0;
-			_pDevice->_bindlessFreeList.push_back( index );
+			_pDevice->_listBindlessFree.push_back( index );
 		}
 	}
 
@@ -521,10 +521,10 @@ namespace sw
 			return kInvalidDescriptorIndex;
 
 		RHIDescriptorIndex index;
-		if ( _pDevice->_uavFreeList.empty() == false )
+		if ( _pDevice->_listUavFree.empty() == false )
 		{
-			index = _pDevice->_uavFreeList.back();
-			_pDevice->_uavFreeList.pop_back();
+			index = _pDevice->_listUavFree.back();
+			_pDevice->_listUavFree.pop_back();
 			_pDevice->_listRegisteredUAV[index]	  = uav;
 			_pDevice->_listUavSourceBuffer[index] = buffer;
 		}

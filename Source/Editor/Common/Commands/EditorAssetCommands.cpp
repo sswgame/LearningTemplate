@@ -544,7 +544,7 @@ namespace sw::editor
 		params._title				= "Save Scene";
 		params._description			= "Scene";
 		params._bEnableMultiselect	= false;
-		params._filterExtensionList = { ".scene.xml", ".xml" };
+		params._listFilterExtension = { ".scene.xml", ".xml" };
 		const string mapsDir		= ResourceUtil::joinActivePackPath( path::kMapsFolder );
 		if ( FileUtil::directoryExists( mapsDir ) )
 			params._initialDirectory = mapsDir;

@@ -536,7 +536,7 @@ namespace sw
 		hashed_string											  _fullyQualifiedName;
 		hashed_string											  _parentFQN;
 		hashed_string											  _moduleName;
-		vector<PropertyInfo>									  _propertyList;
+		vector<PropertyInfo>									  _listProperty;
 		vector<FunctionInfo>									  _listMethod;
 		TypeMetadata											  _metadata;
 		mutable vector<PropertyInfo>							  _propertyListWithBase;
@@ -635,10 +635,10 @@ namespace sw
 			if ( _bIsCacheBuilt != 0 )
 				return;
 
-			_mapNameToProperty.reserve( _propertyList.size() * 2 );
+			_mapNameToProperty.reserve( _listProperty.size() * 2 );
 			_mapNameToMethod.reserve( _listMethod.size() );
 
-			for ( const PropertyInfo& propertyInfo : _propertyList )
+			for ( const PropertyInfo& propertyInfo : _listProperty )
 			{
 				_mapNameToProperty[propertyInfo._name] = &propertyInfo;
 				for ( const hashed_string& alias : propertyInfo._listAlias )
@@ -659,9 +659,9 @@ namespace sw
 		/** @brief 이름 또는 alias로 프로퍼티를 찾습니다. */
 		const PropertyInfo* findProperty( const hashed_string& propertyNameOrAlias ) const
 		{
-			if ( _propertyList.size() <= constants::reflection::kLinearSearchThreshold )
+			if ( _listProperty.size() <= constants::reflection::kLinearSearchThreshold )
 			{
-				for ( const PropertyInfo& propertyInfo : _propertyList )
+				for ( const PropertyInfo& propertyInfo : _listProperty )
 				{
 					if ( propertyInfo.matchesName( propertyNameOrAlias ) )
 						return &propertyInfo;
@@ -701,7 +701,7 @@ namespace sw
 		{
 			if ( bIncludeBase == false )
 			{
-				for ( const PropertyInfo& propertyInfo : _propertyList )
+				for ( const PropertyInfo& propertyInfo : _listProperty )
 				{
 					func( propertyInfo );
 				}

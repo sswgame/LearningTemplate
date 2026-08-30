@@ -10,9 +10,9 @@
 namespace sw
 {
 
-	bool KeyValueFile::parse( string_view text, KeyValueMap& mapOut, KeyValueParseOptions opt )
+	bool KeyValueFile::parse( string_view text, KeyValueMap& outMap, KeyValueParseOptions opt )
 	{
-		mapOut.clear();
+		outMap.clear();
 		forEachContentLine(
 			text,
 			[&]( string_view line )
@@ -30,22 +30,22 @@ namespace sw
 			string_view val = StringUtil::trim( line.substr( eq + 1 ) );
 			if ( key.empty() )
 				return;
-			mapOut.emplace( string( key ), string( val ) );
+			outMap.emplace( string( key ), string( val ) );
 		},
 			opt._commentChar );
 
-		return mapOut.empty() == false;
+		return outMap.empty() == false;
 	}
 
-	bool KeyValueFile::loadFile( string_view absPath, KeyValueMap& mapOut, KeyValueParseOptions opt )
+	bool KeyValueFile::loadFile( string_view absPath, KeyValueMap& outMap, KeyValueParseOptions opt )
 	{
 		string text;
 		if ( FileUtil::readTextFile( absPath, text ) == false )
 			return false;
-		return parse( text, mapOut, opt );
+		return parse( text, outMap, opt );
 	}
 
-	bool KeyValueFile::loadResource( string_view relativePath, KeyValueMap& mapOut, KeyValueParseOptions opt,
+	bool KeyValueFile::loadResource( string_view relativePath, KeyValueMap& outMap, KeyValueParseOptions opt,
 									 string* pOutAbsPath )
 	{
 		string text;
@@ -54,10 +54,10 @@ namespace sw
 			return false;
 		if ( pOutAbsPath != nullptr )
 			*pOutAbsPath = std::move( absPath );
-		return parse( text, mapOut, opt );
+		return parse( text, outMap, opt );
 	}
 
-	bool KeyValueFile::loadPath( string_view path, KeyValueMap& mapOut, KeyValueParseOptions opt, string* pOutAbsPath )
+	bool KeyValueFile::loadPath( string_view path, KeyValueMap& outMap, KeyValueParseOptions opt, string* pOutAbsPath )
 	{
 		if ( path.empty() )
 			return false;
@@ -65,9 +65,9 @@ namespace sw
 		{
 			if ( pOutAbsPath != nullptr )
 				*pOutAbsPath = string{ path };
-			return loadFile( path, mapOut, opt );
+			return loadFile( path, outMap, opt );
 		}
-		return loadResource( path, mapOut, opt, pOutAbsPath );
+		return loadResource( path, outMap, opt, pOutAbsPath );
 	}
 
 	const utf8* KeyValueFile::get( const KeyValueMap& mapData, string_view key, const utf8* pFallback )

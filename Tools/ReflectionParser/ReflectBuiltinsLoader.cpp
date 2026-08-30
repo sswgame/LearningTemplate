@@ -45,7 +45,7 @@ namespace sw
 			}
 
 			/** @brief 주석/전처리기를 건너뛰고 매크로 줄을 수집합니다. */
-			static void collectMacroLines( const string_view text, vector<string>& outLineList )
+			static void collectMacroLines( const string_view text, vector<string>& outListLine )
 			{
 				const string_splitter lines( text, { "\r\n", "\n" } );
 				for ( const string_view rawLine : lines.getSplitList() )
@@ -53,7 +53,7 @@ namespace sw
 					const string line = StringUtil::trim( string( rawLine ).c_str() );
 					if ( line.empty() || line.front() == '#' || line.front() == '/' )
 						continue;
-					outLineList.push_back( line );
+					outListLine.push_back( line );
 				}
 			}
 

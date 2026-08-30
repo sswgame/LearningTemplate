@@ -127,7 +127,7 @@ namespace sw
 		}
 
 		const uint32  argumentIndex = iter->second;
-		ArgumentInfo& argument		= _argumentList[argumentIndex];
+		ArgumentInfo& argument		= _listArgument[argumentIndex];
 
 		// 필수 값 누락 검사
 		const bool bHasNoValue = ( argument._bMustHaveValue != 0 && bHasValue == false );

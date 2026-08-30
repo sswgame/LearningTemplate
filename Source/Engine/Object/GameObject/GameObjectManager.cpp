@@ -306,11 +306,11 @@ namespace sw
 	vector<GameObject*> GameObjectManager::getAllGameObjects() const
 	{
 		std::shared_lock<std::shared_mutex> lock{ _mutex };
-		vector<GameObject*>					listOut;
-		listOut.reserve( _listGameObject.size() + _listPendingAdd.size() );
-		listOut.insert( listOut.end(), _listGameObject.begin(), _listGameObject.end() );
-		listOut.insert( listOut.end(), _listPendingAdd.begin(), _listPendingAdd.end() );
-		return listOut;
+		vector<GameObject*>					listAllGameObject;
+		listAllGameObject.reserve( _listGameObject.size() + _listPendingAdd.size() );
+		listAllGameObject.insert( listAllGameObject.end(), _listGameObject.begin(), _listGameObject.end() );
+		listAllGameObject.insert( listAllGameObject.end(), _listPendingAdd.begin(), _listPendingAdd.end() );
+		return listAllGameObject;
 	}
 
 	GameObject* GameObjectManager::findGameObjectByTag( TagID tag ) const

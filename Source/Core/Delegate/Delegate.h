@@ -354,7 +354,7 @@ namespace sw
 	public:
 		/** @brief 빈 구독 리스트로 둡니다. */
 		MulticastDelegate() noexcept
-			: _delegateList{}
+			: _listDelegate{}
 			, _listPendingRemove{}
 			, _broadcastDepth{ 0 }
 		{
@@ -368,13 +368,13 @@ namespace sw
 		/** @brief 두 멀티캐스트 델리게이트가 동일한 대상 리스트를 가지고 있는지 비교합니다. */
 		bool operator==( const MulticastDelegate& other ) const
 		{
-			if ( _delegateList.size() != other._delegateList.size() )
+			if ( _listDelegate.size() != other._listDelegate.size() )
 				return false;
 
-			const uint32 delegateCount = static_cast<uint32>( _delegateList.size() );
+			const uint32 delegateCount = static_cast<uint32>( _listDelegate.size() );
 			for ( uint32 delegateIndex = 0; delegateIndex < delegateCount; ++delegateIndex )
 			{
-				if ( _delegateList[delegateIndex]._delegate != other._delegateList[delegateIndex]._delegate )
+				if ( _listDelegate[delegateIndex]._delegate != other._listDelegate[delegateIndex]._delegate )
 					return false;
 			}
 			return true;
@@ -384,7 +384,7 @@ namespace sw
 		bool operator!=( const MulticastDelegate& other ) const { return ( *this == other ) == false; }
 
 		/** @brief 하나라도 등록된 델리게이트가 있는지 확인합니다. */
-		bool isBound() const { return _delegateList.empty() == false; }
+		bool isBound() const { return _listDelegate.empty() == false; }
 
 		/**
 		 * @brief 등록된 모든 델리게이트에게 이벤트를 브로드캐스트(발송)합니다.
@@ -395,11 +395,11 @@ namespace sw
 		{
 			// 콜백이 다시 broadcast 를 부를 수 있으므로 깊이로 셉니다. 가장 바깥 호출만 지연 제거를 처리합니다.
 			++_broadcastDepth;
-			const size_t numDelegates = _delegateList.size();
+			const size_t numDelegates = _listDelegate.size();
 			for ( size_t entryIndex = 0; entryIndex < numDelegates; ++entryIndex )
 			{
 				// 콜백이 add() 를 부르면 벡터가 재할당되므로 원소 참조를 들고 호출하지 않습니다.
-				delegate_type callee = _delegateList[entryIndex]._delegate;
+				delegate_type callee = _listDelegate[entryIndex]._delegate;
 				if ( callee.isBound() )
 					callee( args... );
 			}
@@ -420,7 +420,7 @@ namespace sw
 		DelegateHandle add( const delegate_type& newDelegate )
 		{
 			DelegateHandle handle = DelegateHandle::allocate();
-			_delegateList.push_back( DelegateEntry{ handle, newDelegate } );
+			_listDelegate.push_back( DelegateEntry{ handle, newDelegate } );
 			return handle;
 		}
 
@@ -442,10 +442,10 @@ namespace sw
 		/** @brief 등록된 대상 델리게이트와 일치하는 항목을 찾아 삭제합니다. */
 		void remove( const delegate_type& target )
 		{
-			const auto iter = std::find_if( _delegateList.begin(), _delegateList.end(), [&]( const DelegateEntry& entry )
+			const auto iter = std::find_if( _listDelegate.begin(), _listDelegate.end(), [&]( const DelegateEntry& entry )
 			{ return entry._delegate == target; } );
 
-			if ( iter == _delegateList.end() )
+			if ( iter == _listDelegate.end() )
 				return;
 
 			// 핸들 경로와 같은 지연 제거를 타야 broadcast 중 이터레이터가 깨지지 않습니다.
@@ -457,13 +457,13 @@ namespace sw
 		{
 			if ( _broadcastDepth > 0 )
 			{
-				for ( const DelegateEntry& entry : _delegateList )
+				for ( const DelegateEntry& entry : _listDelegate )
 				{
 					_listPendingRemove.push_back( entry._handle );
 				}
 				return;
 			}
-			_delegateList.clear();
+			_listDelegate.clear();
 		}
 
 		/** @brief 등록된 모든 델리게이트를 해제합니다 (removeAll 별칭). */
@@ -473,13 +473,13 @@ namespace sw
 		/** @brief 핸들로 즉시 항목을 제거합니다. broadcast 외부에서만 호출하세요. */
 		void removeNow( const DelegateHandle& handle )
 		{
-			const auto iter = std::find_if( _delegateList.begin(), _delegateList.end(), [&]( const DelegateEntry& entry )
+			const auto iter = std::find_if( _listDelegate.begin(), _listDelegate.end(), [&]( const DelegateEntry& entry )
 			{ return entry._handle == handle; } );
-			if ( iter != _delegateList.end() )
-				_delegateList.erase( iter );
+			if ( iter != _listDelegate.end() )
+				_listDelegate.erase( iter );
 		}
 
-		vector<DelegateEntry>  _delegateList;
+		vector<DelegateEntry>  _listDelegate;
 		vector<DelegateHandle> _listPendingRemove; ///< broadcast 중 지연된 remove 목록
 		uint32				   _broadcastDepth;	   ///< 중첩 broadcast 깊이. 0 이 될 때만 지연 제거를 반영
 	};

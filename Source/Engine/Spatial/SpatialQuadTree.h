@@ -14,9 +14,9 @@ namespace sw
 		using SpatialTree<QuadTreeTraits>::SpatialTree;
 
 		/** @brief 2D 점 좌표를 포함하는 요소를 검색합니다. */
-		void queryPoint( float32 pointX, float32 pointY, vector<SpatialElement>& listOutElements ) const
+		void queryPoint( float32 pointX, float32 pointY, vector<SpatialElement>& outListElement ) const
 		{
-			queryRange( AABB2D{ pointX, pointY, pointX, pointY }, listOutElements );
+			queryRange( AABB2D{ pointX, pointY, pointX, pointY }, outListElement );
 		}
 	};
 } // namespace sw

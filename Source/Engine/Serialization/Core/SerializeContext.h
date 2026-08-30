@@ -16,7 +16,7 @@ namespace sw
 	class SW_API SerializeContext
 	{
 	public:
-		using BinaryWriteFn = Delegate<void( const void* pValPtr, vector<uint8>& listOutBuf )>;
+		using BinaryWriteFn = Delegate<void( const void* pValPtr, vector<uint8>& outListBuffer )>;
 		using BinaryReadFn	= Delegate<bool( void* pValPtr, const uint8* pData, size_t size, size_t& offset )>;
 
 		using TextWriteFn = Delegate<string( const void* pValPtr )>;

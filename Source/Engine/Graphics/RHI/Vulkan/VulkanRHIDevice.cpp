@@ -179,7 +179,7 @@ namespace sw
 		, _pipeline{ nullptr }
 		, _offscreenPipeline{ nullptr }
 		, _vertexBuffer{ nullptr }
-		, _bindlessFreeList{}
+		, _listBindlessFree{}
 		, _gpuBuffers{}
 		, _mapCbSlotSize{}
 		, _boundMeshVb{ 0 }
@@ -192,14 +192,14 @@ namespace sw
 		, _listBindlessSourceBuffer{}
 		, _listRegisteredUAV{}
 		, _listUavSourceBuffer{}
-		, _uavFreeList{}
+		, _listUavFree{}
 		, _gpuTextures{}
 		, _releaseQueue{ 3 }
 		, _mapCompositeFramebuffer{}
 		, _mapPipelineRenderPass{}
 		, _textureDescriptorSetLayout{ nullptr }
 		, _listRegisteredTexture{}
-		, _textureFreeList{}
+		, _listTextureFree{}
 		, _bindlessTextureArrayLayout{ nullptr }
 		, _bindlessTextureSet{ nullptr }
 		, _bindlessDummyImage{ nullptr }
@@ -453,7 +453,7 @@ namespace sw
 			}
 			_mapPipelineRenderPass.clear();
 			_listRegisteredTexture.clear();
-			_textureFreeList.clear();
+			_listTextureFree.clear();
 
 			_bindlessTextureSet = VK_NULL_HANDLE; // owned by descriptor pool
 			if ( _bindlessTextureArrayLayout )

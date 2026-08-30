@@ -18,10 +18,10 @@ namespace sw
 	struct SW_API ReflectAny
 	{
 		hashed_string _typeFqn;
-		vector<uint8> _listBytes;
+		vector<uint8> _bytes;
 
 		/** @brief 비어 있는지 반환합니다. */
-		bool empty() const { return _typeFqn.empty() || _listBytes.empty(); }
+		bool empty() const { return _typeFqn.empty() || _bytes.empty(); }
 
 		/** @brief TypeInfo와 값 포인터로 ReflectAny를 만듭니다. */
 		static ReflectAny makeFrom( const TypeInfo& info, const void* pValue );

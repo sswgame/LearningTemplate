@@ -9,8 +9,8 @@ namespace sw
 	SW_LOG_CALLER( "SpeciesCatalog" );
 
 	SpeciesCatalog::SpeciesCatalog()
-		: _moveList{}
-		, _speciesList{}
+		: _listMove{}
+		, _listSpecies{}
 	{
 	}
 
@@ -21,12 +21,12 @@ namespace sw
 
 	void SpeciesCatalog::seedFallback()
 	{
-		_moveList.clear();
-		_speciesList.clear();
-		_moveList.push_back( { "tackle", "Tackle", 40, 35 } );
-		_moveList.push_back( { "growl", "Growl", 0, 40 } );
-		_speciesList.push_back( { "critter_a", "Wild Critter", 40, 10, 0, 1 } );
-		_speciesList.push_back( { "starter_a", "Leaf Pup", 45, 11, 0, 1 } );
+		_listMove.clear();
+		_listSpecies.clear();
+		_listMove.push_back( { "tackle", "Tackle", 40, 35 } );
+		_listMove.push_back( { "growl", "Growl", 0, 40 } );
+		_listSpecies.push_back( { "critter_a", "Wild Critter", 40, 10, 0, 1 } );
+		_listSpecies.push_back( { "starter_a", "Leaf Pup", 45, 11, 0, 1 } );
 	}
 
 	bool SpeciesCatalog::loadFromResource( string_view assetRelativePath )
@@ -64,7 +64,7 @@ namespace sw
 				def._name  = pName != nullptr ? pName : pId;
 				def._power = moveNode.attrInt( "power", 0 );
 				def._ppMax = moveNode.attrInt( "ppMax", 0 );
-				_moveList.push_back( std::move( def ) );
+				_listMove.push_back( std::move( def ) );
 			}
 		}
 
@@ -88,11 +88,11 @@ namespace sw
 					def._move0 = 0;
 				if ( def._move1 < 0 )
 					def._move1 = 0;
-				_speciesList.push_back( std::move( def ) );
+				_listSpecies.push_back( std::move( def ) );
 			}
 		}
 
-		if ( _moveList.empty() || _speciesList.empty() )
+		if ( _listMove.empty() || _listSpecies.empty() )
 		{
 			SW_LOG_ERROR( "Empty table in %# — using fallback.", absPath );
 			seedFallback();
@@ -100,40 +100,40 @@ namespace sw
 		}
 
 		SW_LOG_INFO( "Loaded %# moves, %# species from %#",
-					 static_cast<uint32>( _moveList.size() ), static_cast<uint32>( _speciesList.size() ), absPath );
+					 static_cast<uint32>( _listMove.size() ), static_cast<uint32>( _listSpecies.size() ), absPath );
 		return true;
 	}
 
 	const SpeciesDef* SpeciesCatalog::findSpecies( const utf8* pId ) const
 	{
-		if ( _speciesList.empty() )
+		if ( _listSpecies.empty() )
 			const_cast<SpeciesCatalog*>( this )->seedFallback();
 		if ( pId == nullptr )
-			return &_speciesList[0];
-		for ( const SpeciesDef& speciesDef : _speciesList )
+			return &_listSpecies[0];
+		for ( const SpeciesDef& speciesDef : _listSpecies )
 		{
 			if ( speciesDef._id == pId )
 				return &speciesDef;
 		}
-		return &_speciesList[0];
+		return &_listSpecies[0];
 	}
 
 	const MoveDef* SpeciesCatalog::findMove( int32 index ) const
 	{
-		if ( _moveList.empty() )
+		if ( _listMove.empty() )
 			const_cast<SpeciesCatalog*>( this )->seedFallback();
-		if ( index < 0 || index >= static_cast<int32>( _moveList.size() ) )
-			return &_moveList[0];
-		return &_moveList[static_cast<size_t>( index )];
+		if ( index < 0 || index >= static_cast<int32>( _listMove.size() ) )
+			return &_listMove[0];
+		return &_listMove[static_cast<size_t>( index )];
 	}
 
 	int32 SpeciesCatalog::findMoveIndex( const utf8* pId ) const
 	{
 		if ( pId == nullptr )
 			return -1;
-		for ( size_t moveIndex = 0; moveIndex < _moveList.size(); ++moveIndex )
+		for ( size_t moveIndex = 0; moveIndex < _listMove.size(); ++moveIndex )
 		{
-			if ( _moveList[moveIndex]._id == pId )
+			if ( _listMove[moveIndex]._id == pId )
 				return static_cast<int32>( moveIndex );
 		}
 		return -1;
@@ -162,7 +162,7 @@ namespace sw
 
 	void SpeciesCatalog::clear()
 	{
-		_moveList.clear();
-		_speciesList.clear();
+		_listMove.clear();
+		_listSpecies.clear();
 	}
 } // namespace sw

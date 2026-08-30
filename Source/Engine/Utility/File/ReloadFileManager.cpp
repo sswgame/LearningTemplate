@@ -18,16 +18,16 @@ namespace sw
 	{
 		struct ReloadFileManagerInternal
 		{
-			static void considerFileVal( unordered_map<string, uint64>& mapPollMtimes, vector<FileChangeEvent>& listOutEvents, const vector<string>& listExtensions, const string& filePath )
+			static void considerFileVal( unordered_map<string, uint64>& mapPollMtime, vector<FileChangeEvent>& outListEvent, const vector<string>& listExtension, const string& filePath )
 			{
 				if ( FileUtil::fileExists( filePath ) == false )
 					return;
 
 				const string filename		  = FileUtil::getFileNamePart( filePath );
-				bool		 extensionAllowed = listExtensions.empty();
+				bool		 extensionAllowed = listExtension.empty();
 				if ( extensionAllowed == false )
 				{
-					for ( const string& allowed : listExtensions )
+					for ( const string& allowed : listExtension )
 					{
 						if ( FileUtil::hasExtension( filename, allowed ) )
 						{
@@ -44,10 +44,10 @@ namespace sw
 					return;
 
 				const string								  normalized = FileUtil::normalizePath( filePath );
-				const unordered_map<string, uint64>::iterator it		 = mapPollMtimes.find( normalized );
-				if ( it == mapPollMtimes.end() )
+				const unordered_map<string, uint64>::iterator it		 = mapPollMtime.find( normalized );
+				if ( it == mapPollMtime.end() )
 				{
-					mapPollMtimes.emplace( normalized, mtime );
+					mapPollMtime.emplace( normalized, mtime );
 					return;
 				}
 
@@ -58,7 +58,7 @@ namespace sw
 					ev._action	  = FileWatcherAction::Modified;
 					ev._directory = FileUtil::normalizePath( FileUtil::getDirectoryPart( filePath ) );
 					ev._filename  = filename;
-					listOutEvents.push_back( std::move( ev ) );
+					outListEvent.push_back( std::move( ev ) );
 				}
 			}
 		};
@@ -217,7 +217,7 @@ namespace sw
 		}
 	}
 
-	void ReloadFileManager::pollMtimeFallback( vector<FileChangeEvent>& listOutEvents )
+	void ReloadFileManager::pollMtimeFallback( vector<FileChangeEvent>& outListEvent )
 	{
 		for ( const WatchEntry& entry : _listWatch )
 		{
@@ -226,13 +226,13 @@ namespace sw
 				continue;
 
 			if ( FileUtil::fileExists( entry._pathPrefix ) )
-				ReloadFileManagerInternal::considerFileVal( _mapPollMtime, listOutEvents, entry._listExtension, entry._pathPrefix );
+				ReloadFileManagerInternal::considerFileVal( _mapPollMtime, outListEvent, entry._listExtension, entry._pathPrefix );
 			else
 			{
 				vector<string> listFiles;
 				FileUtil::collectFiles( entry._pathPrefix, {}, listFiles, true, false );
 				for ( const string& filePath : listFiles )
-					ReloadFileManagerInternal::considerFileVal( _mapPollMtime, listOutEvents, entry._listExtension, filePath );
+					ReloadFileManagerInternal::considerFileVal( _mapPollMtime, outListEvent, entry._listExtension, filePath );
 			}
 		}
 	}

@@ -131,11 +131,11 @@ namespace sw
 		/**
 		 * @brief 렌더 그래프에 새 렌더 패스 노드 추가
 		 * @param passName 렌더 패스 이름 (hashed_string)
-		 * @param listInputs 패스가 읽을 입력 자원 리스트
-		 * @param listOutputs 패스가 기록할 출력 자원 리스트
+		 * @param listInput 패스가 읽을 입력 자원 리스트
+		 * @param listOutput 패스가 기록할 출력 자원 리스트
 		 * @param execute 위상 정렬 실행 시 호출할 콜백 (미바인딩이면 스킵)
 		 */
-		void addPass( hashed_string passName, vector<hashed_string> listInputs = {}, vector<hashed_string> listOutputs = {},
+		void addPass( hashed_string passName, vector<hashed_string> listInput = {}, vector<hashed_string> listOutput = {},
 					  RenderGraphPassExecuteFn execute = {} );
 
 		/**

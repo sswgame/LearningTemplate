@@ -30,7 +30,7 @@ namespace sw
 				return typeHash;
 			}
 
-			static bool packOneArg( vector<uint8>& listOut, string_view typeName, const TaskValue& value,
+			static bool packOneArg( vector<uint8>& outBytes, string_view typeName, const TaskValue& value,
 									const SerializeContext& serializeContext )
 			{
 				const hashed_string typeHash( typeName.data(), static_cast<uint32>( typeName.size() ) );
@@ -85,9 +85,9 @@ namespace sw
 				const uint32 size		  = static_cast<uint32>( listPayload.size() );
 				const uint8* pTh		  = reinterpret_cast<const uint8*>( &typeNameHash );
 				const uint8* pSz		  = reinterpret_cast<const uint8*>( &size );
-				listOut.insert( listOut.end(), pTh, pTh + sizeof( uint32 ) );
-				listOut.insert( listOut.end(), pSz, pSz + sizeof( uint32 ) );
-				listOut.insert( listOut.end(), listPayload.begin(), listPayload.end() );
+				outBytes.insert( outBytes.end(), pTh, pTh + sizeof( uint32 ) );
+				outBytes.insert( outBytes.end(), pSz, pSz + sizeof( uint32 ) );
+				outBytes.insert( outBytes.end(), listPayload.begin(), listPayload.end() );
 				return true;
 			}
 
@@ -181,12 +181,12 @@ namespace sw
 		const uint32			count			 = args.getCount();
 		const uint8*			pCountBytes		 = reinterpret_cast<const uint8*>( &count );
 
-		out._listArgumentBytes.reserve( sizeof( uint32 ) + count * 32 );
-		out._listArgumentBytes.insert( out._listArgumentBytes.end(), pCountBytes, pCountBytes + sizeof( uint32 ) );
+		out._argumentBytes.reserve( sizeof( uint32 ) + count * 32 );
+		out._argumentBytes.insert( out._argumentBytes.end(), pCountBytes, pCountBytes + sizeof( uint32 ) );
 
 		for ( uint32 argIndex = 0; argIndex < count; ++argIndex )
 		{
-			if ( ReflectionRpcInternal::packOneArg( out._listArgumentBytes, pFunc->_listParameterTypeName[argIndex], args.get( argIndex ), serializeContext ) == false )
+			if ( ReflectionRpcInternal::packOneArg( out._argumentBytes, pFunc->_listParameterTypeName[argIndex], args.get( argIndex ), serializeContext ) == false )
 				return false;
 		}
 		return true;
@@ -209,18 +209,18 @@ namespace sw
 		TaskArgs				unpacked;
 		const SerializeContext& serializeContext = SerializeContext::getDefault();
 		size_t					offset{ 0 };
-		if ( envelope._listArgumentBytes.size() < sizeof( uint32 ) )
+		if ( envelope._argumentBytes.size() < sizeof( uint32 ) )
 			return {};
 		uint32 count{ 0 };
-		Memory::copy( &count, envelope._listArgumentBytes.data(), sizeof( uint32 ) );
+		Memory::copy( &count, envelope._argumentBytes.data(), sizeof( uint32 ) );
 		offset += sizeof( uint32 );
 		if ( count != static_cast<uint32>( pFunc->_listParameterTypeName.size() ) )
 			return {};
 
 		for ( uint32 argIndex = 0; argIndex < count; ++argIndex )
 		{
-			if ( ReflectionRpcInternal::unpackOneArg( unpacked, pFunc->_listParameterTypeName[argIndex], envelope._listArgumentBytes.data(),
-													  envelope._listArgumentBytes.size(), offset, serializeContext ) == false )
+			if ( ReflectionRpcInternal::unpackOneArg( unpacked, pFunc->_listParameterTypeName[argIndex], envelope._argumentBytes.data(),
+													  envelope._argumentBytes.size(), offset, serializeContext ) == false )
 				return {};
 		}
 

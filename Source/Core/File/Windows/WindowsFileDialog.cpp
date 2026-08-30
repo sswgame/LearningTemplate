@@ -41,16 +41,16 @@ namespace sw
 		filter.append( desc );
 		filter.push_back( 0 );
 
-		if ( params._filterExtensionList.empty() )
+		if ( params._listFilterExtension.empty() )
 		{
 			filter.append( "*.*" );
 			filter.push_back( 0 );
 		}
 		else
 		{
-			for ( size_t filterIndex = 0; filterIndex < params._filterExtensionList.size(); ++filterIndex )
+			for ( size_t filterIndex = 0; filterIndex < params._listFilterExtension.size(); ++filterIndex )
 			{
-				const string_view filterExtension = params._filterExtensionList[filterIndex];
+				const string_view filterExtension = params._listFilterExtension[filterIndex];
 				if ( filterIndex > 0 )
 					filter.push_back( ';' );
 				filter.push_back( '*' );

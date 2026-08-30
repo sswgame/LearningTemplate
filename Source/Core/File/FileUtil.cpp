@@ -82,13 +82,13 @@ namespace sw
 		return string{ v.substr( 0, found ) };
 	}
 
-	void FileUtil::getExtensionPart( string_view fileName, vector<string>& outPartList )
+	void FileUtil::getExtensionPart( string_view fileName, vector<string>& outListPart )
 	{
 		const string_splitter splitter{ fileName, { "." } };
-		outPartList.reserve( splitter.getCount() );
+		outListPart.reserve( splitter.getCount() );
 		for ( string_view part : splitter.getSplitList() )
 		{
-			outPartList.push_back( string{ part } );
+			outListPart.push_back( string{ part } );
 		}
 	}
 
@@ -644,7 +644,7 @@ namespace sw
 			.detach();
 	}
 
-	bool FileUtil::collectFiles( string_view directory, string_view filterExtension, vector<string>& outFilePathList, const bool bRecursive, const bool bNormalizePath )
+	bool FileUtil::collectFiles( string_view directory, string_view filterExtension, vector<string>& outListFilePath, const bool bRecursive, const bool bNormalizePath )
 	{
 		if ( directoryExists( directory ) == false )
 			return false;
@@ -664,7 +664,7 @@ namespace sw
 				if ( bHasFilter && hasExtension( genericView, filterExtension ) == false )
 					continue;
 
-				outFilePathList.push_back( bNormalizePath ? normalizePath( genericView ) : string( genericView ) );
+				outListFilePath.push_back( bNormalizePath ? normalizePath( genericView ) : string( genericView ) );
 			}
 		}
 		else
@@ -679,14 +679,14 @@ namespace sw
 				if ( bHasFilter && hasExtension( genericView, filterExtension ) == false )
 					continue;
 
-				outFilePathList.push_back( bNormalizePath ? normalizePath( genericView ) : string( genericView ) );
+				outListFilePath.push_back( bNormalizePath ? normalizePath( genericView ) : string( genericView ) );
 			}
 		}
 
 		return true;
 	}
 
-	bool FileUtil::collectFolders( string_view directory, vector<string>& outFolderList, const bool bRecursive, const bool bNormalizePath )
+	bool FileUtil::collectFolders( string_view directory, vector<string>& outListFolder, const bool bRecursive, const bool bNormalizePath )
 	{
 		if ( directoryExists( directory ) == false )
 			return false;
@@ -702,7 +702,7 @@ namespace sw
 
 				const string genericStd = entry.path().generic_string().c_str();
 				string_view	 genericView{ genericStd };
-				outFolderList.push_back( bNormalizePath ? normalizePath( genericView ) : string( genericView ) );
+				outListFolder.push_back( bNormalizePath ? normalizePath( genericView ) : string( genericView ) );
 			}
 		}
 		else
@@ -714,7 +714,7 @@ namespace sw
 
 				const string genericStd = entry.path().generic_string().c_str();
 				string_view	 genericView{ genericStd };
-				outFolderList.push_back( bNormalizePath ? normalizePath( genericView ) : string( genericView ) );
+				outListFolder.push_back( bNormalizePath ? normalizePath( genericView ) : string( genericView ) );
 			}
 		}
 

@@ -181,7 +181,7 @@ namespace sw::editor
 				params._title				= "Load Component Preset";
 				params._description			= "Component Preset";
 				params._bEnableMultiselect	= false;
-				params._filterExtensionList = { ".preset.xml", ".xml" };
+				params._listFilterExtension = { ".preset.xml", ".xml" };
 				params._initialDirectory	= EditorGlobalVariableCommands::getComponentPresetFolderPath();
 				FileUtil::openFileDialog( params, SW_DELEGATE_FUNCTION( FileDialogDelegate, onLoadPresetDialogResult ) );
 			}
@@ -198,7 +198,7 @@ namespace sw::editor
 				params._title				= "Save Component Preset";
 				params._description			= "Component Preset";
 				params._bEnableMultiselect	= false;
-				params._filterExtensionList = { ".preset.xml" };
+				params._listFilterExtension = { ".preset.xml" };
 				params._initialDirectory	= EditorGlobalVariableCommands::getComponentPresetFolderPath();
 				FileUtil::openFileDialog( params, SW_DELEGATE_FUNCTION( FileDialogDelegate, onSavePresetDialogResult ) );
 			}

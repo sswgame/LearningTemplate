@@ -54,9 +54,9 @@ SW_TEST_CASE( ShaderCompilerTest, BasicCompileAndReflection )
 	}
 
 	SW_EXPECT_TRUE( cacheResult._bSuccess );
-	SW_EXPECT_FALSE( cacheResult._listBytecode.empty() );
+	SW_EXPECT_FALSE( cacheResult._bytecode.empty() );
 
-	sw::ShaderReflectionData reflectionData = sw::ShaderReflection::reflect( cacheResult._listBytecode, desc._targetFormat );
+	sw::ShaderReflectionData reflectionData = sw::ShaderReflection::reflect( cacheResult._bytecode, desc._targetFormat );
 	SW_EXPECT_TRUE( reflectionData._listConstantBuffer.empty() == false || reflectionData._listResource.empty() == false || true );
 }
 
@@ -92,7 +92,7 @@ SW_TEST_CASE( ShaderCompilerTest, MultiTargetCrossCompilation )
 
 		attemptedAny = true;
 		SW_EXPECT_TRUE( vsResult._bSuccess );
-		SW_EXPECT_FALSE( vsResult._listBytecode.empty() );
+		SW_EXPECT_FALSE( vsResult._bytecode.empty() );
 
 		sw::ShaderCompileDesc psDesc{};
 		psDesc._filePath	 = "engine/shaders/fullscreentriangle.hlsl";
@@ -102,7 +102,7 @@ SW_TEST_CASE( ShaderCompilerTest, MultiTargetCrossCompilation )
 
 		sw::ShaderCompileResult psResult = sw::ShaderCompiler::compileHLSL( psDesc );
 		SW_EXPECT_TRUE( psResult._bSuccess );
-		SW_EXPECT_FALSE( psResult._listBytecode.empty() );
+		SW_EXPECT_FALSE( psResult._bytecode.empty() );
 	}
 
 	if ( attemptedAny == false )
@@ -181,20 +181,20 @@ SW_TEST_CASE( ShaderCompilerTest, DiskCacheHitAndClear )
 	}
 
 	SW_EXPECT_TRUE( result1._bSuccess );
-	SW_EXPECT_FALSE( result1._listBytecode.empty() );
+	SW_EXPECT_FALSE( result1._bytecode.empty() );
 
 	// 2차 컴파일 (디스크 캐시 히트)
 	sw::ShaderCompileResult result2 = sw::ShaderCompiler::compileHLSL( desc );
 	SW_EXPECT_TRUE( result2._bSuccess );
-	SW_EXPECT_EQUAL( result1._listBytecode.size(), result2._listBytecode.size() );
-	SW_EXPECT_TRUE( result1._listBytecode == result2._listBytecode );
+	SW_EXPECT_EQUAL( result1._bytecode.size(), result2._bytecode.size() );
+	SW_EXPECT_TRUE( result1._bytecode == result2._bytecode );
 
 	// 디스크 캐시 클리어 후 컴파일 정상 동작 확인
 	sw::ShaderCompiler::clearDiskCache();
 	sw::ShaderCompileResult result3 = sw::ShaderCompiler::compileHLSL( desc );
 	SW_EXPECT_TRUE( result3._bSuccess );
-	SW_EXPECT_FALSE( result3._listBytecode.empty() );
-	SW_EXPECT_EQUAL( result1._listBytecode.size(), result3._listBytecode.size() );
+	SW_EXPECT_FALSE( result3._bytecode.empty() );
+	SW_EXPECT_EQUAL( result1._bytecode.size(), result3._bytecode.size() );
 }
 
 /**
@@ -231,23 +231,23 @@ SW_TEST_CASE( ShaderCompilerTest, MultiBackendShaderCacheIsolation )
 	SW_EXPECT_TRUE( dx12Res1._bSuccess );
 
 	// DXBC와 DXIL은 바이트코드 헤더 및 크기 구성이 다름
-	SW_EXPECT_FALSE( dx11Res1._listBytecode == dx12Res1._listBytecode );
+	SW_EXPECT_FALSE( dx11Res1._bytecode == dx12Res1._bytecode );
 
 	// 3) 다시 DX11 및 DX12 요청 시 각 백엔드 전용 캐시 히트 검증
 	sw::ShaderCompileResult dx11Res2 = shaderCache.getOrCompile( dx11Desc );
 	sw::ShaderCompileResult dx12Res2 = shaderCache.getOrCompile( dx12Desc );
-	SW_EXPECT_TRUE( dx11Res1._listBytecode == dx11Res2._listBytecode );
-	SW_EXPECT_TRUE( dx12Res1._listBytecode == dx12Res2._listBytecode );
+	SW_EXPECT_TRUE( dx11Res1._bytecode == dx11Res2._bytecode );
+	SW_EXPECT_TRUE( dx12Res1._bytecode == dx12Res2._bytecode );
 
 	// 4) Vulkan SPIR-V 컴파일 및 캐시 격리 검증 (DXC SPIR-V 지원 시)
 	sw::ShaderCompileResult vkRes1 = shaderCache.getOrCompile( vkDesc );
 	if ( vkRes1._bSuccess )
 	{
-		SW_EXPECT_FALSE( vkRes1._listBytecode == dx11Res1._listBytecode );
-		SW_EXPECT_FALSE( vkRes1._listBytecode == dx12Res1._listBytecode );
+		SW_EXPECT_FALSE( vkRes1._bytecode == dx11Res1._bytecode );
+		SW_EXPECT_FALSE( vkRes1._bytecode == dx12Res1._bytecode );
 
 		sw::ShaderCompileResult vkRes2 = shaderCache.getOrCompile( vkDesc );
-		SW_EXPECT_TRUE( vkRes1._listBytecode == vkRes2._listBytecode );
+		SW_EXPECT_TRUE( vkRes1._bytecode == vkRes2._bytecode );
 	}
 }
 
@@ -294,7 +294,7 @@ SW_TEST_CASE( ShaderCompilerTest, MultiBackendVariantKeyIsolation )
 		if ( pResDx12 != nullptr && pResDx12->_bSuccess )
 		{
 			SW_EXPECT_EQUAL( 2u, manager.getCompiledVariantCount() );
-			SW_EXPECT_FALSE( pResDx11->_listBytecode == pResDx12->_listBytecode );
+			SW_EXPECT_FALSE( pResDx11->_bytecode == pResDx12->_bytecode );
 		}
 	}
 	manager.clear();

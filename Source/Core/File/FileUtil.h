@@ -30,7 +30,7 @@ namespace sw
 		Type		   _type{ Type::Open };			///< Open 또는 Save
 		string		   _title;						///< 다이얼로그 창 제목 (비어 있으면 OS 기본)
 		string		   _description;				///< 필터 설명 문자열
-		vector<string> _filterExtensionList;		///< 허용 확장자 목록 (예: ".png", "hlsl")
+		vector<string> _listFilterExtension;		///< 허용 확장자 목록 (예: ".png", "hlsl")
 		string		   _initialDirectory;			///< 시작 폴더 (비어 있으면 OS 기본)
 		bool		   _bEnableMultiselect{ true }; ///< 다중 선택 허용 (Open만)
 	};
@@ -54,7 +54,7 @@ namespace sw
 		/** @brief 경로에서 디렉터리만 반환합니다. */
 		static string getDirectoryPart( string_view fullPath );
 		/** @brief 파일명의 확장자 토큰을 수집합니다. */
-		static void getExtensionPart( string_view fileName, vector<string>& outPartList );
+		static void getExtensionPart( string_view fileName, vector<string>& outListPart );
 		/** @brief 파일 경로의 마지막 확장자(예: ".hlsl")를 포함하여 반환합니다. 없을 경우 빈 문자열입니다. */
 		static string getExtension( string_view fileName );
 		/** @brief 경로가 지정된 확장자로 끝나는지 대소문자 구분 없이 확인합니다. (앞에 '.' 생략 가능) */
@@ -145,9 +145,9 @@ namespace sw
 		/** @brief 네이티브 파일 다이얼로그를 엽니다. */
 		static void openFileDialog( const FileDialogParams& params, FileDialogDelegate onSuccess );
 		/** @brief 디렉터리에서 확장자 필터에 맞는 파일을 수집합니다. */
-		static bool collectFiles( string_view directory, string_view filterExtension, vector<string>& outFilePathList, bool bRecursive, bool bNormalizePath = true );
+		static bool collectFiles( string_view directory, string_view filterExtension, vector<string>& outListFilePath, bool bRecursive, bool bNormalizePath = true );
 		/** @brief 디렉터리 하위의 폴더를 수집합니다. */
-		static bool collectFolders( string_view directory, vector<string>& outFolderList, bool bRecursive, bool bNormalizePath = true );
+		static bool collectFolders( string_view directory, vector<string>& outListFolder, bool bRecursive, bool bNormalizePath = true );
 
 		/** @brief 클립보드 텍스트를 반환합니다. */
 		static string getClipboardText();

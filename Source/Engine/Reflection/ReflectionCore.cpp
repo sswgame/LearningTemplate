@@ -195,7 +195,7 @@ namespace sw
 		, _fullyQualifiedName{}
 		, _parentFQN{}
 		, _moduleName{}
-		, _propertyList{}
+		, _listProperty{}
 		, _listMethod{}
 		, _metadata{}
 		, _propertyListWithBase{}
@@ -219,7 +219,7 @@ namespace sw
 		, _fullyQualifiedName{ other._fullyQualifiedName }
 		, _parentFQN{ other._parentFQN }
 		, _moduleName{ other._moduleName }
-		, _propertyList{ other._propertyList }
+		, _listProperty{ other._listProperty }
 		, _listMethod{ other._listMethod }
 		, _metadata{ other._metadata }
 		, _propertyListWithBase{}
@@ -245,7 +245,7 @@ namespace sw
 		, _fullyQualifiedName{ std::move( other._fullyQualifiedName ) }
 		, _parentFQN{ std::move( other._parentFQN ) }
 		, _moduleName{ std::move( other._moduleName ) }
-		, _propertyList{ std::move( other._propertyList ) }
+		, _listProperty{ std::move( other._listProperty ) }
 		, _listMethod{ std::move( other._listMethod ) }
 		, _metadata{ std::move( other._metadata ) }
 		, _propertyListWithBase{}
@@ -279,7 +279,7 @@ namespace sw
 		_fullyQualifiedName = other._fullyQualifiedName;
 		_parentFQN			= other._parentFQN;
 		_moduleName			= other._moduleName;
-		_propertyList		= other._propertyList;
+		_listProperty		= other._listProperty;
 		_listMethod			= other._listMethod;
 		_metadata			= other._metadata;
 		_typeId				= other._typeId;
@@ -309,7 +309,7 @@ namespace sw
 		_fullyQualifiedName = std::move( other._fullyQualifiedName );
 		_parentFQN			= std::move( other._parentFQN );
 		_moduleName			= std::move( other._moduleName );
-		_propertyList		= std::move( other._propertyList );
+		_listProperty		= std::move( other._listProperty );
 		_listMethod			= std::move( other._listMethod );
 		_metadata			= std::move( other._metadata );
 		_typeId				= other._typeId;
@@ -346,7 +346,7 @@ namespace sw
 		};
 
 		_bIsPODFastPath = SW_TRUE;
-		for ( const PropertyInfo& prop : _propertyList )
+		for ( const PropertyInfo& prop : _listProperty )
 		{
 			if ( prop._bIsContainer == SW_TRUE || prop._containerKind != ContainerKind::None )
 			{
@@ -377,14 +377,14 @@ namespace sw
 	const vector<PropertyInfo>& TypeInfo::getPropertiesWithBase() const
 	{
 		if ( _parentFQN.empty() )
-			return _propertyList;
+			return _listProperty;
 
 		if ( _bPropertyListWithBaseBuilt != 0 )
 			return _propertyListWithBase;
 
 		const TypeInfo*				pParent		 = engine::getTypeRegistry().findType( _parentFQN );
 		const vector<PropertyInfo>* pParentProps = ( pParent != nullptr ) ? &pParent->getPropertiesWithBase() : nullptr;
-		const size_t				totalCount	 = ( pParentProps != nullptr ? pParentProps->size() : 0 ) + _propertyList.size();
+		const size_t				totalCount	 = ( pParentProps != nullptr ? pParentProps->size() : 0 ) + _listProperty.size();
 
 		_propertyListWithBase.clear();
 		_propertyListWithBase.reserve( totalCount );
@@ -393,7 +393,7 @@ namespace sw
 			_propertyListWithBase = *pParentProps;
 		}
 
-		for ( const PropertyInfo& prop : _propertyList )
+		for ( const PropertyInfo& prop : _listProperty )
 		{
 			bool replaced{ false };
 			for ( PropertyInfo& existing : _propertyListWithBase )

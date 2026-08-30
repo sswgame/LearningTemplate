@@ -24,7 +24,7 @@ namespace sw
 		// 1) 기본 비압축 — 실패 시 deserialize는 호출 전 상태로 롤백
 		// ------------------------------------------------------------------------------
 		/** @brief 객체를 콤팩트 바이너리로 직렬화합니다. */
-		static void serialize( const void* pInstance, const TypeInfo& typeInfo, vector<uint8>& listOutBuffer,
+		static void serialize( const void* pInstance, const TypeInfo& typeInfo, vector<uint8>& outListBuffer,
 							   const SerializeContext& ctx = SerializeContext::getDefault() );
 
 		/** @brief 바이너리에서 객체를 역직렬화합니다. 실패 시 instance를 호출 전 상태로 되돌립니다. */
@@ -46,7 +46,7 @@ namespace sw
 		// 3) 버전 — 헤더 + migrate, clone
 		// ------------------------------------------------------------------------------
 		/** @brief 버전 버퍼 헤더를 포함한 바이너리 직렬화. */
-		static void serializeVersioned( uint32 version, const void* pInstance, const TypeInfo& typeInfo, vector<uint8>& listOutBuffer,
+		static void serializeVersioned( uint32 version, const void* pInstance, const TypeInfo& typeInfo, vector<uint8>& outListBuffer,
 										const SerializeContext& ctx = SerializeContext::getDefault() );
 
 		/**
@@ -69,7 +69,7 @@ namespace sw
 		/** @brief 객체를 바이너리로 직렬화한 뒤 지정된 코덱으로 압축합니다. */
 		static bool serializeCompressed( const void*			 pInstance,
 										 const TypeInfo&		 typeInfo,
-										 vector<uint8>&			 listOutBuffer,
+										 vector<uint8>&			 outListBuffer,
 										 CompressionCodecType	 codecType = CompressionCodecType::RLE,
 										 const SerializeContext& ctx	   = SerializeContext::getDefault() );
 
@@ -84,7 +84,7 @@ namespace sw
 		static bool serializeVersionedCompressed( uint32				  version,
 												  const void*			  pInstance,
 												  const TypeInfo&		  typeInfo,
-												  vector<uint8>&		  listOutBuffer,
+												  vector<uint8>&		  outListBuffer,
 												  CompressionCodecType	  codecType = CompressionCodecType::RLE,
 												  const SerializeContext& ctx		= SerializeContext::getDefault() );
 

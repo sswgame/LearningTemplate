@@ -795,8 +795,8 @@ namespace sw::editor
 		params._description			= "Assets";
 		params._bEnableMultiselect	= true;
 		params._initialDirectory	= _selectedFolderAbs;
-		params._filterExtensionList = {};
-		EditorAssetTypeRegistry::appendImportExtensions( params._filterExtensionList );
+		params._listFilterExtension = {};
+		EditorAssetTypeRegistry::appendImportExtensions( params._listFilterExtension );
 
 		FileUtil::openFileDialog( params, SW_DELEGATE_METHOD( FileDialogDelegate, &ContentBrowserPanel::onImportDialogResult, this ) );
 	}

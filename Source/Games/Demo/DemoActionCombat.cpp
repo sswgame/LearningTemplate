@@ -42,9 +42,9 @@ namespace sw
 		if ( result._bDashStarted != 0 )
 			applyActionDash();
 
-		if ( result._damageToPlayer > 0 && _partyList.empty() == false )
+		if ( result._damageToPlayer > 0 && _listParty.empty() == false )
 		{
-			PartyMember& leadMember = _partyList[0];
+			PartyMember& leadMember = _listParty[0];
 			leadMember._hp -= result._damageToPlayer;
 			if ( leadMember._hp < 0 )
 				leadMember._hp = 0;

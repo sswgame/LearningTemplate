@@ -20,16 +20,16 @@ namespace sw
 
 	void DemoGame::syncPartyLeadFromBattle()
 	{
-		if ( _partyList.empty() )
+		if ( _listParty.empty() )
 			return;
 		const PartyMember& leadMember = _battle.player();
-		_partyList[0]._hp			  = leadMember._hp;
-		_partyList[0]._hpMax		  = leadMember._hpMax;
-		_partyList[0]._pp0			  = leadMember._pp0;
-		_partyList[0]._pp1			  = leadMember._pp1;
-		_partyList[0]._exp			  = leadMember._exp;
-		_partyList[0]._level		  = leadMember._level;
-		_partyList[0]._expNext		  = leadMember._expNext;
+		_listParty[0]._hp			  = leadMember._hp;
+		_listParty[0]._hpMax		  = leadMember._hpMax;
+		_listParty[0]._pp0			  = leadMember._pp0;
+		_listParty[0]._pp1			  = leadMember._pp1;
+		_listParty[0]._exp			  = leadMember._exp;
+		_listParty[0]._level		  = leadMember._level;
+		_listParty[0]._expNext		  = leadMember._expNext;
 	}
 
 	void DemoGame::updateBattle( float32 deltaTime )
@@ -80,12 +80,12 @@ namespace sw
 
 	void DemoGame::startBattleLoad()
 	{
-		if ( _partyList.empty() )
+		if ( _listParty.empty() )
 			initNewGameParty();
 		string foeId = _tileMap.pickEncounterSpeciesId();
 		if ( foeId.empty() )
 			foeId = _data._defaultEncounterId;
-		_battle.startWithPartyLead( _partyList[0], foeId.c_str() );
+		_battle.startWithPartyLead( _listParty[0], foeId.c_str() );
 		game::getService<SceneManager>()->requestLoadAsync( _data._battleScene );
 		_hud.setDialogue( _battle.getStatusText() );
 		SW_LOG_INFO( "Battle scene requested: %# (foe=%#)", _data._battleScene, foeId.c_str() );

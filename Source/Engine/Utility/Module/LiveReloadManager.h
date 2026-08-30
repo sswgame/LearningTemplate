@@ -131,9 +131,9 @@ namespace sw
 		 */
 		bool drainTasksBeforeUnload();
 		/** @brief root와 종속 모듈 이름을 중복 없이 모읍니다. */
-		void collectDependentClosure( string_view root, vector<string>& listOutUnique ) const;
+		void collectDependentClosure( string_view root, vector<string>& outListUnique ) const;
 		/** @brief 의존 순으로 위상 정렬합니다. 사이클이면 false. */
-		bool topoSortSubgraph( const vector<string>& listNames, vector<string>& listOutOrdered ) const;
+		bool topoSortSubgraph( const vector<string>& listNames, vector<string>& outListOrdered ) const;
 		/** @brief 부분 그래프를 prepare 전부 성공한 뒤에만 commit합니다. */
 		void reloadCascade( const vector<string>& listSubgraphNames );
 

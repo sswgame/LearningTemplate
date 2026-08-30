@@ -169,7 +169,7 @@ namespace sw
 
 				for ( const GameKitConfig& kitConfig : gameKitModuleList )
 				{
-					vector<string> listDeps = kitConfig._dependencyModuleList;
+					vector<string> listDeps = kitConfig._listDependencyModule;
 					if ( listDeps.empty() )
 						listDeps.push_back( gameFrameWorkModule );
 

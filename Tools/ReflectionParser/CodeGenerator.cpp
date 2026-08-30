@@ -607,7 +607,7 @@ namespace sw
 
 		if ( typeInfo._listProperty.empty() == false )
 		{
-			e.line( "info._propertyList =" );
+			e.line( "info._listProperty =" );
 			e.line( "{" );
 			e.push();
 			for ( const ParsedPropertyInfo& prop : typeInfo._listProperty )

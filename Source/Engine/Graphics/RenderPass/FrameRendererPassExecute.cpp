@@ -18,21 +18,21 @@ namespace sw
 
 		for ( const RenderGraphPassDesc& pass : passes )
 		{
-			vector<hashed_string> listInputs;
-			vector<hashed_string> listOutputs;
+			vector<hashed_string> listInput;
+			vector<hashed_string> listOutput;
 			for ( const string& in : pass._listInput )
 			{
-				listInputs.emplace_back( in.c_str() );
+				listInput.emplace_back( in.c_str() );
 			}
 			for ( const string& out : pass._listOutput )
 			{
-				listOutputs.emplace_back( out.c_str() );
+				listOutput.emplace_back( out.c_str() );
 			}
 
 			RenderGraphPassExecuteFn execute =
 				SW_DELEGATE_METHOD( RenderGraphPassExecuteFn, &FrameRenderer::onGraphPassExecute, this );
 
-			_graph.addPass( hashed_string( pass._name.c_str() ), std::move( listInputs ), std::move( listOutputs ), std::move( execute ) );
+			_graph.addPass( hashed_string( pass._name.c_str() ), std::move( listInput ), std::move( listOutput ), std::move( execute ) );
 		}
 
 		if ( _graph.compile() == false )

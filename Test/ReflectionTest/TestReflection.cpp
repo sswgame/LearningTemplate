@@ -83,7 +83,7 @@ static void RegisterTypes( sw::TypeRegistry& registry )
 		info._fullyQualifiedName = sw::hashed_string( "sw::DummyActor" );
 		info._parentFQN			 = sw::hashed_string( "sw::DummyBase" );
 		info._size				 = sizeof( sw::DummyActor );
-		info._propertyList =
+		info._listProperty =
 			{
 				{	  sw::hashed_string( "_hp" ),	  sw::hashed_string( "int32" ),
 				  SW_OFFSET_OF( sw::DummyActor,	_hp ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr},
@@ -101,7 +101,7 @@ static void RegisterTypes( sw::TypeRegistry& registry )
 		info._fullyQualifiedName = sw::hashed_string( "sw::ComplexData" );
 		info._parentFQN			 = sw::hashed_string( "" );
 		info._size				 = sizeof( sw::ComplexData );
-		info._propertyList =
+		info._listProperty =
 			{
 				{ sw::hashed_string( "_id" ), sw::hashed_string( "int32" ),
 				  SW_OFFSET_OF( sw::ComplexData, _id ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr },
@@ -250,7 +250,7 @@ SW_TEST_CASE( Reflection_TypeInfo, PropertyCount )
 	if ( info == nullptr )
 		return;
 
-	SW_EXPECT_EQUAL( 3u, static_cast<uint32>( info->_propertyList.size() ) );
+	SW_EXPECT_EQUAL( 3u, static_cast<uint32>( info->_listProperty.size() ) );
 }
 
 /**
@@ -630,7 +630,7 @@ SW_TEST_CASE( Reflection_Serialization, ObjectDiffSerializationDelta )
 	sw::PropertyInfo hpProp( sw::hashed_string( "_currentHp" ), sw::hashed_string( "int32" ),
 							 SW_OFFSET_OF( DiffAliasActor, _currentHp ) );
 	hpProp._listAlias.push_back( sw::hashed_string( "hp" ) );
-	aliasInfo._propertyList.push_back( hpProp );
+	aliasInfo._listProperty.push_back( hpProp );
 
 	DiffAliasActor cdo{};
 	DiffAliasActor mod{};
@@ -1738,7 +1738,7 @@ SW_TEST_CASE( Reflection_Serialization, PropertyDefaultOnMissing )
 								SW_OFFSET_OF( DefaultActor, _title ) );
 	titleProp._metadata._defaultValue  = "Apprentice";
 	titleProp._metadata._bXmlAttribute = 1;
-	info._propertyList				   = { manaProp, titleProp };
+	info._listProperty				   = { manaProp, titleProp };
 
 	DefaultActor actor;
 	const utf8*	 emptyXml = R"(<?xml version="1.0"?><DefaultActor></DefaultActor>)";
@@ -1776,7 +1776,7 @@ SW_TEST_CASE( Reflection_Serialization, PropertyAliasAndReorderingTest )
 	info._name				 = sw::hashed_string( "AliasTestActor" );
 	info._fullyQualifiedName = sw::hashed_string( "sw::AliasTestActor" );
 	info._size				 = sizeof( AliasTestActor );
-	info._propertyList		 = {
+	info._listProperty		 = {
 		{ sw::hashed_string( "_currentHp" ), sw::hashed_string( "int32" ),
 		  SW_OFFSET_OF( AliasTestActor, _currentHp ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr, sw::hashed_string( "hp" ) }
 	 };
@@ -1818,7 +1818,7 @@ SW_TEST_CASE( Reflection_Serialization, PropertyAliasAndReorderingTest )
 	info1._name				  = sw::hashed_string( "ReorderActor" );
 	info1._fullyQualifiedName = sw::hashed_string( "sw::ReorderActor" );
 	info1._size				  = sizeof( ReorderActor1 );
-	info1._propertyList		  = {
+	info1._listProperty		  = {
 		{sw::hashed_string( "_fieldA" ), sw::hashed_string( "int32" ),
 		  SW_OFFSET_OF( ReorderActor1, _fieldA ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr},
 		{sw::hashed_string( "_fieldB" ), sw::hashed_string( "int32" ),
@@ -1830,7 +1830,7 @@ SW_TEST_CASE( Reflection_Serialization, PropertyAliasAndReorderingTest )
 	sw::BinarySerializer::serialize( &src, info1, binBuf );
 
 	sw::TypeInfo infoReordered = info1;
-	std::swap( infoReordered._propertyList[0], infoReordered._propertyList[1] );
+	std::swap( infoReordered._listProperty[0], infoReordered._listProperty[1] );
 
 	ReorderActor1 dst;
 	dst._fieldA = 0;
@@ -1913,7 +1913,7 @@ SW_TEST_CASE( Reflection_Serialization, LayoutEvolveAddRemoveRename )
 	infoV1._name			   = sw::hashed_string( "LayoutActor" );
 	infoV1._fullyQualifiedName = sw::hashed_string( "sw::LayoutActor" );
 	infoV1._size			   = sizeof( LayoutV1 );
-	infoV1._propertyList	   = {
+	infoV1._listProperty	   = {
 		{	  sw::hashed_string( "_hp" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( LayoutV1,	_hp )},
 		{sw::hashed_string( "_score" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( LayoutV1, _score )},
 	};
@@ -1929,7 +1929,7 @@ SW_TEST_CASE( Reflection_Serialization, LayoutEvolveAddRemoveRename )
 	infoV2._name			   = sw::hashed_string( "LayoutActor" );
 	infoV2._fullyQualifiedName = sw::hashed_string( "sw::LayoutActor" );
 	infoV2._size			   = sizeof( LayoutV2 );
-	infoV2._propertyList	   = { hpV2, manaV2 };
+	infoV2._listProperty	   = { hpV2, manaV2 };
 
 	// --- Binary: V1 blob → V2 (score 스킵, mana Default, hp 매칭) ---
 	LayoutV1		  v1{ 40, 99 };
@@ -1976,7 +1976,7 @@ SW_TEST_CASE( Reflection_Serialization, LayoutEvolveAddRemoveRename )
 	intAliasInfo._name				 = sw::hashed_string( "IntAliasHolder" );
 	intAliasInfo._fullyQualifiedName = sw::hashed_string( "sw::IntAliasHolder" );
 	intAliasInfo._size				 = sizeof( IntAliasHolder );
-	intAliasInfo._propertyList		 = {
+	intAliasInfo._listProperty		 = {
 		{ sw::hashed_string( "_v" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( IntAliasHolder, _v ) }
 	};
 	IntAliasHolder holder{};
@@ -2083,7 +2083,7 @@ SW_TEST_CASE( Reflection_Serialization, BinaryVersionHeaderTest )
 	info._name				 = sw::hashed_string( "VersionedActor" );
 	info._fullyQualifiedName = sw::hashed_string( "sw::VersionedActor" );
 	info._size				 = sizeof( VersionedActor );
-	info._propertyList		 = {
+	info._listProperty		 = {
 		{sw::hashed_string( "_fieldA" ), sw::hashed_string( "int32" ),
 		  SW_OFFSET_OF( VersionedActor, _fieldA ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr},
 		{sw::hashed_string( "_fieldB" ), sw::hashed_string( "int32" ),
@@ -2144,7 +2144,7 @@ SW_TEST_CASE( Reflection_Serialization, FieldTypeChangeAndTextVersioned )
 	intInfo._name				= sw::hashed_string( "IntHp" );
 	intInfo._fullyQualifiedName = sw::hashed_string( "sw::IntHp" );
 	intInfo._size				= sizeof( IntHp );
-	intInfo._propertyList		= {
+	intInfo._listProperty		= {
 		{ sw::hashed_string( "_hp" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( IntHp, _hp ) }
 	 };
 
@@ -2152,7 +2152,7 @@ SW_TEST_CASE( Reflection_Serialization, FieldTypeChangeAndTextVersioned )
 	strInfo._name				= sw::hashed_string( "StrHp" );
 	strInfo._fullyQualifiedName = sw::hashed_string( "sw::StrHp" );
 	strInfo._size				= sizeof( StrHp );
-	strInfo._propertyList		= {
+	strInfo._listProperty		= {
 		{ sw::hashed_string( "_hp" ), sw::hashed_string( "string" ), SW_OFFSET_OF( StrHp, _hp ) }
 	  };
 
@@ -2201,7 +2201,7 @@ SW_TEST_CASE( Reflection_Serialization, VersionedDeserializeFailsWithoutMigrate 
 	info._name				 = sw::hashed_string( "VersionMismatchActor" );
 	info._fullyQualifiedName = sw::hashed_string( "sw::VersionMismatchActor" );
 	info._size				 = sizeof( VersionedActor );
-	info._propertyList		 = {
+	info._listProperty		 = {
 		{ sw::hashed_string( "_fieldA" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( VersionedActor, _fieldA ) }
 	  };
 
@@ -2245,7 +2245,7 @@ SW_TEST_CASE( Reflection_Serialization, StructuralMoveAndPropertyAlias )
 	nestedStatsInfo._name				= sw::hashed_string( "NestedStats" );
 	nestedStatsInfo._fullyQualifiedName = sw::hashed_string( "sw::NestedStats" );
 	nestedStatsInfo._size				= sizeof( NestedStats );
-	nestedStatsInfo._propertyList		= {
+	nestedStatsInfo._listProperty		= {
 		{ sw::hashed_string( "_hp" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( NestedStats, _hp ) }
 	   };
 	sw::engine::getTypeRegistry().registerClass( nestedStatsInfo );
@@ -2254,7 +2254,7 @@ SW_TEST_CASE( Reflection_Serialization, StructuralMoveAndPropertyAlias )
 	nestedActorInfo._name				= sw::hashed_string( "NestedActor" );
 	nestedActorInfo._fullyQualifiedName = sw::hashed_string( "sw::NestedActor" );
 	nestedActorInfo._size				= sizeof( NestedActor );
-	nestedActorInfo._propertyList		= {
+	nestedActorInfo._listProperty		= {
 		{ sw::hashed_string( "_stats" ), sw::hashed_string( "sw::NestedStats" ), SW_OFFSET_OF( NestedActor, _stats ) }
 	   };
 
@@ -2277,7 +2277,7 @@ SW_TEST_CASE( Reflection_Serialization, StructuralMoveAndPropertyAlias )
 	sw::PropertyInfo hpProp( sw::hashed_string( "_hitPoints" ), sw::hashed_string( "int32" ),
 							 SW_OFFSET_OF( RenamedActor, _hitPoints ) );
 	hpProp._listAlias.push_back( sw::hashed_string( "_hp" ) );
-	renamedInfo._propertyList.push_back( hpProp );
+	renamedInfo._listProperty.push_back( hpProp );
 
 	RenamedActor renamed{};
 	ver = 0;
@@ -2300,7 +2300,7 @@ SW_TEST_CASE( Reflection_Serialization, JsonPrettyPrint )
 	info._name				 = sw::hashed_string( "SimpleJsonActor" );
 	info._fullyQualifiedName = sw::hashed_string( "sw::SimpleJsonActor" );
 	info._size				 = sizeof( SimpleJsonActor );
-	info._propertyList		 = {
+	info._listProperty		 = {
 		{ sw::hashed_string( "_val" ), sw::hashed_string( "int32" ),
 		  SW_OFFSET_OF( SimpleJsonActor, _val ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr }
 	 };
@@ -2389,7 +2389,7 @@ SW_TEST_CASE( Reflection_Cloning, ObjectDeepCopyClone )
 	info._name				 = sw::hashed_string( "CloneableActor" );
 	info._fullyQualifiedName = sw::hashed_string( "sw::CloneableActor" );
 	info._size				 = sizeof( CloneableActor );
-	info._propertyList		 = {
+	info._listProperty		 = {
 		{sw::hashed_string( "_health" ),	  sw::hashed_string( "int32" ), SW_OFFSET_OF( CloneableActor, _health ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr},
 		{ sw::hashed_string( "_speed" ), sw::hashed_string( "float32" ), SW_OFFSET_OF( CloneableActor,  _speed ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr}
 	 };

@@ -154,12 +154,12 @@ namespace sw
 			GLuint vs = glCreateShader( GL_VERTEX_SHADER );
 			GLuint ps = bHasPixelShader ? glCreateShader( GL_FRAGMENT_SHADER ) : 0;
 
-			glShaderBinary( 1, &vs, GL_SHADER_BINARY_FORMAT_SPIR_V, vsResult._listBytecode.data(), static_cast<GLsizei>( vsResult._listBytecode.size() ) );
+			glShaderBinary( 1, &vs, GL_SHADER_BINARY_FORMAT_SPIR_V, vsResult._bytecode.data(), static_cast<GLsizei>( vsResult._bytecode.size() ) );
 			glSpecializeShader( vs, vsDesc._entryPoint.c_str(), 0, nullptr, nullptr );
 
 			if ( bHasPixelShader )
 			{
-				glShaderBinary( 1, &ps, GL_SHADER_BINARY_FORMAT_SPIR_V, psResult._listBytecode.data(), static_cast<GLsizei>( psResult._listBytecode.size() ) );
+				glShaderBinary( 1, &ps, GL_SHADER_BINARY_FORMAT_SPIR_V, psResult._bytecode.data(), static_cast<GLsizei>( psResult._bytecode.size() ) );
 				glSpecializeShader( ps, psDesc._entryPoint.c_str(), 0, nullptr, nullptr );
 			}
 
@@ -248,7 +248,7 @@ namespace sw
 
 			GLuint cs = glCreateShader( GL_COMPUTE_SHADER );
 
-			glShaderBinary( 1, &cs, GL_SHADER_BINARY_FORMAT_SPIR_V, csResult._listBytecode.data(), static_cast<GLsizei>( csResult._listBytecode.size() ) );
+			glShaderBinary( 1, &cs, GL_SHADER_BINARY_FORMAT_SPIR_V, csResult._bytecode.data(), static_cast<GLsizei>( csResult._bytecode.size() ) );
 			glSpecializeShader( cs, csDesc._entryPoint.c_str(), 0, nullptr, nullptr );
 
 			GLint csCompiled = GL_FALSE;

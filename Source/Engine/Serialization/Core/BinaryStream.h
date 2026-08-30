@@ -119,17 +119,17 @@ namespace sw
 			return true;
 		}
 
-		bool readBytes( vector<uint8>& listOutByte )
+		bool readBytes( vector<uint8>& outBytes )
 		{
 			uint32 size{ 0 };
 			if ( read( size ) == false )
 				return false;
-			listOutByte.resize( size );
+			outBytes.resize( size );
 			if ( size > 0 )
 			{
 				if ( _offset + size > _size )
 					return false;
-				Memory::copy( listOutByte.data(), _pData + _offset, size );
+				Memory::copy( outBytes.data(), _pData + _offset, size );
 				_offset += size;
 			}
 			return true;

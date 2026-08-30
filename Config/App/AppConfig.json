@@ -1,22 +1,48 @@
 {
-    "_gameKitModuleList": [
+    "vector": [
         {
-            "_name": "GF_Overworld",
-            "_dependencyModuleList": [
-                "GameFramework"
-            ]
-        },
-        {
-            "_name": "GF_TurnBattle",
-            "_dependencyModuleList": [
-                "GameFramework"
-            ]
-        },
-        {
-            "_name": "GF_ActionCombat",
-            "_dependencyModuleList": [
-                "GameFramework",
-                "GF_Overworld"
+            "_name": "_listGameKitModule",
+            "item": [
+                {
+                    "GameKitConfig": {
+                        "_name": "GF_Overworld",
+                        "vector": [
+                            {
+                                "_name": "_listDependencyModule",
+                                "item": [
+                                    "GameFramework"
+                                ]
+                            }
+                        ]
+                    }
+                },
+                {
+                    "GameKitConfig": {
+                        "_name": "GF_TurnBattle",
+                        "vector": [
+                            {
+                                "_name": "_listDependencyModule",
+                                "item": [
+                                    "GameFramework"
+                                ]
+                            }
+                        ]
+                    }
+                },
+                {
+                    "GameKitConfig": {
+                        "_name": "GF_ActionCombat",
+                        "vector": [
+                            {
+                                "_name": "_listDependencyModule",
+                                "item": [
+                                    "GameFramework",
+                                    "GF_Overworld"
+                                ]
+                            }
+                        ]
+                    }
+                }
             ]
         }
     ]

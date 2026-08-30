@@ -38,12 +38,12 @@ namespace sw
 		, _boundMeshStride{ sizeof( RHIVertex ) }
 		, _boundMeshOffset{ 0 }
 		, _listRegisteredBindlessVector{}
-		, _bindlessFreeList{}
+		, _listBindlessFree{}
 		, _listRegisteredTexture{}
-		, _textureFreeList{}
+		, _listTextureFree{}
 		, _listRegisteredUAV{}
 		, _listUavSourceBuffer{}
-		, _uavFreeList{}
+		, _listUavFree{}
 		, _computeRootConstantCB{ nullptr }
 		, _arrComputeRootConstantShadow{}
 		, _pipelineStates{}
@@ -171,12 +171,12 @@ namespace sw
 		_linearSampler.Reset();
 		_activeGraphicsPso = 0;
 		_listRegisteredBindlessVector.clear();
-		_bindlessFreeList.clear();
+		_listBindlessFree.clear();
 		_listRegisteredTexture.clear();
-		_textureFreeList.clear();
+		_listTextureFree.clear();
 		_listRegisteredUAV.clear();
 		_listUavSourceBuffer.clear();
-		_uavFreeList.clear();
+		_listUavFree.clear();
 		_computeRootConstantCB.Reset();
 		Memory::set( _arrComputeRootConstantShadow, 0, sizeof( _arrComputeRootConstantShadow ) );
 		_swapChain.Reset();

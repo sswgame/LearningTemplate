@@ -144,10 +144,10 @@ namespace sw
 {
 	SW_LOG_CALLER( "BinarySerializer" );
 
-	void BinarySerializer::serialize( const void* pInstance, const TypeInfo& typeInfo, vector<uint8>& listOutBuffer,
+	void BinarySerializer::serialize( const void* pInstance, const TypeInfo& typeInfo, vector<uint8>& outListBuffer,
 									  const SerializeContext& ctx )
 	{
-		BinaryStreamWriter			writer( listOutBuffer );
+		BinaryStreamWriter			writer( outListBuffer );
 		const vector<PropertyInfo>& listProps = typeInfo.getPropertiesWithBase();
 		uint32						propCount{ 0 };
 		for ( const PropertyInfo& prop : listProps )
@@ -156,7 +156,7 @@ namespace sw
 				continue;
 			++propCount;
 		}
-		listOutBuffer.reserve( listOutBuffer.size() + sizeof( uint32 ) + propCount * 32 );
+		outListBuffer.reserve( outListBuffer.size() + sizeof( uint32 ) + propCount * 32 );
 		writer.write( propCount );
 
 		for ( const PropertyInfo& prop : listProps )
@@ -180,12 +180,12 @@ namespace sw
 			if ( prop._bIsBitField == SW_TRUE )
 			{
 				const bool bVal = prop.getValue<bool>( pInstance );
-				SerializerUtil::serializeValueBinary( &bVal, hashed_string( "bool" ), listOutBuffer, ctx );
+				SerializerUtil::serializeValueBinary( &bVal, hashed_string( "bool" ), outListBuffer, ctx );
 			}
 			else if ( prop._bIsContainer && prop.hasContainerWrapper() )
-				SerializerUtil::serializeNestedContainerBinary( pPropPtr, prop.getContainerShape(), listOutBuffer, ctx );
+				SerializerUtil::serializeNestedContainerBinary( pPropPtr, prop.getContainerShape(), outListBuffer, ctx );
 			else
-				SerializerUtil::serializeValueBinary( pPropPtr, prop._typeName, listOutBuffer, ctx );
+				SerializerUtil::serializeValueBinary( pPropPtr, prop._typeName, outListBuffer, ctx );
 
 			uint32 payloadSize = static_cast<uint32>( writer.getOffset() - payloadStart );
 			writer.writeAt( sizeHeaderPos, payloadSize );
@@ -321,12 +321,12 @@ namespace sw
 		return true;
 	}
 
-	void BinarySerializer::serializeVersioned( uint32 version, const void* pInstance, const TypeInfo& typeInfo, vector<uint8>& listOutBuffer,
+	void BinarySerializer::serializeVersioned( uint32 version, const void* pInstance, const TypeInfo& typeInfo, vector<uint8>& outListBuffer,
 											   const SerializeContext& ctx )
 	{
-		BinaryStreamWriter writer( listOutBuffer );
+		BinaryStreamWriter writer( outListBuffer );
 		writer.write( version );
-		serialize( pInstance, typeInfo, listOutBuffer, ctx );
+		serialize( pInstance, typeInfo, outListBuffer, ctx );
 	}
 
 	bool BinarySerializer::deserializeVersioned( uint32& outVersion, void* pInstance, const TypeInfo& typeInfo, const uint8* pData, size_t dataSize,
@@ -391,11 +391,11 @@ namespace sw
 
 	bool BinarySerializer::serializeCompressed( const void*				pInstance,
 												const TypeInfo&			typeInfo,
-												vector<uint8>&			listOutBuffer,
+												vector<uint8>&			outListBuffer,
 												CompressionCodecType	codecType,
 												const SerializeContext& ctx )
 	{
-		listOutBuffer.clear();
+		outListBuffer.clear();
 		if ( pInstance == nullptr )
 			return false;
 
@@ -404,7 +404,7 @@ namespace sw
 		if ( listRawBinary.empty() )
 			return false;
 
-		return CompressionStream::compressBuffer( listRawBinary.data(), listRawBinary.size(), listOutBuffer, codecType );
+		return CompressionStream::compressBuffer( listRawBinary.data(), listRawBinary.size(), outListBuffer, codecType );
 	}
 
 	bool BinarySerializer::deserializeCompressed( void*					  pInstance,
@@ -427,11 +427,11 @@ namespace sw
 	bool BinarySerializer::serializeVersionedCompressed( uint32					 version,
 														 const void*			 pInstance,
 														 const TypeInfo&		 typeInfo,
-														 vector<uint8>&			 listOutBuffer,
+														 vector<uint8>&			 outListBuffer,
 														 CompressionCodecType	 codecType,
 														 const SerializeContext& ctx )
 	{
-		listOutBuffer.clear();
+		outListBuffer.clear();
 		if ( pInstance == nullptr )
 			return false;
 
@@ -440,7 +440,7 @@ namespace sw
 		if ( listRawBinary.empty() )
 			return false;
 
-		return CompressionStream::compressBuffer( listRawBinary.data(), listRawBinary.size(), listOutBuffer, codecType );
+		return CompressionStream::compressBuffer( listRawBinary.data(), listRawBinary.size(), outListBuffer, codecType );
 	}
 
 	bool BinarySerializer::deserializeVersionedCompressed( uint32&				   outVersion,

@@ -12,12 +12,12 @@ namespace sw::editor
 	{
 		struct EditorDrawDataSnapshotInternal
 		{
-			static void cloneDrawData( const ImDrawData* pSrc, ImDrawData& outDrawData, vector<ImDrawList*>& outOwnedList )
+			static void cloneDrawData( const ImDrawData* pSrc, ImDrawData& outDrawData, vector<ImDrawList*>& outListOwned )
 			{
 				outDrawData.Clear();
-				for ( ImDrawList* pOwned : outOwnedList )
+				for ( ImDrawList* pOwned : outListOwned )
 					IM_DELETE( pOwned );
-				outOwnedList.clear();
+				outListOwned.clear();
 
 				if ( pSrc == nullptr || pSrc->Valid == false )
 					return;
@@ -31,7 +31,7 @@ namespace sw::editor
 				outDrawData.TotalIdxCount	 = pSrc->TotalIdxCount;
 				outDrawData.TotalVtxCount	 = pSrc->TotalVtxCount;
 
-				outOwnedList.reserve( static_cast<size_t>( pSrc->CmdLists.Size ) );
+				outListOwned.reserve( static_cast<size_t>( pSrc->CmdLists.Size ) );
 				for ( int32 listIndex = 0; listIndex < pSrc->CmdLists.Size; ++listIndex )
 				{
 					ImDrawList* pSrcList = pSrc->CmdLists[listIndex];
@@ -40,7 +40,7 @@ namespace sw::editor
 					ImDrawList* pClone = pSrcList->CloneOutput();
 					if ( pClone == nullptr )
 						continue;
-					outOwnedList.push_back( pClone );
+					outListOwned.push_back( pClone );
 					outDrawData.AddDrawList( pClone );
 				}
 

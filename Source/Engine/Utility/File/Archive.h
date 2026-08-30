@@ -58,7 +58,7 @@ namespace sw
 		Archive& operator=( Archive&& ) = default;
 
 		/** @brief 아카이브의 버퍼 데이터를 대상 벡터에 복사합니다. */
-		void writeData( vector<uint8>& listOutDestination ) const;
+		void writeData( vector<uint8>& outListDestination ) const;
 
 		/** @brief 데이터 포인터를 반환합니다. */
 		const uint8* getData() const { return _pData; }

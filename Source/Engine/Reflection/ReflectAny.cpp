@@ -17,16 +17,16 @@ namespace sw
 				const ReflectAny& any		 = *static_cast<const ReflectAny*>( pPtr );
 				const string_view fqn		 = any._typeFqn.view();
 				const uint32	  nameLen	 = static_cast<uint32>( fqn.size() );
-				const uint32	  blobLen	 = static_cast<uint32>( any._listBytes.size() );
+				const uint32	  blobLen	 = static_cast<uint32>( any._bytes.size() );
 				const uint8*	  pNameBytes = reinterpret_cast<const uint8*>( &nameLen );
 				const uint8*	  pBlobBytes = reinterpret_cast<const uint8*>( &blobLen );
 
-				listBuf.reserve( listBuf.size() + sizeof( uint32 ) * 2 + fqn.size() + any._listBytes.size() );
+				listBuf.reserve( listBuf.size() + sizeof( uint32 ) * 2 + fqn.size() + any._bytes.size() );
 				listBuf.insert( listBuf.end(), pNameBytes, pNameBytes + sizeof( uint32 ) );
 				listBuf.insert( listBuf.end(), reinterpret_cast<const uint8*>( fqn.data() ),
 								reinterpret_cast<const uint8*>( fqn.data() ) + fqn.size() );
 				listBuf.insert( listBuf.end(), pBlobBytes, pBlobBytes + sizeof( uint32 ) );
-				listBuf.insert( listBuf.end(), any._listBytes.begin(), any._listBytes.end() );
+				listBuf.insert( listBuf.end(), any._bytes.begin(), any._bytes.end() );
 			}
 
 			static bool readReflectAnyBinary( void* pPtr, const uint8* pData, size_t size, size_t& offset )
@@ -49,7 +49,7 @@ namespace sw
 				offset += sizeof( uint32 );
 				if ( offset + blobLen > size )
 					return false;
-				any._listBytes.assign( pData + offset, pData + offset + blobLen );
+				any._bytes.assign( pData + offset, pData + offset + blobLen );
 				offset += blobLen;
 				return true;
 			}
@@ -59,9 +59,9 @@ namespace sw
 				const ReflectAny& any = *static_cast<const ReflectAny*>( pPtr );
 				// Compact JSON: {"t":"fqn","b":"hex..."} — keep simple: type|base64-ish hex
 				string hex;
-				hex.reserve( any._listBytes.size() * 2 );
+				hex.reserve( any._bytes.size() * 2 );
 				static constexpr const utf8* kDigits = "0123456789abcdef";
-				for ( uint8 byte : any._listBytes )
+				for ( uint8 byte : any._bytes )
 				{
 					hex.push_back( kDigits[( byte >> 4 ) & 0xF] );
 					hex.push_back( kDigits[byte & 0xF] );
@@ -82,7 +82,7 @@ namespace sw
 				const string_view hex = str.substr( bar + 1 );
 				if ( ( hex.size() % 2 ) != 0 )
 					return false;
-				any._listBytes.resize( hex.size() / 2 );
+				any._bytes.resize( hex.size() / 2 );
 				const auto nibble = []( utf8 ch ) -> int32
 				{
 					if ( '0' <= ch && ch <= '9' )
@@ -93,13 +93,13 @@ namespace sw
 						return ch - 'A' + 10;
 					return -1;
 				};
-				for ( size_t byteIndex = 0; byteIndex < any._listBytes.size(); ++byteIndex )
+				for ( size_t byteIndex = 0; byteIndex < any._bytes.size(); ++byteIndex )
 				{
 					const int32 hiNibble = nibble( hex[byteIndex * 2] );
 					const int32 loNibble = nibble( hex[byteIndex * 2 + 1] );
 					if ( hiNibble < 0 || loNibble < 0 )
 						return false;
-					any._listBytes[byteIndex] = static_cast<uint8>( ( hiNibble << 4 ) | loNibble );
+					any._bytes[byteIndex] = static_cast<uint8>( ( hiNibble << 4 ) | loNibble );
 				}
 				return true;
 			}
@@ -115,7 +115,7 @@ namespace sw
 		if ( pValue == nullptr )
 			return any;
 		any._typeFqn = info._fullyQualifiedName.empty() == false ? info._fullyQualifiedName : info._name;
-		BinarySerializer::serialize( pValue, info, any._listBytes );
+		BinarySerializer::serialize( pValue, info, any._bytes );
 		return any;
 	}
 
@@ -127,7 +127,7 @@ namespace sw
 			info._fullyQualifiedName.empty() == false ? info._fullyQualifiedName : info._name;
 		if ( _typeFqn != want )
 			return false;
-		return BinarySerializer::deserialize( pOut, info, _listBytes.data(), _listBytes.size() );
+		return BinarySerializer::deserialize( pOut, info, _bytes.data(), _bytes.size() );
 	}
 
 	void registerReflectAnyHandlers( SerializeContext& ctx )

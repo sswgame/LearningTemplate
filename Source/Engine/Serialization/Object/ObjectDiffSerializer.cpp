@@ -9,12 +9,12 @@ namespace sw
 {
 	SW_LOG_CALLER( "ObjectDiff" );
 
-	bool ObjectDiffSerializer::serializeDiff( vector<uint8>& listOutDiffBuffer, const void* pCdoInstance, const void* pModifiedInstance, const TypeInfo& typeInfo )
+	bool ObjectDiffSerializer::serializeDiff( vector<uint8>& outListDiffBuffer, const void* pCdoInstance, const void* pModifiedInstance, const TypeInfo& typeInfo )
 	{
 		if ( pCdoInstance == nullptr || pModifiedInstance == nullptr )
 			return false;
 
-		listOutDiffBuffer.clear();
+		outListDiffBuffer.clear();
 		const SerializeContext& ctx = SerializeContext::getDefault();
 		vector<uint8>			listCdoBytes;
 		vector<uint8>			listModBytes;
@@ -54,9 +54,9 @@ namespace sw
 			const uint32 size		= static_cast<uint32>( listModBytes.size() );
 			const uint8* pHashBytes = reinterpret_cast<const uint8*>( &nameHash );
 			const uint8* pSizeBytes = reinterpret_cast<const uint8*>( &size );
-			listOutDiffBuffer.insert( listOutDiffBuffer.end(), pHashBytes, pHashBytes + sizeof( uint32 ) );
-			listOutDiffBuffer.insert( listOutDiffBuffer.end(), pSizeBytes, pSizeBytes + sizeof( uint32 ) );
-			listOutDiffBuffer.insert( listOutDiffBuffer.end(), listModBytes.begin(), listModBytes.end() );
+			outListDiffBuffer.insert( outListDiffBuffer.end(), pHashBytes, pHashBytes + sizeof( uint32 ) );
+			outListDiffBuffer.insert( outListDiffBuffer.end(), pSizeBytes, pSizeBytes + sizeof( uint32 ) );
+			outListDiffBuffer.insert( outListDiffBuffer.end(), listModBytes.begin(), listModBytes.end() );
 		} );
 
 		return true;

@@ -37,7 +37,7 @@ namespace sw
 		 */
 		static bool compressBuffer( const void*						pSrc,
 									size_t							srcSize,
-									vector<uint8>&					listOutBuffer,
+									vector<uint8>&					outBytes,
 									CompressionCodecType			codecType		 = CompressionCodecType::RLE,
 									int32							compressionLevel = 0,
 									const CompressionCodecRegistry* pRegistry		 = nullptr );
@@ -47,7 +47,7 @@ namespace sw
 		 */
 		static bool decompressBuffer( const void*					  pSrc,
 									  size_t						  srcSize,
-									  vector<uint8>&				  listOutBuffer,
+									  vector<uint8>&				  outBytes,
 									  const CompressionCodecRegistry* pRegistry = nullptr );
 
 		/**

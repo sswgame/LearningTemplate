@@ -45,19 +45,19 @@ namespace sw
 		// 2) 파싱 · 로드
 		// ------------------------------------------------------------------------------
 		/** @brief 텍스트를 out에 파싱합니다 (먼저 clear). */
-		static bool parse( string_view text, KeyValueMap& mapOut, KeyValueParseOptions opt = {} );
+		static bool parse( string_view text, KeyValueMap& outMap, KeyValueParseOptions opt = {} );
 
 		/** @brief 절대 경로를 읽고 파싱합니다. */
-		static bool loadFile( string_view absPath, KeyValueMap& mapOut, KeyValueParseOptions opt = {} );
+		static bool loadFile( string_view absPath, KeyValueMap& outMap, KeyValueParseOptions opt = {} );
 
 		/** @brief ResourceUtil로 해석한 뒤 loadFile합니다. */
-		static bool loadResource( string_view relativePath, KeyValueMap& mapOut, KeyValueParseOptions opt = {},
+		static bool loadResource( string_view relativePath, KeyValueMap& outMap, KeyValueParseOptions opt = {},
 								  string* pOutAbsPath = nullptr );
 
 		/**
 		 * @brief 절대/작업 경로가 있으면 loadFile, 없으면 loadResource.
 		 */
-		static bool loadPath( string_view path, KeyValueMap& mapOut, KeyValueParseOptions opt = {},
+		static bool loadPath( string_view path, KeyValueMap& outMap, KeyValueParseOptions opt = {},
 							  string* pOutAbsPath = nullptr );
 
 		// ------------------------------------------------------------------------------

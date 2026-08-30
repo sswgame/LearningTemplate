@@ -222,7 +222,7 @@ namespace sw
 	{
 		ShaderCompileResult result{};
 		result._bSuccess = false;
-		result._listBytecode.reserve( 4096 );
+		result._bytecode.reserve( 4096 );
 
 		string absPathStr = ResourceUtil::getResourcePath( desc._filePath );
 		if ( absPathStr.empty() || FileUtil::fileExists( absPathStr ) == false )
@@ -241,8 +241,8 @@ namespace sw
 				vector<uint8> cachedBytes;
 				if ( FileUtil::readFile( cachePath, cachedBytes ) && cachedBytes.empty() == false )
 				{
-					result._listBytecode = std::move( cachedBytes );
-					result._bSuccess	 = true;
+					result._bytecode = std::move( cachedBytes );
+					result._bSuccess = true;
 					return result;
 				}
 			}
@@ -310,11 +310,11 @@ namespace sw
 				}
 
 				const uint8* pData = static_cast<const uint8*>( codeBlob->GetBufferPointer() );
-				result._listBytecode.assign( pData, pData + codeBlob->GetBufferSize() );
+				result._bytecode.assign( pData, pData + codeBlob->GetBufferSize() );
 				result._bSuccess = true;
-				saveToCacheIfEnabled( result._listBytecode );
+				saveToCacheIfEnabled( result._bytecode );
 
-				SW_LOG_TRACE( "Target: D3D11 (DXBC Row-Major), Size: %# bytes", static_cast<uint32>( result._listBytecode.size() ) );
+				SW_LOG_TRACE( "Target: D3D11 (DXBC Row-Major), Size: %# bytes", static_cast<uint32>( result._bytecode.size() ) );
 				return result;
 			}
 		}
@@ -504,9 +504,9 @@ namespace sw
 						if ( shaderBlob != nullptr && shaderBlob->GetBufferSize() > 0 )
 						{
 							const uint8* pData = static_cast<const uint8*>( shaderBlob->GetBufferPointer() );
-							result._listBytecode.assign( pData, pData + shaderBlob->GetBufferSize() );
+							result._bytecode.assign( pData, pData + shaderBlob->GetBufferSize() );
 							result._bSuccess = true;
-							saveToCacheIfEnabled( result._listBytecode );
+							saveToCacheIfEnabled( result._bytecode );
 
 							const utf8* pFormatName = ( desc._targetFormat == ShaderTargetFormat::SPIRV_Vulkan )
 														? "Vulkan (SPIR-V vulkan1.2)"
@@ -555,9 +555,9 @@ namespace sw
 				if ( SUCCEEDED( hrFallback ) )
 				{
 					const uint8* pData = static_cast<const uint8*>( codeBlob->GetBufferPointer() );
-					result._listBytecode.assign( pData, pData + codeBlob->GetBufferSize() );
+					result._bytecode.assign( pData, pData + codeBlob->GetBufferSize() );
 					result._bSuccess = true;
-					saveToCacheIfEnabled( result._listBytecode );
+					saveToCacheIfEnabled( result._bytecode );
 
 					SW_LOG_TRACE( "Target: D3D12/11 (Row-Major)" );
 					return result;

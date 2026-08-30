@@ -402,7 +402,7 @@ namespace sw
 		FileDialogParams params;
 		params._type				= FileDialogParams::Type::Save;
 		params._description			= "GameObject State XML File (*.xml)";
-		params._filterExtensionList = { "xml" };
+		params._listFilterExtension = { "xml" };
 		params._bEnableMultiselect	= false;
 
 		FileDialogDelegate del = SW_DELEGATE_LAMBDA( FileDialogDelegate, [pGameObject, onSaveDone]( const vector<string>& fileNames )
@@ -420,7 +420,7 @@ namespace sw
 		FileDialogParams params;
 		params._type				= FileDialogParams::Type::Open;
 		params._description			= "GameObject State XML File (*.xml)";
-		params._filterExtensionList = { "xml" };
+		params._listFilterExtension = { "xml" };
 		params._bEnableMultiselect	= false;
 
 		FileDialogDelegate del = SW_DELEGATE_LAMBDA( FileDialogDelegate, [pGameObject, onLoadDone]( const vector<string>& fileNames )

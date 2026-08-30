@@ -85,7 +85,7 @@ namespace sw
 	private:
 		void seedFallback();
 
-		vector<MoveDef>	   _moveList;
-		vector<SpeciesDef> _speciesList;
+		vector<MoveDef>	   _listMove;
+		vector<SpeciesDef> _listSpecies;
 	};
 } // namespace sw

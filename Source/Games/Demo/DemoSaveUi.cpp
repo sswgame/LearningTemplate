@@ -22,7 +22,7 @@ namespace sw
 		_save._mapPath = _currentMapPath;
 		_save._playerX = _player.getTileX();
 		_save._playerY = _player.getTileY();
-		_save.setPartyFrom( _partyList );
+		_save.setPartyFrom( _listParty );
 	}
 
 	bool DemoGame::applySaveToWorld()
@@ -38,17 +38,17 @@ namespace sw
 
 	void DemoGame::initNewGameParty()
 	{
-		_partyList.clear();
-		_partyList.push_back( _speciesCatalog.makeStarter( _data._starterId.c_str(), _data._starterLevel ) );
+		_listParty.clear();
+		_listParty.push_back( _speciesCatalog.makeStarter( _data._starterId.c_str(), _data._starterLevel ) );
 		_save.clearParty();
-		_save.setPartyFrom( _partyList );
+		_save.setPartyFrom( _listParty );
 		_save.setFlag( "story_intro", 0 );
 	}
 
 	void DemoGame::applyPartyFromSave()
 	{
-		_partyList = _save._listParty;
-		if ( _partyList.empty() )
+		_listParty = _save._listParty;
+		if ( _listParty.empty() )
 			initNewGameParty();
 	}
 
@@ -66,18 +66,18 @@ namespace sw
 								  safeFill( playerMember._pp0, 35 ) );
 			_hud.setDialogue( _battle.getStatusText() );
 		}
-		else if ( _actionRoom.isActive() && _partyList.empty() == false )
+		else if ( _actionRoom.isActive() && _listParty.empty() == false )
 		{
-			const PartyMember& leadMember = _partyList[0];
+			const PartyMember& leadMember = _listParty[0];
 			_hud.setActionGauges( safeFill( leadMember._hp, leadMember._hpMax ),
 								  _actionRoom.getBossHpFill(),
 								  _actionRoom.getDashFill() );
 			_hud.publishSnapshot( true );
 			return;
 		}
-		else if ( _partyList.empty() == false )
+		else if ( _listParty.empty() == false )
 		{
-			const PartyMember& leadMember = _partyList[0];
+			const PartyMember& leadMember = _listParty[0];
 			_hud.setBattleGauges( safeFill( leadMember._hp, leadMember._hpMax ), 0.0f,
 								  safeFill( leadMember._exp, leadMember._expNext > 0 ? leadMember._expNext : 1 ),
 								  safeFill( leadMember._pp0, 35 ) );

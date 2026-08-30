@@ -41,7 +41,7 @@ namespace sw
 		, _transitions{}
 		, _hud{}
 		, _cameraBias{}
-		, _partyList{}
+		, _listParty{}
 		, _currentMapPath{}
 		, _returnMapPath{}
 		, _returnScenePath{}
@@ -111,7 +111,7 @@ namespace sw
 		_battle.endBattle();
 		_tileMap.clear();
 		_zones.clear();
-		_partyList.clear();
+		_listParty.clear();
 	}
 
 	void DemoGame::onUpdate( float32 deltaTime )

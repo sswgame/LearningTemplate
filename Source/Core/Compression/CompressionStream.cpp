@@ -67,12 +67,12 @@ namespace sw
 
 	bool CompressionStream::compressBuffer( const void*						pSrc,
 											size_t							srcSize,
-											vector<uint8>&					listOutBuffer,
+											vector<uint8>&					outBytes,
 											CompressionCodecType			codecType,
 											int32							compressionLevel,
 											const CompressionCodecRegistry* pRegistry )
 	{
-		listOutBuffer.clear();
+		outBytes.clear();
 		if ( pSrc == nullptr || srcSize == 0 )
 			return true;
 
@@ -87,9 +87,9 @@ namespace sw
 		}
 
 		const size_t bound = pCodec->compressBound( srcSize );
-		listOutBuffer.resize( sizeof( CompressionHeader ) + bound );
+		outBytes.resize( sizeof( CompressionHeader ) + bound );
 
-		auto* const pHeader		   = reinterpret_cast<CompressionHeader*>( listOutBuffer.data() );
+		auto* const pHeader		   = reinterpret_cast<CompressionHeader*>( outBytes.data() );
 		pHeader->_magic			   = kMagicNumber;
 		pHeader->_version		   = 1;
 		pHeader->_codecType		   = static_cast<uint8>( codecType );
@@ -97,27 +97,27 @@ namespace sw
 		pHeader->_uncompressedSize = static_cast<uint64>( srcSize );
 		pHeader->_checksum		   = calculateChecksum( pSrc, srcSize );
 
-		uint8* const pDstPayload	= listOutBuffer.data() + sizeof( CompressionHeader );
+		uint8* const pDstPayload	= outBytes.data() + sizeof( CompressionHeader );
 		size_t		 compressedSize = 0;
 
 		const bool bSuccess = pCodec->compress( pSrc, srcSize, pDstPayload, bound, compressedSize, compressionLevel );
 		if ( bSuccess == false )
 		{
-			listOutBuffer.clear();
+			outBytes.clear();
 			return false;
 		}
 
 		pHeader->_compressedSize = static_cast<uint64>( compressedSize );
-		listOutBuffer.resize( sizeof( CompressionHeader ) + compressedSize );
+		outBytes.resize( sizeof( CompressionHeader ) + compressedSize );
 		return true;
 	}
 
 	bool CompressionStream::decompressBuffer( const void*					  pSrc,
 											  size_t						  srcSize,
-											  vector<uint8>&				  listOutBuffer,
+											  vector<uint8>&				  outBytes,
 											  const CompressionCodecRegistry* pRegistry )
 	{
-		listOutBuffer.clear();
+		outBytes.clear();
 		if ( pSrc == nullptr || srcSize == 0 )
 			return true;
 
@@ -131,13 +131,13 @@ namespace sw
 		if ( header._uncompressedSize == 0 )
 			return true;
 
-		listOutBuffer.resize( static_cast<size_t>( header._uncompressedSize ) );
+		outBytes.resize( static_cast<size_t>( header._uncompressedSize ) );
 
 		size_t	   outUncompressedSize = 0;
-		const bool bSuccess			   = decompressBuffer( pSrc, srcSize, listOutBuffer.data(), listOutBuffer.size(), outUncompressedSize, pRegistry );
+		const bool bSuccess			   = decompressBuffer( pSrc, srcSize, outBytes.data(), outBytes.size(), outUncompressedSize, pRegistry );
 		if ( bSuccess == false || outUncompressedSize != static_cast<size_t>( header._uncompressedSize ) )
 		{
-			listOutBuffer.clear();
+			outBytes.clear();
 			return false;
 		}
 

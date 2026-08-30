@@ -42,48 +42,48 @@ namespace sw
 				return key;
 			}
 
-			static void collectPrefabRefsFromText( const utf8* pText, vector<string>& outPathList )
+			static void collectPrefabRefsFromText( const utf8* pText, vector<string>& outListPath )
 			{
 				if ( pText == nullptr || pText[0] == '\0' )
 					return;
 				if ( StringUtil::stristr( pText, ".prefab" ) == nullptr )
 					return;
-				outPathList.push_back( pText );
+				outListPath.push_back( pText );
 			}
 
-			static void collectPrefabRefsFromXml( XmlNode node, vector<string>& outPathList )
+			static void collectPrefabRefsFromXml( XmlNode node, vector<string>& outListPath )
 			{
 				if ( node.isValid() == false )
 					return;
-				collectPrefabRefsFromText( node.text(), outPathList );
+				collectPrefabRefsFromText( node.text(), outListPath );
 				for ( XmlAttribute attr = node.firstAttr(); attr; attr = attr.next() )
-					collectPrefabRefsFromText( attr.value(), outPathList );
+					collectPrefabRefsFromText( attr.value(), outListPath );
 				for ( XmlNode childNode = node.child(); childNode; childNode = childNode.next() )
-					collectPrefabRefsFromXml( childNode, outPathList );
+					collectPrefabRefsFromXml( childNode, outListPath );
 			}
 
-			static void collectPrefabRefsFromJson( JsonValue value, vector<string>& outPathList )
+			static void collectPrefabRefsFromJson( JsonValue value, vector<string>& outListPath )
 			{
 				if ( value.isValid() == false )
 					return;
 				if ( value.isString() )
 				{
 					const string text = value.asString();
-					collectPrefabRefsFromText( text.c_str(), outPathList );
+					collectPrefabRefsFromText( text.c_str(), outListPath );
 					return;
 				}
 				if ( value.isObject() )
 				{
 					const vector<string> listKeys = value.memberNames();
 					for ( const string& key : listKeys )
-						collectPrefabRefsFromJson( value.get( key ), outPathList );
+						collectPrefabRefsFromJson( value.get( key ), outListPath );
 					return;
 				}
 				if ( value.isArray() )
 				{
 					const size_t count = value.size();
 					for ( size_t index = 0; index < count; ++index )
-						collectPrefabRefsFromJson( value.at( index ), outPathList );
+						collectPrefabRefsFromJson( value.at( index ), outListPath );
 				}
 			}
 
@@ -394,9 +394,9 @@ namespace sw
 		_bValid	   = _stateData.empty() == false ? SW_TRUE : SW_FALSE;
 	}
 
-	void PrefabAsset::collectReferencedPrefabPaths( vector<string>& outPathList ) const
+	void PrefabAsset::collectReferencedPrefabPaths( vector<string>& outListPath ) const
 	{
-		outPathList.clear();
+		outListPath.clear();
 		const string trimmed = StringUtil::trim( _stateData.c_str() );
 		if ( trimmed.empty() )
 			return;
@@ -405,13 +405,13 @@ namespace sw
 			JsonDocument doc;
 			if ( doc.parse( trimmed ) == false )
 				return;
-			PrefabAssetInternal::collectPrefabRefsFromJson( doc.root(), outPathList );
+			PrefabAssetInternal::collectPrefabRefsFromJson( doc.root(), outListPath );
 			return;
 		}
 		XmlDocument doc;
 		if ( doc.parse( trimmed ) == false )
 			return;
-		PrefabAssetInternal::collectPrefabRefsFromXml( doc.root(), outPathList );
+		PrefabAssetInternal::collectPrefabRefsFromXml( doc.root(), outListPath );
 	}
 
 	PrefabAsset* PrefabManager::loadPrefab( string_view assetRelativePath )

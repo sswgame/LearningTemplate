@@ -41,7 +41,7 @@ namespace sw
 		bool  isLoop() const { return _bLoop == SW_TRUE; }
 		void  setLoop( bool bLoop ) { _bLoop = bLoop ? SW_TRUE : SW_FALSE; }
 
-		void				 collectActiveItems( vector<const SequenceTrackItem*>& outItemList ) const;
+		void				 collectActiveItems( vector<const SequenceTrackItem*>& outListItem ) const;
 		const SequenceAsset& getAsset() const { return _asset; }
 
 	private:

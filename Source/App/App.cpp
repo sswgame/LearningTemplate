@@ -118,7 +118,7 @@ namespace sw
 		const AppConfig*	pAppConfig	   = _engineLoop.getConfigManager()->ensureConfig<AppConfig>(
 			kAppConfigHash, config::kFileRuntimeAppConfig, nullptr );
 		if ( pAppConfig != nullptr )
-			gameKitModuleList = pAppConfig->_gameKitModuleList;
+			gameKitModuleList = pAppConfig->_listGameKitModule;
 #endif
 
 		_moduleHost		   = make_unique<ModuleHost>();

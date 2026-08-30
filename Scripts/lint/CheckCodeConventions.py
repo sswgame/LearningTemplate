@@ -193,7 +193,7 @@ _kMemberVectorRe = re.compile(
 _kOutParamNamingRe = re.compile(
     r'\b(?:(?:const\s+)?(?:[A-Za-z0-9_:]+(?:<[^>]+>)?)\s*[\*&]+\s+|\b)'
     r'(outP[A-Z][A-Za-z0-9_]*|outPP[A-Z][A-Za-z0-9_]*|inoutP[A-Z][A-Za-z0-9_]*|inoutPP[A-Z][A-Za-z0-9_]*|'
-    r'listOut[A-Za-z0-9_]*|mapOut[A-Za-z0-9_]*|uniqueOut[A-Za-z0-9_]*|arrOut[A-Za-z0-9_]*|'
+    r'listOut(?!puts?\b)[A-Za-z0-9_]*|mapOut[A-Za-z0-9_]*|uniqueOut[A-Za-z0-9_]*|arrOut[A-Za-z0-9_]*|'
     r'listInOut[A-Za-z0-9_]*|mapInOut[A-Za-z0-9_]*|(?<!::)\bout_(?!of_range\b)[a-zA-Z0-9_]+|out[A-Z][a-zA-Z0-9_]*List|'
     r'outList[A-Za-z0-9_]*Bytes?|outListByte[A-Za-z0-9_]*)\b'
 )
@@ -306,7 +306,8 @@ def getSuggestedOutParamFixInternal(name: str) -> tuple[str, str] | None:
         kNonPluralExceptions = (
             "Bounds", "Status", "Pass", "Address", "Axis", "Process", "Class", "Cross",
             "Loss", "Mass", "Press", "Canvas", "Args", "Bytes", "Bindless", "RtvIndex",
-            "DsvIndex", "Matrix", "Vertex", "Alias"
+            "DsvIndex", "Matrix", "Vertex", "Alias", "Species", "Series", "Focus", "Radius",
+            "Bias", "Lens", "Basis", "Crisis", "Analysis", "Mesh"
         )
         if not any(name.endswith(exc) for exc in kNonPluralExceptions):
             if name.endswith(("ies", "es", "s")) and not name.endswith("ss"):
@@ -897,7 +898,8 @@ def checkFileConventionsInternal(filePath: Path, rootDir: Path) -> list[Conventi
                     kNonPluralExceptions = (
                         "Bounds", "Status", "Pass", "Address", "Axis", "Process", "Class", "Cross",
                         "Loss", "Mass", "Press", "Canvas", "Args", "Bytes", "Bindless", "RtvIndex",
-                        "DsvIndex", "Matrix", "Vertex", "Alias",
+                        "DsvIndex", "Matrix", "Vertex", "Alias", "Species", "Series", "Focus", "Radius",
+                        "Bias", "Lens", "Basis", "Crisis", "Analysis", "Mesh",
                     )
                     if not any(vName.endswith(exc) for exc in kNonPluralExceptions):
                         if vName.endswith(("ies", "es", "s")) and not vName.endswith("ss"):

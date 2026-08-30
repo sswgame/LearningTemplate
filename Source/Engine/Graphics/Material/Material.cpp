@@ -116,17 +116,17 @@ namespace sw
 		if ( pRhi == nullptr || result._bSuccess == false )
 			return;
 
-		if ( result._listBytecode.empty() == false )
+		if ( result._bytecode.empty() == false )
 		{
 			ShaderTargetFormat fmt = ShaderTargetFormat::DXIL_D3D12;
-			if ( result._listBytecode.size() >= sizeof( uint32 ) )
+			if ( result._bytecode.size() >= sizeof( uint32 ) )
 			{
 				uint32 magic{ 0 };
-				Memory::copy( &magic, result._listBytecode.data(), sizeof( uint32 ) );
+				Memory::copy( &magic, result._bytecode.data(), sizeof( uint32 ) );
 				if ( magic == 0x07230203u )
 					fmt = ShaderTargetFormat::SPIRV_Vulkan;
 			}
-			const ShaderReflectionData reflection = ShaderReflection::reflect( result._listBytecode, fmt );
+			const ShaderReflectionData reflection = ShaderReflection::reflect( result._bytecode, fmt );
 			syncPropertiesFromReflection( reflection );
 		}
 
@@ -134,7 +134,7 @@ namespace sw
 		{
 			pRhi->getResource()->updateConstantBuffer( _constantBuffer, _data._listBuffer.data(), static_cast<uint32>( _data._listBuffer.size() ) );
 			SW_LOG_INFO( "HotRefresh '%#': Shader recompile detected, Constant Buffer re-uploaded. (Bytecode: %# bytes)",
-						 _desc._name.c_str(), result._listBytecode.size() );
+						 _desc._name.c_str(), result._bytecode.size() );
 		}
 	}
 

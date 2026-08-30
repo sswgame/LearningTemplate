@@ -15,7 +15,7 @@ namespace sw
 		string _name;
 
 		PROPERTY()
-		vector<string> _dependencyModuleList;
+		vector<string> _listDependencyModule;
 	};
 
 	REFLECT()
@@ -24,6 +24,6 @@ namespace sw
 		REFLECT_BODY();
 
 		PROPERTY()
-		vector<GameKitConfig> _gameKitModuleList;
+		vector<GameKitConfig> _listGameKitModule;
 	};
 } // namespace sw

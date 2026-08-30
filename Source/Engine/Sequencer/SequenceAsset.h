@@ -44,7 +44,7 @@ namespace sw
 		/** @brief JSON 본문을 만듭니다. */
 		string toJson() const;
 		/** @brief 해당 프레임에 걸쳐 있는 트랙을 채웁니다. */
-		void collectActiveItems( int32 frame, vector<const SequenceTrackItem*>& outItemList ) const;
+		void collectActiveItems( int32 frame, vector<const SequenceTrackItem*>& outListItem ) const;
 
 		int32					  _frameMin{ 0 };
 		int32					  _frameMax{ 100 };

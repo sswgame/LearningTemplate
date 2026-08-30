@@ -46,7 +46,7 @@ namespace sw
 		/** @brief 로드에 성공했으면 true. */
 		bool isValid() const { return _bValid != 0; }
 		/** @brief 상태 XML/JSON 안의 `.prefab` 경로를 수집합니다. */
-		void collectReferencedPrefabPaths( vector<string>& outPathList ) const;
+		void collectReferencedPrefabPaths( vector<string>& outListPath ) const;
 
 	private:
 		string				   _name;

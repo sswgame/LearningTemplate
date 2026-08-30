@@ -74,8 +74,8 @@ namespace sw
 			D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc{};
 			psoDesc.InputLayout				 = { inputElementDescs, _countof( inputElementDescs ) };
 			psoDesc.pRootSignature			 = _pDevice->_rootSignature.Get();
-			psoDesc.VS						 = { vsResult._listBytecode.data(), vsResult._listBytecode.size() };
-			psoDesc.PS						 = { psResult._listBytecode.data(), psResult._listBytecode.size() };
+			psoDesc.VS						 = { vsResult._bytecode.data(), vsResult._bytecode.size() };
+			psoDesc.PS						 = { psResult._bytecode.data(), psResult._bytecode.size() };
 			psoDesc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
 			psoDesc.RasterizerState.CullMode = ( desc._cullMode == RHICullMode::Front )
 												 ? D3D12_CULL_MODE_FRONT
@@ -139,7 +139,7 @@ namespace sw
 			{
 				D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc{};
 				psoDesc.pRootSignature = _pDevice->_computeRootSignature ? _pDevice->_computeRootSignature.Get() : _pDevice->_rootSignature.Get();
-				psoDesc.CS			   = { res._listBytecode.data(), res._listBytecode.size() };
+				psoDesc.CS			   = { res._bytecode.data(), res._bytecode.size() };
 
 				const HRESULT hr = _pDevice->_device->CreateComputePipelineState( &psoDesc, IID_PPV_ARGS( pso.GetAddressOf() ) );
 				if ( FAILED( hr ) )

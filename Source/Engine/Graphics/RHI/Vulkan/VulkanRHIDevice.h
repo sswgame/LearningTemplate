@@ -473,7 +473,7 @@ namespace sw
 		VkPipeline			  _pipeline;
 		VkPipeline			  _offscreenPipeline; ///< Same shaders as `_pipeline`, bound to `_offscreenRenderPass`
 		VkBuffer			  _vertexBuffer;	  ///< 풀스크린 포스트 (정점 3개)
-		vector<uint32>		  _bindlessFreeList;
+		vector<uint32>		  _listBindlessFree;
 
 		RHIHandleTable<VulkanBufferRecord>	   _gpuBuffers;
 		unordered_map<RHIBufferHandle, uint32> _mapCbSlotSize;
@@ -487,7 +487,7 @@ namespace sw
 		vector<RHIBufferHandle>				   _listBindlessSourceBuffer;
 		vector<VkDescriptorSet>				   _listRegisteredUAV;
 		vector<RHIBufferHandle>				   _listUavSourceBuffer;
-		vector<uint32>						   _uavFreeList;
+		vector<uint32>						   _listUavFree;
 
 		RHIHandleTable<VulkanTextureRecord> _gpuTextures;
 		RHIReleaseQueue						_releaseQueue;
@@ -497,7 +497,7 @@ namespace sw
 
 		VkDescriptorSetLayout	_textureDescriptorSetLayout;
 		vector<VkDescriptorSet> _listRegisteredTexture; ///< 레거시 텍스처별 set (슬롯 바인드 폴백)
-		vector<uint32>			_textureFreeList;
+		vector<uint32>			_listTextureFree;
 
 		VkDescriptorSetLayout _bindlessTextureArrayLayout;
 		VkDescriptorSet		  _bindlessTextureSet;
