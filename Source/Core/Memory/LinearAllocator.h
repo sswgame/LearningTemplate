@@ -18,6 +18,11 @@ namespace sw
 	/**
 	 * @class LinearAllocator
 	 * @brief O(1) 선형 할당. reset 시 오프셋만 되돌리고, clear 시 블록을 해제합니다.
+	 *
+	 * @note 스레드 계약: allocate() 는 여러 스레드에서 동시 호출해도 안전합니다(블록 오프셋 CAS).
+	 *       그러나 reset() / clear() 는 진행 중인 allocate() 와 겹치면 안 됩니다 — 겹치면 이미
+	 *       내준 메모리를 다시 내줄 수 있습니다. 호출자가 프레임 경계 등에서 외부 동기화로
+	 *       allocate() 가 없을 때만 reset()/clear() 를 호출해야 합니다.
 	 */
 	class SW_API LinearAllocator
 	{
@@ -47,11 +52,13 @@ namespace sw
 
 		/**
 		 * @brief 모든 블록 오프셋을 0으로 되돌려 재사용합니다. 메모리는 유지합니다.
+		 * @warning 동시에 실행 중인 allocate() 가 없어야 합니다(클래스 스레드 계약 참고).
 		 */
 		void reset();
 
 		/**
 		 * @brief 예약된 블록을 모두 해제합니다.
+		 * @warning 동시에 실행 중인 allocate() 가 없어야 합니다(클래스 스레드 계약 참고).
 		 */
 		void clear();
 
