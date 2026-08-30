@@ -480,12 +480,12 @@ namespace sw
 		if ( _pRHI != nullptr )
 			_pRHI->getDevice().waitIdle();
 
-		// 비동기 태스크 펜싱 (Module Unload 전 안전 보장)
+		// 비동기 태스크 펜싱 (Module Unload 전 안전 보장). 타임아웃은 LiveReloadManager 폴백과 공유합니다.
 		if ( engine::areEngineServicesBound() )
 		{
-			if ( engine::getTaskManager().waitAll( 5000 ) == false )
+			if ( engine::getTaskManager().waitAll( LiveReloadManager::kModuleDrainTimeoutMs ) == false )
 			{
-				SW_LOG_ERROR( "Task fencing timeout (5s) before module reload — poisoning LiveReload graph." );
+				SW_LOG_ERROR( "Task fencing timeout (%# ms) before module reload — poisoning LiveReload graph.", LiveReloadManager::kModuleDrainTimeoutMs );
 				poisonLiveReload( "task fencing timeout before unload" );
 			}
 		}

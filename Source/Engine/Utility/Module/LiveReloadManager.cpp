@@ -542,7 +542,9 @@ namespace sw
 
 	bool LiveReloadManager::drainTasksBeforeUnload()
 	{
-		constexpr uint32 kDrainTimeoutMs = 5000;
+		// App 경로에서는 _drainWorkers(= ModuleHost::drainRenderWorkers)가 실제 배수를 담당하고,
+		// 아래 폴백은 헤드리스/테스트에서만 실행됩니다. 타임아웃 상수는 양쪽이 공유합니다.
+		constexpr uint32 kDrainTimeoutMs = LiveReloadManager::kModuleDrainTimeoutMs;
 
 		// onBeforeReload must stop module-originated work. Drain in-flight tasks so
 		// callbacks cannot enter the old image. Do not clear() — that drops unrelated

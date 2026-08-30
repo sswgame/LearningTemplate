@@ -36,6 +36,12 @@ namespace sw
 		using OnBeforeCommitBatchDelegate = Delegate<void( const vector<string>& listModuleName )>;
 		using DrainWorkersDelegate		  = Delegate<void()>;
 
+		/**
+		 * @brief 모듈 언로드 전 in-flight 태스크 배수 타임아웃(ms). 초과 시 리로드 그래프를 poison 합니다.
+		 * @details ModuleHost::drainRenderWorkers(App 경로)와 drainTasksBeforeUnload(헤드리스 폴백)가 공유합니다.
+		 */
+		static constexpr uint32 kModuleDrainTimeoutMs = 5000;
+
 		/** @brief 모듈 맵과 워처를 비운 채 시작합니다. */
 		LiveReloadManager();
 		/** @brief 로드된 모듈을 언로드합니다. */
