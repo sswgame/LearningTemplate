@@ -11,6 +11,7 @@
 #include "Engine/Graphics/RHI/RHIModuleAbi.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
+#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Utility/Module/LiveReloadManager.h"
 #include "Engine/Utility/Resource/ResourceManager.h"
 
@@ -289,6 +290,85 @@ SW_TEST_CASE( Architecture, LiveReloadSuccessfulShadowReload )
 	SW_EXPECT_EQUAL( newHandleInCb, finalHandle );
 
 	manager.shutdown();
+}
+
+/**
+ * @brief [Architecture] 모듈 리플렉션 registrar 생명주기 — 등록/리로드/언로드 시 TypeRegistry
+ *        내용과 전역 registrar 헤드 상태를 고정한다(#4 안전망).
+ * @details registerModuleTypes 는 매 로드 후 전역 TypeRegistrar::getHead() 를 nullptr 로 drain 한다.
+ *          그 불변식과 "리로드해도 타입 수 불변 / 언로드하면 원복" 을 명시 검증한다.
+ */
+SW_TEST_CASE( Architecture, LiveReloadRegistrarContentLifecycle )
+{
+	const sw::string gfPath = sw::modulePath( "GameFramework" );
+	if ( sw::FileUtil::fileExists( gfPath ) == false )
+		SW_TEST_SKIP( "GameFramework MODULE not built in this config" );
+
+	sw::TypeRegistry& registry = sw::engine::getTypeRegistry();
+
+	const auto collectFqn = [&registry]()
+	{
+		sw::vector<sw::hashed_string> listFqn;
+		registry.forEachType( [&listFqn]( const sw::TypeInfo& info )
+		{
+			listFqn.push_back( info._fullyQualifiedName );
+		} );
+		std::sort( listFqn.begin(), listFqn.end() );
+		return listFqn;
+	};
+
+	const sw::vector<sw::hashed_string> baseTypes = collectFqn();
+	SW_EXPECT_EQUAL( static_cast<sw::TypeRegistrar*>( nullptr ), sw::TypeRegistrar::getHead() );
+	SW_EXPECT_EQUAL( static_cast<sw::EnumRegistrar*>( nullptr ), sw::EnumRegistrar::getHead() );
+
+	sw::LiveReloadManager manager;
+	if ( manager.registerModule( "GameFramework" ) == false )
+		SW_TEST_SKIP( "GameFramework MODULE register failed in this config" );
+
+	const sw::vector<sw::hashed_string> afterRegister = collectFqn();
+	SW_EXPECT_TRUE( afterRegister.size() > baseTypes.size() );
+	SW_EXPECT_EQUAL( static_cast<sw::TypeRegistrar*>( nullptr ), sw::TypeRegistrar::getHead() );
+
+	// 모듈이 새로 들여온 타입 하나를 대표로 잡는다.
+	sw::hashed_string sampleFqn{};
+	bool			  bHasSample{ false };
+	for ( const sw::hashed_string& fqn : afterRegister )
+	{
+		if ( std::binary_search( baseTypes.begin(), baseTypes.end(), fqn ) == false )
+		{
+			sampleFqn  = fqn;
+			bHasSample = true;
+			break;
+		}
+	}
+	SW_EXPECT_TRUE( bHasSample );
+	SW_EXPECT_TRUE( registry.findType( sampleFqn ) != nullptr );
+
+	// 1) 성공 리로드: 타입 수 불변, 대표 타입 유지, 전역 헤드 drain 유지
+	bool onAfterCalled{ false };
+	manager.setOnAfterReload(
+		"GameFramework",
+		SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&onAfterCalled]( void* )
+	{
+		onAfterCalled = true;
+	} ) );
+	manager.triggerReload( "GameFramework" );
+	for ( int32 stepIndex = 0; stepIndex < 80 && onAfterCalled == false; ++stepIndex )
+	{
+		std::this_thread::sleep_for( std::chrono::milliseconds( 15 ) );
+		manager.update();
+	}
+	SW_EXPECT_TRUE( onAfterCalled );
+	SW_EXPECT_FALSE( manager.isGraphBroken() );
+	SW_EXPECT_EQUAL( afterRegister.size(), collectFqn().size() );
+	SW_EXPECT_TRUE( registry.findType( sampleFqn ) != nullptr );
+	SW_EXPECT_EQUAL( static_cast<sw::TypeRegistrar*>( nullptr ), sw::TypeRegistrar::getHead() );
+
+	// 2) 언로드: 타입 수 원복, 대표 타입 제거, 전역 헤드 drain 유지
+	manager.shutdown();
+	SW_EXPECT_EQUAL( baseTypes.size(), collectFqn().size() );
+	SW_EXPECT_TRUE( registry.findType( sampleFqn ) == nullptr );
+	SW_EXPECT_EQUAL( static_cast<sw::TypeRegistrar*>( nullptr ), sw::TypeRegistrar::getHead() );
 }
 
 /**
