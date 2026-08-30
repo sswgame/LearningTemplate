@@ -362,27 +362,8 @@ namespace sw
 			return false;
 		}
 
-		const bool needsMigrate = migrate != nullptr && ( outVersion != currentVersion || listOrphan.empty() == false || pLegacyPtr != nullptr );
-		bool	   ok{ true };
-		if ( needsMigrate )
-		{
-			SchemaMigrateContext mctx;
-			mctx._fromVersion	  = outVersion;
-			mctx._toVersion		  = currentVersion;
-			mctx._pInstance		  = pInstance;
-			mctx._pTypeInfo		  = &typeInfo;
-			mctx._pLegacyInstance = pLegacyPtr;
-			mctx._pLegacyTypeInfo = pLegacyTypeInfo;
-			mctx._pOrphans		  = &listOrphan;
-			mctx._pSerializeCtx	  = &ctx;
-			ok					  = migrate( mctx );
-		}
-		else if ( migrate == nullptr && ( outVersion != currentVersion || listOrphan.empty() == false ) )
-		{
-			SW_LOG_WARNING( "schema version %# -> %# with no migrate callback (%# listOrphan)",
-							outVersion, currentVersion, static_cast<uint32>( listOrphan.size() ) );
-			ok = false;
-		}
+		const bool ok = runSchemaMigrateStep( outVersion, currentVersion, pInstance, typeInfo, pLegacyPtr, pLegacyTypeInfo,
+											  listOrphan, migrate, outVersion != currentVersion || listOrphan.empty() == false, ctx );
 
 		if ( pLegacyPtr != nullptr )
 			destroyScratchInstance( pLegacyPtr, *pLegacyTypeInfo );

@@ -83,6 +83,16 @@ namespace sw
 	/** @brief fromVersion → toVersion. false면 deserializeVersioned 실패. */
 	using SchemaMigrateFn = bool ( * )( const SchemaMigrateContext& ctx );
 
+	/**
+	 * @brief deserializeVersioned 의 마지막 단계 — migrate 호출 조건 판정 + 실행, 또는 no-migrate 경고.
+	 * @details soft 역직렬화가 끝난 뒤 Json/Binary 가 공유하는 로직. 스크래치 인스턴스 파괴는 호출자 책임.
+	 * @param bWarnWhenNoMigrate migrate 가 없고 이 값이 true 이면 경고 후 false 반환(버전/orphan 정책은 호출자가 계산).
+	 */
+	SW_API bool runSchemaMigrateStep( uint32 fromVersion, uint32 currentVersion, void* pInstance, const TypeInfo& typeInfo,
+									  void* pLegacyInstance, const TypeInfo* pLegacyTypeInfo,
+									  const vector<SchemaOrphanValue>& listOrphan, SchemaMigrateFn migrate,
+									  bool bWarnWhenNoMigrate, const SerializeContext& ctx );
+
 	/** @brief Json/Xml 루트에 기록하는 스키마 버전 키. */
 	inline constexpr auto kSchemaVersionKey = "_schemaVersion";
 	/** @brief 컨테이너가 가리키는 PROPERTY 이름 (`<vector _name="_listComponent">`, JSON `"_name"`). */

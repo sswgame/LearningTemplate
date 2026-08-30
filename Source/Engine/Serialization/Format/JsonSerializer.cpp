@@ -745,28 +745,8 @@ namespace sw
 		else if ( softVer != 0 )
 			outVersion = softVer;
 
-		const bool needsMigrate = migrate != nullptr && ( outVersion != currentVersion || listOrphan.empty() == false || pLegacyPtr != nullptr );
-		bool	   ok{ true };
-		if ( needsMigrate )
-		{
-			SchemaMigrateContext mctx;
-			mctx._fromVersion	  = outVersion;
-			mctx._toVersion		  = currentVersion;
-			mctx._pInstance		  = pInstance;
-			mctx._pTypeInfo		  = &typeInfo;
-			mctx._pLegacyInstance = pLegacyPtr;
-			mctx._pLegacyTypeInfo = pLegacyTypeInfo;
-			mctx._pOrphans		  = &listOrphan;
-			mctx._pSerializeCtx	  = &ctx;
-			ok					  = migrate( mctx );
-		}
-		else if ( migrate == nullptr && outVersion != currentVersion )
-		{
-			SW_LOG_WARNING( "(%#) schema version %# -> %# with no migrate callback (%# _orphans: %#)",
-							typeInfo._name.c_str(), outVersion, currentVersion, static_cast<uint32>( listOrphan.size() ),
-							listOrphan.empty() ? "" : listOrphan[0]._name.c_str() );
-			ok = false;
-		}
+		const bool ok = runSchemaMigrateStep( outVersion, currentVersion, pInstance, typeInfo, pLegacyPtr, pLegacyTypeInfo,
+											  listOrphan, migrate, outVersion != currentVersion, ctx );
 		if ( pLegacyPtr != nullptr )
 			destroyScratchInstance( pLegacyPtr, *pLegacyTypeInfo );
 		return ok;

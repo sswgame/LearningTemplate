@@ -462,4 +462,37 @@ namespace sw
 		return false;
 	}
 
+	SW_LOG_CALLER( "SchemaMigrate" );
+
+	bool runSchemaMigrateStep( uint32 fromVersion, uint32 currentVersion, void* pInstance, const TypeInfo& typeInfo,
+							   void* pLegacyInstance, const TypeInfo* pLegacyTypeInfo,
+							   const vector<SchemaOrphanValue>& listOrphan, SchemaMigrateFn migrate,
+							   bool bWarnWhenNoMigrate, const SerializeContext& ctx )
+	{
+		const bool needsMigrate =
+			migrate != nullptr && ( fromVersion != currentVersion || listOrphan.empty() == false || pLegacyInstance != nullptr );
+		if ( needsMigrate )
+		{
+			SchemaMigrateContext mctx;
+			mctx._fromVersion	  = fromVersion;
+			mctx._toVersion		  = currentVersion;
+			mctx._pInstance		  = pInstance;
+			mctx._pTypeInfo		  = &typeInfo;
+			mctx._pLegacyInstance = pLegacyInstance;
+			mctx._pLegacyTypeInfo = pLegacyTypeInfo;
+			mctx._pOrphans		  = &listOrphan;
+			mctx._pSerializeCtx	  = &ctx;
+			return migrate( mctx );
+		}
+
+		if ( migrate == nullptr && bWarnWhenNoMigrate )
+		{
+			SW_LOG_WARNING( "(%#) schema version %# -> %# with no migrate callback (%# orphans: %#)",
+							typeInfo._name.c_str(), fromVersion, currentVersion, static_cast<uint32>( listOrphan.size() ),
+							listOrphan.empty() ? "" : listOrphan[0]._name.c_str() );
+			return false;
+		}
+		return true;
+	}
+
 } // namespace sw
