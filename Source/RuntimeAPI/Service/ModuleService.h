@@ -39,8 +39,8 @@ namespace sw
 		CompressionCodecRegistry,
 		ShaderCache,
 		GameData,
-		MonsterDataCatalog,
-		SpeciesCatalog,
+		MonsterDataCatalog, ///< 호스트가 아니라 게임이 bindLocalService로 제공합니다.
+		SpeciesCatalog,		///< 호스트가 아니라 게임이 bindLocalService로 제공합니다.
 		ComponentDefaults,
 		Count
 	};

@@ -69,6 +69,8 @@ namespace
 					return &sw::engine::getComponentDefaults();
 				case ModuleServiceId::MonsterDataCatalog:
 				case ModuleServiceId::SpeciesCatalog:
+					// 게임 모듈이 bindLocalService로 제공합니다. 호스트 테이블에는 없습니다.
+					break;
 				case ModuleServiceId::Count:
 				default:
 					break;
