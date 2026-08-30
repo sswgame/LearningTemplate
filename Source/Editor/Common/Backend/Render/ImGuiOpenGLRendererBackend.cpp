@@ -207,12 +207,10 @@ namespace sw::editor
 
 	void ImGuiOpenGLRendererBackend::newFrame()
 	{
-		if ( _pRHIDevice != nullptr )
-			_pRHIDevice->bindGraphicsContext();
+		// requiresRenderThreadContext()==true 이므로 ImGuiEditor 가 present 훅(렌더 스레드)에서
+		// 호출한다. GL 컨텍스트는 이미 렌더 스레드에 바인딩돼 있으므로 여기서 잡지 않는다.
 		if ( ImGui::GetIO().BackendRendererUserData != nullptr )
 			ImGui_ImplOpenGL3_NewFrame();
-		if ( _pRHIDevice != nullptr )
-			_pRHIDevice->unbindGraphicsContext();
 	}
 
 	void ImGuiOpenGLRendererBackend::processTextureUpdates()
@@ -220,17 +218,14 @@ namespace sw::editor
 		if ( ImGui::GetIO().BackendRendererUserData == nullptr )
 			return;
 
-		// ImGui_ImplOpenGL3_RenderDrawData 가 draw_data->Textures 를 순회하며 하던 일을 여기(UI 스레드)서 끝낸다.
-		// 스냅샷은 Textures 를 공유하지 않으므로 렌더 스레드가 그리기 전에 텍스처를 준비해 둬야 한다.
-		if ( _pRHIDevice != nullptr )
-			_pRHIDevice->bindGraphicsContext();
+		// ImGui_ImplOpenGL3_RenderDrawData 가 draw_data->Textures 를 순회하며 하던 일을 렌더 스레드에서 먼저 끝낸다.
+		// 스냅샷은 Textures 를 공유하지 않으므로 메인 DrawData 를 그리기 전에 텍스처가 준비돼 있어야 한다.
+		// GL 컨텍스트는 present 훅 진입 시점에 이미 렌더 스레드에 바인딩돼 있다.
 		for ( ImTextureData* pTexture : ImGui::GetPlatformIO().Textures )
 		{
 			if ( pTexture != nullptr && pTexture->Status != ImTextureStatus_OK )
 				ImGui_ImplOpenGL3_UpdateTexture( pTexture );
 		}
-		if ( _pRHIDevice != nullptr )
-			_pRHIDevice->unbindGraphicsContext();
 	}
 
 	void ImGuiOpenGLRendererBackend::render( class IRHIDevice* pRhiDevice, ImDrawData* pDrawData )

@@ -43,6 +43,14 @@ namespace sw::editor
 		 */
 		virtual void processTextureUpdates() {}
 
+		/**
+		 * @brief 프레임 GPU 작업(newFrame·텍스처 갱신·보조 뷰포트 렌더)을 렌더 스레드에서 해야 하면 true.
+		 * @details OpenGL 처럼 GPU 컨텍스트가 스레드 전용(wglMakeCurrent)인 백엔드는 UI 스레드에서
+		 *          컨텍스트를 잡을 수 없다. 이 값이 true 면 ImGuiEditor 가 해당 호출들을 present 훅
+		 *          (렌더 스레드)으로 옮겨 실행한다. DX12/DX11/Vulkan 은 false.
+		 */
+		virtual bool requiresRenderThreadContext() const { return false; }
+
 		// ------------------------------------------------------------------------------
 		// 2) ImGui 텍스처 — Game View RT 등
 		// ------------------------------------------------------------------------------

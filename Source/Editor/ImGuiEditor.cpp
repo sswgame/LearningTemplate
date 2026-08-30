@@ -312,20 +312,26 @@ namespace sw::editor
 		{
 			endFrame();
 
-			// ImGui 1.92 동적 아틀라스: 폰트/텍스처 생성·갱신을 UI 스레드에서 마친다.
-			// (메인 스냅샷은 Textures==nullptr 로 넘겨 렌더 스레드가 텍스처 작업을 하지 않는다)
-			if ( _rendererBackend != nullptr )
+			// GL 처럼 컨텍스트가 렌더 스레드 전용이면 GPU 작업(텍스처 갱신·보조 뷰포트 렌더)을
+			// present 훅으로 옮긴다. 그 외 백엔드는 여기 UI 스레드에서 처리한다.
+			const bool bRenderThreadCtx =
+				_rendererBackend != nullptr && _rendererBackend->requiresRenderThreadContext();
+
+			// ImGui 1.92 동적 아틀라스: 폰트/텍스처 생성·갱신을 그리기 전에 마친다.
+			// (메인 스냅샷은 Textures==nullptr 로 넘겨 렌더 스레드가 이 리스트를 만지지 않는다)
+			if ( _rendererBackend != nullptr && bRenderThreadCtx == false )
 				_rendererBackend->processTextureUpdates();
 
 			ImGuiIO& io = ImGui::GetIO();
 			if ( io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable )
 			{
-				// 보조(플로팅) 뷰포트는 여기 UI 스레드에서 동기로 렌더·present 한다.
-				// imgui 1.92 의 뷰포트 프레임/펜스 관리가 단일 스레드 호출을 전제하므로,
-				// 렌더 스레드에서 가짜 ImGuiViewport 로 present 하던 방식은 무한 대기를 유발했다.
-				// 메인 뷰포트는 RenderPlatformWindowsDefault 가 건너뛰고, 앱이 스냅샷으로 렌더한다.
+				// 플랫폼(OS 윈도우) 갱신은 항상 UI 스레드에서 한다.
+				// 보조(플로팅) 뷰포트의 GPU 렌더·present 는 단일 스레드 호출을 전제하는
+				// imgui 1.92 뷰포트 관리 때문에 한 스레드에서만 돌려야 하며,
+				// GL 이면 그 스레드는 렌더 스레드다(아래 render() 에서 처리).
 				ImGui::UpdatePlatformWindows();
-				ImGui::RenderPlatformWindowsDefault();
+				if ( bRenderThreadCtx == false )
+					ImGui::RenderPlatformWindowsDefault();
 			}
 
 			const uint32 writeSlot = 1u - _publishedDrawSlot.load( std::memory_order_acquire );
@@ -334,6 +340,12 @@ namespace sw::editor
 
 			_arrDrawSnapshot[writeSlot].capture();
 			_publishedDrawSlot.store( writeSlot, std::memory_order_release );
+
+			// 이 프레임을 "렌더 대기" 상태로 표시한다. 다음 updateUI 는 상단 waitForDrawSnapshotIdle
+			// 에서 postPresent 까지 막히므로, 렌더 스레드가 present 훅에서 ImGui 공유 상태
+			// (텍스처 리스트·뷰포트)를 만지는 GL 경로에서도 UI 스레드와 겹치지 않는다.
+			// (렌더 스레드 render() 도 같은 값을 다시 저장하지만 값이 같아 무해하다)
+			_inFlightDrawSlot.store( writeSlot, std::memory_order_release );
 		}
 	}
 
@@ -342,16 +354,32 @@ namespace sw::editor
 		if ( _bInitialized == SW_FALSE || pRhiDevice == nullptr )
 			return;
 
+		// GL: 컨텍스트가 이 스레드(렌더 스레드)에 바인딩된 지금이 프레임 GPU 작업을 할 유일한 지점이다.
+		const bool bRenderThreadCtx =
+			_rendererBackend != nullptr && _rendererBackend->requiresRenderThreadContext();
+		if ( bRenderThreadCtx )
+		{
+			_rendererBackend->newFrame();
+			_rendererBackend->processTextureUpdates();
+		}
+
 		const uint32 slot = _publishedDrawSlot.load( std::memory_order_acquire );
 		_inFlightDrawSlot.store( slot, std::memory_order_release );
-		if ( slot >= ImGuiEditorInternal::kDrawSnapshotCount )
-			return;
+		if ( slot < ImGuiEditorInternal::kDrawSnapshotCount )
+		{
+			ImDrawData* pDrawData = _arrDrawSnapshot[slot].getMainDrawData();
+			if ( pDrawData != nullptr )
+				renderBackend( pRhiDevice, pDrawData );
+		}
 
-		ImDrawData* pDrawData = _arrDrawSnapshot[slot].getMainDrawData();
-		if ( pDrawData == nullptr )
-			return;
-
-		renderBackend( pRhiDevice, pDrawData );
+		// 보조(플로팅) 뷰포트도 GL 이면 여기 렌더 스레드에서 렌더·present 한다.
+		// (UI 스레드는 updateUI 상단 waitForDrawSnapshotIdle 에서 막혀 있어 ImGui 상태가 안정적이다)
+		if ( bRenderThreadCtx )
+		{
+			const ImGuiIO& io = ImGui::GetIO();
+			if ( io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable )
+				ImGui::RenderPlatformWindowsDefault();
+		}
 	}
 
 	void ImGuiEditor::postPresent( IRHIDevice* pRhiDevice )
@@ -453,7 +481,8 @@ namespace sw::editor
 		if ( _bInitialized == SW_FALSE )
 			return;
 
-		if ( _rendererBackend != nullptr )
+		// GL 처럼 컨텍스트가 렌더 스레드 전용인 백엔드는 newFrame 을 present 훅에서 호출한다.
+		if ( _rendererBackend != nullptr && _rendererBackend->requiresRenderThreadContext() == false )
 			_rendererBackend->newFrame();
 
 		if ( _platformBackend != nullptr )
