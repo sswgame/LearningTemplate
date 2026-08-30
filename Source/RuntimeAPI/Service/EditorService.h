@@ -56,10 +56,10 @@ namespace sw
 	{
 		struct EditorData;
 
-		SW_MODULE_API void bindEditorService( const ModuleService& service );
-		SW_MODULE_API void unbindEditorService();
+		void bindEditorService( const ModuleService& service );
+		void unbindEditorService();
 
-		SW_MODULE_API void* getRawService( uint32 id );
+		void* getRawService( uint32 id );
 
 		template <typename T>
 		T* getService()
@@ -67,7 +67,7 @@ namespace sw
 			return static_cast<T*>( getRawService( EditorServiceTraits<T>::id ) );
 		}
 
-		SW_MODULE_API EditorData& getEditorData();
-		SW_MODULE_API void		  setEditorData( EditorData* pData );
+		EditorData& getEditorData();
+		void		setEditorData( EditorData* pData );
 	} // namespace editor
 } // namespace sw

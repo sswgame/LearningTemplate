@@ -108,20 +108,16 @@
 	#elif defined( SW_IMPORTS )
 		/** @brief Engine.dll 을 사용할 때 import 합니다. */
 		#define SW_API __declspec( dllimport )
-		#define SW_API __declspec( dllimport )
 	#else
 		/** @brief 정적 링크 시 장식이 없습니다. */
 		#define SW_API
 	#endif
 
 	#if defined( SW_MODULE_EXPORTS )
-		/** @brief 게임/에디터 모듈 DLL 을 빌드할 때 export 합니다. */
+		/** @brief 게임/에디터 모듈 DLL 을 빌드할 때 C-ABI 진입점을 export 합니다. */
 		#define SW_MODULE_API __declspec( dllexport )
-	#elif defined( SW_MODULE_IMPORTS )
-		/** @brief 게임/에디터 모듈 DLL 을 사용할 때 import 합니다. */
-		#define SW_MODULE_API __declspec( dllimport )
 	#else
-		/** @brief STATIC 모듈(shipping) 또는 헤더만 참조할 때 dllimport를 쓰지 않음 */
+		/** @brief 진입점은 GetProcAddress로만 조회하므로 dllimport를 쓰지 않습니다. */
 		#define SW_MODULE_API
 	#endif
 #else
