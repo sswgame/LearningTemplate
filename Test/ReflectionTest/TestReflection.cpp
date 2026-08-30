@@ -2564,6 +2564,34 @@ namespace
 		}
 		return out;
 	}
+
+	/** @brief 골든 문자열 비교 — 불일치 시 양쪽을 stdout 에 찍고 실패로 이어지도록 false 반환. */
+	bool goldenEq( const utf8* pLabel, const sw::string& actual, const utf8* pExpected )
+	{
+		if ( actual == pExpected )
+			return true;
+		std::fprintf( stdout, "[golden %s]\n---expected---\n%s\n---actual---\n%s\n", pLabel, pExpected, actual.c_str() );
+		std::fflush( stdout );
+		return false;
+	}
+
+	/** @brief 한 인스턴스의 5개 골든(Json/Xml/Bin/JsonVer/BinVer)을 검증합니다. */
+	bool checkGoldenSet( const utf8* pLabel, const void* pInstance, const sw::TypeInfo& typeInfo,
+						 const utf8* pJson, const utf8* pXml, const utf8* pBinHex, const utf8* pJsonVer, const utf8* pBinVerHex )
+	{
+		sw::vector<uint8> bin;
+		sw::BinarySerializer::serialize( pInstance, typeInfo, bin );
+		sw::vector<uint8> binVer;
+		sw::BinarySerializer::serializeVersioned( 7, pInstance, typeInfo, binVer );
+
+		bool bOk = true;
+		bOk &= goldenEq( pLabel, sw::JsonSerializer::serialize( pInstance, typeInfo ), pJson );
+		bOk &= goldenEq( pLabel, sw::XmlSerializer::serialize( pInstance, typeInfo ), pXml );
+		bOk &= goldenEq( pLabel, toHexString( bin ), pBinHex );
+		bOk &= goldenEq( pLabel, sw::JsonSerializer::serializeVersioned( 7, pInstance, typeInfo ), pJsonVer );
+		bOk &= goldenEq( pLabel, toHexString( binVer ), pBinVerHex );
+		return bOk;
+	}
 } // namespace
 
 /**
@@ -2719,6 +2747,62 @@ SW_TEST_CASE( Reflection_Serialization, GoldenOutputFormatsStable )
 	SW_EXPECT_TRUE( sw::JsonSerializer::deserialize( &back, *typeInfo, kGoldenJson ) );
 	SW_EXPECT_EQUAL( 5, back._grid[1][2] );
 	SW_EXPECT_EQUAL( 42, back._inner._x );
+}
+
+/**
+ * @brief [Reflection_Serialization] 스칼라 이스케이프·비트필드·XmlAttribute·versioned 헤더 골든.
+ * @details GoldenOutputFormatsStable(중첩 컨테이너)를 보완하는 두 번째 안전망.
+ */
+SW_TEST_CASE( Reflection_Serialization, GoldenOutputFormatsWide )
+{
+	sw::TypeRegistry& reg = sw::engine::getTypeRegistry();
+
+	const sw::TypeInfo* pScalar = reg.findType( sw::hashed_string( "sw::SampleTestActor" ) );
+	const sw::TypeInfo* pBits	= reg.findType( sw::hashed_string( "sw::BitfieldTestActor" ) );
+	const sw::TypeInfo* pAttr	= reg.findType( sw::hashed_string( "sw::DefaultValueTestActor" ) );
+	SW_ASSERT_TRUE( pScalar != nullptr && pBits != nullptr && pAttr != nullptr );
+
+	// 스칼라 + 문자열 이스케이프(JSON \" \\ \n / XML 단일따옴표 속성 + 원시 개행)
+	sw::SampleTestActor scalar;
+	scalar._hp	 = -7;
+	scalar._name = "a\"b\\c\nd";
+	SW_EXPECT_TRUE( checkGoldenSet(
+		"scalar", &scalar, *pScalar,
+		"{\"_hp\":-7,\"_name\":\"a\\\"b\\\\c\\nd\"}",
+		"<SampleTestActor _hp=\"-7\" _name='a\"b\\c\n"
+		"d'/>\n"
+		"\n",
+		"02000000266feed8bfe2defb04000000f9ffffffcd98c89d3865c1170b000000070000006122625c630a64",
+		"{\"_schemaVersion\":7,\"_hp\":-7,\"_name\":\"a\\\"b\\\\c\\nd\"}",
+		"0700000002000000266feed8bfe2defb04000000f9ffffffcd98c89d3865c1170b000000070000006122625c630a64" ) );
+
+	// 비트필드(: 1) → JSON/XML true|false, Binary 01|00
+	sw::BitfieldTestActor bits;
+	bits._bActive		= SW_TRUE;
+	bits._bInvulnerable = SW_FALSE;
+	bits._bCanJump		= SW_TRUE;
+	bits._score			= 777;
+	SW_EXPECT_TRUE( checkGoldenSet(
+		"bits", &bits, *pBits,
+		"{\"_bActive\":true,\"_bInvulnerable\":false,\"_bCanJump\":true,\"_score\":777}",
+		"<BitfieldTestActor _bActive=\"true\" _bInvulnerable=\"false\" _bCanJump=\"true\" _score=\"777\"/>\n"
+		"\n",
+		"0400000046dd8356dbf29d1901000000012335d1a0dbf29d1901000000002e8c2fdadbf29d190100000001bc771186bfe2defb0400000009030000",
+		"{\"_schemaVersion\":7,\"_bActive\":true,\"_bInvulnerable\":false,\"_bCanJump\":true,\"_score\":777}",
+		"070000000400000046dd8356dbf29d1901000000012335d1a0dbf29d1901000000002e8c2fdadbf29d190100000001bc771186bfe2defb0400000009030000" ) );
+
+	// XmlAttribute 플래그 프로퍼티
+	sw::DefaultValueTestActor attr;
+	attr._mana	= 12;
+	attr._title = "Sir";
+	SW_EXPECT_TRUE( checkGoldenSet(
+		"attr", &attr, *pAttr,
+		"{\"_mana\":12,\"_title\":\"Sir\"}",
+		"<DefaultValueTestActor _mana=\"12\" _title=\"Sir\"/>\n"
+		"\n",
+		"0200000089a752a5bfe2defb040000000c00000068fdd9173865c1170700000003000000536972",
+		"{\"_schemaVersion\":7,\"_mana\":12,\"_title\":\"Sir\"}",
+		"070000000200000089a752a5bfe2defb040000000c00000068fdd9173865c1170700000003000000536972" ) );
 }
 
 /**
