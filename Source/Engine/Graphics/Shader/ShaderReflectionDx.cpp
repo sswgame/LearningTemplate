@@ -3,6 +3,10 @@
 #include "Engine/Graphics/Shader/ShaderCompiler.h"
 #include "Engine/Graphics/Shader/ShaderReflectionUtil.h"
 
+#if defined( SW_HAS_DXC_API )
+	#include <dxcapi.h>
+#endif
+
 #if defined( SW_PLATFORM_WINDOWS )
 namespace sw
 {

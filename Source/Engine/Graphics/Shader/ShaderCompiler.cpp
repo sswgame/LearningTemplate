@@ -9,6 +9,10 @@
 
 #include "Engine/Utility/Resource/ResourceUtil.h"
 
+#if defined( SW_HAS_DXC_API )
+	#include <dxcapi.h>
+#endif
+
 namespace sw
 {
 	namespace

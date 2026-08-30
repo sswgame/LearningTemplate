@@ -1,7 +1,8 @@
 /**
  * @file EnginePlatformHeaders.h
  * @brief OS headers (PlatformOsHeaders) + graphics API system headers (Core/RHI).
- * @note Third Party(vulkan, glad, imgui 등)는 여기 넣지 않습니다. 사용처에서 직접 include 합니다.
+ * @note Third Party(vulkan, glad, imgui, dxc 등)는 여기 넣지 않습니다. 사용처에서 직접 include 합니다.
+ *       Windows에서 DXC 사용 가능 여부만 `SW_HAS_DXC_API`로 표시합니다.
  */
 #pragma once
 #include "Core/Common/PlatformOsHeaders.h"
@@ -14,7 +15,6 @@
 	#include <d3d12sdklayers.h>
 	#include <d3d12shader.h>
 	#include <d3dcompiler.h>
-	#include <dxcapi.h>
 	#include <dxgi1_4.h>
 	#include <mfapi.h>
 	#include <mfidl.h>
@@ -24,7 +24,6 @@
 
 #elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
 	#if __has_include( <dxcapi.h> )
-		#include <dxcapi.h>
 		#define SW_HAS_DXC_API 1
 	#endif
 #endif
