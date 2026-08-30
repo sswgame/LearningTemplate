@@ -16,15 +16,16 @@ project conventions unless the user explicitly requests otherwise.
 - `Source/RuntimeAPI` is a header-only `INTERFACE` library defining the pure
   C-ABI contract between App and Editor/Game modules. Do not put implementations
   in it.
-- `Source/App` is a thin executable launcher. It links only Engine and
-  RuntimeAPI; it uses `EngineLoop` for the main loop and `ModuleHost` to manage
-  hot-reload state serialization and async-task fencing.
+- `Source/App` is a thin executable launcher. In Dev it links only Engine and
+  RuntimeAPI; in Shipping it also statically links `SWGame`. It uses `EngineLoop`
+  for the main loop and `ModuleHost` to manage hot-reload state serialization
+  and async-task fencing.
 - `Source/Editor` is Dev-only. `Source/GameFramework` contains genre-common
   frameworks/kits. `Source/Games` contains concrete games; `SW_ACTIVE_GAME`
   selects the game to build.
 - **DLL Export / Import (API) Macros**:
   - `SW_API`: Used to export/import symbols from **Engine.dll**. Responds to the `SW_EXPORTS` definition.
-  - `SW_MODULE_API`: A generic C-ABI entry point macro used across **all dynamically loaded plugin modules** (Editor.dll, Demo.dll, RHI backends, etc.). Responds to `SW_MODULE_EXPORTS`.
+  - `SW_MODULE_API`: A generic C-ABI entry point macro used across **all dynamically loaded plugin modules** (EditorModule.dll, SWGame.dll, RHI backends, etc.). Responds to `SW_MODULE_EXPORTS`.
   - `SW_GF_API`: Used to export/import **GameFramework.dll** class symbols. Responds to `SW_GF_EXPORTS`.
   - `SW_GAMESERVICE_API`: Used by the GameService locator (`bindGameService` / `getRawService`) in RuntimeAPI. This is not the GameFramework class-export macro.
 
@@ -46,7 +47,7 @@ cmake --build --preset Ninja-Debug
 ### CMake
 
 - Feature options: `SW_*`, declared with `option()` (for example,
-  `SW_ENABLE_PCH`).
+  `SW_ENABLE_PCH`, `sw_configurePch`).
 - Functions/macros: `sw_camelCase`.
 - Target properties and compile definitions: `SW_SCREAMING_CASE`.
 - Product target names: `PascalCase`.

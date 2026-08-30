@@ -11,7 +11,7 @@
 App은 GameFramework를 링크하지 않으므로 셸 전용 `ActionMap`(`_shellActions`)을 둡니다. Debug 레이어(`alwaysOn`)로 ReloadShaders=F8, ReloadEditor=F6, ReloadGame=F7을 조회합니다. 퀵세이브/로드(F5/F9)는 게임플레이 `gameActions()` 쪽입니다.
 
 ## 디렉터리 구조
-- **Core/**: 앱 생명주기 및 윈도우/엔진 부트스트랩 역할을 하는 `App` 
+- **App.cpp / App.h**: 앱 생명주기 및 윈도우/엔진 부트스트랩
 - **Module/**: 동적 모듈 로드, 라이프사이클 핫리로드 관리, 직렬화를 통한 상태 보존 및 태스크 펜싱을 수행하는 `ModuleHost`
 
 기존에 존재하던 `AppBootstrap.cpp`, `AppModuleBinding.cpp`, `AppRhiHotSwap.cpp` 등의 파편화된 로직은 런처의 경량화(Thin Launcher) 원칙에 따라 모두 `App.cpp` 내부와 `EngineLoop`, `ModuleHost` 로 통폐합되었습니다.

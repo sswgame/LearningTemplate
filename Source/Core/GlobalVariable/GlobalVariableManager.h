@@ -145,7 +145,7 @@ namespace sw
 		 */
 		GlobalVariableRegistrar( GlobalVariableRegistrar*& pModuleHead, const utf8* pName, GlobalVariableType type, void* pData, const std::variant<bool, int32, float32, string>& defaultValue, const utf8* pDescription, const utf8* pEnumType = "", const utf8* pModuleName = "", uint32 typeSize = 4 );
 
-		/** @brief Core.dll 전용 등록 리스트 헤드입니다. 다른 모듈은 자체 헤드를 써야 합니다. */
+		/** @brief Engine.dll(Core OBJECT) 전용 등록 리스트 헤드입니다. 다른 모듈은 자체 헤드를 써야 합니다. */
 		static GlobalVariableRegistrar*& getHead();
 
 	private:
@@ -153,7 +153,7 @@ namespace sw
 		void linkTo( GlobalVariableRegistrar*& pModuleHead );
 	};
 
-	/** @brief Core.dll GVM 심볼을 모듈 이름 "Engine"으로 등록합니다. */
+	/** @brief Engine.dll GVM 심볼을 모듈 이름 "Engine"으로 등록합니다. */
 } // namespace sw
 
 /** @brief App/Editor/Game/Test 헤드 헤더에서 SW_GLOBAL_VARIABLE_* 앞에 재정의하세요. */

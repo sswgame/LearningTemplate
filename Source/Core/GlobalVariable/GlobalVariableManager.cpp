@@ -375,7 +375,7 @@ namespace sw
 	}
 
 	/**
-	 * @brief 특정 모듈(예: 언로드되는 Game.dll, Editor.dll)에 속한 전역 변수들을 일괄 해제합니다.
+	 * @brief 특정 모듈(예: 언로드되는 SWGame.dll, EditorModule.dll)에 속한 전역 변수들을 일괄 해제합니다.
 	 *
 	 * [핫 리로드 안전성]: 모듈 언로드 시 댕글링 포인터 접근을 방지하기 위해 필수적으로 호출됩니다.
 	 */

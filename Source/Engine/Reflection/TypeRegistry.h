@@ -310,10 +310,10 @@ namespace sw
 		void ( *_registerFunc )( TypeRegistry& ); ///< TypeRegistry에 TypeInfo를 넣는 함수
 		TypeRegistrar* _pNext;					  ///< 같은 헤드의 다음 registrar
 
-		/** @brief Core.dll 전용 registrar 리스트 헤드. */
+		/** @brief Engine.dll(Core OBJECT) 전용 registrar 리스트 헤드. */
 		static TypeRegistrar*& getHead();
 
-		/** @brief Core.dll 정적 등록에 사용합니다. */
+		/** @brief Engine.dll(Core OBJECT) 정적 등록에 사용합니다. */
 		TypeRegistrar( void ( *registerFunc )( TypeRegistry& ) );
 		/** @brief 핫리로드 모듈 등 외부 registrar 등록에 사용합니다. */
 		TypeRegistrar( void ( *registerFunc )( TypeRegistry& ), TypeRegistrar*& pModuleHead );
@@ -328,10 +328,10 @@ namespace sw
 		void ( *_registerFunc )( TypeRegistry& ); ///< TypeRegistry에 EnumInfo를 넣는 함수
 		EnumRegistrar* _pNext;					  ///< 같은 헤드의 다음 registrar
 
-		/** @brief Core.dll 전용 enum registrar 리스트 헤드. */
+		/** @brief Engine.dll(Core OBJECT) 전용 enum registrar 리스트 헤드. */
 		static EnumRegistrar*& getHead();
 
-		/** @brief Core.dll 정적 등록에 사용합니다. */
+		/** @brief Engine.dll(Core OBJECT) 정적 등록에 사용합니다. */
 		EnumRegistrar( void ( *registerFunc )( TypeRegistry& ) );
 		/** @brief 핫리로드 모듈 등 외부 registrar 등록에 사용합니다. */
 		EnumRegistrar( void ( *registerFunc )( TypeRegistry& ), EnumRegistrar*& pModuleHead );

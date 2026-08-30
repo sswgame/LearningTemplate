@@ -40,7 +40,7 @@ SW Engine 프로젝트에 기여하거나 새로운 게임 모듈을 작성할 �
 
 ### DLL Export / Import (API) 매크로 규칙
 - `SW_API`: **Engine.dll**의 심볼 노출 및 참조 (`SW_EXPORTS` 정의에 반응)
-- `SW_MODULE_API`: **동적 모듈 플러그인(Editor.dll, Demo.dll, RHI 백엔드 등)**의 진입점 C-ABI 노출 (`SW_MODULE_EXPORTS`에 반응)
+- `SW_MODULE_API`: **동적 모듈 플러그인(EditorModule.dll, SWGame.dll, RHI 백엔드 등)**의 진입점 C-ABI 노출 (`SW_MODULE_EXPORTS`에 반응)
 - `SW_GF_API`: **GameFramework.dll** 클래스 심볼 노출 및 참조 (`SW_GF_EXPORTS`에 반응)
 - `SW_GAMESERVICE_API`: RuntimeAPI GameService 로케이터(`bindGameService` / `getRawService`)용 매크로
 
@@ -80,7 +80,7 @@ SW Engine 프로젝트에 기여하거나 새로운 게임 모듈을 작성할 �
 | 대상 | 규칙 | 예시 |
 | :--- | :--- | :--- |
 | Feature option (`-D`) | `SW_*` + `option()` | `SW_ENABLE_PCH`, `SW_USE_VCPKG` |
-| 함수 / 매크로 | `sw_camelCase` | `sw_addLibrary` |
+| 함수 / 매크로 | `sw_camelCase` | `sw_configurePch`, `sw_addGameModule` |
 | 타겟 프로퍼티 / Compile Def | `SW_SCREAMING_CASE` | `SW_PLATFORM_WINDOWS` |
 | 제품 타겟 이름 | `PascalCase` | `App`, `Core`, `SWGame` |
 

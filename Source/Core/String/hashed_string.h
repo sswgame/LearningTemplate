@@ -191,7 +191,7 @@ namespace sw
 	using hashed_wstring = basic_hashed_string<utf16>;
 
 	// ------------------------------------------------------------------------------
-	// 2) intern 테이블 — Core.dll 단독 소유, 모든 모듈은 이 export만 사용
+	// 2) intern 테이블 — Engine.dll(Core OBJECT) 단독 소유, 모든 모듈은 이 export만 사용
 	// ------------------------------------------------------------------------------
 	/** @brief hashed_string intern 테이블 */
 	struct SW_API HashedStringPool

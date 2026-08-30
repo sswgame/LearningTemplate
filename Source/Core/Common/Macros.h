@@ -99,14 +99,15 @@
 #endif
 
 // ------------------------------------------------------------------------------
-// 6) DLL export / import — Core 는 SW_API, 게임 모듈은 SW_MODULE_API
+// 6) DLL export / import — Engine.dll 은 SW_API, 게임/에디터 모듈은 SW_MODULE_API
 // ------------------------------------------------------------------------------
 #if defined( SW_PLATFORM_WINDOWS )
 	#if defined( SW_EXPORTS )
-		/** @brief Core DLL 을 빌드할 때 export 합니다. */
+		/** @brief Engine.dll 을 빌드할 때 export 합니다. (Core OBJECT도 이 매크로로 노출됩니다.) */
 		#define SW_API __declspec( dllexport )
 	#elif defined( SW_IMPORTS )
-		/** @brief Core DLL 을 사용할 때 import 합니다. */
+		/** @brief Engine.dll 을 사용할 때 import 합니다. */
+		#define SW_API __declspec( dllimport )
 		#define SW_API __declspec( dllimport )
 	#else
 		/** @brief 정적 링크 시 장식이 없습니다. */

@@ -14,13 +14,13 @@
   - `Source/Core`: 기초 유틸리티 STATIC 라이브러리. `Engine`과 OBJECT 공유 컴파일.
   - `Source/Engine`: 오브젝트, 그래픽스(RHI), 물리, 씬 등 핵심 엔진 (Dev 모드에서 SHARED DLL).
   - `Source/RuntimeAPI`: App ↔ Editor/Game 모듈 간의 순수 C-ABI 통신 규약 (Header-Only `INTERFACE` 라이브러리로, 구현체 없이 계약 기능만 담당).
-  - `Source/App`: 순수 진입점 프로그램(exe). Engine + RuntimeAPI만 링크. 내부적으로 `EngineLoop`를 통해 메인 루프를 돌고, `ModuleHost`를 통해 핫리로드 시 게임 모듈의 상태(State) 직렬화 및 비동기 태스크 펜싱 등을 관리하는 얇은 런처(Thin Launcher)입니다.
+  - `Source/App`: 순수 진입점 프로그램(exe). Dev에서는 Engine + RuntimeAPI만 링크하고, Shipping에서는 `SWGame`을 정적 링크합니다. 내부적으로 `EngineLoop`를 통해 메인 루프를 돌고, `ModuleHost`를 통해 핫리로드 시 게임 모듈의 상태(State) 직렬화 및 비동기 태스크 펜싱 등을 관리하는 얇은 런처(Thin Launcher)입니다.
   - `Source/Editor`: 개발 모드 전용 에디터 모듈.
   - `Source/GameFramework`: 장르별 공통 프레임워크 및 키트.
   - `Source/Games`: 실제 게임 로직 (`Demo`, `Empty` 등). `SW_ACTIVE_GAME` 변수로 빌드 대상 게임 선택.
 - **DLL Export / Import (API) 매크로 규칙**:
   - `SW_API`: **Engine.dll**의 심볼을 노출하거나 참조할 때 사용합니다. (`SW_EXPORTS` 매크로에 반응)
-  - `SW_MODULE_API`: **동적 모듈 플러그인(Editor.dll, Demo.dll, RHI 백엔드 등)**의 진입점(C-ABI Entry Point)을 노출할 때 공통으로 사용하는 매크로입니다. (`SW_MODULE_EXPORTS`에 반응)
+  - `SW_MODULE_API`: **동적 모듈 플러그인(EditorModule.dll, SWGame.dll, RHI 백엔드 등)**의 진입점(C-ABI Entry Point)을 노출할 때 공통으로 사용하는 매크로입니다. (`SW_MODULE_EXPORTS`에 반응)
   - `SW_GF_API`: **GameFramework.dll** 클래스 심볼을 노출하거나 참조할 때 사용합니다. (`SW_GF_EXPORTS`에 반응)
   - `SW_GAMESERVICE_API`: RuntimeAPI GameService 로케이터(`bindGameService` / `getRawService`)용입니다. GameFramework 클래스 export 매크로(`SW_GF_API`)와는 별개입니다.
 
@@ -55,7 +55,7 @@
 | 대상 | 규칙 | 예시 |
 | :--- | :--- | :--- |
 | Feature option (`-D`) | `SW_*` + `option()` | `SW_ENABLE_PCH`, `SW_USE_VCPKG` |
-| 함수 / 매크로 | `sw_camelCase` | `sw_addLibrary` |
+| 함수 / 매크로 | `sw_camelCase` | `sw_configurePch`, `sw_addGameModule` |
 | 타겟 프로퍼티 / compile def | `SW_SCREAMING` | `SW_PLATFORM_WINDOWS` |
 | 제품 타겟 이름 | `PascalCase` | `App`, `Core`, `SWGame` |
 

@@ -95,7 +95,7 @@ CMake, Ninja, LLVM Clang-cl 및 sccache를 결합하여 **초고속 증분 빌�
   - `App.exe`와 DLL 모듈 간의 통신은 순수 C-ABI 헤더(`RuntimeAPI`)의 함수 테이블을 통해 완전히 격리됩니다.
 - **DLL Export / Import (API) 매크로 규칙**:
   - `SW_API`: **Engine.dll**의 심볼을 노출하거나 참조할 때 사용합니다. (`SW_EXPORTS` 매크로에 반응)
-  - `SW_MODULE_API`: **동적 모듈 플러그인(Editor.dll, Demo.dll, RHI 백엔드 등)**의 진입점(C-ABI Entry Point)을 노출할 때 공통으로 사용하는 매크로입니다. (`SW_MODULE_EXPORTS`에 반응)
+  - `SW_MODULE_API`: **동적 모듈 플러그인(EditorModule.dll, SWGame.dll, RHI 백엔드 등)**의 진입점(C-ABI Entry Point)을 노출할 때 공통으로 사용하는 매크로입니다. (`SW_MODULE_EXPORTS`에 반응)
   - `SW_GF_API`: **GameFramework.dll** 클래스 심볼을 노출하거나 참조할 때 사용합니다. (`SW_GF_EXPORTS`에 반응)
   - `SW_GAMESERVICE_API`: RuntimeAPI GameService 로케이터(`bindGameService` / `getRawService`)용입니다. GameFramework 클래스 export 매크로(`SW_GF_API`)와는 별개입니다.
 
