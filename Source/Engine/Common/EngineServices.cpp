@@ -48,141 +48,46 @@ namespace sw
 
 		bool areEngineServicesBound()
 		{
-			return s_services._pCommandLineManager != nullptr && s_services._pGlobalVariableManager != nullptr &&
-				   s_services._pTaskManager != nullptr && s_services._pTypeRegistry != nullptr &&
-				   s_services._pSceneManager != nullptr && s_services._pInputManager != nullptr &&
-				   s_services._pAudioSystem != nullptr && s_services._pEventDispatcher != nullptr &&
-				   s_services._pResourceManager != nullptr;
+#define SW_ENGINE_SERVICE( member, Type, getter, required ) \
+	if constexpr ( ( required ) != 0 )                      \
+	{                                                       \
+		if ( s_services.member == nullptr )                 \
+			return false;                                   \
+	}
+#define SW_ENGINE_SERVICE_CONST( member, Type, getter, required ) SW_ENGINE_SERVICE( member, Type, getter, required )
+#define SW_ENGINE_SERVICE_OPT( member, Type, getter )
+#include "Engine/Common/EngineServiceList.xxx"
+#undef SW_ENGINE_SERVICE
+#undef SW_ENGINE_SERVICE_CONST
+#undef SW_ENGINE_SERVICE_OPT
+			return true;
 		}
 
-		CommandLineManager& getCommandLineManager()
-		{
-			SW_LOG_ASSERT( s_services._pCommandLineManager != nullptr, "CommandLineManager is not bound" );
-			return *s_services._pCommandLineManager;
-		}
-
-		GlobalVariableManager& getGlobalVariableManager()
-		{
-			SW_LOG_ASSERT( s_services._pGlobalVariableManager != nullptr, "GlobalVariableManager is not bound" );
-			return *s_services._pGlobalVariableManager;
-		}
-
-		LocalizationManager& getLocalizationManager()
-		{
-			SW_LOG_ASSERT( s_services._pLocalizationManager != nullptr, "LocalizationManager is not bound" );
-			return *s_services._pLocalizationManager;
-		}
-
-		TaskManager& getTaskManager()
-		{
-			SW_LOG_ASSERT( s_services._pTaskManager != nullptr, "TaskManager is not bound" );
-			return *s_services._pTaskManager;
-		}
-
-		TypeRegistry& getTypeRegistry()
-		{
-			SW_LOG_ASSERT( s_services._pTypeRegistry != nullptr, "TypeRegistry is not bound" );
-			return *s_services._pTypeRegistry;
-		}
-
-		SceneManager& getSceneManager()
-		{
-			SW_LOG_ASSERT( s_services._pSceneManager != nullptr, "SceneManager is not bound" );
-			return *s_services._pSceneManager;
-		}
-
-		InputManager& getInputManager()
-		{
-			SW_LOG_ASSERT( s_services._pInputManager != nullptr, "InputManager is not bound" );
-			return *s_services._pInputManager;
-		}
-
-		IAudioSystem& getAudioSystem()
-		{
-			SW_LOG_ASSERT( s_services._pAudioSystem != nullptr, "IAudioSystem is not bound" );
-			return *s_services._pAudioSystem;
-		}
-
-		EventDispatcher& getEventDispatcher()
-		{
-			SW_LOG_ASSERT( s_services._pEventDispatcher != nullptr, "EventDispatcher is not bound" );
-			return *s_services._pEventDispatcher;
-		}
-
-		ResourceManager& getResourceManager()
-		{
-			SW_LOG_ASSERT( s_services._pResourceManager != nullptr, "ResourceManager is not bound" );
-			return *s_services._pResourceManager;
-		}
-
-		MemoryProfiler* getMemoryProfiler()
-		{
-			return s_services._pMemoryProfiler;
-		}
-
-		const EngineData& getEngineData()
-		{
-			SW_LOG_ASSERT( s_services._pEngineData != nullptr, "EngineData is not bound" );
-			return *s_services._pEngineData;
-		}
-
-		AssetStreamingQueue& getAssetStreamingQueue()
-		{
-			SW_LOG_ASSERT( s_services._pAssetStreamingQueue != nullptr, "AssetStreamingQueue is not bound" );
-			return *s_services._pAssetStreamingQueue;
-		}
-
-		CommandStack& getCommandStack()
-		{
-			SW_LOG_ASSERT( s_services._pCommandStack != nullptr, "CommandStack is not bound" );
-			return *s_services._pCommandStack;
-		}
-
-		DebugOverlayState& getDebugOverlayState()
-		{
-			SW_LOG_ASSERT( s_services._pDebugOverlayState != nullptr, "DebugOverlayState is not bound" );
-			return *s_services._pDebugOverlayState;
-		}
+#define SW_ENGINE_SERVICE( member, Type, getter, required )                   \
+	Type& getter()                                                            \
+	{                                                                         \
+		SW_LOG_ASSERT( s_services.member != nullptr, #Type " is not bound" ); \
+		return *s_services.member;                                            \
+	}
+#define SW_ENGINE_SERVICE_CONST( member, Type, getter, required )             \
+	const Type& getter()                                                      \
+	{                                                                         \
+		SW_LOG_ASSERT( s_services.member != nullptr, #Type " is not bound" ); \
+		return *s_services.member;                                            \
+	}
+#define SW_ENGINE_SERVICE_OPT( member, Type, getter ) \
+	Type* getter()                                    \
+	{                                                 \
+		return s_services.member;                     \
+	}
+#include "Engine/Common/EngineServiceList.xxx"
+#undef SW_ENGINE_SERVICE
+#undef SW_ENGINE_SERVICE_CONST
+#undef SW_ENGINE_SERVICE_OPT
 
 		FrameDoubleBuffer& getFrameDoubleBuffer()
 		{
 			return FrameDoubleBuffer::get();
-		}
-
-		DebugDrawQueue& getDebugDrawQueue()
-		{
-			SW_LOG_ASSERT( s_services._pDebugDrawQueue != nullptr, "DebugDrawQueue is not bound" );
-			return *s_services._pDebugDrawQueue;
-		}
-
-		RHIBackendRegistry& getRHIBackendRegistry()
-		{
-			SW_LOG_ASSERT( s_services._pRHIBackendRegistry != nullptr, "RHIBackendRegistry is not bound" );
-			return *s_services._pRHIBackendRegistry;
-		}
-
-		CompressionCodecRegistry& getCompressionCodecRegistry()
-		{
-			SW_LOG_ASSERT( s_services._pCompressionCodecRegistry != nullptr, "CompressionCodecRegistry is not bound" );
-			return *s_services._pCompressionCodecRegistry;
-		}
-
-		ShaderCache& getShaderCache()
-		{
-			SW_LOG_ASSERT( s_services._pShaderCache != nullptr, "ShaderCache is not bound" );
-			return *s_services._pShaderCache;
-		}
-
-		ComponentDefaults& getComponentDefaults()
-		{
-			SW_LOG_ASSERT( s_services._pComponentDefaults != nullptr, "ComponentDefaults is not bound" );
-			return *s_services._pComponentDefaults;
-		}
-
-		const GameData& getGameData()
-		{
-			SW_LOG_ASSERT( s_services._pGameData != nullptr, "GameData is not bound" );
-			return *s_services._pGameData;
 		}
 
 		struct ModuleHeadRecord
