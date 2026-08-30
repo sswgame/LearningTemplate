@@ -972,6 +972,8 @@ namespace sw
 			const string nativePath = toNativeSeparators( absPath );
 
 			const string dir = getDirectoryPart( nativePath );
+			utf8		 arrPreviousDllDir[MAX_PATH]{};
+			const DWORD	 previousDllDirLen = GetDllDirectoryA( static_cast<DWORD>( sizeof( arrPreviousDllDir ) ), arrPreviousDllDir );
 			if ( dir.empty() == false )
 				SetDllDirectoryA( dir.c_str() );
 
@@ -980,6 +982,12 @@ namespace sw
 			// 2) LOAD_WITH_ALTERED_SEARCH_PATH 사용 시 SetDllDirectory가 무시되는 Win32 제약에 대비하여 LoadLibraryA 폴백 수행
 			if ( hMod == nullptr )
 				hMod = LoadLibraryA( nativePath.c_str() );
+
+			if ( previousDllDirLen > 0 )
+				SetDllDirectoryA( arrPreviousDllDir );
+			else
+				SetDllDirectoryA( nullptr );
+
 			if ( hMod != nullptr )
 				return hMod;
 		}
