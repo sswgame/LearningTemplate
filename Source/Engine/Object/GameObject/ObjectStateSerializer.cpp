@@ -57,8 +57,10 @@ namespace sw
 					return outTag.isValid();
 				}
 
-				const fixed_string<constant::kMaxBuffer64> tokenNt{ text };
-				outTag._id = StringUtil::strtoull( tokenNt.c_str() );
+				uint64 tagId{ 0 };
+				if ( StringUtil::parseUInt64( text, tagId, 10 ) == false )
+					return false;
+				outTag._id = tagId;
 				return outTag.isValid();
 			}
 

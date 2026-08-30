@@ -491,7 +491,7 @@ namespace sw
 
 			for ( const auto& [nameKey, enumValue] : _mapNameToValue )
 			{
-				if ( StringUtil::equalsIgnoreCase( name, nameKey.view() ) )
+				if ( StringUtil::equals( name, nameKey.view(), true ) )
 				{
 					if ( isValidValue( enumValue ) == false )
 						return false;

@@ -63,6 +63,7 @@ namespace
 			case sw::ModuleServiceId::MonsterDataCatalog:
 			case sw::ModuleServiceId::SpeciesCatalog:
 			case sw::ModuleServiceId::Count:
+			default:
 				break;
 		}
 		return nullptr;

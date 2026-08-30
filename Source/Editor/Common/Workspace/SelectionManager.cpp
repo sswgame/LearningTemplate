@@ -46,6 +46,8 @@ namespace sw::editor
 					_listSelectedObject.push_back( pObj );
 				break;
 			}
+			default:
+				break;
 		}
 
 		notifyChanged();
@@ -132,6 +134,8 @@ namespace sw::editor
 					_listSelectedAsset.emplace_back( assetPath );
 				break;
 			}
+			default:
+				break;
 		}
 
 		notifyChanged();

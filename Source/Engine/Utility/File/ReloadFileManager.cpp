@@ -210,6 +210,8 @@ namespace sw
 					case FileWatcherAction::RenamedNewName:
 						pActionStr = "RenamedNew";
 						break;
+					default:
+						break;
 				}
 				SW_LOG_TRACE( "%# : %#/%#", pActionStr, ev._directory.c_str(), ev._filename.c_str() );
 				_onFileChanged.broadcast( ev );

@@ -104,6 +104,9 @@ namespace sw
 
 					case WM_DESTROY:
 						return 0;
+
+					default:
+						break;
 				}
 
 				return DefWindowProcW( hWnd, msg, wParam, lParam );

@@ -14,21 +14,21 @@ namespace sw
 			{
 				if ( roleText.empty() )
 					return zoneRoleFromMapPath( mapPath );
-				if ( StringUtil::equalsIgnoreCase( roleText, "boss" ) )
+				if ( StringUtil::equals( roleText, "boss", true ) )
 					return ZoneRole::Boss;
-				if ( StringUtil::equalsIgnoreCase( roleText, "dungeon" ) )
+				if ( StringUtil::equals( roleText, "dungeon", true ) )
 					return ZoneRole::Dungeon;
-				if ( StringUtil::equalsIgnoreCase( roleText, "battle" ) )
+				if ( StringUtil::equals( roleText, "battle", true ) )
 					return ZoneRole::Battle;
-				if ( StringUtil::equalsIgnoreCase( roleText, "route" ) )
+				if ( StringUtil::equals( roleText, "route", true ) )
 					return ZoneRole::Route;
-				if ( StringUtil::equalsIgnoreCase( roleText, "center" ) )
+				if ( StringUtil::equals( roleText, "center", true ) )
 					return ZoneRole::Center;
-				if ( StringUtil::equalsIgnoreCase( roleText, "mart" ) )
+				if ( StringUtil::equals( roleText, "mart", true ) )
 					return ZoneRole::Mart;
-				if ( StringUtil::equalsIgnoreCase( roleText, "gym" ) )
+				if ( StringUtil::equals( roleText, "gym", true ) )
 					return ZoneRole::Gym;
-				if ( StringUtil::equalsIgnoreCase( roleText, "wild" ) )
+				if ( StringUtil::equals( roleText, "wild", true ) )
 					return ZoneRole::Wild;
 				return ZoneRole::Town;
 			}
@@ -123,6 +123,8 @@ namespace sw
 				break;
 			case ZoneRole::Wild:
 				z.addTag( "wild" );
+				break;
+			default:
 				break;
 		}
 		_listZone.push_back( std::move( z ) );

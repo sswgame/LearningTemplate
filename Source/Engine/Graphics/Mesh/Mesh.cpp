@@ -72,9 +72,9 @@ namespace sw
 
 	shared_ptr<Mesh> Mesh::createPrimitive( string_view meshId )
 	{
-		if ( meshId.empty() || StringUtil::equalsIgnoreCase( meshId, "Cube" ) )
+		if ( meshId.empty() || StringUtil::equals( meshId, "Cube", true ) )
 			return createUnitCube();
-		if ( StringUtil::equalsIgnoreCase( meshId, "Quad" ) || StringUtil::equalsIgnoreCase( meshId, "Rect" ) )
+		if ( StringUtil::equals( meshId, "Quad", true ) || StringUtil::equals( meshId, "Rect", true ) )
 			return createRectMesh();
 		return {};
 	}

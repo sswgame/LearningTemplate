@@ -99,6 +99,8 @@ namespace sw
 							return "ps_5_0";
 						case ShaderStage::Compute:
 							return "cs_5_0";
+						default:
+							break;
 					}
 					return "vs_5_0";
 				}
@@ -111,6 +113,8 @@ namespace sw
 						return "ps_6_6";
 					case ShaderStage::Compute:
 						return "cs_6_6";
+					default:
+						break;
 				}
 				return "vs_6_6";
 			}

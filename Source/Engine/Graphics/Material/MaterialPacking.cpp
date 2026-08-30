@@ -62,9 +62,7 @@ namespace sw
 
 			static bool iequals( string_view a, const utf8* pB )
 			{
-				if ( pB == nullptr )
-					return false;
-				return StringUtil::equalsIgnoreCase( a, string_view( pB ) );
+				return StringUtil::equals( a, pB, true );
 			}
 
 			static int64 resolveNamedValue( const MaterialProperty& prop, string_view token, bool bitFlagMode )
@@ -76,9 +74,8 @@ namespace sw
 
 				// Numeric literal
 				{
-					utf8*		end{ nullptr };
-					const int64 v = StringUtil::strtoll( name.c_str(), &end, 0 );
-					if ( end != nullptr && *end == '\0' )
+					int64 v{ 0 };
+					if ( StringUtil::parseInt64( name, v, 0 ) )
 						return v;
 				}
 
@@ -133,9 +130,8 @@ namespace sw
 					return 0xFu;
 
 				// Numeric
-				utf8*		 end{ nullptr };
-				const uint64 n = StringUtil::strtoull( v.c_str(), &end, 0 );
-				if ( end != nullptr && *end == '\0' )
+				uint64 n{ 0 };
+				if ( StringUtil::parseUInt64( v, n, 0 ) )
 					return static_cast<uint32>( n );
 
 				uint32 mask{ 0 };
@@ -144,32 +140,28 @@ namespace sw
 					switch ( StringUtil::toUpperChar( charByte ) )
 					{
 						case 'R':
-						case 'X':
-							mask |= 1u << 0;
+							mask |= 1u;
 							break;
 						case 'G':
-						case 'Y':
-							mask |= 1u << 1;
+							mask |= 2u;
 							break;
 						case 'B':
-						case 'Z':
-							mask |= 1u << 2;
+							mask |= 4u;
 							break;
 						case 'A':
-						case 'W':
-							mask |= 1u << 3;
+							mask |= 8u;
 							break;
 						default:
 							break;
 					}
 				}
-				return mask;
+				return mask != 0 ? mask : 0xFu;
 			}
 
-			static bool writeNumericValue( uint8* pDst, uint32 capacity, MaterialPropertyType shaderType, string_view value )
+			static bool writeNumericValue( void* pDst, size_t packSize, MaterialPropertyType shaderType, string_view value )
 			{
 				const uint32 need = MaterialUtil::packedSizeOf( shaderType );
-				if ( need == 0 || capacity < need || pDst == nullptr )
+				if ( need == 0 || packSize < need || pDst == nullptr )
 					return false;
 
 				string_splitter ss( value, { " ", "	", "," } );
@@ -182,10 +174,7 @@ namespace sw
 					{
 						float32 f{ 0.0f };
 						if ( propIndex < tokens.size() )
-						{
-							string tokenStr( tokens[propIndex] );
-							f = static_cast<float32>( StringUtil::atof( tokenStr.c_str() ) );
-						}
+							StringUtil::parseFloat( tokens[propIndex], f );
 						else
 							f = ( propIndex == 3 && shaderType == MaterialPropertyType::Color ) ? 1.0f : 0.0f;
 						pPtr[propIndex] = f;
@@ -198,13 +187,10 @@ namespace sw
 					uint32	count = need / 4;
 					for ( uint32 propIndex = 0; propIndex < count; ++propIndex )
 					{
-						uint32 u{ 0 };
+						uint64 u{ 0 };
 						if ( propIndex < tokens.size() )
-						{
-							string tokenStr( tokens[propIndex] );
-							u = static_cast<uint32>( StringUtil::atoll( tokenStr.c_str() ) );
-						}
-						pPtr[propIndex] = u;
+							StringUtil::parseUInt64( tokens[propIndex], u, 10 );
+						pPtr[propIndex] = static_cast<uint32>( u );
 					}
 					return true;
 				}
@@ -216,10 +202,7 @@ namespace sw
 					{
 						int32 n{ 0 };
 						if ( propIndex < tokens.size() )
-						{
-							string tokenStr( tokens[propIndex] );
-							n = StringUtil::atoi( tokenStr.c_str() );
-						}
+							StringUtil::parseInt( tokens[propIndex], n, 10 );
 						pPtr[propIndex] = n;
 					}
 					return true;
@@ -251,8 +234,9 @@ namespace sw
 					const string v = MaterialUtil::fieldText( item, "value" );
 					if ( v.empty() == false )
 					{
-						utf8* end{ nullptr };
-						e._value = static_cast<uint32>( StringUtil::strtoull( v.c_str(), &end, 0 ) );
+						uint64 val{ 0 };
+						StringUtil::parseUInt64( v, val, 0 );
+						e._value = static_cast<uint32>( val );
 					}
 					if ( e._name.empty() == false )
 						out.push_back( std::move( e ) );
@@ -432,6 +416,8 @@ namespace sw
 			case MaterialPropertyType::Int3:
 			case MaterialPropertyType::Int4:
 				return cpuType;
+			default:
+				break;
 		}
 		return cpuType;
 	}
@@ -568,9 +554,8 @@ namespace sw
 					// Allow numeric override in _value
 					if ( prop._value.empty() == false )
 					{
-						utf8*		 end{ nullptr };
-						const uint64 numericVal = StringUtil::strtoull( prop._value.c_str(), &end, 0 );
-						if ( end != nullptr && *end == '\0' )
+						uint64 numericVal{ 0 };
+						if ( StringUtil::parseUInt64( prop._value, numericVal, 0 ) )
 							textureIndex = static_cast<uint32>( numericVal );
 					}
 					else
@@ -581,7 +566,8 @@ namespace sw
 			}
 			case MaterialPropertyType::Range:
 			{
-				float32 floatVal = static_cast<float32>( StringUtil::atof( prop._value.c_str() ) );
+				float32 floatVal{ 0.0f };
+				StringUtil::parseFloat( prop._value, floatVal );
 				if ( prop._min < prop._max )
 					floatVal = (MathUtil::max)( prop._min, (MathUtil::min)( prop._max, floatVal ) );
 				if ( shaderType == MaterialPropertyType::Float || packSize >= 4 )
@@ -606,6 +592,8 @@ namespace sw
 			case MaterialPropertyType::Keyword:
 			case MaterialPropertyType::Unknown:
 				return false;
+			default:
+				break;
 		}
 		return MaterialPackingInternal::writeNumericValue( pDst, packSize, shaderType, prop._value );
 	}
@@ -661,9 +649,9 @@ namespace sw
 		const string minStr = MaterialUtil::fieldText( item, "min" );
 		const string maxStr = MaterialUtil::fieldText( item, "max" );
 		if ( minStr.empty() == false )
-			prop._min = static_cast<float32>( StringUtil::atof( minStr.c_str() ) );
+			StringUtil::parseFloat( minStr, prop._min );
 		if ( maxStr.empty() == false )
-			prop._max = static_cast<float32>( StringUtil::atof( maxStr.c_str() ) );
+			StringUtil::parseFloat( maxStr, prop._max );
 		prop._bHdr		= MaterialUtil::parseBoolField( item, "bHdr", false );
 		prop._bSrgb		= MaterialUtil::parseBoolField( item, "bSrgb", true );
 		prop._bHidden	= MaterialUtil::parseBoolField( item, "bHidden", false );
@@ -721,6 +709,8 @@ namespace sw
 				return "Epic";
 			case MaterialQualityLevel::Count:
 				return "High";
+			default:
+				break;
 		}
 		return "High";
 	}
@@ -739,7 +729,11 @@ namespace sw
 			out._quality = MaterialUtil::parseQuality( quality );
 		const string lod = MaterialUtil::fieldText( perm, "shaderLOD" );
 		if ( lod.empty() == false )
-			out._shaderLOD = static_cast<uint32>( StringUtil::strtoull( lod.c_str(), nullptr, 10 ) );
+		{
+			uint64 lodVal{ 0 };
+			StringUtil::parseUInt64( lod, lodVal, 10 );
+			out._shaderLOD = static_cast<uint32>( lodVal );
+		}
 		const string usage = MaterialUtil::fieldText( perm, "usage" );
 		if ( usage.empty() == false )
 			out._usage = MaterialPackingInternal::parseUsageFlags( usage );
@@ -872,6 +866,8 @@ namespace sw
 				break;
 			case MaterialQualityLevel::Count:
 				MaterialUtil::appendUniqueDefine( out, "MATERIAL_QUALITY_HIGH" );
+				break;
+			default:
 				break;
 		}
 	}

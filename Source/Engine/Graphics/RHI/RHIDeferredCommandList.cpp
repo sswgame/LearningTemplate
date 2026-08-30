@@ -312,6 +312,8 @@ namespace sw
 				case Op::EndEventMarker:
 					pContext->endEventMarker();
 					break;
+				default:
+					break;
 			}
 		}
 	}

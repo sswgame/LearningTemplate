@@ -163,33 +163,24 @@ namespace sw
 	 * @brief 문자열 값을 대상 인자의 기본값 타입에 맞추어 변환하고 저장합니다.
 	 *
 	 * [초심자 가이드]:
-	 * std::from_chars 및 StringUtil::strnicmp를 사용하여 임시 문자열 힙 할당 없이 즉시 타입 변환을 수행합니다.
+	 * StringUtil::parse*를 사용하여 임시 문자열 힙 할당 없이(0-Allocation) 즉시 타입 변환을 수행합니다.
 	 */
 	void CommandLineManager::setValue( ArgumentInfo& argument, string_view newValue ) const
 	{
 		if ( std::holds_alternative<bool>( argument._defaultValue ) )
 		{
-			const bool bVal = ( newValue == "1" ||
-								StringUtil::strnicmp( newValue.data(), "true", static_cast<uint32>( newValue.size() ) ) == 0 ||
-								StringUtil::strnicmp( newValue.data(), "yes", static_cast<uint32>( newValue.size() ) ) == 0 ||
-								StringUtil::strnicmp( newValue.data(), "on", static_cast<uint32>( newValue.size() ) ) == 0 );
-			argument._value = bVal;
+			argument._value = StringUtil::parseBool( newValue, false );
 		}
 		else if ( std::holds_alternative<int32>( argument._defaultValue ) )
 		{
 			int32 val{ 0 };
-			auto [ptr, ec]	= std::from_chars( newValue.data(), newValue.data() + newValue.size(), val );
-			argument._value = ( ec == std::errc{} ) ? val : 0;
+			StringUtil::parseInt( newValue, val );
+			argument._value = val;
 		}
 		else if ( std::holds_alternative<float32>( argument._defaultValue ) )
 		{
 			float32 val{ 0.0f };
-			auto [ptr, ec] = std::from_chars( newValue.data(), newValue.data() + newValue.size(), val );
-			if ( ec != std::errc{} )
-			{
-				const string valStr( newValue );
-				val = static_cast<float32>( StringUtil::atof( valStr.c_str() ) );
-			}
+			StringUtil::parseFloat( newValue, val );
 			argument._value = val;
 		}
 		else
@@ -210,6 +201,7 @@ namespace sw
 #undef SW_REGISTER_ARGUMENT
 
 			case CommandLineArgument::Count:
+			default:
 				break;
 		}
 		SW_LOG_ASSERT( false, "도달하면 안됩니다" );

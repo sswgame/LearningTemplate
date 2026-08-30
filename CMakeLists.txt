@@ -64,8 +64,6 @@ add_library(sw_third_party_includes INTERFACE)
 add_library(sw_public_source_includes INTERFACE)
 target_include_directories(sw_public_source_includes INTERFACE
 	"${CMAKE_CURRENT_SOURCE_DIR}/Source"
-	"${CMAKE_CURRENT_SOURCE_DIR}/Source/Engine"
-	"${CMAKE_CURRENT_SOURCE_DIR}/Source/Core"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Resource"
 	"${CMAKE_BINARY_DIR}/generated"
 )

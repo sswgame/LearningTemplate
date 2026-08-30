@@ -376,6 +376,8 @@ namespace sw
 			case FacingDir::Right:
 				ox = 0.85f;
 				break;
+			default:
+				break;
 		}
 		return ActionRoomInternal::makeCircleAabb( x + ox, y + oy, 0.45f );
 	}

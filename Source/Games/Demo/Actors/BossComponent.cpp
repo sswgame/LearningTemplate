@@ -99,6 +99,8 @@ namespace sw
 					_bossState	  = BossAiState::SwordRain;
 					_bLaserActive = false;
 					break;
+				default:
+					break;
 			}
 		}
 	}

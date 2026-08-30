@@ -354,7 +354,7 @@ namespace sw
 				// 대소문자만 다른 태그는 orphan 이 아님 (JsonSerializer bCaseVariant 와 동일).
 				for ( const string& known : uniqueKnownNames )
 				{
-					if ( StringUtil::equalsIgnoreCase( known.c_str(), pChildName ) )
+					if ( StringUtil::equals( known.c_str(), pChildName, true ) )
 						return true;
 				}
 				return false;
@@ -494,7 +494,7 @@ namespace sw
 					const utf8* pChildName = child.name();
 					if ( pChildName == nullptr )
 						continue;
-					if ( StringUtil::strcmp( pChildName, kSchemaVersionKey ) == 0 )
+					if ( StringUtil::equals( pChildName, kSchemaVersionKey ) )
 						continue;
 					if ( isNameKnown( uniqueKnownNames, pChildName ) )
 						continue;
@@ -515,7 +515,7 @@ namespace sw
 					const utf8* pAttrName = attr.name();
 					if ( pAttrName == nullptr )
 						continue;
-					if ( StringUtil::strcmp( pAttrName, kSchemaVersionKey ) == 0 )
+					if ( StringUtil::equals( pAttrName, kSchemaVersionKey ) )
 						continue;
 					if ( isNameKnown( uniqueKnownNames, pAttrName ) )
 						continue;
@@ -763,7 +763,7 @@ namespace sw
 			if ( pChildName == nullptr )
 				continue;
 
-			if ( StringUtil::equalsIgnoreCase( pChildName, "entry" ) )
+			if ( StringUtil::equals( pChildName, "entry", true ) )
 			{
 				XmlNode kNode = child.child( "key", bIgnore );
 				XmlNode vNode = child.child( "value", bIgnore );
@@ -806,8 +806,7 @@ namespace sw
 			const utf8* pNameAttr = child.attr( kXmlPropertyNameAttr, bIgnore );
 			if ( pNameAttr == nullptr )
 				continue;
-			const bool bMatch = bIgnore ? StringUtil::equalsIgnoreCase( pNameAttr, pPropName )
-										: StringUtil::strcmp( pNameAttr, pPropName ) == 0;
+			const bool bMatch = StringUtil::equals( pNameAttr, pPropName, bIgnore );
 			if ( bMatch == false )
 				continue;
 
@@ -910,7 +909,11 @@ namespace sw
 			*pOutVersion	 = 0;
 			const utf8* pVer = root.attr( kSchemaVersionKey, bIgnore );
 			if ( pVer != nullptr )
-				*pOutVersion = static_cast<uint32>( StringUtil::strtoull( pVer, nullptr, 10 ) );
+			{
+				uint64 ver{ 0 };
+				StringUtil::parseUInt64( pVer, ver, 10 );
+				*pOutVersion = static_cast<uint32>( ver );
+			}
 		}
 
 		XmlDocumentBackend backend;

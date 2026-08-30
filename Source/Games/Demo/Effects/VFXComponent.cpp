@@ -31,6 +31,8 @@ namespace sw
 				setCurrentAlpha( ( sinVal > 0.0f ) ? 1.0f : 0.2f );
 				break;
 			}
+			default:
+				break;
 		}
 
 		setCurrentAlpha( MathUtil::max( getCurrentAlpha(), 0.0f ) );

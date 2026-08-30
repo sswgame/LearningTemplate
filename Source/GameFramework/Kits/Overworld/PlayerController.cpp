@@ -140,6 +140,8 @@ namespace sw
 			case FacingDir::Right:
 				++outX;
 				break;
+			default:
+				break;
 		}
 	}
 

@@ -45,6 +45,8 @@ namespace
 				return VK_FORMAT_R32G32_SFLOAT;
 			case sw::RHIFormat::R32_FLOAT:
 				return VK_FORMAT_R32_SFLOAT;
+			default:
+				break;
 		}
 		return VK_FORMAT_UNDEFINED;
 	}
@@ -60,7 +62,7 @@ namespace sw
 			{
 				for ( const VkExtensionProperties& ext : availableExts )
 				{
-					if ( StringUtil::strcmp( ext.extensionName, pName ) == 0 )
+					if ( StringUtil::equals( ext.extensionName, pName ) )
 						return true;
 				}
 				return false;
@@ -802,7 +804,7 @@ namespace sw
 			bool layerFound{ false };
 			for ( const VkLayerProperties& layerProperties : availableLayers )
 			{
-				if ( StringUtil::strcmp( pLayerName, layerProperties.layerName ) == 0 )
+				if ( StringUtil::equals( pLayerName, layerProperties.layerName ) )
 				{
 					layerFound = true;
 					break;

@@ -56,15 +56,9 @@ namespace sw
 		root.takeChildText( "defaultMaterial", _defaultMaterial );
 		root.takeChildText( "glassMaterialInstance", _glassMaterialInstance );
 
-		const utf8* pEncounterRateText = root.childText( "encounterRate" );
-		if ( pEncounterRateText != nullptr )
-			_encounterRate = static_cast<float32>( StringUtil::atof( pEncounterRateText ) );
-		const utf8* pStarterLevelText = root.childText( "starterLevel" );
-		if ( pStarterLevelText != nullptr )
-			_starterLevel = StringUtil::atoi( pStarterLevelText );
-		const utf8* pMaxPartySizeText = root.childText( "maxPartySize" );
-		if ( pMaxPartySizeText != nullptr )
-			_maxPartySize = StringUtil::atoi( pMaxPartySizeText );
+		_encounterRate = root.childFloat( "encounterRate", _encounterRate );
+		_starterLevel  = root.childInt( "starterLevel", _starterLevel );
+		_maxPartySize  = root.childInt( "maxPartySize", _maxPartySize );
 
 		SW_LOG_INFO( "Loaded from %# (start=%# starter=%#)", absPath, _startMap, _starterId );
 		return true;

@@ -151,11 +151,11 @@ namespace sw
 		if ( pStr == nullptr )
 			return MonsterArchetype::MeleePatrol;
 
-		if ( StringUtil::equalsIgnoreCase( pStr, "RangedShooter" ) )
+		if ( StringUtil::equals( pStr, "RangedShooter", true ) )
 			return MonsterArchetype::RangedShooter;
-		if ( StringUtil::equalsIgnoreCase( pStr, "FlyingPursuer" ) )
+		if ( StringUtil::equals( pStr, "FlyingPursuer", true ) )
 			return MonsterArchetype::FlyingPursuer;
-		if ( StringUtil::equalsIgnoreCase( pStr, "ChargerRush" ) )
+		if ( StringUtil::equals( pStr, "ChargerRush", true ) )
 			return MonsterArchetype::ChargerRush;
 
 		return MonsterArchetype::MeleePatrol;

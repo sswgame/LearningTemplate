@@ -28,11 +28,11 @@ namespace sw
 				if ( stem.empty() || token.empty() )
 					return false;
 
-				if ( StringUtil::equalsIgnoreCase( stem, token ) )
+				if ( StringUtil::equals( stem, token, true ) )
 					return true;
 
 				// token + '_' 또는 token + '.' 접두사 매칭
-				if ( stem.size() > token.size() && StringUtil::startsWithIgnoreCase( stem, token ) )
+				if ( stem.size() > token.size() && StringUtil::startsWith( stem, token, true ) )
 				{
 					const utf8 delimiter = stem[token.size()];
 					if ( delimiter == '_' || delimiter == '.' )
@@ -68,7 +68,7 @@ namespace sw
 				}
 
 				// 2. 패치 접두사(patch_)가 붙은 경우 대상 모듈 우선순위 + 500 가중치 부여
-				if ( stem.size() >= 6 && StringUtil::startsWithIgnoreCase( stem, "patch_" ) )
+				if ( stem.size() >= 6 && StringUtil::startsWith( stem, "patch_", true ) )
 				{
 					const string_view subStem = stem.substr( 6 );
 					for ( size_t index = 0; index < priorityCount; ++index )

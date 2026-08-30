@@ -36,6 +36,8 @@ namespace
 				return VK_FORMAT_R32G32_SFLOAT;
 			case sw::RHIFormat::R32_FLOAT:
 				return VK_FORMAT_R32_SFLOAT;
+			default:
+				break;
 		}
 		return VK_FORMAT_UNDEFINED;
 	}
@@ -314,6 +316,8 @@ namespace sw
 					return VK_ATTACHMENT_LOAD_OP_LOAD;
 				case RHIRenderPassLoadOp::DontCare:
 					return VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+				default:
+					break;
 			}
 			return VK_ATTACHMENT_LOAD_OP_CLEAR;
 		};
@@ -325,6 +329,8 @@ namespace sw
 					return VK_ATTACHMENT_STORE_OP_STORE;
 				case RHIRenderPassStoreOp::DontCare:
 					return VK_ATTACHMENT_STORE_OP_DONT_CARE;
+				default:
+					break;
 			}
 			return VK_ATTACHMENT_STORE_OP_STORE;
 		};

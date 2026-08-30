@@ -42,13 +42,11 @@ namespace sw::editor
 					if ( pComp == nullptr )
 						continue;
 
-					if ( StringUtil::strnicmp( pComp->getComponentName().c_str(), typeFilter.data(),
-											   static_cast<uint32>( typeFilter.size() ) ) == 0 )
+					if ( StringUtil::startsWith( pComp->getComponentName().view(), typeFilter, true ) )
 						return true;
 
 					const TypeInfo* pTypeInfo = pComp->getTypeInfo();
-					if ( pTypeInfo != nullptr && StringUtil::strnicmp( pTypeInfo->_name.c_str(), typeFilter.data(),
-																	   static_cast<uint32>( typeFilter.size() ) ) == 0 )
+					if ( pTypeInfo != nullptr && StringUtil::startsWith( pTypeInfo->_name.view(), typeFilter, true ) )
 						return true;
 				}
 				return false;
@@ -68,7 +66,7 @@ namespace sw::editor
 				}
 
 				// 2) Tag syntax "tag:TagName"
-				if ( StringUtil::strnicmp( pFilter, "tag:", 4 ) == 0 )
+				if ( StringUtil::startsWith( pFilter, "tag:", true ) )
 				{
 					const string_view tagFilter{ pFilter + 4 };
 					return pObj->hasTag( TagID{ hashed_string( tagFilter ).getHash(), nullptr } );

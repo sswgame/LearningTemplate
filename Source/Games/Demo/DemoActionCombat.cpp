@@ -107,6 +107,8 @@ namespace sw
 			case FacingDir::Right:
 				deltaX = 1;
 				break;
+			default:
+				break;
 		}
 
 		const int32 startX = _player.getTileX();

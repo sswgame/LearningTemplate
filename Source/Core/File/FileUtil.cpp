@@ -187,7 +187,7 @@ namespace sw
 			return false;
 
 		const string_view have = fileName.substr( dot + 1 );
-		return StringUtil::equalsIgnoreCase( have, want );
+		return StringUtil::equals( have, want, true );
 	}
 
 	bool FileUtil::hasAnyExtension( string_view fileName, std::initializer_list<string_view> listExtension )
@@ -202,7 +202,7 @@ namespace sw
 
 	bool FileUtil::endsWithIgnoreCase( string_view path, string_view suffix )
 	{
-		return StringUtil::endsWithIgnoreCase( path, suffix );
+		return StringUtil::endsWith( path, suffix, true );
 	}
 
 	bool FileUtil::endsWithAnyIgnoreCase( string_view path, std::initializer_list<string_view> listSuffix )

@@ -49,31 +49,7 @@ namespace sw
 		if ( pName != nullptr )
 			_desc._name = pName;
 
-		_desc._listAttachment.clear();
-		XmlNode attachsNode = root.child( "_attachments" );
-		if ( attachsNode.isValid() )
-		{
-			for ( XmlNode attNode = attachsNode.child( "item" ); attNode.isValid(); attNode = attNode.next( "item" ) )
-			{
-				RenderPassAttachment att{};
-
-				const utf8* pAttName = attNode.childText( "_name" );
-				if ( pAttName != nullptr )
-					att._name = pAttName;
-				const utf8* pAttFormat = attNode.childText( "_format" );
-				if ( pAttFormat != nullptr )
-					att._format = pAttFormat;
-				att._bClear				   = attNode.childBool( "_bClear", false );
-				const utf8* pAttClearColor = attNode.childText( "_clearColor" );
-				if ( pAttClearColor != nullptr )
-				{
-					if ( std::sscanf( pAttClearColor, "%f,%f,%f,%f", &att._arrClearColor[0], &att._arrClearColor[1], &att._arrClearColor[2], &att._arrClearColor[3] ) < 4 )
-						std::sscanf( pAttClearColor, "%f %f %f %f", &att._arrClearColor[0], &att._arrClearColor[1], &att._arrClearColor[2], &att._arrClearColor[3] );
-				}
-
-				_desc._listAttachment.push_back( std::move( att ) );
-			}
-		}
+		RenderPassXmlUtil::parseAttachmentList( root.child( "_attachments" ), _desc._listAttachment );
 
 		SW_LOG_INFO( "Loaded '%#' (Attachments: %#)",
 					 _desc._name, _desc._listAttachment.size() );
@@ -93,24 +69,7 @@ namespace sw
 
 		root.appendChild( "_name", _desc._name );
 
-		XmlNode attachsNode = root.appendChild( "_attachments" );
-
-		for ( const RenderPassAttachment& att : _desc._listAttachment )
-		{
-			XmlNode attNode = attachsNode.appendChild( "item" );
-			attNode.appendChild( "_name", att._name );
-			attNode.appendChild( "_format", att._format );
-			attNode.appendChild( "_bClear", att._bClear );
-
-			StringBuilder<constant::kMaxBuffer128> colorSS;
-			constexpr Format					   colorFmt( 4 );
-			colorSS.appendFormat( "%#,%#,%#,%#",
-								  Fmt( att._arrClearColor[0], colorFmt ),
-								  Fmt( att._arrClearColor[1], colorFmt ),
-								  Fmt( att._arrClearColor[2], colorFmt ),
-								  Fmt( att._arrClearColor[3], colorFmt ) );
-			attNode.appendChild( "_clearColor", colorSS.view() );
-		}
+		RenderPassXmlUtil::appendAttachmentList( root, _desc._listAttachment );
 
 		if ( doc.saveFile( absPath ) == false )
 		{

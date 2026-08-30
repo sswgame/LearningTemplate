@@ -197,7 +197,7 @@ namespace sw
 		{
 			flagKey			   = condition.substr( 0, eqPos );
 			const string right = condition.substr( eqPos + 2 );
-			expectedVal		   = StringUtil::atoi( right.c_str() );
+			StringUtil::parseInt( right, expectedVal );
 		}
 		else
 		{
@@ -206,8 +206,8 @@ namespace sw
 			{
 				flagKey			   = condition.substr( 0, neqPos );
 				const string right = condition.substr( neqPos + 2 );
-				expectedVal		   = StringUtil::atoi( right.c_str() );
-				bEqualsComparison  = false;
+				StringUtil::parseInt( right, expectedVal );
+				bEqualsComparison = false;
 			}
 		}
 
@@ -238,7 +238,9 @@ namespace sw
 				const string rest  = actionCmd.substr( kSetFlag.size() );
 				const size_t colon = rest.find( ':' );
 				const string key   = ( colon != string::npos ) ? rest.substr( 0, colon ) : string{ rest };
-				const int32	 val   = ( colon != string::npos ) ? StringUtil::atoi( rest.c_str() + colon + 1 ) : 1;
+				int32		 val{ 1 };
+				if ( colon != string::npos )
+					StringUtil::parseInt( rest.substr( colon + 1 ), val );
 				_pSaveSlot->setFlag( key, val );
 			}
 		}

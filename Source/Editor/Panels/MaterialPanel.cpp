@@ -38,8 +38,7 @@ namespace sw::editor
 				uint32			filled{ 0 };
 				for ( ; filled < count && filled < tokenCount; ++filled )
 				{
-					const string token{ splitter.getSplitList()[filled] };
-					pOut[filled] = static_cast<float32>( StringUtil::atof( token.c_str() ) );
+					StringUtil::parseFloat( splitter.getSplitList()[filled], pOut[filled] );
 				}
 				return filled;
 			}
@@ -127,7 +126,8 @@ namespace sw::editor
 					}
 					case MaterialPropertyType::Int:
 					{
-						int32	   iVal		= static_cast<int32>( StringUtil::atoi( prop._value.c_str() ) );
+						int32 iVal{ 0 };
+						StringUtil::parseInt( prop._value, iVal );
 						const bool bChanged = ImGui::DragInt( pLabel, &iVal );
 						if ( bChanged )
 							prop._value = to_string( iVal );
@@ -135,7 +135,8 @@ namespace sw::editor
 					}
 					case MaterialPropertyType::Enum:
 					{
-						int32		selected = static_cast<int32>( StringUtil::atoi( prop._value.c_str() ) );
+						int32 selected{ 0 };
+						StringUtil::parseInt( prop._value, selected );
 						const utf8* pPreview = prop._value.c_str();
 						for ( const MaterialEnumEntry& entry : prop._listEnumEntry )
 						{

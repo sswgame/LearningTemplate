@@ -29,36 +29,6 @@ namespace sw
 			static constexpr uint32		 kSceneBinMagic	  = 0x53434E31u; // 'SCN1'
 			static constexpr uint32		 kSceneBinVersion = 0;
 
-			static string xmlEscape( string_view text )
-			{
-				StringBuilder<constant::kMaxBuffer1024> out;
-				for ( utf8 ch : text )
-				{
-					switch ( ch )
-					{
-						case '&':
-							out.append( "&amp;" );
-							break;
-						case '<':
-							out.append( "&lt;" );
-							break;
-						case '>':
-							out.append( "&gt;" );
-							break;
-						case '"':
-							out.append( "&quot;" );
-							break;
-						case '\'':
-							out.append( "&apos;" );
-							break;
-						default:
-							out.append( ch );
-							break;
-					}
-				}
-				return string{ out.view() };
-			}
-
 			static string absoluteWritePath( string_view path )
 			{
 				string result = ResourceUtil::getResourcePath( path );
@@ -83,7 +53,7 @@ namespace sw
 				out.append( '<' ).append( pNodeName );
 				for ( XmlAttribute attr = node.firstAttr(); attr; attr = attr.next() )
 				{
-					out.append( ' ' ).append( attr.name() ).append( "=\"" ).append( xmlEscape( attr.value() != nullptr ? attr.value() : "" ) ).append( '"' );
+					out.append( ' ' ).append( attr.name() ).append( "=\"" ).append( XmlDocument::escapeString( attr.value() != nullptr ? attr.value() : "" ) ).append( '"' );
 				}
 
 				bool bHasElementChild = false;
@@ -106,7 +76,7 @@ namespace sw
 
 				out.append( '>' );
 				if ( bHasValue )
-					out.append( xmlEscape( node.text() ) );
+					out.append( XmlDocument::escapeString( node.text() ) );
 
 				for ( XmlNode child = node.child(); child; child = child.next() )
 				{

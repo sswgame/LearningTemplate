@@ -38,9 +38,9 @@ namespace sw
 					if ( pType != nullptr )
 						pass._type = pType;
 
-					parseStringList( passNode, "_inputs", pass._listInput );
-					parseStringList( passNode, "_outputs", pass._listOutput );
-					parseStringList( passNode, "_permutations", pass._listPermutation );
+					RenderPassXmlUtil::parseStringList( passNode, "_inputs", pass._listInput );
+					RenderPassXmlUtil::parseStringList( passNode, "_outputs", pass._listOutput );
+					RenderPassXmlUtil::parseStringList( passNode, "_permutations", pass._listPermutation );
 
 					const utf8* pShaderPath = passNode.childText( "_shaderPath" );
 					if ( pShaderPath != nullptr )
@@ -78,40 +78,14 @@ namespace sw
 					const utf8* pType = passNode.attr( "type" );
 					if ( pType != nullptr )
 						pass._type = pType;
-					parseStringList( passNode, "inputs", pass._listInput );
-					parseStringList( passNode, "outputs", pass._listOutput );
+					RenderPassXmlUtil::parseStringList( passNode, "inputs", pass._listInput );
+					RenderPassXmlUtil::parseStringList( passNode, "outputs", pass._listOutput );
 					if ( pass._listInput.empty() )
-						parseStringList( passNode, "_inputs", pass._listInput );
+						RenderPassXmlUtil::parseStringList( passNode, "_inputs", pass._listInput );
 					if ( pass._listOutput.empty() )
-						parseStringList( passNode, "_outputs", pass._listOutput );
-					parseStringList( passNode, "_permutations", pass._listPermutation );
+						RenderPassXmlUtil::parseStringList( passNode, "_outputs", pass._listOutput );
+					RenderPassXmlUtil::parseStringList( passNode, "_permutations", pass._listPermutation );
 					outListPasses.push_back( std::move( pass ) );
-				}
-			}
-
-			static void parseAttachments( XmlNode attachsNode, vector<RenderPassAttachment>& outListAttachments )
-			{
-				outListAttachments.clear();
-				if ( attachsNode.isValid() == false )
-					return;
-
-				for ( XmlNode attNode = attachsNode.child( "item" ); attNode.isValid(); attNode = attNode.next( "item" ) )
-				{
-					RenderPassAttachment att{};
-					const utf8*			 pName = attNode.childText( "_name" );
-					if ( pName != nullptr )
-						att._name = pName;
-					const utf8* pFormat = attNode.childText( "_format" );
-					if ( pFormat != nullptr )
-						att._format = pFormat;
-					att._bClear				= attNode.childBool( "_bClear", att._bClear );
-					const utf8* pClearColor = attNode.childText( "_clearColor" );
-					if ( pClearColor != nullptr )
-					{
-						if ( std::sscanf( pClearColor, "%f,%f,%f,%f", &att._arrClearColor[0], &att._arrClearColor[1], &att._arrClearColor[2], &att._arrClearColor[3] ) < 4 )
-							std::sscanf( pClearColor, "%f %f %f %f", &att._arrClearColor[0], &att._arrClearColor[1], &att._arrClearColor[2], &att._arrClearColor[3] );
-					}
-					outListAttachments.push_back( std::move( att ) );
 				}
 			}
 
@@ -148,12 +122,11 @@ namespace sw
 		XmlNode root = doc.root( "RenderPipelineDesc" );
 		if ( root.isValid() == false )
 		{
-			SW_LOG_ERROR( "Missing <RenderPipelineDesc>: %#", absPath );
+			SW_LOG_ERROR( "XML missing root <RenderPipelineDesc>: %#", absPath );
 			return false;
 		}
 
-		if ( engine::getResourceManager().getAssetFormatRegistry().upgradeXml( AssetKind::RenderPipeline, doc, root,
-																			   AssetFormatVersions::kRenderPipeline ) == false )
+		if ( engine::getResourceManager().getAssetFormatRegistry().upgradeXml( AssetKind::RenderPipeline, doc, root, AssetFormatVersions::kRenderPipeline ) == false )
 		{
 			SW_LOG_ERROR( "formatVersion upgrade failed: %#", absPath );
 			return false;
@@ -162,8 +135,6 @@ namespace sw
 		_desc = {};
 
 		const utf8* pName = root.childText( "_name" );
-		if ( pName == nullptr )
-			pName = root.attr( "name" );
 		if ( pName != nullptr )
 			_desc._name = pName;
 
@@ -171,13 +142,13 @@ namespace sw
 		if ( pShadingModel != nullptr )
 			_desc._shadingModel = pShadingModel;
 
-		RenderPipelineResourceInternal::parseAttachments( root.child( "_attachments" ), _desc._listAttachment );
+		RenderPassXmlUtil::parseAttachmentList( root.child( "_attachments" ), _desc._listAttachment );
 
 		XmlNode passesNode = root.child( "_passes" );
 		if ( passesNode.isValid() )
 			RenderPipelineResourceInternal::parsePipelineGraphPasses( passesNode, _desc._listPass );
 
-		parseStringList( root, "_renderPassRefs", _desc._listRenderPassRef );
+		RenderPassXmlUtil::parseStringList( root, "_renderPassRefs", _desc._listRenderPassRef );
 
 		if ( _desc._shadingModel.empty() || _desc._shadingModel == "Forward" )
 			_desc._shadingModel = RenderPipelineResourceInternal::guessShadingModel( _desc._name, _desc._listPass );
@@ -200,23 +171,7 @@ namespace sw
 		root.appendChild( "_name", _desc._name );
 		root.appendChild( "_shadingModel", _desc._shadingModel );
 
-		XmlNode attachsNode = root.appendChild( "_attachments" );
-		for ( const RenderPassAttachment& att : _desc._listAttachment )
-		{
-			XmlNode attNode = attachsNode.appendChild( "item" );
-			attNode.appendChild( "_name", att._name );
-			attNode.appendChild( "_format", att._format );
-			attNode.appendChild( "_bClear", att._bClear );
-
-			StringBuilder<constant::kMaxBuffer128> colorSS;
-			constexpr Format					   colorFmt( 4 );
-			colorSS.appendFormat( "%#,%#,%#,%#",
-								  Fmt( att._arrClearColor[0], colorFmt ),
-								  Fmt( att._arrClearColor[1], colorFmt ),
-								  Fmt( att._arrClearColor[2], colorFmt ),
-								  Fmt( att._arrClearColor[3], colorFmt ) );
-			attNode.appendChild( "_clearColor", colorSS.view() );
-		}
+		RenderPassXmlUtil::appendAttachmentList( root, _desc._listAttachment );
 
 		XmlNode passesNode = root.appendChild( "_passes" );
 		for ( const RenderGraphPassDesc& pass : _desc._listPass )
@@ -225,8 +180,8 @@ namespace sw
 			passNode.appendChild( "_name", pass._name );
 			passNode.appendChild( "_type", pass._type );
 
-			appendStringList( passNode, "_inputs", pass._listInput );
-			appendStringList( passNode, "_outputs", pass._listOutput );
+			RenderPassXmlUtil::appendStringList( passNode, "_inputs", pass._listInput );
+			RenderPassXmlUtil::appendStringList( passNode, "_outputs", pass._listOutput );
 			if ( pass._shaderPath.empty() == false )
 				passNode.appendChild( "_shaderPath", pass._shaderPath );
 			if ( pass._vertexEntryPoint.empty() == false )
@@ -243,11 +198,11 @@ namespace sw
 			passNode.appendChild( "_bEnableBlend", pass._bEnableBlend );
 
 			if ( pass._listPermutation.empty() == false )
-				appendStringList( passNode, "_permutations", pass._listPermutation );
+				RenderPassXmlUtil::appendStringList( passNode, "_permutations", pass._listPermutation );
 		}
 
 		if ( _desc._listRenderPassRef.empty() == false )
-			appendStringList( root, "_renderPassRefs", _desc._listRenderPassRef );
+			RenderPassXmlUtil::appendStringList( root, "_renderPassRefs", _desc._listRenderPassRef );
 
 		if ( doc.saveFile( absPath ) == false )
 		{

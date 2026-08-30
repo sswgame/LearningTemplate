@@ -186,11 +186,11 @@ namespace sw
 /**
  * @brief 현재 파일 또는 네임스페이스 스코프의 로그 Caller(클래스/시스템명)를 지정합니다.
  */
-#define SW_LOG_CALLER( name )                                                                       \
-	namespace                                                                                       \
-	{                                                                                               \
-		[[maybe_unused]] static const bool SW_CONCAT( _s_logCallerReg_, __COUNTER__ ) = []() {    \
-			::sw::Logger::registerCaller( __FILE__, name );                                       \
+#define SW_LOG_CALLER( name )                                                   \
+	namespace                                                                   \
+	{                                                                           \
+		[[maybe_unused]] static const bool _s_logCallerRegistered = []() {    \
+			::sw::Logger::registerCaller( __FILE__, name );                   \
 			return true; }(); \
 	}
 

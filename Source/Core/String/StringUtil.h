@@ -121,23 +121,28 @@ namespace sw
 		/** @brief 특정 부분 문자열을 다른 문자열로 치환한 새 문자열을 반환합니다. */
 		static string replace( string_view input, string_view from, string_view to );
 
-		/** @brief ASCII 대소문자 무시 동등 비교 (키/태그/속성 이름용). 값 비교에는 쓰지 말 것. */
-		static bool equalsIgnoreCase( const utf8* lhs, const utf8* rhs );
-		/** @brief 대소문자 무시 동등 비교를 합니다. */
-		static bool equalsIgnoreCase( const utf16* lhs, const utf16* rhs );
-		/** @brief string_view 대소문자 무시 동등 비교 */
-		static bool equalsIgnoreCase( string_view lhs, string_view rhs );
-		/** @brief wstring_view 대소문자 무시 동등 비교 */
-		static bool equalsIgnoreCase( wstring_view lhs, wstring_view rhs );
+		/** @brief 두 문자열이 일치하는지 확인합니다 (대소문자 무시 옵션). */
+		static bool equals( string_view lhs, string_view rhs, bool bIgnoreCase = false ) noexcept;
+		/** @brief 두 문자열이 일치하는지 확인합니다 (대소문자 무시 옵션). */
+		static bool equals( wstring_view lhs, wstring_view rhs, bool bIgnoreCase = false ) noexcept;
+		/** @brief 두 C 문자열이 일치하는지 확인합니다 (nullptr 안전, 대소문자 무시 옵션). */
+		static bool equals( const utf8* lhs, const utf8* rhs, bool bIgnoreCase = false ) noexcept;
+		/** @brief 두 C 문자열이 일치하는지 확인합니다 (nullptr 안전, 대소문자 무시 옵션). */
+		static bool equals( const utf16* lhs, const utf16* rhs, bool bIgnoreCase = false ) noexcept;
+
+		/** @brief 두 문자열을 사전순으로 3-Way 비교합니다 (< 0, == 0, > 0). */
+		static int32 compare( string_view lhs, string_view rhs, bool bIgnoreCase = false ) noexcept;
+		/** @brief 두 문자열을 사전순으로 3-Way 비교합니다 (< 0, == 0, > 0). */
+		static int32 compare( wstring_view lhs, wstring_view rhs, bool bIgnoreCase = false ) noexcept;
+		/** @brief 두 C 문자열을 사전순으로 3-Way 비교합니다 (nullptr 안전, < 0, == 0, > 0). */
+		static int32 compare( const utf8* lhs, const utf8* rhs, bool bIgnoreCase = false ) noexcept;
+		/** @brief 두 C 문자열을 사전순으로 3-Way 비교합니다 (nullptr 안전, < 0, == 0, > 0). */
+		static int32 compare( const utf16* lhs, const utf16* rhs, bool bIgnoreCase = false ) noexcept;
 
 		/** @brief 문자열이 지정된 접두사(prefix)로 시작하는지 확인합니다 (Zero Allocation). */
-		static bool startsWith( string_view str, string_view prefix ) noexcept;
+		static bool startsWith( string_view str, string_view prefix, bool bIgnoreCase = false ) noexcept;
 		/** @brief 문자열이 지정된 접미사(suffix)로 끝나는지 확인합니다 (Zero Allocation). */
-		static bool endsWith( string_view str, string_view suffix ) noexcept;
-		/** @brief 문자열이 지정된 접두사(prefix)로 시작하는지 대소문자 무시로 확인합니다 (Zero Allocation). */
-		static bool startsWithIgnoreCase( string_view str, string_view prefix );
-		/** @brief 문자열이 지정된 접미사(suffix)로 끝나는지 대소문자 무시로 확인합니다 (Zero Allocation). */
-		static bool endsWithIgnoreCase( string_view str, string_view suffix );
+		static bool endsWith( string_view str, string_view suffix, bool bIgnoreCase = false ) noexcept;
 
 		/** @brief 문자열 앞(시작 부분)의 공백(Whitespace) 문자를 모두 제거합니다. */
 		static string trimStart( const utf8* input );
@@ -171,21 +176,6 @@ namespace sw
 		/** @brief 문자열 길이를 반환합니다. */
 		static uint32 strlen( const utf16* str );
 
-		/** @brief 대소문자를 구분하지 않고 처음 주어진 길이(length)만큼 두 문자열을 비교합니다. */
-		static int32 strnicmp( const utf8* lhs, const utf8* rhs, uint32 stringLength );
-		/** @brief 대소문자 무시로 길이만큼 비교합니다. */
-		static int32 strnicmp( const utf16* lhs, const utf16* rhs, uint32 stringLength );
-
-		/** @brief 두 문자열을 사전순으로 비교합니다 (동일하면 0). */
-		static int32 strcmp( const utf8* lhs, const utf8* rhs );
-		/** @brief 사전순으로 비교합니다. */
-		static int32 strcmp( const utf16* lhs, const utf16* rhs );
-
-		/** @brief 두 문자열을 지정된 길이(length)만큼 사전순으로 비교합니다 (동일하면 0). */
-		static int32 strncmp( const utf8* lhs, const utf8* rhs, uint32 stringLength );
-		/** @brief 지정된 길이만큼 사전순으로 비교합니다. */
-		static int32 strncmp( const utf16* lhs, const utf16* rhs, uint32 stringLength );
-
 		/** @brief 지정된 길이(length)만큼 문자를 안전하게 복사합니다. */
 		static void strncpy( utf8* pDestination, const utf8* pSource, uint32 length );
 		/** @brief 문자를 안전하게 복사합니다. */
@@ -206,49 +196,41 @@ namespace sw
 		/** @brief 문자가 처음 나타나는 위치를 반환합니다. */
 		static const utf16* strchr( const utf16* str, utf16 c );
 
-		/** @brief 정수를 파싱합니다. 실패·빈 입력은 0입니다. */
-		static int32 atoi( const utf8* str );
-		/** @brief 정수를 파싱합니다. 실패 시 0입니다. */
-		static int32 atoi( const utf16* str );
-
-		/** @brief 64비트 정수를 파싱합니다. 실패·빈 입력은 0입니다. */
-		static int64 atoll( const utf8* str );
-		/** @brief 64비트 정수를 파싱합니다. 실패 시 0입니다. */
-		static int64 atoll( const utf16* str );
-
-		/** @brief 실수를 파싱합니다. 실패·빈 입력은 0입니다. */
-		static float64 atof( const utf8* str );
-		/** @brief 실수를 파싱합니다. 실패 시 0입니다. */
-		static float64 atof( const utf16* str );
-
 		/**
 		 * @brief true/false/1/0/yes/no/on/off 토큰을 bool로 파싱합니다 (대소문자 무시).
 		 * @details 트림 후 매칭. 빈 입력이거나 알 수 없으면 fallback.
 		 */
 		static bool parseBool( string_view token, bool fallback = false );
 
-		/** @brief 32비트 실수를 파싱합니다. */
-		static float32 strtof( const utf8* str, utf8** endPtr = nullptr );
-		/** @brief 32비트 실수를 파싱합니다. */
-		static float32 strtof( const utf16* str, utf16** endPtr = nullptr );
-
-		/** @brief 64비트 실수를 파싱합니다. */
-		static float64 strtod( const utf8* str, utf8** endPtr = nullptr );
-		/** @brief 64비트 실수를 파싱합니다. */
-		static float64 strtod( const utf16* str, utf16** endPtr = nullptr );
+		/**
+		 * @brief string_view 토큰을 32비트 실수로 파싱합니다 (0-Alloc).
+		 * @return 파싱 성공 시 true, 실패 시 false (outValue 미변경).
+		 */
+		static bool parseFloat( string_view token, float32& outValue );
 
 		/**
-		 * @brief 정수를 파싱합니다. base 0이면 0x/8진/10진을 자동 판별합니다.
-		 * @param endPtr 선택. 파싱이 끝난 첫 문자를 가리킵니다(nullptr 허용).
+		 * @brief string_view 토큰을 64비트 실수로 파싱합니다 (0-Alloc).
+		 * @return 파싱 성공 시 true, 실패 시 false (outValue 미변경).
 		 */
-		static int64 strtoll( const utf8* str, utf8** endPtr = nullptr, int32 base = 0 );
-		/** @brief 정수를 파싱합니다(기수 자동 판별). */
-		static int64 strtoll( const utf16* str, utf16** endPtr = nullptr, int32 base = 0 );
+		static bool parseDouble( string_view token, float64& outValue );
 
-		/** @brief 부호 없는 정수를 파싱합니다. */
-		static uint64 strtoull( const utf8* str, utf8** endPtr = nullptr, int32 base = 0 );
-		/** @brief 부호 없는 정수를 파싱합니다. */
-		static uint64 strtoull( const utf16* str, utf16** endPtr = nullptr, int32 base = 0 );
+		/**
+		 * @brief string_view 토큰을 32비트 정수로 파싱합니다 (0-Alloc).
+		 * @return 파싱 성공 시 true, 실패 시 false (outValue 미변경).
+		 */
+		static bool parseInt( string_view token, int32& outValue, int32 base = 10 );
+
+		/**
+		 * @brief string_view 토큰을 64비트 정수로 파싱합니다 (0-Alloc).
+		 * @return 파싱 성공 시 true, 실패 시 false (outValue 미변경).
+		 */
+		static bool parseInt64( string_view token, int64& outValue, int32 base = 10 );
+
+		/**
+		 * @brief string_view 토큰을 64비트 부호 없는 정수로 파싱합니다 (0-Alloc).
+		 * @return 파싱 성공 시 true, 실패 시 false (outValue 미변경).
+		 */
+		static bool parseUInt64( string_view token, uint64& outValue, int32 base = 10 );
 
 		static constexpr uint64 kOffset64 = 14695981039346656037ULL;
 		static constexpr uint64 kPrime64  = 1099511628211ULL;

@@ -285,6 +285,8 @@ namespace sw
 					else
 						sw_delete( *static_cast<Lambda**>( pDest ) );
 					return nullptr;
+				default:
+					break;
 			}
 			return nullptr;
 		}

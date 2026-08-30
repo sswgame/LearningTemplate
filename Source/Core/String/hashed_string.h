@@ -235,7 +235,7 @@ namespace sw
 		{
 			if ( _hash != rhs._hash || _stringLength != rhs._stringLength )
 				return false;
-			return StringUtil::strnicmp( _pStr, rhs._pStr, _stringLength ) == 0;
+			return StringUtil::equals( std::basic_string_view<T>( _pStr, _stringLength ), std::basic_string_view<T>( rhs._pStr, rhs._stringLength ), true );
 		}
 	};
 

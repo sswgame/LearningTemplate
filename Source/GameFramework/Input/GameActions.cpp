@@ -21,7 +21,7 @@ namespace sw
 				for ( XmlNode actionNode = idsRoot.child( "id" ); actionNode; actionNode = actionNode.next( "id" ) )
 				{
 					const utf8* pKeyAttr = actionNode.attr( "key" );
-					if ( pKeyAttr == nullptr || StringUtil::strcmp( pKeyAttr, pKey ) != 0 )
+					if ( StringUtil::equals( pKeyAttr, pKey ) == false )
 						continue;
 					const utf8* pText = actionNode.text();
 					if ( pText != nullptr && pText[0] != '\0' )

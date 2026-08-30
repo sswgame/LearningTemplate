@@ -85,7 +85,9 @@ namespace sw
 		const utf8* pV = get( mapData, key, nullptr );
 		if ( pV == nullptr || pV[0] == '\0' )
 			return fallback;
-		return StringUtil::atoi( pV );
+		int32 val{ fallback };
+		StringUtil::parseInt( pV, val );
+		return val;
 	}
 
 	float32 KeyValueFile::getFloat( const KeyValueMap& mapData, string_view key, float32 fallback )
@@ -93,7 +95,9 @@ namespace sw
 		const utf8* pV = get( mapData, key, nullptr );
 		if ( pV == nullptr || pV[0] == '\0' )
 			return fallback;
-		return static_cast<float32>( StringUtil::atof( pV ) );
+		float32 val{ fallback };
+		StringUtil::parseFloat( pV, val );
+		return val;
 	}
 
 	bool KeyValueFile::getBool( const KeyValueMap& mapData, string_view key, bool fallback )

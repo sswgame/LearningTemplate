@@ -280,6 +280,8 @@ namespace sw::editor
 					ed::EndPin();
 					break;
 				}
+				default:
+					break;
 			}
 
 			ed::EndNode();

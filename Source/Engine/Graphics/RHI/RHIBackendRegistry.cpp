@@ -210,7 +210,7 @@ namespace sw
 		}
 
 		PFN_GetRHIModuleAbiStamp pfnStamp = reinterpret_cast<PFN_GetRHIModuleAbiStamp>( FileUtil::getDynamicSymbol( pModuleHandle, "getRHIModuleAbiStamp" ) );
-		if ( pfnStamp == nullptr || pfnStamp() == nullptr || StringUtil::strcmp( pfnStamp(), kRHIModuleAbiStamp ) != 0 )
+		if ( pfnStamp == nullptr || StringUtil::equals( pfnStamp(), kRHIModuleAbiStamp ) == false )
 		{
 			SW_LOG_ERROR( "RHI MODULE ABI stamp mismatch or missing getRHIModuleAbiStamp (%#; expected %#)", modulePath, kRHIModuleAbiStamp );
 			FileUtil::unloadDynamicLibrary( pModuleHandle );

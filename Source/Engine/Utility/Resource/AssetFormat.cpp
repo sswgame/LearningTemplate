@@ -2,6 +2,8 @@
 
 #include "Engine/Utility/Resource/AssetFormat.h"
 
+#include "Core/String/StringUtil.h"
+
 namespace sw
 {
 	SW_LOG_CALLER( "AssetFormat" );
@@ -28,7 +30,11 @@ namespace sw
 			return AssetFormatVersions::kUnversioned;
 		const utf8* pAttr = root.attr( kXmlAttrName );
 		if ( pAttr != nullptr && pAttr[0] != '\0' )
-			return static_cast<AssetFormatVersion>( StringUtil::strtoull( pAttr, nullptr, 10 ) );
+		{
+			uint64 ver{ AssetFormatVersions::kUnversioned };
+			StringUtil::parseUInt64( pAttr, ver, 10 );
+			return static_cast<AssetFormatVersion>( ver );
+		}
 		return AssetFormatVersions::kUnversioned;
 	}
 

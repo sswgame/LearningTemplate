@@ -299,6 +299,8 @@ namespace sw
 				return "Vulkan";
 			case RHIBackend::OpenGL:
 				return "OpenGL";
+			default:
+				break;
 		}
 		return "Unknown";
 	}
@@ -326,6 +328,8 @@ namespace sw
 				return ShaderTargetFormat::SPIRV_Vulkan;
 			case RHIBackend::OpenGL:
 				return ShaderTargetFormat::SPIRV_OpenGL;
+			default:
+				break;
 		}
 		return ShaderTargetFormat::DXIL_D3D12;
 	}

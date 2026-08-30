@@ -4,6 +4,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/string_splitter.h"
 
 #include "Editor/Common/Config/EditorConfig.h"
 #include "Editor/Common/EditorUtil.h"
@@ -40,25 +41,12 @@ namespace sw::editor
 				const utf8* pText = root.childText( "clearColor" );
 				if ( pText == nullptr || pText[0] == '\0' )
 					return;
-				const utf8* pCursor = pText;
-				float32		arrParsed[4]{};
-				uint32		parsedCount{ 0 };
-				while ( parsedCount < 4 )
-				{
-					utf8*		pEnd	   = nullptr;
-					const utf8* pBefore	   = pCursor;
-					arrParsed[parsedCount] = StringUtil::strtof( pCursor, &pEnd );
-					if ( pEnd == nullptr || pEnd == pBefore )
-						break;
-					++parsedCount;
-					pCursor = pEnd;
-				}
-				if ( parsedCount != 4 )
+				string_splitter tokens( pText, { ",", " " } );
+				const auto&		listToken = tokens.getSplitList();
+				if ( listToken.size() < 4 )
 					return;
-				outColor[0] = arrParsed[0];
-				outColor[1] = arrParsed[1];
-				outColor[2] = arrParsed[2];
-				outColor[3] = arrParsed[3];
+				for ( size_t index = 0; index < 4; ++index )
+					StringUtil::parseFloat( listToken[index], outColor[index] );
 			}
 		};
 	} // namespace

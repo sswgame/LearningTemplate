@@ -1501,7 +1501,12 @@ SW_TEST_CASE( Reflection_Serialization, CustomSerializeContext )
 		[]( const void* ptr )
 	{ return sw::to_string( ( *static_cast<const int32*>( ptr ) ) * 10 ); },
 		[]( void* ptr, std::string_view s )
-	{ *static_cast<int32*>( ptr ) = sw::StringUtil::atoi( sw::string( s ).c_str() ) / 10; return true; } );
+	{
+		int32 val{ 0 };
+		sw::StringUtil::parseInt( s, val );
+		*static_cast<int32*>( ptr ) = val / 10;
+		return true;
+	} );
 
 	const sw::TypeInfo* typeInfo =
 		sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::ComplexData" ) );

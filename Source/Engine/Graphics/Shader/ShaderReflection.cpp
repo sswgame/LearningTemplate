@@ -29,6 +29,7 @@ namespace sw
 			case ShaderTargetFormat::SPIRV_OpenGL:
 				return ShaderReflectionUtil::reflectSpirv( bytecode );
 			case ShaderTargetFormat::Count:
+			default:
 				break;
 		}
 		return {};

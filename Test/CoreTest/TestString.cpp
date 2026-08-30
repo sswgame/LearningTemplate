@@ -25,11 +25,16 @@ SW_TEST_CASE( Core_String, StringUtilBasic )
 	sw::string lower = sw::StringUtil::toLower( "WORLD" );
 	SW_EXPECT_EQUAL( sw::string( "world" ), lower );
 
-	SW_EXPECT_TRUE( sw::StringUtil::equalsIgnoreCase( "RenderPass", "renderpass" ) );
-	SW_EXPECT_TRUE( sw::StringUtil::equalsIgnoreCase( "HP", "hp" ) );
-	SW_EXPECT_FALSE( sw::StringUtil::equalsIgnoreCase( "Hero", "hero!" ) );
-	SW_EXPECT_TRUE( sw::StringUtil::equalsIgnoreCase( static_cast<const utf8*>( "Scene" ), "scene" ) );
-	SW_EXPECT_FALSE( sw::StringUtil::equalsIgnoreCase( static_cast<const utf8*>( nullptr ), "x" ) );
+	SW_EXPECT_TRUE( sw::StringUtil::equals( "RenderPass", "renderpass", true ) );
+	SW_EXPECT_FALSE( sw::StringUtil::equals( "RenderPass", "renderpass", false ) );
+	SW_EXPECT_TRUE( sw::StringUtil::equals( "HP", "hp", true ) );
+	SW_EXPECT_FALSE( sw::StringUtil::equals( "Hero", "hero!", true ) );
+	SW_EXPECT_TRUE( sw::StringUtil::equals( static_cast<const utf8*>( "Scene" ), "scene", true ) );
+	SW_EXPECT_FALSE( sw::StringUtil::equals( static_cast<const utf8*>( nullptr ), "x", true ) );
+	SW_EXPECT_EQUAL( 0, sw::StringUtil::compare( "abc", "abc" ) );
+	SW_EXPECT_TRUE( sw::StringUtil::compare( "ABC", "abc", true ) == 0 );
+	SW_EXPECT_TRUE( sw::StringUtil::compare( "abc", "def" ) < 0 );
+	SW_EXPECT_TRUE( sw::StringUtil::compare( "def", "abc" ) > 0 );
 
 	const sw::string_splitter parts{ "apple,banana,orange", { "," } };
 	SW_EXPECT_EQUAL( 3u, parts.getCount() );
@@ -237,9 +242,10 @@ SW_TEST_CASE( Core_String, FixedStringModernFeatures )
 	SW_EXPECT_EQUAL( 9u, fs.size() );
 	SW_EXPECT_EQUAL( sv, fs.view() );
 
-	SW_EXPECT_TRUE( fs.equalsIgnoreCase( "MODERNCPP" ) );
-	SW_EXPECT_TRUE( fs.equalsIgnoreCase( sw::fixed_string<32>( "moderncpp" ) ) );
-	SW_EXPECT_FALSE( fs.equalsIgnoreCase( "Other" ) );
+	SW_EXPECT_TRUE( fs.equals( "MODERNCPP", true ) );
+	SW_EXPECT_FALSE( fs.equals( "MODERNCPP", false ) );
+	SW_EXPECT_TRUE( fs.equals( sw::fixed_string<32>( "moderncpp" ), true ) );
+	SW_EXPECT_FALSE( fs.equals( "Other", true ) );
 
 	std::hash<sw::fixed_string<32>> hasher;
 	size_t							h1 = hasher( fs );

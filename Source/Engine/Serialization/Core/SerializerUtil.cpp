@@ -357,11 +357,7 @@ namespace sw
 
 	bool SerializerUtil::keysEqual( string_view a, string_view b, bool bIgnoreCase )
 	{
-		if ( a.size() != b.size() )
-			return false;
-		if ( bIgnoreCase == false )
-			return a == b;
-		return StringUtil::strnicmp( a.data(), b.data(), static_cast<uint32>( a.size() ) ) == 0;
+		return StringUtil::equals( a, b, bIgnoreCase );
 	}
 
 	const PropertyInfo* SerializerUtil::matchProperty( const vector<PropertyInfo>& listProps, string_view keyRaw,

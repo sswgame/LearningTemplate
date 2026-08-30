@@ -183,6 +183,26 @@ namespace sw
 					out.push_back( static_cast<utf8>( 0x80 | ( codepoint & 0x3F ) ) );
 				}
 			}
+
+			template <typename T>
+			static string integerToString( T value )
+			{
+				utf8 buf[constant::kMaxBuffer32];
+				auto [ptr, ec] = std::to_chars( buf, buf + sizeof( buf ), value );
+				return string( buf, static_cast<size_t>( ptr - buf ) );
+			}
+
+			template <typename T>
+			static string floatToString( T value )
+			{
+				utf8 buf[constant::kMaxBuffer64];
+				auto [ptr, ec] = std::to_chars( buf, buf + sizeof( buf ), value );
+				if ( ec == std::errc() )
+					return string( buf, static_cast<size_t>( ptr - buf ) );
+
+				formatstring( buf, sizeof( buf ), "%#", value );
+				return string{ buf };
+			}
 		};
 	} // namespace
 } // namespace sw
@@ -196,9 +216,7 @@ namespace sw
 	 */
 	string to_string( int32 value )
 	{
-		utf8 buf[constant::kMaxBuffer32];
-		auto [ptr, ec] = std::to_chars( buf, buf + sizeof( buf ), value );
-		return string( buf, static_cast<size_t>( ptr - buf ) );
+		return StringUtilInternal::integerToString( value );
 	}
 
 	/**
@@ -206,9 +224,7 @@ namespace sw
 	 */
 	string to_string( uint32 value )
 	{
-		utf8 buf[constant::kMaxBuffer32];
-		auto [ptr, ec] = std::to_chars( buf, buf + sizeof( buf ), value );
-		return string( buf, static_cast<size_t>( ptr - buf ) );
+		return StringUtilInternal::integerToString( value );
 	}
 
 	/**
@@ -216,9 +232,7 @@ namespace sw
 	 */
 	string to_string( int64 value )
 	{
-		utf8 buf[constant::kMaxBuffer32];
-		auto [ptr, ec] = std::to_chars( buf, buf + sizeof( buf ), value );
-		return string( buf, static_cast<size_t>( ptr - buf ) );
+		return StringUtilInternal::integerToString( value );
 	}
 
 	/**
@@ -226,9 +240,7 @@ namespace sw
 	 */
 	string to_string( uint64 value )
 	{
-		utf8 buf[constant::kMaxBuffer32];
-		auto [ptr, ec] = std::to_chars( buf, buf + sizeof( buf ), value );
-		return string( buf, static_cast<size_t>( ptr - buf ) );
+		return StringUtilInternal::integerToString( value );
 	}
 
 	/**
@@ -236,13 +248,7 @@ namespace sw
 	 */
 	string to_string( float32 value )
 	{
-		utf8 buf[constant::kMaxBuffer64];
-		auto [ptr, ec] = std::to_chars( buf, buf + sizeof( buf ), value );
-		if ( ec == std::errc() )
-			return string( buf, static_cast<size_t>( ptr - buf ) );
-
-		formatstring( buf, sizeof( buf ), "%#", value );
-		return string{ buf };
+		return StringUtilInternal::floatToString( value );
 	}
 
 	/**
@@ -250,13 +256,7 @@ namespace sw
 	 */
 	string to_string( float64 value )
 	{
-		utf8 buf[constant::kMaxBuffer64];
-		auto [ptr, ec] = std::to_chars( buf, buf + sizeof( buf ), value );
-		if ( ec == std::errc() )
-			return string( buf, static_cast<size_t>( ptr - buf ) );
-
-		formatstring( buf, sizeof( buf ), "%#", value );
-		return string{ buf };
+		return StringUtilInternal::floatToString( value );
 	}
 
 	bool StringUtil::isNullOrEmpty( const utf8* str )
@@ -497,104 +497,212 @@ namespace sw
 		return result;
 	}
 
-	bool StringUtil::equalsIgnoreCase( const utf8* lhs, const utf8* rhs )
+	bool StringUtil::equals( string_view lhs, string_view rhs, bool bIgnoreCase ) noexcept
+	{
+		if ( lhs.size() != rhs.size() )
+			return false;
+		if ( bIgnoreCase )
+		{
+			for ( size_t charIndex = 0; charIndex < lhs.size(); ++charIndex )
+			{
+				if ( lhs[charIndex] != rhs[charIndex] && toLowerChar( lhs[charIndex] ) != toLowerChar( rhs[charIndex] ) )
+					return false;
+			}
+			return true;
+		}
+		return lhs == rhs;
+	}
+
+	bool StringUtil::equals( wstring_view lhs, wstring_view rhs, bool bIgnoreCase ) noexcept
+	{
+		if ( lhs.size() != rhs.size() )
+			return false;
+		if ( bIgnoreCase )
+		{
+			for ( size_t charIndex = 0; charIndex < lhs.size(); ++charIndex )
+			{
+				if ( lhs[charIndex] != rhs[charIndex] && toLowerChar( lhs[charIndex] ) != toLowerChar( rhs[charIndex] ) )
+					return false;
+			}
+			return true;
+		}
+		return lhs == rhs;
+	}
+
+	bool StringUtil::equals( const utf8* lhs, const utf8* rhs, bool bIgnoreCase ) noexcept
 	{
 		if ( lhs == rhs )
 			return true;
 		if ( lhs == nullptr || rhs == nullptr )
 			return false;
-
-		while ( *lhs != '\0' && *rhs != '\0' )
+		if ( bIgnoreCase )
 		{
-			if ( *lhs != *rhs && toLowerChar( *lhs ) != toLowerChar( *rhs ) )
-				return false;
-			++lhs;
-			++rhs;
+			while ( *lhs != '\0' && *rhs != '\0' )
+			{
+				if ( *lhs != *rhs && toLowerChar( *lhs ) != toLowerChar( *rhs ) )
+					return false;
+				++lhs;
+				++rhs;
+			}
+			return *lhs == *rhs;
 		}
-		return *lhs == *rhs;
+		return std::strcmp( lhs, rhs ) == 0;
 	}
 
-	bool StringUtil::equalsIgnoreCase( const utf16* lhs, const utf16* rhs )
+	bool StringUtil::equals( const utf16* lhs, const utf16* rhs, bool bIgnoreCase ) noexcept
 	{
 		if ( lhs == rhs )
 			return true;
 		if ( lhs == nullptr || rhs == nullptr )
 			return false;
-
-		while ( *lhs != L'\0' && *rhs != L'\0' )
+		if ( bIgnoreCase )
 		{
-			if ( *lhs != *rhs && toLowerChar( *lhs ) != toLowerChar( *rhs ) )
-				return false;
-			++lhs;
-			++rhs;
+			while ( *lhs != L'\0' && *rhs != L'\0' )
+			{
+				if ( *lhs != *rhs && toLowerChar( *lhs ) != toLowerChar( *rhs ) )
+					return false;
+				++lhs;
+				++rhs;
+			}
+			return *lhs == *rhs;
 		}
-		return *lhs == *rhs;
+		return std::wcscmp( lhs, rhs ) == 0;
 	}
 
-	bool StringUtil::equalsIgnoreCase( string_view lhs, string_view rhs )
+	int32 StringUtil::compare( string_view lhs, string_view rhs, bool bIgnoreCase ) noexcept
 	{
-		if ( lhs.size() != rhs.size() )
-			return false;
-
-		for ( size_t charIndex = 0; charIndex < lhs.size(); ++charIndex )
+		const size_t minLen = ( lhs.size() < rhs.size() ) ? lhs.size() : rhs.size();
+		if ( bIgnoreCase )
 		{
-			if ( lhs[charIndex] != rhs[charIndex] && toLowerChar( lhs[charIndex] ) != toLowerChar( rhs[charIndex] ) )
-				return false;
+			for ( size_t charIndex = 0; charIndex < minLen; ++charIndex )
+			{
+				const int32 c1 = static_cast<int32>( toLowerChar( lhs[charIndex] ) );
+				const int32 c2 = static_cast<int32>( toLowerChar( rhs[charIndex] ) );
+				if ( c1 != c2 )
+					return c1 - c2;
+			}
 		}
-		return true;
+		else
+		{
+			for ( size_t charIndex = 0; charIndex < minLen; ++charIndex )
+			{
+				const int32 c1 = static_cast<uint8>( lhs[charIndex] );
+				const int32 c2 = static_cast<uint8>( rhs[charIndex] );
+				if ( c1 != c2 )
+					return c1 - c2;
+			}
+		}
+		if ( lhs.size() < rhs.size() )
+			return -1;
+		if ( lhs.size() > rhs.size() )
+			return 1;
+		return 0;
 	}
 
-	bool StringUtil::equalsIgnoreCase( wstring_view lhs, wstring_view rhs )
+	int32 StringUtil::compare( wstring_view lhs, wstring_view rhs, bool bIgnoreCase ) noexcept
 	{
-		if ( lhs.size() != rhs.size() )
-			return false;
-
-		for ( size_t charIndex = 0; charIndex < lhs.size(); ++charIndex )
+		const size_t minLen = ( lhs.size() < rhs.size() ) ? lhs.size() : rhs.size();
+		if ( bIgnoreCase )
 		{
-			if ( lhs[charIndex] != rhs[charIndex] && toLowerChar( lhs[charIndex] ) != toLowerChar( rhs[charIndex] ) )
-				return false;
+			for ( size_t charIndex = 0; charIndex < minLen; ++charIndex )
+			{
+				const int32 c1 = static_cast<int32>( toLowerChar( lhs[charIndex] ) );
+				const int32 c2 = static_cast<int32>( toLowerChar( rhs[charIndex] ) );
+				if ( c1 != c2 )
+					return c1 - c2;
+			}
 		}
-		return true;
+		else
+		{
+			for ( size_t charIndex = 0; charIndex < minLen; ++charIndex )
+			{
+				const int32 c1 = static_cast<int32>( lhs[charIndex] );
+				const int32 c2 = static_cast<int32>( rhs[charIndex] );
+				if ( c1 != c2 )
+					return c1 - c2;
+			}
+		}
+		if ( lhs.size() < rhs.size() )
+			return -1;
+		if ( lhs.size() > rhs.size() )
+			return 1;
+		return 0;
 	}
 
-	bool StringUtil::startsWith( string_view str, string_view prefix ) noexcept
+	int32 StringUtil::compare( const utf8* lhs, const utf8* rhs, bool bIgnoreCase ) noexcept
+	{
+		if ( lhs == rhs )
+			return 0;
+		if ( lhs == nullptr )
+			return -1;
+		if ( rhs == nullptr )
+			return 1;
+		if ( bIgnoreCase )
+		{
+			while ( *lhs != '\0' && *rhs != '\0' )
+			{
+				const int32 c1 = static_cast<int32>( toLowerChar( *lhs ) );
+				const int32 c2 = static_cast<int32>( toLowerChar( *rhs ) );
+				if ( c1 != c2 )
+					return c1 - c2;
+				++lhs;
+				++rhs;
+			}
+			return static_cast<int32>( static_cast<uint8>( *lhs ) ) - static_cast<int32>( static_cast<uint8>( *rhs ) );
+		}
+		return std::strcmp( lhs, rhs );
+	}
+
+	int32 StringUtil::compare( const utf16* lhs, const utf16* rhs, bool bIgnoreCase ) noexcept
+	{
+		if ( lhs == rhs )
+			return 0;
+		if ( lhs == nullptr )
+			return -1;
+		if ( rhs == nullptr )
+			return 1;
+		if ( bIgnoreCase )
+		{
+			while ( *lhs != L'\0' && *rhs != L'\0' )
+			{
+				const int32 c1 = static_cast<int32>( toLowerChar( *lhs ) );
+				const int32 c2 = static_cast<int32>( toLowerChar( *rhs ) );
+				if ( c1 != c2 )
+					return c1 - c2;
+				++lhs;
+				++rhs;
+			}
+			return static_cast<int32>( *lhs ) - static_cast<int32>( *rhs );
+		}
+		return std::wcscmp( lhs, rhs );
+	}
+
+	bool StringUtil::startsWith( string_view str, string_view prefix, bool bIgnoreCase ) noexcept
 	{
 		if ( prefix.empty() )
 			return true;
 		if ( str.size() < prefix.size() )
 			return false;
+		if ( bIgnoreCase )
+		{
+			const string_view head = str.substr( 0, prefix.size() );
+			return equals( head, prefix, true );
+		}
 		return str.compare( 0, prefix.size(), prefix ) == 0;
 	}
 
-	bool StringUtil::endsWith( string_view str, string_view suffix ) noexcept
+	bool StringUtil::endsWith( string_view str, string_view suffix, bool bIgnoreCase ) noexcept
 	{
 		if ( suffix.empty() )
 			return true;
 		if ( str.size() < suffix.size() )
 			return false;
+		if ( bIgnoreCase )
+		{
+			const string_view tail = str.substr( str.size() - suffix.size() );
+			return equals( tail, suffix, true );
+		}
 		return str.compare( str.size() - suffix.size(), suffix.size(), suffix ) == 0;
-	}
-
-	bool StringUtil::startsWithIgnoreCase( string_view str, string_view prefix )
-	{
-		if ( prefix.empty() )
-			return true;
-		if ( str.size() < prefix.size() )
-			return false;
-
-		const string_view head = str.substr( 0, prefix.size() );
-		return equalsIgnoreCase( head, prefix );
-	}
-
-	bool StringUtil::endsWithIgnoreCase( string_view str, string_view suffix )
-	{
-		if ( suffix.empty() )
-			return true;
-		if ( str.size() < suffix.size() )
-			return false;
-
-		const string_view tail = str.substr( str.size() - suffix.size() );
-		return equalsIgnoreCase( tail, suffix );
 	}
 
 	string StringUtil::trimStart( const utf8* input )
@@ -757,104 +865,6 @@ namespace sw
 		return static_cast<uint32>( std::char_traits<utf16>::length( str ) );
 	}
 
-	int32 StringUtil::strnicmp( const utf8* lhs, const utf8* rhs, const uint32 stringLength )
-	{
-		if ( lhs == rhs )
-			return 0;
-		if ( lhs == nullptr )
-			return -1;
-		if ( rhs == nullptr )
-			return 1;
-
-#if defined( SW_PLATFORM_WINDOWS )
-		return _strnicmp( lhs, rhs, stringLength );
-#elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
-		return strncasecmp( lhs, rhs, stringLength );
-#else
-		for ( uint32 charIndex = 0; charIndex < stringLength; ++charIndex )
-		{
-			const int32 c1 = std::tolower( static_cast<uint8>( lhs[charIndex] ) );
-			const int32 c2 = std::tolower( static_cast<uint8>( rhs[charIndex] ) );
-			if ( c1 != c2 )
-				return c1 - c2;
-			if ( lhs[charIndex] == '\0' )
-				break;
-		}
-		return 0;
-#endif
-	}
-
-	int32 StringUtil::strnicmp( const utf16* lhs, const utf16* rhs, const uint32 stringLength )
-	{
-		if ( lhs == rhs )
-			return 0;
-		if ( lhs == nullptr )
-			return -1;
-		if ( rhs == nullptr )
-			return 1;
-
-#if defined( SW_PLATFORM_WINDOWS )
-		return _wcsnicmp( lhs, rhs, stringLength );
-#elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
-		return wcsncasecmp( lhs, rhs, stringLength );
-#else
-		for ( uint32 charIndex = 0; charIndex < stringLength; ++charIndex )
-		{
-			const int32 c1 = towlower( static_cast<wint_t>( lhs[charIndex] ) );
-			const int32 c2 = towlower( static_cast<wint_t>( rhs[charIndex] ) );
-			if ( c1 != c2 )
-				return c1 - c2;
-			if ( lhs[charIndex] == L'\0' )
-				break;
-		}
-		return 0;
-#endif
-	}
-
-	int32 StringUtil::strcmp( const utf8* lhs, const utf8* rhs )
-	{
-		if ( lhs == rhs )
-			return 0;
-		if ( isNullOrEmpty( lhs ) )
-			return -1;
-		if ( isNullOrEmpty( rhs ) )
-			return 1;
-		return std::strcmp( lhs, rhs );
-	}
-
-	int32 StringUtil::strcmp( const utf16* lhs, const utf16* rhs )
-	{
-		if ( lhs == rhs )
-			return 0;
-		if ( isNullOrEmpty( lhs ) )
-			return -1;
-		if ( isNullOrEmpty( rhs ) )
-			return 1;
-		return std::wcscmp( lhs, rhs );
-	}
-
-	int32 StringUtil::strncmp( const utf8* lhs, const utf8* rhs, const uint32 stringLength )
-	{
-		if ( lhs == rhs || stringLength == 0 )
-			return 0;
-		if ( lhs == nullptr )
-			return -1;
-		if ( rhs == nullptr )
-			return 1;
-		return std::strncmp( lhs, rhs, stringLength );
-	}
-
-	int32 StringUtil::strncmp( const utf16* lhs, const utf16* rhs, const uint32 stringLength )
-	{
-		if ( lhs == rhs || stringLength == 0 )
-			return 0;
-		if ( lhs == nullptr )
-			return -1;
-		if ( rhs == nullptr )
-			return 1;
-		return std::wcsncmp( lhs, rhs, stringLength );
-	}
-
 	void StringUtil::strncpy( utf8* pDestination, const utf8* pSource, const uint32 length )
 	{
 #if defined( SW_PLATFORM_WINDOWS )
@@ -879,48 +889,44 @@ namespace sw
 
 	const utf8* StringUtil::strstr( const utf8* str, const utf8* substr )
 	{
-		if ( str == nullptr || substr == nullptr )
+		if ( isNullOrEmpty( str ) || isNullOrEmpty( substr ) )
 			return nullptr;
 		return ::strstr( str, substr );
 	}
 
 	const utf16* StringUtil::strstr( const utf16* str, const utf16* substr )
 	{
-		if ( str == nullptr || substr == nullptr )
+		if ( isNullOrEmpty( str ) || isNullOrEmpty( substr ) )
 			return nullptr;
 		return wcsstr( str, substr );
 	}
 
 	const utf8* StringUtil::stristr( const utf8* str, const utf8* substr )
 	{
-		if ( str == nullptr || substr == nullptr )
+		if ( isNullOrEmpty( str ) || isNullOrEmpty( substr ) )
 			return nullptr;
 
-		const utf8*	 start	   = str;
-		const uint32 substrLen = strlen( substr );
-
-		while ( *start != 0 )
+		const size_t subLen = strlen( substr );
+		while ( *str != '\0' )
 		{
-			if ( strnicmp( start, substr, substrLen ) == 0 )
-				return start;
-			++start;
+			if ( equals( string_view( str, subLen ), string_view( substr, subLen ), true ) )
+				return str;
+			++str;
 		}
 		return nullptr;
 	}
 
 	const utf16* StringUtil::stristr( const utf16* str, const utf16* substr )
 	{
-		if ( str == nullptr || substr == nullptr )
+		if ( isNullOrEmpty( str ) || isNullOrEmpty( substr ) )
 			return nullptr;
 
-		const utf16* start	   = str;
-		const uint32 substrLen = strlen( substr );
-
-		while ( *start != 0 )
+		const size_t subLen = strlen( substr );
+		while ( *str != L'\0' )
 		{
-			if ( strnicmp( start, substr, substrLen ) == 0 )
-				return start;
-			++start;
+			if ( equals( wstring_view( str, subLen ), wstring_view( substr, subLen ), true ) )
+				return str;
+			++str;
 		}
 		return nullptr;
 	}
@@ -939,148 +945,235 @@ namespace sw
 		return wcschr( str, c );
 	}
 
-	int32 StringUtil::atoi( const utf8* str )
-	{
-		if ( isNullOrEmpty( str ) )
-			return 0;
-		return static_cast<int32>( std::strtol( str, nullptr, 10 ) );
-	}
-
-	int32 StringUtil::atoi( const utf16* str )
-	{
-		if ( isNullOrEmpty( str ) )
-			return 0;
-		return static_cast<int32>( std::wcstol( str, nullptr, 10 ) );
-	}
-
-	int64 StringUtil::atoll( const utf8* str )
-	{
-		if ( isNullOrEmpty( str ) )
-			return 0;
-		return std::strtoll( str, nullptr, 10 );
-	}
-
-	int64 StringUtil::atoll( const utf16* str )
-	{
-		if ( isNullOrEmpty( str ) )
-			return 0;
-		return std::wcstoll( str, nullptr, 10 );
-	}
-
 	bool StringUtil::parseBool( string_view token, bool fallback )
 	{
 		const string_view trimmed = trim( token );
 		if ( trimmed.empty() )
 			return fallback;
-		if ( trimmed == "1" || equalsIgnoreCase( trimmed, "true" ) || equalsIgnoreCase( trimmed, "yes" ) ||
-			 equalsIgnoreCase( trimmed, "on" ) )
+		if ( trimmed == "1" || equals( trimmed, "true", true ) || equals( trimmed, "yes", true ) ||
+			 equals( trimmed, "on", true ) )
 			return true;
-		if ( trimmed == "0" || equalsIgnoreCase( trimmed, "false" ) || equalsIgnoreCase( trimmed, "no" ) ||
-			 equalsIgnoreCase( trimmed, "off" ) )
+		if ( trimmed == "0" || equals( trimmed, "false", true ) || equals( trimmed, "no", true ) ||
+			 equals( trimmed, "off", true ) )
 			return false;
 		return fallback;
 	}
 
-	float64 StringUtil::atof( const utf8* str )
+	bool StringUtil::parseFloat( string_view token, float32& outValue )
 	{
-		if ( isNullOrEmpty( str ) )
-			return 0.0;
-		return std::strtod( str, nullptr );
-	}
+		string_view trimmed = trim( token );
+		if ( trimmed.empty() )
+			return false;
+		if ( trimmed.front() == '+' )
+			trimmed.remove_prefix( 1 );
+		if ( trimmed.empty() )
+			return false;
 
-	float64 StringUtil::atof( const utf16* str )
-	{
-		if ( isNullOrEmpty( str ) )
-			return 0.0;
-		return std::wcstod( str, nullptr );
-	}
-
-	float32 StringUtil::strtof( const utf8* str, utf8** endPtr )
-	{
-		if ( isNullOrEmpty( str ) )
+		float32 val{ 0.0f };
+		const auto [ptr, ec] = std::from_chars( trimmed.data(), trimmed.data() + trimmed.size(), val );
+		if ( ec == std::errc{} && ptr == trimmed.data() + trimmed.size() )
 		{
-			if ( endPtr != nullptr )
-				*endPtr = const_cast<utf8*>( str );
-			return 0.0f;
+			outValue = val;
+			return true;
 		}
-		return std::strtof( str, endPtr );
+		return false;
 	}
 
-	float32 StringUtil::strtof( const utf16* str, utf16** endPtr )
+	bool StringUtil::parseDouble( string_view token, float64& outValue )
 	{
-		if ( isNullOrEmpty( str ) )
+		string_view trimmed = trim( token );
+		if ( trimmed.empty() )
+			return false;
+		if ( trimmed.front() == '+' )
+			trimmed.remove_prefix( 1 );
+		if ( trimmed.empty() )
+			return false;
+
+		float64 val{ 0.0 };
+		const auto [ptr, ec] = std::from_chars( trimmed.data(), trimmed.data() + trimmed.size(), val );
+		if ( ec == std::errc{} && ptr == trimmed.data() + trimmed.size() )
 		{
-			if ( endPtr != nullptr )
-				*endPtr = const_cast<utf16*>( str );
-			return 0.0f;
+			outValue = val;
+			return true;
 		}
-		return std::wcstof( str, endPtr );
+		return false;
 	}
 
-	float64 StringUtil::strtod( const utf8* str, utf8** endPtr )
+	bool StringUtil::parseInt( string_view token, int32& outValue, int32 base )
 	{
-		if ( isNullOrEmpty( str ) )
+		string_view trimmed = trim( token );
+		if ( trimmed.empty() )
+			return false;
+
+		bool bNegative = false;
+		if ( trimmed.front() == '+' )
+			trimmed.remove_prefix( 1 );
+		else if ( trimmed.front() == '-' )
 		{
-			if ( endPtr != nullptr )
-				*endPtr = const_cast<utf8*>( str );
-			return 0.0;
+			bNegative = true;
+			trimmed.remove_prefix( 1 );
 		}
-		return std::strtod( str, endPtr );
+
+		if ( trimmed.empty() )
+			return false;
+
+		if ( base == 0 )
+		{
+			if ( trimmed.size() >= 2 && trimmed[0] == '0' && ( trimmed[1] == 'x' || trimmed[1] == 'X' ) )
+			{
+				base = 16;
+				trimmed.remove_prefix( 2 );
+			}
+			else
+			{
+				base = 10;
+			}
+		}
+		else if ( base == 16 )
+		{
+			if ( trimmed.size() >= 2 && trimmed[0] == '0' && ( trimmed[1] == 'x' || trimmed[1] == 'X' ) )
+			{
+				trimmed.remove_prefix( 2 );
+			}
+		}
+
+		if ( base < 2 || base > 36 || trimmed.empty() )
+			return false;
+
+		uint32 uval{ 0 };
+		const auto [ptr, ec] = std::from_chars( trimmed.data(), trimmed.data() + trimmed.size(), uval, base );
+		if ( ec == std::errc{} && ptr == trimmed.data() + trimmed.size() )
+		{
+			if ( bNegative )
+			{
+				constexpr uint32 kMaxAbsInt32 = static_cast<uint32>( ( std::numeric_limits<int32>::max )() ) + 1u;
+				if ( uval > kMaxAbsInt32 )
+					return false;
+				if ( uval == kMaxAbsInt32 )
+					outValue = ( std::numeric_limits<int32>::min )();
+				else
+					outValue = -static_cast<int32>( uval );
+			}
+			else
+			{
+				if ( uval > static_cast<uint32>( ( std::numeric_limits<int32>::max )() ) )
+					return false;
+				outValue = static_cast<int32>( uval );
+			}
+			return true;
+		}
+		return false;
 	}
 
-	float64 StringUtil::strtod( const utf16* str, utf16** endPtr )
+	bool StringUtil::parseInt64( string_view token, int64& outValue, int32 base )
 	{
-		if ( isNullOrEmpty( str ) )
+		string_view trimmed = trim( token );
+		if ( trimmed.empty() )
+			return false;
+
+		bool bNegative = false;
+		if ( trimmed.front() == '+' )
+			trimmed.remove_prefix( 1 );
+		else if ( trimmed.front() == '-' )
 		{
-			if ( endPtr != nullptr )
-				*endPtr = const_cast<utf16*>( str );
-			return 0.0;
+			bNegative = true;
+			trimmed.remove_prefix( 1 );
 		}
-		return std::wcstod( str, endPtr );
+
+		if ( trimmed.empty() )
+			return false;
+
+		if ( base == 0 )
+		{
+			if ( trimmed.size() >= 2 && trimmed[0] == '0' && ( trimmed[1] == 'x' || trimmed[1] == 'X' ) )
+			{
+				base = 16;
+				trimmed.remove_prefix( 2 );
+			}
+			else
+			{
+				base = 10;
+			}
+		}
+		else if ( base == 16 )
+		{
+			if ( trimmed.size() >= 2 && trimmed[0] == '0' && ( trimmed[1] == 'x' || trimmed[1] == 'X' ) )
+			{
+				trimmed.remove_prefix( 2 );
+			}
+		}
+
+		if ( base < 2 || base > 36 || trimmed.empty() )
+			return false;
+
+		uint64 uval{ 0 };
+		const auto [ptr, ec] = std::from_chars( trimmed.data(), trimmed.data() + trimmed.size(), uval, base );
+		if ( ec == std::errc{} && ptr == trimmed.data() + trimmed.size() )
+		{
+			if ( bNegative )
+			{
+				constexpr uint64 kMaxAbsInt64 = static_cast<uint64>( ( std::numeric_limits<int64>::max )() ) + 1ull;
+				if ( uval > kMaxAbsInt64 )
+					return false;
+				if ( uval == kMaxAbsInt64 )
+					outValue = ( std::numeric_limits<int64>::min )();
+				else
+					outValue = -static_cast<int64>( uval );
+			}
+			else
+			{
+				if ( uval > static_cast<uint64>( ( std::numeric_limits<int64>::max )() ) )
+					return false;
+				outValue = static_cast<int64>( uval );
+			}
+			return true;
+		}
+		return false;
 	}
 
-	int64 StringUtil::strtoll( const utf8* str, utf8** endPtr, int32 base )
+	bool StringUtil::parseUInt64( string_view token, uint64& outValue, int32 base )
 	{
-		if ( isNullOrEmpty( str ) )
-		{
-			if ( endPtr != nullptr )
-				*endPtr = const_cast<utf8*>( str );
-			return 0;
-		}
-		return std::strtoll( str, endPtr, base );
-	}
+		string_view trimmed = trim( token );
+		if ( trimmed.empty() )
+			return false;
 
-	int64 StringUtil::strtoll( const utf16* str, utf16** endPtr, int32 base )
-	{
-		if ( isNullOrEmpty( str ) )
-		{
-			if ( endPtr != nullptr )
-				*endPtr = const_cast<utf16*>( str );
-			return 0;
-		}
-		return std::wcstoll( str, endPtr, base );
-	}
+		if ( trimmed.front() == '+' )
+			trimmed.remove_prefix( 1 );
 
-	uint64 StringUtil::strtoull( const utf8* str, utf8** endPtr, int32 base )
-	{
-		if ( isNullOrEmpty( str ) )
-		{
-			if ( endPtr != nullptr )
-				*endPtr = const_cast<utf8*>( str );
-			return 0;
-		}
-		return std::strtoull( str, endPtr, base );
-	}
+		if ( trimmed.empty() )
+			return false;
 
-	uint64 StringUtil::strtoull( const utf16* str, utf16** endPtr, int32 base )
-	{
-		if ( isNullOrEmpty( str ) )
+		if ( base == 0 )
 		{
-			if ( endPtr != nullptr )
-				*endPtr = const_cast<utf16*>( str );
-			return 0;
+			if ( trimmed.size() >= 2 && trimmed[0] == '0' && ( trimmed[1] == 'x' || trimmed[1] == 'X' ) )
+			{
+				base = 16;
+				trimmed.remove_prefix( 2 );
+			}
+			else
+			{
+				base = 10;
+			}
 		}
-		return std::wcstoull( str, endPtr, base );
+		else if ( base == 16 )
+		{
+			if ( trimmed.size() >= 2 && trimmed[0] == '0' && ( trimmed[1] == 'x' || trimmed[1] == 'X' ) )
+			{
+				trimmed.remove_prefix( 2 );
+			}
+		}
+
+		if ( base < 2 || base > 36 || trimmed.empty() )
+			return false;
+
+		uint64 val{ 0 };
+		const auto [ptr, ec] = std::from_chars( trimmed.data(), trimmed.data() + trimmed.size(), val, base );
+		if ( ec == std::errc{} && ptr == trimmed.data() + trimmed.size() )
+		{
+			outValue = val;
+			return true;
+		}
+		return false;
 	}
 
 	string StringUtil::toString( const utf16* input )

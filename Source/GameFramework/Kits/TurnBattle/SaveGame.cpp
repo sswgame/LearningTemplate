@@ -169,7 +169,11 @@ namespace sw
 		for ( const auto& [key, val] : map )
 		{
 			if ( key.size() > prefixLen && key.compare( 0, prefixLen, kFlagPrefix ) == 0 )
-				_mapFlag[key.substr( prefixLen )] = StringUtil::atoi( val.c_str() );
+			{
+				int32 flagVal{ 0 };
+				StringUtil::parseInt( val, flagVal );
+				_mapFlag[key.substr( prefixLen )] = flagVal;
+			}
 		}
 
 		SW_LOG_INFO( "Loaded %# @ (%#,%#) party=%# flags=%#",

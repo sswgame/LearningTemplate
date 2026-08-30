@@ -5,11 +5,10 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/String/hashed_string.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectionConstants.h"
-
-#include "String/hashed_string.h"
 
 namespace sw
 {
@@ -527,7 +526,7 @@ namespace sw
 	{
 		if ( pAliasName == nullptr || pCanonicalName == nullptr )
 			return;
-		if ( StringUtil::strcmp( pAliasName, pCanonicalName ) == 0 )
+		if ( StringUtil::equals( pAliasName, pCanonicalName ) )
 			return;
 
 		std::unique_lock<std::shared_mutex> lock{ _mutex };
@@ -556,7 +555,7 @@ namespace sw
 	{
 		if ( pAliasName == nullptr || pCanonicalName == nullptr )
 			return;
-		if ( StringUtil::strcmp( pAliasName, pCanonicalName ) == 0 )
+		if ( StringUtil::equals( pAliasName, pCanonicalName ) )
 			return;
 
 		std::unique_lock<std::shared_mutex> lock{ _mutex };

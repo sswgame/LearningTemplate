@@ -43,66 +43,6 @@ namespace sw::editor
 	{
 		struct EditorViewportClientInternal
 		{
-			static void setIdentity( float32* pM )
-			{
-				for ( int32 matrixIndex = 0; matrixIndex < 16; ++matrixIndex )
-					pM[matrixIndex] = 0.0f;
-				pM[0] = pM[5] = pM[10] = pM[15] = 1.0f;
-			}
-
-			static void lookAt( float32* pOut, float32 eyeX, float32 eyeY, float32 eyeZ, float32 atX, float32 atY, float32 atZ )
-			{
-				float32 fx = atX - eyeX;
-				float32 fy = atY - eyeY;
-				float32 fz = atZ - eyeZ;
-				float32 fl = MathUtil::sqrt( fx * fx + fy * fy + fz * fz );
-				if ( fl > 1e-6f )
-				{
-					fx /= fl;
-					fy /= fl;
-					fz /= fl;
-				}
-				float32 sx = fy * 0.0f - fz * 1.0f;
-				float32 sy = fz * 0.0f - fx * 0.0f;
-				float32 sz = fx * 1.0f - fy * 0.0f;
-				float32 sl = MathUtil::sqrt( sx * sx + sy * sy + sz * sz );
-				if ( sl > 1e-6f )
-				{
-					sx /= sl;
-					sy /= sl;
-					sz /= sl;
-				}
-				const float32 ux = sy * fz - sz * fy;
-				const float32 uy = sz * fx - sx * fz;
-				const float32 uz = sx * fy - sy * fx;
-
-				setIdentity( pOut );
-				pOut[0]	 = sx;
-				pOut[4]	 = sy;
-				pOut[8]	 = sz;
-				pOut[1]	 = ux;
-				pOut[5]	 = uy;
-				pOut[9]	 = uz;
-				pOut[2]	 = -fx;
-				pOut[6]	 = -fy;
-				pOut[10] = -fz;
-				pOut[12] = -( sx * eyeX + sy * eyeY + sz * eyeZ );
-				pOut[13] = -( ux * eyeX + uy * eyeY + uz * eyeZ );
-				pOut[14] = -( -fx * eyeX + -fy * eyeY + -fz * eyeZ );
-			}
-
-			static void perspective( float32* pOut, float32 fovYDeg, float32 aspect, float32 zNear, float32 zFar )
-			{
-				setIdentity( pOut );
-				const float32 f = 1.0f / MathUtil::tan( MathUtil::toRadian( fovYDeg * 0.5f ) );
-				pOut[0]			= f / aspect;
-				pOut[5]			= f;
-				pOut[10]		= ( zFar + zNear ) / ( zNear - zFar );
-				pOut[11]		= -1.0f;
-				pOut[14]		= ( 2.0f * zFar * zNear ) / ( zNear - zFar );
-				pOut[15]		= 0.0f;
-			}
-
 			static void storeColumnMajor( float32* pOut, const float4x4& matrix )
 			{
 				const float4x4 columnMajor = matrix.transpose();
@@ -441,13 +381,16 @@ namespace sw::editor
 		const float32 forwardY = -MathUtil::sin( pitchRad );
 		const float32 forwardZ = MathUtil::cos( yawRad ) * MathUtil::cos( pitchRad );
 
-		const float3 target = float3{ _cameraPos._x + forwardX, _cameraPos._y + forwardY, _cameraPos._z + forwardZ };
-		EditorViewportClientInternal::lookAt( pOutMatrix, _cameraPos._x, _cameraPos._y, _cameraPos._z, target._x, target._y, target._z );
+		const float3   target  = float3{ _cameraPos._x + forwardX, _cameraPos._y + forwardY, _cameraPos._z + forwardZ };
+		const float4x4 viewMat = float4x4::createLookAt( _cameraPos, target, float3::Up );
+		EditorViewportClientInternal::storeColumnMajor( pOutMatrix, viewMat );
 	}
 
 	void EditorViewportClient::getProjectionMatrix( float32* pOutMatrix, float32 aspect ) const
 	{
-		EditorViewportClientInternal::perspective( pOutMatrix, _fovY, aspect > 0.001f ? aspect : 1.0f, _nearZ, _farZ );
+		const float32  effectiveAspect = aspect > 0.001f ? aspect : 1.0f;
+		const float4x4 projMat		   = float4x4::createPerspectiveFieldOfView( MathUtil::toRadian( _fovY ), effectiveAspect, _nearZ, _farZ );
+		EditorViewportClientInternal::storeColumnMajor( pOutMatrix, projMat );
 	}
 
 	void EditorViewportClient::update( float32 deltaTime, bool bWindowFocused, bool bWindowHovered )

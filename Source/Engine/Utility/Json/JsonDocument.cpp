@@ -24,9 +24,7 @@ namespace sw
 
 			static bool nameEquals( string_view lhs, string_view rhs, bool bIgnoreCase )
 			{
-				if ( bIgnoreCase )
-					return StringUtil::equalsIgnoreCase( lhs, rhs );
-				return lhs == rhs;
+				return StringUtil::equals( lhs, rhs, bIgnoreCase );
 			}
 
 			static string fromStdString( const std::string& value )

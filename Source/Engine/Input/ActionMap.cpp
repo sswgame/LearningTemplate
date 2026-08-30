@@ -120,19 +120,10 @@ namespace sw
 			return false;
 		}
 
-		const utf8*	  pDoubleClickAttr = root.attr( ActionMapInternal::InputMapXml::kAttrDoubleClick );
-		const float32 dblClick		   = pDoubleClickAttr != nullptr
-										   ? static_cast<float32>( StringUtil::atof( pDoubleClickAttr ) )
-										   : ActionMapDefaults::kDoubleClickTime;
-		const utf8*	  pDblDistAttr	   = root.attr( ActionMapInternal::InputMapXml::kAttrDoubleClickDist );
-		const float32 dblDist		   = pDblDistAttr != nullptr
-										   ? static_cast<float32>( StringUtil::atof( pDblDistAttr ) )
-										   : ActionMapDefaults::kDoubleClickMaxDistance;
-		const utf8*	  pHoldAttr		   = root.attr( ActionMapInternal::InputMapXml::kAttrHoldThreshold );
-		const float32 holdThr		   = pHoldAttr != nullptr
-										   ? static_cast<float32>( StringUtil::atof( pHoldAttr ) )
-										   : ActionMapDefaults::kHoldThreshold;
-		const utf8*	  pDefLayer		   = root.attr( ActionMapInternal::InputMapXml::kAttrDefaultLayer );
+		const float32 dblClick	= root.attrFloat( ActionMapInternal::InputMapXml::kAttrDoubleClick, ActionMapDefaults::kDoubleClickTime );
+		const float32 dblDist	= root.attrFloat( ActionMapInternal::InputMapXml::kAttrDoubleClickDist, ActionMapDefaults::kDoubleClickMaxDistance );
+		const float32 holdThr	= root.attrFloat( ActionMapInternal::InputMapXml::kAttrHoldThreshold, ActionMapDefaults::kHoldThreshold );
+		const utf8*	  pDefLayer = root.attr( ActionMapInternal::InputMapXml::kAttrDefaultLayer );
 
 		clear();
 		setDoubleClickTime( dblClick );
@@ -208,19 +199,19 @@ namespace sw
 					ensureLayer( bindLayer );
 				}
 
-				if ( StringUtil::equalsIgnoreCase( pSource, ActionMapInternal::InputMapXml::kSourceKey ) )
+				if ( StringUtil::equals( pSource, ActionMapInternal::InputMapXml::kSourceKey, true ) )
 				{
 					const Key key = KeyCodes::fromName( pCode );
 					if ( key != Key::Unknown )
 						bind( pActionName, key, trigger, bindLayer );
 				}
-				else if ( StringUtil::equalsIgnoreCase( pSource, ActionMapInternal::InputMapXml::kSourceGamepad ) )
+				else if ( StringUtil::equals( pSource, ActionMapInternal::InputMapXml::kSourceGamepad, true ) )
 				{
 					const GamepadButton button = GamepadButtons::fromName( pCode );
 					if ( button != GamepadButton::Count )
 						bind( pActionName, button, trigger, bindLayer );
 				}
-				else if ( StringUtil::equalsIgnoreCase( pSource, ActionMapInternal::InputMapXml::kSourceMouse ) )
+				else if ( StringUtil::equals( pSource, ActionMapInternal::InputMapXml::kSourceMouse, true ) )
 				{
 					const MouseButton mouse = MouseButtons::fromName( pCode );
 					if ( mouse != MouseButton::Count )
@@ -655,10 +646,9 @@ namespace sw
 	{
 		if ( name.empty() )
 			return ActionTrigger::Pressed;
-		const string nameNt( name );
 		for ( const ActionMapInternal::TriggerNameEntry& entry : ActionMapInternal::kArrTriggerNames )
 		{
-			if ( StringUtil::equalsIgnoreCase( nameNt.c_str(), entry._pName ) )
+			if ( StringUtil::equals( name, entry._pName, true ) )
 				return entry._trigger;
 		}
 		return ActionTrigger::Count;
@@ -709,9 +699,9 @@ namespace sw
 			case ActionTrigger::HoldThreshold:
 				return state._bHoldThreshold != 0;
 			case ActionTrigger::Count:
+			default:
 				return false;
 		}
-		return false;
 	}
 
 	bool ActionMap::isBindingLayerActive( const InputBinding& binding ) const

@@ -78,6 +78,8 @@ namespace sw
 				ofn.Flags = OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT | OFN_EXPLORER | OFN_NOCHANGEDIR;
 				result	  = GetSaveFileNameW( &ofn );
 				break;
+			default:
+				break;
 		}
 
 		if ( result == FALSE )

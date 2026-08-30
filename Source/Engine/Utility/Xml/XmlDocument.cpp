@@ -41,11 +41,7 @@ namespace sw
 
 			static bool nameEquals( const utf8* pLhs, const utf8* pRhs, bool bIgnoreCase = true )
 			{
-				if ( pLhs == pRhs )
-					return true;
-				if ( pLhs == nullptr || pRhs == nullptr )
-					return false;
-				return bIgnoreCase ? StringUtil::equalsIgnoreCase( pLhs, pRhs ) : ( StringUtil::strcmp( pLhs, pRhs ) == 0 );
+				return StringUtil::equals( pLhs, pRhs, bIgnoreCase );
 			}
 
 			static rapidxml::xml_node<>* findChild( rapidxml::xml_node<>* pParent, const utf8* pName, bool bIgnoreCase = true )
@@ -165,13 +161,21 @@ namespace sw
 	int32 XmlNode::attrInt( const utf8* pName, int32 fallback, bool bIgnoreCaseKeys ) const
 	{
 		const utf8* pValue = attr( pName, bIgnoreCaseKeys );
-		return pValue != nullptr ? StringUtil::atoi( pValue ) : fallback;
+		if ( pValue == nullptr )
+			return fallback;
+		int32 val{ fallback };
+		StringUtil::parseInt( pValue, val );
+		return val;
 	}
 
 	float32 XmlNode::attrFloat( const utf8* pName, float32 fallback, bool bIgnoreCaseKeys ) const
 	{
 		const utf8* pValue = attr( pName, bIgnoreCaseKeys );
-		return pValue != nullptr ? static_cast<float32>( StringUtil::atof( pValue ) ) : fallback;
+		if ( pValue == nullptr )
+			return fallback;
+		float32 val{ fallback };
+		StringUtil::parseFloat( pValue, val );
+		return val;
 	}
 
 	bool XmlNode::attrBool( const utf8* pName, bool fallback, bool bIgnoreCaseKeys ) const
@@ -211,13 +215,21 @@ namespace sw
 	int32 XmlNode::childInt( const utf8* pName, int32 fallback, bool bIgnoreCaseKeys ) const
 	{
 		const utf8* pText = childText( pName, bIgnoreCaseKeys );
-		return pText != nullptr ? StringUtil::atoi( pText ) : fallback;
+		if ( pText == nullptr )
+			return fallback;
+		int32 val{ fallback };
+		StringUtil::parseInt( pText, val );
+		return val;
 	}
 
 	float32 XmlNode::childFloat( const utf8* pName, float32 fallback, bool bIgnoreCaseKeys ) const
 	{
 		const utf8* pText = childText( pName, bIgnoreCaseKeys );
-		return pText != nullptr ? static_cast<float32>( StringUtil::atof( pText ) ) : fallback;
+		if ( pText == nullptr )
+			return fallback;
+		float32 val{ fallback };
+		StringUtil::parseFloat( pText, val );
+		return val;
 	}
 
 	bool XmlNode::childBool( const utf8* pName, bool fallback, bool bIgnoreCaseKeys ) const
@@ -580,5 +592,81 @@ namespace sw
 		if ( absPath.empty() )
 			return false;
 		return FileUtil::writeTextFile( absPath, saveToString() );
+	}
+
+	string XmlDocument::escapeString( string_view text )
+	{
+		StringBuilder<constant::kMaxBuffer1024> out;
+		for ( const utf8 ch : text )
+		{
+			switch ( ch )
+			{
+				case '&':
+					out.append( "&amp;" );
+					break;
+				case '<':
+					out.append( "&lt;" );
+					break;
+				case '>':
+					out.append( "&gt;" );
+					break;
+				case '"':
+					out.append( "&quot;" );
+					break;
+				case '\'':
+					out.append( "&apos;" );
+					break;
+				default:
+					out.append( ch );
+					break;
+			}
+		}
+		return string{ out.view() };
+	}
+
+	string XmlDocument::unescapeString( string_view text )
+	{
+		StringBuilder<constant::kMaxBuffer1024> out;
+		for ( size_t index = 0; index < text.size(); ++index )
+		{
+			if ( text[index] == '&' )
+			{
+				const string_view rem = text.substr( index );
+				if ( StringUtil::startsWith( rem, "&amp;" ) )
+				{
+					out.append( '&' );
+					index += 4;
+				}
+				else if ( StringUtil::startsWith( rem, "&lt;" ) )
+				{
+					out.append( '<' );
+					index += 3;
+				}
+				else if ( StringUtil::startsWith( rem, "&gt;" ) )
+				{
+					out.append( '>' );
+					index += 3;
+				}
+				else if ( StringUtil::startsWith( rem, "&quot;" ) )
+				{
+					out.append( '"' );
+					index += 5;
+				}
+				else if ( StringUtil::startsWith( rem, "&apos;" ) )
+				{
+					out.append( '\'' );
+					index += 5;
+				}
+				else
+				{
+					out.append( text[index] );
+				}
+			}
+			else
+			{
+				out.append( text[index] );
+			}
+		}
+		return string{ out.view() };
 	}
 } // namespace sw

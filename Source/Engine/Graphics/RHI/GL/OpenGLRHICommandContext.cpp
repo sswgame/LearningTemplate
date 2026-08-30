@@ -290,6 +290,7 @@ namespace sw
 				glMemoryBarrier( GL_BUFFER_UPDATE_BARRIER_BIT );
 				break;
 			case RHIBufferState::Common:
+			default:
 				break;
 		}
 	}

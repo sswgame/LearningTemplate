@@ -191,6 +191,8 @@ namespace sw::editor
 						color			 = uniqueWarpCells.count( key ) ? IM_COL32( 200, 120, 80, 255 ) : IM_COL32( 50, 50, 55, 255 );
 						break;
 					}
+					default:
+						break;
 				}
 
 				const float32 fx = static_cast<float32>( tileX );
@@ -364,6 +366,8 @@ namespace sw::editor
 				}
 				break;
 			}
+			default:
+				break;
 		}
 		notifyDocumentEdited( "Paint Tile Map", "tilemap-paint" );
 	}

@@ -118,6 +118,8 @@ namespace sw
 			}
 			case GlobalVariableType::String:
 				return *static_cast<string*>( _pData );
+			default:
+				break;
 		}
 		return "";
 	}
@@ -126,7 +128,7 @@ namespace sw
 	 * @brief 문자열 입력을 파싱하여 전역 변수의 원시 메모리(*_pData)에 값을 설정합니다.
 	 *
 	 * 값이 성공적으로 변경되면 등록된 변경 감지 콜백(_onValueChanged)을 호출합니다.
-	 * [성능 최적화]: std::from_chars 및 StringUtil::strnicmp를 사용하여 0-Allocation으로 파싱합니다.
+	 * [성능 최적화]: StringUtil::parse*를 사용하여 0-Allocation으로 고속 파싱합니다.
 	 */
 	bool GlobalVariableInfo::setValueFromString( string_view strValue )
 	{
@@ -137,11 +139,7 @@ namespace sw
 		{
 			case GlobalVariableType::Boolean:
 			{
-				// 대소문자 구분 없이 "true", "1", "yes", "on"을 참으로 인식 (임시 string 생성 없음)
-				const bool bVal = ( strValue == "1" ||
-									StringUtil::strnicmp( strValue.data(), "true", static_cast<uint32>( strValue.size() ) ) == 0 ||
-									StringUtil::strnicmp( strValue.data(), "yes", static_cast<uint32>( strValue.size() ) ) == 0 ||
-									StringUtil::strnicmp( strValue.data(), "on", static_cast<uint32>( strValue.size() ) ) == 0 );
+				const bool bVal = StringUtil::parseBool( strValue, false );
 
 				*static_cast<bool*>( _pData ) = bVal;
 				if ( _onValueChanged.isBound() )
@@ -151,10 +149,8 @@ namespace sw
 			case GlobalVariableType::Int32:
 			case GlobalVariableType::Enum:
 			{
-				// C++17 std::from_chars를 사용한 고속 정수 파싱
 				int32 val{ 0 };
-				auto [ptr, ec] = std::from_chars( strValue.data(), strValue.data() + strValue.size(), val );
-				if ( ec == std::errc{} )
+				if ( StringUtil::parseInt( strValue, val ) )
 				{
 					if ( _type == GlobalVariableType::Enum )
 						GlobalVariableInternal::writeEnumValue( _pData, _typeSize, val );
@@ -169,10 +165,8 @@ namespace sw
 			}
 			case GlobalVariableType::Float:
 			{
-				// C++17 std::from_chars를 사용한 고속 부동소수점 파싱
 				float32 val{ 0.0f };
-				auto [ptr, ec] = std::from_chars( strValue.data(), strValue.data() + strValue.size(), val );
-				if ( ec == std::errc{} )
+				if ( StringUtil::parseFloat( strValue, val ) )
 				{
 					*static_cast<float32*>( _pData ) = val;
 					if ( _onValueChanged.isBound() )
@@ -188,6 +182,8 @@ namespace sw
 					_onValueChanged( this );
 				return true;
 			}
+			default:
+				break;
 		}
 		return false;
 	}
@@ -224,6 +220,8 @@ namespace sw
 			case GlobalVariableType::String:
 				if ( std::holds_alternative<string>( _defaultValue ) )
 					*static_cast<string*>( _pData ) = std::get<string>( _defaultValue );
+				break;
+			default:
 				break;
 		}
 
@@ -457,6 +455,8 @@ namespace sw
 					case GlobalVariableType::String:
 						if ( std::holds_alternative<string>( info._defaultValue ) )
 							*static_cast<string*>( info._pData ) = std::get<string>( info._defaultValue );
+						break;
+					default:
 						break;
 				}
 

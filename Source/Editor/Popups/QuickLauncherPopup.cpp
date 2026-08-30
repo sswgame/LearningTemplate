@@ -3,6 +3,7 @@
 #include "Editor/Popups/QuickLauncherPopup.h"
 
 #include "Core/Common/StdHeaders.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Commands/EditorAssetCommands.h"
@@ -112,9 +113,12 @@ namespace sw::editor
 
 					const uint64	  objId = pObj->getObjectId();
 					QuickLauncherItem item{};
-					item._category		 = "GameObject";
-					item._title			 = string{ pObj->getName().c_str() };
-					item._detail		 = "Scene GameObject (ID: " + std::to_string( objId ) + ")";
+					item._category = "GameObject";
+					item._title	   = string{ pObj->getName().c_str() };
+
+					StringBuilder<constant::kMaxBuffer64> detailSb;
+					detailSb.appendFormat( "Scene GameObject (ID: %#)", objId );
+					item._detail		 = string{ detailSb.view() };
 					item._targetObjectId = objId;
 					_listAllItem.push_back( std::move( item ) );
 				}

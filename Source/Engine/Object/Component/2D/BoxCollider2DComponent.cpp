@@ -2,6 +2,9 @@
 
 #include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
 
+#include "Core/String/StringUtil.h"
+#include "Core/String/string_splitter.h"
+
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/AABB.h"
@@ -72,13 +75,12 @@ namespace sw
 		float2 result{ 0.0f, 0.0f };
 		if ( _offsetPos.empty() == false )
 		{
-			float32 x{ 0.0f };
-			float32 y{ 0.0f };
-			if ( sscanf( _offsetPos.c_str(), "%f,%f", &x, &y ) >= 1 )
-			{
-				result._x = x;
-				result._y = y;
-			}
+			string_splitter tokens( _offsetPos, { ",", " " } );
+			const auto&		listToken = tokens.getSplitList();
+			if ( listToken.size() >= 1 && listToken[0].empty() == false )
+				StringUtil::parseFloat( listToken[0], result._x );
+			if ( listToken.size() >= 2 && listToken[1].empty() == false )
+				StringUtil::parseFloat( listToken[1], result._y );
 		}
 		return result;
 	}
@@ -88,13 +90,12 @@ namespace sw
 		float2 result{ 0.0f, 0.0f };
 		if ( _offsetScale.empty() == false )
 		{
-			float32 w{ 0.0f };
-			float32 h{ 0.0f };
-			if ( sscanf( _offsetScale.c_str(), "%f,%f", &w, &h ) >= 1 )
-			{
-				result._x = w;
-				result._y = h;
-			}
+			string_splitter tokens( _offsetScale, { ",", " " } );
+			const auto&		listToken = tokens.getSplitList();
+			if ( listToken.size() >= 1 && listToken[0].empty() == false )
+				StringUtil::parseFloat( listToken[0], result._x );
+			if ( listToken.size() >= 2 && listToken[1].empty() == false )
+				StringUtil::parseFloat( listToken[1], result._y );
 		}
 		return result;
 	}

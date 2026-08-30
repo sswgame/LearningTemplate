@@ -352,9 +352,15 @@ namespace sw
 						break;
 					case Kind::Float:
 						if ( const PropFloatEntry* entry = findFieldEntry( kPropFloats, binding._field ) )
-							entry->_pApply( prop, StringUtil::strtof( string( val ).c_str() ) );
+						{
+							float32 fVal{ 0.0f };
+							StringUtil::parseFloat( val, fVal );
+							entry->_pApply( prop, fVal );
+						}
 						break;
 					case Kind::NetRole:
+						break;
+					default:
 						break;
 				}
 			}

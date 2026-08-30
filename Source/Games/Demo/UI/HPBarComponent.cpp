@@ -68,6 +68,8 @@ namespace sw
 				pTargetObj = getOwner();
 				break;
 			}
+			default:
+				break;
 		}
 
 		if ( pTargetObj != nullptr )

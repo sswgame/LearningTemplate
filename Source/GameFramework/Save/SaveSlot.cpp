@@ -107,7 +107,9 @@ namespace sw
 						verifySb.append( key.c_str() ).append( '=' ).append( val.c_str() ).append( '\n' );
 					}
 				}
-				const uint32 expectedHash = static_cast<uint32>( StringUtil::strtoull( pChecksumStr, nullptr, 10 ) );
+				uint64 expectedHashVal{ 0 };
+				StringUtil::parseUInt64( pChecksumStr, expectedHashVal, 10 );
+				const uint32 expectedHash = static_cast<uint32>( expectedHashVal );
 				const uint32 computedHash = StringUtil::computeHash32( verifySb.view().data(), verifySb.view().size(), false );
 				if ( expectedHash != computedHash )
 				{
@@ -134,7 +136,11 @@ namespace sw
 			for ( const auto& [key, val] : map )
 			{
 				if ( key.size() > prefixLen && key.compare( 0, prefixLen, kFlagPrefix ) == 0 )
-					_mapFlag[key.substr( prefixLen )] = StringUtil::atoi( val.c_str() );
+				{
+					int32 flagVal{ 0 };
+					StringUtil::parseInt( val, flagVal );
+					_mapFlag[key.substr( prefixLen )] = flagVal;
+				}
 			}
 		}
 

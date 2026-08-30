@@ -51,6 +51,8 @@ namespace sw
 				case RHIBackend::Vulkan:
 				case RHIBackend::OpenGL:
 					return true;
+				default:
+					break;
 			}
 			return false;
 		}
@@ -119,6 +121,8 @@ namespace sw
 					caps._bGpuCulling				= 1;
 					caps._bMultiDrawIndirect		= 1;
 					caps._bParallelCommandRecording = 1;
+					break;
+				default:
 					break;
 			}
 			return caps;

@@ -28,8 +28,8 @@ namespace sw
 	 *   `view()` 멤버 함수 및 `operator std::basic_string_view<T>()`를 지원하여 복사 비용 없이 표준 문자열 뷰로 즉시 전달 가능합니다.
 	 * - **std::hash 지원**:
 	 *   `StringUtil::computeHash64/32` 기반의 `std::hash` 특수화가 기본 내장되어 있어 `std::unordered_map`이나 `std::unordered_set`의 키로 직접 사용 가능합니다.
-	 * - **대소문자 무시 비교 (`equalsIgnoreCase`)**:
-	 *   `StringUtil::equalsIgnoreCase`와 직결 연동되어 식별자 및 파일 경로 대소문자 무시 비교를 빠르게 수행합니다.
+	 * - **동등성 및 사전순 비교 (`equals`, `compare`)**:
+	 *   `StringUtil::equals` 및 `StringUtil::compare`와 직결 연동되어 식별자 및 파일 경로 비교를 빠르게 수행합니다.
 	 */
 	template <typename T, uint32 N>
 	class basic_fixed_string
@@ -227,16 +227,16 @@ namespace sw
 		// 6) 비교 및 연산자
 		// ------------------------------------------------------------------------------
 		/** @brief 사전순 비교 (같으면 0) */
-		int32 compare( const basic_fixed_string& other ) const { return StringUtil::strcmp( _arrData, other._arrData ); }
+		int32 compare( const basic_fixed_string& other, bool bIgnoreCase = false ) const { return StringUtil::compare( _arrData, other._arrData, bIgnoreCase ); }
 		template <uint32 M>
-		int32 compare( const basic_fixed_string<T, M>& other ) const { return StringUtil::strcmp( _arrData, other.c_str() ); }
-		int32 compare( const T* str ) const { return ( str != nullptr ) ? StringUtil::strcmp( _arrData, str ) : 1; }
+		int32 compare( const basic_fixed_string<T, M>& other, bool bIgnoreCase = false ) const { return StringUtil::compare( _arrData, other.c_str(), bIgnoreCase ); }
+		int32 compare( const T* str, bool bIgnoreCase = false ) const { return ( str != nullptr ) ? StringUtil::compare( _arrData, str, bIgnoreCase ) : 1; }
 
-		/** @brief 대소문자 무시 동등성 비교 */
-		bool equalsIgnoreCase( const basic_fixed_string& other ) const noexcept { return StringUtil::equalsIgnoreCase( _arrData, other._arrData ); }
+		/** @brief 동등성 비교 (대소문자 무시 옵션) */
+		bool equals( const basic_fixed_string& other, bool bIgnoreCase = false ) const noexcept { return StringUtil::equals( _arrData, other._arrData, bIgnoreCase ); }
 		template <uint32 M>
-		bool equalsIgnoreCase( const basic_fixed_string<T, M>& other ) const noexcept { return StringUtil::equalsIgnoreCase( _arrData, other.c_str() ); }
-		bool equalsIgnoreCase( const T* str ) const noexcept { return str != nullptr && StringUtil::equalsIgnoreCase( _arrData, str ); }
+		bool equals( const basic_fixed_string<T, M>& other, bool bIgnoreCase = false ) const noexcept { return StringUtil::equals( _arrData, other.c_str(), bIgnoreCase ); }
+		bool equals( const T* str, bool bIgnoreCase = false ) const noexcept { return str != nullptr && StringUtil::equals( _arrData, str, bIgnoreCase ); }
 
 		basic_fixed_string& operator+=( const basic_fixed_string& other ) { return append( other ); }
 		template <uint32 M>

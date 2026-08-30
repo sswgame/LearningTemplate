@@ -86,10 +86,9 @@ namespace sw
 	{
 		if ( name.empty() )
 			return GamepadButton::Count;
-		const string nameNt{ name };
 		for ( const GamepadXInputInternal::GamepadNameEntry& entry : GamepadXInputInternal::kArrGamepadNames )
 		{
-			if ( StringUtil::equalsIgnoreCase( nameNt.c_str(), entry._pName ) )
+			if ( StringUtil::equals( name, entry._pName, true ) )
 				return entry._button;
 		}
 		return GamepadButton::Count;

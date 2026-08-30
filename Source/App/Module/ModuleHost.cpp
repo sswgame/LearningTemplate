@@ -69,6 +69,7 @@ namespace
 				case ModuleServiceId::MonsterDataCatalog:
 				case ModuleServiceId::SpeciesCatalog:
 				case ModuleServiceId::Count:
+				default:
 					break;
 			}
 			return nullptr;
@@ -86,6 +87,8 @@ namespace
 				return const_cast<sw::EngineData*>( &sw::engine::getEngineData() );
 			case EditorServiceId::ModuleCompiler:
 				return ( s_pCurrentModuleHost != nullptr ) ? s_pCurrentModuleHost->getModuleCompiler() : nullptr;
+			default:
+				break;
 		}
 		return nullptr;
 	}
