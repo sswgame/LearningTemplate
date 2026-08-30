@@ -178,7 +178,7 @@ namespace sw
 		FileUtil::createDirectory( path );
 		const bool ok = FileUtil::writeFile( path, listBlob.data(), listBlob.size() );
 		if ( ok )
-			SW_LOG_INFO( "Saved binary (SAV1, CRC32=0x%#08X) -> %#", crc, path );
+			SW_LOG_INFO( "Saved binary (SAV1, CRC32=0x%#) -> %#", Fmt( crc, Format( 8, Format::Padding::Zero ).hexUpper() ), path );
 		return ok;
 	}
 
@@ -198,7 +198,7 @@ namespace sw
 		uint32 magic{ 0 };
 		if ( BinaryBlob::readU32( listBlob, offset, magic ) == false || magic != kSaveBinMagic )
 		{
-			SW_LOG_WARNING( "Invalid SAV1 magic in %# (0x%#08X)", path, magic );
+			SW_LOG_WARNING( "Invalid SAV1 magic in %# (0x%#)", path, Fmt( magic, Format( 8, Format::Padding::Zero ).hexUpper() ) );
 			return false;
 		}
 
@@ -224,7 +224,7 @@ namespace sw
 		const uint32 computedCrc = StringUtil::computeCrc32( pPayload, payloadSize );
 		if ( expectedCrc != computedCrc )
 		{
-			SW_LOG_ERROR( "SAV1 CRC32 mismatch in %# (expected 0x%#08X != computed 0x%#08X) — save corrupted!", path, expectedCrc, computedCrc );
+			SW_LOG_ERROR( "SAV1 CRC32 mismatch in %# (expected 0x%# != computed 0x%#) — save corrupted!", path, Fmt( expectedCrc, Format( 8, Format::Padding::Zero ).hexUpper() ), Fmt( computedCrc, Format( 8, Format::Padding::Zero ).hexUpper() ) );
 			return false;
 		}
 

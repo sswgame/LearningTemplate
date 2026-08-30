@@ -186,6 +186,17 @@ _kOutParamNamingRe = re.compile(
     r'outList[A-Za-z0-9_]*Bytes?|outListByte[A-Za-z0-9_]*)\b'
 )
 
+# 타입세이프 포매터(SW_LOG_* / formatstring / appendFormat / SW_ASSERT_MSG)를 호출하는 라인
+_kFormatterCallRe = re.compile(
+    r'\b(?:SW_LOG_(?:INFO|WARNING|ERROR|DEBUG|FATAL|TRACE|VERBOSE)|SW_ASSERT_MSG|formatstring|appendFormat|appendFormatLine)\s*\('
+)
+# 이 포매터가 파싱하지 못하는 printf 스펙: % 뒤에 플래그/폭/정밀도(. - + 공백 0-9)가 붙은 변환.
+# `%#`(플레이스홀더)과 `%s %d %u %f %x %p %zu %lld` 같은 맨 변환은 정상 처리되므로 제외한다.
+_kBadPrintfSpecRe = re.compile(
+    r'%[-+ #0]*(?:\d+\.?\d*|\.\d+)[-+ #]*(?:hh|h|ll|l|z|j|t|L)?[diouxXeEfFgGaAcsp]'
+)
+_kStringLiteralRe = re.compile(r'"((?:\\.|[^"\\])*)"')
+
 # [비복수형 예외 단어 목록]
 kNonPluralExceptions = (
     "Bounds", "Status", "Pass", "Address", "Axis", "Process", "Class", "Cross",
@@ -1188,6 +1199,25 @@ def checkFileConventionsInternal(filePath: Path, rootDir: Path) -> list[Conventi
                     snippet=trimmed,
                 )
             )
+
+        # 타입세이프 포매터에 printf 플래그/폭/정밀도 스펙 사용 검사 (%.2f, %016llx, %#08X 등)
+        if _kFormatterCallRe.search(line):
+            for strMatch in _kStringLiteralRe.finditer(line):
+                badSpec = _kBadPrintfSpecRe.search(strMatch.group(1))
+                if badSpec:
+                    violations.append(
+                        ConventionViolation(
+                            file_path=relPath,
+                            line_number=lineNum,
+                            rule_category="Style/LogFormatSpec",
+                            message=(
+                                f"타입세이프 포매터가 파싱하지 못하는 printf 스펙 '{badSpec.group(0)}'이(가) 있습니다. "
+                                "`%#` 플레이스홀더 + Fmt(값, Format().precision(N)) / Format(폭, Format::Padding::Zero).hex() 를 사용하세요."
+                            ),
+                            snippet=trimmed,
+                        )
+                    )
+                    break
 
         # 불필요한 '== true' 명시 검사
         if _kExplicitTrueRe.search(line):

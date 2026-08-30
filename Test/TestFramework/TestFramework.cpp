@@ -278,14 +278,14 @@ namespace test
 				listFailedTestName.push_back( testInfo.fullName() );
 				std::fprintf( stdout, "[  FAILED  ] %s (%.2f ms)\n", testInfo.fullName().c_str(), elapsed );
 				std::fflush( stdout );
-				SW_LOG_ERROR( "%# (%.2f ms)", testInfo.fullName().c_str(), elapsed );
+				SW_LOG_ERROR( "%# (%# ms)", testInfo.fullName().c_str(), sw::Fmt( elapsed, sw::Format().precision( 2 ) ) );
 			}
 			else
 			{
 				++passedCount;
 				std::fprintf( stdout, "[       OK ] %s (%.2f ms)\n", testInfo.fullName().c_str(), elapsed );
 				std::fflush( stdout );
-				SW_LOG_INFO( "%# (%.2f ms)", testInfo.fullName().c_str(), elapsed );
+				SW_LOG_INFO( "%# (%# ms)", testInfo.fullName().c_str(), sw::Fmt( elapsed, sw::Format().precision( 2 ) ) );
 			}
 		}
 

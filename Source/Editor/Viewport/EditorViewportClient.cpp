@@ -335,8 +335,8 @@ namespace sw::editor
 
 		// Text lines
 		fixed_string<constant::kMaxBuffer32> arrFps;
-		formatstring( arrFps.data(), arrFps.capacity(), "FPS: %.1f (%.2f ms)", static_cast<float64>( fps ),
-					  static_cast<float64>( frameTimeMs ) );
+		formatstring( arrFps.data(), arrFps.capacity(), "FPS: %# (%# ms)", Fmt( static_cast<float64>( fps ), Format().precision( 1 ) ),
+					  Fmt( static_cast<float64>( frameTimeMs ), Format().precision( 2 ) ) );
 		pDrawList->AddText( ImVec2( x0 + 10.0f, y0 + 8.0f ), IM_COL32( 80, 230, 120, 240 ), arrFps.c_str() );
 
 		fixed_string<constant::kMaxBuffer32> arrObj;
@@ -344,8 +344,8 @@ namespace sw::editor
 		pDrawList->AddText( ImVec2( x0 + 10.0f, y0 + 28.0f ), IM_COL32( 210, 215, 230, 230 ), arrObj.c_str() );
 
 		fixed_string<constant::kMaxBuffer32> arrRes;
-		formatstring( arrRes.data(), arrRes.capacity(), "Res: %.0fx%.0f", static_cast<float64>( canvasSize._x ),
-					  static_cast<float64>( canvasSize._y ) );
+		formatstring( arrRes.data(), arrRes.capacity(), "Res: %#x%#", Fmt( static_cast<float64>( canvasSize._x ), Format().precision( 0 ) ),
+					  Fmt( static_cast<float64>( canvasSize._y ), Format().precision( 0 ) ) );
 		pDrawList->AddText( ImVec2( x0 + 10.0f, y0 + 48.0f ), IM_COL32( 140, 160, 190, 220 ), arrRes.c_str() );
 	}
 
@@ -1165,9 +1165,9 @@ namespace sw::editor
 				const float32 dist	= delta.getLength();
 
 				fixed_string<constant::kMaxBuffer64> arrDistText;
-				formatstring( arrDistText.data(), arrDistText.capacity(), "%.2f m (dX: %.2f, dZ: %.2f)",
-							  static_cast<float64>( dist ), static_cast<float64>( delta._x ),
-							  static_cast<float64>( delta._z ) );
+				formatstring( arrDistText.data(), arrDistText.capacity(), "%# m (dX: %#, dZ: %#)",
+							  Fmt( static_cast<float64>( dist ), Format().precision( 2 ) ), Fmt( static_cast<float64>( delta._x ), Format().precision( 2 ) ),
+							  Fmt( static_cast<float64>( delta._z ), Format().precision( 2 ) ) );
 
 				const ImVec2 mid( ( sStart.x + sEnd.x ) * 0.5f, ( sStart.y + sEnd.y ) * 0.5f - 16.0f );
 				pDrawList->AddRectFilled( ImVec2( mid.x - 4.0f, mid.y - 2.0f ),

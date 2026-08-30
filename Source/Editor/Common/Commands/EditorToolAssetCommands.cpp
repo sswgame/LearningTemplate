@@ -86,7 +86,7 @@ namespace sw::editor
 				{
 					float32 value{ 0.0f };
 					Memory::copy( &value, pPtr, sizeof( float32 ) );
-					formatstring( arrBuf.data(), arrBuf.capacity(), "%.4f", value );
+					formatstring( arrBuf.data(), arrBuf.capacity(), "%#", Fmt( value, Format().precision( 4 ) ) );
 					return arrBuf.c_str();
 				}
 				if ( typeName == "int32" || typeName == "int" )
@@ -115,21 +115,21 @@ namespace sw::editor
 				{
 					float3 value{};
 					Memory::copy( &value, pPtr, sizeof( float3 ) );
-					formatstring( arrBuf.data(), arrBuf.capacity(), "(%.3f, %.3f, %.3f)", value._x, value._y, value._z );
+					formatstring( arrBuf.data(), arrBuf.capacity(), "(%#, %#, %#)", Fmt( value._x, Format().precision( 3 ) ), Fmt( value._y, Format().precision( 3 ) ), Fmt( value._z, Format().precision( 3 ) ) );
 					return arrBuf.c_str();
 				}
 				if ( typeName == "float2" )
 				{
 					float2 value{};
 					Memory::copy( &value, pPtr, sizeof( float2 ) );
-					formatstring( arrBuf.data(), arrBuf.capacity(), "(%.3f, %.3f)", value._x, value._y );
+					formatstring( arrBuf.data(), arrBuf.capacity(), "(%#, %#)", Fmt( value._x, Format().precision( 3 ) ), Fmt( value._y, Format().precision( 3 ) ) );
 					return arrBuf.c_str();
 				}
 				if ( typeName == "float4" )
 				{
 					float4 value{};
 					Memory::copy( &value, pPtr, sizeof( float4 ) );
-					formatstring( arrBuf.data(), arrBuf.capacity(), "(%.3f, %.3f, %.3f, %.3f)", value._x, value._y, value._z, value._w );
+					formatstring( arrBuf.data(), arrBuf.capacity(), "(%#, %#, %#, %#)", Fmt( value._x, Format().precision( 3 ) ), Fmt( value._y, Format().precision( 3 ) ), Fmt( value._z, Format().precision( 3 ) ), Fmt( value._w, Format().precision( 3 ) ) );
 					return arrBuf.c_str();
 				}
 				return "<value>";

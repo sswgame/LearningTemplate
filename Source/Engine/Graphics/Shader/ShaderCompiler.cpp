@@ -191,7 +191,7 @@ namespace sw
 				}
 
 				fixed_string<constant::kMaxBuffer64> buf;
-				formatstring( buf.data(), buf.capacity(), "%016llx.bin", static_cast<uint64>( hash ) );
+				formatstring( buf.data(), buf.capacity(), "%#.bin", Fmt( static_cast<uint64>( hash ), Format( 16, Format::Padding::Zero ).hex() ) );
 				return FileUtil::joinPath( cacheDir, buf.c_str() );
 			}
 		};

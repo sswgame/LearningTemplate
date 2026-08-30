@@ -218,7 +218,7 @@ namespace sw::editor
 				if ( state == BuildState::Success )
 				{
 					fixed_string<constant::kMaxBuffer128> contentBuf;
-					formatstring( contentBuf.data(), contentBuf.capacity(), "%s compiled and reloaded in %.2fs", displayName.c_str(), static_cast<float64>( duration ) );
+					formatstring( contentBuf.data(), contentBuf.capacity(), "%# compiled and reloaded in %#s", displayName.c_str(), Fmt( static_cast<float64>( duration ), Format().precision( 2 ) ) );
 					EditorContext::get()->getNotificationManager().push( "Live Coding Succeeded", contentBuf.c_str(), NotificationType::Success, 4.0f );
 				}
 				else if ( state == BuildState::Failed )
@@ -237,7 +237,7 @@ namespace sw::editor
 				ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0.7f, 0.5f, 0.1f, 1.0f ) );
 				ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImVec4( 0.8f, 0.3f, 0.2f, 1.0f ) );
 				fixed_string<constant::kMaxBuffer64> label;
-				formatstring( label.data(), label.capacity(), "Compiling (%.1fs) [Cancel]", static_cast<float64>( elapsed ) );
+				formatstring( label.data(), label.capacity(), "Compiling (%#s) [Cancel]", Fmt( static_cast<float64>( elapsed ), Format().precision( 1 ) ) );
 				if ( ImGui::SmallButton( label.c_str() ) )
 					pCompiler->cancel();
 				ImGui::PopStyleColor( 2 );

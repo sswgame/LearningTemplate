@@ -198,7 +198,7 @@ namespace sw
 		else if ( exitCode == 0 )
 		{
 			_buildState.store( BuildState::Success, std::memory_order_relaxed );
-			SW_LOG_INFO( "Compilation succeeded in %.2fs (target: %#)!", static_cast<float64>( durationSec ), targetDisplayName.c_str() );
+			SW_LOG_INFO( "Compilation succeeded in %#s (target: %#)!", Fmt( static_cast<float64>( durationSec ), Format().precision( 2 ) ), targetDisplayName.c_str() );
 
 			if ( _pLiveReloadManager != nullptr && targetName.empty() == false )
 			{
