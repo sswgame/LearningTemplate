@@ -45,7 +45,9 @@ namespace sw
 		template <typename T>
 		T* getService()
 		{
-			return static_cast<T*>( getRawService( ModuleServiceTraits<T>::id ) );
+			T* pService = static_cast<T*>( getRawService( ModuleServiceTraits<T>::id ) );
+			SW_ASSERT( pService != nullptr );
+			return pService;
 		}
 	} // namespace game
 } // namespace sw
