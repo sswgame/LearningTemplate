@@ -2535,6 +2535,192 @@ SW_TEST_CASE( Reflection_Serialization, NestedStructAndContainersRoundtrip )
 	SW_EXPECT_EQUAL( 42, dstJson._inner._x );
 }
 
+namespace
+{
+	/** @brief 골든 테스트용 고정 상태의 NestedContainerActor 를 만듭니다. */
+	sw::NestedContainerActor makeGoldenNestedActor()
+	{
+		sw::NestedContainerActor src;
+		src._grid = {
+			{ 1, 2 },
+			{ 3, 4, 5 }
+		};
+		src._namedRows["a"] = { 1.0f, 2.5f };
+		src._namedRows["b"] = { -3.25f };
+		src._inner._x		= 42;
+		return src;
+	}
+
+	/** @brief 바이트 버퍼를 소문자 16진 문자열로 인코딩합니다. */
+	sw::string toHexString( const sw::vector<uint8>& bytes )
+	{
+		static constexpr utf8 kDigit[] = "0123456789abcdef";
+		sw::string			  out;
+		out.reserve( bytes.size() * 2 );
+		for ( uint8 byteValue : bytes )
+		{
+			out.push_back( kDigit[byteValue >> 4] );
+			out.push_back( kDigit[byteValue & 0x0F] );
+		}
+		return out;
+	}
+} // namespace
+
+/**
+ * @brief [Reflection_Serialization] 직렬화 3포맷의 정확한 출력을 골든으로 고정합니다.
+ * @details 라운드트립 테스트는 디스크 포맷이 바뀌어도 통과하므로, 리팩터 시 바이트 호환을
+ *          지키는 안전망으로 정확한 출력 문자열/헥스를 비교합니다.
+ *          바이너리 헥스에는 타입/프로퍼티 이름의 FNV-1a 해시가 포함되어 있어(결정적),
+ *          레이아웃·해시·부동소수 포맷이 바뀌면 이 테스트가 먼저 잡습니다.
+ */
+SW_TEST_CASE( Reflection_Serialization, GoldenOutputFormatsStable )
+{
+	const sw::TypeInfo* typeInfo =
+		sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::NestedContainerActor" ) );
+	SW_ASSERT_TRUE( typeInfo != nullptr );
+	if ( typeInfo == nullptr )
+		return;
+
+	const sw::NestedContainerActor src = makeGoldenNestedActor();
+
+	const sw::string kGoldenJson =
+		"{\"vector\":[{\"_name\":\"_grid\",\"item\":[{\"vector\":[{\"_name\":\"item\",\"item\":[1,2]}]},"
+		"{\"vector\":[{\"_name\":\"item\",\"item\":[3,4,5]}]}]}],\"map\":[{\"_name\":\"_namedRows\","
+		"\"entry\":{\"a\":{\"vector\":[{\"_name\":\"value\",\"item\":[1,2.5]}]},"
+		"\"b\":{\"vector\":[{\"_name\":\"value\",\"item\":[-3.25]}]}}}],\"_inner\":{\"_x\":42}}";
+
+	const sw::string kGoldenPretty =
+		"{\n"
+		"    \"vector\": [\n"
+		"        {\n"
+		"            \"_name\": \"_grid\",\n"
+		"            \"item\": [\n"
+		"                {\n"
+		"                    \"vector\": [\n"
+		"                        {\n"
+		"                            \"_name\": \"item\",\n"
+		"                            \"item\": [\n"
+		"                                1,\n"
+		"                                2\n"
+		"                            ]\n"
+		"                        }\n"
+		"                    ]\n"
+		"                },\n"
+		"                {\n"
+		"                    \"vector\": [\n"
+		"                        {\n"
+		"                            \"_name\": \"item\",\n"
+		"                            \"item\": [\n"
+		"                                3,\n"
+		"                                4,\n"
+		"                                5\n"
+		"                            ]\n"
+		"                        }\n"
+		"                    ]\n"
+		"                }\n"
+		"            ]\n"
+		"        }\n"
+		"    ],\n"
+		"    \"map\": [\n"
+		"        {\n"
+		"            \"_name\": \"_namedRows\",\n"
+		"            \"entry\": {\n"
+		"                \"a\": {\n"
+		"                    \"vector\": [\n"
+		"                        {\n"
+		"                            \"_name\": \"value\",\n"
+		"                            \"item\": [\n"
+		"                                1,\n"
+		"                                2.5\n"
+		"                            ]\n"
+		"                        }\n"
+		"                    ]\n"
+		"                },\n"
+		"                \"b\": {\n"
+		"                    \"vector\": [\n"
+		"                        {\n"
+		"                            \"_name\": \"value\",\n"
+		"                            \"item\": [\n"
+		"                                -3.25\n"
+		"                            ]\n"
+		"                        }\n"
+		"                    ]\n"
+		"                }\n"
+		"            }\n"
+		"        }\n"
+		"    ],\n"
+		"    \"_inner\": {\n"
+		"        \"_x\": 42\n"
+		"    }\n"
+		"}";
+
+	const sw::string kGoldenXml =
+		"<NestedContainerActor>\n"
+		"\t<vector _name=\"_grid\">\n"
+		"\t\t<vector _name=\"item\">\n"
+		"\t\t\t<item>1</item>\n"
+		"\t\t\t<item>2</item>\n"
+		"\t\t</vector>\n"
+		"\t\t<vector _name=\"item\">\n"
+		"\t\t\t<item>3</item>\n"
+		"\t\t\t<item>4</item>\n"
+		"\t\t\t<item>5</item>\n"
+		"\t\t</vector>\n"
+		"\t</vector>\n"
+		"\t<map _name=\"_namedRows\">\n"
+		"\t\t<entry>\n"
+		"\t\t\t<key>a</key>\n"
+		"\t\t\t<vector _name=\"value\">\n"
+		"\t\t\t\t<item>1</item>\n"
+		"\t\t\t\t<item>2.5</item>\n"
+		"\t\t\t</vector>\n"
+		"\t\t</entry>\n"
+		"\t\t<entry>\n"
+		"\t\t\t<key>b</key>\n"
+		"\t\t\t<vector _name=\"value\">\n"
+		"\t\t\t\t<item>-3.25</item>\n"
+		"\t\t\t</vector>\n"
+		"\t\t</entry>\n"
+		"\t</map>\n"
+		"\t<_inner _x=\"42\"/>\n"
+		"</NestedContainerActor>\n"
+		"\n";
+
+	const sw::string kGoldenBinHex =
+		"030000005614ce66612cdb3e20000000020000000200000001000000020000000300000003000000"
+		"040000000500000086cb7acc7e60e28222000000020000000100000061020000000000803f000020"
+		"40010000006201000000000050c0be55188f1aa2d1f6180000001400000001000000a27d0b57bfe2"
+		"defb040000002a000000";
+
+	const sw::string json = sw::JsonSerializer::serialize( &src, *typeInfo );
+	if ( json != kGoldenJson )
+		std::fprintf( stdout, "[golden json]\n  expected: %s\n  actual  : %s\n", kGoldenJson.c_str(), json.c_str() );
+	SW_EXPECT_TRUE( json == kGoldenJson );
+
+	const sw::string pretty = sw::JsonSerializer::serializePretty( &src, *typeInfo, 4 );
+	if ( pretty != kGoldenPretty )
+		std::fprintf( stdout, "[golden pretty]\n---expected---\n%s\n---actual---\n%s\n", kGoldenPretty.c_str(), pretty.c_str() );
+	SW_EXPECT_TRUE( pretty == kGoldenPretty );
+
+	const sw::string xml = sw::XmlSerializer::serialize( &src, *typeInfo );
+	if ( xml != kGoldenXml )
+		std::fprintf( stdout, "[golden xml]\n---expected---\n%s\n---actual---\n%s\n", kGoldenXml.c_str(), xml.c_str() );
+	SW_EXPECT_TRUE( xml == kGoldenXml );
+
+	sw::vector<uint8> bin;
+	sw::BinarySerializer::serialize( &src, *typeInfo, bin );
+	const sw::string binHex = toHexString( bin );
+	if ( binHex != kGoldenBinHex )
+		std::fprintf( stdout, "[golden binhex]\n  expected: %s\n  actual  : %s\n", kGoldenBinHex.c_str(), binHex.c_str() );
+	SW_EXPECT_TRUE( binHex == kGoldenBinHex );
+
+	// 역방향: 골든 문자열을 다시 읽어 원본과 같은지 (안전망 자체가 유효한지 확인)
+	sw::NestedContainerActor back;
+	SW_EXPECT_TRUE( sw::JsonSerializer::deserialize( &back, *typeInfo, kGoldenJson ) );
+	SW_EXPECT_EQUAL( 5, back._grid[1][2] );
+	SW_EXPECT_EQUAL( 42, back._inner._x );
+}
+
 /**
  * @brief [Reflection_Serialization] Reflection RPC 팩·호출
  */
