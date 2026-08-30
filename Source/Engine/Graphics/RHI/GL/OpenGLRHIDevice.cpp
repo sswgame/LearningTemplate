@@ -489,7 +489,7 @@ namespace sw
 
 	void OpenGLRHIDevice::shutdownInternal()
 	{
-		if ( _bInitialized == false )
+		if ( _bInitialized == SW_FALSE )
 			return;
 
 #if defined( SW_PLATFORM_WINDOWS )

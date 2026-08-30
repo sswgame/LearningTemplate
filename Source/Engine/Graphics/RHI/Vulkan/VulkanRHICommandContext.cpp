@@ -89,8 +89,8 @@ namespace sw
 		record._layout = static_cast<uint32>( VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
 
 		_pDevice->_bOffscreenPassActive	 = 1;
-		_pDevice->_bFrameStarted		 = 1; // allow Immediate Context draws during offscreen
-		_pDevice->_bRenderPassActive	 = 0;
+		_pDevice->_bFrameStarted		 = SW_TRUE; // allow Immediate Context draws during offscreen
+		_pDevice->_bRenderPassActive	 = SW_FALSE;
 		_pDevice->_activeOffscreenTarget = colorTarget;
 
 		// Default clear pass (FrameRenderer may restart passes on this same buffer).
@@ -107,10 +107,10 @@ namespace sw
 		if ( cmd == VK_NULL_HANDLE || src == 0 )
 			return;
 
-		if ( _pDevice->_bRenderPassActive )
+		if ( _pDevice->_bRenderPassActive == SW_TRUE )
 		{
 			vkCmdEndRenderPass( cmd );
-			_pDevice->_bRenderPassActive = false;
+			_pDevice->_bRenderPassActive = SW_FALSE;
 		}
 
 		VulkanRHIDevice::VulkanTextureRecord* pSrcResolved = _pDevice->resolveTexture( src );
@@ -206,10 +206,10 @@ namespace sw
 		if ( pResolved == nullptr || pResolved->_image == VK_NULL_HANDLE )
 			return;
 
-		if ( _pDevice->_bRenderPassActive )
+		if ( _pDevice->_bRenderPassActive == SW_TRUE )
 		{
 			vkCmdEndRenderPass( cmd );
-			_pDevice->_bRenderPassActive = false;
+			_pDevice->_bRenderPassActive = SW_FALSE;
 		}
 
 		VulkanRHIDevice::VulkanTextureRecord& record	   = *pResolved;
@@ -236,10 +236,10 @@ namespace sw
 			return;
 
 		VulkanRHIDevice::VulkanTextureRecord& record = *pResolved;
-		if ( _pDevice->_bRenderPassActive )
+		if ( _pDevice->_bRenderPassActive == SW_TRUE )
 		{
 			vkCmdEndRenderPass( _pDevice->_offscreenCommandBuffer );
-			_pDevice->_bRenderPassActive = false;
+			_pDevice->_bRenderPassActive = SW_FALSE;
 		}
 		_pDevice->transitionImageLayout( _pDevice->_offscreenCommandBuffer, record._image,
 										 VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
@@ -257,7 +257,7 @@ namespace sw
 		vkWaitForFences( _pDevice->_device, 1, &_pDevice->_offscreenFence, VK_TRUE, UINT64_MAX );
 
 		_pDevice->_bOffscreenPassActive	 = 0;
-		_pDevice->_bFrameStarted		 = 0;
+		_pDevice->_bFrameStarted		 = SW_FALSE;
 		_pDevice->_activeOffscreenTarget = 0;
 	}
 
@@ -286,10 +286,10 @@ namespace sw
 		if ( cmd == VK_NULL_HANDLE )
 			return;
 
-		if ( _pDevice->_bRenderPassActive )
+		if ( _pDevice->_bRenderPassActive == SW_TRUE )
 		{
 			vkCmdEndRenderPass( cmd );
-			_pDevice->_bRenderPassActive = false;
+			_pDevice->_bRenderPassActive = SW_FALSE;
 		}
 
 		const VulkanRHIDevice::VulkanPipelineStateRecord* pRecord = _pDevice->_pipelineStates.get( pso );
@@ -351,10 +351,10 @@ namespace sw
 			key._depth		 = beginInfo._depthTarget;
 			key._depthLoadOp = static_cast<uint8>( beginInfo._depthLoadOp );
 
-			if ( _pDevice->_bRenderPassActive )
+			if ( _pDevice->_bRenderPassActive == SW_TRUE )
 			{
 				vkCmdEndRenderPass( cmd );
-				_pDevice->_bRenderPassActive = false;
+				_pDevice->_bRenderPassActive = SW_FALSE;
 			}
 
 			for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
@@ -428,10 +428,10 @@ namespace sw
 				extent		= { _pDevice->_swapChainExtentWidth, _pDevice->_swapChainExtentHeight };
 			}
 
-			if ( _pDevice->_bRenderPassActive )
+			if ( _pDevice->_bRenderPassActive == SW_TRUE )
 			{
 				vkCmdEndRenderPass( cmd );
-				_pDevice->_bRenderPassActive = false;
+				_pDevice->_bRenderPassActive = SW_FALSE;
 			}
 
 			const float32* pClear = &beginInfo._arrClearColor[0]._x;
@@ -455,7 +455,7 @@ namespace sw
 		renderPassInfo.pClearValues		 = clearValues;
 
 		vkCmdBeginRenderPass( cmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE );
-		_pDevice->_bRenderPassActive = true;
+		_pDevice->_bRenderPassActive = SW_TRUE;
 
 		// Match DX12 beginRenderPass: viewport = pass extent, DX Y orientation.
 		RHIViewport vp{};
@@ -469,10 +469,10 @@ namespace sw
 	void VulkanRHICommandContext::endRenderPass()
 	{
 		VkCommandBuffer cmd = _pDevice->currentCommandBuffer();
-		if ( cmd == VK_NULL_HANDLE || _pDevice->_bRenderPassActive == 0 )
+		if ( cmd == VK_NULL_HANDLE || _pDevice->_bRenderPassActive == SW_FALSE )
 			return;
 		vkCmdEndRenderPass( cmd );
-		_pDevice->_bRenderPassActive = false;
+		_pDevice->_bRenderPassActive = SW_FALSE;
 	}
 
 	void VulkanRHICommandContext::transitionBuffer( RHIBufferHandle buffer, RHIBufferState newState )
@@ -485,10 +485,10 @@ namespace sw
 		if ( pRecord->_buffer == VK_NULL_HANDLE || pRecord->_state == newState )
 			return;
 
-		if ( _pDevice->_bRenderPassActive )
+		if ( _pDevice->_bRenderPassActive == SW_TRUE )
 		{
 			vkCmdEndRenderPass( cmd );
-			_pDevice->_bRenderPassActive = false;
+			_pDevice->_bRenderPassActive = SW_FALSE;
 		}
 
 		VkAccessFlags		 srcAccess{ 0 };
@@ -518,10 +518,10 @@ namespace sw
 		if ( cmd == VK_NULL_HANDLE || _pDevice->_pipelineLayout == VK_NULL_HANDLE || slot >= 4 )
 			return;
 
-		if ( _pDevice->_bRenderPassActive )
+		if ( _pDevice->_bRenderPassActive == SW_TRUE )
 		{
 			vkCmdEndRenderPass( cmd );
-			_pDevice->_bRenderPassActive = false;
+			_pDevice->_bRenderPassActive = SW_FALSE;
 		}
 
 		VkDescriptorSet descSet = VK_NULL_HANDLE;
@@ -624,10 +624,10 @@ namespace sw
 		if ( cmd == VK_NULL_HANDLE )
 			return;
 
-		if ( _pDevice->_bRenderPassActive )
+		if ( _pDevice->_bRenderPassActive == SW_TRUE )
 		{
 			vkCmdEndRenderPass( cmd );
-			_pDevice->_bRenderPassActive = false;
+			_pDevice->_bRenderPassActive = SW_FALSE;
 		}
 
 		vkCmdDispatch( cmd, threadGroupCountX, threadGroupCountY, threadGroupCountZ );

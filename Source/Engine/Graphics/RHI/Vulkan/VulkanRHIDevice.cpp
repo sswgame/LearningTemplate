@@ -240,7 +240,7 @@ namespace sw
 		BLOCK( "Validation Layer Setup" )
 		{
 #if defined( SW_PLATFORM_WINDOWS )
-			if ( _bEnableValidationLayers )
+			if ( _bEnableValidationLayers == SW_TRUE )
 			{
 				string execDir = FileUtil::getDirectoryPart( FileUtil::getExecutablePath() );
 				if ( FileUtil::fileExists( FileUtil::joinPath( execDir, "VkLayer_khronos_validation.json" ) ) )
@@ -260,10 +260,10 @@ namespace sw
 			}
 #endif
 
-			if ( _bEnableValidationLayers && checkValidationLayerSupport() == false )
+			if ( _bEnableValidationLayers == SW_TRUE && checkValidationLayerSupport() == false )
 			{
 				SW_LOG_INFO( "Vulkan Validation Layers requested, but VK_LAYER_KHRONOS_validation was not found (Validation Layers: DISABLED)" );
-				_bEnableValidationLayers = false;
+				_bEnableValidationLayers = SW_FALSE;
 			}
 		}
 
@@ -350,7 +350,7 @@ namespace sw
 		_immContext		 = sw::make_unique<VulkanRHICommandContext>( this );
 		_deferredContext = sw::make_unique<VulkanRHICommandContext>( this );
 
-		SW_LOG_INFO( "Vulkan RHI Backend Device Initialized Successfully (Validation Layers: %#)", _bEnableValidationLayers ? "ENABLED" : "DISABLED" );
+		SW_LOG_INFO( "Vulkan RHI Backend Device Initialized Successfully (Validation Layers: %#)", _bEnableValidationLayers == SW_TRUE ? "ENABLED" : "DISABLED" );
 		return true;
 	}
 
@@ -561,7 +561,7 @@ namespace sw
 			_device = nullptr;
 		}
 
-		if ( _bEnableValidationLayers && _debugMessenger )
+		if ( _bEnableValidationLayers == SW_TRUE && _debugMessenger )
 		{
 			DestroyDebugUtilsMessengerEXT( _instance, _debugMessenger, nullptr );
 			_debugMessenger = nullptr;
@@ -600,7 +600,7 @@ namespace sw
 
 	void VulkanRHIDevice::beginFrame( const float4& clearColor )
 	{
-		_bFrameStarted = false;
+		_bFrameStarted = SW_FALSE;
 		if ( _width == 0 || _height == 0 )
 			return;
 
@@ -642,8 +642,8 @@ namespace sw
 		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 		vkBeginCommandBuffer( _listCommandBuffer[_currentFrame], &beginInfo );
 
-		_bFrameStarted	   = true;
-		_bRenderPassActive = false;
+		_bFrameStarted	   = SW_TRUE;
+		_bRenderPassActive = SW_FALSE;
 
 		constexpr float32 kDefaultViewportX		   = 0.0f;
 		constexpr float32 kDefaultViewportMinDepth = 0.0f;
@@ -681,20 +681,20 @@ namespace sw
 			rpBeginInfo.pClearValues	= &clearVal;
 
 			vkCmdBeginRenderPass( _listCommandBuffer[_currentFrame], &rpBeginInfo, VK_SUBPASS_CONTENTS_INLINE );
-			_bRenderPassActive = true;
+			_bRenderPassActive = SW_TRUE;
 		}
 	}
 
 	void VulkanRHIDevice::endFrame( bool vsync, bool bPresent )
 	{
 		(void)vsync;
-		if ( _bFrameStarted == false )
+		if ( _bFrameStarted == SW_FALSE )
 			return;
 
-		if ( _bRenderPassActive )
+		if ( _bRenderPassActive == SW_TRUE )
 		{
 			vkCmdEndRenderPass( _listCommandBuffer[_currentFrame] );
-			_bRenderPassActive = false;
+			_bRenderPassActive = SW_FALSE;
 		}
 		vkEndCommandBuffer( _listCommandBuffer[_currentFrame] );
 
@@ -739,7 +739,7 @@ namespace sw
 		}
 
 		_currentFrame  = ( _currentFrame + 1 ) % 2;
-		_bFrameStarted = false;
+		_bFrameStarted = SW_FALSE;
 		_releaseQueue.tickFrame();
 	}
 
@@ -747,7 +747,7 @@ namespace sw
 	{
 		if ( _bOffscreenPassActive && _offscreenCommandBuffer != VK_NULL_HANDLE )
 			return _offscreenCommandBuffer;
-		if ( _bFrameStarted && _listCommandBuffer.empty() == false )
+		if ( _bFrameStarted == SW_TRUE && _listCommandBuffer.empty() == false )
 			return _listCommandBuffer[_currentFrame];
 		return VK_NULL_HANDLE;
 	}
@@ -879,15 +879,15 @@ namespace sw
 		}
 		listExtension.push_back( VK_EXT_METAL_SURFACE_EXTENSION_NAME );
 #endif
-		if ( _bEnableValidationLayers && VulkanRHIDeviceInternal::hasExtensionVal( listAvailableExt, VK_EXT_DEBUG_UTILS_EXTENSION_NAME ) )
+		if ( _bEnableValidationLayers == SW_TRUE && VulkanRHIDeviceInternal::hasExtensionVal( listAvailableExt, VK_EXT_DEBUG_UTILS_EXTENSION_NAME ) )
 			listExtension.push_back( VK_EXT_DEBUG_UTILS_EXTENSION_NAME );
-		else if ( _bEnableValidationLayers )
-			_bEnableValidationLayers = false;
+		else if ( _bEnableValidationLayers == SW_TRUE )
+			_bEnableValidationLayers = SW_FALSE;
 
 		createInfo.enabledExtensionCount   = static_cast<uint32>( listExtension.size() );
 		createInfo.ppEnabledExtensionNames = listExtension.data();
 
-		if ( _bEnableValidationLayers )
+		if ( _bEnableValidationLayers == SW_TRUE )
 		{
 			createInfo.enabledLayerCount   = static_cast<uint32>( s_listValidationLayers.size() );
 			createInfo.ppEnabledLayerNames = s_listValidationLayers.data();
@@ -906,7 +906,7 @@ namespace sw
 
 	void VulkanRHIDevice::setupDebugMessenger()
 	{
-		if ( _bEnableValidationLayers == false )
+		if ( _bEnableValidationLayers == SW_FALSE )
 			return;
 		VkDebugUtilsMessengerCreateInfoEXT createInfo{};
 		createInfo.sType		   = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
