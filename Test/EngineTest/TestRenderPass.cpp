@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Concurrency/atomic.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Memory/FrameArenaAllocator.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Task/TaskManager.h"
@@ -92,7 +93,7 @@ SW_TEST_CASE( RenderPassTest, EditorAndGameCameras )
 	SW_EXPECT_TRUE( scene.getObjectManager()->findGameObjectByName( sw::hashed_string( "EditorCamera" ) ) == nullptr );
 
 	const sw::float4x4 vp = gameCam->getViewProjectionMatrix( 16.0f / 9.0f );
-	SW_EXPECT_TRUE( std::fabs( vp._11 ) > 1e-6f || std::fabs( vp._22 ) > 1e-6f );
+	SW_EXPECT_TRUE( sw::MathUtil::abs( vp._11 ) > 1e-6f || sw::MathUtil::abs( vp._22 ) > 1e-6f );
 }
 
 /**
