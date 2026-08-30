@@ -113,6 +113,9 @@ namespace sw
 			TypeRegistrar*				   _pTypeHead{ nullptr };
 			EnumRegistrar*				   _pEnumHead{ nullptr };
 			sw::ComponentFactoryRegistrar* _pFactoryHead{ nullptr };
+			TypeRegistrar*				   _pPreviousTypeHead{ nullptr };
+			EnumRegistrar*				   _pPreviousEnumHead{ nullptr };
+			sw::ComponentFactoryRegistrar* _pPreviousFactoryHead{ nullptr };
 		};
 
 		/** @brief 섀도 복사본을 LoadLibrary 합니다. */

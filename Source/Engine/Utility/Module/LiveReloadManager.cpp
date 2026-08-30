@@ -398,12 +398,19 @@ namespace sw
 
 		BLOCK( "Load Dynamic Library" )
 		{
+			out._pPreviousTypeHead	  = TypeRegistrar::getHead();
+			out._pPreviousEnumHead	  = EnumRegistrar::getHead();
+			out._pPreviousFactoryHead = sw::ComponentFactoryRegistrar::getHead();
+
 			out._pHandle = FileUtil::loadDynamicLibrary( out._tempPath );
 			if ( out._pHandle == nullptr )
 			{
 				SW_LOG_ERROR( "Failed to load dynamic library (keeping old): %#", out._tempPath.c_str() );
 				LiveReloadManagerInternal::tryDeleteShadowArtifacts( out._tempPath );
 				out._tempPath.clear();
+				out._pPreviousTypeHead	  = nullptr;
+				out._pPreviousEnumHead	  = nullptr;
+				out._pPreviousFactoryHead = nullptr;
 				return false;
 			}
 
@@ -487,15 +494,21 @@ namespace sw
 
 	void LiveReloadManager::abortShadowCopy( PreparedShadow& prepared )
 	{
-		prepared._pTypeHead	   = nullptr;
-		prepared._pEnumHead	   = nullptr;
-		prepared._pFactoryHead = nullptr;
-
 		if ( prepared._pHandle != nullptr )
 		{
+			TypeRegistrar::getHead()				 = prepared._pPreviousTypeHead;
+			EnumRegistrar::getHead()				 = prepared._pPreviousEnumHead;
+			sw::ComponentFactoryRegistrar::getHead() = prepared._pPreviousFactoryHead;
 			FileUtil::unloadDynamicLibrary( prepared._pHandle );
 			prepared._pHandle = nullptr;
 		}
+
+		prepared._pTypeHead			   = nullptr;
+		prepared._pEnumHead			   = nullptr;
+		prepared._pFactoryHead		   = nullptr;
+		prepared._pPreviousTypeHead	   = nullptr;
+		prepared._pPreviousEnumHead	   = nullptr;
+		prepared._pPreviousFactoryHead = nullptr;
 		LiveReloadManagerInternal::tryDeleteShadowArtifacts( prepared._tempPath );
 		prepared._tempPath.clear();
 		prepared._sourceMtime = 0;
