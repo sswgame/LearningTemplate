@@ -372,7 +372,7 @@ namespace sw
 		/** @brief PredefinedNameType.xxx 이름을 intern 합니다. */
 		void createPredefinedNameTypes()
 		{
-			if constexpr ( std::is_same_v<T, wchar_t> )
+			if constexpr ( std::is_same_v<T, utf16> )
 			{
 #define REGISTER_NAME( index, name ) basic_hashed_string<T, N> predefined_##name{ *this, L#name };
 #include "Core/Predefined/PredefinedNameType.xxx"
