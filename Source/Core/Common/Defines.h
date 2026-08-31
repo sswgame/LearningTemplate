@@ -41,6 +41,18 @@ namespace sw
 		inline constexpr const utf8* kDefaultLogTag = "Engine";
 		/** @brief 기본 로그 파일 식별자입니다. */
 		inline constexpr const utf8* kDefaultLogFile = "unknown";
+
+		/** @brief 1초당 나노초 수입니다. */
+		inline constexpr int64 kNanosecondsPerSecond = 1'000'000'000LL;
+		/** @brief 1나노초당 초 환산 계수입니다. */
+		inline constexpr float64 kSecondsPerNanosecond = 1e-9;
+
+		/** @brief 선형 할당기 기본 초기 용량 (64KB)입니다. */
+		inline constexpr size_t kDefaultLinearCapacity = 64 * 1024;
+		/** @brief 프레임 아레나 기본 청크 크기 (1MB)입니다. */
+		inline constexpr size_t kDefaultFrameArenaCapacity = 1024 * 1024;
+		/** @brief 작업 훔치기 덱 기본 용량 (1024)입니다. */
+		inline constexpr size_t kDefaultDequeCapacity = 1024;
 	} // namespace constant
 
 	// ------------------------------------------------------------------------------

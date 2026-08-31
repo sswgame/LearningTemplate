@@ -7,6 +7,11 @@
 
 namespace sw
 {
+	namespace
+	{
+		static constexpr float32 kSurfaceAreaFactor = 2.0f;
+	} // namespace
+
 	BVHTree3D::BVHTree3D()
 		: _listNode{}
 		, _listFreeNode{}
@@ -25,7 +30,7 @@ namespace sw
 	float32 BVHTree3D::getSurfaceArea( const AABB& box )
 	{
 		const float3 extents = box._max - box._min;
-		return 2.0f * ( extents._x * extents._y + extents._y * extents._z + extents._z * extents._x );
+		return kSurfaceAreaFactor * ( extents._x * extents._y + extents._y * extents._z + extents._z * extents._x );
 	}
 
 	int32 BVHTree3D::allocateNode()
@@ -121,8 +126,8 @@ namespace sw
 			const AABB	  combinedAABB = combineAABB( _listNode[static_cast<size_t>( index )]._bounds, leafAABB );
 			const float32 combinedArea = getSurfaceArea( combinedAABB );
 
-			const float32 cost			  = 2.0f * combinedArea;
-			const float32 inheritanceCost = 2.0f * ( combinedArea - area );
+			const float32 cost			  = kSurfaceAreaFactor * combinedArea;
+			const float32 inheritanceCost = kSurfaceAreaFactor * ( combinedArea - area );
 
 			// Cost of descending into left child
 			float32 costLeft = 0.0f;

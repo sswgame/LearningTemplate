@@ -11,6 +11,13 @@ namespace sw
 {
 	SW_LOG_CALLER( "DataRaceDetector" );
 
+	namespace
+	{
+		static constexpr uint32 kWriterBitShift = 16;
+		static constexpr uint32 kCountMask		= 0xFFFF;
+		static constexpr uint32 kWriterUnit		= 1u << kWriterBitShift;
+	} // namespace
+
 	/**
 	 * @brief 읽기 작업 시작 진입점
 	 */
@@ -18,7 +25,7 @@ namespace sw
 	{
 		// 하위 16비트(Reader 카운트)를 원자적으로 1 증가
 		uint32 oldState = _state.fetch_add( 1, std::memory_order_acquire );
-		uint32 writers	= oldState >> 16;
+		uint32 writers	= oldState >> kWriterBitShift;
 
 		// 이미 활성화된 Writer가 있다면 Read/Write 충돌
 		if ( writers > 0 )
@@ -39,9 +46,9 @@ namespace sw
 	void RaceDetectContext::enterWrite()
 	{
 		// 상위 16비트(Writer 카운트)를 원자적으로 1 증가
-		uint32 oldState = _state.fetch_add( 1 << 16, std::memory_order_acquire );
-		uint32 readers	= oldState & 0xFFFF;
-		uint32 writers	= oldState >> 16;
+		uint32 oldState = _state.fetch_add( kWriterUnit, std::memory_order_acquire );
+		uint32 readers	= oldState & kCountMask;
+		uint32 writers	= oldState >> kWriterBitShift;
 
 		// 다른 Writer가 이미 활성화되어 있으면 Write/Write 충돌
 		if ( writers > 0 )
@@ -56,7 +63,7 @@ namespace sw
 	 */
 	void RaceDetectContext::exitWrite()
 	{
-		_state.fetch_sub( 1 << 16, std::memory_order_release );
+		_state.fetch_sub( kWriterUnit, std::memory_order_release );
 	}
 
 	/**
@@ -65,8 +72,8 @@ namespace sw
 	void RaceDetectContext::triggerDataRace( const utf8* pMessage )
 	{
 		uint32	  state	  = _state.load( std::memory_order_relaxed );
-		uint32	  readers = state & 0xFFFF;
-		uint32	  writers = ( state >> 16 ) & 0xFFFF;
+		uint32	  readers = state & kCountMask;
+		uint32	  writers = ( state >> kWriterBitShift ) & kCountMask;
 		CallStack callStack;
 		CallStackCapture::capture( callStack, 1 );
 		string stackTrace = CallStackCapture::symbolize( callStack );

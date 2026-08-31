@@ -25,10 +25,10 @@ namespace sw
 					return 1.0 / static_cast<float64>( countsPerSec );
 #elif defined( SW_PLATFORM_LINUX )
 					// Linux CLOCK_MONOTONIC: 1ns = 1e-9s
-					return 1e-9;
+					return constant::kSecondsPerNanosecond;
 #elif defined( SW_PLATFORM_MACOS )
 					// macOS mach_absolute_time: 1ns = 1e-9s
-					return 1e-9;
+					return constant::kSecondsPerNanosecond;
 #else
 	#error "Unsupported platform"
 #endif
@@ -47,7 +47,7 @@ namespace sw
 #elif defined( SW_PLATFORM_LINUX )
 				timespec time{};
 				clock_gettime( CLOCK_MONOTONIC, &time );
-				currTime = static_cast<int64>( time.tv_sec ) * 1'000'000'000LL + static_cast<int64>( time.tv_nsec );
+				currTime = static_cast<int64>( time.tv_sec ) * constant::kNanosecondsPerSecond + static_cast<int64>( time.tv_nsec );
 #elif defined( SW_PLATFORM_MACOS )
 				mach_timebase_info_data_t timebaseInfo;
 				mach_timebase_info( &timebaseInfo );

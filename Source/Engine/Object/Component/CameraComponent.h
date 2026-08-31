@@ -34,6 +34,11 @@ namespace sw
 	public:
 		REFLECT_BODY();
 
+		static constexpr float32 kDefaultFovY		 = 0.70f;
+		static constexpr float32 kDefaultNearZ		 = 0.1f;
+		static constexpr float32 kDefaultFarZ		 = 100.0f;
+		static constexpr float32 kDefaultOrthoHeight = 10.0f;
+
 		/** @brief 기본 카메라를 만듭니다. */
 		CameraComponent();
 		/** @brief 카메라를 해제합니다. */

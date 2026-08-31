@@ -3,6 +3,7 @@
  * @brief Chase-Lev Lock-Free Work-Stealing Deque
  */
 #pragma once
+#include "Core/Common/Defines.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
@@ -19,12 +20,14 @@ namespace sw
 	class WorkStealingDeque
 	{
 	public:
-		explicit WorkStealingDeque( size_t capacity = 1024 )
+		static constexpr size_t kMinCapacity = 8;
+
+		explicit WorkStealingDeque( size_t capacity = constant::kDefaultDequeCapacity )
 		{
 			// capacity must be power of 2
 			while ( capacity & ( capacity - 1 ) )
 				capacity &= capacity - 1;
-			capacity = MathUtil::max( capacity, static_cast<size_t>( 8 ) );
+			capacity = MathUtil::max( capacity, kMinCapacity );
 
 			_capacityMask = capacity - 1;
 			_pBuffer	  = sw_new atomic<T>[capacity];

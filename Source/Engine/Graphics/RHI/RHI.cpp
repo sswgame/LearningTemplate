@@ -91,7 +91,7 @@ namespace sw
 	{
 		for ( uint32 attachmentIndex = 0; attachmentIndex < kMaxColorAttachments; ++attachmentIndex )
 		{
-			_arrClearColor[attachmentIndex] = float4{ 0.1f, 0.1f, 0.1f, 1.0f };
+			_arrClearColor[attachmentIndex] = kDefaultClearColor;
 			_arrLoadOp[attachmentIndex]		= RHIRenderPassLoadOp::Clear;
 		}
 	}

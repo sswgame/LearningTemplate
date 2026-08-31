@@ -3,6 +3,7 @@
  * @brief 고해상도 타이머로 프레임 델타와 스코프 프로파일링을 측정합니다.
  */
 #pragma once
+#include "Core/Common/Defines.h"
 #include "Core/Common/Types.h"
 #include "Core/Log/Logger.h"
 

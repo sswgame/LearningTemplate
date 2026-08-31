@@ -8,6 +8,7 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Common/Common.h"
+#include "Engine/Common/EngineDefines.h"
 #include "Engine/Reflection/ReflectionCore.h"
 
 namespace sw
@@ -161,10 +162,10 @@ namespace sw
 		float32 _y{ 0.0f }; ///< 뷰포트 좌상단 Y
 
 		PROPERTY()
-		float32 _width{ 1280.0f }; ///< 뷰포트 너비
+		float32 _width{ constant::kDefaultViewportWidth }; ///< 뷰포트 너비
 
 		PROPERTY()
-		float32 _height{ 720.0f }; ///< 뷰포트 높이 (양수; Vulkan이 부호 반전)
+		float32 _height{ constant::kDefaultViewportHeight }; ///< 뷰포트 높이 (양수; Vulkan이 부호 반전)
 
 		PROPERTY()
 		float32 _minDepth{ 0.0f }; ///< 최소 깊이 (0.0~1.0)
@@ -383,13 +384,16 @@ namespace sw
 		RHIPipelineStateDesc() noexcept;
 	};
 
+	/** @brief 기본 렌더 타깃 초기화 색상 (RGBA) */
+	inline constexpr float4 kDefaultClearColor = { 0.1f, 0.1f, 0.1f, 1.0f };
+
 	/**
 	 * @struct RHIRenderPassAttachment
 	 * @brief 렌더 패스 색상/깊이 어태치먼트
 	 */
 	struct RHIRenderPassAttachment
 	{
-		float4				 _clearColor = { 0.1f, 0.1f, 0.1f, 1.0f };	///< 초기화 색상 (RGBA)
+		float4				 _clearColor = kDefaultClearColor;			///< 초기화 색상 (RGBA)
 		RHIFormat			 _format	 = RHIFormat::R8G8B8A8_UNORM;	///< 어태치먼트 포맷
 		RHIRenderPassLoadOp	 _loadOp	 = RHIRenderPassLoadOp::Clear;	///< 로드 동작
 		RHIRenderPassStoreOp _storeOp	 = RHIRenderPassStoreOp::Store; ///< 저장 동작
@@ -461,7 +465,7 @@ namespace sw
 		RHIRenderPassBeginInfo() noexcept;
 
 		/** @brief 단일 RT 설정 헬퍼 */
-		void setColorTarget( RHITextureHandle target, const float4& clearColor = { 0.1f, 0.1f, 0.1f, 1.0f }, RHIRenderPassLoadOp loadOp = RHIRenderPassLoadOp::Clear );
+		void setColorTarget( RHITextureHandle target, const float4& clearColor = kDefaultClearColor, RHIRenderPassLoadOp loadOp = RHIRenderPassLoadOp::Clear );
 	};
 
 	// ------------------------------------------------------------------------------

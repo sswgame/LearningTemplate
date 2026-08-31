@@ -3,6 +3,7 @@
  * @brief 프레임 아레나 할당자와 GT/RT 더블 버퍼.
  */
 #pragma once
+#include "Core/Common/Defines.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
@@ -28,7 +29,7 @@ namespace sw
 		 * @brief 첫 청크 용량을 잡고 할당기를 준비합니다.
 		 * @param defaultCapacity 초기 청크 크기(바이트)
 		 */
-		explicit FrameArenaAllocator( size_t defaultCapacity = 1024 * 1024 );
+		explicit FrameArenaAllocator( size_t defaultCapacity = constant::kDefaultFrameArenaCapacity );
 		/** @brief 소유한 청크 버퍼를 해제합니다. */
 		~FrameArenaAllocator();
 

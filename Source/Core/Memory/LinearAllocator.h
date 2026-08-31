@@ -3,6 +3,7 @@
  * @brief 고속 프레임/블록 메모리 할당기
  */
 #pragma once
+#include "Core/Common/Defines.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"

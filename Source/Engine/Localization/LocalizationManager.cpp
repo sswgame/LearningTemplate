@@ -7,6 +7,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
+#include "Engine/Common/EngineDefines.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Localization/StringTable.h"
 #include "Engine/Resource/ResourceUtil.h"
@@ -21,7 +22,7 @@ namespace sw
 	LocalizationManager::LocalizationManager()
 		: _mutex{}
 		, _currentLanguage{}
-		, _fallbackLanguage{ "en_US" }
+		, _fallbackLanguage{ constant::kDefaultLanguage }
 		, _mapLanguageTable{}
 		, _mapCallback{}
 		, _nextCallbackId{ 1 }

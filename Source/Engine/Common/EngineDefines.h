@@ -11,6 +11,14 @@ namespace sw
 	{
 		/** @brief CPU-GPU 동기화를 위한 렌더링 프레임 최대 큐 크기 (이중 버퍼링 기준) */
 		inline constexpr uint32 kMaxFrameCountInFlight = 2;
+		/** @brief 기본 뷰포트 너비입니다. */
+		inline constexpr float32 kDefaultViewportWidth = 1280.0f;
+		/** @brief 기본 뷰포트 높이입니다. */
+		inline constexpr float32 kDefaultViewportHeight = 720.0f;
+		/** @brief 기본 공간 분할/물리 셀 크기입니다. */
+		inline constexpr float32 kDefaultSpatialCellSize = 64.0f;
+		/** @brief 기본 언어 코드입니다. */
+		inline constexpr const utf8* kDefaultLanguage = "en_US";
 	} // namespace constant
 
 	/**
@@ -37,5 +45,7 @@ namespace sw
 
 		/** @brief 엔진 셸 부트스트랩 XML (Resource 상대). */
 		inline static constexpr auto kEngineData = "engine/data/enginedata.xml";
+		/** @brief 에셋 메타 파일 확장자입니다. */
+		inline static constexpr auto kMetaExtension = ".meta";
 	} // namespace path
 } // namespace sw

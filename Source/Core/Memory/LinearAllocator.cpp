@@ -10,7 +10,7 @@ namespace sw
 	SW_LOG_CALLER( "LinearAllocator" );
 
 	LinearAllocator::LinearAllocator()
-		: LinearAllocator{ 1024 * 64 }
+		: LinearAllocator{ constant::kDefaultLinearCapacity }
 	{
 	}
 

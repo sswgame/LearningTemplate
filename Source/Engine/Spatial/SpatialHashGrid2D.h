@@ -5,6 +5,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 
+#include "Engine/Common/EngineDefines.h"
 #include "Engine/Spatial/SpatialTree.h"
 
 namespace sw
@@ -15,7 +16,9 @@ namespace sw
 	class SW_API SpatialHashGrid2D
 	{
 	public:
-		explicit SpatialHashGrid2D( float32 cellSize = 64.0f );
+		static constexpr uint32 kCellKeyShift = 32;
+
+		explicit SpatialHashGrid2D( float32 cellSize = constant::kDefaultSpatialCellSize );
 		~SpatialHashGrid2D()										 = default;
 		SpatialHashGrid2D( const SpatialHashGrid2D& )				 = default;
 		SpatialHashGrid2D& operator=( const SpatialHashGrid2D& )	 = default;
@@ -38,7 +41,7 @@ namespace sw
 	private:
 		uint64 getCellKey( int32 cellX, int32 cellY ) const
 		{
-			return ( static_cast<uint64>( static_cast<uint32>( cellX ) ) << 32 ) |
+			return ( static_cast<uint64>( static_cast<uint32>( cellX ) ) << kCellKeyShift ) |
 				   ( static_cast<uint64>( static_cast<uint32>( cellY ) ) );
 		}
 

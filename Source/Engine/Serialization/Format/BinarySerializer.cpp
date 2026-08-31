@@ -16,6 +16,8 @@ namespace sw
 	{
 		struct BinarySerializerInternal
 		{
+			static constexpr size_t kFastPropBitmaskThreshold = 64;
+
 			static bool deserializeUntransacted( void* pInstance, const TypeInfo& typeInfo, const uint8* pData, size_t dataSize, const SerializeContext& ctx )
 			{
 				BinaryStreamReader reader( pData, dataSize );
@@ -27,7 +29,7 @@ namespace sw
 				const size_t				numProps = listProp.size();
 				uint64						seenBitmask{ 0 };
 				unordered_set<uint32>		uniqueSeenPropHashes;
-				if ( numProps > 64 )
+				if ( numProps > kFastPropBitmaskThreshold )
 					uniqueSeenPropHashes.reserve( numProps );
 
 				for ( uint32 propIndex = 0; propIndex < propCount; ++propIndex )
@@ -67,7 +69,7 @@ namespace sw
 					}
 
 					const PropertyInfo& prop = *pTargetProp;
-					if ( numProps <= 64 )
+					if ( numProps <= kFastPropBitmaskThreshold )
 						seenBitmask |= ( 1ULL << matchedIndex );
 					else
 						uniqueSeenPropHashes.insert( prop.getNameHash() );
@@ -112,7 +114,7 @@ namespace sw
 
 				for ( size_t propIdx = 0; propIdx < numProps; ++propIdx )
 				{
-					if ( numProps <= 64 )
+					if ( numProps <= kFastPropBitmaskThreshold )
 					{
 						if ( ( seenBitmask & ( 1ULL << propIdx ) ) == 0 )
 							SerializerUtil::applyPropertyDefault( listProp[propIdx].getRawPtr( pInstance ), listProp[propIdx], ctx );

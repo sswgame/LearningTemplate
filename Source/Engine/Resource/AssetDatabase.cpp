@@ -6,6 +6,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
 
+#include "Engine/Common/EngineDefines.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Utility/Format/KeyValueFile.h"
 
@@ -58,10 +59,10 @@ namespace sw
 	{
 		string p( relativePath );
 		string result;
-		if ( FileUtil::hasExtension( p, ".meta" ) )
+		if ( FileUtil::hasExtension( p, path::kMetaExtension ) )
 			result = std::move( p );
 		else
-			result = p + ".meta";
+			result = p + path::kMetaExtension;
 		return result;
 	}
 

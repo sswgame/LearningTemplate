@@ -8,10 +8,10 @@
 namespace sw
 {
 	CameraComponent::CameraComponent()
-		: _fovY{ 0.70f }
-		, _nearZ{ 0.1f }
-		, _farZ{ 100.0f }
-		, _orthoHeight{ 10.0f }
+		: _fovY{ kDefaultFovY }
+		, _nearZ{ kDefaultNearZ }
+		, _farZ{ kDefaultFarZ }
+		, _orthoHeight{ kDefaultOrthoHeight }
 		, _priority{ 0 }
 		, _role{ CameraRole::Game }
 		, _bOrthographic{ false }
