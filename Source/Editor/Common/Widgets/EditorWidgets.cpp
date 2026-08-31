@@ -279,7 +279,7 @@ namespace sw::editor
 			{
 				bool bAccept{ true };
 				if ( pExpectedExt != nullptr && pExpectedExt[0] != '\0' )
-					bAccept = FileUtil::endsWithIgnoreCase( droppedPath.c_str(), pExpectedExt );
+					bAccept = FileUtil::hasExtension( droppedPath, pExpectedExt );
 				if ( bAccept )
 				{
 					assetPath = droppedPath;

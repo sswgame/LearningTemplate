@@ -75,10 +75,6 @@ namespace sw
 		static bool hasExtension( string_view fileName, string_view extension );
 		/** @brief 지정된 확장자 중 하나와 대소문자 무시로 일치하는지 확인합니다. */
 		static bool hasAnyExtension( string_view fileName, std::initializer_list<string_view> listExtension );
-		/** @brief 경로가 지정된 접미사(다중 확장자 포함, 예: ".prefab.xml")로 끝나는지 대소문자 구분 없이 확인합니다. */
-		static bool endsWithIgnoreCase( string_view path, string_view suffix );
-		/** @brief 지정된 접미사 중 하나와 대소문자 무시로 끝나는지 확인합니다. */
-		static bool endsWithAnyIgnoreCase( string_view path, std::initializer_list<string_view> listSuffix );
 		/** @brief 확장자를 교체합니다. */
 		static string replaceExtension( string_view fileName, string_view extension );
 		/** @brief 확장자를 제거합니다. */

@@ -569,14 +569,14 @@ namespace sw::editor
 		}
 
 		// "Game / Shaders"를 클릭 가능한 세그먼트로 파싱합니다.
-		vector<string> listPart;
+		vector<string_view> listPart;
 		{
-			string remaining = _breadcrumb;
-			size_t pos{ 0 };
+			string_view remaining{ _breadcrumb };
+			size_t		pos{ 0 };
 			while ( pos < remaining.size() )
 			{
 				size_t sep = remaining.find( " / ", pos );
-				if ( sep == string::npos )
+				if ( sep == string_view::npos )
 				{
 					listPart.push_back( remaining.substr( pos ) );
 					break;
@@ -590,6 +590,7 @@ namespace sw::editor
 		string builtPath;
 		for ( size_t partIndex = 0; partIndex < listPart.size(); ++partIndex )
 		{
+			const string_view part = listPart[partIndex];
 			if ( partIndex > 0 )
 			{
 				ImGui::SameLine();
@@ -599,10 +600,10 @@ namespace sw::editor
 
 			if ( partIndex == 0 )
 			{
-				builtCrumb = listPart[0];
+				builtCrumb = string{ part };
 				for ( const ContentRoot& root : _listRoot )
 				{
-					if ( root._displayName == listPart[0] )
+					if ( root._displayName == part )
 					{
 						builtPath = root._absolutePath;
 						break;
@@ -611,9 +612,10 @@ namespace sw::editor
 			}
 			else
 			{
-				builtCrumb += " / " + listPart[partIndex];
-				const string lowerChild = FileUtil::normalizePath( listPart[partIndex] );
-				string		 next		= FileUtil::joinPath( builtPath, listPart[partIndex] );
+				builtCrumb += " / ";
+				builtCrumb.append( part.data(), part.size() );
+				const string lowerChild = FileUtil::normalizePath( part );
+				string		 next		= FileUtil::joinPath( builtPath, part );
 				if ( FileUtil::directoryExists( next ) == false && builtPath.empty() == false )
 				{
 					vector<string> listChild;
@@ -632,9 +634,15 @@ namespace sw::editor
 
 			const bool bIsLast = ( partIndex + 1 == listPart.size() );
 			if ( bIsLast )
-				ImGui::TextColored( ImVec4( 1.0f, 0.85f, 0.35f, 1.0f ), "%s", listPart[partIndex].c_str() );
-			else if ( ImGui::SmallButton( listPart[partIndex].c_str() ) )
-				selectFolder( builtPath, builtCrumb );
+			{
+				ImGui::TextColored( ImVec4( 1.0f, 0.85f, 0.35f, 1.0f ), "%.*s", static_cast<int32>( part.size() ), part.data() );
+			}
+			else
+			{
+				const string partStr{ part };
+				if ( ImGui::SmallButton( partStr.c_str() ) )
+					selectFolder( builtPath, builtCrumb );
+			}
 		}
 	}
 

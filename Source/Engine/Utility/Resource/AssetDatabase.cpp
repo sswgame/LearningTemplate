@@ -53,7 +53,7 @@ namespace sw
 	{
 		string p( relativePath );
 		string result;
-		if ( FileUtil::endsWithIgnoreCase( p, ".meta" ) )
+		if ( FileUtil::hasExtension( p, ".meta" ) )
 			result = std::move( p );
 		else
 			result = p + ".meta";
@@ -64,7 +64,7 @@ namespace sw
 	{
 		Uuid   result{};
 		string path = FileUtil::normalizePath( relativePath );
-		if ( path.empty() || FileUtil::endsWithIgnoreCase( path, ".meta" ) )
+		if ( path.empty() || FileUtil::hasExtension( path, ".meta" ) )
 			return result;
 
 		BLOCK( "Check Existing Meta" )
@@ -105,7 +105,7 @@ namespace sw
 	bool AssetDatabase::registerExisting( string_view relativePath )
 	{
 		string path = FileUtil::normalizePath( relativePath );
-		if ( path.empty() || FileUtil::endsWithIgnoreCase( path, ".meta" ) )
+		if ( path.empty() || FileUtil::hasExtension( path, ".meta" ) )
 			return false;
 
 		Uuid guid{};
@@ -150,7 +150,7 @@ namespace sw
 			BLOCK( "Filter and Normalize Path" )
 			{
 				const string name = FileUtil::getFileNamePart( filePath );
-				if ( FileUtil::endsWithIgnoreCase( name, ".meta" ) )
+				if ( FileUtil::hasExtension( name, ".meta" ) )
 					continue;
 
 				const string abs = FileUtil::normalizeSeparators( filePath );

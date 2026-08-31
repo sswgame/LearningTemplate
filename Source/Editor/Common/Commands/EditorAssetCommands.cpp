@@ -145,7 +145,7 @@ namespace sw::editor
 				if ( item._relativePath.empty() )
 					item._relativePath = FileUtil::normalizePath( item._name );
 
-				if ( item._bIsDirectory == false && FileUtil::endsWithIgnoreCase( item._name, ".meta" ) )
+				if ( item._bIsDirectory == false && FileUtil::hasExtension( item._name, ".meta" ) )
 					return;
 
 				outList.push_back( std::move( item ) );

@@ -108,8 +108,8 @@ SW_TEST_CASE( Engine_Resource, MakeSavePathLowercasesRelativeFolders )
 	// 대문자 저장 대상 폴더 및 대문자 파일명 전달 시 소문자 변환 검증 (리눅스 에셋 표준)
 	const sw::string saveUpperFolder = sw::ResourceUtil::makeSaveFolderPath( gameRoot + "/PREFABS/SUB_DIR" );
 	const sw::string saveUpperPath	 = sw::ResourceUtil::makeSavePath( gameRoot + "/PREFABS/SUB_DIR", "NEW_HERO.PREFAB.JSON" );
-	SW_EXPECT_TRUE( sw::FileUtil::endsWithIgnoreCase( saveUpperFolder, "prefabs/sub_dir" ) );
-	SW_EXPECT_TRUE( sw::FileUtil::endsWithIgnoreCase( saveUpperPath, "prefabs/sub_dir/new_hero.prefab.json" ) );
+	SW_EXPECT_TRUE( sw::StringUtil::endsWith( saveUpperFolder, "prefabs/sub_dir", true ) );
+	SW_EXPECT_TRUE( sw::StringUtil::endsWith( saveUpperPath, "prefabs/sub_dir/new_hero.prefab.json", true ) );
 }
 
 /**
@@ -241,7 +241,7 @@ SW_TEST_CASE( Engine_Resource, ResourcePathCaseInsensitiveLookupAndLowerCaseNorm
 	const sw::string pathUpperGlobal = sw::ResourceUtil::getResourcePath( "GAME/DEMO/DATA/GAMEDATA.XML" );
 	SW_EXPECT_FALSE( pathUpperGlobal.empty() );
 	SW_EXPECT_TRUE( sw::FileUtil::fileExists( pathUpperGlobal ) );
-	SW_EXPECT_TRUE( sw::FileUtil::endsWithIgnoreCase( pathUpperGlobal, "gamedata.xml" ) );
+	SW_EXPECT_TRUE( sw::StringUtil::endsWith( pathUpperGlobal, "gamedata.xml", true ) );
 
 	// 3. 엔진 파이프라인 대문자 조회 검증
 	const sw::string pathEnginePipeline = sw::ResourceUtil::getResourcePath( "ENGINE/PIPELINE/FORWARDPIPELINE.XML" );

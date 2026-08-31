@@ -56,7 +56,7 @@ namespace sw
 
 				void build( const uint8* pLengths, uint32 count )
 				{
-					std::memset( _arrTree.data(), 0xFF, _arrTree.size() * sizeof( int16 ) );
+					Memory::set( _arrTree.data(), 0xFF, _arrTree.size() * sizeof( int16 ) );
 					array<uint16, constant::kMaxBuffer16> arrCount{};
 					for ( uint32 index = 0; index < count; ++index )
 					{
@@ -162,7 +162,7 @@ namespace sw
 						if ( bs._bytePos + len > bs._size || outPos + len > dstSize )
 							return false;
 
-						std::memcpy( pDst + outPos, bs._pData + bs._bytePos, len );
+						Memory::copy( pDst + outPos, bs._pData + bs._bytePos, len );
 						outPos += len;
 						bs._bytePos += len;
 					}

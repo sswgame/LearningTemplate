@@ -32,11 +32,13 @@ namespace sw
 				string typeNameStr = typeInfo._name.c_str() ? typeInfo._name.c_str() : "";
 				pushLookupName( inoutListName, typeNameStr );
 
-				string stripped = typeNameStr;
-				if ( StringUtil::endsWith( stripped, "Component" ) )
-					stripped = stripped.substr( 0, stripped.size() - 9 );
-				else if ( StringUtil::endsWith( stripped, "Data" ) )
-					stripped = stripped.substr( 0, stripped.size() - 4 );
+				string				  stripped	  = typeNameStr;
+				constexpr string_view kCompSuffix = "Component";
+				constexpr string_view kDataSuffix = "Data";
+				if ( StringUtil::endsWith( stripped, kCompSuffix ) )
+					stripped = stripped.substr( 0, stripped.size() - kCompSuffix.size() );
+				else if ( StringUtil::endsWith( stripped, kDataSuffix ) )
+					stripped = stripped.substr( 0, stripped.size() - kDataSuffix.size() );
 				pushLookupName( inoutListName, stripped );
 			}
 

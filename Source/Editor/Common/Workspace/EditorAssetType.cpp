@@ -146,7 +146,7 @@ namespace sw::editor
 				{
 					for ( uint32 index = 0; index < count; ++index )
 					{
-						if ( FileUtil::endsWithIgnoreCase( path, pSuffix[index] ) )
+						if ( StringUtil::endsWith( path, pSuffix[index], true ) )
 							return true;
 					}
 					return false;
@@ -172,7 +172,7 @@ namespace sw::editor
 					if ( StringUtil::stristr( pathStr.c_str(), ".scene" ) != nullptr )
 						return true;
 				}
-				return FileUtil::endsWithIgnoreCase( path, "_scene.xml" );
+				return StringUtil::endsWith( path, "_scene.xml", true );
 			}
 
 			static bool matchRow( const TypeRow& row, string_view path )
@@ -186,7 +186,7 @@ namespace sw::editor
 			{
 				for ( const string& existing : listSuffix )
 				{
-					if ( FileUtil::endsWithIgnoreCase( existing, suffix ) && existing.size() == suffix.size() )
+					if ( StringUtil::equals( existing, suffix, true ) )
 						return true;
 				}
 				return false;
@@ -262,7 +262,7 @@ namespace sw::editor
 		EditorAssetKind bestKind{ EditorAssetKind::Unknown };
 		for ( const EditorAssetPanelMapping& mapping : kArrPanelMapping )
 		{
-			if ( FileUtil::endsWithIgnoreCase( assetPath, mapping._suffix ) == false )
+			if ( StringUtil::endsWith( assetPath, mapping._suffix, true ) == false )
 				continue;
 			if ( mapping._suffix.size() <= bestLen )
 				continue;

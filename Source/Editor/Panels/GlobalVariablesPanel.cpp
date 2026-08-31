@@ -295,11 +295,12 @@ namespace sw::editor
 				{
 					for ( const string& presetFile : _listPresetFile )
 					{
-						const string fname		 = FileUtil::getFileNamePart( presetFile );
-						string		 displayName = fname;
-						if ( displayName.size() > 13 && displayName.substr( displayName.size() - 13 ) == ".gvpreset.xml" )
+						const string		  fname			= FileUtil::getFileNamePart( presetFile );
+						string				  displayName	= fname;
+						constexpr string_view kPresetSuffix = ".gvpreset.xml";
+						if ( StringUtil::endsWith( displayName, kPresetSuffix, true ) )
 						{
-							displayName = displayName.substr( 0, displayName.size() - 13 );
+							displayName = displayName.substr( 0, displayName.size() - kPresetSuffix.size() );
 						}
 
 						if ( ImGui::MenuItem( displayName.c_str() ) )

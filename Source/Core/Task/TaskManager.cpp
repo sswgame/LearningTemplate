@@ -200,7 +200,7 @@ namespace sw
 		if ( len > kTaskNameCapacity )
 			len = kTaskNameCapacity;
 		if ( len > 0 )
-			std::memcpy( pNode->_arrName, name.data(), len );
+			Memory::copy( pNode->_arrName, name.data(), len );
 		pNode->_arrName[len] = 0;
 #else
 		(void)pNode;

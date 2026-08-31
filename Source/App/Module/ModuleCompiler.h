@@ -10,6 +10,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Time/CpuTimer.h"
 
 #include "RuntimeAPI/Service/IModuleCompiler.h"
 
@@ -72,16 +73,16 @@ namespace sw
 		string findBuildDirectory() const;
 
 	private:
-		LiveReloadManager*					  _pLiveReloadManager;
-		unique_ptr<Process>					  _pCurrentProcess;
-		std::thread							  _workerThread;
-		std::chrono::steady_clock::time_point _buildStartTime;
-		string								  _targetName;
-		mutable mutex						  _mutex;
-		atomic<BuildState>					  _buildState;
-		atomic<int32>						  _lastExitCode;
-		atomic<float32>						  _lastDurationSec;
-		atomic<bool>						  _bIsCompiling;
-		atomic<bool>						  _bCancelRequested;
+		LiveReloadManager*	_pLiveReloadManager;
+		unique_ptr<Process> _pCurrentProcess;
+		std::thread			_workerThread;
+		CpuTimer			_buildTimer;
+		string				_targetName;
+		mutable mutex		_mutex;
+		atomic<BuildState>	_buildState;
+		atomic<int32>		_lastExitCode;
+		atomic<float32>		_lastDurationSec;
+		atomic<bool>		_bIsCompiling;
+		atomic<bool>		_bCancelRequested;
 	};
 } // namespace sw

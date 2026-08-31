@@ -17,7 +17,7 @@ namespace sw
 		: _pLiveReloadManager{ pLiveReloadManager }
 		, _pCurrentProcess{ nullptr }
 		, _workerThread{}
-		, _buildStartTime{}
+		, _buildTimer{}
 		, _targetName{}
 		, _mutex{}
 		, _buildState{ BuildState::Idle }
@@ -64,7 +64,8 @@ namespace sw
 		_bCancelRequested.store( false, std::memory_order_relaxed );
 		_bIsCompiling.store( true, std::memory_order_relaxed );
 		_buildState.store( BuildState::Compiling, std::memory_order_relaxed );
-		_buildStartTime = std::chrono::steady_clock::now();
+		_buildTimer.resetTimer();
+		_buildTimer.startTimer();
 
 		_workerThread = std::thread( &ModuleCompiler::runBuildThread, this, string( targetName ) );
 		return true;
@@ -94,9 +95,7 @@ namespace sw
 		if ( _bIsCompiling.load( std::memory_order_relaxed ) == false )
 			return _lastDurationSec.load( std::memory_order_relaxed );
 
-		const auto now	   = std::chrono::steady_clock::now();
-		const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>( now - _buildStartTime ).count();
-		return static_cast<float32>( elapsed ) / 1000.0f;
+		return _buildTimer.getTotalTime();
 	}
 
 	string ModuleCompiler::getTargetName() const
@@ -183,9 +182,8 @@ namespace sw
 			}
 		}
 
-		const auto	  endTime	  = std::chrono::steady_clock::now();
-		const auto	  elapsedMs	  = std::chrono::duration_cast<std::chrono::milliseconds>( endTime - _buildStartTime ).count();
-		const float32 durationSec = static_cast<float32>( elapsedMs ) / 1000.0f;
+		_buildTimer.stopTimer();
+		const float32 durationSec = _buildTimer.getTotalTime();
 
 		_lastDurationSec.store( durationSec, std::memory_order_relaxed );
 		_lastExitCode.store( exitCode, std::memory_order_relaxed );

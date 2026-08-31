@@ -8,6 +8,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Event/EventDispatcher.h"
+#include "Core/Time/CpuTimer.h"
 
 #include "Engine/Common/Common.h"
 
@@ -158,7 +159,7 @@ namespace sw
 			void*									   _pLibraryModule;
 			uint64									   _loadedSourceMtime;
 			uint64									   _debounceMtime;
-			std::chrono::steady_clock::time_point	   _debounceSince;
+			CpuTimer								   _debounceTimer;
 			atomic<bool>							   _bPendingReload;
 			atomic<bool>							   _bMtimeDebouncing;
 			atomic<bool>							   _bForceReload;

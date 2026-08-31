@@ -3,6 +3,7 @@
 #include "Editor/Panels/DataTablePanel.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/Memory/Memory.h"
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Commands/EditorDataTableCommands.h"
@@ -324,7 +325,7 @@ namespace sw::editor
 			vector<utf8> arrEditBuffer;
 			arrEditBuffer.resize( _selectedGameDataRawText.size() + 4096, 0 );
 			if ( _selectedGameDataRawText.empty() == false )
-				memcpy( arrEditBuffer.data(), _selectedGameDataRawText.c_str(), _selectedGameDataRawText.size() );
+				Memory::copy( arrEditBuffer.data(), _selectedGameDataRawText.c_str(), _selectedGameDataRawText.size() );
 
 			constexpr ImGuiInputTextFlags editFlags = ImGuiInputTextFlags_AllowTabInput;
 			if ( ImGui::InputTextMultiline( "##rawXmlEdit", arrEditBuffer.data(), arrEditBuffer.size(),

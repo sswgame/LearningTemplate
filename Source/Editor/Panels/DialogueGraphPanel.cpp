@@ -4,6 +4,7 @@
 
 #include "Core/Common/Defines.h"
 #include "Core/Log/Logger.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
@@ -213,8 +214,17 @@ namespace sw::editor
 
 					if ( node._text.empty() == false )
 					{
-						const string preview = node._text.size() > 40 ? node._text.substr( 0, 37 ) + "..." : node._text;
-						ImGui::TextDisabled( "\"%s\"", preview.c_str() );
+						if ( node._text.size() > 40 )
+						{
+							StringBuilder<64> previewBuilder;
+							previewBuilder.append( string_view{ node._text.data(), 37 } );
+							previewBuilder.append( "..." );
+							ImGui::TextDisabled( "\"%s\"", previewBuilder.c_str() );
+						}
+						else
+						{
+							ImGui::TextDisabled( "\"%s\"", node._text.c_str() );
+						}
 					}
 					break;
 				}

@@ -200,21 +200,6 @@ namespace sw
 		return false;
 	}
 
-	bool FileUtil::endsWithIgnoreCase( string_view path, string_view suffix )
-	{
-		return StringUtil::endsWith( path, suffix, true );
-	}
-
-	bool FileUtil::endsWithAnyIgnoreCase( string_view path, std::initializer_list<string_view> listSuffix )
-	{
-		for ( string_view suffix : listSuffix )
-		{
-			if ( endsWithIgnoreCase( path, suffix ) )
-				return true;
-		}
-		return false;
-	}
-
 	string FileUtil::replaceExtension( string_view fileName, string_view extension )
 	{
 		if ( fileName.empty() )

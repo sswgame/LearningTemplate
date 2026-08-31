@@ -84,7 +84,8 @@ namespace sw
 		if ( _bStopped )
 			return static_cast<float32>( static_cast<float64>( ( _stopTime - _pausedTime ) - _baseTime ) * _secondsPerCount );
 
-		return static_cast<float32>( static_cast<float64>( ( _currentTime - _pausedTime ) - _baseTime ) * _secondsPerCount );
+		const int64 currTime = ( _currentTime != 0 ) ? _currentTime : CpuTimerInternal::getCurrentPerformanceCount();
+		return static_cast<float32>( static_cast<float64>( ( currTime - _pausedTime ) - _baseTime ) * _secondsPerCount );
 	}
 
 	/**
@@ -103,6 +104,7 @@ namespace sw
 		const int64 currTime = CpuTimerInternal::getCurrentPerformanceCount();
 		_baseTime			 = currTime;
 		_prevTime			 = currTime;
+		_currentTime		 = currTime;
 		_stopTime			 = 0;
 		_pausedTime			 = 0;
 		_bStopped			 = false;
@@ -114,9 +116,10 @@ namespace sw
 		if ( _bStopped )
 		{
 			_pausedTime += ( startTime - _stopTime );
-			_prevTime = startTime;
-			_stopTime = 0;
-			_bStopped = false;
+			_prevTime	 = startTime;
+			_currentTime = startTime;
+			_stopTime	 = 0;
+			_bStopped	 = false;
 		}
 	}
 

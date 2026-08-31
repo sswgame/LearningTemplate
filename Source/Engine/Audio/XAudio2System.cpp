@@ -232,7 +232,7 @@ namespace sw
 
 			static bool loadClip( string_view absPath, PcmClip& out )
 			{
-				if ( FileUtil::endsWithIgnoreCase( absPath, ".wav" ) )
+				if ( FileUtil::hasExtension( absPath, ".wav" ) )
 					return loadWavPcm( absPath, out );
 				return loadViaMediaFoundation( absPath, out );
 			}

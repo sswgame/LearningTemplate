@@ -217,8 +217,9 @@ namespace sw
 		ModuleContext& ctx = iter->second;
 		SW_LOG_INFO( "Manual Live Reload queued for %# (debounce %#ms)...",
 					 moduleName, kMtimeDebounceMs );
-		ctx._debounceMtime	  = FileUtil::getFileTimestamp( ctx._originalModulePath );
-		ctx._debounceSince	  = std::chrono::steady_clock::now();
+		ctx._debounceMtime = FileUtil::getFileTimestamp( ctx._originalModulePath );
+		ctx._debounceTimer.resetTimer();
+		ctx._debounceTimer.startTimer();
 		ctx._bMtimeDebouncing = true;
 		ctx._bForceReload	  = true;
 	}
@@ -232,8 +233,6 @@ namespace sw
 			if ( _fileWatcher != nullptr )
 				_fileWatcher->pollEvents( listEvent );
 		}
-
-		const auto now = std::chrono::steady_clock::now();
 
 		for ( const FileChangeEvent& ev : listEvent )
 		{
@@ -250,8 +249,9 @@ namespace sw
 					if ( sourceMtime <= moduleContext._loadedSourceMtime )
 						continue;
 
-					moduleContext._debounceMtime	= sourceMtime;
-					moduleContext._debounceSince	= now;
+					moduleContext._debounceMtime = sourceMtime;
+					moduleContext._debounceTimer.resetTimer();
+					moduleContext._debounceTimer.startTimer();
 					moduleContext._bMtimeDebouncing = true;
 				}
 			}
@@ -262,16 +262,17 @@ namespace sw
 			if ( ctx._bMtimeDebouncing == false )
 				continue;
 
-			const int64 elapsedMs =
-				std::chrono::duration_cast<std::chrono::milliseconds>( now - ctx._debounceSince ).count();
-			if ( elapsedMs < kMtimeDebounceMs )
+			ctx._debounceTimer.updateTimer();
+			const float32 elapsedSec = ctx._debounceTimer.getTotalTime();
+			if ( elapsedSec < static_cast<float32>( kMtimeDebounceMs ) / 1000.0f )
 				continue;
 
 			const uint64 sourceMtime = FileUtil::getFileTimestamp( ctx._originalModulePath );
 			if ( sourceMtime != ctx._debounceMtime )
 			{
 				ctx._debounceMtime = sourceMtime;
-				ctx._debounceSince = now;
+				ctx._debounceTimer.resetTimer();
+				ctx._debounceTimer.startTimer();
 				continue;
 			}
 
@@ -379,7 +380,7 @@ namespace sw
 		out._sourceMtime = FileUtil::getFileTimestamp( ctx._originalModulePath );
 
 		++LiveReloadManagerInternal::s_reloadCount;
-		const uint64 timestamp = static_cast<uint64>( std::chrono::steady_clock::now().time_since_epoch().count() );
+		const uint64 timestamp = FileUtil::getFileTimestamp( ctx._originalModulePath );
 		const string tempName  = ctx._moduleName + "_temp_" + to_string( LiveReloadManagerInternal::s_reloadCount ) + "_" + to_string( timestamp );
 		const string execDir   = FileUtil::getDirectoryPart( ctx._originalModulePath );
 		out._tempPath		   = FileUtil::joinPath( execDir, FileUtil::formatSharedLibraryName( tempName ) );
@@ -800,7 +801,7 @@ namespace sw
 		, _pLibraryModule{ nullptr }
 		, _loadedSourceMtime{ 0 }
 		, _debounceMtime{ 0 }
-		, _debounceSince{}
+		, _debounceTimer{}
 		, _bPendingReload{ false }
 		, _bMtimeDebouncing{ false }
 		, _bForceReload{ false }
@@ -818,7 +819,7 @@ namespace sw
 		, _pLibraryModule{ other._pLibraryModule }
 		, _loadedSourceMtime{ other._loadedSourceMtime }
 		, _debounceMtime{ other._debounceMtime }
-		, _debounceSince{ other._debounceSince }
+		, _debounceTimer{ other._debounceTimer }
 		, _bPendingReload{ other._bPendingReload.load() }
 		, _bMtimeDebouncing{ other._bMtimeDebouncing.load() }
 		, _bForceReload{ other._bForceReload.load() }
@@ -843,7 +844,7 @@ namespace sw
 			_pLibraryModule		   = other._pLibraryModule;
 			_loadedSourceMtime	   = other._loadedSourceMtime;
 			_debounceMtime		   = other._debounceMtime;
-			_debounceSince		   = other._debounceSince;
+			_debounceTimer		   = other._debounceTimer;
 			_bPendingReload.store( other._bPendingReload.load() );
 			_bMtimeDebouncing.store( other._bMtimeDebouncing.load() );
 			_bForceReload.store( other._bForceReload.load() );
