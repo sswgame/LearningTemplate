@@ -299,22 +299,42 @@ namespace sw
 		   } );
 	}
 
+	/**
+	 * @brief 세 scope(REFLECT/PROPERTY/FUNCTION)가 공통으로 쓰는 편집기 메타를 출력합니다.
+	 * @param pPrefix 대상 접두사. 예: "p._metadata." / "info._metadata."
+	 * @details Category/DisplayName/Tooltip 은 스코프마다 대상만 다르고 형태가 같아 여기 모읍니다.
+	 *          (나머지 필드는 스코프별로 구성이 달라 각 emit 함수에 둡니다)
+	 */
+	template <typename TParsed>
+	static void emitCommonEditorMeta( CodeEmit& e, const TParsed& parsed, const string& prefix )
+	{
+		e.assignQuotedIf( parsed._category.empty() == false, prefix + "_category", parsed._category );
+		e.assignQuotedIf( parsed._displayName.empty() == false, prefix + "_displayName", parsed._displayName );
+		e.assignQuotedIf( parsed._tooltip.empty() == false, prefix + "_tooltip", parsed._tooltip );
+	}
+
+	/**
+	 * @brief 커스텀 메타 페어 맵을 출력합니다. 세 scope 가 동일한 형태를 씁니다.
+	 */
+	template <typename TParsed>
+	static void emitCustomMetaMap( CodeEmit& e, const TParsed& parsed, const string& prefix )
+	{
+		if ( parsed._listCustomMeta.empty() )
+			return;
+		e.linef( "%#_mapCustomMeta = {", prefix );
+		e.push();
+		for ( const auto& [key, val] : parsed._listCustomMeta )
+			e.linef( "{ %#, %# },", CodeEmit::hs( key ), CodeEmit::quoted( val ) );
+		e.pop();
+		e.line( "};" );
+	}
+
 	void CodeGenerator::emitPropertyMetadata( CodeEmit& e, const ParsedPropertyInfo& prop ) const
 	{
 		e.line( "#if !defined( SW_SHIPPING )" );
-		e.assignQuotedIf( prop._category.empty() == false, "p._metadata._category", prop._category );
-		e.assignQuotedIf( prop._displayName.empty() == false, "p._metadata._displayName", prop._displayName );
-		e.assignQuotedIf( prop._tooltip.empty() == false, "p._metadata._tooltip", prop._tooltip );
+		emitCommonEditorMeta( e, prop, "p._metadata." );
 		e.flagIf( prop._bHideInInspector != 0, "p._metadata._bHideInInspector", "SW_TRUE" );
-		if ( prop._listCustomMeta.empty() == false )
-		{
-			e.line( "p._metadata._mapCustomMeta = {" );
-			e.push();
-			for ( const auto& [key, val] : prop._listCustomMeta )
-				e.linef( "{ %#, %# },", CodeEmit::hs( key ), CodeEmit::quoted( val ) );
-			e.pop();
-			e.line( "};" );
-		}
+		emitCustomMetaMap( e, prop, "p._metadata." );
 		e.line( "#endif" );
 
 		e.assignQuotedIf( prop._defaultValue.empty() == false, "p._metadata._defaultValue", prop._defaultValue );
@@ -530,19 +550,9 @@ namespace sw
 			e.assign( "funcInfo._listParameterTypeName", CodeGeneratorInternal::makeQuotedTypeList( method._listParameterTypeName ) );
 
 			e.line( "#if !defined( SW_SHIPPING )" );
-			e.assignQuotedIf( method._category.empty() == false, "funcInfo._metadata._category", method._category );
-			e.assignQuotedIf( method._displayName.empty() == false, "funcInfo._metadata._displayName", method._displayName );
-			e.assignQuotedIf( method._tooltip.empty() == false, "funcInfo._metadata._tooltip", method._tooltip );
+			emitCommonEditorMeta( e, method, "funcInfo._metadata." );
 			e.flagIf( method._bCallInEditor != 0, "funcInfo._metadata._bCallInEditor", "SW_TRUE" );
-			if ( method._listCustomMeta.empty() == false )
-			{
-				e.line( "funcInfo._metadata._mapCustomMeta = {" );
-				e.push();
-				for ( const auto& [key, val] : method._listCustomMeta )
-					e.linef( "{ %#, %# },", CodeEmit::hs( key ), CodeEmit::quoted( val ) );
-				e.pop();
-				e.line( "};" );
-			}
+			emitCustomMetaMap( e, method, "funcInfo._metadata." );
 			e.line( "#endif" );
 
 			if ( method._netRole != FunctionNetRole::Local )
@@ -609,19 +619,9 @@ namespace sw
 		e.push( 3 );
 
 		e.line( "#if !defined( SW_SHIPPING )" );
-		e.assignQuotedIf( typeInfo._category.empty() == false, "info._metadata._category", typeInfo._category );
-		e.assignQuotedIf( typeInfo._displayName.empty() == false, "info._metadata._displayName", typeInfo._displayName );
-		e.assignQuotedIf( typeInfo._tooltip.empty() == false, "info._metadata._tooltip", typeInfo._tooltip );
+		emitCommonEditorMeta( e, typeInfo, "info._metadata." );
 		e.flagIf( typeInfo._bHideInMenu != 0, "info._metadata._bHideInMenu", "SW_TRUE" );
-		if ( typeInfo._listCustomMeta.empty() == false )
-		{
-			e.line( "info._metadata._mapCustomMeta = {" );
-			e.push();
-			for ( const auto& [key, val] : typeInfo._listCustomMeta )
-				e.linef( "{ %#, %# },", CodeEmit::hs( key ), CodeEmit::quoted( val ) );
-			e.pop();
-			e.line( "};" );
-		}
+		emitCustomMetaMap( e, typeInfo, "info._metadata." );
 		e.line( "#endif" );
 
 		if ( typeInfo._listProperty.empty() == false )
