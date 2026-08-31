@@ -95,13 +95,19 @@ namespace sw
 
 	/** @brief Json/Xml 루트에 기록하는 스키마 버전 키. */
 	inline constexpr auto kSchemaVersionKey = "_schemaVersion";
-	/** @brief 컨테이너가 가리키는 PROPERTY 이름 (`<vector _name="_listComponent">`, JSON `"_name"`). */
+	/** @brief 스키마 마이그레이션 orphan 이 가리키는 PROPERTY 이름. */
 	inline constexpr auto kPropertyNameKey	   = "_name";
 	inline constexpr auto kXmlPropertyNameAttr = kPropertyNameKey;
 	/** @brief JSON 시퀀스 페이로드 키 (`"item": [...]`). */
 	inline constexpr auto kJsonContainerItemKey = "item";
 	/** @brief JSON 맵 페이로드 키 (`"entry": { ... }`). */
 	inline constexpr auto kJsonContainerEntryKey = "entry";
+
+	/** @brief XML 시퀀스 원소 태그. 구조체 원소는 대신 타입 이름을 씁니다. */
+	inline constexpr auto kXmlItemTag = "item";
+	/** @brief XML 맵 항목 태그와 키 속성 (`<entry key="a">`). */
+	inline constexpr auto kXmlEntryTag = "entry";
+	inline constexpr auto kXmlKeyAttr  = "key";
 
 	// ------------------------------------------------------------------------------
 	// 5) coerce · 경로 해석 — 바이너리/텍스트 강제 변환, dotted path

@@ -58,29 +58,47 @@ namespace sw
 				return false;
 			}
 
-			static void writeNestedContainerXml( const void* pContainerPtr, const NestedContainerInfo& nested,
-												 const utf8* pPropName, IXmlBackend& backend, const SerializeContext& ctx )
+			static void noteCoerceFailVal( vector<SchemaOrphanValue>* pOutListOrphan, bool& bFieldError, const PropertyInfo& prop, string_view strValue )
 			{
-				if ( pContainerPtr == nullptr || nested._wrapper == nullptr || pPropName == nullptr )
-					return;
-				ISequenceContainerWrapper* pSeq		= nested._wrapper->asSequence();
-				IMapContainerWrapper*	   pMapWrap = nested._wrapper->asMap();
-				const utf8*				   pTypeTag = xmlTypeInfoName( nested._typeName );
-				if ( pTypeTag == nullptr )
+				bFieldError = true;
+				if ( pOutListOrphan != nullptr )
+				{
+					SchemaOrphanValue orphan;
+					orphan._name		 = prop._name;
+					orphan._nameHash	 = prop.getNameHash();
+					orphan._wireTypeHash = 0;
+					orphan._text		 = string( strValue );
+					pOutListOrphan->push_back( std::move( orphan ) );
+				}
+			}
+
+			/**
+			 * @brief 컨테이너를 현재 노드 "안에" 자연스러운 형태로 씁니다.
+			 * @details 시퀀스 원소는 구조체면 타입 이름 태그, 그 외에는 <item>.
+			 *          맵 항목은 <entry key="K">. 값은 그 노드 안에 같은 규칙으로 재귀합니다.
+			 *          리더는 태그 이름에 의존하지 않으므로(다형 포인터 제외) 임의 중첩이 됩니다.
+			 */
+			static void writeContainerXml( const void* pContainerPtr, const NestedContainerInfo& nested,
+										   IXmlBackend& backend, const SerializeContext& ctx )
+			{
+				if ( pContainerPtr == nullptr || nested._wrapper == nullptr )
 					return;
 
-				backend.beginMap( pTypeTag );
-				backend.writeAttribute( kXmlPropertyNameAttr, pPropName );
+				const bool				   bOwnedPtr = isOwnedPointerElementType( nested._elementTypeName );
+				ISequenceContainerWrapper* pSeq		 = nested._wrapper->asSequence();
+				IMapContainerWrapper*	   pMapWrap	 = nested._wrapper->asMap();
+
 				if ( pSeq != nullptr )
 				{
-					const bool bOwnedPtr = isOwnedPointerElementType( nested._elementTypeName );
-					size_t	   sz		 = pSeq->getSize( pContainerPtr );
+					const size_t sz = pSeq->getSize( pContainerPtr );
 					for ( size_t elemIndex = 0; elemIndex < sz; ++elemIndex )
 					{
 						const void* pElemPtr = pSeq->getElementConst( pContainerPtr, elemIndex );
 						if ( nested._elementNested != nullptr )
 						{
-							writeNestedContainerXml( pElemPtr, *nested._elementNested, "item", backend, ctx );
+							backend.beginMap( kXmlItemTag );
+							writeContainerXml( pElemPtr, *nested._elementNested, backend, ctx );
+							backend.endMap();
 						}
 						else if ( bOwnedPtr )
 						{
@@ -88,11 +106,12 @@ namespace sw
 							void*		 pObj  = ppObj != nullptr ? *ppObj : nullptr;
 							if ( pObj == nullptr )
 								continue;
+							// 다형 원소만 태그 이름이 곧 런타임 타입 정보다.
 							const TypeInfo* pRuntimeType = ctx.getRuntimeTypeInfo( pObj );
 							if ( pRuntimeType == nullptr )
 								continue;
 							backend.beginMap( pRuntimeType->_name.c_str() );
-							XmlSerializer::serializeVersionedInto( backend, 0, pObj, *pRuntimeType, ctx );
+							writeXmlProperties( pObj, *pRuntimeType, backend, ctx );
 							backend.endMap();
 						}
 						else
@@ -108,142 +127,55 @@ namespace sw
 							{
 								StringBuilder<constant::kMaxBuffer8192> ss;
 								SerializerUtil::valueToText( ss, pElemPtr, nested._elementTypeName, ctx );
-								backend.writeArrayItem( ss.c_str() );
+								backend.writeValue( kXmlItemTag, ss.c_str() );
 							}
 						}
 					}
+					return;
 				}
-				else if ( pMapWrap != nullptr )
+
+				if ( pMapWrap != nullptr )
 				{
 					pMapWrap->forEach( pContainerPtr, [&]( const void* pKPtr, const void* pVPtr )
 					{
-						backend.beginMapEntry();
-
 						StringBuilder<constant::kMaxBuffer8192> kSs;
 						SerializerUtil::valueToText( kSs, pKPtr, nested._keyTypeName, ctx );
-						backend.writeMapKey( kSs.c_str() );
 
+						backend.beginMap( kXmlEntryTag );
+						backend.writeAttribute( kXmlKeyAttr, kSs.c_str() );
 						if ( nested._elementNested != nullptr )
-							writeNestedContainerXml( pVPtr, *nested._elementNested, "value", backend, ctx );
+						{
+							writeContainerXml( pVPtr, *nested._elementNested, backend, ctx );
+						}
 						else
 						{
-							StringBuilder<constant::kMaxBuffer8192> vSs;
-							SerializerUtil::valueToText( vSs, pVPtr, nested._elementTypeName, ctx );
-							backend.writeMapValue( vSs.c_str() );
+							const TypeInfo* pElemType = findNestedXmlObjectType( nested._elementTypeName, ctx );
+							if ( pElemType != nullptr )
+							{
+								backend.beginMap( pElemType->_name.c_str() );
+								writeXmlProperties( pVPtr, *pElemType, backend, ctx );
+								backend.endMap();
+							}
+							else
+							{
+								StringBuilder<constant::kMaxBuffer8192> vSs;
+								SerializerUtil::valueToText( vSs, pVPtr, nested._elementTypeName, ctx );
+								backend.writeText( vSs.c_str() );
+							}
 						}
-						backend.endMapEntry();
+						backend.endMap();
 					} );
 				}
-				backend.endMap();
 			}
 
-			static void noteCoerceFailVal( vector<SchemaOrphanValue>* pOutListOrphan, bool& bFieldError, const PropertyInfo& prop, string_view strValue )
-			{
-				bFieldError = true;
-				if ( pOutListOrphan != nullptr )
-				{
-					SchemaOrphanValue orphan;
-					orphan._name		 = prop._name;
-					orphan._nameHash	 = prop.getNameHash();
-					orphan._wireTypeHash = 0;
-					orphan._text		 = string( strValue );
-					pOutListOrphan->push_back( std::move( orphan ) );
-				}
-			}
-
-			struct NestedArrayReadCallback
-			{
-				void*					   _pContainerPtr{ nullptr };
-				ISequenceContainerWrapper* _pSeq{ nullptr };
-				const NestedContainerInfo* _pNested{ nullptr };
-				const SerializeContext*	   _pCtx{ nullptr };
-				vector<SchemaOrphanValue>* _pOutListOrphan{ nullptr };
-				const PropertyInfo*		   _pPropForOrphan{ nullptr };
-				size_t*					   _pElemIndex{ nullptr };
-				bool*					   _pAny{ nullptr };
-				bool*					   _pFieldError{ nullptr };
-
-				void invoke( string_view itemStr )
-				{
-					*_pAny = true;
-					_pSeq->addElementDefault( _pContainerPtr );
-					void* pElemPtr = _pSeq->getElement( _pContainerPtr, ( *_pElemIndex )++ );
-					if ( _pNested->_elementNested != nullptr )
-						return;
-					if ( parseTextValueCoerced( pElemPtr, _pNested->_elementTypeName, itemStr, *_pCtx ) == false )
-						noteCoerceFailVal( _pOutListOrphan, *_pFieldError, *_pPropForOrphan, itemStr );
-				}
-			};
-
-			struct NestedMapReadCallback
-			{
-				void*					   _pContainerPtr{ nullptr };
-				IMapContainerWrapper*	   _pMapWrap{ nullptr };
-				const NestedContainerInfo* _pNested{ nullptr };
-				const SerializeContext*	   _pCtx{ nullptr };
-				vector<SchemaOrphanValue>* _pOutListOrphan{ nullptr };
-				const PropertyInfo*		   _pPropForOrphan{ nullptr };
-				vector<uint8>*			   _pListKBuf{ nullptr };
-				vector<uint8>*			   _pListVBuf{ nullptr };
-				bool*					   _pAny{ nullptr };
-				bool*					   _pFieldError{ nullptr };
-
-				void invoke( string_view kStr, string_view vStr )
-				{
-					*_pAny = true;
-					_pMapWrap->defaultConstructKey( _pListKBuf->data() );
-					_pMapWrap->defaultConstructValue( _pListVBuf->data() );
-					const bool kOk = parseTextValueCoerced( _pListKBuf->data(), _pNested->_keyTypeName, kStr, *_pCtx );
-					bool	   vOk = false;
-					if ( _pNested->_elementNested == nullptr )
-						vOk = parseTextValueCoerced( _pListVBuf->data(), _pNested->_elementTypeName, vStr, *_pCtx );
-					if ( kOk && vOk )
-						_pMapWrap->insertKeyValue( _pContainerPtr, _pListKBuf->data(), _pListVBuf->data() );
-					else
-						noteCoerceFailVal( _pOutListOrphan, *_pFieldError, *_pPropForOrphan, vStr );
-					_pMapWrap->destroyKey( _pListKBuf->data() );
-					_pMapWrap->destroyValue( _pListVBuf->data() );
-				}
-			};
-
-			struct NestedOwnedPointerReadCallback
-			{
-				const SerializeContext* _pCtx{ nullptr };
-				bool*					_pAny{ nullptr };
-				bool*					_pFieldError{ nullptr };
-
-				void invoke( string_view typeName, string_view nodeXml )
-				{
-					*_pAny = true;
-					if ( _pCtx == nullptr || typeName.empty() )
-					{
-						*_pFieldError = true;
-						return;
-					}
-
-					const string typeNameNt( typeName );
-					void*		 pObj = _pCtx->createOwnedPointer( hashed_string( typeNameNt.c_str() ) );
-					if ( pObj == nullptr )
-					{
-						*_pFieldError = true;
-						return;
-					}
-
-					const TypeInfo* pType = engine::getTypeRegistry().findType( hashed_string( typeNameNt.c_str() ) );
-					if ( pType == nullptr )
-					{
-						*_pFieldError = true;
-						return;
-					}
-
-					uint32 ver{ 0 };
-					if ( XmlSerializer::deserializeVersioned( ver, pObj, *pType, string( nodeXml ), 0, nullptr, nullptr,
-															  *_pCtx ) == false )
-						*_pFieldError = true;
-				}
-			};
-
-			static bool readNestedContainerXml( void* pContainerPtr, const NestedContainerInfo& nested, IXmlBackend& backend, const SerializeContext& ctx, bool& bOutFieldError, vector<SchemaOrphanValue>* pOutListOrphan, const PropertyInfo& propForOrphan )
+			/**
+			 * @brief 현재 노드 "안에" 있는 컨테이너를 읽습니다. writeContainerXml 의 역연산입니다.
+			 * @details 자식 태그 이름에 의존하지 않고 순서대로 훑습니다(다형 포인터만 이름=타입).
+			 *          원소가 또 컨테이너면 그 자식 노드에서 재귀하므로 임의 중첩이 됩니다.
+			 */
+			static bool readContainerXml( void* pContainerPtr, const NestedContainerInfo& nested, IXmlBackend& backend,
+										  const SerializeContext& ctx, bool& bOutFieldError,
+										  vector<SchemaOrphanValue>* pOutListOrphan, const PropertyInfo& propForOrphan )
 			{
 				if ( pContainerPtr == nullptr || nested._wrapper == nullptr )
 					return false;
@@ -254,51 +186,99 @@ namespace sw
 
 				ISequenceContainerWrapper* pSeq		= nested._wrapper->asSequence();
 				IMapContainerWrapper*	   pMapWrap = nested._wrapper->asMap();
-				if ( pSeq != nullptr && bOwnedPtr )
-				{
-					bool						   any{ false };
-					NestedOwnedPointerReadCallback ptrCb{};
-					ptrCb._pCtx		   = &ctx;
-					ptrCb._pAny		   = &any;
-					ptrCb._pFieldError = &bOutFieldError;
-					backend.iterateMap( nullptr, SW_DELEGATE_METHOD( XmlMapItemDelegate, &NestedOwnedPointerReadCallback::invoke, &ptrCb ) );
-					return any;
-				}
+
 				if ( pSeq != nullptr )
 				{
-					size_t					elemIndex{ 0 };
-					bool					any{ false };
-					NestedArrayReadCallback arrayCb{};
-					arrayCb._pContainerPtr	= pContainerPtr;
-					arrayCb._pSeq			= pSeq;
-					arrayCb._pNested		= &nested;
-					arrayCb._pCtx			= &ctx;
-					arrayCb._pOutListOrphan = pOutListOrphan;
-					arrayCb._pPropForOrphan = &propForOrphan;
-					arrayCb._pElemIndex		= &elemIndex;
-					arrayCb._pAny			= &any;
-					arrayCb._pFieldError	= &bOutFieldError;
-					backend.iterateArray( nullptr, SW_DELEGATE_METHOD( XmlArrayItemDelegate, &NestedArrayReadCallback::invoke, &arrayCb ) );
-					return any;
+					size_t elemIndex{ 0 };
+					bool   bAny{ false };
+					backend.iterateChildren( SW_DELEGATE_LAMBDA( XmlChildVisitDelegate, [&]( string_view tagName )
+					{
+						bAny = true;
+						if ( bOwnedPtr )
+						{
+							// 다형 원소: 태그 이름이 런타임 타입이다.
+							const hashed_string typeName( string( tagName ).c_str() );
+							void*				pObj  = ctx.createOwnedPointer( typeName );
+							const TypeInfo*		pType = engine::getTypeRegistry().findType( typeName );
+							if ( pObj == nullptr || pType == nullptr )
+								return;
+							readXmlIntoInstance( pObj, *pType, backend, ctx, pOutListOrphan );
+							return;
+						}
+
+						pSeq->addElementDefault( pContainerPtr );
+						void* pElemPtr = pSeq->getElement( pContainerPtr, elemIndex++ );
+						if ( nested._elementNested != nullptr )
+						{
+							readContainerXml( pElemPtr, *nested._elementNested, backend, ctx, bOutFieldError, pOutListOrphan, propForOrphan );
+							return;
+						}
+
+						const TypeInfo* pElemType = findNestedXmlObjectType( nested._elementTypeName, ctx );
+						if ( pElemType != nullptr )
+						{
+							readXmlIntoInstance( pElemPtr, *pElemType, backend, ctx, pOutListOrphan );
+							return;
+						}
+
+						string itemText;
+						backend.readText( itemText );
+						if ( parseTextValueCoerced( pElemPtr, nested._elementTypeName, itemText, ctx ) == false )
+							noteCoerceFailVal( pOutListOrphan, bOutFieldError, propForOrphan, itemText );
+					} ) );
+					return bAny;
 				}
-				else if ( pMapWrap != nullptr )
+
+				if ( pMapWrap != nullptr )
 				{
-					vector<uint8>		  listKBuf( pMapWrap->getKeySize() );
-					vector<uint8>		  listVBuf( pMapWrap->getValueSize() );
-					bool				  any{ false };
-					NestedMapReadCallback mapCb{};
-					mapCb._pContainerPtr  = pContainerPtr;
-					mapCb._pMapWrap		  = pMapWrap;
-					mapCb._pNested		  = &nested;
-					mapCb._pCtx			  = &ctx;
-					mapCb._pOutListOrphan = pOutListOrphan;
-					mapCb._pPropForOrphan = &propForOrphan;
-					mapCb._pListKBuf	  = &listKBuf;
-					mapCb._pListVBuf	  = &listVBuf;
-					mapCb._pAny			  = &any;
-					mapCb._pFieldError	  = &bOutFieldError;
-					backend.iterateMap( nullptr, SW_DELEGATE_METHOD( XmlMapItemDelegate, &NestedMapReadCallback::invoke, &mapCb ) );
-					return any;
+					vector<uint8> listKBuf( pMapWrap->getKeySize() );
+					vector<uint8> listVBuf( pMapWrap->getValueSize() );
+					bool		  bAny{ false };
+					backend.iterateChildren( SW_DELEGATE_LAMBDA( XmlChildVisitDelegate, [&]( string_view tagName )
+					{
+						(void)tagName;
+						bAny = true;
+
+						string keyText;
+						backend.readAttribute( kXmlKeyAttr, keyText );
+
+						pMapWrap->defaultConstructKey( listKBuf.data() );
+						pMapWrap->defaultConstructValue( listVBuf.data() );
+
+						const bool kOk = parseTextValueCoerced( listKBuf.data(), nested._keyTypeName, keyText, ctx );
+						bool	   vOk{ true };
+						if ( nested._elementNested != nullptr )
+						{
+							readContainerXml( listVBuf.data(), *nested._elementNested, backend, ctx, bOutFieldError, pOutListOrphan, propForOrphan );
+						}
+						else
+						{
+							const TypeInfo* pElemType = findNestedXmlObjectType( nested._elementTypeName, ctx );
+							if ( pElemType != nullptr )
+							{
+								// 구조체 값은 <entry> 안의 <TypeName> 자식에 들어 있다.
+								if ( backend.pushFirstChild() )
+								{
+									readXmlIntoInstance( listVBuf.data(), *pElemType, backend, ctx, pOutListOrphan );
+									backend.popChild();
+								}
+							}
+							else
+							{
+								string valText;
+								backend.readText( valText );
+								vOk = parseTextValueCoerced( listVBuf.data(), nested._elementTypeName, valText, ctx );
+								if ( vOk == false )
+									noteCoerceFailVal( pOutListOrphan, bOutFieldError, propForOrphan, valText );
+							}
+						}
+
+						if ( kOk && vOk )
+							pMapWrap->insertKeyValue( pContainerPtr, listKBuf.data(), listVBuf.data() );
+						pMapWrap->destroyKey( listKBuf.data() );
+						pMapWrap->destroyValue( listVBuf.data() );
+					} ) );
+					return bAny;
 				}
 				return false;
 			}
@@ -325,7 +305,10 @@ namespace sw
 						NestedContainerInfo shape = prop.getContainerShape();
 						if ( shape._typeName.empty() )
 							shape._typeName = prop._typeName;
-						writeNestedContainerXml( pPropPtr, shape, prop._name.c_str(), backend, ctx );
+						// 프로퍼티 이름이 곧 컨테이너 요소다. 그 안에 원소들이 들어간다.
+						backend.beginMap( prop._name.c_str() );
+						writeContainerXml( pPropPtr, shape, backend, ctx );
+						backend.endMap();
 					}
 					else
 					{
@@ -378,28 +361,23 @@ namespace sw
 						NestedContainerInfo shape = prop.getContainerShape();
 						if ( shape._typeName.empty() )
 							shape._typeName = prop._typeName;
-						const utf8* pTypeTag = xmlTypeInfoName( shape._typeName );
-						bool		entered{ false };
-						if ( pTypeTag != nullptr )
+						// 컨테이너는 프로퍼티 이름 요소 안에 들어 있다.
+						bool entered = backend.pushChild( prop._name.c_str() );
+						if ( entered == false )
 						{
-							if ( backend.pushNamedTypeChild( pTypeTag, prop._name.c_str() ) )
-								entered = true;
-							else
+							for ( const hashed_string& alias : prop._listAlias )
 							{
-								for ( const hashed_string& alias : prop._listAlias )
+								if ( alias.empty() == false && backend.pushChild( alias.c_str() ) )
 								{
-									if ( alias.empty() == false && backend.pushNamedTypeChild( pTypeTag, alias.c_str() ) )
-									{
-										entered = true;
-										break;
-									}
+									entered = true;
+									break;
 								}
 							}
 						}
 						if ( entered )
 						{
 							uniqueSeen.insert( prop.getNameHash() );
-							if ( readNestedContainerXml( pPropPtr, shape, backend, ctx, bFieldError, pOutListOrphan, prop ) == false )
+							if ( readContainerXml( pPropPtr, shape, backend, ctx, bFieldError, pOutListOrphan, prop ) == false )
 								bFieldError = true;
 							backend.popChild();
 						}
@@ -794,28 +772,54 @@ namespace sw
 		return true;
 	}
 
-	bool XmlDocumentBackend::pushNamedTypeChild( const utf8* pTypeTag, const utf8* pPropName )
+	bool XmlDocumentBackend::pushFirstChild()
 	{
-		if ( _impl->_currentParent.isValid() == false || pTypeTag == nullptr || pPropName == nullptr )
+		if ( _impl->_currentParent.isValid() == false )
+			return false;
+		XmlNode child = _impl->_currentParent.child( nullptr, ignoreCaseKeys() );
+		if ( child.isValid() == false )
+			return false;
+		_impl->_listNodeStack.push_back( child );
+		_impl->_currentParent = child;
+		return true;
+	}
+
+	void XmlDocumentBackend::writeText( const utf8* pText )
+	{
+		if ( _impl->_currentParent.isValid() && pText != nullptr )
+			_impl->_currentParent.setValue( pText );
+	}
+
+	bool XmlDocumentBackend::readText( string& outText )
+	{
+		if ( _impl->_currentParent.isValid() == false )
+			return false;
+		const utf8* pText = _impl->_currentParent.text();
+		outText			  = ( pText != nullptr ) ? pText : "";
+		return true;
+	}
+
+	bool XmlDocumentBackend::iterateChildren( const XmlChildVisitDelegate& callback )
+	{
+		if ( _impl->_currentParent.isValid() == false || callback.isBound() == false )
 			return false;
 
-		const bool bIgnore = ignoreCaseKeys();
-		string	   sTag	   = Impl::sanitizeTag( pTypeTag );
-		for ( XmlNode child = _impl->_currentParent.child( sTag.c_str(), bIgnore ); child.isValid();
-			  child			= child.next( sTag.c_str(), bIgnore ) )
+		const XmlNode parent = _impl->_currentParent;
+		bool		  bAny{ false };
+		for ( XmlNode child = parent.child( nullptr, ignoreCaseKeys() ); child.isValid(); child = child.next( nullptr, ignoreCaseKeys() ) )
 		{
-			const utf8* pNameAttr = child.attr( kXmlPropertyNameAttr, bIgnore );
-			if ( pNameAttr == nullptr )
-				continue;
-			const bool bMatch = StringUtil::equals( pNameAttr, pPropName, bIgnore );
-			if ( bMatch == false )
-				continue;
-
+			// 콜백이 도는 동안 그 자식이 현재 노드가 되어야 재귀 순회가 가능하다.
 			_impl->_listNodeStack.push_back( child );
 			_impl->_currentParent = child;
-			return true;
+
+			const utf8* pName = child.name();
+			callback( string_view( pName != nullptr ? pName : "" ) );
+			bAny = true;
+
+			_impl->_listNodeStack.pop_back();
+			_impl->_currentParent = parent;
 		}
-		return false;
+		return bAny;
 	}
 
 	void XmlDocumentBackend::popChild()

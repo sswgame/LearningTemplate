@@ -40,7 +40,7 @@ namespace sw
 		// ------------------------------------------------------------------------------
 		/**
 		 * @brief 한 줄 단축 JSON으로 직렬화합니다.
-		 * @details 스칼라는 프로퍼티 키. 컨테이너는 `"vector":[{ "_name":"_scores", "item":[...] }]`.
+		 * @details 스칼라는 프로퍼티 키. 시퀀스는 배열(`"_scores":[1,2]`), 맵은 오브젝트(`"_stat":{"a":1}`).
 		 */
 		static string serialize( const void* pInstance, const TypeInfo& typeInfo,
 								 const SerializeContext& ctx = SerializeContext::getDefault() );

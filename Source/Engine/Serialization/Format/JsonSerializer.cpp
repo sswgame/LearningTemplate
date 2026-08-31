@@ -276,41 +276,6 @@ namespace sw
 				return bOk;
 			}
 
-			static bool readNestedContainerJson( void* pContainerPtr, const NestedContainerInfo& nested, const JsonValue& src,
-												 const SerializeContext& ctx )
-			{
-				if ( pContainerPtr == nullptr || nested._wrapper == nullptr || src.isObject() == false )
-					return false;
-
-				const bool bOwnedPtr = isOwnedPointerElementType( nested._elementTypeName );
-				if ( bOwnedPtr == false )
-					nested._wrapper->clear( pContainerPtr );
-
-				const bool				   bIgnore = ctx.ignoreCaseKeys();
-				ISequenceContainerWrapper* pSeq	   = nested._wrapper->asSequence();
-				if ( pSeq != nullptr )
-				{
-					const JsonValue items = src.get( kJsonContainerItemKey, bIgnore );
-					if ( items.isValid() == false )
-						return true;
-					if ( items.isArray() == false )
-						return false;
-					return readSequenceItemsJson( pContainerPtr, nested, items, bOwnedPtr, ctx );
-				}
-
-				IMapContainerWrapper* pMapWrap = nested._wrapper->asMap();
-				if ( pMapWrap != nullptr )
-				{
-					const JsonValue entries = src.get( kJsonContainerEntryKey, bIgnore );
-					if ( entries.isValid() == false )
-						return true;
-					if ( entries.isObject() == false )
-						return false;
-					return readMapEntriesJson( pContainerPtr, nested, entries, ctx );
-				}
-				return false;
-			}
-
 			// entries(JSON 오브젝트)의 각 멤버를 맵 컨테이너에 채운다. 호출자가 미리 wrapper->clear() 를 한다.
 			static bool readMapEntriesJson( void* pContainerPtr, const NestedContainerInfo& nested, const JsonValue& entries,
 											const SerializeContext& ctx )
@@ -355,12 +320,17 @@ namespace sw
 				return true;
 			}
 
+			/**
+			 * @brief 컨테이너를 자연스러운 JSON 표현으로 읽습니다. 시퀀스는 배열, 맵은 오브젝트.
+			 * @details 원소가 또 컨테이너면 그 값에서 재귀하므로 임의 중첩이 됩니다.
+			 */
 			static bool readTypedContainerJson( void* pContainerPtr, const NestedContainerInfo& nested, const JsonValue& src,
 												const SerializeContext& ctx )
 			{
-				// 시퀀스 컨테이너는 평범한 JSON 배열도 받는다(손으로 쓴 Config JSON 등 자연스러운 표현).
-				if ( src.isArray() && pContainerPtr != nullptr && nested._wrapper != nullptr &&
-					 nested._wrapper->asSequence() != nullptr )
+				if ( pContainerPtr == nullptr || nested._wrapper == nullptr )
+					return false;
+
+				if ( src.isArray() && nested._wrapper->asSequence() != nullptr )
 				{
 					const bool bOwnedPtr = isOwnedPointerElementType( nested._elementTypeName );
 					if ( bOwnedPtr == false )
@@ -368,28 +338,7 @@ namespace sw
 					return readSequenceItemsJson( pContainerPtr, nested, src, bOwnedPtr, ctx );
 				}
 
-				if ( src.isObject() == false )
-					return false;
-
-				const utf8* pTypeTag = SerializerUtil::containerTypeTagName( nested._typeName );
-				if ( pTypeTag != nullptr )
-				{
-					const JsonValue group = src.get( pTypeTag, ctx.ignoreCaseKeys() );
-					if ( group.isArray() )
-					{
-						if ( group.size() == 0 )
-							return true;
-						return readNestedContainerJson( pContainerPtr, nested, group.at( 0 ), ctx );
-					}
-				}
-
-				const bool bIgnore = ctx.ignoreCaseKeys();
-				if ( src.has( kPropertyNameKey, bIgnore ) || src.has( kJsonContainerItemKey, bIgnore ) ||
-					 src.has( kJsonContainerEntryKey, bIgnore ) )
-					return readNestedContainerJson( pContainerPtr, nested, src, ctx );
-
-				// 맵 컨테이너는 평범한 JSON 오브젝트({"key":value,...})도 받는다.
-				if ( pContainerPtr != nullptr && nested._wrapper != nullptr && nested._wrapper->asMap() != nullptr )
+				if ( src.isObject() && nested._wrapper->asMap() != nullptr )
 				{
 					nested._wrapper->clear( pContainerPtr );
 					return readMapEntriesJson( pContainerPtr, nested, src, ctx );
@@ -461,86 +410,6 @@ namespace sw
 					return;
 				}
 				writeJsonValue( parent.set( prop._name.c_str(), false ), pPropPtr, prop._typeName, ctx );
-			}
-
-			static bool isContainerTypeKey( const vector<PropertyInfo>& listProp, string_view keyRaw, bool bIgnoreCaseKeys )
-			{
-				for ( const PropertyInfo& prop : listProp )
-				{
-					if ( prop._bIsContainer == SW_FALSE || prop.hasContainerWrapper() == false )
-						continue;
-					NestedContainerInfo shape = prop.getContainerShape();
-					if ( shape._typeName.empty() )
-						shape._typeName = prop._typeName;
-					const utf8* pTypeTag = SerializerUtil::containerTypeTagName( shape._typeName );
-					if ( pTypeTag != nullptr && SerializerUtil::keysEqual( keyRaw, pTypeTag, bIgnoreCaseKeys ) )
-						return true;
-				}
-				return false;
-			}
-
-			static bool readContainerTypeGroup( const JsonValue& group, const vector<PropertyInfo>& listProp, void* pInstance,
-												unordered_set<uint32>& uniqueSeen, bool& bFieldError, vector<SchemaOrphanValue>* pOutListOrphan,
-												const SerializeContext& ctx )
-			{
-				if ( group.isArray() == false )
-					return false;
-
-				const bool bIgnore = ctx.ignoreCaseKeys();
-				bool	   bOk{ true };
-				for ( size_t nodeIndex = 0; nodeIndex < group.size(); ++nodeIndex )
-				{
-					const JsonValue node = group.at( nodeIndex );
-					if ( node.isObject() == false )
-					{
-						bOk = false;
-						continue;
-					}
-
-					const string		nameStr = node.get( kPropertyNameKey, bIgnore ).asString();
-					bool				bCaseVariant{ false };
-					const PropertyInfo* pMatched = SerializerUtil::matchProperty( listProp, nameStr, bIgnore, bCaseVariant );
-					if ( pMatched == nullptr && bCaseVariant )
-						continue;
-
-					if ( pMatched == nullptr || pMatched->_bIsContainer == SW_FALSE || pMatched->hasContainerWrapper() == false )
-					{
-						if ( pOutListOrphan != nullptr )
-						{
-							SchemaOrphanValue	orphan;
-							const hashed_string nameHs( nameStr.c_str() );
-							orphan._name	 = nameHs;
-							orphan._nameHash = nameHs.getHash();
-							orphan._text	 = node.dump();
-							pOutListOrphan->push_back( std::move( orphan ) );
-						}
-						else
-							bFieldError = true;
-						bOk = false;
-						continue;
-					}
-
-					uniqueSeen.insert( pMatched->getNameHash() );
-					void*				pPropPtr = pMatched->getRawPtr( pInstance );
-					NestedContainerInfo shape	 = pMatched->getContainerShape();
-					if ( shape._typeName.empty() )
-						shape._typeName = pMatched->_typeName;
-					if ( readNestedContainerJson( pPropPtr, shape, node, ctx ) == false )
-					{
-						if ( pOutListOrphan != nullptr )
-						{
-							SchemaOrphanValue orphan;
-							orphan._name	 = pMatched->_name;
-							orphan._nameHash = pMatched->getNameHash();
-							orphan._text	 = node.dump();
-							pOutListOrphan->push_back( std::move( orphan ) );
-						}
-						else
-							bFieldError = true;
-						bOk = false;
-					}
-				}
-				return bOk;
 			}
 
 			static bool readProperty( const JsonValue& field, const PropertyInfo& prop, void* pInstance, const SerializeContext& ctx )
@@ -690,15 +559,6 @@ namespace sw
 					*pOutVersion = static_cast<uint32>( field.asUint( 0 ) );
 				continue;
 			}
-
-			if ( JsonSerializerInternal::isContainerTypeKey( listProp, keyRaw, bIgnoreCaseKeys ) )
-			{
-				if ( JsonSerializerInternal::readContainerTypeGroup( field, listProp, pInstance, uniqueSeen, bFieldError, pOutListOrphan, ctx ) == false &&
-					 pOutListOrphan == nullptr )
-					bFieldError = true;
-				continue;
-			}
-
 			bool				bCaseVariant{ false };
 			const PropertyInfo* pMatched = SerializerUtil::matchProperty( listProp, keyRaw, bIgnoreCaseKeys, bCaseVariant );
 			if ( pMatched == nullptr && bCaseVariant )

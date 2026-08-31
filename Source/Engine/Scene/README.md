@@ -69,9 +69,9 @@ classDiagram
         <entity name="ShopKeeper" prefab="game/demo/prefabs/NPC.prefab.json"/>
         <entity name="CustomLight">
             <GameObject _schemaVersion="0" _name="CustomLight" _bActive="true">
-                <vector _name="_listComponent">
+                <_listComponent>
                     <MeshComponent _schemaVersion="0" _meshId="Sphere" _localPosition="0,2,0"/>
-                </vector>
+                </_listComponent>
             </GameObject>
         </entity>
     </entities>

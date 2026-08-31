@@ -88,6 +88,18 @@ namespace sw
 		PROPERTY()
 		map<string, vector<float32>> _namedRows;
 
+		/** @brief 중첩 맵: map<K, map<K, V>>. */
+		PROPERTY()
+		map<string, map<string, int32>> _nestedMap;
+
+		/** @brief 구조체 원소 시퀀스. */
+		PROPERTY()
+		vector<NestedInner> _listInner;
+
+		/** @brief 맵 값이 구조체인 경우. */
+		PROPERTY()
+		map<string, NestedInner> _mapInner;
+
 		PROPERTY()
 		NestedInner _inner;
 	};

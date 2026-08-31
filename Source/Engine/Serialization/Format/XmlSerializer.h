@@ -15,6 +15,8 @@ namespace sw
 
 	using XmlArrayItemDelegate = Delegate<void( string_view itemStr )>;
 	using XmlMapItemDelegate   = Delegate<void( string_view keyStr, string_view valStr )>;
+	/** @brief 자식 요소 방문 콜백. 호출되는 동안 그 자식이 백엔드의 현재 노드가 됩니다. */
+	using XmlChildVisitDelegate = Delegate<void( string_view tagName )>;
 
 	/**
 	 * @class IXmlBackend
@@ -87,18 +89,29 @@ namespace sw
 			(void)pTagName;
 			return false;
 		}
-		/**
-		 * @brief 타입 태그 + `_name` 속성으로 자식 요소를 찾아 내려갑니다.
-		 * @details 컨테이너 XML: `<vector _name="_listComponent">`.
-		 */
-		virtual bool pushNamedTypeChild( const utf8* pTypeTag, const utf8* pPropName )
-		{
-			(void)pTypeTag;
-			(void)pPropName;
-			return false;
-		}
+		/** @brief 첫 자식 요소로 내려갑니다. 이름을 모를 때 씁니다. 없으면 false. */
+		virtual bool pushFirstChild() { return false; }
 		/** @brief pushChild로 내려간 부모를 복원합니다. */
 		virtual void popChild() {}
+
+		// ------------------------------------------------------------------------------
+		// 2-1) 노드 단위 접근 — 임의 중첩 컨테이너용
+		//      태그 이름에 의존하지 않고 자식을 순서대로 훑기 위해 필요합니다.
+		// ------------------------------------------------------------------------------
+		/** @brief 현재 노드의 텍스트를 설정합니다. */
+		virtual void writeText( const utf8* pText ) { (void)pText; }
+		/** @brief 현재 노드의 텍스트를 읽습니다. */
+		virtual bool readText( string& outText )
+		{
+			(void)outText;
+			return false;
+		}
+		/** @brief 현재 노드의 자식 요소를 순서대로 방문합니다(이름 무관). */
+		virtual bool iterateChildren( const XmlChildVisitDelegate& callback )
+		{
+			(void)callback;
+			return false;
+		}
 
 		// ------------------------------------------------------------------------------
 		// 3) 키 정책 — 태그/속성 이름만, 값에는 영향 없음
@@ -169,10 +182,16 @@ namespace sw
 		bool iterateMap( const utf8* pTagName, const XmlMapItemDelegate& callback ) override;
 		/** @brief 현재 부모의 자식 요소로 내려갑니다. 없으면 false. */
 		bool pushChild( const utf8* pTagName ) override;
-		/** @brief 타입 태그 + `_name` 속성으로 자식 요소를 찾아 내려갑니다. */
-		bool pushNamedTypeChild( const utf8* pTypeTag, const utf8* pPropName ) override;
+		/** @brief 첫 자식 요소로 내려갑니다. */
+		bool pushFirstChild() override;
 		/** @brief pushChild로 내려간 부모를 복원합니다. */
 		void popChild() override;
+		/** @brief 현재 노드의 텍스트를 설정합니다. */
+		void writeText( const utf8* pText ) override;
+		/** @brief 현재 노드의 텍스트를 읽습니다. */
+		bool readText( string& outText ) override;
+		/** @brief 현재 노드의 자식 요소를 순서대로 방문합니다. */
+		bool iterateChildren( const XmlChildVisitDelegate& callback ) override;
 
 	private:
 		struct Impl;

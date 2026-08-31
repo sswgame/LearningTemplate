@@ -3,9 +3,9 @@
 	<entities>
 		<entity name="TestCube">
 			<GameObject _schemaVersion="0" _name="TestCube" _bActive="true">
-				<vector _name="_listComponent">
+				<_listComponent>
 					<MeshComponent _schemaVersion="0" _meshId="Cube" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1"/>
-				</vector>
+				</_listComponent>
 			</GameObject>
 		</entity>
 	</entities>

@@ -983,8 +983,10 @@ SW_TEST_CASE( ObjectStateXmlSerializerTest, SaveAndLoadXmlString )
 	SW_ASSERT_TRUE( xml.empty() == false );
 	SW_EXPECT_TRUE( xml.find( "GameObject" ) != sw::string::npos );
 	SW_EXPECT_TRUE( xml.find( "SerializedHero" ) != sw::string::npos );
-	SW_EXPECT_TRUE( xml.find( "_name=\"_listComponent\"" ) != sw::string::npos );
-	SW_EXPECT_TRUE( xml.find( "<_listComponent>" ) == sw::string::npos );
+	// 컨테이너는 프로퍼티 이름 요소로 직접 나간다(<vector _name=..> 래핑 없음).
+	// 비어 있으면 self-closing(<_listComponent />)이라 여는 태그만으로 찾는다.
+	SW_EXPECT_TRUE( xml.find( "<_listComponent" ) != sw::string::npos );
+	SW_EXPECT_TRUE( xml.find( "_name=\"_listComponent\"" ) == sw::string::npos );
 	SW_EXPECT_TRUE( xml.find( "SceneTransforms" ) == sw::string::npos );
 	SW_EXPECT_TRUE( xml.find( "_parentGO" ) == sw::string::npos );
 	SW_EXPECT_TRUE( xml.find( "ParentGO" ) == sw::string::npos );

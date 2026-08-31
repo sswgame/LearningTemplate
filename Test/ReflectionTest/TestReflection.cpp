@@ -1405,7 +1405,7 @@ SW_TEST_CASE( Reflection_Serialization, XmlJsonKeysIgnoreCaseValuesPreserveCase 
 
 	// 프로퍼티 키/태그는 대소문자가 달라도 되고, 문자열 값은 대소문자를 유지해야 한다.
 	const utf8* json =
-		R"({"_ID":77,"_TITLE":"CaseSensitiveValue","vector":[{"_name":"_listScore","item":[1,2]}]})";
+		R"({"_ID":77,"_TITLE":"CaseSensitiveValue","_listScore":[1,2]})";
 	sw::ComplexData fromJson;
 	SW_EXPECT_TRUE( sw::JsonSerializer::deserialize( &fromJson, *typeInfo, json ) );
 	SW_EXPECT_EQUAL( 77, fromJson._id );
@@ -1413,7 +1413,7 @@ SW_TEST_CASE( Reflection_Serialization, XmlJsonKeysIgnoreCaseValuesPreserveCase 
 	SW_EXPECT_EQUAL( 2u, static_cast<uint32>( fromJson._listScore.size() ) );
 
 	const utf8* xml =
-		R"(<sw__ComplexData _ID="88" _TITLE="XmlCaseValue"><vector _name="_listScore"><item>3</item><ITEM>4</ITEM></vector></sw__ComplexData>)";
+		R"(<sw__ComplexData _ID="88" _TITLE="XmlCaseValue"><_listScore><item>3</item><ITEM>4</ITEM></_listScore></sw__ComplexData>)";
 	sw::ComplexData fromXml;
 	SW_EXPECT_TRUE( sw::XmlSerializer::deserialize( &fromXml, *typeInfo, xml ) );
 	SW_EXPECT_EQUAL( 88, fromXml._id );
@@ -1439,8 +1439,11 @@ SW_TEST_CASE( Reflection_Serialization, XmlJsonKeysIgnoreCaseValuesPreserveCase 
 	SW_EXPECT_TRUE( sw::XmlSerializer::deserialize( &strictXml, *typeInfo, xml, strictCtx ) );
 	SW_EXPECT_EQUAL( 101, strictXml._id );
 	SW_EXPECT_EQUAL( sw::string( "HeroData" ), strictXml._title );
-	SW_EXPECT_EQUAL( 1u, static_cast<uint32>( strictXml._listScore.size() ) ); // 정확 일치 "item"만, "ITEM" 제외
+	// 시퀀스 원소는 이름으로 조회하지 않고 순서대로 읽는다(원소 태그는 타입에 따라 달라짐).
+	// 따라서 대소문자 정책과 무관하게 자식이 모두 들어온다. strict 는 프로퍼티/속성 이름 조회에만 적용된다.
+	SW_EXPECT_EQUAL( 2u, static_cast<uint32>( strictXml._listScore.size() ) );
 	SW_EXPECT_EQUAL( 3, strictXml._listScore[0] );
+	SW_EXPECT_EQUAL( 4, strictXml._listScore[1] );
 };
 
 /**
@@ -1505,23 +1508,88 @@ SW_TEST_CASE( Reflection_Serialization, JsonMapUsesPlainObject )
 	SW_EXPECT_TRUE( json.find( "\"map\"" ) == sw::string::npos );
 	SW_EXPECT_TRUE( json.find( "\"entry\"" ) == sw::string::npos );
 
-	// 레거시 래핑 형식도 계속 읽힌다(기존 저장물 호환).
+	// 레거시 래핑 형식({"map":[{"_name":..,"entry":..}]})은 더 이상 지원하지 않는다.
+	// 알 수 없는 키 "map" 으로 취급되어 실패해야 한다.
 	sw::ComplexData legacy;
-	SW_EXPECT_TRUE( sw::JsonSerializer::deserialize(
+	SW_EXPECT_FALSE( sw::JsonSerializer::deserialize(
 		&legacy, *typeInfo, R"({"map":[{"_name":"_mapStat","entry":{"hp":9}}]})" ) );
-	SW_EXPECT_EQUAL( 9, legacy._mapStat["hp"] );
 };
 
 /**
  * @brief [Reflection_Serialization] JSON 시퀀스 컨테이너를 평범한 배열 표현으로도 읽는다(손으로 쓴 Config 등).
  */
+/**
+ * @brief [Reflection_Serialization] 임의로 중첩된 컨테이너가 세 포맷 모두에서 왕복한다.
+ * @details vector<vector<T>>, map<K,vector<T>>, map<K,map<K,V>>, vector<Struct>, map<K,Struct>.
+ *          표현 형태에 의존하지 않는 안전망이라 직렬화 shape 을 바꿔도 그대로 유효하다.
+ */
+SW_TEST_CASE( Reflection_Serialization, NestedContainerRoundtripAllFormats )
+{
+	const sw::TypeInfo* typeInfo =
+		sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::NestedContainerActor" ) );
+	SW_ASSERT_TRUE( typeInfo != nullptr );
+
+	sw::NestedContainerActor src;
+	src._grid = {
+		{ 1, 2 },
+		{ 3, 4, 5 }
+	};
+	src._namedRows["a"] = { 1.0f, 2.5f };
+	src._namedRows["b"] = { -3.25f };
+	// 임시 맵을 통째로 대입하면 DataRaceDetector 가 오탐하므로 직접 채운다.
+	src._nestedMap["out"]["x"] = 7;
+	src._nestedMap["out"]["y"] = 8;
+	src._nestedMap["in"]["z"]  = 9;
+	src._listInner.push_back( sw::NestedInner{ 11 } );
+	src._listInner.push_back( sw::NestedInner{ 22 } );
+	src._mapInner["m"]._x = 33;
+	src._inner._x		  = 42;
+
+	const auto verify = [&]( const sw::NestedContainerActor& dst, const utf8* pLabel )
+	{
+		// 실패 시 어느 포맷인지 알 수 있게 라벨을 먼저 남긴다.
+		std::fprintf( stdout, "[nested roundtrip] format=%s\n", pLabel );
+		SW_EXPECT_EQUAL( static_cast<size_t>( 2 ), dst._grid.size() );
+		SW_EXPECT_EQUAL( 5, dst._grid[1][2] );
+		SW_EXPECT_EQUAL( static_cast<size_t>( 2 ), dst._namedRows.size() );
+		SW_EXPECT_EQUAL( -3.25f, dst._namedRows.at( "b" )[0] );
+		SW_EXPECT_EQUAL( static_cast<size_t>( 2 ), dst._nestedMap.size() );
+		SW_EXPECT_EQUAL( 8, dst._nestedMap.at( "out" ).at( "y" ) );
+		SW_EXPECT_EQUAL( 9, dst._nestedMap.at( "in" ).at( "z" ) );
+		SW_EXPECT_EQUAL( static_cast<size_t>( 2 ), dst._listInner.size() );
+		SW_EXPECT_EQUAL( 22, dst._listInner[1]._x );
+		SW_EXPECT_EQUAL( 33, dst._mapInner.at( "m" )._x );
+		SW_EXPECT_EQUAL( 42, dst._inner._x );
+	};
+
+	{
+		const sw::string		 json = sw::JsonSerializer::serialize( &src, *typeInfo );
+		sw::NestedContainerActor dst;
+		SW_EXPECT_TRUE( sw::JsonSerializer::deserialize( &dst, *typeInfo, json ) );
+		verify( dst, "json" );
+	}
+	{
+		sw::vector<uint8> bin;
+		sw::BinarySerializer::serialize( &src, *typeInfo, bin );
+		sw::NestedContainerActor dst;
+		SW_EXPECT_TRUE( sw::BinarySerializer::deserialize( &dst, *typeInfo, bin.data(), bin.size() ) );
+		verify( dst, "binary" );
+	}
+	{
+		const sw::string		 xml = sw::XmlSerializer::serialize( &src, *typeInfo );
+		sw::NestedContainerActor dst;
+		SW_EXPECT_TRUE( sw::XmlSerializer::deserialize( &dst, *typeInfo, xml ) );
+		verify( dst, "xml" );
+	}
+};
+
 SW_TEST_CASE( Reflection_Serialization, JsonSequenceAcceptsPlainArray )
 {
 	const sw::TypeInfo* typeInfo =
 		sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::ComplexData" ) );
 	SW_ASSERT_TRUE( typeInfo != nullptr );
 
-	// 자연스러운 형식: "_listScore": [10, 20, 30] (직렬화기가 쓰는 {"vector":[{...}]} 래핑이 아님)
+	// 자연스러운 형식: "_listScore": [10, 20, 30]
 	sw::ComplexData plain;
 	SW_EXPECT_TRUE( sw::JsonSerializer::deserialize( &plain, *typeInfo, R"({"_id":9,"_listScore":[10,20,30]})" ) );
 	SW_EXPECT_EQUAL( 9, plain._id );
@@ -1550,7 +1618,7 @@ SW_TEST_CASE( Reflection_Serialization, StrictDeserializeFailsOnBadContainerAndF
 	SW_ASSERT_TRUE( typeInfo != nullptr );
 
 	sw::ComplexData jsonContainer;
-	SW_EXPECT_FALSE( sw::JsonSerializer::deserialize( &jsonContainer, *typeInfo, R"({"vector":[{"_name":"_listScore","item":[1,"not_an_int"]}]})" ) );
+	SW_EXPECT_FALSE( sw::JsonSerializer::deserialize( &jsonContainer, *typeInfo, R"({"_listScore":[1,"not_an_int"]})" ) );
 
 	sw::ComplexData jsonField;
 	SW_EXPECT_FALSE( sw::JsonSerializer::deserialize( &jsonField, *typeInfo, R"({"_id":"not_an_int"})" ) );
@@ -1562,10 +1630,10 @@ SW_TEST_CASE( Reflection_Serialization, StrictDeserializeFailsOnBadContainerAndF
 	sw::ComplexData xmlContainer;
 	SW_EXPECT_FALSE( sw::XmlSerializer::deserialize(
 		&xmlContainer, *typeInfo,
-		R"(<sw__ComplexData><vector _name="_listScore"><item>1</item><item>not_an_int</item></vector></sw__ComplexData>)" ) );
+		R"(<sw__ComplexData><_listScore><item>1</item><item>not_an_int</item></_listScore></sw__ComplexData>)" ) );
 
 	sw::ComplexData jsonOk;
-	SW_EXPECT_TRUE( sw::JsonSerializer::deserialize( &jsonOk, *typeInfo, R"({"_id":7,"vector":[{"_name":"_listScore","item":[1,2]}]})" ) );
+	SW_EXPECT_TRUE( sw::JsonSerializer::deserialize( &jsonOk, *typeInfo, R"({"_id":7,"_listScore":[1,2]})" ) );
 	SW_EXPECT_EQUAL( 7, jsonOk._id );
 	SW_EXPECT_EQUAL( 2u, static_cast<uint32>( jsonOk._listScore.size() ) );
 
@@ -2697,7 +2765,11 @@ namespace
 		};
 		src._namedRows["a"] = { 1.0f, 2.5f };
 		src._namedRows["b"] = { -3.25f };
-		src._inner._x		= 42;
+		// 중첩 맵 / 구조체 원소도 골든에 포함해 표기 변화를 놓치지 않게 한다.
+		src._nestedMap["out"]["x"] = 7;
+		src._listInner.push_back( sw::NestedInner{ 11 } );
+		src._mapInner["m"]._x = 33;
+		src._inner._x		  = 42;
 		return src;
 	}
 
@@ -2763,7 +2835,7 @@ SW_TEST_CASE( Reflection_Serialization, GoldenOutputFormatsStable )
 
 	// 컨테이너는 자연스러운 JSON 표현으로 나간다: 시퀀스는 배열, 맵은 오브젝트.
 	const sw::string kGoldenJson =
-		"{\"_grid\":[[1,2],[3,4,5]],\"_namedRows\":{\"a\":[1,2.5],\"b\":[-3.25]},\"_inner\":{\"_x\":42}}";
+		"{\"_grid\":[[1,2],[3,4,5]],\"_namedRows\":{\"a\":[1,2.5],\"b\":[-3.25]},\"_nestedMap\":{\"out\":{\"x\":7}},\"_listInner\":[{\"_x\":11}],\"_mapInner\":{\"m\":{\"_x\":33}},\"_inner\":{\"_x\":42}}";
 
 	const sw::string kGoldenPretty =
 		"{\n"
@@ -2787,6 +2859,21 @@ SW_TEST_CASE( Reflection_Serialization, GoldenOutputFormatsStable )
 		"            -3.25\n"
 		"        ]\n"
 		"    },\n"
+		"    \"_nestedMap\": {\n"
+		"        \"out\": {\n"
+		"            \"x\": 7\n"
+		"        }\n"
+		"    },\n"
+		"    \"_listInner\": [\n"
+		"        {\n"
+		"            \"_x\": 11\n"
+		"        }\n"
+		"    ],\n"
+		"    \"_mapInner\": {\n"
+		"        \"m\": {\n"
+		"            \"_x\": 33\n"
+		"        }\n"
+		"    },\n"
 		"    \"_inner\": {\n"
 		"        \"_x\": 42\n"
 		"    }\n"
@@ -2794,40 +2881,50 @@ SW_TEST_CASE( Reflection_Serialization, GoldenOutputFormatsStable )
 
 	const sw::string kGoldenXml =
 		"<NestedContainerActor>\n"
-		"\t<vector _name=\"_grid\">\n"
-		"\t\t<vector _name=\"item\">\n"
-		"\t\t\t<item>1</item>\n"
-		"\t\t\t<item>2</item>\n"
-		"\t\t</vector>\n"
-		"\t\t<vector _name=\"item\">\n"
-		"\t\t\t<item>3</item>\n"
-		"\t\t\t<item>4</item>\n"
-		"\t\t\t<item>5</item>\n"
-		"\t\t</vector>\n"
-		"\t</vector>\n"
-		"\t<map _name=\"_namedRows\">\n"
-		"\t\t<entry>\n"
-		"\t\t\t<key>a</key>\n"
-		"\t\t\t<vector _name=\"value\">\n"
-		"\t\t\t\t<item>1</item>\n"
-		"\t\t\t\t<item>2.5</item>\n"
-		"\t\t\t</vector>\n"
-		"\t\t</entry>\n"
-		"\t\t<entry>\n"
-		"\t\t\t<key>b</key>\n"
-		"\t\t\t<vector _name=\"value\">\n"
-		"\t\t\t\t<item>-3.25</item>\n"
-		"\t\t\t</vector>\n"
-		"\t\t</entry>\n"
-		"\t</map>\n"
-		"\t<_inner _x=\"42\" />\n"
+		"	<_grid>\n"
+		"		<item>\n"
+		"			<item>1</item>\n"
+		"			<item>2</item>\n"
+		"		</item>\n"
+		"		<item>\n"
+		"			<item>3</item>\n"
+		"			<item>4</item>\n"
+		"			<item>5</item>\n"
+		"		</item>\n"
+		"	</_grid>\n"
+		"	<_namedRows>\n"
+		"		<entry key=\"a\">\n"
+		"			<item>1</item>\n"
+		"			<item>2.5</item>\n"
+		"		</entry>\n"
+		"		<entry key=\"b\">\n"
+		"			<item>-3.25</item>\n"
+		"		</entry>\n"
+		"	</_namedRows>\n"
+		"	<_nestedMap>\n"
+		"		<entry key=\"out\">\n"
+		"			<entry key=\"x\">7</entry>\n"
+		"		</entry>\n"
+		"	</_nestedMap>\n"
+		"	<_listInner>\n"
+		"		<NestedInner _x=\"11\" />\n"
+		"	</_listInner>\n"
+		"	<_mapInner>\n"
+		"		<entry key=\"m\">\n"
+		"			<NestedInner _x=\"33\" />\n"
+		"		</entry>\n"
+		"	</_mapInner>\n"
+		"	<_inner _x=\"42\" />\n"
 		"</NestedContainerActor>\n";
 
 	const sw::string kGoldenBinHex =
-		"030000005614ce66612cdb3e20000000020000000200000001000000020000000300000003000000"
+		"060000005614ce66612cdb3e20000000020000000200000001000000020000000300000003000000"
 		"040000000500000086cb7acc7e60e28222000000020000000100000061020000000000803f000020"
-		"40010000006201000000000050c0be55188f1aa2d1f6180000001400000001000000a27d0b57bfe2"
-		"defb040000002a000000";
+		"40010000006201000000000050c04d6e7f33b377b4f91800000001000000030000006f7574010000"
+		"000100000078070000004ad2a1f20b4516201c000000010000001400000001000000a27d0b57bfe2"
+		"defb040000000b00000088efdd2cd7dd8ffe2100000001000000010000006d1400000001000000a2"
+		"7d0b57bfe2defb0400000021000000be55188f1aa2d1f6180000001400000001000000a27d0b57bf"
+		"e2defb040000002a000000";
 
 	const sw::string json = sw::JsonSerializer::serialize( &src, *typeInfo );
 	if ( json != kGoldenJson )
