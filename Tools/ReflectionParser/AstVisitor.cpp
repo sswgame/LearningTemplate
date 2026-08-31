@@ -501,7 +501,7 @@ namespace sw
 			{
 				const vector<string> args = extractTemplateArgs( typeSpelling );
 				const int32			 numClangArgs =
-					( type.kind == CXType_Invalid ) ? 0 : clang_Type_getNumTemplateArguments( type );
+					 ( type.kind == CXType_Invalid ) ? 0 : clang_Type_getNumTemplateArguments( type );
 
 				if ( node._containerKind == ContainerKind::Map )
 				{
@@ -663,8 +663,10 @@ namespace sw
 						return CXChildVisit_Continue;
 					if ( clang_CXXConstructor_isCopyConstructor( cursor ) || clang_CXXConstructor_isMoveConstructor( cursor ) )
 						return CXChildVisit_Continue;
-					if ( clang_CXXMethod_isDeleted( cursor ) )
+#if defined( CINDEX_VERSION_MINOR ) && ( CINDEX_VERSION_MINOR >= 63 || ( defined( CINDEX_VERSION_MAJOR ) && CINDEX_VERSION_MAJOR > 0 ) )
+					if ( clang_CXXMethod_isDeleted( cursor ) != 0 )
 						return CXChildVisit_Continue;
+#endif
 
 					ParsedFunctionInfo method;
 					method._name		   = annotationConstants::kCtorLookupName;
@@ -767,7 +769,7 @@ namespace sw
 				const CXType   baseType = clang_getCursorType( cursor );
 				const CXCursor baseDecl = clang_getTypeDeclaration( baseType );
 				const string   baseFQN =
-					( clang_Cursor_isNull( baseDecl ) == 0 ) ? AstVisitor::buildFullyQualifiedName( baseDecl ) : string{};
+					  ( clang_Cursor_isNull( baseDecl ) == 0 ) ? AstVisitor::buildFullyQualifiedName( baseDecl ) : string{};
 
 				++collector->_baseCount;
 				if ( collector->_baseCount > 1 )
@@ -985,8 +987,8 @@ namespace sw
 		{
 			const bool bHasFunction = AstVisitorInternal::hasAnnotateAttrPrefix( cursor, annotationConstants::kFunctionPrefix ) ||
 									  AstVisitorInternal::sourceHasPrimaryAnnotation( cursor, annotationConstants::kFunctionPrefix );
-			const bool bHasBody		= AstVisitorInternal::hasAnnotateAttrPrefix( cursor, "REFLECT_BODY" ) ||
-									  ( AstVisitorInternal::cxStringToStd( clang_getCursorSpelling( cursor ) ) == annotationConstants::kReflectBodyMarkerFn );
+			const bool bHasBody = AstVisitorInternal::hasAnnotateAttrPrefix( cursor, "REFLECT_BODY" ) ||
+								  ( AstVisitorInternal::cxStringToStd( clang_getCursorSpelling( cursor ) ) == annotationConstants::kReflectBodyMarkerFn );
 			if ( bHasFunction || bHasBody )
 			{
 				CXCursor   parent		  = clang_getCursorSemanticParent( cursor );
