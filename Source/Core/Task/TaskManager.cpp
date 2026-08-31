@@ -1150,7 +1150,7 @@ namespace sw
 			}
 		}
 
-		return tryStealAndExecute( ~0u );
+		return tryStealAndExecute( invalid_index::kUint32 );
 	}
 
 	bool TaskManager::tryStealAndExecute( uint32 excludedWorkerId )

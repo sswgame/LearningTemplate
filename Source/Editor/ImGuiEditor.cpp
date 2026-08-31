@@ -46,8 +46,8 @@ namespace sw::editor
 	{
 		struct ImGuiEditorInternal
 		{
-			static constexpr uint32 kInvalidDrawSlot   = 0xFFFFFFFFu;
-			static constexpr uint32 kDrawSnapshotCount = 2;
+			static constexpr uint32 kInvalidDrawSlot   = invalid_index::kUint32;
+			static constexpr uint32 kDrawSnapshotCount = constant::kMaxFrameCountInFlight;
 			static void				loadSplashDefaultRenderPass( const TaskArgs& args )
 			{
 				shared_ptr<RenderPassResource> pPass = args.get<shared_ptr<RenderPassResource>>( 0 );
@@ -179,9 +179,9 @@ namespace sw::editor
 
 			TaskManager* pTaskManager = editor::getService<TaskManager>();
 			TaskHandle	 hDefault	  = pTaskManager->emplaceTask(
-				"EditorSplash_DefaultRenderPass",
-				SW_DELEGATE_FUNCTION( TaskArgsDelegate, ImGuiEditorInternal::loadSplashDefaultRenderPass ),
-				MakeTaskArgs( defaultPass ) );
+				  "EditorSplash_DefaultRenderPass",
+				  SW_DELEGATE_FUNCTION( TaskArgsDelegate, ImGuiEditorInternal::loadSplashDefaultRenderPass ),
+				  MakeTaskArgs( defaultPass ) );
 
 			TaskHandle hForward = pTaskManager->emplaceTask(
 				"EditorSplash_ForwardPipeline",

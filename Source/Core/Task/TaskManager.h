@@ -4,6 +4,7 @@
  * @details 방향성 비순환 그래프(DAG) 형태의 의존성 작업 실행을 지원합니다.
  */
 #pragma once
+#include "Core/Common/Defines.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/ConcurrentQueue.h"
@@ -198,7 +199,7 @@ namespace sw
 		/** @brief 현재 스레드의 로컬 큐를 비운 뒤, 다른 워커 작업을 도와 실행합니다. */
 		bool tryHelpAndExecute();
 		/** @brief 다른 워커의 큐에서 작업을 훔쳐와(Work Stealing) 즉시 실행합니다. */
-		bool tryStealAndExecute( uint32 excludedWorkerId );
+		bool tryStealAndExecute( uint32 excludedWorkerId = invalid_index::kUint32 );
 		/** @brief 내부 노드 할당 및 해제 (TaskNode 내부용) */
 		TaskNode* allocateNode();
 		void	  deallocateNode( TaskNode* pNode );

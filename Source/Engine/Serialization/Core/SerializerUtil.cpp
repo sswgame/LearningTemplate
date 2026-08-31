@@ -238,7 +238,7 @@ namespace sw
 		ISequenceContainerWrapper* pSeq = nested._wrapper->asSequence();
 		if ( pSeq != nullptr )
 		{
-			pSeq->reserve( pContainerPtr, MathUtil::min( count, static_cast<uint32>( invalid_index::kUint16 ) ) );
+			pSeq->reserve( pContainerPtr, MathUtil::min( count, static_cast<uint32>( MathUtil::MaxUInt16 ) ) );
 			for ( uint32 elemIndex = 0; elemIndex < count; ++elemIndex )
 			{
 				pSeq->addElementDefault( pContainerPtr );

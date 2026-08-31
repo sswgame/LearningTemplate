@@ -2,6 +2,7 @@
 
 #include "Engine/Animation/BlendSpace.h"
 
+#include "Core/Common/Defines.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Math/Math.h"
 
@@ -83,8 +84,8 @@ namespace sw
 
 		// Inverse Distance Weighting (IDW)
 		float32		 totalWeight = 0.0f;
-		float32		 arrWeight[32];
-		const size_t sampleCount = MathUtil::min( _listSample.size(), static_cast<size_t>( 32 ) );
+		float32		 arrWeight[constant::kMaxBuffer32];
+		const size_t sampleCount = MathUtil::min( _listSample.size(), static_cast<size_t>( constant::kMaxBuffer32 ) );
 		const float2 targetParam{ paramX, paramY };
 
 		for ( size_t index = 0; index < sampleCount; ++index )

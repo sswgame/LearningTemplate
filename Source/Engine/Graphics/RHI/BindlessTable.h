@@ -1,5 +1,6 @@
 #pragma once
 #include "Core/Common/StdHeaders.h"
+#include "Core/Math/MathUtil.h"
 
 #include "Engine/EngineMinimal.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
@@ -14,7 +15,7 @@ namespace sw
 	class SW_API BindlessTable
 	{
 	public:
-		static constexpr RHIDescriptorIndex kMaxBindlessSlots = static_cast<RHIDescriptorIndex>( invalid_index::kUint16 );
+		static constexpr RHIDescriptorIndex kMaxBindlessSlots = static_cast<RHIDescriptorIndex>( MathUtil::MaxUInt16 );
 
 		BindlessTable();
 		~BindlessTable() = default;

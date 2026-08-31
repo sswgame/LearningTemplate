@@ -1,4 +1,5 @@
 #pragma once
+#include "Core/Common/Defines.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/ObjectHandle.h"
@@ -16,12 +17,12 @@ namespace sw
 	{
 		AABB		 _bounds{};
 		ObjectHandle _handle{};
-		int32		 _parent{ -1 };
-		int32		 _leftChild{ -1 };
-		int32		 _rightChild{ -1 };
+		int32		 _parent{ invalid_index::kInt32 };
+		int32		 _leftChild{ invalid_index::kInt32 };
+		int32		 _rightChild{ invalid_index::kInt32 };
 		int32		 _height{ 0 };
 
-		bool isLeaf() const { return _leftChild == -1; }
+		bool isLeaf() const { return _leftChild == invalid_index::kInt32; }
 	};
 
 	/**

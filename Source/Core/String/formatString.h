@@ -680,12 +680,12 @@ namespace sw
 		/** @brief 실수를 문자열로 변환합니다. */
 		static size_t floatToString( utf8* pBuf, float64 value, const Format& format ) noexcept
 		{
-			if ( std::isnan( value ) )
+			if ( MathUtil::isNan( value ) )
 			{
 				Memory::copy( pBuf, "nan", 4 );
 				return 3;
 			}
-			if ( std::isinf( value ) )
+			if ( MathUtil::isInfinite( value ) )
 			{
 				if ( value > 0 )
 				{

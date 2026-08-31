@@ -11,7 +11,7 @@ namespace sw
 		: _listNode{}
 		, _listFreeNode{}
 		, _mapHandleToNode{}
-		, _rootIndex{ -1 }
+		, _rootIndex{ invalid_index::kInt32 }
 	{
 	}
 
@@ -47,9 +47,9 @@ namespace sw
 	{
 		if ( 0 <= nodeIndex && static_cast<size_t>( nodeIndex ) < _listNode.size() )
 		{
-			_listNode[static_cast<size_t>( nodeIndex )]._parent		= -1;
-			_listNode[static_cast<size_t>( nodeIndex )]._leftChild	= -1;
-			_listNode[static_cast<size_t>( nodeIndex )]._rightChild = -1;
+			_listNode[static_cast<size_t>( nodeIndex )]._parent		= invalid_index::kInt32;
+			_listNode[static_cast<size_t>( nodeIndex )]._leftChild	= invalid_index::kInt32;
+			_listNode[static_cast<size_t>( nodeIndex )]._rightChild = invalid_index::kInt32;
 			_listNode[static_cast<size_t>( nodeIndex )]._handle		= ObjectHandle{};
 			_listFreeNode.push_back( nodeIndex );
 		}
@@ -58,7 +58,7 @@ namespace sw
 	int32 BVHTree3D::insert( ObjectHandle handle, const AABB& bounds )
 	{
 		if ( handle.isValid() == false )
-			return -1;
+			return invalid_index::kInt32;
 
 		if ( _mapHandleToNode.find( handle ) != _mapHandleToNode.end() )
 			remove( handle );
@@ -93,7 +93,7 @@ namespace sw
 
 	void BVHTree3D::clear()
 	{
-		_rootIndex = -1;
+		_rootIndex = invalid_index::kInt32;
 		_listNode.clear();
 		_listFreeNode.clear();
 		_mapHandleToNode.clear();
@@ -101,10 +101,10 @@ namespace sw
 
 	void BVHTree3D::insertLeaf( int32 leafIndex )
 	{
-		if ( _rootIndex == -1 )
+		if ( _rootIndex == invalid_index::kInt32 )
 		{
 			_rootIndex											 = leafIndex;
-			_listNode[static_cast<size_t>( _rootIndex )]._parent = -1;
+			_listNode[static_cast<size_t>( _rootIndex )]._parent = invalid_index::kInt32;
 			return;
 		}
 
@@ -175,7 +175,7 @@ namespace sw
 		_listNode[static_cast<size_t>( sibling )]._parent	= newParent;
 		_listNode[static_cast<size_t>( leafIndex )]._parent = newParent;
 
-		if ( oldParent != -1 )
+		if ( oldParent != invalid_index::kInt32 )
 		{
 			if ( _listNode[static_cast<size_t>( oldParent )]._leftChild == sibling )
 				_listNode[static_cast<size_t>( oldParent )]._leftChild = newParent;
@@ -189,7 +189,7 @@ namespace sw
 
 		// Walk back up the tree refitting AABBs and balancing
 		index = _listNode[static_cast<size_t>( leafIndex )]._parent;
-		while ( index != -1 )
+		while ( index != invalid_index::kInt32 )
 		{
 			index = balance( index );
 
@@ -211,7 +211,7 @@ namespace sw
 	{
 		if ( leafIndex == _rootIndex )
 		{
-			_rootIndex = -1;
+			_rootIndex = invalid_index::kInt32;
 			return;
 		}
 
@@ -221,7 +221,7 @@ namespace sw
 									? _listNode[static_cast<size_t>( parent )]._rightChild
 									: _listNode[static_cast<size_t>( parent )]._leftChild;
 
-		if ( grandParent != -1 )
+		if ( grandParent != invalid_index::kInt32 )
 		{
 			if ( _listNode[static_cast<size_t>( grandParent )]._leftChild == parent )
 				_listNode[static_cast<size_t>( grandParent )]._leftChild = sibling;
@@ -232,7 +232,7 @@ namespace sw
 			freeNode( parent );
 
 			int32 index = grandParent;
-			while ( index != -1 )
+			while ( index != invalid_index::kInt32 )
 			{
 				index = balance( index );
 
@@ -252,7 +252,7 @@ namespace sw
 		else
 		{
 			_rootIndex										  = sibling;
-			_listNode[static_cast<size_t>( sibling )]._parent = -1;
+			_listNode[static_cast<size_t>( sibling )]._parent = invalid_index::kInt32;
 			freeNode( parent );
 		}
 	}
@@ -283,7 +283,7 @@ namespace sw
 			C._parent	 = A._parent;
 			A._parent	 = iC;
 
-			if ( C._parent != -1 )
+			if ( C._parent != invalid_index::kInt32 )
 			{
 				if ( _listNode[static_cast<size_t>( C._parent )]._leftChild == nodeIndex )
 					_listNode[static_cast<size_t>( C._parent )]._leftChild = iC;
@@ -333,7 +333,7 @@ namespace sw
 			B._parent	 = A._parent;
 			A._parent	 = iB;
 
-			if ( B._parent != -1 )
+			if ( B._parent != invalid_index::kInt32 )
 			{
 				if ( _listNode[static_cast<size_t>( B._parent )]._leftChild == nodeIndex )
 					_listNode[static_cast<size_t>( B._parent )]._leftChild = iB;
@@ -376,10 +376,10 @@ namespace sw
 
 	void BVHTree3D::queryAABB( const AABB& queryBox, vector<ObjectHandle>& outListHandle ) const
 	{
-		if ( _rootIndex == -1 )
+		if ( _rootIndex == invalid_index::kInt32 )
 			return;
 
-		int32 arrStack[256];
+		int32 arrStack[constant::kMaxBuffer256];
 		int32 stackCount	   = 0;
 		arrStack[stackCount++] = _rootIndex;
 
@@ -396,9 +396,9 @@ namespace sw
 				}
 				else
 				{
-					if ( node._leftChild != -1 && stackCount < 255 )
+					if ( node._leftChild != invalid_index::kInt32 && stackCount < static_cast<int32>( constant::kMaxBuffer256 - 1 ) )
 						arrStack[stackCount++] = node._leftChild;
-					if ( node._rightChild != -1 && stackCount < 255 )
+					if ( node._rightChild != invalid_index::kInt32 && stackCount < static_cast<int32>( constant::kMaxBuffer256 - 1 ) )
 						arrStack[stackCount++] = node._rightChild;
 				}
 			}
@@ -407,7 +407,7 @@ namespace sw
 
 	void BVHTree3D::queryRay( const float3& origin, const float3& direction, float32 maxDist, vector<ObjectHandle>& outListHandle ) const
 	{
-		if ( _rootIndex == -1 || maxDist <= 0.0f )
+		if ( _rootIndex == invalid_index::kInt32 || maxDist <= 0.0f )
 			return;
 
 		const float3 invDir{
@@ -435,7 +435,7 @@ namespace sw
 			return tMax >= MathUtil::max( 0.0f, tMin ) && tMin <= maxDist;
 		};
 
-		int32 arrStack[256];
+		int32 arrStack[constant::kMaxBuffer256];
 		int32 stackCount	   = 0;
 		arrStack[stackCount++] = _rootIndex;
 
@@ -452,9 +452,9 @@ namespace sw
 				}
 				else
 				{
-					if ( node._leftChild != -1 && stackCount < 255 )
+					if ( node._leftChild != invalid_index::kInt32 && stackCount < static_cast<int32>( constant::kMaxBuffer256 - 1 ) )
 						arrStack[stackCount++] = node._leftChild;
-					if ( node._rightChild != -1 && stackCount < 255 )
+					if ( node._rightChild != invalid_index::kInt32 && stackCount < static_cast<int32>( constant::kMaxBuffer256 - 1 ) )
 						arrStack[stackCount++] = node._rightChild;
 				}
 			}
@@ -463,7 +463,7 @@ namespace sw
 
 	void BVHTree3D::querySphere( const float3& center, float32 radius, vector<ObjectHandle>& outListHandle ) const
 	{
-		if ( _rootIndex == -1 || radius <= 0.0f )
+		if ( _rootIndex == invalid_index::kInt32 || radius <= 0.0f )
 			return;
 
 		const float32 r2			   = radius * radius;
@@ -473,7 +473,7 @@ namespace sw
 			return float3::getDistanceSquared( center, closestPoint ) <= r2;
 		};
 
-		int32 arrStack[256];
+		int32 arrStack[constant::kMaxBuffer256];
 		int32 stackCount	   = 0;
 		arrStack[stackCount++] = _rootIndex;
 
@@ -490,9 +490,9 @@ namespace sw
 				}
 				else
 				{
-					if ( node._leftChild != -1 && stackCount < 255 )
+					if ( node._leftChild != invalid_index::kInt32 && stackCount < static_cast<int32>( constant::kMaxBuffer256 - 1 ) )
 						arrStack[stackCount++] = node._leftChild;
-					if ( node._rightChild != -1 && stackCount < 255 )
+					if ( node._rightChild != invalid_index::kInt32 && stackCount < static_cast<int32>( constant::kMaxBuffer256 - 1 ) )
 						arrStack[stackCount++] = node._rightChild;
 				}
 			}
@@ -533,7 +533,7 @@ namespace sw
 			{
 				const float4& plane = arrPlane[planeIndex];
 				const float3  p{
-					plane._x > 0.0f ? box._max._x : box._min._x,
+					 plane._x > 0.0f ? box._max._x : box._min._x,
 					plane._y > 0.0f ? box._max._y : box._min._y,
 					plane._z > 0.0f ? box._max._z : box._min._z };
 
@@ -543,10 +543,10 @@ namespace sw
 			return true;
 		};
 
-		if ( _rootIndex == -1 )
+		if ( _rootIndex == invalid_index::kInt32 )
 			return;
 
-		int32 arrStack[256];
+		int32 arrStack[constant::kMaxBuffer256];
 		int32 stackCount	   = 0;
 		arrStack[stackCount++] = _rootIndex;
 
@@ -563,9 +563,9 @@ namespace sw
 				}
 				else
 				{
-					if ( node._leftChild != -1 && stackCount < 255 )
+					if ( node._leftChild != invalid_index::kInt32 && stackCount < static_cast<int32>( constant::kMaxBuffer256 - 1 ) )
 						arrStack[stackCount++] = node._leftChild;
-					if ( node._rightChild != -1 && stackCount < 255 )
+					if ( node._rightChild != invalid_index::kInt32 && stackCount < static_cast<int32>( constant::kMaxBuffer256 - 1 ) )
 						arrStack[stackCount++] = node._rightChild;
 				}
 			}
@@ -584,7 +584,7 @@ namespace sw
 
 	int32 BVHTree3D::getTreeHeight() const
 	{
-		if ( _rootIndex == -1 )
+		if ( _rootIndex == invalid_index::kInt32 )
 			return 0;
 		return _listNode[static_cast<size_t>( _rootIndex )]._height;
 	}

@@ -82,7 +82,7 @@ namespace sw
 			psoDesc.RasterizerState.CullMode = ( desc._cullMode == RHICullMode::Front )
 												 ? D3D12_CULL_MODE_FRONT
 												 : ( ( desc._cullMode == RHICullMode::Back ) ? D3D12_CULL_MODE_BACK : D3D12_CULL_MODE_NONE );
-			psoDesc.SampleMask				 = UINT_MAX;
+			psoDesc.SampleMask				 = MathUtil::MaxUInt32;
 			psoDesc.PrimitiveTopologyType	 = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 			psoDesc.NumRenderTargets		 = desc._numRenderTargets > 0 ? desc._numRenderTargets : 1;
 			if ( psoDesc.NumRenderTargets > 8 )

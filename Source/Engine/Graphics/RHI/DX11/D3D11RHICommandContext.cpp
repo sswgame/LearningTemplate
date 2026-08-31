@@ -2,6 +2,8 @@
 
 #include "Engine/Graphics/RHI/DX11/D3D11RHICommandContext.h"
 
+#include "Core/Math/MathUtil.h"
+
 #include "Engine/Common/EnginePlatformHeaders.h"
 #include "Engine/Graphics/RHI/DX11/D3D11RHIDevice.h"
 
@@ -98,7 +100,7 @@ namespace sw
 		if ( pRecord->_blendState )
 		{
 			constexpr float32 arrBlendFactor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
-			_pDevice->_deviceContext->OMSetBlendState( pRecord->_blendState.Get(), arrBlendFactor, 0xffffffffu );
+			_pDevice->_deviceContext->OMSetBlendState( pRecord->_blendState.Get(), arrBlendFactor, MathUtil::MaxUInt32 );
 		}
 		if ( pRecord->_depthStencilState )
 			_pDevice->_deviceContext->OMSetDepthStencilState( pRecord->_depthStencilState.Get(), 0 );
@@ -173,7 +175,7 @@ namespace sw
 			if ( pRecord->_blendState )
 			{
 				constexpr float32 arrBlendFactor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
-				_pDevice->_deviceContext->OMSetBlendState( pRecord->_blendState.Get(), arrBlendFactor, 0xffffffffu );
+				_pDevice->_deviceContext->OMSetBlendState( pRecord->_blendState.Get(), arrBlendFactor, MathUtil::MaxUInt32 );
 			}
 		}
 		else if ( pDsv != nullptr && _pDevice->_depthEnabledState )
@@ -400,8 +402,8 @@ namespace sw
 		Microsoft::WRL::ComPtr<ID3DUserDefinedAnnotation> annotation;
 		if ( SUCCEEDED( _pDevice->_deviceContext.As( &annotation ) ) && annotation != nullptr )
 		{
-			utf16 wide[256]{};
-			MultiByteToWideChar( CP_UTF8, 0, pName, -1, wide, 256 );
+			utf16 wide[constant::kMaxBuffer256]{};
+			MultiByteToWideChar( CP_UTF8, 0, pName, -1, wide, constant::kMaxBuffer256 );
 			annotation->BeginEvent( wide );
 		}
 	}

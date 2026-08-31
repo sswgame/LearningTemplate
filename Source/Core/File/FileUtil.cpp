@@ -957,7 +957,7 @@ namespace sw
 			const string nativePath = toNativeSeparators( absPath );
 
 			const string dir = getDirectoryPart( nativePath );
-			utf8		 arrPreviousDllDir[MAX_PATH]{};
+			utf8		 arrPreviousDllDir[constant::kMaxPathSize]{};
 			const DWORD	 previousDllDirLen = GetDllDirectoryA( static_cast<DWORD>( sizeof( arrPreviousDllDir ) ), arrPreviousDllDir );
 			if ( dir.empty() == false )
 				SetDllDirectoryA( dir.c_str() );

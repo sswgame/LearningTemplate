@@ -2,6 +2,8 @@
 
 #include "Engine/Physics/CollisionLayers.h"
 
+#include "Core/Math/MathUtil.h"
+
 namespace sw
 {
 	CollisionLayers::CollisionLayers()
@@ -44,7 +46,7 @@ namespace sw
 	{
 		for ( uint32 layerIndex = 0; layerIndex < kLayerCount; ++layerIndex )
 		{
-			_arrMatrix[layerIndex] = 0xffffffffu;
+			_arrMatrix[layerIndex] = MathUtil::MaxUInt32;
 		}
 	}
 } // namespace sw

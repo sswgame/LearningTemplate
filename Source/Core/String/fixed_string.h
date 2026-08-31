@@ -3,6 +3,7 @@
  * @brief 고정 용량 스택 할당 문자열 (basic_fixed_string)
  */
 #pragma once
+#include "Core/Common/Defines.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
@@ -39,7 +40,7 @@ namespace sw
 
 	public:
 		/** @brief 검색 실패 등을 나타내는 무효 인덱스 상수 (-1) */
-		static constexpr uint32 npos = static_cast<uint32>( -1 );
+		static constexpr uint32 npos = invalid_index::kUint32;
 
 		using value_type	  = T;
 		using size_type		  = uint32;

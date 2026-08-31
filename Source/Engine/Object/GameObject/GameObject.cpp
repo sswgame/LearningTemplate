@@ -30,7 +30,7 @@ namespace sw
 		, _bIsActiveInHierarchy{ true }
 		, _bIsPendingKill{ false }
 		, _listComponent{}
-		, _managerIndex{ static_cast<uint32>( -1 ) }
+		, _managerIndex{ invalid_index::kUint32 }
 	{
 	}
 
@@ -42,7 +42,7 @@ namespace sw
 		, _bIsActiveInHierarchy{ true }
 		, _bIsPendingKill{ false }
 		, _listComponent{}
-		, _managerIndex{ static_cast<uint32>( -1 ) }
+		, _managerIndex{ invalid_index::kUint32 }
 	{
 	}
 

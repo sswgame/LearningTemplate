@@ -5,6 +5,7 @@
  *          T의 주소는 같은 셋의 삽입·삭제 이후 유효하지 않습니다. 저장은 키/핸들만 하십시오.
  */
 #pragma once
+#include "Core/Common/Defines.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
@@ -23,7 +24,7 @@ namespace sw
 		using key_type						 = KeyType;
 		using mapped_type					 = T;
 		using value_type					 = T;
-		static constexpr KeyType kInvalidKey = 0xFFFFFFFF;
+		static constexpr KeyType kInvalidKey = invalid_index::kUint32;
 
 		sparse_set()								   = default;
 		sparse_set( const sparse_set& )				   = delete;

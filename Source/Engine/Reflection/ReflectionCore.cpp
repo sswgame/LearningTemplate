@@ -3,6 +3,7 @@
 #include "Engine/Reflection/ReflectionCore.h"
 
 #include "Core/Concurrency/atomic.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
@@ -123,7 +124,7 @@ namespace sw
 		, _cachedNameHash{ 0 }
 		, _bitOffset{ 0 }
 		, _containerKind{ ContainerKind::None }
-		, _bitMask{ 0xFF }
+		, _bitMask{ MathUtil::MaxUInt8 }
 		, _bIsContainer{ SW_FALSE }
 		, _bIsBitField{ SW_FALSE }
 		, _reservedFlags{ 0 } {}
@@ -160,7 +161,7 @@ namespace sw
 		, _cachedNameHash{ 0 }
 		, _bitOffset{ 0 }
 		, _containerKind{ containerKind }
-		, _bitMask{ 0xFF }
+		, _bitMask{ MathUtil::MaxUInt8 }
 		, _bIsContainer{ static_cast<uint8>( bIsContainer ? SW_TRUE : SW_FALSE ) }
 		, _bIsBitField{ SW_FALSE }
 		, _reservedFlags{ 0 }

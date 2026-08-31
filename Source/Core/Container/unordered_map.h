@@ -9,6 +9,7 @@
  * 4. Heterogeneous Lookup: `std::string_view` 등 이종 키로 검색 시 임시 힙 메모리 할당(Zero-Allocation)을 지원합니다.
  */
 #pragma once
+#include "Core/Common/Defines.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/DataRaceDetector.h"
@@ -65,7 +66,7 @@ namespace sw
 		const key_equal& get_equal() const noexcept { return _traits.second(); }
 
 		/** @brief 빈 버킷 슬롯을 나타내는 센티넬 값 (-1) */
-		static constexpr size_t kEmptySlot = static_cast<size_t>( -1 );
+		static constexpr size_t kEmptySlot = invalid_index::kUint64;
 
 		/**
 		 * @brief 적재율(Load Factor)이 1.0에 도달하면 버킷 크기를 2배로 확장하고 재해시합니다.

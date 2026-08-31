@@ -3,6 +3,7 @@
  * @brief 각도·보간·클램프·난수 등 스칼라 수학 유틸 (전부 static).
  */
 #pragma once
+#include "Core/Common/Defines.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
 
@@ -25,20 +26,26 @@ namespace sw
 		static constexpr float32 DegreeToRadian = Pi / 180.f;
 		static constexpr float32 RadianToDegree = 180.f / Pi;
 		/** @brief float32 비교용 머신 엡실론입니다. */
-		static constexpr float32 Epsilon = std::numeric_limits<float32>::epsilon();
+		static constexpr float32 Epsilon = 1e-6f;
 		/** @brief float64 비교용 머신 엡실론입니다. */
 		static constexpr float64 Epsilon64 = std::numeric_limits<float64>::epsilon();
 
-		static constexpr float32 MaxFloat	= 3.402823466e+38F;
-		static constexpr float32 MinFloat	= -3.402823466e+38F;
-		static constexpr float64 MaxFloat64 = 1.7976931348623158e+308;
-		static constexpr float64 MinFloat64 = -1.7976931348623158e+308;
-		static constexpr int32	 MaxInt32	= 2147483647;
-		static constexpr int32	 MinInt32	= -2147483647 - 1;
-		static constexpr uint32	 MaxUInt32	= 0xFFFFFFFFU;
-		static constexpr int64	 MaxInt64	= 9223372036854775807LL;
-		static constexpr int64	 MinInt64	= -9223372036854775807LL - 1LL;
-		static constexpr uint64	 MaxUInt64	= 0xFFFFFFFFFFFFFFFFULL;
+		static constexpr float32 MaxFloat	= std::numeric_limits<float32>::max();
+		static constexpr float32 MinFloat	= std::numeric_limits<float32>::lowest();
+		static constexpr float64 MaxFloat64 = std::numeric_limits<float64>::max();
+		static constexpr float64 MinFloat64 = std::numeric_limits<float64>::lowest();
+		static constexpr int8	 MaxInt8	= static_cast<int8>( invalid_index::kUint8 >> 1 );
+		static constexpr int8	 MinInt8	= -MaxInt8 + invalid_index::kInt8;
+		static constexpr int16	 MaxInt16	= static_cast<int16>( invalid_index::kUint16 >> 1 );
+		static constexpr int16	 MinInt16	= -MaxInt16 + invalid_index::kInt16;
+		static constexpr int32	 MaxInt32	= static_cast<int32>( invalid_index::kUint32 >> 1 );
+		static constexpr int32	 MinInt32	= -MaxInt32 + invalid_index::kInt32;
+		static constexpr int64	 MaxInt64	= static_cast<int64>( invalid_index::kUint64 >> 1 );
+		static constexpr int64	 MinInt64	= -MaxInt64 + invalid_index::kInt64;
+		static constexpr uint8	 MaxUInt8	= invalid_index::kUint8;
+		static constexpr uint16	 MaxUInt16	= invalid_index::kUint16;
+		static constexpr uint32	 MaxUInt32	= invalid_index::kUint32;
+		static constexpr uint64	 MaxUInt64	= invalid_index::kUint64;
 
 		/** @brief degree 단위의 각도를 radian 으로 변환 */
 		[[nodiscard]] static constexpr float32 toRadian( const float32 degree ) noexcept { return degree * DegreeToRadian; }

@@ -3,6 +3,7 @@
  * @brief 해시셋. SW_USE_DOD_HASHMAP 이면 밀집 버킷, 아니면 std::unordered_set 래퍼.
  */
 #pragma once
+#include "Core/Common/Defines.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/DataRaceDetector.h"
@@ -51,7 +52,7 @@ namespace sw
 		const key_equal& get_equal() const noexcept { return _traits.second(); }
 
 		/** @brief 빈 버킷 슬롯 표시 (전비트 1). */
-		static constexpr size_t kEmptySlot = static_cast<size_t>( -1 );
+		static constexpr size_t kEmptySlot = invalid_index::kUint64;
 
 		/** @brief 검사합니다. */
 		void check_expand()
