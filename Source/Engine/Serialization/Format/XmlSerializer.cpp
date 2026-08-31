@@ -454,7 +454,7 @@ namespace sw
 							uniqueSeen.insert( prop.getNameHash() );
 							if ( prop._bIsBitField == SW_TRUE )
 							{
-								const bool bVal = ( strValue == "true" || strValue == "1" || strValue == "True" || strValue == "TRUE" );
+								const bool bVal = StringUtil::parseBool( strValue, false );
 								prop.setValue<bool>( pInstance, bVal );
 							}
 							else if ( parseTextValueCoerced( pPropPtr, prop._typeName, strValue, ctx ) == false )

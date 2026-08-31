@@ -53,6 +53,47 @@ namespace sw
 			}
 
 			template <typename T>
+			static bool parseScalarValue( string_view token, T& outValue )
+			{
+				const string_view trimmed = StringUtil::trim( token );
+				if ( trimmed.empty() )
+					return false;
+
+				if constexpr ( std::is_floating_point_v<T> )
+				{
+					if constexpr ( sizeof( T ) == sizeof( float32 ) )
+					{
+						float32 val{ 0.0f };
+						if ( StringUtil::parseFloat( trimmed, val ) == false )
+							return false;
+						outValue = static_cast<T>( val );
+					}
+					else
+					{
+						float64 val{ 0.0 };
+						if ( StringUtil::parseDouble( trimmed, val ) == false )
+							return false;
+						outValue = static_cast<T>( val );
+					}
+				}
+				else if constexpr ( std::is_unsigned_v<T> )
+				{
+					uint64 val{ 0 };
+					if ( StringUtil::parseUInt64( trimmed, val, 10 ) == false )
+						return false;
+					outValue = static_cast<T>( val );
+				}
+				else
+				{
+					int64 val{ 0 };
+					if ( StringUtil::parseInt64( trimmed, val, 10 ) == false )
+						return false;
+					outValue = static_cast<T>( val );
+				}
+				return true;
+			}
+
+			template <typename T>
 			static void registerNumericTextHandler( SerializeContext& ctx, const hashed_string& typeName )
 			{
 				ctx.registerTextHandler(
@@ -61,41 +102,7 @@ namespace sw
 				{ return sw::to_string( *static_cast<const T*>( pPtr ) ); },
 					[]( void* pPtr, string_view strView ) -> bool
 				{
-					const string_view trimmed = StringUtil::trim( strView );
-					if ( trimmed.empty() )
-						return false;
-					if constexpr ( std::is_floating_point_v<T> )
-					{
-						if constexpr ( sizeof( T ) == sizeof( float32 ) )
-						{
-							float32 val{ 0.0f };
-							if ( StringUtil::parseFloat( trimmed, val ) == false )
-								return false;
-							*static_cast<T*>( pPtr ) = static_cast<T>( val );
-						}
-						else
-						{
-							float64 val{ 0.0 };
-							if ( StringUtil::parseDouble( trimmed, val ) == false )
-								return false;
-							*static_cast<T*>( pPtr ) = static_cast<T>( val );
-						}
-					}
-					else if constexpr ( std::is_unsigned_v<T> )
-					{
-						uint64 val{ 0 };
-						if ( StringUtil::parseUInt64( trimmed, val, 10 ) == false )
-							return false;
-						*static_cast<T*>( pPtr ) = static_cast<T>( val );
-					}
-					else
-					{
-						int64 val{ 0 };
-						if ( StringUtil::parseInt64( trimmed, val, 10 ) == false )
-							return false;
-						*static_cast<T*>( pPtr ) = static_cast<T>( val );
-					}
-					return true;
+					return parseScalarValue<T>( strView, *static_cast<T*>( pPtr ) );
 				} );
 			}
 
@@ -123,40 +130,9 @@ namespace sw
 					for ( int32 axisIndex = 0; axisIndex < kCount; ++axisIndex )
 					{
 						const size_t	  sep	= strView.find( ',', start );
-						const string_view token = StringUtil::trim( strView.substr( start, sep == string_view::npos ? string_view::npos : sep - start ) );
-						if ( token.empty() )
+						const string_view token = strView.substr( start, sep == string_view::npos ? string_view::npos : sep - start );
+						if ( parseScalarValue<TElem>( token, pOut[axisIndex] ) == false )
 							return false;
-						if constexpr ( std::is_floating_point_v<TElem> )
-						{
-							if constexpr ( sizeof( TElem ) == sizeof( float32 ) )
-							{
-								float32 val{ 0.0f };
-								if ( StringUtil::parseFloat( token, val ) == false )
-									return false;
-								pOut[axisIndex] = static_cast<TElem>( val );
-							}
-							else
-							{
-								float64 val{ 0.0 };
-								if ( StringUtil::parseDouble( token, val ) == false )
-									return false;
-								pOut[axisIndex] = static_cast<TElem>( val );
-							}
-						}
-						else if constexpr ( std::is_unsigned_v<TElem> )
-						{
-							uint64 val{ 0 };
-							if ( StringUtil::parseUInt64( token, val, 10 ) == false )
-								return false;
-							pOut[axisIndex] = static_cast<TElem>( val );
-						}
-						else
-						{
-							int64 val{ 0 };
-							if ( StringUtil::parseInt64( token, val, 10 ) == false )
-								return false;
-							pOut[axisIndex] = static_cast<TElem>( val );
-						}
 						if ( sep == string_view::npos )
 						{
 							if ( axisIndex != kCount - 1 )

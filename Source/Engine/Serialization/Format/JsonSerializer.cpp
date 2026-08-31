@@ -84,7 +84,7 @@ namespace sw
 				{
 					StringBuilder<constant::kMaxBuffer8192> text;
 					SerializerUtil::valueToText( text, pValPtr, typeName, ctx );
-					dst.setBool( text.view() == "true" || text.view() == "1" );
+					dst.setBool( StringUtil::parseBool( text.view(), false ) );
 					return;
 				}
 
@@ -542,8 +542,7 @@ namespace sw
 						bVal = ( field.asInt() != 0 );
 					else if ( field.isString() )
 					{
-						const string_view s = field.asString();
-						bVal				= ( s == "true" || s == "1" || s == "True" || s == "TRUE" );
+						bVal = StringUtil::parseBool( field.asString(), false );
 					}
 					prop.setValue<bool>( pInstance, bVal );
 					return true;
