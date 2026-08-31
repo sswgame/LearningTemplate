@@ -32,6 +32,12 @@ namespace sw
 					if ( pExisting != nullptr )
 						return pExisting;
 				}
+				if ( typeName == hashed_string( "SceneComponent" ) )
+				{
+					SceneComponent* pExisting = pGameObject->getComponent<SceneComponent>();
+					if ( pExisting != nullptr )
+						return pExisting;
+				}
 				GameObjectManager* pManager = pGameObject->getManager();
 				if ( pManager == nullptr )
 					return nullptr;
@@ -162,19 +168,17 @@ namespace sw
 				writer.writeString( "" );
 				continue;
 			}
-			string typeName = pComp->getComponentName().c_str();
-			if ( typeName.empty() )
-			{
-				const TypeInfo* pTi = pComp->getTypeInfo();
-				if ( pTi != nullptr )
-					typeName = pTi->_fullyQualifiedName.c_str();
-			}
+			const TypeInfo* pTi = pComp->getTypeInfo();
+			string			typeName;
+			if ( pTi != nullptr && pTi->_name.empty() == false )
+				typeName = pTi->_name.c_str();
+			else
+				typeName = pComp->getComponentName().c_str();
 			writer.writeString( typeName );
 
 			compBytes.clear();
-			const TypeInfo* pTypeInfo = pComp->getTypeInfo();
-			if ( pTypeInfo != nullptr )
-				BinarySerializer::serializeVersioned( kObjectReflectedSchemaVersion, pComp, *pTypeInfo, compBytes );
+			if ( pTi != nullptr )
+				BinarySerializer::serializeVersioned( kObjectReflectedSchemaVersion, pComp, *pTi, compBytes );
 			writer.writeBytes( compBytes );
 		}
 
@@ -244,6 +248,8 @@ namespace sw
 			if ( ObjectStateSerializerInternal::parseTagId( tagStr, tag ) )
 				pGameObject->addTag( tag );
 		}
+
+		pGameObject->clearComponents();
 
 		uint32 numComps = 0;
 		if ( reader.read( numComps ) == false )

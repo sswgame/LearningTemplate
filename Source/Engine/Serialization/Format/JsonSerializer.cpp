@@ -8,6 +8,7 @@
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Serialization/Core/SchemaMigrate.h"
 #include "Engine/Serialization/Core/SerializerUtil.h"
+#include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Utility/Json/JsonDocument.h"
 
 namespace sw
@@ -65,10 +66,10 @@ namespace sw
 
 				const hashed_string resolved  = resolveHandlerTypeName( typeName, ctx );
 				const bool			bIsString = ( resolved.isPredefinedType( PredefinedNameType::NameType_string ) ||
-												  resolved.isPredefinedType( PredefinedNameType::NameType_hashed_string ) ||
-												  resolved.isPredefinedType( PredefinedNameType::NameType_TagID ) );
+										  resolved.isPredefinedType( PredefinedNameType::NameType_hashed_string ) ||
+										  resolved.isPredefinedType( PredefinedNameType::NameType_TagID ) );
 				const bool			bIsBool	  = ( resolved.isPredefinedType( PredefinedNameType::NameType_bool ) ||
-												  resolved.isPredefinedType( PredefinedNameType::NameType_atomic_bool ) );
+										  resolved.isPredefinedType( PredefinedNameType::NameType_atomic_bool ) );
 				const bool			bIsEnum	  = ( engine::getTypeRegistry().findEnum( typeName ) != nullptr );
 
 				if ( bIsString || bIsEnum )
@@ -595,6 +596,32 @@ namespace sw
 									  const SerializeContext& ctx )
 	{
 		return deserializeSoft( pInstance, typeInfo, jsonStr, nullptr, nullptr, ctx );
+	}
+
+	bool JsonSerializer::serializeToArchive( const void* pInstance, const TypeInfo& typeInfo, Archive& outArchive,
+											 bool bPretty, const SerializeContext& ctx )
+	{
+		const string jsonStr = bPretty ? serializePretty( pInstance, typeInfo, 4, ctx )
+									   : serialize( pInstance, typeInfo, ctx );
+		if ( jsonStr.empty() )
+			return false;
+
+		outArchive << jsonStr;
+		return true;
+	}
+
+	bool JsonSerializer::deserializeFromArchive( void* pInstance, const TypeInfo& typeInfo, Archive& inArchive,
+												 const SerializeContext& ctx )
+	{
+		if ( inArchive.isError() )
+			return false;
+
+		string jsonStr;
+		inArchive >> jsonStr;
+		if ( inArchive.isError() || jsonStr.empty() )
+			return false;
+
+		return deserialize( pInstance, typeInfo, jsonStr, ctx );
 	}
 
 	bool JsonSerializer::saveFile( string_view absPath, const void* pInstance, const TypeInfo& typeInfo, uint32 indentSpaces,

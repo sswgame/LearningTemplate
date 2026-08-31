@@ -8,6 +8,8 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -37,17 +39,29 @@ namespace sw
 	};
 
 	/** @brief 런타임 파티 멤버 (세이브에 들어감) */
-	struct PartyMember
+	REFLECT()
+	struct SW_GF_API PartyMember
 	{
+		REFLECT_BODY();
+
+		PROPERTY()
 		string _speciesId{ "critter_a" };
+		PROPERTY()
 		string _nickname{};
-		int32  _level{ 5 };
-		int32  _hp{ 40 };
-		int32  _hpMax{ 40 };
-		int32  _pp0{ 35 };
-		int32  _pp1{ 20 };
-		int32  _exp{ 0 };
-		int32  _expNext{ 50 };
+		PROPERTY()
+		int32 _level{ 5 };
+		PROPERTY()
+		int32 _hp{ 40 };
+		PROPERTY()
+		int32 _hpMax{ 40 };
+		PROPERTY()
+		int32 _pp0{ 35 };
+		PROPERTY()
+		int32 _pp1{ 20 };
+		PROPERTY()
+		int32 _exp{ 0 };
+		PROPERTY()
+		int32 _expNext{ 50 };
 	};
 
 	// ------------------------------------------------------------------------------

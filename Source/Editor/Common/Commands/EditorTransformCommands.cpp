@@ -19,6 +19,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectPtr.h"
 #include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/Serialization/Format/XmlSerializer.h"
 
 namespace sw::editor
@@ -67,16 +68,22 @@ namespace sw::editor
 
 namespace sw::editor
 {
-	bool EditorTransformCommands::pasteComponentValues( Component* pTargetComp, string_view xml )
+	bool EditorTransformCommands::pasteComponentValues( Component* pTargetComp, const vector<uint8>& bytes, string_view xmlFallback )
 	{
-		if ( pTargetComp == nullptr || pTargetComp->getTypeInfo() == nullptr || xml.empty() )
+		if ( pTargetComp == nullptr || pTargetComp->getTypeInfo() == nullptr )
 			return false;
 
 		GameObject* const pOwner	= pTargetComp->getOwner();
 		const string	  beforeXml = ( pOwner != nullptr ) ? EditorTransaction::captureSnapshot( GameObjectPtr{ pOwner } )
 															: string{};
 
-		const bool bSuccess = XmlSerializer::deserialize( pTargetComp, *pTargetComp->getTypeInfo(), string{ xml } );
+		bool bSuccess = false;
+		if ( bytes.empty() == false )
+			bSuccess = BinarySerializer::deserialize( pTargetComp, *pTargetComp->getTypeInfo(), bytes.data(), bytes.size() );
+
+		if ( bSuccess == false && xmlFallback.empty() == false )
+			bSuccess = XmlSerializer::deserialize( pTargetComp, *pTargetComp->getTypeInfo(), string{ xmlFallback } );
+
 		if ( bSuccess && pOwner != nullptr )
 		{
 			const string afterXml = EditorTransaction::captureSnapshot( GameObjectPtr{ pOwner } );
@@ -85,9 +92,14 @@ namespace sw::editor
 		return bSuccess;
 	}
 
-	Component* EditorTransformCommands::pasteComponentAsNew( GameObject* pTargetObj, string_view typeName, string_view xml )
+	bool EditorTransformCommands::pasteComponentValues( Component* pTargetComp, string_view xml )
 	{
-		if ( pTargetObj == nullptr || typeName.empty() || xml.empty() )
+		return pasteComponentValues( pTargetComp, vector<uint8>{}, xml );
+	}
+
+	Component* EditorTransformCommands::pasteComponentAsNew( GameObject* pTargetObj, string_view typeName, const vector<uint8>& bytes, string_view xmlFallback )
+	{
+		if ( pTargetObj == nullptr || typeName.empty() )
 			return nullptr;
 
 		GameObjectManager* pManager = pTargetObj->getManager();
@@ -99,12 +111,23 @@ namespace sw::editor
 		Component* pNewComp = pManager->addComponentByName( pTargetObj, hashed_string{ typeName } );
 		if ( pNewComp != nullptr && pNewComp->getTypeInfo() != nullptr )
 		{
-			XmlSerializer::deserialize( pNewComp, *pNewComp->getTypeInfo(), string{ xml } );
+			bool bSuccess = false;
+			if ( bytes.empty() == false )
+				bSuccess = BinarySerializer::deserialize( pNewComp, *pNewComp->getTypeInfo(), bytes.data(), bytes.size() );
+
+			if ( bSuccess == false && xmlFallback.empty() == false )
+				bSuccess = XmlSerializer::deserialize( pNewComp, *pNewComp->getTypeInfo(), string{ xmlFallback } );
+
 			const string afterXml = EditorTransaction::captureSnapshot( GameObjectPtr{ pTargetObj } );
 			EditorTransaction::recordModify( GameObjectPtr{ pTargetObj }, beforeXml, afterXml, "Paste Component as New" );
 			return pNewComp;
 		}
 		return nullptr;
+	}
+
+	Component* EditorTransformCommands::pasteComponentAsNew( GameObject* pTargetObj, string_view typeName, string_view xml )
+	{
+		return pasteComponentAsNew( pTargetObj, typeName, vector<uint8>{}, xml );
 	}
 
 	bool EditorTransformCommands::saveComponentPreset( const Component* pComp, string_view presetName )

@@ -34,11 +34,14 @@ namespace sw
 			, _mapBinaryReader{}
 			, _mapTextWriter{}
 			, _mapTextReader{}
+			, _mapObjectToId{}
+			, _mapIdToObject{}
 			, _pOuterInstance{ nullptr }
 			, _pOwnedPointerCreateFn{ nullptr }
 			, _pRuntimeTypeInfoFn{ nullptr }
 			, _bIgnoreCaseKeys{ SW_TRUE }
 			, _bAllowUnknownProperties{ SW_FALSE }
+			, _bEnableObjectDeduplication{ SW_FALSE }
 			, _reservedFlags{ 0 } {}
 
 		// ------------------------------------------------------------------------------
@@ -123,6 +126,63 @@ namespace sw
 			return _pRuntimeTypeInfoFn( pInstance );
 		}
 
+		/** @brief 오브젝트 중복 제거(포인터 테이블) 활성화 여부 설정 */
+		SerializeContext& setEnableObjectDeduplication( bool bEnable )
+		{
+			_bEnableObjectDeduplication = bEnable ? SW_TRUE : SW_FALSE;
+			return *this;
+		}
+
+		bool isObjectDeduplicationEnabled() const { return _bEnableObjectDeduplication == SW_TRUE; }
+
+		/** @brief 포인터 객체를 테이블에 등록하거나 이미 등록된 ID를 반환합니다. */
+		uint32 registerOrFindObjectId( const void* pInstance ) const
+		{
+			if ( pInstance == nullptr )
+				return 0;
+			const auto it = _mapObjectToId.find( pInstance );
+			if ( it != _mapObjectToId.end() )
+				return it->second;
+			const uint32 newId = static_cast<uint32>( _mapObjectToId.size() + 1 );
+			_mapObjectToId.emplace( pInstance, newId );
+			return newId;
+		}
+
+		/** @brief 포인터 객체의 기존 등록 ID를 조회합니다. */
+		bool findObjectId( const void* pInstance, uint32& outId ) const
+		{
+			if ( pInstance == nullptr )
+				return false;
+			const auto it = _mapObjectToId.find( pInstance );
+			if ( it == _mapObjectToId.end() )
+				return false;
+			outId = it->second;
+			return true;
+		}
+
+		/** @brief ID에 매핑되는 역직렬화 인스턴스 주소를 등록합니다. */
+		void registerObjectWithId( uint32 id, void* pInstance ) const
+		{
+			if ( id != 0 && pInstance != nullptr )
+				_mapIdToObject[id] = pInstance;
+		}
+
+		/** @brief ID로부터 역직렬화된 인스턴스 주소를 조회합니다. */
+		void* findObjectById( uint32 id ) const
+		{
+			const auto it = _mapIdToObject.find( id );
+			if ( it != _mapIdToObject.end() )
+				return it->second;
+			return nullptr;
+		}
+
+		/** @brief 객체 포인터 테이블을 초기화합니다. */
+		void clearObjectTable() const
+		{
+			_mapObjectToId.clear();
+			_mapIdToObject.clear();
+		}
+
 		/** @brief 기본 전역 직렬화 컨텍스트를 반환합니다. */
 		static const SerializeContext& getDefault();
 
@@ -131,12 +191,15 @@ namespace sw
 		unordered_map<hashed_string, BinaryReadFn>	_mapBinaryReader;
 		unordered_map<hashed_string, TextWriteFn>	_mapTextWriter;
 		unordered_map<hashed_string, TextReadFn>	_mapTextReader;
+		mutable unordered_map<const void*, uint32>	_mapObjectToId;
+		mutable unordered_map<uint32, void*>		_mapIdToObject;
 		void*										_pOuterInstance;
 		OwnedPointerCreateFn						_pOwnedPointerCreateFn;
 		RuntimeTypeInfoFn							_pRuntimeTypeInfoFn;
-		uint8										_bIgnoreCaseKeys		 : 1;
-		uint8										_bAllowUnknownProperties : 1;
-		[[maybe_unused]] uint8						_reservedFlags			 : 6;
+		uint8										_bIgnoreCaseKeys			: 1;
+		uint8										_bAllowUnknownProperties	: 1;
+		uint8										_bEnableObjectDeduplication : 1;
+		[[maybe_unused]] uint8						_reservedFlags				: 5;
 	};
 
 } // namespace sw

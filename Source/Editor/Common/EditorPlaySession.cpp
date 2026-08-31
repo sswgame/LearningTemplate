@@ -28,10 +28,11 @@ namespace sw::editor
 
 			struct ObjectSnapshot
 			{
-				Uuid   _guid{};
-				uint64 _objectId{ 0 };
-				string _name;
-				string _xml;
+				Uuid		  _guid{};
+				uint64		  _objectId{ 0 };
+				string		  _name;
+				vector<uint8> _bytes;
+				string		  _xml;
 			};
 
 			static inline vector<ObjectSnapshot> s_listPlaySnapshots;
@@ -98,8 +99,11 @@ namespace sw::editor
 					entry._name		= pObj->getName().c_str();
 					if ( pContext != nullptr )
 						entry._guid = pContext->getWorkspace().getOrAssignGuid( entry._objectId );
-					entry._xml = ObjectStateSerializer::saveToXmlString( pObj );
-					if ( entry._xml.empty() == false )
+
+					if ( ObjectStateSerializer::saveToBinaryBuffer( pObj, entry._bytes ) == false )
+						entry._xml = ObjectStateSerializer::saveToXmlString( pObj );
+
+					if ( entry._bytes.empty() == false || entry._xml.empty() == false )
 						s_listPlaySnapshots.push_back( std::move( entry ) );
 				}
 
@@ -176,13 +180,25 @@ namespace sw::editor
 
 					mapRestored[snap._objectId] = pObj;
 
-					if ( ObjectStateSerializer::loadFromXmlString( pObj, snap._xml ) == false )
-						SW_LOG_WARNING( "Failed to restore '%#' from play snapshot.", snap._name.c_str() );
+					if ( snap._bytes.empty() == false )
+					{
+						string parentName;
+						if ( ObjectStateSerializer::loadFromBinaryBuffer( pObj, snap._bytes.data(), snap._bytes.size(), parentName ) == 0 )
+							SW_LOG_WARNING( "Failed to restore '%#' from binary play snapshot.", snap._name.c_str() );
+					}
+					else if ( snap._xml.empty() == false )
+					{
+						if ( ObjectStateSerializer::loadFromXmlString( pObj, snap._xml ) == false )
+							SW_LOG_WARNING( "Failed to restore '%#' from play snapshot.", snap._name.c_str() );
+					}
 				}
 
-				// 3. 계층 관계 리바인딩
+				// 3. 계층 관계 리바인딩 (XML 스냅샷 폴백용)
 				for ( const ObjectSnapshot& snap : s_listPlaySnapshots )
 				{
+					if ( snap._xml.empty() )
+						continue;
+
 					GameObject* pObj = nullptr;
 					auto		it	 = mapRestored.find( snap._objectId );
 					if ( it != mapRestored.end() )

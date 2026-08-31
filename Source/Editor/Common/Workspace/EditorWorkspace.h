@@ -171,14 +171,15 @@ namespace sw::editor
 		// ------------------------------------------------------------------------------
 		// 9) 컴포넌트 복사/붙여넣기 & 프리셋 (에디터 클립보드)
 		// ------------------------------------------------------------------------------
-		void		  copyComponent( const Component* pComp );
-		bool		  hasCopiedComponent() const;
-		const string& getCopiedComponentXml() const { return _copiedComponentXml; }
-		const string& getCopiedComponentTypeName() const { return _copiedComponentTypeName; }
-		bool		  pasteComponentValues( Component* pTargetComp );
-		Component*	  pasteComponentAsNew( GameObject* pTargetObj );
-		bool		  saveComponentPreset( const Component* pComp, string_view presetName );
-		bool		  loadComponentPreset( Component* pComp, string_view presetFilePath );
+		void				 copyComponent( const Component* pComp );
+		bool				 hasCopiedComponent() const;
+		const string&		 getCopiedComponentXml() const { return _copiedComponentXml; }
+		const vector<uint8>& getCopiedComponentBytes() const { return _copiedComponentBytes; }
+		const string&		 getCopiedComponentTypeName() const { return _copiedComponentTypeName; }
+		bool				 pasteComponentValues( Component* pTargetComp );
+		Component*			 pasteComponentAsNew( GameObject* pTargetObj );
+		bool				 saveComponentPreset( const Component* pComp, string_view presetName );
+		bool				 loadComponentPreset( Component* pComp, string_view presetFilePath );
 
 		void alignSelectedObjects( AlignAxis axis, AlignType type );
 		void distributeSelectedObjects( AlignAxis axis );
@@ -217,6 +218,7 @@ namespace sw::editor
 		string						  _emptyString;
 		string						  _copiedComponentXml;
 		string						  _copiedComponentTypeName;
+		vector<uint8>				  _copiedComponentBytes;
 		mutex						  _pendingSceneMutex;
 		array<CameraBookmark, 9>	  _arrCameraBookmark;
 		vector<PrefabIsolationFrame>  _listPrefabIsolationFrame;

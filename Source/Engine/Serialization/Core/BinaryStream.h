@@ -1,5 +1,6 @@
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Common/VarIntUtil.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
@@ -41,6 +42,16 @@ namespace sw
 				const uint8* pSrc = reinterpret_cast<const uint8*>( str.data() );
 				_buffer.insert( _buffer.end(), pSrc, pSrc + size );
 			}
+		}
+
+		void writeVarUInt( uint64 value )
+		{
+			VarIntUtil::encodeVarUInt64( value, _buffer );
+		}
+
+		void writeVarInt( int64 value )
+		{
+			VarIntUtil::encodeVarInt64( value, _buffer );
 		}
 
 		template <typename T>
@@ -107,6 +118,26 @@ namespace sw
 			outStr.assign( reinterpret_cast<const utf8*>( _pData + _offset ), size );
 			_offset += size;
 			return true;
+		}
+
+		bool readVarUInt( uint64& outValue )
+		{
+			return VarIntUtil::decodeVarUInt64( _pData, _size, _offset, outValue );
+		}
+
+		bool readVarUInt( uint32& outValue )
+		{
+			return VarIntUtil::decodeVarUInt32( _pData, _size, _offset, outValue );
+		}
+
+		bool readVarInt( int64& outValue )
+		{
+			return VarIntUtil::decodeVarInt64( _pData, _size, _offset, outValue );
+		}
+
+		bool readVarInt( int32& outValue )
+		{
+			return VarIntUtil::decodeVarInt32( _pData, _size, _offset, outValue );
 		}
 
 		template <typename T>

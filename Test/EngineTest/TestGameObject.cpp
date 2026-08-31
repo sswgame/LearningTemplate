@@ -1524,3 +1524,32 @@ SW_TEST_CASE( GameObjectTest, ActiveInHierarchyFollowsParent )
 	SW_EXPECT_TRUE( pParent->isActiveInHierarchy() );
 	SW_EXPECT_FALSE( pChild->isActiveInHierarchy() );
 }
+
+/**
+ * @brief [GameObjectTest] ObjectStateSerializer 바이너리 버퍼 직렬화 및 복원 검증
+ */
+SW_TEST_CASE( GameObjectTest, ObjectStateBinaryBufferRoundtrip )
+{
+	sw::GameObjectManager manager;
+	sw::GameObject*		  pSource = manager.createGameObject( sw::hashed_string( "BinaryHero" ) );
+	SW_ASSERT_NOT_NULL( pSource );
+	pSource->setActive( false );
+	pSource->addComponent<sw::SceneComponent>();
+
+	sw::vector<uint8> buffer;
+	SW_ASSERT_TRUE( sw::ObjectStateSerializer::saveToBinaryBuffer( pSource, buffer ) );
+	SW_EXPECT_FALSE( buffer.empty() );
+
+	manager.clear();
+
+	sw::GameObject* pTarget = manager.createGameObject( sw::hashed_string( "TempTarget" ) );
+	SW_ASSERT_NOT_NULL( pTarget );
+	pTarget->setActive( true );
+
+	sw::string	 parentName;
+	const size_t bytesRead = sw::ObjectStateSerializer::loadFromBinaryBuffer( pTarget, buffer.data(), buffer.size(), parentName );
+	SW_EXPECT_EQUAL( buffer.size(), bytesRead );
+	SW_EXPECT_STREQ( "BinaryHero", pTarget->getName().c_str() );
+	SW_EXPECT_FALSE( pTarget->isActive() );
+	SW_EXPECT_NOT_NULL( pTarget->getPrimarySceneComponent() );
+}

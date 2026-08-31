@@ -2,6 +2,7 @@
 
 #include "GameFramework/Base/GameInstanceBase.h"
 
+#include "Core/File/FileUtil.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Config/GameConfig.h"
@@ -9,10 +10,25 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectPtr.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
+#include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/BinarySerializer.h"
 
 #include "RuntimeAPI/Service/GameService.h"
+
+namespace sw
+{
+	namespace
+	{
+		struct StateEnvelopeInternal
+		{
+			static constexpr uint32 kMagic	 = 0x53575354u; // 'SWST' (SW State Snapshot)
+			static constexpr uint32 kVersion = 1;
+		};
+	} // namespace
+} // namespace sw
 
 namespace sw
 {
@@ -45,11 +61,8 @@ namespace sw
 		onUpdate( deltaTime );
 	}
 
-	bool GameInstanceBase::serializeState( void* pOutBuffer, uint32* pInOutSize )
+	bool GameInstanceBase::serializeSceneObjects( vector<uint8>& outBytes )
 	{
-		if ( pInOutSize == nullptr )
-			return false;
-
 		if ( game::areGameServicesBound() == false )
 			return false;
 
@@ -69,37 +82,25 @@ namespace sw
 			listValidObject.push_back( pObj );
 		}
 
-		vector<uint8> bytes;
+		outBytes.clear();
 
 		// 게임오브젝트 갯수를 맨 앞에 기록
-		uint32 count   = static_cast<uint32>( listValidObject.size() );
-		size_t oldSize = bytes.size();
-		bytes.resize( oldSize + sizeof( uint32 ) );
-		Memory::copy( bytes.data() + oldSize, &count, sizeof( uint32 ) );
+		const uint32 count	 = static_cast<uint32>( listValidObject.size() );
+		const size_t oldSize = outBytes.size();
+		outBytes.resize( oldSize + sizeof( uint32 ) );
+		Memory::copy( outBytes.data() + oldSize, &count, sizeof( uint32 ) );
 
 		for ( GameObject* pObj : listValidObject )
 		{
-			ObjectStateSerializer::saveToBinaryBuffer( pObj, bytes );
+			ObjectStateSerializer::saveToBinaryBuffer( pObj, outBytes );
 		}
 
-		if ( pOutBuffer == nullptr )
-		{
-			*pInOutSize = static_cast<uint32>( bytes.size() );
-			return true;
-		}
-		else if ( *pInOutSize >= bytes.size() )
-		{
-			Memory::copy( pOutBuffer, bytes.data(), bytes.size() );
-			*pInOutSize = static_cast<uint32>( bytes.size() );
-			return true;
-		}
-
-		return false;
+		return true;
 	}
 
-	bool GameInstanceBase::deserializeState( const void* pInBuffer, uint32 size )
+	bool GameInstanceBase::deserializeSceneObjects( const uint8* pData, size_t size )
 	{
-		if ( pInBuffer == nullptr || size < sizeof( uint32 ) )
+		if ( pData == nullptr || size < sizeof( uint32 ) )
 			return false;
 
 		if ( game::areGameServicesBound() == false )
@@ -109,13 +110,11 @@ namespace sw
 		if ( pActiveScene == nullptr || pActiveScene->getObjectManager() == nullptr )
 			return false;
 
-		// 핫리로드 전 기존 엔티티들 싹 삭제
+		// 기존 엔티티들 정리
 		pActiveScene->getObjectManager()->clear();
 
-		const uint8* pData	= static_cast<const uint8*>( pInBuffer );
-		size_t		 offset = 0;
-
-		uint32 count = 0;
+		size_t offset = 0;
+		uint32 count  = 0;
 		Memory::copy( &count, pData + offset, sizeof( uint32 ) );
 		offset += sizeof( uint32 );
 
@@ -151,15 +150,149 @@ namespace sw
 			GameObject* pParent = pActiveScene->getObjectManager()->findGameObjectByName( hashed_string( restoredObj._parentName.c_str() ) );
 			if ( pParent == nullptr )
 			{
-				SW_LOG_WARNING( "HotReload ParentGO not found: %s", restoredObj._parentName.c_str() );
+				SW_LOG_WARNING( "State Restore ParentGO not found: %s", restoredObj._parentName.c_str() );
 				continue;
 			}
 			restoredObj._pObj->attachToParent( pParent );
 		}
 
-		// 핫리로드 된 모든 오브젝트들의 월드 매트릭스를 강제 동기화
+		// 복원된 모든 오브젝트들의 월드 매트릭스를 강제 동기화
 		pActiveScene->getObjectManager()->flushSceneTransforms();
 
 		return true;
+	}
+
+	bool GameInstanceBase::serializeState( void* pOutBuffer, uint32* pInOutSize )
+	{
+		if ( pInOutSize == nullptr )
+			return false;
+
+		onBeforeStateSerialize();
+
+		Archive arch;
+		arch << StateEnvelopeInternal::kMagic;
+		arch << StateEnvelopeInternal::kVersion;
+
+		// 1) 씬 오브젝트 바이너리 스냅샷
+		vector<uint8> bytesScene;
+		serializeSceneObjects( bytesScene );
+		arch.writeSection( bytesScene.data(), static_cast<uint32>( bytesScene.size() ) );
+
+		// 2) 파생 클래스 커스텀 리플렉션 상태 스냅샷
+		const TypeInfo* pStateTypeInfo = getStateTypeInfo();
+		const void*		pStateInstance = getStateInstance();
+		if ( pStateTypeInfo != nullptr && pStateInstance != nullptr )
+		{
+			vector<uint8> bytesState;
+			BinarySerializer::serialize( pStateInstance, *pStateTypeInfo, bytesState );
+			arch.writeSection( bytesState.data(), static_cast<uint32>( bytesState.size() ) );
+		}
+		else
+		{
+			arch.writeSection( nullptr, 0 );
+		}
+
+		const size_t totalSize = arch.getSize();
+		if ( pOutBuffer == nullptr )
+		{
+			*pInOutSize = static_cast<uint32>( totalSize );
+			return true;
+		}
+
+		if ( *pInOutSize < totalSize )
+			return false;
+
+		Memory::copy( pOutBuffer, arch.getData(), totalSize );
+		*pInOutSize = static_cast<uint32>( totalSize );
+		return true;
+	}
+
+	bool GameInstanceBase::deserializeState( const void* pInBuffer, uint32 size )
+	{
+		if ( pInBuffer == nullptr || size < sizeof( uint32 ) )
+			return false;
+
+		uint32 magic = 0;
+		Memory::copy( &magic, pInBuffer, sizeof( uint32 ) );
+
+		// 구버전/레거시 포맷 폴백
+		if ( magic != StateEnvelopeInternal::kMagic )
+		{
+			const bool bOk = deserializeSceneObjects( static_cast<const uint8*>( pInBuffer ), size );
+			onAfterStateDeserialize();
+			return bOk;
+		}
+
+		if ( size < sizeof( uint32 ) * 4 )
+			return false;
+
+		Archive arch( static_cast<const uint8*>( pInBuffer ), size );
+		arch >> magic;
+
+		uint32 version = 0;
+		arch >> version;
+
+		// 1) 씬 오브젝트 복원
+		vector<uint8> bytesScene;
+		if ( arch.readSection( bytesScene ) == false )
+			return false;
+
+		if ( bytesScene.empty() == false )
+			deserializeSceneObjects( bytesScene.data(), bytesScene.size() );
+
+		// 2) 파생 클래스 커스텀 리플렉션 상태 복원
+		vector<uint8> bytesState;
+		if ( arch.readSection( bytesState ) == false )
+			return false;
+
+		if ( bytesState.empty() == false )
+		{
+			const TypeInfo* pStateTypeInfo = getStateTypeInfo();
+			void*			pStateInstance = getStateInstance();
+			if ( pStateTypeInfo != nullptr && pStateInstance != nullptr )
+			{
+				if ( BinarySerializer::deserialize( pStateInstance, *pStateTypeInfo, bytesState.data(), bytesState.size() ) == false )
+					return false;
+			}
+		}
+
+		if ( arch.isError() )
+			return false;
+
+		onAfterStateDeserialize();
+		return true;
+	}
+
+	bool GameInstanceBase::captureSnapshot( vector<uint8>& outBytes )
+	{
+		uint32 size = 0;
+		if ( serializeState( nullptr, &size ) == false || size == 0 )
+			return false;
+
+		outBytes.resize( size );
+		return serializeState( outBytes.data(), &size );
+	}
+
+	bool GameInstanceBase::restoreSnapshot( const vector<uint8>& inBytes )
+	{
+		if ( inBytes.empty() )
+			return false;
+		return deserializeState( inBytes.data(), static_cast<uint32>( inBytes.size() ) );
+	}
+
+	bool GameInstanceBase::saveStateToFile( string_view filePath )
+	{
+		vector<uint8> snapshotBytes;
+		if ( captureSnapshot( snapshotBytes ) == false )
+			return false;
+		return FileUtil::writeFile( filePath, snapshotBytes.data(), snapshotBytes.size() );
+	}
+
+	bool GameInstanceBase::loadStateFromFile( string_view filePath )
+	{
+		vector<uint8> snapshotBytes;
+		if ( FileUtil::readFile( filePath, snapshotBytes ) == false )
+			return false;
+		return restoreSnapshot( snapshotBytes );
 	}
 } // namespace sw

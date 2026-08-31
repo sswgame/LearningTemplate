@@ -19,6 +19,8 @@
 #include "GameFramework/Transition/TransitionOrchestrator.h"
 #include "GameFramework/UI/RuntimeHud.h"
 
+#include "Games/Demo/DemoGameState.h"
+
 namespace sw
 {
 	// ------------------------------------------------------------------------------
@@ -37,7 +39,7 @@ namespace sw
 	};
 
 	// ------------------------------------------------------------------------------
-	// 2) DemoGame — 오버월드 / 턴제 / 액션 룸을 한 모듈에서 전환
+	// 3) DemoGame — 오버월드 / 턴제 / 액션 룸을 한 모듈에서 전환
 	// ------------------------------------------------------------------------------
 	/** @brief HD-2D 오버월드 / 전투 데모 게임 */
 	class DemoGame : public GameInstanceBase
@@ -48,9 +50,6 @@ namespace sw
 		/** @brief 소유한 키트 상태를 파괴합니다. */
 		virtual ~DemoGame() override;
 
-		bool serializeState( void* pOutBuffer, uint32* pInOutSize ) override;
-		bool deserializeState( const void* pInBuffer, uint32 size ) override;
-
 	protected:
 		/** @brief 팩·맵·입력을 초기화합니다. */
 		bool onInitialize() override;
@@ -59,9 +58,15 @@ namespace sw
 		/** @brief 전환·오버월드·전투 중 활성 모드만 갱신합니다. */
 		void onUpdate( float32 deltaTime ) override;
 
+		const TypeInfo* getStateTypeInfo() const override;
+		void*			getStateInstance() override;
+		const void*		getStateInstance() const override;
+		void			onBeforeStateSerialize() override;
+		void			onAfterStateDeserialize() override;
+
 	private:
 		// ------------------------------------------------------------------------------
-		// 3) 맵 · 세이브 · 파티
+		// 4) 맵 · 세이브 · 파티
 		// ------------------------------------------------------------------------------
 		/** @brief 맵을 로드하고 플레이어를 스폰합니다. */
 		bool loadMap( string_view mapPath, int32 spawnX = 1, int32 spawnY = 1 );
@@ -136,6 +141,7 @@ namespace sw
 		string				   _returnScenePath;
 		int32				   _returnPlayerX;
 		int32				   _returnPlayerY;
+		DemoGameState		   _gameState;
 		uint8				   _bTitleHandedOff		 : 1; ///< Title → Playing 핸드오프 완료
 		uint8				   _bBattleReturnPending : 1;
 		[[maybe_unused]] uint8 _reserved			 : 6;

@@ -8,6 +8,7 @@
 #include "Engine/Serialization/Core/BinaryStream.h"
 #include "Engine/Serialization/Core/SchemaMigrate.h"
 #include "Engine/Serialization/Core/SerializerUtil.h"
+#include "Engine/Serialization/Format/Archive.h"
 
 namespace sw
 {
@@ -444,5 +445,321 @@ namespace sw
 
 		return BinarySerializer::deserializeVersioned( outVersion, pInstance, typeInfo, listRawBinary.data(), listRawBinary.size(),
 													   currentVersion, migrate, pLegacyTypeInfo, ctx );
+	}
+
+	void BinarySerializer::serialize( const void* pInstance, const TypeInfo& typeInfo, Archive& outArchive,
+									  const SerializeContext& ctx )
+	{
+		vector<uint8> buffer;
+		serialize( pInstance, typeInfo, buffer, ctx );
+		if ( buffer.empty() == false )
+			outArchive.writeBytes( buffer.data(), buffer.size() );
+	}
+
+	bool BinarySerializer::deserialize( void* pInstance, const TypeInfo& typeInfo, Archive& inArchive,
+										const SerializeContext& ctx )
+	{
+		if ( inArchive.isError() || inArchive.getData() == nullptr || inArchive.getOffset() >= inArchive.getSize() )
+			return false;
+
+		const uint8* pData	  = inArchive.getData() + inArchive.getOffset();
+		const size_t dataSize = inArchive.getSize() - inArchive.getOffset();
+		return deserialize( pInstance, typeInfo, pData, dataSize, ctx );
+	}
+
+	void BinarySerializer::serializeVersioned( uint32 version, const void* pInstance, const TypeInfo& typeInfo, Archive& outArchive,
+											   const SerializeContext& ctx )
+	{
+		vector<uint8> buffer;
+		serializeVersioned( version, pInstance, typeInfo, buffer, ctx );
+		if ( buffer.empty() == false )
+			outArchive.writeBytes( buffer.data(), buffer.size() );
+	}
+
+	bool BinarySerializer::deserializeVersioned( uint32& outVersion, void* pInstance, const TypeInfo& typeInfo, Archive& inArchive,
+												 uint32 currentVersion, SchemaMigrateFn migrate,
+												 const TypeInfo* pLegacyTypeInfo, const SerializeContext& ctx )
+	{
+		if ( inArchive.isError() || inArchive.getData() == nullptr || inArchive.getOffset() >= inArchive.getSize() )
+			return false;
+
+		const uint8* pData	  = inArchive.getData() + inArchive.getOffset();
+		const size_t dataSize = inArchive.getSize() - inArchive.getOffset();
+		return deserializeVersioned( outVersion, pInstance, typeInfo, pData, dataSize, currentVersion, migrate, pLegacyTypeInfo, ctx );
+	}
+
+	bool BinarySerializer::serializeCompressed( const void*				pInstance,
+												const TypeInfo&			typeInfo,
+												Archive&				outArchive,
+												CompressionCodecType	codecType,
+												const SerializeContext& ctx )
+	{
+		vector<uint8> buffer;
+		if ( serializeCompressed( pInstance, typeInfo, buffer, codecType, ctx ) == false )
+			return false;
+
+		if ( buffer.empty() == false )
+			outArchive.writeBytes( buffer.data(), buffer.size() );
+		return true;
+	}
+
+	bool BinarySerializer::deserializeCompressed( void*					  pInstance,
+												  const TypeInfo&		  typeInfo,
+												  Archive&				  inArchive,
+												  const SerializeContext& ctx )
+	{
+		if ( inArchive.isError() || inArchive.getData() == nullptr || inArchive.getOffset() >= inArchive.getSize() )
+			return false;
+
+		const uint8* pData	  = inArchive.getData() + inArchive.getOffset();
+		const size_t dataSize = inArchive.getSize() - inArchive.getOffset();
+		return deserializeCompressed( pInstance, typeInfo, pData, dataSize, ctx );
+	}
+
+	void BinarySerializer::serializeCompact( const void*			 pInstance,
+											 const TypeInfo&		 typeInfo,
+											 vector<uint8>&			 outBuffer,
+											 const SerializeContext& ctx )
+	{
+		if ( pInstance == nullptr )
+			return;
+
+		BinaryStreamWriter			writer( outBuffer );
+		const vector<PropertyInfo>& listProp   = typeInfo.getPropertiesWithBase();
+		const size_t				totalProps = listProp.size();
+
+		struct PropPayloadRecord
+		{
+			uint32		  _index;
+			vector<uint8> _bytes;
+		};
+		vector<PropPayloadRecord> listRecord;
+		listRecord.reserve( totalProps );
+
+		for ( size_t propIndex = 0; propIndex < totalProps; ++propIndex )
+		{
+			const PropertyInfo& prop = listProp[propIndex];
+			if ( prop._metadata._bTransient == SW_TRUE )
+				continue;
+
+			const void*	  pPropPtr = prop.getRawPtr( pInstance );
+			vector<uint8> propBytes;
+
+			if ( prop._bIsBitField == SW_TRUE )
+			{
+				const bool bVal = prop.getValue<bool>( pInstance );
+				SerializerUtil::serializeValueBinary( &bVal, hashed_string( "bool" ), propBytes, ctx );
+			}
+			else if ( prop._bIsContainer && prop.hasContainerWrapper() )
+			{
+				SerializerUtil::serializeNestedContainerBinary( pPropPtr, prop.getContainerShape(), propBytes, ctx );
+			}
+			else
+			{
+				SerializerUtil::serializeValueBinary( pPropPtr, prop._typeName, propBytes, ctx );
+			}
+
+			listRecord.push_back( { static_cast<uint32>( propIndex ), std::move( propBytes ) } );
+		}
+
+		const size_t modCount = listRecord.size();
+		// Adaptive selection: if modCount >= 3 and modCount >= (totalProps / 4) -> Dense Bitmask (0x01), else Sparse (0x02)
+		const bool bUseDense = ( modCount >= 3 && modCount * 4 >= totalProps );
+
+		if ( bUseDense )
+		{
+			writer.write( static_cast<uint8>( 0x01 ) ); // Dense Mode Magic
+			writer.writeVarUInt( static_cast<uint64>( totalProps ) );
+
+			const size_t  bitmaskBytes = ( totalProps + 7 ) / 8;
+			vector<uint8> bitmask( bitmaskBytes, 0 );
+
+			for ( const auto& rec : listRecord )
+			{
+				bitmask[rec._index / 8] |= static_cast<uint8>( 1 << ( rec._index % 8 ) );
+			}
+			for ( uint8 b : bitmask )
+			{
+				writer.write( b );
+			}
+			for ( const auto& rec : listRecord )
+			{
+				writer.writeVarUInt( static_cast<uint64>( rec._bytes.size() ) );
+				if ( rec._bytes.empty() == false )
+				{
+					for ( uint8 b : rec._bytes )
+						writer.write( b );
+				}
+			}
+		}
+		else
+		{
+			writer.write( static_cast<uint8>( 0x02 ) ); // Sparse Mode Magic
+			writer.writeVarUInt( static_cast<uint64>( modCount ) );
+
+			for ( const auto& rec : listRecord )
+			{
+				writer.writeVarUInt( static_cast<uint64>( rec._index ) );
+				writer.writeVarUInt( static_cast<uint64>( rec._bytes.size() ) );
+				if ( rec._bytes.empty() == false )
+				{
+					for ( uint8 b : rec._bytes )
+						writer.write( b );
+				}
+			}
+		}
+	}
+
+	void BinarySerializer::serializeCompact( const void*			 pInstance,
+											 const TypeInfo&		 typeInfo,
+											 Archive&				 outArchive,
+											 const SerializeContext& ctx )
+	{
+		vector<uint8> buffer;
+		serializeCompact( pInstance, typeInfo, buffer, ctx );
+		if ( buffer.empty() == false )
+			outArchive.writeBytes( buffer.data(), buffer.size() );
+	}
+
+	bool BinarySerializer::deserializeCompact( void*				   pInstance,
+											   const TypeInfo&		   typeInfo,
+											   const uint8*			   pData,
+											   size_t				   dataSize,
+											   const SerializeContext& ctx )
+	{
+		if ( pInstance == nullptr || pData == nullptr || dataSize == 0 )
+			return false;
+
+		BinaryStreamReader			reader( pData, dataSize );
+		const vector<PropertyInfo>& listProp = typeInfo.getPropertiesWithBase();
+		const size_t				numProps = listProp.size();
+
+		uint8 modeByte = 0;
+		if ( reader.read( modeByte ) == false )
+			return false;
+
+		if ( modeByte == 0x01 ) // Dense Bitmask Mode
+		{
+			uint64 totalProps = 0;
+			if ( reader.readVarUInt( totalProps ) == false )
+				return false;
+
+			const size_t  bitmaskBytes = ( totalProps + 7 ) / 8;
+			vector<uint8> bitmask( bitmaskBytes, 0 );
+			for ( size_t byteIndex = 0; byteIndex < bitmaskBytes; ++byteIndex )
+			{
+				if ( reader.read( bitmask[byteIndex] ) == false )
+					return false;
+			}
+
+			for ( uint32 propIndex = 0; propIndex < totalProps; ++propIndex )
+			{
+				const bool bPresent = ( bitmask[propIndex / 8] & ( 1 << ( propIndex % 8 ) ) ) != 0;
+				if ( bPresent == false )
+					continue;
+
+				uint64 payloadSize = 0;
+				if ( reader.readVarUInt( payloadSize ) == false )
+					return false;
+
+				const size_t payloadStart = reader.getOffset();
+				if ( payloadStart + payloadSize > dataSize )
+					return false;
+
+				if ( propIndex < numProps )
+				{
+					const PropertyInfo& prop	 = listProp[propIndex];
+					void*				pPropPtr = prop.getRawPtr( pInstance );
+
+					if ( prop._bIsBitField == SW_TRUE )
+					{
+						bool   bVal	 = false;
+						size_t local = payloadStart;
+						if ( SerializerUtil::deserializeValueBinary( &bVal, hashed_string( "bool" ), pData, payloadStart + payloadSize, local, ctx ) == false )
+							return false;
+						prop.setValue<bool>( pInstance, bVal );
+					}
+					else if ( prop._bIsContainer && prop.hasContainerWrapper() )
+					{
+						size_t local = payloadStart;
+						if ( SerializerUtil::deserializeNestedContainerBinary( pPropPtr, prop.getContainerShape(), pData, payloadStart + payloadSize, local, ctx ) == false )
+							return false;
+					}
+					else
+					{
+						size_t local = payloadStart;
+						if ( SerializerUtil::deserializeValueBinary( pPropPtr, prop._typeName, pData, payloadStart + payloadSize, local, ctx ) == false )
+							return false;
+					}
+				}
+				reader.skip( payloadSize );
+			}
+			return true;
+		}
+		else if ( modeByte == 0x02 ) // Sparse Index Mode
+		{
+			uint64 modCount = 0;
+			if ( reader.readVarUInt( modCount ) == false )
+				return false;
+
+			for ( uint64 modIndex = 0; modIndex < modCount; ++modIndex )
+			{
+				uint64 propIndex = 0;
+				if ( reader.readVarUInt( propIndex ) == false )
+					return false;
+
+				uint64 payloadSize = 0;
+				if ( reader.readVarUInt( payloadSize ) == false )
+					return false;
+
+				const size_t payloadStart = reader.getOffset();
+				if ( payloadStart + payloadSize > dataSize )
+					return false;
+
+				if ( propIndex < numProps )
+				{
+					const PropertyInfo& prop	 = listProp[static_cast<size_t>( propIndex )];
+					void*				pPropPtr = prop.getRawPtr( pInstance );
+
+					if ( prop._bIsBitField == SW_TRUE )
+					{
+						bool   bVal	 = false;
+						size_t local = payloadStart;
+						if ( SerializerUtil::deserializeValueBinary( &bVal, hashed_string( "bool" ), pData, payloadStart + payloadSize, local, ctx ) == false )
+							return false;
+						prop.setValue<bool>( pInstance, bVal );
+					}
+					else if ( prop._bIsContainer && prop.hasContainerWrapper() )
+					{
+						size_t local = payloadStart;
+						if ( SerializerUtil::deserializeNestedContainerBinary( pPropPtr, prop.getContainerShape(), pData, payloadStart + payloadSize, local, ctx ) == false )
+							return false;
+					}
+					else
+					{
+						size_t local = payloadStart;
+						if ( SerializerUtil::deserializeValueBinary( pPropPtr, prop._typeName, pData, payloadStart + payloadSize, local, ctx ) == false )
+							return false;
+					}
+				}
+				reader.skip( payloadSize );
+			}
+			return true;
+		}
+
+		return false;
+	}
+
+	bool BinarySerializer::deserializeCompact( void*				   pInstance,
+											   const TypeInfo&		   typeInfo,
+											   Archive&				   inArchive,
+											   const SerializeContext& ctx )
+	{
+		if ( inArchive.isError() || inArchive.getData() == nullptr || inArchive.getOffset() >= inArchive.getSize() )
+			return false;
+
+		const uint8* pData	  = inArchive.getData() + inArchive.getOffset();
+		const size_t dataSize = inArchive.getSize() - inArchive.getOffset();
+		return deserializeCompact( pInstance, typeInfo, pData, dataSize, ctx );
 	}
 } // namespace sw

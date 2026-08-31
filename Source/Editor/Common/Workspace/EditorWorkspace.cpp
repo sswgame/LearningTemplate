@@ -14,6 +14,7 @@
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/Serialization/Format/XmlSerializer.h"
 
 #include "RuntimeAPI/Service/EditorService.h"
@@ -396,22 +397,24 @@ namespace sw::editor
 
 		_copiedComponentTypeName = pComp->getComponentName().empty() == false ? pComp->getComponentName().c_str()
 																			  : pComp->getTypeInfo()->_name.c_str();
-		_copiedComponentXml		 = XmlSerializer::serialize( pComp, *pComp->getTypeInfo() );
+		_copiedComponentBytes.clear();
+		BinarySerializer::serialize( pComp, *pComp->getTypeInfo(), _copiedComponentBytes );
+		_copiedComponentXml = XmlSerializer::serialize( pComp, *pComp->getTypeInfo() );
 	}
 
 	bool EditorWorkspace::hasCopiedComponent() const
 	{
-		return _copiedComponentXml.empty() == false;
+		return _copiedComponentBytes.empty() == false || _copiedComponentXml.empty() == false;
 	}
 
 	bool EditorWorkspace::pasteComponentValues( Component* pTargetComp )
 	{
-		return EditorTransformCommands::pasteComponentValues( pTargetComp, _copiedComponentXml );
+		return EditorTransformCommands::pasteComponentValues( pTargetComp, _copiedComponentBytes, _copiedComponentXml );
 	}
 
 	Component* EditorWorkspace::pasteComponentAsNew( GameObject* pTargetObj )
 	{
-		return EditorTransformCommands::pasteComponentAsNew( pTargetObj, _copiedComponentTypeName, _copiedComponentXml );
+		return EditorTransformCommands::pasteComponentAsNew( pTargetObj, _copiedComponentTypeName, _copiedComponentBytes, _copiedComponentXml );
 	}
 
 	bool EditorWorkspace::saveComponentPreset( const Component* pComp, string_view presetName )

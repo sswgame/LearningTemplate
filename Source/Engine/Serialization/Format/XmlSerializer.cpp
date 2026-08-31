@@ -9,6 +9,7 @@
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Serialization/Core/SchemaMigrate.h"
 #include "Engine/Serialization/Core/SerializerUtil.h"
+#include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
 
 namespace sw
@@ -868,6 +869,31 @@ namespace sw
 		if ( deserializeSoft( pInstance, typeInfo, xmlStr, &listOrphan, nullptr, ctx ) == false )
 			return false;
 		return listOrphan.empty();
+	}
+
+	bool XmlSerializer::serializeToArchive( const void* pInstance, const TypeInfo& typeInfo, Archive& outArchive,
+											const SerializeContext& ctx )
+	{
+		const string xmlStr = serialize( pInstance, typeInfo, ctx );
+		if ( xmlStr.empty() )
+			return false;
+
+		outArchive << xmlStr;
+		return true;
+	}
+
+	bool XmlSerializer::deserializeFromArchive( void* pInstance, const TypeInfo& typeInfo, Archive& inArchive,
+												const SerializeContext& ctx )
+	{
+		if ( inArchive.isError() )
+			return false;
+
+		string xmlStr;
+		inArchive >> xmlStr;
+		if ( inArchive.isError() || xmlStr.empty() )
+			return false;
+
+		return deserialize( pInstance, typeInfo, xmlStr, ctx );
 	}
 
 	bool XmlSerializer::saveFile( string_view absPath, const void* pInstance, const TypeInfo& typeInfo,

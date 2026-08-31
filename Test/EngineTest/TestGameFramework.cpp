@@ -1,7 +1,9 @@
 #include "pch.h"
 
+#include "Core/Container/map.h"
 #include "Core/File/FileUtil.h"
 
+#include "GameFramework/Base/GameInstanceBase.h"
 #include "GameFramework/Save/ISaveGame.h"
 #include "GameFramework/Transition/TransitionOrchestrator.h"
 #include "GameFramework/UI/DialogueRunnerComponent.h"
@@ -137,7 +139,7 @@ SW_TEST_CASE( GameFrameworkTest, TransitionOrchestratorBattleAndReturnFlow )
 
 	TransitionCallbacks callbacks{};
 	callbacks.startBattle		 = Delegate<void()>::create( [&]()
-	{ bBattleStarted = true; } );
+	   { bBattleStarted = true; } );
 	callbacks.finishBattleReturn = Delegate<void()>::create( [&]()
 	{ bBattleReturned = true; } );
 	orchestrator.setCallbacks( std::move( callbacks ) );
@@ -470,4 +472,304 @@ SW_TEST_CASE( GameFrameworkTest, DialogueRunnerComponentEditorTool100ScaleFormat
 
 	SW_EXPECT_TRUE( runner.advance() );
 	SW_EXPECT_EQUAL( static_cast<uint8>( DialogueRunnerState::Finished ), static_cast<uint8>( runner.getState() ) );
+}
+
+// ------------------------------------------------------------------------------
+// 6) GameInstanceBaseStateTest — 런타임 스냅샷/세이브 파일 직렬화 검증
+// ------------------------------------------------------------------------------
+
+namespace
+{
+	struct TestCustomState
+	{
+		int32  _score{ 1000 };
+		string _stageName{ "Stage_01" };
+	};
+} // namespace
+
+/**
+ * @brief [GameFrameworkTest] GameInstanceBase 스냅샷 캡처 및 인메모리 복원 / 파일 입출력 검증
+ */
+SW_TEST_CASE( GameFrameworkTest, GameInstanceBaseSnapshotAndFileRoundTrip )
+{
+	class DummyGameInstance : public GameInstanceBase
+	{
+	public:
+		TestCustomState _customState{};
+		bool			_bBeforeCalled{ false };
+		bool			_bAfterCalled{ false };
+
+	protected:
+		const TypeInfo* getStateTypeInfo() const override
+		{
+			static TypeInfo s_typeInfo{};
+			if ( s_typeInfo._name.empty() )
+			{
+				s_typeInfo._name			   = hashed_string( "TestCustomState" );
+				s_typeInfo._fullyQualifiedName = hashed_string( "TestCustomState" );
+				s_typeInfo._size			   = sizeof( TestCustomState );
+				s_typeInfo._listProperty	   = {
+					  {	hashed_string( "_score" ),  hashed_string( "int32" ),
+						SW_OFFSET_OF( TestCustomState,	   _score ), false, ContainerKind::None, hashed_string(), hashed_string(), nullptr},
+					  {hashed_string( "_stageName" ), hashed_string( "string" ),
+						SW_OFFSET_OF( TestCustomState, _stageName ), false, ContainerKind::None, hashed_string(), hashed_string(), nullptr}
+				 };
+			}
+			return &s_typeInfo;
+		}
+
+		void*		getStateInstance() override { return &_customState; }
+		const void* getStateInstance() const override { return &_customState; }
+
+		void onBeforeStateSerialize() override { _bBeforeCalled = true; }
+		void onAfterStateDeserialize() override { _bAfterCalled = true; }
+	};
+
+	DummyGameInstance gameInstance;
+	gameInstance._customState._score	 = 77777;
+	gameInstance._customState._stageName = "BossRoom_03";
+
+	// 1) 인메모리 스냅샷 캡처
+	vector<uint8> snapshotBytes;
+	SW_EXPECT_TRUE( gameInstance.captureSnapshot( snapshotBytes ) );
+	SW_EXPECT_TRUE( snapshotBytes.size() > 0 );
+	SW_EXPECT_TRUE( gameInstance._bBeforeCalled );
+
+	// 2) 인메모리 스냅샷 복원
+	DummyGameInstance restoredInstance;
+	SW_EXPECT_TRUE( restoredInstance.restoreSnapshot( snapshotBytes ) );
+	SW_EXPECT_TRUE( restoredInstance._bAfterCalled );
+	SW_EXPECT_EQUAL( 77777, restoredInstance._customState._score );
+	SW_EXPECT_EQUAL( string( "BossRoom_03" ), restoredInstance._customState._stageName );
+
+	// 3) 파일 입출력 스냅샷 라운드트립
+	const string tempStateFile = FileUtil::joinPath( FileUtil::getTempDirectory(), "test_game_state.sav" );
+	SW_EXPECT_TRUE( gameInstance.saveStateToFile( tempStateFile ) );
+	SW_EXPECT_TRUE( FileUtil::fileExists( tempStateFile ) );
+
+	DummyGameInstance fileRestoredInstance;
+	SW_EXPECT_TRUE( fileRestoredInstance.loadStateFromFile( tempStateFile ) );
+	SW_EXPECT_EQUAL( 77777, fileRestoredInstance._customState._score );
+	SW_EXPECT_EQUAL( string( "BossRoom_03" ), fileRestoredInstance._customState._stageName );
+
+	FileUtil::removeFile( tempStateFile );
+}
+
+/**
+ * @brief [GameFrameworkTest] GameInstanceBase 대용량 컨테이너(5,000 strings + 10,000 ints + 2,000 map entries) 스트레스 테스트
+ */
+SW_TEST_CASE( GameFrameworkTest, GameInstanceBaseMassiveStateStressTest )
+{
+	struct MassiveStressState
+	{
+		int32			   _playerX{ 0 };
+		int32			   _playerY{ 0 };
+		int64			   _totalExp{ 0 };
+		vector<int32>	   _listMonsterId{};
+		vector<string>	   _listSkillName{};
+		map<string, int32> _mapFlag{};
+	};
+
+	class MassiveGameInstance : public GameInstanceBase
+	{
+	public:
+		MassiveStressState _state{};
+
+	protected:
+		const TypeInfo* getStateTypeInfo() const override
+		{
+			static TypeInfo s_typeInfo{};
+			if ( s_typeInfo._name.empty() )
+			{
+				s_typeInfo._name			   = hashed_string( "MassiveStressState" );
+				s_typeInfo._fullyQualifiedName = hashed_string( "MassiveStressState" );
+				s_typeInfo._size			   = sizeof( MassiveStressState );
+				s_typeInfo._listProperty	   = {
+					  { hashed_string( "_playerX" ), hashed_string( "int32" ),
+						SW_OFFSET_OF( MassiveStressState, _playerX ), false, ContainerKind::None, hashed_string(), hashed_string(), nullptr },
+					  { hashed_string( "_playerY" ), hashed_string( "int32" ),
+						SW_OFFSET_OF( MassiveStressState, _playerY ), false, ContainerKind::None, hashed_string(), hashed_string(), nullptr },
+					  { hashed_string( "_totalExp" ), hashed_string( "int64" ),
+						SW_OFFSET_OF( MassiveStressState, _totalExp ), false, ContainerKind::None, hashed_string(), hashed_string(), nullptr },
+					  { hashed_string( "_listMonsterId" ), hashed_string( "int32" ),
+						SW_OFFSET_OF( MassiveStressState, _listMonsterId ), true, ContainerKind::Sequence, hashed_string( "int32" ), hashed_string(), std::make_shared<VectorWrapper<vector<int32>>>() },
+					  { hashed_string( "_listSkillName" ), hashed_string( "string" ),
+						SW_OFFSET_OF( MassiveStressState, _listSkillName ), true, ContainerKind::Sequence, hashed_string( "string" ), hashed_string(), std::make_shared<VectorWrapper<vector<string>>>() },
+					  { hashed_string( "_mapFlag" ), hashed_string( "int32" ),
+						SW_OFFSET_OF( MassiveStressState, _mapFlag ), true, ContainerKind::Map, hashed_string( "int32" ), hashed_string( "string" ), std::make_shared<MapWrapper<map<string, int32>>>() }
+				  };
+			}
+			return &s_typeInfo;
+		}
+
+		void*		getStateInstance() override { return &_state; }
+		const void* getStateInstance() const override { return &_state; }
+	};
+
+	MassiveGameInstance writeInstance;
+	writeInstance._state._playerX  = 1234;
+	writeInstance._state._playerY  = -5678;
+	writeInstance._state._totalExp = 987654321012345ll;
+
+	// 10,000개의 Monster ID 채우기
+	writeInstance._state._listMonsterId.reserve( 10000 );
+	for ( int32 index = 0; index < 10000; ++index )
+		writeInstance._state._listMonsterId.push_back( 100000 + index * 3 );
+
+	// 5,000개의 Skill Name 채우기
+	writeInstance._state._listSkillName.reserve( 5000 );
+	for ( int32 index = 0; index < 5000; ++index )
+		writeInstance._state._listSkillName.push_back( string( "Skill_Ultimate_Power_Strike_" ) + std::to_string( index ).c_str() );
+
+	// 2,000개의 Flag 채우기
+	for ( int32 index = 0; index < 2000; ++index )
+		writeInstance._state._mapFlag[string( "quest_flag_key_" ) + std::to_string( index ).c_str()] = index * 7;
+
+	vector<uint8> snapshot;
+	SW_EXPECT_TRUE( writeInstance.captureSnapshot( snapshot ) );
+	SW_EXPECT_TRUE( snapshot.size() > 50000 ); // 수만 바이트 이상 대용량 바이너리
+
+	MassiveGameInstance readInstance;
+	SW_EXPECT_TRUE( readInstance.restoreSnapshot( snapshot ) );
+
+	SW_EXPECT_EQUAL( 1234, readInstance._state._playerX );
+	SW_EXPECT_EQUAL( -5678, readInstance._state._playerY );
+	SW_EXPECT_EQUAL( 987654321012345ll, readInstance._state._totalExp );
+	SW_EXPECT_EQUAL( 10000u, static_cast<uint32>( readInstance._state._listMonsterId.size() ) );
+	SW_EXPECT_EQUAL( 5000u, static_cast<uint32>( readInstance._state._listSkillName.size() ) );
+	SW_EXPECT_EQUAL( 2000u, static_cast<uint32>( readInstance._state._mapFlag.size() ) );
+
+	// 샘플 데이터 검증 (앞/중간/끝)
+	SW_EXPECT_EQUAL( 100000, readInstance._state._listMonsterId[0] );
+	SW_EXPECT_EQUAL( 100000 + 5000 * 3, readInstance._state._listMonsterId[5000] );
+	SW_EXPECT_EQUAL( 100000 + 9999 * 3, readInstance._state._listMonsterId[9999] );
+
+	SW_EXPECT_EQUAL( string( "Skill_Ultimate_Power_Strike_0" ), readInstance._state._listSkillName[0] );
+	SW_EXPECT_EQUAL( string( "Skill_Ultimate_Power_Strike_2500" ), readInstance._state._listSkillName[2500] );
+	SW_EXPECT_EQUAL( string( "Skill_Ultimate_Power_Strike_4999" ), readInstance._state._listSkillName[4999] );
+
+	SW_EXPECT_EQUAL( 0, readInstance._state._mapFlag["quest_flag_key_0"] );
+	SW_EXPECT_EQUAL( 7000, readInstance._state._mapFlag["quest_flag_key_1000"] );
+	SW_EXPECT_EQUAL( 13993, readInstance._state._mapFlag["quest_flag_key_1999"] );
+}
+
+/**
+ * @brief [GameFrameworkTest] GameInstanceBase 연속 100회 스냅샷 캡처 및 임의 시점 되감기(Rewind) 스트레스 테스트
+ */
+SW_TEST_CASE( GameFrameworkTest, GameInstanceBaseCyclicRewindStressTest )
+{
+	class RewindGameInstance : public GameInstanceBase
+	{
+	public:
+		TestCustomState _customState{};
+
+	protected:
+		const TypeInfo* getStateTypeInfo() const override
+		{
+			static TypeInfo s_typeInfo{};
+			if ( s_typeInfo._name.empty() )
+			{
+				s_typeInfo._name			   = hashed_string( "TestCustomState" );
+				s_typeInfo._fullyQualifiedName = hashed_string( "TestCustomState" );
+				s_typeInfo._size			   = sizeof( TestCustomState );
+				s_typeInfo._listProperty	   = {
+					  {	hashed_string( "_score" ),  hashed_string( "int32" ),
+						SW_OFFSET_OF( TestCustomState,	   _score ), false, ContainerKind::None, hashed_string(), hashed_string(), nullptr},
+					  {hashed_string( "_stageName" ), hashed_string( "string" ),
+						SW_OFFSET_OF( TestCustomState, _stageName ), false, ContainerKind::None, hashed_string(), hashed_string(), nullptr}
+				 };
+			}
+			return &s_typeInfo;
+		}
+
+		void*		getStateInstance() override { return &_customState; }
+		const void* getStateInstance() const override { return &_customState; }
+	};
+
+	RewindGameInstance	  instance;
+	vector<vector<uint8>> listHistory;
+	listHistory.reserve( 100 );
+
+	// 100번 상태 변경 및 스냅샷 보관
+	for ( int32 step = 0; step < 100; ++step )
+	{
+		instance._customState._score	 = step * 100;
+		instance._customState._stageName = string( "Room_" ) + std::to_string( step ).c_str();
+
+		vector<uint8> snap;
+		SW_EXPECT_TRUE( instance.captureSnapshot( snap ) );
+		listHistory.push_back( std::move( snap ) );
+	}
+
+	// 임의의 과거 시점으로 되감기(Rewind) 시뮬레이션 및 데이터 일치 검증
+	for ( size_t rewindStep : { 0ull, 50ull, 25ull, 75ull, 99ull, 10ull, 88ull } )
+	{
+		SW_EXPECT_TRUE( instance.restoreSnapshot( listHistory[rewindStep] ) );
+		SW_EXPECT_EQUAL( static_cast<int32>( rewindStep * 100 ), instance._customState._score );
+		SW_EXPECT_EQUAL( string( "Room_" ) + std::to_string( rewindStep ).c_str(), instance._customState._stageName );
+	}
+}
+
+/**
+ * @brief [GameFrameworkTest] GameInstanceBase 변조된 버퍼 및 결함 주입(Fault Injection) 복원 안전성 검증
+ */
+SW_TEST_CASE( GameFrameworkTest, GameInstanceBaseCorruptedBufferFaultResilience )
+{
+	class DummyGameInstance : public GameInstanceBase
+	{
+	public:
+		TestCustomState _customState{};
+
+	protected:
+		const TypeInfo* getStateTypeInfo() const override
+		{
+			static TypeInfo s_typeInfo{};
+			if ( s_typeInfo._name.empty() )
+			{
+				s_typeInfo._name			   = hashed_string( "TestCustomState" );
+				s_typeInfo._fullyQualifiedName = hashed_string( "TestCustomState" );
+				s_typeInfo._size			   = sizeof( TestCustomState );
+				s_typeInfo._listProperty	   = {
+					  {	hashed_string( "_score" ),  hashed_string( "int32" ),
+						SW_OFFSET_OF( TestCustomState,	   _score ), false, ContainerKind::None, hashed_string(), hashed_string(), nullptr},
+					  {hashed_string( "_stageName" ), hashed_string( "string" ),
+						SW_OFFSET_OF( TestCustomState, _stageName ), false, ContainerKind::None, hashed_string(), hashed_string(), nullptr}
+				 };
+			}
+			return &s_typeInfo;
+		}
+
+		void*		getStateInstance() override { return &_customState; }
+		const void* getStateInstance() const override { return &_customState; }
+	};
+
+	DummyGameInstance instance;
+	instance._customState._score	 = 12345;
+	instance._customState._stageName = "SafeRoom";
+
+	// 1) Null/빈 버퍼 주입
+	SW_EXPECT_FALSE( instance.restoreSnapshot( {} ) );
+	SW_EXPECT_FALSE( instance.deserializeState( nullptr, 100 ) );
+	SW_EXPECT_FALSE( instance.deserializeState( nullptr, 0 ) );
+
+	// 2) 정상 스냅샷 생성
+	vector<uint8> validSnapshot;
+	SW_ASSERT_TRUE( instance.captureSnapshot( validSnapshot ) );
+
+	// 3) 잘린 버퍼(Truncated payload) 주입
+	vector<uint8> truncated = validSnapshot;
+	truncated.resize( 6 ); // 헤더만 겨우 있고 바디 없음
+	SW_EXPECT_FALSE( instance.restoreSnapshot( truncated ) );
+
+	// 4) 매직 변조
+	vector<uint8> badMagic = validSnapshot;
+	badMagic[0] ^= 0xFF;
+	// 매직 불일치 시 레거시 씬 로더로 폴백되거나 안전하게 실패
+	SW_EXPECT_FALSE( instance.restoreSnapshot( badMagic ) );
+
+	// 5) 빈 게임 인스턴스 (커스텀 상태 없음) 동작 검증
+	GameInstanceBase defaultGameInstance;
+	vector<uint8>	 emptySnapshot;
+	SW_EXPECT_TRUE( defaultGameInstance.captureSnapshot( emptySnapshot ) );
+	SW_EXPECT_TRUE( defaultGameInstance.restoreSnapshot( emptySnapshot ) );
 }

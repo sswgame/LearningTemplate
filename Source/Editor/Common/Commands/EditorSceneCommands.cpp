@@ -65,7 +65,10 @@ namespace sw::editor
 		if ( pManager == nullptr || pSrc == nullptr )
 			return nullptr;
 
-		const string						  xml = ObjectStateSerializer::saveToXmlString( pSrc );
+		vector<uint8> buffer;
+		const bool	  bSavedBinary = ObjectStateSerializer::saveToBinaryBuffer( pSrc, buffer );
+		const string  xml		   = bSavedBinary ? string{} : ObjectStateSerializer::saveToXmlString( pSrc );
+
 		fixed_string<constant::kMaxBuffer256> newName;
 		formatstring( newName.data(), newName.capacity(), "%#_Copy", pSrc->getName().c_str() );
 
@@ -73,11 +76,21 @@ namespace sw::editor
 		if ( pNewObj == nullptr )
 			return nullptr;
 
-		ObjectStateSerializer::loadFromXmlString( pNewObj, xml );
+		if ( bSavedBinary )
+		{
+			string parentName;
+			ObjectStateSerializer::loadFromBinaryBuffer( pNewObj, buffer.data(), buffer.size(), parentName );
+		}
+		else
+		{
+			ObjectStateSerializer::loadFromXmlString( pNewObj, xml );
+			ObjectStateSerializer::rebindSceneHierarchy( pNewObj, xml );
+		}
+
 		pNewObj->setName( hashed_string( newName.c_str() ) );
 		if ( pSrc->getParent() != nullptr )
 			pNewObj->attachToParent( pSrc->getParent() );
-		ObjectStateSerializer::rebindSceneHierarchy( pNewObj, xml );
+
 		EditorContext* pContext	  = EditorContext::get();
 		const string   prefabPath = ( pContext != nullptr ) ? pContext->getWorkspace().getGameObjectPrefabPath( pSrc->getObjectId() ) : string{};
 		if ( prefabPath.empty() == false && pContext != nullptr )
@@ -253,9 +266,9 @@ namespace sw::editor
 		const float32 halfExtentZ = 0.5f;
 		const float32 startY	  = translation._y + 10.0f;
 		const AABB	  movingBox{
-			float3{translation._x - halfExtentX, startY - bottomOffset, translation._z - halfExtentZ},
-			float3{translation._x + halfExtentX, startY + bottomOffset, translation._z + halfExtentZ}
-		};
+			   float3{translation._x - halfExtentX, startY - bottomOffset, translation._z - halfExtentZ},
+			   float3{translation._x + halfExtentX, startY + bottomOffset, translation._z + halfExtentZ}
+		   };
 		const float3 displacement{ 0.0f, -2000.0f, 0.0f };
 
 		SweepHit sweepHit{};

@@ -94,6 +94,62 @@ namespace sw::editor
 		return ObjectStateSerializer::saveToXmlString( pRaw );
 	}
 
+	bool EditorTransaction::captureBinarySnapshot( GameObjectPtr pObj, vector<uint8>& outBytes )
+	{
+		GameObject* pRaw = pObj.get();
+		if ( pRaw == nullptr )
+			return false;
+		return ObjectStateSerializer::saveToBinaryBuffer( pRaw, outBytes );
+	}
+
+	void EditorTransaction::recordBinaryModify( GameObjectPtr pObj, const vector<uint8>& beforeBytes, const vector<uint8>& afterBytes,
+												string_view label )
+	{
+		GameObject* pRaw = pObj.get();
+		if ( pRaw == nullptr || beforeBytes == afterBytes )
+			return;
+
+		EditorContext*		pContext  = EditorContext::get();
+		const uint64		objId	  = pRaw->getObjectId();
+		const Uuid			guid	  = ( pContext != nullptr ) ? pContext->getWorkspace().getOrAssignGuid( objId ) : Uuid{};
+		const string		objName	  = string{ pRaw->getName().c_str() };
+		const vector<uint8> beforeBuf = beforeBytes;
+		const vector<uint8> afterBuf  = afterBytes;
+
+		CommandStack::Command cmd{};
+		cmd._label = string{ label };
+		cmd._undo  = [guid, objId, objName, beforeBuf]()
+		{
+			GameObjectManager* pManager = EditorTransactionInternal::getActiveGameObjectManager();
+			if ( pManager == nullptr || beforeBuf.empty() )
+				return;
+
+			GameObject* pTarget = EditorTransactionInternal::findTargetGameObject( pManager, guid, objId, objName );
+			if ( pTarget != nullptr )
+			{
+				string parentName;
+				ObjectStateSerializer::loadFromBinaryBuffer( pTarget, beforeBuf.data(), beforeBuf.size(), parentName );
+			}
+		};
+
+		cmd._redo = [guid, objId, objName, afterBuf]()
+		{
+			GameObjectManager* pManager = EditorTransactionInternal::getActiveGameObjectManager();
+			if ( pManager == nullptr || afterBuf.empty() )
+				return;
+
+			GameObject* pTarget = EditorTransactionInternal::findTargetGameObject( pManager, guid, objId, objName );
+			if ( pTarget != nullptr )
+			{
+				string parentName;
+				ObjectStateSerializer::loadFromBinaryBuffer( pTarget, afterBuf.data(), afterBuf.size(), parentName );
+			}
+		};
+
+		editor::getService<CommandStack>()->push( std::move( cmd ) );
+		EditorTransactionInternal::markActiveSceneDirty();
+	}
+
 	void EditorTransaction::recordModify( GameObjectPtr pObj, string_view beforeXml, string_view afterXml,
 										  string_view label )
 	{

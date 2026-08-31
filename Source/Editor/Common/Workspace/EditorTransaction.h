@@ -29,6 +29,10 @@ namespace sw::editor
 		static void recordModify( GameObjectPtr pObj, string_view beforeXml, string_view afterXml,
 								  string_view label = "Modify GameObject" );
 
+		/** @brief 단일 오브젝트의 바이너리 상태 변경(수정) 전/후를 기록하여 Undo/Redo에 등록합니다. */
+		static void recordBinaryModify( GameObjectPtr pObj, const vector<uint8>& beforeBytes, const vector<uint8>& afterBytes,
+										string_view label = "Modify GameObject" );
+
 		/** @brief 게임오브젝트 생성을 Undo/Redo에 등록합니다. */
 		static void recordCreation( GameObjectPtr pObj, string_view label = "Create GameObject" );
 
@@ -37,6 +41,9 @@ namespace sw::editor
 
 		/** @brief 현재 게임오브젝트의 전체 상태를 XML 스냅샷 문자열로 캡처합니다. */
 		static string captureSnapshot( GameObjectPtr pObj );
+
+		/** @brief 현재 게임오브젝트의 전체 상태를 바이너리 스냅샷 버퍼로 캡처합니다. */
+		static bool captureBinarySnapshot( GameObjectPtr pObj, vector<uint8>& outBytes );
 
 		/** @brief 문서 Undo/Redo를 스택에 올립니다. */
 		static void push( Delegate<void()> undo, Delegate<void()> redo, string_view label,

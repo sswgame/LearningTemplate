@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 
 namespace sw
 {
@@ -32,14 +33,16 @@ namespace sw::editor
 
 	/**
 	 * @class EditorTransformCommands
-	 * @brief 워크스페이스 클립보드 XML을 받아 붙여넣기·정렬을 수행합니다.
+	 * @brief 워크스페이스 클립보드 바이너리/XML을 받아 붙여넣기·정렬을 수행합니다.
 	 */
 	class EditorTransformCommands
 	{
 	public:
-		/** @brief 복사한 컴포넌트 XML 값을 대상에 덮어씁니다. */
+		/** @brief 복사한 컴포넌트 바이너리/XML 값을 대상에 덮어씁니다. */
+		static bool pasteComponentValues( Component* pTargetComp, const vector<uint8>& bytes, string_view xmlFallback = {} );
 		static bool pasteComponentValues( Component* pTargetComp, string_view xml );
-		/** @brief 복사한 타입으로 새 컴포넌트를 붙이고 XML을 적용합니다. */
+		/** @brief 복사한 타입으로 새 컴포넌트를 붙이고 바이너리/XML을 적용합니다. */
+		static Component* pasteComponentAsNew( GameObject* pTargetObj, string_view typeName, const vector<uint8>& bytes, string_view xmlFallback = {} );
 		static Component* pasteComponentAsNew( GameObject* pTargetObj, string_view typeName, string_view xml );
 		/** @brief 컴포넌트 프리셋을 Resource 프리셋 폴더에 저장합니다. */
 		static bool saveComponentPreset( const Component* pComp, string_view presetName );

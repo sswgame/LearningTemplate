@@ -10,6 +10,7 @@
 
 namespace sw
 {
+	class Archive;
 	struct TypeInfo;
 
 	using XmlArrayItemDelegate = Delegate<void( string_view itemStr )>;
@@ -203,6 +204,14 @@ namespace sw
 		/** @brief 기본 XmlDocumentBackend로 XML에서 객체를 역직렬화합니다. */
 		static bool deserialize( void* pInstance, const TypeInfo& typeInfo, string_view xmlStr,
 								 const SerializeContext& ctx = SerializeContext::getDefault() );
+
+		/** @brief 객체를 XML로 직렬화하여 Archive에 기록합니다. */
+		static bool serializeToArchive( const void* pInstance, const TypeInfo& typeInfo, Archive& outArchive,
+										const SerializeContext& ctx = SerializeContext::getDefault() );
+
+		/** @brief Archive에서 XML 문자열을 읽어 객체로 역직렬화합니다. */
+		static bool deserializeFromArchive( void* pInstance, const TypeInfo& typeInfo, Archive& inArchive,
+											const SerializeContext& ctx = SerializeContext::getDefault() );
 
 		/** @brief XML을 절대 경로에 씁니다. */
 		static bool saveFile( string_view absPath, const void* pInstance, const TypeInfo& typeInfo,

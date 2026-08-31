@@ -2,52 +2,72 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
+#include "Core/Common/VarIntUtil.h"
+#include "Core/Compression/CompressionStream.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Serialization/Core/SchemaMigrate.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
+#include "Engine/Serialization/Format/JsonSerializer.h"
+#include "Engine/Serialization/Format/XmlSerializer.h"
 
 namespace sw
 {
 	Archive::Archive()
-		: _listBuffer{}
+		: _stringPool{}
+		, _listBuffer{}
 		, _sourceDirectory{}
 		, _sourceFileName{}
 		, _pData{ nullptr }
 		, _dataSize{ 0 }
 		, _offset{ 0 }
-		, _bReadMode{ false }
+		, _bReadMode{ SW_FALSE }
+		, _bError{ SW_FALSE }
+		, _reserved{ 0 }
 	{
 	}
 
 	Archive::Archive( string_view fileName, bool bReadMode )
-		: _listBuffer{}
+		: _stringPool{}
+		, _listBuffer{}
 		, _sourceDirectory{}
 		, _sourceFileName{}
 		, _pData{ nullptr }
 		, _dataSize{ 0 }
 		, _offset{ 0 }
-		, _bReadMode{ bReadMode }
+		, _bReadMode{ bReadMode ? static_cast<uint8>( SW_TRUE ) : static_cast<uint8>( SW_FALSE ) }
+		, _bError{ SW_FALSE }
+		, _reserved{ 0 }
 	{
 		if ( bReadMode )
 		{
-			FileUtil::readFile( fileName, _listBuffer );
-			_pData	  = _listBuffer.data();
-			_dataSize = _listBuffer.size();
+			if ( FileUtil::readFile( fileName, _listBuffer ) )
+			{
+				_pData	  = _listBuffer.data();
+				_dataSize = _listBuffer.size();
+			}
+			else
+			{
+				_bError = SW_TRUE;
+			}
 		}
 	}
 
 	Archive::Archive( const uint8* pData, uint64 size )
-		: _listBuffer{}
+		: _stringPool{}
+		, _listBuffer{}
 		, _sourceDirectory{}
 		, _sourceFileName{}
 		, _pData{ pData }
 		, _dataSize{ size }
 		, _offset{ 0 }
-		, _bReadMode{ true }
+		, _bReadMode{ SW_TRUE }
+		, _bError{ SW_FALSE }
+		, _reserved{ 0 }
 	{
 	}
 
@@ -65,7 +85,8 @@ namespace sw
 
 	void Archive::setReadModeAndResetPos( const bool bSetReadMode )
 	{
-		_bReadMode = bSetReadMode;
+		_bReadMode = bSetReadMode ? SW_TRUE : SW_FALSE;
+		_bError	   = SW_FALSE;
 		_offset	   = 0;
 	}
 
@@ -90,14 +111,78 @@ namespace sw
 	bool Archive::readBytes( void* pOutBuffer, uint64 byteSize )
 	{
 		if ( pOutBuffer == nullptr || byteSize == 0 || _pData == nullptr )
+		{
+			if ( byteSize > 0 )
+				_bError = SW_TRUE;
 			return false;
+		}
 
 		if ( _offset + byteSize > _dataSize )
+		{
+			_bError = SW_TRUE;
 			return false;
+		}
 
 		Memory::copy( pOutBuffer, _pData + _offset, byteSize );
 		_offset += byteSize;
 		return true;
+	}
+
+	void Archive::writeString( string_view str )
+	{
+		*this << str;
+	}
+
+	bool Archive::readString( string& outStr )
+	{
+		*this >> outStr;
+		return isOk();
+	}
+
+	Archive Archive::readSubArchive( uint64 byteSize )
+	{
+		if ( _pData == nullptr || _offset + byteSize > _dataSize )
+		{
+			_bError = SW_TRUE;
+			Archive errArch( nullptr, 0 );
+			errArch.setError();
+			return errArch;
+		}
+
+		const uint8* pSubData = _pData + _offset;
+		_offset += byteSize;
+		return Archive( pSubData, byteSize );
+	}
+
+	void Archive::writeSection( const void* pData, uint32 byteSize )
+	{
+		( *this ) << byteSize;
+		if ( pData != nullptr && byteSize > 0 )
+			writeBytes( pData, byteSize );
+	}
+
+	bool Archive::readSection( vector<uint8>& outBytes )
+	{
+		uint32 size = 0;
+		( *this ) >> size;
+		if ( _bError == SW_TRUE )
+			return false;
+
+		if ( size == 0 )
+		{
+			outBytes.clear();
+			return true;
+		}
+
+		if ( _offset + size > _dataSize )
+		{
+			_bError = SW_TRUE;
+			outBytes.clear();
+			return false;
+		}
+
+		outBytes.resize( size );
+		return readBytes( outBytes.data(), size );
 	}
 
 	uint32 Archive::calculateChecksum() const
@@ -118,7 +203,11 @@ namespace sw
 	{
 		if ( _dataSize < sizeof( uint32 ) || _pData == nullptr )
 			return false;
-		return true;
+
+		uint32 storedChecksum = 0;
+		Memory::copy( &storedChecksum, _pData + _dataSize - sizeof( uint32 ), sizeof( uint32 ) );
+		const uint32 computed = StringUtil::computeCrc32( _pData, _dataSize - sizeof( uint32 ) );
+		return storedChecksum == computed;
 	}
 
 	Archive& Archive::operator<<( bool data )
@@ -193,6 +282,15 @@ namespace sw
 		( *this ) << len;
 		if ( len > 0 )
 			writeBytes( data.data(), len );
+		return *this;
+	}
+
+	Archive& Archive::operator<<( const vector<uint8>& bytes )
+	{
+		const uint32 len = static_cast<uint32>( bytes.size() );
+		( *this ) << len;
+		if ( len > 0 )
+			writeBytes( bytes.data(), len );
 		return *this;
 	}
 
@@ -300,6 +398,25 @@ namespace sw
 		return *this;
 	}
 
+	Archive& Archive::operator>>( vector<uint8>& outBytes )
+	{
+		uint32 len{ 0 };
+		( *this ) >> len;
+		if ( _bError == SW_TRUE )
+			return *this;
+
+		if ( len > 0 )
+		{
+			outBytes.resize( len );
+			readBytes( outBytes.data(), len );
+		}
+		else
+		{
+			outBytes.clear();
+		}
+		return *this;
+	}
+
 	Archive& Archive::operator>>( float2& outData )
 	{
 		readBytes( &outData, sizeof( float2 ) );
@@ -327,7 +444,10 @@ namespace sw
 	bool Archive::serializeObject( void* pInstance, const TypeInfo* pTypeInfo )
 	{
 		if ( pInstance == nullptr || pTypeInfo == nullptr )
+		{
+			_bError = SW_TRUE;
 			return false;
+		}
 
 		BinarySerializer::serialize( pInstance, *pTypeInfo, _listBuffer );
 		_pData	  = _listBuffer.data();
@@ -343,10 +463,16 @@ namespace sw
 	bool Archive::deserializeObject( void* pInstance, const TypeInfo* pTypeInfo )
 	{
 		if ( pInstance == nullptr || pTypeInfo == nullptr || _pData == nullptr )
+		{
+			_bError = SW_TRUE;
 			return false;
+		}
 
 		if ( _offset >= _dataSize )
+		{
+			_bError = SW_TRUE;
 			return false;
+		}
 
 		return BinarySerializer::deserialize( pInstance, *pTypeInfo, _pData + _offset, _dataSize - _offset );
 	}
@@ -354,5 +480,379 @@ namespace sw
 	bool Archive::deserializeObject( void* pInstance, const TypeInfo& typeInfo )
 	{
 		return deserializeObject( pInstance, &typeInfo );
+	}
+
+	bool Archive::writeCompressedSection( const void* pData, uint32 byteSize, CompressionCodecType codecType )
+	{
+		if ( pData == nullptr || byteSize == 0 )
+		{
+			writeSection( nullptr, 0 );
+			return true;
+		}
+
+		vector<uint8> compressedBytes;
+		if ( CompressionStream::compressBuffer( pData, byteSize, compressedBytes, codecType ) == false )
+		{
+			_bError = SW_TRUE;
+			return false;
+		}
+
+		writeSection( compressedBytes.data(), static_cast<uint32>( compressedBytes.size() ) );
+		return true;
+	}
+
+	bool Archive::readCompressedSection( vector<uint8>& outBytes )
+	{
+		vector<uint8> compressedBytes;
+		if ( readSection( compressedBytes ) == false )
+			return false;
+
+		if ( compressedBytes.empty() )
+		{
+			outBytes.clear();
+			return true;
+		}
+
+		if ( CompressionStream::decompressBuffer( compressedBytes.data(), compressedBytes.size(), outBytes ) == false )
+		{
+			_bError = SW_TRUE;
+			outBytes.clear();
+			return false;
+		}
+
+		return true;
+	}
+
+	bool Archive::serializeCompressedObject( const void* pInstance, const TypeInfo& typeInfo, CompressionCodecType codecType )
+	{
+		if ( pInstance == nullptr )
+		{
+			_bError = SW_TRUE;
+			return false;
+		}
+
+		vector<uint8> rawBytes;
+		BinarySerializer::serialize( pInstance, typeInfo, rawBytes );
+		return writeCompressedSection( rawBytes.data(), static_cast<uint32>( rawBytes.size() ), codecType );
+	}
+
+	bool Archive::deserializeCompressedObject( void* pInstance, const TypeInfo& typeInfo )
+	{
+		if ( pInstance == nullptr )
+		{
+			_bError = SW_TRUE;
+			return false;
+		}
+
+		vector<uint8> rawBytes;
+		if ( readCompressedSection( rawBytes ) == false || rawBytes.empty() )
+			return false;
+
+		return BinarySerializer::deserialize( pInstance, typeInfo, rawBytes.data(), rawBytes.size() );
+	}
+
+	bool Archive::serializeVersionedObject( uint32 version, const void* pInstance, const TypeInfo& typeInfo )
+	{
+		if ( pInstance == nullptr )
+		{
+			_bError = SW_TRUE;
+			return false;
+		}
+
+		vector<uint8> versionedBytes;
+		BinarySerializer::serializeVersioned( version, pInstance, typeInfo, versionedBytes );
+		writeSection( versionedBytes.data(), static_cast<uint32>( versionedBytes.size() ) );
+		return true;
+	}
+
+	bool Archive::deserializeVersionedObject( uint32& outVersion, void* pInstance, const TypeInfo& typeInfo,
+											  uint32 currentVersion, SchemaMigrateFn migrate, const TypeInfo* pLegacyTypeInfo )
+	{
+		if ( pInstance == nullptr )
+		{
+			_bError = SW_TRUE;
+			return false;
+		}
+
+		vector<uint8> versionedBytes;
+		if ( readSection( versionedBytes ) == false || versionedBytes.empty() )
+			return false;
+
+		return BinarySerializer::deserializeVersioned( outVersion, pInstance, typeInfo,
+													   versionedBytes.data(), versionedBytes.size(),
+													   currentVersion, migrate, pLegacyTypeInfo );
+	}
+
+	bool Archive::serializeJsonObject( const void* pInstance, const TypeInfo& typeInfo, bool bPretty )
+	{
+		if ( pInstance == nullptr )
+		{
+			_bError = SW_TRUE;
+			return false;
+		}
+
+		const string jsonStr = bPretty ? JsonSerializer::serializePretty( pInstance, typeInfo )
+									   : JsonSerializer::serialize( pInstance, typeInfo );
+		( *this ) << jsonStr;
+		return true;
+	}
+
+	bool Archive::deserializeJsonObject( void* pInstance, const TypeInfo& typeInfo )
+	{
+		if ( pInstance == nullptr )
+		{
+			_bError = SW_TRUE;
+			return false;
+		}
+
+		string jsonStr;
+		( *this ) >> jsonStr;
+		if ( _bError == SW_TRUE || jsonStr.empty() )
+			return false;
+
+		return JsonSerializer::deserialize( pInstance, typeInfo, jsonStr );
+	}
+
+	bool Archive::convertJsonToBinary( string_view jsonStr, const TypeInfo& typeInfo )
+	{
+		if ( jsonStr.empty() || typeInfo._size == 0 )
+		{
+			_bError = SW_TRUE;
+			return false;
+		}
+
+		vector<uint8> listStorage;
+		void*		  pTempInstance = createScratchInstance( typeInfo, listStorage );
+		if ( pTempInstance == nullptr )
+		{
+			_bError = SW_TRUE;
+			return false;
+		}
+
+		const bool bOk = JsonSerializer::deserialize( pTempInstance, typeInfo, jsonStr );
+		if ( bOk )
+			serializeObject( pTempInstance, typeInfo );
+		else
+			_bError = SW_TRUE;
+
+		destroyScratchInstance( pTempInstance, typeInfo );
+		return bOk;
+	}
+
+	string Archive::convertBinaryToJson( const TypeInfo& typeInfo, bool bPretty )
+	{
+		if ( _pData == nullptr || _offset >= _dataSize || typeInfo._size == 0 )
+			return {};
+
+		vector<uint8> listStorage;
+		void*		  pTempInstance = createScratchInstance( typeInfo, listStorage );
+		if ( pTempInstance == nullptr )
+			return {};
+
+		string result;
+		if ( deserializeObject( pTempInstance, typeInfo ) )
+		{
+			result = bPretty ? JsonSerializer::serializePretty( pTempInstance, typeInfo )
+							 : JsonSerializer::serialize( pTempInstance, typeInfo );
+		}
+
+		destroyScratchInstance( pTempInstance, typeInfo );
+		return result;
+	}
+
+	bool Archive::serializeXmlObject( const void* pInstance, const TypeInfo& typeInfo )
+	{
+		if ( pInstance == nullptr )
+		{
+			_bError = SW_TRUE;
+			return false;
+		}
+
+		const string xmlStr = XmlSerializer::serialize( pInstance, typeInfo );
+		( *this ) << xmlStr;
+		return true;
+	}
+
+	bool Archive::deserializeXmlObject( void* pInstance, const TypeInfo& typeInfo )
+	{
+		if ( pInstance == nullptr )
+		{
+			_bError = SW_TRUE;
+			return false;
+		}
+
+		string xmlStr;
+		( *this ) >> xmlStr;
+		if ( _bError == SW_TRUE || xmlStr.empty() )
+			return false;
+
+		return XmlSerializer::deserialize( pInstance, typeInfo, xmlStr );
+	}
+
+	bool Archive::convertXmlToBinary( string_view xmlStr, const TypeInfo& typeInfo )
+	{
+		if ( xmlStr.empty() || typeInfo._size == 0 )
+		{
+			_bError = SW_TRUE;
+			return false;
+		}
+
+		vector<uint8> listStorage;
+		void*		  pTempInstance = createScratchInstance( typeInfo, listStorage );
+		if ( pTempInstance == nullptr )
+			return false;
+
+		const bool bOk = XmlSerializer::deserialize( pTempInstance, typeInfo, xmlStr );
+		if ( bOk )
+			serializeObject( pTempInstance, typeInfo );
+		else
+			_bError = SW_TRUE;
+
+		destroyScratchInstance( pTempInstance, typeInfo );
+		return bOk;
+	}
+
+	string Archive::convertBinaryToXml( const TypeInfo& typeInfo )
+	{
+		if ( _pData == nullptr || _offset >= _dataSize || typeInfo._size == 0 )
+			return {};
+
+		vector<uint8> listStorage;
+		void*		  pTempInstance = createScratchInstance( typeInfo, listStorage );
+		if ( pTempInstance == nullptr )
+			return {};
+
+		string result;
+		if ( deserializeObject( pTempInstance, typeInfo ) )
+			result = XmlSerializer::serialize( pTempInstance, typeInfo );
+
+		destroyScratchInstance( pTempInstance, typeInfo );
+		return result;
+	}
+
+	void Archive::writeVarUInt( uint64 value )
+	{
+		VarIntUtil::encodeVarUInt64( value, _listBuffer );
+		_pData	  = _listBuffer.data();
+		_dataSize = _listBuffer.size();
+		_offset	  = _dataSize;
+	}
+
+	void Archive::writeVarInt( int64 value )
+	{
+		VarIntUtil::encodeVarInt64( value, _listBuffer );
+		_pData	  = _listBuffer.data();
+		_dataSize = _listBuffer.size();
+		_offset	  = _dataSize;
+	}
+
+	bool Archive::readVarUInt( uint64& outValue )
+	{
+		if ( _pData == nullptr || _offset >= _dataSize )
+		{
+			_bError = SW_TRUE;
+			return false;
+		}
+		size_t inoutOffset = static_cast<size_t>( _offset );
+		if ( VarIntUtil::decodeVarUInt64( _pData, static_cast<size_t>( _dataSize ), inoutOffset, outValue ) == false )
+		{
+			_bError = SW_TRUE;
+			return false;
+		}
+		_offset = inoutOffset;
+		return true;
+	}
+
+	bool Archive::readVarUInt( uint32& outValue )
+	{
+		uint64 val64 = 0;
+		if ( readVarUInt( val64 ) == false )
+			return false;
+		outValue = static_cast<uint32>( val64 );
+		return true;
+	}
+
+	bool Archive::readVarInt( int64& outValue )
+	{
+		if ( _pData == nullptr || _offset >= _dataSize )
+		{
+			_bError = SW_TRUE;
+			return false;
+		}
+		size_t inoutOffset = static_cast<size_t>( _offset );
+		if ( VarIntUtil::decodeVarInt64( _pData, static_cast<size_t>( _dataSize ), inoutOffset, outValue ) == false )
+		{
+			_bError = SW_TRUE;
+			return false;
+		}
+		_offset = inoutOffset;
+		return true;
+	}
+
+	bool Archive::readVarInt( int32& outValue )
+	{
+		int64 val64 = 0;
+		if ( readVarInt( val64 ) == false )
+			return false;
+		outValue = static_cast<int32>( val64 );
+		return true;
+	}
+
+	void Archive::writePooledString( string_view str )
+	{
+		const uint32 poolId = _stringPool.internString( str );
+		writeVarUInt( static_cast<uint64>( poolId ) );
+	}
+
+	bool Archive::readPooledString( string& outStr )
+	{
+		uint64 poolId = 0;
+		if ( readVarUInt( poolId ) == false )
+			return false;
+		const string_view sv = _stringPool.getString( static_cast<uint32>( poolId ) );
+		outStr.assign( sv.data(), sv.size() );
+		return true;
+	}
+
+	void Archive::saveStringPool()
+	{
+		_stringPool.saveToArchive( *this );
+	}
+
+	bool Archive::loadStringPool()
+	{
+		return _stringPool.loadFromArchive( *this );
+	}
+
+	bool Archive::serializeCompactObject( const void* pInstance, const TypeInfo& typeInfo, const SerializeContext& ctx )
+	{
+		if ( pInstance == nullptr )
+		{
+			_bError = SW_TRUE;
+			return false;
+		}
+		vector<uint8> compactBytes;
+		BinarySerializer::serializeCompact( pInstance, typeInfo, compactBytes, ctx );
+		writeSection( compactBytes.data(), static_cast<uint32>( compactBytes.size() ) );
+		return isOk();
+	}
+
+	bool Archive::deserializeCompactObject( void* pInstance, const TypeInfo& typeInfo, const SerializeContext& ctx )
+	{
+		if ( pInstance == nullptr )
+		{
+			_bError = SW_TRUE;
+			return false;
+		}
+		vector<uint8> compactBytes;
+		if ( readSection( compactBytes ) == false || compactBytes.empty() )
+		{
+			_bError = SW_TRUE;
+			return false;
+		}
+		const bool bOk = BinarySerializer::deserializeCompact( pInstance, typeInfo, compactBytes.data(), compactBytes.size(), ctx );
+		if ( bOk == false )
+			_bError = SW_TRUE;
+		return bOk;
 	}
 } // namespace sw

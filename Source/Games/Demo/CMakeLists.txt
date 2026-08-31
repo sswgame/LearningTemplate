@@ -5,11 +5,7 @@
 
 # 리플렉션 대상 헤더 스캔
 file(GLOB_RECURSE DEMO_GAME_HEADERS
-	"${CMAKE_CURRENT_SOURCE_DIR}/Actors/*.h"
-	"${CMAKE_CURRENT_SOURCE_DIR}/Combat/*.h"
-	"${CMAKE_CURRENT_SOURCE_DIR}/Effects/*.h"
-	"${CMAKE_CURRENT_SOURCE_DIR}/UI/*.h"
-	"${CMAKE_CURRENT_SOURCE_DIR}/World/*.h"
+	"${CMAKE_CURRENT_SOURCE_DIR}/*.h"
 )
 
 # 게임 팩 타겟(SWGame) 구성

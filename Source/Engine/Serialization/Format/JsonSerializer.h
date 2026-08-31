@@ -11,6 +11,7 @@
 
 namespace sw
 {
+	class Archive;
 	struct TypeInfo;
 
 	/**
@@ -51,6 +52,14 @@ namespace sw
 		/** @brief JSON 문자열에서 객체를 역직렬화합니다. */
 		static bool deserialize( void* pInstance, const TypeInfo& typeInfo, string_view jsonStr,
 								 const SerializeContext& ctx = SerializeContext::getDefault() );
+
+		/** @brief 객체를 JSON으로 직렬화하여 Archive에 기록합니다. */
+		static bool serializeToArchive( const void* pInstance, const TypeInfo& typeInfo, Archive& outArchive,
+										bool bPretty = false, const SerializeContext& ctx = SerializeContext::getDefault() );
+
+		/** @brief Archive에서 JSON 문자열을 읽어 객체로 역직렬화합니다. */
+		static bool deserializeFromArchive( void* pInstance, const TypeInfo& typeInfo, Archive& inArchive,
+											const SerializeContext& ctx = SerializeContext::getDefault() );
 
 		/** @brief Pretty JSON을 절대 경로에 씁니다. indentSpaces==0 이면 serializePretty 기본(4). */
 		static bool saveFile( string_view absPath, const void* pInstance, const TypeInfo& typeInfo, uint32 indentSpaces = 4,
