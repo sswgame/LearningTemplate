@@ -118,8 +118,10 @@ namespace sw
 	{
 		if ( _bTitleHandedOff == SW_FALSE )
 		{
-			_bTitleHandedOff = SW_TRUE;
-			game::getService<SceneManager>()->requestLoadAsync( _data._titleScene );
+			_bTitleHandedOff			= SW_TRUE;
+			SceneManager* pSceneManager = game::getService<SceneManager>();
+			if ( pSceneManager != nullptr )
+				pSceneManager->requestLoadAsync( _data._titleScene );
 			SW_LOG_INFO( "Title scene loaded: '%#'", _data._titleScene );
 		}
 

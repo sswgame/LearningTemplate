@@ -365,6 +365,7 @@ namespace sw
 		hashed_string		   _moduleName;
 		int64				   _invalidValue{ 0 };
 		int64				   _countValue{ 0 };
+		uint8				   _size{ sizeof( int32 ) };
 		uint8				   _bIsBitFlag	  : 1;
 		uint8				   _bHasInvalid	  : 1;
 		uint8				   _bHasCount	  : 1;
@@ -383,6 +384,51 @@ namespace sw
 			(void)key;
 			return nullptr;
 #endif
+		}
+
+		/** @brief 메모리 포인터에서 실제 enum 크기만큼 안전하게 읽어 int64로 반환합니다. */
+		int64 readValueFromMemory( const void* pPtr ) const noexcept
+		{
+			if ( pPtr == nullptr )
+				return 0;
+			switch ( _size )
+			{
+				case 1:
+					return static_cast<int64>( *static_cast<const uint8*>( pPtr ) );
+				case 2:
+					return static_cast<int64>( *static_cast<const uint16*>( pPtr ) );
+				case 4:
+					return static_cast<int64>( *static_cast<const int32*>( pPtr ) );
+				case 8:
+					return *static_cast<const int64*>( pPtr );
+				default:
+					return static_cast<int64>( *static_cast<const int32*>( pPtr ) );
+			}
+		}
+
+		/** @brief int64 값을 실제 enum 크기만큼만 메모리에 안전하게 씁니다. */
+		void writeValueToMemory( void* pPtr, int64 val ) const noexcept
+		{
+			if ( pPtr == nullptr )
+				return;
+			switch ( _size )
+			{
+				case 1:
+					*static_cast<uint8*>( pPtr ) = static_cast<uint8>( val );
+					break;
+				case 2:
+					*static_cast<uint16*>( pPtr ) = static_cast<uint16>( val );
+					break;
+				case 4:
+					*static_cast<int32*>( pPtr ) = static_cast<int32>( val );
+					break;
+				case 8:
+					*static_cast<int64*>( pPtr ) = val;
+					break;
+				default:
+					*static_cast<int32*>( pPtr ) = static_cast<int32>( val );
+					break;
+			}
 		}
 
 		/** @brief ENUM(Invalid/Count) 센티널을 반영한 유효성. 메타가 없으면 true. */

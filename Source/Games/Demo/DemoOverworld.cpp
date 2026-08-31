@@ -23,15 +23,19 @@ namespace sw
 
 	void DemoGame::updateOverworld( float32 deltaTime )
 	{
-		InputManager& inputManager = *game::getService<InputManager>();
-
-		_player.setInputEnabled( canAcceptOverworldInput() );
-		_player.update( deltaTime, inputManager );
+		InputManager* pInputManager = game::getService<InputManager>();
+		if ( pInputManager != nullptr )
+		{
+			_player.setInputEnabled( canAcceptOverworldInput() );
+			_player.update( deltaTime, *pInputManager );
+		}
 
 		{
-			const float32 posX = static_cast<float32>( _player.getTileX() );
-			const float32 posZ = static_cast<float32>( _player.getTileY() );
-			game::getService<DebugDrawQueue>()->drawLine( { posX, 0.05f, posZ }, { posX, 1.05f, posZ }, { 0.2f, 1.0f, 0.4f, 1.0f } );
+			const float32	posX	   = static_cast<float32>( _player.getTileX() );
+			const float32	posZ	   = static_cast<float32>( _player.getTileY() );
+			DebugDrawQueue* pDebugDraw = game::getService<DebugDrawQueue>();
+			if ( pDebugDraw != nullptr )
+				pDebugDraw->drawLine( { posX, 0.05f, posZ }, { posX, 1.05f, posZ }, { 0.2f, 1.0f, 0.4f, 1.0f } );
 		}
 
 		updateHd2dCameraBias();
@@ -47,8 +51,10 @@ namespace sw
 			syncSaveFromWorld();
 			const string	   savePath = resolveSavePath( _data._defaultSavePath );
 			SaveRequestedEvent saveEvent{};
-			saveEvent._savePath = savePath;
-			game::getService<EventDispatcher>()->publish( gameEventChannel(), saveEvent );
+			saveEvent._savePath			 = savePath;
+			EventDispatcher* pDispatcher = game::getService<EventDispatcher>();
+			if ( pDispatcher != nullptr )
+				pDispatcher->publish( gameEventChannel(), saveEvent );
 			_save.saveToFile( savePath );
 			_hud.setDialogue( GameStrings::get( "ui.game_saved", "Game saved." ) );
 		}
@@ -56,8 +62,10 @@ namespace sw
 		{
 			const string	   savePath = resolveSavePath( _data._defaultSavePath );
 			LoadRequestedEvent loadEvent{};
-			loadEvent._savePath = savePath;
-			game::getService<EventDispatcher>()->publish( gameEventChannel(), loadEvent );
+			loadEvent._savePath			 = savePath;
+			EventDispatcher* pDispatcher = game::getService<EventDispatcher>();
+			if ( pDispatcher != nullptr )
+				pDispatcher->publish( gameEventChannel(), loadEvent );
 			if ( _save.loadFromFile( savePath ) )
 			{
 				applySaveToWorld();

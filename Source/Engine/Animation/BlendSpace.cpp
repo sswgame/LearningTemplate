@@ -107,9 +107,12 @@ namespace sw
 
 		for ( size_t index = 1; index < sampleCount; ++index )
 		{
-			const float32		 normalizedWeight = arrWeight[index] / totalWeight;
-			const float32		 blendFactor	  = normalizedWeight / ( accumWeight + normalizedWeight );
-			const DualQuaternion currentDQ		  = DualQuaternion::fromMatrix( _listSample[index]._pose );
+			const float32 normalizedWeight = arrWeight[index] / totalWeight;
+			const float32 weightSum		   = accumWeight + normalizedWeight;
+			if ( weightSum < MathUtil::Epsilon )
+				continue;
+			const float32		 blendFactor = normalizedWeight / weightSum;
+			const DualQuaternion currentDQ	 = DualQuaternion::fromMatrix( _listSample[index]._pose );
 
 			accumDQ = DualQuaternion::dlb( accumDQ, currentDQ, blendFactor );
 			accumWeight += normalizedWeight;

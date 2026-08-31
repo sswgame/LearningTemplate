@@ -181,6 +181,7 @@ namespace sw
 		, _moduleName{}
 		, _invalidValue{ 0 }
 		, _countValue{ 0 }
+		, _size{ sizeof( int32 ) }
 		, _bIsBitFlag{ SW_FALSE }
 		, _bHasInvalid{ SW_FALSE }
 		, _bHasCount{ SW_FALSE }

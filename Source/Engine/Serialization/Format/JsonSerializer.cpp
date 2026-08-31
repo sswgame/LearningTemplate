@@ -405,13 +405,13 @@ namespace sw
 				{
 					if ( src.isString() )
 					{
-						const int64 v					= pEnumInfo->stringFlagsToValue( src.asString() );
-						*static_cast<int64*>( pValPtr ) = v;
+						const int64 v = pEnumInfo->stringFlagsToValue( src.asString() );
+						pEnumInfo->writeValueToMemory( pValPtr, v );
 						return true;
 					}
 					if ( src.isNumber() )
 					{
-						*static_cast<int64*>( pValPtr ) = src.asInt( 0 );
+						pEnumInfo->writeValueToMemory( pValPtr, src.asInt( 0 ) );
 						return true;
 					}
 				}

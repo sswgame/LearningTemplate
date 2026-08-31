@@ -37,16 +37,16 @@ namespace sw
 		if ( _transitions.isBusy() )
 			return;
 
-		InputManager& inputManager = *game::getService<InputManager>();
-		const bool	  bWasActive   = _battle.isActive();
+		InputManager* pInputManager = game::getService<InputManager>();
+		const bool	  bWasActive	= _battle.isActive();
 		_battle.update( deltaTime );
 
 		if ( _battle.getPhase() == BattlePhase::PlayerChoice )
 		{
 			ActionMap&			 actions = gameActions();
 			const GameActionIds& ids	 = gameActionIds();
-			if ( actions.getInputManager() != &inputManager )
-				actions.setInputManager( &inputManager );
+			if ( pInputManager != nullptr && actions.getInputManager() != pInputManager )
+				actions.setInputManager( pInputManager );
 
 			if ( actions.wasActionTriggered( ids._fightMove0 ) || actions.wasActionTriggered( ids._confirm ) )
 				_battle.selectFight( 0 );
@@ -68,8 +68,10 @@ namespace sw
 		_returnPlayerY		  = _player.getTileY();
 		_bBattleReturnPending = 1;
 		BattleRequestedEvent requestedEvent{};
-		requestedEvent._fromMapPath = _returnMapPath;
-		game::getService<EventDispatcher>()->publish( gameEventChannel(), requestedEvent );
+		requestedEvent._fromMapPath	 = _returnMapPath;
+		EventDispatcher* pDispatcher = game::getService<EventDispatcher>();
+		if ( pDispatcher != nullptr )
+			pDispatcher->publish( gameEventChannel(), requestedEvent );
 		_transitions.beginBattle();
 	}
 
@@ -86,7 +88,9 @@ namespace sw
 		if ( foeId.empty() )
 			foeId = _data._defaultEncounterId;
 		_battle.startWithPartyLead( _listParty[0], foeId.c_str() );
-		game::getService<SceneManager>()->requestLoadAsync( _data._battleScene );
+		SceneManager* pSceneManager = game::getService<SceneManager>();
+		if ( pSceneManager != nullptr )
+			pSceneManager->requestLoadAsync( _data._battleScene );
 		_hud.setDialogue( _battle.getStatusText() );
 		SW_LOG_INFO( "Battle scene requested: %# (foe=%#)", _data._battleScene, foeId.c_str() );
 	}
@@ -96,8 +100,10 @@ namespace sw
 		const bool bWon = _battle.playerWon();
 		{
 			BattleEndedEvent endedEvent{};
-			endedEvent._bPlayerWon = bWon ? 1 : 0;
-			game::getService<EventDispatcher>()->publish( gameEventChannel(), endedEvent );
+			endedEvent._bPlayerWon		 = bWon ? 1 : 0;
+			EventDispatcher* pDispatcher = game::getService<EventDispatcher>();
+			if ( pDispatcher != nullptr )
+				pDispatcher->publish( gameEventChannel(), endedEvent );
 		}
 		syncPartyLeadFromBattle();
 		_battle.endBattle();

@@ -49,7 +49,11 @@ namespace sw
 		SW_LOG_TRACE( "%#", _statusText.c_str() );
 		const GameData* pGameData = game::getService<GameData>();
 		if ( pGameData != nullptr && pGameData->_dungeonBgm.empty() == false )
-			game::getService<IAudioSystem>()->playMusic( pGameData->_dungeonBgm );
+		{
+			IAudioSystem* pAudio = game::getService<IAudioSystem>();
+			if ( pAudio != nullptr )
+				pAudio->playMusic( pGameData->_dungeonBgm );
+		}
 	}
 
 	void BattleState::update( float32 deltaTime )

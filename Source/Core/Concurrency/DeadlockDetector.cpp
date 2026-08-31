@@ -148,9 +148,10 @@ namespace sw
 			}
 
 			std::thread::id ownerThread = ownerIt->second;
-			if ( ownerThread == startThreadId )
+			if ( ownerThread == startThreadId || std::find( listPath.begin(), listPath.end(), ownerThread ) != listPath.end() )
 			{
-				// 대기 체인이 시작 스레드로 되돌아왔으므로 교착상태 확정!
+				// 대기 체인이 시작 스레드로 되돌아왔거나 체인 내 순환이 발생했으므로 교착상태 확정!
+				listPath.push_back( ownerThread );
 				dumpDeadlock( listPath );
 				return true;
 			}

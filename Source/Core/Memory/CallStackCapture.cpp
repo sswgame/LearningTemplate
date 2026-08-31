@@ -3,37 +3,40 @@
 #include "Core/Memory/CallStackCapture.h"
 
 #include "Core/Common/PlatformOsHeaders.h"
+#include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 
 namespace sw
 {
-	static bool	 s_bCallStackInitialized{ false };
-	static mutex s_symbolMutex{};
+	static atomic<bool> s_bCallStackInitialized{ false };
+	static mutex		s_symbolMutex{};
 
 	void CallStackCapture::initialize()
 	{
-		if ( s_bCallStackInitialized )
+		bool bExpected = false;
+		if ( s_bCallStackInitialized.compare_exchange_strong( bExpected, true ) == false )
 			return;
 
+		std::scoped_lock<mutex> lock{ s_symbolMutex };
 #if defined( SW_PLATFORM_WINDOWS )
 		SymSetOptions( SYMOPT_UNDNAME | SYMOPT_DEFERRED_LOADS );
 		HANDLE process = GetCurrentProcess();
 		SymInitialize( process, nullptr, FALSE );
 		SymRefreshModuleList( process );
 #endif
-		s_bCallStackInitialized = true;
 	}
 
 	void CallStackCapture::shutdown()
 	{
-		if ( s_bCallStackInitialized == false )
+		bool bExpected = true;
+		if ( s_bCallStackInitialized.compare_exchange_strong( bExpected, false ) == false )
 			return;
 
+		std::scoped_lock<mutex> lock{ s_symbolMutex };
 #if defined( SW_PLATFORM_WINDOWS )
 		HANDLE process = GetCurrentProcess();
 		SymCleanup( process );
 #endif
-		s_bCallStackInitialized = false;
 	}
 
 	void CallStackCapture::capture( CallStack& outStack, uint32 skipFrames )

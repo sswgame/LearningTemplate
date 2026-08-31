@@ -34,7 +34,11 @@ namespace sw
 		frame._bDashPressed	  = actions.wasActionTriggered( ids._dash ) ? 1 : 0;
 
 		if ( frame._bAttackPressed != 0 && _data._attackSfx.empty() == false )
-			game::getService<IAudioSystem>()->play( _data._attackSfx );
+		{
+			IAudioSystem* pAudio = game::getService<IAudioSystem>();
+			if ( pAudio != nullptr )
+				pAudio->play( _data._attackSfx );
+		}
 
 		const ActionRoomFrameResult result = _actionRoom.update( deltaTime, frame );
 		_actionRoom.drawDebug();
@@ -53,7 +57,9 @@ namespace sw
 				leadMember._hp = leadMember._hpMax > 0 ? leadMember._hpMax : 1;
 				PlayerDefeatedInRoomEvent defeatedEvent{};
 				defeatedEvent._returnMapPath = _data._startMap;
-				game::getService<EventDispatcher>()->publish( gameEventChannel(), defeatedEvent );
+				EventDispatcher* pDispatcher = game::getService<EventDispatcher>();
+				if ( pDispatcher != nullptr )
+					pDispatcher->publish( gameEventChannel(), defeatedEvent );
 				_hud.setDialogue( GameStrings::get( "ui.player_down", "You were defeated... returning to town." ) );
 				_actionRoom.clear();
 				_zones.setClearGateLocked( false );
@@ -69,14 +75,22 @@ namespace sw
 			RoomClearedEvent clearedEvent{};
 			clearedEvent._mapPath		= _currentMapPath;
 			clearedEvent._bBossDefeated = result._bBossDefeated != 0 ? 1 : 0;
-			game::getService<EventDispatcher>()->publish( gameEventChannel(), clearedEvent );
 			ClearGateChangedEvent gateEvent{};
-			gateEvent._bLocked = 0;
-			game::getService<EventDispatcher>()->publish( gameEventChannel(), gateEvent );
+			gateEvent._bLocked			 = 0;
+			EventDispatcher* pDispatcher = game::getService<EventDispatcher>();
+			if ( pDispatcher != nullptr )
+			{
+				pDispatcher->publish( gameEventChannel(), clearedEvent );
+				pDispatcher->publish( gameEventChannel(), gateEvent );
+			}
 			if ( result._bBossDefeated != 0 )
 			{
 				if ( _data._bossDefeatSfx.empty() == false )
-					game::getService<IAudioSystem>()->play( _data._bossDefeatSfx );
+				{
+					IAudioSystem* pAudio = game::getService<IAudioSystem>();
+					if ( pAudio != nullptr )
+						pAudio->play( _data._bossDefeatSfx );
+				}
 				_hud.setDialogue( GameStrings::get( "ui.boss_defeated", "Belial defeated!" ) );
 				_save.setFlag( "story_belial_cleared", 1 );
 				SW_LOG_TRACE( "Boss cleared ??victory exit to town unlocked (east door)." );

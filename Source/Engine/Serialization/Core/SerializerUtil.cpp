@@ -71,8 +71,7 @@ namespace sw
 		const EnumInfo* pEnumInfo = engine::getTypeRegistry().findEnum( typeName );
 		if ( pEnumInfo != nullptr )
 		{
-			(void)pEnumInfo;
-			int64		 val = *static_cast<const int64*>( pValuePtr );
+			int64		 val = pEnumInfo->readValueFromMemory( pValuePtr );
 			const uint8* pB	 = reinterpret_cast<const uint8*>( &val );
 			listBuffer.insert( listBuffer.end(), pB, pB + sizeof( int64 ) );
 			return;
@@ -123,12 +122,11 @@ namespace sw
 		const EnumInfo* pEnumInfo = engine::getTypeRegistry().findEnum( typeName );
 		if ( pEnumInfo != nullptr )
 		{
-			(void)pEnumInfo;
 			if ( offset + sizeof( int64 ) > dataSize )
 				return false;
 			int64 val{ 0 };
 			Memory::copy( &val, pData + offset, sizeof( int64 ) );
-			*static_cast<int64*>( pValuePtr ) = val;
+			pEnumInfo->writeValueToMemory( pValuePtr, val );
 			offset += sizeof( int64 );
 			return true;
 		}
@@ -297,7 +295,7 @@ namespace sw
 		const EnumInfo* pEnumInfo = engine::getTypeRegistry().findEnum( typeName );
 		if ( pEnumInfo != nullptr )
 		{
-			const int64 val = *static_cast<const int64*>( pValPtr );
+			const int64 val = pEnumInfo->readValueFromMemory( pValPtr );
 			if ( pEnumInfo->_bIsBitFlag )
 				ss.append( pEnumInfo->toStringFlags( val ).c_str() );
 			else
@@ -332,8 +330,8 @@ namespace sw
 			string_view sv = valStr;
 			if ( sv.size() >= 2 && sv.front() == '"' && sv.back() == '"' )
 				sv = sv.substr( 1, sv.size() - 2 );
-			const int64 v					= pEnumInfo->stringFlagsToValue( sv );
-			*static_cast<int64*>( pValPtr ) = v;
+			const int64 v = pEnumInfo->stringFlagsToValue( sv );
+			pEnumInfo->writeValueToMemory( pValPtr, v );
 			return true;
 		}
 
