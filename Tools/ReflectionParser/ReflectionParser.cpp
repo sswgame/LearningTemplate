@@ -32,6 +32,7 @@ namespace sw
 		sw::string			   _builtinsPath;
 		sw::string			   _annotationMetaPath;
 		sw::string			   _emitTemplatesDir;
+		sw::string			   _sourceRoot;			 ///< 모듈 판별을 이 경로 기준 상대 경로로 수행
 		sw::string			   _emitBuiltinsGenPath; ///< --builtins 와 함께 설정 시 ReflectBuiltins.gen.cpp 전용 모드
 		uint64				   _maxTemplateTimestamp	= 0;
 		uint64				   _builtinsTimestamp		= 0;
@@ -68,6 +69,10 @@ namespace sw
 			else if ( commandLineArg == sw::cliConstants::kEmitTemplates && argIndex + 1 < argc )
 			{
 				outCommandLineArgs._emitTemplatesDir = argv[++argIndex];
+			}
+			else if ( commandLineArg == sw::cliConstants::kSourceRoot && argIndex + 1 < argc )
+			{
+				outCommandLineArgs._sourceRoot = argv[++argIndex];
 			}
 			else if ( commandLineArg == sw::cliConstants::kEmitBuiltinsGen && argIndex + 1 < argc )
 			{
@@ -199,7 +204,7 @@ namespace sw
 		const sw::vector<sw::ParsedTypeInfo> noTypes;
 		const sw::vector<sw::ParsedEnumInfo> noEnums;
 
-		sw::CodeGenerator generator( noTypes, noEnums, inputFile, commandLineArgs._outputDir );
+		sw::CodeGenerator generator( noTypes, noEnums, inputFile, commandLineArgs._outputDir, commandLineArgs._sourceRoot );
 		return generator.generate();
 	}
 
@@ -254,7 +259,8 @@ namespace sw
 			visitor.getCollectedTypes(),
 			visitor.getCollectedEnums(),
 			inputFile,
-			commandLineArgs._outputDir );
+			commandLineArgs._outputDir,
+			commandLineArgs._sourceRoot );
 
 		if ( generator.generate() == false )
 		{

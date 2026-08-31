@@ -52,6 +52,9 @@ function(sw_addReflectionStep TARGET_NAME)
     list(APPEND parserArgs "--builtins" "${_swReflectBuiltins}")
     list(APPEND parserArgs "--annotation-meta" "${_swAnnotationMeta}")
     list(APPEND parserArgs "--emit-templates" "${_swEmitTemplatesDir}")
+    # 모듈 판별을 소스 루트 기준 상대 경로로 하게 한다. 절대 경로로 매칭하면
+    # 리포지토리를 담은 상위 폴더 이름(.../AppData/..., D:/Games/... 등)에 걸려 오분류된다.
+    list(APPEND parserArgs "--source-root" "${CMAKE_SOURCE_DIR}/Source")
     file(GLOB _swEmitTpls "${_swEmitTemplatesDir}/*.tpl")
     foreach(inc IN LISTS ARG_INCLUDES)
         list(APPEND parserArgs "--include" "${inc}")

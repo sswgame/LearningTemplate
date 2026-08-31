@@ -161,6 +161,14 @@ namespace sw
 												{ &ParserClangConfig::_emitRegisterTypeMarker,  jsonKeyConstants::kEmitRegisterTypeMarker},
 												{ &ParserClangConfig::_emitRegisterEnumMarker,  jsonKeyConstants::kEmitRegisterEnumMarker},
 				} );
+
+				const auto itForbidden = obj.find( jsonKeyConstants::kEmitValueForbiddenBases );
+				if ( itForbidden != obj.end() && itForbidden->is_array() )
+					config._listValueForbiddenBaseType = collectStringArray( *itForbidden );
+
+				const auto itForbiddenMsg = obj.find( jsonKeyConstants::kEmitValueForbiddenMessage );
+				if ( itForbiddenMsg != obj.end() && itForbiddenMsg->is_string() )
+					config._valueForbiddenMessage = itForbiddenMsg->get_ref<const std::string&>().c_str();
 			}
 
 			static void applyParsingSection( ParserClangConfig& config, const nlohmann::json& obj )
@@ -172,6 +180,31 @@ namespace sw
 				const auto itPrefixes = obj.find( jsonKeyConstants::kParsingTypeStripPrefixes );
 				if ( itPrefixes != obj.end() && itPrefixes->is_array() )
 					config._listTypeStripPrefix = collectStringArray( *itPrefixes );
+
+				const auto itRules = obj.find( jsonKeyConstants::kParsingModuleRules );
+				if ( itRules != obj.end() && itRules->is_array() )
+				{
+					config._listModuleRule.clear();
+					for ( const auto& rule : *itRules )
+					{
+						if ( rule.is_object() == false )
+							continue;
+						const auto itContains = rule.find( jsonKeyConstants::kModuleRulePathContains );
+						const auto itModule	  = rule.find( jsonKeyConstants::kModuleRuleModule );
+						if ( itContains == rule.end() || itModule == rule.end() )
+							continue;
+						if ( itContains->is_string() == false || itModule->is_string() == false )
+							continue;
+						ParserClangConfig::ModuleRule parsed;
+						parsed._pathContains = itContains->get_ref<const std::string&>().c_str();
+						parsed._module		 = itModule->get_ref<const std::string&>().c_str();
+						config._listModuleRule.push_back( std::move( parsed ) );
+					}
+				}
+
+				const auto itDefaultModule = obj.find( jsonKeyConstants::kParsingDefaultModule );
+				if ( itDefaultModule != obj.end() && itDefaultModule->is_string() )
+					config._defaultModule = itDefaultModule->get_ref<const std::string&>().c_str();
 			}
 
 			static void applyTuningSection( ParserClangConfig& config, const nlohmann::json& obj )
@@ -266,7 +299,8 @@ namespace sw
 namespace sw
 {
 	ParserClangConfig::ParserClangConfig() noexcept
-		: _listBaseArg{}
+		: _listBaseArg{
+	  }
 		, _listForceInclude{}
 		, _llvmClangRel{ "lib/clang" }
 		, _clangIncludeRel{ "include" }
@@ -292,12 +326,20 @@ namespace sw
 		, _emitFlagOpsMarker{ "operator|" }
 		, _emitRegisterTypeMarker{ "RegisterType" }
 		, _emitRegisterEnumMarker{ "RegisterEnum" }
-		, _listComponentBaseType{ "Component", "sw::Component", "SceneComponent", "sw::SceneComponent" }
-		, _listTypeStripPrefix{ "const ", "volatile ", "class ", "struct ", "enum " }
-		, _sourceLookbackBytes{ 512 }
-		, _bLoaded{ SW_FALSE }
-		, _reserved{ 0 }
-		, _padding{ 0 }
+		, _listModuleRule{ { "GameFramework", "GameFramework" },
+						   { "Games", "SWGame" },
+						   { "SWGame", "SWGame" },
+						   { "Editor", "EditorModule" },
+						   { "App", "App" } },
+		_defaultModule{ "Engine" },
+		_listValueForbiddenBaseType{ "sw::Component", "sw::GameObject" },
+		_valueForbiddenMessage{ "GameObject or Component cannot be stored by value inside a PROPERTY(). Use a pointer, GameObjectPtr, or ComponentPtr instead." },
+		_listComponentBaseType{ "Component", "sw::Component", "SceneComponent", "sw::SceneComponent" },
+		_listTypeStripPrefix{ "const ", "volatile ", "class ", "struct ", "enum " },
+		_sourceLookbackBytes{ 512 },
+		_bLoaded{ SW_FALSE },
+		_reserved{ 0 },
+		_padding{ 0 }
 	{
 	}
 

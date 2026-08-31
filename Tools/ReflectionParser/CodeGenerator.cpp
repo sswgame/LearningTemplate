@@ -141,10 +141,12 @@ namespace sw
 		const vector<ParsedTypeInfo>& types,
 		const vector<ParsedEnumInfo>& enums,
 		const string&				  sourceFilePath,
-		const string&				  outputDir )
+		const string&				  outputDir,
+		const string&				  sourceRoot )
 		: _listType{ types }
 		, _listEnum{ enums }
 		, _sourceFilePath{ sourceFilePath }
+		, _sourceRoot{ sourceRoot }
 		, _outputDir{ outputDir }
 		, _outputFilePath{}
 		, _outputHeaderPath{}
@@ -391,10 +393,25 @@ namespace sw
 	{
 		e.line( "[]() {" );
 		e.push();
-		// 강제로 Component/GameObject 파생 클래스가 값으로 들어가는 것을 막는 static_assert
+		// PROPERTY() 에 값으로 담으면 안 되는 기반 타입을 컴파일 타임에 막는다.
+		// 목록은 parser_config 의 emit.value_forbidden_base_types 에서 온다(비면 생략).
 		e.linef( "using PropDecl = decltype(%#::%#);", typeInfo._fullyQualifiedName, prop._name );
-		e.line( "constexpr bool kIsInvalidValue = std::is_pointer_v<std::remove_cv_t<std::remove_reference_t<PropDecl>>> == false && (std::is_base_of_v<sw::Component, std::remove_cv_t<std::remove_reference_t<PropDecl>>> || std::is_base_of_v<sw::GameObject, std::remove_cv_t<std::remove_reference_t<PropDecl>>>);" );
-		e.line( "static_assert(!kIsInvalidValue, \"GameObject or Component cannot be stored by value inside a PROPERTY(). Use a pointer, GameObjectPtr, or ComponentPtr instead.\");" );
+		const ParserClangConfig& cfg = ParserContext::getSharedConfig();
+		if ( cfg._listValueForbiddenBaseType.empty() == false )
+		{
+			string condition;
+			for ( const string& baseType : cfg._listValueForbiddenBaseType )
+			{
+				if ( condition.empty() == false )
+					condition += " || ";
+				condition += "std::is_base_of_v<";
+				condition += baseType;
+				condition += ", std::remove_cv_t<std::remove_reference_t<PropDecl>>>";
+			}
+			e.linef( "constexpr bool kIsInvalidValue = std::is_pointer_v<std::remove_cv_t<std::remove_reference_t<PropDecl>>> == false && (%#);",
+					 condition );
+			e.linef( "static_assert(!kIsInvalidValue, \"%#\");", cfg._valueForbiddenMessage );
+		}
 		e.line( "sw::PropertyInfo p(" );
 		e.push();
 		e.linef( "%#,", CodeEmit::hs( prop._name ) );
@@ -547,15 +564,24 @@ namespace sw
 
 	string CodeGenerator::getModuleName() const
 	{
-		if ( _sourceFilePath.find( "GameFramework" ) != string::npos )
-			return "GameFramework";
-		if ( _sourceFilePath.find( "Games" ) != string::npos || _sourceFilePath.find( "SWGame" ) != string::npos )
-			return "SWGame";
-		if ( _sourceFilePath.find( "Editor" ) != string::npos )
-			return "EditorModule";
-		if ( _sourceFilePath.find( "App" ) != string::npos )
-			return "App";
-		return "Engine";
+		const ParserClangConfig& config = ParserContext::getSharedConfig();
+
+		// 절대 경로로 매칭하면 리포지토리를 담은 상위 폴더 이름(예: .../AppData/..., D:/Games/...)이
+		// 규칙에 걸려 모든 타입이 엉뚱한 모듈로 등록된다. 소스 루트 기준 상대 경로로만 본다.
+		string relativePath = _sourceFilePath;
+		if ( _sourceRoot.empty() == false )
+		{
+			const size_t rootPos = _sourceFilePath.find( _sourceRoot );
+			if ( rootPos != string::npos )
+				relativePath = _sourceFilePath.substr( rootPos + _sourceRoot.size() );
+		}
+
+		for ( const ParserClangConfig::ModuleRule& rule : config._listModuleRule )
+		{
+			if ( rule._pathContains.empty() == false && relativePath.find( rule._pathContains ) != string::npos )
+				return rule._module;
+		}
+		return config._defaultModule;
 	}
 
 	void CodeGenerator::emitTypeRegistrar( CodeEmitBuffer& out, const ParsedTypeInfo& typeInfo ) const

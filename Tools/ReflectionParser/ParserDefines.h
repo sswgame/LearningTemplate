@@ -107,6 +107,7 @@ namespace sw
 		inline static constexpr const utf8* kInclude		 = "--include";
 		inline static constexpr const utf8* kBuiltins		 = "--builtins";
 		inline static constexpr const utf8* kAnnotationMeta	 = "--annotation-meta";
+		inline static constexpr const utf8* kSourceRoot		 = "--source-root";
 		inline static constexpr const utf8* kEmitTemplates	 = "--emit-templates";
 		inline static constexpr const utf8* kEmitBuiltinsGen = "--emit-builtins-gen";
 	}; // struct cliConstants
@@ -179,6 +180,12 @@ namespace sw
 		// parsing.*
 		inline static constexpr const utf8* kParsingComponentBaseTypes = "component_base_types";
 		inline static constexpr const utf8* kParsingTypeStripPrefixes  = "type_strip_prefixes";
+		inline static constexpr const utf8* kParsingModuleRules		   = "module_rules";
+		inline static constexpr const utf8* kParsingDefaultModule	   = "default_module";
+		inline static constexpr const utf8* kModuleRulePathContains	   = "path_contains";
+		inline static constexpr const utf8* kModuleRuleModule		   = "module";
+		inline static constexpr const utf8* kEmitValueForbiddenBases   = "value_forbidden_base_types";
+		inline static constexpr const utf8* kEmitValueForbiddenMessage = "value_forbidden_message";
 
 		// tuning.*
 		inline static constexpr const utf8* kSourceLookbackBytes = "source_lookback_bytes";

@@ -57,7 +57,12 @@
         "flag_ops_header": "FlagOps.gen.h",
         "flag_ops_marker": "operator|",
         "register_type_marker": "RegisterType",
-        "register_enum_marker": "RegisterEnum"
+        "register_enum_marker": "RegisterEnum",
+        "value_forbidden_base_types": [
+            "sw::Component",
+            "sw::GameObject"
+        ],
+        "value_forbidden_message": "GameObject or Component cannot be stored by value inside a PROPERTY(). Use a pointer, GameObjectPtr, or ComponentPtr instead."
     },
     "parsing": {
         "component_base_types": [
@@ -72,7 +77,30 @@
             "class ",
             "struct ",
             "enum "
-        ]
+        ],
+        "module_rules": [
+            {
+                "path_contains": "GameFramework",
+                "module": "GameFramework"
+            },
+            {
+                "path_contains": "Games",
+                "module": "SWGame"
+            },
+            {
+                "path_contains": "SWGame",
+                "module": "SWGame"
+            },
+            {
+                "path_contains": "Editor",
+                "module": "EditorModule"
+            },
+            {
+                "path_contains": "App",
+                "module": "App"
+            }
+        ],
+        "default_module": "Engine"
     },
     "tuning": {
         "source_lookback_bytes": 512

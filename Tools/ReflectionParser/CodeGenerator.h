@@ -21,7 +21,8 @@ namespace sw
 			const vector<ParsedTypeInfo>& types,
 			const vector<ParsedEnumInfo>& enums,
 			const string&				  sourceFilePath,
-			const string&				  outputDir );
+			const string&				  outputDir,
+			const string&				  sourceRoot = string{} );
 
 		/** @brief .gen.cpp / .gen.h 를 생성합니다. */
 		bool generate();
@@ -57,7 +58,11 @@ namespace sw
 		void emitComponentFactoryRegistrar( CodeEmitBuffer& out, const ParsedTypeInfo& typeInfo ) const;
 		/** @brief EnumRegistrar 본문을 출력합니다. */
 		void emitEnumRegistrar( CodeEmitBuffer& out, const ParsedEnumInfo& enumInfo ) const;
-		/** @brief 소스 파일 경로로부터 모듈 이름을 판별합니다. */
+		/**
+		 * @brief 소스 파일 경로로부터 모듈 이름을 판별합니다.
+		 * @details parser_config 의 parsing.module_rules 를 위에서부터 적용합니다. 매칭은
+		 *          sourceRoot 기준 상대 경로로 하므로, 리포지토리를 어디에 두든 결과가 같습니다.
+		 */
 		string getModuleName() const;
 		/** @brief 동반 .gen.h 를 씁니다. */
 		bool emitGeneratedHeader() const;
@@ -85,8 +90,10 @@ namespace sw
 		const vector<ParsedTypeInfo>& _listType;
 		const vector<ParsedEnumInfo>& _listEnum;
 		string						  _sourceFilePath;
-		string						  _outputDir;
-		string						  _outputFilePath;
-		string						  _outputHeaderPath;
+		/** @brief 모듈 판별을 이 경로 기준 상대 경로로 합니다. 비면 전체 경로로 매칭합니다. */
+		string _sourceRoot;
+		string _outputDir;
+		string _outputFilePath;
+		string _outputHeaderPath;
 	};
 } // namespace sw
