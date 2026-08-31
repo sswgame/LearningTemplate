@@ -60,6 +60,7 @@ target_compile_options(sw_compiler_clang INTERFACE
 	-Wno-global-constructors   # 정적 전역 생성자(SW_GLOBAL_VARIABLE, 테스트 등록 등) 허용
 	-Wno-invalid-offsetof      # 다형성/비-표준 레이아웃 클래스 대상 리플렉션 프로퍼티 오프셋 연산 허용
 	-Wno-padded                # 64비트 정렬(alignas)에 따른 자연스러운 구조체 패딩 허용
+	-Wno-unknown-warning-option# 다양한 Clang 버전 간 신규/미지원 경고 옵션 억제 경고 방지
 	-Wno-unsafe-buffer-usage   # RHI/그래픽스/SIMD 등 네이티브 포인터 버퍼 연산 허용
 	$<$<BOOL:${MSVC}>:-Wno-language-extension-token> # Windows SDK 헤더 및 MSVC 전용 키워드(__declspec, __FUNCSIG__, __forceinline 등) 사용 허용
 

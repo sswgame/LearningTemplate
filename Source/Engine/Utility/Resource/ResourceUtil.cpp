@@ -405,11 +405,12 @@ namespace sw
 
 	string ResourceUtil::joinActivePackPath( string_view relativeUnderPack )
 	{
+		if ( relativeUnderPack.empty() )
+			return getActivePackFolderPath();
+
 		const string packFolder = getActivePackFolderPath();
 		if ( packFolder.empty() )
 			return {};
-		if ( relativeUnderPack.empty() )
-			return packFolder;
 		return FileUtil::joinPath( packFolder, relativeUnderPack );
 	}
 

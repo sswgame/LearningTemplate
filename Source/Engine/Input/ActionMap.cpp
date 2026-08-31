@@ -886,11 +886,14 @@ namespace sw
 
 		const float32 lengthSq = dir.getLengthSquared();
 		if ( lengthSq <= MathUtil::Epsilon )
-			return float2{ 0.0f, 0.0f };
+			return dir;
 
 		const float32 length = dir.getLength();
 		if ( binding._deadzone > 0.0f && length < binding._deadzone )
-			return float2{ 0.0f, 0.0f };
+		{
+			dir = float2{ 0.0f, 0.0f };
+			return dir;
+		}
 
 		if ( length > 1.0f )
 			dir.normalize();

@@ -23,7 +23,11 @@ namespace sw
 	{
 	public:
 		/** @brief 가상 소멸. */
-		virtual ~IXmlBackend() = default;
+		virtual ~IXmlBackend()							 = default;
+		IXmlBackend( const IXmlBackend& )				 = default;
+		IXmlBackend& operator=( const IXmlBackend& )	 = default;
+		IXmlBackend( IXmlBackend&& ) noexcept			 = default;
+		IXmlBackend& operator=( IXmlBackend&& ) noexcept = default;
 
 		// ------------------------------------------------------------------------------
 		// 1) 쓰기 — 루트, 값/속성, 배열, 맵

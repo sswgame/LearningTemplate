@@ -66,11 +66,11 @@ namespace sw
 
 	string BootstrapConfig::resolve( string_view packRelative ) const
 	{
-		const string pack = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( _packRoot ) );
-		const string rel  = FileUtil::normalizePath( packRelative );
+		const string_view pack = FileUtil::trimTrailingSlashes( _packRoot );
 		if ( pack.empty() )
-			return rel;
-		return FileUtil::joinPath( pack, rel );
+			return FileUtil::normalizePath( packRelative );
+
+		return FileUtil::joinPath( pack, FileUtil::normalizePath( packRelative ) );
 	}
 
 	bool BootstrapConfig::load( string_view gamedataFileName )

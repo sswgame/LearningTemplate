@@ -25,20 +25,20 @@ namespace sw::editor
 
 	string_view AssetEditorManager::findEditorForPath( string_view assetPath ) const
 	{
-		const string pathStr{ assetPath };
-		size_t		 bestLen{ 0 };
-		string_view	 bestTitle{};
+		const string  pathStr{ assetPath };
+		size_t		  bestLen{ 0 };
+		const string* pBestTitle{ nullptr };
 		for ( const map<string, string>::value_type& pair : _mapOverrideExtToTitle )
 		{
 			if ( FileUtil::endsWithIgnoreCase( pathStr, pair.first ) == false )
 				continue;
 			if ( pair.first.size() <= bestLen )
 				continue;
-			bestLen	  = pair.first.size();
-			bestTitle = pair.second;
+			bestLen	   = pair.first.size();
+			pBestTitle = &pair.second;
 		}
-		if ( bestTitle.empty() == false )
-			return bestTitle;
+		if ( pBestTitle != nullptr && pBestTitle->empty() == false )
+			return string_view{ *pBestTitle };
 		return EditorAssetTypeRegistry::findPanelTitleForPath( assetPath );
 	}
 

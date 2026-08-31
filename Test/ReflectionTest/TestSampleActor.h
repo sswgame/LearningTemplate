@@ -217,6 +217,7 @@ namespace sw
 		PROPERTY( Category = "Flags16" )
 		uint16					_bFlag16_B	: 1;
 		[[maybe_unused]] uint16 _reserved16 : 14;
+		[[maybe_unused]] uint16 _pad16;
 
 		PROPERTY( Category = "Flags32" )
 		uint32 _bFlag32_A : 1;
@@ -224,6 +225,7 @@ namespace sw
 		PROPERTY( Category = "Flags32" )
 		uint32					_bFlag32_B	: 1;
 		[[maybe_unused]] uint32 _reserved32 : 30;
+		[[maybe_unused]] uint32 _pad32;
 
 		PROPERTY( Category = "Flags64" )
 		uint64 _bFlag64_A : 1;
@@ -236,9 +238,11 @@ namespace sw
 			: _bFlag16_A{ SW_FALSE }
 			, _bFlag16_B{ SW_FALSE }
 			, _reserved16{ 0 }
+			, _pad16{ 0 }
 			, _bFlag32_A{ SW_FALSE }
 			, _bFlag32_B{ SW_FALSE }
 			, _reserved32{ 0 }
+			, _pad32{ 0 }
 			, _bFlag64_A{ SW_FALSE }
 			, _bFlag64_B{ SW_FALSE }
 			, _reserved64{ 0 }

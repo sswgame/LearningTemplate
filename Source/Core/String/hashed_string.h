@@ -374,7 +374,7 @@ namespace sw
 		{
 			if constexpr ( std::is_same_v<T, utf16> )
 			{
-#define REGISTER_NAME( index, name ) basic_hashed_string<T, N> predefined_##name{ *this, L#name };
+#define REGISTER_NAME( index, name ) basic_hashed_string<T, N> predefined_##name{ *this, SW_CONCAT( L, #name ) };
 #include "Core/Predefined/PredefinedNameType.xxx"
 #undef REGISTER_NAME
 			}
