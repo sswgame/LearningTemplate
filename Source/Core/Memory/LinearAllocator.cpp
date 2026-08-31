@@ -54,7 +54,7 @@ namespace sw
 				const size_t			recheckIndex = _currentBlockIndex.load( std::memory_order_relaxed );
 				if ( recheckIndex >= kMaxBlockCount || _arrBlock[recheckIndex].load( std::memory_order_relaxed ) == nullptr )
 				{
-					if ( allocateNewBlock( size ) == false )
+					if ( allocateNewBlock( size + alignment ) == false )
 						return nullptr;
 				}
 				continue;
@@ -78,7 +78,7 @@ namespace sw
 			std::scoped_lock<mutex> lock{ _mutex };
 			if ( _currentBlockIndex.load( std::memory_order_relaxed ) == blockIndex )
 			{
-				if ( allocateNewBlock( size ) == false )
+				if ( allocateNewBlock( size + alignment ) == false )
 					return nullptr;
 			}
 		}

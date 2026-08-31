@@ -68,7 +68,7 @@ namespace sw
 	{
 		Marker marker;
 		marker._chunkIndex = _currentChunkIndex;
-		marker._offset	   = _listChunk.empty() == false ? _listChunk[_currentChunkIndex]._offset : 0;
+		marker._offset	   = ( _currentChunkIndex < _listChunk.size() ) ? _listChunk[_currentChunkIndex]._offset : 0;
 		marker._usedBytes  = _usedBytes;
 		return marker;
 	}

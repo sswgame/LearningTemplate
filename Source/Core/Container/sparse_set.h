@@ -57,7 +57,7 @@ namespace sw
 			_listDenseValue.shrink_to_fit();
 		}
 
-		bool contains( KeyType key ) const { return key < _listSparse.size() && std::as_const( _listSparse )[key] != kInvalidKey; }
+		bool contains( KeyType key ) const { return key != kInvalidKey && key < _listSparse.size() && std::as_const( _listSparse )[key] != kInvalidKey; }
 
 		bool get( KeyType key, T& outValue ) const
 		{
@@ -148,6 +148,9 @@ namespace sw
 	template <typename U>
 	void sparse_set<T>::insert( KeyType key, U&& value )
 	{
+		if ( key == kInvalidKey )
+			return;
+
 		if ( contains( key ) )
 		{
 			_listDenseValue[_listSparse[key]] = std::forward<U>( value );
@@ -164,6 +167,9 @@ namespace sw
 	template <typename... Args>
 	void sparse_set<T>::emplace( KeyType key, Args&&... args )
 	{
+		if ( key == kInvalidKey )
+			return;
+
 		if ( contains( key ) )
 		{
 			T* ptr = &_listDenseValue[_listSparse[key]];
@@ -181,7 +187,7 @@ namespace sw
 	template <typename T>
 	void sparse_set<T>::erase( KeyType key )
 	{
-		if ( contains( key ) == false )
+		if ( key == kInvalidKey || contains( key ) == false )
 			return;
 
 		const uint32 denseIndex		= _listSparse[key];

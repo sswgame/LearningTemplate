@@ -47,14 +47,14 @@ namespace sw
 		if ( relativePath.empty() || _impl == nullptr )
 			return nullptr;
 
-		if ( pDevice != nullptr )
-			_impl->_pDevice = pDevice;
-
 		const string key = FileUtil::normalizePath( relativePath );
 		engine::getResourceManager().getAssetDatabase().ensureMeta( key );
 
 		std::unique_lock<std::shared_mutex> lock{ _impl->_mutex };
-		Impl::Entry&						entry = _impl->_mapEntry[key];
+		if ( pDevice != nullptr )
+			_impl->_pDevice = pDevice;
+
+		Impl::Entry& entry = _impl->_mapEntry[key];
 		if ( entry._material == nullptr )
 		{
 			entry._material = make_unique<Material>();

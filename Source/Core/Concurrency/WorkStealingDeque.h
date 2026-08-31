@@ -23,16 +23,18 @@ namespace sw
 		static constexpr size_t kMinCapacity = 8;
 
 		explicit WorkStealingDeque( size_t capacity = constant::kDefaultDequeCapacity )
+			: _top{ 0 }
+			, _bottom{ 0 }
+			, _pBuffer{ nullptr }
+			, _capacityMask{ 0 }
 		{
-			// capacity must be power of 2
-			while ( capacity & ( capacity - 1 ) )
-				capacity &= capacity - 1;
-			capacity = MathUtil::max( capacity, kMinCapacity );
+			size_t cap = kMinCapacity;
+			while ( cap < capacity )
+				cap <<= 1;
+			capacity = cap;
 
 			_capacityMask = capacity - 1;
 			_pBuffer	  = sw_new atomic<T>[capacity];
-			_top.store( 0, std::memory_order_relaxed );
-			_bottom.store( 0, std::memory_order_relaxed );
 		}
 
 		~WorkStealingDeque()
