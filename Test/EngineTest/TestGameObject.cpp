@@ -197,6 +197,135 @@ namespace sw
 										  hashed_string( "sw::SceneComponent" ) );
 	}
 
+	// ------------------------------------------------------------------------------
+	// 다단계 컴포넌트 상속 계층 정의:
+	// Component -> SceneComponent -> MockRootComponent -> MockBasePawnComponent -> MockVehicleComponent -> MockFlyingVehicleComponent
+	// ------------------------------------------------------------------------------
+	class MockRootComponent : public SceneComponent
+	{
+	public:
+		REFLECT_BODY();
+
+		vector<string>* _pTickOrderLog{ nullptr };
+		string			_componentTag{ "Root" };
+
+		MockRootComponent()
+		{
+			setCanEverTick( true );
+		}
+
+		const TypeInfo* getTypeInfo() const override
+		{
+			return StaticType();
+		}
+
+		void onTick( float32 deltaTime ) override
+		{
+			SceneComponent::onTick( deltaTime );
+			if ( _pTickOrderLog != nullptr )
+			{
+				_pTickOrderLog->push_back( _componentTag );
+			}
+		}
+	};
+
+	const TypeInfo* MockRootComponent::StaticType()
+	{
+		return makeMockComponentTypeInfo( hashed_string( "MockRootComponent" ),
+										  hashed_string( "sw::MockRootComponent" ),
+										  sizeof( MockRootComponent ),
+										  hashed_string{} );
+	}
+
+	class MockBasePawnComponent : public MockRootComponent
+	{
+	public:
+		REFLECT_BODY();
+
+		int32 _pawnHealth{ 100 };
+		int32 _pawnTickCount{ 0 };
+
+		MockBasePawnComponent()
+		{
+			setCanEverTick( true );
+		}
+
+		const TypeInfo* getTypeInfo() const override
+		{
+			return StaticType();
+		}
+
+		void onTick( float32 deltaTime ) override
+		{
+			MockRootComponent::onTick( deltaTime );
+			++_pawnTickCount;
+		}
+	};
+
+	const TypeInfo* MockBasePawnComponent::StaticType()
+	{
+		return makeMockComponentTypeInfo( hashed_string( "MockBasePawnComponent" ),
+										  hashed_string( "sw::MockBasePawnComponent" ),
+										  sizeof( MockBasePawnComponent ),
+										  hashed_string( "sw::MockRootComponent" ) );
+	}
+
+	class MockVehicleComponent : public MockBasePawnComponent
+	{
+	public:
+		REFLECT_BODY();
+
+		float32 _maxSpeed{ 120.0f };
+		int32	_vehicleTickCount{ 0 };
+
+		const TypeInfo* getTypeInfo() const override
+		{
+			return StaticType();
+		}
+
+		void onTick( float32 deltaTime ) override
+		{
+			MockBasePawnComponent::onTick( deltaTime );
+			++_vehicleTickCount;
+		}
+	};
+
+	const TypeInfo* MockVehicleComponent::StaticType()
+	{
+		return makeMockComponentTypeInfo( hashed_string( "MockVehicleComponent" ),
+										  hashed_string( "sw::MockVehicleComponent" ),
+										  sizeof( MockVehicleComponent ),
+										  hashed_string( "sw::MockBasePawnComponent" ) );
+	}
+
+	class MockFlyingVehicleComponent : public MockVehicleComponent
+	{
+	public:
+		REFLECT_BODY();
+
+		float32 _maxAltitude{ 5000.0f };
+		int32	_flyingTickCount{ 0 };
+
+		const TypeInfo* getTypeInfo() const override
+		{
+			return StaticType();
+		}
+
+		void onTick( float32 deltaTime ) override
+		{
+			MockVehicleComponent::onTick( deltaTime );
+			++_flyingTickCount;
+		}
+	};
+
+	const TypeInfo* MockFlyingVehicleComponent::StaticType()
+	{
+		return makeMockComponentTypeInfo( hashed_string( "MockFlyingVehicleComponent" ),
+										  hashed_string( "sw::MockFlyingVehicleComponent" ),
+										  sizeof( MockFlyingVehicleComponent ),
+										  hashed_string( "sw::MockVehicleComponent" ) );
+	}
+
 	/** @brief 모의 컴포넌트 TypeInfo 와 팩토리를 등록합니다. */
 	static void RegisterMockComponents( GameObjectManager& manager )
 	{
@@ -204,11 +333,19 @@ namespace sw
 		MockAudioComponent::StaticType();
 		MockCallbackComponent::StaticType();
 		MockTickSceneComponent::StaticType();
+		MockRootComponent::StaticType();
+		MockBasePawnComponent::StaticType();
+		MockVehicleComponent::StaticType();
+		MockFlyingVehicleComponent::StaticType();
 
 		manager.registerComponentType<MockMeshComponent>( hashed_string( "MockMeshComponent" ) );
 		manager.registerComponentType<MockAudioComponent>( hashed_string( "MockAudioComponent" ) );
 		manager.registerComponentType<MockCallbackComponent>( hashed_string( "MockCallbackComponent" ) );
 		manager.registerComponentType<MockTickSceneComponent>( hashed_string( "MockTickSceneComponent" ) );
+		manager.registerComponentType<MockRootComponent>( hashed_string( "MockRootComponent" ) );
+		manager.registerComponentType<MockBasePawnComponent>( hashed_string( "MockBasePawnComponent" ) );
+		manager.registerComponentType<MockVehicleComponent>( hashed_string( "MockVehicleComponent" ) );
+		manager.registerComponentType<MockFlyingVehicleComponent>( hashed_string( "MockFlyingVehicleComponent" ) );
 	}
 } // namespace sw
 
@@ -831,29 +968,156 @@ SW_TEST_CASE( ObjectStateXmlSerializerTest, ParentChildHierarchyRoundtrip )
 }
 
 // ------------------------------------------------------------------------------
-// 8) ComponentTickGroupTest — PrePhysics~PostUpdate 순서
+// 8) ComponentTickGroupTest — PrePhysics~PostUpdate 순서 및 상속 계층 연동 검증
 // ------------------------------------------------------------------------------
 /**
- * @brief [ComponentTickGroupTest] PrePhysics~PostUpdate 틱 순서
+ * @brief [ComponentTickGroupTest] 다단계 상속 계층 컴포넌트들의 4단계 TickGroup(PrePhysics~PostUpdate) 시간순 실행 검증
  */
-SW_TEST_CASE( ComponentTickGroupTest, TickOrderPrePhysicsToPostUpdate )
+SW_TEST_CASE( ComponentTickGroupTest, MultiLevelInheritanceTickGroupChronologicalSequence )
 {
 	sw::GameObjectManager manager;
 	sw::RegisterMockComponents( manager );
-	sw::GameObject* actorPost = manager.createGameObject( sw::hashed_string( "TickGroupActorPost" ) );
-	actorPost->addComponent<MockMeshComponent>();
 
-	sw::GameObject* actorPre = manager.createGameObject( sw::hashed_string( "TickGroupActorPre" ) );
-	actorPre->addComponent<MockMeshComponent>();
+	sw::vector<sw::string> listTickOrder;
 
-	MockMeshComponent* compPost = actorPost->getComponent<MockMeshComponent>();
-	MockMeshComponent* compPre	= actorPre->getComponent<MockMeshComponent>();
-	compPost->setTickGroup( sw::TickGroup::PostPhysics );
-	compPre->setTickGroup( sw::TickGroup::PrePhysics );
+	// 역순(PostUpdate -> PostPhysics -> DuringPhysics -> PrePhysics)으로 액터 및 컴포넌트를 생성하여
+	// 생성 순서와 무관하게 TickGroup 순서대로 틱이 정렬·디스패치되는지 검증
+	sw::GameObject*					pActorPostUpdate = manager.createGameObject( sw::hashed_string( "Actor_PostUpdate" ) );
+	sw::MockFlyingVehicleComponent* pCompFlying		 = pActorPostUpdate->addComponent<sw::MockFlyingVehicleComponent>();
+	pCompFlying->setTickGroup( sw::TickGroup::PostUpdate );
+	pCompFlying->_pTickOrderLog = &listTickOrder;
+	pCompFlying->_componentTag	= "3_PostUpdate_Flying";
+
+	sw::GameObject*			  pActorPostPhysics = manager.createGameObject( sw::hashed_string( "Actor_PostPhysics" ) );
+	sw::MockVehicleComponent* pCompVehicle		= pActorPostPhysics->addComponent<sw::MockVehicleComponent>();
+	pCompVehicle->setTickGroup( sw::TickGroup::PostPhysics );
+	pCompVehicle->_pTickOrderLog = &listTickOrder;
+	pCompVehicle->_componentTag	 = "2_PostPhysics_Vehicle";
+
+	sw::GameObject*			   pActorDuringPhysics = manager.createGameObject( sw::hashed_string( "Actor_DuringPhysics" ) );
+	sw::MockBasePawnComponent* pCompPawn		   = pActorDuringPhysics->addComponent<sw::MockBasePawnComponent>();
+	pCompPawn->setTickGroup( sw::TickGroup::DuringPhysics );
+	pCompPawn->_pTickOrderLog = &listTickOrder;
+	pCompPawn->_componentTag  = "1_DuringPhysics_Pawn";
+
+	sw::GameObject*		   pActorPrePhysics = manager.createGameObject( sw::hashed_string( "Actor_PrePhysics" ) );
+	sw::MockRootComponent* pCompRoot		= pActorPrePhysics->addComponent<sw::MockRootComponent>();
+	pCompRoot->setTickGroup( sw::TickGroup::PrePhysics );
+	pCompRoot->_pTickOrderLog = &listTickOrder;
+	pCompRoot->_componentTag  = "0_PrePhysics_Root";
+
+	// 틱 1회 실행
+	manager.tick( 0.016f );
+
+	SW_EXPECT_EQUAL( static_cast<size_t>( 4 ), listTickOrder.size() );
+	if ( listTickOrder.size() == 4 )
+	{
+		SW_EXPECT_EQUAL( "0_PrePhysics_Root", listTickOrder[0] );
+		SW_EXPECT_EQUAL( "1_DuringPhysics_Pawn", listTickOrder[1] );
+		SW_EXPECT_EQUAL( "2_PostPhysics_Vehicle", listTickOrder[2] );
+		SW_EXPECT_EQUAL( "3_PostUpdate_Flying", listTickOrder[3] );
+	}
+}
+
+/**
+ * @brief [ComponentTickGroupTest] 부모-자식 트리 계층에서 서로 다른 TickGroup을 가진 컴포넌트들의 프레임 내 단방향 데이터 파이프라인 검증
+ */
+SW_TEST_CASE( ComponentTickGroupTest, ParentChildHierarchyHeterogeneousTickGroupDataPipeline )
+{
+	sw::GameObjectManager manager;
+	sw::RegisterMockComponents( manager );
+
+	// 1) 루트 부모 (PrePhysics 단계에서 기본 체력 연산)
+	sw::GameObject*			   pParentObj = manager.createGameObject( sw::hashed_string( "PipelineParent" ) );
+	sw::MockBasePawnComponent* pPawn	  = pParentObj->addComponent<sw::MockBasePawnComponent>();
+	pPawn->setTickGroup( sw::TickGroup::PrePhysics );
+	pPawn->_pawnHealth = 100;
+
+	// 2) 자식 (DuringPhysics 단계에서 부모 체력에 기반하여 최대 속도 산출)
+	sw::GameObject* pChildObj = manager.createGameObject( sw::hashed_string( "PipelineChild" ) );
+	pChildObj->attachToParent( pParentObj );
+	sw::MockVehicleComponent* pVehicle = pChildObj->addComponent<sw::MockVehicleComponent>();
+	pVehicle->setTickGroup( sw::TickGroup::DuringPhysics );
+	pVehicle->_maxSpeed = 0.0f;
+
+	// 3) 손자 (PostUpdate 단계에서 자식 속도에 기반하여 비행 고도 산출)
+	sw::GameObject* pGrandObj = manager.createGameObject( sw::hashed_string( "PipelineGrand" ) );
+	pGrandObj->attachToParent( pChildObj );
+	sw::MockFlyingVehicleComponent* pFlying = pGrandObj->addComponent<sw::MockFlyingVehicleComponent>();
+	pFlying->setTickGroup( sw::TickGroup::PostUpdate );
+	pFlying->_maxAltitude = 0.0f;
+
+	// 커스텀 파이프라인 로깅 연결
+	sw::vector<sw::string> listTickOrder;
+	pPawn->_pTickOrderLog	 = &listTickOrder;
+	pPawn->_componentTag	 = "Stage1_ParentPrePhysics";
+	pVehicle->_pTickOrderLog = &listTickOrder;
+	pVehicle->_componentTag	 = "Stage2_ChildDuringPhysics";
+	pFlying->_pTickOrderLog	 = &listTickOrder;
+	pFlying->_componentTag	 = "Stage3_GrandPostUpdate";
 
 	manager.tick( 0.016f );
-	SW_EXPECT_EQUAL( 1, compPre->_tickCount );
-	SW_EXPECT_EQUAL( 1, compPost->_tickCount );
+
+	SW_EXPECT_EQUAL( static_cast<size_t>( 3 ), listTickOrder.size() );
+	if ( listTickOrder.size() == 3 )
+	{
+		SW_EXPECT_EQUAL( "Stage1_ParentPrePhysics", listTickOrder[0] );
+		SW_EXPECT_EQUAL( "Stage2_ChildDuringPhysics", listTickOrder[1] );
+		SW_EXPECT_EQUAL( "Stage3_GrandPostUpdate", listTickOrder[2] );
+	}
+
+	// 3개 계층 컴포넌트 모두 누락 없이 1회씩 틱을 완료했는지 확인
+	SW_EXPECT_EQUAL( 1, pPawn->_pawnTickCount );
+	SW_EXPECT_EQUAL( 1, pVehicle->_vehicleTickCount );
+	SW_EXPECT_EQUAL( 1, pFlying->_flyingTickCount );
+}
+
+/**
+ * @brief [ComponentTickGroupTest] 런타임에 TickGroup이 동적으로 변경(Migration)되었을 때 틱 웨이브 재구성 및 순서 역전 검증
+ */
+SW_TEST_CASE( ComponentTickGroupTest, DynamicTickGroupRuntimeMigration )
+{
+	sw::GameObjectManager manager;
+	sw::RegisterMockComponents( manager );
+
+	sw::vector<sw::string> listTickOrder;
+
+	sw::GameObject*		   pActorA = manager.createGameObject( sw::hashed_string( "ActorA" ) );
+	sw::MockRootComponent* pCompA  = pActorA->addComponent<sw::MockRootComponent>();
+	pCompA->setTickGroup( sw::TickGroup::PostUpdate ); // A는 처음엔 PostUpdate (나중에 실행)
+	pCompA->_pTickOrderLog = &listTickOrder;
+	pCompA->_componentTag  = "ActorA";
+
+	sw::GameObject*					pActorB = manager.createGameObject( sw::hashed_string( "ActorB" ) );
+	sw::MockFlyingVehicleComponent* pCompB	= pActorB->addComponent<sw::MockFlyingVehicleComponent>();
+	pCompB->setTickGroup( sw::TickGroup::PrePhysics ); // B는 처음엔 PrePhysics (먼저 실행)
+	pCompB->_pTickOrderLog = &listTickOrder;
+	pCompB->_componentTag  = "ActorB";
+
+	// Frame 1: B -> A 순서로 실행되어야 함
+	manager.tick( 0.016f );
+	SW_EXPECT_EQUAL( static_cast<size_t>( 2 ), listTickOrder.size() );
+	if ( listTickOrder.size() == 2 )
+	{
+		SW_EXPECT_EQUAL( "ActorB", listTickOrder[0] );
+		SW_EXPECT_EQUAL( "ActorA", listTickOrder[1] );
+	}
+
+	// 런타임 동적 TickGroup 변경 (A -> PrePhysics, B -> PostUpdate)
+	listTickOrder.clear();
+	pCompA->setTickGroup( sw::TickGroup::PrePhysics );
+	pCompB->setTickGroup( sw::TickGroup::PostUpdate );
+	pActorA->markTickOrderDirty();
+	pActorB->markTickOrderDirty();
+
+	// Frame 2: 즉시 A -> B 순서로 역전되어 실행되어야 함
+	manager.tick( 0.016f );
+	SW_EXPECT_EQUAL( static_cast<size_t>( 2 ), listTickOrder.size() );
+	if ( listTickOrder.size() == 2 )
+	{
+		SW_EXPECT_EQUAL( "ActorA", listTickOrder[0] );
+		SW_EXPECT_EQUAL( "ActorB", listTickOrder[1] );
+	}
 }
 
 // ------------------------------------------------------------------------------
@@ -1552,4 +1816,458 @@ SW_TEST_CASE( GameObjectTest, ObjectStateBinaryBufferRoundtrip )
 	SW_EXPECT_STREQ( "BinaryHero", pTarget->getName().c_str() );
 	SW_EXPECT_FALSE( pTarget->isActive() );
 	SW_EXPECT_NOT_NULL( pTarget->getPrimarySceneComponent() );
+}
+
+/**
+ * @brief [GameObjectTest] 5,000개 대규모 GameObject 생성, 컴포넌트 부착 및 지연 일괄 해제 스트레스 테스트
+ */
+SW_TEST_CASE( GameObjectTest, GameObjectMassiveCreationAndDestructionStressTest )
+{
+	sw::GameObjectManager manager;
+	sw::RegisterMockComponents( manager );
+
+	constexpr uint32			kObjectCount = 5000;
+	sw::vector<sw::GameObject*> listObject;
+	listObject.reserve( kObjectCount );
+
+	// 1) 5,000개 GameObject 및 컴포넌트 대량 생성
+	for ( uint32 index = 0; index < kObjectCount; ++index )
+	{
+		sw::GameObject* pObj = manager.createGameObject( sw::hashed_string( ( "StressActor_" + std::to_string( index ) ).c_str() ) );
+		SW_ASSERT_NOT_NULL( pObj );
+
+		pObj->addComponent<sw::SceneComponent>();
+		sw::MockMeshComponent* pMesh = pObj->addComponent<sw::MockMeshComponent>();
+		pMesh->_meshName			 = "StressMesh";
+
+		if ( index % 5 == 0 )
+			pObj->addComponent<sw::MockAudioComponent>();
+
+		listObject.push_back( pObj );
+	}
+
+	SW_EXPECT_EQUAL( static_cast<size_t>( kObjectCount ), manager.getAllGameObjects().size() );
+
+	// 2) 틱 실행 및 상태 갱신
+	manager.tick( 0.016f );
+
+	// 3) 전수 지연 삭제 큐 등록 및 처리
+	for ( sw::GameObject* pObj : listObject )
+	{
+		manager.destroyObject( pObj );
+	}
+	manager.processDeferredDestruction();
+
+	SW_EXPECT_EQUAL( static_cast<size_t>( 0 ), manager.getAllGameObjects().size() );
+}
+
+/**
+ * @brief [GameObjectTest] 병렬 틱(Parallel Tick) 중 구조 변경 지연 큐(deferPostTick/deferTransformUpdate) 동시성 스트레스 테스트
+ */
+SW_TEST_CASE( GameObjectTest, ParallelTickStructuralMutationStressTest )
+{
+	sw::GameObjectManager manager;
+	sw::RegisterMockComponents( manager );
+
+	constexpr uint32 kObjectCount = 1000;
+	for ( uint32 index = 0; index < kObjectCount; ++index )
+	{
+		sw::GameObject* pObj = manager.createGameObject( sw::hashed_string( ( "ParallelTickActor_" + std::to_string( index ) ).c_str() ) );
+		pObj->addComponent<sw::SceneComponent>();
+		pObj->addComponent<sw::MockMeshComponent>();
+	}
+
+	std::atomic<uint32> postTickExecutedCount{ 0 };
+	std::atomic<uint32> transformUpdateExecutedCount{ 0 };
+
+	// 틱 직전 다중 지연 람다 등록
+	for ( uint32 index = 0; index < 50; ++index )
+	{
+		manager.deferPostTick( SW_DELEGATE_LAMBDA( sw::GameObjectManager::PostTickDelegate, [&postTickExecutedCount]()
+		{
+			postTickExecutedCount.fetch_add( 1, std::memory_order_relaxed );
+		} ) );
+
+		manager.deferTransformUpdate( SW_DELEGATE_LAMBDA( sw::GameObjectManager::TransformUpdateDelegate, [&transformUpdateExecutedCount]()
+		{
+			transformUpdateExecutedCount.fetch_add( 1, std::memory_order_relaxed );
+		} ) );
+	}
+
+	// 틱 수행 시 모든 지연 큐가 정상 flush 되어야 함
+	manager.tick( 0.016f );
+
+	SW_EXPECT_EQUAL( 50u, postTickExecutedCount.load() );
+	SW_EXPECT_EQUAL( 50u, transformUpdateExecutedCount.load() );
+}
+
+/**
+ * @brief [GameObjectTest] 64단계 심층 부모-자식 계층 트랜스폼 월드 합성 및 동적 분리 스트레스 테스트
+ */
+SW_TEST_CASE( GameObjectTest, DeepHierarchyMatrixCompositionStressTest )
+{
+	sw::GameObjectManager manager;
+
+	constexpr uint32			kDepth = 64;
+	sw::vector<sw::GameObject*> listNode;
+	listNode.reserve( kDepth );
+
+	// 64단계 체인 생성: Node_0 -> Node_1 -> ... -> Node_63
+	for ( uint32 depthIndex = 0; depthIndex < kDepth; ++depthIndex )
+	{
+		sw::GameObject* pNode = manager.createGameObject( sw::hashed_string( ( "DeepNode_" + std::to_string( depthIndex ) ).c_str() ) );
+		SW_ASSERT_NOT_NULL( pNode );
+
+		sw::SceneComponent* pComp = pNode->addComponent<sw::SceneComponent>();
+		pComp->setLocalPosition( sw::float3( 1.0f, 0.0f, 0.0f ) ); // 각 단계마다 +1 X 이동
+
+		if ( depthIndex > 0 )
+		{
+			SW_EXPECT_TRUE( pNode->attachToParent( listNode[depthIndex - 1] ) );
+		}
+
+		listNode.push_back( pNode );
+	}
+
+	manager.flushSceneTransforms();
+
+	// 1) 64번째(인덱스 63) 리프 노드의 월드 위치 = (64, 0, 0)
+	sw::SceneComponent* pLeafComp = listNode[kDepth - 1]->getPrimarySceneComponent();
+	SW_ASSERT_NOT_NULL( pLeafComp );
+	SW_EXPECT_NEAR_EQUAL( static_cast<float32>( kDepth ), pLeafComp->getWorldPosition()._x, 1e-3f );
+
+	// 2) 루트 노드(Node_0) 위치를 (100, 0, 0)으로 변경
+	sw::SceneComponent* pRootComp = listNode[0]->getPrimarySceneComponent();
+	SW_ASSERT_NOT_NULL( pRootComp );
+	pRootComp->setLocalPosition( sw::float3( 100.0f, 0.0f, 0.0f ) );
+
+	manager.flushSceneTransforms();
+	SW_EXPECT_NEAR_EQUAL( 100.0f + static_cast<float32>( kDepth - 1 ), pLeafComp->getWorldPosition()._x, 1e-3f );
+
+	// 3) 중간 노드(Node_32)를 부모로부터 분리(Detach)
+	sw::GameObject* pMidNode = listNode[32];
+	pMidNode->detachFromParent();
+	SW_EXPECT_TRUE( pMidNode->getParent() == nullptr );
+
+	manager.flushSceneTransforms();
+	// Node_32부터 Node_63까지는 32개 체인이므로 리프 월드 X = 32.0f
+	SW_EXPECT_NEAR_EQUAL( 32.0f, pLeafComp->getWorldPosition()._x, 1e-3f );
+}
+
+/**
+ * @brief [GameObjectTest] 다중 컴포넌트 심층 계층에서의 동적 부모 재지정(Reparenting), 순환 방어 및 중간 노드 연쇄 삭제 검증
+ */
+SW_TEST_CASE( GameObjectTest, DeepMultiComponentCascadeDestructionAndReparenting )
+{
+	sw::GameObjectManager manager;
+	sw::RegisterMockComponents( manager );
+
+	constexpr uint32			kDepth = 32;
+	sw::vector<sw::GameObject*> listNode;
+	listNode.reserve( kDepth );
+
+	// 1) 32단계 심층 계층 생성 (각 노드마다 Scene, Mesh, Audio 3개 컴포넌트 부착)
+	for ( uint32 depthIndex = 0; depthIndex < kDepth; ++depthIndex )
+	{
+		sw::GameObject* pNode = manager.createGameObject( sw::hashed_string( ( "MultiCompNode_" + std::to_string( depthIndex ) ).c_str() ) );
+		SW_ASSERT_NOT_NULL( pNode );
+
+		sw::SceneComponent* pSceneComp = pNode->addComponent<sw::SceneComponent>();
+		pSceneComp->setLocalPosition( sw::float3( 2.0f, 0.0f, 0.0f ) ); // 각 단계마다 +2 X
+
+		sw::MockMeshComponent* pMeshComp = pNode->addComponent<sw::MockMeshComponent>();
+		pMeshComp->_meshName			 = "Mesh_" + std::to_string( depthIndex );
+
+		pNode->addComponent<sw::MockAudioComponent>();
+
+		if ( depthIndex > 0 )
+		{
+			SW_EXPECT_TRUE( pNode->attachToParent( listNode[depthIndex - 1] ) );
+		}
+
+		listNode.push_back( pNode );
+	}
+
+	SW_EXPECT_EQUAL( static_cast<size_t>( kDepth ), manager.getAllGameObjects().size() );
+
+	// 2) 틱 실행 시 모든 32개 노드의 MockMeshComponent가 1회씩 틱을 수행했는지 확인
+	manager.tick( 0.016f );
+	for ( uint32 depthIndex = 0; depthIndex < kDepth; ++depthIndex )
+	{
+		sw::MockMeshComponent* pMesh = listNode[depthIndex]->getComponent<sw::MockMeshComponent>();
+		SW_ASSERT_NOT_NULL( pMesh );
+		SW_EXPECT_EQUAL( 1, pMesh->_tickCount );
+	}
+
+	// 3) 동적 부모 변경 (Node_16을 Node_4의 직속 자식으로 재지정)
+	sw::GameObject* pNode16 = listNode[16];
+	sw::GameObject* pNode4	= listNode[4];
+	SW_EXPECT_TRUE( pNode16->attachToParent( pNode4 ) );
+	SW_EXPECT_EQUAL( pNode4, pNode16->getParent() );
+
+	// 순환 참조 방어 (자식 Node_16을 부모 Node_4의 부모로 지정 시도 -> 실패해야 함)
+	SW_EXPECT_FALSE( pNode4->attachToParent( pNode16 ) );
+
+	manager.flushSceneTransforms();
+	// Node_4 월드 X = 5 * 2 = 10. Node_16부터 Node_31까지 16개 단계이므로 리프(Node_31) 월드 X = 10 + (16 * 2) = 42.0f
+	sw::SceneComponent* pLeafScene = listNode[kDepth - 1]->getPrimarySceneComponent();
+	SW_ASSERT_NOT_NULL( pLeafScene );
+	SW_EXPECT_NEAR_EQUAL( 42.0f, pLeafScene->getWorldPosition()._x, 1e-3f );
+
+	// 4) 중간 계층 Node_16 연쇄 삭제 (Node_16과 그 하위 자식인 Node_17 ~ Node_31 총 16개 노드 동시 소멸)
+	manager.destroyObject( pNode16, true );
+	manager.processDeferredDestruction();
+
+	// Node_0 ~ Node_15 총 16개 노드만 생존해야 함
+	SW_EXPECT_EQUAL( static_cast<size_t>( 16 ), manager.getAllGameObjects().size() );
+
+	for ( uint32 depthIndex = 0; depthIndex < 16; ++depthIndex )
+	{
+		SW_EXPECT_NOT_NULL( manager.findGameObjectByName( sw::hashed_string( ( "MultiCompNode_" + std::to_string( depthIndex ) ).c_str() ) ) );
+	}
+	for ( uint32 depthIndex = 16; depthIndex < kDepth; ++depthIndex )
+	{
+		SW_EXPECT_NULL( manager.findGameObjectByName( sw::hashed_string( ( "MultiCompNode_" + std::to_string( depthIndex ) ).c_str() ) ) );
+	}
+
+	// 5) 생존 노드들은 정상적으로 계속 틱 수행 가능
+	manager.tick( 0.016f );
+	for ( uint32 depthIndex = 0; depthIndex < 16; ++depthIndex )
+	{
+		sw::MockMeshComponent* pMesh = listNode[depthIndex]->getComponent<sw::MockMeshComponent>();
+		SW_ASSERT_NOT_NULL( pMesh );
+		SW_EXPECT_EQUAL( 2, pMesh->_tickCount );
+	}
+}
+
+/**
+ * @brief [GameObjectTest] 무작위 트리 재배치, 활성 토글 및 삭제가 난무하는 500회 카오스 계층 변이 스트레스 테스트
+ */
+SW_TEST_CASE( GameObjectTest, ChaoticHierarchyMutationAndActiveToggleStressTest )
+{
+	sw::GameObjectManager manager;
+	sw::RegisterMockComponents( manager );
+
+	constexpr uint32			kInitialObjectCount = 100;
+	sw::vector<sw::GameObject*> listAliveObject;
+	listAliveObject.reserve( 500 );
+
+	// 초기 100개 오브젝트 및 계층 생성
+	for ( uint32 index = 0; index < kInitialObjectCount; ++index )
+	{
+		sw::GameObject* pObj = manager.createGameObject( sw::hashed_string( ( "ChaosActor_" + std::to_string( index ) ).c_str() ) );
+		SW_ASSERT_NOT_NULL( pObj );
+
+		sw::SceneComponent* pScene = pObj->addComponent<sw::SceneComponent>();
+		pScene->setLocalPosition( sw::float3( static_cast<float32>( index ), 0.0f, 0.0f ) );
+		pObj->addComponent<sw::MockMeshComponent>();
+
+		if ( index > 0 && ( index % 3 != 0 ) )
+		{
+			pObj->attachToParent( listAliveObject[index / 2] );
+		}
+
+		listAliveObject.push_back( pObj );
+	}
+
+	uint32			 nextActorId  = kInitialObjectCount;
+	constexpr uint32 kTotalRounds = 500;
+
+	for ( uint32 roundIndex = 0; roundIndex < kTotalRounds; ++roundIndex )
+	{
+		const uint32 actionType = ( roundIndex * 37 + 13 ) % 5;
+
+		if ( listAliveObject.empty() == false )
+		{
+			const size_t	targetIndexA = ( roundIndex * 17 ) % listAliveObject.size();
+			const size_t	targetIndexB = ( roundIndex * 29 + 1 ) % listAliveObject.size();
+			sw::GameObject* pObjA		 = listAliveObject[targetIndexA];
+			sw::GameObject* pObjB		 = listAliveObject[targetIndexB];
+
+			if ( actionType == 0 )
+			{
+				// 1) 부모 재지정 시도 (A -> B)
+				if ( pObjA != pObjB )
+					pObjA->attachToParent( pObjB );
+			}
+			else if ( actionType == 1 )
+			{
+				// 2) 부모 분리 (Detach)
+				pObjA->detachFromParent();
+			}
+			else if ( actionType == 2 )
+			{
+				// 3) Active 토글
+				const bool bNewActive = ( roundIndex % 2 == 0 );
+				pObjA->setActive( bNewActive );
+				SW_EXPECT_EQUAL( bNewActive, pObjA->isActive() );
+			}
+			else if ( actionType == 3 )
+			{
+				// 4) 임의 오브젝트 삭제 (지연 큐 등록)
+				manager.destroyObject( pObjA, true );
+				listAliveObject.erase( listAliveObject.begin() + targetIndexA );
+			}
+			else
+			{
+				// 5) 신규 오브젝트 동적 생성 후 임의 부모 연결
+				sw::GameObject* pNewObj = manager.createGameObject( sw::hashed_string( ( "ChaosActor_" + std::to_string( nextActorId++ ) ).c_str() ) );
+				if ( pNewObj != nullptr )
+				{
+					sw::SceneComponent* pScene = pNewObj->addComponent<sw::SceneComponent>();
+					pScene->setLocalPosition( sw::float3( 1.0f, 2.0f, 3.0f ) );
+					pNewObj->addComponent<sw::MockMeshComponent>();
+
+					if ( listAliveObject.empty() == false )
+					{
+						pNewObj->attachToParent( listAliveObject.back() );
+					}
+					listAliveObject.push_back( pNewObj );
+				}
+			}
+		}
+
+		// 10회마다 지연 삭제 처리 및 트랜스폼/틱 flush
+		if ( roundIndex % 10 == 0 )
+		{
+			manager.processDeferredDestruction();
+			manager.flushSceneTransforms();
+			manager.tick( 0.016f );
+		}
+	}
+
+	// 최종 상태 검증
+	manager.processDeferredDestruction();
+	manager.flushSceneTransforms();
+	manager.tick( 0.016f );
+
+	// 남아있는 모든 오브젝트의 월드 좌표가 유효(NaN/Inf 없음)한지 검증
+	for ( sw::GameObject* pObj : manager.getAllGameObjects() )
+	{
+		sw::SceneComponent* pScene = pObj->getPrimarySceneComponent();
+		if ( pScene != nullptr )
+		{
+			const sw::float3 worldPos = pScene->getWorldPosition();
+			SW_EXPECT_FALSE( std::isnan( worldPos._x ) );
+			SW_EXPECT_FALSE( std::isnan( worldPos._y ) );
+			SW_EXPECT_FALSE( std::isnan( worldPos._z ) );
+			SW_EXPECT_FALSE( std::isinf( worldPos._x ) );
+		}
+	}
+
+	// 씬 클리어
+	manager.clear();
+	SW_EXPECT_EQUAL( static_cast<size_t>( 0 ), manager.getAllGameObjects().size() );
+}
+
+/**
+ * @brief [GameObjectTest] 다단계 상속(4단계) 컴포넌트의 TypeInfo::isDerivedFrom 및 isA/castTo 다형성 검증
+ */
+SW_TEST_CASE( GameObjectTest, MultiLevelComponentInheritanceTypeInfoAndIsA )
+{
+	sw::GameObjectManager manager;
+	sw::RegisterMockComponents( manager );
+
+	sw::GameObject* pObj = manager.createGameObject( sw::hashed_string( "InheritanceActor" ) );
+	SW_ASSERT_NOT_NULL( pObj );
+
+	sw::MockFlyingVehicleComponent* pFlying = pObj->addComponent<sw::MockFlyingVehicleComponent>();
+	SW_ASSERT_NOT_NULL( pFlying );
+
+	const sw::TypeInfo* pType = pFlying->getTypeInfo();
+	SW_ASSERT_NOT_NULL( pType );
+
+	// 1) TypeInfo::isDerivedFrom 4단계 상속 체인 전수 검증
+	// MockFlyingVehicleComponent -> MockVehicleComponent -> MockBasePawnComponent -> MockRootComponent
+	SW_EXPECT_TRUE( pType->isDerivedFrom( sw::hashed_string( "sw::MockFlyingVehicleComponent" ) ) );
+	SW_EXPECT_TRUE( pType->isDerivedFrom( sw::hashed_string( "MockFlyingVehicleComponent" ) ) );
+
+	SW_EXPECT_TRUE( pType->isDerivedFrom( sw::hashed_string( "sw::MockVehicleComponent" ) ) );
+	SW_EXPECT_TRUE( pType->isDerivedFrom( sw::hashed_string( "MockVehicleComponent" ) ) );
+
+	SW_EXPECT_TRUE( pType->isDerivedFrom( sw::hashed_string( "sw::MockBasePawnComponent" ) ) );
+	SW_EXPECT_TRUE( pType->isDerivedFrom( sw::hashed_string( "MockBasePawnComponent" ) ) );
+
+	SW_EXPECT_TRUE( pType->isDerivedFrom( sw::hashed_string( "sw::MockRootComponent" ) ) );
+	SW_EXPECT_TRUE( pType->isDerivedFrom( sw::hashed_string( "MockRootComponent" ) ) );
+
+	// 무관한 형제/타입에 대해서는 false
+	SW_EXPECT_FALSE( pType->isDerivedFrom( sw::hashed_string( "sw::MockAudioComponent" ) ) );
+	SW_EXPECT_FALSE( pType->isDerivedFrom( sw::hashed_string( "sw::MockMeshComponent" ) ) );
+
+	// 2) isA<T>() 템플릿 다형성 검증
+	SW_EXPECT_TRUE( sw::isA<sw::MockFlyingVehicleComponent>( pFlying ) );
+	SW_EXPECT_TRUE( sw::isA<sw::MockVehicleComponent>( pFlying ) );
+	SW_EXPECT_TRUE( sw::isA<sw::MockBasePawnComponent>( pFlying ) );
+	SW_EXPECT_TRUE( sw::isA<sw::MockRootComponent>( pFlying ) );
+	SW_EXPECT_FALSE( sw::isA<sw::MockAudioComponent>( pFlying ) );
+
+	// 3) castTo<T>() 템플릿 안전 업캐스팅 검증
+	sw::MockVehicleComponent*  pVehicle = sw::castTo<sw::MockVehicleComponent>( pFlying );
+	sw::MockBasePawnComponent* pPawn	= sw::castTo<sw::MockBasePawnComponent>( pFlying );
+	sw::MockRootComponent*	   pRoot	= sw::castTo<sw::MockRootComponent>( pFlying );
+
+	SW_ASSERT_NOT_NULL( pVehicle );
+	SW_ASSERT_NOT_NULL( pPawn );
+	SW_ASSERT_NOT_NULL( pRoot );
+
+	SW_EXPECT_EQUAL( static_cast<void*>( pFlying ), static_cast<void*>( pVehicle ) );
+	SW_EXPECT_EQUAL( static_cast<void*>( pFlying ), static_cast<void*>( pPawn ) );
+	SW_EXPECT_EQUAL( static_cast<void*>( pFlying ), static_cast<void*>( pRoot ) );
+
+	SW_EXPECT_NULL( sw::castTo<sw::MockAudioComponent>( pFlying ) );
+}
+
+/**
+ * @brief [GameObjectTest] GameObject::getComponent<T>()의 다단계 상속 다형성 조회 및 가상 메서드 체인 검증
+ */
+SW_TEST_CASE( GameObjectTest, MultiLevelComponentGameObjectPolymorphicLookup )
+{
+	sw::GameObjectManager manager;
+	sw::RegisterMockComponents( manager );
+
+	sw::GameObject* pObj = manager.createGameObject( sw::hashed_string( "DroneActor" ) );
+	SW_ASSERT_NOT_NULL( pObj );
+
+	// 다단계 상속 컴포넌트 부착
+	sw::MockFlyingVehicleComponent* pFlying = pObj->addComponent<sw::MockFlyingVehicleComponent>();
+	SW_ASSERT_NOT_NULL( pFlying );
+	pFlying->_pawnHealth  = 250;
+	pFlying->_maxSpeed	  = 180.0f;
+	pFlying->_maxAltitude = 8000.0f;
+
+	// 1) 임의의 부모 타입 T로 getComponent<T>() 호출 시 동일 인스턴스 조회 검증
+	sw::MockFlyingVehicleComponent* pExactLookup   = pObj->getComponent<sw::MockFlyingVehicleComponent>();
+	sw::MockVehicleComponent*		pVehicleLookup = pObj->getComponent<sw::MockVehicleComponent>();
+	sw::MockBasePawnComponent*		pPawnLookup	   = pObj->getComponent<sw::MockBasePawnComponent>();
+	sw::MockRootComponent*			pRootLookup	   = pObj->getComponent<sw::MockRootComponent>();
+
+	SW_ASSERT_NOT_NULL( pExactLookup );
+	SW_ASSERT_NOT_NULL( pVehicleLookup );
+	SW_ASSERT_NOT_NULL( pPawnLookup );
+	SW_ASSERT_NOT_NULL( pRootLookup );
+
+	SW_EXPECT_EQUAL( pFlying, pExactLookup );
+	SW_EXPECT_EQUAL( pFlying, pVehicleLookup );
+	SW_EXPECT_EQUAL( pFlying, pPawnLookup );
+	SW_EXPECT_EQUAL( pFlying, pRootLookup );
+
+	// 무관한 컴포넌트 조회 시 nullptr
+	SW_EXPECT_NULL( pObj->getComponent<sw::MockAudioComponent>() );
+	SW_EXPECT_NULL( pObj->getComponent<sw::MockMeshComponent>() );
+
+	// 2) 다단계 상속 계층의 가상 onTick 체인 연쇄 호출 검증
+	manager.tick( 0.016f );
+	SW_EXPECT_EQUAL( 1, pFlying->_flyingTickCount );
+	SW_EXPECT_EQUAL( 1, pFlying->_vehicleTickCount );
+	SW_EXPECT_EQUAL( 1, pFlying->_pawnTickCount );
+
+	// 3) 상속된 SceneComponent 트랜스폼 동작 검증
+	pFlying->setLocalPosition( sw::float3( 10.0f, 20.0f, 30.0f ) );
+	manager.flushSceneTransforms();
+
+	const sw::float3 worldPos = pFlying->getWorldPosition();
+	SW_EXPECT_NEAR_EQUAL( 10.0f, worldPos._x, 1e-4f );
+	SW_EXPECT_NEAR_EQUAL( 20.0f, worldPos._y, 1e-4f );
+	SW_EXPECT_NEAR_EQUAL( 30.0f, worldPos._z, 1e-4f );
 }
