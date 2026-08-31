@@ -133,7 +133,10 @@ namespace sw
 				sb.appendFormat( "  [%#] %#\n", frameIndex, symbolName.c_str() );
 				if ( dladdr( stack._arrFrame[frameIndex], &info ) && info.dli_sname )
 				{
-					sb.appendFormat( " + 0x%#", Fmt( reinterpret_cast<uint64>( (utf8*)stack._arrFrame[frameIndex] - (utf8*)info.dli_saddr ), Format().hex() ) );
+					// 포인터 차이는 정수(ptrdiff_t)이므로 reinterpret_cast 가 아니라 정수 변환을 쓴다.
+					const ptrdiff_t frameOffset =
+						static_cast<const utf8*>( stack._arrFrame[frameIndex] ) - static_cast<const utf8*>( info.dli_saddr );
+					sb.appendFormat( " + 0x%#", Fmt( static_cast<uint64>( frameOffset ), Format().hex() ) );
 				}
 			}
 			free( symbols );

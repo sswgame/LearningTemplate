@@ -53,9 +53,16 @@ if(Python3_Interpreter_FOUND)
 	sw_addRepoPythonTarget(CookScenes "${SW_SCRIPT_GENERATE_COOK_SCENES}"
 		COMMENT "Cooking scene XML to SCN1 binary..."
 	)
+	# 팩은 실행 파일 옆(Bin/Packs)에 놓는다. App 이 exeDir/Packs 를 먼저 찾기 때문.
+	# 정의되지 않은 변수를 쓰면 "/Packs"(파일시스템 루트)가 되어 조용히 엉뚱한 곳에 쿠킹되거나
+	# Linux 에서 권한 오류로 죽으므로, 비어 있으면 구성 단계에서 잡는다.
+	set(swPackOutputDir "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Packs")
+	if(NOT CMAKE_RUNTIME_OUTPUT_DIRECTORY)
+		message(FATAL_ERROR "[CookPacks] CMAKE_RUNTIME_OUTPUT_DIRECTORY is empty — pack output path would resolve to the filesystem root.")
+	endif()
 	sw_addRepoPythonTarget(CookPacks "${SW_SCRIPT_COOK_RESOURCE_PACKS}"
 		COMMENT "Cooking Resource folders into binary .pack (SWPK) archives..."
-		ARGS --all --output "${SW_BIN_DIR}/Packs"
+		ARGS --all --output "${swPackOutputDir}"
 	)
 
 	add_custom_target(CookAssets
