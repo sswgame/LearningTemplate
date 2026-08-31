@@ -575,13 +575,11 @@ namespace sw
 			vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pDevice->_pipelineLayout, 1, 1, &_pDevice->_bindlessTextureSet, 0, nullptr );
 	}
 
-	void VulkanRHICommandContext::draw( uint32 vertexCount, uint32 startVertex, RHIDescriptorIndex materialDescriptorIndex )
+	bool VulkanRHICommandContext::bindActiveGraphicsPipeline()
 	{
 		VkCommandBuffer cmd = _pDevice->currentCommandBuffer();
-		const bool		bCanDraw =
-			( cmd != VK_NULL_HANDLE && _pDevice->_pipelineLayout != VK_NULL_HANDLE && vertexCount > 0 );
-		if ( bCanDraw == false )
-			return;
+		if ( cmd == VK_NULL_HANDLE )
+			return false;
 
 		VkPipeline										  pipeline = _pDevice->_pipeline;
 		const VulkanRHIDevice::VulkanPipelineStateRecord* pRecord  = _pDevice->_pipelineStates.get( _pDevice->_activeGraphicsPso );
@@ -592,10 +590,24 @@ namespace sw
 		}
 		else if ( _pDevice->_activeOffscreenTarget != 0 && _pDevice->_offscreenPipeline != VK_NULL_HANDLE )
 			pipeline = _pDevice->_offscreenPipeline;
+
 		if ( pipeline == VK_NULL_HANDLE )
-			return;
+			return false;
 
 		vkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline );
+		return true;
+	}
+
+	void VulkanRHICommandContext::draw( uint32 vertexCount, uint32 startVertex, RHIDescriptorIndex materialDescriptorIndex )
+	{
+		VkCommandBuffer cmd = _pDevice->currentCommandBuffer();
+		const bool		bCanDraw =
+			( cmd != VK_NULL_HANDLE && _pDevice->_pipelineLayout != VK_NULL_HANDLE && vertexCount > 0 );
+		if ( bCanDraw == false )
+			return;
+
+		if ( bindActiveGraphicsPipeline() == false )
+			return;
 
 		bindGraphicsMaterialSets( materialDescriptorIndex );
 
@@ -689,6 +701,9 @@ namespace sw
 		if ( cmd == VK_NULL_HANDLE || pRecord == nullptr )
 			return;
 
+		if ( bindActiveGraphicsPipeline() == false )
+			return;
+
 		bindGraphicsMaterialSets( materialDescriptorIndex );
 
 		if ( materialDescriptorIndex != kInvalidDescriptorIndex && _pDevice->_pipelineLayout != VK_NULL_HANDLE )
@@ -728,6 +743,9 @@ namespace sw
 		if ( bValidArgs == false )
 			return;
 
+		if ( bindActiveGraphicsPipeline() == false )
+			return;
+
 		// 셰이더가 set 0 을 정적으로 참조하므로 인다이렉트 드로우에서도 바인딩해야 한다(머티리얼 인덱스는 인스턴스 버퍼에서 온다).
 		bindGraphicsMaterialSets( kInvalidDescriptorIndex );
 
@@ -763,6 +781,9 @@ namespace sw
 		const bool								   bValidMultiArgs =
 			( cmd != VK_NULL_HANDLE && pArgs != nullptr && pArgs->_buffer != VK_NULL_HANDLE && maxCommandCount > 0 );
 		if ( bValidMultiArgs == false )
+			return;
+
+		if ( bindActiveGraphicsPipeline() == false )
 			return;
 
 		// 셰이더의 set 0 정적 참조를 만족시킨다(머티리얼은 GPU 인스턴스 데이터에서 인덱싱).

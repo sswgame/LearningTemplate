@@ -991,8 +991,9 @@ SW_TEST_CASE( ObjectStateXmlSerializerTest, SaveAndLoadXmlString )
 
 	const sw::string json = ObjectStateSerializer::saveToJsonString( &source );
 	SW_ASSERT_TRUE( json.empty() == false );
-	SW_EXPECT_TRUE( json.find( "\"vector\"" ) != sw::string::npos );
-	SW_EXPECT_TRUE( json.find( "\"_name\":\"_listComponent\"" ) != sw::string::npos );
+	// 컨테이너는 프로퍼티 이름 아래 배열로 직접 나간다("vector"/"_name" 래핑 없음).
+	SW_EXPECT_TRUE( json.find( "\"_listComponent\":[" ) != sw::string::npos );
+	SW_EXPECT_TRUE( json.find( "\"vector\"" ) == sw::string::npos );
 	SW_EXPECT_TRUE( json.find( "\"Components\"" ) == sw::string::npos );
 	SW_EXPECT_TRUE( json.find( "ParentGO" ) == sw::string::npos );
 

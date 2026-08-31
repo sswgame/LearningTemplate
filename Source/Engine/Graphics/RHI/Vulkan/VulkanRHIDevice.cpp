@@ -1737,6 +1737,21 @@ namespace sw
 		if ( vkCreateBuffer( _device, &bufferInfo, nullptr, &_dummyUBO ) != VK_SUCCESS )
 			return false;
 
+		// 실패 지점마다 여기까지 만든 것을 되돌린다. (핸들을 남기면 재시도 시 그대로 누수된다)
+		const auto destroyDummyUbo = [this]()
+		{
+			if ( _dummyUBOMemory != VK_NULL_HANDLE )
+			{
+				vkFreeMemory( _device, _dummyUBOMemory, nullptr );
+				_dummyUBOMemory = VK_NULL_HANDLE;
+			}
+			if ( _dummyUBO != VK_NULL_HANDLE )
+			{
+				vkDestroyBuffer( _device, _dummyUBO, nullptr );
+				_dummyUBO = VK_NULL_HANDLE;
+			}
+		};
+
 		VkMemoryRequirements memReq{};
 		vkGetBufferMemoryRequirements( _device, _dummyUBO, &memReq );
 		uint32 memoryTypeIndex{ 0 };
@@ -1744,8 +1759,7 @@ namespace sw
 							 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
 							 memoryTypeIndex ) == false )
 		{
-			vkDestroyBuffer( _device, _dummyUBO, nullptr );
-			_dummyUBO = VK_NULL_HANDLE;
+			destroyDummyUbo();
 			return false;
 		}
 
@@ -1755,8 +1769,8 @@ namespace sw
 		allocMem.memoryTypeIndex = memoryTypeIndex;
 		if ( vkAllocateMemory( _device, &allocMem, nullptr, &_dummyUBOMemory ) != VK_SUCCESS )
 		{
-			vkDestroyBuffer( _device, _dummyUBO, nullptr );
-			_dummyUBO = VK_NULL_HANDLE;
+			_dummyUBOMemory = VK_NULL_HANDLE;
+			destroyDummyUbo();
 			return false;
 		}
 		vkBindBufferMemory( _device, _dummyUBO, _dummyUBOMemory, 0 );
@@ -1776,6 +1790,8 @@ namespace sw
 		if ( vkAllocateDescriptorSets( _device, &allocInfo, &_descriptorSet ) != VK_SUCCESS )
 		{
 			_descriptorSet = VK_NULL_HANDLE;
+			destroyDummyUbo();
+			SW_LOG_ERROR( "Failed to allocate the default (set 0) descriptor set." );
 			return false;
 		}
 

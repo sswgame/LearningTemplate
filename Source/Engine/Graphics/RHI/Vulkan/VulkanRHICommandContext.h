@@ -46,6 +46,13 @@ namespace sw
 		 */
 		void bindGraphicsMaterialSets( RHIDescriptorIndex materialDescriptorIndex );
 
+		/**
+		 * @brief 현재 활성 그래픽스 PSO(없으면 오프스크린/기본 파이프라인)를 바인딩합니다.
+		 * @details 모든 draw 계열이 직전 상태에 의존하지 않고 스스로 파이프라인을 세우도록 합니다.
+		 * @return 바인딩할 파이프라인이 있으면 true, 없으면 false(드로우를 건너뛰어야 함).
+		 */
+		bool bindActiveGraphicsPipeline();
+
 		VulkanRHIDevice* _pDevice;
 	};
 } // namespace sw

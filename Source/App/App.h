@@ -38,6 +38,8 @@ namespace sw
 		bool onWindowMessage( const NativeWindowEvent& event );
 		/** @brief gv_rhiBackend 변경 이벤트 훅 */
 		void onRhiBackendChanged( const GlobalVariableInfo* pInfo );
+		/** @brief tick 내부에서 지연 조회되는 에디터 뷰 카메라입니다. */
+		CameraComponent* getEditorViewCamera();
 		/** @brief 대기 중인 RHI 백엔드 변경을 적용 (ModuleHost 연계) */
 		bool applyPendingBackendChange();
 		/** @brief 강제 핫리로드 단축키 콜백 */
@@ -54,5 +56,7 @@ namespace sw
 
 		float32 _maxFrameDeltaTime;
 		bool	_bEnableEditor;
+		/** @brief gv_rhiBackend 되돌림 대입이 변경 콜백을 재귀 호출하는 것을 막습니다. */
+		bool _bHandlingRhiBackendChange;
 	};
 } // namespace sw

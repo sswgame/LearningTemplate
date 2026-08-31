@@ -55,6 +55,23 @@ namespace sw
 		OptionC = 1 << 2,
 	};
 
+	/** @brief uint8 폭 enum — 역직렬화가 실제 크기만큼만 써야 인접 필드가 안 깨진다. */
+	enum class NarrowEnum : uint8
+	{
+		Zero = 0,
+		One	 = 1,
+		Two	 = 2,
+	};
+
+	/** @brief NarrowEnum 뒤에 1바이트 필드를 두어 초과 기록을 감지한다. */
+	struct NarrowEnumHost
+	{
+		NarrowEnum _mode{ NarrowEnum::Zero };
+		uint8	   _guard{ 0xAB };
+		uint8	   _guard2{ 0xCD };
+		uint8	   _guard3{ 0xEF };
+	};
+
 	struct ComplexData
 	{
 		int32			   _id	  = 101;
@@ -118,6 +135,20 @@ static void RegisterTypes( sw::TypeRegistry& registry )
 		};
 		registry.registerClass( info );
 	}
+
+	{
+		sw::TypeInfo info;
+		info._name				 = sw::hashed_string( "NarrowEnumHost" );
+		info._fullyQualifiedName = sw::hashed_string( "sw::NarrowEnumHost" );
+		info._parentFQN			 = sw::hashed_string( "" );
+		info._size				 = sizeof( sw::NarrowEnumHost );
+		info._listProperty =
+			{
+				{ sw::hashed_string( "_mode" ), sw::hashed_string( "sw::NarrowEnum" ),
+				  SW_OFFSET_OF( sw::NarrowEnumHost, _mode ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr },
+		};
+		registry.registerClass( info );
+	}
 }
 
 /** @brief DummyType / DummyBitFlag 를 레지스트리에 등록합니다. */
@@ -128,6 +159,7 @@ static void RegisterEnums( sw::TypeRegistry& registry )
 		sw::EnumInfo info;
 		info._name				 = sw::hashed_string( "DummyType" );
 		info._fullyQualifiedName = sw::hashed_string( "sw::DummyType" );
+		info._size				 = static_cast<uint8>( sizeof( sw::DummyType ) );
 		info._bIsBitFlag		 = SW_FALSE;
 		info._mapNameToValue =
 			{
@@ -148,6 +180,7 @@ static void RegisterEnums( sw::TypeRegistry& registry )
 		sw::EnumInfo info;
 		info._name				 = sw::hashed_string( "DummyBitFlag" );
 		info._fullyQualifiedName = sw::hashed_string( "sw::DummyBitFlag" );
+		info._size				 = static_cast<uint8>( sizeof( sw::DummyBitFlag ) );
 		info._bIsBitFlag		 = SW_TRUE;
 		info._mapNameToValue =
 			{
@@ -162,6 +195,27 @@ static void RegisterEnums( sw::TypeRegistry& registry )
 				{1, sw::hashed_string( "OptionA" )},
 				{2, sw::hashed_string( "OptionB" )},
 				{4, sw::hashed_string( "OptionC" )},
+		};
+		registry.registerEnum( info );
+	}
+
+	{
+		sw::EnumInfo info;
+		info._name				 = sw::hashed_string( "NarrowEnum" );
+		info._fullyQualifiedName = sw::hashed_string( "sw::NarrowEnum" );
+		info._size				 = static_cast<uint8>( sizeof( sw::NarrowEnum ) );
+		info._bIsBitFlag		 = SW_FALSE;
+		info._mapNameToValue =
+			{
+				{sw::hashed_string( "Zero" ), 0},
+				{ sw::hashed_string( "One" ), 1},
+				{ sw::hashed_string( "Two" ), 2},
+		};
+		info._mapValueToName =
+			{
+				{0, sw::hashed_string( "Zero" )},
+				{1,	 sw::hashed_string( "One" )},
+				{2,	 sw::hashed_string( "Two" )},
 		};
 		registry.registerEnum( info );
 	}
@@ -1390,6 +1444,75 @@ SW_TEST_CASE( Reflection_Serialization, XmlJsonKeysIgnoreCaseValuesPreserveCase 
 };
 
 /**
+ * @brief [Reflection_Serialization] 폭이 좁은(uint8) enum 을 역직렬화해도 인접 필드를 덮어쓰지 않는다.
+ * @details EnumInfo::_size 가 실제 크기로 채워져야 writeValueToMemory 가 딱 그만큼만 쓴다.
+ *          codegen 이 _size 를 안 넣으면 4바이트를 써서 뒤따르는 1바이트 필드들이 깨진다.
+ */
+SW_TEST_CASE( Reflection_Serialization, NarrowEnumDeserializeKeepsAdjacentBytes )
+{
+	const sw::EnumInfo* pEnumInfo =
+		sw::engine::getTypeRegistry().findEnum( sw::hashed_string( "sw::NarrowEnum" ) );
+	SW_ASSERT_TRUE( pEnumInfo != nullptr );
+	SW_EXPECT_EQUAL( static_cast<uint32>( sizeof( sw::NarrowEnum ) ), static_cast<uint32>( pEnumInfo->_size ) );
+
+	const sw::TypeInfo* typeInfo =
+		sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::NarrowEnumHost" ) );
+	SW_ASSERT_TRUE( typeInfo != nullptr );
+
+	sw::NarrowEnumHost host;
+	SW_EXPECT_TRUE( sw::JsonSerializer::deserialize( &host, *typeInfo, R"({"_mode":"Two"})" ) );
+	SW_EXPECT_TRUE( host._mode == sw::NarrowEnum::Two );
+	// enum 뒤 1바이트 필드들이 초기값 그대로여야 한다.
+	SW_EXPECT_EQUAL( static_cast<uint32>( 0xAB ), static_cast<uint32>( host._guard ) );
+	SW_EXPECT_EQUAL( static_cast<uint32>( 0xCD ), static_cast<uint32>( host._guard2 ) );
+	SW_EXPECT_EQUAL( static_cast<uint32>( 0xEF ), static_cast<uint32>( host._guard3 ) );
+
+	// 숫자 표기도 동일하게 동작한다.
+	sw::NarrowEnumHost numeric;
+	SW_EXPECT_TRUE( sw::JsonSerializer::deserialize( &numeric, *typeInfo, R"({"_mode":1})" ) );
+	SW_EXPECT_TRUE( numeric._mode == sw::NarrowEnum::One );
+	SW_EXPECT_EQUAL( static_cast<uint32>( 0xAB ), static_cast<uint32>( numeric._guard ) );
+
+	// 왕복도 값이 유지된다.
+	sw::NarrowEnumHost src;
+	src._mode				= sw::NarrowEnum::Two;
+	const sw::string   json = sw::JsonSerializer::serialize( &src, *typeInfo );
+	sw::NarrowEnumHost dst;
+	SW_EXPECT_TRUE( sw::JsonSerializer::deserialize( &dst, *typeInfo, json ) );
+	SW_EXPECT_TRUE( dst._mode == sw::NarrowEnum::Two );
+	SW_EXPECT_EQUAL( static_cast<uint32>( 0xAB ), static_cast<uint32>( dst._guard ) );
+};
+
+/**
+ * @brief [Reflection_Serialization] JSON 맵 컨테이너를 평범한 오브젝트 표현으로도 읽고 쓴다.
+ */
+SW_TEST_CASE( Reflection_Serialization, JsonMapUsesPlainObject )
+{
+	const sw::TypeInfo* typeInfo =
+		sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::ComplexData" ) );
+	SW_ASSERT_TRUE( typeInfo != nullptr );
+
+	// 읽기: {"key":value,...}
+	sw::ComplexData plain;
+	SW_EXPECT_TRUE( sw::JsonSerializer::deserialize( &plain, *typeInfo, R"({"_mapStat":{"atk":7,"def":3}})" ) );
+	SW_EXPECT_EQUAL( 2u, static_cast<uint32>( plain._mapStat.size() ) );
+	SW_EXPECT_EQUAL( 7, plain._mapStat["atk"] );
+	SW_EXPECT_EQUAL( 3, plain._mapStat["def"] );
+
+	// 쓰기도 같은 표현이어야 한다(래핑 키가 나오면 안 됨).
+	const sw::string json = sw::JsonSerializer::serialize( &plain, *typeInfo );
+	SW_EXPECT_TRUE( json.find( "\"_mapStat\":{" ) != sw::string::npos );
+	SW_EXPECT_TRUE( json.find( "\"map\"" ) == sw::string::npos );
+	SW_EXPECT_TRUE( json.find( "\"entry\"" ) == sw::string::npos );
+
+	// 레거시 래핑 형식도 계속 읽힌다(기존 저장물 호환).
+	sw::ComplexData legacy;
+	SW_EXPECT_TRUE( sw::JsonSerializer::deserialize(
+		&legacy, *typeInfo, R"({"map":[{"_name":"_mapStat","entry":{"hp":9}}]})" ) );
+	SW_EXPECT_EQUAL( 9, legacy._mapStat["hp"] );
+};
+
+/**
  * @brief [Reflection_Serialization] JSON 시퀀스 컨테이너를 평범한 배열 표현으로도 읽는다(손으로 쓴 Config 등).
  */
 SW_TEST_CASE( Reflection_Serialization, JsonSequenceAcceptsPlainArray )
@@ -1821,9 +1944,9 @@ SW_TEST_CASE( Reflection_Serialization, PropertyAliasAndReorderingTest )
 	info._fullyQualifiedName = sw::hashed_string( "sw::AliasTestActor" );
 	info._size				 = sizeof( AliasTestActor );
 	info._listProperty		 = {
-		  { sw::hashed_string( "_currentHp" ), sw::hashed_string( "int32" ),
-			SW_OFFSET_OF( AliasTestActor, _currentHp ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr, sw::hashed_string( "hp" ) }
-	   };
+		{ sw::hashed_string( "_currentHp" ), sw::hashed_string( "int32" ),
+		  SW_OFFSET_OF( AliasTestActor, _currentHp ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr, sw::hashed_string( "hp" ) }
+	 };
 
 	sw::string	   oldJson = "{\"hp\": 250}";
 	AliasTestActor actor;
@@ -1863,11 +1986,11 @@ SW_TEST_CASE( Reflection_Serialization, PropertyAliasAndReorderingTest )
 	info1._fullyQualifiedName = sw::hashed_string( "sw::ReorderActor" );
 	info1._size				  = sizeof( ReorderActor1 );
 	info1._listProperty		  = {
-		  {sw::hashed_string( "_fieldA" ), sw::hashed_string( "int32" ),
-			SW_OFFSET_OF( ReorderActor1, _fieldA ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr},
-		  {sw::hashed_string( "_fieldB" ), sw::hashed_string( "int32" ),
-			SW_OFFSET_OF( ReorderActor1, _fieldB ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr}
-	};
+		{sw::hashed_string( "_fieldA" ), sw::hashed_string( "int32" ),
+		  SW_OFFSET_OF( ReorderActor1, _fieldA ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr},
+		{sw::hashed_string( "_fieldB" ), sw::hashed_string( "int32" ),
+		  SW_OFFSET_OF( ReorderActor1, _fieldB ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr}
+	  };
 
 	ReorderActor1	  src;
 	sw::vector<uint8> binBuf;
@@ -1958,9 +2081,9 @@ SW_TEST_CASE( Reflection_Serialization, LayoutEvolveAddRemoveRename )
 	infoV1._fullyQualifiedName = sw::hashed_string( "sw::LayoutActor" );
 	infoV1._size			   = sizeof( LayoutV1 );
 	infoV1._listProperty	   = {
-		  {	sw::hashed_string( "_hp" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( LayoutV1,	  _hp )},
-		  {sw::hashed_string( "_score" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( LayoutV1, _score )},
-	  };
+		{	  sw::hashed_string( "_hp" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( LayoutV1,	_hp )},
+		{sw::hashed_string( "_score" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( LayoutV1, _score )},
+	};
 
 	sw::PropertyInfo hpV2( sw::hashed_string( "_hp" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( LayoutV2, _hp ),
 						   false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr,
@@ -2021,8 +2144,8 @@ SW_TEST_CASE( Reflection_Serialization, LayoutEvolveAddRemoveRename )
 	intAliasInfo._fullyQualifiedName = sw::hashed_string( "sw::IntAliasHolder" );
 	intAliasInfo._size				 = sizeof( IntAliasHolder );
 	intAliasInfo._listProperty		 = {
-		  { sw::hashed_string( "_v" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( IntAliasHolder, _v ) }
-	  };
+		{ sw::hashed_string( "_v" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( IntAliasHolder, _v ) }
+	};
 	IntAliasHolder holder{};
 	SW_EXPECT_TRUE( sw::XmlSerializer::deserialize(
 		&holder, intAliasInfo, R"(<?xml version="1.0"?><IntAliasHolder _v="123"/>)" ) );
@@ -2128,11 +2251,11 @@ SW_TEST_CASE( Reflection_Serialization, BinaryVersionHeaderTest )
 	info._fullyQualifiedName = sw::hashed_string( "sw::VersionedActor" );
 	info._size				 = sizeof( VersionedActor );
 	info._listProperty		 = {
-		  {sw::hashed_string( "_fieldA" ), sw::hashed_string( "int32" ),
-			SW_OFFSET_OF( VersionedActor, _fieldA ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr},
-		  {sw::hashed_string( "_fieldB" ), sw::hashed_string( "int32" ),
-			SW_OFFSET_OF( VersionedActor, _fieldB ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr}
-	 };
+		{sw::hashed_string( "_fieldA" ), sw::hashed_string( "int32" ),
+		  SW_OFFSET_OF( VersionedActor, _fieldA ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr},
+		{sw::hashed_string( "_fieldB" ), sw::hashed_string( "int32" ),
+		  SW_OFFSET_OF( VersionedActor, _fieldB ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr}
+	   };
 
 	sw::vector<uint8> buffer;
 	sw::BinarySerializer::serializeVersioned( 102, &actor, info, buffer );
@@ -2189,16 +2312,16 @@ SW_TEST_CASE( Reflection_Serialization, FieldTypeChangeAndTextVersioned )
 	intInfo._fullyQualifiedName = sw::hashed_string( "sw::IntHp" );
 	intInfo._size				= sizeof( IntHp );
 	intInfo._listProperty		= {
-		  { sw::hashed_string( "_hp" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( IntHp, _hp ) }
-	   };
+		{ sw::hashed_string( "_hp" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( IntHp, _hp ) }
+	 };
 
 	sw::TypeInfo strInfo;
 	strInfo._name				= sw::hashed_string( "StrHp" );
 	strInfo._fullyQualifiedName = sw::hashed_string( "sw::StrHp" );
 	strInfo._size				= sizeof( StrHp );
 	strInfo._listProperty		= {
-		  { sw::hashed_string( "_hp" ), sw::hashed_string( "string" ), SW_OFFSET_OF( StrHp, _hp ) }
-	};
+		{ sw::hashed_string( "_hp" ), sw::hashed_string( "string" ), SW_OFFSET_OF( StrHp, _hp ) }
+	  };
 
 	IntHp			  src{ 42 };
 	sw::vector<uint8> bin;
@@ -2246,8 +2369,8 @@ SW_TEST_CASE( Reflection_Serialization, VersionedDeserializeFailsWithoutMigrate 
 	info._fullyQualifiedName = sw::hashed_string( "sw::VersionMismatchActor" );
 	info._size				 = sizeof( VersionedActor );
 	info._listProperty		 = {
-		  { sw::hashed_string( "_fieldA" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( VersionedActor, _fieldA ) }
-	};
+		{ sw::hashed_string( "_fieldA" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( VersionedActor, _fieldA ) }
+	  };
 
 	VersionedActor	  actor{ 7 };
 	sw::vector<uint8> bin;
@@ -2290,8 +2413,8 @@ SW_TEST_CASE( Reflection_Serialization, StructuralMoveAndPropertyAlias )
 	nestedStatsInfo._fullyQualifiedName = sw::hashed_string( "sw::NestedStats" );
 	nestedStatsInfo._size				= sizeof( NestedStats );
 	nestedStatsInfo._listProperty		= {
-		  { sw::hashed_string( "_hp" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( NestedStats, _hp ) }
-	 };
+		{ sw::hashed_string( "_hp" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( NestedStats, _hp ) }
+	   };
 	sw::engine::getTypeRegistry().registerClass( nestedStatsInfo );
 
 	sw::TypeInfo nestedActorInfo;
@@ -2299,8 +2422,8 @@ SW_TEST_CASE( Reflection_Serialization, StructuralMoveAndPropertyAlias )
 	nestedActorInfo._fullyQualifiedName = sw::hashed_string( "sw::NestedActor" );
 	nestedActorInfo._size				= sizeof( NestedActor );
 	nestedActorInfo._listProperty		= {
-		  { sw::hashed_string( "_stats" ), sw::hashed_string( "sw::NestedStats" ), SW_OFFSET_OF( NestedActor, _stats ) }
-	 };
+		{ sw::hashed_string( "_stats" ), sw::hashed_string( "sw::NestedStats" ), SW_OFFSET_OF( NestedActor, _stats ) }
+	   };
 
 	// JSON orphan `_hp` → `_stats._hp`
 	NestedActor nested{};
@@ -2345,9 +2468,9 @@ SW_TEST_CASE( Reflection_Serialization, JsonPrettyPrint )
 	info._fullyQualifiedName = sw::hashed_string( "sw::SimpleJsonActor" );
 	info._size				 = sizeof( SimpleJsonActor );
 	info._listProperty		 = {
-		  { sw::hashed_string( "_val" ), sw::hashed_string( "int32" ),
-			SW_OFFSET_OF( SimpleJsonActor, _val ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr }
-	   };
+		{ sw::hashed_string( "_val" ), sw::hashed_string( "int32" ),
+		  SW_OFFSET_OF( SimpleJsonActor, _val ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr }
+	 };
 
 	sw::string prettyStr = sw::JsonSerializer::serializePretty( &actor, info, 4 );
 	SW_EXPECT_TRUE( prettyStr.find( '\n' ) != sw::string::npos );
@@ -2375,10 +2498,10 @@ SW_TEST_CASE( Reflection_TypeInfo, DynamicMethodInvoke )
 	funcInfo._name	   = "addScore";
 	funcInfo._hashName = sw::hashed_string( "addScore" );
 	funcInfo._invoker  = SW_DELEGATE_LAMBDA( sw::Delegate<sw::TaskValue( void*, const sw::TaskArgs& )>, []( void* pObjPtr, const sw::TaskArgs& args ) -> sw::TaskValue
-	 {
-		 static_cast<InvokableTestActor*>( pObjPtr )->addScore( args.get<int32>( 0 ) );
-		 return sw::TaskValue{};
-	 } );
+	{
+		static_cast<InvokableTestActor*>( pObjPtr )->addScore( args.get<int32>( 0 ) );
+		return sw::TaskValue{};
+	} );
 
 	sw::TypeInfo info;
 	info._name				 = sw::hashed_string( "InvokableTestActor" );
@@ -2434,9 +2557,9 @@ SW_TEST_CASE( Reflection_Cloning, ObjectDeepCopyClone )
 	info._fullyQualifiedName = sw::hashed_string( "sw::CloneableActor" );
 	info._size				 = sizeof( CloneableActor );
 	info._listProperty		 = {
-		  {sw::hashed_string( "_health" ),	sw::hashed_string( "int32" ), SW_OFFSET_OF( CloneableActor, _health ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr},
-		  { sw::hashed_string( "_speed" ), sw::hashed_string( "float32" ), SW_OFFSET_OF( CloneableActor,	 _speed ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr}
-	   };
+		{sw::hashed_string( "_health" ),	  sw::hashed_string( "int32" ), SW_OFFSET_OF( CloneableActor, _health ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr},
+		{ sw::hashed_string( "_speed" ), sw::hashed_string( "float32" ), SW_OFFSET_OF( CloneableActor,  _speed ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr}
+	 };
 
 	bool cloneOk = sw::BinarySerializer::cloneObject( &dstActor, &srcActor, info );
 	SW_EXPECT_TRUE( cloneOk );
@@ -2472,10 +2595,10 @@ SW_TEST_CASE( Reflection_FunctionMacro, AnnotatedMethodInvoke )
 	funcInfo._returnTypeName		= "void";
 	funcInfo._listParameterTypeName = { "sw::int32" };
 	funcInfo._invoker				= SW_DELEGATE_LAMBDA( sw::Delegate<sw::TaskValue( void*, const sw::TaskArgs& )>, []( void* pObjPtr, const sw::TaskArgs& args ) -> sw::TaskValue
-				  {
-		  static_cast<FunctionAnnotatedActor*>( pObjPtr )->takeDamage( args.get<int32>( 0 ) );
-		  return sw::TaskValue{};
-	  } );
+	{
+		static_cast<FunctionAnnotatedActor*>( pObjPtr )->takeDamage( args.get<int32>( 0 ) );
+		return sw::TaskValue{};
+	} );
 
 	sw::TypeInfo info;
 	info._name				 = sw::hashed_string( "FunctionAnnotatedActor" );
@@ -2638,72 +2761,32 @@ SW_TEST_CASE( Reflection_Serialization, GoldenOutputFormatsStable )
 
 	const sw::NestedContainerActor src = makeGoldenNestedActor();
 
+	// 컨테이너는 자연스러운 JSON 표현으로 나간다: 시퀀스는 배열, 맵은 오브젝트.
 	const sw::string kGoldenJson =
-		"{\"vector\":[{\"_name\":\"_grid\",\"item\":[{\"vector\":[{\"_name\":\"item\",\"item\":[1,2]}]},"
-		"{\"vector\":[{\"_name\":\"item\",\"item\":[3,4,5]}]}]}],\"map\":[{\"_name\":\"_namedRows\","
-		"\"entry\":{\"a\":{\"vector\":[{\"_name\":\"value\",\"item\":[1,2.5]}]},"
-		"\"b\":{\"vector\":[{\"_name\":\"value\",\"item\":[-3.25]}]}}}],\"_inner\":{\"_x\":42}}";
+		"{\"_grid\":[[1,2],[3,4,5]],\"_namedRows\":{\"a\":[1,2.5],\"b\":[-3.25]},\"_inner\":{\"_x\":42}}";
 
 	const sw::string kGoldenPretty =
 		"{\n"
-		"    \"vector\": [\n"
-		"        {\n"
-		"            \"_name\": \"_grid\",\n"
-		"            \"item\": [\n"
-		"                {\n"
-		"                    \"vector\": [\n"
-		"                        {\n"
-		"                            \"_name\": \"item\",\n"
-		"                            \"item\": [\n"
-		"                                1,\n"
-		"                                2\n"
-		"                            ]\n"
-		"                        }\n"
-		"                    ]\n"
-		"                },\n"
-		"                {\n"
-		"                    \"vector\": [\n"
-		"                        {\n"
-		"                            \"_name\": \"item\",\n"
-		"                            \"item\": [\n"
-		"                                3,\n"
-		"                                4,\n"
-		"                                5\n"
-		"                            ]\n"
-		"                        }\n"
-		"                    ]\n"
-		"                }\n"
-		"            ]\n"
-		"        }\n"
+		"    \"_grid\": [\n"
+		"        [\n"
+		"            1,\n"
+		"            2\n"
+		"        ],\n"
+		"        [\n"
+		"            3,\n"
+		"            4,\n"
+		"            5\n"
+		"        ]\n"
 		"    ],\n"
-		"    \"map\": [\n"
-		"        {\n"
-		"            \"_name\": \"_namedRows\",\n"
-		"            \"entry\": {\n"
-		"                \"a\": {\n"
-		"                    \"vector\": [\n"
-		"                        {\n"
-		"                            \"_name\": \"value\",\n"
-		"                            \"item\": [\n"
-		"                                1,\n"
-		"                                2.5\n"
-		"                            ]\n"
-		"                        }\n"
-		"                    ]\n"
-		"                },\n"
-		"                \"b\": {\n"
-		"                    \"vector\": [\n"
-		"                        {\n"
-		"                            \"_name\": \"value\",\n"
-		"                            \"item\": [\n"
-		"                                -3.25\n"
-		"                            ]\n"
-		"                        }\n"
-		"                    ]\n"
-		"                }\n"
-		"            }\n"
-		"        }\n"
-		"    ],\n"
+		"    \"_namedRows\": {\n"
+		"        \"a\": [\n"
+		"            1,\n"
+		"            2.5\n"
+		"        ],\n"
+		"        \"b\": [\n"
+		"            -3.25\n"
+		"        ]\n"
+		"    },\n"
 		"    \"_inner\": {\n"
 		"        \"_x\": 42\n"
 		"    }\n"

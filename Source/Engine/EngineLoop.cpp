@@ -4,6 +4,7 @@
 
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Compression/CompressionCodecRegistry.h"
+#include "Core/Concurrency/CrashHandler.h"
 #include "Core/Concurrency/DeadlockDetector.h"
 #include "Core/Event/EventDispatcher.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
@@ -123,6 +124,9 @@ namespace sw
 			_logger = make_unique<Logger>();
 			_logger->initialize();
 
+			// 로거 직후에 설치해야 이후 어디서 죽든 콜 스택이 남는다.
+			CrashHandler::initialize();
+
 #if defined( SW_DEBUG )
 			_deadlockDetector = make_unique<DeadlockDetector>();
 			_deadlockDetector->initialize();
@@ -228,7 +232,7 @@ namespace sw
 
 			const hashed_string kGameConfigHash = hashed_string{ "GameConfig" };
 			const GameConfig*	pGameConfig		= _configManager->ensureConfig<GameConfig>(
-				  kGameConfigHash, config::kFileRuntimeGameConfig, shipping_host::kGameConfigJson );
+				kGameConfigHash, config::kFileRuntimeGameConfig, shipping_host::kGameConfigJson );
 			if ( pGameConfig != nullptr )
 				GameConfig::setActive( *pGameConfig );
 
@@ -409,6 +413,7 @@ namespace sw
 
 			HashedStringPool::shutdown();
 
+			CrashHandler::shutdown();
 			_logger.reset();
 		}
 
@@ -421,12 +426,12 @@ namespace sw
 			_inputManager->beginFrame();
 	}
 
-	void EngineLoop::tick( float32			deltaTime,
-						   uint64			gameRenderTarget,
-						   uint32			vpWidth,
-						   uint32			vpHeight,
-						   CameraComponent* pViewCamera,
-						   bool				bTickScene )
+	void EngineLoop::tick( float32							 deltaTime,
+						   uint64							 gameRenderTarget,
+						   uint32							 vpWidth,
+						   uint32							 vpHeight,
+						   const ViewCameraProviderDelegate& viewCameraProvider,
+						   bool								 bTickScene )
 	{
 		BLOCK( "핫 리로드 / 씬 트랜지션 / 이벤트" )
 		{
@@ -471,7 +476,8 @@ namespace sw
 			if ( pActiveScene != nullptr )
 			{
 				pActiveScene->ensureDefaultCameras();
-				CameraComponent* pCam = pViewCamera;
+				// 위의 핫리로드/씬 전환/씬 틱이 GameObject 를 파괴했을 수 있으므로 여기서 조회한다.
+				CameraComponent* pCam = viewCameraProvider.isBound() ? viewCameraProvider() : nullptr;
 				if ( pCam == nullptr || pCam->isActive() == false )
 					pCam = pActiveScene->getActiveGameCamera();
 				if ( pCam != nullptr )

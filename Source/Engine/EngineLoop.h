@@ -46,6 +46,13 @@ namespace sw
 	class CameraComponent;
 
 	/**
+	 * @brief 이번 프레임 뷰 카메라를 돌려줍니다.
+	 * @details tick 내부의 핫리로드/씬 전환이 GameObject 를 파괴할 수 있으므로,
+	 *          카메라는 미리 캡처하지 않고 파괴 단계가 끝난 뒤 이 델리게이트로 조회합니다.
+	 */
+	SW_DECLARE_DELEGATE( CameraComponent*, ViewCameraProviderDelegate, void );
+
+	/**
 	 * @class EngineLoop
 	 * @brief App이 보유하던 코어 매니저들을 캡슐화하고 메인 루프(tick)를 담당합니다.
 	 */
@@ -74,7 +81,8 @@ namespace sw
 		 * @param pViewCamera 호스트가 지정한 렌더 카메라. nullptr이면 씬의 게임 카메라.
 		 * @param bTickScene false이면 씬 GameObject tick을 건너뜁니다 (에디터 Pause).
 		 */
-		void tick( float32 deltaTime, uint64 gameRenderTarget, uint32 vpWidth, uint32 vpHeight, CameraComponent* pViewCamera, bool bTickScene );
+		void tick( float32 deltaTime, uint64 gameRenderTarget, uint32 vpWidth, uint32 vpHeight,
+				   const ViewCameraProviderDelegate& viewCameraProvider, bool bTickScene );
 		/** @brief 입력 종료 등 프레임의 마지막 단계입니다. */
 		void endFrame();
 

@@ -46,9 +46,7 @@ namespace sw::editor
 	{
 		struct ImGuiEditorInternal
 		{
-			static constexpr uint32 kInvalidDrawSlot   = invalid_index::kUint32;
-			static constexpr uint32 kDrawSnapshotCount = constant::kMaxFrameCountInFlight;
-			static void				loadSplashDefaultRenderPass( const TaskArgs& args )
+			static void loadSplashDefaultRenderPass( const TaskArgs& args )
 			{
 				shared_ptr<RenderPassResource> pPass = args.get<shared_ptr<RenderPassResource>>( 0 );
 				if ( pPass == nullptr )
@@ -81,7 +79,7 @@ namespace sw::editor
 		, _dockLayout{}
 		, _arrDrawSnapshot{}
 		, _publishedDrawSlot{ 0 }
-		, _inFlightDrawSlot{ ImGuiEditorInternal::kInvalidDrawSlot }
+		, _inFlightDrawSlot{ _s_kInvalidDrawSlot }
 		, _bInitialized{ SW_FALSE }
 		, _reservedFlags{ 0 }
 	{
@@ -179,9 +177,9 @@ namespace sw::editor
 
 			TaskManager* pTaskManager = editor::getService<TaskManager>();
 			TaskHandle	 hDefault	  = pTaskManager->emplaceTask(
-				  "EditorSplash_DefaultRenderPass",
-				  SW_DELEGATE_FUNCTION( TaskArgsDelegate, ImGuiEditorInternal::loadSplashDefaultRenderPass ),
-				  MakeTaskArgs( defaultPass ) );
+				"EditorSplash_DefaultRenderPass",
+				SW_DELEGATE_FUNCTION( TaskArgsDelegate, ImGuiEditorInternal::loadSplashDefaultRenderPass ),
+				MakeTaskArgs( defaultPass ) );
 
 			TaskHandle hForward = pTaskManager->emplaceTask(
 				"EditorSplash_ForwardPipeline",
@@ -225,8 +223,8 @@ namespace sw::editor
 			pActiveWindow->setCloseQueryHandler( {} );
 
 		waitForDrawSnapshotIdle();
-		_arrDrawSnapshot[0].clear();
-		_arrDrawSnapshot[1].clear();
+		for ( EditorDrawDataSnapshot& snapshot : _arrDrawSnapshot )
+			snapshot.clear();
 
 		_dockLayout.save();
 
@@ -334,7 +332,8 @@ namespace sw::editor
 					ImGui::RenderPlatformWindowsDefault();
 			}
 
-			const uint32 writeSlot = 1u - _publishedDrawSlot.load( std::memory_order_acquire );
+			const uint32 writeSlot =
+				( _publishedDrawSlot.load( std::memory_order_acquire ) + 1u ) % _s_kDrawSnapshotCount;
 			while ( _inFlightDrawSlot.load( std::memory_order_acquire ) == writeSlot )
 				std::this_thread::yield();
 
@@ -365,7 +364,7 @@ namespace sw::editor
 
 		const uint32 slot = _publishedDrawSlot.load( std::memory_order_acquire );
 		_inFlightDrawSlot.store( slot, std::memory_order_release );
-		if ( slot < ImGuiEditorInternal::kDrawSnapshotCount )
+		if ( slot < _s_kDrawSnapshotCount )
 		{
 			ImDrawData* pDrawData = _arrDrawSnapshot[slot].getMainDrawData();
 			if ( pDrawData != nullptr )
@@ -387,7 +386,7 @@ namespace sw::editor
 		std::ignore = pRhiDevice;
 		// 메인 스냅샷 렌더가 끝났으니 UI 스레드가 다음 슬롯을 쓰도록 해제한다.
 		// 보조 뷰포트는 updateUI 에서 UI 스레드가 이미 렌더·present 했다.
-		_inFlightDrawSlot.store( ImGuiEditorInternal::kInvalidDrawSlot, std::memory_order_release );
+		_inFlightDrawSlot.store( _s_kInvalidDrawSlot, std::memory_order_release );
 	}
 
 	bool ImGuiEditor::processEvent( const NativeWindowEvent& event )
@@ -511,7 +510,7 @@ namespace sw::editor
 
 	void ImGuiEditor::waitForDrawSnapshotIdle()
 	{
-		while ( _inFlightDrawSlot.load( std::memory_order_acquire ) != ImGuiEditorInternal::kInvalidDrawSlot )
+		while ( _inFlightDrawSlot.load( std::memory_order_acquire ) != _s_kInvalidDrawSlot )
 			std::this_thread::yield();
 	}
 

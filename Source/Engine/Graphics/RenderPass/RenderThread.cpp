@@ -235,8 +235,29 @@ namespace sw
 
 	void RenderThread::executePacket( RenderFramePacket& packet )
 	{
-		if ( _pDevice == nullptr || packet._bValid == 0 )
+		// 훅에 넘길 디바이스가 아예 없으면 할 수 있는 게 없다.
+		if ( _pDevice == nullptr )
 			return;
+
+		std::ignore = executeFrameBody( packet );
+
+		// 프레임 본문이 중간에 중단되더라도 postPresent 통지는 반드시 보낸다.
+		// 에디터는 이 신호로 draw 스냅샷 in-flight 상태를 해제하므로, 빠뜨리면
+		// 다음 updateUI 가 waitForDrawSnapshotIdle 에서 영구 대기한다.
+		if ( _postPresentHook.isBound() )
+			_postPresentHook( *_pDevice, packet );
+
+		if ( _pDevice->requiresExclusiveContextThread() && _bContextBound.load( std::memory_order_relaxed ) )
+		{
+			_pDevice->unbindGraphicsContext();
+			_bContextBound = false;
+		}
+	}
+
+	bool RenderThread::executeFrameBody( RenderFramePacket& packet )
+	{
+		if ( packet._bValid == 0 )
+			return false;
 
 		ensureContextOnCurrentThread();
 
@@ -247,7 +268,7 @@ namespace sw
 			if ( pImm == nullptr )
 			{
 				SW_LOG_ERROR( "getImmediateContext() is null; skipping offscreen packet" );
-				return;
+				return false;
 			}
 			pImm->beginOffscreenPass( packet._gameRenderTarget, packet._clearColor );
 		}
@@ -256,7 +277,7 @@ namespace sw
 			if ( _pDevice->getSwapChain() == nullptr )
 			{
 				SW_LOG_ERROR( "getSwapChain() is null; skipping packet" );
-				return;
+				return false;
 			}
 			_pDevice->getSwapChain()->beginFrame( packet._clearColor );
 		}
@@ -277,14 +298,7 @@ namespace sw
 		if ( _pDevice->getSwapChain() != nullptr )
 			_pDevice->getSwapChain()->endFrame( true );
 
-		if ( _postPresentHook.isBound() )
-			_postPresentHook( *_pDevice, packet );
-
-		if ( _pDevice->requiresExclusiveContextThread() )
-		{
-			_pDevice->unbindGraphicsContext();
-			_bContextBound = false;
-		}
+		return true;
 	}
 
 	bool RenderThread::ensureContextOnCurrentThread()

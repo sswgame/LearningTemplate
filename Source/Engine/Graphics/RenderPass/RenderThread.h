@@ -74,8 +74,13 @@ namespace sw
 	private:
 		/** @brief 렌더 스레드 루프: 패킷을 꺼내 executePacket. */
 		void threadMain();
-		/** @brief 패킷을 실행합니다. */
+		/** @brief 패킷을 실행하고, 중단되더라도 postPresent 훅 통지를 보장합니다. */
 		void executePacket( RenderFramePacket& packet );
+		/**
+		 * @brief 씬 렌더 ~ present 훅 ~ Present 까지의 프레임 본문입니다.
+		 * @return 프레임을 실제로 그렸으면 true, 유효하지 않은 패킷/리소스로 건너뛰었으면 false.
+		 */
+		bool executeFrameBody( RenderFramePacket& packet );
 		/** @brief 현재 스레드에 그래픽스 컨텍스트가 있는지 확인합니다. */
 		bool ensureContextOnCurrentThread();
 

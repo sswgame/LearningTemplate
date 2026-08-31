@@ -12,6 +12,7 @@ set(cfSources
 	"${CMAKE_CURRENT_SOURCE_DIR}/Compression/CompressionStream.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Compression/NullCompressionCodec.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Compression/RleCompressionCodec.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/Concurrency/CrashHandler.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Concurrency/DataRaceDetector.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Concurrency/DeadlockDetector.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Container/DynamicBitset.cpp"

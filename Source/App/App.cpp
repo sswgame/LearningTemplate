@@ -43,6 +43,7 @@ namespace sw
 		, _window{ nullptr }
 		, _maxFrameDeltaTime{ 0.1f }
 		, _bEnableEditor{ false }
+		, _bHandlingRhiBackendChange{ false }
 	{
 	}
 
@@ -222,9 +223,13 @@ namespace sw
 			uint32 gameViewportWidth  = 0;
 			uint32 gameViewportHeight = 0;
 			_moduleHost->getGameViewport( gameRenderTarget, gameViewportWidth, gameViewportHeight );
-			CameraComponent* pViewCamera = _bEnableEditor ? _moduleHost->getViewportCamera() : nullptr;
-			const bool		 bTickScene	 = _moduleHost->shouldTickScene();
-			_engineLoop.tick( deltaTime, gameRenderTarget, gameViewportWidth, gameViewportHeight, pViewCamera, bTickScene );
+			// 카메라 포인터를 미리 잡아두면 tick 내부의 씬 전환/핫리로드가 그 GameObject 를
+			// 파괴한 뒤 역참조하게 된다. 조회 자체를 tick 안으로 넘긴다.
+			ViewCameraProviderDelegate viewCameraProvider{};
+			if ( _bEnableEditor )
+				viewCameraProvider = SW_DELEGATE_METHOD( ViewCameraProviderDelegate, &App::getEditorViewCamera, this );
+			const bool bTickScene = _moduleHost->shouldTickScene();
+			_engineLoop.tick( deltaTime, gameRenderTarget, gameViewportWidth, gameViewportHeight, viewCameraProvider, bTickScene );
 			if ( _bEnableEditor )
 				_moduleHost->endEditorFrame();
 
@@ -268,22 +273,35 @@ namespace sw
 		return false;
 	}
 
+	CameraComponent* App::getEditorViewCamera()
+	{
+		return _moduleHost != nullptr ? _moduleHost->getViewportCamera() : nullptr;
+	}
+
 	void App::onRhiBackendChanged( const GlobalVariableInfo* pInfo )
 	{
 		RHI* pRHI = _engineLoop.getRHI();
 		if ( pInfo == nullptr || pRHI == nullptr )
 			return;
 
-		const RHIBackend requestedBackend = static_cast<RHIBackend>( pInfo->getValueAsInt() );
+		// 아래에서 gv_rhiBackend 로 되돌림 대입을 하면 이 콜백이 다시 불린다.
+		// 되돌림 대상 자체가 사용 불가/에디터 미지원이면 무한 재귀가 되므로 재진입을 막는다.
+		if ( _bHandlingRhiBackendChange )
+			return;
+		_bHandlingRhiBackendChange = true;
 
+		const RHIBackend requestedBackend = static_cast<RHIBackend>( pInfo->getValueAsInt() );
 		if ( _bEnableEditor && RHIAvailability::query( requestedBackend )._bEditorSupported == false )
 		{
 			SW_LOG_WARNING( "Backend %# is not editor-supported — reverting.", RHI::getBackendTypeName( requestedBackend ) );
 			gv_rhiBackend = pRHI->getCommittedBackend();
-			return;
+		}
+		else
+		{
+			pRHI->schedulePendingBackendChange( requestedBackend );
 		}
 
-		pRHI->schedulePendingBackendChange( requestedBackend );
+		_bHandlingRhiBackendChange = false;
 	}
 
 	bool App::applyPendingBackendChange()

@@ -66,10 +66,10 @@ namespace sw
 
 				const hashed_string resolved  = resolveHandlerTypeName( typeName, ctx );
 				const bool			bIsString = ( resolved.isPredefinedType( PredefinedNameType::NameType_string ) ||
-										  resolved.isPredefinedType( PredefinedNameType::NameType_hashed_string ) ||
-										  resolved.isPredefinedType( PredefinedNameType::NameType_TagID ) );
+												  resolved.isPredefinedType( PredefinedNameType::NameType_hashed_string ) ||
+												  resolved.isPredefinedType( PredefinedNameType::NameType_TagID ) );
 				const bool			bIsBool	  = ( resolved.isPredefinedType( PredefinedNameType::NameType_bool ) ||
-										  resolved.isPredefinedType( PredefinedNameType::NameType_atomic_bool ) );
+												  resolved.isPredefinedType( PredefinedNameType::NameType_atomic_bool ) );
 				const bool			bIsEnum	  = ( engine::getTypeRegistry().findEnum( typeName ) != nullptr );
 
 				if ( bIsString || bIsEnum )
@@ -117,58 +117,78 @@ namespace sw
 				dst.setString( text.view() );
 			}
 
-			static void writeNestedContainerJson( JsonValue dst, const void* pContainerPtr, const NestedContainerInfo& nested,
-												  const utf8* pPropName, const SerializeContext& ctx )
+			/**
+			 * @brief 컨테이너 원소 하나를 dst 에 씁니다. (중첩 컨테이너 / 구조체 / 소유 포인터 / 값)
+			 * @details 소유 포인터만 런타임 타입을 알아야 하므로 { "TypeName": {...} } 래핑을 유지합니다.
+			 */
+			static void writeContainerElementJson( JsonValue dst, const void* pElemPtr, const NestedContainerInfo& nested,
+												   bool bOwnedPtr, const SerializeContext& ctx )
 			{
-				if ( pContainerPtr == nullptr || nested._wrapper == nullptr || dst.isValid() == false || pPropName == nullptr )
+				if ( nested._elementNested != nullptr )
+				{
+					writeContainerValueJson( dst, pElemPtr, *nested._elementNested, ctx );
+					return;
+				}
+
+				if ( bOwnedPtr )
+				{
+					void* const* ppObj = static_cast<void* const*>( pElemPtr );
+					void*		 pObj  = ppObj != nullptr ? *ppObj : nullptr;
+					if ( pObj == nullptr )
+					{
+						dst.setObject();
+						return;
+					}
+					const TypeInfo* pRuntimeType = ctx.getRuntimeTypeInfo( pObj );
+					if ( pRuntimeType == nullptr )
+					{
+						dst.setObject();
+						return;
+					}
+					dst.setObject();
+					JsonValue body = dst.set( pRuntimeType->_name.c_str(), false );
+					JsonSerializer::writeObject( body, pObj, *pRuntimeType, ctx );
+					body.set( kSchemaVersionKey, false ).setUint( 0 );
+					return;
+				}
+
+				const TypeInfo* pElemType = findNestedJsonObjectType( nested._elementTypeName, ctx );
+				if ( pElemType != nullptr )
+				{
+					// 값 구조체는 타입 래핑 없이 본문을 그대로 쓴다(리더가 양쪽 다 받는다).
+					JsonSerializer::writeObject( dst, pElemPtr, *pElemType, ctx );
+					return;
+				}
+
+				writeJsonValue( dst, pElemPtr, nested._elementTypeName, ctx );
+			}
+
+			/**
+			 * @brief 컨테이너를 자연스러운 JSON 표현으로 씁니다. 시퀀스는 배열, 맵은 오브젝트.
+			 */
+			static void writeContainerValueJson( JsonValue dst, const void* pContainerPtr, const NestedContainerInfo& nested,
+												 const SerializeContext& ctx )
+			{
+				if ( dst.isValid() == false || pContainerPtr == nullptr || nested._wrapper == nullptr )
 					return;
 
-				dst.setObject();
-				dst.set( kPropertyNameKey, false ).setString( pPropName );
+				const bool bOwnedPtr = isOwnedPointerElementType( nested._elementTypeName );
 
 				ISequenceContainerWrapper* pSeq = nested._wrapper->asSequence();
 				if ( pSeq != nullptr )
 				{
-					JsonValue  items	 = dst.set( kJsonContainerItemKey, false );
-					const bool bOwnedPtr = isOwnedPointerElementType( nested._elementTypeName );
-					items.setArray();
+					dst.setArray();
 					const size_t sz = pSeq->getSize( pContainerPtr );
 					for ( size_t elementIndex = 0; elementIndex < sz; ++elementIndex )
 					{
 						const void* pElemPtr = pSeq->getElementConst( pContainerPtr, elementIndex );
-						if ( nested._elementNested != nullptr )
-						{
-							JsonValue slot = items.pushBack();
-							slot.setObject();
-							writeTypedContainerJson( slot, "item", pElemPtr, *nested._elementNested, ctx );
-						}
-						else if ( bOwnedPtr )
+						if ( bOwnedPtr )
 						{
 							void* const* ppObj = static_cast<void* const*>( pElemPtr );
-							void*		 pObj  = ppObj != nullptr ? *ppObj : nullptr;
-							if ( pObj == nullptr )
-								continue;
-							const TypeInfo* pRuntimeType = ctx.getRuntimeTypeInfo( pObj );
-							if ( pRuntimeType == nullptr )
-								continue;
-							JsonValue slot = items.pushBack();
-							slot.setObject();
-							JsonValue body = slot.set( pRuntimeType->_name.c_str(), false );
-							JsonSerializer::writeObject( body, pObj, *pRuntimeType, ctx );
-							body.set( kSchemaVersionKey, false ).setUint( 0 );
+							if ( ppObj == nullptr || *ppObj == nullptr )
+								continue; // 널 원소는 건너뛴다(레거시 동작 유지).
 						}
-						else
-						{
-							const TypeInfo* pElemType = findNestedJsonObjectType( nested._elementTypeName, ctx );
-							if ( pElemType != nullptr )
-							{
-								JsonValue slot = items.pushBack();
-								slot.setObject();
-								JsonSerializer::writeObject( slot.set( pElemType->_name.c_str(), false ), pElemPtr, *pElemType, ctx );
-							}
-							else
-								writeJsonValue( items.pushBack(), pElemPtr, nested._elementTypeName, ctx );
-						}
+						writeContainerElementJson( dst.pushBack(), pElemPtr, nested, bOwnedPtr, ctx );
 					}
 					return;
 				}
@@ -176,40 +196,14 @@ namespace sw
 				IMapContainerWrapper* pMapWrap = nested._wrapper->asMap();
 				if ( pMapWrap != nullptr )
 				{
-					JsonValue entries = dst.set( kJsonContainerEntryKey, false );
-					entries.setObject();
+					dst.setObject();
 					pMapWrap->forEach( pContainerPtr, [&]( const void* pKPtr, const void* pVPtr )
 					{
 						StringBuilder<constant::kMaxBuffer8192> keySs;
 						SerializerUtil::valueToText( keySs, pKPtr, nested._keyTypeName, ctx );
-						if ( nested._elementNested != nullptr )
-						{
-							JsonValue slot = entries.set( keySs.view(), false );
-							slot.setObject();
-							writeTypedContainerJson( slot, "value", pVPtr, *nested._elementNested, ctx );
-						}
-						else
-							writeJsonValue( entries.set( keySs.view(), false ), pVPtr, nested._elementTypeName, ctx );
+						writeContainerElementJson( dst.set( keySs.view(), false ), pVPtr, nested, false, ctx );
 					} );
 				}
-			}
-
-			static void writeTypedContainerJson( JsonValue parent, const utf8* pPropName, const void* pContainerPtr,
-												 const NestedContainerInfo& nested, const SerializeContext& ctx )
-			{
-				if ( parent.isValid() == false || pPropName == nullptr )
-					return;
-				const utf8* pTypeTag = SerializerUtil::containerTypeTagName( nested._typeName );
-				if ( pTypeTag == nullptr )
-					return;
-
-				JsonValue group = parent.get( pTypeTag, false );
-				if ( group.isArray() == false )
-				{
-					group = parent.set( pTypeTag, false );
-					group.setArray();
-				}
-				writeNestedContainerJson( group.pushBack(), pContainerPtr, nested, pPropName, ctx );
 			}
 
 			// items(JSON 배열)의 각 원소를 시퀀스 컨테이너에 채운다. 호출자가 미리 wrapper->clear() 를 한다.
@@ -312,43 +306,53 @@ namespace sw
 						return true;
 					if ( entries.isObject() == false )
 						return false;
-
-					vector<uint8> listKBuf( pMapWrap->getKeySize() );
-					vector<uint8> listVBuf( pMapWrap->getValueSize() );
-					for ( const string& key : entries.memberNames() )
-					{
-						pMapWrap->defaultConstructKey( listKBuf.data() );
-						pMapWrap->defaultConstructValue( listVBuf.data() );
-						JsonDocument keyDoc;
-						keyDoc.root().setString( key );
-						bool								kOk{ false };
-						const SerializeContext::TextReadFn* pKeyReader = ctx.findTextReader( nested._keyTypeName );
-						if ( pKeyReader != nullptr )
-							kOk = ( *pKeyReader )( listKBuf.data(), key );
-						else
-							kOk = readJsonValue( listKBuf.data(), nested._keyTypeName, keyDoc.root(), ctx );
-
-						bool			vOk{ false };
-						const JsonValue valJson = entries.get( key, false );
-						if ( nested._elementNested != nullptr )
-							vOk = readTypedContainerJson( listVBuf.data(), *nested._elementNested, valJson, ctx );
-						else
-						{
-							const SerializeContext::TextReadFn* pElemReader = ctx.findTextReader( nested._elementTypeName );
-							if ( pElemReader != nullptr )
-								vOk = ( *pElemReader )( listVBuf.data(), valJson.isString() ? valJson.asString() : valJson.dump() );
-							else
-								vOk = readJsonValue( listVBuf.data(), nested._elementTypeName, valJson, ctx );
-						}
-
-						if ( kOk && vOk )
-							pMapWrap->insertKeyValue( pContainerPtr, listKBuf.data(), listVBuf.data() );
-						pMapWrap->destroyKey( listKBuf.data() );
-						pMapWrap->destroyValue( listVBuf.data() );
-					}
-					return true;
+					return readMapEntriesJson( pContainerPtr, nested, entries, ctx );
 				}
 				return false;
+			}
+
+			// entries(JSON 오브젝트)의 각 멤버를 맵 컨테이너에 채운다. 호출자가 미리 wrapper->clear() 를 한다.
+			static bool readMapEntriesJson( void* pContainerPtr, const NestedContainerInfo& nested, const JsonValue& entries,
+											const SerializeContext& ctx )
+			{
+				IMapContainerWrapper* pMapWrap = nested._wrapper != nullptr ? nested._wrapper->asMap() : nullptr;
+				if ( pMapWrap == nullptr || entries.isObject() == false )
+					return false;
+
+				vector<uint8> listKBuf( pMapWrap->getKeySize() );
+				vector<uint8> listVBuf( pMapWrap->getValueSize() );
+				for ( const string& key : entries.memberNames() )
+				{
+					pMapWrap->defaultConstructKey( listKBuf.data() );
+					pMapWrap->defaultConstructValue( listVBuf.data() );
+					JsonDocument keyDoc;
+					keyDoc.root().setString( key );
+					bool								kOk{ false };
+					const SerializeContext::TextReadFn* pKeyReader = ctx.findTextReader( nested._keyTypeName );
+					if ( pKeyReader != nullptr )
+						kOk = ( *pKeyReader )( listKBuf.data(), key );
+					else
+						kOk = readJsonValue( listKBuf.data(), nested._keyTypeName, keyDoc.root(), ctx );
+
+					bool			vOk{ false };
+					const JsonValue valJson = entries.get( key, false );
+					if ( nested._elementNested != nullptr )
+						vOk = readTypedContainerJson( listVBuf.data(), *nested._elementNested, valJson, ctx );
+					else
+					{
+						const SerializeContext::TextReadFn* pElemReader = ctx.findTextReader( nested._elementTypeName );
+						if ( pElemReader != nullptr )
+							vOk = ( *pElemReader )( listVBuf.data(), valJson.isString() ? valJson.asString() : valJson.dump() );
+						else
+							vOk = readJsonValue( listVBuf.data(), nested._elementTypeName, valJson, ctx );
+					}
+
+					if ( kOk && vOk )
+						pMapWrap->insertKeyValue( pContainerPtr, listKBuf.data(), listVBuf.data() );
+					pMapWrap->destroyKey( listKBuf.data() );
+					pMapWrap->destroyValue( listVBuf.data() );
+				}
+				return true;
 			}
 
 			static bool readTypedContainerJson( void* pContainerPtr, const NestedContainerInfo& nested, const JsonValue& src,
@@ -383,6 +387,13 @@ namespace sw
 				if ( src.has( kPropertyNameKey, bIgnore ) || src.has( kJsonContainerItemKey, bIgnore ) ||
 					 src.has( kJsonContainerEntryKey, bIgnore ) )
 					return readNestedContainerJson( pContainerPtr, nested, src, ctx );
+
+				// 맵 컨테이너는 평범한 JSON 오브젝트({"key":value,...})도 받는다.
+				if ( pContainerPtr != nullptr && nested._wrapper != nullptr && nested._wrapper->asMap() != nullptr )
+				{
+					nested._wrapper->clear( pContainerPtr );
+					return readMapEntriesJson( pContainerPtr, nested, src, ctx );
+				}
 				return false;
 			}
 
@@ -445,7 +456,8 @@ namespace sw
 					NestedContainerInfo shape = prop.getContainerShape();
 					if ( shape._typeName.empty() )
 						shape._typeName = prop._typeName;
-					writeTypedContainerJson( parent, prop._name.c_str(), pPropPtr, shape, ctx );
+					// 프로퍼티 이름 아래에 바로 배열/오브젝트로 쓴다.
+					writeContainerValueJson( parent.set( prop._name.c_str(), false ), pPropPtr, shape, ctx );
 					return;
 				}
 				writeJsonValue( parent.set( prop._name.c_str(), false ), pPropPtr, prop._typeName, ctx );
