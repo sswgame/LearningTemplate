@@ -69,39 +69,6 @@ namespace sw
 				return nullptr;
 			}
 
-// ------------------------------------------------------------------------------
-// 애노테이션 필드 테이블 — PredefinedAnnotationField.xxx 한 곳에서 전개합니다.
-// 플래그 멤버가 uint8 : 1 비트필드라 멤버 포인터 바인딩이 불가능해, 단순 대입
-// 적용 함수를 매크로로 생성합니다. 커스텀 로직은 아래에 손으로 둡니다.
-// ------------------------------------------------------------------------------
-// (Scope,Kind) 전 조합을 no-op 으로 두고, 만들 대상만 잠깐 켠다.
-#define SW_ANN_NOOP( Id, Member )
-#define SW_ANN_Reflect_Flag									 SW_ANN_NOOP
-#define SW_ANN_Reflect_Bool									 SW_ANN_NOOP
-#define SW_ANN_Reflect_String								 SW_ANN_NOOP
-#define SW_ANN_Reflect_FlagFn								 SW_ANN_NOOP
-#define SW_ANN_Reflect_StringFn								 SW_ANN_NOOP
-#define SW_ANN_Reflect_FloatFn								 SW_ANN_NOOP
-#define SW_ANN_Enum_Flag									 SW_ANN_NOOP
-#define SW_ANN_Enum_Bool									 SW_ANN_NOOP
-#define SW_ANN_Enum_String									 SW_ANN_NOOP
-#define SW_ANN_Enum_FlagFn									 SW_ANN_NOOP
-#define SW_ANN_Enum_StringFn								 SW_ANN_NOOP
-#define SW_ANN_Enum_FloatFn									 SW_ANN_NOOP
-#define SW_ANN_Property_Flag								 SW_ANN_NOOP
-#define SW_ANN_Property_Bool								 SW_ANN_NOOP
-#define SW_ANN_Property_String								 SW_ANN_NOOP
-#define SW_ANN_Property_FlagFn								 SW_ANN_NOOP
-#define SW_ANN_Property_StringFn							 SW_ANN_NOOP
-#define SW_ANN_Property_FloatFn								 SW_ANN_NOOP
-#define SW_ANN_Function_Flag								 SW_ANN_NOOP
-#define SW_ANN_Function_Bool								 SW_ANN_NOOP
-#define SW_ANN_Function_String								 SW_ANN_NOOP
-#define SW_ANN_Function_FlagFn								 SW_ANN_NOOP
-#define SW_ANN_Function_StringFn							 SW_ANN_NOOP
-#define SW_ANN_Function_FloatFn								 SW_ANN_NOOP
-#define REGISTER_ANNOTATION_FIELD( Scope, Kind, Id, Member ) SW_ANN_##Scope##_##Kind( Id, Member )
-
 			/** @brief 쉼표/세미콜론으로 나눈 타입 별칭을 붙입니다. */
 			static void appendTypeAliases( vector<string>& outListAlias, const string& raw )
 			{
@@ -224,240 +191,126 @@ namespace sw
 				parseCustomMetaPairs( value, method._listCustomMeta );
 			}
 
-			struct ReflectFlagEntry
+// ------------------------------------------------------------------------------
+// 애노테이션 필드 테이블 — PredefinedAnnotationField.xxx 한 곳에서 전개합니다.
+// 플래그 멤버가 uint8 : 1 비트필드라 멤버 포인터 바인딩이 불가능해, 대입 람다를 씁니다.
+// 각 Scope별로 1회의 #include 전개로 모든 Kind 항목을 통합 테이블에 등록합니다.
+// ------------------------------------------------------------------------------
+#define REGISTER_ANNOTATION_FIELD( Scope, Kind, Id, Member ) SW_ANN_##Scope( Kind, Id, Member )
+
+			// ── REFLECT ──────────────────────────────────────────────────
+			struct ReflectEntry
 			{
 				string_view _field;
-				void ( *_pApply )( ParsedTypeInfo& );
-			};
-#undef SW_ANN_Reflect_Flag
-#define SW_ANN_Reflect_Flag( Id, Member ) \
-	static void applyReflect##Id( ParsedTypeInfo& target ) { target.Member = SW_TRUE; }
-#include "PredefinedAnnotationField.xxx"
-#undef SW_ANN_Reflect_Flag
-#define SW_ANN_Reflect_Flag SW_ANN_NOOP
-			static constexpr ReflectFlagEntry kReflectFlags[] = {
-#undef SW_ANN_Reflect_Flag
-#define SW_ANN_Reflect_Flag( Id, Member ) { #Id, applyReflect##Id },
-#include "PredefinedAnnotationField.xxx"
-#undef SW_ANN_Reflect_Flag
-#define SW_ANN_Reflect_Flag SW_ANN_NOOP
+				void ( *_pApply )( ParsedTypeInfo&, const AnnotationBinding&, string_view );
 			};
 
-			struct ReflectStringEntry
-			{
-				string_view _field;
-				void ( *_pApply )( ParsedTypeInfo&, const string& );
+#define SW_ANN_Enum( ... )
+#define SW_ANN_Property( ... )
+#define SW_ANN_Function( ... )
+#define SW_ANN_Reflect( Kind, Id, Member ) SW_ANN_Reflect_##Kind( Id, Member )
+
+#define SW_ANN_Reflect_Flag( Id, Member )	  { #Id, []( ParsedTypeInfo& target, const AnnotationBinding&, string_view ) { target.Member = SW_TRUE; } },
+#define SW_ANN_Reflect_String( Id, Member )	  { #Id, []( ParsedTypeInfo& target, const AnnotationBinding&, string_view val ) { target.Member = string( val ); } },
+#define SW_ANN_Reflect_StringFn( Id, Member ) { #Id, []( ParsedTypeInfo& target, const AnnotationBinding&, string_view val ) { Member( target, string( val ) ); } },
+
+			static constexpr ReflectEntry kReflectEntries[] = {
+#include "PredefinedAnnotationField.xxx"
 			};
+
+#undef SW_ANN_Reflect_Flag
 #undef SW_ANN_Reflect_String
-#define SW_ANN_Reflect_String( Id, Member ) \
-	static void applyReflect##Id( ParsedTypeInfo& target, const string& value ) { target.Member = value; }
-#include "PredefinedAnnotationField.xxx"
-#undef SW_ANN_Reflect_String
-#define SW_ANN_Reflect_String SW_ANN_NOOP
-			static constexpr ReflectStringEntry kReflectStrings[] = {
-#undef SW_ANN_Reflect_String
-#define SW_ANN_Reflect_String( Id, Member ) { #Id, applyReflect##Id },
-#include "PredefinedAnnotationField.xxx"
-#undef SW_ANN_Reflect_String
-#define SW_ANN_Reflect_String SW_ANN_NOOP
 #undef SW_ANN_Reflect_StringFn
-#define SW_ANN_Reflect_StringFn( Id, Member ) { #Id, Member },
-#include "PredefinedAnnotationField.xxx"
-#undef SW_ANN_Reflect_StringFn
-#define SW_ANN_Reflect_StringFn SW_ANN_NOOP
-			};
+#undef SW_ANN_Reflect
 
-			struct EnumFlagEntry
+			// ── ENUM ─────────────────────────────────────────────────────
+			struct EnumEntry
 			{
 				string_view _field;
-				void ( *_pApply )( ParsedEnumInfo& );
+				void ( *_pApply )( ParsedEnumInfo&, string_view );
 			};
-			static constexpr EnumFlagEntry kEnumFlags[] = {
+
+#undef SW_ANN_Enum
+#define SW_ANN_Reflect( ... )
+#define SW_ANN_Enum( Kind, Id, Member ) SW_ANN_Enum_##Kind( Id, Member )
+
+#define SW_ANN_Enum_FlagFn( Id, Member )   { #Id, []( ParsedEnumInfo& target, string_view ) { Member( target ); } },
+#define SW_ANN_Enum_String( Id, Member )   { #Id, []( ParsedEnumInfo& target, string_view val ) { target.Member = string( val ); } },
+#define SW_ANN_Enum_StringFn( Id, Member ) { #Id, []( ParsedEnumInfo& target, string_view val ) { Member( target, string( val ) ); } },
+
+			static constexpr EnumEntry kEnumEntries[] = {
+#include "PredefinedAnnotationField.xxx"
+			};
+
 #undef SW_ANN_Enum_FlagFn
-#define SW_ANN_Enum_FlagFn( Id, Member ) { #Id, Member },
-#include "PredefinedAnnotationField.xxx"
-#undef SW_ANN_Enum_FlagFn
-#define SW_ANN_Enum_FlagFn SW_ANN_NOOP
-			};
-
-			struct EnumStringEntry
-			{
-				string_view _field;
-				void ( *_pApply )( ParsedEnumInfo&, const string& );
-			};
 #undef SW_ANN_Enum_String
-#define SW_ANN_Enum_String( Id, Member ) \
-	static void applyEnum##Id( ParsedEnumInfo& target, const string& value ) { target.Member = value; }
-#include "PredefinedAnnotationField.xxx"
-#undef SW_ANN_Enum_String
-#define SW_ANN_Enum_String SW_ANN_NOOP
-			static constexpr EnumStringEntry kEnumStrings[] = {
-#undef SW_ANN_Enum_String
-#define SW_ANN_Enum_String( Id, Member ) { #Id, applyEnum##Id },
-#include "PredefinedAnnotationField.xxx"
-#undef SW_ANN_Enum_String
-#define SW_ANN_Enum_String SW_ANN_NOOP
 #undef SW_ANN_Enum_StringFn
-#define SW_ANN_Enum_StringFn( Id, Member ) { #Id, Member },
-#include "PredefinedAnnotationField.xxx"
-#undef SW_ANN_Enum_StringFn
-#define SW_ANN_Enum_StringFn SW_ANN_NOOP
-			};
+#undef SW_ANN_Enum
 
-			struct PropBoolEntry
+			// ── PROPERTY ─────────────────────────────────────────────────
+			struct PropEntry
 			{
 				string_view _field;
-				void ( *_pApply )( ParsedPropertyInfo&, bool );
-			};
-#undef SW_ANN_Property_Bool
-#define SW_ANN_Property_Bool( Id, Member ) \
-	static void applyProp##Id( ParsedPropertyInfo& target, bool value ) { target.Member = value; }
-#include "PredefinedAnnotationField.xxx"
-#undef SW_ANN_Property_Bool
-#define SW_ANN_Property_Bool SW_ANN_NOOP
-			static constexpr PropBoolEntry kPropBools[] = {
-#undef SW_ANN_Property_Bool
-#define SW_ANN_Property_Bool( Id, Member ) { #Id, applyProp##Id },
-#include "PredefinedAnnotationField.xxx"
-#undef SW_ANN_Property_Bool
-#define SW_ANN_Property_Bool SW_ANN_NOOP
+				void ( *_pApply )( ParsedPropertyInfo&, const AnnotationBinding&, string_view );
 			};
 
-			struct PropStringEntry
-			{
-				string_view _field;
-				void ( *_pApply )( ParsedPropertyInfo&, const string& );
+#undef SW_ANN_Property
+#define SW_ANN_Enum( ... )
+#define SW_ANN_Property( Kind, Id, Member ) SW_ANN_Property_##Kind( Id, Member )
+
+#define SW_ANN_Property_Bool( Id, Member )	   { #Id, []( ParsedPropertyInfo& target, const AnnotationBinding& b, string_view val ) { target.Member = ( b._kind == AnnotationBinding::Kind::Flag ? true : parseAnnotationBool( val ) ); } },
+#define SW_ANN_Property_String( Id, Member )   { #Id, []( ParsedPropertyInfo& target, const AnnotationBinding&, string_view val ) { target.Member = string( val ); } },
+#define SW_ANN_Property_StringFn( Id, Member ) { #Id, []( ParsedPropertyInfo& target, const AnnotationBinding&, string_view val ) { Member( target, string( val ) ); } },
+#define SW_ANN_Property_FloatFn( Id, Member ) \
+	{ #Id, []( ParsedPropertyInfo& target, const AnnotationBinding&, string_view val ) {   \
+		 float32 fVal{ 0.0f };                                                             \
+		 StringUtil::parseFloat( val, fVal );                                              \
+		 Member( target, fVal ); } },
+
+			static constexpr PropEntry kPropEntries[] = {
+#include "PredefinedAnnotationField.xxx"
 			};
+
+#undef SW_ANN_Property_Bool
 #undef SW_ANN_Property_String
-#define SW_ANN_Property_String( Id, Member ) \
-	static void applyProp##Id( ParsedPropertyInfo& target, const string& value ) { target.Member = value; }
-#include "PredefinedAnnotationField.xxx"
-#undef SW_ANN_Property_String
-#define SW_ANN_Property_String SW_ANN_NOOP
-			static constexpr PropStringEntry kPropStrings[] = {
-#undef SW_ANN_Property_String
-#define SW_ANN_Property_String( Id, Member ) { #Id, applyProp##Id },
-#include "PredefinedAnnotationField.xxx"
-#undef SW_ANN_Property_String
-#define SW_ANN_Property_String SW_ANN_NOOP
 #undef SW_ANN_Property_StringFn
-#define SW_ANN_Property_StringFn( Id, Member ) { #Id, Member },
-#include "PredefinedAnnotationField.xxx"
-#undef SW_ANN_Property_StringFn
-#define SW_ANN_Property_StringFn SW_ANN_NOOP
-			};
-
-			struct PropFloatEntry
-			{
-				string_view _field;
-				void ( *_pApply )( ParsedPropertyInfo&, float32 );
-			};
-			static constexpr PropFloatEntry kPropFloats[] = {
 #undef SW_ANN_Property_FloatFn
-#define SW_ANN_Property_FloatFn( Id, Member ) { #Id, Member },
-#include "PredefinedAnnotationField.xxx"
-#undef SW_ANN_Property_FloatFn
-#define SW_ANN_Property_FloatFn SW_ANN_NOOP
-			};
+#undef SW_ANN_Property
 
-			struct FuncFlagEntry
+			// ── FUNCTION ─────────────────────────────────────────────────
+			struct FuncEntry
 			{
 				string_view _field;
-				void ( *_pApply )( ParsedFunctionInfo& );
-			};
-#undef SW_ANN_Function_Flag
-#define SW_ANN_Function_Flag( Id, Member ) \
-	static void applyFunc##Id( ParsedFunctionInfo& target ) { target.Member = SW_TRUE; }
-#include "PredefinedAnnotationField.xxx"
-#undef SW_ANN_Function_Flag
-#define SW_ANN_Function_Flag SW_ANN_NOOP
-			static constexpr FuncFlagEntry kFuncFlags[] = {
-#undef SW_ANN_Function_Flag
-#define SW_ANN_Function_Flag( Id, Member ) { #Id, applyFunc##Id },
-#include "PredefinedAnnotationField.xxx"
-#undef SW_ANN_Function_Flag
-#define SW_ANN_Function_Flag SW_ANN_NOOP
+				void ( *_pApply )( ParsedFunctionInfo&, string_view );
 			};
 
-			struct FuncStringEntry
-			{
-				string_view _field;
-				void ( *_pApply )( ParsedFunctionInfo&, const string& );
-			};
-#undef SW_ANN_Function_String
-#define SW_ANN_Function_String( Id, Member ) \
-	static void applyFunc##Id( ParsedFunctionInfo& target, const string& value ) { target.Member = value; }
+#undef SW_ANN_Function
+#define SW_ANN_Property( ... )
+#define SW_ANN_Function( Kind, Id, Member ) SW_ANN_Function_##Kind( Id, Member )
+
+#define SW_ANN_Function_Flag( Id, Member )	   { #Id, []( ParsedFunctionInfo& target, string_view ) { target.Member = SW_TRUE; } },
+#define SW_ANN_Function_String( Id, Member )   { #Id, []( ParsedFunctionInfo& target, string_view val ) { target.Member = string( val ); } },
+#define SW_ANN_Function_StringFn( Id, Member ) { #Id, []( ParsedFunctionInfo& target, string_view val ) { Member( target, string( val ) ); } },
+
+			static constexpr FuncEntry kFuncEntries[] = {
 #include "PredefinedAnnotationField.xxx"
-#undef SW_ANN_Function_String
-#define SW_ANN_Function_String SW_ANN_NOOP
-			static constexpr FuncStringEntry kFuncStrings[] = {
-#undef SW_ANN_Function_String
-#define SW_ANN_Function_String( Id, Member ) { #Id, applyFunc##Id },
-#include "PredefinedAnnotationField.xxx"
-#undef SW_ANN_Function_String
-#define SW_ANN_Function_String SW_ANN_NOOP
-#undef SW_ANN_Function_StringFn
-#define SW_ANN_Function_StringFn( Id, Member ) { #Id, Member },
-#include "PredefinedAnnotationField.xxx"
-#undef SW_ANN_Function_StringFn
-#define SW_ANN_Function_StringFn SW_ANN_NOOP
 			};
 
+#undef SW_ANN_Function_Flag
+#undef SW_ANN_Function_String
+#undef SW_ANN_Function_StringFn
+#undef SW_ANN_Function
+
+#undef SW_ANN_Reflect
+#undef SW_ANN_Enum
+#undef SW_ANN_Property
 #undef REGISTER_ANNOTATION_FIELD
-#undef SW_ANN_Reflect_Flag
-#undef SW_ANN_Reflect_Bool
-#undef SW_ANN_Reflect_String
-#undef SW_ANN_Reflect_FlagFn
-#undef SW_ANN_Reflect_StringFn
-#undef SW_ANN_Reflect_FloatFn
-#undef SW_ANN_Enum_Flag
-#undef SW_ANN_Enum_Bool
-#undef SW_ANN_Enum_String
-#undef SW_ANN_Enum_FlagFn
-#undef SW_ANN_Enum_StringFn
-#undef SW_ANN_Enum_FloatFn
-#undef SW_ANN_Property_Flag
-#undef SW_ANN_Property_Bool
-#undef SW_ANN_Property_String
-#undef SW_ANN_Property_FlagFn
-#undef SW_ANN_Property_StringFn
-#undef SW_ANN_Property_FloatFn
-#undef SW_ANN_Function_Flag
-#undef SW_ANN_Function_Bool
-#undef SW_ANN_Function_String
-#undef SW_ANN_Function_FlagFn
-#undef SW_ANN_Function_StringFn
-#undef SW_ANN_Function_FloatFn
-#undef SW_ANN_NOOP
 
-			/** @brief PROPERTY 바인딩 Kind 에 따라 프로퍼티 필드를 채웁니다. */
+			/** @brief PROPERTY 바인딩에 따라 프로퍼티 필드를 채웁니다. */
 			static void applyPropertyBinding( ParsedPropertyInfo& prop, const AnnotationBinding& binding, string_view val )
 			{
-				using Kind = AnnotationBinding::Kind;
-				switch ( binding._kind )
-				{
-					case Kind::Flag:
-					case Kind::Bool:
-						if ( const PropBoolEntry* entry = findFieldEntry( kPropBools, binding._field ) )
-							entry->_pApply( prop, binding._kind == Kind::Flag ? true : parseAnnotationBool( val ) );
-						break;
-					case Kind::String:
-						if ( const PropStringEntry* entry = findFieldEntry( kPropStrings, binding._field ) )
-							entry->_pApply( prop, string( val ) );
-						break;
-					case Kind::Float:
-						if ( const PropFloatEntry* entry = findFieldEntry( kPropFloats, binding._field ) )
-						{
-							float32 fVal{ 0.0f };
-							StringUtil::parseFloat( val, fVal );
-							entry->_pApply( prop, fVal );
-						}
-						break;
-					case Kind::NetRole:
-						break;
-					default:
-						break;
-				}
+				if ( const PropEntry* entry = findFieldEntry( kPropEntries, binding._field ) )
+					entry->_pApply( prop, binding, val );
 			}
 		};
 	} // namespace
@@ -533,9 +386,9 @@ namespace sw
 				const AnnotationBinding* binding = meta.findBare( annotationConstants::kReflectScope, token );
 				if ( binding == nullptr || binding->_kind != AnnotationBinding::Kind::Flag )
 					continue;
-				if ( const AnnotationApplyInternal::ReflectFlagEntry* entry =
-						 AnnotationApplyInternal::findFieldEntry( AnnotationApplyInternal::kReflectFlags, binding->_field ) )
-					entry->_pApply( typeInfo );
+				if ( const AnnotationApplyInternal::ReflectEntry* entry =
+						 AnnotationApplyInternal::findFieldEntry( AnnotationApplyInternal::kReflectEntries, binding->_field ) )
+					entry->_pApply( typeInfo, *binding, {} );
 				continue;
 			}
 
@@ -548,16 +401,16 @@ namespace sw
 			{
 				if ( AnnotationApplyInternal::parseAnnotationBool( val ) )
 				{
-					if ( const AnnotationApplyInternal::ReflectFlagEntry* entry =
-							 AnnotationApplyInternal::findFieldEntry( AnnotationApplyInternal::kReflectFlags, binding->_field ) )
-						entry->_pApply( typeInfo );
+					if ( const AnnotationApplyInternal::ReflectEntry* entry =
+							 AnnotationApplyInternal::findFieldEntry( AnnotationApplyInternal::kReflectEntries, binding->_field ) )
+						entry->_pApply( typeInfo, *binding, val );
 				}
 			}
 			else if ( binding->_kind == AnnotationBinding::Kind::String )
 			{
-				if ( const AnnotationApplyInternal::ReflectStringEntry* entry =
-						 AnnotationApplyInternal::findFieldEntry( AnnotationApplyInternal::kReflectStrings, binding->_field ) )
-					entry->_pApply( typeInfo, string( val ) );
+				if ( const AnnotationApplyInternal::ReflectEntry* entry =
+						 AnnotationApplyInternal::findFieldEntry( AnnotationApplyInternal::kReflectEntries, binding->_field ) )
+					entry->_pApply( typeInfo, *binding, val );
 			}
 		}
 	}
@@ -581,9 +434,9 @@ namespace sw
 				{
 					if ( binding->_kind == AnnotationBinding::Kind::Flag )
 					{
-						if ( const AnnotationApplyInternal::EnumFlagEntry* entry =
-								 AnnotationApplyInternal::findFieldEntry( AnnotationApplyInternal::kEnumFlags, binding->_field ) )
-							entry->_pApply( enumInfo );
+						if ( const AnnotationApplyInternal::EnumEntry* entry =
+								 AnnotationApplyInternal::findFieldEntry( AnnotationApplyInternal::kEnumEntries, binding->_field ) )
+							entry->_pApply( enumInfo, {} );
 					}
 				}
 				continue;
@@ -594,9 +447,9 @@ namespace sw
 			const AnnotationBinding* binding = meta.findKey( annotationConstants::kEnumScope, key );
 			if ( binding == nullptr || binding->_kind != AnnotationBinding::Kind::String )
 				continue;
-			if ( const AnnotationApplyInternal::EnumStringEntry* entry =
-					 AnnotationApplyInternal::findFieldEntry( AnnotationApplyInternal::kEnumStrings, binding->_field ) )
-				entry->_pApply( enumInfo, string( val ) );
+			if ( const AnnotationApplyInternal::EnumEntry* entry =
+					 AnnotationApplyInternal::findFieldEntry( AnnotationApplyInternal::kEnumEntries, binding->_field ) )
+				entry->_pApply( enumInfo, val );
 		}
 	}
 
@@ -653,9 +506,9 @@ namespace sw
 					}
 					else if ( binding->_kind == AnnotationBinding::Kind::Flag )
 					{
-						if ( const AnnotationApplyInternal::FuncFlagEntry* entry =
-								 AnnotationApplyInternal::findFieldEntry( AnnotationApplyInternal::kFuncFlags, binding->_field ) )
-							entry->_pApply( method );
+						if ( const AnnotationApplyInternal::FuncEntry* entry =
+								 AnnotationApplyInternal::findFieldEntry( AnnotationApplyInternal::kFuncEntries, binding->_field ) )
+							entry->_pApply( method, {} );
 					}
 				}
 				continue;
@@ -668,19 +521,18 @@ namespace sw
 				{
 					if ( AnnotationApplyInternal::parseAnnotationBool( val ) )
 					{
-						if ( const AnnotationApplyInternal::FuncFlagEntry* entry =
-								 AnnotationApplyInternal::findFieldEntry( AnnotationApplyInternal::kFuncFlags, binding->_field ) )
-							entry->_pApply( method );
+						if ( const AnnotationApplyInternal::FuncEntry* entry =
+								 AnnotationApplyInternal::findFieldEntry( AnnotationApplyInternal::kFuncEntries, binding->_field ) )
+							entry->_pApply( method, val );
 					}
 				}
 				else if ( binding->_kind == AnnotationBinding::Kind::String )
 				{
-					if ( const AnnotationApplyInternal::FuncStringEntry* entry =
-							 AnnotationApplyInternal::findFieldEntry( AnnotationApplyInternal::kFuncStrings, binding->_field ) )
-						entry->_pApply( method, string( val ) );
+					if ( const AnnotationApplyInternal::FuncEntry* entry =
+							 AnnotationApplyInternal::findFieldEntry( AnnotationApplyInternal::kFuncEntries, binding->_field ) )
+						entry->_pApply( method, val );
 				}
 			}
 		}
 	}
-
 } // namespace sw

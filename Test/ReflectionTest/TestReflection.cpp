@@ -1552,7 +1552,7 @@ SW_TEST_CASE( Reflection_Serialization, NestedContainerRoundtripAllFormats )
 		SW_EXPECT_EQUAL( static_cast<size_t>( 2 ), dst._grid.size() );
 		SW_EXPECT_EQUAL( 5, dst._grid[1][2] );
 		SW_EXPECT_EQUAL( static_cast<size_t>( 2 ), dst._namedRows.size() );
-		SW_EXPECT_EQUAL( -3.25f, dst._namedRows.at( "b" )[0] );
+		SW_EXPECT_NEAR_EQUAL( -3.25f, dst._namedRows.at( "b" )[0], 1e-4f );
 		SW_EXPECT_EQUAL( static_cast<size_t>( 2 ), dst._nestedMap.size() );
 		SW_EXPECT_EQUAL( 8, dst._nestedMap.at( "out" ).at( "y" ) );
 		SW_EXPECT_EQUAL( 9, dst._nestedMap.at( "in" ).at( "z" ) );

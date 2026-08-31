@@ -18,21 +18,6 @@ namespace sw
 	{
 		struct XmlSerializerInternal
 		{
-			static const utf8* xmlTypeInfoName( hashed_string typeName )
-			{
-				const TypeInfo* pTypeInfo = engine::getTypeRegistry().findType( typeName );
-				if ( pTypeInfo != nullptr )
-				{
-					if ( pTypeInfo->_name.empty() == false )
-						return pTypeInfo->_name.c_str();
-					if ( pTypeInfo->_fullyQualifiedName.empty() == false )
-						return pTypeInfo->_fullyQualifiedName.c_str();
-				}
-				if ( typeName.empty() == false )
-					return typeName.c_str();
-				return nullptr;
-			}
-
 			static const TypeInfo* findNestedXmlObjectType( hashed_string typeName, const SerializeContext& ctx )
 			{
 				if ( ctx.findTextWriter( typeName ) != nullptr )

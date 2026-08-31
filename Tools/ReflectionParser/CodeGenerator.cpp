@@ -301,7 +301,7 @@ namespace sw
 
 	/**
 	 * @brief 세 scope(REFLECT/PROPERTY/FUNCTION)가 공통으로 쓰는 편집기 메타를 출력합니다.
-	 * @param pPrefix 대상 접두사. 예: "p._metadata." / "info._metadata."
+	 * @param prefix 대상 접두사. 예: "p._metadata." / "info._metadata."
 	 * @details Category/DisplayName/Tooltip 은 스코프마다 대상만 다르고 형태가 같아 여기 모읍니다.
 	 *          (나머지 필드는 스코프별로 구성이 달라 각 emit 함수에 둡니다)
 	 */
