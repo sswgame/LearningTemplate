@@ -223,6 +223,13 @@ namespace sw
 		/** @brief 이미 생성된 GameObject를 매니저에 등록하고 소유권을 가져갑니다. */
 		void registerGameObject( GameObject* pObj );
 
+		/** @brief 틱 디스패치 웨이브의 개별 틱 실행 항목 */
+		struct TickExecutionItem
+		{
+			ComponentHandle _handle;
+			uint32			_subTickId{ 0 };
+		};
+
 	private:
 		/** @brief 소유 컴포넌트를 TickGroup 순으로 틱합니다. */
 		void tickComponents( float32 deltaTime );
@@ -260,16 +267,16 @@ namespace sw
 
 		PhysicsWorld _physicsWorld;
 
-		atomic<bool>					_bParallelTransformReadOnly;
-		atomic<bool>					_bTicking;
-		atomic<bool>					_bIsTickWavesDirty;
-		vector<vector<ComponentHandle>> _listCachedTickWave;
-		mutex							_deferredTransformMutex;
-		vector<TransformUpdateDelegate> _listDeferredTransformUpdate;
-		vector<TransformUpdateDelegate> _listProcessingTransform;
-		mutex							_deferredPostTickMutex;
-		vector<PostTickDelegate>		_listDeferredPostTickUpdate;
-		vector<PostTickDelegate>		_listProcessingPostTick;
+		atomic<bool>					  _bParallelTransformReadOnly;
+		atomic<bool>					  _bTicking;
+		atomic<bool>					  _bIsTickWavesDirty;
+		vector<vector<TickExecutionItem>> _listCachedTickWave;
+		mutex							  _deferredTransformMutex;
+		vector<TransformUpdateDelegate>	  _listDeferredTransformUpdate;
+		vector<TransformUpdateDelegate>	  _listProcessingTransform;
+		mutex							  _deferredPostTickMutex;
+		vector<PostTickDelegate>		  _listDeferredPostTickUpdate;
+		vector<PostTickDelegate>		  _listProcessingPostTick;
 
 		unordered_map<hashed_string, ComponentFactoryDelegate> _mapFactory;
 		unordered_map<hashed_string, hashed_string>			   _mapFactoryModule;

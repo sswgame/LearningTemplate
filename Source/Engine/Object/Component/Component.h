@@ -28,6 +28,65 @@ namespace sw
 	};
 
 	/**
+	 * @enum TickPhase
+	 * @brief 동일한 TickGroup 내에서의 세부 실행 페이즈 (Phase)
+	 */
+	enum class TickPhase : uint8
+	{
+		Early	 = 0,	///< 선행 연산 (데이터 준비, 물리 전처리)
+		Normal	 = 64,	///< 기본 연산 (일반 게임플레이)
+		Late	 = 128, ///< 후행 연산 (래그돌 합성, 소켓 어태치먼트)
+		Finalize = 192	///< 최종 연산 (GPU 버퍼 업로드, LOD 계산)
+	};
+
+	/**
+	 * @struct SubTickHandle
+	 * @brief 서브틱 식별 및 선행 종속성(Prerequisite) 연결을 위한 고유 핸들
+	 */
+	struct SubTickHandle
+	{
+		uint64 _componentId{ 0 };
+		uint32 _subTickId{ 0 };
+
+		constexpr bool isValid() const
+		{
+			return _componentId != 0 && _subTickId != 0;
+		}
+
+		constexpr bool operator==( const SubTickHandle& other ) const
+		{
+			return _componentId == other._componentId && _subTickId == other._subTickId;
+		}
+
+		constexpr bool operator!=( const SubTickHandle& other ) const
+		{
+			return !( *this == other );
+		}
+	};
+
+	struct SubTickHandleHash
+	{
+		size_t operator()( const SubTickHandle& handle ) const noexcept
+		{
+			return static_cast<size_t>( handle._componentId ^ ( static_cast<uint64>( handle._subTickId ) << 32 ) );
+		}
+	};
+
+	/**
+	 * @struct SubTickInfo
+	 * @brief 컴포넌트에 등록된 개별 서브틱의 메타데이터 및 종속성 정보
+	 */
+	struct SubTickInfo
+	{
+		uint32				  _subTickId{ 0 };
+		TickGroup			  _group{ TickGroup::DuringPhysics };
+		TickPhase			  _phase{ TickPhase::Normal };
+		uint8				  _priority{ 0 };
+		uint8				  _bActive{ SW_TRUE };
+		vector<SubTickHandle> _listPrerequisite;
+	};
+
+	/**
 	 * @class Component
 	 * @brief GameObject의 기능 및 데이터를 분리 확장하기 위한 컴포넌트 기반 클래스
 	 */
@@ -61,12 +120,34 @@ namespace sw
 		virtual void onBeginPlay();
 		/** @brief 게임플레이 종료 시 정리 콜백 (beginPlay 대응) */
 		virtual void onEndPlay();
-		/** @brief 프레임 단위 업데이트 콜백 */
+		/** @brief 프레임 단위 메인 업데이트 콜백 */
 		virtual void onTick( float32 deltaTime );
+		/** @brief 프레임 단위 보조 서브틱 업데이트 콜백 */
+		virtual void onSubTick( uint32 subTickId, float32 deltaTime );
 		/** @brief 컴포넌트 소멸 및 해제 시 콜백 */
 		virtual void onDestroy();
 		/** @brief 프로퍼티 변경 시 이벤트 콜백 */
 		virtual void onPropertyChanged( hashed_string propertyName );
+
+		/** @brief 서브틱을 등록합니다. (TickGroup + Phase + Priority 지원) */
+		SubTickHandle registerSubTick( TickGroup group, uint32 subTickId, TickPhase phase = TickPhase::Normal, uint8 priority = 0 );
+		/** @brief 특정 서브틱을 등록 해제합니다. */
+		bool unregisterSubTick( uint32 subTickId );
+		/** @brief 특정 서브틱에 선행 종속성(Prerequisite)을 추가합니다. (prerequisiteHandle이 먼저 실행되어야 함) */
+		bool addSubTickPrerequisite( uint32 subTickId, const SubTickHandle& prerequisiteHandle );
+		/** @brief 특정 서브틱의 활성화 여부를 설정합니다. */
+		void setSubTickActive( uint32 subTickId, bool bActive );
+		/** @brief 특정 서브틱이 활성화되어 있는지 확인합니다. (O(1) Bitmask Fast-Path) */
+		bool isSubTickActive( uint32 subTickId ) const
+		{
+			if ( subTickId == 0 )
+				return false;
+			if ( subTickId < 64 )
+				return ( _subTickActiveMask.load( std::memory_order_relaxed ) & ( 1ULL << subTickId ) ) != 0;
+			return isSubTickActiveSlow( subTickId );
+		}
+		/** @brief 등록된 모든 서브틱 목록을 반환합니다. */
+		const vector<SubTickInfo>& getAllSubTicks() const { return _listSubTick; }
 
 		/** @brief 구체 타입 TypeInfo로 gamedata 기본값을 주입합니다. */
 		void applyTypeDefaults( const TypeInfo* pTypeInfo );
@@ -108,6 +189,7 @@ namespace sw
 
 	private:
 		void				  initialize();
+		bool				  isSubTickActiveSlow( uint32 subTickId ) const;
 		static atomic<uint64> _s_nextComponentId; ///< ID 생성 카운터
 
 	protected:
@@ -115,10 +197,12 @@ namespace sw
 		uint64		  _componentId;	  ///< 컴포넌트 고유 시리얼 ID
 		hashed_string _componentName; ///< 컴포넌트 식별 이름
 
-		atomic<bool> _bActive{ true };						 ///< 컴포넌트 개별 활성화
-		atomic<bool> _bIsPendingKill{ false };				 ///< 지연 삭제 플래그
-		TickGroup	 _tickGroup{ TickGroup::DuringPhysics }; ///< TickGroup 슬롯
-		uint8		 _bCanEverTick	: 1;
-		uint8		 _reservedFlags : 7;
+		atomic<uint64>		_subTickActiveMask{ 0 };				///< 서브틱 1~63 활성 상태 O(1) 원자적 비트마스크
+		atomic<bool>		_bActive{ true };						///< 컴포넌트 개별 활성화
+		atomic<bool>		_bIsPendingKill{ false };				///< 지연 삭제 플래그
+		TickGroup			_tickGroup{ TickGroup::DuringPhysics }; ///< TickGroup 슬롯
+		uint8				_bCanEverTick  : 1;
+		uint8				_reservedFlags : 7;
+		vector<SubTickInfo> _listSubTick; ///< 등록된 보조 서브틱 목록
 	};
 } // namespace sw

@@ -31,15 +31,155 @@ namespace sw
 				return s_mapFactoryHeads;
 			}
 
-			static vector<vector<ComponentHandle>> splitWaveByObject( const vector<ComponentHandle>& listWave )
+			struct TickCandidate
 			{
-				vector<vector<ComponentHandle>> listSubwave;
-				vector<unordered_set<uint64>>	listOccupied;
-				for ( const ComponentHandle& handle : listWave )
+				ComponentHandle		  _handle;
+				uint32				  _subTickId{ 0 };
+				uint64				  _componentId{ 0 };
+				uint64				  _objectId{ 0 };
+				uint8				  _orderKey{ 64 };
+				uint32				  _originalIndex{ 0 };
+				vector<SubTickHandle> _listPrerequisite;
+			};
+
+			static vector<vector<GameObjectManager::TickExecutionItem>> sortTickCandidates( vector<TickCandidate>& listCandidate )
+			{
+				const size_t count = listCandidate.size();
+				if ( count == 0 )
+					return {};
+
+				if ( count == 1 )
 				{
-					if ( handle.isValid() == false )
+					return { { { listCandidate[0]._handle, listCandidate[0]._subTickId } } };
+				}
+
+				// SubTickHandle -> 후보자 인덱스 빠른 매핑 맵 구성
+				unordered_map<SubTickHandle, size_t, SubTickHandleHash> mapLookup;
+				mapLookup.reserve( count );
+				for ( size_t idx = 0; idx < count; ++idx )
+				{
+					mapLookup[{ listCandidate[idx]._componentId, listCandidate[idx]._subTickId }] = idx;
+				}
+
+				// 선행 종속성 DAG 그래프(인접 리스트 및 In-degree) 구성
+				vector<vector<size_t>> listAdj( count );
+				vector<uint32>		   listInDegree( count, 0 );
+				bool				   bHasPrerequisites = false;
+
+				for ( size_t idx = 0; idx < count; ++idx )
+				{
+					for ( const SubTickHandle& prereq : listCandidate[idx]._listPrerequisite )
+					{
+						auto it = mapLookup.find( prereq );
+						if ( it != mapLookup.end() )
+						{
+							const size_t prereqIdx = it->second;
+							if ( prereqIdx != idx )
+							{
+								listAdj[prereqIdx].push_back( idx );
+								++listInDegree[idx];
+								bHasPrerequisites = true;
+							}
+						}
+					}
+				}
+
+				// 종속성이 전혀 없는 경우: TickPhase + Priority 기준 단일 웨이브 안정 정렬 (Fast-Path)
+				if ( bHasPrerequisites == false )
+				{
+					std::stable_sort( listCandidate.begin(), listCandidate.end(), []( const TickCandidate& a, const TickCandidate& b )
+					{
+						if ( a._orderKey != b._orderKey )
+							return a._orderKey < b._orderKey;
+						return a._originalIndex < b._originalIndex;
+					} );
+
+					vector<GameObjectManager::TickExecutionItem> listSingleWave;
+					listSingleWave.reserve( count );
+					for ( const TickCandidate& cand : listCandidate )
+					{
+						listSingleWave.push_back( { cand._handle, cand._subTickId } );
+					}
+					return { std::move( listSingleWave ) };
+				}
+
+				// Kahn 알고리즘 기반 DAG 레벨별 분할 웨이브 생성 (Topological Level Waves)
+				auto sortLevel = [&listCandidate]( vector<size_t>& listLevel )
+				{
+					std::stable_sort( listLevel.begin(), listLevel.end(), [&listCandidate]( size_t a, size_t b )
+					{
+						if ( listCandidate[a]._orderKey != listCandidate[b]._orderKey )
+							return listCandidate[a]._orderKey < listCandidate[b]._orderKey;
+						return listCandidate[a]._originalIndex < listCandidate[b]._originalIndex;
+					} );
+				};
+
+				vector<size_t> listCurrentLevel;
+				for ( size_t idx = 0; idx < count; ++idx )
+				{
+					if ( listInDegree[idx] == 0 )
+						listCurrentLevel.push_back( idx );
+				}
+
+				vector<vector<GameObjectManager::TickExecutionItem>> listDagWave;
+				vector<bool>										 listVisited( count, false );
+				size_t												 totalProcessed{ 0 };
+
+				while ( listCurrentLevel.empty() == false )
+				{
+					sortLevel( listCurrentLevel );
+					vector<GameObjectManager::TickExecutionItem> listWaveItem;
+					listWaveItem.reserve( listCurrentLevel.size() );
+					vector<size_t> listNextLevel;
+
+					for ( size_t u : listCurrentLevel )
+					{
+						listVisited[u] = true;
+						++totalProcessed;
+						listWaveItem.push_back( { listCandidate[u]._handle, listCandidate[u]._subTickId } );
+
+						for ( size_t v : listAdj[u] )
+						{
+							if ( --listInDegree[v] == 0 )
+								listNextLevel.push_back( v );
+						}
+					}
+
+					listDagWave.push_back( std::move( listWaveItem ) );
+					listCurrentLevel = std::move( listNextLevel );
+				}
+
+				// 순환 참조(Cycle) 방어: 미방문 노드가 남아있으면 orderKey 순으로 추가
+				if ( totalProcessed < count )
+				{
+					vector<size_t> listRemaining;
+					for ( size_t idx = 0; idx < count; ++idx )
+					{
+						if ( listVisited[idx] == false )
+							listRemaining.push_back( idx );
+					}
+					sortLevel( listRemaining );
+					vector<GameObjectManager::TickExecutionItem> listFallbackWave;
+					listFallbackWave.reserve( listRemaining.size() );
+					for ( size_t idx : listRemaining )
+					{
+						listFallbackWave.push_back( { listCandidate[idx]._handle, listCandidate[idx]._subTickId } );
+					}
+					listDagWave.push_back( std::move( listFallbackWave ) );
+				}
+
+				return listDagWave;
+			}
+
+			static vector<vector<GameObjectManager::TickExecutionItem>> splitWaveByObject( const vector<GameObjectManager::TickExecutionItem>& listWave )
+			{
+				vector<vector<GameObjectManager::TickExecutionItem>> listSubwave;
+				vector<unordered_set<uint64>>						 listOccupied;
+				for ( const GameObjectManager::TickExecutionItem& item : listWave )
+				{
+					if ( item._handle.isValid() == false )
 						continue;
-					const uint64 objectId = handle.objectId();
+					const uint64 objectId = item._handle.objectId();
 					size_t		 slot{ 0 };
 					for ( ; slot < listSubwave.size(); ++slot )
 					{
@@ -51,38 +191,48 @@ namespace sw
 						listSubwave.emplace_back();
 						listOccupied.emplace_back();
 					}
-					listSubwave[slot].push_back( handle );
+					listSubwave[slot].push_back( item );
 					listOccupied[slot].insert( objectId );
 				}
 				return listSubwave;
 			}
 
-			static void resolveAndTickComponent( GameObjectManager* pManager, float32 deltaTime, const ComponentHandle& handle )
+			static void resolveAndTickItem( GameObjectManager* pManager, float32 deltaTime, const GameObjectManager::TickExecutionItem& item )
 			{
-				Component* pComp = pManager->resolveComponent( handle );
-				if ( pComp == nullptr || pComp->isActive() == false || pComp->canEverTick() == false )
+				Component* pComp = pManager->resolveComponent( item._handle );
+				if ( pComp == nullptr || pComp->isActive() == false )
 					return;
 				GameObject* pOwner = pComp->getOwner();
 				if ( pOwner == nullptr || pOwner->isActiveInHierarchy() == false || pOwner->isPendingKill() )
 					return;
-				pComp->onTick( deltaTime );
+
+				if ( item._subTickId == 0 )
+				{
+					if ( pComp->canEverTick() )
+						pComp->onTick( deltaTime );
+				}
+				else
+				{
+					if ( pComp->isSubTickActive( item._subTickId ) )
+						pComp->onSubTick( item._subTickId, deltaTime );
+				}
 			}
 
 			struct ComponentWaveTick
 			{
-				GameObjectManager*	   _pManager{ nullptr };
-				const ComponentHandle* _pRawHandles{ nullptr };
-				float32				   _deltaTime{ 0.0f };
-				uint32				   _totalCount{ 0 };
+				GameObjectManager*							_pManager{ nullptr };
+				const GameObjectManager::TickExecutionItem* _pRawItems{ nullptr };
+				float32										_deltaTime{ 0.0f };
+				uint32										_totalCount{ 0 };
 
 				void tickIndex( uint32 index )
 				{
 					if ( index < _totalCount )
-						resolveAndTickComponent( _pManager, _deltaTime, _pRawHandles[index] );
+						resolveAndTickItem( _pManager, _deltaTime, _pRawItems[index] );
 				}
 			};
 
-			static void dispatchWave( GameObjectManager* pManager, float32 deltaTime, const vector<ComponentHandle>& listWave )
+			static void dispatchWave( GameObjectManager* pManager, float32 deltaTime, const vector<GameObjectManager::TickExecutionItem>& listWave )
 			{
 				if ( listWave.empty() )
 					return;
@@ -90,20 +240,20 @@ namespace sw
 				constexpr uint32 kParallelThreshold = 16;
 				if ( listWave.size() < kParallelThreshold || engine::areEngineServicesBound() == false )
 				{
-					for ( const ComponentHandle& handle : listWave )
-						resolveAndTickComponent( pManager, deltaTime, handle );
+					for ( const GameObjectManager::TickExecutionItem& item : listWave )
+						resolveAndTickItem( pManager, deltaTime, item );
 					return;
 				}
 
 				ComponentWaveTick waveTick{};
-				waveTick._pManager	  = pManager;
-				waveTick._deltaTime	  = deltaTime;
-				waveTick._pRawHandles = listWave.data();
-				waveTick._totalCount  = static_cast<uint32>( listWave.size() );
+				waveTick._pManager	 = pManager;
+				waveTick._deltaTime	 = deltaTime;
+				waveTick._pRawItems	 = listWave.data();
+				waveTick._totalCount = static_cast<uint32>( listWave.size() );
 
 				TaskStageHandle stage  = engine::getTaskManager().createAnonymousStage( "ComponentWave" );
 				TaskHandle		handle = engine::getTaskManager().emplaceParallel(
-					waveTick._totalCount, SW_DELEGATE_METHOD( ParallelTaskDelegate, &ComponentWaveTick::tickIndex, &waveTick ) );
+					 waveTick._totalCount, SW_DELEGATE_METHOD( ParallelTaskDelegate, &ComponentWaveTick::tickIndex, &waveTick ) );
 				stage.addTask( handle );
 				handle.submit();
 				engine::getTaskManager().waitStage( stage );
@@ -843,41 +993,80 @@ namespace sw
 	{
 		if ( _bIsTickWavesDirty.exchange( false, std::memory_order_acq_rel ) )
 		{
-			array<vector<Component*>, 4> arrListGroup;
-			const vector<GameObject*>	 listObject = getAllGameObjects();
+			array<vector<GameObjectManagerInternal::TickCandidate>, 4> arrListGroup;
+			const vector<GameObject*>								   listObject		   = getAllGameObjects();
+			uint32													   totalCandidateCount = 0;
+
 			for ( GameObject* pObj : listObject )
 			{
 				if ( pObj == nullptr || pObj->isPendingKill() == true )
 					continue;
+
 				for ( Component* pComp : pObj->getAllComponents() )
 				{
-					if ( pComp == nullptr || pComp->canEverTick() == false )
+					if ( pComp == nullptr )
 						continue;
-					const uint8 groupIndex = static_cast<uint8>( pComp->getTickGroup() );
-					if ( groupIndex < arrListGroup.size() )
-						arrListGroup[groupIndex].push_back( pComp );
+
+					// 1. Main Tick
+					if ( pComp->canEverTick() == true )
+					{
+						const uint8 groupIndex = static_cast<uint8>( pComp->getTickGroup() );
+						if ( groupIndex < arrListGroup.size() )
+						{
+							GameObjectManagerInternal::TickCandidate cand{};
+							cand._handle		= pComp->getHandle();
+							cand._subTickId		= 0;
+							cand._componentId	= pComp->getComponentId();
+							cand._objectId		= pObj->getObjectId();
+							cand._orderKey		= static_cast<uint8>( TickPhase::Normal );
+							cand._originalIndex = totalCandidateCount++;
+							arrListGroup[groupIndex].push_back( std::move( cand ) );
+						}
+					}
+
+					// 2. SubTicks
+					for ( const SubTickInfo& subTick : pComp->getAllSubTicks() )
+					{
+						if ( subTick._bActive == SW_TRUE )
+						{
+							const uint8 groupIndex = static_cast<uint8>( subTick._group );
+							if ( groupIndex < arrListGroup.size() )
+							{
+								GameObjectManagerInternal::TickCandidate cand{};
+								cand._handle		   = pComp->getHandle();
+								cand._subTickId		   = subTick._subTickId;
+								cand._componentId	   = pComp->getComponentId();
+								cand._objectId		   = pObj->getObjectId();
+								cand._orderKey		   = static_cast<uint8>( subTick._phase ) + ( subTick._priority & 63 );
+								cand._originalIndex	   = totalCandidateCount++;
+								cand._listPrerequisite = subTick._listPrerequisite;
+								arrListGroup[groupIndex].push_back( std::move( cand ) );
+							}
+						}
+					}
 				}
 			}
 
 			_listCachedTickWave.clear();
-			for ( const vector<Component*>& wave : arrListGroup )
+			for ( vector<GameObjectManagerInternal::TickCandidate>& groupCandidates : arrListGroup )
 			{
-				if ( wave.empty() )
+				if ( groupCandidates.empty() )
 					continue;
-				vector<ComponentHandle> listTarget;
-				listTarget.reserve( wave.size() );
-				for ( Component* pComp : wave )
-					listTarget.push_back( pComp->getHandle() );
-				vector<vector<ComponentHandle>> listSubwave = GameObjectManagerInternal::splitWaveByObject( listTarget );
-				for ( vector<ComponentHandle>& subwave : listSubwave )
+
+				vector<vector<TickExecutionItem>> listDagWaves = GameObjectManagerInternal::sortTickCandidates( groupCandidates );
+				for ( const vector<TickExecutionItem>& dagWave : listDagWaves )
 				{
-					if ( subwave.empty() == false )
-						_listCachedTickWave.push_back( std::move( subwave ) );
+					vector<vector<TickExecutionItem>> listSubwave = GameObjectManagerInternal::splitWaveByObject( dagWave );
+					for ( vector<TickExecutionItem>& subwave : listSubwave )
+					{
+						if ( subwave.empty() == false )
+							_listCachedTickWave.push_back( std::move( subwave ) );
+					}
 				}
 			}
 		}
 
-		for ( const vector<ComponentHandle>& wave : _listCachedTickWave )
+		for ( const vector<TickExecutionItem>& wave : _listCachedTickWave )
 			GameObjectManagerInternal::dispatchWave( this, deltaTime, wave );
 	}
 

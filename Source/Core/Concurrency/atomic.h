@@ -97,6 +97,21 @@ namespace sw
 			return _value.fetch_sub( arg, order );
 		}
 
+		T fetch_or( T arg, std::memory_order order = std::memory_order_seq_cst ) noexcept
+		{
+			return _value.fetch_or( arg, order );
+		}
+
+		T fetch_and( T arg, std::memory_order order = std::memory_order_seq_cst ) noexcept
+		{
+			return _value.fetch_and( arg, order );
+		}
+
+		T fetch_xor( T arg, std::memory_order order = std::memory_order_seq_cst ) noexcept
+		{
+			return _value.fetch_xor( arg, order );
+		}
+
 		T operator++() noexcept { return fetch_add( 1 ) + 1; }
 		T operator++( int32 ) noexcept { return fetch_add( 1 ); }
 		T operator--() noexcept { return fetch_sub( 1 ) - 1; }
