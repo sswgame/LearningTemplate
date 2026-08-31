@@ -15,9 +15,9 @@
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
 #include "Engine/Common/EngineDefines.h"
-#include "Engine/Utility/Resource/AssetDatabase.h"
-#include "Engine/Utility/Resource/ResourceManager.h"
-#include "Engine/Utility/Resource/ResourceUtil.h"
+#include "Engine/Resource/AssetDatabase.h"
+#include "Engine/Resource/ResourceManager.h"
+#include "Engine/Resource/ResourceUtil.h"
 
 #include "RuntimeAPI/Service/EditorService.h"
 

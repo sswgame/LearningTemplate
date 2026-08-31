@@ -14,9 +14,9 @@
 #include "Core/Common/Macros.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Utility/File/ReloadFileManager.h"
-#include "Engine/Utility/Resource/AssetDatabase.h"
-#include "Engine/Utility/Resource/AssetFormat.h"
+#include "Engine/Resource/AssetDatabase.h"
+#include "Engine/Resource/AssetFormat.h"
+#include "Engine/Utility/Module/ReloadFileManager.h"
 
 namespace sw
 {

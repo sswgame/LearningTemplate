@@ -21,11 +21,11 @@
 #include "Engine/Object/GameObject/GameObjectPtr.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/Resource/ResourceManager.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Sequencer/SequenceAsset.h"
 #include "Engine/Sequencer/SequenceTimelineUtil.h"
-#include "Engine/Utility/Resource/ResourceManager.h"
 
 #include "RuntimeAPI/Service/EditorService.h"
 

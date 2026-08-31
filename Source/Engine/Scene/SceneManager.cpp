@@ -9,10 +9,10 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Resource/ResourceManager.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Utility/CommandStack.h"
-#include "Engine/Utility/Resource/ResourceManager.h"
 
 namespace sw
 {
@@ -180,9 +180,9 @@ namespace sw
 
 		shared_ptr<AsyncLoadSlot> slot = _asyncLoad;
 		_loadHandle					   = engine::getTaskManager().emplaceTask(
-			"SceneLoadAsync",
-			SW_DELEGATE_FUNCTION( TaskArgsDelegate, SceneManager::loadSceneAsyncJob ),
-			MakeTaskArgs( slot, string( path ) ) );
+			   "SceneLoadAsync",
+			   SW_DELEGATE_FUNCTION( TaskArgsDelegate, SceneManager::loadSceneAsyncJob ),
+			   MakeTaskArgs( slot, string( path ) ) );
 
 		_loadHandle.submit();
 		return _loadHandle.isValid();

@@ -8,8 +8,8 @@
 
 #include "Engine/Common/EngineDefines.h"
 #include "Engine/Localization/LocalizationManager.h"
+#include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Utility/Json/JsonDocument.h"
-#include "Engine/Utility/Resource/ResourceUtil.h"
 
 #include "RuntimeAPI/Service/EditorService.h"
 

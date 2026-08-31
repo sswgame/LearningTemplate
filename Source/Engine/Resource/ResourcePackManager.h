@@ -7,7 +7,7 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Utility/Resource/ResourcePackReader.h"
+#include "Engine/Resource/ResourcePackReader.h"
 
 namespace sw
 {

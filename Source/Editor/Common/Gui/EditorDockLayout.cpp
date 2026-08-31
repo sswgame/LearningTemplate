@@ -10,7 +10,7 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Panels/EditorPanelManager.h"
 
-#include "Engine/Utility/File/KeyValueFile.h"
+#include "Engine/Utility/Format/KeyValueFile.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -112,7 +112,7 @@ namespace sw::editor
 
 		const ImGuiViewport* pViewport	 = ImGui::GetMainViewport();
 		const ImGuiID		 dockspaceId = ImGui::DockSpaceOverViewport(
-			ImGui::GetID( "EditorMainDockSpace_v6" ), pViewport, ImGuiDockNodeFlags_PassthruCentralNode );
+			   ImGui::GetID( "EditorMainDockSpace_v6" ), pViewport, ImGuiDockNodeFlags_PassthruCentralNode );
 
 		if ( _bApplied == SW_FALSE )
 		{

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Utility/Resource/AssetFormat.h"
+#include "Engine/Resource/AssetFormat.h"
 
 #include "Core/String/StringUtil.h"
 

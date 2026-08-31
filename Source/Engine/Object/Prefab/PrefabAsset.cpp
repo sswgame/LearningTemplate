@@ -9,12 +9,12 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
+#include "Engine/Resource/AssetDatabase.h"
+#include "Engine/Resource/AssetFormat.h"
+#include "Engine/Resource/ResourceManager.h"
+#include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Serialization/Object/ObjectDiffSerializer.h"
 #include "Engine/Utility/Json/JsonDocument.h"
-#include "Engine/Utility/Resource/AssetDatabase.h"
-#include "Engine/Utility/Resource/AssetFormat.h"
-#include "Engine/Utility/Resource/ResourceManager.h"
-#include "Engine/Utility/Resource/ResourceUtil.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
 
 namespace sw

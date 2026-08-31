@@ -7,7 +7,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Audio/IAudioSystem.h"
-#include "Engine/Utility/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourceUtil.h"
 
 namespace sw
 {

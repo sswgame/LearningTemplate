@@ -6,8 +6,8 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RenderPass/RenderPassXmlUtil.h"
-#include "Engine/Utility/Resource/AssetFormat.h"
-#include "Engine/Utility/Resource/ResourceManager.h"
+#include "Engine/Resource/AssetFormat.h"
+#include "Engine/Resource/ResourceManager.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
 
 namespace sw

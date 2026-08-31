@@ -7,7 +7,7 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
-#include "Engine/Utility/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourceUtil.h"
 
 #define RAPIDXML_NO_EXCEPTIONS
 #include <rapidxml/rapidxml.hpp>

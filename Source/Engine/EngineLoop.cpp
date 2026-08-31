@@ -37,13 +37,13 @@
 #include "Engine/Localization/StringTable.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/ComponentDefaults.h"
+#include "Engine/Resource/AssetStreamingQueue.h"
+#include "Engine/Resource/ResourceManager.h"
+#include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Utility/CommandStack.h"
 #include "Engine/Utility/Debug/DebugOverlayState.h"
-#include "Engine/Utility/File/ReloadFileManager.h"
 #include "Engine/Utility/Module/LiveReloadManager.h"
-#include "Engine/Utility/Resource/AssetStreamingQueue.h"
-#include "Engine/Utility/Resource/ResourceManager.h"
-#include "Engine/Utility/Resource/ResourceUtil.h"
+#include "Engine/Utility/Module/ReloadFileManager.h"
 #include "Engine/Window/IWindow.h"
 
 #include "RuntimeAPI/PluginAPI.h"
@@ -228,7 +228,7 @@ namespace sw
 
 			const hashed_string kGameConfigHash = hashed_string{ "GameConfig" };
 			const GameConfig*	pGameConfig		= _configManager->ensureConfig<GameConfig>(
-				kGameConfigHash, config::kFileRuntimeGameConfig, shipping_host::kGameConfigJson );
+				  kGameConfigHash, config::kFileRuntimeGameConfig, shipping_host::kGameConfigJson );
 			if ( pGameConfig != nullptr )
 				GameConfig::setActive( *pGameConfig );
 

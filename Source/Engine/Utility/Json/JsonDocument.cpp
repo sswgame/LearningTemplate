@@ -5,7 +5,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
 
-#include "Engine/Utility/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourceUtil.h"
 
 #include <nlohmann/json.hpp>
 

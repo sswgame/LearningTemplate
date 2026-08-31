@@ -446,7 +446,7 @@ octree.querySphere( sw::float3( 15.0f, 5.0f, 15.0f ), 25.0f, listExplosionTarget
 텍스처, 셰이더, XML 파일이 외부 툴에서 수정되면 실시간으로 감지하여 콜백을 실행합니다.
 
 ```cpp
-#include "Engine/Utility/File/ReloadFileManager.h"
+#include "Engine/Utility/Module/ReloadFileManager.h"
 
 // 셰이더 파일 수정 시 자동 리로드 콜백 등록
 auto handle = sw::ReloadFileManager::get().registerWatch(
@@ -516,7 +516,7 @@ if ( sw::PhysicsSystem::get().raycast( sw::Vector2(0,0), sw::Vector2(1,0), 500.0
 게임플레이 중 버벅임(Frame Drop / Stuttering)을 방지하기 위해 백그라운드 워커 스레드에서 에셋을 사전 로드(Prefetch)하고 완료 콜백을 스레드-안전하게 전달합니다.
 
 ```cpp
-#include "Engine/Utility/Resource/AssetStreamingQueue.h"
+#include "Engine/Resource/AssetStreamingQueue.h"
 
 // 1. 큐 초기화 및 우선순위 기반 비동기 프리로드 요청
 sw::AssetStreamingQueue::get().initialize();

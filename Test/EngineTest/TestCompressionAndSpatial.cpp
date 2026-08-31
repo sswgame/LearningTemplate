@@ -10,12 +10,12 @@
 #include "Engine/Physics/AABB.h"
 #include "Engine/Reflection/PropertyMetaHint.h"
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Resource/AssetStreamingQueue.h"
 #include "Engine/Spatial/BVHTree3D.h"
 #include "Engine/Spatial/SpatialHashGrid2D.h"
 #include "Engine/Spatial/SpatialOctree.h"
 #include "Engine/Spatial/SpatialQuadTree.h"
-#include "Engine/Utility/File/ReloadFileManager.h"
-#include "Engine/Utility/Resource/AssetStreamingQueue.h"
+#include "Engine/Utility/Module/ReloadFileManager.h"
 
 #include "TestFramework/TestFramework.h"
 

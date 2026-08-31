@@ -2,9 +2,9 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Material/Material.h"
-#include "Engine/Utility/Resource/AssetFormat.h"
-#include "Engine/Utility/Resource/AssetStreamingQueue.h"
-#include "Engine/Utility/Resource/ResourceManager.h"
+#include "Engine/Resource/AssetFormat.h"
+#include "Engine/Resource/AssetStreamingQueue.h"
+#include "Engine/Resource/ResourceManager.h"
 
 #include "TestFramework/TestFramework.h"
 

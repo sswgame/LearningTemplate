@@ -6,7 +6,7 @@
 #include "Engine/Graphics/Shader/ShaderCompiler.h"
 #include "Engine/Graphics/Shader/ShaderReflection.h"
 #include "Engine/Graphics/Shader/ShaderVariant.h"
-#include "Engine/Utility/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourceUtil.h"
 
 #include "TestFramework/TestFramework.h"
 

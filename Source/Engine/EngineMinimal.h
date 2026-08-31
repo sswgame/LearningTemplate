@@ -7,4 +7,4 @@
 
 #include "Engine/Common/EngineDefines.h"
 #include "Engine/Common/EnginePlatformHeaders.h"
-#include "Engine/Utility/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourceUtil.h"

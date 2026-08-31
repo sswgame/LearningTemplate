@@ -6,7 +6,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
-#include "Engine/Utility/Resource/ResourcePackTypes.h"
+#include "Engine/Resource/ResourcePackTypes.h"
 
 namespace sw
 {

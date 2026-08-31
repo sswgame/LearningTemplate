@@ -7,11 +7,11 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Common/EngineServices.h"
-#include "Engine/Utility/Resource/AssetStreamingQueue.h"
-#include "Engine/Utility/Resource/ResourcePackManager.h"
-#include "Engine/Utility/Resource/ResourcePackReader.h"
-#include "Engine/Utility/Resource/ResourcePackTypes.h"
-#include "Engine/Utility/Resource/ResourceUtil.h"
+#include "Engine/Resource/AssetStreamingQueue.h"
+#include "Engine/Resource/ResourcePackManager.h"
+#include "Engine/Resource/ResourcePackReader.h"
+#include "Engine/Resource/ResourcePackTypes.h"
+#include "Engine/Resource/ResourceUtil.h"
 
 #include "TestFramework/TestFramework.h"
 

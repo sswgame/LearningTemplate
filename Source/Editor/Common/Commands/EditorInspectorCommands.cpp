@@ -15,10 +15,10 @@
 #include "Engine/Object/GameObject/GameObjectPtr.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
+#include "Engine/Resource/ResourceManager.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Utility/CommandStack.h"
-#include "Engine/Utility/Resource/ResourceManager.h"
 
 #include "RuntimeAPI/Service/EditorService.h"
 

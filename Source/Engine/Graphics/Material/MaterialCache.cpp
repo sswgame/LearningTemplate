@@ -7,7 +7,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
-#include "Engine/Utility/Resource/ResourceManager.h"
+#include "Engine/Resource/ResourceManager.h"
 
 namespace sw
 {

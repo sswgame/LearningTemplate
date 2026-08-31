@@ -8,8 +8,8 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResource.h"
 #include "Engine/Graphics/Shader/ShaderReflection.h"
-#include "Engine/Utility/Resource/AssetFormat.h"
-#include "Engine/Utility/Resource/ResourceManager.h"
+#include "Engine/Resource/AssetFormat.h"
+#include "Engine/Resource/ResourceManager.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
 
 namespace sw

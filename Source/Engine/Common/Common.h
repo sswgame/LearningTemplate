@@ -12,4 +12,4 @@
 #include "Core/Time/CpuTimer.h"
 
 #include "Engine/EngineMinimal.h"
-#include "Engine/Utility/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourceUtil.h"

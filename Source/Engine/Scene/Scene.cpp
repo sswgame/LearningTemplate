@@ -16,9 +16,9 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
+#include "Engine/Resource/AssetDatabase.h"
+#include "Engine/Resource/ResourceManager.h"
 #include "Engine/Scene/SceneDocument.h"
-#include "Engine/Utility/Resource/AssetDatabase.h"
-#include "Engine/Utility/Resource/ResourceManager.h"
 
 namespace sw
 {

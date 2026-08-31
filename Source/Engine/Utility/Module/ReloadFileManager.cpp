@@ -1,8 +1,10 @@
 #include "pch.h"
 
-#include "Engine/Utility/File/ReloadFileManager.h"
+#include "Engine/Utility/Module/ReloadFileManager.h"
 
 #include "Core/File/FileUtil.h"
+
+#include "Engine/Resource/ResourceUtil.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
 	#include "Core/File/Windows/WindowsFileWatcher.h"

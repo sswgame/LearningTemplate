@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Utility/Resource/ResourcePackReader.h"
+#include "Engine/Resource/ResourcePackReader.h"
 
 #include "Core/Common/Defines.h"
 #include "Core/Common/StdHeaders.h"
@@ -511,7 +511,7 @@ namespace sw
 
 		string_view sv{ reinterpret_cast<const utf8*>( bytes.data() ), bytes.size() };
 		// UTF-8 BOM(0xEF, 0xBB, 0xBF) 제거
-		if ( sv.size() >= 3 && static_cast<uint8>( sv[0] ) == 0xEF && static_cast<uint8>( sv[1] ) == 0xBB && static_cast<uint8>( sv[2] ) == 0xBF )
+		if ( sv.size() >= 3 && static_cast<uint8>( sv[0] ) == 0xEF && static_cast<uint8>( sv[1] ) == 0xBF && static_cast<uint8>( sv[2] ) == 0xBF )
 		{
 			sv.remove_prefix( 3 );
 		}

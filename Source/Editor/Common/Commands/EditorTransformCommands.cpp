@@ -18,8 +18,8 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectPtr.h"
+#include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Serialization/Format/XmlSerializer.h"
-#include "Engine/Utility/Resource/ResourceUtil.h"
 
 namespace sw::editor
 {

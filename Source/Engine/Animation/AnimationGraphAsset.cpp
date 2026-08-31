@@ -4,8 +4,8 @@
 
 #include "Core/File/FileUtil.h"
 
+#include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Utility/Json/JsonDocument.h"
-#include "Engine/Utility/Resource/ResourceUtil.h"
 
 namespace sw
 {

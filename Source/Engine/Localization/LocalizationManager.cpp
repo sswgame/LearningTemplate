@@ -9,9 +9,9 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Localization/StringTable.h"
-#include "Engine/Utility/File/KeyValueFile.h"
+#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Utility/Format/KeyValueFile.h"
 #include "Engine/Utility/Json/JsonDocument.h"
-#include "Engine/Utility/Resource/ResourceUtil.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
 
 namespace sw

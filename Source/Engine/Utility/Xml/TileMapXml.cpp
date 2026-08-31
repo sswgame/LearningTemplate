@@ -2,7 +2,7 @@
 
 #include "Engine/Utility/Xml/TileMapXml.h"
 
-#include "Engine/Utility/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
 
 namespace sw

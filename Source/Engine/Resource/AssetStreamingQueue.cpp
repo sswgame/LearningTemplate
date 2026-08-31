@@ -1,13 +1,13 @@
 #include "pch.h"
 
-#include "Engine/Utility/Resource/AssetStreamingQueue.h"
+#include "Engine/Resource/AssetStreamingQueue.h"
 
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/EngineServices.h"
-#include "Engine/Utility/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourceUtil.h"
 
 namespace sw
 {
@@ -86,10 +86,10 @@ namespace sw
 		{
 			TaskManager& taskManager = engine::getTaskManager();
 			TaskHandle	 handle		 = taskManager.emplaceTask(
-				"AssetStreamingTask",
-				SW_DELEGATE_METHOD( TaskArgsDelegate, &AssetStreamingQueue::processAssetTask, this ),
-				MakeTaskArgs( pathStr ),
-				TaskThreadAffinity::Any );
+				   "AssetStreamingTask",
+				   SW_DELEGATE_METHOD( TaskArgsDelegate, &AssetStreamingQueue::processAssetTask, this ),
+				   MakeTaskArgs( pathStr ),
+				   TaskThreadAffinity::Any );
 			handle.submit();
 		}
 		else

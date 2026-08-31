@@ -16,7 +16,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
-#include "Engine/Utility/Resource/ResourceManager.h"
+#include "Engine/Resource/ResourceManager.h"
 
 #include "RuntimeAPI/Service/EditorService.h"
 

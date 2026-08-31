@@ -6,9 +6,9 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
-#include "Engine/Utility/File/KeyValueFile.h"
+#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Utility/Format/KeyValueFile.h"
 #include "Engine/Utility/Json/JsonDocument.h"
-#include "Engine/Utility/Resource/ResourceUtil.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
 
 SW_LOG_CALLER( "StringTable" );

@@ -8,7 +8,7 @@
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
-#include "Engine/Utility/Resource/ResourceManager.h"
+#include "Engine/Resource/ResourceManager.h"
 
 #include "Games/Demo/Actors/MonsterComponent.h"
 

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Utility/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourceUtil.h"
 
 #include "Core/Concurrency/mutex.h"
 #include "Core/File/FileUtil.h"

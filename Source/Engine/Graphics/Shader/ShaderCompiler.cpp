@@ -7,7 +7,7 @@
 #include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
 
-#include "Engine/Utility/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourceUtil.h"
 
 #if defined( SW_HAS_DXC_API )
 	#include <dxcapi.h>
@@ -480,11 +480,11 @@ namespace sw
 
 					ShaderCompilerInternal::DxcComPtr<IDxcResult> compileResult;
 					HRESULT										  hrCompile = compiler->Compile(
-						&sourceBuffer,
-						listArgument.data(),
-						static_cast<uint32>( listArgument.size() ),
-						ShaderCompilerInternal::dxcGet( includeHandler ),
-						IID_PPV_ARGS( ShaderCompilerInternal::dxcAddressOf( compileResult ) ) );
+						  &sourceBuffer,
+						  listArgument.data(),
+						  static_cast<uint32>( listArgument.size() ),
+						  ShaderCompilerInternal::dxcGet( includeHandler ),
+						  IID_PPV_ARGS( ShaderCompilerInternal::dxcAddressOf( compileResult ) ) );
 
 					if ( FAILED( hrCompile ) )
 						SW_LOG_ERROR( "DXC compiler->Compile failed with HRESULT: 0x%#", hrCompile );

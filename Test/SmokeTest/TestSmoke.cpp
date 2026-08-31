@@ -12,8 +12,8 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/Resource/ResourceManager.h"
 #include "Engine/Utility/Module/LiveReloadManager.h"
-#include "Engine/Utility/Resource/ResourceManager.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 

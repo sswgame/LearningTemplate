@@ -1,11 +1,11 @@
 #include "pch.h"
 
-#include "Engine/Utility/File/KeyValueFile.h"
+#include "Engine/Utility/Format/KeyValueFile.h"
 
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
 
-#include "Engine/Utility/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourceUtil.h"
 
 namespace sw
 {
