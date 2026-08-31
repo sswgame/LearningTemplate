@@ -680,13 +680,10 @@ namespace sw
 		if ( _impl == nullptr || _impl->_bInitialized == 0 )
 			return false;
 
-#if defined( SW_PLATFORM_WINDOWS )
-		if ( _impl->_pXAudio == nullptr )
-		{
-			SW_LOG_WARNING( "play: null XAudio2 (%#)", string( path ) );
+		if ( path.empty() )
 			return false;
-		}
 
+#if defined( SW_PLATFORM_WINDOWS )
 		string abs = ResourceUtil::getResourcePath( path );
 		if ( abs.empty() )
 			abs = string( path );
@@ -694,6 +691,14 @@ namespace sw
 		{
 			SW_LOG_WARNING( "File not found: %#", abs );
 			return false;
+		}
+
+		if ( _impl->_pXAudio == nullptr )
+		{
+			if ( loop )
+				_impl->_musicPath = string( path );
+			SW_LOG_TRACE( "play (null audio fallback): %#", string( path ) );
+			return true;
 		}
 
 		const string requestedPath = string( path );

@@ -3,9 +3,11 @@
  * @brief 오디오 출력이 지원되지 않는 플랫폼을 위한 더미 구현
  */
 #pragma once
+#include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
 #include "Engine/Audio/IAudioSystem.h"
+#include "Engine/Utility/Resource/ResourceUtil.h"
 
 namespace sw
 {
@@ -33,12 +35,26 @@ namespace sw
 
 		bool play( string_view path ) override
 		{
+			if ( path.empty() )
+				return false;
+			string abs = ResourceUtil::getResourcePath( path );
+			if ( abs.empty() )
+				abs = string( path );
+			if ( FileUtil::fileExists( abs ) == false )
+				return false;
 			SW_LOG_TRACE( "play: %#", string( path ) );
 			return true;
 		}
 
 		bool playMusic( string_view path ) override
 		{
+			if ( path.empty() )
+				return false;
+			string abs = ResourceUtil::getResourcePath( path );
+			if ( abs.empty() )
+				abs = string( path );
+			if ( FileUtil::fileExists( abs ) == false )
+				return false;
 			SW_LOG_TRACE( "playMusic: %#", string( path ) );
 			return true;
 		}
