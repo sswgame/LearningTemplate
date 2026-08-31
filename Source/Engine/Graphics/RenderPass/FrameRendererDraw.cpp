@@ -127,8 +127,9 @@ namespace sw
 						   []( const SceneMeshDrawItem& lhs, const SceneMeshDrawItem& rhs )
 				{ return lhs._sortKey < rhs._sortKey; } );
 
-				RHIPipelineStateHandle lastPso = 0;
-				RHIBufferHandle		   lastVb  = 0;
+				RHIPipelineStateHandle lastPso	  = 0;
+				RHIBufferHandle		   lastVb	  = 0;
+				bool				   bFirstItem = true;
 
 				for ( const auto& item : listDrawItem )
 				{
@@ -139,10 +140,11 @@ namespace sw
 						lastPso = item._pso;
 					}
 
-					if ( _passConstants._world != item._world )
+					if ( bFirstItem || _passConstants._world != item._world )
 					{
 						_passConstants._world = item._world;
 						commitBindlessTextureBindings();
+						bFirstItem = false;
 					}
 
 					if ( item._pMaterialInstance != nullptr )
@@ -183,6 +185,7 @@ namespace sw
 			_pCmd->setPipelineState( pso );
 
 		uint32 drawn{ 0 };
+		bool   bFirstItem = true;
 		for ( const GpuMeshBatch& batch : batches )
 		{
 			Mesh* pMesh = batch._pMesh;
@@ -207,10 +210,11 @@ namespace sw
 				if ( globalIndex >= listInstances.size() )
 					break;
 				const GpuInstance& inst = listInstances[globalIndex];
-				if ( _passConstants._world != inst._world )
+				if ( bFirstItem || _passConstants._world != inst._world )
 				{
 					_passConstants._world = inst._world;
 					commitBindlessTextureBindings();
+					bFirstItem = false;
 				}
 				_pCmd->draw( pMesh->getVertexCount(), 0, drawCb );
 				++drawn;
