@@ -236,7 +236,7 @@ namespace sw
 		pGameObject->setActive( isActive != 0 );
 
 		uint32 numTags = 0;
-		if ( reader.read( numTags ) == false )
+		if ( reader.read( numTags ) == false || numTags > 100000 )
 			return 0;
 		pGameObject->clearTags();
 		for ( uint32 tagIndex = 0; tagIndex < numTags; ++tagIndex )
@@ -252,10 +252,10 @@ namespace sw
 		pGameObject->clearComponents();
 
 		uint32 numComps = 0;
-		if ( reader.read( numComps ) == false )
+		if ( reader.read( numComps ) == false || numComps > 100000 )
 			return 0;
 		vector<Component*> listLoadedComponent;
-		listLoadedComponent.reserve( numComps );
+		listLoadedComponent.reserve( std::min( numComps, 4096u ) );
 
 		for ( uint32 compIndex = 0; compIndex < numComps; ++compIndex )
 		{
@@ -295,18 +295,19 @@ namespace sw
 		uint32 numAttaches = 0;
 		if ( reader.read( numAttaches ) )
 		{
+			if ( numAttaches > 100000 )
+				return 0;
 			for ( uint32 attachIndex = 0; attachIndex < numAttaches; ++attachIndex )
 			{
 				uint32 childIdx = 0, parentIdx = 0;
-				if ( reader.read( childIdx ) && reader.read( parentIdx ) )
+				if ( reader.read( childIdx ) == false || reader.read( parentIdx ) == false )
+					return 0;
+				if ( childIdx < listLoadedComponent.size() && parentIdx < listLoadedComponent.size() )
 				{
-					if ( childIdx < listLoadedComponent.size() && parentIdx < listLoadedComponent.size() )
-					{
-						SceneComponent* pChildSc  = castTo<SceneComponent>( listLoadedComponent[childIdx] );
-						SceneComponent* pParentSc = castTo<SceneComponent>( listLoadedComponent[parentIdx] );
-						if ( pChildSc != nullptr && pParentSc != nullptr )
-							pChildSc->attachToComponent( pParentSc );
-					}
+					SceneComponent* pChildSc  = castTo<SceneComponent>( listLoadedComponent[childIdx] );
+					SceneComponent* pParentSc = castTo<SceneComponent>( listLoadedComponent[parentIdx] );
+					if ( pChildSc != nullptr && pParentSc != nullptr )
+						pChildSc->attachToComponent( pParentSc );
 				}
 			}
 		}

@@ -324,6 +324,13 @@ namespace sw
 			_listEntityNode.push_back( std::move( node ) );
 		}
 
+		if ( arch.isError() )
+		{
+			SW_LOG_ERROR( "Binary scene stream corrupted in %#", absPath );
+			_bValid = false;
+			return false;
+		}
+
 		_bValid = true;
 		SW_LOG_INFO( "Loaded '%#' (%# entities) from binary %#",
 					 _name, static_cast<uint32>( _listEntityNode.size() ), absPath );

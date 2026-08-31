@@ -402,13 +402,27 @@ namespace sw
 	{
 		uint32 len{ 0 };
 		( *this ) >> len;
+		if ( _bError == SW_TRUE )
+		{
+			outData.clear();
+			return *this;
+		}
+
 		if ( len > 0 )
 		{
+			if ( _pData == nullptr || _offset + len > _dataSize )
+			{
+				_bError = SW_TRUE;
+				outData.clear();
+				return *this;
+			}
 			outData.resize( len );
 			readBytes( outData.data(), len );
 		}
 		else
+		{
 			outData.clear();
+		}
 		return *this;
 	}
 
@@ -417,10 +431,19 @@ namespace sw
 		uint32 len{ 0 };
 		( *this ) >> len;
 		if ( _bError == SW_TRUE )
+		{
+			outBytes.clear();
 			return *this;
+		}
 
 		if ( len > 0 )
 		{
+			if ( _pData == nullptr || _offset + len > _dataSize )
+			{
+				_bError = SW_TRUE;
+				outBytes.clear();
+				return *this;
+			}
 			outBytes.resize( len );
 			readBytes( outBytes.data(), len );
 		}
@@ -787,8 +810,11 @@ namespace sw
 	bool Archive::readPooledString( string& outStr )
 	{
 		uint64 poolId = 0;
-		if ( readVarUInt( poolId ) == false )
+		if ( readVarUInt( poolId ) == false || poolId >= _stringPool.getCount() )
+		{
+			_bError = SW_TRUE;
 			return false;
+		}
 		const string_view sv = _stringPool.getString( static_cast<uint32>( poolId ) );
 		outStr.assign( sv.data(), sv.size() );
 		return true;
@@ -801,7 +827,12 @@ namespace sw
 
 	bool Archive::loadStringPool()
 	{
-		return _stringPool.loadFromArchive( *this );
+		const bool bOk = _stringPool.loadFromArchive( *this );
+		if ( bOk == false )
+		{
+			_bError = SW_TRUE;
+		}
+		return bOk;
 	}
 
 	bool Archive::serializeCompactObject( const void* pInstance, const TypeInfo& typeInfo, const SerializeContext& ctx )

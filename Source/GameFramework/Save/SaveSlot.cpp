@@ -249,6 +249,12 @@ namespace sw
 			mapLoadedFlag[std::move( key )] = val;
 		}
 
+		if ( payloadArch.isError() )
+		{
+			SW_LOG_ERROR( "Error reading SAV1 payload data from %#", path );
+			return false;
+		}
+
 		_mapPath = std::move( loadedMap );
 		_playerX = px;
 		_playerY = py;

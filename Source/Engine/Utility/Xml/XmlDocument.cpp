@@ -9,34 +9,32 @@
 
 #include "Engine/Resource/ResourceUtil.h"
 
-#define RAPIDXML_NO_EXCEPTIONS
-#include <rapidxml/rapidxml.hpp>
-#include <rapidxml/rapidxml_print.hpp>
-
-// RAPIDXML_NO_EXCEPTIONS 정의 시 RapidXML 내부에서 파싱 실패 시 호출하는 콜백 함수입니다.
-namespace rapidxml
-{
-	void parse_error_handler( const utf8* pWhat, void* pWhere )
-	{
-		(void)pWhere;
-		SW_LOG_ERROR( "RapidXML Parse Error: %#", pWhat != nullptr ? pWhat : "unknown" );
-	}
-} // namespace rapidxml
+#include <pugixml.hpp>
 
 namespace sw
 {
 	namespace
 	{
+		struct XmlStringWriter : pugi::xml_writer
+		{
+			string _result;
+
+			void write( const void* pData, size_t size ) override
+			{
+				_result.append( static_cast<const utf8*>( pData ), size );
+			}
+		};
+
 		struct XmlDocumentInternal
 		{
-			static rapidxml::xml_node<>* asNode( void* pPtr )
+			static pugi::xml_node asNode( void* pPtr )
 			{
-				return static_cast<rapidxml::xml_node<>*>( pPtr );
+				return pugi::xml_node{ static_cast<pugi::xml_node_struct*>( pPtr ) };
 			}
 
-			static rapidxml::xml_attribute<>* asAttr( void* pPtr )
+			static pugi::xml_attribute asAttr( void* pPtr )
 			{
-				return static_cast<rapidxml::xml_attribute<>*>( pPtr );
+				return pugi::xml_attribute{ static_cast<pugi::xml_attribute_struct*>( pPtr ) };
 			}
 
 			static bool nameEquals( const utf8* pLhs, const utf8* pRhs, bool bIgnoreCase = true )
@@ -44,55 +42,44 @@ namespace sw
 				return StringUtil::equals( pLhs, pRhs, bIgnoreCase );
 			}
 
-			static rapidxml::xml_node<>* findChild( rapidxml::xml_node<>* pParent, const utf8* pName, bool bIgnoreCase = true )
+			static pugi::xml_node findChild( pugi::xml_node parent, const utf8* pName, bool bIgnoreCase = true )
 			{
-				if ( pParent == nullptr || pName == nullptr )
-					return nullptr;
+				if ( parent.empty() || pName == nullptr )
+					return {};
 				if ( bIgnoreCase == false )
-					return pParent->first_node( pName );
-				for ( rapidxml::xml_node<>* pChild = pParent->first_node(); pChild != nullptr; pChild = pChild->next_sibling() )
+					return parent.child( pName );
+				for ( pugi::xml_node child = parent.first_child(); child.empty() == false; child = child.next_sibling() )
 				{
-					if ( pChild->name() != nullptr && nameEquals( pChild->name(), pName, true ) )
-						return pChild;
+					if ( nameEquals( child.name(), pName, true ) )
+						return child;
 				}
-				return nullptr;
+				return {};
 			}
 
-			static rapidxml::xml_node<>* findSibling( rapidxml::xml_node<>* pNode, const utf8* pName, bool bIgnoreCase = true )
+			static pugi::xml_node findSibling( pugi::xml_node node, const utf8* pName, bool bIgnoreCase = true )
 			{
-				if ( pNode == nullptr || pName == nullptr )
-					return nullptr;
-				for ( rapidxml::xml_node<>* pSiblingNode = pNode; pSiblingNode != nullptr; pSiblingNode = pSiblingNode->next_sibling() )
+				if ( node.empty() || pName == nullptr )
+					return {};
+				for ( pugi::xml_node sibling = node; sibling.empty() == false; sibling = sibling.next_sibling() )
 				{
-					if ( pSiblingNode->name() != nullptr && nameEquals( pSiblingNode->name(), pName, bIgnoreCase ) )
-						return pSiblingNode;
+					if ( nameEquals( sibling.name(), pName, bIgnoreCase ) )
+						return sibling;
 				}
-				return nullptr;
+				return {};
 			}
 
-			static rapidxml::xml_attribute<>* findAttr( rapidxml::xml_node<>* pNode, const utf8* pName, bool bIgnoreCase = true )
+			static pugi::xml_attribute findAttr( pugi::xml_node node, const utf8* pName, bool bIgnoreCase = true )
 			{
-				if ( pNode == nullptr || pName == nullptr )
-					return nullptr;
+				if ( node.empty() || pName == nullptr )
+					return {};
 				if ( bIgnoreCase == false )
-					return pNode->first_attribute( pName );
-				for ( rapidxml::xml_attribute<>* pAttr = pNode->first_attribute(); pAttr != nullptr; pAttr = pAttr->next_attribute() )
+					return node.attribute( pName );
+				for ( pugi::xml_attribute attr = node.first_attribute(); attr.empty() == false; attr = attr.next_attribute() )
 				{
-					if ( pAttr->name() != nullptr && nameEquals( pAttr->name(), pName, true ) )
-						return pAttr;
+					if ( nameEquals( attr.name(), pName, true ) )
+						return attr;
 				}
-				return nullptr;
-			}
-
-			static const utf8* allocDocString( rapidxml::xml_document<>* pDoc, string_view value )
-			{
-				if ( pDoc == nullptr )
-					return "";
-				utf8* pOut = pDoc->allocate_string( nullptr, value.size() + 1 );
-				if ( value.empty() == false )
-					Memory::copy( pOut, value.data(), value.size() );
-				pOut[value.size()] = '\0';
-				return pOut;
+				return {};
 			}
 
 			static bool parseNodeBool( const utf8* pText, bool fallback )
@@ -111,50 +98,49 @@ namespace sw
 
 	struct XmlDocument::Impl
 	{
-		string					 buffer;
-		rapidxml::xml_document<> doc;
+		pugi::xml_document doc;
 	};
 
 	const utf8* XmlAttribute::name() const
 	{
-		rapidxml::xml_attribute<>* pAttr = XmlDocumentInternal::asAttr( _pAttr );
-		return pAttr != nullptr && pAttr->name() != nullptr ? pAttr->name() : "";
+		const pugi::xml_attribute attr = XmlDocumentInternal::asAttr( _pAttr );
+		return attr.name();
 	}
 
 	const utf8* XmlAttribute::value() const
 	{
-		rapidxml::xml_attribute<>* pAttr = XmlDocumentInternal::asAttr( _pAttr );
-		return pAttr != nullptr && pAttr->value() != nullptr ? pAttr->value() : "";
+		const pugi::xml_attribute attr = XmlDocumentInternal::asAttr( _pAttr );
+		return attr.value();
 	}
 
 	XmlAttribute XmlAttribute::next() const
 	{
-		rapidxml::xml_attribute<>* pAttr = XmlDocumentInternal::asAttr( _pAttr );
-		if ( pAttr == nullptr )
+		const pugi::xml_attribute attr = XmlDocumentInternal::asAttr( _pAttr );
+		if ( attr.empty() )
 			return {};
-		return XmlAttribute{ pAttr->next_attribute() };
+		return XmlAttribute{ attr.next_attribute().internal_object() };
 	}
 
 	const utf8* XmlNode::name() const
 	{
-		rapidxml::xml_node<>* pNode = XmlDocumentInternal::asNode( _pNode );
-		return pNode != nullptr && pNode->name() != nullptr ? pNode->name() : "";
+		const pugi::xml_node pNode = XmlDocumentInternal::asNode( _pNode );
+		return pNode.name();
 	}
 
 	const utf8* XmlNode::text() const
 	{
-		rapidxml::xml_node<>* pNode = XmlDocumentInternal::asNode( _pNode );
-		return pNode != nullptr && pNode->value() != nullptr ? pNode->value() : "";
+		const pugi::xml_node pNode = XmlDocumentInternal::asNode( _pNode );
+		return pNode.child_value();
 	}
 
 	const utf8* XmlNode::attr( const utf8* pName, bool bIgnoreCaseKeys ) const
 	{
-		rapidxml::xml_node<>* pNode = XmlDocumentInternal::asNode( _pNode );
-		if ( pNode == nullptr || pName == nullptr )
+		const pugi::xml_node pNode = XmlDocumentInternal::asNode( _pNode );
+		if ( pNode.empty() || pName == nullptr )
 			return nullptr;
-		rapidxml::xml_attribute<>* pAttr = XmlDocumentInternal::findAttr( pNode, pName, bIgnoreCaseKeys );
-		if ( pAttr != nullptr )
-			return pAttr->value();
+		const pugi::xml_attribute pAttr = XmlDocumentInternal::findAttr( pNode, pName, bIgnoreCaseKeys );
+		if ( pAttr.empty() == false )
+			return pAttr.value();
 		return nullptr;
 	}
 
@@ -185,28 +171,28 @@ namespace sw
 
 	XmlNode XmlNode::child( const utf8* pName, bool bIgnoreCaseKeys ) const
 	{
-		rapidxml::xml_node<>* pNode = XmlDocumentInternal::asNode( _pNode );
-		if ( pNode == nullptr )
+		const pugi::xml_node pNode = XmlDocumentInternal::asNode( _pNode );
+		if ( pNode.empty() )
 			return {};
 		if ( pName == nullptr )
-			return XmlNode{ pNode->first_node() };
-		return XmlNode{ XmlDocumentInternal::findChild( pNode, pName, bIgnoreCaseKeys ) };
+			return XmlNode{ pNode.first_child().internal_object() };
+		return XmlNode{ XmlDocumentInternal::findChild( pNode, pName, bIgnoreCaseKeys ).internal_object() };
 	}
 
 	XmlNode XmlNode::next( const utf8* pName, bool bIgnoreCaseKeys ) const
 	{
-		rapidxml::xml_node<>* pNode = XmlDocumentInternal::asNode( _pNode );
-		if ( pNode == nullptr )
+		const pugi::xml_node pNode = XmlDocumentInternal::asNode( _pNode );
+		if ( pNode.empty() )
 			return {};
-		rapidxml::xml_node<>* pSibling = pNode->next_sibling();
+		const pugi::xml_node pSibling = pNode.next_sibling();
 		if ( pName == nullptr )
-			return XmlNode{ pSibling };
-		return XmlNode{ XmlDocumentInternal::findSibling( pSibling, pName, bIgnoreCaseKeys ) };
+			return XmlNode{ pSibling.internal_object() };
+		return XmlNode{ XmlDocumentInternal::findSibling( pSibling, pName, bIgnoreCaseKeys ).internal_object() };
 	}
 
 	const utf8* XmlNode::childText( const utf8* pName, bool bIgnoreCaseKeys ) const
 	{
-		XmlNode childNode = child( pName, bIgnoreCaseKeys );
+		const XmlNode childNode = child( pName, bIgnoreCaseKeys );
 		if ( childNode.isValid() == false )
 			return nullptr;
 		return childNode.text();
@@ -248,20 +234,19 @@ namespace sw
 
 	XmlAttribute XmlNode::firstAttr() const
 	{
-		rapidxml::xml_node<>* pNode = XmlDocumentInternal::asNode( _pNode );
-		if ( pNode == nullptr )
+		const pugi::xml_node pNode = XmlDocumentInternal::asNode( _pNode );
+		if ( pNode.empty() )
 			return {};
-		return XmlAttribute{ pNode->first_attribute() };
+		return XmlAttribute{ pNode.first_attribute().internal_object() };
 	}
 
 	XmlNode XmlNode::appendChild( const utf8* pName ) const
 	{
-		rapidxml::xml_node<>* pNode = XmlDocumentInternal::asNode( _pNode );
-		if ( pNode == nullptr || pNode->document() == nullptr )
+		pugi::xml_node pNode = XmlDocumentInternal::asNode( _pNode );
+		if ( pNode.empty() || pName == nullptr )
 			return {};
-		rapidxml::xml_node<>* pChild = pNode->document()->allocate_node( rapidxml::node_element, pNode->document()->allocate_string( pName ) );
-		pNode->append_node( pChild );
-		return XmlNode{ pChild };
+		pugi::xml_node pChild = pNode.append_child( pName );
+		return XmlNode{ pChild.internal_object() };
 	}
 
 	XmlNode XmlNode::appendChild( const utf8* pName, string_view value ) const
@@ -301,21 +286,28 @@ namespace sw
 
 	void XmlNode::appendAttr( const utf8* pName, const utf8* pValue ) const
 	{
-		rapidxml::xml_node<>* pNode = XmlDocumentInternal::asNode( _pNode );
-		if ( pNode == nullptr || pNode->document() == nullptr || pName == nullptr )
+		pugi::xml_node pNode = XmlDocumentInternal::asNode( _pNode );
+		if ( pNode.empty() || pName == nullptr )
 			return;
-		const utf8*				   pSafeValue = pValue != nullptr ? pValue : "";
-		rapidxml::xml_attribute<>* pAttr	  = pNode->document()->allocate_attribute( pNode->document()->allocate_string( pName ), pNode->document()->allocate_string( pSafeValue ) );
-		pNode->append_attribute( pAttr );
+		pugi::xml_attribute pAttr = pNode.append_attribute( pName );
+		pAttr.set_value( pValue != nullptr ? pValue : "" );
 	}
 
 	void XmlNode::appendAttr( const utf8* pName, string_view value ) const
 	{
-		rapidxml::xml_node<>* pNode = XmlDocumentInternal::asNode( _pNode );
-		if ( pNode == nullptr || pNode->document() == nullptr || pName == nullptr )
+		pugi::xml_node pNode = XmlDocumentInternal::asNode( _pNode );
+		if ( pNode.empty() || pName == nullptr )
 			return;
-		rapidxml::xml_document<>* pDoc = pNode->document();
-		pNode->append_attribute( pDoc->allocate_attribute( pDoc->allocate_string( pName ), XmlDocumentInternal::allocDocString( pDoc, value ) ) );
+		pugi::xml_attribute pAttr = pNode.append_attribute( pName );
+		if ( value.empty() )
+		{
+			pAttr.set_value( "" );
+		}
+		else
+		{
+			const string valStr( value );
+			pAttr.set_value( valStr.c_str() );
+		}
 	}
 
 	void XmlNode::appendAttr( const utf8* pName, int32 value ) const
@@ -346,27 +338,31 @@ namespace sw
 
 	void XmlNode::setAttr( const utf8* pName, const utf8* pValue ) const
 	{
-		if ( _pNode == nullptr || pName == nullptr )
+		pugi::xml_node pNode = XmlDocumentInternal::asNode( _pNode );
+		if ( pNode.empty() || pName == nullptr )
 			return;
-		rapidxml::xml_node<>*	   pNode	  = XmlDocumentInternal::asNode( _pNode );
-		rapidxml::xml_attribute<>* pAttr	  = XmlDocumentInternal::findAttr( pNode, pName, true );
-		const utf8*				   pSafeValue = pValue != nullptr ? pValue : "";
-		if ( pAttr != nullptr )
-			pAttr->value( pNode->document()->allocate_string( pSafeValue ) );
+		pugi::xml_attribute pAttr = XmlDocumentInternal::findAttr( pNode, pName, true );
+		if ( pAttr.empty() == false )
+			pAttr.set_value( pValue != nullptr ? pValue : "" );
 		else
-			appendAttr( pName, pSafeValue );
+			appendAttr( pName, pValue );
 	}
 
 	void XmlNode::setAttr( const utf8* pName, string_view value ) const
 	{
-		if ( _pNode == nullptr || pName == nullptr )
+		pugi::xml_node pNode = XmlDocumentInternal::asNode( _pNode );
+		if ( pNode.empty() || pName == nullptr )
 			return;
-		rapidxml::xml_node<>*	   pNode = XmlDocumentInternal::asNode( _pNode );
-		rapidxml::xml_attribute<>* pAttr = XmlDocumentInternal::findAttr( pNode, pName, true );
-		if ( pAttr != nullptr )
-			pAttr->value( XmlDocumentInternal::allocDocString( pNode->document(), value ) );
+		pugi::xml_attribute pAttr = XmlDocumentInternal::findAttr( pNode, pName, true );
+		if ( pAttr.empty() == false )
+		{
+			const string valStr( value );
+			pAttr.set_value( valStr.c_str() );
+		}
 		else
+		{
 			appendAttr( pName, value );
+		}
 	}
 
 	void XmlNode::setAttr( const utf8* pName, int32 value ) const
@@ -397,27 +393,27 @@ namespace sw
 
 	void XmlNode::setName( const utf8* pName ) const
 	{
-		if ( _pNode == nullptr || pName == nullptr )
+		pugi::xml_node pNode = XmlDocumentInternal::asNode( _pNode );
+		if ( pNode.empty() || pName == nullptr )
 			return;
-		rapidxml::xml_node<>* pNode = XmlDocumentInternal::asNode( _pNode );
-		pNode->name( pNode->document()->allocate_string( pName ) );
+		pNode.set_name( pName );
 	}
 
 	void XmlNode::setValue( const utf8* pValue ) const
 	{
-		rapidxml::xml_node<>* pNode = XmlDocumentInternal::asNode( _pNode );
-		if ( pNode == nullptr || pNode->document() == nullptr )
+		pugi::xml_node pNode = XmlDocumentInternal::asNode( _pNode );
+		if ( pNode.empty() )
 			return;
-		const utf8* pSafeValue = pValue != nullptr ? pValue : "";
-		pNode->value( pNode->document()->allocate_string( pSafeValue ) );
+		pNode.text().set( pValue != nullptr ? pValue : "" );
 	}
 
 	void XmlNode::setValue( string_view value ) const
 	{
-		rapidxml::xml_node<>* pNode = XmlDocumentInternal::asNode( _pNode );
-		if ( pNode == nullptr || pNode->document() == nullptr )
+		pugi::xml_node pNode = XmlDocumentInternal::asNode( _pNode );
+		if ( pNode.empty() )
 			return;
-		pNode->value( XmlDocumentInternal::allocDocString( pNode->document(), value ) );
+		const string valStr( value );
+		pNode.text().set( valStr.c_str() );
 	}
 
 	void XmlNode::setValue( int32 value ) const
@@ -448,45 +444,22 @@ namespace sw
 
 	string XmlNode::toString() const
 	{
-		rapidxml::xml_node<>* pNode = XmlDocumentInternal::asNode( _pNode );
-		if ( pNode == nullptr )
+		const pugi::xml_node pNode = XmlDocumentInternal::asNode( _pNode );
+		if ( pNode.empty() )
 			return {};
-		string result;
-		rapidxml::print( std::back_inserter( result ), *pNode, 0 );
-		return result;
+		XmlStringWriter writer;
+		pNode.print( writer, "\t", pugi::format_default | pugi::format_no_declaration );
+		return std::move( writer._result );
 	}
 
 	XmlNode XmlNode::appendClone( XmlNode src ) const
 	{
-		if ( isValid() == false || src.isValid() == false )
+		pugi::xml_node pNode = XmlDocumentInternal::asNode( _pNode );
+		pugi::xml_node pSrc	 = XmlDocumentInternal::asNode( src._pNode );
+		if ( pNode.empty() || pSrc.empty() )
 			return {};
-
-		const utf8* pName = src.name();
-		if ( pName == nullptr || pName[0] == '\0' )
-			return {};
-
-		XmlNode dst = appendChild( pName );
-		for ( XmlAttribute attr = src.firstAttr(); attr; attr = attr.next() )
-			dst.appendAttr( attr.name(), attr.value() != nullptr ? attr.value() : "" );
-
-		bool bHasElementChild = false;
-		for ( XmlNode childNode = src.child(); childNode; childNode = childNode.next() )
-		{
-			const utf8* pChildName = childNode.name();
-			if ( pChildName != nullptr && pChildName[0] != '\0' )
-			{
-				bHasElementChild = true;
-				dst.appendClone( childNode );
-			}
-		}
-
-		if ( bHasElementChild == false )
-		{
-			const utf8* pText = src.text();
-			if ( pText != nullptr && pText[0] != '\0' )
-				dst.setValue( pText );
-		}
-		return dst;
+		pugi::xml_node cloned = pNode.append_copy( pSrc );
+		return XmlNode{ cloned.internal_object() };
 	}
 
 	XmlDocument::XmlDocument()
@@ -509,23 +482,29 @@ namespace sw
 		if ( _impl == nullptr )
 			_impl = make_unique<Impl>();
 		else
-		{
-			_impl->doc.clear();
-			_impl->buffer.clear();
-		}
+			_impl->doc.reset();
 	}
 
 	bool XmlDocument::parse( string_view xmlText )
 	{
 		if ( _impl == nullptr )
 			_impl = make_unique<Impl>();
-		_impl->doc.clear();
-		_impl->buffer.assign( xmlText.begin(), xmlText.end() );
-		if ( _impl->buffer.empty() )
+		_impl->doc.reset();
+		if ( xmlText.empty() )
 			return false;
-		_impl->buffer.push_back( '\0' );
-		_impl->doc.parse<0>( _impl->buffer.data() );
-		return _impl->doc.first_node() != nullptr;
+
+		const pugi::xml_parse_result result = _impl->doc.load_buffer(
+			xmlText.data(),
+			xmlText.size(),
+			pugi::parse_default | pugi::parse_trim_pcdata );
+
+		if ( result.status != pugi::status_ok )
+		{
+			SW_LOG_ERROR( "PugiXML Parse Error: %# (offset %#)", result.description(), result.offset );
+			return false;
+		}
+
+		return _impl->doc.first_child().empty() == false;
 	}
 
 	bool XmlDocument::loadFile( string_view absPath )
@@ -565,26 +544,25 @@ namespace sw
 		if ( _impl == nullptr )
 			return {};
 		if ( pName == nullptr )
-			return XmlNode{ _impl->doc.first_node() };
-		return XmlNode{ XmlDocumentInternal::findChild( &_impl->doc, pName, bIgnoreCaseKeys ) };
+			return XmlNode{ _impl->doc.first_child().internal_object() };
+		return XmlNode{ XmlDocumentInternal::findChild( _impl->doc, pName, bIgnoreCaseKeys ).internal_object() };
 	}
 
 	XmlNode XmlDocument::appendRoot( const utf8* pName )
 	{
 		if ( _impl == nullptr )
 			_impl = make_unique<Impl>();
-		rapidxml::xml_node<>* pRoot = _impl->doc.allocate_node( rapidxml::node_element, _impl->doc.allocate_string( pName ) );
-		_impl->doc.append_node( pRoot );
-		return XmlNode{ pRoot };
+		pugi::xml_node pRoot = _impl->doc.append_child( pName );
+		return XmlNode{ pRoot.internal_object() };
 	}
 
 	string XmlDocument::saveToString() const
 	{
 		if ( _impl == nullptr )
 			return "";
-		string result;
-		rapidxml::print( std::back_inserter( result ), _impl->doc, 0 );
-		return result;
+		XmlStringWriter writer;
+		_impl->doc.save( writer, "\t", pugi::format_default | pugi::format_no_declaration );
+		return std::move( writer._result );
 	}
 
 	bool XmlDocument::saveFile( string_view absPath ) const

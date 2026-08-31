@@ -2737,9 +2737,8 @@ SW_TEST_CASE( Reflection_Serialization, GoldenOutputFormatsStable )
 		"\t\t\t</vector>\n"
 		"\t\t</entry>\n"
 		"\t</map>\n"
-		"\t<_inner _x=\"42\"/>\n"
-		"</NestedContainerActor>\n"
-		"\n";
+		"\t<_inner _x=\"42\" />\n"
+		"</NestedContainerActor>\n";
 
 	const sw::string kGoldenBinHex =
 		"030000005614ce66612cdb3e20000000020000000200000001000000020000000300000003000000"
@@ -2789,16 +2788,14 @@ SW_TEST_CASE( Reflection_Serialization, GoldenOutputFormatsWide )
 	const sw::TypeInfo* pAttr	= reg.findType( sw::hashed_string( "sw::DefaultValueTestActor" ) );
 	SW_ASSERT_TRUE( pScalar != nullptr && pBits != nullptr && pAttr != nullptr );
 
-	// 스칼라 + 문자열 이스케이프(JSON \" \\ \n / XML 단일따옴표 속성 + 원시 개행)
+	// 스칼라 + 문자열 이스케이프(JSON \" \\ \n / XML 속성 엔티티 이스케이프 &quot; &#10;)
 	sw::SampleTestActor scalar;
 	scalar._hp	 = -7;
 	scalar._name = "a\"b\\c\nd";
 	SW_EXPECT_TRUE( checkGoldenSet(
 		"scalar", &scalar, *pScalar,
 		"{\"_hp\":-7,\"_name\":\"a\\\"b\\\\c\\nd\"}",
-		"<SampleTestActor _hp=\"-7\" _name='a\"b\\c\n"
-		"d'/>\n"
-		"\n",
+		"<SampleTestActor _hp=\"-7\" _name=\"a&quot;b\\c&#10;d\" />\n",
 		"02000000266feed8bfe2defb04000000f9ffffffcd98c89d3865c1170b000000070000006122625c630a64",
 		"{\"_schemaVersion\":7,\"_hp\":-7,\"_name\":\"a\\\"b\\\\c\\nd\"}",
 		"0700000002000000266feed8bfe2defb04000000f9ffffffcd98c89d3865c1170b000000070000006122625c630a64" ) );
@@ -2812,8 +2809,7 @@ SW_TEST_CASE( Reflection_Serialization, GoldenOutputFormatsWide )
 	SW_EXPECT_TRUE( checkGoldenSet(
 		"bits", &bits, *pBits,
 		"{\"_bActive\":true,\"_bInvulnerable\":false,\"_bCanJump\":true,\"_score\":777}",
-		"<BitfieldTestActor _bActive=\"true\" _bInvulnerable=\"false\" _bCanJump=\"true\" _score=\"777\"/>\n"
-		"\n",
+		"<BitfieldTestActor _bActive=\"true\" _bInvulnerable=\"false\" _bCanJump=\"true\" _score=\"777\" />\n",
 		"0400000046dd8356dbf29d1901000000012335d1a0dbf29d1901000000002e8c2fdadbf29d190100000001bc771186bfe2defb0400000009030000",
 		"{\"_schemaVersion\":7,\"_bActive\":true,\"_bInvulnerable\":false,\"_bCanJump\":true,\"_score\":777}",
 		"070000000400000046dd8356dbf29d1901000000012335d1a0dbf29d1901000000002e8c2fdadbf29d190100000001bc771186bfe2defb0400000009030000" ) );
@@ -2825,8 +2821,7 @@ SW_TEST_CASE( Reflection_Serialization, GoldenOutputFormatsWide )
 	SW_EXPECT_TRUE( checkGoldenSet(
 		"attr", &attr, *pAttr,
 		"{\"_mana\":12,\"_title\":\"Sir\"}",
-		"<DefaultValueTestActor _mana=\"12\" _title=\"Sir\"/>\n"
-		"\n",
+		"<DefaultValueTestActor _mana=\"12\" _title=\"Sir\" />\n",
 		"0200000089a752a5bfe2defb040000000c00000068fdd9173865c1170700000003000000536972",
 		"{\"_schemaVersion\":7,\"_mana\":12,\"_title\":\"Sir\"}",
 		"070000000200000089a752a5bfe2defb040000000c00000068fdd9173865c1170700000003000000536972" ) );

@@ -82,12 +82,16 @@ namespace sw
 		{
 			if ( pStructInfo->isPrimitive() == false )
 			{
-				vector<uint8> listStructBuf;
-				BinarySerializer::serialize( pValuePtr, *pStructInfo, listStructBuf, ctx );
-				const uint32 size	= static_cast<uint32>( listStructBuf.size() );
-				const uint8* pBytes = reinterpret_cast<const uint8*>( &size );
-				listBuffer.insert( listBuffer.end(), pBytes, pBytes + sizeof( uint32 ) );
-				listBuffer.insert( listBuffer.end(), listStructBuf.begin(), listStructBuf.end() );
+				const size_t sizePos   = listBuffer.size();
+				const uint32 dummySize = 0;
+				const uint8* pDummy	   = reinterpret_cast<const uint8*>( &dummySize );
+				listBuffer.insert( listBuffer.end(), pDummy, pDummy + sizeof( uint32 ) );
+
+				const size_t structStart = listBuffer.size();
+				BinarySerializer::serialize( pValuePtr, *pStructInfo, listBuffer, ctx );
+				const uint32 structSize = static_cast<uint32>( listBuffer.size() - structStart );
+
+				Memory::copy( listBuffer.data() + sizePos, &structSize, sizeof( uint32 ) );
 				return;
 			}
 		}

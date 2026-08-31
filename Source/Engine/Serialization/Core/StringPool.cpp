@@ -78,7 +78,7 @@ namespace sw
 	{
 		initPredefined();
 		uint64 dynCount = 0;
-		if ( inArchive.readVarUInt( dynCount ) == false )
+		if ( inArchive.readVarUInt( dynCount ) == false || dynCount > 1000000 )
 			return false;
 
 		_listString.reserve( kPredefinedCount + static_cast<size_t>( dynCount ) );
@@ -111,7 +111,7 @@ namespace sw
 	{
 		initPredefined();
 		uint64 dynCount = 0;
-		if ( VarIntUtil::decodeVarUInt64( pData, dataSize, inoutOffset, dynCount ) == false )
+		if ( VarIntUtil::decodeVarUInt64( pData, dataSize, inoutOffset, dynCount ) == false || dynCount > 1000000 )
 			return false;
 
 		_listString.reserve( kPredefinedCount + static_cast<size_t>( dynCount ) );

@@ -268,6 +268,11 @@ namespace sw
 		}
 
 		arch >> _name >> _stateData;
+		if ( arch.isError() )
+		{
+			SW_LOG_ERROR( "Binary prefab stream corrupted in %#", absPath );
+			return false;
+		}
 
 		if ( PrefabAssetInternal::upgradePrefabXmlBody( _stateData ) == false )
 		{

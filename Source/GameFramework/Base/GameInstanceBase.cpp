@@ -237,8 +237,8 @@ namespace sw
 		if ( arch.readSection( bytesScene ) == false )
 			return false;
 
-		if ( bytesScene.empty() == false )
-			deserializeSceneObjects( bytesScene.data(), bytesScene.size() );
+		if ( bytesScene.empty() == false && deserializeSceneObjects( bytesScene.data(), bytesScene.size() ) == false )
+			return false;
 
 		// 2) 파생 클래스 커스텀 리플렉션 상태 복원
 		vector<uint8> bytesState;

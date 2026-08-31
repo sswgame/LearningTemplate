@@ -164,14 +164,19 @@ namespace sw
 			uint32 size{ 0 };
 			if ( read( size ) == false )
 				return false;
-			outBytes.resize( size );
-			if ( size > 0 )
+			if ( size == 0 )
 			{
-				if ( _offset + size > _size )
-					return false;
-				Memory::copy( outBytes.data(), _pData + _offset, size );
-				_offset += size;
+				outBytes.clear();
+				return true;
 			}
+			if ( _offset + size > _size )
+			{
+				outBytes.clear();
+				return false;
+			}
+			outBytes.resize( size );
+			Memory::copy( outBytes.data(), _pData + _offset, size );
+			_offset += size;
 			return true;
 		}
 

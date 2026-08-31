@@ -9,7 +9,9 @@
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Scene/SceneDocument.h"
+#include "Engine/Serialization/Core/BinaryStream.h"
 #include "Engine/Serialization/Core/SerializerUtil.h"
+#include "Engine/Serialization/Core/StringPool.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/Serialization/Format/JsonSerializer.h"
@@ -1371,4 +1373,174 @@ SW_TEST_CASE( Engine_Archive, ZeroCopyReadBytesView )
 	const uint8* pNullView = readArch.readBytesView( 1 );
 	SW_EXPECT_NULL( pNullView );
 	SW_EXPECT_TRUE( readArch.isError() );
+}
+
+SW_TEST_CASE( Engine_Archive, MalformedStreamOversizedAllocationFaultInjection )
+{
+	// 1. Corrupted Archive::operator>>( string& ) with huge length prefix (0xFFFFFFFF)
+	{
+		const uint8 malformedStringBytes[4] = { 0xFF, 0xFF, 0xFF, 0xFF };
+		sw::Archive readArch( malformedStringBytes, 4 );
+		sw::string	outStr;
+		readArch >> outStr;
+		SW_EXPECT_TRUE( readArch.isError() );
+		SW_EXPECT_TRUE( outStr.empty() );
+	}
+
+	// 2. Corrupted Archive::operator>>( vector<uint8>& ) with huge length prefix (0x7FFFFFFF)
+	{
+		const uint8		  malformedVectorBytes[8] = { 0xFF, 0xFF, 0xFF, 0x7F, 0x01, 0x02, 0x03, 0x04 };
+		sw::Archive		  readArch( malformedVectorBytes, 8 );
+		sw::vector<uint8> outBytes;
+		readArch >> outBytes;
+		SW_EXPECT_TRUE( readArch.isError() );
+		SW_EXPECT_TRUE( outBytes.empty() );
+	}
+
+	// 3. Corrupted BinaryStreamReader::readBytes with huge length prefix (0x00FFFFFF)
+	{
+		const uint8			   malformedBytes[8] = { 0xFF, 0xFF, 0xFF, 0x00, 0x11, 0x22, 0x33, 0x44 };
+		sw::BinaryStreamReader reader( malformedBytes, 8 );
+		sw::vector<uint8>	   outBytes;
+		SW_EXPECT_FALSE( reader.readBytes( outBytes ) );
+		SW_EXPECT_TRUE( outBytes.empty() );
+	}
+
+	// 4. Corrupted BinaryStreamReader::readString with huge length prefix
+	{
+		const uint8			   malformedBytes[8] = { 0xFF, 0xFF, 0xFF, 0x00, 0x11, 0x22, 0x33, 0x44 };
+		sw::BinaryStreamReader reader( malformedBytes, 8 );
+		sw::string			   outStr;
+		SW_EXPECT_FALSE( reader.readString( outStr ) );
+		SW_EXPECT_TRUE( outStr.empty() );
+	}
+}
+
+SW_TEST_CASE( Engine_Archive, CorruptedStringPoolAndOutofBoundsSymbolFaultInjection )
+{
+	// 1. StringPool::loadFromArchive with oversized dynCount (exceeding 1,000,000 limit)
+	{
+		sw::Archive writeArch;
+		writeArch.writeVarUInt( 2000000ULL ); // 2 million dynamic strings
+		sw::Archive	   readArch( writeArch.getData(), writeArch.getSize() );
+		sw::StringPool pool;
+		SW_EXPECT_FALSE( pool.loadFromArchive( readArch ) );
+	}
+
+	// 2. StringPool::loadFromBinaryBuffer with oversized dynCount
+	{
+		sw::vector<uint8> rawBytes;
+		sw::VarIntUtil::encodeVarUInt64( 5000000ULL, rawBytes );
+		size_t		   offset = 0;
+		sw::StringPool pool;
+		SW_EXPECT_FALSE( pool.loadFromBinaryBuffer( rawBytes.data(), rawBytes.size(), offset ) );
+	}
+
+	// 3. Archive::readPooledString with out-of-bounds poolId
+	{
+		sw::Archive writeArch;
+		writeArch.writeVarUInt( 99999ULL ); // poolId not in string pool
+		sw::Archive readArch( writeArch.getData(), writeArch.getSize() );
+		sw::string	outStr;
+		SW_EXPECT_FALSE( readArch.readPooledString( outStr ) );
+		SW_EXPECT_TRUE( readArch.isError() );
+		SW_EXPECT_TRUE( outStr.empty() );
+	}
+}
+
+SW_TEST_CASE( Engine_Archive, TranscodingFailureCasesAndInvalidInputs )
+{
+	const sw::TypeInfo* pPlayerType = TestReflectedPlayer::StaticType();
+	SW_EXPECT_NOT_NULL( pPlayerType );
+
+	// 1. Malformed JSON transcoding to binary
+	{
+		const sw::string  brokenJson = "{\"_level\": 42, \"_name\": \"Unfinished";
+		sw::vector<uint8> outBinary;
+		SW_EXPECT_FALSE( sw::SerializerUtil::transcodeJsonToBinary( brokenJson, *pPlayerType, outBinary ) );
+		SW_EXPECT_TRUE( outBinary.empty() );
+	}
+
+	// 2. Malformed XML transcoding to binary
+	{
+		const sw::string  brokenXml = "<TestReflectedPlayer _level=\"42\" <unclosed_tag";
+		sw::vector<uint8> outBinary;
+		SW_EXPECT_FALSE( sw::SerializerUtil::transcodeXmlToBinary( brokenXml, *pPlayerType, outBinary ) );
+		SW_EXPECT_TRUE( outBinary.empty() );
+	}
+
+	// 3. Null / empty binary data transcoding to JSON and XML
+	{
+		const sw::string jsonResult = sw::SerializerUtil::transcodeBinaryToJson( nullptr, 0, *pPlayerType );
+		SW_EXPECT_TRUE( jsonResult.empty() );
+
+		const sw::string xmlResult = sw::SerializerUtil::transcodeBinaryToXml( nullptr, 0, *pPlayerType );
+		SW_EXPECT_TRUE( xmlResult.empty() );
+	}
+
+	// 4. Truncated binary data transcoding to JSON
+	{
+		const uint8		 truncatedBytes[2] = { 0x01, 0x00 };
+		const sw::string jsonResult		   = sw::SerializerUtil::transcodeBinaryToJson( truncatedBytes, 2, *pPlayerType );
+		SW_EXPECT_TRUE( jsonResult.empty() );
+	}
+}
+
+SW_TEST_CASE( Engine_Archive, CorruptedSaveSlotAndDocumentBinaryStreams )
+{
+	// 1. SaveSlot SAV1 CRC32 mismatch detection
+	{
+		sw::SaveSlot validSlot;
+		validSlot._mapPath = "dungeon_boss";
+		validSlot._playerX = 100;
+		validSlot._playerY = 200;
+		validSlot.setFlag( "boss_defeated", 1 );
+
+		const sw::string savePath = "saved/test_corrupt_slot.sav";
+		SW_EXPECT_TRUE( validSlot.saveCommonToBinaryFile( savePath ) );
+
+		// Read and intentionally flip a byte in payload
+		sw::vector<uint8> fileBytes;
+		SW_EXPECT_TRUE( sw::FileUtil::readFile( savePath, fileBytes ) );
+		SW_EXPECT_TRUE( fileBytes.size() > 20 );
+
+		// Flip byte at the end of the file
+		fileBytes.back() ^= 0xFF;
+		SW_EXPECT_TRUE( sw::FileUtil::writeFile( savePath, fileBytes.data(), fileBytes.size() ) );
+
+		// Load must detect CRC32 mismatch and reject
+		sw::SaveSlot corruptSlot;
+		SW_EXPECT_FALSE( corruptSlot.loadCommonFromBinaryFile( savePath ) );
+
+		// Cleanup
+		sw::FileUtil::removeFile( savePath );
+	}
+
+	// 2. SceneDocument corrupted binary magic
+	{
+		const uint8		 corruptedSceneBytes[8] = { 0xFF, 0xFF, 0xFF, 0xFF, 0x01, 0x00, 0x00, 0x00 };
+		const sw::string testScenePath			= "saved/test_corrupt_scene.bin";
+		SW_EXPECT_TRUE( sw::FileUtil::writeFile( testScenePath, corruptedSceneBytes, 8 ) );
+
+		sw::SceneDocument sceneDoc;
+		SW_EXPECT_FALSE( sceneDoc.loadBinary( testScenePath ) );
+		SW_EXPECT_FALSE( sceneDoc._bValid );
+
+		// Cleanup
+		sw::FileUtil::removeFile( testScenePath );
+	}
+
+	// 3. PrefabAsset corrupted binary magic
+	{
+		const uint8		 corruptedPrefabBytes[8] = { 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
+		const sw::string testPrefabPath			 = "saved/test_corrupt_prefab.bin";
+		SW_EXPECT_TRUE( sw::FileUtil::writeFile( testPrefabPath, corruptedPrefabBytes, 8 ) );
+
+		sw::PrefabAsset prefabAsset;
+		SW_EXPECT_FALSE( prefabAsset.loadFromBinaryFile( testPrefabPath ) );
+		SW_EXPECT_FALSE( prefabAsset.isValid() );
+
+		// Cleanup
+		sw::FileUtil::removeFile( testPrefabPath );
+	}
 }

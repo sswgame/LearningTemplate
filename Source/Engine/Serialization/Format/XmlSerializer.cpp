@@ -906,10 +906,10 @@ namespace sw
 
 	bool XmlSerializer::loadFile( string_view path, void* pInstance, const TypeInfo& typeInfo, const SerializeContext& ctx )
 	{
-		XmlDocument doc;
-		if ( doc.loadPath( path ) == false )
+		string text;
+		if ( FileUtil::readTextFile( path, text ) == false )
 			return false;
-		return deserialize( pInstance, typeInfo, doc.saveToString(), ctx );
+		return deserialize( pInstance, typeInfo, text, ctx );
 	}
 
 	bool XmlSerializer::deserializeSoft( void* pInstance, const TypeInfo& typeInfo, string_view xmlStr,

@@ -2,6 +2,8 @@
 
 #include "Engine/Utility/Xml/TileMapXml.h"
 
+#include "Core/File/FileUtil.h"
+
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
 
@@ -11,14 +13,26 @@ namespace sw
 
 	bool TileMapXmlData::load( string_view path )
 	{
-		XmlDocument doc;
-		string		absPath;
-		if ( doc.loadPath( path, &absPath ) == false )
+		if ( path.empty() )
+			return false;
+
+		string text;
+		string absPath;
+		if ( FileUtil::fileExists( path ) )
+		{
+			if ( FileUtil::readTextFile( path, text ) == false )
+			{
+				SW_LOG_ERROR( "Not found: %#", path );
+				return false;
+			}
+		}
+		else if ( ResourceUtil::readTextResource( path, text, &absPath ) == false )
 		{
 			SW_LOG_ERROR( "Not found: %#", path );
 			return false;
 		}
-		if ( loadFromXml( doc.saveToString() ) == false )
+
+		if ( loadFromXml( text ) == false )
 			return false;
 		_sourcePath = path;
 		return true;
@@ -161,10 +175,10 @@ namespace sw
 		if ( absPath.empty() )
 			absPath = path;
 
-		XmlDocument doc;
-		if ( doc.parse( toXml() ) == false )
+		const string xml = toXml();
+		if ( xml.empty() )
 			return false;
-		const bool bOk = doc.saveFile( absPath );
+		const bool bOk = FileUtil::writeTextFile( absPath, xml );
 		if ( bOk )
 			SW_LOG_INFO( "Saved '%#' -> %#", _name, absPath );
 		return bOk;

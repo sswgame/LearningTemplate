@@ -638,7 +638,7 @@ namespace sw
 		JsonDocument doc;
 		if ( doc.loadPath( path ) == false )
 			return false;
-		return deserialize( pInstance, typeInfo, doc.dump(), ctx );
+		return readObject( doc.root(), pInstance, typeInfo, nullptr, nullptr, ctx );
 	}
 
 	void JsonSerializer::writeObject( JsonValue dst, const void* pInstance, const TypeInfo& typeInfo,

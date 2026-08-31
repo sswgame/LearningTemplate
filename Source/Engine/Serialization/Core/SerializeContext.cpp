@@ -19,6 +19,17 @@ namespace sw
 	{
 		struct SerializeContextInternal
 		{
+			static string_view unquote( string_view strView )
+			{
+				string_view sv = StringUtil::trim( strView );
+				if ( sv.size() >= 2 && sv.front() == '"' && sv.back() == '"' )
+				{
+					sv.remove_prefix( 1 );
+					sv.remove_suffix( 1 );
+				}
+				return sv;
+			}
+
 			template <typename T>
 			static void regBuiltinBin( SerializeContext& ctx, const utf8* pName )
 			{
@@ -324,7 +335,7 @@ namespace sw
 			{ return *static_cast<const bool*>( pPtr ) ? "true" : "false"; };
 			auto boolRead = []( void* pPtr, string_view strView )
 			{
-				*static_cast<bool*>( pPtr ) = ( strView == "true" || strView == "1" );
+				*static_cast<bool*>( pPtr ) = StringUtil::parseBool( strView, false );
 				return true;
 			};
 			ctx.registerTextHandler( hashed_string( PredefinedNameType::NameType_bool ), boolWrite, boolRead );
@@ -333,7 +344,7 @@ namespace sw
 			{ return static_cast<const atomic<bool>*>( pPtr )->load() ? "true" : "false"; };
 			auto atomicBoolRead = []( void* pPtr, string_view strView )
 			{
-				static_cast<atomic<bool>*>( pPtr )->store( strView == "true" || strView == "1" );
+				static_cast<atomic<bool>*>( pPtr )->store( StringUtil::parseBool( strView, false ) );
 				return true;
 			};
 			ctx.registerTextHandler( hashed_string( PredefinedNameType::NameType_atomic_bool ), atomicBoolWrite, atomicBoolRead );
@@ -341,13 +352,11 @@ namespace sw
 			auto tagIdWrite = []( const void* pPtr ) -> string
 			{
 				const TagID& tag = *static_cast<const TagID*>( pPtr );
-				if ( tag._pString != nullptr )
-					return string( tag._pString );
-				return {};
+				return tag._pString != nullptr ? string( tag._pString ) : string{};
 			};
 			auto tagIdRead = []( void* pPtr, string_view strView ) -> bool
 			{
-				string_view text = strView;
+				string_view text = StringUtil::trim( strView );
 				if ( StringUtil::startsWith( text, "str:" ) )
 					text.remove_prefix( 4 );
 				if ( text.empty() )
@@ -364,12 +373,7 @@ namespace sw
 			{ return string( static_cast<const string*>( pPtr )->c_str() ); };
 			TextReadFn strReadTxt = []( void* pPtr, string_view strView )
 			{
-				string_view sv = strView;
-				if ( sv.empty() == false && sv.front() == '"' )
-					sv.remove_prefix( 1 );
-				if ( sv.empty() == false && sv.back() == '"' )
-					sv.remove_suffix( 1 );
-				*static_cast<string*>( pPtr ) = string( sv );
+				*static_cast<string*>( pPtr ) = string( SerializeContextInternal::unquote( strView ) );
 				return true;
 			};
 
@@ -379,11 +383,7 @@ namespace sw
 			{ return string( static_cast<const hashed_string*>( pPtr )->c_str() ); };
 			TextReadFn hashedStrReadTxt = []( void* pPtr, string_view strView )
 			{
-				string_view sv = strView;
-				if ( sv.empty() == false && sv.front() == '"' )
-					sv.remove_prefix( 1 );
-				if ( sv.empty() == false && sv.back() == '"' )
-					sv.remove_suffix( 1 );
+				const string_view sv				 = SerializeContextInternal::unquote( strView );
 				*static_cast<hashed_string*>( pPtr ) = hashed_string( sv.data(), static_cast<uint32>( sv.size() ) );
 				return true;
 			};
@@ -398,7 +398,7 @@ namespace sw
 			auto packedRead = []( void* pPtr, string_view strView ) -> bool
 			{
 				uint64 packed{ 0 };
-				if ( StringUtil::parseUInt64( strView, packed, 10 ) == false )
+				if ( StringUtil::parseUInt64( StringUtil::trim( strView ), packed, 10 ) == false )
 					return false;
 				*static_cast<ObjectHandle*>( pPtr ) = ObjectHandle::fromPacked( packed );
 				return true;
@@ -416,13 +416,14 @@ namespace sw
 			},
 				[]( void* pPtr, string_view strView )
 			{
-				const size_t sep = strView.find( ':' );
+				const string_view trimmed = StringUtil::trim( strView );
+				const size_t	  sep	  = trimmed.find( ':' );
 				if ( sep == string_view::npos )
 					return false;
 				uint64 objectId{ 0 };
 				uint64 componentId{ 0 };
-				if ( StringUtil::parseUInt64( strView.substr( 0, sep ), objectId, 10 ) == false ||
-					 StringUtil::parseUInt64( strView.substr( sep + 1 ), componentId, 10 ) == false )
+				if ( StringUtil::parseUInt64( trimmed.substr( 0, sep ), objectId, 10 ) == false ||
+					 StringUtil::parseUInt64( trimmed.substr( sep + 1 ), componentId, 10 ) == false )
 					return false;
 				*static_cast<ComponentHandle*>( pPtr ) =
 					ComponentHandle::makeOwned( objectId, componentId );

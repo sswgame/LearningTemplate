@@ -124,7 +124,7 @@ namespace sw
 			}
 			offset += payload;
 		}
-		return true;
+		return offset == diffSize;
 	}
 
 } // namespace sw
