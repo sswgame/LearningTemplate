@@ -766,40 +766,29 @@ namespace sw
 											   const TypeInfo* pLegacyTypeInfo, const SerializeContext& ctx )
 	{
 		vector<SchemaOrphanValue> listOrphan;
-		vector<uint8>			  listLegacyStorage;
-		void*					  pLegacyPtr{ nullptr };
-		outVersion = 0;
+		ScopedScratchInstance	  scratchLegacy( pLegacyTypeInfo );
+		void*					  pLegacyPtr = scratchLegacy.get();
+		outVersion							 = 0;
 
 		if ( pLegacyTypeInfo != nullptr && pLegacyTypeInfo->_size > 0 )
 		{
-			pLegacyPtr = createScratchInstance( *pLegacyTypeInfo, listLegacyStorage );
 			uint32 legacyVer{ 0 };
 			if ( pLegacyPtr == nullptr ||
 				 deserializeSoft( pLegacyPtr, *pLegacyTypeInfo, jsonStr, &listOrphan, &legacyVer, ctx ) == false )
-			{
-				destroyScratchInstance( pLegacyPtr, *pLegacyTypeInfo );
 				return false;
-			}
 			outVersion = legacyVer;
 		}
 
 		uint32 softVer{ 0 };
 		if ( deserializeSoft( pInstance, typeInfo, jsonStr, &listOrphan, &softVer, ctx ) == false )
-		{
-			if ( pLegacyPtr != nullptr )
-				destroyScratchInstance( pLegacyPtr, *pLegacyTypeInfo );
 			return false;
-		}
 		if ( pLegacyPtr == nullptr )
 			outVersion = softVer;
 		else if ( softVer != 0 )
 			outVersion = softVer;
 
-		const bool ok = runSchemaMigrateStep( outVersion, currentVersion, pInstance, typeInfo, pLegacyPtr, pLegacyTypeInfo,
-											  listOrphan, migrate, outVersion != currentVersion, ctx );
-		if ( pLegacyPtr != nullptr )
-			destroyScratchInstance( pLegacyPtr, *pLegacyTypeInfo );
-		return ok;
+		return runSchemaMigrateStep( outVersion, currentVersion, pInstance, typeInfo, pLegacyPtr, pLegacyTypeInfo,
+									 listOrphan, migrate, outVersion != currentVersion, ctx );
 	}
 
 } // namespace sw

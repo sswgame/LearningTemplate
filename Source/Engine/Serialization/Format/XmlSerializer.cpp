@@ -977,65 +977,29 @@ namespace sw
 											  const TypeInfo* pLegacyTypeInfo, const SerializeContext& ctx )
 	{
 		vector<SchemaOrphanValue> listOrphan;
-		vector<uint8>			  listLegacyStorage;
-		void*					  pLegacyPtr{ nullptr };
-		outVersion = 0;
+		ScopedScratchInstance	  scratchLegacy( pLegacyTypeInfo );
+		void*					  pLegacyPtr = scratchLegacy.get();
+		outVersion							 = 0;
 
 		if ( pLegacyTypeInfo != nullptr && pLegacyTypeInfo->_size > 0 )
 		{
-			pLegacyPtr = createScratchInstance( *pLegacyTypeInfo, listLegacyStorage );
 			uint32 legacyVer{ 0 };
 			if ( pLegacyPtr == nullptr ||
 				 deserializeSoft( pLegacyPtr, *pLegacyTypeInfo, xmlStr, &listOrphan, &legacyVer, ctx ) == false )
-			{
-				destroyScratchInstance( pLegacyPtr, *pLegacyTypeInfo );
 				return false;
-			}
 			outVersion = legacyVer;
 		}
 
 		uint32 softVer{ 0 };
 		if ( deserializeSoft( pInstance, typeInfo, xmlStr, &listOrphan, &softVer, ctx ) == false )
-		{
-			if ( pLegacyPtr != nullptr )
-				destroyScratchInstance( pLegacyPtr, *pLegacyTypeInfo );
 			return false;
-		}
 		if ( pLegacyPtr == nullptr )
 			outVersion = softVer;
 		else if ( softVer != 0 )
 			outVersion = softVer;
 
-		const bool needsMigrate = migrate != nullptr && ( outVersion != currentVersion || listOrphan.empty() == false || pLegacyPtr != nullptr );
-		bool	   ok{ true };
-		if ( needsMigrate )
-		{
-			SchemaMigrateContext mctx;
-			mctx._fromVersion	  = outVersion;
-			mctx._toVersion		  = currentVersion;
-			mctx._pInstance		  = pInstance;
-			mctx._pTypeInfo		  = &typeInfo;
-			mctx._pLegacyInstance = pLegacyPtr;
-			mctx._pLegacyTypeInfo = pLegacyTypeInfo;
-			mctx._pOrphans		  = &listOrphan;
-			mctx._pSerializeCtx	  = &ctx;
-			ok					  = migrate( mctx );
-		}
-		else if ( migrate == nullptr && outVersion != currentVersion )
-		{
-			SW_LOG_WARNING( "schema version %# -> %# with no migrate callback (%# listOrphan)",
-							outVersion, currentVersion, static_cast<uint32>( listOrphan.size() ) );
-			ok = false;
-		}
-		else if ( migrate == nullptr && listOrphan.empty() == false && ctx.allowUnknownProperties() == false )
-		{
-			SW_LOG_WARNING( "schema version %# -> %# with no migrate callback (%# listOrphan)",
-							outVersion, currentVersion, static_cast<uint32>( listOrphan.size() ) );
-			ok = false;
-		}
-		if ( pLegacyPtr != nullptr )
-			destroyScratchInstance( pLegacyPtr, *pLegacyTypeInfo );
-		return ok;
+		return runSchemaMigrateStep( outVersion, currentVersion, pInstance, typeInfo, pLegacyPtr, pLegacyTypeInfo,
+									 listOrphan, migrate, outVersion != currentVersion, ctx );
 	}
 
 } // namespace sw

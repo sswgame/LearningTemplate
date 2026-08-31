@@ -342,33 +342,21 @@ namespace sw
 		const size_t bodySize = dataSize - reader.getOffset();
 
 		vector<SchemaOrphanValue> listOrphan;
-		vector<uint8>			  listLegacyStorage;
-		void*					  pLegacyPtr{ nullptr };
+		ScopedScratchInstance	  scratchLegacy( pLegacyTypeInfo );
+		void*					  pLegacyPtr = scratchLegacy.get();
 
 		if ( pLegacyTypeInfo != nullptr && pLegacyTypeInfo->_size > 0 )
 		{
-			pLegacyPtr = createScratchInstance( *pLegacyTypeInfo, listLegacyStorage );
 			if ( pLegacyPtr == nullptr ||
 				 deserializeSoft( pLegacyPtr, *pLegacyTypeInfo, pBody, bodySize, &listOrphan, ctx ) == false )
-			{
-				destroyScratchInstance( pLegacyPtr, *pLegacyTypeInfo );
 				return false;
-			}
 		}
 
 		if ( deserializeSoft( pInstance, typeInfo, pBody, bodySize, &listOrphan, ctx ) == false )
-		{
-			if ( pLegacyPtr != nullptr )
-				destroyScratchInstance( pLegacyPtr, *pLegacyTypeInfo );
 			return false;
-		}
 
-		const bool ok = runSchemaMigrateStep( outVersion, currentVersion, pInstance, typeInfo, pLegacyPtr, pLegacyTypeInfo,
-											  listOrphan, migrate, outVersion != currentVersion || listOrphan.empty() == false, ctx );
-
-		if ( pLegacyPtr != nullptr )
-			destroyScratchInstance( pLegacyPtr, *pLegacyTypeInfo );
-		return ok;
+		return runSchemaMigrateStep( outVersion, currentVersion, pInstance, typeInfo, pLegacyPtr, pLegacyTypeInfo,
+									 listOrphan, migrate, outVersion != currentVersion || listOrphan.empty() == false, ctx );
 	}
 
 	bool BinarySerializer::serializeCompressed( const void*				pInstance,

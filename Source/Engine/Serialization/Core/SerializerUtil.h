@@ -50,10 +50,15 @@ namespace sw
 	 */
 	struct ScopedScratchInstance
 	{
-		explicit ScopedScratchInstance( const TypeInfo& typeInfo )
-			: _pTypeInfo{ &typeInfo }
+		explicit ScopedScratchInstance( const TypeInfo* pTypeInfo )
+			: _pTypeInfo{ pTypeInfo }
 			, _listStorage{}
-			, _pInstance{ createScratchInstance( typeInfo, _listStorage ) }
+			, _pInstance{ ( pTypeInfo != nullptr && pTypeInfo->_size > 0 ) ? createScratchInstance( *pTypeInfo, _listStorage ) : nullptr }
+		{
+		}
+
+		explicit ScopedScratchInstance( const TypeInfo& typeInfo )
+			: ScopedScratchInstance( &typeInfo )
 		{
 		}
 

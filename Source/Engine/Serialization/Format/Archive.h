@@ -98,6 +98,8 @@ namespace sw
 		void writeString( string_view str );
 		/** @brief 아카이브로부터 길이 접두사가 포함된 문자열을 읽어옵니다. */
 		bool readString( string& outStr );
+		/** @brief 아카이브로부터 길이 접두사가 포함된 문자열 뷰를 복사 없이 읽어옵니다 (읽기 모드 전용). */
+		bool readStringView( string_view& outView );
 
 		/** @brief 현재 버퍼 데이터의 CRC32 체크섬을 계산합니다. */
 		uint32 calculateChecksum() const;

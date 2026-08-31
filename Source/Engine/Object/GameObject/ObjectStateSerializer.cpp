@@ -2,6 +2,8 @@
 
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 
+#include "Core/Math/MathUtil.h"
+
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/Component/TagComponent.h"
@@ -21,6 +23,8 @@ namespace sw
 	{
 		struct ObjectStateSerializerInternal
 		{
+			static constexpr uint32 kMaxSerializedCount = 100000;
+
 			/** @brief Tags 배열 복원으로 이미 생긴 TagComponent는 재사용합니다. */
 			static Component* addOrReuseComponentByName( GameObject* pGameObject, hashed_string typeName, bool bLogWarning )
 			{
@@ -236,7 +240,7 @@ namespace sw
 		pGameObject->setActive( isActive != 0 );
 
 		uint32 numTags = 0;
-		if ( reader.read( numTags ) == false || numTags > 100000 )
+		if ( reader.read( numTags ) == false || numTags > ObjectStateSerializerInternal::kMaxSerializedCount )
 			return 0;
 		pGameObject->clearTags();
 		for ( uint32 tagIndex = 0; tagIndex < numTags; ++tagIndex )
@@ -252,10 +256,10 @@ namespace sw
 		pGameObject->clearComponents();
 
 		uint32 numComps = 0;
-		if ( reader.read( numComps ) == false || numComps > 100000 )
+		if ( reader.read( numComps ) == false || numComps > ObjectStateSerializerInternal::kMaxSerializedCount )
 			return 0;
 		vector<Component*> listLoadedComponent;
-		listLoadedComponent.reserve( std::min( numComps, 4096u ) );
+		listLoadedComponent.reserve( MathUtil::min( numComps, constant::kMaxBuffer4096 ) );
 
 		for ( uint32 compIndex = 0; compIndex < numComps; ++compIndex )
 		{
@@ -295,7 +299,7 @@ namespace sw
 		uint32 numAttaches = 0;
 		if ( reader.read( numAttaches ) )
 		{
-			if ( numAttaches > 100000 )
+			if ( numAttaches > ObjectStateSerializerInternal::kMaxSerializedCount )
 				return 0;
 			for ( uint32 attachIndex = 0; attachIndex < numAttaches; ++attachIndex )
 			{

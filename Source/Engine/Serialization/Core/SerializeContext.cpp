@@ -236,10 +236,10 @@ namespace sw
 				BinaryStreamReader reader{ pData, size };
 				if ( reader.skip( offset ) == false )
 					return false;
-				string tempStr;
-				if ( reader.readString( tempStr ) == false )
+				string_view sv;
+				if ( reader.readStringView( sv ) == false )
 					return false;
-				*static_cast<hashed_string*>( pPtr ) = hashed_string( tempStr.c_str() );
+				*static_cast<hashed_string*>( pPtr ) = hashed_string( sv.data(), static_cast<uint32>( sv.size() ) );
 				offset								 = reader.getOffset();
 				return true;
 			};
@@ -273,13 +273,13 @@ namespace sw
 				BinaryStreamReader reader{ pData, size };
 				if ( reader.skip( offset ) == false )
 					return false;
-				string tempStr;
-				if ( reader.readString( tempStr ) == false )
+				string_view sv;
+				if ( reader.readStringView( sv ) == false )
 					return false;
-				if ( tempStr.empty() )
+				if ( sv.empty() )
 					*static_cast<TagID*>( pPtr ) = TagID{};
 				else
-					*static_cast<TagID*>( pPtr ) = TagID::request( tempStr );
+					*static_cast<TagID*>( pPtr ) = TagID::request( sv );
 				offset = reader.getOffset();
 				return true;
 			};

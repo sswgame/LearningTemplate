@@ -48,7 +48,7 @@ namespace sw
 
 		const uint32 newId = static_cast<uint32>( _listString.size() );
 		_listString.push_back( key );
-		_mapStringToId.emplace( key, newId );
+		_mapStringToId.emplace( _listString.back(), newId );
 		return newId;
 	}
 
@@ -78,7 +78,7 @@ namespace sw
 	{
 		initPredefined();
 		uint64 dynCount = 0;
-		if ( inArchive.readVarUInt( dynCount ) == false || dynCount > 1000000 )
+		if ( inArchive.readVarUInt( dynCount ) == false || dynCount > kMaxDynamicStrings )
 			return false;
 
 		_listString.reserve( kPredefinedCount + static_cast<size_t>( dynCount ) );
@@ -90,8 +90,8 @@ namespace sw
 			if ( inArchive.readString( str ) == false )
 				return false;
 			const uint32 id = static_cast<uint32>( _listString.size() );
-			_listString.push_back( str );
-			_mapStringToId.emplace( std::move( str ), id );
+			_listString.push_back( std::move( str ) );
+			_mapStringToId.emplace( _listString.back(), id );
 		}
 		return true;
 	}
@@ -111,7 +111,7 @@ namespace sw
 	{
 		initPredefined();
 		uint64 dynCount = 0;
-		if ( VarIntUtil::decodeVarUInt64( pData, dataSize, inoutOffset, dynCount ) == false || dynCount > 1000000 )
+		if ( VarIntUtil::decodeVarUInt64( pData, dataSize, inoutOffset, dynCount ) == false || dynCount > kMaxDynamicStrings )
 			return false;
 
 		_listString.reserve( kPredefinedCount + static_cast<size_t>( dynCount ) );

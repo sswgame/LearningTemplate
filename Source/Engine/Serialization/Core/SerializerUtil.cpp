@@ -2,6 +2,7 @@
 
 #include "Engine/Serialization/Core/SerializerUtil.h"
 
+#include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -231,10 +232,13 @@ namespace sw
 		Memory::copy( &count, pData + offset, sizeof( uint32 ) );
 		offset += sizeof( uint32 );
 
+		if ( ( dataSize - offset ) < count )
+			return false;
+
 		ISequenceContainerWrapper* pSeq = nested._wrapper->asSequence();
 		if ( pSeq != nullptr )
 		{
-			pSeq->reserve( pContainerPtr, count );
+			pSeq->reserve( pContainerPtr, MathUtil::min( count, static_cast<uint32>( invalid_index::kUint16 ) ) );
 			for ( uint32 elemIndex = 0; elemIndex < count; ++elemIndex )
 			{
 				pSeq->addElementDefault( pContainerPtr );

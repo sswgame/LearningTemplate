@@ -14,7 +14,7 @@ namespace sw
 	class SW_API BindlessTable
 	{
 	public:
-		static constexpr RHIDescriptorIndex kMaxBindlessSlots = 65536;
+		static constexpr RHIDescriptorIndex kMaxBindlessSlots = static_cast<RHIDescriptorIndex>( invalid_index::kUint16 );
 
 		BindlessTable();
 		~BindlessTable() = default;

@@ -21,7 +21,8 @@ namespace sw
 	class SW_API StringPool
 	{
 	public:
-		static constexpr uint32 kPredefinedCount = static_cast<uint32>( PredefinedNameType::Count );
+		static constexpr uint32 kPredefinedCount   = static_cast<uint32>( PredefinedNameType::Count );
+		static constexpr uint32 kMaxDynamicStrings = 1000000;
 
 		StringPool();
 		~StringPool()								   = default;

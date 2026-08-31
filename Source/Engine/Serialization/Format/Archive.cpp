@@ -153,6 +153,32 @@ namespace sw
 		return isOk();
 	}
 
+	bool Archive::readStringView( string_view& outView )
+	{
+		uint32 len{ 0 };
+		( *this ) >> len;
+		if ( _bError == SW_TRUE )
+		{
+			outView = {};
+			return false;
+		}
+
+		if ( len > 0 )
+		{
+			if ( _pData == nullptr || _offset + len > _dataSize )
+			{
+				_bError = SW_TRUE;
+				outView = {};
+				return false;
+			}
+			outView = string_view{ reinterpret_cast<const utf8*>( _pData + _offset ), len };
+			_offset += len;
+			return true;
+		}
+		outView = {};
+		return true;
+	}
+
 	Archive Archive::readSubArchive( uint64 byteSize )
 	{
 		if ( _pData == nullptr || _offset + byteSize > _dataSize )

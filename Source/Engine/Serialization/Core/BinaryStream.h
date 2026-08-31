@@ -129,6 +129,23 @@ namespace sw
 			return true;
 		}
 
+		bool readStringView( string_view& outView )
+		{
+			uint32 size{ 0 };
+			if ( read( size ) == false )
+				return false;
+			if ( size == 0 )
+			{
+				outView = {};
+				return true;
+			}
+			if ( _offset + size > _size )
+				return false;
+			outView = string_view{ reinterpret_cast<const utf8*>( _pData + _offset ), size };
+			_offset += size;
+			return true;
+		}
+
 		bool readVarUInt( uint64& outValue )
 		{
 			return VarIntUtil::decodeVarUInt64( _pData, _size, _offset, outValue );
