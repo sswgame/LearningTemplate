@@ -70,6 +70,15 @@ namespace sw
 			}
 		}
 
+		void writeRawBytes( const void* pData, size_t size )
+		{
+			if ( pData != nullptr && size > 0 )
+			{
+				const uint8* pSrc = reinterpret_cast<const uint8*>( pData );
+				_buffer.insert( _buffer.end(), pSrc, pSrc + size );
+			}
+		}
+
 		void reserve( size_t additionalCapacity )
 		{
 			_buffer.reserve( _buffer.size() + additionalCapacity );

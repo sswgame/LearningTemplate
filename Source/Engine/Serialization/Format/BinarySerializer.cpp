@@ -528,83 +528,86 @@ namespace sw
 		const vector<PropertyInfo>& listProp   = typeInfo.getPropertiesWithBase();
 		const size_t				totalProps = listProp.size();
 
-		struct PropPayloadRecord
+		struct FlatPropRecord
 		{
-			uint32		  _index;
-			vector<uint8> _bytes;
+			uint32 _index;
+			uint32 _offset;
+			uint32 _size;
 		};
-		vector<PropPayloadRecord> listRecord;
-		listRecord.reserve( totalProps );
+
+		thread_local vector<FlatPropRecord> t_listRecord;
+		thread_local vector<uint8>			t_scratchPayload;
+		t_listRecord.clear();
+		t_scratchPayload.clear();
 
 		for ( size_t propIndex = 0; propIndex < totalProps; ++propIndex )
 		{
 			const PropertyInfo& prop = listProp[propIndex];
-			if ( prop._metadata._bTransient == SW_TRUE )
+			if ( SerializerUtil::shouldSerializeProperty( prop ) == false )
 				continue;
 
-			const void*	  pPropPtr = prop.getRawPtr( pInstance );
-			vector<uint8> propBytes;
+			const void*	 pPropPtr	  = prop.getRawPtr( pInstance );
+			const size_t payloadStart = t_scratchPayload.size();
 
 			if ( prop._bIsBitField == SW_TRUE )
 			{
 				const bool bVal = prop.getValue<bool>( pInstance );
-				SerializerUtil::serializeValueBinary( &bVal, hashed_string( "bool" ), propBytes, ctx );
+				SerializerUtil::serializeValueBinary( &bVal, hashed_string( "bool" ), t_scratchPayload, ctx );
 			}
 			else if ( prop._bIsContainer && prop.hasContainerWrapper() )
 			{
-				SerializerUtil::serializeNestedContainerBinary( pPropPtr, prop.getContainerShape(), propBytes, ctx );
+				SerializerUtil::serializeNestedContainerBinary( pPropPtr, prop.getContainerShape(), t_scratchPayload, ctx );
 			}
 			else
 			{
-				SerializerUtil::serializeValueBinary( pPropPtr, prop._typeName, propBytes, ctx );
+				SerializerUtil::serializeValueBinary( pPropPtr, prop._typeName, t_scratchPayload, ctx );
 			}
 
-			listRecord.push_back( { static_cast<uint32>( propIndex ), std::move( propBytes ) } );
+			const uint32 payloadSize = static_cast<uint32>( t_scratchPayload.size() - payloadStart );
+			t_listRecord.push_back( { static_cast<uint32>( propIndex ), static_cast<uint32>( payloadStart ), payloadSize } );
 		}
 
-		const size_t modCount = listRecord.size();
-		// Adaptive selection: if modCount >= 3 and modCount >= (totalProps / 4) -> Dense Bitmask (0x01), else Sparse (0x02)
-		const bool bUseDense = ( modCount >= 3 && modCount * 4 >= totalProps );
+		const size_t modCount  = t_listRecord.size();
+		const bool	 bUseDense = PresenceMaskUtil::shouldUseDenseMode( modCount, totalProps );
 
 		if ( bUseDense )
 		{
-			writer.write( static_cast<uint8>( 0x01 ) ); // Dense Mode Magic
+			writer.write( PresenceMaskUtil::kModeDense );
 			writer.writeVarUInt( static_cast<uint64>( totalProps ) );
 
-			const size_t  bitmaskBytes = ( totalProps + 7 ) / 8;
-			vector<uint8> bitmask( bitmaskBytes, 0 );
+			const size_t			   bitmaskBytes = PresenceMaskUtil::calculateBitmaskBytes( totalProps );
+			thread_local vector<uint8> t_bitmask;
+			t_bitmask.assign( bitmaskBytes, 0 );
 
-			for ( const auto& rec : listRecord )
+			for ( const auto& rec : t_listRecord )
 			{
-				bitmask[rec._index / 8] |= static_cast<uint8>( 1 << ( rec._index % 8 ) );
+				PresenceMaskUtil::setBit( t_bitmask.data(), rec._index );
 			}
-			for ( uint8 b : bitmask )
+			for ( size_t byteIndex = 0; byteIndex < bitmaskBytes; ++byteIndex )
 			{
-				writer.write( b );
+				writer.write( t_bitmask[byteIndex] );
 			}
-			for ( const auto& rec : listRecord )
+			for ( const auto& rec : t_listRecord )
 			{
-				writer.writeVarUInt( static_cast<uint64>( rec._bytes.size() ) );
-				if ( rec._bytes.empty() == false )
+				writer.writeVarUInt( static_cast<uint64>( rec._size ) );
+				if ( rec._size > 0 )
 				{
-					for ( uint8 b : rec._bytes )
-						writer.write( b );
+					writer.writeRawBytes( t_scratchPayload.data() + rec._offset, rec._size );
 				}
 			}
 		}
 		else
 		{
-			writer.write( static_cast<uint8>( 0x02 ) ); // Sparse Mode Magic
+			writer.write( PresenceMaskUtil::kModeSparse );
 			writer.writeVarUInt( static_cast<uint64>( modCount ) );
 
-			for ( const auto& rec : listRecord )
+			for ( const auto& rec : t_listRecord )
 			{
 				writer.writeVarUInt( static_cast<uint64>( rec._index ) );
-				writer.writeVarUInt( static_cast<uint64>( rec._bytes.size() ) );
-				if ( rec._bytes.empty() == false )
+				writer.writeVarUInt( static_cast<uint64>( rec._size ) );
+				if ( rec._size > 0 )
 				{
-					for ( uint8 b : rec._bytes )
-						writer.write( b );
+					writer.writeRawBytes( t_scratchPayload.data() + rec._offset, rec._size );
 				}
 			}
 		}
@@ -638,13 +641,13 @@ namespace sw
 		if ( reader.read( modeByte ) == false )
 			return false;
 
-		if ( modeByte == 0x01 ) // Dense Bitmask Mode
+		if ( modeByte == PresenceMaskUtil::kModeDense )
 		{
 			uint64 totalProps = 0;
 			if ( reader.readVarUInt( totalProps ) == false )
 				return false;
 
-			const size_t  bitmaskBytes = ( totalProps + 7 ) / 8;
+			const size_t  bitmaskBytes = PresenceMaskUtil::calculateBitmaskBytes( totalProps );
 			vector<uint8> bitmask( bitmaskBytes, 0 );
 			for ( size_t byteIndex = 0; byteIndex < bitmaskBytes; ++byteIndex )
 			{
@@ -654,7 +657,7 @@ namespace sw
 
 			for ( uint32 propIndex = 0; propIndex < totalProps; ++propIndex )
 			{
-				const bool bPresent = ( bitmask[propIndex / 8] & ( 1 << ( propIndex % 8 ) ) ) != 0;
+				const bool bPresent = PresenceMaskUtil::testBit( bitmask.data(), propIndex );
 				if ( bPresent == false )
 					continue;
 
@@ -696,7 +699,7 @@ namespace sw
 			}
 			return true;
 		}
-		else if ( modeByte == 0x02 ) // Sparse Index Mode
+		else if ( modeByte == PresenceMaskUtil::kModeSparse )
 		{
 			uint64 modCount = 0;
 			if ( reader.readVarUInt( modCount ) == false )

@@ -11,6 +11,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Serialization/Core/SchemaMigrate.h"
+#include "Engine/Serialization/Core/SerializerUtil.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/Serialization/Format/JsonSerializer.h"
 #include "Engine/Serialization/Format/XmlSerializer.h"
@@ -126,6 +127,19 @@ namespace sw
 		Memory::copy( pOutBuffer, _pData + _offset, byteSize );
 		_offset += byteSize;
 		return true;
+	}
+
+	const uint8* Archive::readBytesView( uint64 byteSize )
+	{
+		if ( _pData == nullptr || _offset + byteSize > _dataSize )
+		{
+			_bError = SW_TRUE;
+			return nullptr;
+		}
+
+		const uint8* pResult = _pData + _offset;
+		_offset += byteSize;
+		return pResult;
 	}
 
 	void Archive::writeString( string_view str )
@@ -621,22 +635,15 @@ namespace sw
 			return false;
 		}
 
-		vector<uint8> listStorage;
-		void*		  pTempInstance = createScratchInstance( typeInfo, listStorage );
-		if ( pTempInstance == nullptr )
+		vector<uint8> outBytes;
+		if ( SerializerUtil::transcodeJsonToBinary( jsonStr, typeInfo, outBytes ) == false )
 		{
 			_bError = SW_TRUE;
 			return false;
 		}
 
-		const bool bOk = JsonSerializer::deserialize( pTempInstance, typeInfo, jsonStr );
-		if ( bOk )
-			serializeObject( pTempInstance, typeInfo );
-		else
-			_bError = SW_TRUE;
-
-		destroyScratchInstance( pTempInstance, typeInfo );
-		return bOk;
+		writeBytes( outBytes.data(), outBytes.size() );
+		return true;
 	}
 
 	string Archive::convertBinaryToJson( const TypeInfo& typeInfo, bool bPretty )
@@ -644,20 +651,7 @@ namespace sw
 		if ( _pData == nullptr || _offset >= _dataSize || typeInfo._size == 0 )
 			return {};
 
-		vector<uint8> listStorage;
-		void*		  pTempInstance = createScratchInstance( typeInfo, listStorage );
-		if ( pTempInstance == nullptr )
-			return {};
-
-		string result;
-		if ( deserializeObject( pTempInstance, typeInfo ) )
-		{
-			result = bPretty ? JsonSerializer::serializePretty( pTempInstance, typeInfo )
-							 : JsonSerializer::serialize( pTempInstance, typeInfo );
-		}
-
-		destroyScratchInstance( pTempInstance, typeInfo );
-		return result;
+		return SerializerUtil::transcodeBinaryToJson( _pData + _offset, _dataSize - _offset, typeInfo, bPretty );
 	}
 
 	bool Archive::serializeXmlObject( const void* pInstance, const TypeInfo& typeInfo )
@@ -697,19 +691,15 @@ namespace sw
 			return false;
 		}
 
-		vector<uint8> listStorage;
-		void*		  pTempInstance = createScratchInstance( typeInfo, listStorage );
-		if ( pTempInstance == nullptr )
-			return false;
-
-		const bool bOk = XmlSerializer::deserialize( pTempInstance, typeInfo, xmlStr );
-		if ( bOk )
-			serializeObject( pTempInstance, typeInfo );
-		else
+		vector<uint8> outBytes;
+		if ( SerializerUtil::transcodeXmlToBinary( xmlStr, typeInfo, outBytes ) == false )
+		{
 			_bError = SW_TRUE;
+			return false;
+		}
 
-		destroyScratchInstance( pTempInstance, typeInfo );
-		return bOk;
+		writeBytes( outBytes.data(), outBytes.size() );
+		return true;
 	}
 
 	string Archive::convertBinaryToXml( const TypeInfo& typeInfo )
@@ -717,17 +707,7 @@ namespace sw
 		if ( _pData == nullptr || _offset >= _dataSize || typeInfo._size == 0 )
 			return {};
 
-		vector<uint8> listStorage;
-		void*		  pTempInstance = createScratchInstance( typeInfo, listStorage );
-		if ( pTempInstance == nullptr )
-			return {};
-
-		string result;
-		if ( deserializeObject( pTempInstance, typeInfo ) )
-			result = XmlSerializer::serialize( pTempInstance, typeInfo );
-
-		destroyScratchInstance( pTempInstance, typeInfo );
-		return result;
+		return SerializerUtil::transcodeBinaryToXml( _pData + _offset, _dataSize - _offset, typeInfo );
 	}
 
 	void Archive::writeVarUInt( uint64 value )

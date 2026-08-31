@@ -36,6 +36,11 @@ namespace sw
 
 	uint32 StringPool::internString( string_view str )
 	{
+		const hashed_string hashed( str );
+		const uint32		keyIndex = hashed.getIndex();
+		if ( keyIndex < kPredefinedCount )
+			return keyIndex;
+
 		const string key( str );
 		const auto	 it = _mapStringToId.find( key );
 		if ( it != _mapStringToId.end() )

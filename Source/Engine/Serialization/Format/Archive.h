@@ -91,6 +91,8 @@ namespace sw
 		void writeBytes( const void* pBuffer, uint64 byteSize );
 		/** @brief 지정된 크기만큼 바이트를 읽어옵니다. */
 		bool readBytes( void* pOutBuffer, uint64 byteSize );
+		/** @brief 메모리 버퍼로부터 데이터 복사 없이 포인터 뷰를 읽어옵니다. (읽기 모드 전용) */
+		const uint8* readBytesView( uint64 byteSize );
 
 		/** @brief 문자열을 길이 접두사와 함께 아카이브에 기록합니다. */
 		void writeString( string_view str );

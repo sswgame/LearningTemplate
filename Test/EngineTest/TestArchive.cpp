@@ -9,8 +9,11 @@
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Scene/SceneDocument.h"
+#include "Engine/Serialization/Core/SerializerUtil.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
+#include "Engine/Serialization/Format/JsonSerializer.h"
+#include "Engine/Serialization/Format/XmlSerializer.h"
 
 #include "GameFramework/Save/ISaveGame.h"
 
@@ -1292,4 +1295,80 @@ SW_TEST_CASE( Engine_Archive, MassiveEndToEndDeduplicationPipelineStress5000 )
 	}
 
 	SW_EXPECT_TRUE( readBundled.isOk() );
+}
+
+SW_TEST_CASE( Engine_Archive, SerializerUtilTranscodingAndScopedScratch )
+{
+	const sw::TypeInfo* pPlayerType = TestReflectedPlayer::StaticType();
+	SW_EXPECT_NOT_NULL( pPlayerType );
+
+	// 1. Test ScopedScratchInstance RAII
+	{
+		sw::ScopedScratchInstance scratch( *pPlayerType );
+		SW_EXPECT_TRUE( scratch.isValid() );
+		SW_EXPECT_NOT_NULL( scratch.get() );
+		TestReflectedPlayer* pPlayer = static_cast<TestReflectedPlayer*>( scratch.get() );
+		pPlayer->_level				 = 99;
+		pPlayer->_name				 = "ScratchHero";
+		pPlayer->_gold				 = 7777;
+	} // Automatically destroyed safely here
+
+	// 2. Test JSON <-> Binary transcoding via SerializerUtil
+	TestReflectedPlayer originalPlayer;
+	originalPlayer._level = 42;
+	originalPlayer._name  = "TranscodePlayer";
+	originalPlayer._gold  = 99999;
+
+	const sw::string jsonSource = sw::JsonSerializer::serialize( &originalPlayer, *pPlayerType );
+	SW_EXPECT_FALSE( jsonSource.empty() );
+
+	sw::vector<uint8> transcodedBinary;
+	SW_EXPECT_TRUE( sw::SerializerUtil::transcodeJsonToBinary( jsonSource, *pPlayerType, transcodedBinary ) );
+	SW_EXPECT_FALSE( transcodedBinary.empty() );
+
+	const sw::string transcodedJson = sw::SerializerUtil::transcodeBinaryToJson( transcodedBinary.data(), transcodedBinary.size(), *pPlayerType );
+	SW_EXPECT_FALSE( transcodedJson.empty() );
+
+	TestReflectedPlayer deserializedFromJson;
+	SW_EXPECT_TRUE( sw::JsonSerializer::deserialize( &deserializedFromJson, *pPlayerType, transcodedJson ) );
+	SW_EXPECT_EQUAL( 42, deserializedFromJson._level );
+	SW_EXPECT_EQUAL( "TranscodePlayer", deserializedFromJson._name );
+	SW_EXPECT_EQUAL( 99999, deserializedFromJson._gold );
+
+	// 3. Test XML <-> Binary transcoding via SerializerUtil
+	const sw::string xmlSource = sw::XmlSerializer::serialize( &originalPlayer, *pPlayerType );
+	SW_EXPECT_FALSE( xmlSource.empty() );
+
+	sw::vector<uint8> transcodedXmlBinary;
+	SW_EXPECT_TRUE( sw::SerializerUtil::transcodeXmlToBinary( xmlSource, *pPlayerType, transcodedXmlBinary ) );
+	SW_EXPECT_FALSE( transcodedXmlBinary.empty() );
+
+	const sw::string transcodedXml = sw::SerializerUtil::transcodeBinaryToXml( transcodedXmlBinary.data(), transcodedXmlBinary.size(), *pPlayerType );
+	SW_EXPECT_FALSE( transcodedXml.empty() );
+
+	TestReflectedPlayer deserializedFromXml;
+	SW_EXPECT_TRUE( sw::XmlSerializer::deserialize( &deserializedFromXml, *pPlayerType, transcodedXml ) );
+	SW_EXPECT_EQUAL( 42, deserializedFromXml._level );
+	SW_EXPECT_EQUAL( "TranscodePlayer", deserializedFromXml._name );
+	SW_EXPECT_EQUAL( 99999, deserializedFromXml._gold );
+}
+
+SW_TEST_CASE( Engine_Archive, ZeroCopyReadBytesView )
+{
+	sw::Archive writeArch;
+	const uint8 samplePayload[8] = { 0xAA, 0xBB, 0xCC, 0xDD, 0x11, 0x22, 0x33, 0x44 };
+	writeArch.writeBytes( samplePayload, 8 );
+
+	sw::Archive	 readArch( writeArch.getData(), writeArch.getSize() );
+	const uint8* pView = readArch.readBytesView( 8 );
+	SW_EXPECT_NOT_NULL( pView );
+	SW_EXPECT_EQUAL( samplePayload[0], pView[0] );
+	SW_EXPECT_EQUAL( samplePayload[7], pView[7] );
+	SW_EXPECT_TRUE( readArch.isOk() );
+	SW_EXPECT_EQUAL( 0ULL, readArch.getRemainingBytes() );
+
+	// Over-read error check
+	const uint8* pNullView = readArch.readBytesView( 1 );
+	SW_EXPECT_NULL( pNullView );
+	SW_EXPECT_TRUE( readArch.isError() );
 }
