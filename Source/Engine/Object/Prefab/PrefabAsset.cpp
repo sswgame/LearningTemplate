@@ -2,7 +2,6 @@
 
 #include "Engine/Object/Prefab/PrefabAsset.h"
 
-#include "Core/File/BinaryBlob.h"
 #include "Core/Uuid/Uuid.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -13,6 +12,7 @@
 #include "Engine/Resource/AssetFormat.h"
 #include "Engine/Resource/ResourceManager.h"
 #include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Object/ObjectDiffSerializer.h"
 #include "Engine/Utility/Json/JsonDocument.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
@@ -105,9 +105,12 @@ namespace sw
 				XmlNode wrapRoot = wrapDoc.root( kRoot );
 				if ( wrapRoot.isValid() == false )
 					return false;
-				if ( engine::getResourceManager().getAssetFormatRegistry().upgradeXml( AssetKind::Prefab, wrapDoc, wrapRoot,
-																					   AssetFormatVersions::kPrefab ) == false )
-					return false;
+				if ( engine::areEngineServicesBound() )
+				{
+					if ( engine::getResourceManager().getAssetFormatRegistry().upgradeXml( AssetKind::Prefab, wrapDoc, wrapRoot,
+																						   AssetFormatVersions::kPrefab ) == false )
+						return false;
+				}
 				XmlNode bodyNode = wrapRoot.child( kGameObject );
 				if ( bodyNode.isValid() == false )
 					return false;
@@ -241,39 +244,30 @@ namespace sw
 		if ( absPath.empty() )
 			absPath = assetRelativePath;
 
-		vector<uint8> listBlob;
-		if ( FileUtil::readFile( absPath, listBlob ) == false || listBlob.size() < 12 )
+		Archive arch( absPath, true );
+		if ( arch.getSize() < 12 )
 		{
 			SW_LOG_ERROR( "Binary read failed or too small: %#", absPath );
 			return false;
 		}
 
-		size_t offset{ 0 };
-
 		uint32 magic{ 0 };
-		if ( BinaryBlob::readU32( listBlob, offset, magic ) == false || magic != PrefabAssetInternal::kPrefabBinMagic2 )
+		arch >> magic;
+		if ( magic != PrefabAssetInternal::kPrefabBinMagic2 )
 		{
 			SW_LOG_ERROR( "Bad binary magic: %#", absPath );
 			return false;
 		}
+
+		uint32 version{ 0 };
+		arch >> version;
+		if ( version > PrefabAssetInternal::kPrefabBinVersion )
 		{
-			uint32 version{ 0 };
-			if ( BinaryBlob::readU32( listBlob, offset, version ) == false )
-			{
-				SW_LOG_ERROR( "Binary version truncated: %#", absPath );
-				return false;
-			}
-			if ( version > PrefabAssetInternal::kPrefabBinVersion )
-			{
-				SW_LOG_ERROR( "Unsupported binary version %# in %#", version, absPath );
-				return false;
-			}
-		}
-		if ( BinaryBlob::readString( listBlob, offset, _name ) == false || BinaryBlob::readString( listBlob, offset, _stateData ) == false )
-		{
-			SW_LOG_ERROR( "Binary payload truncated: %#", absPath );
+			SW_LOG_ERROR( "Unsupported binary version %# in %#", version, absPath );
 			return false;
 		}
+
+		arch >> _name >> _stateData;
 
 		if ( PrefabAssetInternal::upgradePrefabXmlBody( _stateData ) == false )
 		{
@@ -374,12 +368,12 @@ namespace sw
 		if ( absPath.empty() )
 			absPath = assetRelativePath;
 
-		vector<uint8> listBlob;
-		BinaryBlob::appendU32( listBlob, PrefabAssetInternal::kPrefabBinMagic2 );
-		BinaryBlob::appendU32( listBlob, PrefabAssetInternal::kPrefabBinVersion );
-		BinaryBlob::appendString( listBlob, _name );
-		BinaryBlob::appendString( listBlob, _stateData );
-		return FileUtil::writeFile( absPath, listBlob.data(), listBlob.size() );
+		Archive arch;
+		arch << PrefabAssetInternal::kPrefabBinMagic2;
+		arch << PrefabAssetInternal::kPrefabBinVersion;
+		arch << _name;
+		arch << _stateData;
+		return arch.saveFile( absPath );
 	}
 
 	void PrefabAsset::setFromGameObject( const GameObject* pGameObject )

@@ -1,11 +1,11 @@
 #include "pch.h"
 
-#include "Core/File/BinaryBlob.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Utility/Format/KeyValueFile.h"
 
 #include "GameFramework/Save/ISaveGame.h"
@@ -153,30 +153,26 @@ namespace sw
 	 */
 	bool SaveSlot::saveCommonToBinaryFile( string_view path ) const
 	{
-		vector<uint8> listPayload;
-		BinaryBlob::appendString( listPayload, _mapPath );
-		BinaryBlob::appendI32( listPayload, _playerX );
-		BinaryBlob::appendI32( listPayload, _playerY );
-		BinaryBlob::appendU32( listPayload, static_cast<uint32>( _mapFlag.size() ) );
+		Archive payloadArch;
+		payloadArch << _mapPath << _playerX << _playerY;
+		payloadArch << static_cast<uint32>( _mapFlag.size() );
 
 		for ( const auto& [key, val] : _mapFlag )
 		{
-			BinaryBlob::appendString( listPayload, key );
-			BinaryBlob::appendI32( listPayload, val );
+			payloadArch << key << val;
 		}
 
-		const uint32 crc = StringUtil::computeCrc32( listPayload.data(), listPayload.size() );
+		const uint32 crc = payloadArch.calculateChecksum();
 
-		vector<uint8> listBlob;
-		listBlob.reserve( 16 + listPayload.size() );
-		BinaryBlob::appendU32( listBlob, kSaveBinMagic );
-		BinaryBlob::appendU32( listBlob, kSaveBinVersion );
-		BinaryBlob::appendU32( listBlob, crc );
-		BinaryBlob::appendU32( listBlob, static_cast<uint32>( listPayload.size() ) );
-		listBlob.insert( listBlob.end(), listPayload.begin(), listPayload.end() );
+		Archive fileArch;
+		fileArch << kSaveBinMagic;
+		fileArch << kSaveBinVersion;
+		fileArch << crc;
+		fileArch << static_cast<uint32>( payloadArch.getSize() );
+		fileArch.writeBytes( payloadArch.getData(), payloadArch.getSize() );
 
 		FileUtil::createDirectory( path );
-		const bool ok = FileUtil::writeFile( path, listBlob.data(), listBlob.size() );
+		const bool ok = fileArch.saveFile( path );
 		if ( ok )
 			SW_LOG_INFO( "Saved binary (SAV1, CRC32=0x%#) -> %#", Fmt( crc, Format( 8, Format::Padding::Zero ).hexUpper() ), path );
 		return ok;
@@ -187,40 +183,42 @@ namespace sw
 	 */
 	bool SaveSlot::loadCommonFromBinaryFile( string_view path )
 	{
-		vector<uint8> listBlob;
-		if ( FileUtil::readFile( path, listBlob ) == false || listBlob.size() < 16 )
+		Archive fileArch( path, true );
+		if ( fileArch.getSize() < 16 )
 		{
 			SW_LOG_WARNING( "Binary save file unreadable or too small: %#", path );
 			return false;
 		}
 
-		size_t offset{ 0 };
 		uint32 magic{ 0 };
-		if ( BinaryBlob::readU32( listBlob, offset, magic ) == false || magic != kSaveBinMagic )
+		fileArch >> magic;
+		if ( magic != kSaveBinMagic )
 		{
 			SW_LOG_WARNING( "Invalid SAV1 magic in %# (0x%#)", path, Fmt( magic, Format( 8, Format::Padding::Zero ).hexUpper() ) );
 			return false;
 		}
 
 		uint32 version{ 0 };
-		if ( BinaryBlob::readU32( listBlob, offset, version ) == false || version > kSaveBinVersion )
+		fileArch >> version;
+		if ( version > kSaveBinVersion )
 		{
 			SW_LOG_WARNING( "Unsupported SAV1 version %# in %#", version, path );
 			return false;
 		}
 
 		uint32 expectedCrc{ 0 };
-		if ( BinaryBlob::readU32( listBlob, offset, expectedCrc ) == false )
-			return false;
+		fileArch >> expectedCrc;
 
 		uint32 payloadSize{ 0 };
-		if ( BinaryBlob::readU32( listBlob, offset, payloadSize ) == false || ( offset + payloadSize ) > listBlob.size() )
+		fileArch >> payloadSize;
+
+		if ( fileArch.getOffset() + payloadSize > fileArch.getSize() )
 		{
 			SW_LOG_ERROR( "Truncated SAV1 payload in %#", path );
 			return false;
 		}
 
-		const uint8* pPayload	 = listBlob.data() + offset;
+		const uint8* pPayload	 = fileArch.getData() + fileArch.getOffset();
 		const uint32 computedCrc = StringUtil::computeCrc32( pPayload, payloadSize );
 		if ( expectedCrc != computedCrc )
 		{
@@ -228,21 +226,15 @@ namespace sw
 			return false;
 		}
 
-		string loadedMap;
-		int32  px{ 0 };
-		int32  py{ 0 };
-		uint32 flagCount{ 0 };
+		Archive payloadArch( pPayload, payloadSize );
+		string	loadedMap;
+		int32	px{ 0 };
+		int32	py{ 0 };
+		uint32	flagCount{ 0 };
 
-		if ( BinaryBlob::readString( listBlob, offset, loadedMap ) == false ||
-			 BinaryBlob::readI32( listBlob, offset, px ) == false ||
-			 BinaryBlob::readI32( listBlob, offset, py ) == false ||
-			 BinaryBlob::readU32( listBlob, offset, flagCount ) == false )
-		{
-			SW_LOG_ERROR( "Corrupted payload fields in %#", path );
-			return false;
-		}
+		payloadArch >> loadedMap >> px >> py >> flagCount;
 
-		if ( offset + static_cast<size_t>( flagCount ) * 5 > listBlob.size() )
+		if ( payloadArch.getOffset() + static_cast<size_t>( flagCount ) * 5 > payloadSize )
 		{
 			SW_LOG_ERROR( "Invalid flagCount %# in SAV1 payload (overflow)", flagCount );
 			return false;
@@ -253,12 +245,7 @@ namespace sw
 		{
 			string key;
 			int32  val{ 0 };
-			if ( BinaryBlob::readString( listBlob, offset, key ) == false ||
-				 BinaryBlob::readI32( listBlob, offset, val ) == false )
-			{
-				SW_LOG_ERROR( "Corrupted flag entry at index %# in %#", flagIndex, path );
-				return false;
-			}
+			payloadArch >> key >> val;
 			mapLoadedFlag[std::move( key )] = val;
 		}
 

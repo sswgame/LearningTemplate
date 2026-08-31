@@ -2,7 +2,6 @@
 
 #include "Engine/Scene/SceneDocument.h"
 
-#include "Core/File/BinaryBlob.h"
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/Uuid/Uuid.h"
@@ -11,6 +10,7 @@
 #include "Engine/Resource/AssetDatabase.h"
 #include "Engine/Resource/AssetFormat.h"
 #include "Engine/Resource/ResourceManager.h"
+#include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
 
 namespace sw
@@ -276,53 +276,39 @@ namespace sw
 		if ( absPath.empty() )
 			absPath = path;
 
-		vector<uint8> listBlob;
-		if ( FileUtil::readFile( absPath, listBlob ) == false || listBlob.size() < 12 )
+		Archive arch( absPath, true );
+		if ( arch.getSize() < 12 )
 		{
 			SW_LOG_ERROR( "Binary read failed or too small: %#", absPath );
 			return false;
 		}
 
-		size_t offset{ 0 };
 		uint32 magic{ 0 };
-		if ( BinaryBlob::readU32( listBlob, offset, magic ) == false || magic != SceneDocumentInternal::kSceneBinMagic )
+		arch >> magic;
+		if ( magic != SceneDocumentInternal::kSceneBinMagic )
 		{
 			SW_LOG_ERROR( "Bad binary magic: %#", absPath );
 			return false;
 		}
 
 		uint32 version{ 0 };
-		if ( BinaryBlob::readU32( listBlob, offset, version ) == false || version > SceneDocumentInternal::kSceneBinVersion )
+		arch >> version;
+		if ( version > SceneDocumentInternal::kSceneBinVersion )
 		{
 			SW_LOG_ERROR( "Unsupported binary version %# in %#", version, absPath );
 			return false;
 		}
 
-		if ( BinaryBlob::readString( listBlob, offset, _name ) == false )
-		{
-			SW_LOG_ERROR( "Binary name truncated: %#", absPath );
-			return false;
-		}
+		arch >> _name;
 
 		uint32 entityCount{ 0 };
-		if ( BinaryBlob::readU32( listBlob, offset, entityCount ) == false )
-		{
-			SW_LOG_ERROR( "Binary entity count truncated: %#", absPath );
-			return false;
-		}
+		arch >> entityCount;
 
 		_listEntityNode.reserve( entityCount );
 		for ( uint32 entityIndex = 0; entityIndex < entityCount; ++entityIndex )
 		{
 			EntityNode node{};
-			if ( BinaryBlob::readString( listBlob, offset, node._name ) == false ||
-				 BinaryBlob::readString( listBlob, offset, node._prefab ) == false ||
-				 BinaryBlob::readString( listBlob, offset, node._prefabGuid ) == false ||
-				 BinaryBlob::readString( listBlob, offset, node._embeddedXml ) == false )
-			{
-				SW_LOG_ERROR( "Binary entity truncated at index %#: %#", entityIndex, absPath );
-				return false;
-			}
+			arch >> node._name >> node._prefab >> node._prefabGuid >> node._embeddedXml;
 
 			if ( node._prefabGuid.empty() == false && engine::areEngineServicesBound() )
 			{
@@ -346,11 +332,11 @@ namespace sw
 
 	bool SceneDocument::saveBinary( string_view path ) const
 	{
-		vector<uint8> listBlob;
-		BinaryBlob::appendU32( listBlob, SceneDocumentInternal::kSceneBinMagic );
-		BinaryBlob::appendU32( listBlob, SceneDocumentInternal::kSceneBinVersion );
-		BinaryBlob::appendString( listBlob, _name );
-		BinaryBlob::appendU32( listBlob, static_cast<uint32>( _listEntityNode.size() ) );
+		Archive arch;
+		arch << SceneDocumentInternal::kSceneBinMagic;
+		arch << SceneDocumentInternal::kSceneBinVersion;
+		arch << _name;
+		arch << static_cast<uint32>( _listEntityNode.size() );
 
 		for ( const EntityNode& entity : _listEntityNode )
 		{
@@ -362,10 +348,10 @@ namespace sw
 					prefabGuid = pGuid->toString();
 			}
 
-			BinaryBlob::appendString( listBlob, entity._name );
-			BinaryBlob::appendString( listBlob, entity._prefab );
-			BinaryBlob::appendString( listBlob, prefabGuid );
-			BinaryBlob::appendString( listBlob, entity._embeddedXml );
+			arch << entity._name;
+			arch << entity._prefab;
+			arch << prefabGuid;
+			arch << entity._embeddedXml;
 		}
 
 		const string absPath = SceneDocumentInternal::absoluteWritePath( path );
@@ -375,7 +361,7 @@ namespace sw
 			return false;
 		}
 		FileUtil::createDirectory( absPath );
-		const bool bOk = FileUtil::writeFile( absPath, listBlob.data(), listBlob.size() );
+		const bool bOk = arch.saveFile( absPath );
 		if ( bOk )
 			SW_LOG_INFO( "Saved binary '%#' (%# entities) -> %#",
 						 _name, static_cast<uint32>( _listEntityNode.size() ), absPath );
