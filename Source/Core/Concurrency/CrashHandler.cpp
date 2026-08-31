@@ -8,7 +8,7 @@
 #include <cstdio>
 
 #if defined( SW_PLATFORM_WINDOWS )
-	#include <windows.h>
+	#include "Core/Common/PlatformOsHeaders.h"
 #else
 	#include <csignal>
 #endif
@@ -22,14 +22,23 @@ namespace sw
 		/** @brief 핸들러 안에서 또 크래시가 나도 무한 재진입하지 않게 막습니다. */
 		atomic<bool> s_bReporting{ false };
 
-		/** @brief 폴트 종류와 현재 스레드 콜 스택을 로그로 남깁니다. */
-		void reportCrash( const utf8* pReason, const void* pFaultAddress )
+		/**
+		 * @brief 폴트 종류와 콜 스택을 로그로 남깁니다.
+		 * @param pPlatformContext 있으면 그 지점부터 스택을 걷습니다(Windows 는 CONTEXT*).
+		 *                         nullptr 이면 현재 스레드 스택을 캡처합니다.
+		 */
+		void reportCrash( const utf8* pReason, const void* pFaultAddress, void* pPlatformContext )
 		{
 			if ( s_bReporting.exchange( true ) )
 				return;
 
+			// 예외 컨텍스트에서 걸어야 KiUserExceptionDispatcher 등 디스패치 프레임이 앞을
+			// 차지하지 않고 실제 폴트 지점이 [0] 에 온다.
 			CallStack stack{};
-			CallStackCapture::capture( stack, 1 );
+			if ( pPlatformContext != nullptr )
+				CallStackCapture::captureFromContext( stack, pPlatformContext );
+			else
+				CallStackCapture::capture( stack, 1 );
 
 			StringBuilder<constant::kMaxBuffer8192> builder;
 			builder.append( "\n==================== CRASH ====================\n" );
@@ -89,7 +98,7 @@ namespace sw
 				pReason		  = exceptionCodeName( pInfo->ExceptionRecord->ExceptionCode );
 				pFaultAddress = pInfo->ExceptionRecord->ExceptionAddress;
 			}
-			reportCrash( pReason, pFaultAddress );
+			reportCrash( pReason, pFaultAddress, ( pInfo != nullptr ) ? pInfo->ContextRecord : nullptr );
 
 			if ( s_pPreviousFilter != nullptr )
 				return s_pPreviousFilter( pInfo );
@@ -118,7 +127,7 @@ namespace sw
 
 		void onFatalSignal( int32 signalNumber )
 		{
-			reportCrash( signalName( signalNumber ), nullptr );
+			reportCrash( signalName( signalNumber ), nullptr, nullptr );
 			std::signal( signalNumber, SIG_DFL );
 			std::raise( signalNumber );
 		}
@@ -159,5 +168,7 @@ namespace sw
 		std::signal( SIGFPE, SIG_DFL );
 		std::signal( SIGABRT, SIG_DFL );
 #endif
+		// initialize 에서 잡은 심볼 참조를 돌려준다(참조 카운트 짝 맞추기).
+		CallStackCapture::shutdown();
 	}
 } // namespace sw

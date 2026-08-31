@@ -78,7 +78,8 @@ namespace sw
 		 * @param gameRenderTarget 오프스크린 Game View RT 식별자 (없으면 0 = 백버퍼)
 		 * @param vpWidth 뷰포트 너비
 		 * @param vpHeight 뷰포트 높이
-		 * @param pViewCamera 호스트가 지정한 렌더 카메라. nullptr이면 씬의 게임 카메라.
+		 * @param viewCameraProvider 호스트가 지정한 렌더 카메라를 돌려주는 델리게이트.
+		 *                           바인딩되지 않았거나 nullptr을 돌려주면 씬의 게임 카메라를 씁니다.
 		 * @param bTickScene false이면 씬 GameObject tick을 건너뜁니다 (에디터 Pause).
 		 */
 		void tick( float32 deltaTime, uint64 gameRenderTarget, uint32 vpWidth, uint32 vpHeight,

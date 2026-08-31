@@ -17,7 +17,9 @@ namespace sw
 	 */
 	struct SW_API CallStack
 	{
-		static constexpr uint32 kMaxFrames			  = 16;
+		// 크래시 스택은 16프레임으로는 자주 잘린다. CallStackAllocInfo 는 "콜스택별" 집계라
+		// 항목 수가 할당 수가 아닌 고유 호출 지점 수에 비례하므로 32 로 올려도 부담이 작다.
+		static constexpr uint32 kMaxFrames			  = 32;
 		void*					_arrFrame[kMaxFrames] = { nullptr };
 		uint64					_hash{ 0 };
 		uint32					_frameCount{ 0 };
@@ -80,9 +82,21 @@ namespace sw
 		static void capture( CallStack& outStack, uint32 skipFrames = 1 );
 
 		/**
+		 * @brief 주어진 플랫폼 컨텍스트가 가리키는 지점의 콜 스택을 캡처합니다.
+		 * @param outStack 캡처된 콜 스택을 저장할 구조체
+		 * @param pPlatformContext Windows 는 `CONTEXT*`. 다른 플랫폼은 무시하고 현재 스택을 캡처합니다.
+		 * @details 크래시 핸들러용입니다. 핸들러 안에서 capture() 를 부르면 예외 디스패치
+		 *          프레임(KiUserExceptionDispatcher 등)이 앞을 채워 정작 폴트 지점이 잘립니다.
+		 *          컨텍스트에서 걸어가면 실제 폴트 프레임이 [0] 에 옵니다.
+		 */
+		static void captureFromContext( CallStack& outStack, void* pPlatformContext );
+
+		/**
 		 * @brief 캡처된 프레임을 심볼·파일·라인 문자열로 바꿉니다.
 		 * @param stack 변환할 콜 스택
 		 * @return 콜 스택 문자열
+		 * @details 심볼 API 는 프로세스 전역 락으로 보호됩니다. 락을 즉시 얻지 못하면
+		 *          (다른 스레드가 심볼화 중) 교착을 피해 주소만 출력합니다.
 		 */
 		static string symbolize( const CallStack& stack );
 	};
