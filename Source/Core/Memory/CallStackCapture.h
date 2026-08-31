@@ -17,9 +17,9 @@ namespace sw
 	 */
 	struct SW_API CallStack
 	{
-		// 크래시 스택은 16프레임으로는 자주 잘린다. CallStackAllocInfo 는 "콜스택별" 집계라
-		// 항목 수가 할당 수가 아닌 고유 호출 지점 수에 비례하므로 32 로 올려도 부담이 작다.
-		static constexpr uint32 kMaxFrames			  = 32;
+		// DeadlockDetector 가 "모든 mutex 잠금마다" 이 구조체로 캡처·복사하므로 얕게 유지한다.
+		// 깊은 스택이 필요한 크래시 리포트는 DeepCallStack 을 쓴다.
+		static constexpr uint32 kMaxFrames			  = 16;
 		void*					_arrFrame[kMaxFrames] = { nullptr };
 		uint64					_hash{ 0 };
 		uint32					_frameCount{ 0 };
@@ -39,6 +39,18 @@ namespace sw
 
 		/** @brief 해시 또는 프레임이 다르면 true 입니다. */
 		bool operator!=( const CallStack& other ) const { return !( *this == other ); }
+	};
+
+	/**
+	 * @brief 크래시 리포트용 깊은 콜 스택입니다.
+	 * @details CallStack 은 DeadlockDetector 가 모든 잠금마다 캡처·복사하므로 얕아야 합니다.
+	 *          반면 크래시는 한 번만 찍고 깊이가 곧 진단 가치라 별도 타입으로 둡니다.
+	 */
+	struct SW_API DeepCallStack
+	{
+		static constexpr uint32 kMaxFrames			  = 64;
+		void*					_arrFrame[kMaxFrames] = { nullptr };
+		uint32					_frameCount{ 0 };
 	};
 
 } // namespace sw
@@ -89,7 +101,7 @@ namespace sw
 		 *          프레임(KiUserExceptionDispatcher 등)이 앞을 채워 정작 폴트 지점이 잘립니다.
 		 *          컨텍스트에서 걸어가면 실제 폴트 프레임이 [0] 에 옵니다.
 		 */
-		static void captureFromContext( CallStack& outStack, void* pPlatformContext );
+		static void captureFromContext( DeepCallStack& outStack, void* pPlatformContext );
 
 		/**
 		 * @brief 캡처된 프레임을 심볼·파일·라인 문자열로 바꿉니다.
@@ -99,5 +111,7 @@ namespace sw
 		 *          (다른 스레드가 심볼화 중) 교착을 피해 주소만 출력합니다.
 		 */
 		static string symbolize( const CallStack& stack );
+		/** @brief 깊은 콜 스택(크래시 리포트)을 심볼 문자열로 바꿉니다. */
+		static string symbolize( const DeepCallStack& stack );
 	};
 } // namespace sw

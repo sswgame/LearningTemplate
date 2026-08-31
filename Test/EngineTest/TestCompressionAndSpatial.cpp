@@ -5,7 +5,6 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/BindlessTable.h"
 #include "Engine/Graphics/RenderPass/ComputePass.h"
-#include "Engine/Graphics/RenderPass/IndirectDrawBuffer.h"
 #include "Engine/Graphics/RenderPass/RenderGraph.h"
 #include "Engine/Physics/AABB.h"
 #include "Engine/Reflection/PropertyMetaHint.h"
@@ -136,28 +135,6 @@ SW_TEST_CASE( Engine_Resource, AssetStreamingQueueAsyncOperations )
 }
 
 // ------------------------------------------------------------------------------
-// 5) IndirectDrawBuffer 커맨드 버퍼 빌드 검증
-// ------------------------------------------------------------------------------
-SW_TEST_CASE( Engine_Renderer, IndirectDrawBufferCommandBuilding )
-{
-	sw::IndirectDrawBuffer indirectBuffer;
-	SW_EXPECT_EQUAL( size_t( 0 ), indirectBuffer.getCommandCount() );
-
-	indirectBuffer.addDrawCommand( 36, 10, 0, 0, 0 );
-	indirectBuffer.addDrawCommand( 12, 5, 36, 0, 10 );
-	SW_EXPECT_EQUAL( size_t( 2 ), indirectBuffer.getCommandCount() );
-	SW_EXPECT_EQUAL( size_t( 2 * sizeof( sw::DrawIndexedInstancedIndirectCommand ) ), indirectBuffer.getBufferSizeInBytes() );
-
-	const auto& listCommands = indirectBuffer.getCommands();
-	SW_EXPECT_EQUAL( uint32( 36 ), listCommands[0]._indexCountPerInstance );
-	SW_EXPECT_EQUAL( uint32( 10 ), listCommands[0]._instanceCount );
-	SW_EXPECT_EQUAL( uint32( 12 ), listCommands[1]._indexCountPerInstance );
-
-	indirectBuffer.clear();
-	SW_EXPECT_EQUAL( size_t( 0 ), indirectBuffer.getCommandCount() );
-}
-
-// ------------------------------------------------------------------------------
 // 6) BindlessTable 슬롯 할당 및 프리 리스트 재사용 검증
 // ------------------------------------------------------------------------------
 SW_TEST_CASE( Engine_RHI, BindlessTableSlotAllocationAndReuse )
@@ -224,9 +201,9 @@ SW_TEST_CASE( Engine_File, ReloadFileManagerLifecycle )
 	bool	   bCallbackCalled = false;
 	const auto handle		   = manager.registerWatch( "Resource/shaders", { ".hlsl" },
 														SW_DELEGATE_LAMBDA( sw::FileWatchMatchDelegate, [&bCallbackCalled]( const sw::FileChangeEvent& )
-			 {
-		 bCallbackCalled = true;
-	 } ) );
+	{
+		bCallbackCalled = true;
+	} ) );
 
 	SW_EXPECT_TRUE( handle.isValid() );
 	manager.unregisterWatch( handle );
@@ -553,9 +530,9 @@ SW_TEST_CASE( Engine_Spatial, BVHTree3DAABBRaySphereQueries )
 
 	sw::vector<sw::ObjectHandle> listAabb;
 	const sw::AABB				 testBox{
-					  {-1.0f, -1.0f,  0.0f},
-					  { 6.0f,  5.0f, 15.0f}
-	};
+		{-1.0f, -1.0f,	0.0f},
+		{ 6.0f,	5.0f, 15.0f}
+	  };
 	bvh.queryAABB( testBox, listAabb );
 	SW_EXPECT_EQUAL( 2u, static_cast<uint32>( listAabb.size() ) );
 

@@ -6,8 +6,22 @@
 #include "Editor/Common/Backend/Render/ImGuiOpenGLRendererBackend.h"
 #include "Editor/Common/Backend/Render/ImGuiVulkanRendererBackend.h"
 
+#include <imgui.h>
+
 namespace sw::editor
 {
+	void IImGuiRendererBackend::updatePendingTextures( void ( *pUpdateTexture )( ImTextureData* ) )
+	{
+		if ( pUpdateTexture == nullptr || ImGui::GetIO().BackendRendererUserData == nullptr )
+			return;
+
+		for ( ImTextureData* pTexture : ImGui::GetPlatformIO().Textures )
+		{
+			if ( pTexture != nullptr && pTexture->Status != ImTextureStatus_OK )
+				pUpdateTexture( pTexture );
+		}
+	}
+
 	unique_ptr<IImGuiRendererBackend> IImGuiRendererBackend::createRendererBackend( RHIBackend backend )
 	{
 		switch ( backend )

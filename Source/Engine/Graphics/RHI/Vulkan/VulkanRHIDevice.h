@@ -467,7 +467,6 @@ namespace sw
 		VkPipelineLayout	  _pipelineLayout;
 		VkDescriptorSetLayout _descriptorSetLayout;
 		VkDescriptorSetLayout _uavDescriptorSetLayout;
-		VkDescriptorSetLayout _explicitUavDescriptorSetLayout;
 		VkDescriptorPool	  _descriptorPool;
 		VkDescriptorSet		  _descriptorSet;
 		VkBuffer			  _dummyUBO;

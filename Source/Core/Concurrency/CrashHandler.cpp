@@ -34,11 +34,8 @@ namespace sw
 
 			// 예외 컨텍스트에서 걸어야 KiUserExceptionDispatcher 등 디스패치 프레임이 앞을
 			// 차지하지 않고 실제 폴트 지점이 [0] 에 온다.
-			CallStack stack{};
-			if ( pPlatformContext != nullptr )
-				CallStackCapture::captureFromContext( stack, pPlatformContext );
-			else
-				CallStackCapture::capture( stack, 1 );
+			DeepCallStack stack{};
+			CallStackCapture::captureFromContext( stack, pPlatformContext );
 
 			StringBuilder<constant::kMaxBuffer8192> builder;
 			builder.append( "\n==================== CRASH ====================\n" );

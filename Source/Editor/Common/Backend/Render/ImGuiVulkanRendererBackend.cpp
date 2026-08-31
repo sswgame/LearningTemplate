@@ -247,16 +247,7 @@ namespace sw::editor
 
 	void ImGuiVulkanRendererBackend::processTextureUpdates()
 	{
-		if ( ImGui::GetIO().BackendRendererUserData == nullptr )
-			return;
-
-		// ImGui_ImplVulkan_RenderDrawData 가 draw_data->Textures 를 순회하며 하던 일을 여기(UI 스레드)서 끝낸다.
-		// 스냅샷은 Textures 를 공유하지 않으므로 렌더 스레드가 그리기 전에 텍스처를 준비해 둬야 한다.
-		for ( ImTextureData* pTexture : ImGui::GetPlatformIO().Textures )
-		{
-			if ( pTexture != nullptr && pTexture->Status != ImTextureStatus_OK )
-				ImGui_ImplVulkan_UpdateTexture( pTexture );
-		}
+		updatePendingTextures( &ImGui_ImplVulkan_UpdateTexture );
 	}
 
 	void ImGuiVulkanRendererBackend::render( class IRHIDevice* pRhiDevice, ImDrawData* pDrawData )

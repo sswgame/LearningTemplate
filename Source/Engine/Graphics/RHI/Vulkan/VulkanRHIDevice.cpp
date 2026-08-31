@@ -174,7 +174,6 @@ namespace sw
 		, _pipelineLayout{ nullptr }
 		, _descriptorSetLayout{ nullptr }
 		, _uavDescriptorSetLayout{ nullptr }
-		, _explicitUavDescriptorSetLayout{ nullptr }
 		, _descriptorPool{ nullptr }
 		, _descriptorSet{ nullptr }
 		, _dummyUBO{ nullptr }
@@ -525,18 +524,10 @@ namespace sw
 				vkDestroyDescriptorPool( _device, _descriptorPool, nullptr );
 			if ( _descriptorSetLayout )
 				vkDestroyDescriptorSetLayout( _device, _descriptorSetLayout, nullptr );
-			// _explicitUavDescriptorSetLayout may alias _uavDescriptorSetLayout.
-			if ( _explicitUavDescriptorSetLayout == _uavDescriptorSetLayout )
-				_explicitUavDescriptorSetLayout = nullptr;
 			if ( _uavDescriptorSetLayout )
 			{
 				vkDestroyDescriptorSetLayout( _device, _uavDescriptorSetLayout, nullptr );
 				_uavDescriptorSetLayout = nullptr;
-			}
-			if ( _explicitUavDescriptorSetLayout )
-			{
-				vkDestroyDescriptorSetLayout( _device, _explicitUavDescriptorSetLayout, nullptr );
-				_explicitUavDescriptorSetLayout = nullptr;
 			}
 
 			cleanupSwapChain();
@@ -1560,7 +1551,6 @@ namespace sw
 			return false;
 		if ( createSimpleSetLayout( VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, allStages, _uavDescriptorSetLayout ) == false )
 			return false;
-		_explicitUavDescriptorSetLayout = _uavDescriptorSetLayout;
 
 		// Bindless texture array layout (set 1) — ensureBindlessTextureArray가 세트를 할당.
 		{

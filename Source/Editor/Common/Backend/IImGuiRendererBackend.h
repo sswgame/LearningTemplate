@@ -13,6 +13,7 @@ namespace sw
 } // namespace sw
 
 struct ImDrawData;
+struct ImTextureData;
 
 namespace sw::editor
 {
@@ -64,5 +65,16 @@ namespace sw::editor
 		// ------------------------------------------------------------------------------
 		/** @brief 지정 RHI 백엔드에 맞는 렌더러 구현을 생성합니다. */
 		static unique_ptr<IImGuiRendererBackend> createRendererBackend( RHIBackend backend );
+
+	protected:
+		/**
+		 * @brief 갱신 대기 중인 ImGui 텍스처를 백엔드 UpdateTexture 로 모두 처리합니다.
+		 * @param pUpdateTexture ImGui_Impl*_UpdateTexture 함수 포인터.
+		 * @details 백엔드 4종이 이 루프를 똑같이 반복하므로 여기 모읍니다.
+		 *          ImGui_Impl*_RenderDrawData 가 draw_data->Textures 를 순회하며 하던 일인데,
+		 *          draw-data 스냅샷은 그 리스트를 공유하지 않으므로 그리기 전에 끝내야 합니다.
+		 *          호출 스레드는 requiresRenderThreadContext() 에 따라 UI/렌더 스레드로 갈립니다.
+		 */
+		static void updatePendingTextures( void ( *pUpdateTexture )( ImTextureData* ) );
 	};
 } // namespace sw::editor

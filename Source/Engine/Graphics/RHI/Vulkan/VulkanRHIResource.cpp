@@ -952,7 +952,7 @@ namespace sw
 		allocInfo.sType				 = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 		allocInfo.descriptorPool	 = _pDevice->_descriptorPool;
 		allocInfo.descriptorSetCount = 1;
-		allocInfo.pSetLayouts		 = &_pDevice->_explicitUavDescriptorSetLayout;
+		allocInfo.pSetLayouts		 = &_pDevice->_uavDescriptorSetLayout;
 
 		VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
 		if ( vkAllocateDescriptorSets( _pDevice->_device, &allocInfo, &descriptorSet ) != VK_SUCCESS )

@@ -78,17 +78,13 @@ namespace sw
 		outStack._hash = hash;
 	}
 
-	void CallStackCapture::captureFromContext( CallStack& outStack, void* pPlatformContext )
+	void CallStackCapture::captureFromContext( DeepCallStack& outStack, void* pPlatformContext )
 	{
 		outStack._frameCount = 0;
-		outStack._hash		 = 0;
 
 #if defined( SW_PLATFORM_WINDOWS )
 		if ( pPlatformContext == nullptr )
-		{
-			capture( outStack, 1 );
 			return;
-		}
 
 		// StackWalk64 는 넘겨준 CONTEXT 를 진행하며 수정하므로 복사본으로 걷는다.
 		CONTEXT walkContext = *static_cast<const CONTEXT*>( pPlatformContext );
@@ -106,7 +102,6 @@ namespace sw
 		frame.AddrFrame.Offset = walkContext.Fp;
 		frame.AddrStack.Offset = walkContext.Sp;
 	#else
-		capture( outStack, 1 );
 		return;
 	#endif
 		frame.AddrPC.Mode	 = AddrModeFlat;
@@ -116,7 +111,7 @@ namespace sw
 		HANDLE					process = GetCurrentProcess();
 		HANDLE					thread	= GetCurrentThread();
 		std::scoped_lock<mutex> lock{ s_symbolMutex }; // StackWalk64 도 dbghelp 전역 상태를 쓴다.
-		while ( outStack._frameCount < CallStack::kMaxFrames )
+		while ( outStack._frameCount < DeepCallStack::kMaxFrames )
 		{
 			if ( StackWalk64( machineType, process, thread, &frame, &walkContext,
 							  nullptr, SymFunctionTableAccess64, SymGetModuleBase64, nullptr ) == FALSE )
@@ -126,105 +121,121 @@ namespace sw
 			outStack._arrFrame[outStack._frameCount++] = reinterpret_cast<void*>( frame.AddrPC.Offset );
 		}
 #else
+		// 비-Windows: 폴트 컨텍스트에서 걷는 이식 구현이 없어 현재 스레드 스택으로 대체한다.
 		(void)pPlatformContext;
-		capture( outStack, 1 );
-		return;
+		CallStack shallow{};
+		capture( shallow, 1 );
+		outStack._frameCount = shallow._frameCount;
+		for ( uint32 frameIndex = 0; frameIndex < shallow._frameCount; ++frameIndex )
+			outStack._arrFrame[frameIndex] = shallow._arrFrame[frameIndex];
 #endif
-
-		uint64 hash{ 0 };
-		for ( uint32 frameIndex = 0; frameIndex < outStack._frameCount; ++frameIndex )
-		{
-			hash ^= reinterpret_cast<uint64>( outStack._arrFrame[frameIndex] ) + 0x9e3779b9 + ( hash << 6 ) + ( hash >> 2 );
-		}
-		outStack._hash = hash;
 	}
+
+	namespace
+	{
+		/** @brief CallStack / DeepCallStack 공용 심볼화 본체입니다. */
+		string symbolizeFrames( void* const* ppFrame, uint32 frameCount );
+	} // namespace
 
 	string CallStackCapture::symbolize( const CallStack& stack )
 	{
-		if ( stack._frameCount == 0 )
-			return "[Empty CallStack]";
+		return symbolizeFrames( stack._arrFrame, stack._frameCount );
+	}
 
-		// 32프레임 × (심볼 + 전체 파일 경로 + 라인)은 2KB 를 쉽게 넘긴다.
-		StringBuilder<constant::kMaxBuffer8192> sb;
+	string CallStackCapture::symbolize( const DeepCallStack& stack )
+	{
+		return symbolizeFrames( stack._arrFrame, stack._frameCount );
+	}
 
-		// 크래시 경로에서도 불리므로 절대 막히면 안 된다. 다른 스레드가 심볼화 중이면
-		// 교착 대신 주소만 출력한다(맵 파일로 후처리 가능).
-		std::unique_lock<mutex> lock{ s_symbolMutex, std::try_to_lock };
-		if ( lock.owns_lock() == false )
+	namespace
+	{
+		string symbolizeFrames( void* const* ppFrame, uint32 frameCount )
 		{
-			for ( uint32 frameIndex = 0; frameIndex < stack._frameCount; ++frameIndex )
+			if ( ppFrame == nullptr || frameCount == 0 )
+				return "[Empty CallStack]";
+
+			// 32프레임 × (심볼 + 전체 파일 경로 + 라인)은 2KB 를 쉽게 넘긴다.
+			StringBuilder<constant::kMaxBuffer8192> sb;
+
+			// 크래시 경로에서도 불리므로 절대 막히면 안 된다. 다른 스레드가 심볼화 중이면
+			// 교착 대신 주소만 출력한다(맵 파일로 후처리 가능).
+			std::unique_lock<mutex> lock{ s_symbolMutex, std::try_to_lock };
+			if ( lock.owns_lock() == false )
 			{
-				sb.appendFormat( "  [%#] 0x%# (symbols busy)\n", frameIndex,
-								 Fmt( reinterpret_cast<uint64>( stack._arrFrame[frameIndex] ), Format().hex() ) );
+				for ( uint32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
+				{
+					sb.appendFormat( "  [%#] 0x%# (symbols busy)\n", frameIndex,
+									 Fmt( reinterpret_cast<uint64>( ppFrame[frameIndex] ), Format().hex() ) );
+				}
+				return string( sb.view() );
 			}
-			return string( sb.view() );
-		}
 
 #if defined( SW_PLATFORM_WINDOWS )
-		HANDLE						process = GetCurrentProcess();
-		alignas( SYMBOL_INFO ) utf8 symbolBuffer[sizeof( SYMBOL_INFO ) + MAX_SYM_NAME * sizeof( TCHAR )];
-		SYMBOL_INFO*				pSymbol = reinterpret_cast<SYMBOL_INFO*>( symbolBuffer );
-		pSymbol->SizeOfStruct				= sizeof( SYMBOL_INFO );
-		pSymbol->MaxNameLen					= MAX_SYM_NAME;
+			HANDLE						process = GetCurrentProcess();
+			alignas( SYMBOL_INFO ) utf8 symbolBuffer[sizeof( SYMBOL_INFO ) + MAX_SYM_NAME * sizeof( TCHAR )];
+			SYMBOL_INFO*				pSymbol = reinterpret_cast<SYMBOL_INFO*>( symbolBuffer );
+			pSymbol->SizeOfStruct				= sizeof( SYMBOL_INFO );
+			pSymbol->MaxNameLen					= MAX_SYM_NAME;
 
-		for ( uint32 frameIndex = 0; frameIndex < stack._frameCount; ++frameIndex )
-		{
-			DWORD64 address = reinterpret_cast<DWORD64>( stack._arrFrame[frameIndex] );
-			if ( address == 0 )
-				continue;
-
-			DWORD64 displacement = 0;
-			if ( SymFromAddr( process, address, &displacement, pSymbol ) )
+			for ( uint32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
 			{
-				DWORD			displacementLine = 0;
-				IMAGEHLP_LINE64 lineInfo		 = {};
-				lineInfo.SizeOfStruct			 = sizeof( IMAGEHLP_LINE64 );
+				DWORD64 address = reinterpret_cast<DWORD64>( ppFrame[frameIndex] );
+				if ( address == 0 )
+					continue;
 
-				if ( SymGetLineFromAddr64( process, address, &displacementLine, &lineInfo ) )
+				DWORD64 displacement = 0;
+				if ( SymFromAddr( process, address, &displacement, pSymbol ) )
 				{
-					sb.appendFormat( "  [%#] %# (%#:%#)\n", frameIndex, pSymbol->Name, lineInfo.FileName, lineInfo.LineNumber );
+					DWORD			displacementLine = 0;
+					IMAGEHLP_LINE64 lineInfo		 = {};
+					lineInfo.SizeOfStruct			 = sizeof( IMAGEHLP_LINE64 );
+
+					if ( SymGetLineFromAddr64( process, address, &displacementLine, &lineInfo ) )
+					{
+						sb.appendFormat( "  [%#] %# (%#:%#)\n", frameIndex, pSymbol->Name, lineInfo.FileName, lineInfo.LineNumber );
+					}
+					else
+					{
+						sb.appendFormat( "  [%#] %#\n", frameIndex, pSymbol->Name );
+					}
 				}
 				else
 				{
-					sb.appendFormat( "  [%#] %#\n", frameIndex, pSymbol->Name );
+					sb.appendFormat( "  [%#] 0x%#\n", frameIndex, Fmt( address, Format().hex() ) );
 				}
 			}
-			else
-			{
-				sb.appendFormat( "  [%#] 0x%#\n", frameIndex, Fmt( address, Format().hex() ) );
-			}
-		}
 #elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
-		utf8** symbols = backtrace_symbols( stack._arrFrame, stack._frameCount );
-		for ( uint32 frameIndex = 0; frameIndex < stack._frameCount; ++frameIndex )
-		{
-			string symbolName = ( symbols != nullptr ) ? symbols[frameIndex] : "??";
-
-			// dladdr 로 더 정확한 심볼 정보 시도 (한 번만 호출하고 결과를 재사용한다)
-			Dl_info	   info{};
-			const bool bResolved = ( dladdr( stack._arrFrame[frameIndex], &info ) != 0 && info.dli_sname != nullptr );
-			if ( bResolved )
+			utf8** symbols = backtrace_symbols( ppFrame, frameCount );
+			for ( uint32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
 			{
-				int32 status	 = 0;
-				utf8* pDemangled = abi::__cxa_demangle( info.dli_sname, nullptr, nullptr, &status );
-				symbolName		 = ( status == 0 && pDemangled != nullptr ) ? pDemangled : info.dli_sname;
-				free( pDemangled );
-			}
+				string symbolName = ( symbols != nullptr ) ? symbols[frameIndex] : "??";
 
-			sb.appendFormat( "  [%#] %#", frameIndex, symbolName.c_str() );
-			if ( bResolved && info.dli_saddr != nullptr )
-			{
-				// 포인터 차이는 정수(ptrdiff_t)이므로 reinterpret_cast 가 아니라 정수 변환을 쓴다.
-				const ptrdiff_t frameOffset =
-					static_cast<const utf8*>( stack._arrFrame[frameIndex] ) - static_cast<const utf8*>( info.dli_saddr );
-				sb.appendFormat( " + 0x%#", Fmt( static_cast<uint64>( frameOffset ), Format().hex() ) );
+				// dladdr 로 더 정확한 심볼 정보 시도 (한 번만 호출하고 결과를 재사용한다)
+				Dl_info	   info{};
+				const bool bResolved = ( dladdr( ppFrame[frameIndex], &info ) != 0 && info.dli_sname != nullptr );
+				if ( bResolved )
+				{
+					int32 status	 = 0;
+					utf8* pDemangled = abi::__cxa_demangle( info.dli_sname, nullptr, nullptr, &status );
+					symbolName		 = ( status == 0 && pDemangled != nullptr ) ? pDemangled : info.dli_sname;
+					free( pDemangled );
+				}
+
+				sb.appendFormat( "  [%#] %#", frameIndex, symbolName.c_str() );
+				if ( bResolved && info.dli_saddr != nullptr )
+				{
+					// 포인터 차이는 정수(ptrdiff_t)이므로 reinterpret_cast 가 아니라 정수 변환을 쓴다.
+					const ptrdiff_t frameOffset =
+						static_cast<const utf8*>( ppFrame[frameIndex] ) - static_cast<const utf8*>( info.dli_saddr );
+					sb.appendFormat( " + 0x%#", Fmt( static_cast<uint64>( frameOffset ), Format().hex() ) );
+				}
+				sb.append( "\n" );
 			}
-			sb.append( "\n" );
-		}
-		free( symbols );
+			free( symbols );
 #endif
 
-		return string( sb.view() );
-	}
+			return string( sb.view() );
+		}
+	} // namespace
 
 } // namespace sw

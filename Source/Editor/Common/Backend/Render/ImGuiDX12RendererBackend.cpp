@@ -193,16 +193,7 @@ namespace sw::editor
 	void ImGuiDX12RendererBackend::processTextureUpdates()
 	{
 #if defined( SW_PLATFORM_WINDOWS )
-		if ( ImGui::GetIO().BackendRendererUserData == nullptr )
-			return;
-
-		// ImGui_ImplDX12_RenderDrawData 가 draw_data->Textures 를 순회하며 하던 일을 여기(UI 스레드)서 끝낸다.
-		// UpdateTexture 는 내부 업로드 커맨드 리스트 + 펜스 동기이므로 반환 시 GPU 텍스처가 준비된다.
-		for ( ImTextureData* pTexture : ImGui::GetPlatformIO().Textures )
-		{
-			if ( pTexture != nullptr && pTexture->Status != ImTextureStatus_OK )
-				ImGui_ImplDX12_UpdateTexture( pTexture );
-		}
+		updatePendingTextures( &ImGui_ImplDX12_UpdateTexture );
 #endif
 	}
 

@@ -5,11 +5,6 @@
         "_schemaVersion": 0,
         "_name": "SamplePrefab",
         "_bActive": true,
-        "vector": [
-            {
-                "_name": "_listComponent",
-                "item": []
-            }
-        ]
+        "_listComponent": []
     }
 }
