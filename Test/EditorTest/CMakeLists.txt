@@ -7,7 +7,9 @@ sw_addTestExecutable(EditorTest
 	SOURCES
 		TestEditorAssetType.cpp
 		TestEditorSessionPolicy.cpp
+		TestSelectionManager.cpp
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorAssetType.cpp"
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/SelectionManager.cpp"
 	LIBS
 		Engine
 	LABELS
