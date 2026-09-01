@@ -451,6 +451,42 @@ namespace sw
 										  hashed_string{} );
 	}
 
+	class MockPoolLifecycleComponent : public Component
+	{
+	public:
+		REFLECT_BODY();
+
+		static atomic<int32> s_ctorCount;
+		static atomic<int32> s_dtorCount;
+
+		int32 _customData{ 42 };
+
+		MockPoolLifecycleComponent()
+		{
+			s_ctorCount.fetch_add( 1, std::memory_order_relaxed );
+		}
+
+		~MockPoolLifecycleComponent() override
+		{
+			s_dtorCount.fetch_add( 1, std::memory_order_relaxed );
+		}
+
+		const TypeInfo* getTypeInfo() const override
+		{
+			return StaticType();
+		}
+	};
+
+	atomic<int32> MockPoolLifecycleComponent::s_ctorCount{ 0 };
+	atomic<int32> MockPoolLifecycleComponent::s_dtorCount{ 0 };
+
+	const TypeInfo* MockPoolLifecycleComponent::StaticType()
+	{
+		return makeMockComponentTypeInfo( hashed_string( "MockPoolLifecycleComponent" ),
+										  hashed_string( "sw::MockPoolLifecycleComponent" ),
+										  sizeof( MockPoolLifecycleComponent ) );
+	}
+
 	/** @brief 모의 컴포넌트 TypeInfo 와 팩토리를 등록합니다. */
 	static void RegisterMockComponents( GameObjectManager& manager )
 	{
@@ -464,6 +500,7 @@ namespace sw
 		MockFlyingVehicleComponent::StaticType();
 		MockMidTickDeactivatorComponent::StaticType();
 		MockSubTickStressComponent::StaticType();
+		MockPoolLifecycleComponent::StaticType();
 
 		manager.registerComponentType<MockMeshComponent>( hashed_string( "MockMeshComponent" ) );
 		manager.registerComponentType<MockAudioComponent>( hashed_string( "MockAudioComponent" ) );
@@ -475,6 +512,7 @@ namespace sw
 		manager.registerComponentType<MockFlyingVehicleComponent>( hashed_string( "MockFlyingVehicleComponent" ) );
 		manager.registerComponentType<MockMidTickDeactivatorComponent>( hashed_string( "MockMidTickDeactivatorComponent" ) );
 		manager.registerComponentType<MockSubTickStressComponent>( hashed_string( "MockSubTickStressComponent" ) );
+		manager.registerComponentType<MockPoolLifecycleComponent>( hashed_string( "MockPoolLifecycleComponent" ) );
 	}
 } // namespace sw
 
@@ -2776,7 +2814,10 @@ SW_TEST_CASE( GameObjectTest, ChaoticHierarchyMutationAndActiveToggleStressTest 
 			{
 				// 4) 임의 오브젝트 삭제 (지연 큐 등록)
 				manager.destroyObject( pObjA, true );
-				listAliveObject.erase( listAliveObject.begin() + targetIndexA );
+				listAliveObject.erase(
+					std::remove_if( listAliveObject.begin(), listAliveObject.end(), []( sw::GameObject* pObj )
+				{ return pObj == nullptr || pObj->isPendingKill(); } ),
+					listAliveObject.end() );
 			}
 			else
 			{
@@ -2940,4 +2981,236 @@ SW_TEST_CASE( GameObjectTest, MultiLevelComponentGameObjectPolymorphicLookup )
 	SW_EXPECT_NEAR_EQUAL( 10.0f, worldPos._x, 1e-4f );
 	SW_EXPECT_NEAR_EQUAL( 20.0f, worldPos._y, 1e-4f );
 	SW_EXPECT_NEAR_EQUAL( 30.0f, worldPos._z, 1e-4f );
+}
+
+/**
+ * @brief [GameObjectPoolTest] GameObject 파괴 후 재생성 시 TypedPoolAllocator 메모리 주소 재활용 및 내부 상태 초기화 검증
+ */
+SW_TEST_CASE( GameObjectPoolTest, GameObjectPoolMemoryReuseAndStateReset )
+{
+	sw::GameObjectManager manager;
+
+	// 1) 3개 액터 생성 및 메모리 주소 기록
+	sw::GameObject* pObj0 = manager.createGameObject( sw::hashed_string( "Actor_0" ) );
+	sw::GameObject* pObj1 = manager.createGameObject( sw::hashed_string( "Actor_1" ) );
+	sw::GameObject* pObj2 = manager.createGameObject( sw::hashed_string( "Actor_2" ) );
+
+	SW_ASSERT_NOT_NULL( pObj0 );
+	SW_ASSERT_NOT_NULL( pObj1 );
+	SW_ASSERT_NOT_NULL( pObj2 );
+
+	void* pAddr0 = static_cast<void*>( pObj0 );
+	void* pAddr1 = static_cast<void*>( pObj1 );
+	void* pAddr2 = static_cast<void*>( pObj2 );
+
+	// 서로 다른 메모리 주소 할당 확인
+	SW_EXPECT_NOT_EQUAL( pAddr0, pAddr1 );
+	SW_EXPECT_NOT_EQUAL( pAddr1, pAddr2 );
+
+	const uint64 id0 = pObj0->getObjectId();
+	const uint64 id1 = pObj1->getObjectId();
+	const uint64 id2 = pObj2->getObjectId();
+
+	// 2) 액터 지연 삭제 처리
+	manager.destroyObject( pObj2 );
+	manager.destroyObject( pObj1 );
+	manager.destroyObject( pObj0 );
+	manager.processDeferredDestruction();
+
+	SW_EXPECT_EQUAL( static_cast<size_t>( 0 ), manager.getAllGameObjects().size() );
+
+	// 3) 새로운 액터 3개 생성 시 풀의 LIFO 프리리스트에 의해 이전 주소가 재활용되는지 검증
+	sw::GameObject* pNewObj0 = manager.createGameObject( sw::hashed_string( "NewActor_0" ) );
+	sw::GameObject* pNewObj1 = manager.createGameObject( sw::hashed_string( "NewActor_1" ) );
+	sw::GameObject* pNewObj2 = manager.createGameObject( sw::hashed_string( "NewActor_2" ) );
+
+	SW_ASSERT_NOT_NULL( pNewObj0 );
+	SW_ASSERT_NOT_NULL( pNewObj1 );
+	SW_ASSERT_NOT_NULL( pNewObj2 );
+
+	void* pNewAddr0 = static_cast<void*>( pNewObj0 );
+	void* pNewAddr1 = static_cast<void*>( pNewObj1 );
+	void* pNewAddr2 = static_cast<void*>( pNewObj2 );
+
+	// LIFO 순서에 따라 마지막에 반환된 pAddr0, pAddr1, pAddr2가 재사용됨
+	SW_EXPECT_EQUAL( pAddr0, pNewAddr0 );
+	SW_EXPECT_EQUAL( pAddr1, pNewAddr1 );
+	SW_EXPECT_EQUAL( pAddr2, pNewAddr2 );
+
+	// 새로운 고유 ID가 발급되었는지 확인 (이전 ID와 다름)
+	SW_EXPECT_NOT_EQUAL( id0, pNewObj0->getObjectId() );
+	SW_EXPECT_NOT_EQUAL( id1, pNewObj1->getObjectId() );
+	SW_EXPECT_NOT_EQUAL( id2, pNewObj2->getObjectId() );
+
+	// 이름 및 기본 상태가 깨끗하게 초기화되었는지 확인
+	SW_EXPECT_STREQ( "NewActor_0", pNewObj0->getName().c_str() );
+	SW_EXPECT_TRUE( pNewObj0->isActive() );
+	SW_EXPECT_FALSE( pNewObj0->isPendingKill() );
+	SW_EXPECT_EQUAL( static_cast<size_t>( 0 ), pNewObj0->getComponentCount() );
+}
+
+/**
+ * @brief [ComponentPoolTest] 서로 다른 컴포넌트 타입별 전용 PoolAllocator 격리 및 주소 재활용 검증
+ */
+SW_TEST_CASE( ComponentPoolTest, PolymorphicComponentPoolIsolationAndAddressRecycle )
+{
+	sw::GameObjectManager manager;
+	sw::RegisterMockComponents( manager );
+
+	sw::GameObject* pActor = manager.createGameObject( sw::hashed_string( "TestActor" ) );
+	SW_ASSERT_NOT_NULL( pActor );
+
+	// 1) 크기가 다른 서로 다른 타입의 컴포넌트 추가
+	sw::SceneComponent*		pScene1 = pActor->addComponent<sw::SceneComponent>();
+	sw::MockMeshComponent*	pMesh1	= pActor->addComponent<sw::MockMeshComponent>();
+	sw::MockAudioComponent* pAudio1 = pActor->addComponent<sw::MockAudioComponent>();
+
+	SW_ASSERT_NOT_NULL( pScene1 );
+	SW_ASSERT_NOT_NULL( pMesh1 );
+	SW_ASSERT_NOT_NULL( pAudio1 );
+
+	void* pMeshAddr1  = static_cast<void*>( pMesh1 );
+	void* pAudioAddr1 = static_cast<void*>( pAudio1 );
+
+	// 2) MockMeshComponent 만 삭제
+	pActor->removeComponent( pMesh1 );
+
+	// 3) 새로운 MockMeshComponent 추가 시 동일한 메모리 주소가 재활용되는지 검증
+	sw::MockMeshComponent* pMesh2 = pActor->addComponent<sw::MockMeshComponent>();
+	SW_ASSERT_NOT_NULL( pMesh2 );
+	void* pMeshAddr2 = static_cast<void*>( pMesh2 );
+	SW_EXPECT_EQUAL( pMeshAddr1, pMeshAddr2 );
+
+	// MockAudioComponent 는 기존 인스턴스가 유지되고 영향받지 않음
+	SW_EXPECT_EQUAL( pAudio1, pActor->getComponent<sw::MockAudioComponent>() );
+
+	// 4) MockAudioComponent 삭제 후 재추가 시 Audio 풀 주소 재활용 검증
+	pActor->removeComponent( pAudio1 );
+	sw::MockAudioComponent* pAudio2 = pActor->addComponent<sw::MockAudioComponent>();
+	SW_ASSERT_NOT_NULL( pAudio2 );
+	void* pAudioAddr2 = static_cast<void*>( pAudio2 );
+	SW_EXPECT_EQUAL( pAudioAddr1, pAudioAddr2 );
+}
+
+/**
+ * @brief [ComponentPoolTest] 컴포넌트 풀 할당 및 해제 시 생성자/소멸자 호출 1:1 매칭 정확도 검증
+ */
+SW_TEST_CASE( ComponentPoolTest, ComponentPoolConstructorAndDestructorExactTracking )
+{
+	sw::GameObjectManager manager;
+	sw::RegisterMockComponents( manager );
+
+	sw::MockPoolLifecycleComponent::s_ctorCount.store( 0, std::memory_order_relaxed );
+	sw::MockPoolLifecycleComponent::s_dtorCount.store( 0, std::memory_order_relaxed );
+
+	// 1) 100개 오브젝트에 각각 MockPoolLifecycleComponent 추가
+	constexpr uint32			kCount = 100;
+	sw::vector<sw::GameObject*> listObject;
+	listObject.reserve( kCount );
+
+	for ( uint32 index = 0; index < kCount; ++index )
+	{
+		sw::GameObject* pObj  = manager.createGameObject( sw::hashed_string( ( "LifeActor_" + std::to_string( index ) ).c_str() ) );
+		auto*			pComp = pObj->addComponent<sw::MockPoolLifecycleComponent>();
+		pComp->_customData	  = static_cast<int32>( index );
+		listObject.push_back( pObj );
+	}
+
+	SW_EXPECT_EQUAL( static_cast<int32>( kCount ), sw::MockPoolLifecycleComponent::s_ctorCount.load( std::memory_order_relaxed ) );
+	SW_EXPECT_EQUAL( 0, sw::MockPoolLifecycleComponent::s_dtorCount.load( std::memory_order_relaxed ) );
+
+	// 2) 50개 오브젝트에서 removeComponent 로 직접 해제
+	for ( uint32 index = 0; index < 50; ++index )
+	{
+		auto* pComp = listObject[index]->getComponent<sw::MockPoolLifecycleComponent>();
+		SW_ASSERT_NOT_NULL( pComp );
+		listObject[index]->removeComponent( pComp );
+	}
+
+	SW_EXPECT_EQUAL( 50, sw::MockPoolLifecycleComponent::s_dtorCount.load( std::memory_order_relaxed ) );
+
+	// 3) 남은 50개 오브젝트는 GameObjectManager::clear 로 일괄 정리
+	manager.clear();
+
+	SW_EXPECT_EQUAL( static_cast<int32>( kCount ), sw::MockPoolLifecycleComponent::s_dtorCount.load( std::memory_order_relaxed ) );
+	SW_EXPECT_EQUAL( sw::MockPoolLifecycleComponent::s_ctorCount.load( std::memory_order_relaxed ),
+					 sw::MockPoolLifecycleComponent::s_dtorCount.load( std::memory_order_relaxed ) );
+}
+
+/**
+ * @brief [ComponentPoolTest] 초고빈도(High-Frequency Churn) 컴포넌트 추가/삭제 스트레스 테스트
+ */
+SW_TEST_CASE( ComponentPoolTest, ComponentPoolHighFrequencyChurnStress )
+{
+	sw::GameObjectManager manager;
+	sw::RegisterMockComponents( manager );
+
+	sw::GameObject* pActor = manager.createGameObject( sw::hashed_string( "ChurnActor" ) );
+	SW_ASSERT_NOT_NULL( pActor );
+
+	constexpr uint32 kIterations = 10000;
+	for ( uint32 iterIndex = 0; iterIndex < kIterations; ++iterIndex )
+	{
+		sw::MockMeshComponent* pMesh = pActor->addComponent<sw::MockMeshComponent>();
+		pMesh->_meshName			 = "DynamicMesh";
+		SW_ASSERT_NOT_NULL( pMesh );
+
+		sw::MockAudioComponent* pAudio = pActor->addComponent<sw::MockAudioComponent>();
+		pAudio->_volume				   = 0.5f;
+		SW_ASSERT_NOT_NULL( pAudio );
+
+		pActor->removeComponent( pMesh );
+		pActor->removeComponent( pAudio );
+	}
+
+	SW_EXPECT_EQUAL( static_cast<size_t>( 0 ), pActor->getComponentCount() );
+}
+
+/**
+ * @brief [GameObjectManagerPoolTest] Scene clear 후 풀 완전 초기화 및 재사용 라이프사이클 검증
+ */
+SW_TEST_CASE( GameObjectManagerPoolTest, SceneClearAndPoolReuseLifecycle )
+{
+	sw::GameObjectManager manager;
+	sw::RegisterMockComponents( manager );
+
+	// 1) 씬 1 생성: 200개 액터 및 복합 컴포넌트 구성
+	constexpr uint32 kObjectCount = 200;
+	for ( uint32 index = 0; index < kObjectCount; ++index )
+	{
+		sw::GameObject* pObj = manager.createGameObject( sw::hashed_string( ( "Scene1_Obj_" + std::to_string( index ) ).c_str() ) );
+		pObj->addComponent<sw::SceneComponent>();
+		pObj->addComponent<sw::MockMeshComponent>();
+		pObj->addComponent<sw::MockAudioComponent>();
+	}
+
+	SW_EXPECT_EQUAL( static_cast<size_t>( kObjectCount ), manager.getAllGameObjects().size() );
+	manager.tick( 0.016f );
+
+	// 2) 씬 클리어 (풀 완전 초기화)
+	manager.clear();
+	SW_EXPECT_EQUAL( static_cast<size_t>( 0 ), manager.getAllGameObjects().size() );
+
+	// 3) 씬 2 생성: 클리어된 매니저에서 다시 200개 액터 정상 생성 및 틱 검증
+	for ( uint32 index = 0; index < kObjectCount; ++index )
+	{
+		sw::GameObject* pObj = manager.createGameObject( sw::hashed_string( ( "Scene2_Obj_" + std::to_string( index ) ).c_str() ) );
+		pObj->addComponent<sw::SceneComponent>();
+		sw::MockMeshComponent* pMesh = pObj->addComponent<sw::MockMeshComponent>();
+		pMesh->_meshName			 = "Scene2Mesh";
+	}
+
+	SW_EXPECT_EQUAL( static_cast<size_t>( kObjectCount ), manager.getAllGameObjects().size() );
+	manager.tick( 0.016f );
+
+	// 씬 2의 모든 메시 컴포넌트가 1회 틱되었는지 검증
+	for ( sw::GameObject* pObj : manager.getAllGameObjects() )
+	{
+		sw::MockMeshComponent* pMesh = pObj->getComponent<sw::MockMeshComponent>();
+		SW_ASSERT_NOT_NULL( pMesh );
+		SW_EXPECT_EQUAL( 1, pMesh->_tickCount );
+	}
+
+	manager.clear();
+	SW_EXPECT_EQUAL( static_cast<size_t>( 0 ), manager.getAllGameObjects().size() );
 }

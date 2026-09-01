@@ -178,11 +178,10 @@ namespace sw
 				return nullptr;
 			}
 
-			T* pComp = sw_new T( std::forward<Args>( args )... );
+			T* pComp = _pOwnerManager->createComponent<T>( this, std::forward<Args>( args )... );
 			if ( pComp == nullptr )
 				return nullptr;
 
-			pComp->setOwner( this );
 			const TypeInfo* pTypeInfo = nullptr;
 			if constexpr ( HasStaticType_v<T> )
 				pTypeInfo = T::StaticType();

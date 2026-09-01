@@ -12,6 +12,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Memory/PoolAllocator.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Object/Component/ComponentHandle.h"
@@ -155,6 +156,9 @@ namespace sw
 		/** @brief Component를 지연 삭제 큐에 넣습니다. */
 		void destroyComponent( Component* pComp );
 
+		/** @brief 풀 또는 힙에서 할당된 컴포넌트 인스턴스를 파괴하고 메모리를 반환합니다. */
+		void destroyComponentInstance( Component* pComp );
+
 		/** @brief 지연 삭제 큐의 오브젝트·컴포넌트를 실제로 해제합니다. */
 		void processDeferredDestruction();
 
@@ -209,6 +213,36 @@ namespace sw
 		/** @brief 등록된 이름으로 컴포넌트를 추가합니다. 에디터·직렬화 전용. 게임은 addComponent<T>를 씁니다. */
 		Component* addComponentByName( GameObject* pGameObject, hashed_string typeName, bool bLogWarning = true );
 
+		/** @brief 타입 T의 컴포넌트를 전용 풀 또는 힙에서 할당하고 생성합니다. */
+		template <typename T, typename... Args>
+		T* createComponent( GameObject* pOwner, Args&&... args )
+		{
+			const TypeInfo* pTypeInfo = nullptr;
+			if constexpr ( HasStaticType_v<T> )
+				pTypeInfo = T::StaticType();
+			else if constexpr ( HasReflectStaticType_v<T> )
+				pTypeInfo = ReflectTypeTraits<T>::StaticType();
+
+			void* pMem = nullptr;
+			if ( pTypeInfo != nullptr )
+			{
+				PoolAllocator* pPool = getOrCreateComponentPool( pTypeInfo, sizeof( T ) );
+				if ( pPool != nullptr )
+					pMem = pPool->allocate();
+			}
+
+			if ( pMem == nullptr )
+			{
+				pMem = Memory::allocMemory( sizeof( T ) );
+				if ( pMem == nullptr )
+					return nullptr;
+			}
+
+			T* pComp = sw_placement_new( pMem ) T( std::forward<Args>( args )... );
+			pComp->setOwner( pOwner );
+			return pComp;
+		}
+
 		/** @brief Tick 웨이브를 다음 beginTick에서 다시 만듭니다. */
 		void markTickWavesDirty() { _bIsTickWavesDirty.store( true, std::memory_order_release ); }
 
@@ -240,16 +274,25 @@ namespace sw
 		/** @brief 잠금 없이 고유 이름을 만듭니다. */
 		hashed_string makeUniqueNameUnlocked( hashed_string requested ) const;
 
-	private:
-		struct GameObjectChunk
+		PoolAllocator* getOrCreateComponentPool( const TypeInfo* pTypeInfo, size_t typeSize )
 		{
-			static constexpr size_t kChunkSize = 256;
-			GameObject*				_pMemory;
-			GameObjectChunk();
-			~GameObjectChunk();
-		};
-		vector<unique_ptr<GameObjectChunk>> _listGoChunk;
-		vector<GameObject*>					_listGoFree;
+			if ( pTypeInfo == nullptr )
+				return nullptr;
+
+			std::unique_lock<std::shared_mutex> lock{ _mutex };
+			auto								iter = _mapComponentPool.find( pTypeInfo );
+			if ( iter != _mapComponentPool.end() )
+				return iter->second.get();
+
+			auto		   pNewPool		 = make_unique<PoolAllocator>( typeSize, 64u, true );
+			PoolAllocator* pRaw			 = pNewPool.get();
+			_mapComponentPool[pTypeInfo] = std::move( pNewPool );
+			return pRaw;
+		}
+
+	private:
+		TypedPoolAllocator<GameObject>							  _poolGameObject;
+		unordered_map<const TypeInfo*, unique_ptr<PoolAllocator>> _mapComponentPool;
 
 		vector<GameObject*>						  _listGameObject;
 		unordered_map<hashed_string, GameObject*> _mapNameToObject;

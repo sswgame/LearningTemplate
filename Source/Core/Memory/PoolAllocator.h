@@ -76,7 +76,9 @@ namespace sw
 		T* create( Args&&... args )
 		{
 			void* pMem = _pool.allocate();
-			return new ( pMem ) T( std::forward<Args>( args )... );
+			if ( pMem == nullptr )
+				return nullptr;
+			return sw_placement_new( pMem ) T( std::forward<Args>( args )... );
 		}
 
 		void destroy( T* pObj )

@@ -296,19 +296,9 @@ namespace sw
 	/**
 	 * @brief GameObjectManager 생성자: 기본 엔진 및 모듈 컴포넌트 팩토리들을 등록합니다.
 	 */
-	GameObjectManager::GameObjectChunk::GameObjectChunk()
-		: _pMemory{ static_cast<GameObject*>( sw::Memory::allocMemory( sizeof( GameObject ) * kChunkSize ) ) }
-	{
-	}
-
-	GameObjectManager::GameObjectChunk::~GameObjectChunk()
-	{
-		sw::Memory::freeMemory( _pMemory );
-	}
-
 	GameObjectManager::GameObjectManager()
-		: _listGoChunk{}
-		, _listGoFree{}
+		: _poolGameObject{ 256, true }
+		, _mapComponentPool{}
 		, _listGameObject{}
 		, _mapNameToObject{}
 		, _mapIdToObject{}
@@ -376,20 +366,8 @@ namespace sw
 		GameObject* pObj = nullptr;
 		{
 			std::unique_lock<std::shared_mutex> lock{ _mutex };
-			if ( _listGoFree.empty() )
-			{
-				auto chunk = make_unique<GameObjectChunk>();
-				for ( size_t slotIndex = 0; slotIndex < GameObjectChunk::kChunkSize; ++slotIndex )
-				{
-					_listGoFree.push_back( &chunk->_pMemory[GameObjectChunk::kChunkSize - 1 - slotIndex] );
-				}
-				_listGoChunk.push_back( std::move( chunk ) );
-			}
-			pObj = _listGoFree.back();
-			_listGoFree.pop_back();
-
-			const hashed_string uniqueName = makeUniqueNameUnlocked( name );
-			sw_placement_new( pObj ) GameObject( uniqueName );
+			const hashed_string					uniqueName = makeUniqueNameUnlocked( name );
+			pObj										   = _poolGameObject.create( uniqueName );
 
 			const uint64 id		 = generateNewId();
 			pObj->_objectId		 = id;
@@ -711,6 +689,27 @@ namespace sw
 		}
 	}
 
+	void GameObjectManager::destroyComponentInstance( Component* pComp )
+	{
+		if ( pComp == nullptr )
+			return;
+
+		const TypeInfo* pTypeInfo = pComp->getTypeInfo();
+		if ( pTypeInfo != nullptr )
+		{
+			std::unique_lock<std::shared_mutex> lock{ _mutex };
+			auto								iter = _mapComponentPool.find( pTypeInfo );
+			if ( iter != _mapComponentPool.end() && iter->second != nullptr )
+			{
+				pComp->~Component();
+				iter->second->free( pComp );
+				return;
+			}
+		}
+
+		sw_delete( pComp );
+	}
+
 	void GameObjectManager::processDeferredDestruction()
 	{
 		{
@@ -774,15 +773,8 @@ namespace sw
 
 		for ( GameObject* pObj : listDying )
 		{
-			pObj->~GameObject();
-		}
-
-		{
-			std::unique_lock<std::shared_mutex> lock{ _mutex };
-			for ( GameObject* pObj : listDying )
-			{
-				_listGoFree.push_back( pObj );
-			}
+			if ( pObj != nullptr )
+				_poolGameObject.destroy( pObj );
 		}
 	}
 
@@ -822,13 +814,17 @@ namespace sw
 		for ( GameObject* pObj : listDying )
 		{
 			if ( pObj != nullptr )
-				pObj->~GameObject();
+				_poolGameObject.destroy( pObj );
 		}
 
 		{
 			std::unique_lock<std::shared_mutex> lock{ _mutex };
-			_listGoChunk.clear();
-			_listGoFree.clear();
+			_poolGameObject.clear();
+			for ( auto& [pTypeInfo, pPool] : _mapComponentPool )
+			{
+				if ( pPool != nullptr )
+					pPool->clear();
+			}
 		}
 
 		_listCachedTickWave.clear();

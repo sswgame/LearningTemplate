@@ -414,7 +414,10 @@ namespace sw
 			unregisterComponentIfSceneRoot( pComp );
 			pComp->onDestroy();
 			pComp->setOwner( nullptr );
-			sw_delete( pComp );
+			if ( _pOwnerManager != nullptr )
+				_pOwnerManager->destroyComponentInstance( pComp );
+			else
+				sw_delete( pComp );
 		}
 		markTickOrderDirty();
 	}
@@ -463,7 +466,12 @@ namespace sw
 		if ( bRemoved == false )
 			SW_LOG_ERROR( "Failed to remove component '%#' from actor list.", componentName.c_str() );
 		else
-			sw_delete( pComp );
+		{
+			if ( _pOwnerManager != nullptr )
+				_pOwnerManager->destroyComponentInstance( pComp );
+			else
+				sw_delete( pComp );
+		}
 		markTickOrderDirty();
 		return bRemoved;
 	}
