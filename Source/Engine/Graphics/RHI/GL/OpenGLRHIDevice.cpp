@@ -107,10 +107,6 @@ namespace sw
 #endif
 			}
 		};
-
-#if defined( SW_PLATFORM_LINUX )
-		thread_local int32 OpenGLRHIDeviceInternal::t_glxXError{ 0 };
-#endif
 	} // namespace
 } // namespace sw
 
