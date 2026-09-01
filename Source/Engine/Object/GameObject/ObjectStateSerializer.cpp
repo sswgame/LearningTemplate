@@ -13,6 +13,8 @@
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Core/BinaryStream.h"
 #include "Engine/Serialization/Core/Serializer.h"
 #include "Engine/Serialization/Format/JsonSerializer.h"
@@ -89,6 +91,28 @@ namespace sw
 				if ( pComp == nullptr || pComp->isPendingKill() )
 					return nullptr;
 				return pComp->getTypeInfo();
+			}
+
+			/**
+			 * @brief 파일 다이얼로그 콜백 시점에 오브젝트 id 로 GameObject 를 다시 찾습니다.
+			 * @details openFileDialog 는 detached 스레드에서 콜백하므로, 사용자가 파일을 고르는
+			 *          동안 씬 전환/삭제로 대상이 사라질 수 있습니다. 원시 포인터를 캡처하면
+			 *          해제된 메모리를 건드리게 되므로 id 로 잡고 여기서 유효성을 다시 확인합니다.
+			 */
+			static GameObject* resolveGameObjectById( uint64 objectId )
+			{
+				if ( objectId == 0 || engine::areEngineServicesBound() == false )
+					return nullptr;
+
+				const SceneManager& sceneManager = engine::getSceneManager();
+				Scene*				pScene		 = sceneManager.getActiveScene();
+				if ( pScene == nullptr )
+					return nullptr;
+
+				GameObjectManager* pObjectManager = pScene->getObjectManager();
+				if ( pObjectManager == nullptr )
+					return nullptr;
+				return pObjectManager->findGameObjectById( objectId );
 			}
 
 			static SerializeContext makeGameObjectXmlContext( GameObject* pGameObject )
@@ -421,10 +445,15 @@ namespace sw
 		params._listFilterExtension = { "xml" };
 		params._bEnableMultiselect	= false;
 
-		FileDialogDelegate del = SW_DELEGATE_LAMBDA( FileDialogDelegate, [pGameObject, onSaveDone]( const vector<string>& listFileName )
+		// 원시 포인터 대신 id 를 캡처한다. 콜백은 detached 스레드에서 나중에 실행되므로
+		// 그 사이 대상이 파괴되면 포인터가 댕글링이 된다.
+		const uint64 objectId = ( pGameObject != nullptr ) ? pGameObject->getObjectId() : 0;
+
+		FileDialogDelegate del = SW_DELEGATE_LAMBDA( FileDialogDelegate, [objectId, onSaveDone]( const vector<string>& listFileName )
 		{
-			if ( listFileName.empty() == false && pGameObject != nullptr )
-				saveToXmlFile( pGameObject, listFileName.front() );
+			GameObject* pTarget = ObjectStateSerializerInternal::resolveGameObjectById( objectId );
+			if ( listFileName.empty() == false && pTarget != nullptr )
+				saveToXmlFile( pTarget, listFileName.front() );
 			if ( onSaveDone.isBound() )
 				onSaveDone( listFileName );
 		} );
@@ -439,10 +468,13 @@ namespace sw
 		params._listFilterExtension = { "xml" };
 		params._bEnableMultiselect	= false;
 
-		FileDialogDelegate del = SW_DELEGATE_LAMBDA( FileDialogDelegate, [pGameObject, onLoadDone]( const vector<string>& listFileName )
+		const uint64 objectId = ( pGameObject != nullptr ) ? pGameObject->getObjectId() : 0;
+
+		FileDialogDelegate del = SW_DELEGATE_LAMBDA( FileDialogDelegate, [objectId, onLoadDone]( const vector<string>& listFileName )
 		{
-			if ( listFileName.empty() == false && pGameObject != nullptr )
-				loadFromXmlFile( pGameObject, listFileName.front() );
+			GameObject* pTarget = ObjectStateSerializerInternal::resolveGameObjectById( objectId );
+			if ( listFileName.empty() == false && pTarget != nullptr )
+				loadFromXmlFile( pTarget, listFileName.front() );
 			if ( onLoadDone.isBound() )
 				onLoadDone( listFileName );
 		} );

@@ -17,6 +17,7 @@ namespace sw
 		, _mapLoadedAsset{}
 		, _uniqueActiveRequest{}
 		, _mapInFlightCallback{}
+		, _mapRequestGeneration{}
 		, _queueCompleted{}
 		, _bInitialized{ false }
 	{
@@ -44,6 +45,7 @@ namespace sw
 		_listPendingRequest.clear();
 		_uniqueActiveRequest.clear();
 		_mapInFlightCallback.clear();
+		_mapRequestGeneration.clear();
 
 		CompletedItem discardItem{};
 		while ( _queueCompleted.dequeue( discardItem ) )
@@ -78,6 +80,8 @@ namespace sw
 		}
 
 		_uniqueActiveRequest.insert( pathStr );
+		// 이 요청의 세대를 확정한다. 워커가 끝났을 때 세대가 그대로여야 콜백을 발행한다.
+		const uint64 generation = ++_mapRequestGeneration[pathStr];
 		if ( onComplete.isBound() )
 			_mapInFlightCallback[pathStr].push_back( onComplete );
 
@@ -91,10 +95,10 @@ namespace sw
 		{
 			TaskManager& taskManager = engine::getTaskManager();
 			TaskHandle	 handle		 = taskManager.emplaceTask(
-				   "AssetStreamingTask",
-				   SW_DELEGATE_METHOD( TaskArgsDelegate, &AssetStreamingQueue::processAssetTask, this ),
-				   MakeTaskArgs( pathStr ),
-				   TaskThreadAffinity::Any );
+				"AssetStreamingTask",
+				SW_DELEGATE_METHOD( TaskArgsDelegate, &AssetStreamingQueue::processAssetTask, this ),
+				MakeTaskArgs( pathStr, generation ),
+				TaskThreadAffinity::Any );
 			handle.submit();
 		}
 		else
@@ -153,10 +157,18 @@ namespace sw
 
 	void AssetStreamingQueue::processAssetTask( const TaskArgs& args )
 	{
-		const string pathStr = args.get<string>( 0 );
-		const bool	 bExists = ResourceUtil::hasResource( pathStr );
+		const string pathStr	= args.get<string>( 0 );
+		const uint64 generation = args.get<uint64>( 1 );
+		const bool	 bExists	= ResourceUtil::hasResource( pathStr );
 
 		std::scoped_lock<mutex> innerLock{ _mutex };
+
+		// 취소된 뒤 같은 경로가 다시 요청되면 세대가 올라간다. 오래된 태스크가 새 요청의
+		// 콜백을 대신 완료시키지 않도록 여기서 걸러낸다.
+		const auto itGeneration = _mapRequestGeneration.find( pathStr );
+		if ( itGeneration == _mapRequestGeneration.end() || itGeneration->second != generation )
+			return;
+
 		_mapLoadedAsset[pathStr] = bExists;
 		_uniqueActiveRequest.erase( pathStr );
 
@@ -190,6 +202,8 @@ namespace sw
 		std::scoped_lock<mutex> lock{ _mutex };
 		_uniqueActiveRequest.erase( pathStr );
 		_mapInFlightCallback.erase( pathStr );
+		// 이미 실행 중인 워커가 나중에 완료돼도 무시되도록 세대를 올린다.
+		++_mapRequestGeneration[pathStr];
 
 		for ( auto it = _listPendingRequest.begin(); it != _listPendingRequest.end(); ++it )
 		{

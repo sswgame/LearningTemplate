@@ -35,7 +35,7 @@ namespace sw
 		/** @brief 트랜잭션을 취소하고 수집된 명령들을 버립니다. */
 		void cancelTransaction();
 		/** @brief 트랜잭션 진행 여부를 반환합니다. */
-		bool isInsideTransaction() const { return _bInsideTransaction != 0; }
+		bool isInsideTransaction() const { return _transactionDepth != 0; }
 		/** @brief 동일한 coalesceKey로 연속 push될 때 최초 undo를 보존하고 최신 redo로 병합합니다. */
 		void pushCoalesce( string_view coalesceKey, Command cmd );
 
@@ -70,6 +70,7 @@ namespace sw
 		string			_lastCoalesceKey;
 		string			_empty;
 		size_t			_index{ 0 };
-		uint8			_bInsideTransaction{ 0 };
+		/** @brief 중첩 트랜잭션 깊이. 최외곽(0 으로 복귀)에서만 하나의 복합 커맨드로 커밋합니다. */
+		uint32 _transactionDepth{ 0 };
 	};
 } // namespace sw

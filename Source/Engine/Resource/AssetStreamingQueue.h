@@ -78,7 +78,13 @@ namespace sw
 		unordered_map<string, bool>								   _mapLoadedAsset;
 		unordered_set<string>									   _uniqueActiveRequest;
 		unordered_map<string, vector<OnStreamingCompleteDelegate>> _mapInFlightCallback;
-		ConcurrentQueue<CompletedItem, 1024>					   _queueCompleted;
-		bool													   _bInitialized;
+		/**
+		 * @brief 경로별 요청 세대. 취소 후 즉시 재요청하면 세대가 올라갑니다.
+		 * @details 취소해도 이미 큐에 들어간 워커 태스크는 계속 실행됩니다. 세대가 없으면
+		 *          그 오래된 태스크가 완료되면서 새 요청의 콜백을 대신 소비해 버립니다.
+		 */
+		unordered_map<string, uint64>		 _mapRequestGeneration;
+		ConcurrentQueue<CompletedItem, 1024> _queueCompleted;
+		bool								 _bInitialized;
 	};
 } // namespace sw

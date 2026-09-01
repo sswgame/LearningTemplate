@@ -20,13 +20,13 @@ SW_TEST_CASE( CommandStack, PushUndoRedoAndBranch )
 	CommandStack::Command inc;
 	inc._label = "inc";
 	inc._redo  = SW_DELEGATE_LAMBDA( Delegate<void()>, [&value]()
-	 {
-		 ++value;
-	 } );
+	{
+		++value;
+	} );
 	inc._undo  = SW_DELEGATE_LAMBDA( Delegate<void()>, [&value]()
-	 {
-		 --value;
-	 } );
+	{
+		--value;
+	} );
 	inc._redo();
 	stack.push( std::move( inc ) );
 
@@ -45,13 +45,13 @@ SW_TEST_CASE( CommandStack, PushUndoRedoAndBranch )
 	CommandStack::Command dec;
 	dec._label = "dec";
 	dec._redo  = SW_DELEGATE_LAMBDA( Delegate<void()>, [&value]()
-	 {
-		 --value;
-	 } );
+	{
+		--value;
+	} );
 	dec._undo  = SW_DELEGATE_LAMBDA( Delegate<void()>, [&value]()
-	 {
-		 ++value;
-	 } );
+	{
+		++value;
+	} );
 	stack.undo();
 	dec._redo();
 	stack.push( std::move( dec ) );
@@ -82,9 +82,9 @@ SW_TEST_CASE( CommandStack, GlobalSingletonAndMultiStepChain )
 		sw::CommandStack::Command cmd;
 		cmd._label = "step_" + sw::to_string( cmdIndex );
 		cmd._redo  = SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [&count]()
-		 { ++count; } );
+		{ ++count; } );
 		cmd._undo  = SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [&count]()
-		 { --count; } );
+		{ --count; } );
 		cmd._redo();
 		globalStack.push( std::move( cmd ) );
 	}
@@ -113,6 +113,58 @@ SW_TEST_CASE( CommandStack, GlobalSingletonAndMultiStepChain )
 /**
  * @brief [CommandStack] 복합 트랜잭션 (Compound Transaction) begin/end/cancel 검증
  */
+/**
+ * @brief [CommandStack] 중첩 트랜잭션은 최외곽에서 하나로 커밋된다.
+ * @details 예전에는 1비트 플래그라 안쪽 begin 이 바깥이 쌓아둔 목록을 clear 하고,
+ *          안쪽 end 가 플래그를 풀어 바깥 Undo 기록이 통째로 유실됐다.
+ */
+SW_TEST_CASE( CommandStack, NestedTransactionCommitsOnceAtOutermost )
+{
+	CommandStack stack;
+	int32		 value{ 0 };
+
+	const auto pushAdd = [&stack, &value]( int32 amount )
+	{
+		CommandStack::Command cmd;
+		cmd._label = "add";
+		cmd._redo  = SW_DELEGATE_LAMBDA( Delegate<void()>, [&value, amount]()
+		{
+			value += amount;
+		} );
+		cmd._undo  = SW_DELEGATE_LAMBDA( Delegate<void()>, [&value, amount]()
+		{
+			value -= amount;
+		} );
+		cmd._redo();
+		stack.push( std::move( cmd ) );
+	};
+
+	stack.beginTransaction( "Outer" );
+	pushAdd( 1 );
+
+	stack.beginTransaction( "Inner" ); // 중첩 진입 — 여기서 커밋되면 안 된다
+	SW_EXPECT_TRUE( stack.isInsideTransaction() );
+	pushAdd( 2 );
+	stack.endTransaction(); // 안쪽 종료 — 아직 트랜잭션 안이어야 한다
+	SW_EXPECT_TRUE( stack.isInsideTransaction() );
+	SW_EXPECT_FALSE( stack.canUndo() ); // 최외곽이 끝나기 전엔 히스토리에 없어야 한다
+
+	pushAdd( 4 );
+	stack.endTransaction();
+
+	SW_EXPECT_FALSE( stack.isInsideTransaction() );
+	SW_EXPECT_EQUAL( 7, value );
+
+	// 세 커맨드가 하나의 복합 커맨드로 합쳐져야 한다: 한 번의 undo 로 전부 되돌아간다.
+	SW_EXPECT_TRUE( stack.canUndo() );
+	stack.undo();
+	SW_EXPECT_EQUAL( 0, value );
+	SW_EXPECT_FALSE( stack.canUndo() );
+
+	stack.redo();
+	SW_EXPECT_EQUAL( 7, value );
+};
+
 SW_TEST_CASE( CommandStack, CompoundTransaction )
 {
 	CommandStack stack;
@@ -125,26 +177,26 @@ SW_TEST_CASE( CommandStack, CompoundTransaction )
 	CommandStack::Command cmd1;
 	cmd1._label = "op1";
 	cmd1._redo	= SW_DELEGATE_LAMBDA( Delegate<void()>, [&valA]()
-	 {
-		 valA += 5;
-	 } );
+	{
+		valA += 5;
+	} );
 	cmd1._undo	= SW_DELEGATE_LAMBDA( Delegate<void()>, [&valA]()
-	 {
-		 valA -= 5;
-	 } );
+	{
+		valA -= 5;
+	} );
 	cmd1._redo();
 	stack.push( std::move( cmd1 ) );
 
 	CommandStack::Command cmd2;
 	cmd2._label = "op2";
 	cmd2._redo	= SW_DELEGATE_LAMBDA( Delegate<void()>, [&valB]()
-	 {
-		 valB *= 2;
-	 } );
+	{
+		valB *= 2;
+	} );
 	cmd2._undo	= SW_DELEGATE_LAMBDA( Delegate<void()>, [&valB]()
-	 {
-		 valB /= 2;
-	 } );
+	{
+		valB /= 2;
+	} );
 	cmd2._redo();
 	stack.push( std::move( cmd2 ) );
 
@@ -174,13 +226,13 @@ SW_TEST_CASE( CommandStack, CompoundTransaction )
 	CommandStack::Command cmd3;
 	cmd3._label = "op3";
 	cmd3._redo	= SW_DELEGATE_LAMBDA( Delegate<void()>, [&valA]()
-	 {
-		 valA += 100;
-	 } );
+	{
+		valA += 100;
+	} );
 	cmd3._undo	= SW_DELEGATE_LAMBDA( Delegate<void()>, [&valA]()
-	 {
-		 valA -= 100;
-	 } );
+	{
+		valA -= 100;
+	} );
 	cmd3._redo();
 	stack.push( std::move( cmd3 ) );
 	stack.cancelTransaction();
@@ -207,13 +259,13 @@ SW_TEST_CASE( CommandStack, PushCoalesce )
 		CommandStack::Command cmd;
 		cmd._label = "SliderDrag";
 		cmd._redo  = SW_DELEGATE_LAMBDA( Delegate<void()>, [&sliderValue, targetVal]()
-		 {
-			 sliderValue = targetVal;
-		 } );
+		{
+			sliderValue = targetVal;
+		} );
 		cmd._undo  = SW_DELEGATE_LAMBDA( Delegate<void()>, [&sliderValue, initialVal]()
-		 {
-			 sliderValue = initialVal;
-		 } );
+		{
+			sliderValue = initialVal;
+		} );
 		cmd._redo();
 		stack.pushCoalesce( "Transform_PosX", std::move( cmd ) );
 	}
@@ -246,9 +298,9 @@ SW_TEST_CASE( CommandStack, JumpToAndHistoryInspection )
 		CommandStack::Command cmd;
 		cmd._label = "step_" + sw::to_string( cmdIndex );
 		cmd._redo  = SW_DELEGATE_LAMBDA( Delegate<void()>, [&value, cmdIndex]()
-		 { value = cmdIndex; } );
+		{ value = cmdIndex; } );
 		cmd._undo  = SW_DELEGATE_LAMBDA( Delegate<void()>, [&value, cmdIndex]()
-		 { value = cmdIndex - 1; } );
+		{ value = cmdIndex - 1; } );
 		cmd._redo();
 		stack.push( std::move( cmd ) );
 	}
@@ -310,15 +362,15 @@ SW_TEST_CASE( CommandStack, GameObjectBinarySnapshotUndoRedoTransactions )
 		CommandStack::Command cmd;
 		cmd._label = "MoveStep_" + to_string( stepIndex );
 		cmd._redo  = SW_DELEGATE_LAMBDA( Delegate<void()>, [pObject, afterBytes]()
-		 {
-			 string parentName;
-			 ObjectStateSerializer::loadFromBinaryBuffer( pObject, afterBytes.data(), afterBytes.size(), parentName );
-		 } );
+		{
+			string parentName;
+			ObjectStateSerializer::loadFromBinaryBuffer( pObject, afterBytes.data(), afterBytes.size(), parentName );
+		} );
 		cmd._undo  = SW_DELEGATE_LAMBDA( Delegate<void()>, [pObject, beforeBytes]()
-		 {
-			 string parentName;
-			 ObjectStateSerializer::loadFromBinaryBuffer( pObject, beforeBytes.data(), beforeBytes.size(), parentName );
-		 } );
+		{
+			string parentName;
+			ObjectStateSerializer::loadFromBinaryBuffer( pObject, beforeBytes.data(), beforeBytes.size(), parentName );
+		} );
 
 		stack.push( std::move( cmd ) );
 	}

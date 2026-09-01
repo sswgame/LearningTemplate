@@ -9,7 +9,7 @@ namespace sw
 		if ( cmd._undo.isBound() == false || cmd._redo.isBound() == false )
 			return;
 
-		if ( _bInsideTransaction != 0 )
+		if ( _transactionDepth != 0 )
 		{
 			_listPendingTransactionCommand.push_back( std::move( cmd ) );
 			return;
@@ -34,17 +34,26 @@ namespace sw
 
 	void CommandStack::beginTransaction( string_view label )
 	{
-		_bInsideTransaction = 1;
-		_transactionLabel	= label;
-		_listPendingTransactionCommand.clear();
+		// 중첩 호출은 최외곽 트랜잭션에 합류시킨다. 여기서 목록을 비우면 바깥이 쌓아둔
+		// Undo 기록이 통째로 사라진다.
+		if ( _transactionDepth == 0 )
+		{
+			_transactionLabel = label;
+			_listPendingTransactionCommand.clear();
+		}
+		++_transactionDepth;
 	}
 
 	void CommandStack::endTransaction()
 	{
-		if ( _bInsideTransaction == 0 )
+		if ( _transactionDepth == 0 )
 			return;
 
-		_bInsideTransaction = 0;
+		// 최외곽이 끝날 때만 실제로 커밋한다.
+		--_transactionDepth;
+		if ( _transactionDepth != 0 )
+			return;
+
 		if ( _listPendingTransactionCommand.empty() )
 			return;
 
@@ -86,7 +95,8 @@ namespace sw
 
 	void CommandStack::cancelTransaction()
 	{
-		_bInsideTransaction = 0;
+		// 취소는 중첩 깊이와 무관하게 전체 트랜잭션을 버린다.
+		_transactionDepth = 0;
 		_transactionLabel.clear();
 		_listPendingTransactionCommand.clear();
 	}
@@ -96,7 +106,7 @@ namespace sw
 		if ( cmd._undo.isBound() == false || cmd._redo.isBound() == false )
 			return;
 
-		if ( _bInsideTransaction != 0 )
+		if ( _transactionDepth != 0 )
 		{
 			_listPendingTransactionCommand.push_back( std::move( cmd ) );
 			return;
@@ -156,8 +166,8 @@ namespace sw
 		_listPendingTransactionCommand.clear();
 		_transactionLabel.clear();
 		_lastCoalesceKey.clear();
-		_index				= 0;
-		_bInsideTransaction = 0;
+		_index			  = 0;
+		_transactionDepth = 0;
 	}
 
 	const string& CommandStack::peekUndoLabel() const
