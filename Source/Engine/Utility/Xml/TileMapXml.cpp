@@ -18,17 +18,9 @@ namespace sw
 
 		string text;
 		string absPath;
-		if ( FileUtil::fileExists( path ) )
+		if ( ResourceUtil::readTextResource( path, text, &absPath ) == false && FileUtil::readTextFile( path, text ) == false )
 		{
-			if ( FileUtil::readTextFile( path, text ) == false )
-			{
-				SW_LOG_ERROR( "Not found: %#", path );
-				return false;
-			}
-		}
-		else if ( ResourceUtil::readTextResource( path, text, &absPath ) == false )
-		{
-			SW_LOG_ERROR( "Not found: %#", path );
+			SW_LOG_ERROR( "TileMap file not found: %#", path );
 			return false;
 		}
 

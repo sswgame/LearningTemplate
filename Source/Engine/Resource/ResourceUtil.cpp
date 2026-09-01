@@ -338,6 +338,22 @@ namespace sw
 		return FileUtil::readFile( relativePath, outBytes );
 	}
 
+	bool ResourceUtil::hasResource( string_view relativePath )
+	{
+		if ( relativePath.empty() )
+			return false;
+
+		const string normalizedKey = FileUtil::normalizePath( relativePath );
+		if ( _s_packManager.hasFile( normalizedKey ) )
+			return true;
+
+		const string absPath = getResourcePath( relativePath );
+		if ( absPath.empty() == false && FileUtil::fileExists( absPath ) )
+			return true;
+
+		return FileUtil::fileExists( relativePath );
+	}
+
 	bool ResourceUtil::mountPack( string_view packFilePath, int32 priority )
 	{
 		clearPathCache();

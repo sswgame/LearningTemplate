@@ -252,6 +252,7 @@ namespace sw
 		RHIDescriptorIndex							  _gpuCullCbIndex;
 		unordered_map<string, RHIPipelineStateHandle> _mapEnginePso;
 		unordered_map<uint64, RHIPipelineStateHandle> _mapMaterialPassPso;
+		unordered_map<hashed_string, uint32>		  _mapPassNameToIndex;
 		mutex										  _psoMutex;
 		uint32										  _transientWidth;
 		uint32										  _transientHeight;

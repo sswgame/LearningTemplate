@@ -393,11 +393,7 @@ namespace sw
 		if ( FileUtil::hasExtension( path, ".bin" ) )
 			return loadBinary( path );
 
-		string absBinPath = ResourceUtil::getResourcePath( binPath );
-		if ( absBinPath.empty() )
-			absBinPath = binPath;
-
-		if ( FileUtil::fileExists( absBinPath ) && loadBinary( binPath ) )
+		if ( ResourceUtil::hasResource( binPath ) && loadBinary( binPath ) )
 			return true;
 
 		return loadXml( path );

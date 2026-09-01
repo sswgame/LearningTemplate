@@ -75,7 +75,7 @@ namespace sw
 		}
 
 		string text;
-		if ( FileUtil::readTextFile( filePath, text ) == false )
+		if ( ResourceUtil::readTextResource( filePath, text ) == false && FileUtil::readTextFile( filePath, text ) == false )
 		{
 			SW_LOG_WARNING( "Failed to read language file: %#", string( filePath ).c_str() );
 			return false;
@@ -327,12 +327,7 @@ namespace sw
 			vector<uint8> tableBuffer;
 			if ( pTable != nullptr )
 			{
-				const string tempFile = FileUtil::joinPath( FileUtil::getTempDirectory(), "temp_st_save.bin" );
-				if ( pTable->saveToBinaryFile( tempFile ) )
-				{
-					FileUtil::readFile( tempFile, tableBuffer );
-					FileUtil::removeFile( tempFile );
-				}
+				pTable->saveToBinaryBuffer( tableBuffer );
 			}
 
 			const uint32 tableSize = static_cast<uint32>( tableBuffer.size() );
@@ -349,7 +344,12 @@ namespace sw
 	bool LocalizationManager::loadFromBinaryPack( string_view filePath )
 	{
 		vector<uint8> buffer;
-		if ( FileUtil::readFile( filePath, buffer ) == false || buffer.size() < 12 )
+		bool		  bRead = ResourceUtil::readBinaryResource( filePath, buffer );
+		if ( bRead == false )
+		{
+			bRead = FileUtil::readFile( filePath, buffer );
+		}
+		if ( bRead == false || buffer.size() < 12 )
 		{
 			return false;
 		}
@@ -404,15 +404,10 @@ namespace sw
 
 			if ( tableSize > 0 )
 			{
-				const string tempFile = FileUtil::joinPath( FileUtil::getTempDirectory(), "temp_st_load.bin" );
-				if ( FileUtil::writeFile( tempFile, pPtr, tableSize ) )
+				auto pTable = make_unique<StringTable>();
+				if ( pTable->loadFromBinaryBuffer( pPtr, tableSize ) )
 				{
-					auto pTable = make_unique<StringTable>();
-					if ( pTable->loadFromBinaryFile( tempFile ) )
-					{
-						registerLanguageTable( langCode, std::move( pTable ) );
-					}
-					FileUtil::removeFile( tempFile );
+					registerLanguageTable( langCode, std::move( pTable ) );
 				}
 			}
 

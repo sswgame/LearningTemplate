@@ -100,7 +100,7 @@ namespace sw
 		else
 		{
 			// 동기 즉시 폴백
-			const bool bExists		 = FileUtil::fileExists( pathStr );
+			const bool bExists		 = ResourceUtil::hasResource( pathStr );
 			_mapLoadedAsset[pathStr] = bExists;
 			_uniqueActiveRequest.erase( pathStr );
 
@@ -145,12 +145,7 @@ namespace sw
 	void AssetStreamingQueue::processAssetTask( const TaskArgs& args )
 	{
 		const string pathStr = args.get<string>( 0 );
-		bool		 bExists = ResourceUtil::getPackManager().hasFile( pathStr );
-		if ( bExists == false )
-		{
-			const string absPath = ResourceUtil::getResourcePath( pathStr );
-			bExists				 = ( absPath.empty() == false ) ? FileUtil::fileExists( absPath ) : FileUtil::fileExists( pathStr );
-		}
+		const bool	 bExists = ResourceUtil::hasResource( pathStr );
 
 		std::scoped_lock<mutex> innerLock{ _mutex };
 		_mapLoadedAsset[pathStr] = bExists;

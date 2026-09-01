@@ -150,7 +150,7 @@ namespace sw
 			static bool loadWavPcm( string_view absPath, PcmClip& out )
 			{
 				vector<uint8> listFile;
-				if ( FileUtil::readFile( absPath, listFile ) == false )
+				if ( ResourceUtil::readBinaryResource( absPath, listFile ) == false && FileUtil::readFile( absPath, listFile ) == false )
 					return false;
 
 				return parseWavPcmMemory( listFile.data(), listFile.size(), out );
@@ -230,10 +230,14 @@ namespace sw
 				return true;
 			}
 
-			static bool loadClip( string_view absPath, PcmClip& out )
+			static bool loadClip( string_view path, PcmClip& out )
 			{
-				if ( FileUtil::hasExtension( absPath, ".wav" ) )
-					return loadWavPcm( absPath, out );
+				if ( FileUtil::hasExtension( path, ".wav" ) )
+					return loadWavPcm( path, out );
+
+				string absPath = ResourceUtil::getResourcePath( path );
+				if ( absPath.empty() )
+					absPath = string( path );
 				return loadViaMediaFoundation( absPath, out );
 			}
 		};
@@ -250,14 +254,24 @@ namespace sw
 	struct XAudio2SystemImpl
 	{
 #if defined( SW_PLATFORM_WINDOWS )
+		static constexpr size_t											  kMaxIdleVoices = 32;
 		IXAudio2*														  _pXAudio{ nullptr };
 		IXAudio2MasteringVoice*											  _pMasterVoice{ nullptr };
 		vector<XAudio2SystemInternal::VoiceBuffer>						  _listActiveVoice;
+		vector<XAudio2SystemInternal::VoiceBuffer>						  _listIdleVoice;
 		IXAudio2SourceVoice*											  _pMusicVoice{ nullptr };
 		shared_ptr<XAudio2SystemInternal::PcmClip>						  _pMusicClip{ nullptr };
 		unordered_map<string, shared_ptr<XAudio2SystemInternal::PcmClip>> _mapClipCache;
 		mutex															  _clipCacheMutex;
 		mutex															  _voiceMutex;
+
+		static bool isFormatEqual( const WAVEFORMATEX& a, const WAVEFORMATEX& b )
+		{
+			return a.wFormatTag == b.wFormatTag &&
+				   a.nChannels == b.nChannels &&
+				   a.nSamplesPerSec == b.nSamplesPerSec &&
+				   a.wBitsPerSample == b.wBitsPerSample;
+		}
 
 		shared_ptr<XAudio2SystemInternal::PcmClip> getOrLoadClip( string_view absPath )
 		{
@@ -384,6 +398,15 @@ namespace sw
 			}
 		}
 		_impl->_listActiveVoice.clear();
+		for ( XAudio2SystemInternal::VoiceBuffer& idleBuffer : _impl->_listIdleVoice )
+		{
+			if ( idleBuffer._pVoice != nullptr )
+			{
+				idleBuffer._pVoice->Stop( 0 );
+				idleBuffer._pVoice->DestroyVoice();
+			}
+		}
+		_impl->_listIdleVoice.clear();
 		if ( _impl->_pMasterVoice != nullptr )
 		{
 			_impl->_pMasterVoice->DestroyVoice();
@@ -414,7 +437,7 @@ namespace sw
 	}
 
 	/**
-	 * @brief 매 프레임 재생이 종료된(큐 버퍼가 0이 된) 원샷 사운드 보이스를 감지하여 정리합니다.
+	 * @brief 매 프레임 재생이 종료된(큐 버퍼가 0이 된) 원샷 사운드 보이스를 감지하여 정리하거나 유휴 풀에 보관합니다.
 	 */
 	void XAudio2System::update( float32 )
 	{
@@ -438,7 +461,16 @@ namespace sw
 			v._pVoice->GetState( &state );
 			if ( state.BuffersQueued == 0 )
 			{
-				v._pVoice->DestroyVoice();
+				v._pVoice->Stop( 0 );
+				v._pVoice->FlushSourceBuffers();
+				if ( _impl->_listIdleVoice.size() < XAudio2SystemImpl::kMaxIdleVoices )
+				{
+					_impl->_listIdleVoice.push_back( std::move( v ) );
+				}
+				else
+				{
+					v._pVoice->DestroyVoice();
+				}
 				v = std::move( voices.back() );
 				voices.pop_back();
 				continue;
@@ -624,11 +656,30 @@ namespace sw
 			return;
 
 		IXAudio2SourceVoice* pVoice{ nullptr };
-		HRESULT				 hr = _impl->_pXAudio->CreateSourceVoice( &pVoice, &pClip->_format );
-		if ( FAILED( hr ) || pVoice == nullptr )
+		if ( loop == false )
 		{
-			SW_LOG_WARNING( "CreateSourceVoice failed (0x%#)", static_cast<uint32>( hr ) );
-			return;
+			for ( size_t idx = 0; idx < _impl->_listIdleVoice.size(); ++idx )
+			{
+				if ( _impl->_listIdleVoice[idx]._pClip != nullptr &&
+					 XAudio2SystemImpl::isFormatEqual( _impl->_listIdleVoice[idx]._pClip->_format, pClip->_format ) )
+				{
+					pVoice					   = _impl->_listIdleVoice[idx]._pVoice;
+					_impl->_listIdleVoice[idx] = std::move( _impl->_listIdleVoice.back() );
+					_impl->_listIdleVoice.pop_back();
+					break;
+				}
+			}
+		}
+
+		HRESULT hr = S_OK;
+		if ( pVoice == nullptr )
+		{
+			hr = _impl->_pXAudio->CreateSourceVoice( &pVoice, &pClip->_format );
+			if ( FAILED( hr ) || pVoice == nullptr )
+			{
+				SW_LOG_WARNING( "CreateSourceVoice failed (0x%#)", static_cast<uint32>( hr ) );
+				return;
+			}
 		}
 
 		XAUDIO2_BUFFER audioBuffer{};
@@ -684,12 +735,9 @@ namespace sw
 			return false;
 
 #if defined( SW_PLATFORM_WINDOWS )
-		string abs = ResourceUtil::getResourcePath( path );
-		if ( abs.empty() )
-			abs = string( path );
-		if ( FileUtil::fileExists( abs ) == false )
+		if ( ResourceUtil::hasResource( path ) == false )
 		{
-			SW_LOG_WARNING( "File not found: %#", abs );
+			SW_LOG_WARNING( "Audio resource not found: %#", string( path ) );
 			return false;
 		}
 
@@ -707,7 +755,7 @@ namespace sw
 			.emplaceTask(
 				"XAudio2Play",
 				SW_DELEGATE_METHOD( TaskArgsDelegate, &XAudio2System::playDecodedClipTask, this ),
-				MakeTaskArgs( abs, loop, requestedPath ) )
+				MakeTaskArgs( requestedPath, loop, requestedPath ) )
 			.submit();
 
 		if ( loop )

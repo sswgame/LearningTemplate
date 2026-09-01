@@ -10,6 +10,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Serialization/Core/SchemaMigrate.h"
 #include "Engine/Serialization/Core/SerializerUtil.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
@@ -46,7 +47,7 @@ namespace sw
 	{
 		if ( bReadMode )
 		{
-			if ( FileUtil::readFile( fileName, _listBuffer ) )
+			if ( ResourceUtil::readBinaryResource( fileName, _listBuffer ) )
 			{
 				_pData	  = _listBuffer.data();
 				_dataSize = _listBuffer.size();

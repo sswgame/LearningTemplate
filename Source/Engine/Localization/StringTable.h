@@ -18,6 +18,8 @@ namespace sw
 		bool		loadFromResource( string_view assetRelativePath );
 		bool		saveToBinaryFile( string_view filePath ) const;
 		bool		loadFromBinaryFile( string_view filePath );
+		bool		saveToBinaryBuffer( vector<uint8>& outBytes ) const;
+		bool		loadFromBinaryBuffer( const uint8* pData, size_t size );
 		const utf8* getString( const hashed_string& key ) const;
 		const utf8* getString( const hashed_string& key, const utf8* pDefaultText ) const;
 		bool		contains( const hashed_string& key ) const;

@@ -12,6 +12,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Serialization/Core/BinaryStream.h"
 #include "Engine/Serialization/Core/Serializer.h"
 #include "Engine/Serialization/Format/JsonSerializer.h"
@@ -403,7 +404,9 @@ namespace sw
 	bool ObjectStateSerializer::loadFromXmlFile( GameObject* pGameObject, string_view filePath )
 	{
 		vector<uint8> listData;
-		if ( FileUtil::readFile( string{ filePath }, listData ) == false || listData.empty() )
+		if ( ResourceUtil::readBinaryResource( filePath, listData ) == false && FileUtil::readFile( string{ filePath }, listData ) == false )
+			return false;
+		if ( listData.empty() )
 			return false;
 
 		string_view xmlStr( reinterpret_cast<const utf8*>( listData.data() ), listData.size() );

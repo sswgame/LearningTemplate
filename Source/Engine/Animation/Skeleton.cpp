@@ -7,7 +7,7 @@ namespace sw
 	int32 Skeleton::addBone( string_view name, int32 parentIndex, const float4x4& invReferencePose, const float4x4& boneSpaceTransform )
 	{
 		Bone bone{};
-		bone._name					  = string{ name };
+		bone._name					  = hashed_string( name );
 		bone._parentIndex			  = parentIndex;
 		bone._invReferencePose		  = invReferencePose;
 		bone._boneSpaceTransform	  = boneSpaceTransform;
@@ -20,6 +20,11 @@ namespace sw
 	}
 
 	int32 Skeleton::findBoneIndex( string_view name ) const
+	{
+		return findBoneIndex( hashed_string( name ) );
+	}
+
+	int32 Skeleton::findBoneIndex( const hashed_string& name ) const
 	{
 		for ( size_t index = 0; index < _listBone.size(); ++index )
 		{

@@ -15,9 +15,14 @@ namespace sw
 	{
 		const vector<RenderGraphPassDesc>& listPass = _pipelineResource.getGraphPass();
 		_graph.clear();
+		_mapPassNameToIndex.clear();
 
-		for ( const RenderGraphPassDesc& pass : listPass )
+		for ( uint32 index = 0; index < static_cast<uint32>( listPass.size() ); ++index )
 		{
+			const RenderGraphPassDesc& pass = listPass[index];
+			const hashed_string		   nameHash( pass._name.c_str() );
+			_mapPassNameToIndex[nameHash] = index;
+
 			vector<hashed_string> listInput;
 			vector<hashed_string> listOutput;
 			for ( const string& in : pass._listInput )
@@ -32,7 +37,7 @@ namespace sw
 			RenderGraphPassExecuteFn execute =
 				SW_DELEGATE_METHOD( RenderGraphPassExecuteFn, &FrameRenderer::onGraphPassExecute, this );
 
-			_graph.addPass( hashed_string( pass._name.c_str() ), std::move( listInput ), std::move( listOutput ), std::move( execute ) );
+			_graph.addPass( nameHash, std::move( listInput ), std::move( listOutput ), std::move( execute ) );
 		}
 
 		if ( _graph.compile() == false )
@@ -50,16 +55,15 @@ namespace sw
 		if ( ctx._pCmdList != nullptr )
 			_pCmd = ctx._pCmdList;
 
-		const utf8* pPassType = "";
-		const utf8* pPassName = ctx._passName.c_str() != nullptr ? ctx._passName.c_str() : "";
-		for ( const RenderGraphPassDesc& pass : _pipelineResource.getGraphPass() )
+		const vector<RenderGraphPassDesc>& listPass	 = _pipelineResource.getGraphPass();
+		const utf8*						   pPassType = "";
+		const utf8*						   pPassName = ctx._passName.c_str() != nullptr ? ctx._passName.c_str() : "";
+		const auto						   iter		 = _mapPassNameToIndex.find( ctx._passName );
+		if ( iter != _mapPassNameToIndex.end() && iter->second < listPass.size() )
 		{
-			if ( hashed_string( pass._name.c_str() ) == ctx._passName )
-			{
-				pPassType = pass._type.c_str();
-				pPassName = pass._name.c_str();
-				break;
-			}
+			const RenderGraphPassDesc& pass = listPass[iter->second];
+			pPassType						= pass._type.c_str();
+			pPassName						= pass._name.c_str();
 		}
 		executePass( pPassType, pPassName, _pBoundMaterial );
 

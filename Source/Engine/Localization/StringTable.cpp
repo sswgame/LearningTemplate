@@ -43,7 +43,7 @@ namespace sw
 		}
 
 		string text;
-		if ( FileUtil::readTextFile( filePath, text ) == false )
+		if ( ResourceUtil::readTextResource( filePath, text ) == false && FileUtil::readTextFile( filePath, text ) == false )
 		{
 			SW_LOG_WARNING( "Failed to open StringTable file: %#", filePath.c_str() );
 			return false;
@@ -57,17 +57,17 @@ namespace sw
 		return bSuccess;
 	}
 
-	bool StringTable::saveToBinaryFile( string_view filePath ) const
+	bool StringTable::saveToBinaryBuffer( vector<uint8>& outBytes ) const
 	{
 		std::shared_lock<std::shared_mutex> lock( _mutex );
 
-		vector<uint8> buffer;
-		buffer.reserve( 16 + _mapTable.size() * 32 );
+		outBytes.clear();
+		outBytes.reserve( 16 + _mapTable.size() * 32 );
 
 		auto appendBytes = [&]( const void* pSrc, size_t numBytes )
 		{
 			const uint8* pByteSrc = static_cast<const uint8*>( pSrc );
-			buffer.insert( buffer.end(), pByteSrc, pByteSrc + numBytes );
+			outBytes.insert( outBytes.end(), pByteSrc, pByteSrc + numBytes );
 		};
 
 		const uint32 magic	 = kStringTableBinaryMagic;
@@ -90,19 +90,26 @@ namespace sw
 			}
 		}
 
+		return true;
+	}
+
+	bool StringTable::saveToBinaryFile( string_view filePath ) const
+	{
+		vector<uint8> buffer;
+		if ( saveToBinaryBuffer( buffer ) == false )
+			return false;
 		return FileUtil::writeFile( filePath, buffer.data(), buffer.size() );
 	}
 
-	bool StringTable::loadFromBinaryFile( string_view filePath )
+	bool StringTable::loadFromBinaryBuffer( const uint8* pData, size_t size )
 	{
-		vector<uint8> buffer;
-		if ( FileUtil::readFile( filePath, buffer ) == false || buffer.size() < 12 )
+		if ( pData == nullptr || size < 12 )
 		{
 			return false;
 		}
 
-		const uint8* pPtr = buffer.data();
-		const uint8* pEnd = buffer.data() + buffer.size();
+		const uint8* pPtr = pData;
+		const uint8* pEnd = pData + size;
 
 		uint32 magic{ 0 };
 		uint32 version{ 0 };
@@ -117,7 +124,7 @@ namespace sw
 
 		if ( magic != kStringTableBinaryMagic || version != kStringTableBinaryVersion )
 		{
-			SW_LOG_WARNING( "Invalid StringTable binary format or version in %#", string( filePath ).c_str() );
+			SW_LOG_WARNING( "Invalid StringTable binary format or version." );
 			return false;
 		}
 
@@ -128,7 +135,7 @@ namespace sw
 		{
 			if ( pPtr + sizeof( uint64 ) + sizeof( uint32 ) > pEnd )
 			{
-				SW_LOG_WARNING( "Corrupted StringTable binary file in %#", string( filePath ).c_str() );
+				SW_LOG_WARNING( "Corrupted StringTable binary buffer." );
 				return false;
 			}
 
@@ -141,7 +148,7 @@ namespace sw
 
 			if ( pPtr + strLen > pEnd )
 			{
-				SW_LOG_WARNING( "Corrupted StringTable entry in %#", string( filePath ).c_str() );
+				SW_LOG_WARNING( "Corrupted StringTable entry in binary buffer." );
 				return false;
 			}
 
@@ -151,8 +158,20 @@ namespace sw
 			_mapTable[keyHash] = std::move( valueStr );
 		}
 
-		SW_LOG_INFO( "Loaded %# strings from binary %#.", _mapTable.size(), string( filePath ).c_str() );
 		return true;
+	}
+
+	bool StringTable::loadFromBinaryFile( string_view filePath )
+	{
+		vector<uint8> buffer;
+		if ( ( ResourceUtil::readBinaryResource( filePath, buffer ) == false && FileUtil::readFile( filePath, buffer ) == false ) || buffer.size() < 12 )
+		{
+			return false;
+		}
+		const bool bLoaded = loadFromBinaryBuffer( buffer.data(), buffer.size() );
+		if ( bLoaded )
+			SW_LOG_INFO( "Loaded %# strings from binary %#.", _mapTable.size(), string( filePath ).c_str() );
+		return bLoaded;
 	}
 
 	bool StringTable::loadFromJsonText( string_view jsonText )
@@ -249,6 +268,17 @@ namespace sw
 
 	bool StringTable::loadFromResource( string_view assetRelativePath )
 	{
+		if ( FileUtil::hasExtension( assetRelativePath, ".bin" ) )
+		{
+			vector<uint8> buffer;
+			if ( ResourceUtil::readBinaryResource( assetRelativePath, buffer ) == false )
+			{
+				SW_LOG_WARNING( "Failed to read binary resource StringTable: %#", assetRelativePath );
+				return false;
+			}
+			return loadFromBinaryBuffer( buffer.data(), buffer.size() );
+		}
+
 		string text;
 		string absPath;
 		if ( ResourceUtil::readTextResource( assetRelativePath, text, &absPath ) == false )

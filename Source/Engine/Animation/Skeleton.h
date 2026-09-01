@@ -4,6 +4,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/MatrixMath.h"
+#include "Core/String/hashed_string.h"
 
 namespace sw
 {
@@ -12,11 +13,11 @@ namespace sw
 	 */
 	struct SW_API Bone
 	{
-		string	 _name;
-		int32	 _parentIndex{ -1 };
-		float4x4 _invReferencePose{ float4x4::Identity };
-		float4x4 _boneSpaceTransform{ float4x4::Identity };
-		float4x4 _characterSpaceTransform{ float4x4::Identity };
+		hashed_string _name;
+		int32		  _parentIndex{ -1 };
+		float4x4	  _invReferencePose{ float4x4::Identity };
+		float4x4	  _boneSpaceTransform{ float4x4::Identity };
+		float4x4	  _characterSpaceTransform{ float4x4::Identity };
 	};
 
 	/**
@@ -34,6 +35,7 @@ namespace sw
 
 		int32 addBone( string_view name, int32 parentIndex, const float4x4& invReferencePose, const float4x4& boneSpaceTransform );
 		int32 findBoneIndex( string_view name ) const;
+		int32 findBoneIndex( const hashed_string& name ) const;
 
 		void setBoneSpaceTransform( int32 boneIndex, const float4x4& boneSpaceTransform );
 		void updateCharacterSpaceTransforms();

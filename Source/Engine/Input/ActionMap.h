@@ -72,14 +72,35 @@ namespace sw
 		inline constexpr float32	 kNeverPressedSentinel	 = 1.0e9f;
 	} // namespace ActionMapDefaults
 
+	/// @brief XML 레이어: 우선순위, enabled, blockLower, alwaysOn
+	struct LayerDef
+	{
+		string				   _name;
+		int32				   _priority;
+		uint8				   _bEnabled	: 1;
+		uint8				   _bBlockLower : 1; /**< 켜져 있으면 낮은 우선순위 레이어를 비활성화합니다. */
+		uint8				   _bAlwaysOn	: 1; /**< enableOnlyLayer가 끄지 않습니다. */
+		[[maybe_unused]] uint8 _reserved	: 5;
+
+		/** @brief 기본 레이어 정의입니다. */
+		LayerDef()
+			: _name{}
+			, _priority{ 0 }
+			, _bEnabled{ SW_TRUE }
+			, _bBlockLower{ SW_FALSE }
+			, _bAlwaysOn{ SW_FALSE }
+			, _reserved{ 0 } {}
+	};
+
 	struct InputBinding
 	{
-		string			   _layer{};
-		Key				   _key{ Key::Unknown };
-		GamepadButton	   _button{ GamepadButton::Count };
-		MouseButton		   _mouse{ MouseButton::Count };
-		InputBindingSource _source{ InputBindingSource::Key };
-		ActionTrigger	   _trigger{ ActionTrigger::Pressed };
+		string					_layer{};
+		Key						_key{ Key::Unknown };
+		GamepadButton			_button{ GamepadButton::Count };
+		MouseButton				_mouse{ MouseButton::Count };
+		InputBindingSource		_source{ InputBindingSource::Key };
+		ActionTrigger			_trigger{ ActionTrigger::Pressed };
+		mutable const LayerDef* _pCachedLayer{ nullptr };
 
 		InputBinding() = default;
 	};
@@ -93,6 +114,8 @@ namespace sw
 	class SW_API ActionMap
 	{
 	public:
+		using LayerDef = sw::LayerDef;
+
 		/** @brief 빈 맵으로 시작합니다. */
 		ActionMap();
 
@@ -246,26 +269,6 @@ namespace sw
 		static const utf8* actionTriggerToName( ActionTrigger trigger );
 
 	private:
-		/// @brief XML 레이어: 우선순위, enabled, blockLower, alwaysOn
-		struct LayerDef
-		{
-			string				   _name;
-			int32				   _priority;
-			uint8				   _bEnabled	: 1;
-			uint8				   _bBlockLower : 1; /**< 켜져 있으면 낮은 우선순위 레이어를 비활성화합니다. */
-			uint8				   _bAlwaysOn	: 1; /**< enableOnlyLayer가 끄지 않습니다. */
-			[[maybe_unused]] uint8 _reserved	: 5;
-
-			/** @brief 기본 레이어 정의입니다. */
-			LayerDef()
-				: _name{}
-				, _priority{ 0 }
-				, _bEnabled{ SW_TRUE }
-				, _bBlockLower{ SW_FALSE }
-				, _bAlwaysOn{ SW_FALSE }
-				, _reserved{ 0 } {}
-		};
-
 		/// @brief 바인딩 한 줄의 프레임 상태 (다운/프레스/홀드/더블클릭)
 		struct BindingState
 		{

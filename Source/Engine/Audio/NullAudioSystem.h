@@ -35,12 +35,7 @@ namespace sw
 
 		bool play( string_view path ) override
 		{
-			if ( path.empty() )
-				return false;
-			string abs = ResourceUtil::getResourcePath( path );
-			if ( abs.empty() )
-				abs = string( path );
-			if ( FileUtil::fileExists( abs ) == false )
+			if ( path.empty() || ResourceUtil::hasResource( path ) == false )
 				return false;
 			SW_LOG_TRACE( "play: %#", string( path ) );
 			return true;
@@ -48,12 +43,7 @@ namespace sw
 
 		bool playMusic( string_view path ) override
 		{
-			if ( path.empty() )
-				return false;
-			string abs = ResourceUtil::getResourcePath( path );
-			if ( abs.empty() )
-				abs = string( path );
-			if ( FileUtil::fileExists( abs ) == false )
+			if ( path.empty() || ResourceUtil::hasResource( path ) == false )
 				return false;
 			SW_LOG_TRACE( "playMusic: %#", string( path ) );
 			return true;

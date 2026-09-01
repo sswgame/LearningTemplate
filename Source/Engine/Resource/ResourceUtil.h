@@ -71,6 +71,13 @@ namespace sw
 		 */
 		static bool readBinaryResource( string_view relativePath, vector<uint8>& outBytes );
 
+		/**
+		 * @brief 리소스가 존재하는지 검사합니다 (VFS 팩 또는 로컬 디스크 파일).
+		 * @param relativePath 팩 상대 키 또는 전역 ID
+		 * @return 리소스 존재 여부
+		 */
+		static bool hasResource( string_view relativePath );
+
 		/** @brief .pack 바이너리 파일을 VFS에 마운트합니다. */
 		static bool mountPack( string_view packFilePath, int32 priority = 0 );
 

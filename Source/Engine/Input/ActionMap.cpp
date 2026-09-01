@@ -706,8 +706,14 @@ namespace sw
 
 	bool ActionMap::isBindingLayerActive( const InputBinding& binding ) const
 	{
-		const string&	layerName = binding._layer.empty() ? _defaultLayerName : binding._layer;
-		const LayerDef* pDef	  = findLayer( layerName );
+		const LayerDef* pDef = binding._pCachedLayer;
+		if ( pDef == nullptr )
+		{
+			const string& layerName = binding._layer.empty() ? _defaultLayerName : binding._layer;
+			pDef					= findLayer( layerName );
+			binding._pCachedLayer	= pDef;
+		}
+
 		if ( pDef == nullptr )
 			return true;
 		if ( pDef->_bEnabled == 0 )

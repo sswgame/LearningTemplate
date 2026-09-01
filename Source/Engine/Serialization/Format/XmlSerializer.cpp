@@ -7,6 +7,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Serialization/Core/SchemaMigrate.h"
 #include "Engine/Serialization/Core/SerializerUtil.h"
 #include "Engine/Serialization/Format/Archive.h"
@@ -896,7 +897,7 @@ namespace sw
 	bool XmlSerializer::loadFile( string_view path, void* pInstance, const TypeInfo& typeInfo, const SerializeContext& ctx )
 	{
 		string text;
-		if ( FileUtil::readTextFile( path, text ) == false )
+		if ( ResourceUtil::readTextResource( path, text ) == false && FileUtil::readTextFile( path, text ) == false )
 			return false;
 		return deserialize( pInstance, typeInfo, text, ctx );
 	}
