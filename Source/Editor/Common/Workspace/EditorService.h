@@ -9,14 +9,18 @@ namespace sw::editor
 {
 	struct EditorData;
 
-	void  bindEditorService( const ModuleService& service );
-	void  unbindEditorService();
-	void* getRawService( ModuleServiceId id );
+	namespace internal
+	{
+		void* getRawService( ModuleServiceId id );
+	}
+
+	void bindEditorService( const ModuleService& service );
+	void unbindEditorService();
 
 	template <typename T>
 	T* getService()
 	{
-		return static_cast<T*>( getRawService( ModuleServiceTraits<T>::id ) );
+		return static_cast<T*>( internal::getRawService( ModuleServiceTraits<T>::id ) );
 	}
 
 	EditorData& getEditorData();

@@ -43,6 +43,10 @@ namespace sw
 			struct HasModuleServiceTraits<T, std::void_t<decltype( ModuleServiceTraits<T>::id )>> : std::true_type
 			{
 			};
+
+			SW_GAMESERVICE_API void* getRawService( ModuleServiceId id );
+			SW_GAMESERVICE_API void	 bindRawLocalService( uint64 typeHash, void* pService );
+			SW_GAMESERVICE_API void* getRawLocalService( uint64 typeHash );
 		} // namespace internal
 
 		SW_GAMESERVICE_API void bindGameService( const ModuleService& service );
@@ -50,36 +54,30 @@ namespace sw
 		/** @brief 서비스 콜백이 바인딩되었는지 확인합니다. */
 		SW_GAMESERVICE_API bool areGameServicesBound();
 
-		SW_GAMESERVICE_API void* getRawService( ModuleServiceId id );
-		SW_GAMESERVICE_API void	 bindLocalService( ModuleServiceId id, void* pService );
-
-		SW_GAMESERVICE_API void	 bindRawLocalService( uint64 typeHash, void* pService );
-		SW_GAMESERVICE_API void* getRawLocalService( uint64 typeHash );
-
 		template <typename T>
 		void bindLocalService( T* pService )
 		{
-			bindRawLocalService( internal::getServiceTypeHash<T>(), static_cast<void*>( pService ) );
+			internal::bindRawLocalService( internal::getServiceTypeHash<T>(), static_cast<void*>( pService ) );
 		}
 
 		template <typename T>
 		void unbindLocalService()
 		{
-			bindRawLocalService( internal::getServiceTypeHash<T>(), nullptr );
+			internal::bindRawLocalService( internal::getServiceTypeHash<T>(), nullptr );
 		}
 
 		template <typename T>
 		T* getService()
 		{
 			// 1) 게임 로컬 서비스 우선 조회 (RTTI-Free 컴파일타임 TypeId 해시 레지스트리)
-			void* pLocal = getRawLocalService( internal::getServiceTypeHash<T>() );
+			void* pLocal = internal::getRawLocalService( internal::getServiceTypeHash<T>() );
 			if ( pLocal != nullptr )
 				return static_cast<T*>( pLocal );
 
 			// 2) 호스트(엔진) 서비스 조회
 			if constexpr ( internal::HasModuleServiceTraits<T>::value )
 			{
-				T* pHost = static_cast<T*>( getRawService( ModuleServiceTraits<T>::id ) );
+				T* pHost = static_cast<T*>( internal::getRawService( ModuleServiceTraits<T>::id ) );
 				if ( pHost != nullptr )
 					return pHost;
 			}

@@ -21,11 +21,14 @@ namespace sw::editor
 		s_editorService = {};
 	}
 
-	void* getRawService( ModuleServiceId id )
+	namespace internal
 	{
-		SW_LOG_ASSERT( s_editorService.getService != nullptr, "EditorService is not bound" );
-		return s_editorService.getService( toRawServiceId( id ) );
-	}
+		void* getRawService( ModuleServiceId id )
+		{
+			SW_LOG_ASSERT( s_editorService.getService != nullptr, "EditorService is not bound" );
+			return s_editorService.getService( toRawServiceId( id ) );
+		}
+	} // namespace internal
 
 	EditorData& getEditorData()
 	{

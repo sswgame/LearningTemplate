@@ -46,39 +46,35 @@ namespace sw
 			return s_gameService.getService != nullptr;
 		}
 
-		SW_GAMESERVICE_API void bindLocalService( ModuleServiceId id, void* pService )
+		namespace internal
 		{
-			const uint32 rawId = toRawServiceId( id );
-			if ( rawId < kModuleServiceCount )
-				s_arrLocalHostOverrides[rawId] = pService;
-		}
+			SW_GAMESERVICE_API void bindRawLocalService( uint64 typeHash, void* pService )
+			{
+				if ( pService != nullptr )
+					s_mapLocalService[typeHash] = pService;
+				else
+					s_mapLocalService.erase( typeHash );
+			}
 
-		SW_GAMESERVICE_API void bindRawLocalService( uint64 typeHash, void* pService )
-		{
-			if ( pService != nullptr )
-				s_mapLocalService[typeHash] = pService;
-			else
-				s_mapLocalService.erase( typeHash );
-		}
+			SW_GAMESERVICE_API void* getRawLocalService( uint64 typeHash )
+			{
+				const auto it = s_mapLocalService.find( typeHash );
+				return it != s_mapLocalService.end() ? it->second : nullptr;
+			}
 
-		SW_GAMESERVICE_API void* getRawLocalService( uint64 typeHash )
-		{
-			const auto it = s_mapLocalService.find( typeHash );
-			return it != s_mapLocalService.end() ? it->second : nullptr;
-		}
+			SW_GAMESERVICE_API void* getRawService( ModuleServiceId id )
+			{
+				const uint32 rawId = toRawServiceId( id );
+				if ( rawId < kModuleServiceCount && s_arrLocalHostOverrides[rawId] != nullptr )
+					return s_arrLocalHostOverrides[rawId];
 
-		SW_GAMESERVICE_API void* getRawService( ModuleServiceId id )
-		{
-			const uint32 rawId = toRawServiceId( id );
-			if ( rawId < kModuleServiceCount && s_arrLocalHostOverrides[rawId] != nullptr )
-				return s_arrLocalHostOverrides[rawId];
+				if ( s_gameService.getService == nullptr )
+					return nullptr;
 
-			if ( s_gameService.getService == nullptr )
-				return nullptr;
-
-			if ( rawId >= kModuleServiceCount )
-				return nullptr;
-			return s_gameService.getService( rawId );
-		}
+				if ( rawId >= kModuleServiceCount )
+					return nullptr;
+				return s_gameService.getService( rawId );
+			}
+		} // namespace internal
 	} // namespace game
 } // namespace sw
