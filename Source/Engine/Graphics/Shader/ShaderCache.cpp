@@ -31,8 +31,6 @@ namespace sw
 
 	ShaderCompileResult ShaderCache::getOrCompile( const ShaderCompileDesc& desc )
 	{
-		std::scoped_lock<mutex> lock{ _mutexCache };
-
 		string absPath;
 		string cacheKey;
 		uint64 currentTimestamp{ 0 };
@@ -50,18 +48,22 @@ namespace sw
 		if ( absPath.empty() == false )
 			currentTimestamp = FileUtil::getFileTimestamp( absPath );
 
-		auto iter = _mapCache.find( cacheKey );
-		if ( iter != _mapCache.end() )
 		{
-			if ( iter->second._lastTimestamp == currentTimestamp && currentTimestamp != 0 )
-				return iter->second._result;
+			std::scoped_lock<mutex> lock{ _mutexCache };
+			const auto				iter = _mapCache.find( cacheKey );
+			if ( iter != _mapCache.end() )
+			{
+				if ( iter->second._lastTimestamp == currentTimestamp && currentTimestamp != 0 )
+					return iter->second._result;
+			}
 		}
 
 		BLOCK( "캐시 미스: HLSL 컴파일 및 캐시 항목 업데이트" )
 		ShaderCompileResult compiledResult = ShaderCompiler::compileHLSL( desc );
 		if ( compiledResult._bSuccess )
 		{
-			ShaderCacheEntry entry{};
+			std::scoped_lock<mutex> lock{ _mutexCache };
+			ShaderCacheEntry		entry{};
 			entry._lastTimestamp = currentTimestamp;
 			entry._result		 = compiledResult;
 			_mapCache.insert_or_assign( std::move( cacheKey ), std::move( entry ) );

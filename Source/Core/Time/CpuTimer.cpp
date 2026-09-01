@@ -2,6 +2,8 @@
 
 #include "Core/Time/CpuTimer.h"
 
+#include "Core/Math/MathUtil.h"
+
 #if defined( SW_PLATFORM_WINDOWS )
 	#include "Core/Common/PlatformOsHeaders.h"
 #endif
@@ -82,10 +84,14 @@ namespace sw
 	float32 CpuTimer::getTotalTime() const noexcept
 	{
 		if ( _bStopped )
-			return static_cast<float32>( static_cast<float64>( ( _stopTime - _pausedTime ) - _baseTime ) * _secondsPerCount );
+		{
+			const float64 total = static_cast<float64>( ( _stopTime - _pausedTime ) - _baseTime ) * _secondsPerCount;
+			return static_cast<float32>( MathUtil::max( 0.0, total ) );
+		}
 
-		const int64 currTime = ( _currentTime != 0 ) ? _currentTime : CpuTimerInternal::getCurrentPerformanceCount();
-		return static_cast<float32>( static_cast<float64>( ( currTime - _pausedTime ) - _baseTime ) * _secondsPerCount );
+		const int64	  currTime = ( _currentTime != 0 ) ? _currentTime : CpuTimerInternal::getCurrentPerformanceCount();
+		const float64 total	   = static_cast<float64>( ( currTime - _pausedTime ) - _baseTime ) * _secondsPerCount;
+		return static_cast<float32>( MathUtil::max( 0.0, total ) );
 	}
 
 	/**

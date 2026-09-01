@@ -84,6 +84,30 @@ namespace sw
 		if ( _bThreadSafe )
 			_mutex.lock();
 
+#if defined( SW_DEBUG )
+		bool		 bValidChunk	 = false;
+		const size_t chunkHeaderSize = ( sizeof( Chunk ) + 15u ) & ~size_t{ 15 };
+		const size_t chunkSize		 = chunkHeaderSize + ( _blockSize * _blocksPerChunk );
+		for ( Chunk* pChunk = _pChunkList; pChunk != nullptr; pChunk = pChunk->_pNext )
+		{
+			const uint8* pStart	 = reinterpret_cast<const uint8*>( pChunk ) + chunkHeaderSize;
+			const uint8* pEnd	 = reinterpret_cast<const uint8*>( pChunk ) + chunkSize;
+			const uint8* pTarget = reinterpret_cast<const uint8*>( pBlock );
+			if ( pStart <= pTarget && pTarget < pEnd )
+			{
+				bValidChunk = true;
+				break;
+			}
+		}
+		SW_ASSERT( bValidChunk && "PoolAllocator::free: Pointer does not belong to any allocated chunk!" );
+		if ( bValidChunk == false )
+		{
+			if ( _bThreadSafe )
+				_mutex.unlock();
+			return;
+		}
+#endif
+
 		FreeNode* pNode = static_cast<FreeNode*>( pBlock );
 		pNode->_pNext	= _pFreeList;
 		_pFreeList		= pNode;

@@ -187,7 +187,7 @@ namespace sw
 				case WM_SIZE:
 					pThis->_width  = LOWORD( lParam );
 					pThis->_height = HIWORD( lParam );
-					if ( pThis->_bRecreating == SW_FALSE && pThis->_onResize.isBound() )
+					if ( wParam != SIZE_MINIMIZED && pThis->_width > 0 && pThis->_height > 0 && pThis->_bRecreating == SW_FALSE && pThis->_onResize.isBound() )
 						pThis->_onResize( pThis->_width, pThis->_height );
 					return 0;
 

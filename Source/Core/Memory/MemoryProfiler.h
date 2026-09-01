@@ -131,6 +131,7 @@ namespace sw
 		// 콜스택 세부 추적용 (_bDetailedTrackingEnabled가 true일 때만 사용)
 		mutable mutex							  _stackMapMutex;
 		unordered_map<uint64, CallStackAllocInfo> _mapCallStackAllocInfo;
+		unordered_map<void*, uint64>			  _mapPtrToCallStackHash;
 	};
 
 	/**

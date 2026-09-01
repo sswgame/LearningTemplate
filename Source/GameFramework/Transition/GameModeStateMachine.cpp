@@ -46,6 +46,19 @@ namespace sw
 		if ( _currentMode == newMode )
 			return true;
 
+		if ( _bIsTransitioning )
+		{
+			SW_LOG_WARNING( "Re-entrant mode transition to %# ignored while transitioning.", static_cast<uint32>( newMode ) );
+			return false;
+		}
+
+		_bIsTransitioning = true;
+		struct TransitionGuard
+		{
+			bool& _flag;
+			~TransitionGuard() { _flag = false; }
+		} guard{ _bIsTransitioning };
+
 		const GamePlayMode oldMode = _currentMode;
 
 		// 1) Exit previous mode handler

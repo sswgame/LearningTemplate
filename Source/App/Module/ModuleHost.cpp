@@ -555,7 +555,6 @@ namespace sw
 
 	void ModuleHost::captureGameState()
 	{
-		_listGameSavedState.clear();
 		if ( _game == nullptr || _gameApi.serializeState == nullptr )
 			return;
 
@@ -563,9 +562,9 @@ namespace sw
 		if ( _gameApi.serializeState( _game, nullptr, &size ) == false || size == 0 )
 			return;
 
-		_listGameSavedState.resize( size );
-		if ( _gameApi.serializeState( _game, _listGameSavedState.data(), &size ) == false )
-			_listGameSavedState.clear();
+		vector<uint8> tempState( size );
+		if ( _gameApi.serializeState( _game, tempState.data(), &size ) )
+			_listGameSavedState = std::move( tempState );
 	}
 
 	void ModuleHost::restoreGameState()
@@ -574,11 +573,14 @@ namespace sw
 			return;
 
 		if ( _gameApi.deserializeState( _game, _listGameSavedState.data(), static_cast<uint32>( _listGameSavedState.size() ) ) )
+		{
 			SW_LOG_INFO( "Scene object state restored from %zu bytes.", _listGameSavedState.size() );
+			_listGameSavedState.clear();
+		}
 		else
-			SW_LOG_ERROR( "Failed to restore game state." );
-
-		_listGameSavedState.clear();
+		{
+			SW_LOG_ERROR( "Failed to restore game state — keeping saved state for subsequent reload." );
+		}
 	}
 
 	bool ModuleHost::recreateEditorInstance( void* pEditorModule )

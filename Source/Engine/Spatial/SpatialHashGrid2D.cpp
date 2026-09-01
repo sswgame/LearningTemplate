@@ -97,6 +97,8 @@ namespace sw
 
 	void SpatialHashGrid2D::queryAABB( float32 minX, float32 minY, float32 maxX, float32 maxY, vector<ObjectHandle>& outListHandle ) const
 	{
+		outListHandle.clear();
+
 		const float32 normMinX = MathUtil::min( minX, maxX );
 		const float32 normMaxX = MathUtil::max( minX, maxX );
 		const float32 normMinY = MathUtil::min( minY, maxY );
@@ -122,19 +124,21 @@ namespace sw
 						if ( boundIt != _mapHandleBound.end() )
 						{
 							if ( queryBounds.intersects( boundIt->second ) )
-							{
-								if ( std::find( outListHandle.begin(), outListHandle.end(), handle ) == outListHandle.end() )
-									outListHandle.push_back( handle );
-							}
+								outListHandle.push_back( handle );
 						}
 					}
 				}
 			}
 		}
+
+		std::sort( outListHandle.begin(), outListHandle.end() );
+		outListHandle.erase( std::unique( outListHandle.begin(), outListHandle.end() ), outListHandle.end() );
 	}
 
 	void SpatialHashGrid2D::queryCircle( float32 centerX, float32 centerY, float32 radius, vector<ObjectHandle>& outListHandle ) const
 	{
+		outListHandle.clear();
+
 		const float32 radiusSq = radius * radius;
 		const float32 minX	   = centerX - radius;
 		const float32 maxX	   = centerX + radius;
@@ -163,19 +167,21 @@ namespace sw
 							const float2  center{ centerX, centerY };
 							const float2  closePoint = center.clamped( float2{ b._minX, b._minY }, float2{ b._maxX, b._maxY } );
 							if ( float2::getDistanceSquared( center, closePoint ) <= radiusSq )
-							{
-								if ( std::find( outListHandle.begin(), outListHandle.end(), handle ) == outListHandle.end() )
-									outListHandle.push_back( handle );
-							}
+								outListHandle.push_back( handle );
 						}
 					}
 				}
 			}
 		}
+
+		std::sort( outListHandle.begin(), outListHandle.end() );
+		outListHandle.erase( std::unique( outListHandle.begin(), outListHandle.end() ), outListHandle.end() );
 	}
 
 	void SpatialHashGrid2D::queryRay( float32 startX, float32 startY, float32 dirX, float32 dirY, float32 maxDist, vector<ObjectHandle>& outListHandle ) const
 	{
+		outListHandle.clear();
+
 		float2 dir{ dirX, dirY };
 		if ( dir.getLengthSquared() <= MathUtil::Epsilon || maxDist <= 0.0f )
 			return;
@@ -215,8 +221,7 @@ namespace sw
 					auto boundIt = _mapHandleBound.find( handle );
 					if ( boundIt != _mapHandleBound.end() )
 					{
-						if ( std::find( outListHandle.begin(), outListHandle.end(), handle ) == outListHandle.end() )
-							outListHandle.push_back( handle );
+						outListHandle.push_back( handle );
 					}
 				}
 			}
@@ -234,6 +239,9 @@ namespace sw
 				tMaxY += tDeltaY;
 			}
 		}
+
+		std::sort( outListHandle.begin(), outListHandle.end() );
+		outListHandle.erase( std::unique( outListHandle.begin(), outListHandle.end() ), outListHandle.end() );
 	}
 
 } // namespace sw

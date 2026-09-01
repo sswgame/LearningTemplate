@@ -230,7 +230,7 @@ namespace sw
 
 			const hashed_string kGameConfigHash = hashed_string{ "GameConfig" };
 			const GameConfig*	pGameConfig		= _configManager->ensureConfig<GameConfig>(
-				  kGameConfigHash, config::kFileRuntimeGameConfig, shipping_host::kGameConfigJson );
+				kGameConfigHash, config::kFileRuntimeGameConfig, shipping_host::kGameConfigJson );
 			if ( pGameConfig != nullptr )
 				GameConfig::setActive( *pGameConfig );
 
@@ -369,8 +369,6 @@ namespace sw
 			if ( _logger != nullptr )
 				_logger->shutdown();
 
-			engine::unbindEngineServices();
-
 			_renderThread.reset();
 			_frameRenderer.reset();
 			_sceneManager.reset();
@@ -407,6 +405,8 @@ namespace sw
 			_mapDebugAction.reset();
 			_memoryProfiler.reset();
 			_deadlockDetector.reset();
+
+			engine::unbindEngineServices();
 
 			HashedStringPool::shutdown();
 

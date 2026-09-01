@@ -111,16 +111,20 @@ namespace sw
 
 	void RuntimeHud::publishSnapshot( bool actionMode ) const
 	{
-		game::getService<DebugOverlayState>()->_bVisible = _bVisible;
-		game::getService<DebugOverlayState>()->setFloat( RuntimeHudInternal::keyPlayerHp(), _playerHp._fill );
-		game::getService<DebugOverlayState>()->setFloat( RuntimeHudInternal::keyFoeHp(), _foeHp._fill );
-		game::getService<DebugOverlayState>()->setFloat( RuntimeHudInternal::keyDash(), _pp._fill );
-		game::getService<DebugOverlayState>()->setFloat( RuntimeHudInternal::keyFade(), _fadeAlpha );
-		game::getService<DebugOverlayState>()->setFloat( RuntimeHudInternal::keyAction(), actionMode ? 1.0f : 0.0f );
+		DebugOverlayState* pOverlay = game::getService<DebugOverlayState>();
+		if ( pOverlay == nullptr )
+			return;
+
+		pOverlay->_bVisible = _bVisible;
+		pOverlay->setFloat( RuntimeHudInternal::keyPlayerHp(), _playerHp._fill );
+		pOverlay->setFloat( RuntimeHudInternal::keyFoeHp(), _foeHp._fill );
+		pOverlay->setFloat( RuntimeHudInternal::keyDash(), _pp._fill );
+		pOverlay->setFloat( RuntimeHudInternal::keyFade(), _fadeAlpha );
+		pOverlay->setFloat( RuntimeHudInternal::keyAction(), actionMode ? 1.0f : 0.0f );
 		if ( _dialogue.empty() )
-			game::getService<DebugOverlayState>()->setString( RuntimeHudInternal::keyDialogue(), {} );
+			pOverlay->setString( RuntimeHudInternal::keyDialogue(), {} );
 		else
-			game::getService<DebugOverlayState>()->setString( RuntimeHudInternal::keyDialogue(), _dialogue );
+			pOverlay->setString( RuntimeHudInternal::keyDialogue(), _dialogue );
 	}
 
 	void RuntimeHud::logSnapshot() const

@@ -303,13 +303,14 @@ namespace sw
 		/** @brief 모든 메모리 블록, 청크, 맵을 일괄 해제합니다. */
 		void clear() noexcept
 		{
-			std::scoped_lock<mutex> globalLock{ _globalAppendMutex };
-
+			std::unique_lock<std::shared_mutex> arrShardLock[kNumShards];
 			for ( uint32 shardIndex = 0; shardIndex < kNumShards; ++shardIndex )
 			{
-				std::unique_lock<std::shared_mutex> shardLock{ _arrShard[shardIndex]._mutex };
+				arrShardLock[shardIndex] = std::unique_lock<std::shared_mutex>( _arrShard[shardIndex]._mutex );
 				_arrShard[shardIndex]._mapKeyToIndex.clear();
 			}
+
+			std::scoped_lock<mutex> globalLock{ _globalAppendMutex };
 
 			for ( uint32 chunkIndex = 0; chunkIndex < kMaxChunks; ++chunkIndex )
 			{

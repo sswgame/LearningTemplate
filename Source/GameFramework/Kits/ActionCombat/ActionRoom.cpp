@@ -128,7 +128,10 @@ namespace sw
 		if ( _kind == ActionRoomKind::None )
 			return;
 
-		DebugDrawQueue& dbg = *game::getService<DebugDrawQueue>();
+		DebugDrawQueue* pDbg = game::getService<DebugDrawQueue>();
+		if ( pDbg == nullptr )
+			return;
+
 		for ( const Actor& actor : _listActor )
 		{
 			if ( actor._bAlive == SW_FALSE )
@@ -136,13 +139,13 @@ namespace sw
 			const float4 color = ( actor._kind == ActorKind::Boss )
 								   ? float4( 1.0f, 0.25f, 0.2f, 1.0f )
 								   : float4( 1.0f, 0.55f, 0.2f, 1.0f );
-			dbg.drawSphere( float3( actor._x, 0.5f, actor._y ), actor._radius, color );
+			pDbg->drawSphere( float3( actor._x, 0.5f, actor._y ), actor._radius, color );
 		}
 		for ( const Projectile& projectile : _listProjectile )
 		{
 			if ( projectile._bAlive == SW_FALSE )
 				continue;
-			dbg.drawSphere( float3( projectile._x, 0.4f, projectile._y ), projectile._radius, float4( 1.0f, 0.9f, 0.2f, 1.0f ) );
+			pDbg->drawSphere( float3( projectile._x, 0.4f, projectile._y ), projectile._radius, float4( 1.0f, 0.9f, 0.2f, 1.0f ) );
 		}
 	}
 

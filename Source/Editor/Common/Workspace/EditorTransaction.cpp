@@ -221,8 +221,9 @@ namespace sw::editor
 			GameObject* pTarget = EditorTransactionInternal::findTargetGameObject( pManager, guid, objId, objName );
 			if ( pTarget != nullptr )
 			{
-				if ( EditorContext::get()->getSelectionManager().hasObject( GameObjectPtr{ pTarget } ) )
-					EditorContext::get()->getSelectionManager().selectObject( GameObjectPtr{ pTarget }, SelectionMode::Remove );
+				EditorContext* pCurrentContext = EditorContext::get();
+				if ( pCurrentContext != nullptr && pCurrentContext->getSelectionManager().hasObject( GameObjectPtr{ pTarget } ) )
+					pCurrentContext->getSelectionManager().selectObject( GameObjectPtr{ pTarget }, SelectionMode::Remove );
 				pManager->destroyObject( pTarget );
 			}
 		};
@@ -244,8 +245,10 @@ namespace sw::editor
 				ObjectStateSerializer::loadFromXmlString( pCreated, stateXml );
 				ObjectStateSerializer::rebindSceneHierarchy( pCreated, stateXml );
 				if ( pCurrentContext != nullptr )
+				{
 					pCurrentContext->getWorkspace().setGameObjectPrefabPath( pCreated->getObjectId(), prefabPath );
-				EditorContext::get()->getSelectionManager().selectObject( GameObjectPtr{ pCreated }, SelectionMode::Replace );
+					pCurrentContext->getSelectionManager().selectObject( GameObjectPtr{ pCreated }, SelectionMode::Replace );
+				}
 			}
 		};
 
@@ -285,8 +288,10 @@ namespace sw::editor
 				ObjectStateSerializer::loadFromXmlString( pCreated, stateXml );
 				ObjectStateSerializer::rebindSceneHierarchy( pCreated, stateXml );
 				if ( pCurrentContext != nullptr )
+				{
 					pCurrentContext->getWorkspace().setGameObjectPrefabPath( pCreated->getObjectId(), prefabPath );
-				EditorContext::get()->getSelectionManager().selectObject( GameObjectPtr{ pCreated }, SelectionMode::Replace );
+					pCurrentContext->getSelectionManager().selectObject( GameObjectPtr{ pCreated }, SelectionMode::Replace );
+				}
 			}
 		};
 
@@ -299,8 +304,9 @@ namespace sw::editor
 			GameObject* pTarget = EditorTransactionInternal::findTargetGameObject( pManager, guid, objId, objName );
 			if ( pTarget != nullptr )
 			{
-				if ( EditorContext::get()->getSelectionManager().hasObject( GameObjectPtr{ pTarget } ) )
-					EditorContext::get()->getSelectionManager().selectObject( GameObjectPtr{ pTarget }, SelectionMode::Remove );
+				EditorContext* pCurrentContext = EditorContext::get();
+				if ( pCurrentContext != nullptr && pCurrentContext->getSelectionManager().hasObject( GameObjectPtr{ pTarget } ) )
+					pCurrentContext->getSelectionManager().selectObject( GameObjectPtr{ pTarget }, SelectionMode::Remove );
 				pManager->destroyObject( pTarget );
 			}
 		};

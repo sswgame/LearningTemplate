@@ -706,17 +706,11 @@ namespace sw
 
 	bool ActionMap::isBindingLayerActive( const InputBinding& binding ) const
 	{
-		const LayerDef* pDef = binding._pCachedLayer;
-		if ( pDef == nullptr )
-		{
-			const string& layerName = binding._layer.empty() ? _defaultLayerName : binding._layer;
-			pDef					= findLayer( layerName );
-			binding._pCachedLayer	= pDef;
-		}
-
+		const string&	layerName = binding._layer.empty() ? _defaultLayerName : binding._layer;
+		const LayerDef* pDef	  = findLayer( layerName );
 		if ( pDef == nullptr )
 			return true;
-		if ( pDef->_bEnabled == 0 )
+		if ( pDef->_bEnabled == SW_FALSE )
 			return false;
 		if ( _cachedBlockFloor >= 0 && pDef->_priority < _cachedBlockFloor )
 			return false;

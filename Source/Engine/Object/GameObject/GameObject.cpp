@@ -225,7 +225,8 @@ namespace sw
 		if ( pParent != nullptr )
 			bParentActive = pParent->isActiveInHierarchy();
 
-		_bIsActiveInHierarchy.store( bParentActive, std::memory_order_relaxed );
+		const bool bActiveInHierarchy = bParentActive && isActive();
+		_bIsActiveInHierarchy.store( bActiveInHierarchy, std::memory_order_relaxed );
 
 		for ( GameObject* pChild : getChildren() )
 		{

@@ -225,6 +225,10 @@ namespace sw
 			conjugate();
 			( *this ) /= nSq;
 		}
+		else
+		{
+			*this = Identity;
+		}
 	}
 
 	quaternion quaternion::inverse() const noexcept
@@ -662,7 +666,7 @@ namespace sw
 	float4x4 float4x4::invert() const noexcept
 	{
 		const float32 det = determinant();
-		if ( MathUtil::nearEqual( det, 0.f ) )
+		if ( MathUtil::abs( det ) < 1e-7f )
 			return Identity;
 
 		const float32 invDet = 1.0f / det;

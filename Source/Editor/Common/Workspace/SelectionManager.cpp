@@ -19,6 +19,8 @@ namespace sw::editor
 		{
 			case SelectionMode::Replace:
 			{
+				if ( _listSelectedObject.size() == 1 && _listSelectedObject.front() == pObj )
+					return;
 				_listSelectedObject.clear();
 				if ( pObj.isValid() )
 					_listSelectedObject.push_back( pObj );
@@ -98,7 +100,7 @@ namespace sw::editor
 		if ( _listSelectedObject.empty() )
 			return 0;
 		GameObject* pRaw = _listSelectedObject.front().get();
-		return ( pRaw != nullptr ) ? pRaw->getObjectId() : 0;
+		return pRaw != nullptr ? pRaw->getObjectId() : 0;
 	}
 
 	void SelectionManager::selectAsset( string_view assetPath, SelectionMode mode )
@@ -107,6 +109,8 @@ namespace sw::editor
 		{
 			case SelectionMode::Replace:
 			{
+				if ( _listSelectedAsset.size() == 1 && _listSelectedAsset.front() == assetPath )
+					return;
 				_listSelectedAsset.clear();
 				if ( assetPath.empty() == false )
 					_listSelectedAsset.emplace_back( assetPath );

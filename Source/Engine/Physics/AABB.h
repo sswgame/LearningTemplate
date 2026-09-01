@@ -60,8 +60,8 @@ namespace sw
 				   _min._z <= other._max._z && other._min._z <= _max._z;
 		}
 
-		float3 getCenter() const noexcept { return ( _min + _max ) * 0.5f; }
-		float3 getExtents() const noexcept { return ( _max - _min ) * 0.5f; }
+		float3 getCenter() const noexcept { return isValid() ? ( _min + _max ) * 0.5f : float3{ 0.0f, 0.0f, 0.0f }; }
+		float3 getExtents() const noexcept { return isValid() ? ( _max - _min ) * 0.5f : float3{ 0.0f, 0.0f, 0.0f }; }
 	};
 
 	/** @brief AABB가 겹치고 CollisionLayers가 쌍을 허용하면 true입니다. */

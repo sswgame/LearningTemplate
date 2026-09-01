@@ -246,8 +246,17 @@ namespace sw
 		}
 	}
 
-	void DialogueRunnerComponent::executeNode( int32 nodeId )
+	void DialogueRunnerComponent::executeNode( int32 nodeId, int32 recursionDepth )
 	{
+		if ( recursionDepth > 64 )
+		{
+			SW_LOG_WARNING( "DialogueRunner: Cyclic node transition detected at node %#; breaking loop.", nodeId );
+			_state = DialogueRunnerState::Finished;
+			if ( _onFinished.isBound() )
+				_onFinished();
+			return;
+		}
+
 		if ( nodeId <= 0 )
 		{
 			_state = DialogueRunnerState::Finished;
@@ -271,7 +280,7 @@ namespace sw
 
 		if ( node._type == DialogueAssetNodeType::Start )
 		{
-			executeNode( _graph.findDefaultNextNodeId( nodeId ) );
+			executeNode( _graph.findDefaultNextNodeId( nodeId ), recursionDepth + 1 );
 		}
 		else if ( node._type == DialogueAssetNodeType::Dialogue )
 		{
@@ -302,12 +311,14 @@ namespace sw
 			int32	   nextId		 = _graph.findBranchNextNodeId( nodeId, bConditionMet );
 			if ( nextId <= 0 )
 				nextId = _graph.findDefaultNextNodeId( nodeId );
-			executeNode( nextId );
+			executeNode( nextId, recursionDepth + 1 );
 		}
 		else if ( node._type == DialogueAssetNodeType::Action )
 		{
 			executeAction( node._actionCommand );
-			executeNode( _graph.findDefaultNextNodeId( nodeId ) );
+			if ( _state == DialogueRunnerState::Idle || _state == DialogueRunnerState::Finished )
+				return;
+			executeNode( _graph.findDefaultNextNodeId( nodeId ), recursionDepth + 1 );
 		}
 		else if ( node._type == DialogueAssetNodeType::End )
 		{

@@ -20,6 +20,22 @@ namespace sw
 			return sw::FileUtil::normalizePath( dir );
 		}
 
+		/** @brief 테스트용 샘플 XML 프리팹 파일을 생성하고 경로를 반환합니다. */
+		sw::string ensureSamplePrefabXml()
+		{
+			const sw::string path = makeTempPrefabPath( "sample_source.prefab.xml" );
+			if ( sw::FileUtil::fileExists( path ) == false )
+			{
+				const utf8* pXmlContent = R"(<?xml version="1.0" encoding="utf-8"?>
+<Prefab version="1" name="SampleHero">
+    <GameObject _name="SampleHero">
+    </GameObject>
+</Prefab>)";
+				sw::FileUtil::writeTextFile( path, pXmlContent );
+			}
+			return path;
+		}
+
 	} // namespace
 } // namespace sw
 
@@ -31,11 +47,9 @@ namespace sw
  */
 SW_TEST_CASE( PrefabTest, XmlJsonBinaryRoundtrip )
 {
-	sw::PrefabAsset src;
-	if ( src.loadFromXmlFile( "prefabs/sample.prefab.xml" ) == false )
-	{
-		SW_TEST_SKIP( "prefabs/sample.prefab.xml not found" );
-	}
+	const sw::string srcXmlPath = sw::ensureSamplePrefabXml();
+	sw::PrefabAsset	 src;
+	SW_ASSERT_TRUE( src.loadFromXmlFile( srcXmlPath ) );
 	SW_EXPECT_TRUE( src.isValid() );
 	SW_EXPECT_FALSE( src.getStateData().empty() );
 
@@ -61,6 +75,10 @@ SW_TEST_CASE( PrefabTest, XmlJsonBinaryRoundtrip )
 	SW_EXPECT_TRUE( fromBin.loadFromBinaryFile( binPath ) );
 	SW_EXPECT_TRUE( fromBin.isValid() );
 	SW_EXPECT_EQUAL( src.getName(), fromBin.getName() );
+
+	sw::FileUtil::removeFile( xmlPath );
+	sw::FileUtil::removeFile( jsonPath );
+	sw::FileUtil::removeFile( binPath );
 }
 
 /**
@@ -68,11 +86,9 @@ SW_TEST_CASE( PrefabTest, XmlJsonBinaryRoundtrip )
  */
 SW_TEST_CASE( PrefabTest, CacheKeyNormalizesPathAndExtension )
 {
-	sw::PrefabAsset src;
-	if ( src.loadFromXmlFile( "prefabs/sample.prefab.xml" ) == false )
-	{
-		SW_TEST_SKIP( "prefabs/sample.prefab.xml not found" );
-	}
+	const sw::string srcXmlPath = sw::ensureSamplePrefabXml();
+	sw::PrefabAsset	 src;
+	SW_ASSERT_TRUE( src.loadFromXmlFile( srcXmlPath ) );
 
 	const sw::string xmlPath  = sw::makeTempPrefabPath( "cachekey.prefab.xml" );
 	const sw::string jsonPath = sw::makeTempPrefabPath( "cachekey.prefab.json" );
@@ -108,14 +124,10 @@ SW_TEST_CASE( PrefabTest, CacheKeyNormalizesPathAndExtension )
  */
 SW_TEST_CASE( PrefabTest, SpawnCreatesGameObject )
 {
-	if ( sw::ResourceUtil::getResourcePath( "prefabs/sample.prefab.xml" ).empty() )
-	{
-		SW_TEST_SKIP( "prefabs/sample.prefab.xml not found" );
-	}
-
+	const sw::string	  srcXmlPath = sw::ensureSamplePrefabXml();
 	sw::GameObjectManager objects;
 	sw::PrefabManager	  prefabs;
-	sw::GameObject*		  spawned = prefabs.spawn( &objects, "prefabs/sample.prefab.xml", "SpawnedSample" );
+	sw::GameObject*		  spawned = prefabs.spawn( &objects, srcXmlPath, "SpawnedSample" );
 	SW_ASSERT_NOT_NULL( spawned );
 	SW_EXPECT_EQUAL( sw::string( "SpawnedSample" ), sw::string( spawned->getName().c_str() ) );
 }
@@ -141,6 +153,34 @@ SW_TEST_CASE( PrefabTest, InMemoryJsonPrefabCreationAndSpawn )
 	sw::GameObject* spawned = prefabs.spawn( &objects, tempPath, "BossActor" );
 	SW_ASSERT_NOT_NULL( spawned );
 	SW_EXPECT_EQUAL( sw::string( "BossActor" ), sw::string( spawned->getName().c_str() ) );
+
+	sw::FileUtil::removeFile( tempPath );
+#endif
+}
+
+/**
+ * @brief [PrefabTest] 프리팹 자기 참조 및 순환 참조 스폰 시 스택 오버플로우 방어 검증
+ */
+SW_TEST_CASE( PrefabTest, CircularReferenceSpawnProtection )
+{
+#if defined( SW_SHIPPING )
+	SW_TEST_SKIP( "Circular prefab spawn test is Dev-only" );
+#else
+	const sw::string tempPath	= sw::makeTempPrefabPath( "circular_self.prefab.json" );
+	const sw::string prefabJson = sw::string( R"({
+		"_name": "CircularSelf",
+		"_prefabAssetPath": ")" ) +
+								  tempPath + R"("
+	})";
+
+	SW_EXPECT_TRUE( sw::FileUtil::writeTextFile( tempPath, prefabJson ) );
+
+	sw::GameObjectManager objects;
+	sw::PrefabManager	  prefabs;
+
+	// 순환 참조 감지 시 무한 재귀 없이 안전하게 반환
+	sw::GameObject* spawned = prefabs.spawn( &objects, tempPath, "TestCircular" );
+	SW_ASSERT_NOT_NULL( spawned );
 
 	sw::FileUtil::removeFile( tempPath );
 #endif

@@ -88,12 +88,14 @@ namespace sw
 			{
 				string		   sourceText( reinterpret_cast<const utf8*>( fileBytes.data() ), fileBytes.size() );
 				vector<string> listIncludeFile = ShaderIncludeResolver::parseIncludes( sourceText );
-				string		   shaderDir	   = FileUtil::getDirectoryPart( desc._filePath );
+				string		   shaderDir	   = FileUtil::getDirectoryPart( ioPath );
 
 				for ( const string& inc : listIncludeFile )
 				{
-					string incPath = shaderDir.empty() ? string( inc ) : FileUtil::joinPath( shaderDir, inc );
-					incPath		   = FileUtil::normalizePath( incPath );
+					string incPath = ResourceUtil::getResourcePath( inc );
+					if ( incPath.empty() )
+						incPath = shaderDir.empty() ? string( inc ) : FileUtil::joinPath( shaderDir, inc );
+					incPath = FileUtil::normalizePath( incPath );
 					_mapIncludeDependency[incPath].push_back( keyPath );
 				}
 			}

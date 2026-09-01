@@ -15,8 +15,7 @@ namespace sw
 
 	Mesh::~Mesh()
 	{
-		_vertexBuffer  = 0;
-		_pUploadDevice = nullptr;
+		releaseGpu();
 	}
 
 	shared_ptr<Mesh> Mesh::createUnitCube()

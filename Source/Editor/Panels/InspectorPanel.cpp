@@ -226,9 +226,9 @@ namespace sw::editor
 		}
 
 		ImGui::SeparatorText( "Components" );
-		EditorContext*			  pSelEditorContext = EditorContext::get();
-		IRHIDevice*				  pRhiDevice		= ( pSelEditorContext != nullptr ) ? pSelEditorContext->getRhiDevice() : nullptr;
-		const vector<Component*>& listComponent		= pObj->getAllComponents();
+		EditorContext*			 pSelEditorContext = EditorContext::get();
+		IRHIDevice*				 pRhiDevice		   = ( pSelEditorContext != nullptr ) ? pSelEditorContext->getRhiDevice() : nullptr;
+		const vector<Component*> listComponent	   = pObj->getAllComponents();
 		for ( Component* pComp : listComponent )
 		{
 			if ( pComp == nullptr )
@@ -266,7 +266,7 @@ namespace sw::editor
 													  ? pComp->getComponentName().c_str()
 													  : pTInfo->_name.c_str();
 						const bool	 bCanPaste	  = ( ws.hasCopiedComponent() &&
-												  ws.getCopiedComponentTypeName() == compTypeName );
+													  ws.getCopiedComponentTypeName() == compTypeName );
 						if ( bCanPaste )
 						{
 							if ( ImGui::MenuItem( "Paste Component Values" ) )

@@ -5,6 +5,7 @@
 #include "Engine/Animation/BlendSpace.h"
 #include "Engine/Animation/DualQuaternion.h"
 #include "Engine/Animation/Skeleton.h"
+#include "Engine/Object/Component/2D/SpriteAnimatorComponent.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -245,4 +246,30 @@ SW_TEST_CASE( AnimationTest, BlendSpace_ParametricMotionInterpolation )
 
 	float4x4 pose2D = bs2D.evaluate( 1.0f, 0.0f );
 	SW_EXPECT_NEAR_EQUAL( 10.0f, pose2D._41, 1e-2f );
+}
+
+/**
+ * @brief [AnimationTest] SpriteAnimatorComponent 재생, 프레임 안전성 및 틱 검증
+ */
+SW_TEST_CASE( AnimationTest, SpriteAnimatorComponent_PlaybackAndFrameSafety )
+{
+	SpriteAnimatorComponent animator;
+	SW_EXPECT_EQUAL( 1, animator.getTotalFrames() );
+	SW_EXPECT_FALSE( animator.isPlaying() );
+
+	animator.setFrameRate( 12.0f );
+	animator.play( "Idle", true );
+	SW_EXPECT_TRUE( animator.isPlaying() );
+	SW_EXPECT_EQUAL( 1, animator.getTotalFrames() );
+
+	animator.setTotalFrames( 4 );
+	SW_EXPECT_EQUAL( 4, animator.getTotalFrames() );
+
+	// 12fps -> 1 frame per 0.0833s. Advance by 0.1s
+	animator.onTick( 0.1f );
+	SW_EXPECT_EQUAL( 1, animator.getCurrentFrame() );
+
+	// Advance past all 4 frames with looping
+	animator.onTick( 0.4f );
+	SW_EXPECT_TRUE( animator.getCurrentFrame() < 4 );
 }

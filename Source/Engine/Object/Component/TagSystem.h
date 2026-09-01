@@ -41,17 +41,20 @@ namespace sw
 		/** @brief 유효한 태그인지 반환합니다. */
 		constexpr bool isValid() const { return _id != 0; }
 
+		/** @brief 태그의 문자열을 반환합니다 (레지스트리 역조회 포함). */
+		const utf8* getString() const;
+
 		/** @brief parentTag가 자신과 같거나 조상 체인에 있으면 true */
-		constexpr bool isSubtagOf( const TagID& parentTag ) const
+		bool isSubtagOf( const TagID& parentTag ) const
 		{
 			if ( _id == parentTag._id )
 				return true;
 
-			if ( _pString == nullptr || parentTag._pString == nullptr )
+			const utf8* pSource = getString();
+			const utf8* pParent = parentTag.getString();
+			if ( pSource == nullptr || pParent == nullptr )
 				return false;
 
-			const utf8* pSource = _pString;
-			const utf8* pParent = parentTag._pString;
 			while ( *pParent != '\0' )
 			{
 				if ( *pSource != *pParent )

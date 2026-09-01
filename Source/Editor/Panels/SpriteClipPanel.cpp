@@ -177,15 +177,26 @@ namespace sw::editor
 
 	void SpriteClipPanel::saveJson()
 	{
-		EditorToolAssetCommands::saveSpriteClip( captureClipData(), getLoadedAssetPath() );
-		clearDocumentDirty();
-		syncDocumentUndoBaseline();
+		if ( getLoadedAssetPath().empty() )
+			return;
+		if ( EditorToolAssetCommands::saveSpriteClip( captureClipData(), getLoadedAssetPath() ) )
+		{
+			clearDocumentDirty();
+			syncDocumentUndoBaseline();
+		}
 	}
 
 	bool SpriteClipPanel::saveDocument()
 	{
-		saveJson();
-		return true;
+		if ( getLoadedAssetPath().empty() )
+			return false;
+		if ( EditorToolAssetCommands::saveSpriteClip( captureClipData(), getLoadedAssetPath() ) )
+		{
+			clearDocumentDirty();
+			syncDocumentUndoBaseline();
+			return true;
+		}
+		return false;
 	}
 
 	EditorSpriteClipData SpriteClipPanel::captureClipData() const

@@ -95,5 +95,6 @@ namespace sw
 		GamePlayMode											  _previousMode;
 		unordered_map<GamePlayMode, shared_ptr<IGameModeHandler>> _mapHandler;
 		ModeChangedDelegate										  _onModeChanged;
+		bool													  _bIsTransitioning{ false };
 	};
 } // namespace sw

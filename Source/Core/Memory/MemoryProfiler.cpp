@@ -257,7 +257,9 @@ namespace sw
 			MemoryProfilerInternal::t_bIsInsideProfiler = true;
 			{
 				std::scoped_lock<mutex> lock{ _stackMapMutex };
-				auto&					info = _mapCallStackAllocInfo[outHash];
+				if ( pPtr != nullptr )
+					_mapPtrToCallStackHash[pPtr] = outHash;
+				auto& info = _mapCallStackAllocInfo[outHash];
 				if ( info._stack._frameCount == 0 )
 					info._stack = stack;
 				info._currentBytes += size;
@@ -271,7 +273,6 @@ namespace sw
 
 	void MemoryProfiler::recordFree( void* pPtr, size_t size, MemoryTag tag, uint64 callStackHash )
 	{
-		(void)pPtr;
 		if ( _bTrackingEnabled.load( std::memory_order_relaxed ) == false )
 			return;
 
@@ -286,21 +287,39 @@ namespace sw
 		_arrStat[tagIdx]._currentAllocatedBytes.fetch_sub( size, std::memory_order_relaxed );
 		_arrStat[tagIdx]._currentAllocationCount.fetch_sub( 1, std::memory_order_relaxed );
 
-		if ( _bDetailedTrackingEnabled.load( std::memory_order_relaxed ) && callStackHash != 0 )
+		if ( _bDetailedTrackingEnabled.load( std::memory_order_relaxed ) )
 		{
 			MemoryProfilerInternal::t_bIsInsideProfiler = true;
 			{
 				std::scoped_lock<mutex> lock{ _stackMapMutex };
-				auto					it = _mapCallStackAllocInfo.find( callStackHash );
-				if ( it != _mapCallStackAllocInfo.end() )
+				uint64					hash = callStackHash;
+				if ( hash == 0 && pPtr != nullptr )
 				{
-					if ( it->second._currentBytes >= size )
-						it->second._currentBytes -= size;
-					else
-						it->second._currentBytes = 0;
+					auto itPtr = _mapPtrToCallStackHash.find( pPtr );
+					if ( itPtr != _mapPtrToCallStackHash.end() )
+					{
+						hash = itPtr->second;
+						_mapPtrToCallStackHash.erase( itPtr );
+					}
+				}
+				else if ( pPtr != nullptr )
+				{
+					_mapPtrToCallStackHash.erase( pPtr );
+				}
 
-					if ( it->second._currentCount > 0 )
-						it->second._currentCount--;
+				if ( hash != 0 )
+				{
+					auto it = _mapCallStackAllocInfo.find( hash );
+					if ( it != _mapCallStackAllocInfo.end() )
+					{
+						if ( it->second._currentBytes >= size )
+							it->second._currentBytes -= size;
+						else
+							it->second._currentBytes = 0;
+
+						if ( it->second._currentCount > 0 )
+							it->second._currentCount--;
+					}
 				}
 			}
 			MemoryProfilerInternal::t_bIsInsideProfiler = false;

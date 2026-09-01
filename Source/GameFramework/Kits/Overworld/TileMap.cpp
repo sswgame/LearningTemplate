@@ -79,6 +79,7 @@ namespace sw
 			dst._weight	   = src._weight;
 			_listEncounterEntry.push_back( std::move( dst ) );
 		}
+		rebuildWarpIndex();
 		return true;
 	}
 
@@ -146,6 +147,7 @@ namespace sw
 		_listVisual.clear();
 		_listWarp.clear();
 		_listEncounterEntry.clear();
+		rebuildWarpIndex();
 	}
 
 	void TileMap::resize( int32 width, int32 height )
@@ -161,6 +163,7 @@ namespace sw
 		_listVisual.assign( count, TileVisual{} );
 		_listWarp.clear();
 		_listEncounterEntry.clear();
+		rebuildWarpIndex();
 	}
 
 	string TileMap::pickEncounterSpeciesId() const
@@ -246,13 +249,20 @@ namespace sw
 		return f;
 	}
 
+	void TileMap::rebuildWarpIndex()
+	{
+		_mapWarpIndex.clear();
+		for ( size_t idx = 0; idx < _listWarp.size(); ++idx )
+		{
+			_mapWarpIndex[getWarpKey( _listWarp[idx]._tileX, _listWarp[idx]._tileY )] = idx;
+		}
+	}
+
 	const TileWarp* TileMap::findWarp( int32 x, int32 y ) const
 	{
-		for ( const TileWarp& warp : _listWarp )
-		{
-			if ( warp._tileX == x && warp._tileY == y )
-				return &warp;
-		}
+		auto it = _mapWarpIndex.find( getWarpKey( x, y ) );
+		if ( it != _mapWarpIndex.end() && it->second < _listWarp.size() )
+			return &_listWarp[it->second];
 		return nullptr;
 	}
 
@@ -289,14 +299,13 @@ namespace sw
 
 	void TileMap::setOrUpdateWarp( const TileWarp& warp )
 	{
-		for ( TileWarp& existingWarp : _listWarp )
+		auto it = _mapWarpIndex.find( getWarpKey( warp._tileX, warp._tileY ) );
+		if ( it != _mapWarpIndex.end() && it->second < _listWarp.size() )
 		{
-			if ( existingWarp._tileX == warp._tileX && existingWarp._tileY == warp._tileY )
-			{
-				existingWarp = warp;
-				return;
-			}
+			_listWarp[it->second] = warp;
+			return;
 		}
+		_mapWarpIndex[getWarpKey( warp._tileX, warp._tileY )] = _listWarp.size();
 		_listWarp.push_back( warp );
 	}
 
@@ -306,6 +315,7 @@ namespace sw
 										 [x, y]( const TileWarp& warp )
 		{ return warp._tileX == x && warp._tileY == y; } ),
 						 _listWarp.end() );
+		rebuildWarpIndex();
 	}
 
 	void TileMap::paintEdgeWarpPreset( int32 edge, string_view targetMap, int32 tx, int32 ty )

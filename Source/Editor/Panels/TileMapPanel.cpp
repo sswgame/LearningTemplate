@@ -41,6 +41,8 @@ namespace sw::editor
 		, _arrTint{ 180.0f / 255.0f, 200.0f / 255.0f, 160.0f / 255.0f }
 		, _width{ 8 }
 		, _height{ 8 }
+		, _inputWidth{ 8 }
+		, _inputHeight{ 8 }
 		, _paintHeight{ 1 }
 		, _atlasId{ 0 }
 		, _warpTx{ 1 }
@@ -77,12 +79,12 @@ namespace sw::editor
 		ImGui::InputText( "Name", _nameBuffer.data(), _nameBuffer.capacity() );
 		if ( ImGui::IsItemDeactivatedAfterEdit() )
 			notifyDocumentEdited( "Edit Tile Map Name", "tilemap-name" );
-		ImGui::InputInt( "Width", &_width );
+		ImGui::InputInt( "Width", &_inputWidth );
 		ImGui::SameLine();
-		ImGui::InputInt( "Height", &_height );
+		ImGui::InputInt( "Height", &_inputHeight );
 		if ( ImGui::Button( "Apply Size" ) )
 		{
-			resize( MathUtil::max( 1, _width ), MathUtil::max( 1, _height ) );
+			resize( MathUtil::max( 1, _inputWidth ), MathUtil::max( 1, _inputHeight ) );
 			notifyDocumentEdited( "Resize Tile Map" );
 		}
 
@@ -222,6 +224,8 @@ namespace sw::editor
 			return;
 		_width			   = width;
 		_height			   = height;
+		_inputWidth		   = width;
+		_inputHeight	   = height;
 		const size_t count = static_cast<size_t>( _width * _height );
 		_listWalkable.assign( count, 1 );
 		_listEncounter.assign( count, 0 );
@@ -239,6 +243,8 @@ namespace sw::editor
 		_nameBuffer			= data._name.c_str();
 		_width				= data._width;
 		_height				= data._height;
+		_inputWidth			= data._width;
+		_inputHeight		= data._height;
 		_listWalkable		= std::move( data._listWalkable );
 		_listEncounter		= std::move( data._listEncounter );
 		_listPassThrough	= std::move( data._listPassThrough );

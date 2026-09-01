@@ -4,6 +4,8 @@
 #include "Core/File/FileUtil.h"
 
 #include "GameFramework/Base/GameInstanceBase.h"
+#include "GameFramework/Kits/Overworld/TileMap.h"
+#include "GameFramework/Kits/TurnBattle/SpeciesData.h"
 #include "GameFramework/Save/ISaveGame.h"
 #include "GameFramework/Transition/TransitionOrchestrator.h"
 #include "GameFramework/UI/DialogueRunnerComponent.h"
@@ -139,7 +141,7 @@ SW_TEST_CASE( GameFrameworkTest, TransitionOrchestratorBattleAndReturnFlow )
 
 	TransitionCallbacks callbacks{};
 	callbacks.startBattle		 = Delegate<void()>::create( [&]()
-	   { bBattleStarted = true; } );
+	{ bBattleStarted = true; } );
 	callbacks.finishBattleReturn = Delegate<void()>::create( [&]()
 	{ bBattleReturned = true; } );
 	orchestrator.setCallbacks( std::move( callbacks ) );
@@ -509,11 +511,11 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceBaseSnapshotAndFileRoundTrip )
 				s_typeInfo._fullyQualifiedName = hashed_string( "TestCustomState" );
 				s_typeInfo._size			   = sizeof( TestCustomState );
 				s_typeInfo._listProperty	   = {
-					  {	hashed_string( "_score" ),  hashed_string( "int32" ),
-						SW_OFFSET_OF( TestCustomState,	   _score ), false, ContainerKind::None, hashed_string(), hashed_string(), nullptr},
-					  {hashed_string( "_stageName" ), hashed_string( "string" ),
-						SW_OFFSET_OF( TestCustomState, _stageName ), false, ContainerKind::None, hashed_string(), hashed_string(), nullptr}
-				 };
+					{	  hashed_string( "_score" ),	 hashed_string( "int32" ),
+					  SW_OFFSET_OF( TestCustomState,	 _score ), false, ContainerKind::None, hashed_string(), hashed_string(), nullptr},
+					{hashed_string( "_stageName" ), hashed_string( "string" ),
+					  SW_OFFSET_OF( TestCustomState, _stageName ), false, ContainerKind::None, hashed_string(), hashed_string(), nullptr}
+				   };
 			}
 			return &s_typeInfo;
 		}
@@ -585,19 +587,19 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceBaseMassiveStateStressTest )
 				s_typeInfo._fullyQualifiedName = hashed_string( "MassiveStressState" );
 				s_typeInfo._size			   = sizeof( MassiveStressState );
 				s_typeInfo._listProperty	   = {
-					  { hashed_string( "_playerX" ), hashed_string( "int32" ),
-						SW_OFFSET_OF( MassiveStressState, _playerX ), false, ContainerKind::None, hashed_string(), hashed_string(), nullptr },
-					  { hashed_string( "_playerY" ), hashed_string( "int32" ),
-						SW_OFFSET_OF( MassiveStressState, _playerY ), false, ContainerKind::None, hashed_string(), hashed_string(), nullptr },
-					  { hashed_string( "_totalExp" ), hashed_string( "int64" ),
-						SW_OFFSET_OF( MassiveStressState, _totalExp ), false, ContainerKind::None, hashed_string(), hashed_string(), nullptr },
-					  { hashed_string( "_listMonsterId" ), hashed_string( "int32" ),
-						SW_OFFSET_OF( MassiveStressState, _listMonsterId ), true, ContainerKind::Sequence, hashed_string( "int32" ), hashed_string(), std::make_shared<VectorWrapper<vector<int32>>>() },
-					  { hashed_string( "_listSkillName" ), hashed_string( "string" ),
-						SW_OFFSET_OF( MassiveStressState, _listSkillName ), true, ContainerKind::Sequence, hashed_string( "string" ), hashed_string(), std::make_shared<VectorWrapper<vector<string>>>() },
-					  { hashed_string( "_mapFlag" ), hashed_string( "int32" ),
-						SW_OFFSET_OF( MassiveStressState, _mapFlag ), true, ContainerKind::Map, hashed_string( "int32" ), hashed_string( "string" ), std::make_shared<MapWrapper<map<string, int32>>>() }
-				  };
+					{ hashed_string( "_playerX" ), hashed_string( "int32" ),
+					  SW_OFFSET_OF( MassiveStressState, _playerX ), false, ContainerKind::None, hashed_string(), hashed_string(), nullptr },
+					{ hashed_string( "_playerY" ), hashed_string( "int32" ),
+					  SW_OFFSET_OF( MassiveStressState, _playerY ), false, ContainerKind::None, hashed_string(), hashed_string(), nullptr },
+					{ hashed_string( "_totalExp" ), hashed_string( "int64" ),
+					  SW_OFFSET_OF( MassiveStressState, _totalExp ), false, ContainerKind::None, hashed_string(), hashed_string(), nullptr },
+					{ hashed_string( "_listMonsterId" ), hashed_string( "int32" ),
+					  SW_OFFSET_OF( MassiveStressState, _listMonsterId ), true, ContainerKind::Sequence, hashed_string( "int32" ), hashed_string(), std::make_shared<VectorWrapper<vector<int32>>>() },
+					{ hashed_string( "_listSkillName" ), hashed_string( "string" ),
+					  SW_OFFSET_OF( MassiveStressState, _listSkillName ), true, ContainerKind::Sequence, hashed_string( "string" ), hashed_string(), std::make_shared<VectorWrapper<vector<string>>>() },
+					{ hashed_string( "_mapFlag" ), hashed_string( "int32" ),
+					  SW_OFFSET_OF( MassiveStressState, _mapFlag ), true, ContainerKind::Map, hashed_string( "int32" ), hashed_string( "string" ), std::make_shared<MapWrapper<map<string, int32>>>() }
+				};
 			}
 			return &s_typeInfo;
 		}
@@ -673,11 +675,11 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceBaseCyclicRewindStressTest )
 				s_typeInfo._fullyQualifiedName = hashed_string( "TestCustomState" );
 				s_typeInfo._size			   = sizeof( TestCustomState );
 				s_typeInfo._listProperty	   = {
-					  {	hashed_string( "_score" ),  hashed_string( "int32" ),
-						SW_OFFSET_OF( TestCustomState,	   _score ), false, ContainerKind::None, hashed_string(), hashed_string(), nullptr},
-					  {hashed_string( "_stageName" ), hashed_string( "string" ),
-						SW_OFFSET_OF( TestCustomState, _stageName ), false, ContainerKind::None, hashed_string(), hashed_string(), nullptr}
-				 };
+					{	  hashed_string( "_score" ),	 hashed_string( "int32" ),
+					  SW_OFFSET_OF( TestCustomState,	 _score ), false, ContainerKind::None, hashed_string(), hashed_string(), nullptr},
+					{hashed_string( "_stageName" ), hashed_string( "string" ),
+					  SW_OFFSET_OF( TestCustomState, _stageName ), false, ContainerKind::None, hashed_string(), hashed_string(), nullptr}
+				   };
 			}
 			return &s_typeInfo;
 		}
@@ -730,11 +732,11 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceBaseCorruptedBufferFaultResilience 
 				s_typeInfo._fullyQualifiedName = hashed_string( "TestCustomState" );
 				s_typeInfo._size			   = sizeof( TestCustomState );
 				s_typeInfo._listProperty	   = {
-					  {	hashed_string( "_score" ),  hashed_string( "int32" ),
-						SW_OFFSET_OF( TestCustomState,	   _score ), false, ContainerKind::None, hashed_string(), hashed_string(), nullptr},
-					  {hashed_string( "_stageName" ), hashed_string( "string" ),
-						SW_OFFSET_OF( TestCustomState, _stageName ), false, ContainerKind::None, hashed_string(), hashed_string(), nullptr}
-				 };
+					{	  hashed_string( "_score" ),	 hashed_string( "int32" ),
+					  SW_OFFSET_OF( TestCustomState,	 _score ), false, ContainerKind::None, hashed_string(), hashed_string(), nullptr},
+					{hashed_string( "_stageName" ), hashed_string( "string" ),
+					  SW_OFFSET_OF( TestCustomState, _stageName ), false, ContainerKind::None, hashed_string(), hashed_string(), nullptr}
+				   };
 			}
 			return &s_typeInfo;
 		}
@@ -772,4 +774,150 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceBaseCorruptedBufferFaultResilience 
 	vector<uint8>	 emptySnapshot;
 	SW_EXPECT_TRUE( defaultGameInstance.captureSnapshot( emptySnapshot ) );
 	SW_EXPECT_TRUE( defaultGameInstance.restoreSnapshot( emptySnapshot ) );
+}
+
+/**
+ * @brief [TileMapTest] TileMap Warp O(1) 해시 인덱싱 및 findWarp/setOrUpdateWarp/removeWarp 일관성 검증
+ */
+SW_TEST_CASE( GameFrameworkTest, TileMap_WarpLookupAndIndexCache )
+{
+	TileMap tileMap;
+	tileMap.resize( 10, 10 );
+
+	SW_EXPECT_NULL( tileMap.findWarp( 2, 3 ) );
+
+	TileWarp warp1{};
+	warp1._tileX	   = 2;
+	warp1._tileY	   = 3;
+	warp1._targetMap   = "Map_B";
+	warp1._targetTileX = 5;
+	warp1._targetTileY = 6;
+	tileMap.setOrUpdateWarp( warp1 );
+
+	const TileWarp* pFound = tileMap.findWarp( 2, 3 );
+	SW_ASSERT_NOT_NULL( pFound );
+	SW_EXPECT_EQUAL( string( "Map_B" ), pFound->_targetMap );
+	SW_EXPECT_EQUAL( 5, pFound->_targetTileX );
+	SW_EXPECT_EQUAL( 6, pFound->_targetTileY );
+
+	// 업데이트
+	warp1._targetMap = "Map_C";
+	tileMap.setOrUpdateWarp( warp1 );
+	pFound = tileMap.findWarp( 2, 3 );
+	SW_ASSERT_NOT_NULL( pFound );
+	SW_EXPECT_EQUAL( string( "Map_C" ), pFound->_targetMap );
+
+	// 삭제
+	tileMap.removeWarp( 2, 3 );
+	SW_EXPECT_NULL( tileMap.findWarp( 2, 3 ) );
+}
+
+/**
+ * @brief [DialogueTest] Action 실행 중 stopDialogue 호출 시 후속 노드 미실행 및 Idle 상태 보존 검증
+ */
+SW_TEST_CASE( GameFrameworkTest, DialogueRunner_StopDialogueDuringAction )
+{
+	const utf8* dialogueJson = R"({
+		"startNodeId": 1,
+		"nodes": [
+			{ "id": 1, "type": "Action", "action": "CloseMenu" },
+			{ "id": 2, "type": "Dialogue", "speaker": "NPC", "text": "Should not appear" }
+		],
+		"links": [
+			{ "id": 1, "from": 1, "to": 2 }
+		]
+	})";
+
+	DialogueRunnerComponent runner;
+	SW_EXPECT_TRUE( runner.loadGraphJson( dialogueJson ) );
+
+	bool bActionExecuted = false;
+	runner.setOnDialogueEvent( [&]( const string& cmd )
+	{
+		if ( cmd == "CloseMenu" )
+		{
+			bActionExecuted = true;
+			runner.stopDialogue();
+		}
+	} );
+
+	SW_EXPECT_TRUE( runner.startDialogue( 1 ) );
+	SW_EXPECT_TRUE( bActionExecuted );
+	SW_EXPECT_EQUAL( static_cast<uint8>( DialogueRunnerState::Idle ), static_cast<uint8>( runner.getState() ) );
+}
+
+/**
+ * @brief [GameFrameworkTest] FadeService 0초 즉시 전환 및 극단적 델타타임 스파이크 안전성 검증
+ */
+SW_TEST_CASE( GameFrameworkTest, FadeService_ZeroAndExtremeDeltaTimeEdgeCases )
+{
+	FadeService fade;
+
+	// 1) 0초 즉시 페이드 아웃 (0-Division 방어 및 1프레임 내 완료)
+	fade.beginFadeOut( 0.0f );
+	SW_EXPECT_TRUE( fade.isBusy() );
+	fade.update( 0.016f );
+	SW_EXPECT_TRUE( fade.isFinished() );
+	SW_EXPECT_EQUAL( static_cast<uint8>( FadePhase::HoldBlack ), static_cast<uint8>( fade.getPhase() ) );
+	SW_EXPECT_NEAR_EQUAL( 1.0f, fade.getOverlayAlpha(), 1e-4f );
+
+	// 2) 0초 즉시 페이드 인 및 거대 델타타임 스파이크(100.0초) 경과 시 오버슈트 방어
+	fade.beginFadeIn( 0.0f );
+	fade.update( 100.0f );
+	SW_EXPECT_TRUE( fade.isFinished() );
+	SW_EXPECT_FALSE( fade.isBusy() );
+	SW_EXPECT_EQUAL( static_cast<uint8>( FadePhase::Idle ), static_cast<uint8>( fade.getPhase() ) );
+	SW_EXPECT_NEAR_EQUAL( 0.0f, fade.getOverlayAlpha(), 1e-4f );
+}
+
+/**
+ * @brief [GameFrameworkTest] SpeciesCatalog 미등록 ID 및 음수/범위 초과 기술 인덱스 검색 시 안전 폴백 보장 검증
+ */
+SW_TEST_CASE( GameFrameworkTest, SpeciesCatalog_InvalidLookupAndNegativeIndexSafety )
+{
+	SpeciesCatalog catalog;
+
+	// 미등록 ID 및 nullptr 검색 시 크래시 없이 기본 유효 폴백 종족 반환
+	const SpeciesDef* pNonExistent = catalog.findSpecies( "completely_unknown_monster_id_999" );
+	SW_ASSERT_NOT_NULL( pNonExistent );
+	SW_EXPECT_FALSE( pNonExistent->_id.empty() );
+
+	// 음수 및 범위를 벗어난 기술 인덱스 검색 시 안전한 기본 폴백 기술 반환
+	const MoveDef* pNegativeMove = catalog.findMove( -1 );
+	SW_ASSERT_NOT_NULL( pNegativeMove );
+	SW_EXPECT_FALSE( pNegativeMove->_id.empty() );
+
+	const MoveDef* pOverflowMove = catalog.findMove( 99999 );
+	SW_ASSERT_NOT_NULL( pOverflowMove );
+	SW_EXPECT_FALSE( pOverflowMove->_id.empty() );
+
+	// 미등록 ID로 야생 개체 생성 시에도 크래시 없이 최소 기본 스탯 객체 반환
+	PartyMember wildCritter = catalog.makeWild( "unknown_species", 10 );
+	SW_EXPECT_TRUE( wildCritter._hpMax > 0 );
+	SW_EXPECT_TRUE( wildCritter._hp > 0 );
+}
+
+/**
+ * @brief [GameFrameworkTest] TileMap 맵 경계 밖(-1, 99999) 쿼리 시 벽 판정(Solid) 및 크래시 방어 검증
+ */
+SW_TEST_CASE( GameFrameworkTest, TileMap_OutOfBoundsQueriesSafety )
+{
+	TileMap tileMap;
+	tileMap.resize( 10, 10 );
+
+	// 경계 내부 정상 타일
+	tileMap.setWalkable( 5, 5, true );
+	SW_EXPECT_TRUE( tileMap.isWalkable( 5, 5 ) );
+
+	// 경계 밖 (-1, -1, 100, 100) 쿼리 시 무조건 비보행(false), 솔리드(true), 워프 없음(nullptr)
+	SW_EXPECT_FALSE( tileMap.isWalkable( -1, 5 ) );
+	SW_EXPECT_FALSE( tileMap.isWalkable( 5, -1 ) );
+	SW_EXPECT_FALSE( tileMap.isWalkable( 10, 5 ) );
+	SW_EXPECT_FALSE( tileMap.isWalkable( 5, 10 ) );
+
+	SW_EXPECT_TRUE( tileMap.isSolid( -5, -5 ) );
+	SW_EXPECT_TRUE( tileMap.isSolid( 100, 100 ) );
+
+	SW_EXPECT_NULL( tileMap.findWarp( -1, -1 ) );
+	SW_EXPECT_NULL( tileMap.findWarp( 100, 100 ) );
 }

@@ -748,6 +748,7 @@ namespace sw
 					frac -= digit;
 				}
 			}
+			*pCurrent = '\0';
 			return static_cast<size_t>( pCurrent - pBuf );
 		}
 

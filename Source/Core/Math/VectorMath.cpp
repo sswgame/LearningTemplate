@@ -63,7 +63,10 @@ namespace sw
 
 	float2 float2::reflect( const float2& source, const float2& normal ) noexcept
 	{
-		const float2 n = normal.normalize();
+		const float32 normalLenSq = normal.getLengthSquared();
+		if ( normalLenSq < MathUtil::Epsilon )
+			return source;
+		const float2 n = normal / MathUtil::sqrt( normalLenSq );
 		return source - ( 2.f * source.dot( n ) ) * n;
 	}
 
@@ -243,14 +246,20 @@ namespace sw
 
 	float3 float3::reflect( const float3& source, const float3& normal ) noexcept
 	{
-		const float3  direction	 = normal.normalize();
+		const float32 normalLenSq = normal.getLengthSquared();
+		if ( normalLenSq < MathUtil::Epsilon )
+			return source;
+		const float3  direction	 = normal / MathUtil::sqrt( normalLenSq );
 		const float32 dotProduct = source.dot( direction );
 		return source - ( 2.f * dotProduct ) * direction;
 	}
 
 	float3 float3::project( const float3& from, const float3& to ) noexcept
 	{
-		const float3& direction	 = to.normalize();
+		const float32 toLenSq = to.getLengthSquared();
+		if ( toLenSq < MathUtil::Epsilon )
+			return Zero;
+		const float3  direction	 = to / MathUtil::sqrt( toLenSq );
 		const float32 dotProduct = from.dot( direction );
 		return direction * dotProduct;
 	}

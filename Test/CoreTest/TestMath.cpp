@@ -4,6 +4,8 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 
+#include "Engine/Physics/AABB.h"
+
 #include "TestFramework/TestFramework.h"
 
 // ------------------------------------------------------------------------------
@@ -369,4 +371,72 @@ SW_TEST_CASE( Core_Math, Matrix4x4TRSAndInversion )
 	SW_EXPECT_NEAR_EQUAL( 1.0f, identity._44, 1e-3f );
 	SW_EXPECT_NEAR_EQUAL( 0.0f, identity._12, 1e-3f );
 	SW_EXPECT_NEAR_EQUAL( 0.0f, identity._14, 1e-3f );
+}
+
+/**
+ * @brief [Core_Math] MathUtil::align 0 정렬 및 getRandomRange 역경계/8비트 정수 엣지 케이스 검증
+ */
+SW_TEST_CASE( Core_Math, MathUtilAlignZeroAndRandomRangeEdgeCases )
+{
+	// 1) align 0 전달 시 Divide-by-Zero 없이 원본 반환
+	SW_EXPECT_EQUAL( 13u, sw::MathUtil::align( 13u, 0u ) );
+	SW_EXPECT_EQUAL( 27u, sw::MathUtil::align( 27u, 0u ) );
+
+	// 2) from > to 역구간 전달 시 자동 스왑 안전성
+	for ( int32 iter = 0; iter < 10; ++iter )
+	{
+		int32 val = sw::MathUtil::getRandomRange( 20, 10 );
+		SW_EXPECT_TRUE( 10 <= val && val <= 20 );
+	}
+
+	// 3) int8 / uint8 8비트 정수 타입 전달 시 승격 및 안전한 범위 추출
+	for ( int32 iter = 0; iter < 10; ++iter )
+	{
+		int8 s8Val = sw::MathUtil::getRandomRange( static_cast<int8>( -5 ), static_cast<int8>( 5 ) );
+		SW_EXPECT_TRUE( -5 <= s8Val && s8Val <= 5 );
+
+		uint8 u8Val = sw::MathUtil::getRandomRange( static_cast<uint8>( 10 ), static_cast<uint8>( 20 ) );
+		SW_EXPECT_TRUE( 10 <= u8Val && u8Val <= 20 );
+	}
+}
+
+/**
+ * @brief [Core_Math] float4x4::createPerspectiveFieldOfView Near >= Far 입력 시 안전 클램핑 검증
+ */
+SW_TEST_CASE( Core_Math, PerspectiveFieldOfViewNearFarEdgeCase )
+{
+	// Near >= Far 시 near/far 역전 크래시 방지 및 유효한 투영 행렬 생성
+	sw::float4x4 proj = sw::float4x4::createPerspectiveFieldOfView( sw::MathUtil::Pi / 4.0f, 1.777f, 100.0f, 10.0f );
+	SW_EXPECT_TRUE( proj._33 != 0.0f );
+	SW_EXPECT_TRUE( proj._34 != 0.0f );
+}
+
+/**
+ * @brief [Core_Math] float3::transformNormal 비균등 스케일 변환 시 법선 직교성 검증
+ */
+SW_TEST_CASE( Core_Math, VectorTransformNormalNonUniformScale )
+{
+	// (0, 1, 0) 법선 벡터에 (2, 5, 2) 비균등 스케일 적용
+	sw::float4x4 nonUniformScale = sw::float4x4::createScale( sw::float3{ 2.0f, 5.0f, 2.0f } );
+	sw::float3	 unitY{ 0.0f, 1.0f, 0.0f };
+	sw::float3	 transformedNormal = sw::float3::transformNormal( unitY, nonUniformScale ).normalize();
+
+	// Y축 방향 법선은 여전히 Y축 방향이어야 하며 길이가 1이어야 함
+	SW_EXPECT_NEAR_EQUAL( 0.0f, transformedNormal._x, 1e-4f );
+	SW_EXPECT_NEAR_EQUAL( 1.0f, transformedNormal._y, 1e-4f );
+	SW_EXPECT_NEAR_EQUAL( 0.0f, transformedNormal._z, 1e-4f );
+}
+
+/**
+ * @brief [Core_Math] AABB::empty 미초기화 시 getExtents() 부동소수점 오버플로우 방어 검증
+ */
+SW_TEST_CASE( Core_Math, AABBEmptyExtentsSafety )
+{
+	sw::AABB emptyBox = sw::AABB::empty();
+	SW_EXPECT_FALSE( emptyBox.isValid() );
+
+	sw::float3 extents = emptyBox.getExtents();
+	SW_EXPECT_NEAR_EQUAL( 0.0f, extents._x, 1e-4f );
+	SW_EXPECT_NEAR_EQUAL( 0.0f, extents._y, 1e-4f );
+	SW_EXPECT_NEAR_EQUAL( 0.0f, extents._z, 1e-4f );
 }

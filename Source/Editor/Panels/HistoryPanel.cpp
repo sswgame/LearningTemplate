@@ -119,10 +119,12 @@ namespace sw::editor
 				if ( bIsUndone )
 					ImGui::PushStyleColor( ImGuiCol_Text, ImVec4{ 0.5f, 0.5f, 0.5f, 1.0f } );
 
+				ImGui::PushID( static_cast<int32>( stepNum ) );
 				if ( ImGui::Selectable( labelBuf.c_str(), bIsActiveHead, ImGuiSelectableFlags_SpanAllColumns ) )
 				{
 					cmdStack.jumpTo( stepNum );
 				}
+				ImGui::PopID();
 
 				if ( bIsUndone )
 					ImGui::PopStyleColor();

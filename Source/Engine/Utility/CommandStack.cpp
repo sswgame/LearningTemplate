@@ -6,7 +6,7 @@ namespace sw
 {
 	void CommandStack::push( Command cmd )
 	{
-		if ( cmd._undo.isBound() == false || cmd._redo.isBound() == false )
+		if ( cmd._undo.isBound() == false || cmd._redo.isBound() == false || _bIsExecuting )
 			return;
 
 		if ( _transactionDepth != 0 )
@@ -143,21 +143,30 @@ namespace sw
 	void CommandStack::undo()
 	{
 		_lastCoalesceKey.clear();
-		if ( canUndo() == false )
+		if ( canUndo() == false || _bIsExecuting )
 			return;
 		--_index;
 		if ( _listCommand[_index]._undo.isBound() )
+		{
+			_bIsExecuting = true;
 			_listCommand[_index]._undo();
+			_bIsExecuting = false;
+		}
 	}
 
 	void CommandStack::redo()
 	{
 		_lastCoalesceKey.clear();
-		if ( canRedo() == false )
+		if ( canRedo() == false || _bIsExecuting )
 			return;
-		if ( _listCommand[_index]._redo.isBound() )
-			_listCommand[_index]._redo();
+		const size_t targetIndex = _index;
 		++_index;
+		if ( _listCommand[targetIndex]._redo.isBound() )
+		{
+			_bIsExecuting = true;
+			_listCommand[targetIndex]._redo();
+			_bIsExecuting = false;
+		}
 	}
 
 	void CommandStack::clear()

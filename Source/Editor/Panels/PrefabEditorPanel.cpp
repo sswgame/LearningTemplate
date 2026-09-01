@@ -159,6 +159,7 @@ namespace sw::editor
 					{
 						EditorToolAssetCommands::revertPrefabOverride( PrefabEditorPanelInternal::getPrefabTargetInstance(), item, _selectedPrefabPath );
 						SW_LOG_TRACE( "Reverted %s.%s to %s", item._componentName.c_str(), item._propertyName.c_str(), item._defaultValue.c_str() );
+						scanPrefabOverrides( _selectedPrefabPath.c_str() );
 					}
 					ImGui::PopID();
 				}

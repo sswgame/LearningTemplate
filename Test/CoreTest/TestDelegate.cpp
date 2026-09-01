@@ -199,7 +199,7 @@ SW_TEST_CASE( Core_Delegate, DelegateFullCoverage )
 	sw::MulticastDelegate<void( int32 )> multiDel;
 	int32								 val{ 0 };
 	sw::Delegate<void( int32 )>			 delLambda = SW_DELEGATE_LAMBDA( sw::Delegate<void( int32 )>, [&]( int32 delta )
-			 { val += delta; } );
+	{ val += delta; } );
 
 	auto handle = multiDel.add( delLambda );
 	multiDel.broadcast( 20 );
@@ -208,4 +208,37 @@ SW_TEST_CASE( Core_Delegate, DelegateFullCoverage )
 	multiDel.remove( handle );
 	multiDel.broadcast( 30 );
 	SW_EXPECT_EQUAL( 20, val );
+}
+
+/**
+ * @brief [Core_Delegate] MulticastDelegate 브로드캐스트 도중 자기 자신 또는 후속 리스너 remove 시 안전성 검증
+ */
+SW_TEST_CASE( Core_Delegate, MulticastDelegateDeferredRemoveDuringBroadcast )
+{
+	sw::MulticastDelegate<void()> multiDel;
+	int32						  countA = 0;
+	int32						  countB = 0;
+
+	sw::DelegateHandle handleA;
+	sw::DelegateHandle handleB;
+
+	handleA = multiDel.add( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [&]()
+	{
+		countA++;
+		// A 실행 중 B를 remove -> B는 unbind되어 이번 브로드캐스트 및 다음 브로드캐스트에서 실행되지 않아야 함
+		multiDel.remove( handleB );
+	} ) );
+
+	handleB = multiDel.add( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [&]()
+	{
+		countB++;
+	} ) );
+
+	multiDel.broadcast();
+	SW_EXPECT_EQUAL( 1, countA );
+	SW_EXPECT_EQUAL( 0, countB );
+
+	multiDel.broadcast();
+	SW_EXPECT_EQUAL( 2, countA );
+	SW_EXPECT_EQUAL( 0, countB );
 }

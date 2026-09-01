@@ -256,3 +256,25 @@ SW_TEST_CASE( TagSystemTest, DeepHierarchyAndBatchOperations )
 	SW_EXPECT_EQUAL( 1u, container.getTagCount() );
 	SW_EXPECT_FALSE( container.hasTag( dynamicTag, true ) );
 }
+
+/**
+ * @brief [TagSystemTest] 숫자 ID로만 복원된 역직렬화 TagID의 문자열 레지스트리 복원 및 isSubtagOf 매칭 검증
+ */
+SW_TEST_CASE( TagSystemTest, DeserializedTagIDStringRecoveryAndHierarchyMatching )
+{
+	// 1) 런타임 등록으로 원본 태그 생성
+	TagID  originalTag = TagID::request( "Skill.Spell.Fireball" );
+	TagID  rootTag	   = TagID::request( "Skill" );
+	uint64 rawId	   = originalTag._id;
+
+	// 2) 역직렬화 모의: 숫자 ID만 가진 TagID 복원
+	TagID restoredTag( rawId );
+	SW_EXPECT_TRUE( restoredTag.isValid() );
+	SW_EXPECT_EQUAL( originalTag._id, restoredTag._id );
+	SW_EXPECT_TRUE( originalTag == restoredTag );
+
+	// 3) _pString이 nullptr인 상태에서도 전역 레지스트리를 통해 isSubtagOf가 정확히 동작하는지 검증
+	SW_EXPECT_TRUE( restoredTag.isSubtagOf( rootTag ) );
+	SW_EXPECT_TRUE( restoredTag.isSubtagOf( TagID::request( "Skill.Spell" ) ) );
+	SW_EXPECT_FALSE( restoredTag.isSubtagOf( TagID::request( "Skill.Melee" ) ) );
+}

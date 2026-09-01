@@ -268,11 +268,15 @@ namespace sw::editor
 			if ( pGo == nullptr || pGo->getPrimarySceneComponent() == nullptr )
 				continue;
 
-			const string	beforeXml = EditorTransaction::captureSnapshot( pGoPtr );
-			SceneComponent* pSc		  = pGo->getPrimarySceneComponent();
-			float3			pos		  = pSc->getLocalPosition();
-			EditorTransformCommandsInternal::setLocalAxisValue( pos, axis, targetVal );
-			pSc->setLocalPosition( pos );
+			const string	beforeXml	 = EditorTransaction::captureSnapshot( pGoPtr );
+			SceneComponent* pSc			 = pGo->getPrimarySceneComponent();
+			const float3	localPos	 = pSc->getLocalPosition();
+			const float3	worldPos	 = pSc->getWorldPosition();
+			const float32	curWorldAxis = EditorTransformCommandsInternal::worldAxisValue( worldPos, axis );
+			const float32	delta		 = targetVal - curWorldAxis;
+			float3			newLocal	 = localPos;
+			EditorTransformCommandsInternal::setLocalAxisValue( newLocal, axis, EditorTransformCommandsInternal::worldAxisValue( localPos, axis ) + delta );
+			pSc->setLocalPosition( newLocal );
 
 			const string afterXml = EditorTransaction::captureSnapshot( pGoPtr );
 			EditorTransaction::recordModify( pGoPtr, beforeXml, afterXml, "Align Objects" );
@@ -319,11 +323,16 @@ namespace sw::editor
 			if ( pGoPtr.isValid() == false || pGoPtr->getPrimarySceneComponent() == nullptr )
 				continue;
 
-			const string	beforeXml = EditorTransaction::captureSnapshot( pGoPtr );
-			SceneComponent* pSc		  = pGoPtr->getPrimarySceneComponent();
-			float3			pos		  = pSc->getLocalPosition();
-			EditorTransformCommandsInternal::setLocalAxisValue( pos, axis, minVal + step * static_cast<float32>( idx ) );
-			pSc->setLocalPosition( pos );
+			const string	beforeXml	  = EditorTransaction::captureSnapshot( pGoPtr );
+			SceneComponent* pSc			  = pGoPtr->getPrimarySceneComponent();
+			const float3	localPos	  = pSc->getLocalPosition();
+			const float3	worldPos	  = pSc->getWorldPosition();
+			const float32	curWorldAxis  = EditorTransformCommandsInternal::worldAxisValue( worldPos, axis );
+			const float32	targetDistVal = minVal + step * static_cast<float32>( idx );
+			const float32	delta		  = targetDistVal - curWorldAxis;
+			float3			newLocal	  = localPos;
+			EditorTransformCommandsInternal::setLocalAxisValue( newLocal, axis, EditorTransformCommandsInternal::worldAxisValue( localPos, axis ) + delta );
+			pSc->setLocalPosition( newLocal );
 
 			const string afterXml = EditorTransaction::captureSnapshot( pGoPtr );
 			EditorTransaction::recordModify( pGoPtr, beforeXml, afterXml, "Distribute Objects" );

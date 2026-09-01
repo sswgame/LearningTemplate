@@ -26,6 +26,8 @@ namespace sw
 				else
 					*static_cast<int32*>( pData ) = val;
 			}
+
+			static inline std::shared_mutex s_stringVarMutex;
 		};
 	} // namespace
 } // namespace sw
@@ -117,7 +119,10 @@ namespace sw
 				return string( sb.view() );
 			}
 			case GlobalVariableType::String:
+			{
+				std::shared_lock<std::shared_mutex> lock{ GlobalVariableInternal::s_stringVarMutex };
 				return *static_cast<string*>( _pData );
+			}
 			default:
 				break;
 		}
@@ -180,7 +185,10 @@ namespace sw
 		if ( _pData == nullptr || _type != GlobalVariableType::String )
 			return false;
 
-		*static_cast<string*>( _pData ) = string{ val };
+		{
+			std::unique_lock<std::shared_mutex> lock{ GlobalVariableInternal::s_stringVarMutex };
+			*static_cast<string*>( _pData ) = string{ val };
+		}
 		if ( _onValueChanged.isBound() )
 			_onValueChanged( this );
 		return true;

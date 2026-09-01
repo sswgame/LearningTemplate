@@ -14,10 +14,10 @@ namespace sw
 		, _graph{}
 		, _currentAnimation{}
 		, _listAnimation{}
-		, _frameRate{ 0.0f }
+		, _frameRate{ 12.0f }
 		, _frameTimer{ 0.0f }
 		, _currentFrame{ 0 }
-		, _totalFrames{ 0 }
+		, _totalFrames{ 1 }
 		, _bRepeat{ SW_FALSE }
 		, _bPlaying{ SW_FALSE }
 		, _bPaused{ SW_FALSE }
@@ -88,6 +88,10 @@ namespace sw
 		_bPaused		  = SW_FALSE;
 		_currentFrame	  = 0;
 		_frameTimer		  = 0.0f;
+		if ( _totalFrames <= 0 )
+			_totalFrames = 1;
+		if ( _frameRate <= 0.0f )
+			_frameRate = 12.0f;
 		updateSpriteFrame();
 	}
 
@@ -143,6 +147,16 @@ namespace sw
 	void SpriteAnimatorComponent::setFrameRate( float32 rate )
 	{
 		_frameRate = rate;
+	}
+
+	int32 SpriteAnimatorComponent::getTotalFrames() const
+	{
+		return _totalFrames;
+	}
+
+	void SpriteAnimatorComponent::setTotalFrames( int32 total )
+	{
+		_totalFrames = total > 0 ? total : 1;
 	}
 
 	int32 SpriteAnimatorComponent::getCurrentFrame() const

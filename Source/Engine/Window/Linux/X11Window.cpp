@@ -137,12 +137,12 @@ namespace sw
 		const uint32 height = _height;
 		_bRecreating		= SW_TRUE;
 		destroy();
-		_bRecreating	   = SW_FALSE;
 		_bShouldClose	   = SW_FALSE;
 		const string title = StringUtil::utf16ToUtf8( _title.c_str() );
 		const bool	 ok	   = initializeWindow( title.c_str(), width, height );
 		if ( ok && bWasVisible )
 			showWindow( true );
+		_bRecreating = SW_FALSE;
 
 		_restoreX = 100;
 		_restoreY = 100;

@@ -479,10 +479,20 @@ namespace sw
 	GameObject* PrefabManager::spawn( GameObjectManager* pGameObjectManager, string_view assetRelativePath, const utf8* pInstanceName,
 									  const uint8* pInstanceDiff, size_t instanceDiffSize )
 	{
-		if ( pGameObjectManager == nullptr )
-			return nullptr;
+		string resolvedPath{ assetRelativePath };
+		if ( engine::areEngineServicesBound() )
+		{
+			Uuid guid{};
+			if ( Uuid::tryParse( assetRelativePath, guid ) && guid.isNull() == false )
+			{
+				const string* pPath = engine::getResourceManager().getAssetDatabase().getPath( guid );
+				if ( pPath != nullptr && pPath->empty() == false )
+					resolvedPath = *pPath;
+			}
+		}
 
-		const hashed_string				   pathKey( assetRelativePath.data(), static_cast<uint32>( assetRelativePath.size() ) );
+		const string					   cacheKey = PrefabAssetInternal::makePrefabCacheKey( resolvedPath );
+		const hashed_string				   pathKey( cacheKey.data(), static_cast<uint32>( cacheKey.size() ) );
 		thread_local vector<hashed_string> t_listSpawnStack;
 
 		if ( std::find( t_listSpawnStack.begin(), t_listSpawnStack.end(), pathKey ) != t_listSpawnStack.end() )

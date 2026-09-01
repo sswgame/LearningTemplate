@@ -95,26 +95,24 @@ namespace sw
 		}
 
 		GameObjectManager* pObjMgr = _pManager;
-		if ( pObjMgr == nullptr )
+		if ( pObjMgr == nullptr && engine::areEngineServicesBound() )
 		{
-			if ( engine::areEngineServicesBound() == false )
-				return;
-
 			SceneManager& sceneMgr = engine::getSceneManager();
 			Scene*		  pScene   = sceneMgr.getActiveScene();
-			if ( pScene == nullptr )
-				return;
-
-			pObjMgr = pScene->getObjectManager();
+			if ( pScene != nullptr )
+			{
+				pObjMgr = pScene->getObjectManager();
+			}
 		}
 
 		if ( pObjMgr == nullptr )
 			return;
 
 		// 1) 빠른 경로: 캐시된 오브젝트 ID가 여전히 유효하고 이름이 일치하는지 확인
-		if ( _cachedObjectId != 0 && pObjMgr->findGameObjectById( _cachedObjectId ) != nullptr )
+		if ( _cachedObjectId != 0 )
 		{
-			if ( _pCachedPtr != nullptr && _pCachedPtr->getName() == _targetName && _pCachedPtr->isPendingKill() == false )
+			GameObject* pFound = pObjMgr->findGameObjectById( _cachedObjectId );
+			if ( pFound != nullptr && pFound == _pCachedPtr && pFound->getName() == _targetName && pFound->isPendingKill() == false )
 			{
 				return; // 캐시 유효
 			}

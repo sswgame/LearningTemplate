@@ -548,3 +548,36 @@ SW_TEST_CASE( Engine_Spatial, BVHTree3DAABBRaySphereQueries )
 	if ( listSphere.empty() == false )
 		SW_EXPECT_EQUAL( eNear1, listSphere[0] );
 }
+
+/**
+ * @brief [SpatialHashGrid2D] 복수 셀에 걸친 대형 오브젝트 쿼리 시 중복 없는 반환 및 정렬 최적화 검증
+ */
+SW_TEST_CASE( Engine_Spatial, SpatialHashGrid2D_SpanningMultiCellsDuplicateFiltering )
+{
+	sw::SpatialHashGrid2D  grid( 10.0f );
+	const sw::ObjectHandle h1 = sw::ObjectHandle::make( 1, 1 );
+	const sw::ObjectHandle h2 = sw::ObjectHandle::make( 2, 1 );
+
+	// h1은 (0,0)부터 (25,25)까지 9개 셀에 걸쳐 삽입
+	grid.insert( h1, 0.0f, 0.0f, 25.0f, 25.0f );
+	// h2는 (5,5)부터 (8,8)까지 1개 셀
+	grid.insert( h2, 5.0f, 5.0f, 8.0f, 8.0f );
+
+	sw::vector<sw::ObjectHandle> listResults;
+	grid.queryAABB( -5.0f, -5.0f, 30.0f, 30.0f, listResults );
+
+	// 중복 없이 h1, h2 총 2개만 반환되어야 함
+	SW_EXPECT_EQUAL( 2u, static_cast<uint32>( listResults.size() ) );
+	SW_EXPECT_EQUAL( h1, listResults[0] );
+	SW_EXPECT_EQUAL( h2, listResults[1] );
+
+	// queryCircle 검증
+	listResults.clear();
+	grid.queryCircle( 12.5f, 12.5f, 15.0f, listResults );
+	SW_EXPECT_EQUAL( 2u, static_cast<uint32>( listResults.size() ) );
+
+	// queryRay 검증
+	listResults.clear();
+	grid.queryRay( -10.0f, 6.0f, 1.0f, 0.0f, 40.0f, listResults );
+	SW_EXPECT_EQUAL( 2u, static_cast<uint32>( listResults.size() ) );
+}

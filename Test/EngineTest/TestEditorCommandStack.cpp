@@ -547,3 +547,40 @@ SW_TEST_CASE( CommandStack, ComponentBinaryClipboardValuePasting )
 	SW_EXPECT_NEAR_EQUAL( 2.0f, pTargetSc->getLocalScale()._y, 0.001f );
 	SW_EXPECT_NEAR_EQUAL( 2.0f, pTargetSc->getLocalScale()._z, 0.001f );
 }
+
+/**
+ * @brief [CommandStack] Undo/Redo 도중 push 재진입 가드 엣지 케이스 검증
+ */
+SW_TEST_CASE( CommandStack, ReentrancyPushGuardDuringUndoRedo )
+{
+	CommandStack stack;
+	int32		 val = 0;
+
+	CommandStack::Command cmd1{};
+	cmd1._label = "Cmd1";
+	cmd1._undo	= [&]()
+	{
+		val = 0;
+		// 재진입 push 시도
+		CommandStack::Command reentrantCmd{};
+		reentrantCmd._label = "Reentrant";
+		reentrantCmd._undo	= []() {};
+		reentrantCmd._redo	= []() {};
+		stack.push( std::move( reentrantCmd ) );
+	};
+	cmd1._redo = [&]()
+	{ val = 1; };
+
+	stack.push( std::move( cmd1 ) );
+	SW_EXPECT_EQUAL( 1u, stack.getCommandCount() );
+	SW_EXPECT_TRUE( stack.canUndo() );
+
+	// Undo 실행 -> 콜백 내부에서 push 시도해도 스택 인덱스와 크기가 오염되지 않아야 함
+	stack.undo();
+	SW_EXPECT_EQUAL( 0, val );
+	SW_EXPECT_EQUAL( 1u, stack.getCommandCount() );
+	SW_EXPECT_TRUE( stack.canRedo() );
+
+	stack.redo();
+	SW_EXPECT_EQUAL( 1, val );
+}

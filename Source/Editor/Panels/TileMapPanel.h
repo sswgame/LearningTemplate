@@ -89,6 +89,8 @@ namespace sw::editor
 		float32								  _arrTint[3];
 		int32								  _width;
 		int32								  _height;
+		int32								  _inputWidth;
+		int32								  _inputHeight;
 		int32								  _paintHeight;
 		int32								  _atlasId;
 		int32								  _warpTx;

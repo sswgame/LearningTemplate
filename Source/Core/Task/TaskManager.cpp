@@ -1250,7 +1250,14 @@ namespace sw
 			{
 				while ( _queueMainThread.enqueue( pNode ) == false )
 				{
-					std::this_thread::yield();
+					if ( isMainThread() )
+					{
+						dispatchMainThreadTasks();
+					}
+					else
+					{
+						std::this_thread::yield();
+					}
 				}
 				std::scoped_lock<mutex> waitLock{ _waitAllMutex };
 				_cvWaitAll.notify_one();
@@ -1266,6 +1273,8 @@ namespace sw
 						WorkerQueue& localQ = *std::as_const( _listWorkerQueue )[static_cast<uint32>( workerId )];
 						while ( localQ._queue.push( pNode ) == false )
 						{
+							if ( _globalWorkerQueue.enqueue( pNode ) )
+								break;
 							std::this_thread::yield();
 						}
 					}
@@ -1289,19 +1298,19 @@ namespace sw
 
 	void TaskManager::onTaskFinished( TaskNode* pNode )
 	{
-		pNode->_state.store( TaskState::WaitingForChildren, std::memory_order_release );
-		if ( pNode->_activeChildren.load( std::memory_order_acquire ) > 0 )
+		pNode->_state.store( TaskState::WaitingForChildren, std::memory_order_seq_cst );
+		if ( pNode->_activeChildren.load( std::memory_order_seq_cst ) > 0 )
 			return;
 
-		pNode->_state.store( TaskState::Completed, std::memory_order_release );
+		pNode->_state.store( TaskState::Completed, std::memory_order_seq_cst );
 
 		BLOCK( "Update Parent Task" )
 		{
 			TaskNode* pParent = pNode->_pParent;
 			if ( pParent != nullptr )
 			{
-				int32 remaining = pParent->_activeChildren.fetch_sub( 1, std::memory_order_acq_rel ) - 1;
-				if ( remaining == 0 && pParent->_state.load( std::memory_order_acquire ) == TaskState::WaitingForChildren )
+				int32 remaining = pParent->_activeChildren.fetch_sub( 1, std::memory_order_seq_cst ) - 1;
+				if ( remaining == 0 && pParent->_state.load( std::memory_order_seq_cst ) == TaskState::WaitingForChildren )
 					onTaskFinished( pParent );
 				pParent->release();
 			}

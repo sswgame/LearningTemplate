@@ -60,7 +60,7 @@ namespace sw
 				continue;
 			}
 
-			size_t oldOffset = pCurrentBlock->_offset.load( std::memory_order_relaxed );
+			size_t oldOffset = pCurrentBlock->_offset.load( std::memory_order_acquire );
 			while ( true )
 			{
 				const uintptr_t basePtr		  = reinterpret_cast<uintptr_t>( pCurrentBlock->_pData ) + oldOffset;
@@ -70,13 +70,13 @@ namespace sw
 				if ( newOffset > pCurrentBlock->_capacity )
 					break;
 
-				if ( pCurrentBlock->_offset.compare_exchange_weak( oldOffset, newOffset, std::memory_order_relaxed ) )
+				if ( pCurrentBlock->_offset.compare_exchange_weak( oldOffset, newOffset, std::memory_order_acq_rel, std::memory_order_acquire ) )
 					return reinterpret_cast<void*>( alignedPtr );
 			}
 
 			// 블록이 가득 찼으므로 새 블록을 할당합니다.
 			std::scoped_lock<mutex> lock{ _mutex };
-			if ( _currentBlockIndex.load( std::memory_order_relaxed ) == blockIndex )
+			if ( _currentBlockIndex.load( std::memory_order_acquire ) == blockIndex )
 			{
 				if ( allocateNewBlock( size + alignment ) == false )
 					return nullptr;
@@ -87,10 +87,10 @@ namespace sw
 	void LinearAllocator::reset()
 	{
 		std::scoped_lock<mutex> lock{ _mutex };
-		const size_t			blockCount = _blockCount.load( std::memory_order_relaxed );
+		const size_t			blockCount = _blockCount.load( std::memory_order_acquire );
 		for ( size_t blockIndex = 0; blockIndex < blockCount; ++blockIndex )
 		{
-			_arrBlock[blockIndex].load( std::memory_order_relaxed )->_offset.store( 0, std::memory_order_relaxed );
+			_arrBlock[blockIndex].load( std::memory_order_acquire )->_offset.store( 0, std::memory_order_release );
 		}
 
 		_currentBlockIndex.store( 0, std::memory_order_release );

@@ -3214,3 +3214,53 @@ SW_TEST_CASE( GameObjectManagerPoolTest, SceneClearAndPoolReuseLifecycle )
 	manager.clear();
 	SW_EXPECT_EQUAL( static_cast<size_t>( 0 ), manager.getAllGameObjects().size() );
 }
+
+/**
+ * @brief [GameObjectHierarchy] refreshActiveInHierarchy 부모-자식-손자 다계층 합성 활성 상태 엣지 케이스 검증
+ */
+SW_TEST_CASE( GameObjectHierarchy, ActiveInHierarchyCompoundEvaluation )
+{
+	sw::GameObjectManager manager;
+	sw::GameObject*		  pGrandparent = manager.createGameObject( sw::hashed_string( "Grandparent" ) );
+	sw::GameObject*		  pParent	   = manager.createGameObject( sw::hashed_string( "Parent" ) );
+	sw::GameObject*		  pChild	   = manager.createGameObject( sw::hashed_string( "Child" ) );
+
+	sw::SceneComponent* pGrandparentSc = pGrandparent->addComponent<sw::SceneComponent>();
+	sw::SceneComponent* pParentSc	   = pParent->addComponent<sw::SceneComponent>();
+	sw::SceneComponent* pChildSc	   = pChild->addComponent<sw::SceneComponent>();
+
+	pParentSc->attachToComponent( pGrandparentSc );
+	pChildSc->attachToComponent( pParentSc );
+
+	// 1) 초기 상태: 모두 활성
+	SW_EXPECT_TRUE( pGrandparent->isActiveInHierarchy() );
+	SW_EXPECT_TRUE( pParent->isActiveInHierarchy() );
+	SW_EXPECT_TRUE( pChild->isActiveInHierarchy() );
+
+	// 2) Child만 비활성화: Grandparent/Parent는 true, Child는 false
+	pChild->setActive( false );
+	SW_EXPECT_TRUE( pGrandparent->isActiveInHierarchy() );
+	SW_EXPECT_TRUE( pParent->isActiveInHierarchy() );
+	SW_EXPECT_FALSE( pChild->isActiveInHierarchy() );
+
+	// 3) Parent 비활성화, Child 재활성화: Grandparent=true, Parent=false, Child=false (부모가 꺼져있으므로)
+	pParent->setActive( false );
+	pChild->setActive( true );
+	SW_EXPECT_TRUE( pGrandparent->isActiveInHierarchy() );
+	SW_EXPECT_FALSE( pParent->isActiveInHierarchy() );
+	SW_EXPECT_FALSE( pChild->isActiveInHierarchy() );
+
+	// 4) Grandparent 비활성화, Parent 활성화, Child 활성화: Grandparent=false, Parent=false, Child=false (조상이 꺼져있으므로)
+	pGrandparent->setActive( false );
+	pParent->setActive( true );
+	pChild->setActive( true );
+	SW_EXPECT_FALSE( pGrandparent->isActiveInHierarchy() );
+	SW_EXPECT_FALSE( pParent->isActiveInHierarchy() );
+	SW_EXPECT_FALSE( pChild->isActiveInHierarchy() );
+
+	// 5) Grandparent 복구: 모두 true
+	pGrandparent->setActive( true );
+	SW_EXPECT_TRUE( pGrandparent->isActiveInHierarchy() );
+	SW_EXPECT_TRUE( pParent->isActiveInHierarchy() );
+	SW_EXPECT_TRUE( pChild->isActiveInHierarchy() );
+}

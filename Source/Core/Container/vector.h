@@ -894,8 +894,15 @@ namespace sw
 	{
 		SW_SCOPED_RACE_WRITE();
 		if ( _size >= _capacity )
+		{
+			T temp( std::move( value ) );
 			reserveInternal( _capacity == 0 ? 4 : _capacity * 2 );
-		sw_placement_new( ( _pData + ( _size ) ) ) T( std::move( value ) );
+			sw_placement_new( ( _pData + ( _size ) ) ) T( std::move( temp ) );
+		}
+		else
+		{
+			sw_placement_new( ( _pData + ( _size ) ) ) T( std::move( value ) );
+		}
 		++_size;
 	}
 
@@ -905,8 +912,15 @@ namespace sw
 	{
 		SW_SCOPED_RACE_WRITE();
 		if ( _size >= _capacity )
+		{
+			T temp( std::forward<Args>( args )... );
 			reserveInternal( _capacity == 0 ? 4 : _capacity * 2 );
-		sw_placement_new( ( _pData + ( _size ) ) ) T( std::forward<Args>( args )... );
+			sw_placement_new( ( _pData + ( _size ) ) ) T( std::move( temp ) );
+		}
+		else
+		{
+			sw_placement_new( ( _pData + ( _size ) ) ) T( std::forward<Args>( args )... );
+		}
 		++_size;
 		return _pData[_size - 1];
 	}

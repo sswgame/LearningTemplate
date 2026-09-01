@@ -54,6 +54,9 @@ namespace sw
 		float32 getFrameRate() const;
 		void	setFrameRate( float32 rate );
 
+		int32 getTotalFrames() const;
+		void  setTotalFrames( int32 total );
+
 		int32 getCurrentFrame() const;
 		bool  isPlaying() const;
 		bool  isPaused() const;

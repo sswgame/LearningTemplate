@@ -102,14 +102,16 @@ namespace sw
 			return false;
 		}
 
-		FileUtil::removeFile( path );
 		const bool bCopied = FileUtil::copyFile( tempPath, path );
-		FileUtil::removeFile( tempPath );
-
 		if ( bCopied )
+		{
+			FileUtil::removeFile( tempPath );
 			SW_LOG_INFO( "Saved %# (party=%# flags=%#)", path, _listParty.size(), _mapFlag.size() );
+		}
 		else
-			SW_LOG_ERROR( "Failed to commit atomic save to %#", path );
+		{
+			SW_LOG_ERROR( "Failed to commit atomic save to %# (temporary file retained at %#)", path, tempPath.c_str() );
+		}
 
 		return bCopied;
 	}

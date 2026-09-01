@@ -201,7 +201,21 @@ namespace sw
 		const string			pathStr = string( assetPath );
 		std::scoped_lock<mutex> lock{ _mutex };
 		_uniqueActiveRequest.erase( pathStr );
-		_mapInFlightCallback.erase( pathStr );
+
+		const auto itCallbacks = _mapInFlightCallback.find( pathStr );
+		if ( itCallbacks != _mapInFlightCallback.end() )
+		{
+			for ( const auto& cb : itCallbacks->second )
+			{
+				CompletedItem item{};
+				item._path	   = pathStr;
+				item._callback = cb;
+				item._bSuccess = false;
+				_queueCompleted.enqueue( std::move( item ) );
+			}
+			_mapInFlightCallback.erase( itCallbacks );
+		}
+
 		// 이미 실행 중인 워커가 나중에 완료돼도 무시되도록 세대를 올린다.
 		++_mapRequestGeneration[pathStr];
 

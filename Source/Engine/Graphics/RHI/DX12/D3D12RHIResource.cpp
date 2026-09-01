@@ -753,6 +753,9 @@ namespace sw
 			gpuHandle.ptr += heapSlot * _pDevice->_cbvDescriptorSize;
 		}
 
+		if ( pRes->GetDesc().Width < 4 )
+			return kInvalidDescriptorIndex;
+
 		// RWByteAddressBuffer / RAW UAV: R32_TYPELESS + RAW, StructureByteStride must be 0.
 		D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc{};
 		uavDesc.ViewDimension			   = D3D12_UAV_DIMENSION_BUFFER;
@@ -777,6 +780,8 @@ namespace sw
 		if ( index < _pDevice->_listRegisteredUAV.size() )
 		{
 			_pDevice->_listRegisteredUAV[index]._resource = nullptr;
+			_pDevice->_listRegisteredUAV[index]._buffer	  = 0;
+			_pDevice->_listRegisteredUAV[index]._texture  = 0;
 			_pDevice->_listFreeUav.push_back( index );
 		}
 	}

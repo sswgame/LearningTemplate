@@ -163,3 +163,36 @@ SW_TEST_CASE( Engine_GlobalVariable, NonExistentVariableHandling )
 	SW_EXPECT_FALSE( sw::engine::getGlobalVariableManager().setValueFromString( "gv_nonExistentVariable", "123" ) );
 	SW_EXPECT_FALSE( sw::engine::getGlobalVariableManager().resetToDefault( "gv_nonExistentVariable" ) );
 }
+
+/**
+ * @brief [Engine_GlobalVariable] 멀티스레드 환경에서 문자열 전역 변수 동시 읽기/쓰기 스레드 안전성 검증
+ */
+SW_TEST_CASE( Engine_GlobalVariable, MultithreadedStringReadWriteThreadSafety )
+{
+	sw::GlobalVariableInfo* pStrInfo = sw::engine::getGlobalVariableManager().findVariable( "gv_testString" );
+	SW_ASSERT_NOT_NULL( pStrInfo );
+
+	std::atomic<bool> bRunning{ true };
+	std::thread		  writer( [&]()
+	{
+		for ( int32 iter = 0; iter < 1000; ++iter )
+		{
+			sw::engine::getGlobalVariableManager().setValueFromString( "gv_testString", sw::string( "Value_" + std::to_string( iter ) ) );
+		}
+		bRunning.store( false, std::memory_order_release );
+	} );
+
+	std::thread reader( [&]()
+	{
+		while ( bRunning.load( std::memory_order_acquire ) )
+		{
+			sw::string val = pStrInfo->getValueAsString();
+			SW_EXPECT_TRUE( val.find( "Value_" ) != sw::string::npos || val == "InitialValue" );
+		}
+	} );
+
+	writer.join();
+	reader.join();
+
+	sw::engine::getGlobalVariableManager().resetToDefault( "gv_testString" );
+}

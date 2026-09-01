@@ -241,6 +241,8 @@ namespace sw
 		template <typename T>
 		static SW_INLINE constexpr T align( T value, T alignment )
 		{
+			if ( alignment <= T( 0 ) )
+				return value;
 			if constexpr ( std::is_integral_v<T> )
 			{
 				if ( ( alignment & ( alignment - 1 ) ) == 0 )
@@ -257,7 +259,12 @@ namespace sw
 
 			thread_local std::mt19937_64 t_generator{ std::random_device{}() };
 
-			std::conditional_t<std::is_floating_point_v<T>, std::uniform_real_distribution<T>, std::uniform_int_distribution<T>> dist{};
+			using DistType = std::conditional_t<
+				std::is_floating_point_v<T>,
+				std::uniform_real_distribution<T>,
+				std::uniform_int_distribution<std::conditional_t<( sizeof( T ) < 2 ), int32, T>>>;
+
+			DistType dist{};
 			return static_cast<T>( dist( t_generator ) );
 		}
 
@@ -271,8 +278,16 @@ namespace sw
 
 			T start = static_cast<T>( from );
 			T end	= static_cast<T>( to );
+			if ( start > end )
+				std::swap( start, end );
 
-			std::conditional_t<std::is_floating_point_v<T>, std::uniform_real_distribution<T>, std::uniform_int_distribution<T>> dist{ start, end };
+			using DistType = std::conditional_t<
+				std::is_floating_point_v<T>,
+				std::uniform_real_distribution<T>,
+				std::uniform_int_distribution<std::conditional_t<( sizeof( T ) < 2 ), int32, T>>>;
+
+			DistType dist{ static_cast<std::conditional_t<( sizeof( T ) < 2 ), int32, T>>( start ),
+						   static_cast<std::conditional_t<( sizeof( T ) < 2 ), int32, T>>( end ) };
 
 			return static_cast<T>( dist( t_generator ) );
 		}

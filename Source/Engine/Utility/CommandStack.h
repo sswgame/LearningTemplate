@@ -72,5 +72,6 @@ namespace sw
 		size_t			_index{ 0 };
 		/** @brief 중첩 트랜잭션 깊이. 최외곽(0 으로 복귀)에서만 하나의 복합 커맨드로 커밋합니다. */
 		uint32 _transactionDepth{ 0 };
+		bool   _bIsExecuting{ false };
 	};
 } // namespace sw

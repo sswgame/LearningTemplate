@@ -122,29 +122,36 @@ namespace sw
 		}
 
 		GameObjectManager* pObjMgr = _pManager;
-		if ( pObjMgr == nullptr )
+		if ( pObjMgr == nullptr && engine::areEngineServicesBound() )
 		{
-			if ( engine::areEngineServicesBound() == false )
-				return;
-
 			SceneManager& sceneMgr = engine::getSceneManager();
 			Scene*		  pScene   = sceneMgr.getActiveScene();
-			if ( pScene == nullptr )
-				return;
-
-			pObjMgr = pScene->getObjectManager();
+			if ( pScene != nullptr )
+			{
+				pObjMgr = pScene->getObjectManager();
+			}
 		}
 
 		if ( pObjMgr == nullptr )
 			return;
 
 		// 1) 빠른 경로
-		if ( _cachedObjectId != 0 && pObjMgr->findGameObjectById( _cachedObjectId ) != nullptr )
+		if ( _cachedObjectId != 0 )
 		{
-			if ( _pCachedPtr != nullptr && _pCachedPtr->isPendingKill() == false )
+			GameObject* pFound = pObjMgr->findGameObjectById( _cachedObjectId );
+			if ( pFound != nullptr && pFound->isPendingKill() == false )
 			{
-				GameObject* pOwner = _pCachedPtr->getOwner();
-				if ( pOwner != nullptr && pOwner->getName() == _targetObjectName && _pCachedPtr->getComponentName() == _targetComponentType )
+				bool bComponentFound = false;
+				for ( Component* pComp : pFound->getAllComponents() )
+				{
+					if ( pComp == _pCachedPtr && pComp->isPendingKill() == false )
+					{
+						bComponentFound = true;
+						break;
+					}
+				}
+
+				if ( bComponentFound && pFound->getName() == _targetObjectName && _pCachedPtr->getComponentName() == _targetComponentType )
 				{
 					return; // 캐시 유효
 				}

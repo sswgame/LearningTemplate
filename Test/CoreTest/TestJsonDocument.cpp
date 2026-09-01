@@ -118,3 +118,26 @@ SW_TEST_CASE( Core_Json, BooleanFloatAndDeepNestedObject )
 	SW_EXPECT_NEAR_EQUAL( 20.25, subArr.at( 1 ).asFloat(), 1e-4 );
 	SW_EXPECT_NEAR_EQUAL( 30.125, subArr.at( 2 ).asFloat(), 1e-4 );
 }
+
+/**
+ * @brief [Core_Json] 부동소수점 JSON 토큰의 asInt, asUint 변환 안전성 엣지 케이스 검증
+ */
+SW_TEST_CASE( Core_Json, FloatToIntTypeSafetyAndCoercion )
+{
+	const utf8* jsonStr = R"({
+		"floatVal": 3.75,
+		"intVal": 42,
+		"negativeFloat": -10.8,
+		"zeroVal": 0.0
+	})";
+
+	sw::JsonDocument doc;
+	SW_EXPECT_TRUE( doc.parse( jsonStr ) );
+
+	sw::JsonValue root = doc.root();
+	SW_EXPECT_EQUAL( 3, root.get( "floatVal" ).asInt() );
+	SW_EXPECT_EQUAL( 3u, static_cast<uint32>( root.get( "floatVal" ).asUint() ) );
+	SW_EXPECT_EQUAL( 42, root.get( "intVal" ).asInt() );
+	SW_EXPECT_EQUAL( -10, root.get( "negativeFloat" ).asInt() );
+	SW_EXPECT_EQUAL( 0, root.get( "zeroVal" ).asInt() );
+}

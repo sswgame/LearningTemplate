@@ -128,7 +128,7 @@ namespace sw
 			Delegate newDelegate{};
 			newDelegate._pInstance = nullptr;
 			newDelegate._stubFunc  = static_cast<stub_function>( []( const void*, Args... args ) -> R
-			 { return std::invoke( Function, std::forward<Args>( args )... ); } );
+			{ return std::invoke( Function, std::forward<Args>( args )... ); } );
 
 			return newDelegate;
 		}
@@ -139,10 +139,10 @@ namespace sw
 			Delegate newDelegate{};
 			newDelegate._pInstance = reinterpret_cast<const void*>( pFunc );
 			newDelegate._stubFunc  = static_cast<stub_function>( []( const void* pPtr, Args... args ) -> R
-			 {
-				 auto pFn = reinterpret_cast<R ( * )( Args... )>( const_cast<void*>( pPtr ) );
-				 return pFn( std::forward<Args>( args )... );
-			 } );
+			{
+				auto pFn = reinterpret_cast<R ( * )( Args... )>( const_cast<void*>( pPtr ) );
+				return pFn( std::forward<Args>( args )... );
+			} );
 
 			return newDelegate;
 		}
@@ -154,10 +154,10 @@ namespace sw
 			Delegate newDelegate{};
 			newDelegate._pInstance = pClassInstance;
 			newDelegate._stubFunc  = static_cast<stub_function>( []( const void* pPtr, Args... args ) -> R
-			 {
-				 const Class* pInstance = static_cast<const Class*>( pPtr );
-				 return std::invoke( MemberFunction, pInstance, std::forward<Args>( args )... );
-			 } );
+			{
+				const Class* pInstance = static_cast<const Class*>( pPtr );
+				return std::invoke( MemberFunction, pInstance, std::forward<Args>( args )... );
+			} );
 
 			return newDelegate;
 		}
@@ -169,10 +169,10 @@ namespace sw
 			Delegate newDelegate{};
 			newDelegate._pInstance = pClassInstance;
 			newDelegate._stubFunc  = static_cast<stub_function>( []( const void* pPtr, Args... args ) -> R
-			 {
-				 Class* pInstance = const_cast<Class*>( static_cast<const Class*>( pPtr ) );
-				 return std::invoke( MemberFunction, pInstance, std::forward<Args>( args )... );
-			 } );
+			{
+				Class* pInstance = const_cast<Class*>( static_cast<const Class*>( pPtr ) );
+				return std::invoke( MemberFunction, pInstance, std::forward<Args>( args )... );
+			} );
 
 			return newDelegate;
 		}
@@ -188,10 +188,10 @@ namespace sw
 			Delegate newDelegate{};
 			newDelegate._managerFunc = &lambdaManager<Lambda>;
 			newDelegate._stubFunc	 = static_cast<stub_function>( []( const void* pPtr, Args... args ) -> R
-			   {
-				   const Lambda* pInstance = static_cast<const Lambda*>( pPtr );
-				   return ( const_cast<Lambda*>( pInstance )->operator() )( std::forward<Args>( args )... );
-			   } );
+			{
+				const Lambda* pInstance = static_cast<const Lambda*>( pPtr );
+				return ( const_cast<Lambda*>( pInstance )->operator() )( std::forward<Args>( args )... );
+			} );
 
 			constexpr bool bIsSBO = sizeof( Lambda ) <= kInlineBufferSize && alignof( Lambda ) <= alignof( std::max_align_t ) && std::is_nothrow_move_constructible_v<Lambda>;
 			if constexpr ( bIsSBO )
@@ -434,7 +434,15 @@ namespace sw
 
 			if ( _broadcastDepth > 0 )
 			{
-				// broadcast 완료 후 일괄 처리 (이터레이터 무효화 방지)
+				// broadcast 중 삭제 시 남은 순회에서 이미 파괴된 객체에 대한 UAF 호출을 방지하기 위해 즉시 무효화
+				for ( DelegateEntry& entry : _listDelegate )
+				{
+					if ( entry._handle == handle )
+					{
+						entry._delegate = delegate_type{};
+						break;
+					}
+				}
 				_listPendingRemove.push_back( handle );
 				return;
 			}
@@ -459,8 +467,9 @@ namespace sw
 		{
 			if ( _broadcastDepth > 0 )
 			{
-				for ( const DelegateEntry& entry : _listDelegate )
+				for ( DelegateEntry& entry : _listDelegate )
 				{
+					entry._delegate = delegate_type{};
 					_listPendingRemove.push_back( entry._handle );
 				}
 				return;

@@ -1232,14 +1232,22 @@ namespace sw
 			createInfo.subresourceRange.layerCount	   = 1;
 
 			if ( vkCreateImageView( _device, &createInfo, nullptr, &_listSwapChainImageView[imageIndex] ) != VK_SUCCESS )
+			{
+				for ( size_t cleanupIndex = 0; cleanupIndex < imageIndex; ++cleanupIndex )
+				{
+					if ( _listSwapChainImageView[cleanupIndex] != VK_NULL_HANDLE )
+						vkDestroyImageView( _device, _listSwapChainImageView[cleanupIndex], nullptr );
+				}
+				_listSwapChainImageView.clear();
 				return false;
+			}
 		}
 		return true;
 	}
 
 	bool VulkanRHIDevice::createFramebuffers()
 	{
-		_listSwapChainFramebuffer.resize( _listSwapChainImageView.size() );
+		_listSwapChainFramebuffer.resize( _listSwapChainImageView.size(), VK_NULL_HANDLE );
 		for ( size_t imageIndex = 0; imageIndex < _listSwapChainImageView.size(); imageIndex++ )
 		{
 			VkImageView				arrAttachment[] = { _listSwapChainImageView[imageIndex] };
@@ -1252,7 +1260,15 @@ namespace sw
 			framebufferInfo.height			= _swapChainExtentHeight;
 			framebufferInfo.layers			= 1;
 			if ( vkCreateFramebuffer( _device, &framebufferInfo, nullptr, &_listSwapChainFramebuffer[imageIndex] ) != VK_SUCCESS )
+			{
+				for ( size_t cleanupIndex = 0; cleanupIndex < imageIndex; ++cleanupIndex )
+				{
+					if ( _listSwapChainFramebuffer[cleanupIndex] != VK_NULL_HANDLE )
+						vkDestroyFramebuffer( _device, _listSwapChainFramebuffer[cleanupIndex], nullptr );
+				}
+				_listSwapChainFramebuffer.clear();
 				return false;
+			}
 		}
 		return true;
 	}

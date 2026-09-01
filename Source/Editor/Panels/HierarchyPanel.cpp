@@ -68,7 +68,7 @@ namespace sw::editor
 				if ( StringUtil::startsWith( pFilter, "tag:", true ) )
 				{
 					const string_view tagFilter{ pFilter + 4 };
-					return pObj->hasTag( TagID{ hashed_string( tagFilter ).getHash(), nullptr } );
+					return pObj->hasTag( TagID{ StringUtil::computeHash64( tagFilter.data(), tagFilter.size() ), nullptr } );
 				}
 
 				// 3) General name matching
@@ -306,7 +306,7 @@ namespace sw::editor
 
 				EditorWorkspace& ws		   = EditorContext::get()->getWorkspace();
 				const bool		 bSelected = ( ws.getSelectedObjectId() == pObj->getObjectId() &&
-										   ws.getSelectedComponentId() == pSceneComp->getComponentId() );
+											   ws.getSelectedComponentId() == pSceneComp->getComponentId() );
 
 				const utf8* pCompName = pSceneComp->getComponentName().empty() == false
 										  ? pSceneComp->getComponentName().c_str()
@@ -485,7 +485,7 @@ namespace sw::editor
 
 						EditorWorkspace& ws			   = EditorContext::get()->getWorkspace();
 						const bool		 bCompSelected = ( ws.getSelectedObjectId() == pObj->getObjectId() &&
-													   ws.getSelectedComponentId() == pComp->getComponentId() );
+														   ws.getSelectedComponentId() == pComp->getComponentId() );
 
 						const utf8* pCompName = pComp->getComponentName().empty() == false
 												  ? pComp->getComponentName().c_str()

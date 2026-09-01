@@ -7,6 +7,7 @@
 #include "Core/Concurrency/WorkStealingDeque.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/DynamicBitset.h"
+#include "Core/Container/HandleTable.h"
 #include "Core/Container/array.h"
 #include "Core/Container/deque.h"
 #include "Core/Container/list.h"
@@ -979,4 +980,46 @@ SW_TEST_CASE( Core_DataStructure, ConcurrentQueueMPMCStress )
 
 	SW_EXPECT_EQUAL( kTotalItems, countConsumed.load() );
 	SW_EXPECT_EQUAL( expectedSum, sumConsumed.load() );
+}
+
+/**
+ * @brief [Core_DataStructure] HandleTable insert, erase, generation 증가 및 재사용 검증
+ */
+SW_TEST_CASE( Core_DataStructure, HandleTableInsertEraseAndGenerationIncrement )
+{
+	sw::HandleTable<sw::string> table;
+	sw::ObjectHandle			h1 = table.insert( "Entity_1" );
+	sw::ObjectHandle			h2 = table.insert( "Entity_2" );
+
+	SW_ASSERT_TRUE( h1.isValid() );
+	SW_ASSERT_TRUE( h2.isValid() );
+	SW_EXPECT_EQUAL( sw::string( "Entity_1" ), *table.get( h1 ) );
+	SW_EXPECT_EQUAL( sw::string( "Entity_2" ), *table.get( h2 ) );
+
+	// h1 삭제
+	table.erase( h1 );
+	SW_EXPECT_NULL( table.get( h1 ) );
+
+	// 새 엔트리 삽입 시 동일 슬롯 재사용 및 세대 번호(generation) 증가 검증
+	sw::ObjectHandle h3 = table.insert( "Entity_3" );
+	SW_ASSERT_TRUE( h3.isValid() );
+	SW_EXPECT_EQUAL( h1.index(), h3.index() );
+	SW_EXPECT_TRUE( h1.generation() < h3.generation() );
+	SW_EXPECT_NULL( table.get( h1 ) ); // 구세대 핸들은 무효
+	SW_EXPECT_EQUAL( sw::string( "Entity_3" ), *table.get( h3 ) );
+}
+
+/**
+ * @brief [Core_DataStructure] DynamicBitset 잘못된 입력 문자 파싱 안전성 검증
+ */
+SW_TEST_CASE( Core_DataStructure, DynamicBitsetInvalidStringParsingSafety )
+{
+	sw::DynamicBitset bitset( "10A1B0" );
+	SW_EXPECT_EQUAL( 6u, bitset.size() );
+
+	// '1' 위치는 bitIndex 5와 2
+	SW_EXPECT_TRUE( bitset.test( 5 ) );
+	SW_EXPECT_TRUE( bitset.test( 2 ) );
+	SW_EXPECT_FALSE( bitset.test( 4 ) );
+	SW_EXPECT_FALSE( bitset.test( 0 ) );
 }

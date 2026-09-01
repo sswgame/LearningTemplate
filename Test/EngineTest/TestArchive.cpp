@@ -1544,3 +1544,38 @@ SW_TEST_CASE( Engine_Archive, CorruptedSaveSlotAndDocumentBinaryStreams )
 		sw::FileUtil::removeFile( testPrefabPath );
 	}
 }
+
+/**
+ * @brief [Engine_Archive] SaveSlot 플래그 키 사전순 정렬 기반 체크섬 일관성 및 라운드트립 검증
+ */
+SW_TEST_CASE( Engine_Archive, SaveSlotDeterministicChecksumAndLoad )
+{
+	const sw::string testSavePath = "saved/test_deterministic_slot.bin";
+
+	sw::SaveSlot slot1;
+	slot1._mapPath = "Overworld_Main";
+	slot1._playerX = 10;
+	slot1._playerY = 20;
+
+	// 무작위 순서로 플래그 삽입
+	slot1.setFlag( "quest.boss_defeated", 1 );
+	slot1.setFlag( "inventory.key_count", 3 );
+	slot1.setFlag( "dialogue.npc_met", 1 );
+	slot1.setFlag( "area.unlocked_gate", 1 );
+
+	SW_ASSERT_TRUE( slot1.saveCommonToBinaryFile( testSavePath ) );
+
+	sw::SaveSlot slot2;
+	SW_ASSERT_TRUE( slot2.loadCommonFromBinaryFile( testSavePath ) );
+
+	SW_EXPECT_EQUAL( sw::string( "Overworld_Main" ), slot2._mapPath );
+	SW_EXPECT_EQUAL( 10, slot2._playerX );
+	SW_EXPECT_EQUAL( 20, slot2._playerY );
+	SW_EXPECT_EQUAL( 1, slot2.getFlag( "quest.boss_defeated" ) );
+	SW_EXPECT_EQUAL( 3, slot2.getFlag( "inventory.key_count" ) );
+	SW_EXPECT_EQUAL( 1, slot2.getFlag( "dialogue.npc_met" ) );
+	SW_EXPECT_EQUAL( 1, slot2.getFlag( "area.unlocked_gate" ) );
+
+	// Cleanup
+	sw::FileUtil::removeFile( testSavePath );
+}

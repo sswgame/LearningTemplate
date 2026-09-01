@@ -53,7 +53,10 @@ namespace sw
 
 		BLOCK( "Write Flags" )
 		{
-			for ( const auto& [key, val] : _mapFlag )
+			vector<std::pair<string, int32>> listSortedFlag( _mapFlag.begin(), _mapFlag.end() );
+			std::sort( listSortedFlag.begin(), listSortedFlag.end(), []( const auto& lhs, const auto& rhs )
+			{ return lhs.first < rhs.first; } );
+			for ( const auto& [key, val] : listSortedFlag )
 			{
 				sb.append( "flag." ).append( key.c_str() ).append( '=' ).append( val ).append( '\n' );
 			}
@@ -100,12 +103,21 @@ namespace sw
 				const int32								px	 = KeyValueFile::getInt( map, "x", 0 );
 				const int32								py	 = KeyValueFile::getInt( map, "y", 0 );
 				verifySb.append( "map=" ).append( pMap ).append( "\nx=" ).append( px ).append( "\ny=" ).append( py ).append( '\n' );
+
+				vector<std::pair<string, string>> listSortedFlag;
 				for ( const auto& [key, val] : map )
 				{
 					if ( StringUtil::startsWith( key, "flag." ) )
 					{
-						verifySb.append( key.c_str() ).append( '=' ).append( val.c_str() ).append( '\n' );
+						listSortedFlag.emplace_back( key, val );
 					}
+				}
+				std::sort( listSortedFlag.begin(), listSortedFlag.end(), []( const auto& lhs, const auto& rhs )
+				{ return lhs.first < rhs.first; } );
+
+				for ( const auto& [key, val] : listSortedFlag )
+				{
+					verifySb.append( key.c_str() ).append( '=' ).append( val.c_str() ).append( '\n' );
 				}
 				uint64 expectedHashVal{ 0 };
 				StringUtil::parseUInt64( pChecksumStr, expectedHashVal, 10 );

@@ -704,3 +704,41 @@ SW_TEST_CASE( Core_String, FixedStringUnorderedContainers )
 	SW_EXPECT_EQUAL( 100, mapScore[sw::fixed_string<32>( "Player1" )] );
 	SW_EXPECT_EQUAL( 250, mapScore[sw::fixed_string<32>( "Player2" )] );
 }
+
+/**
+ * @brief [Core_String] FormatString floatToString 및 폴백 널 종단 문자 보장 검증
+ */
+SW_TEST_CASE( Core_String, FormatStringFloatFallbackNullTerminator )
+{
+	utf8 buf[64]{ 0 };
+	sw::formatstring( buf, sizeof( buf ), "Value: %#", 123.456f );
+	sw::string formattedFloat( buf );
+	SW_EXPECT_FALSE( formattedFloat.empty() );
+	SW_EXPECT_TRUE( formattedFloat.find( "123.45" ) != sw::string::npos );
+	SW_EXPECT_EQUAL( '\0', buf[formattedFloat.size()] );
+}
+
+/**
+ * @brief [Core_String] StringBuilder 경계 크기 appendFormat 포맷팅 및 재할당 안전성 검증
+ */
+SW_TEST_CASE( Core_String, StringBuilderBoundaryAvailableMinusOne )
+{
+	sw::StringBuilder<256> builder;
+	builder.append( "1234567890" );
+	builder.appendFormat( "_%#_%#", 100, 200 );
+	SW_EXPECT_EQUAL( sw::string( "1234567890_100_200" ), sw::string( builder.c_str() ) );
+}
+
+/**
+ * @brief [Core_String] basic_fixed_string C 문자열 좌측 덧셈 연산자 및 O(1) size() 일관성 검증
+ */
+SW_TEST_CASE( Core_String, FixedStringOperatorPlusWithCStringLhsAndSizeO1 )
+{
+	sw::fixed_string<32> rhs( "World" );
+	SW_EXPECT_EQUAL( 5u, rhs.size() );
+
+	// C 문자열 좌측 덧셈: "Hello " + rhs
+	auto combined = "Hello " + rhs;
+	SW_EXPECT_EQUAL( sw::string( "Hello World" ), sw::string( combined.c_str() ) );
+	SW_EXPECT_EQUAL( 11u, combined.size() );
+}

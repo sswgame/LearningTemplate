@@ -41,9 +41,16 @@ namespace sw
 			{
 				if ( pObj == nullptr || pObj->is_object() == false )
 					return nullptr;
+				if ( bIgnoreCase == false )
+				{
+					auto it = pObj->find( std::string_view( key.data(), key.size() ) );
+					if ( it != pObj->end() )
+						return &( *it );
+					return nullptr;
+				}
 				for ( auto it = pObj->begin(); it != pObj->end(); ++it )
 				{
-					if ( nameEquals( it.key(), key, bIgnoreCase ) )
+					if ( nameEquals( it.key(), key, true ) )
 						return &( *it );
 				}
 				return nullptr;
@@ -117,7 +124,13 @@ namespace sw
 		const JsonImpl* pValue = JsonDocumentInternal::asJson( _pValue );
 		if ( pValue == nullptr || pValue->is_number() == false )
 			return fallback;
-		return pValue->get<int64>();
+		if ( pValue->is_number_integer() )
+			return pValue->get<int64>();
+		if ( pValue->is_number_unsigned() )
+			return static_cast<int64>( pValue->get<uint64>() );
+		if ( pValue->is_number_float() )
+			return static_cast<int64>( pValue->get<float64>() );
+		return fallback;
 	}
 
 	uint64 JsonValue::asUint( uint64 fallback ) const
@@ -125,7 +138,13 @@ namespace sw
 		const JsonImpl* pValue = JsonDocumentInternal::asJson( _pValue );
 		if ( pValue == nullptr || pValue->is_number() == false )
 			return fallback;
-		return pValue->get<uint64>();
+		if ( pValue->is_number_unsigned() )
+			return pValue->get<uint64>();
+		if ( pValue->is_number_integer() )
+			return static_cast<uint64>( pValue->get<int64>() );
+		if ( pValue->is_number_float() )
+			return static_cast<uint64>( pValue->get<float64>() );
+		return fallback;
 	}
 
 	float64 JsonValue::asFloat( float64 fallback ) const
@@ -133,7 +152,13 @@ namespace sw
 		const JsonImpl* pValue = JsonDocumentInternal::asJson( _pValue );
 		if ( pValue == nullptr || pValue->is_number() == false )
 			return fallback;
-		return pValue->get<float64>();
+		if ( pValue->is_number_float() )
+			return pValue->get<float64>();
+		if ( pValue->is_number_integer() )
+			return static_cast<float64>( pValue->get<int64>() );
+		if ( pValue->is_number_unsigned() )
+			return static_cast<float64>( pValue->get<uint64>() );
+		return fallback;
 	}
 
 	bool JsonValue::asBool( bool fallback ) const

@@ -181,9 +181,9 @@ namespace sw
 
 		shared_ptr<AsyncLoadSlot> slot = _asyncLoad;
 		_loadHandle					   = engine::getTaskManager().emplaceTask(
-			   "SceneLoadAsync",
-			   SW_DELEGATE_FUNCTION( TaskArgsDelegate, SceneManager::loadSceneAsyncJob ),
-			   MakeTaskArgs( slot, string( path ) ) );
+			"SceneLoadAsync",
+			SW_DELEGATE_FUNCTION( TaskArgsDelegate, SceneManager::loadSceneAsyncJob ),
+			MakeTaskArgs( slot, string( path ) ) );
 
 		_loadHandle.submit();
 		if ( _loadHandle.isValid() == false )
@@ -318,6 +318,10 @@ namespace sw
 			else
 			{
 				SW_LOG_TRACE( "Discarding completed load in favor of queued '%#'", nextPath );
+				if ( _asyncLoad != nullptr )
+				{
+					_asyncLoad->_promise.setValue( nullptr );
+				}
 				if ( pendingScene != nullptr )
 				{
 					pendingScene->shutdown();

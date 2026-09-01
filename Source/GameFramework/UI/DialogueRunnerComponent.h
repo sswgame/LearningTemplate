@@ -92,7 +92,7 @@ namespace sw
 
 	private:
 		bool evaluateCondition( const string& condition ) const;
-		void executeNode( int32 nodeId );
+		void executeNode( int32 nodeId, int32 recursionDepth = 0 );
 		void executeAction( const string& actionCmd );
 
 		PROPERTY( Category = "Dialogue", DisplayName = "Graph", AssetPath, AssetType = "DialogueGraph", Tooltip = "Dialogue graph asset" )

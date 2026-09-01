@@ -11,6 +11,9 @@ sw_addTestExecutable(EngineTest
 	LIBS
 		Engine
 		GameFramework
+		GF_Overworld
+		GF_TurnBattle
+		GF_ActionCombat
 	LABELS
 		"unit;engine"
 	TIMEOUT
