@@ -95,28 +95,4 @@ namespace sw
 		_listChunk.push_back( Chunk{ pBuf, chunkSize, 0 } );
 		_totalAllocatedBytes += chunkSize;
 	}
-
-	FrameArenaAllocator& FrameArenaAllocator::getThreadLocal()
-	{
-		thread_local FrameArenaAllocator t_frameArena( 64 * 1024 );
-		return t_frameArena;
-	}
-
-	namespace
-	{
-
-		FrameDoubleBuffer* s_pFrameDoubleBuffer{ nullptr };
-
-	} // namespace
-
-	void FrameDoubleBuffer::bind( FrameDoubleBuffer* pBuffer )
-	{
-		s_pFrameDoubleBuffer = pBuffer;
-	}
-
-	FrameDoubleBuffer& FrameDoubleBuffer::get()
-	{
-		SW_LOG_ASSERT( s_pFrameDoubleBuffer != nullptr, "FrameDoubleBuffer is not bound" );
-		return *s_pFrameDoubleBuffer;
-	}
 } // namespace sw

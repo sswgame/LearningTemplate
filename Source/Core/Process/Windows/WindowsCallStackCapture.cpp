@@ -1,10 +1,12 @@
 #include "pch.h"
 
-#include "Core/Memory/CallStackCapture.h"
-
-#include "Core/Common/PlatformOsHeaders.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Process/CallStackCapture.h"
+#include "Core/String/StringBuilder.h"
+
+#if defined( SW_PLATFORM_WINDOWS )
+	#include "Core/Common/PlatformOsHeaders.h"
 
 namespace sw
 {
@@ -20,12 +22,10 @@ namespace sw
 			return;
 
 		std::scoped_lock<mutex> lock{ s_symbolMutex };
-#if defined( SW_PLATFORM_WINDOWS )
 		SymSetOptions( SYMOPT_UNDNAME | SYMOPT_DEFERRED_LOADS | SYMOPT_LOAD_LINES );
 		HANDLE process = GetCurrentProcess();
 		SymInitialize( process, nullptr, FALSE );
 		SymRefreshModuleList( process );
-#endif
 	}
 
 	void CallStackCapture::shutdown()
@@ -41,10 +41,8 @@ namespace sw
 			return;
 
 		std::scoped_lock<mutex> lock{ s_symbolMutex };
-#if defined( SW_PLATFORM_WINDOWS )
-		HANDLE process = GetCurrentProcess();
+		HANDLE					process = GetCurrentProcess();
 		SymCleanup( process );
-#endif
 	}
 
 	void CallStackCapture::capture( CallStack& outStack, uint32 skipFrames )
@@ -52,22 +50,8 @@ namespace sw
 		outStack._frameCount = 0;
 		outStack._hash		 = 0;
 
-#if defined( SW_PLATFORM_WINDOWS )
 		// 이 capture 함수 자신을 건너뛰기 위해 +1
 		outStack._frameCount = CaptureStackBackTrace( skipFrames + 1, CallStack::kMaxFrames, outStack._arrFrame, nullptr );
-#elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
-		void* tempFrames[CallStack::kMaxFrames + 16];
-		int32 count		 = backtrace( tempFrames, CallStack::kMaxFrames + skipFrames + 1 );
-		int32 validCount = count - ( skipFrames + 1 );
-		if ( validCount > 0 )
-		{
-			outStack._frameCount = MathUtil::min<uint32>( static_cast<uint32>( validCount ), CallStack::kMaxFrames );
-			for ( uint32 frameIndex = 0; frameIndex < outStack._frameCount; ++frameIndex )
-			{
-				outStack._arrFrame[frameIndex] = tempFrames[frameIndex + skipFrames + 1];
-			}
-		}
-#endif
 
 		// 프레임 주소로 해시를 계산합니다.
 		uint64 hash{ 0 };
@@ -82,7 +66,6 @@ namespace sw
 	{
 		outStack._frameCount = 0;
 
-#if defined( SW_PLATFORM_WINDOWS )
 		if ( pPlatformContext == nullptr )
 			return;
 
@@ -120,35 +103,11 @@ namespace sw
 				break;
 			outStack._arrFrame[outStack._frameCount++] = reinterpret_cast<void*>( frame.AddrPC.Offset );
 		}
-#else
-		// 비-Windows: 폴트 컨텍스트에서 걷는 이식 구현이 없어 현재 스레드 스택으로 대체한다.
-		(void)pPlatformContext;
-		CallStack shallow{};
-		capture( shallow, 1 );
-		outStack._frameCount = shallow._frameCount;
-		for ( uint32 frameIndex = 0; frameIndex < shallow._frameCount; ++frameIndex )
-			outStack._arrFrame[frameIndex] = shallow._arrFrame[frameIndex];
-#endif
 	}
 
 	namespace
 	{
 		/** @brief CallStack / DeepCallStack 공용 심볼화 본체입니다. */
-		string symbolizeFrames( void* const* ppFrame, uint32 frameCount );
-	} // namespace
-
-	string CallStackCapture::symbolize( const CallStack& stack )
-	{
-		return symbolizeFrames( stack._arrFrame, stack._frameCount );
-	}
-
-	string CallStackCapture::symbolize( const DeepCallStack& stack )
-	{
-		return symbolizeFrames( stack._arrFrame, stack._frameCount );
-	}
-
-	namespace
-	{
 		string symbolizeFrames( void* const* ppFrame, uint32 frameCount )
 		{
 			if ( ppFrame == nullptr || frameCount == 0 )
@@ -170,7 +129,6 @@ namespace sw
 				return string( sb.view() );
 			}
 
-#if defined( SW_PLATFORM_WINDOWS )
 			HANDLE						process = GetCurrentProcess();
 			alignas( SYMBOL_INFO ) utf8 symbolBuffer[sizeof( SYMBOL_INFO ) + MAX_SYM_NAME * sizeof( TCHAR )];
 			SYMBOL_INFO*				pSymbol = reinterpret_cast<SYMBOL_INFO*>( symbolBuffer );
@@ -204,38 +162,21 @@ namespace sw
 					sb.appendFormat( "  [%#] 0x%#\n", frameIndex, Fmt( address, Format().hex() ) );
 				}
 			}
-#elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
-			utf8** symbols = backtrace_symbols( ppFrame, frameCount );
-			for ( uint32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
-			{
-				string symbolName = ( symbols != nullptr ) ? symbols[frameIndex] : "??";
-
-				// dladdr 로 더 정확한 심볼 정보 시도 (한 번만 호출하고 결과를 재사용한다)
-				Dl_info	   info{};
-				const bool bResolved = ( dladdr( ppFrame[frameIndex], &info ) != 0 && info.dli_sname != nullptr );
-				if ( bResolved )
-				{
-					int32 status	 = 0;
-					utf8* pDemangled = abi::__cxa_demangle( info.dli_sname, nullptr, nullptr, &status );
-					symbolName		 = ( status == 0 && pDemangled != nullptr ) ? pDemangled : info.dli_sname;
-					free( pDemangled );
-				}
-
-				sb.appendFormat( "  [%#] %#", frameIndex, symbolName.c_str() );
-				if ( bResolved && info.dli_saddr != nullptr )
-				{
-					// 포인터 차이는 정수(ptrdiff_t)이므로 reinterpret_cast 가 아니라 정수 변환을 쓴다.
-					const ptrdiff_t frameOffset =
-						static_cast<const utf8*>( ppFrame[frameIndex] ) - static_cast<const utf8*>( info.dli_saddr );
-					sb.appendFormat( " + 0x%#", Fmt( static_cast<uint64>( frameOffset ), Format().hex() ) );
-				}
-				sb.append( "\n" );
-			}
-			free( symbols );
-#endif
 
 			return string( sb.view() );
 		}
 	} // namespace
 
+	string CallStackCapture::symbolize( const CallStack& stack )
+	{
+		return symbolizeFrames( stack._arrFrame, stack._frameCount );
+	}
+
+	string CallStackCapture::symbolize( const DeepCallStack& stack )
+	{
+		return symbolizeFrames( stack._arrFrame, stack._frameCount );
+	}
+
 } // namespace sw
+
+#endif

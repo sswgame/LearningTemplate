@@ -24,8 +24,6 @@ namespace sw
 #undef SW_ENGINE_SERVICE_CONST
 #undef SW_ENGINE_SERVICE_OPT
 
-	class FrameDoubleBuffer;
-
 	// ------------------------------------------------------------------------------
 	// 1) EngineServices — App이 소유한 매니저 포인터 묶음
 	//    Engine.dll은 이 테이블만 들고, 생성/파괴는 App
@@ -39,9 +37,9 @@ namespace sw
 #undef SW_ENGINE_SERVICE
 #undef SW_ENGINE_SERVICE_CONST
 #undef SW_ENGINE_SERVICE_OPT
-
-		FrameDoubleBuffer* _pFrameDoubleBuffer{ nullptr }; ///< getter는 FrameDoubleBuffer::get()로 위임됩니다.
 	};
+
+	struct ModuleService;
 
 	namespace engine
 	{
@@ -54,6 +52,8 @@ namespace sw
 		SW_API void unbindEngineServices();
 		/** @brief 필수 매니저가 모두 바인딩되었는지 (MemoryProfiler / GameData 는 선택). */
 		SW_API bool areEngineServicesBound();
+		/** @brief ModuleService 테이블에 현재 바인딩된 Engine 서비스를 채웁니다. */
+		SW_API void fillModuleServices( ModuleService& outService, bool bGameModuleOnly = false );
 
 		// ------------------------------------------------------------------------------
 		// 3) 코어 매니저 조회 — bind 이후에만 호출 (EngineServiceList.xxx 에서 생성)
@@ -65,8 +65,5 @@ namespace sw
 #undef SW_ENGINE_SERVICE
 #undef SW_ENGINE_SERVICE_CONST
 #undef SW_ENGINE_SERVICE_OPT
-
-		/** @brief 바인딩된 FrameDoubleBuffer를 반환합니다. */
-		SW_API FrameDoubleBuffer& getFrameDoubleBuffer();
 	} // namespace engine
 } // namespace sw

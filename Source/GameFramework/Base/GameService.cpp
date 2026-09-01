@@ -4,9 +4,9 @@
 
 #include "Core/Container/map.h"
 
-#include "GameFramework/GameFrameworkExports.h"
+#include "Engine/Utility/Module/ModuleTypeRegistry.h"
 
-#include "RuntimeAPI/PluginAPI.h"
+#include "GameFramework/GameFrameworkExports.h"
 
 SW_LOG_CALLER( "GameService" );
 namespace sw
@@ -22,7 +22,6 @@ namespace sw
 	namespace
 	{
 		ModuleService	   s_gameService{};
-		void*			   s_arrLocalHostOverrides[kModuleServiceCount]{ nullptr };
 		map<uint64, void*> s_mapLocalService{};
 	} // namespace
 
@@ -36,14 +35,12 @@ namespace sw
 		SW_GAMESERVICE_API void unbindGameService()
 		{
 			s_gameService = {};
-			for ( uint32 index = 0; index < kModuleServiceCount; ++index )
-				s_arrLocalHostOverrides[index] = nullptr;
 			s_mapLocalService.clear();
 		}
 
 		SW_GAMESERVICE_API bool areGameServicesBound()
 		{
-			return s_gameService.getService != nullptr;
+			return s_gameService.arrServices[sw::internal::toRawServiceId( sw::internal::ModuleServiceId::SceneManager )] != nullptr;
 		}
 
 		namespace internal
@@ -62,18 +59,12 @@ namespace sw
 				return it != s_mapLocalService.end() ? it->second : nullptr;
 			}
 
-			SW_GAMESERVICE_API void* getRawService( ModuleServiceId id )
+			SW_GAMESERVICE_API void* getRawService( sw::internal::ModuleServiceId id )
 			{
-				const uint32 rawId = toRawServiceId( id );
-				if ( rawId < kModuleServiceCount && s_arrLocalHostOverrides[rawId] != nullptr )
-					return s_arrLocalHostOverrides[rawId];
-
-				if ( s_gameService.getService == nullptr )
+				const uint32 rawId = sw::internal::toRawServiceId( id );
+				if ( rawId >= sw::internal::kModuleServiceCount )
 					return nullptr;
-
-				if ( rawId >= kModuleServiceCount )
-					return nullptr;
-				return s_gameService.getService( rawId );
+				return const_cast<void*>( s_gameService.arrServices[rawId] );
 			}
 		} // namespace internal
 	} // namespace game

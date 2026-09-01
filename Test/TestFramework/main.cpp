@@ -26,11 +26,10 @@
 #include "Engine/Utility/CommandStack.h"
 #include "Engine/Utility/Debug/DebugOverlayState.h"
 #include "Engine/Utility/Module/LiveReloadManager.h"
+#include "Engine/Utility/Module/ModuleTypeRegistry.h"
 #include "Engine/Utility/Module/ReloadFileManager.h"
 
 #include "GameFramework/Base/GameService.h"
-
-#include "RuntimeAPI/PluginAPI.h"
 
 #include "TestFramework/TestFramework.h"
 

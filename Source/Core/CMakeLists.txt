@@ -12,7 +12,6 @@ set(cfSources
 	"${CMAKE_CURRENT_SOURCE_DIR}/Compression/CompressionStream.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Compression/NullCompressionCodec.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Compression/RleCompressionCodec.cpp"
-	"${CMAKE_CURRENT_SOURCE_DIR}/Concurrency/CrashHandler.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Concurrency/DataRaceDetector.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Concurrency/DeadlockDetector.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Container/DynamicBitset.cpp"
@@ -23,7 +22,6 @@ set(cfSources
 	"${CMAKE_CURRENT_SOURCE_DIR}/Log/Logger.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Math/MatrixMath.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Math/VectorMath.cpp"
-	"${CMAKE_CURRENT_SOURCE_DIR}/Memory/CallStackCapture.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Memory/FrameArenaAllocator.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Memory/LinearAllocator.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Memory/Memory.cpp"
@@ -40,14 +38,20 @@ set(cfSources
 if(WIN32)
 	list(APPEND cfSources "${CMAKE_CURRENT_SOURCE_DIR}/File/Windows/WindowsFileDialog.cpp")
 	list(APPEND cfSources "${CMAKE_CURRENT_SOURCE_DIR}/File/Windows/WindowsFileWatcher.cpp")
+	list(APPEND cfSources "${CMAKE_CURRENT_SOURCE_DIR}/Process/Windows/WindowsCallStackCapture.cpp")
+	list(APPEND cfSources "${CMAKE_CURRENT_SOURCE_DIR}/Process/Windows/WindowsCrashHandler.cpp")
 	list(APPEND cfSources "${CMAKE_CURRENT_SOURCE_DIR}/Process/Windows/WindowsProcess.cpp")
 elseif(APPLE)
 	list(APPEND cfSources "${CMAKE_CURRENT_SOURCE_DIR}/File/Mac/MacFileDialog.cpp")
 	list(APPEND cfSources "${CMAKE_CURRENT_SOURCE_DIR}/File/Mac/MacFileWatcher.cpp")
+	list(APPEND cfSources "${CMAKE_CURRENT_SOURCE_DIR}/Process/Mac/MacCallStackCapture.cpp")
+	list(APPEND cfSources "${CMAKE_CURRENT_SOURCE_DIR}/Process/Mac/MacCrashHandler.cpp")
 	list(APPEND cfSources "${CMAKE_CURRENT_SOURCE_DIR}/Process/Mac/MacProcess.cpp")
 elseif(UNIX)
 	list(APPEND cfSources "${CMAKE_CURRENT_SOURCE_DIR}/File/Linux/LinuxFileDialog.cpp")
 	list(APPEND cfSources "${CMAKE_CURRENT_SOURCE_DIR}/File/Linux/LinuxFileWatcher.cpp")
+	list(APPEND cfSources "${CMAKE_CURRENT_SOURCE_DIR}/Process/Linux/LinuxCallStackCapture.cpp")
+	list(APPEND cfSources "${CMAKE_CURRENT_SOURCE_DIR}/Process/Linux/LinuxCrashHandler.cpp")
 	list(APPEND cfSources "${CMAKE_CURRENT_SOURCE_DIR}/Process/Linux/LinuxProcess.cpp")
 endif()
 

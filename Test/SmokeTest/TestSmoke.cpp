@@ -14,65 +14,21 @@
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Resource/ResourceManager.h"
 #include "Engine/Utility/Module/LiveReloadManager.h"
+#include "Engine/Utility/Module/ModuleTypeRegistry.h"
 
 #include "GameFramework/Base/GameService.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 #include "RuntimeAPI/ABI/EditorAPI.h"
 #include "RuntimeAPI/ABI/GameAPI.h"
-#include "RuntimeAPI/PluginAPI.h"
 
 #include "TestFramework/TestFramework.h"
 
 namespace
 {
-	void* getGameService( uint32 id )
-	{
-		using sw::ModuleServiceId;
-
-		if ( id >= sw::kModuleServiceCount )
-			return nullptr;
-
-		const auto serviceId = static_cast<ModuleServiceId>( id );
-
-#define SW_ENGINE_SERVICE( member, Tag, Type, getter, required, gameAllowed ) \
-	if ( serviceId == sw::ModuleServiceTraits<sw::Type>::id )                 \
-	{                                                                         \
-		if constexpr ( ( gameAllowed ) == 0 )                                 \
-			return nullptr;                                                   \
-		else                                                                  \
-			return &sw::engine::getter();                                     \
-	}
-
-#define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, required, gameAllowed ) \
-	if ( serviceId == sw::ModuleServiceTraits<sw::Type>::id )                       \
-	{                                                                               \
-		if constexpr ( ( gameAllowed ) == 0 )                                       \
-			return nullptr;                                                         \
-		else                                                                        \
-			return const_cast<sw::Type*>( &sw::engine::getter() );                  \
-	}
-
-#define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, gameAllowed ) \
-	if ( serviceId == sw::ModuleServiceTraits<sw::Type>::id )           \
-	{                                                                   \
-		if constexpr ( ( gameAllowed ) == 0 )                           \
-			return nullptr;                                             \
-		else                                                            \
-			return sw::engine::getter();                                \
-	}
-
-#include "Engine/Common/EngineServiceList.xxx"
-#undef SW_ENGINE_SERVICE
-#undef SW_ENGINE_SERVICE_CONST
-#undef SW_ENGINE_SERVICE_OPT
-
-		return nullptr;
-	}
-
 	[[maybe_unused]] void fillGameService( sw::ModuleService& gameService )
 	{
-		gameService.getService = getGameService;
+		sw::engine::fillModuleServices( gameService, true );
 	}
 } // namespace
 

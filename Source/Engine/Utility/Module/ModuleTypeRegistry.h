@@ -1,13 +1,13 @@
+/**
+ * @file ModuleTypeRegistry.h
+ * @brief 동적 로드 모듈의 리플렉션 타입 및 컴포넌트 팩토리 등록/정리 인터페이스.
+ */
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 
 namespace sw
 {
-	class TypeRegistry;
-	SW_API TypeRegistry&	  getTypeRegistry();
-	SW_API class TaskManager& getTaskManager();
-
 	struct TypeRegistrar;
 	struct EnumRegistrar;
 	struct ComponentFactoryRegistrar;

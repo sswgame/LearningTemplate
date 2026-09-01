@@ -6,7 +6,7 @@ namespace sw
 	{
 		static const TypeInfo* StaticType()
 		{
-			return ::sw::getTypeRegistry().findType( ::sw::hashed_string( "$FQN" ) );
+			return ::sw::engine::getTypeRegistry().findType( ::sw::hashed_string( "$FQN" ) );
 		}
 	};
 } // namespace sw

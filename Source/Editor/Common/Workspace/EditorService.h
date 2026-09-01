@@ -11,7 +11,7 @@ namespace sw::editor
 
 	namespace internal
 	{
-		void* getRawService( ModuleServiceId id );
+		void* getRawService( sw::internal::ModuleServiceId id );
 	} // namespace internal
 
 	void bindEditorService( const ModuleService& service );
@@ -20,7 +20,7 @@ namespace sw::editor
 	template <typename T>
 	T* getService()
 	{
-		return static_cast<T*>( internal::getRawService( ModuleServiceTraits<T>::id ) );
+		return static_cast<T*>( internal::getRawService( sw::internal::ModuleServiceTraits<T>::id ) );
 	}
 
 	EditorData& getEditorData();

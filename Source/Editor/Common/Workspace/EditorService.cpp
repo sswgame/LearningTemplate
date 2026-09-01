@@ -23,10 +23,12 @@ namespace sw::editor
 
 	namespace internal
 	{
-		void* getRawService( ModuleServiceId id )
+		void* getRawService( sw::internal::ModuleServiceId id )
 		{
-			SW_LOG_ASSERT( s_editorService.getService != nullptr, "EditorService is not bound" );
-			return s_editorService.getService( toRawServiceId( id ) );
+			const uint32 rawId = sw::internal::toRawServiceId( id );
+			if ( rawId >= sw::internal::kModuleServiceCount )
+				return nullptr;
+			return const_cast<void*>( s_editorService.arrServices[rawId] );
 		}
 	} // namespace internal
 

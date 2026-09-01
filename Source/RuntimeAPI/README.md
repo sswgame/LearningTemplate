@@ -11,9 +11,8 @@
 | 폴더 | 헤더 | 누가 include | 용도 |
 |------|------|--------------|------|
 | **ABI/** | `RuntimeHandles.h`, `GameAPI.h`, `EditorAPI.h` | App, 모듈, 테스트 | 호스트 ↔ 모듈 C-ABI 함수 테이블·불투명 핸들 |
-| **Service/** | `ModuleService.h` | App, 모듈 | 호스트 ↔ 모듈 C-ABI 단일 통합 서비스 테이블 (`GameService.h`, `EditorService.h`는 각 모듈에 위치) |
+| **Service/** | `ModuleService.h`, `HostServiceList.xxx` | App, 모듈 | 호스트 ↔ 모듈 C-ABI 단일 통합 서비스 테이블 (`GameService.h`, `EditorService.h`는 각 모듈에 위치) |
 | **Export/** | `GameModuleExports.h`, `EditorModuleExports.h` | 모듈 `.cpp`만 | `SW_IMPLEMENT_*_MODULE` 매크로. `Memory.h`와 로케이터 bind를 끌어옴 |
-| **(루트)** | `PluginAPI.h` | Engine/App/GF | C-ABI가 아닌 공유 계약 |
 
 - Game 모듈은 `ABI/GameAPI.h`, `GameFramework/Base/GameService.h`, `Export/GameModuleExports.h`만 include 한다.
 - Editor 모듈은 `ABI/EditorAPI.h`, `Editor/Common/Workspace/EditorService.h`, `Export/EditorModuleExports.h`를 include 한다.

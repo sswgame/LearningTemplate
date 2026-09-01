@@ -5,7 +5,7 @@
 #if SW_DEBUG
 	#include "Core/Container/string.h"
 	#include "Core/Log/Logger.h"
-	#include "Core/Memory/CallStackCapture.h"
+	#include "Core/Process/CallStackCapture.h"
 
 namespace sw
 {

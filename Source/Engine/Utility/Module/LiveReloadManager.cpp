@@ -11,8 +11,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Scene/SceneManager.h"
-
-#include "RuntimeAPI/PluginAPI.h"
+#include "Engine/Utility/Module/ModuleTypeRegistry.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
 	#include "Core/File/Windows/WindowsFileWatcher.h"

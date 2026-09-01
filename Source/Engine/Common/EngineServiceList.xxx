@@ -14,10 +14,9 @@
  *   Type* getter()        — assert 없음(널 허용). bound 검사에서 제외.
  *
  * 정의하지 않은 변형은 includer가 빈 매크로로 채워야 합니다.
- * FrameDoubleBuffer는 getter가 FrameDoubleBuffer::get()으로 위임되고 bind에 부수효과가
- * 있어 이 목록에서 제외하고 손으로 관리합니다.
  */
 
+SW_ENGINE_SERVICE( _pFrameDoubleBuffer, class, FrameDoubleBuffer, getFrameDoubleBuffer, 1, 1 )
 SW_ENGINE_SERVICE( _pCommandLineManager, class, CommandLineManager, getCommandLineManager, 1, 0 )
 SW_ENGINE_SERVICE( _pGlobalVariableManager, class, GlobalVariableManager, getGlobalVariableManager, 1, 1 )
 SW_ENGINE_SERVICE( _pLocalizationManager, class, LocalizationManager, getLocalizationManager, 1, 1 )
@@ -40,3 +39,4 @@ SW_ENGINE_SERVICE( _pComponentDefaults, class, ComponentDefaults, getComponentDe
 SW_ENGINE_SERVICE_CONST( _pEngineData, struct, EngineData, getEngineData, 1, 0 )
 
 SW_ENGINE_SERVICE_OPT( _pMemoryProfiler, class, MemoryProfiler, getMemoryProfiler, 0 )
+

@@ -7,7 +7,6 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/VectorMath.h"
-#include "Core/Memory/FrameStlAllocator.h"
 
 namespace sw
 {
@@ -46,16 +45,16 @@ namespace sw
 		void drawSphere( const float3& center, float32 radius, const float4& color );
 
 		/** @brief 예약된 선 목록을 반환합니다. */
-		const sw::vector<DebugLine, FrameStlAllocator<DebugLine>>& getLines() const { return _listLine; }
+		const sw::vector<DebugLine>& getLines() const { return _listLine; }
 		/** @brief 예약된 구체 목록을 반환합니다. */
-		const sw::vector<DebugSphere, FrameStlAllocator<DebugSphere>>& getSpheres() const { return _listSphere; }
+		const sw::vector<DebugSphere>& getSpheres() const { return _listSphere; }
 		/** @brief 선 개수를 반환합니다. */
 		uint32 getLineCount() const { return static_cast<uint32>( _listLine.size() ); }
 		/** @brief 구체 개수를 반환합니다. */
 		uint32 getSphereCount() const { return static_cast<uint32>( _listSphere.size() ); }
 
 	private:
-		sw::vector<DebugLine, FrameStlAllocator<DebugLine>>		_listLine;
-		sw::vector<DebugSphere, FrameStlAllocator<DebugSphere>> _listSphere;
+		sw::vector<DebugLine>	_listLine;
+		sw::vector<DebugSphere> _listSphere;
 	};
 } // namespace sw

@@ -17,77 +17,42 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectPtr.h"
 #include "Engine/Utility/Module/LiveReloadManager.h"
+#include "Engine/Utility/Module/ModuleTypeRegistry.h"
 #include "Engine/Window/IWindow.h"
-#include "Engine/Window/NativeWindowEvent.h"
 
-#include "RuntimeAPI/PluginAPI.h"
 #include "RuntimeAPI/Service/ModuleService.h"
 
 #include "sw/config/ConfigConstants.h"
 
-namespace
+namespace sw
 {
-	sw::ModuleHost* s_pCurrentModuleHost{ nullptr };
-
-	enum class ModuleTarget : uint8
+	namespace
 	{
-		Editor,
-		Game
-	};
+		ModuleHost* s_pCurrentModuleHost{ nullptr };
 
-	template <ModuleTarget Target>
-	void* getModuleService( uint32 id )
-	{
-		using sw::ModuleServiceId;
-
-		if ( id >= sw::kModuleServiceCount )
-			return nullptr;
-
-		const auto serviceId = static_cast<ModuleServiceId>( id );
-
-#define SW_ENGINE_SERVICE( member, Tag, Type, getter, required, gameAllowed )     \
-	if ( serviceId == sw::ModuleServiceTraits<sw::Type>::id )                     \
-	{                                                                             \
-		if constexpr ( Target == ModuleTarget::Game && ( ( gameAllowed ) == 0 ) ) \
-			return nullptr;                                                       \
-		else                                                                      \
-			return &sw::engine::getter();                                         \
-	}
-
-#define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, required, gameAllowed ) \
-	if ( serviceId == sw::ModuleServiceTraits<sw::Type>::id )                       \
-	{                                                                               \
-		if constexpr ( Target == ModuleTarget::Game && ( ( gameAllowed ) == 0 ) )   \
-			return nullptr;                                                         \
-		else                                                                        \
-			return const_cast<sw::Type*>( &sw::engine::getter() );                  \
-	}
-
-#define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, gameAllowed )           \
-	if ( serviceId == sw::ModuleServiceTraits<sw::Type>::id )                     \
-	{                                                                             \
-		if constexpr ( Target == ModuleTarget::Game && ( ( gameAllowed ) == 0 ) ) \
-			return nullptr;                                                       \
-		else                                                                      \
-			return sw::engine::getter();                                          \
-	}
-
-#include "Engine/Common/EngineServiceList.xxx"
-#undef SW_ENGINE_SERVICE
-#undef SW_ENGINE_SERVICE_CONST
-#undef SW_ENGINE_SERVICE_OPT
-
-		if ( serviceId == ModuleServiceId::ModuleCompiler )
+		enum class ModuleTarget : uint8
 		{
-			if constexpr ( Target == ModuleTarget::Game )
-				return nullptr;
-			else
-				return ( s_pCurrentModuleHost != nullptr ) ? s_pCurrentModuleHost->getModuleCompiler() : nullptr;
-		}
+			Editor,
+			Game
+		};
 
-		return nullptr;
+		template <ModuleTarget Target>
+		void buildModuleService( ModuleService& outService )
+		{
+			engine::fillModuleServices( outService, Target == ModuleTarget::Game );
+
+#define SW_HOST_SERVICE( member, Tag, Type, getter, gameAllowed )                             \
+	if constexpr ( Target == ModuleTarget::Editor || ( ( gameAllowed ) == 1 ) )               \
+	{                                                                                         \
+		outService.arrServices[internal::toRawServiceId( internal::ModuleServiceId::Type )] = \
+			( s_pCurrentModuleHost != nullptr ) ? s_pCurrentModuleHost->getter() : nullptr;   \
 	}
-} // namespace
+
+#include "RuntimeAPI/Service/HostServiceList.xxx"
+#undef SW_HOST_SERVICE
+		}
+	} // namespace
+} // namespace sw
 
 namespace sw
 {
@@ -513,7 +478,7 @@ namespace sw
 		if ( _editorApi.bindService != nullptr )
 		{
 			ModuleService editorService{};
-			editorService.getService = getModuleService<ModuleTarget::Editor>;
+			buildModuleService<ModuleTarget::Editor>( editorService );
 			_editorApi.bindService( &editorService );
 		}
 
@@ -545,7 +510,7 @@ namespace sw
 		if ( _gameApi.bindService != nullptr )
 		{
 			ModuleService gameService{};
-			gameService.getService = getModuleService<ModuleTarget::Game>;
+			buildModuleService<ModuleTarget::Game>( gameService );
 			_gameApi.bindService( &gameService );
 		}
 
@@ -630,7 +595,7 @@ namespace sw
 		if ( _editorApi.bindService != nullptr )
 		{
 			ModuleService editorService{};
-			editorService.getService = getModuleService<ModuleTarget::Editor>;
+			buildModuleService<ModuleTarget::Editor>( editorService );
 			_editorApi.bindService( &editorService );
 		}
 
@@ -669,7 +634,7 @@ namespace sw
 		if ( _gameApi.bindService != nullptr )
 		{
 			ModuleService gameService{};
-			gameService.getService = getModuleService<ModuleTarget::Game>;
+			buildModuleService<ModuleTarget::Game>( gameService );
 			_gameApi.bindService( &gameService );
 		}
 

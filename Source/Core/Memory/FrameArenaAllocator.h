@@ -117,9 +117,6 @@ namespace sw
 		/** @brief 현재 프레임에서 잘라 쓴 바이트입니다. */
 		size_t getUsedBytes() const { return _usedBytes; }
 
-		/** @brief 현재 스레드의 프레임 아레나를 반환합니다. 없으면 생성합니다. */
-		static FrameArenaAllocator& getThreadLocal();
-
 	private:
 		/** @brief 한 청크의 버퍼·용량·쓰기 오프셋입니다. */
 		struct Chunk
@@ -184,11 +181,6 @@ namespace sw
 			const uint32 activeIdx = _activeBufferIndex.load( std::memory_order_relaxed );
 			return _arrArena[activeIdx].getUsedBytes();
 		}
-
-		/** @brief EngineLoop가 소유한 프레임 더블 버퍼를 연결하거나 해제합니다. */
-		SW_API static void bind( FrameDoubleBuffer* pBuffer );
-		/** @brief 바인딩된 프레임 더블 버퍼를 반환합니다. */
-		SW_API static FrameDoubleBuffer& get();
 
 	private:
 		FrameArenaAllocator _arrArena[2];

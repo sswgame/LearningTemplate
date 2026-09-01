@@ -1,19 +1,17 @@
 #include "pch.h"
 
-#include "Core/Concurrency/CrashHandler.h"
-
-#include "Core/Memory/CallStackCapture.h"
+#include "Core/Concurrency/atomic.h"
+#include "Core/Log/Logger.h"
+#include "Core/Process/CallStackCapture.h"
+#include "Core/Process/CrashHandler.h"
 #include "Core/String/StringBuilder.h"
 
 #include <cstdio>
 
 #if defined( SW_PLATFORM_WINDOWS )
 	#include "Core/Common/PlatformOsHeaders.h"
-#else
-	#include <csignal>
-#endif
 
-SW_LOG_CALLER( "CrashHandler" );
+SW_LOG_CALLER( "WindowsCrashHandler" );
 namespace sw
 {
 	namespace
@@ -57,7 +55,6 @@ namespace sw
 			s_bReporting.store( false );
 		}
 
-#if defined( SW_PLATFORM_WINDOWS )
 		LPTOP_LEVEL_EXCEPTION_FILTER s_pPreviousFilter{ nullptr };
 
 		/** @brief 예외 코드를 사람이 읽는 이름으로 바꿉니다. */
@@ -101,34 +98,6 @@ namespace sw
 				return s_pPreviousFilter( pInfo );
 			return EXCEPTION_EXECUTE_HANDLER;
 		}
-#else
-		/** @brief 시그널 번호를 이름으로 바꿉니다. */
-		const utf8* signalName( int32 signalNumber )
-		{
-			switch ( signalNumber )
-			{
-				case SIGSEGV:
-					return "SIGSEGV (segfault)";
-				case SIGBUS:
-					return "SIGBUS";
-				case SIGILL:
-					return "SIGILL";
-				case SIGFPE:
-					return "SIGFPE";
-				case SIGABRT:
-					return "SIGABRT";
-				default:
-					return "fatal signal";
-			}
-		}
-
-		void onFatalSignal( int32 signalNumber )
-		{
-			reportCrash( signalName( signalNumber ), nullptr, nullptr );
-			std::signal( signalNumber, SIG_DFL );
-			std::raise( signalNumber );
-		}
-#endif
 	} // namespace
 
 	void CrashHandler::initialize()
@@ -138,15 +107,7 @@ namespace sw
 
 		CallStackCapture::initialize();
 
-#if defined( SW_PLATFORM_WINDOWS )
 		s_pPreviousFilter = SetUnhandledExceptionFilter( &onUnhandledException );
-#else
-		std::signal( SIGSEGV, &onFatalSignal );
-		std::signal( SIGBUS, &onFatalSignal );
-		std::signal( SIGILL, &onFatalSignal );
-		std::signal( SIGFPE, &onFatalSignal );
-		std::signal( SIGABRT, &onFatalSignal );
-#endif
 		SW_LOG_TRACE( "Crash handler installed." );
 	}
 
@@ -155,17 +116,12 @@ namespace sw
 		if ( s_bInstalled.exchange( false ) == false )
 			return;
 
-#if defined( SW_PLATFORM_WINDOWS )
 		SetUnhandledExceptionFilter( s_pPreviousFilter );
 		s_pPreviousFilter = nullptr;
-#else
-		std::signal( SIGSEGV, SIG_DFL );
-		std::signal( SIGBUS, SIG_DFL );
-		std::signal( SIGILL, SIG_DFL );
-		std::signal( SIGFPE, SIG_DFL );
-		std::signal( SIGABRT, SIG_DFL );
-#endif
+
 		// initialize 에서 잡은 심볼 참조를 돌려준다(참조 카운트 짝 맞추기).
 		CallStackCapture::shutdown();
 	}
 } // namespace sw
+
+#endif

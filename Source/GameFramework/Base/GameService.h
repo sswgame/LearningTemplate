@@ -40,11 +40,11 @@ namespace sw
 			};
 
 			template <typename T>
-			struct HasModuleServiceTraits<T, std::void_t<decltype( ModuleServiceTraits<T>::id )>> : std::true_type
+			struct HasModuleServiceTraits<T, std::void_t<decltype( sw::internal::ModuleServiceTraits<T>::id )>> : std::true_type
 			{
 			};
 
-			SW_GAMESERVICE_API void* getRawService( ModuleServiceId id );
+			SW_GAMESERVICE_API void* getRawService( sw::internal::ModuleServiceId id );
 			SW_GAMESERVICE_API void	 bindRawLocalService( uint64 typeHash, void* pService );
 			SW_GAMESERVICE_API void* getRawLocalService( uint64 typeHash );
 		} // namespace internal
@@ -77,7 +77,7 @@ namespace sw
 			// 2) 호스트(엔진) 서비스 조회
 			if constexpr ( internal::HasModuleServiceTraits<T>::value )
 			{
-				T* pHost = static_cast<T*>( internal::getRawService( ModuleServiceTraits<T>::id ) );
+				T* pHost = static_cast<T*>( internal::getRawService( sw::internal::ModuleServiceTraits<T>::id ) );
 				if ( pHost != nullptr )
 					return pHost;
 			}

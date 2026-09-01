@@ -1,0 +1,11 @@
+/**
+ * @file RuntimeAPI/Service/HostServiceList.xxx
+ * @brief App.exe(ModuleHost)가 소유하고 모듈(Editor)에 제공하는 호스트 전용 서비스 단일 등록표 (X-macro).
+ * @details include 전에 아래 매크로를 정의한 뒤 여러 번 include 합니다 (#pragma once 없음).
+ *          전방 선언 · ModuleServiceId 열거형 · ModuleServiceTraits가 이 목록에서 생성됩니다.
+ *
+ * SW_HOST_SERVICE( member, Tag, Type, getter, gameAllowed )
+ *   gameAllowed=1이면 게임 모듈(SWGame)에 노출, 0이면 호스트/에디터 전용(게임 요청 시 nullptr).
+ */
+
+SW_HOST_SERVICE( _pModuleCompiler, class, IModuleCompiler, getModuleCompiler, 0 )

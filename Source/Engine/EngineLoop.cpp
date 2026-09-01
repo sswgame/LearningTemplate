@@ -4,13 +4,13 @@
 
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Compression/CompressionCodecRegistry.h"
-#include "Core/Concurrency/CrashHandler.h"
 #include "Core/Concurrency/DeadlockDetector.h"
 #include "Core/Event/EventDispatcher.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Memory/FrameArenaAllocator.h"
 #include "Core/Memory/MemoryProfiler.h"
+#include "Core/Process/CrashHandler.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Task/TaskManager.h"
 
@@ -44,10 +44,9 @@
 #include "Engine/Utility/CommandStack.h"
 #include "Engine/Utility/Debug/DebugOverlayState.h"
 #include "Engine/Utility/Module/LiveReloadManager.h"
+#include "Engine/Utility/Module/ModuleTypeRegistry.h"
 #include "Engine/Utility/Module/ReloadFileManager.h"
 #include "Engine/Window/IWindow.h"
-
-#include "RuntimeAPI/PluginAPI.h"
 
 #include "sw/config/ConfigConstants.h"
 #include "sw/config/ShippingHostDefaults.h"
@@ -175,7 +174,6 @@ namespace sw
 			_shaderCache = make_unique<ShaderCache>();
 			_shaderCache->initialize();
 			_componentDefaults = make_unique<ComponentDefaults>();
-			FrameDoubleBuffer::bind( _frameDoubleBuffer.get() );
 
 			EngineServices services{};
 			services._pCommandLineManager		= _commandLineManager.get();
@@ -232,7 +230,7 @@ namespace sw
 
 			const hashed_string kGameConfigHash = hashed_string{ "GameConfig" };
 			const GameConfig*	pGameConfig		= _configManager->ensureConfig<GameConfig>(
-				kGameConfigHash, config::kFileRuntimeGameConfig, shipping_host::kGameConfigJson );
+				  kGameConfigHash, config::kFileRuntimeGameConfig, shipping_host::kGameConfigJson );
 			if ( pGameConfig != nullptr )
 				GameConfig::setActive( *pGameConfig );
 
@@ -371,7 +369,6 @@ namespace sw
 			if ( _logger != nullptr )
 				_logger->shutdown();
 
-			FrameDoubleBuffer::bind( nullptr );
 			engine::unbindEngineServices();
 
 			_renderThread.reset();
@@ -505,8 +502,8 @@ namespace sw
 		if ( _inputManager != nullptr )
 			_inputManager->endFrame();
 		engine::getDebugDrawQueue().clear();
-		FrameArenaAllocator::getThreadLocal().reset();
-		FrameDoubleBuffer::get().swapAndResetPrevious();
+		if ( _frameDoubleBuffer != nullptr )
+			_frameDoubleBuffer->swapAndResetPrevious();
 	}
 
 	bool EngineLoop::applyPendingBackendChange()

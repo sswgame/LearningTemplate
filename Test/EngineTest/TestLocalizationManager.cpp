@@ -10,6 +10,7 @@
 #include "GameFramework/Data/GameStrings.h"
 #include "GameFramework/Transition/GameModeStateMachine.h"
 
+#include "TestFramework/GameTestUtil.h"
 #include "TestFramework/TestFramework.h"
 
 // ------------------------------------------------------------------------------
@@ -341,13 +342,8 @@ SW_TEST_CASE( LocalizationManagerTest, StringTableDirectMultiFormatFileLoading )
 SW_TEST_CASE( LocalizationManagerTest, GameStringsFullLifecycleAndMultiLanguageSwitching )
 {
 	sw::ModuleService gameService{};
-	gameService.getService = []( uint32 id ) -> void*
-	{
-		if ( id == sw::toRawServiceId( sw::ModuleServiceId::LocalizationManager ) )
-			return &sw::engine::getLocalizationManager();
-		return nullptr;
-	};
-	sw::game::bindGameService( gameService );
+	gameService.arrServices[sw::internal::toRawServiceId( sw::internal::ModuleServiceId::LocalizationManager )] = &sw::engine::getLocalizationManager();
+	sw::test::ScopedGameServiceBinding scopedBinding{ gameService };
 
 	const utf8* kKoJson = R"({
 		"UI_TITLE": "신비의 섬",
@@ -442,8 +438,6 @@ SW_TEST_CASE( LocalizationManagerTest, GameStringsFullLifecycleAndMultiLanguageS
 	sw::GameStrings::removeLanguageChangedCallback( cbId );
 	sw::GameStrings::clear();
 
-	sw::game::unbindGameService();
-
 	sw::FileUtil::removeFile( pathKo );
 	sw::FileUtil::removeFile( pathEn );
 	sw::FileUtil::removeFile( pathJa );
@@ -455,13 +449,8 @@ SW_TEST_CASE( LocalizationManagerTest, GameStringsFullLifecycleAndMultiLanguageS
 SW_TEST_CASE( LocalizationManagerTest, GameStringsSetupLocalizationFromDirectory )
 {
 	sw::ModuleService gameService{};
-	gameService.getService = []( uint32 id ) -> void*
-	{
-		if ( id == sw::toRawServiceId( sw::ModuleServiceId::LocalizationManager ) )
-			return &sw::engine::getLocalizationManager();
-		return nullptr;
-	};
-	sw::game::bindGameService( gameService );
+	gameService.arrServices[sw::internal::toRawServiceId( sw::internal::ModuleServiceId::LocalizationManager )] = &sw::engine::getLocalizationManager();
+	sw::test::ScopedGameServiceBinding scopedBinding{ gameService };
 
 	const sw::string tempDir = sw::FileUtil::getTempDirectory();
 	const sw::string packDir = sw::FileUtil::joinPath( tempDir, "temp_localization_pack" );
@@ -520,7 +509,6 @@ SW_TEST_CASE( LocalizationManagerTest, GameStringsSetupLocalizationFromDirectory
 	SW_EXPECT_STREQ( "Quit", sw::GameStrings::get( "UI_QUIT" ) );
 
 	sw::GameStrings::clear();
-	sw::game::unbindGameService();
 
 	sw::FileUtil::removeFile( pathKo );
 	sw::FileUtil::removeFile( pathEn );
