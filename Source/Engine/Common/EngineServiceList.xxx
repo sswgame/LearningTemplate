@@ -2,15 +2,15 @@
  * @file Engine/Common/EngineServiceList.xxx
  * @brief App이 소유하고 Engine.dll이 조회하는 코어 서비스 단일 등록표 (X-macro).
  * @details include 전에 아래 매크로를 정의한 뒤 여러 번 include 합니다 (#pragma once 없음).
- *          EngineServices 멤버 · engine::getXxx() 선언/정의 · areEngineServicesBound() 본문이
- *          이 목록에서 생성됩니다.
+ *          전방 선언 · EngineServices 멤버 · engine::getXxx() 선언/정의 · areEngineServicesBound() 본문 ·
+ *          ModuleServiceId 열거형 · ModuleServiceTraits가 이 목록에서 생성됩니다.
  *
- * SW_ENGINE_SERVICE( member, Type, getter, required, gameAllowed )
+ * SW_ENGINE_SERVICE( member, Tag, Type, getter, required, gameAllowed )
  *   Type& getter()        — 바인딩 안 됐으면 assert. required=1이면 areEngineServicesBound() 검사에 포함.
  *                           gameAllowed=1이면 게임 모듈(SWGame)에 노출, 0이면 호스트/에디터 전용(게임 요청 시 nullptr).
- * SW_ENGINE_SERVICE_CONST( member, Type, getter, required, gameAllowed )
+ * SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, required, gameAllowed )
  *   const Type& getter()  — 위와 동일, const 참조 반환.
- * SW_ENGINE_SERVICE_OPT( member, Type, getter, gameAllowed )
+ * SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, gameAllowed )
  *   Type* getter()        — assert 없음(널 허용). bound 검사에서 제외.
  *
  * 정의하지 않은 변형은 includer가 빈 매크로로 채워야 합니다.
@@ -18,25 +18,25 @@
  * 있어 이 목록에서 제외하고 손으로 관리합니다.
  */
 
-SW_ENGINE_SERVICE( _pCommandLineManager, CommandLineManager, getCommandLineManager, 1, 0 )
-SW_ENGINE_SERVICE( _pGlobalVariableManager, GlobalVariableManager, getGlobalVariableManager, 1, 1 )
-SW_ENGINE_SERVICE( _pLocalizationManager, LocalizationManager, getLocalizationManager, 1, 1 )
-SW_ENGINE_SERVICE( _pTaskManager, TaskManager, getTaskManager, 1, 0 )
-SW_ENGINE_SERVICE( _pTypeRegistry, TypeRegistry, getTypeRegistry, 1, 1 )
-SW_ENGINE_SERVICE( _pSceneManager, SceneManager, getSceneManager, 1, 1 )
-SW_ENGINE_SERVICE( _pInputManager, InputManager, getInputManager, 1, 1 )
-SW_ENGINE_SERVICE( _pAudioSystem, IAudioSystem, getAudioSystem, 1, 1 )
-SW_ENGINE_SERVICE( _pEventDispatcher, EventDispatcher, getEventDispatcher, 1, 1 )
-SW_ENGINE_SERVICE( _pResourceManager, ResourceManager, getResourceManager, 1, 1 )
-SW_ENGINE_SERVICE( _pAssetStreamingQueue, AssetStreamingQueue, getAssetStreamingQueue, 1, 0 )
-SW_ENGINE_SERVICE( _pCommandStack, CommandStack, getCommandStack, 1, 0 )
-SW_ENGINE_SERVICE( _pDebugOverlayState, DebugOverlayState, getDebugOverlayState, 1, 1 )
-SW_ENGINE_SERVICE( _pDebugDrawQueue, DebugDrawQueue, getDebugDrawQueue, 1, 1 )
-SW_ENGINE_SERVICE( _pRHIBackendRegistry, RHIBackendRegistry, getRHIBackendRegistry, 1, 0 )
-SW_ENGINE_SERVICE( _pCompressionCodecRegistry, CompressionCodecRegistry, getCompressionCodecRegistry, 1, 1 )
-SW_ENGINE_SERVICE( _pShaderCache, ShaderCache, getShaderCache, 1, 1 )
-SW_ENGINE_SERVICE( _pComponentDefaults, ComponentDefaults, getComponentDefaults, 1, 1 )
+SW_ENGINE_SERVICE( _pCommandLineManager, class, CommandLineManager, getCommandLineManager, 1, 0 )
+SW_ENGINE_SERVICE( _pGlobalVariableManager, class, GlobalVariableManager, getGlobalVariableManager, 1, 1 )
+SW_ENGINE_SERVICE( _pLocalizationManager, class, LocalizationManager, getLocalizationManager, 1, 1 )
+SW_ENGINE_SERVICE( _pTaskManager, class, TaskManager, getTaskManager, 1, 0 )
+SW_ENGINE_SERVICE( _pTypeRegistry, class, TypeRegistry, getTypeRegistry, 1, 1 )
+SW_ENGINE_SERVICE( _pSceneManager, class, SceneManager, getSceneManager, 1, 1 )
+SW_ENGINE_SERVICE( _pInputManager, class, InputManager, getInputManager, 1, 1 )
+SW_ENGINE_SERVICE( _pAudioSystem, class, IAudioSystem, getAudioSystem, 1, 1 )
+SW_ENGINE_SERVICE( _pEventDispatcher, class, EventDispatcher, getEventDispatcher, 1, 1 )
+SW_ENGINE_SERVICE( _pResourceManager, class, ResourceManager, getResourceManager, 1, 1 )
+SW_ENGINE_SERVICE( _pAssetStreamingQueue, class, AssetStreamingQueue, getAssetStreamingQueue, 1, 0 )
+SW_ENGINE_SERVICE( _pCommandStack, class, CommandStack, getCommandStack, 1, 0 )
+SW_ENGINE_SERVICE( _pDebugOverlayState, struct, DebugOverlayState, getDebugOverlayState, 1, 1 )
+SW_ENGINE_SERVICE( _pDebugDrawQueue, class, DebugDrawQueue, getDebugDrawQueue, 1, 1 )
+SW_ENGINE_SERVICE( _pRHIBackendRegistry, class, RHIBackendRegistry, getRHIBackendRegistry, 1, 0 )
+SW_ENGINE_SERVICE( _pCompressionCodecRegistry, class, CompressionCodecRegistry, getCompressionCodecRegistry, 1, 1 )
+SW_ENGINE_SERVICE( _pShaderCache, class, ShaderCache, getShaderCache, 1, 1 )
+SW_ENGINE_SERVICE( _pComponentDefaults, class, ComponentDefaults, getComponentDefaults, 1, 1 )
 
-SW_ENGINE_SERVICE_CONST( _pEngineData, EngineData, getEngineData, 1, 0 )
+SW_ENGINE_SERVICE_CONST( _pEngineData, struct, EngineData, getEngineData, 1, 0 )
 
-SW_ENGINE_SERVICE_OPT( _pMemoryProfiler, MemoryProfiler, getMemoryProfiler, 0 )
+SW_ENGINE_SERVICE_OPT( _pMemoryProfiler, class, MemoryProfiler, getMemoryProfiler, 0 )

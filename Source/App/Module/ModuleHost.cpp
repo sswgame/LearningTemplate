@@ -45,7 +45,7 @@ namespace
 
 		const auto serviceId = static_cast<ModuleServiceId>( id );
 
-#define SW_ENGINE_SERVICE( member, Type, getter, required, gameAllowed )          \
+#define SW_ENGINE_SERVICE( member, Tag, Type, getter, required, gameAllowed )     \
 	if ( serviceId == sw::ModuleServiceTraits<sw::Type>::id )                     \
 	{                                                                             \
 		if constexpr ( Target == ModuleTarget::Game && ( ( gameAllowed ) == 0 ) ) \
@@ -54,16 +54,16 @@ namespace
 			return &sw::engine::getter();                                         \
 	}
 
-#define SW_ENGINE_SERVICE_CONST( member, Type, getter, required, gameAllowed )    \
-	if ( serviceId == sw::ModuleServiceTraits<sw::Type>::id )                     \
-	{                                                                             \
-		if constexpr ( Target == ModuleTarget::Game && ( ( gameAllowed ) == 0 ) ) \
-			return nullptr;                                                       \
-		else                                                                      \
-			return const_cast<sw::Type*>( &sw::engine::getter() );                \
+#define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, required, gameAllowed ) \
+	if ( serviceId == sw::ModuleServiceTraits<sw::Type>::id )                       \
+	{                                                                               \
+		if constexpr ( Target == ModuleTarget::Game && ( ( gameAllowed ) == 0 ) )   \
+			return nullptr;                                                         \
+		else                                                                        \
+			return const_cast<sw::Type*>( &sw::engine::getter() );                  \
 	}
 
-#define SW_ENGINE_SERVICE_OPT( member, Type, getter, gameAllowed )                \
+#define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, gameAllowed )           \
 	if ( serviceId == sw::ModuleServiceTraits<sw::Type>::id )                     \
 	{                                                                             \
 		if constexpr ( Target == ModuleTarget::Game && ( ( gameAllowed ) == 0 ) ) \

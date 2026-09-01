@@ -15,29 +15,16 @@
 #endif
 
 namespace sw
-
 {
-	class CommandLineManager;
-	class GlobalVariableManager;
-	class TaskManager;
-	class TypeRegistry;
-	class SceneManager;
-	class InputManager;
-	class IAudioSystem;
-	class EventDispatcher;
-	class ResourceManager;
-	class LocalizationManager;
-	class MemoryProfiler;
-	struct EngineData;
-	class AssetStreamingQueue;
-	class CommandStack;
-	struct DebugOverlayState;
-	class DebugDrawQueue;
+#define SW_ENGINE_SERVICE( member, Tag, Type, getter, required, gameAllowed )		Tag Type;
+#define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, required, gameAllowed ) Tag Type;
+#define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, gameAllowed )				Tag Type;
+#include "Engine/Common/EngineServiceList.xxx"
+#undef SW_ENGINE_SERVICE
+#undef SW_ENGINE_SERVICE_CONST
+#undef SW_ENGINE_SERVICE_OPT
+
 	class FrameDoubleBuffer;
-	class RHIBackendRegistry;
-	class CompressionCodecRegistry;
-	class ShaderCache;
-	class ComponentDefaults;
 
 	// ------------------------------------------------------------------------------
 	// 1) EngineServices — App이 소유한 매니저 포인터 묶음
@@ -45,9 +32,9 @@ namespace sw
 	// ------------------------------------------------------------------------------
 	struct EngineServices
 	{
-#define SW_ENGINE_SERVICE( member, Type, getter, required, gameAllowed )	   Type* member{ nullptr };
-#define SW_ENGINE_SERVICE_CONST( member, Type, getter, required, gameAllowed ) Type* member{ nullptr };
-#define SW_ENGINE_SERVICE_OPT( member, Type, getter, gameAllowed )			   Type* member{ nullptr };
+#define SW_ENGINE_SERVICE( member, Tag, Type, getter, required, gameAllowed )		Type* member{ nullptr };
+#define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, required, gameAllowed ) Type* member{ nullptr };
+#define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, gameAllowed )				Type* member{ nullptr };
 #include "Engine/Common/EngineServiceList.xxx"
 #undef SW_ENGINE_SERVICE
 #undef SW_ENGINE_SERVICE_CONST
@@ -71,9 +58,9 @@ namespace sw
 		// ------------------------------------------------------------------------------
 		// 3) 코어 매니저 조회 — bind 이후에만 호출 (EngineServiceList.xxx 에서 생성)
 		// ------------------------------------------------------------------------------
-#define SW_ENGINE_SERVICE( member, Type, getter, required, gameAllowed )	   SW_API Type& getter();
-#define SW_ENGINE_SERVICE_CONST( member, Type, getter, required, gameAllowed ) SW_API const Type& getter();
-#define SW_ENGINE_SERVICE_OPT( member, Type, getter, gameAllowed )			   SW_API Type* getter();
+#define SW_ENGINE_SERVICE( member, Tag, Type, getter, required, gameAllowed )		SW_API Type& getter();
+#define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, required, gameAllowed ) SW_API const Type& getter();
+#define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, gameAllowed )				SW_API Type* getter();
 #include "Engine/Common/EngineServiceList.xxx"
 #undef SW_ENGINE_SERVICE
 #undef SW_ENGINE_SERVICE_CONST

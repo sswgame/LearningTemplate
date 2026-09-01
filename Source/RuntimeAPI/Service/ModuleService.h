@@ -7,33 +7,21 @@
 
 namespace sw
 {
-	class CommandLineManager;
-	class GlobalVariableManager;
-	class TaskManager;
-	class TypeRegistry;
-	class SceneManager;
-	class InputManager;
-	class IAudioSystem;
-	class EventDispatcher;
-	class ResourceManager;
-	class LocalizationManager;
-	class MemoryProfiler;
-	struct EngineData;
-	class AssetStreamingQueue;
-	class CommandStack;
-	struct DebugOverlayState;
-	class DebugDrawQueue;
-	class RHIBackendRegistry;
-	class CompressionCodecRegistry;
-	class ShaderCache;
-	class ComponentDefaults;
+#define SW_ENGINE_SERVICE( member, Tag, Type, getter, required, gameAllowed )		Tag Type;
+#define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, required, gameAllowed ) Tag Type;
+#define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, gameAllowed )				Tag Type;
+#include "Engine/Common/EngineServiceList.xxx"
+#undef SW_ENGINE_SERVICE
+#undef SW_ENGINE_SERVICE_CONST
+#undef SW_ENGINE_SERVICE_OPT
+
 	class IModuleCompiler;
 
 	enum class ModuleServiceId : uint32
 	{
-#define SW_ENGINE_SERVICE( member, Type, getter, required, gameAllowed )	   Type,
-#define SW_ENGINE_SERVICE_CONST( member, Type, getter, required, gameAllowed ) Type,
-#define SW_ENGINE_SERVICE_OPT( member, Type, getter, gameAllowed )			   Type,
+#define SW_ENGINE_SERVICE( member, Tag, Type, getter, required, gameAllowed )		Type,
+#define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, required, gameAllowed ) Type,
+#define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, gameAllowed )				Type,
 #include "Engine/Common/EngineServiceList.xxx"
 #undef SW_ENGINE_SERVICE
 #undef SW_ENGINE_SERVICE_CONST
@@ -70,11 +58,11 @@ namespace sw
 		static constexpr ModuleServiceId id = Id; \
 	}
 
-#define SW_ENGINE_SERVICE( member, Type, getter, required, gameAllowed ) SW_DECLARE_MODULE_SERVICE( Type, ModuleServiceId::Type );
-#define SW_ENGINE_SERVICE_CONST( member, Type, getter, required, gameAllowed ) \
-	SW_DECLARE_MODULE_SERVICE( Type, ModuleServiceId::Type );                  \
+#define SW_ENGINE_SERVICE( member, Tag, Type, getter, required, gameAllowed ) SW_DECLARE_MODULE_SERVICE( Type, ModuleServiceId::Type );
+#define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, required, gameAllowed ) \
+	SW_DECLARE_MODULE_SERVICE( Type, ModuleServiceId::Type );                       \
 	SW_DECLARE_MODULE_SERVICE( const Type, ModuleServiceId::Type );
-#define SW_ENGINE_SERVICE_OPT( member, Type, getter, gameAllowed ) SW_DECLARE_MODULE_SERVICE( Type, ModuleServiceId::Type );
+#define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, gameAllowed ) SW_DECLARE_MODULE_SERVICE( Type, ModuleServiceId::Type );
 #include "Engine/Common/EngineServiceList.xxx"
 #undef SW_ENGINE_SERVICE
 #undef SW_ENGINE_SERVICE_CONST
