@@ -67,7 +67,7 @@ namespace sw
 
 		/**
 		 * @brief 언어 팩 디렉터리나 리소스 파일을 탐색하여 언어 팩들을 로드하고 활성/폴백 언어를 자동으로 세팅합니다.
-		 * @param directoryOrResourcePath 디렉터리 경로 (예: "game/demo/data/localization") 또는 기본 파일 경로 ("game/demo/data/strings.xml")
+		 * @param directoryOrResourcePath 디렉터리 경로 (예: "<팩루트>/data/localization") 또는 기본 파일 경로 ("<팩루트>/data/strings.xml")
 		 * @param defaultLanguage 기본 활성 언어 코드 (예: "ko_KR")
 		 * @param fallbackLanguage 대체(Fallback) 언어 코드 (예: "en_US")
 		 * @return 하나 이상의 언어 파일이 성공적으로 로드되고 설정되었는지 여부

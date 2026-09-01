@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Editor tool seeds (Dev). Host paths/layout filenames live in Config/Editor/EditorConfig.json. -->
 <EditorData>
-	<defaultMap>game/demo/maps/town01.xml</defaultMap>
-	<warpMap>game/demo/maps/route01.xml</warpMap>
-	<spriteAtlas>game/demo/textures/00_character/00_player/00_player.png</spriteAtlas>
+	<defaultMap></defaultMap>
+	<warpMap></warpMap>
+	<spriteAtlas></spriteAtlas>
 	<defaultMaterial>engine/materials/defaultmaterial.material</defaultMaterial>
 
 	<fontSize>16</fontSize>

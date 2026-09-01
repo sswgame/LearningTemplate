@@ -19,9 +19,9 @@ namespace sw::editor
 	/** @brief editordata.xml 에디터 도구 시드 */
 	struct EditorData
 	{
-		string _defaultMap{ "game/demo/maps/town01.xml" };
-		string _warpMap{ "game/demo/maps/route01.xml" };
-		string _spriteAtlas{ "game/demo/textures/00_character/00_player/00_player.png" };
+		string _defaultMap{};
+		string _warpMap{};
+		string _spriteAtlas{};
 		string _defaultMaterial{ "engine/materials/defaultmaterial.material" };
 
 		float32 _fontSize{ 16.0f };

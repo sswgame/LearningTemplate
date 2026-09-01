@@ -201,7 +201,7 @@ SW_TEST_CASE( Engine_ResourcePack, SinglePackMountAndHashLookup )
 SW_TEST_CASE( Engine_ResourcePack, VFSPriorityStackAndOverrides )
 {
 	const sw::string enginePack = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "test_vfs_engine.pack" );
-	const sw::string gamePack	= sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "test_vfs_game_demo.pack" );
+	const sw::string gamePack	= sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "test_vfs_game_main.pack" );
 	const sw::string dlcPack	= sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "test_vfs_dlc_exp1.pack" );
 	const sw::string patchPack	= sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "test_vfs_patch.pack" );
 
@@ -335,8 +335,8 @@ SW_TEST_CASE( Engine_ResourcePack, DynamicPriorityAutoCalculation )
 {
 	const sw::string enginePack = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "engine_autotest.pack" );
 	const sw::string commonPack = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "common_autotest.pack" );
-	const sw::string gamePack	= sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "game_demo_autotest.pack" );
-	const sw::string patchGame	= sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "patch_game_demo_autotest.pack" );
+	const sw::string gamePack	= sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "game_main_autotest.pack" );
+	const sw::string patchGame	= sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "patch_game_main_autotest.pack" );
 	const sw::string hotfixPack = sw::FileUtil::joinPath( sw::FileUtil::getCurrentPath(), "patch_hotfix_autotest.pack" );
 
 	sw::createTestPackFile( enginePack, 0, sw::PackCompressionType::None, {

@@ -271,11 +271,11 @@ SW_TEST_CASE( Engine_Archive, ArchiveObjectTLVSerialization )
 	info._fullyQualifiedName = sw::hashed_string( "sw::DummyStruct" );
 	info._size				 = sizeof( DummyStruct );
 	info._listProperty		 = {
-		  {sw::hashed_string( "_valA" ), sw::hashed_string( "int32" ),
-			SW_OFFSET_OF( DummyStruct, _valA ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr},
-		  {sw::hashed_string( "_valB" ), sw::hashed_string( "int32" ),
-			SW_OFFSET_OF( DummyStruct, _valB ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr}
-	};
+		{sw::hashed_string( "_valA" ), sw::hashed_string( "int32" ),
+		  SW_OFFSET_OF( DummyStruct, _valA ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr},
+		{sw::hashed_string( "_valB" ), sw::hashed_string( "int32" ),
+		  SW_OFFSET_OF( DummyStruct, _valB ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr}
+	  };
 
 	sw::Archive archWrite;
 	DummyStruct src;
@@ -308,7 +308,7 @@ SW_TEST_CASE( Engine_Archive, SaveSlotBinaryArchiveRoundTrip )
 	const sw::string savePath = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "test_save_slot.sav" );
 
 	sw::SaveSlot writeSlot;
-	writeSlot._mapPath = "Resource/game/demo/scenes/overworld.scene.xml";
+	writeSlot._mapPath = "Resource/game/empty/scenes/overworld.scene.xml";
 	writeSlot._playerX = 150;
 	writeSlot._playerY = -300;
 	writeSlot.setFlag( "quest_dragon_defeated", 1 );

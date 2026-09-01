@@ -204,7 +204,7 @@ Games / GameFramework 에서는 `EngineServices` 대신 **`GameService`** 를 �
 
 GameObject* go = game::getResourceManager().getPrefabManager().spawn(
     mgr,
-    "game/demo/prefabs/BansheeBullet.prefab.json",
+    "game/<pack>/prefabs/bullet.prefab.json",
     "Projectile" );
 ```
 

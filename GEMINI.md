@@ -17,7 +17,7 @@
   - `Source/App`: 순수 진입점 프로그램(exe). Dev에서는 Engine + RuntimeAPI만 링크하고, Shipping에서는 `SWGame`을 정적 링크합니다. 내부적으로 `EngineLoop`를 통해 메인 루프를 돌고, `ModuleHost`를 통해 핫리로드 시 게임 모듈의 상태(State) 직렬화 및 비동기 태스크 펜싱 등을 관리하는 얇은 런처(Thin Launcher)입니다.
   - `Source/Editor`: 개발 모드 전용 에디터 모듈.
   - `Source/GameFramework`: 장르별 공통 프레임워크 및 키트.
-  - `Source/Games`: 실제 게임 로직 (`Demo`, `Empty` 등). `SW_ACTIVE_GAME` 변수로 빌드 대상 게임 선택.
+  - `Source/Games`: 실제 게임 로직 (`Empty` 등). `SW_ACTIVE_GAME` 변수로 빌드 대상 게임 선택.
 - **DLL Export / Import (API) 매크로 규칙**:
   - `SW_API`: **Engine.dll**의 심볼을 노출하거나 참조할 때 사용합니다. (`SW_EXPORTS` 매크로에 반응)
   - `SW_MODULE_API`: **동적 모듈 플러그인(EditorModule.dll, SWGame.dll, RHI 백엔드 등)**의 진입점(C-ABI Entry Point)을 노출할 때 공통으로 사용하는 매크로입니다. (`SW_MODULE_EXPORTS`에 반응)
@@ -93,7 +93,7 @@
 ### 3.4 Resource 에셋 명명 규칙 (엄격한 소문자 강제)
 | 대상 | 규칙 | 예시 |
 | :--- | :--- | :--- |
-| 리소스 디렉터리 | 완전 소문자 (`lowercase`) | `Resource/game/demo/animation/`, `Resource/engine/shaders/` |
+| 리소스 디렉터리 | 완전 소문자 (`lowercase`) | `Resource/game/empty/animation/`, `Resource/engine/shaders/` |
 | 리소스 파일명 | 완전 소문자 (`lowercase`) | `inventory.anim`, `0.title.scene.xml`, `ghost.prefab.json` |
 | 예외 | 문서 마크다운 | `Resource/README.md` |
 

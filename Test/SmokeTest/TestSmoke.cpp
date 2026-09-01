@@ -847,65 +847,12 @@ SW_TEST_CASE( ModuleAPI, FullGameSceneAndComponentLifecycle )
 		api.update( game, 0.016f );
 	}
 
-	auto waitForSceneLoad = [&]( const utf8* pPath ) -> sw::Scene*
-	{
-		auto pathMatches = []( const sw::string& a, const utf8* pB ) -> bool
-		{
-			if ( pB == nullptr || a.empty() )
-				return false;
-			const sw::string lowerA = sw::StringUtil::toLower( a.c_str() );
-			const sw::string lowerB = sw::StringUtil::toLower( pB );
-			return lowerA.find( lowerB ) != sw::string::npos || lowerB.find( lowerA ) != sw::string::npos;
-		};
-
-		if ( sw::engine::areEngineServicesBound() )
-			sw::engine::getTaskManager().waitAll();
-		sw::engine::getSceneManager().tickTransitions();
-
-		sw::Scene* current = sw::engine::getSceneManager().getActiveScene();
-		if ( current == nullptr || pathMatches( current->getSourcePath(), pPath ) == false )
-		{
-			sw::engine::getSceneManager().requestLoadAsync( pPath );
-		}
-
-		for ( int32 iter = 0; iter < 100; ++iter )
-		{
-			if ( sw::engine::areEngineServicesBound() )
-				sw::engine::getTaskManager().waitAll();
-			sw::engine::getSceneManager().tickTransitions();
-
-			sw::Scene* sc = sw::engine::getSceneManager().getActiveScene();
-			if ( sc != nullptr && sc->getObjectManager() && sc->getObjectManager()->getAllGameObjects().size() > 0 )
-			{
-				if ( pathMatches( sc->getSourcePath(), pPath ) )
-				{
-					return sc;
-				}
-			}
-			std::this_thread::sleep_for( std::chrono::milliseconds( 5 ) );
-		}
-		sw::engine::getSceneManager().tickTransitions();
-		return sw::engine::getSceneManager().getActiveScene();
-	};
-
-	// 2) Load converted 0.title.scene.xml
-	sw::Scene* titleScene = waitForSceneLoad( "game/demo/maps/0.title.scene.xml" );
-	SW_ASSERT_NOT_NULL( titleScene );
-	SW_EXPECT_TRUE( titleScene->getObjectManager()->getAllGameObjects().size() > 0 );
-
-	for ( int32 frameIndex = 0; frameIndex < 5; ++frameIndex )
-	{
-		api.update( game, 0.016f );
-		sw::Scene* pActive = sw::engine::getSceneManager().getActiveScene();
-		if ( pActive != nullptr )
-			pActive->tick( 0.016f );
-	}
-
-	// 3) Load converted 1.entrance.scene.xml
-	sw::engine::getSceneManager().requestLoadAsync( "game/demo/maps/1.entrance.scene.xml" );
-	sw::Scene* entranceScene = waitForSceneLoad( "game/demo/maps/1.entrance.scene.xml" );
-	SW_ASSERT_NOT_NULL( entranceScene );
-	SW_EXPECT_TRUE( entranceScene->getObjectManager()->getAllGameObjects().size() > 0 );
+	// 2) Create and tick a dynamic test scene
+	sw::Scene* pTestScene = sw::engine::getSceneManager().createScene( "TestMainScene" );
+	SW_ASSERT_NOT_NULL( pTestScene );
+	sw::GameObject* pObj = pTestScene->getObjectManager()->createGameObject( sw::hashed_string( "TestActor" ) );
+	SW_ASSERT_NOT_NULL( pObj );
+	SW_EXPECT_TRUE( pTestScene->getObjectManager()->getAllGameObjects().size() > 0 );
 
 	for ( int32 frameIndex = 0; frameIndex < 5; ++frameIndex )
 	{

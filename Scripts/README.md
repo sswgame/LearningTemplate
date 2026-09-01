@@ -53,7 +53,7 @@ from common import getProjectRoot  # 또는 from common.Paths import getProjectR
 # Windows PowerShell에서는 `py -3`, macOS/Linux에서는 `python3`를 사용합니다.
 py -3 Scripts/setup/SetupEnvironment.py
 py -3 Scripts/lint/CheckEngineLayers.py
-py -3 Scripts/lint/CheckSourceGlob.py --root . --build build/Ninja-Debug --active-game Demo
+py -3 Scripts/lint/CheckSourceGlob.py --root . --build build/Ninja-Debug --active-game Empty
 py -3 Scripts/lint/RunClangFormat.py          # in-place (clang-format 없으면 Tools/LLVM에 자동 설치)
 py -3 Scripts/lint/RunClangFormat.py --check  # CI dry-run
 py -3 Scripts/generate/CookPrefabs.py

@@ -65,8 +65,8 @@ classDiagram
 <?xml version="1.0" encoding="utf-8"?>
 <Scene formatVersion="0" name="Town01">
     <entities>
-        <entity name="PlayerSpawn" prefab="game/demo/prefabs/Hero.prefab.json"/>
-        <entity name="ShopKeeper" prefab="game/demo/prefabs/NPC.prefab.json"/>
+        <entity name="PlayerSpawn" prefab="game/<pack>/prefabs/hero.prefab.json"/>
+        <entity name="ShopKeeper" prefab="game/<pack>/prefabs/npc.prefab.json"/>
         <entity name="CustomLight">
             <GameObject _schemaVersion="0" _name="CustomLight" _bActive="true">
                 <_listComponent>
@@ -118,11 +118,11 @@ sw::GameObject* pPlayer = pScene->getObjectManager()->createGameObject(sw::hashe
 // 활성 씬을 XML 씬 문서로 저장
 sw::SceneDocument doc{};
 pScene->serializeToDocument(doc);
-doc.saveXml("Resource/game/demo/maps/Level01.scene.xml");
+doc.saveXml("Resource/game/<pack>/maps/level01.scene.xml");
 
 // 독립 씬 문서 로드 및 인스턴스화
 sw::SceneDocument loadedDoc{};
-if (loadedDoc.load("Resource/game/demo/maps/Level01.scene.xml"))
+if (loadedDoc.load("Resource/game/<pack>/maps/level01.scene.xml"))
 {
     sw::Scene newScene("Level01");
     newScene.instantiate(loadedDoc);

@@ -4,7 +4,27 @@
 
 작성일시: 2026-09-02
 분석 대상: Core, Engine, RuntimeAPI, App, Editor, GameFramework, RHI, Graphics,
-           Audio, Animation, Spatial, Serialization, Concurrency
+           Audio, Animation, Spatial, Serialization, Concurrency, Save/Load,
+           Input, TagSystem, Sequencer, Dialogue, StateMachine, TileMap,
+           ShaderCompiler, Localization, Containers, LiveReload, Camera, Kits,
+           ShaderReflection, StringTable, DiagnosticTools, GlobalVariables,
+           ProcessUtil, JsonDocument, XmlDocument, EditorViewportClient,
+           EditorTransformCommands, LinearAllocator, InputManager,
+           EditorTransaction, Win32Window, D3D12RHISwapChain,
+           SelectionManager, LinuxFileWatcher, Memory, X11Window,
+           MathUtil, MatrixMath, HierarchyPanel, D3D11RHICommandContext,
+           EngineLoop, VectorMath, ContentBrowserPanel, TileMapPanel,
+           FrameRendererPassExecute, DialogueRunnerComponent,
+           SpriteAnimatorComponent, DataTablePanel, formatString,
+           BoxCollider2DComponent, SceneComponent, AnimationGraphPanel,
+           ComponentPtr, RuntimeHud, SequencerPanel, InspectorPanel,
+           SpriteClipPanel, StringBuilder, SceneManager, fixed_string,
+           ProfilerPanel, HandleTable, DynamicBitset, MeshComponent,
+           PrefabEditorPanel, GameObject, ConsolePanel, CommandStack,
+           HistoryPanel, Mesh, AssetStreamingQueue, CCD, PrefabAsset,
+           MaterialCache, AABB, App, MemoryProfiler, SaveGame,
+           D3D11RHIDevice, SpeciesData, GameObjectPtr, ActionRoom,
+           XAudio2System
 
 --------------------------------------------------------------------------------
 1. 동시성 및 멀티스레딩 잠재 결함 (Critical / Concurrency)
@@ -55,12 +75,298 @@
 - 개선 권장안:
   * _broadcastDepth > 0일 때 remove(handle)가 호출되면 해당 슬롯의 _delegate를 unbind()로 즉시 무효화하여 남은 순회에서 호출되지 않도록 방어해야 합니다.
 
+1.6 LocalizationManager 임시 락 해제 후 내부 버퍼 포인터 반환으로 인한 Use-After-Free
+- 관련 파일: Source/Engine/Localization/LocalizationManager.cpp (L504~L531)
+- 문제점:
+  * LocalizationManager::getString()은 함수 내부에서 std::shared_lock<std::shared_mutex> lock( _mutex );을 획득하여 문자열을 찾은 후, 내부 StringTable의 텍스트 버퍼를 가리키는 원시 포인터(const utf8* pFound)를 그대로 반환합니다.
+  * getString()이 리턴되는 즉시 스택 상의 lock이 소멸(Unlock)되므로, 호출부가 반환된 포인터를 사용하고 있는 도중 다른 스레드가 언어 재로드/해제(loadLanguageFile, clear 등)를 호출하면 해당 포인터는 즉시 해제된 메모리를 가리키는 댕글링 포인터가 되어 크래시를 유발합니다.
+- 개선 권장안:
+  * 내부 버퍼 수명을 안전하게 보장하는 불변 인터닝 스트링 풀을 사용하거나, string 값 복사 반환 또는 호출부 락 획득 스코프를 제공해야 합니다.
+
+1.7 GlobalVariableInfo 다중 스레드 환경에서 비원자적 std::string 쓰기 데이터 레이스
+- 관련 파일: Source/Core/GlobalVariable/GlobalVariableManager.cpp (L178~L187, L222~L225)
+- 문제점:
+  * GlobalVariableInfo::setValueAsString() 및 setValueFromString()은 전역 변수 포인터에 문자열을 대입할 때 어떠한 락 없이 *static_cast<string*>(_pData) = string{val};를 직접 수행합니다.
+  * 워커 스레드, 렌더 스레드 등이 전역 문자열 변수(gv_*)를 읽는 도중 메인 스레드나 콘솔에서 값을 수정하면 비원자적 힙 재할당으로 인해 힙 메모리 오염 및 Double Free 크래시가 발생합니다.
+- 개선 권장안:
+  * 전역 문자열 변수 슬롯에 std::shared_mutex를 도입하거나 atomic<shared_ptr<string>> 기반 원자적 교체를 적용해야 합니다.
+
+1.8 LinearAllocator 멀티스레드 할당 CAS의 느슨한 메모리 오더(relaxed) 및 ABA 레이스 취약점
+- 관련 파일: Source/Core/Memory/LinearAllocator.cpp (L73~L75, L87~L97)
+- 문제점:
+  * LinearAllocator::allocate()는 락프리 할당을 위해 compare_exchange_weak를 std::memory_order_relaxed로 수행하여 Release/Acquire 동기화 펜스를 보장하지 못합니다.
+  * 한 스레드가 oldOffset = 0을 읽고 CAS 루프를 도는 도중 다른 스레드가 reset()을 호출하여 오프셋이 0으로 초기화되면, 이미 지나간 이전 크기 계산 값으로 0번 오프셋을 덮어쓰는 ABA 레이스 컨디션이 발생하여 메모리 오염이 발생합니다.
+- 개선 권장안:
+  * CAS 성공 시 std::memory_order_acq_rel을 적용하고, reset()은 모든 할당 스레드가 완료된 정지점(Quiescent Point)에서만 호출되도록 보장해야 합니다.
+
+1.9 SceneManager::tickTransitions 연속 씬 전환 시 TaskPromise 덮어쓰기로 인한 무한 대기(Hang) 결함
+- 관련 파일: Source/Engine/Scene/SceneManager.cpp (L170~L195, L310~L336)
+- 문제점:
+  * SceneManager::requestLoadFuture 실행 중 후속 씬 로드 요청이 들어와 _queuedPath에 등록된 후 이전 퓨처를 반환받았을 때, tickTransitions에서 _asyncLoad->_promise = TaskPromise<Scene*>{}로 새 객체를 덮어쓰며 이전 프로미스를 파괴합니다.
+  * 이전 퓨처를 대기(future.wait()/get())하던 호출자 스레드가 완료 신호를 받지 못하고 영구히 멈추는 무한 데드락(Hang)이 발생합니다.
+- 개선 권장안:
+  * 로드 요청별 독립 Promise 큐를 운영하거나 교체 시 이전 Promise에 명시적으로 취소/null 값을 설정해야 합니다.
+
+1.10 AssetStreamingQueue::cancelRequest 취소 시 TaskPromise 미해결로 인한 퓨처 무한 대기(Hang) 결함
+- 관련 파일: Source/Engine/Resource/AssetStreamingQueue.cpp (L138~L156, L199~L216)
+- 문제점:
+  * requestAssetFuture 호출 후 cancelRequest(pathStr)가 실행되면 _mapInFlightCallback에서 콜백이 삭제되지만 pPromise->setValue(false)가 호출되지 않아, 퓨처를 대기(future.wait())하던 스레드가 영구 블로킹됩니다.
+- 개선 권장안:
+  * cancelRequest 시 등록된 콜백에 cb(pathStr, false)를 호출하여 프로미스를 안전하게 실패 처리해야 합니다.
+
 
 --------------------------------------------------------------------------------
-2. 성능 병목 지점 및 락 경합 (Performance Bottlenecks)
+2. 시스템 로직, 라이브리로드, 입력 및 데이터 무결성 결함 (Critical / Integrity & Logic)
 --------------------------------------------------------------------------------
 
-2.1 컴포넌트 병렬 틱 시 std::shared_mutex 반복 락 경합
+2.1 ActionMap 레이어 포인터 캐싱 후 unordered_map 리해싱 시 댕글링 포인터 참조 (Dangling Pointer / UAF)
+- 관련 파일: Source/Engine/Input/ActionMap.cpp (L709~L724)
+- 문제점:
+  * ActionMap::isBindingLayerActive()는 레이어 조회 성능을 위해 _mapLayer(unordered_map<string, LayerDef>) 내부 원소의 메모리 주소를 binding._pCachedLayer에 포인터로 직접 캐싱합니다.
+  * 이후 런타임에 registerLayer() / ensureLayer()를 통해 새 입력 레이어가 추가될 때 _mapLayer의 버킷 재할당(Rehashing)이 발생하면 이전에 캐싱된 모든 _pCachedLayer 포인터가 댕글링 포인터가 됩니다.
+  * 다음 프레임에 pDef->_bEnabled를 읽는 순간 메모리 오염(Use-After-Free) 또는 프로세스 크래시가 발생합니다.
+- 개선 권장안:
+  * 원시 포인터 대신 정수형 레이어 ID(uint32 LayerIndex 또는 hashed_string)를 캐싱하거나, 포인터 안정성이 보장되는 고정 핸들 테이블(HandleTable<LayerDef>)을 사용해야 합니다.
+
+2.2 GameModeStateMachine 재진입 전이 시 브로드캐스트 순서 역전 및 상태 불일치 (Re-entrant Desync)
+- 관련 파일: Source/GameFramework/Transition/GameModeStateMachine.cpp (L44~L76)
+- 문제점:
+  * GameModeStateMachine::transitionTo(newMode)는 이전 핸들러 onExit -> 새 핸들러 onEnter -> _onModeChanged 브로드캐스트 순서로 실행됩니다.
+  * 새 핸들러의 onEnter()나 _onModeChanged 콜백 내부에서 또 다른 모드로의 전이(transitionTo(ThirdMode))를 재진입 호출하는 경우, 안쪽 전이가 먼저 완료되고 바깥쪽의 이전 전이 이벤트가 나중에 발송되어 외부 리스너들의 상태 동기화가 완전히 깨집니다.
+- 개선 권장안:
+  * 상태 전이 중 재진입 호출이 발생할 경우 즉시 실행하지 않고 큐에 보관한 뒤 현재 전이가 완료된 후 순차 실행하는 재진입 가드(Re-entrancy Guard)를 도입해야 합니다.
+
+2.3 ModuleHost 모듈 리로드 실패 후 재시도 시 이전 게임 상태(GameState) 영구 소실
+- 관련 파일: Source/App/Module/ModuleHost.cpp (L334, L361~L365, L556~L582)
+- 문제점:
+  * ModuleHost::onBeforeGameReload()는 게임 DLL 언로드 직전 captureGameState()를 호출하여 _listGameSavedState 버퍼에 씬/오브젝트 상태를 백업합니다.
+  * 만약 컴파일 에러나 바인딩 실패(poisonLiveReload)로 인해 _game이 nullptr로 남고 restoreGameState()가 호출되지 않은 상태에서, 개발자가 에러 수정 후 다시 리로드하면 onBeforeGameReload()가 _listGameSavedState.clear()를 호출합니다.
+  * 이때 _game == nullptr이므로 새로운 직렬화도 불가능하여 이전에 백업해둔 모든 게임 상태 데이터가 완전히 증발(Wiped)합니다.
+- 개선 권장안:
+  * _game != nullptr일 때만 _listGameSavedState를 덮어쓰도록 보호하고, 이전 리로드 실패로 남은 백업 데이터는 성공적으로 복구될 때까지 보존해야 합니다.
+
+2.4 LiveShaderManager 인클루드 의존성 키 경로(상대 vs 절대) 불일치로 인한 헤더 핫리로드 실패
+- 관련 파일: Source/Engine/Graphics/Shader/LiveShaderManager.cpp (L93~L98, L203~L216)
+- 문제점:
+  * LiveShaderManager::watchShader()는 HLSL 소스 내부의 #include를 파싱하여 _mapIncludeDependency에 등록할 때 engine/shaders/bindless.hlsli와 같은 상대 경로를 키로 저장합니다.
+  * 그러나 파일 변경 감지 콜백(onWatchedFileChanged)에서는 OS 파일 감지기로부터 전달된 전체 경로를 합쳐 d:/projects/.../resource/engine/shaders/bindless.hlsli와 같은 절대 경로로 맵을 조회합니다.
+  * 절대 경로 키와 상대 경로 키가 불일치하여 공용 헤더(.hlsli)를 수정해도 해당 헤더를 인클루드하는 셰이더들의 실시간 핫리로드가 단 한 번도 트리거되지 않는 결함이 발생합니다.
+- 개선 권장안:
+  * watchShader에서 의존성을 등록할 때 ResourceUtil::getResourcePath()를 통해 실제 파일시스템의 절대 정규화 경로로 통일하여 등록해야 합니다.
+
+2.5 TagSystem 숫자 ID로 복원된 TagID의 계층 매칭(isSubtagOf) 영구 실패
+- 관련 파일: Source/Engine/Object/Component/TagSystem.h (L45~L63), Source/Engine/Object/GameObject/ObjectStateSerializer.cpp (L61~L78)
+- 문제점:
+  * TagID::isSubtagOf()는 부모-자식 계층 태그 판별 시 원본 문자열 포인터(_pString)를 순회하며 점(.) 구분자를 검사합니다.
+  * 하지만 네트워크 패킷, 세이브 파일, 바이너리 직렬화 등에서 64비트 정수 해시 ID로 태그가 복원되면 outTag._pString은 nullptr로 남게 됩니다.
+  * isSubtagOf 구현은 문자열이 없는 경우 즉시 return false를 수행하므로, 역직렬화되거나 정수 ID만 보유한 엔티티의 태그는 계층 매칭(isSubtagOf, hasTag(parent, false))이 무조건 실패하는 치명적 로직 결함이 발생합니다.
+- 개선 권장안:
+  * TagID 생성 시 전역 태그 레지스트리에서 _id를 역조회하여 _pString을 항상 유효하게 바인딩하거나, 태그 계층 트리를 64비트 정수 비트마스크로 인코딩하도록 구조를 개선해야 합니다.
+
+2.6 SaveSlot 텍스트 세이브 로드 시 체크섬 불일치로 인한 정상 세이브 오염 판정 (Corrupted Save False Alarm)
+- 관련 파일: Source/GameFramework/Save/SaveSlot.cpp (L56~L66, L103~L119)
+- 문제점:
+  * SaveSlot::saveCommonToTextFile()은 _mapFlag(unordered_map<string, int32>)를 순회하며 텍스트를 만들고 StringUtil::computeHash32로 체크섬을 계산합니다.
+  * 반면 loadCommonFromTextFile()은 파일에서 읽은 KeyValueMap(unordered_map<string, string>)을 순회하며 verifySb를 구성하고 체크섬을 검증합니다.
+  * unordered_map의 순회 순서는 해시 버킷 분포 및 삽입 이력에 따라 달라지므로, 플래그가 2개 이상인 경우 저장 시의 플래그 기록 순서와 로드 시의 순회 순서가 달라져 체크섬이 완전히 불일치하게 됩니다.
+  * 결과적으로 정상적으로 저장된 세이브 파일임에도 로드 시 Checksum mismatch 에러를 출력하며 로드가 거부되는 치명적인 버그가 발생합니다.
+- 개선 권장안:
+  * 플래그 목록을 체크섬 계산 및 저장/검증 전에 키 이름(std::map 또는 사전순 정렬) 기준으로 정렬(Deterministic Sorting)한 후 순회하도록 통일해야 합니다.
+
+2.7 GameInstanceBase 중복 오브젝트 명칭 존재 시 부모-자식 계층구조 오연결 (Hierarchy Mismatch)
+- 관련 파일: Source/GameFramework/Base/GameInstanceBase.cpp (L145~L155)
+- 문제점:
+  * GameInstanceBase::deserializeSceneObjects()에서 씬 오브젝트들을 복원한 후 2차 패스에서 부모 관계를 복원할 때 findGameObjectByName(restoredObj._parentName)을 사용합니다.
+  * 씬 내에 "Enemy", "Tree", "Item", "Light", "Particle" 등 동일한 이름을 가진 게임오브젝트가 여러 개 존재할 경우, 선형 검색에서 가장 먼저 발견된 첫 번째 인스턴스에 모든 자식 오브젝트가 잘못 부착되는 현상이 발생합니다.
+- 개선 권장안:
+  * 이름 문자열(_parentName) 대신 씬 내 유일성이 보장되는 ObjectId(또는 Persistent GUID / 핸들)를 직렬화하여 부모-자식 관계를 정확히 매핑해야 합니다.
+
+2.8 StringTable 64비트 바이너리 해시 키와 32비트 런타임 룩업 불일치로 인한 검색 실패
+- 관련 파일: Source/Engine/Localization/StringTable.cpp (L81~L90, L142~L148, L293~L300)
+- 문제점:
+  * StringTable의 내부 테이블 _mapTable은 unordered_map<uint64, string> 타입이며, 바이너리 팩 저장/로드 시 64비트 정수 키(uint64 keyHash)를 입출력합니다.
+  * 하지만 런타임 검색 함수 getString(key)는 hashed_string::getHash()(32비트 FNV 해시)만을 전달하여 조회합니다.
+  * 외부 툴이나 TagID(64비트 FNV-1a 해시)를 통해 빌드된 64비트 해시 키가 포함된 바이너리 팩을 로드한 경우, 상위 32비트가 존재하는 64비트 키와 32비트 해시는 절대로 일치하지 않아 모든 문자열 검색이 실패(nullptr 반환)합니다.
+- 개선 권장안:
+  * StringTable의 룩업 키를 64비트 FNV-1a(StringUtil::computeHash64)로 일관되게 통일하거나 hashed_string 자체를 키로 사용해야 합니다.
+
+2.9 JsonValue::asInt 부동소수점 JSON 토큰 파싱 시 예외(Type Error) 크래시 결함
+- 관련 파일: Source/Engine/Utility/Json/JsonDocument.cpp (L115~L121)
+- 문제점:
+  * JsonValue::asInt()에서 pValue->is_number()만 검사하고 pValue->get<int64>()를 직접 호출합니다.
+  * JSON에 실수형 값(1.5, 0.0 등)이 저장되어 있는 경우 nlohmann::json이 type_error 예외를 던지며, 게임 런타임에서 즉각 프로세스 크래시가 발생합니다.
+- 개선 권장안:
+  * is_number_integer()를 먼저 검사하고 실수형인 경우 정수 캐스팅을 수행하도록 방어 코드를 적용해야 합니다.
+
+2.10 EditorTransformCommands 정렬/분배 시 월드 기준 좌표를 로컬 트랜스폼에 대입하는 위치 왜곡 버그
+- 관련 파일: Source/Editor/Common/Commands/EditorTransformCommands.cpp (L246~L276, L307~L327)
+- 문제점:
+  * alignSelectedObjects() 및 distributeSelectedObjects()에서 월드 좌표계 기준 정렬 타깃 값(targetVal, minVal, maxVal)을 계산한 뒤, pSc->getLocalPosition()을 수정하여 setLocalPosition()에 대입합니다.
+  * 선택된 객체에 부모 컴포넌트(오프셋, 회전, 스케일)가 존재하는 경우, 월드 기준 정렬 값이 로컬 오프셋에 덮어씌워져 객체들이 수십~수백 유닛 이상 엉뚱한 위치로 날아가는 위치 왜곡이 발생합니다.
+- 개선 권장안:
+  * 부모의 월드 역변환(Inverse Transform)을 통해 targetVal을 로컬 좌표계로 변환하여 대입하거나 setWorldPosition()을 사용해야 합니다.
+
+2.11 InputManager 윈도우 포커스 상실 시 키/마우스 입력 상태 고착(Stuck Key) 버그
+- 관련 파일: Source/Engine/Input/InputManager.cpp (L88~L119)
+- 문제점:
+  * 사용자가 키나 마우스 버튼을 누른 상태에서 Alt+Tab 창 전환이나 팝업에 의해 윈도우 포커스를 잃으면(FocusLost) OS로부터 KeyUp 메시지가 수신되지 않습니다.
+  * InputManager에 포커스 상실 시 키 상태 플러시(Flush) 로직이 없어, 창으로 복귀했을 때 이전 키가 계속 눌린 상태로 영구 고착(Stuck Key / Endless Walking)되는 입력 결함이 발생합니다.
+- 개선 권장안:
+  * FocusLost 이벤트 수신 시 모든 키/마우스 버퍼를 false로 리셋하는 clearInputState()를 호출해야 합니다.
+
+2.12 EditorTransaction::recordDestruction 부모 객체 삭제 취소(Undo) 시 자식 서브트리 계층 영구 유실
+- 관련 파일: Source/Editor/Common/Workspace/EditorTransaction.cpp (L256~L291)
+- 문제점:
+  * EditorTransaction::recordDestruction(pObj)은 대상 단일 오브젝트의 스냅샷만 캡처합니다.
+  * 부모 게임오브젝트를 삭제하면 하위 자식 게임오브젝트들까지 재귀적으로 파괴되지만, 실행 취소(Undo) 시 루트 부모 1개만 다시 생성되고 자식들은 복원되지 않아 하위 씬 트리가 영구 증발합니다.
+- 개선 권장안:
+  * 삭제 대상과 자식 서브트리 전체의 스냅샷 목록을 재귀 수집하여 저장하고, Undo 시 일괄 재구축해야 합니다.
+
+2.13 EditorTransaction Undo/Redo 시 EditorContext 널 포인터 역참조 크래시
+- 관련 파일: Source/Editor/Common/Workspace/EditorTransaction.cpp (L224~L225, L248, L289, L303)
+- 문제점:
+  * recordCreation 및 recordDestruction 람다 내부에서 EditorContext::get()->getSelectionManager()를 널 체크 없이 직접 호출합니다.
+  * 에디터 셧다운 시점이나 헤드리스 배치 스크립트 실행 중 트랜잭션 롤백 시 Null Pointer Dereference 크래시가 발생합니다.
+- 개선 권장안:
+  * EditorContext 널 체크 가드를 추가해야 합니다.
+
+2.14 LinuxFileWatcher 재귀 하위 폴더 생성 및 폴더 이동(IN_MOVED_TO) 시 inotify 감시 영구 누락
+- 관련 파일: Source/Core/File/Linux/LinuxFileWatcher.cpp (L233~L255)
+- 문제점:
+  * LinuxFileWatcher는 IN_CREATE 발생 시 단 1단계의 하위 디렉터리만 addWatchDirectory를 호출하므로, 중첩된 하위 디렉터리 트리(dirA/dirB/dirC)가 복사되거나 생성될 때 내부 폴더들이 inotify에 등록되지 않습니다.
+  * 또한 외부에서 디렉터리가 통째로 이동(IN_MOVED_TO)되었을 때 감시 등록 분기가 없어 이동된 디렉터리 내부의 모든 파일 변경 이벤트가 영구 유실됩니다.
+- 개선 권장안:
+  * IN_CREATE 및 IN_MOVED_TO 발생 시 addWatchRecursive를 호출하여 전체 서브트리를 재귀 등록해야 합니다.
+
+2.15 HierarchyPanel tag: 검색 시 32비트 해시 전달로 64비트 TagID 검색 영구 실패
+- 관련 파일: Source/Editor/Panels/HierarchyPanel.cpp (L68~L73)
+- 문제점:
+  * HierarchyPanel의 tag:xxx 필터링 검색 시 hashed_string(tagFilter).getHash()(32비트 해시)를 TagID 생성자에 전달합니다.
+  * 64비트 FNV-1a 해시를 사용하는 엔티티의 TagID와 32비트 해시가 불일치하여, 에디터 검색창에 tag: 태그 검색 시 일치하는 객체가 존재해도 0건으로 표시되는 결함이 발생합니다.
+- 개선 권장안:
+  * TagID{ StringUtil::computeHash64(tagFilter), nullptr } 또는 TagID{ tagFilter }로 64비트 해시를 생성해야 합니다.
+
+2.16 EngineLoop::shutdown unbindEngineServices 선행으로 인한 소멸자 engine::get... 크래시 위험
+- 관련 파일: Source/Engine/EngineLoop.cpp (L372~L400)
+- 문제점:
+  * EngineLoop::shutdown()에서 _sceneManager, _resourceManager 등 객체들의 reset() 이전에 engine::unbindEngineServices()를 먼저 호출합니다.
+  * 씬의 게임오브젝트나 컴포넌트 소멸자에서 engine::getTaskManager(), engine::getResourceManager() 등을 호출하는 경우 nullptr을 반환받아 셧다운 크래시가 발생합니다.
+- 개선 권장안:
+  * 모든 매니저 reset()이 완료된 후 마지막 단계에서 unbindEngineServices()를 호출하도록 순서를 변경해야 합니다.
+
+2.17 TileMapPanel 그리드 크기 입력 도중 Apply 이전 프레임에서 벡터 OOB 접근 크래시
+- 관련 파일: Source/Editor/Panels/TileMapPanel.cpp (L80~L87, L167~L180)
+- 문제점:
+  * ImGui::InputInt로 _width, _height를 직접 바인딩하여 사용자가 값을 키보드로 수정하는 순간, "Apply Size" 버튼을 누르기 전 프레임에서 그리드 렌더링 루프가 증가된 _width 기준으로 _listVisual 등의 벡터를 인덱싱하여 즉각적인 힙 메모리 범위 초과(Out-of-Bounds) 세그폴트 크래시가 발생합니다.
+- 개선 권장안:
+  * 임시 입력 변수(_inputWidth, _inputHeight)를 분리하거나 렌더링 시 벡터 크기 가드를 추가해야 합니다.
+
+2.18 DialogueRunnerComponent::executeNode Branch/Action 순환 노드 시 무한 재귀 스택 오버플로우 크래시
+- 관련 파일: Source/GameFramework/UI/DialogueRunnerComponent.cpp (L299~L312)
+- 문제점:
+  * Branch 및 Action 노드 실행 시 깊이 제한(Depth Guard) 없이 executeNode를 직접 재귀 호출합니다.
+  * 다이얼로그 그래프 내에 순환 링크(Cycle)가 존재할 경우 수천 회의 함수 호출이 누적되어 스택 오버플로우로 프로세스가 크래시됩니다.
+- 개선 권장안:
+  * while 루프 기반 순차 전이 또는 kMaxExecutionDepth(예: 64) 가드를 적용해야 합니다.
+
+2.19 DialogueRunnerComponent::executeAction 중 stopDialogue 호출 시 후속 노드 강제 실행으로 상태 부활
+- 관련 파일: Source/GameFramework/UI/DialogueRunnerComponent.cpp (L307~L311)
+- 문제점:
+  * Action 노드 실행 중 _onEvent 콜백에서 stopDialogue()가 호출되어 대화가 중단되었음에도, executeAction 리턴 후 다음 라인의 executeNode가 무조건 실행되어 대화 상태가 ShowingDialogue로 비정상 부활합니다.
+- 개선 권장안:
+  * executeAction 직후 _state == Idle / Finished 검사 후 조기 리턴 가드를 추가해야 합니다.
+
+2.20 SpriteAnimatorComponent _totalFrames 미설정으로 인한 애니메이션 틱 영구 정지 결함
+- 관련 파일: Source/Engine/Object/Component/2D/SpriteAnimatorComponent.h (L78~L79), Source/Engine/Object/Component/2D/SpriteAnimatorComponent.cpp (L51~L56)
+- 문제점:
+  * _totalFrames가 생성자에서 0으로 초기화된 이후 어떤 함수에서도 설정되지 않으며 외부 Setter도 존재하지 않아 onTick() 탈출 조건(_totalFrames <= 0)에 의해 모든 2D 스프라이트 애니메이션이 영구 정지됩니다.
+- 개선 권장안:
+  * play() 호출 시 프레임 수를 조회하여 _totalFrames에 대입하거나 setTotalFrames()를 구현해야 합니다.
+
+2.21 SceneComponent _bHasDirtyDescendant 갱신 후 리셋 누락으로 계층 더티 프루닝 영구 무효화
+- 관련 파일: Source/Engine/Object/Component/SceneComponent.cpp (L498~L512), Source/Engine/Object/Component/SceneComponent.h (L112~L115)
+- 문제점:
+  * markTransformDirty() 시 부모 계층을 올라가며 _bHasDirtyDescendant = SW_TRUE를 설정하지만, 트랜스폼 계산 완료 후 이를 SW_FALSE로 리셋하는 로직이 엔진에 없어 부모 노드의 플래그가 영구히 참으로 고착되어 더티 프루닝이 무력화됩니다.
+- 개선 권장안:
+  * 트랜스폼 플러시 완료 시점에 clearDirtyDescendant()를 호출하여 정상 리셋해야 합니다.
+
+2.22 ComponentPtr::resolveLazy 빠른 경로에서 컴포넌트 단독 삭제 시 Use-After-Free 크래시
+- 관련 파일: Source/Engine/Object/Component/ComponentPtr.cpp (L142~L152)
+- 문제점:
+  * findGameObjectById로 게임오브젝트의 생존을 확인한 후 _pCachedPtr->isPendingKill()을 호출할 때, 게임오브젝트에서 해당 컴포넌트만 단독 삭제된 경우 이미 해제된 힙 메모리를 역참조하여 Use-After-Free 세그폴트 크래시가 발생합니다.
+- 개선 권장안:
+  * ComponentHandle을 통한 핸들 검증 또는 pOwner->hasComponent(_pCachedPtr) 가드를 선행해야 합니다.
+
+2.23 RuntimeHud::publishSnapshot 서비스 미바인딩 시 널 체크 없는 DebugOverlayState 역참조 크래시
+- 관련 파일: Source/GameFramework/UI/RuntimeHud.cpp (L112~L124)
+- 문제점:
+  * DebugOverlayState 서비스가 바인딩되지 않은 배포(Shipping) 빌드나 헤드리스 환경에서 널 체크 없이 game::getService<DebugOverlayState>()를 7회 연속 역참조하여 즉각적인 널 포인터 크래시가 발생합니다.
+- 개선 권장안:
+  * DebugOverlayState 포인터를 1회 로컬 캐싱하고 nullptr 가드를 추가해야 합니다.
+
+2.24 InspectorPanel 컴포넌트 카드 순회 중 Paste as New Component 시 벡터 재할당 UAF 크래시
+- 관련 파일: Source/Editor/Panels/InspectorPanel.cpp (L231~L289)
+- 문제점:
+  * pObj->getAllComponents() 벡터 참조를 순회하는 루프 도중 컨텍스트 메뉴에서 Paste as New Component를 실행하면 pObj에 새 컴포넌트가 추가(push_back)되면서 내부 벡터가 재할당됩니다.
+  * 루프가 break 없이 계속 진행되어 해제된 메모리를 역참조하는 Use-After-Free 크래시가 발생합니다.
+- 개선 권장안:
+  * 컴포넌트 붙여넣기 실행 직후 즉시 break로 루프를 탈출하거나 지연 명령으로 큐잉해야 합니다.
+
+2.25 SpriteClipPanel::saveDocument 새 에셋 경로 공백 시 저장 실패에도 성공 반환 및 더티 오소멸 결함
+- 관련 파일: Source/Editor/Panels/SpriteClipPanel.cpp (L178~L189)
+- 문제점:
+  * 새 에셋 등 getLoadedAssetPath()가 빈 상태에서 저장을 호출하면 디스크 파일 저장이 실패했음에도 clearDocumentDirty()를 호출하고 saveDocument()가 true를 반환하여 사용자의 작업 내용이 저장된 것으로 오인되고 유실됩니다.
+- 개선 권장안:
+  * 경로 공백 시 false를 반환하고 실제 저장 성공 시에만 더티 플래그를 클리어해야 합니다.
+
+2.26 PrefabEditorPanel::drawContent 개별 오버라이드 Revert 시 scanPrefabOverrides 누락으로 UI 미갱신 결함
+- 관련 파일: Source/Editor/Panels/PrefabEditorPanel.cpp (L157~L165)
+- 문제점:
+  * 개별 오버라이드 프로퍼티의 Revert 버튼 클릭 시 revertPrefabOverride는 실행되지만 scanPrefabOverrides가 호출되지 않아, 실제 데이터는 롤백되었으나 UI 테이블에는 수정 마크(*)와 변경 전 값이 그대로 잔류합니다.
+- 개선 권장안:
+  * Revert 실행 즉시 scanPrefabOverrides를 호출하여 UI 테이블 데이터를 갱신해야 합니다.
+
+2.27 CommandStack::undo/redo 실행 도중 재진입 push 시 히스토리 스택 파손 결함
+- 관련 파일: Source/Engine/Utility/CommandStack.cpp (L7~L33, L187~L197)
+- 문제점:
+  * undo() / redo() 콜백 실행 도중 다른 리스너나 트랜잭션에 의해 CommandStack::push()가 재진입 호출되면 _listCommand의 현재 위치 이후 커맨드들이 강제 삭제(erase)되고 _index가 오염되어 jumpTo() 루프 중 크래시 또는 히스토리 스택 파손이 발생합니다.
+- 개선 권장안:
+  * _bIsExecutingCommand 재진입 가드 플래그를 도입하여 실행 중 push 요청을 방어/지연해야 합니다.
+
+2.28 PrefabManager::spawn 순환 참조 가드에서 비정규화 원본 경로 비교로 인한 무한 재귀 스택 오버플로우 결함
+- 관련 파일: Source/Engine/Object/Prefab/PrefabAsset.cpp (L479~L506)
+- 문제점:
+  * PrefabManager::spawn의 t_listSpawnStack 순환 참조 감지 로직이 GUID 역참조 및 경로 정규화(makePrefabCacheKey)를 거치지 않고 원본 문자열 assetRelativePath로 pathKey를 생성하여, 상대 경로/절대 경로/GUID 등 경로 표현 방식이 다를 경우 순환 프리팹 참조 감지에 실패하고 무한 재귀 스폰으로 스택 오버플로우 크래시를 유발합니다.
+- 개선 권장안:
+  * makePrefabCacheKey(resolvedPath)로 변환된 최종 정규화 캐시 키로 순환 스택을 검사해야 합니다.
+
+2.29 MemoryProfiler 세부 추적 시 callStackHash 미전달 해제로 인한 가짜 메모리 누수 누적 결함
+- 관련 파일: Source/Core/Memory/MemoryProfiler.cpp (L250~L267, L289~L307)
+- 문제점:
+  * recordAllocation은 콜스택별 할당량(_mapCallStackAllocInfo)을 누적하지만, 일반적인 free/delete 훅에서 recordFree 호출 시 callStackHash == 0으로 전달되어 차감 블록이 영원히 실행되지 않아 정상 해제된 메모리도 가짜 메모리 누수로 누적 기록됩니다.
+- 개선 권장안:
+  * 포인터별 콜스택 해시 룩업 매핑 테이블을 유지하여 해제 시 자동 차감하도록 개선해야 합니다.
+
+2.30 SaveGame::saveToFile 원본 파일 선삭제 후 복사 실패 시 임시 파일까지 파괴되는 세이브 데이터 영구 소실 결함
+- 관련 파일: Source/GameFramework/Kits/TurnBattle/SaveGame.cpp (L98~L115)
+- 문제점:
+  * SaveGame::saveToFile이 임시 파일(.tmp)을 생성한 후 FileUtil::removeFile(path)로 원본 세이브 파일을 먼저 삭제하고 copyFile(tempPath, path)를 수행합니다. 디스크 공간 부족, 권한 오류, 파일 락 등으로 복사가 실패하면 다음 줄의 FileUtil::removeFile(tempPath)가 임시 파일마저 삭제하여 원본 세이브와 임시 세이브가 모두 영구 증발합니다.
+- 개선 권장안:
+  * 복사 실패 시 임시 파일을 보존하고 OS 레벨의 원자적 파일 교체 API(MoveFileEx/rename)를 적용해야 합니다.
+
+2.31 GameObjectPtr::resolveLazy 씬 전환 후 파괴된 _pManager 포인터 역참조로 인한 Use-After-Free 크래시 결함
+- 관련 파일: Source/Engine/Object/GameObject/GameObjectPtr.cpp (L88~L122)
+- 문제점:
+  * GameObjectPtr이 이전 씬의 GameObjectManager 원시 포인터(_pManager)를 보관하고 있어, 씬 전환 후 이전 씬이 파괴되었음에도 _pManager != nullptr로 인식하여 폴백을 타지 않고 이미 해제된 매니저 포인터로 findGameObjectById()를 호출해 Use-After-Free 크래시를 유발합니다.
+- 개선 권장안:
+  * _pManager를 캐싱하지 않고 항상 getActiveScene()->getObjectManager()를 통해 유효한 매니저를 조회하거나 SceneId 검증을 적용해야 합니다.
+
+
+--------------------------------------------------------------------------------
+3. 성능 병목 지점 및 락 경합 (Performance Bottlenecks)
+--------------------------------------------------------------------------------
+
+3.1 컴포넌트 병렬 틱 시 std::shared_mutex 반복 락 경합
 - 관련 파일: Source/Engine/Object/GameObject/GameObjectManager.cpp (L201~L220, L426~L434)
 - 문제점:
   * GameObjectManager::tickComponents가 DAG 웨이브 단위로 수십~수백 개의 컴포넌트를 TaskManager::emplaceParallel을 통해 워커 스레드들로 분산 실행합니다.
@@ -69,7 +375,7 @@
 - 개선 권장안:
   * TickExecutionItem 생성 시점에 유효한 컴포넌트 원시 포인터와 오브젝트 활성 상태를 확정해 두고, 병렬 실행 중에는 ID 재검색 및 락 획득 없이 직접 호출하거나 스레드별 읽기 전용 스냅샷 테이블을 사용해야 합니다.
 
-2.2 UI 스레드와 렌더 스레드 간 직렬화 파이프라인 버블 (Frame Stalling)
+3.2 UI 스레드와 렌더 스레드 간 직렬화 파이프라인 버블 (Frame Stalling)
 - 관련 파일: Source/Editor/ImGuiEditor.cpp (L280, L511~L515)
 - 문제점:
   * ImGuiEditor::updateUI() 시작 시 waitForDrawSnapshotIdle()을 호출하여 _inFlightDrawSlot이 해제될 때까지 스핀(yield())합니다.
@@ -78,7 +384,7 @@
 - 개선 권장안:
   * EditorDrawDataSnapshot 링 버퍼 슬롯 수를 3개(Triple-Buffered Snapshot)로 늘려, 직전 프레임이 렌더링 중이어도 UI 스레드가 다음 슬롯에 독립적으로 UI 커맨드를 기록할 수 있도록 디커플링해야 합니다.
 
-2.3 뷰포트/패널 리사이즈 시 GPU 임시 자원 전면 재생성 (Resource Thrashing)
+3.3 뷰포트/패널 리사이즈 시 GPU 임시 자원 전면 재생성 (Resource Thrashing)
 - 관련 파일: Source/Engine/Graphics/RenderPass/FrameRendererResources.cpp (L180~L223)
 - 문제점:
   * FrameRenderer::ensureTransientResources()는 에디터 뷰포트나 도킹 창 크기가 1픽셀이라도 달라지면 releaseTransientResources()를 호출하여 모든 Render Target, Depth Buffer, G-Buffer, Bloom 텍스처 및 Bindless SRV를 완전히 파괴하고 새로 생성합니다.
@@ -86,7 +392,15 @@
 - 개선 권장안:
   * 실제 렌더 타깃 해상도를 256/512 단위로 상향 패딩(Power-of-Two 또는 Block Allotment)하여 할당하고, 뷰포트 영역만 동적으로 잘라 쓰는 동적 뷰포트 스케일링(Dynamic Viewport Allocation) 구조를 도입해야 합니다.
 
-2.4 물리 쿼리 및 스윕 테스트 시 매 프레임 힙 동적 할당 (std::vector + std::sort)
+3.4 SpatialHashGrid2D 쿼리 시 O(N x K) 중복 검사 및 반복 해시 조회 병목
+- 관련 파일: Source/Engine/Spatial/SpatialHashGrid2D.cpp (L119~L130)
+- 문제점:
+  * SpatialHashGrid2D::queryAABB 및 queryCircle은 쿼리 영역에 포함된 모든 버킷을 순회하며 등록된 핸들을 수집합니다.
+  * 여러 셀에 걸쳐 있는 엔티티를 검사할 때마다 _mapHandleBound.find(handle)로 바운딩 박스를 해시 검색하고, 중복 방지를 위해 std::find로 출력 벡터 전체를 매번 선형 탐색(O(K))하여 쿼리 반경이 넓을수록 기하급수적으로 성능이 저하됩니다.
+- 개선 권장안:
+  * 엔티티마다 단조 증가하는 uint32 _lastQueryId 타임스탬프를 부여하여 O(1)로 중복 방문을 체크하거나 쿼리 임시 비트셋을 활용해야 합니다.
+
+3.5 물리 쿼리 및 스윕 테스트 시 매 프레임 힙 동적 할당 (std::vector + std::sort)
 - 관련 파일: Source/Engine/Physics/PhysicsWorld.cpp (L249~L268)
 - 문제점:
   * PhysicsWorld::queryAabb 및 sweepTest 호출 시마다 로컬 vector<BodyHandle> listCandidateHandle이 힙에서 동적 할당되며, 중복 셀에 등록된 핸들을 제거하기 위해 std::sort와 std::unique를 매번 수행합니다.
@@ -94,7 +408,7 @@
 - 개선 권장안:
   * 스택 기반 Small-Vector(InlineVector<BodyHandle, 64>) 또는 프레임 선형 할당기(LinearAllocator)를 사용하고, 비트셋(DynamicBitset)을 통한 방문 체크로 O(N log N) 정렬 없이 O(N)으로 중복을 걸러내야 합니다.
 
-2.5 BVHTree3D 동적 오브젝트 이동 시 매 프레임 트리 전면 재구축 (Dynamic Tree Rebuild)
+3.6 BVHTree3D 동적 오브젝트 이동 시 매 프레임 트리 전면 재구축 (Dynamic Tree Rebuild)
 - 관련 파일: Source/Engine/Spatial/BVHTree3D.cpp (L68~L79, L82~L85)
 - 문제점:
   * BVHTree3D::update(handle, bounds)가 호출될 때마다 내부적으로 remove(handle) 후 insert(handle, bounds)를 수행합니다.
@@ -103,7 +417,31 @@
 - 개선 권장안:
   * Box2D/PhysX 스타일의 확장 바운딩 박스(Fat AABB with Margin/Velocity)를 도입하여, 객체가 이전 Fat AABB 영역을 벗어났을 때만 트리를 갱신하고 작은 이동은 비용 0으로 스킵하도록 최적화해야 합니다.
 
-2.6 BinarySerializer 역직렬화 시 O(N) 선형 탐색 및 힙 할당 병목
+3.7 ReloadFileManager mtime 폴백 모드 활성화 시 매 프레임 전체 디스크 재귀 탐색 병목
+- 관련 파일: Source/Engine/Utility/Module/ReloadFileManager.cpp (L133~L135, L226~L244)
+- 문제점:
+  * 파일 와처 실패 시 mtime 폴백 모드에서 update()가 매 프레임 collectFiles()를 동기 호출하여 전체 디스크를 재귀 순회합니다.
+  * 수천 개의 에셋 파일이 있는 프로젝트에서 매 틱마다 50~200ms 단위의 극심한 프레임 스톨이 발생합니다.
+- 개선 권장안:
+  * 주기적 타이머 스로틀링(1.0초 간격)을 적용하고 비동기 워커 태스크로 디스크 탐색을 분리해야 합니다.
+
+3.8 JsonDocument 및 XmlDocument 대용량 노드 룩업 시 O(N) 선형 탐색 병목
+- 관련 파일: Source/Engine/Utility/Json/JsonDocument.cpp (L40~L50), Source/Engine/Utility/Xml/XmlDocument.cpp (L71~L83)
+- 문제점:
+  * JsonDocumentInternal::findMember가 대소문자 구분 룩업에서도 nlohmann json의 내부 트리/해시 룩업을 쓰지 않고 O(N) 선형 루프를 돕니다.
+  * XmlDocument 또한 bIgnoreCaseKeys = true 기본값으로 인해 수천 개 노드 로드 시 매 접근마다 선형 탐색 O(N^2) 병목이 발생합니다.
+- 개선 권장안:
+  * bIgnoreCase == false 시 즉시 find/attribute를 호출하고 핫 패스에서는 대소문자 구분을 기본값으로 지정해야 합니다.
+
+3.9 TileMap 뷰포트 타일 플래그 조회 시 findWarp O(W) 선형 탐색 병목
+- 관련 파일: Source/GameFramework/Kits/Overworld/TileMap.cpp (L244~L256)
+- 문제점:
+  * TileMap::getFlags(x, y)는 해당 타일에 워프가 존재하는지 확인하기 위해 findWarp(x, y)를 호출하며, 이는 _listWarp 전체를 순회하는 O(W) 선형 탐색을 수행합니다.
+  * 맵 둘레에 수십~수백 개의 워프 타일이 등록되어 있을 때, 렌더러나 충돌 시스템이 뷰포트 내 타일(1,200개)의 플래그를 매 프레임 검사하면 프레임당 수십만 번의 무의미한 벡터 순회가 발생합니다.
+- 개선 권장안:
+  * TileMap 내부에 1바이트 크기의 _listWarpIndex(또는 2D 워프 플래그 비트셋)를 유지하여 (x, y) 인덱스로 O(1) 즉시 조회할 수 있도록 개선해야 합니다.
+
+3.10 BinarySerializer 역직렬화 시 O(N) 선형 탐색 및 힙 할당 병목
 - 관련 파일: Source/Engine/Serialization/Format/BinarySerializer.cpp (L49~L76)
 - 문제점:
   * 바이너리 스트림에서 프로퍼티를 읽을 때마다 등록된 전체 프로퍼티 목록(listProp)을 처음부터 끝까지 순회하는 O(N) 선형 탐색을 수행합니다.
@@ -112,12 +450,297 @@
 - 개선 권장안:
   * TypeInfo 내부에 해시 기반 인덱스 룩업 테이블(또는 정렬된 해시 배열의 바이너리 서치)을 구축하여 O(1) 또는 O(log N)으로 프로퍼티를 찾도록 최적화해야 합니다.
 
+3.11 DialogueGraphAsset 파일 로드 시 중복 직렬화/역직렬화 오버헤드
+- 관련 파일: Source/Engine/Dialogue/DialogueGraphAsset.cpp (L40~L44)
+- 문제점:
+  * DialogueGraphAsset::loadFromFile() 구현에서 JsonDocument doc에 파일 파싱을 완료한 후, 이를 다시 JSON 문자열로 덤프(doc.dump(-1))한 뒤 parseJson(string_view)으로 넘겨 동일한 JSON 트리를 2번 파싱하고 대용량 임시 문자열을 힙에 할당/해제합니다.
+  * 퀘스트/다이얼로그 그래프가 수천 개 노드를 가진 대규모 게임에서 불필요한 CPU 사이클 소모와 메모리 대역폭 낭비가 발생합니다.
+- 개선 권장안:
+  * parseJson(const JsonValue& root) 오버로드를 작성하여 이미 메모리에 파싱된 doc.root() DOM 노드를 직접 순회하도록 수정해야 합니다.
+
+3.12 DeadlockDetector 전역 락 직렬화 및 매 락 획득 시 동기식 콜스택 캡처 병목
+- 관련 파일: Source/Core/Concurrency/DeadlockDetector.cpp (L67~L88)
+- 문제점:
+  * 디버그 빌드에서 활성화되는 DeadlockDetector::recordLockIntended는 엔진 내 모든 뮤텍스 락 획득 시마다 CallStackCapture::capture로 무거운 OS 스택 워킹을 동기 수행하고 전역 단일 뮤텍스(_mutex)를 잠급니다.
+  * 프레임당 수만 번 발생하는 락 연산이 모두 단일 스레드로 직렬화되어 멀티스레드 태스크 시스템 성능이 수천 배 저하됩니다.
+- 개선 권장안:
+  * 락 획득 순서 DAG만 가볍게 기록하고, 실제 데드락 의심 시간 초과 시에만 비동기로 콜스택을 덤프하도록 개선해야 합니다.
+
+3.13 DataRaceDetector 예외/중단 발생 시 상태 카운터 영구 오염 버그
+- 관련 파일: Source/Core/Concurrency/DataRaceDetector.cpp (L24~L67)
+- 문제점:
+  * RaceDetectContext::enterRead/enterWrite에서 fetch_add로 카운터를 올린 후 디버그 브레이크나 예외가 발생하여 exitRead/exitWrite가 호출되지 못하면 카운터가 영구히 감소하지 않습니다.
+  * 이후 해당 객체에 대한 모든 정상적인 동시 접근이 매번 데이터 레이스로 오탐되어 무한 브레이크가 발생합니다.
+- 개선 권장안:
+  * RAII Scoped Guard를 강제하고 예외 상황 시 자동 롤백을 지원해야 합니다.
+
+3.14 SelectionManager::selectObject 무효 객체 정리 시 2연속 이벤트 중복 브로드캐스트 병목
+- 관련 파일: Source/Editor/Common/Workspace/SelectionManager.cpp (L14~L54, L212~L223)
+- 문제점:
+  * selectObject에서 pruneInvalid() 호출 시 무효 객체가 제거되면 notifyChanged()를 발송하고, 이후 함수 종료 시 다시 notifyChanged()를 연속 발송합니다.
+  * 인스펙터, 계층 트리, 프로퍼티 그리드 UI가 동일 프레임에 2회 중복 전체 재구축을 수행하여 프레임 드랍을 유발합니다.
+- 개선 권장안:
+  * pruneInvalid()에서 플래그만 반환하고 함수 종료 시 단 1회만 통합 통지하도록 개선해야 합니다.
+
+3.15 ContentBrowserPanel::drawFolderTreeNode 매 프레임 전체 폴더 트리 동기 디스크 재귀 탐색 병목
+- 관련 파일: Source/Editor/Panels/ContentBrowserPanel.cpp (L463~L523)
+- 문제점:
+  * Sources 디렉터리 트리 렌더링 시 열려 있는 모든 노드에서 매 프레임(60~144 FPS) collectChildFolders를 동기 호출하여 OS 파일시스템을 재귀 탐색합니다.
+  * 프로젝트 내 폴더 수가 많아질수록 매 틱마다 무거운 디스크 I/O 스톨이 발생하여 UI 프레임 드랍을 유발합니다.
+- 개선 권장안:
+  * 폴더 트리를 인메모리 노드로 캐싱하고 변경 이벤트 또는 수동 새로고침 시에만 갱신하도록 최적화해야 합니다.
+
+3.16 DataTablePanel::drawGameDataTab 매 프레임 대용량 XML 텍스트 버퍼 재할당 및 4KB 초과 붙여넣기 잘림
+- 관련 파일: Source/Editor/Panels/DataTablePanel.cpp (L325~L336)
+- 문제점:
+  * 매 프레임 vector<utf8>을 힙 동적 할당 및 메모리 복사하여 대용량 XML 편집 시 프레임 드랍이 발생하며, 고정 +4096 여유 공간으로 인해 4KB 초과 텍스트 붙여넣기 시 텍스트가 잘리는 결함이 발생합니다.
+- 개선 권장안:
+  * 지속성 버퍼 캐싱 및 ImGuiInputTextFlags_CallbackResize를 지원해야 합니다.
+
+3.17 BoxCollider2DComponent::getBounds 충돌/바운드 계산 시 매번 string_splitter 힙 할당 및 문자열 파싱 병목
+- 관련 파일: Source/Engine/Object/Component/2D/BoxCollider2DComponent.cpp (L73~L113)
+- 문제점:
+  * getBounds() 및 충돌 검사 호출 시마다 string_splitter로 문자열 오프셋/스케일을 분할 파싱하여 매 틱 수만 번의 힙 메모리 할당 및 파싱 오버헤드가 발생합니다.
+- 개선 권장안:
+  * 파싱된 float2 수치형 변수를 멤버로 캐싱하고 프로퍼티 수정 시에만 1회 파싱하도록 수정해야 합니다.
+
+3.18 StringBuilder::appendFormat 경계 크기(available - 1) 일치 시 불필요한 힙 재할당 및 2회 포맷팅 병목
+- 관련 파일: Source/Core/String/StringBuilder.h (L267~L284)
+- 문제점:
+  * 포맷팅된 문자열의 길이가 버퍼 여유 공간(available - 1)에 정확히 맞아떨어질 때 written < available - 1 검사가 false가 되어 버퍼 부족으로 오판하고 불필요한 힙 메모리 재할당 및 2회 중복 포맷팅을 수행합니다.
+- 개선 권장안:
+  * formatstring의 실제 잘림 여부 반환값을 정확히 검증하여 불필요한 재할당을 방지해야 합니다.
+
+3.19 basic_fixed_string::size 매 호출마다 O(N) strlen 수행으로 루프 O(N^2) 성능 저하 병목
+- 관련 파일: Source/Core/String/fixed_string.h (L169~L174)
+- 문제점:
+  * _size 멤버 변수가 정상적으로 유지되고 있음에도 size() 및 length()에서 매번 StringUtil::strlen(_arrData)를 호출하여, 순회 루프나 빈번한 조회 시 O(N^2) 성능 저하가 발생합니다.
+- 개선 권장안:
+  * size()는 return _size;로 O(1) 즉시 반환하도록 수정하고 외부 C 버퍼 수정 시 전용 update_size()를 제공해야 합니다.
+
+3.20 ProfilerPanel::drawPerformanceTab 매 프레임 전체 씬 5회 중복 getComponent<T> 순회 병목
+- 관련 파일: Source/Editor/Panels/ProfilerPanel.cpp (L130~L149)
+- 문제점:
+  * 매 프레임(60~144 FPS) 씬의 모든 게임오브젝트를 순회하며 5개 컴포넌트 타입(Scene, Mesh, Sprite, Box2D, Camera)을 getComponent<T>()로 각각 선형 탐색 및 RTTI 캐스팅하여 수만 번의 불필요한 컴포넌트 순회 및 CPU 오버헤드를 유발합니다.
+- 개선 권장안:
+  * pObj->getAllComponents()를 1회 단일 순회하여 집계하거나 0.5초 주기 타이머 스로틀링을 적용해야 합니다.
+
+3.21 ConsolePanel::drawContent 신규 로그 1건마다 2,048개 전체 로그 딥 카피 병목
+- 관련 파일: Source/Editor/Panels/ConsolePanel.cpp (L107~L118)
+- 문제점:
+  * 새 로그 1건 수신 시마다 _entriesMutex를 쥔 채 2,048개 LogEntry 전체를 딥 카피하여 8,000+ 힙 할당 및 로깅 중인 모든 워커 스레드를 블로킹시키는 병목이 발생합니다.
+- 개선 권장안:
+  * 링 버퍼 기반 신규 로그 델타 추가 또는 shared_ptr 스왑 방식으로 개선해야 합니다.
+
+3.22 App::run 고정 타임스텝 누적 시 서브스텝 상한 부재로 인한 'Spiral of Death' 병목
+- 관련 파일: Source/App/App.cpp (L192~L215)
+- 문제점:
+  * 일시적인 프레임 스톨(100ms) 발생 시 while (accumulator >= kFixedDeltaTime) 루프가 단일 프레임에 6~8회 이상의 무거운 물리 고정 틱을 연속 실행하여 CPU 부하를 가중시키고 영구적인 저프레임 악순환(Spiral of Death)에 빠집니다.
+- 개선 권장안:
+  * 프레임당 최대 서브스텝 수(kMaxSubSteps = 4)를 제한하고 초과분을 클램핑해야 합니다.
+
+3.23 MemoryProfiler::recordAllocation 세부 추적 시 모든 힙 할당 전역 락 직렬화 병목
+- 관련 파일: Source/Core/Memory/MemoryProfiler.cpp (L252~L267), Source/Core/Memory/MemoryProfiler.h (L132~L134)
+- 문제점:
+  * _bDetailedTrackingEnabled 활성화 시 매 메모리 할당마다 OS 스택 워킹을 수행하고 단일 뮤텍스(_stackMapMutex)를 잠가 멀티스레드 워커들의 메모리 할당이 단일 스레드로 직렬화되는 병목이 발생합니다.
+- 개선 권장안:
+  * 스레드 로컬 버퍼(TLS Allocation Buffer) 및 샤딩된 뮤텍스 테이블을 도입해야 합니다.
+
+3.24 D3D11RHIDevice::beginFrame 매 프레임 CreateRenderTargetView COM 객체 동적 재생성 병목
+- 관련 파일: Source/Engine/Graphics/RHI/DX11/D3D11RHIDevice.cpp (L210~L220, L292~L305)
+- 문제점:
+  * 매 프레임(60~144 FPS)마다 백버퍼 RTV를 파괴하고 CreateRenderTargetView를 동기 호출하여 재생성함으로써 드라이버 내부 객체 할당/해제 및 COM 오버헤드를 매 틱 유발합니다.
+- 개선 권장안:
+  * 스왑체인 버퍼 개수만큼 RTV 배열을 사전 생성해 두고 인덱스 기반으로 즉시 바인딩하도록 수정해야 합니다.
+
 
 --------------------------------------------------------------------------------
-3. 메모리 관리 및 서브시스템 잠재 결함 (Memory & Subsystems)
+4. 그래픽스 RHI, 카메라, 윈도우, 메모리, 수학, 애니메이션, 셰이더, 오디오 및 서브시스템 잠재 결함 (Graphics, Shaders, Window, Memory, Math, Animation, Audio & Kits)
 --------------------------------------------------------------------------------
 
-3.1 XAudio2System 유휴 보이스 풀(Idle Voice Pool)의 오디오 샘플 무기한 잔류 (Memory Leak)
+4.1 ShaderReflectionDx Constant Buffer 바인드 슬롯(_bindPoint) 오인덱싱 결함
+- 관련 파일: Source/Engine/Graphics/Shader/ShaderReflectionDx.cpp (L79~L93, L143~L155)
+- 문제점:
+  * ShaderReflectionDxInternal에서 CBuffer 정보를 추출할 때 실제 레지스터 바인드 포인트(register(bN))가 아닌 단순 루프 인덱스(cbIndex)를 _bindPoint에 대입합니다.
+  * register(b2)나 register(b5) 등에 바인딩된 CBuffer가 리플렉션 상에서 b0, b1으로 잘못 매핑되어, 셰이더가 엉뚱한 슬롯의 상수 버퍼를 읽고 파라미터가 오염되는 치명적인 결함이 발생합니다.
+- 개선 권장안:
+  * BoundResources 목록의 D3D_SHADER_INPUT_BIND_DESC.BindPoint를 역조회하여 실제 CBuffer 슬롯 번호를 매핑해야 합니다.
+
+4.2 ShaderCompiler #include 헤더 의존성 미추적으로 인한 Stale 셰이더 캐시 반환 결함
+- 관련 파일: Source/Engine/Graphics/Shader/ShaderCompiler.cpp (L169~L196)
+- 문제점:
+  * ShaderCompiler::computeCachePath()는 디스크 캐시 키 계산 시 메인 .hlsl 파일 바이트만 해시하고 #include로 임포트된 헤더(common.hlsli, bindless.hlsli, lighting.hlsli 등)의 변경 사항을 추적하지 않습니다.
+  * 개발자가 공용 헤더를 수정하더라도 메인 셰이더 파일이 그대로이면 캐시 해시가 동일하여 과거에 빌드된 오래된 바이트코드가 그대로 반환되어 렌더링이 깨지는 결함이 발생합니다.
+- 개선 권장안:
+  * #include 지시문을 재귀 파싱하여 의존하는 모든 헤더 파일의 바이트/타임스탬프를 캐시 키에 포함해야 합니다.
+
+4.3 ShaderReflectionSpirv 비정사각 행렬(Rectangular Matrix) 타입 해석 오류
+- 관련 파일: Source/Engine/Graphics/Shader/ShaderReflectionSpirv.cpp (L93~L101)
+- 문제점:
+  * SPIR-V 셰이더 리플렉션 시 행렬 타입의 이름을 결정할 때 열 개수만으로 to_string(count) + "x" + to_string(count)를 조립하여 무조건 정사각 행렬(3x3, 2x2)로만 이름을 생성합니다.
+  * 3x4 또는 4x3 등 직사각형 행렬이 셰이더에 선언되어 있을 경우 행(Row) 개수가 무시되고 3x3으로 오인식되어 버퍼 크기 계산 오류 및 머티리얼 바인딩 데이터 깨짐이 발생합니다.
+- 개선 권장안:
+  * 서브 벡터 타입의 행(Row) 개수를 정확히 역조회하여 Float<row>x<col>로 명명하고 크기를 계산해야 합니다.
+
+4.4 VulkanRHIDevice 스왑체인 재생성 시 세마포어 재사용 규약 위반 (Vulkan Spec Violation)
+- 관련 파일: Source/Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.cpp (L608~L618)
+- 문제점:
+  * VulkanRHIDevice::beginFrame()에서 vkAcquireNextImageKHR가 VK_ERROR_OUT_OF_DATE_KHR 또는 VK_SUBOPTIMAL_KHR를 반환하면 recreateSwapChain()을 호출합니다.
+  * 이후 vkAcquireNextImageKHR를 즉시 재호출하면서 실패한 이전 호출에 전달되었던 _listImageAvailableSemaphore[_currentFrame]를 재초기화나 대기 없이 그대로 다시 전달합니다.
+  * Vulkan 표준 명세(VUID-vkAcquireNextImageKHR-semaphore-01779)에 따르면 실패한 획득 호출에 사용된 세마포어는 정의되지 않은 상태(Unsignaled/Pending)가 될 수 있어, 재사용 시 드라이버 검증 에러 및 특정 GPU 드라이버에서 GPU 멈춤/크래시가 유발될 수 있습니다.
+- 개선 권장안:
+  * 스왑체인 재생성 시 해당 프레임의 획득 세마포어를 vkDestroySemaphore 후 새로 생성하거나, 전용 획득 세마포어 풀을 운영해야 합니다.
+
+4.5 Win32Window 창 최소화(SIZE_MINIMIZED) 시 0 x 0 해상도 리사이즈 이벤트 전달로 인한 Swapchain 크래시
+- 관련 파일: Source/Engine/Window/Windows/Win32Window.cpp (L187~L192)
+- 문제점:
+  * 윈도우 최소화 시 WM_SIZE가 폭/높이 0을 전달하고, 이를 필터링 없이 _onResize(0, 0)로 브로드캐스트합니다.
+  * Vulkan RHI(0x0 익스텐트 금지 규약 위반) 및 DX12/DX11(0 크기 Depth/GBuffer 텍스처 생성 시 E_INVALIDARG)에서 즉각적인 디바이스 크래시 및 비정상 종료가 발생합니다.
+- 개선 권장안:
+  * WM_SIZE 핸들러에서 wParam == SIZE_MINIMIZED이거나 width == 0 || height == 0인 경우 _onResize 호출을 건너뛰도록 방어해야 합니다.
+
+4.6 D3D12RHISwapChain::resize 후 백버퍼 리소스 초기 상태 불일치로 인한 배리어 에러
+- 관련 파일: Source/Engine/Graphics/RHI/DX12/D3D12RHISwapChain.cpp (L35~L43, L64~L74)
+- 문제점:
+  * ResizeBuffers 이후 새로 생성된 백버퍼는 D3D12_RESOURCE_STATE_COMMON 상태이지만, _pDevice->_swapchainState가 이전 상태(PRESENT)로 남아있습니다.
+  * 다음 beginFrame에서 D3D12_RESOURCE_STATE_PRESENT -> RENDER_TARGET 배리어를 실행하여 D3D12 디버그 레이어 에러 및 전환 실패가 발생합니다.
+- 개선 권장안:
+  * createRenderTargets() 시점에 _swapchainState를 D3D12_RESOURCE_STATE_COMMON으로 재설정해야 합니다.
+
+4.7 Memory::freeMemory / alignedFree 할당자 타입 불일치 검증 부재로 인한 Windows CRT 크래시
+- 관련 파일: Source/Core/Memory/Memory.cpp (L95~L113, L157~L170)
+- 문제점:
+  * Memory::alignedAlloc은 _aligned_malloc을, allocMemory는 malloc을 사용합니다.
+  * AllocHeader에 할당 방식 플래그가 없어, 혼용 해제 시 _magic 검사를 통과하여 free(_aligned_malloc_ptr) 또는 _aligned_free(malloc_ptr)가 호출되어 Windows CRT 힙 손상(_CrtIsValidHeapPointer) 크래시가 발생합니다.
+- 개선 권장안:
+  * AllocHeader에 _bIsAlignedAlloc 플래그를 두고 올바른 CRT 해제 함수가 호출되도록 분기해야 합니다.
+
+4.8 MathUtil::getRandomRange 8비트 정수 전달 시 C++ 표준 규약 위반(UB) 및 역구간(from > to) 크래시
+- 관련 파일: Source/Core/Math/MathUtil.h (L266~L278)
+- 문제점:
+  * std::uniform_int_distribution<T>에 uint8/int8 전달 시 C++ 표준 규약 위반으로 UB 또는 컴파일 에러가 발생합니다.
+  * 또한 from > to 전달 시 std::invalid_argument 예외 또는 무한 루프 크래시가 유발됩니다.
+- 개선 권장안:
+  * 8비트 정수는 int32로 확장하고 start <= end 순서로 자동 정렬해야 합니다.
+
+4.9 MathUtil::align 정렬 크기 0 전달 시 0 반환 및 0 나누기(Divide-by-Zero) 결함
+- 관련 파일: Source/Core/Math/MathUtil.h (L241~L250)
+- 문제점:
+  * alignment == 0일 때 (0 & -1) == 0이 참이 되어 결과가 무조건 0으로 반환되거나, 비2의거듭제곱 경로에서 0으로 나누기 크래시가 발생합니다.
+- 개선 권장안:
+  * alignment <= 0인 경우 입력 value를 그대로 반환하도록 가드를 추가해야 합니다.
+
+4.10 float4x4::createPerspectiveFieldOfView 역방향 클리핑 평면 전달 시 투영 행렬 파손 결함
+- 관련 파일: Source/Core/Math/MatrixMath.cpp (L395~L405)
+- 문제점:
+  * nearPlane >= farPlane인 경우 span이 음수가 되어 깊이 버퍼 매핑이 역전되고 뷰포트 내 지오메트리가 Z-클리핑에 의해 전면 소멸(Black Screen)합니다.
+- 개선 권장안:
+  * farPlane > nearPlane + 0.001f를 강제하고 유효 범위를 클램핑해야 합니다.
+
+4.11 float3::transformNormal 비균등 스케일(Non-uniform Scale) 행렬 적용 시 법선 왜곡 결함
+- 관련 파일: Source/Core/Math/VectorMath.cpp (L277~L283)
+- 문제점:
+  * 비균등 스케일이 포함된 행렬을 법선에 직접 곱하면 직교성이 파괴되어 노멀이 표면에 수직하지 않게 비틀어집니다.
+  * 정확한 법선 변환을 위해서는 역전치(Inverse Transpose) 행렬을 적용해야 합니다.
+- 개선 권장안:
+  * 역전치 행렬 변환 지원 및 균등 스케일 전용 안내 가드를 추가해야 합니다.
+
+4.12 FrameRenderer Present 패스에서 백버퍼 크기 대신 _transientWidth 뷰포트 바인딩 왜곡 결함
+- 관련 파일: Source/Engine/Graphics/RenderPass/FrameRendererPassExecute.cpp (L298~L308)
+- 문제점:
+  * Present 패스 실행 시 뷰포트 크기로 출력 타깃 해상도 대신 내부 렌더 버퍼 크기인 _transientWidth, _transientHeight를 전달하여 동적 해상도 스케일링 시 렌더링 화면이 좌상단으로 축소/왜곡됩니다.
+- 개선 권장안:
+  * 출력 타깃의 실제 크기(_outputWidth/_outputHeight)로 뷰포트를 바인딩해야 합니다.
+
+4.13 D3D11RHICommandContext::endOffscreenPass 전체 128개 SRV 강제 무효화로 인한 후속 텍스처 소실
+- 관련 파일: Source/Engine/Graphics/RHI/DX11/D3D11RHICommandContext.cpp (L43~L53)
+- 문제점:
+  * 오프스크린 렌더 패스 종료 시 PSSetShaderResources(0, 128, nullSrvs)를 호출하여 파이프라인의 모든 128개 SRV 슬롯을 강제 nullptr로 초기화합니다.
+  * 이로 인해 후속 드로우 콜에서 사전에 바인딩된 글로벌/머티리얼 텍스처 슬롯이 소실되어 검은색으로 렌더링되는 파이프라인 오염이 발생합니다.
+- 개선 권장안:
+  * 해당 패스에서 렌더 타깃으로 사용되었던 텍스처 슬롯만 선별적으로 언바인드하도록 개선해야 합니다.
+
+4.14 D3D11RHICommandContext::bindShaderResource 버텍스(VS) 및 컴퓨트(CS) 텍스처 바인딩 누락
+- 관련 파일: Source/Engine/Graphics/RHI/DX11/D3D11RHICommandContext.cpp (L225~L236)
+- 문제점:
+  * bindShaderResource는 픽셀 셰이더(PSSetShaderResources) 슬롯만 바인딩하므로, 버텍스 텍스처 페칭(VTF)이나 컴퓨트 셰이더에서 텍스처 샘플링이 불가능합니다.
+- 개선 권장안:
+  * 스테이지별 바인딩(VSSetShaderResources / CSSetShaderResources)을 지원해야 합니다.
+
+4.15 OpenGLRHIDevice 복합 FBO 생성 시 글로벌 프레임버퍼 바인딩 리셋 및 GPU 스톨
+- 관련 파일: Source/Engine/Graphics/RHI/GL/OpenGLRHIDevice.cpp (L940~L975)
+- 문제점:
+  * OpenGLRHIDevice::getCompositeFbo()는 FBO를 생성하고 glCheckFramebufferStatus()로 유효성을 검사한 뒤 glBindFramebuffer(GL_FRAMEBUFFER, 0)을 무조건 호출합니다.
+  * 렌더 패스 실행 도중 새로운 복합 렌더 타깃 조합이 요구되어 이 함수가 호출되면, 현재 활성화되어 있던 오프스크린 FBO 바인딩이 묵시적으로 0(기본 백버퍼)으로 초기화되어 후속 드로우 콜이 엉뚱한 화면에 그려지는 렌더링 오염이 발생합니다.
+  * 또한 glCheckFramebufferStatus는 드라이버 내부에서 파이프라인 동기화(GPU Stall)를 유발합니다.
+- 개선 권장안:
+  * 함수 시작 시 glGetIntegerv(GL_FRAMEBUFFER_BINDING, &prevFbo)로 이전 바인딩을 저장하고 종료 시 복원(RAII Scope)하거나, 프레임 시작 전 오프라인 단계에서 FBO를 사전 빌드해야 합니다.
+
+4.16 MaterialUtil::alignOffset의 Float2 16바이트 과대 정렬로 인한 Cbuffer 불일치
+- 관련 파일: Source/Engine/Graphics/Material/MaterialPacking.cpp (L450~L458), Source/Engine/Graphics/Material/Material.cpp (L330~L334)
+- 문제점:
+  * MaterialUtil::alignOffset(offset, typeSize) 구현을 보면 4 < typeSize && typeSize <= 16 조건으로 인해 Float2(typeSize = 8)인 경우에도 무조건 16바이트 정렬을 강제합니다.
+  * HLSL 표준 패킹 규칙에서는 float2 a; float2 b;가 선언되면 16바이트 벡터 하나 안에 0번 오프셋과 8번 오프셋으로 연속 패킹됩니다.
+  * 하지만 엔진의 오프셋 계산기는 b를 16번 오프셋으로 밀어버려, HLSL 셰이더가 읽는 위치와 C++ CPU 버퍼가 기록하는 메모리 위치 사이에 8바이트 오차가 발생하여 머티리얼 파라미터가 셰이더에서 엉뚱하게 깨져 보이는 결함이 발생할 수 있습니다.
+- 개선 권장안:
+  * Float2/Uint2/Int2의 경우 기본 정렬을 8바이트로 설정하고, 16바이트 경계(Vector Boundary)를 넘는 경우에만 16바이트로 올림하는 HLSL Cbuffer 패킹 규칙에 맞춰 정렬 로직을 수정해야 합니다.
+
+4.17 D3D11 / D3D12 그래픽스 PSO의 하드코딩된 정점 입력 레이아웃 (Layout Restriction)
+- 관련 파일: Source/Engine/Graphics/RHI/DX12/D3D12RHIResource.cpp (L71~L77), Source/Engine/Graphics/RHI/DX11/D3D11RHIResource.cpp (L92~L96)
+- 문제점:
+  * Direct3D 11 및 12 백엔드의 createPipelineState 함수에서 Input Layout이 POSITION(float3)과 COLOR(float4) 단 2개 속성으로 고정(Hardcoded)되어 있습니다.
+  * 텍스처 좌표(TEXCOORD), 법선 벡터(NORMAL), 탄젠트(TANGENT), 스켈레탈 가중치(BLENDWEIGHT/BLENDINDICES) 등 표준 3D 메시 속성을 요구하는 셰이더는 Input Assembler를 통해 정점 데이터를 공급받지 못하여 렌더링이 불가능하거나 깨지는 구조적 제약이 존재합니다.
+- 개선 권장안:
+  * RHIPipelineStateDesc에 동적 VertexLayoutDesc를 전달받아 동적으로 D3D12_INPUT_ELEMENT_DESC 배열을 구성하거나, Bindless ByteAddressBuffer를 통한 프로그래머블 버텍스 풀링(Vertex Pulling) 방식으로 파이프라인을 전환해야 합니다.
+
+4.18 CameraComponent::lookAt 회전된 부모 계층 하에서 월드/로컬 좌표계 혼동으로 인한 시선 왜곡
+- 관련 파일: Source/Engine/Object/Component/CameraComponent.cpp (L28~L39)
+- 문제점:
+  * CameraComponent::lookAt(target)은 getWorldPosition()으로 월드 공간 벡터를 계산한 후 setLocalRotation(float3(pitch, yaw, 0.0f))을 호출합니다.
+  * 카메라 컴포넌트가 회전된 부모 노드(SpringArm, Character 등)에 부착되어 있는 경우 부모의 회전과 월드 각도가 이중으로 합성되어 시선 방향이 엉뚱한 방향으로 비틀립니다.
+- 개선 권장안:
+  * 부모의 역행렬을 이용해 로컬 공간 벡터로 변환 후 회전을 계산하거나 setWorldRotation()을 적용해야 합니다.
+
+4.19 EditorViewportClient Orbit 카메라 조작 시 극점(Pole) 각도 클램핑 부재로 인한 뷰 반전
+- 관련 파일: Source/Editor/Viewport/EditorViewportClient.cpp (L380~L390)
+- 문제점:
+  * 마우스 드래그로 Orbit 카메라 피치 회전 시 [-89.5f, 89.5f] 범위 클램핑이 누락되어 +-90도를 넘어가면 LookAt 계산 시 Up 벡터와 Forward 벡터가 평행해져 뷰가 순식간에 상하 반전(Gimbal Lock)되고 조작이 튀는 결함이 발생합니다.
+- 개선 권장안:
+  * 마우스 조작 시 피치 회전 각도를 엄격히 클램핑해야 합니다.
+
+4.20 Skeleton 비위상 정렬(Unsorted) 본 인덱스 계층 변환 누락 (Bone Hierarchy Break)
+- 관련 파일: Source/Engine/Animation/Skeleton.cpp (L45~L58)
+- 문제점:
+  * Skeleton::updateCharacterSpaceTransforms()는 본 트랜스폼을 루트부터 누적할 때 단순히 선형 루프를 돌며 부모 인덱스가 자식 인덱스보다 앞선 경우(bone._parentIndex < index)만 부모 변환을 곱해줍니다.
+  * 외부 3D 모델(FBX, glTF) 에셋 중 본 배열이 루트->잎 순서로 완벽히 위상 정렬되어 있지 않고 부모 본이 배열의 뒤쪽에 위치하는 경우(bone._parentIndex > index), 자식 본이 부모의 트랜스폼을 전혀 물려받지 못하고 원점 기준 로컬 변환으로 렌더링되어 스켈레탈 메시가 사방으로 찢어지는 렌더링 파손이 발생합니다.
+- 개선 권장안:
+  * 본 로드 시점에 위상 정렬을 강제 수행하여 재배열하거나, 계층 순회 트리(DFS / BFS 재귀) 방식으로 트랜스폼 누적 순서를 보장해야 합니다.
+
+4.21 SequenceTimelineUtil 동일 오브젝트 타겟팅 시 비활성 클립의 GameObject 비활성화 간섭
+- 관련 파일: Source/Engine/Sequencer/SequenceTimelineUtil.cpp (L90~L99)
+- 문제점:
+  * SequenceTimelineUtil::applyFrame()에서 현재 프레임에 비활성화된 트랙 아이템을 순회하며 대상 오브젝트를 pTarget->setActive(false)로 꺼버립니다.
+  * 만약 하나의 액터에 타임라인 상에서 시간 구간이 다른 2개 이상의 클립이 배치되어 있는 경우, 10프레임 시점에 50~80프레임 클립(비활성 상태)이 동일 타겟을 setActive(false)시켜버려 현재 재생 중이던 0~30프레임 액션의 액터가 깜빡이며 사라지는 결함이 발생합니다.
+- 개선 권장안:
+  * 비활성화를 트랙 아이템 단위로 즉시 수행하지 않고, 타임라인에 등록된 전체 클립 중 해당 프레임에 활성화된 클립이 단 하나도 없는 오브젝트만 모아서 비활성화하도록 2패스 상태 집계 방식으로 수정해야 합니다.
+
+4.22 ProjectileComponent 로컬 좌표계 이동 및 고속 투사체 터널링(Tunneling) 취약점
+- 관련 파일: Source/GameFramework/Kits/ActionCombat/ProjectileComponent.cpp (L49~L57)
+- 문제점:
+  * ProjectileComponent::onTick()에서 getLocalPosition()을 읽어 로컬 좌표에 속도를 더해 갱신하므로, 회전된 부모 계층 아래 스폰된 투사체의 궤적이 왜곡됩니다.
+  * 또한 레이캐스트 스윕(CCD) 없이 단순 델타 좌표 이동만 수행하므로 고속 투사체가 얇은 충돌체를 그대로 관통하는 터널링 현상이 발생합니다.
+- 개선 권장안:
+  * setWorldPosition() 기반으로 갱신하고 PhysicsWorld::sweepTest를 통한 연속 충돌 검출(CCD)을 적용해야 합니다.
+
+4.23 AnimPlayer 크로스페이드 시 4x4 행렬 선형 보간으로 인한 외형 붕괴 (Matrix Lerp Distortion)
+- 관련 파일: Source/Engine/Animation/AnimPlayer.cpp (L83)
+- 문제점:
+  * 애니메이션 클립 간 크로스페이드(블렌딩) 시 트랜스폼을 float4x4::lerp(result._transform, b._transform, alpha)로 성분별 단순 선형 보간합니다.
+  * 3x3 회전 행렬을 선형 보간하면 직교성(Orthogonality)이 상실되어 스케일 왜곡, 뼈대 찌그러짐, 볼륨 붕괴(Skin Collapsing / Candy-Wrapper Artifact) 현상이 발생합니다.
+- 개선 권장안:
+  * DualQuaternion::dlb()를 사용하거나, TRS 분해(Translation Lerp + Quaternion Slerp + Scale Lerp)를 적용하여 보간해야 합니다.
+
+4.24 XAudio2System 유휴 보이스 풀(Idle Voice Pool)의 오디오 샘플 무기한 잔류 (Memory Leak)
 - 관련 파일: Source/Engine/Audio/XAudio2System.cpp (L468~L481, L666~L680)
 - 문제점:
   * 원샷 효과음 재생이 끝나면 _listActiveVoice에서 _listIdleVoice로 VoiceBuffer를 이동시켜 최대 32개의 보이스를 재사용합니다.
@@ -126,31 +749,15 @@
 - 개선 권장안:
   * update()에서 보이스를 _listIdleVoice로 이동할 때 v._pClip.reset()으로 사운드 클립 참조를 즉시 해제하고, WAVEFORMATEX 정보만 남겨 재사용 시 새 클립을 바인딩하도록 수정해야 합니다.
 
-3.2 D3D11 / D3D12 그래픽스 PSO의 하드코딩된 정점 입력 레이아웃 (Layout Restriction)
-- 관련 파일: Source/Engine/Graphics/RHI/DX12/D3D12RHIResource.cpp (L71~L77), Source/Engine/Graphics/RHI/DX11/D3D11RHIResource.cpp (L92~L96)
-- 문제점:
-  * Direct3D 11 및 12 백엔드의 createPipelineState 함수에서 Input Layout이 POSITION(float3)과 COLOR(float4) 단 2개 속성으로 고정(Hardcoded)되어 있습니다.
-  * 텍스처 좌표(TEXCOORD), 법선 벡터(NORMAL), 탄젠트(TANGENT), 스켈레탈 가중치(BLENDWEIGHT/BLENDINDICES) 등 표준 3D 메시 속성을 요구하는 셰이더는 Input Assembler를 통해 정점 데이터를 공급받지 못하여 렌더링이 불가능하거나 깨지는 구조적 제약이 존재합니다.
-- 개선 권장안:
-  * RHIPipelineStateDesc에 동적 VertexLayoutDesc를 전달받아 동적으로 D3D12_INPUT_ELEMENT_DESC 배열을 구성하거나, Bindless ByteAddressBuffer를 통한 프로그래머블 버텍스 풀링(Vertex Pulling) 방식으로 파이프라인을 전환해야 합니다.
-
-3.3 AnimPlayer 크로스페이드 시 4x4 행렬 선형 보간으로 인한 외형 붕괴 (Matrix Lerp Distortion)
-- 관련 파일: Source/Engine/Animation/AnimPlayer.cpp (L83)
-- 문제점:
-  * 애니메이션 클립 간 크로스페이드(블렌딩) 시 트랜스폼을 float4x4::lerp(result._transform, b._transform, alpha)로 성분별 단순 선형 보간합니다.
-  * 3x3 회전 행렬을 선형 보간하면 직교성(Orthogonality)이 상실되어 스케일 왜곡, 뼈대 찌그러짐, 볼륨 붕괴(Skin Collapsing / Candy-Wrapper Artifact) 현상이 발생합니다.
-- 개선 권장안:
-  * DualQuaternion::dlb()를 사용하거나, TRS 분해(Translation Lerp + Quaternion Slerp + Scale Lerp)를 적용하여 보간해야 합니다.
-
-3.4 AssetStreamingQueue의 비동기 백그라운드 로딩 미수행
+4.25 AssetStreamingQueue의 비동기 백그라운드 로딩 미수행
 - 관련 파일: Source/Engine/Resource/AssetStreamingQueue.cpp (L158~L163)
 - 문제점:
   * 비동기 스트리밍 워커 태스크인 processAssetTask()가 실제 디스크 읽기, 압축 해제, 역직렬화를 수행하지 않고 단순히 ResourceUtil::hasResource(pathStr)(파일 존재 여부 확인)만 수행한 뒤 메인 스레드로 완료를 넘깁니다.
-  * 결과적으로 메인 스레드의 완료 콜백에서 무거운 에셋 파싱과 I/O가 동기적으로 실행되어 프레임 히치(Hitch)를 방지하려는 스트리밍 큐의 본래 목적을 달성하지 못합니다.
+  * 결과적으로 메인 스레드의 완료 콜백에서 무거운 에셋 파싱과 I/O가 동기적으로 실행되어 프레임 히치(Hitch)를 방지하려는 스트리밍Queue의 본래 목적을 달성하지 못합니다.
 - 개선 권장안:
   * 워커 태스크 내부에서 원시 파일 바이트 로드 및 에셋 역직렬화(CPU 파싱)를 직접 수행하고, 메인 스레드에는 GPU 리소스 등록 및 씬 바인딩만 위임하도록 파이프라인을 개선해야 합니다.
 
-3.5 SpatialTree (QuadTree / Octree) 월드 경계 밖 객체 유실
+4.26 SpatialTree (QuadTree / Octree) 월드 경계 밖 객체 유실
 - 관련 파일: Source/Engine/Spatial/SpatialTree.h (L284~L298, L393~L397)
 - 문제점:
   * SpatialTree::insert()는 대상 객체의 바운딩 박스가 루트 노드의 _worldBounds와 교차하지 않으면 false를 반환하고 등록을 거부합니다.
@@ -158,7 +765,7 @@
 - 개선 권장안:
   * 월드 경계 밖 객체를 보관하는 전역 오버플로우 목록(Loose Global Bucket)을 두거나, 루트 바운드를 2배씩 동적으로 확장(Dynamic Loose Tree Re-rooting)하는 메커니즘을 추가해야 합니다.
 
-3.6 SceneComponent::detachFromComponent 시 자식 순서 비결정론적 변경
+4.27 SceneComponent::detachFromComponent 시 자식 순서 비결정론적 변경
 - 관련 파일: Source/Engine/Object/Component/SceneComponent.cpp (L459~L468)
 - 문제점:
   * 부모 컴포넌트에서 자식을 제거할 때 listSibling[childIndex] = listSibling.back(); listSibling.pop_back(); (Swap & Pop) 방식을 사용합니다.
@@ -166,7 +773,55 @@
 - 개선 권장안:
   * 순서 유지가 중요한 경우 std::erase를 통한 순서 보존 삭제를 적용하거나, 자식 인덱스를 명시적으로 관리하는 슬롯 방식을 고려해야 합니다.
 
-3.7 PoolAllocator::free 이중 해제(Double Free) 검증 부재
+4.28 ObjectStateSerializer 게임오브젝트 간 트랜스폼 계층구조 유실
+- 관련 파일: Source/Engine/Object/GameObject/ObjectStateSerializer.cpp (L323~L342)
+- 문제점:
+  * ObjectStateSerializer::saveToBinaryBuffer 및 loadFromBinaryBuffer는 오브젝트 내부의 로컬 컴포넌트 인덱스 기반의 동일 게임오브젝트 내부 컴포넌트 부착만 직렬화합니다.
+  * 서로 다른 GameObject에 속한 SceneComponent 간의 Attach 관계(예: 캐릭터 소켓에 무기 액터 부착)는 바이너리 직렬화 대상에서 누락되어, 핫리로드나 상태 복원 시 트랜스폼 부착이 해제되고 원점으로 분리됩니다.
+- 개선 권장안:
+  * 컴포넌트 고유 핸들(ObjectHandle / ComponentId)을 기록하는 글로벌 트랜스폼 부착 테이블 직렬화 패스를 추가해야 합니다.
+
+4.29 BattleState 유효하지 않은 스킬 슬롯 처리 결함 및 완료 통지 부재
+- 관련 파일: Source/GameFramework/Kits/TurnBattle/BattleState.cpp (L143~L156)
+- 문제점:
+  * applyMove()에서 moveSlot != 0인 모든 입력을 무조건 _pp1/_move1로 처리하여 스킬이 1개뿐인 몬스터의 PP가 엉뚱하게 감소합니다.
+  * 배틀 종료 시 상위 상태 머신에 통지하는 델리게이트 이벤트가 없어 폴링 의존 구조를 초래합니다.
+- 개선 권장안:
+  * 슬롯 유효성 검사를 추가하고 _onBattleFinished 델리게이트를 도입해야 합니다.
+
+4.30 sparse_set 대용량/스파스 ID 삽입 시 메모리 급증 및 OOM 취약점
+- 관련 파일: Source/Core/Container/sparse_set.h (L136~L140)
+- 문제점:
+  * sparse_set의 ensureSparse(key)는 전달된 키가 현재 스파스 배열 크기보다 클 때 _listSparse.resize( key + 1, kInvalidKey )로 단일 연속 메모리를 할당합니다.
+  * 엔티티 ID에 상위 비트 플래그가 포함되어 있거나 수백만 단위의 불연속 키(Sparse Key)가 삽입될 경우 단 하나의 sparse_set 인스턴스가 수백 MB ~ 수 GB의 힙 메모리를 즉시 할당하여 OOM 크래시가 발생할 수 있습니다.
+- 개선 권장안:
+  * 단일 연속 배열 대신 페이지 단위(예: 4KB / 4096개 슬롯)로 청크를 할당하는 페이징 스파스 배열(Paged Sparse Array) 구조로 전환해야 합니다.
+
+4.31 ConfigManager 32비트 해시 단독 키잉 및 멀티스레드 동기화 부재
+- 관련 파일: Source/Engine/Config/ConfigManager.h (L54, L104~L111)
+- 문제점:
+  * ConfigManager의 내부 저장소 _mapConfig는 unordered_map<uint32, unique_ptr<IConfig>> 형태로, name.getHash()(32비트 FNV 해시)만을 단독 키로 사용합니다.
+  * 설정 파일 이름 간 32비트 해시 충돌(Hash Collision)이 발생할 경우 기존 설정 객체가 덮어씌워져 파괴되는 구조적 취약점이 있습니다.
+  * 또한 워커 스레드나 라이브리로드 스레드에서 getConfig()와 loadConfig()가 동시에 호출될 수 있음에도 락 동기화가 적용되어 있지 않습니다.
+- 개선 권장안:
+  * 키 타입을 hashed_string 자체(문자열 동등성 비교 지원)로 변경하고, 조회/등록 시 std::shared_mutex를 통한 스레드 안전성을 확보해야 합니다.
+
+4.32 BVHTree3D::queryFrustum 절두체 평면 추출 주석 및 부호 정규화 모호성
+- 관련 파일: Source/Engine/Spatial/BVHTree3D.cpp (L549~L559)
+- 문제점:
+  * queryFrustum 주석에는 column-major matrix로 기재되어 있으나 엔진은 Row-Major Direct3D 행렬을 사용합니다.
+  * 행우선 행렬에서 열 기반 선형 결합으로 평면을 유도할 때 주석과 코드의 축 해석 혼재로 인해 Near/Far 평면 경계에서 객체 조기 컬링 팝인 현상이 발생할 수 있습니다.
+- 개선 권장안:
+  * Row-Major Frustum 평면 추출 공식을 명시적 유틸리티로 분리하고 단위 테스트로 검증해야 합니다.
+
+4.33 ProcessUtil::executeProcess 윈도우 커맨드 라인 특수문자/공백 이스케이프 미처리
+- 관련 파일: Source/Core/Process/Windows/ProcessUtil.cpp
+- 문제점:
+  * 외부 빌드 툴, 셰이더 컴파일러(dxc.exe) 등을 실행할 때 인자 목록에 공백이나 큰따옴표가 포함된 경로가 전달되는 경우 Windows CreateProcess 인자 이스케이프 규칙을 거치지 않아 경로가 쪼개져 외부 프로세스 호출이 실패할 수 있습니다.
+- 개선 권장안:
+  * 공백이나 특수 문자가 포함된 인자를 자동으로 큰따옴표로 감싸고 내부 따옴표를 이스케이프하는 헬퍼를 적용해야 합니다.
+
+4.34 PoolAllocator::free 이중 해제(Double Free) 검증 부재
 - 관련 파일: Source/Core/Memory/PoolAllocator.cpp (L79~L93)
 - 문제점:
   * PoolAllocator::free(pBlock) 호출 시 해당 포인터가 이미 프리리스트에 존재하는지 검증하지 않고 pNode->_pNext = _pFreeList; _pFreeList = pNode;로 즉시 연결합니다.
@@ -174,25 +829,250 @@
 - 개선 권장안:
   * SW_DEBUG 빌드에서 블록 헤더에 매직 넘버/할당 플래그를 두어 중복 해제를 사전에 감지하고 assert를 발생시키도록 안전장치를 추가해야 합니다.
 
+4.35 X11Window::recreate 재성성 중 _bRecreating 플래그 조기 해제로 인한 이벤트 오염
+- 관련 파일: Source/Engine/Window/Linux/X11Window.cpp (L138~L144)
+- 문제점:
+  * X11Window::recreate()에서 destroy() 직후 initializeWindow 이전에 _bRecreating을 FALSE로 리셋하여, 초기화 도중 수신되는 ConfigureNotify가 일반 런타임 이벤트로 처리되어 RHI 스왑체인 중복 재생성을 유발합니다.
+- 개선 권장안:
+  * _bRecreating = SW_FALSE를 initializeWindow 및 showWindow가 완료된 후로 이동해야 합니다.
+
+4.36 ContentBrowserPanel Show in Explorer 시 system() 동기 블로킹 및 비Windows 실행 실패
+- 관련 파일: Source/Editor/Panels/ContentBrowserPanel.cpp (L204~L209)
+- 문제점:
+  * 컨텍스트 메뉴에서 에셋 탐색기 열기 실행 시 C 표준 system()을 호출하여 UI 스레드가 블로킹되고 Linux/macOS에서 explorer.exe 부재로 실패합니다.
+- 개선 권장안:
+  * ProcessUtil 또는 플랫폼별 비동기 셸 유틸리티로 전환해야 합니다.
+
+4.37 FormatString::floatToString 폴백 경로 시 널 종료 문자(\0) 누락 결함
+- 관련 파일: Source/Core/String/formatString.h (L716~L752)
+- 문제점:
+  * fallbackFloatToString은 버퍼 끝에 '\0'을 명시적으로 기록하지 않고 길이만 반환하여, std::to_chars 실패 후 C 문자열 포인터로 읽을 경우 버퍼 끝에 이전 가비지 메모리가 노출될 수 있습니다.
+- 개선 권장안:
+  * 반환 직전 *pCurrent = '\0' 종단 처리를 추가해야 합니다.
+
+4.38 AnimationGraphPanel::syncPreviewGraph AnimClip 원시 포인터 등록 후 재할당 시 댕글링 포인터 위험
+- 관련 파일: Source/Editor/Panels/AnimationGraphPanel.cpp (L332~L344)
+- 문제점:
+  * _previewPlayer.registerClip에 _listPreviewClip 벡터 내부의 원시 메모리 주소(&clip)를 전달하여, 노드 추가/삭제나 벡터 재할당 발생 시 댕글링 포인터가 잔류할 위험이 있습니다.
+- 개선 권장안:
+  * 값 복사 또는 shared_ptr 소유 구조로 전환해야 합니다.
+
+4.39 SequencerPanel::applyAsset 에셋 로드/교체 시 _selected 인덱스 미초기화로 인한 UI 상태 왜곡
+- 관련 파일: Source/Editor/Panels/SequencerPanel.cpp (L183~L186, L300~L321)
+- 문제점:
+  * 새 시퀀스 파일을 열거나 되돌릴 때 _selected 인덱스가 리셋되지 않아 이전 파일의 트랙 인덱스가 남아 ImSequencer 및 프로퍼티 편집기에 잘못된 아이템이 바인딩됩니다.
+- 개선 권장안:
+  * 에셋 교체 시 _selected = -1로 리셋해야 합니다.
+
+4.40 basic_fixed_string::operator+ C 문자열 좌측 덧셈 시 반환 용량 고정으로 인한 버퍼 오버플로우/잘림 결함
+- 관련 파일: Source/Core/String/fixed_string.h (L624~L630)
+- 문제점:
+  * operator+(const T* lhs, const basic_fixed_string<T, N>& rhs)의 반환 타입이 basic_fixed_string<T, N>으로 고정되어, 접두어 C 문자열과 고정 문자열의 길이 합이 N을 초과할 경우 어설트 크래시 또는 문자열 잘림이 발생합니다.
+- 개선 권장안:
+  * 넉넉한 가변 템플릿 반환 타입 또는 std::basic_string 반환으로 안전성을 보장해야 합니다.
+
+4.41 HandleTable::erase 슬롯 해제 시 T{} 기본 생성자 대입으로 인한 생성/소멸 오버헤드
+- 관련 파일: Source/Core/Container/HandleTable.h (L68~L80)
+- 문제점:
+  * HandleTable::erase가 슬롯을 비울 때 _listSlot[index]._value = T{}를 대입하여, 생성 비용이 큰 T 타입의 경우 매 슬롯 삭제 시마다 불필요한 임시 객체 생성 및 소멸 오버헤드가 발생합니다.
+- 개선 권장안:
+  * std::optional 또는 std::destroy_at을 통한 명시적 소멸자 호출 방식을 적용해야 합니다.
+
+4.42 DynamicBitset::DynamicBitset(string_view) 잘못된 입력 문자 파싱 시 시프트 왜곡 결함
+- 관련 파일: Source/Core/Container/DynamicBitset.cpp (L17~L32)
+- 문제점:
+  * '0', '1' 이외의 잘못된 문자가 포함된 문자열을 파싱할 때 에러 로그만 출력하고 건너뛰어, 이후 상위 비트들의 위치가 앞으로 당겨져 전체 수치 데이터가 왜곡됩니다.
+- 개선 권장안:
+  * 입력 문자열 검증을 강화하고 예외/중단 처리를 적용해야 합니다.
+
+4.43 MeshComponent::_meshId 인스펙터 변경 시 기존 GPU 메시 미갱신 결함
+- 관련 파일: Source/Engine/Object/Component/3D/MeshComponent.cpp (L28~L34)
+- 문제점:
+  * resolveRuntimeMesh()가 if (_mesh != nullptr) return;으로 작성되어 있어, 에디터 인스펙터에서 _meshId를 변경해도 기존 GPU 메시가 무효화되지 않아 3D 메시 갱신이 실패합니다.
+- 개선 권장안:
+  * onPropertyChanged()에서 _meshId 변경 시 _mesh.reset()을 호출하고 재해석하도록 수정해야 합니다.
+
+4.44 GameObject::refreshActiveInHierarchy 계층 활성 상태 전파 시 조상 상태 명명 및 로직 모호성
+- 관련 파일: Source/Engine/Object/GameObject/GameObject.cpp (L221~L235)
+- 문제점:
+  * _bIsActiveInHierarchy가 자신의 활성 상태를 포함하지 않고 조상 활성 상태만 저장하여 변수명과 getter 로직 간 의미적 불일치가 존재합니다.
+- 개선 권장안:
+  * 변수명을 _bAreAncestorsActive로 변경하거나 최종 합성 활성 상태를 캐싱하도록 구조를 통일해야 합니다.
+
+4.45 HistoryPanel::drawContent 커맨드 라벨 특수 포맷팅 누락 시 ImGui ID 충돌 위험
+- 관련 파일: Source/Editor/Panels/HistoryPanel.cpp (L115~L125)
+- 문제점:
+  * HistoryPanel에서 각 커맨드 항목의 라벨을 생성할 때 formatstring으로 ##step%#를 붙이지만, pCmdLabel 자체에 ## 구분자가 포함되어 있을 경우 ImGui 식별자가 잘려 ID 충돌 및 잘못된 행 클릭 결함이 발생할 수 있습니다.
+- 개선 권장안:
+  * ImGui::PushID(cmdIndex)로 명시적 스코프를 감싸도록 개선해야 합니다.
+
+4.46 Mesh::~Mesh 소멸자에서 releaseGpu() 누락으로 인한 GPU 정점 버퍼 VRAM 영구 누수
+- 관련 파일: Source/Engine/Graphics/Mesh/Mesh.cpp (L16~L20)
+- 문제점:
+  * Mesh 소멸자에서 releaseGpu()를 호출하지 않고 포인터와 버퍼 핸들만 0으로 초기화하여, 동적으로 생성/파괴되는 모든 메시의 GPU 버텍스 버퍼가 VRAM에 영구 잔류합니다.
+- 개선 권장안:
+  * 소멸자에서 releaseGpu()를 명시적으로 호출하도록 수정해야 합니다.
+
+4.47 CCD::sweepAABB t=0 초기 겹침 시 충돌 법선 (0, 1, 0) 하드코딩 왜곡 결함
+- 관련 파일: Source/Engine/Physics/CCD.cpp (L26~L33)
+- 문제점:
+  * 두 AABB가 t=0 시점에 이미 겹쳐 있을 때 충돌 법선을 (0, 1, 0) 상향 벡터로 하드코딩하여 반환하여, 수평 벽면 충돌 시 오브젝트가 공중으로 튀는 물리 시뮬레이션 왜곡이 발생합니다.
+- 개선 권장안:
+  * 3개 축 침투 깊이를 비교하여 최소 분리 축(MTD)의 법선을 반환하도록 개선해야 합니다.
+
+4.48 MaterialCache::release 0 참조 시 즉시 GPU 버퍼 소멸로 인한 렌더 스레드 UAF 위험
+- 관련 파일: Source/Engine/Graphics/Material/MaterialCache.cpp (L82~L97), Source/Engine/Graphics/Material/Material.cpp (L52~L61)
+- 문제점:
+  * 참조가 0이 되는 즉시 _mapEntry.erase()로 Material을 파괴하여 GPU Constant Buffer와 Bindless Descriptor를 해제하므로, 렌더 스레드가 해당 프레임 드로우 콜을 처리 중일 때 충돌 위험 및 병렬 읽기 시 lock 직렬화 병목이 발생합니다.
+- 개선 권장안:
+  * 지연 가비지 수거(Deferred GC) 큐를 적용하고 const 읽기 메서드에 shared_lock을 제공해야 합니다.
+
+4.49 AABB::empty 미초기화 시 getExtents() 부동소수점 오버플로우(-inf/NaN) 결함
+- 관련 파일: Source/Engine/Physics/AABB.h (L20~L26, L63~L65)
+- 문제점:
+  * AABB::empty()가 MinFloat/MaxFloat로 초기화된 상태에서 isValid() 검사 없이 getExtents() 호출 시 (MinFloat - MaxFloat)가 float32 수치 범위를 초과하여 -inf/NaN이 생성되고 공간 트리가 오염됩니다.
+- 개선 권장안:
+  * getExtents() 내부에서 isValid() 삼항 검사로 무효한 바운드에 대해 0을 반환하도록 보호해야 합니다.
+
+4.50 SpeciesCatalog::findSpecies 미등록 ID 검색 시 nullptr 대신 0번 엔트리 강제 반환 결함
+- 관련 파일: Source/GameFramework/Kits/TurnBattle/SpeciesData.cpp (L107~L119)
+- 문제점:
+  * findSpecies가 오타나 삭제된 ID로 조회 시 nullptr을 반환하지 않고 무조건 0번 기본 종(&_listSpecies[0])을 반환하여, 데이터 오염이나 에셋 경로 누락 버그를 숨기고 모든 알 수 없는 몬스터가 0번 크리처로 둔갑하는 로직 결함이 발생합니다.
+- 개선 권장안:
+  * 미등록 ID 검색 시 SW_LOG_ERROR를 출력하고 nullptr을 반환하도록 분기해야 합니다.
+
+4.51 ActionRoom::drawDebug DebugDrawQueue 서비스 널 체크 부재로 인한 배포(Shipping) 빌드 크래시 결함
+- 관련 파일: Source/GameFramework/Kits/ActionCombat/ActionRoom.cpp (L126~L147)
+- 문제점:
+  * ActionRoom::drawDebug()가 DebugDrawQueue& dbg = *game::getService<DebugDrawQueue>();로 널 검증 없이 역참조를 수행하여, 서비스가 바인딩되지 않는 Shipping 빌드나 초기화 전 호출 시 즉각적인 널 포인터 역참조 크래시가 발생합니다.
+- 개선 권장안:
+  * DebugDrawQueue* pDbg = game::getService<DebugDrawQueue>(); nullptr 가드를 추가해야 합니다.
+
+4.52 XAudio2SystemInternal::loadViaMediaFoundation 압축 오디오 로드 시 벡터 사전 예약 부재로 인한 지수적 재할당 병목
+- 관련 파일: Source/Engine/Audio/XAudio2System.cpp (L201~L224)
+- 문제점:
+  * Media Foundation을 통해 MP3 등 압축 오디오 디코딩 시 listPcm에 수천 번 insert를 수행하면서 사전 reserve가 없어, 수십 MB 버퍼가 매번 2배씩 힙 메모리를 반복 재할당/복사하여 로딩 지연을 초래합니다.
+- 개선 권장안:
+  * 음원 길이(MF_PD_DURATION) 또는 예상 크기를 바탕으로 listPcm.reserve()를 사전 수행하도록 최적화해야 합니다.
+
 
 --------------------------------------------------------------------------------
-4. 요약 및 종합 권장 조치 로드맵
+5. 요약 및 종합 권장 조치 로드맵
 --------------------------------------------------------------------------------
 
 [P0] Concurrency - TaskManager 큐 포화 시 무한 스핀 데드락 위험 -> 시스템 멈춤 (Hang)
 [P0] Concurrency - TaskManager 부모-자식 태스크 완료 시 Store-Load 레이스 -> 태스크 누락 및 영구 대기
 [P0] Concurrency - hashed_string 풀 clear()와 등록 간 락 역전(AB-BA) -> 셧다운 시 데드락
 [P0] Concurrency - MulticastDelegate 브로드캐스트 도중 제거된 객체 호출 -> Use-After-Free 크래시
+[P0] Concurrency - LocalizationManager 임시 락 해제 후 내부 버퍼 포인터 반환 -> Use-After-Free
+[P0] Concurrency - GlobalVariableInfo 다중 스레드 환경에서 std::string 비원자적 쓰기 -> 힙 오염
+[P0] Concurrency - SceneManager::tickTransitions 연속 씬 전환 시 TaskPromise 덮어쓰기로 인한 퓨처 영구 무한 대기
+[P0] Concurrency - AssetStreamingQueue::cancelRequest 취소 시 TaskPromise 미해결로 인한 퓨처 무한 대기
+[P0] Memory      - ActionMap 레이어 포인터 캐싱 후 _mapLayer 리해싱 시 댕글링 포인터 -> 크래시
+[P0] StateMachine - GameModeStateMachine 재진입 전이 시 브로드캐스트 순서 역전 -> 게임/UI 상태 불일치
+[P0] LiveReload  - ModuleHost 모듈 리로드 실패 후 재시도 시 이전 백업 게임 상태 영구 소실
+[P0] LiveShader  - LiveShaderManager 인클루드 상대/절대 경로 불일치 -> .hlsli 수정 핫리로드 미작동
+[P0] Tag System  - TagSystem 숫자 ID로 복원된 태그의 _pString 누락 -> isSubtagOf 매칭 무조건 실패
+[P0] Save System - SaveSlot unordered_map 순서 불일치로 인한 정상 세이브 오염 판정 -> 로드 실패
+[P0] Save / Integrity - SaveGame::saveToFile 세이브 원본 선삭제 후 복사 실패 시 원본/임시 파일 영구 소실
+[P0] Object / Lifecycle - GameObjectPtr::resolveLazy 씬 전환 시 파괴된 이전 _pManager 포인터 역참조 UAF 크래시
+[P0] Scene Graph - GameInstanceBase 중복 명칭 오브젝트 존재 시 부모-자식 계층구조 오부착 -> 씬 왜곡
+[P0] Shader      - ShaderReflectionDx Constant Buffer 실제 바인드 슬롯(bN) 대신 인덱스 대입 -> 파라미터 오염
+[P0] Shader      - ShaderCompiler #include 헤더 의존성 미추적 -> Stale 셰이더 캐시 반환 결함
+[P0] Localization - StringTable 64비트 바이너리 해시 키와 32비트 룩업 불일치 -> 텍스트 검색 실패
+[P0] JSON Parser - JsonValue::asInt 부동소수점 값 파싱 시 nlohmann 예외 크래시
+[P0] Editor Transform - EditorTransformCommands 정렬/분배 시 월드 좌표 로컬 대입 -> 위치 왜곡
+[P0] Undo / Scene - EditorTransaction 부모 오브젝트 삭제 취소(Undo) 시 하위 자식 서브트리 영구 소실
+[P0] Window & RHI - Win32Window 창 최소화(SIZE_MINIMIZED) 시 0 x 0 리사이즈 전달 -> Vulkan/DX12 크래시
+[P0] Editor Tool - TileMapPanel 그리드 크기 입력 도중 Apply 이전 프레임에서 벡터 OOB 접근 크래시
+[P0] 2D Component - SpriteAnimatorComponent _totalFrames 미설정으로 인해 모든 2D 애니메이션 틱 영구 정지
+[P0] Object System - ComponentPtr 빠른 경로에서 컴포넌트 단독 삭제 시 Use-After-Free 크래시
+[P0] Editor Panel - InspectorPanel 컴포넌트 순회 중 Paste as New Component 시 벡터 재할당 UAF 크래시
+[P0] Prefab System - PrefabManager::spawn 순환 참조 가드 비정규화 경로 비교 -> 무한 재귀 스택 오버플로우
 [P1] Memory      - FrameDoubleBuffer GT/RT 간 리셋 동기화 부재 -> 렌더링 데이터 오염 / UAF
 [P1] Memory      - XAudio2System 유휴 보이스 풀에서 이전 사운드 버퍼 미해제 -> 오디오 메모리 누수
+[P1] Memory Allocator - LinearAllocator CAS relaxed 오더 및 reset() ABA 데이터 레이스
+[P1] Memory / CRT - Memory::freeMemory / alignedFree 할당자 타입 불일치 -> Windows CRT 힙 손상 크래시
+[P1] Math Core   - MathUtil::getRandomRange 8비트 정수 전달 시 C++ 표준 UB 및 from > to 크래시
+[P1] Math Core   - MathUtil::align 정렬 크기 0 전달 시 0 반환 및 Divide-by-Zero 결함
 [P1] Performance - GameObjectManager 병렬 틱 시 _mutex 반복 경합 -> 멀티코어 확장성 저하
 [P1] Performance - ImGuiEditor 매 프레임 postPresent 동기 대기 -> GT/RT 파이프라이닝 차단
+[P1] Performance - ReloadFileManager mtime 폴백 활성화 시 매 프레임 전체 디스크 재귀 탐색 스톨
+[P1] Performance - JsonDocument / XmlDocument 노드 룩업 시 O(N) 선형 순회 병목 -> 로딩 지연
+[P1] Performance - SelectionManager::selectObject 무효 객체 정리 시 2연속 이벤트 중복 브로드캐스트 병목
+[P1] Performance - ContentBrowserPanel Sources 폴더 트리 매 프레임 동기 디스크 재귀 탐색 병목
+[P1] Performance - basic_fixed_string::size 매 호출마다 O(N) strlen 수행으로 루프 O(N^2) 성능 저하 병목
+[P1] Performance - ProfilerPanel::drawPerformanceTab 매 프레임 전체 씬 5회 중복 getComponent<T> 순회 병목
+[P1] Performance - ConsolePanel::drawContent 신규 로그 1건마다 2,048개 전체 로그 딥 카피 병목
+[P1] Performance - App::run 고정 타임스텝 누적 시 서브스텝 상한 부재로 인한 'Spiral of Death' 병목
+[P1] Diagnostics - MemoryProfiler 세부 추적 시 callStackHash 미전달 해제로 인한 가짜 메모리 누수 누적 결함
+[P1] Diagnostics - MemoryProfiler::recordAllocation 세부 추적 시 모든 힙 할당 전역 락 직렬화 병목
+[P1] Editor Tool - DataTablePanel 매 프레임 XML 버퍼 동적 할당 병목 및 4KB 초과 붙여넣기 잘림
+[P1] Editor Tool - PrefabEditorPanel 개별 프로퍼티 Revert 시 scanPrefabOverrides 누락으로 UI 미갱신
+[P1] Editor Tool - CommandStack::undo/redo 실행 도중 재진입 push 시 히스토리 스택 파손 결함
+[P1] 2D Physics  - BoxCollider2DComponent::getBounds 충돌 계산 시 매번 string_splitter 힙 할당 병목
+[P1] 3D Physics  - CCD::sweepAABB t=0 초기 겹침 시 충돌 법선 (0, 1, 0) 하드코딩 왜곡 결함
+[P1] 3D Graphics - MeshComponent::_meshId 인스펙터 변경 시 기존 GPU 메시 미갱신 결함
+[P1] 3D Graphics - Mesh::~Mesh 소멸자에서 releaseGpu() 누락으로 인한 GPU 버텍스 버퍼 VRAM 영구 누수
+[P1] 3D Graphics - MaterialCache::release 0 참조 시 즉시 GPU 버퍼 소멸로 인한 렌더 스레드 UAF 위험
+[P1] Graphics RHI - D3D11RHIDevice::beginFrame 매 프레임 CreateRenderTargetView COM 객체 동적 재생성 병목
+[P1] Scene Graph - SceneComponent _bHasDirtyDescendant 갱신 후 리셋 누락으로 계층 더티 프루닝 영구 무효화
+[P1] Game UI     - RuntimeHud 서비스 미바인딩 시 널 체크 없는 DebugOverlayState 역참조 크래시
+[P1] Game UI / Debug - ActionRoom::drawDebug DebugDrawQueue 서비스 널 체크 없는 *nullptr 역참조 Shipping 크래시
+[P1] Data Integrity - SpriteClipPanel 새 에셋 경로 공백 시 저장 실패에도 성공 반환 및 더티 오소멸 결함
 [P1] Graphics    - D3D11/D3D12 정점 입력 레이아웃 하드코딩 -> UV/Normal 등 정점 속성 미지원
+[P1] Graphics    - D3D12RHISwapChain 리사이즈 후 _swapchainState 미초기화로 인한 배리어 에러
+[P1] Graphics    - FrameRenderer Present 패스에서 백버퍼 크기 대신 _transientWidth 뷰포트 바인딩 왜곡
+[P1] Graphics    - D3D11RHICommandContext::endOffscreenPass 전체 128개 SRV 강제 무효화로 후속 텍스처 소실
+[P1] Vulkan RHI  - VulkanRHIDevice 스왑체인 재생성 시 미정리 세마포어 재사용 -> Vulkan 규약 위반
+[P1] OpenGL RHI  - OpenGLRHIDevice 복합 FBO 생성 시 글로벌 FBO 바인딩 리셋 -> 렌더 타깃 오염 및 스톨
+[P1] Shader      - ShaderReflectionSpirv 3x4 등 직사각형 행렬을 정사각 행렬로 오인식 -> 버퍼 크기 오류
+[P1] Camera      - CameraComponent::lookAt 부모 회전 시 월드 각도를 로컬 회전에 대입 -> 시선 비틀림
+[P1] Animation   - Skeleton 비위상 정렬 본 배열 에셋 로드 시 부모 변환 누락 -> 뼈대 찢어짐 파손
+[P1] Sequencer   - SequenceTimelineUtil 복수 클립 동일 타겟팅 시 비활성 클립의 setActive(false) 간섭
+[P1] Spatial 2D  - SpatialHashGrid2D 쿼리 시 O(N x K) 중복 검사 및 반복 해시 조회 병목 -> 프레임 저하
+[P1] Container   - sparse_set 큰 키 삽입 시 수백 MB~수 GB 메모리 급증 및 OOM 크래시 위험
+[P1] Diagnostics - DeadlockDetector 전역 락 직렬화 및 매 락 획득 시 동기 스택 캡처 병목
+[P1] Diagnostics - DataRaceDetector 디버그 브레이크/예외 시 카운터 미복구로 인한 무한 레이스 오탐
+[P1] Input System - InputManager 윈도우 포커스 상실 시 키 버퍼 미초기화로 인한 키 고착(Stuck Key)
+[P1] Editor Stability - EditorTransaction 트랜스폼 롤백 시 EditorContext 널 포인터 역참조 크래시
+[P1] Lifecycle   - EngineLoop::shutdown unbindEngineServices 선행으로 인한 소멸자 engine::get... 크래시 위험
+[P1] Linux FileWatcher - LinuxFileWatcher 하위 폴더 생성 및 IN_MOVED_TO 시 재귀 inotify 감시 누락
+[P1] Editor Hierarchy - HierarchyPanel tag: 검색 시 32비트 해시 전달로 64비트 TagID 검색 영구 실패
+[P1] Dialogue    - DialogueRunnerComponent::executeNode Action/Branch 순환 시 무한 재귀 스택 오버플로우
+[P2] Material    - MaterialUtil::alignOffset Float2 16바이트 과대 정렬 -> HLSL Cbuffer 오프셋 불일치
+[P2] Matrix Math - float4x4::createPerspectiveFieldOfView Near >= Far 시 Z-클리핑 소멸 결함
+[P2] Vector Math - float3::transformNormal 비균등 스케일 행렬 곱셈 시 법선 왜곡 결함
+[P2] Graphics D3D11 - D3D11RHICommandContext::bindShaderResource 시 VS / CS 셰이더 스테이지 SRV 바인딩 누락
 [P2] Animation   - AnimPlayer 4x4 행렬 단순 Lerp -> 크로스페이드 시 외형/볼륨 붕괴
 [P2] Spatial     - BVHTree3D Fat AABB 부재 -> 동적 객체 이동 시 매 틱 트리 전면 재구축
+[P2] Spatial Math - BVHTree3D::queryFrustum Frustum 평면 추출 주석 및 부호 정규화 모호성
+[P2] Physics 3D Math - AABB::empty 미초기화 시 getExtents() 부동소수점 오버플로우(-inf/NaN) 결함
+[P2] Game Data   - SpeciesCatalog::findSpecies 미등록 ID 검색 시 nullptr 대신 0번 엔트리 강제 반환 결함
+[P2] Audio / Performance - XAudio2SystemInternal::loadViaMediaFoundation 압축 오디오 로드 시 벡터 사전 예약 부재로 인한 지수적 재할당 병목
+[P2] Overworld   - TileMap 뷰포트 플래그 검사 시 _listWarp 선형 탐색 -> CPU 사이클 낭비
+[P2] Config      - ConfigManager 32비트 해시 단독 키잉 및 멀티스레드 동기화 부재 -> 충돌 위험
+[P2] Gameplay    - ProjectileComponent 로컬 좌표계 갱신 및 CCD 부재 -> 투사체 궤적 왜곡 및 터널링
+[P2] TurnBattle  - BattleState 스킬 슬롯 유효성 검사 누락 및 배틀 완료 이벤트 델리게이트 부재
+[P2] Dialogue    - DialogueRunnerComponent::executeAction 중 stopDialogue 호출 시 후속 노드 실행으로 상태 부활
+[P2] Editor Viewport - EditorViewportClient Orbit 피치 각도 클램핑 부재로 +-90도 극점에서 뷰 반전
+[P2] Process     - ProcessUtil::executeProcess 윈도우 커맨드 라인 특수문자/공백 이스케이프 부재
 [P2] Serialization - BinarySerializer 역직렬화 시 O(N) 선형 탐색 및 힙 할당 -> 로드 지연
+[P2] Serialization - ObjectStateSerializer 게임오브젝트 간 SceneComponent 트랜스폼 부착 유실
+[P2] Dialogue    - DialogueGraphAsset 파일 로드 시 중복 직렬화/역직렬화(dump -> parseJson) 오버헤드
 [P2] Graphics    - 뷰포트 리사이즈 시 임시 텍스처/SRV 전면 파괴/재생성 -> 창 조절 시 프레임 드랍
 [P2] Physics     - PhysicsWorld 쿼리마다 힙 벡터 할당 및 정렬 -> CPU 메모리 대역폭 낭비
 [P2] Streaming   - AssetStreamingQueue 백그라운드 파싱 누락 -> 메인 스레드 I/O 히치
+[P2] Linux X11   - X11Window::recreate 재성성 중 _bRecreating 조기 해제로 인한 윈도우 이벤트 오염
+[P2] Editor Cross-Platform - ContentBrowserPanel Show in Explorer 시 system() 동기 블로킹 및 비Windows 실패
+[P2] Core String - FormatString::floatToString 폴백 경로 시 \0 널 종료 문자 누락 결함
+[P2] Editor Tool - AnimationGraphPanel::syncPreviewGraph AnimClip 원시 포인터 등록 후 재할당 시 댕글링 포인터 위험
+[P2] Editor Panel - SequencerPanel::applyAsset 에셋 로드/교체 시 _selected 인덱스 미초기화로 인한 UI 상태 왜곡
+[P2] Core String - StringBuilder::appendFormat 경계 크기(available - 1) 일치 시 불필요한 힙 재할당 및 2회 포맷팅 병목
+[P2] Core Container - basic_fixed_string::operator+ C 문자열 좌측 덧셈 시 반환 용량 고정으로 인한 버퍼 오버플로우/잘림 결함
+[P2] Container   - HandleTable::erase 슬롯 해제 시 T{} 기본 생성자 대입으로 인한 생성/소멸 오버헤드
+[P2] Container   - DynamicBitset::DynamicBitset(string_view) 잘못된 입력 문자 파싱 시 시프트 왜곡 결함
+[P2] Engine Object - GameObject::refreshActiveInHierarchy 계층 활성 상태 전파 시 조상 상태 명명 및 로직 모호성
+[P2] Editor UI   - HistoryPanel::drawContent 커맨드 라벨 특수 포맷팅 누락 시 ImGui ID 충돌 위험
 
 ================================================================================

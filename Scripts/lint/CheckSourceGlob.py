@@ -50,7 +50,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="소스 GLOB 누락 검사")
     parser.add_argument("--root", type=Path, default=None)
     parser.add_argument("--build", type=Path, default=None, help="compile_commands.json 이 있는 빌드 디렉터리")
-    parser.add_argument("--active-game", default="Demo", help="SW_ACTIVE_GAME 팩 이름")
+    parser.add_argument("--active-game", default="Empty", help="SW_ACTIVE_GAME 팩 이름")
     args = parser.parse_args()
     repo = (args.root or getProjectRoot()).resolve()
 

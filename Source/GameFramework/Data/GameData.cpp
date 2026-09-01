@@ -14,9 +14,11 @@ namespace sw
 
 	bool GameData::loadFromResource( string_view assetRelativePath )
 	{
-		const string path = assetRelativePath.empty()
-							  ? string( "game/demo/data/gamedata.xml" )
-							  : string( assetRelativePath );
+		// 게임별 기본 경로를 엔진이 알 필요는 없다. 경로가 없으면 로드할 것도 없다.
+		if ( assetRelativePath.empty() )
+			return false;
+
+		const string path = string( assetRelativePath );
 
 		XmlDocument doc;
 		string		absPath;

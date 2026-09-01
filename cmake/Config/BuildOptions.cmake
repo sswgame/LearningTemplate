@@ -59,8 +59,8 @@ option(SW_ENABLE_STL_CONTAINER "엔진 커스텀 할당자 대신 std::allocator
 option(SW_ENABLE_TIME_TRACE "Clang 컴파일 시간 프로파일링(-ftime-trace JSON 출력)" OFF)
 
 # 활성화할 대상 게임 팩 선택 (Source/Games/ 하위 디렉터리 이름)
-set(SW_ACTIVE_GAME "Demo" CACHE STRING "활성화할 Source/Games 게임 팩 (Demo | Empty)")
-set_property(CACHE SW_ACTIVE_GAME PROPERTY STRINGS Demo Empty)
+set(SW_ACTIVE_GAME "Empty" CACHE STRING "활성화할 Source/Games 게임 팩 (Empty)")
+set_property(CACHE SW_ACTIVE_GAME PROPERTY STRINGS Empty)
 
 # ------------------------------------------------------------------------------
 # 4) 컴파일 PDB · compile_commands.json · 플래그 INTERFACE 초기화

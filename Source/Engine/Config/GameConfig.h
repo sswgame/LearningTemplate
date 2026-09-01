@@ -16,7 +16,7 @@ namespace sw
 		REFLECT_BODY();
 
 		PROPERTY()
-		string _packRoot{ "game/demo" };
+		string _packRoot{};
 
 		PROPERTY()
 		string _gameDataFile{ "data/gamedata.xml" };

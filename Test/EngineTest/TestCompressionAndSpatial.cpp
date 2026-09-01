@@ -124,13 +124,13 @@ SW_TEST_CASE( Engine_Resource, AssetStreamingQueueAsyncOperations )
 	queue.initialize();
 
 	bool bCompleteCalled = false;
-	queue.requestAsset( "Resource/game/demo/data/gamedata.xml", sw::StreamingPriority::High,
+	queue.requestAsset( "Resource/common/shaders/forward_lit.hlsl", sw::StreamingPriority::High,
 						SW_DELEGATE_LAMBDA( sw::OnStreamingCompleteDelegate, [&bCompleteCalled]( std::string_view, bool )
 	{
 		bCompleteCalled = true;
 	} ) );
 
-	SW_EXPECT_TRUE( queue.isStreaming( "Resource/game/demo/data/gamedata.xml" ) || queue.isLoaded( "Resource/game/demo/data/gamedata.xml" ) );
+	SW_EXPECT_TRUE( queue.isStreaming( "Resource/common/shaders/forward_lit.hlsl" ) || queue.isLoaded( "Resource/common/shaders/forward_lit.hlsl" ) );
 	queue.shutdown();
 }
 
@@ -201,9 +201,9 @@ SW_TEST_CASE( Engine_File, ReloadFileManagerLifecycle )
 	bool	   bCallbackCalled = false;
 	const auto handle		   = manager.registerWatch( "Resource/shaders", { ".hlsl" },
 														SW_DELEGATE_LAMBDA( sw::FileWatchMatchDelegate, [&bCallbackCalled]( const sw::FileChangeEvent& )
-			 {
-		 bCallbackCalled = true;
-	 } ) );
+	{
+		bCallbackCalled = true;
+	} ) );
 
 	SW_EXPECT_TRUE( handle.isValid() );
 	manager.unregisterWatch( handle );
@@ -530,9 +530,9 @@ SW_TEST_CASE( Engine_Spatial, BVHTree3DAABBRaySphereQueries )
 
 	sw::vector<sw::ObjectHandle> listAabb;
 	const sw::AABB				 testBox{
-					  {-1.0f, -1.0f,  0.0f},
-					  { 6.0f,  5.0f, 15.0f}
-	};
+		{-1.0f, -1.0f,	0.0f},
+		{ 6.0f,	5.0f, 15.0f}
+	  };
 	bvh.queryAABB( testBox, listAabb );
 	SW_EXPECT_EQUAL( 2u, static_cast<uint32>( listAabb.size() ) );
 

@@ -20,7 +20,7 @@ namespace sw
 		{
 			/**
 			 * @brief 팩 파일명이 우선순위 토큰과 일치하는지 대소문자 무시로 판별합니다 (Zero Allocation).
-			 * @param stem 팩 파일명 (확장자 제외, 예: "game", "game_demo", "dlc_expansion")
+			 * @param stem 팩 파일명 (확장자 제외, 예: "game", "game_patch", "dlc_expansion")
 			 * @param token 검색 우선순위 토큰 (예: "game", "dlc", "engine")
 			 */
 			static bool matchesTokenCaseInsensitive( string_view stem, string_view token )

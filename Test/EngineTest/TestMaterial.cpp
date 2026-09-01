@@ -199,7 +199,7 @@ SW_TEST_CASE( MaterialTest, MaterialDefaultAndInstanceOverride )
 	SW_EXPECT_NEAR_EQUAL( 0.5f, roughness, 1e-3f );
 
 	sw::MaterialInstance instance( &material );
-	SW_EXPECT_TRUE( instance.loadFromFile( "game/demo/materials/glassorange.materialinstance" ) || ( instance.setParameter( sw::hashed_string( "color" ), "0.2 0.75 1.0 0.35" ), true ) );
+	instance.setParameter( sw::hashed_string( "color" ), "0.2 0.75 1.0 0.35" );
 	SW_EXPECT_TRUE( instance.isParameterOverridden( sw::hashed_string( "color" ) ) );
 
 	sw::string colorOverride;

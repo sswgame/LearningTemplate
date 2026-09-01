@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Config/GameConfig.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Resource/AssetFormat.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
@@ -233,15 +234,15 @@ SW_TEST_CASE( Engine_Resource, ResourcePathCaseInsensitiveLookupAndLowerCaseNorm
 	SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
 
 	// 1. FileUtil::normalizePath 기본 동작 검증 (역슬래시 -> 슬래시, 소문자화)
-	const sw::string rawPath	= "Resource\\Game\\Demo\\Maps\\Town01.xml";
+	const sw::string rawPath	= "Resource\\Engine\\Pipeline\\ForwardPipeline.xml";
 	const sw::string normalized = sw::FileUtil::normalizePath( rawPath );
-	SW_EXPECT_STREQ( "resource/game/demo/maps/town01.xml", normalized.c_str() );
+	SW_EXPECT_STREQ( "resource/engine/pipeline/forwardpipeline.xml", normalized.c_str() );
 
 	// 2. 대문자/혼합 대소문자 전역 ID로 조회 시 소문자 물리 파일 매핑 검증
-	const sw::string pathUpperGlobal = sw::ResourceUtil::getResourcePath( "GAME/DEMO/DATA/GAMEDATA.XML" );
+	const sw::string pathUpperGlobal = sw::ResourceUtil::getResourcePath( "ENGINE/MATERIALS/DEFAULTMATERIAL.MATERIAL" );
 	SW_EXPECT_FALSE( pathUpperGlobal.empty() );
 	SW_EXPECT_TRUE( sw::FileUtil::fileExists( pathUpperGlobal ) );
-	SW_EXPECT_TRUE( sw::StringUtil::endsWith( pathUpperGlobal, "gamedata.xml", true ) );
+	SW_EXPECT_TRUE( sw::StringUtil::endsWith( pathUpperGlobal, "defaultmaterial.material", true ) );
 
 	// 3. 엔진 파이프라인 대문자 조회 검증
 	const sw::string pathEnginePipeline = sw::ResourceUtil::getResourcePath( "ENGINE/PIPELINE/FORWARDPIPELINE.XML" );
@@ -249,21 +250,29 @@ SW_TEST_CASE( Engine_Resource, ResourcePathCaseInsensitiveLookupAndLowerCaseNorm
 	SW_EXPECT_TRUE( sw::FileUtil::fileExists( pathEnginePipeline ) );
 
 	// 4. 팩 상대 키(Mixed case) 조회 검증
-	const sw::string pathMixedPack = sw::ResourceUtil::getResourcePath( "Maps/Town01.xml" );
+	//    게임 콘텐츠에 의존하지 않도록 팩 루트를 엔진 팩으로 지정해 검사한다.
+	const sw::GameConfig oldActive	= sw::GameConfig::getActive();
+	sw::GameConfig		 packConfig = oldActive;
+	packConfig._packRoot			= "engine";
+	sw::GameConfig::setActive( packConfig );
+
+	const sw::string pathMixedPack = sw::ResourceUtil::getResourcePath( "Pipeline/ForwardPipeline.xml" );
 	SW_EXPECT_FALSE( pathMixedPack.empty() );
 	SW_EXPECT_TRUE( sw::FileUtil::fileExists( pathMixedPack ) );
 
-	// 5. 프리팹 대문자 키 조회 검증
-	const sw::string pathUpperPrefab = sw::ResourceUtil::getResourcePath( "game/demo/prefabs/GHOST.PREFAB.JSON" );
-	SW_EXPECT_FALSE( pathUpperPrefab.empty() );
-	SW_EXPECT_TRUE( sw::FileUtil::fileExists( pathUpperPrefab ) );
+	sw::GameConfig::setActive( oldActive );
+
+	// 5. 다른 엔진 리소스의 대문자 키 조회 검증
+	const sw::string pathUpperOther = sw::ResourceUtil::getResourcePath( "ENGINE/PIPELINE/DEFERREDPIPELINE.XML" );
+	SW_EXPECT_FALSE( pathUpperOther.empty() );
+	SW_EXPECT_TRUE( sw::FileUtil::fileExists( pathUpperOther ) );
 
 	// 6. 텍스트 리소스 읽기 시 대문자 키 전달 검증
 	sw::string textContent;
-	const bool bReadOk = sw::ResourceUtil::readTextResource( "GAME/DEMO/DATA/GAMEDATA.XML", textContent );
+	const bool bReadOk = sw::ResourceUtil::readTextResource( "ENGINE/PIPELINE/FORWARDPIPELINE.XML", textContent );
 	SW_EXPECT_TRUE( bReadOk );
 	SW_EXPECT_FALSE( textContent.empty() );
-	SW_EXPECT_TRUE( textContent.find( "<GameData>" ) != sw::string::npos );
+	SW_EXPECT_TRUE( textContent.find( "<RenderPipeline" ) != sw::string::npos );
 }
 
 /**
@@ -278,21 +287,28 @@ SW_TEST_CASE( Engine_Resource, ConfigurableResourcePriorityAndDlcSupport )
 	SW_EXPECT_FALSE( defaultPriority.empty() );
 	SW_EXPECT_STREQ( "game", defaultPriority[0].c_str() );
 
-	// 2. 임시 DLC 디렉터리 및 에셋 생성하여 DLC 최우선 탐색 검증
-	const sw::string dlcDir	 = sw::FileUtil::joinPath( sw::ResourceUtil::getRootFolderPath(), "dlc/test_dlc/maps" );
-	const sw::string dlcFile = sw::FileUtil::joinPath( dlcDir, "0.title.scene.xml" );
+	// 2. 임시 game 및 DLC 디렉터리/에셋 생성하여 우선순위 오버라이드 검증
+	const sw::string gameDir  = sw::FileUtil::joinPath( sw::ResourceUtil::getRootFolderPath(), "game/empty/test_asset" );
+	const sw::string gameFile = sw::FileUtil::joinPath( gameDir, "priority_test.xml" );
+	sw::FileUtil::ensureDirectoryExists( gameDir );
+	const utf8* kGameContent = "<Asset source=\"game\" />";
+	SW_EXPECT_TRUE( sw::FileUtil::writeFile( gameFile, reinterpret_cast<const uint8*>( kGameContent ),
+											 static_cast<uint64>( sw::StringUtil::strlen( kGameContent ) ) ) );
+
+	const sw::string dlcDir	 = sw::FileUtil::joinPath( sw::ResourceUtil::getRootFolderPath(), "dlc/test_dlc/test_asset" );
+	const sw::string dlcFile = sw::FileUtil::joinPath( dlcDir, "priority_test.xml" );
 	sw::FileUtil::ensureDirectoryExists( dlcDir );
 
-	const utf8* kDlcSceneContent = "<Scene name=\"DLC_Title\" />";
-	SW_EXPECT_TRUE( sw::FileUtil::writeFile( dlcFile, reinterpret_cast<const uint8*>( kDlcSceneContent ),
-											 static_cast<uint64>( sw::StringUtil::strlen( kDlcSceneContent ) ) ) );
+	const utf8* kDlcContent = "<Asset source=\"dlc\" />";
+	SW_EXPECT_TRUE( sw::FileUtil::writeFile( dlcFile, reinterpret_cast<const uint8*>( kDlcContent ),
+											 static_cast<uint64>( sw::StringUtil::strlen( kDlcContent ) ) ) );
 
 	// 3. DLC가 1순위인 우선순위 목록 적용
 	const sw::vector<sw::string> listDlcFirstPriority = { "dlc/test_dlc", "game", "common", "engine", "editor" };
 	SW_EXPECT_TRUE( sw::ResourceUtil::setSearchPriority( listDlcFirstPriority ) );
 
-	// 4. 팩 상대 키 "maps/0.title.scene.xml" 조회 시 게임 팩이 아닌 DLC 폴더의 파일로 매핑되는지 검증
-	const sw::string resolvedDlcPath = sw::ResourceUtil::getResourcePath( "maps/0.title.scene.xml" );
+	// 4. 팩 상대 키 "test_asset/priority_test.xml" 조회 시 게임 팩이 아닌 DLC 폴더의 파일로 매핑되는지 검증
+	const sw::string resolvedDlcPath = sw::ResourceUtil::getResourcePath( "test_asset/priority_test.xml" );
 	SW_EXPECT_FALSE( resolvedDlcPath.empty() );
 	SW_EXPECT_TRUE( sw::FileUtil::pathsEqualNormalized( resolvedDlcPath, dlcFile ) );
 
@@ -300,14 +316,17 @@ SW_TEST_CASE( Engine_Resource, ConfigurableResourcePriorityAndDlcSupport )
 	const sw::vector<sw::string>& listRestoredPriority = sw::ResourceUtil::getDefaultSearchPriority();
 	SW_EXPECT_TRUE( sw::ResourceUtil::setSearchPriority( listRestoredPriority ) );
 
-	const sw::string resolvedGamePath = sw::ResourceUtil::getResourcePath( "maps/0.title.scene.xml" );
+	const sw::string resolvedGamePath = sw::ResourceUtil::getResourcePath( "test_asset/priority_test.xml" );
 	SW_EXPECT_FALSE( resolvedGamePath.empty() );
 	SW_EXPECT_FALSE( sw::FileUtil::pathsEqualNormalized( resolvedGamePath, dlcFile ) );
-	SW_EXPECT_TRUE( sw::FileUtil::normalizePath( resolvedGamePath ).find( "game/demo" ) != sw::string::npos );
+	SW_EXPECT_TRUE( sw::FileUtil::pathsEqualNormalized( resolvedGamePath, gameFile ) );
 
-	// 6. 임시 DLC 파일 및 디렉터리 정리
+	// 6. 임시 파일 및 디렉터리 정리
 	sw::FileUtil::removeFile( dlcFile );
 	sw::FileUtil::removeDirectory( dlcDir );
 	sw::FileUtil::removeDirectory( sw::FileUtil::joinPath( sw::ResourceUtil::getRootFolderPath(), "dlc/test_dlc" ) );
 	sw::FileUtil::removeDirectory( sw::FileUtil::joinPath( sw::ResourceUtil::getRootFolderPath(), "dlc" ) );
+
+	sw::FileUtil::removeFile( gameFile );
+	sw::FileUtil::removeDirectory( gameDir );
 }

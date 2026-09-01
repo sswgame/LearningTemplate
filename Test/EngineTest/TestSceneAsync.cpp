@@ -123,13 +123,13 @@ SW_TEST_CASE( SceneTest, DocumentBinaryRoundTrip )
 	originalDoc._name = "BinaryTestScene";
 	sw::SceneDocument::EntityNode entA{};
 	entA._name		  = "Hero";
-	entA._prefab	  = "game/demo/prefabs/Hero.prefab";
+	entA._prefab	  = "game/empty/prefabs/hero.prefab";
 	entA._embeddedXml = "<GameObjectState><Name>Hero</Name></GameObjectState>";
 	originalDoc._listEntityNode.push_back( std::move( entA ) );
 
 	sw::SceneDocument::EntityNode entB{};
 	entB._name	 = "Monster";
-	entB._prefab = "game/demo/prefabs/Monster.prefab";
+	entB._prefab = "game/empty/prefabs/monster.prefab";
 	originalDoc._listEntityNode.push_back( std::move( entB ) );
 
 	SW_ASSERT_TRUE( originalDoc.saveBinary( binPath ) );
@@ -140,10 +140,10 @@ SW_TEST_CASE( SceneTest, DocumentBinaryRoundTrip )
 	SW_EXPECT_STREQ( "BinaryTestScene", loadedDoc._name );
 	SW_ASSERT_EQUAL( size_t( 2 ), loadedDoc._listEntityNode.size() );
 	SW_EXPECT_STREQ( "Hero", loadedDoc._listEntityNode[0]._name );
-	SW_EXPECT_STREQ( "game/demo/prefabs/Hero.prefab", loadedDoc._listEntityNode[0]._prefab );
+	SW_EXPECT_STREQ( "game/empty/prefabs/hero.prefab", loadedDoc._listEntityNode[0]._prefab );
 	SW_EXPECT_STREQ( "<GameObjectState><Name>Hero</Name></GameObjectState>", loadedDoc._listEntityNode[0]._embeddedXml );
 	SW_EXPECT_STREQ( "Monster", loadedDoc._listEntityNode[1]._name );
-	SW_EXPECT_STREQ( "game/demo/prefabs/Monster.prefab", loadedDoc._listEntityNode[1]._prefab );
+	SW_EXPECT_STREQ( "game/empty/prefabs/monster.prefab", loadedDoc._listEntityNode[1]._prefab );
 
 	sw::FileUtil::removeFile( binPath );
 }
