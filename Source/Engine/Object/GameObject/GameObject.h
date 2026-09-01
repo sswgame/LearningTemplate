@@ -13,7 +13,6 @@
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/TagSystem.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -24,6 +23,7 @@ namespace sw
 		struct sw_GameObject_Registrar;
 	} // namespace generated
 
+	class GameObjectManager;
 	class ObjectStateSerializer;
 	class SceneComponent;
 
@@ -148,55 +148,7 @@ namespace sw
 		 * @return 생성된 컴포넌트. 구조 동결(tick) 중이면 지연 큐에 넣고 nullptr.
 		 */
 		template <typename T, typename... Args>
-		T* addComponent( Args&&... args )
-		{
-			static_assert( std::is_base_of_v<Component, T>, "T must derive from sw::Component" );
-			static_assert( HasOwnReflectBody_v<T> || HasReflectStaticType_v<T> || sizeof( T ) == sizeof( Component ),
-						   "T must declare its own REFLECT_BODY()." );
-
-			if ( _pOwnerManager == nullptr )
-			{
-				SW_LOG_ERROR( "Cannot add component without an owner GameObjectManager!" );
-				return nullptr;
-			}
-
-			if ( _pOwnerManager->isStructuralMutationFrozen() )
-			{
-				const uint64	   objectId = _objectId;
-				GameObjectManager* pMgr		= _pOwnerManager;
-				auto			   packedArgs =
-					std::make_tuple( std::decay_t<Args>( std::forward<Args>( args ) )... );
-				pMgr->deferPostTick( [pMgr, objectId, packedArgs = std::move( packedArgs )]() mutable
-				{
-					GameObject* pObj = pMgr->findGameObjectById( objectId );
-					if ( pObj == nullptr )
-						return;
-					std::apply( [pObj]( auto&&... forwarded )
-					{ pObj->addComponent<T>( std::forward<decltype( forwarded )>( forwarded )... ); },
-								std::move( packedArgs ) );
-				} );
-				return nullptr;
-			}
-
-			T* pComp = _pOwnerManager->createComponent<T>( this, std::forward<Args>( args )... );
-			if ( pComp == nullptr )
-				return nullptr;
-
-			const TypeInfo* pTypeInfo = nullptr;
-			if constexpr ( HasStaticType_v<T> )
-				pTypeInfo = T::StaticType();
-			else if constexpr ( HasReflectStaticType_v<T> )
-				pTypeInfo = ReflectTypeTraits<T>::StaticType();
-
-			const hashed_string typeKey = pTypeInfo != nullptr ? pTypeInfo->_name : hashed_string{};
-			pComp->setComponentName( typeKey );
-			pComp->applyTypeDefaults( pTypeInfo );
-
-			_listComponent.push_back( pComp );
-			registerComponentIfSceneRoot( pComp );
-			markTickOrderDirty();
-			return pComp;
-		}
+		T* addComponent( Args&&... args );
 
 		/** @brief 소유 Component 개수. pending-kill은 제외합니다. */
 		size_t getComponentCount() const;
@@ -276,4 +228,60 @@ namespace sw
 		uint32			   _managerIndex;  ///< Manager의 _gameObjects 내 인덱스
 	};
 
+} // namespace sw
+
+#include "Engine/Object/GameObject/GameObjectManager.h"
+
+namespace sw
+{
+	template <typename T, typename... Args>
+	T* GameObject::addComponent( Args&&... args )
+	{
+		static_assert( std::is_base_of_v<Component, T>, "T must derive from sw::Component" );
+		static_assert( HasOwnReflectBody_v<T> || HasReflectStaticType_v<T> || sizeof( T ) == sizeof( Component ),
+					   "T must declare its own REFLECT_BODY()." );
+
+		if ( _pOwnerManager == nullptr )
+		{
+			SW_LOG_ERROR( "Cannot add component without an owner GameObjectManager!" );
+			return nullptr;
+		}
+
+		if ( _pOwnerManager->isStructuralMutationFrozen() )
+		{
+			const uint64	   objectId = _objectId;
+			GameObjectManager* pMgr		= _pOwnerManager;
+			auto			   packedArgs =
+				std::make_tuple( std::decay_t<Args>( std::forward<Args>( args ) )... );
+			pMgr->deferPostTick( [pMgr, objectId, packedArgs = std::move( packedArgs )]() mutable
+			{
+				GameObject* pObj = pMgr->findGameObjectById( objectId );
+				if ( pObj == nullptr )
+					return;
+				std::apply( [pObj]( auto&&... forwarded )
+				{ pObj->addComponent<T>( std::forward<decltype( forwarded )>( forwarded )... ); },
+							std::move( packedArgs ) );
+			} );
+			return nullptr;
+		}
+
+		T* pComp = _pOwnerManager->createComponent<T>( this, std::forward<Args>( args )... );
+		if ( pComp == nullptr )
+			return nullptr;
+
+		const TypeInfo* pTypeInfo = nullptr;
+		if constexpr ( HasStaticType_v<T> )
+			pTypeInfo = T::StaticType();
+		else if constexpr ( HasReflectStaticType_v<T> )
+			pTypeInfo = ReflectTypeTraits<T>::StaticType();
+
+		const hashed_string typeKey = pTypeInfo != nullptr ? pTypeInfo->_name : hashed_string{};
+		pComp->setComponentName( typeKey );
+		pComp->applyTypeDefaults( pTypeInfo );
+
+		_listComponent.push_back( pComp );
+		registerComponentIfSceneRoot( pComp );
+		markTickOrderDirty();
+		return pComp;
+	}
 } // namespace sw

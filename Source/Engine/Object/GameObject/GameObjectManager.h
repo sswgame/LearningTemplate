@@ -17,11 +17,11 @@
 
 #include "Engine/Object/Component/ComponentHandle.h"
 #include "Engine/Object/Component/TagSystem.h"
+#include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Physics/PhysicsWorld.h"
 
 namespace sw
 {
-	class GameObject;
 	class Component;
 	class SceneComponent;
 	class MeshComponent;

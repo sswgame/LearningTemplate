@@ -15,9 +15,18 @@ namespace sw
 	{
 		/** @brief 프로세스 전역 활성 로그 싱크 포인터 */
 		atomic<ILogSink*> s_globalSink{ nullptr };
-		/** @brief 파일명 해시별 로그 Caller 이름 캐시 */
-		unordered_map<uint64, string> s_mapFileToCaller{};
-		mutex						  s_callerMutex{};
+
+		/** @brief 파일명 해시별 로그 Caller 이름 엔트리 (동적 힙 메모리 할당 0건) */
+		struct CallerEntry
+		{
+			uint64 _fileHash{ 0 };
+			utf8   _arrCallerName[64]{ 0 };
+		};
+
+		static constexpr size_t kMaxCallerEntries = 512;
+		CallerEntry				s_arrCallerEntry[kMaxCallerEntries]{};
+		size_t					s_callerEntryCount{ 0 };
+		mutex					s_callerMutex{};
 	} // namespace
 
 	Logger::Logger()
@@ -128,7 +137,26 @@ namespace sw
 		FileUtil::getFileNamePart( filePath, fileName );
 		const uint64			fileHash = StringUtil::computeHash64( fileName );
 		std::scoped_lock<mutex> lock{ s_callerMutex };
-		s_mapFileToCaller[fileHash] = string{ callerName };
+
+		for ( size_t index = 0; index < s_callerEntryCount; ++index )
+		{
+			if ( s_arrCallerEntry[index]._fileHash == fileHash )
+			{
+				const size_t copyLen = std::min( callerName.size(), sizeof( s_arrCallerEntry[index]._arrCallerName ) - 1 );
+				std::memcpy( s_arrCallerEntry[index]._arrCallerName, callerName.data(), copyLen );
+				s_arrCallerEntry[index]._arrCallerName[copyLen] = '\0';
+				return;
+			}
+		}
+
+		if ( s_callerEntryCount < kMaxCallerEntries )
+		{
+			s_arrCallerEntry[s_callerEntryCount]._fileHash = fileHash;
+			const size_t copyLen						   = std::min( callerName.size(), sizeof( s_arrCallerEntry[s_callerEntryCount]._arrCallerName ) - 1 );
+			std::memcpy( s_arrCallerEntry[s_callerEntryCount]._arrCallerName, callerName.data(), copyLen );
+			s_arrCallerEntry[s_callerEntryCount]._arrCallerName[copyLen] = '\0';
+			++s_callerEntryCount;
+		}
 	}
 
 	const utf8* Logger::getCaller( const utf8* pFile )
@@ -139,9 +167,11 @@ namespace sw
 		FileUtil::getFileNamePart( string_view{ pFile }, fileName );
 		const uint64			fileHash = StringUtil::computeHash64( fileName );
 		std::scoped_lock<mutex> lock{ s_callerMutex };
-		auto					it = s_mapFileToCaller.find( fileHash );
-		if ( it != s_mapFileToCaller.end() )
-			return it->second.c_str();
+		for ( size_t index = 0; index < s_callerEntryCount; ++index )
+		{
+			if ( s_arrCallerEntry[index]._fileHash == fileHash )
+				return s_arrCallerEntry[index]._arrCallerName;
+		}
 		return nullptr;
 	}
 
