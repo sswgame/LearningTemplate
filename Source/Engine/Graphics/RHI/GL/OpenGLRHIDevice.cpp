@@ -20,6 +20,7 @@
 	#define WGL_CONTEXT_CORE_PROFILE_BIT_ARB 0x00000001
 using PFNWGLCREATECONTEXTATTRIBSARBPROC = HGLRC( WINAPI* )( HDC hDC, HGLRC hShareContext, const int32* pAttribList );
 #elif defined( SW_PLATFORM_LINUX )
+	#define GLX_GLXEXT_LEGACY
 	#include <GL/glx.h>
 	#include "Core/Common/X11MacroUndef.h"
 	#define GLX_CONTEXT_MAJOR_VERSION_ARB	 0x2091
