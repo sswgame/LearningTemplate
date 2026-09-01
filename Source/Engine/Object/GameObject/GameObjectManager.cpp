@@ -33,6 +33,7 @@ namespace sw
 
 			struct TickCandidate
 			{
+				Component*			  _pComponent{ nullptr };
 				ComponentHandle		  _handle;
 				uint32				  _subTickId{ 0 };
 				uint64				  _componentId{ 0 };
@@ -50,7 +51,7 @@ namespace sw
 
 				if ( count == 1 )
 				{
-					return { { { listCandidate[0]._handle, listCandidate[0]._subTickId } } };
+					return { { { listCandidate[0]._pComponent, listCandidate[0]._handle, listCandidate[0]._subTickId } } };
 				}
 
 				// SubTickHandle -> 후보자 인덱스 빠른 매핑 맵 구성
@@ -98,7 +99,7 @@ namespace sw
 					listSingleWave.reserve( count );
 					for ( const TickCandidate& cand : listCandidate )
 					{
-						listSingleWave.push_back( { cand._handle, cand._subTickId } );
+						listSingleWave.push_back( { cand._pComponent, cand._handle, cand._subTickId } );
 					}
 					return { std::move( listSingleWave ) };
 				}
@@ -136,7 +137,7 @@ namespace sw
 					{
 						listVisited[u] = true;
 						++totalProcessed;
-						listWaveItem.push_back( { listCandidate[u]._handle, listCandidate[u]._subTickId } );
+						listWaveItem.push_back( { listCandidate[u]._pComponent, listCandidate[u]._handle, listCandidate[u]._subTickId } );
 
 						for ( size_t v : listAdj[u] )
 						{
@@ -163,7 +164,7 @@ namespace sw
 					listFallbackWave.reserve( listRemaining.size() );
 					for ( size_t idx : listRemaining )
 					{
-						listFallbackWave.push_back( { listCandidate[idx]._handle, listCandidate[idx]._subTickId } );
+						listFallbackWave.push_back( { listCandidate[idx]._pComponent, listCandidate[idx]._handle, listCandidate[idx]._subTickId } );
 					}
 					listDagWave.push_back( std::move( listFallbackWave ) );
 				}
@@ -199,8 +200,11 @@ namespace sw
 
 			static void resolveAndTickItem( GameObjectManager* pManager, float32 deltaTime, const GameObjectManager::TickExecutionItem& item )
 			{
-				Component* pComp = pManager->resolveComponent( item._handle );
-				if ( pComp == nullptr || pComp->isActive() == false )
+				Component* pComp = item._pComponent;
+				if ( pComp == nullptr )
+					pComp = pManager->resolveComponent( item._handle );
+
+				if ( pComp == nullptr || pComp->isPendingKill() || pComp->isActive() == false )
 					return;
 				GameObject* pOwner = pComp->getOwner();
 				if ( pOwner == nullptr || pOwner->isActiveInHierarchy() == false || pOwner->isPendingKill() )
@@ -476,22 +480,20 @@ namespace sw
 	void GameObjectManager::beginPlay()
 	{
 		mergePendingAdds();
-		const vector<GameObject*> listObject = getAllGameObjects();
-		for ( GameObject* pObj : listObject )
+		forEachGameObject( []( GameObject* pObj )
 		{
 			if ( pObj != nullptr && pObj->isActiveInHierarchy() )
 				pObj->beginPlay();
-		}
+		} );
 	}
 
 	void GameObjectManager::endPlay()
 	{
-		const vector<GameObject*> listObject = getAllGameObjects();
-		for ( GameObject* pObj : listObject )
+		forEachGameObject( []( GameObject* pObj )
 		{
 			if ( pObj != nullptr && pObj->isActiveInHierarchy() )
 				pObj->endPlay();
-		}
+		} );
 	}
 
 	void GameObjectManager::tick( float32 deltaTime )
@@ -832,22 +834,21 @@ namespace sw
 
 	void GameObjectManager::rebindAllCachedTypeInfo()
 	{
-		TypeRegistry&			  typeRegistry = engine::getTypeRegistry();
-		const vector<GameObject*> listObject   = getAllGameObjects();
-		for ( GameObject* pObj : listObject )
+		TypeRegistry& typeRegistry = engine::getTypeRegistry();
+		forEachGameObject( [&typeRegistry]( GameObject* pObj )
 		{
 			if ( pObj == nullptr )
-				continue;
-			for ( Component* pComp : pObj->getAllComponents() )
+				return;
+			pObj->forEachComponent( [&typeRegistry]( Component* pComp )
 			{
 				if ( pComp == nullptr )
-					continue;
+					return;
 				const hashed_string typeKey = pComp->getComponentName();
 				if ( typeKey.empty() )
-					continue;
+					return;
 				pComp->applyTypeDefaults( typeRegistry.findType( typeKey ) );
-			}
-		}
+			} );
+		} );
 		markTickWavesDirty();
 	}
 
@@ -990,26 +991,26 @@ namespace sw
 		if ( _bIsTickWavesDirty.exchange( false, std::memory_order_acq_rel ) )
 		{
 			array<vector<GameObjectManagerInternal::TickCandidate>, 4> arrListGroup;
-			const vector<GameObject*>								   listObject		   = getAllGameObjects();
 			uint32													   totalCandidateCount = 0;
 
-			for ( GameObject* pObj : listObject )
+			forEachGameObject( [&]( GameObject* pObj )
 			{
-				if ( pObj == nullptr || pObj->isPendingKill() == true )
-					continue;
+				if ( pObj == nullptr || pObj->isPendingKill() )
+					return;
 
-				for ( Component* pComp : pObj->getAllComponents() )
+				pObj->forEachComponent( [&]( Component* pComp )
 				{
-					if ( pComp == nullptr )
-						continue;
+					if ( pComp == nullptr || pComp->isPendingKill() )
+						return;
 
 					// 1. Main Tick
-					if ( pComp->canEverTick() == true )
+					if ( pComp->canEverTick() )
 					{
 						const uint8 groupIndex = static_cast<uint8>( pComp->getTickGroup() );
 						if ( groupIndex < arrListGroup.size() )
 						{
 							GameObjectManagerInternal::TickCandidate cand{};
+							cand._pComponent	= pComp;
 							cand._handle		= pComp->getHandle();
 							cand._subTickId		= 0;
 							cand._componentId	= pComp->getComponentId();
@@ -1029,6 +1030,7 @@ namespace sw
 							if ( groupIndex < arrListGroup.size() )
 							{
 								GameObjectManagerInternal::TickCandidate cand{};
+								cand._pComponent	   = pComp;
 								cand._handle		   = pComp->getHandle();
 								cand._subTickId		   = subTick._subTickId;
 								cand._componentId	   = pComp->getComponentId();
@@ -1040,8 +1042,8 @@ namespace sw
 							}
 						}
 					}
-				}
-			}
+				} );
+			} );
 
 			_listCachedTickWave.clear();
 			for ( vector<GameObjectManagerInternal::TickCandidate>& groupCandidates : arrListGroup )

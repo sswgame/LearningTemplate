@@ -79,6 +79,43 @@ namespace sw
 		/** @brief 등록된 모든 GameObject 목록의 스냅샷을 반환합니다. pending-add를 포함하며 목록을 바꾸지 않습니다. */
 		vector<GameObject*> getAllGameObjects() const;
 
+		/** @brief 힙 할당 없이 등록된 모든 유효한 GameObject를 순회합니다. */
+		template <typename Func>
+		void forEachGameObject( Func&& func ) const
+		{
+			std::shared_lock<std::shared_mutex> lock{ _mutex };
+			for ( GameObject* pObj : _listGameObject )
+			{
+				if ( pObj != nullptr && pObj->isPendingKill() == false )
+					func( pObj );
+			}
+			for ( GameObject* pObj : _listPendingAdd )
+			{
+				if ( pObj != nullptr && pObj->isPendingKill() == false )
+					func( pObj );
+			}
+		}
+
+		/** @brief 힙 할당 없이 씬의 모든 유효한 Component를 순회합니다. */
+		template <typename Func>
+		void forEachComponent( Func&& func ) const
+		{
+			forEachGameObject( [&func]( GameObject* pObj )
+			{
+				pObj->forEachComponent( func );
+			} );
+		}
+
+		/** @brief 힙 할당 없이 씬의 특정 타입 TComponent 파생 컴포넌트들을 순회합니다. */
+		template <typename TComponent, typename Func>
+		void forEachComponentOfType( Func&& func ) const
+		{
+			forEachGameObject( [&func]( GameObject* pObj )
+			{
+				pObj->forEachComponentOfType<TComponent>( func );
+			} );
+		}
+
 		/** @brief 태그를 가진 첫 GameObject를 반환합니다. 없으면 nullptr. */
 		GameObject* findGameObjectByTag( TagID tag ) const;
 
@@ -260,6 +297,7 @@ namespace sw
 		/** @brief 틱 디스패치 웨이브의 개별 틱 실행 항목 */
 		struct TickExecutionItem
 		{
+			Component*		_pComponent{ nullptr };
 			ComponentHandle _handle;
 			uint32			_subTickId{ 0 };
 		};

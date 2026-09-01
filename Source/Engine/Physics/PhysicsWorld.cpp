@@ -87,10 +87,6 @@ namespace sw
 							*handleIt = listHandle.back();
 							listHandle.pop_back();
 						}
-						if ( listHandle.empty() )
-						{
-							_mapGrid.erase( it );
-						}
 					}
 				}
 			}
@@ -133,12 +129,44 @@ namespace sw
 	{
 		std::unique_lock<std::shared_mutex> lock{ _mutex };
 		PhysicsBody*						pBody = _bodies.get( handle );
-		if ( pBody != nullptr )
+		if ( pBody == nullptr )
+			return;
+
+		const AABB oldAABB = pBody->_aabb;
+		if ( oldAABB.isValid() && aabb.isValid() )
 		{
-			removeBodyFromGrid( handle, pBody->_aabb );
-			pBody->_aabb = aabb;
-			insertBodyToGrid( handle, aabb );
+			const float3 oldNormMin = float3::min( oldAABB._min, oldAABB._max );
+			const float3 oldNormMax = float3::max( oldAABB._min, oldAABB._max );
+			const float3 newNormMin = float3::min( aabb._min, aabb._max );
+			const float3 newNormMax = float3::max( aabb._min, aabb._max );
+
+			const int32 oldMinX = PhysicsWorldInternal::toCellCoord( oldNormMin._x, kCellSize );
+			const int32 oldMaxX = PhysicsWorldInternal::toCellCoord( oldNormMax._x, kCellSize );
+			const int32 oldMinY = PhysicsWorldInternal::toCellCoord( oldNormMin._y, kCellSize );
+			const int32 oldMaxY = PhysicsWorldInternal::toCellCoord( oldNormMax._y, kCellSize );
+			const int32 oldMinZ = PhysicsWorldInternal::toCellCoord( oldNormMin._z, kCellSize );
+			const int32 oldMaxZ = PhysicsWorldInternal::toCellCoord( oldNormMax._z, kCellSize );
+
+			const int32 newMinX = PhysicsWorldInternal::toCellCoord( newNormMin._x, kCellSize );
+			const int32 newMaxX = PhysicsWorldInternal::toCellCoord( newNormMax._x, kCellSize );
+			const int32 newMinY = PhysicsWorldInternal::toCellCoord( newNormMin._y, kCellSize );
+			const int32 newMaxY = PhysicsWorldInternal::toCellCoord( newNormMax._y, kCellSize );
+			const int32 newMinZ = PhysicsWorldInternal::toCellCoord( newNormMin._z, kCellSize );
+			const int32 newMaxZ = PhysicsWorldInternal::toCellCoord( newNormMax._z, kCellSize );
+
+			const bool bSameCells = ( oldMinX == newMinX && oldMaxX == newMaxX &&
+									  oldMinY == newMinY && oldMaxY == newMaxY &&
+									  oldMinZ == newMinZ && oldMaxZ == newMaxZ );
+			if ( bSameCells )
+			{
+				pBody->_aabb = aabb;
+				return;
+			}
 		}
+
+		removeBodyFromGrid( handle, pBody->_aabb );
+		pBody->_aabb = aabb;
+		insertBodyToGrid( handle, aabb );
 	}
 
 	/**

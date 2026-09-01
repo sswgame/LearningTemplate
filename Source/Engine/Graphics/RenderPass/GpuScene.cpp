@@ -259,20 +259,19 @@ namespace sw
 		_listScratchCandidate.clear();
 		_listScratchCandidate.reserve( 1024 );
 
-		const vector<GameObject*> listObject = pObjects->getAllGameObjects();
-		for ( GameObject* pObj : listObject )
+		pObjects->forEachGameObject( [this]( GameObject* pObj )
 		{
-			if ( pObj == nullptr || pObj->isPendingKill() || pObj->isActiveInHierarchy() == false )
-				continue;
+			if ( pObj == nullptr || pObj->isActiveInHierarchy() == false )
+				return;
 
-			for ( Component* pComp : pObj->getAllComponents() )
+			pObj->forEachComponent( [this]( Component* pComp )
 			{
-				MeshComponent* pMeshComp = pComp != nullptr ? castTo<MeshComponent>( pComp ) : nullptr;
+				MeshComponent* pMeshComp = castTo<MeshComponent>( pComp );
 				if ( pMeshComp == nullptr || pMeshComp->isVisible() == false )
-					continue;
+					return;
 				shared_ptr<Mesh> mesh = pMeshComp->getMesh();
 				if ( mesh == nullptr || mesh->getVertexCount() == 0 )
-					continue;
+					return;
 
 				const float4x4 world = pMeshComp->getWorldMatrix();
 				DrawCandidate  cand{};
@@ -285,8 +284,8 @@ namespace sw
 				shared_ptr<MaterialInstance> materialInstance = pMeshComp->getMaterialInstance();
 				cand._pInstance								  = materialInstance.get();
 				_listScratchCandidate.push_back( cand );
-			}
-		}
+			} );
+		} );
 
 		if ( _listScratchCandidate.empty() )
 		{

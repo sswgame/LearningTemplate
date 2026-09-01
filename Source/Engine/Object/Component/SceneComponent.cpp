@@ -58,7 +58,7 @@ namespace sw
 									  static_cast<float32>( outWorldLWC._z ) );
 			}
 
-			static string sceneComponentTypeBaseName( const Component* pComp )
+			static string_view sceneComponentTypeBaseName( const Component* pComp )
 			{
 				if ( pComp == nullptr )
 					return "Component";
@@ -77,10 +77,13 @@ namespace sw
 
 			static string makeStableSceneComponentKey( const Component* pComp, int32 occurrenceIndex )
 			{
-				string base = sceneComponentTypeBaseName( pComp );
-				base += '#';
-				base += to_string( occurrenceIndex );
-				return base;
+				const string_view base = sceneComponentTypeBaseName( pComp );
+				string			  key;
+				key.reserve( base.size() + 12 );
+				key.append( base.data(), base.size() );
+				key += '#';
+				key += to_string( occurrenceIndex );
+				return key;
 			}
 
 			static string findStableSceneComponentKey( const Component* pComp )
@@ -88,17 +91,26 @@ namespace sw
 				if ( pComp == nullptr || pComp->getOwner() == nullptr )
 					return {};
 
-				unordered_map<string, int32> mapOccurrence;
-				for ( Component* pOther : pComp->getOwner()->getAllComponents() )
+				const string_view targetBase = sceneComponentTypeBaseName( pComp );
+				int32			  occ		 = 0;
+				string			  resultKey;
+
+				pComp->getOwner()->forEachComponent( [&]( const Component* pOther )
 				{
-					if ( pOther == nullptr )
-						continue;
-					const string base = sceneComponentTypeBaseName( pOther );
-					const int32	 occ  = mapOccurrence[base]++;
-					if ( pOther == pComp )
-						return makeStableSceneComponentKey( pComp, occ );
-				}
-				return {};
+					if ( resultKey.empty() == false || pOther == nullptr )
+						return;
+
+					const string_view otherBase = sceneComponentTypeBaseName( pOther );
+					if ( otherBase == targetBase )
+					{
+						if ( pOther == pComp )
+							resultKey = makeStableSceneComponentKey( pComp, occ );
+						else
+							++occ;
+					}
+				} );
+
+				return resultKey;
 			}
 
 			static SceneComponent* findSceneComponentByAttachKey( GameObject* pOwner, string_view attachKey )
@@ -106,17 +118,38 @@ namespace sw
 				if ( pOwner == nullptr || attachKey.empty() )
 					return nullptr;
 
-				unordered_map<string, int32> mapOccurrence;
-				for ( Component* pComp : pOwner->getAllComponents() )
+				const size_t hashPos = attachKey.rfind( '#' );
+				if ( hashPos == string_view::npos )
+					return nullptr;
+
+				const string_view reqBase = attachKey.substr( 0, hashPos );
+				int32			  reqOcc  = 0;
+				for ( size_t idx = hashPos + 1; idx < attachKey.size(); ++idx )
 				{
-					if ( pComp == nullptr )
-						continue;
-					const string base = sceneComponentTypeBaseName( pComp );
-					const int32	 occ  = mapOccurrence[base]++;
-					if ( makeStableSceneComponentKey( pComp, occ ) == attachKey )
-						return castTo<SceneComponent>( pComp );
+					if ( attachKey[idx] < '0' || attachKey[idx] > '9' )
+						return nullptr;
+					reqOcc = reqOcc * 10 + ( attachKey[idx] - '0' );
 				}
-				return nullptr;
+
+				int32			occ	   = 0;
+				SceneComponent* pFound = nullptr;
+
+				pOwner->forEachComponent( [&]( Component* pComp )
+				{
+					if ( pFound != nullptr || pComp == nullptr )
+						return;
+
+					const string_view base = sceneComponentTypeBaseName( pComp );
+					if ( base == reqBase )
+					{
+						if ( occ == reqOcc )
+							pFound = castTo<SceneComponent>( pComp );
+						else
+							++occ;
+					}
+				} );
+
+				return pFound;
 			}
 		};
 	} // namespace

@@ -67,27 +67,26 @@ namespace sw
 			};
 
 			vector<SceneMeshDrawItem> listDrawItem;
-			const vector<GameObject*> listObject = pObjects->getAllGameObjects();
-			for ( GameObject* pObj : listObject )
+			pObjects->forEachGameObject( [&]( GameObject* pObj )
 			{
-				if ( pObj == nullptr || pObj->isPendingKill() || pObj->isActiveInHierarchy() == false )
-					continue;
+				if ( pObj == nullptr || pObj->isActiveInHierarchy() == false )
+					return;
 
-				for ( Component* pComp : pObj->getAllComponents() )
+				pObj->forEachComponent( [&]( Component* pComp )
 				{
-					MeshComponent* pMeshComp = pComp != nullptr ? castTo<MeshComponent>( pComp ) : nullptr;
+					MeshComponent* pMeshComp = castTo<MeshComponent>( pComp );
 					if ( pMeshComp == nullptr || pMeshComp->isVisible() == false )
-						continue;
+						return;
 
 					const bool bTransparent = pMeshComp->getBlendMode() == RHIBlendMode::Transparent;
 					if ( bTransparent != bTransparentPass )
-						continue;
+						return;
 
 					shared_ptr<Mesh> mesh = pMeshComp->getMesh();
 					if ( mesh == nullptr || mesh->getVertexCount() == 0 )
-						continue;
+						return;
 					if ( mesh->upload( _pDevice ) == false )
-						continue;
+						return;
 
 					RHIPipelineStateHandle		 drawPso		  = pso;
 					Material*					 pMaterial		  = pMeshComp->getMaterial();
@@ -118,8 +117,8 @@ namespace sw
 					item._cbIndex			= drawCb;
 					item._world				= pMeshComp->getWorldMatrix();
 					listDrawItem.push_back( std::move( item ) );
-				}
-			}
+				} );
+			} );
 
 			if ( listDrawItem.empty() == false )
 			{

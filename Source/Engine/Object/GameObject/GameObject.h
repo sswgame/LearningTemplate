@@ -156,6 +156,35 @@ namespace sw
 		/** @brief 소유 Component 포인터. pending-kill은 제외합니다. */
 		vector<Component*> getAllComponents() const;
 
+		/** @brief 소유 Component 벡터에 대한 직접 상수 참조를 반환합니다. */
+		const vector<Component*>& getComponents() const { return _listComponent; }
+
+		/** @brief 힙 할당 없이 유효한 모든 컴포넌트를 방문합니다. */
+		template <typename Func>
+		void forEachComponent( Func&& func ) const
+		{
+			for ( Component* pComp : _listComponent )
+			{
+				if ( pComp != nullptr && pComp->isPendingKill() == false )
+					func( pComp );
+			}
+		}
+
+		/** @brief 힙 할당 없이 특정 타입 T 파생 컴포넌트들을 방문합니다. */
+		template <typename TComponent, typename Func>
+		void forEachComponentOfType( Func&& func ) const
+		{
+			for ( Component* pComp : _listComponent )
+			{
+				if ( pComp != nullptr && pComp->isPendingKill() == false )
+				{
+					TComponent* pTyped = castTo<TComponent>( pComp );
+					if ( pTyped != nullptr )
+						func( pTyped );
+				}
+			}
+		}
+
 		/** @brief 소유 컴포넌트를 모두 해제합니다. (직렬화 복원용) */
 		void clearComponents();
 

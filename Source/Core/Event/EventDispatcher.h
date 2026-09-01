@@ -118,13 +118,10 @@ namespace sw
 				iter					  = newIter;
 			}
 
-			ChannelEventList* pList = iter->second.get();
-			IEvent*			  pOldHead{ nullptr };
-			do
-			{
-				pOldHead = pList->_pHead.load( std::memory_order_relaxed );
-				pQueuedEvent->_next.store( pOldHead, std::memory_order_relaxed );
-			} while ( pList->_pHead.compare_exchange_weak( pOldHead, pQueuedEvent, std::memory_order_release, std::memory_order_relaxed ) == false );
+			ChannelEventList* pList	   = iter->second.get();
+			IEvent*			  pOldHead = pList->_pHead.load( std::memory_order_relaxed );
+			pQueuedEvent->_next.store( pOldHead, std::memory_order_relaxed );
+			pList->_pHead.store( pQueuedEvent, std::memory_order_release );
 		}
 
 		/** @brief 큐에 쌓인 이벤트를 모두 방송하고 프레임 아레나를 리셋합니다. */
