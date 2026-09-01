@@ -69,16 +69,16 @@ namespace sw
 
 		PROCESS_INFORMATION pi{};
 		const BOOL			bCreated = CreateProcessW(
-			nullptr,
-			wsCmdLine.data(),
-			nullptr,
-			nullptr,
-			TRUE,
-			creationFlags,
-			nullptr,
-			options._workingDirectory.empty() ? nullptr : wsBuildDir.c_str(),
-			&si,
-			&pi );
+			 nullptr,
+			 wsCmdLine.data(),
+			 nullptr,
+			 nullptr,
+			 TRUE,
+			 creationFlags,
+			 nullptr,
+			 options._workingDirectory.empty() ? nullptr : wsBuildDir.c_str(),
+			 &si,
+			 &pi );
 
 		CloseHandle( hStdOutWrite );
 

@@ -119,7 +119,7 @@ namespace sw
 #if !defined( SW_SHIPPING )
 		const hashed_string kAppConfigHash = hashed_string{ "AppConfig" };
 		const AppConfig*	pAppConfig	   = _engineLoop.getConfigManager()->ensureConfig<AppConfig>(
-			kAppConfigHash, config::kFileRuntimeAppConfig, nullptr );
+			   kAppConfigHash, config::kFileRuntimeAppConfig, nullptr );
 		if ( pAppConfig != nullptr )
 			listGameKitModule = pAppConfig->_listGameKitModule;
 #endif

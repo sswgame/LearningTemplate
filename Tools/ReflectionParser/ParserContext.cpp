@@ -326,11 +326,7 @@ namespace sw
 		, _emitFlagOpsMarker{ "operator|" }
 		, _emitRegisterTypeMarker{ "RegisterType" }
 		, _emitRegisterEnumMarker{ "RegisterEnum" }
-		, _listModuleRule{ { "GameFramework", "GameFramework" },
-						   { "Games", "SWGame" },
-						   { "SWGame", "SWGame" },
-						   { "Editor", "EditorModule" },
-						   { "App", "App" } },
+		, _listModuleRule{ { "GameFramework", "GameFramework" }, { "Games", "SWGame" }, { "SWGame", "SWGame" }, { "Editor", "EditorModule" }, { "App", "App" } },
 		_defaultModule{ "Engine" },
 		_listValueForbiddenBaseType{ "sw::Component", "sw::GameObject" },
 		_valueForbiddenMessage{ "GameObject or Component cannot be stored by value inside a PROPERTY(). Use a pointer, GameObjectPtr, or ComponentPtr instead." },

@@ -66,10 +66,10 @@ namespace sw
 
 				const hashed_string resolved  = resolveHandlerTypeName( typeName, ctx );
 				const bool			bIsString = ( resolved.isPredefinedType( PredefinedNameType::NameType_string ) ||
-												  resolved.isPredefinedType( PredefinedNameType::NameType_hashed_string ) ||
-												  resolved.isPredefinedType( PredefinedNameType::NameType_TagID ) );
+										  resolved.isPredefinedType( PredefinedNameType::NameType_hashed_string ) ||
+										  resolved.isPredefinedType( PredefinedNameType::NameType_TagID ) );
 				const bool			bIsBool	  = ( resolved.isPredefinedType( PredefinedNameType::NameType_bool ) ||
-												  resolved.isPredefinedType( PredefinedNameType::NameType_atomic_bool ) );
+										  resolved.isPredefinedType( PredefinedNameType::NameType_atomic_bool ) );
 				const bool			bIsEnum	  = ( engine::getTypeRegistry().findEnum( typeName ) != nullptr );
 
 				if ( bIsString || bIsEnum )

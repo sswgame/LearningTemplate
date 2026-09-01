@@ -135,7 +135,7 @@ namespace sw
 			const float4 clearColor = getAttachmentClearColorOrDefault( FrameRendererUtil::Attachment::kGBufferAlbedo, float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
 			const bool	 bHasNormal = findTransient( FrameRendererUtil::Attachment::kGBufferNormal ) != 0;
 			const bool	 bUseMrt	= bHasNormal && _pDevice->supportsMultiRenderTarget() &&
-									  getEnginePso( FrameRendererUtil::PassType::kGBuffer ) != 0;
+								 getEnginePso( FrameRendererUtil::PassType::kGBuffer ) != 0;
 			if ( bUseMrt )
 			{
 				const float4			  normalClear  = getAttachmentClearColorOrDefault( FrameRendererUtil::Attachment::kGBufferNormal, FrameRendererUtil::kNormalClear );

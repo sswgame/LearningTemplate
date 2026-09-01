@@ -105,8 +105,8 @@ namespace sw::editor
 			toastDesc._borderSize = 1.5f;
 			toastDesc._bgAlpha	  = bgCol.w;
 			toastDesc._flags	  = editor::EditorOverlayFlags::NoDecoration | editor::EditorOverlayFlags::NoInputs |
-									editor::EditorOverlayFlags::NoNav | editor::EditorOverlayFlags::AutoResize |
-									editor::EditorOverlayFlags::NoSavedSettings | editor::EditorOverlayFlags::NoFocusOnAppearing;
+							   editor::EditorOverlayFlags::NoNav | editor::EditorOverlayFlags::AutoResize |
+							   editor::EditorOverlayFlags::NoSavedSettings | editor::EditorOverlayFlags::NoFocusOnAppearing;
 
 			ImGui::PushStyleColor( ImGuiCol_WindowBg, bgCol );
 			ImGui::PushStyleColor( ImGuiCol_Border, borderCol );

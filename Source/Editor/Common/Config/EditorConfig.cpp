@@ -36,7 +36,7 @@ namespace sw::editor
 		const string	projectRoot = EditorUtil::getProjectRootPath();
 		string			configPath	= FileUtil::normalizeSeparators( config::kFileRuntimeEditorConfig );
 		const bool		bAbsolute	= ( configPath.size() >= 2 && configPath[1] == ':' ) ||
-									  ( configPath.empty() == false && ( configPath[0] == '/' || configPath[0] == '\\' ) );
+							   ( configPath.empty() == false && ( configPath[0] == '/' || configPath[0] == '\\' ) );
 		if ( projectRoot.empty() == false && bAbsolute == false )
 			configPath = FileUtil::joinPath( projectRoot, configPath );
 

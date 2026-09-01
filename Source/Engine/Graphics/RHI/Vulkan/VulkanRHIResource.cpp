@@ -171,8 +171,8 @@ namespace sw
 		VkPipelineColorBlendAttachmentState arrColorBlendAttachment[kMaxColorAttachments]{};
 		for ( uint32 blendIndex = 0; blendIndex < blendCount; ++blendIndex )
 		{
-			arrColorBlendAttachment[blendIndex].colorWriteMask		= VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
-																	  VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+			arrColorBlendAttachment[blendIndex].colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
+																 VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 			arrColorBlendAttachment[blendIndex].blendEnable			= desc._bEnableBlend ? VK_TRUE : VK_FALSE;
 			arrColorBlendAttachment[blendIndex].srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
 			arrColorBlendAttachment[blendIndex].dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
@@ -340,9 +340,9 @@ namespace sw
 		VkAttachmentDescription attachments[kMaxColorAttachments + 1]{};
 		VkAttachmentReference	colorRefs[kMaxColorAttachments]{};
 		const uint32			colorCount =
-			desc._listColorAttachment.size() > kMaxColorAttachments
-				? kMaxColorAttachments
-				: static_cast<uint32>( desc._listColorAttachment.size() );
+			   desc._listColorAttachment.size() > kMaxColorAttachments
+						   ? kMaxColorAttachments
+						   : static_cast<uint32>( desc._listColorAttachment.size() );
 
 		for ( uint32 colorIndex = 0; colorIndex < colorCount; ++colorIndex )
 		{

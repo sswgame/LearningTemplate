@@ -452,7 +452,7 @@ SW_TEST_CASE( RenderPassTest, FrameRendererInitializeAndExecuteSmoke )
 	sw::unique_ptr<sw::IWindow>	   window;
 	sw::shared_ptr<sw::IRHIDevice> device;
 	const sw::RHIBackend		   backends[] = {
-		sw::RHIBackend::DirectX11, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL, sw::RHIBackend::DirectX12 };
+		  sw::RHIBackend::DirectX11, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL, sw::RHIBackend::DirectX12 };
 	bool bOk{ false };
 	for ( sw::RHIBackend backend : backends )
 	{

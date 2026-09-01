@@ -50,7 +50,7 @@ namespace sw
 
 			const uint64 currentFrame  = _currentFrame;
 			auto		 partitionIter = std::stable_partition( _listFrameEntry.begin(), _listFrameEntry.end(), [currentFrame]( const FrameDeferredEntry& entry )
-			{
+					{
 				return entry._targetFrame > currentFrame;
 			} );
 

@@ -29,7 +29,7 @@ namespace sw
 			case RHIBufferState::ShaderResource:
 				access = VK_ACCESS_SHADER_READ_BIT;
 				stage  = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT |
-						 VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+						VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
 				break;
 			case RHIBufferState::IndirectArgument:
 				access = VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
@@ -42,7 +42,7 @@ namespace sw
 			case RHIBufferState::VertexOrConstant:
 				access = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT | VK_ACCESS_UNIFORM_READ_BIT;
 				stage  = VK_PIPELINE_STAGE_VERTEX_INPUT_BIT | VK_PIPELINE_STAGE_VERTEX_SHADER_BIT |
-						 VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+						VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
 				break;
 			case RHIBufferState::Index:
 				access = VK_ACCESS_INDEX_READ_BIT;

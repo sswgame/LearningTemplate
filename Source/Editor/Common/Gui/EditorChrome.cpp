@@ -286,7 +286,7 @@ namespace sw::editor
 		overlayDesc._rounding	= desc._rounding;
 		overlayDesc._borderSize = desc._borderSize;
 		overlayDesc._flags		= EditorOverlayFlags::NoTitleBar | EditorOverlayFlags::NoResize |
-								  EditorOverlayFlags::NoMove | EditorOverlayFlags::NoSavedSettings;
+							 EditorOverlayFlags::NoMove | EditorOverlayFlags::NoSavedSettings;
 
 		ImGui::PushStyleColor( ImGuiCol_WindowBg, ImVec4{ desc._bgColor._x, desc._bgColor._y, desc._bgColor._z, desc._bgColor._w } );
 		ImGui::PushStyleColor( ImGuiCol_Border,
