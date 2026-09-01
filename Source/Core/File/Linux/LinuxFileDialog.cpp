@@ -71,7 +71,7 @@ namespace sw
 					if ( dir.empty() )
 						dir = ".";
 
-					const string candidate = FileUtil::joinPath( dir, name );
+					const string candidate = FileUtil::joinPath( dir, pName );
 					if ( isExecutableFile( candidate ) )
 						return candidate;
 
@@ -118,7 +118,7 @@ namespace sw
 				{
 					if ( extension[0] != '.' )
 						pattern.push_back( '.' );
-					pattern.append( extension );
+					pattern.append( extension.data(), extension.size() );
 				}
 				return pattern;
 			}
@@ -182,9 +182,9 @@ namespace sw
 				size_t start{ 0 };
 				while ( start < output.size() )
 				{
-					const size_t sep  = output.find( separator, start );
-					const size_t end  = ( sep == string::npos ) ? output.size() : sep;
-					string		 part = output.substr( start, end - start );
+					const size_t sep = output.find( separator, start );
+					const size_t end = ( sep == string::npos ) ? output.size() : sep;
+					string		 part{ output.substr( start, end - start ) };
 					while ( part.empty() == false && ( part.back() == '\n' || part.back() == '\r' ) )
 						part.pop_back();
 					if ( part.empty() == false )
